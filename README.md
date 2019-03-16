@@ -6,7 +6,7 @@ Cute is carefully designed to implement high quality APIs by anticipating common
 
 ## Cute Snippets
 
-Working with cute typically involves working with concise code-snippets that anticipate exactly you will need as a developer. Check out some full example programs here.
+Working with cute typically involves working with concise code-snippets that anticipate exactly what you will need as a developer. Check out some full example programs here.
 
 #### Hello World
 
