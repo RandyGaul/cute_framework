@@ -16,6 +16,6 @@ cute | The instance of the Cute framework to signal to stop running.
 
 ## Related Functions
 
-[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md)
-[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md)
+[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md),
+[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md),
 [is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md)
