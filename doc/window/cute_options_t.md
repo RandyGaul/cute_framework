@@ -15,7 +15,7 @@ CUTE_OPTIONS_GFX_D3D9 | Initializes a DirecX 9 context (Windows only).
 
 ## Code Example
 
-```
+```cpp
 // Initialize Cute with an OpenGL 3.2 context, but no audio.
 uint32_t options = CUTE_OPTIONS_GFX_GL | CUTE_OPTIONS_NO_AUDIO;
 cute_t* cute = cute_make(title, x, y, w, h, options);
@@ -28,6 +28,8 @@ The `options` parameter of [cute_make](https://github.com/RandyGaul/cute_framewo
 Cute can be initialized without any graphics or audio (for example, to implement a game server) by passing in `CUTE_OPTIONS_NO_GFX` or `CUTE_OPTIONS_NO_AUDIO` in the `options` parameter of [cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/cute_make.md).
 
 ## Related Functions
+
+[cute_destroy](https://github.com/RandyGaul/cute_framework/tree/master/doc/window/cute_destroy.md)
 
 ---
 
