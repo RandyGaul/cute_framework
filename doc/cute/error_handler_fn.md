@@ -1,6 +1,6 @@
 # error_handler_fn
 
-This function type can be set as the Cute error handler (by [error_handler_set](https://github.com/RandyGaul/cute_framework/new/master/doc/cute/error_handler_set.md)), used to get reports of errors in a concurrent environment.
+This function type can be set as the Cute error handler (by [error_handler_set](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/error_handler_set.md)), used to get reports of errors in a concurrent environment.
 
 ## Syntax
 
