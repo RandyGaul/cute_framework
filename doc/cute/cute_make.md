@@ -49,7 +49,3 @@ The [options](https://github.com/RandyGaul/cute_framework/blob/master/doc/window
 ## Related Functions
 
 [cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/cute_destroy.md)
-
----
-
-[window](https://github.com/RandyGaul/cute_framework/tree/master/doc/window)
