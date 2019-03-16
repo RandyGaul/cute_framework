@@ -5,6 +5,7 @@ An emuration for all the options to initialize the Cute framework.
 ## Values
 
 Enumeration Entry | Description
+--- | ---
 CUTE_OPTIONS_NO_GFX | Skips all graphics initialization. 
 CUTE_OPTIONS_NO_AUDIO | Skips all audio initialization.
 CUTE_OPTIONS_FULLSCREEN | Starts up with a fullscreen window.
