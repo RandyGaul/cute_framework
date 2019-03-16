@@ -16,4 +16,4 @@ cute | The instance of the Cute framework to destroy.
 
 ## Related Functions
 
-[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/cute_make.md)
+[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md)
