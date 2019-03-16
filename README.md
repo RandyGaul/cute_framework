@@ -4,6 +4,10 @@ The *cutest* framework out there for creating 2D games in C++ - runs on Windows/
 
 Cute is carefully designed to implement high quality APIs by anticipating common game developer needs and requirements. Cute prides itself on a lean-and-mean style with the utmost dedication to practicality. Cute is open source under the zlib license, making it free to use for commercial purposes without limitations.
 
+## Download Cute
+
+Click here to download the latest release of Cute!
+
 ## Snippets
 
 Working with cute typically involves working with concise code-snippets that anticipate exactly what you will need as a developer. Check out some full example programs here.
