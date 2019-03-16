@@ -13,7 +13,7 @@ typedef void (error_handler_fn)(const char* error_string, void* udata);
 Parameter Name | Description
 --- | ---
 string | The utf8 encoded string containing the clipboard text.
-udata | The user data originally set by [error_handler_set](https://github.com/RandyGaul/cute_framework/new/master/doc/cute/error_handler_set.md).
+udata | The user data originally set by [error_handler_set](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/error_handler_set.md).
 
 ## Remarks
 
