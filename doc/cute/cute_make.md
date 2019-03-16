@@ -17,7 +17,7 @@ x | The x position of the window.
 y | The y position of the window.
 w | The width of the window in pixels.
 h | The height of the window in pixels.
-options | 0 by default; a bitmask of [cute_options_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/cute_options_t.md) flags.
+options | 0 by default; a bitmask of [cute_options_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_options_t.md) flags.
 
 ## Return Value
 
@@ -44,8 +44,8 @@ while (is_running(cute))
 
 ## Remarks
 
-The [options](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/cute_options_t.md) parameter is a flag. Different options can be OR'd together. Parameters **w** and **h** are ignored if Cute is initialized to fullscreen.
+The [options](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_options_t.md) parameter is a flag. Different options can be OR'd together. Parameters **w** and **h** are ignored if Cute is initialized to fullscreen.
 
 ## Related Functions
 
-[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/cute_destroy.md)
+[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md)
