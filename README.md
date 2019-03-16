@@ -99,3 +99,11 @@ Cute covers all the low level guts required to build 2D games by implementing th
 * entity
 * hotload
 * profile
+
+## Support
+
+Cute is actively developed and the author, Randy Gaul, uses it for his own games. Just open a [github issue](https://github.com/RandyGaul/cute_framework/issues/new) to ask any questions you might have :)
+
+## Contributing
+
+Contributions are welcome, so feel free to open a [pull-request](https://github.com/RandyGaul/cute_framework/pulls). To make it as easy as possible to accept new pull-requests it is a good idea to open up a discussion as a [github issue](https://github.com/RandyGaul/cute_framework/issues/new) to talk about changes before making a commitment to develop a full pull-request.
