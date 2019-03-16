@@ -100,7 +100,6 @@ Cute covers all the low level guts required to build 2D games by implementing th
 * camera
 * logging
 * entity
-* hotload
 * profile
 
 ## Support
