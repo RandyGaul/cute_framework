@@ -110,3 +110,7 @@ Cute is actively developed and the author, Randy Gaul, uses it for his own games
 ## Contributing
 
 Contributions are welcome, so feel free to open a [pull-request](https://github.com/RandyGaul/cute_framework/pulls). To make it as easy as possible to accept new pull-requests it is a good idea to open up a discussion as a [github issue](https://github.com/RandyGaul/cute_framework/issues/new) to talk about changes before making a commitment to develop a full pull-request.
+
+## Dependencies
+
+Cute has very little dependencies, carefully chosen for their high quality. The first is the [SDL2 library](https://www.libsdl.org/), used for platform handling and GL context creation. The second is [libsodium](https://libsodium.gitbook.io/doc/), used for symmetric-key encryption, after a TLS tunnel has been opened and used to generate a session-token. The third is [glad](https://github.com/Dav1dde/glad) used to load OpenGL function pointers on the Windows platform. Each dependency is packaged up inside the distributions of Cute, ready to go out-of-the-box.
