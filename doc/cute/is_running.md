@@ -20,6 +20,6 @@ The function [stop_running](https://github.com/RandyGaul/cute_framework/blob/mas
 
 ## Related Functions
 
-[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md)
-[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md)
+[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md),
+[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md),
 [stop_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/stop_running.md)
