@@ -30,7 +30,3 @@ Cute can be initialized without any graphics or audio (for example, to implement
 ## Related Functions
 
 [cute_destroy](https://github.com/RandyGaul/cute_framework/tree/master/doc/window/cute_destroy.md)
-
----
-
-enumerations, [window](https://github.com/RandyGaul/cute_framework/tree/master/doc/window)
