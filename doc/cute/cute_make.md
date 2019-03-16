@@ -21,7 +21,7 @@ options | 0 by default; a bitmask of [cute_options_t](https://github.com/RandyGa
 
 ## Return Value
 
-Returns a pointer to a `cute_t` instance, representing a mixture of the application window, optional audio, and optional graphics. Returns `NULL` on failure; call [cute_get_error](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute_get_error.md) for more information.
+Returns a pointer to a `cute_t` instance, representing a mixture of the application window, optional audio, and optional graphics. Returns `NULL` on failure; call [error_get](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/error_get.md) for more information.
 
 ## Code Example
 
