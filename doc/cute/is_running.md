@@ -14,6 +14,21 @@ Parameter Name | Description
 --- | ---
 cute | The instance of the Cute framework to check the running status of.
 
+## Return Value
+
+Returns `1` until a signal is received that Cute needs to shutdown, then it will return `0`.
+
+## Code Example
+
+> Running an infinite loop, until ready to destroy Cute.
+
+```cpp
+while (is_running(cute))
+{
+	// your code here ...
+}
+```
+
 ## Remarks
 
 The function [stop_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/stop_running.md) can be used to force `is_running` to return `0` on the next call.
