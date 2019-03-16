@@ -16,7 +16,7 @@ cute | The instance of the Cute framework to check the running status of.
 
 ## Remarks
 
-The function (stop_running)[(https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/stop_running.md) can be used to force `is_running` to return `0` on the next call.
+The function (stop_running)[https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/stop_running.md) can be used to force `is_running` to return `0` on the next call.
 
 ## Related Functions
 
