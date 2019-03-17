@@ -53,7 +53,13 @@ cute_t* cute_make(const char* window_title, int x, int y, int w, int h, uint32_t
 	if (options & CUTE_OPTIONS_GFX_GLES) flags |= SDL_WINDOW_OPENGL;
 	if (options & CUTE_OPTIONS_FULLSCREEN) flags |= SDL_WINDOW_FULLSCREEN;
 	if (options & CUTE_OPTIONS_RESIZABLE) flags |= SDL_WINDOW_RESIZABLE;
-	SDL_Window* window = SDL_CreateWindow(window_title, x, y, w, h, flags);
+
+	SDL_Window* window;
+	if (options & CUTE_OPTIONS_WINDOW_POS_CENTERED) {
+		window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h, flags);
+	} else {
+		window = SDL_CreateWindow(window_title, x, y, w, h, flags);
+	}
 	CUTE_PLACEMENT_NEW(window) cute_t;
 	cute->window = window;
 	cute->mem_ctx = user_allocator_context;
@@ -105,6 +111,12 @@ int is_running(cute_t* cute)
 void stop_running(cute_t* cute)
 {
 	cute->running = 0;
+}
+
+void cute_update(cute_t* cute, float dt)
+{
+	// TODO: Implement me.
+	// Should poll input, render, do net stuff, deal with events.
 }
 
 }
