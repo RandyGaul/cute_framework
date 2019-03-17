@@ -19,22 +19,30 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_ERROR_H
-#define CUTE_ERROR_H
+#ifndef CUTE_INTERNAL_H
+#define CUTE_INTERNAL_H
 
-#include <cute_defines.h>
+#include <cute_buffer.h>
+#include <cute_audio.h>
+
+struct SDL_Window;
+struct cs_context_t;
 
 namespace cute
 {
 
-struct cute_t;
-
-typedef void (CUTE_CALL error_handler_fn)(const char* error_string, void* udata);
-
-extern CUTE_API const char* CUTE_CALL error_get(cute_t* cute);
-extern CUTE_API void CUTE_CALL error_set(cute_t* cute, const char* error_string);
-extern CUTE_API void CUTE_CALL error_handler_set(cute_t* cute, error_handler_fn* handler, void* udata);
+struct cute_t
+{
+	int running = 1;
+	SDL_Window* window = NULL;
+	buffer_t playing_sounds = buffer_t(internal::sound_instance_size());
+	audio_t* playing_music = NULL;
+	audio_t* next_music = NULL;
+	cs_context_t* cs = NULL;
+	threadpool_t* threadpool = NULL;
+	void* mem_ctx = NULL;
+};
 
 }
 
-#endif // CUTE_ERROR_H
+#endif // CUTE_INTERNAL_H

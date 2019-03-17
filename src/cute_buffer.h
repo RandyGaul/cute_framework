@@ -19,22 +19,34 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_ERROR_H
-#define CUTE_ERROR_H
+#ifndef BUFFER_H
+#define BUFFER_H
 
 #include <cute_defines.h>
 
 namespace cute
 {
 
-struct cute_t;
+struct buffer_t
+{
+	buffer_t() {}
+	buffer_t(int stride) : stride(stride) {}
 
-typedef void (CUTE_CALL error_handler_fn)(const char* error_string, void* udata);
+	int stride = 0;
+	int count = 0;
+	int capacity = 0;
+	void* data = 0;
+	void* user_allocator_ctx = NULL;
+};
 
-extern CUTE_API const char* CUTE_CALL error_get(cute_t* cute);
-extern CUTE_API void CUTE_CALL error_set(cute_t* cute, const char* error_string);
-extern CUTE_API void CUTE_CALL error_handler_set(cute_t* cute, error_handler_fn* handler, void* udata);
+extern CUTE_API void CUTE_CALL buffer_push(buffer_t* buf, const void* element);
+extern CUTE_API void CUTE_CALL buffer_at(buffer_t* buf, int i, void* out);
+extern CUTE_API void CUTE_CALL buffer_pop(buffer_t* buf, void* out);
+extern CUTE_API void CUTE_CALL buffer_grow(buffer_t* buf, int new_capacity);
+extern CUTE_API void CUTE_CALL buffer_check_grow(buffer_t* buf, int initial_capacity);
+extern CUTE_API void CUTE_CALL buffer_clear(buffer_t* buf);
+extern CUTE_API void CUTE_CALL buffer_free(buffer_t* buf);
 
 }
 
-#endif // CUTE_ERROR_H
+#endif // BUFFER_H

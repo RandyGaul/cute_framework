@@ -20,23 +20,25 @@
 */
 
 #include <cute.h>
+#include <cute_internal.h>
 #include <cute_alloc.h>
+#include <cute_buffer.h>
+#include <cute_audio.h>
+#include <cute_concurrency.h>
+
 #include <SDL.h>
-#include <glad.h>
+#include <glad/glad.h>
+
+#define CUTE_SOUND_FORCE_SDL
+#include <cute/cute_sound.h>
 
 namespace cute
 {
 
-struct cute_t
-{
-	int running;
-	SDL_Window* window;
-	void* mem_ctx;
-};
-
 cute_t* cute_make(const char* window_title, int x, int y, int w, int h, uint32_t options, void* user_allocator_context)
 {
 	cute_t* cute = (cute_t*)CUTE_ALLOC(sizeof(cute_t), user_allocator_context);
+	if (!cute) return NULL;
 
 	if (!(options & CUTE_OPTIONS_NO_GFX)) {
 		SDL_InitSubSystem(SDL_INIT_VIDEO);
@@ -52,7 +54,7 @@ cute_t* cute_make(const char* window_title, int x, int y, int w, int h, uint32_t
 	if (options & CUTE_OPTIONS_FULLSCREEN) flags |= SDL_WINDOW_FULLSCREEN;
 	if (options & CUTE_OPTIONS_RESIZABLE) flags |= SDL_WINDOW_RESIZABLE;
 	SDL_Window* window = SDL_CreateWindow(window_title, x, y, w, h, flags);
-	cute->running = 1;
+	CUTE_PLACEMENT_NEW(window) cute_t;
 	cute->window = window;
 	cute->mem_ctx = user_allocator_context;
 
@@ -74,11 +76,21 @@ cute_t* cute_make(const char* window_title, int x, int y, int w, int h, uint32_t
 		gladLoadGLLoader(SDL_GL_GetProcAddress);
 	}
 
+	if (!(options & CUTE_OPTIONS_NO_AUDIO)) {
+		cute->cs = cs_make_context(NULL, 44100, 5, 1, 0);
+	}
+
+	int num_cores = core_count() - 1;
+	if (num_cores) {
+		cute->threadpool = threadpool_create(num_cores, user_allocator_context);
+	}
+
 	return cute;
 }
 
 void cute_destroy(cute_t* cute)
 {
+	if (cute->cs) cs_shutdown_context(cute->cs);
 	SDL_DestroyWindow(cute->window);
 	SDL_Quit();
 	CUTE_FREE(cute, cute->mem_ctx);

@@ -48,6 +48,8 @@
 
 #define CUTE_UNUSED(x) (void)x
 
+#define CUTE_INLINE inline
+
 #include <stdint.h>
 
 #endif // CUTE_DEFINES_H

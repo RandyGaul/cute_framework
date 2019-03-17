@@ -19,22 +19,22 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_ERROR_H
-#define CUTE_ERROR_H
+#ifndef CUTE_C_RUNTIME_H
+#define CUTE_C_RUNTIME_H
 
-#include <cute_defines.h>
+#ifndef CUTE_ASSERT
+#	include <assert.h>
+#	define CUTE_ASSERT assert
+#endif
 
-namespace cute
-{
+#ifndef CUTE_MEMCPY
+#	include <string.h>
+#	define CUTE_MEMCPY memcpy
+#endif
 
-struct cute_t;
+#ifndef CUTE_MEMSET
+#	include <string.h>
+#	define CUTE_MEMSET memset
+#endif
 
-typedef void (CUTE_CALL error_handler_fn)(const char* error_string, void* udata);
-
-extern CUTE_API const char* CUTE_CALL error_get(cute_t* cute);
-extern CUTE_API void CUTE_CALL error_set(cute_t* cute, const char* error_string);
-extern CUTE_API void CUTE_CALL error_handler_set(cute_t* cute, error_handler_fn* handler, void* udata);
-
-}
-
-#endif // CUTE_ERROR_H
+#endif // CUTE_C_RUNTIME_H
