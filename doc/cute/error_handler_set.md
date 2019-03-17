@@ -41,4 +41,5 @@ void setup_cute_error_handler(cute_t* cute)
 
 ## Related Functions
 
-[error_get](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/error_get.md)
+[error_get](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/error_get.md),
+[error_set](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/error_set.md)
