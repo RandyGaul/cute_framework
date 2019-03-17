@@ -88,7 +88,6 @@ Cute covers all the low level guts required to build 2D games by implementing th
 * input
 * math
 * collision detection
-* physics
 * concurrency
 * time
 * net
