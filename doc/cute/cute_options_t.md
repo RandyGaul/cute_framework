@@ -12,7 +12,7 @@ CUTE_OPTIONS_GFX_GL | Initializes an OpenGL 3.2 context (not mobile-friendly).
 CUTE_OPTIONS_GFX_GLES | Initialize an OpenGL ES 2.0 context (mobile devices only).
 CUTE_OPTIONS_GFX_D3D9 | Initializes a DirecX 9 context (Windows only).
 CUTE_OPTIONS_FULLSCREEN | Starts up with a fullscreen window.
-CUTE_OPTIONS_RESIZEABLE | The window can be resized.
+CUTE_OPTIONS_RESIZABLE | The window can be resized.
 
 ## Code Example
 
