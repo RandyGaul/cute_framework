@@ -26,4 +26,5 @@ To handle errors in a concurrent environment the [error_handler_set] should be u
 
 ## Related Functions
 
-[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md)
+[error_set](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/error_set.md)
+[error_handler_set](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/error_handler_set.md)
