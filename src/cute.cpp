@@ -78,6 +78,7 @@ cute_t* cute_make(const char* window_title, int x, int y, int w, int h, uint32_t
 
 	if (!(options & CUTE_OPTIONS_NO_AUDIO)) {
 		cute->cs = cs_make_context(NULL, 44100, 5, 1, 0);
+		if (cute->cs) cs_spawn_mix_thread(cute->cs);
 	}
 
 	int num_cores = core_count() - 1;
