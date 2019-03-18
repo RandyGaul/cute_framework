@@ -22,21 +22,7 @@
 #include <cute_net.h>
 #include <cute_error.h>
 
-#include <libsodium/sodium.h>
-
 namespace cute
 {
-
-namespace internal
-{
-	int crypto_init(cute_t* cute)
-	{
-		if (sodium_init() < 0) {
-			error_set(cute, "Unable to initialize crypto library. It is *not safe* to connect to the net.");
-			return -1;
-		}
-		return 0;
-	}
-}
 
 }

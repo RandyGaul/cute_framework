@@ -28,34 +28,34 @@ namespace cute
 {
 
 struct cute_t;
+struct connection_t;
+struct endpoint_t;
+struct crypto_key_t;
 
-/*
-	mock api
+endpoint_t endpoint_make(uint32_t address, int16_t port);
+connection_t* connection_make(endpoint_t endpoint, const crypto_key_t* endpoint_public_key);
+void connection_destroy(connection_t* dst);
 
-	endpoint
-		public key
-		ip address
+// TODO:
+// Client connect to server
+// Client poll the handshake
+// Server accept incoming client
+	// Make new connection
+	// Server perform handshake on thread
+// Server broadcast to all connections
 
-	generate server endpoint
-		for player hosted servers
-		also for my own use
-		also generates decryption key
+// OPEN QUESTIONS:
+// Should there be cute_net_server.h and cute_net_server.cpp?
+// What about cute_net_client.h and cute_net_client.cpp?
+// Probably not client.
+// Preference: Use cute_net.h for clients trivially, and create extra wrapper for server to listen + spawn many connections.
+// Note: Server-ish code can probably go into utils header.
 
-	load decryption key
-
-	endpoint server_endpoint = load_endpoint("path");
-	connection c = connect(server_endpoint)
-
-	// Also want high perf channel for server?
-	c.send(msg);
-	msg m = c.poll();
-*/
-
-namespace internal
-{
-	int crypto_init(cute_t* cute);
-}
+void send_data(cute_t* cute, connection_t* dst, void* data, int data_byte_count, int channel);
+void send_data_unreliable(cute_t* cute, connection_t* dst, void* data, int data_byte_count);
 
 }
+
+#include <cute_net_utils.h>
 
 #endif // CUTE_NET_H

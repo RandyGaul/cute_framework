@@ -27,8 +27,6 @@
 namespace cute
 {
 
-struct cute_t;
-
 enum cute_options_t
 {
 	CUTE_OPTIONS_NO_GFX               = 0x001,

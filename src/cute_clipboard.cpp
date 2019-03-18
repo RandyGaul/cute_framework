@@ -20,7 +20,7 @@
 */
 
 #include <cute_clipboard.h>
-#include <SDL_clipboard.h>
+#include <SDL2/SDL_clipboard.h>
 
 namespace cute
 {

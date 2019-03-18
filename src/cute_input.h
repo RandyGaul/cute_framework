@@ -27,7 +27,6 @@
 namespace cute
 {
 
-struct cute_t;
 enum key_button_t : int;
 enum mouse_button_t : int;
 enum mouse_click_t : int;

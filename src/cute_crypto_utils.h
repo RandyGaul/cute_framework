@@ -19,48 +19,27 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_DEFINES_H
-#define CUTE_DEFINES_H
-
-#ifndef _CRT_SECURE_NO_WARNINGS
-#	define _CRT_SECURE_NO_WARNINGS
-#endif
-
-#ifndef _CRT_NONSTDC_NO_DEPRECATE
-#	define _CRT_NONSTDC_NO_DEPRECATE
-#endif
-
-#ifndef NOMINMAX
-#	define NOMINMAX
-#endif
-
-#ifdef _MSC_VER
-#	ifdef CUTE_EXPORT
-#		define CUTE_API __declspec(dllexport)
-#	else
-#		define CUTE_API __declspec(dllimport)
-#	endif
-#else
-#	if ((__GNUC__ >= 4) || defined(__clang__))
-#		define CUTE_API __attribute__((visibility("default")))
-#	else
-#		define CUTE_API
-#	endif
-#endif
-
-#define CUTE_CALL __cdecl
-
-#define CUTE_UNUSED(x) (void)x
-
-#define CUTE_INLINE inline
-
-#include <stdint.h>
+#ifndef CUTE_CRYPTO_UTILS_H
+#define CUTE_CRYPTO_UTILS_H
 
 namespace cute
 {
 
-struct cute_t;
+struct crypto_key_t
+{
+	uint8_t key[crypto_box_PUBLICKEYBYTES];
+};
+
+struct crypto_nonce_t
+{
+	uint8_t nonce[crypto_box_NONCEBYTES];
+};
+
+namespace internal
+{
+	int crypto_init(cute_t* cute);
+}
 
 }
 
-#endif // CUTE_DEFINES_H
+#endif // CUTE_CRYPTO_UTILS_H

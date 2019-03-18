@@ -29,7 +29,6 @@ namespace cute
 {
 
 struct audio_t;
-struct cute_t;
 
 extern CUTE_API audio_t* CUTE_CALL audio_load_ogg(const char* path, void* user_allocator_context = NULL);
 extern CUTE_API audio_t* CUTE_CALL audio_load_wav(const char* path, void* user_allocator_context = NULL);

@@ -150,6 +150,7 @@
     <ClCompile Include="src\cute_buffer.cpp" />
     <ClCompile Include="src\cute_clipboard.cpp" />
     <ClCompile Include="src\cute_concurrency.cpp" />
+    <ClCompile Include="src\cute_crypto.cpp" />
     <ClCompile Include="src\cute_error.cpp" />
     <ClCompile Include="src\cute_input.cpp" />
     <ClCompile Include="src\cute_net.cpp" />
@@ -157,18 +158,21 @@
   <ItemGroup>
     <ClInclude Include="libraries\glad\glad.h" />
     <ClInclude Include="libraries\KHR\khrplatform.h" />
+    <ClInclude Include="src\cute_crypto_utils.h" />
     <ClInclude Include="src\cute.h" />
     <ClInclude Include="src\cute_alloc.h" />
     <ClInclude Include="src\cute_audio.h" />
     <ClInclude Include="src\cute_buffer.h" />
     <ClInclude Include="src\cute_clipboard.h" />
     <ClInclude Include="src\cute_concurrency.h" />
+    <ClInclude Include="src\cute_crypto.h" />
     <ClInclude Include="src\cute_c_runtime.h" />
     <ClInclude Include="src\cute_defines.h" />
     <ClInclude Include="src\cute_error.h" />
     <ClInclude Include="src\cute_input.h" />
     <ClInclude Include="src\cute_internal.h" />
     <ClInclude Include="src\cute_net.h" />
+    <ClInclude Include="src\cute_net_utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
