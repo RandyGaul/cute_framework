@@ -48,6 +48,7 @@ extern CUTE_API int CUTE_CALL is_running(cute_t* cute);
 extern CUTE_API void CUTE_CALL stop_running(cute_t* cute);
 
 extern CUTE_API void CUTE_CALL cute_update(cute_t* cute, float dt);
+extern CUTE_API float CUTE_CALL calc_dt();
 
 }
 

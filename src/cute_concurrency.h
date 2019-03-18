@@ -24,7 +24,7 @@
 
 #include <cute_defines.h>
 
-#include <SDL_thread.h>
+#include <SDL2/SDL_thread.h>
 #define CUTE_SYNC_SDL
 #include <cute/cute_sync.h>
 

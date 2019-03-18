@@ -264,7 +264,7 @@
 
 #if CUTE_SOUND_PLATFORM == CUTE_SOUND_SDL
 
-	#include <SDL.h>
+	#include <SDL2/SDL.h>
 
 #endif
 

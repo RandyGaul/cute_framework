@@ -26,7 +26,7 @@
 #include <cute_audio.h>
 #include <cute_concurrency.h>
 
-#include <SDL.h>
+#include <SDL2/SDL.h>
 #include <glad/glad.h>
 
 #define CUTE_SOUND_FORCE_SDL
@@ -117,6 +117,25 @@ void cute_update(cute_t* cute, float dt)
 {
 	// TODO: Implement me.
 	// Should poll input, render, do net stuff, deal with events.
+}
+
+float calc_dt()
+{
+	static int first = 1;
+	static double inv_freq;
+	static uint64_t prev;
+
+	uint64_t now = SDL_GetPerformanceCounter();
+
+	if (first) {
+		first = 0;
+		prev = now;
+		inv_freq = 1.0 / (double)SDL_GetPerformanceFrequency();
+	}
+
+	float dt = (float)((double)(now - prev) * inv_freq);
+	prev = now;
+	return dt;
 }
 
 }

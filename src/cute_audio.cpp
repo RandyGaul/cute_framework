@@ -132,8 +132,9 @@ void audio_stream_ogg(cute_t* cute, const char* path, promise_t promise, void* u
 	param->path = path;
 	param->user_promise = promise;
 	param->mem_ctx = user_allocator_context;
-	
+
 	threadpool_add_task(cute->threadpool, s_stream_ogg_task_fn, param);
+	cute_threadpool_kick(cute->threadpool);
 }
 
 void audio_stream_wav(cute_t* cute, const char* path, promise_t promise, void* user_allocator_context)
@@ -143,8 +144,9 @@ void audio_stream_wav(cute_t* cute, const char* path, promise_t promise, void* u
 	param->path = path;
 	param->user_promise = promise;
 	param->mem_ctx = user_allocator_context;
-	
+
 	threadpool_add_task(cute->threadpool, s_stream_wav_task_fn, param);
+	cute_threadpool_kick(cute->threadpool);
 }
 
 void audio_stream_ogg_from_memory(cute_t* cute, void* memory, int byte_count, promise_t promise, void* user_allocator_context)
@@ -155,8 +157,9 @@ void audio_stream_ogg_from_memory(cute_t* cute, void* memory, int byte_count, pr
 	param->byte_count = byte_count;
 	param->user_promise = promise;
 	param->mem_ctx = user_allocator_context;
-	
+
 	threadpool_add_task(cute->threadpool, s_stream_ogg_task_fn, param);
+	cute_threadpool_kick(cute->threadpool);
 }
 
 void audio_stream_wav_from_memory(cute_t* cute, void* memory, int byte_count, promise_t promise, void* user_allocator_context)
@@ -167,8 +170,9 @@ void audio_stream_wav_from_memory(cute_t* cute, void* memory, int byte_count, pr
 	param->byte_count = byte_count;
 	param->user_promise = promise;
 	param->mem_ctx = user_allocator_context;
-	
+
 	threadpool_add_task(cute->threadpool, s_stream_wav_task_fn, param);
+	cute_threadpool_kick(cute->threadpool);
 }
 
 int audio_destroy(audio_t* audio)
@@ -187,6 +191,8 @@ int audio_ref_count(audio_t* audio_source)
 {
 	return audio_source->playing_count;
 }
+
+//TODO: Implement music stuff.
 
 int music_play(cute_t* cute, audio_t* audio_source, float fade_in_time, float delay)
 {

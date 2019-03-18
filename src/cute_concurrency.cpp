@@ -22,7 +22,7 @@
 #include <cute_concurrency.h>
 #include <cute_alloc.h>
 
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 #define CUTE_SYNC_IMPLEMENTATION
 #define CUTE_SYNC_SDL
