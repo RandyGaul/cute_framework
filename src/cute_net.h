@@ -27,32 +27,32 @@
 namespace cute
 {
 
-struct cute_t;
 struct connection_t;
 struct endpoint_t;
 struct crypto_key_t;
 
-endpoint_t endpoint_make(uint32_t address, int16_t port);
-connection_t* connection_make(endpoint_t endpoint, const crypto_key_t* endpoint_public_key);
+int endpoint_init(endpoint_t* endpoint, const char* address_and_port_string, const crypto_key_t* endpoint_public_key);
+connection_t* connection_make(cute_t* cute, endpoint_t endpoint);
 void connection_destroy(connection_t* dst);
 
-// TODO:
-// Client connect to server
-// Client poll the handshake
-// Server accept incoming client
-	// Make new connection
-	// Server perform handshake on thread
-// Server broadcast to all connections
+enum connection_state_t : int
+{
+	CONNECTION_STATE_SENDING_HELLO,
+	CONNECTION_STATE_SENDING_HELLO_RESPONSE,
+	CONNECTION_STATE_SENDING_HELLO_OK,
 
-// OPEN QUESTIONS:
-// Should there be cute_net_server.h and cute_net_server.cpp?
-// What about cute_net_client.h and cute_net_client.cpp?
-// Probably not client.
-// Preference: Use cute_net.h for clients trivially, and create extra wrapper for server to listen + spawn many connections.
-// Note: Server-ish code can probably go into utils header.
+	CONNECTION_STATE_CONNECTED,
 
-void send_data(cute_t* cute, connection_t* dst, void* data, int data_byte_count, int channel);
-void send_data_unreliable(cute_t* cute, connection_t* dst, void* data, int data_byte_count);
+	CONNECTION_STATE_HELLO_TIMED_OUT,
+	CONNECTION_STATE_CONNECTION_DENIED,
+	CONNECTION_STATE_DISCONNECTED,
+	CONNECTION_STATE_TIMED_OUT,
+};
+
+connection_state_t connection_state_get(connection_t* connection);
+
+int send_data(connection_t* dst, void* data, int data_byte_count);
+int send_data_unreliable(connection_t* dst, void* data, int data_byte_count);
 
 }
 

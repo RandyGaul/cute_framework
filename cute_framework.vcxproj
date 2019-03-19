@@ -145,7 +145,6 @@
   <ItemGroup>
     <ClCompile Include="libraries\glad\glad.c" />
     <ClCompile Include="src\cute.cpp" />
-    <ClCompile Include="src\cute_alloc.cpp" />
     <ClCompile Include="src\cute_audio.cpp" />
     <ClCompile Include="src\cute_buffer.cpp" />
     <ClCompile Include="src\cute_clipboard.cpp" />
@@ -154,6 +153,7 @@
     <ClCompile Include="src\cute_error.cpp" />
     <ClCompile Include="src\cute_input.cpp" />
     <ClCompile Include="src\cute_net.cpp" />
+    <ClCompile Include="src\cute_timer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="libraries\glad\glad.h" />
@@ -173,6 +173,7 @@
     <ClInclude Include="src\cute_internal.h" />
     <ClInclude Include="src\cute_net.h" />
     <ClInclude Include="src\cute_net_utils.h" />
+    <ClInclude Include="src\cute_timer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

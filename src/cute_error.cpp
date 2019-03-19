@@ -28,23 +28,21 @@ static const char* s_error;
 static error_handler_fn* s_handler;
 static void* s_udata;
 
-const char* error_get(cute_t* cute)
+const char* error_get()
 {
 	return s_error;
 }
 
-void error_set(cute_t* cute, const char* error_string)
+void error_set(const char* error_string)
 {
-	CUTE_UNUSED(cute);
 	s_error = error_string;
 	if (s_handler) {
 		s_handler(error_string, s_udata);
 	}
 }
 
-void error_handler_set(cute_t* cute, error_handler_fn* handler, void* udata)
+void error_handler_set(error_handler_fn* handler, void* udata)
 {
-	CUTE_UNUSED(cute);
 	s_handler = handler;
 	s_udata = udata;
 }

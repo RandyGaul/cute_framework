@@ -22,6 +22,8 @@
 #ifndef CUTE_CRYPTO_UTILS_H
 #define CUTE_CRYPTO_UTILS_H
 
+#include <libsodium/sodium.h>
+
 namespace cute
 {
 
@@ -37,7 +39,7 @@ struct crypto_nonce_t
 
 namespace internal
 {
-	int crypto_init(cute_t* cute);
+	int crypto_init();
 }
 
 }

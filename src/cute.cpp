@@ -25,6 +25,8 @@
 #include <cute_buffer.h>
 #include <cute_audio.h>
 #include <cute_concurrency.h>
+#include <cute_crypto_utils.h>
+#include <cute_net.h>
 
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
@@ -38,7 +40,7 @@ namespace cute
 cute_t* cute_make(const char* window_title, int x, int y, int w, int h, uint32_t options, void* user_allocator_context)
 {
 	cute_t* cute = (cute_t*)CUTE_ALLOC(sizeof(cute_t), user_allocator_context);
-	if (!cute) return NULL;
+	CUTE_CHECK(cute);
 
 	if (!(options & CUTE_OPTIONS_NO_GFX)) {
 		SDL_InitSubSystem(SDL_INIT_VIDEO);
@@ -60,6 +62,7 @@ cute_t* cute_make(const char* window_title, int x, int y, int w, int h, uint32_t
 	} else {
 		window = SDL_CreateWindow(window_title, x, y, w, h, flags);
 	}
+	CUTE_CHECK(window);
 	CUTE_PLACEMENT_NEW(window) cute_t;
 	cute->window = window;
 	cute->mem_ctx = user_allocator_context;
@@ -87,12 +90,21 @@ cute_t* cute_make(const char* window_title, int x, int y, int w, int h, uint32_t
 		if (cute->cs) cs_spawn_mix_thread(cute->cs);
 	}
 
+	if (!(options & CUTE_OPTIONS_NO_NET)) {
+		CUTE_CHECK(internal::crypto_init());
+		CUTE_CHECK(internal::net_init());
+	}
+
 	int num_cores = core_count() - 1;
 	if (num_cores) {
 		cute->threadpool = threadpool_create(num_cores, user_allocator_context);
 	}
 
 	return cute;
+
+cute_error:
+	CUTE_FREE(cute, user_allocator_ctx);
+	return NULL;
 }
 
 void cute_destroy(cute_t* cute)
@@ -117,25 +129,6 @@ void cute_update(cute_t* cute, float dt)
 {
 	// TODO: Implement me.
 	// Should poll input, render, do net stuff, deal with events.
-}
-
-float calc_dt()
-{
-	static int first = 1;
-	static double inv_freq;
-	static uint64_t prev;
-
-	uint64_t now = SDL_GetPerformanceCounter();
-
-	if (first) {
-		first = 0;
-		prev = now;
-		inv_freq = 1.0 / (double)SDL_GetPerformanceFrequency();
-	}
-
-	float dt = (float)((double)(now - prev) * inv_freq);
-	prev = now;
-	return dt;
 }
 
 }

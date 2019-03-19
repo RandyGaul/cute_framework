@@ -29,9 +29,9 @@ namespace cute
 
 typedef void (CUTE_CALL error_handler_fn)(const char* error_string, void* udata);
 
-extern CUTE_API const char* CUTE_CALL error_get(cute_t* cute);
-extern CUTE_API void CUTE_CALL error_set(cute_t* cute, const char* error_string);
-extern CUTE_API void CUTE_CALL error_handler_set(cute_t* cute, error_handler_fn* handler, void* udata);
+extern CUTE_API const char* CUTE_CALL error_get();
+extern CUTE_API void CUTE_CALL error_set(const char* error_string);
+extern CUTE_API void CUTE_CALL error_handler_set(error_handler_fn* handler, void* udata);
 
 }
 

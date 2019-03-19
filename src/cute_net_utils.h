@@ -53,20 +53,21 @@ struct endpoint_t
 
 	union
 	{
-		uint32_t ipv4;
+		uint8_t ipv4[4];
 		uint16_t ipv6[8];
 	} u;
 
 	crypto_key_t public_key;
 };
 
-endpoint_t endpoint_make(int16_t port);
-endpoint_t endpoint_make(uint8_t a, uint8_t b, uint8_t c, uint8_t d, int16_t port);
-endpoint_t endpoint_make(sockaddr_storage* sockaddr);
-endpoint_t endpoint_make(const char* address_and_port_string);
-
-void endpoint_to_string(endpoint_t endpoint, void* buffer, int buffer_byte_count);
+void endpoint_to_string(endpoint_t endpoint, char* buffer, int buffer_size);
 int endpoint_equals(endpoint_t a, endpoint_t b);
+
+namespace internal
+{
+	int net_init();
+	void net_cleanup();
+}
 
 }
 

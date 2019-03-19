@@ -71,10 +71,10 @@ void crypto_nonce_increment(crypto_nonce_t* nonce)
 
 namespace internal
 {
-	int crypto_init(cute_t* cute)
+	int crypto_init()
 	{
 		if (sodium_init() < 0) {
-			error_set(cute, "Unable to initialize crypto library. It is *not safe* to connect to the net.");
+			error_set( "Unable to initialize crypto library. It is *not safe* to connect to the net.");
 			return -1;
 		}
 		return 0;

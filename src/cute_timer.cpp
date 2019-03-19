@@ -19,37 +19,46 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_C_RUNTIME_H
-#define CUTE_C_RUNTIME_H
+#include <cute_timer.h>
 
-#ifndef CUTE_ASSERT
-#	include <assert.h>
-#	define CUTE_ASSERT assert
-#endif
+#include <SDL2/SDL.h>
 
-#ifndef CUTE_MEMCPY
-#	include <string.h>
-#	define CUTE_MEMCPY memcpy
-#endif
+namespace cute
+{
 
-#ifndef CUTE_MEMSET
-#	include <string.h>
-#	define CUTE_MEMSET memset
-#endif
+float calc_dt()
+{
+	static int first = 1;
+	static double inv_freq;
+	static uint64_t prev;
 
-#ifndef CUTE_STRNCPY
-#	include <string.h>
-#	define CUTE_STRNCPY strncpy
-#endif
+	uint64_t now = SDL_GetPerformanceCounter();
 
-#ifndef CUTE_STRLEN
-#	include <string.h>
-#	define CUTE_STRLEN strlen
-#endif
+	if (first) {
+		first = 0;
+		prev = now;
+		inv_freq = 1.0 / (double)SDL_GetPerformanceFrequency();
+	}
 
-#ifndef CUTE_SNPRINTF
-#	include <stdio.h>
-#	define CUTE_SNPRINTF snprintf
-#endif
+	float dt = (float)((double)(now - prev) * inv_freq);
+	prev = now;
+	return dt;
+}
 
-#endif // CUTE_C_RUNTIME_H
+timer_t timer_make()
+{
+	timer_t timer;
+	timer.prev = SDL_GetPerformanceCounter();
+	timer.inv_freq = 1.0 / (double)SDL_GetPerformanceFrequency();
+	return timer;
+}
+
+float timer_dt(timer_t* timer)
+{
+	uint64_t now = SDL_GetPerformanceCounter();
+	float dt = (float)((double)(now - timer->prev) * timer->inv_freq);
+	timer->prev = now;
+	return dt;
+}
+
+}
