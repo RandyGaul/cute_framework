@@ -72,7 +72,7 @@ static CUTE_INLINE file_type_t s_file_type(PHYSFS_FileType type)
 	}
 }
 
-int file_system_stat(const char* virtual_path, cute_file_stat_t* stat)
+int file_system_stat(const char* virtual_path, stat_t* stat)
 {
 	PHYSFS_Stat physfs_stat;
 	if (!PHYSFS_stat(virtual_path, &physfs_stat)) {
@@ -89,7 +89,7 @@ int file_system_stat(const char* virtual_path, cute_file_stat_t* stat)
 	}
 }
 
-cute_file_t* file_system_create_file(const char* virtual_path)
+file_t* file_system_create_file(const char* virtual_path)
 {
 	PHYSFS_file* file = PHYSFS_openWrite(virtual_path);
 	if (!file) {
@@ -101,10 +101,10 @@ cute_file_t* file_system_create_file(const char* virtual_path)
 		PHYSFS_close(file);
 		return NULL;
 	}
-	return (cute_file_t*)file;
+	return (file_t*)file;
 }
 
-cute_file_t* file_system_open_file_for_write(const char* virtual_path)
+file_t* file_system_open_file_for_write(const char* virtual_path)
 {
 	PHYSFS_file* file = PHYSFS_openWrite(virtual_path);
 	if (!file) {
@@ -116,10 +116,10 @@ cute_file_t* file_system_open_file_for_write(const char* virtual_path)
 		PHYSFS_close(file);
 		return NULL;
 	}
-	return (cute_file_t*)file;
+	return (file_t*)file;
 }
 
-cute_file_t* file_system_open_file_for_append(const char* virtual_path)
+file_t* file_system_open_file_for_append(const char* virtual_path)
 {
 	PHYSFS_file* file = PHYSFS_openAppend(virtual_path);
 	if (!file) {
@@ -131,10 +131,10 @@ cute_file_t* file_system_open_file_for_append(const char* virtual_path)
 		PHYSFS_close(file);
 		return NULL;
 	}
-	return (cute_file_t*)file;
+	return (file_t*)file;
 }
 
-cute_file_t* file_system_open_file_for_read(const char* virtual_path)
+file_t* file_system_open_file_for_read(const char* virtual_path)
 {
 	PHYSFS_file* file = PHYSFS_openRead(virtual_path);
 	if (!file) {
@@ -146,10 +146,10 @@ cute_file_t* file_system_open_file_for_read(const char* virtual_path)
 		PHYSFS_close(file);
 		return NULL;
 	}
-	return (cute_file_t*)file;
+	return (file_t*)file;
 }
 
-int file_system_close(cute_file_t* file)
+int file_system_close(file_t* file)
 {
 	if (!PHYSFS_close((PHYSFS_file*)file)) {
 		error_set("Failed to close file.");
@@ -217,37 +217,37 @@ int file_system_file_exists(const char* virtual_path)
 	return PHYSFS_exists(virtual_path) ? 0 : -1;
 }
 
-uint64_t file_system_read(cute_file_t* file, void* buffer, uint64_t bytes)
+uint64_t file_system_read(file_t* file, void* buffer, uint64_t bytes)
 {
 	return PHYSFS_readBytes((PHYSFS_file*)file, buffer, bytes);
 }
 
-uint64_t file_system_write(cute_file_t* file, const void* buffer, uint64_t bytes)
+uint64_t file_system_write(file_t* file, const void* buffer, uint64_t bytes)
 {
 	return PHYSFS_writeBytes((PHYSFS_file*)file, buffer, bytes);
 }
 
-int file_system_eof(cute_file_t* file)
+int file_system_eof(file_t* file)
 {
 	return PHYSFS_eof((PHYSFS_file*)file) ? 0 : -1;
 }
 
-uint64_t file_system_tell(cute_file_t* file)
+uint64_t file_system_tell(file_t* file)
 {
 	return PHYSFS_tell((PHYSFS_file*)file);
 }
 
-int file_system_seek(cute_file_t* file, uint64_t position)
+int file_system_seek(file_t* file, uint64_t position)
 {
 	return PHYSFS_seek((PHYSFS_file*)file, position) ? 0 : -1;
 }
 
-uint64_t file_system_size(cute_file_t* file)
+uint64_t file_system_size(file_t* file)
 {
 	return PHYSFS_fileLength((PHYSFS_file*)file);
 }
 
-int file_system_flush(cute_file_t* file)
+int file_system_flush(file_t* file)
 {
 	if (!PHYSFS_flush((PHYSFS_file*)file)) {
 		error_set("Unable to flush file.");
@@ -259,7 +259,7 @@ int file_system_flush(cute_file_t* file)
 int file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, uint64_t* size, void* user_allocator_context)
 {
 	CUTE_ASSERT(data_ptr);
-	cute_file_t* file = file_system_open_file_for_read(virtual_path);
+	file_t* file = file_system_open_file_for_read(virtual_path);
 	void* data = NULL;
 	CUTE_CHECK(file);
 	uint64_t sz = file_system_size(file);
@@ -280,7 +280,7 @@ cute_error:
 
 int file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, uint64_t size)
 {
-	cute_file_t* file = file_system_open_file_for_read(virtual_path);
+	file_t* file = file_system_open_file_for_read(virtual_path);
 	CUTE_CHECK(file);
 	uint64_t sz = file_system_write(file, data, size);
 	if (sz != size) {
