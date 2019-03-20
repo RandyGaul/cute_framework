@@ -27,7 +27,7 @@
 namespace cute
 {
 
-extern CUTE_API const char* CUTE_CALL file_system_get_backed_specific_error_message();
+extern CUTE_API const char* CUTE_CALL file_system_get_backend_specific_error_message();
 extern CUTE_API const char* CUTE_CALL file_system_get_working_directory();
 extern CUTE_API const char* CUTE_CALL file_system_get_user_directory();
 extern CUTE_API const char* CUTE_CALL file_system_get_actual_path(const char* virtual_path);
