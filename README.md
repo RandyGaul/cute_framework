@@ -121,9 +121,12 @@ Note: This has temporarily become a big TODO list. This list will eventually nee
 	* [ ] d3d9
 	* [ ] GL 3.2
 	* [ ] GLES 2.0
+	* [ ] color and helpers
 * [ ] input
 	* [ ] mouse
+		* [ ] cursor
 	* [ ] keyboard
+	* [ ] gamepad
 	* [ ] text input
 	* [ ] drag n drop file
 * [ ] math
@@ -168,6 +171,12 @@ Note: This has temporarily become a big TODO list. This list will eventually nee
 	* [ ] render data to screen
 * [ ] run on browser
 * [ ] automated release package builder
+* [ ] cmake support
+* [ ] single-file-header packer (still requires shared lib dependencies)
+* [ ] error
+	* [ ] thread local
+	* [x] error strings and handler
+	* [ ] dialogue box
 
 ## Support
 
