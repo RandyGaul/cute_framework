@@ -167,8 +167,10 @@ Note: This has temporarily become a big TODO list. This list will eventually nee
 	* [ ] entity list
 	* [ ] composition mechanism
 * [ ] profile
-	* [ ] capture data
-	* [ ] render data to screen
+	* [ ] record capture data
+	* [ ] render capture data to screen
+	* [ ] print capture data
+	* [ ] interpolate capture data
 * [ ] run on browser
 * [ ] automated release package builder
 * [ ] cmake support
