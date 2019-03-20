@@ -67,7 +67,7 @@ while (cute::is_running(app))
 
 ## Examples
 
-Here are a few examples built with Cute. They also run in the browser, thanks to emscripten!
+Here are a few examples built with Cute.
 
 * Snake
 * Blue Armor-Suit Man
@@ -174,7 +174,6 @@ Note: This has temporarily become a big TODO list. This list will eventually nee
 	* [ ] render capture data to screen
 	* [ ] print capture data
 	* [ ] interpolate capture data
-* [ ] run on browser
 * [ ] automated release package builder
 * [ ] cmake support
 * [ ] single-file-header packer (still requires shared lib dependencies)
