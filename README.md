@@ -77,30 +77,26 @@ Here are a few examples built with Cute. They also run in the browser, thanks to
 
 Cute covers all the low level guts required to build 2D games by implementing the "common slice" of what games typically need the most. This leaves the exciting game implementation up to you! You won't find high level game-specific features here; cute stays lean-and-mean by focusing on knocking out the toughest problems games run into before getting off the ground. Check out the documentation categories.
 
-* [ ] [cute](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute_t.md)
-* [ ] audio
+* [x] [cute](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute_t.md)
+* [x] audio
 * [ ] event
-* [ ] file system
+* [x] file system (DONE)
 * [ ] graphics
-* [ ] input
+* [x] input
 * [ ] math
 * [ ] collision detection
-* [ ] concurrency
-* [ ] time
-* [ ] net
+* [x] concurrency (DONE)
+* [x] time (DONE)
+* [x] net
 * [ ] utf8
 * [ ] serialization
 * [ ] data structures
-* [ ] allocators
+* [x] allocators
 * [ ] ini
 * [ ] camera
 * [ ] logging
 * [ ] entity
 * [ ] profile
-
-* [x] Done
-* [.] WIP
-* [ ] Not started
 
 ## Support
 
