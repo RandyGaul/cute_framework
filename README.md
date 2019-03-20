@@ -91,7 +91,7 @@ Cute covers all the low level guts required to build 2D games by implementing th
 * [ ] utf8
 * [ ] serialization
 * [ ] data structures
-* [x] allocators
+* [x] allocators (DONE)
 * [ ] ini
 * [ ] camera
 * [ ] logging
