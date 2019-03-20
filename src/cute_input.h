@@ -31,25 +31,25 @@ enum key_button_t : int;
 enum mouse_button_t : int;
 enum mouse_click_t : int;
 
-extern CUTE_API int CUTE_CALL key_is_down(cute_t* cute, key_button_t key);
-extern CUTE_API int CUTE_CALL key_is_up(cute_t* cute, key_button_t key);
-extern CUTE_API int CUTE_CALL key_was_pressed(cute_t* cute, key_button_t key);
-extern CUTE_API int CUTE_CALL key_was_released(cute_t* cute, key_button_t key);
+extern CUTE_API int CUTE_CALL key_is_down(app_t* app, key_button_t key);
+extern CUTE_API int CUTE_CALL key_is_up(app_t* app, key_button_t key);
+extern CUTE_API int CUTE_CALL key_was_pressed(app_t* app, key_button_t key);
+extern CUTE_API int CUTE_CALL key_was_released(app_t* app, key_button_t key);
 
-extern CUTE_API int CUTE_CALL mouse_x(cute_t* cute);
-extern CUTE_API int CUTE_CALL mouse_y(cute_t* cute);
+extern CUTE_API int CUTE_CALL mouse_x(app_t* app);
+extern CUTE_API int CUTE_CALL mouse_y(app_t* app);
 
-extern CUTE_API int CUTE_CALL mouse_is_down(cute_t* cute, mouse_button_t button);
-extern CUTE_API int CUTE_CALL mouse_is_up(cute_t* cute, mouse_button_t button);
-extern CUTE_API int CUTE_CALL mouse_was_pressed(cute_t* cute, mouse_button_t button);
-extern CUTE_API int CUTE_CALL mouse_was_released(cute_t* cute, mouse_button_t button);
-extern CUTE_API int CUTE_CALL mouse_wheel_motion(cute_t* cute);
-extern CUTE_API int CUTE_CALL mouse_double_click(cute_t* cute, mouse_button_t button);
+extern CUTE_API int CUTE_CALL mouse_is_down(app_t* app, mouse_button_t button);
+extern CUTE_API int CUTE_CALL mouse_is_up(app_t* app, mouse_button_t button);
+extern CUTE_API int CUTE_CALL mouse_was_pressed(app_t* app, mouse_button_t button);
+extern CUTE_API int CUTE_CALL mouse_was_released(app_t* app, mouse_button_t button);
+extern CUTE_API int CUTE_CALL mouse_wheel_motion(app_t* app);
+extern CUTE_API int CUTE_CALL mouse_double_click(app_t* app, mouse_button_t button);
 
-extern CUTE_API void CUTE_CALL input_text_add_utf8(cute_t* cute, const char* text);
-extern CUTE_API int CUTE_CALL input_text_pop_utf32(cute_t* cute);
-extern CUTE_API int CUTE_CALL input_text_has_data(cute_t* cute);
-extern CUTE_API void CUTE_CALL input_text_clear(cute_t* cute);
+extern CUTE_API void CUTE_CALL input_text_add_utf8(app_t* app, const char* text);
+extern CUTE_API int CUTE_CALL input_text_pop_utf32(app_t* app);
+extern CUTE_API int CUTE_CALL input_text_has_data(app_t* app);
+extern CUTE_API void CUTE_CALL input_text_clear(app_t* app);
 
 enum mouse_click_t : int
 {
@@ -320,7 +320,7 @@ enum key_button_t : int
 
 namespace internal
 {
-	void pump_input_msgs(cute_t* cute);
+	void pump_input_msgs(app_t* app);
 }
 
 }

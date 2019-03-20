@@ -27,8 +27,8 @@
 namespace cute
 {
 
-extern CUTE_API char* CUTE_CALL clipboard_get(cute_t* cute);
-extern CUTE_API int CUTE_CALL clipboard_set(cute_t* cute, const char* string);
+extern CUTE_API char* CUTE_CALL clipboard_get();
+extern CUTE_API int CUTE_CALL clipboard_set(const char* string);
 
 }
 

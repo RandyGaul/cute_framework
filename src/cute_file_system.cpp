@@ -191,7 +191,7 @@ void file_system_free_enumerated_directory(const char** directory_list)
 	PHYSFS_freeList(directory_list);
 }
 
-const char* file_system_get_backed_specific_error_message()
+const char* file_system_get_backend_specific_error_message()
 {
 	return PHYSFS_getLastError();
 }

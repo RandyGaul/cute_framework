@@ -25,16 +25,14 @@
 namespace cute
 {
 
-char* clipboard_get(cute_t* cute)
+char* clipboard_get()
 {
-	CUTE_UNUSED(cute);
 	char* text = SDL_GetClipboardText();
 	return text;
 }
 
-int clipboard_set(cute_t* cute, const char* string)
+int clipboard_set(const char* string)
 {
-	CUTE_UNUSED(cute);
 	int ret = SDL_SetClipboardText(string);
 	return ret;
 }

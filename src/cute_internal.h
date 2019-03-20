@@ -46,7 +46,7 @@ struct mouse_state_t
 	int click_type = 0;
 };
 
-struct cute_t
+struct app_t
 {
 	int running = 1;
 	SDL_Window* window = NULL;

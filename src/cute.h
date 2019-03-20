@@ -27,25 +27,25 @@
 namespace cute
 {
 
-enum cute_options_t
+enum app_options_t
 {
-	CUTE_OPTIONS_NO_GFX               = 0x001,
-	CUTE_OPTIONS_NO_AUDIO             = 0x002,
-	CUTE_OPTIONS_NO_NET               = 0x004,
-	CUTE_OPTIONS_GFX_GL               = 0x008,
-	CUTE_OPTIONS_GFX_GLES             = 0x010,
-	CUTE_OPTIONS_GFX_D3D9             = 0x020,
-	CUTE_OPTIONS_FULLSCREEN           = 0x040,
-	CUTE_OPTIONS_RESIZABLE            = 0x080,
-	CUTE_OPTIONS_WINDOW_POS_CENTERED  = 0x100,
+	APP_OPTIONS_NO_GFX               = 0x001,
+	APP_OPTIONS_NO_AUDIO             = 0x002,
+	APP_OPTIONS_NO_NET               = 0x004,
+	APP_OPTIONS_GFX_GL               = 0x008,
+	APP_OPTIONS_GFX_GLES             = 0x010,
+	APP_OPTIONS_GFX_D3D9             = 0x020,
+	APP_OPTIONS_FULLSCREEN           = 0x040,
+	APP_OPTIONS_RESIZABLE            = 0x080,
+	APP_OPTIONS_WINDOW_POS_CENTERED  = 0x100,
 };
 
-extern CUTE_API cute_t* CUTE_CALL cute_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
-extern CUTE_API void CUTE_CALL cute_destroy(cute_t* cute);
+extern CUTE_API app_t* CUTE_CALL app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
+extern CUTE_API void CUTE_CALL app_destroy(app_t* app);
 
-extern CUTE_API int CUTE_CALL is_running(cute_t* cute);
-extern CUTE_API void CUTE_CALL stop_running(cute_t* cute);
-extern CUTE_API void CUTE_CALL cute_update(cute_t* cute, float dt);
+extern CUTE_API int CUTE_CALL is_running(app_t* app);
+extern CUTE_API void CUTE_CALL stop_running(app_t* app);
+extern CUTE_API void CUTE_CALL app_update(app_t* app, float dt);
 
 }
 

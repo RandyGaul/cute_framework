@@ -125,7 +125,7 @@ static void s_stream_wav_task_fn(void* param)
 	audio_param->user_promise.invoke(audio ? PROMISE_STATE_OK : PROMISE_STATE_ERROR, audio);
 }
 
-void audio_stream_ogg(cute_t* cute, const char* path, promise_t promise, void* user_allocator_context)
+void audio_stream_ogg(app_t* app, const char* path, promise_t promise, void* user_allocator_context)
 {
 	audio_param_t* param = (audio_param_t*)CUTE_ALLOC(sizeof(audio_param_t), user_allocator_context);
 	CUTE_PLACEMENT_NEW(param) audio_param_t;
@@ -133,11 +133,11 @@ void audio_stream_ogg(cute_t* cute, const char* path, promise_t promise, void* u
 	param->user_promise = promise;
 	param->mem_ctx = user_allocator_context;
 
-	threadpool_add_task(cute->threadpool, s_stream_ogg_task_fn, param);
-	cute_threadpool_kick(cute->threadpool);
+	threadpool_add_task(app->threadpool, s_stream_ogg_task_fn, param);
+	cute_threadpool_kick(app->threadpool);
 }
 
-void audio_stream_wav(cute_t* cute, const char* path, promise_t promise, void* user_allocator_context)
+void audio_stream_wav(app_t* app, const char* path, promise_t promise, void* user_allocator_context)
 {
 	audio_param_t* param = (audio_param_t*)CUTE_ALLOC(sizeof(audio_param_t), user_allocator_context);
 	CUTE_PLACEMENT_NEW(param) audio_param_t;
@@ -145,11 +145,11 @@ void audio_stream_wav(cute_t* cute, const char* path, promise_t promise, void* u
 	param->user_promise = promise;
 	param->mem_ctx = user_allocator_context;
 
-	threadpool_add_task(cute->threadpool, s_stream_wav_task_fn, param);
-	cute_threadpool_kick(cute->threadpool);
+	threadpool_add_task(app->threadpool, s_stream_wav_task_fn, param);
+	cute_threadpool_kick(app->threadpool);
 }
 
-void audio_stream_ogg_from_memory(cute_t* cute, void* memory, int byte_count, promise_t promise, void* user_allocator_context)
+void audio_stream_ogg_from_memory(app_t* app, void* memory, int byte_count, promise_t promise, void* user_allocator_context)
 {
 	audio_param_t* param = (audio_param_t*)CUTE_ALLOC(sizeof(audio_param_t), user_allocator_context);
 	CUTE_PLACEMENT_NEW(param) audio_param_t;
@@ -158,11 +158,11 @@ void audio_stream_ogg_from_memory(cute_t* cute, void* memory, int byte_count, pr
 	param->user_promise = promise;
 	param->mem_ctx = user_allocator_context;
 
-	threadpool_add_task(cute->threadpool, s_stream_ogg_task_fn, param);
-	cute_threadpool_kick(cute->threadpool);
+	threadpool_add_task(app->threadpool, s_stream_ogg_task_fn, param);
+	cute_threadpool_kick(app->threadpool);
 }
 
-void audio_stream_wav_from_memory(cute_t* cute, void* memory, int byte_count, promise_t promise, void* user_allocator_context)
+void audio_stream_wav_from_memory(app_t* app, void* memory, int byte_count, promise_t promise, void* user_allocator_context)
 {
 	audio_param_t* param = (audio_param_t*)CUTE_ALLOC(sizeof(audio_param_t), user_allocator_context);
 	CUTE_PLACEMENT_NEW(param) audio_param_t;
@@ -171,8 +171,8 @@ void audio_stream_wav_from_memory(cute_t* cute, void* memory, int byte_count, pr
 	param->user_promise = promise;
 	param->mem_ctx = user_allocator_context;
 
-	threadpool_add_task(cute->threadpool, s_stream_wav_task_fn, param);
-	cute_threadpool_kick(cute->threadpool);
+	threadpool_add_task(app->threadpool, s_stream_wav_task_fn, param);
+	cute_threadpool_kick(app->threadpool);
 }
 
 int audio_destroy(audio_t* audio)
@@ -194,50 +194,50 @@ int audio_ref_count(audio_t* audio_source)
 
 //TODO: Implement music stuff.
 
-int music_play(cute_t* cute, audio_t* audio_source, float fade_in_time, float delay)
+int music_play(app_t* app, audio_t* audio_source, float fade_in_time, float delay)
 {
 	return 0;
 }
 
-void music_stop(cute_t* cute, float fade_out_time)
+void music_stop(app_t* app, float fade_out_time)
 {
 }
 
-void music_pause(cute_t* cute)
+void music_pause(app_t* app)
 {
 }
 
-void music_resume(cute_t* cute)
+void music_resume(app_t* app)
 {
 }
 
-int music_switch_to(cute_t* cute, audio_t* audio_source, float fade_out_time, float fade_in_time)
-{
-	return 0;
-}
-
-int music_crossfade_to(cute_t* cute, audio_t* audio_source, float cross_fade_time)
+int music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, float fade_in_time)
 {
 	return 0;
 }
 
-void music_set_loop(cute_t* cute, int loop)
+int music_crossfade_to(app_t* app, audio_t* audio_source, float cross_fade_time)
+{
+	return 0;
+}
+
+void music_set_loop(app_t* app, int loop)
 {
 }
 
-void music_set_volume(cute_t* cute, float volume)
+void music_set_volume(app_t* app, float volume)
 {
 }
 
-void music_set_pan(cute_t* cute, float pan)
+void music_set_pan(app_t* app, float pan)
 {
 }
 
-void music_pitch(cute_t* cute, float pitch)
+void music_pitch(app_t* app, float pitch)
 {
 }
 
-void sound_play(cute_t* cute, audio_t* audio_source, sound_def_t def)
+void sound_play(app_t* app, audio_t* audio_source, sound_def_t def)
 {
 }
 

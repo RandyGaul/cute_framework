@@ -40,7 +40,7 @@ struct socket_t
 
 struct connection_t
 {
-	cute_t* cute;
+	app_t* app;
 
 	connection_state_t state;
 	const crypto_key_t* public_key;
@@ -449,7 +449,7 @@ int endpoint_equals(endpoint_t a, endpoint_t b)
 
 // -------------------------------------------------------------------------------------------------
 
-connection_t* connection_make(cute_t* cute, endpoint_t endpoint)
+connection_t* connection_make(app_t* app, endpoint_t endpoint)
 {
 	return NULL;
 }

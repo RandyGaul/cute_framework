@@ -32,28 +32,21 @@ struct endpoint_t;
 struct crypto_key_t;
 
 int endpoint_init(endpoint_t* endpoint, const char* address_and_port_string, const crypto_key_t* endpoint_public_key);
-connection_t* connection_make(cute_t* cute, endpoint_t endpoint);
+connection_t* connection_make(app_t* app, endpoint_t endpoint);
 void connection_destroy(connection_t* connection);
 
 enum connection_state_t : int
 {
-	CONNECTION_STATE_SENDING_HELLO,
-	CONNECTION_STATE_SENDING_HELLO_RESPONSE,
-	CONNECTION_STATE_SENDING_HELLO_OK,
-
+	CONNECTION_STATE_CONNECTING,
 	CONNECTION_STATE_CONNECTED,
-
-	CONNECTION_STATE_HELLO_TIMED_OUT,
-	CONNECTION_STATE_CONNECTION_DENIED,
 	CONNECTION_STATE_DISCONNECTED,
-	CONNECTION_STATE_TIMED_OUT,
 };
 
-connection_state_t connection_state_get(connection_t* connection);
+connection_state_t connection_state_get(const connection_t* connection);
 void connection_update(connection_t* connection, float dt);
 
-int send_data(connection_t* connection, void* data, int data_byte_count);
-int send_data_unreliable(connection_t* connection, void* data, int data_byte_count);
+int send_data(connection_t* connection, const void* data, int data_byte_count);
+int send_data_unreliable(connection_t* connection, const void* data, int data_byte_count);
 
 }
 

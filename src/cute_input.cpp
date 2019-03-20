@@ -202,126 +202,126 @@ static int s_map_SDL_keys(int key)
 	return 0;
 }
 
-int key_is_down(cute_t* cute, key_button_t key)
+int key_is_down(app_t* app, key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
-	return cute->keys[key] | cute->keys_prev[key];
+	return app->keys[key] | app->keys_prev[key];
 }
 
-int key_is_up(cute_t* cute, key_button_t key)
+int key_is_up(app_t* app, key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
-	return !cute->keys[key] & !cute->keys_prev[key];
+	return !app->keys[key] & !app->keys_prev[key];
 }
 
-int key_was_pressed(cute_t* cute, key_button_t key)
+int key_was_pressed(app_t* app, key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 
 	float repeat_delay = 0.5f;
 	float repeat_rate = 0.035f;
-	float t = cute->keys_duration[key];
+	float t = app->keys_duration[key];
 	int repeat_count = 0;
 
 	if (t > repeat_delay) {
 		repeat_count = (int)((t - repeat_delay) / repeat_rate);
-		cute->keys_duration[key] -= repeat_count * repeat_rate;
+		app->keys_duration[key] -= repeat_count * repeat_rate;
 	}
 
-	return (cute->keys[key] & !cute->keys_prev[key]) | repeat_count;
+	return (app->keys[key] & !app->keys_prev[key]) | repeat_count;
 }
 
-int key_was_released(cute_t* cute, key_button_t key)
+int key_was_released(app_t* app, key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
-	return !cute->keys[key] & cute->keys_prev[key];
+	return !app->keys[key] & app->keys_prev[key];
 }
 
-int mouse_x(cute_t* cute)
+int mouse_x(app_t* app)
 {
-	return cute->mouse.x;
+	return app->mouse.x;
 }
 
-int mouse_y(cute_t* cute)
+int mouse_y(app_t* app)
 {
-	return cute->mouse.y;
+	return app->mouse.y;
 }
 
-int mouse_is_down(cute_t* cute, mouse_button_t button)
+int mouse_is_down(app_t* app, mouse_button_t button)
 {
 	switch (button)
 	{
-	case MOUSE_BUTTON_LEFT:   return cute->mouse.left_button   | cute->mouse_prev.left_button;
-	case MOUSE_BUTTON_RIGHT:  return cute->mouse.right_button  | cute->mouse_prev.right_button;
-	case MOUSE_BUTTON_MIDDLE: return cute->mouse.middle_button | cute->mouse_prev.middle_button;
+	case MOUSE_BUTTON_LEFT:   return app->mouse.left_button   | app->mouse_prev.left_button;
+	case MOUSE_BUTTON_RIGHT:  return app->mouse.right_button  | app->mouse_prev.right_button;
+	case MOUSE_BUTTON_MIDDLE: return app->mouse.middle_button | app->mouse_prev.middle_button;
 	}
 	return 0;
 }
 
-int mouse_is_up(cute_t* cute, mouse_button_t button)
+int mouse_is_up(app_t* app, mouse_button_t button)
 {
 	switch (button)
 	{
-	case MOUSE_BUTTON_LEFT:   return !cute->mouse.left_button   & !cute->mouse_prev.left_button;
-	case MOUSE_BUTTON_RIGHT:  return !cute->mouse.right_button  & !cute->mouse_prev.right_button;
-	case MOUSE_BUTTON_MIDDLE: return !cute->mouse.middle_button & !cute->mouse_prev.middle_button;
+	case MOUSE_BUTTON_LEFT:   return !app->mouse.left_button   & !app->mouse_prev.left_button;
+	case MOUSE_BUTTON_RIGHT:  return !app->mouse.right_button  & !app->mouse_prev.right_button;
+	case MOUSE_BUTTON_MIDDLE: return !app->mouse.middle_button & !app->mouse_prev.middle_button;
 	}
 	return 0;
 }
 
-int mouse_was_pressed(cute_t* cute, mouse_button_t button)
+int mouse_was_pressed(app_t* app, mouse_button_t button)
 {
 	switch (button)
 	{
-	case MOUSE_BUTTON_LEFT:   return !cute->mouse.left_button   & cute->mouse_prev.left_button;
-	case MOUSE_BUTTON_RIGHT:  return !cute->mouse.right_button  & cute->mouse_prev.right_button;
-	case MOUSE_BUTTON_MIDDLE: return !cute->mouse.middle_button & cute->mouse_prev.middle_button;
+	case MOUSE_BUTTON_LEFT:   return !app->mouse.left_button   & app->mouse_prev.left_button;
+	case MOUSE_BUTTON_RIGHT:  return !app->mouse.right_button  & app->mouse_prev.right_button;
+	case MOUSE_BUTTON_MIDDLE: return !app->mouse.middle_button & app->mouse_prev.middle_button;
 	}
 	return 0;
 }
 
-int mouse_was_released(cute_t* cute, mouse_button_t button)
+int mouse_was_released(app_t* app, mouse_button_t button)
 {
 	switch (button)
 	{
-	case MOUSE_BUTTON_LEFT:   return cute->mouse.left_button   & !cute->mouse_prev.left_button;
-	case MOUSE_BUTTON_RIGHT:  return cute->mouse.right_button  & !cute->mouse_prev.right_button;
-	case MOUSE_BUTTON_MIDDLE: return cute->mouse.middle_button & !cute->mouse_prev.middle_button;
+	case MOUSE_BUTTON_LEFT:   return app->mouse.left_button   & !app->mouse_prev.left_button;
+	case MOUSE_BUTTON_RIGHT:  return app->mouse.right_button  & !app->mouse_prev.right_button;
+	case MOUSE_BUTTON_MIDDLE: return app->mouse.middle_button & !app->mouse_prev.middle_button;
 	}
 	return 0;
 }
 
-int mouse_wheel_motion(cute_t* cute)
+int mouse_wheel_motion(app_t* app)
 {
-	return cute->mouse.wheel_motion;
+	return app->mouse.wheel_motion;
 }
 
-int mouse_double_click(cute_t* cute, mouse_button_t button)
+int mouse_double_click(app_t* app, mouse_button_t button)
 {
-	return mouse_is_down(cute, button) && cute->mouse.click_type == MOUSE_CLICK_DOUBLE;
+	return mouse_is_down(app, button) && app->mouse.click_type == MOUSE_CLICK_DOUBLE;
 }
 
-void input_text_add_utf8(cute_t* cute, const char* text)
+void input_text_add_utf8(app_t* app, const char* text)
 {
 }
 
-int input_text_pop_utf32(cute_t* cute)
-{
-	return 0;
-}
-
-int input_text_has_data(cute_t* cute)
+int input_text_pop_utf32(app_t* app)
 {
 	return 0;
 }
 
-void input_text_clear(cute_t* cute)
+int input_text_has_data(app_t* app)
+{
+	return 0;
+}
+
+void input_text_clear(app_t* app)
 {
 }
 
 namespace internal
 {
-	void pump_input_msgs(cute_t* cute)
+	void pump_input_msgs(app_t* app)
 	{
 	}
 }

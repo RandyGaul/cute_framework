@@ -63,7 +63,7 @@
 namespace cute
 {
 
-struct cute_t;
+struct app_t;
 
 }
 
