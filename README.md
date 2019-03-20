@@ -79,10 +79,10 @@ Cute covers all the low level guts required to build 2D games by implementing th
 
 * [ ] [cute](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute_t.md)
 * [ ] audio
-	* [ ] load wav
-	* [ ] load ogg
-	* [ ] stream wav
-	* [ ] stream ogg
+	* [x] load wav
+	* [x] load ogg
+	* [x] stream wav
+	* [x] stream ogg
 	* [ ] stream then switch ogg
 	* [ ] stream then crossfade ogg
 	* [ ] music
@@ -160,6 +160,7 @@ Cute covers all the low level guts required to build 2D games by implementing th
 * [ ] entity
 	* [ ] vtable
 	* [ ] entity list
+	* [ ] composition mechanism
 * [ ] profile
 	* [ ] capture data
 	* [ ] render data to screen
