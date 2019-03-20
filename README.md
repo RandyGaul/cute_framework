@@ -77,26 +77,92 @@ Here are a few examples built with Cute. They also run in the browser, thanks to
 
 Cute covers all the low level guts required to build 2D games by implementing the "common slice" of what games typically need the most. This leaves the exciting game implementation up to you! You won't find high level game-specific features here; cute stays lean-and-mean by focusing on knocking out the toughest problems games run into before getting off the ground. Check out the documentation categories.
 
-* [x] [cute](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute_t.md)
-* [x] audio
+* [ ] [cute](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute_t.md)
+* [ ] audio
+	* [ ] load wav
+	* [ ] load ogg
+	* [ ] stream wav
+	* [ ] stream ogg
+	* [ ] stream then switch ogg
+	* [ ] stream then crossfade ogg
+	* [ ] music
+	* [ ] sounds
 * [ ] event
-* [x] file system (DONE)
+	* [ ] poll event
+	* [ ] push event
+	* [ ] grab data out of event
+	* [ ] free event data
+* [x] file system
+	* [x] file io
+	* [x] directory/archive mounting
 * [ ] graphics
-* [x] input
+	* [ ] sprite batching
+	* [ ] shader
+	* [ ] vertex/index buffers
+	* [ ] blend states
+	* [ ] fbo (full-screen effect)
+	* [ ] render to texture
+	* [ ] debug rendering (line, shape, frames)
+	* [ ] draw calls
+	* [ ] projection
+	* [ ] textures, wrap mode
+	* [ ] scissor
+	* [ ] viewport, resizing
+	* [ ] pixel upscaling
+	* [ ] frame-based animation
+	* [ ] raster font
+	* [ ] image loading
+	* [ ] pixel upscale shader
+	* [ ] universal MVP in shaders
+	* [ ] CPU culling with DBVH
+	* [ ] matrix helpers
+	* [ ] d3d9
+	* [ ] GL 3.2
+	* [ ] GLES 2.0
+* [ ] input
+	* [ ] mouse
+	* [ ] keyboard
+	* [ ] text input
+	* [ ] drag n drop file
 * [ ] math
 * [ ] collision detection
-* [x] concurrency (DONE)
-* [x] time (DONE)
-* [x] net
-* [ ] utf8
+* [x] concurrency
+* [x] time
+* [ ] net
+	* [ ] connection handhsake
+	* [ ] reliability
+	* [ ] relay server
+		* [ ] broadcast to all, to all but one, to one
+		* [ ] accept new connection
+		* [ ] disconnect client
+		* [ ] look for timed out clients
+		* [ ] thread to pull packets and queue them
+		* [ ] poll server packets (deque)
+	* [x] security
+* [ ] utf8 (for localization support)
 * [ ] serialization
 * [ ] data structures
-* [x] allocators (DONE)
+	* [x] buffer
+	* [ ] hash table
+	* [ ] doubly linked list
+	* [ ] dbvh
+	* [ ] string
+* [x] allocators
 * [ ] ini
 * [ ] camera
+	* [ ] track an entity
+	* [ ] set position
+	* [ ] set destination + lerp time
+	* [ ] state machine driven
 * [ ] logging
+	* [ ] to stderr
+	* [ ] to log file
 * [ ] entity
+	* [ ] vtable
+	* [ ] entity list
 * [ ] profile
+	* [ ] capture data
+	* [ ] render data to screen
 
 ## Support
 
