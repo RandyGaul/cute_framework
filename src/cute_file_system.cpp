@@ -212,6 +212,11 @@ const char* file_system_get_actual_path(const char* virtual_path)
 	return PHYSFS_getRealDir(virtual_path);
 }
 
+void file_system_enable_symlinks()
+{
+	PHYSFS_permitSymbolicLinks(1);
+}
+
 int file_system_file_exists(const char* virtual_path)
 {
 	return PHYSFS_exists(virtual_path) ? 0 : -1;

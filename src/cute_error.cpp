@@ -24,6 +24,7 @@
 namespace cute
 {
 
+// TODO: Thread local on these is probably best.
 static const char* s_error;
 static error_handler_fn* s_handler;
 static void* s_udata;
