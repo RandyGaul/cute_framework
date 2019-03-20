@@ -17,15 +17,14 @@ Working with cute typically involves working with concise code-snippets that ant
 > Rendering a hello world string centered on the screen.
 ```cpp
 #include <cute.h>
-using namespace cute;
 
-cute_t* cute = cute_make("Fancy Window Title", x, y, w, h);
+cute::app_t* app = cute::app_make("Fancy Window Title", x, y, w, h);
 
-while (is_running(cute))
+while (cute::is_running(app))
 {
 	int font_x = 0, font_y = 0;
-	font_print(cute, font_x, font_y, "Hello, world!");
-	cute_update(cute);
+	cute::font_print(app, font_x, font_y, "Hello, world!");
+	cute::app_update(app);
 }
 
 ```
@@ -35,18 +34,17 @@ while (is_running(cute))
 > A ghost appears when pressing space (boo!).
 ```cpp
 #include <cute.h>
-using namespace cute;
 
-cute_t* cute = cute_make("Ghost Goes Boo!", x, y, w, h);
-sprite_t ghost = sprite_make("ghost.png");
+cute::app_t* app = cute::app_make("Ghost Goes Boo!", x, y, w, h);
+cute::sprite_t ghost = cute::sprite_make("ghost.png");
 
-while (is_running(cute))
+while (cute::is_running(app))
 {
-	if (key_is_pressed(KEY_SPACE)) {
-		sprite_push(ghost);
+	if (cute::key_is_pressed(app, cute::KEY_SPACE)) {
+		cute::sprite_push(app, ghost);
 	}
 
-	cute_update(cute);
+	cute::app_update(app);
 }
 ```
 
@@ -55,16 +53,15 @@ while (is_running(cute))
 > An empty screen accompanied by some music.
 ```cpp
 #include <cute.h>
-using namespace cute;
 
-cute_t* cute = cute_make("Did you hear something?", x, y, w, h);
-audio_t* song = audio_load_ogg("rad_song.ogg");
+cute::app_t* app = cute::app_make("Did you hear something?", x, y, w, h);
+cute::audio_t* song = cute::audio_load_ogg("rad_song.ogg");
 
-music_play(song);
+cute::music_play(app, song);
 
-while (is_running(cute))
+while (cute::is_running(app))
 {
-	cute_update(cute);
+	cute::app_update(app);
 }
 ```
 
@@ -80,26 +77,30 @@ Here are a few examples built with Cute. They also run in the browser, thanks to
 
 Cute covers all the low level guts required to build 2D games by implementing the "common slice" of what games typically need the most. This leaves the exciting game implementation up to you! You won't find high level game-specific features here; cute stays lean-and-mean by focusing on knocking out the toughest problems games run into before getting off the ground. Check out the documentation categories.
 
-* [cute](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute_t.md)
-* audio
-* event
-* file system
-* graphics
-* input
-* math
-* collision detection
-* concurrency
-* time
-* net
-* utf8
-* serialization
-* data structures
-* allocators
-* ini
-* camera
-* logging
-* entity
-* profile
+* [ ] [cute](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute_t.md)
+* [ ] audio
+* [ ] event
+* [ ] file system
+* [ ] graphics
+* [ ] input
+* [ ] math
+* [ ] collision detection
+* [ ] concurrency
+* [ ] time
+* [ ] net
+* [ ] utf8
+* [ ] serialization
+* [ ] data structures
+* [ ] allocators
+* [ ] ini
+* [ ] camera
+* [ ] logging
+* [ ] entity
+* [ ] profile
+
+* [x] Done
+* [.] WIP
+* [ ] Not started
 
 ## Support
 
