@@ -134,8 +134,11 @@ Note: This has temporarily become a big TODO list. This list will eventually nee
 * [x] concurrency
 * [x] time
 * [ ] net
+	* [x] socket
 	* [ ] connection handhsake
 	* [ ] reliability
+		* [ ] packet ack and resend
+		* [ ] fragmentation and reassembly
 	* [ ] relay server
 		* [ ] broadcast to all, to all but one, to one
 		* [ ] accept new connection
