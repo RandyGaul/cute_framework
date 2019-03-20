@@ -33,7 +33,7 @@ struct crypto_key_t;
 
 int endpoint_init(endpoint_t* endpoint, const char* address_and_port_string, const crypto_key_t* endpoint_public_key);
 connection_t* connection_make(cute_t* cute, endpoint_t endpoint);
-void connection_destroy(connection_t* dst);
+void connection_destroy(connection_t* connection);
 
 enum connection_state_t : int
 {
@@ -50,9 +50,10 @@ enum connection_state_t : int
 };
 
 connection_state_t connection_state_get(connection_t* connection);
+void connection_update(connection_t* connection, float dt);
 
-int send_data(connection_t* dst, void* data, int data_byte_count);
-int send_data_unreliable(connection_t* dst, void* data, int data_byte_count);
+int send_data(connection_t* connection, void* data, int data_byte_count);
+int send_data_unreliable(connection_t* connection, void* data, int data_byte_count);
 
 }
 

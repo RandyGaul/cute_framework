@@ -26,6 +26,7 @@
 #include <cute_audio.h>
 #include <cute_concurrency.h>
 #include <cute_crypto_utils.h>
+#include <cute_file_system_utils.h>
 #include <cute_net.h>
 
 #include <SDL2/SDL.h>
@@ -37,7 +38,7 @@
 namespace cute
 {
 
-cute_t* cute_make(const char* window_title, int x, int y, int w, int h, uint32_t options, void* user_allocator_context)
+cute_t* cute_make(const char* window_title, int x, int y, int w, int h, uint32_t options, const char* argv0, void* user_allocator_context)
 {
 	cute_t* cute = (cute_t*)CUTE_ALLOC(sizeof(cute_t), user_allocator_context);
 	CUTE_CHECK(cute);
@@ -99,6 +100,8 @@ cute_t* cute_make(const char* window_title, int x, int y, int w, int h, uint32_t
 	if (num_cores) {
 		cute->threadpool = threadpool_create(num_cores, user_allocator_context);
 	}
+
+	CUTE_CHECK(internal::file_system_init(argv0));
 
 	return cute;
 

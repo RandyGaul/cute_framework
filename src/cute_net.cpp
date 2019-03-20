@@ -252,6 +252,8 @@ static int s_socket_receive(socket_t* socket, endpoint_t* from, void* data, int 
 	typedef int socklen_t;
 #endif
 
+	memset(from, 0, sizeof(*from));
+
 	sockaddr_storage sockaddr_from;
 	socklen_t from_length = sizeof(sockaddr_from);
 	int result = recvfrom(socket->handle, (char*)data, byte_count, 0, (sockaddr*)&sockaddr_from, &from_length);
@@ -439,6 +441,9 @@ int endpoint_equals(endpoint_t a, endpoint_t b)
 		return 0;
 	}
 
+	// TODO:
+	// Look at keys?
+
 	return 1;
 }
 
@@ -449,8 +454,27 @@ connection_t* connection_make(cute_t* cute, endpoint_t endpoint)
 	return NULL;
 }
 
-void connection_destroy(connection_t* dst)
+void connection_destroy(connection_t* connection)
 {
+}
+
+connection_state_t connection_state_get(connection_t* connection)
+{
+	return connection->state;
+}
+
+void connection_update(connection_t* connection, float dt)
+{
+}
+
+int send_data(connection_t* connection, void* data, int data_byte_count)
+{
+	return -1;
+}
+
+int send_data_unreliable(connection_t* connection, void* data, int data_byte_count)
+{
+	return -1;
 }
 
 namespace internal

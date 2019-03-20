@@ -56,6 +56,10 @@
 
 #include <stdint.h>
 
+#define CUTE_KB 1024
+#define CUTE_MB (CUTE_KB * CUTE_KB)
+#define CUTE_GB (CUTE_MB * CUTE_MB)
+
 namespace cute
 {
 

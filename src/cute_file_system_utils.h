@@ -19,25 +19,24 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_TIMER_H
-#define CUTE_TIMER_H
+#ifndef CUTE_FILE_SYSTEM_UTILS_H
+#define CUTE_FILE_SYSTEM_UTILS_H
 
 #include <cute_defines.h>
 
 namespace cute
 {
 
-extern CUTE_API float CUTE_CALL calc_dt();
+extern CUTE_API const char* CUTE_CALL file_system_get_backed_specific_error_message();
+extern CUTE_API const char* CUTE_CALL file_system_get_working_directory();
+extern CUTE_API const char* CUTE_CALL file_system_get_user_directory();
+extern CUTE_API const char* CUTE_CALL file_system_get_actual_path(const char* virtual_path);
 
-struct timer_t
+namespace internal
 {
-	double inv_freq;
-	uint64_t prev;
-};
-
-timer_t timer_make();
-float timer_dt(timer_t* timer);
+	int file_system_init(const char* argv0);
+}
 
 }
 
-#endif // CUTE_TIMER_H
+#endif // CUTE_FILE_SYSTEM_UTILS_H
