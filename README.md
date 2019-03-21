@@ -117,7 +117,8 @@ Note: This has temporarily become a big TODO list. This list will eventually nee
 	* [ ] pixel upscale shader
 	* [ ] universal MVP in shaders
 	* [ ] CPU culling with DBVH
-	* [ ] matrix helpers
+
+	* [ ] network simulator	* [ ] matrix helpers
 	* [ ] d3d9
 	* [ ] GL 3.2
 	* [ ] GLES 2.0
@@ -147,6 +148,8 @@ Note: This has temporarily become a big TODO list. This list will eventually nee
 		* [ ] thread to pull packets and queue them
 		* [ ] poll server packets (deque)
 	* [x] security
+	* [ ] network simulator
+	* [ ] packet loss and RTT estimator
 * [ ] utf8 (for localization support)
 * [ ] serialization
 * [ ] data structures
