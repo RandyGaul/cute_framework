@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <cute.h>
-#include <cute_internal.h>
+#include <cute_app.h>
+#include <cute_app_internal.h>
 #include <cute_alloc.h>
 #include <cute_buffer.h>
 #include <cute_audio.h>

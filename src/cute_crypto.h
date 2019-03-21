@@ -24,8 +24,6 @@
 
 #include <cute_defines.h>
 
-#include <libsodium/sodium.h>
-
 namespace cute
 {
 

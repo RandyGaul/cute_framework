@@ -24,29 +24,31 @@
 
 #include <cute_defines.h>
 
+#define CUTE_PACKET_SIZE_MAX (CUTE_MB + 256)
+
 namespace cute
 {
 
-struct connection_t;
+struct client_t;
 struct endpoint_t;
 struct crypto_key_t;
 
 int endpoint_init(endpoint_t* endpoint, const char* address_and_port_string, const crypto_key_t* endpoint_public_key);
-connection_t* connection_make(app_t* app, endpoint_t endpoint);
-void connection_destroy(connection_t* connection);
+client_t* client_make(app_t* app, endpoint_t endpoint);
+void client_destroy(client_t* client);
 
-enum connection_state_t : int
+enum client_state_t : int
 {
-	CONNECTION_STATE_CONNECTING,
-	CONNECTION_STATE_CONNECTED,
-	CONNECTION_STATE_DISCONNECTED,
+	CLIENT_STATE_CONNECTING,
+	CLIENT_STATE_CONNECTED,
+	CLIENT_STATE_DISCONNECTED,
 };
 
-connection_state_t connection_state_get(const connection_t* connection);
-void connection_update(connection_t* connection, float dt);
+client_state_t client_state_get(const client_t* client);
+void client_update(client_t* client, float dt);
 
-int send_data(connection_t* connection, const void* data, int data_byte_count);
-int send_data_unreliable(connection_t* connection, const void* data, int data_byte_count);
+int client_send_data(client_t* client, const void* data, int data_byte_count);
+int client_send_data_unreliable(client_t* client, const void* data, int data_byte_count);
 
 }
 

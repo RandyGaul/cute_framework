@@ -145,6 +145,7 @@
   <ItemGroup>
     <ClCompile Include="libraries\glad\glad.c" />
     <ClCompile Include="src\cute.cpp" />
+    <ClCompile Include="src\cute_app.cpp" />
     <ClCompile Include="src\cute_audio.cpp" />
     <ClCompile Include="src\cute_buffer.cpp" />
     <ClCompile Include="src\cute_clipboard.cpp" />
@@ -159,6 +160,8 @@
   <ItemGroup>
     <ClInclude Include="libraries\glad\glad.h" />
     <ClInclude Include="libraries\KHR\khrplatform.h" />
+    <ClInclude Include="src\cute_app.h" />
+    <ClInclude Include="src\cute_app_internal.h" />
     <ClInclude Include="src\cute_crypto_utils.h" />
     <ClInclude Include="src\cute.h" />
     <ClInclude Include="src\cute_alloc.h" />
