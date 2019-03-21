@@ -144,7 +144,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="libraries\glad\glad.c" />
-    <ClCompile Include="src\cute.cpp" />
     <ClCompile Include="src\cute_app.cpp" />
     <ClCompile Include="src\cute_audio.cpp" />
     <ClCompile Include="src\cute_buffer.cpp" />

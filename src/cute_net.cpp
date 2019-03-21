@@ -26,6 +26,8 @@
 #include <cute_app_internal.h>
 #include <cute_crypto.h>
 
+#include <cute/cute_serialize.h>
+
 #define CUTE_SEND_BUFFER_SIZE (CUTE_MB * 2)
 #define CUTE_RECEIVE_BUFFER_SIZE (CUTE_MB * 2)
 
@@ -52,6 +54,7 @@ struct client_t
 	client_state_t state;
 	socket_t socket;
 	crypto_key_t session_key;
+	serialize_t* io;
 };
 
 // -------------------------------------------------------------------------------------------------
@@ -462,6 +465,7 @@ client_t* client_make(app_t* app, endpoint_t endpoint)
 	client->state = CLIENT_STATE_CONNECTING;
 	CUTE_CHECK(s_socket_init(&client->socket, endpoint, CUTE_SEND_BUFFER_SIZE, CUTE_RECEIVE_BUFFER_SIZE));
 	client->session_key = crypto_generate_symmetric_key();
+	client->io = serialize_buffer_create(SERIALIZE_READ, NULL, 0, NULL);
 	return client;
 
 cute_error:
@@ -475,7 +479,7 @@ void client_destroy(client_t* client)
 	CUTE_FREE(client, client->app->mem_ctx);
 }
 
-enum packet_type_t
+enum packet_type_t : int
 {
 	PACKET_TYPE_HELLO,
 	PACKET_TYPE_CONNECTION_ACCEPTED,
@@ -497,15 +501,20 @@ static CUTE_INLINE uint64_t s_client_read_sequence_number(void* packet)
 
 static CUTE_INLINE crypto_nonce_t s_nonce_from_sequence(uint64_t sequence)
 {
+	crypto_nonce_t nonce;
+	memset(&nonce, 0, sizeof(nonce));
+	return nonce;
 }
 
 static CUTE_INLINE packet_type_t s_client_packet_type(void* packet)
 {
+	return (packet_type_t)-1;
 }
 
 struct replay_protection_buffer_t;
 int replay_protection(uint64_t sequence, replay_protection_buffer_t* buffer)
 {
+	return -1;
 }
 
 static void* s_client_decrypt_packet(client_t* client, void* packet, int size, packet_type_t* type)
@@ -553,6 +562,9 @@ static void s_client_receive_packets(client_t* client)
 			// A forged or otherwise corrupt/unknown type of packet has appeared.
 			continue;
 		}
+
+		serialize_t* io = client->io;
+		serialize_reset_buffer(io, SERIALIZE_READ, packet, bytes_read);
 
 		switch (type)
 		{

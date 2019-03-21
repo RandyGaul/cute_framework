@@ -26,6 +26,7 @@
 #include <cute_audio.h>
 #include <cute_concurrency.h>
 #include <cute_crypto_utils.h>
+#include <cute_file_system.h>
 #include <cute_file_system_utils.h>
 #include <cute_net.h>
 
@@ -34,6 +35,12 @@
 
 #define CUTE_SOUND_FORCE_SDL
 #include <cute/cute_sound.h>
+
+#define CUTE_SERIALIZE_IMPLEMENTATION
+#define SERIALIZE_UNIT_TESTS
+#define SERIALIZE_FREAD(buffer, element_size, element_count, stream) cute::file_system_read((cute::file_t*)stream, buffer, element_size * element_count)
+#define SERIALIZE_FWRITE(buffer, element_size, element_count, stream) cute::file_system_write((cute::file_t*)stream, buffer, element_size * element_count)
+#include <cute/cute_serialize.h>
 
 namespace cute
 {
