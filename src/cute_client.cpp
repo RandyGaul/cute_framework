@@ -54,6 +54,7 @@ struct client_t
 	float t;
 	client_state_t state;
 	socket_t socket;
+	crypto_key_t server_public_key;
 	crypto_key_t session_key;
 	serialize_t* io;
 	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
@@ -357,12 +358,10 @@ static int s_parse_ipv4_for_port(endpoint_t* endpoint, char* str)
 
 #define CUTE_ENDPOINT_STRING_MAX_LENGTH INET6_ADDRSTRLEN
 
-int endpoint_init(endpoint_t* endpoint, const char* address_and_port_string, const crypto_key_t* endpoint_public_key)
+int endpoint_init(endpoint_t* endpoint, const char* address_and_port_string)
 {
 	CUTE_ASSERT(address_and_port_string);
-	CUTE_ASSERT(endpoint_public_key);
 	memset(endpoint, 0, sizeof(*endpoint));
-	endpoint->public_key = *endpoint_public_key;
 
 	char buffer[CUTE_ENDPOINT_STRING_MAX_LENGTH];
 	CUTE_STRNCPY(buffer, address_and_port_string, CUTE_ENDPOINT_STRING_MAX_LENGTH - 1);
@@ -459,7 +458,7 @@ int endpoint_equals(endpoint_t a, endpoint_t b)
 
 // -------------------------------------------------------------------------------------------------
 
-client_t* client_make(app_t* app, endpoint_t endpoint)
+client_t* client_make(app_t* app, endpoint_t endpoint, const crypto_key_t* server_public_key)
 {
 	client_t* client = (client_t*)CUTE_ALLOC(sizeof(client_t), app->mem_ctx);
 	CUTE_MEMSET(client, 0, sizeof(client_t));
@@ -468,6 +467,7 @@ client_t* client_make(app_t* app, endpoint_t endpoint)
 	CUTE_CHECK(s_socket_init(&client->socket, endpoint, CUTE_SEND_BUFFER_SIZE, CUTE_RECEIVE_BUFFER_SIZE));
 	client->session_key = crypto_generate_symmetric_key();
 	client->io = serialize_buffer_create(SERIALIZE_READ, NULL, 0, NULL);
+	client->server_public_key = *server_public_key;
 	return client;
 
 cute_error:

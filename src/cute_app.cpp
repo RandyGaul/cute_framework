@@ -28,7 +28,7 @@
 #include <cute_crypto_utils.h>
 #include <cute_file_system.h>
 #include <cute_file_system_utils.h>
-#include <cute_net.h>
+#include <cute_net_utils.h>
 
 #include <SDL2/SDL.h>
 #include <glad/glad.h>

@@ -33,7 +33,7 @@ struct client_t;
 struct endpoint_t;
 struct crypto_key_t;
 
-int endpoint_init(endpoint_t* endpoint, const char* address_and_port_string, const crypto_key_t* endpoint_public_key);
+int endpoint_init(endpoint_t* endpoint, const char* address_and_port_string);
 client_t* client_make(app_t* app, endpoint_t endpoint);
 void client_destroy(client_t* client);
 

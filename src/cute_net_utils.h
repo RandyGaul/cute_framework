@@ -56,8 +56,6 @@ struct endpoint_t
 		uint8_t ipv4[4];
 		uint16_t ipv6[8];
 	} u;
-
-	crypto_key_t public_key;
 };
 
 void endpoint_to_string(endpoint_t endpoint, char* buffer, int buffer_size);
