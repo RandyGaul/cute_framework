@@ -60,6 +60,8 @@
 #define CUTE_MB (CUTE_KB * CUTE_KB)
 #define CUTE_GB (CUTE_MB * CUTE_MB)
 
+#define CUTE_SERIALIZE_CHECK(x) do { if ((x) != SERIALIZE_SUCCESS) goto cute_error; } while (0)
+
 namespace cute
 {
 
