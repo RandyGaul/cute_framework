@@ -19,7 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <cute_net.h>
+#include <cute_net_utils.h>
+#include <cute_client.h>
 #include <cute_error.h>
 #include <cute_c_runtime.h>
 #include <cute_alloc.h>
@@ -55,6 +56,7 @@ struct client_t
 	socket_t socket;
 	crypto_key_t session_key;
 	serialize_t* io;
+	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
 };
 
 // -------------------------------------------------------------------------------------------------
@@ -536,7 +538,7 @@ static CUTE_INLINE void s_client_add_packet_to_queue(client_t* client, void* pac
 
 static void s_client_receive_packets(client_t* client)
 {
-	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
+	uint8_t* buffer = client->buffer;
 
 	while (1)
 	{
