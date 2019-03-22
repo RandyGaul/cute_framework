@@ -31,9 +31,9 @@ struct circular_buffer_t
 {
 	int index0 = 0;
 	int index1 = 0;
-	int count = 0;
+	int size_left = 0;
 	int capacity = 0;
-	void* data = NULL;
+	uint8_t* data = NULL;
 	void* user_allocator_context = NULL;
 };
 
@@ -42,7 +42,6 @@ extern CUTE_API void CUTE_CALL circular_buffer_free(circular_buffer_t* buffer);
 
 extern CUTE_API int CUTE_CALL circular_buffer_push(circular_buffer_t* buffer, const void* data, int size);
 extern CUTE_API int CUTE_CALL circular_buffer_pull(circular_buffer_t* buffer, void* data, int size);
-extern CUTE_API void CUTE_CALL circular_buffer_clear(circular_buffer_t* buffer);
 
 }
 

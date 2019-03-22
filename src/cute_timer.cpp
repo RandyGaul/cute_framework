@@ -61,4 +61,11 @@ float timer_dt(timer_t* timer)
 	return dt;
 }
 
+float timer_elapsed(timer_t* timer)
+{
+	uint64_t now = SDL_GetPerformanceCounter();
+	float elapsed = (float)((double)(now - timer->prev) * timer->inv_freq);
+	return elapsed;
+}
+
 }

@@ -26,11 +26,15 @@
 #include <cute_alloc.h>
 #include <cute_app_internal.h>
 #include <cute_crypto.h>
+#include <cute_circular_buffer.h>
 
 #include <cute/cute_serialize.h>
 
-#define CUTE_SEND_BUFFER_SIZE (CUTE_MB * 2)
-#define CUTE_RECEIVE_BUFFER_SIZE (CUTE_MB * 2)
+#define CUTE_SEND_BUFFER_SIZE (2 * CUTE_MB)
+#define CUTE_RECEIVE_BUFFER_SIZE (2 * CUTE_MB)
+#define CUTE_PACKET_QUEUE_MAX_ENTRIES (2 * 1024)
+
+#define CUTE_CLIENT_RECONNECT_SECONDS 4.0f
 
 namespace cute
 {
@@ -47,18 +51,77 @@ struct socket_t
 	endpoint_t endpoint;
 };
 
+struct packet_queue_t
+{
+	int count = 0;
+	int index0 = 0;
+	int index1 = 0;
+	int sizes[CUTE_PACKET_QUEUE_MAX_ENTRIES];
+	uint64_t sequences[CUTE_PACKET_QUEUE_MAX_ENTRIES];
+	circular_buffer_t packets;
+};
+
 struct client_t
 {
 	app_t* app;
 
-	float t;
+	float connect_time;
+	float keep_alive_time;
 	client_state_t state;
 	socket_t socket;
 	crypto_key_t server_public_key;
 	crypto_key_t session_key;
 	serialize_t* io;
+	packet_queue_t packets;
 	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
 };
+
+// -------------------------------------------------------------------------------------------------
+
+static int s_packet_queue_init(packet_queue_t* q, void* mem_ctx)
+{
+	CUTE_PLACEMENT_NEW(q) packet_queue_t;
+	q->packets = circular_buffer_make(CUTE_RECEIVE_BUFFER_SIZE, mem_ctx);
+	if (q->packets.data) return 0;
+	else return -1;
+}
+
+static void s_packet_queue_free(packet_queue_t* q)
+{
+	circular_buffer_free(&q->packets);
+	CUTE_MEMSET(q, 0, sizeof(*q));
+}
+
+static int s_packet_queue_push(packet_queue_t* q, const void* packet, int size, uint64_t sequence)
+{
+	if (q->count >= CUTE_PACKET_QUEUE_MAX_ENTRIES) return -1;
+	if (circular_buffer_push(&q->packets, packet, size)) {
+		return -1;
+	} else {
+		q->count++;
+		int index = (q->index1 + 1) % CUTE_PACKET_QUEUE_MAX_ENTRIES;
+		q->index1 = index;
+		q->sizes[index] = size;
+		q->sequences[index] = sequence;
+		return 0;
+	}
+}
+
+static int s_packet_queue_pull(packet_queue_t* q, void* packet, int* size, uint64_t* sequence)
+{
+	if (q->count <= 0) return -1;
+	int sz = q->sizes[q->index0];
+	if (circular_buffer_pull(&q->packets, packet, sz)) {
+		return -1;
+	} else {
+		q->count--;
+		int index = (q->index0 + 1) % CUTE_PACKET_QUEUE_MAX_ENTRIES;
+		q->index0 = index;
+		*size = q->sizes[index];
+		*sequence = q->sequences[index];
+		return 0;
+	}
+}
 
 // -------------------------------------------------------------------------------------------------
 
@@ -468,9 +531,11 @@ client_t* client_make(app_t* app, endpoint_t endpoint, const crypto_key_t* serve
 	client->session_key = crypto_generate_symmetric_key();
 	client->io = serialize_buffer_create(SERIALIZE_READ, NULL, 0, NULL);
 	client->server_public_key = *server_public_key;
+	CUTE_CHECK(s_packet_queue_init(&client->packets, app->mem_ctx));
 	return client;
 
 cute_error:
+	if (client) s_packet_queue_free(&client->packets);
 	CUTE_FREE(client, app->mem_ctx);
 	return NULL;
 }
@@ -478,6 +543,7 @@ cute_error:
 void client_destroy(client_t* client)
 {
 	s_socket_cleanup(&client->socket);
+	s_packet_queue_free(&client->packets);
 	CUTE_FREE(client, client->app->mem_ctx);
 }
 
@@ -522,10 +588,6 @@ static uint8_t* s_client_open_packet(client_t* client, uint8_t* packet, int size
 	}
 
 	return packet;
-}
-
-static CUTE_INLINE void s_client_add_packet_to_queue(client_t* client, void* packet, int size)
-{
 }
 
 /*
@@ -604,42 +666,80 @@ static void s_client_receive_packets(client_t* client)
 
 		case PACKET_TYPE_USERDATA:
 			if (client->state == CLIENT_STATE_CONNECTED) {
-				s_client_add_packet_to_queue(client, packet, packet_size);
+				CUTE_CHECK(s_packet_queue_push(&client->packets, packet, packet_size, sequence));
 			}
 			break;
 		}
 	}
 
 cute_error:
-	// Skip packet upon any serialization error.
+	// Skip packet upon any errors.
 	return;
 }
 
 static void s_client_send_packets(client_t* client)
 {
-}
-
-void client_update(client_t* client, float dt)
-{
-	client->t += dt;
-
-	s_client_receive_packets(client);
-	s_client_send_packets(client);
-
 	switch (client->state)
 	{
-		// Retry connect.
 	case CLIENT_STATE_CONNECTING:
-		break;
+	{
+		// Retry connect.
+		if (client->connect_time >= CUTE_CLIENT_RECONNECT_SECONDS) {
+			client->connect_time = 0;
+		}
+
+		if (client->connect_time) {
+			break;
+		}
+
+		// Send connect packet.
+
+		/*
+			STEPS
+			write sequence
+			write packet type
+			-- PAYLOAD BEGIN --
+			write symmetric key
+			--  PAYLOAD END  --
+			pad to CUTE_PACKET_SIZE_MAX
+		*/
+
+	}	break;
 
 		// Keep-alive packet.
 	case CLIENT_STATE_CONNECTED:
 		break;
 
 		// No-op.
+	case CLIENT_STATE_CONNECTION_DENIED:
 	case CLIENT_STATE_DISCONNECTED:
 		break;
 	}
+}
+
+static void s_client_run_state_machine(client_t* client)
+{
+	switch (client->state)
+	{
+	case CLIENT_STATE_CONNECTING:
+		break;
+
+	case CLIENT_STATE_CONNECTED:
+		break;
+
+	case CLIENT_STATE_CONNECTION_DENIED:
+	case CLIENT_STATE_DISCONNECTED:
+		break;
+	}
+}
+
+void client_update(client_t* client, float dt)
+{
+	s_client_receive_packets(client);
+	s_client_send_packets(client);
+	s_client_run_state_machine(client);
+	client->connect_time += dt;
+	client->keep_alive_time += dt;
 }
 
 int client_send_data(client_t* client, void* data, int data_byte_count)

@@ -48,7 +48,7 @@ namespace cute
 app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t options, const char* argv0, void* user_allocator_context)
 {
 	app_t* app = (app_t*)CUTE_ALLOC(sizeof(app_t), user_allocator_context);
-	CUTE_CHECK(app);
+	CUTE_CHECK_POINTER(app);
 
 	if (!(options & APP_OPTIONS_NO_GFX)) {
 		SDL_InitSubSystem(SDL_INIT_VIDEO);
@@ -70,7 +70,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	} else {
 		window = SDL_CreateWindow(window_title, x, y, w, h, flags);
 	}
-	CUTE_CHECK(window);
+	CUTE_CHECK_POINTER(window);
 	CUTE_PLACEMENT_NEW(window) app_t;
 	app->window = window;
 	app->mem_ctx = user_allocator_context;

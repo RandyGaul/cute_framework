@@ -19,9 +19,10 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <cute_cicular_buffer.cpp>
-#include <cute_alloc.cpp>
-#include <cute_error.cpp>
+#include <cute_circular_buffer.h>
+#include <cute_alloc.h>
+#include <cute_error.h>
+#include <cute_c_runtime.h>
 
 namespace cute
 {
@@ -30,7 +31,7 @@ circular_buffer_t circular_buffer_make(int initial_size_in_bytes, void* user_all
 {
 	circular_buffer_t buffer;
 	buffer.capacity = initial_size_in_bytes;
-	buffer.data = CUTE_ALLOC(initial_size_in_bytes, user_allocator_context);
+	buffer.data = (uint8_t*)CUTE_ALLOC(initial_size_in_bytes, user_allocator_context);
 	buffer.user_allocator_context = user_allocator_context;
 	return buffer;
 }
@@ -43,55 +44,46 @@ void circular_buffer_free(circular_buffer_t* buffer)
 
 int circular_buffer_push(circular_buffer_t* buffer, const void* data, int size)
 {
-	if (!buffer->data || !buffer->capacity) {
-		error_set("Attempted to push to a circular buffer with no capacit and/or NULL data pointer (make sure to call `circular_buffer_make` first).");
+	if (buffer->size_left < size) {
+		error_set("Failed to push to circular buffer: out of space.");
 		return -1;
 	}
 
-	if (!size) {
-		return 0;
-	}
+	buffer->size_left -= size;
 
-	if (buffer->size < size) {
-		// TODO: Grow.
-	}
-
-	if (buffer->size) {
-		// If the buffer was perfectly filled, without triggering a grow operation, then
-		// index0 == index1. Assert here, after growing, and make sure it is impossible
-		// for the indices to line up perfectly. It is safe to assume a grow operation
-		// would always push indices apart (except for when size is zero, which is handled
-		// in an above if-check).
-		CUTE_ASSERT(buffer->index0 != buffer->index1);
-	}
-
-	if (buffer->index0 < buffer->index1) {
-		int bytes_to_end = buffer->capacity - buffer->index1;
-		if (size <= bytes_to_end) {
-			// 2 memcpy
-		} else {
-			// 1 memcpy
-		}
+	int bytes_to_end = buffer->capacity - buffer->index1;
+	if (buffer->index0 < buffer->index1 && size > bytes_to_end) {
+		CUTE_MEMCPY(buffer->data + buffer->index1, data, bytes_to_end);
+		CUTE_MEMCPY(buffer->data, (uint8_t*)data + bytes_to_end, size - bytes_to_end);
+		buffer->index1 = size - bytes_to_end;
 	} else {
-		// 1 memcpy
+		CUTE_MEMCPY(buffer->data + buffer->index1, data, size);
+		buffer->index1 += size;
 	}
+
+	return 0;
 }
 
 int circular_buffer_pull(circular_buffer_t* buffer, void* data, int size)
 {
-	if (!buffer->data || !buffer->capacity) {
-		error_set("Attempted to push to a circular buffer with no capacit and/or NULL data pointer (make sure to call `circular_buffer_make` first).");
+	if (buffer->capacity - buffer->size_left < size) {
+		error_set("Failed to pull from circular buffer: not enough data.");
 		return -1;
 	}
+
+	buffer->size_left += size;
+
+	int bytes_to_end = buffer->capacity - buffer->index0;
+	if (buffer->index1 < buffer->index0 && size > bytes_to_end) {
+		CUTE_MEMCPY(data, buffer->data + buffer->index0, bytes_to_end);
+		CUTE_MEMCPY((uint8_t*)data + bytes_to_end, buffer->data, size - bytes_to_end);
+		buffer->index0 = size - bytes_to_end;
+	} else {
+		CUTE_MEMCPY(data, buffer->data + buffer->index0, size);
+		buffer->index0 += size;
+	}
+
+	return 0;
 }
 
-void circular_buffer_clear(circular_buffer_t* buffer)
-{
-	buffer->index0 = 0;
-	buffer->index1 = 0;
-	buffer->count = 0;
 }
-
-}
-
-#endif // CUTE_CIRCULAR_BUFFER_H

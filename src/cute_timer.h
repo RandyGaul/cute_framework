@@ -37,6 +37,7 @@ struct timer_t
 
 extern CUTE_API timer_t CUTE_CALL timer_make();
 extern CUTE_API float CUTE_CALL timer_dt(timer_t* timer);
+extern CUTE_API float CUTE_CALL timer_elapsed(timer_t* timer);
 
 }
 

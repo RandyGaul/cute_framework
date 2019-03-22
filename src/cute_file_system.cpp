@@ -266,10 +266,10 @@ int file_system_read_entire_file_to_memory(const char* virtual_path, void** data
 	CUTE_ASSERT(data_ptr);
 	file_t* file = file_system_open_file_for_read(virtual_path);
 	void* data = NULL;
-	CUTE_CHECK(file);
+	CUTE_CHECK_POINTER(file);
 	uint64_t sz = file_system_size(file);
 	data = CUTE_ALLOC(sz, user_allocator_context);
-	CUTE_CHECK(data);
+	CUTE_CHECK_POINTER(data);
 	uint64_t sz_read = file_system_read(file, *data_ptr, sz);
 	*data_ptr = data;
 	if (size) *size = sz_read;
@@ -286,7 +286,7 @@ cute_error:
 int file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, uint64_t size)
 {
 	file_t* file = file_system_open_file_for_read(virtual_path);
-	CUTE_CHECK(file);
+	CUTE_CHECK_POINTER(file);
 	uint64_t sz = file_system_write(file, data, size);
 	if (sz != size) {
 		error_set("Unable to write file to disk.");
