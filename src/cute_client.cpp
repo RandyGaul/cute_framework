@@ -65,9 +65,10 @@ struct client_t
 {
 	app_t* app;
 
+	client_state_t state;
 	float connect_time;
 	float keep_alive_time;
-	client_state_t state;
+	uint64_t sequence;
 	socket_t socket;
 	crypto_key_t server_public_key;
 	crypto_key_t session_key;
@@ -277,13 +278,13 @@ static int s_socket_init(socket_t* socket, endpoint_t endpoint, int send_buffer_
 	return 0;
 }
 
-static int s_socket_send(socket_t* socket, endpoint_t endpoint, const void* data, int byte_count)
+static int s_socket_send(socket_t* socket, const void* data, int byte_count)
 {
-	CUTE_ASSERT(socket);
-	CUTE_ASSERT(socket->handle != 0);
-	CUTE_ASSERT(endpoint.type != ADDRESS_TYPE_NONE);
 	CUTE_ASSERT(data);
 	CUTE_ASSERT(byte_count >= 0);
+	CUTE_ASSERT(socket->handle != 0);
+	endpoint_t endpoint = socket->endpoint;
+	CUTE_ASSERT(endpoint.type != ADDRESS_TYPE_NONE);
 
 	if (endpoint.type == ADDRESS_TYPE_IPV6)
 	{
@@ -527,6 +528,9 @@ client_t* client_make(app_t* app, endpoint_t endpoint, const crypto_key_t* serve
 	CUTE_MEMSET(client, 0, sizeof(client_t));
 	client->app = app;
 	client->state = CLIENT_STATE_CONNECTING;
+	client->connect_time = 0;
+	client->keep_alive_time = 0;
+	client->sequence = 0;
 	CUTE_CHECK(s_socket_init(&client->socket, endpoint, CUTE_SEND_BUFFER_SIZE, CUTE_RECEIVE_BUFFER_SIZE));
 	client->session_key = crypto_generate_symmetric_key();
 	client->io = serialize_buffer_create(SERIALIZE_READ, NULL, 0, NULL);
@@ -679,6 +683,8 @@ cute_error:
 
 static void s_client_send_packets(client_t* client)
 {
+	uint8_t* buffer = client->buffer;
+
 	switch (client->state)
 	{
 	case CLIENT_STATE_CONNECTING:
@@ -694,16 +700,33 @@ static void s_client_send_packets(client_t* client)
 
 		// Send connect packet.
 
-		/*
-			STEPS
-			write sequence
-			write packet type
-			-- PAYLOAD BEGIN --
-			write symmetric key
-			--  PAYLOAD END  --
-			pad to CUTE_PACKET_SIZE_MAX
-		*/
+		serialize_t* io = client->io;
+		serialize_reset_buffer(io, SERIALIZE_WRITE, buffer, CUTE_PACKET_SIZE_MAX);
 
+		// -- PACKET HEADER BEGIN --
+		// Write sequence.
+		uint64_t sequence = client->sequence++;
+		CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &sequence));
+		uint64_t packet_typeu64;
+
+		// Write packet type.
+		CUTE_SERIALIZE_CHECK(serialize_uint64(io, &packet_typeu64, 0, PACKET_TYPE_MAX));
+		packet_type_t type = (packet_type_t)packet_typeu64;
+		// --  PACKET HEADER END  --
+
+		// Write symmetric key.
+		serialize_bytes(io, (char*)&client->session_key, sizeof(client->session_key));
+
+		// Pad zero-bytes to end.
+		CUTE_SERIALIZE_CHECK(serialize_flush(io));
+		int bytes_so_far = serialize_serialized_bytes(io);
+		int pad_bytes = CUTE_PACKET_SIZE_MAX - bytes_so_far;
+		uint32_t bits = 0;
+		for (int i = 0; i < pad_bytes; ++i) serialize_bits(io, &bits, 8);
+		CUTE_ASSERT(serialize_serialized_bytes(io) == CUTE_PACKET_SIZE_MAX);
+
+		// Send the packet off.
+		s_socket_send(&client->socket, buffer, CUTE_PACKET_SIZE_MAX);
 	}	break;
 
 		// Keep-alive packet.
@@ -715,6 +738,13 @@ static void s_client_send_packets(client_t* client)
 	case CLIENT_STATE_DISCONNECTED:
 		break;
 	}
+
+	return;
+
+cute_error:
+	// Immediately set state to disconnected in the event of any errors.
+	client->state = CLIENT_STATE_DISCONNECTED;
+	return;
 }
 
 static void s_client_run_state_machine(client_t* client)
