@@ -30,6 +30,7 @@ namespace cute
 circular_buffer_t circular_buffer_make(int initial_size_in_bytes, void* user_allocator_context)
 {
 	circular_buffer_t buffer;
+	buffer.size_left = initial_size_in_bytes;
 	buffer.capacity = initial_size_in_bytes;
 	buffer.data = (uint8_t*)CUTE_ALLOC(initial_size_in_bytes, user_allocator_context);
 	buffer.user_allocator_context = user_allocator_context;
