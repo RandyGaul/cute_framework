@@ -33,9 +33,11 @@ struct client_t;
 struct endpoint_t;
 struct crypto_key_t;
 
-extern CUTE_API int CUTE_CALL endpoint_init(endpoint_t* endpoint, const char* address_and_port_string);
-extern CUTE_API client_t* CUTE_CALL client_make(app_t* app, endpoint_t endpoint);
+extern CUTE_API client_t* CUTE_CALL client_alloc(void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL client_destroy(client_t* client);
+
+extern CUTE_API int CUTE_CALL client_connect(client_t* client, endpoint_t endpoint, const crypto_key_t* server_public_key);
+extern CUTE_API void CUTE_CALL client_disconnect(client_t* client);
 
 enum client_state_t : int
 {

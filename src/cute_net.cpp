@@ -500,9 +500,6 @@ int endpoint_equals(endpoint_t a, endpoint_t b)
 		return 0;
 	}
 
-	// TODO:
-	// Look at keys?
-
 	return 1;
 }
 
@@ -515,7 +512,7 @@ namespace internal
 #ifdef _MSC_VER
 		WSADATA wsa_data;
 		if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != NO_ERROR) {
-			error_set("Unable to initialize crypto library. It is *not safe* to connect to the net.");
+			error_set("Unable to initialize WSA.");
 			return -1;
 		}
 #else

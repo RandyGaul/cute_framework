@@ -41,8 +41,6 @@ namespace cute
 
 struct client_t
 {
-	app_t* app;
-
 	client_state_t state;
 	float connect_time;
 	float keep_alive_time;
@@ -55,25 +53,18 @@ struct client_t
 	nonce_buffer_t nonce_buffer;
 	packet_queue_t packets;
 	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
+	void* mem_ctx;
 };
 
 // -------------------------------------------------------------------------------------------------
 
-client_t* client_make(app_t* app, endpoint_t endpoint, const crypto_key_t* server_public_key)
+client_t* client_make(void* user_allocator_context)
 {
 	client_t* client = (client_t*)CUTE_ALLOC(sizeof(client_t), app->mem_ctx);
+	CUTE_CHECK_POINTER(client);
 	CUTE_MEMSET(client, 0, sizeof(client_t));
-	client->app = app;
-	client->state = CLIENT_STATE_CONNECTING;
-	client->connect_time = 0;
-	client->keep_alive_time = 0;
-	client->sequence_offset = 0;
-	client->sequence = 0;
-	CUTE_CHECK(socket_init(&client->socket, endpoint, CUTE_CLIENT_SEND_BUFFER_SIZE, CUTE_CLIENT_RECEIVE_BUFFER_SIZE));
-	client->session_key = crypto_generate_symmetric_key();
-	client->io = serialize_buffer_create(SERIALIZE_READ, NULL, 0, NULL);
-	client->server_public_key = *server_public_key;
-	CUTE_CHECK(packet_queue_init(&client->packets, CUTE_CLIENT_RECEIVE_BUFFER_SIZE, app->mem_ctx));
+	client->state = CLIENT_STATE_DISCONNECTED;
+	client->mem_ctx = user_allocator_context;
 	return client;
 
 cute_error:
@@ -84,9 +75,32 @@ cute_error:
 
 void client_destroy(client_t* client)
 {
+	// TODO: Disconnect.
 	socket_cleanup(&client->socket);
 	packet_queue_free(&client->packets);
 	CUTE_FREE(client, client->app->mem_ctx);
+}
+
+int client_connect(client_t* client, endpoint_t endpoint, const crypto_key_t* server_public_key)
+{
+	client->state = CLIENT_STATE_CONNECTING;
+	client->connect_time = 0;
+	client->keep_alive_time = 0;
+	client->sequence_offset = 0;
+	client->sequence = 0;
+	CUTE_CHECK(socket_init(&client->socket, endpoint, CUTE_CLIENT_SEND_BUFFER_SIZE, CUTE_CLIENT_RECEIVE_BUFFER_SIZE));
+	client->session_key = crypto_generate_symmetric_key();
+	client->io = serialize_buffer_create(SERIALIZE_READ, NULL, 0, NULL);
+	CUTE_CHECK(packet_queue_init(&client->packets, CUTE_CLIENT_RECEIVE_BUFFER_SIZE, client->mem_ctx));
+	client->server_public_key = *server_public_key;
+	return 0;
+
+cute_error:
+	return -1;
+}
+
+void client_disconnect(client_t* client)
+{
 }
 
 enum packet_type_t : int
