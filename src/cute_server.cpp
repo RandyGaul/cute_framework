@@ -114,7 +114,7 @@ static void s_server_recieve_packets(server_t* server)
 			break;
 		}
 
-		// Find client by address.
+		// Find client by address. TODO: Need handle table.
 		// Lookup symmetric key (if available).
 		// Otherwise use server private key.
 		// Decrypt packet.
@@ -136,6 +136,7 @@ void server_update(server_t* server, float dt)
 
 int server_poll_event(server_t* server, server_event_t* event)
 {
+	return -1;
 }
 
 void server_disconnect_client(server_t* server, client_id_t id)
