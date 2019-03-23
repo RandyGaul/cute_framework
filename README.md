@@ -178,6 +178,10 @@ Note: This has temporarily become a big TODO list. This list will eventually nee
 	* [ ] print capture data
 	* [ ] interpolate capture data
 * [ ] automated release package builder
+* [ ] build/distro options
+	* [ ] copy + paste all source into project
+	* [ ] build shared libs themselves
+	* [ ] download prebuilt release folder
 * [ ] cmake support
 * [ ] single-file-header packer (still requires shared lib dependencies)
 * [ ] error
