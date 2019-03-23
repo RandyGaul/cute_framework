@@ -150,6 +150,7 @@ Note: This has temporarily become a big TODO list. This list will eventually nee
 	* [x] security
 	* [ ] network simulator
 	* [ ] packet loss and RTT estimator
+	* [ ] loopback client
 * [ ] utf8 (for localization support)
 * [ ] serialization
 * [ ] data structures
