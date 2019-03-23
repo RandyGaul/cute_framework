@@ -38,8 +38,7 @@ extern CUTE_API crypto_key_t CUTE_CALL crypto_generate_symmetric_key();
 extern CUTE_API int CUTE_CALL crypto_encrypt(const crypto_key_t* symmetric_key, uint8_t* data, int byte_count, const crypto_nonce_t* nonce);
 extern CUTE_API int CUTE_CALL crypto_decrypt(const crypto_key_t* symmetric_key, uint8_t* data, int byte_count, const crypto_nonce_t* nonce);
 
-extern CUTE_API crypto_nonce_t CUTE_CALL crypto_nonce_generate();
-extern CUTE_API void CUTE_CALL crypto_nonce_increment(crypto_nonce_t* nonce);
+extern CUTE_API void CUTE_CALL crypto_random_bytes(void* data, int byte_count);
 
 }
 

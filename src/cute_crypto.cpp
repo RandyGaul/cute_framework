@@ -57,16 +57,9 @@ int crypto_decrypt(const crypto_key_t* symmetric_key, uint8_t* data, int byte_co
 	return crypto_secretbox_open_easy(data, data, byte_count, nonce->nonce, symmetric_key->key);
 }
 
-crypto_nonce_t crypto_nonce_generate()
+void crypto_random_bytes(void* data, int byte_count)
 {
-	crypto_nonce_t nonce;
-	randombytes_buf(&nonce, sizeof(crypto_nonce_t));
-	return nonce;
-}
-
-void crypto_nonce_increment(crypto_nonce_t* nonce)
-{
-	sodium_increment(nonce->nonce, sizeof(crypto_nonce_t));
+	randombytes_buf(data, byte_count);
 }
 
 namespace internal

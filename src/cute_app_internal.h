@@ -25,7 +25,8 @@
 #include <cute_buffer.h>
 #include <cute_audio.h>
 
-#define CUTE_CHECK(x) do { if (!(x)) goto cute_error; } while (0)
+#define CUTE_CHECK(x) do { if (x) goto cute_error; } while (0)
+#define CUTE_CHECK_POINTER(x) do { if (!(x)) goto cute_error; } while (0)
 
 struct SDL_Window;
 struct cs_context_t;

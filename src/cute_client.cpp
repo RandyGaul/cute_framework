@@ -33,6 +33,7 @@
 #define CUTE_SEND_BUFFER_SIZE (2 * CUTE_MB)
 #define CUTE_RECEIVE_BUFFER_SIZE (2 * CUTE_MB)
 #define CUTE_PACKET_QUEUE_MAX_ENTRIES (2 * 1024)
+#define CUTE_NONCE_BUFFER_SIZE 256
 
 #define CUTE_CLIENT_RECONNECT_SECONDS 4.0f
 
@@ -61,6 +62,12 @@ struct packet_queue_t
 	circular_buffer_t packets;
 };
 
+struct nonce_buffer_t
+{
+	uint64_t max;
+	uint64_t entries[CUTE_NONCE_BUFFER_SIZE];
+};
+
 struct client_t
 {
 	app_t* app;
@@ -68,14 +75,49 @@ struct client_t
 	client_state_t state;
 	float connect_time;
 	float keep_alive_time;
+	uint64_t sequence_offset;
 	uint64_t sequence;
 	socket_t socket;
 	crypto_key_t server_public_key;
 	crypto_key_t session_key;
 	serialize_t* io;
+	nonce_buffer_t nonce_buffer;
 	packet_queue_t packets;
 	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
 };
+
+// -------------------------------------------------------------------------------------------------
+
+void nonce_buffer_init(nonce_buffer_t* buffer)
+{
+	buffer->max = 0;
+	CUTE_MEMSET(buffer->entries, ~0ULL, sizeof(uint64_t) * CUTE_NONCE_BUFFER_SIZE);
+}
+
+int nonce_cull_duplicate(nonce_buffer_t* buffer, uint64_t sequence, uint64_t seed)
+{
+	if (sequence < buffer->max - CUTE_NONCE_BUFFER_SIZE) {
+		// This is UDP - just drop old packets.
+		return -1;
+	}
+
+	if (buffer->max < sequence) {
+		buffer->max = sequence;
+	}
+
+	uint64_t h = sequence + seed;
+	int index = (int)(h % CUTE_NONCE_BUFFER_SIZE);
+	uint64_t val = buffer->entries[index];
+	int empty_slot = val == ~0ULL;
+	int outdated = val >= sequence;
+	if (empty_slot | !outdated) {
+		buffer->entries[index] = sequence;
+		return 0;
+	} else {
+		// Duplicate or replay packet detected.
+		return -1;
+	}
+}
 
 // -------------------------------------------------------------------------------------------------
 
@@ -530,6 +572,7 @@ client_t* client_make(app_t* app, endpoint_t endpoint, const crypto_key_t* serve
 	client->state = CLIENT_STATE_CONNECTING;
 	client->connect_time = 0;
 	client->keep_alive_time = 0;
+	client->sequence_offset = 0;
 	client->sequence = 0;
 	CUTE_CHECK(s_socket_init(&client->socket, endpoint, CUTE_SEND_BUFFER_SIZE, CUTE_RECEIVE_BUFFER_SIZE));
 	client->session_key = crypto_generate_symmetric_key();
@@ -651,6 +694,9 @@ static void s_client_receive_packets(client_t* client)
 
 		case PACKET_TYPE_CONNECTION_ACCEPTED:
 			if (client->state == CLIENT_STATE_CONNECTING) {
+				// The first sequence from the server is used as the initialization vector for all
+				// subsequent nonces.
+				client->sequence_offset = sequence;
 				client->state = CLIENT_STATE_CONNECTED;
 			}
 			break;
@@ -689,7 +735,6 @@ static void s_client_send_packets(client_t* client)
 	{
 	case CLIENT_STATE_CONNECTING:
 	{
-		// Retry connect.
 		if (client->connect_time >= CUTE_CLIENT_RECONNECT_SECONDS) {
 			client->connect_time = 0;
 		}
@@ -698,21 +743,18 @@ static void s_client_send_packets(client_t* client)
 			break;
 		}
 
-		// Send connect packet.
-
 		serialize_t* io = client->io;
 		serialize_reset_buffer(io, SERIALIZE_WRITE, buffer, CUTE_PACKET_SIZE_MAX);
 
-		// -- PACKET HEADER BEGIN --
-		// Write sequence.
-		uint64_t sequence = client->sequence++;
-		CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &sequence));
-		uint64_t packet_typeu64;
+		// Write version string.
+		const char* version_string = CUTE_PROTOCOL_VERSION;
+		int version_len = CUTE_STRLEN(CUTE_PROTOCOL_VERSION);
+		CUTE_CHECK(serialize_bytes(io, (char*)version_string, version_len + 1));
 
 		// Write packet type.
+		uint64_t packet_typeu64;
 		CUTE_SERIALIZE_CHECK(serialize_uint64(io, &packet_typeu64, 0, PACKET_TYPE_MAX));
 		packet_type_t type = (packet_type_t)packet_typeu64;
-		// --  PACKET HEADER END  --
 
 		// Write symmetric key.
 		serialize_bytes(io, (char*)&client->session_key, sizeof(client->session_key));
@@ -747,27 +789,10 @@ cute_error:
 	return;
 }
 
-static void s_client_run_state_machine(client_t* client)
-{
-	switch (client->state)
-	{
-	case CLIENT_STATE_CONNECTING:
-		break;
-
-	case CLIENT_STATE_CONNECTED:
-		break;
-
-	case CLIENT_STATE_CONNECTION_DENIED:
-	case CLIENT_STATE_DISCONNECTED:
-		break;
-	}
-}
-
 void client_update(client_t* client, float dt)
 {
 	s_client_receive_packets(client);
 	s_client_send_packets(client);
-	s_client_run_state_machine(client);
 	client->connect_time += dt;
 	client->keep_alive_time += dt;
 }

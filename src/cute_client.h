@@ -33,9 +33,9 @@ struct client_t;
 struct endpoint_t;
 struct crypto_key_t;
 
-int endpoint_init(endpoint_t* endpoint, const char* address_and_port_string);
-client_t* client_make(app_t* app, endpoint_t endpoint);
-void client_destroy(client_t* client);
+extern CUTE_API int CUTE_CALL endpoint_init(endpoint_t* endpoint, const char* address_and_port_string);
+extern CUTE_API client_t* CUTE_CALL client_make(app_t* app, endpoint_t endpoint);
+extern CUTE_API void CUTE_CALL client_destroy(client_t* client);
 
 enum client_state_t : int
 {
@@ -45,11 +45,11 @@ enum client_state_t : int
 	CLIENT_STATE_CONNECTION_DENIED,
 };
 
-client_state_t client_state_get(const client_t* client);
-void client_update(client_t* client, float dt);
+extern CUTE_API client_state_t CUTE_CALL client_state_get(const client_t* client);
+extern CUTE_API void CUTE_CALL client_update(client_t* client, float dt);
 
-int client_send_data(client_t* client, const void* data, int data_byte_count);
-int client_send_data_unreliable(client_t* client, const void* data, int data_byte_count);
+extern CUTE_API int CUTE_CALL client_send_data(client_t* client, const void* data, int data_byte_count);
+extern CUTE_API int CUTE_CALL client_send_data_unreliable(client_t* client, const void* data, int data_byte_count);
 
 }
 
