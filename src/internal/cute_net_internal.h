@@ -25,6 +25,18 @@
 #include <cute_defines.h>
 #include <cute_circular_buffer.h>
 
+#ifdef _MSC_VER
+#	include <winsock2.h>   // socket
+#	include <ws2tcpip.h>   // WSA stuff
+#	pragma comment(lib, "ws2_32.lib")
+#else
+#	include <sys/socket.h> // socket
+#	include <fcntl.h>      // fcntl
+#	include <arpa/inet.h>  // inet_pton
+#	include <unistd.h>     // close
+#	include <errno.h>
+#endif
+
 #define CUTE_PACKET_QUEUE_MAX_ENTRIES (2 * 1024)
 #define CUTE_NONCE_BUFFER_SIZE 256
 
