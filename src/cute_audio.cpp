@@ -21,7 +21,8 @@
 
 #include <cute_audio.h>
 #include <cute_alloc.h>
-#include <cute_app_internal.h>
+
+#include <internal/cute_app_internal.h>
 
 #define STB_VORBIS_HEADER_ONLY
 #include <stb/stb_vorbis.c>

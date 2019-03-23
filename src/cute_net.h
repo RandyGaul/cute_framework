@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_NET_UTILS_H
-#define CUTE_NET_UTILS_H
+#ifndef CUTE_NET_H
+#define CUTE_NET_H
 
 #include <cute_crypto.h>
 
@@ -35,6 +35,8 @@
 #	include <unistd.h>     // close
 #	include <errno.h>
 #endif
+
+#define CUTE_PACKET_SIZE_MAX (CUTE_MB + 256)
 
 namespace cute
 {
@@ -61,12 +63,6 @@ struct endpoint_t
 void endpoint_to_string(endpoint_t endpoint, char* buffer, int buffer_size);
 int endpoint_equals(endpoint_t a, endpoint_t b);
 
-namespace internal
-{
-	int net_init();
-	void net_cleanup();
 }
 
-}
-
-#endif // CUTE_NET_UTILS_H
+#endif // CUTE_NET_H

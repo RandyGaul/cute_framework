@@ -23,7 +23,7 @@
 #define CUTE_SERVER_H
 
 #include <cute_defines.h>
-#include <cute_net_utils.h>
+#include <cute_net.h>
 #include <cute_crypto.h>
 
 #define CUTE_SERVER_MAX_CLIENTS 256

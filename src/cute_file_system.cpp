@@ -24,7 +24,9 @@
 #include <cute_error.h>
 #include <cute_c_runtime.h>
 #include <cute_alloc.h>
-#include <cute_app_internal.h>
+
+#include <internal/cute_defines_internal.h>
+#include <internal/cute_app_internal.h>
 
 #include <physfs/physfs.h>
 

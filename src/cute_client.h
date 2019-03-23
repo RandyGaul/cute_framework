@@ -19,12 +19,12 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_NET_H
-#define CUTE_NET_H
+#ifndef CUTE_CLIENT_H
+#define CUTE_CLIENT_H
 
 #include <cute_defines.h>
 
-#define CUTE_PACKET_SIZE_MAX (CUTE_MB + 256)
+#define CUTE_CLIENT_RECONNECT_SECONDS 5.0f
 
 namespace cute
 {
@@ -55,6 +55,4 @@ extern CUTE_API int CUTE_CALL client_send_data_unreliable(client_t* client, cons
 
 }
 
-#include <cute_net_utils.h>
-
-#endif // CUTE_NET_H
+#endif // CUTE_CLIENT_H

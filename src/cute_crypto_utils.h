@@ -37,11 +37,6 @@ struct crypto_nonce_t
 	uint8_t nonce[crypto_box_NONCEBYTES];
 };
 
-namespace internal
-{
-	int crypto_init();
-}
-
 }
 
 #endif // CUTE_CRYPTO_UTILS_H

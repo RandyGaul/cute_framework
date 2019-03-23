@@ -20,7 +20,6 @@
 */
 
 #include <cute_app.h>
-#include <cute_app_internal.h>
 #include <cute_alloc.h>
 #include <cute_buffer.h>
 #include <cute_audio.h>
@@ -28,7 +27,14 @@
 #include <cute_crypto_utils.h>
 #include <cute_file_system.h>
 #include <cute_file_system_utils.h>
-#include <cute_net_utils.h>
+#include <cute_net.h>
+
+#include <internal/cute_defines_internal.h>
+#include <internal/cute_app_internal.h>
+#include <internal/cute_file_system_internal.h>
+#include <internal/cute_net_internal.h>
+#include <internal/cute_crypto_internal.h>
+#include <internal/cute_audio_internal.h>
 
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
@@ -94,6 +100,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	}
 
 	if (!(options & APP_OPTIONS_NO_AUDIO)) {
+		app->playing_sounds = buffer_t(internal::sound_instance_size());
 		app->cs = cs_make_context(NULL, 44100, 5, 1, 0);
 		if (app->cs) cs_spawn_mix_thread(app->cs);
 	}

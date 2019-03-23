@@ -64,11 +64,6 @@ struct sound_def_t
 
 extern CUTE_API void CUTE_CALL sound_play(app_t* app, audio_t* audio_source, sound_def_t def);
 
-namespace internal
-{
-	int sound_instance_size();
-}
-
 }
 
 #endif // CUTE_AUDIO_H

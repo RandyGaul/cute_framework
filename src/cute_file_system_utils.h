@@ -33,11 +33,6 @@ extern CUTE_API const char* CUTE_CALL file_system_get_user_directory();
 extern CUTE_API const char* CUTE_CALL file_system_get_actual_path(const char* virtual_path);
 extern CUTE_API void CUTE_CALL file_system_enable_symlinks();
 
-namespace internal
-{
-	int file_system_init(const char* argv0);
-}
-
 }
 
 #endif // CUTE_FILE_SYSTEM_UTILS_H

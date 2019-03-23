@@ -20,8 +20,9 @@
 */
 
 #include <cute_input.h>
-#include <cute_app_internal.h>
 #include <cute_c_runtime.h>
+
+#include <internal/cute_app_internal.h>
 
 #include <SDL2/SDL.h>
 

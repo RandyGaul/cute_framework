@@ -1,0 +1,53 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="src\cute_clipboard.cpp" />
+    <ClCompile Include="src\cute_error.cpp" />
+    <ClCompile Include="src\cute_audio.cpp" />
+    <ClCompile Include="libraries\glad\glad.c" />
+    <ClCompile Include="src\cute_buffer.cpp" />
+    <ClCompile Include="src\cute_concurrency.cpp" />
+    <ClCompile Include="src\cute_input.cpp" />
+    <ClCompile Include="src\cute_crypto.cpp" />
+    <ClCompile Include="src\cute_timer.cpp" />
+    <ClCompile Include="src\cute_file_system.cpp" />
+    <ClCompile Include="src\cute_app.cpp" />
+    <ClCompile Include="src\cute_client.cpp" />
+    <ClCompile Include="src\cute_server.cpp" />
+    <ClCompile Include="src\cute_circular_buffer.cpp" />
+    <ClCompile Include="src\cute_net.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\cute.h" />
+    <ClInclude Include="src\cute_clipboard.h" />
+    <ClInclude Include="src\cute_error.h" />
+    <ClInclude Include="src\cute_defines.h" />
+    <ClInclude Include="src\cute_alloc.h" />
+    <ClInclude Include="src\cute_audio.h" />
+    <ClInclude Include="libraries\glad\glad.h" />
+    <ClInclude Include="libraries\KHR\khrplatform.h" />
+    <ClInclude Include="src\cute_buffer.h" />
+    <ClInclude Include="src\cute_c_runtime.h" />
+    <ClInclude Include="src\cute_concurrency.h" />
+    <ClInclude Include="src\cute_internal.h" />
+    <ClInclude Include="src\cute_input.h" />
+    <ClInclude Include="src\cute_crypto.h" />
+    <ClInclude Include="src\cute_crypto_utils.h" />
+    <ClInclude Include="src\cute_timer.h" />
+    <ClInclude Include="src\cute_file_system.h" />
+    <ClInclude Include="src\cute_file_system_utils.h" />
+    <ClInclude Include="src\cute_app.h" />
+    <ClInclude Include="src\cute_app_internal.h" />
+    <ClInclude Include="src\cute_client.h" />
+    <ClInclude Include="src\cute_server.h" />
+    <ClInclude Include="src\cute_circular_buffer.h" />
+    <ClInclude Include="src\internal\cute_app_internal.h" />
+    <ClInclude Include="src\internal\cute_audio_internal.h" />
+    <ClInclude Include="src\internal\cute_crypto_internal.h" />
+    <ClInclude Include="src\internal\cute_defines_internal.h" />
+    <ClInclude Include="src\internal\cute_file_system_internal.h" />
+    <ClInclude Include="src\internal\cute_input_internal.h" />
+    <ClInclude Include="src\internal\cute_net_internal.h" />
+    <ClInclude Include="src\cute_net.h" />
+  </ItemGroup>
+</Project>

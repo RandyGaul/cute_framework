@@ -25,9 +25,6 @@
 #include <cute_buffer.h>
 #include <cute_audio.h>
 
-#define CUTE_CHECK(x) do { if (x) goto cute_error; } while (0)
-#define CUTE_CHECK_POINTER(x) do { if (!(x)) goto cute_error; } while (0)
-
 struct SDL_Window;
 struct cs_context_t;
 
@@ -51,7 +48,7 @@ struct app_t
 {
 	int running = 1;
 	SDL_Window* window = NULL;
-	buffer_t playing_sounds = buffer_t(internal::sound_instance_size());
+	buffer_t playing_sounds;
 	audio_t* playing_music = NULL;
 	audio_t* next_music = NULL;
 	cs_context_t* cs = NULL;
