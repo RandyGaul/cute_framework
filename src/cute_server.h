@@ -35,7 +35,15 @@ struct server_t;
 struct server_event_t;
 using client_id_t = uint64_t;
 
-extern CUTE_API server_t* CUTE_CALL server_make(endpoint_t endpoint, const crypto_key_t* public_key, const crypto_key_t* private_key, int max_clients = 64, float client_time_out = 20.0f);
+struct server_config_t
+{
+	int max_clients = 64;
+	float client_timeout_time = 20.0f;
+	int max_incoming_bytes_per_second = 0;
+	int max_outgoing_bytes_per_second = 0;
+};
+
+extern CUTE_API server_t* CUTE_CALL server_make(endpoint_t endpoint, const crypto_key_t* public_key, const crypto_key_t* private_key, const server_config_t* config = NULL);
 extern CUTE_API void CUTE_CALL server_destroy(server_t* server);
 
 extern CUTE_API void CUTE_CALL server_update(server_t* server, float dt);
@@ -89,6 +97,15 @@ struct server_event_t
 	disconnect client function
 	thread to receive packets from socket
 	broadcast funcs - to all, to all but one, to one
+
+	get client data by id
+		endpoint
+		is loopback
+
+	loopback functions
+		send packet
+		recieve packet
+		client userdata
 */
 
 }

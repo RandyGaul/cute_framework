@@ -797,15 +797,21 @@ void client_update(client_t* client, float dt)
 	client->keep_alive_time += dt;
 }
 
-int client_send_data(client_t* client, void* data, int data_byte_count)
+void client_get_packet(client_t* client, void* data, int* size)
+{
+}
+
+int client_send_data(client_t* client, void* data, int size)
 {
 	return -1;
 }
 
-int client_send_data_unreliable(client_t* client, void* data, int data_byte_count)
+int client_send_data_unreliable(client_t* client, void* data, int size)
 {
 	return -1;
 }
+
+// -------------------------------------------------------------------------------------------------
 
 namespace internal
 {

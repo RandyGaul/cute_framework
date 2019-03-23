@@ -48,8 +48,10 @@ enum client_state_t : int
 extern CUTE_API client_state_t CUTE_CALL client_state_get(const client_t* client);
 extern CUTE_API void CUTE_CALL client_update(client_t* client, float dt);
 
-extern CUTE_API int CUTE_CALL client_send_data(client_t* client, const void* data, int data_byte_count);
-extern CUTE_API int CUTE_CALL client_send_data_unreliable(client_t* client, const void* data, int data_byte_count);
+extern CUTE_API void CUTE_CALL client_get_packet(client_t* client, void* data, int* size);
+
+extern CUTE_API int CUTE_CALL client_send_data(client_t* client, const void* data, int size);
+extern CUTE_API int CUTE_CALL client_send_data_unreliable(client_t* client, const void* data, int size);
 
 }
 
