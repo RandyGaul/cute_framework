@@ -36,6 +36,7 @@ struct crypto_key_t;
 extern CUTE_API client_t* CUTE_CALL client_alloc(void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL client_destroy(client_t* client);
 
+// TODO: Loopback support.
 extern CUTE_API int CUTE_CALL client_connect(client_t* client, endpoint_t endpoint, const crypto_key_t* server_public_key, int loopback = 0);
 extern CUTE_API void CUTE_CALL client_disconnect(client_t* client);
 
