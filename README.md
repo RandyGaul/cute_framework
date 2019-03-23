@@ -159,6 +159,7 @@ Note: This has temporarily become a big TODO list. This list will eventually nee
 	* [ ] doubly linked list
 	* [ ] dbvh
 	* [ ] string
+	* [ ] handle table
 * [x] allocators
 * [ ] ini
 * [ ] camera
