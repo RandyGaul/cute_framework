@@ -42,6 +42,7 @@ namespace cute
 struct client_t
 {
 	client_state_t state;
+	int loopback;
 	float connect_time;
 	float keep_alive_time;
 	uint64_t sequence_offset;
@@ -58,7 +59,7 @@ struct client_t
 
 // -------------------------------------------------------------------------------------------------
 
-client_t* client_make(void* user_allocator_context)
+client_t* client_alloc(void* user_allocator_context)
 {
 	client_t* client = (client_t*)CUTE_ALLOC(sizeof(client_t), app->mem_ctx);
 	CUTE_CHECK_POINTER(client);
@@ -81,9 +82,10 @@ void client_destroy(client_t* client)
 	CUTE_FREE(client, client->app->mem_ctx);
 }
 
-int client_connect(client_t* client, endpoint_t endpoint, const crypto_key_t* server_public_key)
+int client_connect(client_t* client, endpoint_t endpoint, const crypto_key_t* server_public_key, int loopback)
 {
 	client->state = CLIENT_STATE_CONNECTING;
+	client->loopback = loopback;
 	client->connect_time = 0;
 	client->keep_alive_time = 0;
 	client->sequence_offset = 0;
@@ -118,6 +120,11 @@ enum packet_type_t : int
 client_state_t client_state_get(client_t* client)
 {
 	return client->state;
+}
+
+int client_is_loopback(const client_t* client)
+{
+	return client->loopback;
 }
 
 struct replay_protection_buffer_t;

@@ -57,6 +57,9 @@ extern CUTE_API void CUTE_CALL server_broadcast_to_all_clients(server_t* server,
 extern CUTE_API void CUTE_CALL server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, client_id_t id, int reliable);
 extern CUTE_API void CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, client_id_t id, int reliable);
 
+struct client_t;
+extern CUTE_API void CUTE_CALL server_connect_loopback_client(client_t* client);
+
 enum server_event_type_t
 {
 	SERVER_EVENT_TYPE_NEW_CONNECTION,

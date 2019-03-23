@@ -36,8 +36,13 @@ struct crypto_key_t;
 extern CUTE_API client_t* CUTE_CALL client_alloc(void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL client_destroy(client_t* client);
 
-extern CUTE_API int CUTE_CALL client_connect(client_t* client, endpoint_t endpoint, const crypto_key_t* server_public_key);
+extern CUTE_API int CUTE_CALL client_connect(client_t* client, endpoint_t endpoint, const crypto_key_t* server_public_key, int loopback = 0);
 extern CUTE_API void CUTE_CALL client_disconnect(client_t* client);
+
+extern CUTE_API void CUTE_CALL client_update(client_t* client, float dt);
+extern CUTE_API void CUTE_CALL client_get_packet(client_t* client, void* data, int* size);
+extern CUTE_API int CUTE_CALL client_send_data(client_t* client, const void* data, int size);
+extern CUTE_API int CUTE_CALL client_send_data_unreliable(client_t* client, const void* data, int size);
 
 enum client_state_t : int
 {
@@ -48,12 +53,7 @@ enum client_state_t : int
 };
 
 extern CUTE_API client_state_t CUTE_CALL client_state_get(const client_t* client);
-extern CUTE_API void CUTE_CALL client_update(client_t* client, float dt);
-
-extern CUTE_API void CUTE_CALL client_get_packet(client_t* client, void* data, int* size);
-
-extern CUTE_API int CUTE_CALL client_send_data(client_t* client, const void* data, int size);
-extern CUTE_API int CUTE_CALL client_send_data_unreliable(client_t* client, const void* data, int size);
+extern CUTE_API int CUTE_CALL client_is_loopback(const client_t* client);
 
 }
 
