@@ -117,7 +117,8 @@ Note: This has temporarily become a big TODO list. This list will eventually nee
 	* [ ] pixel upscale shader
 	* [ ] universal MVP in shaders
 	* [ ] CPU culling with DBVH
-	* [ ] network simulator	* [ ] matrix helpers
+	* [ ] network simulator
+	* [ ] matrix helpers
 	* [ ] d3d9
 	* [ ] GL 3.2
 	* [ ] GLES 2.0
