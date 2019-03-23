@@ -30,6 +30,7 @@ namespace cute
 circular_buffer_t circular_buffer_make(int initial_size_in_bytes, void* user_allocator_context)
 {
 	circular_buffer_t buffer;
+	buffer.size_left = initial_size_in_bytes;
 	buffer.capacity = initial_size_in_bytes;
 	buffer.data = (uint8_t*)CUTE_ALLOC(initial_size_in_bytes, user_allocator_context);
 	buffer.user_allocator_context = user_allocator_context;
@@ -49,8 +50,6 @@ int circular_buffer_push(circular_buffer_t* buffer, const void* data, int size)
 		return -1;
 	}
 
-	buffer->size_left -= size;
-
 	int bytes_to_end = buffer->capacity - buffer->index1;
 	if (buffer->index0 < buffer->index1 && size > bytes_to_end) {
 		CUTE_MEMCPY(buffer->data + buffer->index1, data, bytes_to_end);
@@ -60,6 +59,8 @@ int circular_buffer_push(circular_buffer_t* buffer, const void* data, int size)
 		CUTE_MEMCPY(buffer->data + buffer->index1, data, size);
 		buffer->index1 += size;
 	}
+
+	buffer->size_left -= size;
 
 	return 0;
 }
@@ -71,8 +72,6 @@ int circular_buffer_pull(circular_buffer_t* buffer, void* data, int size)
 		return -1;
 	}
 
-	buffer->size_left += size;
-
 	int bytes_to_end = buffer->capacity - buffer->index0;
 	if (buffer->index1 < buffer->index0 && size > bytes_to_end) {
 		CUTE_MEMCPY(data, buffer->data + buffer->index0, bytes_to_end);
@@ -82,6 +81,8 @@ int circular_buffer_pull(circular_buffer_t* buffer, void* data, int size)
 		CUTE_MEMCPY(data, buffer->data + buffer->index0, size);
 		buffer->index0 += size;
 	}
+
+	buffer->size_left += size;
 
 	return 0;
 }
