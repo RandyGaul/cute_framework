@@ -6,6 +6,7 @@
   <ItemGroup>
     <ClInclude Include="test\test_handle.h" />
     <ClInclude Include="test\test_harness.h" />
+    <ClInclude Include="test\test_circular_buffer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shared_libs\physfs.dll" />

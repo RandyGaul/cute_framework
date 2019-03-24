@@ -23,6 +23,7 @@
 #include <test_harness.h>
 
 #include <test_handle.h>
+#include <test_circular_buffer.h>
 
 int main(int argc, const char** argv)
 {
@@ -35,15 +36,28 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_handle_large_loop),
 		CUTE_TEST_CASE_ENTRY(test_handle_large_loop_and_free),
 		CUTE_TEST_CASE_ENTRY(test_handle_alloc_too_many),
+		CUTE_TEST_CASE_ENTRY(test_circular_buffer_basic),
+		CUTE_TEST_CASE_ENTRY(test_circular_buffer_fill_up_and_empty),
+		CUTE_TEST_CASE_ENTRY(test_circular_buffer_overflow),
+		CUTE_TEST_CASE_ENTRY(test_circular_buffer_underflow),
+		CUTE_TEST_CASE_ENTRY(test_circular_buffer_two_threads),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
+	int fail_count = 0;
+
+	// TODO: Make cute_mem_leak.h/.cpp to check for memory leaks, and use it in the test harness for each test.
 
 	// Run all tests.
 	if (argc == 1) {
 		for (int i = 0; i < test_count; ++i)
 		{
 			test_t* test = tests + i;
-			do_test(test, i + 1);
+			if (do_test(test, i + 1)) fail_count++;
+		}
+		if (fail_count) {
+			fprintf(CUTE_TEST_IO_STREAM, "\033[31mFAILED\033[0m %d test case%s.\n\n", fail_count, fail_count > 1 ? "s" : "");
+		} else {
+			fprintf(CUTE_TEST_IO_STREAM, "All tests \033[32mPASSED\033[0m.\n\n");
 		}
 	} else if (argc == 2) {
 		const char* soak = argv[1];

@@ -55,7 +55,7 @@ void windows_turn_on_console_color()
 }
 #endif
 
-void do_test(test_t* test, int i)
+int do_test(test_t* test, int i)
 {
 	const char* test_name = test->test_name;
 	const char* description = test->description;
@@ -67,6 +67,7 @@ void do_test(test_t* test, int i)
 		fprintf(CUTE_TEST_IO_STREAM, "Error string: %s\n\t", cute_error_str);
 	}
 	fprintf(CUTE_TEST_IO_STREAM, "Result:       %s", result_string);
+	return result;
 }
 
 #define CUTE_TEST_PRINT_FILE_LINE(s) do { fprintf(CUTE_TEST_IO_STREAM, "Extra info:   %s\n\tLine number:  %d\n\tFile:         %s\n\t", s, __LINE__, __FILE__); } while (0)

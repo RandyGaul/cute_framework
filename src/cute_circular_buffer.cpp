@@ -23,6 +23,7 @@
 #include <cute_alloc.h>
 #include <cute_error.h>
 #include <cute_c_runtime.h>
+#include <cute_concurrency.h>
 
 namespace cute
 {
@@ -54,13 +55,13 @@ int circular_buffer_push(circular_buffer_t* buffer, const void* data, int size)
 	if (buffer->index0 < buffer->index1 && size > bytes_to_end) {
 		CUTE_MEMCPY(buffer->data + buffer->index1, data, bytes_to_end);
 		CUTE_MEMCPY(buffer->data, (uint8_t*)data + bytes_to_end, size - bytes_to_end);
-		buffer->index1 = size - bytes_to_end;
+		buffer->index1 = (size - bytes_to_end) % buffer->capacity;
 	} else {
 		CUTE_MEMCPY(buffer->data + buffer->index1, data, size);
-		buffer->index1 += size;
+		buffer->index1 = (buffer->index1 + size) % buffer->capacity;
 	}
 
-	buffer->size_left -= size;
+	atomic_add(&buffer->size_left, -size);
 
 	return 0;
 }
@@ -76,13 +77,13 @@ int circular_buffer_pull(circular_buffer_t* buffer, void* data, int size)
 	if (buffer->index1 < buffer->index0 && size > bytes_to_end) {
 		CUTE_MEMCPY(data, buffer->data + buffer->index0, bytes_to_end);
 		CUTE_MEMCPY((uint8_t*)data + bytes_to_end, buffer->data, size - bytes_to_end);
-		buffer->index0 = size - bytes_to_end;
+		buffer->index0 = (size - bytes_to_end) % buffer->capacity;
 	} else {
 		CUTE_MEMCPY(data, buffer->data + buffer->index0, size);
-		buffer->index0 += size;
+		buffer->index0 = (buffer->index0 + size) % buffer->capacity;
 	}
 
-	buffer->size_left += size;
+	atomic_add(&buffer->size_left, size);
 
 	return 0;
 }
