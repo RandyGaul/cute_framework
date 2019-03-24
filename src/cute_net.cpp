@@ -39,7 +39,7 @@ int packet_queue_init(packet_queue_t* q, int size, void* mem_ctx)
 	else return -1;
 }
 
-void packet_queue_free(packet_queue_t* q)
+void pack_queue_clean_up(packet_queue_t* q)
 {
 	circular_buffer_free(&q->packets);
 	CUTE_MEMSET(q, 0, sizeof(*q));

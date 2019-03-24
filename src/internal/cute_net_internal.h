@@ -72,7 +72,7 @@ struct packet_queue_t
 };
 
 extern CUTE_API int CUTE_CALL packet_queue_init(packet_queue_t* q, int size, void* mem_ctx);
-extern CUTE_API void CUTE_CALL packet_queue_free(packet_queue_t* q);
+extern CUTE_API void CUTE_CALL pack_queue_clean_up(packet_queue_t* q);
 extern CUTE_API int CUTE_CALL packet_queue_push(packet_queue_t* q, const void* packet, int size, uint64_t sequence);
 extern CUTE_API int CUTE_CALL packet_queue_pull(packet_queue_t* q, void* packet, int* size, uint64_t* sequence);
 

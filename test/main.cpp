@@ -49,6 +49,8 @@ int main(int argc, const char** argv)
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;
 
+	// WORKNG HERE: Test packet queue, then socket.
+
 	// TODO: Make cute_mem_leak.h/.cpp to check for memory leaks, and use it in the test harness for each test.
 
 	// Run all tests.
