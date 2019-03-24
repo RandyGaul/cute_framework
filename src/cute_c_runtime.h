@@ -52,4 +52,9 @@
 #	define CUTE_SNPRINTF snprintf
 #endif
 
+#ifndef CUTE_STRCMP
+#	include <string.h>
+#	define CUTE_STRCMP strcmp
+#endif
+
 #endif // CUTE_C_RUNTIME_H

@@ -75,7 +75,7 @@ int handle_table_init(handle_table_t* table, int initial_capacity, void* user_al
 	{
 		handle_internal_t handle;
 		handle.u.data.user_index = i + 1;
-		handle.u.data.table_index = 0;
+		handle.u.data.table_index = i;
 		handle.u.data.generation = 0;
 		handles[i] = handle;
 	}
@@ -134,11 +134,14 @@ void handle_table_free(handle_table_t* table, handle_t handle)
 {
 	// Push handle onto freelist.
 	handle_internal_t h = s_handle(handle);
-	uint16_t table_index = h.u.data.table_index;
-	h.u.data.table_index = table->freelist;
+	uint16_t table_index = h.u.data.user_index;
+	h.u.data.user_index = table->freelist;
 	h.u.data.generation++;
 	table->handles[table_index] = s_handle(h);
 	table->freelist = table_index;
+	table->size--;
 }
+
+// TODO: Make unit tests project.
 
 }

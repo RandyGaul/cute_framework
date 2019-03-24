@@ -1,0 +1,57 @@
+#include <cute_error.h>
+
+typedef int (test_fn)();
+
+struct test_t
+{
+	const char* test_name;
+	const char* description;
+	test_fn* fn_ptr;
+};
+
+#ifndef CUTE_TEST_IO_STREAM
+#	include <stdio.h>
+#	define CUTE_TEST_IO_STREAM stderr
+#endif
+
+#ifdef _MSC_VER
+#include <Windows.h>
+
+// At the time of writing, this define requires fairly recent windows version, so it's
+// safest to just define it ourselves... Should be harmless!
+#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
+#	define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#endif
+
+// https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
+void windows_turn_on_console_color()
+{
+	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
+	DWORD flags = 0;
+	GetConsoleMode(h, &flags);
+	flags |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+	SetConsoleMode(h, flags);
+}
+#endif
+
+void do_test(test_t* test, int i)
+{
+	const char* test_name = test->test_name;
+	const char* description = test->description;
+	fprintf(CUTE_TEST_IO_STREAM, "Running test #%d\n\tName:         %s\n\tDescription:  %s\n\t", i, test_name, description);
+	int result = test->fn_ptr();
+	const char* result_string = result ? "\033[31mFAILED\033[0m\n\n" : "\033[32mPASSED\033[0m\n\n";
+	if (result) {
+		const char* cute_error_str = cute::error_get();
+		fprintf(CUTE_TEST_IO_STREAM, "Error string: %s\n\t", cute_error_str);
+	}
+	fprintf(CUTE_TEST_IO_STREAM, "Result:       %s", result_string);
+}
+
+#define CUTE_TEST_PRINT_FILE_LINE(s) do { fprintf(CUTE_TEST_IO_STREAM, "Extra info:   %s\n\tLine number:  %d\n\tFile:         %s\n\t", s, __LINE__, __FILE__); } while (0)
+#define CUTE_TEST_ASSERT(x) do { if (!(x)) { CUTE_TEST_PRINT_FILE_LINE("Assertion was false."); return -1; } } while (0)
+#define CUTE_TEST_CHECK(x) do { if (x) { CUTE_TEST_PRINT_FILE_LINE("Return code failed check."); return -1; } } while (0)
+#define CUTE_TEST_CHECK_POINTER(x) do { if (!(x)) { CUTE_TEST_PRINT_FILE_LINE("Pointer failed check."); return -1; } } while (0)
+
+#define CUTE_TEST_CASE(function, description) int function(); test_t test_##function = { #function, description, function }
+#define CUTE_TEST_CASE_ENTRY(function) test_##function
