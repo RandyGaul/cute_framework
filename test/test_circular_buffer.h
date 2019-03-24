@@ -174,5 +174,7 @@ int test_circular_buffer_two_threads()
 		circular_buffer_free(&buffer);
 	}
 
+	error_set(NULL);
+
 	return 0;
 }

@@ -36,6 +36,7 @@ struct test_t
 #endif
 
 #ifdef _MSC_VER
+#define _WINSOCKAPI_
 #include <Windows.h>
 
 // At the time of writing, this define requires fairly recent windows version, so it's

@@ -86,7 +86,7 @@ void nonce_buffer_init(nonce_buffer_t* buffer)
 
 int nonce_cull_duplicate(nonce_buffer_t* buffer, uint64_t sequence, uint64_t seed)
 {
-	if (sequence < buffer->max - CUTE_NONCE_BUFFER_SIZE) {
+	if (sequence + CUTE_NONCE_BUFFER_SIZE < buffer->max) {
 		// This is UDP - just drop old packets.
 		return -1;
 	}

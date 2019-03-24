@@ -24,6 +24,7 @@
 
 #include <test_handle.h>
 #include <test_circular_buffer.h>
+#include <test_nonce_buffer.h>
 
 int main(int argc, const char** argv)
 {
@@ -41,6 +42,9 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_circular_buffer_overflow),
 		CUTE_TEST_CASE_ENTRY(test_circular_buffer_underflow),
 		CUTE_TEST_CASE_ENTRY(test_circular_buffer_two_threads),
+		CUTE_TEST_CASE_ENTRY(test_nonce_buffer_valid_packets),
+		CUTE_TEST_CASE_ENTRY(test_nonce_buffer_old_packet_out_of_range),
+		CUTE_TEST_CASE_ENTRY(test_nonce_buffer_duplicate),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

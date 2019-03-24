@@ -23,6 +23,7 @@
 #define CUTE_NET_INTERNAL_H
 
 #include <cute_defines.h>
+#include <cute_net.h>
 #include <cute_circular_buffer.h>
 
 #ifdef _MSC_VER
@@ -55,10 +56,10 @@ struct socket_t
 	endpoint_t endpoint;
 };
 
-void socket_cleanup(socket_t* socket);
-int socket_init(socket_t* socket, endpoint_t endpoint, int send_buffer_size, int receive_buffer_size);
-int socket_send(socket_t* socket, const void* data, int byte_count);
-int socket_receive(socket_t* socket, endpoint_t* from, void* data, int byte_count);
+extern CUTE_API void CUTE_CALL socket_cleanup(socket_t* socket);
+extern CUTE_API int CUTE_CALL socket_init(socket_t* socket, endpoint_t endpoint, int send_buffer_size, int receive_buffer_size);
+extern CUTE_API int CUTE_CALL socket_send(socket_t* socket, const void* data, int byte_count);
+extern CUTE_API int CUTE_CALL socket_receive(socket_t* socket, endpoint_t* from, void* data, int byte_count);
 
 struct packet_queue_t
 {
@@ -70,10 +71,10 @@ struct packet_queue_t
 	circular_buffer_t packets;
 };
 
-int packet_queue_init(packet_queue_t* q, int size, void* mem_ctx);
-void packet_queue_free(packet_queue_t* q);
-int packet_queue_push(packet_queue_t* q, const void* packet, int size, uint64_t sequence);
-int packet_queue_pull(packet_queue_t* q, void* packet, int* size, uint64_t* sequence);
+extern CUTE_API int CUTE_CALL packet_queue_init(packet_queue_t* q, int size, void* mem_ctx);
+extern CUTE_API void CUTE_CALL packet_queue_free(packet_queue_t* q);
+extern CUTE_API int CUTE_CALL packet_queue_push(packet_queue_t* q, const void* packet, int size, uint64_t sequence);
+extern CUTE_API int CUTE_CALL packet_queue_pull(packet_queue_t* q, void* packet, int* size, uint64_t* sequence);
 
 struct nonce_buffer_t
 {
@@ -81,8 +82,8 @@ struct nonce_buffer_t
 	uint64_t entries[CUTE_NONCE_BUFFER_SIZE];
 };
 
-void nonce_buffer_init(nonce_buffer_t* buffer);
-int nonce_cull_duplicate(nonce_buffer_t* buffer, uint64_t sequence, uint64_t seed);
+extern CUTE_API void CUTE_CALL nonce_buffer_init(nonce_buffer_t* buffer);
+extern CUTE_API int CUTE_CALL nonce_cull_duplicate(nonce_buffer_t* buffer, uint64_t sequence, uint64_t seed);
 
 namespace internal
 {
