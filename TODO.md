@@ -72,14 +72,14 @@
 	* [ ] packet loss and RTT estimator
 	* [ ] loopback client
 * [ ] utf8 (for localization support)
-* [ ] serialization
+* [x] serialization
 * [ ] data structures
 	* [x] buffer
 	* [ ] hash table
 	* [ ] doubly linked list
 	* [ ] dbvh
 	* [ ] string
-	* [ ] handle table
+	* [x] handle table
 * [x] allocators
 * [ ] ini
 * [ ] camera
@@ -87,9 +87,6 @@
 	* [ ] set position
 	* [ ] set destination + lerp time
 	* [ ] state machine driven
-* [ ] logging
-	* [ ] to stderr
-	* [ ] to log file
 * [ ] entity
 	* [ ] vtable
 	* [ ] entity list
@@ -99,14 +96,14 @@
 	* [ ] render capture data to screen
 	* [ ] print capture data
 	* [ ] interpolate capture data
-* [ ] automated release package builder
 * [ ] build/distro options
 	* [ ] copy + paste all source into project
 	* [ ] build shared libs themselves
 	* [ ] download prebuilt release folder
-* [x] cmake support
-* [ ] single-file-header packer (still requires shared lib dependencies)
+	* [x] cmake support
+	* [ ] single-file-header packer (still requires shared lib dependencies)
 * [ ] error
 	* [ ] thread local
 	* [x] error strings and handler
 	* [ ] dialogue box
+* [x] unit test harness
