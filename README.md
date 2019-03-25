@@ -130,3 +130,5 @@ Cute has a few external dependencies, linked as shared libraries.
 Cute has a few internal dependencies, built straight from source as apart of Cute.
 * [glad](https://github.com/Dav1dde/glad), used to load OpenGL function pointers on the Windows platform.
 * [PhysicsFS](https://icculus.org/physfs/), used for [virtual file system](https://www.randygaul.net/2019/03/20/virtual-file-systems-in-games/).
+* [STB Vorbis](https://github.com/nothings/stb/blob/master/stb_vorbis.c), for parsing OGG files.
+* [Cute Headers](https://github.com/RandyGaul/cute_headers), used to implement all kinds of things. These headers were implemented by the author of the Cute Framework, and are used to implement the majority of the features in the Cute Framework. These headers are built by embedding the source directly, via single-file header format.

@@ -1,4 +1,22 @@
 
+* [ ] docs
+	* [ ] big list of all enums, structs, functions, defines
+	* [ ] api by category (graphics, collision, file system, audio, net and events, input, utilities, entities and serialization)
+	* [ ] fill out pages for initial release
+	* [ ] tutorials on common subjects
+		* [ ] 1) sprites -> 2) shader -> 3) culling -> 4) animation -> 5) camera (each of these four tutorials builds onto the next)
+		* [ ] input and window
+		* [ ] entities, serialization, and messaging
+		* [ ] collision detection
+		* [ ] response, character controllers (reuse player2d)
+		* [ ] tile broadphase, DBVH broadphase
+		* [ ] chat relay client/server
+	* [ ] Articles (not quite tutorials, but a little more than just a document page)
+		* [ ] event queue and networked games
+		* [ ] integrating Box2D
+		* [ ] localization
+		* [ ] virtual file system, patching, and distribution
+	* [ ] example game
 * [ ] [cute](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute_t.md)
 * [ ] audio
 	* [x] load wav
@@ -91,6 +109,7 @@
 	* [ ] vtable
 	* [ ] entity list
 	* [ ] composition mechanism
+	* [ ] messaging
 * [ ] profile
 	* [ ] record capture data
 	* [ ] render capture data to screen
