@@ -191,6 +191,18 @@ Note: This has temporarily become a big TODO list. This list will eventually nee
 	* [x] error strings and handler
 	* [ ] dialogue box
 
+## Integration into your Project
+
+Cute has a couple options for integration into your project. Which one your pick depends on your preferences. If you are unsure which to pick, go with option #1 since it is the most traditional.
+
+1. Download prebuilt binaries and headers for your platform.
+2. Download the single-file header format of Cute, with prebuilt dependencies.
+3. Download the source code of Cute and run the build scripts yourself.
+
+Options #1 and #2 are nearly identical, except #1 has multiple headers and prebuilt shared libraries, while #2 provides Cute as a single-file header along with libsodium as a prebuilt shared library (which must be linked agianst).
+
+Option #3 should work out-of-the-box for Windows, Linux, Mac OSX, iOS, and Android. Other platforms will require manual tinkering for support.
+
 ## Support
 
 Cute is actively developed and the author, Randy Gaul, uses it for his own games. Just open a [github issue](https://github.com/RandyGaul/cute_framework/issues/new) to ask any questions you might have :)
@@ -201,6 +213,10 @@ Contributions are welcome, so feel free to open a [pull-request](https://github.
 
 ## Dependencies
 
-Users of Cute don't need to think about dependencies at all, since they are packaged up in the distribution of Cute, ready to use out-of-the-box. They are listed here for the curious.
+Cute has a few external dependencies, linked as shared libraries.
+* [SDL2](https://www.libsdl.org/), used for platform handling and GL context creation.
+* [libsodium](https://libsodium.gitbook.io/doc/), used for encryption + authentication.
 
-Cute has very little dependencies, carefully chosen for their high quality. The first is the [SDL2 library](https://www.libsdl.org/), used for platform handling and GL context creation. The second is [libsodium](https://libsodium.gitbook.io/doc/), is used for security. The third is [glad](https://github.com/Dav1dde/glad) used to load OpenGL function pointers on the Windows platform.
+Cute has a few internal dependencies, built straight from source as apart of Cute.
+* [glad](https://github.com/Dav1dde/glad), used to load OpenGL function pointers on the Windows platform.
+* [PhysicsFS](https://icculus.org/physfs/), used for [virtual file system](https://www.randygaul.net/2019/03/20/virtual-file-systems-in-games/).
