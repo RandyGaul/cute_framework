@@ -1,15 +1,17 @@
 cmake_minimum_required(VERSION 2.8.4)
 project(cute_framework)
 
+# Force 64bit builds.
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     message(FATAL_ERROR "Only 64-bit build is supported.")
     return()
 endif()
 
+# Common directories for compiler/linker path.
 include_directories(src libraries test)
 link_directories(shared_libs)
 
-# PhysicsFS
+# PhysicsFS shared library.
 set(PHYSFS_SRCS
 	libraries/physfs/physfs_archiver_7z.c
 	libraries/physfs/physfs_archiver_dir.c
@@ -49,7 +51,7 @@ endif()
 
 add_library(physfs ${PHYSFS_SRCS})
 
-# cute
+# Cute Framework shared library.
 set(CUTE_SRCS
 	src/cute_app.cpp
 	src/cute_audio.cpp
@@ -108,7 +110,7 @@ add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS})
 target_link_libraries(cute PRIVATE SDL2 physfs libsodium)
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)
 
-# cute unit tests
+# Cute unit tests executable (optional, defaulted to also build).
 option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
 if (CUTE_FRAMEWORK_BUILD_TESTS)
 
@@ -122,11 +124,14 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_packet_queue.h
 		test/test_socket.h
 	)
-	
+
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
 	target_link_libraries(tests PRIVATE cute)
+
+	# Copy over prebuilt binaries to output directory.
 	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs" $<TARGET_FILE_DIR:tests>)
 
+	# For convenience make tests the startup project in Visual Studio.
 	if (MSVC)
 		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tests)
 	endif()
