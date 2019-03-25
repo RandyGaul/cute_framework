@@ -34,7 +34,8 @@ int test_socket_init_send_recieve_shutdown()
 	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_SYMMETRIC_KEY_MAC_BYTES);
 	CUTE_MEMCPY(message_buffer, message_string, message_length);
 
-	CUTE_TEST_CHECK(socket_send(&socket, message_buffer, message_length));
+	int bytes_sent = socket_send(&socket, message_buffer, message_length);
+	CUTE_TEST_ASSERT(bytes_sent == message_length);
 	CUTE_MEMSET(message_buffer, 0, message_length);
 	CUTE_TEST_ASSERT(CUTE_MEMCMP(message_buffer, message_string, message_length));
 
