@@ -52,26 +52,32 @@ int packet_queue_push(packet_queue_t* q, const void* packet, int size, uint64_t 
 		return -1;
 	} else {
 		q->count++;
-		int index = (q->index1 + 1) % CUTE_PACKET_QUEUE_MAX_ENTRIES;
-		q->index1 = index;
-		q->sizes[index] = size;
-		q->sequences[index] = sequence;
+		q->sizes[q->index1] = size;
+		q->sequences[q->index1] = sequence;
+		q->index1 = (q->index1 + 1) % CUTE_PACKET_QUEUE_MAX_ENTRIES;
 		return 0;
 	}
 }
 
-int packet_queue_pull(packet_queue_t* q, void* packet, int* size, uint64_t* sequence)
+int packet_queue_peek(packet_queue_t* q, int* size)
 {
 	if (q->count <= 0) return -1;
 	int sz = q->sizes[q->index0];
+	*size = sz;
+	return 0;
+}
+
+int packet_queue_pull(packet_queue_t* q, void* packet, int size, uint64_t* sequence)
+{
+	if (q->count <= 0) return -1;
+	int sz = q->sizes[q->index0];
+	if (size != sz) return -1;
 	if (circular_buffer_pull(&q->packets, packet, sz)) {
 		return -1;
 	} else {
 		q->count--;
-		int index = (q->index0 + 1) % CUTE_PACKET_QUEUE_MAX_ENTRIES;
-		q->index0 = index;
-		*size = q->sizes[index];
-		*sequence = q->sequences[index];
+		*sequence = q->sequences[q->index0];
+		q->index0 = (q->index0 + 1) % CUTE_PACKET_QUEUE_MAX_ENTRIES;
 		return 0;
 	}
 }
@@ -132,7 +138,7 @@ int socket_init(socket_t* socket, endpoint_t endpoint, int send_buffer_size, int
 	CUTE_ASSERT(endpoint.type != ADDRESS_TYPE_NONE);
 
 	socket->endpoint = endpoint;
-	socket->handle = ::socket((endpoint.type == ADDRESS_TYPE_IPV6) ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	socket->handle = ::socket(endpoint.type == ADDRESS_TYPE_IPV6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
 #ifdef _MSC_VER
 	if (socket->handle == INVALID_SOCKET)

@@ -158,7 +158,7 @@ int test_circular_buffer_two_threads_pull(void *data)
 CUTE_TEST_CASE(test_circular_buffer_two_threads, "Run a producer and a consumer thread, and validate input/output of the buffer.");
 int test_circular_buffer_two_threads()
 {
-	for (int iters = 0; iters < 100; ++iters)
+	for (int iters = 0; iters < 10; ++iters)
 	{
 		circular_buffer_t buffer = circular_buffer_make(sizeof(int) * 32);
 		CUTE_TEST_CHECK_POINTER(buffer.data);

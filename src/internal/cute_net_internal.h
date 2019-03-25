@@ -56,8 +56,8 @@ struct socket_t
 	endpoint_t endpoint;
 };
 
-extern CUTE_API void CUTE_CALL socket_cleanup(socket_t* socket);
 extern CUTE_API int CUTE_CALL socket_init(socket_t* socket, endpoint_t endpoint, int send_buffer_size, int receive_buffer_size);
+extern CUTE_API void CUTE_CALL socket_cleanup(socket_t* socket);
 extern CUTE_API int CUTE_CALL socket_send(socket_t* socket, const void* data, int byte_count);
 extern CUTE_API int CUTE_CALL socket_receive(socket_t* socket, endpoint_t* from, void* data, int byte_count);
 
@@ -74,7 +74,8 @@ struct packet_queue_t
 extern CUTE_API int CUTE_CALL packet_queue_init(packet_queue_t* q, int size, void* mem_ctx);
 extern CUTE_API void CUTE_CALL pack_queue_clean_up(packet_queue_t* q);
 extern CUTE_API int CUTE_CALL packet_queue_push(packet_queue_t* q, const void* packet, int size, uint64_t sequence);
-extern CUTE_API int CUTE_CALL packet_queue_pull(packet_queue_t* q, void* packet, int* size, uint64_t* sequence);
+extern CUTE_API int CUTE_CALL packet_queue_peek(packet_queue_t* q, int* size);
+extern CUTE_API int CUTE_CALL packet_queue_pull(packet_queue_t* q, void* packet, int size, uint64_t* sequence);
 
 struct nonce_buffer_t
 {
@@ -87,8 +88,8 @@ extern CUTE_API int CUTE_CALL nonce_cull_duplicate(nonce_buffer_t* buffer, uint6
 
 namespace internal
 {
-	int net_init();
-	void net_cleanup();
+	extern CUTE_API int CUTE_CALL net_init();
+	extern CUTE_API void CUTE_CALL net_cleanup();
 }
 
 }

@@ -37,6 +37,11 @@
 #	define CUTE_MEMSET memset
 #endif
 
+#ifndef CUTE_STRCPY
+#	include <string.h>
+#	define CUTE_STRCPY strcpy
+#endif
+
 #ifndef CUTE_STRNCPY
 #	include <string.h>
 #	define CUTE_STRNCPY strncpy
@@ -47,14 +52,19 @@
 #	define CUTE_STRLEN strlen
 #endif
 
-#ifndef CUTE_SNPRINTF
-#	include <stdio.h>
-#	define CUTE_SNPRINTF snprintf
+#ifndef CUTE_MEMCMP
+#	include <string.h>
+#	define CUTE_MEMCMP memcmp
 #endif
 
 #ifndef CUTE_STRCMP
 #	include <string.h>
 #	define CUTE_STRCMP strcmp
+#endif
+
+#ifndef CUTE_SNPRINTF
+#	include <stdio.h>
+#	define CUTE_SNPRINTF snprintf
 #endif
 
 #endif // CUTE_C_RUNTIME_H

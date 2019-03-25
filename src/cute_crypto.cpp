@@ -30,9 +30,9 @@ void crypto_generate_keypair(crypto_key_t* public_key, crypto_key_t* private_key
 	crypto_box_keypair(public_key->key, private_key->key);
 }
 
-int crypto_encrypt_asymmetric(const crypto_key_t* your_public_key, const crypto_key_t* endpoint_private_key, uint8_t* data, int byte_count, const crypto_nonce_t* nonce)
+int crypto_encrypt_asymmetric(const crypto_key_t* endpoint_public_key, const crypto_key_t* your_private_key, uint8_t* data, int byte_count, const crypto_nonce_t* nonce)
 {
-	return crypto_box_easy(data, data, byte_count, nonce->nonce, your_public_key->key, endpoint_private_key->key);
+	return crypto_box_easy(data, data, byte_count, nonce->nonce, endpoint_public_key->key, your_private_key->key);
 }
 
 int crypto_decrypt_asymmetric(const crypto_key_t* endpoint_public_key, const crypto_key_t* your_private_key, uint8_t* data, int byte_count, const crypto_nonce_t* nonce)

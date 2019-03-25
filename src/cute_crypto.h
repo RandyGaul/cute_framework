@@ -24,6 +24,11 @@
 
 #include <cute_defines.h>
 
+#include <libsodium/sodium.h>
+
+#define CUTE_CRYPTO_SYMMETRIC_KEY_MAC_BYTES crypto_secretbox_MACBYTES
+#define CUTE_CRYPTO_ASYMMETRIC_KEY_MAC_BYTES crypto_box_MACBYTES
+
 namespace cute
 {
 
@@ -31,7 +36,7 @@ struct crypto_key_t;
 struct crypto_nonce_t;
 
 extern CUTE_API void CUTE_CALL crypto_generate_keypair(crypto_key_t* public_key, crypto_key_t* private_key);
-extern CUTE_API int CUTE_CALL crypto_encrypt_asymmetric(const crypto_key_t* your_public_key, const crypto_key_t* endpoint_private_key, uint8_t* data, int byte_count, const crypto_nonce_t* nonce);
+extern CUTE_API int CUTE_CALL crypto_encrypt_asymmetric(const crypto_key_t* endpoint_public_key, const crypto_key_t* your_private_key, uint8_t* data, int byte_count, const crypto_nonce_t* nonce);
 extern CUTE_API int CUTE_CALL crypto_decrypt_asymmetric(const crypto_key_t* endpoint_public_key, const crypto_key_t* your_private_key, uint8_t* data, int byte_count, const crypto_nonce_t* nonce);
 
 extern CUTE_API crypto_key_t CUTE_CALL crypto_generate_symmetric_key();

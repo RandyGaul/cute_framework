@@ -69,7 +69,7 @@ client_t* client_alloc(void* user_allocator_context)
 	return client;
 
 cute_error:
-	if (client) packet_queue_free(&client->packets);
+	if (client) pack_queue_clean_up(&client->packets);
 	CUTE_FREE(client, app->mem_ctx);
 	return NULL;
 }
@@ -78,7 +78,7 @@ void client_destroy(client_t* client)
 {
 	// TODO: Disconnect.
 	socket_cleanup(&client->socket);
-	packet_queue_free(&client->packets);
+	pack_queue_clean_up(&client->packets);
 	CUTE_FREE(client, client->app->mem_ctx);
 }
 

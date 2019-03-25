@@ -8,6 +8,9 @@
     <ClInclude Include="test\test_harness.h" />
     <ClInclude Include="test\test_circular_buffer.h" />
     <ClInclude Include="test\test_nonce_buffer.h" />
+    <ClInclude Include="test\test_crypto.h" />
+    <ClInclude Include="test\test_packet_queue.h" />
+    <ClInclude Include="test\test_socket.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shared_libs\physfs.dll" />

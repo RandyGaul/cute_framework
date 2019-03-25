@@ -19,21 +19,33 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_ALLOC_H
-#define CUTE_ALLOC_H
+#include <internal/cute_net_internal.h>
 
-#if !defined(CUTE_ALLOC) && !defined(CUTE_FREE)
-#	ifdef _MSC_VER
-#		define _CRTDBG_MAP_ALLOC
-#		include <crtdbg.h>
-#	endif
-#	include <stdlib.h>
-#	define CUTE_ALLOC(size, user_ctx) malloc(size)
-#	define CUTE_FREE(ptr, user_ctx) free(ptr)
-#endif
+CUTE_TEST_CASE(test_packet_queue_basic, "Basic use-case example, push and pull a few packets.");
+int test_packet_queue_basic()
+{
+	packet_queue_t q;
+	CUTE_TEST_CHECK(packet_queue_init(&q, 1024, NULL));
 
-enum cute_dummy_enum_t { CUTE_DUMMY_ENUM };
-inline void* operator new(size_t, cute_dummy_enum_t, void* ptr) { return ptr; }
-#define CUTE_PLACEMENT_NEW(ptr) new(CUTE_DUMMY_ENUM, ptr)
+	uint64_t data = 0x1234567812345678;
+	CUTE_TEST_CHECK(packet_queue_push(&q, &data, sizeof(data), 0));
+	CUTE_TEST_CHECK(packet_queue_push(&q, &data, sizeof(data), 1));
 
-#endif // CUTE_ALLOC_H
+	uint64_t sequence;
+	uint64_t got_data;
+	int size;
+
+	CUTE_TEST_CHECK(packet_queue_peek(&q, &size));
+	CUTE_TEST_CHECK(packet_queue_pull(&q, &got_data, size, &sequence));
+	CUTE_TEST_ASSERT(sequence == 0);
+	CUTE_TEST_ASSERT(got_data == data);
+
+	CUTE_TEST_CHECK(packet_queue_peek(&q, &size));
+	CUTE_TEST_CHECK(packet_queue_pull(&q, &got_data, size, &sequence));
+	CUTE_TEST_ASSERT(sequence == 1);
+	CUTE_TEST_ASSERT(got_data == data);
+
+	pack_queue_clean_up(&q);
+
+	return 0;
+}

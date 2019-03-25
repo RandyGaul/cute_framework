@@ -19,18 +19,37 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifdef _MSC_VER
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#endif
+
 #include <cute_c_runtime.h>
 #include <test_harness.h>
+#include <internal/cute_crypto_internal.h>
 
 #include <test_handle.h>
 #include <test_circular_buffer.h>
 #include <test_nonce_buffer.h>
+#include <test_crypto.h>
+#include <test_packet_queue.h>
+#include <test_socket.h>
 
 int main(int argc, const char** argv)
 {
 #ifdef _MSC_VER
+	_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+	_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
+	_CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE);
+	_CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
+	_CrtSetReportFile(_CRT_WARN, _CRTDBG_FILE_STDERR);
+	_CrtSetReportFile(_CRT_ERROR, _CRTDBG_FILE_STDERR);
+	_CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
 	windows_turn_on_console_color();
 #endif
+
+	internal::net_init();
+	// internal::crypto_init(); WTF???
 
 	test_t tests[] = {
 		CUTE_TEST_CASE_ENTRY(test_handle_basic),
@@ -45,13 +64,15 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_nonce_buffer_valid_packets),
 		CUTE_TEST_CASE_ENTRY(test_nonce_buffer_old_packet_out_of_range),
 		CUTE_TEST_CASE_ENTRY(test_nonce_buffer_duplicate),
+		CUTE_TEST_CASE_ENTRY(test_crypto_symmetric_key_encrypt_decrypt),
+		CUTE_TEST_CASE_ENTRY(test_crypto_assymetric_key_encrypt_decrypt),
+		CUTE_TEST_CASE_ENTRY(test_packet_queue_basic),
+		CUTE_TEST_CASE_ENTRY(test_socket_init_send_recieve_shutdown),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;
 
 	// WORKNG HERE: Test packet queue, then socket.
-
-	// TODO: Make cute_mem_leak.h/.cpp to check for memory leaks, and use it in the test harness for each test.
 
 	// Run all tests.
 	if (argc == 1) {
@@ -73,7 +94,8 @@ int main(int argc, const char** argv)
 				for (int i = 0; i < test_count; ++i)
 				{
 					test_t* test = tests + i;
-					do_test(test, i + 1);
+					int result = do_test(test, i + 1);
+					if (result) goto break_soak;
 				}
 			}
 		}
@@ -100,5 +122,12 @@ int main(int argc, const char** argv)
 		return -1;
 	}
 
+	internal::net_cleanup();
+
+#ifdef _MSC_VER
+	_CrtDumpMemoryLeaks();
+#endif
+
+break_soak:
 	return 0;
 }

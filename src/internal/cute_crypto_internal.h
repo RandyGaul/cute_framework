@@ -22,12 +22,14 @@
 #ifndef CUTE_CRYPTO_INTERNAL_H
 #define CUTE_CRYPTO_INTERNAL_H
 
+#include <cute_defines.h>
+
 namespace cute
 {
 
 namespace internal
 {
-	int crypto_init();
+	extern CUTE_API int CUTE_CALL crypto_init();
 }
 
 }
