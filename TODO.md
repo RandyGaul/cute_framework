@@ -18,6 +18,7 @@
 		* [ ] virtual file system, patching, and distribution
 	* [ ] example game
 * [ ] [cute](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute_t.md)
+	* [ ] executable icon
 * [ ] audio
 	* [x] load wav
 	* [x] load ogg
