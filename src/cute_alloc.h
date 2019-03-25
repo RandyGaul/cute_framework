@@ -32,6 +32,10 @@
 #	define CUTE_FREE(ptr, user_ctx) free(ptr)
 #endif
 
+#ifdef _MSC_VER
+#	pragma warning(disable:4291)
+#endif
+
 enum cute_dummy_enum_t { CUTE_DUMMY_ENUM };
 inline void* operator new(size_t, cute_dummy_enum_t, void* ptr) { return ptr; }
 #define CUTE_PLACEMENT_NEW(ptr) new(CUTE_DUMMY_ENUM, ptr)

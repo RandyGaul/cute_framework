@@ -9,6 +9,47 @@ endif()
 include_directories(src libraries test)
 link_directories(shared_libs)
 
+# PhysicsFS
+set(PHYSFS_SRCS
+	libraries/physfs/physfs_archiver_7z.c
+	libraries/physfs/physfs_archiver_dir.c
+	libraries/physfs/physfs_archiver_grp.c
+	libraries/physfs/physfs_archiver_hog.c
+	libraries/physfs/physfs_archiver_iso9660.c
+	libraries/physfs/physfs_archiver_mvl.c
+	libraries/physfs/physfs_archiver_qpak.c
+	libraries/physfs/physfs_archiver_slb.c
+	libraries/physfs/physfs_archiver_unpacked.c
+	libraries/physfs/physfs_archiver_vdf.c
+	libraries/physfs/physfs_archiver_wad.c
+	libraries/physfs/physfs_archiver_zip.c
+	libraries/physfs/physfs_byteorder.c
+	libraries/physfs/physfs_casefolding.h
+	libraries/physfs/physfs_internal.h
+	libraries/physfs/physfs_lzmasdk.h
+	libraries/physfs/physfs_miniz.h
+	libraries/physfs/physfs_platform_haiku.cpp
+	libraries/physfs/physfs_platform_os2.c
+	libraries/physfs/physfs_platform_posix.c
+	libraries/physfs/physfs_platform_qnx.c
+	libraries/physfs/physfs_platform_unix.c
+	libraries/physfs/physfs_platform_windows.c
+	libraries/physfs/physfs_platform_winrt.cpp
+	libraries/physfs/physfs_platforms.h
+	libraries/physfs/physfs_unicode.c
+	libraries/physfs/physfs.c
+	libraries/physfs/physfs.h
+)
+
+if(APPLE)
+	set(PHYSFS_SRCS ${PHYSFS_SRCS}
+		libraries/physfs/physfs_platform_apple.m
+	)
+endif()
+
+add_library(physfs ${PHYSFS_SRCS})
+
+# cute
 set(CUTE_SRCS
 	src/cute_app.cpp
 	src/cute_audio.cpp
@@ -67,6 +108,7 @@ add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS})
 target_link_libraries(cute PRIVATE SDL2 physfs libsodium)
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)
 
+# cute unit tests
 option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
 if (CUTE_FRAMEWORK_BUILD_TESTS)
 
