@@ -19,18 +19,14 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_VERSION_H
-#define CUTE_VERSION_H
-
-#include <cute_defines.h>
-
-#define CUTE_VERSION_STRING_COMPILED "Cute Framework Version 0.0"
+#include <cute_version.h>
 
 namespace cute
 {
 
-extern CUTE_API const char* CUTE_CALL version_string_linked();
-
+const char* version_string_linked()
+{
+	return "Cute Framework Version 0.0";
 }
 
-#endif // CUTE_VERSION_H
+}	
