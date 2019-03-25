@@ -191,7 +191,7 @@ Note: This has temporarily become a big TODO list. This list will eventually nee
 	* [x] error strings and handler
 	* [ ] dialogue box
 
-## Integration into your Project
+## Integrating Cute with your Project
 
 Cute has a couple options for integration into your project. Which one your pick depends on your preferences. If you are unsure which to pick, go with option #1 since it is the most traditional.
 
