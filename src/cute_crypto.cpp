@@ -25,26 +25,17 @@
 namespace cute
 {
 
-void crypto_generate_keypair(crypto_key_t* public_key, crypto_key_t* private_key)
+int crypto_encrypt_asymmetric(const crypto_key_t* endpoint_public_key, uint8_t* data, int size)
 {
-	crypto_box_keypair(public_key->key, private_key->key);
+	return crypto_box_seal(data, data, size, endpoint_public_key->key);
 }
 
-int crypto_encrypt_asymmetric(const crypto_key_t* endpoint_public_key, const crypto_key_t* your_private_key, uint8_t* data, int byte_count, const crypto_nonce_t* nonce)
+int crypto_decrypt_asymmetric(const crypto_key_t* your_public_key, const crypto_key_t* your_secret_key, uint8_t* data, int size)
 {
-	return crypto_box_easy(data, data, byte_count, nonce->nonce, endpoint_public_key->key, your_private_key->key);
-}
-
-int crypto_decrypt_asymmetric(const crypto_key_t* endpoint_public_key, const crypto_key_t* your_private_key, uint8_t* data, int byte_count, const crypto_nonce_t* nonce)
-{
-	return crypto_box_open_easy(data, data, byte_count, nonce->nonce, endpoint_public_key->key, your_private_key->key);
-}
-
-crypto_key_t crypto_generate_symmetric_key()
-{
-	crypto_key_t key;
-	crypto_secretbox_keygen(key.key);
-	return key;
+	uint8_t buffer[1024];
+	for (int i = 0; i < 1024; ++i) buffer[i] = 0;
+	int ret = crypto_box_seal_open(buffer, data, size, your_public_key->key, your_secret_key->key);
+	return ret;
 }
 
 int crypto_encrypt(const crypto_key_t* symmetric_key, uint8_t* data, int byte_count, const crypto_nonce_t* nonce)
@@ -55,6 +46,25 @@ int crypto_encrypt(const crypto_key_t* symmetric_key, uint8_t* data, int byte_co
 int crypto_decrypt(const crypto_key_t* symmetric_key, uint8_t* data, int byte_count, const crypto_nonce_t* nonce)
 {
 	return crypto_secretbox_open_easy(data, data, byte_count, nonce->nonce, symmetric_key->key);
+}
+
+void crypto_generate_keypair(crypto_key_t* public_key, crypto_key_t* private_key)
+{
+	crypto_box_keypair(public_key->key, private_key->key);
+}
+
+crypto_key_t crypto_generate_symmetric_key()
+{
+	crypto_key_t key;
+	crypto_secretbox_keygen(key.key);
+	return key;
+}
+
+crypto_nonce_t crypto_random_nonce()
+{
+	crypto_nonce_t nonce;
+	crypto_random_bytes(&nonce, sizeof(nonce));
+	return nonce;
 }
 
 void crypto_random_bytes(void* data, int byte_count)

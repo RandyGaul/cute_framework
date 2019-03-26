@@ -48,6 +48,7 @@ struct server_t
 	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
 	void* mem_ctx = NULL;
 
+	handle_table_t client_handles;
 	int client_count = 0;
 	int client_is_connected[CUTE_SERVER_MAX_CLIENTS];
 	int client_is_loopback[CUTE_SERVER_MAX_CLIENTS];
@@ -56,7 +57,7 @@ struct server_t
 	uint64_t client_sequence_offset[CUTE_SERVER_MAX_CLIENTS];
 	uint64_t client_sequence[CUTE_SERVER_MAX_CLIENTS];
 	nonce_buffer_t client_nonce_buffer[CUTE_SERVER_MAX_CLIENTS];
-	client_id_t client_id[CUTE_SERVER_MAX_CLIENTS];
+	handle_t client_id[CUTE_SERVER_MAX_CLIENTS];
 	crypto_key_t client_session_key[CUTE_SERVER_MAX_CLIENTS];
 	packet_queue_t client_packets[CUTE_SERVER_MAX_CLIENTS];
 };
@@ -85,6 +86,7 @@ int server_start(server_t* server, endpoint_t endpoint, const crypto_key_t* publ
 	server->private_key = *private_key;
 	CUTE_CHECK(socket_init(&server->socket, endpoint, CUTE_SERVER_SEND_BUFFER_SIZE, CUTE_SERVER_RECEIVE_BUFFER_SIZE));
 	server->config = config ? *config : server_config_t();
+	CUTE_CHECK(handle_table_init(&server->client_handles, 256, server->mem_ctx));
 	server->client_count = 0;
 	server->running = 1;
 
@@ -101,6 +103,19 @@ void server_stop(server_t* server)
 	socket_cleanup(&server->socket);
 }
 
+static uint32_t s_client_index_from_endpoint(server_t* server, endpoint_t endpoint)
+{
+	endpoint_t* endpoints = server->client_endpoint;
+	int count = server->client_count;
+	for (int i = 0; i < count; ++i)
+	{
+		if (endpoint_equals(endpoints[i], endpoint)) {
+			return i;
+		}
+	}
+	return UINT32_MAX;
+}
+
 static void s_server_recieve_packets(server_t* server)
 {
 	uint8_t* buffer = server->buffer;
@@ -114,11 +129,26 @@ static void s_server_recieve_packets(server_t* server)
 			break;
 		}
 
-		// Find client by address. TODO: Need handle table.
-		// Lookup symmetric key (if available).
+		// Find client by address.
+		uint32_t client_index = s_client_index_from_endpoint(server, from);
+		if (client_index == UINT32_MAX) {
+			// Client address not found -- potential new connection.
+			// Decrypt packet.
+			// Lookup symmetric key.
+			int is_new_connection_packet = 0;
+			if (!is_new_connection_packet) {
+				// Do not know who this is, and they are not requesting a new connection.
+				// Ignore this nonsense.
+				continue;
+			}
+		}
+
 		// Otherwise use server private key.
 		// Decrypt packet.
+		// Read sequence number, do replay protection.
 		// Switch on packet type.
+
+		// TODO: Make sure on client replay protection happens *after* decrypting.
 	}
 }
 
@@ -139,7 +169,7 @@ int server_poll_event(server_t* server, server_event_t* event)
 	return -1;
 }
 
-void server_disconnect_client(server_t* server, client_id_t id)
+void server_disconnect_client(server_t* server, handle_t id)
 {
 }
 
@@ -151,11 +181,11 @@ void server_broadcast_to_all_clients(server_t* server, const void* packet, int s
 {
 }
 
-void server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, client_id_t id, int reliable)
+void server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t id, int reliable)
 {
 }
 
-void server_send_to_client(server_t* server, const void* packet, int size, client_id_t id, int reliable)
+void server_send_to_client(server_t* server, const void* packet, int size, handle_t id, int reliable)
 {
 }
 

@@ -79,117 +79,39 @@ Cute covers all the low level guts required to build 2D games by implementing th
 
 Note: This has temporarily become a big TODO list. This list will eventually need to be converted into documentation categories.
 
-* [ ] [cute](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute_t.md)
-* [ ] audio
-	* [x] load wav
-	* [x] load ogg
-	* [x] stream wav
-	* [x] stream ogg
-	* [ ] stream then switch ogg
-	* [ ] stream then crossfade ogg
-	* [ ] music
-	* [ ] sounds
-* [ ] event
-	* [ ] poll event
-	* [ ] push event
-	* [ ] grab data out of event
-	* [ ] free event data
-* [x] file system
-	* [x] file io
-	* [x] directory/archive mounting
-* [ ] graphics
-	* [ ] sprite batching
-	* [ ] shader
-	* [ ] vertex/index buffers
-	* [ ] blend states
-	* [ ] fbo (full-screen effect)
-	* [ ] render to texture
-	* [ ] debug rendering (line, shape, frames)
-	* [ ] draw calls
-	* [ ] projection
-	* [ ] textures, wrap mode
-	* [ ] scissor
-	* [ ] viewport, resizing
-	* [ ] pixel upscaling
-	* [ ] frame-based animation
-	* [ ] raster font
-	* [ ] image loading
-	* [ ] pixel upscale shader
-	* [ ] universal MVP in shaders
-	* [ ] CPU culling with DBVH
-	* [ ] network simulator
-	* [ ] matrix helpers
-	* [ ] d3d9
-	* [ ] GL 3.2
-	* [ ] GLES 2.0
-	* [ ] color and helpers
-* [ ] input
-	* [ ] mouse
-		* [ ] cursor
-	* [ ] keyboard
-	* [ ] gamepad
-	* [ ] text input
-	* [ ] drag n drop file
-* [ ] math
-* [ ] collision detection
-* [x] concurrency
-* [x] time
-* [ ] net
-	* [x] socket
-	* [ ] connection handhsake
-	* [ ] reliability
-		* [ ] packet ack and resend
-		* [ ] fragmentation and reassembly
-	* [ ] relay server
-		* [ ] broadcast to all, to all but one, to one
-		* [ ] accept new connection
-		* [ ] disconnect client
-		* [ ] look for timed out clients
-		* [ ] thread to pull packets and queue them
-		* [ ] poll server packets (deque)
-	* [x] security
-	* [ ] network simulator
-	* [ ] packet loss and RTT estimator
-	* [ ] loopback client
-* [ ] utf8 (for localization support)
-* [ ] serialization
-* [ ] data structures
-	* [x] buffer
-	* [ ] hash table
-	* [ ] doubly linked list
-	* [ ] dbvh
-	* [ ] string
-	* [ ] handle table
-* [x] allocators
-* [ ] ini
-* [ ] camera
-	* [ ] track an entity
-	* [ ] set position
-	* [ ] set destination + lerp time
-	* [ ] state machine driven
-* [ ] logging
-	* [ ] to stderr
-	* [ ] to log file
-* [ ] entity
-	* [ ] vtable
-	* [ ] entity list
-	* [ ] composition mechanism
-* [ ] profile
-	* [ ] record capture data
-	* [ ] render capture data to screen
-	* [ ] print capture data
-	* [ ] interpolate capture data
-* [ ] automated release package builder
-* [ ] build/distro options
-	* [ ] copy + paste all source into project
-	* [ ] build shared libs themselves
-	* [ ] download prebuilt release folder
-* [x] cmake support
-* [ ] single-file-header packer (still requires shared lib dependencies)
-* [ ] error
-	* [ ] thread local
-	* [x] error strings and handler
-	* [ ] dialogue box
+* [cute](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute_t.md)
+* audio
+* event
+* file system
+* graphics
+* input
+* math
+* collision detection
+* concurrency
+* time
+* net
+* utf8 (for localization support)
+* serialization
+* data structures
+* allocators
+* ini
+* camera
+* entity
+* profile
+* build/distro options
+* error
+
+## Integrating Cute with your Project
+
+Cute has a couple options for integration into your project. Which one your pick depends on your preferences. If you are unsure which to pick, go with option #1 since it is the most traditional.
+
+1. Download prebuilt binaries and headers for your platform.
+2. Download the single-file header format of Cute, with prebuilt dependencies.
+3. Download the source code of Cute and run the build scripts yourself.
+
+Options #1 and #2 are nearly identical, except #1 has multiple headers and prebuilt shared libraries, while #2 provides Cute as a single-file header along with libsodium as a prebuilt shared library (which must be linked agianst).
+
+Option #3 should work out-of-the-box for Windows, Linux, Mac OSX, iOS, and Android. Other platforms will require manual tinkering for support.
 
 ## Support
 
@@ -201,6 +123,12 @@ Contributions are welcome, so feel free to open a [pull-request](https://github.
 
 ## Dependencies
 
-Users of Cute don't need to think about dependencies at all, since they are packaged up in the distribution of Cute, ready to use out-of-the-box. They are listed here for the curious.
+Cute has a few external dependencies, linked as shared libraries.
+* [SDL2](https://www.libsdl.org/), used for platform handling and GL context creation.
+* [libsodium](https://libsodium.gitbook.io/doc/), used for encryption + authentication.
 
-Cute has very little dependencies, carefully chosen for their high quality. The first is the [SDL2 library](https://www.libsdl.org/), used for platform handling and GL context creation. The second is [libsodium](https://libsodium.gitbook.io/doc/), is used for security. The third is [glad](https://github.com/Dav1dde/glad) used to load OpenGL function pointers on the Windows platform.
+Cute has a few internal dependencies, built straight from source as apart of Cute.
+* [glad](https://github.com/Dav1dde/glad), used to load OpenGL function pointers on the Windows platform.
+* [PhysicsFS](https://icculus.org/physfs/), used for [virtual file system](https://www.randygaul.net/2019/03/20/virtual-file-systems-in-games/).
+* [STB Vorbis](https://github.com/nothings/stb/blob/master/stb_vorbis.c), for parsing OGG files.
+* [Cute Headers](https://github.com/RandyGaul/cute_headers), used to implement all kinds of things. These headers were implemented by the author of the Cute Framework, and are used to implement the majority of the features in the Cute Framework. These headers are built by embedding the source directly, via single-file header format.

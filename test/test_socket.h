@@ -31,7 +31,7 @@ int test_socket_init_send_recieve_shutdown()
 
 	const char* message_string = "The message.";
 	int message_length = (int)CUTE_STRLEN(message_string) + 1;
-	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_SYMMETRIC_KEY_MAC_BYTES);
+	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length);
 	CUTE_MEMCPY(message_buffer, message_string, message_length);
 
 	int bytes_sent = socket_send(&socket, message_buffer, message_length);

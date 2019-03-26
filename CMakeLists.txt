@@ -68,6 +68,7 @@ set(CUTE_SRCS
 	src/cute_net.cpp
 	src/cute_server.cpp
 	src/cute_timer.cpp
+	src/cute_version.cpp
 
 	libraries/glad/glad.c
 )
