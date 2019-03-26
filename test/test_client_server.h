@@ -19,32 +19,34 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_CRYPTO_UTILS_H
-#define CUTE_CRYPTO_UTILS_H
+#include <cute_client.h>
+#include <cute_server.h>
 
-#include <libsodium/sodium.h>
+using namespace cute;
 
-namespace cute
+CUTE_TEST_CASE(test_client_server_handshake, "Test out barebones connection setup between client and server instances.");
+int test_client_server_handshake()
 {
+	client_t* client = client_alloc(NULL);
+	CUTE_TEST_CHECK_POINTER(client);
 
-struct crypto_key_t
-{
-	// Note: Assume crypto_box_PUBLICKEYBYTES == crypto_box_SECRETKEYBYTES.
-	// This invariant is tested in `crypto_init`, for safety.
-	uint8_t key[crypto_box_PUBLICKEYBYTES];
-};
+	server_t* server = server_alloc(NULL);
+	CUTE_TEST_CHECK_POINTER(server);
 
-struct crypto_nonce_t
-{
-	uint8_t nonce[crypto_box_NONCEBYTES];
-};
+	crypto_key_t pk, sk;
+	CUTE_TEST_CHECK(crypto_generate_keypair(&pk, &sk));
+	CUTE_TEST_CHECK(server_start(server, "127.0.0.1:500", &pk, &sk, NULL));
+	CUTE_TEST_CHECK(client_connect(client, 501, "127.0.0.1:500", &pk));
 
-extern CUTE_API crypto_nonce_t CUTE_CALL crypto_random_nonce();
-extern CUTE_API void CUTE_CALL crypto_random_bytes(void* data, int byte_count);
-extern CUTE_API crypto_key_t CUTE_CALL crypto_generate_symmetric_key();
-extern CUTE_API int CUTE_CALL crypto_generate_keypair(crypto_key_t* public_key, crypto_key_t* private_key);
-extern CUTE_API const char* CUTE_CALL crypto_sodium_version_linked();
+	float dt = 1.0f / 60.0f;
+	client_update(client, dt);
+	server_update(server, dt);
 
+	client_disconnect(client);
+	server_stop(server);
+
+	client_destroy(client);
+	server_destroy(server);
+
+	return 0;
 }
-
-#endif // CUTE_CRYPTO_UTILS_H

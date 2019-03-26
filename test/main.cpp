@@ -34,6 +34,7 @@
 #include <test_crypto.h>
 #include <test_packet_queue.h>
 #include <test_socket.h>
+#include <test_client_server.h>
 
 int main(int argc, const char** argv)
 {
@@ -68,11 +69,10 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_crypto_assymetric_key_encrypt_decrypt),
 		CUTE_TEST_CASE_ENTRY(test_packet_queue_basic),
 		CUTE_TEST_CASE_ENTRY(test_socket_init_send_recieve_shutdown),
+		CUTE_TEST_CASE_ENTRY(test_client_server_handshake),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;
-
-	// WORKNG HERE: Test packet queue, then socket.
 
 	// Run all tests.
 	if (argc == 1) {

@@ -44,6 +44,18 @@
 namespace cute
 {
 
+enum packet_type_t : int
+{
+	PACKET_TYPE_HELLO,
+	PACKET_TYPE_CONNECTION_ACCEPTED,
+	PACKET_TYPE_CONNECTION_DENIED,
+	PACKET_TYPE_KEEP_ALIVE,
+	PACKET_TYPE_DISCONNECT,
+	PACKET_TYPE_USERDATA,
+
+	PACKET_TYPE_MAX,
+};
+
 #ifdef _MSC_VER
 	using socket_handle_t = uint64_t;
 #else
@@ -56,9 +68,10 @@ struct socket_t
 	endpoint_t endpoint;
 };
 
-extern CUTE_API int CUTE_CALL socket_init(socket_t* socket, endpoint_t endpoint, int send_buffer_size, int receive_buffer_size);
+extern CUTE_API int CUTE_CALL socket_init(socket_t* socket, const char* address_and_port, int send_buffer_size, int receive_buffer_size);
+extern CUTE_API int CUTE_CALL socket_init(socket_t* socket, address_type_t address_type, uint16_t port, int send_buffer_size, int receive_buffer_size);
 extern CUTE_API void CUTE_CALL socket_cleanup(socket_t* socket);
-extern CUTE_API int CUTE_CALL socket_send(socket_t* socket, const void* data, int byte_count);
+extern CUTE_API int CUTE_CALL socket_send(socket_t* socket, endpoint_t send_to, const void* data, int byte_count);
 extern CUTE_API int CUTE_CALL socket_receive(socket_t* socket, endpoint_t* from, void* data, int byte_count);
 
 struct packet_queue_t

@@ -67,6 +67,11 @@
 #	define CUTE_STRCMP strcmp
 #endif
 
+#ifndef CUTE_STRNCMP
+#	include <string.h>
+#	define CUTE_STRNCMP strncmp
+#endif
+
 #ifndef CUTE_SNPRINTF
 #	include <stdio.h>
 #	define CUTE_SNPRINTF snprintf

@@ -48,6 +48,7 @@ struct client_t
 	uint64_t sequence_offset;
 	uint64_t sequence;
 	socket_t socket;
+	endpoint_t server_endpoint;
 	crypto_key_t server_public_key;
 	crypto_key_t session_key;
 	serialize_t* io;
@@ -76,21 +77,24 @@ cute_error:
 
 void client_destroy(client_t* client)
 {
-	// TODO: Disconnect.
 	socket_cleanup(&client->socket);
 	pack_queue_clean_up(&client->packets);
 	CUTE_FREE(client, client->app->mem_ctx);
 }
 
-int client_connect(client_t* client, endpoint_t endpoint, const crypto_key_t* server_public_key, int loopback)
+int client_connect(client_t* client, uint16_t port, const char* server_address_and_port, const crypto_key_t* server_public_key, int loopback)
 {
+	endpoint_t server_endpoint;
+	CUTE_CHECK(endpoint_init(&server_endpoint, server_address_and_port));
+
 	client->state = CLIENT_STATE_CONNECTING;
 	client->loopback = loopback;
 	client->connect_time = 0;
 	client->keep_alive_time = 0;
 	client->sequence_offset = 0;
 	client->sequence = 0;
-	CUTE_CHECK(socket_init(&client->socket, endpoint, CUTE_CLIENT_SEND_BUFFER_SIZE, CUTE_CLIENT_RECEIVE_BUFFER_SIZE));
+	CUTE_CHECK(socket_init(&client->socket, server_endpoint.type, port, CUTE_CLIENT_SEND_BUFFER_SIZE, CUTE_CLIENT_RECEIVE_BUFFER_SIZE));
+	client->server_endpoint = server_endpoint;
 	client->session_key = crypto_generate_symmetric_key();
 	client->io = serialize_buffer_create(SERIALIZE_READ, NULL, 0, NULL);
 	CUTE_CHECK(packet_queue_init(&client->packets, CUTE_CLIENT_RECEIVE_BUFFER_SIZE, client->mem_ctx));
@@ -103,19 +107,11 @@ cute_error:
 
 void client_disconnect(client_t* client)
 {
+	socket_cleanup(&client->socket);
+	serialize_destroy(client->io);
+	client->io = NULL;
+	pack_queue_clean_up(&client->packets);
 }
-
-enum packet_type_t : int
-{
-	PACKET_TYPE_HELLO,
-	PACKET_TYPE_CONNECTION_ACCEPTED,
-	PACKET_TYPE_CONNECTION_DENIED,
-	PACKET_TYPE_KEEP_ALIVE,
-	PACKET_TYPE_DISCONNECT,
-	PACKET_TYPE_USERDATA,
-
-	PACKET_TYPE_MAX,
-};
 
 client_state_t client_state_get(client_t* client)
 {
@@ -140,13 +136,13 @@ static uint8_t* s_client_open_packet(client_t* client, uint8_t* packet, int size
 	CUTE_ASSERT(sizeof(nonce) >= sizeof(uint64_t));
 	*(uint64_t*)((uint8_t*)&nonce + sizeof(nonce) - sizeof(uint64_t)) = sequence;
 
-	if (replay_protection(sequence, NULL) < 0) {
-		// Duplicate packet detected.
+	if (crypto_decrypt(&client->session_key, packet, size, &nonce) < 0) {
+		// Forged packet!
 		return NULL;
 	}
 
-	if (crypto_decrypt(&client->session_key, packet, size, &nonce) < 0) {
-		// Forged packet!
+	if (replay_protection(sequence, NULL) < 0) {
+		// Duplicate packet detected.
 		return NULL;
 	}
 
@@ -174,7 +170,7 @@ static void s_client_receive_packets(client_t* client)
 			break;
 		}
 
-		if (!endpoint_equals(from, client->socket.endpoint)) {
+		if (!endpoint_equals(from, client->server_endpoint)) {
 			// Only accept communications if the address match's the server's address.
 			// This is mostly just a "sanity" check.
 			break;
@@ -264,27 +260,30 @@ static void s_client_send_packets(client_t* client)
 
 		// Write version string.
 		const char* version_string = CUTE_PROTOCOL_VERSION;
-		int version_len = (int)CUTE_STRLEN(CUTE_PROTOCOL_VERSION);
-		CUTE_CHECK(serialize_bytes(io, (char*)version_string, version_len + 1));
+		CUTE_CHECK(serialize_bytes(io, (unsigned char*)version_string, CUTE_PROTOCOL_VERSION_STRING_LEN));
 
 		// Write packet type.
-		uint64_t packet_typeu64;
+		uint64_t packet_typeu64 = PACKET_TYPE_HELLO;
 		CUTE_SERIALIZE_CHECK(serialize_uint64(io, &packet_typeu64, 0, PACKET_TYPE_MAX));
-		packet_type_t type = (packet_type_t)packet_typeu64;
 
 		// Write symmetric key.
-		serialize_bytes(io, (char*)&client->session_key, sizeof(client->session_key));
+		CUTE_SERIALIZE_CHECK(serialize_bytes(io, client->session_key.key, sizeof(client->session_key)));
 
 		// Pad zero-bytes to end.
 		CUTE_SERIALIZE_CHECK(serialize_flush(io));
 		int bytes_so_far = serialize_serialized_bytes(io);
-		int pad_bytes = CUTE_PACKET_SIZE_MAX - bytes_so_far;
+		int pad_bytes = CUTE_PACKET_SIZE_MAX - bytes_so_far - CUTE_CRYPTO_ASYMMETRIC_BYTES;
+		CUTE_ASSERT(pad_bytes >= 0);
 		uint32_t bits = 0;
-		for (int i = 0; i < pad_bytes; ++i) serialize_bits(io, &bits, 8);
-		CUTE_ASSERT(serialize_serialized_bytes(io) == CUTE_PACKET_SIZE_MAX);
+		for (int i = 0; i < pad_bytes; ++i) CUTE_CHECK(serialize_bits(io, &bits, 8));
+		CUTE_ASSERT(serialize_serialized_bytes(io) == CUTE_PACKET_SIZE_MAX - CUTE_CRYPTO_ASYMMETRIC_BYTES);
+
+		// Encrypt with server's public key.
+		CUTE_CHECK(crypto_encrypt_asymmetric(&client->server_public_key, buffer, CUTE_PACKET_SIZE_MAX - CUTE_CRYPTO_ASYMMETRIC_BYTES, CUTE_PACKET_SIZE_MAX));
 
 		// Send the packet off.
-		socket_send(&client->socket, buffer, CUTE_PACKET_SIZE_MAX);
+		int bytes_sent = socket_send(&client->socket, client->server_endpoint, buffer, CUTE_PACKET_SIZE_MAX);
+		(void)bytes_sent;
 	}	break;
 
 		// Keep-alive packet.

@@ -25,16 +25,14 @@ CUTE_TEST_CASE(test_socket_init_send_recieve_shutdown, "Test sending one packet 
 int test_socket_init_send_recieve_shutdown()
 {
 	socket_t socket;
-	endpoint_t endpoint;
-	CUTE_TEST_CHECK(endpoint_init(&endpoint, "127.0.0.1:5000"));
-	CUTE_TEST_CHECK(socket_init(&socket, endpoint, CUTE_MB, CUTE_MB));
+	CUTE_TEST_CHECK(socket_init(&socket, "127.0.0.1:5000", CUTE_MB, CUTE_MB));
 
 	const char* message_string = "The message.";
 	int message_length = (int)CUTE_STRLEN(message_string) + 1;
 	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length);
 	CUTE_MEMCPY(message_buffer, message_string, message_length);
 
-	int bytes_sent = socket_send(&socket, message_buffer, message_length);
+	int bytes_sent = socket_send(&socket, socket.endpoint, message_buffer, message_length);
 	CUTE_TEST_ASSERT(bytes_sent == message_length);
 	CUTE_MEMSET(message_buffer, 0, message_length);
 	CUTE_TEST_ASSERT(CUTE_MEMCMP(message_buffer, message_string, message_length));
@@ -42,7 +40,7 @@ int test_socket_init_send_recieve_shutdown()
 	endpoint_t from;
 	int bytes_recieved = socket_receive(&socket, &from, message_buffer, message_length);
 	CUTE_TEST_ASSERT(bytes_recieved == message_length);
-	CUTE_TEST_ASSERT(endpoint_equals(endpoint, from));
+	CUTE_TEST_ASSERT(endpoint_equals(socket.endpoint, from));
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(message_buffer, message_string, message_length));
 
 	free(message_buffer);

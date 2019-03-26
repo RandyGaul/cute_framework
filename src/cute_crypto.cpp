@@ -34,7 +34,15 @@ int crypto_encrypt_asymmetric(const crypto_key_t* endpoint_public_key, uint8_t* 
 		error_set("Can not encrypt data: `buffer_size` must be at least `CUTE_CRYPTO_ASYMMETRIC_BYTES` bytes larger than `size_to_encrypt`.");
 		return -1;
 	}
+
+	// `crypto_box_seal` does *not* support overlapped buffers for `c` and `m`. After inspecting
+	// the source of `crypto_box_seal`, it became apparent `crypto_box_seal` is built entirely
+	// with high level primitives of the sodium API, and starts by writing `CUTE_CRYPTO_ASYMMETRIC_BYTES`
+	// to the beginning of the `c` buffer. Therefor, if `buffer` is simply memmove'd forward by
+	// `CUTE_CRYPTO_ASYMMETRIC_BYTES`, we can "mimic" in-place encryption just like the rest of the
+	// sodium API.
 	CUTE_MEMMOVE(buffer + CUTE_CRYPTO_ASYMMETRIC_BYTES, buffer, size_to_encrypt);
+
 	return crypto_box_seal(buffer, buffer + CUTE_CRYPTO_ASYMMETRIC_BYTES, size_to_encrypt, endpoint_public_key->key);
 }
 

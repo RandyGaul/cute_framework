@@ -132,13 +132,9 @@ void socket_cleanup(socket_t* socket)
 	}
 }
 
-int socket_init(socket_t* socket, endpoint_t endpoint, int send_buffer_size, int receive_buffer_size)
+static int s_socket_init(socket_t* socket, address_type_t address_type, int send_buffer_size, int receive_buffer_size)
 {
-	CUTE_ASSERT(socket);
-	CUTE_ASSERT(endpoint.type != ADDRESS_TYPE_NONE);
-
-	socket->endpoint = endpoint;
-	socket->handle = ::socket(endpoint.type == ADDRESS_TYPE_IPV6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	socket->handle = ::socket(address_type == ADDRESS_TYPE_IPV6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
 #ifdef _MSC_VER
 	if (socket->handle == INVALID_SOCKET)
@@ -152,7 +148,7 @@ int socket_init(socket_t* socket, endpoint_t endpoint, int send_buffer_size, int
 
 	// Allow users to enforce ipv6 only.
 	// See: https://msdn.microsoft.com/en-us/library/windows/desktop/ms738574(v=vs.85).aspx
-	if (endpoint.type == ADDRESS_TYPE_IPV6)
+	if (address_type == ADDRESS_TYPE_IPV6)
 	{
 		int enable = 1;
 		if (setsockopt(socket->handle, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&enable, sizeof(enable)) != 0)
@@ -179,45 +175,15 @@ int socket_init(socket_t* socket, endpoint_t endpoint, int send_buffer_size, int
 		return -1;
 	}
 
-	// Bind port.
-	if (endpoint.type == ADDRESS_TYPE_IPV6)
-	{
-		sockaddr_in6 socket_endpoint;
-		memset(&socket_endpoint, 0, sizeof(sockaddr_in6));
-		socket_endpoint.sin6_family = AF_INET6;
-		for (int i = 0; i < 8; ++i) ((uint16_t*)&socket_endpoint.sin6_addr) [i] = htons(endpoint.u.ipv6[i]);
-		socket_endpoint.sin6_port = htons(endpoint.port);
+	return 0;
+}
 
-		if (bind(socket->handle, (sockaddr*)&socket_endpoint, sizeof(socket_endpoint)) < 0)
-		{
-			error_set("Failed to bind ipv6 socket.");
-			socket_cleanup(socket);
-			return -1;
-		}
-	}
-	else
-	{
-		sockaddr_in socket_endpoint;
-		memset(&socket_endpoint, 0, sizeof(socket_endpoint));
-		socket_endpoint.sin_family = AF_INET;
-		socket_endpoint.sin_addr.s_addr = (((uint32_t) endpoint.u.ipv4[0]))       |
-		                                  (((uint32_t) endpoint.u.ipv4[1]) << 8)  |
-		                                  (((uint32_t) endpoint.u.ipv4[2]) << 16) |
-		                                  (((uint32_t) endpoint.u.ipv4[3]) << 24);
-		socket_endpoint.sin_port = htons(endpoint.port);
-
-		if (bind(socket->handle, (sockaddr*)&socket_endpoint, sizeof(socket_endpoint)) < 0)
-		{
-			error_set("Failed to bind ipv4 socket.");
-			socket_cleanup(socket);
-			return -1;
-		}
-	}
-
+static int s_socket_bind_port_and_set_non_blocking(socket_t* socket, address_type_t address_type, uint16_t port)
+{
 	// Binding to port zero means "any port", so record which one was bound.
-	if (endpoint.port == 0)
+	if (port == 0)
 	{
-		if (endpoint.type == ADDRESS_TYPE_IPV6)
+		if (address_type == ADDRESS_TYPE_IPV6)
 		{
 			sockaddr_in6 sin;
 			socklen_t len = sizeof(sin);
@@ -269,12 +235,116 @@ int socket_init(socket_t* socket, endpoint_t endpoint, int send_buffer_size, int
 	return 0;
 }
 
-int socket_send(socket_t* socket, const void* data, int byte_count)
+int socket_init(socket_t* socket, address_type_t address_type, uint16_t port, int send_buffer_size, int receive_buffer_size)
+{
+	CUTE_MEMSET(&socket->endpoint, 0, sizeof(endpoint_t));
+	socket->endpoint.type = address_type;
+	socket->endpoint.port = port;
+
+	if (s_socket_init(socket, address_type, send_buffer_size, receive_buffer_size)) {
+		return -1;
+	}
+
+	// Bind port.
+	if (address_type == ADDRESS_TYPE_IPV6)
+	{
+		sockaddr_in6 socket_endpoint;
+		memset(&socket_endpoint, 0, sizeof(sockaddr_in6));
+		socket_endpoint.sin6_family = AF_INET6;
+		socket_endpoint.sin6_addr = in6addr_any;
+		socket_endpoint.sin6_port = htons(port);
+
+		if (bind(socket->handle, (sockaddr*)&socket_endpoint, sizeof(socket_endpoint)) < 0)
+		{
+			error_set("Failed to bind ipv6 socket.");
+			socket_cleanup(socket);
+			return -1;
+		}
+	}
+	else
+	{
+		sockaddr_in socket_endpoint;
+		memset(&socket_endpoint, 0, sizeof(socket_endpoint));
+		socket_endpoint.sin_family = AF_INET;
+		socket_endpoint.sin_addr.s_addr = INADDR_ANY;
+		socket_endpoint.sin_port = htons(port);
+
+		if (bind(socket->handle, (sockaddr*)&socket_endpoint, sizeof(socket_endpoint)) < 0)
+		{
+			error_set("Failed to bind ipv4 socket.");
+			socket_cleanup(socket);
+			return -1;
+		}
+	}
+
+	if (s_socket_bind_port_and_set_non_blocking(socket, address_type, port)) {
+		return -1;
+	}
+
+	return 0;
+}
+
+int socket_init(socket_t* socket, const char* address_and_port, int send_buffer_size, int receive_buffer_size)
+{
+	endpoint_t endpoint;
+	if (endpoint_init(&endpoint, address_and_port)) {
+		return -1;
+	}
+
+	socket->endpoint = endpoint;
+
+	if (s_socket_init(socket, endpoint.type, send_buffer_size, receive_buffer_size)) {
+		return -1;
+	}
+
+	// Bind port.
+	if (endpoint.type == ADDRESS_TYPE_IPV6)
+	{
+		sockaddr_in6 socket_endpoint;
+		memset(&socket_endpoint, 0, sizeof(sockaddr_in6));
+		socket_endpoint.sin6_family = AF_INET6;
+		for (int i = 0; i < 8; ++i) ((uint16_t*)&socket_endpoint.sin6_addr) [i] = htons(endpoint.u.ipv6[i]);
+		socket_endpoint.sin6_port = htons(endpoint.port);
+
+		if (bind(socket->handle, (sockaddr*)&socket_endpoint, sizeof(socket_endpoint)) < 0)
+		{
+			error_set("Failed to bind ipv6 socket.");
+			socket_cleanup(socket);
+			return -1;
+		}
+	}
+	else
+	{
+		sockaddr_in socket_endpoint;
+		memset(&socket_endpoint, 0, sizeof(socket_endpoint));
+		socket_endpoint.sin_family = AF_INET;
+		socket_endpoint.sin_addr.s_addr = (((uint32_t) endpoint.u.ipv4[0]))       |
+		                                  (((uint32_t) endpoint.u.ipv4[1]) << 8)  |
+		                                  (((uint32_t) endpoint.u.ipv4[2]) << 16) |
+		                                  (((uint32_t) endpoint.u.ipv4[3]) << 24);
+		socket_endpoint.sin_port = htons(endpoint.port);
+
+		if (bind(socket->handle, (sockaddr*)&socket_endpoint, sizeof(socket_endpoint)) < 0)
+		{
+			error_set("Failed to bind ipv4 socket.");
+			socket_cleanup(socket);
+			return -1;
+		}
+	}
+
+	if (s_socket_bind_port_and_set_non_blocking(socket, endpoint.type, endpoint.port)) {
+		return -1;
+	}
+
+	return 0;
+}
+
+int socket_send(socket_t* socket, endpoint_t send_to, const void* data, int byte_count)
 {
 	CUTE_ASSERT(data);
 	CUTE_ASSERT(byte_count >= 0);
 	CUTE_ASSERT(socket->handle != 0);
-	endpoint_t endpoint = socket->endpoint;
+	endpoint_t endpoint = send_to;
 	CUTE_ASSERT(endpoint.type != ADDRESS_TYPE_NONE);
 
 	if (endpoint.type == ADDRESS_TYPE_IPV6)
@@ -304,6 +374,7 @@ int socket_send(socket_t* socket, const void* data, int byte_count)
 		int result = sendto(socket->handle, (const char*)data, byte_count, 0, (sockaddr*)&socket_address, sizeof(socket_address));
 		return result;
 	}
+
 	return -1;
 }
 

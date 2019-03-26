@@ -87,6 +87,7 @@
 		* [ ] thread to pull packets and queue them
 		* [ ] poll server packets (deque)
 	* [x] security
+		* [ ] challenge response
 	* [ ] network simulator
 	* [ ] packet loss and RTT estimator
 	* [ ] loopback client

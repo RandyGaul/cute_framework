@@ -26,8 +26,8 @@
 
 #include <libsodium/sodium.h>
 
-#define CUTE_CRYPTO_SYMMETRIC_BYTES ((int)crypto_secretbox_MACBYTES)
 #define CUTE_CRYPTO_ASYMMETRIC_BYTES ((int)crypto_box_SEALBYTES)
+#define CUTE_CRYPTO_SYMMETRIC_BYTES ((int)crypto_secretbox_MACBYTES)
 
 namespace cute
 {

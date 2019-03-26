@@ -46,7 +46,7 @@ struct server_config_t
 extern CUTE_API server_t* CUTE_CALL server_alloc(void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL server_destroy(server_t* server);
 
-extern CUTE_API int CUTE_CALL server_start(server_t* server, endpoint_t endpoint, const crypto_key_t* public_key, const crypto_key_t* private_key, const server_config_t* config = NULL);
+extern CUTE_API int CUTE_CALL server_start(server_t* server, const char* address_and_port, const crypto_key_t* public_key, const crypto_key_t* secret_key, const server_config_t* config = NULL);
 extern CUTE_API void CUTE_CALL server_stop(server_t* server);
 
 extern CUTE_API void CUTE_CALL server_update(server_t* server, float dt);

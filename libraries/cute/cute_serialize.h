@@ -257,7 +257,7 @@ int serialize_buffer(serialize_t* io, void* buffer, int size);
  * terminator. It is recommended to serialize the length of your byte buffer before calling this
  * function, or to serialize a `0` sentinel byte afterwards.
  */
-int serialize_bytes(serialize_t* io, char* bytes, int len);
+int serialize_bytes(serialize_t* io, unsigned char* bytes, int len);
 
 /**
  * Serializes a series of four bytes. Upon reading, if the bytes read do not match the bytes
@@ -640,15 +640,18 @@ int serialize_buffer(serialize_t* io, void* buffer, int size)
 	return SERIALIZE_SUCCESS;
 }
 
-int serialize_bytes(serialize_t* io, char* bytes, int len)
+int serialize_bytes(serialize_t* io, unsigned char* bytes, int len)
 {
 	while (len--)
 	{
-		char c = *bytes;
+		unsigned char c = *bytes;
+		if (io->type == SERIALIZE_WRITE) {
+			++bytes;
+		}
 		SERIALIZE_UINT32 a = (SERIALIZE_UINT32)c;
 		if (serialize_bits(io, &a, 8) != SERIALIZE_SUCCESS) return SERIALIZE_FAILURE;
 		if (io->type == SERIALIZE_READ) {
-			*bytes++ = (char)a;
+			*bytes++ = (unsigned char)a;
 		}
 	}
 	return SERIALIZE_SUCCESS;
@@ -684,12 +687,15 @@ int serialize_flush(serialize_t* io)
 				if (bytes_to_write != bytes_written) {
 					return SERIALIZE_FAILURE;
 				}
+				io->measure_bytes += bytes_written;
 			}
 		} else {
 			while (io->buffer < io->end && io->bit_count) {
 				*io->buffer++ = (unsigned char)io->bits;
 				io->bits >>= 8;
-				io->bit_count -= 8;
+				if (io->bit_count >= 8) io->bit_count -= 8;
+				else io->bit_count = 0;
+				io->measure_bytes++;
 			}
 		}
 	}

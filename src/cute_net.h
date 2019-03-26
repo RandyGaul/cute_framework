@@ -24,7 +24,7 @@
 
 #include <cute_crypto.h>
 
-#define CUTE_PACKET_SIZE_MAX (CUTE_MB + 256)
+#define CUTE_PACKET_SIZE_MAX (CUTE_KB + 256)
 
 namespace cute
 {

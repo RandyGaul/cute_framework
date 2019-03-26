@@ -124,6 +124,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_nonce_buffer.h
 		test/test_packet_queue.h
 		test/test_socket.h
+		test/test_client_server.h
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
