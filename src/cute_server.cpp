@@ -48,6 +48,7 @@ struct server_t
 	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
 	void* mem_ctx = NULL;
 
+	handle_table_t client_handles; // WORKING HERE: Hooking up this table.
 	int client_count = 0;
 	int client_is_connected[CUTE_SERVER_MAX_CLIENTS];
 	int client_is_loopback[CUTE_SERVER_MAX_CLIENTS];
@@ -56,7 +57,7 @@ struct server_t
 	uint64_t client_sequence_offset[CUTE_SERVER_MAX_CLIENTS];
 	uint64_t client_sequence[CUTE_SERVER_MAX_CLIENTS];
 	nonce_buffer_t client_nonce_buffer[CUTE_SERVER_MAX_CLIENTS];
-	client_id_t client_id[CUTE_SERVER_MAX_CLIENTS];
+	handle_t client_id[CUTE_SERVER_MAX_CLIENTS];
 	crypto_key_t client_session_key[CUTE_SERVER_MAX_CLIENTS];
 	packet_queue_t client_packets[CUTE_SERVER_MAX_CLIENTS];
 };
@@ -139,7 +140,7 @@ int server_poll_event(server_t* server, server_event_t* event)
 	return -1;
 }
 
-void server_disconnect_client(server_t* server, client_id_t id)
+void server_disconnect_client(server_t* server, handle_t id)
 {
 }
 
@@ -151,11 +152,11 @@ void server_broadcast_to_all_clients(server_t* server, const void* packet, int s
 {
 }
 
-void server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, client_id_t id, int reliable)
+void server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t id, int reliable)
 {
 }
 
-void server_send_to_client(server_t* server, const void* packet, int size, client_id_t id, int reliable)
+void server_send_to_client(server_t* server, const void* packet, int size, handle_t id, int reliable)
 {
 }
 

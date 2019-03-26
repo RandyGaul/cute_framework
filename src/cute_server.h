@@ -25,6 +25,7 @@
 #include <cute_defines.h>
 #include <cute_net.h>
 #include <cute_crypto.h>
+#include <cute_handle_table.h>
 
 #define CUTE_SERVER_MAX_CLIENTS 256
 
@@ -33,7 +34,6 @@ namespace cute
 
 struct server_t;
 struct server_event_t;
-using client_id_t = uint64_t;
 
 struct server_config_t
 {
@@ -51,13 +51,13 @@ extern CUTE_API void CUTE_CALL server_stop(server_t* server);
 
 extern CUTE_API void CUTE_CALL server_update(server_t* server, float dt);
 extern CUTE_API int CUTE_CALL server_poll_event(server_t* server, server_event_t* event);
-extern CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, client_id_t id);
+extern CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_id);
 extern CUTE_API void CUTE_CALL server_look_for_and_disconnected_timed_out_clients(server_t* server);
 extern CUTE_API void CUTE_CALL server_broadcast_to_all_clients(server_t* server, const void* packet, int size, int reliable);
-extern CUTE_API void CUTE_CALL server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, client_id_t id, int reliable);
-extern CUTE_API void CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, client_id_t id, int reliable);
+extern CUTE_API void CUTE_CALL server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t client_id, int reliable);
+extern CUTE_API void CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, handle_t client_id, int reliable);
 
-extern CUTE_API client_id_t CUTE_CALL server_connect_loopback_client();
+extern CUTE_API handle_t CUTE_CALL server_connect_loopback_client();
 
 enum server_event_type_t
 {
@@ -73,19 +73,19 @@ struct server_event_t
 	{
 		struct
 		{
-			client_id_t id;
+			handle_t client_id;
 			endpoint_t endpoint;
 			crypto_key_t session_key;
 		} new_connection;
 
 		struct
 		{
-			client_id_t id;
+			handle_t client_id;
 		} disconnected;
 
 		struct
 		{
-			client_id_t id;
+			handle_t client_id;
 			void* data;
 			int size;
 		} user_packet;

@@ -32,8 +32,8 @@ int test_handle_basic()
 	cute::handle_t h1 = handle_table_alloc(&table, 13);
 	CUTE_TEST_ASSERT(h0 != CUTE_INVALID_HANDLE);
 	CUTE_TEST_ASSERT(h1 != CUTE_INVALID_HANDLE);
-	int index0 = CUTE_HANDLE_INDEX(h0);
-	int index1 = CUTE_HANDLE_INDEX(h1);
+	uint32_t index0 = handle_table_get_index(&table, h0);
+	uint32_t index1 = handle_table_get_index(&table, h1);
 	CUTE_TEST_ASSERT(index0 == 7);
 	CUTE_TEST_ASSERT(index1 == 13);
 
@@ -44,14 +44,13 @@ int test_handle_basic()
 	h1 = handle_table_alloc(&table, 267);
 	CUTE_TEST_ASSERT(h0 != CUTE_INVALID_HANDLE);
 	CUTE_TEST_ASSERT(h1 != CUTE_INVALID_HANDLE);
-	index0 = CUTE_HANDLE_INDEX(h0);
-	index1 = CUTE_HANDLE_INDEX(h1);
+	index0 = handle_table_get_index(&table, h0);
+	index1 = handle_table_get_index(&table, h1);
 	CUTE_TEST_ASSERT(index0 == 4);
 	CUTE_TEST_ASSERT(index1 == 267);
 
-	h1 = handle_table_update_index(&table, h1, 9);
-	CUTE_TEST_ASSERT(h1 != CUTE_INVALID_HANDLE);
-	index1 = CUTE_HANDLE_INDEX(h1);
+	handle_table_update_index(&table, h1, 9);
+	index1 = handle_table_get_index(&table, h1);
 	CUTE_TEST_ASSERT(index1 == 9);
 
 	handle_table_clean_up(&table);
@@ -60,17 +59,17 @@ int test_handle_basic()
 	return 0;
 }
 
-CUTE_TEST_CASE(test_handle_large_loop, "Allocate right up the maximum size possible for `handle_table_t`, which is 65535.");
+CUTE_TEST_CASE(test_handle_large_loop, "Allocate right up the maximum size possible for the table.");
 int test_handle_large_loop()
 {
 	handle_table_t table;
-	CUTE_TEST_CHECK(handle_table_init(&table, 65535, NULL));
+	CUTE_TEST_CHECK(handle_table_init(&table, 1024, NULL));
 
-	for (int i = 0; i < 65535; ++i)
+	for (int i = 0; i < 1024; ++i)
 	{
 		cute::handle_t h = handle_table_alloc(&table, i);
 		CUTE_TEST_ASSERT(h != CUTE_INVALID_HANDLE);
-		CUTE_ASSERT(CUTE_HANDLE_INDEX(h) == i);
+		CUTE_ASSERT(handle_table_get_index(&table, h) == (uint32_t)i);
 	}
 
 	handle_table_clean_up(&table);
@@ -83,42 +82,46 @@ CUTE_TEST_CASE(test_handle_large_loop_and_free, "\"Soak test\" to fill up the ha
 int test_handle_large_loop_and_free()
 {
 	handle_table_t table;
-	CUTE_TEST_CHECK(handle_table_init(&table, 65535, NULL));
+	CUTE_TEST_CHECK(handle_table_init(&table, 1024, NULL));
+	cute::handle_t* handles = (cute::handle_t*)malloc(sizeof(cute::handle_t) * 2014);
 
 	for (int iters = 0; iters < 5; ++iters)
 	{
-		for (int i = 0; i < 65535; ++i)
+		for (int i = 0; i < 1024; ++i)
 		{
 			cute::handle_t h = handle_table_alloc(&table, i);
 			CUTE_TEST_ASSERT(h != CUTE_INVALID_HANDLE);
-			CUTE_ASSERT(CUTE_HANDLE_INDEX(h) == i);
+			CUTE_ASSERT(handle_table_get_index(&table, h) == (uint32_t)i);
+			handles[i] = h;
 		}
 
-		CUTE_TEST_ASSERT(table.freelist == 65535);
+		CUTE_TEST_ASSERT(table.freelist == UINT32_MAX);
 
-		for (int i = 0; i < 65535; ++i)
+		for (int i = 0; i < 1024; ++i)
 		{
-			handle_table_free(&table, i);
+			cute::handle_t h = handles[i];
+			handle_table_free(&table, h);
 		}
 	}
 
 	handle_table_clean_up(&table);
 	CUTE_TEST_ASSERT(table.handles == NULL);
+	free(handles);
 
 	return 0;
 }
 
-CUTE_TEST_CASE(test_handle_alloc_too_many, "Allocating over 65535 entries should result in failure.");
+CUTE_TEST_CASE(test_handle_alloc_too_many, "Allocating over 1024 entries should result in failure.");
 int test_handle_alloc_too_many()
 {
 	handle_table_t table;
-	CUTE_TEST_CHECK(handle_table_init(&table, 65535, NULL));
+	CUTE_TEST_CHECK(handle_table_init(&table, 1024, NULL));
 
-	for (int i = 0; i < 65535; ++i)
+	for (int i = 0; i < 1024; ++i)
 	{
 		cute::handle_t h = handle_table_alloc(&table, i);
 		CUTE_TEST_ASSERT(h != CUTE_INVALID_HANDLE);
-		CUTE_ASSERT(CUTE_HANDLE_INDEX(h) == i);
+		CUTE_ASSERT(handle_table_get_index(&table, h) == (uint32_t)i);
 	}
 
 	cute::handle_t h = handle_table_alloc(&table, 0);

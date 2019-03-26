@@ -30,22 +30,21 @@ namespace cute
 using handle_t = uint64_t;
 #define CUTE_INVALID_HANDLE (~0ULL)
 
-#define CUTE_HANDLE_INDEX(handle) (handle & 0xFFFF)
-
 struct handle_table_t
 {
 	int size = 0;
 	int capacity = 0;
-	uint16_t freelist = 0;
-	handle_t* handles = NULL;
+	uint32_t freelist = 0;
+	void* handles = NULL;
 	void* mem_ctx = NULL;
 };
 
-extern CUTE_API int CUTE_CALL handle_table_init(handle_table_t* table, int initial_capacity, void* user_allocator_context = NULL);
+extern CUTE_API int CUTE_CALL handle_table_init(handle_table_t* table, int capacity, void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL handle_table_clean_up(handle_table_t* table);
 
-extern CUTE_API handle_t CUTE_CALL handle_table_alloc(handle_table_t* table, uint16_t index);
-extern CUTE_API handle_t CUTE_CALL handle_table_update_index(handle_table_t* table, handle_t handle, uint16_t index);
+extern CUTE_API handle_t CUTE_CALL handle_table_alloc(handle_table_t* table, uint32_t index);
+extern CUTE_API uint32_t CUTE_CALL handle_table_get_index(handle_table_t* table, handle_t handle);
+extern CUTE_API void CUTE_CALL handle_table_update_index(handle_table_t* table, handle_t handle, uint32_t index);
 extern CUTE_API void CUTE_CALL handle_table_free(handle_table_t* table, handle_t handle);
 
 }
