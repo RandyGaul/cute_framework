@@ -24,6 +24,8 @@
 
 #include <cute_crypto.h>
 
+#define CUTE_PROTOCOL_VERSION "CUTE PROTOCOL VERSION 1.00"
+#define CUTE_PROTOCOL_VERSION_STRING_LEN (26 + 1)
 #define CUTE_PACKET_SIZE_MAX (CUTE_KB + 256)
 
 namespace cute

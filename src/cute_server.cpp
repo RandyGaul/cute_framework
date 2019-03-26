@@ -219,7 +219,11 @@ static void s_server_recieve_packets(server_t* server)
 			client_index = s_client_make(server, from, &session_key, 0);
 			if (client_index != UINT32_MAX) {
 				// Failed to create new client for some reason (like out of memory).
+				continue;
 			}
+
+			// WORKING HERE.
+			// Need to store state in server, to send connection accepted response.
 		} else {
 			// Grab session key for this client.
 			// Decrypt packet.

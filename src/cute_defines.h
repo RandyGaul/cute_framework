@@ -62,9 +62,6 @@
 
 #define CUTE_SERIALIZE_CHECK(x) do { if ((x) != SERIALIZE_SUCCESS) goto cute_error; } while (0)
 
-#define CUTE_PROTOCOL_VERSION "CUTE PROTOCOL VERSION 1.00"
-#define CUTE_PROTOCOL_VERSION_STRING_LEN (26 + 1)
-
 namespace cute
 {
 
