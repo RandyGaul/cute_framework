@@ -49,7 +49,7 @@ if(APPLE)
 	)
 endif()
 
-add_library(physfs ${PHYSFS_SRCS})
+add_library(physfs STATIC ${PHYSFS_SRCS})
 
 # Cute Framework shared library.
 set(CUTE_SRCS
