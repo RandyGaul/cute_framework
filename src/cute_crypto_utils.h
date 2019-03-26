@@ -37,6 +37,11 @@ struct crypto_nonce_t
 	uint8_t nonce[crypto_box_NONCEBYTES];
 };
 
+extern CUTE_API crypto_nonce_t CUTE_CALL crypto_random_nonce();
+extern CUTE_API void CUTE_CALL crypto_random_bytes(void* data, int byte_count);
+extern CUTE_API crypto_key_t CUTE_CALL crypto_generate_symmetric_key();
+extern CUTE_API void CUTE_CALL crypto_generate_keypair(crypto_key_t* public_key, crypto_key_t* private_key);
+
 }
 
 #endif // CUTE_CRYPTO_UTILS_H

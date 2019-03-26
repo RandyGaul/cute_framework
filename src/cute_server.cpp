@@ -133,8 +133,8 @@ static void s_server_recieve_packets(server_t* server)
 		uint32_t client_index = s_client_index_from_endpoint(server, from);
 		if (client_index == UINT32_MAX) {
 			// Client address not found -- potential new connection.
-			// Lookup symmetric key.
 			// Decrypt packet.
+			// Lookup symmetric key.
 			int is_new_connection_packet = 0;
 			if (!is_new_connection_packet) {
 				// Do not know who this is, and they are not requesting a new connection.

@@ -30,7 +30,7 @@ int test_crypto_symmetric_key_encrypt_decrypt()
 
 	const char* message_string = "The message.";
 	int message_length = (int)CUTE_STRLEN(message_string) + 1;
-	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_SYMMETRIC_KEY_MAC_BYTES);
+	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_SYMMETRIC_BYTES);
 	CUTE_MEMCPY(message_buffer, message_string, message_length);
 
 	crypto_nonce_t nonce;
@@ -38,7 +38,7 @@ int test_crypto_symmetric_key_encrypt_decrypt()
 
 	CUTE_TEST_CHECK(crypto_encrypt(&k, message_buffer, message_length, &nonce));
 	CUTE_TEST_ASSERT(CUTE_MEMCMP(message_buffer, message_string, message_length));
-	CUTE_TEST_CHECK(crypto_decrypt(&k, message_buffer, message_length + CUTE_CRYPTO_SYMMETRIC_KEY_MAC_BYTES, &nonce));
+	CUTE_TEST_CHECK(crypto_decrypt(&k, message_buffer, message_length + CUTE_CRYPTO_SYMMETRIC_BYTES, &nonce));
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(message_buffer, message_string, message_length));
 
 	free(message_buffer);
@@ -46,26 +46,20 @@ int test_crypto_symmetric_key_encrypt_decrypt()
 	return 0;
 }
 
-CUTE_TEST_CASE(test_crypto_assymetric_key_encrypt_decrypt, "Generate two keysets, a and b, and perform encryption + authentication from a to b.");
+CUTE_TEST_CASE(test_crypto_assymetric_key_encrypt_decrypt, "Simulate sending a secure anonymous message to server with public and secret keypair.");
 int test_crypto_assymetric_key_encrypt_decrypt()
 {
-	crypto_key_t pk_a, sk_a;
-	crypto_key_t pk_b, sk_b;
-
-	crypto_generate_keypair(&pk_a, &sk_a);
-	crypto_generate_keypair(&pk_b, &sk_b);
+	crypto_key_t pk, sk;
+	crypto_generate_keypair(&pk, &sk);
 
 	const char* message_string = "The message.";
 	int message_length = (int)CUTE_STRLEN(message_string) + 1;
-	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_ASYMMETRIC_KEY_MAC_BYTES);
+	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_ASYMMETRIC_BYTES);
 	CUTE_MEMCPY(message_buffer, message_string, message_length);
 
-	crypto_nonce_t nonce;
-	crypto_random_bytes(&nonce, sizeof(nonce));
-
-	CUTE_TEST_CHECK(crypto_encrypt_asymmetric(&pk_b, &sk_a, message_buffer, message_length, &nonce));
+	CUTE_TEST_CHECK(crypto_encrypt_asymmetric(&pk, message_buffer, message_length));
 	CUTE_TEST_ASSERT(CUTE_MEMCMP(message_buffer, message_string, message_length));
-	CUTE_TEST_CHECK(crypto_decrypt_asymmetric(&pk_a, &sk_b, message_buffer, message_length + CUTE_CRYPTO_ASYMMETRIC_KEY_MAC_BYTES, &nonce));
+	CUTE_TEST_CHECK(crypto_decrypt_asymmetric(&pk, &sk, message_buffer, message_length + CUTE_CRYPTO_ASYMMETRIC_BYTES));
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(message_buffer, message_string, message_length));
 
 	free(message_buffer);
