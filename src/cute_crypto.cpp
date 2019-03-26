@@ -21,26 +21,35 @@
 
 #include <cute_crypto.h>
 #include <cute_error.h>
+#include <cute_c_runtime.h>
+
+#include <internal/cute_crypto_internal.h>
 
 namespace cute
 {
 
-int crypto_encrypt_asymmetric(const crypto_key_t* endpoint_public_key, uint8_t* data, int size)
+int crypto_encrypt_asymmetric(const crypto_key_t* endpoint_public_key, uint8_t* buffer, int size_to_encrypt, int buffer_size)
 {
-	return crypto_box_seal(data, data, size, endpoint_public_key->key);
+	if (size_to_encrypt + CUTE_CRYPTO_ASYMMETRIC_BYTES > buffer_size) {
+		error_set("Can not encrypt data: `buffer_size` must be at least `CUTE_CRYPTO_ASYMMETRIC_BYTES` bytes larger than `size_to_encrypt`.");
+		return -1;
+	}
+	CUTE_MEMMOVE(buffer + CUTE_CRYPTO_ASYMMETRIC_BYTES, buffer, size_to_encrypt);
+	return crypto_box_seal(buffer, buffer + CUTE_CRYPTO_ASYMMETRIC_BYTES, size_to_encrypt, endpoint_public_key->key);
 }
 
-int crypto_decrypt_asymmetric(const crypto_key_t* your_public_key, const crypto_key_t* your_secret_key, uint8_t* data, int size)
+int crypto_decrypt_asymmetric(const crypto_key_t* your_public_key, const crypto_key_t* your_secret_key, uint8_t* buffer, int buffer_size)
 {
-	uint8_t buffer[1024];
-	for (int i = 0; i < 1024; ++i) buffer[i] = 0;
-	int ret = crypto_box_seal_open(buffer, data, size, your_public_key->key, your_secret_key->key);
-	return ret;
+	return crypto_box_seal_open(buffer, buffer, buffer_size, your_public_key->key, your_secret_key->key);
 }
 
-int crypto_encrypt(const crypto_key_t* symmetric_key, uint8_t* data, int byte_count, const crypto_nonce_t* nonce)
+int crypto_encrypt(const crypto_key_t* symmetric_key, uint8_t* buffer, int size_to_encrypt, int buffer_size, const crypto_nonce_t* nonce)
 {
-	return crypto_secretbox_easy(data, data, byte_count, nonce->nonce, symmetric_key->key);
+	if (size_to_encrypt + CUTE_CRYPTO_SYMMETRIC_BYTES > buffer_size) {
+		error_set("Can not encrypt data: `buffer_size` must be at least `CUTE_CRYPTO_SYMMETRIC_BYTES` bytes larger than `size_to_encrypt`.");
+		return -1;
+	}
+	return crypto_secretbox_easy(buffer, buffer, size_to_encrypt, nonce->nonce, symmetric_key->key);
 }
 
 int crypto_decrypt(const crypto_key_t* symmetric_key, uint8_t* data, int byte_count, const crypto_nonce_t* nonce)
@@ -48,9 +57,9 @@ int crypto_decrypt(const crypto_key_t* symmetric_key, uint8_t* data, int byte_co
 	return crypto_secretbox_open_easy(data, data, byte_count, nonce->nonce, symmetric_key->key);
 }
 
-void crypto_generate_keypair(crypto_key_t* public_key, crypto_key_t* private_key)
+int crypto_generate_keypair(crypto_key_t* public_key, crypto_key_t* private_key)
 {
-	crypto_box_keypair(public_key->key, private_key->key);
+	return crypto_box_keypair(public_key->key, private_key->key);
 }
 
 crypto_key_t crypto_generate_symmetric_key()
@@ -72,11 +81,21 @@ void crypto_random_bytes(void* data, int byte_count)
 	randombytes_buf(data, byte_count);
 }
 
+const char* crypto_sodium_version_linked()
+{
+	return sodium_version_string();
+}
+
 namespace internal
 {
 	int crypto_init()
 	{
 		if (sodium_init() < 0) {
+			error_set( "Unable to initialize crypto library. It is *not safe* to connect to the net.");
+			return -1;
+		}
+		if (crypto_box_publickeybytes() != crypto_box_secretkeybytes()) {
+			// The version of libsodium Cute was originally written with held this invariant.
 			error_set( "Unable to initialize crypto library. It is *not safe* to connect to the net.");
 			return -1;
 		}

@@ -36,7 +36,7 @@ int test_crypto_symmetric_key_encrypt_decrypt()
 	crypto_nonce_t nonce;
 	crypto_random_bytes(&nonce, sizeof(nonce));
 
-	CUTE_TEST_CHECK(crypto_encrypt(&k, message_buffer, message_length, &nonce));
+	CUTE_TEST_CHECK(crypto_encrypt(&k, message_buffer, message_length, message_length + CUTE_CRYPTO_SYMMETRIC_BYTES, &nonce));
 	CUTE_TEST_ASSERT(CUTE_MEMCMP(message_buffer, message_string, message_length));
 	CUTE_TEST_CHECK(crypto_decrypt(&k, message_buffer, message_length + CUTE_CRYPTO_SYMMETRIC_BYTES, &nonce));
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(message_buffer, message_string, message_length));
@@ -57,7 +57,7 @@ int test_crypto_assymetric_key_encrypt_decrypt()
 	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_ASYMMETRIC_BYTES);
 	CUTE_MEMCPY(message_buffer, message_string, message_length);
 
-	CUTE_TEST_CHECK(crypto_encrypt_asymmetric(&pk, message_buffer, message_length));
+	CUTE_TEST_CHECK(crypto_encrypt_asymmetric(&pk, message_buffer, message_length, message_length + CUTE_CRYPTO_ASYMMETRIC_BYTES));
 	CUTE_TEST_ASSERT(CUTE_MEMCMP(message_buffer, message_string, message_length));
 	CUTE_TEST_CHECK(crypto_decrypt_asymmetric(&pk, &sk, message_buffer, message_length + CUTE_CRYPTO_ASYMMETRIC_BYTES));
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(message_buffer, message_string, message_length));

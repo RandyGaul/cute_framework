@@ -32,6 +32,11 @@
 #	define CUTE_MEMCPY memcpy
 #endif
 
+#ifndef CUTE_MEMMOVE
+#	include <string.h>
+#	define CUTE_MEMMOVE memmove
+#endif
+
 #ifndef CUTE_MEMSET
 #	include <string.h>
 #	define CUTE_MEMSET memset

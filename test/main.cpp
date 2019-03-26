@@ -49,7 +49,7 @@ int main(int argc, const char** argv)
 #endif
 
 	internal::net_init();
-	// internal::crypto_init(); WTF???
+	internal::crypto_init();
 
 	test_t tests[] = {
 		CUTE_TEST_CASE_ENTRY(test_handle_basic),
