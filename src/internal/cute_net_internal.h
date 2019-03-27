@@ -47,8 +47,6 @@ namespace cute
 enum packet_type_t : int
 {
 	PACKET_TYPE_HELLO,
-	PACKET_TYPE_PROOF_OF_WORK_REQUEST, // https://en.wikipedia.org/wiki/Proof-of-work_system : NOTE : Use Argon2
-	PACKET_TYPE_PROOF_OF_WORK_RESPONSE,
 	PACKET_TYPE_CONNECTION_ACCEPTED,
 	PACKET_TYPE_CONNECTION_DENIED,
 	PACKET_TYPE_KEEP_ALIVE,

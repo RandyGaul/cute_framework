@@ -87,7 +87,10 @@
 		* [ ] thread to pull packets and queue them
 		* [ ] poll server packets (deque)
 	* [x] security
-		* [ ] proof of work
+		* [x] symmetric encryption
+		* [x] asymmetric encryption
+		* [ ] proof of work utility, https://en.wikipedia.org/wiki/Proof-of-work_system : NOTE : Use Argon2
+		* [ ] password challenge/response utility
 	* [ ] network simulator
 	* [ ] packet loss and RTT estimator
 	* [ ] loopback client
