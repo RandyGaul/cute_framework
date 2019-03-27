@@ -56,6 +56,15 @@ enum packet_type_t : int
 	PACKET_TYPE_MAX,
 };
 
+enum connection_denied_reason_t : int
+{
+	CONNECTION_DENIED_REASON_CLIENT_CAPACITY_AT_MAXIMUM,
+	CONNECTION_DENIED_REASON_BAD_PACKET,
+	CONNECTION_DENIED_REASON_SERVER_ERROR,
+
+	CONNECTION_DENIED_REASON_MAX,
+};
+
 #ifdef _MSC_VER
 	using socket_handle_t = uint64_t;
 #else

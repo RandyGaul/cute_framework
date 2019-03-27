@@ -33,12 +33,12 @@ int test_crypto_symmetric_key_encrypt_decrypt()
 	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_SYMMETRIC_BYTES);
 	CUTE_MEMCPY(message_buffer, message_string, message_length);
 
-	crypto_nonce_t nonce;
-	crypto_random_bytes(&nonce, sizeof(nonce));
+	uint64_t sequence;
+	crypto_random_bytes(&sequence, sizeof(sequence));
 
-	CUTE_TEST_CHECK(crypto_encrypt(&k, message_buffer, message_length, message_length + CUTE_CRYPTO_SYMMETRIC_BYTES, &nonce));
+	CUTE_TEST_CHECK(crypto_encrypt(&k, message_buffer, message_length, message_length + CUTE_CRYPTO_SYMMETRIC_BYTES, sequence));
 	CUTE_TEST_ASSERT(CUTE_MEMCMP(message_buffer, message_string, message_length));
-	CUTE_TEST_CHECK(crypto_decrypt(&k, message_buffer, message_length + CUTE_CRYPTO_SYMMETRIC_BYTES, &nonce));
+	CUTE_TEST_CHECK(crypto_decrypt(&k, message_buffer, message_length + CUTE_CRYPTO_SYMMETRIC_BYTES, sequence));
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(message_buffer, message_string, message_length));
 
 	free(message_buffer);

@@ -33,13 +33,12 @@ namespace cute
 {
 
 struct crypto_key_t;
-struct crypto_nonce_t;
 
 extern CUTE_API int CUTE_CALL crypto_encrypt_asymmetric(const crypto_key_t* endpoint_public_key, uint8_t* buffer, int size_to_encrypt, int buffer_size);
 extern CUTE_API int CUTE_CALL crypto_decrypt_asymmetric(const crypto_key_t* your_public_key, const crypto_key_t* your_secret_key, uint8_t* buffer, int buffer_size);
 
-extern CUTE_API int CUTE_CALL crypto_encrypt(const crypto_key_t* symmetric_key, uint8_t* buffer, int size_to_encrypt, int buffer_size, const crypto_nonce_t* nonce);
-extern CUTE_API int CUTE_CALL crypto_decrypt(const crypto_key_t* symmetric_key, uint8_t* buffer, int buffer_size, const crypto_nonce_t* nonce);
+extern CUTE_API int CUTE_CALL crypto_encrypt(const crypto_key_t* symmetric_key, uint8_t* buffer, int size_to_encrypt, int buffer_size, uint64_t sequence);
+extern CUTE_API int CUTE_CALL crypto_decrypt(const crypto_key_t* symmetric_key, uint8_t* buffer, int buffer_size, uint64_t sequence);
 
 }
 

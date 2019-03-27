@@ -51,18 +51,27 @@ int crypto_decrypt_asymmetric(const crypto_key_t* your_public_key, const crypto_
 	return crypto_box_seal_open(buffer, buffer, buffer_size, your_public_key->key, your_secret_key->key);
 }
 
-int crypto_encrypt(const crypto_key_t* symmetric_key, uint8_t* buffer, int size_to_encrypt, int buffer_size, const crypto_nonce_t* nonce)
+int crypto_encrypt(const crypto_key_t* symmetric_key, uint8_t* buffer, int size_to_encrypt, int buffer_size, uint64_t sequence)
 {
 	if (size_to_encrypt + CUTE_CRYPTO_SYMMETRIC_BYTES > buffer_size) {
 		error_set("Can not encrypt data: `buffer_size` must be at least `CUTE_CRYPTO_SYMMETRIC_BYTES` bytes larger than `size_to_encrypt`.");
 		return -1;
 	}
-	return crypto_secretbox_easy(buffer, buffer, size_to_encrypt, nonce->nonce, symmetric_key->key);
+
+	uint8_t nonce[crypto_box_NONCEBYTES];
+	CUTE_MEMSET(nonce, 0, sizeof(nonce));
+	*((uint64_t*)(nonce + sizeof(nonce) - sizeof(uint64_t))) = sequence;
+
+	return crypto_secretbox_easy(buffer, buffer, size_to_encrypt, nonce, symmetric_key->key);
 }
 
-int crypto_decrypt(const crypto_key_t* symmetric_key, uint8_t* data, int byte_count, const crypto_nonce_t* nonce)
+int crypto_decrypt(const crypto_key_t* symmetric_key, uint8_t* data, int byte_count, uint64_t sequence)
 {
-	return crypto_secretbox_open_easy(data, data, byte_count, nonce->nonce, symmetric_key->key);
+	uint8_t nonce[crypto_box_NONCEBYTES];
+	CUTE_MEMSET(nonce, 0, sizeof(nonce));
+	*((uint64_t*)(nonce + sizeof(nonce) - sizeof(uint64_t))) = sequence;
+
+	return crypto_secretbox_open_easy(data, data, byte_count, nonce, symmetric_key->key);
 }
 
 int crypto_generate_keypair(crypto_key_t* public_key, crypto_key_t* private_key)
@@ -75,13 +84,6 @@ crypto_key_t crypto_generate_symmetric_key()
 	crypto_key_t key;
 	crypto_secretbox_keygen(key.key);
 	return key;
-}
-
-crypto_nonce_t crypto_random_nonce()
-{
-	crypto_nonce_t nonce;
-	crypto_random_bytes(&nonce, sizeof(nonce));
-	return nonce;
 }
 
 void crypto_random_bytes(void* data, int byte_count)

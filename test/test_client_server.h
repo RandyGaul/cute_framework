@@ -39,8 +39,15 @@ int test_client_server_handshake()
 	CUTE_TEST_CHECK(client_connect(client, 501, "127.0.0.1:500", &pk));
 
 	float dt = 1.0f / 60.0f;
+
+	// Send hello.
 	client_update(client, dt);
+
+	// Accept connection, send connection response.
 	server_update(server, dt);
+
+	// Recieve connection accepted.
+	client_update(client, dt);
 
 	client_disconnect(client);
 	server_stop(server);

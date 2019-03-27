@@ -123,26 +123,16 @@ int client_is_loopback(const client_t* client)
 	return client->loopback;
 }
 
-struct replay_protection_buffer_t;
-int replay_protection(uint64_t sequence, replay_protection_buffer_t* buffer)
-{
-	return -1;
-}
-
 static uint8_t* s_client_open_packet(client_t* client, uint8_t* packet, int size, uint64_t sequence)
 {
-	crypto_nonce_t nonce;
-	memset(&nonce, 0, sizeof(nonce));
-	CUTE_ASSERT(sizeof(nonce) >= sizeof(uint64_t));
-	*(uint64_t*)((uint8_t*)&nonce + sizeof(nonce) - sizeof(uint64_t)) = sequence;
-
-	if (crypto_decrypt(&client->session_key, packet, size, &nonce) < 0) {
+	if (crypto_decrypt(&client->session_key, packet, size, sequence) < 0) {
 		// Forged packet!
 		return NULL;
 	}
 
-	if (replay_protection(sequence, NULL) < 0) {
-		// Duplicate packet detected.
+	// WORKING HERE : First connection response needs special case for sequence/offset.
+	if (nonce_cull_duplicate(&client->nonce_buffer, sequence, client->sequence_offset) < 0) {
+		// Duplicate, or very old, packet detected.
 		return NULL;
 	}
 
@@ -178,9 +168,15 @@ static void s_client_receive_packets(client_t* client)
 
 		serialize_t* io = client->io;
 		serialize_reset_buffer(io, SERIALIZE_READ, buffer, bytes_read);
+		if (bytes_read <= sizeof(uint64_t)) {
+			// Packet too small to eb valid.
+			continue;
+		}
 
 		uint64_t sequence;
 		CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &sequence));
+		buffer += sizeof(uint64_t);
+		bytes_read -= sizeof(uint64_t);
 
 		uint8_t* packet = s_client_open_packet(client, buffer, bytes_read, sequence);
 		if (!packet) {
