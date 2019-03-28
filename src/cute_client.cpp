@@ -163,7 +163,7 @@ static void s_client_receive_packets(client_t* client)
 		CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &sequence));
 		packet_type_t type;
 		int packet_size;
-		uint8_t* packet = open_packet(io, &client->session_key, &client->nonce_buffer, buffer, bytes_read, client->sequence, client->sequence_offset, &type, &packet_size);
+		uint8_t* packet = open_packet(io, &client->session_key, &client->nonce_buffer, buffer, bytes_read, sequence, client->sequence_offset, &type, &packet_size);
 
 		if (!packet) {
 			// A forged or otherwise corrupt/unknown type of packet has appeared.
@@ -171,7 +171,7 @@ static void s_client_receive_packets(client_t* client)
 		}
 
 		// Packet has been verified to have come from the server -- safe to process.
-		client->last_packet_recieved_time = 0;
+		int valid_packet = 0;
 
 		switch (type)
 		{
@@ -182,65 +182,40 @@ static void s_client_receive_packets(client_t* client)
 				client->sequence = 1;
 				CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &client->sequence_offset));
 				client->state = CLIENT_STATE_CONNECTED;
+				valid_packet = 1;
 			}
 			break;
 
 		case PACKET_TYPE_CONNECTION_DENIED:
 			client->state = CLIENT_STATE_DISCONNECTED;
+			valid_packet = 1;
 			return;
 
 		case PACKET_TYPE_KEEP_ALIVE:
-			// No-op.
+			valid_packet = 1;
 			break;
 
 		case PACKET_TYPE_DISCONNECT:
 			client->state = CLIENT_STATE_DISCONNECTED;
+			valid_packet = 1;
 			return;
 
 		case PACKET_TYPE_USERDATA:
 			if (client->state == CLIENT_STATE_CONNECTED) {
 				CUTE_CHECK(packet_queue_push(&client->packets, packet, packet_size, sequence));
+				valid_packet = 1;
 			}
 			break;
+		}
+
+		if (valid_packet) {
+			client->last_packet_recieved_time = 0;
 		}
 	}
 
 cute_error:
 	// Skip packet upon any errors.
 	return;
-}
-
-static int s_write_packet_header(client_t* client, packet_type_t packet_type)
-{
-	serialize_t* io = client->io;
-	uint8_t* buffer = client->buffer;
-
-	serialize_reset_buffer(io, SERIALIZE_WRITE, buffer, CUTE_PACKET_SIZE_MAX);
-	uint64_t sequence = client->sequence;
-	CUTE_CHECK(serialize_uint64_full(io, &sequence));
-	uint64_t packet_typeu64 = packet_type;
-	CUTE_SERIALIZE_CHECK(serialize_uint64(io, &packet_typeu64, 0, PACKET_TYPE_MAX));
-	CUTE_SERIALIZE_CHECK(serialize_flush(io));
-	int packet_size = serialize_serialized_bytes(io);
-	return packet_size;
-
-cute_error:
-	return -1;
-}
-
-static int s_encrypt_and_send(client_t* client, int packet_size)
-{
-	uint8_t* buffer = client->buffer;
-	uint64_t sequence = client->sequence++;
-	CUTE_CHECK(crypto_encrypt(&client->session_key, buffer + sizeof(uint64_t), packet_size - sizeof(uint64_t), CUTE_PACKET_SIZE_MAX, sequence + client->sequence_offset));
-	packet_size += CUTE_CRYPTO_SYMMETRIC_BYTES;
-
-	int bytes_sent = socket_send(&client->socket, client->server_endpoint, buffer, packet_size);
-	(void)bytes_sent;
-	return 0;
-
-cute_error:
-	return -1;
 }
 
 static void s_client_send_packets(client_t* client)
@@ -291,9 +266,9 @@ static void s_client_send_packets(client_t* client)
 	{
 		if (client->last_packet_sent_time >= CUTE_KEEPALIVE_RATE) {
 			client->last_packet_sent_time = 0;
-			int packet_size = s_write_packet_header(client, PACKET_TYPE_KEEP_ALIVE);
+			int packet_size = packet_write_header(client->io, buffer, PACKET_TYPE_KEEP_ALIVE, client->sequence);
 			if (packet_size <= 0) goto cute_error;
-			CUTE_CHECK(s_encrypt_and_send(client, packet_size));
+			CUTE_CHECK(packet_encrypt_and_send(&client->session_key, &client->socket, client->server_endpoint, buffer, packet_size, client->sequence_offset + client->sequence++));
 		}
 
 	}	break;

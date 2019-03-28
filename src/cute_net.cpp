@@ -27,6 +27,7 @@
 #include <cute_error.h>
 
 #include <internal/cute_net_internal.h>
+#include <internal/cute_defines_internal.h>
 
 #include <cute/cute_serialize.h>
 
@@ -625,6 +626,33 @@ uint8_t* open_packet(serialize_t* io, const crypto_key_t* session_key, nonce_buf
 
 cute_error:
 	return NULL;
+}
+
+int packet_write_header(serialize_t* io, uint8_t* buffer, packet_type_t packet_type, uint64_t sequence)
+{
+	serialize_reset_buffer(io, SERIALIZE_WRITE, buffer, CUTE_PACKET_SIZE_MAX);
+	CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &sequence));
+	uint64_t packet_typeu64 = packet_type;
+	CUTE_SERIALIZE_CHECK(serialize_uint64(io, &packet_typeu64, 0, PACKET_TYPE_MAX));
+	CUTE_SERIALIZE_CHECK(serialize_flush(io));
+	int header_size = serialize_serialized_bytes(io);
+	return header_size;
+
+cute_error:
+	return -1;
+}
+
+int packet_encrypt_and_send(const crypto_key_t* key, socket_t* socket, endpoint_t endpoint, uint8_t* buffer, int packet_size, uint64_t offsetted_sequence)
+{
+	CUTE_CHECK(crypto_encrypt(key, buffer + sizeof(uint64_t), packet_size - sizeof(uint64_t), CUTE_PACKET_SIZE_MAX, offsetted_sequence));
+	packet_size += CUTE_CRYPTO_SYMMETRIC_BYTES;
+
+	int bytes_sent = socket_send(socket, endpoint, buffer, packet_size);
+	(void)bytes_sent;
+	return 0;
+
+cute_error:
+	return -1;
 }
 
 // -------------------------------------------------------------------------------------------------

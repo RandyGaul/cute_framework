@@ -134,6 +134,8 @@ void server_stop(server_t* server)
 	handle_table_clean_up(&server->client_handle_table);
 	serialize_destroy(server->io);
 	pack_queue_clean_up(&server->packets);
+	CUTE_FREE(server->event_queue, server->mem_ctx);
+	server->event_queue = NULL;
 	server->io = NULL;
 }
 
@@ -337,7 +339,7 @@ static void s_server_recieve_packets(server_t* server)
 			uint8_t* packet = open_packet(io, server->client_session_key + client_index, server->client_nonce_buffer + client_index, buffer, bytes_read, sequence, server->client_sequence_offset[client_index], &type, &packet_size);
 			CUTE_CHECK_POINTER(packet);
 
-			server->client_last_packet_recieved_time[client_index] = 0;
+			int valid_packet = 0;
 
 			switch (type)
 			{
@@ -348,20 +350,24 @@ static void s_server_recieve_packets(server_t* server)
 				break;
 
 			case PACKET_TYPE_KEEP_ALIVE:
-				if (server->client_is_connected[client_index]) {
-					server->client_last_packet_recieved_time[client_index] = 0;
-				}
+				valid_packet = 1;
 				break;
 
 			case PACKET_TYPE_DISCONNECT:
+				valid_packet = 1;
 				server_disconnect_client(server, server->client_id[client_index], 0);
 				break;
 
 			case PACKET_TYPE_USERDATA:
+				valid_packet = 1;
 				if (server->client_is_connected[client_index]) {
 					CUTE_CHECK(packet_queue_push(server->client_packets + client_index, packet, packet_size, sequence));
 				}
 				break;
+			}
+
+			if (valid_packet && server->client_is_connected[client_index]) {
+				server->client_last_packet_recieved_time[client_index] = 0;
 			}
 		}
 
@@ -383,8 +389,9 @@ static void s_server_send_packets(server_t* server, float dt)
 		if (!is_loopback[i]) {
 			if (last_sent_times[i] >= CUTE_KEEPALIVE_RATE) {
 				last_sent_times[i] = 0;
-				// WORKING HERE
-				// Gotta send packet now. Can probably steal packet header writing + encrypting from client code.
+				int packet_size = packet_write_header(server->io, server->buffer, PACKET_TYPE_KEEP_ALIVE, server->client_sequence[i]);
+				if (packet_size <= 0) continue;
+				packet_encrypt_and_send(server->client_session_key + i, &server->socket, server->client_endpoint[i], server->buffer, packet_size, server->client_sequence_offset[i] + server->client_sequence[i]++);
 			}
 		}
 	}
