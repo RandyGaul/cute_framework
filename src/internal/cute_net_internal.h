@@ -110,8 +110,8 @@ struct nonce_buffer_t
 extern CUTE_API void CUTE_CALL nonce_buffer_init(nonce_buffer_t* buffer);
 extern CUTE_API int CUTE_CALL nonce_cull_duplicate(nonce_buffer_t* buffer, uint64_t sequence, uint64_t seed);
 
-extern CUTE_API int CUTE_CALL validate_packet_size(int size);
-extern CUTE_API uint8_t* CUTE_CALL open_packet(serialize_t* io, const crypto_key_t* session_key, nonce_buffer_t* nonce_buffer, uint8_t* packet, int size, uint64_t sequence, uint64_t sequence_offset, packet_type_t* type, int* packet_size);
+extern CUTE_API int CUTE_CALL packet_validate_size(int size);
+extern CUTE_API uint8_t* CUTE_CALL packet_open(serialize_t* io, const crypto_key_t* session_key, nonce_buffer_t* nonce_buffer, uint8_t* packet, int size, uint64_t sequence, uint64_t sequence_offset, packet_type_t* type, int* packet_size);
 extern CUTE_API int CUTE_CALL packet_write_header(serialize_t* io, uint8_t* buffer, packet_type_t packet_type, uint64_t sequence);
 extern CUTE_API int CUTE_CALL packet_encrypt_and_send(const crypto_key_t* key, socket_t* socket, endpoint_t endpoint, uint8_t* buffer, int packet_size, uint64_t offsetted_sequence);
 

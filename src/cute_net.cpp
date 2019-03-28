@@ -585,7 +585,7 @@ int endpoint_equals(endpoint_t a, endpoint_t b)
 
 // -------------------------------------------------------------------------------------------------
 
-int validate_packet_size(int size)
+int packet_validate_size(int size)
 {
 	int crypto_bytes = CUTE_CRYPTO_SYMMETRIC_BYTES < CUTE_CRYPTO_ASYMMETRIC_BYTES ? CUTE_CRYPTO_SYMMETRIC_BYTES : CUTE_CRYPTO_ASYMMETRIC_BYTES;
 	if (size <= sizeof(uint64_t) + crypto_bytes) {
@@ -596,7 +596,7 @@ int validate_packet_size(int size)
 	return 0;
 }
 
-uint8_t* open_packet(serialize_t* io, const crypto_key_t* session_key, nonce_buffer_t* nonce_buffer, uint8_t* packet, int size, uint64_t sequence, uint64_t sequence_offset, packet_type_t* type, int* packet_size)
+uint8_t* packet_open(serialize_t* io, const crypto_key_t* session_key, nonce_buffer_t* nonce_buffer, uint8_t* packet, int size, uint64_t sequence, uint64_t sequence_offset, packet_type_t* type, int* packet_size)
 {
 	if (crypto_decrypt(session_key, packet + sizeof(uint64_t), size - sizeof(uint64_t), sequence + sequence_offset) < 0) {
 		// Forged packet!

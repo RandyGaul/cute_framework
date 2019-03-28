@@ -261,7 +261,7 @@ static void s_server_recieve_packets(server_t* server)
 			break;
 		}
 
-		if (validate_packet_size(bytes_read)) {
+		if (packet_validate_size(bytes_read)) {
 			continue;
 		}
 
@@ -336,7 +336,7 @@ static void s_server_recieve_packets(server_t* server)
 
 			packet_type_t type;
 			int packet_size;
-			uint8_t* packet = open_packet(io, server->client_session_key + client_index, server->client_nonce_buffer + client_index, buffer, bytes_read, sequence, server->client_sequence_offset[client_index], &type, &packet_size);
+			uint8_t* packet = packet_open(io, server->client_session_key + client_index, server->client_nonce_buffer + client_index, buffer, bytes_read, sequence, server->client_sequence_offset[client_index], &type, &packet_size);
 			CUTE_CHECK_POINTER(packet);
 
 			int valid_packet = 0;

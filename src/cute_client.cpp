@@ -146,7 +146,7 @@ static void s_client_receive_packets(client_t* client)
 			break;
 		}
 
-		if (validate_packet_size(bytes_read)) {
+		if (packet_validate_size(bytes_read)) {
 			continue;
 		}
 
@@ -163,7 +163,7 @@ static void s_client_receive_packets(client_t* client)
 		CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &sequence));
 		packet_type_t type;
 		int packet_size;
-		uint8_t* packet = open_packet(io, &client->session_key, &client->nonce_buffer, buffer, bytes_read, sequence, client->sequence_offset, &type, &packet_size);
+		uint8_t* packet = packet_open(io, &client->session_key, &client->nonce_buffer, buffer, bytes_read, sequence, client->sequence_offset, &type, &packet_size);
 
 		if (!packet) {
 			// A forged or otherwise corrupt/unknown type of packet has appeared.
