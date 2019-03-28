@@ -77,7 +77,6 @@ struct server_event_t
 		{
 			handle_t client_id;
 			endpoint_t endpoint;
-			crypto_key_t session_key;
 		} new_connection;
 
 		struct

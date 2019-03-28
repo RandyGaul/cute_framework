@@ -149,7 +149,23 @@ static uint32_t s_client_index_from_endpoint(server_t* server, endpoint_t endpoi
 
 static server_event_t* s_push_event(server_t* server)
 {
-	// WORKING HERE.
+	CUTE_ASSERT(server->event_queue_size <= server->event_queue_capacity);
+	if (server->event_queue_size == server->event_queue_capacity) {
+		if (!server->event_queue_can_grow) return NULL;
+		server_event_t* old_data = server->event_queue;
+		int new_capacity = server->event_queue_capacity ? server->event_queue_capacity * 2 : 256;
+		server_event_t* new_data = (server_event_t*)CUTE_ALLOC(sizeof(server_event_t) * new_capacity, server->mem_ctx);
+		if (!new_data) return NULL;
+		CUTE_MEMCPY(new_data, old_data, sizeof(server_event_t) * server->event_queue_capacity);
+		CUTE_FREE(old_data, server->mem_ctx);
+		server->event_queue = new_data;
+		server->event_queue_capacity = new_capacity;
+	}
+
+	int index = server->event_queue_index++;
+	server->event_queue_index %= server->event_queue_capacity;
+	server->event_queue_size++;
+	return server->event_queue + index;
 }
 
 static uint32_t s_client_make(server_t* server, endpoint_t endpoint, crypto_key_t* session_key, int loopback)
@@ -176,6 +192,11 @@ static uint32_t s_client_make(server_t* server, endpoint_t endpoint, crypto_key_
 	if (packet_queue_init(server->client_packets + index, 2 *CUTE_MB, server->mem_ctx)) {
 		return UINT32_MAX;
 	}
+
+	server_event_t* event = s_push_event(server);
+	event->type = SERVER_EVENT_TYPE_NEW_CONNECTION;
+	event->u.new_connection.client_id = server->client_id[index];
+	event->u.new_connection.endpoint = endpoint;
 
 	return index;
 }
@@ -331,6 +352,7 @@ int server_poll_event(server_t* server, server_event_t* event)
 
 void server_disconnect_client(server_t* server, handle_t client_id)
 {
+	// TODO : Send disconnected packet. Maybe use s_push_event.
 	uint32_t index = handle_table_get_index(&server->client_handle_table, client_id);
 	server->client_is_connected[index] = 0;
 	pack_queue_clean_up(server->client_packets + index);
