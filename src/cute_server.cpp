@@ -58,6 +58,7 @@ struct server_t
 	int client_is_connected[CUTE_SERVER_MAX_CLIENTS];
 	int client_is_loopback[CUTE_SERVER_MAX_CLIENTS];
 	float client_last_packet_recieved_time[CUTE_SERVER_MAX_CLIENTS];
+	float client_last_packet_sent_time[CUTE_SERVER_MAX_CLIENTS];
 	endpoint_t client_endpoint[CUTE_SERVER_MAX_CLIENTS];
 	uint64_t client_sequence_offset[CUTE_SERVER_MAX_CLIENTS];
 	uint64_t client_sequence[CUTE_SERVER_MAX_CLIENTS];
@@ -69,7 +70,8 @@ struct server_t
 	int event_queue_can_grow = 0;
 	int event_queue_size = 0;
 	int event_queue_capacity = 0;
-	int event_queue_index = 0;
+	int event_queue_index0 = 0;
+	int event_queue_index1 = 0;
 	server_event_t* event_queue = 0;
 };
 
@@ -103,10 +105,11 @@ int server_start(server_t* server, const char* address_and_port, const crypto_ke
 	server->connection_denied_count = 0;
 	server->client_count = 0;
 
+	config = &server->config;
 	server->event_queue_can_grow = config->event_queue_can_grow;
 	server->event_queue_size = 0;
 	server->event_queue_capacity = config->event_queue_initial_capacity;
-	server->event_queue_index = 0;
+	server->event_queue_index0 = 0;
 	server->event_queue = (server_event_t*)CUTE_ALLOC(sizeof(server_event_t) * config->event_queue_initial_capacity, server->mem_ctx);
 	if (config->event_queue_initial_capacity) CUTE_CHECK_POINTER(server->event_queue);
 
@@ -147,6 +150,11 @@ static uint32_t s_client_index_from_endpoint(server_t* server, endpoint_t endpoi
 	return UINT32_MAX;
 }
 
+static CUTE_INLINE uint32_t s_client_index_from_handle(server_t* server, handle_t h)
+{
+	return handle_table_get_index(&server->client_handle_table, h);
+}
+
 static server_event_t* s_push_event(server_t* server)
 {
 	CUTE_ASSERT(server->event_queue_size <= server->event_queue_capacity);
@@ -162,8 +170,8 @@ static server_event_t* s_push_event(server_t* server)
 		server->event_queue_capacity = new_capacity;
 	}
 
-	int index = server->event_queue_index++;
-	server->event_queue_index %= server->event_queue_capacity;
+	int index = server->event_queue_index0++;
+	server->event_queue_index0 %= server->event_queue_capacity;
 	server->event_queue_size++;
 	return server->event_queue + index;
 }
@@ -183,6 +191,7 @@ static uint32_t s_client_make(server_t* server, endpoint_t endpoint, crypto_key_
 	server->client_is_connected[index] = 1;
 	server->client_is_loopback[index] = loopback;
 	server->client_last_packet_recieved_time[index] = 0;
+	server->client_last_packet_sent_time[index] = 0;
 	server->client_endpoint[index] = endpoint;
 	server->client_sequence_offset[index] = sequence_offset;
 	server->client_sequence[index] = 0;
@@ -250,6 +259,10 @@ static void s_server_recieve_packets(server_t* server)
 			break;
 		}
 
+		if (validate_packet_size(bytes_read)) {
+			continue;
+		}
+
 		// Find client by address.
 		uint32_t client_index = s_client_index_from_endpoint(server, from);
 		if (client_index == UINT32_MAX) {
@@ -284,16 +297,6 @@ static void s_server_recieve_packets(server_t* server)
 			CUTE_CHECK(serialize_bytes(io, (unsigned char*)version_buffer, CUTE_PROTOCOL_VERSION_STRING_LEN));
 			CUTE_CHECK(CUTE_STRNCMP(version_string, version_buffer, CUTE_PROTOCOL_VERSION_STRING_LEN));
 
-			// Read packet type.
-			uint64_t packet_typeu64;
-			CUTE_SERIALIZE_CHECK(serialize_uint64(io, &packet_typeu64, 0, PACKET_TYPE_MAX));
-			packet_type_t type = (packet_type_t)packet_typeu64;
-			if (type != PACKET_TYPE_HELLO) {
-				// Only the hello packet, representing a new connection request, is allowed at first.
-				s_server_connection_denied(server, from, CONNECTION_DENIED_REASON_BAD_PACKET);
-				continue;
-			}
-
 			// Read symmetric key.
 			crypto_key_t session_key;
 			CUTE_CHECK(serialize_bytes(io, session_key.key, sizeof(session_key)));
@@ -308,22 +311,58 @@ static void s_server_recieve_packets(server_t* server)
 
 			// Send connection accepted packet.
 			serialize_reset_buffer(io, SERIALIZE_WRITE, buffer, CUTE_PACKET_SIZE_MAX);
+			
+			uint64_t first_sequence = 0;
+			CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &first_sequence));
+
+			uint64_t packet_typeu64 = (uint64_t)PACKET_TYPE_CONNECTION_ACCEPTED;
+			CUTE_SERIALIZE_CHECK(serialize_uint64(io, &packet_typeu64, 0, PACKET_TYPE_MAX));
+			CUTE_SERIALIZE_CHECK(serialize_flush(io));
 
 			uint64_t sequence_offset = server->client_sequence_offset[client_index];
 			CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &sequence_offset));
 
-			packet_typeu64 = (uint64_t)PACKET_TYPE_CONNECTION_ACCEPTED;
-			CUTE_SERIALIZE_CHECK(serialize_uint64(io, &packet_typeu64, 0, PACKET_TYPE_MAX));
-
-			CUTE_SERIALIZE_CHECK(serialize_flush(io));
 			int bytes_written = serialize_serialized_bytes(io);
 
-			s_send_packet_to_client(server, client_index, buffer, bytes_written, sequence_offset);
+			s_send_packet_to_client(server, client_index, buffer, bytes_written, first_sequence);
 		} else {
-			// Grab session key for this client.
-			// Decrypt packet.
-			// Read sequence number, do replay protection.
-			// Switch on packet type.
+			serialize_t* io = server->io;
+			serialize_reset_buffer(io, SERIALIZE_READ, buffer, CUTE_PACKET_SIZE_MAX);
+
+			uint64_t sequence;
+			CUTE_CHECK(serialize_uint64_full(io, &sequence));
+
+			packet_type_t type;
+			int packet_size;
+			uint8_t* packet = open_packet(io, server->client_session_key + client_index, server->client_nonce_buffer + client_index, buffer, bytes_read, sequence, server->client_sequence_offset[client_index], &type, &packet_size);
+			CUTE_CHECK_POINTER(packet);
+
+			server->client_last_packet_recieved_time[client_index] = 0;
+
+			switch (type)
+			{
+			case PACKET_TYPE_CONNECTION_ACCEPTED:
+				break;
+
+			case PACKET_TYPE_CONNECTION_DENIED:
+				break;
+
+			case PACKET_TYPE_KEEP_ALIVE:
+				if (server->client_is_connected[client_index]) {
+					server->client_last_packet_recieved_time[client_index] = 0;
+				}
+				break;
+
+			case PACKET_TYPE_DISCONNECT:
+				server_disconnect_client(server, server->client_id[client_index], 0);
+				break;
+
+			case PACKET_TYPE_USERDATA:
+				if (server->client_is_connected[client_index]) {
+					CUTE_CHECK(packet_queue_push(server->client_packets + client_index, packet, packet_size, sequence));
+				}
+				break;
+			}
 		}
 
 	cute_error:
@@ -336,6 +375,7 @@ static void s_server_send_packets(server_t* server, float dt)
 {
 	// Look for connection responses to send.
 	// Look for keep-alives to send.
+	// WORKING HERE : Gotta send keepalive for the keepalive test!
 }
 
 void server_update(server_t* server, float dt)
@@ -343,16 +383,34 @@ void server_update(server_t* server, float dt)
 	server->connection_denied_count = 0;
 	s_server_recieve_packets(server);
 	s_server_send_packets(server, dt);
+
+	int client_count = server->client_count;
+	float* last_recieved_times = server->client_last_packet_recieved_time;
+	float* last_sent_times = server->client_last_packet_sent_time;
+	for (int i = 0; i < client_count; ++i)
+	{
+		last_recieved_times[i] += dt;
+		last_sent_times[i] += dt;
+	}
 }
 
 int server_poll_event(server_t* server, server_event_t* event)
 {
+	if (server->event_queue_size) {
+		*event = server->event_queue[server->event_queue_index1++];
+		server->event_queue_index1 %= server->event_queue_capacity;
+		server->event_queue_size--;
+		return 0;
+	}
 	return -1;
 }
 
-void server_disconnect_client(server_t* server, handle_t client_id)
+void server_disconnect_client(server_t* server, handle_t client_id, int send_notification_to_client)
 {
-	// TODO : Send disconnected packet. Maybe use s_push_event.
+	if (send_notification_to_client) {
+		// TODO : Send disconnected packet. Maybe use s_push_event.
+	}
+
 	uint32_t index = handle_table_get_index(&server->client_handle_table, client_id);
 	server->client_is_connected[index] = 0;
 	pack_queue_clean_up(server->client_packets + index);
@@ -373,6 +431,14 @@ void server_broadcast_to_all_but_one_client(server_t* server, const void* packet
 
 void server_send_to_client(server_t* server, const void* packet, int size, handle_t id, int reliable)
 {
+}
+
+float server_get_last_packet_recieved_time_from_client(server_t* server, handle_t client_id)
+{
+	uint32_t index = s_client_index_from_handle(server, client_id);
+	if (index == UINT32_MAX) return -1.0f;
+	CUTE_ASSERT(server->client_is_connected[index]);
+	return server->client_last_packet_recieved_time[index];
 }
 
 }

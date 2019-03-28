@@ -28,6 +28,8 @@
 
 #include <internal/cute_net_internal.h>
 
+#include <cute/cute_serialize.h>
+
 namespace cute
 {
 
@@ -578,6 +580,51 @@ int endpoint_equals(endpoint_t a, endpoint_t b)
 	}
 
 	return 1;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+int validate_packet_size(int size)
+{
+	int crypto_bytes = CUTE_CRYPTO_SYMMETRIC_BYTES < CUTE_CRYPTO_ASYMMETRIC_BYTES ? CUTE_CRYPTO_SYMMETRIC_BYTES : CUTE_CRYPTO_ASYMMETRIC_BYTES;
+	if (size <= sizeof(uint64_t) + crypto_bytes) {
+		// Packet too small to be valid.
+		return -1;
+	}
+
+	return 0;
+}
+
+uint8_t* open_packet(serialize_t* io, const crypto_key_t* session_key, nonce_buffer_t* nonce_buffer, uint8_t* packet, int size, uint64_t sequence, uint64_t sequence_offset, packet_type_t* type, int* packet_size)
+{
+	if (crypto_decrypt(session_key, packet + sizeof(uint64_t), size - sizeof(uint64_t), sequence + sequence_offset) < 0) {
+		// Forged packet!
+		return NULL;
+	}
+
+	if (nonce_cull_duplicate(nonce_buffer, sequence, sequence_offset) < 0) {
+		// Duplicate, or very old, packet detected.
+		return NULL;
+	}
+
+	// Read in packet type, and calculate payload size.
+	uint64_t packet_typeu64;
+	CUTE_SERIALIZE_CHECK(serialize_uint64(io, &packet_typeu64, 0, PACKET_TYPE_MAX));
+	CUTE_SERIALIZE_CHECK(serialize_flush(io));
+	*type = (packet_type_t)packet_typeu64;
+	int serialized_bytes = serialize_serialized_bytes(io);
+	int payload_size = size - serialized_bytes - CUTE_CRYPTO_SYMMETRIC_BYTES;
+	*packet_size = payload_size;
+	packet += serialized_bytes;
+	if (*packet_size < 0) {
+		// Read beyond packet header's defined length; this is not a valid packet.
+		return NULL;
+	}
+
+	return packet;
+
+cute_error:
+	return NULL;
 }
 
 // -------------------------------------------------------------------------------------------------

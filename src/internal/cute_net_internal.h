@@ -42,12 +42,13 @@
 #define CUTE_NONCE_BUFFER_SIZE 256
 #define CUTE_KEEPALIVE_RATE 10.0f
 
+struct serialize_t;
+
 namespace cute
 {
 
 enum packet_type_t : int
 {
-	PACKET_TYPE_HELLO,
 	PACKET_TYPE_CONNECTION_ACCEPTED,
 	PACKET_TYPE_CONNECTION_DENIED,
 	PACKET_TYPE_KEEP_ALIVE,
@@ -108,6 +109,9 @@ struct nonce_buffer_t
 
 extern CUTE_API void CUTE_CALL nonce_buffer_init(nonce_buffer_t* buffer);
 extern CUTE_API int CUTE_CALL nonce_cull_duplicate(nonce_buffer_t* buffer, uint64_t sequence, uint64_t seed);
+
+extern CUTE_API int CUTE_CALL validate_packet_size(int size);
+extern CUTE_API uint8_t* CUTE_CALL open_packet(serialize_t* io, const crypto_key_t* session_key, nonce_buffer_t* nonce_buffer, uint8_t* packet, int size, uint64_t sequence, uint64_t sequence_offset, packet_type_t* type, int* packet_size);
 
 namespace internal
 {

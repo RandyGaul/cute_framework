@@ -74,25 +74,31 @@ int test_keep_alive_packets()
 	CUTE_TEST_CHECK(server_start(server, "127.0.0.1:500", &pk, &sk, NULL));
 	CUTE_TEST_CHECK(client_connect(client, 501, "127.0.0.1:500", &pk));
 
-	float dt = 1.0f / 60.0f;
-	client_update(client, dt);
-	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTING);
-	server_update(server, dt);
-	client_update(client, dt);
-	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTED);
-
+	// Assert connectivity.
 	// Advance client/server time significantly to trigger the need for keepalive packets.
-	dt = CUTE_KEEPALIVE_RATE;
-	server_update(server, dt);
-	client_update(client, dt);
+	client_update(client, 0);
+	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTING);
+	server_update(server, CUTE_KEEPALIVE_RATE);
+	client_update(client, CUTE_KEEPALIVE_RATE);
 	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTED);
 
 	server_event_t event;
 	CUTE_TEST_CHECK(server_poll_event(server, &event));
-	CUTE_TEST_ASSERT(event.type = SERVER_EVENT_TYPE_NEW_CONNECTION);
+	CUTE_TEST_ASSERT(event.type == SERVER_EVENT_TYPE_NEW_CONNECTION);
+	cute::handle_t client_id = event.u.new_connection.client_id;
 
 	// Event queue should be empty now.
-	CUTE_TEST_CHECK(server_poll_event(server, &event) < 0);
+	CUTE_TEST_ASSERT(server_poll_event(server, &event) < 0);
+
+	CUTE_TEST_ASSERT(client_get_last_packet_recieved_time(client) == CUTE_KEEPALIVE_RATE);
+	CUTE_TEST_ASSERT(server_get_last_packet_recieved_time_from_client(server, client_id) == CUTE_KEEPALIVE_RATE);
+
+	// Update each endpoint to trigger keepalive packets.
+	server_update(server, 0);
+	client_update(client, 0);
+	server_update(server, 0);
+	CUTE_TEST_ASSERT(client_get_last_packet_recieved_time(client) == 0);
+	CUTE_TEST_ASSERT(server_get_last_packet_recieved_time_from_client(server, client_id) == 0);
 
 	client_disconnect(client);
 	server_stop(server);
@@ -103,4 +109,11 @@ int test_keep_alive_packets()
 }
 
 // WORKING HERE
-// TODO : Keep alive packet, client timeout, no server response on connect, server timeout, connection denied, server disconnect client after connecting, client disconnect after connecting.
+// TODO
+// Keep alive packet
+// client timeout
+// no server response on connect
+// server timeout
+// connection denied
+// server disconnect client after connecting
+// client disconnect after connecting.

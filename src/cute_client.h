@@ -41,7 +41,7 @@ extern CUTE_API int CUTE_CALL client_connect(client_t* client, uint16_t port, co
 extern CUTE_API void CUTE_CALL client_disconnect(client_t* client);
 
 extern CUTE_API void CUTE_CALL client_update(client_t* client, float dt);
-extern CUTE_API void CUTE_CALL client_get_packet(client_t* client, void* data, int* size);
+extern CUTE_API int CUTE_CALL client_get_packet(client_t* client, void* data, int* size);
 extern CUTE_API int CUTE_CALL client_send_data(client_t* client, const void* data, int size);
 extern CUTE_API int CUTE_CALL client_send_data_unreliable(client_t* client, const void* data, int size);
 
@@ -53,6 +53,7 @@ enum client_state_t : int
 };
 
 extern CUTE_API client_state_t CUTE_CALL client_state_get(const client_t* client);
+extern CUTE_API float CUTE_CALL client_get_last_packet_recieved_time(const client_t* client);
 extern CUTE_API int CUTE_CALL client_is_loopback(const client_t* client);
 
 }
