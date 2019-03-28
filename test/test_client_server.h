@@ -24,7 +24,7 @@
 
 using namespace cute;
 
-CUTE_TEST_CASE(test_client_server_handshake, "Test out barebones connection setup between client and server instances.");
+CUTE_TEST_CASE(test_client_server_handshake, "Test out barebones connection between client and server instances.");
 int test_client_server_handshake()
 {
 	client_t* client = client_alloc(NULL);
@@ -37,17 +37,20 @@ int test_client_server_handshake()
 	CUTE_TEST_CHECK(crypto_generate_keypair(&pk, &sk));
 	CUTE_TEST_CHECK(server_start(server, "127.0.0.1:500", &pk, &sk, NULL));
 	CUTE_TEST_CHECK(client_connect(client, 501, "127.0.0.1:500", &pk));
+	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTING);
 
 	float dt = 1.0f / 60.0f;
 
 	// Send hello.
 	client_update(client, dt);
+	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTING);
 
 	// Accept connection, send connection response.
 	server_update(server, dt);
 
-	// Recieve connection accepted.
+	// Recieve connection accepted. Client should report as connected.
 	client_update(client, dt);
+	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTED);
 
 	client_disconnect(client);
 	server_stop(server);
@@ -57,3 +60,6 @@ int test_client_server_handshake()
 
 	return 0;
 }
+
+// WORKING HERE
+// TODO : Keep alive packet, client timeout, no server response on connect, server timeout, connection denied, server disconnect client after connecting, client disconnect after connecting.

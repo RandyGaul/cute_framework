@@ -698,6 +698,9 @@ int serialize_flush(serialize_t* io)
 				io->measure_bytes++;
 			}
 		}
+	} else {
+		io->bits = 0;
+		io->bit_count = 0;
 	}
 	return SERIALIZE_SUCCESS;
 }

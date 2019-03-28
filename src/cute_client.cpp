@@ -97,6 +97,7 @@ int client_connect(client_t* client, uint16_t port, const char* server_address_a
 	client->server_endpoint = server_endpoint;
 	client->session_key = crypto_generate_symmetric_key();
 	client->io = serialize_buffer_create(SERIALIZE_READ, NULL, 0, NULL);
+	nonce_buffer_init(&client->nonce_buffer);
 	CUTE_CHECK(packet_queue_init(&client->packets, CUTE_CLIENT_RECEIVE_BUFFER_SIZE, client->mem_ctx));
 	client->server_public_key = *server_public_key;
 	return 0;
@@ -107,13 +108,17 @@ cute_error:
 
 void client_disconnect(client_t* client)
 {
+	if (client->state == CLIENT_STATE_CONNECTED) {
+		// TODO : Notify server with disconnect packet.
+	}
+
 	socket_cleanup(&client->socket);
 	serialize_destroy(client->io);
 	client->io = NULL;
 	pack_queue_clean_up(&client->packets);
 }
 
-client_state_t client_state_get(client_t* client)
+client_state_t client_state_get(const client_t* client)
 {
 	return client->state;
 }
@@ -130,22 +135,24 @@ static uint8_t* s_client_open_packet(client_t* client, uint8_t* packet, int size
 		return NULL;
 	}
 
-	// WORKING HERE : First connection response needs special case for sequence/offset.
-	if (nonce_cull_duplicate(&client->nonce_buffer, sequence, client->sequence_offset) < 0) {
+	int duplicate = 0;
+	if (client->state == CLIENT_STATE_CONNECTING) {
+		if (nonce_cull_duplicate(&client->nonce_buffer, 0, sequence) < 0) {
+			duplicate = 1;
+		}
+	} else {
+		if (nonce_cull_duplicate(&client->nonce_buffer, sequence, client->sequence_offset) < 0) {
+			duplicate = 1;
+		}
+	}
+
+	if (duplicate) {
 		// Duplicate, or very old, packet detected.
 		return NULL;
 	}
 
 	return packet;
 }
-
-/*
-	Packet Format - WIP
-	[sequence]         8 bytes
-	[packet type]      req_bits(0, PACKET_TYPE_MAX) bits
-	[payload data]     variable
-	[optional padding] padding up to CUTE_PACKET_SIZE_MAX
-*/
 
 static void s_client_receive_packets(client_t* client)
 {
@@ -168,17 +175,14 @@ static void s_client_receive_packets(client_t* client)
 
 		serialize_t* io = client->io;
 		serialize_reset_buffer(io, SERIALIZE_READ, buffer, bytes_read);
-		if (bytes_read <= sizeof(uint64_t)) {
+		if (bytes_read <= sizeof(uint64_t) + CUTE_CRYPTO_SYMMETRIC_BYTES) {
 			// Packet too small to eb valid.
 			continue;
 		}
 
 		uint64_t sequence;
 		CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &sequence));
-		buffer += sizeof(uint64_t);
-		bytes_read -= sizeof(uint64_t);
-
-		uint8_t* packet = s_client_open_packet(client, buffer, bytes_read, sequence);
+		uint8_t* packet = s_client_open_packet(client, buffer + sizeof(uint64_t), bytes_read - sizeof(uint64_t), sequence);
 		if (!packet) {
 			// A forged or otherwise corrupt/unknown type of packet has appeared.
 			continue;
@@ -187,10 +191,14 @@ static void s_client_receive_packets(client_t* client)
 		uint64_t packet_typeu64;
 		CUTE_SERIALIZE_CHECK(serialize_uint64(io, &packet_typeu64, 0, PACKET_TYPE_MAX));
 		packet_type_t type = (packet_type_t)packet_typeu64;
-		int skip_bytes = crypto_secretbox_MACBYTES + serialize_serialized_bytes(io);
-		int packet_size = bytes_read - skip_bytes;
-		packet += skip_bytes;
-		if (packet_size <= 0) break;
+		CUTE_SERIALIZE_CHECK(serialize_flush(io));
+		int serialized_bytes = serialize_serialized_bytes(io);
+		int packet_size = bytes_read - serialized_bytes - CUTE_CRYPTO_SYMMETRIC_BYTES;
+		packet += serialized_bytes;
+		if (packet_size < 0) {
+			// Read beyond packet header's defined length; this is not a valid packet.
+			break;
+		}
 
 		// Packet has been verified to have come from the server -- safe to process.
 		switch (type)
@@ -210,8 +218,8 @@ static void s_client_receive_packets(client_t* client)
 			break;
 
 		case PACKET_TYPE_CONNECTION_DENIED:
-			client->state = CLIENT_STATE_CONNECTION_DENIED;
-			break;
+			client->state = CLIENT_STATE_DISCONNECTED;
+			return;
 
 		case PACKET_TYPE_KEEP_ALIVE:
 			if (client->state == CLIENT_STATE_CONNECTED) {
@@ -220,7 +228,7 @@ static void s_client_receive_packets(client_t* client)
 
 		case PACKET_TYPE_DISCONNECT:
 			client->state = CLIENT_STATE_DISCONNECTED;
-			break;
+			return;
 
 		case PACKET_TYPE_USERDATA:
 			if (client->state == CLIENT_STATE_CONNECTED) {
@@ -287,7 +295,6 @@ static void s_client_send_packets(client_t* client)
 		break;
 
 		// No-op.
-	case CLIENT_STATE_CONNECTION_DENIED:
 	case CLIENT_STATE_DISCONNECTED:
 		break;
 	}
@@ -302,8 +309,13 @@ cute_error:
 
 void client_update(client_t* client, float dt)
 {
+	if (client->state == CLIENT_STATE_DISCONNECTED) {
+		return;
+	}
+
 	s_client_receive_packets(client);
 	s_client_send_packets(client);
+
 	client->connect_time += dt;
 	client->keep_alive_time += dt;
 }

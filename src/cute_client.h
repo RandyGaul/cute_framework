@@ -50,7 +50,6 @@ enum client_state_t : int
 	CLIENT_STATE_CONNECTING,
 	CLIENT_STATE_CONNECTED,
 	CLIENT_STATE_DISCONNECTED,
-	CLIENT_STATE_CONNECTION_DENIED,
 };
 
 extern CUTE_API client_state_t CUTE_CALL client_state_get(const client_t* client);
