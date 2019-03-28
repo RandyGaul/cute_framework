@@ -75,13 +75,14 @@ int test_keep_alive_packets()
 	CUTE_TEST_CHECK(client_connect(client, 501, "127.0.0.1:500", &pk));
 
 	// Assert connectivity.
-	// Advance client/server time significantly to trigger the need for keepalive packets.
+	// Advance client/server time significantly to trigger the need for keepalive packets upon the subsequent updates.
 	client_update(client, 0);
 	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTING);
 	server_update(server, CUTE_KEEPALIVE_RATE);
 	client_update(client, CUTE_KEEPALIVE_RATE);
 	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTED);
 
+	// Assert new client connected event arrival.
 	server_event_t event;
 	CUTE_TEST_CHECK(server_poll_event(server, &event));
 	CUTE_TEST_ASSERT(event.type == SERVER_EVENT_TYPE_NEW_CONNECTION);
@@ -90,13 +91,16 @@ int test_keep_alive_packets()
 	// Event queue should be empty now.
 	CUTE_TEST_ASSERT(server_poll_event(server, &event) < 0);
 
+	// Assert timestamps as needing keepalive packets from the opposing endpoints.
 	CUTE_TEST_ASSERT(client_get_last_packet_recieved_time(client) == CUTE_KEEPALIVE_RATE);
 	CUTE_TEST_ASSERT(server_get_last_packet_recieved_time_from_client(server, client_id) == CUTE_KEEPALIVE_RATE);
 
 	// Update each endpoint to trigger keepalive packets.
-	server_update(server, 0);
-	client_update(client, 0);
-	server_update(server, 0);
+	server_update(server, 0); // Send keepalive.
+	client_update(client, 0); // Get a keepalive, send a keepalive. Timestamp cleared.
+	server_update(server, 0); // Get a keepalive. Timestamp cleared.
+
+	// Assert timestamps were cleared.
 	CUTE_TEST_ASSERT(client_get_last_packet_recieved_time(client) == 0);
 	CUTE_TEST_ASSERT(server_get_last_packet_recieved_time_from_client(server, client_id) == 0);
 

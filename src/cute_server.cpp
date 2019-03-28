@@ -373,9 +373,21 @@ static void s_server_recieve_packets(server_t* server)
 
 static void s_server_send_packets(server_t* server, float dt)
 {
-	// Look for connection responses to send.
-	// Look for keep-alives to send.
-	// WORKING HERE : Gotta send keepalive for the keepalive test!
+	CUTE_ASSERT(server->running);
+	
+	int client_count = server->client_count;
+	float* last_sent_times = server->client_last_packet_sent_time;
+	int* is_loopback = server->client_is_loopback;
+	for (int i = 0; i < client_count; ++i)
+	{
+		if (!is_loopback[i]) {
+			if (last_sent_times[i] >= CUTE_KEEPALIVE_RATE) {
+				last_sent_times[i] = 0;
+				// WORKING HERE
+				// Gotta send packet now. Can probably steal packet header writing + encrypting from client code.
+			}
+		}
+	}
 }
 
 void server_update(server_t* server, float dt)
