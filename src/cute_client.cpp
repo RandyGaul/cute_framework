@@ -177,7 +177,7 @@ static void s_client_receive_packets(client_t* client)
 		{
 		case PACKET_TYPE_CONNECTION_ACCEPTED:
 			if (client->state == CLIENT_STATE_CONNECTING) {
-				// The first sequence from the server is used as the initialization vector for all
+				// This first sequence from the server is used as the initialization vector for all
 				// subsequent nonces.
 				client->sequence = 1;
 				CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &client->sequence_offset));

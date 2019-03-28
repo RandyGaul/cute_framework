@@ -219,7 +219,7 @@ static uint32_t s_client_make(server_t* server, endpoint_t endpoint, crypto_key_
 // help in the case of a harmful client attempting a DOS attack. For the case of DOS this
 // buffer is capped to `CUTE_SERVER_CONNECTION_DENIED_MAX_COUNT`, and responses will be
 // dropped if this buffer fills up.
-static void s_server_connection_denied(server_t* server, endpoint_t from, connection_denied_reason_t reason)
+static void s_server_connection_denied(server_t* server, endpoint_t from, const crypto_key_t* key, connection_denied_reason_t reason)
 {
 	CUTE_ASSERT(server->connection_denied_count <= CUTE_SERVER_CONNECTION_DENIED_MAX_COUNT);
 	if (server->connection_denied_count == CUTE_SERVER_CONNECTION_DENIED_MAX_COUNT) {
@@ -227,7 +227,16 @@ static void s_server_connection_denied(server_t* server, endpoint_t from, connec
 	}
 	server->connection_denied_count++;
 
-	// TODO: Construct and send connection denied packet.
+	int packet_size = packet_write_header(server->io, server->buffer, PACKET_TYPE_KEEP_ALIVE, 0);
+	uint64_t reason_typeu64 = reason;
+	CUTE_SERIALIZE_CHECK(serialize_uint64(server->io, &reason_typeu64, 0, CONNECTION_DENIED_REASON_MAX));
+	CUTE_SERIALIZE_CHECK(serialize_flush(server->io));
+	packet_encrypt_and_send(key, &server->socket, from, server->buffer, packet_size, 0);
+
+	// WORKING HERE : Client needs to look for connection denied packets. Also write unit test for this.
+
+cute_error:
+	return;
 }
 
 static int s_send_packet_to_client(server_t* server, uint32_t client_index, uint8_t* packet, int size, uint64_t sequence)
@@ -270,23 +279,15 @@ static void s_server_recieve_packets(server_t* server)
 		if (client_index == UINT32_MAX) {
 			// Client address not found -- potential new connection.
 
-			if (server->client_count == CUTE_SERVER_MAX_CLIENTS) {
-				// Not accepting new connections; out of client slots.
-				s_server_connection_denied(server, from, CONNECTION_DENIED_REASON_CLIENT_CAPACITY_AT_MAXIMUM);
-				continue;
-			}
-
 			if (bytes_read < CUTE_PACKET_SIZE_MAX) {
 				// New connections *must* be padded to `CUTE_PACKET_SIZE_MAX`, or will be dropped. This helps
 				// to dissuade nefarious usage of the connection API from dubious users.
-				s_server_connection_denied(server, from, CONNECTION_DENIED_REASON_BAD_PACKET);
 				continue;
 			}
 
 			// Decrypt packet.
 			if (crypto_decrypt_asymmetric(&server->public_key, &server->secret_key, buffer, CUTE_PACKET_SIZE_MAX)) {
 				// Forged/tampered packet!
-				s_server_connection_denied(server, from, CONNECTION_DENIED_REASON_BAD_PACKET);
 				continue;
 			}
 
@@ -303,11 +304,17 @@ static void s_server_recieve_packets(server_t* server)
 			crypto_key_t session_key;
 			CUTE_CHECK(serialize_bytes(io, session_key.key, sizeof(session_key)));
 
+			if (server->client_count == CUTE_SERVER_MAX_CLIENTS) {
+				// Not accepting new connections; out of client slots.
+				s_server_connection_denied(server, from, &session_key, CONNECTION_DENIED_REASON_CLIENT_CAPACITY_AT_MAXIMUM);
+				continue;
+			}
+
 			// Make new client, store session key.
 			client_index = s_client_make(server, from, &session_key, 0);
 			if (client_index == UINT32_MAX) {
 				// Failed to create new client for some reason (like out of memory).
-				s_server_connection_denied(server, from, CONNECTION_DENIED_REASON_SERVER_ERROR);
+				s_server_connection_denied(server, from, &session_key, CONNECTION_DENIED_REASON_SERVER_ERROR);
 				continue;
 			}
 
@@ -390,7 +397,6 @@ static void s_server_send_packets(server_t* server, float dt)
 			if (last_sent_times[i] >= CUTE_KEEPALIVE_RATE) {
 				last_sent_times[i] = 0;
 				int packet_size = packet_write_header(server->io, server->buffer, PACKET_TYPE_KEEP_ALIVE, server->client_sequence[i]);
-				if (packet_size <= 0) continue;
 				packet_encrypt_and_send(server->client_session_key + i, &server->socket, server->client_endpoint[i], server->buffer, packet_size, server->client_sequence_offset[i] + server->client_sequence[i]++);
 			}
 		}
