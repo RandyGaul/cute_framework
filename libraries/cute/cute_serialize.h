@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_serialize.h - v1.02
+	cute_serialize.h - v1.03
 
 	To create implementation (the function definitions)
 		#define CUTE_SERIALIZE_IMPLEMENTATION
@@ -130,6 +130,7 @@
 		1.00 (10/22/2018) initial release
 		1.01 (02/05/2019) added many convenience functions, and fixed bug in serialize cstr
 		1.02 (03/20/2019) added SERIALIZE_FREAD and SERIALIZE_FWRITE, and disabled compiling unit tests by default
+		1.03 (03/27/2019) bugfixe edge-cases in measure bytes, cstr, and flush
 */
 
 #if !defined(CUTE_SERIALIZE_H)

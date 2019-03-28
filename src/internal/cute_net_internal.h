@@ -40,6 +40,7 @@
 
 #define CUTE_PACKET_QUEUE_MAX_ENTRIES (2 * 1024)
 #define CUTE_NONCE_BUFFER_SIZE 256
+#define CUTE_KEEPALIVE_RATE 10.0f
 
 namespace cute
 {

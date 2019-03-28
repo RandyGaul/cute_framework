@@ -61,5 +61,46 @@ int test_client_server_handshake()
 	return 0;
 }
 
+CUTE_TEST_CASE(test_keep_alive_packets, "Test keepalive packets during idle connection between client and server.");
+int test_keep_alive_packets()
+{
+	client_t* client = client_alloc(NULL);
+	CUTE_TEST_CHECK_POINTER(client);
+	server_t* server = server_alloc(NULL);
+	CUTE_TEST_CHECK_POINTER(server);
+
+	crypto_key_t pk, sk;
+	CUTE_TEST_CHECK(crypto_generate_keypair(&pk, &sk));
+	CUTE_TEST_CHECK(server_start(server, "127.0.0.1:500", &pk, &sk, NULL));
+	CUTE_TEST_CHECK(client_connect(client, 501, "127.0.0.1:500", &pk));
+
+	float dt = 1.0f / 60.0f;
+	client_update(client, dt);
+	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTING);
+	server_update(server, dt);
+	client_update(client, dt);
+	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTED);
+
+	// Advance client/server time significantly to trigger the need for keepalive packets.
+	dt = CUTE_KEEPALIVE_RATE;
+	server_update(server, dt);
+	client_update(client, dt);
+	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTED);
+
+	server_event_t event;
+	CUTE_TEST_CHECK(server_poll_event(server, &event));
+	CUTE_TEST_ASSERT(event.type = SERVER_EVENT_TYPE_NEW_CONNECTION);
+
+	// Event queue should be empty now.
+	CUTE_TEST_CHECK(server_poll_event(server, &event) < 0);
+
+	client_disconnect(client);
+	server_stop(server);
+
+	client_destroy(client);
+	server_destroy(server);
+	return 0;
+}
+
 // WORKING HERE
 // TODO : Keep alive packet, client timeout, no server response on connect, server timeout, connection denied, server disconnect client after connecting, client disconnect after connecting.

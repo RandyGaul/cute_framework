@@ -70,6 +70,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_packet_queue_basic),
 		CUTE_TEST_CASE_ENTRY(test_socket_init_send_recieve_shutdown),
 		CUTE_TEST_CASE_ENTRY(test_client_server_handshake),
+		CUTE_TEST_CASE_ENTRY(test_keep_alive_packets),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

@@ -65,6 +65,12 @@ struct server_t
 	handle_t client_id[CUTE_SERVER_MAX_CLIENTS];
 	crypto_key_t client_session_key[CUTE_SERVER_MAX_CLIENTS];
 	packet_queue_t client_packets[CUTE_SERVER_MAX_CLIENTS];
+
+	int event_queue_can_grow = 0;
+	int event_queue_size = 0;
+	int event_queue_capacity = 0;
+	int event_queue_index = 0;
+	server_event_t* event_queue = 0;
 };
 
 server_t* server_alloc(void* user_allocator_context)
@@ -96,6 +102,14 @@ int server_start(server_t* server, const char* address_and_port, const crypto_ke
 	CUTE_CHECK(handle_table_init(&server->client_handle_table, 256, server->mem_ctx));
 	server->connection_denied_count = 0;
 	server->client_count = 0;
+
+	server->event_queue_can_grow = config->event_queue_can_grow;
+	server->event_queue_size = 0;
+	server->event_queue_capacity = config->event_queue_initial_capacity;
+	server->event_queue_index = 0;
+	server->event_queue = (server_event_t*)CUTE_ALLOC(sizeof(server_event_t) * config->event_queue_initial_capacity, server->mem_ctx);
+	if (config->event_queue_initial_capacity) CUTE_CHECK_POINTER(server->event_queue);
+
 	server->running = 1;
 
 	server->client_count = 0;
@@ -131,6 +145,11 @@ static uint32_t s_client_index_from_endpoint(server_t* server, endpoint_t endpoi
 		}
 	}
 	return UINT32_MAX;
+}
+
+static server_event_t* s_push_event(server_t* server)
+{
+	// WORKING HERE.
 }
 
 static uint32_t s_client_make(server_t* server, endpoint_t endpoint, crypto_key_t* session_key, int loopback)
@@ -300,6 +319,7 @@ static void s_server_send_packets(server_t* server, float dt)
 
 void server_update(server_t* server, float dt)
 {
+	server->connection_denied_count = 0;
 	s_server_recieve_packets(server);
 	s_server_send_packets(server, dt);
 }

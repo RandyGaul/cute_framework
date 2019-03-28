@@ -41,6 +41,8 @@ struct server_config_t
 	float client_timeout_time = 20.0f;
 	int max_incoming_bytes_per_second = 0;
 	int max_outgoing_bytes_per_second = 0;
+	int event_queue_initial_capacity = 1024;
+	int event_queue_can_grow = 1;
 };
 
 extern CUTE_API server_t* CUTE_CALL server_alloc(void* user_allocator_context = NULL);
