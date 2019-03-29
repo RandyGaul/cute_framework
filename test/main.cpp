@@ -71,6 +71,8 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_socket_init_send_recieve_shutdown),
 		CUTE_TEST_CASE_ENTRY(test_client_server_handshake),
 		CUTE_TEST_CASE_ENTRY(test_keep_alive_packets),
+		CUTE_TEST_CASE_ENTRY(test_no_server_response_on_client_connect),
+		CUTE_TEST_CASE_ENTRY(test_client_timeout),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

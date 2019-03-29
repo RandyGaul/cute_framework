@@ -98,7 +98,7 @@ int server_start(server_t* server, const char* address_and_port, const crypto_ke
 	CUTE_CHECK(endpoint_init(&server->endpoint, address_and_port));
 	server->public_key = *public_key;
 	server->secret_key = *secret_key;
-	CUTE_CHECK(socket_init(&server->socket, server->endpoint.type, server->endpoint.port, CUTE_SERVER_SEND_BUFFER_SIZE, CUTE_SERVER_RECEIVE_BUFFER_SIZE));
+	CUTE_CHECK(socket_init(&server->socket, address_and_port, CUTE_SERVER_SEND_BUFFER_SIZE, CUTE_SERVER_RECEIVE_BUFFER_SIZE));
 	server->io = serialize_buffer_create(SERIALIZE_READ, NULL, 0, NULL);
 	server->config = config ? *config : server_config_t();
 	CUTE_CHECK(handle_table_init(&server->client_handle_table, 256, server->mem_ctx));
