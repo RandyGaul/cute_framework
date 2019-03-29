@@ -335,5 +335,7 @@ int client_disconnects_itself_from_server()
 // [x] server forecfully disconnects client after connecting
 // [ ] client forecfully disconnects after connecting.
 // Challenge token to prevent spoofing.
-// Connect confirmation via acked-keepalive packets.
+// Connect confirmation also needs client index + max client count.
 // Disconnect packet redundancy.
+// Refactor connection request packet.
+// All packets should have unified read/write functions, implying the same headers and encryptors.
