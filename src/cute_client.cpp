@@ -109,10 +109,20 @@ cute_error:
 	return -1;
 }
 
+static int s_client_send_packet_no_payload(client_t* client, packet_type_t packet_type)
+{
+	int packet_size = packet_write_header(client->io, client->buffer, PACKET_TYPE_KEEPALIVE, client->sequence);
+	if (packet_size <= 0) goto cute_error;
+	CUTE_CHECK(packet_encrypt_and_send(&client->session_key, &client->socket, client->server_endpoint, client->buffer, packet_size, client->sequence_offset + client->sequence++));
+	return 0;
+cute_error:
+	return -1;
+}
+
 void client_disconnect(client_t* client)
 {
 	if (client->state == CLIENT_STATE_CONNECTED) {
-		// TODO : Notify server with disconnect packet.
+		s_client_send_packet_no_payload(client, PACKET_TYPE_DISCONNECT);
 	}
 
 	socket_cleanup(&client->socket);
@@ -194,7 +204,7 @@ static void s_client_receive_packets(client_t* client)
 			valid_packet = 1;
 			return;
 
-		case PACKET_TYPE_KEEP_ALIVE:
+		case PACKET_TYPE_KEEPALIVE:
 			valid_packet = 1;
 			break;
 
@@ -270,9 +280,7 @@ static void s_client_send_packets(client_t* client)
 	{
 		if (client->last_packet_sent_time >= CUTE_KEEPALIVE_RATE) {
 			client->last_packet_sent_time = 0;
-			int packet_size = packet_write_header(client->io, buffer, PACKET_TYPE_KEEP_ALIVE, client->sequence);
-			if (packet_size <= 0) goto cute_error;
-			CUTE_CHECK(packet_encrypt_and_send(&client->session_key, &client->socket, client->server_endpoint, buffer, packet_size, client->sequence_offset + client->sequence++));
+			CUTE_CHECK(s_client_send_packet_no_payload(client, PACKET_TYPE_KEEPALIVE));
 		}
 
 	}	break;
@@ -298,6 +306,11 @@ void client_update(client_t* client, float dt)
 
 	s_client_receive_packets(client);
 	s_client_send_packets(client);
+
+	if (client->last_packet_recieved_time >= CUTE_KEEPALIVE_RATE * 3) {
+		client->state = CLIENT_STATE_DISCONNECTED;
+		s_client_send_packet_no_payload(client, PACKET_TYPE_DISCONNECT);
+	}
 
 	client->last_packet_recieved_time += dt;
 	client->last_packet_sent_time += dt;

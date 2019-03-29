@@ -141,9 +141,83 @@ int test_no_server_response_on_client_connect()
 	return 0;
 }
 
-CUTE_TEST_CASE(test_client_timeout, "Client connects to server, then times out. Server should detect and cull the connection.");
-int test_client_timeout()
+CUTE_TEST_CASE(test_server_timeout, "Client connects to server, then server times out. Client waits for grace period, then disconnects itself.");
+int test_server_timeout()
 {
+	client_t* client = client_alloc(NULL);
+	CUTE_TEST_CHECK_POINTER(client);
+	server_t* server = server_alloc(NULL);
+	CUTE_TEST_CHECK_POINTER(server);
+
+	crypto_key_t pk, sk;
+	CUTE_TEST_CHECK(crypto_generate_keypair(&pk, &sk));
+	CUTE_TEST_CHECK(server_start(server, "127.0.0.1:5000", &pk, &sk, NULL));
+	CUTE_TEST_CHECK(client_connect(client, 501, "127.0.0.1:5000", &pk));
+
+	// Assert connectivity.
+	client_update(client, 0);
+	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTING);
+	server_update(server, 0);
+	client_update(client, 0);
+	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTED);
+
+	// Now server stops responding.
+	client_update(client, CUTE_KEEPALIVE_RATE);
+	client_update(client, CUTE_KEEPALIVE_RATE);
+	client_update(client, CUTE_KEEPALIVE_RATE);
+	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTED);
+
+	// Now client should disconnect.
+	client_update(client, CUTE_KEEPALIVE_RATE);
+	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_DISCONNECTED);
+
+	client_disconnect(client);
+	server_stop(server);
+
+	client_destroy(client);
+	server_destroy(server);
+
+	return 0;
+}
+
+CUTE_TEST_CASE(client_connects_then_times_out, "Client should connect then dissappear. Server should detect and cull the connection.");
+int client_connects_then_times_out()
+{
+	client_t* client = client_alloc(NULL);
+	CUTE_TEST_CHECK_POINTER(client);
+	server_t* server = server_alloc(NULL);
+	CUTE_TEST_CHECK_POINTER(server);
+
+	crypto_key_t pk, sk;
+	CUTE_TEST_CHECK(crypto_generate_keypair(&pk, &sk));
+	CUTE_TEST_CHECK(server_start(server, "127.0.0.1:5000", &pk, &sk, NULL));
+	CUTE_TEST_CHECK(client_connect(client, 501, "127.0.0.1:5000", &pk));
+
+	// Assert connectivity.
+	client_update(client, 0);
+	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTING);
+	server_update(server, 0);
+	client_update(client, 0);
+	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_CONNECTED);
+
+	// Now client stops responding. Server should start tracking long response times (no keepalives).
+	server_update(server, CUTE_KEEPALIVE_RATE);
+	server_update(server, CUTE_KEEPALIVE_RATE);
+	server_update(server, CUTE_KEEPALIVE_RATE);
+
+	// Server should cull time-out connection here.
+	server_look_for_and_disconnected_timed_out_clients(server);
+
+	// Client should report as disconnected.
+	client_update(client, 0);
+	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_DISCONNECTED);
+
+	client_disconnect(client);
+	server_stop(server);
+
+	client_destroy(client);
+	server_destroy(server);
+
 	return 0;
 }
 
@@ -152,7 +226,7 @@ int test_client_timeout()
 // [x] Keep alive packet
 // [ ] client timeout
 // [x] no server response on connect
-// [ ] server timeout
+// [x] server timeout
 // [ ] connection denied
-// [ ] server disconnect client after connecting
-// [ ] client disconnect after connecting.
+// [ ] server forecfully disconnects client after connecting
+// [ ] client forecfully disconnects after connecting.

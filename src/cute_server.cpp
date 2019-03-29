@@ -227,7 +227,7 @@ static void s_server_connection_denied(server_t* server, endpoint_t from, const 
 	}
 	server->connection_denied_count++;
 
-	int packet_size = packet_write_header(server->io, server->buffer, PACKET_TYPE_KEEP_ALIVE, 0);
+	int packet_size = packet_write_header(server->io, server->buffer, PACKET_TYPE_KEEPALIVE, 0);
 	uint64_t reason_typeu64 = reason;
 	CUTE_SERIALIZE_CHECK(serialize_uint64(server->io, &reason_typeu64, 0, CONNECTION_DENIED_REASON_MAX));
 	CUTE_SERIALIZE_CHECK(serialize_flush(server->io));
@@ -356,7 +356,7 @@ static void s_server_recieve_packets(server_t* server)
 			case PACKET_TYPE_CONNECTION_DENIED:
 				break;
 
-			case PACKET_TYPE_KEEP_ALIVE:
+			case PACKET_TYPE_KEEPALIVE:
 				valid_packet = 1;
 				break;
 
@@ -396,7 +396,7 @@ static void s_server_send_packets(server_t* server, float dt)
 		if (!is_loopback[i]) {
 			if (last_sent_times[i] >= CUTE_KEEPALIVE_RATE) {
 				last_sent_times[i] = 0;
-				int packet_size = packet_write_header(server->io, server->buffer, PACKET_TYPE_KEEP_ALIVE, server->client_sequence[i]);
+				int packet_size = packet_write_header(server->io, server->buffer, PACKET_TYPE_KEEPALIVE, server->client_sequence[i]);
 				packet_encrypt_and_send(server->client_session_key + i, &server->socket, server->client_endpoint[i], server->buffer, packet_size, server->client_sequence_offset[i] + server->client_sequence[i]++);
 			}
 		}
