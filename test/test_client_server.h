@@ -336,3 +336,4 @@ int client_disconnects_itself_from_server()
 // [ ] client forecfully disconnects after connecting.
 // Challenge token to prevent spoofing.
 // Connect confirmation via acked-keepalive packets.
+// Disconnect packet redundancy.
