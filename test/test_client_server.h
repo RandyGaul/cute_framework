@@ -326,16 +326,43 @@ int client_disconnects_itself_from_server()
 }
 
 // WORKING HERE
-// TODO
+
+// PRIORITIZED TODO:
+// [ ] All packets should have unified read/write functions, implying the same headers and encryptors.
+// [ ] Refactor connection request packet to use standardized packet form.
+// [ ] Redundant disconnect packets (unreliable).
+// [ ] Challenge response to prevent spoofing.
+// [ ] Connect confirmation also needs client index + max client count.
+// [ ] Optional "expect connect tokens" setting for the beginning of the handshake.
+
+// Connect token format
+// 1. timeout in seconds (64 bits)
+// 2. the number of server addressess (32 bits)
+// 3. each server address
+// 4. connect_user_data
+
+// connect_user_data format
+// 4.1 nonce (64 bits)
+// 4.2 packet type
+// 4.3 user game id
+// 4.4 session id (64 bits)
+// 4.4 the number of server addressess (32 bits)
+// 4.5 each server address
+
+// The idea is connect token is obtained via REST API (somehow), and the client reads the token data.
+// The connect_user_data is an entire encrypted packet, to be sent to the dedicated game server.
+// The client reads the list of servers, and sends the connect_user_data to one server at a time.
+// The game server can verify the sesion id is valid. The session id maps the player to a single
+// playable session. This means it can be used to lookup any information from the backend about the player.
+
+// TEST TODO
 // [x] Keep alive packet
-// [x] client timeout
-// [x] no server response on connect
-// [x] server timeout
-// [x] connection denied
-// [x] server forecfully disconnects client after connecting
-// [ ] client forecfully disconnects after connecting.
-// Challenge token to prevent spoofing.
-// Connect confirmation also needs client index + max client count.
-// Disconnect packet redundancy.
-// Refactor connection request packet.
-// All packets should have unified read/write functions, implying the same headers and encryptors.
+// [x] Client timeout
+// [x] No server response on connect
+// [x] Server timeout
+// [x] Connection denied
+// [x] Server forecfully disconnects client after connecting
+// [ ] Client forecfully disconnects after connecting.
+// [ ] Challenge response failure
+// [ ] Connect token acceptance
+// [ ] Connect token failure
