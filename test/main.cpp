@@ -74,6 +74,8 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_no_server_response_on_client_connect),
 		CUTE_TEST_CASE_ENTRY(test_server_timeout),
 		CUTE_TEST_CASE_ENTRY(client_connects_then_times_out),
+		CUTE_TEST_CASE_ENTRY(test_max_clients_connection_denied),
+		CUTE_TEST_CASE_ENTRY(server_disconnect_a_client),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

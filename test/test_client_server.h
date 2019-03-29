@@ -21,6 +21,7 @@
 
 #include <cute_client.h>
 #include <cute_server.h>
+#include <cute_alloc.h>
 
 using namespace cute;
 
@@ -221,12 +222,117 @@ int client_connects_then_times_out()
 	return 0;
 }
 
+CUTE_TEST_CASE(test_max_clients_connection_denied, "Spawn many clients, to overflow the server. Should get connection denied response.");
+int test_max_clients_connection_denied()
+{
+	// Startup the server.
+	crypto_key_t pk, sk;
+	CUTE_TEST_CHECK(crypto_generate_keypair(&pk, &sk));
+	server_t* server = server_alloc(NULL);
+	CUTE_TEST_CHECK_POINTER(server);
+	CUTE_TEST_CHECK(server_start(server, "127.0.0.1:5000", &pk, &sk, NULL));
+
+	// Spin up maximum capacity of clients.
+	client_t** clients = (client_t**)CUTE_ALLOC(sizeof(void*) * CUTE_SERVER_MAX_CLIENTS + 1, NULL);
+	for (int i = 0; i < CUTE_SERVER_MAX_CLIENTS; ++i)
+	{
+		clients[i] = client_alloc(NULL);
+		CUTE_TEST_CHECK_POINTER(clients[i]);
+		CUTE_TEST_CHECK(client_connect(clients[i], 4001 + i, "127.0.0.1:5000", &pk));
+		client_update(clients[i], 0);
+	}
+
+	// Accept all client connections.
+	server_update(server, 0);
+
+	// Assert connectivity.
+	for (int i = 0; i < CUTE_SERVER_MAX_CLIENTS; ++i)
+	{
+		client_update(clients[i], 0);
+		CUTE_TEST_ASSERT(client_state_get(clients[i]) == CLIENT_STATE_CONNECTED);
+	}
+
+	// Try to connect one more client, but it should fail. Assert no connectivity.
+	client_t* client = client_alloc(NULL);
+	CUTE_TEST_CHECK(client_connect(client, 6000, "127.0.0.1:5000", &pk));
+	client_update(client, 0); // Send connect packet.
+	server_update(server, 0); // Respond with connection denied.
+	client_update(client, 0); // Recieve connection denied.
+	CUTE_TEST_ASSERT(client_state_get(client) == CLIENT_STATE_DISCONNECTED);
+
+	client_disconnect(client);
+	client_destroy(client);
+
+	for (int i = 0; i < CUTE_SERVER_MAX_CLIENTS; ++i)
+	{
+		client_disconnect(clients[i]);
+		client_destroy(clients[i]);
+	}
+
+	server_update(server, 0);
+	server_stop(server);
+	server_destroy(server);
+
+	CUTE_FREE(clients, NULL);
+
+	return 0;
+}
+
+CUTE_TEST_CASE(server_disconnect_a_client, "Server forcefully disconnects a client.");
+int server_disconnect_a_client()
+{
+	crypto_key_t pk, sk;
+	CUTE_TEST_CHECK(crypto_generate_keypair(&pk, &sk));
+	server_t* server = server_alloc(NULL);
+	CUTE_TEST_CHECK_POINTER(server);
+	CUTE_TEST_CHECK(server_start(server, "127.0.0.1:5000", &pk, &sk, NULL));
+	
+	client_t* client0 = client_alloc(NULL);
+	client_t* client1 = client_alloc(NULL);
+	CUTE_TEST_CHECK(client_connect(client0, 6000, "127.0.0.1:5000", &pk));
+	CUTE_TEST_CHECK(client_connect(client1, 6001, "127.0.0.1:5000", &pk));
+	client_update(client0, 0);
+	client_update(client1, 0);
+	server_update(server, 0);
+	client_update(client0, 0);
+	client_update(client1, 0);
+	CUTE_TEST_ASSERT(client_state_get(client0) == CLIENT_STATE_CONNECTED);
+	CUTE_TEST_ASSERT(client_state_get(client1) == CLIENT_STATE_CONNECTED);
+
+	server_event_t event;
+	CUTE_TEST_CHECK(server_poll_event(server, &event));
+	CUTE_TEST_ASSERT(event.type == SERVER_EVENT_TYPE_NEW_CONNECTION);
+	cute::handle_t client_id = event.u.new_connection.client_id;
+
+	server_disconnect_client(server, client_id, 1);
+	client_update(client0, 0);
+	CUTE_TEST_ASSERT(client_state_get(client0) == CLIENT_STATE_DISCONNECTED);
+	CUTE_TEST_ASSERT(client_state_get(client1) == CLIENT_STATE_CONNECTED);
+
+	client_disconnect(client0);
+	client_destroy(client0);
+	client_disconnect(client1);
+	client_destroy(client1);
+	server_stop(server);
+	server_destroy(server);
+
+	return 0;
+}
+
+CUTE_TEST_CASE(client_disconnects_itself_from_server, "Client disconnects itself from server, and server should recieve notification.");
+int client_disconnects_itself_from_server()
+{
+	return 0;
+}
+
 // WORKING HERE
 // TODO
 // [x] Keep alive packet
-// [ ] client timeout
+// [x] client timeout
 // [x] no server response on connect
 // [x] server timeout
-// [ ] connection denied
-// [ ] server forecfully disconnects client after connecting
+// [x] connection denied
+// [x] server forecfully disconnects client after connecting
 // [ ] client forecfully disconnects after connecting.
+// Challenge token to prevent spoofing.
+// Connect confirmation via acked-keepalive packets.

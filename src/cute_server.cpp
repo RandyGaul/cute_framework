@@ -63,7 +63,6 @@ struct server_t
 	uint64_t client_sequence_offset[CUTE_SERVER_MAX_CLIENTS];
 	uint64_t client_sequence[CUTE_SERVER_MAX_CLIENTS];
 	nonce_buffer_t client_nonce_buffer[CUTE_SERVER_MAX_CLIENTS];
-	handle_t client_id[CUTE_SERVER_MAX_CLIENTS];
 	crypto_key_t client_session_key[CUTE_SERVER_MAX_CLIENTS];
 	packet_queue_t client_packets[CUTE_SERVER_MAX_CLIENTS];
 
@@ -124,9 +123,9 @@ cute_error:
 
 void server_stop(server_t* server)
 {
-	for (int i = 0; i < server->client_count; ++i)
+	while(server->client_count)
 	{
-		server_disconnect_client(server, server->client_handle[i]);
+		server_disconnect_client(server, server->client_handle[0]);
 	}
 
 	server->running = 0;
@@ -198,18 +197,24 @@ static uint32_t s_client_make(server_t* server, endpoint_t endpoint, crypto_key_
 	server->client_sequence_offset[index] = sequence_offset;
 	server->client_sequence[index] = 0;
 	nonce_buffer_init(server->client_nonce_buffer + index);
-	server->client_id[index] = handle_table_alloc(&server->client_handle_table, index);
 	server->client_session_key[index] = *session_key;
-	if (packet_queue_init(server->client_packets + index, 2 *CUTE_MB, server->mem_ctx)) {
+	if (packet_queue_init(server->client_packets + index, 2 * CUTE_MB, server->mem_ctx)) {
 		return UINT32_MAX;
 	}
 
 	server_event_t* event = s_push_event(server);
 	event->type = SERVER_EVENT_TYPE_NEW_CONNECTION;
-	event->u.new_connection.client_id = server->client_id[index];
+	event->u.new_connection.client_id = server->client_handle[index];
 	event->u.new_connection.endpoint = endpoint;
 
 	return index;
+}
+
+static int s_server_send_packet_no_payload(server_t* server, int client_index, packet_type_t packet_type)
+{
+	int packet_size = packet_write_header(server->io, server->buffer, packet_type, server->client_sequence[client_index]);
+	if (packet_size <= 0) return -1;
+	return packet_encrypt_and_send(server->client_session_key + client_index, &server->socket, server->client_endpoint[client_index], server->buffer, packet_size, server->client_sequence_offset[client_index] + server->client_sequence[client_index]++);
 }
 
 // Attempt to record address to kindly report to the client their connection was denied.
@@ -219,7 +224,7 @@ static uint32_t s_client_make(server_t* server, endpoint_t endpoint, crypto_key_
 // help in the case of a harmful client attempting a DOS attack. For the case of DOS this
 // buffer is capped to `CUTE_SERVER_CONNECTION_DENIED_MAX_COUNT`, and responses will be
 // dropped if this buffer fills up.
-static void s_server_connection_denied(server_t* server, endpoint_t from, const crypto_key_t* key, connection_denied_reason_t reason)
+static void s_server_connection_denied(server_t* server, endpoint_t from, const crypto_key_t* key)
 {
 	CUTE_ASSERT(server->connection_denied_count <= CUTE_SERVER_CONNECTION_DENIED_MAX_COUNT);
 	if (server->connection_denied_count == CUTE_SERVER_CONNECTION_DENIED_MAX_COUNT) {
@@ -227,16 +232,8 @@ static void s_server_connection_denied(server_t* server, endpoint_t from, const 
 	}
 	server->connection_denied_count++;
 
-	int packet_size = packet_write_header(server->io, server->buffer, PACKET_TYPE_KEEPALIVE, 0);
-	uint64_t reason_typeu64 = reason;
-	CUTE_SERIALIZE_CHECK(serialize_uint64(server->io, &reason_typeu64, 0, CONNECTION_DENIED_REASON_MAX));
-	CUTE_SERIALIZE_CHECK(serialize_flush(server->io));
+	int packet_size = packet_write_header(server->io, server->buffer, PACKET_TYPE_CONNECTION_DENIED, 0);
 	packet_encrypt_and_send(key, &server->socket, from, server->buffer, packet_size, 0);
-
-	// WORKING HERE : Client needs to look for connection denied packets. Also write unit test for this.
-
-cute_error:
-	return;
 }
 
 static int s_send_packet_to_client(server_t* server, uint32_t client_index, uint8_t* packet, int size, uint64_t sequence)
@@ -306,7 +303,7 @@ static void s_server_recieve_packets(server_t* server)
 
 			if (server->client_count == CUTE_SERVER_MAX_CLIENTS) {
 				// Not accepting new connections; out of client slots.
-				s_server_connection_denied(server, from, &session_key, CONNECTION_DENIED_REASON_CLIENT_CAPACITY_AT_MAXIMUM);
+				s_server_connection_denied(server, from, &session_key);
 				continue;
 			}
 
@@ -314,13 +311,13 @@ static void s_server_recieve_packets(server_t* server)
 			client_index = s_client_make(server, from, &session_key, 0);
 			if (client_index == UINT32_MAX) {
 				// Failed to create new client for some reason (like out of memory).
-				s_server_connection_denied(server, from, &session_key, CONNECTION_DENIED_REASON_SERVER_ERROR);
+				s_server_connection_denied(server, from, &session_key);
 				continue;
 			}
 
 			// Send connection accepted packet.
 			serialize_reset_buffer(io, SERIALIZE_WRITE, buffer, CUTE_PACKET_SIZE_MAX);
-			
+
 			uint64_t first_sequence = 0;
 			CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &first_sequence));
 
@@ -362,7 +359,7 @@ static void s_server_recieve_packets(server_t* server)
 
 			case PACKET_TYPE_DISCONNECT:
 				valid_packet = 1;
-				server_disconnect_client(server, server->client_id[client_index], 0);
+				server_disconnect_client(server, server->client_handle[client_index], 0);
 				break;
 
 			case PACKET_TYPE_USERDATA:
@@ -396,8 +393,7 @@ static void s_server_send_packets(server_t* server, float dt)
 		if (!is_loopback[i]) {
 			if (last_sent_times[i] >= CUTE_KEEPALIVE_RATE) {
 				last_sent_times[i] = 0;
-				int packet_size = packet_write_header(server->io, server->buffer, PACKET_TYPE_KEEPALIVE, server->client_sequence[i]);
-				packet_encrypt_and_send(server->client_session_key + i, &server->socket, server->client_endpoint[i], server->buffer, packet_size, server->client_sequence_offset[i] + server->client_sequence[i]++);
+				s_server_send_packet_no_payload(server, i, PACKET_TYPE_KEEPALIVE);
 			}
 		}
 	}
@@ -432,18 +428,50 @@ int server_poll_event(server_t* server, server_event_t* event)
 
 void server_disconnect_client(server_t* server, handle_t client_id, int send_notification_to_client)
 {
+	CUTE_ASSERT(server->client_count >= 1);
+	uint32_t index = handle_table_get_index(&server->client_handle_table, client_id);
 	if (send_notification_to_client) {
-		// TODO : Send disconnected packet. Maybe use s_push_event.
+		s_server_send_packet_no_payload(server, index, PACKET_TYPE_DISCONNECT);
 	}
 
-	uint32_t index = handle_table_get_index(&server->client_handle_table, client_id);
+	// Free client resources.
 	server->client_is_connected[index] = 0;
 	pack_queue_clean_up(server->client_packets + index);
 	handle_table_free(&server->client_handle_table, client_id);
+
+	// Move client in back to the empty slot.
+	int last_index = --server->client_count;
+	if (last_index) {
+		handle_t h = server->client_handle[index];
+		handle_table_update_index(&server->client_handle_table, h, index);
+
+		server->client_handle[index]                    = server->client_handle[last_index];
+		server->client_is_connected[index]              = server->client_is_connected[last_index];
+		server->client_is_loopback[index]               = server->client_is_loopback[last_index];
+		server->client_last_packet_recieved_time[index] = server->client_last_packet_recieved_time[last_index];
+		server->client_last_packet_sent_time[index]     = server->client_last_packet_sent_time[last_index];
+		server->client_endpoint[index]                  = server->client_endpoint[last_index];
+		server->client_sequence_offset[index]           = server->client_sequence_offset[last_index];
+		server->client_sequence[index]                  = server->client_sequence[last_index];
+		server->client_nonce_buffer[index]              = server->client_nonce_buffer[last_index];
+		server->client_session_key[index]               = server->client_session_key[last_index];
+		server->client_packets[index]                   = server->client_packets[last_index];
+	}
 }
 
 void server_look_for_and_disconnected_timed_out_clients(server_t* server)
 {
+	int client_count = server->client_count;
+	float* last_recieved_times = server->client_last_packet_recieved_time;
+	for (int i = 0; i < client_count;)
+	{
+		if (last_recieved_times[i] >= CUTE_KEEPALIVE_RATE * 3) {
+			--client_count;
+			server_disconnect_client(server, server->client_handle[i], 1);
+		} else {
+			 ++i;
+		}
+	}
 }
 
 void server_broadcast_to_all_clients(server_t* server, const void* packet, int size, int reliable)
