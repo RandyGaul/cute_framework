@@ -659,62 +659,68 @@ int packet_validate_size(int size)
 	return 0;
 }
 
-uint8_t* packet_open(serialize_t* io, const crypto_key_t* session_key, nonce_buffer_t* nonce_buffer, uint8_t* packet, int size, uint64_t sequence, uint64_t sequence_offset, packet_type_t* type, int* packet_size)
+#define CUTE_ADDITIONAL_DATA_SIZE (CUTE_PROTOCOL_VERSION_STRING_LEN + sizeof(uint64_t) + 1)
+static CUTE_INLINE void s_write_header(uint8_t* header, packet_type_t packet_type, uint64_t game_id)
 {
-	if (crypto_decrypt(session_key, packet + sizeof(uint64_t), size - sizeof(uint64_t), sequence + sequence_offset) < 0) {
-		// Forged packet!
-		return NULL;
+	CUTE_MEMCPY(header, CUTE_PROTOCOL_VERSION, CUTE_PROTOCOL_VERSION_STRING_LEN);
+	CUTE_MEMCPY(header + CUTE_PROTOCOL_VERSION_STRING_LEN, &game_id, sizeof(uint64_t));
+	unsigned char packet_type_byte = (unsigned char)packet_type;
+	CUTE_MEMCPY(header + CUTE_PROTOCOL_VERSION_STRING_LEN + sizeof(uint64_t), &packet_type_byte, 1);
+}
+
+uint8_t* packet_open(nonce_buffer_t* nonce_buffer, uint64_t game_id, uint8_t* packet, int size, uint64_t sequence_offset, const crypto_key_t* key, packet_type_t* packet_type, int* packet_size)
+{
+	packet_type_t type = (packet_type_t)*(packet += 1);
+	if (type == PACKET_TYPE_CONNECTION_REQUEST) {
+		// WORKING HERE
+		// Read in these:
+		// CUTE_PROTOCOL_VERSION
+		// game_id
+		const uint8_t* nonce = packet;
+		packet += CUTE_CRYPTO_NONCE_BYTES;
+		// Decrypt the connect token secret data
+	} else {
+		uint8_t additional_data[CUTE_ADDITIONAL_DATA_SIZE];
+		s_write_header(additional_data, type, game_id);
+		uint64_t sequence = (uint64_t)(*(packet += sizeof(uint64_t)));
+		if (crypto_decrypt(key, packet, size - sizeof(uint64_t) - 1, additional_data, CUTE_ADDITIONAL_DATA_SIZE, sequence + sequence_offset) < 0) {
+			// Forged packet!
+			return NULL;
+		}
+
+		if (nonce_cull_duplicate(nonce_buffer, sequence, sequence_offset) < 0) {
+			// Duplicate, or very old, packet detected.
+			return NULL;
+		}
+
+		*packet_size = size - sizeof(uint64_t) - 1 - CUTE_CRYPTO_MAC_BYTES;
 	}
 
-	if (nonce_cull_duplicate(nonce_buffer, sequence, sequence_offset) < 0) {
-		// Duplicate, or very old, packet detected.
-		return NULL;
-	}
-
-	// Read in packet type, and calculate payload size.
-	uint64_t packet_typeu64;
-	CUTE_SERIALIZE_CHECK(serialize_uint64(io, &packet_typeu64, 0, PACKET_TYPE_MAX));
-	CUTE_SERIALIZE_CHECK(serialize_flush(io));
-	*type = (packet_type_t)packet_typeu64;
-	int serialized_bytes = serialize_serialized_bytes(io);
-	int payload_size = size - serialized_bytes - CUTE_CRYPTO_SYMMETRIC_BYTES;
-	*packet_size = payload_size;
-	packet += serialized_bytes;
-	if (*packet_size < 0) {
-		// Read beyond packet header's defined length; this is not a valid packet.
-		return NULL;
-	}
-
+	*packet_type = type;
 	return packet;
 
 cute_error:
 	return NULL;
 }
 
-#define CUTE_ADDITIONAL_DATA_SIZE (CUTE_PROTOCOL_VERSION_STRING_LEN + sizeof(uint64_t) + 1)
-
 int packet_write(serialize_t* io, uint64_t game_id, packet_type_t packet_type, uint64_t sequence, const uint8_t* payload, int payload_size, const crypto_key_t* key)
 {
-	uint8_t* buffer = (uint8_t*)serialize_get_buffer(io);
 
 	if (packet_type == PACKET_TYPE_CONNECTION_REQUEST) {
 		CUTE_ASSERT(payload_size == CUTE_PACKET_SIZE_MAX);
-		CUTE_MEMCPY(buffer, payload, payload_size);
+		CUTE_MEMCPY((uint8_t*)serialize_get_buffer(io), payload, payload_size);
 		return payload_size;
 	} else {
-		// Write header.
 		uint8_t additional_data[CUTE_ADDITIONAL_DATA_SIZE];
-		CUTE_MEMCPY(additional_data, CUTE_PROTOCOL_VERSION, CUTE_PROTOCOL_VERSION_STRING_LEN);
-		CUTE_MEMCPY(additional_data + CUTE_PROTOCOL_VERSION_STRING_LEN, &game_id, sizeof(uint64_t));
-		unsigned char packet_type_byte = (unsigned char)packet_type;
-		CUTE_MEMCPY(additional_data + CUTE_PROTOCOL_VERSION_STRING_LEN + sizeof(uint64_t), &packet_type_byte, 1);
+		s_write_header(additional_data, packet_type, game_id);
 
-
+		CUTE_SERIALIZE_CHECK(serialize_bits(io, (unsigned*)&packet_type, 8));
 		CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &sequence));
-		int packet_size = header_size + payload_size + CUTE_CRYPTO_MAC_BYTES;
+		int packet_size = serialize_serialized_bytes(io) + payload_size + CUTE_CRYPTO_MAC_BYTES;
 		CUTE_ASSERT(packet_size <= CUTE_PACKET_SIZE_MAX);
+		uint8_t* buffer = (uint8_t*)serialize_get_buffer(io);
 		CUTE_MEMCPY(buffer, payload, payload_size);
-		CUTE_CHECK(crypto_encrypt(key, buffer, payload_size, buffer_start, header_size, sequence));
+		CUTE_CHECK(crypto_encrypt(key, buffer, payload_size, additional_data, CUTE_ADDITIONAL_DATA_SIZE, sequence));
 		return packet_size;
 	}
 

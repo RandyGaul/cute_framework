@@ -335,15 +335,16 @@ int client_disconnects_itself_from_server()
 
 // Generalized packet format
 	// HEADER
-		// "CUTE 1.0" (9 bytes)
-		// game id (uint64_t)
 		// packet type (uint8_t)
-		// sequence number (uin64_t or 24 bytes*)
+		// * "CUTE 1.0" (9 bytes)
+		// * game id (uint64_t)
+		// sequence number (uin64_t or 24 bytes**)
 	// PAYLOAD
 		// -- begin encryption --
 		// payload data
 		// --  end encryption  --
-// * Typical packets use uint64_t, but connect tokens use full 24 bytes.
+// * Only present in connect token, otherwise is not actually in packet, but still the additional data.
+// ** Typical packets use uint64_t, but connect tokens use full 24 bytes.
 
 // Connect token format
 	// HEADER
