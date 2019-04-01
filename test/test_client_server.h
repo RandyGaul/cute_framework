@@ -343,11 +343,11 @@ int client_disconnects_itself_from_server()
 
 // connect_user_data format
 // 4.1 nonce (64 bits)
-// 4.2 packet type
 // 4.3 user game id
 // 4.4 session id (64 bits)
-// 4.4 the number of server addressess (32 bits)
-// 4.5 each server address
+// 4.5 timout in seconds (64 bits)
+// 4.6 the number of server addressess (32 bits)
+// 4.7 each server address
 
 // The idea is connect token is obtained via REST API (somehow), and the client reads the token data.
 // The connect_user_data is an entire encrypted packet, to be sent to the dedicated game server.

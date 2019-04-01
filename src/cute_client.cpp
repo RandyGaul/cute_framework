@@ -250,6 +250,8 @@ static void s_client_send_packets(client_t* client)
 			serialize_t* io = client->io;
 			serialize_reset_buffer(io, SERIALIZE_WRITE, buffer, CUTE_PACKET_SIZE_MAX);
 
+			packet_write_header(io, buffer, PACKET_TYPE_CONNECTION_REQUEST, 0);
+
 			// Write version string.
 			const char* version_string = CUTE_PROTOCOL_VERSION;
 			CUTE_CHECK(serialize_bytes(io, (unsigned char*)version_string, CUTE_PROTOCOL_VERSION_STRING_LEN));
