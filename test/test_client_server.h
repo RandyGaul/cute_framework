@@ -325,8 +325,6 @@ int client_disconnects_itself_from_server()
 	return 0;
 }
 
-// WORKING HERE
-
 // PRIORITIZED TODO:
 // [ ] All packets should have unified read/write functions, implying the same headers and encryptors.
 // [ ] Refactor connection request packet to use standardized packet form.
@@ -335,19 +333,29 @@ int client_disconnects_itself_from_server()
 // [ ] Connect confirmation also needs client index + max client count.
 // [ ] Optional "expect connect tokens" setting for the beginning of the handshake.
 
-// Connect token format
-// 1. timeout in seconds (64 bits)
-// 2. the number of server addressess (32 bits)
-// 3. each server address
-// 4. connect_user_data
+// Generalized packet format
+	// HEADER
+		// "CUTE 1.0" (9 bytes)
+		// game id (uint64_t)
+		// packet type (uint8_t)
+		// sequence number (uin64_t or 24 bytes*)
+	// PAYLOAD
+		// -- begin encryption --
+		// payload data
+		// --  end encryption  --
+// * Typical packets use uint64_t, but connect tokens use full 24 bytes.
 
-// connect_user_data format
-// 4.1 nonce (64 bits)
-// 4.3 user game id
-// 4.4 session id (64 bits)
-// 4.5 timout in seconds (64 bits)
-// 4.6 the number of server addressess (32 bits)
-// 4.7 each server address
+// Connect token format
+	// HEADER
+	// expire timestamp (uint64_t)
+	// the number of server addressess (uint16_t)
+		// each server address
+	// secret_data
+		// user id
+		// session nonce
+		// session key
+		// user data (512 bytes)
+		// pad bytes
 
 // The idea is connect token is obtained via REST API (somehow), and the client reads the token data.
 // The connect_user_data is an entire encrypted packet, to be sent to the dedicated game server.

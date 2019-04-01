@@ -28,50 +28,48 @@
 namespace cute
 {
 
-int crypto_encrypt_asymmetric(const crypto_key_t* endpoint_public_key, uint8_t* buffer, int size_to_encrypt, int buffer_size)
+int crypto_encrypt(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* additional_data, int additional_data_size, uint64_t nonce)
 {
-	if (size_to_encrypt + CUTE_CRYPTO_ASYMMETRIC_BYTES > buffer_size) {
-		error_set("Can not encrypt data: `buffer_size` must be at least `CUTE_CRYPTO_ASYMMETRIC_BYTES` bytes larger than `size_to_encrypt`.");
-		return -1;
-	}
+	uint8_t nonce_bytes[crypto_aead_chacha20poly1305_ietf_NPUBBYTES];
+	CUTE_MEMSET(nonce_bytes, 0, sizeof(nonce_bytes));
+	*((uint64_t*)(nonce_bytes + sizeof(nonce_bytes) - sizeof(uint64_t))) = nonce;
 
-	// `crypto_box_seal` does *not* support overlapped buffers for `c` and `m`. After inspecting
-	// the source of `crypto_box_seal`, it became apparent `crypto_box_seal` is built entirely
-	// with high level primitives of the sodium API, and starts by writing `CUTE_CRYPTO_ASYMMETRIC_BYTES`
-	// to the beginning of the `c` buffer. Therefor, if `buffer` is simply memmove'd forward by
-	// `CUTE_CRYPTO_ASYMMETRIC_BYTES`, we can "mimic" in-place encryption just like the rest of the
-	// sodium API.
-	CUTE_MEMMOVE(buffer + CUTE_CRYPTO_ASYMMETRIC_BYTES, buffer, size_to_encrypt);
-
-	return crypto_box_seal(buffer, buffer + CUTE_CRYPTO_ASYMMETRIC_BYTES, size_to_encrypt, endpoint_public_key->key);
+	uint64_t encrypted_sz;
+	int ret = crypto_aead_chacha20poly1305_ietf_encrypt(data, &encrypted_sz, data, (uint64_t)data_size, additional_data, additional_data_size, NULL, nonce_bytes, key->key);
+	if (ret < 0) return -1;
+	CUTE_ASSERT(encrypted_sz == data_size + CUTE_CRYPTO_BYTES);
+	return ret;
 }
 
-int crypto_decrypt_asymmetric(const crypto_key_t* your_public_key, const crypto_key_t* your_secret_key, uint8_t* buffer, int buffer_size)
+int crypto_decrypt(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* additional_data, int additional_data_size, uint64_t nonce)
 {
-	return crypto_box_seal_open(buffer, buffer, buffer_size, your_public_key->key, your_secret_key->key);
+	uint8_t nonce_bytes[crypto_aead_chacha20poly1305_ietf_NPUBBYTES];
+	CUTE_MEMSET(nonce_bytes, 0, sizeof(nonce_bytes));
+	*((uint64_t*)(nonce_bytes + sizeof(nonce_bytes) - sizeof(uint64_t))) = nonce;
+
+	uint64_t encrypted_sz;
+	int ret = crypto_aead_chacha20poly1305_ietf_decrypt(data, &encrypted_sz, NULL, data, (uint64_t)data_size, additional_data, additional_data_size, nonce_bytes, key->key);
+	if (ret < 0) return -1;
+	CUTE_ASSERT(encrypted_sz == data_size + CUTE_CRYPTO_BYTES);
+	return ret;
 }
 
-int crypto_encrypt(const crypto_key_t* symmetric_key, uint8_t* buffer, int size_to_encrypt, int buffer_size, uint64_t sequence)
+int crypto_encrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* additional_data, int additional_data_size, const uint8_t* nonce)
 {
-	if (size_to_encrypt + CUTE_CRYPTO_SYMMETRIC_BYTES > buffer_size) {
-		error_set("Can not encrypt data: `buffer_size` must be at least `CUTE_CRYPTO_SYMMETRIC_BYTES` bytes larger than `size_to_encrypt`.");
-		return -1;
-	}
-
-	uint8_t nonce[crypto_box_NONCEBYTES];
-	CUTE_MEMSET(nonce, 0, sizeof(nonce));
-	*((uint64_t*)(nonce + sizeof(nonce) - sizeof(uint64_t))) = sequence;
-
-	return crypto_secretbox_easy(buffer, buffer, size_to_encrypt, nonce, symmetric_key->key);
+	uint64_t encrypted_sz;
+	int ret = crypto_aead_chacha20poly1305_ietf_encrypt(data, &encrypted_sz, data, (uint64_t)data_size, additional_data, additional_data_size, NULL, nonce, key->key);
+	if (ret < 0) return -1;
+	CUTE_ASSERT(encrypted_sz == data_size + CUTE_CRYPTO_BYTES);
+	return ret;
 }
 
-int crypto_decrypt(const crypto_key_t* symmetric_key, uint8_t* data, int byte_count, uint64_t sequence)
+int crypto_decrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* additional_data, int additional_data_size, const uint8_t* nonce)
 {
-	uint8_t nonce[crypto_box_NONCEBYTES];
-	CUTE_MEMSET(nonce, 0, sizeof(nonce));
-	*((uint64_t*)(nonce + sizeof(nonce) - sizeof(uint64_t))) = sequence;
-
-	return crypto_secretbox_open_easy(data, data, byte_count, nonce, symmetric_key->key);
+	uint64_t decrypted_sz;
+	int ret = crypto_aead_xchacha20poly1305_ietf_decrypt(data, &decrypted_sz, NULL, data, (uint64_t)data_size, additional_data, (uint64_t)additional_data_size, nonce, key->key);
+	if (ret < 0) return -1;
+	CUTE_ASSERT(decrypted_sz == data_size - CUTE_CRYPTO_BYTES);
+	return ret;
 }
 
 int crypto_generate_keypair(crypto_key_t* public_key, crypto_key_t* private_key)
@@ -79,7 +77,7 @@ int crypto_generate_keypair(crypto_key_t* public_key, crypto_key_t* private_key)
 	return crypto_box_keypair(public_key->key, private_key->key);
 }
 
-crypto_key_t crypto_generate_symmetric_key()
+crypto_key_t crypto_generate_key()
 {
 	crypto_key_t key;
 	crypto_secretbox_keygen(key.key);

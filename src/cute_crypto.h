@@ -26,19 +26,19 @@
 
 #include <libsodium/sodium.h>
 
-#define CUTE_CRYPTO_ASYMMETRIC_BYTES ((int)crypto_box_SEALBYTES)
-#define CUTE_CRYPTO_SYMMETRIC_BYTES ((int)crypto_secretbox_MACBYTES)
+#define CUTE_CRYPTO_BYTES ((int)crypto_aead_xchacha20poly1305_ietf_ABYTES)
+#define CUTE_CRYPTO_NONCE_BYTES ((int)crypto_aead_xchacha20poly1305_ietf_NPUBBYTES)
 
 namespace cute
 {
 
 struct crypto_key_t;
 
-extern CUTE_API int CUTE_CALL crypto_encrypt_asymmetric(const crypto_key_t* endpoint_public_key, uint8_t* buffer, int size_to_encrypt, int buffer_size);
-extern CUTE_API int CUTE_CALL crypto_decrypt_asymmetric(const crypto_key_t* your_public_key, const crypto_key_t* your_secret_key, uint8_t* buffer, int buffer_size);
+extern CUTE_API int CUTE_CALL crypto_encrypt(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* additional_data, int additional_data_size, uint64_t nonce);
+extern CUTE_API int CUTE_CALL crypto_decrypt(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* additional_data, int additional_data_size, uint64_t nonce);
 
-extern CUTE_API int CUTE_CALL crypto_encrypt(const crypto_key_t* symmetric_key, uint8_t* buffer, int size_to_encrypt, int buffer_size, uint64_t sequence);
-extern CUTE_API int CUTE_CALL crypto_decrypt(const crypto_key_t* symmetric_key, uint8_t* buffer, int buffer_size, uint64_t sequence);
+extern CUTE_API int CUTE_CALL crypto_encrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* additional_data, int additional_data_size, const uint8_t* nonce);
+extern CUTE_API int CUTE_CALL crypto_decrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* additional_data, int additional_data_size, const uint8_t* nonce);
 
 }
 

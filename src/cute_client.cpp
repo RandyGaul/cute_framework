@@ -98,7 +98,7 @@ int client_connect(client_t* client, uint16_t port, const char* server_address_a
 	client->sequence = 0;
 	CUTE_CHECK(socket_init(&client->socket, server_endpoint.type, port, CUTE_CLIENT_SEND_BUFFER_SIZE, CUTE_CLIENT_RECEIVE_BUFFER_SIZE));
 	client->server_endpoint = server_endpoint;
-	client->session_key = crypto_generate_symmetric_key();
+	client->session_key = crypto_generate_key();
 	client->io = serialize_buffer_create(SERIALIZE_READ, NULL, 0, NULL);
 	nonce_buffer_init(&client->nonce_buffer);
 	CUTE_CHECK(packet_queue_init(&client->packets, CUTE_CLIENT_RECEIVE_BUFFER_SIZE, client->mem_ctx));

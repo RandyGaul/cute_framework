@@ -24,8 +24,6 @@
 
 #include <cute_crypto.h>
 
-#define CUTE_PROTOCOL_VERSION "CUTE PROTOCOL VERSION 1.00"
-#define CUTE_PROTOCOL_VERSION_STRING_LEN (26 + 1)
 #define CUTE_PACKET_SIZE_MAX (CUTE_KB + 256)
 
 #define CUTE_CONNECT_TOKEN_SIZE 2048
@@ -59,8 +57,7 @@ extern CUTE_API int CUTE_CALL endpoint_equals(endpoint_t a, endpoint_t b);
 
 extern CUTE_API int CUTE_CALL generate_connect_token(
 	int address_count,
-	const char** address_list_public,
-	const char** address_list_secret,
+	const char** address_list,
 	uint64_t expire_time,
 	uint32_t game_id,
 	uint64_t client_id,

@@ -27,16 +27,18 @@
 namespace cute
 {
 
+static_assert(
+	crypto_aead_xchacha20poly1305_ietf_KEYBYTES == crypto_aead_chacha20poly1305_ietf_KEYBYTES,
+	"For simplicity of this API all key sizes are assumed to be the same, as defined by libsodium."
+);
+
 struct crypto_key_t
 {
-	// Note: Assume crypto_box_PUBLICKEYBYTES == crypto_box_SECRETKEYBYTES.
-	// This invariant is tested in `crypto_init`, for safety.
-	uint8_t key[crypto_box_PUBLICKEYBYTES];
+	uint8_t key[crypto_aead_xchacha20poly1305_ietf_KEYBYTES];
 };
 
 extern CUTE_API void CUTE_CALL crypto_random_bytes(void* data, int byte_count);
-extern CUTE_API crypto_key_t CUTE_CALL crypto_generate_symmetric_key();
-extern CUTE_API int CUTE_CALL crypto_generate_keypair(crypto_key_t* public_key, crypto_key_t* private_key);
+extern CUTE_API crypto_key_t CUTE_CALL crypto_generate_key();
 extern CUTE_API const char* CUTE_CALL crypto_sodium_version_linked();
 
 }

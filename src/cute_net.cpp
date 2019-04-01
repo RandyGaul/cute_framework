@@ -31,6 +31,9 @@
 
 #include <cute/cute_serialize.h>
 
+#define CUTE_PROTOCOL_VERSION "CUTE 1.0"
+#define CUTE_PROTOCOL_VERSION_STRING_LEN (8 + 1)
+
 namespace cute
 {
 
@@ -615,35 +618,28 @@ int generate_connect_token(
 	serialize_t* io = serialize_buffer_create(SERIALIZE_WRITE, token_ptr_out, CUTE_CONNECT_TOKEN_SIZE, NULL);
 	CUTE_CHECK_POINTER(io);
 
-	endpoint_t endpoints_public[CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX];
+	endpoint_t endpoints[CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX];
 	for (int i = 0; i < address_count; ++i)
 	{
 		endpoint_t endpoint;
 		CUTE_CHECK(endpoint_init(&endpoint, address_list_public[i]));
-		endpoints_public[i] = endpoint;
-	}
-
-	endpoint_t endpoints_secret[CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX];
-	for (int i = 0; i < address_count; ++i)
-	{
-		endpoint_t endpoint;
-		CUTE_CHECK(endpoint_init(&endpoint, address_list_secret[i]));
-		endpoints_secret[i] = endpoint;
+		endpoints[i] = endpoint;
 	}
 
 	// Write public portion of the connect token.
 
-	// Write the secret portion of the connect token.
 	CUTE_CHECK(serialize_uint64_full(io, &expire_time));
 	CUTE_CHECK(serialize_uint32_full(io, &game_id));
-	CUTE_CHECK(serialize_uint64_full(io, &client_id));
 	CUTE_CHECK(serialize_bytes(io, (uint8_t*)key, sizeof(crypto_key_t)));
 	CUTE_CHECK(address_count > CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX);
 	unsigned address_count_unsigned = (unsigned)address_count;
 	CUTE_CHECK(serialize_uint32(io, &address_count_unsigned, 0, CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX));
 
 	for (int i = 0; i < address_count; ++i)
-		CUTE_CHECK(serialize_endpoint(io, endpoints_public[i]));
+		CUTE_CHECK(serialize_endpoint(io, endpoints[i]));
+
+	// Write the secret portion of the connect token.
+	CUTE_CHECK(serialize_uint64_full(io, &client_id));
 
 cute_error:
 	if (io) serialize_destroy(io);
@@ -695,28 +691,32 @@ cute_error:
 	return NULL;
 }
 
-int packet_write_header(serialize_t* io, uint8_t* buffer, packet_type_t packet_type, uint64_t sequence)
+#define CUTE_ADDITIONAL_DATA_SIZE (CUTE_PROTOCOL_VERSION_STRING_LEN + sizeof(uint64_t) + 1)
+
+int packet_write(serialize_t* io, uint64_t game_id, packet_type_t packet_type, uint64_t sequence, const uint8_t* payload, int payload_size, const crypto_key_t* key)
 {
-	serialize_reset_buffer(io, SERIALIZE_WRITE, buffer, CUTE_PACKET_SIZE_MAX);
-	CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &sequence));
-	uint64_t packet_typeu64 = packet_type;
-	CUTE_SERIALIZE_CHECK(serialize_uint64(io, &packet_typeu64, 0, PACKET_TYPE_MAX));
-	CUTE_SERIALIZE_CHECK(serialize_flush(io));
-	int header_size = serialize_serialized_bytes(io);
-	return header_size;
+	uint8_t* buffer = (uint8_t*)serialize_get_buffer(io);
 
-cute_error:
-	return -1;
-}
+	if (packet_type == PACKET_TYPE_CONNECTION_REQUEST) {
+		CUTE_ASSERT(payload_size == CUTE_PACKET_SIZE_MAX);
+		CUTE_MEMCPY(buffer, payload, payload_size);
+		return payload_size;
+	} else {
+		// Write header.
+		uint8_t additional_data[CUTE_ADDITIONAL_DATA_SIZE];
+		CUTE_MEMCPY(additional_data, CUTE_PROTOCOL_VERSION, CUTE_PROTOCOL_VERSION_STRING_LEN);
+		CUTE_MEMCPY(additional_data + CUTE_PROTOCOL_VERSION_STRING_LEN, &game_id, sizeof(uint64_t));
+		unsigned char packet_type_byte = (unsigned char)packet_type;
+		CUTE_MEMCPY(additional_data + CUTE_PROTOCOL_VERSION_STRING_LEN + sizeof(uint64_t), &packet_type_byte, 1);
 
-int packet_encrypt_and_send(const crypto_key_t* key, socket_t* socket, endpoint_t endpoint, uint8_t* buffer, int packet_size, uint64_t offsetted_sequence)
-{
-	CUTE_CHECK(crypto_encrypt(key, buffer + sizeof(uint64_t), packet_size - sizeof(uint64_t), CUTE_PACKET_SIZE_MAX, offsetted_sequence));
-	packet_size += CUTE_CRYPTO_SYMMETRIC_BYTES;
 
-	int bytes_sent = socket_send(socket, endpoint, buffer, packet_size);
-	(void)bytes_sent;
-	return 0;
+		CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &sequence));
+		int packet_size = header_size + payload_size + CUTE_CRYPTO_MAC_BYTES;
+		CUTE_ASSERT(packet_size <= CUTE_PACKET_SIZE_MAX);
+		CUTE_MEMCPY(buffer, payload, payload_size);
+		CUTE_CHECK(crypto_encrypt(key, buffer, payload_size, buffer_start, header_size, sequence));
+		return packet_size;
+	}
 
 cute_error:
 	return -1;
