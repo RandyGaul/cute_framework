@@ -583,6 +583,73 @@ int endpoint_equals(endpoint_t a, endpoint_t b)
 	return 1;
 }
 
+int serialize_endpoint(serialize_t* io, endpoint_t endpoint)
+{
+	CUTE_CHECK(endpoint.type == ADDRESS_TYPE_NONE);
+	int type = endpoint.type == ADDRESS_TYPE_IPV4;
+	CUTE_CHECK(serialize_bytes(io, (uint8_t*)type, 1));
+	if (endpoint.type == ADDRESS_TYPE_IPV4) {
+		CUTE_CHECK(serialize_bytes(io, (uint8_t*)endpoint.u.ipv4, sizeof(uint8_t) * 4));
+	} else if (endpoint.type == ADDRESS_TYPE_IPV6) {
+		CUTE_CHECK(serialize_bytes(io, (uint8_t*)endpoint.u.ipv6, sizeof(uint16_t) * 8));
+	}
+	CUTE_CHECK(serialize_bytes(io, (uint8_t*)&endpoint.port, 2));
+	return SERIALIZE_SUCCESS;
+
+cute_error:
+	return SERIALIZE_FAILURE;
+}
+
+int generate_connect_token(
+	int address_count,
+	const char** address_list_public,
+	const char** address_list_secret,
+	uint64_t expire_time,
+	uint32_t game_id,
+	uint64_t client_id,
+	const crypto_key_t* key,
+	uint8_t* token_ptr_out,
+	const uint8_t* user_data,
+	void* user_allocator_context)
+{
+	serialize_t* io = serialize_buffer_create(SERIALIZE_WRITE, token_ptr_out, CUTE_CONNECT_TOKEN_SIZE, NULL);
+	CUTE_CHECK_POINTER(io);
+
+	endpoint_t endpoints_public[CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX];
+	for (int i = 0; i < address_count; ++i)
+	{
+		endpoint_t endpoint;
+		CUTE_CHECK(endpoint_init(&endpoint, address_list_public[i]));
+		endpoints_public[i] = endpoint;
+	}
+
+	endpoint_t endpoints_secret[CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX];
+	for (int i = 0; i < address_count; ++i)
+	{
+		endpoint_t endpoint;
+		CUTE_CHECK(endpoint_init(&endpoint, address_list_secret[i]));
+		endpoints_secret[i] = endpoint;
+	}
+
+	// Write public portion of the connect token.
+
+	// Write the secret portion of the connect token.
+	CUTE_CHECK(serialize_uint64_full(io, &expire_time));
+	CUTE_CHECK(serialize_uint32_full(io, &game_id));
+	CUTE_CHECK(serialize_uint64_full(io, &client_id));
+	CUTE_CHECK(serialize_bytes(io, (uint8_t*)key, sizeof(crypto_key_t)));
+	CUTE_CHECK(address_count > CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX);
+	unsigned address_count_unsigned = (unsigned)address_count;
+	CUTE_CHECK(serialize_uint32(io, &address_count_unsigned, 0, CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX));
+
+	for (int i = 0; i < address_count; ++i)
+		CUTE_CHECK(serialize_endpoint(io, endpoints_public[i]));
+
+cute_error:
+	if (io) serialize_destroy(io);
+	return -1;
+}
+
 // -------------------------------------------------------------------------------------------------
 
 int packet_validate_size(int size)
