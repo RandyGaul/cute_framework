@@ -25,14 +25,13 @@
 #include <cute_circular_buffer.h>
 #include <cute_c_runtime.h>
 #include <cute_error.h>
+#include <cute_memory_pool.h>
 
 #include <internal/cute_net_internal.h>
 #include <internal/cute_defines_internal.h>
+#include <internal/cute_serialize_internal.h>
 
 #include <cute/cute_serialize.h>
-
-#define CUTE_PROTOCOL_VERSION "CUTE 1.0"
-#define CUTE_PROTOCOL_VERSION_STRING_LEN (8 + 1)
 
 namespace cute
 {
@@ -662,28 +661,107 @@ int packet_validate_size(int size)
 #define CUTE_ADDITIONAL_DATA_SIZE (CUTE_PROTOCOL_VERSION_STRING_LEN + sizeof(uint64_t) + 1)
 static CUTE_INLINE void s_write_header(uint8_t* header, packet_type_t packet_type, uint64_t game_id)
 {
-	CUTE_MEMCPY(header, CUTE_PROTOCOL_VERSION, CUTE_PROTOCOL_VERSION_STRING_LEN);
-	CUTE_MEMCPY(header + CUTE_PROTOCOL_VERSION_STRING_LEN, &game_id, sizeof(uint64_t));
-	unsigned char packet_type_byte = (unsigned char)packet_type;
-	CUTE_MEMCPY(header + CUTE_PROTOCOL_VERSION_STRING_LEN + sizeof(uint64_t), &packet_type_byte, 1);
+	write_uint8(&header, (uint8_t)packet_type);
+	write_bytes(&header, CUTE_PROTOCOL_VERSION, CUTE_PROTOCOL_VERSION_STRING_LEN);
+	write_uint64(&header, game_id);
 }
 
-uint8_t* packet_open(nonce_buffer_t* nonce_buffer, uint64_t game_id, uint8_t* packet, int size, uint64_t sequence_offset, const crypto_key_t* key, packet_type_t* packet_type, int* packet_size)
+static uint64_t s_read_uint64(uint8_t** buffer)
 {
-	packet_type_t type = (packet_type_t)*(packet += 1);
+	uint64_t val = *(uint64_t*)*buffer;
+	*buffer += sizeof(uint64_t);
+	return val;
+}
+
+void* packet_open(packet_allocator_t* pa, nonce_buffer_t* nonce_buffer, uint64_t game_id, uint64_t timestamp, uint8_t* buffer, int size, uint64_t sequence_offset, const crypto_key_t* key, int is_server, packet_type_t* packet_type)
+{
+	uint8_t* buffer_start = buffer;
+	packet_type_t type = (packet_type_t)read_uint8(&buffer);
+	*packet_type = type;
+
+	// Filter out invalid packet types.
+	if (is_server) {
+		switch (type)
+		{
+		default: return NULL;
+		case PACKET_TYPE_CONNECTION_REQUEST: break;
+		case PACKET_TYPE_KEEPALIVE: break;
+		case PACKET_TYPE_DISCONNECT: break;
+		case PACKET_TYPE_CHALLENGE_RESPONSE: break;
+		case PACKET_TYPE_USERDATA: break;
+		}
+	} else {
+		switch (type)
+		{
+		default: return NULL;
+		case PACKET_TYPE_CONNECTION_ACCEPTED: break;
+		case PACKET_TYPE_CONNECTION_DENIED: break;
+		case PACKET_TYPE_KEEPALIVE: break;
+		case PACKET_TYPE_DISCONNECT: break;
+		case PACKET_TYPE_CHALLENGE_REQUEST: break;
+		case PACKET_TYPE_USERDATA: break;
+		}
+	}
+
 	if (type == PACKET_TYPE_CONNECTION_REQUEST) {
-		// WORKING HERE
-		// Read in these:
-		// CUTE_PROTOCOL_VERSION
-		// game_id
-		const uint8_t* nonce = packet;
-		packet += CUTE_CRYPTO_NONCE_BYTES;
-		// Decrypt the connect token secret data
+		CUTE_CHECK(size != CUTE_PACKET_SIZE_MAX);
+
+		// Read in and verify the header.
+		CUTE_CHECK(read_uint8(&buffer) != 'C');
+		CUTE_CHECK(read_uint8(&buffer) != 'U');
+		CUTE_CHECK(read_uint8(&buffer) != 'T');
+		CUTE_CHECK(read_uint8(&buffer) != 'E');
+		CUTE_CHECK(read_uint8(&buffer) != ' ');
+		CUTE_CHECK(read_uint8(&buffer) != '1');
+		CUTE_CHECK(read_uint8(&buffer) != '.');
+		CUTE_CHECK(read_uint8(&buffer) != '0');
+		CUTE_CHECK(read_uint8(&buffer) != '\0');
+		uint64_t game_id_from_packet = read_uint64(&buffer);
+		CUTE_CHECK(game_id_from_packet != game_id);
+		uint8_t nonce[CUTE_CRYPTO_NONCE_BYTES];
+		read_bytes(&buffer, nonce, CUTE_CRYPTO_NONCE_BYTES);
+		uint64_t expire_timestamp = read_uint64(&buffer);
+		CUTE_CHECK(expire_timestamp > timestamp);
+
+		// Decrypt secret section of the connect token.
+		uint8_t* additional_data = buffer_start;
+		int additional_data_size = CUTE_CONNECT_TOKEN_HEADER_SIZE;
+
+		int secret_size = CUTE_PACKET_SIZE_MAX - additional_data_size;
+		uint8_t* secret_data = buffer_start + additional_data_size;
+
+		CUTE_CHECK(crypto_decrypt_bignonce(key, secret_data, secret_size, additional_data, additional_data_size, nonce));
+		secret_size -= CUTE_CRYPTO_MAC_BYTES;
+
+		// Read the token secret data.
+		packet_decrypted_connect_token_t* token = (packet_decrypted_connect_token_t*)packet_allocator_alloc(pa, PACKET_TYPE_CONNECTION_REQUEST);
+		token->client_id = read_uint64(&secret_data);
+		token->expire_timestamp = expire_timestamp;
+		token->sequence_offset = read_uint64(&secret_data);
+		read_bytes(&secret_data, token->session_key.key, sizeof(crypto_key_t));
+		read_bytes(&secret_data, token->user_data, CUTE_CONNECT_TOKEN_USER_DATA_SIZE);
+
+		// Read the token public data.
+		uint16_t endpoint_count = read_uint16(&additional_data);
+		token->endpoint_count = endpoint_count;
+		for (int i = 0; i < endpoint_count; ++i)
+		{
+			address_type_t type = (address_type_t)read_uint8(&additional_data);
+			if(type == ADDRESS_TYPE_NONE) {
+				packet_allocator_free(pa, PACKET_TYPE_CHALLENGE_REQUEST, token);
+				return NULL;
+			}
+			token->endpoints[i].type = type;
+			read_bytes(&additional_data, (uint8_t*)(&token->endpoints[i].u), type == ADDRESS_TYPE_IPV4 ? sizeof(endpoint_t::u.ipv4) : sizeof(endpoint_t::u.ipv6));
+			token->endpoints[i].port = read_uint16(&additional_data);
+		}
+
+		return token;
 	} else {
 		uint8_t additional_data[CUTE_ADDITIONAL_DATA_SIZE];
 		s_write_header(additional_data, type, game_id);
-		uint64_t sequence = (uint64_t)(*(packet += sizeof(uint64_t)));
-		if (crypto_decrypt(key, packet, size - sizeof(uint64_t) - 1, additional_data, CUTE_ADDITIONAL_DATA_SIZE, sequence + sequence_offset) < 0) {
+		uint64_t sequence = read_uint64(&buffer);
+		if (crypto_decrypt(key, buffer, size - sizeof(uint64_t) - 1, additional_data, CUTE_ADDITIONAL_DATA_SIZE, sequence + sequence_offset) < 0) {
 			// Forged packet!
 			return NULL;
 		}
@@ -693,39 +771,154 @@ uint8_t* packet_open(nonce_buffer_t* nonce_buffer, uint64_t game_id, uint8_t* pa
 			return NULL;
 		}
 
-		*packet_size = size - sizeof(uint64_t) - 1 - CUTE_CRYPTO_MAC_BYTES;
-	}
+		switch (type)
+		{
+		case PACKET_TYPE_CONNECTION_ACCEPTED:
+		{
+			packet_connection_accepted_t* packet = (packet_connection_accepted_t*)packet_allocator_alloc(pa, PACKET_TYPE_CONNECTION_ACCEPTED);
+			packet->client_number = read_uint32(&buffer);
+			packet->max_clients = read_uint32(&buffer);
+			return packet;
+		}	break;
 
-	*packet_type = type;
-	return packet;
+		case PACKET_TYPE_CONNECTION_DENIED:
+		{
+			packet_connection_denied_t* packet = (packet_connection_denied_t*)packet_allocator_alloc(pa, PACKET_TYPE_CONNECTION_DENIED);
+			packet->packet_type = (uint8_t)type;
+			return packet;
+		}	break;
+
+		case PACKET_TYPE_KEEPALIVE:
+		{
+			packet_connection_denied_t* packet = (packet_connection_denied_t*)packet_allocator_alloc(pa, PACKET_TYPE_KEEPALIVE);
+			packet->packet_type = (uint8_t)type;
+			return packet;
+		}	break;
+
+		case PACKET_TYPE_DISCONNECT:
+		{
+			packet_connection_denied_t* packet = (packet_connection_denied_t*)packet_allocator_alloc(pa, PACKET_TYPE_DISCONNECT);
+			packet->packet_type = (uint8_t)type;
+			return packet;
+		}	break;
+
+		case PACKET_TYPE_CHALLENGE_REQUEST: // fall-thru
+		case PACKET_TYPE_CHALLENGE_RESPONSE:
+		{
+			packet_challenge_t* packet = (packet_challenge_t*)packet_allocator_alloc(pa, PACKET_TYPE_CHALLENGE_REQUEST);
+			packet->nonce = read_uint64(&buffer);
+			CUTE_MEMCPY(packet->challenge_data, buffer, sizeof(packet->challenge_data));
+			return packet;
+		}	break;
+
+		case PACKET_TYPE_USERDATA:
+		{
+			packet_userdata_t* packet = (packet_userdata_t*)packet_allocator_alloc(pa, PACKET_TYPE_USERDATA);
+			packet->size = read_uint32(&buffer);
+			CUTE_MEMSET(packet->data, 0, sizeof(packet->data));
+			CUTE_MEMCPY(packet->data, buffer, packet->size);
+			return packet;
+		}	break;
+
+		default: return NULL;
+		}
+	}
 
 cute_error:
 	return NULL;
 }
 
-int packet_write(serialize_t* io, uint64_t game_id, packet_type_t packet_type, uint64_t sequence, const uint8_t* payload, int payload_size, const crypto_key_t* key)
+int packet_write(void* packet_ptr, packet_type_t packet_type, uint8_t* buffer, uint64_t game_id, uint64_t sequence, const crypto_key_t* key)
 {
+	uint8_t* buffer_start = buffer;
 
 	if (packet_type == PACKET_TYPE_CONNECTION_REQUEST) {
-		CUTE_ASSERT(payload_size == CUTE_PACKET_SIZE_MAX);
-		CUTE_MEMCPY((uint8_t*)serialize_get_buffer(io), payload, payload_size);
-		return payload_size;
+		packet_encrypted_connect_token_t* packet = (packet_encrypted_connect_token_t*)packet_ptr;
+		write_uint8(&buffer, (uint8_t)PACKET_TYPE_CONNECTION_REQUEST);
+		write_bytes(&buffer, CUTE_PROTOCOL_VERSION, CUTE_PROTOCOL_VERSION_STRING_LEN);
+		write_uint64(&buffer, game_id);
+		write_bytes(&buffer, packet->nonce, sizeof(packet->nonce));
+		write_uint64(&buffer, packet->expire_timestamp);
+		write_bytes(&buffer, packet->secret_data, sizeof(packet->secret_data));
+		int packet_size = (int)(buffer - buffer_start);
+		CUTE_ASSERT(packet_size == CUTE_PACKET_SIZE_MAX);
+		return packet_size;
 	} else {
+		write_uint8(&buffer, (uint8_t)packet_type);
+		write_uint64(&buffer, sequence);
+
+		uint8_t* payload_start = buffer;
+		int payload_size = 0;
+		switch (packet_type)
+		{
+		case PACKET_TYPE_CONNECTION_ACCEPTED:
+		{
+			packet_connection_accepted_t* packet = (packet_connection_accepted_t*)packet_ptr;
+			write_uint32(&buffer, packet->client_number);
+			write_uint32(&buffer, packet->max_clients);
+		}	break;
+
+		case PACKET_TYPE_CONNECTION_DENIED: // fall-thru
+		case PACKET_TYPE_KEEPALIVE: // fall-thru
+		case PACKET_TYPE_DISCONNECT:
+		{
+			// No payload data.
+		}	break;
+
+		case PACKET_TYPE_CHALLENGE_REQUEST: // fall-thru
+		case PACKET_TYPE_CHALLENGE_RESPONSE:
+		{
+			packet_challenge_t* packet = (packet_challenge_t*)packet_ptr;
+			write_uint64(&buffer, packet->nonce);
+			write_bytes(&buffer, packet->challenge_data, sizeof(packet->challenge_data));
+		}	break;
+
+		case PACKET_TYPE_USERDATA:
+		{
+			packet_userdata_t* packet = (packet_userdata_t*)packet_ptr;
+			CUTE_ASSERT(packet->size <= CUTE_PACKET_PAYLOAD_MAX);
+			CUTE_MEMCPY(buffer, packet->data, packet->size);
+			buffer += packet->size;
+		}	break;
+
+		default:
+			error_set("Attempted to write invalid packet type.");
+			CUTE_ASSERT(0);
+			return -1;
+		}
+
 		uint8_t additional_data[CUTE_ADDITIONAL_DATA_SIZE];
 		s_write_header(additional_data, packet_type, game_id);
 
-		CUTE_SERIALIZE_CHECK(serialize_bits(io, (unsigned*)&packet_type, 8));
-		CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &sequence));
-		int packet_size = serialize_serialized_bytes(io) + payload_size + CUTE_CRYPTO_MAC_BYTES;
+		if (crypto_encrypt(key, payload_start, payload_size, additional_data, CUTE_ADDITIONAL_DATA_SIZE, sequence) < 0) {
+			return -1;
+		}
+
+		buffer += CUTE_CRYPTO_MAC_BYTES;
+
+		int packet_size = (int)(buffer - buffer_start);
 		CUTE_ASSERT(packet_size <= CUTE_PACKET_SIZE_MAX);
-		uint8_t* buffer = (uint8_t*)serialize_get_buffer(io);
-		CUTE_MEMCPY(buffer, payload, payload_size);
-		CUTE_CHECK(crypto_encrypt(key, buffer, payload_size, additional_data, CUTE_ADDITIONAL_DATA_SIZE, sequence));
 		return packet_size;
 	}
+}
 
-cute_error:
-	return -1;
+// -------------------------------------------------------------------------------------------------
+
+
+packet_allocator_t* packet_allocator_make(void* user_allocator_context)
+{
+}
+
+void packet_allocator_destroy(packet_allocator_t* packet_allocator)
+{
+}
+
+void* packet_allocator_alloc(packet_allocator_t* packet_allocator, packet_type_t type)
+{
+}
+
+void packet_allocator_free(packet_allocator_t* packet_allocator, packet_type_t type, void* packet)
+{
 }
 
 // -------------------------------------------------------------------------------------------------

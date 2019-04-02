@@ -19,11 +19,23 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_DEFINES_INTERNAL_H
-#define CUTE_DEFINES_INTERNAL_H
+#ifndef CUTE_MEMORY_POOL_H
+#define CUTE_MEMORY_POOL_H
 
-#define CUTE_CHECK(x) do { if (x) goto cute_error; } while (0)
-#define CUTE_CHECK_ASSERT(x) do { if (!(x)) goto cute_error; } while (0)
-#define CUTE_CHECK_POINTER(x) do { if (!(x)) goto cute_error; } while (0)
+#include <cute_defines.h>
 
-#endif // CUTE_DEFINES_INTERNAL_H
+namespace cute
+{
+
+struct memory_pool_t;
+
+extern CUTE_API memory_pool_t* CUTE_CALL memory_pool_make(int element_size, int element_count, void* user_allocator_context = NULL);
+extern CUTE_API void CUTE_CALL memory_pool_destroy(memory_pool_t* pool);
+
+extern CUTE_API void* CUTE_CALL memory_pool_alloc(memory_pool_t* pool);
+extern CUTE_API void* CUTE_CALL memory_pool_try_alloc(memory_pool_t* pool);
+extern CUTE_API void CUTE_CALL memory_pool_free(memory_pool_t* pool, void* element);
+
+}
+
+#endif // CUTE_MEMORY_POOL_H

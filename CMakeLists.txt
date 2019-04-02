@@ -69,6 +69,7 @@ set(CUTE_SRCS
 	src/cute_server.cpp
 	src/cute_timer.cpp
 	src/cute_version.cpp
+	src/cute_memory_pool.cpp
 
 	libraries/glad/glad.c
 )
@@ -95,6 +96,7 @@ set(CUTE_HDRS
 	src/cute_server.h
 	src/cute_timer.h
 	src/cute_version.h
+	src/cute_memory_pool.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h

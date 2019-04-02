@@ -349,13 +349,13 @@ int client_disconnects_itself_from_server()
 // Connect token format
 	// HEADER
 	// expire timestamp (uint64_t)
-	// the number of server addressess (uint16_t)
-		// each server address
-	// secret_data
+	// payload - secret_data
 		// user id
-		// session nonce
+		// session sequence offset
 		// session key
 		// user data (512 bytes)
+		// the number of server addressess (uint16_t)
+			// each server address
 		// pad bytes
 
 // The idea is connect token is obtained via REST API (somehow), and the client reads the token data.

@@ -26,7 +26,7 @@
 
 #include <libsodium/sodium.h>
 
-#define CUTE_CRYPTO_BYTES ((int)crypto_aead_xchacha20poly1305_ietf_ABYTES)
+#define CUTE_CRYPTO_MAC_BYTES ((int)crypto_aead_xchacha20poly1305_ietf_ABYTES)
 #define CUTE_CRYPTO_NONCE_BYTES ((int)crypto_aead_xchacha20poly1305_ietf_NPUBBYTES)
 
 namespace cute
