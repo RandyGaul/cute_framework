@@ -40,20 +40,34 @@
 namespace cute
 {
 
+enum client_state_internal_t : int
+{
+	CLIENT_STATE_INTERNAL_CONNECT_TOKEN_EXPIRED         = -6,
+	CLIENT_STATE_INTERNAL_INVALID_CONNECT_TOKEN         = -5,
+	CLIENT_STATE_INTERNAL_CONNECTION_TIMED_OUT          = -4,
+	CLIENT_STATE_INTERNAL_CONNECTION_RESPONSE_TIMED_OUT = -3,
+	CLIENT_STATE_INTERNAL_CONNECTION_REQUEST_TIMED_OUT  = -2,
+	CLIENT_STATE_INTERNAL_CONNECTION_DENIED             = -1,
+	CLIENT_STATE_INTERNAL_DISCONNECTED                  = 0,
+	CLIENT_STATE_INTERNAL_SENDING_CONNECTION_REQUEST    = 1,
+	CLIENT_STATE_INTERNAL_SENDING_CONNECTION_RESPONSE   = 2,
+	CLIENT_STATE_INTERNAL_CONNECTED                     = 3,
+};
+
 struct client_t
 {
 	client_state_t state;
+	client_state_internal_t state_internal;
 	int reconnect_tries;
 	int loopback;
 	float last_packet_recieved_time;
 	float last_packet_sent_time;
-	uint64_t sequence_offset;
-	uint64_t sequence;
-	socket_t socket;
+	connect_token_t connect_token;
+	int server_endpoint_index;
 	endpoint_t server_endpoint;
-	crypto_key_t server_public_key;
-	crypto_key_t session_key;
-	serialize_t* io;
+	socket_t socket;
+	crypto_key_t key;
+	uint64_t sequence;
 	nonce_buffer_t nonce_buffer;
 	packet_queue_t packets;
 	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
@@ -68,6 +82,7 @@ client_t* client_alloc(void* user_allocator_context)
 	CUTE_CHECK_POINTER(client);
 	CUTE_MEMSET(client, 0, sizeof(client_t));
 	client->state = CLIENT_STATE_DISCONNECTED;
+	client->state_internal = CLIENT_STATE_INTERNAL_DISCONNECTED;
 	client->mem_ctx = user_allocator_context;
 	return client;
 
@@ -84,37 +99,22 @@ void client_destroy(client_t* client)
 	CUTE_FREE(client, client->app->mem_ctx);
 }
 
-int client_connect(client_t* client, uint16_t port, const char* server_address_and_port, const crypto_key_t* server_public_key, int loopback)
+int client_connect(client_t* client, uint8_t* connect_token)
 {
-	endpoint_t server_endpoint;
-	CUTE_CHECK(endpoint_init(&server_endpoint, server_address_and_port));
+	CUTE_CHECK(connect_token_open(&client->connect_token, connect_token));
 
 	client->state = CLIENT_STATE_CONNECTING;
+	client->state_internal = CLIENT_STATE_INTERNAL_SENDING_CONNECTION_REQUEST;
 	client->reconnect_tries = 0;
-	client->loopback = loopback;
+	client->loopback = 0;
 	client->last_packet_recieved_time = 0;
 	client->last_packet_sent_time = CUTE_KEEPALIVE_RATE;
-	client->sequence_offset = 0;
+	CUTE_CHECK(socket_init(&client->socket, client->server_endpoint.type, client->server_endpoint.port, CUTE_CLIENT_SEND_BUFFER_SIZE, CUTE_CLIENT_RECEIVE_BUFFER_SIZE));
 	client->sequence = 0;
-	CUTE_CHECK(socket_init(&client->socket, server_endpoint.type, port, CUTE_CLIENT_SEND_BUFFER_SIZE, CUTE_CLIENT_RECEIVE_BUFFER_SIZE));
-	client->server_endpoint = server_endpoint;
-	client->session_key = crypto_generate_key();
-	client->io = serialize_buffer_create(SERIALIZE_READ, NULL, 0, NULL);
 	nonce_buffer_init(&client->nonce_buffer);
 	CUTE_CHECK(packet_queue_init(&client->packets, CUTE_CLIENT_RECEIVE_BUFFER_SIZE, client->mem_ctx));
-	client->server_public_key = *server_public_key;
 	return 0;
 
-cute_error:
-	return -1;
-}
-
-static int s_client_send_packet_no_payload(client_t* client, packet_type_t packet_type)
-{
-	int packet_size = packet_write_header(client->io, client->buffer, PACKET_TYPE_KEEPALIVE, client->sequence);
-	if (packet_size <= 0) goto cute_error;
-	CUTE_CHECK(packet_encrypt_and_send(&client->session_key, &client->socket, client->server_endpoint, client->buffer, packet_size, client->sequence_offset + client->sequence++));
-	return 0;
 cute_error:
 	return -1;
 }
@@ -126,8 +126,6 @@ void client_disconnect(client_t* client)
 	}
 
 	socket_cleanup(&client->socket);
-	serialize_destroy(client->io);
-	client->io = NULL;
 	pack_queue_clean_up(&client->packets);
 }
 
@@ -176,7 +174,7 @@ static void s_client_receive_packets(client_t* client)
 		CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &sequence));
 		packet_type_t type;
 		int packet_size;
-		uint8_t* packet = packet_open(io, &client->session_key, &client->nonce_buffer, buffer, bytes_read, sequence, client->sequence_offset, &type, &packet_size);
+		uint8_t* packet = packet_open(io, &client->key, &client->nonce_buffer, buffer, bytes_read, sequence, client->sequence_offset, &type, &packet_size);
 
 		if (!packet) {
 			// A forged or otherwise corrupt/unknown type of packet has appeared.
@@ -231,9 +229,19 @@ cute_error:
 	return;
 }
 
-static void s_client_send_packets(client_t* client)
+static void s_client_send_packet(client_t* client, void* packet, packet_type_t type)
 {
 	uint8_t* buffer = client->buffer;
+	const crypto_key_t* key = type == PACKET_TYPE_CONNECTION_REQUEST ? NULL : &client->key;
+	int size = packet_write(packet, type, buffer, client->connect_token.game_id, client->sequence + client->connect_token.sequence_offset, key);
+	if (size <= 0) return;
+	CUTE_ASSERT(size <= CUTE_PACKET_SIZE_MAX);
+	int bytes_sent = socket_send(&client->socket, client->server_endpoint, buffer, size);
+	(void)bytes_sent;
+}
+
+static void s_client_send_packets(client_t* client)
+{
 
 	switch (client->state)
 	{
@@ -247,33 +255,14 @@ static void s_client_send_packets(client_t* client)
 			}
 			client->reconnect_tries++;
 
-			serialize_t* io = client->io;
-			serialize_reset_buffer(io, SERIALIZE_WRITE, buffer, CUTE_PACKET_SIZE_MAX);
+			packet_encrypted_connect_token_t packet;
+			packet.expire_timestamp = client->connect_token.expire_timestamp;
+			CUTE_ASSERT(sizeof(packet.nonce) == sizeof(client->connect_token.nonce));
+			CUTE_MEMCPY(packet.nonce, client->connect_token.nonce, sizeof(packet.nonce));
+			CUTE_ASSERT(sizeof(packet.secret_data) == sizeof(client->connect_token.secret_data));
+			CUTE_MEMCPY(packet.secret_data, client->connect_token.secret_data, sizeof(packet.secret_data));
 
-			packet_write_header(io, buffer, PACKET_TYPE_CONNECTION_REQUEST, 0);
-
-			// Write version string.
-			const char* version_string = CUTE_PROTOCOL_VERSION;
-			CUTE_CHECK(serialize_bytes(io, (unsigned char*)version_string, CUTE_PROTOCOL_VERSION_STRING_LEN));
-
-			// Write symmetric key.
-			CUTE_SERIALIZE_CHECK(serialize_bytes(io, client->session_key.key, sizeof(client->session_key)));
-
-			// Pad zero-bytes to end.
-			CUTE_SERIALIZE_CHECK(serialize_flush(io));
-			int bytes_so_far = serialize_serialized_bytes(io);
-			int pad_bytes = CUTE_PACKET_SIZE_MAX - bytes_so_far - CUTE_CRYPTO_ASYMMETRIC_BYTES;
-			CUTE_ASSERT(pad_bytes >= 0);
-			uint32_t bits = 0;
-			for (int i = 0; i < pad_bytes; ++i) CUTE_CHECK(serialize_bits(io, &bits, 8));
-			CUTE_ASSERT(serialize_serialized_bytes(io) == CUTE_PACKET_SIZE_MAX - CUTE_CRYPTO_ASYMMETRIC_BYTES);
-
-			// Encrypt with server's public key.
-			CUTE_CHECK(crypto_encrypt_asymmetric(&client->server_public_key, buffer, CUTE_PACKET_SIZE_MAX - CUTE_CRYPTO_ASYMMETRIC_BYTES, CUTE_PACKET_SIZE_MAX));
-
-			// Send the packet off.
-			int bytes_sent = socket_send(&client->socket, client->server_endpoint, buffer, CUTE_PACKET_SIZE_MAX);
-			(void)bytes_sent;
+			s_client_send_packet(client, &packet, PACKET_TYPE_CONNECTION_REQUEST);
 		}
 	}	break;
 

@@ -37,7 +37,7 @@ extern CUTE_API client_t* CUTE_CALL client_alloc(void* user_allocator_context = 
 extern CUTE_API void CUTE_CALL client_destroy(client_t* client);
 
 // TODO: Loopback support.
-extern CUTE_API int CUTE_CALL client_connect(client_t* client, uint16_t port, const char* server_address_and_port, const crypto_key_t* server_public_key, int loopback = 0);
+extern CUTE_API int CUTE_CALL client_connect(client_t* client, uint8_t* connect_token);
 extern CUTE_API void CUTE_CALL client_disconnect(client_t* client);
 
 extern CUTE_API void CUTE_CALL client_update(client_t* client, float dt);

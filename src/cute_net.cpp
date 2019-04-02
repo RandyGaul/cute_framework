@@ -904,6 +904,12 @@ int packet_write(void* packet_ptr, packet_type_t packet_type, uint8_t* buffer, u
 
 // -------------------------------------------------------------------------------------------------
 
+int connect_token_open(connect_token_t* token, uint8_t* buffer)
+{
+}
+
+// -------------------------------------------------------------------------------------------------
+
 
 packet_allocator_t* packet_allocator_make(void* user_allocator_context)
 {
