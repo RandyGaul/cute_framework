@@ -177,7 +177,7 @@ static server_event_t* s_push_event(server_t* server)
 	return server->event_queue + index;
 }
 
-static uint32_t s_client_make(server_t* server, endpoint_t endpoint, crypto_key_t* session_key, int loopback)
+static uint32_t s_client_make(server_t* server, endpoint_t endpoint, crypto_key_t* key, int loopback)
 {
 	if (server->client_count == CUTE_SERVER_MAX_CLIENTS) {
 		return UINT32_MAX;
@@ -197,7 +197,7 @@ static uint32_t s_client_make(server_t* server, endpoint_t endpoint, crypto_key_
 	server->client_sequence_offset[index] = sequence_offset;
 	server->client_sequence[index] = 0;
 	nonce_buffer_init(server->client_nonce_buffer + index);
-	server->client_session_key[index] = *session_key;
+	server->client_session_key[index] = *key;
 	if (packet_queue_init(server->client_packets + index, 2 * CUTE_MB, server->mem_ctx)) {
 		return UINT32_MAX;
 	}
@@ -298,20 +298,20 @@ static void s_server_recieve_packets(server_t* server)
 			CUTE_CHECK(CUTE_STRNCMP(version_string, version_buffer, CUTE_PROTOCOL_VERSION_STRING_LEN));
 
 			// Read symmetric key.
-			crypto_key_t session_key;
-			CUTE_CHECK(serialize_bytes(io, session_key.key, sizeof(session_key)));
+			crypto_key_t key;
+			CUTE_CHECK(serialize_bytes(io, key.key, sizeof(key)));
 
 			if (server->client_count == CUTE_SERVER_MAX_CLIENTS) {
 				// Not accepting new connections; out of client slots.
-				s_server_connection_denied(server, from, &session_key);
+				s_server_connection_denied(server, from, &key);
 				continue;
 			}
 
 			// Make new client, store session key.
-			client_index = s_client_make(server, from, &session_key, 0);
+			client_index = s_client_make(server, from, &key, 0);
 			if (client_index == UINT32_MAX) {
 				// Failed to create new client for some reason (like out of memory).
-				s_server_connection_denied(server, from, &session_key);
+				s_server_connection_denied(server, from, &key);
 				continue;
 			}
 
