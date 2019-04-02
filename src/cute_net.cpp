@@ -36,52 +36,32 @@
 namespace cute
 {
 
-int packet_queue_init(packet_queue_t* q, int size, void* mem_ctx)
+int packet_queue_init(packet_queue_t* q)
 {
 	CUTE_PLACEMENT_NEW(q) packet_queue_t;
-	q->packets = circular_buffer_make(size, mem_ctx);
-	if (q->packets.data) return 0;
-	else return -1;
 }
 
-void pack_queue_clean_up(packet_queue_t* q)
+int packet_queue_push(packet_queue_t* q, const void* packet, packet_type_t type)
 {
-	circular_buffer_free(&q->packets);
-	CUTE_MEMSET(q, 0, sizeof(*q));
-}
-
-int packet_queue_push(packet_queue_t* q, const void* packet, int size, uint64_t sequence)
-{
-	if (q->count >= CUTE_PACKET_QUEUE_MAX_ENTRIES) return -1;
-	if (circular_buffer_push(&q->packets, packet, size)) {
+	if (q->count >= CUTE_PACKET_QUEUE_MAX_ENTRIES) {
 		return -1;
 	} else {
 		q->count++;
-		q->sizes[q->index1] = size;
-		q->sequences[q->index1] = sequence;
+		q->types[q->index1] = type;
+		q->packets[q->index1] = packet;
 		q->index1 = (q->index1 + 1) % CUTE_PACKET_QUEUE_MAX_ENTRIES;
 		return 0;
 	}
 }
 
-int packet_queue_peek(packet_queue_t* q, int* size)
+int packet_queue_pop(packet_queue_t* q, const void** packet, packet_type_t* type)
 {
-	if (q->count <= 0) return -1;
-	int sz = q->sizes[q->index0];
-	*size = sz;
-	return 0;
-}
-
-int packet_queue_pull(packet_queue_t* q, void* packet, int size, uint64_t* sequence)
-{
-	if (q->count <= 0) return -1;
-	int sz = q->sizes[q->index0];
-	if (size != sz) return -1;
-	if (circular_buffer_pull(&q->packets, packet, sz)) {
+	if (q->count <= 0) {
 		return -1;
 	} else {
 		q->count--;
-		*sequence = q->sequences[q->index0];
+		*type = q->types[q->index0];
+		*packet = q->packets[q->index0];
 		q->index0 = (q->index0 + 1) % CUTE_PACKET_QUEUE_MAX_ENTRIES;
 		return 0;
 	}

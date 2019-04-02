@@ -40,7 +40,7 @@
 
 #define CUTE_PACKET_QUEUE_MAX_ENTRIES (2 * 1024)
 #define CUTE_NONCE_BUFFER_SIZE 256
-#define CUTE_KEEPALIVE_RATE 10.0f
+#define CUTE_KEEPALIVE_RATE (1.0f / 10.0f)
 #define CUTE_DISCONNECT_REDUNDANT_PACKET_COUNT 10
 #define CUTE_CHALLENGE_DATA_SIZE 256
 #define CUTE_CONNECT_TOKEN_NONCE_SIZE CUTE_CRYPTO_NONCE_BYTES
@@ -89,16 +89,13 @@ struct packet_queue_t
 	int count = 0;
 	int index0 = 0;
 	int index1 = 0;
-	int sizes[CUTE_PACKET_QUEUE_MAX_ENTRIES];
-	uint64_t sequences[CUTE_PACKET_QUEUE_MAX_ENTRIES];
-	circular_buffer_t packets;
+	packet_type_t types[CUTE_PACKET_QUEUE_MAX_ENTRIES];
+	const void* packets[CUTE_PACKET_QUEUE_MAX_ENTRIES];
 };
 
-extern CUTE_API int CUTE_CALL packet_queue_init(packet_queue_t* q, int size, void* mem_ctx);
-extern CUTE_API void CUTE_CALL pack_queue_clean_up(packet_queue_t* q);
-extern CUTE_API int CUTE_CALL packet_queue_push(packet_queue_t* q, const void* packet, int size, uint64_t sequence);
-extern CUTE_API int CUTE_CALL packet_queue_peek(packet_queue_t* q, int* size);
-extern CUTE_API int CUTE_CALL packet_queue_pull(packet_queue_t* q, void* packet, int size, uint64_t* sequence);
+extern CUTE_API int CUTE_CALL packet_queue_init(packet_queue_t* q);
+extern CUTE_API int CUTE_CALL packet_queue_push(packet_queue_t* q, const void* packet, packet_type_t type);
+extern CUTE_API int CUTE_CALL packet_queue_pop(packet_queue_t* q, const void** packet, packet_type_t* type);
 
 struct nonce_buffer_t
 {
