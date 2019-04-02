@@ -242,7 +242,6 @@ static void s_client_send_packet(client_t* client, void* packet, packet_type_t t
 
 static void s_client_send_packets(client_t* client)
 {
-
 	switch (client->state)
 	{
 	case CLIENT_STATE_CONNECTING:

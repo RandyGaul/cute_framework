@@ -124,7 +124,7 @@ struct packet_decrypted_connect_token_t
 	uint64_t expire_timestamp;
 	uint64_t client_id;
 	uint64_t sequence_offset;
-	crypto_key_t session_key;
+	crypto_key_t key;
 	uint16_t endpoint_count;
 	endpoint_t endpoints[CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX];
 	uint8_t user_data[CUTE_CONNECT_TOKEN_USER_DATA_SIZE];
@@ -175,7 +175,7 @@ struct connect_token_t
 	uint64_t expire_timestamp;
 	uint64_t game_id;
 	uint64_t sequence_offset;
-	crypto_key_t session_key;
+	crypto_key_t key;
 	uint16_t endpoint_count;
 	endpoint_t endpoints[CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX];
 	uint8_t nonce[CUTE_CONNECT_TOKEN_NONCE_SIZE];

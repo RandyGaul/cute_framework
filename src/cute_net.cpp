@@ -738,7 +738,7 @@ void* packet_open(packet_allocator_t* pa, nonce_buffer_t* nonce_buffer, uint64_t
 		token->client_id = read_uint64(&secret_data);
 		token->expire_timestamp = expire_timestamp;
 		token->sequence_offset = read_uint64(&secret_data);
-		read_bytes(&secret_data, token->session_key.key, sizeof(crypto_key_t));
+		read_bytes(&secret_data, token->key.key, sizeof(crypto_key_t));
 		read_bytes(&secret_data, token->user_data, CUTE_CONNECT_TOKEN_USER_DATA_SIZE);
 
 		// Read the token public data.
