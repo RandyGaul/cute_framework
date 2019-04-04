@@ -103,11 +103,12 @@ Once the client sends the *connect token packet* to a game server, the connectio
 
 The connection handshake begins once a client starts sending a *connect token packet* to a game server. The client runs a state machine to fulfill the handshake. Once the state machine completes successfully, the connection is complete and both the client and game server are free to send *payload packet*'s to each other, containing game-specific data.
 
-> Note: There is a description of all packet types and their formats later in this document in the [Packet Formats](#packet-formats) section.
+##### Note:
+> There is a description of all packet types and their formats later in this document in the [Packet Formats](#packet-formats) section.
 
 ## Client Handshake State Machine
 
-> The various client states.
+The various client states.
 
 State Name | Value
 --- | ---
