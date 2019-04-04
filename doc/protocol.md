@@ -79,7 +79,7 @@ number of server endpoints    uint32_t  The number of servers in the following l
         port                  uint16_t
     <end if>
 <end for>
-<zeroes padded to 688 bytes>            Counting from the end of the REST SECTION.
+<zeroes padded to 656 bytes>            Counting from the end of the REST SECTION.
 connect token nonce           24 bytes
 // --  END PUBLIC SECTION  --
 // -- BEGIN SECRET SECTION --
