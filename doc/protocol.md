@@ -168,6 +168,16 @@ The time to live for the connect token is calculated as:
 
     expiration timestamp - creation timestamp
 
+## Packet Formats
+
+* *connect token packet*
+* *keepalive packet*
+* *connection denied packet*
+* *payload packet*
+* *connection accepted packet*
+* *challenge request packet*
+* *challenge response packet*
+
 ## Server Handshake and Connection Process
 ## Disconnect Sequence
 
