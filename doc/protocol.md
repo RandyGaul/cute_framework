@@ -1,6 +1,6 @@
 # Cute Protocol Standard
 
-The Cute protocol implements a client-server based transport layer for securely connecting and authenticating with backend game servers over UDP. The purpose of this document is to aid in organizing and referencing the implementation, and to help users make educated decisions about how to use the Cute Protocol in their own game.
+The Cute protocol implements a client-server based transport layer for securely connecting and authenticating with backend game servers over UDP. The purpose of this document is to aid users in making educated decisions about how to use the Cute Protocol in their own game.
 
 ## High Level Overview
 
