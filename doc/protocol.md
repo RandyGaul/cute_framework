@@ -47,62 +47,63 @@ The PUBLIC SECTION of the *connect token packet* is used as Additional Data for 
 
 ### The connect token format.
 ```
--- BEGIN PUBLIC SECTION --
---- BEGIN REST SECTION ---  
-version info                9         "Cute 1.00" ASCII, including nul byte.
-protocol id                 uint64_t  User chosen value to identify the game.
-creation timestamp          uint64_t  Unix timestamp of when the connect token was created.
-client to server key        32 bytes  Client uses to encrypt packets, server uses to decrypt packets.
-server to client key        32 bytes  Server uses to encrypt packets, client uses to decrypt packets.
----- END REST SECTION ----            
-zero byte                   1 byte    Represents packet type of `PACKET_TYPE_CONNECTION_REQUEST`
-protocol id                 uint64_t  User chosen value to identify the game.
-expiration timestamp        uint64_t  Unix timestamp of when the connect token becomes invalid.
-handshake timeout           int32_t   Seconds of how long a connection handshake will wait before timing out.
-number of server endpoints  uint32_t  The number of servers in the following list in the range of [1, 32].
+--  BEGIN PUBLIC SECTION  --
+---  BEGIN REST SECTION  ---  
+version info                  9         "Cute 1.00" ASCII, including nul byte.
+protocol id                   uint64_t  User chosen value to identify the game.
+creation timestamp            uint64_t  Unix timestamp of when the connect token was created.
+client to server key          32 bytes  Client uses to encrypt packets, server uses to decrypt packets.
+server to client key          32 bytes  Server uses to encrypt packets, client uses to decrypt packets.
+----  END REST SECTION  ----            
+zero byte                     1 byte    Represents packet type of `PACKET_TYPE_CONNECTION_REQUEST`
+protocol id                   uint64_t  User chosen value to identify the game.
+expiration timestamp          uint64_t  Unix timestamp of when the connect token becomes invalid.
+handshake timeout             int32_t   Seconds of how long a connection handshake will wait before timing out.
+number of server endpoints    uint32_t  The number of servers in the following list in the range of [1, 32].
 <for each server endpoint>
-    address type            uint8_t   1 = IPv4, 2 = IPv6 address, in the range of [1, 2].
-    <if IPv4 address>       6 bytes   Format: a.b.c.d:port
-        a                   uint8_t
-        b                   uint8_t
-        c                   uint8_t
-        d                   uint8_t
-        port                uint16_t
-    <else if IPv6 address>  18 bytes  Format: [a:b:c:d:e:f:g:h]:port
-        a                   uint16_t
-        b                   uint16_t
-        c                   uint16_t
-        d                   uint16_t
-        e                   uint16_t
-        f                   uint16_t
-        g                   uint16_t
-        h                   uint16_t
-        port                uint16_t
+    address type              uint8_t   1 = IPv4, 2 = IPv6 address, in the range of [1, 2].
+    <if IPv4 address>         6 bytes   Format: a.b.c.d:port
+        a                     uint8_t
+        b                     uint8_t
+        c                     uint8_t
+        d                     uint8_t
+        port                  uint16_t
+    <else if IPv6 address>    18 bytes  Format: [a:b:c:d:e:f:g:h]:port
+        a                     uint16_t
+        b                     uint16_t
+        c                     uint16_t
+        d                     uint16_t
+        e                     uint16_t
+        f                     uint16_t
+        g                     uint16_t
+        h                     uint16_t
+        port                  uint16_t
     <end if>
 <end for>
-<zeroes padded to 688 bytes counting from END REST SECTION>
-connect token nonce         24 bytes
+<zeroes padded to 688 bytes>            Counting from the end of the REST SECTION.
+connect token nonce           24 bytes
 // --  END PUBLIC SECTION  --
 // -- BEGIN SECRET SECTION --
-client id                   uint64_t  Unique identifier for a particular client.
-client to server key        32 bytes  Client uses to encrypt packets, server uses to decrypt packets.
-server to client key        32 bytes  Server uses to encrypt packets, client uses to decrypt packets.
-user data                   256 bytes Space for the user to store whatever auxiliary data they need.
+client id                     uint64_t  Unique identifier for a particular client.
+client to server key          32 bytes  Client uses to encrypt packets, server uses to decrypt packets.
+server to client key          32 bytes  Server uses to encrypt packets, client uses to decrypt packets.
+user data                     256 bytes Space for the user to store whatever auxiliary data they need.
 // --  END SECRET SECTION  --
-hmac bytes                  16 bytes  Written and used by encryption primitives to verify key signature.
+HMAC bytes                    16 bytes  Written and used by encryption primitives to verify key signature.
 ```
 
-The *connect token packet* is sent as-is without modification to a game server in the list. All game servers are valid choices, but it is recommended to start by making an attempt to connect to the first server in the list. If a failure occurs (for example the server is full), the client can move onto the next server in the list. Only one server is the list is acceptable, but it is recommended to have more than one if possible, to improve the chances a client can successfully connect to a server and join the game.
+The *connect token packet* is sent as-is without modification to a game server in the list. All game servers are valid choices, but it is recommended to start by making an attempt to connect to the first server in the list. If a failure occurs (for example the server is full), the client can move onto the next server in the list. Storing only a single server in the list is acceptable, but it is recommended to have more than one if possible, to improve the chances a client can successfully connect to a game server and play.
 
 Once the client sends the *connect token packet* to a game server, the connection handshake begins.
 
-The Unix timestamps can, for example, be created with something similar to `(uint64_t)time(NULL)` in the C language.
+##### Note:
+> The Unix timestamps can, for example, be created with something similar to `(uint64_t)time(NULL)` in the C language.
 
 ## Connection Handshake
 
-The connection handshake begins once a client starts sending a *connect token packet* to a game server. Both the client runs a state machine to fulfill the handshake. Once the state machine completes successfully, the connection is complete and both the client and game server are free to send UDP payload packets to each other, containing game-specific data.
+The connection handshake begins once a client starts sending a *connect token packet* to a game server. The client runs a state machine to fulfill the handshake. Once the state machine completes successfully, the connection is complete and both the client and game server are free to send *payload packet*'s to each other, containing game-specific data.
 
-> Note: There is a description of all packet types and their formats later in this document.
+> Note: There is a description of all packet types and their formats later in this document in the [Packet Formats](#packet-formats) section.
 
 ## Client Handshake State Machine
 
@@ -139,7 +140,7 @@ If the last server in the list responds with a *connection denied packet*, the c
 
 ### CLIENT_STATE_SENDING_CHALLENGE_RESPONSE
 
-During the CLIENT_STATE_SENDING_CONNECTION_REQUEST the client stored the contents of *challenge request packet*. The contents are used to form an identical *challenge response packet* (though it is encrypted with the client to server key, as opposed to the *challenge request packet* encrypted with the server to client key). The client sends the server the *challenge response packet*. The purpose is to verify two things about the client:
+During the CLIENT_STATE_SENDING_CONNECTION_REQUEST the client stored the contents of *challenge request packet*. The contents are used to form the *challenge response packet*. The client sends the server the *challenge response packet*. The purpose is to verify a few things about the client:
 
 1. That the client is not spoofing their IP address, and can successfully respond to the server by reflecting the *challenge request packet* with a *challenge response packet*.
 2. That the client is able to decrypt the *challenge request packet* and encrypt the *challenge response packet*. This asserts that the client was the **only** user the web service gave the original connect token to.
@@ -173,5 +174,15 @@ In order to gracefully disconnect, either the client or the server can perform t
 
 ## Tuning Parameters
 
-KEEPALIVE_FREQUENCY
-DISCONNECT_SEQUENCE_PACKET_COUNT
+* KEEPALIVE_FREQUENCY
+* DISCONNECT_SEQUENCE_PACKET_COUNT
+
+## Protection Against Various Attacks
+
+* Replay
+* Reflection
+* IP spoofing
+* "Going wide"
+* Packet sniffing
+* DDoS mitigation
+* DoS amplification
