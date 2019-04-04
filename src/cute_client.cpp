@@ -52,7 +52,7 @@ enum client_state_internal_t : int
 	CLIENT_STATE_INTERNAL_CONNECTION_DENIED             = -1,
 	CLIENT_STATE_INTERNAL_DISCONNECTED                  = 0,
 	CLIENT_STATE_INTERNAL_SENDING_CONNECTION_REQUEST    = 1,
-	CLIENT_STATE_INTERNAL_SENDING_CONNECTION_RESPONSE   = 2,
+	CLIENT_STATE_INTERNAL_SENDING_CHALLENGE_RESPONSE    = 2,
 	CLIENT_STATE_INTERNAL_CONNECTED                     = 3,
 };
 
@@ -63,6 +63,9 @@ struct client_t
 	int loopback;
 	float last_packet_recieved_time;
 	float last_packet_sent_time;
+	int client_number;
+	int max_clients;
+	int has_sent_disconnect_packets;
 	connect_token_t connect_token;
 	uint64_t challenge_sequence;
 	uint8_t challenge_data[CUTE_CHALLENGE_DATA_SIZE];
@@ -161,7 +164,7 @@ static void s_client_receive_packets(client_t* client)
 		}
 
 		packet_type_t type;
-		void* packet = packet_open(
+		void* packet_ptr = packet_open(
 			client->packet_allocator,
 			&client->nonce_buffer,
 			client->connect_token.game_id,
@@ -179,24 +182,26 @@ static void s_client_receive_packets(client_t* client)
 		{
 		case PACKET_TYPE_CONNECTION_ACCEPTED:
 		{
-			client->last_packet_recieved_time = 0;
+			if (client->state_internal == CLIENT_STATE_INTERNAL_SENDING_CONNECTION_REQUEST) {
+				client->last_packet_recieved_time = 0;
+				packet_connection_accepted_t* packet = (packet_connection_accepted_t*)packet_ptr;
+				client->client_number = packet->client_number;
+				client->max_clients = packet->max_clients;
+				client->state_internal = CLIENT_STATE_INTERNAL_CONNECTED;
+			}
 		}	break;
 		
 		case PACKET_TYPE_CONNECTION_DENIED:
 		{
-			client->last_packet_recieved_time = 0;
+			if (client->state_internal == CLIENT_STATE_INTERNAL_SENDING_CONNECTION_REQUEST ||
+			    client->state_internal == CLIENT_STATE_INTERNAL_SENDING_CONNECTION_REQUEST) {
+				client->last_packet_recieved_time = 0;
+				client->state_internal = CLIENT_STATE_INTERNAL_DISCONNECTED;
+			}
 		}	break;
 		
 		case PACKET_TYPE_KEEPALIVE:
-		{
-			client->last_packet_recieved_time = 0;
-		}	break;
-		
 		case PACKET_TYPE_DISCONNECT:
-		{
-			client->last_packet_recieved_time = 0;
-		}	break;
-		
 		case PACKET_TYPE_CHALLENGE_REQUEST:
 		{
 			client->last_packet_recieved_time = 0;
@@ -210,9 +215,9 @@ static void s_client_receive_packets(client_t* client)
 		}
 
 		if (push_packet) {
-			packet_queue_push(&client->packet_queue, packet, type);
+			packet_queue_push(&client->packet_queue, packet_ptr, type);
 		} else {
-			packet_allocator_free(client->packet_allocator, type, packet);
+			packet_allocator_free(client->packet_allocator, type, packet_ptr);
 		}
 	}
 }
