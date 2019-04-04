@@ -54,7 +54,7 @@ creation timestamp            uint64_t  Unix timestamp of when the connect token
 client to server key          32 bytes  Client uses to encrypt packets, server uses to decrypt packets.
 server to client key          32 bytes  Server uses to encrypt packets, client uses to decrypt packets.
 ----  END REST SECTION  ----            
-zero byte                     1 byte    Represents packet type of `PACKET_TYPE_CONNECTION_REQUEST`
+zero byte                     1 byte    Represents packet type of *connect token packet*.
 protocol id                   uint64_t  User chosen value to identify the game.
 expiration timestamp          uint64_t  Unix timestamp of when the connect token becomes invalid.
 handshake timeout             int32_t   Seconds of how long a connection handshake will wait before timing out.
