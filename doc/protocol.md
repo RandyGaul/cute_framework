@@ -40,23 +40,24 @@ Once a client receives a connect token from the web service, the PUBLIC SECTION 
 
 The *connect token packet* is not modifiable by the client, and the SECRET SECTION is not readable by anyone but the web service, and the dedicated servers. The entire *connect token packet* is protected by the cryptographically secure AEAD ([Authenticated Encryption with Additional Data](https://en.wikipedia.org/wiki/Authenticated_encryption#Authenticated_encryption_with_associated_data)) primitive XChaCha20-Poly1305, provided by libsodium. They key used for the AEAD primitive is a shared secret known by all dedicated game servers, and the web service. It is recommended to implement a mechanism to rotate this key periodically, though the mechanism to do so is out of scope for this document.
 
-> Note: The AEAD primitive is a function that encrypts a chunk of data, and computes an HMAC ([keyed-hash message authentication code](https://en.wikipedia.org/wiki/HMAC)). The HMAC is a 16 byte value used to authenticate the message, and prevent tampering/modification of the message (i.e. maintain integrity of the message). The encryption ensures only those who know the key can read the message. The Additional Data (the AD in AEAD) is a chunk of data that is not encrypted, but "mixed-in" to the computation of the HMAC.
+> Note:
+The AEAD primitive is a function that encrypts a chunk of data, and computes an HMAC ([keyed-hash message authentication code](https://en.wikipedia.org/wiki/HMAC)). The HMAC is a 16 byte value used to authenticate the message, and prevent tampering/modification of the message (i.e. maintain integrity of the message). The encryption ensures only those who know the key can read the message. The Additional Data (the AD in AEAD) is a chunk of data that is not encrypted, but "mixed-in" to the computation of the HMAC.
 
 The PUBLIC SECTION of the *connect token packet* is used as Additional Data for the AEAD, where the SECRET SECTION is encrypted by the AEAD. Once the AEAD is used, the output HMAC is appended to the final 16 bytes of the token, thus completing the full 1024 *connect token packet*.
 
-> The connect token format.
+### The connect token format.
 ```
 -- BEGIN PUBLIC SECTION --
 --- BEGIN REST SECTION ---  
 version info                9         "Cute 1.00" ASCII, including nul byte.
 protocol id                 uint64_t  User chosen value to identify the game.
-creation timestamp          uint64_t  Unix timestamp (i.e. (uint64_t)time(NULL)) of when the connect token was created.
+creation timestamp          uint64_t  Unix timestamp of when the connect token was created.
 client to server key        32 bytes  Client uses to encrypt packets, server uses to decrypt packets.
 server to client key        32 bytes  Server uses to encrypt packets, client uses to decrypt packets.
 ---- END REST SECTION ----            
 zero byte                   1 byte    Represents packet type of `PACKET_TYPE_CONNECTION_REQUEST`
 protocol id                 uint64_t  User chosen value to identify the game.
-expiration timestamp        uint64_t  Unix timestamp (i.e. `(uint64_t)time(NULL)`) of when the connect token becomes invalid.
+expiration timestamp        uint64_t  Unix timestamp of when the connect token becomes invalid.
 handshake timeout           int32_t   Seconds of how long a connection handshake will wait before timing out.
 number of server endpoints  uint32_t  The number of servers in the following list in the range of [1, 32].
 <for each server endpoint>
@@ -94,6 +95,8 @@ hmac bytes                  16 bytes  Written and used by encryption primitives 
 The *connect token packet* is sent as-is without modification to a game server in the list. All game servers are valid choices, but it is recommended to start by making an attempt to connect to the first server in the list. If a failure occurs (for example the server is full), the client can move onto the next server in the list. Only one server is the list is acceptable, but it is recommended to have more than one if possible, to improve the chances a client can successfully connect to a server and join the game.
 
 Once the client sends the *connect token packet* to a game server, the connection handshake begins.
+
+The Unix timestamps can, for example, be created with something similar to `(uint64_t)time(NULL)` in the C language.
 
 ## Connection Handshake
 
