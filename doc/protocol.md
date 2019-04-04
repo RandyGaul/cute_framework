@@ -42,7 +42,7 @@ The *connect token packet* is not modifiable by the client, and the SECRET SECTI
 ##### Note:
 > The AEAD primitive is a function that encrypts a chunk of data, and computes an HMAC ([keyed-hash message authentication code](https://en.wikipedia.org/wiki/HMAC)). The HMAC is a 16 byte value used to authenticate the message, and prevent tampering/modification of the message (i.e. maintain integrity of the message). The encryption ensures only those who know the key can read the message. The Additional Data (the AD in AEAD) is a chunk of data that is not encrypted, but "mixed-in" to the computation of the HMAC.
 
-The PUBLIC SECTION of the *connect token packet* is used as Additional Data for the AEAD, where the SECRET SECTION is encrypted by the AEAD. Once the AEAD is used, the output HMAC is appended to the final 16 bytes of the token, thus completing the full 1024 *connect token packet*.
+The PUBLIC SECTION of the *connect token packet* is used as Additional Data for the AEAD, where the SECRET SECTION is encrypted by the AEAD. Once the AEAD is used, the output HMAC is appended to the final 16 bytes of the token, thus completing the full 1024 bytes *connect token packet*.
 
 ### The Connect Token Format
 ```
