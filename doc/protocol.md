@@ -36,11 +36,11 @@ The connect token has three major sections.
 2. SECRET SECTION
 3. REST SECTION
 
-Once a client receives a connect token from the web service, they PUBLIC SECTION is read by the client. This section contains a server IP list of dedicated game servers to attempt to connect to. Once read, the client deletes the REST SECTION. The remaining data in the connect token consist of 1024 bytes. The final 1024 bytes are called the *connect token packet*.
+Once a client receives a connect token from the web service, the PUBLIC SECTION is read by the client. This section contains a server IP list of dedicated game servers to attempt to connect to. Once read, the client deletes the REST SECTION. The remaining data in the connect token consist of 1024 bytes. The final 1024 bytes are called the *connect token packet*.
 
-The *connect token packet* is not modifiable by the client, and the SECRET SECTION is not readable by anyone but the web service, and the dedicated servers. The entire *connect token packet* is protected by the cryptographically secure AEAD ([Authenticated Encryption with Additional Data](https://en.wikipedia.org/wiki/Authenticated_encryption#Authenticated_encryption_with_associated_data)) primitive XChaCha20-Poly1305, provided by libsodium.
+The *connect token packet* is not modifiable by the client, and the SECRET SECTION is not readable by anyone but the web service, and the dedicated servers. The entire *connect token packet* is protected by the cryptographically secure AEAD ([Authenticated Encryption with Additional Data](https://en.wikipedia.org/wiki/Authenticated_encryption#Authenticated_encryption_with_associated_data)) primitive XChaCha20-Poly1305, provided by libsodium. They key used for the AEAD primitive is a shared secret known by all dedicated game servers, and the web service. It is recommended to implement a mechanism to rotate this key periodically, though the mechanism to do so is out of scope for this document.
 
-The AEAD primitive is a function that encrypts a chunk of data, and computes an HMAC ([keyed-hash message authentication code]((https://en.wikipedia.org/wiki/HMAC))). The HMAC is a 16 byte value used to authenticate the message, and prevent tampering/modification of the message (i.e. maintain integrity of the message). The encryption ensures only those who know the key can read the message. The Additional Data (the AD in AEAD) is a chunk of data that is not encrypted, but "mixed-in" to the computation of the HMAC.
+> Note: The AEAD primitive is a function that encrypts a chunk of data, and computes an HMAC ([keyed-hash message authentication code](https://en.wikipedia.org/wiki/HMAC)). The HMAC is a 16 byte value used to authenticate the message, and prevent tampering/modification of the message (i.e. maintain integrity of the message). The encryption ensures only those who know the key can read the message. The Additional Data (the AD in AEAD) is a chunk of data that is not encrypted, but "mixed-in" to the computation of the HMAC.
 
 The PUBLIC SECTION of the *connect token packet* is used as Additional Data for the AEAD, where the SECRET SECTION is encrypted by the AEAD. Once the AEAD is used, the output HMAC is appended to the final 16 bytes of the token, thus completing the full 1024 *connect token packet*.
 
@@ -164,7 +164,6 @@ The time to live for the connect token is calculated as:
     expiration timestamp - creation timestamp
 
 ## Server Handshake and Connection Process
-
 ## Disconnect Sequence
 
 In order to gracefully disconnect, either the client or the server can perform the Disconnect Sequence, which means to fire off a series of unreliable *disconnect packet*'s in quick succession (e.g. in a for loop). The number of packets is defined by the DISCONNECT_SEQUENCE_PACKET_COUNT tuning parameter (see [tuning parameters](#tuning-parameters)). The purpose of the redundancy is to be statistically likely that one of the unreliable packets gets through to the endpoint, even in the face of packet loss. A reliable packet is not used for disconnects, since reliable packets require acks, and ack paradigms typically do not mesh well with graceful disconnects.
