@@ -7,7 +7,7 @@ The Cute protocol implements a client-server based transport layer for securely 
 The main pieces of the Cute Protocol are:
 
 1. Connect tokens.
-2. Authentication web service.
+2. Web service.
 3. Dedicated servers.
 4. Clients.
 
