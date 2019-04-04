@@ -45,7 +45,7 @@ The *connect token packet* is not modifiable by the client, and the SECRET SECTI
 
 The PUBLIC SECTION of the *connect token packet* is used as Additional Data for the AEAD, where the SECRET SECTION is encrypted by the AEAD. Once the AEAD is used, the output HMAC is appended to the final 16 bytes of the token, thus completing the full 1024 *connect token packet*.
 
-### The connect token format.
+### The Connect Token Format
 ```
 --  BEGIN PUBLIC SECTION  --
 ---  BEGIN REST SECTION  ---  
