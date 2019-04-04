@@ -197,3 +197,5 @@ In order to gracefully disconnect, either the client or the server can perform t
 * Packet sniffing
 * DDoS mitigation
 * DoS amplification
+
+TODO: Link all packet types and states with anchors.
