@@ -11,7 +11,7 @@ The main pieces of the Cute Protocol are:
 3. Dedicated servers.
 4. Clients.
 
-The web service provides an authentication mechanism via [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) call (typically [HTTPS](https://en.wikipedia.org/wiki/HTTPS)). Any authentication technique can be used since authentication with a web service is: A) very well understood with many good pre-built solutions (like OAuth/2 or OpenID). The web service and API are out of scope of the standard, except for how they produce a connect token.
+The web service provides an authentication mechanism via [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) call ([HTTPS](https://en.wikipedia.org/wiki/HTTPS) is recommended, but not required). Any authentication technique can be used since authentication with a web service is: A) very well understood with many good pre-built solutions (like OAuth/2 or OpenID). The web service and API are out of scope of the standard, except for how they produce a connect token.
 
 The connect token is the mechanism that allows clients to securely authenticate with a dedicated server.
 
