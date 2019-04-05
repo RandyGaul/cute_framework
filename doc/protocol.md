@@ -170,14 +170,18 @@ The time to live for the connect token is calculated as:
 
 ## Packet Formats
 
-* *connect token packet*
-* *keepalive packet*
-* *connection denied packet*
-* *payload packet*
-* *connection accepted packet*
-* *challenge request packet*
-* *challenge response packet*
-* *disconnect packet*
+Packet Type | Packet Type Value
+--- | ---
+*connect token packet* | 0
+*keepalive packet* | 1
+*connection denied packet* | 2
+*payload packet* | 3
+*connection accepted packet* | 4
+*challenge request packet* | 5
+*challenge response packet* | 6
+*disconnect packet* | 7
+
+The Packet Type Value is used to write the `packet type` byte as described in the next section.
 
 ## Encrypted Packets
 
@@ -274,27 +278,67 @@ The *challenge response packet* is the reflected version of the *challenge reque
 
 The *disconnect packet* can be sent by the client or the server during the client *connected* state. Once sent, the connection is considered terminated. Once received, the connection is also considered terminated. Sending the *disconnect packet* must be done by the [Disconnect Sequence](#disconnect-sequence) in order to statistically assure clean disconnects, without waiting for unnecessary timeouts.
 
+## Decrypting Packets
+
+When decrypting packets the following steps must occur, in order, before a packet can be considered valid for further processing.
+
+1. If an incoming packet is less than 26 bytes, ignore the packet.
+2. If the `packet type` byte is greater than 7, ignore the packet.
+3. The server ignores packets of types *challenge response packet*, *connection denied packet*, and *connection accepted packet*.
+4. The client ignores packets of types *challenge request packet* and *connect token packet*.
+5. If the packet fails replay protection, ignore the packet. See the [Replay Protection](#replay-protection) section for more info.
+6. If the packet fails to decrypt with the AEAD primitive, ignore the packet.
+7. If the packet's size post-encryption is not within the ranges specified by each packet format in the [Unencrypted Packets](#unencrypted-packets) section, ignore the packet. Here's a table of acceptable sizes.
+
+Packet Type | Size Post-Encryption
+--- | ---
+*connect token packet* | 1008 bytes
+*keepalive packet* | 0 bytes
+*connection denied packet* | 0 bytes
+*payload packet* | In the range of [1-1255] bytes
+*connection accepted packet* | 16 bytes
+*challenge request packet* | 264 bytes
+*challenge response packet* | 264 bytes
+*disconnect packet* | 0 bytes
+
 ## Server Handshake and Connection Process
 
 ## Disconnect Sequence
 
 In order to gracefully disconnect, either the client or the server can perform the Disconnect Sequence, which means to fire off a series of *disconnect packet*'s in quick succession (e.g. in a for loop). The number of packets is defined by the DISCONNECT_SEQUENCE_PACKET_COUNT tuning parameter (see [Tuning Parameters](#tuning-parameters)). The purpose of the redundancy is to be statistically likely that one of the packets gets through to the endpoint, even in the face of packet loss.
 
-## Tuning Parameters
-
-* KEEPALIVE_FREQUENCY
-* DISCONNECT_SEQUENCE_PACKET_COUNT
-
-## Constants
-
 ## Protection Against Various Attacks
 
-* Replay
+Cute Protocol takes measures to defend itself against many common attacks. This list is not meant to be exhaustive, but instead is included for posterity.
+
+### Replay Protection
+
+Replay protection is to guard against [replay attacks](https://en.wikipedia.org/wiki/Replay_attack). Cute Protocol uses incrementing sequences numbers as the nonce for the AEAD primitive in order to guard against replay attacks.
+
+Replay protection is enabled for the *disconnect packet*, *keepalive packet*, and *payload packet*. All other packet types are already protected by replay attacks by other means (like the connect token handling process, or replay attacks simply do nothing in other cases and are safely ignored).
+
+The replay algorithm uses an array of `uint64_t` elements called the *replay buffer*. The size of the *replay buffer* is tuneable by REPLAY_BUFFER_SIZE. Here is the replay protection algorithm.
+
+1. All encrypted packets are prefixed with a `uint64_t` sequence number , starting at zero and incrementing. There is a different incrementing counter for each connection.
+2. The sequence number of a received packet is read prior to decryption. It can not be modified without detection by the AEAD primitive, since it is used as a nonce in the AEAD.
+3. The maximum sequence number is tracked, called *max sequence*.
+4. If the sequence number + REPLAY_BUFFER_SIZE is less than *max sequence*, ignore the packet. This means either the packet is very old, and should be dropped (since this UDP), or it was an attempted replay attack/duplicated packet. Otherwise update *max sequence* and set it to the sequence number.
+5. If the sequence number has already been received, as determined by a lookup into the *replay buffer*, ignore the packet as it is an attempted replay attack/duplicated packet.
+
 * Reflection
 * IP spoofing
 * "Going wide"
 * Packet sniffing
 * DDoS mitigation
 * DoS amplification
+* Secret key exposure mitigation - key rotation
+
+## Tuning Parameters
+
+* KEEPALIVE_FREQUENCY
+* DISCONNECT_SEQUENCE_PACKET_COUNT
+* REPLAY_BUFFER_SIZE
+
+## Constants
 
 TODO: Link all packet types and states with anchors.
