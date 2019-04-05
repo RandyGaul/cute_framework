@@ -47,14 +47,14 @@ The PUBLIC SECTION of the *connect token packet* is used as Associated Data for 
 --  BEGIN PUBLIC SECTION  --
 ---  BEGIN REST SECTION  ---  
 version info                   9          "Cute 1.00" ASCII, including nul byte.
-protocol id                    uint64_t   User chosen value to identify the game.
+application id                 uint64_t   User chosen value to identify the game.
 creation timestamp             uint64_t   Unix timestamp of when the connect token was created.
 client to server key           32 bytes   Client uses to encrypt packets, server uses to decrypt packets.
 server to client key           32 bytes   Server uses to encrypt packets, client uses to decrypt packets.
 ----  END REST SECTION  ----            
-zero byte                      1 byte     Represents packet type of *connect token packet*.
+packet type                    1 byte     Represents packet type of *connect token packet*; value of zero.
 version info                   9          "Cute 1.00" ASCII, including nul byte.
-protocol id                    uint64_t   User chosen value to identify the game.
+application id                 uint64_t   User chosen value to identify the game.
 expiration timestamp           uint64_t   Unix timestamp of when the connect token becomes invalid.
 handshake timeout              int32_t    Seconds of how long a connection handshake will wait before timing out.
 number of server endpoints     uint32_t   The number of servers in the following list in the range of [1, 32].
@@ -205,10 +205,10 @@ Each encrypted packet uses a buffer for Associated Data in the AEAD. The buffeer
 ```
 packet type      1 byte
 version info     9          "Cute 1.00" ASCII, including nul byte.
-protocol id      uint64_t   User chosen value to identify the game.
+application id   uint64_t   User chosen value to identify the game.
 ```
 
-This buffer is constructed locally inside both the client and the server for each packet received or sent. The `version info` and the `protocol id` do not change frequently, and can be static un-changing memory. The `packet type` byte should be read from the packet and copied in front of the Associated Data buffer used by the AEAD.
+This buffer is constructed locally inside both the client and the server for each packet received or sent. The `version info` and the `application id` do not change frequently, and can be static un-changing memory. The `packet type` byte should be read from the packet and copied in front of the Associated Data buffer used by the AEAD.
 
 ## Unencrypted Packets
 
@@ -303,6 +303,29 @@ Packet Type | Size Post-Encryption
 
 ## Server Handshake and Connection Process
 
+The server should be on a publicly available IP address and port. This way clients can initiate the connection handshake by sending the *connect token packet* to the server, who is listening on a UDP socket + port combo.
+
+The server maintains a set of clients, capped at SERVER_MAX_CLIENTS tunable (see [Tuning Parameters](#tuning-parameters) for more info). Each client is represented by an opaque *client handle*. Max clients can be set to any number as deemed acceptable according to the implementation. For many first-person shooter games, somewhere from 8-32 players often makes sense. For larger games, such as MMOs, multiple thousands of players can be acceptable for the Cute Protocol, so long as the implementation appropriately scales to that level. The Cute Protocol is quite agnostic to connection scale, since different implementations are free to represent clients in a manner suitable to their specific needs.
+
+### Server Handshake Process
+
+The server runs a state machine for each potential client attempting to get through the handshake process. Instead of writing down the state machine formally, as was done for the [Client Handshake State Machine](#client-handshake-state-machine) section, the steps are listed here in order for simplicity. The server follows exactly these steps, in order, once a *connect token packet* is received. These are the steps for setting up a secure connection with a client in the *connected* state.
+
+Here are the steps for processing the *connect token packet*.
+
+1. A *connect token packet* is received on the listener UDP socket and port combo. This means a potential client wants to star the connection handshake process.
+2. If the *connect token packet* is not exactly 1024 bytes, ignore the packet.
+3. If the `packet type` byte at the beginning of the packet is not zero (*connect token packet*), ignore the packet.
+4. Read and make sure the protocol string `version info` "CUTE 1.00", including the nul byte, comes right after the `packet type` byte.
+5. Read and make sure the `application id` matches the expected id for the user's application.
+6. Read the `expiration timestamp`. If the token has expired, ignore the packet.
+7. Read and decrypt the *connect token packet* SECRET SECTION. The PUBLIC SECTION is used as the Associated Data in the AEAD primitive. If the *connect token packet* fails to decrypt, ignore the packet.
+8. If all previous checks pass, respond with a *challenge request packet*.
+
+The next series of steps is for performing the challenge response sequence. WORKING HERE
+
+1. Read and store the data in the decrypted SECRET SECTION
+
 ## Disconnect Sequence
 
 In order to gracefully disconnect, either the client or the server can perform the Disconnect Sequence, which means to fire off a series of *disconnect packet*'s in quick succession (e.g. in a for loop). The number of packets is defined by the DISCONNECT_SEQUENCE_PACKET_COUNT tuning parameter (see [Tuning Parameters](#tuning-parameters)). The purpose of the redundancy is to be statistically likely that one of the packets gets through to the endpoint, even in the face of packet loss.
@@ -322,8 +345,9 @@ The replay algorithm uses an array of `uint64_t` elements called the *replay buf
 1. All encrypted packets are prefixed with a `uint64_t` sequence number , starting at zero and incrementing. There is a different incrementing counter for each connection.
 2. The sequence number of a received packet is read prior to decryption. It can not be modified without detection by the AEAD primitive, since it is used as a nonce in the AEAD.
 3. The maximum sequence number is tracked, called *max sequence*.
-4. If the sequence number + REPLAY_BUFFER_SIZE is less than *max sequence*, ignore the packet. This means either the packet is very old, and should be dropped (since this UDP), or it was an attempted replay attack/duplicated packet. Otherwise update *max sequence* and set it to the sequence number.
+4. If the sequence number + REPLAY_BUFFER_SIZE is less than *max sequence*, ignore the packet. This means either the packet is very old, and should be dropped (since this UDP), or it was an attempted replay attack/duplicated packet.
 5. If the sequence number has already been received, as determined by a lookup into the *replay buffer*, ignore the packet as it is an attempted replay attack/duplicated packet.
+6. After a successful decryption, update *max sequence* and set it to the sequence number if the sequence number is larger than *max sequence*. Be careful and *do not perform this step before decryption successfully completes*. Updating the max sequence is a sensitive operation, and can only occur if the sequence number is validated by the decryption AEAD primitive.
 
 Here is an example implementation of the replay protection buffer and culling algorithm written in C.
 
@@ -349,10 +373,6 @@ int replay_buffer_cull_duplicate(replay_buffer_t* buffer, uint64_t sequence, uin
         return -1;
     }
 
-    if (buffer->max < sequence) {
-        buffer->max = sequence;
-    }
-
     uint64_t h = sequence + seed;
     int index = (int)(h % REPLAY_BUFFER_SIZE);
     uint64_t val = buffer->entries[index];
@@ -364,6 +384,13 @@ int replay_buffer_cull_duplicate(replay_buffer_t* buffer, uint64_t sequence, uin
     } else {
         // Duplicate or replayed packet detected.
         return -1;
+    }
+}
+
+int replay_buffer_update_max(replay_buffer_t* buffer, uint64_t sequenc)
+{
+    if (buffer->max < sequence) {
+        buffer->max = sequence;
     }
 }
 ```
@@ -391,6 +418,10 @@ int read_packet(
     }
 
     // Continue on with decryption steps ...
+
+    replay_buffer_update_max(replay_buffer, sequence);
+
+	// Continue with any other optional processing ...
 }
 ```
 
@@ -411,6 +442,7 @@ int read_packet(
 * KEEPALIVE_FREQUENCY
 * DISCONNECT_SEQUENCE_PACKET_COUNT
 * REPLAY_BUFFER_SIZE
+* SERVER_MAX_CLIENTS
 
 ## Constants
 
