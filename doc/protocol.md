@@ -313,17 +313,89 @@ Cute Protocol takes measures to defend itself against many common attacks. This 
 
 ### Replay Protection
 
-Replay protection is to guard against [replay attacks](https://en.wikipedia.org/wiki/Replay_attack). Cute Protocol uses incrementing sequences numbers as the nonce for the AEAD primitive in order to guard against replay attacks.
+Replay protection is to guard against [replay attacks](https://en.wikipedia.org/wiki/Replay_attack). Cute Protocol uses incrementing sequence numbers as the nonce for the AEAD primitive in order to guard against replay attacks.
 
 Replay protection is enabled for the *disconnect packet*, *keepalive packet*, and *payload packet*. All other packet types are already protected by replay attacks by other means (like the connect token handling process, or replay attacks simply do nothing in other cases and are safely ignored).
 
-The replay algorithm uses an array of `uint64_t` elements called the *replay buffer*. The size of the *replay buffer* is tuneable by REPLAY_BUFFER_SIZE. Here is the replay protection algorithm.
+The replay algorithm uses an array of `uint64_t` elements called the *replay buffer*. The size of the *replay buffer* is tuneable by REPLAY_BUFFER_SIZE tunable (see [Tuning Parameters](#tuning-parameters)). Here is the replay protection algorithm.
 
 1. All encrypted packets are prefixed with a `uint64_t` sequence number , starting at zero and incrementing. There is a different incrementing counter for each connection.
 2. The sequence number of a received packet is read prior to decryption. It can not be modified without detection by the AEAD primitive, since it is used as a nonce in the AEAD.
 3. The maximum sequence number is tracked, called *max sequence*.
 4. If the sequence number + REPLAY_BUFFER_SIZE is less than *max sequence*, ignore the packet. This means either the packet is very old, and should be dropped (since this UDP), or it was an attempted replay attack/duplicated packet. Otherwise update *max sequence* and set it to the sequence number.
 5. If the sequence number has already been received, as determined by a lookup into the *replay buffer*, ignore the packet as it is an attempted replay attack/duplicated packet.
+
+Here is an example implementation of the replay protection buffer and culling algorithm written in C.
+
+```c
+#define REPLAY_BUFFER_SIZE
+
+struct replay_buffer_t
+{
+    uint64_t max;
+    uint64_t entries[REPLAY_BUFFER_SIZE];
+};
+
+void replay_buffer_init(replay_buffer_t* buffer)
+{
+    buffer->max = 0;
+    CUTE_MEMSET(buffer->entries, ~0, sizeof(uint64_t) * REPLAY_BUFFER_SIZE);
+}
+
+int replay_buffer_cull_duplicate(replay_buffer_t* buffer, uint64_t sequence, uint64_t seed)
+{
+    if (sequence + REPLAY_BUFFER_SIZE < buffer->max) {
+        // This is UDP - just drop old packets.
+        return -1;
+    }
+
+    if (buffer->max < sequence) {
+        buffer->max = sequence;
+    }
+
+    uint64_t h = sequence + seed;
+    int index = (int)(h % REPLAY_BUFFER_SIZE);
+    uint64_t val = buffer->entries[index];
+    int empty_slot = val == ~0ULL;
+    int outdated = val >= sequence;
+    if (empty_slot | !outdated) {
+        buffer->entries[index] = sequence;
+        return 0;
+    } else {
+        // Duplicate or replay packet detected.
+        return -1;
+    }
+}
+```
+
+Here is some an example use-case scenario for using replay protection on an incoming packet, written in C.
+
+
+```c
+int read_packet(
+    uint8_t* packet,
+    int size,
+    uint64_t sequence_offset,
+    replay_buffer_t*
+    replay_buffer,
+    /* ... other params ... */
+)
+{
+    // ...
+
+    uint8_t packet_type = read_uint8(&packet);
+    uint8_t sequence =  = read_uint64(&packet);
+    if (replay_buffer_cull_duplicate(replay_buffer, sequence, sequence_offset) {
+        return -1;
+    }
+
+    // ...
+}
+```
+
+##### Note:
+
+> `sequence offset` can safely be set to zero in the case of Cute Protocol, since each connection uses unique keys as determined by the initial connect token, so nonce reuse starting at zero and incrementing is perfectly safe. In many other protocols a random nonce offset seed is necessary. The example code includes this randomized offset as `sequence_offset` for posterity. Typically the server will generate the session-nonce, and communicate it to the client in a secure manner. In Cute Protocol's case, the web service communicates the `client to server key` and the `server to client key`, which defines a unique session, and is thus safe from session recording and replay attacks.
 
 * Reflection
 * IP spoofing
