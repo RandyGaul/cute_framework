@@ -48,47 +48,47 @@ The PUBLIC SECTION of the *connect token packet* is used as Additional Data for 
 ```
 --  BEGIN PUBLIC SECTION  --
 ---  BEGIN REST SECTION  ---  
-version info                  9         "Cute 1.00" ASCII, including nul byte.
-protocol id                   uint64_t  User chosen value to identify the game.
-creation timestamp            uint64_t  Unix timestamp of when the connect token was created.
-client to server key          32 bytes  Client uses to encrypt packets, server uses to decrypt packets.
-server to client key          32 bytes  Server uses to encrypt packets, client uses to decrypt packets.
+version info                   9          "Cute 1.00" ASCII, including nul byte.
+protocol id                    uint64_t   User chosen value to identify the game.
+creation timestamp             uint64_t   Unix timestamp of when the connect token was created.
+client to server key           32 bytes   Client uses to encrypt packets, server uses to decrypt packets.
+server to client key           32 bytes   Server uses to encrypt packets, client uses to decrypt packets.
 ----  END REST SECTION  ----            
-zero byte                     1 byte    Represents packet type of *connect token packet*.
-protocol id                   uint64_t  User chosen value to identify the game.
-expiration timestamp          uint64_t  Unix timestamp of when the connect token becomes invalid.
-handshake timeout             int32_t   Seconds of how long a connection handshake will wait before timing out.
-number of server endpoints    uint32_t  The number of servers in the following list in the range of [1, 32].
+zero byte                      1 byte     Represents packet type of *connect token packet*.
+protocol id                    uint64_t   User chosen value to identify the game.
+expiration timestamp           uint64_t   Unix timestamp of when the connect token becomes invalid.
+handshake timeout              int32_t    Seconds of how long a connection handshake will wait before timing out.
+number of server endpoints     uint32_t   The number of servers in the following list in the range of [1, 32].
 <for each server endpoint>
-    address type              uint8_t   1 = IPv4, 2 = IPv6 address, in the range of [1, 2].
-    <if IPv4 address>         6 bytes   Format: a.b.c.d:port
-        a                     uint8_t
-        b                     uint8_t
-        c                     uint8_t
-        d                     uint8_t
-        port                  uint16_t
-    <else if IPv6 address>    18 bytes  Format: [a:b:c:d:e:f:g:h]:port
-        a                     uint16_t
-        b                     uint16_t
-        c                     uint16_t
-        d                     uint16_t
-        e                     uint16_t
-        f                     uint16_t
-        g                     uint16_t
-        h                     uint16_t
-        port                  uint16_t
+    address type               uint8_t    1 = IPv4, 2 = IPv6 address, in the range of [1, 2].
+    <if IPv4 address>          6 bytes    Format: a.b.c.d:port
+        a                      uint8_t
+        b                      uint8_t
+        c                      uint8_t
+        d                      uint8_t
+        port                   uint16_t
+    <else if IPv6 address>     18 bytes   Format: [a:b:c:d:e:f:g:h]:port
+        a                      uint16_t
+        b                      uint16_t
+        c                      uint16_t
+        d                      uint16_t
+        e                      uint16_t
+        f                      uint16_t
+        g                      uint16_t
+        h                      uint16_t
+        port                   uint16_t
     <end if>
 <end for>
-<zeroes padded to 688 bytes>            Counting from the end of the REST SECTION.
-connect token nonce           24 bytes
+<zeroes padded to 688 bytes>              Counting from the end of the REST SECTION.
+connect token nonce            24 bytes
 // --  END PUBLIC SECTION  --
 // -- BEGIN SECRET SECTION --
-client id                     uint64_t  Unique identifier for a particular client.
-client to server key          32 bytes  Client uses to encrypt packets, server uses to decrypt packets.
-server to client key          32 bytes  Server uses to encrypt packets, client uses to decrypt packets.
-user data                     256 bytes Space for the user to store whatever auxiliary data they need.
+client id                      uint64_t   Unique identifier for a particular client.
+client to server key           32 bytes   Client uses to encrypt packets, server uses to decrypt packets.
+server to client key           32 bytes   Server uses to encrypt packets, client uses to decrypt packets.
+user data                      256 bytes  Space for the user to store whatever auxiliary data they need.
 // --  END SECRET SECTION  --
-HMAC bytes                    16 bytes  Written and used by encryption primitives to verify key signature.
+HMAC bytes                     16 bytes   Written and used by encryption primitives to verify key signature.
 ```
 
 The *connect token packet* is sent as-is without modification to a game server in the list. All game servers are valid choices, but it is recommended to start by making an attempt to connect to the first server in the list. If a failure occurs (for example the server is full), the client can move onto the next server in the list. Storing only a single server in the list is acceptable, but it is recommended to have more than one if possible, to improve the chances a client can successfully connect to a game server and play.
@@ -111,57 +111,59 @@ The various client states.
 
 State Name | Value
 --- | ---
-CLIENT_STATE_CONNECT_TOKEN_EXPIRED | -6
-CLIENT_STATE_INVALID_CONNECT_TOKEN | -5
-CLIENT_STATE_CONNECTION_TIMED_OUT | -4
-CLIENT_STATE_CHALLENGE_RESPONSE_TIMED_OUT | -3
-CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT | -2
-CLIENT_STATE_CONNECTION_DENIED | -1
-CLIENT_STATE_DISCONNECTED | 0
-CLIENT_STATE_SENDING_CONNECTION_REQUEST | 1
-CLIENT_STATE_SENDING_CHALLENGE_RESPONSE | 2
-CLIENT_STATE_CONNECTED | 3
+*connect token expired* | -6
+*invalid connect token* | -5
+*connection timed out* | -4
+*challenge response timed out* | -3
+*connection request timed out* | -2
+*connection denied* | -1
+*disconnected* | 0
+*sending connection request* | 1
+*sending challenge response* | 2
+*connected* | 3
 
-### CLIENT_STATE_DISCONNECTED
+Each state only accepts a subset of packet types, and all extraneous packets received are ignored.
 
-The default state is CLIENT_STATE_DISCONNECTED. The client transitions to the CLIENT_STATE_SENDING_CONNECTION_REQUEST state once they receive a valid connect token from the web service and have recorded data from the PUBLIC SECTION of the connect token.
+### Disconnected
+
+The default state is *disconnected*. The client transitions to the *sending connection request* state once they receive a valid connect token from the web service and have recorded data from the PUBLIC SECTION of the connect token.
 
 Exactly how the client requests and receives the connect token is out of scope of this document, besides requiring a secure REST API call. Exactly how the web service generates the server list of the connect token is also out of scope of this document, as this is the realm of match-making or other similar mechanisms.
 
-The client reads the PUBLIC SECTION of the connect token and records all of the data. If the data is invalid the client transitions to the CLIENT_STATE_INVALID_CONNECT_TOKEN state. The connect token is deemed invalid by the client if the number of server addresses is outside the range of [1, 32], or if an IP address type is not in the range [1, 2], or if the creation timestamp is more recent than the expiration timestamp.
+The client reads the PUBLIC SECTION of the connect token and records all of the data. If the data is invalid the client transitions to the *invalid connect token* state. The connect token is deemed invalid by the client if the number of server addresses is outside the range of [1, 32], or if an IP address type is not in the range [1, 2], or if the creation timestamp is more recent than the expiration timestamp.
 
-### CLIENT_STATE_SENDING_CONNECTION_REQUEST
+### Sending Connection Request
 
-The client sends the *connect token packet* to a game server from the list and waits for a response. This packet is **not** encrypted by the client, as it is already processed by the AEAD primitive by the web service. If the server responds with a *challenge request packet*, the client transitions to the CLIENT_STATE_SENDING_CHALLENGE_RESPONSE, after decrypting and recording the contents of the *challenge request packet*.
+The client sends the *connect token packet* to a game server from the list and waits for a response. This packet is **not** encrypted by the client, as it is already processed by the AEAD primitive by the web service. If the server responds with a *challenge request packet*, the client transitions to the *sending challenge response*, after decrypting and recording the contents of the *challenge request packet*.
 
 It is recommended the client moves onto the next server in the server list in the event of failure cases. If no more servers are left in the list, the client transitions to one of the error states.
 
-If the last server in the list responds with a *connection denied packet*, the client transitions to the CLIENT_STATE_CONNECTION_DENIED state. If the last server in the server does not send a *challenge request packet* or a *connection denied packet*, the client transitions to the CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT state.
+If the last server in the list responds with a *connection denied packet*, the client transitions to the *connection denied* state. If the last server in the server does not send a *challenge request packet* or a *connection denied packet*, the client transitions to the *connection request timed out* state.
 
-### CLIENT_STATE_SENDING_CHALLENGE_RESPONSE
+### Sending Challenge Response
 
-During the CLIENT_STATE_SENDING_CONNECTION_REQUEST the client stored the contents of *challenge request packet*. The contents are used to form the *challenge response packet*. The client sends the server the *challenge response packet*. The purpose is to verify a few things about the client:
+During the *sending connection request* the client stored the contents of *challenge request packet*. The contents are used to form the *challenge response packet*. The client sends the server the *challenge response packet*. The purpose is to verify a few things about the client:
 
 1. That the client is not spoofing their IP address, and can successfully respond to the server by reflecting the *challenge request packet* with a *challenge response packet*.
 2. That the client is able to decrypt the *challenge request packet* and encrypt the *challenge response packet*. This asserts that the client was the **only** user the web service gave the original connect token to.
 
-If successful, the server will respond with a *connection accepted packet*, and the client transitions to the CLIENT_STATE_CONNECTED state after recording data from the *connection accepted packet*. The client records the *client id* field, the *max clients* field, and the *connection timeout* field from the *connection accepted packet*.
+If successful, the server will respond with a *connection accepted packet*, and the client transitions to the *connected* state after recording data from the *connection accepted packet*. The client records the *client id* field, the *max clients* field, and the *connection timeout* field from the *connection accepted packet*.
 
 It is recommended the client moves onto the next server in the server list in the event of failure cases. If no more servers are left in the list, the client transitions to one of the error states.
 
-If the last server in the list responds with a *connection denied packet*, the client transitions to the CLIENT_STATE_CONNECTION_DENIED state. If the last server in the server does not send a *connection accepted packet* or a *connection denied packet*, the client transitions to the CLIENT_STATE_CHALLENGE_RESPONSE_TIMED_OUT state.
+If the last server in the list responds with a *connection denied packet*, the client transitions to the *connection denied* state. If the last server in the server does not send a *connection accepted packet* or a *connection denied packet*, the client transitions to the *challenge response timed out* state.
 
-### CLIENT_STATE_CONNECTED
+### Connected
 
 The purpose of the connected state is to allow the user to send and receive *payload packet*'s containing game-specific data. In the absence of any payload packets, the client generates and sends a *keepalive packet* at the KEEPALIVE_FREQUENCY tuning parameter (see [tuning parameters](#tuning-parameters)).
 
-If no *payload packet*'s or *keepalive packet*'s are received from the server within a *connection timeout* timespan, the client transitions to the CLIENT_STATE_CONNECTION_TIMED_OUT state.
+If no *payload packet*'s or *keepalive packet*'s are received from the server within a *connection timeout* timespan, the client transitions to the *connection timed out* state.
 
-If the client receives a *disconnect packet* from the server it transitions to the CLIENT_STATE_DISCONNECTED state after performing the [Disconnect Sequence](#disconnect-sequence).
+If the client receives a *disconnect packet* from the server it transitions to the *disconnected* state after performing the [Disconnect Sequence](#disconnect-sequence).
 
-### CLIENT_STATE_CONNECT_TOKEN_EXPIRED
+### Connect Token Expired
 
-If at any time the client's connect token expires, the client transitions to the CLIENT_STATE_CONNECT_TOKEN_EXPIRED. This can happen if the client has to try connecting to multiple servers in the server list, and continually fails to establish a connection.
+If at any time the client's connect token expires, the client transitions to the *connect token expired*. This can happen if the client has to try connecting to multiple servers in the server list, and continually fails to establish a connection.
 
 The time to live for the connect token is calculated as:
 
@@ -176,16 +178,101 @@ The time to live for the connect token is calculated as:
 * *connection accepted packet*
 * *challenge request packet*
 * *challenge response packet*
+* *disconnect packet*
+
+## Encrypted Packets
+
+All packets except for the *connect token packet* are encrypted. Each encrypted packet has the following form.
+
+```
+packet type      1 byte
+sequence nonce   uint64_t
+encrypted bytes  <variable length>
+HMAC bytes       16 bytes
+```
+
+All packets are 1280 bytes or smaller, so the maximum size of the `encrypted bytes`	 is 1255 bytes.
+
+## Unencrypted Packets
+
+Prior to encryption each packet type has a different format, which comprise the data that forms the `encrypted bytes` post-encryption.
+
+### Keepalive Packet
+
+```
+<no data>           0 bytes
+```
+
+The *keepalive packet* is only sent if no *keepalive packet*'s, *disconnect packet*'s, or *payload packet*'s have been received within KEEPALIVE_FREQUENCY seconds during the client *connected* state. If none of these packets are received by either the client or the server, the connection is terminated after `connection timeout` seconds.
+
+### Connection Denied Packet
+
+```
+<no data>           0 bytes
+```
+
+The *connection denied packet* can be sent by the server during the connection handshake. It is sent whenever an error occurs (like no room on the server, or received packets fail to decrypt), or if the client fails to comply with the proper handshake process.
+
+### Payload Packet
+
+```
+payload data        In the range of [1, 1255] bytes.
+```
+
+The *payload packet* can be sent by the client or the server during the *connected* state of the client. They contain game specific user data.
+
+### Connection Accepted Packet
+
+```
+client id           uint64_t
+max clients         uint32_t
+connection timeout  uint32_t
+```
+
+The *connection accepted packet* is sent from both the client and the server once a client has successfully connected to the server.
+
+### Challenge Request Packet
+
+```
+sequence nonce      uint64_t
+secret data         256 bytes
+```
+
+The *challenge request packet* is sent from the server as apart of the connection handshake process. This challenge response sequence is used to prevent ip spoofing and *connect token packet* sniffing. For more information about how, see the [Sending Challenge Response](#sending-challenge-response) section.
+
+The `sequence nonce` is an incrementing counter starting at 0, initialized upon server restart.
+
+The `secret data` is simply 256 bytes of data. The data can be anything, including randomized bits. Exactly what bits are the `secret data` is left to the implementation. To fulfill the purpose of this packet, the client merely needs to decrypt the packet with the `server to client` key, encrypt it with the `client to server key`, and send it back to the server. The contents of the `secret data` are ignored by the client.
+
+### Challenge Response Packet
+
+```
+sequence nonce      uint64_t
+secret data         256 bytes
+```
+
+The *challenge response packet* is the reflected version of the *challenge request packet*, and is sent by the client as apart of the connection handshake process. All the client has to do is copy the entire decrypted *challenge request packet*, encrypt it, and send it back to the server for verification. For more information see the [Sending Challenge Response](#sending-challenge-response), or the [Challenge Request Packet](#challenge-request-packet) section.
+
+### Disconnect Packet
+
+```
+<no data>           0 bytes
+```
+
+The *disconnect packet* can be sent by the client or the server during the client *connected* state. Once sent, the connection is considered terminated. Once received, the connection is also considered terminated. Sending the *disconnect packet* must be done by the [Disconnect Sequence](#disconnect-sequence) in order to statistically assure clean disconnects, without waiting for unnecessary timeouts.
 
 ## Server Handshake and Connection Process
+
 ## Disconnect Sequence
 
-In order to gracefully disconnect, either the client or the server can perform the Disconnect Sequence, which means to fire off a series of unreliable *disconnect packet*'s in quick succession (e.g. in a for loop). The number of packets is defined by the DISCONNECT_SEQUENCE_PACKET_COUNT tuning parameter (see [tuning parameters](#tuning-parameters)). The purpose of the redundancy is to be statistically likely that one of the unreliable packets gets through to the endpoint, even in the face of packet loss. A reliable packet is not used for disconnects, since reliable packets require acks, and ack paradigms typically do not mesh well with graceful disconnects.
+In order to gracefully disconnect, either the client or the server can perform the Disconnect Sequence, which means to fire off a series of *disconnect packet*'s in quick succession (e.g. in a for loop). The number of packets is defined by the DISCONNECT_SEQUENCE_PACKET_COUNT tuning parameter (see [tuning parameters](#tuning-parameters)). The purpose of the redundancy is to be statistically likely that one of the packets gets through to the endpoint, even in the face of packet loss.
 
 ## Tuning Parameters
 
 * KEEPALIVE_FREQUENCY
 * DISCONNECT_SEQUENCE_PACKET_COUNT
+
+## Constants
 
 ## Protection Against Various Attacks
 
