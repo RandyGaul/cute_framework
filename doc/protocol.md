@@ -11,11 +11,9 @@ The main pieces of the Cute Protocol are:
 3. Dedicated servers.
 4. Clients.
 
-The web service provides an authentication mechanism via [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) call ([HTTPS](https://en.wikipedia.org/wiki/HTTPS) is recommended, but not required). Any authentication technique can be used since authentication with a web service is: A) very well understood with many good pre-built solutions (like OAuth/2 or OpenID). The web service and API are out of scope of the standard, except for how they produce a connect token.
+The web service provides an authentication mechanism via [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) call ([HTTPS](https://en.wikipedia.org/wiki/HTTPS) is recommended, but not required). Any authentication technique can be used since authentication with a web service is: A) very well understood with many good pre-built solutions (like OAuth/2 or OpenID); B) easily isolated away from this document without a strong conceptual dependency. The details of the web service and its exact API are out of scope of the standard, except for how they produce a connect token.
 
-The connect token is the mechanism that allows clients to securely authenticate with a dedicated server.
-
-Dedicated servers are the servers actually running game. Clients are the players who connect to a dedicated server in order to play.
+The connect token is the mechanism that allows clients to securely authenticate with a dedicated server. Dedicated servers are the servers actually running game. Clients are the players who connect to a dedicated server in order to play.
 
 ## Connecting as a Client
 
@@ -147,7 +145,7 @@ During the *sending connection request* the client stored the contents of *chall
 1. That the client is not spoofing their IP address, and can successfully respond to the server by reflecting the *challenge request packet* with a *challenge response packet*.
 2. That the client is able to decrypt the *challenge request packet* and encrypt the *challenge response packet*. This asserts that the client was the **only** user the web service gave the original connect token to.
 
-If successful, the server will respond with a *connection accepted packet*, and the client transitions to the *connected* state after recording data from the *connection accepted packet*. The client records the *client id* field, the *max clients* field, and the *connection timeout* field from the *connection accepted packet*.
+If successful, the server will respond with a *connection accepted packet*, and the client transitions to the *connected* state after recording data from the *connection accepted packet*. The client records the *client id* field, the *max clients* field, and the `connection timeout` field from the *connection accepted packet*.
 
 It is recommended the client moves onto the next server in the server list in the event of failure cases. If no more servers are left in the list, the client transitions to one of the error states.
 
@@ -155,9 +153,9 @@ If the last server in the list responds with a *connection denied packet*, the c
 
 ### Connected
 
-The purpose of the connected state is to allow the user to send and receive *payload packet*'s containing game-specific data. In the absence of any payload packets, the client generates and sends a *keepalive packet* at the KEEPALIVE_FREQUENCY tuning parameter (see [tuning parameters](#tuning-parameters)).
+The purpose of the connected state is to allow the user to send and receive *payload packet*'s containing game-specific data. In the absence of any payload packets, the client generates and sends a *keepalive packet* at the KEEPALIVE_FREQUENCY tuning parameter (see [Tuning Parameters](#tuning-parameters)).
 
-If no *payload packet*'s or *keepalive packet*'s are received from the server within a *connection timeout* timespan, the client transitions to the *connection timed out* state.
+If no *payload packet*'s or *keepalive packet*'s are received from the server within a `connection timeout` timespan, the client transitions to the *connection timed out* state.
 
 If the client receives a *disconnect packet* from the server it transitions to the *disconnected* state after performing the [Disconnect Sequence](#disconnect-sequence).
 
@@ -267,7 +265,7 @@ The *disconnect packet* can be sent by the client or the server during the clien
 
 ## Disconnect Sequence
 
-In order to gracefully disconnect, either the client or the server can perform the Disconnect Sequence, which means to fire off a series of *disconnect packet*'s in quick succession (e.g. in a for loop). The number of packets is defined by the DISCONNECT_SEQUENCE_PACKET_COUNT tuning parameter (see [tuning parameters](#tuning-parameters)). The purpose of the redundancy is to be statistically likely that one of the packets gets through to the endpoint, even in the face of packet loss.
+In order to gracefully disconnect, either the client or the server can perform the Disconnect Sequence, which means to fire off a series of *disconnect packet*'s in quick succession (e.g. in a for loop). The number of packets is defined by the DISCONNECT_SEQUENCE_PACKET_COUNT tuning parameter (see [Tuning Parameters](#tuning-parameters)). The purpose of the redundancy is to be statistically likely that one of the packets gets through to the endpoint, even in the face of packet loss.
 
 ## Tuning Parameters
 
