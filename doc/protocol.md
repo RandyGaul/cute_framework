@@ -80,13 +80,13 @@ number of server endpoints     uint32_t   The number of servers in the following
 <end for>
 <zeroes padded to 656 bytes>              Counting from the end of the REST SECTION.
 connect token nonce            24 bytes
---   END PUBLIC SECTION   --
+---  END PUBLIC SECTION  ---
 --  BEGIN SECRET SECTION  --
 client id                      uint64_t   Unique identifier for a particular client.
 client to server key           32 bytes   Client uses to encrypt packets, server uses to decrypt packets.
 server to client key           32 bytes   Server uses to encrypt packets, client uses to decrypt packets.
 user data                      256 bytes  Space for the user to store whatever auxiliary data they need.
---   END SECRET SECTION   --
+---  END SECRET SECTION  ---
 HMAC bytes                     16 bytes   Written and used by encryption primitives to verify key signature.
 ```
 
