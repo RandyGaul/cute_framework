@@ -1,6 +1,6 @@
 # Cute Protocol Standard
 
-The Cute protocol implements a client-server based transport layer for securely connecting and authenticating with backend game servers over UDP. The purpose of this document is to aid users in making educated decisions about how to use the Cute Protocol in their own game.
+The Cute Protocol implements a client-server based transport layer for securely connecting and authenticating with backend game servers over UDP. The purpose of this document is to aid users in making educated decisions about how to use the Cute Protocol in their own game.
 
 ## High Level Overview
 
@@ -80,13 +80,13 @@ number of server endpoints     uint32_t   The number of servers in the following
 <end for>
 <zeroes padded to 656 bytes>              Counting from the end of the REST SECTION.
 connect token nonce            24 bytes
-// --  END PUBLIC SECTION  --
-// -- BEGIN SECRET SECTION --
+--   END PUBLIC SECTION   --
+--  BEGIN SECRET SECTION  --
 client id                      uint64_t   Unique identifier for a particular client.
 client to server key           32 bytes   Client uses to encrypt packets, server uses to decrypt packets.
 server to client key           32 bytes   Server uses to encrypt packets, client uses to decrypt packets.
 user data                      256 bytes  Space for the user to store whatever auxiliary data they need.
-// --  END SECRET SECTION  --
+--   END SECRET SECTION   --
 HMAC bytes                     16 bytes   Written and used by encryption primitives to verify key signature.
 ```
 
@@ -339,7 +339,7 @@ struct replay_buffer_t
 void replay_buffer_init(replay_buffer_t* buffer)
 {
     buffer->max = 0;
-    CUTE_MEMSET(buffer->entries, ~0, sizeof(uint64_t) * REPLAY_BUFFER_SIZE);
+    memset(buffer->entries, ~0, sizeof(uint64_t) * REPLAY_BUFFER_SIZE);
 }
 
 int replay_buffer_cull_duplicate(replay_buffer_t* buffer, uint64_t sequence, uint64_t seed)
@@ -362,7 +362,7 @@ int replay_buffer_cull_duplicate(replay_buffer_t* buffer, uint64_t sequence, uin
         buffer->entries[index] = sequence;
         return 0;
     } else {
-        // Duplicate or replay packet detected.
+        // Duplicate or replayed packet detected.
         return -1;
     }
 }
@@ -383,13 +383,14 @@ int read_packet(
 {
     // ...
 
+    // Perform replay protection
     uint8_t packet_type = read_uint8(&packet);
-    uint8_t sequence =  = read_uint64(&packet);
+    uint8_t sequence = read_uint64(&packet);
     if (replay_buffer_cull_duplicate(replay_buffer, sequence, sequence_offset) {
         return -1;
     }
 
-    // ...
+    // Continue on with decryption steps ...
 }
 ```
 
