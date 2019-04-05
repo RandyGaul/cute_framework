@@ -182,7 +182,7 @@ The time to live for the connect token is calculated as:
 
 ## Encrypted Packets
 
-All packets except for the *connect token packet* are encrypted. Each encrypted packet has the following form.
+All packets except for the *connect token packet* are encrypted before sent. Each encrypted packet has the following form.
 
 ```
 packet type      1 byte
@@ -192,6 +192,8 @@ HMAC bytes       16 bytes
 ```
 
 All packets are 1280 bytes or smaller, so the maximum size of the `encrypted bytes`	 is 1255 bytes.
+
+The *connect token packet* does not get encrypted by the client before being sent, as it is already encrypted by the web service using a secret key only known to the web service and the backend dedicated game servers. This means the client cannot read, modify, or generate the SECRET SECTION of the *connect token packet*.
 
 ## Unencrypted Packets
 
