@@ -478,6 +478,18 @@ int read_packet(
 
 > `sequence offset` can safely be set to zero in the case of Cute Protocol, since each connection uses unique keys as determined by the initial connect token, so nonce reuse starting at zero and incrementing is perfectly safe. In many other protocols a random nonce offset seed is necessary. The example code includes this randomized offset as `sequence_offset` for posterity. Typically the server will generate the session-nonce, and communicate it to the client in a secure manner. In Cute Protocol's case, the web service communicates the `client to server key` and the `server to client key`, which defines a unique session, and is thus safe from session recording and replay attacks.
 
+### Packet Sniffing
+
+One may wonder if the *connect token packet* is susceptible to packet sniffing. What if someone grabs the packet and sends a copy to the server before the valid client's copy reaches the server? In this case the server will start up two *encryption state*'s, one for each potential client. The server will cache the *connect token packet* keyed by the `HMAC bytes` of the packet. This will ensure only one copy of the particular connect token is cached.
+
+The server will also setup two *encryption state*'s, one for each IP address. In the case where the malicious potential client spoofed their IP to match the valid user's IP, only one encryption mapping will be setup.
+
+The server then sends out the *challenge request packet*, which in the case of no IP spoofing will go to both potential clients. Since the valid client received the initial connect token and read the REST SECTION, it knows the `client to server key` and the `server to client key` that the *encryption state* is using, and be able to properly respond with a well-formed and valid *challenge response packet*. The malicious client never had access to the encryption keys, and will not be able to respond with a valid packet. The server will ignore all packets that fail to decrypt from the malicious client.
+
+In the case of IP spoofing, only the valid client will receive a *challenge request packet*.
+
+After a connection is established the client and server continue to use the *encryption state* setup during the handshake process, and the shared secret keyset prevents anyone from being able to read, modify, or forge any packet data.
+
 ## Tuning Parameters
 
 * KEEPALIVE_FREQUENCY
