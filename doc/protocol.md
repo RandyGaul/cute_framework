@@ -241,7 +241,7 @@ The *payload packet* can be sent by the client or the server during the *connect
 ### Connection Accepted Packet
 
 ```
-client id           uint64_t
+client handle       uint64_t
 max clients         uint32_t
 connection timeout  uint32_t
 ```
@@ -311,20 +311,61 @@ The server maintains a set of clients, capped at SERVER_MAX_CLIENTS tunable (see
 
 The server runs a state machine for each potential client attempting to get through the handshake process. Instead of writing down the state machine formally, as was done for the [Client Handshake State Machine](#client-handshake-state-machine) section, the steps are listed here in order for simplicity. The server follows exactly these steps, in order, once a *connect token packet* is received. These are the steps for setting up a secure connection with a client in the *connected* state.
 
+#### Processing the *connect token packet*
+
 Here are the steps for processing the *connect token packet*.
 
-1. A *connect token packet* is received on the listener UDP socket and port combo. This means a potential client wants to star the connection handshake process.
+1. A *connect token packet* is received on the listener UDP socket and port. This means a potential client wants to start the connection handshake process.
 2. If the *connect token packet* is not exactly 1024 bytes, ignore the packet.
 3. If the `packet type` byte at the beginning of the packet is not zero (*connect token packet*), ignore the packet.
 4. Read and make sure the protocol string `version info` "CUTE 1.00", including the nul byte, comes right after the `packet type` byte.
 5. Read and make sure the `application id` matches the expected id for the user's application.
 6. Read the `expiration timestamp`. If the token has expired, ignore the packet.
-7. Read and decrypt the *connect token packet* SECRET SECTION. The PUBLIC SECTION is used as the Associated Data in the AEAD primitive. If the *connect token packet* fails to decrypt, ignore the packet.
-8. If all previous checks pass, respond with a *challenge request packet*.
+7. The connect token is deemed invalid by the client if the number of server addresses is outside the range of [1, 32], or if an IP address type is not in the range [1, 2], or if the creation timestamp is more recent than the expiration timestamp. If any of these checks fail, ignore the packet.
+8. Decrypt and read the *connect token packet* SECRET SECTION. The PUBLIC SECTION is used as the Associated Data in the AEAD primitive. If the *connect token packet* fails to decrypt, ignore the packet.
 
-The next series of steps is for performing the challenge response sequence. WORKING HERE
+#### Setting Up an *encryption state*
 
-1. Read and store the data in the decrypted SECRET SECTION
+The next series of steps is for setting up an *encryption state* with the potential client. An *encryption state* must contain the following information from the *connect token packet*:
+
+* `handshake timeout`
+* `client to server key`
+* `server to client key`
+
+The keys are used to perform encrypted communication with the potential client. The `handshake timeout` is used to time out the handshake process in the event the client takes too long to respond at any stage.
+
+1. If the server is not in the list of IP addresses in the *connect token packet*, ignore the packet.
+2. If a client is already connected with the same IP address and port, ignore the packet.
+3. Lookup in the *connect token cache* with the *connect token packet* `HMAC bytes` as the key.
+	1. If a matching IP address and port is in the *connect token cache*, ignore the packet.
+	2. If a matching `client id` is in the *connect token cache*, ignore the packet.
+4. Otherwise, using the *connect token packet* `HMAC bytes`, the IP address, and the port, cache the connect token in the *connect token cache* to signify "in use", using the `HMAC bytes` as the key, and the IP address + port as the value.
+5. If the server is full, respond with a *connection denied packet*.
+6. Setup an *encryption state* with the client, keyed by the client IP address and port. If for any reason this operation fails, ignore the packet.
+
+#### Challenge Request and Response Sequence
+
+Once the connect token has been validated, and the encryption state is successfully setup, the next steps are to complete the challenge request and response sequence with the client. The purpose of these steps is to prevent IP spoofing, and also to prevent *connect token packet* sniffing. From here on all packets are encrypted or decrypted with the *encryption state*.
+
+1. Send the client a *challenge request packet* periodically through the PACKET_SEND_FREQUENCY tunable (see [Tuning Parameters](#tuning-parameters)). To do so, the server must increment the `sequence nonce` number after the encryption mapping times out or is destroyed, or the client successfully responds with a valid *challenge response packet*. Before sending the *challenge request packet*, fill in the bytes with a unique bit pattern, and remember the bit pattern for later.
+2. If a *challenge response packet* is received, first read in the `sequence nonce` and try decrypting the packet. If decryption fails, ignore the packet.
+3. Test to make sure the bit patter post-encryption matches the bit pattern sent in the *challenge request packet*.
+4. If all checks, passed, the client is now considered *connected*, but *confirmed*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
+5. Once the client responds with a *payload packet*, or a *keepalive packet*, consider the client *confirmed*.
+6. If the client does not respond within `handshake timeout` seconds, destroy the encryption mapping and remove the connect token from the *connect token cache*.
+7. Once a client is *connected* the server may start sending arbitrary *payload packet*'s, so long as each payload packet is prefixed with a preceded by another *connection accepted packet*. This will cut-down on round-trip delay, while still gracefully ensuring in a statistically likely manner that the client receives at least one *connection accepted packet*. Preceding *connection accepted packets* are not to be sent once the client is *confirmed*.
+
+### Connected and Confirmed Clients
+
+Once a client is *connected* (even if they are not yet *confirmed*) they are assigned a unique 64-bit identifier. This identifier is used to fill in the *connection accepted packet*'s `client handle`. Incoming packets for a client's IP address and port are mapped to the associated `client handle`. Once *connected*, the server and client can send the following packet types.
+
+* *keepalive packet*
+* *payload packet*
+* *disconnect packet*
+
+It is recommended that incoming packets are pulled off of the UDP stack as fast as possible, especially as the number of maximum clients becomes higher. It is best to pull packets off of the UDP stack from a dedicated thread, whose sole purpose is to move packets from the UDP stack to an internal queue. The queue can then be polled by the user's calling thread on an as-needed basis. It is also recommended to cap the size of this queue, and drop packets once filled. Optionally the payload packet can be utilized to implement a *backpressure packet*, which is intended to inform the opposing endpoint to send data at a slower rate.
+
+If no packets are sent to a client within the KEEPALIVE_FREQUENCY to a particular client, send a *keepalive packet*.
 
 ## Disconnect Sequence
 
@@ -443,6 +484,7 @@ int read_packet(
 * DISCONNECT_SEQUENCE_PACKET_COUNT
 * REPLAY_BUFFER_SIZE
 * SERVER_MAX_CLIENTS
+* PACKET_SEND_FREQUENCY
 
 ## Constants
 
