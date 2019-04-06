@@ -490,6 +490,12 @@ In the case of IP spoofing, only the valid client will receive a *challenge requ
 
 After a connection is established the client and server continue to use the *encryption state* setup during the handshake process, and the shared secret keyset prevents anyone from being able to read, modify, or forge any packet data.
 
+### Malicious Client Connection Spam and Zombie Clients
+
+A valid but malicious may attempt to use a valid connect token to connect to multiple different servers, and may attempt to spoof their IP address to try and establish multiple connections to one server to spinup "zombie clients" (invalid clients with valid connections that do nothing but wait to timeout).
+
+The first attack is prevented by the server list within the connect token. This list is protected by the AEAD primitive since it is used as Associated Data. This means that nobody but the web service and the dedicated servers can modify or forge the connect token, or read the SECRET SECTION of the connect token. The strategy is to only include *some* of the available servers in this list, WORKING HERE
+
 ## Tuning Parameters
 
 * KEEPALIVE_FREQUENCY
