@@ -259,7 +259,7 @@ The *challenge request packet* is sent from the server as apart of the connectio
 
 The `sequence nonce` is an incrementing counter starting at 0, initialized upon server restart.
 
-The `secret data` is simply 256 bytes of data. The data can be anything, including randomized bits. Exactly what bits are the `secret data` is left to the implementation. To fulfill the purpose of this packet, the client merely needs to decrypt the packet with the `server to client` key, encrypt it with the `client to server key`, and send it back to the server. The contents of the `secret data` are ignored by the client.
+The `secret data` is simply 256 bytes of data. The data can be anything, including randomized bits. Exactly what bits are the `secret data` is left to the implementation. To fulfill the purpose of this packet, the client merely needs to decrypt the packet with the `server to client` key, encrypt it with the `client to server key`, and send it back to the server. The contents of the `secret data` are ignored by the client. This packet is intentionally smaller than the *connect token packet* to prevent [DDoS amplification](https://en.wikipedia.org/wiki/Denial-of-service_attack#Amplification).
 
 ### Challenge Response Packet
 
@@ -286,6 +286,7 @@ When decrypting packets the following steps must occur, in order, before a packe
 2. If the `packet type` byte is greater than 7, ignore the packet.
 3. The server ignores packets of types *challenge response packet*, *connection denied packet*, and *connection accepted packet*.
 4. The client ignores packets of types *challenge request packet* and *connect token packet*.
+* If the packet's size pre-encryption is not within acceptable range, as defined by the packet type, ignore the packet. For example, the *connect token packet* must be exactly 1024 bytes. All other packets can be within the post-encryption ranges (listed below), with 16 + 8 + 1 (25) bytes added for the encryption `HMAC bytes`, `sequence nonce`, and `packet type` byte (so for example, the *keeapalive packet* packet pre-encryption should be exactly 0 + 25 (25) bytes in size).
 5. If the packet fails replay protection, ignore the packet. See the [Replay Protection](#replay-protection) section for more info.
 6. If the packet fails to decrypt with the AEAD primitive, ignore the packet.
 7. If the packet's size post-encryption is not within the ranges specified by each packet format in the [Unencrypted Packets](#unencrypted-packets) section, ignore the packet. Here's a table of acceptable sizes.
@@ -306,6 +307,13 @@ Packet Type | Size Post-Encryption
 The server should be on a publicly available IP address and port. This way clients can initiate the connection handshake by sending the *connect token packet* to the server, who is listening on a UDP socket + port combo.
 
 The server maintains a set of clients, capped at SERVER_MAX_CLIENTS tunable (see [Tuning Parameters](#tuning-parameters) for more info). Each client is represented by an opaque *client handle*. Max clients can be set to any number as deemed acceptable according to the implementation. For many first-person shooter games, somewhere from 8-32 players often makes sense. For larger games, such as MMOs, multiple thousands of players can be acceptable for the Cute Protocol, so long as the implementation appropriately scales to that level. The Cute Protocol is quite agnostic to connection scale, since different implementations are free to represent clients in a manner suitable to their specific needs.
+
+The servers goals are:
+* Only respond when absolutely necessary.
+* Early out packet validation as quickly as possible (for example, perform any available checks pre-encryption on the *connect token packet*).
+* Only allow clients with valid connect tokens to instantiate a connection.
+* **Never** write any sensitive data based on the contents of any packet before the decryption check succeeds. Data pre-decryption should be thought of as dangerous, and never be used as a predicate to mutate sensitive server state.
+* Always respond during the handshake process with much smaller packet sizes than were initially sent, in order to stay far away from being available for a [DDoS amplification attack](https://en.wikipedia.org/wiki/Denial-of-service_attack#Amplification).
 
 ### Server Handshake Process
 
@@ -470,22 +478,15 @@ int read_packet(
 
 > `sequence offset` can safely be set to zero in the case of Cute Protocol, since each connection uses unique keys as determined by the initial connect token, so nonce reuse starting at zero and incrementing is perfectly safe. In many other protocols a random nonce offset seed is necessary. The example code includes this randomized offset as `sequence_offset` for posterity. Typically the server will generate the session-nonce, and communicate it to the client in a secure manner. In Cute Protocol's case, the web service communicates the `client to server key` and the `server to client key`, which defines a unique session, and is thus safe from session recording and replay attacks.
 
-* Reflection
-* IP spoofing
-* "Going wide"
-* Packet sniffing
-* DDoS mitigation
-* DoS amplification
-* Secret key exposure mitigation - key rotation
-
 ## Tuning Parameters
 
 * KEEPALIVE_FREQUENCY
+	* Value in seconds of when to send a keepalive during a connection when no payload packets are sent.
 * DISCONNECT_SEQUENCE_PACKET_COUNT
+	* The number of packets to redundantly send upon the Disconnect Sequence.
 * REPLAY_BUFFER_SIZE
+	* Number of recorded sequence numbers into the past to keep around in a rolling cache. Typically 5-10 seconds can work well, depending on latency concerns and application context.
 * SERVER_MAX_CLIENTS
+	* The capacity of the server in terms of how many different simultaneous *connected* clients can be held at once.
 * PACKET_SEND_FREQUENCY
-
-## Constants
-
-TODO: Link all packet types and states with anchors.
+	* Rate to send packets, in seconds, during the connection handshake process.
