@@ -467,7 +467,7 @@ int replay_buffer_cull_duplicate(replay_buffer_t* buffer, uint64_t sequence, uin
     }
 }
 
-int replay_buffer_update(replay_buffer_t* buffer, uint64_t sequence)
+void replay_buffer_update(replay_buffer_t* buffer, uint64_t sequence)
 {
     if (buffer->max < sequence) {
         buffer->max = sequence;
@@ -480,7 +480,6 @@ int replay_buffer_update(replay_buffer_t* buffer, uint64_t sequence)
     int outdated = val >= sequence;
     if (empty_slot | !outdated) {
         buffer->entries[index] = sequence;
-        return 0;
     }
 }
 ```
