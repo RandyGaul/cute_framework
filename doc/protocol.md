@@ -460,7 +460,6 @@ int replay_buffer_cull_duplicate(replay_buffer_t* buffer, uint64_t sequence, uin
     int empty_slot = val == ~0ULL;
     int outdated = val >= sequence;
     if (empty_slot | !outdated) {
-        buffer->entries[index] = sequence;
         return 0;
     } else {
         // Duplicate or replayed packet detected.
@@ -468,10 +467,20 @@ int replay_buffer_cull_duplicate(replay_buffer_t* buffer, uint64_t sequence, uin
     }
 }
 
-int replay_buffer_update_max(replay_buffer_t* buffer, uint64_t sequenc)
+int replay_buffer_update(replay_buffer_t* buffer, uint64_t sequence)
 {
     if (buffer->max < sequence) {
         buffer->max = sequence;
+    }
+
+    uint64_t h = sequence + seed;
+    int index = (int)(h % REPLAY_BUFFER_SIZE);
+    uint64_t val = buffer->entries[index];
+    int empty_slot = val == ~0ULL;
+    int outdated = val >= sequence;
+    if (empty_slot | !outdated) {
+        buffer->entries[index] = sequence;
+        return 0;
     }
 }
 ```
