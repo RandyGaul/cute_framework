@@ -312,7 +312,7 @@ When decrypting packets the following steps must occur, in order, before a packe
 * If the packet's size pre-encryption is not within acceptable range, as defined by the packet type, ignore the packet. For example, the *connect token packet* must be exactly 1024 bytes. All other packets can be within the post-encryption ranges (listed below), with 16 + 8 + 1 (25) bytes added for the encryption `HMAC bytes`, `sequence nonce`, and `packet type` byte (so for example, the *keeapalive packet* packet pre-encryption should be exactly 0 + 25 (25) bytes in size).
 5. If the packet fails replay protection, ignore the packet. See the [Replay Protection](#replay-protection) section for more info.
 6. If the packet fails to decrypt with the AEAD primitive, ignore the packet.
-7. If the packet's size post-encryption is not within the ranges specified by each packet format in the [Unencrypted Packets](#unencrypted-packets) section, ignore the packet. Here's a table of acceptable sizes.
+7. If the packet's size post-decryption is not within the ranges specified by each packet format in the [Unencrypted Packets](#unencrypted-packets) section, ignore the packet. Here's a table of acceptable sizes.
 
 Packet Type | Size Post-Encryption
 --- | ---
