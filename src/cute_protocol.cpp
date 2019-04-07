@@ -26,6 +26,7 @@
 
 #include <internal/cute_defines_internal.h>
 #include <internal/cute_serialize_internal.h>
+#include <internal/cute_protocol_internal.h>
 
 namespace cute
 {
