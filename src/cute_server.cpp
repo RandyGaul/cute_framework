@@ -40,6 +40,7 @@
 namespace cute
 {
 
+/*
 struct server_t
 {
 	int running = 0;
@@ -493,5 +494,6 @@ float server_get_last_packet_recieved_time_from_client(server_t* server, handle_
 	CUTE_ASSERT(server->client_is_connected[index]);
 	return server->client_last_packet_recieved_time[index];
 }
+*/
 
 }

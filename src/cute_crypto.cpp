@@ -57,7 +57,7 @@ int crypto_decrypt(const crypto_key_t* key, uint8_t* data, int data_size, const 
 int crypto_encrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* additional_data, int additional_data_size, const uint8_t* nonce)
 {
 	uint64_t encrypted_sz;
-	int ret = crypto_aead_chacha20poly1305_ietf_encrypt(data, &encrypted_sz, data, (uint64_t)data_size, additional_data, additional_data_size, NULL, nonce, key->key);
+	int ret = crypto_aead_xchacha20poly1305_ietf_encrypt(data, &encrypted_sz, data, (uint64_t)data_size, additional_data, additional_data_size, NULL, nonce, key->key);
 	if (ret < 0) return -1;
 	CUTE_ASSERT(encrypted_sz == data_size + CUTE_CRYPTO_HMAC_BYTES);
 	return ret;

@@ -83,6 +83,7 @@ CUTE_INLINE void write_endpoint(uint8_t** p, endpoint_t endpoint)
 		write_uint16(p, endpoint.u.ipv6[0]);
 		write_uint16(p, endpoint.u.ipv6[1]);
 		write_uint16(p, endpoint.u.ipv6[2]);
+		write_uint16(p, endpoint.u.ipv6[3]);
 		write_uint16(p, endpoint.u.ipv6[4]);
 		write_uint16(p, endpoint.u.ipv6[5]);
 		write_uint16(p, endpoint.u.ipv6[6]);
@@ -91,6 +92,11 @@ CUTE_INLINE void write_endpoint(uint8_t** p, endpoint_t endpoint)
 		CUTE_ASSERT(0);
 	}
 	write_uint16(p, endpoint.port);
+}
+
+CUTE_INLINE void write_key(uint8_t** p, const crypto_key_t* key)
+{
+	write_bytes(p, (const uint8_t*)key, sizeof(*key));
 }
 
 CUTE_INLINE uint8_t read_uint8(uint8_t** p)
@@ -156,6 +162,7 @@ CUTE_INLINE endpoint_t read_endpoint(uint8_t** p)
 		endpoint.u.ipv6[0] = read_uint16(p);
 		endpoint.u.ipv6[1] = read_uint16(p);
 		endpoint.u.ipv6[2] = read_uint16(p);
+		endpoint.u.ipv6[3] = read_uint16(p);
 		endpoint.u.ipv6[4] = read_uint16(p);
 		endpoint.u.ipv6[5] = read_uint16(p);
 		endpoint.u.ipv6[6] = read_uint16(p);
@@ -165,6 +172,13 @@ CUTE_INLINE endpoint_t read_endpoint(uint8_t** p)
 	}
 	endpoint.port = read_uint16(p);
 	return endpoint;
+}
+
+CUTE_INLINE crypto_key_t read_key(uint8_t** p)
+{
+	crypto_key_t key;
+	read_bytes(p, (uint8_t*)&key, sizeof(key));
+	return key;
 }
 
 }

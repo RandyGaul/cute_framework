@@ -47,7 +47,7 @@ memory_pool_t* memory_pool_make(int element_size, int element_count, void* user_
 	CUTE_CHECK_POINTER(pool);
 
 	pool->element_size = element_size;
-	pool->arena_size = arena_size - sizeof(memory_pool_t);
+	pool->arena_size = (int)(arena_size - sizeof(memory_pool_t));
 	pool->arena = (uint8_t*)(pool + 1);
 	pool->free_list = pool->arena;
 	pool->overflow_count = 0;
@@ -103,7 +103,7 @@ void* memory_pool_try_alloc(memory_pool_t* pool)
 
 void memory_pool_free(memory_pool_t* pool, void* element)
 {
-	int difference = (int)((uint8_t*)element - (uintptr_t)pool->arena);
+	int difference = (int)((uint8_t*)element - pool->arena);
 	int in_bounds = difference < pool->arena_size;
 	if (pool->overflow_count && !in_bounds) {
 		CUTE_FREE(element, pool->mem_ctx);

@@ -44,6 +44,8 @@
 namespace cute
 {
 
+/*
+
 struct client_t
 {
 	client_state_t state;
@@ -292,5 +294,6 @@ int client_send_data_unreliable(client_t* client, void* data, int size)
 {
 	return -1;
 }
+*/
 
 }

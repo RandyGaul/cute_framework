@@ -31,6 +31,7 @@
 #define CUTE_PACKET_SIZE_MAX (CUTE_KB + 256)
 #define CUTE_PACKET_PAYLOAD_MAX (CUTE_PACKET_SIZE_MAX - 1 - sizeof(uint64_t) - CUTE_CRYPTO_HMAC_BYTES)
 
+#define CUTE_CONNECT_TOKEN_PACKET_SIZE 1024
 #define CUTE_CONNECT_TOKEN_SIZE 1114
 #define CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX 32
 #define CUTE_CONNECT_TOKEN_USER_DATA_SIZE 256
@@ -50,7 +51,7 @@ namespace protocol
 
 enum packet_type_t : int
 {
-	PACKET_TYPE_CONNECTION_REQUEST,
+	PACKET_TYPE_CONNECT_TOKEN,
 	PACKET_TYPE_CONNECTION_ACCEPTED,
 	PACKET_TYPE_CONNECTION_DENIED,
 	PACKET_TYPE_KEEPALIVE,
@@ -63,7 +64,7 @@ enum packet_type_t : int
 };
 
 extern CUTE_API int CUTE_CALL generate_connect_token(
-	uint32_t application_id,
+	uint64_t application_id,
 	uint64_t creation_timestamp,
 	const crypto_key_t* client_to_server_key,
 	const crypto_key_t* server_to_client_key,

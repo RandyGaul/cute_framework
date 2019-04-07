@@ -22,6 +22,8 @@
 #include <cute_client.h>
 #include <cute_server.h>
 #include <cute_alloc.h>
+
+#include <internal/cute_protocol_internal.h>
 using namespace cute;
 
 CUTE_TEST_CASE(test_generate_connect_token, "Basic test to generate a connect token and assert the expected token.");
@@ -37,26 +39,65 @@ int test_generate_connect_token()
 		"[::]:5002"
 	};
 
-	uint8_t token[CUTE_CONNECT_TOKEN_SIZE];
+	uint64_t application_id = ~0ULL;
+	uint64_t current_timestamp = 0;
+	uint64_t expiration_timestamp = 1;
+	uint32_t handshake_timeout = 10;
+	uint64_t client_id = 17;
+
+	uint8_t user_data[CUTE_CONNECT_TOKEN_USER_DATA_SIZE];
+	crypto_random_bytes(user_data, sizeof(user_data));
+
+	uint8_t token_buffer[CUTE_CONNECT_TOKEN_SIZE];
 	CUTE_TEST_CHECK(protocol::generate_connect_token(
-		~0,
-		0,
+		application_id,
+		current_timestamp,
 		&client_to_server_key,
 		&server_to_client_key,
-		1,
-		10,
+		expiration_timestamp,
+		handshake_timeout,
 		3,
 		endpoints,
-		17,
-		NULL,
+		client_id,
+		user_data,
 		&shared_secret_key,
-		token
+		token_buffer
 	));
 
-	// WORKING HERE
-	// Need functions to:
-	// Read connect token as client, and skip REST SECTION.
-	// Read connect token and decrypt + validate it as server.
+	// Assert reading token from web service as a client.
+	protocol::connect_token_t token;
+	uint8_t* connect_token_packet = protocol::client_read_connect_token_from_web_service(token_buffer, application_id, current_timestamp, &token);
+	CUTE_TEST_CHECK_POINTER(connect_token_packet);
+
+	CUTE_TEST_ASSERT(token.creation_timestamp == current_timestamp);
+	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&client_to_server_key, &token.client_to_server_key, sizeof(crypto_key_t)));
+	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&server_to_client_key, &token.server_to_client_key, sizeof(crypto_key_t)));
+	CUTE_TEST_ASSERT(token.expiration_timestamp == expiration_timestamp);
+	CUTE_TEST_ASSERT(token.handshake_timeout == handshake_timeout);
+	CUTE_TEST_ASSERT(token.endpoint_count == 3);
+	for (int i = 0; i < token.endpoint_count; ++i)
+	{
+		endpoint_t endpoint;
+		CUTE_TEST_CHECK(endpoint_init(&endpoint, endpoints[i]));
+		CUTE_TEST_ASSERT(endpoint_equals(token.endpoints[i], endpoint));
+	}
+
+	// Assert reading *connect token packet* as server, and decrypting it successfully.
+	protocol::connect_token_decrypted_t decrypted_token;
+	CUTE_TEST_CHECK(protocol::server_decrypt_connect_token_packet(connect_token_packet, &shared_secret_key, application_id, current_timestamp, &decrypted_token));
+	CUTE_TEST_ASSERT(decrypted_token.expiration_timestamp == expiration_timestamp);
+	CUTE_TEST_ASSERT(decrypted_token.handshake_timeout == handshake_timeout);
+	CUTE_TEST_ASSERT(decrypted_token.endpoint_count == 3);
+	for (int i = 0; i < token.endpoint_count; ++i)
+	{
+		endpoint_t endpoint;
+		CUTE_TEST_CHECK(endpoint_init(&endpoint, endpoints[i]));
+		CUTE_TEST_ASSERT(endpoint_equals(decrypted_token.endpoints[i], endpoint));
+	}
+	CUTE_TEST_ASSERT(decrypted_token.client_id == client_id);
+	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&client_to_server_key, &decrypted_token.client_to_server_key, sizeof(crypto_key_t)));
+	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&server_to_client_key, &decrypted_token.server_to_client_key, sizeof(crypto_key_t)));
+	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&user_data, &decrypted_token.user_data, CUTE_CONNECT_TOKEN_USER_DATA_SIZE));
 
 	return 0;
 }

@@ -490,9 +490,13 @@ int endpoint_equals(endpoint_t a, endpoint_t b)
 	if (a.port != b.port) return 0;
 
 	if (a.type == ADDRESS_TYPE_IPV4) {
-		for (int i = 0; i < 4; ++i) if (a.u.ipv4[i] != b.u.ipv4[i]) return 0;
+		for (int i = 0; i < 4; ++i)
+			if (a.u.ipv4[i] != b.u.ipv4[i])
+				return 0;
 	} else if (a.type == ADDRESS_TYPE_IPV6) {
-		for (int i = 0; i < 8; ++i) if (a.u.ipv6[i] != b.u.ipv6[i]) return 0;
+		for (int i = 0; i < 8; ++i)
+			if (a.u.ipv6[i] != b.u.ipv6[i])
+				return 0;
 	} else {
 		return 0;
 	}
