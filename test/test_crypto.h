@@ -23,22 +23,22 @@
 #include <cute_c_runtime.h>
 using namespace cute;
 
-CUTE_TEST_CASE(test_crypto_symmetric_key_encrypt_decrypt, "Generate symmetric key, encrypt a message, decrypt the message.");
-int test_crypto_symmetric_key_encrypt_decrypt()
+CUTE_TEST_CASE(test_crypto_encrypt_decrypt, "Generate key, encrypt a message, decrypt the message.");
+int test_crypto_encrypt_decrypt()
 {
-	crypto_key_t k = crypto_generate_symmetric_key();
+	crypto_key_t k = crypto_generate_key();
 
 	const char* message_string = "The message.";
 	int message_length = (int)CUTE_STRLEN(message_string) + 1;
-	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_SYMMETRIC_BYTES);
+	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_MAC_BYTES);
 	CUTE_MEMCPY(message_buffer, message_string, message_length);
 
 	uint64_t sequence;
 	crypto_random_bytes(&sequence, sizeof(sequence));
 
-	CUTE_TEST_CHECK(crypto_encrypt(&k, message_buffer, message_length, message_length + CUTE_CRYPTO_SYMMETRIC_BYTES, sequence));
+	CUTE_TEST_CHECK(crypto_encrypt(&k, message_buffer, message_length, NULL, 0, sequence));
 	CUTE_TEST_ASSERT(CUTE_MEMCMP(message_buffer, message_string, message_length));
-	CUTE_TEST_CHECK(crypto_decrypt(&k, message_buffer, message_length + CUTE_CRYPTO_SYMMETRIC_BYTES, sequence));
+	CUTE_TEST_CHECK(crypto_decrypt(&k, message_buffer, message_length + CUTE_CRYPTO_MAC_BYTES, NULL, 0, sequence));
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(message_buffer, message_string, message_length));
 
 	free(message_buffer);
@@ -46,20 +46,25 @@ int test_crypto_symmetric_key_encrypt_decrypt()
 	return 0;
 }
 
-CUTE_TEST_CASE(test_crypto_assymetric_key_encrypt_decrypt, "Simulate sending a secure anonymous message to server with public and secret keypair.");
-int test_crypto_assymetric_key_encrypt_decrypt()
+CUTE_TEST_CASE(test_crypto_encrypt_decrypt_additional_data, "Generate key and additional data, encrypt message, decrypt message.");
+int test_crypto_encrypt_decrypt_additional_data()
 {
-	crypto_key_t pk, sk;
-	crypto_generate_keypair(&pk, &sk);
+	crypto_key_t k = crypto_generate_key();
 
 	const char* message_string = "The message.";
 	int message_length = (int)CUTE_STRLEN(message_string) + 1;
-	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_ASYMMETRIC_BYTES);
+	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_MAC_BYTES);
 	CUTE_MEMCPY(message_buffer, message_string, message_length);
 
-	CUTE_TEST_CHECK(crypto_encrypt_asymmetric(&pk, message_buffer, message_length, message_length + CUTE_CRYPTO_ASYMMETRIC_BYTES));
+	uint64_t sequence;
+	crypto_random_bytes(&sequence, sizeof(sequence));
+
+	uint8_t additional_data[256];
+	crypto_random_bytes(additional_data, sizeof(additional_data));
+
+	CUTE_TEST_CHECK(crypto_encrypt(&k, message_buffer, message_length, additional_data, sizeof(additional_data), sequence));
 	CUTE_TEST_ASSERT(CUTE_MEMCMP(message_buffer, message_string, message_length));
-	CUTE_TEST_CHECK(crypto_decrypt_asymmetric(&pk, &sk, message_buffer, message_length + CUTE_CRYPTO_ASYMMETRIC_BYTES));
+	CUTE_TEST_CHECK(crypto_decrypt(&k, message_buffer, message_length + CUTE_CRYPTO_MAC_BYTES, additional_data, sizeof(additional_data), sequence));
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(message_buffer, message_string, message_length));
 
 	free(message_buffer);

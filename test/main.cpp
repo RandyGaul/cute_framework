@@ -34,7 +34,7 @@
 #include <test_crypto.h>
 #include <test_packet_queue.h>
 #include <test_socket.h>
-#include <test_client_server.h>
+#include <test_connect_token.h>
 
 int main(int argc, const char** argv)
 {
@@ -65,17 +65,11 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_nonce_buffer_valid_packets),
 		CUTE_TEST_CASE_ENTRY(test_nonce_buffer_old_packet_out_of_range),
 		CUTE_TEST_CASE_ENTRY(test_nonce_buffer_duplicate),
-		CUTE_TEST_CASE_ENTRY(test_crypto_symmetric_key_encrypt_decrypt),
-		CUTE_TEST_CASE_ENTRY(test_crypto_assymetric_key_encrypt_decrypt),
+		CUTE_TEST_CASE_ENTRY(test_crypto_encrypt_decrypt),
+		CUTE_TEST_CASE_ENTRY(test_crypto_encrypt_decrypt_additional_data),
 		CUTE_TEST_CASE_ENTRY(test_packet_queue_basic),
 		CUTE_TEST_CASE_ENTRY(test_socket_init_send_recieve_shutdown),
-		CUTE_TEST_CASE_ENTRY(test_client_server_handshake),
-		CUTE_TEST_CASE_ENTRY(test_keep_alive_packets),
-		CUTE_TEST_CASE_ENTRY(test_no_server_response_on_client_connect),
-		CUTE_TEST_CASE_ENTRY(test_server_timeout),
-		CUTE_TEST_CASE_ENTRY(client_connects_then_times_out),
-		CUTE_TEST_CASE_ENTRY(test_max_clients_connection_denied),
-		CUTE_TEST_CASE_ENTRY(server_disconnect_a_client),
+		CUTE_TEST_CASE_ENTRY(test_generate_connect_token),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

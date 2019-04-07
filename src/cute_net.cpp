@@ -36,12 +36,12 @@
 namespace cute
 {
 
-int packet_queue_init(packet_queue_t* q)
+void packet_queue_init(packet_queue_t* q)
 {
 	CUTE_PLACEMENT_NEW(q) packet_queue_t;
 }
 
-int packet_queue_push(packet_queue_t* q, const void* packet, packet_type_t type)
+int packet_queue_push(packet_queue_t* q, void* packet, packet_type_t type)
 {
 	if (q->count >= CUTE_PACKET_QUEUE_MAX_ENTRIES) {
 		return -1;
@@ -54,7 +54,7 @@ int packet_queue_push(packet_queue_t* q, const void* packet, packet_type_t type)
 	}
 }
 
-int packet_queue_pop(packet_queue_t* q, const void** packet, packet_type_t* type)
+int packet_queue_pop(packet_queue_t* q, void** packet, packet_type_t* type)
 {
 	if (q->count <= 0) {
 		return -1;
@@ -577,6 +577,7 @@ int generate_connect_token(
 	const uint8_t* user_data,
 	void* user_allocator_context)
 {
+	return -1;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -585,7 +586,7 @@ int generate_connect_token(
 static CUTE_INLINE void s_write_header(uint8_t* header, packet_type_t packet_type, uint64_t game_id)
 {
 	write_uint8(&header, (uint8_t)packet_type);
-	write_bytes(&header, CUTE_PROTOCOL_VERSION, CUTE_PROTOCOL_VERSION_STRING_LEN);
+	write_bytes(&header, (uint8_t*)CUTE_PROTOCOL_VERSION, CUTE_PROTOCOL_VERSION_STRING_LEN);
 	write_uint64(&header, game_id);
 }
 
@@ -758,7 +759,7 @@ int packet_write(void* packet_ptr, packet_type_t packet_type, uint8_t* buffer, u
 	if (packet_type == PACKET_TYPE_CONNECTION_REQUEST) {
 		packet_encrypted_connect_token_t* packet = (packet_encrypted_connect_token_t*)packet_ptr;
 		write_uint8(&buffer, (uint8_t)PACKET_TYPE_CONNECTION_REQUEST);
-		write_bytes(&buffer, CUTE_PROTOCOL_VERSION, CUTE_PROTOCOL_VERSION_STRING_LEN);
+		write_bytes(&buffer, (uint8_t*)CUTE_PROTOCOL_VERSION, CUTE_PROTOCOL_VERSION_STRING_LEN);
 		write_uint64(&buffer, game_id);
 		write_bytes(&buffer, packet->nonce, sizeof(packet->nonce));
 		write_uint64(&buffer, packet->expire_timestamp);
@@ -829,6 +830,7 @@ int packet_write(void* packet_ptr, packet_type_t packet_type, uint8_t* buffer, u
 
 int connect_token_open(connect_token_t* token, uint8_t* buffer)
 {
+	return -1;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -836,6 +838,7 @@ int connect_token_open(connect_token_t* token, uint8_t* buffer)
 
 packet_allocator_t* packet_allocator_make(void* user_allocator_context)
 {
+	return NULL;
 }
 
 void packet_allocator_destroy(packet_allocator_t* packet_allocator)
@@ -844,6 +847,7 @@ void packet_allocator_destroy(packet_allocator_t* packet_allocator)
 
 void* packet_allocator_alloc(packet_allocator_t* packet_allocator, packet_type_t type)
 {
+	return NULL;
 }
 
 void packet_allocator_free(packet_allocator_t* packet_allocator, packet_type_t type, void* packet)

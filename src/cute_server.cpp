@@ -132,7 +132,6 @@ void server_stop(server_t* server)
 	socket_cleanup(&server->socket);
 	handle_table_clean_up(&server->client_handle_table);
 	serialize_destroy(server->io);
-	pack_queue_clean_up(&server->packets);
 	CUTE_FREE(server->event_queue, server->mem_ctx);
 	server->event_queue = NULL;
 	server->io = NULL;
@@ -198,9 +197,7 @@ static uint32_t s_client_make(server_t* server, endpoint_t endpoint, crypto_key_
 	server->client_sequence[index] = 0;
 	nonce_buffer_init(server->client_nonce_buffer + index);
 	server->client_session_key[index] = *key;
-	if (packet_queue_init(server->client_packets + index, 2 * CUTE_MB, server->mem_ctx)) {
-		return UINT32_MAX;
-	}
+	packet_queue_init(server->client_packets + index);
 
 	server_event_t* event = s_push_event(server);
 	event->type = SERVER_EVENT_TYPE_NEW_CONNECTION;
@@ -212,9 +209,10 @@ static uint32_t s_client_make(server_t* server, endpoint_t endpoint, crypto_key_
 
 static int s_server_send_packet_no_payload(server_t* server, int client_index, packet_type_t packet_type)
 {
-	int packet_size = packet_write_header(server->io, server->buffer, packet_type, server->client_sequence[client_index]);
-	if (packet_size <= 0) return -1;
-	return packet_encrypt_and_send(server->client_session_key + client_index, &server->socket, server->client_endpoint[client_index], server->buffer, packet_size, server->client_sequence_offset[client_index] + server->client_sequence[client_index]++);
+	//int packet_size = packet_write_header(server->io, server->buffer, packet_type, server->client_sequence[client_index]);
+	//if (packet_size <= 0) return -1;
+	//return packet_encrypt_and_send(server->client_session_key + client_index, &server->socket, server->client_endpoint[client_index], server->buffer, packet_size, server->client_sequence_offset[client_index] + server->client_sequence[client_index]++);
+	return -1;
 }
 
 // Attempt to record address to kindly report to the client their connection was denied.
@@ -232,8 +230,8 @@ static void s_server_connection_denied(server_t* server, endpoint_t from, const 
 	}
 	server->connection_denied_count++;
 
-	int packet_size = packet_write_header(server->io, server->buffer, PACKET_TYPE_CONNECTION_DENIED, 0);
-	packet_encrypt_and_send(key, &server->socket, from, server->buffer, packet_size, 0);
+	//int packet_size = packet_write_header(server->io, server->buffer, PACKET_TYPE_CONNECTION_DENIED, 0);
+	//packet_encrypt_and_send(key, &server->socket, from, server->buffer, packet_size, 0);
 }
 
 static int s_send_packet_to_client(server_t* server, uint32_t client_index, uint8_t* packet, int size, uint64_t sequence)
@@ -241,17 +239,17 @@ static int s_send_packet_to_client(server_t* server, uint32_t client_index, uint
 	int sequence_size = sizeof(uint64_t);
 	int size_minus_sequence = size - sizeof(uint64_t);
 	CUTE_ASSERT(size_minus_sequence > 0);
-	CUTE_CHECK(crypto_encrypt(server->client_session_key + client_index, packet + sizeof(uint64_t), size_minus_sequence, CUTE_PACKET_SIZE_MAX, sequence));
-	int size_along_with_encryption_bytes = size + CUTE_CRYPTO_SYMMETRIC_BYTES;
-	CUTE_ASSERT(size_along_with_encryption_bytes <= CUTE_PACKET_SIZE_MAX);
-	int bytes_sent = socket_send(&server->socket, server->client_endpoint[client_index], packet, size_along_with_encryption_bytes);
-	if (bytes_sent != size_along_with_encryption_bytes) {
+	//CUTE_CHECK(crypto_encrypt(server->client_session_key + client_index, packet + sizeof(uint64_t), size_minus_sequence, CUTE_PACKET_SIZE_MAX, sequence));
+	//int size_along_with_encryption_bytes = size + CUTE_CRYPTO_SYMMETRIC_BYTES;
+	//CUTE_ASSERT(size_along_with_encryption_bytes <= CUTE_PACKET_SIZE_MAX);
+	//int bytes_sent = socket_send(&server->socket, server->client_endpoint[client_index], packet, size_along_with_encryption_bytes);
+	//if (bytes_sent != size_along_with_encryption_bytes) {
 		return -1;
-	}
-	return 0;
+	//}
+	//return 0;
 
-cute_error:
-	return -1;
+//cute_error:
+//	return -1;
 }
 
 static void s_server_recieve_packets(server_t* server)
@@ -267,9 +265,9 @@ static void s_server_recieve_packets(server_t* server)
 			break;
 		}
 
-		if (packet_validate_size(bytes_read)) {
-			continue;
-		}
+		//if (packet_validate_size(bytes_read)) {
+		//	continue;
+		//}
 
 		// Find client by address.
 		uint32_t client_index = s_client_index_from_endpoint(server, from);
@@ -283,10 +281,10 @@ static void s_server_recieve_packets(server_t* server)
 			}
 
 			// Decrypt packet.
-			if (crypto_decrypt_asymmetric(&server->public_key, &server->secret_key, buffer, CUTE_PACKET_SIZE_MAX)) {
-				// Forged/tampered packet!
-				continue;
-			}
+			//if (crypto_decrypt_asymmetric(&server->public_key, &server->secret_key, buffer, CUTE_PACKET_SIZE_MAX)) {
+			//	// Forged/tampered packet!
+			//	continue;
+			//}
 
 			serialize_t* io = server->io;
 			serialize_reset_buffer(io, SERIALIZE_READ, buffer, CUTE_PACKET_SIZE_MAX);
@@ -338,9 +336,10 @@ static void s_server_recieve_packets(server_t* server)
 			uint64_t sequence;
 			CUTE_CHECK(serialize_uint64_full(io, &sequence));
 
-			packet_type_t type;
-			int packet_size;
-			uint8_t* packet = packet_open(io, server->client_session_key + client_index, server->client_nonce_buffer + client_index, buffer, bytes_read, sequence, server->client_sequence_offset[client_index], &type, &packet_size);
+			packet_type_t type = PACKET_TYPE_MAX;
+			//int packet_size;
+			//uint8_t* packet = packet_open(io, server->client_session_key + client_index, server->client_nonce_buffer + client_index, buffer, bytes_read, sequence, server->client_sequence_offset[client_index], &type, &packet_size);
+			uint8_t* packet = NULL;
 			CUTE_CHECK_POINTER(packet);
 
 			int valid_packet = 0;
@@ -365,7 +364,7 @@ static void s_server_recieve_packets(server_t* server)
 			case PACKET_TYPE_USERDATA:
 				valid_packet = 1;
 				if (server->client_is_connected[client_index]) {
-					CUTE_CHECK(packet_queue_push(server->client_packets + client_index, packet, packet_size, sequence));
+					CUTE_CHECK(packet_queue_push(server->client_packets + client_index, packet, type));
 				}
 				break;
 			}
@@ -436,7 +435,6 @@ void server_disconnect_client(server_t* server, handle_t client_id, int send_not
 
 	// Free client resources.
 	server->client_is_connected[index] = 0;
-	pack_queue_clean_up(server->client_packets + index);
 	handle_table_free(&server->client_handle_table, client_id);
 
 	// Move client in back to the empty slot.

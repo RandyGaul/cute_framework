@@ -42,24 +42,9 @@
 namespace cute
 {
 
-enum client_state_internal_t : int
-{
-	CLIENT_STATE_INTERNAL_CONNECT_TOKEN_EXPIRED         = -6,
-	CLIENT_STATE_INTERNAL_INVALID_CONNECT_TOKEN         = -5,
-	CLIENT_STATE_INTERNAL_CONNECTION_TIMED_OUT          = -4,
-	CLIENT_STATE_INTERNAL_CONNECTION_RESPONSE_TIMED_OUT = -3,
-	CLIENT_STATE_INTERNAL_CONNECTION_REQUEST_TIMED_OUT  = -2,
-	CLIENT_STATE_INTERNAL_CONNECTION_DENIED             = -1,
-	CLIENT_STATE_INTERNAL_DISCONNECTED                  = 0,
-	CLIENT_STATE_INTERNAL_SENDING_CONNECTION_REQUEST    = 1,
-	CLIENT_STATE_INTERNAL_SENDING_CHALLENGE_RESPONSE    = 2,
-	CLIENT_STATE_INTERNAL_CONNECTED                     = 3,
-};
-
 struct client_t
 {
 	client_state_t state;
-	client_state_internal_t state_internal;
 	int loopback;
 	float last_packet_recieved_time;
 	float last_packet_sent_time;
@@ -89,7 +74,6 @@ client_t* client_alloc(void* user_allocator_context)
 	CUTE_CHECK_POINTER(client);
 	CUTE_MEMSET(client, 0, sizeof(client_t));
 	client->state = CLIENT_STATE_DISCONNECTED;
-	client->state_internal = CLIENT_STATE_INTERNAL_DISCONNECTED;
 	client->mem_ctx = user_allocator_context;
 	return client;
 
@@ -108,8 +92,7 @@ int client_connect(client_t* client, uint8_t* connect_token)
 {
 	CUTE_CHECK(connect_token_open(&client->connect_token, connect_token));
 
-	client->state = CLIENT_STATE_CONNECTING;
-	client->state_internal = CLIENT_STATE_INTERNAL_SENDING_CONNECTION_REQUEST;
+	client->state = CLIENT_STATE_SENDING_CONNECTION_REQUEST;
 	client->loopback = 0;
 	client->last_packet_recieved_time = 0;
 	client->last_packet_sent_time = CUTE_KEEPALIVE_RATE;
@@ -182,21 +165,21 @@ static void s_client_receive_packets(client_t* client)
 		{
 		case PACKET_TYPE_CONNECTION_ACCEPTED:
 		{
-			if (client->state_internal == CLIENT_STATE_INTERNAL_SENDING_CONNECTION_REQUEST) {
+			if (client->state == CLIENT_STATE_SENDING_CONNECTION_REQUEST) {
 				client->last_packet_recieved_time = 0;
 				packet_connection_accepted_t* packet = (packet_connection_accepted_t*)packet_ptr;
 				client->client_number = packet->client_number;
 				client->max_clients = packet->max_clients;
-				client->state_internal = CLIENT_STATE_INTERNAL_CONNECTED;
+				client->state = CLIENT_STATE_CONNECTED;
 			}
 		}	break;
 		
 		case PACKET_TYPE_CONNECTION_DENIED:
 		{
-			if (client->state_internal == CLIENT_STATE_INTERNAL_SENDING_CONNECTION_REQUEST ||
-			    client->state_internal == CLIENT_STATE_INTERNAL_SENDING_CONNECTION_REQUEST) {
+			if (client->state == CLIENT_STATE_SENDING_CONNECTION_REQUEST ||
+			    client->state == CLIENT_STATE_SENDING_CONNECTION_REQUEST) {
 				client->last_packet_recieved_time = 0;
-				client->state_internal = CLIENT_STATE_INTERNAL_DISCONNECTED;
+				client->state = CLIENT_STATE_DISCONNECTED;
 			}
 		}	break;
 		
@@ -235,9 +218,9 @@ static void s_client_send_packet(client_t* client, void* packet, packet_type_t t
 
 static void s_client_send_packets(client_t* client)
 {
-	switch (client->state_internal)
+	switch (client->state)
 	{
-	case CLIENT_STATE_INTERNAL_SENDING_CONNECTION_REQUEST:
+	case CLIENT_STATE_SENDING_CONNECTION_REQUEST:
 	{
 		if (client->last_packet_sent_time >= CUTE_KEEPALIVE_RATE) {
 			client->last_packet_sent_time = 0;
@@ -253,7 +236,7 @@ static void s_client_send_packets(client_t* client)
 		}
 	}	break;
 
-	case CLIENT_STATE_INTERNAL_SENDING_CONNECTION_RESPONSE:
+	case CLIENT_STATE_SENDING_CHALLENGE_RESPONSE:
 	{
 		if (client->last_packet_sent_time >= CUTE_KEEPALIVE_RATE) {
 			client->last_packet_sent_time = 0;
@@ -266,7 +249,7 @@ static void s_client_send_packets(client_t* client)
 		}
 	}	break;
 
-	case CLIENT_STATE_INTERNAL_CONNECTED:
+	case CLIENT_STATE_CONNECTED:
 		if (client->last_packet_sent_time >= CUTE_KEEPALIVE_RATE) {
 			client->last_packet_sent_time = 0;
 

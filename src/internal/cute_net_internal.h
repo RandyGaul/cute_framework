@@ -90,12 +90,12 @@ struct packet_queue_t
 	int index0 = 0;
 	int index1 = 0;
 	packet_type_t types[CUTE_PACKET_QUEUE_MAX_ENTRIES];
-	const void* packets[CUTE_PACKET_QUEUE_MAX_ENTRIES];
+	void* packets[CUTE_PACKET_QUEUE_MAX_ENTRIES];
 };
 
-extern CUTE_API int CUTE_CALL packet_queue_init(packet_queue_t* q);
-extern CUTE_API int CUTE_CALL packet_queue_push(packet_queue_t* q, const void* packet, packet_type_t type);
-extern CUTE_API int CUTE_CALL packet_queue_pop(packet_queue_t* q, const void** packet, packet_type_t* type);
+extern CUTE_API void CUTE_CALL packet_queue_init(packet_queue_t* q);
+extern CUTE_API int CUTE_CALL packet_queue_push(packet_queue_t* q, void* packet, packet_type_t type);
+extern CUTE_API int CUTE_CALL packet_queue_pop(packet_queue_t* q, void** packet, packet_type_t* type);
 
 struct nonce_buffer_t
 {

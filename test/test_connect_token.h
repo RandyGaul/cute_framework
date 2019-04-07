@@ -19,27 +19,14 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <internal/cute_net_internal.h>
+#include <cute_client.h>
+#include <cute_server.h>
+#include <cute_alloc.h>
 
-CUTE_TEST_CASE(test_packet_queue_basic, "Basic use-case example, push and pull a few packets.");
-int test_packet_queue_basic()
+using namespace cute;
+
+CUTE_TEST_CASE(test_generate_connect_token, "Basic test to generate a connect token and assert the expected token.");
+int test_generate_connect_token()
 {
-	packet_queue_t q;
-	packet_queue_init(&q);
-
-	uint64_t data = 0x1234567812345678;
-	CUTE_TEST_CHECK(packet_queue_push(&q, &data, (packet_type_t)0));
-	CUTE_TEST_CHECK(packet_queue_push(&q, &data, (packet_type_t)1));
-
-	void* packet;
-	packet_type_t type;
-	CUTE_TEST_CHECK(packet_queue_pop(&q, &packet, &type));
-	CUTE_TEST_ASSERT(packet == &data);
-	CUTE_TEST_ASSERT(type == (packet_type_t)0);
-
-	CUTE_TEST_CHECK(packet_queue_pop(&q, &packet, &type));
-	CUTE_TEST_ASSERT(packet == &data);
-	CUTE_TEST_ASSERT(type == (packet_type_t)1);
-
 	return 0;
 }
