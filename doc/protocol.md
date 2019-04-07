@@ -40,7 +40,7 @@ The steps for a client to connect to a dedicated game server are:
             |  |                                  ^                          ^
             |  v                                  |                          |
          +--------+   *connect token packet* ->   |   if fail, try next ->   |
-         | Client |-------------------------------+--------------------------+----------> ...
+         | Client |-------------------------------+--------------------------+----------> ... Token timeout!
          +--------+
  ```
 
