@@ -510,7 +510,7 @@ int read_packet(
 
     replay_buffer_update(replay_buffer, sequence);
 
-	// Continue with any other optional processing ...
+    // Continue with any other optional processing ...
 }
 ```
 
