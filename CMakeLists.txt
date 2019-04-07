@@ -108,6 +108,7 @@ set(CUTE_HDRS
 	src/internal/cute_input_internal.h
 	src/internal/cute_net_internal.h
 	src/internal/cute_serialize_internal.h
+	src/internal/cute_protocol_internal.h
 
 	libraries/glad/glad.h
 )

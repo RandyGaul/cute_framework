@@ -144,35 +144,44 @@ int packet_queue_pop(packet_queue_t* q, void** packet, packet_type_t* type)
 
 // -------------------------------------------------------------------------------------------------
 
-void nonce_buffer_init(nonce_buffer_t* buffer)
+void replay_buffer_init(replay_buffer_t* buffer)
 {
-	buffer->max = 0;
-	CUTE_MEMSET(buffer->entries, ~0, sizeof(uint64_t) * CUTE_NONCE_BUFFER_SIZE);
+    buffer->max = 0;
+    CUTE_MEMSET(buffer->entries, ~0, sizeof(uint64_t) * CUTE_REPLAY_BUFFER_SIZE);
 }
 
-int nonce_cull_duplicate(nonce_buffer_t* buffer, uint64_t sequence, uint64_t seed)
+int replay_buffer_cull_duplicate(replay_buffer_t* buffer, uint64_t sequence)
 {
-	if (sequence + CUTE_NONCE_BUFFER_SIZE < buffer->max) {
-		// This is UDP - just drop old packets.
-		return -1;
-	}
+    if (sequence + CUTE_REPLAY_BUFFER_SIZE < buffer->max) {
+        // This is UDP - just drop old packets.
+        return -1;
+    }
 
-	if (buffer->max < sequence) {
-		buffer->max = sequence;
-	}
+    int index = (int)(sequence % CUTE_REPLAY_BUFFER_SIZE);
+    uint64_t val = buffer->entries[index];
+    int empty_slot = val == ~0ULL;
+    int outdated = val >= sequence;
+    if (empty_slot | !outdated) {
+        return 0;
+    } else {
+        // Duplicate or replayed packet detected.
+        return -1;
+    }
+}
 
-	uint64_t h = sequence + seed;
-	int index = (int)(h % CUTE_NONCE_BUFFER_SIZE);
-	uint64_t val = buffer->entries[index];
-	int empty_slot = val == ~0ULL;
-	int outdated = val >= sequence;
-	if (empty_slot | !outdated) {
-		buffer->entries[index] = sequence;
-		return 0;
-	} else {
-		// Duplicate or replay packet detected.
-		return -1;
-	}
+void replay_buffer_update(replay_buffer_t* buffer, uint64_t sequence)
+{
+    if (buffer->max < sequence) {
+        buffer->max = sequence;
+    }
+
+    int index = (int)(sequence % CUTE_REPLAY_BUFFER_SIZE);
+    uint64_t val = buffer->entries[index];
+    int empty_slot = val == ~0ULL;
+    int outdated = val >= sequence;
+    if (empty_slot | !outdated) {
+        buffer->entries[index] = sequence;
+    }
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -192,7 +201,7 @@ static uint64_t s_read_uint64(uint8_t** buffer)
 	return val;
 }
 
-void* packet_open(packet_allocator_t* pa, nonce_buffer_t* nonce_buffer, uint64_t game_id, uint64_t timestamp, uint8_t* buffer, int size, uint64_t sequence_offset, const crypto_key_t* key, int is_server, packet_type_t* packet_type)
+void* packet_open(packet_allocator_t* pa, replay_buffer_t* nonce_buffer, uint64_t game_id, uint64_t timestamp, uint8_t* buffer, int size, uint64_t sequence_offset, const crypto_key_t* key, int is_server, packet_type_t* packet_type)
 {
 	uint8_t* buffer_start = buffer;
 	packet_type_t type = (packet_type_t)read_uint8(&buffer);
@@ -285,7 +294,7 @@ void* packet_open(packet_allocator_t* pa, nonce_buffer_t* nonce_buffer, uint64_t
 			return NULL;
 		}
 
-		if (nonce_cull_duplicate(nonce_buffer, sequence, sequence_offset) < 0) {
+		if (replay_buffer_cull_duplicate(nonce_buffer, sequence) < 0) {
 			// Duplicate, or very old, packet detected.
 			return NULL;
 		}

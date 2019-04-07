@@ -31,6 +31,7 @@
 #include <internal/cute_defines_internal.h>
 #include <internal/cute_net_internal.h>
 #include <internal/cute_app_internal.h>
+#include <internal/cute_protocol_internal.h>
 
 #include <cute/cute_serialize.h>
 
@@ -61,7 +62,7 @@ struct client_t
 	crypto_key_t key;
 	uint64_t sequence;
 	packet_allocator_t* packet_allocator;
-	nonce_buffer_t nonce_buffer;
+	replay_buffer_t nonce_buffer;
 	packet_queue_t packet_queue;
 	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
 	void* mem_ctx;
@@ -100,7 +101,7 @@ int client_connect(client_t* client, uint8_t* connect_token)
 	CUTE_CHECK(socket_init(&client->socket, client->server_endpoint.type, client->server_endpoint.port, CUTE_CLIENT_SEND_BUFFER_SIZE, CUTE_CLIENT_RECEIVE_BUFFER_SIZE));
 	client->sequence = 0;
 	packet_queue_init(&client->packet_queue);
-	nonce_buffer_init(&client->nonce_buffer);
+	replay_buffer_init(&client->nonce_buffer);
 	return 0;
 
 cute_error:
@@ -147,7 +148,7 @@ static void s_client_receive_packets(client_t* client)
 			break;
 		}
 
-		packet_type_t type;
+		packet_type_t type = PACKET_TYPE_CHALLENGE_REQUEST;
 		//void* packet_ptr = packet_open(
 		//	client->packet_allocator,
 		//	&client->nonce_buffer,

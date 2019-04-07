@@ -20,6 +20,8 @@
 */
 
 #include <internal/cute_net_internal.h>
+#include <internal/cute_protocol_internal.h>
+using namespace cute;
 
 CUTE_TEST_CASE(test_packet_queue_basic, "Basic use-case example, push and pull a few packets.");
 int test_packet_queue_basic()

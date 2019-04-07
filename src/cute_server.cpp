@@ -28,6 +28,7 @@
 
 #include <internal/cute_defines_internal.h>
 #include <internal/cute_net_internal.h>
+#include <internal/cute_protocol_internal.h>
 
 #include <cute/cute_serialize.h>
 
@@ -63,7 +64,7 @@ struct server_t
 	endpoint_t client_endpoint[CUTE_SERVER_MAX_CLIENTS];
 	uint64_t client_sequence_offset[CUTE_SERVER_MAX_CLIENTS];
 	uint64_t client_sequence[CUTE_SERVER_MAX_CLIENTS];
-	nonce_buffer_t client_nonce_buffer[CUTE_SERVER_MAX_CLIENTS];
+	replay_buffer_t client_nonce_buffer[CUTE_SERVER_MAX_CLIENTS];
 	crypto_key_t client_session_key[CUTE_SERVER_MAX_CLIENTS];
 	packet_queue_t client_packets[CUTE_SERVER_MAX_CLIENTS];
 
@@ -196,7 +197,7 @@ static uint32_t s_client_make(server_t* server, endpoint_t endpoint, crypto_key_
 	server->client_endpoint[index] = endpoint;
 	server->client_sequence_offset[index] = sequence_offset;
 	server->client_sequence[index] = 0;
-	nonce_buffer_init(server->client_nonce_buffer + index);
+	replay_buffer_init(server->client_nonce_buffer + index);
 	server->client_session_key[index] = *key;
 	packet_queue_init(server->client_packets + index);
 

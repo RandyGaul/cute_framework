@@ -21,58 +21,62 @@
 
 #include <cute_protocol.h>
 #include <internal/cute_net_internal.h>
+#include <internal/cute_protocol_internal.h>
 using namespace cute;
 
-CUTE_TEST_CASE(test_nonce_buffer_valid_packets, "Typical use-case example, should pass all sequences.");
-int test_nonce_buffer_valid_packets()
+CUTE_TEST_CASE(test_replay_buffer_valid_packets, "Typical use-case example, should pass all sequences.");
+int test_replay_buffer_valid_packets()
 {
-	nonce_buffer_t buffer;
-	nonce_buffer_init(&buffer);
+	replay_buffer_t buffer;
+	replay_buffer_init(&buffer);
 
 	CUTE_TEST_ASSERT(buffer.max == 0);
 
-	for (int i = 0; i < CUTE_NONCE_BUFFER_SIZE; ++i)
+	for (int i = 0; i < CUTE_REPLAY_BUFFER_SIZE; ++i)
 	{
 		uint64_t sequence = buffer.entries[i];
 		CUTE_TEST_ASSERT(sequence == ~0ULL);
 	}
 
-	for (int i = 0; i < CUTE_NONCE_BUFFER_SIZE; ++i)
+	for (int i = 0; i < CUTE_REPLAY_BUFFER_SIZE; ++i)
 	{
-		CUTE_TEST_CHECK(nonce_cull_duplicate(&buffer, (uint64_t)i, 1337));
+		CUTE_TEST_CHECK(replay_buffer_cull_duplicate(&buffer, (uint64_t)i));
+		replay_buffer_update(&buffer, (uint64_t)i);
 	}
 
 	return 0;
 }
 
-CUTE_TEST_CASE(test_nonce_buffer_old_packet_out_of_range, "Nonce buffer should cull packets of sequence older than `CUTE_NONCE_BUFFER_SIZE`.");
-int test_nonce_buffer_old_packet_out_of_range()
+CUTE_TEST_CASE(test_replay_buffer_old_packet_out_of_range, "Replay buffer should cull packets of sequence older than `CUTE_REPLAY_BUFFER_SIZE`.");
+int test_replay_buffer_old_packet_out_of_range()
 {
-	nonce_buffer_t buffer;
-	nonce_buffer_init(&buffer);
+	replay_buffer_t buffer;
+	replay_buffer_init(&buffer);
 
-	for (int i = 0; i < CUTE_NONCE_BUFFER_SIZE * 2; ++i)
+	for (int i = 0; i < CUTE_REPLAY_BUFFER_SIZE * 2; ++i)
 	{
-		CUTE_TEST_CHECK(nonce_cull_duplicate(&buffer, (uint64_t)i, 1337));
+		CUTE_TEST_CHECK(replay_buffer_cull_duplicate(&buffer, (uint64_t)i));
+		replay_buffer_update(&buffer, (uint64_t)i);
 	}
 
-	CUTE_TEST_CHECK(!nonce_cull_duplicate(&buffer, 0, 1337));
+	CUTE_TEST_CHECK(!replay_buffer_cull_duplicate(&buffer, 0));
 
 	return 0;
 }
 
-CUTE_TEST_CASE(test_nonce_buffer_duplicate, "Pass in some valid nonces, and then assert the duplicate fails.");
-int test_nonce_buffer_duplicate()
+CUTE_TEST_CASE(test_replay_buffer_duplicate, "Pass in some valid nonces, and then assert the duplicate fails.");
+int test_replay_buffer_duplicate()
 {
-	nonce_buffer_t buffer;
-	nonce_buffer_init(&buffer);
+	replay_buffer_t buffer;
+	replay_buffer_init(&buffer);
 
-	for (int i = 0; i < CUTE_NONCE_BUFFER_SIZE; ++i)
+	for (int i = 0; i < CUTE_REPLAY_BUFFER_SIZE; ++i)
 	{
-		CUTE_TEST_CHECK(nonce_cull_duplicate(&buffer, (uint64_t)i, 1337));
+		CUTE_TEST_CHECK(replay_buffer_cull_duplicate(&buffer, (uint64_t)i));
+		replay_buffer_update(&buffer, (uint64_t)i);
 	}
 
-	CUTE_TEST_CHECK(!nonce_cull_duplicate(&buffer, 100, 1337));
+	CUTE_TEST_CHECK(!replay_buffer_cull_duplicate(&buffer, 100));
 
 	return 0;
 }

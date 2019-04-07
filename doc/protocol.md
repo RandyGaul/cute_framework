@@ -447,15 +447,14 @@ void replay_buffer_init(replay_buffer_t* buffer)
     memset(buffer->entries, ~0, sizeof(uint64_t) * REPLAY_BUFFER_SIZE);
 }
 
-int replay_buffer_cull_duplicate(replay_buffer_t* buffer, uint64_t sequence, uint64_t seed)
+int replay_buffer_cull_duplicate(replay_buffer_t* buffer, uint64_t sequence)
 {
     if (sequence + REPLAY_BUFFER_SIZE < buffer->max) {
         // This is UDP - just drop old packets.
         return -1;
     }
 
-    uint64_t h = sequence + seed;
-    int index = (int)(h % REPLAY_BUFFER_SIZE);
+    int index = (int)(sequence % REPLAY_BUFFER_SIZE);
     uint64_t val = buffer->entries[index];
     int empty_slot = val == ~0ULL;
     int outdated = val >= sequence;
@@ -473,8 +472,7 @@ void replay_buffer_update(replay_buffer_t* buffer, uint64_t sequence)
         buffer->max = sequence;
     }
 
-    uint64_t h = sequence + seed;
-    int index = (int)(h % REPLAY_BUFFER_SIZE);
+    int index = (int)(sequence % REPLAY_BUFFER_SIZE);
     uint64_t val = buffer->entries[index];
     int empty_slot = val == ~0ULL;
     int outdated = val >= sequence;

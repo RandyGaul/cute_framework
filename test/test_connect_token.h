@@ -22,7 +22,6 @@
 #include <cute_client.h>
 #include <cute_server.h>
 #include <cute_alloc.h>
-
 using namespace cute;
 
 CUTE_TEST_CASE(test_generate_connect_token, "Basic test to generate a connect token and assert the expected token.");
@@ -53,6 +52,11 @@ int test_generate_connect_token()
 		&shared_secret_key,
 		token
 	));
+
+	// WORKING HERE
+	// Need functions to:
+	// Read connect token as client, and skip REST SECTION.
+	// Read connect token and decrypt + validate it as server.
 
 	return 0;
 }

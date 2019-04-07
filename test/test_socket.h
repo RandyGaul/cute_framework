@@ -20,6 +20,7 @@
 */
 
 #include <internal/cute_net_internal.h>
+using namespace cute;
 
 CUTE_TEST_CASE(test_socket_init_send_recieve_shutdown, "Test sending one packet on an ipv4 socket, and then retrieve it.");
 int test_socket_init_send_recieve_shutdown()

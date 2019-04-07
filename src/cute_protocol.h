@@ -36,7 +36,7 @@
 #define CUTE_CONNECT_TOKEN_USER_DATA_SIZE 256
 
 #define CUTE_PACKET_QUEUE_MAX_ENTRIES (2 * 1024)
-#define CUTE_NONCE_BUFFER_SIZE 256
+#define CUTE_REPLAY_BUFFER_SIZE 256
 #define CUTE_KEEPALIVE_RATE (1.0f / 10.0f)
 #define CUTE_DISCONNECT_REDUNDANT_PACKET_COUNT 10
 #define CUTE_CHALLENGE_DATA_SIZE 256
@@ -74,38 +74,6 @@ extern CUTE_API int CUTE_CALL generate_connect_token(
 	const crypto_key_t* shared_secret_key,
 	uint8_t* token_ptr_out
 );
-
-struct packet_queue_t
-{
-	int count = 0;
-	int index0 = 0;
-	int index1 = 0;
-	packet_type_t types[CUTE_PACKET_QUEUE_MAX_ENTRIES];
-	void* packets[CUTE_PACKET_QUEUE_MAX_ENTRIES];
-};
-
-extern CUTE_API void CUTE_CALL packet_queue_init(packet_queue_t* q);
-extern CUTE_API int CUTE_CALL packet_queue_push(packet_queue_t* q, void* packet, packet_type_t type);
-extern CUTE_API int CUTE_CALL packet_queue_pop(packet_queue_t* q, void** packet, packet_type_t* type);
-
-struct nonce_buffer_t
-{
-	uint64_t max;
-	uint64_t entries[CUTE_NONCE_BUFFER_SIZE];
-};
-
-extern CUTE_API void CUTE_CALL nonce_buffer_init(nonce_buffer_t* buffer);
-extern CUTE_API int CUTE_CALL nonce_cull_duplicate(nonce_buffer_t* buffer, uint64_t sequence, uint64_t seed);
-
-struct packet_allocator_t;
-
-extern CUTE_API packet_allocator_t* CUTE_CALL packet_allocator_make(void* user_allocator_context = NULL);
-extern CUTE_API void CUTE_CALL packet_allocator_destroy(packet_allocator_t* packet_allocator);
-extern CUTE_API void* CUTE_CALL packet_allocator_alloc(packet_allocator_t* packet_allocator, packet_type_t type);
-extern CUTE_API void CUTE_CALL packet_allocator_free(packet_allocator_t* packet_allocator, packet_type_t type, void* packet);
-
-int packet_write(void* packet_ptr, packet_type_t packet_type, uint8_t* buffer, uint64_t game_id, uint64_t sequence, const crypto_key_t* key);
-void* packet_open(packet_allocator_t* pa, nonce_buffer_t* nonce_buffer, uint64_t game_id, uint64_t timestamp, uint8_t* buffer, int size, uint64_t sequence_offset, const crypto_key_t* key, int is_server, packet_type_t* packet_type);
 
 struct packet_decrypted_connect_token_t
 {
