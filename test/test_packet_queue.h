@@ -26,22 +26,22 @@ using namespace cute;
 CUTE_TEST_CASE(test_packet_queue_basic, "Basic use-case example, push and pull a few packets.");
 int test_packet_queue_basic()
 {
-	packet_queue_t q;
-	packet_queue_init(&q);
+	protocol::packet_queue_t q;
+	protocol::packet_queue_init(&q);
 
 	uint64_t data = 0x1234567812345678;
-	CUTE_TEST_CHECK(packet_queue_push(&q, &data, (packet_type_t)0));
-	CUTE_TEST_CHECK(packet_queue_push(&q, &data, (packet_type_t)1));
+	CUTE_TEST_CHECK(protocol::packet_queue_push(&q, &data, (protocol::packet_type_t)0));
+	CUTE_TEST_CHECK(protocol::packet_queue_push(&q, &data, (protocol::packet_type_t)1));
 
 	void* packet;
-	packet_type_t type;
-	CUTE_TEST_CHECK(packet_queue_pop(&q, &packet, &type));
+	protocol::packet_type_t type;
+	CUTE_TEST_CHECK(protocol::packet_queue_pop(&q, &packet, &type));
 	CUTE_TEST_ASSERT(packet == &data);
-	CUTE_TEST_ASSERT(type == (packet_type_t)0);
+	CUTE_TEST_ASSERT(type == (protocol::packet_type_t)0);
 
-	CUTE_TEST_CHECK(packet_queue_pop(&q, &packet, &type));
+	CUTE_TEST_CHECK(protocol::packet_queue_pop(&q, &packet, &type));
 	CUTE_TEST_ASSERT(packet == &data);
-	CUTE_TEST_ASSERT(type == (packet_type_t)1);
+	CUTE_TEST_ASSERT(type == (protocol::packet_type_t)1);
 
 	return 0;
 }

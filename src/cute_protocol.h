@@ -45,6 +45,8 @@
 
 namespace cute
 {
+namespace protocol
+{
 
 enum packet_type_t : int
 {
@@ -75,6 +77,7 @@ extern CUTE_API int CUTE_CALL generate_connect_token(
 	uint8_t* token_ptr_out
 );
 
+}
 }
 
 #endif // CUTE_PROTOCOL_H

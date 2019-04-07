@@ -30,6 +30,8 @@
 
 namespace cute
 {
+namespace protocol
+{
 
 int generate_connect_token(
 	uint32_t application_id,
@@ -459,4 +461,5 @@ void packet_allocator_free(packet_allocator_t* packet_allocator, packet_type_t t
 {
 }
 
+}
 }

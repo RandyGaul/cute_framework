@@ -38,7 +38,7 @@ int test_generate_connect_token()
 	};
 
 	uint8_t token[CUTE_CONNECT_TOKEN_SIZE];
-	CUTE_TEST_CHECK(generate_connect_token(
+	CUTE_TEST_CHECK(protocol::generate_connect_token(
 		~0,
 		0,
 		&client_to_server_key,

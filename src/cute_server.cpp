@@ -49,7 +49,7 @@ struct server_t
 	server_config_t config;
 	socket_t socket;
 	serialize_t* io = NULL;
-	packet_queue_t packets;
+	protocol::packet_queue_t packets;
 	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
 	void* mem_ctx = NULL;
 
@@ -64,9 +64,9 @@ struct server_t
 	endpoint_t client_endpoint[CUTE_SERVER_MAX_CLIENTS];
 	uint64_t client_sequence_offset[CUTE_SERVER_MAX_CLIENTS];
 	uint64_t client_sequence[CUTE_SERVER_MAX_CLIENTS];
-	replay_buffer_t client_nonce_buffer[CUTE_SERVER_MAX_CLIENTS];
+	protocol::replay_buffer_t client_nonce_buffer[CUTE_SERVER_MAX_CLIENTS];
 	crypto_key_t client_session_key[CUTE_SERVER_MAX_CLIENTS];
-	packet_queue_t client_packets[CUTE_SERVER_MAX_CLIENTS];
+	protocol::packet_queue_t client_packets[CUTE_SERVER_MAX_CLIENTS];
 
 	int event_queue_can_grow = 0;
 	int event_queue_size = 0;
@@ -209,7 +209,7 @@ static uint32_t s_client_make(server_t* server, endpoint_t endpoint, crypto_key_
 	return index;
 }
 
-static int s_server_send_packet_no_payload(server_t* server, int client_index, packet_type_t packet_type)
+static int s_server_send_packet_no_payload(server_t* server, int client_index, protocol::packet_type_t packet_type)
 {
 	//int packet_size = packet_write_header(server->io, server->buffer, packet_type, server->client_sequence[client_index]);
 	//if (packet_size <= 0) return -1;
@@ -321,8 +321,8 @@ static void s_server_recieve_packets(server_t* server)
 			uint64_t first_sequence = 0;
 			CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &first_sequence));
 
-			uint64_t packet_typeu64 = (uint64_t)PACKET_TYPE_CONNECTION_ACCEPTED;
-			CUTE_SERIALIZE_CHECK(serialize_uint64(io, &packet_typeu64, 0, PACKET_TYPE_MAX));
+			uint64_t packet_typeu64 = (uint64_t)protocol::PACKET_TYPE_CONNECTION_ACCEPTED;
+			CUTE_SERIALIZE_CHECK(serialize_uint64(io, &packet_typeu64, 0, protocol::PACKET_TYPE_MAX));
 			CUTE_SERIALIZE_CHECK(serialize_flush(io));
 
 			uint64_t sequence_offset = server->client_sequence_offset[client_index];
@@ -338,7 +338,7 @@ static void s_server_recieve_packets(server_t* server)
 			uint64_t sequence;
 			CUTE_CHECK(serialize_uint64_full(io, &sequence));
 
-			packet_type_t type = PACKET_TYPE_MAX;
+			protocol::packet_type_t type = protocol::PACKET_TYPE_MAX;
 			//int packet_size;
 			//uint8_t* packet = packet_open(io, server->client_session_key + client_index, server->client_nonce_buffer + client_index, buffer, bytes_read, sequence, server->client_sequence_offset[client_index], &type, &packet_size);
 			uint8_t* packet = NULL;
@@ -348,22 +348,22 @@ static void s_server_recieve_packets(server_t* server)
 
 			switch (type)
 			{
-			case PACKET_TYPE_CONNECTION_ACCEPTED:
+			case protocol::PACKET_TYPE_CONNECTION_ACCEPTED:
 				break;
 
-			case PACKET_TYPE_CONNECTION_DENIED:
+			case protocol::PACKET_TYPE_CONNECTION_DENIED:
 				break;
 
-			case PACKET_TYPE_KEEPALIVE:
+			case protocol::PACKET_TYPE_KEEPALIVE:
 				valid_packet = 1;
 				break;
 
-			case PACKET_TYPE_DISCONNECT:
+			case protocol::PACKET_TYPE_DISCONNECT:
 				valid_packet = 1;
 				server_disconnect_client(server, server->client_handle[client_index], 0);
 				break;
 
-			case PACKET_TYPE_USERDATA:
+			case protocol::PACKET_TYPE_USERDATA:
 				valid_packet = 1;
 				if (server->client_is_connected[client_index]) {
 					CUTE_CHECK(packet_queue_push(server->client_packets + client_index, packet, type));
@@ -394,7 +394,7 @@ static void s_server_send_packets(server_t* server, float dt)
 		if (!is_loopback[i]) {
 			if (last_sent_times[i] >= CUTE_KEEPALIVE_RATE) {
 				last_sent_times[i] = 0;
-				s_server_send_packet_no_payload(server, i, PACKET_TYPE_KEEPALIVE);
+				s_server_send_packet_no_payload(server, i, protocol::PACKET_TYPE_KEEPALIVE);
 			}
 		}
 	}
@@ -432,7 +432,7 @@ void server_disconnect_client(server_t* server, handle_t client_id, int send_not
 	CUTE_ASSERT(server->client_count >= 1);
 	uint32_t index = handle_table_get_index(&server->client_handle_table, client_id);
 	if (send_notification_to_client) {
-		s_server_send_packet_no_payload(server, index, PACKET_TYPE_DISCONNECT);
+		s_server_send_packet_no_payload(server, index, protocol::PACKET_TYPE_DISCONNECT);
 	}
 
 	// Free client resources.

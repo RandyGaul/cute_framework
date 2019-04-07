@@ -27,8 +27,8 @@ using namespace cute;
 CUTE_TEST_CASE(test_replay_buffer_valid_packets, "Typical use-case example, should pass all sequences.");
 int test_replay_buffer_valid_packets()
 {
-	replay_buffer_t buffer;
-	replay_buffer_init(&buffer);
+	protocol::replay_buffer_t buffer;
+	protocol::replay_buffer_init(&buffer);
 
 	CUTE_TEST_ASSERT(buffer.max == 0);
 
@@ -40,8 +40,8 @@ int test_replay_buffer_valid_packets()
 
 	for (int i = 0; i < CUTE_REPLAY_BUFFER_SIZE; ++i)
 	{
-		CUTE_TEST_CHECK(replay_buffer_cull_duplicate(&buffer, (uint64_t)i));
-		replay_buffer_update(&buffer, (uint64_t)i);
+		CUTE_TEST_CHECK(protocol::replay_buffer_cull_duplicate(&buffer, (uint64_t)i));
+		protocol::replay_buffer_update(&buffer, (uint64_t)i);
 	}
 
 	return 0;
@@ -50,13 +50,13 @@ int test_replay_buffer_valid_packets()
 CUTE_TEST_CASE(test_replay_buffer_old_packet_out_of_range, "Replay buffer should cull packets of sequence older than `CUTE_REPLAY_BUFFER_SIZE`.");
 int test_replay_buffer_old_packet_out_of_range()
 {
-	replay_buffer_t buffer;
-	replay_buffer_init(&buffer);
+	protocol::replay_buffer_t buffer;
+	protocol::replay_buffer_init(&buffer);
 
 	for (int i = 0; i < CUTE_REPLAY_BUFFER_SIZE * 2; ++i)
 	{
-		CUTE_TEST_CHECK(replay_buffer_cull_duplicate(&buffer, (uint64_t)i));
-		replay_buffer_update(&buffer, (uint64_t)i);
+		CUTE_TEST_CHECK(protocol::replay_buffer_cull_duplicate(&buffer, (uint64_t)i));
+		protocol::replay_buffer_update(&buffer, (uint64_t)i);
 	}
 
 	CUTE_TEST_CHECK(!replay_buffer_cull_duplicate(&buffer, 0));
@@ -67,16 +67,16 @@ int test_replay_buffer_old_packet_out_of_range()
 CUTE_TEST_CASE(test_replay_buffer_duplicate, "Pass in some valid nonces, and then assert the duplicate fails.");
 int test_replay_buffer_duplicate()
 {
-	replay_buffer_t buffer;
-	replay_buffer_init(&buffer);
+	protocol::replay_buffer_t buffer;
+	protocol::replay_buffer_init(&buffer);
 
 	for (int i = 0; i < CUTE_REPLAY_BUFFER_SIZE; ++i)
 	{
-		CUTE_TEST_CHECK(replay_buffer_cull_duplicate(&buffer, (uint64_t)i));
-		replay_buffer_update(&buffer, (uint64_t)i);
+		CUTE_TEST_CHECK(protocol::replay_buffer_cull_duplicate(&buffer, (uint64_t)i));
+		protocol::replay_buffer_update(&buffer, (uint64_t)i);
 	}
 
-	CUTE_TEST_CHECK(!replay_buffer_cull_duplicate(&buffer, 100));
+	CUTE_TEST_CHECK(!protocol::replay_buffer_cull_duplicate(&buffer, 100));
 
 	return 0;
 }

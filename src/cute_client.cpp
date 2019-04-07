@@ -53,7 +53,7 @@ struct client_t
 	int client_number;
 	int max_clients;
 	int has_sent_disconnect_packets;
-	connect_token_t connect_token;
+	protocol::connect_token_t connect_token;
 	uint64_t challenge_sequence;
 	uint8_t challenge_data[CUTE_CHALLENGE_DATA_SIZE];
 	int server_endpoint_index;
@@ -61,9 +61,9 @@ struct client_t
 	socket_t socket;
 	crypto_key_t key;
 	uint64_t sequence;
-	packet_allocator_t* packet_allocator;
-	replay_buffer_t nonce_buffer;
-	packet_queue_t packet_queue;
+	protocol::packet_allocator_t* packet_allocator;
+	protocol::replay_buffer_t nonce_buffer;
+	protocol::packet_queue_t packet_queue;
 	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
 	void* mem_ctx;
 };
@@ -148,7 +148,7 @@ static void s_client_receive_packets(client_t* client)
 			break;
 		}
 
-		packet_type_t type = PACKET_TYPE_CHALLENGE_REQUEST;
+		protocol::packet_type_t type = protocol::PACKET_TYPE_CHALLENGE_REQUEST;
 		//void* packet_ptr = packet_open(
 		//	client->packet_allocator,
 		//	&client->nonce_buffer,
@@ -165,18 +165,18 @@ static void s_client_receive_packets(client_t* client)
 		int push_packet = 0;
 		switch (type)
 		{
-		case PACKET_TYPE_CONNECTION_ACCEPTED:
+		case protocol::PACKET_TYPE_CONNECTION_ACCEPTED:
 		{
 			if (client->state == CLIENT_STATE_SENDING_CONNECTION_REQUEST) {
 				client->last_packet_recieved_time = 0;
-				packet_connection_accepted_t* packet = (packet_connection_accepted_t*)packet_ptr;
+				protocol::packet_connection_accepted_t* packet = (protocol::packet_connection_accepted_t*)packet_ptr;
 				client->client_number = packet->client_number;
 				client->max_clients = packet->max_clients;
 				client->state = CLIENT_STATE_CONNECTED;
 			}
 		}	break;
 		
-		case PACKET_TYPE_CONNECTION_DENIED:
+		case protocol::PACKET_TYPE_CONNECTION_DENIED:
 		{
 			if (client->state == CLIENT_STATE_SENDING_CONNECTION_REQUEST ||
 			    client->state == CLIENT_STATE_SENDING_CONNECTION_REQUEST) {
@@ -185,14 +185,14 @@ static void s_client_receive_packets(client_t* client)
 			}
 		}	break;
 		
-		case PACKET_TYPE_KEEPALIVE:
-		case PACKET_TYPE_DISCONNECT:
-		case PACKET_TYPE_CHALLENGE_REQUEST:
+		case protocol::PACKET_TYPE_KEEPALIVE:
+		case protocol::PACKET_TYPE_DISCONNECT:
+		case protocol::PACKET_TYPE_CHALLENGE_REQUEST:
 		{
 			client->last_packet_recieved_time = 0;
 		}	break;
 		
-		case PACKET_TYPE_USERDATA:
+		case protocol::PACKET_TYPE_USERDATA:
 		{
 			client->last_packet_recieved_time = 0;
 			push_packet = 1;
@@ -207,10 +207,10 @@ static void s_client_receive_packets(client_t* client)
 	}
 }
 
-static void s_client_send_packet(client_t* client, void* packet, packet_type_t type)
+static void s_client_send_packet(client_t* client, void* packet, protocol::packet_type_t type)
 {
 	uint8_t* buffer = client->buffer;
-	const crypto_key_t* key = type == PACKET_TYPE_CONNECTION_REQUEST ? NULL : &client->key;
+	const crypto_key_t* key = type == protocol::PACKET_TYPE_CONNECTION_REQUEST ? NULL : &client->key;
 	//int size = packet_write(packet, type, buffer, client->connect_token.application_id, client->sequence + client->connect_token.sequence_offset, key);
 	int size = 0;
 	if (size <= 0) return;
@@ -228,14 +228,14 @@ static void s_client_send_packets(client_t* client)
 		if (client->last_packet_sent_time >= CUTE_KEEPALIVE_RATE) {
 			client->last_packet_sent_time = 0;
 
-			packet_encrypted_connect_token_t packet;
+			protocol::packet_encrypted_connect_token_t packet;
 			//packet.expiration_timestamp = client->connect_token.expire_timestamp;
 			//CUTE_ASSERT(sizeof(packet.nonce) == sizeof(client->connect_token.nonce));
 			//CUTE_MEMCPY(packet.nonce, client->connect_token.nonce, sizeof(packet.nonce));
 			//CUTE_ASSERT(sizeof(packet.secret_data) == sizeof(client->connect_token.secret_data));
 			//CUTE_MEMCPY(packet.secret_data, client->connect_token.secret_data, sizeof(packet.secret_data));
 
-			s_client_send_packet(client, &packet, PACKET_TYPE_CONNECTION_REQUEST);
+			s_client_send_packet(client, &packet, protocol::PACKET_TYPE_CONNECTION_REQUEST);
 		}
 	}	break;
 
@@ -244,11 +244,11 @@ static void s_client_send_packets(client_t* client)
 		if (client->last_packet_sent_time >= CUTE_KEEPALIVE_RATE) {
 			client->last_packet_sent_time = 0;
 
-			packet_challenge_t packet;
+			protocol::packet_challenge_t packet;
 			packet.nonce = client->challenge_sequence;
 			CUTE_MEMCPY(packet.challenge_data, client->challenge_data, CUTE_CHALLENGE_DATA_SIZE);
 
-			s_client_send_packet(client, &packet, PACKET_TYPE_CHALLENGE_RESPONSE);
+			s_client_send_packet(client, &packet, protocol::PACKET_TYPE_CHALLENGE_RESPONSE);
 		}
 	}	break;
 
@@ -256,10 +256,10 @@ static void s_client_send_packets(client_t* client)
 		if (client->last_packet_sent_time >= CUTE_KEEPALIVE_RATE) {
 			client->last_packet_sent_time = 0;
 
-			packet_keepalive_t packet;
-			packet.packet_type = PACKET_TYPE_KEEPALIVE;
+			protocol::packet_keepalive_t packet;
+			packet.packet_type = protocol::PACKET_TYPE_KEEPALIVE;
 
-			s_client_send_packet(client, &packet, PACKET_TYPE_KEEPALIVE);
+			s_client_send_packet(client, &packet, protocol::PACKET_TYPE_KEEPALIVE);
 		}
 		break;
 	}

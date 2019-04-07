@@ -26,6 +26,8 @@
 
 namespace cute
 {
+namespace protocol
+{
 
 struct packet_queue_t
 {
@@ -131,6 +133,7 @@ struct connect_token_t
 	uint8_t secret_data_and_hmac[CUTE_CONNECT_TOKEN_SECRET_SECTION_SIZE + CUTE_CRYPTO_HMAC_BYTES];
 };
 
+}
 }
 
 #endif // CUTE_PROTOCOL_INTERNAL_H
