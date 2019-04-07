@@ -98,8 +98,8 @@ number of server endpoints     uint32_t   The number of servers in the following
     <end if>
 <end for>
 <zeroes padded to 656 bytes>              Counting from the end of the REST SECTION.
-connect token nonce            24 bytes
 ---  END PUBLIC SECTION  ---
+connect token nonce            24 bytes
 --  BEGIN SECRET SECTION  --
 client id                      uint64_t   Unique identifier for a particular client.
 client to server key           32 bytes   Client uses to encrypt packets, server uses to decrypt packets.
