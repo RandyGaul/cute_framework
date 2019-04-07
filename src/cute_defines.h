@@ -62,6 +62,8 @@
 
 #define CUTE_SERIALIZE_CHECK(x) do { if ((x) != SERIALIZE_SUCCESS) goto cute_error; } while (0)
 
+#define CUTE_STATIC_ASSERT(condition, error_message_string) static_assert(condition, error_message_string)
+
 namespace cute
 {
 

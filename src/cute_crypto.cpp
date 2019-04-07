@@ -37,7 +37,7 @@ int crypto_encrypt(const crypto_key_t* key, uint8_t* data, int data_size, const 
 	uint64_t encrypted_sz;
 	int ret = crypto_aead_chacha20poly1305_ietf_encrypt(data, &encrypted_sz, data, (uint64_t)data_size, additional_data, additional_data_size, NULL, nonce_bytes, key->key);
 	if (ret < 0) return -1;
-	CUTE_ASSERT(encrypted_sz == data_size + CUTE_CRYPTO_MAC_BYTES);
+	CUTE_ASSERT(encrypted_sz == data_size + CUTE_CRYPTO_HMAC_BYTES);
 	return ret;
 }
 
@@ -50,7 +50,7 @@ int crypto_decrypt(const crypto_key_t* key, uint8_t* data, int data_size, const 
 	uint64_t encrypted_sz;
 	int ret = crypto_aead_chacha20poly1305_ietf_decrypt(data, &encrypted_sz, NULL, data, (uint64_t)data_size, additional_data, additional_data_size, nonce_bytes, key->key);
 	if (ret < 0) return -1;
-	CUTE_ASSERT(encrypted_sz == data_size - CUTE_CRYPTO_MAC_BYTES);
+	CUTE_ASSERT(encrypted_sz == data_size - CUTE_CRYPTO_HMAC_BYTES);
 	return ret;
 }
 
@@ -59,7 +59,7 @@ int crypto_encrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_siz
 	uint64_t encrypted_sz;
 	int ret = crypto_aead_chacha20poly1305_ietf_encrypt(data, &encrypted_sz, data, (uint64_t)data_size, additional_data, additional_data_size, NULL, nonce, key->key);
 	if (ret < 0) return -1;
-	CUTE_ASSERT(encrypted_sz == data_size + CUTE_CRYPTO_MAC_BYTES);
+	CUTE_ASSERT(encrypted_sz == data_size + CUTE_CRYPTO_HMAC_BYTES);
 	return ret;
 }
 
@@ -68,7 +68,7 @@ int crypto_decrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_siz
 	uint64_t decrypted_sz;
 	int ret = crypto_aead_xchacha20poly1305_ietf_decrypt(data, &decrypted_sz, NULL, data, (uint64_t)data_size, additional_data, (uint64_t)additional_data_size, nonce, key->key);
 	if (ret < 0) return -1;
-	CUTE_ASSERT(decrypted_sz == data_size - CUTE_CRYPTO_MAC_BYTES);
+	CUTE_ASSERT(decrypted_sz == data_size - CUTE_CRYPTO_HMAC_BYTES);
 	return ret;
 }
 

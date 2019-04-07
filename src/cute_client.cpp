@@ -26,6 +26,7 @@
 #include <cute_alloc.h>
 #include <cute_crypto.h>
 #include <cute_circular_buffer.h>
+#include <cute_protocol.h>
 
 #include <internal/cute_defines_internal.h>
 #include <internal/cute_net_internal.h>
@@ -90,7 +91,7 @@ void client_destroy(client_t* client)
 
 int client_connect(client_t* client, uint8_t* connect_token)
 {
-	CUTE_CHECK(connect_token_open(&client->connect_token, connect_token));
+	//CUTE_CHECK(connect_token_open(&client->connect_token, connect_token));
 
 	client->state = CLIENT_STATE_SENDING_CONNECTION_REQUEST;
 	client->loopback = 0;
@@ -147,18 +148,18 @@ static void s_client_receive_packets(client_t* client)
 		}
 
 		packet_type_t type;
-		void* packet_ptr = packet_open(
-			client->packet_allocator,
-			&client->nonce_buffer,
-			client->connect_token.game_id,
-			timestamp,
-			client->buffer,
-			bytes_read,
-			client->connect_token.sequence_offset,
-			&client->connect_token.key,
-			0,
-			&type
-		);
+		//void* packet_ptr = packet_open(
+		//	client->packet_allocator,
+		//	&client->nonce_buffer,
+		//	client->connect_token.application_id,
+		//	timestamp,
+		//	client->buffer,
+		//	bytes_read,
+		//	&client->connect_token.key,
+		//	0,
+		//	&type
+		//);
+		void* packet_ptr = NULL;
 
 		int push_packet = 0;
 		switch (type)
@@ -209,7 +210,8 @@ static void s_client_send_packet(client_t* client, void* packet, packet_type_t t
 {
 	uint8_t* buffer = client->buffer;
 	const crypto_key_t* key = type == PACKET_TYPE_CONNECTION_REQUEST ? NULL : &client->key;
-	int size = packet_write(packet, type, buffer, client->connect_token.game_id, client->sequence + client->connect_token.sequence_offset, key);
+	//int size = packet_write(packet, type, buffer, client->connect_token.application_id, client->sequence + client->connect_token.sequence_offset, key);
+	int size = 0;
 	if (size <= 0) return;
 	CUTE_ASSERT(size <= CUTE_PACKET_SIZE_MAX);
 	int bytes_sent = socket_send(&client->socket, client->server_endpoint, buffer, size);
@@ -226,11 +228,11 @@ static void s_client_send_packets(client_t* client)
 			client->last_packet_sent_time = 0;
 
 			packet_encrypted_connect_token_t packet;
-			packet.expire_timestamp = client->connect_token.expire_timestamp;
-			CUTE_ASSERT(sizeof(packet.nonce) == sizeof(client->connect_token.nonce));
-			CUTE_MEMCPY(packet.nonce, client->connect_token.nonce, sizeof(packet.nonce));
-			CUTE_ASSERT(sizeof(packet.secret_data) == sizeof(client->connect_token.secret_data));
-			CUTE_MEMCPY(packet.secret_data, client->connect_token.secret_data, sizeof(packet.secret_data));
+			//packet.expiration_timestamp = client->connect_token.expire_timestamp;
+			//CUTE_ASSERT(sizeof(packet.nonce) == sizeof(client->connect_token.nonce));
+			//CUTE_MEMCPY(packet.nonce, client->connect_token.nonce, sizeof(packet.nonce));
+			//CUTE_ASSERT(sizeof(packet.secret_data) == sizeof(client->connect_token.secret_data));
+			//CUTE_MEMCPY(packet.secret_data, client->connect_token.secret_data, sizeof(packet.secret_data));
 
 			s_client_send_packet(client, &packet, PACKET_TYPE_CONNECTION_REQUEST);
 		}

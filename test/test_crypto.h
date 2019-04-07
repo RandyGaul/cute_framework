@@ -30,7 +30,7 @@ int test_crypto_encrypt_decrypt()
 
 	const char* message_string = "The message.";
 	int message_length = (int)CUTE_STRLEN(message_string) + 1;
-	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_MAC_BYTES);
+	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_HMAC_BYTES);
 	CUTE_MEMCPY(message_buffer, message_string, message_length);
 
 	uint64_t sequence;
@@ -38,7 +38,7 @@ int test_crypto_encrypt_decrypt()
 
 	CUTE_TEST_CHECK(crypto_encrypt(&k, message_buffer, message_length, NULL, 0, sequence));
 	CUTE_TEST_ASSERT(CUTE_MEMCMP(message_buffer, message_string, message_length));
-	CUTE_TEST_CHECK(crypto_decrypt(&k, message_buffer, message_length + CUTE_CRYPTO_MAC_BYTES, NULL, 0, sequence));
+	CUTE_TEST_CHECK(crypto_decrypt(&k, message_buffer, message_length + CUTE_CRYPTO_HMAC_BYTES, NULL, 0, sequence));
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(message_buffer, message_string, message_length));
 
 	free(message_buffer);
@@ -53,7 +53,7 @@ int test_crypto_encrypt_decrypt_additional_data()
 
 	const char* message_string = "The message.";
 	int message_length = (int)CUTE_STRLEN(message_string) + 1;
-	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_MAC_BYTES);
+	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_HMAC_BYTES);
 	CUTE_MEMCPY(message_buffer, message_string, message_length);
 
 	uint64_t sequence;
@@ -64,7 +64,7 @@ int test_crypto_encrypt_decrypt_additional_data()
 
 	CUTE_TEST_CHECK(crypto_encrypt(&k, message_buffer, message_length, additional_data, sizeof(additional_data), sequence));
 	CUTE_TEST_ASSERT(CUTE_MEMCMP(message_buffer, message_string, message_length));
-	CUTE_TEST_CHECK(crypto_decrypt(&k, message_buffer, message_length + CUTE_CRYPTO_MAC_BYTES, additional_data, sizeof(additional_data), sequence));
+	CUTE_TEST_CHECK(crypto_decrypt(&k, message_buffer, message_length + CUTE_CRYPTO_HMAC_BYTES, additional_data, sizeof(additional_data), sequence));
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(message_buffer, message_string, message_length));
 
 	free(message_buffer);

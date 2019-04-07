@@ -75,7 +75,7 @@ packet type                    1 byte     Represents packet type of *connect tok
 version info                   10         "Cute 1.00" ASCII, including nul byte.
 application id                 uint64_t   User chosen value to identify the game.
 expiration timestamp           uint64_t   Unix timestamp of when the connect token becomes invalid.
-handshake timeout              int32_t    Seconds of how long a connection handshake will wait before timing out.
+handshake timeout              uint32_t   Seconds of how long a connection handshake will wait before timing out.
 number of server endpoints     uint32_t   The number of servers in the following list in the range of [1, 32].
 <for each server endpoint>
     address type               uint8_t    1 = IPv4, 2 = IPv6 address, in the range of [1, 2].

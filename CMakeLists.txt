@@ -70,6 +70,7 @@ set(CUTE_SRCS
 	src/cute_timer.cpp
 	src/cute_version.cpp
 	src/cute_memory_pool.cpp
+	src/cute_protocol.cpp
 
 	libraries/glad/glad.c
 )
@@ -97,6 +98,7 @@ set(CUTE_HDRS
 	src/cute_timer.h
 	src/cute_version.h
 	src/cute_memory_pool.h
+	src/cute_protocol.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
@@ -105,6 +107,7 @@ set(CUTE_HDRS
 	src/internal/cute_file_system_internal.h
 	src/internal/cute_input_internal.h
 	src/internal/cute_net_internal.h
+	src/internal/cute_serialize_internal.h
 
 	libraries/glad/glad.h
 )

@@ -24,6 +24,7 @@
 #include <cute_alloc.h>
 #include <cute_crypto.h>
 #include <cute_c_runtime.h>
+#include <cute_protocol.h>
 
 #include <internal/cute_defines_internal.h>
 #include <internal/cute_net_internal.h>
@@ -290,10 +291,10 @@ static void s_server_recieve_packets(server_t* server)
 			serialize_reset_buffer(io, SERIALIZE_READ, buffer, CUTE_PACKET_SIZE_MAX);
 
 			// Read version string.
-			const char* version_string = CUTE_PROTOCOL_VERSION;
+			const uint8_t* version_string = CUTE_PROTOCOL_VERSION_STRING;
 			char version_buffer[CUTE_PROTOCOL_VERSION_STRING_LEN];
 			CUTE_CHECK(serialize_bytes(io, (unsigned char*)version_buffer, CUTE_PROTOCOL_VERSION_STRING_LEN));
-			CUTE_CHECK(CUTE_STRNCMP(version_string, version_buffer, CUTE_PROTOCOL_VERSION_STRING_LEN));
+			CUTE_CHECK(CUTE_STRNCMP((const char*)version_string, version_buffer, CUTE_PROTOCOL_VERSION_STRING_LEN));
 
 			// Read symmetric key.
 			crypto_key_t key;
