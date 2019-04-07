@@ -28,5 +28,29 @@ using namespace cute;
 CUTE_TEST_CASE(test_generate_connect_token, "Basic test to generate a connect token and assert the expected token.");
 int test_generate_connect_token()
 {
+	crypto_key_t client_to_server_key;
+	crypto_key_t server_to_client_key;
+
+	const char* endpoints[] = {
+		"",
+		"",
+		""
+	};
+
+	uint8_t token[CUTE_CONNECT_TOKEN_SIZE];
+	CUTE_TEST_CHECK(generate_connect_token(
+		~0,
+		0,
+		&client_to_server_key,
+		&server_to_client_key,
+		1,
+		10,
+		3,
+		endpoints,
+		17,
+		NULL,
+		token
+	));
+
 	return 0;
 }

@@ -566,16 +566,18 @@ int endpoint_equals(endpoint_t a, endpoint_t b)
 }
 
 int generate_connect_token(
+	uint32_t application_id,
+	uint64_t creation_timestamp,
+	const crypto_key_t* client_to_server_key,
+	const crypto_key_t* server_to_client_key,
+	uint64_t expiration_timestamp,
+	int64_t handshake_timeout,
 	int address_count,
-	const char** address_list_public,
-	const char** address_list_secret,
-	uint64_t expire_time,
-	uint32_t game_id,
+	const char** address_list,
 	uint64_t client_id,
-	const crypto_key_t* key,
-	uint8_t* token_ptr_out,
 	const uint8_t* user_data,
-	void* user_allocator_context)
+	uint8_t* token_ptr_out
+)
 {
 	return -1;
 }

@@ -29,9 +29,9 @@
 #define CUTE_PACKET_SIZE_MAX (CUTE_KB + 256)
 #define CUTE_PACKET_PAYLOAD_MAX (CUTE_PACKET_SIZE_MAX - 1 - sizeof(uint64_t) - CUTE_CRYPTO_MAC_BYTES)
 
-#define CUTE_CONNECT_TOKEN_SIZE 2048
+#define CUTE_CONNECT_TOKEN_SIZE 1024
 #define CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX 32
-#define CUTE_CONNECT_TOKEN_USER_DATA_SIZE 512
+#define CUTE_CONNECT_TOKEN_USER_DATA_SIZE 256
 
 namespace cute
 {
@@ -60,15 +60,17 @@ extern CUTE_API void CUTE_CALL endpoint_to_string(endpoint_t endpoint, char* buf
 extern CUTE_API int CUTE_CALL endpoint_equals(endpoint_t a, endpoint_t b);
 
 extern CUTE_API int CUTE_CALL generate_connect_token(
-	int address_count,
-	const char** address_list,
-	const char** address_list_secret,
-	uint64_t expire_time,
-	uint32_t game_id,
+	uint32_t application_id,
+	uint64_t creation_timestamp,
+	const crypto_key_t* client_to_server_key,
+	const crypto_key_t* server_to_client_key,
+	uint64_t expiration_timestamp,
+	int64_t handshake_timeout,
+	int endpoint_count,
+	const char** endpoint_list,
 	uint64_t client_id,
-	const crypto_key_t* key,
-	uint8_t* token_ptr_out,
-	const uint8_t* user_data
+	const uint8_t* user_data,
+	uint8_t* token_ptr_out
 );
 
 }
