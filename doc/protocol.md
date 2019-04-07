@@ -353,7 +353,7 @@ Here are the steps for processing the *connect token packet*.
 5. Read and make sure the `application id` matches the expected id for the user's application.
 6. Read the `expiration timestamp`. If the token has expired, ignore the packet.
 7. The connect token is deemed invalid by the client if the number of server addresses is outside the range of [1, 32], or if an IP address type is not in the range [1, 2], or if the creation timestamp is more recent than the expiration timestamp. If any of these checks fail, ignore the packet.
-8. Decrypt and read the *connect token packet* SECRET SECTION. The PUBLIC SECTION is used as the Associated Data in the AEAD primitive. If the *connect token packet* fails to decrypt, ignore the packet.
+8. Decrypt and read the *connect token packet* SECRET SECTION, using the `connect token nonce` from the *connect token packet* as the nonce for the AEAD. The PUBLIC SECTION is used as the Associated Data in the AEAD primitive. If the *connect token packet* fails to decrypt, ignore the packet.
 
 #### Setting Up an *encryption state*
 
