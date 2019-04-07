@@ -30,7 +30,7 @@ int test_crypto_encrypt_decrypt()
 
 	const char* message_string = "The message.";
 	int message_length = (int)CUTE_STRLEN(message_string) + 1;
-	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_HMAC_BYTES);
+	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * (message_length + CUTE_CRYPTO_HMAC_BYTES));
 	CUTE_MEMCPY(message_buffer, message_string, message_length);
 
 	uint64_t sequence;
@@ -53,7 +53,7 @@ int test_crypto_encrypt_decrypt_associated_data()
 
 	const char* message_string = "The message.";
 	int message_length = (int)CUTE_STRLEN(message_string) + 1;
-	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_HMAC_BYTES);
+	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * (message_length + CUTE_CRYPTO_HMAC_BYTES));
 	CUTE_MEMCPY(message_buffer, message_string, message_length);
 
 	uint64_t sequence;
@@ -79,7 +79,7 @@ int test_crypto_encrypt_decrypt_big_nonce()
 
 	const char* message_string = "The message.";
 	int message_length = (int)CUTE_STRLEN(message_string) + 1;
-	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_HMAC_BYTES);
+	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * (message_length + CUTE_CRYPTO_HMAC_BYTES));
 	CUTE_MEMCPY(message_buffer, message_string, message_length);
 
 	uint8_t big_nonce[CUTE_CRYPTO_NONCE_BYTES];
@@ -87,7 +87,7 @@ int test_crypto_encrypt_decrypt_big_nonce()
 
 	CUTE_TEST_CHECK(crypto_encrypt_bignonce(&k, message_buffer, message_length, NULL, 0, big_nonce));
 	CUTE_TEST_ASSERT(CUTE_MEMCMP(message_buffer, message_string, message_length));
-	CUTE_TEST_CHECK(crypto_encrypt_bignonce(&k, message_buffer, message_length + CUTE_CRYPTO_HMAC_BYTES, NULL, 0, big_nonce));
+	CUTE_TEST_CHECK(crypto_decrypt_bignonce(&k, message_buffer, message_length + CUTE_CRYPTO_HMAC_BYTES, NULL, 0, big_nonce));
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(message_buffer, message_string, message_length));
 
 	free(message_buffer);
@@ -102,7 +102,7 @@ int test_crypto_encrypt_decrypt_associated_data_big_nonce()
 
 	const char* message_string = "The message.";
 	int message_length = (int)CUTE_STRLEN(message_string) + 1;
-	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * message_length + CUTE_CRYPTO_HMAC_BYTES);
+	uint8_t* message_buffer = (uint8_t*)malloc(sizeof(uint8_t) * (message_length + CUTE_CRYPTO_HMAC_BYTES));
 	CUTE_MEMCPY(message_buffer, message_string, message_length);
 
 	uint8_t big_nonce[CUTE_CRYPTO_NONCE_BYTES];
@@ -113,7 +113,7 @@ int test_crypto_encrypt_decrypt_associated_data_big_nonce()
 
 	CUTE_TEST_CHECK(crypto_encrypt_bignonce(&k, message_buffer, message_length, associated_data, sizeof(associated_data), big_nonce));
 	CUTE_TEST_ASSERT(CUTE_MEMCMP(message_buffer, message_string, message_length));
-	CUTE_TEST_CHECK(crypto_encrypt_bignonce(&k, message_buffer, message_length + CUTE_CRYPTO_HMAC_BYTES, associated_data, sizeof(associated_data), big_nonce));
+	CUTE_TEST_CHECK(crypto_decrypt_bignonce(&k, message_buffer, message_length + CUTE_CRYPTO_HMAC_BYTES, associated_data, sizeof(associated_data), big_nonce));
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(message_buffer, message_string, message_length));
 
 	free(message_buffer);
