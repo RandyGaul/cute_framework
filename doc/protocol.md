@@ -28,20 +28,20 @@ The steps for a client to connect to a dedicated game server are:
 5. If the handshake succeeds, the player is connected and begins to play over a secure UDP channel.
 
 ```
-        +-----------+
-        |    Web    |
-        |  Service  |
-        +-----------+
-            ^  |
-            |  |                            +-----------+              +-----------+
-          REST Call                         | Dedicated |              | Dedicated |
-          returns a                         | Server  1 |              | Server  2 |
-        Connect Token                       +-----------+              +-----------+
-            |  |                                  ^                          ^
-            |  v                                  |                          |
-         +--------+   *connect token packet* ->   |   if fail, try next ->   |
-         | Client |-------------------------------+--------------------------+----------> ... Token timeout!
-         +--------+
+      +-----------+
+      |    Web    |
+      |  Service  |
+      +-----------+
+          ^  |
+          |  |                            +-----------+              +-----------+
+        REST Call                         | Dedicated |              | Dedicated |
+        returns a                         | Server  1 |              | Server  2 |
+      Connect Token                       +-----------+              +-----------+
+          |  |                                  ^                          ^
+          |  v                                  |                          |
+       +--------+   *connect token packet* ->   |   if fail, try next ->   |
+       | Client |-------------------------------+--------------------------+----------> ... Token timeout!
+       +--------+
  ```
 
 ## Connect Token Format
