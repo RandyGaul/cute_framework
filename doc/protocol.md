@@ -508,7 +508,7 @@ int read_packet(
 
     // Continue on with decryption steps ...
 
-    replay_buffer_update_max(replay_buffer, sequence);
+    replay_buffer_update(replay_buffer, sequence);
 
 	// Continue with any other optional processing ...
 }
