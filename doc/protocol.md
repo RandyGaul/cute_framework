@@ -227,7 +227,7 @@ Each encrypted packet uses a buffer for Associated Data in the AEAD, except for 
 
 ```
 packet type      1 byte
-version info     9          "Cute 1.00" ASCII, including nul byte.
+version info     10         "Cute 1.00" ASCII, including nul byte.
 application id   uint64_t   User chosen value to identify the game.
 ```
 
