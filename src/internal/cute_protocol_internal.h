@@ -60,8 +60,6 @@ extern CUTE_API void CUTE_CALL packet_allocator_free(packet_allocator_t* packet_
 int packet_write(void* packet_ptr, packet_type_t packet_type, uint8_t* buffer, uint64_t game_id, uint64_t sequence, const crypto_key_t* key);
 void* packet_open(packet_allocator_t* pa, replay_buffer_t* nonce_buffer, uint64_t game_id, uint64_t timestamp, uint8_t* buffer, int size, uint64_t sequence_offset, const crypto_key_t* key, int is_server, packet_type_t* packet_type);
 
-
-
 struct packet_decrypted_connect_token_t
 {
 	uint64_t expire_timestamp;
