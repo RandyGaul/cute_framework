@@ -127,11 +127,12 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_crypto.h
 		test/test_handle.h
 		test/test_harness.h
-		test/test_nonce_buffer.h
+		test/test_replay_buffer.h
 		test/test_packet_queue.h
 		test/test_socket.h
 		test/test_connect_token.h
 		test/test_packets.h
+		test/test_encryption_state.h
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
