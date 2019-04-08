@@ -149,6 +149,52 @@ extern CUTE_API int CUTE_CALL server_decrypt_connect_token_packet(uint8_t* packe
 
 // -------------------------------------------------------------------------------------------------
 
+#define CUTE_PROTOCOL_HASHTABLE_KEY_BYTES (crypto_shorthash_KEYBYTES)
+#define CUTE_PROTOCOL_HASHTABLE_HASH_BYTES (crypto_shorthash_BYTES)
+
+CUTE_STATIC_ASSERT(CUTE_PROTOCOL_HASHTABLE_HASH_BYTES == 8, "The hash output must be 8 in order to fit nicely into a `uint64_t` hash.");
+
+struct hashtable_slot_t
+{
+	uint64_t key_hash;
+	int item_index;
+	int base_count;
+};
+
+struct hashtable_t
+{
+	int count;
+	int slot_capacity;
+	hashtable_slot_t* slots;
+
+	uint8_t secret_key[CUTE_PROTOCOL_HASHTABLE_KEY_BYTES];
+
+	int key_size;
+	int item_size;
+	int item_capacity;
+	void* items_key;
+	int* items_slot_index;
+	void* items_data;
+
+	void* temp_key;
+	void* temp_item;
+	void* mem_ctx;
+};
+
+extern CUTE_API int CUTE_CALL hashtable_init(hashtable_t* table, int key_size, int item_size, int capacity, void* mem_ctx);
+extern CUTE_API void CUTE_CALL hashtable_cleanup(hashtable_t* table);
+
+extern CUTE_API void CUTE_CALL hashtable_insert(hashtable_t* table, const void* key, const void* item);
+extern CUTE_API void CUTE_CALL hashtable_remove(hashtable_t* table, const void* key);
+extern CUTE_API void CUTE_CALL hashtable_clear(hashtable_t* table);
+extern CUTE_API void* CUTE_CALL hashtable_find(const hashtable_t* table, const void* key);
+extern CUTE_API int CUTE_CALL hashtable_count(const hashtable_t* table);
+extern CUTE_API void* CUTE_CALL hashtable_items(const hashtable_t* table);
+extern CUTE_API void* CUTE_CALL hashtable_keys(const hashtable_t* table);
+extern CUTE_API void CUTE_CALL hashtable_swap(hashtable_t* table, int index_a, int index_b);
+
+// -------------------------------------------------------------------------------------------------
+
 #define CUTE_ENCRYPTION_STATES_MAX (CUTE_PROTOCOL_CLIENT_MAX * 4)
 
 struct encryption_state_t
@@ -163,8 +209,6 @@ struct encryption_state_map_t
 {
 	encryption_state_t states[CUTE_ENCRYPTION_STATES_MAX];
 };
-
-// WORKING HERE - Gotta make a cryptographic hash table for arbitrarily sized keys byte array keys.
 
 }
 }

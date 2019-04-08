@@ -132,6 +132,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_socket.h
 		test/test_connect_token.h
 		test/test_packets.h
+		test/test_hashtable.h
 		test/test_encryption_state.h
 	)
 

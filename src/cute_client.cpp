@@ -66,7 +66,7 @@ struct client_t
 	protocol::packet_allocator_t* packet_allocator;
 	protocol::replay_buffer_t nonce_buffer;
 	protocol::packet_queue_t packet_queue;
-	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
+	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 	void* mem_ctx;
 };
 
@@ -138,7 +138,7 @@ static void s_client_receive_packets(client_t* client)
 	while (1)
 	{
 		endpoint_t from;
-		int bytes_read = socket_receive(&client->socket, &from, buffer, CUTE_PACKET_SIZE_MAX);
+		int bytes_read = socket_receive(&client->socket, &from, buffer, CUTE_PROTOCOL_PACKET_SIZE_MAX);
 		if (bytes_read <= 0) {
 			// No more packets to receive for now.
 			break;
@@ -216,7 +216,7 @@ static void s_client_send_packet(client_t* client, void* packet, protocol::packe
 	//int size = packet_write(packet, type, buffer, client->connect_token.application_id, client->sequence + client->connect_token.sequence_offset, key);
 	int size = 0;
 	if (size <= 0) return;
-	CUTE_ASSERT(size <= CUTE_PACKET_SIZE_MAX);
+	CUTE_ASSERT(size <= CUTE_PROTOCOL_PACKET_SIZE_MAX);
 	int bytes_sent = socket_send(&client->socket, client->server_endpoint, buffer, size);
 	(void)bytes_sent;
 }

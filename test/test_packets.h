@@ -37,7 +37,7 @@ int test_packet_connection_accepted()
 	packet.max_clients = 32;
 	packet.connection_timeout = 10;
 
-	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
+	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 
 	int bytes_written = protocol::packet_write(&packet, buffer, application_id, sequence, &key);
 	CUTE_TEST_ASSERT(bytes_written > 0);
@@ -66,7 +66,7 @@ int test_packet_connection_denied()
 	protocol::packet_connection_denied_t packet;
 	packet.packet_type = protocol::PACKET_TYPE_CONNECTION_DENIED;
 
-	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
+	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 
 	int bytes_written = protocol::packet_write(&packet, buffer, application_id, sequence, &key);
 	CUTE_TEST_ASSERT(bytes_written > 0);
@@ -92,7 +92,7 @@ int test_packet_keepalive()
 	protocol::packet_keepalive_t packet;
 	packet.packet_type = protocol::PACKET_TYPE_KEEPALIVE;
 
-	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
+	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 
 	int bytes_written = protocol::packet_write(&packet, buffer, application_id, sequence, &key);
 	CUTE_TEST_ASSERT(bytes_written > 0);
@@ -118,7 +118,7 @@ int test_packet_disconnect()
 	protocol::packet_disconnect_t packet;
 	packet.packet_type = protocol::PACKET_TYPE_DISCONNECT;
 
-	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
+	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 
 	int bytes_written = protocol::packet_write(&packet, buffer, application_id, sequence, &key);
 	CUTE_TEST_ASSERT(bytes_written > 0);
@@ -146,7 +146,7 @@ int test_packet_challenge()
 	packet.nonce = 30;
 	crypto_random_bytes(packet.challenge_data, sizeof(packet.challenge_data));
 
-	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
+	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 
 	int bytes_written = protocol::packet_write(&packet, buffer, application_id, sequence, &key);
 	CUTE_TEST_ASSERT(bytes_written > 0);
@@ -173,10 +173,10 @@ int test_packet_payload()
 
 	protocol::packet_payload_t packet;
 	packet.packet_type = protocol::PACKET_TYPE_PAYLOAD;
-	packet.payload_size = CUTE_PACKET_PAYLOAD_MAX;
+	packet.payload_size = CUTE_PROTOCOL_PACKET_PAYLOAD_MAX;
 	crypto_random_bytes(packet.payload, sizeof(packet.payload));
 
-	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
+	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 
 	int bytes_written = protocol::packet_write(&packet, buffer, application_id, sequence, &key);
 	CUTE_TEST_ASSERT(bytes_written > 0);

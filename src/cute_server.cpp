@@ -51,7 +51,7 @@ struct server_t
 	socket_t socket;
 	serialize_t* io = NULL;
 	protocol::packet_queue_t packets;
-	uint8_t buffer[CUTE_PACKET_SIZE_MAX];
+	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 	void* mem_ctx = NULL;
 
 	int connection_denied_count = 0;
@@ -242,9 +242,9 @@ static int s_send_packet_to_client(server_t* server, uint32_t client_index, uint
 	int sequence_size = sizeof(uint64_t);
 	int size_minus_sequence = size - sizeof(uint64_t);
 	CUTE_ASSERT(size_minus_sequence > 0);
-	//CUTE_CHECK(crypto_encrypt(server->client_session_key + client_index, packet + sizeof(uint64_t), size_minus_sequence, CUTE_PACKET_SIZE_MAX, sequence));
+	//CUTE_CHECK(crypto_encrypt(server->client_session_key + client_index, packet + sizeof(uint64_t), size_minus_sequence, CUTE_PROTOCOL_PACKET_SIZE_MAX, sequence));
 	//int size_along_with_encryption_bytes = size + CUTE_CRYPTO_SYMMETRIC_BYTES;
-	//CUTE_ASSERT(size_along_with_encryption_bytes <= CUTE_PACKET_SIZE_MAX);
+	//CUTE_ASSERT(size_along_with_encryption_bytes <= CUTE_PROTOCOL_PACKET_SIZE_MAX);
 	//int bytes_sent = socket_send(&server->socket, server->client_endpoint[client_index], packet, size_along_with_encryption_bytes);
 	//if (bytes_sent != size_along_with_encryption_bytes) {
 		return -1;
@@ -262,7 +262,7 @@ static void s_server_recieve_packets(server_t* server)
 	while (1)
 	{
 		endpoint_t from;
-		int bytes_read = socket_receive(&server->socket, &from, buffer, CUTE_PACKET_SIZE_MAX);
+		int bytes_read = socket_receive(&server->socket, &from, buffer, CUTE_PROTOCOL_PACKET_SIZE_MAX);
 		if (bytes_read <= 0) {
 			// No more packets to receive for now.
 			break;
@@ -277,20 +277,20 @@ static void s_server_recieve_packets(server_t* server)
 		if (client_index == UINT32_MAX) {
 			// Client address not found -- potential new connection.
 
-			if (bytes_read < CUTE_PACKET_SIZE_MAX) {
-				// New connections *must* be padded to `CUTE_PACKET_SIZE_MAX`, or will be dropped. This helps
+			if (bytes_read < CUTE_PROTOCOL_PACKET_SIZE_MAX) {
+				// New connections *must* be padded to `CUTE_PROTOCOL_PACKET_SIZE_MAX`, or will be dropped. This helps
 				// to dissuade nefarious usage of the connection API from dubious users.
 				continue;
 			}
 
 			// Decrypt packet.
-			//if (crypto_decrypt_asymmetric(&server->public_key, &server->secret_key, buffer, CUTE_PACKET_SIZE_MAX)) {
+			//if (crypto_decrypt_asymmetric(&server->public_key, &server->secret_key, buffer, CUTE_PROTOCOL_PACKET_SIZE_MAX)) {
 			//	// Forged/tampered packet!
 			//	continue;
 			//}
 
 			serialize_t* io = server->io;
-			serialize_reset_buffer(io, SERIALIZE_READ, buffer, CUTE_PACKET_SIZE_MAX);
+			serialize_reset_buffer(io, SERIALIZE_READ, buffer, CUTE_PROTOCOL_PACKET_SIZE_MAX);
 
 			// Read version string.
 			const uint8_t* version_string = CUTE_PROTOCOL_VERSION_STRING;
@@ -317,7 +317,7 @@ static void s_server_recieve_packets(server_t* server)
 			}
 
 			// Send connection accepted packet.
-			serialize_reset_buffer(io, SERIALIZE_WRITE, buffer, CUTE_PACKET_SIZE_MAX);
+			serialize_reset_buffer(io, SERIALIZE_WRITE, buffer, CUTE_PROTOCOL_PACKET_SIZE_MAX);
 
 			uint64_t first_sequence = 0;
 			CUTE_SERIALIZE_CHECK(serialize_uint64_full(io, &first_sequence));
@@ -334,7 +334,7 @@ static void s_server_recieve_packets(server_t* server)
 			s_send_packet_to_client(server, client_index, buffer, bytes_written, first_sequence);
 		} else {
 			serialize_t* io = server->io;
-			serialize_reset_buffer(io, SERIALIZE_READ, buffer, CUTE_PACKET_SIZE_MAX);
+			serialize_reset_buffer(io, SERIALIZE_READ, buffer, CUTE_PROTOCOL_PACKET_SIZE_MAX);
 
 			uint64_t sequence;
 			CUTE_CHECK(serialize_uint64_full(io, &sequence));
