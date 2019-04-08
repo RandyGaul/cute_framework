@@ -872,7 +872,7 @@ encryption_state_t* encryption_map_get_states(encryption_map_t* map)
 	return (encryption_state_t*)hashtable_items(&map->table);
 }
 
-void encryption_map_look_for_timeouts(encryption_map_t* map, float dt)
+void encryption_map_look_for_timeouts_or_expirations(encryption_map_t* map, float dt, uint64_t time)
 {
 	int index = 0;
 	int count = encryption_map_count(map);
@@ -883,26 +883,9 @@ void encryption_map_look_for_timeouts(encryption_map_t* map, float dt)
 	{
 		encryption_state_t* state = states + index;
 		state->last_handshake_access_time += dt;
-		if (state->last_handshake_access_time >= state->handshake_timeout) {
-			encryption_map_remove(map, endpoints[index]);
-			--count;
-		} else {
-			++index;
-		}
-	}
-}
-
-void encryption_map_look_for_expirations(encryption_map_t* map, uint64_t time)
-{
-	int index = 0;
-	int count = encryption_map_count(map);
-	endpoint_t* endpoints = encryption_map_get_endpoints(map);
-	encryption_state_t* states = encryption_map_get_states(map);
-
-	while (index < count)
-	{
-		encryption_state_t* state = states + index;
-		if (state->expiration_timestamp <= time) {
+		int timed_out = state->last_handshake_access_time >= state->handshake_timeout;
+		int expired = state->expiration_timestamp <= time;
+		if (timed_out | expired) {
 			encryption_map_remove(map, endpoints[index]);
 			--count;
 		} else {

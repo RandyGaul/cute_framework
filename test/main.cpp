@@ -84,6 +84,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_hash_table_basic),
 		CUTE_TEST_CASE_ENTRY(test_hash_table_hammer),
 		CUTE_TEST_CASE_ENTRY(test_encryption_map_basic),
+		CUTE_TEST_CASE_ENTRY(test_encryption_map_timeout_and_expiration),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

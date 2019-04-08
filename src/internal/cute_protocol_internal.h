@@ -223,8 +223,7 @@ extern CUTE_API void CUTE_CALL encryption_map_remove(encryption_map_t* map, endp
 extern CUTE_API endpoint_t* CUTE_CALL encryption_map_get_endpoints(encryption_map_t* map);
 extern CUTE_API encryption_state_t* CUTE_CALL encryption_map_get_states(encryption_map_t* map);
 
-extern CUTE_API void CUTE_CALL encryption_map_look_for_timeouts(encryption_map_t* map, float dt);
-extern CUTE_API void CUTE_CALL encryption_map_look_for_expirations(encryption_map_t* map, uint64_t time);
+extern CUTE_API void CUTE_CALL encryption_map_look_for_timeouts_or_expirations(encryption_map_t* map, float dt, uint64_t time);
 
 }
 }
