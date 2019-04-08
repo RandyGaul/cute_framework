@@ -48,9 +48,9 @@ struct replay_buffer_t
 	uint64_t entries[CUTE_REPLAY_BUFFER_SIZE];
 };
 
-extern CUTE_API void CUTE_CALL replay_buffer_init(replay_buffer_t* buffer);
-extern CUTE_API int CUTE_CALL replay_buffer_cull_duplicate(replay_buffer_t* buffer, uint64_t sequence);
-extern CUTE_API void CUTE_CALL replay_buffer_update(replay_buffer_t* buffer, uint64_t sequence);
+extern CUTE_API void CUTE_CALL replay_buffer_init(replay_buffer_t* replay_buffer);
+extern CUTE_API int CUTE_CALL replay_buffer_cull_duplicate(replay_buffer_t* replay_buffer, uint64_t sequence);
+extern CUTE_API void CUTE_CALL replay_buffer_update(replay_buffer_t* replay_buffer, uint64_t sequence);
 
 struct packet_allocator_t;
 
@@ -58,9 +58,6 @@ extern CUTE_API packet_allocator_t* CUTE_CALL packet_allocator_make(void* user_a
 extern CUTE_API void CUTE_CALL packet_allocator_destroy(packet_allocator_t* packet_allocator);
 extern CUTE_API void* CUTE_CALL packet_allocator_alloc(packet_allocator_t* packet_allocator, packet_type_t type);
 extern CUTE_API void CUTE_CALL packet_allocator_free(packet_allocator_t* packet_allocator, packet_type_t type, void* packet);
-
-int packet_write(void* packet_ptr, packet_type_t packet_type, uint8_t* buffer, uint64_t game_id, uint64_t sequence, const crypto_key_t* key);
-void* packet_open(packet_allocator_t* pa, replay_buffer_t* nonce_buffer, uint64_t game_id, uint64_t timestamp, uint8_t* buffer, int size, uint64_t sequence_offset, const crypto_key_t* key, int is_server, packet_type_t* packet_type);
 
 struct packet_connect_token_t
 {
@@ -101,12 +98,15 @@ struct packet_challenge_t
 	uint8_t challenge_data[CUTE_CHALLENGE_DATA_SIZE];
 };
 
-struct packet_userdata_t
+struct packet_payload_t
 {
 	uint8_t packet_type;
-	int size;
-	uint8_t data[CUTE_PACKET_PAYLOAD_MAX];
+	uint16_t payload_size;
+	uint8_t payload[CUTE_PACKET_PAYLOAD_MAX];
 };
+
+extern CUTE_API int CUTE_CALL packet_write(void* packet_ptr, uint8_t* buffer, uint64_t application_id, uint64_t sequence, const crypto_key_t* key);
+extern CUTE_API void* CUTE_CALL packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t application_id, packet_allocator_t* pa, replay_buffer_t* replay_buffer);
 
 extern CUTE_API int CUTE_CALL read_connect_token_packet_public_section(uint8_t* buffer, uint64_t application_id, uint64_t current_time, packet_connect_token_t* packet);
 

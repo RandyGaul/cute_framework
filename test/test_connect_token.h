@@ -19,8 +19,6 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <cute_client.h>
-#include <cute_server.h>
 #include <cute_alloc.h>
 
 #include <internal/cute_protocol_internal.h>

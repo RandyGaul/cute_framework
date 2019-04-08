@@ -52,9 +52,9 @@ The connect token has three major sections.
 2. SECRET SECTION
 3. REST SECTION
 
-Once a client receives a connect token from the web service, the REST SECTION and the PUBLIC SECTION is read by the client. This section contains a server IP list of dedicated game servers to attempt to connect to, along with some other data. Once read, the client deletes the REST SECTION. The remaining data in the connect token consists of 1024 bytes. The final 1024 bytes are called the *connect token packet*.
+Once a client receives a connect token from the web service, the REST SECTION and the PUBLIC SECTION is read by the client. These sections contains a server IP list of dedicated game servers to attempt to connect to, along with some other data. Once read, the client deletes the REST SECTION. The remaining data in the connect token consists of 1024 bytes. The final 1024 bytes are called the *connect token packet*.
 
-The *connect token packet* is not modifiable by the client, and the SECRET SECTION is not readable and can not be forged by anyone except the web service and dedicated game servers. The entire *connect token packet* is protected by a cryptographically secure AEAD ([Authenticated Encryption with Associated Data](https://en.wikipedia.org/wiki/Authenticated_encryption#Authenticated_encryption_with_associated_data)) primitive. The key used for the AEAD primitive is a shared secret known by all dedicated game servers, and the web service. It is recommended to implement a mechanism to rotate this key periodically, though the mechanism to do so is out of scope for this document.
+The entire *connect token packet* is not modifiable or forge-able, and the SECRET SECTION is not readable by anyone except the web service and dedicated game servers. The entire *connect token packet* is protected by a cryptographically secure AEAD ([Authenticated Encryption with Associated Data](https://en.wikipedia.org/wiki/Authenticated_encryption#Authenticated_encryption_with_associated_data)) primitive. The key used for the AEAD primitive is a shared secret known by all dedicated game servers, and the web service. It is recommended to implement a mechanism to rotate this key periodically, though the mechanism to do so is out of scope for this document.
 
 ##### Note:
 > The AEAD primitive is a function that encrypts a chunk of data, and computes an HMAC ([keyed-hash message authentication code](https://en.wikipedia.org/wiki/HMAC)). The HMAC is a 16 byte value used to authenticate the message, and prevent tampering/modification of the message (i.e. maintain integrity of the message). The encryption ensures only those who know the key can read the message. The Associated Data (the AD in AEAD) is a chunk of data that is not encrypted, but "mixed-in" to the computation of the HMAC.
@@ -259,7 +259,8 @@ The *connection denied packet* can be sent by the server during the connection h
 ### Payload Packet
 
 ```
-payload data        In the range of [1, 1255] bytes.
+payload size        uint16_t
+payload data        In the range of [1, 1253] bytes.
 ```
 
 The *payload packet* can be sent by the client or the server during the *connected* state of the client. They contain game specific user data.
@@ -278,20 +279,20 @@ The *connection accepted packet* is sent from the the server once a client has s
 
 ```
 sequence nonce      uint64_t
-secret data         256 bytes
+challenge bytes     256 bytes
 ```
 
 The *challenge request packet* is sent from the server as apart of the connection handshake process. This challenge response sequence is used to prevent IP spoofing and *connect token packet* sniffing. For more information about how, see the [Sending Challenge Response](#sending-challenge-response) section.
 
 The `sequence nonce` is an incrementing counter starting at 0, initialized upon server restart.
 
-The `secret data` is simply 256 bytes of data. The data can be anything, including randomized bits. Exactly what bits are the `secret data` is left to the implementation. To fulfill the purpose of this packet, the client merely needs to decrypt the packet with the `server to client` key, encrypt it with the `client to server key`, and send it back to the server. The contents of the `secret data` are ignored by the client. This packet is intentionally smaller than the *connect token packet* to prevent [DDoS amplification](https://en.wikipedia.org/wiki/Denial-of-service_attack#Amplification).
+The `challenge bytes` is simply 256 bytes of data. The data can be anything, including randomized bits. Exactly what bits are the `challenge bytes` is left to the implementation. To fulfill the purpose of this packet, the client merely needs to decrypt the packet with the `server to client` key, encrypt it with the `client to server key`, and send it back to the server. The contents of the `challenge bytes` are ignored by the client. This packet is intentionally smaller than the *connect token packet* to prevent [DDoS amplification](https://en.wikipedia.org/wiki/Denial-of-service_attack#Amplification).
 
 ### Challenge Response Packet
 
 ```
 sequence nonce      uint64_t
-secret data         256 bytes
+challenge bytes     256 bytes
 ```
 
 The *challenge response packet* is the reflected version of the *challenge request packet*, and is sent by the client as apart of the connection handshake process. All the client has to do is copy the entire decrypted *challenge request packet*, encrypt it, and send it back to the server for verification. For more information see the [Sending Challenge Response](#sending-challenge-response), or the [Challenge Request Packet](#challenge-request-packet) section.
@@ -312,12 +313,11 @@ When decrypting packets the following steps must occur, in order, before a packe
 2. If the `packet type` byte is greater than 7, ignore the packet.
 3. The server ignores packets of types *challenge response packet*, *connection denied packet*, and *connection accepted packet*.
 4. The client ignores packets of types *challenge request packet* and *connect token packet*.
-* If the packet's size pre-encryption is not within acceptable range, as defined by the packet type, ignore the packet. For example, the *connect token packet* must be exactly 1024 bytes. All other packets can be within the post-encryption ranges (listed below), with 16 + 8 + 1 (25) bytes added for the encryption `HMAC bytes`, `sequence nonce`, and `packet type` byte (so for example, the *keeapalive packet* packet pre-encryption should be exactly 0 + 25 (25) bytes in size).
-5. If the packet fails replay protection, ignore the packet. See the [Replay Protection](#replay-protection) section for more info.
-6. If the packet fails to decrypt with the AEAD primitive, ignore the packet.
-7. If the packet's size post-decryption is not within the ranges specified by each packet format in the [Unencrypted Packets](#unencrypted-packets) section, ignore the packet. Here's a table of acceptable sizes.
+5. If the packet's `encrypted bytes` is not within acceptable range, as defined by the packet type, ignore the packet. A table of acceptable sizes is given just below the end of these 7 steps.
+6. If the packet fails replay protection, ignore the packet. See the [Replay Protection](#replay-protection) section for more info.
+7. If the packet fails to decrypt with the AEAD primitive, ignore the packet.
 
-Packet Type | Size Post-Encryption
+Packet Type | `encrypted bytes` Size
 --- | ---
 *connect token packet* | 1008 bytes
 *keepalive packet* | 0 bytes
@@ -372,9 +372,9 @@ The `client to server key` and `server to client key` are used to perform encryp
 1. If the server is not in the list of IP addresses in the *connect token packet*, ignore the packet.
 2. If a client is already connected with the same IP address and port, ignore the packet.
 3. Lookup in the *connect token cache* with the *connect token packet* `HMAC bytes` as the key.
-	1. The *connect token cache* is a key-value store, where the `HMAC bytes` are used to lookup IP address and port, and `client id`. It is recommended to use a rolling cache to automatically evict old entries that will have already timed-out.
-	2. If a matching IP address and port is in the *connect token cache*, ignore the packet.
-	3. If a matching `client id` is in the *connect token cache*, ignore the packet.
+	* The *connect token cache* is a key-value store, where the `HMAC bytes` are used to lookup IP address and port, and `client id`. It is recommended to use a rolling cache to automatically evict old entries that will have already timed-out.
+	1. If a matching IP address and port is in the *connect token cache*, ignore the packet.
+	2. If a matching `client id` is in the *connect token cache*, ignore the packet.
 4. Otherwise, insert the *connect token packet* into the *connect token cache* as described above.
 5. If the server is full, respond with a *connection denied packet*.
 6. Setup an *encryption state* with the client, keyed by the client IP address and port. If for any reason this operation fails, ignore the packet.
@@ -387,10 +387,10 @@ The *encryption state* should be deleted or recycled whenever a connection or ha
 
 Once the connect token has been validated, and the encryption state is successfully setup, the next steps are to complete the challenge request and response sequence with the client. The purpose of these steps is to prevent IP spoofing, and also to prevent *connect token packet* sniffing. From here on all packets are encrypted or decrypted with the *encryption state*.
 
-1. Send the client a *challenge request packet* periodically through the PACKET_SEND_FREQUENCY tunable (see [Tuning Parameters](#tuning-parameters)). To do so, the server must increment the `sequence nonce` number after the encryption mapping times out or is destroyed, or the client successfully responds with a valid *challenge response packet*. Before sending the *challenge request packet*, fill in the bytes with a unique bit pattern, and remember the bit pattern for later.
+1. Send the client a *challenge request packet* periodically through the PACKET_SEND_FREQUENCY tunable (see [Tuning Parameters](#tuning-parameters)). Before sending the *challenge request packet*, fill in the `challenge bytes` with a unique bit pattern, and remember the bit pattern for later. Use the `sequence nonce` from the *encryption state* to fill in the `sequence nonce` of the *challenge request packet*.
 2. If a *challenge response packet* is received, first read in the `sequence nonce` and try decrypting the packet. If decryption fails, ignore the packet.
-3. Test to make sure the bit pattern post-encryption matches the bit pattern sent in the *challenge request packet*.
-4. If all checks, passed, the client is now considered *connected*, but not *confirmed*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
+3. Test to make sure the bit pattern post-decryption matches the bit pattern sent in the *challenge request packet*.
+4. If all checks, passed, the client is now considered *connected*, but not *confirmed*. Increment the `sequence nonce` of the *encryption state*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
 5. Once the client responds with a *payload packet*, or a *keepalive packet*, consider the client *confirmed*.
 6. If the client does not respond within `handshake timeout` seconds, destroy the encryption mapping and remove the connect token from the *connect token cache*.
 7. Once a client is *connected* the server may start sending *payload packet*'s. If the client is not yet confirmed, the server *must* send an additional *connection accepted packet* just before sending the *payload packet*. Once the client is *confirmed* preceding *connection accepted packet*'s are no longer necessary. The purpose of extra *connection accepted packet*'s is an optimization: the server is allowed to start streaming payload packets earlier, but also ensures the client receives a *connection accepted packet*.

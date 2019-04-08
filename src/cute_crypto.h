@@ -34,11 +34,11 @@ namespace cute
 
 struct crypto_key_t;
 
-extern CUTE_API int CUTE_CALL crypto_encrypt(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* additional_data, int additional_data_size, uint64_t nonce);
-extern CUTE_API int CUTE_CALL crypto_decrypt(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* additional_data, int additional_data_size, uint64_t nonce);
+extern CUTE_API int CUTE_CALL crypto_encrypt(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* associated_data, int associated_data_size, uint64_t nonce);
+extern CUTE_API int CUTE_CALL crypto_decrypt(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* associated_data, int associated_data_size, uint64_t nonce);
 
-extern CUTE_API int CUTE_CALL crypto_encrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* additional_data, int additional_data_size, const uint8_t* nonce);
-extern CUTE_API int CUTE_CALL crypto_decrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* additional_data, int additional_data_size, const uint8_t* nonce);
+extern CUTE_API int CUTE_CALL crypto_encrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* associated_data, int associated_data_size, const uint8_t* nonce);
+extern CUTE_API int CUTE_CALL crypto_decrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* associated_data, int associated_data_size, const uint8_t* nonce);
 
 }
 

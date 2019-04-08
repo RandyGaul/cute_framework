@@ -151,44 +151,44 @@ int packet_queue_pop(packet_queue_t* q, void** packet, packet_type_t* type)
 
 // -------------------------------------------------------------------------------------------------
 
-void replay_buffer_init(replay_buffer_t* buffer)
+void replay_buffer_init(replay_buffer_t* replay_buffer)
 {
-    buffer->max = 0;
-    CUTE_MEMSET(buffer->entries, ~0, sizeof(uint64_t) * CUTE_REPLAY_BUFFER_SIZE);
+	replay_buffer->max = 0;
+	CUTE_MEMSET(replay_buffer->entries, ~0, sizeof(uint64_t) * CUTE_REPLAY_BUFFER_SIZE);
 }
 
-int replay_buffer_cull_duplicate(replay_buffer_t* buffer, uint64_t sequence)
+int replay_buffer_cull_duplicate(replay_buffer_t* replay_buffer, uint64_t sequence)
 {
-    if (sequence + CUTE_REPLAY_BUFFER_SIZE < buffer->max) {
-        // This is UDP - just drop old packets.
-        return -1;
-    }
+	if (sequence + CUTE_REPLAY_BUFFER_SIZE < replay_buffer->max) {
+		// This is UDP - just drop old packets.
+		return -1;
+	}
 
-    int index = (int)(sequence % CUTE_REPLAY_BUFFER_SIZE);
-    uint64_t val = buffer->entries[index];
-    int empty_slot = val == ~0ULL;
-    int outdated = val >= sequence;
-    if (empty_slot | !outdated) {
-        return 0;
-    } else {
-        // Duplicate or replayed packet detected.
-        return -1;
-    }
+	int index = (int)(sequence % CUTE_REPLAY_BUFFER_SIZE);
+	uint64_t val = replay_buffer->entries[index];
+	int empty_slot = val == ~0ULL;
+	int outdated = val >= sequence;
+	if (empty_slot | !outdated) {
+		return 0;
+	} else {
+		// Duplicate or replayed packet detected.
+		return -1;
+	}
 }
 
-void replay_buffer_update(replay_buffer_t* buffer, uint64_t sequence)
+void replay_buffer_update(replay_buffer_t* replay_buffer, uint64_t sequence)
 {
-    if (buffer->max < sequence) {
-        buffer->max = sequence;
-    }
+	if (replay_buffer->max < sequence) {
+		replay_buffer->max = sequence;
+	}
 
-    int index = (int)(sequence % CUTE_REPLAY_BUFFER_SIZE);
-    uint64_t val = buffer->entries[index];
-    int empty_slot = val == ~0ULL;
-    int outdated = val >= sequence;
-    if (empty_slot | !outdated) {
-        buffer->entries[index] = sequence;
-    }
+	int index = (int)(sequence % CUTE_REPLAY_BUFFER_SIZE);
+	uint64_t val = replay_buffer->entries[index];
+	int empty_slot = val == ~0ULL;
+	int outdated = val >= sequence;
+	if (empty_slot | !outdated) {
+		replay_buffer->entries[index] = sequence;
+	}
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -223,238 +223,182 @@ cute_error:
 	return -1;
 }
 
-void* packet_open(packet_allocator_t* pa, replay_buffer_t* nonce_buffer, uint64_t game_id, uint64_t timestamp, uint8_t* buffer, int size, uint64_t sequence_offset, const crypto_key_t* key, int is_server, packet_type_t* packet_type)
+static CUTE_INLINE uint8_t* s_header(uint8_t** p, uint8_t type, uint64_t sequence)
 {
-	/*
-	uint8_t* buffer_start = buffer;
-	packet_type_t type = (packet_type_t)read_uint8(&buffer);
-	*packet_type = type;
+	write_uint8(p, type);
+	write_uint64(p, sequence);
+	return *p;
+}
 
-	// Filter out invalid packet types.
-	if (is_server) {
-		switch (type)
-		{
-		default: return NULL;
-		case PACKET_TYPE_CONNECT_TOKEN: break;
-		case PACKET_TYPE_KEEPALIVE: break;
-		case PACKET_TYPE_DISCONNECT: break;
-		case PACKET_TYPE_CHALLENGE_RESPONSE: break;
-		case PACKET_TYPE_USERDATA: break;
-		}
-	} else {
-		switch (type)
-		{
-		default: return NULL;
-		case PACKET_TYPE_CONNECTION_ACCEPTED: break;
-		case PACKET_TYPE_CONNECTION_DENIED: break;
-		case PACKET_TYPE_KEEPALIVE: break;
-		case PACKET_TYPE_DISCONNECT: break;
-		case PACKET_TYPE_CHALLENGE_REQUEST: break;
-		case PACKET_TYPE_USERDATA: break;
-		}
+static CUTE_INLINE void s_associated_data(uint8_t** p, uint8_t type, uint64_t application_id)
+{
+	write_uint8(p, type);
+	write_bytes(p, CUTE_PROTOCOL_VERSION_STRING, CUTE_PROTOCOL_VERSION_STRING_LEN);
+	write_uint64(p, application_id);
+}
+
+int packet_write(void* packet_ptr, uint8_t* buffer, uint64_t application_id, uint64_t sequence, const crypto_key_t* key)
+{
+	uint8_t type = *(uint8_t*)packet_ptr;
+	uint8_t* buffer_start = buffer;
+	uint8_t* payload = s_header(&buffer, type, sequence);
+	int payload_size = 0;
+
+	switch (type)
+	{
+	case PACKET_TYPE_CONNECTION_ACCEPTED:
+	{
+		packet_connection_accepted_t* packet = (packet_connection_accepted_t*)packet_ptr;
+		write_uint64(&buffer, packet->client_handle);
+		write_uint32(&buffer, packet->max_clients);
+		write_uint32(&buffer, packet->connection_timeout);
+		payload_size = (int)(buffer - payload);
+		CUTE_ASSERT(payload_size == 8 + 4 + 4);
+	}	break;
+
+	case PACKET_TYPE_CONNECTION_DENIED:
+	{
+		packet_connection_denied_t* packet = (packet_connection_denied_t*)packet_ptr;
+		payload_size = (int)(buffer - payload);
+		CUTE_ASSERT(payload_size == 0);
+	}	break;
+
+	case PACKET_TYPE_KEEPALIVE:
+	{
+		packet_keepalive_t* packet = (packet_keepalive_t*)packet_ptr;
+		payload_size = (int)(buffer - payload);
+		CUTE_ASSERT(payload_size == 0);
+	}	break;
+
+	case PACKET_TYPE_DISCONNECT:
+	{
+		packet_disconnect_t* packet = (packet_disconnect_t*)packet_ptr;
+		payload_size = (int)(buffer - payload);
+		CUTE_ASSERT(payload_size == 0);
+	}	break;
+
+	case PACKET_TYPE_CHALLENGE_REQUEST: // fall-thru
+	case PACKET_TYPE_CHALLENGE_RESPONSE:
+	{
+		packet_challenge_t* packet = (packet_challenge_t*)packet_ptr;
+		write_uint64(&buffer, packet->nonce);
+		CUTE_MEMCPY(buffer, packet->challenge_data, CUTE_CHALLENGE_DATA_SIZE);
+		buffer += CUTE_CHALLENGE_DATA_SIZE;
+		payload_size = (int)(buffer - payload);
+		CUTE_ASSERT(payload_size == 8 + CUTE_CHALLENGE_DATA_SIZE);
+	}	break;
+
+	case PACKET_TYPE_PAYLOAD:
+	{
+		packet_payload_t* packet = (packet_payload_t*)packet_ptr;
+		write_uint16(&buffer, packet->payload_size);
+		CUTE_MEMCPY(buffer, packet->payload, packet->payload_size);
+		buffer += packet->payload_size;
+		payload_size = (int)(buffer - payload);
+		CUTE_ASSERT(payload_size == 2 + packet->payload_size);
+	}	break;
 	}
 
-	if (type == PACKET_TYPE_CONNECT_TOKEN) {
-		CUTE_CHECK(size != CUTE_PACKET_SIZE_MAX);
+	uint8_t associated_data[1 + CUTE_PROTOCOL_VERSION_STRING_LEN + 8];
+	uint8_t* ad_ptr = associated_data;
+	s_associated_data(&ad_ptr, type, application_id);
 
-		// Read in and verify the header.
-		CUTE_CHECK(read_uint8(&buffer) != 'C');
-		CUTE_CHECK(read_uint8(&buffer) != 'U');
-		CUTE_CHECK(read_uint8(&buffer) != 'T');
-		CUTE_CHECK(read_uint8(&buffer) != 'E');
-		CUTE_CHECK(read_uint8(&buffer) != ' ');
-		CUTE_CHECK(read_uint8(&buffer) != '1');
-		CUTE_CHECK(read_uint8(&buffer) != '.');
-		CUTE_CHECK(read_uint8(&buffer) != '0');
-		CUTE_CHECK(read_uint8(&buffer) != '\0');
-		uint64_t game_id_from_packet = read_uint64(&buffer);
-		CUTE_CHECK(game_id_from_packet != game_id);
-		uint8_t nonce[CUTE_CRYPTO_NONCE_BYTES];
-		read_bytes(&buffer, nonce, CUTE_CRYPTO_NONCE_BYTES);
-		uint64_t expire_timestamp = read_uint64(&buffer);
-		CUTE_CHECK(expire_timestamp > timestamp);
+	CUTE_CHECK(crypto_encrypt(key, payload, payload_size, associated_data, sizeof(associated_data), sequence));
 
-		// Decrypt secret section of the connect token.
-		uint8_t* additional_data = buffer_start;
-		int additional_data_size = ~0; // FIXME (was CUTE_CONNECT_TOKEN_HEADER_SIZE or something dumb).
+	return (int)(buffer - buffer_start) + CUTE_CRYPTO_HMAC_BYTES;
 
-		int secret_size = CUTE_PACKET_SIZE_MAX - additional_data_size;
-		uint8_t* secret_data = buffer_start + additional_data_size;
+cute_error:
+	return -1;
+}
 
-		CUTE_CHECK(crypto_decrypt_bignonce(key, secret_data, secret_size, additional_data, additional_data_size, nonce));
-		secret_size -= CUTE_CRYPTO_HMAC_BYTES;
+void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t application_id, packet_allocator_t* pa, replay_buffer_t* replay_buffer)
+{
+	uint8_t* buffer_start = buffer;
+	uint8_t type = read_uint8(&buffer);
 
-		// Read the token secret data.
-		packet_decrypted_connect_token_t* token = (packet_decrypted_connect_token_t*)packet_allocator_alloc(pa, PACKET_TYPE_CONNECTION_REQUEST);
-		token->client_id = read_uint64(&secret_data);
-		token->expire_timestamp = expire_timestamp;
-		token->sequence_offset = read_uint64(&secret_data);
-		read_bytes(&secret_data, token->key.key, sizeof(crypto_key_t));
-		read_bytes(&secret_data, token->user_data, CUTE_CONNECT_TOKEN_USER_DATA_SIZE);
+	switch (type)
+	{
+	case PACKET_TYPE_CONNECTION_ACCEPTED: CUTE_CHECK(size != 16 + 25); break;
+	case PACKET_TYPE_CONNECTION_DENIED: CUTE_CHECK(size != 25); break;
+	case PACKET_TYPE_KEEPALIVE: CUTE_CHECK(size != 25); break;
+	case PACKET_TYPE_DISCONNECT: CUTE_CHECK(size != 25); break;
+	case PACKET_TYPE_CHALLENGE_REQUEST: CUTE_CHECK(size != 264 + 25); break;
+	case PACKET_TYPE_CHALLENGE_RESPONSE: CUTE_CHECK(size != 264 + 25); break;
+	case PACKET_TYPE_PAYLOAD: CUTE_CHECK(size - 25 < 1 || size - 25 > 1255); break;
+	}
 
-		// Read the token public data.
-		uint16_t endpoint_count = read_uint16(&additional_data);
-		token->endpoint_count = endpoint_count;
-		for (int i = 0; i < endpoint_count; ++i)
-		{
-			address_type_t type = (address_type_t)read_uint8(&additional_data);
-			if(type == ADDRESS_TYPE_NONE) {
-				packet_allocator_free(pa, PACKET_TYPE_CHALLENGE_REQUEST, token);
-				return NULL;
-			}
-			token->endpoints[i].type = type;
-			read_bytes(&additional_data, (uint8_t*)(&token->endpoints[i].u), type == ADDRESS_TYPE_IPV4 ? sizeof(endpoint_t::u.ipv4) : sizeof(endpoint_t::u.ipv6));
-			token->endpoints[i].port = read_uint16(&additional_data);
-		}
+	uint64_t sequence = read_uint64(&buffer);
+	int bytes_read = (int)(buffer - buffer_start);
+	CUTE_ASSERT(bytes_read == 1 + 8);
 
-		return token;
-	} else {
-		uint8_t additional_data[CUTE_ADDITIONAL_DATA_SIZE];
-		s_write_header(additional_data, type, game_id);
-		uint64_t sequence = read_uint64(&buffer);
-		if (crypto_decrypt(key, buffer, size - sizeof(uint64_t) - 1, additional_data, CUTE_ADDITIONAL_DATA_SIZE, sequence + sequence_offset) < 0) {
-			// Forged packet!
-			return NULL;
-		}
+	if (replay_buffer) {
+		CUTE_CHECK(replay_buffer_cull_duplicate(replay_buffer, sequence));
+	}
 
-		if (replay_buffer_cull_duplicate(nonce_buffer, sequence) < 0) {
-			// Duplicate, or very old, packet detected.
-			return NULL;
-		}
+	uint8_t associated_data[1 + CUTE_PROTOCOL_VERSION_STRING_LEN + 8];
+	uint8_t* ad_ptr = associated_data;
+	s_associated_data(&ad_ptr, type, application_id);
 
-		switch (type)
-		{
-		case PACKET_TYPE_CONNECTION_ACCEPTED:
-		{
-			packet_connection_accepted_t* packet = (packet_connection_accepted_t*)packet_allocator_alloc(pa, PACKET_TYPE_CONNECTION_ACCEPTED);
-			packet->client_number = read_uint32(&buffer);
-			packet->max_clients = read_uint32(&buffer);
-			return packet;
-		}	break;
+	CUTE_CHECK(crypto_decrypt(key, buffer, size - bytes_read, associated_data, sizeof(associated_data), sequence));
 
-		case PACKET_TYPE_CONNECTION_DENIED:
-		{
-			packet_connection_denied_t* packet = (packet_connection_denied_t*)packet_allocator_alloc(pa, PACKET_TYPE_CONNECTION_DENIED);
-			packet->packet_type = (uint8_t)type;
-			return packet;
-		}	break;
+	if (replay_buffer) {
+		replay_buffer_update(replay_buffer, sequence);
+	}
 
-		case PACKET_TYPE_KEEPALIVE:
-		{
-			packet_connection_denied_t* packet = (packet_connection_denied_t*)packet_allocator_alloc(pa, PACKET_TYPE_KEEPALIVE);
-			packet->packet_type = (uint8_t)type;
-			return packet;
-		}	break;
+	switch (type)
+	{
+	case PACKET_TYPE_CONNECTION_ACCEPTED:
+	{
+		packet_connection_accepted_t* packet = (packet_connection_accepted_t*)packet_allocator_alloc(pa, (packet_type_t)type);
+		packet->packet_type = type;
+		packet->client_handle = read_uint64(&buffer);
+		packet->max_clients = read_uint32(&buffer);
+		packet->connection_timeout = read_uint32(&buffer);
+		return packet;
+	}	break;
 
-		case PACKET_TYPE_DISCONNECT:
-		{
-			packet_connection_denied_t* packet = (packet_connection_denied_t*)packet_allocator_alloc(pa, PACKET_TYPE_DISCONNECT);
-			packet->packet_type = (uint8_t)type;
-			return packet;
-		}	break;
+	case PACKET_TYPE_CONNECTION_DENIED:
+	{
+		packet_connection_denied_t* packet = (packet_connection_denied_t*)packet_allocator_alloc(pa, (packet_type_t)type);
+		packet->packet_type = type;
+		return packet;
+	}	break;
 
-		case PACKET_TYPE_CHALLENGE_REQUEST: // fall-thru
-		case PACKET_TYPE_CHALLENGE_RESPONSE:
-		{
-			packet_challenge_t* packet = (packet_challenge_t*)packet_allocator_alloc(pa, PACKET_TYPE_CHALLENGE_REQUEST);
-			packet->nonce = read_uint64(&buffer);
-			CUTE_MEMCPY(packet->challenge_data, buffer, sizeof(packet->challenge_data));
-			return packet;
-		}	break;
+	case PACKET_TYPE_KEEPALIVE:
+	{
+		packet_keepalive_t* packet = (packet_keepalive_t*)packet_allocator_alloc(pa, (packet_type_t)type);
+		packet->packet_type = type;
+		return packet;
+	}	break;
 
-		case PACKET_TYPE_USERDATA:
-		{
-			packet_userdata_t* packet = (packet_userdata_t*)packet_allocator_alloc(pa, PACKET_TYPE_USERDATA);
-			packet->size = read_uint32(&buffer);
-			CUTE_MEMSET(packet->data, 0, sizeof(packet->data));
-			CUTE_MEMCPY(packet->data, buffer, packet->size);
-			return packet;
-		}	break;
+	case PACKET_TYPE_DISCONNECT:
+	{
+		packet_disconnect_t* packet = (packet_disconnect_t*)packet_allocator_alloc(pa, (packet_type_t)type);
+		packet->packet_type = type;
+		return packet;
+	}	break;
 
-		default: return NULL;
-		}
+	case PACKET_TYPE_CHALLENGE_REQUEST: // fall-thru
+	case PACKET_TYPE_CHALLENGE_RESPONSE:
+	{
+		packet_challenge_t* packet = (packet_challenge_t*)packet_allocator_alloc(pa, (packet_type_t)type);
+		packet->packet_type = type;
+		packet->nonce = read_uint64(&buffer);
+		CUTE_MEMCPY(packet->challenge_data, buffer, CUTE_CHALLENGE_DATA_SIZE);
+		return packet;
+	}	break;
+
+	case PACKET_TYPE_PAYLOAD:
+	{
+		packet_payload_t* packet = (packet_payload_t*)packet_allocator_alloc(pa, (packet_type_t)type);
+		packet->packet_type = type;
+		packet->payload_size = read_uint16(&buffer);
+		CUTE_MEMCPY(packet->payload, buffer, packet->payload_size);
+		return packet;
+	}	break;
 	}
 
 cute_error:
-	return NULL;
-	*/
-	return NULL;
-}
-
-int packet_write(void* packet_ptr, packet_type_t packet_type, uint8_t* buffer, uint64_t game_id, uint64_t sequence, const crypto_key_t* key)
-{
-	/*
-	uint8_t* buffer_start = buffer;
-
-	if (packet_type == PACKET_TYPE_CONNECTION_REQUEST) {
-		packet_encrypted_connect_token_t* packet = (packet_encrypted_connect_token_t*)packet_ptr;
-		//write_uint8(&buffer, (uint8_t)PACKET_TYPE_CONNECTION_REQUEST);
-		//write_bytes(&buffer, CUTE_PROTOCOL_VERSION_STRING, CUTE_PROTOCOL_VERSION_STRING_LEN);
-		//write_uint64(&buffer, game_id);
-		//write_bytes(&buffer, packet->nonce, sizeof(packet->nonce));
-		//write_uint64(&buffer, packet->expire_timestamp);
-		//write_bytes(&buffer, packet->secret_data, sizeof(packet->secret_data));
-		int packet_size = (int)(buffer - buffer_start);
-		//CUTE_ASSERT(packet_size == CUTE_PACKET_SIZE_MAX);
-		return packet_size;
-	} else {
-		write_uint8(&buffer, (uint8_t)packet_type);
-		write_uint64(&buffer, sequence);
-
-		uint8_t* payload_start = buffer;
-		int payload_size = 0;
-		switch (packet_type)
-		{
-		case PACKET_TYPE_CONNECTION_ACCEPTED:
-		{
-			packet_connection_accepted_t* packet = (packet_connection_accepted_t*)packet_ptr;
-			write_uint32(&buffer, packet->client_number);
-			write_uint32(&buffer, packet->max_clients);
-		}	break;
-
-		case PACKET_TYPE_CONNECTION_DENIED: // fall-thru
-		case PACKET_TYPE_KEEPALIVE: // fall-thru
-		case PACKET_TYPE_DISCONNECT:
-		{
-			// No payload data.
-		}	break;
-
-		case PACKET_TYPE_CHALLENGE_REQUEST: // fall-thru
-		case PACKET_TYPE_CHALLENGE_RESPONSE:
-		{
-			packet_challenge_t* packet = (packet_challenge_t*)packet_ptr;
-			write_uint64(&buffer, packet->nonce);
-			write_bytes(&buffer, packet->challenge_data, sizeof(packet->challenge_data));
-		}	break;
-
-		case PACKET_TYPE_USERDATA:
-		{
-			packet_userdata_t* packet = (packet_userdata_t*)packet_ptr;
-			CUTE_ASSERT(packet->size <= CUTE_PACKET_PAYLOAD_MAX);
-			CUTE_MEMCPY(buffer, packet->data, packet->size);
-			buffer += packet->size;
-		}	break;
-
-		default:
-			error_set("Attempted to write invalid packet type.");
-			CUTE_ASSERT(0);
-			return -1;
-		}
-
-		uint8_t additional_data[CUTE_ADDITIONAL_DATA_SIZE];
-		s_write_header(additional_data, packet_type, game_id);
-
-		if (crypto_encrypt(key, payload_start, payload_size, additional_data, CUTE_ADDITIONAL_DATA_SIZE, sequence) < 0) {
-			return -1;
-		}
-
-		buffer += CUTE_CRYPTO_HMAC_BYTES;
-
-		int packet_size = (int)(buffer - buffer_start);
-		CUTE_ASSERT(packet_size <= CUTE_PACKET_SIZE_MAX);
-		return packet_size;
-	}
-	*/
 	return NULL;
 }
 
@@ -472,11 +416,46 @@ void packet_allocator_destroy(packet_allocator_t* packet_allocator)
 
 void* packet_allocator_alloc(packet_allocator_t* packet_allocator, packet_type_t type)
 {
-	return NULL;
+	int size = 0;
+
+	switch (type)
+	{
+	case PACKET_TYPE_CONNECT_TOKEN:
+		size = sizeof(packet_connect_token_t);
+		break;
+
+	case PACKET_TYPE_CONNECTION_ACCEPTED:
+		size = sizeof(packet_connection_accepted_t);
+		break;
+
+	case PACKET_TYPE_CONNECTION_DENIED:
+		size = sizeof(packet_connection_denied_t);
+		break;
+
+	case PACKET_TYPE_KEEPALIVE:
+		size = sizeof(packet_keepalive_t);
+		break;
+
+	case PACKET_TYPE_DISCONNECT:
+		size = sizeof(packet_disconnect_t);
+		break;
+
+	case PACKET_TYPE_CHALLENGE_REQUEST: // fall-thru
+	case PACKET_TYPE_CHALLENGE_RESPONSE:
+		size = sizeof(packet_challenge_t);
+		break;
+
+	case PACKET_TYPE_PAYLOAD:
+		size = sizeof(packet_payload_t);
+		break;
+	}
+
+	return CUTE_ALLOC(size, NULL);
 }
 
 void packet_allocator_free(packet_allocator_t* packet_allocator, packet_type_t type, void* packet)
 {
+	CUTE_FREE(packet, NULL);
 }
 
 // -------------------------------------------------------------------------------------------------
