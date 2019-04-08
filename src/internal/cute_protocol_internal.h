@@ -42,6 +42,8 @@ extern CUTE_API void CUTE_CALL packet_queue_init(packet_queue_t* q);
 extern CUTE_API int CUTE_CALL packet_queue_push(packet_queue_t* q, void* packet, packet_type_t type);
 extern CUTE_API int CUTE_CALL packet_queue_pop(packet_queue_t* q, void** packet, packet_type_t* type);
 
+// -------------------------------------------------------------------------------------------------
+
 struct replay_buffer_t
 {
 	uint64_t max;
@@ -52,6 +54,8 @@ extern CUTE_API void CUTE_CALL replay_buffer_init(replay_buffer_t* replay_buffer
 extern CUTE_API int CUTE_CALL replay_buffer_cull_duplicate(replay_buffer_t* replay_buffer, uint64_t sequence);
 extern CUTE_API void CUTE_CALL replay_buffer_update(replay_buffer_t* replay_buffer, uint64_t sequence);
 
+// -------------------------------------------------------------------------------------------------
+
 struct packet_allocator_t;
 
 extern CUTE_API packet_allocator_t* CUTE_CALL packet_allocator_make(void* user_allocator_context = NULL);
@@ -59,13 +63,15 @@ extern CUTE_API void CUTE_CALL packet_allocator_destroy(packet_allocator_t* pack
 extern CUTE_API void* CUTE_CALL packet_allocator_alloc(packet_allocator_t* packet_allocator, packet_type_t type);
 extern CUTE_API void CUTE_CALL packet_allocator_free(packet_allocator_t* packet_allocator, packet_type_t type, void* packet);
 
+// -------------------------------------------------------------------------------------------------
+
 struct packet_connect_token_t
 {
 	uint8_t packet_type;
 	uint64_t expiration_timestamp;
 	uint32_t handshake_timeout;
 	uint16_t endpoint_count;
-	endpoint_t endpoints[CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX];
+	endpoint_t endpoints[CUTE_CONNECT_TOKEN_ENDPOINT_MAX];
 };
 
 struct packet_connection_accepted_t
@@ -102,7 +108,7 @@ struct packet_payload_t
 {
 	uint8_t packet_type;
 	uint16_t payload_size;
-	uint8_t payload[CUTE_PACKET_PAYLOAD_MAX];
+	uint8_t payload[CUTE_PROTOCOL_PACKET_PAYLOAD_MAX];
 };
 
 extern CUTE_API int CUTE_CALL packet_write(void* packet_ptr, uint8_t* buffer, uint64_t application_id, uint64_t sequence, const crypto_key_t* key);
@@ -121,7 +127,7 @@ struct connect_token_t
 	uint64_t expiration_timestamp;
 	uint32_t handshake_timeout;
 	uint16_t endpoint_count;
-	endpoint_t endpoints[CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX];
+	endpoint_t endpoints[CUTE_CONNECT_TOKEN_ENDPOINT_MAX];
 };
 
 struct connect_token_decrypted_t
@@ -129,7 +135,7 @@ struct connect_token_decrypted_t
 	uint64_t expiration_timestamp;
 	uint32_t handshake_timeout;
 	uint16_t endpoint_count;
-	endpoint_t endpoints[CUTE_CONNECT_TOKEN_SERVER_COUNT_MAX];
+	endpoint_t endpoints[CUTE_CONNECT_TOKEN_ENDPOINT_MAX];
 
 	uint64_t client_id;
 	crypto_key_t client_to_server_key;
@@ -140,6 +146,25 @@ struct connect_token_decrypted_t
 
 extern CUTE_API uint8_t* CUTE_CALL client_read_connect_token_from_web_service(uint8_t* buffer, uint64_t application_id, uint64_t current_time, connect_token_t* token);
 extern CUTE_API int CUTE_CALL server_decrypt_connect_token_packet(uint8_t* packet_buffer, const crypto_key_t* secret_key, uint64_t application_id, uint64_t current_time, connect_token_decrypted_t* token);
+
+// -------------------------------------------------------------------------------------------------
+
+#define CUTE_ENCRYPTION_STATES_MAX (CUTE_PROTOCOL_CLIENT_MAX * 4)
+
+struct encryption_state_t
+{
+	uint64_t sequence;
+	uint32_t timeout;
+	crypto_key_t client_to_server_key;
+	crypto_key_t server_to_client_key;
+};
+
+struct encryption_state_map_t
+{
+	encryption_state_t states[CUTE_ENCRYPTION_STATES_MAX];
+};
+
+// WORKING HERE - Gotta make a cryptographic hash table for arbitrarily sized keys byte array keys.
 
 }
 }
