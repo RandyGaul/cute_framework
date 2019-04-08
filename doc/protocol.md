@@ -363,11 +363,12 @@ Here are the steps for processing the *connect token packet*.
 The next series of steps is for setting up an *encryption state* with the potential client. An *encryption state* must contain the following information from the *connect token packet*:
 
 * `sequence nonce`
+* `expiration timestamp`
 * `handshake timeout`
 * `client to server key`
 * `server to client key`
 
-The `client to server key` and `server to client key` are used to perform encrypted communication with the potential client. The `handshake timeout` is used to time out the handshake process in the event the client takes too long to respond at any stage.
+The `client to server key` and `server to client key` are used to perform encrypted communication with the potential client. The `handshake timeout` is used to time out the handshake process in the event the client takes too long to respond at any stage. `expiration timestamp` is when the associated connect token expires.
 
 1. If the server is not in the list of IP addresses in the *connect token packet*, ignore the packet.
 2. If a client is already connected with the same IP address and port, ignore the packet.
@@ -381,7 +382,7 @@ The `client to server key` and `server to client key` are used to perform encryp
 
 The encryption state simply maps a client's IP address and port to the state stored within the *encryption state* (as described above). Exactly how this data is stored and with what data structure is left up to the implementation. It is recommended to allow more *encryption state*'s than the maximum capacity of clients, in order to effectively handle invalid connection attempts along with valid connection attempts gracefully.
 
-The *encryption state* should be deleted or recycled whenever a connection or handshake terminates.
+The *encryption state* should be deleted or recycled whenever a connection or handshake terminates. Once a handshakes completes successfully and is promoted to a connection, the associated *encryption mapping* no longer needs to periodically check the `expiration timestamp`.
 
 #### Challenge Request and Response Sequence
 

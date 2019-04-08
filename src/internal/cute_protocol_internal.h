@@ -195,20 +195,36 @@ extern CUTE_API void CUTE_CALL hashtable_swap(hashtable_t* table, int index_a, i
 
 // -------------------------------------------------------------------------------------------------
 
-#define CUTE_ENCRYPTION_STATES_MAX (CUTE_PROTOCOL_CLIENT_MAX * 4)
+#define CUTE_ENCRYPTION_STATES_MAX (CUTE_PROTOCOL_CLIENT_MAX * 2)
 
 struct encryption_state_t
 {
 	uint64_t sequence;
-	uint32_t timeout;
+	uint32_t expiration_timestamp;
+	uint32_t handshake_timeout;
+	float last_handshake_access_time;
 	crypto_key_t client_to_server_key;
 	crypto_key_t server_to_client_key;
 };
 
-struct encryption_state_map_t
+struct encryption_map_t
 {
-	encryption_state_t states[CUTE_ENCRYPTION_STATES_MAX];
+	hashtable_t table;
 };
+
+extern CUTE_API int CUTE_CALL encryption_map_init(encryption_map_t* map, void* mem_ctx);
+extern CUTE_API void CUTE_CALL encryption_map_cleanup(encryption_map_t* map);
+extern CUTE_API void CUTE_CALL encryption_map_clear(encryption_map_t* map);
+extern CUTE_API int CUTE_CALL encryption_map_count(encryption_map_t* map);
+
+extern CUTE_API void CUTE_CALL encryption_map_insert(encryption_map_t* map, endpoint_t endpoint, const encryption_state_t* state);
+extern CUTE_API int CUTE_CALL encryption_map_find(encryption_map_t* map, endpoint_t endpoint, encryption_state_t* state);
+extern CUTE_API void CUTE_CALL encryption_map_remove(encryption_map_t* map, endpoint_t endpoint);
+extern CUTE_API endpoint_t* CUTE_CALL encryption_map_get_endpoints(encryption_map_t* map);
+extern CUTE_API encryption_state_t* CUTE_CALL encryption_map_get_states(encryption_map_t* map);
+
+extern CUTE_API void CUTE_CALL encryption_map_look_for_timeouts(encryption_map_t* map, float dt);
+extern CUTE_API void CUTE_CALL encryption_map_look_for_expirations(encryption_map_t* map, uint64_t time);
 
 }
 }

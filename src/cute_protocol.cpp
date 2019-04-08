@@ -818,5 +818,98 @@ void hashtable_swap(hashtable_t* table, int index_a, int index_b)
 	table->slots[slot_b].item_index = index_a;
 }
 
+// -------------------------------------------------------------------------------------------------
+
+int encryption_map_init(encryption_map_t* map, void* mem_ctx)
+{
+	return hashtable_init(&map->table, sizeof(endpoint_t), sizeof(encryption_state_t), CUTE_ENCRYPTION_STATES_MAX, mem_ctx);
+}
+
+void encryption_map_cleanup(encryption_map_t* map)
+{
+	hashtable_cleanup(&map->table);
+}
+
+void encryption_map_clear(encryption_map_t* map)
+{
+	hashtable_clear(&map->table);
+}
+
+int encryption_map_count(encryption_map_t* map)
+{
+	return hashtable_count(&map->table);
+}
+
+void encryption_map_insert(encryption_map_t* map, endpoint_t endpoint, const encryption_state_t* state)
+{
+	hashtable_insert(&map->table, &endpoint, state);
+}
+
+int encryption_map_find(encryption_map_t* map, endpoint_t endpoint, encryption_state_t* state)
+{
+	void* ptr = hashtable_find(&map->table, &endpoint);
+	if (ptr) {
+		*state = *(encryption_state_t*)ptr;
+		state->last_handshake_access_time = 0;
+		return 0;
+	} else {
+		return -1;
+	}
+}
+
+void encryption_map_remove(encryption_map_t* map, endpoint_t endpoint)
+{
+	hashtable_remove(&map->table, &endpoint);
+}
+
+endpoint_t* encryption_map_get_endpoints(encryption_map_t* map)
+{
+	return (endpoint_t*)hashtable_keys(&map->table);
+}
+
+encryption_state_t* encryption_map_get_states(encryption_map_t* map)
+{
+	return (encryption_state_t*)hashtable_items(&map->table);
+}
+
+void encryption_map_look_for_timeouts(encryption_map_t* map, float dt)
+{
+	int index = 0;
+	int count = encryption_map_count(map);
+	endpoint_t* endpoints = encryption_map_get_endpoints(map);
+	encryption_state_t* states = encryption_map_get_states(map);
+
+	while (index < count)
+	{
+		encryption_state_t* state = states + index;
+		state->last_handshake_access_time += dt;
+		if (state->last_handshake_access_time >= state->handshake_timeout) {
+			encryption_map_remove(map, endpoints[index]);
+			--count;
+		} else {
+			++index;
+		}
+	}
+}
+
+void encryption_map_look_for_expirations(encryption_map_t* map, uint64_t time)
+{
+	int index = 0;
+	int count = encryption_map_count(map);
+	endpoint_t* endpoints = encryption_map_get_endpoints(map);
+	encryption_state_t* states = encryption_map_get_states(map);
+
+	while (index < count)
+	{
+		encryption_state_t* state = states + index;
+		if (state->expiration_timestamp <= time) {
+			encryption_map_remove(map, endpoints[index]);
+			--count;
+		} else {
+			++index;
+		}
+	}
+}
+
 }
 }

@@ -36,8 +36,8 @@
 #include <test_socket.h>
 #include <test_connect_token.h>
 #include <test_packets.h>
-#include <test_encryption_state.h>
 #include <test_hashtable.h>
+#include <test_encryption_map.h>
 
 int main(int argc, const char** argv)
 {
@@ -83,7 +83,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_packet_payload),
 		CUTE_TEST_CASE_ENTRY(test_hash_table_basic),
 		CUTE_TEST_CASE_ENTRY(test_hash_table_hammer),
-		CUTE_TEST_CASE_ENTRY(test_encryption_state_basic),
+		CUTE_TEST_CASE_ENTRY(test_encryption_map_basic),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;
