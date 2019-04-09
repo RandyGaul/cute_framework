@@ -90,8 +90,15 @@ extern CUTE_API int CUTE_CALL client_connect(client_t* client, const uint8_t* co
 extern CUTE_API void CUTE_CALL client_disconnect(client_t* client);
 extern CUTE_API void CUTE_CALL client_update(client_t* client, float dt);
 
-extern CUTE_API int CUTE_CALL client_get_packet(client_t* client, void* data, int* size);
+extern CUTE_API int CUTE_CALL client_get_packet(client_t* client, void* data, int* size, uint64_t* sequence);
+extern CUTE_API void CUTE_CALL client_free_packet(client_t* client, void* packet);
 extern CUTE_API int CUTE_CALL client_send_data(client_t* client, const void* data, int size);
+
+extern CUTE_API client_state_t CUTE_CALL client_get_state(client_t* client);
+extern CUTE_API uint64_t CUTE_CALL client_get_handle(client_t* client);
+extern CUTE_API uint32_t CUTE_CALL client_get_max_clients(client_t* client);
+extern CUTE_API endpoint_t CUTE_CALL client_get_server_address(client_t* client);
+extern CUTE_API uint16_t CUTE_CALL client_get_port(client_t* client);
 
 }
 }

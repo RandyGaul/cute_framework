@@ -1209,14 +1209,43 @@ void client_update(client_t* client, float dt)
 	}
 }
 
-int client_get_packet(client_t* client, void* data, int* size)
+int client_get_packet(client_t* client, void* data, int* size, uint64_t* sequence)
 {
 	return -1;
+
+
+void client_free_packet(client_t* client, void* packet)
+{
 }
 
 int client_send_data(client_t* client, const void* data, int size)
 {
 	return -1;
+
+
+client_state_t client_get_state(client_t* client)
+{
+	return client->state;
+}
+
+uint64_t client_get_handle(client_t* client)
+{
+	return client->client_handle;
+}
+
+uint32_t client_get_max_clients(client_t* client)
+{
+	return client->max_clients;
+}
+
+endpoint_t client_get_server_address(client_t* client)
+{
+	return client->server_endpoint;
+}
+
+uint16_t client_get_port(client_t* client)
+{
+	return client->port;
 }
 
 // -------------------------------------------------------------------------------------------------
