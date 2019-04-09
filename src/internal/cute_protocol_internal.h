@@ -205,6 +205,26 @@ extern CUTE_API void CUTE_CALL hashtable_swap(hashtable_t* table, int index_a, i
 
 // -------------------------------------------------------------------------------------------------
 
+#define CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX (CUTE_PROTOCOL_CLIENT_MAX * 8)
+
+struct connect_token_entry_t
+{
+	uint64_t entry_creation_time;
+	uint64_t token_expire_time;
+	endpoint_t endpoint;
+	uint8_t hmac_bytes[CUTE_PROTOCOL_HMAC_BYTES];
+};
+
+struct connect_token_cache_t
+{
+	hashtable_t table;
+};
+
+// Need to do LRU cache with heap on the table here.
+// API: Add entry, find entry. Add should, if full, remove oldest. Reset.
+
+// -------------------------------------------------------------------------------------------------
+
 #define CUTE_ENCRYPTION_STATES_MAX (CUTE_PROTOCOL_CLIENT_MAX * 2)
 
 struct encryption_state_t
