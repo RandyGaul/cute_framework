@@ -13,7 +13,7 @@ The main pieces of the Cute Protocol are:
 
 The web service provides an authentication mechanism via [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) call ([HTTPS](https://en.wikipedia.org/wiki/HTTPS) is recommended, but not required). Any authentication technique can be used since authentication with a web service is: A) very well understood with many good pre-built solutions (like OAuth/2 or OpenID); B) easily isolated away from this document without a strong conceptual dependency. The details of the web service and its exact API are out of scope of the standard, except for how they produce a connect token.
 
-The connect token is the mechanism that allows clients to securely authenticate with a dedicated server. Dedicated servers are the servers actually running game. Clients are the players who connect to a dedicated server in order to play. The dedicated servers need not only provide a game service - it can be any online service that wants to run over UDP with a scure and live connection. However, for this document the backend servers are assumed to host a game service.
+The connect token is the mechanism that allows clients to securely authenticate with a dedicated server. Dedicated servers are the servers running game. Clients are the players who connect to a dedicated server to play. The dedicated servers need not only provide a game service - it can be any online service that wants to run over UDP with a secure and live connection. However, for this document the backend servers are assumed to host a game service.
 
 For this document, the user is the one who owns the web service and dedicated servers.
 
@@ -21,9 +21,9 @@ For this document, the user is the one who owns the web service and dedicated se
 
 The steps for a client to connect to a dedicated game server are:
 
-1. Client wants to authenticate with the web service, and issues a REST call to obtain a connect token.
+1. Client wants to authenticate with the web service and issues a REST call to obtain a connect token.
 2. Web service generates and returns a connect token to the client. The `client to server key` and the `server to client key` must be uniquely generated for each connect token.
-3. Client sends the token to a dedicated server instance, in order to securely setup a connection and play.
+3. 3.	Client sends the token to a dedicated server instance to securely setup a connection and play.
 4. The dedicated server processes the connect token, and if valid, starts the connection handshake with the client.
 5. If the handshake succeeds, the player is connected and begins to play over a secure UDP channel.
 
@@ -52,14 +52,14 @@ The connect token has three major sections.
 2. SECRET SECTION
 3. REST SECTION
 
-Once a client receives a connect token from the web service, the REST SECTION and the PUBLIC SECTION are read by the client. These sections contains a server IP list of dedicated game servers to attempt to connect to, along with some other data. Once read, the client deletes the REST SECTION. The remaining data in the connect token consists of 1024 bytes. The final 1024 bytes are called the *connect token packet*.
+Once a client receives a connect token from the web service, the REST SECTION and the PUBLIC SECTION are read by the client. These sections contain a server IP list of dedicated game servers to attempt to connect to, along with some other data. Once read, the client deletes the REST SECTION. The remaining data in the connect token consists of 1024 bytes. The final 1024 bytes are called the *connect token packet*.
 
 The entire *connect token packet* is not modifiable or forge-able, and the SECRET SECTION is not readable by anyone except the web service and dedicated game servers. The entire *connect token packet* is protected by a cryptographically secure AEAD ([Authenticated Encryption with Associated Data](https://en.wikipedia.org/wiki/Authenticated_encryption#Authenticated_encryption_with_associated_data)) primitive. The key used for the AEAD primitive is a shared secret known by all dedicated game servers, and the web service. It is recommended to implement a mechanism to rotate this key periodically, though the mechanism to do so is out of scope for this document.
 
 ##### Note:
 > The AEAD primitive is a function that encrypts a chunk of data, and computes an HMAC ([keyed-hash message authentication code](https://en.wikipedia.org/wiki/HMAC)). The HMAC is a 16 byte value used to authenticate the message, and prevent tampering/modification of the message (i.e. maintain integrity of the message). The encryption ensures only those who know the key can read the message. The Associated Data (the AD in AEAD) is a chunk of data that is not encrypted, but "mixed-in" to the computation of the HMAC.
 
-The PUBLIC SECTION of the *connect token packet* is used as Associated Data for the AEAD, where the SECRET SECTION is encrypted by the AEAD. Once the AEAD is used, the output HMAC is appended to the final 16 bytes of the token, thus completing the full 1024 bytes *connect token packet*. This means the PUBLIC SECTION is not modifyable or forgeable by anyone except the web service or the dedicated backend servers, since they share the secret key used for the AEAD to encrypt the SECRET SECTION, using the PUBLIC SECTION as the Associated Data.
+The PUBLIC SECTION of the *connect token packet* is used as Associated Data for the AEAD, where the SECRET SECTION is encrypted by the AEAD. Once the AEAD is used, the output HMAC is appended to the final 16 bytes of the token, thus completing the full 1024 bytes *connect token packet*. This means the PUBLIC SECTION is not modifiable or forgeable by anyone except the web service or the dedicated backend servers, since they share the secret key used for the AEAD to encrypt the SECRET SECTION, using the PUBLIC SECTION as the Associated Data.
 
 ### The Connect Token Format
 ```
@@ -155,7 +155,7 @@ The default state is *disconnected*. The client transitions to the *sending conn
 
 Exactly how the client requests and receives the connect token is out of scope of this document, besides requiring a secure REST API call. Exactly how the web service generates the server list of the connect token is also out of scope of this document, as this is the realm of match-making or other similar mechanisms.
 
-The client reads the PUBLIC SECTION and the REST SECTION of the connect token and records all of the data. If the data is invalid the client transitions to the *invalid connect token* state. The connect token is deemed invalid if the number of server addresses is outside the range of [1, 32], or if an IP address type is not in the range [1, 2], or if the creation timestamp is more recent than the expiration timestamp.
+The client reads the PUBLIC SECTION and the REST SECTION of the connect token and records all the data. If the data is invalid the client transitions to the *invalid connect token* state. The connect token is deemed invalid if the number of server addresses is outside the range of [1, 32], or if an IP address type is not in the range [1, 2], or if the creation timestamp is more recent than the expiration timestamp.
 
 ### Sending Connection Request
 
@@ -170,7 +170,7 @@ If the last server in the list responds with a *connection denied packet*, the c
 During the *sending connection request* the client stored the contents of *challenge request packet*. The contents are used to form the *challenge response packet*. The client repeatedly sends the server the *challenge response packet* at the PACKET_SEND_FREQUENCY (see [Tuning Parameters](#tuning-parameters)). The purpose is to verify a few things about the client:
 
 1. That the client is not spoofing their IP address, and can successfully respond to the server by reflecting the *challenge request packet* with a *challenge response packet*.
-2. That the client is able to decrypt the *challenge request packet* and encrypt the *challenge response packet*. This asserts that the client was the **only** user the web service gave the original connect token to.
+2. That the client can decrypt the *challenge request packet* and encrypt the *challenge response packet*. This asserts that the client was the **only** user the web service gave the original connect token to.
 
 If successful, the server will respond with a *connection accepted packet*, and the client transitions to the *connected* state after recording data from the *connection accepted packet*. The client records the *client id* field, the *max clients* field, and the `connection timeout` field from the *connection accepted packet*.
 
@@ -188,7 +188,7 @@ If the client receives a *disconnect packet* from the server it transitions to t
 
 ### Connect Token Expired
 
-If at any time the client's connect token expires during the handshake process, the client transitions to the *connect token expired*. This can happen if the client has to try connecting to multiple servers in the server list, and continually fails to establish a connection.
+If at any time the client's connect token expires during the handshake process, the client transitions to the *connect token expired*. This can happen if the client must try connecting to multiple servers in the server list, and continually fails to establish a connection.
 
 The time to live for the connect token is calculated as:
 
@@ -234,7 +234,7 @@ version info     10         "Cute 1.00" ASCII, including nul byte.
 application id   uint64_t   User chosen value to identify the game.
 ```
 
-This buffer is constructed locally inside both the client and the server for each packet received or sent. The `version info` and the `application id` do not change frequently, and can be static un-changing memory. The `packet type` byte should be read from the packet and copied in front of the Associated Data buffer used by the AEAD.
+This buffer is constructed locally inside both the client and the server for each packet received or sent. The `packet type` byte should be read from the packet and copied in front of the Associated Data buffer used by the AEAD.
 
 ## Unencrypted Packets
 
@@ -273,7 +273,7 @@ max clients         uint32_t
 connection timeout  uint32_t
 ```
 
-The *connection accepted packet* is sent from the the server once a client has successfully connected to the server. It is repeatedly sent before each *payload packet* as long as the client is not *confirmed*. More details can be found in the [Connected and Confirmed Clients](#connected-and-confirmed-clients) section.
+The *connection accepted packet* is sent from the server once a client has successfully connected to the server. It is repeatedly sent before each *payload packet* as long as the client is not *confirmed*. More details can be found in the [Connected and Confirmed Clients](#connected-and-confirmed-clients) section.
 
 ### Challenge Request Packet
 
@@ -282,11 +282,11 @@ challenge nonce     uint64_t
 challenge bytes     256 bytes
 ```
 
-The *challenge request packet* is sent from the server as apart of the connection handshake process. This challenge response sequence is used to prevent IP spoofing and *connect token packet* sniffing. For more information about how, see the [Sending Challenge Response](#sending-challenge-response) section.
+The *challenge request packet* is sent from the server as a part of the connection handshake process. This challenge response sequence is used to prevent IP spoofing and *connect token packet* sniffing. For more information about how, see the [Sending Challenge Response](#sending-challenge-response) section.
 
 The `challenge nonce` is an incrementing counter starting at 0, initialized upon server restart.
 
-The `challenge bytes` is simply 256 bytes of data. The data can be anything, including randomized bits. Exactly what bits are the `challenge bytes` is left to the implementation. To fulfill the purpose of this packet, the client merely needs to decrypt the packet with the `server to client` key, encrypt it with the `client to server key`, and send it back to the server. The contents of the `challenge bytes` are ignored by the client. This packet is intentionally smaller than the *connect token packet* to prevent [DDoS amplification](https://en.wikipedia.org/wiki/Denial-of-service_attack#Amplification).
+The `challenge bytes` are simply 256 bytes of data. The data can be anything, including randomized bits. Exactly what bits are the `challenge bytes` is left to the implementation. To fulfill the purpose of this packet, the client merely needs to decrypt the packet with the `server to client` key, encrypt it with the `client to server key`, and send it back to the server. The contents of the `challenge bytes` are ignored by the client. This packet is intentionally smaller than the *connect token packet* to prevent [DDoS amplification](https://en.wikipedia.org/wiki/Denial-of-service_attack#Amplification).
 
 ### Challenge Response Packet
 
@@ -295,7 +295,7 @@ challenge nonce     uint64_t
 challenge bytes     256 bytes
 ```
 
-The *challenge response packet* is the reflected version of the *challenge request packet*, and is sent by the client as apart of the connection handshake process. All the client has to do is copy the entire decrypted *challenge request packet*, encrypt it, and send it back to the server for verification. For more information see the [Sending Challenge Response](#sending-challenge-response), or the [Challenge Request Packet](#challenge-request-packet) section.
+The *challenge response packet* is the reflected version of the *challenge request packet* and is sent by the client as a part of the connection handshake process. All the client must do is copy the entire decrypted *challenge request packet*, encrypt it, and send it back to the server for verification. For more information see the [Sending Challenge Response](#sending-challenge-response), or the [Challenge Request Packet](#challenge-request-packet) section.
 
 ### Disconnect Packet
 
@@ -313,7 +313,7 @@ When decrypting packets the following steps must occur, in order, before a packe
 2. If the `packet type` byte is greater than 7, ignore the packet.
 3. The server ignores packets of types *challenge response packet*, *connection denied packet*, and *connection accepted packet*.
 4. The client ignores packets of types *challenge request packet* and *connect token packet*.
-5. If the packet's `encrypted bytes` is not within acceptable range, as defined by the packet type, ignore the packet. A table of acceptable sizes is given just below the end of these 7 steps.
+5. If the packet's `encrypted bytes` are not within acceptable range, as defined by the packet type, ignore the packet. A table of acceptable sizes is given just below the end of these 7 steps.
 6. If the packet fails replay protection, ignore the packet. See the [Replay Protection](#replay-protection) section for more info.
 7. If the packet fails to decrypt with the AEAD primitive, ignore the packet.
 
@@ -382,11 +382,11 @@ The `client to server key` and `server to client key` are used to perform encryp
 
 The encryption state simply maps a client's IP address and port to the state stored within the *encryption state* (as described above). Exactly how this data is stored and with what data structure is left up to the implementation. It is recommended to allow more *encryption state*'s than the maximum capacity of clients, in order to effectively handle invalid connection attempts along with valid connection attempts gracefully.
 
-The *encryption state* should be deleted or recycled whenever a connection or handshake terminates. Once a handshakes completes successfully and is promoted to a connection, the associated *encryption mapping* no longer needs to periodically check the `expiration timestamp`.
+The *encryption state* should be deleted or recycled whenever a connection or handshake terminates. Once a handshake completes successfully and is promoted to a connection, the associated *encryption mapping* no longer needs to periodically check the `expiration timestamp`.
 
 #### Challenge Request and Response Sequence
 
-Once the connect token has been validated, and the encryption state is successfully setup, the next steps are to complete the challenge request and response sequence with the client. The purpose of these steps is to prevent IP spoofing, and also to prevent *connect token packet* sniffing. From here on all packets are encrypted or decrypted with the *encryption state*.
+Once the connect token has been validated, and the encryption state is successfully setup, the next steps are to complete the challenge request and response sequence with the client. The purpose of these steps is to prevent IP spoofing, and to prevent *connect token packet* sniffing. From here on all packets are encrypted or decrypted with the *encryption state*.
 
 1. Send the client a *challenge request packet* periodically through the PACKET_SEND_FREQUENCY tunable (see [Tuning Parameters](#tuning-parameters)). Before sending the *challenge request packet*, fill in the `challenge bytes` with a unique bit pattern, and remember the bit pattern for later. Use the `sequence nonce` from the *encryption state* to fill in the `sequence nonce` of the *challenge request packet*.
 2. If a *challenge response packet* is received, first read in the `sequence nonce` and try decrypting the packet. If decryption fails, ignore the packet.
@@ -395,7 +395,7 @@ Once the connect token has been validated, and the encryption state is successfu
 6. The client is now considered *connected*, but not *confirmed*. Increment the `sequence nonce` of the *encryption state*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
 7. Once the client responds with a *payload packet*, or a *keepalive packet*, consider the client *confirmed*.
 8. If the client does not respond within `handshake timeout` seconds, destroy the associated *encryption state* and remove the connect token from the *connect token cache*.
-9. Once a client is *connected* the server may start sending *payload packet*'s. If the client is not yet confirmed, the server **must** send an additional *connection accepted packet* just before sending a *payload packet*. Once the client is *confirmed* preceding *connection accepted packet*'s are no longer necessary. The purpose of extra *connection accepted packet*'s is an optimization: the server is allowed to start streaming payload packets earlier, but also ensures the client receives a *connection accepted packet*.
+9. Once a client is *connected* the server may start sending *payload packet*'s. If the client is not yet confirmed, the server **must** send an additional *connection accepted packet* just before sending a *payload packet*. Once the client is *confirmed* preceding *connection accepted packet*'s are no longer necessary. The purpose of extra *connection accepted packet*'s is an optimization: the server can start streaming payload packets earlier, but also ensures the client receives a *connection accepted packet*.
 
 ### Connected and Confirmed Clients
 
@@ -405,9 +405,9 @@ Once a client is *connected* (even if they are not yet *confirmed*) they are ass
 * *payload packet*
 * *disconnect packet*
 
-It is recommended that incoming packets are pulled off of the UDP stack as fast as possible, especially as the number of maximum clients becomes higher. It is best to pull packets off of the UDP stack from a dedicated thread, whose sole purpose is to move packets from the UDP stack to an internal queue. The queue can then be polled by the user's calling thread on an as-needed basis. It is also recommended to cap the size of this queue, and drop packets once filled. Optionally the payload packet can be utilized to implement a *backpressure packet*, which is intended to inform the opposing endpoint to send data at a slower rate.
+It is recommended that incoming packets are pulled off the UDP stack as fast as possible, especially as the number of maximum clients becomes higher. It is best to pull packets off the UDP stack from a dedicated thread, whose sole purpose is to move packets from the UDP stack to an internal queue. The queue can then be polled by the user's calling thread on an as-needed basis. It is also recommended to cap the size of this queue, and drop packets once filled. Optionally the payload packet can be utilized to implement a *backpressure packet*, which is intended to inform the opposing endpoint to send data at a slower rate.
 
-If no packets are sent to a client within the KEEPALIVE_FREQUENCY to a particular client, send a *keepalive packet*.
+If no packets are sent to a client within the KEEPALIVE_FREQUENCY to the client, send a *keepalive packet*.
 
 ## Disconnect Sequence
 
@@ -419,14 +419,14 @@ Cute Protocol takes measures to defend itself against many common attacks. This 
 
 ### Replay Protection
 
-Replay protection is to guard against [replay attacks](https://en.wikipedia.org/wiki/Replay_attack). Cute Protocol uses incrementing sequence numbers as the nonce for the AEAD primitive in order to guard against replay attacks.
+Replay protection is to guard against [replay attacks](https://en.wikipedia.org/wiki/Replay_attack). Cute Protocol uses incrementing sequence numbers as the nonce for the AEAD primitive to guard against replay attacks.
 
 Replay protection is enabled for the *disconnect packet*, *keepalive packet*, and *payload packet*. All other packet types are already protected by replay attacks by other means (like the connect token handling process, or replay attacks simply do nothing in other cases and are safely ignored).
 
-The replay algorithm uses an array of `uint64_t` elements called the *replay buffer*. The size of the *replay buffer* is tuneable by REPLAY_BUFFER_SIZE tunable (see [Tuning Parameters](#tuning-parameters)). Here is the replay protection algorithm.
+The replay algorithm uses an array of `uint64_t` elements called the *replay buffer*. The size of the *replay buffer* is tunable by REPLAY_BUFFER_SIZE tunable (see [Tuning Parameters](#tuning-parameters)). Here is the replay protection algorithm.
 
 1. All encrypted packets are prefixed with a `uint64_t` sequence number, starting at zero and incrementing. This sequence number is the `sequence nonce` stored within the associated *encryption state*. In this way, there is a different incrementing counter and encryption key-set for each connection.
-2. The sequence number of a received packet is read prior to decryption. It can not be modified without detection by the AEAD primitive, since it is used as a nonce in the AEAD.
+2. The sequence number of a received packet is read prior to decryption. It cannot be modified without detection by the AEAD primitive since it is used as a nonce in the AEAD.
 3. The maximum sequence number is tracked, called *max sequence*.
 4. If the sequence number + REPLAY_BUFFER_SIZE is less than *max sequence*, ignore the packet. This means either the packet is very old, and should be dropped (since this UDP), or it was an attempted replay attack/duplicated packet.
 5. If the sequence number has already been received, as determined by a lookup into the *replay buffer*, ignore the packet as it is an attempted replay attack/duplicated packet.
@@ -515,7 +515,7 @@ int read_packet(
 
 ### Packet Sniffing
 
-One may wonder if the *connect token packet* is susceptible to packet sniffing. What if someone grabs the packet and sends a copy to the server before the valid client's copy reaches the server? In this case the server will start up two *encryption state*'s, one for each potential client. The server will cache the *connect token packet* keyed by the `HMAC bytes` of the packet. This will ensure only one copy of the particular connect token is cached.
+One may wonder if the *connect token packet* is susceptible to packet sniffing. What if someone grabs the packet and sends a copy to the server before the valid client's copy reaches the server? In this case the server will start up two *encryption state*'s, one for each potential client. The server will cache the *connect token packet* keyed by the `HMAC bytes` of the packet. This will ensure only one copy of the connect token is cached.
 
 The server will also setup two *encryption state*'s, one for each IP address. In the case where the malicious potential client spoofed their IP to match the valid user's IP, only one encryption mapping will be setup.
 
@@ -537,7 +537,7 @@ The second attack is prevented by the challenge request and response packets in 
 
 Protection against [Man in the Middle](https://en.wikipedia.org/wiki/Man-in-the-middle_attack) (MitM) attacks is quite straightforward for the Cute Protocol. The web service and the dedicated backend servers all hold a shared secret. This secret is the key used to encrypt and decrypt connect tokens. This key is never exposed to clients, and in this way a MitM can not read, modify or forge the SECRET SECTION of the connect token without somehow getting a hold of the shared secret key. Additionally, the PUBLIC SECTION of the connect token is protected by the AEAD since it is used as Associated Data.
 
-A MitM can potentially get a hold of connect tokens, but is unable to do anything with them. If an attempt is made to use a valid connect token to join a game server, the challenge and response sequence prevents them from connecting since they do not have access to the `client to server key`, or the `server to client key`. These keys are uniquely generated by the web service for each connect token, and are given only to valid authenticated clients via the REST SECTION of the connect token, over a secure REST API call (like HTTPS, which uses the TLS/SSL protocol to setup a secure TCP tunnel). This means every connection a client makes to a dedicated server uses a shared secret key-set between the client and the server, making it impossible for a MitM to read, modify, or forge any encrypted packets.
+A MitM can potentially get a hold of connect tokens but is unable to do anything with them. If an attempt is made to use a valid connect token to join a game server, the challenge and response sequence prevents them from connecting since they do not have access to the `client to server key`, or the `server to client key`. These keys are uniquely generated by the web service for each connect token, and are given only to valid authenticated clients via the REST SECTION of the connect token, over a secure REST API call (like HTTPS, which uses the TLS/SSL protocol to setup a secure TCP tunnel). This means every connection a client makes to a dedicated server uses a shared secret key-set between the client and the server, making it impossible for a MitM to read, modify, or forge any encrypted packets.
 
 ### DDoS Amplification
 
@@ -550,7 +550,7 @@ UDP protocols are susceptible to [DDoS amplification](https://en.wikipedia.org/w
 * DISCONNECT_SEQUENCE_PACKET_COUNT
 	* The number of packets to redundantly send upon the Disconnect Sequence.
 * REPLAY_BUFFER_SIZE
-	* Number of recorded sequence numbers into the past to keep around in a rolling cache. Typically 5-10 seconds can work well, depending on latency concerns and application context.
+	* Number of recorded sequence numbers into the past to keep around in a rolling cache. Typically, 5-10 seconds can work well, depending on latency concerns and application context.
 * SERVER_MAX_CLIENTS
 	* The capacity of the server in terms of how many different simultaneous *connected* clients can be held at once.
 * PACKET_SEND_FREQUENCY
