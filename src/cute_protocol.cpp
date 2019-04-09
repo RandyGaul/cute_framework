@@ -975,10 +975,11 @@ int client_connect(client_t* client, const uint8_t* connect_token)
 		goto cute_error;
 	}
 
-	CUTE_MEMCPY(connect_token_packet, connect_token_packet, CUTE_CONNECT_TOKEN_PACKET_SIZE);
+	CUTE_MEMCPY(client->connect_token_packet, connect_token_packet, CUTE_CONNECT_TOKEN_PACKET_SIZE);
 
-	CUTE_CHECK(socket_init(&client->socket, client->server_endpoint.type, client->server_endpoint.port, CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE, CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE));
 	client->packet_allocator = packet_allocator_make(client->mem_ctx);
+	CUTE_CHECK_POINTER(client->packet_allocator);
+	CUTE_CHECK(socket_init(&client->socket, client->server_endpoint.type, client->server_endpoint.port, CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE, CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE));
 	replay_buffer_init(&client->replay_buffer);
 	packet_queue_init(&client->packet_queue);
 	return 0;
@@ -997,7 +998,7 @@ static void s_send(client_t* client, void* packet)
 	}
 }
 
-static void s_disconnect(client_t* client, client_state_t state, int send_packets = 0)
+static void s_disconnect(client_t* client, client_state_t state, int send_packets)
 {
 	if (send_packets) {
 		packet_disconnect_t packet;
@@ -1193,8 +1194,7 @@ void client_update(client_t* client, float dt)
 			if (s_goto_next_server(client)) {
 				return;
 			}
-
-			if (client->state == CLIENT_STATE_SENDING_CONNECTION_REQUEST) {
+			else if (client->state == CLIENT_STATE_SENDING_CONNECTION_REQUEST) {
 				s_disconnect(client, CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT, 1);
 			} else {
 				s_disconnect(client, CLIENT_STATE_CHALLENGED_RESPONSE_TIMED_OUT, 1);
@@ -1218,6 +1218,11 @@ int client_send_data(client_t* client, const void* data, int size)
 {
 	return -1;
 }
+
+// -------------------------------------------------------------------------------------------------
+
+// WORKING HERE
+// Implement server next.
 
 }
 }
