@@ -155,7 +155,7 @@ The default state is *disconnected*. The client transitions to the *sending conn
 
 Exactly how the client requests and receives the connect token is out of scope of this document, besides requiring a secure REST API call. Exactly how the web service generates the server list of the connect token is also out of scope of this document, as this is the realm of match-making or other similar mechanisms.
 
-The client reads the PUBLIC SECTION and the REST SECTION of the connect token and records all of the data. If the data is invalid the client transitions to the *invalid connect token* state. The connect token is deemed invalid by the client if the number of server addresses is outside the range of [1, 32], or if an IP address type is not in the range [1, 2], or if the creation timestamp is more recent than the expiration timestamp.
+The client reads the PUBLIC SECTION and the REST SECTION of the connect token and records all of the data. If the data is invalid the client transitions to the *invalid connect token* state. The connect token is deemed invalid if the number of server addresses is outside the range of [1, 32], or if an IP address type is not in the range [1, 2], or if the creation timestamp is more recent than the expiration timestamp.
 
 ### Sending Connection Request
 
@@ -246,7 +246,7 @@ This section describes the payload of each packet type prior to encryption.
 <no data>           0 bytes
 ```
 
-The *keepalive packet* is only sent if no *keepalive packet*'s, *disconnect packet*'s, or *payload packet*'s have been received within KEEPALIVE_FREQUENCY seconds during the client *connected* state. If none of these packets are received by either the client or the server, the connection is terminated after `connection timeout` seconds.
+The *keepalive packet* is only sent if no *keepalive packet*'s, *disconnect packet*'s, or *payload packet*'s have been sent within KEEPALIVE_FREQUENCY seconds during the client *connected* state. If none of these packets are received by either the client or the server, the connection is terminated after `connection timeout` seconds.
 
 ### Connection Denied Packet
 
@@ -355,7 +355,7 @@ Here are the steps for processing the *connect token packet*.
 4. Read and make sure the protocol string `version info` "CUTE 1.00", including the nul byte, comes right after the `packet type` byte.
 5. Read and make sure the `application id` matches the expected id for the user's application.
 6. Read the `expiration timestamp`. If the token has expired, ignore the packet.
-7. The connect token is deemed invalid by the client if the number of server addresses is outside the range of [1, 32], or if an IP address type is not in the range [1, 2], or if the creation timestamp is more recent than the expiration timestamp. If any of these checks fail, ignore the packet.
+7. The connect token is deemed invalid if the number of server addresses is outside the range of [1, 32], or if an IP address type is not in the range [1, 2], or if the creation timestamp is more recent than the expiration timestamp. If any of these checks fail, ignore the packet.
 8. Decrypt and read the *connect token packet* SECRET SECTION, using the `connect token nonce` from the *connect token packet* as the nonce for the AEAD. The PUBLIC SECTION is used as the Associated Data in the AEAD primitive. If the *connect token packet* fails to decrypt, ignore the packet.
 
 #### Setting Up an *encryption state*
@@ -391,10 +391,11 @@ Once the connect token has been validated, and the encryption state is successfu
 1. Send the client a *challenge request packet* periodically through the PACKET_SEND_FREQUENCY tunable (see [Tuning Parameters](#tuning-parameters)). Before sending the *challenge request packet*, fill in the `challenge bytes` with a unique bit pattern, and remember the bit pattern for later. Use the `sequence nonce` from the *encryption state* to fill in the `sequence nonce` of the *challenge request packet*.
 2. If a *challenge response packet* is received, first read in the `sequence nonce` and try decrypting the packet. If decryption fails, ignore the packet.
 3. Test to make sure the bit pattern post-decryption matches the bit pattern sent in the *challenge request packet*.
-4. If all checks, passed, the client is now considered *connected*, but not *confirmed*. Increment the `sequence nonce` of the *encryption state*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
-5. Once the client responds with a *payload packet*, or a *keepalive packet*, consider the client *confirmed*.
-6. If the client does not respond within `handshake timeout` seconds, destroy the encryption mapping and remove the connect token from the *connect token cache*.
-7. Once a client is *connected* the server may start sending *payload packet*'s. If the client is not yet confirmed, the server *must* send an additional *connection accepted packet* just before sending the *payload packet*. Once the client is *confirmed* preceding *connection accepted packet*'s are no longer necessary. The purpose of extra *connection accepted packet*'s is an optimization: the server is allowed to start streaming payload packets earlier, but also ensures the client receives a *connection accepted packet*.
+4. If all checks passed, make sure there is still space available for the client to connect. If the server is full, respond with a *connection denied packet* and terminate the handshake.
+6. The client is now considered *connected*, but not *confirmed*. Increment the `sequence nonce` of the *encryption state*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
+7. Once the client responds with a *payload packet*, or a *keepalive packet*, consider the client *confirmed*.
+8. If the client does not respond within `handshake timeout` seconds, destroy the associated *encryption state* and remove the connect token from the *connect token cache*.
+9. Once a client is *connected* the server may start sending *payload packet*'s. If the client is not yet confirmed, the server **must** send an additional *connection accepted packet* just before sending a *payload packet*. Once the client is *confirmed* preceding *connection accepted packet*'s are no longer necessary. The purpose of extra *connection accepted packet*'s is an optimization: the server is allowed to start streaming payload packets earlier, but also ensures the client receives a *connection accepted packet*.
 
 ### Connected and Confirmed Clients
 
@@ -490,7 +491,6 @@ Here is some an example use-case scenario for using replay protection on an inco
 int read_packet(
     uint8_t* packet,
     int size,
-    uint64_t sequence_offset,
     replay_buffer_t*
     replay_buffer,
     /* ... other params ... */
@@ -501,7 +501,7 @@ int read_packet(
     // Perform replay protection
     uint8_t packet_type = read_uint8(&packet);
     uint8_t sequence = read_uint64(&packet);
-    if (replay_buffer_cull_duplicate(replay_buffer, sequence, sequence_offset) {
+    if (replay_buffer_cull_duplicate(replay_buffer, sequence) {
         return -1;
     }
 
@@ -512,9 +512,6 @@ int read_packet(
     // Continue with any other optional processing ...
 }
 ```
-
-##### Note:
-> `sequence offset` can safely be set to zero in the case of Cute Protocol, since each connection uses unique keys as determined by the initial connect token, so nonce reuse starting at zero and incrementing is perfectly safe. In many other protocols a random nonce offset seed is necessary. The example code includes this randomized offset as `sequence_offset` for posterity. Typically the server will generate the session-nonce, and communicate it to the client in a secure manner. In Cute Protocol's case, the web service communicates the `client to server key` and the `server to client key`, which defines a unique session, and is thus safe from session recording and replay attacks.
 
 ### Packet Sniffing
 
