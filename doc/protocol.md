@@ -159,7 +159,7 @@ The client reads the PUBLIC SECTION and the REST SECTION of the connect token an
 
 ### Sending Connection Request
 
-The client sends the *connect token packet*, PACKET_SEND_FREQUENCY (see [Tuning Parameters](#tuning-parameters)), to a game server from the list and waits for a response. This packet is **not** encrypted by the client, as it is already processed by the AEAD primitive by the web service. If the server responds with a *challenge request packet*, the client transitions to the *sending challenge response*, after decrypting and recording the contents of the *challenge request packet*.
+The client repeatedly sends the *connect token packet* at PACKET_SEND_FREQUENCY (see [Tuning Parameters](#tuning-parameters)), to a game server from the list and waits for a response. This packet is **not** encrypted by the client, as it is already processed by the AEAD primitive by the web service. If the server responds with a *challenge request packet*, the client transitions to the *sending challenge response*, after decrypting and recording the contents of the *challenge request packet*.
 
 It is recommended the client moves onto the next server in the server list in the event of failure cases. If no more servers are left in the list, the client transitions to one of the error states.
 
@@ -167,7 +167,7 @@ If the last server in the list responds with a *connection denied packet*, the c
 
 ### Sending Challenge Response
 
-During the *sending connection request* the client stored the contents of *challenge request packet*. The contents are used to form the *challenge response packet*. The client sends the server the *challenge response packet* at the PACKET_SEND_FREQUENCY (see [Tuning Parameters](#tuning-parameters)). The purpose is to verify a few things about the client:
+During the *sending connection request* the client stored the contents of *challenge request packet*. The contents are used to form the *challenge response packet*. The client repeatedly sends the server the *challenge response packet* at the PACKET_SEND_FREQUENCY (see [Tuning Parameters](#tuning-parameters)). The purpose is to verify a few things about the client:
 
 1. That the client is not spoofing their IP address, and can successfully respond to the server by reflecting the *challenge request packet* with a *challenge response packet*.
 2. That the client is able to decrypt the *challenge request packet* and encrypt the *challenge response packet*. This asserts that the client was the **only** user the web service gave the original connect token to.
@@ -180,7 +180,7 @@ If the last server in the list responds with a *connection denied packet*, the c
 
 ### Connected
 
-The purpose of the connected state is to allow the user to send and receive *payload packet*'s containing game-specific data. In the absence of any payload packets, the client generates and sends a *keepalive packet* at the KEEPALIVE_FREQUENCY tuning parameter (see [Tuning Parameters](#tuning-parameters)).
+The purpose of the connected state is to allow the user to send and receive *payload packet*'s containing game-specific data. In the absence of any payload packets, the client generates and sends a *keepalive packet* at the KEEPALIVE_FREQUENCY (see [Tuning Parameters](#tuning-parameters)).
 
 If no *payload packet*'s or *keepalive packet*'s are received from the server within a `connection timeout` timespan, the client transitions to the *connection timed out* state.
 

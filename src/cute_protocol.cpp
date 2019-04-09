@@ -612,7 +612,6 @@ static CUTE_INLINE uint32_t s_get_next_prime(uint32_t val)
 	return ~0;
 }
 
-
 int hashtable_init(hashtable_t* table, int key_size, int item_size, int capacity, void* mem_ctx)
 {
 	CUTE_ASSERT(capacity);
@@ -924,6 +923,8 @@ struct client_t
 	protocol::connect_token_t connect_token;
 	uint64_t challenge_sequence;
 	uint8_t challenge_data[CUTE_CHALLENGE_DATA_SIZE];
+	int goto_next_server;
+	client_state_t goto_next_server_tentative_state;
 	int server_endpoint_index;
 	endpoint_t server_endpoint;
 	endpoint_t web_service_endpoint;
@@ -986,13 +987,6 @@ cute_error:
 	return -1;
 }
 
-void client_disconnect(client_t* client)
-{
-	socket_cleanup(&client->socket);
-	packet_allocator_destroy(client->packet_allocator);
-	client->packet_allocator = NULL;
-}
-
 static void s_send(client_t* client, void* packet)
 {
 	int sz = packet_write(packet, client->buffer, client->application_id, client->sequence++, &client->client_to_server_key);
@@ -1003,18 +997,27 @@ static void s_send(client_t* client, void* packet)
 	}
 }
 
-static void s_state_machine(client_t* client)
+static void s_disconnect(client_t* client, client_state_t state, int send_packets = 0)
 {
-	switch (client->state)
-	{
-	case CLIENT_STATE_SENDING_CONNECTION_REQUEST:
-		if (client->last_packet_sent_time >= CUTE_PROTOCOL_SEND_RATE) {
-			s_send(client, client->connect_token_packet);
+	if (send_packets) {
+		packet_disconnect_t packet;
+		packet.packet_type = PACKET_TYPE_DISCONNECT;
+		for (int i = 0; i < CUTE_PROTOCOL_REDUNDANT_DISCONNECT_PACKET_COUNT; ++i)
+		{
+			s_send(client, &packet);
 		}
-		break;
-
-		// WORKING HERE
 	}
+
+	socket_cleanup(&client->socket);
+	packet_allocator_destroy(client->packet_allocator);
+	client->packet_allocator = NULL;
+
+	client->state = state;
+}
+
+void client_disconnect(client_t* client)
+{
+	s_disconnect(client, CLIENT_STATE_DISCONNECTED, 1);
 }
 
 static void s_receive_packets(client_t* client)
@@ -1026,6 +1029,10 @@ static void s_receive_packets(client_t* client)
 		// Read packet from UDP stack, and open it.
 		endpoint_t from;
 		int sz = socket_receive(&client->socket, &from, buffer, CUTE_PROTOCOL_PACKET_SIZE_MAX);
+
+		if (!endpoint_equals(client->server_endpoint, from)) {
+			continue;
+		}
 
 		if (sz < 26) {
 			continue;
@@ -1073,6 +1080,51 @@ static void s_receive_packets(client_t* client)
 
 static void s_send_packets(client_t* client)
 {
+	switch (client->state)
+	{
+	case CLIENT_STATE_SENDING_CONNECTION_REQUEST:
+		if (client->last_packet_sent_time >= CUTE_PROTOCOL_SEND_RATE) {
+			s_send(client, client->connect_token_packet);
+		}
+		break;
+
+	case CLIENT_STATE_SENDING_CHALLENGE_RESPONSE:
+		if (client->last_packet_sent_time >= CUTE_PROTOCOL_SEND_RATE) {
+			packet_challenge_t packet;
+			packet.packet_type = PACKET_TYPE_CHALLENGE_RESPONSE;
+			packet.nonce = client->challenge_sequence;
+			CUTE_MEMCPY(packet.challenge_data, client->challenge_data, CUTE_CHALLENGE_DATA_SIZE);
+			s_send(client, &packet);
+		}
+		break;
+
+	case CLIENT_STATE_CONNECTED:
+		if (client->last_packet_sent_time >= CUTE_PROTOCOL_SEND_RATE) {
+			packet_keepalive_t packet;
+			packet.packet_type = PACKET_TYPE_KEEPALIVE;
+			s_send(client, &packet);
+		}
+		break;
+	}
+}
+
+static int s_goto_next_server(client_t* client)
+{
+	int index = ++client->server_endpoint_index;
+
+	if (index == client->connect_token.endpoint_count) {
+		return 0;
+	}
+	
+	client->last_packet_recieved_time = 0;
+	client->last_packet_sent_time = CUTE_PROTOCOL_SEND_RATE;
+	client->goto_next_server = 0;
+	packet_queue_init(&client->packet_queue);
+
+	client->server_endpoint = client->connect_token.endpoints[index];
+	client->state = CLIENT_STATE_SENDING_CONNECTION_REQUEST;
+
+	return 1;
 }
 
 void client_update(client_t* client, float dt)
@@ -1082,13 +1134,36 @@ void client_update(client_t* client, float dt)
 	}
 
 	client->current_time = (uint64_t)time(NULL);
+	client->last_packet_recieved_time += dt;
+	client->last_packet_sent_time += dt;
 
-	s_state_machine(client);
 	s_receive_packets(client);
 	s_send_packets(client);
 
-	client->last_packet_recieved_time += dt;
-	client->last_packet_sent_time += dt;
+	int timeout = client->last_packet_recieved_time >= client->connect_token.handshake_timeout;
+	int is_handshake = client->state >= CLIENT_STATE_SENDING_CONNECTION_REQUEST && client->state <= CLIENT_STATE_SENDING_CHALLENGE_RESPONSE;
+	if (is_handshake) {
+		int expired = client->connect_token.expiration_timestamp >= client->current_time;
+		if (expired) {
+			s_disconnect(client, CLIENT_STATE_CONNECT_TOKEN_EXPIRED, 1);
+		} else if (timeout | client->goto_next_server) {
+			if (s_goto_next_server(client)) {
+				return;
+			}
+
+			if (client->state == CLIENT_STATE_SENDING_CONNECTION_REQUEST) {
+				s_disconnect(client, CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT, 1);
+			} else {
+				s_disconnect(client, CLIENT_STATE_CHALLENGED_RESPONSE_TIMED_OUT, 1);
+			}
+		}
+	} else { // CLIENT_STATE_CONNECTED
+		CUTE_ASSERT(client->state == CLIENT_STATE_CONNECTED);
+		timeout = client->last_packet_recieved_time >= client->connection_timeout;
+		if (timeout) {
+			s_disconnect(client, CLIENT_STATE_CONNECTION_TIMED_OUT, 1);
+		}
+	}
 }
 
 int client_get_packet(client_t* client, void* data, int* size)

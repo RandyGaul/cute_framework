@@ -45,6 +45,7 @@
 #define CUTE_KEEPALIVE_RATE (1.0f / 10.0f)
 #define CUTE_DISCONNECT_REDUNDANT_PACKET_COUNT 10
 #define CUTE_CHALLENGE_DATA_SIZE 256
+#define CUTE_PROTOCOL_REDUNDANT_DISCONNECT_PACKET_COUNT 10
 
 namespace cute
 {
@@ -74,7 +75,7 @@ enum client_state_t : int
 	CLIENT_STATE_INVALID_CONNECT_TOKEN         = -5,
 	CLIENT_STATE_CONNECTION_TIMED_OUT          = -4,
 	CLIENT_STATE_CHALLENGED_RESPONSE_TIMED_OUT = -3,
-	CLIENT_STATE_CONNECTION_REQEST_TIMED_OUT   = -2,
+	CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT  = -2,
 	CLIENT_STATE_CONNECTION_DENIED             = -1,
 	CLIENT_STATE_DISCONNECTED                  =  0,
 	CLIENT_STATE_SENDING_CONNECTION_REQUEST    =  1,
@@ -82,7 +83,7 @@ enum client_state_t : int
 	CLIENT_STATE_CONNECTED                     =  3,
 };
 
-extern CUTE_API client_t* CUTE_CALL client_make(uint16_t port, const char* web_service_address, void* user_allocator_context = NULL);
+extern CUTE_API client_t* CUTE_CALL client_make(uint16_t port, const char* web_service_address, uint64_t application_id, void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL client_destroy(client_t* client);
 
 extern CUTE_API int CUTE_CALL client_connect(client_t* client, const uint8_t* connect_token);
