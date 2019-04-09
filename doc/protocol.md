@@ -188,7 +188,7 @@ If the client receives a *disconnect packet* from the server it transitions to t
 
 ### Connect Token Expired
 
-If at any time the client's connect token expires, the client transitions to the *connect token expired*. This can happen if the client has to try connecting to multiple servers in the server list, and continually fails to establish a connection.
+If at any time the client's connect token expires during the handshake process, the client transitions to the *connect token expired*. This can happen if the client has to try connecting to multiple servers in the server list, and continually fails to establish a connection.
 
 The time to live for the connect token is calculated as:
 
