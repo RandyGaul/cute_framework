@@ -155,7 +155,7 @@ The default state is *disconnected*. The client transitions to the *sending conn
 
 Exactly how the client requests and receives the connect token is out of scope of this document, besides requiring a secure REST API call. Exactly how the web service generates the server list of the connect token is also out of scope of this document, as this is the realm of match-making or other similar mechanisms.
 
-The client reads the PUBLIC SECTION of the connect token and records all of the data. If the data is invalid the client transitions to the *invalid connect token* state. The connect token is deemed invalid by the client if the number of server addresses is outside the range of [1, 32], or if an IP address type is not in the range [1, 2], or if the creation timestamp is more recent than the expiration timestamp.
+The client reads the PUBLIC SECTION and the REST SECTION of the connect token and records all of the data. If the data is invalid the client transitions to the *invalid connect token* state. The connect token is deemed invalid by the client if the number of server addresses is outside the range of [1, 32], or if an IP address type is not in the range [1, 2], or if the creation timestamp is more recent than the expiration timestamp.
 
 ### Sending Connection Request
 

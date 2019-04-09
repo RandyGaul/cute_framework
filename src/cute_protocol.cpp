@@ -249,6 +249,12 @@ static CUTE_INLINE void s_associated_data(uint8_t** p, uint8_t type, uint64_t ap
 int packet_write(void* packet_ptr, uint8_t* buffer, uint64_t application_id, uint64_t sequence, const crypto_key_t* key)
 {
 	uint8_t type = *(uint8_t*)packet_ptr;
+
+	if (type == PACKET_TYPE_CONNECT_TOKEN) {
+		CUTE_MEMCPY(buffer, packet_ptr, CUTE_CONNECT_TOKEN_PACKET_SIZE);
+		return CUTE_CONNECT_TOKEN_PACKET_SIZE;
+	}
+
 	uint8_t* buffer_start = buffer;
 	uint8_t* payload = s_header(&buffer, type, sequence);
 	int payload_size = 0;
@@ -333,7 +339,7 @@ void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t a
 	case PACKET_TYPE_DISCONNECT: CUTE_CHECK(size != 25); break;
 	case PACKET_TYPE_CHALLENGE_REQUEST: CUTE_CHECK(size != 264 + 25); break;
 	case PACKET_TYPE_CHALLENGE_RESPONSE: CUTE_CHECK(size != 264 + 25); break;
-	case PACKET_TYPE_PAYLOAD: CUTE_CHECK(size - 25 < 1 || size - 25 > 1255); break;
+	case PACKET_TYPE_PAYLOAD: CUTE_CHECK((size - 25 < 1) | (size - 25 > 1255)); break;
 	}
 
 	uint64_t sequence = read_uint64(&buffer);
@@ -963,7 +969,11 @@ int client_connect(client_t* client, const uint8_t* connect_token)
 		client->current_time,
 		&client->connect_token
 	);
-	CUTE_CHECK_POINTER(connect_token_packet);
+	if (!connect_token_packet) {
+		client->state = CLIENT_STATE_INVALID_CONNECT_TOKEN;
+		goto cute_error;
+	}
+
 	CUTE_MEMCPY(connect_token_packet, connect_token_packet, CUTE_CONNECT_TOKEN_PACKET_SIZE);
 
 	CUTE_CHECK(socket_init(&client->socket, client->server_endpoint.type, client->server_endpoint.port, CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE, CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE));
@@ -983,14 +993,81 @@ void client_disconnect(client_t* client)
 	client->packet_allocator = NULL;
 }
 
+static void s_send(client_t* client, void* packet)
+{
+	int sz = packet_write(packet, client->buffer, client->application_id, client->sequence++, &client->client_to_server_key);
+
+	if (sz >= 25) {
+		socket_send(&client->socket, client->server_endpoint, client->buffer, sz);
+		client->last_packet_sent_time = 0;
+	}
+}
+
+static void s_state_machine(client_t* client)
+{
+	switch (client->state)
+	{
+	case CLIENT_STATE_SENDING_CONNECTION_REQUEST:
+		if (client->last_packet_sent_time >= CUTE_PROTOCOL_SEND_RATE) {
+			s_send(client, client->connect_token_packet);
+		}
+		break;
+
+		// WORKING HERE
+	}
+}
+
 static void s_receive_packets(client_t* client)
 {
 	uint8_t* buffer = client->buffer;
 
 	while (1)
 	{
+		// Read packet from UDP stack, and open it.
 		endpoint_t from;
-		socket_receive(&client->socket, &from, buffer, CUTE_PROTOCOL_PACKET_SIZE_MAX);
+		int sz = socket_receive(&client->socket, &from, buffer, CUTE_PROTOCOL_PACKET_SIZE_MAX);
+
+		if (sz < 26) {
+			continue;
+		}
+
+		uint8_t type = *buffer;
+		if (type > 7) {
+			continue;
+		}
+
+		switch (type)
+		{
+		case PACKET_TYPE_CONNECT_TOKEN: // fall-thru
+		case PACKET_TYPE_CHALLENGE_REQUEST:
+			continue;
+		}
+
+		void* packet = packet_open(buffer, sz, &client->server_to_client_key, client->application_id, client->packet_allocator, &client->replay_buffer);
+
+		// Handle packet based on client's current state.
+		int free_packet = 1;
+		switch (client->state)
+		{
+		case CLIENT_STATE_SENDING_CONNECTION_REQUEST:
+			if (type == PACKET_TYPE_CHALLENGE_REQUEST) {
+			}
+			break;
+
+		case CLIENT_STATE_SENDING_CHALLENGE_RESPONSE:
+			break;
+
+		case CLIENT_STATE_CONNECTED:
+			break;
+
+		default:
+			CUTE_ASSERT(0);
+			break;
+		}
+
+		if (free_packet) {
+			packet_allocator_free(client->packet_allocator, (packet_type_t)type, packet);
+		}
 	}
 }
 
@@ -1006,6 +1083,7 @@ void client_update(client_t* client, float dt)
 
 	client->current_time = (uint64_t)time(NULL);
 
+	s_state_machine(client);
 	s_receive_packets(client);
 	s_send_packets(client);
 
