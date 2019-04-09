@@ -52,7 +52,7 @@ The connect token has three major sections.
 2. SECRET SECTION
 3. REST SECTION
 
-Once a client receives a connect token from the web service, the REST SECTION and the PUBLIC SECTION is read by the client. These sections contains a server IP list of dedicated game servers to attempt to connect to, along with some other data. Once read, the client deletes the REST SECTION. The remaining data in the connect token consists of 1024 bytes. The final 1024 bytes are called the *connect token packet*.
+Once a client receives a connect token from the web service, the REST SECTION and the PUBLIC SECTION are read by the client. These sections contains a server IP list of dedicated game servers to attempt to connect to, along with some other data. Once read, the client deletes the REST SECTION. The remaining data in the connect token consists of 1024 bytes. The final 1024 bytes are called the *connect token packet*.
 
 The entire *connect token packet* is not modifiable or forge-able, and the SECRET SECTION is not readable by anyone except the web service and dedicated game servers. The entire *connect token packet* is protected by a cryptographically secure AEAD ([Authenticated Encryption with Associated Data](https://en.wikipedia.org/wiki/Authenticated_encryption#Authenticated_encryption_with_associated_data)) primitive. The key used for the AEAD primitive is a shared secret known by all dedicated game servers, and the web service. It is recommended to implement a mechanism to rotate this key periodically, though the mechanism to do so is out of scope for this document.
 
