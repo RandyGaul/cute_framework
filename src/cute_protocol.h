@@ -60,8 +60,6 @@ enum packet_type_t : uint8_t
 	PACKET_TYPE_CHALLENGE_REQUEST,
 	PACKET_TYPE_CHALLENGE_RESPONSE,
 	PACKET_TYPE_PAYLOAD,
-
-	PACKET_TYPE_MAX,
 };
 
 extern CUTE_API int CUTE_CALL generate_connect_token(
@@ -78,6 +76,32 @@ extern CUTE_API int CUTE_CALL generate_connect_token(
 	const crypto_key_t* shared_secret_key,
 	uint8_t* token_ptr_out
 );
+
+struct client_t;
+
+enum client_state_t : int
+{
+	CLIENT_STATE_CONNECT_TOKEN_EXPIRED         = -6,
+	CLIENT_STATE_INVALID_CONNECT_TOKEN         = -5,
+	CLIENT_STATE_CONNECTION_TIMED_OUT          = -4,
+	CLIENT_STATE_CHALLENGED_RESPONSE_TIMED_OUT = -3,
+	CLIENT_STATE_CONNECTION_REQEST_TIMED_OUT   = -2,
+	CLIENT_STATE_CONNECTION_DENIED             = -1,
+	CLIENT_STATE_DISCONNECTED                  =  0,
+	CLIENT_STATE_SENDING_CONNECTION_REQUEST    =  1,
+	CLIENT_STATE_SENDING_CHALLENGE_RESPONSE    =  2,
+	CLIENT_STATE_CONNECTED                     =  3,
+};
+
+extern CUTE_API client_t* CUTE_CALL client_make(uint16_t port, const char* web_service_address, void* user_allocator_context = NULL);
+extern CUTE_API void CUTE_CALL client_destroy(client_t* client);
+
+extern CUTE_API int CUTE_CALL client_connect(client_t* client, const uint8_t* connect_token);
+extern CUTE_API void CUTE_CALL client_disconnect(client_t* client);
+extern CUTE_API void CUTE_CALL client_update(client_t* client, float dt);
+
+extern CUTE_API int CUTE_CALL client_get_packet(client_t* client, void* data, int* size);
+extern CUTE_API int CUTE_CALL client_send_data(client_t* client, const void* data, int size);
 
 }
 }

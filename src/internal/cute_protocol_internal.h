@@ -114,8 +114,6 @@ struct packet_payload_t
 extern CUTE_API int CUTE_CALL packet_write(void* packet_ptr, uint8_t* buffer, uint64_t application_id, uint64_t sequence, const crypto_key_t* key);
 extern CUTE_API void* CUTE_CALL packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t application_id, packet_allocator_t* pa, replay_buffer_t* replay_buffer);
 
-extern CUTE_API int CUTE_CALL read_connect_token_packet_public_section(uint8_t* buffer, uint64_t application_id, uint64_t current_time, packet_connect_token_t* packet);
-
 // -------------------------------------------------------------------------------------------------
 
 struct connect_token_t

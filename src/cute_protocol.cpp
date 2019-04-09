@@ -25,10 +25,17 @@
 #include <cute_c_runtime.h>
 #include <cute_error.h>
 #include <cute_alloc.h>
+#include <cute_net.h>
 
 #include <internal/cute_defines_internal.h>
 #include <internal/cute_serialize_internal.h>
 #include <internal/cute_protocol_internal.h>
+#include <internal/cute_net_internal.h>
+
+#include <time.h>
+
+#define CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE (2 * CUTE_MB)
+#define CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE (2 * CUTE_MB)
 
 namespace cute
 {
@@ -892,6 +899,128 @@ void encryption_map_look_for_timeouts_or_expirations(encryption_map_t* map, floa
 			++index;
 		}
 	}
+}
+
+// -------------------------------------------------------------------------------------------------
+
+struct client_t
+{
+	client_state_t state;
+	int loopback;
+	float last_packet_recieved_time;
+	float last_packet_sent_time;
+	uint64_t application_id;
+	uint64_t current_time;
+	uint64_t client_handle;
+	int max_clients;
+	float connection_timeout;
+	int has_sent_disconnect_packets;
+	protocol::connect_token_t connect_token;
+	uint64_t challenge_sequence;
+	uint8_t challenge_data[CUTE_CHALLENGE_DATA_SIZE];
+	int server_endpoint_index;
+	endpoint_t server_endpoint;
+	endpoint_t web_service_endpoint;
+	socket_t socket;
+	crypto_key_t client_to_server_key;
+	crypto_key_t server_to_client_key;
+	uint64_t sequence;
+	protocol::packet_allocator_t* packet_allocator;
+	protocol::replay_buffer_t replay_buffer;
+	protocol::packet_queue_t packet_queue;
+	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
+	uint8_t connect_token_packet[CUTE_CONNECT_TOKEN_PACKET_SIZE];
+	void* mem_ctx;
+};
+
+client_t* client_make(uint16_t port, const char* web_service_address, uint64_t application_id, void* user_allocator_context)
+{
+	client_t* client = (client_t*)CUTE_ALLOC(sizeof(client_t), app->mem_ctx);
+	CUTE_CHECK_POINTER(client);
+	CUTE_MEMSET(client, 0, sizeof(client_t));
+	client->state = CLIENT_STATE_DISCONNECTED;
+	client->application_id = application_id;
+	client->current_time = (uint64_t)time(NULL);
+	client->mem_ctx = user_allocator_context;
+	return client;
+
+cute_error:
+	CUTE_FREE(client, app->mem_ctx);
+	return NULL;
+}
+
+void client_destroy(client_t* client)
+{
+	// TODO: Detect if disconnect was not called yet.
+	CUTE_FREE(client, client->app->mem_ctx);
+}
+
+int client_connect(client_t* client, const uint8_t* connect_token)
+{
+	uint8_t* connect_token_packet = client_read_connect_token_from_web_service(
+		(uint8_t*)connect_token,
+		client->application_id,
+		client->current_time,
+		&client->connect_token
+	);
+	CUTE_CHECK_POINTER(connect_token_packet);
+	CUTE_MEMCPY(connect_token_packet, connect_token_packet, CUTE_CONNECT_TOKEN_PACKET_SIZE);
+
+	CUTE_CHECK(socket_init(&client->socket, client->server_endpoint.type, client->server_endpoint.port, CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE, CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE));
+	client->packet_allocator = packet_allocator_make(client->mem_ctx);
+	replay_buffer_init(&client->replay_buffer);
+	packet_queue_init(&client->packet_queue);
+	return 0;
+
+cute_error:
+	return -1;
+}
+
+void client_disconnect(client_t* client)
+{
+	socket_cleanup(&client->socket);
+	packet_allocator_destroy(client->packet_allocator);
+	client->packet_allocator = NULL;
+}
+
+static void s_receive_packets(client_t* client)
+{
+	uint8_t* buffer = client->buffer;
+
+	while (1)
+	{
+		endpoint_t from;
+		socket_receive(&client->socket, &from, buffer, CUTE_PROTOCOL_PACKET_SIZE_MAX);
+	}
+}
+
+static void s_send_packets(client_t* client)
+{
+}
+
+void client_update(client_t* client, float dt)
+{
+	if (client->state <= 0) {
+		return;
+	}
+
+	client->current_time = (uint64_t)time(NULL);
+
+	s_receive_packets(client);
+	s_send_packets(client);
+
+	client->last_packet_recieved_time += dt;
+	client->last_packet_sent_time += dt;
+}
+
+int client_get_packet(client_t* client, void* data, int* size)
+{
+	return -1;
+}
+
+int client_send_data(client_t* client, const void* data, int size)
+{
+	return -1;
 }
 
 }
