@@ -1,6 +1,6 @@
 # Cute Protocol Standard
 
-The Cute Protocol implements a client-server based transport layer for securely connecting and authenticating with backend game servers over UDP. The purpose of this document is to aid users in making educated decisions about how to use the Cute Protocol in their own game.
+The Cute Protocol implements a client-server based transport layer for securely connecting and authenticating with backend game servers over UDP. The purpose of this document is to aid users in making educated decisions about how to use the Cute Protocol in their own game. Thanks to Glenn Fiedler for his blog and especially his implementation of [netcode.io](https://github.com/networkprotocol/netcode.io) - the majority of the knowledge needed to create Cute Protocol was gleaned from Glenn's online learning resources.
 
 ## High Level Overview
 
@@ -13,7 +13,7 @@ The main pieces of the Cute Protocol are:
 
 The web service provides an authentication mechanism via [REST](https://en.wikipedia.org/wiki/Representational_state_transfer) call ([HTTPS](https://en.wikipedia.org/wiki/HTTPS) is recommended, but not required). Any authentication technique can be used since authentication with a web service is: A) very well understood with many good pre-built solutions (like OAuth/2 or OpenID); B) easily isolated away from this document without a strong conceptual dependency. The details of the web service and its exact API are out of scope of the standard, except for how they produce a connect token.
 
-The connect token is the mechanism that allows clients to securely authenticate with a dedicated server. Dedicated servers are the servers actually running game. Clients are the players who connect to a dedicated server in order to play.
+The connect token is the mechanism that allows clients to securely authenticate with a dedicated server. Dedicated servers are the servers actually running game. Clients are the players who connect to a dedicated server in order to play. The dedicated servers need not only provide a game service - it can be any online service that wants to run over UDP with a scure and live connection. However, for this document the backend servers are assumed to host a game service.
 
 For this document, the user is the one who owns the web service and dedicated servers.
 
