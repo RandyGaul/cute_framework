@@ -278,20 +278,20 @@ The *connection accepted packet* is sent from the the server once a client has s
 ### Challenge Request Packet
 
 ```
-sequence nonce      uint64_t
+challenge nonce     uint64_t
 challenge bytes     256 bytes
 ```
 
 The *challenge request packet* is sent from the server as apart of the connection handshake process. This challenge response sequence is used to prevent IP spoofing and *connect token packet* sniffing. For more information about how, see the [Sending Challenge Response](#sending-challenge-response) section.
 
-The `sequence nonce` is an incrementing counter starting at 0, initialized upon server restart.
+The `challenge nonce` is an incrementing counter starting at 0, initialized upon server restart.
 
 The `challenge bytes` is simply 256 bytes of data. The data can be anything, including randomized bits. Exactly what bits are the `challenge bytes` is left to the implementation. To fulfill the purpose of this packet, the client merely needs to decrypt the packet with the `server to client` key, encrypt it with the `client to server key`, and send it back to the server. The contents of the `challenge bytes` are ignored by the client. This packet is intentionally smaller than the *connect token packet* to prevent [DDoS amplification](https://en.wikipedia.org/wiki/Denial-of-service_attack#Amplification).
 
 ### Challenge Response Packet
 
 ```
-sequence nonce      uint64_t
+challenge nonce     uint64_t
 challenge bytes     256 bytes
 ```
 

@@ -232,8 +232,8 @@ static void s_client_send_packets(client_t* client)
 
 			protocol::packet_encrypted_connect_token_t packet;
 			//packet.expiration_timestamp = client->connect_token.expire_timestamp;
-			//CUTE_ASSERT(sizeof(packet.nonce) == sizeof(client->connect_token.nonce));
-			//CUTE_MEMCPY(packet.nonce, client->connect_token.nonce, sizeof(packet.nonce));
+			//CUTE_ASSERT(sizeof(packet.sequence_nonce) == sizeof(client->connect_token.sequence_nonce));
+			//CUTE_MEMCPY(packet.sequence_nonce, client->connect_token.sequence_nonce, sizeof(packet.sequence_nonce));
 			//CUTE_ASSERT(sizeof(packet.secret_data) == sizeof(client->connect_token.secret_data));
 			//CUTE_MEMCPY(packet.secret_data, client->connect_token.secret_data, sizeof(packet.secret_data));
 
@@ -247,7 +247,7 @@ static void s_client_send_packets(client_t* client)
 			client->last_packet_sent_time = 0;
 
 			protocol::packet_challenge_t packet;
-			packet.nonce = client->challenge_sequence;
+			packet.sequence_nonce = client->challenge_sequence;
 			CUTE_MEMCPY(packet.challenge_data, client->challenge_data, CUTE_CHALLENGE_DATA_SIZE);
 
 			s_client_send_packet(client, &packet, protocol::PACKET_TYPE_CHALLENGE_RESPONSE);

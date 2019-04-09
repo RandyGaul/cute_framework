@@ -112,7 +112,7 @@ struct packet_disconnect_t
 struct packet_challenge_t
 {
 	uint8_t packet_type;
-	uint64_t nonce;
+	uint64_t challenge_nonce;
 	uint8_t challenge_data[CUTE_CHALLENGE_DATA_SIZE];
 };
 

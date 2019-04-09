@@ -143,7 +143,7 @@ int test_packet_challenge()
 
 	protocol::packet_challenge_t packet;
 	packet.packet_type = protocol::PACKET_TYPE_CHALLENGE_REQUEST;
-	packet.nonce = 30;
+	packet.challenge_nonce = 30;
 	crypto_random_bytes(packet.challenge_data, sizeof(packet.challenge_data));
 
 	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
@@ -156,7 +156,7 @@ int test_packet_challenge()
 	protocol::packet_challenge_t* packet_val = (protocol::packet_challenge_t*)packet_ptr;
 
 	CUTE_TEST_ASSERT(packet_val->packet_type == packet.packet_type);
-	CUTE_TEST_ASSERT(packet_val->nonce == packet.nonce);
+	CUTE_TEST_ASSERT(packet_val->challenge_nonce == packet.challenge_nonce);
 	CUTE_TEST_ASSERT(!(CUTE_MEMCMP(packet_val->challenge_data, packet.challenge_data, sizeof(packet.challenge_data))));
 
 	protocol::packet_allocator_free(NULL, (protocol::packet_type_t)packet.packet_type, packet_ptr);
