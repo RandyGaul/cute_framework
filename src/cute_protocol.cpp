@@ -26,6 +26,7 @@
 #include <cute_error.h>
 #include <cute_alloc.h>
 #include <cute_net.h>
+#include <cute_handle_table.h>
 
 #include <internal/cute_defines_internal.h>
 #include <internal/cute_serialize_internal.h>
@@ -1328,8 +1329,38 @@ uint16_t client_get_port(client_t* client)
 
 // -------------------------------------------------------------------------------------------------
 
-// WORKING HERE
-// Implement server next.
+struct server_t
+{
+	int running;
+	uint64_t application_id;
+	uint64_t current_time;
+	socket_t socket;
+	protocol::packet_allocator_t* packet_allocator;
+	crypto_key_t secret_key;
+
+	encryption_map_t encryption_map;
+	connect_token_cache_t token_cache;
+
+	int client_count;
+	handle_table_t client_handle_table;
+	handle_t client_handle[CUTE_PROTOCOL_CLIENT_MAX];
+	int client_is_connected[CUTE_PROTOCOL_CLIENT_MAX];
+	float client_last_packet_recieved_time[CUTE_PROTOCOL_CLIENT_MAX];
+	float client_last_packet_sent_time[CUTE_PROTOCOL_CLIENT_MAX];
+	endpoint_t client_endpoint[CUTE_PROTOCOL_CLIENT_MAX];
+	uint64_t client_sequence[CUTE_PROTOCOL_CLIENT_MAX];
+	crypto_key_t client_client_to_server_key[CUTE_PROTOCOL_CLIENT_MAX];
+	crypto_key_t client_server_to_client_key[CUTE_PROTOCOL_CLIENT_MAX];
+	protocol::replay_buffer_t client_replay_buffer[CUTE_PROTOCOL_CLIENT_MAX];
+	protocol::packet_queue_t client_packets[CUTE_PROTOCOL_CLIENT_MAX];
+
+	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
+	void* mem_ctx;
+};
+
+server_t* server_make(const char* address, uint64_t application_id, const crypto_key_t* secret_key, void* mem_ctx)
+{
+}
 
 }
 }
