@@ -213,7 +213,6 @@ struct connect_token_cache_entry_t
 	uint64_t entry_creation_time;
 	uint64_t token_expire_time;
 	endpoint_t endpoint;
-	uint8_t hmac_bytes[CUTE_CRYPTO_HMAC_BYTES];
 	list_node_t* node;
 };
 
@@ -225,6 +224,7 @@ struct connect_token_cache_node_t
 
 struct connect_token_cache_t
 {
+	int capacity;
 	hashtable_t table;
 	list_t list;
 	list_t free_list;
@@ -232,7 +232,7 @@ struct connect_token_cache_t
 	void* mem_ctx;
 };
 
-extern CUTE_API int CUTE_CALL connect_token_cache_init(connect_token_cache_t* cache, void* mem_ctx);
+extern CUTE_API int CUTE_CALL connect_token_cache_init(connect_token_cache_t* cache, int capacity, void* mem_ctx);
 extern CUTE_API void CUTE_CALL connect_token_cache_cleanup(connect_token_cache_t* cache);
 
 extern CUTE_API connect_token_cache_entry_t* CUTE_CALL connect_token_cache_find(connect_token_cache_t* cache, const uint8_t* hmac_bytes);

@@ -73,6 +73,7 @@ CUTE_INLINE void list_remove(list_node_t* node)
 {
 	node->prev->next = node->next;
 	node->next->prev = node->prev;
+	list_init_node(node);
 }
 
 CUTE_INLINE list_node_t* list_pop_front(list_t* list)
@@ -92,6 +93,16 @@ CUTE_INLINE list_node_t* list_pop_back(list_t* list)
 CUTE_INLINE int list_empty(list_t* list)
 {
 	return list->nodes.next == list->nodes.prev && list->nodes.next == &list->nodes;
+}
+
+CUTE_INLINE list_node_t* list_begin(list_t* list)
+{
+	return list->nodes.next;
+}
+
+CUTE_INLINE list_node_t* list_end(list_t* list)
+{
+	return &list->nodes;
 }
 
 }

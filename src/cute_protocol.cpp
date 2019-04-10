@@ -767,10 +767,11 @@ void hashtable_remove(hashtable_t* table, const void* key)
 	{
 		void* dst_key = s_get_key(table, index);
 		void* src_key = s_get_key(table, last_index);
-		CUTE_MEMCPY(dst_key, src_key, (size_t)table->item_size);
+		CUTE_MEMCPY(dst_key, src_key, (size_t)table->key_size);
 		void* dst_item = s_get_item(table, index);
 		void* src_item = s_get_item(table, last_index);
 		CUTE_MEMCPY(dst_item, src_item, (size_t)table->item_size);
+        table->items_slot_index[index] = table->items_slot_index[last_index];
 		table->slots[table->items_slot_index[last_index]].item_index = index;
 	}
 	--table->count;
@@ -834,15 +835,16 @@ void hashtable_swap(hashtable_t* table, int index_a, int index_b)
 
 // -------------------------------------------------------------------------------------------------
 
-int connect_token_cache_init(connect_token_cache_t* cache, void* mem_ctx)
+int connect_token_cache_init(connect_token_cache_t* cache, int capacity, void* mem_ctx)
 {
-	CUTE_CHECK(hashtable_init(&cache->table, CUTE_CRYPTO_HMAC_BYTES, sizeof(connect_token_cache_entry_t), CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX, mem_ctx));
+	cache->capacity = capacity;
+	CUTE_CHECK(hashtable_init(&cache->table, CUTE_CRYPTO_HMAC_BYTES, sizeof(connect_token_cache_entry_t), capacity, mem_ctx));
 	list_init(&cache->list);
 	list_init(&cache->free_list);
-	cache->node_memory = (connect_token_cache_node_t*)CUTE_ALLOC(sizeof(connect_token_cache_node_t) * CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX, mem_ctx);
+	cache->node_memory = (connect_token_cache_node_t*)CUTE_ALLOC(sizeof(connect_token_cache_node_t) * capacity, mem_ctx);
 	CUTE_CHECK_POINTER(cache->node_memory);
 
-	for (int i = 0; i < CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX; ++i)
+	for (int i = 0; i < capacity; ++i)
 	{
 		list_node_t* node = &cache->node_memory[i].node;
 		list_init_node(node);
@@ -883,11 +885,10 @@ void connect_token_cache_add(connect_token_cache_t* cache, uint64_t entry_creati
 	entry.entry_creation_time = entry_creation_time;
 	entry.token_expire_time = token_expire_time;
 	entry.endpoint = endpoint;
-	CUTE_MEMCPY(entry.hmac_bytes, hmac_bytes, CUTE_CRYPTO_HMAC_BYTES);
 
 	int table_count = hashtable_count(&cache->table);
-	CUTE_ASSERT(table_count <= CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX);
-	if (table_count == CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX) {
+	CUTE_ASSERT(table_count <= cache->capacity);
+	if (table_count == cache->capacity) {
 		list_node_t* oldest_node = list_pop_back(&cache->list);
 		connect_token_cache_node_t* oldest_entry_node = CUTE_LIST_HOST(connect_token_cache_node_t, node, oldest_node);
 		hashtable_remove(&cache->table, oldest_entry_node->hmac_bytes);
@@ -901,7 +902,8 @@ void connect_token_cache_add(connect_token_cache_t* cache, uint64_t entry_creati
 		connect_token_cache_entry_t* entry_ptr = (connect_token_cache_entry_t*)hashtable_insert(&cache->table, hmac_bytes, &entry);
 		CUTE_ASSERT(entry_ptr);
 		entry_ptr->node = list_pop_front(&cache->free_list);
-		list_init_node(entry_ptr->node);
+		connect_token_cache_node_t* entry_node = CUTE_LIST_HOST(connect_token_cache_node_t, node, entry_ptr->node);
+		CUTE_MEMCPY(entry_node->hmac_bytes, hmac_bytes, CUTE_CRYPTO_HMAC_BYTES);
 		list_push_front(&cache->list, entry_ptr->node);
 	}
 }
