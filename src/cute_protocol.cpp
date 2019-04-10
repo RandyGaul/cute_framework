@@ -1360,6 +1360,7 @@ struct server_t
 
 server_t* server_make(const char* address, uint64_t application_id, const crypto_key_t* secret_key, void* mem_ctx)
 {
+	return NULL;
 }
 
 }
