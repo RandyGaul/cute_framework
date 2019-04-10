@@ -45,10 +45,10 @@ int test_encryption_map_basic()
 
 	encryption_map_insert(&map, endpoint, &state);
 
-	encryption_state_t state_looked_up;
-	CUTE_TEST_CHECK(encryption_map_find(&map, endpoint, &state_looked_up));
+	encryption_state_t* state_looked_up = encryption_map_find(&map, endpoint);
+	CUTE_TEST_CHECK_POINTER(state_looked_up);
 
-	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&state, &state_looked_up, sizeof(state)));
+	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&state, state_looked_up, sizeof(state)));
 
 	encryption_map_cleanup(&map);
 
@@ -88,29 +88,32 @@ int test_encryption_map_timeout_and_expiration()
 	encryption_map_insert(&map, endpoint0, &state0);
 	encryption_map_insert(&map, endpoint1, &state1);
 
-	encryption_state_t state_looked_up;
-	CUTE_TEST_CHECK(encryption_map_find(&map, endpoint0, &state_looked_up));
-	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&state0, &state_looked_up, sizeof(state0)));
+	encryption_state_t* state_looked_up = encryption_map_find(&map, endpoint0);
+	CUTE_TEST_CHECK_POINTER(state_looked_up);
+	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&state0, state_looked_up, sizeof(state0)));
 
-	CUTE_TEST_CHECK(encryption_map_find(&map, endpoint1, &state_looked_up));
-	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&state1, &state_looked_up, sizeof(state1)));
+	state_looked_up = encryption_map_find(&map, endpoint1);
+	CUTE_TEST_CHECK_POINTER(state_looked_up);
+	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&state1, state_looked_up, sizeof(state1)));
 
 	// Nothing should timeout or expire just yet.
 	encryption_map_look_for_timeouts_or_expirations(&map, 4.0f, 9ULL);
 
-	CUTE_TEST_CHECK(encryption_map_find(&map, endpoint0, &state_looked_up));
-	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&state0, &state_looked_up, sizeof(state0)));
+	state_looked_up = encryption_map_find(&map, endpoint0);
+	CUTE_TEST_CHECK_POINTER(state_looked_up);
+	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&state0, state_looked_up, sizeof(state0)));
 
-	CUTE_TEST_CHECK(encryption_map_find(&map, endpoint1, &state_looked_up));
-	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&state1, &state_looked_up, sizeof(state1)));
+	state_looked_up = encryption_map_find(&map, endpoint1);
+	CUTE_TEST_CHECK_POINTER(state_looked_up);
+	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&state1, state_looked_up, sizeof(state1)));
 
 	// Now timeout state0.
-	encryption_map_look_for_timeouts_or_expirations(&map, 1.0f, 9ULL);
-	CUTE_TEST_ASSERT(encryption_map_find(&map, endpoint0, &state_looked_up) < 0);
+	encryption_map_look_for_timeouts_or_expirations(&map, 6.0f, 9ULL);
+	CUTE_TEST_CHECK_POINTER(!encryption_map_find(&map, endpoint0));
 
 	// Now expire state1.
 	encryption_map_look_for_timeouts_or_expirations(&map, 0, 10ULL);
-	CUTE_TEST_ASSERT(encryption_map_find(&map, endpoint1, &state_looked_up) < 0);
+	CUTE_TEST_CHECK_POINTER(!encryption_map_find(&map, endpoint1));
 
 	// Assert that there are no present entries.
 	CUTE_TEST_ASSERT(encryption_map_count(&map) == 0);

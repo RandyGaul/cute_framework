@@ -23,6 +23,7 @@
 #define CUTE_PROTOCOL_INTERNAL_H
 
 #include <cute_protocol.h>
+#include <cute_doubly_list.h>
 
 namespace cute
 {
@@ -194,7 +195,7 @@ struct hashtable_t
 extern CUTE_API int CUTE_CALL hashtable_init(hashtable_t* table, int key_size, int item_size, int capacity, void* mem_ctx);
 extern CUTE_API void CUTE_CALL hashtable_cleanup(hashtable_t* table);
 
-extern CUTE_API void CUTE_CALL hashtable_insert(hashtable_t* table, const void* key, const void* item);
+extern CUTE_API void* CUTE_CALL hashtable_insert(hashtable_t* table, const void* key, const void* item);
 extern CUTE_API void CUTE_CALL hashtable_remove(hashtable_t* table, const void* key);
 extern CUTE_API void CUTE_CALL hashtable_clear(hashtable_t* table);
 extern CUTE_API void* CUTE_CALL hashtable_find(const hashtable_t* table, const void* key);
@@ -207,21 +208,35 @@ extern CUTE_API void CUTE_CALL hashtable_swap(hashtable_t* table, int index_a, i
 
 #define CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX (CUTE_PROTOCOL_CLIENT_MAX * 8)
 
-struct connect_token_entry_t
+struct connect_token_cache_entry_t
 {
 	uint64_t entry_creation_time;
 	uint64_t token_expire_time;
 	endpoint_t endpoint;
-	uint8_t hmac_bytes[CUTE_PROTOCOL_HMAC_BYTES];
+	uint8_t hmac_bytes[CUTE_CRYPTO_HMAC_BYTES];
+	list_node_t* node;
+};
+
+struct connect_token_cache_node_t
+{
+	uint8_t hmac_bytes[CUTE_CRYPTO_HMAC_BYTES];
+	list_node_t node;
 };
 
 struct connect_token_cache_t
 {
 	hashtable_t table;
+	list_t list;
+	list_t free_list;
+	connect_token_cache_node_t* node_memory;
+	void* mem_ctx;
 };
 
-// Need to do LRU cache with heap on the table here.
-// API: Add entry, find entry. Add should, if full, remove oldest. Reset.
+extern CUTE_API int CUTE_CALL connect_token_cache_init(connect_token_cache_t* cache, void* mem_ctx);
+extern CUTE_API void CUTE_CALL connect_token_cache_cleanup(connect_token_cache_t* cache);
+
+extern CUTE_API connect_token_cache_entry_t* CUTE_CALL connect_token_cache_find(connect_token_cache_t* cache, const uint8_t* hmac_bytes);
+extern CUTE_API void CUTE_CALL connect_token_cache_add(connect_token_cache_t* cache, uint64_t entry_creation_time, uint64_t token_expire_time, endpoint_t endpoint, const uint8_t* hmac_bytes);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -248,7 +263,7 @@ extern CUTE_API void CUTE_CALL encryption_map_clear(encryption_map_t* map);
 extern CUTE_API int CUTE_CALL encryption_map_count(encryption_map_t* map);
 
 extern CUTE_API void CUTE_CALL encryption_map_insert(encryption_map_t* map, endpoint_t endpoint, const encryption_state_t* state);
-extern CUTE_API int CUTE_CALL encryption_map_find(encryption_map_t* map, endpoint_t endpoint, encryption_state_t* state);
+extern CUTE_API encryption_state_t* CUTE_CALL encryption_map_find(encryption_map_t* map, endpoint_t endpoint);
 extern CUTE_API void CUTE_CALL encryption_map_remove(encryption_map_t* map, endpoint_t endpoint);
 extern CUTE_API endpoint_t* CUTE_CALL encryption_map_get_endpoints(encryption_map_t* map);
 extern CUTE_API encryption_state_t* CUTE_CALL encryption_map_get_states(encryption_map_t* map);

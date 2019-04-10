@@ -707,7 +707,7 @@ static int hashtable_internal_find_slot(const hashtable_t* table, const void* ke
 	return -1;
 }
 
-void hashtable_insert(hashtable_t* table, const void* key, const void* item)
+void* hashtable_insert(hashtable_t* table, const void* key, const void* item)
 {
 	CUTE_ASSERT(hashtable_internal_find_slot(table, key) < 0);
 	uint64_t hash = s_calc_hash(table, key);
@@ -715,13 +715,13 @@ void hashtable_insert(hashtable_t* table, const void* key, const void* item)
 	CUTE_ASSERT(table->count < table->slot_capacity);
 
 	int base_slot = (int)(hash % (uint64_t)table->slot_capacity);
-	int base_count = table->slots[ base_slot ].base_count;
+	int base_count = table->slots[base_slot].base_count;
 	int slot = base_slot;
 	int first_free = slot;
 	while (base_count)
 	{
 		uint64_t slot_hash = table->slots[slot].key_hash;
-		if (slot_hash == 0 && table->slots[ first_free ].key_hash != 0) first_free = slot;
+		if (slot_hash == 0 && table->slots[first_free].key_hash != 0) first_free = slot;
 		int slot_base = (int)(slot_hash % (uint64_t)table->slot_capacity);
 		if (slot_base == base_slot) 
 			--base_count;
@@ -729,7 +729,7 @@ void hashtable_insert(hashtable_t* table, const void* key, const void* item)
 	}
 
 	slot = first_free;
-	while (table->slots[ slot ].key_hash)
+	while (table->slots[slot].key_hash)
 		slot = (slot + 1) % table->slot_capacity;
 
 	CUTE_ASSERT(table->count < table->item_capacity);
@@ -738,7 +738,7 @@ void hashtable_insert(hashtable_t* table, const void* key, const void* item)
 	CUTE_ASSERT(hash);
 	table->slots[slot].key_hash = hash;
 	table->slots[slot].item_index = table->count;
-	++table->slots[ base_slot ].base_count;
+	++table->slots[base_slot].base_count;
 
 	void* item_dst = s_get_item(table, table->count);
 	void* key_dst = s_get_key(table, table->count);
@@ -746,6 +746,8 @@ void hashtable_insert(hashtable_t* table, const void* key, const void* item)
 	CUTE_MEMCPY(key_dst, key, table->key_size);
     table->items_slot_index[table->count] = slot;
 	++table->count;
+
+	return item_dst;
 }
 
 void hashtable_remove(hashtable_t* table, const void* key)
@@ -832,6 +834,80 @@ void hashtable_swap(hashtable_t* table, int index_a, int index_b)
 
 // -------------------------------------------------------------------------------------------------
 
+int connect_token_cache_init(connect_token_cache_t* cache, void* mem_ctx)
+{
+	CUTE_CHECK(hashtable_init(&cache->table, CUTE_CRYPTO_HMAC_BYTES, sizeof(connect_token_cache_entry_t), CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX, mem_ctx));
+	list_init(&cache->list);
+	list_init(&cache->free_list);
+	cache->node_memory = (connect_token_cache_node_t*)CUTE_ALLOC(sizeof(connect_token_cache_node_t) * CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX, mem_ctx);
+	CUTE_CHECK_POINTER(cache->node_memory);
+
+	for (int i = 0; i < CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX; ++i)
+	{
+		list_node_t* node = &cache->node_memory[i].node;
+		list_init_node(node);
+		list_push_front(&cache->free_list, node);
+	}
+
+	cache->mem_ctx = mem_ctx;
+
+	return 0;
+
+cute_error:
+	return -1;
+}
+
+void connect_token_cache_cleanup(connect_token_cache_t* cache)
+{
+	hashtable_cleanup(&cache->table);
+	CUTE_FREE(cache->node_memory, cache->mem_ctx);
+}
+
+connect_token_cache_entry_t* connect_token_cache_find(connect_token_cache_t* cache, const uint8_t* hmac_bytes)
+{
+	void* entry_ptr = hashtable_find(&cache->table, hmac_bytes);
+	if (entry_ptr) {
+		connect_token_cache_entry_t* entry = (connect_token_cache_entry_t*)entry_ptr;
+		list_node_t* node = entry->node;
+		list_remove(node);
+		list_push_front(&cache->list, node);
+		return entry;
+	} else {
+		return NULL;
+	}
+}
+
+void connect_token_cache_add(connect_token_cache_t* cache, uint64_t entry_creation_time, uint64_t token_expire_time, endpoint_t endpoint, const uint8_t* hmac_bytes)
+{
+	connect_token_cache_entry_t entry;
+	entry.entry_creation_time = entry_creation_time;
+	entry.token_expire_time = token_expire_time;
+	entry.endpoint = endpoint;
+	CUTE_MEMCPY(entry.hmac_bytes, hmac_bytes, CUTE_CRYPTO_HMAC_BYTES);
+
+	int table_count = hashtable_count(&cache->table);
+	CUTE_ASSERT(table_count <= CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX);
+	if (table_count == CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX) {
+		list_node_t* oldest_node = list_pop_back(&cache->list);
+		connect_token_cache_node_t* oldest_entry_node = CUTE_LIST_HOST(connect_token_cache_node_t, node, oldest_node);
+		hashtable_remove(&cache->table, oldest_entry_node->hmac_bytes);
+		CUTE_MEMCPY(oldest_entry_node->hmac_bytes, hmac_bytes, CUTE_CRYPTO_HMAC_BYTES);
+
+		connect_token_cache_entry_t* entry_ptr = (connect_token_cache_entry_t*)hashtable_insert(&cache->table, hmac_bytes, &entry);
+		CUTE_ASSERT(entry_ptr);
+		entry_ptr->node = oldest_node;
+		list_push_front(&cache->list, entry_ptr->node);
+	} else {
+		connect_token_cache_entry_t* entry_ptr = (connect_token_cache_entry_t*)hashtable_insert(&cache->table, hmac_bytes, &entry);
+		CUTE_ASSERT(entry_ptr);
+		entry_ptr->node = list_pop_front(&cache->free_list);
+		list_init_node(entry_ptr->node);
+		list_push_front(&cache->list, entry_ptr->node);
+	}
+}
+
+// -------------------------------------------------------------------------------------------------
+
 int encryption_map_init(encryption_map_t* map, void* mem_ctx)
 {
 	return hashtable_init(&map->table, sizeof(endpoint_t), sizeof(encryption_state_t), CUTE_ENCRYPTION_STATES_MAX, mem_ctx);
@@ -857,15 +933,15 @@ void encryption_map_insert(encryption_map_t* map, endpoint_t endpoint, const enc
 	hashtable_insert(&map->table, &endpoint, state);
 }
 
-int encryption_map_find(encryption_map_t* map, endpoint_t endpoint, encryption_state_t* state)
+encryption_state_t* encryption_map_find(encryption_map_t* map, endpoint_t endpoint)
 {
 	void* ptr = hashtable_find(&map->table, &endpoint);
 	if (ptr) {
-		*state = *(encryption_state_t*)ptr;
+		encryption_state_t* state = (encryption_state_t*)ptr;
 		state->last_handshake_access_time = 0;
-		return 0;
+		return state;
 	} else {
-		return -1;
+		return NULL;
 	}
 }
 
@@ -1212,7 +1288,7 @@ void client_update(client_t* client, float dt)
 int client_get_packet(client_t* client, void* data, int* size, uint64_t* sequence)
 {
 	return -1;
-
+}
 
 void client_free_packet(client_t* client, void* packet)
 {
@@ -1221,7 +1297,7 @@ void client_free_packet(client_t* client, void* packet)
 int client_send_data(client_t* client, const void* data, int size)
 {
 	return -1;
-
+}
 
 client_state_t client_get_state(client_t* client)
 {
@@ -1245,7 +1321,7 @@ endpoint_t client_get_server_address(client_t* client)
 
 uint16_t client_get_port(client_t* client)
 {
-	return client->port;
+	return client->socket.endpoint.port;
 }
 
 // -------------------------------------------------------------------------------------------------

@@ -99,6 +99,7 @@ set(CUTE_HDRS
 	src/cute_version.h
 	src/cute_memory_pool.h
 	src/cute_protocol.h
+	src/cute_doubly_list.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
