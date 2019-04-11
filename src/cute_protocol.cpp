@@ -880,12 +880,9 @@ connect_token_cache_entry_t* connect_token_cache_find(connect_token_cache_t* cac
 	}
 }
 
-void connect_token_cache_add(connect_token_cache_t* cache, uint64_t token_expire_time, uint32_t handshake_timeout, endpoint_t endpoint, const uint8_t* hmac_bytes)
+void connect_token_cache_add(connect_token_cache_t* cache, const uint8_t* hmac_bytes)
 {
 	connect_token_cache_entry_t entry;
-	entry.entry_creation_time = entry_creation_time;
-	entry.token_expire_time = token_expire_time;
-	entry.endpoint = endpoint;
 
 	int table_count = hashtable_count(&cache->table);
 	CUTE_ASSERT(table_count <= cache->capacity);
@@ -1492,13 +1489,11 @@ static void s_server_receive_packets(server_t* server)
 			int endpoint_already_connected = !!hashtable_find(&server->client_endpoint_table, &from);
 			if (endpoint_already_connected) continue;
 
-			int token_already_in_use = !!connect_token_cache_find(&server->token_cache, token.hmac_bytes);
-			if (token_already_in_use) continue;
-
 			int client_id_already_connected = !!hashtable_find(&server->client_id_table, &token.client_id);
 			if (client_id_already_connected) continue;
 
-			connect_token_cache_add(&server->token_cache, token.
+			int token_already_in_use = !!connect_token_cache_find(&server->token_cache, token.hmac_bytes);
+			if (token_already_in_use) continue;
 
 		} else {
 			handle_t* handle_ptr = (handle_t*)hashtable_find(&server->client_endpoint_table, &from);

@@ -45,13 +45,13 @@ int test_connect_token_cache()
 	crypto_random_bytes(hmac_bytes_d, sizeof(hmac_bytes_d));
 	crypto_random_bytes(hmac_bytes_e, sizeof(hmac_bytes_e));
 
-	protocol::connect_token_cache_add(&cache, 0, 0, endpoint, hmac_bytes_a);
+	protocol::connect_token_cache_add(&cache, hmac_bytes_a);
 	CUTE_TEST_ASSERT(protocol::connect_token_cache_find(&cache, hmac_bytes_a));
-	protocol::connect_token_cache_add(&cache, 0, 0, endpoint, hmac_bytes_b);
+	protocol::connect_token_cache_add(&cache, hmac_bytes_b);
 	CUTE_TEST_ASSERT(protocol::connect_token_cache_find(&cache, hmac_bytes_b));
-	protocol::connect_token_cache_add(&cache, 0, 0, endpoint, hmac_bytes_c);
+	protocol::connect_token_cache_add(&cache, hmac_bytes_c);
 	CUTE_TEST_ASSERT(protocol::connect_token_cache_find(&cache, hmac_bytes_c));
-	protocol::connect_token_cache_add(&cache, 0, 0, endpoint, hmac_bytes_d);
+	protocol::connect_token_cache_add(&cache, hmac_bytes_d);
 	CUTE_TEST_ASSERT(protocol::connect_token_cache_find(&cache, hmac_bytes_d));
 
 	CUTE_TEST_ASSERT(!protocol::connect_token_cache_find(&cache, hmac_bytes_a));
@@ -59,7 +59,7 @@ int test_connect_token_cache()
 	CUTE_TEST_ASSERT(protocol::connect_token_cache_find(&cache, hmac_bytes_c));
 	CUTE_TEST_ASSERT(protocol::connect_token_cache_find(&cache, hmac_bytes_d));
 
-	protocol::connect_token_cache_add(&cache, 0, 0, endpoint, hmac_bytes_e);
+	protocol::connect_token_cache_add(&cache, hmac_bytes_e);
 	CUTE_TEST_ASSERT(protocol::connect_token_cache_find(&cache, hmac_bytes_e));
 
 	CUTE_TEST_ASSERT(!protocol::connect_token_cache_find(&cache, hmac_bytes_a));

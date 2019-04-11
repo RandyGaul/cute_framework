@@ -210,10 +210,6 @@ extern CUTE_API void CUTE_CALL hashtable_swap(hashtable_t* table, int index_a, i
 
 struct connect_token_cache_entry_t
 {
-	uint32_t sequence_nonce;
-	uint64_t token_expire_time;
-	uint32_t handshake_timeout;
-	endpoint_t endpoint;
 	list_node_t* node;
 };
 
@@ -237,7 +233,7 @@ extern CUTE_API int CUTE_CALL connect_token_cache_init(connect_token_cache_t* ca
 extern CUTE_API void CUTE_CALL connect_token_cache_cleanup(connect_token_cache_t* cache);
 
 extern CUTE_API connect_token_cache_entry_t* CUTE_CALL connect_token_cache_find(connect_token_cache_t* cache, const uint8_t* hmac_bytes);
-extern CUTE_API void CUTE_CALL connect_token_cache_add(connect_token_cache_t* cache, uint64_t token_expire_time, uint32_t handshake_timeout, endpoint_t endpoint, const uint8_t* hmac_bytes);
+extern CUTE_API void CUTE_CALL connect_token_cache_add(connect_token_cache_t* cache, const uint8_t* hmac_bytes);
 
 // -------------------------------------------------------------------------------------------------
 

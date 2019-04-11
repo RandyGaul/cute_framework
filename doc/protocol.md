@@ -372,13 +372,11 @@ The `client to server key` and `server to client key` are used to perform encryp
 
 1. If the server is not in the list of IP addresses in the *connect token packet*, ignore the packet.
 2. If a client is already connected with the same IP address and port, ignore the packet.
-3. Lookup in the *connect token cache* with the *connect token packet* `HMAC bytes` as the key.
-	* The *connect token cache* is a key-value store, where the `HMAC bytes` are used to lookup IP address and port, and `client id`. It is recommended to use a rolling cache to automatically evict old entries that will have already timed-out.
-	1. If a matching IP address and port is in the *connect token cache*, ignore the packet.
-	2. If a matching `client id` is in the *connect token cache*, ignore the packet.
-4. Otherwise, insert the *connect token packet* into the *connect token cache* as described above.
+3. If a matching `client id` already connected, ignore the packet.
+4. Lookup in the *connect token cache* with the *connect token packet* `HMAC bytes` as the key. If it is in the cache this means the token was already used; ignore the packet.
+	* The *connect token cache* is a [set data structure](https://en.wikipedia.org/wiki/Set_(abstract_data_type)) where the `HMAC bytes` are used as the unique values. It is recommended to use a rolling cache to automatically evict old connect token entries that will have likely already expired.
 5. If the server is full, respond with a *connection denied packet*.
-6. Setup an *encryption state* with the client, keyed by the client IP address and port. If for any reason this operation fails, ignore the packet.
+6. Setup an *encryption state* with the client, keyed by the client IP address and port.
 
 The encryption state simply maps a client's IP address and port to the state stored within the *encryption state* (as described above). Exactly how this data is stored and with what data structure is left up to the implementation. It is recommended to allow more *encryption state*'s than the maximum capacity of clients, in order to effectively handle invalid connection attempts along with valid connection attempts gracefully.
 
@@ -392,7 +390,7 @@ Once the connect token has been validated, and the encryption state is successfu
 2. If a *challenge response packet* is received, first read in the `sequence nonce` and try decrypting the packet. If decryption fails, ignore the packet.
 3. Test to make sure the bit pattern post-decryption matches the bit pattern sent in the *challenge request packet*.
 4. If all checks passed, make sure there is still space available for the client to connect. If the server is full, respond with a *connection denied packet* and terminate the handshake.
-6. The client is now considered *connected*, but not *confirmed*. Increment the `sequence nonce` of the *encryption state*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
+6. The client is now considered *connected*, but not *confirmed*. Insert the `hmac bytes` from the encryption mapping into the *connect token cache*. Increment the `sequence nonce` of the *encryption state*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
 7. Once the client responds with a *payload packet*, or a *keepalive packet*, consider the client *confirmed*.
 8. If the client does not respond within `handshake timeout` seconds, destroy the associated *encryption state* and remove the connect token from the *connect token cache*.
 9. Once a client is *connected* the server may start sending *payload packet*'s. If the client is not yet confirmed, the server **must** send an additional *connection accepted packet* just before sending a *payload packet*. Once the client is *confirmed* preceding *connection accepted packet*'s are no longer necessary. The purpose of extra *connection accepted packet*'s is an optimization: the server can start streaming payload packets earlier, but also ensures the client receives a *connection accepted packet*.
