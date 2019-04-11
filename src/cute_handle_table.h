@@ -40,7 +40,7 @@ struct handle_table_t
 };
 
 extern CUTE_API int CUTE_CALL handle_table_init(handle_table_t* table, int capacity, void* user_allocator_context = NULL);
-extern CUTE_API void CUTE_CALL handle_table_clean_up(handle_table_t* table);
+extern CUTE_API void CUTE_CALL handle_table_cleanup(handle_table_t* table);
 
 extern CUTE_API handle_t CUTE_CALL handle_table_alloc(handle_table_t* table, uint32_t index);
 extern CUTE_API uint32_t CUTE_CALL handle_table_get_index(handle_table_t* table, handle_t handle);

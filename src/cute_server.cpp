@@ -133,7 +133,7 @@ void server_stop(server_t* server)
 
 	server->running = 0;
 	socket_cleanup(&server->socket);
-	handle_table_clean_up(&server->client_handle_table);
+	handle_table_cleanup(&server->client_handle_table);
 	serialize_destroy(server->io);
 	CUTE_FREE(server->event_queue, server->mem_ctx);
 	server->event_queue = NULL;

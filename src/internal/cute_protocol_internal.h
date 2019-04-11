@@ -206,12 +206,13 @@ extern CUTE_API void CUTE_CALL hashtable_swap(hashtable_t* table, int index_a, i
 
 // -------------------------------------------------------------------------------------------------
 
-#define CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX (CUTE_PROTOCOL_CLIENT_MAX * 8)
+#define CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX (CUTE_PROTOCOL_SERVER_MAX_CLIENTS * 8)
 
 struct connect_token_cache_entry_t
 {
-	uint64_t entry_creation_time;
+	uint32_t sequence_nonce;
 	uint64_t token_expire_time;
+	uint32_t handshake_timeout;
 	endpoint_t endpoint;
 	list_node_t* node;
 };
@@ -236,11 +237,11 @@ extern CUTE_API int CUTE_CALL connect_token_cache_init(connect_token_cache_t* ca
 extern CUTE_API void CUTE_CALL connect_token_cache_cleanup(connect_token_cache_t* cache);
 
 extern CUTE_API connect_token_cache_entry_t* CUTE_CALL connect_token_cache_find(connect_token_cache_t* cache, const uint8_t* hmac_bytes);
-extern CUTE_API void CUTE_CALL connect_token_cache_add(connect_token_cache_t* cache, uint64_t entry_creation_time, uint64_t token_expire_time, endpoint_t endpoint, const uint8_t* hmac_bytes);
+extern CUTE_API void CUTE_CALL connect_token_cache_add(connect_token_cache_t* cache, uint64_t token_expire_time, uint32_t handshake_timeout, endpoint_t endpoint, const uint8_t* hmac_bytes);
 
 // -------------------------------------------------------------------------------------------------
 
-#define CUTE_ENCRYPTION_STATES_MAX (CUTE_PROTOCOL_CLIENT_MAX * 2)
+#define CUTE_ENCRYPTION_STATES_MAX (CUTE_PROTOCOL_SERVER_MAX_CLIENTS * 2)
 
 struct encryption_state_t
 {

@@ -880,7 +880,7 @@ connect_token_cache_entry_t* connect_token_cache_find(connect_token_cache_t* cac
 	}
 }
 
-void connect_token_cache_add(connect_token_cache_t* cache, uint64_t entry_creation_time, uint64_t token_expire_time, endpoint_t endpoint, const uint8_t* hmac_bytes)
+void connect_token_cache_add(connect_token_cache_t* cache, uint64_t token_expire_time, uint32_t handshake_timeout, endpoint_t endpoint, const uint8_t* hmac_bytes)
 {
 	connect_token_cache_entry_t entry;
 	entry.entry_creation_time = entry_creation_time;
@@ -1343,24 +1343,259 @@ struct server_t
 
 	int client_count;
 	handle_table_t client_handle_table;
-	handle_t client_handle[CUTE_PROTOCOL_CLIENT_MAX];
-	int client_is_connected[CUTE_PROTOCOL_CLIENT_MAX];
-	float client_last_packet_recieved_time[CUTE_PROTOCOL_CLIENT_MAX];
-	float client_last_packet_sent_time[CUTE_PROTOCOL_CLIENT_MAX];
-	endpoint_t client_endpoint[CUTE_PROTOCOL_CLIENT_MAX];
-	uint64_t client_sequence[CUTE_PROTOCOL_CLIENT_MAX];
-	crypto_key_t client_client_to_server_key[CUTE_PROTOCOL_CLIENT_MAX];
-	crypto_key_t client_server_to_client_key[CUTE_PROTOCOL_CLIENT_MAX];
-	protocol::replay_buffer_t client_replay_buffer[CUTE_PROTOCOL_CLIENT_MAX];
-	protocol::packet_queue_t client_packets[CUTE_PROTOCOL_CLIENT_MAX];
+	hashtable_t client_endpoint_table;
+	hashtable_t client_id_table;
+	handle_t client_handle[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	int client_is_connected[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	float client_last_packet_recieved_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	float client_last_packet_sent_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	endpoint_t client_endpoint[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	uint64_t client_sequence[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	crypto_key_t client_client_to_server_key[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	crypto_key_t client_server_to_client_key[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	protocol::replay_buffer_t client_replay_buffer[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	protocol::packet_queue_t client_packets[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 
 	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 	void* mem_ctx;
 };
 
-server_t* server_make(const char* address, uint64_t application_id, const crypto_key_t* secret_key, void* mem_ctx)
+server_t* server_make(uint64_t application_id, const crypto_key_t* secret_key, void* mem_ctx)
 {
+	server_t* server = (server_t*)CUTE_ALLOC(sizeof(server_t), mem_ctx);
+	CUTE_CHECK_POINTER(server);
+	CUTE_MEMSET(server, 0, sizeof(server_t));
+
+	server->running = 0;
+	server->application_id = application_id;
+	server->packet_allocator = packet_allocator_make(mem_ctx);
+	CUTE_CHECK_POINTER(server->packet_allocator);
+	server->mem_ctx = mem_ctx;
+
+	return server;
+
+cute_error:
+	if (server) packet_allocator_destroy(server->packet_allocator);
+	CUTE_FREE(server, mem_ctx);
 	return NULL;
+}
+
+void server_destroy(server_t* server)
+{
+	packet_allocator_destroy(server->packet_allocator);
+	CUTE_FREE(server, server->mem_ctx);
+}
+
+int server_start(server_t* server, const char* address)
+{
+	int cleanup_map = 0;
+	int cleanup_cache = 0;
+	int cleanup_handles = 0;
+	int cleanup_socket = 0;
+	int cleanup_endpoint_table = 0;
+	int cleanup_client_id_table = 0;
+	server->running = 1;
+	CUTE_CHECK(encryption_map_init(&server->encryption_map, server->mem_ctx));
+	cleanup_map = 1;
+	CUTE_CHECK(connect_token_cache_init(&server->token_cache, CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX, server->mem_ctx));
+	cleanup_cache = 1;
+	CUTE_CHECK(handle_table_init(&server->client_handle_table, CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx));
+	cleanup_handles = 1;
+	CUTE_CHECK(socket_init(&server->socket, address, CUTE_PROTOCOL_SERVER_SEND_BUFFER_SIZE, CUTE_PROTOCOL_SERVER_RECEIVE_BUFFER_SIZE));
+	cleanup_socket = 1;
+	CUTE_CHECK(hashtable_init(&server->client_endpoint_table, sizeof(endpoint_t), sizeof(handle_t), CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx));
+	cleanup_endpoint_table = 1;
+	CUTE_CHECK(hashtable_init(&server->client_id_table, sizeof(endpoint_t), sizeof(handle_t), CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx));
+	cleanup_client_id_table = 1;
+	
+
+	server->client_count = 0;
+
+	return 0;
+
+cute_error:
+	if (cleanup_map) encryption_map_cleanup(&server->encryption_map);
+	if (cleanup_cache) connect_token_cache_cleanup(&server->token_cache);
+	if (cleanup_handles) handle_table_cleanup(&server->client_handle_table);
+	if (cleanup_socket) socket_cleanup(&server->socket);
+	if (cleanup_endpoint_table) hashtable_cleanup(&server->client_endpoint_table);
+	if (cleanup_client_id_table) hashtable_cleanup(&server->client_id_table);
+	return -1;
+}
+
+void server_stop(server_t* server)
+{
+	server->running = 0;
+
+	// TODO: Loop over packet queues and drop all the things.
+
+	encryption_map_cleanup(&server->encryption_map);
+	connect_token_cache_cleanup(&server->token_cache);
+	handle_table_cleanup(&server->client_handle_table);
+	socket_cleanup(&server->socket);
+	hashtable_cleanup(&server->client_endpoint_table);
+	hashtable_cleanup(&server->client_id_table);
+}
+
+static CUTE_INLINE uint32_t s_client_index(server_t* server, handle_t h)
+{
+	return handle_table_get_index(&server->client_handle_table, h);
+}
+
+static void s_server_receive_packets(server_t* server)
+{
+	uint8_t* buffer = server->buffer;
+
+	while (1)
+	{
+		endpoint_t from;
+		int sz = socket_receive(&server->socket, &from, buffer, CUTE_PROTOCOL_PACKET_SIZE_MAX);
+
+		if (sz < 26) {
+			continue;
+		}
+
+		uint8_t type = *buffer;
+		if (type > 7) {
+			continue;
+		}
+
+		switch (type)
+		{
+		case PACKET_TYPE_CONNECTION_ACCEPTED: // fall-thru
+		case PACKET_TYPE_CONNECTION_DENIED: // fall-thru
+		case PACKET_TYPE_CHALLENGE_REQUEST:
+			continue;
+		}
+
+		if (type == PACKET_TYPE_CONNECT_TOKEN) {
+			if (sz != 1024) {
+				continue;
+			}
+
+			connect_token_decrypted_t token;
+			if (server_decrypt_connect_token_packet(buffer, &server->secret_key, server->application_id, server->current_time, &token) < 0) {
+				continue;
+			}
+
+			endpoint_t server_endpoint = server->socket.endpoint;
+			int found = 0;
+			for (int i = 0; i < token.endpoint_count; ++i)
+			{
+				if (endpoint_equals(server_endpoint, token.endpoints[i])) {
+					found = 1;
+					break;
+				}
+			}
+			if (!found) continue;
+
+			int endpoint_already_connected = !!hashtable_find(&server->client_endpoint_table, &from);
+			if (endpoint_already_connected) continue;
+
+			int token_already_in_use = !!connect_token_cache_find(&server->token_cache, token.hmac_bytes);
+			if (token_already_in_use) continue;
+
+			int client_id_already_connected = !!hashtable_find(&server->client_id_table, &token.client_id);
+			if (client_id_already_connected) continue;
+
+			connect_token_cache_add(&server->token_cache, token.
+
+		} else {
+			handle_t* handle_ptr = (handle_t*)hashtable_find(&server->client_endpoint_table, &from);
+			if (!handle_ptr) continue;
+			handle_t handle = *handle_ptr;
+			uint32_t index = s_client_index(server, handle);
+
+			void* packet_ptr = packet_open(buffer, sz, server->client_client_to_server_key + index, server->application_id, server->packet_allocator, server->client_replay_buffer + index);
+		}
+	}
+}
+
+static void s_server_send_packets(server_t* server)
+{
+	CUTE_ASSERT(server->running);
+
+	int client_count = server->client_count;
+	float* last_sent_times = server->client_last_packet_sent_time;
+	//int* is_loopback = server->client_is_loopback;
+	for (int i = 0; i < client_count; ++i)
+	{
+		//if (!is_loopback[i]) {
+			if (last_sent_times[i] >= CUTE_PROTOCOL_SEND_RATE) {
+				last_sent_times[i] = 0;
+				//s_server_send_packet_no_payload(server, i, protocol::PACKET_TYPE_KEEPALIVE);
+			}
+		//}
+	}
+}
+
+static void s_server_disconnect_sequence(server_t* server, uint32_t client_index)
+{
+	for (int i = 0; i < CUTE_DISCONNECT_REDUNDANT_PACKET_COUNT; ++i)
+	{
+	}
+}
+
+void server_disconnect_client(server_t* server, handle_t client_id)
+{
+	CUTE_ASSERT(server->client_count >= 1);
+	uint32_t index = handle_table_get_index(&server->client_handle_table, client_id);
+	s_server_disconnect_sequence(server, index);
+
+	// Free client resources.
+	server->client_is_connected[index] = 0;
+	handle_table_free(&server->client_handle_table, client_id);
+
+	// Move client in back to the empty slot.
+	int last_index = --server->client_count;
+	if (last_index) {
+		handle_t h = server->client_handle[index];
+		handle_table_update_index(&server->client_handle_table, h, index);
+
+		server->client_handle[index]                    = server->client_handle[last_index];
+		server->client_is_connected[index]              = server->client_is_connected[last_index];
+		server->client_last_packet_recieved_time[index] = server->client_last_packet_recieved_time[last_index];
+		server->client_last_packet_sent_time[index]     = server->client_last_packet_sent_time[last_index];
+		server->client_endpoint[index]                  = server->client_endpoint[last_index];
+		server->client_sequence[index]                  = server->client_sequence[last_index];
+		server->client_client_to_server_key[index]      = server->client_client_to_server_key[last_index];
+		server->client_server_to_client_key[index]      = server->client_server_to_client_key[last_index];
+		server->client_replay_buffer[index]             = server->client_replay_buffer[last_index];
+		server->client_packets[index]                   = server->client_packets[last_index];
+	}
+}
+
+static void s_server_look_for_timeouts(server_t* server)
+{
+	int client_count = server->client_count;
+	float* last_recieved_times = server->client_last_packet_recieved_time;
+	for (int i = 0; i < client_count;)
+	{
+		if (last_recieved_times[i] >= CUTE_PROTOCOL_SEND_RATE) {
+			--client_count;
+			server_disconnect_client(server, server->client_handle[i]);
+		} else {
+			 ++i;
+		}
+	}
+}
+
+void server_update(server_t* server, float dt)
+{
+	server->current_time = (uint64_t)time(NULL);
+
+	s_server_receive_packets(server);
+	s_server_send_packets(server);
+	s_server_look_for_timeouts(server);
+
+	int client_count = server->client_count;
+	float* last_recieved_times = server->client_last_packet_recieved_time;
+	float* last_sent_times = server->client_last_packet_sent_time;
+	for (int i = 0; i < client_count; ++i)
+	{
+		last_recieved_times[i] += dt;
+		last_sent_times[i] += dt;
+	}
 }
 
 }

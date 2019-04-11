@@ -53,7 +53,7 @@ int test_handle_basic()
 	index1 = handle_table_get_index(&table, h1);
 	CUTE_TEST_ASSERT(index1 == 9);
 
-	handle_table_clean_up(&table);
+	handle_table_cleanup(&table);
 	CUTE_TEST_ASSERT(table.handles == NULL);
 
 	return 0;
@@ -72,7 +72,7 @@ int test_handle_large_loop()
 		CUTE_ASSERT(handle_table_get_index(&table, h) == (uint32_t)i);
 	}
 
-	handle_table_clean_up(&table);
+	handle_table_cleanup(&table);
 	CUTE_TEST_ASSERT(table.handles == NULL);
 
 	return 0;
@@ -104,7 +104,7 @@ int test_handle_large_loop_and_free()
 		}
 	}
 
-	handle_table_clean_up(&table);
+	handle_table_cleanup(&table);
 	CUTE_TEST_ASSERT(table.handles == NULL);
 	free(handles);
 
@@ -127,7 +127,7 @@ int test_handle_alloc_too_many()
 	cute::handle_t h = handle_table_alloc(&table, 0);
 	CUTE_TEST_ASSERT(h == CUTE_INVALID_HANDLE);
 
-	handle_table_clean_up(&table);
+	handle_table_cleanup(&table);
 	CUTE_TEST_ASSERT(table.handles == NULL);
 
 	return 0;

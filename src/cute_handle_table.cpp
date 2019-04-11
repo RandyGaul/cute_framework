@@ -79,7 +79,7 @@ cute_error:
 	return -1;
 }
 
-void handle_table_clean_up(handle_table_t* table)
+void handle_table_cleanup(handle_table_t* table)
 {
 	CUTE_FREE(table->handles, table->mem_ctx);
 	CUTE_PLACEMENT_NEW(table) handle_table_t;
