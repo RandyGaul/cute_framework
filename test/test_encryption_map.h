@@ -36,9 +36,11 @@ int test_encryption_map_basic()
 	state.sequence = 0;
 	state.expiration_timestamp = 10;
 	state.handshake_timeout = 5;
-	state.last_handshake_access_time = 0;
+	state.last_packet_recieved_time = 0;
+	state.last_packet_sent_time = 0;
 	state.client_to_server_key = crypto_generate_key();
 	state.server_to_client_key = crypto_generate_key();
+	state.client_id = 0;
 
 	endpoint_t endpoint;
 	CUTE_TEST_CHECK(endpoint_init(&endpoint, "[::]:5000"));
@@ -67,17 +69,21 @@ int test_encryption_map_timeout_and_expiration()
 	state0.sequence = 0;
 	state0.expiration_timestamp = 10;
 	state0.handshake_timeout = 5;
-	state0.last_handshake_access_time = 0;
+	state0.last_packet_recieved_time = 0;
+	state0.last_packet_sent_time = 0;
 	state0.client_to_server_key = crypto_generate_key();
 	state0.server_to_client_key = crypto_generate_key();
+	state0.client_id = 0;
 
 	encryption_state_t state1;
 	state1.sequence = 0;
 	state1.expiration_timestamp = 10;
 	state1.handshake_timeout = 6;
-	state1.last_handshake_access_time = 0;
+	state1.last_packet_recieved_time = 0;
+	state1.last_packet_sent_time = 0;
 	state1.client_to_server_key = crypto_generate_key();
 	state1.server_to_client_key = crypto_generate_key();
+	state1.client_id = 0;
 
 	endpoint_t endpoint0;
 	CUTE_TEST_CHECK(endpoint_init(&endpoint0, "[::]:5000"));

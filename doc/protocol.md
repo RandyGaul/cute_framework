@@ -279,6 +279,7 @@ The *connection accepted packet* is sent from the server once a client has succe
 
 ```
 challenge nonce     uint64_t
+client id           uint64_t
 challenge bytes     256 bytes
 ```
 
@@ -386,13 +387,14 @@ The *encryption state* should be deleted or recycled whenever a connection or ha
 
 Once the connect token has been validated, and the encryption state is successfully setup, the next steps are to complete the challenge request and response sequence with the client. The purpose of these steps is to prevent IP spoofing, and to prevent *connect token packet* sniffing. From here on all packets are encrypted or decrypted with the *encryption state*.
 
-1. Send the client a *challenge request packet* periodically through the PACKET_SEND_FREQUENCY tunable (see [Tuning Parameters](#tuning-parameters)). Before sending the *challenge request packet*, fill in the `challenge bytes` with a unique bit pattern, and remember the bit pattern for later. Use the `sequence nonce` from the *encryption state* to fill in the `sequence nonce` of the *challenge request packet*.
+1. Send the client a *challenge request packet* periodically through the PACKET_SEND_FREQUENCY tunable (see [Tuning Parameters](#tuning-parameters)). Before sending the *challenge request packet*, fill in the `challenge bytes` with a unique bit pattern (optionaL and remember the bit pattern for later). Use the `sequence nonce` from the *encryption state* to fill in the `sequence nonce` of the *challenge request packet*.
 2. If a *challenge response packet* is received, first read in the `sequence nonce` and try decrypting the packet. If decryption fails, ignore the packet.
-3. Test to make sure the bit pattern post-decryption matches the bit pattern sent in the *challenge request packet*.
-4. If all checks passed, make sure there is still space available for the client to connect. If the server is full, respond with a *connection denied packet* and terminate the handshake.
-6. The client is now considered *connected*, but not *confirmed*. Insert the `hmac bytes` from the *encryption state* into the *connect token cache*. Increment the `sequence nonce` of the *encryption state*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
-7. Once the client responds with a *payload packet*, or a *keepalive packet*, consider the client *confirmed*.
-8. If the client does not respond within `handshake timeout` seconds, destroy the associated *encryption state* and remove the connect token from the *connect token cache*.
+3. This step is optional. Test to make sure the bit pattern post-decryption matches the bit pattern sent in the *challenge request packet*.
+4. If a client is already connected with the same IP address and port, ignore the packet.
+5. If a matching `client id` already connected, ignore the packet.
+6. If all checks passed, make sure there is still space available for the client to connect. If the server is full, respond with a *connection denied packet* and terminate the handshake.
+7. The client is now considered *connected*, but not *confirmed*. Insert the `hmac bytes` from the *encryption state* into the *connect token cache*. Increment the `sequence nonce` of the *encryption state*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
+8. Once the client responds with a *payload packet*, or a *keepalive packet*, consider the client *confirmed*.
 9. Once a client is *connected* the server may start sending *payload packet*'s. If the client is not yet confirmed, the server **must** send an additional *connection accepted packet* just before sending a *payload packet*. Once the client is *confirmed* preceding *connection accepted packet*'s are no longer necessary. The purpose of extra *connection accepted packet*'s is an optimization: the server can start streaming payload packets earlier, but also ensures the client receives a *connection accepted packet*.
 
 ### Connected and Confirmed Clients

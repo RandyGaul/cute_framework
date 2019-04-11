@@ -242,11 +242,13 @@ extern CUTE_API void CUTE_CALL connect_token_cache_add(connect_token_cache_t* ca
 struct encryption_state_t
 {
 	uint64_t sequence;
-	uint32_t expiration_timestamp;
+	uint64_t expiration_timestamp;
 	uint32_t handshake_timeout;
-	float last_handshake_access_time;
+	float last_packet_recieved_time;
+	float last_packet_sent_time;
 	crypto_key_t client_to_server_key;
 	crypto_key_t server_to_client_key;
+	uint64_t client_id;
 };
 
 struct encryption_map_t

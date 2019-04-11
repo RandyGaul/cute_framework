@@ -938,7 +938,7 @@ encryption_state_t* encryption_map_find(encryption_map_t* map, endpoint_t endpoi
 	void* ptr = hashtable_find(&map->table, &endpoint);
 	if (ptr) {
 		encryption_state_t* state = (encryption_state_t*)ptr;
-		state->last_handshake_access_time = 0;
+		state->last_packet_recieved_time = 0;
 		return state;
 	} else {
 		return NULL;
@@ -970,8 +970,8 @@ void encryption_map_look_for_timeouts_or_expirations(encryption_map_t* map, floa
 	while (index < count)
 	{
 		encryption_state_t* state = states + index;
-		state->last_handshake_access_time += dt;
-		int timed_out = state->last_handshake_access_time >= state->handshake_timeout;
+		state->last_packet_recieved_time += dt;
+		int timed_out = state->last_packet_recieved_time >= state->handshake_timeout;
 		int expired = state->expiration_timestamp <= time;
 		if (timed_out | expired) {
 			encryption_map_remove(map, endpoints[index]);
@@ -1335,6 +1335,7 @@ struct server_t
 	protocol::packet_allocator_t* packet_allocator;
 	crypto_key_t secret_key;
 
+	uint64_t challenge_nonce;
 	encryption_map_t encryption_map;
 	connect_token_cache_t token_cache;
 
@@ -1343,7 +1344,7 @@ struct server_t
 	hashtable_t client_endpoint_table;
 	hashtable_t client_id_table;
 	handle_t client_handle[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	int client_is_connected[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	int client_is_confirmed[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	float client_last_packet_recieved_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	float client_last_packet_sent_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	endpoint_t client_endpoint[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
@@ -1391,7 +1392,6 @@ int server_start(server_t* server, const char* address)
 	int cleanup_socket = 0;
 	int cleanup_endpoint_table = 0;
 	int cleanup_client_id_table = 0;
-	server->running = 1;
 	CUTE_CHECK(encryption_map_init(&server->encryption_map, server->mem_ctx));
 	cleanup_map = 1;
 	CUTE_CHECK(connect_token_cache_init(&server->token_cache, CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX, server->mem_ctx));
@@ -1404,8 +1404,9 @@ int server_start(server_t* server, const char* address)
 	cleanup_endpoint_table = 1;
 	CUTE_CHECK(hashtable_init(&server->client_id_table, sizeof(endpoint_t), sizeof(handle_t), CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx));
 	cleanup_client_id_table = 1;
-	
 
+	server->running = 1;
+	server->challenge_nonce = 0;
 	server->client_count = 0;
 
 	return 0;
@@ -1437,6 +1438,11 @@ void server_stop(server_t* server)
 static CUTE_INLINE uint32_t s_client_index(server_t* server, handle_t h)
 {
 	return handle_table_get_index(&server->client_handle_table, h);
+}
+
+static void s_server_connect_client(server_t* server, endpoint_t endpoint, encryption_state_t* state)
+{
+	// WORKING HERE
 }
 
 static void s_server_receive_packets(server_t* server)
@@ -1495,23 +1501,122 @@ static void s_server_receive_packets(server_t* server)
 			int token_already_in_use = !!connect_token_cache_find(&server->token_cache, token.hmac_bytes);
 			if (token_already_in_use) continue;
 
+			if (server->client_count == CUTE_PROTOCOL_SERVER_MAX_CLIENTS) {
+				// TODO: send packet connection denied
+			}
+
+			if (!encryption_map_find(&server->encryption_map, from)) {
+				encryption_state_t encryption_state;
+				encryption_state.sequence = 0;
+				encryption_state.expiration_timestamp = token.expiration_timestamp;
+				encryption_state.handshake_timeout = token.handshake_timeout;
+				encryption_state.last_packet_recieved_time = 0;
+				encryption_state.last_packet_sent_time = CUTE_PROTOCOL_SEND_RATE;
+				encryption_state.client_to_server_key = token.client_to_server_key;
+				encryption_state.server_to_client_key = token.server_to_client_key;
+				encryption_state.client_id = token.client_id;
+				encryption_map_insert(&server->encryption_map, from, &encryption_state);
+			}
 		} else {
 			handle_t* handle_ptr = (handle_t*)hashtable_find(&server->client_endpoint_table, &from);
-			if (!handle_ptr) continue;
-			handle_t handle = *handle_ptr;
-			uint32_t index = s_client_index(server, handle);
+			replay_buffer_t* replay_buffer = NULL;
+			const crypto_key_t* client_to_server_key;
+			encryption_state_t* state = NULL;
 
-			void* packet_ptr = packet_open(buffer, sz, server->client_client_to_server_key + index, server->application_id, server->packet_allocator, server->client_replay_buffer + index);
+			int endpoint_already_connected = !!handle_ptr;
+			if (endpoint_already_connected) {
+				if (type == PACKET_TYPE_CHALLENGE_RESPONSE) {
+					// Someone already connected with this address.
+					continue;
+				}
+
+				handle_t handle = *handle_ptr;
+				uint32_t index = s_client_index(server, handle);
+				replay_buffer = server->client_replay_buffer + index;
+				client_to_server_key = server->client_client_to_server_key + index;
+			} else {
+				state = encryption_map_find(&server->encryption_map, from);
+				if (!state) continue;
+				client_to_server_key = &state->client_to_server_key;
+			}
+
+			void* packet_ptr = packet_open(buffer, sz, client_to_server_key, server->application_id, server->packet_allocator, replay_buffer);
+			int free_packet = 1;
+
+			switch (type)
+			{
+			case PACKET_TYPE_KEEPALIVE:
+				break;
+
+			case PACKET_TYPE_DISCONNECT:
+				break;
+
+			case PACKET_TYPE_CHALLENGE_RESPONSE:
+			{
+				CUTE_ASSERT(!endpoint_already_connected);
+				int client_id_already_connected = !!hashtable_find(&server->client_id_table, &state->client_id);
+				if (client_id_already_connected) continue;
+				if (server->client_count == CUTE_PROTOCOL_SERVER_MAX_CLIENTS) {
+					// TODO: send packet connection denied
+					break;
+				}
+
+				s_server_connect_client(server, from, state);
+			}	break;
+
+			case PACKET_TYPE_PAYLOAD:
+				free_packet = 0;
+				break;
+			}
+
+			if (free_packet) {
+				packet_allocator_free(server->packet_allocator, (packet_type_t)type, packet_ptr);
+			} else {
+				// TODO: Push packet onto client packet buffer.
+			}
 		}
 	}
 }
 
-static void s_server_send_packets(server_t* server)
+static void s_server_send_packets(server_t* server, float dt)
 {
 	CUTE_ASSERT(server->running);
 
+	// Send challenge request packets.
+	int state_count = encryption_map_count(&server->encryption_map);
+	encryption_state_t* states = encryption_map_get_states(&server->encryption_map);
+	endpoint_t* endpoints = encryption_map_get_endpoints(&server->encryption_map);
+	uint8_t* buffer = server->buffer;
+	for (int i = 0; i < state_count; ++i)
+	{
+		encryption_state_t* state = states + i;
+		state->last_packet_sent_time += dt;
+
+		if (state->last_packet_sent_time >= CUTE_PROTOCOL_SEND_RATE) {
+			state->last_packet_sent_time = 0;
+
+			packet_challenge_t challenge;
+			challenge.packet_type = PACKET_TYPE_CHALLENGE_REQUEST;
+			challenge.challenge_nonce = server->challenge_nonce++;
+			crypto_random_bytes(challenge.challenge_data, sizeof(challenge.challenge_data));
+
+			if (packet_write(&challenge, buffer, server->application_id, state->sequence++, &state->server_to_client_key) == 289) {
+				socket_send(&server->socket, endpoints[i], buffer, 289);
+			}
+		}
+	}
+
+	// Update client timers.
 	int client_count = server->client_count;
+	float* last_recieved_times = server->client_last_packet_recieved_time;
 	float* last_sent_times = server->client_last_packet_sent_time;
+	for (int i = 0; i < client_count; ++i)
+	{
+		last_recieved_times[i] += dt;
+		last_sent_times[i] += dt;
+	}
+
+	// Send keepalive packets.
 	//int* is_loopback = server->client_is_loopback;
 	for (int i = 0; i < client_count; ++i)
 	{
@@ -1538,7 +1643,7 @@ void server_disconnect_client(server_t* server, handle_t client_id)
 	s_server_disconnect_sequence(server, index);
 
 	// Free client resources.
-	server->client_is_connected[index] = 0;
+	server->client_is_confirmed[index] = 0;
 	handle_table_free(&server->client_handle_table, client_id);
 
 	// Move client in back to the empty slot.
@@ -1548,7 +1653,7 @@ void server_disconnect_client(server_t* server, handle_t client_id)
 		handle_table_update_index(&server->client_handle_table, h, index);
 
 		server->client_handle[index]                    = server->client_handle[last_index];
-		server->client_is_connected[index]              = server->client_is_connected[last_index];
+		server->client_is_confirmed[index]              = server->client_is_confirmed[last_index];
 		server->client_last_packet_recieved_time[index] = server->client_last_packet_recieved_time[last_index];
 		server->client_last_packet_sent_time[index]     = server->client_last_packet_sent_time[last_index];
 		server->client_endpoint[index]                  = server->client_endpoint[last_index];
@@ -1580,17 +1685,8 @@ void server_update(server_t* server, float dt)
 	server->current_time = (uint64_t)time(NULL);
 
 	s_server_receive_packets(server);
-	s_server_send_packets(server);
+	s_server_send_packets(server, dt);
 	s_server_look_for_timeouts(server);
-
-	int client_count = server->client_count;
-	float* last_recieved_times = server->client_last_packet_recieved_time;
-	float* last_sent_times = server->client_last_packet_sent_time;
-	for (int i = 0; i < client_count; ++i)
-	{
-		last_recieved_times[i] += dt;
-		last_sent_times[i] += dt;
-	}
 }
 
 }
