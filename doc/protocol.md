@@ -380,7 +380,7 @@ The `client to server key` and `server to client key` are used to perform encryp
 
 The encryption state simply maps a client's IP address and port to the state stored within the *encryption state* (as described above). Exactly how this data is stored and with what data structure is left up to the implementation. It is recommended to allow more *encryption state*'s than the maximum capacity of clients, in order to effectively handle invalid connection attempts along with valid connection attempts gracefully.
 
-The *encryption state* should be deleted or recycled whenever a connection or handshake terminates. Once a handshake completes successfully and is promoted to a connection, the associated *encryption mapping* no longer needs to periodically check the `expiration timestamp`.
+The *encryption state* should be deleted or recycled whenever a connection or handshake terminates. Once a handshake completes successfully and is promoted to a connection, the associated *encryption state* no longer needs to periodically check the `expiration timestamp`.
 
 #### Challenge Request and Response Sequence
 
@@ -390,7 +390,7 @@ Once the connect token has been validated, and the encryption state is successfu
 2. If a *challenge response packet* is received, first read in the `sequence nonce` and try decrypting the packet. If decryption fails, ignore the packet.
 3. Test to make sure the bit pattern post-decryption matches the bit pattern sent in the *challenge request packet*.
 4. If all checks passed, make sure there is still space available for the client to connect. If the server is full, respond with a *connection denied packet* and terminate the handshake.
-6. The client is now considered *connected*, but not *confirmed*. Insert the `hmac bytes` from the encryption mapping into the *connect token cache*. Increment the `sequence nonce` of the *encryption state*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
+6. The client is now considered *connected*, but not *confirmed*. Insert the `hmac bytes` from the *encryption state* into the *connect token cache*. Increment the `sequence nonce` of the *encryption state*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
 7. Once the client responds with a *payload packet*, or a *keepalive packet*, consider the client *confirmed*.
 8. If the client does not respond within `handshake timeout` seconds, destroy the associated *encryption state* and remove the connect token from the *connect token cache*.
 9. Once a client is *connected* the server may start sending *payload packet*'s. If the client is not yet confirmed, the server **must** send an additional *connection accepted packet* just before sending a *payload packet*. Once the client is *confirmed* preceding *connection accepted packet*'s are no longer necessary. The purpose of extra *connection accepted packet*'s is an optimization: the server can start streaming payload packets earlier, but also ensures the client receives a *connection accepted packet*.
@@ -515,7 +515,7 @@ int read_packet(
 
 One may wonder if the *connect token packet* is susceptible to packet sniffing. What if someone grabs the packet and sends a copy to the server before the valid client's copy reaches the server? In this case the server will start up two *encryption state*'s, one for each potential client. The server will cache the *connect token packet* keyed by the `HMAC bytes` of the packet. This will ensure only one copy of the connect token is cached.
 
-The server will also setup two *encryption state*'s, one for each IP address. In the case where the malicious potential client spoofed their IP to match the valid user's IP, only one encryption mapping will be setup.
+The server will also setup two *encryption state*'s, one for each IP address. In the case where the malicious potential client spoofed their IP to match the valid user's IP, only one *encryption state* will be setup.
 
 The server then sends out the *challenge request packet*, which in the case of no IP spoofing will go to both potential clients. Since the valid client received the initial connect token and read the REST SECTION, it knows the `client to server key` and the `server to client key` that the *encryption state* is using, and be able to properly respond with a well-formed and valid *challenge response packet*. The malicious client never had access to the encryption keys, and will not be able to respond with a valid packet. The server will ignore all packets that fail to decrypt from the malicious client.
 
