@@ -1060,6 +1060,7 @@ int client_connect(client_t* client, const uint8_t* connect_token)
 
 	client->last_packet_sent_time = CUTE_PROTOCOL_SEND_RATE;
 	client->state = CLIENT_STATE_SENDING_CONNECTION_REQUEST;
+	client->goto_next_server_tentative_state = CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT;
 
 	return 0;
 
@@ -1102,6 +1103,7 @@ static void s_disconnect(client_t* client, client_state_t state, int send_packet
 
 void client_disconnect(client_t* client)
 {
+	if (client->state <= 0) return;
 	s_disconnect(client, CLIENT_STATE_DISCONNECTED, 1);
 }
 
@@ -1239,12 +1241,12 @@ static void s_send_packets(client_t* client)
 
 static int s_goto_next_server(client_t* client)
 {
-	int index = ++client->server_endpoint_index;
-
-	if (index == client->connect_token.endpoint_count) {
+	if (client->server_endpoint_index + 1 == client->connect_token.endpoint_count) {
 		s_disconnect(client, client->goto_next_server_tentative_state, 0);
 		return 0;
 	}
+
+	int index = ++client->server_endpoint_index;
 	
 	client->last_packet_recieved_time = 0;
 	client->last_packet_sent_time = CUTE_PROTOCOL_SEND_RATE;
@@ -1282,7 +1284,7 @@ void client_update(client_t* client, float dt)
 			}
 			else if (client->state == CLIENT_STATE_SENDING_CONNECTION_REQUEST) {
 				s_disconnect(client, CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT, 1);
-			} else {
+			} else if (client->state == CLIENT_STATE_SENDING_CHALLENGE_RESPONSE) {
 				s_disconnect(client, CLIENT_STATE_CHALLENGED_RESPONSE_TIMED_OUT, 1);
 			}
 		}

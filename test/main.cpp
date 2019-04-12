@@ -92,6 +92,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_doubly_list),
 		CUTE_TEST_CASE_ENTRY(test_connect_token_cache),
 		CUTE_TEST_CASE_ENTRY(test_protocol_client_server),
+		CUTE_TEST_CASE_ENTRY(test_protocol_client_no_server_responses),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;
