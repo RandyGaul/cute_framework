@@ -1152,6 +1152,7 @@ static void s_receive_packets(client_t* client)
 				client->challenge_nonce = packet->challenge_nonce;
 				CUTE_MEMCPY(client->challenge_data, packet->challenge_data, CUTE_CHALLENGE_DATA_SIZE);
 				client->state = CLIENT_STATE_SENDING_CHALLENGE_RESPONSE;
+				client->goto_next_server_tentative_state = CLIENT_STATE_CHALLENGED_RESPONSE_TIMED_OUT;
 				client->last_packet_sent_time = CUTE_PROTOCOL_SEND_RATE;
 				client->last_packet_recieved_time = 0;
 			} else if (type == PACKET_TYPE_CONNECTION_DENIED) {
@@ -1610,7 +1611,7 @@ static void s_server_receive_packets(server_t* server)
 			{
 				CUTE_ASSERT(!endpoint_already_connected);
 				int client_id_already_connected = !!hashtable_find(&server->client_id_table, &state->client_id);
-				if (client_id_already_connected) continue;
+				if (client_id_already_connected) break;
 				if (server->client_count == CUTE_PROTOCOL_SERVER_MAX_CLIENTS) {
 					packet_connection_denied_t packet;
 					packet.packet_type = PACKET_TYPE_CONNECTION_DENIED;

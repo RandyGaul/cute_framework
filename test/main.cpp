@@ -94,6 +94,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_protocol_client_server),
 		CUTE_TEST_CASE_ENTRY(test_protocol_client_no_server_responses),
 		CUTE_TEST_CASE_ENTRY(test_protocol_client_server_list),
+		CUTE_TEST_CASE_ENTRY(test_protocol_server_challenge_response_timeout),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;
@@ -147,10 +148,6 @@ int main(int argc, const char** argv)
 	}
 
 	internal::net_cleanup();
-
-#ifdef _MSC_VER
-	_CrtDumpMemoryLeaks();
-#endif
 
 break_soak:
 	return 0;

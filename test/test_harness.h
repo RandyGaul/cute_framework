@@ -68,6 +68,11 @@ int do_test(test_t* test, int i)
 		fprintf(CUTE_TEST_IO_STREAM, "Error string: %s\n\t", cute_error_str);
 	}
 	fprintf(CUTE_TEST_IO_STREAM, "Result:       %s", result_string);
+
+#ifdef _MSC_VER
+	_CrtDumpMemoryLeaks();
+#endif
+
 	return result;
 }
 
