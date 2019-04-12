@@ -40,6 +40,7 @@
 #include <test_encryption_map.h>
 #include <test_doubly_list.h>
 #include <test_connect_token_cache.h>
+#include <test_client_server.h>
 
 int main(int argc, const char** argv)
 {
@@ -89,6 +90,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_encryption_map_timeout_and_expiration),
 		CUTE_TEST_CASE_ENTRY(test_doubly_list),
 		CUTE_TEST_CASE_ENTRY(test_connect_token_cache),
+		CUTE_TEST_CASE_ENTRY(test_protocol_client_server),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

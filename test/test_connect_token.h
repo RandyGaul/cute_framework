@@ -32,9 +32,9 @@ int test_generate_connect_token()
 	crypto_key_t shared_secret_key = crypto_generate_key();
 
 	const char* endpoints[] = {
-		"[::]:5000",
-		"[::]:5001",
-		"[::]:5002"
+		"[::1]:5000",
+		"[::1]:5001",
+		"[::1]:5002"
 	};
 
 	uint64_t application_id = ~0ULL;

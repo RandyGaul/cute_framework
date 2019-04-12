@@ -508,7 +508,7 @@ int CUTE_CALL server_decrypt_connect_token_packet(uint8_t* packet_buffer, const 
 	// Read public section.
 	packet_connect_token_t packet;
 	CUTE_CHECK(read_connect_token_packet_public_section(packet_buffer, application_id, current_time, &packet));
-	CUTE_CHECK(packet.expiration_timestamp < current_time);
+	CUTE_CHECK(packet.expiration_timestamp <= current_time);
 	token->expiration_timestamp = packet.expiration_timestamp;
 	token->handshake_timeout = packet.handshake_timeout;
 	token->endpoint_count = packet.endpoint_count;
@@ -996,21 +996,18 @@ struct client_t
 	int max_clients;
 	float connection_timeout;
 	int has_sent_disconnect_packets;
-	protocol::connect_token_t connect_token;
+	connect_token_t connect_token;
 	uint64_t challenge_nonce;
 	uint8_t challenge_data[CUTE_CHALLENGE_DATA_SIZE];
 	int goto_next_server;
 	client_state_t goto_next_server_tentative_state;
 	int server_endpoint_index;
-	endpoint_t server_endpoint;
 	endpoint_t web_service_endpoint;
 	socket_t socket;
-	crypto_key_t client_to_server_key;
-	crypto_key_t server_to_client_key;
 	uint64_t sequence;
-	protocol::packet_allocator_t* packet_allocator;
-	protocol::replay_buffer_t replay_buffer;
-	protocol::packet_queue_t packet_queue;
+	packet_allocator_t* packet_allocator;
+	replay_buffer_t replay_buffer;
+	packet_queue_t packet_queue;
 	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 	uint8_t connect_token_packet[CUTE_CONNECT_TOKEN_PACKET_SIZE];
 	void* mem_ctx;
@@ -1054,22 +1051,33 @@ int client_connect(client_t* client, const uint8_t* connect_token)
 	CUTE_MEMCPY(client->connect_token_packet, connect_token_packet, CUTE_CONNECT_TOKEN_PACKET_SIZE);
 
 	client->packet_allocator = packet_allocator_make(client->mem_ctx);
-	CUTE_CHECK_POINTER(client->packet_allocator);
-	CUTE_CHECK(socket_init(&client->socket, client->server_endpoint.type, client->server_endpoint.port, CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE, CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE));
+	// CUTE_CHECK_POINTER(client->packet_allocator); TODO
+	CUTE_CHECK(socket_init(&client->socket, ADDRESS_TYPE_IPV6, 0, CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE, CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE));
 	replay_buffer_init(&client->replay_buffer);
 	packet_queue_init(&client->packet_queue);
+
+	client->server_endpoint_index = 0;
+
+	client->last_packet_sent_time = CUTE_PROTOCOL_SEND_RATE;
+	client->state = CLIENT_STATE_SENDING_CONNECTION_REQUEST;
+
 	return 0;
 
 cute_error:
 	return -1;
 }
 
+static CUTE_INLINE endpoint_t s_server_endpoint(client_t* client)
+{
+	return client->connect_token.endpoints[client->server_endpoint_index];
+}
+
 static void s_send(client_t* client, void* packet)
 {
-	int sz = packet_write(packet, client->buffer, client->application_id, client->sequence++, &client->client_to_server_key);
+	int sz = packet_write(packet, client->buffer, client->application_id, client->sequence++, &client->connect_token.client_to_server_key);
 
 	if (sz >= 25) {
-		socket_send(&client->socket, client->server_endpoint, client->buffer, sz);
+		socket_send(&client->socket, s_server_endpoint(client), client->buffer, sz);
 		client->last_packet_sent_time = 0;
 	}
 }
@@ -1106,12 +1114,13 @@ static void s_receive_packets(client_t* client)
 		// Read packet from UDP stack, and open it.
 		endpoint_t from;
 		int sz = socket_receive(&client->socket, &from, buffer, CUTE_PROTOCOL_PACKET_SIZE_MAX);
+		if (!sz) break;
 
-		if (!endpoint_equals(client->server_endpoint, from)) {
+		if (!endpoint_equals(s_server_endpoint(client), from)) {
 			continue;
 		}
 
-		if (sz < 26) {
+		if (sz < 25) {
 			continue;
 		}
 
@@ -1123,11 +1132,11 @@ static void s_receive_packets(client_t* client)
 		switch (type)
 		{
 		case PACKET_TYPE_CONNECT_TOKEN: // fall-thru
-		case PACKET_TYPE_CHALLENGE_REQUEST:
+		case PACKET_TYPE_CHALLENGE_RESPONSE:
 			continue;
 		}
 
-		void* packet_ptr = packet_open(buffer, sz, &client->server_to_client_key, client->application_id, client->packet_allocator, &client->replay_buffer);
+		void* packet_ptr = packet_open(buffer, sz, &client->connect_token.server_to_client_key, client->application_id, client->packet_allocator, &client->replay_buffer);
 
 		// Handle packet based on client's current state.
 		int free_packet = 1;
@@ -1141,6 +1150,7 @@ static void s_receive_packets(client_t* client)
 				client->challenge_nonce = packet->challenge_nonce;
 				CUTE_MEMCPY(client->challenge_data, packet->challenge_data, CUTE_CHALLENGE_DATA_SIZE);
 				client->state = CLIENT_STATE_SENDING_CHALLENGE_RESPONSE;
+				client->last_packet_sent_time = CUTE_PROTOCOL_SEND_RATE;
 				client->last_packet_recieved_time = 0;
 			} else if (type == PACKET_TYPE_CONNECTION_DENIED) {
 				client->goto_next_server = 1;
@@ -1241,7 +1251,7 @@ static int s_goto_next_server(client_t* client)
 	client->goto_next_server = 0;
 	packet_queue_init(&client->packet_queue);
 
-	client->server_endpoint = client->connect_token.endpoints[index];
+	client->server_endpoint_index = index;
 	client->state = CLIENT_STATE_SENDING_CONNECTION_REQUEST;
 
 	return 1;
@@ -1263,7 +1273,7 @@ void client_update(client_t* client, float dt)
 	int timeout = client->last_packet_recieved_time >= client->connect_token.handshake_timeout;
 	int is_handshake = client->state >= CLIENT_STATE_SENDING_CONNECTION_REQUEST && client->state <= CLIENT_STATE_SENDING_CHALLENGE_RESPONSE;
 	if (is_handshake) {
-		int expired = client->connect_token.expiration_timestamp >= client->current_time;
+		int expired = client->connect_token.expiration_timestamp <= client->current_time;
 		if (expired) {
 			s_disconnect(client, CLIENT_STATE_CONNECT_TOKEN_EXPIRED, 1);
 		} else if (timeout | client->goto_next_server) {
@@ -1316,7 +1326,7 @@ uint32_t client_get_max_clients(client_t* client)
 
 endpoint_t client_get_server_address(client_t* client)
 {
-	return client->server_endpoint;
+	return s_server_endpoint(client);
 }
 
 uint16_t client_get_port(client_t* client)
@@ -1368,7 +1378,8 @@ server_t* server_make(uint64_t application_id, const crypto_key_t* secret_key, v
 	server->running = 0;
 	server->application_id = application_id;
 	server->packet_allocator = packet_allocator_make(mem_ctx);
-	CUTE_CHECK_POINTER(server->packet_allocator);
+	//CUTE_CHECK_POINTER(server->packet_allocator); TODO
+	server->secret_key = *secret_key;
 	server->mem_ctx = mem_ctx;
 
 	return server;
@@ -1403,7 +1414,7 @@ int server_start(server_t* server, const char* address, uint32_t connection_time
 	cleanup_socket = 1;
 	CUTE_CHECK(hashtable_init(&server->client_endpoint_table, sizeof(endpoint_t), sizeof(handle_t), CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx));
 	cleanup_endpoint_table = 1;
-	CUTE_CHECK(hashtable_init(&server->client_id_table, sizeof(endpoint_t), sizeof(handle_t), CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx));
+	CUTE_CHECK(hashtable_init(&server->client_id_table, sizeof(uint64_t), 0, CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx));
 	cleanup_client_id_table = 1;
 
 	server->running = 1;
@@ -1453,7 +1464,7 @@ static void s_server_connect_client(server_t* server, endpoint_t endpoint, encry
 	server->client_handle[index] = h;
 	server->client_is_confirmed[index] = 0;
 	server->client_last_packet_recieved_time[index] = 0;
-	server->client_last_packet_sent_time[index] = CUTE_PROTOCOL_SEND_RATE;
+	server->client_last_packet_sent_time[index] = 0;
 	server->client_endpoint[index] = endpoint;
 	server->client_sequence[index] = state->sequence;
 	server->client_client_to_server_key[index] = state->client_to_server_key;
@@ -1462,6 +1473,15 @@ static void s_server_connect_client(server_t* server, endpoint_t endpoint, encry
 	packet_queue_init(&server->client_packets[index]);
 
 	connect_token_cache_add(&server->token_cache, state->hmac_bytes);
+
+	packet_connection_accepted_t packet;
+	packet.packet_type = PACKET_TYPE_CONNECTION_ACCEPTED;
+	packet.client_handle = h;
+	packet.max_clients = CUTE_PROTOCOL_SERVER_MAX_CLIENTS;
+	packet.connection_timeout = server->connection_timeout;
+	if (packet_write(&packet, server->buffer, server->application_id, server->client_sequence[index]++, server->client_server_to_client_key + index) == 41) {
+		socket_send(&server->socket, server->client_endpoint[index], server->buffer, 41);
+	}
 }
 
 static void s_server_receive_packets(server_t* server)
@@ -1472,6 +1492,7 @@ static void s_server_receive_packets(server_t* server)
 	{
 		endpoint_t from;
 		int sz = socket_receive(&server->socket, &from, buffer, CUTE_PROTOCOL_PACKET_SIZE_MAX);
+		if (!sz) break;
 
 		if (sz < 26) {
 			continue;
@@ -1661,7 +1682,7 @@ static void s_server_send_packets(server_t* server, float dt)
 			if (last_sent_times[i] >= CUTE_PROTOCOL_SEND_RATE) {
 				last_sent_times[i] = 0;
 
-				if (confirmed[i]) {
+				if (!confirmed[i]) {
 					packet_connection_accepted_t packet;
 					packet.packet_type = PACKET_TYPE_CONNECTION_ACCEPTED;
 					packet.client_handle = handles[i];

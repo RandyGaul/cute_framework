@@ -25,6 +25,7 @@
 #include <cute_defines.h>
 #include <cute_crypto.h>
 #include <cute_net.h>
+#include <cute_handle_table.h>
 
 #define CUTE_PROTOCOL_VERSION_STRING ((const uint8_t*)"CUTE 1.00")
 #define CUTE_PROTOCOL_VERSION_STRING_LEN (9 + 1)
@@ -100,6 +101,17 @@ extern CUTE_API uint64_t CUTE_CALL client_get_handle(client_t* client);
 extern CUTE_API uint32_t CUTE_CALL client_get_max_clients(client_t* client);
 extern CUTE_API endpoint_t CUTE_CALL client_get_server_address(client_t* client);
 extern CUTE_API uint16_t CUTE_CALL client_get_port(client_t* client);
+
+struct server_t;
+
+extern CUTE_API server_t* CUTE_CALL server_make(uint64_t application_id, const crypto_key_t* secret_key, void* mem_ctx);
+extern CUTE_API void CUTE_CALL server_destroy(server_t* server);
+
+extern CUTE_API int CUTE_CALL server_start(server_t* server, const char* address, uint32_t connection_timeout);
+extern CUTE_API void CUTE_CALL server_stop(server_t* server);
+
+extern CUTE_API void CUTE_CALL server_update(server_t* server, float dt);
+extern CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_id);
 
 }
 }
