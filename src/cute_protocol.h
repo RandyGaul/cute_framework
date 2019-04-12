@@ -120,6 +120,44 @@ extern CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle
 
 extern CUTE_API int CUTE_CALL server_client_count(server_t* server);
 
+enum server_event_type_t : int
+{
+	SERVER_EVENT_TYPE_NEW_CONNECTION,
+	SERVER_EVENT_TYPE_DISCONNECTED,
+	SERVER_EVENT_TYPE_USER_PACKET,
+};
+
+struct server_event_t
+{
+	server_event_type_t type;
+	union
+	{
+		struct
+		{
+			handle_t client_id;
+			endpoint_t endpoint;
+		} new_connection;
+
+		struct
+		{
+			handle_t client_id;
+		} disconnected;
+
+		struct
+		{
+			handle_t client_id;
+			void* data;
+			int size;
+		} user_packet;
+	} u;
+};
+
+extern CUTE_API int CUTE_CALL server_poll_event(server_t* server, server_event_t* event);
+extern CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_id);
+extern CUTE_API void CUTE_CALL server_broadcast_to_all_clients(server_t* server, const void* packet, int size);
+extern CUTE_API void CUTE_CALL server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t client_id);
+extern CUTE_API void CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, handle_t client_id);
+
 // -------------------------------------------------------------------------------------------------
 
 #define CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL 0
