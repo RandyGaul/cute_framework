@@ -1326,13 +1326,8 @@ int client_send_data(client_t* client, const void* data, int size)
 	packet.packet_type = PACKET_TYPE_PAYLOAD;
 	packet.payload_size = size;
 	CUTE_MEMCPY(packet.payload, data, size);
-	int sz = packet_write(&packet, client->buffer, client->application_id, client->sequence++, &client->connect_token.client_to_server_key);
-	if (sz < 0) {
-		return -1;
-	} else {
-		socket_send(&client->socket, client->connect_token.endpoints[client->server_endpoint_index], client->buffer, sz);
-		return 0;
-	}
+	s_send(client, &packet);
+	return 0;
 }
 
 client_state_t client_get_state(client_t* client)
@@ -1486,7 +1481,7 @@ static void s_server_connect_client(server_t* server, endpoint_t endpoint, encry
 	CUTE_ASSERT(server->client_count < CUTE_PROTOCOL_SERVER_MAX_CLIENTS);
 	int index = server->client_count++;
 
-	log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Connecting client " PRIu64 ".", state->client_id);
+	log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Connecting client %" PRIu64 ".", state->client_id);
 
 	handle_t h = handle_table_alloc(&server->client_handle_table, index);
 
@@ -1519,7 +1514,7 @@ static void s_server_connect_client(server_t* server, endpoint_t endpoint, encry
 	packet.connection_timeout = server->connection_timeout;
 	if (packet_write(&packet, server->buffer, server->application_id, server->client_sequence[index]++, server->client_server_to_client_key + index) == 41) {
 		socket_send(&server->socket, server->client_endpoint[index], server->buffer, 41);
-		log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client " PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[index]);
+		log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[index]);
 	}
 }
 
@@ -1531,14 +1526,14 @@ static void s_server_disconnect_sequence(server_t* server, uint32_t index)
 		packet.packet_type = PACKET_TYPE_DISCONNECT;
 		if (packet_write(&packet, server->buffer, server->application_id, server->client_sequence[index]++, server->client_server_to_client_key + index) == 25) {
 			socket_send(&server->socket, server->client_endpoint[index], server->buffer, 25);
-			log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client " PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[index]);
+			log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[index]);
 		}
 	}
 }
 
 static void s_server_disconnect_client(server_t* server, uint32_t index, int send_packets)
 {
-	log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Disconnecting client " PRIu64 ".", server->client_id[index]);
+	log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Disconnecting client %" PRIu64 ".", server->client_id[index]);
 
 	server_event_t event;
 	event.type = SERVER_EVENT_DISCONNECTED;
@@ -1693,10 +1688,13 @@ static void s_server_receive_packets(server_t* server)
 			case PACKET_TYPE_KEEPALIVE:
 				CUTE_ASSERT(index != ~0);
 				server->client_last_packet_received_time[index] = 0;
+				if (!server->client_is_confirmed[index]) log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Client %" PRIu64 " is now *confirmed*.", server->client_id[index]);
+				server->client_is_confirmed[index] = 1;
 				break;
 
 			case PACKET_TYPE_DISCONNECT:
 				CUTE_ASSERT(index != ~0);
+				log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Client %" PRIu64 " has sent the server a DISCONNECT packet.", server->client_id[index]);
 				s_server_disconnect_client(server, index, 0);
 				break;
 
@@ -1718,6 +1716,10 @@ static void s_server_receive_packets(server_t* server)
 			}	break;
 
 			case PACKET_TYPE_PAYLOAD:
+				CUTE_ASSERT(index != ~0);
+				server->client_last_packet_received_time[index] = 0;
+				if (!server->client_is_confirmed[index]) log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Client %" PRIu64 " is now *confirmed*.", server->client_id[index]);
+				server->client_is_confirmed[index] = 1;
 				free_packet = 0;
 				packet_payload_t* packet = (packet_payload_t*)packet_ptr;
 				server_event_t event;
@@ -1726,7 +1728,7 @@ static void s_server_receive_packets(server_t* server)
 				event.u.payload_packet.size = packet->payload_size;
 				event.u.payload_packet.data = packet->payload;
 				if (s_server_event_push(server, &event) < 0) {
-					log(CUTE_PROTOCOL_LOG_LEVEL_WARNING, "Protocol Server: Event queue is full; dropping payload packet for client " PRIu64 ".", (int)server->client_id[index]);
+					log(CUTE_PROTOCOL_LOG_LEVEL_WARNING, "Protocol Server: Event queue is full; dropping payload packet for client %" PRIu64 ".", server->client_id[index]);
 					free_packet = 1;
 				}
 				break;
@@ -1765,7 +1767,7 @@ static void s_server_send_packets(server_t* server, float dt)
 
 			if (packet_write(&packet, buffer, application_id, state->sequence++, &state->server_to_client_key) == 289) {
 				socket_send(socket, endpoints[i], buffer, 289);
-				log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to potential client " PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[i]);
+				log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to potential client %" PRIu64 ".", s_packet_str(packet.packet_type), state->client_id);
 			}
 		}
 	}
@@ -1801,7 +1803,7 @@ static void s_server_send_packets(server_t* server, float dt)
 					packet.connection_timeout = connection_timeout;
 					if (packet_write(&packet, buffer, application_id, sequences[i]++, server_to_client_keys + i) == 41) {
 						socket_send(socket, endpoints[i], buffer, 41);
-						log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client " PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[i]);
+						log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[i]);
 					}
 				}
 
@@ -1809,7 +1811,7 @@ static void s_server_send_packets(server_t* server, float dt)
 				packet.packet_type = PACKET_TYPE_KEEPALIVE;
 				if (packet_write(&packet, buffer, application_id, sequences[i]++, server_to_client_keys + i) == 25) {
 					socket_send(socket, endpoints[i], buffer, 25);
-					log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client " PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[i]);
+					log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[i]);
 				}
 			}
 		//}
@@ -1845,6 +1847,36 @@ void server_broadcast_to_all_but_one_client(server_t* server, const void* packet
 
 void server_send_to_client(server_t* server, const void* packet, int size, handle_t client_handle)
 {
+	if (size < 1) return;
+	if (size > CUTE_PROTOCOL_PACKET_PAYLOAD_MAX) return;
+
+	CUTE_ASSERT(server->client_count >= 1);
+	// TODO: Make a waya to assert client_id is valid.
+	uint32_t index = handle_table_get_index(&server->client_handle_table, client_handle);
+
+	if (!server->client_is_confirmed[index]) {
+		packet_connection_accepted_t packet;
+		packet.packet_type = PACKET_TYPE_CONNECTION_ACCEPTED;
+		packet.client_handle = server->client_handle[index];
+		packet.max_clients = CUTE_PROTOCOL_SERVER_MAX_CLIENTS;
+		packet.connection_timeout = server->connection_timeout;
+		if (packet_write(&packet, server->buffer, server->application_id, server->client_sequence[index]++, server->client_server_to_client_key + index) == 41) {
+			socket_send(&server->socket, server->client_endpoint[index], server->buffer, 41);
+			log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[index]);
+		}
+	}
+
+	packet_payload_t payload;
+	payload.packet_type = PACKET_TYPE_PAYLOAD;
+	payload.payload_size = size;
+	CUTE_MEMCPY(payload.payload, packet, size);
+	int sz = packet_write(&payload, server->buffer, server->application_id, server->client_sequence[index]++, server->client_server_to_client_key + index);
+	if (sz > 25) {
+		socket_send(&server->socket, server->client_endpoint[index], server->buffer, sz);
+		log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(payload.packet_type), server->client_id[index]);
+	}
+
+	server->client_last_packet_sent_time[index] = 0;
 }
 
 static void s_server_look_for_timeouts(server_t* server)

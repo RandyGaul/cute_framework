@@ -985,3 +985,111 @@ int test_protocol_server_initiated_disconnect()
 
 	return 0;
 }
+
+CUTE_TEST_CASE(test_protocol_client_server_payloads, "Client and server connect and send payload packets. Server should confirm client.");
+int test_protocol_client_server_payloads()
+{
+	using namespace protocol;
+
+	crypto_key_t client_to_server_key = crypto_generate_key();
+	crypto_key_t server_to_client_key = crypto_generate_key();
+	crypto_key_t secret_key = crypto_generate_key();
+
+	const char* endpoints[] = {
+		"[::1]:5000",
+	};
+
+	uint64_t application_id = 100;
+	uint64_t current_timestamp = 0;
+	uint64_t expiration_timestamp = 1;
+	uint32_t handshake_timeout = 5;
+	uint64_t client_id = 17;
+
+	uint8_t user_data[CUTE_CONNECT_TOKEN_USER_DATA_SIZE];
+	crypto_random_bytes(user_data, sizeof(user_data));
+
+	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
+	CUTE_TEST_CHECK(generate_connect_token(
+		application_id,
+		current_timestamp,
+		&client_to_server_key,
+		&server_to_client_key,
+		expiration_timestamp,
+		handshake_timeout,
+		sizeof(endpoints) / sizeof(endpoints[0]),
+		endpoints,
+		client_id,
+		user_data,
+		&secret_key,
+		connect_token
+	));
+
+	server_t* server = server_make(application_id, &secret_key, NULL);
+	CUTE_TEST_CHECK_POINTER(server);
+
+	client_t* client = client_make(5001, NULL, application_id, NULL);
+	CUTE_TEST_CHECK_POINTER(client);
+
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+	CUTE_TEST_CHECK(client_connect(client, connect_token));
+
+	cute::handle_t client_handle = CUTE_INVALID_HANDLE;
+	uint64_t to_server_data = 3;
+	uint64_t to_client_data = 4;
+
+	int iters = 0;
+	float dt = 1.0f / 60.0f;
+	int payloads_received_by_server = 0;
+	int payloads_received_by_client = 0;
+	while (iters++ < 1000)
+	{
+		client_update(client, dt, 0);
+		server_update(server, dt, 0);
+
+		server_event_t event;
+		if (!server_poll_event(server, &event)) {
+			CUTE_TEST_ASSERT(event.type != SERVER_EVENT_DISCONNECTED);
+			if (event.type == SERVER_EVENT_NEW_CONNECTION) {
+				client_handle = event.u.new_connection.client_handle;
+			} else {
+				CUTE_TEST_ASSERT(client_handle == event.u.payload_packet.client_handle);
+				CUTE_TEST_ASSERT(sizeof(uint64_t) == event.u.payload_packet.size);
+				uint64_t* data = (uint64_t*)event.u.payload_packet.data;
+				CUTE_TEST_ASSERT(*data == to_server_data);
+				server_free_packet(server, data);
+				++payloads_received_by_server;
+			}
+		}
+
+		void* packet = NULL;
+		uint64_t sequence = ~0ULL;
+		int size;
+		if (!client_get_packet(client, &packet, &size, &sequence)) {
+			CUTE_TEST_ASSERT(sizeof(uint64_t) == size);
+			uint64_t* data = (uint64_t*)packet;
+			CUTE_TEST_ASSERT(*data == to_client_data);
+			client_free_packet(client, packet);
+			++payloads_received_by_client;
+		}
+
+		if (client_get_state(client) <= 0) break;
+		if (client_get_state(client) == CLIENT_STATE_CONNECTED) {
+			CUTE_TEST_ASSERT(client_handle != CUTE_INVALID_HANDLE);
+			CUTE_TEST_CHECK(client_send_data(client, &to_server_data, sizeof(uint64_t)));
+			server_send_to_client(server, &to_client_data, sizeof(uint64_t), client_handle);
+		}
+
+		if (payloads_received_by_server >= 10 && payloads_received_by_client >= 10) break;
+	}
+	CUTE_TEST_ASSERT(server_running(server));
+	CUTE_TEST_ASSERT(iters < 1000);
+	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_CONNECTED);
+
+	client_disconnect(client);
+	client_destroy(client);
+
+	server_stop(server);
+	server_destroy(server);
+
+	return 0;
+}

@@ -43,6 +43,8 @@
 
 int main(int argc, const char** argv)
 {
+	//protocol::log_set_level(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL);
+
 #ifdef _MSC_VER
 	_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 	_CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
@@ -101,6 +103,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_protocol_connect_a_few_clients),
 		CUTE_TEST_CASE_ENTRY(test_protocol_keepalive),
 		CUTE_TEST_CASE_ENTRY(test_protocol_client_initiated_disconnect),
+		CUTE_TEST_CASE_ENTRY(test_protocol_client_server_payloads),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;
