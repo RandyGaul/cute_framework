@@ -20,6 +20,7 @@
 */
 
 #include <cute_protocol.h>
+#include <cute_handle_table.h>
 
 #include <internal/cute_protocol_internal.h>
 using namespace cute;
@@ -947,6 +948,8 @@ int test_protocol_server_initiated_disconnect()
 	CUTE_TEST_CHECK_POINTER(server);
 	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
 
+	cute::handle_t client_handle;
+
 	int iters = 0;
 	float dt = 1.0f / 60.0f;
 	while (iters++ < 1000)
@@ -959,6 +962,7 @@ int test_protocol_server_initiated_disconnect()
 			server_event_t event;
 			CUTE_TEST_CHECK(server_poll_event(server, &event));
 			CUTE_TEST_ASSERT(event.type == SERVER_EVENT_NEW_CONNECTION);
+			client_handle = event.u.new_connection.client_handle;
 			server_disconnect_client(server, event.u.new_connection.client_handle);
 		}
 
@@ -968,6 +972,10 @@ int test_protocol_server_initiated_disconnect()
 	CUTE_TEST_ASSERT(server_client_count(server) == 0);
 	CUTE_TEST_ASSERT(iters == 110);
 	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_DISCONNECTED);
+	server_event_t event;
+	CUTE_TEST_CHECK(server_poll_event(server, &event));
+	CUTE_TEST_ASSERT(event.type == SERVER_EVENT_DISCONNECTED);
+	CUTE_TEST_ASSERT(event.u.disconnected.client_handle == client_handle);
 
 	client_disconnect(client);
 	client_destroy(client);

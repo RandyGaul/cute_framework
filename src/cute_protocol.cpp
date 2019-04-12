@@ -989,6 +989,8 @@ client_t* client_make(uint16_t port, const char* web_service_address, uint64_t a
 	s_client_set_state(client, CLIENT_STATE_DISCONNECTED);
 	client->application_id = application_id;
 	client->mem_ctx = user_allocator_context;
+	client->packet_queue = circular_buffer_make(CUTE_MB, client->mem_ctx);
+	CUTE_CHECK_POINTER(client->packet_queue.data);
 	return client;
 
 cute_error:
@@ -999,6 +1001,7 @@ cute_error:
 void client_destroy(client_t* client)
 {
 	// TODO: Detect if disconnect was not called yet.
+	circular_buffer_free(&client->packet_queue);
 	CUTE_FREE(client, client->app->mem_ctx);
 }
 
@@ -1028,9 +1031,6 @@ int client_connect(client_t* client, const uint8_t* connect_token)
 	// CUTE_CHECK_POINTER(client->packet_allocator); TODO
 	CUTE_CHECK(socket_init(&client->socket, ADDRESS_TYPE_IPV6, 0, CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE, CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE));
 	replay_buffer_init(&client->replay_buffer);
-
-	client->packet_queue = circular_buffer_make(CUTE_MB, client->mem_ctx);
-	CUTE_CHECK_POINTER(client->packet_queue.data);
 
 	client->server_endpoint_index = 0;
 
@@ -1091,7 +1091,7 @@ static void s_disconnect(client_t* client, client_state_t state, int send_packet
 	socket_cleanup(&client->socket);
 	packet_allocator_destroy(client->packet_allocator);
 	client->packet_allocator = NULL;
-	circular_buffer_free(&client->packet_queue);
+	circular_buffer_reset(&client->packet_queue);
 
 	s_client_set_state(client, state);
 }
@@ -1387,6 +1387,7 @@ cute_error:
 void server_destroy(server_t* server)
 {
 	packet_allocator_destroy(server->packet_allocator);
+	circular_buffer_free(&server->event_queue);
 	CUTE_FREE(server, server->mem_ctx);
 }
 
@@ -1398,7 +1399,6 @@ int server_start(server_t* server, const char* address, uint32_t connection_time
 	int cleanup_socket = 0;
 	int cleanup_endpoint_table = 0;
 	int cleanup_client_id_table = 0;
-	int cleanup_event_queue = 0;
 	CUTE_CHECK(encryption_map_init(&server->encryption_map, server->mem_ctx));
 	cleanup_map = 1;
 	CUTE_CHECK(connect_token_cache_init(&server->token_cache, CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX, server->mem_ctx));
@@ -1411,9 +1411,6 @@ int server_start(server_t* server, const char* address, uint32_t connection_time
 	cleanup_endpoint_table = 1;
 	CUTE_CHECK(hashtable_init(&server->client_id_table, sizeof(uint64_t), 0, CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx));
 	cleanup_client_id_table = 1;
-	server->event_queue = circular_buffer_make(CUTE_PROTOCOL_EVENT_QUEUE_SIZE, server->mem_ctx);
-	CUTE_CHECK(server->event_queue.data);
-	cleanup_event_queue = 1;
 
 	server->running = 1;
 	server->challenge_nonce = 0;
@@ -1429,7 +1426,6 @@ cute_error:
 	if (cleanup_socket) socket_cleanup(&server->socket);
 	if (cleanup_endpoint_table) hashtable_cleanup(&server->client_endpoint_table);
 	if (cleanup_client_id_table) hashtable_cleanup(&server->client_id_table);
-	if (cleanup_event_queue) circular_buffer_free(&server->event_queue);
 	return -1;
 }
 
@@ -1471,7 +1467,7 @@ void server_stop(server_t* server)
 	socket_cleanup(&server->socket);
 	hashtable_cleanup(&server->client_endpoint_table);
 	hashtable_cleanup(&server->client_id_table);
-	circular_buffer_free(&server->event_queue);
+	circular_buffer_reset(&server->event_queue);
 }
 
 int server_running(server_t* server)
