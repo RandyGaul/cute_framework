@@ -24,6 +24,7 @@
 
 #include <cute_protocol.h>
 #include <cute_doubly_list.h>
+#include <cute_circular_buffer.h>
 
 #include <internal/cute_net_internal.h>
 
@@ -43,19 +44,6 @@ enum packet_type_t : uint8_t
 	PACKET_TYPE_CHALLENGE_RESPONSE,
 	PACKET_TYPE_PAYLOAD,
 };
-
-struct packet_queue_t
-{
-	int count = 0;
-	int index0 = 0;
-	int index1 = 0;
-	packet_type_t types[CUTE_PACKET_QUEUE_MAX_ENTRIES];
-	void* packets[CUTE_PACKET_QUEUE_MAX_ENTRIES];
-};
-
-extern CUTE_API void CUTE_CALL packet_queue_init(packet_queue_t* q);
-extern CUTE_API int CUTE_CALL packet_queue_push(packet_queue_t* q, void* packet, packet_type_t type);
-extern CUTE_API int CUTE_CALL packet_queue_pop(packet_queue_t* q, void** packet, packet_type_t* type);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -127,7 +115,7 @@ struct packet_payload_t
 };
 
 extern CUTE_API int CUTE_CALL packet_write(void* packet_ptr, uint8_t* buffer, uint64_t application_id, uint64_t sequence, const crypto_key_t* key);
-extern CUTE_API void* CUTE_CALL packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t application_id, packet_allocator_t* pa, replay_buffer_t* replay_buffer);
+extern CUTE_API void* CUTE_CALL packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t application_id, packet_allocator_t* pa, replay_buffer_t* replay_buffer = NULL, uint64_t* sequence_ptr = NULL);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -296,8 +284,8 @@ struct client_t
 	socket_t socket;
 	uint64_t sequence;
 	packet_allocator_t* packet_allocator;
+	circular_buffer_t packet_queue;
 	replay_buffer_t replay_buffer;
-	packet_queue_t packet_queue;
 	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 	uint8_t connect_token_packet[CUTE_CONNECT_TOKEN_PACKET_SIZE];
 	void* mem_ctx;
@@ -314,6 +302,7 @@ struct server_t
 	protocol::packet_allocator_t* packet_allocator;
 	crypto_key_t secret_key;
 	uint32_t connection_timeout;
+	circular_buffer_t event_queue;
 
 	uint64_t challenge_nonce;
 	encryption_map_t encryption_map;
@@ -323,6 +312,7 @@ struct server_t
 	handle_table_t client_handle_table;
 	hashtable_t client_endpoint_table;
 	hashtable_t client_id_table;
+	uint64_t client_id[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	handle_t client_handle[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	int client_is_confirmed[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	float client_last_packet_received_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
@@ -332,7 +322,6 @@ struct server_t
 	crypto_key_t client_client_to_server_key[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	crypto_key_t client_server_to_client_key[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	protocol::replay_buffer_t client_replay_buffer[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	protocol::packet_queue_t client_packets[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 
 	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 	void* mem_ctx;

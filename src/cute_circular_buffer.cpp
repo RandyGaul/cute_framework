@@ -21,7 +21,6 @@
 
 #include <cute_circular_buffer.h>
 #include <cute_alloc.h>
-#include <cute_error.h>
 #include <cute_c_runtime.h>
 #include <cute_concurrency.h>
 
@@ -44,10 +43,16 @@ void circular_buffer_free(circular_buffer_t* buffer)
 	CUTE_MEMSET(buffer, 0, sizeof(*buffer));
 }
 
+void circular_buffer_reset(circular_buffer_t* buffer)
+{
+	buffer->index0 = 0;
+	buffer->index1 = 0;
+	buffer->size_left = buffer->capacity;
+}
+
 int circular_buffer_push(circular_buffer_t* buffer, const void* data, int size)
 {
 	if (buffer->size_left < size) {
-		error_set("Failed to push to circular buffer: out of space.");
 		return -1;
 	}
 
@@ -69,7 +74,6 @@ int circular_buffer_push(circular_buffer_t* buffer, const void* data, int size)
 int circular_buffer_pull(circular_buffer_t* buffer, void* data, int size)
 {
 	if (buffer->capacity - buffer->size_left < size) {
-		error_set("Failed to pull from circular buffer: not enough data.");
 		return -1;
 	}
 

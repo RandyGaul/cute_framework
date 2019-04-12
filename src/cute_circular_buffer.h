@@ -40,6 +40,8 @@ struct circular_buffer_t
 extern CUTE_API circular_buffer_t CUTE_CALL circular_buffer_make(int initial_size_in_bytes, void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL circular_buffer_free(circular_buffer_t* buffer);
 
+extern CUTE_API void CUTE_CALL circular_buffer_reset(circular_buffer_t* buffer);
+
 extern CUTE_API int CUTE_CALL circular_buffer_push(circular_buffer_t* buffer, const void* data, int size);
 extern CUTE_API int CUTE_CALL circular_buffer_pull(circular_buffer_t* buffer, void* data, int size);
 

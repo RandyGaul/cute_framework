@@ -32,8 +32,9 @@
 #define CUTE_PROTOCOL_SERVER_MAX_CLIENTS 32
 #define CUTE_PROTOCOL_PACKET_SIZE_MAX (CUTE_KB + 256)
 #define CUTE_PROTOCOL_PACKET_PAYLOAD_MAX (1255 - 2)
-#define CUTE_PROTOCOL_SERVER_SEND_BUFFER_SIZE (CUTE_MB * 12)
-#define CUTE_PROTOCOL_SERVER_RECEIVE_BUFFER_SIZE (CUTE_MB * 12)
+#define CUTE_PROTOCOL_SERVER_SEND_BUFFER_SIZE (CUTE_MB * 16)
+#define CUTE_PROTOCOL_SERVER_RECEIVE_BUFFER_SIZE (CUTE_MB * 16)
+#define CUTE_PROTOCOL_EVENT_QUEUE_SIZE (CUTE_MB * 4)
 
 #define CUTE_CONNECT_TOKEN_PACKET_SIZE 1024
 #define CUTE_CONNECT_TOKEN_SIZE 1114
@@ -94,7 +95,7 @@ extern CUTE_API int CUTE_CALL client_connect(client_t* client, const uint8_t* co
 extern CUTE_API void CUTE_CALL client_disconnect(client_t* client);
 extern CUTE_API void CUTE_CALL client_update(client_t* client, float dt, uint64_t current_time);
 
-extern CUTE_API int CUTE_CALL client_get_packet(client_t* client, void* data, int* size, uint64_t* sequence);
+extern CUTE_API int CUTE_CALL client_get_packet(client_t* client, void** data, int* size, uint64_t* sequence);
 extern CUTE_API void CUTE_CALL client_free_packet(client_t* client, void* packet);
 extern CUTE_API int CUTE_CALL client_send_data(client_t* client, const void* data, int size);
 
@@ -116,15 +117,16 @@ extern CUTE_API void CUTE_CALL server_stop(server_t* server);
 extern CUTE_API int CUTE_CALL server_running(server_t* server);
 
 extern CUTE_API void CUTE_CALL server_update(server_t* server, float dt, uint64_t current_time);
-extern CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_id);
+extern CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_handle);
 
 extern CUTE_API int CUTE_CALL server_client_count(server_t* server);
+extern CUTE_API uint64_t CUTE_CALL server_get_client_id_from_handle(server_t* server, handle_t client_handle);
 
 enum server_event_type_t : int
 {
-	SERVER_EVENT_TYPE_NEW_CONNECTION,
-	SERVER_EVENT_TYPE_DISCONNECTED,
-	SERVER_EVENT_TYPE_USER_PACKET,
+	SERVER_EVENT_NEW_CONNECTION,
+	SERVER_EVENT_DISCONNECTED,
+	SERVER_EVENT_PAYLOAD_PACKET,
 };
 
 struct server_event_t
@@ -134,29 +136,30 @@ struct server_event_t
 	{
 		struct
 		{
-			handle_t client_id;
+			handle_t client_handle;
 			endpoint_t endpoint;
 		} new_connection;
 
 		struct
 		{
-			handle_t client_id;
+			handle_t client_handle;
 		} disconnected;
 
 		struct
 		{
-			handle_t client_id;
+			handle_t client_handle;
 			void* data;
 			int size;
-		} user_packet;
+		} payload_packet;
 	} u;
 };
 
 extern CUTE_API int CUTE_CALL server_poll_event(server_t* server, server_event_t* event);
-extern CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_id);
+extern CUTE_API void CUTE_CALL server_free_packet(server_t* server, void* packet);
+extern CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_handle);
 extern CUTE_API void CUTE_CALL server_broadcast_to_all_clients(server_t* server, const void* packet, int size);
-extern CUTE_API void CUTE_CALL server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t client_id);
-extern CUTE_API void CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, handle_t client_id);
+extern CUTE_API void CUTE_CALL server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t client_handle);
+extern CUTE_API void CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, handle_t client_handle);
 
 // -------------------------------------------------------------------------------------------------
 

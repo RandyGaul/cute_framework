@@ -956,7 +956,10 @@ int test_protocol_server_initiated_disconnect()
 
 		if (iters == 100) {
 			CUTE_TEST_ASSERT(server_client_count(server) == 1);
-			server_disconnect_client(server, ); // WORKING HERE : Need to make server event API so I can actually disconnect a client by id.
+			server_event_t event;
+			CUTE_TEST_CHECK(server_poll_event(server, &event));
+			CUTE_TEST_ASSERT(event.type == SERVER_EVENT_NEW_CONNECTION);
+			server_disconnect_client(server, event.u.new_connection.client_handle);
 		}
 
 		if (iters == 110) break;

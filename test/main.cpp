@@ -32,7 +32,6 @@
 #include <test_circular_buffer.h>
 #include <test_replay_buffer.h>
 #include <test_crypto.h>
-#include <test_packet_queue.h>
 #include <test_socket.h>
 #include <test_connect_token.h>
 #include <test_packets.h>
@@ -75,7 +74,6 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_crypto_encrypt_decrypt_associated_data),
 		CUTE_TEST_CASE_ENTRY(test_crypto_encrypt_decrypt_big_nonce),
 		CUTE_TEST_CASE_ENTRY(test_crypto_encrypt_decrypt_associated_data_big_nonce),
-		CUTE_TEST_CASE_ENTRY(test_packet_queue_basic),
 		CUTE_TEST_CASE_ENTRY(test_socket_init_send_recieve_shutdown),
 		CUTE_TEST_CASE_ENTRY(test_generate_connect_token),
 		CUTE_TEST_CASE_ENTRY(test_packet_connection_accepted),
