@@ -79,3 +79,21 @@ int test_hash_table_hammer()
 
 	return 0;
 }
+
+CUTE_TEST_CASE(test_hash_table_set, "Make sure the table also operates as a set (zero size value).");
+int test_hash_table_set()
+{
+	protocol::hashtable_t table;
+	CUTE_TEST_CHECK(protocol::hashtable_init(&table, 8, 0, 20, NULL));
+
+	uint64_t key = 5;
+
+	protocol::hashtable_insert(&table, &key, NULL);
+
+	void* item_ptr = protocol::hashtable_find(&table, &key);
+	CUTE_TEST_CHECK_POINTER(item_ptr);
+
+	protocol::hashtable_cleanup(&table);
+
+	return 0;
+}

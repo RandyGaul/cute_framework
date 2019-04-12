@@ -1448,6 +1448,11 @@ void server_stop(server_t* server)
 	hashtable_cleanup(&server->client_id_table);
 }
 
+int server_running(server_t* server)
+{
+	return server->running;
+}
+
 static CUTE_INLINE uint32_t s_client_index(server_t* server, handle_t h)
 {
 	return handle_table_get_index(&server->client_handle_table, h);
@@ -1494,7 +1499,7 @@ static void s_server_receive_packets(server_t* server)
 		int sz = socket_receive(&server->socket, &from, buffer, CUTE_PROTOCOL_PACKET_SIZE_MAX);
 		if (!sz) break;
 
-		if (sz < 26) {
+		if (sz < 25) {
 			continue;
 		}
 

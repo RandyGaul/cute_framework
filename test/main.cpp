@@ -86,6 +86,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_packet_payload),
 		CUTE_TEST_CASE_ENTRY(test_hash_table_basic),
 		CUTE_TEST_CASE_ENTRY(test_hash_table_hammer),
+		CUTE_TEST_CASE_ENTRY(test_hash_table_set),
 		CUTE_TEST_CASE_ENTRY(test_encryption_map_basic),
 		CUTE_TEST_CASE_ENTRY(test_encryption_map_timeout_and_expiration),
 		CUTE_TEST_CASE_ENTRY(test_doubly_list),
