@@ -1759,6 +1759,7 @@ static void s_server_send_packets(server_t* server, float dt)
 void server_disconnect_client(server_t* server, handle_t client_id)
 {
 	CUTE_ASSERT(server->client_count >= 1);
+	// TODO: Make a waya to assert client_id is valid.
 	uint32_t index = handle_table_get_index(&server->client_handle_table, client_id);
 	s_server_disconnect_client(server, index, 1);
 }
