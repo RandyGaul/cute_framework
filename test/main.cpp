@@ -100,6 +100,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_protocol_server_connect_expired_token),
 		CUTE_TEST_CASE_ENTRY(test_protocol_client_bad_keys),
 		CUTE_TEST_CASE_ENTRY(test_protocol_server_not_in_list_but_gets_request),
+		CUTE_TEST_CASE_ENTRY(test_protocol_connect_a_few_clients),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

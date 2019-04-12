@@ -69,6 +69,8 @@ extern CUTE_API int CUTE_CALL generate_connect_token(
 	uint8_t* token_ptr_out
 );
 
+// -------------------------------------------------------------------------------------------------
+
 struct client_t;
 
 enum client_state_t : int
@@ -101,6 +103,8 @@ extern CUTE_API uint64_t CUTE_CALL client_get_handle(client_t* client);
 extern CUTE_API uint32_t CUTE_CALL client_get_max_clients(client_t* client);
 extern CUTE_API endpoint_t CUTE_CALL client_get_server_address(client_t* client);
 extern CUTE_API uint16_t CUTE_CALL client_get_port(client_t* client);
+
+// -------------------------------------------------------------------------------------------------
 
 struct server_t;
 

@@ -1158,10 +1158,6 @@ static void s_receive_packets(client_t* client)
 				should_break = 1;
 			}
 			break;
-
-		default:
-			CUTE_ASSERT(0);
-			break;
 		}
 
 		if (free_packet) {
@@ -1640,8 +1636,8 @@ static void s_server_send_packets(server_t* server, float dt)
 					packet.client_handle = handles[i];
 					packet.max_clients = CUTE_PROTOCOL_SERVER_MAX_CLIENTS;
 					packet.connection_timeout = connection_timeout;
-					if (packet_write(&packet, buffer, application_id, sequences[i]++, server_to_client_keys + i) == 25) {
-						socket_send(socket, endpoints[i], buffer, 25);
+					if (packet_write(&packet, buffer, application_id, sequences[i]++, server_to_client_keys + i) == 41) {
+						socket_send(socket, endpoints[i], buffer, 41);
 					}
 				}
 
