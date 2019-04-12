@@ -755,5 +755,73 @@ int test_protocol_connect_a_few_clients()
 	return 0;
 }
 
+CUTE_TEST_CASE(test_protocol_keepalive, "Client and server setup connection and maintain it through keepalive packets.");
+int test_protocol_keepalive()
+{
+	using namespace protocol;
+	
+	crypto_key_t client_to_server_key = crypto_generate_key();
+	crypto_key_t server_to_client_key = crypto_generate_key();
+	crypto_key_t secret_key = crypto_generate_key();
+
+	const char* endpoints[] = {
+		"[::1]:5000",
+	};
+
+	uint64_t application_id = 100;
+	uint64_t current_timestamp = 0;
+	uint64_t expiration_timestamp = 1;
+	uint32_t handshake_timeout = 5;
+	uint64_t client_id = 1;
+
+	uint8_t user_data[CUTE_CONNECT_TOKEN_USER_DATA_SIZE];
+	crypto_random_bytes(user_data, sizeof(user_data));
+
+	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
+
+	CUTE_TEST_CHECK(generate_connect_token(
+		application_id,
+		current_timestamp,
+		&client_to_server_key,
+		&server_to_client_key,
+		expiration_timestamp,
+		handshake_timeout,
+		sizeof(endpoints) / sizeof(endpoints[0]),
+		endpoints,
+		client_id,
+		user_data,
+		&secret_key,
+		connect_token
+	));
+	client_t* client = client_make(5001, NULL, application_id, NULL);
+	CUTE_TEST_CHECK_POINTER(client);
+	CUTE_TEST_CHECK(client_connect(client, connect_token));
+
+	server_t* server = server_make(application_id, &secret_key, NULL);
+	CUTE_TEST_CHECK_POINTER(server);
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+
+	int iters = 0;
+	float dt = 1.0f / 60.0f;
+	while (iters++ < 1000)
+	{
+		client_update(client, dt, 0);
+		server_update(server, dt, 0);
+
+		if (client_get_state(client) <= 0) break;
+	}
+	CUTE_TEST_ASSERT(server_running(server));
+	CUTE_TEST_ASSERT(iters == 1001);
+	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_CONNECTED);
+
+	client_disconnect(client);
+	client_destroy(client);
+
+	server_stop(server);
+	server_destroy(server);
+
+	return 0;
+}
+
 // WORKING HERE
-// Gotta test disconnects next.
+// Gotta test disconnects

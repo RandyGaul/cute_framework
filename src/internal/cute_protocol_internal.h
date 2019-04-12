@@ -325,7 +325,7 @@ struct server_t
 	hashtable_t client_id_table;
 	handle_t client_handle[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	int client_is_confirmed[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	float client_last_packet_recieved_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	float client_last_packet_received_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	float client_last_packet_sent_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	endpoint_t client_endpoint[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	uint64_t client_sequence[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];

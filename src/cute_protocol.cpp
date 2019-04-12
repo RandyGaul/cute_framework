@@ -1401,10 +1401,11 @@ static void s_server_connect_client(server_t* server, endpoint_t endpoint, encry
 
 	handle_t h = handle_table_alloc(&server->client_handle_table, index);
 	hashtable_insert(&server->client_id_table, &state->client_id, NULL);
+	hashtable_insert(&server->client_endpoint_table, &endpoint, &h);
 
 	server->client_handle[index] = h;
 	server->client_is_confirmed[index] = 0;
-	server->client_last_packet_recieved_time[index] = 0;
+	server->client_last_packet_received_time[index] = 0;
 	server->client_last_packet_sent_time[index] = 0;
 	server->client_endpoint[index] = endpoint;
 	server->client_sequence[index] = state->sequence;
@@ -1511,6 +1512,7 @@ static void s_server_receive_packets(server_t* server)
 			replay_buffer_t* replay_buffer = NULL;
 			const crypto_key_t* client_to_server_key;
 			encryption_state_t* state = NULL;
+			uint32_t index = ~0;
 
 			int endpoint_already_connected = !!handle_ptr;
 			if (endpoint_already_connected) {
@@ -1520,7 +1522,7 @@ static void s_server_receive_packets(server_t* server)
 				}
 
 				handle_t handle = *handle_ptr;
-				uint32_t index = s_client_index(server, handle);
+				index = s_client_index(server, handle);
 				replay_buffer = server->client_replay_buffer + index;
 				client_to_server_key = server->client_client_to_server_key + index;
 			} else {
@@ -1542,6 +1544,8 @@ static void s_server_receive_packets(server_t* server)
 			switch (type)
 			{
 			case PACKET_TYPE_KEEPALIVE:
+				CUTE_ASSERT(index != ~0);
+				server->client_last_packet_received_time[index] = 0;
 				break;
 
 			case PACKET_TYPE_DISCONNECT:
@@ -1609,11 +1613,11 @@ static void s_server_send_packets(server_t* server, float dt)
 
 	// Update client timers.
 	int client_count = server->client_count;
-	float* last_recieved_times = server->client_last_packet_recieved_time;
+	float* last_received_times = server->client_last_packet_received_time;
 	float* last_sent_times = server->client_last_packet_sent_time;
 	for (int i = 0; i < client_count; ++i)
 	{
-		last_recieved_times[i] += dt;
+		last_received_times[i] += dt;
 		last_sent_times[i] += dt;
 	}
 
@@ -1681,7 +1685,7 @@ void server_disconnect_client(server_t* server, handle_t client_id)
 
 		server->client_handle[index]                    = server->client_handle[last_index];
 		server->client_is_confirmed[index]              = server->client_is_confirmed[last_index];
-		server->client_last_packet_recieved_time[index] = server->client_last_packet_recieved_time[last_index];
+		server->client_last_packet_received_time[index] = server->client_last_packet_received_time[last_index];
 		server->client_last_packet_sent_time[index]     = server->client_last_packet_sent_time[last_index];
 		server->client_endpoint[index]                  = server->client_endpoint[last_index];
 		server->client_sequence[index]                  = server->client_sequence[last_index];
@@ -1695,10 +1699,10 @@ void server_disconnect_client(server_t* server, handle_t client_id)
 static void s_server_look_for_timeouts(server_t* server)
 {
 	int client_count = server->client_count;
-	float* last_recieved_times = server->client_last_packet_recieved_time;
+	float* last_received_times = server->client_last_packet_received_time;
 	for (int i = 0; i < client_count;)
 	{
-		if (last_recieved_times[i] >= CUTE_PROTOCOL_SEND_RATE) {
+		if (last_received_times[i] >= server->connection_timeout) {
 			--client_count;
 			server_disconnect_client(server, server->client_handle[i]);
 		} else {
