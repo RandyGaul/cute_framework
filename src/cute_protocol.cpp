@@ -983,12 +983,37 @@ void encryption_map_look_for_timeouts_or_expirations(encryption_map_t* map, floa
 
 // -------------------------------------------------------------------------------------------------
 
+static CUTE_INLINE const char* s_client_state_str(client_state_t state)
+{
+	switch (state)
+	{
+	case CLIENT_STATE_CONNECT_TOKEN_EXPIRED: return "CONNECT_TOKEN_EXPIRED";
+	case CLIENT_STATE_INVALID_CONNECT_TOKEN: return "INVALID_CONNECT_TOKEN";
+	case CLIENT_STATE_CONNECTION_TIMED_OUT: return "CONNECTION_TIMED_OUT";
+	case CLIENT_STATE_CHALLENGED_RESPONSE_TIMED_OUT: return "CHALLENGED_RESPONSE_TIMED_OUT";
+	case CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT: return "CONNECTION_REQUEST_TIMED_OUT";
+	case CLIENT_STATE_CONNECTION_DENIED: return "CONNECTION_DENIED";
+	case CLIENT_STATE_DISCONNECTED: return "DISCONNECTED";
+	case CLIENT_STATE_SENDING_CONNECTION_REQUEST: return "SENDING_CONNECTION_REQUEST";
+	case CLIENT_STATE_SENDING_CHALLENGE_RESPONSE: return "SENDING_CHALLENGE_RESPONSE";
+	case CLIENT_STATE_CONNECTED: return "CONNECTED";
+	}
+
+	return NULL;
+}
+
+static void s_client_set_state(client_t* client, client_state_t state)
+{
+	client->state = state;
+	log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Client: Switching to state %s.", s_client_state_str(state));
+}
+
 client_t* client_make(uint16_t port, const char* web_service_address, uint64_t application_id, void* user_allocator_context)
 {
 	client_t* client = (client_t*)CUTE_ALLOC(sizeof(client_t), app->mem_ctx);
 	CUTE_CHECK_POINTER(client);
 	CUTE_MEMSET(client, 0, sizeof(client_t));
-	client->state = CLIENT_STATE_DISCONNECTED;
+	s_client_set_state(client, CLIENT_STATE_DISCONNECTED);
 	client->application_id = application_id;
 	client->mem_ctx = user_allocator_context;
 	return client;
@@ -1013,7 +1038,7 @@ int client_connect(client_t* client, const uint8_t* connect_token)
 		&client->connect_token
 	);
 	if (!connect_token_packet) {
-		client->state = CLIENT_STATE_INVALID_CONNECT_TOKEN;
+		s_client_set_state(client, CLIENT_STATE_INVALID_CONNECT_TOKEN);
 		goto cute_error;
 	}
 
@@ -1028,7 +1053,7 @@ int client_connect(client_t* client, const uint8_t* connect_token)
 	client->server_endpoint_index = 0;
 
 	client->last_packet_sent_time = CUTE_PROTOCOL_SEND_RATE;
-	client->state = CLIENT_STATE_SENDING_CONNECTION_REQUEST;
+	s_client_set_state(client, CLIENT_STATE_SENDING_CONNECTION_REQUEST);
 	client->goto_next_server_tentative_state = CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT;
 
 	return 0;
@@ -1042,6 +1067,23 @@ static CUTE_INLINE endpoint_t s_server_endpoint(client_t* client)
 	return client->connect_token.endpoints[client->server_endpoint_index];
 }
 
+static CUTE_INLINE const char* s_packet_str(uint8_t type)
+{
+	switch (type)
+	{
+	case PACKET_TYPE_CONNECT_TOKEN: return "CONNECT_TOKEN";
+	case PACKET_TYPE_CONNECTION_ACCEPTED: return "CONNECTION_ACCEPTED";
+	case PACKET_TYPE_CONNECTION_DENIED: return "CONNECTION_DENIED";
+	case PACKET_TYPE_KEEPALIVE: return "KEEPALIVE";
+	case PACKET_TYPE_DISCONNECT: return "DISCONNECT";
+	case PACKET_TYPE_CHALLENGE_REQUEST: return "CHALLENGE_REQUEST";
+	case PACKET_TYPE_CHALLENGE_RESPONSE: return "CHALLENGE_RESPONSE";
+	case PACKET_TYPE_PAYLOAD: return "PAYLOAD";
+	}
+
+	return NULL;
+}
+
 static void s_send(client_t* client, void* packet)
 {
 	int sz = packet_write(packet, client->buffer, client->application_id, client->sequence++, &client->connect_token.client_to_server_key);
@@ -1049,6 +1091,7 @@ static void s_send(client_t* client, void* packet)
 	if (sz >= 25) {
 		socket_send(&client->socket, s_server_endpoint(client), client->buffer, sz);
 		client->last_packet_sent_time = 0;
+		log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Client: Sent %s packet to server.", s_packet_str(*(uint8_t*)packet));
 	}
 }
 
@@ -1067,7 +1110,7 @@ static void s_disconnect(client_t* client, client_state_t state, int send_packet
 	packet_allocator_destroy(client->packet_allocator);
 	client->packet_allocator = NULL;
 
-	client->state = state;
+	s_client_set_state(client, state);
 }
 
 void client_disconnect(client_t* client)
@@ -1121,7 +1164,7 @@ static void s_receive_packets(client_t* client)
 				packet_challenge_t* packet = (packet_challenge_t*)packet_ptr;
 				client->challenge_nonce = packet->challenge_nonce;
 				CUTE_MEMCPY(client->challenge_data, packet->challenge_data, CUTE_CHALLENGE_DATA_SIZE);
-				client->state = CLIENT_STATE_SENDING_CHALLENGE_RESPONSE;
+				s_client_set_state(client, CLIENT_STATE_SENDING_CHALLENGE_RESPONSE);
 				client->goto_next_server_tentative_state = CLIENT_STATE_CHALLENGED_RESPONSE_TIMED_OUT;
 				client->last_packet_sent_time = CUTE_PROTOCOL_SEND_RATE;
 				client->last_packet_recieved_time = 0;
@@ -1138,7 +1181,7 @@ static void s_receive_packets(client_t* client)
 				client->client_handle = packet->client_handle;
 				client->max_clients = packet->max_clients;
 				client->connection_timeout = (float)packet->connection_timeout;
-				client->state = CLIENT_STATE_CONNECTED;
+				s_client_set_state(client, CLIENT_STATE_CONNECTED);
 				client->last_packet_recieved_time = 0;
 			} else if (type == PACKET_TYPE_CONNECTION_DENIED) {
 				client->goto_next_server = 1;
@@ -1210,18 +1253,21 @@ static int s_goto_next_server(client_t* client)
 {
 	if (client->server_endpoint_index + 1 == client->connect_token.endpoint_count) {
 		s_disconnect(client, client->goto_next_server_tentative_state, 0);
+		log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Client: Unable to connect to any server in the server list.");
 		return 0;
 	}
 
 	int index = ++client->server_endpoint_index;
 	
+	log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Client: Unable to connect to server index %d; now attempting index %d.", index - 1, index);
+
 	client->last_packet_recieved_time = 0;
 	client->last_packet_sent_time = CUTE_PROTOCOL_SEND_RATE;
 	client->goto_next_server = 0;
 	packet_queue_init(&client->packet_queue);
 
 	client->server_endpoint_index = index;
-	client->state = CLIENT_STATE_SENDING_CONNECTION_REQUEST;
+	s_client_set_state(client, CLIENT_STATE_SENDING_CONNECTION_REQUEST);
 
 	return 1;
 }
@@ -1399,6 +1445,8 @@ static void s_server_connect_client(server_t* server, endpoint_t endpoint, encry
 	CUTE_ASSERT(server->client_count < CUTE_PROTOCOL_SERVER_MAX_CLIENTS);
 	int index = server->client_count++;
 
+	log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Connecting client index %d.", index);
+
 	handle_t h = handle_table_alloc(&server->client_handle_table, index);
 	hashtable_insert(&server->client_id_table, &state->client_id, NULL);
 	hashtable_insert(&server->client_endpoint_table, &endpoint, &h);
@@ -1415,6 +1463,7 @@ static void s_server_connect_client(server_t* server, endpoint_t endpoint, encry
 	packet_queue_init(&server->client_packets[index]);
 
 	connect_token_cache_add(&server->token_cache, state->hmac_bytes);
+	encryption_map_remove(&server->encryption_map, endpoint);
 
 	packet_connection_accepted_t packet;
 	packet.packet_type = PACKET_TYPE_CONNECTION_ACCEPTED;
@@ -1423,6 +1472,51 @@ static void s_server_connect_client(server_t* server, endpoint_t endpoint, encry
 	packet.connection_timeout = server->connection_timeout;
 	if (packet_write(&packet, server->buffer, server->application_id, server->client_sequence[index]++, server->client_server_to_client_key + index) == 41) {
 		socket_send(&server->socket, server->client_endpoint[index], server->buffer, 41);
+		log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s packet to client index %d.", s_packet_str(packet.packet_type), index);
+	}
+}
+
+static void s_server_disconnect_sequence(server_t* server, uint32_t index)
+{
+	for (int i = 0; i < CUTE_DISCONNECT_REDUNDANT_PACKET_COUNT; ++i)
+	{
+		packet_disconnect_t packet;
+		packet.packet_type = PACKET_TYPE_DISCONNECT;
+		if (packet_write(&packet, server->buffer, server->application_id, server->client_sequence[index]++, server->client_server_to_client_key + index) == 25) {
+			socket_send(&server->socket, server->client_endpoint[index], server->buffer, 25);
+			log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client index %d.", s_packet_str(packet.packet_type), index);
+		}
+	}
+}
+
+static void s_server_disconnect_client(server_t* server, uint32_t index, int send_packets)
+{
+	log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Disconnecting client index %d.", index);
+
+	if (send_packets) {
+		s_server_disconnect_sequence(server, index);
+	}
+
+	// Free client resources.
+	server->client_is_confirmed[index] = 0;
+	handle_table_free(&server->client_handle_table, server->client_handle[index]);
+
+	// Move client in back to the empty slot.
+	int last_index = --server->client_count;
+	if (last_index) {
+		handle_t h = server->client_handle[index];
+		handle_table_update_index(&server->client_handle_table, h, index);
+
+		server->client_handle[index]                    = server->client_handle[last_index];
+		server->client_is_confirmed[index]              = server->client_is_confirmed[last_index];
+		server->client_last_packet_received_time[index] = server->client_last_packet_received_time[last_index];
+		server->client_last_packet_sent_time[index]     = server->client_last_packet_sent_time[last_index];
+		server->client_endpoint[index]                  = server->client_endpoint[last_index];
+		server->client_sequence[index]                  = server->client_sequence[last_index];
+		server->client_client_to_server_key[index]      = server->client_client_to_server_key[last_index];
+		server->client_server_to_client_key[index]      = server->client_server_to_client_key[last_index];
+		server->client_replay_buffer[index]             = server->client_replay_buffer[last_index];
+		server->client_packets[index]                   = server->client_packets[last_index];
 	}
 }
 
@@ -1505,6 +1599,7 @@ static void s_server_receive_packets(server_t* server)
 				packet.packet_type = PACKET_TYPE_CONNECTION_DENIED;
 				if (packet_write(&packet, server->buffer, server->application_id, state->sequence++, &token.server_to_client_key) == 25) {
 					socket_send(&server->socket, from, server->buffer, 25);
+					log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to potential client (server is full).", s_packet_str(packet.packet_type));
 				}
 			}
 		} else {
@@ -1549,6 +1644,8 @@ static void s_server_receive_packets(server_t* server)
 				break;
 
 			case PACKET_TYPE_DISCONNECT:
+				CUTE_ASSERT(index != ~0);
+				s_server_disconnect_client(server, index, 0);
 				break;
 
 			case PACKET_TYPE_CHALLENGE_RESPONSE:
@@ -1561,6 +1658,7 @@ static void s_server_receive_packets(server_t* server)
 					packet.packet_type = PACKET_TYPE_CONNECTION_DENIED;
 					if (packet_write(&packet, server->buffer, server->application_id, state->sequence++, &state->server_to_client_key) == 25) {
 						socket_send(&server->socket, from, server->buffer, 25);
+						log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to potential client (server is full).", s_packet_str(packet.packet_type));
 					}
 				} else {
 					s_server_connect_client(server, from, state);
@@ -1600,13 +1698,14 @@ static void s_server_send_packets(server_t* server, float dt)
 		if (state->last_packet_sent_time >= CUTE_PROTOCOL_SEND_RATE) {
 			state->last_packet_sent_time = 0;
 
-			packet_challenge_t challenge;
-			challenge.packet_type = PACKET_TYPE_CHALLENGE_REQUEST;
-			challenge.challenge_nonce = server->challenge_nonce++;
-			crypto_random_bytes(challenge.challenge_data, sizeof(challenge.challenge_data));
+			packet_challenge_t packet;
+			packet.packet_type = PACKET_TYPE_CHALLENGE_REQUEST;
+			packet.challenge_nonce = server->challenge_nonce++;
+			crypto_random_bytes(packet.challenge_data, sizeof(packet.challenge_data));
 
-			if (packet_write(&challenge, buffer, application_id, state->sequence++, &state->server_to_client_key) == 289) {
+			if (packet_write(&packet, buffer, application_id, state->sequence++, &state->server_to_client_key) == 289) {
 				socket_send(socket, endpoints[i], buffer, 289);
+				log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to potential client index %d.", s_packet_str(packet.packet_type), i);
 			}
 		}
 	}
@@ -1642,6 +1741,7 @@ static void s_server_send_packets(server_t* server, float dt)
 					packet.connection_timeout = connection_timeout;
 					if (packet_write(&packet, buffer, application_id, sequences[i]++, server_to_client_keys + i) == 41) {
 						socket_send(socket, endpoints[i], buffer, 41);
+						log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client index %d.", s_packet_str(packet.packet_type), i);
 					}
 				}
 
@@ -1649,21 +1749,10 @@ static void s_server_send_packets(server_t* server, float dt)
 				packet.packet_type = PACKET_TYPE_KEEPALIVE;
 				if (packet_write(&packet, buffer, application_id, sequences[i]++, server_to_client_keys + i) == 25) {
 					socket_send(socket, endpoints[i], buffer, 25);
+					log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client index %d.", s_packet_str(packet.packet_type), i);
 				}
 			}
 		//}
-	}
-}
-
-static void s_server_disconnect_sequence(server_t* server, uint32_t index)
-{
-	for (int i = 0; i < CUTE_DISCONNECT_REDUNDANT_PACKET_COUNT; ++i)
-	{
-		packet_disconnect_t packet;
-		packet.packet_type = PACKET_TYPE_DISCONNECT;
-		if (packet_write(&packet, server->buffer, server->application_id, server->client_sequence[index]++, server->client_server_to_client_key + index) == 25) {
-			socket_send(&server->socket, server->client_endpoint[index], server->buffer, 25);
-		}
 	}
 }
 
@@ -1671,29 +1760,7 @@ void server_disconnect_client(server_t* server, handle_t client_id)
 {
 	CUTE_ASSERT(server->client_count >= 1);
 	uint32_t index = handle_table_get_index(&server->client_handle_table, client_id);
-	s_server_disconnect_sequence(server, index);
-
-	// Free client resources.
-	server->client_is_confirmed[index] = 0;
-	handle_table_free(&server->client_handle_table, client_id);
-
-	// Move client in back to the empty slot.
-	int last_index = --server->client_count;
-	if (last_index) {
-		handle_t h = server->client_handle[index];
-		handle_table_update_index(&server->client_handle_table, h, index);
-
-		server->client_handle[index]                    = server->client_handle[last_index];
-		server->client_is_confirmed[index]              = server->client_is_confirmed[last_index];
-		server->client_last_packet_received_time[index] = server->client_last_packet_received_time[last_index];
-		server->client_last_packet_sent_time[index]     = server->client_last_packet_sent_time[last_index];
-		server->client_endpoint[index]                  = server->client_endpoint[last_index];
-		server->client_sequence[index]                  = server->client_sequence[last_index];
-		server->client_client_to_server_key[index]      = server->client_client_to_server_key[last_index];
-		server->client_server_to_client_key[index]      = server->client_server_to_client_key[last_index];
-		server->client_replay_buffer[index]             = server->client_replay_buffer[last_index];
-		server->client_packets[index]                   = server->client_packets[last_index];
-	}
+	s_server_disconnect_client(server, index, 1);
 }
 
 static void s_server_look_for_timeouts(server_t* server)
@@ -1718,6 +1785,45 @@ void server_update(server_t* server, float dt, uint64_t current_time)
 	s_server_receive_packets(server);
 	s_server_send_packets(server, dt);
 	s_server_look_for_timeouts(server);
+}
+
+int server_client_count(server_t* server)
+{
+	return server->client_count;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+static int s_log_level = CUTE_PROTOCOL_LOG_LEVEL_NONE;
+static log_fn* s_log_fn = NULL;
+static void* s_log_udata = NULL;
+
+void log_set_level(int level)
+{
+	s_log_level = level;
+}
+
+void log_set_function(log_fn* fn, void* udata)
+{
+	s_log_fn = fn;
+	s_log_udata = udata;
+}
+
+void log(int level, const char* fmt, ...)
+{
+	if (s_log_level > level) return;
+
+	va_list args;
+	va_start(args, fmt);
+
+	if (s_log_fn) {
+		s_log_fn(s_log_udata, level, fmt, args);
+	} else {
+		vfprintf(stderr, fmt, args);
+		fprintf(stderr, "\n\t");
+	}
+
+	va_end(args);
 }
 
 }

@@ -118,6 +118,21 @@ extern CUTE_API int CUTE_CALL server_running(server_t* server);
 extern CUTE_API void CUTE_CALL server_update(server_t* server, float dt, uint64_t current_time);
 extern CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_id);
 
+extern CUTE_API int CUTE_CALL server_client_count(server_t* server);
+
+// -------------------------------------------------------------------------------------------------
+
+#define CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL 0
+#define CUTE_PROTOCOL_LOG_LEVEL_WARNING 1
+#define CUTE_PROTOCOL_LOG_LEVEL_ERROR 2
+#define CUTE_PROTOCOL_LOG_LEVEL_NONE 3
+
+typedef void (log_fn)(void* udata, int level, const char* fmt, ...);
+
+extern CUTE_API void CUTE_CALL log_set_level(int level);
+extern CUTE_API void CUTE_CALL log_set_function(log_fn* fn, void* udata);
+extern CUTE_API void CUTE_CALL log(int level, const char* fmt, ...);
+
 }
 }
 
