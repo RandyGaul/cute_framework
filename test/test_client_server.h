@@ -297,3 +297,51 @@ int test_protocol_server_challenge_response_timeout()
 
 	return 0;
 }
+
+CUTE_TEST_CASE(test_protocol_client_expired_token, "Client gets an expired token before connecting.");
+int test_protocol_client_expired_token()
+{
+	using namespace protocol;
+	
+	crypto_key_t client_to_server_key = crypto_generate_key();
+	crypto_key_t server_to_client_key = crypto_generate_key();
+	crypto_key_t secret_key = crypto_generate_key();
+
+	const char* endpoints[] = {
+		"[::1]:5000",
+	};
+
+	uint64_t application_id = 100;
+	uint64_t current_timestamp = 0;
+	uint64_t expiration_timestamp = (uint64_t)time(NULL) - 1;
+	uint32_t handshake_timeout = 5;
+	uint64_t client_id = 17;
+
+	uint8_t user_data[CUTE_CONNECT_TOKEN_USER_DATA_SIZE];
+	crypto_random_bytes(user_data, sizeof(user_data));
+
+	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
+	CUTE_TEST_CHECK(generate_connect_token(
+		application_id,
+		current_timestamp,
+		&client_to_server_key,
+		&server_to_client_key,
+		expiration_timestamp,
+		handshake_timeout,
+		sizeof(endpoints) / sizeof(endpoints[0]),
+		endpoints,
+		client_id,
+		user_data,
+		&secret_key,
+		connect_token
+	));
+
+	client_t* client = client_make(5001, NULL, application_id, NULL);
+	CUTE_TEST_CHECK_POINTER(client);
+	CUTE_TEST_ASSERT(client_connect(client, connect_token) < 0);
+
+	client_disconnect(client);
+	client_destroy(client);
+
+	return 0;
+}
