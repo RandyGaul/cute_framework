@@ -92,4 +92,29 @@ int circular_buffer_pull(circular_buffer_t* buffer, void* data, int size)
 	return 0;
 }
 
+int circular_buffer_grow(circular_buffer_t* buffer, int new_size_in_bytes)
+{
+	uint8_t* old_data = buffer->data;
+	uint8_t* new_data = (uint8_t*)CUTE_ALLOC(new_size_in_bytes, buffer->user_allocator_context);
+	if (!new_data) return -1;
+
+	int index0 = buffer->index0;
+	int index1 = buffer->index1;
+
+	if (index0 < index1) {
+		CUTE_MEMCPY(new_data + index0, old_data + index0, index1 - index0);
+	} else {
+		CUTE_MEMCPY(new_data, old_data, index1);
+		int offset_from_end = buffer->capacity - index0;
+		CUTE_MEMCPY(new_data + new_size_in_bytes - offset_from_end, old_data + index0, offset_from_end);
+	}
+
+	CUTE_FREE(old_data, buffer->user_allocator_context);
+	buffer->data = new_data;
+	buffer->size_left += new_size_in_bytes - buffer->capacity;
+	buffer->capacity = new_size_in_bytes;
+
+	return 0;
+}
+
 }

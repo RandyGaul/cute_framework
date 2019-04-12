@@ -137,7 +137,6 @@ struct server_event_t
 		struct
 		{
 			handle_t client_handle;
-			endpoint_t endpoint;
 		} new_connection;
 
 		struct

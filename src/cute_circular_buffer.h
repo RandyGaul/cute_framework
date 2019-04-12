@@ -45,6 +45,8 @@ extern CUTE_API void CUTE_CALL circular_buffer_reset(circular_buffer_t* buffer);
 extern CUTE_API int CUTE_CALL circular_buffer_push(circular_buffer_t* buffer, const void* data, int size);
 extern CUTE_API int CUTE_CALL circular_buffer_pull(circular_buffer_t* buffer, void* data, int size);
 
+extern CUTE_API int CUTE_CALL circular_buffer_grow(circular_buffer_t* buffer, int new_size_in_bytes);
+
 }
 
 #endif // CUTE_CIRCULAR_BUFFER_H

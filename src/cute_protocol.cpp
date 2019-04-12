@@ -1433,11 +1433,37 @@ cute_error:
 	return -1;
 }
 
+static CUTE_INLINE int s_server_event_pull(server_t* server, server_event_t* event)
+{
+	return circular_buffer_pull(&server->event_queue, event, sizeof(server_event_t));
+}
+
+static CUTE_INLINE int s_server_event_push(server_t* server, server_event_t* event)
+{
+	if (circular_buffer_push(&server->event_queue, event, sizeof(server_event_t)) < 0) {
+		log(CUTE_PROTOCOL_LOG_LEVEL_WARNING, "Protocol Server: Event queue is full; growing (doubling in size) to %d bytes", server->event_queue.capacity * 2);
+		if (circular_buffer_grow(&server->event_queue, server->event_queue.capacity * 2) < 0) {
+			return -1;
+		}
+		return circular_buffer_push(&server->event_queue, event, sizeof(server_event_t));
+	} else {
+		return 0;
+	}
+}
+
 void server_stop(server_t* server)
 {
 	server->running = 0;
 
-	// TODO: Loop over packet queue and drop all the things.
+	// Free any lingering payload packets.
+	while (1)
+	{
+		server_event_t event;
+		if (s_server_event_pull(server, &event) < 0) break;
+		if (event.type == SERVER_EVENT_PAYLOAD_PACKET) {
+			server_free_packet(server, event.u.payload_packet.data);
+		}
+	}
 
 	encryption_map_cleanup(&server->encryption_map);
 	connect_token_cache_cleanup(&server->token_cache);
@@ -1460,12 +1486,19 @@ static CUTE_INLINE uint32_t s_client_index(server_t* server, handle_t h)
 
 static void s_server_connect_client(server_t* server, endpoint_t endpoint, encryption_state_t* state)
 {
+
 	CUTE_ASSERT(server->client_count < CUTE_PROTOCOL_SERVER_MAX_CLIENTS);
 	int index = server->client_count++;
 
 	log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Connecting client " PRIu64 ".", state->client_id);
 
 	handle_t h = handle_table_alloc(&server->client_handle_table, index);
+
+	server_event_t event;
+	event.type = SERVER_EVENT_NEW_CONNECTION;
+	event.u.new_connection.client_handle = h;
+	if (s_server_event_push(server, &event) < 0) return;
+
 	hashtable_insert(&server->client_id_table, &state->client_id, NULL);
 	hashtable_insert(&server->client_endpoint_table, &endpoint, &h);
 
@@ -1511,6 +1544,11 @@ static void s_server_disconnect_client(server_t* server, uint32_t index, int sen
 {
 	log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Disconnecting client " PRIu64 ".", server->client_id[index]);
 
+	server_event_t event;
+	event.type = SERVER_EVENT_DISCONNECTED;
+	event.u.disconnected.client_handle = server->client_handle[index];
+	if (s_server_event_push(server, &event) < 0) return;
+
 	if (send_packets) {
 		s_server_disconnect_sequence(server, index);
 	}
@@ -1536,16 +1574,6 @@ static void s_server_disconnect_client(server_t* server, uint32_t index, int sen
 		server->client_server_to_client_key[index]      = server->client_server_to_client_key[last_index];
 		server->client_replay_buffer[index]             = server->client_replay_buffer[last_index];
 	}
-}
-
-static CUTE_INLINE int s_server_event_push(server_t* server, server_event_t* event)
-{
-	return circular_buffer_push(&server->event_queue, event, sizeof(server_event_t));
-}
-
-static CUTE_INLINE int s_server_event_pull(server_t* server, server_event_t* event)
-{
-	return circular_buffer_pull(&server->event_queue, event, sizeof(server_event_t));
 }
 
 static void s_server_receive_packets(server_t* server)
@@ -1862,7 +1890,7 @@ uint64_t server_get_client_id_from_handle(server_t* server, handle_t client_hand
 
 // -------------------------------------------------------------------------------------------------
 
-static int s_log_level = CUTE_PROTOCOL_LOG_LEVEL_NONE;
+static int s_log_level = CUTE_PROTOCOL_LOG_LEVEL_ERROR;
 static log_fn* s_log_fn = NULL;
 static void* s_log_udata = NULL;
 
