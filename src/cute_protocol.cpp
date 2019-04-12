@@ -1591,6 +1591,11 @@ static void s_server_receive_packets(server_t* server)
 			} else {
 				state = encryption_map_find(&server->encryption_map, from);
 				if (!state) continue;
+				int connect_token_expired = state->expiration_timestamp <= server->current_time;
+				if (connect_token_expired) {
+					encryption_map_remove(&server->encryption_map, from);
+					continue;
+				}
 				client_to_server_key = &state->client_to_server_key;
 			}
 
