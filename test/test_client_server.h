@@ -559,3 +559,75 @@ int test_protocol_client_bad_keys()
 
 	return 0;
 }
+
+CUTE_TEST_CASE(test_protocol_server_not_in_list_but_gets_request, "Client tries to connect to server, but token does not contain server endpoint.");
+int test_protocol_server_not_in_list_but_gets_request()
+{
+	using namespace protocol;
+	
+	crypto_key_t client_to_server_key = crypto_generate_key();
+	crypto_key_t server_to_client_key = crypto_generate_key();
+	crypto_key_t secret_key = crypto_generate_key();
+
+	const char* endpoints[] = {
+		"[::1]:5001",
+	};
+
+	uint64_t application_id = 100;
+	uint64_t current_timestamp = 0;
+	uint64_t expiration_timestamp = 1;
+	uint32_t handshake_timeout = 5;
+	uint64_t client_id = 17;
+
+	uint8_t user_data[CUTE_CONNECT_TOKEN_USER_DATA_SIZE];
+	crypto_random_bytes(user_data, sizeof(user_data));
+
+	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
+	CUTE_TEST_CHECK(generate_connect_token(
+		application_id,
+		current_timestamp,
+		&client_to_server_key,
+		&server_to_client_key,
+		expiration_timestamp,
+		handshake_timeout,
+		sizeof(endpoints) / sizeof(endpoints[0]),
+		endpoints,
+		client_id,
+		user_data,
+		&secret_key,
+		connect_token
+	));
+
+	server_t* server = server_make(application_id, &secret_key, NULL);
+	CUTE_TEST_CHECK_POINTER(server);
+
+	client_t* client = client_make(5001, NULL, application_id, NULL);
+	CUTE_TEST_CHECK_POINTER(client);
+
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+	CUTE_TEST_CHECK(client_connect(client, connect_token));
+
+	// This will make packets arrive to correct server address, but connect token has the wrong address.
+	CUTE_TEST_CHECK(endpoint_init(client->connect_token.endpoints, "[::1]:5000"));
+
+	int iters = 0;
+	while (iters++ < 100)
+	{
+		client_update(client, 1, 0);
+		server_update(server, 1, 0);
+
+		if (client_get_state(client) <= 0) break;
+		if (client_get_state(client) == CLIENT_STATE_CONNECTED) break;
+	}
+	CUTE_TEST_ASSERT(server_running(server));
+	CUTE_TEST_ASSERT(iters < 100);
+	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT);
+
+	client_disconnect(client);
+	client_destroy(client);
+
+	server_stop(server);
+	server_destroy(server);
+
+	return 0;
+}
