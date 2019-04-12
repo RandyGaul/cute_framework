@@ -90,7 +90,7 @@ extern CUTE_API void CUTE_CALL client_destroy(client_t* client);
 
 extern CUTE_API int CUTE_CALL client_connect(client_t* client, const uint8_t* connect_token);
 extern CUTE_API void CUTE_CALL client_disconnect(client_t* client);
-extern CUTE_API void CUTE_CALL client_update(client_t* client, float dt);
+extern CUTE_API void CUTE_CALL client_update(client_t* client, float dt, uint64_t current_time);
 
 extern CUTE_API int CUTE_CALL client_get_packet(client_t* client, void* data, int* size, uint64_t* sequence);
 extern CUTE_API void CUTE_CALL client_free_packet(client_t* client, void* packet);
@@ -111,7 +111,7 @@ extern CUTE_API int CUTE_CALL server_start(server_t* server, const char* address
 extern CUTE_API void CUTE_CALL server_stop(server_t* server);
 extern CUTE_API int CUTE_CALL server_running(server_t* server);
 
-extern CUTE_API void CUTE_CALL server_update(server_t* server, float dt);
+extern CUTE_API void CUTE_CALL server_update(server_t* server, float dt, uint64_t current_time);
 extern CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_id);
 
 }

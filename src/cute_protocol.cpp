@@ -33,8 +33,6 @@
 #include <internal/cute_protocol_internal.h>
 #include <internal/cute_net_internal.h>
 
-#include <time.h>
-
 #define CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE (2 * CUTE_MB)
 #define CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE (2 * CUTE_MB)
 
@@ -64,6 +62,7 @@ int generate_connect_token(
 )
 {
 	CUTE_ASSERT(address_count >= 1 && address_count <= 32);
+	CUTE_ASSERT(creation_timestamp < expiration_timestamp);
 
 	uint8_t** p = &token_ptr_out;
 
@@ -1020,7 +1019,6 @@ client_t* client_make(uint16_t port, const char* web_service_address, uint64_t a
 	CUTE_MEMSET(client, 0, sizeof(client_t));
 	client->state = CLIENT_STATE_DISCONNECTED;
 	client->application_id = application_id;
-	client->current_time = (uint64_t)time(NULL);
 	client->mem_ctx = user_allocator_context;
 	return client;
 
@@ -1260,13 +1258,13 @@ static int s_goto_next_server(client_t* client)
 	return 1;
 }
 
-void client_update(client_t* client, float dt)
+void client_update(client_t* client, float dt, uint64_t current_time)
 {
 	if (client->state <= 0) {
 		return;
 	}
 
-	client->current_time = (uint64_t)time(NULL);
+	client->current_time = current_time;
 	client->last_packet_recieved_time += dt;
 	client->last_packet_sent_time += dt;
 
@@ -1767,9 +1765,9 @@ static void s_server_look_for_timeouts(server_t* server)
 	}
 }
 
-void server_update(server_t* server, float dt)
+void server_update(server_t* server, float dt, uint64_t current_time)
 {
-	server->current_time = (uint64_t)time(NULL);
+	server->current_time = current_time;
 
 	s_server_receive_packets(server);
 	s_server_send_packets(server, dt);
