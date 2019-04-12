@@ -1334,6 +1334,7 @@ struct server_t
 	socket_t socket;
 	protocol::packet_allocator_t* packet_allocator;
 	crypto_key_t secret_key;
+	uint32_t connection_timeout;
 
 	uint64_t challenge_nonce;
 	encryption_map_t encryption_map;
@@ -1384,7 +1385,7 @@ void server_destroy(server_t* server)
 	CUTE_FREE(server, server->mem_ctx);
 }
 
-int server_start(server_t* server, const char* address)
+int server_start(server_t* server, const char* address, uint32_t connection_timeout)
 {
 	int cleanup_map = 0;
 	int cleanup_cache = 0;
@@ -1408,6 +1409,7 @@ int server_start(server_t* server, const char* address)
 	server->running = 1;
 	server->challenge_nonce = 0;
 	server->client_count = 0;
+	server->connection_timeout = connection_timeout;
 
 	return 0;
 
@@ -1442,7 +1444,24 @@ static CUTE_INLINE uint32_t s_client_index(server_t* server, handle_t h)
 
 static void s_server_connect_client(server_t* server, endpoint_t endpoint, encryption_state_t* state)
 {
-	// WORKING HERE
+	CUTE_ASSERT(server->client_count < CUTE_PROTOCOL_SERVER_MAX_CLIENTS);
+	int index = server->client_count++;
+
+	handle_t h = handle_table_alloc(&server->client_handle_table, index);
+	hashtable_insert(&server->client_id_table, &state->client_id, NULL);
+
+	server->client_handle[index] = h;
+	server->client_is_confirmed[index] = 0;
+	server->client_last_packet_recieved_time[index] = 0;
+	server->client_last_packet_sent_time[index] = CUTE_PROTOCOL_SEND_RATE;
+	server->client_endpoint[index] = endpoint;
+	server->client_sequence[index] = state->sequence;
+	server->client_client_to_server_key[index] = state->client_to_server_key;
+	server->client_server_to_client_key[index] = state->server_to_client_key;
+	replay_buffer_init(&server->client_replay_buffer[index]);
+	packet_queue_init(&server->client_packets[index]);
+
+	connect_token_cache_add(&server->token_cache, state->hmac_bytes);
 }
 
 static void s_server_receive_packets(server_t* server)
@@ -1501,11 +1520,8 @@ static void s_server_receive_packets(server_t* server)
 			int token_already_in_use = !!connect_token_cache_find(&server->token_cache, token.hmac_bytes);
 			if (token_already_in_use) continue;
 
-			if (server->client_count == CUTE_PROTOCOL_SERVER_MAX_CLIENTS) {
-				// TODO: send packet connection denied
-			}
-
-			if (!encryption_map_find(&server->encryption_map, from)) {
+			encryption_state_t* state = encryption_map_find(&server->encryption_map, from);
+			if (!state) {
 				encryption_state_t encryption_state;
 				encryption_state.sequence = 0;
 				encryption_state.expiration_timestamp = token.expiration_timestamp;
@@ -1515,7 +1531,18 @@ static void s_server_receive_packets(server_t* server)
 				encryption_state.client_to_server_key = token.client_to_server_key;
 				encryption_state.server_to_client_key = token.server_to_client_key;
 				encryption_state.client_id = token.client_id;
+				CUTE_MEMCPY(encryption_state.hmac_bytes, token.hmac_bytes, CUTE_CRYPTO_HMAC_BYTES);
 				encryption_map_insert(&server->encryption_map, from, &encryption_state);
+				state = encryption_map_find(&server->encryption_map, from);
+				CUTE_ASSERT(state);
+			}
+
+			if (server->client_count == CUTE_PROTOCOL_SERVER_MAX_CLIENTS) {
+				packet_connection_denied_t packet;
+				packet.packet_type = PACKET_TYPE_CONNECTION_DENIED;
+				if (packet_write(&packet, server->buffer, server->application_id, state->sequence++, &token.server_to_client_key) == 25) {
+					socket_send(&server->socket, from, server->buffer, 25);
+				}
 			}
 		} else {
 			handle_t* handle_ptr = (handle_t*)hashtable_find(&server->client_endpoint_table, &from);
@@ -1557,11 +1584,14 @@ static void s_server_receive_packets(server_t* server)
 				int client_id_already_connected = !!hashtable_find(&server->client_id_table, &state->client_id);
 				if (client_id_already_connected) continue;
 				if (server->client_count == CUTE_PROTOCOL_SERVER_MAX_CLIENTS) {
-					// TODO: send packet connection denied
-					break;
+					packet_connection_denied_t packet;
+					packet.packet_type = PACKET_TYPE_CONNECTION_DENIED;
+					if (packet_write(&packet, server->buffer, server->application_id, state->sequence++, &state->server_to_client_key) == 25) {
+						socket_send(&server->socket, from, server->buffer, 25);
+					}
+				} else {
+					s_server_connect_client(server, from, state);
 				}
-
-				s_server_connect_client(server, from, state);
 			}	break;
 
 			case PACKET_TYPE_PAYLOAD:
@@ -1587,6 +1617,8 @@ static void s_server_send_packets(server_t* server, float dt)
 	encryption_state_t* states = encryption_map_get_states(&server->encryption_map);
 	endpoint_t* endpoints = encryption_map_get_endpoints(&server->encryption_map);
 	uint8_t* buffer = server->buffer;
+	uint64_t application_id = server->application_id;
+	socket_t* socket = &server->socket;
 	for (int i = 0; i < state_count; ++i)
 	{
 		encryption_state_t* state = states + i;
@@ -1600,8 +1632,8 @@ static void s_server_send_packets(server_t* server, float dt)
 			challenge.challenge_nonce = server->challenge_nonce++;
 			crypto_random_bytes(challenge.challenge_data, sizeof(challenge.challenge_data));
 
-			if (packet_write(&challenge, buffer, server->application_id, state->sequence++, &state->server_to_client_key) == 289) {
-				socket_send(&server->socket, endpoints[i], buffer, 289);
+			if (packet_write(&challenge, buffer, application_id, state->sequence++, &state->server_to_client_key) == 289) {
+				socket_send(socket, endpoints[i], buffer, 289);
 			}
 		}
 	}
@@ -1618,21 +1650,47 @@ static void s_server_send_packets(server_t* server, float dt)
 
 	// Send keepalive packets.
 	//int* is_loopback = server->client_is_loopback;
+	int* confirmed = server->client_is_confirmed;
+	uint64_t* sequences = server->client_sequence;
+	crypto_key_t* server_to_client_keys = server->client_server_to_client_key;
+	handle_t* handles = server->client_handle;
+	uint32_t connection_timeout = server->connection_timeout;
 	for (int i = 0; i < client_count; ++i)
 	{
 		//if (!is_loopback[i]) {
 			if (last_sent_times[i] >= CUTE_PROTOCOL_SEND_RATE) {
 				last_sent_times[i] = 0;
-				//s_server_send_packet_no_payload(server, i, protocol::PACKET_TYPE_KEEPALIVE);
+
+				if (confirmed[i]) {
+					packet_connection_accepted_t packet;
+					packet.packet_type = PACKET_TYPE_CONNECTION_ACCEPTED;
+					packet.client_handle = handles[i];
+					packet.max_clients = CUTE_PROTOCOL_SERVER_MAX_CLIENTS;
+					packet.connection_timeout = connection_timeout;
+					if (packet_write(&packet, buffer, application_id, sequences[i]++, server_to_client_keys + i) == 25) {
+						socket_send(socket, endpoints[i], buffer, 25);
+					}
+				}
+
+				packet_keepalive_t packet;
+				packet.packet_type = PACKET_TYPE_KEEPALIVE;
+				if (packet_write(&packet, buffer, application_id, sequences[i]++, server_to_client_keys + i) == 25) {
+					socket_send(socket, endpoints[i], buffer, 25);
+				}
 			}
 		//}
 	}
 }
 
-static void s_server_disconnect_sequence(server_t* server, uint32_t client_index)
+static void s_server_disconnect_sequence(server_t* server, uint32_t index)
 {
 	for (int i = 0; i < CUTE_DISCONNECT_REDUNDANT_PACKET_COUNT; ++i)
 	{
+		packet_disconnect_t packet;
+		packet.packet_type = PACKET_TYPE_DISCONNECT;
+		if (packet_write(&packet, server->buffer, server->application_id, server->client_sequence[index]++, server->client_server_to_client_key + index) == 25) {
+			socket_send(&server->socket, server->client_endpoint[index], server->buffer, 25);
+		}
 	}
 }
 

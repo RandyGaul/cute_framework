@@ -249,6 +249,7 @@ struct encryption_state_t
 	crypto_key_t client_to_server_key;
 	crypto_key_t server_to_client_key;
 	uint64_t client_id;
+	uint8_t hmac_bytes[CUTE_CRYPTO_HMAC_BYTES];
 };
 
 struct encryption_map_t
