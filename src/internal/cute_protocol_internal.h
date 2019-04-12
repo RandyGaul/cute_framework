@@ -25,6 +25,8 @@
 #include <cute_protocol.h>
 #include <cute_doubly_list.h>
 
+#include <internal/cute_net_internal.h>
+
 namespace cute
 {
 namespace protocol
@@ -269,6 +271,72 @@ extern CUTE_API endpoint_t* CUTE_CALL encryption_map_get_endpoints(encryption_ma
 extern CUTE_API encryption_state_t* CUTE_CALL encryption_map_get_states(encryption_map_t* map);
 
 extern CUTE_API void CUTE_CALL encryption_map_look_for_timeouts_or_expirations(encryption_map_t* map, float dt, uint64_t time);
+
+// -------------------------------------------------------------------------------------------------
+
+struct client_t
+{
+	client_state_t state;
+	int loopback;
+	float last_packet_recieved_time;
+	float last_packet_sent_time;
+	uint64_t application_id;
+	uint64_t current_time;
+	uint64_t client_handle;
+	int max_clients;
+	float connection_timeout;
+	int has_sent_disconnect_packets;
+	connect_token_t connect_token;
+	uint64_t challenge_nonce;
+	uint8_t challenge_data[CUTE_CHALLENGE_DATA_SIZE];
+	int goto_next_server;
+	client_state_t goto_next_server_tentative_state;
+	int server_endpoint_index;
+	endpoint_t web_service_endpoint;
+	socket_t socket;
+	uint64_t sequence;
+	packet_allocator_t* packet_allocator;
+	replay_buffer_t replay_buffer;
+	packet_queue_t packet_queue;
+	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
+	uint8_t connect_token_packet[CUTE_CONNECT_TOKEN_PACKET_SIZE];
+	void* mem_ctx;
+};
+
+// -------------------------------------------------------------------------------------------------
+
+struct server_t
+{
+	int running;
+	uint64_t application_id;
+	uint64_t current_time;
+	socket_t socket;
+	protocol::packet_allocator_t* packet_allocator;
+	crypto_key_t secret_key;
+	uint32_t connection_timeout;
+
+	uint64_t challenge_nonce;
+	encryption_map_t encryption_map;
+	connect_token_cache_t token_cache;
+
+	int client_count;
+	handle_table_t client_handle_table;
+	hashtable_t client_endpoint_table;
+	hashtable_t client_id_table;
+	handle_t client_handle[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	int client_is_confirmed[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	float client_last_packet_recieved_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	float client_last_packet_sent_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	endpoint_t client_endpoint[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	uint64_t client_sequence[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	crypto_key_t client_client_to_server_key[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	crypto_key_t client_server_to_client_key[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	protocol::replay_buffer_t client_replay_buffer[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	protocol::packet_queue_t client_packets[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+
+	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
+	void* mem_ctx;
+};
 
 }
 }

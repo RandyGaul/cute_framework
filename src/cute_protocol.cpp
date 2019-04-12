@@ -983,35 +983,6 @@ void encryption_map_look_for_timeouts_or_expirations(encryption_map_t* map, floa
 
 // -------------------------------------------------------------------------------------------------
 
-struct client_t
-{
-	client_state_t state;
-	int loopback;
-	float last_packet_recieved_time;
-	float last_packet_sent_time;
-	uint64_t application_id;
-	uint64_t current_time;
-	uint64_t client_handle;
-	int max_clients;
-	float connection_timeout;
-	int has_sent_disconnect_packets;
-	connect_token_t connect_token;
-	uint64_t challenge_nonce;
-	uint8_t challenge_data[CUTE_CHALLENGE_DATA_SIZE];
-	int goto_next_server;
-	client_state_t goto_next_server_tentative_state;
-	int server_endpoint_index;
-	endpoint_t web_service_endpoint;
-	socket_t socket;
-	uint64_t sequence;
-	packet_allocator_t* packet_allocator;
-	replay_buffer_t replay_buffer;
-	packet_queue_t packet_queue;
-	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
-	uint8_t connect_token_packet[CUTE_CONNECT_TOKEN_PACKET_SIZE];
-	void* mem_ctx;
-};
-
 client_t* client_make(uint16_t port, const char* web_service_address, uint64_t application_id, void* user_allocator_context)
 {
 	client_t* client = (client_t*)CUTE_ALLOC(sizeof(client_t), app->mem_ctx);
@@ -1137,6 +1108,7 @@ static void s_receive_packets(client_t* client)
 		}
 
 		void* packet_ptr = packet_open(buffer, sz, &client->connect_token.server_to_client_key, client->application_id, client->packet_allocator, &client->replay_buffer);
+		if (!packet_ptr) continue;
 
 		// Handle packet based on client's current state.
 		int free_packet = 1;
@@ -1336,39 +1308,6 @@ uint16_t client_get_port(client_t* client)
 }
 
 // -------------------------------------------------------------------------------------------------
-
-struct server_t
-{
-	int running;
-	uint64_t application_id;
-	uint64_t current_time;
-	socket_t socket;
-	protocol::packet_allocator_t* packet_allocator;
-	crypto_key_t secret_key;
-	uint32_t connection_timeout;
-
-	uint64_t challenge_nonce;
-	encryption_map_t encryption_map;
-	connect_token_cache_t token_cache;
-
-	int client_count;
-	handle_table_t client_handle_table;
-	hashtable_t client_endpoint_table;
-	hashtable_t client_id_table;
-	handle_t client_handle[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	int client_is_confirmed[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	float client_last_packet_recieved_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	float client_last_packet_sent_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	endpoint_t client_endpoint[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	uint64_t client_sequence[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	crypto_key_t client_client_to_server_key[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	crypto_key_t client_server_to_client_key[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	protocol::replay_buffer_t client_replay_buffer[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	protocol::packet_queue_t client_packets[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-
-	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
-	void* mem_ctx;
-};
 
 server_t* server_make(uint64_t application_id, const crypto_key_t* secret_key, void* mem_ctx)
 {
@@ -1600,6 +1539,8 @@ static void s_server_receive_packets(server_t* server)
 			}
 
 			void* packet_ptr = packet_open(buffer, sz, client_to_server_key, server->application_id, server->packet_allocator, replay_buffer);
+			if (!packet_ptr) continue;
+
 			int free_packet = 1;
 
 			switch (type)

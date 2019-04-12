@@ -98,6 +98,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_protocol_client_expired_token),
 		CUTE_TEST_CASE_ENTRY(test_protocol_client_connect_expired_token),
 		CUTE_TEST_CASE_ENTRY(test_protocol_server_connect_expired_token),
+		CUTE_TEST_CASE_ENTRY(test_protocol_client_bad_keys),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;
