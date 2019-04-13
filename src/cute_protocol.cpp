@@ -744,7 +744,7 @@ void hashtable_remove(hashtable_t* table, const void* key)
 		void* dst_item = s_get_item(table, index);
 		void* src_item = s_get_item(table, last_index);
 		CUTE_MEMCPY(dst_item, src_item, (size_t)table->item_size);
-        table->items_slot_index[index] = table->items_slot_index[last_index];
+		table->items_slot_index[index] = table->items_slot_index[last_index];
 		table->slots[table->items_slot_index[last_index]].item_index = index;
 	}
 	--table->count;
@@ -1559,11 +1559,12 @@ static void s_server_disconnect_client(server_t* server, uint32_t index, int sen
 	// Free client resources.
 	server->client_is_confirmed[index] = 0;
 	handle_table_free(&server->client_handle_table, server->client_handle[index]);
+	hashtable_remove(&server->client_id_table, server->client_id + index);
 
 	// Move client in back to the empty slot.
 	int last_index = --server->client_count;
-	if (last_index) {
-		handle_t h = server->client_handle[index];
+	if (last_index != index) {
+		handle_t h = server->client_handle[last_index];
 		handle_table_update_index(&server->client_handle_table, h, index);
 
 		server->client_id[index]                        = server->client_id[last_index];

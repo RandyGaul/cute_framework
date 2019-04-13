@@ -122,7 +122,6 @@ void handle_table_update_index(handle_table_t* table, handle_t handle, uint32_t 
 	handle_entry_t* handles = s_handles(table);
 	uint32_t table_index = s_table_index(handle);
 	handles[table_index].data.user_index = index;
-	table->size++;
 }
 
 void handle_table_free(handle_table_t* table, handle_t handle)

@@ -1094,7 +1094,7 @@ int test_protocol_client_server_payloads()
 	return 0;
 }
 
-CUTE_TEST_CASE(test_protocol_multiple_connections_and_payloads, "A server hosts multiple simultaneous clients with payloads, and random disconnects/connects.");
+CUTE_TEST_CASE(test_protocol_multiple_connections_and_payloads, "A server hosts multiple simultaneous clients with payloads and random disconnects/connects.");
 int test_protocol_multiple_connections_and_payloads()
 {
 	using namespace protocol;
@@ -1255,5 +1255,116 @@ int test_protocol_multiple_connections_and_payloads()
 	return 0;
 }
 
-// Multiple servers
-// Client reconnects to server
+CUTE_TEST_CASE(test_protocol_client_reconnect, "Client connects to server, disconnects, and reconnects.");
+int test_protocol_client_reconnect()
+{
+	using namespace protocol;
+	
+	crypto_key_t client_to_server_key = crypto_generate_key();
+	crypto_key_t server_to_client_key = crypto_generate_key();
+	crypto_key_t secret_key = crypto_generate_key();
+
+	const char* endpoints[] = {
+		"[::1]:5000",
+	};
+
+	uint64_t application_id = 100;
+	uint64_t current_timestamp = 0;
+	uint64_t expiration_timestamp = 1;
+	uint32_t handshake_timeout = 5;
+	uint64_t client_id = 17;
+
+	uint8_t user_data[CUTE_CONNECT_TOKEN_USER_DATA_SIZE];
+	crypto_random_bytes(user_data, sizeof(user_data));
+
+	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
+	CUTE_TEST_CHECK(generate_connect_token(
+		application_id,
+		current_timestamp,
+		&client_to_server_key,
+		&server_to_client_key,
+		expiration_timestamp,
+		handshake_timeout,
+		sizeof(endpoints) / sizeof(endpoints[0]),
+		endpoints,
+		client_id,
+		user_data,
+		&secret_key,
+		connect_token
+	));
+
+	server_t* server = server_make(application_id, &secret_key, NULL);
+	CUTE_TEST_CHECK_POINTER(server);
+
+	client_t* client = client_make(5001, NULL, application_id, NULL);
+	CUTE_TEST_CHECK_POINTER(client);
+
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+	CUTE_TEST_CHECK(client_connect(client, connect_token));
+
+	// Connect client.
+	int iters = 0;
+	while (iters++ < 100)
+	{
+		client_update(client, 0, 0);
+		server_update(server, 0, 0);
+
+		if (client_get_state(client) <= 0) break;
+		if (client_get_state(client) == CLIENT_STATE_CONNECTED) break;
+	}
+	CUTE_TEST_ASSERT(server_running(server));
+	CUTE_TEST_ASSERT(iters < 100);
+	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_CONNECTED);
+
+	// Disonnect client.
+	client_disconnect(client);
+	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_DISCONNECTED);
+
+	iters = 0;
+	while (iters++ < 100)
+	{
+		server_update(server, 0, 0);
+		if (server_client_count(server) == 0) break;
+	}
+	CUTE_TEST_ASSERT(iters < 100);
+
+	// Generate new connect token.
+	CUTE_TEST_CHECK(generate_connect_token(
+		application_id,
+		current_timestamp,
+		&client_to_server_key,
+		&server_to_client_key,
+		expiration_timestamp,
+		handshake_timeout,
+		sizeof(endpoints) / sizeof(endpoints[0]),
+		endpoints,
+		client_id,
+		user_data,
+		&secret_key,
+		connect_token
+	));
+
+	// Reconnect client.
+	CUTE_TEST_CHECK(client_connect(client, connect_token));
+	iters = 0;
+	while (iters++ < 100)
+	{
+		client_update(client, 0, 0);
+		server_update(server, 0, 0);
+
+		if (client_get_state(client) <= 0) break;
+		if (client_get_state(client) == CLIENT_STATE_CONNECTED) break;
+	}
+	CUTE_TEST_ASSERT(server_running(server));
+	CUTE_TEST_ASSERT(iters < 100);
+	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_CONNECTED);
+
+	client_disconnect(client);
+	client_destroy(client);
+
+	server_update(server, 0, 0);
+	server_stop(server);
+	server_destroy(server);
+
+	return 0;
+}
