@@ -1845,17 +1845,29 @@ void server_free_packet(server_t* server, void* packet)
 void server_disconnect_client(server_t* server, handle_t client_handle)
 {
 	CUTE_ASSERT(server->client_count >= 1);
-	// TODO: Make a waya to assert client_id is valid.
 	uint32_t index = handle_table_get_index(&server->client_handle_table, client_handle);
 	s_server_disconnect_client(server, index, 1);
 }
 
 void server_broadcast_to_all_clients(server_t* server, const void* packet, int size)
 {
+	int count = server->client_count;
+	handle_t* handles = server->client_handle;
+	for (int i = 0; i < count; ++i)
+	{
+		server_send_to_client(server, packet, size, handles[i]);
+	}
 }
 
 void server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t client_handle)
 {
+	int count = server->client_count;
+	handle_t* handles = server->client_handle;
+	for (int i = 0; i < count; ++i)
+	{
+		if (handles[i] == client_handle) continue;
+		server_send_to_client(server, packet, size, handles[i]);
+	}
 }
 
 int server_send_to_client(server_t* server, const void* packet, int size, handle_t client_handle)

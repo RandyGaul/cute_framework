@@ -114,6 +114,8 @@ uint32_t handle_table_get_index(handle_table_t* table, handle_t handle)
 {
 	handle_entry_t* handles = s_handles(table);
 	uint32_t table_index = s_table_index(handle);
+	uint64_t generation = handle & 0xFFFFFFFF;
+	CUTE_ASSERT(handles[table_index].data.generation == generation);
 	return handles[table_index].data.user_index;
 }
 
@@ -121,6 +123,8 @@ void handle_table_update_index(handle_table_t* table, handle_t handle, uint32_t 
 {
 	handle_entry_t* handles = s_handles(table);
 	uint32_t table_index = s_table_index(handle);
+	uint64_t generation = handle & 0xFFFFFFFF;
+	CUTE_ASSERT(handles[table_index].data.generation == generation);
 	handles[table_index].data.user_index = index;
 }
 
@@ -133,6 +137,14 @@ void handle_table_free(handle_table_t* table, handle_t handle)
 	handles[table_index].data.generation++;
 	table->freelist = table_index;
 	table->size--;
+}
+
+int handle_is_valid(handle_table_t* table, handle_t handle)
+{
+	handle_entry_t* handles = s_handles(table);
+	uint32_t table_index = s_table_index(handle);
+	uint64_t generation = handle & 0xFFFFFFFF;
+	return handles[table_index].data.generation == generation;
 }
 
 }

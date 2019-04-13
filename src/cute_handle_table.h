@@ -46,6 +46,7 @@ extern CUTE_API handle_t CUTE_CALL handle_table_alloc(handle_table_t* table, uin
 extern CUTE_API uint32_t CUTE_CALL handle_table_get_index(handle_table_t* table, handle_t handle);
 extern CUTE_API void CUTE_CALL handle_table_update_index(handle_table_t* table, handle_t handle, uint32_t index);
 extern CUTE_API void CUTE_CALL handle_table_free(handle_table_t* table, handle_t handle);
+extern CUTE_API int CUTE_CALL handle_is_valid(handle_table_t* table, handle_t handle);
 
 }
 
