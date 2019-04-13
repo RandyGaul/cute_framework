@@ -1076,7 +1076,7 @@ int test_protocol_client_server_payloads()
 		if (client_get_state(client) == CLIENT_STATE_CONNECTED) {
 			CUTE_TEST_ASSERT(client_handle != CUTE_INVALID_HANDLE);
 			CUTE_TEST_CHECK(client_send_data(client, &to_server_data, sizeof(uint64_t)));
-			server_send_to_client(server, &to_client_data, sizeof(uint64_t), client_handle);
+			CUTE_TEST_CHECK(server_send_to_client(server, &to_client_data, sizeof(uint64_t), client_handle));
 		}
 
 		if (payloads_received_by_server >= 10 && payloads_received_by_client >= 10) break;
@@ -1093,3 +1093,167 @@ int test_protocol_client_server_payloads()
 
 	return 0;
 }
+
+CUTE_TEST_CASE(test_protocol_multiple_connections_and_payloads, "A server hosts multiple simultaneous clients with payloads, and random disconnects/connects.");
+int test_protocol_multiple_connections_and_payloads()
+{
+	using namespace protocol;
+
+	crypto_key_t secret_key = crypto_generate_key();
+
+	const char* endpoints[] = {
+		"[::1]:5000",
+	};
+
+	const int max_clients = 5;
+	uint64_t application_id = 100;
+
+	server_t* server = server_make(application_id, &secret_key, NULL);
+	CUTE_TEST_CHECK_POINTER(server);
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 2));
+
+	uint64_t current_timestamp = 0;
+	uint64_t expiration_timestamp = 1;
+	uint32_t handshake_timeout = 2;
+	uint8_t user_data[CUTE_CONNECT_TOKEN_USER_DATA_SIZE];
+	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
+	crypto_random_bytes(user_data, sizeof(user_data));
+
+	client_t** clients = (client_t**)CUTE_ALLOC(sizeof(client_t*) * max_clients, NULL);
+
+	for (int i = 0; i < max_clients; ++i)
+	{
+		crypto_key_t client_to_server_key = crypto_generate_key();
+		crypto_key_t server_to_client_key = crypto_generate_key();
+		uint64_t client_id = (uint64_t)i;
+
+		CUTE_TEST_CHECK(generate_connect_token(
+			application_id,
+			current_timestamp,
+			&client_to_server_key,
+			&server_to_client_key,
+			expiration_timestamp,
+			handshake_timeout,
+			sizeof(endpoints) / sizeof(endpoints[0]),
+			endpoints,
+			client_id,
+			user_data,
+			&secret_key,
+			connect_token
+		));
+		client_t* client = client_make(5000 + i, NULL, application_id, NULL);
+		CUTE_TEST_CHECK_POINTER(client);
+		CUTE_TEST_CHECK(client_connect(client, connect_token));
+		clients[i] = client;
+	}
+
+	uint64_t to_server_data = 3;
+	uint64_t to_client_data = 4;
+	int client_handle_index = 0;
+	cute::handle_t* client_handles = (cute::handle_t*)CUTE_ALLOC(sizeof(cute::handle_t) * max_clients, NULL);
+	for (int i = 0; i < max_clients; ++i) client_handles[i] = CUTE_INVALID_HANDLE;
+
+	int iters = 0;
+	float dt = 1.0f / 20.0f;
+	int payloads_received_by_server = 0;
+	int* payloads_received_by_client = (int*)CUTE_ALLOC(sizeof(int) * max_clients, NULL);
+	CUTE_MEMSET(payloads_received_by_client, 0, sizeof(int) * max_clients);
+	int client_count = 2;
+	while (iters++ < 100)
+	{
+		for (int i = 0; i < client_count; ++i)
+			client_update(clients[i], dt, 0);
+
+		server_update(server, dt, 0);
+
+		for (int i = 0; i < client_count; ++i)
+			if (client_get_state(clients[i]) <= 0) break;
+
+		if (iters == 4) {
+			client_count += 3;
+		}
+
+		if (iters == 8) {
+			client_count -= 2;
+		}
+
+		server_event_t event;
+		while (!server_poll_event(server, &event)) {
+			if (event.type == SERVER_EVENT_NEW_CONNECTION) {
+				CUTE_TEST_ASSERT(client_handle_index < client_count);
+				client_handles[client_handle_index++] = event.u.new_connection.client_handle;
+			} else if (event.type == SERVER_EVENT_PAYLOAD_PACKET) {
+				int is_valid_handle = 0;
+				int client_index = ~0;
+				for (int i = 0; i < client_handle_index; ++i)
+				{
+					if (client_handles[i] == event.u.payload_packet.client_handle)
+					{
+						is_valid_handle = 1;
+						client_index = i;
+						break;
+					}
+				}
+				CUTE_TEST_ASSERT(is_valid_handle);
+				CUTE_TEST_ASSERT(client_index != ~0);
+
+				CUTE_TEST_ASSERT(sizeof(uint64_t) == event.u.payload_packet.size);
+				uint64_t* data = (uint64_t*)event.u.payload_packet.data;
+				CUTE_TEST_ASSERT(*data == to_server_data);
+				server_free_packet(server, data);
+				++payloads_received_by_server;
+			}
+		}
+
+		for (int i = 0; i < client_count; ++i)
+		{
+			void* packet = NULL;
+			uint64_t sequence = ~0ULL;
+			int size;
+			if (!client_get_packet(clients[i], &packet, &size, &sequence)) {
+				CUTE_TEST_ASSERT(sizeof(uint64_t) == size);
+				uint64_t* data = (uint64_t*)packet;
+				CUTE_TEST_ASSERT(*data == to_client_data);
+				client_free_packet(clients[i], packet);
+				payloads_received_by_client[i]++;
+			}
+		}
+
+		for (int i = 0; i < client_count; ++i)
+		{
+			if (client_get_state(clients[i]) == CLIENT_STATE_CONNECTED) {
+				CUTE_TEST_CHECK(client_send_data(clients[i], &to_server_data, sizeof(uint64_t)));
+				CUTE_TEST_CHECK(server_send_to_client(server, &to_client_data, sizeof(uint64_t), client_handles[i]));
+			}
+		}
+	}
+	for (int i = 0; i < client_count; ++i)
+	{
+		CUTE_TEST_ASSERT(payloads_received_by_client[i] >= 1);
+	}
+	CUTE_TEST_ASSERT(server_running(server));
+	for (int i = 0; i < max_clients; ++i)
+	{
+		client_update(clients[i], 0, 0);
+		if (i >= client_count) {
+			CUTE_TEST_ASSERT(client_get_state(clients[i]) == CLIENT_STATE_DISCONNECTED);
+		} else {
+			CUTE_TEST_ASSERT(client_get_state(clients[i]) == CLIENT_STATE_CONNECTED);
+		}
+		client_disconnect(clients[i]);
+		client_destroy(clients[i]);
+	}
+
+	server_update(server, dt, 0);
+	server_stop(server);
+	server_destroy(server);
+
+	CUTE_FREE(clients, NULL);
+	CUTE_FREE(client_handles, NULL);
+	CUTE_FREE(payloads_received_by_client, NULL);
+
+	return 0;
+}
+
+// Multiple servers
+// Client reconnects to server

@@ -1079,6 +1079,11 @@ static void s_send(client_t* client, void* packet)
 
 static void s_disconnect(client_t* client, client_state_t state, int send_packets)
 {
+	void* packet = NULL;
+	while (!client_get_packet(client, &packet, NULL, NULL)) {
+		client_free_packet(client, packet);
+	}
+
 	if (send_packets) {
 		packet_disconnect_t packet;
 		packet.packet_type = PACKET_TYPE_DISCONNECT;
@@ -1156,6 +1161,7 @@ static void s_receive_packets(client_t* client)
 				client->goto_next_server = 1;
 				client->goto_next_server_tentative_state = CLIENT_STATE_CONNECTION_DENIED;
 				should_break = 1;
+				log(CUTE_PROTOCOL_LOG_LEVEL_WARNING, "Protocol Client: Received CONNECTION_DENIED packet, attempting to connect to next server.");
 			}
 			break;
 
@@ -1171,6 +1177,7 @@ static void s_receive_packets(client_t* client)
 				client->goto_next_server = 1;
 				client->goto_next_server_tentative_state = CLIENT_STATE_CONNECTION_DENIED;
 				should_break = 1;
+				log(CUTE_PROTOCOL_LOG_LEVEL_WARNING, "Protocol Client: Received CONNECTION_DENIED packet, attempting to connect to next server.");
 			}
 			break;
 
@@ -1191,6 +1198,7 @@ static void s_receive_packets(client_t* client)
 			} else if (type == PACKET_TYPE_KEEPALIVE) {
 				client->last_packet_recieved_time = 0;
 			} else if (type == PACKET_TYPE_DISCONNECT) {
+				log(CUTE_PROTOCOL_LOG_LEVEL_WARNING, "Protocol Client: Received DISCONNECT packet from server.");
 				s_disconnect(client, CLIENT_STATE_DISCONNECTED, 0);
 				should_break = 1;
 			}
@@ -1273,6 +1281,10 @@ void client_update(client_t* client, float dt, uint64_t current_time)
 	s_receive_packets(client);
 	s_send_packets(client);
 
+	if (client->state <= 0) {
+		return;
+	}
+
 	int timeout = client->last_packet_recieved_time >= client->connect_token.handshake_timeout;
 	int is_handshake = client->state >= CLIENT_STATE_SENDING_CONNECTION_REQUEST && client->state <= CLIENT_STATE_SENDING_CHALLENGE_RESPONSE;
 	if (is_handshake) {
@@ -1305,8 +1317,8 @@ int client_get_packet(client_t* client, void** data, int* size, uint64_t* sequen
 		return -1;
 	}
 
-	*sequence = payload.sequence;
-	*size = payload.size;
+	if (sequence) *sequence = payload.sequence;
+	if (size) *size = payload.size;
 	*data = payload.data;
 
 	return 0;
@@ -1845,10 +1857,10 @@ void server_broadcast_to_all_but_one_client(server_t* server, const void* packet
 {
 }
 
-void server_send_to_client(server_t* server, const void* packet, int size, handle_t client_handle)
+int server_send_to_client(server_t* server, const void* packet, int size, handle_t client_handle)
 {
-	if (size < 1) return;
-	if (size > CUTE_PROTOCOL_PACKET_PAYLOAD_MAX) return;
+	if (size < 1) return -1;
+	if (size > CUTE_PROTOCOL_PACKET_PAYLOAD_MAX) return -1;
 
 	CUTE_ASSERT(server->client_count >= 1);
 	// TODO: Make a waya to assert client_id is valid.
@@ -1863,6 +1875,9 @@ void server_send_to_client(server_t* server, const void* packet, int size, handl
 		if (packet_write(&packet, server->buffer, server->application_id, server->client_sequence[index]++, server->client_server_to_client_key + index) == 41) {
 			socket_send(&server->socket, server->client_endpoint[index], server->buffer, 41);
 			log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[index]);
+			server->client_last_packet_sent_time[index] = 0;
+		} else {
+			return -1;
 		}
 	}
 
@@ -1874,9 +1889,12 @@ void server_send_to_client(server_t* server, const void* packet, int size, handl
 	if (sz > 25) {
 		socket_send(&server->socket, server->client_endpoint[index], server->buffer, sz);
 		log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(payload.packet_type), server->client_id[index]);
+		server->client_last_packet_sent_time[index] = 0;
+	} else {
+		return -1;
 	}
 
-	server->client_last_packet_sent_time[index] = 0;
+	return 0;
 }
 
 static void s_server_look_for_timeouts(server_t* server)
@@ -1885,8 +1903,9 @@ static void s_server_look_for_timeouts(server_t* server)
 	float* last_received_times = server->client_last_packet_received_time;
 	for (int i = 0; i < client_count;)
 	{
-		if (last_received_times[i] >= server->connection_timeout) {
+		if (last_received_times[i] >= (float)server->connection_timeout) {
 			--client_count;
+			log(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Client %" PRIu64 " has timed out.", server->client_id[i]);
 			server_disconnect_client(server, server->client_handle[i]);
 		} else {
 			 ++i;

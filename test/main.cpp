@@ -104,6 +104,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_protocol_keepalive),
 		CUTE_TEST_CASE_ENTRY(test_protocol_client_initiated_disconnect),
 		CUTE_TEST_CASE_ENTRY(test_protocol_client_server_payloads),
+		CUTE_TEST_CASE_ENTRY(test_protocol_multiple_connections_and_payloads),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

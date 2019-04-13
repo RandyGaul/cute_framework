@@ -158,7 +158,7 @@ extern CUTE_API void CUTE_CALL server_free_packet(server_t* server, void* packet
 extern CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_handle);
 extern CUTE_API void CUTE_CALL server_broadcast_to_all_clients(server_t* server, const void* packet, int size);
 extern CUTE_API void CUTE_CALL server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t client_handle);
-extern CUTE_API void CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, handle_t client_handle);
+extern CUTE_API int CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, handle_t client_handle);
 
 // -------------------------------------------------------------------------------------------------
 
