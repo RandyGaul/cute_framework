@@ -1560,6 +1560,7 @@ static void s_server_disconnect_client(server_t* server, uint32_t index, int sen
 	server->client_is_confirmed[index] = 0;
 	handle_table_free(&server->client_handle_table, server->client_handle[index]);
 	hashtable_remove(&server->client_id_table, server->client_id + index);
+	hashtable_remove(&server->client_endpoint_table, server->client_endpoint + index);
 
 	// Move client in back to the empty slot.
 	int last_index = --server->client_count;
