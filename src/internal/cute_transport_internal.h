@@ -53,6 +53,21 @@ extern CUTE_API void CUTE_CALL sequence_buffer_generate_ack_bits(sequence_buffer
 
 // -------------------------------------------------------------------------------------------------
 
+struct transport_config_t
+{
+
+};
+
+struct transport_t;
+
+void transport_config_default(transport_config_t* config);
+transport_t* transport_create(const transport_config_t* config);
+void transport_destroy(transport_t* transport);
+
+void transport_send(transport_t* transport, void* data, int size);
+
+// Need acks for each sequence. Also need acks for each fragment of a sequence.
+
 }
 
 #endif // CUTE_TRANSPORT_INTERNAL_H
