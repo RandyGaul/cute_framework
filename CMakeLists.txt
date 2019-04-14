@@ -71,6 +71,8 @@ set(CUTE_SRCS
 	src/cute_version.cpp
 	src/cute_memory_pool.cpp
 	src/cute_protocol.cpp
+	
+	src/internal/cute_transport_internal.cpp
 
 	libraries/glad/glad.c
 )
@@ -110,6 +112,7 @@ set(CUTE_HDRS
 	src/internal/cute_net_internal.h
 	src/internal/cute_serialize_internal.h
 	src/internal/cute_protocol_internal.h
+	src/internal/cute_transport_internal.h
 
 	libraries/glad/glad.h
 )
@@ -137,6 +140,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_doubly_list.h
 		test/test_connect_token_cache.h
 		test/test_client_server.h
+		test/test_sequence_buffer.h
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})

@@ -40,6 +40,7 @@
 #include <test_doubly_list.h>
 #include <test_connect_token_cache.h>
 #include <test_client_server.h>
+#include <test_sequence_buffer.h>
 
 int main(int argc, const char** argv)
 {
@@ -106,6 +107,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_protocol_client_server_payloads),
 		CUTE_TEST_CASE_ENTRY(test_protocol_multiple_connections_and_payloads),
 		CUTE_TEST_CASE_ENTRY(test_protocol_client_reconnect),
+		CUTE_TEST_CASE_ENTRY(test_sequence_buffer_basic),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;
