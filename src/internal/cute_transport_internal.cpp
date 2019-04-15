@@ -21,10 +21,16 @@
 
 #include <cute_alloc.h>
 #include <cute_c_runtime.h>
+#include <cute_buffer.h>
 
 #include <internal/cute_defines_internal.h>
 #include <internal/cute_transport_internal.h>
 #include <internal/cute_serialize_internal.h>
+
+#include <math.h>
+#include <float.h>
+
+#define CUTE_TRANSPORT_HEADER_SIZE (2 + 2 + 4)
 
 namespace cute
 {
@@ -51,15 +57,25 @@ cute_error:
 	return -1;
 }
 
-void sequence_buffer_cleanup(sequence_buffer_t* buffer)
+void sequence_buffer_cleanup(sequence_buffer_t* buffer, sequence_buffer_cleanup_entry_fn* cleanup_fn)
 {
+	for (int i = 0; i < buffer->capacity; ++i)
+	{
+		sequence_buffer_remove(buffer, i, cleanup_fn);
+	}
+
 	CUTE_FREE(buffer->entry_sequence, buffer->mem_ctx);
 	CUTE_FREE(buffer->entry_data, buffer->mem_ctx);
 	CUTE_MEMSET(buffer, 0, sizeof(sequence_buffer_t));
 }
 
-void sequence_buffer_reset(sequence_buffer_t* buffer)
+void sequence_buffer_reset(sequence_buffer_t* buffer, sequence_buffer_cleanup_entry_fn* cleanup_fn)
 {
+	for (int i = 0; i < buffer->capacity; ++i)
+	{
+		sequence_buffer_remove(buffer, i, cleanup_fn);
+	}
+
 	buffer->sequence = 0;
 	CUTE_MEMSET(buffer->entry_sequence, ~0, sizeof(uint32_t) * buffer->capacity);
 }
@@ -102,12 +118,17 @@ void sequence_buffer_advance(sequence_buffer_t* buffer, uint16_t sequence)
 	}
 }
 
+static CUTE_INLINE int s_sequence_is_stale(sequence_buffer_t* buffer, uint16_t sequence)
+{
+	return s_sequence_less_than(sequence, buffer->sequence - ((uint16_t)buffer->capacity));
+}
+
 void* sequence_buffer_insert(sequence_buffer_t* buffer, uint16_t sequence, sequence_buffer_cleanup_entry_fn* cleanup_fn)
 {
 	if (s_sequence_greater_than(sequence + 1, buffer->sequence)) {
 		s_sequence_buffer_remove_entries(buffer, buffer->sequence, sequence, cleanup_fn);
 		buffer->sequence = sequence + 1;
-	} else if (s_sequence_less_than(sequence, buffer->sequence - ((uint16_t)buffer->capacity))) {
+	} else if (s_sequence_is_stale(buffer, sequence)) {
 		return NULL;
 	}
 	int index = sequence % buffer->capacity;
@@ -148,8 +169,6 @@ void* sequence_buffer_at_index(sequence_buffer_t* sequence_buffer, int index)
 
 void sequence_buffer_generate_ack_bits(sequence_buffer_t* sequence_buffer, uint16_t* ack, uint32_t* ack_bits)
 {
-	CUTE_ASSERT(ack);
-	CUTE_ASSERT(ack_bits);
 	*ack = sequence_buffer->sequence - 1;
 	*ack_bits = 0;
 	uint32_t mask = 1;
@@ -161,6 +180,326 @@ void sequence_buffer_generate_ack_bits(sequence_buffer_t* sequence_buffer, uint1
 		}
 		mask <<= 1;
 	}
+}
+
+// -------------------------------------------------------------------------------------------------
+
+struct transport_t
+{
+	double time;
+	int max_packet_size;
+	int initial_ack_capacity;
+
+	int (*send_packet_fn)(uint16_t sequence, void* packet, int size, void* udata);
+	int (*open_packet_fn)(uint16_t sequence, void* packet, int size, void* udata);
+
+	void* udata;
+	void* mem_ctx;
+
+	uint16_t sequence;
+	buffer_t acks;
+	sequence_buffer_t sent_packets;
+	sequence_buffer_t received_packets;
+
+	float rtt;
+	float packet_loss;
+	float outgoing_bandwidth_kbps;
+	float incoming_bandwidth_kbps;
+
+	uint64_t counters[TRANSPORT_COUNTERS_MAX];
+};
+
+struct sent_packet_t
+{
+	double timestamp;
+	int acked;
+	int size;
+};
+
+struct received_packet_t
+{
+	double timestamp;
+	int size;
+};
+
+transport_t* transport_make(const transport_config_t* config)
+{
+	int sent_packets_init = 0;
+	int received_packets_init = 0;
+	void* mem_ctx = config->user_allocator_context;
+
+	if (!config->send_packet_fn || !config->open_packet_fn) return NULL;
+	if (config->max_packet_size > CUTE_TRANSPORT_PACKET_PAYLOAD_MAX) return NULL;
+
+	transport_t* transport = (transport_t*)CUTE_ALLOC(sizeof(transport_t), mem_ctx);
+	if (!transport) return NULL;
+
+	transport->time = 0;
+	transport->max_packet_size = config->max_packet_size;
+	transport->initial_ack_capacity = config->initial_ack_capacity;
+	transport->send_packet_fn = config->send_packet_fn;
+	transport->open_packet_fn = config->open_packet_fn;
+	transport->udata = config->udata;
+	transport->mem_ctx = config->user_allocator_context;
+
+	transport->sequence = 0;
+	transport->acks = buffer_make(sizeof(uint16_t));
+	CUTE_CHECK(sequence_buffer_init(&transport->sent_packets, config->sent_packets_sequence_buffer_size, sizeof(sent_packet_t), mem_ctx));
+	sent_packets_init = 1;
+	CUTE_CHECK(sequence_buffer_init(&transport->received_packets, config->received_packets_sequence_buffer_size, sizeof(received_packet_t), mem_ctx));
+	received_packets_init = 1;
+
+	transport->rtt = 0;
+	transport->packet_loss = 0;
+	transport->outgoing_bandwidth_kbps = 0;
+	transport->incoming_bandwidth_kbps = 0;
+
+	for (int i = 0; i < TRANSPORT_COUNTERS_MAX; ++i) {
+		transport->counters[i] = 0;
+	}
+
+	return transport;
+
+cute_error:
+	if (transport)
+	{
+		if (sent_packets_init) sequence_buffer_cleanup(&transport->sent_packets);
+		if (received_packets_init) sequence_buffer_cleanup(&transport->received_packets);
+	}
+	CUTE_FREE(transport, config->user_allocator_context);
+	return NULL;
+}
+
+void transport_destroy(transport_t* transport)
+{
+	buffer_free(&transport->acks);
+	sequence_buffer_cleanup(&transport->sent_packets);
+	sequence_buffer_cleanup(&transport->received_packets);
+	CUTE_FREE(transport, transport->mem_ctx);
+}
+
+void transport_reset(transport_t* transport)
+{
+	transport->sequence = 0;
+
+	buffer_clear(&transport->acks);
+	sequence_buffer_reset(&transport->sent_packets);
+	sequence_buffer_reset(&transport->received_packets);
+
+	transport->rtt = 0;
+	transport->packet_loss = 0;
+	transport->outgoing_bandwidth_kbps = 0;
+	transport->incoming_bandwidth_kbps = 0;
+
+	for (int i = 0; i < TRANSPORT_COUNTERS_MAX; ++i) {
+		transport->counters[i] = 0;
+	}
+}
+
+static int s_write_transport_header(uint8_t* buffer, uint16_t sequence, uint16_t ack, uint32_t ack_bits)
+{
+	uint8_t* buffer_start = buffer;
+	write_uint16(&buffer, sequence);
+	write_uint16(&buffer, ack);
+	write_uint32(&buffer, ack_bits);
+	return (int)(buffer - buffer_start);
+}
+
+int transport_send_packet(transport_t* transport, void* data, int size, uint16_t* sequence_out)
+{
+	if (size > transport->max_packet_size) {
+		transport->counters[TRANSPORT_COUNTERS_PACKETS_TOO_LARGE_TO_SEND]++;
+		return -1;
+	}
+
+	uint16_t sequence = transport->sequence++;
+	uint16_t ack;
+	uint32_t ack_bits;
+
+	sequence_buffer_generate_ack_bits(&transport->received_packets, &ack, &ack_bits);
+	sent_packet_t* packet = (sent_packet_t*)sequence_buffer_insert(&transport->sent_packets, sequence);
+
+	packet->timestamp = transport->time;
+	packet->acked = 0;
+	packet->size = size + CUTE_TRANSPORT_HEADER_SIZE;
+
+	uint8_t buffer[CUTE_TRANSPORT_PACKET_PAYLOAD_MAX];
+	int header_size = s_write_transport_header(buffer, sequence, ack, ack_bits);
+	CUTE_ASSERT(header_size == CUTE_TRANSPORT_HEADER_SIZE);
+	CUTE_ASSERT(size + header_size < CUTE_TRANSPORT_PACKET_PAYLOAD_MAX);
+	CUTE_MEMCPY(buffer + header_size, data, size);
+	if (transport->send_packet_fn(sequence, buffer, size + header_size, transport->udata) < 0) {
+		transport->counters[TRANSPORT_COUNTERS_PACKETS_INVALID]++;
+		return -1;
+	}
+
+	transport->counters[TRANSPORT_COUNTERS_PACKETS_SENT]++;
+
+	if (sequence_out) *sequence_out = sequence;
+	return 0;
+}
+
+static int s_read_transport_header(uint8_t* buffer, int size, uint16_t* sequence, uint16_t* ack, uint32_t* ack_bits)
+{
+	if (size < CUTE_TRANSPORT_HEADER_SIZE) return -1;
+	uint8_t* buffer_start = buffer;
+	*sequence = read_uint16(&buffer);
+	*ack = read_uint16(&buffer);
+	*ack_bits = read_uint32(&buffer);
+	return (int)(buffer - buffer_start);
+}
+
+int transport_receive_packet(transport_t* transport, void* data, int size)
+{
+	if (size > transport->max_packet_size) {
+		transport->counters[TRANSPORT_COUNTERS_PACKETS_TOO_LARGE_TO_RECEIVE]++;
+		return -1;
+	}
+
+	transport->counters[TRANSPORT_COUNTERS_PACKETS_RECEIVED]++;
+
+	uint16_t sequence;
+	uint16_t ack;
+	uint32_t ack_bits;
+	uint8_t* buffer = (uint8_t*)data;
+
+	int header_size = s_read_transport_header(buffer, size, &sequence, &ack, &ack_bits);
+	if (header_size < 0) {
+		transport->counters[TRANSPORT_COUNTERS_PACKETS_INVALID]++;
+		return -1;
+	}
+	CUTE_ASSERT(header_size == CUTE_TRANSPORT_HEADER_SIZE);
+
+	if (s_sequence_is_stale(&transport->received_packets, sequence)) {
+		transport->counters[TRANSPORT_COUNTERS_PACKETS_STALE]++;
+		return -1;
+	}
+
+	if (transport->open_packet_fn(sequence, buffer + header_size, size - header_size, transport->udata) < 0) {
+		return -1;
+	}
+
+	received_packet_t* packet = (received_packet_t*)sequence_buffer_insert(&transport->received_packets, sequence);
+	packet->timestamp = transport->time;
+	packet->size = size;
+	
+	for (int i = 0; i < 32; ++i)
+	{
+		int bit_was_set = ack_bits & 1;
+		ack_bits >>= 1;
+
+		if (bit_was_set) {
+			uint16_t ack_sequence = ack - ((uint16_t)i);
+			sent_packet_t* sent_packet = (sent_packet_t*)sequence_buffer_find(&transport->sent_packets, ack_sequence);
+
+			if (sent_packet && !sent_packet->acked) {
+				buffer_check_grow(&transport->acks, transport->initial_ack_capacity);
+				buffer_push(&transport->acks, &ack_sequence);
+				transport->counters[TRANSPORT_COUNTERS_PACKETS_ACKED]++;
+				sent_packet->acked = 1;
+
+				float rtt = (float)(transport->time - sent_packet->timestamp);
+				transport->rtt += (rtt - transport->rtt) * 0.001f;
+				if (transport->rtt < 0) transport->rtt = 0;
+			}
+		}
+
+	}
+
+	return 0;
+}
+
+uint16_t* transport_get_acks(transport_t* transport)
+{
+	return (uint16_t*)transport->acks.data;
+}
+
+int transport_get_acks_count(transport_t* transport)
+{
+	return transport->acks.count;
+}
+
+void transport_clear_acks(transport_t* transport)
+{
+	buffer_clear(&transport->acks);
+}
+
+static CUTE_INLINE float s_calc_packet_loss(float packet_loss, sequence_buffer_t* sent_packets)
+{
+	int packet_count = 0;
+	int packet_drop_count = 0;
+
+	for (int i = 0; i < sent_packets->capacity; ++i)
+	{
+		sent_packet_t* packet = (sent_packet_t*)sequence_buffer_at_index(sent_packets, i);
+		if (packet) {
+			packet_count++;
+			if (!packet->acked) packet_drop_count++;
+		}
+	}
+
+	float loss = (float)packet_drop_count / (float)packet_count;
+	packet_loss += (loss - packet_loss) * 0.1f;
+	if (packet_loss < 0) packet_loss = 0;
+	return packet_loss;
+}
+
+static CUTE_INLINE float s_calc_bandwidth(float bandwidth, sequence_buffer_t* sent_packets)
+{
+	int bytes_sent = 0;
+	double start_timestamp = DBL_MAX;
+	double end_timestamp = 0;
+
+	for (int i = 0; i < sent_packets->capacity; ++i)
+	{
+		sent_packet_t* packet = (sent_packet_t*)sequence_buffer_at_index(sent_packets, i);
+		if (packet) {
+			bytes_sent += packet->size;
+			if (packet->timestamp < start_timestamp) start_timestamp = packet->timestamp;
+			if (packet->timestamp > end_timestamp) end_timestamp = packet->timestamp;
+		}
+	}
+
+	if (start_timestamp != DBL_MAX) {
+		float sent_bandwidth = (float)(((double)bytes_sent / 1024.0) / (end_timestamp - start_timestamp));
+		bandwidth += (sent_bandwidth - bandwidth) * 0.1f;
+		if (bandwidth < 0) bandwidth = 0;
+	}
+
+	return bandwidth;
+}
+
+void transport_update(transport_t* transport, float dt)
+{
+	transport->time += dt;
+	transport->packet_loss = s_calc_packet_loss(transport->packet_loss, &transport->sent_packets);
+	transport->incoming_bandwidth_kbps = s_calc_bandwidth(transport->incoming_bandwidth_kbps, &transport->sent_packets);
+	transport->outgoing_bandwidth_kbps = s_calc_bandwidth(transport->outgoing_bandwidth_kbps, &transport->received_packets);
+}
+
+float transport_rtt(transport_t* transport)
+{
+	return transport->rtt;
+}
+
+float transport_packet_loss(transport_t* transport)
+{
+	return transport->packet_loss;
+}
+
+float transport_bandwidth_outgoing_kbps(transport_t* transport)
+{
+	return transport->outgoing_bandwidth_kbps;
+}
+
+float transport_bandwidth_incoming_kbps(transport_t* transport)
+{
+	return transport->incoming_bandwidth_kbps;
+}
+
+uint64_t transport_get_counter(transport_t* transport, transport_counter_t counter)
+{
+	return transport->counters[counter];
 }
 
 // -------------------------------------------------------------------------------------------------

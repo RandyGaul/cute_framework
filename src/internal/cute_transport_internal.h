@@ -24,6 +24,8 @@
 
 #include <cute_defines.h>
 
+#define CUTE_TRANSPORT_PACKET_PAYLOAD_MAX (1200)
+
 namespace cute
 {
 
@@ -37,11 +39,11 @@ struct sequence_buffer_t
 	void* mem_ctx;
 };
 
-extern CUTE_API int CUTE_CALL sequence_buffer_init(sequence_buffer_t* buffer, int capacity, int stride, void* mem_ctx);
-extern CUTE_API void CUTE_CALL sequence_buffer_cleanup(sequence_buffer_t* buffer);
-extern CUTE_API void CUTE_CALL sequence_buffer_reset(sequence_buffer_t* buffer);
-
 typedef void (sequence_buffer_cleanup_entry_fn)(void* data, void* mem_ctx);
+
+extern CUTE_API int CUTE_CALL sequence_buffer_init(sequence_buffer_t* buffer, int capacity, int stride, void* mem_ctx);
+extern CUTE_API void CUTE_CALL sequence_buffer_cleanup(sequence_buffer_t* buffer, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
+extern CUTE_API void CUTE_CALL sequence_buffer_reset(sequence_buffer_t* buffer, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
 
 extern CUTE_API void CUTE_CALL sequence_buffer_advance(sequence_buffer_t* buffer, uint16_t sequence);
 extern CUTE_API void* CUTE_CALL sequence_buffer_insert(sequence_buffer_t* buffer, uint16_t sequence, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
@@ -55,18 +57,67 @@ extern CUTE_API void CUTE_CALL sequence_buffer_generate_ack_bits(sequence_buffer
 
 struct transport_config_t
 {
+	int use_ipv4 = 0;
+	int use_ipv6 = 1;
+	int max_packet_size = 1200;
+	int initial_ack_capacity = 256;
+	int sent_packets_sequence_buffer_size = 256;
+	int received_packets_sequence_buffer_size = 256;
 
+	int (*send_packet_fn)(uint16_t sequence, void* packet, int size, void* udata) = NULL;
+	int (*open_packet_fn)(uint16_t sequence, void* packet, int size, void* udata) = NULL;
+
+	void* udata = NULL;
+	void* user_allocator_context = NULL;
 };
 
 struct transport_t;
 
-void transport_config_default(transport_config_t* config);
-transport_t* transport_create(const transport_config_t* config);
-void transport_destroy(transport_t* transport);
+extern CUTE_API transport_t* CUTE_CALL transport_make(const transport_config_t* config);
+extern CUTE_API void CUTE_CALL transport_destroy(transport_t* transport);
+extern CUTE_API void CUTE_CALL transport_reset(transport_t* transport);
 
-void transport_send(transport_t* transport, void* data, int size);
+extern CUTE_API int CUTE_CALL transport_send_packet(transport_t* transport, void* data, int size, uint16_t* sequence);
+extern CUTE_API int CUTE_CALL transport_receive_packet(transport_t* transport, void* data, int size);
 
-// Need acks for each sequence. Also need acks for each fragment of a sequence.
+extern CUTE_API uint16_t* CUTE_CALL transport_get_acks(transport_t* transport);
+extern CUTE_API int CUTE_CALL transport_get_acks_count(transport_t* transport);
+extern CUTE_API void CUTE_CALL transport_clear_acks(transport_t* transport);
+
+extern CUTE_API void CUTE_CALL transport_update(transport_t* transport, float dt);
+extern CUTE_API float CUTE_CALL transport_rtt(transport_t* transport);
+extern CUTE_API float CUTE_CALL transport_packet_loss(transport_t* transport);
+extern CUTE_API float CUTE_CALL transport_bandwidth_outgoing_kbps(transport_t* transport);
+extern CUTE_API float CUTE_CALL transport_bandwidth_incoming_kbps(transport_t* transport);
+
+enum transport_counter_t
+{
+	TRANSPORT_COUNTERS_PACKETS_SENT,
+	TRANSPORT_COUNTERS_PACKETS_RECEIVED,
+	TRANSPORT_COUNTERS_PACKETS_ACKED,
+	TRANSPORT_COUNTERS_PACKETS_STALE,
+	TRANSPORT_COUNTERS_PACKETS_INVALID,
+	TRANSPORT_COUNTERS_PACKETS_TOO_LARGE_TO_SEND,
+	TRANSPORT_COUNTERS_PACKETS_TOO_LARGE_TO_RECEIVE,
+
+	TRANSPORT_COUNTERS_MAX
+};
+
+extern CUTE_API uint64_t CUTE_CALL transport_get_counter(transport_t* transport, transport_counter_t counter);
+
+// -------------------------------------------------------------------------------------------------
+
+struct block_transport_configuration_t
+{
+	int fragment_size;
+
+	void* user_allocator_context = NULL;
+};
+
+struct block_transport_t;
+
+extern CUTE_API block_transport_t* CUTE_CALL block_transport_make(const block_transport_configuration_t* config);
+extern CUTE_API void CUTE_CALL block_transport_destroy(block_transport_t* block_transport);
 
 }
 

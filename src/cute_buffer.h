@@ -39,6 +39,8 @@ struct buffer_t
 	void* user_allocator_ctx = NULL;
 };
 
+buffer_t CUTE_INLINE buffer_make(int stride) { return buffer_t(stride); }
+
 extern CUTE_API void CUTE_CALL buffer_push(buffer_t* buf, const void* element);
 extern CUTE_API void CUTE_CALL buffer_at(buffer_t* buf, int i, void* out);
 extern CUTE_API void CUTE_CALL buffer_pop(buffer_t* buf, void* out);

@@ -141,6 +141,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_connect_token_cache.h
 		test/test_client_server.h
 		test/test_sequence_buffer.h
+		test/test_transport.h
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
