@@ -30,7 +30,7 @@
 #include <math.h>
 #include <float.h>
 
-#define CUTE_TRANSPORT_HEADER_SIZE (2 + 2 + 4)
+#define CUTE_ACK_SYSTEM_HEADER_SIZE (2 + 2 + 4)
 
 namespace cute
 {
@@ -184,7 +184,7 @@ void sequence_buffer_generate_ack_bits(sequence_buffer_t* sequence_buffer, uint1
 
 // -------------------------------------------------------------------------------------------------
 
-struct transport_t
+struct ack_system_t
 {
 	double time;
 	int max_packet_size;
@@ -206,7 +206,7 @@ struct transport_t
 	float outgoing_bandwidth_kbps;
 	float incoming_bandwidth_kbps;
 
-	uint64_t counters[TRANSPORT_COUNTERS_MAX];
+	uint64_t counters[ACK_SYSTEM_COUNTERS_MAX];
 };
 
 struct sent_packet_t
@@ -222,7 +222,7 @@ struct received_packet_t
 	int size;
 };
 
-transport_t* transport_make(const transport_config_t* config)
+ack_system_t* ack_system_make(const ack_system_config_t* config)
 {
 	int sent_packets_init = 0;
 	int received_packets_init = 0;
@@ -231,7 +231,7 @@ transport_t* transport_make(const transport_config_t* config)
 	if (!config->send_packet_fn || !config->open_packet_fn) return NULL;
 	if (config->max_packet_size > CUTE_TRANSPORT_PACKET_PAYLOAD_MAX) return NULL;
 
-	transport_t* transport = (transport_t*)CUTE_ALLOC(sizeof(transport_t), mem_ctx);
+	ack_system_t* transport = (ack_system_t*)CUTE_ALLOC(sizeof(ack_system_t), mem_ctx);
 	if (!transport) return NULL;
 
 	transport->time = 0;
@@ -254,7 +254,7 @@ transport_t* transport_make(const transport_config_t* config)
 	transport->outgoing_bandwidth_kbps = 0;
 	transport->incoming_bandwidth_kbps = 0;
 
-	for (int i = 0; i < TRANSPORT_COUNTERS_MAX; ++i) {
+	for (int i = 0; i < ACK_SYSTEM_COUNTERS_MAX; ++i) {
 		transport->counters[i] = 0;
 	}
 
@@ -270,7 +270,7 @@ cute_error:
 	return NULL;
 }
 
-void transport_destroy(transport_t* transport)
+void ack_system_destroy(ack_system_t* transport)
 {
 	buffer_free(&transport->acks);
 	sequence_buffer_cleanup(&transport->sent_packets);
@@ -278,7 +278,7 @@ void transport_destroy(transport_t* transport)
 	CUTE_FREE(transport, transport->mem_ctx);
 }
 
-void transport_reset(transport_t* transport)
+void ack_system_reset(ack_system_t* transport)
 {
 	transport->sequence = 0;
 
@@ -291,12 +291,12 @@ void transport_reset(transport_t* transport)
 	transport->outgoing_bandwidth_kbps = 0;
 	transport->incoming_bandwidth_kbps = 0;
 
-	for (int i = 0; i < TRANSPORT_COUNTERS_MAX; ++i) {
+	for (int i = 0; i < ACK_SYSTEM_COUNTERS_MAX; ++i) {
 		transport->counters[i] = 0;
 	}
 }
 
-static int s_write_transport_header(uint8_t* buffer, uint16_t sequence, uint16_t ack, uint32_t ack_bits)
+static int s_write_ack_system_header(uint8_t* buffer, uint16_t sequence, uint16_t ack, uint32_t ack_bits)
 {
 	uint8_t* buffer_start = buffer;
 	write_uint16(&buffer, sequence);
@@ -305,10 +305,10 @@ static int s_write_transport_header(uint8_t* buffer, uint16_t sequence, uint16_t
 	return (int)(buffer - buffer_start);
 }
 
-int transport_send_packet(transport_t* transport, void* data, int size, uint16_t* sequence_out)
+int ack_system_send_packet(ack_system_t* transport, void* data, int size, uint16_t* sequence_out)
 {
 	if (size > transport->max_packet_size) {
-		transport->counters[TRANSPORT_COUNTERS_PACKETS_TOO_LARGE_TO_SEND]++;
+		transport->counters[ACK_SYSTEM_COUNTERS_PACKETS_TOO_LARGE_TO_SEND]++;
 		return -1;
 	}
 
@@ -321,27 +321,27 @@ int transport_send_packet(transport_t* transport, void* data, int size, uint16_t
 
 	packet->timestamp = transport->time;
 	packet->acked = 0;
-	packet->size = size + CUTE_TRANSPORT_HEADER_SIZE;
+	packet->size = size + CUTE_ACK_SYSTEM_HEADER_SIZE;
 
 	uint8_t buffer[CUTE_TRANSPORT_PACKET_PAYLOAD_MAX];
-	int header_size = s_write_transport_header(buffer, sequence, ack, ack_bits);
-	CUTE_ASSERT(header_size == CUTE_TRANSPORT_HEADER_SIZE);
+	int header_size = s_write_ack_system_header(buffer, sequence, ack, ack_bits);
+	CUTE_ASSERT(header_size == CUTE_ACK_SYSTEM_HEADER_SIZE);
 	CUTE_ASSERT(size + header_size < CUTE_TRANSPORT_PACKET_PAYLOAD_MAX);
 	CUTE_MEMCPY(buffer + header_size, data, size);
 	if (transport->send_packet_fn(sequence, buffer, size + header_size, transport->udata) < 0) {
-		transport->counters[TRANSPORT_COUNTERS_PACKETS_INVALID]++;
+		transport->counters[ACK_SYSTEM_COUNTERS_PACKETS_INVALID]++;
 		return -1;
 	}
 
-	transport->counters[TRANSPORT_COUNTERS_PACKETS_SENT]++;
+	transport->counters[ACK_SYSTEM_COUNTERS_PACKETS_SENT]++;
 
 	if (sequence_out) *sequence_out = sequence;
 	return 0;
 }
 
-static int s_read_transport_header(uint8_t* buffer, int size, uint16_t* sequence, uint16_t* ack, uint32_t* ack_bits)
+static int s_read_ack_system_header(uint8_t* buffer, int size, uint16_t* sequence, uint16_t* ack, uint32_t* ack_bits)
 {
-	if (size < CUTE_TRANSPORT_HEADER_SIZE) return -1;
+	if (size < CUTE_ACK_SYSTEM_HEADER_SIZE) return -1;
 	uint8_t* buffer_start = buffer;
 	*sequence = read_uint16(&buffer);
 	*ack = read_uint16(&buffer);
@@ -349,29 +349,29 @@ static int s_read_transport_header(uint8_t* buffer, int size, uint16_t* sequence
 	return (int)(buffer - buffer_start);
 }
 
-int transport_receive_packet(transport_t* transport, void* data, int size)
+int ack_system_receive_packet(ack_system_t* transport, void* data, int size)
 {
 	if (size > transport->max_packet_size) {
-		transport->counters[TRANSPORT_COUNTERS_PACKETS_TOO_LARGE_TO_RECEIVE]++;
+		transport->counters[ACK_SYSTEM_COUNTERS_PACKETS_TOO_LARGE_TO_RECEIVE]++;
 		return -1;
 	}
 
-	transport->counters[TRANSPORT_COUNTERS_PACKETS_RECEIVED]++;
+	transport->counters[ACK_SYSTEM_COUNTERS_PACKETS_RECEIVED]++;
 
 	uint16_t sequence;
 	uint16_t ack;
 	uint32_t ack_bits;
 	uint8_t* buffer = (uint8_t*)data;
 
-	int header_size = s_read_transport_header(buffer, size, &sequence, &ack, &ack_bits);
+	int header_size = s_read_ack_system_header(buffer, size, &sequence, &ack, &ack_bits);
 	if (header_size < 0) {
-		transport->counters[TRANSPORT_COUNTERS_PACKETS_INVALID]++;
+		transport->counters[ACK_SYSTEM_COUNTERS_PACKETS_INVALID]++;
 		return -1;
 	}
-	CUTE_ASSERT(header_size == CUTE_TRANSPORT_HEADER_SIZE);
+	CUTE_ASSERT(header_size == CUTE_ACK_SYSTEM_HEADER_SIZE);
 
 	if (s_sequence_is_stale(&transport->received_packets, sequence)) {
-		transport->counters[TRANSPORT_COUNTERS_PACKETS_STALE]++;
+		transport->counters[ACK_SYSTEM_COUNTERS_PACKETS_STALE]++;
 		return -1;
 	}
 
@@ -395,7 +395,7 @@ int transport_receive_packet(transport_t* transport, void* data, int size)
 			if (sent_packet && !sent_packet->acked) {
 				buffer_check_grow(&transport->acks, transport->initial_ack_capacity);
 				buffer_push(&transport->acks, &ack_sequence);
-				transport->counters[TRANSPORT_COUNTERS_PACKETS_ACKED]++;
+				transport->counters[ACK_SYSTEM_COUNTERS_PACKETS_ACKED]++;
 				sent_packet->acked = 1;
 
 				float rtt = (float)(transport->time - sent_packet->timestamp);
@@ -409,17 +409,17 @@ int transport_receive_packet(transport_t* transport, void* data, int size)
 	return 0;
 }
 
-uint16_t* transport_get_acks(transport_t* transport)
+uint16_t* ack_system_get_acks(ack_system_t* transport)
 {
 	return (uint16_t*)transport->acks.data;
 }
 
-int transport_get_acks_count(transport_t* transport)
+int ack_system_get_acks_count(ack_system_t* transport)
 {
 	return transport->acks.count;
 }
 
-void transport_clear_acks(transport_t* transport)
+void ack_system_clear_acks(ack_system_t* transport)
 {
 	buffer_clear(&transport->acks);
 }
@@ -469,7 +469,7 @@ static CUTE_INLINE float s_calc_bandwidth(float bandwidth, sequence_buffer_t* se
 	return bandwidth;
 }
 
-void transport_update(transport_t* transport, float dt)
+void ack_system_update(ack_system_t* transport, float dt)
 {
 	transport->time += dt;
 	transport->packet_loss = s_calc_packet_loss(transport->packet_loss, &transport->sent_packets);
@@ -477,31 +477,106 @@ void transport_update(transport_t* transport, float dt)
 	transport->outgoing_bandwidth_kbps = s_calc_bandwidth(transport->outgoing_bandwidth_kbps, &transport->received_packets);
 }
 
-float transport_rtt(transport_t* transport)
+float ack_system_rtt(ack_system_t* transport)
 {
 	return transport->rtt;
 }
 
-float transport_packet_loss(transport_t* transport)
+float ack_system_packet_loss(ack_system_t* transport)
 {
 	return transport->packet_loss;
 }
 
-float transport_bandwidth_outgoing_kbps(transport_t* transport)
+float ack_system_bandwidth_outgoing_kbps(ack_system_t* transport)
 {
 	return transport->outgoing_bandwidth_kbps;
 }
 
-float transport_bandwidth_incoming_kbps(transport_t* transport)
+float ack_system_bandwidth_incoming_kbps(ack_system_t* transport)
 {
 	return transport->incoming_bandwidth_kbps;
 }
 
-uint64_t transport_get_counter(transport_t* transport, transport_counter_t counter)
+uint64_t ack_system_get_counter(ack_system_t* transport, ack_system_counter_t counter)
 {
 	return transport->counters[counter];
 }
 
 // -------------------------------------------------------------------------------------------------
+
+struct transport_t
+{
+	uint64_t sequence;
+	sequence_buffer_t reliable_sent_packets;
+	sequence_buffer_t reliable_received_packets;
+	sequence_buffer_t fragment_reassembly;
+};
+
+struct fragment_reassembly_data_t
+{
+	int packet_header_bytes;
+	int packet_size;
+	uint8_t* packet;
+
+	int fragment_count_so_far;
+	int fragments_total;
+	uint8_t* fragment_received;
+};
+
+static void s_fragment_reassembly_data_cleanup(void* data, void* mem_ctx)
+{
+	fragment_reassembly_data_t* reassembly_data = (fragment_reassembly_data_t*)data;
+	CUTE_FREE(reassembly_data->packet, mem_ctx);
+	CUTE_FREE(reassembly_data->fragment_received, mem_ctx);
+}
+
+transport_t* transport_make(const transport_configuration_t* config)
+{
+}
+
+void transport_destroy(transport_t* transport)
+{
+}
+
+void transport_reset(transport_t* tranpsport)
+{
+}
+
+int transport_send_reliably_and_in_order(transport_t* transport, void* data, int size, uint64_t* sequence)
+{
+}
+
+int transport_send_fire_and_forget(transport_t* transport, void* data, int size)
+{
+}
+
+int transport_recieve(transport_t* transport, void** data, int* size, uint64_t* sequence)
+{
+}
+
+void transport_free(transport_t* transport, void* data)
+{
+}
+
+int transport_process_packet(transport_t* transport, void* data, int size)
+{
+}
+
+void transport_process_acks(transport_t* transport, uint16_t* acks, int ack_count)
+{
+}
+
+void transport_resend_unacked_fragments(transport_t* transport)
+{
+}
+
+// fragment header
+// prefix byte : zero for fragment, nonzero otherwise
+// 8 bytes sequence
+// if fragment:
+	// 2 bytes fragment count
+	// 2 bytes fragment index
+	// 2 bytes fragment size
+// total: 15 bytes for fragment, 1 byte s
 
 }

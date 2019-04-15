@@ -109,7 +109,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_protocol_multiple_connections_and_payloads),
 		CUTE_TEST_CASE_ENTRY(test_protocol_client_reconnect),
 		CUTE_TEST_CASE_ENTRY(test_sequence_buffer_basic),
-		CUTE_TEST_CASE_ENTRY(test_transport_basic),
+		CUTE_TEST_CASE_ENTRY(test_ack_system_basic),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

@@ -22,22 +22,22 @@
 #include <internal/cute_transport_internal.h>
 using namespace cute;
 
-struct test_transport_data_t
+struct test_ack_system_data_t
 {
 	int drop_packet = 0;
 	int id;
-	transport_t* transport_a;
-	transport_t* transport_b;
+	ack_system_t* ack_system_a;
+	ack_system_t* ack_system_b;
 };
 
 int test_send_packet_fn(uint16_t sequence, void* packet, int size, void* udata)
 {
-	test_transport_data_t* data = (test_transport_data_t*)udata;
+	test_ack_system_data_t* data = (test_ack_system_data_t*)udata;
 	if (data->drop_packet) return 0;
 	if (data->id) {
-		return transport_receive_packet(data->transport_a, packet, size);
+		return ack_system_receive_packet(data->ack_system_a, packet, size);
 	} else {
-		return transport_receive_packet(data->transport_b, packet, size);
+		return ack_system_receive_packet(data->ack_system_b, packet, size);
 	}
 }
 
@@ -51,25 +51,25 @@ int test_open_packet_fn(uint16_t sequence, void* packet, int size, void* udata)
 	}
 }
 
-CUTE_TEST_CASE(test_transport_basic, "Create transport, send a few packets, and receive them. Make sure some drop.");
-int test_transport_basic()
+CUTE_TEST_CASE(test_ack_system_basic, "Create ack system, send a few packets, and receive them. Make sure some drop. Assert acks.");
+int test_ack_system_basic()
 {
-	test_transport_data_t data_a;
-	test_transport_data_t data_b;
+	test_ack_system_data_t data_a;
+	test_ack_system_data_t data_b;
 	data_a.id = 0;
 	data_b.id = 1;
 
-	transport_config_t config;
+	ack_system_config_t config;
 	config.send_packet_fn = test_send_packet_fn;
 	config.open_packet_fn = test_open_packet_fn;
 	config.udata = &data_a;
-	transport_t* transport_a = transport_make(&config);
+	ack_system_t* ack_system_a = ack_system_make(&config);
 	config.udata = &data_b;
-	transport_t* transport_b = transport_make(&config);
-	data_a.transport_a = transport_a;
-	data_a.transport_b = transport_b;
-	data_b.transport_a = transport_a;
-	data_b.transport_b = transport_b;
+	ack_system_t* ack_system_b = ack_system_make(&config);
+	data_a.ack_system_a = ack_system_a;
+	data_a.ack_system_b = ack_system_b;
+	data_b.ack_system_a = ack_system_a;
+	data_b.ack_system_b = ack_system_b;
 
 	uint64_t packet_data = 100;
 
@@ -83,25 +83,25 @@ int test_transport_basic()
 			data_b.drop_packet = 0;
 		}
 		uint16_t sequence_a, sequence_b;
-		CUTE_TEST_CHECK(transport_send_packet(transport_a, &packet_data, sizeof(packet_data), &sequence_a));
-		CUTE_TEST_CHECK(transport_send_packet(transport_b, &packet_data, sizeof(packet_data), &sequence_b));
+		CUTE_TEST_CHECK(ack_system_send_packet(ack_system_a, &packet_data, sizeof(packet_data), &sequence_a));
+		CUTE_TEST_CHECK(ack_system_send_packet(ack_system_b, &packet_data, sizeof(packet_data), &sequence_b));
 	}
 
-	uint64_t a_sent = transport_get_counter(transport_a, TRANSPORT_COUNTERS_PACKETS_SENT);
-	uint64_t b_sent = transport_get_counter(transport_b, TRANSPORT_COUNTERS_PACKETS_SENT);
+	uint64_t a_sent = ack_system_get_counter(ack_system_a, ACK_SYSTEM_COUNTERS_PACKETS_SENT);
+	uint64_t b_sent = ack_system_get_counter(ack_system_b, ACK_SYSTEM_COUNTERS_PACKETS_SENT);
 	CUTE_TEST_ASSERT(a_sent == b_sent);
 
-	uint64_t a_received = transport_get_counter(transport_a, TRANSPORT_COUNTERS_PACKETS_RECEIVED);
-	uint64_t b_received = transport_get_counter(transport_b, TRANSPORT_COUNTERS_PACKETS_RECEIVED);
+	uint64_t a_received = ack_system_get_counter(ack_system_a, ACK_SYSTEM_COUNTERS_PACKETS_RECEIVED);
+	uint64_t b_received = ack_system_get_counter(ack_system_b, ACK_SYSTEM_COUNTERS_PACKETS_RECEIVED);
 	CUTE_TEST_ASSERT(a_received == b_received);
 
 	CUTE_TEST_ASSERT(a_sent > a_received);
 	CUTE_TEST_ASSERT(b_sent > b_received);
 
-	uint16_t* acks_a = transport_get_acks(transport_a);
-	uint16_t* acks_b = transport_get_acks(transport_b);
-	int count_a = transport_get_acks_count(transport_a);
-	int count_b = transport_get_acks_count(transport_b);
+	uint16_t* acks_a = ack_system_get_acks(ack_system_a);
+	uint16_t* acks_b = ack_system_get_acks(ack_system_b);
+	int count_a = ack_system_get_acks_count(ack_system_a);
+	int count_b = ack_system_get_acks_count(ack_system_b);
 	CUTE_TEST_ASSERT(count_a - 1 == count_b);
 	for (int i = 0; i < count_b; ++i)
 	{
@@ -112,8 +112,8 @@ int test_transport_basic()
 		CUTE_TEST_ASSERT(acks_a[i] != 9);
 	}
 
-	transport_destroy(transport_a);
-	transport_destroy(transport_b);
+	ack_system_destroy(ack_system_a);
+	ack_system_destroy(ack_system_b);
 
 	return 0;
 }
