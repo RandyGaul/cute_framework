@@ -31,6 +31,7 @@
 #include <float.h>
 
 #define CUTE_ACK_SYSTEM_HEADER_SIZE (2 + 2 + 4)
+#define CUTE_TRASNPORT_HEADER_SIZE (1 + 8 + 2 + 2 + 2)
 
 namespace cute
 {
@@ -542,8 +543,21 @@ void transport_reset(transport_t* tranpsport)
 {
 }
 
+static CUTE_INLINE int s_transport_write_header(uint8_t* buffer, int size, uint8_t prefix, uint64_t sequence, uint16_t fragment_count, uint16_t fragment_index, uint16_t fragment_size)
+{
+	if (size < CUTE_TRASNPORT_HEADER_SIZE) return -1;
+	uint8_t* buffer_start = buffer;
+	write_uint8(&buffer, prefix);
+	write_uint64(&buffer, sequence);
+	write_uint16(&buffer, fragment_count);
+	write_uint16(&buffer, fragment_index);
+	write_uint16(&buffer, fragment_size);
+	return (int)(buffer - buffer_start);
+}
+
 int transport_send_reliably_and_in_order(transport_t* transport, void* data, int size, uint64_t* sequence)
 {
+
 }
 
 int transport_send_fire_and_forget(transport_t* transport, void* data, int size)
