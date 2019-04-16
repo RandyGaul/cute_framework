@@ -55,11 +55,14 @@ extern CUTE_API void CUTE_CALL sequence_buffer_generate_ack_bits(sequence_buffer
 
 // -------------------------------------------------------------------------------------------------
 
+#define CUTE_ACK_SYSTEM_HEADER_SIZE (2 + 2 + 4)
+#define CUTE_ACK_SYSTEM_MAX_PACKET_SIZE 1240
+
 struct ack_system_config_t
 {
 	int use_ipv4 = 0;
 	int use_ipv6 = 1;
-	int max_packet_size = 1200;
+	int max_packet_size = CUTE_ACK_SYSTEM_MAX_PACKET_SIZE;
 	int initial_ack_capacity = 256;
 	int sent_packets_sequence_buffer_size = 256;
 	int received_packets_sequence_buffer_size = 256;
@@ -77,7 +80,8 @@ extern CUTE_API ack_system_t* CUTE_CALL ack_system_make(const ack_system_config_
 extern CUTE_API void CUTE_CALL ack_system_destroy(ack_system_t* transport);
 extern CUTE_API void CUTE_CALL ack_system_reset(ack_system_t* transport);
 
-extern CUTE_API int CUTE_CALL ack_system_send_packet(ack_system_t* transport, void* data, int size, uint16_t* sequence);
+extern CUTE_API uint16_t CUTE_CALL ack_system_get_sequence(ack_system_t* ack_system);
+extern CUTE_API int CUTE_CALL ack_system_send_packet(ack_system_t* transport, void* data, int size, uint16_t* sequence = NULL);
 extern CUTE_API int CUTE_CALL ack_system_receive_packet(ack_system_t* transport, void* data, int size);
 
 extern CUTE_API uint16_t* CUTE_CALL ack_system_get_acks(ack_system_t* transport);
@@ -107,10 +111,14 @@ extern CUTE_API uint64_t CUTE_CALL ack_system_get_counter(ack_system_t* transpor
 
 // -------------------------------------------------------------------------------------------------
 
+#define CUTE_TRANSPORT_HEADER_SIZE (1 + 2 + 2 + 2 + 2)
+#define CUTE_TRANSPORT_MAX_FRAGMENT_SIZE 1200
+
 struct transport_configuration_t
 {
-	int fragment_size = 1200;
+	int fragment_size = CUTE_TRANSPORT_MAX_FRAGMENT_SIZE;
 	int max_fragments_in_flight = 256;
+	int fragment_memory_pool_element_count = 256;
 	int max_size_single_send = CUTE_MB * 20;
 
 	ack_system_t* ack_system;
@@ -124,13 +132,13 @@ extern CUTE_API transport_t* CUTE_CALL transport_make(const transport_configurat
 extern CUTE_API void CUTE_CALL transport_destroy(transport_t* transport);
 extern CUTE_API void transport_reset(transport_t* tranpsport);
 
-extern CUTE_API int transport_send_reliably_and_in_order(transport_t* transport, void* data, int size, uint64_t* sequence);
+extern CUTE_API int transport_send_reliably_and_in_order(transport_t* transport, void* data, int size);
 extern CUTE_API int transport_send_fire_and_forget(transport_t* transport, void* data, int size);
 
-extern CUTE_API int transport_recieve(transport_t* transport, void** data, int* size, uint64_t* sequence);
+extern CUTE_API int transport_recieve(transport_t* transport, void** data, int* size);
 extern CUTE_API void transport_free(transport_t* transport, void* data);
 
-extern CUTE_API int transport_process_packet(transport_t* transport, void* data, int size);
+extern CUTE_API int transport_process_packet(transport_t* transport, uint8_t* data, int size);
 extern CUTE_API void transport_process_acks(transport_t* transport, uint16_t* acks, int ack_count);
 extern CUTE_API void transport_resend_unacked_fragments(transport_t* transport);
 

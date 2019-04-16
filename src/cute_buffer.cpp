@@ -39,6 +39,12 @@ void buffer_at(buffer_t* buf, int i, void* out)
 	CUTE_MEMCPY(out, data + i * buf->stride, buf->stride);
 }
 
+void buffer_set(buffer_t* buf, int i, const void* element)
+{
+	uint8_t* data = (uint8_t*)buf->data;
+	CUTE_MEMCPY(data + i * buf->stride, element, buf->stride);
+}
+
 void buffer_pop(buffer_t* buf, void* out)
 {
 	buffer_at(buf, --buf->count, out);

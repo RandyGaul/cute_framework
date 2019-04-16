@@ -24,6 +24,30 @@
 
 #include <cute_defines.h>
 
+
+#define CHECK_BUFFER_GROW(ctx, count, capacity, data, type, initial) \
+	do { \
+		if (ctx->count == ctx->capacity) \
+		{ \
+			int new_capacity = ctx->capacity ? ctx->capacity * 2 : initial; \
+			void* new_data = ALLOC(sizeof(type) * new_capacity); \
+			memcpy(new_data, ctx->data, sizeof(type) * ctx->count); \
+			FREE(ctx->data); \
+			ctx->data = (type*)new_data; \
+			ctx->capacity = new_capacity; \
+		} \
+	} while (0)
+
+#define BUFFER_GROW(ctx, count, capacity, data, type, new_cap) \
+	do { \
+		int new_capacity = new_cap; \
+		void* new_data = ALLOC(sizeof(type) * new_capacity); \
+		memcpy(new_data, ctx->data, sizeof(type) * ctx->count); \
+		FREE(ctx->data); \
+		ctx->data = (type*)new_data; \
+		ctx->capacity = new_capacity; \
+	} while (0)
+
 namespace cute
 {
 
@@ -43,6 +67,7 @@ buffer_t CUTE_INLINE buffer_make(int stride) { return buffer_t(stride); }
 
 extern CUTE_API void CUTE_CALL buffer_push(buffer_t* buf, const void* element);
 extern CUTE_API void CUTE_CALL buffer_at(buffer_t* buf, int i, void* out);
+extern CUTE_API void CUTE_CALL buffer_set(buffer_t* buf, int i, const void* element);
 extern CUTE_API void CUTE_CALL buffer_pop(buffer_t* buf, void* out);
 extern CUTE_API void CUTE_CALL buffer_grow(buffer_t* buf, int new_capacity);
 extern CUTE_API void CUTE_CALL buffer_check_grow(buffer_t* buf, int initial_capacity);
