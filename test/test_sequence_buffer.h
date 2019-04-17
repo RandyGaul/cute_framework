@@ -27,7 +27,7 @@ int test_sequence_buffer_basic()
 {
 	sequence_buffer_t sequence_buffer;
 	sequence_buffer_t* buffer = &sequence_buffer;
-	CUTE_TEST_CHECK(sequence_buffer_init(buffer, 256, sizeof(int), NULL));
+	CUTE_TEST_CHECK(sequence_buffer_init(buffer, 256, sizeof(int), NULL, NULL));
 
 	int entries[3];
 	int count = sizeof(entries) / sizeof(entries[0]);

@@ -24,28 +24,32 @@
 
 #include <cute_defines.h>
 
-
-#define CHECK_BUFFER_GROW(ctx, count, capacity, data, type, initial) \
+#define CUTE_CHECK_BUFFER_GROW(ctx, count, capacity, data, type, initial, mem_ctx) \
 	do { \
 		if (ctx->count == ctx->capacity) \
 		{ \
 			int new_capacity = ctx->capacity ? ctx->capacity * 2 : initial; \
-			void* new_data = ALLOC(sizeof(type) * new_capacity); \
-			memcpy(new_data, ctx->data, sizeof(type) * ctx->count); \
-			FREE(ctx->data); \
+			void* new_data = CUTE_ALLOC(sizeof(type) * new_capacity, mem_ctx); \
+			CUTE_MEMCPY(new_data, ctx->data, sizeof(type) * ctx->count); \
+			CUTE_FREE(ctx->data, mem_ctx); \
 			ctx->data = (type*)new_data; \
 			ctx->capacity = new_capacity; \
 		} \
 	} while (0)
 
-#define BUFFER_GROW(ctx, count, capacity, data, type, new_cap) \
+#define CUTE_BUFFER_GROW(ctx, count, capacity, data, type, new_cap, mem_ctx) \
 	do { \
 		int new_capacity = new_cap; \
-		void* new_data = ALLOC(sizeof(type) * new_capacity); \
-		memcpy(new_data, ctx->data, sizeof(type) * ctx->count); \
-		FREE(ctx->data); \
+		void* new_data = CUTE_ALLOC(sizeof(type) * new_capacity, mem_ctx); \
+		CUTE_MEMCPY(new_data, ctx->data, sizeof(type) * ctx->count); \
+		CUTE_FREE(ctx->data, mem_ctx); \
 		ctx->data = (type*)new_data; \
 		ctx->capacity = new_capacity; \
+	} while (0)
+
+#define CUTE_BUFFER_SWAP_WITH_LAST(ctx, index, count, data) \
+	do { \
+		ctx->data[index] = ctx->data[--ctx->count]; \
 	} while (0)
 
 namespace cute

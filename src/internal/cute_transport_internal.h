@@ -36,12 +36,13 @@ struct sequence_buffer_t
 	int stride;
 	uint32_t* entry_sequence;
 	uint8_t* entry_data;
+	void* udata;
 	void* mem_ctx;
 };
 
-typedef void (sequence_buffer_cleanup_entry_fn)(void* data, void* mem_ctx);
+typedef void (sequence_buffer_cleanup_entry_fn)(void* data, void* udata, void* mem_ctx);
 
-extern CUTE_API int CUTE_CALL sequence_buffer_init(sequence_buffer_t* buffer, int capacity, int stride, void* mem_ctx);
+extern CUTE_API int CUTE_CALL sequence_buffer_init(sequence_buffer_t* buffer, int capacity, int stride, void* udata, void* mem_ctx);
 extern CUTE_API void CUTE_CALL sequence_buffer_cleanup(sequence_buffer_t* buffer, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
 extern CUTE_API void CUTE_CALL sequence_buffer_reset(sequence_buffer_t* buffer, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
 
@@ -56,7 +57,7 @@ extern CUTE_API void CUTE_CALL sequence_buffer_generate_ack_bits(sequence_buffer
 // -------------------------------------------------------------------------------------------------
 
 #define CUTE_ACK_SYSTEM_HEADER_SIZE (2 + 2 + 4)
-#define CUTE_ACK_SYSTEM_MAX_PACKET_SIZE 1240
+#define CUTE_ACK_SYSTEM_MAX_PACKET_SIZE 1200
 
 struct ack_system_config_t
 {
@@ -112,23 +113,25 @@ extern CUTE_API uint64_t CUTE_CALL ack_system_get_counter(ack_system_t* transpor
 // -------------------------------------------------------------------------------------------------
 
 #define CUTE_TRANSPORT_HEADER_SIZE (1 + 2 + 2 + 2 + 2)
-#define CUTE_TRANSPORT_MAX_FRAGMENT_SIZE 1200
+#define CUTE_TRANSPORT_MAX_FRAGMENT_SIZE 1100
 
-struct transport_configuration_t
+CUTE_STATIC_ASSERT(CUTE_ACK_SYSTEM_MAX_PACKET_SIZE + CUTE_TRANSPORT_HEADER_SIZE < 1253, "Must fit within Cute Protocol's payload limit.");
+
+struct transport_config_t
 {
 	int fragment_size = CUTE_TRANSPORT_MAX_FRAGMENT_SIZE;
 	int max_fragments_in_flight = 256;
-	int fragment_memory_pool_element_count = 256;
+	int max_fragments_stored_at_once = 1024;
 	int max_size_single_send = CUTE_MB * 20;
 
-	ack_system_t* ack_system;
+	ack_system_t* ack_system = NULL;
 
 	void* user_allocator_context = NULL;
 };
 
 struct transport_t;
 
-extern CUTE_API transport_t* CUTE_CALL transport_make(const transport_configuration_t* config);
+extern CUTE_API transport_t* CUTE_CALL transport_make(const transport_config_t* config);
 extern CUTE_API void CUTE_CALL transport_destroy(transport_t* transport);
 extern CUTE_API void transport_reset(transport_t* tranpsport);
 
@@ -138,8 +141,8 @@ extern CUTE_API int transport_send_fire_and_forget(transport_t* transport, void*
 extern CUTE_API int transport_recieve(transport_t* transport, void** data, int* size);
 extern CUTE_API void transport_free(transport_t* transport, void* data);
 
-extern CUTE_API int transport_process_packet(transport_t* transport, uint8_t* data, int size);
-extern CUTE_API void transport_process_acks(transport_t* transport, uint16_t* acks, int ack_count);
+extern CUTE_API int transport_process_packet(transport_t* transport, void* data, int size);
+extern CUTE_API void transport_process_acks(transport_t* transport);
 extern CUTE_API void transport_resend_unacked_fragments(transport_t* transport);
 
 }

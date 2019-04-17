@@ -25,9 +25,11 @@ using namespace cute;
 struct test_ack_system_data_t
 {
 	int drop_packet = 0;
-	int id;
-	ack_system_t* ack_system_a;
-	ack_system_t* ack_system_b;
+	int id = ~0;
+	ack_system_t* ack_system_a = NULL;
+	ack_system_t* ack_system_b = NULL;
+	transport_t* transport_a = NULL;
+	transport_t* transport_b = NULL;
 };
 
 int test_send_packet_fn(uint16_t sequence, void* packet, int size, void* udata)
@@ -71,6 +73,9 @@ int test_ack_system_basic()
 	data_b.ack_system_a = ack_system_a;
 	data_b.ack_system_b = ack_system_b;
 
+	CUTE_TEST_CHECK_POINTER(ack_system_a);
+	CUTE_TEST_CHECK_POINTER(ack_system_b);
+
 	uint64_t packet_data = 100;
 
 	for (int i = 0; i < 10; ++i)
@@ -111,6 +116,80 @@ int test_ack_system_basic()
 		CUTE_TEST_ASSERT(acks_a[i] != 6);
 		CUTE_TEST_ASSERT(acks_a[i] != 9);
 	}
+
+	ack_system_destroy(ack_system_a);
+	ack_system_destroy(ack_system_b);
+
+	return 0;
+}
+
+int test_transport_open_packet_fn(uint16_t sequence, void* packet, int size, void* udata)
+{
+	test_ack_system_data_t* data = (test_ack_system_data_t*)udata;
+	if (data->id) {
+		return transport_process_packet(data->transport_a, packet, size);
+	} else {
+		return transport_process_packet(data->transport_b, packet, size);
+	}
+}
+
+CUTE_TEST_CASE(test_transport_basic, "Create transport, send a couple packets, receive them.");
+int test_transport_basic()
+{
+	test_ack_system_data_t data_a;
+	test_ack_system_data_t data_b;
+	data_a.id = 0;
+	data_b.id = 1;
+
+	ack_system_config_t config;
+	config.send_packet_fn = test_send_packet_fn;
+	config.open_packet_fn = test_transport_open_packet_fn;
+	config.udata = &data_a;
+	ack_system_t* ack_system_a = ack_system_make(&config);
+	config.udata = &data_b;
+	ack_system_t* ack_system_b = ack_system_make(&config);
+	data_a.ack_system_a = ack_system_a;
+	data_a.ack_system_b = ack_system_b;
+	data_b.ack_system_a = ack_system_a;
+	data_b.ack_system_b = ack_system_b;
+
+	transport_config_t transport_config;
+	transport_config.ack_system = ack_system_a;
+	transport_t* transport_a = transport_make(&transport_config);
+	transport_config.ack_system = ack_system_b;
+	transport_t* transport_b = transport_make(&transport_config);
+	data_a.transport_a = transport_a;
+	data_a.transport_b = transport_b;
+	data_b.transport_a = transport_a;
+	data_b.transport_b = transport_b;
+
+	int packet_size = 4;
+	uint8_t* packet = (uint8_t*)CUTE_ALLOC(packet_size, NULL);
+	CUTE_MEMSET(packet, 0xFF, packet_size);
+
+	CUTE_TEST_CHECK(transport_send_reliably_and_in_order(transport_a, packet, packet_size));
+	CUTE_TEST_CHECK(transport_send_reliably_and_in_order(transport_b, packet, packet_size));
+
+	transport_process_acks(transport_a);
+	transport_process_acks(transport_b);
+
+	void* packet_received;
+	int packet_received_size;
+
+	CUTE_TEST_CHECK(transport_recieve(transport_a, &packet_received, &packet_received_size));
+	CUTE_TEST_ASSERT(packet_size == packet_received_size);
+	CUTE_TEST_ASSERT(!CUTE_MEMCMP(packet, packet_received, packet_size));
+	transport_free(transport_a, packet_received);
+
+	CUTE_TEST_CHECK(transport_recieve(transport_b, &packet_received, &packet_received_size));
+	CUTE_TEST_ASSERT(packet_size == packet_received_size);
+	CUTE_TEST_ASSERT(!CUTE_MEMCMP(packet, packet_received, packet_size));
+	transport_free(transport_b, packet_received);
+
+	CUTE_FREE(packet, NULL);
+
+	transport_destroy(transport_a);
+	transport_destroy(transport_b);
 
 	ack_system_destroy(ack_system_a);
 	ack_system_destroy(ack_system_b);
