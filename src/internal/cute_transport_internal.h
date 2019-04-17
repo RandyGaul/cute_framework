@@ -40,6 +40,7 @@ struct sequence_buffer_t
 	void* mem_ctx;
 };
 
+// TODO: Place this on the sequence buffer itself to minimize parameters.
 typedef void (sequence_buffer_cleanup_entry_fn)(void* data, void* udata, void* mem_ctx);
 
 extern CUTE_API int CUTE_CALL sequence_buffer_init(sequence_buffer_t* buffer, int capacity, int stride, void* udata, void* mem_ctx);
@@ -133,17 +134,18 @@ struct transport_t;
 
 extern CUTE_API transport_t* CUTE_CALL transport_make(const transport_config_t* config);
 extern CUTE_API void CUTE_CALL transport_destroy(transport_t* transport);
-extern CUTE_API void transport_reset(transport_t* tranpsport);
+extern CUTE_API void CUTE_CALL transport_reset(transport_t* tranpsport);
 
-extern CUTE_API int transport_send_reliably_and_in_order(transport_t* transport, void* data, int size);
-extern CUTE_API int transport_send_fire_and_forget(transport_t* transport, void* data, int size);
+extern CUTE_API int CUTE_CALL transport_send_reliably_and_in_order(transport_t* transport, void* data, int size);
+extern CUTE_API int CUTE_CALL transport_send_fire_and_forget(transport_t* transport, void* data, int size);
 
-extern CUTE_API int transport_recieve(transport_t* transport, void** data, int* size);
-extern CUTE_API void transport_free(transport_t* transport, void* data);
+extern CUTE_API int CUTE_CALL transport_recieve_reliably_and_in_order(transport_t* transport, void** data, int* size);
+extern CUTE_API int CUTE_CALL transport_recieve_fire_and_forget(transport_t* transport, void** data, int* size);
+extern CUTE_API void CUTE_CALL transport_free(transport_t* transport, void* data);
 
-extern CUTE_API int transport_process_packet(transport_t* transport, void* data, int size);
-extern CUTE_API void transport_process_acks(transport_t* transport);
-extern CUTE_API void transport_resend_unacked_fragments(transport_t* transport);
+extern CUTE_API int CUTE_CALL transport_process_packet(transport_t* transport, void* data, int size);
+extern CUTE_API void CUTE_CALL transport_process_acks(transport_t* transport);
+extern CUTE_API void CUTE_CALL transport_resend_unacked_fragments(transport_t* transport);
 
 }
 

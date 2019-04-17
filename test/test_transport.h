@@ -176,12 +176,12 @@ int test_transport_basic()
 	void* packet_received;
 	int packet_received_size;
 
-	CUTE_TEST_CHECK(transport_recieve(transport_a, &packet_received, &packet_received_size));
+	CUTE_TEST_CHECK(transport_recieve_reliably_and_in_order(transport_a, &packet_received, &packet_received_size));
 	CUTE_TEST_ASSERT(packet_size == packet_received_size);
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(packet, packet_received, packet_size));
 	transport_free(transport_a, packet_received);
 
-	CUTE_TEST_CHECK(transport_recieve(transport_b, &packet_received, &packet_received_size));
+	CUTE_TEST_CHECK(transport_recieve_reliably_and_in_order(transport_b, &packet_received, &packet_received_size));
 	CUTE_TEST_ASSERT(packet_size == packet_received_size);
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(packet, packet_received, packet_size));
 	transport_free(transport_b, packet_received);
