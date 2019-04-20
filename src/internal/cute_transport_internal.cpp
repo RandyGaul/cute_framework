@@ -513,6 +513,28 @@ uint64_t ack_system_get_counter(ack_system_t* ack_system, ack_system_counter_t c
 
 // -------------------------------------------------------------------------------------------------
 
+struct fragment_t
+{
+	double timestamp;
+	uint8_t* data;
+};
+
+struct fragment_reassembly_entry_t
+{
+	int packet_size;
+	uint8_t* packet;
+
+	int fragment_count_so_far;
+	int fragments_total;
+	uint8_t* fragment_received;
+};
+
+struct assembled_packet_t
+{
+	int size;
+	uint8_t* packet;
+};
+
 struct packet_assembly_t
 {
 	uint16_t assembled_sequence;
@@ -520,6 +542,19 @@ struct packet_assembly_t
 	sequence_buffer_t fragment_reassembly;
 	sequence_buffer_t assembled_packets;
 };
+
+static void s_fragment_reassembly_entry_cleanup(void* data, void* udata, void* mem_ctx)
+{
+	fragment_reassembly_entry_t* reassembly = (fragment_reassembly_entry_t*)data;
+	CUTE_FREE(reassembly->packet, mem_ctx);
+	CUTE_FREE(reassembly->fragment_received, mem_ctx);
+}
+
+static void s_assembled_packet_cleanup(void* data, void* udata, void* mem_ctx)
+{
+	assembled_packet_t* assembled_packet = (assembled_packet_t*)data;
+	CUTE_FREE(assembled_packet->packet, mem_ctx);
+}
 
 static int s_packet_assembly_init(packet_assembly_t* assembly, int max_fragments_in_flight, int max_fragments_stored_at_once, void* mem_ctx)
 {
@@ -546,12 +581,6 @@ static void s_packet_assembly_cleanup(packet_assembly_t* assembly)
 }
 
 // -------------------------------------------------------------------------------------------------
-
-struct fragment_t
-{
-	double timestamp;
-	uint8_t* data;
-};
 
 struct transport_t
 {
@@ -580,22 +609,6 @@ struct fragment_entry_t
 	handle_t fragment_handle;
 };
 
-struct fragment_reassembly_entry_t
-{
-	int packet_size;
-	uint8_t* packet;
-
-	int fragment_count_so_far;
-	int fragments_total;
-	uint8_t* fragment_received;
-};
-
-struct assembled_packet_t
-{
-	int size;
-	uint8_t* packet;
-};
-
 static void s_fragment_entry_cleanup(void* data, void* udata, void* mem_ctx)
 {
 	transport_t* transport = (transport_t*)udata;
@@ -608,19 +621,6 @@ static void s_fragment_entry_cleanup(void* data, void* udata, void* mem_ctx)
 		CUTE_BUFFER_SWAP_WITH_LAST(transport, index, fragment_count, fragments);
 		handle_table_free(&transport->fragment_handle_table, h);
 	}
-}
-
-static void s_fragment_reassembly_entry_cleanup(void* data, void* udata, void* mem_ctx)
-{
-	fragment_reassembly_entry_t* reassembly = (fragment_reassembly_entry_t*)data;
-	CUTE_FREE(reassembly->packet, mem_ctx);
-	CUTE_FREE(reassembly->fragment_received, mem_ctx);
-}
-
-static void s_assembled_packet_cleanup(void* data, void* udata, void* mem_ctx)
-{
-	assembled_packet_t* assembled_packet = (assembled_packet_t*)data;
-	CUTE_FREE(assembled_packet->packet, mem_ctx);
 }
 
 transport_t* transport_make(const transport_config_t* config)
@@ -806,6 +806,9 @@ int transport_recieve_reliably_and_in_order(transport_t* transport, void** data,
 		} else {
 			*data = entry->packet;
 			*size = entry->size;
+			entry->packet = NULL;
+			entry->size = 0;
+			assembly->assembled_sequence++;
 			return 0;
 		}
 	} else {
@@ -821,14 +824,7 @@ int transport_recieve_fire_and_forget(transport_t* transport, void** data, int* 
 
 void transport_free(transport_t* transport, void* data)
 {
-	// WORKING HERE. Thinking of nice way to free packets. Reliables need extra care to not
-	// wrap sequence buffer, but unreliables can wrap, it's fine. Probably just two different
-	// free functions will be good.
-	uint16_t sequence = transport->assembled_sequence++;
-	assembled_packet_t* entry = (assembled_packet_t*)sequence_buffer_find(&transport->assembled_packets, sequence);
-	CUTE_ASSERT(entry);
-	CUTE_ASSERT(entry->packet == data);
-	sequence_buffer_remove(&transport->assembled_packets, sequence, s_assembled_packet_cleanup);
+	CUTE_FREE(data, transport->mem_ctx);
 }
 
 int transport_process_packet(transport_t* transport, void* data, int size)
@@ -858,9 +854,9 @@ int transport_process_packet(transport_t* transport, void* data, int size)
 
 	// TODO: Optimize for single-fragment case (no reassembly necessary).
 	// Build reassembly if it doesn't exist yet.
-	fragment_reassembly_entry_t* reassembly = (fragment_reassembly_entry_t*)sequence_buffer_find(&transport->fragment_reassembly, reassembly_sequence);
+	fragment_reassembly_entry_t* reassembly = (fragment_reassembly_entry_t*)sequence_buffer_find(&transport->reliable_and_in_order_assembly.fragment_reassembly, reassembly_sequence);
 	if (!reassembly) {
-		reassembly = (fragment_reassembly_entry_t*)sequence_buffer_insert(&transport->fragment_reassembly, reassembly_sequence, s_fragment_reassembly_entry_cleanup);
+		reassembly = (fragment_reassembly_entry_t*)sequence_buffer_insert(&transport->reliable_and_in_order_assembly.fragment_reassembly, reassembly_sequence, s_fragment_reassembly_entry_cleanup);
 		reassembly->packet_size = total_packet_size;
 		reassembly->packet = (uint8_t*)CUTE_ALLOC(total_packet_size, transport->mem_ctx);
 		if (!reassembly->packet) return -1;
@@ -896,11 +892,11 @@ int transport_process_packet(transport_t* transport, void* data, int size)
 	// Store completed packet for retrieval by user.
 	if (reassembly->fragment_count_so_far == fragment_count) {
 		uint16_t assembled_sequence = reassembly_sequence;
-		assembled_packet_t* assembled_packet = (assembled_packet_t*)sequence_buffer_insert(&transport->assembled_packets, assembled_sequence, s_assembled_packet_cleanup);
+		assembled_packet_t* assembled_packet = (assembled_packet_t*)sequence_buffer_insert(&transport->reliable_and_in_order_assembly.assembled_packets, assembled_sequence, s_assembled_packet_cleanup);
 		assembled_packet->size = total_packet_size;
 		assembled_packet->packet = reassembly->packet;
 		reassembly->packet = NULL;
-		sequence_buffer_remove(&transport->fragment_reassembly, reassembly_sequence, s_fragment_reassembly_entry_cleanup);
+		sequence_buffer_remove(&transport->reliable_and_in_order_assembly.fragment_reassembly, reassembly_sequence, s_fragment_reassembly_entry_cleanup);
 	}
 
 	return 0;
