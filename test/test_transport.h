@@ -359,12 +359,10 @@ int test_transport_drop_fragments_reliable_hammer()
 
 	int iters = 0;
 	int received = 0;
-	while (iters++ < 10000)
+	while (iters++ < 20000)
 	{
 		CUTE_TEST_CHECK(transport_send_fire_and_forget(transport_a, fire_and_forget_packet, fire_and_forget_packet_size));
 		CUTE_TEST_CHECK(transport_send_fire_and_forget(transport_b, fire_and_forget_packet, fire_and_forget_packet_size));
-
-		if (iters == 46) __debugbreak();
 
 		transport_process_acks(transport_a);
 		transport_process_acks(transport_b);

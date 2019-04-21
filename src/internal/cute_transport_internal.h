@@ -31,6 +31,7 @@
 // TODO: Audit default values and sizes.
 // TODO: Look for places to use memory pools.
 // TODO: Audit bounds checking.
+// TODO: Fire and forget should have an upper-bound on packet size (configurable) and a max configurable size.
 
 namespace cute
 {
@@ -47,7 +48,7 @@ struct sequence_buffer_t
 };
 
 // TODO: Place this on the sequence buffer itself to minimize parameters.
-typedef void (sequence_buffer_cleanup_entry_fn)(void* data, void* udata, void* mem_ctx);
+typedef void (sequence_buffer_cleanup_entry_fn)(void* data, uint16_t sequence, void* udata, void* mem_ctx);
 
 extern CUTE_API int CUTE_CALL sequence_buffer_init(sequence_buffer_t* buffer, int capacity, int stride, void* udata, void* mem_ctx);
 extern CUTE_API void CUTE_CALL sequence_buffer_cleanup(sequence_buffer_t* buffer, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
@@ -138,13 +139,15 @@ extern CUTE_API uint64_t CUTE_CALL ack_system_get_counter(ack_system_t* transpor
 
 #define CUTE_TRANSPORT_HEADER_SIZE (1 + 2 + 2 + 2 + 2)
 #define CUTE_TRANSPORT_MAX_FRAGMENT_SIZE 1100
+#define CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES (1024)
 
 CUTE_STATIC_ASSERT(CUTE_ACK_SYSTEM_MAX_PACKET_SIZE + CUTE_TRANSPORT_HEADER_SIZE < 1253, "Must fit within Cute Protocol's payload limit.");
 
 struct transport_config_t
 {
 	int fragment_size = CUTE_TRANSPORT_MAX_FRAGMENT_SIZE;
-	int max_fragments_in_flight = 16;
+	int max_packet_size = CUTE_TRANSPORT_MAX_FRAGMENT_SIZE * 4;
+	int max_fragments_in_flight = 4;
 	int max_size_single_send = CUTE_MB * 20;
 
 	ack_system_t* ack_system = NULL;
