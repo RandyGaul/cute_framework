@@ -111,6 +111,8 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_sequence_buffer_basic),
 		CUTE_TEST_CASE_ENTRY(test_ack_system_basic),
 		CUTE_TEST_CASE_ENTRY(test_transport_basic),
+		CUTE_TEST_CASE_ENTRY(test_transport_drop_fragments),
+		CUTE_TEST_CASE_ENTRY(test_transport_drop_fragments_reliable_hammer),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

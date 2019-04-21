@@ -26,6 +26,12 @@
 
 #define CUTE_TRANSPORT_PACKET_PAYLOAD_MAX (1200)
 
+// TODO: Pack header sizes down to a minimum.
+// TODO: Look for optimizations on single-fragment sending.
+// TODO: Audit default values and sizes.
+// TODO: Look for places to use memory pools.
+// TODO: Audit bounds checking.
+
 namespace cute
 {
 
@@ -54,6 +60,23 @@ extern CUTE_API int CUTE_CALL sequence_buffer_is_empty(sequence_buffer_t* sequen
 extern CUTE_API void* CUTE_CALL sequence_buffer_find(sequence_buffer_t* sequence_buffer, uint16_t sequence);
 extern CUTE_API void* CUTE_CALL sequence_buffer_at_index(sequence_buffer_t* sequence_buffer, int index);
 extern CUTE_API void CUTE_CALL sequence_buffer_generate_ack_bits(sequence_buffer_t* sequence_buffer, uint16_t* ack, uint32_t* ack_bits);
+
+// -------------------------------------------------------------------------------------------------
+
+#define CUTE_PACKET_QUEUE_MAX_ENTRIES (1024)
+
+struct packet_queue_t
+{
+	int count;
+	int index0;
+	int index1;
+	int sizes[CUTE_PACKET_QUEUE_MAX_ENTRIES];
+	void* packets[CUTE_PACKET_QUEUE_MAX_ENTRIES];
+};
+
+extern CUTE_API void CUTE_CALL packet_queue_init(packet_queue_t* q);
+extern CUTE_API int CUTE_CALL packet_queue_push(packet_queue_t* q, void* packet, int size);
+extern CUTE_API int CUTE_CALL packet_queue_pop(packet_queue_t* q, void** packet, int *size);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -121,8 +144,7 @@ CUTE_STATIC_ASSERT(CUTE_ACK_SYSTEM_MAX_PACKET_SIZE + CUTE_TRANSPORT_HEADER_SIZE 
 struct transport_config_t
 {
 	int fragment_size = CUTE_TRANSPORT_MAX_FRAGMENT_SIZE;
-	int max_fragments_in_flight = 256;
-	int max_fragments_stored_at_once = 1024;
+	int max_fragments_in_flight = 16;
 	int max_size_single_send = CUTE_MB * 20;
 
 	ack_system_t* ack_system = NULL;

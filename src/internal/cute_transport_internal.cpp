@@ -188,6 +188,41 @@ void sequence_buffer_generate_ack_bits(sequence_buffer_t* sequence_buffer, uint1
 
 // -------------------------------------------------------------------------------------------------
 
+void packet_queue_init(packet_queue_t* q)
+{
+	q->count = 0;
+	q->index0 = 0;
+	q->index1 = 0;
+}
+
+int packet_queue_push(packet_queue_t* q, void* packet, int size)
+{
+	if (q->count >= CUTE_PACKET_QUEUE_MAX_ENTRIES) {
+		return -1;
+	} else {
+		q->count++;
+		q->sizes[q->index1] = size;
+		q->packets[q->index1] = packet;
+		q->index1 = (q->index1 + 1) % CUTE_PACKET_QUEUE_MAX_ENTRIES;
+		return 0;
+	}
+}
+
+int packet_queue_pop(packet_queue_t* q, void** packet, int* size)
+{
+	if (q->count <= 0) {
+		return -1;
+	} else {
+		q->count--;
+		*size = q->sizes[q->index0];
+		*packet = q->packets[q->index0];
+		q->index0 = (q->index0 + 1) % CUTE_PACKET_QUEUE_MAX_ENTRIES;
+		return 0;
+	}
+}
+
+// -------------------------------------------------------------------------------------------------
+
 struct ack_system_t
 {
 	double time;
@@ -516,7 +551,9 @@ uint64_t ack_system_get_counter(ack_system_t* ack_system, ack_system_counter_t c
 struct fragment_t
 {
 	double timestamp;
+	handle_t handle;
 	uint8_t* data;
+	int size;
 };
 
 struct fragment_reassembly_entry_t
@@ -529,18 +566,11 @@ struct fragment_reassembly_entry_t
 	uint8_t* fragment_received;
 };
 
-struct assembled_packet_t
-{
-	int size;
-	uint8_t* packet;
-};
-
 struct packet_assembly_t
 {
-	uint16_t assembled_sequence;
 	uint16_t reassembly_sequence;
 	sequence_buffer_t fragment_reassembly;
-	sequence_buffer_t assembled_packets;
+	packet_queue_t assembled_packets;
 };
 
 static void s_fragment_reassembly_entry_cleanup(void* data, void* udata, void* mem_ctx)
@@ -550,22 +580,15 @@ static void s_fragment_reassembly_entry_cleanup(void* data, void* udata, void* m
 	CUTE_FREE(reassembly->fragment_received, mem_ctx);
 }
 
-static void s_assembled_packet_cleanup(void* data, void* udata, void* mem_ctx)
-{
-	assembled_packet_t* assembled_packet = (assembled_packet_t*)data;
-	CUTE_FREE(assembled_packet->packet, mem_ctx);
-}
-
-static int s_packet_assembly_init(packet_assembly_t* assembly, int max_fragments_in_flight, int max_fragments_stored_at_once, void* mem_ctx)
+static int s_packet_assembly_init(packet_assembly_t* assembly, int max_fragments_in_flight, void* mem_ctx)
 {
 	int reassembly_init = 0;
 
-	assembly->assembled_sequence = 0;
 	assembly->reassembly_sequence = 0;
 
 	CUTE_CHECK(sequence_buffer_init(&assembly->fragment_reassembly, max_fragments_in_flight, sizeof(fragment_reassembly_entry_t), NULL, mem_ctx));
 	reassembly_init = 1;
-	CUTE_CHECK(sequence_buffer_init(&assembly->assembled_packets, max_fragments_stored_at_once, sizeof(assembled_packet_t), NULL, mem_ctx));
+	packet_queue_init(&assembly->assembled_packets);
 
 	return 0;
 
@@ -577,7 +600,6 @@ cute_error:
 static void s_packet_assembly_cleanup(packet_assembly_t* assembly)
 {
 	sequence_buffer_cleanup(&assembly->fragment_reassembly, s_fragment_reassembly_entry_cleanup);
-	sequence_buffer_cleanup(&assembly->assembled_packets, s_assembled_packet_cleanup);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -617,9 +639,9 @@ static void s_fragment_entry_cleanup(void* data, void* udata, void* mem_ctx)
 	if (handle_is_valid(&transport->fragment_handle_table, h)) {
 		int index = handle_table_get_index(&transport->fragment_handle_table, h);
 		fragment_t* fragment = transport->fragments + index;
+		handle_table_free(&transport->fragment_handle_table, h);
 		CUTE_FREE(fragment->data, transport->mem_ctx);
 		CUTE_BUFFER_SWAP_WITH_LAST(transport, index, fragment_count, fragments);
-		handle_table_free(&transport->fragment_handle_table, h);
 	}
 }
 
@@ -634,7 +656,6 @@ transport_t* transport_make(const transport_config_t* config)
 	if (!transport) return NULL;
 	transport->fragment_size = config->fragment_size;
 	transport->max_fragments_in_flight = config->max_fragments_in_flight;
-	transport->max_fragments_stored_at_once = config->max_fragments_stored_at_once;
 	transport->max_size_single_send = config->max_size_single_send;
 
 	transport->fragment_count = 0;
@@ -644,14 +665,14 @@ transport_t* transport_make(const transport_config_t* config)
 	transport->ack_system = config->ack_system;
 	transport->mem_ctx = config->user_allocator_context;
 
-	CUTE_CHECK(handle_table_init(&transport->fragment_handle_table, transport->max_fragments_stored_at_once, transport->mem_ctx));
+	CUTE_CHECK(handle_table_init(&transport->fragment_handle_table, transport->max_fragments_in_flight, transport->mem_ctx));
 	table_init = 1;
 	CUTE_CHECK(sequence_buffer_init(&transport->sent_fragments, transport->max_fragments_in_flight, sizeof(fragment_entry_t), transport, transport->mem_ctx));
 	sequence_sent_fragments_init = 1;
 
-	CUTE_CHECK(s_packet_assembly_init(&transport->reliable_and_in_order_assembly, transport->max_fragments_in_flight, transport->max_fragments_stored_at_once, transport->mem_ctx));
+	CUTE_CHECK(s_packet_assembly_init(&transport->reliable_and_in_order_assembly, transport->max_fragments_in_flight, transport->mem_ctx));
 	assembly_reliable_init = 1;
-	CUTE_CHECK(s_packet_assembly_init(&transport->fire_and_forget_assembly, transport->max_fragments_in_flight, transport->max_fragments_stored_at_once, transport->mem_ctx));
+	CUTE_CHECK(s_packet_assembly_init(&transport->fire_and_forget_assembly, transport->max_fragments_in_flight, transport->mem_ctx));
 	assembly_unreliable_init = 1;
 
 	return transport;
@@ -720,7 +741,9 @@ int transport_send_reliably_and_in_order(transport_t* transport, void* data, int
 		handle_t fragment_handle = handle_table_alloc(&transport->fragment_handle_table, fragment_index);
 
 		fragment->timestamp = timestamp;
+		fragment->handle = fragment_handle;
 		fragment->data = (uint8_t*)CUTE_ALLOC(fragment_size + CUTE_TRANSPORT_HEADER_SIZE, transport->mem_ctx);
+		fragment->size = this_fragment_size;
 		// TODO: Memory pool on sent fragments.
 
 		// Write the transport header.
@@ -793,33 +816,25 @@ int transport_send_fire_and_forget(transport_t* transport, void* data, int size)
 int transport_recieve_reliably_and_in_order(transport_t* transport, void** data, int* size)
 {
 	packet_assembly_t* assembly = &transport->reliable_and_in_order_assembly;
-	uint16_t sequence = assembly->assembled_sequence;
-	uint16_t end_sequence = assembly->reassembly_sequence;
-
-	if (s_sequence_less_than(sequence, end_sequence))
-	{
-		assembled_packet_t* entry = (assembled_packet_t*)sequence_buffer_find(&assembly->assembled_packets, sequence);
-		if (!entry) {
-			*data = NULL;
-			*size = 0;
-			return -1;
-		} else {
-			*data = entry->packet;
-			*size = entry->size;
-			entry->packet = NULL;
-			entry->size = 0;
-			assembly->assembled_sequence++;
-			return 0;
-		}
-	} else {
+	if (packet_queue_pop(&assembly->assembled_packets, data, size) < 0) {
+		*data = NULL;
+		*size = 0;
 		return -1;
+	} else {
+		return 0;
 	}
 }
 
 int transport_recieve_fire_and_forget(transport_t* transport, void** data, int* size)
 {
-	CUTE_ASSERT(0); // TODO: Implement me.
-	return -1;
+	packet_assembly_t* assembly = &transport->fire_and_forget_assembly;
+	if (packet_queue_pop(&assembly->assembled_packets, data, size) < 0) {
+		*data = NULL;
+		*size = 0;
+		return -1;
+	} else {
+		return 0;
+	}
 }
 
 void transport_free(transport_t* transport, void* data)
@@ -852,11 +867,17 @@ int transport_process_packet(transport_t* transport, void* data, int size)
 		return -1;
 	}
 
-	// TODO: Optimize for single-fragment case (no reassembly necessary).
+	packet_assembly_t* assembly;
+	if (prefix) {
+		assembly = assembly = &transport->reliable_and_in_order_assembly;
+	} else {
+		assembly = assembly = &transport->fire_and_forget_assembly;
+	}
+
 	// Build reassembly if it doesn't exist yet.
-	fragment_reassembly_entry_t* reassembly = (fragment_reassembly_entry_t*)sequence_buffer_find(&transport->reliable_and_in_order_assembly.fragment_reassembly, reassembly_sequence);
+	fragment_reassembly_entry_t* reassembly = (fragment_reassembly_entry_t*)sequence_buffer_find(&assembly->fragment_reassembly, reassembly_sequence);
 	if (!reassembly) {
-		reassembly = (fragment_reassembly_entry_t*)sequence_buffer_insert(&transport->reliable_and_in_order_assembly.fragment_reassembly, reassembly_sequence, s_fragment_reassembly_entry_cleanup);
+		reassembly = (fragment_reassembly_entry_t*)sequence_buffer_insert(&assembly->fragment_reassembly, reassembly_sequence, s_fragment_reassembly_entry_cleanup);
 		reassembly->packet_size = total_packet_size;
 		reassembly->packet = (uint8_t*)CUTE_ALLOC(total_packet_size, transport->mem_ctx);
 		if (!reassembly->packet) return -1;
@@ -892,11 +913,9 @@ int transport_process_packet(transport_t* transport, void* data, int size)
 	// Store completed packet for retrieval by user.
 	if (reassembly->fragment_count_so_far == fragment_count) {
 		uint16_t assembled_sequence = reassembly_sequence;
-		assembled_packet_t* assembled_packet = (assembled_packet_t*)sequence_buffer_insert(&transport->reliable_and_in_order_assembly.assembled_packets, assembled_sequence, s_assembled_packet_cleanup);
-		assembled_packet->size = total_packet_size;
-		assembled_packet->packet = reassembly->packet;
+		packet_queue_push(&assembly->assembled_packets, reassembly->packet, total_packet_size);
 		reassembly->packet = NULL;
-		sequence_buffer_remove(&transport->reliable_and_in_order_assembly.fragment_reassembly, reassembly_sequence, s_fragment_reassembly_entry_cleanup);
+		sequence_buffer_remove(&assembly->fragment_reassembly, reassembly_sequence, s_fragment_reassembly_entry_cleanup);
 	}
 
 	return 0;
@@ -916,6 +935,27 @@ void transport_process_acks(transport_t* transport)
 
 void transport_resend_unacked_fragments(transport_t* transport)
 {
+	// Resend unacked fragments which were previously sent.
+	int count = transport->fragment_count;
+	fragment_t* fragments = transport->fragments;
+
+	for (int i = 0; i < count;)
+	{
+		fragment_t* fragment = fragments + i;
+
+		// Send to ack system.
+		uint16_t sequence;
+		if (ack_system_send_packet(transport->ack_system, fragment->data, fragment->size + CUTE_TRANSPORT_HEADER_SIZE, &sequence) < 0) {
+			// Remove failed fragments (this should never happen, and is only here for safety).
+			handle_table_free(&transport->fragment_handle_table, fragment->handle);
+			CUTE_FREE(fragment->data, transport->mem_ctx);
+			CUTE_BUFFER_SWAP_WITH_LAST(transport, i, fragment_count, fragments);
+			--count;
+			continue;
+		} else {
+			 ++i;
+		}
+	}
 }
 
 }
