@@ -147,7 +147,7 @@ struct transport_config_t
 {
 	int fragment_size = CUTE_TRANSPORT_MAX_FRAGMENT_SIZE;
 	int max_packet_size = CUTE_TRANSPORT_MAX_FRAGMENT_SIZE * 4;
-	int max_fragments_in_flight = 4;
+	int max_fragments_in_flight = 8;
 	int max_size_single_send = CUTE_MB * 20;
 
 	ack_system_t* ack_system = NULL;
@@ -170,7 +170,9 @@ extern CUTE_API void CUTE_CALL transport_free(transport_t* transport, void* data
 
 extern CUTE_API int CUTE_CALL transport_process_packet(transport_t* transport, void* data, int size);
 extern CUTE_API void CUTE_CALL transport_process_acks(transport_t* transport);
+extern CUTE_API void CUTE_CALL transport_clear_acks(transport_t* transport);
 extern CUTE_API void CUTE_CALL transport_resend_unacked_fragments(transport_t* transport);
+extern CUTE_API int CUTE_CALL transport_unacked_fragment_count(transport_t* transport);
 
 }
 
