@@ -174,11 +174,6 @@ void sequence_buffer_generate_ack_bits(sequence_buffer_t* sequence_buffer, uint1
 	{
 		uint16_t sequence = *ack - ((uint16_t)i);
 		if (sequence_buffer_find(sequence_buffer, sequence)) {
-			if (sequence == 5678) {
-				static int SHIT_COUNTER = 0;
-				SHIT_COUNTER++;
-				//if (FUCK_COUNT == 171) __debugbreak();
-			}
 			*ack_bits |= mask;
 		}
 		mask <<= 1;
