@@ -132,9 +132,9 @@ int test_transport_open_packet_fn(uint16_t sequence, void* packet, int size, voi
 {
 	test_ack_system_data_t* data = (test_ack_system_data_t*)udata;
 	if (data->id) {
-		return transport_process_packet(data->transport_b, packet, size);
+		return transport_process_packet(data->transport_b, packet, size, sequence);
 	} else {
-		return transport_process_packet(data->transport_a, packet, size);
+		return transport_process_packet(data->transport_a, packet, size, sequence);
 	}
 }
 
@@ -325,6 +325,8 @@ int test_send_packet_many_drops_fn(uint16_t sequence, void* packet, int size, vo
 CUTE_TEST_CASE(test_transport_drop_fragments_reliable_hammer, "Create and send many fragments under extreme packet loss.");
 int test_transport_drop_fragments_reliable_hammer()
 {
+	srand(0);
+
 	test_ack_system_data_t data_a;
 	test_ack_system_data_t data_b;
 	data_a.id = 0;
@@ -352,7 +354,7 @@ int test_transport_drop_fragments_reliable_hammer()
 	data_b.transport_a = transport_a;
 	data_b.transport_b = transport_b;
 
-	int packet_size = CUTE_KB * 100;
+	int packet_size = CUTE_KB * 10;
 	uint8_t* packet = (uint8_t*)CUTE_ALLOC(packet_size, NULL);
 	for (int i = 0; i < packet_size; ++i) {
 		packet[i] = (uint8_t)i;
@@ -368,6 +370,7 @@ int test_transport_drop_fragments_reliable_hammer()
 
 	int iters = 0;
 	int received = 0;
+
 	while (1)
 	{
 		CUTE_TEST_CHECK(transport_send_fire_and_forget(transport_a, fire_and_forget_packet, fire_and_forget_packet_size));

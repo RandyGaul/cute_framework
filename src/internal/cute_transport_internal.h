@@ -32,6 +32,7 @@
 // TODO: Look for places to use memory pools.
 // TODO: Audit bounds checking.
 // TODO: Fire and forget should have an upper-bound on packet size (configurable) and a max configurable size.
+// TODO: Reliable resending rate.
 
 namespace cute
 {
@@ -168,7 +169,7 @@ extern CUTE_API int CUTE_CALL transport_recieve_reliably_and_in_order(transport_
 extern CUTE_API int CUTE_CALL transport_recieve_fire_and_forget(transport_t* transport, void** data, int* size);
 extern CUTE_API void CUTE_CALL transport_free(transport_t* transport, void* data);
 
-extern CUTE_API int CUTE_CALL transport_process_packet(transport_t* transport, void* data, int size);
+extern CUTE_API int CUTE_CALL transport_process_packet(transport_t* transport, void* data, int size, uint16_t sequence);
 extern CUTE_API void CUTE_CALL transport_process_acks(transport_t* transport);
 extern CUTE_API void CUTE_CALL transport_clear_acks(transport_t* transport);
 extern CUTE_API void CUTE_CALL transport_resend_unacked_fragments(transport_t* transport);

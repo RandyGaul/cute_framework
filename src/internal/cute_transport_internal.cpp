@@ -91,16 +91,16 @@ static void s_sequence_buffer_remove_entries(sequence_buffer_t* buffer, int sequ
 			int index = sequence % buffer->capacity;
 			if (cleanup_fn && buffer->entry_sequence[index] != 0xFFFFFFFF) {
 				cleanup_fn(buffer->entry_data + buffer->stride * index, buffer->entry_sequence[index], buffer->udata, buffer->mem_ctx);
-				buffer->entry_sequence[index] = 0xFFFFFFFF;
 			}
+			buffer->entry_sequence[index] = 0xFFFFFFFF;
 		}
 	} else {
 		for (int i = 0; i < buffer->capacity; ++i)
 		{
 			if (cleanup_fn && buffer->entry_sequence[i] != 0xFFFFFFFF) {
 				cleanup_fn(buffer->entry_data + buffer->stride * i, buffer->entry_sequence[i], buffer->udata, buffer->mem_ctx);
-				buffer->entry_sequence[i] = 0xFFFFFFFF;
 			}
+			buffer->entry_sequence[i] = 0xFFFFFFFF;
 		}
 	}
 }
@@ -114,14 +114,6 @@ static CUTE_INLINE int s_sequence_greater_than(uint16_t a, uint16_t b)
 static CUTE_INLINE int s_sequence_less_than(uint16_t a, uint16_t b)
 {
 	return s_sequence_greater_than(b, a);
-}
-
-void sequence_buffer_advance(sequence_buffer_t* buffer, uint16_t sequence)
-{
-	if (s_sequence_greater_than(sequence + 1, buffer->sequence)) {
-		s_sequence_buffer_remove_entries(buffer, buffer->sequence, sequence, NULL);
-		buffer->sequence = sequence + 1;
-	}
 }
 
 static CUTE_INLINE int s_sequence_is_stale(sequence_buffer_t* buffer, uint16_t sequence)
@@ -182,6 +174,11 @@ void sequence_buffer_generate_ack_bits(sequence_buffer_t* sequence_buffer, uint1
 	{
 		uint16_t sequence = *ack - ((uint16_t)i);
 		if (sequence_buffer_find(sequence_buffer, sequence)) {
+			if (sequence == 5678) {
+				static int SHIT_COUNTER = 0;
+				SHIT_COUNTER++;
+				//if (FUCK_COUNT == 171) __debugbreak();
+			}
 			*ack_bits |= mask;
 		}
 		mask <<= 1;
@@ -256,6 +253,12 @@ struct sent_packet_t
 	int acked;
 	int size;
 };
+
+static void s_sent_packet_cleanup(void* data, uint16_t sequence, void* udata, void* mem_ctx)
+{
+	sent_packet_t* packet = (sent_packet_t*)data;
+	packet->acked = 0;
+}
 
 struct received_packet_t
 {
@@ -358,7 +361,7 @@ int ack_system_send_packet(ack_system_t* ack_system, void* data, int size, uint1
 	uint32_t ack_bits;
 
 	sequence_buffer_generate_ack_bits(&ack_system->received_packets, &ack, &ack_bits);
-	sent_packet_t* packet = (sent_packet_t*)sequence_buffer_insert(&ack_system->sent_packets, sequence);
+	sent_packet_t* packet = (sent_packet_t*)sequence_buffer_insert(&ack_system->sent_packets, sequence, s_sent_packet_cleanup);
 	CUTE_ASSERT(packet);
 
 	packet->timestamp = ack_system->time;
@@ -430,8 +433,6 @@ int ack_system_receive_packet(ack_system_t* ack_system, void* data, int size)
 	CUTE_ASSERT(packet);
 	packet->timestamp = ack_system->time;
 	packet->size = size;
-
-	sequence_buffer_advance(&ack_system->received_packets, sequence);
 
 	for (int i = 0; i < 32; ++i)
 	{
@@ -643,7 +644,7 @@ static int s_send_queue_push(send_queue_t* q, const send_queue_item_t* item)
 	CUTE_ASSERT(q->index1 >= 0 && q->index1 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
 
 	if (q->count < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES) {
-		int next_index = q->index1 + 1 % CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES;
+		int next_index = (q->index1 + 1) % CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES;
 		q->items[next_index] = *item;
 		q->index1 = next_index;
 		++q->count;
@@ -659,7 +660,7 @@ static void s_send_queue_pop(send_queue_t* q)
 	CUTE_ASSERT(q->index0 >= 0 && q->index0 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
 	CUTE_ASSERT(q->index1 >= 0 && q->index1 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
 
-	int next_index = q->index0 + 1 % CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES;
+	int next_index = (q->index0 + 1) % CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES;
 	q->index0 = next_index;
 	--q->count;
 }
@@ -671,7 +672,7 @@ static int s_send_queue_peek(send_queue_t* q, send_queue_item_t** item)
 	CUTE_ASSERT(q->index1 >= 0 && q->index1 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
 
 	if (q->count > 0) {
-		int next_index = q->index0 + 1 % CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES;
+		int next_index = (q->index0 + 1) % CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES;
 		*item = q->items + next_index;
 		return 0;
 	} else {
@@ -982,7 +983,7 @@ void transport_free(transport_t* transport, void* data)
 	CUTE_FREE(data, transport->mem_ctx);
 }
 
-int transport_process_packet(transport_t* transport, void* data, int size)
+int transport_process_packet(transport_t* transport, void* data, int size, uint16_t sequence)
 {
 	if (size < CUTE_TRANSPORT_HEADER_SIZE) return -1;
 
