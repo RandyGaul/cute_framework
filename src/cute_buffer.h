@@ -23,6 +23,7 @@
 #define BUFFER_H
 
 #include <cute_defines.h>
+#include <cute_alloc.h>
 
 #define CUTE_BUFFER_GROW(ctx, count, capacity, data, type, new_cap, mem_ctx) \
 	do { \

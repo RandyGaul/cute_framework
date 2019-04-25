@@ -71,6 +71,7 @@ set(CUTE_SRCS
 	src/cute_version.cpp
 	src/cute_memory_pool.cpp
 	src/cute_protocol.cpp
+	src/cute_kv.cpp
 	
 	src/internal/cute_transport_internal.cpp
 
@@ -102,6 +103,7 @@ set(CUTE_HDRS
 	src/cute_memory_pool.h
 	src/cute_protocol.h
 	src/cute_doubly_list.h
+	src/cute_kv.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
@@ -142,6 +144,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_client_server.h
 		test/test_sequence_buffer.h
 		test/test_transport.h
+		test/test_kv.h
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})

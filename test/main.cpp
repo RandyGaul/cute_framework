@@ -42,6 +42,7 @@
 #include <test_client_server.h>
 #include <test_sequence_buffer.h>
 #include <test_transport.h>
+#include <test_kv.h>
 
 int main(int argc, const char** argv)
 {
@@ -113,6 +114,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_transport_basic),
 		CUTE_TEST_CASE_ENTRY(test_transport_drop_fragments),
 		CUTE_TEST_CASE_ENTRY(test_transport_drop_fragments_reliable_hammer),
+		CUTE_TEST_CASE_ENTRY(test_kv_basic),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;
