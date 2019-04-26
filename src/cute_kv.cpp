@@ -163,6 +163,46 @@ static CUTE_INLINE int s_try(kv_t* kv, uint8_t expect)
 	return 0;
 }
 
+#define CUTE_KV_CHECK_CONDITION(condition, failure_details) do { if (!(condition)) { return error_failure(failure_details); } } while (0)
+#define CUTE_KV_CHECK(err) do { if (err.is_error()) return err; } while (0)
+
+#define s_expect(kv, expected_character) \
+	do { \
+		CUTE_KV_CHECK_CONDITION(s_next(kv) != expected_character, "kv : Found unexpected token."); \
+	} while (0)
+
+static error_t s_scan_string(kv_t* kv, uint8_t** end_of_string)
+{
+	*end_of_string = NULL;
+	s_expect(kv, '"');
+	while (kv->in < kv->in_end)
+	{
+		uint8_t* end = (uint8_t*)CUTE_MEMCHR(kv->in, '"', kv->in_end - kv->in);
+		if (*(end - 1) != '\\') {
+			*end_of_string = end;
+			break;
+		}
+	}
+	if (kv->in == kv->in_end) return error_failure("kv : Unterminated string at end of file.");
+	return error_success();
+}
+
+static CUTE_INLINE uint8_t s_parse_escape_code(uint8_t c)
+{
+	switch (c)
+	{
+	case '\\': return '\\';
+	case '\'': return '\'';
+	case '"': return '"';
+	case 't': return '\t';
+	case 'f': return '\f';
+	case 'n': return '\n';
+	case 'r': return '\r';
+	case '0': return '\0';
+	default: return c;
+	}
+}
+
 void kv_reset(kv_t* kv, const void* data, size_t size, int mode)
 {
 	kv->start = (uint8_t*)data;
