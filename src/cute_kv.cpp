@@ -128,12 +128,52 @@ void kv_destroy(kv_t* kv)
 	CUTE_FREE(kv, kv->mem_ctx);
 }
 
+static CUTE_INLINE int s_isspace(uint8_t c)
+{
+	return (c == ' ') |
+		(c == '\t') |
+		(c == '\n') |
+		(c == '\v') |
+		(c == '\f') |
+		(c == '\r');
+}
+
+static CUTE_INLINE uint8_t s_peak(kv_t* kv)
+{
+	while (kv->in < kv->in_end && s_isspace(*kv->in)) kv->in++;
+	return kv->in < kv->in_end ? *kv->in : 0;
+}
+
+static CUTE_INLINE uint8_t s_next(kv_t* kv)
+{
+	uint8_t c;
+	if (kv->in == kv->in_end) return 0;
+	while (s_isspace(c = *kv->in++)) if (kv->in == kv->in_end) return 0;
+	return c;
+}
+
+static CUTE_INLINE int s_try(kv_t* kv, uint8_t expect)
+{
+	if (kv->in == kv->in_end) return 0;
+	if (s_peak(kv) == expect)
+	{
+		kv->in++;
+		return 1;
+	}
+	return 0;
+}
+
 void kv_reset(kv_t* kv, const void* data, size_t size, int mode)
 {
 	kv->start = (uint8_t*)data;
 	kv->in = (uint8_t*)data;
 	kv->in_end = kv->in + size;
 	kv->mode = mode;
+
+	if (mode == CUTE_KV_MODE_READ) {
+		CUTE_CHECK_BUFFER_GROW(kv, offset_stack_count, offset_stack_capacity, offset_stack, int, 16, mem_ctx);
+		kv->offset_stack[kv->offset_stack_count++] = kv->entry_count;
+	}
 }
 
 void kv_peek_object(kv_t* kv, const char** str, size_t* len)
@@ -181,6 +221,7 @@ static CUTE_INLINE void s_write_str_no_quotes(kv_t* kv, const char* str, size_t 
 		s_error(kv, "kv : Attempted to write string beyond buffer.");
 		return;
 	}
+	// TODO: Handle escapes and utf8 somehow.
 	CUTE_STRNCPY((char*)in, str, len);
 	kv->in = end;
 }
@@ -211,9 +252,7 @@ void kv_begin(kv_t* kv, const char* key, const char* type_id)
 			s_write_str(kv, type_id);
 			s_write_str_no_quotes(kv, " {\n", 3);
 		}
-
-		CUTE_CHECK_BUFFER_GROW(kv, offset_stack_count, offset_stack_capacity, offset_stack, int, 16, mem_ctx);
-		kv->offset_stack[kv->offset_stack_count++] = kv->entry_count;
+	} else {
 	}
 }
 
