@@ -25,7 +25,10 @@
 namespace cute
 {
 
-#define CUTE_BASE64_SIZE(size) ((((size) + 2) / 3) * 4)
+// Info about base 64 encoding: https://tools.ietf.org/html/rfc4648
+
+#define CUTE_BASE64_ENCODED_SIZE(size) ((((size) + 2) / 3) * 4)
+#define CUTE_BASE64_DECODED_SIZE(size) ((((size) + 3) / 4) * 3)
 
 CUTE_API error_t CUTE_CALL base64_encode(void* dst, int dst_size, const void* src, int src_size);
 CUTE_API error_t CUTE_CALL base64_decode(void* dst, int dst_size, const void* src, int src_size);
