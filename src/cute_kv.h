@@ -23,29 +23,15 @@
 #define CUTE_KV_H
 
 #include <cute_defines.h>
+#include <cute_error.h>
 
 namespace cute
 {
 
-#define CUTE_ERROR_SUCCESS (0)
-#define CUTE_ERROR_FAILURE (-1)
-
-struct error_t
-{
-	int code;
-	const char* details;
-
-	CUTE_INLINE int is_error() const { return code == CUTE_ERROR_FAILURE; }
-};
-
-CUTE_INLINE error_t error_make(int code, const char* details) { error_t error; error.code = code; error.details = details; return error; }
-CUTE_INLINE error_t error_failure(const char* details) { error_t error; error.code = CUTE_ERROR_FAILURE; error.details = details; return error; }
-CUTE_INLINE error_t error_success() { error_t error; error.code = CUTE_ERROR_SUCCESS; error.details = NULL; return error; }
-
 struct kv_t;
 
-#define CUTE_KV_MODE_WRITE       1
-#define CUTE_KV_MODE_READ        0
+#define CUTE_KV_MODE_WRITE 1
+#define CUTE_KV_MODE_READ  0
 
 CUTE_API kv_t* CUTE_CALL kv_make(void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL kv_destroy(kv_t* kv);

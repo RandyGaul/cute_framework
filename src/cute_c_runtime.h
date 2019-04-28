@@ -57,7 +57,7 @@
 #	define CUTE_STRLEN strlen
 #endif
 
-#ifndef CUTE_STRCHR
+#ifndef CUTE_MEMCHR
 #	include <string.h>
 #	define CUTE_MEMCHR memchr
 #endif

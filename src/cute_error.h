@@ -33,6 +33,21 @@ extern CUTE_API const char* CUTE_CALL error_get();
 extern CUTE_API void CUTE_CALL error_set(const char* error_string);
 extern CUTE_API void CUTE_CALL error_handler_set(error_handler_fn* handler, void* udata);
 
+#define CUTE_ERROR_SUCCESS (0)
+#define CUTE_ERROR_FAILURE (-1)
+
+struct error_t
+{
+	int code;
+	const char* details;
+
+	CUTE_INLINE int is_error() const { return code == CUTE_ERROR_FAILURE; }
+};
+
+CUTE_INLINE error_t error_make(int code, const char* details) { error_t error; error.code = code; error.details = details; return error; }
+CUTE_INLINE error_t error_failure(const char* details) { error_t error; error.code = CUTE_ERROR_FAILURE; error.details = details; return error; }
+CUTE_INLINE error_t error_success() { error_t error; error.code = CUTE_ERROR_SUCCESS; error.details = NULL; return error; }
+
 }
 
 #endif // CUTE_ERROR_H

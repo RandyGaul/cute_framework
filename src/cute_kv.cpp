@@ -187,6 +187,22 @@ static error_t s_scan_string(kv_t* kv, uint8_t** end_of_string)
 	return error_success();
 }
 
+struct kv_string_t
+{
+	uint8_t* str;
+	size_t len;
+};
+
+struct kv_object_t
+{
+	kv_string_t key;
+
+	int count;
+	kv_string_t* keys;
+	kv_string_t* values;
+	kv_type_t* types;
+};
+
 static CUTE_INLINE uint8_t s_parse_escape_code(uint8_t c)
 {
 	switch (c)
@@ -405,18 +421,17 @@ static void s_write(kv_t* kv, double val)
 
 error_t kv_end(kv_t* kv)
 {
-	int offset = kv->offset_stack[--kv->offset_stack_count];
-	int count = kv->entry_count - offset;
-	kv_entry_t* entries = kv->entries + offset;
-	kv->entry_count = offset;
-
-
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		s_tabs(kv, -1);
 		s_write_u8(kv, '}');
 		s_write_u8(kv, ',');
 		s_write_u8(kv, '\n');
 	} else {
+		int offset = kv->offset_stack[--kv->offset_stack_count];
+		int count = kv->entry_count - offset;
+		kv_entry_t* entries = kv->entries + offset;
+		kv->entry_count = offset;
+
 		for (int i = 0; i < count; ++i)
 		{
 			kv_entry_t* entry = entries + i;
