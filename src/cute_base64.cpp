@@ -45,11 +45,7 @@ static const uint8_t s_6bits_to_base64[64] = {
 			int index = val - 43;
 			out_array[index] = i;
 		}
-		printf("\n");
-		for (int i = 0; i < 79; ++i)
-		{
-			printf("%d,\n", out_array[i]);
-		}
+		for (int i = 0; i < 79; ++i) printf("%d,\n", out_array[i]);
 */
 static const int s_base64_to_6bits[79] = {
 	62, -1, -1, -1, 63, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, -1, -1, -1, -1, 0, 1, 2, 3, 4,
