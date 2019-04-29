@@ -25,6 +25,8 @@
 #include <cute_defines.h>
 #include <cute_error.h>
 
+// TODO : Audit error reporting strategy. Probably majority of functions can fail.
+
 namespace cute
 {
 
@@ -35,11 +37,11 @@ struct kv_t;
 
 CUTE_API kv_t* CUTE_CALL kv_make(void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL kv_destroy(kv_t* kv);
-CUTE_API void CUTE_CALL kv_reset(kv_t* kv, const void* data, size_t size, int mode);
+CUTE_API void CUTE_CALL kv_reset(kv_t* kv, const void* data, int size, int mode);
 
-CUTE_API void CUTE_CALL kv_peek_object(kv_t* kv, const char** str, size_t* len);
-CUTE_API void CUTE_CALL kv_begin(kv_t* kv, const char* key, const char* type_id);
-CUTE_API error_t CUTE_CALL kv_end(kv_t* kv);
+CUTE_API void CUTE_CALL kv_peek_object(kv_t* kv, const char** str, int* len);
+CUTE_API void CUTE_CALL kv_object_begin(kv_t* kv, const char* key, const char* type_id);
+CUTE_API error_t CUTE_CALL kv_object_end(kv_t* kv);
 
 CUTE_API void CUTE_CALL kv_field(kv_t* kv, const char* key, uint8_t* val);
 CUTE_API void CUTE_CALL kv_field(kv_t* kv, const char* key, uint16_t* val);
@@ -54,9 +56,10 @@ CUTE_API void CUTE_CALL kv_field(kv_t* kv, const char* key, int64_t* val);
 CUTE_API void CUTE_CALL kv_field(kv_t* kv, const char* key, float* val);
 CUTE_API void CUTE_CALL kv_field(kv_t* kv, const char* key, double* val);
 
-CUTE_API void CUTE_CALL kv_field_str(kv_t* kv, const char* key, char** str, size_t* size);
-CUTE_API void CUTE_CALL kv_field_blob(kv_t* kv, const char* key, void* data, size_t* size);
-CUTE_API void CUTE_CALL kv_field_array(kv_t* kv, const char* key, int* count);
+CUTE_API void CUTE_CALL kv_field_str(kv_t* kv, const char* key, char** str, int* size);
+CUTE_API void CUTE_CALL kv_field_blob(kv_t* kv, const char* key, void* data, int* size);
+CUTE_API void CUTE_CALL kv_field_array_begin(kv_t* kv, const char* key, int* count, const char* type_id = NULL);
+CUTE_API void CUTE_CALL kv_field_array_end(kv_t* kv);
 
 CUTE_API void CUTE_CALL kv_print(kv_t* kv);
 

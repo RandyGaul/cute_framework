@@ -27,26 +27,42 @@ struct thing_t
 	int a;
 	float b;
 	char* str;
-	size_t str_len;
+	int str_len;
 };
 
 void do_serialize(kv_t* kv, thing_t* thing)
 {
-	kv_begin(kv, NULL, "thing_t");
+	kv_object_begin(kv, NULL, "thing_t");
 	kv_field(kv, "a", &thing->a);
 	kv_field(kv, "b", &thing->b);
 	kv_field_str(kv, "str", &thing->str, &thing->str_len);
-		kv_begin(kv, "sub_thing", "nested_thing_t");
+		kv_object_begin(kv, "sub_thing", "nested_thing_t");
 		kv_field(kv, "a", &thing->a);
 		kv_field(kv, "die_fucker", &thing->a);
-			kv_begin(kv, "interior_thing", "final_nest_t");
+			kv_object_begin(kv, "interior_thing", "final_nest_t");
 			kv_field(kv, "hi", &thing->a);
 			kv_field_str(kv, "geez", &thing->str, &thing->str_len);
-			kv_end(kv);
-		kv_end(kv);
+			kv_object_end(kv);
+		kv_object_end(kv);
 	kv_field(kv, "x", &thing->a);
 	kv_field(kv, "y", &thing->b);
-	kv_end(kv);
+	int blob_size = 17;
+	kv_field_blob(kv, "blob_data", "Some blob input.", &blob_size);
+	int int_count = 8;
+	kv_field_array_begin(kv, "array_of_ints", &int_count);
+		for (int i = 0; i < int_count; ++i) kv_field(kv, NULL, &i);
+	kv_field_array_end(kv);
+	int_count = 3;
+	kv_field_array_begin(kv, "array_of_objects", &int_count, "array_object_t");
+		for (int i = 0; i < int_count; ++i)
+		{
+			kv_object_begin(kv, NULL, NULL);
+			kv_field(kv, "some integer.", &thing->a);
+			kv_field_str(kv, "some string", &thing->str, &thing->str_len);
+			kv_object_end(kv);
+		}
+	kv_field_array_end(kv);
+	kv_object_end(kv);
 }
 
 CUTE_TEST_CASE(test_kv_basic, "FUCKERS.");
@@ -54,14 +70,14 @@ int test_kv_basic()
 {
 	kv_t* kv = kv_make();
 
-	char buffer[256];
+	char buffer[1024];
 	kv_reset(kv, buffer, sizeof(buffer), CUTE_KV_MODE_WRITE);
 
 	thing_t thing;
 	thing.a = 5;
 	thing.b = 10.3f;
 	thing.str = "Hello.";
-	thing.str_len = CUTE_STRLEN(thing.str);
+	thing.str_len = (int)CUTE_STRLEN(thing.str);
 
 	do_serialize(kv, &thing);
 

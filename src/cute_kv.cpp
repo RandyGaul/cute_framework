@@ -22,6 +22,7 @@
 #include <cute_kv.h>
 #include <cute_c_runtime.h>
 #include <cute_buffer.h>
+#include <cute_base64.h>
 
 #include <stdio.h>
 #include <inttypes.h>
@@ -51,13 +52,13 @@ namespace cute
 struct kv_str_t
 {
 	char** str;
-	size_t* size;
+	int* size;
 };
 
 struct kv_blob_t
 {
 	void* data;
-	size_t* size;
+	int* size;
 };
 
 struct kv_entry_t
@@ -88,9 +89,14 @@ struct kv_t
 	int entry_count;
 	kv_entry_t* entries;
 
+	int is_array;
+	int is_array_stack_capacity;
+	int is_array_stack_count;
+	int* is_array_stack;
+
 	int tabs;
 	error_t error;
-	size_t temp_size;
+	int temp_size;
 	uint8_t* temp;
 
 	void* mem_ctx;
@@ -113,6 +119,11 @@ kv_t* kv_make(void* user_allocator_context)
 	kv->entry_count = 0;
 	kv->entries = NULL;
 
+	kv->is_array = 0;
+	kv->is_array_stack_capacity = 0;
+	kv->is_array_stack_count = 0;
+	kv->is_array_stack = NULL;
+
 	kv->tabs = 0;
 	kv->error = error_success();
 	kv->temp_size = 0;
@@ -126,6 +137,20 @@ kv_t* kv_make(void* user_allocator_context)
 void kv_destroy(kv_t* kv)
 {
 	CUTE_FREE(kv, kv->mem_ctx);
+}
+
+static CUTE_INLINE void s_push_array(kv_t* kv, int is_array)
+{
+	CUTE_CHECK_BUFFER_GROW(kv, is_array_stack_count, is_array_stack_capacity, is_array_stack, int, 8, kv->mem_ctx);
+	CUTE_ASSERT(kv->is_array_stack);
+	kv->is_array_stack[kv->is_array_stack_count++] = kv->is_array;
+	kv->is_array = is_array;
+}
+
+static CUTE_INLINE void s_pop_array(kv_t* kv)
+{
+	CUTE_ASSERT(kv->is_array_stack_count > 0);
+	kv->is_array = kv->is_array_stack[--kv->is_array_stack_count];
 }
 
 static CUTE_INLINE int s_isspace(uint8_t c)
@@ -190,7 +215,7 @@ static error_t s_scan_string(kv_t* kv, uint8_t** end_of_string)
 struct kv_string_t
 {
 	uint8_t* str;
-	size_t len;
+	int len;
 };
 
 struct kv_object_t
@@ -219,7 +244,7 @@ static CUTE_INLINE uint8_t s_parse_escape_code(uint8_t c)
 	}
 }
 
-void kv_reset(kv_t* kv, const void* data, size_t size, int mode)
+void kv_reset(kv_t* kv, const void* data, int size, int mode)
 {
 	kv->start = (uint8_t*)data;
 	kv->in = (uint8_t*)data;
@@ -232,7 +257,7 @@ void kv_reset(kv_t* kv, const void* data, size_t size, int mode)
 	}
 }
 
-void kv_peek_object(kv_t* kv, const char** str, size_t* len)
+void kv_peek_object(kv_t* kv, const char** str, int* len)
 {
 }
 
@@ -269,7 +294,7 @@ static CUTE_INLINE void s_tabs(kv_t* kv, int delta = 0)
 	if (delta > 0) kv->tabs += delta;
 }
 
-static CUTE_INLINE void s_write_str_no_quotes(kv_t* kv, const char* str, size_t len)
+static CUTE_INLINE void s_write_str_no_quotes(kv_t* kv, const char* str, int len)
 {
 	uint8_t* in = kv->in;
 	uint8_t* end = kv->in + len;
@@ -282,7 +307,7 @@ static CUTE_INLINE void s_write_str_no_quotes(kv_t* kv, const char* str, size_t 
 	kv->in = end;
 }
 
-static CUTE_INLINE void s_write_str(kv_t* kv, const char* str, size_t len)
+static CUTE_INLINE void s_write_str(kv_t* kv, const char* str, int len)
 {
 	s_write_u8(kv, '"');
 	s_write_str_no_quotes(kv, str, len);
@@ -291,23 +316,27 @@ static CUTE_INLINE void s_write_str(kv_t* kv, const char* str, size_t len)
 
 static CUTE_INLINE void s_write_str(kv_t* kv, const char* str)
 {
-	s_write_str(kv, str, CUTE_STRLEN(str));
+	s_write_str(kv, str, (int)CUTE_STRLEN(str));
 }
 
-void kv_begin(kv_t* kv, const char* key, const char* type_id)
+void kv_object_begin(kv_t* kv, const char* key, const char* type_id)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		s_tabs(kv, 1);
-		if (key) {
-			s_write_str(kv, key);
-			s_write_str_no_quotes(kv, " -> ", 4);
+		if (!kv->is_array) {
+			s_tabs(kv, 1);
+			if (key) {
+				s_write_str(kv, key);
+				s_write_str_no_quotes(kv, " -> ", 4);
+			} else {
+				s_write_str_no_quotes(kv, "-> ", 3);
+			}
 			s_write_str(kv, type_id);
 			s_write_str_no_quotes(kv, " {\n", 3);
 		} else {
-			s_write_str_no_quotes(kv, "-> ", 3);
-			s_write_str(kv, type_id);
-			s_write_str_no_quotes(kv, " {\n", 3);
+			s_write_str_no_quotes(kv, "{\n", 2);
+			kv->tabs += 1;
 		}
+		s_push_array(kv, 0);
 	} else {
 	}
 }
@@ -321,7 +350,7 @@ static CUTE_INLINE void s_skip_until(kv_t* kv, uint8_t val)
 {
 }
 
-static uint8_t* s_temp(kv_t* kv, size_t size)
+static uint8_t* s_temp(kv_t* kv, int size)
 {
 	if (kv->temp_size < size + 1) {
 		CUTE_FREE(kv->temp, kv->mem_ctx);
@@ -331,7 +360,7 @@ static uint8_t* s_temp(kv_t* kv, size_t size)
 	return kv->temp;
 }
 
-static size_t s_to_string(kv_t* kv, uint64_t val)
+static int s_to_string(kv_t* kv, uint64_t val)
 {
 	const char* fmt = "%" PRIu64;
 	uint8_t* temp = s_temp(kv, 256);
@@ -347,7 +376,7 @@ static size_t s_to_string(kv_t* kv, uint64_t val)
 	return size - 1;
 }
 
-static size_t s_to_string(kv_t* kv, int64_t val)
+static int s_to_string(kv_t* kv, int64_t val)
 {
 	const char* fmt = "%" PRIi64;
 	uint8_t* temp = s_temp(kv, 256);
@@ -363,7 +392,7 @@ static size_t s_to_string(kv_t* kv, int64_t val)
 	return size - 1;
 }
 
-static size_t s_to_string(kv_t* kv, float val)
+static int s_to_string(kv_t* kv, float val)
 {
 	const char* fmt = "%f";
 	uint8_t* temp = s_temp(kv, 256);
@@ -379,7 +408,7 @@ static size_t s_to_string(kv_t* kv, float val)
 	return size - 1;
 }
 
-static size_t s_to_string(kv_t* kv, double val)
+static int s_to_string(kv_t* kv, double val)
 {
 	const char* fmt = "%f";
 	uint8_t* temp = s_temp(kv, 256);
@@ -397,35 +426,37 @@ static size_t s_to_string(kv_t* kv, double val)
 
 static void s_write(kv_t* kv, uint64_t val)
 {
-	size_t size = s_to_string(kv, val);
+	int size = s_to_string(kv, val);
 	s_write_str_no_quotes(kv, (char*)kv->temp, size);
 }
 
 static void s_write(kv_t* kv, int64_t val)
 {
-	size_t size = s_to_string(kv, val);
+	int size = s_to_string(kv, val);
 	s_write_str_no_quotes(kv, (char*)kv->temp, size);
 }
 
 static void s_write(kv_t* kv, float val)
 {
-	size_t size = s_to_string(kv, val);
+	int size = s_to_string(kv, val);
 	s_write_str_no_quotes(kv, (char*)kv->temp, size);
 }
 
 static void s_write(kv_t* kv, double val)
 {
-	size_t size = s_to_string(kv, val);
+	int size = s_to_string(kv, val);
 	s_write_str_no_quotes(kv, (char*)kv->temp, size);
 }
 
-error_t kv_end(kv_t* kv)
+error_t kv_object_end(kv_t* kv)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		s_tabs(kv, -1);
 		s_write_u8(kv, '}');
 		s_write_u8(kv, ',');
 		s_write_u8(kv, '\n');
+		s_tabs(kv);
+		s_pop_array(kv);
 	} else {
 		int offset = kv->offset_stack[--kv->offset_stack_count];
 		int count = kv->entry_count - offset;
@@ -499,17 +530,24 @@ static CUTE_INLINE void s_entry_ptr(kv_t* kv, const char* key, void* val, kv_typ
 
 static CUTE_INLINE void s_field_begin(kv_t* kv, const char* key)
 {
-	s_tabs(kv);
-	s_write_str(kv, key);
-	s_write_u8(kv, ' ');
-	s_write_u8(kv, ':');
-	s_write_u8(kv, ' ');
+	if (!kv->is_array) {
+		s_tabs(kv);
+		s_write_str(kv, key);
+		s_write_u8(kv, ' ');
+		s_write_u8(kv, ':');
+		s_write_u8(kv, ' ');
+	}
 }
 
 static CUTE_INLINE void s_field_end(kv_t* kv)
 {
-	s_write_u8(kv, ',');
-	s_write_u8(kv, '\n');
+	if (!kv->is_array) {
+		s_write_u8(kv, ',');
+		s_write_u8(kv, '\n');
+	} else {
+		s_write_u8(kv, ',');
+		s_write_u8(kv, ' ');
+	}
 }
 
 void kv_field(kv_t* kv, const char* key, uint8_t* val)
@@ -622,7 +660,7 @@ void kv_field(kv_t* kv, const char* key, double* val)
 	}
 }
 
-void kv_field_str(kv_t* kv, const char* key, char** str, size_t* size)
+void kv_field_str(kv_t* kv, const char* key, char** str, int* size)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		s_field_begin(kv, key);
@@ -639,9 +677,15 @@ void kv_field_str(kv_t* kv, const char* key, char** str, size_t* size)
 	}
 }
 
-void kv_field_blob(kv_t* kv, const char* key, void* data, size_t* size)
+void kv_field_blob(kv_t* kv, const char* key, void* data, int* size)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
+		s_field_begin(kv, key);
+		int buffer_size = CUTE_BASE64_ENCODED_SIZE(*size);
+		uint8_t* buffer = s_temp(kv, buffer_size);
+		base64_encode(buffer, buffer_size, data, *size);
+		s_write_str(kv, (const char*)buffer, buffer_size);
+		s_field_end(kv);
 	} else {
 		CUTE_CHECK_BUFFER_GROW(kv, entry_count, entry_capacity, entries, kv_entry_t, 32, kv->mem_ctx);
 		kv_entry_t entry;
@@ -653,9 +697,22 @@ void kv_field_blob(kv_t* kv, const char* key, void* data, size_t* size)
 	}
 }
 
-void kv_field_array(kv_t* kv, const char* key, int* count)
+void kv_field_array_begin(kv_t* kv, const char* key, int* count, const char* type_id)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
+		if (type_id) {
+			s_tabs(kv);
+			s_write_str(kv, key);
+			s_write_str_no_quotes(kv, " -> ", 4);
+			s_write_str(kv, type_id);
+			s_write_u8(kv, ' ');
+		} else {
+			s_field_begin(kv, key);
+		}
+		s_write_str_no_quotes(kv, "[\n", 2);
+		kv->tabs += 1;
+		s_tabs(kv);
+		s_push_array(kv, 1);
 	} else {
 		CUTE_CHECK_BUFFER_GROW(kv, entry_count, entry_capacity, entries, kv_entry_t, 32, kv->mem_ctx);
 		kv_entry_t entry;
@@ -663,6 +720,17 @@ void kv_field_array(kv_t* kv, const char* key, int* count)
 		entry.key = key;
 		entry.u.array_count = count;
 		kv->entries[kv->entry_count++] = entry;
+	}
+}
+
+void kv_field_array_end(kv_t* kv)
+{
+	if (kv->mode == CUTE_KV_MODE_WRITE) {
+		s_write_u8(kv, '\n');
+		s_tabs(kv, -1);
+		s_write_str_no_quotes(kv, "],\n", 3);
+		s_pop_array(kv);
+	} else {
 	}
 }
 
