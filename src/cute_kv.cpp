@@ -23,6 +23,7 @@
 #include <cute_c_runtime.h>
 #include <cute_buffer.h>
 #include <cute_base64.h>
+#include <cute_array.h>
 
 #include <stdio.h>
 #include <inttypes.h>
@@ -49,29 +50,22 @@ enum kv_type_t
 namespace cute
 {
 
-struct kv_str_t
+
+struct kv_string_t
 {
-	char** str;
-	int* size;
+	uint8_t* str;
+	int len;
 };
 
-struct kv_blob_t
+struct kv_object_t
 {
-	void* data;
-	int* size;
-};
+	kv_string_t key;
 
-struct kv_entry_t
-{
-	kv_type_t type;
-	const char* key;
-	union
-	{
-		void* ptr;
-		kv_str_t str;
-		kv_blob_t blob;
-		int* array_count;
-	} u;
+	int count;
+	array<kv_string_t> keys;
+	array<kv_type_t> types;
+	array<kv_string_t> values;
+	int parent_index;
 };
 
 struct kv_t
@@ -85,9 +79,7 @@ struct kv_t
 	int offset_stack_capacity;
 	int* offset_stack;
 
-	int entry_capacity;
-	int entry_count;
-	kv_entry_t* entries;
+	array<kv_object_t> objects;
 
 	int is_array;
 	int is_array_stack_capacity;
@@ -105,6 +97,7 @@ struct kv_t
 kv_t* kv_make(void* user_allocator_context)
 {
 	kv_t* kv = (kv_t*)CUTE_ALLOC(sizeof(kv_t), user_allocator_context);
+	CUTE_PLACEMENT_NEW(kv) kv_t;
 
 	kv->mode = -1;
 	kv->start = NULL;
@@ -114,10 +107,6 @@ kv_t* kv_make(void* user_allocator_context)
 	kv->offset_stack_count = 0;
 	kv->offset_stack_capacity = 0;
 	kv->offset_stack = NULL;
-
-	kv->entry_capacity = 0;
-	kv->entry_count = 0;
-	kv->entries = NULL;
 
 	kv->is_array = 0;
 	kv->is_array_stack_capacity = 0;
@@ -212,22 +201,6 @@ static error_t s_scan_string(kv_t* kv, uint8_t** end_of_string)
 	return error_success();
 }
 
-struct kv_string_t
-{
-	uint8_t* str;
-	int len;
-};
-
-struct kv_object_t
-{
-	kv_string_t key;
-
-	int count;
-	kv_string_t* keys;
-	kv_string_t* values;
-	kv_type_t* types;
-};
-
 static CUTE_INLINE uint8_t s_parse_escape_code(uint8_t c)
 {
 	switch (c)
@@ -252,8 +225,13 @@ void kv_reset(kv_t* kv, const void* data, int size, int mode)
 	kv->mode = mode;
 
 	if (mode == CUTE_KV_MODE_READ) {
-		CUTE_CHECK_BUFFER_GROW(kv, offset_stack_count, offset_stack_capacity, offset_stack, int, 16, mem_ctx);
-		kv->offset_stack[kv->offset_stack_count++] = kv->entry_count;
+		/*
+			Start parsing at top level.
+			The top level should have special rules.
+			*Only objects* at the top level, without keys.
+
+
+		*/
 	}
 }
 
@@ -458,74 +436,9 @@ error_t kv_object_end(kv_t* kv)
 		s_tabs(kv);
 		s_pop_array(kv);
 	} else {
-		int offset = kv->offset_stack[--kv->offset_stack_count];
-		int count = kv->entry_count - offset;
-		kv_entry_t* entries = kv->entries + offset;
-		kv->entry_count = offset;
-
-		for (int i = 0; i < count; ++i)
-		{
-			kv_entry_t* entry = entries + i;
-
-			switch (entry->type)
-			{
-			case CUTE_KV_TYPE_UINT8:
-				break;
-
-			case CUTE_KV_TYPE_UINT16:
-				break;
-
-			case CUTE_KV_TYPE_UINT32:
-				break;
-
-			case CUTE_KV_TYPE_UINT64:
-				break;
-
-			case CUTE_KV_TYPE_INT8:
-				break;
-
-			case CUTE_KV_TYPE_INT16:
-				break;
-
-			case CUTE_KV_TYPE_INT32:
-				break;
-
-			case CUTE_KV_TYPE_INT64:
-				break;
-
-			case CUTE_KV_TYPE_FLOAT:
-				break;
-
-			case CUTE_KV_TYPE_DOUBLE:
-				break;
-
-			case CUTE_KV_TYPE_STRING:
-				break;
-
-			case CUTE_KV_TYPE_ARRAY:
-				break;
-
-			case CUTE_KV_TYPE_BLOB:
-				break;
-
-			default:
-				s_error(kv, "kv : Encountered unknown field.");
-				break;
-			}
-		}
 	}
 
 	return kv->error;
-}
-
-static CUTE_INLINE void s_entry_ptr(kv_t* kv, const char* key, void* val, kv_type_t type)
-{
-	CUTE_CHECK_BUFFER_GROW(kv, entry_count, entry_capacity, entries, kv_entry_t, 32, kv->mem_ctx);
-	kv_entry_t entry;
-	entry.type = type;
-	entry.key = key;
-	entry.u.ptr = val;
-	kv->entries[kv->entry_count++] = entry;
 }
 
 static CUTE_INLINE void s_field_begin(kv_t* kv, const char* key)
@@ -557,7 +470,6 @@ void kv_field(kv_t* kv, const char* key, uint8_t* val)
 		s_write_u8(kv, *val);
 		s_field_end(kv);
 	} else {
-		s_entry_ptr(kv, key, val, CUTE_KV_TYPE_UINT8);
 	}
 }
 
@@ -568,7 +480,6 @@ void kv_field(kv_t* kv, const char* key, uint16_t* val)
 		s_write(kv, (uint64_t)*(uint16_t*)val);
 		s_field_end(kv);
 	} else {
-		s_entry_ptr(kv, key, val, CUTE_KV_TYPE_UINT16);
 	}
 }
 
@@ -579,7 +490,6 @@ void kv_field(kv_t* kv, const char* key, uint32_t* val)
 		s_write(kv, (uint64_t)*(uint32_t*)val);
 		s_field_end(kv);
 	} else {
-		s_entry_ptr(kv, key, val, CUTE_KV_TYPE_UINT32);
 	}
 }
 
@@ -590,7 +500,6 @@ void kv_field(kv_t* kv, const char* key, uint64_t* val)
 		s_write(kv, *(uint64_t*)val);
 		s_field_end(kv);
 	} else {
-		s_entry_ptr(kv, key, val, CUTE_KV_TYPE_UINT64);
 	}
 }
 
@@ -601,7 +510,6 @@ void kv_field(kv_t* kv, const char* key, int8_t* val)
 		s_write(kv, (int64_t)*(int8_t*)val);
 		s_field_end(kv);
 	} else {
-		s_entry_ptr(kv, key, val, CUTE_KV_TYPE_INT8);
 	}
 }
 
@@ -612,7 +520,6 @@ void kv_field(kv_t* kv, const char* key, int16_t* val)
 		s_write(kv, (int64_t)*(int16_t*)val);
 		s_field_end(kv);
 	} else {
-		s_entry_ptr(kv, key, val, CUTE_KV_TYPE_INT16);
 	}
 }
 
@@ -623,7 +530,6 @@ void kv_field(kv_t* kv, const char* key, int32_t* val)
 		s_write(kv, (int64_t)*(int32_t*)val);
 		s_field_end(kv);
 	} else {
-		s_entry_ptr(kv, key, val, CUTE_KV_TYPE_INT32);
 	}
 }
 
@@ -634,7 +540,6 @@ void kv_field(kv_t* kv, const char* key, int64_t* val)
 		s_write(kv, *(int64_t*)val);
 		s_field_end(kv);
 	} else {
-		s_entry_ptr(kv, key, val, CUTE_KV_TYPE_INT64);
 	}
 }
 
@@ -645,7 +550,6 @@ void kv_field(kv_t* kv, const char* key, float* val)
 		s_write(kv, *val);
 		s_field_end(kv);
 	} else {
-		s_entry_ptr(kv, key, val, CUTE_KV_TYPE_FLOAT);
 	}
 }
 
@@ -656,7 +560,6 @@ void kv_field(kv_t* kv, const char* key, double* val)
 		s_write(kv, *val);
 		s_field_end(kv);
 	} else {
-		s_entry_ptr(kv, key, val, CUTE_KV_TYPE_DOUBLE);
 	}
 }
 
@@ -667,13 +570,6 @@ void kv_field_str(kv_t* kv, const char* key, char** str, int* size)
 		s_write_str(kv, *str, *size);
 		s_field_end(kv);
 	} else {
-		CUTE_CHECK_BUFFER_GROW(kv, entry_count, entry_capacity, entries, kv_entry_t, 32, kv->mem_ctx);
-		kv_entry_t entry;
-		entry.type = CUTE_KV_TYPE_STRING;
-		entry.key = key;
-		entry.u.str.str = str;
-		entry.u.str.size = size;
-		kv->entries[kv->entry_count++] = entry;
 	}
 }
 
@@ -687,13 +583,6 @@ void kv_field_blob(kv_t* kv, const char* key, void* data, int* size)
 		s_write_str(kv, (const char*)buffer, buffer_size);
 		s_field_end(kv);
 	} else {
-		CUTE_CHECK_BUFFER_GROW(kv, entry_count, entry_capacity, entries, kv_entry_t, 32, kv->mem_ctx);
-		kv_entry_t entry;
-		entry.type = CUTE_KV_TYPE_BLOB;
-		entry.key = key;
-		entry.u.blob.data = data;
-		entry.u.blob.size = size;
-		kv->entries[kv->entry_count++] = entry;
 	}
 }
 
@@ -714,12 +603,6 @@ void kv_field_array_begin(kv_t* kv, const char* key, int* count, const char* typ
 		s_tabs(kv);
 		s_push_array(kv, 1);
 	} else {
-		CUTE_CHECK_BUFFER_GROW(kv, entry_count, entry_capacity, entries, kv_entry_t, 32, kv->mem_ctx);
-		kv_entry_t entry;
-		entry.type = CUTE_KV_TYPE_BLOB;
-		entry.key = key;
-		entry.u.array_count = count;
-		kv->entries[kv->entry_count++] = entry;
 	}
 }
 

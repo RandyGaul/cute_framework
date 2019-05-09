@@ -74,7 +74,7 @@ set(CUTE_SRCS
 	src/cute_kv.cpp
 	src/cute_base64.cpp
 	src/cute_log.cpp
-	
+
 	src/internal/cute_transport_internal.cpp
 
 	libraries/glad/glad.c
@@ -108,6 +108,7 @@ set(CUTE_HDRS
 	src/cute_kv.h
 	src/cute_base64.h
 	src/cute_log.h
+	src/cute_array.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
