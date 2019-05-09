@@ -37,7 +37,7 @@ struct kv_t;
 
 CUTE_API kv_t* CUTE_CALL kv_make(void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL kv_destroy(kv_t* kv);
-CUTE_API void CUTE_CALL kv_reset(kv_t* kv, const void* data, int size, int mode);
+CUTE_API error_t CUTE_CALL kv_reset(kv_t* kv, const void* data, int size, int mode);
 
 CUTE_API void CUTE_CALL kv_peek_object(kv_t* kv, const char** str, int* len);
 CUTE_API void CUTE_CALL kv_object_begin(kv_t* kv, const char* key, const char* type_id);

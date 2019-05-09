@@ -94,7 +94,8 @@ template <typename T>
 T& array<T>::add()
 {
 	ensure_capacity(count_ + 1);
-	count_++;
+	T* slot = items_ + count_++;
+	return *slot;
 }
 
 template <typename T>

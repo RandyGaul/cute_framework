@@ -50,22 +50,20 @@ enum kv_type_t
 namespace cute
 {
 
-
 struct kv_string_t
 {
-	uint8_t* str;
-	int len;
+	uint8_t* str = NULL;
+	int len = 0;
 };
 
 struct kv_object_t
 {
+	int parent_index = ~0;
 	kv_string_t key;
 
-	int count;
 	array<kv_string_t> keys;
 	array<kv_type_t> types;
 	array<kv_string_t> values;
-	int parent_index;
 };
 
 struct kv_t
@@ -79,6 +77,7 @@ struct kv_t
 	int offset_stack_capacity;
 	int* offset_stack;
 
+	array <int> top_level_object_indices;
 	array<kv_object_t> objects;
 
 	int is_array;
@@ -178,7 +177,7 @@ static CUTE_INLINE int s_try(kv_t* kv, uint8_t expect)
 }
 
 #define CUTE_KV_CHECK_CONDITION(condition, failure_details) do { if (!(condition)) { return error_failure(failure_details); } } while (0)
-#define CUTE_KV_CHECK(err) do { if (err.is_error()) return err; } while (0)
+#define CUTE_KV_CHECK(x) do { error_t err = (x); if (err.is_error()) return err; } while (0)
 
 #define s_expect(kv, expected_character) \
 	do { \
@@ -217,7 +216,7 @@ static CUTE_INLINE uint8_t s_parse_escape_code(uint8_t c)
 	}
 }
 
-void kv_reset(kv_t* kv, const void* data, int size, int mode)
+error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
 {
 	kv->start = (uint8_t*)data;
 	kv->in = (uint8_t*)data;
@@ -230,9 +229,23 @@ void kv_reset(kv_t* kv, const void* data, int size, int mode)
 			The top level should have special rules.
 			*Only objects* at the top level, without keys.
 
-
+			User can peek at their types. So we can simply store them in an array.
 		*/
+
+		kv->top_level_object_indices.add(0);
+
+		// Read in objects in a loop. Add them to top level indices array.
+		// Parse out the members iteratively.
+
+		// WORKING HERE
+		// Scanning for top level object.
+		// Will probably need typesafe dictionary soon (like array).
+
+		uint8_t* end;
+		CUTE_KV_CHECK(s_scan_string(kv, &end));
 	}
+
+	return error_success();
 }
 
 void kv_peek_object(kv_t* kv, const char** str, int* len)
