@@ -905,8 +905,6 @@ int test_protocol_server_initiated_disconnect()
 {
 	using namespace protocol;
 
-	log_set_level(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL);
-
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
 	crypto_key_t secret_key = crypto_generate_key();

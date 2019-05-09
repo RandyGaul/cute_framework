@@ -73,6 +73,7 @@ set(CUTE_SRCS
 	src/cute_protocol.cpp
 	src/cute_kv.cpp
 	src/cute_base64.cpp
+	src/cute_log.cpp
 	
 	src/internal/cute_transport_internal.cpp
 
@@ -106,6 +107,7 @@ set(CUTE_HDRS
 	src/cute_doubly_list.h
 	src/cute_kv.h
 	src/cute_base64.h
+	src/cute_log.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
