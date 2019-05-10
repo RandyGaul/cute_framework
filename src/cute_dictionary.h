@@ -34,6 +34,7 @@ struct dictionary
 	dictionary();
 	dictionary(void* user_allocator_context);
 	dictionary(int capacity, void* user_allocator_context);
+	~dictionary();
 
 	T* find(const K& key);
 	const T* find(const K& key) const;
@@ -73,6 +74,12 @@ template <typename K, typename T>
 dictionary<K, T>::dictionary(int capacity, void* user_allocator_context)
 {
 	hashtable_init(&table, sizeof(T), sizeof(K), capacity, user_allocator_context);
+}
+
+template <typename K, typename T>
+dictionary<K, T>::~dictionary()
+{
+	hashtable_cleanup(&table);
 }
 
 template <typename K, typename T>
