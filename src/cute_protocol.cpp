@@ -39,6 +39,11 @@
 #define CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE (2 * CUTE_MB)
 #define CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE (2 * CUTE_MB)
 
+#define CUTE_PROTOCOL_HASHTABLE_KEY_BYTES (crypto_shorthash_KEYBYTES)
+#define CUTE_PROTOCOL_HASHTABLE_HASH_BYTES (crypto_shorthash_BYTES)
+
+CUTE_STATIC_ASSERT(CUTE_PROTOCOL_HASHTABLE_HASH_BYTES == 8, "The hash output must be 8 in order to fit nicely into a `uint64_t` hash.");
+
 namespace cute
 {
 namespace protocol

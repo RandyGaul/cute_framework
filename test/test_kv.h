@@ -83,6 +83,10 @@ int test_kv_basic()
 
 	kv_print(kv);
 
+	int size = kv_size_written(kv);
+
+	kv_reset(kv, buffer, size, CUTE_KV_MODE_READ);
+
 	kv_destroy(kv);
 
 	return -1;

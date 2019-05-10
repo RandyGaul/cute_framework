@@ -181,18 +181,21 @@ static CUTE_INLINE int s_try(kv_t* kv, uint8_t expect)
 
 #define s_expect(kv, expected_character) \
 	do { \
-		CUTE_KV_CHECK_CONDITION(s_next(kv) != expected_character, "kv : Found unexpected token."); \
+		CUTE_KV_CHECK_CONDITION(s_next(kv) == expected_character, "kv : Found unexpected token."); \
 	} while (0)
 
-static error_t s_scan_string(kv_t* kv, uint8_t** end_of_string)
+static error_t s_scan_string(kv_t* kv, uint8_t** start_of_string, uint8_t** end_of_string)
 {
+	*start_of_string = NULL;
 	*end_of_string = NULL;
 	s_expect(kv, '"');
+	*start_of_string = kv->in;
 	while (kv->in < kv->in_end)
 	{
 		uint8_t* end = (uint8_t*)CUTE_MEMCHR(kv->in, '"', kv->in_end - kv->in);
 		if (*(end - 1) != '\\') {
 			*end_of_string = end;
+			kv->in = end + 1;
 			break;
 		}
 	}
@@ -232,8 +235,6 @@ error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
 			User can peek at their types. So we can simply store them in an array.
 		*/
 
-		kv->top_level_object_indices.add(0);
-
 		// Read in objects in a loop. Add them to top level indices array.
 		// Parse out the members iteratively.
 
@@ -241,11 +242,36 @@ error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
 		// Scanning for top level object.
 		// Will probably need typesafe dictionary soon (like array).
 
-		uint8_t* end;
-		CUTE_KV_CHECK(s_scan_string(kv, &end));
+		s_expect(kv, '-');
+		s_expect(kv, '>');
+
+		uint8_t* string_start;
+		uint8_t* string_end;
+		CUTE_KV_CHECK(s_scan_string(kv, &string_start, &string_end));
+
+		s_expect(kv, '{');
+
+		CUTE_PLACEMENT_NEW(&kv->objects.add()) kv_object_t;
+		kv->top_level_object_indices.add(0);
+
+		array<int> object_index_stack;
+		object_index_stack.add(0);
+
+		while (object_index_stack.count())
+		{
+			int object_index = object_index_stack.pop();
+			kv_object_t& object = kv->objects[object_index];
+
+			// Parsing keys of this object.
+		}
 	}
 
 	return error_success();
+}
+
+int kv_size_written(kv_t* kv)
+{
+	return (int)(kv->in - kv->start);
 }
 
 void kv_peek_object(kv_t* kv, const char** str, int* len)

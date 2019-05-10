@@ -40,6 +40,7 @@ struct array
 	T& insert(int index, const T& item);
 	void set(int index, const T& item);
 	void remove(int index);
+	T& pop();
 	void unordered_remove(int index);
 	void clear();
 	void resize(int new_count);
@@ -140,6 +141,12 @@ void array<T>::remove(int index)
 	CUTE_ASSERT(index >= 0 && index < capacity_);
 	CUTE_MEMMOVE(items + index, items + index + 1, sizeof(T) * count_);
 	--count_;
+}
+
+template <typename T>
+T& array<T>::pop()
+{
+	return items_[--count_];
 }
 
 template <typename T>
