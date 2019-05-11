@@ -274,9 +274,8 @@ static CUTE_INLINE uint8_t s_parse_escape_code(uint8_t c)
 
 static CUTE_INLINE error_t s_parse(kv_t* kv)
 {
-	array<int> object_index_stack;
-
 	int done_parsing = 0;
+	array<int> object_index_stack;
 
 	do {
 		// Push top level objects onto the stack while there are still more listed in the file.
@@ -406,6 +405,9 @@ static CUTE_INLINE error_t s_parse(kv_t* kv)
 			}
 		}
 	} while (!done_parsing);
+
+	// WORKING HERE
+	// Need to test this code. Especially arrays of arrays and arrays of objects and whatnot.
 
 	return error_success();
 }
