@@ -59,19 +59,22 @@ struct kv_string_t
 struct kv_object_t
 {
 	int parent_index = ~0;
-	kv_string_t key;
+	int parsing_array = 0;
 
-	array<kv_string_t> keys;
-	array<kv_type_t> types;
-	array<kv_string_t> values;
+	kv_string_t key;
+	kv_string_t type;
+
+	array<kv_string_t> field_key;
+	array<kv_string_t> field_val;
+	array<int> field_is_array;
 };
 
 struct kv_t
 {
 	int mode;
-	uint8_t* start;
 	uint8_t* in;
 	uint8_t* in_end;
+	uint8_t* start;
 
 	int offset_stack_count;
 	int offset_stack_capacity;
@@ -151,7 +154,7 @@ static CUTE_INLINE int s_isspace(uint8_t c)
 		(c == '\r');
 }
 
-static CUTE_INLINE uint8_t s_peak(kv_t* kv)
+static CUTE_INLINE uint8_t s_peek(kv_t* kv)
 {
 	while (kv->in < kv->in_end && s_isspace(*kv->in)) kv->in++;
 	return kv->in < kv->in_end ? *kv->in : 0;
@@ -168,7 +171,7 @@ static CUTE_INLINE uint8_t s_next(kv_t* kv)
 static CUTE_INLINE int s_try(kv_t* kv, uint8_t expect)
 {
 	if (kv->in == kv->in_end) return 0;
-	if (s_peak(kv) == expect)
+	if (s_peek(kv) == expect)
 	{
 		kv->in++;
 		return 1;
@@ -188,18 +191,58 @@ static error_t s_scan_string(kv_t* kv, uint8_t** start_of_string, uint8_t** end_
 {
 	*start_of_string = NULL;
 	*end_of_string = NULL;
-	s_expect(kv, '"');
+	int has_quotes = s_try(kv, '"');
 	*start_of_string = kv->in;
-	while (kv->in < kv->in_end)
-	{
-		uint8_t* end = (uint8_t*)CUTE_MEMCHR(kv->in, '"', kv->in_end - kv->in);
-		if (*(end - 1) != '\\') {
-			*end_of_string = end;
-			kv->in = end + 1;
-			break;
+	if (has_quotes) {
+		while (kv->in < kv->in_end)
+		{
+			uint8_t* end = (uint8_t*)CUTE_MEMCHR(kv->in, '"', kv->in_end - kv->in);
+			if (*(end - 1) != '\\') {
+				*end_of_string = end;
+				kv->in = end + 1;
+				break;
+			}
 		}
+	} else {
+		uint8_t* end = (uint8_t*)CUTE_MEMCHR(kv->in, ',', kv->in_end - kv->in);
+		*end_of_string = end;
+		kv->in = end + 1;
 	}
 	if (kv->in == kv->in_end) return error_failure("kv : Unterminated string at end of file.");
+	return error_success();
+}
+
+static CUTE_INLINE error_t s_skip_to(kv_t* kv, uint8_t c)
+{
+	int has_quotes = s_try(kv, '"');
+	if (has_quotes) {
+		while (1)
+		{
+			// Skip over a string.
+			while (kv->in < kv->in_end)
+			{
+				uint8_t* end = (uint8_t*)CUTE_MEMCHR(kv->in, '"', kv->in_end - kv->in);
+				if (end == kv->in_end) return error_failure("kv : Unterminated string at end of file.");
+				if (*(end - 1) != '\\') {
+					kv->in = end + 1;
+					break;
+				}
+			}
+
+			uint8_t* end = (uint8_t*)CUTE_MEMCHR(kv->in, c, kv->in_end - kv->in);
+			if (end == kv->in_end) return error_failure("kv : End of file encountered abruptly.");
+			uint8_t* quote = (uint8_t*)CUTE_MEMCHR(kv->in, '"', kv->in_end - kv->in);
+			kv->in = end + 1;
+			if (end < quote) {
+				break;
+			}
+		}
+	} else {
+		uint8_t* end = (uint8_t*)CUTE_MEMCHR(kv->in, c, kv->in_end - kv->in);
+		if (end == kv->in_end) return error_failure("kv : End of file encountered abruptly.");
+		kv->in = end + 1;
+	}
+
 	return error_success();
 }
 
@@ -219,6 +262,151 @@ static CUTE_INLINE uint8_t s_parse_escape_code(uint8_t c)
 	}
 }
 
+static CUTE_INLINE error_t s_parse(kv_t* kv)
+{
+	array<int> object_index_stack;
+
+	int done_parsing = 0;
+
+	uint8_t* string_start;
+	uint8_t* string_end;
+
+	do {
+		// Push top level objects onto the stack while there are still more listed in the file.
+		if (s_try(kv, '-')) {
+			s_expect(kv, '>');
+
+			CUTE_KV_CHECK(s_scan_string(kv, &string_start, &string_end));
+
+			s_expect(kv, '{');
+
+			kv_object_t* top_level_object = &kv->objects.add();
+			CUTE_PLACEMENT_NEW(top_level_object) kv_object_t;
+			top_level_object->type.str = string_start;
+			top_level_object->type.len = (int)(string_end - string_start);
+
+			int index = kv->objects.count() - 1;
+			kv->top_level_object_indices.add(index);
+			object_index_stack.add(index);
+		} else {
+			done_parsing = 1;
+			if (kv->in != kv->in_end) {
+				return error_failure("Unable to parse entire file contents.");
+			}
+		}
+
+		// LL(1) descent parse each object.
+		while (object_index_stack.count())
+		{
+			int object_index = object_index_stack.pop();
+			kv_object_t* object = kv->objects + object_index;
+
+			while (1)
+			{
+				if (object->parsing_array) {
+					if (s_try(kv, ']')) {
+						object->parsing_array = 0;
+						s_try(kv, ',');
+					}
+				}
+
+				if (s_try(kv, '}')) {
+					s_try(kv, ',');
+					break;
+				}
+
+				kv_string_t key;
+				int is_object = 0;
+
+				// Key.
+				if (!object->parsing_array) {
+					CUTE_KV_CHECK(s_scan_string(kv, &string_start, &string_end));
+					key.str = string_start;
+					key.len = (int)(string_end - string_start);
+					object->field_key.add(key);
+
+					if (s_try(kv, '-')) {
+						s_expect(kv, '>');
+						is_object = 1;
+					} else {
+						if (!s_try(kv, ':')) {
+							s_expect(kv, '}');
+							break;
+						}
+					}
+				} else {
+					if (s_try(kv, '{')) {
+						is_object = 1;
+					} else {
+						if (s_try(kv, ']')) {
+							s_try(kv, ',');
+							break;
+						}
+					}
+				}
+
+				// Value.
+				if (!is_object) {
+					int is_array = s_try(kv, '[');
+					if (is_array) {
+						object->field_val.add();
+						CUTE_KV_CHECK(s_skip_to(kv, ']'));
+					} else {
+						CUTE_KV_CHECK(s_scan_string(kv, &string_start, &string_end));
+						kv_string_t val;
+						val.str = string_start;
+						val.len = (int)(string_end - string_start);
+						object->field_val.add(val);
+					}
+
+					object->field_is_array.add(is_array);
+					
+					s_try(kv, ',');
+					int done = s_try(kv, '}');
+					if (done) {
+						s_try(kv, ',');
+						break;
+					}
+				} else {
+					// Construct a new child object.
+					kv_object_t* child = &kv->objects.add();
+					CUTE_PLACEMENT_NEW(child) kv_object_t;
+
+					child->parent_index = object_index;
+					child->key = key;
+
+					// Scan type and array information.
+					if (object->parsing_array) {
+						child->type = object->field_val[object->field_val.count() - 1];
+					} else {
+						CUTE_KV_CHECK(s_scan_string(kv, &string_start, &string_end));
+						kv_string_t type;
+						type.str = string_start;
+						type.len = (int)(string_end - string_start);
+
+						int is_array = s_try(kv, '[');
+						object->field_is_array.add(is_array);
+						object->field_val.add(type);
+						if (is_array) {
+							CUTE_ASSERT(object->parsing_array == 0);
+							object->parsing_array = 1;
+						} else {
+							child->type = type;
+						}
+
+						s_expect(kv, '{');
+					}
+
+					object_index_stack.add(object_index);
+					object_index_stack.add(kv->objects.count() - 1);
+
+					break;
+				}
+			}
+		}
+	} while (!done_parsing);
+}
+
 error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
 {
 	kv->start = (uint8_t*)data;
@@ -227,43 +415,7 @@ error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
 	kv->mode = mode;
 
 	if (mode == CUTE_KV_MODE_READ) {
-		/*
-			Start parsing at top level.
-			The top level should have special rules.
-			*Only objects* at the top level, without keys.
-
-			User can peek at their types. So we can simply store them in an array.
-		*/
-
-		// Read in objects in a loop. Add them to top level indices array.
-		// Parse out the members iteratively.
-
-		// WORKING HERE
-		// Scanning for top level object.
-		// Will probably need typesafe dictionary soon (like array).
-
-		s_expect(kv, '-');
-		s_expect(kv, '>');
-
-		uint8_t* string_start;
-		uint8_t* string_end;
-		CUTE_KV_CHECK(s_scan_string(kv, &string_start, &string_end));
-
-		s_expect(kv, '{');
-
-		CUTE_PLACEMENT_NEW(&kv->objects.add()) kv_object_t;
-		kv->top_level_object_indices.add(0);
-
-		array<int> object_index_stack;
-		object_index_stack.add(0);
-
-		while (object_index_stack.count())
-		{
-			int object_index = object_index_stack.pop();
-			kv_object_t& object = kv->objects[object_index];
-
-			// Parsing keys of this object.
-		}
+		return s_parse(kv);
 	}
 
 	return error_success();

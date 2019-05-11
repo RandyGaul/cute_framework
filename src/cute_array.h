@@ -51,6 +51,9 @@ struct array
 	T& operator[](int index);
 	const T& operator[](int index) const;
 
+	T* operator+(int index);
+	const T* operator+(int index) const;
+
 	T* data();
 	const T* data() const;
 
@@ -205,6 +208,20 @@ template <typename T>
 const T* array<T>::data() const
 {
 	return items_;
+}
+
+template <typename T>
+T* array<T>::operator+(int index)
+{
+	CUTE_ASSERT(index >= 0 && index < capacity_);
+	return items_ + index;
+}
+
+template <typename T>
+const T* array<T>::operator+(int index) const
+{
+	CUTE_ASSERT(index >= 0 && index < capacity_);
+	return items_ + index;
 }
 
 template <typename T>
