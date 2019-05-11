@@ -212,6 +212,16 @@ static error_t s_scan_string(kv_t* kv, uint8_t** start_of_string, uint8_t** end_
 	return error_success();
 }
 
+static error_t s_scan_string(kv_t* kv, kv_string_t* str)
+{
+	uint8_t* string_start;
+	uint8_t* string_end;
+	error_t err = s_scan_string(kv, &string_start, &string_end);
+	str->str = string_start;
+	str->len = (int)(string_end - string_start);
+	return err;
+}
+
 static CUTE_INLINE error_t s_skip_to(kv_t* kv, uint8_t c)
 {
 	int has_quotes = s_try(kv, '"');
@@ -268,22 +278,19 @@ static CUTE_INLINE error_t s_parse(kv_t* kv)
 
 	int done_parsing = 0;
 
-	uint8_t* string_start;
-	uint8_t* string_end;
-
 	do {
 		// Push top level objects onto the stack while there are still more listed in the file.
 		if (s_try(kv, '-')) {
 			s_expect(kv, '>');
 
-			CUTE_KV_CHECK(s_scan_string(kv, &string_start, &string_end));
+			kv_string_t type_string;
+			CUTE_KV_CHECK(s_scan_string(kv, &type_string));
 
 			s_expect(kv, '{');
 
 			kv_object_t* top_level_object = &kv->objects.add();
 			CUTE_PLACEMENT_NEW(top_level_object) kv_object_t;
-			top_level_object->type.str = string_start;
-			top_level_object->type.len = (int)(string_end - string_start);
+			top_level_object->type = type_string;
 
 			int index = kv->objects.count() - 1;
 			kv->top_level_object_indices.add(index);
@@ -315,15 +322,13 @@ static CUTE_INLINE error_t s_parse(kv_t* kv)
 					break;
 				}
 
-				kv_string_t key;
+				kv_string_t key_string;
 				int is_object = 0;
 
 				// Key.
 				if (!object->parsing_array) {
-					CUTE_KV_CHECK(s_scan_string(kv, &string_start, &string_end));
-					key.str = string_start;
-					key.len = (int)(string_end - string_start);
-					object->field_key.add(key);
+					CUTE_KV_CHECK(s_scan_string(kv, &key_string));
+					object->field_key.add(key_string);
 
 					if (s_try(kv, '-')) {
 						s_expect(kv, '>');
@@ -352,11 +357,9 @@ static CUTE_INLINE error_t s_parse(kv_t* kv)
 						object->field_val.add();
 						CUTE_KV_CHECK(s_skip_to(kv, ']'));
 					} else {
-						CUTE_KV_CHECK(s_scan_string(kv, &string_start, &string_end));
-						kv_string_t val;
-						val.str = string_start;
-						val.len = (int)(string_end - string_start);
-						object->field_val.add(val);
+						kv_string_t val_string;
+						CUTE_KV_CHECK(s_scan_string(kv, &val_string));
+						object->field_val.add(val_string);
 					}
 
 					object->field_is_array.add(is_array);
@@ -373,25 +376,23 @@ static CUTE_INLINE error_t s_parse(kv_t* kv)
 					CUTE_PLACEMENT_NEW(child) kv_object_t;
 
 					child->parent_index = object_index;
-					child->key = key;
+					child->key = key_string;
 
 					// Scan type and array information.
 					if (object->parsing_array) {
 						child->type = object->field_val[object->field_val.count() - 1];
 					} else {
-						CUTE_KV_CHECK(s_scan_string(kv, &string_start, &string_end));
-						kv_string_t type;
-						type.str = string_start;
-						type.len = (int)(string_end - string_start);
+						kv_string_t type_string;
+						CUTE_KV_CHECK(s_scan_string(kv, &type_string));
 
 						int is_array = s_try(kv, '[');
 						object->field_is_array.add(is_array);
-						object->field_val.add(type);
+						object->field_val.add(type_string);
 						if (is_array) {
 							CUTE_ASSERT(object->parsing_array == 0);
 							object->parsing_array = 1;
 						} else {
-							child->type = type;
+							child->type = type_string;
 						}
 
 						s_expect(kv, '{');
@@ -405,6 +406,8 @@ static CUTE_INLINE error_t s_parse(kv_t* kv)
 			}
 		}
 	} while (!done_parsing);
+
+	return error_success();
 }
 
 error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
