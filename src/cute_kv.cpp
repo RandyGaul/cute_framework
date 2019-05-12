@@ -37,27 +37,10 @@ struct kv_string_t
 	int len = 0;
 };
 
-enum kv_type_t
-{
-	CUTE_KV_TYPE_NULL   = -1,
-	CUTE_KV_TYPE_INT64  = 7,
-	CUTE_KV_TYPE_DOUBLE = 9,
-	CUTE_KV_TYPE_STRING = 10,
-	CUTE_KV_TYPE_ARRAY  = 11,
-	CUTE_KV_TYPE_BLOB   = 12,
-	CUTE_KV_TYPE_OBJECT = 13,
-};
-
 struct kv_field_t
 {
+	kv_string_t key;
 	kv_string_t val;
-	union
-	{
-		int64_t int_val;
-		double double_val;
-		kv_string_t string_val;
-		kv_string_t blob_val;
-	} u;
 };
 
 struct kv_object_t
@@ -375,7 +358,7 @@ static CUTE_INLINE error_t s_parse(kv_t* kv)
 					}
 				}
 
-				object->field_array_size.add(is_array ? array_size : -1);
+				//object->field_array_size.add(is_array ? array_size : -1);
 
 				// Value.
 				if (!is_object) {

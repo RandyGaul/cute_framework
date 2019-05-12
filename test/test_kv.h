@@ -30,15 +30,17 @@ struct thing_t
 	int str_len;
 };
 
+// WORKING HERE
+// Need to output this string then parse it.
 /*
--> "thing_t" {
+: "thing_t" {
 	"a" : 5,
 	"b" : 10.300000,
 	"str" : "Hello.",
-	"sub_thing" -> "nested_thing_t" {
+	"sub_thing" : "nested_thing_t" {
 		"a" : 5,
 		"die_fucker" : 5,
-		"interior_thing" -> "final_nest_t" {
+		"interior_thing" : "final_nest_t" {
 			"hi" : 5,
 			"geez" : "Hello.",
 		},
@@ -46,10 +48,18 @@ struct thing_t
 	"x" : 5,
 	"y" : 10.300000,
 	"blob_data" : "U29tZSBibG9iIGlucHV0LgA=",
-	"array_of_ints" : [
+	"array_of_ints" [8] {
 		0, 1, 2, 3, 4, 5, 6, 7,
-	],
-	"array_of_objects" -> "array_object_t" [
+	},
+	"array_of_array_of_ints" [2][3] {
+		{
+			0, 1, 2
+		},
+		{
+			2, 5, 1
+		},
+	},
+	"array_of_objects" [3] "array_object_t" {
 		{
 			"some integer." : 5,
 			"some string" : "Hello.",
@@ -62,7 +72,7 @@ struct thing_t
 			"some integer." : 5,
 			"some string" : "Hello.",
 		},
-	],
+	},
 },
 */
 
