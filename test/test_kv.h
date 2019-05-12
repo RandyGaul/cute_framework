@@ -30,6 +30,42 @@ struct thing_t
 	int str_len;
 };
 
+/*
+-> "thing_t" {
+	"a" : 5,
+	"b" : 10.300000,
+	"str" : "Hello.",
+	"sub_thing" -> "nested_thing_t" {
+		"a" : 5,
+		"die_fucker" : 5,
+		"interior_thing" -> "final_nest_t" {
+			"hi" : 5,
+			"geez" : "Hello.",
+		},
+	},
+	"x" : 5,
+	"y" : 10.300000,
+	"blob_data" : "U29tZSBibG9iIGlucHV0LgA=",
+	"array_of_ints" : [
+		0, 1, 2, 3, 4, 5, 6, 7,
+	],
+	"array_of_objects" -> "array_object_t" [
+		{
+			"some integer." : 5,
+			"some string" : "Hello.",
+		},
+		{
+			"some integer." : 5,
+			"some string" : "Hello.",
+		},
+		{
+			"some integer." : 5,
+			"some string" : "Hello.",
+		},
+	],
+},
+*/
+
 void do_serialize(kv_t* kv, thing_t* thing)
 {
 	kv_object_begin(kv, NULL, "thing_t");

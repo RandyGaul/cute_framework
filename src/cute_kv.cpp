@@ -28,25 +28,6 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-enum kv_type_t
-{
-	CUTE_KV_TYPE_NULL   = -1,
-	CUTE_KV_TYPE_UINT8  = 0,
-	CUTE_KV_TYPE_UINT16 = 1,
-	CUTE_KV_TYPE_UINT32 = 2,
-	CUTE_KV_TYPE_UINT64 = 3,
-	CUTE_KV_TYPE_INT8   = 4,
-	CUTE_KV_TYPE_INT16  = 5,
-	CUTE_KV_TYPE_INT32  = 6,
-	CUTE_KV_TYPE_INT64  = 7,
-	CUTE_KV_TYPE_FLOAT  = 8,
-	CUTE_KV_TYPE_DOUBLE = 9,
-	CUTE_KV_TYPE_STRING = 10,
-	CUTE_KV_TYPE_ARRAY  = 11,
-	CUTE_KV_TYPE_BLOB   = 12,
-	CUTE_KV_TYPE_OBJECT = 13,
-};
-
 namespace cute
 {
 
@@ -54,6 +35,29 @@ struct kv_string_t
 {
 	uint8_t* str = NULL;
 	int len = 0;
+};
+
+enum kv_type_t
+{
+	CUTE_KV_TYPE_NULL   = -1,
+	CUTE_KV_TYPE_INT64  = 7,
+	CUTE_KV_TYPE_DOUBLE = 9,
+	CUTE_KV_TYPE_STRING = 10,
+	CUTE_KV_TYPE_ARRAY  = 11,
+	CUTE_KV_TYPE_BLOB   = 12,
+	CUTE_KV_TYPE_OBJECT = 13,
+};
+
+struct kv_field_t
+{
+	kv_string_t val;
+	union
+	{
+		int64_t int_val;
+		double double_val;
+		kv_string_t string_val;
+		kv_string_t blob_val;
+	} u;
 };
 
 struct kv_object_t
@@ -66,7 +70,7 @@ struct kv_object_t
 
 	array<kv_string_t> field_key;
 	array<kv_string_t> field_val;
-	array<int> field_is_array;
+	array<array<kv_string_t>> field_array;
 };
 
 struct kv_t
@@ -83,6 +87,7 @@ struct kv_t
 	array <int> top_level_object_indices;
 	array<kv_object_t> objects;
 
+	int first_element_in_array; // Hack. Does not generalize.
 	int is_array;
 	int is_array_stack_capacity;
 	int is_array_stack_count;
@@ -110,6 +115,7 @@ kv_t* kv_make(void* user_allocator_context)
 	kv->offset_stack_capacity = 0;
 	kv->offset_stack = NULL;
 
+	kv->first_element_in_array = 0;
 	kv->is_array = 0;
 	kv->is_array_stack_capacity = 0;
 	kv->is_array_stack_count = 0;
@@ -136,12 +142,14 @@ static CUTE_INLINE void s_push_array(kv_t* kv, int is_array)
 	CUTE_ASSERT(kv->is_array_stack);
 	kv->is_array_stack[kv->is_array_stack_count++] = kv->is_array;
 	kv->is_array = is_array;
+	kv->first_element_in_array = is_array;
 }
 
 static CUTE_INLINE void s_pop_array(kv_t* kv)
 {
 	CUTE_ASSERT(kv->is_array_stack_count > 0);
 	kv->is_array = kv->is_array_stack[--kv->is_array_stack_count];
+	kv->first_element_in_array = 0;
 }
 
 static CUTE_INLINE int s_isspace(uint8_t c)
@@ -272,6 +280,16 @@ static CUTE_INLINE uint8_t s_parse_escape_code(uint8_t c)
 	}
 }
 
+static CUTE_INLINE error_t s_parse_int(kv_t* kv, int* out)
+{
+	uint8_t* end;
+	int val = (int)strtoll((char*)kv->in, (char**)&end, 10);
+	CUTE_KV_CHECK_CONDITION(kv->in != end, "Invalid integer found during parse.");
+	kv->in = end;
+	*out = val;
+	return error_success();
+}
+
 static CUTE_INLINE error_t s_parse(kv_t* kv)
 {
 	int done_parsing = 0;
@@ -310,7 +328,7 @@ static CUTE_INLINE error_t s_parse(kv_t* kv)
 			while (1)
 			{
 				if (object->parsing_array) {
-					if (s_try(kv, ']')) {
+					if (s_try(kv, '}')) {
 						object->parsing_array = 0;
 						s_try(kv, ',');
 					}
@@ -323,6 +341,8 @@ static CUTE_INLINE error_t s_parse(kv_t* kv)
 
 				kv_string_t key_string;
 				int is_object = 0;
+				int is_array = 0;
+				int array_size = 0;
 
 				// Key.
 				if (!object->parsing_array) {
@@ -338,20 +358,27 @@ static CUTE_INLINE error_t s_parse(kv_t* kv)
 							break;
 						}
 					}
+					if (s_try(kv, '[')) {
+						is_array = 1;
+						CUTE_KV_CHECK(s_parse_int(kv, &array_size));
+						s_expect(kv, ']');
+						s_expect(kv, '{');
+					}
 				} else {
 					if (s_try(kv, '{')) {
 						is_object = 1;
 					} else {
-						if (s_try(kv, ']')) {
+						if (s_try(kv, '}')) {
 							s_try(kv, ',');
 							break;
 						}
 					}
 				}
 
+				object->field_array_size.add(is_array ? array_size : -1);
+
 				// Value.
 				if (!is_object) {
-					int is_array = s_try(kv, '[');
 					if (is_array) {
 						object->field_val.add();
 						CUTE_KV_CHECK(s_skip_to(kv, ']'));
@@ -361,8 +388,6 @@ static CUTE_INLINE error_t s_parse(kv_t* kv)
 						object->field_val.add(val_string);
 					}
 
-					object->field_is_array.add(is_array);
-					
 					s_try(kv, ',');
 					int done = s_try(kv, '}');
 					if (done) {
@@ -384,8 +409,6 @@ static CUTE_INLINE error_t s_parse(kv_t* kv)
 						kv_string_t type_string;
 						CUTE_KV_CHECK(s_scan_string(kv, &type_string));
 
-						int is_array = s_try(kv, '[');
-						object->field_is_array.add(is_array);
 						object->field_val.add(type_string);
 						if (is_array) {
 							CUTE_ASSERT(object->parsing_array == 0);
@@ -459,13 +482,16 @@ static CUTE_INLINE void s_write_u8(kv_t* kv, uint8_t val)
 	kv->in = end;
 }
 
-static CUTE_INLINE void s_tabs(kv_t* kv, int delta = 0)
+static CUTE_INLINE void s_tabs_delta(kv_t* kv, int delta)
 {
-	if (delta < 0) kv->tabs += delta;
+	kv->tabs += delta;
+}
+
+static CUTE_INLINE void s_tabs(kv_t* kv)
+{
 	int tabs = kv->tabs;
 	for (int i = 0; i < tabs; ++i)
 		s_write_u8(kv, '\t');
-	if (delta > 0) kv->tabs += delta;
 }
 
 static CUTE_INLINE void s_write_str_no_quotes(kv_t* kv, const char* str, int len)
@@ -496,8 +522,13 @@ static CUTE_INLINE void s_write_str(kv_t* kv, const char* str)
 void kv_object_begin(kv_t* kv, const char* key, const char* type_id)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
+		if (kv->first_element_in_array) {
+			kv->first_element_in_array = 0;
+		} else {
+			s_tabs(kv);
+		}
+		s_tabs_delta(kv, 1);
 		if (!kv->is_array) {
-			s_tabs(kv, 1);
 			if (key) {
 				s_write_str(kv, key);
 				s_write_str_no_quotes(kv, " -> ", 4);
@@ -508,7 +539,6 @@ void kv_object_begin(kv_t* kv, const char* key, const char* type_id)
 			s_write_str_no_quotes(kv, " {\n", 3);
 		} else {
 			s_write_str_no_quotes(kv, "{\n", 2);
-			kv->tabs += 1;
 		}
 		s_push_array(kv, 0);
 	} else {
@@ -625,11 +655,11 @@ static void s_write(kv_t* kv, double val)
 error_t kv_object_end(kv_t* kv)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		s_tabs(kv, -1);
+		s_tabs_delta(kv, -1);
+		s_tabs(kv);
 		s_write_u8(kv, '}');
 		s_write_u8(kv, ',');
 		s_write_u8(kv, '\n');
-		s_tabs(kv);
 		s_pop_array(kv);
 	} else {
 	}
@@ -794,8 +824,10 @@ void kv_field_array_begin(kv_t* kv, const char* key, int* count, const char* typ
 		} else {
 			s_field_begin(kv, key);
 		}
-		s_write_str_no_quotes(kv, "[\n", 2);
-		kv->tabs += 1;
+		s_write_u8(kv, '[');
+		s_write(kv, (uint64_t)*count);
+		s_write_str_no_quotes(kv, "] {\n", 4);
+		s_tabs_delta(kv, 1);
 		s_tabs(kv);
 		s_push_array(kv, 1);
 	} else {
@@ -806,9 +838,11 @@ void kv_field_array_end(kv_t* kv)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		s_write_u8(kv, '\n');
-		s_tabs(kv, -1);
-		s_write_str_no_quotes(kv, "],\n", 3);
+		s_tabs_delta(kv, -1);
+		s_tabs(kv);
+		s_write_str_no_quotes(kv, "},\n", 3);
 		s_pop_array(kv);
+		kv->first_element_in_array = 0;
 	} else {
 	}
 }
