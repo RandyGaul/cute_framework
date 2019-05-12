@@ -81,30 +81,45 @@ void do_serialize(kv_t* kv, thing_t* thing)
 	kv_object_begin(kv);
 	kv_key(kv, "a"); kv_val(kv, &thing->a);
 	kv_key(kv, "b"); kv_val(kv, &thing->b);
-	kv_key(kv, "str"); kv_val(kv, &thing->str, &thing->str_len);
+	kv_key(kv, "str"); kv_val_string(kv, &thing->str, &thing->str_len);
 		kv_key(kv, "sub_thing"); kv_object_begin(kv);
 		kv_key(kv, "a"); kv_val(kv, &thing->a);
 		kv_key(kv, "die_fucker"); kv_val(kv, &thing->a);
 			kv_key(kv, "interior_thing");  kv_object_begin(kv);
 			kv_key(kv, "hi"); kv_val(kv, &thing->a);
-			kv_key(kv, "geez"); kv_val(kv, &thing->str, &thing->str_len);
+			kv_key(kv, "geez"); kv_val_string(kv, &thing->str, &thing->str_len);
 			kv_object_end(kv);
 		kv_object_end(kv);
 	kv_key(kv, "x"); kv_val(kv, &thing->a);
 	kv_key(kv, "y"); kv_val(kv, &thing->b);
 	int blob_size = 17;
-	kv_key(kv, "blob_data"); kv_val(kv, "Some blob input.", &blob_size);
+	kv_key(kv, "blob_data"); kv_val_blob(kv, "Some blob input.", &blob_size);
 	int int_count = 8;
 	kv_key(kv, "array_of_ints"); kv_array_begin(kv, &int_count);
 		for (int i = 0; i < int_count; ++i) kv_val(kv, &i);
 	kv_array_end(kv);
-	int_count = 3;
+	int_count = 2;
+	kv_key(kv, "array_of_array_of_ints"); kv_array_begin(kv, &int_count);
+		int_count = 3;
+		kv_array_begin(kv, &int_count);
+		for (int i = 0; i < int_count; ++i)
+		{
+			kv_val(kv, &i);
+		}
+		kv_array_end(kv);
+		kv_array_begin(kv, &int_count);
+		for (int i = 0; i < int_count; ++i)
+		{
+			kv_val(kv, &i);
+		}
+		kv_array_end(kv);
+	kv_array_end(kv);
 	kv_key(kv, "array_of_objects"); kv_array_begin(kv, &int_count);
 	for (int i = 0; i < int_count; ++i)
 	{
 		kv_object_begin(kv);
 		kv_key(kv, "some_integer"); kv_val(kv, &thing->a);
-		kv_key(kv, "some_string"); kv_val(kv, &thing->str, &thing->str_len);
+		kv_key(kv, "some_string"); kv_val_string(kv, &thing->str, &thing->str_len);
 		kv_object_end(kv);
 	}
 	kv_array_end(kv);

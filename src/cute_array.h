@@ -30,8 +30,8 @@ template <typename T>
 struct array
 {
 	array();
-	array(void* user_allocator_context);
-	array(int capacity, void* user_allocator_context);
+	explicit array(void* user_allocator_context);
+	explicit array(int capacity, void* user_allocator_context);
 	~array();
 
 	T& add();

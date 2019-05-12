@@ -42,27 +42,27 @@ CUTE_API int CUTE_CALL kv_size_written(kv_t* kv);
 
 CUTE_API error_t CUTE_CALL kv_key(kv_t* kv, const char* key);
 
-CUTE_API void CUTE_CALL kv_val(kv_t* kv, uint8_t* val);
-CUTE_API void CUTE_CALL kv_val(kv_t* kv, uint16_t* val);
-CUTE_API void CUTE_CALL kv_val(kv_t* kv, uint32_t* val);
-CUTE_API void CUTE_CALL kv_val(kv_t* kv, uint64_t* val);
+CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, uint8_t* val);
+CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, uint16_t* val);
+CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, uint32_t* val);
+CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, uint64_t* val);
 
-CUTE_API void CUTE_CALL kv_val(kv_t* kv, int8_t* val);
-CUTE_API void CUTE_CALL kv_val(kv_t* kv, int16_t* val);
-CUTE_API void CUTE_CALL kv_val(kv_t* kv, int32_t* val);
-CUTE_API void CUTE_CALL kv_val(kv_t* kv, int64_t* val);
+CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, int8_t* val);
+CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, int16_t* val);
+CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, int32_t* val);
+CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, int64_t* val);
 
-CUTE_API void CUTE_CALL kv_val(kv_t* kv, float* val);
-CUTE_API void CUTE_CALL kv_val(kv_t* kv, double* val);
+CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, float* val);
+CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, double* val);
 
-CUTE_API void CUTE_CALL kv_val(kv_t* kv, char** str, int* size);
-CUTE_API void CUTE_CALL kv_val(kv_t* kv, void* data, int* size);
+CUTE_API error_t CUTE_CALL kv_val_string(kv_t* kv, char** str, int* size);
+CUTE_API error_t CUTE_CALL kv_val_blob(kv_t* kv, void* data, int* size);
 
-CUTE_API void CUTE_CALL kv_object_begin(kv_t* kv);
+CUTE_API error_t CUTE_CALL kv_object_begin(kv_t* kv);
 CUTE_API error_t CUTE_CALL kv_object_end(kv_t* kv);
 
-CUTE_API void CUTE_CALL kv_array_begin(kv_t* kv, int* count);
-CUTE_API void CUTE_CALL kv_array_end(kv_t* kv);
+CUTE_API error_t CUTE_CALL kv_array_begin(kv_t* kv, int* count);
+CUTE_API error_t CUTE_CALL kv_array_end(kv_t* kv);
 
 CUTE_API void CUTE_CALL kv_print(kv_t* kv);
 
