@@ -40,27 +40,29 @@ CUTE_API void CUTE_CALL kv_destroy(kv_t* kv);
 CUTE_API error_t CUTE_CALL kv_reset(kv_t* kv, const void* data, int size, int mode);
 CUTE_API int CUTE_CALL kv_size_written(kv_t* kv);
 
-CUTE_API void CUTE_CALL kv_peek_object(kv_t* kv, const char** str, int* len);
-CUTE_API void CUTE_CALL kv_object_begin(kv_t* kv, const char* key, const char* type_id);
+CUTE_API error_t CUTE_CALL kv_key(kv_t* kv, const char* key);
+
+CUTE_API void CUTE_CALL kv_val(kv_t* kv, uint8_t* val);
+CUTE_API void CUTE_CALL kv_val(kv_t* kv, uint16_t* val);
+CUTE_API void CUTE_CALL kv_val(kv_t* kv, uint32_t* val);
+CUTE_API void CUTE_CALL kv_val(kv_t* kv, uint64_t* val);
+
+CUTE_API void CUTE_CALL kv_val(kv_t* kv, int8_t* val);
+CUTE_API void CUTE_CALL kv_val(kv_t* kv, int16_t* val);
+CUTE_API void CUTE_CALL kv_val(kv_t* kv, int32_t* val);
+CUTE_API void CUTE_CALL kv_val(kv_t* kv, int64_t* val);
+
+CUTE_API void CUTE_CALL kv_val(kv_t* kv, float* val);
+CUTE_API void CUTE_CALL kv_val(kv_t* kv, double* val);
+
+CUTE_API void CUTE_CALL kv_val(kv_t* kv, char** str, int* size);
+CUTE_API void CUTE_CALL kv_val(kv_t* kv, void* data, int* size);
+
+CUTE_API void CUTE_CALL kv_object_begin(kv_t* kv);
 CUTE_API error_t CUTE_CALL kv_object_end(kv_t* kv);
 
-CUTE_API void CUTE_CALL kv_field(kv_t* kv, const char* key, uint8_t* val);
-CUTE_API void CUTE_CALL kv_field(kv_t* kv, const char* key, uint16_t* val);
-CUTE_API void CUTE_CALL kv_field(kv_t* kv, const char* key, uint32_t* val);
-CUTE_API void CUTE_CALL kv_field(kv_t* kv, const char* key, uint64_t* val);
-
-CUTE_API void CUTE_CALL kv_field(kv_t* kv, const char* key, int8_t* val);
-CUTE_API void CUTE_CALL kv_field(kv_t* kv, const char* key, int16_t* val);
-CUTE_API void CUTE_CALL kv_field(kv_t* kv, const char* key, int32_t* val);
-CUTE_API void CUTE_CALL kv_field(kv_t* kv, const char* key, int64_t* val);
-
-CUTE_API void CUTE_CALL kv_field(kv_t* kv, const char* key, float* val);
-CUTE_API void CUTE_CALL kv_field(kv_t* kv, const char* key, double* val);
-
-CUTE_API void CUTE_CALL kv_field_str(kv_t* kv, const char* key, char** str, int* size);
-CUTE_API void CUTE_CALL kv_field_blob(kv_t* kv, const char* key, void* data, int* size);
-CUTE_API void CUTE_CALL kv_field_array_begin(kv_t* kv, const char* key, int* count, const char* type_id = NULL);
-CUTE_API void CUTE_CALL kv_field_array_end(kv_t* kv);
+CUTE_API void CUTE_CALL kv_array_begin(kv_t* kv, int* count);
+CUTE_API void CUTE_CALL kv_array_end(kv_t* kv);
 
 CUTE_API void CUTE_CALL kv_print(kv_t* kv);
 

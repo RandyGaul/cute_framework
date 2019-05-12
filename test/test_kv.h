@@ -33,44 +33,44 @@ struct thing_t
 // WORKING HERE
 // Need to output this string then parse it.
 /*
-: "thing_t" {
-	"a" : 5,
-	"b" : 10.300000,
-	"str" : "Hello.",
-	"sub_thing" : "nested_thing_t" {
-		"a" : 5,
-		"die_fucker" : 5,
-		"interior_thing" : "final_nest_t" {
-			"hi" : 5,
-			"geez" : "Hello.",
+{
+	a = 5,
+	b = 10.300000,
+	str = "Hello.",
+	sub_thing = {
+		a = 5,
+		die_fucker = 5,
+		interior_thing = {
+			hi = 5,
+			geez = "Hello.",
 		},
 	},
-	"x" : 5,
-	"y" : 10.300000,
-	"blob_data" : "U29tZSBibG9iIGlucHV0LgA=",
-	"array_of_ints" [8] {
+	x = 5,
+	y = 10.300000,
+	blob_data = "U29tZSBibG9iIGlucHV0LgA=",
+	array_of_ints [8] {
 		0, 1, 2, 3, 4, 5, 6, 7,
 	},
-	"array_of_array_of_ints" [2][3] {
-		{
+	array_of_array_of_ints [2] {
+		[3] {
 			0, 1, 2
 		},
-		{
+		[3] {
 			2, 5, 1
 		},
 	},
-	"array_of_objects" [3] "array_object_t" {
+	array_of_objects [3] {
 		{
-			"some integer." : 5,
-			"some string" : "Hello.",
+			some_integer = 5,
+			some_string = "Hello.",
 		},
 		{
-			"some integer." : 5,
-			"some string" : "Hello.",
+			some_integer = 5,
+			some_string = "Hello.",
 		},
 		{
-			"some integer." : 5,
-			"some string" : "Hello.",
+			some_integer = 5,
+			some_string = "Hello.",
 		},
 	},
 },
@@ -78,36 +78,36 @@ struct thing_t
 
 void do_serialize(kv_t* kv, thing_t* thing)
 {
-	kv_object_begin(kv, NULL, "thing_t");
-	kv_field(kv, "a", &thing->a);
-	kv_field(kv, "b", &thing->b);
-	kv_field_str(kv, "str", &thing->str, &thing->str_len);
-		kv_object_begin(kv, "sub_thing", "nested_thing_t");
-		kv_field(kv, "a", &thing->a);
-		kv_field(kv, "die_fucker", &thing->a);
-			kv_object_begin(kv, "interior_thing", "final_nest_t");
-			kv_field(kv, "hi", &thing->a);
-			kv_field_str(kv, "geez", &thing->str, &thing->str_len);
+	kv_object_begin(kv);
+	kv_key(kv, "a"); kv_val(kv, &thing->a);
+	kv_key(kv, "b"); kv_val(kv, &thing->b);
+	kv_key(kv, "str"); kv_val(kv, &thing->str, &thing->str_len);
+		kv_key(kv, "sub_thing"); kv_object_begin(kv);
+		kv_key(kv, "a"); kv_val(kv, &thing->a);
+		kv_key(kv, "die_fucker"); kv_val(kv, &thing->a);
+			kv_key(kv, "interior_thing");  kv_object_begin(kv);
+			kv_key(kv, "hi"); kv_val(kv, &thing->a);
+			kv_key(kv, "geez"); kv_val(kv, &thing->str, &thing->str_len);
 			kv_object_end(kv);
 		kv_object_end(kv);
-	kv_field(kv, "x", &thing->a);
-	kv_field(kv, "y", &thing->b);
+	kv_key(kv, "x"); kv_val(kv, &thing->a);
+	kv_key(kv, "y"); kv_val(kv, &thing->b);
 	int blob_size = 17;
-	kv_field_blob(kv, "blob_data", "Some blob input.", &blob_size);
+	kv_key(kv, "blob_data"); kv_val(kv, "Some blob input.", &blob_size);
 	int int_count = 8;
-	kv_field_array_begin(kv, "array_of_ints", &int_count);
-		for (int i = 0; i < int_count; ++i) kv_field(kv, NULL, &i);
-	kv_field_array_end(kv);
+	kv_key(kv, "array_of_ints"); kv_array_begin(kv, &int_count);
+		for (int i = 0; i < int_count; ++i) kv_val(kv, &i);
+	kv_array_end(kv);
 	int_count = 3;
-	kv_field_array_begin(kv, "array_of_objects", &int_count, "array_object_t");
-		for (int i = 0; i < int_count; ++i)
-		{
-			kv_object_begin(kv, NULL, NULL);
-			kv_field(kv, "some integer.", &thing->a);
-			kv_field_str(kv, "some string", &thing->str, &thing->str_len);
-			kv_object_end(kv);
-		}
-	kv_field_array_end(kv);
+	kv_key(kv, "array_of_objects"); kv_array_begin(kv, &int_count);
+	for (int i = 0; i < int_count; ++i)
+	{
+		kv_object_begin(kv);
+		kv_key(kv, "some_integer"); kv_val(kv, &thing->a);
+		kv_key(kv, "some_string"); kv_val(kv, &thing->str, &thing->str_len);
+		kv_object_end(kv);
+	}
+	kv_array_end(kv);
 	kv_object_end(kv);
 }
 

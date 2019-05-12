@@ -37,10 +37,38 @@ struct kv_string_t
 	int len = 0;
 };
 
+enum kv_type_t
+{
+	CUTE_KV_TYPE_NULL   = 0,
+	CUTE_KV_TYPE_INT64  = 1,
+	CUTE_KV_TYPE_DOUBLE = 2,
+	CUTE_KV_TYPE_STRING = 3,
+	CUTE_KV_TYPE_ARRAY  = 4,
+	CUTE_KV_TYPE_BLOB   = 5,
+	CUTE_KV_TYPE_OBJECT = 6,
+};
+
+union kv_union_t
+{
+	int64_t ival;
+	double dval;
+	kv_string_t sval;
+	kv_string_t bval;
+	int object_index;
+	kv_type_t array_type;
+};
+
+struct kv_val_t
+{
+	kv_type_t type;
+	kv_union_t u;
+	array<kv_union_t> aval;
+};
+
 struct kv_field_t
 {
 	kv_string_t key;
-	kv_string_t val;
+	kv_val_t val;
 };
 
 struct kv_object_t
@@ -49,11 +77,7 @@ struct kv_object_t
 	int parsing_array = 0;
 
 	kv_string_t key;
-	kv_string_t type;
-
-	array<kv_string_t> field_key;
-	array<kv_string_t> field_val;
-	array<array<kv_string_t>> field_array;
+	array<kv_field_t> fields;
 };
 
 struct kv_t
@@ -63,18 +87,8 @@ struct kv_t
 	uint8_t* in_end;
 	uint8_t* start;
 
-	int offset_stack_count;
-	int offset_stack_capacity;
-	int* offset_stack;
-
 	array <int> top_level_object_indices;
 	array<kv_object_t> objects;
-
-	int first_element_in_array; // Hack. Does not generalize.
-	int is_array;
-	int is_array_stack_capacity;
-	int is_array_stack_count;
-	int* is_array_stack;
 
 	int tabs;
 	error_t error;
@@ -93,16 +107,6 @@ kv_t* kv_make(void* user_allocator_context)
 	kv->start = NULL;
 	kv->in = NULL;
 	kv->in_end = NULL;
-	
-	kv->offset_stack_count = 0;
-	kv->offset_stack_capacity = 0;
-	kv->offset_stack = NULL;
-
-	kv->first_element_in_array = 0;
-	kv->is_array = 0;
-	kv->is_array_stack_capacity = 0;
-	kv->is_array_stack_count = 0;
-	kv->is_array_stack = NULL;
 
 	kv->tabs = 0;
 	kv->error = error_success();
@@ -117,22 +121,6 @@ kv_t* kv_make(void* user_allocator_context)
 void kv_destroy(kv_t* kv)
 {
 	CUTE_FREE(kv, kv->mem_ctx);
-}
-
-static CUTE_INLINE void s_push_array(kv_t* kv, int is_array)
-{
-	CUTE_CHECK_BUFFER_GROW(kv, is_array_stack_count, is_array_stack_capacity, is_array_stack, int, 8, kv->mem_ctx);
-	CUTE_ASSERT(kv->is_array_stack);
-	kv->is_array_stack[kv->is_array_stack_count++] = kv->is_array;
-	kv->is_array = is_array;
-	kv->first_element_in_array = is_array;
-}
-
-static CUTE_INLINE void s_pop_array(kv_t* kv)
-{
-	CUTE_ASSERT(kv->is_array_stack_count > 0);
-	kv->is_array = kv->is_array_stack[--kv->is_array_stack_count];
-	kv->first_element_in_array = 0;
 }
 
 static CUTE_INLINE int s_isspace(uint8_t c)
@@ -273,148 +261,8 @@ static CUTE_INLINE error_t s_parse_int(kv_t* kv, int* out)
 	return error_success();
 }
 
-static CUTE_INLINE error_t s_parse(kv_t* kv)
+static CUTE_INLINE error_t s_parse_object(kv_t* kv)
 {
-	int done_parsing = 0;
-	array<int> object_index_stack;
-
-	do {
-		// Push top level objects onto the stack while there are still more listed in the file.
-		if (s_try(kv, '-')) {
-			s_expect(kv, '>');
-
-			kv_string_t type_string;
-			CUTE_KV_CHECK(s_scan_string(kv, &type_string));
-
-			s_expect(kv, '{');
-
-			kv_object_t* top_level_object = &kv->objects.add();
-			CUTE_PLACEMENT_NEW(top_level_object) kv_object_t;
-			top_level_object->type = type_string;
-
-			int index = kv->objects.count() - 1;
-			kv->top_level_object_indices.add(index);
-			object_index_stack.add(index);
-		} else {
-			done_parsing = 1;
-			if (kv->in != kv->in_end) {
-				return error_failure("Unable to parse entire file contents.");
-			}
-		}
-
-		// LL(1) descent parse each object.
-		while (object_index_stack.count())
-		{
-			int object_index = object_index_stack.pop();
-			kv_object_t* object = kv->objects + object_index;
-
-			while (1)
-			{
-				if (object->parsing_array) {
-					if (s_try(kv, '}')) {
-						object->parsing_array = 0;
-						s_try(kv, ',');
-					}
-				}
-
-				if (s_try(kv, '}')) {
-					s_try(kv, ',');
-					break;
-				}
-
-				kv_string_t key_string;
-				int is_object = 0;
-				int is_array = 0;
-				int array_size = 0;
-
-				// Key.
-				if (!object->parsing_array) {
-					CUTE_KV_CHECK(s_scan_string(kv, &key_string));
-					object->field_key.add(key_string);
-
-					if (s_try(kv, '-')) {
-						s_expect(kv, '>');
-						is_object = 1;
-					} else {
-						if (!s_try(kv, ':')) {
-							s_expect(kv, '}');
-							break;
-						}
-					}
-					if (s_try(kv, '[')) {
-						is_array = 1;
-						CUTE_KV_CHECK(s_parse_int(kv, &array_size));
-						s_expect(kv, ']');
-						s_expect(kv, '{');
-					}
-				} else {
-					if (s_try(kv, '{')) {
-						is_object = 1;
-					} else {
-						if (s_try(kv, '}')) {
-							s_try(kv, ',');
-							break;
-						}
-					}
-				}
-
-				//object->field_array_size.add(is_array ? array_size : -1);
-
-				// Value.
-				if (!is_object) {
-					if (is_array) {
-						object->field_val.add();
-						CUTE_KV_CHECK(s_skip_to(kv, ']'));
-					} else {
-						kv_string_t val_string;
-						CUTE_KV_CHECK(s_scan_string(kv, &val_string));
-						object->field_val.add(val_string);
-					}
-
-					s_try(kv, ',');
-					int done = s_try(kv, '}');
-					if (done) {
-						s_try(kv, ',');
-						break;
-					}
-				} else {
-					// Construct a new child object.
-					kv_object_t* child = &kv->objects.add();
-					CUTE_PLACEMENT_NEW(child) kv_object_t;
-
-					child->parent_index = object_index;
-					child->key = key_string;
-
-					// Scan type and array information.
-					if (object->parsing_array) {
-						child->type = object->field_val[object->field_val.count() - 1];
-					} else {
-						kv_string_t type_string;
-						CUTE_KV_CHECK(s_scan_string(kv, &type_string));
-
-						object->field_val.add(type_string);
-						if (is_array) {
-							CUTE_ASSERT(object->parsing_array == 0);
-							object->parsing_array = 1;
-						} else {
-							child->type = type_string;
-						}
-
-						s_expect(kv, '{');
-					}
-
-					object_index_stack.add(object_index);
-					object_index_stack.add(kv->objects.count() - 1);
-
-					break;
-				}
-			}
-		}
-	} while (!done_parsing);
-
-	// WORKING HERE
-	// Need to test this code. Especially arrays of arrays and arrays of objects and whatnot.
-
 	return error_success();
 }
 
@@ -426,7 +274,10 @@ error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
 	kv->mode = mode;
 
 	if (mode == CUTE_KV_MODE_READ) {
-		return s_parse(kv);
+		while (s_peek(kv) == '{')
+		{
+			CUTE_KV_CHECK(s_parse_object(kv));
+		}
 	}
 
 	return error_success();
@@ -435,10 +286,6 @@ error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
 int kv_size_written(kv_t* kv)
 {
 	return (int)(kv->in - kv->start);
-}
-
-void kv_peek_object(kv_t* kv, const char** str, int* len)
-{
 }
 
 static CUTE_INLINE int s_is_error(kv_t* kv)
@@ -502,7 +349,7 @@ static CUTE_INLINE void s_write_str(kv_t* kv, const char* str)
 	s_write_str(kv, str, (int)CUTE_STRLEN(str));
 }
 
-void kv_object_begin(kv_t* kv, const char* key, const char* type_id)
+void kv_object_begin(kv_t* kv, const char* key)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		if (kv->first_element_in_array) {
@@ -518,7 +365,6 @@ void kv_object_begin(kv_t* kv, const char* key, const char* type_id)
 			} else {
 				s_write_str_no_quotes(kv, "-> ", 3);
 			}
-			s_write_str(kv, type_id);
 			s_write_str_no_quotes(kv, " {\n", 3);
 		} else {
 			s_write_str_no_quotes(kv, "{\n", 2);
@@ -772,7 +618,7 @@ void kv_field(kv_t* kv, const char* key, double* val)
 	}
 }
 
-void kv_field_str(kv_t* kv, const char* key, char** str, int* size)
+void kv_field_string(kv_t* kv, const char* key, char** str, int* size)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		s_field_begin(kv, key);
