@@ -273,13 +273,6 @@ static error_t s_parse_hex(kv_t* kv, uint64_t* hex)
 	return error_success();
 }
 
-static CUTE_INLINE error_t s_parse_string(kv_t* kv, kv_string_t* string)
-{
-	error_t err = s_scan_string(kv, string);
-	if (err.is_error()) return err;
-	return error_success();
-}
-
 static CUTE_INLINE error_t s_parse_number(kv_t* kv, kv_val_t* val)
 {
 	error_t err;
@@ -351,7 +344,7 @@ static error_t s_parse_value(kv_t* kv, kv_val_t* val)
 
 	if (c == '"') {
 		kv_string_t string;
-		err = s_parse_string(kv, &string);
+		err = s_scan_string(kv, &string);
 		if (err.is_error()) return err;
 		val->type = KV_TYPE_STRING;
 		val->u.sval = string;
