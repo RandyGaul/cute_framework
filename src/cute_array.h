@@ -235,7 +235,8 @@ void array<T>::ensure_capacity(int num_elements)
 			CUTE_ASSERT(new_capacity); // Detect overflow.
 		}
 
-		T* new_items = (T*)CUTE_ALLOC(sizeof(T) * new_capacity, mem_ctx_);
+		size_t new_size = sizeof(T) * new_capacity;
+		T* new_items = (T*)CUTE_ALLOC(new_size, mem_ctx_);
 		CUTE_ASSERT(new_items);
 		CUTE_MEMCPY(new_items, items_, sizeof(T) * count_);
 		CUTE_FREE(items_, mem_ctx_);

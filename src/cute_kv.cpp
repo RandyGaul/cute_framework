@@ -115,8 +115,31 @@ kv_t* kv_make(void* user_allocator_context)
 	return kv;
 }
 
+void kv_destroy_val(kv_t* kv, kv_val_t* val)
+{
+	int count = val->aval.count();
+	for (int i = 0; i < count; ++i)
+	{
+		kv_destroy_val(kv, val->aval + i);
+	}
+	val->~kv_val_t();
+}
+
 void kv_destroy(kv_t* kv)
 {
+	int count = kv->objects.count();
+	for (int i = 0; i < count; ++i)
+	{
+		kv_object_t* object = kv->objects + i;
+		for (int j = 0; j < object->fields.count(); ++j)
+		{
+			kv_field_t* field = object->fields + j;
+			kv_destroy_val(kv, &field->val);
+		}
+		object->~kv_object_t();
+	}
+	kv->~kv_t();
+	CUTE_FREE(kv->temp, kv->mem_ctx);
 	CUTE_FREE(kv, kv->mem_ctx);
 }
 
@@ -205,40 +228,6 @@ static error_t s_scan_string(kv_t* kv, kv_string_t* str)
 	str->str = string_start;
 	str->len = (int)(string_end - string_start);
 	return err;
-}
-
-static CUTE_INLINE error_t s_skip_to(kv_t* kv, uint8_t c)
-{
-	int has_quotes = s_try(kv, '"');
-	if (has_quotes) {
-		while (1)
-		{
-			// Skip over a string.
-			while (kv->in < kv->in_end)
-			{
-				uint8_t* end = (uint8_t*)CUTE_MEMCHR(kv->in, '"', kv->in_end - kv->in);
-				if (end == kv->in_end) return error_failure("Unterminated string at end of file.");
-				if (*(end - 1) != '\\') {
-					kv->in = end + 1;
-					break;
-				}
-			}
-
-			uint8_t* end = (uint8_t*)CUTE_MEMCHR(kv->in, c, kv->in_end - kv->in);
-			if (end == kv->in_end) return error_failure("End of file encountered abruptly.");
-			uint8_t* quote = (uint8_t*)CUTE_MEMCHR(kv->in, '"', kv->in_end - kv->in);
-			kv->in = end + 1;
-			if (end < quote) {
-				break;
-			}
-		}
-	} else {
-		uint8_t* end = (uint8_t*)CUTE_MEMCHR(kv->in, c, kv->in_end - kv->in);
-		if (end == kv->in_end) return error_failure("End of file encountered abruptly.");
-		kv->in = end + 1;
-	}
-
-	return error_success();
 }
 
 static CUTE_INLINE uint8_t s_parse_escape_code(uint8_t c)
@@ -441,6 +430,20 @@ static CUTE_INLINE error_t s_write_u8(kv_t* kv, uint8_t val)
 	return error_success();
 }
 
+static CUTE_INLINE void s_try_consume_one_tab(kv_t* kv)
+{
+	if (kv->in - 1 >= kv->start && kv->in[-1] == '\t') {
+		kv->in--;
+	}
+}
+
+static CUTE_INLINE void s_try_consume_whitespace(kv_t* kv)
+{
+	while (kv->in - 1 >= kv->start && s_isspace(kv->in[-1])) {
+		kv->in--;
+	}
+}
+
 static CUTE_INLINE void s_tabs_delta(kv_t* kv, int delta)
 {
 	kv->tabs += delta;
@@ -483,7 +486,6 @@ static CUTE_INLINE error_t s_write_str(kv_t* kv, const char* str)
 
 error_t kv_key(kv_t* kv, const char* key)
 {
-	CUTE_RETURN_IF_ERROR(s_tabs(kv));
 	CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, key, (int)CUTE_STRLEN(key)));
 	CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, " = ", 3));
 	return error_success();
@@ -593,7 +595,6 @@ static CUTE_INLINE error_t s_begin_val(kv_t* kv)
 	if (kv->in_array) {
 		if (kv->in_array == CUTE_KV_IN_ARRAY_AND_FIRST_ELEMENT) {
 			kv->in_array = CUTE_KV_IN_ARRAY;
-			CUTE_RETURN_IF_ERROR(s_tabs(kv));
 		} else {
 			CUTE_RETURN_IF_ERROR(s_write_u8(kv, ' '));
 		}
@@ -606,6 +607,7 @@ static CUTE_INLINE error_t s_end_val(kv_t* kv)
 	CUTE_RETURN_IF_ERROR(s_write_u8(kv, ','));
 	if (!kv->in_array) {
 		CUTE_RETURN_IF_ERROR(s_write_u8(kv, '\n'));
+		CUTE_RETURN_IF_ERROR(s_tabs(kv));
 	}
 	return error_success();
 }
@@ -756,14 +758,9 @@ error_t kv_val_blob(kv_t* kv, void* data, int* size)
 error_t kv_object_begin(kv_t* kv)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		if (kv->in_array) {
-			if (kv->in_array == CUTE_KV_IN_ARRAY_AND_FIRST_ELEMENT) {
-				kv->in_array = CUTE_KV_IN_ARRAY;
-				CUTE_RETURN_IF_ERROR(s_tabs(kv));
-			}
-		}
 		CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, "{\n", 2));
 		s_tabs_delta(kv, 1);
+		CUTE_RETURN_IF_ERROR(s_tabs(kv));
 		s_push_array(kv, CUTE_KV_NOT_IN_ARRAY);
 	} else {
 	}
@@ -774,12 +771,9 @@ error_t kv_object_end(kv_t* kv)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		s_tabs_delta(kv, -1);
+		s_try_consume_one_tab(kv);
+		CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, "},\n", 3));
 		CUTE_RETURN_IF_ERROR(s_tabs(kv));
-		if (kv->in_array_stack[kv->in_array_stack.count() - 1]) {
-			CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, "}, ", 3));
-		} else {
-			CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, "},\n", 3));
-		}
 		s_pop_array(kv);
 	} else {
 	}
@@ -789,13 +783,11 @@ error_t kv_object_end(kv_t* kv)
 error_t kv_array_begin(kv_t* kv, int* count)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		if (kv->in_array) {
-			CUTE_RETURN_IF_ERROR(s_tabs(kv));
-		}
 		s_tabs_delta(kv, 1);
 		CUTE_RETURN_IF_ERROR(s_write_u8(kv, '['));
 		CUTE_RETURN_IF_ERROR(s_write(kv, (int64_t)*count));
 		CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, "] {\n", 4));
+		CUTE_RETURN_IF_ERROR(s_tabs(kv));
 		s_push_array(kv, CUTE_KV_IN_ARRAY_AND_FIRST_ELEMENT);
 	} else {
 	}
@@ -805,11 +797,15 @@ error_t kv_array_begin(kv_t* kv, int* count)
 error_t kv_array_end(kv_t* kv)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		s_pop_array(kv);
 		s_tabs_delta(kv, -1);
-		CUTE_RETURN_IF_ERROR(s_write_u8(kv, '\n'));
+		s_try_consume_whitespace(kv);
+		if (kv->in_array) {
+			CUTE_RETURN_IF_ERROR(s_write_u8(kv, '\n'));
+		}
 		CUTE_RETURN_IF_ERROR(s_tabs(kv));
 		CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, "},\n", 3));
+		CUTE_RETURN_IF_ERROR(s_tabs(kv));
+		s_pop_array(kv);
 	} else {
 	}
 	return error_success();
