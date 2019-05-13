@@ -94,6 +94,7 @@ struct kv_t
 	uint8_t* in_end = NULL;
 	uint8_t* start = NULL;
 
+	int read_mode_object_index = 0;
 	array<int> top_level_object_indices;
 	array<kv_object_t> objects;
 
@@ -329,6 +330,7 @@ static error_t s_parse_array(kv_t* kv, array<kv_val_t>* array_val)
 	CUTE_RETURN_IF_ERROR(s_parse_int(kv, &count));
 	s_expect(kv, ']');
 	s_expect(kv, '{');
+	array_val->ensure_capacity((int)count);
 	for (int i = 0; i < (int)count; ++i)
 	{
 		kv_val_t* val = &array_val->add();
@@ -399,6 +401,7 @@ error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
 		while (s_peek(kv) == '{')
 		{
 			CUTE_RETURN_IF_ERROR(s_parse_object(kv));
+			kv->top_level_object_indices.add(kv->objects.count() - 1);
 		}
 
 		s_try(kv, ',');
@@ -484,10 +487,34 @@ static CUTE_INLINE error_t s_write_str(kv_t* kv, const char* str)
 	return error_success();
 }
 
+static CUTE_INLINE kv_field_t* s_find_field(kv_object_t* object, const char* key)
+{
+	size_t len = CUTE_STRLEN(key);
+	int count = object->fields.count();
+	for (int i = 0; i < count; ++i)
+	{
+		kv_field_t* field = object->fields + i;
+		kv_string_t string = field->key;
+		if (len != string.len) continue;
+		if (CUTE_STRNCMP(key, (const char*)string.str, string.len)) continue;
+		return field;
+	}
+	return NULL;
+}
+
 error_t kv_key(kv_t* kv, const char* key)
 {
-	CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, key, (int)CUTE_STRLEN(key)));
-	CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, " = ", 3));
+	if (kv->mode == CUTE_KV_MODE_WRITE) {
+		CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, key, (int)CUTE_STRLEN(key)));
+		CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, " = ", 3));
+	} else {
+		kv_object_t* object = kv->objects + kv->read_mode_object_index;
+		kv_field_t* field = s_find_field(object, key);
+		if (field) {
+		} else {
+			return error_failure("Unable to find field to match `key`.");
+		}
+	}
 	return error_success();
 }
 
@@ -626,7 +653,6 @@ error_t kv_val(kv_t* kv, uint8_t* val)
 error_t kv_val(kv_t* kv, uint16_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		
 		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
 		CUTE_RETURN_IF_ERROR(s_write(kv, (uint64_t)*(uint16_t*)val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
@@ -638,7 +664,6 @@ error_t kv_val(kv_t* kv, uint16_t* val)
 error_t kv_val(kv_t* kv, uint32_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		
 		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
 		CUTE_RETURN_IF_ERROR(s_write(kv, (uint64_t)*(uint32_t*)val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
@@ -650,7 +675,6 @@ error_t kv_val(kv_t* kv, uint32_t* val)
 error_t kv_val(kv_t* kv, uint64_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		
 		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
 		CUTE_RETURN_IF_ERROR(s_write(kv, *(uint64_t*)val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
@@ -662,7 +686,6 @@ error_t kv_val(kv_t* kv, uint64_t* val)
 error_t kv_val(kv_t* kv, int8_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		
 		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
 		CUTE_RETURN_IF_ERROR(s_write(kv, (int64_t)*(int8_t*)val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
@@ -674,7 +697,6 @@ error_t kv_val(kv_t* kv, int8_t* val)
 error_t kv_val(kv_t* kv, int16_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		
 		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
 		CUTE_RETURN_IF_ERROR(s_write(kv, (int64_t)*(int16_t*)val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
@@ -686,7 +708,6 @@ error_t kv_val(kv_t* kv, int16_t* val)
 error_t kv_val(kv_t* kv, int32_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		
 		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
 		CUTE_RETURN_IF_ERROR(s_write(kv, (int64_t)*(int32_t*)val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
@@ -698,7 +719,6 @@ error_t kv_val(kv_t* kv, int32_t* val)
 error_t kv_val(kv_t* kv, int64_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		
 		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
 		CUTE_RETURN_IF_ERROR(s_write(kv, *(int64_t*)val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
@@ -710,7 +730,6 @@ error_t kv_val(kv_t* kv, int64_t* val)
 error_t kv_val(kv_t* kv, float* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		
 		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
 		CUTE_RETURN_IF_ERROR(s_write(kv, *val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
@@ -722,7 +741,6 @@ error_t kv_val(kv_t* kv, float* val)
 error_t kv_val(kv_t* kv, double* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		
 		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
 		CUTE_RETURN_IF_ERROR(s_write(kv, *val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
@@ -763,6 +781,7 @@ error_t kv_object_begin(kv_t* kv)
 		CUTE_RETURN_IF_ERROR(s_tabs(kv));
 		s_push_array(kv, CUTE_KV_NOT_IN_ARRAY);
 	} else {
+		CUTE_RETURN_IF_FALSE(kv->read_mode_object_index < kv->objects.count(), "Attempted to read a kv object when there are none left to read.");
 	}
 	return error_success();
 }
@@ -776,6 +795,12 @@ error_t kv_object_end(kv_t* kv)
 		CUTE_RETURN_IF_ERROR(s_tabs(kv));
 		s_pop_array(kv);
 	} else {
+		kv_object_t* object = kv->objects + kv->read_mode_object_index;
+		if (object->parent_index == ~0) {
+			kv->read_mode_object_index++;
+		} else {
+			kv->read_mode_object_index = object->parent_index;
+		}
 	}
 	return error_success();
 }

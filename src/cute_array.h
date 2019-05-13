@@ -43,7 +43,7 @@ struct array
 	T& pop();
 	void unordered_remove(int index);
 	void clear();
-	void resize(int new_count);
+	void ensure_capacity(int num_elements);
 
 	int capacity() const;
 	int count() const;
@@ -62,8 +62,6 @@ private:
 	int count_ = 0;
 	T* items_ = NULL;
 	void * mem_ctx_;
-
-	void ensure_capacity(int num_elements);
 };
 
 // -------------------------------------------------------------------------------------------------
@@ -166,10 +164,24 @@ void array<T>::clear()
 }
 
 template <typename T>
-void array<T>::resize(int new_count)
+void array<T>::ensure_capacity(int num_elements)
 {
-	ensure_capacity(new_count);
-	count_ = new_count;
+	if (num_elements > capacity_) {
+		int new_capacity = capacity_ ? capacity_ * 2 : 256;
+		while (new_capacity < num_elements)
+		{
+			new_capacity <<= 1;
+			CUTE_ASSERT(new_capacity); // Detect overflow.
+		}
+
+		size_t new_size = sizeof(T) * new_capacity;
+		T* new_items = (T*)CUTE_ALLOC(new_size, mem_ctx_);
+		CUTE_ASSERT(new_items);
+		CUTE_MEMCPY(new_items, items_, sizeof(T) * count_);
+		CUTE_FREE(items_, mem_ctx_);
+		items_ = new_items;
+		capacity_ = new_capacity;
+	}
 }
 
 template <typename T>
@@ -222,27 +234,6 @@ const T* array<T>::operator+(int index) const
 {
 	CUTE_ASSERT(index >= 0 && index < capacity_);
 	return items_ + index;
-}
-
-template <typename T>
-void array<T>::ensure_capacity(int num_elements)
-{
-	if (num_elements > capacity_) {
-		int new_capacity = capacity_ ? capacity_ * 2 : 256;
-		while (new_capacity < num_elements)
-		{
-			new_capacity <<= 1;
-			CUTE_ASSERT(new_capacity); // Detect overflow.
-		}
-
-		size_t new_size = sizeof(T) * new_capacity;
-		T* new_items = (T*)CUTE_ALLOC(new_size, mem_ctx_);
-		CUTE_ASSERT(new_items);
-		CUTE_MEMCPY(new_items, items_, sizeof(T) * count_);
-		CUTE_FREE(items_, mem_ctx_);
-		items_ = new_items;
-		capacity_ = new_capacity;
-	}
 }
 
 }

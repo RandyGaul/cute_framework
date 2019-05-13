@@ -168,6 +168,8 @@ int test_kv_basic()
 	error_t err = kv_reset(kv, buffer, size, CUTE_KV_MODE_READ);
 	CUTE_TEST_ASSERT(!err.is_error());
 
+	do_serialize(kv, &thing);
+
 	kv_destroy(kv);
 
 	return 0;
