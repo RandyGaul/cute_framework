@@ -23,6 +23,32 @@
 #include <cute_c_runtime.h>
 #include <cute_alloc.h>
 
+/* 
+	Implements a basic growable array data structure for POD items. Items can
+	use constructors and destructors, but must have trivial "memcpy" assignment
+	operators (such as the default compiler-generated assignment operator).
+
+	cute::array does *not* work as a drop-in replacement for std::vector as it
+	has a few special properties. Here is the list of important points for using
+	this array data structure.
+
+	1. Items stored in the array is assumed to be POD. Sometimes the assignment
+	   operator is used, and sometimes `CUTE_MEMCPY` or `CUTE_MEMMOVE` is used.
+	   Items in the array should *not* have specialized assignment operators
+	   beyond simply copying byte-for-byte POD data.
+	2. There is no way to perform a proper "deep-copy" by using the assignment
+	   operator on cute::array.
+	3. Items stored in the array do have constructors and destructors called, but
+	   only upon insertion or removal (not during grow or other operations). The
+	   idea is to facilitate easy initializing of values stored in the array, such
+	   as working with an array of arrays.
+	4. The assignment operator on cute::array does *not* perform a "deep-copy".
+	5. No iterators.
+	6. No rvalue semantics are supported. Instead, the `steal_from` function can
+	   be used to cleanup any current items, and then steal items from another
+	   cute::array.
+*/
+
 namespace cute
 {
 
@@ -44,6 +70,7 @@ struct array
 	void unordered_remove(int index);
 	void clear();
 	void ensure_capacity(int num_elements);
+	void steal_from(array<T>& steal_from_me);
 
 	int capacity() const;
 	int count() const;
@@ -64,7 +91,7 @@ private:
 	int capacity_ = 0;
 	int count_ = 0;
 	T* items_ = NULL;
-	void * mem_ctx_;
+	void* mem_ctx_ = NULL;
 };
 
 // -------------------------------------------------------------------------------------------------
@@ -201,6 +228,17 @@ void array<T>::ensure_capacity(int num_elements)
 		items_ = new_items;
 		capacity_ = new_capacity;
 	}
+}
+
+template <typename T>
+void array<T>::steal_from(array<T>& steal_from_me)
+{
+	this->~array<T>();
+	capacity_ = steal_from_me.capacity_;
+	count_ = steal_from_me.count_;
+	items_ = steal_from_me.items_;
+	mem_ctx_ = steal_from_me.mem_ctx_;
+	steal_from_me->array<T>();
 }
 
 template <typename T>

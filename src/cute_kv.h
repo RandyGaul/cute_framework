@@ -37,6 +37,7 @@ CUTE_API kv_t* CUTE_CALL kv_make(void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL kv_destroy(kv_t* kv);
 CUTE_API error_t CUTE_CALL kv_reset(kv_t* kv, const void* data, int size, int mode);
 CUTE_API int CUTE_CALL kv_size_written(kv_t* kv);
+CUTE_API error_t CUTE_CALL kv_error_state(kv_t* kv);
 
 enum kv_type_t
 {
@@ -45,8 +46,7 @@ enum kv_type_t
 	KV_TYPE_DOUBLE = 2,
 	KV_TYPE_STRING = 3,
 	KV_TYPE_ARRAY  = 4,
-	KV_TYPE_BLOB   = 5,
-	KV_TYPE_OBJECT = 6,
+	KV_TYPE_OBJECT = 5,
 };
 
 CUTE_API error_t CUTE_CALL kv_key(kv_t* kv, const char* key, kv_type_t* type = NULL);

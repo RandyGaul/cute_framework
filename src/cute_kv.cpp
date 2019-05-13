@@ -99,6 +99,8 @@ struct kv_t
 	int temp_size = 0;
 	uint8_t* temp = NULL;
 
+	error_t err = error_success();
+
 	void* mem_ctx = NULL;
 };
 
@@ -184,7 +186,7 @@ static CUTE_INLINE int s_try(kv_t* kv, uint8_t expect)
 
 #define s_expect(kv, expected_character) \
 	do { \
-		CUTE_RETURN_IF_FALSE(s_next(kv) == expected_character, "Found unexpected token."); \
+		if (s_next(kv) != expected_character) return error_failure("Found unexpected token."); \
 	} while (0)
 
 static error_t s_scan_string(kv_t* kv, uint8_t** start_of_string, uint8_t** end_of_string)
@@ -243,7 +245,7 @@ static CUTE_INLINE error_t s_parse_int(kv_t* kv, int64_t* out)
 {
 	uint8_t* end;
 	int64_t val = CUTE_STRTOLL((char*)kv->in, (char**)&end, 10);
-	CUTE_RETURN_IF_FALSE(kv->in != end, "Invalid integer found during parse.");
+	if (kv->in == end) return error_failure("Invalid integer found during parse.");
 	kv->in = end;
 	*out = val;
 	return error_success();
@@ -253,7 +255,7 @@ static CUTE_INLINE error_t s_parse_float(kv_t* kv, double* out)
 {
 	uint8_t* end;
 	double val = CUTE_STRTOD((char*)kv->in, (char**)&end);
-	CUTE_RETURN_IF_FALSE(kv->in != end, "Invalid integer found during parse.");
+	if (kv->in == end) return error_failure("Invalid integer found during parse.");
 	kv->in = end;
 	*out = val;
 	return error_success();
@@ -263,10 +265,10 @@ static error_t s_parse_hex(kv_t* kv, uint64_t* hex)
 {
 	s_expect(kv, '0');
 	uint8_t c = s_next(kv);
-	CUTE_RETURN_IF_FALSE(c != 'x' && c != 'X', "Expected 'x' or 'X' when parsing a hex number.");
+	if (!(c != 'x' && c != 'X')) return error_failure("Expected 'x' or 'X' when parsing a hex number.");
 	uint8_t* end;
 	uint64_t val = (uint64_t)CUTE_STRTOLL((char*)kv->in, (char**)&end, 16);
-	CUTE_RETURN_IF_FALSE(kv->in != end, "Invalid integer found during parse.");
+	if (kv->in == end) return error_failure("Invalid integer found during parse.");
 	kv->in = end;
 	*hex = val;
 	return error_success();
@@ -274,15 +276,18 @@ static error_t s_parse_hex(kv_t* kv, uint64_t* hex)
 
 static CUTE_INLINE error_t s_parse_string(kv_t* kv, kv_string_t* string)
 {
-	CUTE_RETURN_IF_ERROR(s_scan_string(kv, string));
+	error_t err = s_scan_string(kv, string);
+	if (err.is_error()) return err;
 	return error_success();
 }
 
 static CUTE_INLINE error_t s_parse_number(kv_t* kv, kv_val_t* val)
 {
+	error_t err;
 	if (kv->in + 1 < kv->in_end && ((kv->in[1] == 'x') | (kv->in[1] == 'X'))) {
 		uint64_t hex;
-		CUTE_RETURN_IF_ERROR(s_parse_hex(kv, &hex));
+		err = s_parse_hex(kv, &hex);
+		if (err.is_error()) return err;
 		val->type = KV_TYPE_INT64;
 		val->u.ival = (int64_t)hex;
 	} else {
@@ -300,12 +305,14 @@ static CUTE_INLINE error_t s_parse_number(kv_t* kv, kv_val_t* val)
 
 		if (is_float) {
 			double dval;
-			CUTE_RETURN_IF_ERROR(s_parse_float(kv, &dval));
+			err = s_parse_float(kv, &dval);
+			if (err.is_error()) return err;
 			val->type = KV_TYPE_DOUBLE;
 			val->u.dval = dval;
 		} else {
 			int64_t ival;
-			CUTE_RETURN_IF_ERROR(s_parse_int(kv, &ival));
+			err = s_parse_int(kv, &ival);
+			if (err.is_error()) return err;
 			val->type = KV_TYPE_INT64;
 			val->u.ival = ival;
 		}
@@ -317,9 +324,11 @@ error_t s_parse_value(kv_t* kv, kv_val_t* val);
 
 static error_t s_parse_array(kv_t* kv, array<kv_val_t>* array_val)
 {
+	error_t err;
 	int64_t count;
 	s_expect(kv, '[');
-	CUTE_RETURN_IF_ERROR(s_parse_int(kv, &count));
+	err = s_parse_int(kv, &count);
+	if (err.is_error()) return err;
 	s_expect(kv, ']');
 	s_expect(kv, '{');
 	array_val->ensure_capacity((int)count);
@@ -327,7 +336,8 @@ static error_t s_parse_array(kv_t* kv, array<kv_val_t>* array_val)
 	{
 		kv_val_t* val = &array_val->add();
 		CUTE_PLACEMENT_NEW(val) kv_val_t;
-		CUTE_RETURN_IF_ERROR(s_parse_value(kv, val));
+		err = s_parse_value(kv, val);
+		if (err.is_error()) return err;
 	}
 	s_expect(kv, '}');
 	return error_success();
@@ -337,21 +347,26 @@ error_t s_parse_object(kv_t* kv, int* index);
 
 static error_t s_parse_value(kv_t* kv, kv_val_t* val)
 {
+	error_t err;
 	uint8_t c = s_peek(kv);
 
 	if (c == '"') {
 		kv_string_t string;
-		CUTE_RETURN_IF_ERROR(s_parse_string(kv, &string));
+		err = s_parse_string(kv, &string);
+		if (err.is_error()) return err;
 		val->type = KV_TYPE_STRING;
 		val->u.sval = string;
 	} else if ((c >= '0' && c <= '9') | (c == '-')) {
-		CUTE_RETURN_IF_ERROR(s_parse_number(kv, val));
+		err = s_parse_number(kv, val);
+		if (err.is_error()) return err;
 	} else if (c == '[') {
-		CUTE_RETURN_IF_ERROR(s_parse_array(kv, &val->aval));
+		err = s_parse_array(kv, &val->aval);
+		if (err.is_error()) return err;
 		val->type = KV_TYPE_ARRAY;
 	} else if (c == '{') {
 		int index;
-		CUTE_RETURN_IF_ERROR(s_parse_object(kv, &index));
+		err = s_parse_object(kv, &index);
+		if (err.is_error()) return err;
 		val->type = KV_TYPE_OBJECT;
 		val->u.object_index = index;
 	} else {
@@ -377,9 +392,11 @@ static error_t s_parse_object(kv_t* kv, int* index)
 		kv_field_t* field = &object->fields.add();
 		CUTE_PLACEMENT_NEW(field) kv_field_t;
 
-		CUTE_RETURN_IF_ERROR(s_scan_string(kv, &field->key));
+		error_t err = s_scan_string(kv, &field->key);
+		if (err.is_error()) return err;
 		s_expect(kv, '=');
-		CUTE_RETURN_IF_ERROR(s_parse_value(kv, &field->val));
+		err = s_parse_value(kv, &field->val);
+		if (err.is_error()) return err;
 
 		// If objects were parsed, assign proper parent indices.
 		if (field->val.type == KV_TYPE_OBJECT) {
@@ -417,7 +434,8 @@ error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
 		while (s_peek(kv) == '{')
 		{
 			int index;
-			CUTE_RETURN_IF_ERROR(s_parse_object(kv, &index));
+			error_t err = s_parse_object(kv, &index);
+			if (err.is_error()) return err;
 			kv->top_level_object_indices.add(index);
 		}
 
@@ -436,6 +454,11 @@ error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
 int kv_size_written(kv_t* kv)
 {
 	return (int)(kv->in - kv->start);
+}
+
+error_t kv_error_state(kv_t* kv)
+{
+	return kv->err;
 }
 
 static CUTE_INLINE error_t s_write_u8(kv_t* kv, uint8_t val)
@@ -473,7 +496,10 @@ static CUTE_INLINE error_t s_tabs(kv_t* kv)
 {
 	int tabs = kv->tabs;
 	for (int i = 0; i < tabs; ++i)
-		CUTE_RETURN_IF_ERROR(s_write_u8(kv, '\t'));
+	{
+		error_t err = s_write_u8(kv, '\t');
+		if (err.is_error()) return err;
+	}
 	return error_success();
 }
 
@@ -492,15 +518,19 @@ static CUTE_INLINE error_t s_write_str_no_quotes(kv_t* kv, const char* str, int 
 
 static CUTE_INLINE error_t s_write_str(kv_t* kv, const char* str, int len)
 {
-	CUTE_RETURN_IF_ERROR(s_write_u8(kv, '"'));
-	CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, str, len));
-	CUTE_RETURN_IF_ERROR(s_write_u8(kv, '"'));
+	error_t err = s_write_u8(kv, '"');
+	if (err.is_error()) return err;
+	err = s_write_str_no_quotes(kv, str, len);
+	if (err.is_error()) return err;
+	err = s_write_u8(kv, '"');
+	if (err.is_error()) return err;
 	return error_success();
 }
 
 static CUTE_INLINE error_t s_write_str(kv_t* kv, const char* str)
 {
-	CUTE_RETURN_IF_ERROR(s_write_str(kv, str, (int)CUTE_STRLEN(str)));
+	error_t err = s_write_str(kv, str, (int)CUTE_STRLEN(str));
+	if (err.is_error()) return err;
 	return error_success();
 }
 
@@ -521,9 +551,12 @@ static CUTE_INLINE kv_field_t* s_find_field(kv_object_t* object, const char* key
 
 error_t kv_key(kv_t* kv, const char* key, kv_type_t* type)
 {
+	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, key, (int)CUTE_STRLEN(key)));
-		CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, " = ", 3));
+		error_t err = s_write_str_no_quotes(kv, key, (int)CUTE_STRLEN(key));
+		if (err.is_error()) return err;
+		err = s_write_str_no_quotes(kv, " = ", 3);
+		if (err.is_error()) return err;
 		CUTE_UNUSED(type);
 	} else {
 		if (kv->read_mode_from_array) {
@@ -648,7 +681,8 @@ static CUTE_INLINE error_t s_begin_val(kv_t* kv)
 		if (kv->in_array == CUTE_KV_IN_ARRAY_AND_FIRST_ELEMENT) {
 			kv->in_array = CUTE_KV_IN_ARRAY;
 		} else {
-			CUTE_RETURN_IF_ERROR(s_write_u8(kv, ' '));
+			error_t err = s_write_u8(kv, ' ');
+			if (err.is_error()) return err;
 		}
 	}
 	return error_success();
@@ -656,10 +690,13 @@ static CUTE_INLINE error_t s_begin_val(kv_t* kv)
 
 static CUTE_INLINE error_t s_end_val(kv_t* kv)
 {
-	CUTE_RETURN_IF_ERROR(s_write_u8(kv, ','));
+	error_t err = s_write_u8(kv, ',');
+	if (err.is_error()) return err;
 	if (!kv->in_array) {
-		CUTE_RETURN_IF_ERROR(s_write_u8(kv, '\n'));
-		CUTE_RETURN_IF_ERROR(s_tabs(kv));
+		err = s_write_u8(kv, '\n');
+		if (err.is_error()) return err;
+		err = s_tabs(kv);
+		if (err.is_error()) return err;
 	}
 	return error_success();
 }
@@ -687,12 +724,15 @@ static CUTE_INLINE kv_val_t* s_pop_val(kv_t* kv, kv_type_t type)
 error_t kv_val(kv_t* kv, uint8_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
-		CUTE_RETURN_IF_ERROR(s_write_u8(kv, *val));
-		CUTE_RETURN_IF_ERROR(s_end_val(kv));
+		error_t err = s_begin_val(kv);
+		if (err.is_error()) return err;
+		err = s_write_u8(kv, *val);
+		if (err.is_error()) return err;
+		err = s_end_val(kv);
+		if (err.is_error()) return err;
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_INT64);
-		CUTE_RETURN_IF_FALSE(matched_val, "Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		*val = (uint8_t)matched_val->u.ival;
 	}
 	return error_success();
@@ -701,12 +741,15 @@ error_t kv_val(kv_t* kv, uint8_t* val)
 error_t kv_val(kv_t* kv, uint16_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
-		CUTE_RETURN_IF_ERROR(s_write(kv, (uint64_t)*(uint16_t*)val));
-		CUTE_RETURN_IF_ERROR(s_end_val(kv));
+		error_t err = s_begin_val(kv);
+		if (err.is_error()) return err;
+		err = s_write(kv, (uint64_t)*(uint16_t*)val);
+		if (err.is_error()) return err;
+		err = s_end_val(kv);
+		if (err.is_error()) return err;
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_INT64);
-		CUTE_RETURN_IF_FALSE(matched_val, "Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		*val = (uint16_t)matched_val->u.ival;
 	}
 	return error_success();
@@ -715,12 +758,15 @@ error_t kv_val(kv_t* kv, uint16_t* val)
 error_t kv_val(kv_t* kv, uint32_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
-		CUTE_RETURN_IF_ERROR(s_write(kv, (uint64_t)*(uint32_t*)val));
-		CUTE_RETURN_IF_ERROR(s_end_val(kv));
+		error_t err = s_begin_val(kv);
+		if (err.is_error()) return err;
+		err = s_write(kv, (uint64_t)*(uint32_t*)val);
+		if (err.is_error()) return err;
+		err = s_end_val(kv);
+		if (err.is_error()) return err;
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_INT64);
-		CUTE_RETURN_IF_FALSE(matched_val, "Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		*val = (uint32_t)matched_val->u.ival;
 	}
 	return error_success();
@@ -729,12 +775,15 @@ error_t kv_val(kv_t* kv, uint32_t* val)
 error_t kv_val(kv_t* kv, uint64_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
-		CUTE_RETURN_IF_ERROR(s_write(kv, *(uint64_t*)val));
-		CUTE_RETURN_IF_ERROR(s_end_val(kv));
+		error_t err = s_begin_val(kv);
+		if (err.is_error()) return err;
+		err = s_write(kv, *(uint64_t*)val);
+		if (err.is_error()) return err;
+		err = s_end_val(kv);
+		if (err.is_error()) return err;
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_INT64);
-		CUTE_RETURN_IF_FALSE(matched_val, "Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		*val = (uint64_t)matched_val->u.ival;
 	}
 	return error_success();
@@ -743,12 +792,15 @@ error_t kv_val(kv_t* kv, uint64_t* val)
 error_t kv_val(kv_t* kv, int8_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
-		CUTE_RETURN_IF_ERROR(s_write(kv, (int64_t)*(int8_t*)val));
-		CUTE_RETURN_IF_ERROR(s_end_val(kv));
+		error_t err = s_begin_val(kv);
+		if (err.is_error()) return err;
+		err = s_write(kv, (int64_t)*(int8_t*)val);
+		if (err.is_error()) return err;
+		err = s_end_val(kv);
+		if (err.is_error()) return err;
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_INT64);
-		CUTE_RETURN_IF_FALSE(matched_val, "Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		*val = (int8_t)matched_val->u.ival;
 	}
 	return error_success();
@@ -757,12 +809,15 @@ error_t kv_val(kv_t* kv, int8_t* val)
 error_t kv_val(kv_t* kv, int16_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
-		CUTE_RETURN_IF_ERROR(s_write(kv, (int64_t)*(int16_t*)val));
-		CUTE_RETURN_IF_ERROR(s_end_val(kv));
+		error_t err = s_begin_val(kv);
+		if (err.is_error()) return err;
+		err = s_write(kv, (int64_t)*(int16_t*)val);
+		if (err.is_error()) return err;
+		err = s_end_val(kv);
+		if (err.is_error()) return err;
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_INT64);
-		CUTE_RETURN_IF_FALSE(matched_val, "Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		*val = (int16_t)matched_val->u.ival;
 	}
 	return error_success();
@@ -771,12 +826,15 @@ error_t kv_val(kv_t* kv, int16_t* val)
 error_t kv_val(kv_t* kv, int32_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
-		CUTE_RETURN_IF_ERROR(s_write(kv, (int64_t)*(int32_t*)val));
-		CUTE_RETURN_IF_ERROR(s_end_val(kv));
+		error_t err = s_begin_val(kv);
+		if (err.is_error()) return err;
+		err = s_write(kv, (int64_t)*(int32_t*)val);
+		if (err.is_error()) return err;
+		err = s_end_val(kv);
+		if (err.is_error()) return err;
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_INT64);
-		CUTE_RETURN_IF_FALSE(matched_val, "Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		*val = (int32_t)matched_val->u.ival;
 	}
 	return error_success();
@@ -785,12 +843,15 @@ error_t kv_val(kv_t* kv, int32_t* val)
 error_t kv_val(kv_t* kv, int64_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
-		CUTE_RETURN_IF_ERROR(s_write(kv, *(int64_t*)val));
-		CUTE_RETURN_IF_ERROR(s_end_val(kv));
+		error_t err = s_begin_val(kv);
+		if (err.is_error()) return err;
+		err = s_write(kv, *(int64_t*)val);
+		if (err.is_error()) return err;
+		err = s_end_val(kv);
+		if (err.is_error()) return err;
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_INT64);
-		CUTE_RETURN_IF_FALSE(matched_val, "Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!matched_val) error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		*val = matched_val->u.ival;
 	}
 	return error_success();
@@ -799,12 +860,15 @@ error_t kv_val(kv_t* kv, int64_t* val)
 error_t kv_val(kv_t* kv, float* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
-		CUTE_RETURN_IF_ERROR(s_write(kv, *val));
-		CUTE_RETURN_IF_ERROR(s_end_val(kv));
+		error_t err = s_begin_val(kv);
+		if (err.is_error()) return err;
+		err = s_write(kv, *val);
+		if (err.is_error()) return err;
+		err = s_end_val(kv);
+		if (err.is_error()) return err;
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_DOUBLE);
-		CUTE_RETURN_IF_FALSE(matched_val, "Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		*val = (float)matched_val->u.dval;
 	}
 	return error_success();
@@ -813,12 +877,15 @@ error_t kv_val(kv_t* kv, float* val)
 error_t kv_val(kv_t* kv, double* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
-		CUTE_RETURN_IF_ERROR(s_write(kv, *val));
-		CUTE_RETURN_IF_ERROR(s_end_val(kv));
+		error_t err = s_begin_val(kv);
+		if (err.is_error()) return err;
+		err = s_write(kv, *val);
+		if (err.is_error()) return err;
+		err = s_end_val(kv);
+		if (err.is_error()) return err;
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_DOUBLE);
-		CUTE_RETURN_IF_FALSE(matched_val, "Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		*val = matched_val->u.dval;
 	}
 	return error_success();
@@ -827,12 +894,15 @@ error_t kv_val(kv_t* kv, double* val)
 error_t kv_val_string(kv_t* kv, char** str, int* size)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		CUTE_RETURN_IF_ERROR(s_begin_val(kv));
-		CUTE_RETURN_IF_ERROR(s_write_str(kv, *str, *size));
-		CUTE_RETURN_IF_ERROR(s_end_val(kv));
+		error_t err = s_begin_val(kv);
+		if (err.is_error()) return err;
+		err = s_write_str(kv, *str, *size);
+		if (err.is_error()) return err;
+		err = s_end_val(kv);
+		if (err.is_error()) return err;
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_STRING);
-		CUTE_RETURN_IF_FALSE(matched_val, "Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		*str = (char*)matched_val->u.sval.str;
 		*size = (int)matched_val->u.sval.len;
 	}
@@ -843,17 +913,21 @@ error_t kv_val_blob(kv_t* kv, void* data, int* size, int capacity)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		int buffer_size = CUTE_BASE64_ENCODED_SIZE(*size);
-		CUTE_RETURN_IF_FALSE(buffer_size <= capacity, "`capacity` is too small to hold base 64 encoded `data`.");
+		if (!(buffer_size <= capacity)) return error_failure("`capacity` is too small to hold base 64 encoded `data`.");
 		uint8_t* buffer = s_temp(kv, buffer_size);
-		CUTE_RETURN_IF_ERROR(base64_encode(buffer, buffer_size, data, *size));
-		CUTE_RETURN_IF_ERROR(s_write_str(kv, (const char*)buffer, buffer_size));
-		CUTE_RETURN_IF_ERROR(s_end_val(kv));
+		error_t err = base64_encode(buffer, buffer_size, data, *size);
+		if (err.is_error()) return err;
+		err = s_write_str(kv, (const char*)buffer, buffer_size);
+		if (err.is_error()) return err;
+		err = s_end_val(kv);
+		if (err.is_error()) return err;
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_STRING);
-		CUTE_RETURN_IF_FALSE(matched_val, "Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		int buffer_size = CUTE_BASE64_DECODED_SIZE(matched_val->u.sval.len);
-		CUTE_RETURN_IF_FALSE(buffer_size <= capacity, "Decoded base 64 string is too large to store in `data`.");
-		CUTE_RETURN_IF_ERROR(base64_decode(data, buffer_size, matched_val->u.sval.str, matched_val->u.sval.len));
+		if (!(buffer_size <= capacity)) return error_failure("Decoded base 64 string is too large to store in `data`.");
+		error_t err = base64_decode(data, buffer_size, matched_val->u.sval.str, matched_val->u.sval.len);
+		if (err.is_error()) return err;
 		*size = buffer_size;
 	}
 	return error_success();
@@ -862,16 +936,18 @@ error_t kv_val_blob(kv_t* kv, void* data, int* size, int capacity)
 error_t kv_object_begin(kv_t* kv)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, "{\n", 2));
+		error_t err = s_write_str_no_quotes(kv, "{\n", 2);
+		if (err.is_error()) return err;
 		s_tabs_delta(kv, 1);
-		CUTE_RETURN_IF_ERROR(s_tabs(kv));
+		err = s_tabs(kv);
+		if (err.is_error()) return err;
 		s_push_array(kv, CUTE_KV_NOT_IN_ARRAY);
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_OBJECT);
 		if (matched_val) {
 			kv->read_mode_object_index = matched_val->u.object_index;
 		} else {
-			CUTE_RETURN_IF_FALSE(kv->read_mode_top_level_index < kv->top_level_object_indices.count(), "Attempted to read object beyond end of input.");
+			if (!(kv->read_mode_top_level_index < kv->top_level_object_indices.count())) return error_failure("Attempted to read object beyond end of input.");
 			kv->read_mode_object_index = kv->top_level_object_indices[kv->read_mode_top_level_index];
 		}
 		s_push_read_mode_array(kv, NULL);
@@ -884,13 +960,15 @@ error_t kv_object_end(kv_t* kv)
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		s_tabs_delta(kv, -1);
 		s_try_consume_one_tab(kv);
-		CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, "},\n", 3));
-		CUTE_RETURN_IF_ERROR(s_tabs(kv));
+		error_t err = s_write_str_no_quotes(kv, "},\n", 3);
+		if (err.is_error()) return err;
+		err = s_tabs(kv);
+		if (err.is_error()) return err;
 		s_pop_array(kv);
 	} else {
 		kv_object_t* object = kv->objects + kv->read_mode_object_index;
 		if (object->parent_index == ~0) {
-			CUTE_RETURN_IF_FALSE(kv->read_mode_top_level_index != ~0, "`kv_object_end` called an extra time.");
+			if (kv->read_mode_top_level_index == ~0) return error_failure("`kv_object_end` called an extra time.");
 			if (kv->read_mode_top_level_index == kv->top_level_object_indices.count() - 1) {
 				kv->read_mode_top_level_index = ~0;
 			} else {
@@ -908,14 +986,18 @@ error_t kv_array_begin(kv_t* kv, int* count)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		s_tabs_delta(kv, 1);
-		CUTE_RETURN_IF_ERROR(s_write_u8(kv, '['));
-		CUTE_RETURN_IF_ERROR(s_write(kv, (int64_t)*count));
-		CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, "] {\n", 4));
-		CUTE_RETURN_IF_ERROR(s_tabs(kv));
+		error_t err = s_write_u8(kv, '[');
+		if (err.is_error()) return err;
+		err = s_write(kv, (int64_t)*count);
+		if (err.is_error()) return err;
+		err = s_write_str_no_quotes(kv, "] {\n", 4);
+		if (err.is_error()) return err;
+		err = s_tabs(kv);
+		if (err.is_error()) return err;
 		s_push_array(kv, CUTE_KV_IN_ARRAY_AND_FIRST_ELEMENT);
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_ARRAY);
-		CUTE_RETURN_IF_FALSE(matched_val, "Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		s_push_read_mode_array(kv, matched_val);
 	}
 	return error_success();
@@ -923,15 +1005,20 @@ error_t kv_array_begin(kv_t* kv, int* count)
 
 error_t kv_array_end(kv_t* kv)
 {
+	error_t err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		s_tabs_delta(kv, -1);
 		s_try_consume_whitespace(kv);
 		if (kv->in_array) {
-			CUTE_RETURN_IF_ERROR(s_write_u8(kv, '\n'));
+			err = s_write_u8(kv, '\n');
+			if (err.is_error()) return err;
 		}
-		CUTE_RETURN_IF_ERROR(s_tabs(kv));
-		CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, "},\n", 3));
-		CUTE_RETURN_IF_ERROR(s_tabs(kv));
+		err = s_tabs(kv);
+		if (err.is_error()) return err;
+		err = s_write_str_no_quotes(kv, "},\n", 3);
+		if (err.is_error()) return err;
+		err = s_tabs(kv);
+		if (err.is_error()) return err;
 		s_pop_array(kv);
 	} else {
 		s_pop_read_mode_array(kv);
