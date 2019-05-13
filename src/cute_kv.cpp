@@ -225,22 +225,6 @@ static error_t s_scan_string(kv_t* kv, kv_string_t* str)
 	return err;
 }
 
-static CUTE_INLINE uint8_t s_parse_escape_code(uint8_t c)
-{
-	switch (c)
-	{
-	case '\\': return '\\';
-	case '\'': return '\'';
-	case '"': return '"';
-	case 't': return '\t';
-	case 'f': return '\f';
-	case 'n': return '\n';
-	case 'r': return '\r';
-	case '0': return '\0';
-	default: return c;
-	}
-}
-
 static CUTE_INLINE error_t s_parse_int(kv_t* kv, int64_t* out)
 {
 	uint8_t* end;
@@ -430,6 +414,8 @@ error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
 	kv->read_mode_array_index_stack.clear();
 	kv->in_array_stack.clear();
 
+	kv->err = error_success();
+
 	if (mode == CUTE_KV_MODE_READ) {
 		while (s_peek(kv) == '{')
 		{
@@ -510,7 +496,6 @@ static CUTE_INLINE error_t s_write_str_no_quotes(kv_t* kv, const char* str, int 
 	if (end >= kv->in_end) {
 		return error_failure("Attempted to write string beyond buffer.");
 	}
-	// TODO: Handle escapes and utf8 somehow.
 	CUTE_STRNCPY((char*)in, str, len);
 	kv->in = end;
 	return error_success();
@@ -723,6 +708,7 @@ static CUTE_INLINE kv_val_t* s_pop_val(kv_t* kv, kv_type_t type)
 
 error_t kv_val(kv_t* kv, uint8_t* val)
 {
+	if (kv->err.is_error()) return err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		error_t err = s_begin_val(kv);
 		if (err.is_error()) return err;
@@ -740,6 +726,7 @@ error_t kv_val(kv_t* kv, uint8_t* val)
 
 error_t kv_val(kv_t* kv, uint16_t* val)
 {
+	if (kv->err.is_error()) return err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		error_t err = s_begin_val(kv);
 		if (err.is_error()) return err;
@@ -757,6 +744,7 @@ error_t kv_val(kv_t* kv, uint16_t* val)
 
 error_t kv_val(kv_t* kv, uint32_t* val)
 {
+	if (kv->err.is_error()) return err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		error_t err = s_begin_val(kv);
 		if (err.is_error()) return err;
@@ -774,6 +762,7 @@ error_t kv_val(kv_t* kv, uint32_t* val)
 
 error_t kv_val(kv_t* kv, uint64_t* val)
 {
+	if (kv->err.is_error()) return err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		error_t err = s_begin_val(kv);
 		if (err.is_error()) return err;
@@ -791,6 +780,7 @@ error_t kv_val(kv_t* kv, uint64_t* val)
 
 error_t kv_val(kv_t* kv, int8_t* val)
 {
+	if (kv->err.is_error()) return err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		error_t err = s_begin_val(kv);
 		if (err.is_error()) return err;
@@ -808,6 +798,7 @@ error_t kv_val(kv_t* kv, int8_t* val)
 
 error_t kv_val(kv_t* kv, int16_t* val)
 {
+	if (kv->err.is_error()) return err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		error_t err = s_begin_val(kv);
 		if (err.is_error()) return err;
@@ -825,6 +816,7 @@ error_t kv_val(kv_t* kv, int16_t* val)
 
 error_t kv_val(kv_t* kv, int32_t* val)
 {
+	if (kv->err.is_error()) return err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		error_t err = s_begin_val(kv);
 		if (err.is_error()) return err;
@@ -842,6 +834,7 @@ error_t kv_val(kv_t* kv, int32_t* val)
 
 error_t kv_val(kv_t* kv, int64_t* val)
 {
+	if (kv->err.is_error()) return err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		error_t err = s_begin_val(kv);
 		if (err.is_error()) return err;
@@ -859,6 +852,7 @@ error_t kv_val(kv_t* kv, int64_t* val)
 
 error_t kv_val(kv_t* kv, float* val)
 {
+	if (kv->err.is_error()) return err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		error_t err = s_begin_val(kv);
 		if (err.is_error()) return err;
@@ -876,6 +870,7 @@ error_t kv_val(kv_t* kv, float* val)
 
 error_t kv_val(kv_t* kv, double* val)
 {
+	if (kv->err.is_error()) return err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		error_t err = s_begin_val(kv);
 		if (err.is_error()) return err;
@@ -893,6 +888,7 @@ error_t kv_val(kv_t* kv, double* val)
 
 error_t kv_val_string(kv_t* kv, char** str, int* size)
 {
+	if (kv->err.is_error()) return err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		error_t err = s_begin_val(kv);
 		if (err.is_error()) return err;
@@ -911,6 +907,7 @@ error_t kv_val_string(kv_t* kv, char** str, int* size)
 
 error_t kv_val_blob(kv_t* kv, void* data, int* size, int capacity)
 {
+	if (kv->err.is_error()) return err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		int buffer_size = CUTE_BASE64_ENCODED_SIZE(*size);
 		if (!(buffer_size <= capacity)) return error_failure("`capacity` is too small to hold base 64 encoded `data`.");
@@ -935,6 +932,7 @@ error_t kv_val_blob(kv_t* kv, void* data, int* size, int capacity)
 
 error_t kv_object_begin(kv_t* kv)
 {
+	if (kv->err.is_error()) return err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		error_t err = s_write_str_no_quotes(kv, "{\n", 2);
 		if (err.is_error()) return err;
@@ -957,6 +955,7 @@ error_t kv_object_begin(kv_t* kv)
 
 error_t kv_object_end(kv_t* kv)
 {
+	if (kv->err.is_error()) return err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		s_tabs_delta(kv, -1);
 		s_try_consume_one_tab(kv);
@@ -984,6 +983,7 @@ error_t kv_object_end(kv_t* kv)
 
 error_t kv_array_begin(kv_t* kv, int* count)
 {
+	if (kv->err.is_error()) return err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		s_tabs_delta(kv, 1);
 		error_t err = s_write_u8(kv, '[');
@@ -1005,6 +1005,7 @@ error_t kv_array_begin(kv_t* kv, int* count)
 
 error_t kv_array_end(kv_t* kv)
 {
+	if (kv->err.is_error()) return err;
 	error_t err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		s_tabs_delta(kv, -1);
