@@ -39,7 +39,7 @@ struct thing_t
 	} sub_thing;
 	float x = 5;
 	float y = 10.3f;
-	char blob_data[17] = "Some blob input.";
+	char blob_data[24] = "Some blob input.";
 	int array_of_ints[8] = { 0, 1, 2, 3, 4, 5, 6, 7 };
 	int array_of_array_of_ints[2][3] = {
 		{ 0, 1, 2 },
@@ -52,55 +52,56 @@ struct thing_t
 	} array_of_objects[3];
 };
 
-void do_serialize(kv_t* kv, thing_t* thing)
+error_t do_serialize(kv_t* kv, thing_t* thing)
 {
 	int len;
-	kv_object_begin(kv);
-	kv_key(kv, "a"); kv_val(kv, &thing->a);
-	kv_key(kv, "b"); kv_val(kv, &thing->b);
-	kv_key(kv, "str"); len = 6; kv_val_string(kv, &thing->str, &len);
-		kv_key(kv, "sub_thing"); kv_object_begin(kv);
-		kv_key(kv, "a"); kv_val(kv, &thing->sub_thing.a);
-		kv_key(kv, "die_pls"); kv_val(kv, &thing->sub_thing.die_pls);
-			kv_key(kv, "interior_thing");  kv_object_begin(kv);
-			kv_key(kv, "hi"); kv_val(kv, &thing->sub_thing.interior_thing.hi);
-			kv_key(kv, "geez"); len = 6; kv_val_string(kv, &thing->sub_thing.interior_thing.geez, &len);
-			kv_object_end(kv);
-		kv_object_end(kv);
-	kv_key(kv, "x"); kv_val(kv, &thing->x);
-	kv_key(kv, "y"); kv_val(kv, &thing->y);
-	int blob_size = sizeof(thing->blob_data);
-	kv_key(kv, "blob_data"); kv_val_blob(kv, thing->blob_data, &blob_size);
+	CUTE_RETURN_IF_ERROR(kv_object_begin(kv));
+	CUTE_RETURN_IF_ERROR(kv_key(kv, "a")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->a));
+	CUTE_RETURN_IF_ERROR(kv_key(kv, "b")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->b));
+	CUTE_RETURN_IF_ERROR(kv_key(kv, "str")); len = 6; CUTE_RETURN_IF_ERROR(kv_val_string(kv, &thing->str, &len));
+		CUTE_RETURN_IF_ERROR(kv_key(kv, "sub_thing")); CUTE_RETURN_IF_ERROR(kv_object_begin(kv));
+		CUTE_RETURN_IF_ERROR(kv_key(kv, "a")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->sub_thing.a));
+		CUTE_RETURN_IF_ERROR(kv_key(kv, "die_pls")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->sub_thing.die_pls));
+			CUTE_RETURN_IF_ERROR(kv_key(kv, "interior_thing")); CUTE_RETURN_IF_ERROR(kv_object_begin(kv));
+			CUTE_RETURN_IF_ERROR(kv_key(kv, "hi")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->sub_thing.interior_thing.hi));
+			CUTE_RETURN_IF_ERROR(kv_key(kv, "geez")); len = 6; CUTE_RETURN_IF_ERROR(kv_val_string(kv, &thing->sub_thing.interior_thing.geez, &len));
+			CUTE_RETURN_IF_ERROR(kv_object_end(kv));
+		CUTE_RETURN_IF_ERROR(kv_object_end(kv));
+	CUTE_RETURN_IF_ERROR(kv_key(kv, "x")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->x));
+	CUTE_RETURN_IF_ERROR(kv_key(kv, "y")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->y));
+	int blob_size = 17;
+	CUTE_RETURN_IF_ERROR(kv_key(kv, "blob_data")); CUTE_RETURN_IF_ERROR(kv_val_blob(kv, thing->blob_data, &blob_size, sizeof(thing->blob_data)));
 	int int_count = 8;
-	kv_key(kv, "array_of_ints"); kv_array_begin(kv, &int_count);
-		for (int i = 0; i < int_count; ++i) kv_val(kv, thing->array_of_ints + i);
-	kv_array_end(kv);
+	CUTE_RETURN_IF_ERROR(kv_key(kv, "array_of_ints")); CUTE_RETURN_IF_ERROR(kv_array_begin(kv, &int_count));
+		for (int i = 0; i < int_count; ++i) CUTE_RETURN_IF_ERROR(kv_val(kv, thing->array_of_ints + i));
+	CUTE_RETURN_IF_ERROR(kv_array_end(kv));
 	int_count = 2;
-	kv_key(kv, "array_of_array_of_ints"); kv_array_begin(kv, &int_count);
+	CUTE_RETURN_IF_ERROR(kv_key(kv, "array_of_array_of_ints")); CUTE_RETURN_IF_ERROR(kv_array_begin(kv, &int_count));
 		int_count = 3;
-		kv_array_begin(kv, &int_count);
+		CUTE_RETURN_IF_ERROR(kv_array_begin(kv, &int_count));
 		for (int i = 0; i < int_count; ++i)
 		{
-			kv_val(kv, thing->array_of_array_of_ints[0] + i);
+			CUTE_RETURN_IF_ERROR(kv_val(kv, thing->array_of_array_of_ints[0] + i));
 		}
-		kv_array_end(kv);
-		kv_array_begin(kv, &int_count);
+		CUTE_RETURN_IF_ERROR(kv_array_end(kv));
+		CUTE_RETURN_IF_ERROR(kv_array_begin(kv, &int_count));
 		for (int i = 0; i < int_count; ++i)
 		{
-			kv_val(kv, thing->array_of_array_of_ints[1] + i);
+			CUTE_RETURN_IF_ERROR(kv_val(kv, thing->array_of_array_of_ints[1] + i));
 		}
-		kv_array_end(kv);
-	kv_array_end(kv);
-	kv_key(kv, "array_of_objects"); kv_array_begin(kv, &int_count);
+		CUTE_RETURN_IF_ERROR(kv_array_end(kv));
+	CUTE_RETURN_IF_ERROR(kv_array_end(kv));
+	CUTE_RETURN_IF_ERROR(kv_key(kv, "array_of_objects")); CUTE_RETURN_IF_ERROR(kv_array_begin(kv, &int_count));
 	for (int i = 0; i < int_count; ++i)
 	{
-		kv_object_begin(kv);
-		kv_key(kv, "some_integer"); kv_val(kv, &thing->array_of_objects[i].some_integer);
-		kv_key(kv, "some_string"); len = 6; kv_val_string(kv, &thing->array_of_objects[i].some_string, &len);
-		kv_object_end(kv);
+		CUTE_RETURN_IF_ERROR(kv_object_begin(kv));
+		CUTE_RETURN_IF_ERROR(kv_key(kv, "some_integer")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->array_of_objects[i].some_integer));
+		CUTE_RETURN_IF_ERROR(kv_key(kv, "some_string")); len = 6; CUTE_RETURN_IF_ERROR(kv_val_string(kv, &thing->array_of_objects[i].some_string, &len));
+		CUTE_RETURN_IF_ERROR(kv_object_end(kv));
 	}
-	kv_array_end(kv);
-	kv_object_end(kv);
+	CUTE_RETURN_IF_ERROR(kv_array_end(kv));
+	CUTE_RETURN_IF_ERROR(kv_object_end(kv));
+	return error_success();
 }
 
 CUTE_TEST_CASE(test_kv_basic, "Fairly comprehensive test for basic kv to and from buffer.");
@@ -116,7 +117,7 @@ int test_kv_basic()
 	thing.b = 10.3f;
 	thing.str = "Hello.";
 
-	do_serialize(kv, &thing);
+	CUTE_TEST_ASSERT(!do_serialize(kv, &thing).is_error());
 
 	const char* expected =
 	"{\n"
@@ -168,7 +169,7 @@ int test_kv_basic()
 	error_t err = kv_reset(kv, buffer, size, CUTE_KV_MODE_READ);
 	CUTE_TEST_ASSERT(!err.is_error());
 
-	do_serialize(kv, &thing);
+	CUTE_TEST_ASSERT(!do_serialize(kv, &thing).is_error());
 
 	kv_destroy(kv);
 
