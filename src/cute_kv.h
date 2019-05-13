@@ -40,7 +40,18 @@ CUTE_API void CUTE_CALL kv_destroy(kv_t* kv);
 CUTE_API error_t CUTE_CALL kv_reset(kv_t* kv, const void* data, int size, int mode);
 CUTE_API int CUTE_CALL kv_size_written(kv_t* kv);
 
-CUTE_API error_t CUTE_CALL kv_key(kv_t* kv, const char* key);
+enum kv_type_t
+{
+	KV_TYPE_NULL   = 0,
+	KV_TYPE_INT64  = 1,
+	KV_TYPE_DOUBLE = 2,
+	KV_TYPE_STRING = 3,
+	KV_TYPE_ARRAY  = 4,
+	KV_TYPE_BLOB   = 5,
+	KV_TYPE_OBJECT = 6,
+};
+
+CUTE_API error_t CUTE_CALL kv_key(kv_t* kv, const char* key, kv_type_t* type = NULL);
 
 CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, uint8_t* val);
 CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, uint16_t* val);
@@ -56,7 +67,7 @@ CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, float* val);
 CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, double* val);
 
 CUTE_API error_t CUTE_CALL kv_val_string(kv_t* kv, char** str, int* size);
-CUTE_API error_t CUTE_CALL kv_val_blob(kv_t* kv, void* data, int* size);
+CUTE_API error_t CUTE_CALL kv_val_blob(kv_t* kv, void* data, int* size, int capacity);
 
 CUTE_API error_t CUTE_CALL kv_object_begin(kv_t* kv);
 CUTE_API error_t CUTE_CALL kv_object_end(kv_t* kv);

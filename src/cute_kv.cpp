@@ -38,17 +38,6 @@ struct kv_string_t
 	int len = 0;
 };
 
-enum kv_type_t
-{
-	CUTE_KV_TYPE_NULL   = 0,
-	CUTE_KV_TYPE_INT64  = 1,
-	CUTE_KV_TYPE_DOUBLE = 2,
-	CUTE_KV_TYPE_STRING = 3,
-	CUTE_KV_TYPE_ARRAY  = 4,
-	CUTE_KV_TYPE_BLOB   = 5,
-	CUTE_KV_TYPE_OBJECT = 6,
-};
-
 union kv_union_t
 {
 	kv_union_t() {}
@@ -58,12 +47,11 @@ union kv_union_t
 	kv_string_t sval;
 	kv_string_t bval;
 	int object_index;
-	kv_type_t array_type;
 };
 
 struct kv_val_t
 {
-	kv_type_t type;
+	kv_type_t type = CUTE_KV_TYPE_NULL;
 	kv_union_t u;
 	array<kv_val_t> aval;
 };
@@ -94,6 +82,7 @@ struct kv_t
 	uint8_t* in_end = NULL;
 	uint8_t* start = NULL;
 
+	kv_field_t* read_mode_matched_field = NULL;
 	int read_mode_object_index = 0;
 	array<int> top_level_object_indices;
 	array<kv_object_t> objects;
@@ -291,7 +280,7 @@ static CUTE_INLINE error_t s_parse_number(kv_t* kv, kv_val_t* val)
 	if (kv->in + 1 < kv->in_end && ((kv->in[1] == 'x') | (kv->in[1] == 'X'))) {
 		uint64_t hex;
 		CUTE_RETURN_IF_ERROR(s_parse_hex(kv, &hex));
-		val->type = CUTE_KV_TYPE_INT64;
+		val->type = KV_TYPE_INT64;
 		val->u.ival = (int64_t)hex;
 	} else {
 		uint8_t c;
@@ -309,12 +298,12 @@ static CUTE_INLINE error_t s_parse_number(kv_t* kv, kv_val_t* val)
 		if (is_float) {
 			double dval;
 			CUTE_RETURN_IF_ERROR(s_parse_float(kv, &dval));
-			val->type = CUTE_KV_TYPE_DOUBLE;
+			val->type = KV_TYPE_DOUBLE;
 			val->u.dval = dval;
 		} else {
 			int64_t ival;
 			CUTE_RETURN_IF_ERROR(s_parse_int(kv, &ival));
-			val->type = CUTE_KV_TYPE_INT64;
+			val->type = KV_TYPE_INT64;
 			val->u.ival = ival;
 		}
 	}
@@ -350,16 +339,16 @@ static error_t s_parse_value(kv_t* kv, kv_val_t* val)
 	if (c == '"') {
 		kv_string_t string;
 		CUTE_RETURN_IF_ERROR(s_parse_string(kv, &string));
-		val->type = CUTE_KV_TYPE_STRING;
+		val->type = KV_TYPE_STRING;
 		val->u.sval = string;
 	} else if ((c >= '0' && c <= '9') | (c == '-')) {
 		CUTE_RETURN_IF_ERROR(s_parse_number(kv, val));
 	} else if (c == '[') {
 		CUTE_RETURN_IF_ERROR(s_parse_array(kv, &val->aval));
-		val->type = CUTE_KV_TYPE_ARRAY;
+		val->type = KV_TYPE_ARRAY;
 	} else if (c == '{') {
 		CUTE_RETURN_IF_ERROR(s_parse_object(kv));
-		val->type = CUTE_KV_TYPE_OBJECT;
+		val->type = KV_TYPE_OBJECT;
 		val->u.object_index = kv->objects.count() - 1;
 	} else {
 		return error_failure("Unexpected character when parsing a value.");
@@ -502,15 +491,21 @@ static CUTE_INLINE kv_field_t* s_find_field(kv_object_t* object, const char* key
 	return NULL;
 }
 
-error_t kv_key(kv_t* kv, const char* key)
+error_t kv_key(kv_t* kv, const char* key, kv_type_t* type)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, key, (int)CUTE_STRLEN(key)));
 		CUTE_RETURN_IF_ERROR(s_write_str_no_quotes(kv, " = ", 3));
+		CUTE_UNUSED(type);
 	} else {
 		kv_object_t* object = kv->objects + kv->read_mode_object_index;
 		kv_field_t* field = s_find_field(object, key);
 		if (field) {
+			CUTE_ASSERT(field->val.type != CUTE_KV_TYPE_NULL);
+			kv->read_mode_matched_field = field;
+			if (type) {
+				CUTE_RETURN_IF_FALSE(field->val.type == *type, "Type mismatch when reading field.");
+			}
 		} else {
 			return error_failure("Unable to find field to match `key`.");
 		}
@@ -639,6 +634,15 @@ static CUTE_INLINE error_t s_end_val(kv_t* kv)
 	return error_success();
 }
 
+static CUTE_INLINE kv_field_t* s_pop_field(kv_t* kv, kv_type_t type)
+{
+	kv_field_t* field = kv->read_mode_matched_field;
+	if (!field) return NULL;
+	if (field->val.type != type) return NULL;
+	kv->read_mode_matched_field = NULL;
+	return field;
+}
+
 error_t kv_val(kv_t* kv, uint8_t* val)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
@@ -646,6 +650,9 @@ error_t kv_val(kv_t* kv, uint8_t* val)
 		CUTE_RETURN_IF_ERROR(s_write_u8(kv, *val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
 	} else {
+		kv_field_t* field = s_pop_field(kv, KV_TYPE_INT64);
+		CUTE_RETURN_IF_FALSE(field, "No matching field set by previous call to `kv_key`.");
+		*val = (uint8_t)field->val.u.ival;
 	}
 	return error_success();
 }
@@ -657,6 +664,9 @@ error_t kv_val(kv_t* kv, uint16_t* val)
 		CUTE_RETURN_IF_ERROR(s_write(kv, (uint64_t)*(uint16_t*)val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
 	} else {
+		kv_field_t* field = s_pop_field(kv, KV_TYPE_INT64);
+		CUTE_RETURN_IF_FALSE(field, "No matching field set by previous call to `kv_key`.");
+		*val = (uint16_t)field->val.u.ival;
 	}
 	return error_success();
 }
@@ -668,6 +678,9 @@ error_t kv_val(kv_t* kv, uint32_t* val)
 		CUTE_RETURN_IF_ERROR(s_write(kv, (uint64_t)*(uint32_t*)val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
 	} else {
+		kv_field_t* field = s_pop_field(kv, KV_TYPE_INT64);
+		CUTE_RETURN_IF_FALSE(field, "No matching field set by previous call to `kv_key`.");
+		*val = (uint32_t)field->val.u.ival;
 	}
 	return error_success();
 }
@@ -679,6 +692,9 @@ error_t kv_val(kv_t* kv, uint64_t* val)
 		CUTE_RETURN_IF_ERROR(s_write(kv, *(uint64_t*)val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
 	} else {
+		kv_field_t* field = s_pop_field(kv, KV_TYPE_INT64);
+		CUTE_RETURN_IF_FALSE(field, "No matching field set by previous call to `kv_key`.");
+		*val = (uint64_t)field->val.u.ival;
 	}
 	return error_success();
 }
@@ -690,6 +706,9 @@ error_t kv_val(kv_t* kv, int8_t* val)
 		CUTE_RETURN_IF_ERROR(s_write(kv, (int64_t)*(int8_t*)val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
 	} else {
+		kv_field_t* field = s_pop_field(kv, KV_TYPE_INT64);
+		CUTE_RETURN_IF_FALSE(field, "No matching field set by previous call to `kv_key`.");
+		*val = (int8_t)field->val.u.ival;
 	}
 	return error_success();
 }
@@ -701,6 +720,9 @@ error_t kv_val(kv_t* kv, int16_t* val)
 		CUTE_RETURN_IF_ERROR(s_write(kv, (int64_t)*(int16_t*)val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
 	} else {
+		kv_field_t* field = s_pop_field(kv, KV_TYPE_INT64);
+		CUTE_RETURN_IF_FALSE(field, "No matching field set by previous call to `kv_key`.");
+		*val = (int16_t)field->val.u.ival;
 	}
 	return error_success();
 }
@@ -712,6 +734,9 @@ error_t kv_val(kv_t* kv, int32_t* val)
 		CUTE_RETURN_IF_ERROR(s_write(kv, (int64_t)*(int32_t*)val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
 	} else {
+		kv_field_t* field = s_pop_field(kv, KV_TYPE_INT64);
+		CUTE_RETURN_IF_FALSE(field, "No matching field set by previous call to `kv_key`.");
+		*val = (int32_t)field->val.u.ival;
 	}
 	return error_success();
 }
@@ -723,6 +748,9 @@ error_t kv_val(kv_t* kv, int64_t* val)
 		CUTE_RETURN_IF_ERROR(s_write(kv, *(int64_t*)val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
 	} else {
+		kv_field_t* field = s_pop_field(kv, KV_TYPE_INT64);
+		CUTE_RETURN_IF_FALSE(field, "No matching field set by previous call to `kv_key`.");
+		*val = field->val.u.ival;
 	}
 	return error_success();
 }
@@ -734,6 +762,9 @@ error_t kv_val(kv_t* kv, float* val)
 		CUTE_RETURN_IF_ERROR(s_write(kv, *val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
 	} else {
+		kv_field_t* field = s_pop_field(kv, KV_TYPE_DOUBLE);
+		CUTE_RETURN_IF_FALSE(field, "No matching field set by previous call to `kv_key`.");
+		*val = (float)field->val.u.dval;
 	}
 	return error_success();
 }
@@ -745,6 +776,9 @@ error_t kv_val(kv_t* kv, double* val)
 		CUTE_RETURN_IF_ERROR(s_write(kv, *val));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
 	} else {
+		kv_field_t* field = s_pop_field(kv, KV_TYPE_DOUBLE);
+		CUTE_RETURN_IF_FALSE(field, "No matching field set by previous call to `kv_key`.");
+		*val = field->val.u.dval;
 	}
 	return error_success();
 }
@@ -756,19 +790,30 @@ error_t kv_val_string(kv_t* kv, char** str, int* size)
 		CUTE_RETURN_IF_ERROR(s_write_str(kv, *str, *size));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
 	} else {
+		kv_field_t* field = s_pop_field(kv, KV_TYPE_STRING);
+		CUTE_RETURN_IF_FALSE(field, "No matching field set by previous call to `kv_key`.");
+		*str = (char*)field->val.u.sval.str;
+		*size = (int)field->val.u.sval.len;
 	}
 	return error_success();
 }
 
-error_t kv_val_blob(kv_t* kv, void* data, int* size)
+error_t kv_val_blob(kv_t* kv, void* data, int* size, int capacity)
 {
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		int buffer_size = CUTE_BASE64_ENCODED_SIZE(*size);
+		CUTE_RETURN_IF_FALSE(buffer_size <= capacity, "`capacity` is too small to hold base 64 encoded `data`.");
 		uint8_t* buffer = s_temp(kv, buffer_size);
 		CUTE_RETURN_IF_ERROR(base64_encode(buffer, buffer_size, data, *size));
 		CUTE_RETURN_IF_ERROR(s_write_str(kv, (const char*)buffer, buffer_size));
 		CUTE_RETURN_IF_ERROR(s_end_val(kv));
 	} else {
+		kv_field_t* field = s_pop_field(kv, KV_TYPE_STRING);
+		CUTE_RETURN_IF_FALSE(field, "No matching field set by previous call to `kv_key`.");
+		int buffer_size = CUTE_BASE64_DECODED_SIZE(field->val.u.sval.len);
+		CUTE_RETURN_IF_FALSE(buffer_size <= capacity, "Decoded base 64 string is too large to store in `data`.");
+		CUTE_RETURN_IF_ERROR(base64_decode(data, buffer_size, field->val.u.sval.str, buffer_size));
+		*size = buffer_size;
 	}
 	return error_success();
 }
