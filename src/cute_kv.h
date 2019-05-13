@@ -25,8 +25,6 @@
 #include <cute_defines.h>
 #include <cute_error.h>
 
-// TODO : Audit error reporting strategy. Probably majority of functions can fail.
-
 namespace cute
 {
 
