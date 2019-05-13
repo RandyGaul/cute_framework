@@ -82,4 +82,14 @@
 #	define CUTE_SNPRINTF snprintf
 #endif
 
+#ifndef CUTE_STRTOLL
+#	include <stdlib.h>
+#	define CUTE_STRTOLL strtoll
+#endif
+
+#ifndef CUTE_STRTOD
+#	include <stdlib.h>
+#	define CUTE_STRTOD strtod
+#endif
+
 #endif // CUTE_C_RUNTIME_H

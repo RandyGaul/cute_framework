@@ -51,6 +51,8 @@ enum kv_type_t
 
 union kv_union_t
 {
+	kv_union_t() {}
+
 	int64_t ival;
 	double dval;
 	kv_string_t sval;
@@ -63,7 +65,7 @@ struct kv_val_t
 {
 	kv_type_t type;
 	kv_union_t u;
-	array<kv_union_t> aval;
+	array<kv_val_t> aval;
 };
 
 struct kv_field_t
@@ -166,7 +168,7 @@ static CUTE_INLINE int s_try(kv_t* kv, uint8_t expect)
 
 #define s_expect(kv, expected_character) \
 	do { \
-		CUTE_RETURN_IF_FALSE(s_next(kv) == expected_character, "kv : Found unexpected token."); \
+		CUTE_RETURN_IF_FALSE(s_next(kv) == expected_character, "Found unexpected token."); \
 	} while (0)
 
 static error_t s_scan_string(kv_t* kv, uint8_t** start_of_string, uint8_t** end_of_string)
@@ -186,11 +188,12 @@ static error_t s_scan_string(kv_t* kv, uint8_t** start_of_string, uint8_t** end_
 			}
 		}
 	} else {
-		uint8_t* end = (uint8_t*)CUTE_MEMCHR(kv->in, ',', kv->in_end - kv->in);
+		uint8_t* end = kv->in;
+		while (end < kv->in_end && !s_isspace(*end)) end++;
 		*end_of_string = end;
 		kv->in = end + 1;
 	}
-	if (kv->in == kv->in_end) return error_failure("kv : Unterminated string at end of file.");
+	if (kv->in == kv->in_end) return error_failure("Unterminated string at end of file.");
 	return error_success();
 }
 
@@ -214,7 +217,7 @@ static CUTE_INLINE error_t s_skip_to(kv_t* kv, uint8_t c)
 			while (kv->in < kv->in_end)
 			{
 				uint8_t* end = (uint8_t*)CUTE_MEMCHR(kv->in, '"', kv->in_end - kv->in);
-				if (end == kv->in_end) return error_failure("kv : Unterminated string at end of file.");
+				if (end == kv->in_end) return error_failure("Unterminated string at end of file.");
 				if (*(end - 1) != '\\') {
 					kv->in = end + 1;
 					break;
@@ -222,7 +225,7 @@ static CUTE_INLINE error_t s_skip_to(kv_t* kv, uint8_t c)
 			}
 
 			uint8_t* end = (uint8_t*)CUTE_MEMCHR(kv->in, c, kv->in_end - kv->in);
-			if (end == kv->in_end) return error_failure("kv : End of file encountered abruptly.");
+			if (end == kv->in_end) return error_failure("End of file encountered abruptly.");
 			uint8_t* quote = (uint8_t*)CUTE_MEMCHR(kv->in, '"', kv->in_end - kv->in);
 			kv->in = end + 1;
 			if (end < quote) {
@@ -231,7 +234,7 @@ static CUTE_INLINE error_t s_skip_to(kv_t* kv, uint8_t c)
 		}
 	} else {
 		uint8_t* end = (uint8_t*)CUTE_MEMCHR(kv->in, c, kv->in_end - kv->in);
-		if (end == kv->in_end) return error_failure("kv : End of file encountered abruptly.");
+		if (end == kv->in_end) return error_failure("End of file encountered abruptly.");
 		kv->in = end + 1;
 	}
 
@@ -254,18 +257,145 @@ static CUTE_INLINE uint8_t s_parse_escape_code(uint8_t c)
 	}
 }
 
-static CUTE_INLINE error_t s_parse_int(kv_t* kv, int* out)
+static CUTE_INLINE error_t s_parse_int(kv_t* kv, int64_t* out)
 {
 	uint8_t* end;
-	int val = (int)strtoll((char*)kv->in, (char**)&end, 10);
+	int64_t val = CUTE_STRTOLL((char*)kv->in, (char**)&end, 10);
 	CUTE_RETURN_IF_FALSE(kv->in != end, "Invalid integer found during parse.");
 	kv->in = end;
 	*out = val;
 	return error_success();
 }
 
-static CUTE_INLINE error_t s_parse_object(kv_t* kv)
+static CUTE_INLINE error_t s_parse_float(kv_t* kv, double* out)
 {
+	uint8_t* end;
+	double val = CUTE_STRTOD((char*)kv->in, (char**)&end);
+	CUTE_RETURN_IF_FALSE(kv->in != end, "Invalid integer found during parse.");
+	kv->in = end;
+	*out = val;
+	return error_success();
+}
+
+static error_t s_parse_hex(kv_t* kv, uint64_t* hex)
+{
+	s_expect(kv, '0');
+	uint8_t c = s_next(kv);
+	CUTE_RETURN_IF_FALSE(c != 'x' && c != 'X', "Expected 'x' or 'X' when parsing a hex number.");
+	uint8_t* end;
+	uint64_t val = (uint64_t)CUTE_STRTOLL((char*)kv->in, (char**)&end, 16);
+	CUTE_RETURN_IF_FALSE(kv->in != end, "Invalid integer found during parse.");
+	kv->in = end;
+	*hex = val;
+	return error_success();
+}
+
+static CUTE_INLINE error_t s_parse_string(kv_t* kv, kv_string_t* string)
+{
+	CUTE_RETURN_IF_ERROR(s_scan_string(kv, string));
+	return error_success();
+}
+
+static CUTE_INLINE error_t s_parse_number(kv_t* kv, kv_val_t* val)
+{
+	if (kv->in + 1 < kv->in_end && ((kv->in[1] == 'x') | (kv->in[1] == 'X'))) {
+		uint64_t hex;
+		CUTE_RETURN_IF_ERROR(s_parse_hex(kv, &hex));
+		val->type = CUTE_KV_TYPE_INT64;
+		val->u.ival = (int64_t)hex;
+	} else {
+		uint8_t c;
+		uint8_t* s = kv->in;
+		int is_float = 0;
+		while (s < kv->in_end && (c = *s++) != ',')
+		{
+			if (c == '.')
+			{
+				is_float = 1;
+				break;
+			}
+		}
+
+		if (is_float) {
+			double dval;
+			CUTE_RETURN_IF_ERROR(s_parse_float(kv, &dval));
+			val->type = CUTE_KV_TYPE_DOUBLE;
+			val->u.dval = dval;
+		} else {
+			int64_t ival;
+			CUTE_RETURN_IF_ERROR(s_parse_int(kv, &ival));
+			val->type = CUTE_KV_TYPE_INT64;
+			val->u.ival = ival;
+		}
+	}
+	return error_success();
+}
+
+error_t s_parse_value(kv_t* kv, kv_val_t* val);
+
+static error_t s_parse_array(kv_t* kv, array<kv_val_t>* array_val)
+{
+	int64_t count;
+	s_expect(kv, '[');
+	CUTE_RETURN_IF_ERROR(s_parse_int(kv, &count));
+	s_expect(kv, ']');
+	s_expect(kv, '{');
+	for (int i = 0; i < (int)count; ++i)
+	{
+		kv_val_t* val = &array_val->add();
+		CUTE_PLACEMENT_NEW(val) kv_val_t;
+		CUTE_RETURN_IF_ERROR(s_parse_value(kv, val));
+	}
+	s_expect(kv, '}');
+	return error_success();
+}
+
+error_t s_parse_object(kv_t* kv);
+
+static error_t s_parse_value(kv_t* kv, kv_val_t* val)
+{
+	uint8_t c = s_peek(kv);
+
+	if (c == '"') {
+		kv_string_t string;
+		CUTE_RETURN_IF_ERROR(s_parse_string(kv, &string));
+		val->type = CUTE_KV_TYPE_STRING;
+		val->u.sval = string;
+	} else if ((c >= '0' && c <= '9') | (c == '-')) {
+		CUTE_RETURN_IF_ERROR(s_parse_number(kv, val));
+	} else if (c == '[') {
+		CUTE_RETURN_IF_ERROR(s_parse_array(kv, &val->aval));
+		val->type = CUTE_KV_TYPE_ARRAY;
+	} else if (c == '{') {
+		CUTE_RETURN_IF_ERROR(s_parse_object(kv));
+		val->type = CUTE_KV_TYPE_OBJECT;
+		val->u.object_index = kv->objects.count() - 1;
+	} else {
+		return error_failure("Unexpected character when parsing a value.");
+	}
+
+	s_try(kv, ',');
+
+	return error_success();
+}
+
+static error_t s_parse_object(kv_t* kv)
+{
+	kv_object_t* object = &kv->objects.add();
+	CUTE_PLACEMENT_NEW(object) kv_object_t;
+
+	s_expect(kv, '{');
+
+	while (!s_try(kv, '}'))
+	{
+		kv_field_t* field = &object->fields.add();
+		CUTE_PLACEMENT_NEW(field) kv_field_t;
+
+		CUTE_RETURN_IF_ERROR(s_scan_string(kv, &field->key));
+		s_expect(kv, '=');
+		CUTE_RETURN_IF_ERROR(s_parse_value(kv, &field->val));
+	}
+
 	return error_success();
 }
 
@@ -280,6 +410,14 @@ error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
 		while (s_peek(kv) == '{')
 		{
 			CUTE_RETURN_IF_ERROR(s_parse_object(kv));
+		}
+
+		s_try(kv, ',');
+		uint8_t c;
+		while (kv->in != kv->in_end && s_isspace(c = *kv->in)) kv->in++;
+
+		if (kv->in != kv->in_end) {
+			return error_failure("Unable to parse entire input `data`.");
 		}
 	}
 
