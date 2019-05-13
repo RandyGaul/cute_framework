@@ -186,7 +186,7 @@ static CUTE_INLINE int s_try(kv_t* kv, uint8_t expect)
 
 #define s_expect(kv, expected_character) \
 	do { \
-		if (s_next(kv) != expected_character) return error_failure("Found unexpected token."); \
+		if (s_next(kv) != expected_character) { kv->err = error_failure("Found unexpected token."); return kv->err; } \
 	} while (0)
 
 static error_t s_scan_string(kv_t* kv, uint8_t** start_of_string, uint8_t** end_of_string)
@@ -211,7 +211,10 @@ static error_t s_scan_string(kv_t* kv, uint8_t** start_of_string, uint8_t** end_
 		*end_of_string = end;
 		kv->in = end + 1;
 	}
-	if (kv->in == kv->in_end) return error_failure("Unterminated string at end of file.");
+	if (kv->in == kv->in_end) {
+		kv->err = error_failure("Unterminated string at end of file.");
+		return kv->err;
+	}
 	return error_success();
 }
 
@@ -229,7 +232,10 @@ static CUTE_INLINE error_t s_parse_int(kv_t* kv, int64_t* out)
 {
 	uint8_t* end;
 	int64_t val = CUTE_STRTOLL((char*)kv->in, (char**)&end, 10);
-	if (kv->in == end) return error_failure("Invalid integer found during parse.");
+	if (kv->in == end) {
+		kv->err = error_failure("Invalid integer found during parse.");
+		return kv->err;
+	}
 	kv->in = end;
 	*out = val;
 	return error_success();
@@ -239,7 +245,10 @@ static CUTE_INLINE error_t s_parse_float(kv_t* kv, double* out)
 {
 	uint8_t* end;
 	double val = CUTE_STRTOD((char*)kv->in, (char**)&end);
-	if (kv->in == end) return error_failure("Invalid integer found during parse.");
+	if (kv->in == end) {
+		kv->err = error_failure("Invalid integer found during parse.");
+		return kv->err;
+	}
 	kv->in = end;
 	*out = val;
 	return error_success();
@@ -249,10 +258,16 @@ static error_t s_parse_hex(kv_t* kv, uint64_t* hex)
 {
 	s_expect(kv, '0');
 	uint8_t c = s_next(kv);
-	if (!(c != 'x' && c != 'X')) return error_failure("Expected 'x' or 'X' when parsing a hex number.");
+	if (!(c != 'x' && c != 'X')) {
+		kv->err = error_failure("Expected 'x' or 'X' when parsing a hex number.");
+		return kv->err;
+	}
 	uint8_t* end;
 	uint64_t val = (uint64_t)CUTE_STRTOLL((char*)kv->in, (char**)&end, 16);
-	if (kv->in == end) return error_failure("Invalid integer found during parse.");
+	if (kv->in == end) {
+		kv->err = error_failure("Invalid integer found during parse.");
+		return kv->err;
+	}
 	kv->in = end;
 	*hex = val;
 	return error_success();
@@ -354,7 +369,8 @@ static error_t s_parse_value(kv_t* kv, kv_val_t* val)
 		val->type = KV_TYPE_OBJECT;
 		val->u.object_index = index;
 	} else {
-		return error_failure("Unexpected character when parsing a value.");
+		kv->err = error_failure("Unexpected character when parsing a value.");
+		return kv->err;
 	}
 
 	s_try(kv, ',');
@@ -430,7 +446,8 @@ error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
 		while (kv->in != kv->in_end && s_isspace(c = *kv->in)) kv->in++;
 
 		if (kv->in != kv->in_end) {
-			return error_failure("Unable to parse entire input `data`.");
+			kv->err = error_failure("Unable to parse entire input `data`.");
+			return kv->err;
 		}
 	}
 
@@ -452,7 +469,8 @@ static CUTE_INLINE error_t s_write_u8(kv_t* kv, uint8_t val)
 	uint8_t* in = kv->in;
 	uint8_t* end = kv->in + 1;
 	if (end >= kv->in_end) {
-		error_failure("Attempted to write uint8_t beyond buffer.");
+		kv->err = error_failure("Attempted to write uint8_t beyond buffer.");
+		return kv->err;
 	}
 	*in = val;
 	kv->in = end;
@@ -494,7 +512,8 @@ static CUTE_INLINE error_t s_write_str_no_quotes(kv_t* kv, const char* str, int 
 	uint8_t* in = kv->in;
 	uint8_t* end = kv->in + len;
 	if (end >= kv->in_end) {
-		return error_failure("Attempted to write string beyond buffer.");
+		kv->err = error_failure("Attempted to write string beyond buffer.");
+		return kv->err;
 	}
 	CUTE_STRNCPY((char*)in, str, len);
 	kv->in = end;
@@ -910,7 +929,10 @@ error_t kv_val_blob(kv_t* kv, void* data, int* size, int capacity)
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		int buffer_size = CUTE_BASE64_ENCODED_SIZE(*size);
-		if (!(buffer_size <= capacity)) return error_failure("`capacity` is too small to hold base 64 encoded `data`.");
+		if (!(buffer_size <= capacity)) {
+			kv->err = error_failure("`capacity` is too small to hold base 64 encoded `data`.");
+			return kv->err;
+		}
 		uint8_t* buffer = s_temp(kv, buffer_size);
 		error_t err = base64_encode(buffer, buffer_size, data, *size);
 		if (err.is_error()) return err;
@@ -920,9 +942,15 @@ error_t kv_val_blob(kv_t* kv, void* data, int* size, int capacity)
 		if (err.is_error()) return err;
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_STRING);
-		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!matched_val) {
+			kv->err = error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+			return kv->err;
+		}
 		int buffer_size = CUTE_BASE64_DECODED_SIZE(matched_val->u.sval.len);
-		if (!(buffer_size <= capacity)) return error_failure("Decoded base 64 string is too large to store in `data`.");
+		if (!(buffer_size <= capacity)) {
+			kv->err = error_failure("Decoded base 64 string is too large to store in `data`.");
+			return kv->err;
+		}
 		error_t err = base64_decode(data, buffer_size, matched_val->u.sval.str, matched_val->u.sval.len);
 		if (err.is_error()) return err;
 		*size = buffer_size;
@@ -945,7 +973,10 @@ error_t kv_object_begin(kv_t* kv)
 		if (matched_val) {
 			kv->read_mode_object_index = matched_val->u.object_index;
 		} else {
-			if (!(kv->read_mode_top_level_index < kv->top_level_object_indices.count())) return error_failure("Attempted to read object beyond end of input.");
+			if (!(kv->read_mode_top_level_index < kv->top_level_object_indices.count())) {
+				kv->err = error_failure("Attempted to read object beyond end of input.");
+				return kv->err;
+			}
 			kv->read_mode_object_index = kv->top_level_object_indices[kv->read_mode_top_level_index];
 		}
 		s_push_read_mode_array(kv, NULL);
@@ -967,7 +998,10 @@ error_t kv_object_end(kv_t* kv)
 	} else {
 		kv_object_t* object = kv->objects + kv->read_mode_object_index;
 		if (object->parent_index == ~0) {
-			if (kv->read_mode_top_level_index == ~0) return error_failure("`kv_object_end` called an extra time.");
+			if (kv->read_mode_top_level_index == ~0) {
+				kv->err = error_failure("`kv_object_end` called an extra time.");
+				return kv->err;
+			}
 			if (kv->read_mode_top_level_index == kv->top_level_object_indices.count() - 1) {
 				kv->read_mode_top_level_index = ~0;
 			} else {
@@ -997,7 +1031,10 @@ error_t kv_array_begin(kv_t* kv, int* count)
 		s_push_array(kv, CUTE_KV_IN_ARRAY_AND_FIRST_ELEMENT);
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_ARRAY);
-		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!matched_val) {
+			kv->err = error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+			return kv->err;
+		}
 		s_push_read_mode_array(kv, matched_val);
 	}
 	return error_success();
