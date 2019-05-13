@@ -246,7 +246,7 @@ static CUTE_INLINE error_t s_parse_float(kv_t* kv, double* out)
 	uint8_t* end;
 	double val = CUTE_STRTOD((char*)kv->in, (char**)&end);
 	if (kv->in == end) {
-		kv->err = error_failure("Invalid integer found during parse.");
+		kv->err = error_failure("Invalid float found during parse.");
 		return kv->err;
 	}
 	kv->in = end;
@@ -265,7 +265,7 @@ static error_t s_parse_hex(kv_t* kv, uint64_t* hex)
 	uint8_t* end;
 	uint64_t val = (uint64_t)CUTE_STRTOLL((char*)kv->in, (char**)&end, 16);
 	if (kv->in == end) {
-		kv->err = error_failure("Invalid integer found during parse.");
+		kv->err = error_failure("Invalid hex integer found during parse.");
 		return kv->err;
 	}
 	kv->in = end;
