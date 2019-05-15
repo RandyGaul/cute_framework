@@ -55,7 +55,6 @@ extern CUTE_API int CUTE_CALL sequence_buffer_init(sequence_buffer_t* buffer, in
 extern CUTE_API void CUTE_CALL sequence_buffer_cleanup(sequence_buffer_t* buffer, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
 extern CUTE_API void CUTE_CALL sequence_buffer_reset(sequence_buffer_t* buffer, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
 
-extern CUTE_API void CUTE_CALL sequence_buffer_advance(sequence_buffer_t* buffer, uint16_t sequence);
 extern CUTE_API void* CUTE_CALL sequence_buffer_insert(sequence_buffer_t* buffer, uint16_t sequence, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
 extern CUTE_API void CUTE_CALL sequence_buffer_remove(sequence_buffer_t* buffer, uint16_t sequence, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
 extern CUTE_API int CUTE_CALL sequence_buffer_is_empty(sequence_buffer_t* sequence_buffer, uint16_t sequence);

@@ -22,6 +22,8 @@
 #ifndef BUFFER_H
 #define BUFFER_H
 
+// TODO: Delete me (in favor of cute_array.h).
+
 #include <cute_defines.h>
 #include <cute_alloc.h>
 

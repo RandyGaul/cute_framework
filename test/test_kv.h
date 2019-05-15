@@ -169,7 +169,136 @@ int test_kv_basic()
 	error_t err = kv_reset(kv, buffer, size, CUTE_KV_MODE_READ);
 	CUTE_TEST_ASSERT(!err.is_error());
 
+	CUTE_MEMSET(&thing, 0, sizeof(thing_t));
+
 	CUTE_TEST_ASSERT(!do_serialize(kv, &thing).is_error());
+
+	// TODO: Assert values are correct. Try reset function and perform a few times.
+
+	kv_destroy(kv);
+
+	return 0;
+}
+
+#include <string>
+
+CUTE_TEST_CASE(test_kv_std_string_to_disk, "Testing kv utility for c-string to disk, std::string from disk.");
+int test_kv_std_string_to_disk()
+{
+	std::string s0;
+	const char* s1 = "Alice in Wonderland.";
+	int s1_len = (int)CUTE_STRLEN(s1);
+
+	kv_t* kv = kv_make();
+	CUTE_TEST_CHECK_POINTER(kv);
+
+	char buffer[1024];
+	kv_reset(kv, buffer, sizeof(buffer), CUTE_KV_MODE_WRITE);
+
+	kv_object_begin(kv);
+	kv_key(kv, "book_title");
+	kv_val_string(kv, (char**)&s1, &s1_len);
+	kv_object_end(kv);
+
+	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
+	int size = kv_size_written(kv);
+	CUTE_TEST_ASSERT(!kv_reset(kv, buffer, size, CUTE_KV_MODE_READ).is_error());
+
+	kv_object_begin(kv);
+	kv_key(kv, "book_title");
+	kv_val(kv, &s0);
+	kv_object_end(kv);
+
+	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
+	CUTE_TEST_ASSERT((int)s0.length() == s1_len);
+	CUTE_TEST_ASSERT(!CUTE_STRNCMP(s0.data(), s1, s1_len));
+
+	kv_destroy(kv);
+
+	return 0;
+}
+
+CUTE_TEST_CASE(test_kv_std_string_from_disk, "Testing kv utility for std::string to disk, c-string from disk.");
+int test_kv_std_string_from_disk()
+{
+	// std::string from disk, c-string to disk
+	const char* s0 = NULL;
+	int s0_len = 0;
+	std::string s1 = "Alice in Wonderland.";
+	int s1_len = (int)s1.length();
+
+	kv_t* kv = kv_make();
+	CUTE_TEST_CHECK_POINTER(kv);
+
+	char buffer[1024];
+	kv_reset(kv, buffer, sizeof(buffer), CUTE_KV_MODE_WRITE);
+
+	kv_object_begin(kv);
+	kv_key(kv, "book_title");
+	kv_val(kv, &s1);
+	kv_object_end(kv);
+
+	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
+	int size = kv_size_written(kv);
+	CUTE_TEST_ASSERT(!kv_reset(kv, buffer, size, CUTE_KV_MODE_READ).is_error());
+
+	kv_object_begin(kv);
+	kv_key(kv, "book_title");
+	kv_val_string(kv, (char**)&s0, &s0_len);
+	kv_object_end(kv);
+
+	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
+	CUTE_TEST_ASSERT((int)s1.length() == s0_len);
+	CUTE_TEST_ASSERT(!CUTE_STRNCMP(s1.data(), s0, s0_len));
+
+	kv_destroy(kv);
+
+	return 0;
+}
+
+CUTE_TEST_CASE(test_kv_std_vector, "Testing kv utility for std::vector support.");
+int test_kv_std_vector()
+{
+	kv_t* kv = kv_make();
+	CUTE_TEST_CHECK_POINTER(kv);
+
+	char buffer[1024];
+	kv_reset(kv, buffer, sizeof(buffer), CUTE_KV_MODE_WRITE);
+
+	std::vector<int> v;
+	v.push_back(10);
+	v.push_back(-3);
+	v.push_back(17);
+	v.push_back(5);
+	v.push_back(0);
+	v.push_back(100);
+	v.push_back(6);
+	v.push_back(-2);
+
+	kv_object_begin(kv);
+	kv_key(kv, "vector_of_ints");
+	kv_val(kv, &v);
+	kv_object_end(kv);
+
+	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
+	int size = kv_size_written(kv);
+	CUTE_TEST_ASSERT(!kv_reset(kv, buffer, size, CUTE_KV_MODE_READ).is_error());
+
+	v.clear();
+	kv_object_begin(kv);
+	kv_key(kv, "vector_of_ints");
+	kv_val(kv, &v);
+	kv_object_end(kv);
+
+	CUTE_TEST_ASSERT(v.size() == 8);
+	CUTE_TEST_ASSERT(v[0] == 10);
+	CUTE_TEST_ASSERT(v[1] == -3);
+	CUTE_TEST_ASSERT(v[2] == 17);
+	CUTE_TEST_ASSERT(v[3] == 5);
+	CUTE_TEST_ASSERT(v[4] == 0);
+	CUTE_TEST_ASSERT(v[5] == 100);
+	CUTE_TEST_ASSERT(v[6] == 6);
+	CUTE_TEST_ASSERT(v[7] == -2);
 
 	kv_destroy(kv);
 

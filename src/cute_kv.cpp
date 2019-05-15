@@ -900,6 +900,10 @@ error_t kv_val(kv_t* kv, double* val)
 
 error_t kv_val_string(kv_t* kv, char** str, int* size)
 {
+	if (kv->mode == CUTE_KV_MODE_READ) {
+		*str = NULL;
+		*size = 0;
+	}
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		error_t err = s_begin_val(kv);
@@ -919,6 +923,7 @@ error_t kv_val_string(kv_t* kv, char** str, int* size)
 
 error_t kv_val_blob(kv_t* kv, void* data, int* size, int capacity)
 {
+	if (kv->mode == CUTE_KV_MODE_READ) *size = 0;
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		int buffer_size = CUTE_BASE64_ENCODED_SIZE(*size);
@@ -1010,6 +1015,7 @@ error_t kv_object_end(kv_t* kv)
 
 error_t kv_array_begin(kv_t* kv, int* count)
 {
+	if (kv->mode == CUTE_KV_MODE_READ) *count = 0;
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		s_tabs_delta(kv, 1);
@@ -1029,6 +1035,7 @@ error_t kv_array_begin(kv_t* kv, int* count)
 			return kv->err;
 		}
 		s_push_read_mode_array(kv, matched_val);
+		*count = matched_val->aval.count();
 	}
 	return error_success();
 }

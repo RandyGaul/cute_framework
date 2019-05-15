@@ -47,7 +47,7 @@
 
 int main(int argc, const char** argv)
 {
-	//protocol::log_set_level(CUTE_PROTOCOL_LOG_LEVEL_INFORMATIONAL);
+	//log_set_level(CUTE_LOG_LEVEL_INFORMATIONAL);
 
 #ifdef _MSC_VER
 	_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
@@ -117,6 +117,9 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_transport_drop_fragments_reliable_hammer),
 		CUTE_TEST_CASE_ENTRY(test_base64_encode),
 		CUTE_TEST_CASE_ENTRY(test_kv_basic),
+		CUTE_TEST_CASE_ENTRY(test_kv_std_string_to_disk),
+		CUTE_TEST_CASE_ENTRY(test_kv_std_string_from_disk),
+		CUTE_TEST_CASE_ENTRY(test_kv_std_vector),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;
@@ -171,6 +174,8 @@ int main(int argc, const char** argv)
 
 	internal::net_cleanup();
 
+	return fail_count ? -1 : 0;
+
 break_soak:
-	return 0;
+	return -1;
 }
