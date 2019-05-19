@@ -37,6 +37,7 @@ CUTE_API kv_t* CUTE_CALL kv_make(void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL kv_destroy(kv_t* kv);
 CUTE_API error_t CUTE_CALL kv_reset(kv_t* kv, const void* data, int size, int mode);
 CUTE_API int CUTE_CALL kv_size_written(kv_t* kv);
+CUTE_API int CUTE_CALL kv_has_data(kv_t* kv); // TODO, for reading.
 CUTE_API error_t CUTE_CALL kv_error_state(kv_t* kv);
 
 enum kv_type_t
