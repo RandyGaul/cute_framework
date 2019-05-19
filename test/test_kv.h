@@ -173,8 +173,6 @@ int test_kv_basic()
 
 	CUTE_TEST_ASSERT(!do_serialize(kv, &thing).is_error());
 
-	// TODO: Assert values are correct. Try reset function and perform a few times.
-
 	kv_destroy(kv);
 
 	return 0;

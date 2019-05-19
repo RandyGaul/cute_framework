@@ -7,11 +7,17 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
     return()
 endif()
 
+# Disable annoying MSVC warnings.
+if(MSVC)
+	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
+	add_definitions(-D_CRT_SECURE_NO_DEPRECATE)
+endif()
+
 # Common directories for compiler/linker path.
-include_directories(src libraries test)
+include_directories(src libraries test libraries/datalibrary)
 link_directories(shared_libs)
 
-# PhysicsFS shared library.
+# PhysicsFS, statically linked.
 set(PHYSFS_SRCS
 	libraries/physfs/physfs_archiver_7z.c
 	libraries/physfs/physfs_archiver_dir.c
@@ -51,6 +57,46 @@ endif()
 
 add_library(physfs STATIC ${PHYSFS_SRCS})
 
+# Data Library statically linked.
+set(DATA_LIBRARY_SRCS
+	libraries/datalibrary/dl.cpp
+	libraries/datalibrary/dl_alloc.cpp
+	libraries/datalibrary/dl_convert.cpp
+	libraries/datalibrary/dl_patch_ptr.cpp
+	libraries/datalibrary/dl_reflect.cpp
+	libraries/datalibrary/dl_txt_pack.cpp
+	libraries/datalibrary/dl_txt_read.cpp
+	libraries/datalibrary/dl_txt_unpack.cpp
+	libraries/datalibrary/dl_typelib_read_bin.cpp
+	libraries/datalibrary/dl_typelib_read_txt.cpp
+	libraries/datalibrary/dl_typelib_write_bin.cpp
+	libraries/datalibrary/dl_typelib_write_c_header.cpp
+	libraries/datalibrary/dl_typelib_write_txt.cpp
+	libraries/datalibrary/dl_util.cpp
+)
+
+set(DATA_LIBRARY_HDRS
+	libraries/datalibrary/dl/dl.h
+	libraries/datalibrary/dl/dl_convert.h
+	libraries/datalibrary/dl/dl_defines.h
+	libraries/datalibrary/dl/dl_reflect.h
+	libraries/datalibrary/dl/dl_txt.h
+	libraries/datalibrary/dl/dl_typelib.h
+	libraries/datalibrary/dl/dl_util.h
+
+	libraries/datalibrary/dl_alloc.h
+	libraries/datalibrary/dl_assert.h
+	libraries/datalibrary/dl_binary_writer.h
+	libraries/datalibrary/dl_hash.h
+	libraries/datalibrary/dl_internal_util.h
+	libraries/datalibrary/dl_patch_ptr.h
+	libraries/datalibrary/dl_swap.h
+	libraries/datalibrary/dl_txt_read.h
+	libraries/datalibrary/dl_types.h
+)
+
+add_library(data_library STATIC ${DATA_LIBRARY_SRCS} ${DATA_LIBRARY_HDRS})
+
 # Cute Framework shared library.
 set(CUTE_SRCS
 	src/cute_app.cpp
@@ -75,6 +121,7 @@ set(CUTE_SRCS
 	src/cute_base64.cpp
 	src/cute_log.cpp
 	src/cute_hashtable.cpp
+	src/cute_datalibrary.cpp
 
 	src/internal/cute_transport_internal.cpp
 
@@ -112,6 +159,7 @@ set(CUTE_HDRS
 	src/cute_array.h
 	src/cute_hashtable.h
 	src/cute_dictionary.h
+	src/cute_datalibrary.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
@@ -128,7 +176,7 @@ set(CUTE_HDRS
 )
 
 add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS})
-target_link_libraries(cute PRIVATE SDL2 physfs libsodium)
+target_link_libraries(cute PRIVATE SDL2 physfs data_library libsodium)
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)
 
 # Cute unit tests executable (optional, defaulted to also build).
@@ -166,4 +214,28 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 	if (MSVC)
 		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tests)
 	endif()
+endif()
+
+# Data Library Type Library Compiler (dltlc) - optional, defaulted to not build.
+option(DATA_LIBRARY_TYPE_LIBRARY_COMPILER "Build the type library compiler (dltlc)." OFF)
+if (DATA_LIBRARY_TYPE_LIBRARY_COMPILER)
+	set(DLTLC_SRCS
+		libraries/datalibrary/dltlc/dltlc.cpp
+		libraries/datalibrary/getopt/getopt.c
+	)
+
+	add_executable(dltlc ${DLTLC_SRCS})
+	target_link_libraries(dltlc PRIVATE data_library)
+endif()
+
+# Data Library Pack (dlpack) - optional, defaulted to not build.
+option(DATA_LIBRARY_PACK "Build dlpack." OFF)
+if (DATA_LIBRARY_PACK)
+	set(DLPACK_SRCS
+		libraries/datalibrary/dlpack/dlpack.cpp
+		libraries/datalibrary/getopt/getopt.c
+	)
+
+	add_executable(dlpack ${DLPACK_SRCS})
+	target_link_libraries(dlpack PRIVATE data_library)
 endif()
