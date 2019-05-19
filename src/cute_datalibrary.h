@@ -25,13 +25,18 @@
 namespace cute
 {
 
-CUTE_API error_t CUTE_CALL compile_typelibs(const char* in_path, const char* out_path);
+CUTE_API error_t CUTE_CALL compile_typelibs(const char* typelib_path, const char* datalibrary_output_path);
+
+// -------------------------------------------------------------------------------------------------
 
 struct datalibrary_t;
 
 CUTE_API datalibrary_t* CUTE_CALL datalibrary_make();
 CUTE_API void CUTE_CALL datalibrary_destroy(datalibrary_t* dl);
 
-CUTE_API error_t CUTE_CALL datalibrary_load(const char* path);
+CUTE_API error_t CUTE_CALL datalibrary_load_typelib_binary(datalibrary_t* dl, const char* datalibrary_output_path);
+
+CUTE_API error_t CUTE_CALL datalibrary_load_instance(datalibrary_t* dl, const char* type_id, void* data, int size, const void* instance, int instance_size, int* bytes_consumed);
+CUTE_API error_t CUTE_CALL datalibrary_store_instance(datalibrary_t* dl, const char* type_id, const void* instance, void* data, int size, int* bytes_written);
 
 }

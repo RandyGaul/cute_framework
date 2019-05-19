@@ -34,9 +34,10 @@ namespace cute
 
 typedef void (log_fn)(void* udata, int level, const char* fmt, ...);
 
-extern CUTE_API void CUTE_CALL log_set_level(int level);
-extern CUTE_API void CUTE_CALL log_set_function(log_fn* fn, void* udata);
-extern CUTE_API void CUTE_CALL log(int level, const char* fmt, ...);
+CUTE_API void CUTE_CALL log_set_level(int level);
+CUTE_API void CUTE_CALL log_set_function(log_fn* fn, void* udata);
+CUTE_API int CUTE_CALL log_get_level();
+CUTE_API void CUTE_CALL log(int level, const char* fmt, ...);
 
 }
 

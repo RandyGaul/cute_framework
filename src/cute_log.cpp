@@ -42,6 +42,11 @@ void log_set_function(log_fn* fn, void* udata)
 	s_log_udata = udata;
 }
 
+int log_get_level()
+{
+	return s_log_level;
+}
+
 void log(int level, const char* fmt, ...)
 {
 	if (s_log_level > level) return;
