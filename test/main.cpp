@@ -44,7 +44,6 @@
 #include <test_transport.h>
 #include <test_base64.h>
 #include <test_kv.h>
-#include <test_datalibrary.h>
 
 int main(int argc, const char** argv)
 {
@@ -121,7 +120,6 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_kv_std_string_to_disk),
 		CUTE_TEST_CASE_ENTRY(test_kv_std_string_from_disk),
 		CUTE_TEST_CASE_ENTRY(test_kv_std_vector),
-		CUTE_TEST_CASE_ENTRY(test_datalibrary_basic),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;
