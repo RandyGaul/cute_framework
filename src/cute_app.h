@@ -37,7 +37,8 @@ enum app_options_t
 	APP_OPTIONS_GFX_D3D9             = 0x020,
 	APP_OPTIONS_FULLSCREEN           = 0x040,
 	APP_OPTIONS_RESIZABLE            = 0x080,
-	APP_OPTIONS_WINDOW_POS_CENTERED  = 0x100,
+	APP_OPTIONS_HIDDEN               = 0x100,
+	APP_OPTIONS_WINDOW_POS_CENTERED  = 0x200,
 };
 
 extern CUTE_API app_t* CUTE_CALL app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);

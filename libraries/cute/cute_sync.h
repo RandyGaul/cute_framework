@@ -22,6 +22,7 @@
 
 	Revision history:
 		1.0  (05/31/2018) initial release
+		1.1  (05/23/2019) flip return values to closely match SDL
 */
 
 #if !defined(CUTE_SYNC_H)
@@ -41,12 +42,12 @@ typedef SDL_ThreadFunction cute_thread_func_t;
 cute_mutex_t* cute_mutex_create();
 
 /**
- * Returns 1 on success, zero otherwise.
+ * Returns 0 on success, -1 otherwise.
  */
 int cute_lock(cute_mutex_t* mutex);
 
 /**
- * Returns 1 on success, zero otherwise.
+ * Returns 0 on success, -1 otherwise.
  */
 int cute_unlock(cute_mutex_t* mutex);
 
@@ -64,19 +65,19 @@ cute_cv_t* cute_cv_create();
 
 /**
  * Signals all sleeping threads to wake that are waiting on the condition variable.
- * Returns 1 on success, zero otherwise.
+ * Returns 0 on success, -1 otherwise.
  */
 int cute_cv_wake_all(cute_cv_t* cv);
 
 /**
  * Signals a single thread to wake that are waiting on the condition variable.
- * Returns 1 on success, zero otherwise.
+ * Returns 0 on success, -1 otherwise.
  */
 int cute_cv_wake_one(cute_cv_t* cv);
 
 /**
  * Places a thread to wait on the condition variable.
- * Returns 1 on success, zero otherwise.
+ * Returns 0 on success, -1 otherwise.
  */
 int cute_cv_wait(cute_cv_t* cv, cute_mutex_t* mutex);
 void cute_cv_destroy(cute_cv_t* cv);
@@ -89,20 +90,20 @@ cute_sem_t* cute_sem_create(unsigned initial_count);
 
 /**
  * Automically increments the semaphore's value and then wakes a sleeping thread.
- * Returns 1 on success, zero otherwise.
+ * Returns 0 on success, -1 otherwise.
  */
 int cute_sem_post(cute_sem_t* semaphore);
 
 /**
  * Non-blocking version of `cute_sem_wait`.
- * Returns 1 on success, zero otherwise.
+ * Returns 0 on success, -1 otherwise.
  */
 int cute_sem_try(cute_sem_t* semaphore);
 
 /**
  * Suspends the calling thread's execution unless the semaphore's value is positive. Will
  * decrement the value atomically afterwards.
- * Returns 1 on success, zero otherwise.
+ * Returns 0 on success, -1 otherwise.
  */
 int cute_sem_wait(cute_sem_t* semaphore);
 int cute_sem_value(cute_sem_t* semaphore);
@@ -157,7 +158,7 @@ int cute_atomic_get(int* address);
 
 /**
  * Atomically sets `address` to `value` if compare equals `address`.
- * Returns 1 of the value was set, 0 otherwise.
+ * Returns 0 of the value was set, -1 otherwise.
  */
 int cute_atomic_cas(int* address, int compare, int value);
 
@@ -173,7 +174,7 @@ void* cute_atomic_ptr_get(void** address);
 
 /**
  * Atomically sets `address` to `value` if compare equals `address`.
- * Returns 1 of the value was set, 0 otherwise.
+ * Returns 0 of the value was set, -1 otherwise.
  */
 int cute_atomic_ptr_cas(void** address, void* compare, void* value);
 
@@ -282,12 +283,12 @@ cute_mutex_t* cute_mutex_create()
 
 int cute_lock(cute_mutex_t* mutex)
 {
-	return !SDL_LockMutex(mutex);
+	return SDL_LockMutex(mutex);
 }
 
 int cute_unlock(cute_mutex_t* mutex)
 {
-	return !SDL_UnlockMutex(mutex);
+	return SDL_UnlockMutex(mutex);
 }
 
 int cute_trylock(cute_mutex_t* mutex)
@@ -307,17 +308,17 @@ cute_cv_t* cute_cv_create()
 
 int cute_cv_wake_all(cute_cv_t* cv)
 {
-	return !SDL_CondBroadcast(cv);
+	return SDL_CondBroadcast(cv);
 }
 
 int cute_cv_wake_one(cute_cv_t* cv)
 {
-	return !SDL_CondSignal(cv);
+	return SDL_CondSignal(cv);
 }
 
 int cute_cv_wait(cute_cv_t* cv, cute_mutex_t* mutex)
 {
-	return !SDL_CondWait(cv, mutex);
+	return SDL_CondWait(cv, mutex);
 }
 
 void cute_cv_destroy(cute_cv_t* cv)
@@ -332,17 +333,17 @@ cute_sem_t* cute_sem_create(unsigned initial_count)
 
 int cute_sem_post(cute_sem_t* semaphore)
 {
-	return !SDL_SemPost(semaphore);
+	return SDL_SemPost(semaphore);
 }
 
 int cute_sem_try(cute_sem_t* semaphore)
 {
-	return !SDL_SemTryWait(semaphore);
+	return SDL_SemTryWait(semaphore);
 }
 
 int cute_sem_wait(cute_sem_t* semaphore)
 {
-	return !SDL_SemWait(semaphore);
+	return SDL_SemWait(semaphore);
 }
 
 int cute_sem_value(cute_sem_t* semaphore)
@@ -415,7 +416,7 @@ int cute_atomic_get(int* address)
 
 int cute_atomic_cas(int* address, int compare, int value)
 {
-	return SDL_AtomicCAS((SDL_atomic_t*)address, compare, value);
+	return SDL_AtomicCAS((SDL_atomic_t*)address, compare, value) == SDL_TRUE ? 0 : -1;
 }
 
 void* cute_atomic_ptr_set(void** address, void* value)
@@ -430,7 +431,7 @@ void* cute_atomic_ptr_get(void** address)
 
 int cute_atomic_ptr_cas(void** address, void* compare, void* value)
 {
-	return SDL_AtomicCASPtr(address, compare, value);
+	return SDL_AtomicCASPtr(address, compare, value) == SDL_TRUE ? 0 : -1;
 }
 
 void cute_rw_lock_create(cute_rw_lock_t* rw)
@@ -542,7 +543,7 @@ void cute_rw_lock_destroy(cute_rw_lock_t* rw)
 static void* cute_malloc_aligned(size_t size, int alignment, void* mem_ctx)
 {
 	void* p = CUTE_THREAD_ALLOC(size + alignment, mem_ctx);
-	if (!p) return 0;
+	if (!p) return NULL;
 	unsigned char offset = (unsigned char)((size_t)p & (alignment - 1));
 	p = (void*)CUTE_THREAD_ALIGN_PTR(p + 1, alignment);
 	*((char*)p - 1) = alignment - offset;
@@ -591,11 +592,11 @@ int cute_try_pop_task_internal(cute_threadpool_t* pool, cute_task_t* task)
 	{
 		*task = pool->tasks[--pool->task_count];
 		cute_unlock(pool->task_mutex);
-		return 1;
+		return 0;
 	}
 
 	cute_unlock(pool->task_mutex);
-	return 0;
+	return -1;
 }
 
 int cute_worker_thread_internal(void* udata)
@@ -604,19 +605,19 @@ int cute_worker_thread_internal(void* udata)
 	while (pool->running)
 	{
 		cute_task_t task;
-		if (cute_try_pop_task_internal(pool, &task))
+		if (!cute_try_pop_task_internal(pool, &task))
 		{
 			task.do_work(task.param);
 		}
 
 		cute_sem_wait(pool->semaphore);
 	}
-	return 0;
+	return -1;
 }
 
 cute_threadpool_t* cute_threadpool_create(int thread_count, void* mem_ctx)
 {
-	if (CUTE_THREAD_CACHELINE_SIZE < cute_cacheline_size()) return 0;
+	if (CUTE_THREAD_CACHELINE_SIZE < cute_cacheline_size()) return NULL;
 
 	cute_threadpool_t* pool = (cute_threadpool_t*)CUTE_THREAD_ALLOC(sizeof(cute_threadpool_t), mem_ctx);
 	pool->task_capacity = 64;
@@ -667,7 +668,7 @@ void cute_threadpool_kick_and_wait(cute_threadpool_t* pool)
 	while (pool->task_count)
 	{
 		cute_task_t task;
-		if (cute_try_pop_task_internal(pool, &task))
+		if (!cute_try_pop_task_internal(pool, &task))
 		{
 			cute_sem_try(pool->semaphore);
 			task.do_work(task.param);

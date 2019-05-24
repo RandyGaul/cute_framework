@@ -166,9 +166,9 @@ int test_circular_buffer_two_threads()
 		thread_t* push = thread_create(test_circular_buffer_two_threads_push, "thread push", &buffer);
 		thread_t* pull = thread_create(test_circular_buffer_two_threads_pull, "thread pull", &buffer);
 
-		CUTE_TEST_CHECK(thread_wait(pull));
+		CUTE_TEST_ASSERT(!thread_wait(pull).is_error());
 		test_circular_buffer_running = 0; // Let push thread know the pull thread early-exited, in case it fails.
-		CUTE_TEST_CHECK(thread_wait(push));
+		CUTE_TEST_ASSERT(!thread_wait(push).is_error());
 		test_circular_buffer_running = 1; // Reset state for next time.
 
 		circular_buffer_free(&buffer);

@@ -43,19 +43,19 @@ void mutex_destroy(mutex_t* mutex)
 	cute_mutex_destroy(mutex);
 }
 
-int mutex_lock(mutex_t* mutex)
+error_t mutex_lock(mutex_t* mutex)
 {
-	return !cute_lock(mutex);
+	return error_make(cute_lock(mutex), NULL);
 }
 
-int mutex_unlock(mutex_t* mutex)
+error_t mutex_unlock(mutex_t* mutex)
 {
-	return !cute_unlock(mutex);
+	return error_make(cute_unlock(mutex), NULL);
 }
 
-int mutex_trylock(mutex_t* mutex)
+bool mutex_trylock(mutex_t* mutex)
 {
-	return !cute_trylock(mutex);
+	return !!cute_trylock(mutex);
 }
 
 cv_t* cv_create()
@@ -68,19 +68,19 @@ void cv_destroy(cv_t* cv)
 	cute_cv_destroy(cv);
 }
 
-int cv_wake_all(cv_t* cv)
+error_t cv_wake_all(cv_t* cv)
 {
-	return !cute_cv_wake_all(cv);
+	return error_make(cute_cv_wake_all(cv), NULL);
 }
 
-int cv_wake_one(cv_t* cv)
+error_t cv_wake_one(cv_t* cv)
 {
-	return !cute_cv_wake_one(cv);
+	return error_make(cute_cv_wake_one(cv), NULL);
 }
 
-int cv_wait(cv_t* cv, mutex_t* mutex)
+error_t cv_wait(cv_t* cv, mutex_t* mutex)
 {
-	return !cute_cv_wait(cv, mutex);
+	return error_make(cute_cv_wait(cv, mutex), NULL);
 }
 
 sem_t* sem_create(unsigned initial_count)
@@ -93,24 +93,24 @@ void sem_destroy(sem_t* semaphore)
 	cute_sem_destroy(semaphore);
 }
 
-int sem_post(sem_t* semaphore)
+error_t sem_post(sem_t* semaphore)
 {
-	return !cute_sem_post(semaphore);
+	return error_make(cute_sem_post(semaphore), NULL);
 }
 
-int sem_try(sem_t* semaphore)
+error_t sem_try(sem_t* semaphore)
 {
-	return !cute_sem_try(semaphore);
+	return error_make(cute_sem_try(semaphore), NULL);
 }
 
-int sem_wait(sem_t* semaphore)
+error_t sem_wait(sem_t* semaphore)
 {
-	return !cute_sem_wait(semaphore);
+	return error_make(cute_sem_wait(semaphore), NULL);
 }
 
-int sem_value(sem_t* semaphore)
+error_t sem_value(sem_t* semaphore)
 {
-	return !cute_sem_value(semaphore);
+	return error_make(cute_sem_value(semaphore), NULL);
 }
 
 thread_t* thread_create(thread_func_t func, const char* name, void* udata)
@@ -133,9 +133,9 @@ thread_id_t thread_id()
 	return cute_thread_id();
 }
 
-int thread_wait(thread_t* thread)
+error_t thread_wait(thread_t* thread)
 {
-	return cute_thread_wait(thread);
+	return error_make(cute_thread_wait(thread), NULL);
 }
 
 int core_count()
@@ -163,9 +163,9 @@ int atomic_get(int* address)
 	return cute_atomic_get(address);
 }
 
-int atomic_cas(int* address, int compare, int value)
+error_t atomic_cas(int* address, int compare, int value)
 {
-	return cute_atomic_cas(address, compare, value);
+	return error_make(cute_atomic_cas(address, compare, value), NULL);
 }
 
 void* atomic_ptr_set(void** address, void* value)
@@ -178,9 +178,9 @@ void* atomic_ptr_get(void** address)
 	return cute_atomic_ptr_get(address);
 }
 
-int atomic_ptr_cas(void** address, void* compare, void* value)
+error_t atomic_ptr_cas(void** address, void* compare, void* value)
 {
-	return cute_atomic_ptr_cas(address, compare, value);
+	return error_make(cute_atomic_ptr_cas(address, compare, value), NULL);
 }
 
 rw_lock_t* rw_lock_create(void* user_allocator_context)

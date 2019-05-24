@@ -41,7 +41,7 @@ struct error_t
 	int code;
 	const char* details;
 
-	CUTE_INLINE int is_error() const { return code == CUTE_ERROR_FAILURE; }
+	CUTE_INLINE bool is_error() const { return code == CUTE_ERROR_FAILURE; }
 };
 
 CUTE_INLINE error_t error_make(int code, const char* details) { error_t error; error.code = code; error.details = details; return error; }

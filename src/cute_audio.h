@@ -24,6 +24,7 @@
 
 #include <cute_defines.h>
 #include <cute_concurrency.h>
+#include <cute_error.h>
 
 namespace cute
 {
@@ -38,15 +39,15 @@ extern CUTE_API void CUTE_CALL audio_stream_ogg(app_t* app, const char* path, pr
 extern CUTE_API void CUTE_CALL audio_stream_wav(app_t* app, const char* path, promise_t promise, void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL audio_stream_ogg_from_memory(app_t* app, void* memory, int byte_count, promise_t promise, void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL audio_stream_wav_from_memory(app_t* app, void* memory, int byte_count, promise_t promise, void* user_allocator_context = NULL);
-extern CUTE_API int CUTE_CALL audio_destroy(audio_t* audio);
+extern CUTE_API error_t CUTE_CALL audio_destroy(audio_t* audio);
 extern CUTE_API int CUTE_CALL audio_ref_count(audio_t* audio_source);
 
-extern CUTE_API int CUTE_CALL music_play(app_t* app, audio_t* audio_source, float fade_in_time = 0, float delay = 0);
+extern CUTE_API error_t CUTE_CALL music_play(app_t* app, audio_t* audio_source, float fade_in_time = 0, float delay = 0);
 extern CUTE_API void CUTE_CALL music_stop(app_t* app, float fade_out_time = 0);
 extern CUTE_API void CUTE_CALL music_pause(app_t* app);
 extern CUTE_API void CUTE_CALL music_resume(app_t* app);
-extern CUTE_API int CUTE_CALL music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time = 0, float fade_in_time = 0);
-extern CUTE_API int CUTE_CALL music_crossfade_to(app_t* app, audio_t* audio_source, float cross_fade_time = 0);
+extern CUTE_API error_t CUTE_CALL music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time = 0, float fade_in_time = 0);
+extern CUTE_API error_t CUTE_CALL music_crossfade_to(app_t* app, audio_t* audio_source, float cross_fade_time = 0);
 extern CUTE_API void CUTE_CALL music_set_loop(app_t* app, int loop);
 extern CUTE_API void CUTE_CALL music_set_volume(app_t* app, float volume);
 extern CUTE_API void CUTE_CALL music_set_pan(app_t* app, float pan);

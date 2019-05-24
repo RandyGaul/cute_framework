@@ -308,6 +308,11 @@ namespace internal
 	{
 		return PHYSFS_init(argv0) ? 0 : -1;
 	}
+
+	void file_system_destroy()
+	{
+		PHYSFS_deinit();
+	}
 }
 
 }

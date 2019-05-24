@@ -160,6 +160,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_transport.h
 		test/test_kv.h
 		test/test_base64.h
+		test/test_audio.h
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
@@ -168,8 +169,13 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 	# Copy over prebuilt binaries to output directory.
 	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs" $<TARGET_FILE_DIR:tests>)
 
+	# Copy over any test data in the test/test_data folder.
+	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:tests>)
+
 	# For convenience make tests the startup project in Visual Studio.
+	# Also set working directory to the target output folder.
 	if (MSVC)
 		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tests)
+		set_property(TARGET tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$(OutDir)")
 	endif()
 endif()

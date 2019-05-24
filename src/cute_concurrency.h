@@ -23,6 +23,7 @@
 #define CUTE_CONCURRENCY_H
 
 #include <cute_defines.h>
+#include <cute_error.h>
 
 #include <SDL2/SDL_thread.h>
 #define CUTE_SYNC_SDL
@@ -42,28 +43,28 @@ using threadpool_t  = cute_threadpool_t;
 
 extern CUTE_API mutex_t* CUTE_CALL mutex_create();
 extern CUTE_API void CUTE_CALL mutex_destroy(mutex_t* mutex);
-extern CUTE_API int CUTE_CALL mutex_lock(mutex_t* mutex);
-extern CUTE_API int CUTE_CALL mutex_unlock(mutex_t* mutex);
-extern CUTE_API int CUTE_CALL mutex_trylock(mutex_t* mutex);
+extern CUTE_API error_t CUTE_CALL mutex_lock(mutex_t* mutex);
+extern CUTE_API error_t CUTE_CALL mutex_unlock(mutex_t* mutex);
+extern CUTE_API bool CUTE_CALL mutex_trylock(mutex_t* mutex);
 
 extern CUTE_API cv_t* CUTE_CALL cv_create();
 extern CUTE_API void CUTE_CALL cv_destroy(cv_t* cv);
-extern CUTE_API int CUTE_CALL cv_wake_all(cv_t* cv);
-extern CUTE_API int CUTE_CALL cv_wake_one(cv_t* cv);
-extern CUTE_API int CUTE_CALL cv_wait(cv_t* cv, mutex_t* mutex);
+extern CUTE_API error_t CUTE_CALL cv_wake_all(cv_t* cv);
+extern CUTE_API error_t CUTE_CALL cv_wake_one(cv_t* cv);
+extern CUTE_API error_t CUTE_CALL cv_wait(cv_t* cv, mutex_t* mutex);
 
 extern CUTE_API sem_t* CUTE_CALL sem_create(unsigned initial_count);
 extern CUTE_API void CUTE_CALL sem_destroy(sem_t* semaphore);
-extern CUTE_API int CUTE_CALL sem_post(sem_t* semaphore);
-extern CUTE_API int CUTE_CALL sem_try(sem_t* semaphore);
-extern CUTE_API int CUTE_CALL sem_wait(sem_t* semaphore);
-extern CUTE_API int CUTE_CALL sem_value(sem_t* semaphore);
+extern CUTE_API error_t CUTE_CALL sem_post(sem_t* semaphore);
+extern CUTE_API error_t CUTE_CALL sem_try(sem_t* semaphore);
+extern CUTE_API error_t CUTE_CALL sem_wait(sem_t* semaphore);
+extern CUTE_API error_t CUTE_CALL sem_value(sem_t* semaphore);
 
 extern CUTE_API thread_t* CUTE_CALL thread_create(thread_func_t func, const char* name, void* udata);
 extern CUTE_API void CUTE_CALL thread_detach(thread_t* thread);
 extern CUTE_API thread_id_t CUTE_CALL thread_get_id(thread_t* thread);
 extern CUTE_API thread_id_t CUTE_CALL thread_id();
-extern CUTE_API int CUTE_CALL thread_wait(thread_t* thread);
+extern CUTE_API error_t CUTE_CALL thread_wait(thread_t* thread);
 
 extern CUTE_API int CUTE_CALL core_count();
 extern CUTE_API int CUTE_CALL cacheline_size();
@@ -71,10 +72,10 @@ extern CUTE_API int CUTE_CALL cacheline_size();
 extern CUTE_API int CUTE_CALL atomic_add(int* address, int addend);
 extern CUTE_API int CUTE_CALL atomic_set(int* address, int value);
 extern CUTE_API int CUTE_CALL atomic_get(int* address);
-extern CUTE_API int CUTE_CALL atomic_cas(int* address, int compare, int value);
+extern CUTE_API error_t CUTE_CALL atomic_cas(int* address, int compare, int value);
 extern CUTE_API void* CUTE_CALL atomic_ptr_set(void** address, void* value);
 extern CUTE_API void* CUTE_CALL atomic_ptr_get(void** address);
-extern CUTE_API int CUTE_CALL atomic_ptr_cas(void** address, void* compare, void* value);
+extern CUTE_API error_t CUTE_CALL atomic_ptr_cas(void** address, void* compare, void* value);
 
 extern CUTE_API rw_lock_t* CUTE_CALL rw_lock_create(void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL rw_lock_destroy(rw_lock_t* rw, void* user_allocator_context = NULL);
@@ -91,19 +92,13 @@ extern CUTE_API void CUTE_CALL threadpool_add_task(threadpool_t* pool, task_fn* 
 extern CUTE_API void CUTE_CALL threadpool_kick_and_wait(threadpool_t* pool);
 extern CUTE_API void CUTE_CALL threadpool_kick(threadpool_t* pool);
 
-enum promise_state_t : int
-{
-	PROMISE_STATE_OK    = 0,
-	PROMISE_STATE_ERROR = -1,
-};
-
-typedef void (CUTE_CALL promise_fn)(promise_state_t state, void* param, void* udata);
+typedef void (CUTE_CALL promise_fn)(error_t status, void* param, void* udata);
 
 struct promise_t
 {
 	CUTE_INLINE promise_t () { }
 	CUTE_INLINE promise_t (promise_fn* callback, void* udata) : callback(callback), udata(udata) { }
-	CUTE_INLINE void invoke(promise_state_t state, void* param) { callback(state, param, udata); }
+	CUTE_INLINE void invoke(error_t status, void* param) { callback(status, param, udata); }
 
 	promise_fn* callback = NULL;
 	void* udata = NULL;

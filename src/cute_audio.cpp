@@ -111,7 +111,8 @@ static void s_stream_ogg_task_fn(void* param)
 	} else {
 		audio = audio_load_ogg_from_memory(audio_param->memory, audio_param->byte_count, audio_param->mem_ctx);
 	}
-	audio_param->user_promise.invoke(audio ? PROMISE_STATE_OK : PROMISE_STATE_ERROR, audio);
+	audio_param->user_promise.invoke(audio ? error_success() : error_failure("Failed to load ogg file."), audio);
+	CUTE_FREE(audio_param, audio_param->mem_ctx);
 }
 
 static void s_stream_wav_task_fn(void* param)
@@ -123,7 +124,8 @@ static void s_stream_wav_task_fn(void* param)
 	} else {
 		audio = audio_load_wav_from_memory(audio_param->memory, audio_param->byte_count, audio_param->mem_ctx);
 	}
-	audio_param->user_promise.invoke(audio ? PROMISE_STATE_OK : PROMISE_STATE_ERROR, audio);
+	audio_param->user_promise.invoke(audio ? error_success() : error_failure("Failed to load wav file."), audio);
+	CUTE_FREE(audio_param, audio_param->mem_ctx);
 }
 
 void audio_stream_ogg(app_t* app, const char* path, promise_t promise, void* user_allocator_context)
@@ -176,15 +178,15 @@ void audio_stream_wav_from_memory(app_t* app, void* memory, int byte_count, prom
 	cute_threadpool_kick(app->threadpool);
 }
 
-int audio_destroy(audio_t* audio)
+error_t audio_destroy(audio_t* audio)
 {
 	if (audio_ref_count(audio) == 0) {
 		void* mem_ctx = audio->mem_ctx;
 		cs_free_sound(audio);
 		CUTE_FREE(audio, mem_ctx);
-		return 0;
+		return error_success();
 	} else {
-		return -1;
+		return error_failure("Reference count for audio was not zero.");
 	}
 }
 
@@ -195,9 +197,9 @@ int audio_ref_count(audio_t* audio_source)
 
 //TODO: Implement music stuff.
 
-int music_play(app_t* app, audio_t* audio_source, float fade_in_time, float delay)
+error_t music_play(app_t* app, audio_t* audio_source, float fade_in_time, float delay)
 {
-	return 0;
+	return error_success();
 }
 
 void music_stop(app_t* app, float fade_out_time)
@@ -212,14 +214,14 @@ void music_resume(app_t* app)
 {
 }
 
-int music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, float fade_in_time)
+error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, float fade_in_time)
 {
-	return 0;
+	return error_success();
 }
 
-int music_crossfade_to(app_t* app, audio_t* audio_source, float cross_fade_time)
+error_t music_crossfade_to(app_t* app, audio_t* audio_source, float cross_fade_time)
 {
-	return 0;
+	return error_success();
 }
 
 void music_set_loop(app_t* app, int loop)
