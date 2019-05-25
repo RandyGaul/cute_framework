@@ -22,6 +22,7 @@
 #ifndef CUTE_DEFINES_INTERNAL_H
 #define CUTE_DEFINES_INTERNAL_H
 
+// TODO: Remove these.
 #define CUTE_CHECK(x) do { if (x) goto cute_error; } while (0)
 #define CUTE_CHECK_ASSERT(x) do { if (!(x)) goto cute_error; } while (0)
 #define CUTE_CHECK_POINTER(x) do { if (!(x)) goto cute_error; } while (0)

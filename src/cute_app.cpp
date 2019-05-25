@@ -51,6 +51,7 @@
 namespace cute
 {
 
+// TODO: Refactor to error_t reporting.
 app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t options, const char* argv0, void* user_allocator_context)
 {
 	app_t* app = (app_t*)CUTE_ALLOC(sizeof(app_t), user_allocator_context);
@@ -101,9 +102,14 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	}
 
 	if (!(options & APP_OPTIONS_NO_AUDIO)) {
-		app->playing_sounds = buffer_t(internal::sound_instance_size());
-		app->cs = cs_make_context(NULL, 44100, 5, 1, 0);
-		if (app->cs) cs_spawn_mix_thread(app->cs);
+		int max_simultaneous_sounds = 5000; // TODO: Expose this.
+		app->cute_sound = cs_make_context(NULL, 44100, 5, 1, max_simultaneous_sounds);
+		if (app->cute_sound) {
+			cs_spawn_mix_thread(app->cute_sound);
+			app->audio_system = audio_system_make(app->mem_ctx);
+		} else {
+			// TODO: Return error message.
+		}
 	}
 
 	if (!(options & APP_OPTIONS_NO_NET)) {
@@ -127,10 +133,11 @@ cute_error:
 
 void app_destroy(app_t* app)
 {
-	if (app->cs) cs_shutdown_context(app->cs);
+	if (app->cute_sound) cs_shutdown_context(app->cute_sound);
 	SDL_DestroyWindow(app->window);
 	SDL_Quit();
 	cute_threadpool_destroy(app->threadpool);
+	audio_system_destroy(app->audio_system);
 	CUTE_FREE(app, app->mem_ctx);
 	internal::file_system_destroy();
 }

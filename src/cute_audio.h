@@ -40,7 +40,7 @@ extern CUTE_API void CUTE_CALL audio_stream_wav(app_t* app, const char* path, pr
 extern CUTE_API void CUTE_CALL audio_stream_ogg_from_memory(app_t* app, void* memory, int byte_count, promise_t promise, void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL audio_stream_wav_from_memory(app_t* app, void* memory, int byte_count, promise_t promise, void* user_allocator_context = NULL);
 extern CUTE_API error_t CUTE_CALL audio_destroy(audio_t* audio);
-extern CUTE_API int CUTE_CALL audio_ref_count(audio_t* audio_source);
+extern CUTE_API int CUTE_CALL audio_ref_count(audio_t* audio);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -56,7 +56,7 @@ extern CUTE_API error_t CUTE_CALL music_crossfade_to(app_t* app, audio_t* audio_
 
 // -------------------------------------------------------------------------------------------------
 
-struct sound_def_t
+struct sound_params_t
 {
 	int paused = 0;
 	int looped = 0;
@@ -66,7 +66,7 @@ struct sound_def_t
 	float delay = 0;
 };
 
-extern CUTE_API void CUTE_CALL sound_play(app_t* app, audio_t* audio_source, sound_def_t def);
+extern CUTE_API void CUTE_CALL sound_play(app_t* app, audio_t* audio_source, sound_params_t params = sound_params_t());
 
 // -------------------------------------------------------------------------------------------------
 

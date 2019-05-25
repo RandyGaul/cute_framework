@@ -21,6 +21,8 @@
 
 #include <cute_audio.h>
 #include <cute_alloc.h>
+#include <cute_array.h>
+#include <cute_log.h>
 
 #include <internal/cute_app_internal.h>
 
@@ -182,12 +184,25 @@ error_t audio_destroy(audio_t* audio)
 	}
 }
 
-int audio_ref_count(audio_t* audio_source)
+int audio_ref_count(audio_t* audio)
 {
-	return audio_source->playing_count;
+	return audio->playing_count;
 }
 
 // -------------------------------------------------------------------------------------------------
+
+using audio_instance_t = cs_playing_sound_t;
+
+struct audio_system_t
+{
+	float global_volume = 1.0f;
+	float music_volume = 1.0f;
+	float sound_volume = 1.0f;
+	audio_instance_t* music_playing = NULL;
+	audio_instance_t* music_next = NULL;
+	array<audio_instance_t*> playing_sounds;
+	void* mem_ctx = NULL;
+};
 
 error_t music_play(app_t* app, audio_t* audio_source, float fade_in_time, float delay)
 {
@@ -230,27 +245,126 @@ error_t music_crossfade_to(app_t* app, audio_t* audio_source, float cross_fade_t
 
 // -------------------------------------------------------------------------------------------------
 
-void sound_play(app_t* app, audio_t* audio_source, sound_def_t def)
+void sound_play(app_t* app, audio_t* audio_source, sound_params_t params)
 {
+	audio_system_t* audio_system = app->audio_system;
+	if (!audio_system) return;
+
+	cs_play_sound_def_t def;
+	def.paused = params.paused;
+	def.looped = params.looped;
+	def.volume_left = params.volume;
+	def.volume_right = params.volume;
+	def.pan = params.pan;
+	def.pitch = params.pitch;
+	def.delay = params.delay;
+	def.loaded = audio_source;
+	audio_instance_t* instance = cs_play_sound(app->cute_sound, def);
+
+	if (instance) {
+		audio_system->playing_sounds.add(instance);
+	} else {
+		log(CUTE_LOG_LEVEL_WARNING, "Unable to play sound. Audio instance buffer full.");
+	}
 }
 
 // -------------------------------------------------------------------------------------------------
 
 void audio_set_pan(app_t* app, float pan)
 {
+	audio_system_t* audio_system = app->audio_system;
+	if (!audio_system) return;
+
+	int count = audio_system->playing_sounds.count();
+	audio_instance_t** instances = audio_system->playing_sounds.data();
+
+	for (int i = 0; i < count; ++i)
+	{
+		audio_instance_t* instance = instances[i];
+		cs_set_pan(instance, pan);
+	}
+
+	if (audio_system->music_playing) cs_set_pan(audio_system->music_playing, pan);
+	if (audio_system->music_next) cs_set_pan(audio_system->music_next, pan);
 }
 
 void audio_set_global_volume(app_t* app, float volume)
 {
+	audio_system_t* audio_system = app->audio_system;
+	if (!audio_system) return;
+
+	audio_system->global_volume = volume;
+	float sound_volume = audio_system->sound_volume * volume;
+	float music_volume = audio_system->music_volume * volume;
+
+	int count = audio_system->playing_sounds.count();
+	audio_instance_t** instances = audio_system->playing_sounds.data();
+
+	for (int i = 0; i < count; ++i)
+	{
+		audio_instance_t* instance = instances[i];
+		cs_set_volume(instance, sound_volume, sound_volume);
+	}
+
+	if (audio_system->music_playing) cs_set_volume(audio_system->music_playing, music_volume, music_volume);
+	if (audio_system->music_next) cs_set_volume(audio_system->music_next, music_volume, music_volume);
 }
 
 void audio_set_sound_volume(app_t* app, float volume)
 {
+	audio_system_t* audio_system = app->audio_system;
+	if (!audio_system) return;
+
+	audio_system->sound_volume = volume;
+	float sound_volume = audio_system->global_volume * volume;
+
+	int count = audio_system->playing_sounds.count();
+	audio_instance_t** instances = audio_system->playing_sounds.data();
+
+	for (int i = 0; i < count; ++i)
+	{
+		audio_instance_t* instance = instances[i];
+		cs_set_volume(instance, sound_volume, sound_volume);
+	}
 }
 
-namespace internal
+// -------------------------------------------------------------------------------------------------
+
+audio_system_t* audio_system_make(void* mem_ctx)
 {
-	int sound_instance_size() { return sizeof(sound_t); }
+	audio_system_t* audio_system = (audio_system_t*)CUTE_ALLOC(sizeof(audio_system_t), mem_ctx);
+	CUTE_ASSERT(audio_system);
+	CUTE_PLACEMENT_NEW(audio_system) audio_system_t;
+	audio_system->mem_ctx = mem_ctx;
+	return audio_system;
+}
+
+void audio_system_destroy(audio_system_t* audio_system)
+{
+	CUTE_FREE(audio_system, audio_system->mem_ctx);
+}
+
+void audio_system_update(audio_system_t* audio_system)
+{
+	int count = audio_system->playing_sounds.count();
+	audio_instance_t** instances = audio_system->playing_sounds.data();
+
+	// Remove old instances that finished playing.
+	for (int i = 0; i < count;)
+	{
+		audio_instance_t* instance = instances[i];
+		if (!instance->active) {
+			audio_system->playing_sounds.unordered_remove(i);
+			--count;
+		} else {
+			++i;
+		}
+	}
+}
+
+int sound_instance_size()
+{
+	return sizeof(sound_t);
 }
 
 }

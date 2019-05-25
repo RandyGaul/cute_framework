@@ -31,6 +31,8 @@ struct cs_context_t;
 namespace cute
 {
 
+struct audio_system_t;
+
 struct mouse_state_t
 {
 	int left_button = 0;
@@ -48,16 +50,16 @@ struct app_t
 {
 	int running = 1;
 	SDL_Window* window = NULL;
-	buffer_t playing_sounds;
-	audio_t* playing_music = NULL;
-	audio_t* next_music = NULL;
-	cs_context_t* cs = NULL;
+	cs_context_t* cute_sound = NULL;
 	threadpool_t* threadpool = NULL;
+	audio_system_t* audio_system = NULL;
+
 	buffer_t input_text = buffer_t(sizeof(int));
 	int keys[512];
 	int keys_prev[512];
 	float keys_duration[512];
 	mouse_state_t mouse, mouse_prev;
+
 	void* mem_ctx = NULL;
 };
 

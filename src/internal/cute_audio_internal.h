@@ -25,10 +25,13 @@
 namespace cute
 {
 
-namespace internal
-{
-	int sound_instance_size();
-}
+struct audio_system_t;
+
+audio_system_t* audio_system_make(void* mem_ctx = NULL);
+void audio_system_destroy(audio_system_t* audio_system);
+void audio_system_update(audio_system_t* audio_system);
+
+int sound_instance_size();
 
 }
 
