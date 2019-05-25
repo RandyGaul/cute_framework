@@ -42,16 +42,19 @@ extern CUTE_API void CUTE_CALL audio_stream_wav_from_memory(app_t* app, void* me
 extern CUTE_API error_t CUTE_CALL audio_destroy(audio_t* audio);
 extern CUTE_API int CUTE_CALL audio_ref_count(audio_t* audio_source);
 
+// -------------------------------------------------------------------------------------------------
+
 extern CUTE_API error_t CUTE_CALL music_play(app_t* app, audio_t* audio_source, float fade_in_time = 0, float delay = 0);
 extern CUTE_API void CUTE_CALL music_stop(app_t* app, float fade_out_time = 0);
+extern CUTE_API void CUTE_CALL music_set_volume(app_t* app, float volume);
+extern CUTE_API void CUTE_CALL music_set_pitch(app_t* app, float pitch);
+extern CUTE_API void CUTE_CALL music_set_loop(app_t* app, int loop);
 extern CUTE_API void CUTE_CALL music_pause(app_t* app);
 extern CUTE_API void CUTE_CALL music_resume(app_t* app);
 extern CUTE_API error_t CUTE_CALL music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time = 0, float fade_in_time = 0);
 extern CUTE_API error_t CUTE_CALL music_crossfade_to(app_t* app, audio_t* audio_source, float cross_fade_time = 0);
-extern CUTE_API void CUTE_CALL music_set_loop(app_t* app, int loop);
-extern CUTE_API void CUTE_CALL music_set_volume(app_t* app, float volume);
-extern CUTE_API void CUTE_CALL music_set_pan(app_t* app, float pan);
-extern CUTE_API void CUTE_CALL music_pitch(app_t* app, float pitch);
+
+// -------------------------------------------------------------------------------------------------
 
 struct sound_def_t
 {
@@ -64,6 +67,12 @@ struct sound_def_t
 };
 
 extern CUTE_API void CUTE_CALL sound_play(app_t* app, audio_t* audio_source, sound_def_t def);
+
+// -------------------------------------------------------------------------------------------------
+
+extern CUTE_API void CUTE_CALL audio_set_pan(app_t* app, float pan);
+extern CUTE_API void CUTE_CALL audio_set_global_volume(app_t* app, float volume);
+extern CUTE_API void CUTE_CALL audio_set_sound_volume(app_t* app, float volume);
 
 }
 

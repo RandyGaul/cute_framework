@@ -35,18 +35,11 @@
 namespace cute
 {
 
-enum streaming_state_t : int
-{
-	STREAMING_STATE_LOADING,
-	STREAMING_STATE_LOADED,
-};
-
 struct audio_t : public cs_loaded_sound_t
 {
 	audio_t() { }
 	audio_t(const cs_loaded_sound_t& sound) { *((cs_loaded_sound_t*)this) = sound; }
 
-	streaming_state_t state = STREAMING_STATE_LOADING;
 	promise_t user_promise;
 	promise_t play_promise;
 	void* mem_ctx;
@@ -60,7 +53,6 @@ static CUTE_INLINE audio_t* s_audio_make(audio_t audio_struct, void* user_alloca
 		audio_t* audio = (audio_t*)CUTE_ALLOC(sizeof(audio_t), user_allocator_context);
 		CUTE_PLACEMENT_NEW(audio) audio_t;
 		*audio = audio_struct;
-		audio->state = STREAMING_STATE_LOADED;
 		return audio;
 	} else {
 		return NULL;
@@ -195,7 +187,7 @@ int audio_ref_count(audio_t* audio_source)
 	return audio_source->playing_count;
 }
 
-//TODO: Implement music stuff.
+// -------------------------------------------------------------------------------------------------
 
 error_t music_play(app_t* app, audio_t* audio_source, float fade_in_time, float delay)
 {
@@ -203,6 +195,18 @@ error_t music_play(app_t* app, audio_t* audio_source, float fade_in_time, float 
 }
 
 void music_stop(app_t* app, float fade_out_time)
+{
+}
+
+void music_set_volume(app_t* app, float volume)
+{
+}
+
+void music_set_pitch(app_t* app, float pitch)
+{
+}
+
+void music_set_loop(app_t* app, int loop)
 {
 }
 
@@ -224,23 +228,23 @@ error_t music_crossfade_to(app_t* app, audio_t* audio_source, float cross_fade_t
 	return error_success();
 }
 
-void music_set_loop(app_t* app, int loop)
-{
-}
-
-void music_set_volume(app_t* app, float volume)
-{
-}
-
-void music_set_pan(app_t* app, float pan)
-{
-}
-
-void music_pitch(app_t* app, float pitch)
-{
-}
+// -------------------------------------------------------------------------------------------------
 
 void sound_play(app_t* app, audio_t* audio_source, sound_def_t def)
+{
+}
+
+// -------------------------------------------------------------------------------------------------
+
+void audio_set_pan(app_t* app, float pan)
+{
+}
+
+void audio_set_global_volume(app_t* app, float volume)
+{
+}
+
+void audio_set_sound_volume(app_t* app, float volume)
 {
 }
 

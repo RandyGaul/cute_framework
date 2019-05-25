@@ -92,16 +92,16 @@ extern CUTE_API void CUTE_CALL threadpool_add_task(threadpool_t* pool, task_fn* 
 extern CUTE_API void CUTE_CALL threadpool_kick_and_wait(threadpool_t* pool);
 extern CUTE_API void CUTE_CALL threadpool_kick(threadpool_t* pool);
 
-typedef void (CUTE_CALL promise_fn)(error_t status, void* param, void* udata);
+typedef void (CUTE_CALL promise_fn)(error_t status, void* param, void* promise_udata);
 
 struct promise_t
 {
 	CUTE_INLINE promise_t () { }
-	CUTE_INLINE promise_t (promise_fn* callback, void* udata) : callback(callback), udata(udata) { }
-	CUTE_INLINE void invoke(error_t status, void* param) { callback(status, param, udata); }
+	CUTE_INLINE promise_t (promise_fn* callback, void* promise_udata) : callback(callback), promise_udata(promise_udata) { }
+	CUTE_INLINE void invoke(error_t status, void* param) { callback(status, param, promise_udata); }
 
 	promise_fn* callback = NULL;
-	void* udata = NULL;
+	void* promise_udata = NULL;
 };
 
 }
