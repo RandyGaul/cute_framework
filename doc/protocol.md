@@ -23,7 +23,7 @@ The steps for a client to connect to a dedicated game server are:
 
 1. Client wants to authenticate with the web service and issues a REST call to obtain a connect token.
 2. Web service generates and returns a connect token to the client. The `client to server key` and the `server to client key` must be uniquely generated for each connect token.
-3. 3.	Client sends the token to a dedicated server instance to securely setup a connection and play.
+3. Client sends the token to a dedicated server instance to securely setup a connection and play.
 4. The dedicated server processes the connect token, and if valid, starts the connection handshake with the client.
 5. If the handshake succeeds, the player is connected and begins to play over a secure UDP channel.
 
