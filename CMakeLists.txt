@@ -118,6 +118,9 @@ set(CUTE_HDRS
 	src/cute_array.h
 	src/cute_hashtable.h
 	src/cute_dictionary.h
+	src/cute_entity.h
+	src/cute_component.h
+	src/cute_system.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h

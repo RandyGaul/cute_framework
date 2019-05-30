@@ -344,7 +344,7 @@ void audio_system_destroy(audio_system_t* audio_system)
 	CUTE_FREE(audio_system, audio_system->mem_ctx);
 }
 
-void audio_system_update(audio_system_t* audio_system)
+void audio_system_update(audio_system_t* audio_system, float dt)
 {
 	int count = audio_system->playing_sounds.count();
 	audio_instance_t** instances = audio_system->playing_sounds.data();
@@ -360,6 +360,8 @@ void audio_system_update(audio_system_t* audio_system)
 			++i;
 		}
 	}
+
+	// Update fades and crossfades.
 }
 
 int sound_instance_size()

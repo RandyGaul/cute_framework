@@ -19,20 +19,23 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_AUDIO_INTERNAL_H
-#define CUTE_AUDIO_INTERNAL_H
+#ifndef CUTE_COMPONENT_H
+#define CUTE_COMPONENT_H
+
+#include <cute_entity.h>
 
 namespace cute
 {
 
-struct audio_system_t;
+using component_id_t = handle_t;
 
-audio_system_t* audio_system_make(void* mem_ctx = NULL);
-void audio_system_destroy(audio_system_t* audio_system);
-void audio_system_update(audio_system_t* audio_system, float dt);
-
-int sound_instance_size();
+struct component_t
+{
+	component_id_t id;
+	entity_id_t entity_id;
+	entity_type_t entity_type;
+};
 
 }
 
-#endif // CUTE_AUDIO_INTERNAL_H
+#endif // CUTE_COMPONENT_H

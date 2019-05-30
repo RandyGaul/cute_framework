@@ -1,0 +1,104 @@
+System
+	Implements gameplay features (code)
+	Contains singleton data
+	Has associated component for looping
+
+Component
+	Contains only local data
+		Has entity embedded (entity defined below)
+	Functions operate only on local data
+	Statically defined dependencies on other components, run-time asserted
+	Has serialized format
+
+Entity
+	type id
+		has associated blueprint schema for serialization
+		schema can be visualized
+		can inherit from another schema by referenced id and extend it
+	unique run-time id
+	embedded in components
+	global table to determine alive status (entity System)
+
+---
+
+Open questions.
+1. Is messaging necessary?
+2. Do example implementation scenarios have glaring friction points?
+3. Are there determinism problems?
+4. Is there too many steps to make a new component or entity type (iteration friction)?
+5. How would events (network events for gameplay) fit in?
+
+---
+
+Work through example problem.
+Octorok example.
+
+Systems
+	System_Player
+		Component_Player
+		handle inputs
+		look for things to interact with
+	System_Octorok
+		Component_Octorok
+		control animations
+		pathfinding
+		fire projectiles
+	System_Collider
+		Component_Collider
+		array of touch_entity events
+		touch_entity event - Component_Collider id pair
+	System_Sprite
+		Component_Sprite
+		update animation
+		push sprite to batcher
+
+Components
+	Component_Transform
+		rotation
+		translation
+	Component_Player
+		unique id
+	Component_Octorok
+		array of live projectiles
+	Component_Collider
+		shape id
+		local shape struct
+		bool tile_collision
+		my touch_category
+		their touch_category
+		array of touch_entity events
+	Component_Sprite
+		animation
+		or single image frame
+
+Run-time Entities
+	Player - entity id player
+		Component_Transform
+		Component_Player
+		Component_Sprite
+		Component_Collider
+	Octorok - entity id octorok
+		Component_Transform
+		Component_Octorok
+		Component_Sprite
+		Component_Collider
+
+---
+
+Conclusions.
+1. My intuition says hard no. File inclusions are reduced by nature of composition, rendering messaging not useful.
+2. Not shown from examples.
+3. No. Rewind simply relies on queuing up invertible actions.
+4. No problem here.
+5. System_Event can encapsulate all details here.
+
+---
+
+Implementation details.
+
+Any systems inheritance?
+Yes, to type the array and deal with lookups.
+Component inheritance?
+Yes, for entity id and type.
+Each system has an associated header, and maintains an array of it's matching component type.
+Systems can retrieve components from other systems by entity id lookup.

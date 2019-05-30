@@ -139,7 +139,7 @@ void handle_table_free(handle_table_t* table, handle_t handle)
 	table->size--;
 }
 
-int handle_is_valid(handle_table_t* table, handle_t handle)
+int handle_table_is_valid(handle_table_t* table, handle_t handle)
 {
 	handle_entry_t* handles = s_handles(table);
 	uint32_t table_index = s_table_index(handle);
