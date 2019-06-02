@@ -45,6 +45,7 @@
 #include <test_base64.h>
 #include <test_kv.h>
 #include <test_audio.h>
+#include <test_ecs.h>
 
 int main(int argc, const char** argv)
 {
@@ -123,6 +124,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_kv_std_vector),
 		CUTE_TEST_CASE_ENTRY(test_audio_load_synchronous),
 		CUTE_TEST_CASE_ENTRY(test_audio_load_asynchronous),
+		CUTE_TEST_CASE_ENTRY(test_ecs_octorok),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

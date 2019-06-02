@@ -38,7 +38,7 @@ struct system_t
 	component_id_t add_component(const T& component);
 	error_t get_component(component_id_t id, T* component);
 	void remove_component(component_id_t id);
-	void unordered_remove_component(int index);
+	void remove_component(int index);
 
 	T* get_components();
 	int get_components_count();
@@ -90,22 +90,35 @@ template <typename T>
 void system_t<T>::remove_component(component_id_t id)
 {
 	if (handle_table_is_valid(&m_component_table, id)) {
-		int index = (int)handle_table_get_index(&m_component_table, id);
-		m_components.unordered_remove(index);
 		handle_table_free(&m_component_table, id);
-
-		int moved_index = index;
-		if (moved_index != m_components.count()) {
-			component_id_t moved_handle = m_components[moved_index].id;
-			handle_table_update_index(&m_component_table, moved_handle, moved_index);
-		}
+		int index = (int)handle_table_get_index(&m_component_table, id);
+		remove_component(index);
 	}
 }
 
-// WORKING HERE
-// Realized I need to lookup components by entity id.
-// Perhaps the entity can store an array of component id's, index'd by component type.
-// Which means the entity system would need to be run-time initialized and have code to store an array of variable length entities.
+template <typename T>
+void system_t<T>::remove_component(int index)
+{
+	m_components.unordered_remove(index);
+
+	int moved_index = index;
+	if (moved_index != m_components.count()) {
+		component_id_t moved_handle = m_components[moved_index].id;
+		handle_table_update_index(&m_component_table, moved_handle, moved_index);
+	}
+}
+
+template <typename T>
+T* system_t<T>::get_components()
+{
+	return m_components.data();
+}
+
+template <typename T>
+int system_t<T>::get_components_count()
+{
+	return m_components.get();
+}
 
 }
 

@@ -88,10 +88,10 @@ struct array
 	const T* data() const;
 
 private:
-	int capacity_ = 0;
-	int count_ = 0;
-	T* items_ = NULL;
-	void* mem_ctx_ = NULL;
+	int m_capacity = 0;
+	int m_count = 0;
+	T* m_items = NULL;
+	void* m_mem_ctx = NULL;
 };
 
 // -------------------------------------------------------------------------------------------------
@@ -103,35 +103,35 @@ array<T>::array()
 
 template <typename T>
 array<T>::array(void* user_allocator_context)
-	: mem_ctx_(user_allocator_context)
+	: m_mem_ctx(user_allocator_context)
 {
 }
 
 template <typename T>
 array<T>::array(int capacity, void* user_allocator_context)
-	: capacity_(capacity)
-	, mem_ctx_(user_allocator_context)
+	: m_capacity(capacity)
+	, m_mem_ctx(user_allocator_context)
 {
-	items_ = (T*)CUTE_ALLOC(sizeof(T), mem_ctx_);
-	CUTE_ASSERT(items_);
+	m_items = (T*)CUTE_ALLOC(sizeof(T), m_mem_ctx);
+	CUTE_ASSERT(m_items);
 }
 
 template <typename T>
 array<T>::~array()
 {
-	for (int i = 0; i < count_; ++i)
+	for (int i = 0; i < m_count; ++i)
 	{
-		T* slot = items_ + i;
+		T* slot = m_items + i;
 		slot->~T();
 	}
-	CUTE_FREE(items_, mem_ctx_);
+	CUTE_FREE(m_items, m_mem_ctx);
 }
 
 template <typename T>
 T& array<T>::add()
 {
-	ensure_capacity(count_ + 1);
-	T* slot = items_ + count_++;
+	ensure_capacity(m_count + 1);
+	T* slot = m_items + m_count++;
 	CUTE_PLACEMENT_NEW(slot) T;
 	return *slot;
 }
@@ -139,8 +139,8 @@ T& array<T>::add()
 template <typename T>
 T& array<T>::add(const T& item)
 {
-	ensure_capacity(count_ + 1);
-	T* slot = items_ + count_++;
+	ensure_capacity(m_count + 1);
+	T* slot = m_items + m_count++;
 	CUTE_PLACEMENT_NEW(slot) T(item);
 	return *slot;
 }
@@ -148,19 +148,19 @@ T& array<T>::add(const T& item)
 template <typename T>
 T& array<T>::insert(int index)
 {
-	CUTE_ASSERT(index >= 0 && index < capacity_);
+	CUTE_ASSERT(index >= 0 && index < m_capacity);
 	add();
-	for (int i = count_ - 1; i > index; --i) items_[i] = items_[i - 1];
-	return items_[index];
+	for (int i = m_count - 1; i > index; --i) m_items[i] = m_items[i - 1];
+	return m_items[index];
 }
 
 template <typename T>
 T& array<T>::insert(int index, const T& item)
 {
-	CUTE_ASSERT(index >= 0 && index < capacity_);
+	CUTE_ASSERT(index >= 0 && index < m_capacity);
 	add();
-	CUTE_MEMMOVE(items_ + index + 1, items_ + index, sizeof(T) * count_);
-	T* slot = items_ + index;
+	CUTE_MEMMOVE(m_items + index + 1, m_items + index, sizeof(T) * m_count);
+	T* slot = m_items + index;
 	CUTE_PLACEMENT_NEW(slot) T(item);
 	return *slot;
 }
@@ -168,52 +168,52 @@ T& array<T>::insert(int index, const T& item)
 template <typename T>
 void array<T>::set(int index, const T& item)
 {
-	CUTE_ASSERT(index >= 0 && index < capacity_);
-	T* slot = items_ + index;
+	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	T* slot = m_items + index;
 	*slot = item;
 }
 
 template <typename T>
 void array<T>::remove(int index)
 {
-	CUTE_ASSERT(index >= 0 && index < capacity_);
-	T* slot = items_ + index;
+	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	T* slot = m_items + index;
 	slot->~T();
-	CUTE_MEMMOVE(items + index, items + index + 1, sizeof(T) * count_);
-	--count_;
+	CUTE_MEMMOVE(items + index, items + index + 1, sizeof(T) * m_count);
+	--m_count;
 }
 
 template <typename T>
 T& array<T>::pop()
 {
-	return items_[--count_];
+	return m_items[--m_count];
 }
 
 template <typename T>
 void array<T>::unordered_remove(int index)
 {
-	CUTE_ASSERT(index >= 0 && index < capacity_);
-	T* slot = items_ + index;
+	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	T* slot = m_items + index;
 	slot->~T();
-	items_[index] = items_[--count_];
+	m_items[index] = m_items[--m_count];
 }
 
 template <typename T>
 void array<T>::clear()
 {
-	for (int i = 0; i < count_; ++i)
+	for (int i = 0; i < m_count; ++i)
 	{
-		T* slot = items_ + i;
+		T* slot = m_items + i;
 		slot->~T();
 	}
-	count_ = 0;
+	m_count = 0;
 }
 
 template <typename T>
 void array<T>::ensure_capacity(int num_elements)
 {
-	if (num_elements > capacity_) {
-		int new_capacity = capacity_ ? capacity_ * 2 : 256;
+	if (num_elements > m_capacity) {
+		int new_capacity = m_capacity ? m_capacity * 2 : 256;
 		while (new_capacity < num_elements)
 		{
 			new_capacity <<= 1;
@@ -221,12 +221,12 @@ void array<T>::ensure_capacity(int num_elements)
 		}
 
 		size_t new_size = sizeof(T) * new_capacity;
-		T* new_items = (T*)CUTE_ALLOC(new_size, mem_ctx_);
+		T* new_items = (T*)CUTE_ALLOC(new_size, m_mem_ctx);
 		CUTE_ASSERT(new_items);
-		CUTE_MEMCPY(new_items, items_, sizeof(T) * count_);
-		CUTE_FREE(items_, mem_ctx_);
-		items_ = new_items;
-		capacity_ = new_capacity;
+		CUTE_MEMCPY(new_items, m_items, sizeof(T) * m_count);
+		CUTE_FREE(m_items, m_mem_ctx);
+		m_items = new_items;
+		m_capacity = new_capacity;
 	}
 }
 
@@ -234,75 +234,75 @@ template <typename T>
 void array<T>::steal_from(array<T>& steal_from_me)
 {
 	this->~array<T>();
-	capacity_ = steal_from_me.capacity_;
-	count_ = steal_from_me.count_;
-	items_ = steal_from_me.items_;
-	mem_ctx_ = steal_from_me.mem_ctx_;
+	m_capacity = steal_from_me.m_capacity;
+	m_count = steal_from_me.m_count;
+	m_items = steal_from_me.m_items;
+	m_mem_ctx = steal_from_me.m_mem_ctx;
 	steal_from_me->array<T>();
 }
 
 template <typename T>
 int array<T>::capacity() const
 {
-	return capacity_;
+	return m_capacity;
 }
 
 template <typename T>
 int array<T>::count() const
 {
-	return count_;
+	return m_count;
 }
 
 template <typename T>
 T& array<T>::operator[](int index)
 {
-	CUTE_ASSERT(index >= 0 && index < capacity_);
-	return items_[index];
+	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	return m_items[index];
 }
 
 template <typename T>
 const T& array<T>::operator[](int index) const
 {
-	CUTE_ASSERT(index >= 0 && index < capacity_);
-	return items_[index];
+	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	return m_items[index];
 }
 
 template <typename T>
 T* array<T>::data()
 {
-	return items_;
+	return m_items;
 }
 
 template <typename T>
 const T* array<T>::data() const
 {
-	return items_;
+	return m_items;
 }
 
 template <typename T>
 T* array<T>::operator+(int index)
 {
-	CUTE_ASSERT(index >= 0 && index < capacity_);
-	return items_ + index;
+	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	return m_items + index;
 }
 
 template <typename T>
 const T* array<T>::operator+(int index) const
 {
-	CUTE_ASSERT(index >= 0 && index < capacity_);
-	return items_ + index;
+	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	return m_items + index;
 }
 
 template <typename T>
 T& array<T>::last()
 {
-	return (*this)[count_ - 1];
+	return (*this)[m_count - 1];
 }
 
 template <typename T>
 const T& array<T>::last() const
 {
-	return (*this)[count_ - 1];
+	return (*this)[m_count - 1];
 }
 
 }

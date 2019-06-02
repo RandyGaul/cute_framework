@@ -24,15 +24,22 @@
 
 #include <cute_handle_table.h>
 
+#define CUTE_ENTITY_MAX_COMPONENTS (16)
+
 namespace cute
 {
 
 using entity_id_t = handle_t;
 using entity_type_t = uint32_t;
+using component_id_t = handle_t;
+using component_type_t = uint32_t;
 
 struct entity_t
 {
 	entity_type_t type;
+	int component_count;
+	component_id_t component_id[CUTE_ENTITY_MAX_COMPONENTS];
+	component_type_t component_type[CUTE_ENTITY_MAX_COMPONENTS];
 };
 
 }

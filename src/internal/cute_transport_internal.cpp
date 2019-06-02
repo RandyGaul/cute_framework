@@ -1078,14 +1078,14 @@ void transport_process_acks(transport_t* transport)
 		fragment_entry_t* fragment_entry = (fragment_entry_t*)sequence_buffer_find(&transport->sent_fragments, sequence);
 		if (fragment_entry) {
 			handle_t h = fragment_entry->fragment_handle;
-			if (handle_is_valid(&transport->fragment_handle_table, h)) {
+			if (handle_table_is_valid(&transport->fragment_handle_table, h)) {
 				uint32_t index = handle_table_get_index(&transport->fragment_handle_table, h);
 				CUTE_ASSERT((int)index < transport->fragment_count);
 				handle_table_free(&transport->fragment_handle_table, h);
 				fragment_t* fragment = transport->fragments + index;
 				CUTE_FREE(fragment->data, transport->mem_ctx);
 				handle_t last_handle = transport->fragments[transport->fragment_count - 1].handle;
-				if (handle_is_valid(&transport->fragment_handle_table, last_handle)) {
+				if (handle_table_is_valid(&transport->fragment_handle_table, last_handle)) {
 					handle_table_update_index(&transport->fragment_handle_table, last_handle, index);
 				}
 				CUTE_BUFFER_SWAP_WITH_LAST(transport, index, fragment_count, fragments);

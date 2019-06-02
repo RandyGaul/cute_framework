@@ -102,3 +102,109 @@ Component inheritance?
 Yes, for entity id and type.
 Each system has an associated header, and maintains an array of it's matching component type.
 Systems can retrieve components from other systems by entity id lookup.
+
+---
+
+Need a little more infrastructure on Systems otherwise the entire thing isn't useful.
+Systems should be stored by string.
+System is a pure virtual class.
+
+Great!
+
+Now I need a way to specify entity schemas and associate them with a type.
+I also need a way to register component serializers based on string id.
+
+Component initializer.
+Simply writes out default values. User handles typecasting.
+
+Component serializers.
+A single function to serialize a component. The user can handle typecasting and logic.
+They will get passed the kv context and component type.
+A serializer is a function pointer and string pair. The string is the component name.
+This trivially supports data inheritance - missing keys are safely ignored.
+This means a single component serializer can support instance loading and data inheritance.
+
+Data inheritance will be used on the entity level.
+An entity can be constructed within the cute framework, along with the associated components.
+Components are initialized with the user-supplied initializer functions.
+
+Entities are registered with a schema, name, and type id.
+The schema specifies components by type, and optionally overrides default values.
+
+Example entity, Octorok schema.
+
+{
+	entity_name = "octorok",
+	entity_id = 103,
+	component_transform = {
+	}
+	component_octorok = {
+	}
+	component_sprite = {
+		image = "/data/images/octorok.png",
+	}
+	component_collider = {
+		type = "circle"
+		radius = 3
+		my_touch_categories = 102301,
+		their_touch_catogries = 821904,
+	},
+},
+
+Now I need to design entity instance format. It can look exactly like the schema.
+However, there is an error if a component is listed here that is not in the schema.
+
+So what might it look like to write a component serializer?
+Don't want to serialize members that are already defaulted. So the user can write a custom read/write functions that differ.
+
+---
+
+Once serialized the entity and components need to be run-time initialized. For example, mapping serialized id's to run-time id's for various entities.
+app should be able to load entities from a kv file.
+Once finished the associated systems should be notified of which components are new (the ones at the end of their arrays).
+That way they can patch any entity id's with the serialized id map.
+
+Actually a built-in component for tracking entity ids that is serializeable is a great idea. RIGHT?
+
+Perhaps this is a little too hard to design right now.
+
+I'll deal with it later.
+
+---
+
+Run the Octorok example.
+Define the schema. Done.
+Register it to the app. Done.
+Load entities from a file.
+
+{
+	entity_type = "octorok",
+	component_transform = {
+		pos = {
+			x = 10,
+			y = 15,
+		},
+	}
+},
+{
+	entity_type = "octorok",
+	component_transform = {
+		pos = {
+			x = 15,
+			y = 15,
+		},
+	}
+},
+
+Done I guess.
+
+What does load entities do?
+Loops over objects and looks for entity_name.
+Then looks for each component type for instance data.
+And that's it really.
+
+---
+
+What about saving entities?
+Ew.
+Well, instances of schemas, and then write "changed" or "instanced" values. So, in other words, it's up to the user.

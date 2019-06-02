@@ -28,6 +28,7 @@
 #include <cute_file_system.h>
 #include <cute_file_system_utils.h>
 #include <cute_net.h>
+#include <cute_c_runtime.h>
 
 #include <internal/cute_defines_internal.h>
 #include <internal/cute_app_internal.h>
@@ -142,20 +143,19 @@ void app_destroy(app_t* app)
 	internal::file_system_destroy();
 }
 
-int is_running(app_t* app)
+int app_is_running(app_t* app)
 {
 	return app->running;
 }
 
-void stop_running(app_t* app)
+void app_stop_running(app_t* app)
 {
 	app->running = 0;
 }
 
 void app_update(app_t* app, float dt)
 {
-	// TODO: Implement me.
-	// Should poll input, render, do net stuff, deal with events.
+	CUTE_ASSERT(0);
 }
 
 }

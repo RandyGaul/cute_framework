@@ -19,21 +19,51 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_COMPONENT_H
-#define CUTE_COMPONENT_H
-
-#include <cute_entity.h>
+#include <internal/cute_ecs_internal.h>
 
 namespace cute
 {
 
-struct component_t
+ecs_allocator_t* ecs_allocator_make(int object_size, int max_objects, int reserve_count, void* user_allocator_context)
 {
-	component_id_t id;
-	entity_id_t entity_id;
-	entity_type_t entity_type;
-};
-
+	return NULL;
 }
 
-#endif // CUTE_COMPONENT_H
+void ecs_allocator_destroy(ecs_allocator_t* ecs_alloc)
+{
+}
+
+handle_t ecs_allocator_allocate(ecs_allocator_t* ecs_alloc, const void* object)
+{
+	return CUTE_INVALID_HANDLE;
+}
+
+error_t ecs_allocator_get_object(ecs_allocator_t* ecs_alloc, handle_t id, void* object)
+{
+	return error_failure(NULL);
+}
+
+void ecs_allocator_remove_object(ecs_allocator_t* ecs_alloc, handle_t id)
+{
+}
+
+void ecs_allocator_remove_object(ecs_allocator_t* ecs_alloc, int index)
+{
+}
+
+bool ecs_allocator_has_object(ecs_allocator_t* ecs_alloc, handle_t id)
+{
+	return false;
+}
+
+void* ecs_allocator_get_objects(ecs_allocator_t* ecs_alloc)
+{
+	return NULL;
+}
+
+int ecs_allocator_get_object_count(ecs_allocator_t* ecs_alloc)
+{
+	return 0;
+}
+
+}

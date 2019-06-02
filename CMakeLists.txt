@@ -81,8 +81,12 @@ set(CUTE_SRCS
 	src/cute_base64.cpp
 	src/cute_log.cpp
 	src/cute_hashtable.cpp
+	src/cute_ecs.cpp
+	src/cute_string.cpp
+	src/cute_string_utils.cpp
 
 	src/internal/cute_transport_internal.cpp
+	src/internal/cute_ecs_internal.cpp
 
 	libraries/glad/glad.c
 )
@@ -118,9 +122,9 @@ set(CUTE_HDRS
 	src/cute_array.h
 	src/cute_hashtable.h
 	src/cute_dictionary.h
-	src/cute_entity.h
-	src/cute_component.h
-	src/cute_system.h
+	src/cute_ecs.h
+	src/cute_string.h
+	src/cute_string_utils.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
@@ -132,6 +136,7 @@ set(CUTE_HDRS
 	src/internal/cute_serialize_internal.h
 	src/internal/cute_protocol_internal.h
 	src/internal/cute_transport_internal.h
+	src/internal/cute_ecs_internal.h
 
 	libraries/glad/glad.h
 )
@@ -164,6 +169,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_kv.h
 		test/test_base64.h
 		test/test_audio.h
+		test/test_ecs.h
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})

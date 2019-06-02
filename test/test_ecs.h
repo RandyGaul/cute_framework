@@ -19,21 +19,12 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_COMPONENT_H
-#define CUTE_COMPONENT_H
+#include <cute_ecs.h>
 
-#include <cute_entity.h>
+using namespace cute;
 
-namespace cute
+CUTE_TEST_CASE(test_ecs_octorok, "Run ECS with a mock Octorok entity.");
+int test_ecs_octorok()
 {
-
-struct component_t
-{
-	component_id_t id;
-	entity_id_t entity_id;
-	entity_type_t entity_type;
-};
-
+	return -1;
 }
-
-#endif // CUTE_COMPONENT_H

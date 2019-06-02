@@ -19,21 +19,39 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_COMPONENT_H
-#define CUTE_COMPONENT_H
+#ifndef CUTE_STRING_H
+#define CUTE_STRING_H
 
-#include <cute_entity.h>
+#include <cute_defines.h>
 
 namespace cute
 {
 
-struct component_t
+struct string_t
 {
-	component_id_t id;
-	entity_id_t entity_id;
-	entity_type_t entity_type;
+	explicit string_t();
+	explicit string_t(char* str);
+	explicit string_t(const char* str);
+	explicit string_t(const char* begin, const char* end);
+	explicit string_t(void* null_pointer);
+	string_t(const string_t& other);
+	~string_t();
+
+	int len() const;
+	const char* c_str() const;
+
+	string_t& operator=(const string_t& rhs);
+	int operator==(const string_t& rhs) const;
+	int operator!=(const string_t& rhs) const;
+
+	uint64_t id;
 };
+
+void string_set_allocator_context(void* user_allocator_context);
+void* string_get_allocator_context();
+void string_defrag();
+void string_nuke();
 
 }
 
-#endif // CUTE_COMPONENT_H
+#endif // STRING_H

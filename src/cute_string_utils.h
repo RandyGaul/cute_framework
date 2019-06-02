@@ -19,21 +19,29 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_COMPONENT_H
-#define CUTE_COMPONENT_H
+#ifndef CUTE_STRING_UTIL_H
+#define CUTE_STRING_UTIL_H
 
-#include <cute_entity.h>
+#include <cute_string.h>
+
+#include <varargs.h>
 
 namespace cute
 {
 
-struct component_t
-{
-	component_id_t id;
-	entity_id_t entity_id;
-	entity_type_t entity_type;
-};
+string_t operator+(const string_t& a, const string_t& b);
+
+int to_int(const string_t& x);
+float to_float(const string_t& x);
+
+string_t format(string_t fmt, ...);
+
+string_t to_string(int x);
+string_t to_string(uint64_t x);
+string_t to_string(float x);
+
+void string_utils_cleanup_static_memory();
 
 }
 
-#endif // CUTE_COMPONENT_H
+#endif // CUTE_STRING_UTIL_H
