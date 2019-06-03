@@ -167,8 +167,7 @@ struct test_system_octorok_t : public system_t
 CUTE_TEST_CASE(test_ecs_octorok, "Run ECS with a mock Octorok entity.");
 int test_ecs_octorok()
 {
-	uint32_t headless = APP_OPTIONS_NO_GFX | APP_OPTIONS_NO_AUDIO | APP_OPTIONS_NO_NET | APP_OPTIONS_HIDDEN;
-	app_t* app = app_make(NULL, 0, 0, 0, 0, headless);
+	app_t* app = app_make(NULL, 0, 0, 0, 0, APP_OPTIONS_HEADLESS);
 
 	const char* octorok_schema = CUTE_STRINGIZE({
 		entity_type = "octorok",

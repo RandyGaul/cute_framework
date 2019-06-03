@@ -71,7 +71,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	if (options & APP_OPTIONS_GFX_GLES) flags |= SDL_WINDOW_OPENGL;
 	if (options & APP_OPTIONS_FULLSCREEN) flags |= SDL_WINDOW_FULLSCREEN;
 	if (options & APP_OPTIONS_RESIZABLE) flags |= SDL_WINDOW_RESIZABLE;
-	if (options & APP_OPTIONS_HIDDEN) flags |= SDL_WINDOW_HIDDEN;
+	if (options & APP_OPTIONS_HIDDEN) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
 
 	SDL_Window* window;
 	if (options & APP_OPTIONS_WINDOW_POS_CENTERED) {
