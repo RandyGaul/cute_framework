@@ -408,42 +408,36 @@ struct strpool_t
 #ifdef STRPOOL_IMPLEMENTATION
 #undef STRPOOL_IMPLEMENTATION
 
-#define _CRT_NONSTDC_NO_DEPRECATE
-#define _CRT_SECURE_NO_WARNINGS
+#ifndef _CRT_NONSTDC_NO_DEPRECATE
+    #define _CRT_NONSTDC_NO_DEPRECATE
+#endif
+#ifndef _CRT_SECURE_NO_WARNINGS
+    #define _CRT_SECURE_NO_WARNINGS
+#endif
 #include <stddef.h>
 
 #ifndef STRPOOL_ASSERT
-    #define _CRT_NONSTDC_NO_DEPRECATE
-    #define _CRT_SECURE_NO_WARNINGS
     #include <assert.h>
     #define STRPOOL_ASSERT( x ) assert( x )
 #endif
 
 #ifndef STRPOOL_MEMSET
-    #define _CRT_NONSTDC_NO_DEPRECATE
-    #define _CRT_SECURE_NO_WARNINGS
     #include <string.h>
     #define STRPOOL_MEMSET( ptr, val, cnt ) ( memset( ptr, val, cnt ) )
 #endif
 
 #ifndef STRPOOL_MEMCPY
-    #define _CRT_NONSTDC_NO_DEPRECATE
-    #define _CRT_SECURE_NO_WARNINGS
     #include <string.h>
     #define STRPOOL_MEMCPY( dst, src, cnt ) ( memcpy( dst, src, cnt ) )
 #endif
 
 #ifndef STRPOOL_MEMCMP
-    #define _CRT_NONSTDC_NO_DEPRECATE
-    #define _CRT_SECURE_NO_WARNINGS
     #include <string.h>
     #define STRPOOL_MEMCMP( pr1, pr2, cnt ) ( memcmp( pr1, pr2, cnt ) )
 #endif
 
 #ifndef STRPOOL_STRNICMP
     #ifdef _WIN32
-        #define _CRT_NONSTDC_NO_DEPRECATE
-        #define _CRT_SECURE_NO_WARNINGS
         #include <string.h>
         #define STRPOOL_STRNICMP( s1, s2, len ) ( strnicmp( s1, s2, len ) )
     #else
@@ -453,8 +447,6 @@ struct strpool_t
 #endif
 
 #ifndef STRPOOL_MALLOC
-    #define _CRT_NONSTDC_NO_DEPRECATE
-    #define _CRT_SECURE_NO_WARNINGS
     #include <stdlib.h>
     #define STRPOOL_MALLOC( ctx, size ) ( malloc( size ) )
     #define STRPOOL_FREE( ctx, ptr ) ( free( ptr ) )

@@ -410,7 +410,7 @@ static error_t s_parse_object(kv_t* kv, int* index)
 	return error_success();
 }
 
-error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
+error_t kv_reset_io(kv_t* kv, const void* data, int size, int mode)
 {
 	kv->start = (uint8_t*)data;
 	kv->in = (uint8_t*)data;
@@ -442,9 +442,24 @@ error_t kv_reset(kv_t* kv, const void* data, int size, int mode)
 			kv->err = error_failure("Unable to parse entire input `data`.");
 			return kv->err;
 		}
+
+		kv->start = NULL;
+		kv->in = NULL;
+		kv->in_end = NULL;
 	}
 
 	return error_success();
+}
+
+void kv_reset_read(kv_t* kv)
+{
+	CUTE_ASSERT(kv->mode == CUTE_KV_MODE_READ);
+	kv->read_mode_matched_val = NULL;
+	kv->read_mode_object_index = 0;
+	kv->read_mode_top_level_index = 0;
+	kv->read_mode_from_array = 0;
+	kv->read_mode_array_stack.clear();
+	kv->read_mode_array_index_stack.clear();
 }
 
 int kv_size_written(kv_t* kv)

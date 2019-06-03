@@ -45,10 +45,18 @@ using component_type_t = uint32_t;
 
 struct entity_t
 {
-	entity_type_t type;
-	int component_count;
+	entity_type_t type = CUTE_INVALID_ENTITY_TYPE;
+	int component_count = 0;
 	component_id_t component_id[CUTE_ENTITY_MAX_COMPONENTS];
 	component_type_t component_type[CUTE_ENTITY_MAX_COMPONENTS];
+
+	CUTE_INLINE void add(component_id_t id, component_type_t type)
+	{
+		CUTE_ASSERT(component_count < CUTE_ENTITY_MAX_COMPONENTS);
+		component_id[component_count] = id;
+		component_type[component_count] = type;
+		++component_count;
+	}
 };
 
 struct component_t
@@ -96,9 +104,9 @@ private:
 
 //--------------------------------------------------------------------------------------------------
 
-extern CUTE_API void CUTE_CALL app_add_system(app_t* app, system_t* system, const char* system_name, const char* component_name);
+extern CUTE_API void CUTE_CALL app_add_system(app_t* app, system_t* system);
 extern CUTE_API system_t* CUTE_CALL app_get_system(app_t* app, const char* system_name);
-extern CUTE_API void CUTE_CALL app_set_dont_update_systems_for_me_flag(app_t* app);
+extern CUTE_API void CUTE_CALL app_set_update_systems_for_me_flag(app_t* app, bool true_to_update_false_to_do_nothing);
 
 //--------------------------------------------------------------------------------------------------
 
@@ -107,6 +115,8 @@ struct kv_t;
 typedef void (component_initialize_fn)(component_t* component);
 typedef error_t (component_serialize_fn)(kv_t* kv, component_t* component);
 
+#define CUTE_COMPONENT_MAX_DEPENDENCIES (16)
+
 struct component_config_t
 {
 	const char* component_name = NULL;
@@ -114,11 +124,11 @@ struct component_config_t
 	component_initialize_fn* component_initializer = NULL;
 	component_serialize_fn* component_serializer = NULL;
 	int component_dependency_count = 0;
-	component_type_t component_dependencies[16] = { CUTE_INVALID_COMPONENT_TYPE };
+	component_type_t component_dependencies[CUTE_COMPONENT_MAX_DEPENDENCIES] = { CUTE_INVALID_COMPONENT_TYPE };
 
-	void add_dependency(component_type_t component_type)
+	CUTE_INLINE void add_dependency(component_type_t component_type)
 	{
-		CUTE_ASSERT(component_dependency_count < 16);
+		CUTE_ASSERT(component_dependency_count < CUTE_COMPONENT_MAX_DEPENDENCIES);
 		component_dependencies[component_dependency_count++] = component_type;
 	}
 };
@@ -127,7 +137,7 @@ extern CUTE_API void CUTE_CALL app_register_component(app_t* app, const componen
 
 //--------------------------------------------------------------------------------------------------
 
-extern CUTE_API error_t CUTE_CALL app_register_entity_schema(app_t* app, const char* entity_name, entity_id_t entity_id, const void* schema, int schema_size);
+extern CUTE_API error_t CUTE_CALL app_register_entity_schema(app_t* app, const char* entity_name, entity_type_t entity_type, const void* schema, int schema_size);
 extern CUTE_API error_t CUTE_CALL app_load_entities(app_t* app, const void* memory, int size);
 
 }

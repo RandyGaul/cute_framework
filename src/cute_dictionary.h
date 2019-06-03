@@ -24,11 +24,12 @@
 
 #include <cute_defines.h>
 #include <cute_hashtable.h>
+#include <cute_c_runtime.h>
 
 namespace cute
 {
 
-template <typename T, typename K>
+template <typename K, typename T>
 struct dictionary
 {
 	dictionary();
@@ -61,19 +62,19 @@ private:
 template <typename K, typename T>
 dictionary<K, T>::dictionary()
 {
-	hashtable_init(&table, sizeof(T), sizeof(K), 256, NULL);
+	hashtable_init(&table, sizeof(K), sizeof(T), 256, NULL);
 }
 
 template <typename K, typename T>
 dictionary<K, T>::dictionary(void* user_allocator_context)
 {
-	hashtable_init(&table, sizeof(T), sizeof(K), 256, user_allocator_context);
+	hashtable_init(&table, sizeof(K), sizeof(T), 256, user_allocator_context);
 }
 
 template <typename K, typename T>
 dictionary<K, T>::dictionary(int capacity, void* user_allocator_context)
 {
-	hashtable_init(&table, sizeof(T), sizeof(K), capacity, user_allocator_context);
+	hashtable_init(&table, sizeof(K), sizeof(T), capacity, user_allocator_context);
 }
 
 template <typename K, typename T>
@@ -144,6 +145,150 @@ const K* dictionary<K, T>::keys() const
 
 template <typename K, typename T>
 void dictionary<K, T>::swap(int index_a, int index_b)
+{
+	hashtable_swap(&table, index_a, index_b);
+}
+
+// -------------------------------------------------------------------------------------------------
+// const char* specialization
+// Forces all strings to be less than 64 characters, and asserts otherwise.
+// The limitation is for simplicity of implementation.
+
+#define DICTIONARY_STRING_BLOCK_MAX 64
+
+struct dictionary_string_block_t
+{
+	size_t len = 0;
+	uint8_t data[DICTIONARY_STRING_BLOCK_MAX] = { 0 };
+};
+
+CUTE_INLINE dictionary_string_block_t s_dictionary_make_block(const char* key)
+{
+	dictionary_string_block_t block;
+	block.len = CUTE_STRLEN(key);
+	CUTE_ASSERT(block.len < DICTIONARY_STRING_BLOCK_MAX - 1);
+	CUTE_STRCPY((char*)block.data, key);
+	return block;
+}
+
+template <typename T>
+struct dictionary<const char*, T>
+{
+	dictionary();
+	dictionary(void* user_allocator_context);
+	dictionary(int capacity, void* user_allocator_context);
+	~dictionary();
+
+	T* find(const char* key);
+	const T* find(const char* key) const;
+
+	T* insert(const char* key, const T& val);
+	void remove(const char* key);
+
+	void clear();
+
+	int count() const;
+	T* items();
+	const T* items() const;
+	dictionary_string_block_t* keys();
+	const dictionary_string_block_t* keys() const;
+
+	void swap(int index_a, int index_b);
+
+private:
+	hashtable_t table;
+};
+
+template <typename T>
+dictionary<const char*, T>::dictionary()
+{
+	hashtable_init(&table, sizeof(dictionary_string_block_t), sizeof(T), 256, NULL);
+}
+
+template <typename T>
+dictionary<const char*, T>::dictionary(void* user_allocator_context)
+{
+	hashtable_init(&table, sizeof(dictionary_string_block_t), sizeof(T), 256, user_allocator_context);
+}
+
+template <typename T>
+dictionary<const char*, T>::dictionary(int capacity, void* user_allocator_context)
+{
+	hashtable_init(&table, sizeof(dictionary_string_block_t), sizeof(T), capacity, user_allocator_context);
+}
+
+template <typename T>
+dictionary<const char*, T>::~dictionary()
+{
+	hashtable_cleanup(&table);
+}
+
+template <typename T>
+T* dictionary<const char*, T>::find(const char* key)
+{
+	dictionary_string_block_t block = s_dictionary_make_block(key);
+	return (T*)hashtable_find(&table, &block);
+}
+
+template <typename T>
+const T* dictionary<const char*, T>::find(const char* key) const
+{
+	dictionary_string_block_t block = s_dictionary_make_block(key);
+	return (T*)hashtable_find(&table, &block);
+}
+
+template <typename T>
+T* dictionary<const char*, T>::insert(const char* key, const T& val)
+{
+	dictionary_string_block_t block = s_dictionary_make_block(key);
+	return (T*)hashtable_insert(&table, &block, &val);
+}
+
+template <typename T>
+void dictionary<const char*, T>::remove(const char* key)
+{
+	dictionary_string_block_t block = s_dictionary_make_block(key);
+	hashtable_remove(&table, &block);
+}
+
+template <typename T>
+void dictionary<const char*, T>::clear()
+{
+	hashtable_clear(&table);
+}
+
+template <typename T>
+int dictionary<const char*, T>::count() const
+{
+	return hashtable_count(&table);
+}
+
+template <typename T>
+T* dictionary<const char*, T>::items()
+{
+	return (T*)hashtable_items(&table);
+}
+
+template <typename T>
+const T* dictionary<const char*, T>::items() const
+{
+	return (const T*)hashtable_items(&table);
+}
+
+template <typename T>
+dictionary_string_block_t* dictionary<const char*, T>::keys()
+{
+	return (dictionary_string_block_t*)hashtable_keys(&table);
+}
+
+template <typename T>
+const dictionary_string_block_t* dictionary<const char*, T>::keys() const
+{
+	return (const dictionary_string_block_t*)hashtable_keys(&table);
+}
+
+template <typename T>
+void dictionary<const char*, T>::swap(int index_a, int index_b)
 {
 	hashtable_swap(&table, index_a, index_b);
 }

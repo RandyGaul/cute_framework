@@ -110,7 +110,7 @@ int test_kv_basic()
 	kv_t* kv = kv_make();
 
 	char buffer[1024];
-	kv_reset(kv, buffer, sizeof(buffer), CUTE_KV_MODE_WRITE);
+	kv_reset_io(kv, buffer, sizeof(buffer), CUTE_KV_MODE_WRITE);
 
 	thing_t thing;
 	thing.a = 5;
@@ -166,7 +166,7 @@ int test_kv_basic()
 	int size = kv_size_written(kv);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(buffer, expected, size));
 
-	error_t err = kv_reset(kv, buffer, size, CUTE_KV_MODE_READ);
+	error_t err = kv_reset_io(kv, buffer, size, CUTE_KV_MODE_READ);
 	CUTE_TEST_ASSERT(!err.is_error());
 
 	CUTE_MEMSET(&thing, 0, sizeof(thing_t));
@@ -191,7 +191,7 @@ int test_kv_std_string_to_disk()
 	CUTE_TEST_CHECK_POINTER(kv);
 
 	char buffer[1024];
-	kv_reset(kv, buffer, sizeof(buffer), CUTE_KV_MODE_WRITE);
+	kv_reset_io(kv, buffer, sizeof(buffer), CUTE_KV_MODE_WRITE);
 
 	kv_object_begin(kv);
 	kv_key(kv, "book_title");
@@ -200,7 +200,7 @@ int test_kv_std_string_to_disk()
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
 	int size = kv_size_written(kv);
-	CUTE_TEST_ASSERT(!kv_reset(kv, buffer, size, CUTE_KV_MODE_READ).is_error());
+	CUTE_TEST_ASSERT(!kv_reset_io(kv, buffer, size, CUTE_KV_MODE_READ).is_error());
 
 	kv_object_begin(kv);
 	kv_key(kv, "book_title");
@@ -229,7 +229,7 @@ int test_kv_std_string_from_disk()
 	CUTE_TEST_CHECK_POINTER(kv);
 
 	char buffer[1024];
-	kv_reset(kv, buffer, sizeof(buffer), CUTE_KV_MODE_WRITE);
+	kv_reset_io(kv, buffer, sizeof(buffer), CUTE_KV_MODE_WRITE);
 
 	kv_object_begin(kv);
 	kv_key(kv, "book_title");
@@ -238,7 +238,7 @@ int test_kv_std_string_from_disk()
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
 	int size = kv_size_written(kv);
-	CUTE_TEST_ASSERT(!kv_reset(kv, buffer, size, CUTE_KV_MODE_READ).is_error());
+	CUTE_TEST_ASSERT(!kv_reset_io(kv, buffer, size, CUTE_KV_MODE_READ).is_error());
 
 	kv_object_begin(kv);
 	kv_key(kv, "book_title");
@@ -261,7 +261,7 @@ int test_kv_std_vector()
 	CUTE_TEST_CHECK_POINTER(kv);
 
 	char buffer[1024];
-	kv_reset(kv, buffer, sizeof(buffer), CUTE_KV_MODE_WRITE);
+	kv_reset_io(kv, buffer, sizeof(buffer), CUTE_KV_MODE_WRITE);
 
 	std::vector<int> v;
 	v.push_back(10);
@@ -280,7 +280,7 @@ int test_kv_std_vector()
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
 	int size = kv_size_written(kv);
-	CUTE_TEST_ASSERT(!kv_reset(kv, buffer, size, CUTE_KV_MODE_READ).is_error());
+	CUTE_TEST_ASSERT(!kv_reset_io(kv, buffer, size, CUTE_KV_MODE_READ).is_error());
 
 	v.clear();
 	kv_object_begin(kv);

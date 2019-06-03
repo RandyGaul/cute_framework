@@ -80,7 +80,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		window = SDL_CreateWindow(window_title, x, y, w, h, flags);
 	}
 	CUTE_CHECK_POINTER(window);
-	CUTE_PLACEMENT_NEW(window) app_t;
+	CUTE_PLACEMENT_NEW(app) app_t;
 	app->window = window;
 	app->mem_ctx = user_allocator_context;
 

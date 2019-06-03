@@ -170,6 +170,8 @@ Perhaps this is a little too hard to design right now.
 
 I'll deal with it later.
 
+Probably best idea is simply to have a component specifically for holding other entity id's that knows how to serialize itself smartly.
+
 ---
 
 Run the Octorok example.

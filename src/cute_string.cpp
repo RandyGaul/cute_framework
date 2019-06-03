@@ -82,7 +82,7 @@ string_t::string_t()
 
 string_t::string_t(char* str)
 {
-	int len = strlen(str);
+	int len = (int)CUTE_STRLEN(str);
 	if (len) {
 		id = strpool_inject(s_pool(), str, len);
 		s_incref(id);
@@ -91,7 +91,7 @@ string_t::string_t(char* str)
 
 string_t::string_t(const char* str)
 {
-	int len = str ? strlen(str) : 0;
+	int len = str ? (int)CUTE_STRLEN(str) : 0;
 	if (len) {
 		id = strpool_inject(s_pool(), str, len);
 		s_incref(id);
@@ -100,7 +100,7 @@ string_t::string_t(const char* str)
 
 string_t::string_t(const char* begin, const char* end)
 {
-	int len = begin ? (end ? end - begin : strlen(begin)) : 0;
+	int len = begin ? (end ? (int)(end - begin) : (int)CUTE_STRLEN(begin)) : 0;
 	if (len) {
 		id = strpool_inject(s_pool(), begin, len);
 		s_incref(id);

@@ -77,7 +77,7 @@ float to_float(const string_t& x)
 string_t format(string_t fmt, ...)
 {
 	va_list args;
-	va_start(args, fmt);
+	va_start(args);
 	char* temp = s_temp(256);
 
 	#ifdef _WIN32

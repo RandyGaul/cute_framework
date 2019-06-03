@@ -24,6 +24,7 @@
 
 #include <cute_handle_table.h>
 #include <cute_error.h>
+#include <cute_ecs.h>
 
 namespace cute
 {
@@ -35,12 +36,22 @@ void ecs_allocator_destroy(ecs_allocator_t* ecs_alloc);
 
 handle_t ecs_allocator_allocate(ecs_allocator_t* ecs_alloc, const void* object);
 error_t ecs_allocator_get_object(ecs_allocator_t* ecs_alloc, handle_t id, void* object);
-void ecs_allocator_remove_object(ecs_allocator_t* ecs_alloc, handle_t id);
-void ecs_allocator_remove_object(ecs_allocator_t* ecs_alloc, int index);
+void* ecs_allocator_remove_object(ecs_allocator_t* ecs_alloc, handle_t id, int* moved_index);
+void* ecs_allocator_remove_object(ecs_allocator_t* ecs_alloc, int index);
 bool ecs_allocator_has_object(ecs_allocator_t* ecs_alloc, handle_t id);
+void ecs_allocator_update_handle(ecs_allocator_t* ecs_alloc, handle_t moved_handle, int moved_index);
 
 void* ecs_allocator_get_objects(ecs_allocator_t* ecs_alloc);
 int ecs_allocator_get_object_count(ecs_allocator_t* ecs_alloc);
+
+//--------------------------------------------------------------------------------------------------
+
+struct entity_schema_t
+{
+	const char* entity_name;
+	entity_t entity;
+	kv_t* parsed_kv_schema;
+};
 
 }
 

@@ -64,6 +64,9 @@
 
 #define CUTE_STATIC_ASSERT(condition, error_message_string) static_assert(condition, error_message_string)
 
+#define CUTE_STRINGIZE_INTERNAL(...) #__VA_ARGS__
+#define CUTE_STRINGIZE(...) CUTE_STRINGIZE_INTERNAL(__VA_ARGS__)
+
 namespace cute
 {
 

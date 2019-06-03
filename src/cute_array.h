@@ -19,11 +19,14 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifndef CUTE_ARRAY_H
+#define CUTE_ARRAY_H
+
 #include <cute_defines.h>
 #include <cute_c_runtime.h>
 #include <cute_alloc.h>
 
-/* 
+/*
 	Implements a basic growable array data structure for POD items. Items can
 	use constructors and destructors, but must have trivial "memcpy" assignment
 	operators (such as the default compiler-generated assignment operator).
@@ -148,7 +151,7 @@ T& array<T>::add(const T& item)
 template <typename T>
 T& array<T>::insert(int index)
 {
-	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	CUTE_ASSERT(index >= 0 && index < m_count);
 	add();
 	for (int i = m_count - 1; i > index; --i) m_items[i] = m_items[i - 1];
 	return m_items[index];
@@ -157,7 +160,7 @@ T& array<T>::insert(int index)
 template <typename T>
 T& array<T>::insert(int index, const T& item)
 {
-	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	CUTE_ASSERT(index >= 0 && index < m_count);
 	add();
 	CUTE_MEMMOVE(m_items + index + 1, m_items + index, sizeof(T) * m_count);
 	T* slot = m_items + index;
@@ -168,7 +171,7 @@ T& array<T>::insert(int index, const T& item)
 template <typename T>
 void array<T>::set(int index, const T& item)
 {
-	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	CUTE_ASSERT(index >= 0 && index < m_count);
 	T* slot = m_items + index;
 	*slot = item;
 }
@@ -176,7 +179,7 @@ void array<T>::set(int index, const T& item)
 template <typename T>
 void array<T>::remove(int index)
 {
-	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	CUTE_ASSERT(index >= 0 && index < m_count);
 	T* slot = m_items + index;
 	slot->~T();
 	CUTE_MEMMOVE(items + index, items + index + 1, sizeof(T) * m_count);
@@ -192,7 +195,7 @@ T& array<T>::pop()
 template <typename T>
 void array<T>::unordered_remove(int index)
 {
-	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	CUTE_ASSERT(index >= 0 && index < m_count);
 	T* slot = m_items + index;
 	slot->~T();
 	m_items[index] = m_items[--m_count];
@@ -256,14 +259,14 @@ int array<T>::count() const
 template <typename T>
 T& array<T>::operator[](int index)
 {
-	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	CUTE_ASSERT(index >= 0 && index < m_count);
 	return m_items[index];
 }
 
 template <typename T>
 const T& array<T>::operator[](int index) const
 {
-	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	CUTE_ASSERT(index >= 0 && index < m_count);
 	return m_items[index];
 }
 
@@ -282,14 +285,14 @@ const T* array<T>::data() const
 template <typename T>
 T* array<T>::operator+(int index)
 {
-	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	CUTE_ASSERT(index >= 0 && index < m_count);
 	return m_items + index;
 }
 
 template <typename T>
 const T* array<T>::operator+(int index) const
 {
-	CUTE_ASSERT(index >= 0 && index < m_capacity);
+	CUTE_ASSERT(index >= 0 && index < m_count);
 	return m_items + index;
 }
 
@@ -306,3 +309,5 @@ const T& array<T>::last() const
 }
 
 }
+
+#endif // CUTE_ARRAY_H
