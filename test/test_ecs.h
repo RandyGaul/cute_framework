@@ -42,7 +42,7 @@ struct test_component_collider_t : public component_t
 	float radius;
 };
 
-struct test_octorok_component_t : public component_t
+struct test_component_octorok_t : public component_t
 {
 	int ai_state;
 	uint32_t octorok_pellet_count;
@@ -53,7 +53,7 @@ enum test_component_types_t : uint32_t
 	test_component_transform_type,
 	test_component_sprite_type,
 	test_component_collider_type,
-	test_octorok_component_type,
+	test_component_octorok_type,
 };
 
 void test_component_transform_initialize(component_t* component)
@@ -73,15 +73,13 @@ error_t test_component_transform_serialize(kv_t* kv, component_t* component)
 
 // -------------------------------------------------------------------------------------------------
 
-struct test_system_transform_t : public system_t
+struct test_system_transform_t : public system_t<test_component_transform_t>
 {
 	test_system_transform_t()
-		: system_t(
+		: system_t<test_component_transform_t>(
 			CUTE_STRINGIZE(test_system_transform_t),
 			CUTE_STRINGIZE(test_component_transform_t),
 			test_component_transform_type,
-			sizeof(test_component_transform_t),
-			1024,
 			1024
 		)
 	{
@@ -100,8 +98,18 @@ struct test_system_transform_t : public system_t
 	}
 };
 
-struct test_system_sprite_t : public system_t
+struct test_system_sprite_t : public system_t<test_component_sprite_t>
 {
+	test_system_sprite_t()
+		: system_t<test_component_sprite_t>(
+			CUTE_STRINGIZE(test_system_sprite_t),
+			CUTE_STRINGIZE(test_component_sprite_t),
+			test_component_sprite_type,
+			1024
+		)
+	{
+	}
+
 	void push_sprite(uint64_t sprite_id)
 	{
 		// WORKING HERE
@@ -109,6 +117,9 @@ struct test_system_sprite_t : public system_t
 		// Lookup entity by id, then fetch components from systems.
 		// Needs to be streamlined.
 		// app_get_entity(app, entity_id)
+		// id = entity.get_component(type);
+		// system->get_component(id);
+		// Trying to get transform component in here easily.
 		CUTE_UNUSED(sprite_id);
 	}
 
@@ -124,8 +135,18 @@ struct test_system_sprite_t : public system_t
 	}
 };
 
-struct test_system_collider_t : public system_t
+struct test_system_collider_t : public system_t<test_component_collider_t>
 {
+	test_system_collider_t()
+		: system_t<test_component_collider_t>(
+			CUTE_STRINGIZE(test_system_collider_t),
+			CUTE_STRINGIZE(test_component_collider_t),
+			test_component_collider_type,
+			1024
+		)
+	{
+	}
+
 	void debug_draw(test_component_collider_t* collider)
 	{
 		CUTE_UNUSED(collider);
@@ -143,9 +164,19 @@ struct test_system_collider_t : public system_t
 	}
 };
 
-struct test_system_octorok_t : public system_t
+struct test_system_octorok_t : public system_t<test_component_octorok_t>
 {
-	void run_ai(test_octorok_component_t* octorok)
+	test_system_octorok_t()
+		: system_t<test_component_octorok_t>(
+			CUTE_STRINGIZE(test_system_octorok_t),
+			CUTE_STRINGIZE(test_component_octorok_t),
+			test_component_octorok_type,
+			1024
+		)
+	{
+	}
+
+	void run_ai(test_component_octorok_t* octorok)
 	{
 		CUTE_UNUSED(octorok);
 	}
@@ -153,10 +184,10 @@ struct test_system_octorok_t : public system_t
 	virtual void update(float dt) override
 	{
 		int component_count = get_components_count();
-		test_octorok_component_t* components = (test_octorok_component_t*)get_components();
+		test_component_octorok_t* components = (test_component_octorok_t*)get_components();
 		for (int i = 0; i < component_count; ++i)
 		{
-			test_octorok_component_t* octorok = components + i;
+			test_component_octorok_t* octorok = components + i;
 			run_ai(octorok);
 		}
 	}
@@ -173,7 +204,7 @@ int test_ecs_octorok()
 		entity_type = "octorok",
 		test_component_transform_t = {
 		}
-		test_octorok_component_t = {
+		test_component_octorok_t = {
 		}
 		test_component_sprite_t = {
 			image = "/data/images/octorok.png",

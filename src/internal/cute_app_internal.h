@@ -28,7 +28,7 @@
 #include <cute_ecs.h>
 #include <cute_dictionary.h>
 
-#include <internal/cute_ecs_internal.h>
+#include <internal/cute_object_table_internal.h>
 
 struct SDL_Window;
 struct cs_context_t;
@@ -66,9 +66,11 @@ struct app_t
 	mouse_state_t mouse, mouse_prev;
 
 	bool udpate_systems_flag = true;
-	array<system_t*> systems;
+	array<system_interface_t*> systems;
 	array<const char*> system_names;
 	array<const char*> system_component_names;
+
+	object_table_t<entity_t> entity_allocator;
 
 	dictionary<const char*, component_type_t> component_name_to_type_table;
 	dictionary<component_type_t, component_config_t> component_configs;

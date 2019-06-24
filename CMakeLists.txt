@@ -86,7 +86,6 @@ set(CUTE_SRCS
 	src/cute_string_utils.cpp
 
 	src/internal/cute_transport_internal.cpp
-	src/internal/cute_ecs_internal.cpp
 
 	libraries/glad/glad.c
 )
@@ -136,7 +135,7 @@ set(CUTE_HDRS
 	src/internal/cute_serialize_internal.h
 	src/internal/cute_protocol_internal.h
 	src/internal/cute_transport_internal.h
-	src/internal/cute_ecs_internal.h
+	src/internal/cute_object_table_internal.h
 
 	libraries/glad/glad.h
 )

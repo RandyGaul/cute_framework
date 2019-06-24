@@ -25,99 +25,41 @@
 #include <cute_log.h>
 
 #include <internal/cute_app_internal.h>
-#include <internal/cute_ecs_internal.h>
 
 namespace cute
 {
 
-system_t::system_t(const char* name, const char* component_name, component_type_t component_type, int component_size, int max_components, int reserve_count, void* user_allocator_context)
+system_interface_t::system_interface_t(const char* name, const char* component_name, component_type_t component_type)
 	: m_name(name)
 	, m_component_name(component_name)
 	, m_component_type(component_type)
-	, m_components(ecs_allocator_make(component_size, max_components, reserve_count, user_allocator_context))
 {
 }
 
-system_t::~system_t()
-{
-	ecs_allocator_destroy(m_components);
-}
-
-component_id_t system_t::add_component(const component_t* component)
-{
-	return ecs_allocator_allocate(m_components, component);
-}
-
-error_t system_t::get_component(component_id_t id, component_t* component)
-{
-	return ecs_allocator_get_object(m_components, id, component);
-}
-
-void system_t::remove_component(component_id_t id)
-{
-	int moved_index = ~0;
-	void* object = ecs_allocator_remove_object(m_components, id, &moved_index);
-	if (object) {
-		CUTE_ASSERT(moved_index != ~0);
-		component_t* component = (component_t*)object;
-		component_id_t moved_handle = component->id;
-		ecs_allocator_update_handle(m_components, moved_handle, moved_index);
-	}
-}
-
-void system_t::remove_component(int index)
-{
-	void* object = ecs_allocator_remove_object(m_components, index);
-	component_t* component = (component_t*)object;
-	component_id_t moved_handle = component->id;
-	ecs_allocator_update_handle(m_components, moved_handle, index);
-}
-
-bool system_t::has_component(component_id_t id) const
-{
-	return ecs_allocator_has_object(m_components, id);
-}
-
-void* system_t::get_components()
-{
-	return ecs_allocator_get_objects(m_components);
-}
-
-const void* system_t::get_components() const
-{
-	return ecs_allocator_get_objects(m_components);
-}
-
-int system_t::get_components_count()
-{
-	return ecs_allocator_get_object_count(m_components);
-}
-
-const char* system_t::get_name() const
+const char* system_interface_t::get_name() const
 {
 	return m_name;
 }
-
-const char* system_t::get_component_name() const
+const char* system_interface_t::get_component_name() const
 {
 	return m_component_name;
 }
 
-component_type_t system_t::get_component_type() const
+component_type_t system_interface_t::get_component_type() const
 {
 	return m_component_type;
 }
 
 //--------------------------------------------------------------------------------------------------
 
-void app_add_system(app_t* app, system_t* system)
+void app_add_system(app_t* app, system_interface_t* system)
 {
 	app->systems.add(system);
 	app->system_names.add(system->get_name());
 	app->system_component_names.add(system->get_component_name());
 }
 
-system_t* app_get_system(app_t* app, const char* name)
+system_interface_t* app_get_system(app_t* app, const char* name)
 {
 	for (int i = 0; i < app->system_names.count(); ++i)
 	{

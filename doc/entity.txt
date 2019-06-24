@@ -210,3 +210,16 @@ And that's it really.
 What about saving entities?
 Ew.
 Well, instances of schemas, and then write "changed" or "instanced" values. So, in other words, it's up to the user.
+
+---
+
+So now within a system I am looking at this sort of memory access pattern and use case.
+
+for each system
+	for each component
+		lookup entity
+		lookup other necessary components
+
+I think this is fine.
+Making the API as simple as possible is the top goal.
+Once different components are implemented entites can be created by mix and matching components.

@@ -26,12 +26,12 @@
 #include <cute_handle_table.h>
 #include <cute_array.h>
 
+#include <internal/cute_object_table_internal.h>
+
 #define CUTE_ENTITY_MAX_COMPONENTS (16)
 
 namespace cute
 {
-
-struct ecs_allocator_t;
 
 using entity_id_t = handle_t;
 using entity_type_t = uint32_t;
@@ -59,6 +59,13 @@ struct entity_t
 	}
 };
 
+struct entity_schema_t
+{
+	const char* entity_name;
+	entity_t entity;
+	struct kv_t* parsed_kv_schema;
+};
+
 struct component_t
 {
 	component_id_t id;
@@ -66,30 +73,14 @@ struct component_t
 	entity_type_t entity_type;
 };
 
-struct CUTE_API system_t
+//--------------------------------------------------------------------------------------------------
+
+struct CUTE_API system_interface_t
 {
-	CUTE_CALL system_t(
-		const char* name,
-		const char* component_name,
-		component_type_t component_type,
-		int component_size,
-		int max_components,
-		int reserve_count,
-		void* user_allocator_context = NULL
-	);
-	virtual CUTE_CALL ~system_t();
+	CUTE_CALL system_interface_t(const char* name, const char* component_name, component_type_t component_type);
+	virtual CUTE_CALL ~system_interface_t() { }
 
 	virtual void CUTE_CALL update(float dt) = 0;
-
-	component_id_t CUTE_CALL add_component(const component_t* component);
-	error_t CUTE_CALL get_component(component_id_t id, component_t* component);
-	void CUTE_CALL remove_component(component_id_t id);
-	void CUTE_CALL remove_component(int index);
-	bool CUTE_CALL has_component(component_id_t id) const;
-
-	void* CUTE_CALL get_components();
-	const void* CUTE_CALL get_components() const;
-	int CUTE_CALL get_components_count();
 
 	const char* CUTE_CALL get_name() const;
 	const char* CUTE_CALL get_component_name() const;
@@ -99,13 +90,113 @@ private:
 	const char* m_name;
 	const char* m_component_name;
 	component_type_t m_component_type;
-	ecs_allocator_t* m_components;
 };
 
 //--------------------------------------------------------------------------------------------------
 
-extern CUTE_API void CUTE_CALL app_add_system(app_t* app, system_t* system);
-extern CUTE_API system_t* CUTE_CALL app_get_system(app_t* app, const char* system_name);
+template <typename T>
+struct system_t : public system_interface_t
+{
+	system_t(
+		const char* name,
+		const char* component_name,
+		component_type_t component_type,
+		int reserve_count = 1024,
+		void* user_allocator_context = NULL
+	);
+	virtual ~system_t();
+
+	virtual void update(float dt) override { };
+
+	component_id_t add_component(const T* component);
+	T* get_component(component_id_t id);
+	void remove_component(component_id_t id);
+	void remove_component(int index);
+	bool has_component(component_id_t id) const;
+
+	void* get_components();
+	const void* get_components() const;
+	int get_components_count();
+
+private:
+	object_table_t<T> m_components;
+};
+
+//--------------------------------------------------------------------------------------------------
+
+template <typename T>
+system_t<T>::system_t(const char* name, const char* component_name, component_type_t component_type, int reserve_count, void* user_allocator_context)
+	: system_interface_t(name, component_name, component_type)
+	, m_components(reserve_count, user_allocator_context)
+{
+}
+
+template <typename T>
+system_t<T>::~system_t()
+{
+}
+
+template <typename T>
+component_id_t system_t<T>::add_component(const T* component)
+{
+	return m_components.allocate(component);
+}
+
+template <typename T>
+T* system_t<T>::get_component(component_id_t id)
+{
+	return m_components.get_object(id);
+}
+
+template <typename T>
+void system_t<T>::remove_component(component_id_t id)
+{
+	int moved_index = ~0;
+	T* component = m_components.remove_object(id, &moved_index);
+	if (component) {
+		CUTE_ASSERT(moved_index != ~0);
+		component_id_t moved_handle = component->id;
+		handle_table_update_index(m_components.m_table, moved_handle, moved_index);
+	}
+}
+
+template <typename T>
+void system_t<T>::remove_component(int index)
+{
+	void* object = m_objects.remove_object(index);
+	component_t* component = (component_t*)object;
+	component_id_t moved_handle = component->id;
+	handle_table_update_index(m_components.m_table, moved_handle, index);
+}
+
+template <typename T>
+bool system_t<T>::has_component(component_id_t id) const
+{
+	return m_components.has_object(id);
+}
+
+template <typename T>
+void* system_t<T>::get_components()
+{
+	return m_components.get_objects();
+}
+
+template <typename T>
+const void* system_t<T>::get_components() const
+{
+	return m_components.get_objects();
+}
+
+template <typename T>
+int system_t<T>::get_components_count()
+{
+	return m_components.get_object_count();
+}
+
+//--------------------------------------------------------------------------------------------------
+
+extern CUTE_API void CUTE_CALL app_add_system(app_t* app, system_interface_t* system);
+extern CUTE_API system_interface_t* CUTE_CALL app_get_system(app_t* app, const char* system_name);
 extern CUTE_API void CUTE_CALL app_set_update_systems_for_me_flag(app_t* app, bool true_to_update_false_to_do_nothing);
 
 //--------------------------------------------------------------------------------------------------

@@ -125,6 +125,8 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 
 	CUTE_CHECK(internal::file_system_init(argv0));
 
+	//app->entity_allocator = ecs_allocator_make(sizeof(entity_t), 
+
 	return app;
 
 cute_error:
