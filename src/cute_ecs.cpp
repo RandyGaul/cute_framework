@@ -38,7 +38,7 @@ void app_register_system(app_t* app, system_fn* system_update_function, componen
 	for (int i = 0; i < types_count; ++i) system.component_types.add(types[i]);
 }
 
-void add_register_entity_type(app_t* app, entity_type_t entity_type, component_type_t* types, int types_count)
+void app_register_entity_type(app_t* app, entity_type_t entity_type, component_type_t* types, int types_count)
 {
 	CUTE_ASSERT(types_count);
 	entity_collection_t* collection = app->entity_collections.insert(entity_type);
@@ -51,6 +51,7 @@ void add_register_entity_type(app_t* app, entity_type_t entity_type, component_t
 
 entity_t app_make_entity(app_t* app, entity_type_t type)
 {
+	// TODO: Implement me.
 	entity_t entity;
 	entity.type = CUTE_INVALID_ENTITY_TYPE;
 	entity.handle = CUTE_INVALID_HANDLE;
@@ -59,6 +60,12 @@ entity_t app_make_entity(app_t* app, entity_type_t type)
 
 void app_destroy_entity(app_t* app, entity_t entity)
 {
+	// TODO: Implement me.
+}
+
+bool app_is_entity_valid(app_t* app, entity_t entity)
+{
+	return false; // TODO: Implement me.
 }
 
 static void s_1(float dt, system_fn* fn_uncasted, typeless_array& c0)
@@ -188,6 +195,7 @@ error_t app_register_entity_schema(app_t* app, const char* entity_name, entity_t
 
 error_t app_load_entities(app_t* app, const void* memory, int size)
 {
+	// TODO: Implement me.
 	return error_failure(NULL);
 }
 

@@ -59,6 +59,7 @@ struct system_t
 
 struct entity_collection_t
 {
+	handle_table_t* entity_handles = NULL;
 	array<component_type_t> component_types;
 	array<typeless_array> component_tables;
 };

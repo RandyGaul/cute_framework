@@ -59,8 +59,9 @@ void app_register_system(app_t* app, T system_update_function, component_type_t*
 	app_register_system(app, (system_fn*)system_update_function, types, types_count);
 }
 
-extern CUTE_API void CUTE_CALL add_register_entity_type(app_t* app, entity_type_t entity_type, component_type_t* types, int types_count);
+extern CUTE_API void CUTE_CALL app_register_entity_type(app_t* app, entity_type_t entity_type, component_type_t* types, int types_count);
 extern CUTE_API entity_t CUTE_CALL app_make_entity(app_t* app, entity_type_t type);
+extern CUTE_API bool CUTE_CALL app_is_entity_valid(app_t* app, entity_t entity);
 extern CUTE_API void CUTE_CALL app_destroy_entity(app_t* app, entity_t entity);
 extern CUTE_API void CUTE_CALL app_update_systems(app_t* app);
 
@@ -89,10 +90,10 @@ struct component_config_t
 };
 
 extern CUTE_API void CUTE_CALL app_register_component_type(app_t* app, const component_config_t* component_config);
-extern CUTE_API void CUTE_CALL app_update_systems(app_t* app);
 
 //--------------------------------------------------------------------------------------------------
 
+// TODO: Refactor me into a config struct, and coalesce with `app_register_entity_type`.
 extern CUTE_API error_t CUTE_CALL app_register_entity_schema(app_t* app, const char* entity_name, entity_type_t entity_type, const void* schema, int schema_size);
 extern CUTE_API error_t CUTE_CALL app_load_entities(app_t* app, const void* memory, int size);
 
