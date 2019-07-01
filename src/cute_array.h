@@ -73,7 +73,7 @@ struct array
 	void unordered_remove(int index);
 	void clear();
 	void ensure_capacity(int num_elements);
-	void steal_from(array<T>& steal_from_me);
+	void steal_from(array<T>* steal_from_me);
 
 	int capacity() const;
 	int count() const;
@@ -153,7 +153,8 @@ T& array<T>::insert(int index)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	add();
-	for (int i = m_count - 1; i > index; --i) m_items[i] = m_items[i - 1];
+	int count_to_move = m_count - 1 - index;
+	CUTE_MEMMOVE(m_items + index + 1, m_items + index, sizeof(T) * count_to_move);
 	return m_items[index];
 }
 
@@ -162,7 +163,8 @@ T& array<T>::insert(int index, const T& item)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	add();
-	CUTE_MEMMOVE(m_items + index + 1, m_items + index, sizeof(T) * m_count);
+	int count_to_move = m_count - 1 - index;
+	CUTE_MEMMOVE(m_items + index + 1, m_items + index, sizeof(T) * count_to_move);
 	T* slot = m_items + index;
 	CUTE_PLACEMENT_NEW(slot) T(item);
 	return *slot;
@@ -182,13 +184,15 @@ void array<T>::remove(int index)
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	T* slot = m_items + index;
 	slot->~T();
-	CUTE_MEMMOVE(items + index, items + index + 1, sizeof(T) * m_count);
+	int count_to_move = m_count - 1 - index;
+	CUTE_MEMMOVE(items + index, items + index + 1, sizeof(T) * count_to_move);
 	--m_count;
 }
 
 template <typename T>
 T& array<T>::pop()
 {
+	CUTE_ASSERT(m_count > 0);
 	return m_items[--m_count];
 }
 
@@ -234,14 +238,14 @@ void array<T>::ensure_capacity(int num_elements)
 }
 
 template <typename T>
-void array<T>::steal_from(array<T>& steal_from_me)
+void array<T>::steal_from(array<T>* steal_from_me)
 {
 	this->~array<T>();
-	m_capacity = steal_from_me.m_capacity;
-	m_count = steal_from_me.m_count;
-	m_items = steal_from_me.m_items;
-	m_mem_ctx = steal_from_me.m_mem_ctx;
-	steal_from_me->array<T>();
+	m_capacity = steal_from_me->m_capacity;
+	m_count = steal_from_me->m_count;
+	m_items = steal_from_me->m_items;
+	m_mem_ctx = steal_from_me->m_mem_ctx;
+	CUTE_PLACEMENT_NEW(steal_from_me) array<T>();
 }
 
 template <typename T>

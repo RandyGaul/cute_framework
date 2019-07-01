@@ -29,55 +29,116 @@
 namespace cute
 {
 
-system_interface_t::system_interface_t(const char* name, const char* component_name, component_type_t component_type)
-	: m_name(name)
-	, m_component_name(component_name)
-	, m_component_type(component_type)
-{
-}
-
-const char* system_interface_t::get_name() const
-{
-	return m_name;
-}
-const char* system_interface_t::get_component_name() const
-{
-	return m_component_name;
-}
-
-component_type_t system_interface_t::get_component_type() const
-{
-	return m_component_type;
-}
-
 //--------------------------------------------------------------------------------------------------
 
-void app_add_system(app_t* app, system_interface_t* system)
+void app_register_system(app_t* app, system_fn* system_update_function, component_type_t* types, int types_count)
 {
-	app->systems.add(system);
-	app->system_names.add(system->get_name());
-	app->system_component_names.add(system->get_component_name());
+	system_t& system = app->systems.add();
+	system.update_func = system_update_function;
+	for (int i = 0; i < types_count; ++i) system.component_types.add(types[i]);
 }
 
-system_interface_t* app_get_system(app_t* app, const char* name)
+void add_register_entity_type(app_t* app, entity_type_t entity_type, component_type_t* types, int types_count)
 {
-	for (int i = 0; i < app->system_names.count(); ++i)
+	CUTE_ASSERT(types_count);
+	entity_collection_t* collection = app->entity_collections.insert(entity_type);
+	for (int i = 0; i < types_count; ++i)
 	{
-		if (!CUTE_STRCMP(name, app->system_names[i])) {
-			return app->systems[i];
+		collection->component_types.add(types[i]);
+		collection->component_tables.add();
+	}
+}
+
+entity_t app_make_entity(app_t* app, entity_type_t type)
+{
+	entity_t entity;
+	entity.type = CUTE_INVALID_ENTITY_TYPE;
+	entity.handle = CUTE_INVALID_HANDLE;
+	return entity;
+}
+
+void app_destroy_entity(app_t* app, entity_t entity)
+{
+}
+
+static void s_1(float dt, system_fn* fn_uncasted, typeless_array& c0)
+{
+	void (*fn)(float, void*) = (void (*)(float, void*))fn_uncasted;
+	int count = c0.count();
+
+	for (int i = 0; i < count; ++i)
+		fn(dt, c0[i]);
+}
+
+static void s_2(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1)
+{
+	CUTE_ASSERT(c0.count() == c1.count());
+	void (*fn)(float, void*, void*) = (void (*)(float, void*, void*))fn_uncasted;
+	int count = c0.count();
+
+	for (int i = 0; i < count; ++i)
+		fn(dt, c0[i], c1[i]);
+}
+
+static void s_3(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2)
+{
+	CUTE_ASSERT(c0.count() == c1.count() == c2.count());
+	void (*fn)(float, void*, void*, void*) = (void (*)(float, void*, void*, void*))fn_uncasted;
+	int count = c0.count();
+
+	for (int i = 0; i < count; ++i)
+		fn(dt, c0[i], c1[i], c2[i]);
+}
+
+static inline void s_match(array<int>* matches, const array<component_type_t>& a, const array<component_type_t>& b)
+{
+	for (int i = 0; i < a.count(); ++i)
+	{
+		for (int j = 0; j < b.count(); ++j)
+		{
+			if (a[i] == b[j]) {
+				matches->add(i);
+				break;
+			}
 		}
 	}
-	return NULL;
 }
 
-void app_set_update_systems_for_me_flag(app_t* app, bool true_to_update_false_to_do_nothing)
+void app_update_systems(app_t* app)
 {
-	app->udpate_systems_flag = true_to_update_false_to_do_nothing;
+	float dt = 0;
+	int system_count = app->systems.count();
+	for (int i = 0; i < system_count; ++i)
+	{
+		system_t* system = app->systems + i;
+		system_fn* func = system->update_func;
+
+		for (int j = 0; j < app->entity_collections.count(); ++j)
+		{
+			entity_collection_t* collection = app->entity_collections.items() + j;
+			CUTE_ASSERT(collection->component_tables.count() == collection->component_types.count());
+			int component_count = collection->component_tables.count();
+
+			array<int> matches;
+			s_match(&matches, system->component_types, collection->component_types);
+
+			array<typeless_array>& tables = collection->component_tables;
+			if (matches.count() == component_count) {
+				switch (component_count)
+				{
+				case 1: s_1(dt, func, tables[matches[0]]); break;
+				case 2: s_2(dt, func, tables[matches[0]], tables[matches[1]]); break;
+				case 3: s_3(dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]]); break;
+				default: CUTE_ASSERT(0);
+				}
+			}
+		}
+	}
 }
 
 //--------------------------------------------------------------------------------------------------
 
-void app_register_component(app_t* app, const component_config_t* component_config)
+void app_register_component_type(app_t* app, const component_config_t* component_config)
 {
 	app->component_name_to_type_table.insert(component_config->component_name, component_config->component_type);
 	app->component_configs.insert(component_config->component_type, *component_config);
@@ -96,11 +157,12 @@ error_t app_register_entity_schema(app_t* app, const char* entity_name, entity_t
 
 	entity_schema_t entity_schema;
 	entity_schema.entity_name = entity_name;
-	entity_schema.entity.type = entity_type;
+	entity_schema.entity_type = entity_type;
 	entity_schema.parsed_kv_schema = kv;
 
 	int component_config_count = app->component_configs.count();
 	const component_config_t* component_configs = app->component_configs.items();
+	array<component_type_t> component_types; // TODO: Use me.
 	for (int i = 0; i < component_config_count; ++i)
 	{
 		const component_config_t* config = component_configs + i;
@@ -112,7 +174,7 @@ error_t app_register_entity_schema(app_t* app, const char* entity_name, entity_t
 				log(CUTE_LOG_LEVEL_ERROR, "Unable to find type for component name %s.\n", config->component_name);
 				return error_failure("Encountered invalid component name.");
 			} else {
-				entity_schema.entity.add(CUTE_INVALID_COMPONENT_ID, *component_type);
+				component_types.add(*component_type);
 			}
 		}
 	}

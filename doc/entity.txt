@@ -223,3 +223,45 @@ for each system
 I think this is fine.
 Making the API as simple as possible is the top goal.
 Once different components are implemented entites can be created by mix and matching components.
+
+---
+
+Scratch this.
+
+Entity type
+	Incrementing id
+	Gets assigned at runtime during type registration
+
+Entity
+	Entity type
+	Handle
+
+Entity Collection
+	Array of component types
+	Array of array of components
+	Handle table
+	Can look up components by handle
+
+Entity System
+	Dictionary of entity type to entity collections
+	Can register entity types
+	Can update all systems
+
+System
+	Set of component types
+	Update function
+	Takes components as parameters
+	Takes entity id as parameter
+
+Component
+	Just byte data
+	Has an initializer function
+	Has a serializer function
+
+---
+
+Register component types.
+Register entity types.
+Register entity schema.
+Load entity from string.
+Call update on systems.

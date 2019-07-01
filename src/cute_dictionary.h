@@ -40,6 +40,7 @@ struct dictionary
 	T* find(const K& key);
 	const T* find(const K& key) const;
 
+	T* insert(const K& key);
 	T* insert(const K& key, const T& val);
 	void remove(const K& key);
 
@@ -80,6 +81,9 @@ dictionary<K, T>::dictionary(int capacity, void* user_allocator_context)
 template <typename K, typename T>
 dictionary<K, T>::~dictionary()
 {
+	T* items_ptr = items();
+	int items_count = count();
+	for (int i = 0; i < items_count; ++i) (items_ptr + i)->~T();
 	hashtable_cleanup(&table);
 }
 
@@ -96,14 +100,26 @@ const T* dictionary<K, T>::find(const K& key) const
 }
 
 template <typename K, typename T>
+T* dictionary<K, T>::insert(const K& key)
+{
+	T* slot = (T*)hashtable_insert(&table, &key, NULL);
+	CUTE_PLACEMENT_NEW(slot) T();
+	return slot;
+}
+
+template <typename K, typename T>
 T* dictionary<K, T>::insert(const K& key, const T& val)
 {
-	return (T*)hashtable_insert(&table, &key, &val);
+	T* slot = (T*)hashtable_insert(&table, &key, &val);
+	CUTE_PLACEMENT_NEW(slot) T(val);
+	return slot;
 }
 
 template <typename K, typename T>
 void dictionary<K, T>::remove(const K& key)
 {
+	T* slot = find(key);
+	slot->~T();
 	hashtable_remove(&table, &key);
 }
 

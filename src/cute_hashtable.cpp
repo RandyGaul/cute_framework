@@ -242,7 +242,7 @@ void* hashtable_insert(hashtable_t* table, const void* key, const void* item)
 
 	void* item_dst = s_get_item(table, table->count);
 	void* key_dst = s_get_key(table, table->count);
-	CUTE_MEMCPY(item_dst, item, table->item_size);
+	if (item) CUTE_MEMCPY(item_dst, item, table->item_size);
 	CUTE_MEMCPY(key_dst, key, table->key_size);
     table->items_slot_index[table->count] = slot;
 	++table->count;
