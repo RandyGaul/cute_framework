@@ -51,6 +51,26 @@ struct mouse_state_t
 	int click_type = 0;
 };
 
+struct system_t
+{
+	system_fn* update_func;
+	array<component_type_t> component_types;
+};
+
+struct entity_collection_t
+{
+	handle_table_t* entity_handles = NULL;
+	array<component_type_t> component_types;
+	array<typeless_array> component_tables;
+};
+
+struct entity_schema_t
+{
+	const char* entity_name;
+	entity_type_t entity_type;
+	struct kv_t* parsed_kv_schema;
+};
+
 struct app_t
 {
 	int running = 1;
@@ -65,12 +85,8 @@ struct app_t
 	float keys_duration[512];
 	mouse_state_t mouse, mouse_prev;
 
-	bool udpate_systems_flag = true;
-	array<system_interface_t*> systems;
-	array<const char*> system_names;
-	array<const char*> system_component_names;
-
-	object_table_t<entity_t> entity_allocator;
+	array<system_t> systems;
+	dictionary<entity_type_t, entity_collection_t> entity_collections;
 
 	dictionary<const char*, component_type_t> component_name_to_type_table;
 	dictionary<component_type_t, component_config_t> component_configs;

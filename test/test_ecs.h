@@ -25,24 +25,24 @@ using namespace cute;
 
 // -------------------------------------------------------------------------------------------------
 
-struct test_component_transform_t : public component_t
+struct test_component_transform_t
 {
 	float x;
 	float y;
 };
 
-struct test_component_sprite_t : public component_t
+struct test_component_sprite_t
 {
 	uint64_t sprite_id;
 };
 
-struct test_component_collider_t : public component_t
+struct test_component_collider_t
 {
 	uint64_t collider_type;
 	float radius;
 };
 
-struct test_component_octorok_t : public component_t
+struct test_component_octorok_t
 {
 	int ai_state;
 	uint32_t octorok_pellet_count;
@@ -56,14 +56,14 @@ enum test_component_types_t : uint32_t
 	test_component_octorok_type,
 };
 
-void test_component_transform_initialize(component_t* component)
+void test_component_transform_initialize(void* component)
 {
 	test_component_transform_t* transform = (test_component_transform_t*)component;
 	transform->x = 0;
 	transform->y = 0;
 }
 
-error_t test_component_transform_serialize(kv_t* kv, component_t* component)
+error_t test_component_transform_serialize(kv_t* kv, void* component)
 {
 	test_component_transform_t* transform = (test_component_transform_t*)component;
 	kv_key(kv, "x"); kv_val(kv, &transform->x);
@@ -73,125 +73,23 @@ error_t test_component_transform_serialize(kv_t* kv, component_t* component)
 
 // -------------------------------------------------------------------------------------------------
 
-struct test_system_transform_t : public system_t<test_component_transform_t>
+void update_test_transform(float dt, test_component_transform_t* transform)
 {
-	test_system_transform_t()
-		: system_t<test_component_transform_t>(
-			CUTE_STRINGIZE(test_system_transform_t),
-			CUTE_STRINGIZE(test_component_transform_t),
-			test_component_transform_type,
-			1024
-		)
-	{
-	}
+	transform->x += 1.0f * dt;
+	transform->y -= 1.0f * dt;
+}
 
-	virtual void update(float dt) override
-	{
-		int component_count = get_components_count();
-		test_component_transform_t* components = (test_component_transform_t*)get_components();
-		for (int i = 0; i < component_count; ++i)
-		{
-			test_component_transform_t* transform = components + i;
-			transform->x += 1.0f * dt;
-			transform->y -= 1.0f * dt;
-		}
-	}
-};
-
-struct test_system_sprite_t : public system_t<test_component_sprite_t>
+void update_test_sprite(float dt, test_component_sprite_t* sprite, test_component_transform_t* transform)
 {
-	test_system_sprite_t()
-		: system_t<test_component_sprite_t>(
-			CUTE_STRINGIZE(test_system_sprite_t),
-			CUTE_STRINGIZE(test_component_sprite_t),
-			test_component_sprite_type,
-			1024
-		)
-	{
-	}
+}
 
-	void push_sprite(uint64_t sprite_id)
-	{
-		// WORKING HERE
-		// Gotta make getting other components trivial.
-		// Lookup entity by id, then fetch components from systems.
-		// Needs to be streamlined.
-		// app_get_entity(app, entity_id)
-		// id = entity.get_component(type);
-		// system->get_component(id);
-		// Trying to get transform component in here easily.
-		CUTE_UNUSED(sprite_id);
-	}
-
-	virtual void update(float dt) override
-	{
-		int component_count = get_components_count();
-		test_component_sprite_t* components = (test_component_sprite_t*)get_components();
-		for (int i = 0; i < component_count; ++i)
-		{
-			test_component_sprite_t* sprite = components + i;
-			push_sprite(sprite->sprite_id);
-		}
-	}
-};
-
-struct test_system_collider_t : public system_t<test_component_collider_t>
+void update_test_collider(float dt, test_component_collider_t* collider)
 {
-	test_system_collider_t()
-		: system_t<test_component_collider_t>(
-			CUTE_STRINGIZE(test_system_collider_t),
-			CUTE_STRINGIZE(test_component_collider_t),
-			test_component_collider_type,
-			1024
-		)
-	{
-	}
+}
 
-	void debug_draw(test_component_collider_t* collider)
-	{
-		CUTE_UNUSED(collider);
-	}
-
-	virtual void update(float dt) override
-	{
-		int component_count = get_components_count();
-		test_component_collider_t* components = (test_component_collider_t*)get_components();
-		for (int i = 0; i < component_count; ++i)
-		{
-			test_component_collider_t* collider = components + i;
-			debug_draw(collider);
-		}
-	}
-};
-
-struct test_system_octorok_t : public system_t<test_component_octorok_t>
+void update_test_octorok(float dt, test_component_octorok_t* octorok)
 {
-	test_system_octorok_t()
-		: system_t<test_component_octorok_t>(
-			CUTE_STRINGIZE(test_system_octorok_t),
-			CUTE_STRINGIZE(test_component_octorok_t),
-			test_component_octorok_type,
-			1024
-		)
-	{
-	}
-
-	void run_ai(test_component_octorok_t* octorok)
-	{
-		CUTE_UNUSED(octorok);
-	}
-
-	virtual void update(float dt) override
-	{
-		int component_count = get_components_count();
-		test_component_octorok_t* components = (test_component_octorok_t*)get_components();
-		for (int i = 0; i < component_count; ++i)
-		{
-			test_component_octorok_t* octorok = components + i;
-			run_ai(octorok);
-		}
-	}
-};
+}
 
 // -------------------------------------------------------------------------------------------------
 
@@ -202,6 +100,7 @@ int test_ecs_octorok()
 
 	const char* octorok_schema = CUTE_STRINGIZE({
 		entity_type = "octorok",
+		inherits_from = "",
 		test_component_transform_t = {
 		}
 		test_component_octorok_t = {
@@ -237,14 +136,22 @@ int test_ecs_octorok()
 	transform_config.component_type = test_component_transform_type;
 	transform_config.component_initializer = test_component_transform_initialize;
 	transform_config.component_serializer = test_component_transform_serialize;
-	app_register_component(app, &transform_config);
+	app_register_component_type(app, &transform_config);
 
-	test_system_transform_t transform_system;
-
-	app_add_system(app, &transform_system);
+	component_type_t transform_component_type = test_component_transform_type;
+	app_register_system(app, update_test_transform, &transform_component_type, 1);
 
 	error_t err = app_register_entity_schema(app, "octorok", 0, octorok_schema, (int)CUTE_STRLEN(octorok_schema));
 	if (err.is_error()) return -1;
+	
+	// WOKRING HERE.
+	// TODO
+	// [ ] Register component types.
+	// [ ] Register systems.
+	// [ ] Register entity types.
+	// [ ] Register entity schema.
+	// [ ] Load entity from string.
+	// [ ] Call update on systems.
 
 	return -1;
 }

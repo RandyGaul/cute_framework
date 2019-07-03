@@ -37,7 +37,7 @@ union handle_entry_t
 		uint64_t user_index : 32;
 		uint64_t generation : 32;
 	} data;
-	uint64_t val;
+	uint64_t val = 0;
 };
 
 struct handle_table_t

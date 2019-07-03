@@ -84,6 +84,7 @@ set(CUTE_SRCS
 	src/cute_ecs.cpp
 	src/cute_string.cpp
 	src/cute_string_utils.cpp
+	src/cute_typeless_array.cpp
 
 	src/internal/cute_transport_internal.cpp
 
@@ -124,6 +125,7 @@ set(CUTE_HDRS
 	src/cute_ecs.h
 	src/cute_string.h
 	src/cute_string_utils.h
+	src/cute_typeless_array.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
