@@ -47,6 +47,8 @@ struct entity_t
 	handle_t handle;
 };
 
+// TODO: Refactor header into registration section, and simple section.
+
 //--------------------------------------------------------------------------------------------------
 
 typedef void system_fn();
@@ -78,7 +80,7 @@ struct component_config_t
 	component_type_t component_type = CUTE_INVALID_COMPONENT_TYPE;
 	int component_size = 0;
 	component_initialize_fn* component_initializer = NULL;
-	component_serialize_fn* component_serializer = NULL;
+	component_serialize_fn* component_serializer = NULL; // TODO: Move me to entity. Entity should deserialize.
 	int component_dependency_count = 0;
 	component_type_t component_dependencies[CUTE_COMPONENT_MAX_DEPENDENCIES] = { CUTE_INVALID_COMPONENT_TYPE };
 
