@@ -68,7 +68,7 @@ CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, int64_t* val);
 CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, float* val);
 CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, double* val);
 
-CUTE_API error_t CUTE_CALL kv_val_string(kv_t* kv, char** str, int* size);
+CUTE_API error_t CUTE_CALL kv_val_string(kv_t* kv, const char** str, size_t* size);
 CUTE_API error_t CUTE_CALL kv_val_blob(kv_t* kv, void* data, int* size, int capacity);
 
 CUTE_API error_t CUTE_CALL kv_object_begin(kv_t* kv);

@@ -78,12 +78,22 @@ static void s_2(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_a
 
 static void s_3(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2)
 {
-	CUTE_ASSERT(c0.count() == c1.count() == c2.count());
+	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count());
 	void (*fn)(float, void*, void*, void*) = (void (*)(float, void*, void*, void*))fn_uncasted;
 	int count = c0.count();
 
 	for (int i = 0; i < count; ++i)
 		fn(dt, c0[i], c1[i], c2[i]);
+}
+
+static void s_4(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3)
+{
+	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count());
+	void (*fn)(float, void*, void*, void*, void*) = (void (*)(float, void*, void*, void*, void*))fn_uncasted;
+	int count = c0.count();
+
+	for (int i = 0; i < count; ++i)
+		fn(dt, c0[i], c1[i], c2[i], c3[i]);
 }
 
 static inline void s_match(array<int>* matches, const array<component_type_t>& a, const array<component_type_t>& b)
@@ -125,6 +135,7 @@ void app_update_systems(app_t* app)
 				case 1: s_1(dt, func, tables[matches[0]]); break;
 				case 2: s_2(dt, func, tables[matches[0]], tables[matches[1]]); break;
 				case 3: s_3(dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]]); break;
+				case 4: s_4(dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]]); break;
 				default: CUTE_ASSERT(0);
 				}
 			}
@@ -137,6 +148,7 @@ void app_update_systems(app_t* app)
 error_t app_register_component_type(app_t* app, const component_config_t* component_config)
 {
 	app->component_name_to_type_table.insert(component_config->name, component_config->type);
+	app->component_type_to_name_table.insert(component_config->type, component_config->name);
 	app->component_configs.insert(component_config->type, *component_config);
 	return error_success();
 }
@@ -145,14 +157,6 @@ error_t app_register_component_type(app_t* app, const component_config_t* compon
 
 error_t app_register_entity_type(app_t* app, const entity_config_t* config)
 {
-	// Register types.
-	entity_collection_t* collection = app->entity_collections.insert(config->type);
-	for (int i = 0; i < config->types_count; ++i)
-	{
-		collection->component_types.add(config->types[i]);
-		collection->component_tables.add();
-	}
-
 	// Register serialization schema.
 	kv_t* kv = kv_make(app->mem_ctx);
 	error_t err = kv_reset_io(kv, config->schema, config->schema_size, CUTE_KV_MODE_READ);
@@ -168,7 +172,7 @@ error_t app_register_entity_type(app_t* app, const entity_config_t* config)
 
 	int component_config_count = app->component_configs.count();
 	const component_config_t* component_configs = app->component_configs.items();
-	array<component_type_t> component_types; // TODO: Use me.
+	array<component_type_t> component_types;
 	for (int i = 0; i < component_config_count; ++i)
 	{
 		const component_config_t* config = component_configs + i;
@@ -185,6 +189,16 @@ error_t app_register_entity_type(app_t* app, const entity_config_t* config)
 		}
 	}
 
+	// Register types.
+	entity_collection_t* collection = app->entity_collections.insert(config->type);
+	for (int i = 0; i < component_types.count(); ++i)
+	{
+		collection->component_types.add(component_types[i]);
+		typeless_array& table = collection->component_tables.add();
+		component_config_t* config = app->component_configs.find(component_types[i]);
+		table.m_element_size = config->size;
+	}
+
 	kv_reset_read(kv);
 	app->entity_name_to_type_table.insert(config->name, config->type);
 	app->entity_schemas.insert(config->type, entity_schema);
@@ -192,10 +206,65 @@ error_t app_register_entity_type(app_t* app, const entity_config_t* config)
 	return error_success();
 }
 
-error_t app_load_entities(app_t* app, const void* memory, int size)
+error_t app_load_entities(app_t* app, const void* memory, size_t size)
 {
-	// TODO: Implement me.
-	return error_failure(NULL);
+	kv_t* kv = kv_make(app->mem_ctx);
+	error_t err = kv_reset_io(kv, memory, size, CUTE_KV_MODE_READ);
+	if (err.is_error()) {
+		return err;
+	}
+
+	while (1)
+	{
+		err = kv_object_begin(kv);
+		if (err.is_error()) {
+			// TODO: This end condition sucks.
+			// kv needs a solid "is any more top level objects" function.
+			// For parsing only. Also add that kv_parse function.
+			break;
+		}
+
+		const char* entity_type_str = NULL;
+		size_t sz = 0;
+		kv_key(kv, "entity_type");
+		kv_val_string(kv, &entity_type_str, &sz);
+
+		entity_type_t* entity_type_ptr = app->entity_name_to_type_table.find(entity_type_str, sz);
+		if (!entity_type_ptr) {
+			return error_failure("Unable to find entity type.");
+		}
+
+		entity_type_t entity_type = *entity_type_ptr;
+		entity_collection_t* collection = app->entity_collections.find(entity_type);
+		CUTE_ASSERT(collection);
+
+		const array<component_type_t>& types = collection->component_types;
+		for (int i = 0; i < types.count(); ++i)
+		{
+			const char** ptr = app->component_type_to_name_table.find(types[i]);
+			CUTE_ASSERT(ptr);
+			const char* type_str = *ptr;
+			error_t err = kv_key(kv, type_str);
+
+			component_config_t* config = app->component_configs.find(types[i]);
+			if (!config) {
+				return error_failure("Unable to find component config.");
+			}
+
+			void* component = collection->component_tables[i].add();
+			config->initializer_fn(component);
+
+			if (!err.is_error()) {
+				kv_object_begin(kv);
+				config->serializer_fn(kv, component);
+				kv_object_end(kv);
+			}
+		}
+
+		kv_object_end(kv);
+	}
+
+	return error_success();
 }
 
 }

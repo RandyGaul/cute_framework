@@ -407,6 +407,8 @@ static error_t s_parse_object(kv_t* kv, int* index)
 		}
 	}
 
+	s_try(kv, ',');
+
 	return error_success();
 }
 
@@ -434,7 +436,6 @@ error_t kv_reset_io(kv_t* kv, const void* data, size_t size, int mode)
 			kv->top_level_object_indices.add(index);
 		}
 
-		s_try(kv, ',');
 		uint8_t c;
 		while (kv->in != kv->in_end && s_isspace(c = *kv->in)) kv->in++;
 
@@ -515,7 +516,7 @@ static CUTE_INLINE error_t s_tabs(kv_t* kv)
 	return error_success();
 }
 
-static CUTE_INLINE error_t s_write_str_no_quotes(kv_t* kv, const char* str, int len)
+static CUTE_INLINE error_t s_write_str_no_quotes(kv_t* kv, const char* str, size_t len)
 {
 	uint8_t* in = kv->in;
 	uint8_t* end = kv->in + len;
@@ -528,7 +529,7 @@ static CUTE_INLINE error_t s_write_str_no_quotes(kv_t* kv, const char* str, int 
 	return error_success();
 }
 
-static CUTE_INLINE error_t s_write_str(kv_t* kv, const char* str, int len)
+static CUTE_INLINE error_t s_write_str(kv_t* kv, const char* str, size_t len)
 {
 	error_t err = s_write_u8(kv, '"');
 	if (err.is_error()) return err;
@@ -889,8 +890,16 @@ error_t kv_val(kv_t* kv, float* val)
 		if (err.is_error()) return err;
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_DOUBLE);
-		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
-		*val = (float)matched_val->u.dval;
+		if (!matched_val) {
+			matched_val = s_pop_val(kv, KV_TYPE_INT64);
+			if (matched_val) {
+				*val = (float)matched_val->u.ival;
+			} else {
+				return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+			}
+		} else {
+			*val = (float)matched_val->u.dval;
+		}
 	}
 	return error_success();
 }
@@ -913,7 +922,7 @@ error_t kv_val(kv_t* kv, double* val)
 	return error_success();
 }
 
-error_t kv_val_string(kv_t* kv, char** str, int* size)
+error_t kv_val_string(kv_t* kv, const char** str, size_t* size)
 {
 	if (kv->mode == CUTE_KV_MODE_READ) {
 		*str = NULL;
@@ -930,7 +939,7 @@ error_t kv_val_string(kv_t* kv, char** str, int* size)
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_STRING);
 		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
-		*str = (char*)matched_val->u.sval.str;
+		*str = (const char*)matched_val->u.sval.str;
 		*size = (int)matched_val->u.sval.len;
 	}
 	return error_success();
@@ -986,7 +995,8 @@ error_t kv_object_begin(kv_t* kv)
 		if (matched_val) {
 			kv->read_mode_object_index = matched_val->u.object_index;
 		} else {
-			if (!(kv->read_mode_top_level_index < kv->top_level_object_indices.count())) {
+			bool has_top_index = kv->read_mode_top_level_index != ~0;
+			if (!(has_top_index && kv->read_mode_top_level_index < kv->top_level_object_indices.count())) {
 				kv->err = error_failure("Attempted to read object beyond end of input.");
 				return kv->err;
 			}

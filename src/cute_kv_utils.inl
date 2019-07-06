@@ -31,8 +31,8 @@ namespace cute
 CUTE_INLINE error_t kv_val(kv_t* kv, std::string* val)
 {
 	const char* ptr = val->data();
-	int len = (int)val->length();
-	error_t err = kv_val_string(kv, (char**)&ptr, &len);
+	size_t len = val->length();
+	error_t err = kv_val_string(kv, &ptr, &len);
 	if (err.is_error()) return err;
 	val->assign(ptr, len);
 	return error_success();

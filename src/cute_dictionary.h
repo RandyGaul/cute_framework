@@ -187,6 +187,15 @@ CUTE_INLINE dictionary_string_block_t s_dictionary_make_block(const char* key)
 	return block;
 }
 
+CUTE_INLINE dictionary_string_block_t s_dictionary_make_block(const char* key, size_t key_len)
+{
+	dictionary_string_block_t block;
+	block.len = key_len;
+	CUTE_ASSERT(block.len < DICTIONARY_STRING_BLOCK_MAX - 1);
+	CUTE_STRNCPY((char*)block.data, key, key_len);
+	return block;
+}
+
 template <typename T>
 struct dictionary<const char*, T>
 {
@@ -197,9 +206,13 @@ struct dictionary<const char*, T>
 
 	T* find(const char* key);
 	const T* find(const char* key) const;
+	T* find(const char* key, size_t key_len);
+	const T* find(const char* key, size_t key_len) const;
 
 	T* insert(const char* key, const T& val);
 	void remove(const char* key);
+	T* insert(const char* key, size_t key_len, const T& val);
+	void remove(const char* key, size_t key_len);
 
 	void clear();
 
@@ -254,9 +267,37 @@ const T* dictionary<const char*, T>::find(const char* key) const
 }
 
 template <typename T>
+T* dictionary<const char*, T>::find(const char* key, size_t key_len)
+{
+	dictionary_string_block_t block = s_dictionary_make_block(key, key_len);
+	return (T*)hashtable_find(&table, &block);
+}
+
+template <typename T>
+const T* dictionary<const char*, T>::find(const char* key, size_t key_len) const
+{
+	dictionary_string_block_t block = s_dictionary_make_block(key, key_len);
+	return (T*)hashtable_find(&table, &block);
+}
+
+template <typename T>
 T* dictionary<const char*, T>::insert(const char* key, const T& val)
 {
 	dictionary_string_block_t block = s_dictionary_make_block(key);
+	return (T*)hashtable_insert(&table, &block, &val);
+}
+
+template <typename T>
+void dictionary<const char*, T>::remove(const char* key, size_t key_len)
+{
+	dictionary_string_block_t block = s_dictionary_make_block(key, key_len);
+	hashtable_remove(&table, &block);
+}
+
+template <typename T>
+T* dictionary<const char*, T>::insert(const char* key, size_t key_len, const T& val)
+{
+	dictionary_string_block_t block = s_dictionary_make_block(key, key_len);
 	return (T*)hashtable_insert(&table, &block, &val);
 }
 

@@ -26,7 +26,7 @@ struct thing_t
 {
 	int a = 5;
 	float b = 10.3f;
-	char* str = "Hello.";
+	const char* str = "Hello.";
 	struct
 	{
 		int a = 5;
@@ -34,7 +34,7 @@ struct thing_t
 		struct
 		{
 			int hi = 5;
-			char* geez = "Hello.";
+			const char* geez = "Hello.";
 		} interior_thing;
 	} sub_thing;
 	float x = 5;
@@ -48,13 +48,13 @@ struct thing_t
 	struct
 	{
 		int some_integer = 5;
-		char* some_string = "Hello.";
+		const char* some_string = "Hello.";
 	} array_of_objects[3];
 };
 
 error_t do_serialize(kv_t* kv, thing_t* thing)
 {
-	int len;
+	size_t len;
 	CUTE_RETURN_IF_ERROR(kv_object_begin(kv));
 	CUTE_RETURN_IF_ERROR(kv_key(kv, "a")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->a));
 	CUTE_RETURN_IF_ERROR(kv_key(kv, "b")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->b));
@@ -185,7 +185,7 @@ int test_kv_std_string_to_disk()
 {
 	std::string s0;
 	const char* s1 = "Alice in Wonderland.";
-	int s1_len = (int)CUTE_STRLEN(s1);
+	size_t s1_len = CUTE_STRLEN(s1);
 
 	kv_t* kv = kv_make();
 	CUTE_TEST_CHECK_POINTER(kv);
@@ -195,7 +195,7 @@ int test_kv_std_string_to_disk()
 
 	kv_object_begin(kv);
 	kv_key(kv, "book_title");
-	kv_val_string(kv, (char**)&s1, &s1_len);
+	kv_val_string(kv, &s1, &s1_len);
 	kv_object_end(kv);
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
@@ -208,7 +208,7 @@ int test_kv_std_string_to_disk()
 	kv_object_end(kv);
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
-	CUTE_TEST_ASSERT((int)s0.length() == s1_len);
+	CUTE_TEST_ASSERT(s0.length() == s1_len);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(s0.data(), s1, s1_len));
 
 	kv_destroy(kv);
@@ -221,9 +221,9 @@ int test_kv_std_string_from_disk()
 {
 	// std::string from disk, c-string to disk
 	const char* s0 = NULL;
-	int s0_len = 0;
+	size_t s0_len = 0;
 	std::string s1 = "Alice in Wonderland.";
-	int s1_len = (int)s1.length();
+	size_t s1_len = s1.length();
 
 	kv_t* kv = kv_make();
 	CUTE_TEST_CHECK_POINTER(kv);
@@ -242,7 +242,7 @@ int test_kv_std_string_from_disk()
 
 	kv_object_begin(kv);
 	kv_key(kv, "book_title");
-	kv_val_string(kv, (char**)&s0, &s0_len);
+	kv_val_string(kv, &s0, &s0_len);
 	kv_object_end(kv);
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());

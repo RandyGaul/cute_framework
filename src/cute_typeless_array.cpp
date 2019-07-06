@@ -30,18 +30,18 @@ typeless_array::typeless_array()
 {
 }
 
-typeless_array::typeless_array(int element_size, void* user_allocator_context)
-	: m_item_size(element_size)
+typeless_array::typeless_array(size_t element_size, void* user_allocator_context)
+	: m_element_size(element_size)
 	, m_mem_ctx(user_allocator_context)
 {
 }
 
-typeless_array::typeless_array(int element_size, int capacity, void* user_allocator_context)
-	: m_item_size(element_size)
+typeless_array::typeless_array(size_t element_size, int capacity, void* user_allocator_context)
+	: m_element_size(element_size)
 	, m_capacity(capacity)
 	, m_mem_ctx(user_allocator_context)
 {
-	m_items = CUTE_ALLOC(m_item_size, m_mem_ctx);
+	m_items = CUTE_ALLOC(m_element_size, m_mem_ctx);
 	CUTE_ASSERT(m_items);
 }
 
@@ -53,15 +53,15 @@ typeless_array::~typeless_array()
 void* typeless_array::add()
 {
 	ensure_capacity(m_count + 1);
-	void* slot = (void*)(((uintptr_t)m_items) + m_count++);
+	void* slot = (void*)(((uintptr_t)m_items) + m_count++ * m_element_size);
 	return slot;
 }
 
 void* typeless_array::add(const void* item)
 {
 	ensure_capacity(m_count + 1);
-	void* slot = (void*)(((uintptr_t)m_items) + m_count++);
-	CUTE_MEMCPY(slot, item, m_item_size);
+	void* slot = (void*)(((uintptr_t)m_items) + m_count++ * m_element_size);
+	CUTE_MEMCPY(slot, item, m_element_size);
 	return slot;
 }
 
@@ -69,10 +69,10 @@ void* typeless_array::insert(int index)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	add();
-	void* slot = (void*)(((uintptr_t)m_items) + index);
-	void* slot_plus_one = (void*)(((uintptr_t)m_items) + index + 1);
+	void* slot = (void*)(((uintptr_t)m_items) + index * m_element_size);
+	void* slot_plus_one = (void*)(((uintptr_t)m_items) + (index + 1) * m_element_size);
 	int count_to_move = m_count - 1 - index;
-	CUTE_MEMMOVE(slot_plus_one, slot, m_item_size * count_to_move);
+	CUTE_MEMMOVE(slot_plus_one, slot, m_element_size * count_to_move);
 	return slot;
 }
 
@@ -80,28 +80,28 @@ void* typeless_array::insert(int index, const void* item)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	add();
-	void* slot = (void*)(((uintptr_t)m_items) + index);
-	void* slot_plus_one = (void*)(((uintptr_t)m_items) + index + 1);
+	void* slot = (void*)(((uintptr_t)m_items) + index * m_element_size);
+	void* slot_plus_one = (void*)(((uintptr_t)m_items) + (index + 1) * m_element_size);
 	int count_to_move = m_count - 1 - index;
-	CUTE_MEMMOVE(slot_plus_one, slot, m_item_size * count_to_move);
-	CUTE_MEMCPY(slot, item, m_item_size);
+	CUTE_MEMMOVE(slot_plus_one, slot, m_element_size * count_to_move);
+	CUTE_MEMCPY(slot, item, m_element_size);
 	return slot;
 }
 
 void typeless_array::set(int index, const void* item)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
-	void* slot = (void*)(((uintptr_t)m_items) + index);
-	CUTE_MEMCPY(slot, item, m_item_size);
+	void* slot = (void*)(((uintptr_t)m_items) + index * m_element_size);
+	CUTE_MEMCPY(slot, item, m_element_size);
 }
 
 void typeless_array::remove(int index)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
-	void* slot = (void*)(((uintptr_t)m_items) + index);
-	void* slot_plus_one = (void*)(((uintptr_t)m_items) + index + 1);
+	void* slot = (void*)(((uintptr_t)m_items) + index * m_element_size);
+	void* slot_plus_one = (void*)(((uintptr_t)m_items) + (index + 1) * m_element_size);
 	int count_to_move = m_count - 1 - index;
-	CUTE_MEMMOVE(slot_plus_one, slot, m_item_size * count_to_move);
+	CUTE_MEMMOVE(slot_plus_one, slot, m_element_size * count_to_move);
 }
 
 void* typeless_array::pop()
@@ -113,9 +113,9 @@ void* typeless_array::pop()
 void typeless_array::unordered_remove(int index)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
-	void* slot = (void*)(((uintptr_t)m_items) + index);
-	void* slot_last = (void*)(((uintptr_t)m_items) + m_count - 1);
-	CUTE_MEMCPY(slot, slot_last, m_item_size);
+	void* slot = (void*)(((uintptr_t)m_items) + index * m_element_size);
+	void* slot_last = (void*)(((uintptr_t)m_items) + (m_count - 1) * m_element_size);
+	CUTE_MEMCPY(slot, slot_last, m_element_size);
 	--m_count;
 }
 
@@ -134,10 +134,10 @@ void typeless_array::ensure_capacity(int num_elements)
 			CUTE_ASSERT(new_capacity); // Detect overflow.
 		}
 
-		size_t new_size = m_item_size * new_capacity;
+		size_t new_size = m_element_size * new_capacity;
 		void* new_items = CUTE_ALLOC(new_size, m_mem_ctx);
 		CUTE_ASSERT(new_items);
-		CUTE_MEMCPY(new_items, m_items, m_item_size * m_count);
+		CUTE_MEMCPY(new_items, m_items, m_element_size * m_count);
 		CUTE_FREE(m_items, m_mem_ctx);
 		m_items = new_items;
 		m_capacity = new_capacity;
@@ -167,42 +167,42 @@ int typeless_array::count() const
 void* typeless_array::operator[](int index)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
-	void* slot = (void*)(((uintptr_t)m_items) + index);
+	void* slot = (void*)(((uintptr_t)m_items) + index * m_element_size);
 	return slot;
 }
 
 const void* typeless_array::operator[](int index) const
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
-	void* slot = (void*)(((uintptr_t)m_items) + index);
+	void* slot = (void*)(((uintptr_t)m_items) + index * m_element_size);
 	return slot;
 }
 
 void* typeless_array::operator+(int index)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
-	void* slot = (void*)(((uintptr_t)m_items) + index);
+	void* slot = (void*)(((uintptr_t)m_items) + index * m_element_size);
 	return slot;
 }
 
 const void* typeless_array::operator+(int index) const
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
-	void* slot = (void*)(((uintptr_t)m_items) + index);
+	void* slot = (void*)(((uintptr_t)m_items) + index * m_element_size);
 	return slot;
 }
 
 void* typeless_array::last()
 {
 	CUTE_ASSERT(m_count > 0);
-	void* slot_last = (void*)(((uintptr_t)m_items) + m_count - 1);
+	void* slot_last = (void*)(((uintptr_t)m_items) + (m_count - 1) * m_element_size);
 	return slot_last;
 }
 
 const void* typeless_array::last() const
 {
 	CUTE_ASSERT(m_count > 0);
-	void* slot_last = (void*)(((uintptr_t)m_items) + m_count - 1);
+	void* slot_last = (void*)(((uintptr_t)m_items) + (m_count - 1) * m_element_size);
 	return slot_last;
 }
 

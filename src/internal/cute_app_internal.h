@@ -89,6 +89,7 @@ struct app_t
 	dictionary<entity_type_t, entity_collection_t> entity_collections;
 
 	dictionary<const char*, component_type_t> component_name_to_type_table;
+	dictionary<component_type_t, const char*> component_type_to_name_table;
 	dictionary<component_type_t, component_config_t> component_configs;
 	dictionary<const char*, entity_type_t> entity_name_to_type_table;
 	dictionary<entity_type_t, entity_schema_t> entity_schemas;

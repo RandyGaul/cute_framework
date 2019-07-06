@@ -34,7 +34,30 @@ namespace cute
 {
 
 //--------------------------------------------------------------------------------------------------
-// Component definition and registration.
+// Entity
+
+using entity_type_t = uint32_t;
+#define CUTE_INVALID_ENTITY_TYPE ((entity_type_t)(~0))
+
+struct entity_t
+{
+	entity_type_t type;
+	handle_t handle;
+};
+
+struct entity_config_t
+{
+	const char* name = NULL;
+	entity_type_t type = CUTE_INVALID_ENTITY_TYPE;
+
+	size_t schema_size = 0;
+	const void* schema = NULL;
+};
+
+extern CUTE_API error_t CUTE_CALL app_register_entity_type(app_t* app, const entity_config_t* config);
+
+//--------------------------------------------------------------------------------------------------
+// Component
 
 using component_type_t = uint32_t;
 #define CUTE_INVALID_COMPONENT_TYPE ((component_type_t)(~0))
@@ -58,33 +81,7 @@ struct component_config_t
 extern CUTE_API error_t CUTE_CALL app_register_component_type(app_t* app, const component_config_t* component_config);
 
 //--------------------------------------------------------------------------------------------------
-// Entity type definition and registration.
-
-using entity_type_t = uint32_t;
-#define CUTE_INVALID_ENTITY_TYPE ((entity_type_t)(~0))
-
-struct entity_t
-{
-	entity_type_t type;
-	handle_t handle;
-};
-
-struct entity_config_t
-{
-	const char* name = NULL;
-	entity_type_t type = CUTE_INVALID_ENTITY_TYPE;
-	
-	int types_count = 0;
-	component_type_t* types = NULL;
-
-	size_t schema_size = 0;
-	const void* schema = NULL;
-};
-
-extern CUTE_API error_t CUTE_CALL app_register_entity_type(app_t* app, const entity_config_t* config);
-
-//--------------------------------------------------------------------------------------------------
-// System defition and registration.
+// System
 
 typedef void system_fn();
 extern CUTE_API void CUTE_CALL app_register_system(app_t* app, system_fn* system_update_function, component_type_t* types, int types_count);
@@ -96,12 +93,12 @@ void app_register_system(app_t* app, T system_update_function, component_type_t*
 }
 
 //--------------------------------------------------------------------------------------------------
-// Run-time functions and lifetime management.
+// Run-time functions and entity lifetime management.
 
 extern CUTE_API entity_t CUTE_CALL app_make_entity(app_t* app, entity_type_t type);
 extern CUTE_API void CUTE_CALL app_destroy_entity(app_t* app, entity_t entity);
 extern CUTE_API bool CUTE_CALL app_is_entity_valid(app_t* app, entity_t entity);
-extern CUTE_API error_t CUTE_CALL app_load_entities(app_t* app, const void* memory, int size);
+extern CUTE_API error_t CUTE_CALL app_load_entities(app_t* app, const void* memory, size_t size);
 
 extern CUTE_API void CUTE_CALL app_update_systems(app_t* app);
 

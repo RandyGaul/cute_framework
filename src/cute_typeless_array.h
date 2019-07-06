@@ -30,8 +30,8 @@ namespace cute
 struct typeless_array
 {
 	typeless_array();
-	explicit typeless_array(int element_size, void* user_allocator_context);
-	explicit typeless_array(int element_size, int capacity, void* user_allocator_context);
+	explicit typeless_array(size_t element_size, void* user_allocator_context);
+	explicit typeless_array(size_t element_size, int capacity, void* user_allocator_context);
 	~typeless_array();
 
 	void* add();
@@ -61,8 +61,7 @@ struct typeless_array
 	void* data();
 	const void* data() const;
 
-private:
-	int m_item_size = 0;
+	size_t m_element_size = 0;
 	int m_capacity = 0;
 	int m_count = 0;
 	void* m_items = NULL;
