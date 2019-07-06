@@ -59,7 +59,7 @@ bool app_is_entity_valid(app_t* app, entity_t entity)
 
 static void s_1(float dt, system_fn* fn_uncasted, typeless_array& c0)
 {
-	void (*fn)(float, void*) = (void (*)(float, void*))fn_uncasted;
+	auto fn = (void (*)(float, void*))fn_uncasted;
 	int count = c0.count();
 
 	for (int i = 0; i < count; ++i)
@@ -69,7 +69,7 @@ static void s_1(float dt, system_fn* fn_uncasted, typeless_array& c0)
 static void s_2(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1)
 {
 	CUTE_ASSERT(c0.count() == c1.count());
-	void (*fn)(float, void*, void*) = (void (*)(float, void*, void*))fn_uncasted;
+	auto fn = (void (*)(float, void*, void*))fn_uncasted;
 	int count = c0.count();
 
 	for (int i = 0; i < count; ++i)
@@ -79,7 +79,7 @@ static void s_2(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_a
 static void s_3(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2)
 {
 	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count());
-	void (*fn)(float, void*, void*, void*) = (void (*)(float, void*, void*, void*))fn_uncasted;
+	auto fn = (void (*)(float, void*, void*, void*))fn_uncasted;
 	int count = c0.count();
 
 	for (int i = 0; i < count; ++i)
@@ -89,11 +89,51 @@ static void s_3(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_a
 static void s_4(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3)
 {
 	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count());
-	void (*fn)(float, void*, void*, void*, void*) = (void (*)(float, void*, void*, void*, void*))fn_uncasted;
+	auto fn = (void (*)(float, void*, void*, void*, void*))fn_uncasted;
 	int count = c0.count();
 
 	for (int i = 0; i < count; ++i)
 		fn(dt, c0[i], c1[i], c2[i], c3[i]);
+}
+
+static void s_5(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4)
+{
+	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count());
+	auto fn = (void (*)(float, void*, void*, void*, void*, void*))fn_uncasted;
+	int count = c0.count();
+
+	for (int i = 0; i < count; ++i)
+		fn(dt, c0[i], c1[i], c2[i], c3[i], c4[i]);
+}
+
+static void s_6(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5)
+{
+	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count());
+	auto fn = (void (*)(float, void*, void*, void*, void*, void*, void*))fn_uncasted;
+	int count = c0.count();
+
+	for (int i = 0; i < count; ++i)
+		fn(dt, c0[i], c1[i], c2[i], c3[i], c4[i], c5[i]);
+}
+
+static void s_7(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5, typeless_array& c6)
+{
+	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count() && c0.count() == c6.count());
+	auto fn = (void (*)(float, void*, void*, void*, void*, void*, void*, void*))fn_uncasted;
+	int count = c0.count();
+
+	for (int i = 0; i < count; ++i)
+		fn(dt, c0[i], c1[i], c2[i], c3[i], c4[i], c5[i], c6[i]);
+}
+
+static void s_8(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5, typeless_array& c6, typeless_array& c7)
+{
+	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count() && c0.count() == c6.count() && c0.count() == c7.count());
+	auto fn = (void (*)(float, void*, void*, void*, void*, void*, void*, void*, void*))fn_uncasted;
+	int count = c0.count();
+
+	for (int i = 0; i < count; ++i)
+		fn(dt, c0[i], c1[i], c2[i], c3[i], c4[i], c5[i], c6[i], c7[i]);
 }
 
 static inline void s_match(array<int>* matches, const array<component_type_t>& a, const array<component_type_t>& b)
@@ -136,6 +176,10 @@ void app_update_systems(app_t* app)
 				case 2: s_2(dt, func, tables[matches[0]], tables[matches[1]]); break;
 				case 3: s_3(dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]]); break;
 				case 4: s_4(dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]]); break;
+				case 5: s_5(dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]]); break;
+				case 6: s_6(dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]]); break;
+				case 7: s_7(dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]]); break;
+				case 8: s_8(dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]], tables[matches[7]]); break;
 				default: CUTE_ASSERT(0);
 				}
 			}
