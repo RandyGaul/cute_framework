@@ -147,8 +147,8 @@ void app_update_systems(app_t* app)
 
 void app_register_component_type(app_t* app, const component_config_t* component_config)
 {
-	app->component_name_to_type_table.insert(component_config->component_name, component_config->component_type);
-	app->component_configs.insert(component_config->component_type, *component_config);
+	app->component_name_to_type_table.insert(component_config->name, component_config->type);
+	app->component_configs.insert(component_config->type, *component_config);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -174,11 +174,11 @@ error_t app_register_entity_schema(app_t* app, const char* entity_name, entity_t
 	{
 		const component_config_t* config = component_configs + i;
 
-		err = kv_key(kv, config->component_name);
+		err = kv_key(kv, config->name);
 		if (!err.is_error()) {
-			component_type_t* component_type = app->component_name_to_type_table.find(config->component_name);
+			component_type_t* component_type = app->component_name_to_type_table.find(config->name);
 			if (!component_type) {
-				log(CUTE_LOG_LEVEL_ERROR, "Unable to find type for component name %s.\n", config->component_name);
+				log(CUTE_LOG_LEVEL_ERROR, "Unable to find type for component name %s.\n", config->name);
 				return error_failure("Encountered invalid component name.");
 			} else {
 				component_types.add(*component_type);

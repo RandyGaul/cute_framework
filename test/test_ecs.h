@@ -132,10 +132,10 @@ int test_ecs_octorok()
 	});
 
 	component_config_t transform_config;
-	transform_config.component_name = CUTE_STRINGIZE(test_component_transform_t);
-	transform_config.component_type = test_component_transform_type;
-	transform_config.component_initializer = test_component_transform_initialize;
-	transform_config.component_serializer = test_component_transform_serialize;
+	transform_config.name = CUTE_STRINGIZE(test_component_transform_t);
+	transform_config.type = test_component_transform_type;
+	transform_config.initializer_fn = test_component_transform_initialize;
+	transform_config.serializer_fn = test_component_transform_serialize;
 	app_register_component_type(app, &transform_config);
 
 	component_type_t transform_component_type = test_component_transform_type;
