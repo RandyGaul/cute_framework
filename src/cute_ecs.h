@@ -42,8 +42,6 @@ using component_type_t = uint32_t;
 typedef void (component_initialize_fn)(void* component);
 typedef error_t(component_serialize_fn)(struct kv_t* kv, void* component);
 
-#define CUTE_COMPONENT_MAX_DEPENDENCIES (16)
-
 struct component_config_t
 {
 	size_t size = 0;
@@ -54,10 +52,10 @@ struct component_config_t
 	component_serialize_fn* serializer_fn = NULL;
 
 	int dependency_count = 0;
-	component_type_t dependencies[CUTE_COMPONENT_MAX_DEPENDENCIES] = { CUTE_INVALID_COMPONENT_TYPE };
+	component_type_t* dependencies = NULL;
 };
 
-extern CUTE_API void CUTE_CALL app_register_component_type(app_t* app, const component_config_t* component_config);
+extern CUTE_API error_t CUTE_CALL app_register_component_type(app_t* app, const component_config_t* component_config);
 
 //--------------------------------------------------------------------------------------------------
 // Entity type definition and registration.
@@ -71,8 +69,19 @@ struct entity_t
 	handle_t handle;
 };
 
-extern CUTE_API void CUTE_CALL app_register_entity_type(app_t* app, entity_type_t entity_type, component_type_t* types, int types_count);
-extern CUTE_API error_t CUTE_CALL app_register_entity_schema(app_t* app, const char* entity_name, entity_type_t entity_type, const void* schema, int schema_size);
+struct entity_config_t
+{
+	const char* name = NULL;
+	entity_type_t type = CUTE_INVALID_ENTITY_TYPE;
+	
+	int types_count = 0;
+	component_type_t* types = NULL;
+
+	size_t schema_size = 0;
+	const void* schema = NULL;
+};
+
+extern CUTE_API error_t CUTE_CALL app_register_entity_type(app_t* app, const entity_config_t* config);
 
 //--------------------------------------------------------------------------------------------------
 // System defition and registration.

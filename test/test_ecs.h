@@ -25,6 +25,14 @@ using namespace cute;
 
 // -------------------------------------------------------------------------------------------------
 
+enum test_component_types_t : uint32_t
+{
+	test_component_transform_type,
+	test_component_sprite_type,
+	test_component_collider_type,
+	test_component_octorok_type,
+};
+
 struct test_component_transform_t
 {
 	float x;
@@ -33,28 +41,22 @@ struct test_component_transform_t
 
 struct test_component_sprite_t
 {
-	uint64_t sprite_id;
+	uint64_t img_id;
 };
 
 struct test_component_collider_t
 {
-	uint64_t collider_type;
+	uint64_t type;
 	float radius;
 };
 
 struct test_component_octorok_t
 {
 	int ai_state;
-	uint32_t octorok_pellet_count;
+	uint32_t pellet_count;
 };
 
-enum test_component_types_t : uint32_t
-{
-	test_component_transform_type,
-	test_component_sprite_type,
-	test_component_collider_type,
-	test_component_octorok_type,
-};
+// -------------------------------------------------------------------------------------------------
 
 void test_component_transform_initialize(void* component)
 {
@@ -71,6 +73,49 @@ error_t test_component_transform_serialize(kv_t* kv, void* component)
 	return kv_error_state(kv);
 }
 
+void test_component_sprite_initialize(void* component)
+{
+	test_component_sprite_t* sprite = (test_component_sprite_t*)component;
+	sprite->img_id = 0;
+}
+
+error_t test_component_sprite_serialize(kv_t* kv, void* component)
+{
+	test_component_sprite_t* sprite = (test_component_sprite_t*)component;
+	kv_key(kv, "img_id"); kv_val(kv, &sprite->img_id);
+	return kv_error_state(kv);
+}
+
+void test_component_collider_initialize(void* component)
+{
+	test_component_collider_t* collider = (test_component_collider_t*)component;
+	collider->type = 0;
+	collider->radius = 0;
+}
+
+error_t test_component_collider_serialize(kv_t* kv, void* component)
+{
+	test_component_collider_t* collider = (test_component_collider_t*)component;
+	kv_key(kv, "type"); kv_val(kv, &collider->type);
+	kv_key(kv, "radius"); kv_val(kv, &collider->radius);
+	return kv_error_state(kv);
+}
+
+void test_component_octorok_initialize(void* component)
+{
+	test_component_octorok_t* octorok = (test_component_octorok_t*)component;
+	octorok->ai_state = 0;
+	octorok->pellet_count = 0;
+}
+
+error_t test_component_octorok_serialize(kv_t* kv, void* component)
+{
+	test_component_octorok_t* octorok = (test_component_octorok_t*)component;
+	kv_key(kv, "ai_state"); kv_val(kv, &octorok->ai_state);
+	kv_key(kv, "pellet_count"); kv_val(kv, &octorok->pellet_count);
+	return kv_error_state(kv);
+}
+
 // -------------------------------------------------------------------------------------------------
 
 void update_test_transform(float dt, test_component_transform_t* transform)
@@ -79,15 +124,15 @@ void update_test_transform(float dt, test_component_transform_t* transform)
 	transform->y -= 1.0f * dt;
 }
 
-void update_test_sprite(float dt, test_component_sprite_t* sprite, test_component_transform_t* transform)
+void update_test_sprite(float dt, test_component_transform_t* transform, test_component_sprite_t* sprite)
 {
 }
 
-void update_test_collider(float dt, test_component_collider_t* collider)
+void update_test_collider(float dt, test_component_transform_t* transform, test_component_collider_t* collider)
 {
 }
 
-void update_test_octorok(float dt, test_component_octorok_t* octorok)
+void update_test_octorok(float dt, test_component_transform_t* transform, test_component_octorok_t* octorok)
 {
 }
 
@@ -98,6 +143,36 @@ int test_ecs_octorok()
 {
 	app_t* app = app_make(NULL, 0, 0, 0, 0, APP_OPTIONS_HEADLESS);
 
+	// Register component types.
+	component_config_t transform_config;
+	transform_config.name = CUTE_STRINGIZE(test_component_transform_t);
+	transform_config.type = test_component_transform_type;
+	transform_config.initializer_fn = test_component_transform_initialize;
+	transform_config.serializer_fn = test_component_transform_serialize;
+	app_register_component_type(app, &transform_config);
+
+	component_config_t sprite_config;
+	sprite_config.name = CUTE_STRINGIZE(test_component_sprite_t);
+	sprite_config.type = test_component_sprite_type;
+	sprite_config.initializer_fn = test_component_sprite_initialize;
+	sprite_config.serializer_fn = test_component_sprite_serialize;
+	app_register_component_type(app, &sprite_config);
+
+	component_config_t collider_config;
+	collider_config.name = CUTE_STRINGIZE(test_component_collider_t);
+	collider_config.type = test_component_collider_type;
+	collider_config.initializer_fn = test_component_collider_initialize;
+	collider_config.serializer_fn = test_component_collider_serialize;
+	app_register_component_type(app, &collider_config);
+
+	component_config_t octorok_config;
+	octorok_config.name = CUTE_STRINGIZE(test_component_octorok_t);
+	octorok_config.type = test_component_octorok_type;
+	octorok_config.initializer_fn = test_component_octorok_initialize;
+	octorok_config.serializer_fn = test_component_octorok_serialize;
+	app_register_component_type(app, &octorok_config);
+
+	// Register entity types (just one, the octorok).
 	const char* octorok_schema = CUTE_STRINGIZE({
 		entity_type = "octorok",
 		inherits_from = "",
@@ -113,6 +188,12 @@ int test_ecs_octorok()
 			radius = 3
 		},
 	});
+
+	component_type_t transform_component_type = test_component_transform_type;
+	app_register_system(app, update_test_transform, &transform_component_type, 1);
+
+	error_t err = app_register_entity_schema(app, "octorok", 0, octorok_schema, (int)CUTE_STRLEN(octorok_schema));
+	if (err.is_error()) return -1;
 
 	const char* serialized_entities = CUTE_STRINGIZE({
 		{
@@ -130,19 +211,6 @@ int test_ecs_octorok()
 			}
 		},
 	});
-
-	component_config_t transform_config;
-	transform_config.name = CUTE_STRINGIZE(test_component_transform_t);
-	transform_config.type = test_component_transform_type;
-	transform_config.initializer_fn = test_component_transform_initialize;
-	transform_config.serializer_fn = test_component_transform_serialize;
-	app_register_component_type(app, &transform_config);
-
-	component_type_t transform_component_type = test_component_transform_type;
-	app_register_system(app, update_test_transform, &transform_component_type, 1);
-
-	error_t err = app_register_entity_schema(app, "octorok", 0, octorok_schema, (int)CUTE_STRLEN(octorok_schema));
-	if (err.is_error()) return -1;
 	
 	// WOKRING HERE.
 	// TODO

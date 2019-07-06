@@ -38,17 +38,6 @@ void app_register_system(app_t* app, system_fn* system_update_function, componen
 	for (int i = 0; i < types_count; ++i) system.component_types.add(types[i]);
 }
 
-void app_register_entity_type(app_t* app, entity_type_t entity_type, component_type_t* types, int types_count)
-{
-	CUTE_ASSERT(types_count);
-	entity_collection_t* collection = app->entity_collections.insert(entity_type);
-	for (int i = 0; i < types_count; ++i)
-	{
-		collection->component_types.add(types[i]);
-		collection->component_tables.add();
-	}
-}
-
 entity_t app_make_entity(app_t* app, entity_type_t type)
 {
 	// TODO: Implement me.
@@ -145,16 +134,27 @@ void app_update_systems(app_t* app)
 
 //--------------------------------------------------------------------------------------------------
 
-void app_register_component_type(app_t* app, const component_config_t* component_config)
+error_t app_register_component_type(app_t* app, const component_config_t* component_config)
 {
 	app->component_name_to_type_table.insert(component_config->name, component_config->type);
 	app->component_configs.insert(component_config->type, *component_config);
+	return error_success();
 }
 
 //--------------------------------------------------------------------------------------------------
 
-error_t app_register_entity_schema(app_t* app, const char* entity_name, entity_type_t entity_type, const void* schema, int schema_size)
+error_t app_register_entity_type(app_t* app, const entity_config_t* config)
 {
+	// Register types.
+	CUTE_ASSERT(types_count);
+	entity_collection_t* collection = app->entity_collections.insert(config->type);
+	for (int i = 0; i < types_count; ++i)
+	{
+		collection->component_types.add(types[i]);
+		collection->component_tables.add();
+	}
+
+	// Register serialization schema.
 	kv_t* kv = kv_make(app->mem_ctx);
 	error_t err = kv_reset_io(kv, schema, schema_size, CUTE_KV_MODE_READ);
 	if (err.is_error()) {
@@ -191,6 +191,10 @@ error_t app_register_entity_schema(app_t* app, const char* entity_name, entity_t
 	app->entity_schemas.insert(entity_type, entity_schema);
 
 	return error_success();
+}
+
+error_t app_register_entity_schema(app_t* app, const char* entity_name, entity_type_t entity_type, const void* schema, int schema_size)
+{
 }
 
 error_t app_load_entities(app_t* app, const void* memory, int size)
