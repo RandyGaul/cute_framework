@@ -33,9 +33,12 @@ struct kv_t;
 #define CUTE_KV_MODE_WRITE 1
 #define CUTE_KV_MODE_READ  0
 
+// TODO
+// Explicit parse function.
+
 CUTE_API kv_t* CUTE_CALL kv_make(void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL kv_destroy(kv_t* kv);
-CUTE_API error_t CUTE_CALL kv_reset_io(kv_t* kv, const void* data, int size, int mode);
+CUTE_API error_t CUTE_CALL kv_reset_io(kv_t* kv, const void* data, size_t size, int mode);
 CUTE_API void CUTE_CALL kv_reset_read(kv_t* kv);
 CUTE_API int CUTE_CALL kv_size_written(kv_t* kv);
 CUTE_API error_t CUTE_CALL kv_error_state(kv_t* kv);

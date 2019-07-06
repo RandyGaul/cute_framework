@@ -146,25 +146,24 @@ error_t app_register_component_type(app_t* app, const component_config_t* compon
 error_t app_register_entity_type(app_t* app, const entity_config_t* config)
 {
 	// Register types.
-	CUTE_ASSERT(types_count);
 	entity_collection_t* collection = app->entity_collections.insert(config->type);
-	for (int i = 0; i < types_count; ++i)
+	for (int i = 0; i < config->types_count; ++i)
 	{
-		collection->component_types.add(types[i]);
+		collection->component_types.add(config->types[i]);
 		collection->component_tables.add();
 	}
 
 	// Register serialization schema.
 	kv_t* kv = kv_make(app->mem_ctx);
-	error_t err = kv_reset_io(kv, schema, schema_size, CUTE_KV_MODE_READ);
+	error_t err = kv_reset_io(kv, config->schema, config->schema_size, CUTE_KV_MODE_READ);
 	if (err.is_error()) {
-		log(CUTE_LOG_LEVEL_ERROR, "Unable to find parse entity schema for %s.\n", entity_name);
+		log(CUTE_LOG_LEVEL_ERROR, "Unable to find parse entity schema for %s.\n", config->name);
 		return err;
 	}
 
 	entity_schema_t entity_schema;
-	entity_schema.entity_name = entity_name;
-	entity_schema.entity_type = entity_type;
+	entity_schema.entity_name = config->name;
+	entity_schema.entity_type = config->type;
 	entity_schema.parsed_kv_schema = kv;
 
 	int component_config_count = app->component_configs.count();
@@ -187,14 +186,10 @@ error_t app_register_entity_type(app_t* app, const entity_config_t* config)
 	}
 
 	kv_reset_read(kv);
-	app->entity_name_to_type_table.insert(entity_name, entity_type);
-	app->entity_schemas.insert(entity_type, entity_schema);
+	app->entity_name_to_type_table.insert(config->name, config->type);
+	app->entity_schemas.insert(config->type, entity_schema);
 
 	return error_success();
-}
-
-error_t app_register_entity_schema(app_t* app, const char* entity_name, entity_type_t entity_type, const void* schema, int schema_size)
-{
 }
 
 error_t app_load_entities(app_t* app, const void* memory, int size)

@@ -118,22 +118,10 @@ error_t test_component_octorok_serialize(kv_t* kv, void* component)
 
 // -------------------------------------------------------------------------------------------------
 
-void update_test_transform(float dt, test_component_transform_t* transform)
+void update_test_octorok_system(float dt, test_component_transform_t* transform, test_component_octorok_t* octorok)
 {
 	transform->x += 1.0f * dt;
 	transform->y -= 1.0f * dt;
-}
-
-void update_test_sprite(float dt, test_component_transform_t* transform, test_component_sprite_t* sprite)
-{
-}
-
-void update_test_collider(float dt, test_component_transform_t* transform, test_component_collider_t* collider)
-{
-}
-
-void update_test_octorok(float dt, test_component_transform_t* transform, test_component_octorok_t* octorok)
-{
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -189,11 +177,30 @@ int test_ecs_octorok()
 		},
 	});
 
-	component_type_t transform_component_type = test_component_transform_type;
-	app_register_system(app, update_test_transform, &transform_component_type, 1);
+	component_type_t octorok_entity_types[] = {
+		test_component_transform_type,
+		test_component_sprite_type,
+		test_component_collider_type,
+		test_component_octorok_type
+	};
 
-	error_t err = app_register_entity_schema(app, "octorok", 0, octorok_schema, (int)CUTE_STRLEN(octorok_schema));
-	if (err.is_error()) return -1;
+	entity_config_t entity_config;
+	entity_config.name = "Octorok";
+	entity_config.type = 0;
+	entity_config.types_count = 4;
+	entity_config.types = octorok_entity_types;
+	entity_config.schema_size = CUTE_STRLEN(octorok_schema);
+	entity_config.schema = octorok_schema;
+	app_register_entity_type(app, &entity_config);
+
+	// Register systems (just one, the Octorok system).
+	component_type_t octorok_system_types[] = {
+		test_component_transform_type,
+		test_component_sprite_type,
+		test_component_collider_type,
+		test_component_octorok_type
+	};
+	app_register_system(app, update_test_octorok_system, octorok_system_types, 4);
 
 	const char* serialized_entities = CUTE_STRINGIZE({
 		{

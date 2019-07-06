@@ -410,7 +410,7 @@ static error_t s_parse_object(kv_t* kv, int* index)
 	return error_success();
 }
 
-error_t kv_reset_io(kv_t* kv, const void* data, int size, int mode)
+error_t kv_reset_io(kv_t* kv, const void* data, size_t size, int mode)
 {
 	kv->start = (uint8_t*)data;
 	kv->in = (uint8_t*)data;

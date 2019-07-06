@@ -53,7 +53,7 @@ struct mouse_state_t
 
 struct system_t
 {
-	system_fn* update_func;
+	system_fn* update_func = NULL;
 	array<component_type_t> component_types;
 };
 
