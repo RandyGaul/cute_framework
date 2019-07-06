@@ -278,8 +278,8 @@ error_t app_load_entities(app_t* app, const void* memory, size_t size)
 			return error_failure("Unable to find entity type.");
 		}
 
-		entity_type_t entity_type = *entity_type_ptr;
-		entity_collection_t* collection = app->entity_collections.find(entity_type);
+		entity_type_t type = *entity_type_ptr;
+		entity_collection_t* collection = app->entity_collections.find(type);
 		CUTE_ASSERT(collection);
 
 		const array<component_type_t>& types = collection->component_types;
@@ -295,6 +295,7 @@ error_t app_load_entities(app_t* app, const void* memory, size_t size)
 				return error_failure("Unable to find component config.");
 			}
 
+			int index = collection->component_tables.count();
 			void* component = collection->component_tables[i].add();
 			config->initializer_fn(component);
 
@@ -303,10 +304,15 @@ error_t app_load_entities(app_t* app, const void* memory, size_t size)
 				config->serializer_fn(kv, component);
 				kv_object_end(kv);
 			}
+
+			handle_t h = collection->entity_handle_table.alloc_handle(index);
+			collection->entity_handles.add(h);
 		}
 
 		kv_object_end(kv);
 	}
+
+	kv_destroy(kv);
 
 	return error_success();
 }

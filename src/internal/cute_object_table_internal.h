@@ -46,7 +46,7 @@ struct object_table_t
 	const T* get_objects() const;
 	int get_object_count() const;
 
-	handle_table_t* m_table;
+	handle_allocator_t* m_table;
 	array<T> m_objects;
 };
 
@@ -54,7 +54,7 @@ struct object_table_t
 
 template <typename T>
 object_table_t<T>::object_table_t(int reserve_count, void* user_allocator_context)
-	: m_table(handle_table_make(reserve_count, user_allocator_context))
+	: m_table(handle_allocator_make(reserve_count, user_allocator_context))
 	, m_objects(reserve_count, user_allocator_context)
 {
 }
@@ -62,7 +62,7 @@ object_table_t<T>::object_table_t(int reserve_count, void* user_allocator_contex
 template <typename T>
 object_table_t<T>::~object_table_t()
 {
-	handle_table_destroy(m_table);
+	handle_allocator_destroy(m_table);
 }
 
 template <typename T>
@@ -71,17 +71,17 @@ handle_t object_table_t<T>::allocate(const T* object)
 	int index = m_objects.count();
 	T* slot = &m_objects.add();
 	CUTE_MEMCPY(slot, object, sizeof(T));
-	handle_t handle = handle_table_alloc(m_table, index);
+	handle_t handle = handle_allocator_alloc(m_table, index);
 	return handle;
 }
 
 template <typename T>
 T* object_table_t<T>::get_object(handle_t id) const
 {
-	if (!handle_table_is_valid(m_table, id)) {
+	if (!handle_allocator_is_handle_valid(m_table, id)) {
 		return NULL;
 	} else {
-		int index = (int)handle_table_get_index(m_table, id);
+		int index = (int)handle_allocator_get_index(m_table, id);
 		const T* object = &m_objects[index];
 		return object;
 	}
@@ -90,9 +90,9 @@ T* object_table_t<T>::get_object(handle_t id) const
 template <typename T>
 T* object_table_t<T>::remove_object(handle_t id, int* moved_index)
 {
-	if (handle_table_is_valid(m_table, id)) {
-		handle_table_free(m_table, id);
-		int index = (int)handle_table_get_index(m_table, id);
+	if (handle_allocator_is_handle_valid(m_table, id)) {
+		handle_allocator_free(m_table, id);
+		int index = (int)handle_allocator_get_index(m_table, id);
 		if (moved_index) *moved_index = index;
 		m_objects.unordered_remove(index);
 	} else {
@@ -110,13 +110,13 @@ T* object_table_t<T>::remove_object(int index)
 template <typename T>
 bool object_table_t<T>::has_object(handle_t id) const
 {
-	return handle_table_is_valid(m_table, id) ? true : false;
+	return handle_allocator_is_handle_valid(m_table, id) ? true : false;
 }
 
 template <typename T>
 void object_table_t<T>::update_handle(handle_t moved_handle, int moved_index)
 {
-	handle_table_update_index(m_table, moved_handle, moved_index);
+	handle_allocator_update_index(m_table, moved_handle, moved_index);
 }
 
 template <typename T>

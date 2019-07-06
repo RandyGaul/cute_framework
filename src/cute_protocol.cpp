@@ -1416,7 +1416,7 @@ int server_start(server_t* server, const char* address, uint32_t connection_time
 	cleanup_map = 1;
 	CUTE_CHECK(connect_token_cache_init(&server->token_cache, CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX, server->mem_ctx));
 	cleanup_cache = 1;
-	server->client_handle_table = handle_table_make(CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx);
+	server->client_handle_table = handle_allocator_make(CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx);
 	CUTE_CHECK_POINTER(server->client_handle_table);
 	cleanup_handles = 1;
 	CUTE_CHECK(socket_init(&server->socket, address, CUTE_PROTOCOL_SERVER_SEND_BUFFER_SIZE, CUTE_PROTOCOL_SERVER_RECEIVE_BUFFER_SIZE));
@@ -1436,7 +1436,7 @@ int server_start(server_t* server, const char* address, uint32_t connection_time
 cute_error:
 	if (cleanup_map) encryption_map_cleanup(&server->encryption_map);
 	if (cleanup_cache) connect_token_cache_cleanup(&server->token_cache);
-	if (cleanup_handles) handle_table_destroy(server->client_handle_table);
+	if (cleanup_handles) handle_allocator_destroy(server->client_handle_table);
 	if (cleanup_socket) socket_cleanup(&server->socket);
 	if (cleanup_endpoint_table) hashtable_cleanup(&server->client_endpoint_table);
 	if (cleanup_client_id_table) hashtable_cleanup(&server->client_id_table);
@@ -1477,7 +1477,7 @@ void server_stop(server_t* server)
 
 	encryption_map_cleanup(&server->encryption_map);
 	connect_token_cache_cleanup(&server->token_cache);
-	handle_table_destroy(server->client_handle_table);
+	handle_allocator_destroy(server->client_handle_table);
 	socket_cleanup(&server->socket);
 	hashtable_cleanup(&server->client_endpoint_table);
 	hashtable_cleanup(&server->client_id_table);
@@ -1491,7 +1491,7 @@ int server_running(server_t* server)
 
 static CUTE_INLINE uint32_t s_client_index(server_t* server, handle_t h)
 {
-	return handle_table_get_index(server->client_handle_table, h);
+	return handle_allocator_get_index(server->client_handle_table, h);
 }
 
 static void s_server_connect_client(server_t* server, endpoint_t endpoint, encryption_state_t* state)
@@ -1502,7 +1502,7 @@ static void s_server_connect_client(server_t* server, endpoint_t endpoint, encry
 
 	log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Connecting client %" PRIu64 ".", state->client_id);
 
-	handle_t h = handle_table_alloc(server->client_handle_table, index);
+	handle_t h = handle_allocator_alloc(server->client_handle_table, index);
 
 	server_event_t event;
 	event.type = SERVER_EVENT_NEW_CONNECTION;
@@ -1565,7 +1565,7 @@ static void s_server_disconnect_client(server_t* server, uint32_t index, int sen
 
 	// Free client resources.
 	server->client_is_confirmed[index] = 0;
-	handle_table_free(server->client_handle_table, server->client_handle[index]);
+	handle_allocator_free(server->client_handle_table, server->client_handle[index]);
 	hashtable_remove(&server->client_id_table, server->client_id + index);
 	hashtable_remove(&server->client_endpoint_table, server->client_endpoint + index);
 
@@ -1573,7 +1573,7 @@ static void s_server_disconnect_client(server_t* server, uint32_t index, int sen
 	int last_index = --server->client_count;
 	if (last_index != index) {
 		handle_t h = server->client_handle[last_index];
-		handle_table_update_index(server->client_handle_table, h, index);
+		handle_allocator_update_index(server->client_handle_table, h, index);
 
 		server->client_id[index]                        = server->client_id[last_index];
 		server->client_handle[index]                    = server->client_handle[last_index];
@@ -1853,7 +1853,7 @@ void server_free_packet(server_t* server, void* packet)
 void server_disconnect_client(server_t* server, handle_t client_handle)
 {
 	CUTE_ASSERT(server->client_count >= 1);
-	uint32_t index = handle_table_get_index(server->client_handle_table, client_handle);
+	uint32_t index = handle_allocator_get_index(server->client_handle_table, client_handle);
 	s_server_disconnect_client(server, index, 1);
 }
 
@@ -1885,7 +1885,7 @@ int server_send_to_client(server_t* server, const void* packet, int size, handle
 
 	CUTE_ASSERT(server->client_count >= 1);
 	// TODO: Make a waya to assert client_id is valid.
-	uint32_t index = handle_table_get_index(server->client_handle_table, client_handle);
+	uint32_t index = handle_allocator_get_index(server->client_handle_table, client_handle);
 
 	if (!server->client_is_confirmed[index]) {
 		packet_connection_accepted_t packet;
@@ -1952,7 +1952,7 @@ uint64_t server_get_client_id_from_handle(server_t* server, handle_t client_hand
 {
 	CUTE_ASSERT(server->client_count >= 1);
 	// TODO: Make a waya to assert client_id is valid.
-	uint32_t index = handle_table_get_index(server->client_handle_table, client_handle);
+	uint32_t index = handle_allocator_get_index(server->client_handle_table, client_handle);
 	return server->client_id[index];
 }
 

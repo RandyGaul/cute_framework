@@ -84,6 +84,8 @@ struct array
 	T* operator+(int index);
 	const T* operator+(int index) const;
 
+	array<T>& operator=(array<T>& rhs);
+
 	T& last();
 	const T& last() const;
 
@@ -298,6 +300,13 @@ const T* array<T>::operator+(int index) const
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	return m_items + index;
+}
+
+template <typename T>
+array<T>& array<T>::operator=(array<T>& rhs)
+{
+	steal_from(rhs);
+	return *this;
 }
 
 template <typename T>

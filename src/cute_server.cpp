@@ -55,7 +55,7 @@ struct server_t
 	void* mem_ctx = NULL;
 
 	int connection_denied_count = 0;
-	handle_table_t client_handle_table;
+	handle_allocator_t client_handle_table;
 	int client_count = 0;
 	handle_t client_handle[CUTE_SERVER_MAX_CLIENTS];
 	int client_is_connected[CUTE_SERVER_MAX_CLIENTS];
@@ -155,7 +155,7 @@ static uint32_t s_client_index_from_endpoint(server_t* server, endpoint_t endpoi
 
 static CUTE_INLINE uint32_t s_client_index_from_handle(server_t* server, handle_t h)
 {
-	return handle_table_get_index(&server->client_handle_table, h);
+	return handle_allocator_get_index(&server->client_handle_table, h);
 }
 
 static server_event_t* s_push_event(server_t* server)
@@ -189,7 +189,7 @@ static uint32_t s_client_make(server_t* server, endpoint_t endpoint, crypto_key_
 	crypto_random_bytes(&sequence_offset, sizeof(sequence_offset));
 
 	uint32_t index = (uint32_t)server->client_count++;
-	server->client_handle[index] = handle_table_alloc(&server->client_handle_table, index);
+	server->client_handle[index] = handle_allocator_alloc(&server->client_handle_table, index);
 	CUTE_ASSERT(server->client_handle[index] != CUTE_INVALID_HANDLE);
 	server->client_is_connected[index] = 1;
 	server->client_is_loopback[index] = loopback;
@@ -431,20 +431,20 @@ int server_poll_event(server_t* server, server_event_t* event)
 void server_disconnect_client(server_t* server, handle_t client_id, int send_notification_to_client)
 {
 	CUTE_ASSERT(server->client_count >= 1);
-	uint32_t index = handle_table_get_index(&server->client_handle_table, client_id);
+	uint32_t index = handle_allocator_get_index(&server->client_handle_table, client_id);
 	if (send_notification_to_client) {
 		s_server_send_packet_no_payload(server, index, protocol::PACKET_TYPE_DISCONNECT);
 	}
 
 	// Free client resources.
 	server->client_is_connected[index] = 0;
-	handle_table_free(&server->client_handle_table, client_id);
+	handle_allocator_free(&server->client_handle_table, client_id);
 
 	// Move client in back to the empty slot.
 	int last_index = --server->client_count;
 	if (last_index) {
 		handle_t h = server->client_handle[index];
-		handle_table_update_index(&server->client_handle_table, h, index);
+		handle_allocator_update_index(&server->client_handle_table, h, index);
 
 		server->client_handle[index]                    = server->client_handle[last_index];
 		server->client_is_connected[index]              = server->client_is_connected[last_index];

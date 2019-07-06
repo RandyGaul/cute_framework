@@ -29,6 +29,7 @@
 #include <cute_file_system_utils.h>
 #include <cute_net.h>
 #include <cute_c_runtime.h>
+#include <cute_kv.h>
 
 #include <internal/cute_defines_internal.h>
 #include <internal/cute_app_internal.h>
@@ -141,6 +142,10 @@ void app_destroy(app_t* app)
 	SDL_Quit();
 	cute_threadpool_destroy(app->threadpool);
 	audio_system_destroy(app->audio_system);
+	int schema_count = app->entity_schemas.count();
+	entity_schema_t* schemas = app->entity_schemas.items();
+	for (int i = 0; i < schema_count; ++i) kv_destroy(schemas->parsed_kv_schema);
+	app->~app_t();
 	CUTE_FREE(app, app->mem_ctx);
 	internal::file_system_destroy();
 }

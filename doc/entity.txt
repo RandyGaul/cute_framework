@@ -265,3 +265,17 @@ Register entity types.
 Register entity schema.
 Load entity from string.
 Call update on systems.
+
+---
+
+StateSystem
+-> Queue up changes
+-> Invoke processing later
+-> Store/access data
+
+---
+
+Ways to get an entity_t.
+Geometrically, within a system, via spatial query.
+Already known via serialization (referenced in file).
+Assigned in editor or UI.

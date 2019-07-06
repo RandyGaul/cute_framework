@@ -309,7 +309,7 @@ struct server_t
 	connect_token_cache_t token_cache;
 
 	int client_count;
-	handle_table_t* client_handle_table;
+	handle_allocator_t* client_handle_table;
 	hashtable_t client_endpoint_table;
 	hashtable_t client_id_table;
 	uint64_t client_id[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];

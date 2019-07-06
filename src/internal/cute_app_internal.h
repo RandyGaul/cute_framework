@@ -59,7 +59,8 @@ struct system_t
 
 struct entity_collection_t
 {
-	handle_table_t* entity_handles = NULL;
+	handle_table_t entity_handle_table;
+	array<handle_t> entity_handles;
 	array<component_type_t> component_types;
 	array<typeless_array> component_tables;
 };
@@ -79,12 +80,13 @@ struct app_t
 	threadpool_t* threadpool = NULL;
 	audio_system_t* audio_system = NULL;
 
-	buffer_t input_text = buffer_t(sizeof(int));
+	//buffer_t input_text = buffer_t(sizeof(int));
 	int keys[512];
 	int keys_prev[512];
 	float keys_duration[512];
 	mouse_state_t mouse, mouse_prev;
 
+	// TODO: Set allocator context for these data structures.
 	array<system_t> systems;
 	dictionary<entity_type_t, entity_collection_t> entity_collections;
 

@@ -118,10 +118,17 @@ error_t test_component_octorok_serialize(kv_t* kv, void* component)
 
 // -------------------------------------------------------------------------------------------------
 
+int s_octorok_system_ran_ok;
 void update_test_octorok_system(float dt, test_component_transform_t* transform, test_component_sprite_t* sprite, test_component_collider_t* collider, test_component_octorok_t* octorok)
 {
-	transform->x += 1.0f * dt;
-	transform->y -= 1.0f * dt;
+	CUTE_ASSERT(sprite->img_id == 7);
+	CUTE_ASSERT(collider->type == 3);
+	CUTE_ASSERT(collider->radius == 14.0f);
+	CUTE_ASSERT(octorok->ai_state == 0);
+	CUTE_ASSERT(octorok->pellet_count == 3);
+	transform->x = 20.0f;
+	transform->y = 20.0f;
+	if (transform->x == 20.0f) s_octorok_system_ran_ok++;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -216,18 +223,13 @@ int test_ecs_octorok()
 	app_load_entities(app, serialized_entities, CUTE_STRLEN(serialized_entities));
 
 	// Update the systems.
+	s_octorok_system_ran_ok = 0;
 	app_update_systems(app);
 
 	// Assert outcomes (make sure the systems actually ran).
+	CUTE_TEST_ASSERT(s_octorok_system_ran_ok == 2);
 
-	// WORKING HERE.
-	// TODO
-	// [x] Register component types.
-	// [x] Register systems.
-	// [x] Register entity types.
-	// [x] Load entity from string.
-	// [x] Call update on systems.
-	// [ ] Assert outcome.
+	app_destroy(app);
 
-	return -1;
+	return 0;
 }

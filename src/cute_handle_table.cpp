@@ -40,20 +40,20 @@ union handle_entry_t
 	uint64_t val = 0;
 };
 
-struct handle_table_t
+struct handle_allocator_t
 {
-	handle_table_t(void* user_allocator_context)
+	handle_allocator_t(void* user_allocator_context)
 		: m_handles(user_allocator_context)
 		, m_mem_ctx(user_allocator_context)
 	{
 	}
 
-	uint32_t m_freelist = 0;
+	uint32_t m_freelist = ~0;
 	array<handle_entry_t> m_handles;
 	void* m_mem_ctx = NULL;
 };
 
-static void s_add_elements_to_freelist(handle_table_t* table, int first_index, int last_index)
+static void s_add_elements_to_freelist(handle_allocator_t* table, int first_index, int last_index)
 {
 	handle_entry_t* m_handles = table->m_handles.data();
 	for (int i = first_index; i < last_index; ++i)
@@ -72,10 +72,10 @@ static void s_add_elements_to_freelist(handle_table_t* table, int first_index, i
 	table->m_freelist = first_index;
 }
 
-handle_table_t* handle_table_make(int initial_capacity, void* user_allocator_context)
+handle_allocator_t* handle_allocator_make(int initial_capacity, void* user_allocator_context)
 {
-	handle_table_t* table = (handle_table_t*)CUTE_ALLOC(sizeof(handle_table_t), user_allocator_context);
-	CUTE_PLACEMENT_NEW(table) handle_table_t(user_allocator_context);
+	handle_allocator_t* table = (handle_allocator_t*)CUTE_ALLOC(sizeof(handle_allocator_t), user_allocator_context);
+	CUTE_PLACEMENT_NEW(table) handle_allocator_t(user_allocator_context);
 
 	if (initial_capacity) {
 		table->m_handles.ensure_capacity(initial_capacity);
@@ -86,19 +86,20 @@ handle_table_t* handle_table_make(int initial_capacity, void* user_allocator_con
 	return table;
 }
 
-void handle_table_destroy(handle_table_t* table)
+void handle_allocator_destroy(handle_allocator_t* table)
 {
 	if (!table) return;
 	void* mem_ctx = table->m_mem_ctx;
-	table->~handle_table_t();
+	table->~handle_allocator_t();
 	CUTE_FREE(table, mem_ctx);
 }
 
-handle_t handle_table_alloc(handle_table_t* table, uint32_t index)
+handle_t handle_allocator_alloc(handle_allocator_t* table, uint32_t index)
 {
 	int freelist_index = table->m_freelist;
 	if (freelist_index == UINT32_MAX) {
 		int first_index = table->m_handles.capacity();
+		if (!first_index) first_index = 1;
 		table->m_handles.ensure_capacity(first_index * 2);
 		int last_index = table->m_handles.capacity() - 1;
 		s_add_elements_to_freelist(table, first_index, last_index);
@@ -120,7 +121,7 @@ static CUTE_INLINE uint32_t s_table_index(handle_t handle)
 	return (uint32_t)((handle & 0xFFFFFFFF00000000ULL) >> 32);
 }
 
-uint32_t handle_table_get_index(handle_table_t* table, handle_t handle)
+uint32_t handle_allocator_get_index(handle_allocator_t* table, handle_t handle)
 {
 	handle_entry_t* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);
@@ -129,7 +130,7 @@ uint32_t handle_table_get_index(handle_table_t* table, handle_t handle)
 	return m_handles[table_index].data.user_index;
 }
 
-void handle_table_update_index(handle_table_t* table, handle_t handle, uint32_t index)
+void handle_allocator_update_index(handle_allocator_t* table, handle_t handle, uint32_t index)
 {
 	handle_entry_t* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);
@@ -138,7 +139,7 @@ void handle_table_update_index(handle_table_t* table, handle_t handle, uint32_t 
 	m_handles[table_index].data.user_index = index;
 }
 
-void handle_table_free(handle_table_t* table, handle_t handle)
+void handle_allocator_free(handle_allocator_t* table, handle_t handle)
 {
 	// Push handle onto m_freelist.
 	handle_entry_t* m_handles = table->m_handles.data();
@@ -148,7 +149,7 @@ void handle_table_free(handle_table_t* table, handle_t handle)
 	table->m_freelist = table_index;
 }
 
-int handle_table_is_valid(handle_table_t* table, handle_t handle)
+int handle_allocator_is_handle_valid(handle_allocator_t* table, handle_t handle)
 {
 	handle_entry_t* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);

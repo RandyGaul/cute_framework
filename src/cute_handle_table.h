@@ -27,19 +27,62 @@
 namespace cute
 {
 
-struct handle_table_t;
+struct handle_allocator_t;
 
 using handle_t = uint64_t;
 #define CUTE_INVALID_HANDLE (~0ULL)
 
-extern CUTE_API handle_table_t* CUTE_CALL handle_table_make(int initial_capacity, void* user_allocator_context = NULL);
-extern CUTE_API void CUTE_CALL handle_table_destroy(handle_table_t* table);
+extern CUTE_API handle_allocator_t* CUTE_CALL handle_allocator_make(int initial_capacity, void* user_allocator_context = NULL);
+extern CUTE_API void CUTE_CALL handle_allocator_destroy(handle_allocator_t* table);
 
-extern CUTE_API handle_t CUTE_CALL handle_table_alloc(handle_table_t* table, uint32_t index);
-extern CUTE_API uint32_t CUTE_CALL handle_table_get_index(handle_table_t* table, handle_t handle);
-extern CUTE_API void CUTE_CALL handle_table_update_index(handle_table_t* table, handle_t handle, uint32_t index);
-extern CUTE_API void CUTE_CALL handle_table_free(handle_table_t* table, handle_t handle);
-extern CUTE_API int CUTE_CALL handle_table_is_valid(handle_table_t* table, handle_t handle);
+extern CUTE_API handle_t CUTE_CALL handle_allocator_alloc(handle_allocator_t* table, uint32_t index);
+extern CUTE_API uint32_t CUTE_CALL handle_allocator_get_index(handle_allocator_t* table, handle_t handle);
+extern CUTE_API void CUTE_CALL handle_allocator_update_index(handle_allocator_t* table, handle_t handle, uint32_t index);
+extern CUTE_API void CUTE_CALL handle_allocator_free(handle_allocator_t* table, handle_t handle);
+extern CUTE_API int CUTE_CALL handle_allocator_is_handle_valid(handle_allocator_t* table, handle_t handle);
+
+// -------------------------------------------------------------------------------------------------
+
+struct handle_table_t
+{
+	CUTE_INLINE handle_table_t(int initial_capacity = 0, void* user_allocator_context = NULL)
+		: m_alloc(handle_allocator_make(initial_capacity, user_allocator_context))
+	{
+	}
+
+	CUTE_INLINE ~handle_table_t()
+	{
+		handle_allocator_destroy(m_alloc);
+		m_alloc = NULL;
+	}
+
+	CUTE_INLINE handle_t alloc_handle(uint32_t index)
+	{
+		return handle_allocator_alloc(m_alloc, index);
+	}
+
+	CUTE_INLINE uint32_t get_index(handle_t handle)
+	{
+		return handle_allocator_get_index(m_alloc, handle);
+	}
+
+	CUTE_INLINE void get_index(handle_t handle, uint32_t index)
+	{
+		handle_allocator_update_index(m_alloc, handle, index);
+	}
+
+	CUTE_INLINE void free_handle(handle_t handle)
+	{
+		handle_allocator_free(m_alloc, handle);
+	}
+
+	CUTE_INLINE bool is_valid(handle_t handle)
+	{
+		return !!handle_allocator_is_handle_valid(m_alloc, handle);
+	}
+
+	handle_allocator_t* m_alloc;
+};
 
 }
 
