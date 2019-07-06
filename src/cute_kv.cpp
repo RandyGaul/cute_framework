@@ -916,8 +916,16 @@ error_t kv_val(kv_t* kv, double* val)
 		if (err.is_error()) return err;
 	} else {
 		kv_val_t* matched_val = s_pop_val(kv, KV_TYPE_DOUBLE);
-		if (!matched_val) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
-		*val = matched_val->u.dval;
+		if (!matched_val) {
+			matched_val = s_pop_val(kv, KV_TYPE_INT64);
+			if (matched_val) {
+				*val = (double)matched_val->u.ival;
+			} else {
+				return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+			}
+		} else {
+			*val = matched_val->u.dval;
+		}
 	}
 	return error_success();
 }

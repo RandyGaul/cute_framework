@@ -36,6 +36,16 @@ struct kv_t;
 // TODO
 // Explicit parse function.
 
+// Setup for reading (parse).
+// Setup for writing (set buffer).
+// Make/destroy.
+// Reset read state.
+// End condition for reading.
+// Delete kv mode.
+
+// kv_parse(kv, data, size);
+// kv_
+
 CUTE_API kv_t* CUTE_CALL kv_make(void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL kv_destroy(kv_t* kv);
 CUTE_API error_t CUTE_CALL kv_reset_io(kv_t* kv, const void* data, size_t size, int mode);
