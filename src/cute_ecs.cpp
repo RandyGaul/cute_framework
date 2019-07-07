@@ -203,7 +203,7 @@ error_t app_register_entity_type(app_t* app, const entity_config_t* config)
 {
 	// Register serialization schema.
 	kv_t* kv = kv_make(app->mem_ctx);
-	error_t err = kv_reset_io(kv, config->schema, config->schema_size, CUTE_KV_MODE_READ);
+	error_t err = kv_parse(kv, config->schema, config->schema_size);
 	if (err.is_error()) {
 		log(CUTE_LOG_LEVEL_ERROR, "Unable to find parse entity schema for %s.\n", config->name);
 		return err;
@@ -243,7 +243,7 @@ error_t app_register_entity_type(app_t* app, const entity_config_t* config)
 		table.m_element_size = config->size;
 	}
 
-	kv_reset_read(kv);
+	kv_reset_read_state(kv);
 	app->entity_name_to_type_table.insert(config->name, config->type);
 	app->entity_schemas.insert(config->type, entity_schema);
 
@@ -253,20 +253,25 @@ error_t app_register_entity_type(app_t* app, const entity_config_t* config)
 error_t app_load_entities(app_t* app, const void* memory, size_t size)
 {
 	kv_t* kv = kv_make(app->mem_ctx);
-	error_t err = kv_reset_io(kv, memory, size, CUTE_KV_MODE_READ);
+	error_t err = kv_parse(kv, memory, size);
 	if (err.is_error()) {
 		return err;
 	}
 
-	while (1)
+	err = kv_key(kv, "entities");
+	if (err.is_error()) {
+		return err;
+	}
+
+	// WORKING HERE
+	// Using array of entities, and not top level objects.
+	// Requires a fairly big refactor of kv.
+	// But it's all for the best.
+	kv_val_
+
+	while (kv_has_more_objects_to_read(kv))
 	{
-		err = kv_object_begin(kv);
-		if (err.is_error()) {
-			// TODO: This end condition sucks.
-			// kv needs a solid "is any more top level objects" function.
-			// For parsing only. Also add that kv_parse function.
-			break;
-		}
+		kv_object_begin(kv);
 
 		const char* entity_type_str = NULL;
 		size_t sz = 0;

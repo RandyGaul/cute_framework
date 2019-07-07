@@ -29,13 +29,16 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+#define CUTE_KV_MODE_WRITE 1
+#define CUTE_KV_MODE_READ  0
+
 namespace cute
 {
 
 struct kv_string_t
 {
 	uint8_t* str = NULL;
-	int len = 0;
+	size_t len = 0;
 };
 
 union kv_union_t
@@ -96,7 +99,7 @@ struct kv_t
 	array<int> in_array_stack;
 
 	int tabs = 0;
-	int temp_size = 0;
+	size_t temp_size = 0;
 	uint8_t* temp = NULL;
 
 	error_t err = error_success();
@@ -412,10 +415,10 @@ static error_t s_parse_object(kv_t* kv, int* index)
 	return error_success();
 }
 
-error_t kv_reset_io(kv_t* kv, const void* data, size_t size, int mode)
+static void s_reset(kv_t* kv, const void* ptr, size_t size, int mode)
 {
-	kv->start = (uint8_t*)data;
-	kv->in = (uint8_t*)data;
+	kv->start = (uint8_t*)ptr;
+	kv->in = (uint8_t*)ptr;
 	kv->in_end = kv->in + size;
 	kv->mode = mode;
 
@@ -426,33 +429,41 @@ error_t kv_reset_io(kv_t* kv, const void* data, size_t size, int mode)
 	kv->in_array_stack.clear();
 
 	kv->err = error_success();
+}
 
-	if (mode == CUTE_KV_MODE_READ) {
-		while (s_peek(kv) == '{')
-		{
-			int index;
-			error_t err = s_parse_object(kv, &index);
-			if (err.is_error()) return err;
-			kv->top_level_object_indices.add(index);
-		}
+error_t kv_parse(kv_t* kv, const void* data, size_t size)
+{
+	s_reset(kv, data, size, CUTE_KV_MODE_READ);
 
-		uint8_t c;
-		while (kv->in != kv->in_end && s_isspace(c = *kv->in)) kv->in++;
-
-		if (kv->in != kv->in_end) {
-			kv->err = error_failure("Unable to parse entire input `data`.");
-			return kv->err;
-		}
-
-		kv->start = NULL;
-		kv->in = NULL;
-		kv->in_end = NULL;
+	while (s_peek(kv) == '{')
+	{
+		int index;
+		error_t err = s_parse_object(kv, &index);
+		if (err.is_error()) return err;
+		kv->top_level_object_indices.add(index);
 	}
+
+	uint8_t c;
+	while (kv->in != kv->in_end && s_isspace(c = *kv->in)) kv->in++;
+
+	if (kv->in != kv->in_end) {
+		kv->err = error_failure("Unable to parse entire input `data`.");
+		return kv->err;
+	}
+
+	kv->start = NULL;
+	kv->in = NULL;
+	kv->in_end = NULL;
 
 	return error_success();
 }
 
-void kv_reset_read(kv_t* kv)
+void kv_set_write_buffer(kv_t* kv, void* buffer, size_t size)
+{
+	s_reset(kv, buffer, size, CUTE_KV_MODE_WRITE);
+}
+
+void kv_reset_read_state(kv_t* kv)
 {
 	CUTE_ASSERT(kv->mode == CUTE_KV_MODE_READ);
 	kv->read_mode_matched_val = NULL;
@@ -589,7 +600,7 @@ error_t kv_key(kv_t* kv, const char* key, kv_type_t* type)
 	return error_success();
 }
 
-static uint8_t* s_temp(kv_t* kv, int size)
+static uint8_t* s_temp(kv_t* kv, size_t size)
 {
 	if (kv->temp_size < size + 1) {
 		CUTE_FREE(kv->temp, kv->mem_ctx);
@@ -953,12 +964,12 @@ error_t kv_val_string(kv_t* kv, const char** str, size_t* size)
 	return error_success();
 }
 
-error_t kv_val_blob(kv_t* kv, void* data, int* size, int capacity)
+error_t kv_val_blob(kv_t* kv, void* data, size_t* size, size_t capacity)
 {
 	if (kv->mode == CUTE_KV_MODE_READ) *size = 0;
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
-		int buffer_size = CUTE_BASE64_ENCODED_SIZE(*size);
+		size_t buffer_size = CUTE_BASE64_ENCODED_SIZE(*size);
 		if (!(buffer_size <= capacity)) {
 			kv->err = error_failure("`capacity` is too small to hold base 64 encoded `data`.");
 			return kv->err;
@@ -976,7 +987,7 @@ error_t kv_val_blob(kv_t* kv, void* data, int* size, int capacity)
 			kv->err = error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 			return kv->err;
 		}
-		int buffer_size = CUTE_BASE64_DECODED_SIZE(matched_val->u.sval.len);
+		size_t buffer_size = CUTE_BASE64_DECODED_SIZE(matched_val->u.sval.len);
 		if (!(buffer_size <= capacity)) {
 			kv->err = error_failure("Decoded base 64 string is too large to store in `data`.");
 			return kv->err;
@@ -1004,7 +1015,8 @@ error_t kv_object_begin(kv_t* kv)
 			kv->read_mode_object_index = matched_val->u.object_index;
 		} else {
 			bool has_top_index = kv->read_mode_top_level_index != ~0;
-			if (!(has_top_index && kv->read_mode_top_level_index < kv->top_level_object_indices.count())) {
+			bool no_more_top_level_indices = kv->read_mode_top_level_index >= kv->top_level_object_indices.count();
+			if ((!has_top_index) | no_more_top_level_indices) {
 				kv->err = error_failure("Attempted to read object beyond end of input.");
 				return kv->err;
 			}
@@ -1033,7 +1045,7 @@ error_t kv_object_end(kv_t* kv)
 				kv->err = error_failure("`kv_object_end` called an extra time.");
 				return kv->err;
 			}
-			if (kv->read_mode_top_level_index == kv->top_level_object_indices.count() - 1) {
+			else if (kv->read_mode_top_level_index == kv->top_level_object_indices.count() - 1) {
 				kv->read_mode_top_level_index = ~0;
 			} else {
 				kv->read_mode_object_index = kv->top_level_object_indices[++kv->read_mode_top_level_index];

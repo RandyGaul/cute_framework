@@ -186,6 +186,6 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 	# Also set working directory to the target output folder.
 	if (MSVC)
 		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tests)
-		set_property(TARGET tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY "$(OutDir)")
+		set_property(TARGET tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:tests>)
 	endif()
 endif()

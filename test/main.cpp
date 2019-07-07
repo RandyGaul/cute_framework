@@ -24,6 +24,8 @@
 #include <crtdbg.h>
 #endif
 
+#include <direct.h>
+
 #include <cute_c_runtime.h>
 #include <test_harness.h>
 #include <internal/cute_crypto_internal.h>
@@ -49,6 +51,10 @@
 
 int main(int argc, const char** argv)
 {
+	char buf[256];
+	getcwd(buf, 256);
+	printf("Tests are running from %s.\n", buf);
+
 	//log_set_level(CUTE_LOG_LEVEL_INFORMATIONAL);
 
 #ifdef _MSC_VER
