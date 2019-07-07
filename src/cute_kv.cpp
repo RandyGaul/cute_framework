@@ -486,7 +486,7 @@ void kv_set_write_buffer(kv_t* kv, void* buffer, size_t size)
 	s_reset(kv, buffer, size, CUTE_KV_MODE_WRITE);
 }
 
-void kv_set_delta_base(kv_t* kv, kv_t* base)
+void kv_set_base(kv_t* kv, kv_t* base)
 {
 	CUTE_ASSERT(base->mode == CUTE_KV_MODE_READ);
 	kv->base = base;

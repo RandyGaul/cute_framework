@@ -303,7 +303,7 @@ int test_kv_write_delta_basic()
 
 	char buffer[1024];
 	kv_set_write_buffer(kv, buffer, 1024);
-	kv_set_delta_base(kv, base);
+	kv_set_base(kv, base);
 
 	int val = 1;
 	kv_key(kv, "a");
@@ -353,7 +353,7 @@ int test_kv_read_delta_basic()
 	err = kv_parse(kv, delta, CUTE_STRLEN(delta));
 	if (err.is_error()) return -1;
 
-	kv_set_delta_base(kv, base);
+	kv_set_base(kv, base);
 
 	int val;
 	kv_key(kv, "a");
@@ -407,9 +407,9 @@ int test_kv_write_delta_deep()
 
 	char buffer[1024];
 	kv_set_write_buffer(kv, buffer, 1024);
-	kv_set_delta_base(kv, base2);
-	kv_set_delta_base(base2, base1);
-	kv_set_delta_base(base1, base0);
+	kv_set_base(kv, base2);
+	kv_set_base(base2, base1);
+	kv_set_base(base1, base0);
 
 	// No-ops.
 	int val = 1;
@@ -503,9 +503,9 @@ int test_kv_read_delta_deep()
 	err = kv_parse(kv, delta, CUTE_STRLEN(delta));
 	if (err.is_error()) return -1;
 
-	kv_set_delta_base(kv, base2);
-	kv_set_delta_base(base2, base1);
-	kv_set_delta_base(base1, base0);
+	kv_set_base(kv, base2);
+	kv_set_base(base2, base1);
+	kv_set_base(base1, base0);
 
 	int val;
 	kv_key(kv, "a");
@@ -535,3 +535,6 @@ int test_kv_read_delta_deep()
 
 	return 0;
 }
+
+// WORKING HERE
+// Need to implement and test base deltas for arrays/blobs/string/object.

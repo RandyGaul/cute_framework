@@ -100,10 +100,10 @@ extern CUTE_API void CUTE_CALL app_destroy_entity(app_t* app, entity_t entity);
 extern CUTE_API bool CUTE_CALL app_is_entity_valid(app_t* app, entity_t entity);
 extern CUTE_API error_t CUTE_CALL app_load_entities(app_t* app, const void* memory, size_t size);
 
-// WORKING HERE
-// Serialize entities.
-// Entities can refer to one another in serialized form.
-// Inheritance of schemas.
+// TODO LIST
+// 1. Serialize entities.
+// 2. Entities can refer to one another in serialized form.
+// 3. Inheritance of schemas.
 
 extern CUTE_API void CUTE_CALL app_update_systems(app_t* app);
 
