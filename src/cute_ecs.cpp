@@ -260,16 +260,16 @@ error_t app_load_entities(app_t* app, const void* memory, size_t size)
 
 	err = kv_key(kv, "entities");
 	if (err.is_error()) {
-		return err;
+		return error_failure("Unable to find `entities` array in kv file.");
 	}
 
-	// WORKING HERE
-	// Using array of entities, and not top level objects.
-	// Requires a fairly big refactor of kv.
-	// But it's all for the best.
-	kv_val_
+	int entity_count;
+	err = kv_array_begin(kv, &entity_count);
+	if (err.is_error()) {
+		return error_failure("The `entities` key is not an array.");
+	}
 
-	while (kv_has_more_objects_to_read(kv))
+	while (entity_count--)
 	{
 		kv_object_begin(kv);
 
@@ -317,6 +317,7 @@ error_t app_load_entities(app_t* app, const void* memory, size_t size)
 		kv_object_end(kv);
 	}
 
+	kv_array_end(kv);
 	kv_destroy(kv);
 
 	return error_success();

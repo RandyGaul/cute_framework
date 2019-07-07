@@ -55,7 +55,6 @@ struct thing_t
 error_t do_serialize(kv_t* kv, thing_t* thing)
 {
 	size_t len;
-	CUTE_RETURN_IF_ERROR(kv_object_begin(kv));
 	CUTE_RETURN_IF_ERROR(kv_key(kv, "a")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->a));
 	CUTE_RETURN_IF_ERROR(kv_key(kv, "b")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->b));
 	CUTE_RETURN_IF_ERROR(kv_key(kv, "str")); len = 6; CUTE_RETURN_IF_ERROR(kv_val_string(kv, &thing->str, &len));
@@ -100,7 +99,6 @@ error_t do_serialize(kv_t* kv, thing_t* thing)
 		CUTE_RETURN_IF_ERROR(kv_object_end(kv));
 	}
 	CUTE_RETURN_IF_ERROR(kv_array_end(kv));
-	CUTE_RETURN_IF_ERROR(kv_object_end(kv));
 	return error_success();
 }
 
@@ -120,45 +118,43 @@ int test_kv_basic()
 	CUTE_TEST_ASSERT(!do_serialize(kv, &thing).is_error());
 
 	const char* expected =
-	"{\n"
+	"a = 5,\n"
+	"b = 10.300000,\n"
+	"str = \"Hello.\",\n"
+	"sub_thing = {\n"
 	"	a = 5,\n"
-	"	b = 10.300000,\n"
-	"	str = \"Hello.\",\n"
-	"	sub_thing = {\n"
-	"		a = 5,\n"
-	"		die_pls = 5,\n"
-	"		interior_thing = {\n"
-	"			hi = 5,\n"
-	"			geez = \"Hello.\",\n"
-	"		},\n"
+	"	die_pls = 5,\n"
+	"	interior_thing = {\n"
+	"		hi = 5,\n"
+	"		geez = \"Hello.\",\n"
 	"	},\n"
-	"	x = 5.000000,\n"
-	"	y = 10.300000,\n"
-	"	blob_data = \"U29tZSBibG9iIGlucHV0LgA=\",\n"
-	"	array_of_ints = [8] {\n"
-	"		0, 1, 2, 3, 4, 5, 6, 7,\n"
+	"},\n"
+	"x = 5.000000,\n"
+	"y = 10.300000,\n"
+	"blob_data = \"U29tZSBibG9iIGlucHV0LgA=\",\n"
+	"array_of_ints = [8] {\n"
+	"	0, 1, 2, 3, 4, 5, 6, 7,\n"
+	"},\n"
+	"array_of_array_of_ints = [2] {\n"
+	"	[3] {\n"
+	"		0, 1, 2,\n"
 	"	},\n"
-	"	array_of_array_of_ints = [2] {\n"
-	"		[3] {\n"
-	"			0, 1, 2,\n"
-	"		},\n"
-	"		[3] {\n"
-	"			0, 1, 2,\n"
-	"		},\n"
+	"	[3] {\n"
+	"		0, 1, 2,\n"
 	"	},\n"
-	"	array_of_objects = [3] {\n"
-	"		{\n"
-	"			some_integer = 5,\n"
-	"			some_string = \"Hello.\",\n"
-	"		},\n"
-	"		{\n"
-	"			some_integer = 5,\n"
-	"			some_string = \"Hello.\",\n"
-	"		},\n"
-	"		{\n"
-	"			some_integer = 5,\n"
-	"			some_string = \"Hello.\",\n"
-	"		},\n"
+	"},\n"
+	"array_of_objects = [3] {\n"
+	"	{\n"
+	"		some_integer = 5,\n"
+	"		some_string = \"Hello.\",\n"
+	"	},\n"
+	"	{\n"
+	"		some_integer = 5,\n"
+	"		some_string = \"Hello.\",\n"
+	"	},\n"
+	"	{\n"
+	"		some_integer = 5,\n"
+	"		some_string = \"Hello.\",\n"
 	"	},\n"
 	"},\n"
 	;
@@ -193,19 +189,15 @@ int test_kv_std_string_to_disk()
 	char buffer[1024];
 	kv_set_write_buffer(kv, buffer, sizeof(buffer));
 
-	kv_object_begin(kv);
 	kv_key(kv, "book_title");
 	kv_val_string(kv, &s1, &s1_len);
-	kv_object_end(kv);
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
 	int size = kv_size_written(kv);
 	CUTE_TEST_ASSERT(!kv_parse(kv, buffer, size).is_error());
 
-	kv_object_begin(kv);
 	kv_key(kv, "book_title");
 	kv_val(kv, &s0);
-	kv_object_end(kv);
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
 	CUTE_TEST_ASSERT(s0.length() == s1_len);
@@ -231,19 +223,15 @@ int test_kv_std_string_from_disk()
 	char buffer[1024];
 	kv_set_write_buffer(kv, buffer, sizeof(buffer));
 
-	kv_object_begin(kv);
 	kv_key(kv, "book_title");
 	kv_val(kv, &s1);
-	kv_object_end(kv);
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
 	int size = kv_size_written(kv);
 	CUTE_TEST_ASSERT(!kv_parse(kv, buffer, size).is_error());
 
-	kv_object_begin(kv);
 	kv_key(kv, "book_title");
 	kv_val_string(kv, &s0, &s0_len);
-	kv_object_end(kv);
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
 	CUTE_TEST_ASSERT((int)s1.length() == s0_len);
@@ -273,20 +261,16 @@ int test_kv_std_vector()
 	v.push_back(6);
 	v.push_back(-2);
 
-	kv_object_begin(kv);
 	kv_key(kv, "vector_of_ints");
 	kv_val(kv, &v);
-	kv_object_end(kv);
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
 	int size = kv_size_written(kv);
 	CUTE_TEST_ASSERT(!kv_parse(kv, buffer, size).is_error());
 
 	v.clear();
-	kv_object_begin(kv);
 	kv_key(kv, "vector_of_ints");
 	kv_val(kv, &v);
-	kv_object_end(kv);
 
 	CUTE_TEST_ASSERT(v.size() == 8);
 	CUTE_TEST_ASSERT(v[0] == 10);

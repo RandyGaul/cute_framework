@@ -87,8 +87,6 @@ struct kv_t
 
 	kv_val_t* read_mode_matched_val = NULL;
 	int read_mode_object_index = 0;
-	int read_mode_top_level_index = 0;
-	array<int> top_level_object_indices;
 	array<kv_object_t> objects;
 
 	int read_mode_from_array = 0;
@@ -160,6 +158,11 @@ static CUTE_INLINE int s_isspace(uint8_t c)
 		(c == '\v') |
 		(c == '\f') |
 		(c == '\r');
+}
+
+static CUTE_INLINE void s_skip_white(kv_t* kv)
+{
+	while (kv->in < kv->in_end && s_isspace(*kv->in)) kv->in++;
 }
 
 static CUTE_INLINE uint8_t s_peek(kv_t* kv)
@@ -338,7 +341,7 @@ static error_t s_parse_array(kv_t* kv, array<kv_val_t>* array_val)
 	return error_success();
 }
 
-error_t s_parse_object(kv_t* kv, int* index);
+error_t s_parse_object(kv_t* kv, int* index, bool is_top_level = false);
 
 static error_t s_parse_value(kv_t* kv, kv_val_t* val)
 {
@@ -374,17 +377,30 @@ static error_t s_parse_value(kv_t* kv, kv_val_t* val)
 	return error_success();
 }
 
-static error_t s_parse_object(kv_t* kv, int* index)
+static error_t s_parse_object(kv_t* kv, int* index, bool is_top_level)
 {
 	kv_object_t* object = &kv->objects.add();
 	CUTE_PLACEMENT_NEW(object) kv_object_t;
 	*index = kv->objects.count() - 1;
 	int parent_index = *index;
 
-	s_expect(kv, '{');
+	if (!is_top_level) {
+		s_expect(kv, '{');
+	}
 
-	while (!s_try(kv, '}'))
+	while (1)
 	{
+		if (is_top_level) {
+			if (kv->in >= kv->in_end) {
+				CUTE_ASSERT(kv->in == kv->in_end);
+				break;
+			}
+		} else {
+			if (s_try(kv, '}')) {
+				break;
+			}
+		}
+
 		kv_field_t* field = &object->fields.add();
 		CUTE_PLACEMENT_NEW(field) kv_field_t;
 
@@ -408,6 +424,8 @@ static error_t s_parse_object(kv_t* kv, int* index)
 				}
 			}
 		}
+
+		s_skip_white(kv);
 	}
 
 	s_try(kv, ',');
@@ -422,7 +440,6 @@ static void s_reset(kv_t* kv, const void* ptr, size_t size, int mode)
 	kv->in_end = kv->in + size;
 	kv->mode = mode;
 
-	kv->top_level_object_indices.clear();
 	kv->objects.clear();
 	kv->read_mode_array_stack.clear();
 	kv->read_mode_array_index_stack.clear();
@@ -435,13 +452,11 @@ error_t kv_parse(kv_t* kv, const void* data, size_t size)
 {
 	s_reset(kv, data, size, CUTE_KV_MODE_READ);
 
-	while (s_peek(kv) == '{')
-	{
-		int index;
-		error_t err = s_parse_object(kv, &index);
-		if (err.is_error()) return err;
-		kv->top_level_object_indices.add(index);
-	}
+	bool is_top_level = true;
+	int index;
+	error_t err = s_parse_object(kv, &index, is_top_level);
+	if (err.is_error()) return err;
+	CUTE_ASSERT(index == 0);
 
 	uint8_t c;
 	while (kv->in != kv->in_end && s_isspace(c = *kv->in)) kv->in++;
@@ -468,7 +483,6 @@ void kv_reset_read_state(kv_t* kv)
 	CUTE_ASSERT(kv->mode == CUTE_KV_MODE_READ);
 	kv->read_mode_matched_val = NULL;
 	kv->read_mode_object_index = 0;
-	kv->read_mode_top_level_index = 0;
 	kv->read_mode_from_array = 0;
 	kv->read_mode_array_stack.clear();
 	kv->read_mode_array_index_stack.clear();
@@ -1014,13 +1028,8 @@ error_t kv_object_begin(kv_t* kv)
 		if (matched_val) {
 			kv->read_mode_object_index = matched_val->u.object_index;
 		} else {
-			bool has_top_index = kv->read_mode_top_level_index != ~0;
-			bool no_more_top_level_indices = kv->read_mode_top_level_index >= kv->top_level_object_indices.count();
-			if ((!has_top_index) | no_more_top_level_indices) {
-				kv->err = error_failure("Attempted to read object beyond end of input.");
-				return kv->err;
-			}
-			kv->read_mode_object_index = kv->top_level_object_indices[kv->read_mode_top_level_index];
+			kv->err = error_failure("Unable to get object, no matching `kv_key` call.");
+			return kv->err;
 		}
 		s_push_read_mode_array(kv, NULL);
 	}
@@ -1041,15 +1050,8 @@ error_t kv_object_end(kv_t* kv)
 	} else {
 		kv_object_t* object = kv->objects + kv->read_mode_object_index;
 		if (object->parent_index == ~0) {
-			if (kv->read_mode_top_level_index == ~0) {
-				kv->err = error_failure("`kv_object_end` called an extra time.");
-				return kv->err;
-			}
-			else if (kv->read_mode_top_level_index == kv->top_level_object_indices.count() - 1) {
-				kv->read_mode_top_level_index = ~0;
-			} else {
-				kv->read_mode_object_index = kv->top_level_object_indices[++kv->read_mode_top_level_index];
-			}
+			kv->err = error_failure("Tried to end kv object, but none was currently set.");
+			return kv->err;
 		} else {
 			kv->read_mode_object_index = object->parent_index;
 		}
