@@ -279,3 +279,20 @@ Ways to get an entity_t.
 Geometrically, within a system, via spatial query.
 Already known via serialization (referenced in file).
 Assigned in editor or UI.
+
+---
+
+// Serialize entities.
+// Entities can refer to one another in serialized form.
+// Can an entity refer to another entity in another file?
+
+If an entity can refer to another entity in an entirely different file, then loading can happen at different times.
+This means an id can be invalid until serialized later.
+So id resolution would need to be pretty complicated.
+I imagine entities on disk would only be able to refer to one another within a single file, for simplicity of implementation.
+
+Serializing entities has a problem. How can I serialize only the instance data differing from the schema?
+I need an efficient way to diff an entity with the schema for saving.
+
+How would the diff work?
+Loop over all key/value pairs, compare old value with new value, and serialize it if it's different.

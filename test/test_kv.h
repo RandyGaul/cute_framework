@@ -159,7 +159,7 @@ int test_kv_basic()
 	"},\n"
 	;
 
-	int size = kv_size_written(kv);
+	size_t size = kv_size_written(kv);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(buffer, expected, size));
 
 	error_t err = kv_parse(kv, buffer, size);
@@ -193,7 +193,7 @@ int test_kv_std_string_to_disk()
 	kv_val_string(kv, &s1, &s1_len);
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
-	int size = kv_size_written(kv);
+	size_t size = kv_size_written(kv);
 	CUTE_TEST_ASSERT(!kv_parse(kv, buffer, size).is_error());
 
 	kv_key(kv, "book_title");
@@ -227,7 +227,7 @@ int test_kv_std_string_from_disk()
 	kv_val(kv, &s1);
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
-	int size = kv_size_written(kv);
+	size_t size = kv_size_written(kv);
 	CUTE_TEST_ASSERT(!kv_parse(kv, buffer, size).is_error());
 
 	kv_key(kv, "book_title");
@@ -265,7 +265,7 @@ int test_kv_std_vector()
 	kv_val(kv, &v);
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
-	int size = kv_size_written(kv);
+	size_t size = kv_size_written(kv);
 	CUTE_TEST_ASSERT(!kv_parse(kv, buffer, size).is_error());
 
 	v.clear();
@@ -282,6 +282,255 @@ int test_kv_std_vector()
 	CUTE_TEST_ASSERT(v[6] == 6);
 	CUTE_TEST_ASSERT(v[7] == -2);
 
+	kv_destroy(kv);
+
+	return 0;
+}
+
+CUTE_TEST_CASE(test_kv_write_delta_basic, "Writing keys and values with base delta.");
+int test_kv_write_delta_basic()
+{
+	kv_t* kv = kv_make();
+	kv_t* base = kv_make();
+	
+	const char* text_base = CUTE_STRINGIZE(
+		a = 1,
+		b = 2
+	);
+
+	error_t err = kv_parse(base, text_base, CUTE_STRLEN(text_base));
+	if (err.is_error()) return -1;
+
+	char buffer[1024];
+	kv_set_write_buffer(kv, buffer, 1024);
+	kv_set_delta_base(kv, base);
+
+	int val = 1;
+	kv_key(kv, "a");
+	kv_val(kv, &val);
+
+	val = 3;
+	kv_key(kv, "b");
+	kv_val(kv, &val);
+
+	val = 17;
+	kv_key(kv, "c");
+	kv_val(kv, &val);
+
+	const char* expected =
+	"b = 3,\n"
+	"c = 17,\n"
+	;
+
+	size_t size = kv_size_written(kv);
+	CUTE_TEST_ASSERT(!CUTE_STRNCMP(buffer, expected, size));
+
+	kv_destroy(base);
+	kv_destroy(kv);
+
+	return 0;
+}
+
+CUTE_TEST_CASE(test_kv_read_delta_basic, "Reading keys and values with base delta.");
+int test_kv_read_delta_basic()
+{
+	kv_t* kv = kv_make();
+	kv_t* base = kv_make();
+	
+	const char* text_base = CUTE_STRINGIZE(
+		a = 1,
+		b = 2
+	);
+
+	error_t err = kv_parse(base, text_base, CUTE_STRLEN(text_base));
+	if (err.is_error()) return -1;
+	
+	const char* delta =
+	"b = 3,\n"
+	"c = 17,\n"
+	;
+
+	err = kv_parse(kv, delta, CUTE_STRLEN(delta));
+	if (err.is_error()) return -1;
+
+	kv_set_delta_base(kv, base);
+
+	int val;
+	kv_key(kv, "a");
+	kv_val(kv, &val);
+	CUTE_TEST_ASSERT(val == 1);
+
+	kv_key(kv, "b");
+	kv_val(kv, &val);
+	CUTE_TEST_ASSERT(val == 3);
+
+	kv_key(kv, "c");
+	kv_val(kv, &val);
+	CUTE_TEST_ASSERT(val == 17);
+
+	kv_destroy(base);
+	kv_destroy(kv);
+
+	return 0;
+}
+
+CUTE_TEST_CASE(test_kv_write_delta_deep, "Writing keys and values with base hierarchy.");
+int test_kv_write_delta_deep()
+{
+	kv_t* kv = kv_make();
+	kv_t* base0 = kv_make();
+	kv_t* base1 = kv_make();
+	kv_t* base2 = kv_make();
+
+	const char* text_base0 = CUTE_STRINGIZE(
+		a = 1.0,
+		b = 2
+		c = 3,
+	);
+
+	const char* text_base1 = CUTE_STRINGIZE(
+		b = 5,
+		c = 6.0
+	);
+
+	const char* text_base2 = CUTE_STRINGIZE(
+		c = 7.0,
+		d = 8
+	);
+
+	error_t err = kv_parse(base0, text_base0, CUTE_STRLEN(text_base0));
+	if (err.is_error()) return -1;
+	err = kv_parse(base1, text_base1, CUTE_STRLEN(text_base1));
+	if (err.is_error()) return -1;
+	err = kv_parse(base2, text_base2, CUTE_STRLEN(text_base2));
+	if (err.is_error()) return -1;
+
+	char buffer[1024];
+	kv_set_write_buffer(kv, buffer, 1024);
+	kv_set_delta_base(kv, base2);
+	kv_set_delta_base(base2, base1);
+	kv_set_delta_base(base1, base0);
+
+	// No-ops.
+	int val = 1;
+	kv_key(kv, "a");
+	kv_val(kv, &val);
+
+	val = 5;
+	kv_key(kv, "b");
+	kv_val(kv, &val);
+
+	val = 7;
+	kv_key(kv, "c");
+	kv_val(kv, &val);
+
+	val = 8;
+	kv_key(kv, "d");
+	kv_val(kv, &val);
+
+	// Now write some real deltas.
+	val = 20;
+	kv_key(kv, "b");
+	kv_val(kv, &val);
+
+	val = 21;
+	kv_key(kv, "a");
+	kv_val(kv, &val);
+
+	val = 22;
+	kv_key(kv, "e");
+	kv_val(kv, &val);
+
+	val = 23;
+	kv_key(kv, "d");
+	kv_val(kv, &val);
+
+	const char* expected =
+	"b = 20,\n"
+	"a = 21,\n"
+	"e = 22,\n"
+	"d = 23,\n"
+	;
+
+	size_t size = kv_size_written(kv);
+	CUTE_TEST_ASSERT(!CUTE_STRNCMP(buffer, expected, size));
+
+	kv_destroy(base0);
+	kv_destroy(base1);
+	kv_destroy(base2);
+	kv_destroy(kv);
+
+	return 0;
+}
+
+CUTE_TEST_CASE(test_kv_read_delta_deep, "Reading keys and values with base hierarchy.");
+int test_kv_read_delta_deep()
+{
+	kv_t* kv = kv_make();
+	kv_t* base0 = kv_make();
+	kv_t* base1 = kv_make();
+	kv_t* base2 = kv_make();
+
+	const char* text_base0 = CUTE_STRINGIZE(
+		a = 1.0,
+		b = 2
+		c = 3,
+	);
+
+	const char* text_base1 = CUTE_STRINGIZE(
+		b = 5,
+		c = 6.0
+	);
+
+	const char* text_base2 = CUTE_STRINGIZE(
+		c = 7.0,
+		d = 8
+	);
+
+	error_t err = kv_parse(base0, text_base0, CUTE_STRLEN(text_base0));
+	if (err.is_error()) return -1;
+	err = kv_parse(base1, text_base1, CUTE_STRLEN(text_base1));
+	if (err.is_error()) return -1;
+	err = kv_parse(base2, text_base2, CUTE_STRLEN(text_base2));
+	if (err.is_error()) return -1;
+	
+	const char* delta =
+	"b = 3,\n"
+	"d = 4,\n"
+	"e = 1,\n"
+	;
+
+	err = kv_parse(kv, delta, CUTE_STRLEN(delta));
+	if (err.is_error()) return -1;
+
+	kv_set_delta_base(kv, base2);
+	kv_set_delta_base(base2, base1);
+	kv_set_delta_base(base1, base0);
+
+	int val;
+	kv_key(kv, "a");
+	kv_val(kv, &val);
+	CUTE_TEST_ASSERT(val == 1);
+
+	kv_key(kv, "b");
+	kv_val(kv, &val);
+	CUTE_TEST_ASSERT(val == 3);
+
+	kv_key(kv, "c");
+	kv_val(kv, &val);
+	CUTE_TEST_ASSERT(val == 7);
+
+	kv_key(kv, "d");
+	kv_val(kv, &val);
+	CUTE_TEST_ASSERT(val == 4);
+
+	kv_key(kv, "e");
+	kv_val(kv, &val);
+	CUTE_TEST_ASSERT(val == 1);
+
+	kv_destroy(base0);
+	kv_destroy(base1);
+	kv_destroy(base2);
 	kv_destroy(kv);
 
 	return 0;

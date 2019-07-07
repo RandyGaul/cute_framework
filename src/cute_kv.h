@@ -37,8 +37,9 @@ CUTE_API error_t CUTE_CALL kv_parse(kv_t* kv, const void* data, size_t size);
 CUTE_API void CUTE_CALL kv_reset_read_state(kv_t* kv);
 
 CUTE_API void CUTE_CALL kv_set_write_buffer(kv_t* kv, void* buffer, size_t size);
+CUTE_API void CUTE_CALL kv_set_delta_base(kv_t* kv, kv_t* base);
 
-CUTE_API int CUTE_CALL kv_size_written(kv_t* kv);
+CUTE_API size_t CUTE_CALL kv_size_written(kv_t* kv);
 CUTE_API error_t CUTE_CALL kv_error_state(kv_t* kv);
 
 // -------------------------------------------------------------------------------------------------

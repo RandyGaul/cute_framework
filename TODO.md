@@ -96,10 +96,10 @@
 * [x] serialization
 * [ ] data structures
 	* [x] buffer
-	* [ ] hash table
-	* [ ] doubly linked list
+	* [x] hash table
+	* [x] doubly linked list
 	* [ ] dbvh
-	* [ ] string
+	* [x] string
 	* [x] handle table
 * [x] allocators
 * [ ] ini
@@ -108,11 +108,9 @@
 	* [ ] set position
 	* [ ] set destination + lerp time
 	* [ ] state machine driven
-* [ ] entity
-	* [ ] vtable
-	* [ ] entity list
-	* [ ] composition mechanism
-	* [ ] messaging
+* [.] ecs
+	* [x] entity and components
+	* [ ] global state
 * [ ] profile
 	* [ ] record capture data
 	* [ ] render capture data to screen
