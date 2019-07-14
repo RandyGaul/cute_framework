@@ -428,6 +428,9 @@ int test_kv_write_delta_deep()
 	kv_key(kv, "d");
 	kv_val(kv, &val);
 
+	size_t sz = kv_size_written(kv);
+	CUTE_TEST_ASSERT(sz == 0);
+
 	// Now write some real deltas.
 	val = 20;
 	kv_key(kv, "b");

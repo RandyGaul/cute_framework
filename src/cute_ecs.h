@@ -45,16 +45,13 @@ struct entity_t
 	handle_t handle;
 };
 
-struct entity_config_t
+struct entity_schema_t
 {
-	const char* name = NULL;
-	entity_type_t type = CUTE_INVALID_ENTITY_TYPE;
-
-	size_t schema_size = 0;
-	const void* schema = NULL;
+	size_t size = 0;
+	const void* memory = NULL;
 };
 
-extern CUTE_API error_t CUTE_CALL app_register_entity_type(app_t* app, const entity_config_t* config);
+extern CUTE_API error_t CUTE_CALL app_register_entity_type(app_t* app, const entity_schema_t* schema);
 
 //--------------------------------------------------------------------------------------------------
 // Component
@@ -67,7 +64,7 @@ typedef error_t (component_serialize_fn)(struct kv_t* kv, void* component);
 
 struct component_config_t
 {
-	size_t size = 0;
+	size_t size_of_component = 0;
 	const char* name = NULL;
 	component_type_t type = CUTE_INVALID_COMPONENT_TYPE;
 
@@ -99,11 +96,7 @@ extern CUTE_API entity_t CUTE_CALL app_make_entity(app_t* app, entity_type_t typ
 extern CUTE_API void CUTE_CALL app_destroy_entity(app_t* app, entity_t entity);
 extern CUTE_API bool CUTE_CALL app_is_entity_valid(app_t* app, entity_t entity);
 extern CUTE_API error_t CUTE_CALL app_load_entities(app_t* app, const void* memory, size_t size);
-
-// TODO LIST
-// 1. Serialize entities.
-// 2. Entities can refer to one another in serialized form.
-// 3. Inheritance of schemas.
+extern CUTE_API error_t CUTE_CALL app_save_entities(app_t* app, void* memory, size_t size);
 
 extern CUTE_API void CUTE_CALL app_update_systems(app_t* app);
 

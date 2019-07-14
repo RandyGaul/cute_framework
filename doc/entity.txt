@@ -296,3 +296,12 @@ I need an efficient way to diff an entity with the schema for saving.
 
 How would the diff work?
 Loop over all key/value pairs, compare old value with new value, and serialize it if it's different.
+
+---
+
+ok great, can now serialize the diff
+stupendous
+
+but now
+lifetimes of entities and serializing references to one another
+nyaa

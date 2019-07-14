@@ -142,9 +142,9 @@ void app_destroy(app_t* app)
 	SDL_Quit();
 	cute_threadpool_destroy(app->threadpool);
 	audio_system_destroy(app->audio_system);
-	int schema_count = app->entity_schemas.count();
-	entity_schema_t* schemas = app->entity_schemas.items();
-	for (int i = 0; i < schema_count; ++i) kv_destroy(schemas->parsed_kv_schema);
+	int schema_count = app->entity_parsed_schemas.count();
+	kv_t** schemas = app->entity_parsed_schemas.items();
+	for (int i = 0; i < schema_count; ++i) kv_destroy(schemas[i]);
 	app->~app_t();
 	CUTE_FREE(app, app->mem_ctx);
 	internal::file_system_destroy();

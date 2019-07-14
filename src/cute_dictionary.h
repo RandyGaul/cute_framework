@@ -39,6 +39,8 @@ struct dictionary
 
 	T* find(const K& key);
 	const T* find(const K& key) const;
+	error_t find(const K& key, T* val_out);
+	error_t find(const K& key, T* val_out) const;
 
 	T* insert(const K& key);
 	T* insert(const K& key, const T& val);
@@ -97,6 +99,30 @@ template <typename K, typename T>
 const T* dictionary<K, T>::find(const K& key) const
 {
 	return (const T*)hashtable_find(&table, &key);
+}
+
+template <typename K, typename T>
+error_t dictionary<K, T>::find(const K& key, T* val_out)
+{
+	T* ptr = (T*)hashtable_find(&table, &key);
+	if (ptr) {
+		*val_out = *ptr;
+		return error_success();
+	} else {
+		return error_failure("Unable to find dictionary entry.");
+	}
+}
+
+template <typename K, typename T>
+error_t dictionary<K, T>::find(const K& key, T* val_out) const
+{
+	const T* ptr = (const T*)hashtable_find(&table, &key);
+	if (ptr) {
+		*val_out = *ptr;
+		return error_success();
+	} else {
+		return error_failure("Unable to find dictionary entry.");
+	}
 }
 
 template <typename K, typename T>
@@ -208,6 +234,8 @@ struct dictionary<const char*, T>
 	const T* find(const char* key) const;
 	T* find(const char* key, size_t key_len);
 	const T* find(const char* key, size_t key_len) const;
+	error_t find(const char* key, size_t key_len, T* val_out);
+	error_t find(const char* key, size_t key_len, T* val_out) const;
 
 	T* insert(const char* key, const T& val);
 	void remove(const char* key);
@@ -278,6 +306,30 @@ const T* dictionary<const char*, T>::find(const char* key, size_t key_len) const
 {
 	dictionary_string_block_t block = s_dictionary_make_block(key, key_len);
 	return (T*)hashtable_find(&table, &block);
+}
+
+template <typename T>
+error_t dictionary<const char*, T>::find(const char* key, size_t key_len, T* val_out)
+{
+	T* ptr = find(key, key_len);
+	if (ptr) {
+		*val_out = *ptr;
+		return error_success();
+	} else {
+		return error_failure("Unable to find dictionary entry.");
+	}
+}
+
+template <typename T>
+error_t dictionary<const char*, T>::find(const char* key, size_t key_len, T* val_out) const
+{
+	const T* ptr = find(key, key_len);
+	if (ptr) {
+		*val_out = *ptr;
+		return error_success();
+	} else {
+		return error_failure("Unable to find dictionary entry.");
+	}
 }
 
 template <typename T>

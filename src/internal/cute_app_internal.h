@@ -65,13 +65,6 @@ struct entity_collection_t
 	array<typeless_array> component_tables;
 };
 
-struct entity_schema_t
-{
-	const char* entity_name;
-	entity_type_t entity_type;
-	struct kv_t* parsed_kv_schema;
-};
-
 struct app_t
 {
 	int running = 1;
@@ -91,10 +84,9 @@ struct app_t
 	dictionary<entity_type_t, entity_collection_t> entity_collections;
 
 	dictionary<const char*, component_type_t> component_name_to_type_table;
-	dictionary<component_type_t, const char*> component_type_to_name_table;
 	dictionary<component_type_t, component_config_t> component_configs;
-	dictionary<const char*, entity_type_t> entity_name_to_type_table;
-	dictionary<entity_type_t, entity_schema_t> entity_schemas;
+	dictionary<entity_type_t, kv_t*> entity_parsed_schemas;
+	dictionary<entity_type_t, entity_type_t> entity_schema_inheritence;
 
 	void* mem_ctx = NULL;
 };
