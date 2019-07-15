@@ -305,3 +305,19 @@ stupendous
 but now
 lifetimes of entities and serializing references to one another
 nyaa
+
+how does saving entities work
+
+LOAD
+* Each entity has implicit index in the file
+* The index is the index of instance into the file
+* Each reference is one of these indices
+* When loading, a hash table is built to map file index to entity id
+* After all entities are loaded, all references are patched
+* I will need to store an array of entity reference pointers to patch
+
+SAVE
+* The user supplies an array of entity ids
+* This is the order they are stored in file and implicitly defines ids
+* A table is constructed to go from entity id to index
+* Upon saving, all references are converted from runtime entity id to index

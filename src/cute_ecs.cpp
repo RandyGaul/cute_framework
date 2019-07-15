@@ -258,14 +258,14 @@ error_t app_register_entity_type(app_t* app, const entity_schema_t* schema)
 	return error_success();
 }
 
-static error_t s_load_from_schema(app_t* app, entity_type_t entity_type, component_config_t* config, void* component)
+static error_t s_load_from_schema(app_t* app, entity_type_t entity_type, component_config_t* config, void* component, void* udata)
 {
 	// Look for parent.
 	// If parent exists, load values from it first.
 	entity_type_t inherits_from;
 	error_t err = app->entity_schema_inheritence.find(entity_type, &inherits_from);
 	if (!err.is_error()) {
-		err = s_load_from_schema(app, inherits_from, config, component);
+		err = s_load_from_schema(app, inherits_from, config, component, udata);
 		if (err.is_error()) return err;
 	}
 
@@ -277,7 +277,7 @@ static error_t s_load_from_schema(app_t* app, entity_type_t entity_type, compone
 	if (err.is_error()) return err;
 
 	kv_object_begin(schema);
-	err = config->serializer_fn(schema, component);
+	err = config->serializer_fn(app, schema, component, udata);
 	kv_object_end(schema);
 	return err;
 }
@@ -330,10 +330,10 @@ error_t app_load_entities(app_t* app, const void* memory, size_t size)
 
 			int index = collection->component_tables.count();
 			void* component = collection->component_tables[i].add();
-			config->initializer_fn(component);
+			config->initializer_fn(app, component, config->initializer_fn_udata);
 
 			// First load values from the schema.
-			err = s_load_from_schema(app, entity_type, config, component);
+			err = s_load_from_schema(app, entity_type, config, component, config->serializer_fn_udata);
 			if (err.is_error()) {
 				kv_destroy(kv);
 				return error_failure("Unable to parse component from schema.");
@@ -343,7 +343,7 @@ error_t app_load_entities(app_t* app, const void* memory, size_t size)
 			error_t err = kv_key(kv, config->name);
 			if (!err.is_error()) {
 				kv_object_begin(kv);
-				err = config->serializer_fn(kv, component);
+				err = config->serializer_fn(app, kv, component, config->serializer_fn_udata);
 				kv_object_end(kv);
 				if (err.is_error()) {
 					kv_destroy(kv);
@@ -364,9 +364,57 @@ error_t app_load_entities(app_t* app, const void* memory, size_t size)
 	return error_success();
 }
 
-error_t app_save_entities(app_t* app, void* memory, size_t size)
+error_t app_save_entities(app_t* app, const array<entity_t>& entities, void* memory, size_t size)
 {
-	return error_failure("Not implemented.");
+	kv_t* kv = kv_make(app->mem_ctx);
+	kv_set_write_buffer(kv, memory, size);
+
+	dictionary<entity_t, int> id_table;
+	for (int i = 0; i < entities.count(); ++i)
+		id_table.insert(entities[i], i);
+
+	app->save_id_table = &id_table;
+
+	for (int i = 0; i < entities.count(); ++i)
+	{
+		entity_t entity = entities[i];
+		entity_collection_t* collection = app->entity_collections.find(entity.type);
+		if (!collection) {
+			kv_destroy(kv);
+			app->save_id_table = NULL;
+			return error_failure("Unable to find entity type.");
+		}
+
+		bool is_valid = collection->entity_handle_table.is_valid(entity.handle);
+		if (!is_valid) {
+			kv_destroy(kv);
+			app->save_id_table = NULL;
+			return error_failure("Attempted to save an invalid entity.");
+		}
+		uint32_t index = collection->entity_handle_table.get_index(entity.handle);
+
+		const array<component_type_t>& component_types = collection->component_types;
+		const array<typeless_array>& component_tables = collection->component_tables;
+		for (int j = 0; j < component_types.count(); ++j)
+		{
+			component_type_t component_type = component_types[j];
+			const typeless_array& component_table = component_tables[j];
+			component_config_t* config = app->component_configs.find(component_type);
+			const void* component = component_table[index];
+
+			error_t err = config->serializer_fn(app, kv, (void*)component, config->serializer_fn_udata);
+			if (err.is_error()) {
+				kv_destroy(kv);
+				app->save_id_table = NULL;
+				return err;
+			}
+		}
+	}
+
+	kv_destroy(kv);
+	app->save_id_table = NULL;
+
+	return error_success();
 }
 
 }

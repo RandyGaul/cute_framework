@@ -20,6 +20,7 @@
 */
 
 #include <cute_ecs.h>
+#include <cute_kv_utils.h>
 
 using namespace cute;
 
@@ -55,18 +56,19 @@ struct test_component_octorok_t
 	int ai_state;
 	uint32_t pellet_count;
 	array<entity_t> pellets;
+	entity_t buddy;
 };
 
 // -------------------------------------------------------------------------------------------------
 
-void test_component_transform_initialize(void* component)
+void test_component_transform_initialize(app_t* app, void* component, void* udata)
 {
 	test_component_transform_t* transform = (test_component_transform_t*)component;
 	transform->x = 0;
 	transform->y = 0;
 }
 
-error_t test_component_transform_serialize(kv_t* kv, void* component)
+error_t test_component_transform_serialize(app_t* app, kv_t* kv, void* component, void* udata)
 {
 	test_component_transform_t* transform = (test_component_transform_t*)component;
 	kv_key(kv, "x"); kv_val(kv, &transform->x);
@@ -74,27 +76,27 @@ error_t test_component_transform_serialize(kv_t* kv, void* component)
 	return kv_error_state(kv);
 }
 
-void test_component_sprite_initialize(void* component)
+void test_component_sprite_initialize(app_t* app, void* component, void* udata)
 {
 	test_component_sprite_t* sprite = (test_component_sprite_t*)component;
 	sprite->img_id = 7;
 }
 
-error_t test_component_sprite_serialize(kv_t* kv, void* component)
+error_t test_component_sprite_serialize(app_t* app, kv_t* kv, void* component, void* udata)
 {
 	test_component_sprite_t* sprite = (test_component_sprite_t*)component;
 	kv_key(kv, "img_id"); kv_val(kv, &sprite->img_id);
 	return kv_error_state(kv);
 }
 
-void test_component_collider_initialize(void* component)
+void test_component_collider_initialize(app_t* app, void* component, void* udata)
 {
 	test_component_collider_t* collider = (test_component_collider_t*)component;
 	collider->type = 3;
 	collider->radius = 14.0f;
 }
 
-error_t test_component_collider_serialize(kv_t* kv, void* component)
+error_t test_component_collider_serialize(app_t* app, kv_t* kv, void* component, void* udata)
 {
 	test_component_collider_t* collider = (test_component_collider_t*)component;
 	kv_key(kv, "type"); kv_val(kv, &collider->type);
@@ -102,18 +104,19 @@ error_t test_component_collider_serialize(kv_t* kv, void* component)
 	return kv_error_state(kv);
 }
 
-void test_component_octorok_initialize(void* component)
+void test_component_octorok_initialize(app_t* app, void* component, void* udata)
 {
 	test_component_octorok_t* octorok = (test_component_octorok_t*)component;
 	octorok->ai_state = 0;
 	octorok->pellet_count = 3;
 }
 
-error_t test_component_octorok_serialize(kv_t* kv, void* component)
+error_t test_component_octorok_serialize(app_t* app, kv_t* kv, void* component, void* udata)
 {
 	test_component_octorok_t* octorok = (test_component_octorok_t*)component;
 	kv_key(kv, "ai_state"); kv_val(kv, &octorok->ai_state);
 	kv_key(kv, "pellet_count"); kv_val(kv, &octorok->pellet_count);
+	kv_key(kv, "buddy"); kv_val_entity(kv, app, octorok->buddy);
 	return kv_error_state(kv);
 }
 
@@ -226,6 +229,11 @@ int test_ecs_octorok()
 		}
 	);
 
+	// WORKING HERE
+	// Trying to run and test saving entities.
+	//err = app_save_entities(app, entities, 
+
+	// This crashes since id_table isn't hooked up yet.
 	err = app_load_entities(app, serialized_entities, CUTE_STRLEN(serialized_entities));
 	if (err.is_error()) return -1;
 

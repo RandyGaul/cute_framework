@@ -88,6 +88,8 @@ struct app_t
 	dictionary<entity_type_t, kv_t*> entity_parsed_schemas;
 	dictionary<entity_type_t, entity_type_t> entity_schema_inheritence;
 
+	dictionary<entity_t, int>* save_id_table = NULL;
+
 	void* mem_ctx = NULL;
 };
 

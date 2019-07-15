@@ -83,5 +83,3 @@ CUTE_API void CUTE_CALL kv_print(kv_t* kv);
 }
 
 #endif // CUTE_KV_H
-
-#include <cute_kv_utils.inl>

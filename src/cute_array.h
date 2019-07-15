@@ -40,16 +40,16 @@
 	   Items in the array should *not* have specialized assignment operators
 	   beyond simply copying byte-for-byte POD data.
 	2. There is no way to perform a proper "deep-copy" by using the assignment
-	   operator on cute::array.
+	   operator on cute::array. Instead, assignment steals the pointer from one
+	   array to another (like an rvalue reference) with the `steal_from` function.
 	3. Items stored in the array do have constructors and destructors called, but
 	   only upon insertion or removal (not during grow or other operations). The
 	   idea is to facilitate easy initializing of values stored in the array, such
 	   as working with an array of arrays.
-	4. The assignment operator on cute::array does *not* perform a "deep-copy".
-	5. No iterators.
-	6. No rvalue semantics are supported. Instead, the `steal_from` function can
+	4. No iterators.
+	5. No rvalue semantics are supported. Instead, the `steal_from` function can
 	   be used to cleanup any current items, and then steal items from another
-	   cute::array.
+	   cute::array. `steal_from` is called within the assignment operator.
 */
 
 namespace cute

@@ -78,6 +78,7 @@ set(CUTE_SRCS
 	src/cute_memory_pool.cpp
 	src/cute_protocol.cpp
 	src/cute_kv.cpp
+	src/cute_kv_utils.cpp
 	src/cute_base64.cpp
 	src/cute_log.cpp
 	src/cute_hashtable.cpp
@@ -117,6 +118,7 @@ set(CUTE_HDRS
 	src/cute_protocol.h
 	src/cute_doubly_list.h
 	src/cute_kv.h
+	src/cute_kv_utils.h
 	src/cute_base64.h
 	src/cute_log.h
 	src/cute_array.h

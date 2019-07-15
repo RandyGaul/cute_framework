@@ -59,8 +59,8 @@ extern CUTE_API error_t CUTE_CALL app_register_entity_type(app_t* app, const ent
 using component_type_t = uint32_t;
 #define CUTE_INVALID_COMPONENT_TYPE ((component_type_t)(~0))
 
-typedef void (component_initialize_fn)(void* component);
-typedef error_t (component_serialize_fn)(struct kv_t* kv, void* component);
+typedef void (component_initialize_fn)(app_t* app, void* component, void* udata);
+typedef error_t (component_serialize_fn)(app_t* app, struct kv_t* kv, void* component, void* udata);
 
 struct component_config_t
 {
@@ -68,7 +68,10 @@ struct component_config_t
 	const char* name = NULL;
 	component_type_t type = CUTE_INVALID_COMPONENT_TYPE;
 
+	void* initializer_fn_udata = NULL;
 	component_initialize_fn* initializer_fn = NULL;
+
+	void* serializer_fn_udata = NULL;
 	component_serialize_fn* serializer_fn = NULL;
 
 	int dependency_count = 0;
@@ -96,7 +99,7 @@ extern CUTE_API entity_t CUTE_CALL app_make_entity(app_t* app, entity_type_t typ
 extern CUTE_API void CUTE_CALL app_destroy_entity(app_t* app, entity_t entity);
 extern CUTE_API bool CUTE_CALL app_is_entity_valid(app_t* app, entity_t entity);
 extern CUTE_API error_t CUTE_CALL app_load_entities(app_t* app, const void* memory, size_t size);
-extern CUTE_API error_t CUTE_CALL app_save_entities(app_t* app, void* memory, size_t size);
+extern CUTE_API error_t CUTE_CALL app_save_entities(app_t* app, const array<entity_t>& entities, void* memory, size_t size);
 
 extern CUTE_API void CUTE_CALL app_update_systems(app_t* app);
 

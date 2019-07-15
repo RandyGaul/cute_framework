@@ -20,6 +20,7 @@
 */
 
 #include <cute_kv.h>
+#include <cute_kv_utils.h>
 using namespace cute;
 
 struct thing_t
@@ -539,5 +540,4 @@ int test_kv_read_delta_deep()
 	return 0;
 }
 
-// WORKING HERE
-// Need to implement and test base deltas for arrays/blobs/string/object.
+// TODO: Need to implement and test base deltas for arrays/blobs/string/object.

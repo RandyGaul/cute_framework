@@ -19,39 +19,20 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_KV_UTILS_INL
-#define CUTE_KV_UTILS_INL
+#include <cute_kv_utils.h>
 
-#include <string>
-#include <vector>
+#include <internal/cute_app_internal.h>
 
 namespace cute
 {
 
-CUTE_INLINE error_t kv_val(kv_t* kv, std::string* val)
+error_t kv_val_entity(kv_t* kv, app_t* app, entity_t entity)
 {
-	const char* ptr = val->data();
-	size_t len = val->length();
-	error_t err = kv_val_string(kv, &ptr, &len);
+	dictionary<entity_t, int>* id_table = app->save_id_table;
+	int index;
+	error_t err = id_table->find(entity, &index);
 	if (err.is_error()) return err;
-	val->assign(ptr, len);
-	return error_success();
-}
-
-template <typename T>
-CUTE_INLINE error_t kv_val(kv_t* kv, std::vector<T>* val)
-{
-	int count = (int)val->size();
-	kv_array_begin(kv, &count);
-	val->resize(count);
-	for (int i = 0; i < count; ++i)
-	{
-		kv_val(kv, &(*val)[i]);
-	}
-	kv_array_end(kv);
-	return kv_error_state(kv);
+	return kv_val(kv, &index);
 }
 
 }
-
-#endif // CUTE_KV_UTILS_INL
