@@ -287,17 +287,20 @@ error_t app_load_entities(app_t* app, const void* memory, size_t size)
 	kv_t* kv = kv_make(app->mem_ctx);
 	error_t err = kv_parse(kv, memory, size);
 	if (err.is_error()) {
+		kv_destroy(kv);
 		return err;
 	}
 
 	err = kv_key(kv, "entities");
 	if (err.is_error()) {
+		kv_destroy(kv);
 		return error_failure("Unable to find `entities` array in kv file.");
 	}
 
 	int entity_count;
 	err = kv_array_begin(kv, &entity_count);
 	if (err.is_error()) {
+		kv_destroy(kv);
 		return error_failure("The `entities` key is not an array.");
 	}
 
