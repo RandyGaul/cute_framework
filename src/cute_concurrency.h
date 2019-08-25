@@ -77,8 +77,8 @@ extern CUTE_API void* CUTE_CALL atomic_ptr_set(void** atomic, void* value);
 extern CUTE_API void* CUTE_CALL atomic_ptr_get(void** atomic);
 extern CUTE_API error_t CUTE_CALL atomic_ptr_cas(void** atomic, void* expected, void* value);
 
-extern CUTE_API rw_lock_t* CUTE_CALL rw_lock_create(void* user_allocator_context = NULL);
-extern CUTE_API void CUTE_CALL rw_lock_destroy(rw_lock_t* rw, void* user_allocator_context = NULL);
+extern CUTE_API rw_lock_t CUTE_CALL rw_lock_create();
+extern CUTE_API void CUTE_CALL rw_lock_destroy(rw_lock_t* rw);
 extern CUTE_API void CUTE_CALL read_lock(rw_lock_t* rw);
 extern CUTE_API void CUTE_CALL read_unlock(rw_lock_t* rw);
 extern CUTE_API void CUTE_CALL write_lock(rw_lock_t* rw);

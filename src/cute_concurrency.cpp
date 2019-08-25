@@ -190,17 +190,14 @@ error_t atomic_ptr_cas(void** atomic, void* expected, void* value)
 	return error_make(cute_atomic_ptr_cas(atomic, expected, value), NULL);
 }
 
-rw_lock_t* rw_lock_create(void* user_allocator_context)
+rw_lock_t rw_lock_create()
 {
-	rw_lock_t* rw = (rw_lock_t*)CUTE_ALLOC(sizeof(rw_lock_t), user_allocator_context);
-	if (rw) cute_rw_lock_create(rw);
-	return rw;
+	return cute_rw_lock_create();
 }
 
-void rw_lock_destroy(rw_lock_t* rw, void* user_allocator_context)
+void rw_lock_destroy(rw_lock_t* rw)
 {
 	if (rw) cute_rw_lock_destroy(rw);
-	CUTE_FREE(rw, user_allocator_context);
 }
 
 void read_lock(rw_lock_t* rw)
