@@ -25,8 +25,6 @@
 #include <cute_defines.h>
 #include <cute_error.h>
 
-#include <SDL2/SDL_thread.h>
-#define CUTE_SYNC_SDL
 #include <cute/cute_sync.h>
 
 namespace cute
@@ -34,26 +32,27 @@ namespace cute
 
 using mutex_t       = cute_mutex_t;
 using cv_t          = cute_cv_t;
-using sem_t         = cute_sem_t;
+using atomic_int_t  = cute_atomic_int_t;
+using sem_t         = cute_semaphore_t;
 using thread_t      = cute_thread_t;
 using thread_id_t   = cute_thread_id_t;
-using thread_func_t = cute_thread_func_t;
+using thread_func_t = cute_thread_fn;
 using rw_lock_t     = cute_rw_lock_t;
 using threadpool_t  = cute_threadpool_t;
 
-extern CUTE_API mutex_t* CUTE_CALL mutex_create();
+extern CUTE_API mutex_t CUTE_CALL mutex_create();
 extern CUTE_API void CUTE_CALL mutex_destroy(mutex_t* mutex);
 extern CUTE_API error_t CUTE_CALL mutex_lock(mutex_t* mutex);
 extern CUTE_API error_t CUTE_CALL mutex_unlock(mutex_t* mutex);
 extern CUTE_API bool CUTE_CALL mutex_trylock(mutex_t* mutex);
 
-extern CUTE_API cv_t* CUTE_CALL cv_create();
+extern CUTE_API cv_t CUTE_CALL cv_create();
 extern CUTE_API void CUTE_CALL cv_destroy(cv_t* cv);
 extern CUTE_API error_t CUTE_CALL cv_wake_all(cv_t* cv);
 extern CUTE_API error_t CUTE_CALL cv_wake_one(cv_t* cv);
 extern CUTE_API error_t CUTE_CALL cv_wait(cv_t* cv, mutex_t* mutex);
 
-extern CUTE_API sem_t* CUTE_CALL sem_create(unsigned initial_count);
+extern CUTE_API sem_t CUTE_CALL sem_create(int initial_count);
 extern CUTE_API void CUTE_CALL sem_destroy(sem_t* semaphore);
 extern CUTE_API error_t CUTE_CALL sem_post(sem_t* semaphore);
 extern CUTE_API error_t CUTE_CALL sem_try(sem_t* semaphore);
@@ -69,13 +68,14 @@ extern CUTE_API error_t CUTE_CALL thread_wait(thread_t* thread);
 extern CUTE_API int CUTE_CALL core_count();
 extern CUTE_API int CUTE_CALL cacheline_size();
 
-extern CUTE_API int CUTE_CALL atomic_add(int* address, int addend);
-extern CUTE_API int CUTE_CALL atomic_set(int* address, int value);
-extern CUTE_API int CUTE_CALL atomic_get(int* address);
-extern CUTE_API error_t CUTE_CALL atomic_cas(int* address, int compare, int value);
-extern CUTE_API void* CUTE_CALL atomic_ptr_set(void** address, void* value);
-extern CUTE_API void* CUTE_CALL atomic_ptr_get(void** address);
-extern CUTE_API error_t CUTE_CALL atomic_ptr_cas(void** address, void* compare, void* value);
+extern CUTE_API atomic_int_t CUTE_CALL atomic_zero();
+extern CUTE_API int CUTE_CALL atomic_add(atomic_int_t* atomic, int addend);
+extern CUTE_API int CUTE_CALL atomic_set(atomic_int_t* atomic, int value);
+extern CUTE_API int CUTE_CALL atomic_get(atomic_int_t* atomic);
+extern CUTE_API error_t CUTE_CALL atomic_cas(atomic_int_t* atomic, int expected, int value);
+extern CUTE_API void* CUTE_CALL atomic_ptr_set(void** atomic, void* value);
+extern CUTE_API void* CUTE_CALL atomic_ptr_get(void** atomic);
+extern CUTE_API error_t CUTE_CALL atomic_ptr_cas(void** atomic, void* expected, void* value);
 
 extern CUTE_API rw_lock_t* CUTE_CALL rw_lock_create(void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL rw_lock_destroy(rw_lock_t* rw, void* user_allocator_context = NULL);

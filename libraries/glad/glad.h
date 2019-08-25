@@ -35,6 +35,7 @@
 #ifndef NOMINMAX
 #define NOMINMAX 1
 #endif
+#define _WINSOCKAPI_
 #include <windows.h>
 #endif
 

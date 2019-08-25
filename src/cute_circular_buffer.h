@@ -23,6 +23,7 @@
 #define CUTE_CIRCULAR_BUFFER_H
 
 #include <cute_defines.h>
+#include <cute_concurrency.h>
 
 namespace cute
 {
@@ -31,7 +32,7 @@ struct circular_buffer_t
 {
 	int index0 = 0;
 	int index1 = 0;
-	int size_left = 0;
+	atomic_int_t size_left = atomic_zero();
 	int capacity = 0;
 	uint8_t* data = NULL;
 	void* user_allocator_context = NULL;

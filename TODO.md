@@ -92,7 +92,7 @@
 	* [ ] network simulator
 	* [ ] packet loss and RTT estimator
 	* [ ] loopback client
-* [ ] utf8 (for localization support)
+* [x] utf8 (for localization support)
 * [x] serialization
 * [ ] data structures
 	* [x] buffer

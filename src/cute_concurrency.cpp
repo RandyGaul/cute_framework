@@ -25,7 +25,7 @@
 #include <SDL2/SDL.h>
 
 #define CUTE_SYNC_IMPLEMENTATION
-#define CUTE_SYNC_SDL
+#define CUTE_SYNC_WINDOWS
 #define CUTE_THREAD_ALLOC CUTE_ALLOC
 #define CUTE_THREAD_FREE CUTE_FREE
 #include <cute/cute_sync.h>
@@ -33,7 +33,7 @@
 namespace cute
 {
 
-mutex_t* mutex_create()
+mutex_t mutex_create()
 {
 	return cute_mutex_create();
 }
@@ -58,7 +58,7 @@ bool mutex_trylock(mutex_t* mutex)
 	return !!cute_trylock(mutex);
 }
 
-cv_t* cv_create()
+cv_t cv_create()
 {
 	return cute_cv_create();
 }
@@ -83,34 +83,34 @@ error_t cv_wait(cv_t* cv, mutex_t* mutex)
 	return error_make(cute_cv_wait(cv, mutex), NULL);
 }
 
-sem_t* sem_create(unsigned initial_count)
+sem_t sem_create(int initial_count)
 {
-	return cute_sem_create(initial_count);
+	return cute_semaphore_create(initial_count);
 }
 
 void sem_destroy(sem_t* semaphore)
 {
-	cute_sem_destroy(semaphore);
+	cute_semaphore_destroy(semaphore);
 }
 
 error_t sem_post(sem_t* semaphore)
 {
-	return error_make(cute_sem_post(semaphore), NULL);
+	return error_make(cute_semaphore_post(semaphore), NULL);
 }
 
 error_t sem_try(sem_t* semaphore)
 {
-	return error_make(cute_sem_try(semaphore), NULL);
+	return error_make(cute_semaphore_try(semaphore), NULL);
 }
 
 error_t sem_wait(sem_t* semaphore)
 {
-	return error_make(cute_sem_wait(semaphore), NULL);
+	return error_make(cute_semaphore_wait(semaphore), NULL);
 }
 
 error_t sem_value(sem_t* semaphore)
 {
-	return error_make(cute_sem_value(semaphore), NULL);
+	return error_make(cute_semaphore_value(semaphore), NULL);
 }
 
 thread_t* thread_create(thread_func_t func, const char* name, void* udata)
@@ -148,39 +148,46 @@ int cacheline_size()
 	return cute_cacheline_size();
 }
 
-int atomic_add(int* address, int addend)
+atomic_int_t atomic_zero()
 {
-	return cute_atomic_add(address, addend);
+	atomic_int_t result;
+	result.i = 0;
+	return result;
 }
 
-int atomic_set(int* address, int value)
+int atomic_add(atomic_int_t* atomic, int addend)
 {
-	return cute_atomic_set(address, value);
+	return cute_atomic_add(atomic, addend);
 }
 
-int atomic_get(int* address)
+int atomic_set(atomic_int_t* atomic, int value)
 {
-	return cute_atomic_get(address);
+	return cute_atomic_set(atomic, value);
 }
 
-error_t atomic_cas(int* address, int compare, int value)
+int atomic_get(atomic_int_t* atomic)
 {
-	return error_make(cute_atomic_cas(address, compare, value), NULL);
+	return cute_atomic_get(atomic);
 }
 
-void* atomic_ptr_set(void** address, void* value)
+error_t atomic_cas(atomic_int_t* atomic, int expected, int value)
 {
-	return cute_atomic_ptr_set(address, value);
+	return error_make(cute_atomic_cas(atomic, expected, value), NULL);
 }
 
-void* atomic_ptr_get(void** address)
+void* atomic_ptr_set(void** atomic, void* value)
 {
-	return cute_atomic_ptr_get(address);
+	return cute_atomic_ptr_set(atomic, value);
 }
 
-error_t atomic_ptr_cas(void** address, void* compare, void* value)
+void* atomic_ptr_get(void** atomic)
 {
-	return error_make(cute_atomic_ptr_cas(address, compare, value), NULL);
+	return cute_atomic_ptr_get(atomic);
+}
+
+error_t atomic_ptr_cas(void** atomic, void* expected, void* value)
+{
+	return error_make(cute_atomic_ptr_cas(atomic, expected, value), NULL);
 }
 
 rw_lock_t* rw_lock_create(void* user_allocator_context)

@@ -217,14 +217,20 @@ int test_ecs_octorok()
 				test_component_transform_t = {
 					x = 10.0,
 					y = 15.0,
-				}
+				},
+				test_component_octorok_t = {
+					buddy = 1,
+				},
 			},
 			{
 				entity_type = 0,
 				test_component_transform_t = {
 					x = 30,
 					y = 40,
-				}
+				},
+				test_component_octorok_t = {
+					buddy = 0,
+				},
 			},
 		}
 	);
