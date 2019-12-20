@@ -27,6 +27,7 @@
 namespace cute
 {
 
+// TODO: Remove these error handler things. Use `error_t` instead.
 typedef void (CUTE_CALL error_handler_fn)(const char* error_string, void* udata);
 
 extern CUTE_API const char* CUTE_CALL error_get();
