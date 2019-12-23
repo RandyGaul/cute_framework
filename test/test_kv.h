@@ -540,4 +540,42 @@ int test_kv_read_delta_deep()
 	return 0;
 }
 
+CUTE_TEST_CASE(test_kv_write_delta_array, "Writing an array with a delta.");
+int test_kv_write_delta_basic()
+{
+	kv_t* kv = kv_make();
+	kv_t* base = kv_make();
+
+	const char* base_text = CUTE_STRINGIZE(
+		a = [3]{
+			1, 2, 3
+		},
+		b = [3]{
+			4, 5, 6
+		},
+	);
+
+	const char* text = CUTE_STRINGIZE(
+		b = [3]{
+			7, 8, 9, 10
+		},
+	);
+
+	error_t err = kv_parse(base, base_text, CUTE_STRLEN(base_text));
+	if (err.is_error()) return -1;
+	err = kv_parse(kv, text, CUTE_STRLEN(text));
+	if (err.is_error()) return -1;
+
+	kv_set_base(kv, base);
+
+	int count;
+	int elements[4];
+
+	kv_key(kv, "a");
+	kv_array_begin(kv, &count);
+	CUTE_TEST_ASSERT(count == 3);
+
+	return 0;
+}
+
 // TODO: Need to implement and test base deltas for arrays/blobs/string/object.

@@ -808,7 +808,7 @@ cute_mutex_t cute_mutex_create()
 {
 	CUTE_SYNC_ASSERT(sizeof(pthread_mutex_t) <= sizeof(cute_mutex_t));
 	cute_mutex_t mutex;
-	pthread_mutex_t((pthread_mutex_t*)&mutex, NULL);
+	pthread_mutex_init((pthread_mutex_t*)&mutex, NULL);
 	return mutex;
 }
 

@@ -33,6 +33,8 @@
 
 #include <cute/cute_serialize.h>
 
+#include <array>
+
 namespace cute
 {
 
