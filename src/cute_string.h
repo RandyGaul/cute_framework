@@ -24,6 +24,14 @@
 
 #include <cute_defines.h>
 
+/*
+	Implements a *single-threaded* string-interning system where each string on the stack
+	is represented by a `uint64_t`, and internally ref-counts inside of a global string-
+	interning system stored statically.
+
+	There is no support for string operations in a multi-threaded scenario.
+*/
+
 namespace cute
 {
 

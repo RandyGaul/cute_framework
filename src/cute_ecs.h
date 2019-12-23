@@ -47,6 +47,7 @@ struct entity_t
 
 struct entity_schema_t
 {
+	// TODO: Should probably just be fully parsed and ready to go kv_t instance.
 	size_t size = 0;
 	const void* memory = NULL;
 };
@@ -98,7 +99,11 @@ void app_register_system(app_t* app, T system_update_function, component_type_t*
 extern CUTE_API entity_t CUTE_CALL app_make_entity(app_t* app, entity_type_t type);
 extern CUTE_API void CUTE_CALL app_destroy_entity(app_t* app, entity_t entity);
 extern CUTE_API bool CUTE_CALL app_is_entity_valid(app_t* app, entity_t entity);
+
+// TODO: Should probably just be fully parsed and ready to go kv_t instance.
 extern CUTE_API error_t CUTE_CALL app_load_entities(app_t* app, const void* memory, size_t size);
+
+// TODO: Should probably just be fully parsed and ready to go kv_t instance.
 extern CUTE_API error_t CUTE_CALL app_save_entities(app_t* app, const array<entity_t>& entities, void* memory, size_t size);
 
 extern CUTE_API void CUTE_CALL app_update_systems(app_t* app);
