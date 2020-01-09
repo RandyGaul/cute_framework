@@ -369,7 +369,7 @@ The next series of steps is for setting up an *encryption state* with the potent
 * `client to server key`
 * `server to client key`
 
-The `client to server key` and `server to client key` are used to perform encrypted communication with the potential client, and come from the `SECRET SECTION` of the *connect token packet*. The `handshake timeout` is used to time out the handshake process in the event the client takes too long to respond at any stage. `expiration timestamp` is when the associated connect token expires.
+The `client to server key` and `server to client key` are used to perform encrypted communication with the potential client, and come from the SECRET SECTION of the *connect token packet*. The `handshake timeout` is used to time out the handshake process in the event the client takes too long to respond at any stage. `expiration timestamp` is when the associated connect token expires.
 
 1. If the server is not in the list of IP addresses in the *connect token packet*, ignore the packet.
 2. If a client is already connected with the same IP address and port, ignore the packet.
