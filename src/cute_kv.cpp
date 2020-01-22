@@ -205,6 +205,7 @@ static error_t s_scan_string(kv_t* kv, uint8_t** start_of_string, uint8_t** end_
 	*end_of_string = NULL;
 	int has_quotes = s_try(kv, '"');
 	*start_of_string = kv->in;
+	int terminated = 0;
 	if (has_quotes) {
 		while (kv->in < kv->in_end)
 		{
@@ -212,6 +213,7 @@ static error_t s_scan_string(kv_t* kv, uint8_t** start_of_string, uint8_t** end_
 			if (*(end - 1) != '\\') {
 				*end_of_string = end;
 				kv->in = end + 1;
+				terminated = 1;
 				break;
 			}
 		}
@@ -221,7 +223,7 @@ static error_t s_scan_string(kv_t* kv, uint8_t** start_of_string, uint8_t** end_
 		*end_of_string = end;
 		kv->in = end + 1;
 	}
-	if (kv->in == kv->in_end) {
+	if (!terminated && kv->in == kv->in_end) {
 		kv->err = error_failure("Unterminated string at end of file.");
 		return kv->err;
 	}
@@ -629,6 +631,7 @@ static error_t s_write_key(kv_t* kv, const char* key, kv_type_t* type)
 
 error_t kv_key(kv_t* kv, const char* key, kv_type_t* type)
 {
+	if (kv->mode == -1) return error_failure("Read or write mode have not been set.");
 	if (kv->err.is_error()) return kv->err;
 	if (kv->base) {
 		kv_t* match = s_match_base_key(kv->base, key);
@@ -1135,9 +1138,9 @@ error_t kv_val_string(kv_t* kv, const char** str, size_t* size)
 	return error_success();
 }
 
-error_t kv_val_blob(kv_t* kv, void* data, size_t* size, size_t capacity)
+error_t kv_val_blob(kv_t* kv, void* data, size_t data_capacity, size_t* data_len)
 {
-	if (kv->mode == CUTE_KV_MODE_READ) *size = 0;
+	if (kv->mode == CUTE_KV_MODE_READ) *data_len = 0;
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		if (kv->matched_base) {
@@ -1149,13 +1152,9 @@ error_t kv_val_blob(kv_t* kv, void* data, size_t* size, size_t capacity)
 				return error_success();
 			}
 		}
-		size_t buffer_size = CUTE_BASE64_ENCODED_SIZE(*size);
-		if (!(buffer_size <= capacity)) {
-			kv->err = error_failure("`capacity` is too small to hold base 64 encoded `data`.");
-			return kv->err;
-		}
+		size_t buffer_size = CUTE_BASE64_ENCODED_SIZE(*data_len);
 		uint8_t* buffer = s_temp(kv, buffer_size);
-		error_t err = base64_encode(buffer, buffer_size, data, *size);
+		error_t err = base64_encode(buffer, buffer_size, data, *data_len);
 		if (err.is_error()) return err;
 		err = s_write_str(kv, (const char*)buffer, buffer_size);
 		if (err.is_error()) return err;
@@ -1168,13 +1167,13 @@ error_t kv_val_blob(kv_t* kv, void* data, size_t* size, size_t capacity)
 			return kv->err;
 		}
 		size_t buffer_size = CUTE_BASE64_DECODED_SIZE(matched_val->u.sval.len);
-		if (!(buffer_size <= capacity)) {
+		if (!(buffer_size <= data_capacity)) {
 			kv->err = error_failure("Decoded base 64 string is too large to store in `data`.");
 			return kv->err;
 		}
 		error_t err = base64_decode(data, buffer_size, matched_val->u.sval.str, matched_val->u.sval.len);
 		if (err.is_error()) return err;
-		*size = buffer_size;
+		*data_len = buffer_size;
 	}
 	return error_success();
 }

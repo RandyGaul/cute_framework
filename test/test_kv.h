@@ -69,8 +69,8 @@ error_t do_serialize(kv_t* kv, thing_t* thing)
 		CUTE_RETURN_IF_ERROR(kv_object_end(kv));
 	CUTE_RETURN_IF_ERROR(kv_key(kv, "x")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->x));
 	CUTE_RETURN_IF_ERROR(kv_key(kv, "y")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->y));
-	size_t blob_size = 17;
-	CUTE_RETURN_IF_ERROR(kv_key(kv, "blob_data")); CUTE_RETURN_IF_ERROR(kv_val_blob(kv, thing->blob_data, &blob_size, sizeof(thing->blob_data)));
+	size_t blob_data_lem = CUTE_STRLEN(thing->blob_data) + 1;
+	CUTE_RETURN_IF_ERROR(kv_key(kv, "blob_data")); CUTE_RETURN_IF_ERROR(kv_val_blob(kv, thing->blob_data, sizeof(thing->blob_data), &blob_data_lem));
 	int int_count = 8;
 	CUTE_RETURN_IF_ERROR(kv_key(kv, "array_of_ints")); CUTE_RETURN_IF_ERROR(kv_array_begin(kv, &int_count));
 		for (int i = 0; i < int_count; ++i) CUTE_RETURN_IF_ERROR(kv_val(kv, thing->array_of_ints + i));
@@ -541,7 +541,7 @@ int test_kv_read_delta_deep()
 }
 
 CUTE_TEST_CASE(test_kv_write_delta_array, "Writing an array with a delta.");
-int test_kv_write_delta_basic()
+int test_kv_write_delta_array()
 {
 	kv_t* kv = kv_make();
 	kv_t* base = kv_make();
@@ -556,7 +556,7 @@ int test_kv_write_delta_basic()
 	);
 
 	const char* text = CUTE_STRINGIZE(
-		b = [3]{
+		b = [4]{
 			7, 8, 9, 10
 		},
 	);
@@ -569,13 +569,89 @@ int test_kv_write_delta_basic()
 	kv_set_base(kv, base);
 
 	int count;
-	int elements[4];
-
 	kv_key(kv, "a");
 	kv_array_begin(kv, &count);
 	CUTE_TEST_ASSERT(count == 3);
+	kv_array_end(kv);
+
+	kv_key(kv, "b");
+	kv_array_begin(kv, &count);
+	CUTE_TEST_ASSERT(count == 4);
+
+	int vals[] = { 7, 8, 9, 10 };
+	for (int i = 0; i < count; ++i) {
+		int val;
+		kv_val(kv, &val);
+		CUTE_TEST_ASSERT(val == vals[i]);
+	}
+
+	kv_destroy(kv);
+	kv_destroy(base);
 
 	return 0;
 }
 
-// TODO: Need to implement and test base deltas for arrays/blobs/string/object.
+CUTE_TEST_CASE(test_kv_write_delta_blob, "Writing a blob with a delta.");
+int test_kv_write_delta_blob()
+{
+	char base_text[256];
+	char text[256];
+	size_t sz;
+
+	const char* blob0 = "Blob me up baby!";
+	const char* blob1 = "I am the delta.";
+
+	kv_t* writer = kv_make();
+	kv_set_write_buffer(writer, base_text, 256);
+
+	kv_key(writer, "a");
+	sz = CUTE_STRLEN(blob0) + 1;
+	kv_val_blob(writer, (void*)blob0, 256, &sz);
+	kv_key(writer, "b");
+	kv_val_blob(writer, (void*)blob0, 256, &sz);
+	base_text[kv_size_written(writer)] = 0;
+
+	kv_set_write_buffer(writer, text, 256);
+	kv_key(writer, "b");
+	sz = CUTE_STRLEN(blob1) + 1;
+	kv_val_blob(writer, (void*)blob1, 256, &sz);
+	text[kv_size_written(writer)] = 0;
+	kv_destroy(writer);
+
+	kv_t* kv = kv_make();
+	kv_t* base = kv_make();
+
+	error_t err = kv_parse(base, base_text, CUTE_STRLEN(base_text));
+	if (err.is_error()) return -1;
+	err = kv_parse(kv, text, CUTE_STRLEN(text));
+	if (err.is_error()) return -1;
+
+	kv_set_base(kv, base);
+
+	char buffer[256];
+	size_t size_decoded;
+
+	kv_key(kv, "a");
+	kv_val_blob(kv, &buffer, 256, &size_decoded);
+	CUTE_TEST_ASSERT(!CUTE_STRCMP(buffer, blob0));
+
+	kv_key(kv, "b");
+	kv_val_blob(kv, &buffer, 256, &size_decoded);
+	CUTE_TEST_ASSERT(!CUTE_STRCMP(buffer, blob1));
+
+	kv_destroy(kv);
+	kv_destroy(base);
+
+	return 0;
+}
+
+// TODO: Need to implement and test base deltas for:
+// [x] Arrays
+// [x] Blobs
+// [ ] Strings
+// [ ] Objects
+CUTE_TEST_CASE(test_kv_write_delta_string, "Writing a string with a delta.");
+int test_kv_write_delta_string()
+{
+	return 0;
+}

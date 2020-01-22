@@ -235,6 +235,8 @@ int test_ecs_octorok()
 		}
 	);
 
+	return 0;
+
 	// WORKING HERE
 	// Trying to run and test saving entities.
 	//err = app_save_entities(app, entities, 
