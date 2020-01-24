@@ -86,6 +86,7 @@ struct kv_t
 	uint8_t* start = NULL;
 
 	kv_val_t* read_mode_matched_val = NULL;
+	int read_mode_object_skip_count = 0;
 	int read_mode_object_index = 0;
 	array<kv_object_t> objects;
 
@@ -341,7 +342,9 @@ static error_t s_parse_array(kv_t* kv, array<kv_val_t>* array_val)
 		kv_val_t* val = &array_val->add();
 		CUTE_PLACEMENT_NEW(val) kv_val_t;
 		err = s_parse_value(kv, val);
-		if (err.is_error()) return err;
+		if (err.is_error()) {
+			return error_failure("Unexecpted value when parsing an array. Make sure the elements are well-formed, and the length is correct.");
+		}
 	}
 	s_expect(kv, '}');
 	return error_success();
@@ -498,6 +501,7 @@ void kv_reset_read_state(kv_t* kv)
 {
 	CUTE_ASSERT(kv->mode == CUTE_KV_MODE_READ);
 	kv->read_mode_matched_val = NULL;
+	kv->read_mode_object_skip_count = 0;
 	kv->read_mode_object_index = 0;
 	kv->read_mode_from_array = 0;
 	kv->read_mode_array_stack.clear();
@@ -790,7 +794,7 @@ static CUTE_INLINE error_t s_end_val(kv_t* kv)
 	return error_success();
 }
 
-static CUTE_INLINE kv_val_t* s_pop_val(kv_t* kv, kv_type_t type)
+static CUTE_INLINE kv_val_t* s_pop_val(kv_t* kv, kv_type_t type, bool pop_val = true)
 {
 	if (kv->read_mode_from_array) {
 		CUTE_ASSERT(!kv->read_mode_matched_val);
@@ -799,13 +803,14 @@ static CUTE_INLINE kv_val_t* s_pop_val(kv_t* kv, kv_type_t type)
 		if (index == array_val->aval.count()) {
 			return NULL;
 		}
-		kv_val_t* val = array_val->aval + index++;
+		kv_val_t* val = array_val->aval + index;
+		if (pop_val) ++index;
 		return val;
 	} else {
 		kv_val_t* val = kv->read_mode_matched_val;
 		if (!val) return NULL;
 		if (val->type != type) return NULL;
-		kv->read_mode_matched_val = NULL;
+		if (pop_val) kv->read_mode_matched_val = NULL;
 		return val;
 	}
 }
@@ -816,12 +821,16 @@ static void s_backup_base_key(kv_t* kv)
 	kv->backup_base_key_bytes = 0;
 }
 
-static inline kv_val_t* s_find_match(kv_t* kv, kv_type_t type)
+static inline kv_val_t* s_find_match(kv_t* kv, kv_type_t type, bool* was_from_base = NULL, bool pop_base_val = true)
 {
+	if (was_from_base) *was_from_base = false;
 	kv_val_t* matched_val = s_pop_val(kv, type);
 	if (!matched_val && kv->matched_base) {
-		matched_val = s_pop_val(kv->matched_base, type);
-		if (matched_val) kv->matched_base = NULL;
+		matched_val = s_pop_val(kv->matched_base, type, pop_base_val);
+		if (matched_val) {
+			kv->matched_base = NULL;
+			if (was_from_base) *was_from_base = true;
+		}
 	}
 	return matched_val;
 }
@@ -1178,8 +1187,12 @@ error_t kv_val_blob(kv_t* kv, void* data, size_t data_capacity, size_t* data_len
 	return error_success();
 }
 
-error_t kv_object_begin(kv_t* kv)
+error_t kv_object_begin(kv_t* kv, const char* key)
 {
+	if (key) {
+		error_t err = kv_key(kv, key);
+		if (err.is_error()) return err;
+	}
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {
 		error_t err = s_write_str_no_quotes(kv, "{\n", 2);
@@ -1189,14 +1202,21 @@ error_t kv_object_begin(kv_t* kv)
 		if (err.is_error()) return err;
 		s_push_array(kv, CUTE_KV_NOT_IN_ARRAY);
 	} else {
-		kv_val_t* matched_val = s_find_match(kv, KV_TYPE_OBJECT);
-		if (matched_val) {
+		bool was_from_base = false;
+		kv_val_t* matched_val = s_find_match(kv, KV_TYPE_OBJECT, &was_from_base, false);
+		if (matched_val && !was_from_base) {
 			kv->read_mode_object_index = matched_val->u.object_index;
+			s_push_read_mode_array(kv, NULL);
+		} else if (kv->base && matched_val) {
+			kv->read_mode_object_skip_count++;
 		} else {
 			kv->err = error_failure("Unable to get object, no matching `kv_key` call.");
 			return kv->err;
 		}
-		s_push_read_mode_array(kv, NULL);
+		if (kv->base) {
+			error_t err = kv_object_begin(kv->base);
+			if (err.is_error()) return err;
+		}
 	}
 	return error_success();
 }
@@ -1218,15 +1238,28 @@ error_t kv_object_end(kv_t* kv)
 			kv->err = error_failure("Tried to end kv object, but none was currently set.");
 			return kv->err;
 		} else {
-			kv->read_mode_object_index = object->parent_index;
+			if (kv->read_mode_object_skip_count) {
+				CUTE_ASSERT(kv->read_mode_object_skip_count > 0);
+				--kv->read_mode_object_skip_count;
+			} else {
+				s_pop_read_mode_array(kv);
+				kv->read_mode_object_index = object->parent_index;
+			}
 		}
-		s_pop_read_mode_array(kv);
+		if (kv->base) {
+			error_t err = kv_object_end(kv->base);
+			if (err.is_error()) return err;
+		}
 	}
 	return error_success();
 }
 
-error_t kv_array_begin(kv_t* kv, int* count)
+error_t kv_array_begin(kv_t* kv, int* count, const char* key)
 {
+	if (key) {
+		error_t err = kv_key(kv, key);
+		if (err.is_error()) return err;
+	}
 	if (kv->mode == CUTE_KV_MODE_READ) *count = 0;
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CUTE_KV_MODE_WRITE) {

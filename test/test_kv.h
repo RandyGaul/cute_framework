@@ -59,10 +59,10 @@ error_t do_serialize(kv_t* kv, thing_t* thing)
 	CUTE_RETURN_IF_ERROR(kv_key(kv, "a")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->a));
 	CUTE_RETURN_IF_ERROR(kv_key(kv, "b")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->b));
 	CUTE_RETURN_IF_ERROR(kv_key(kv, "str")); len = 6; CUTE_RETURN_IF_ERROR(kv_val_string(kv, &thing->str, &len));
-		CUTE_RETURN_IF_ERROR(kv_key(kv, "sub_thing")); CUTE_RETURN_IF_ERROR(kv_object_begin(kv));
+		CUTE_RETURN_IF_ERROR(kv_object_begin(kv, "sub_thing"));
 		CUTE_RETURN_IF_ERROR(kv_key(kv, "a")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->sub_thing.a));
 		CUTE_RETURN_IF_ERROR(kv_key(kv, "die_pls")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->sub_thing.die_pls));
-			CUTE_RETURN_IF_ERROR(kv_key(kv, "interior_thing")); CUTE_RETURN_IF_ERROR(kv_object_begin(kv));
+			CUTE_RETURN_IF_ERROR(kv_object_begin(kv, "interior_thing"));
 			CUTE_RETURN_IF_ERROR(kv_key(kv, "hi")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->sub_thing.interior_thing.hi));
 			CUTE_RETURN_IF_ERROR(kv_key(kv, "geez")); len = 6; CUTE_RETURN_IF_ERROR(kv_val_string(kv, &thing->sub_thing.interior_thing.geez, &len));
 			CUTE_RETURN_IF_ERROR(kv_object_end(kv));
@@ -72,11 +72,11 @@ error_t do_serialize(kv_t* kv, thing_t* thing)
 	size_t blob_data_lem = CUTE_STRLEN(thing->blob_data) + 1;
 	CUTE_RETURN_IF_ERROR(kv_key(kv, "blob_data")); CUTE_RETURN_IF_ERROR(kv_val_blob(kv, thing->blob_data, sizeof(thing->blob_data), &blob_data_lem));
 	int int_count = 8;
-	CUTE_RETURN_IF_ERROR(kv_key(kv, "array_of_ints")); CUTE_RETURN_IF_ERROR(kv_array_begin(kv, &int_count));
+	CUTE_RETURN_IF_ERROR(kv_array_begin(kv, &int_count, "array_of_ints"));
 		for (int i = 0; i < int_count; ++i) CUTE_RETURN_IF_ERROR(kv_val(kv, thing->array_of_ints + i));
 	CUTE_RETURN_IF_ERROR(kv_array_end(kv));
 	int_count = 2;
-	CUTE_RETURN_IF_ERROR(kv_key(kv, "array_of_array_of_ints")); CUTE_RETURN_IF_ERROR(kv_array_begin(kv, &int_count));
+	CUTE_RETURN_IF_ERROR(kv_array_begin(kv, &int_count, "array_of_array_of_ints"));
 		int_count = 3;
 		CUTE_RETURN_IF_ERROR(kv_array_begin(kv, &int_count));
 		for (int i = 0; i < int_count; ++i)
@@ -91,7 +91,7 @@ error_t do_serialize(kv_t* kv, thing_t* thing)
 		}
 		CUTE_RETURN_IF_ERROR(kv_array_end(kv));
 	CUTE_RETURN_IF_ERROR(kv_array_end(kv));
-	CUTE_RETURN_IF_ERROR(kv_key(kv, "array_of_objects")); CUTE_RETURN_IF_ERROR(kv_array_begin(kv, &int_count));
+	CUTE_RETURN_IF_ERROR(kv_array_begin(kv, &int_count, "array_of_objects"));
 	for (int i = 0; i < int_count; ++i)
 	{
 		CUTE_RETURN_IF_ERROR(kv_object_begin(kv));
@@ -569,13 +569,11 @@ int test_kv_write_delta_array()
 	kv_set_base(kv, base);
 
 	int count;
-	kv_key(kv, "a");
-	kv_array_begin(kv, &count);
+	kv_array_begin(kv, &count, "a");
 	CUTE_TEST_ASSERT(count == 3);
 	kv_array_end(kv);
 
-	kv_key(kv, "b");
-	kv_array_begin(kv, &count);
+	kv_array_begin(kv, &count, "b");
 	CUTE_TEST_ASSERT(count == 4);
 
 	int vals[] = { 7, 8, 9, 10 };
@@ -584,6 +582,7 @@ int test_kv_write_delta_array()
 		kv_val(kv, &val);
 		CUTE_TEST_ASSERT(val == vals[i]);
 	}
+	kv_array_end(kv);
 
 	kv_destroy(kv);
 	kv_destroy(base);
@@ -645,13 +644,174 @@ int test_kv_write_delta_blob()
 	return 0;
 }
 
-// TODO: Need to implement and test base deltas for:
-// [x] Arrays
-// [x] Blobs
-// [ ] Strings
-// [ ] Objects
 CUTE_TEST_CASE(test_kv_write_delta_string, "Writing a string with a delta.");
 int test_kv_write_delta_string()
 {
+	kv_t* kv = kv_make();
+	kv_t* base = kv_make();
+
+	const char* base_text = CUTE_STRINGIZE(
+		a = "a",
+		b = "b"
+	);
+
+	const char* text = CUTE_STRINGIZE(
+		b = "c"
+	);
+
+	error_t err = kv_parse(base, base_text, CUTE_STRLEN(base_text));
+	if (err.is_error()) return -1;
+	err = kv_parse(kv, text, CUTE_STRLEN(text));
+	if (err.is_error()) return -1;
+
+	kv_set_base(kv, base);
+
+	const char* str;
+	size_t sz;
+
+	kv_key(kv, "a");
+	kv_val_string(kv, &str, &sz);
+	CUTE_TEST_ASSERT(!CUTE_STRNCMP(str, "a", sz));
+
+	kv_key(kv, "b");
+	kv_val_string(kv, &str, &sz);
+	CUTE_TEST_ASSERT(!CUTE_STRNCMP(str, "c", sz));
+
+	kv_destroy(kv);
+	kv_destroy(base);
+
+	return 0;
+}
+
+CUTE_TEST_CASE(test_kv_write_delta_object, "Writing some objects with deltas.");
+int test_kv_write_delta_object()
+{
+	const char* base_text = CUTE_STRINGIZE(
+		object = {
+			a = 1,
+			b = 2,
+			nest0 = {
+				c = "hi",
+				d = "wow",
+				nest2 = {
+					f = [3]{
+						1, 2, 3
+					},
+				},
+				nest3 = {
+					g = [2] {
+						[5] {
+							10, 11, 12, 13, 14
+						},
+						[7] {
+							3, 4, 5, 6, 7, 8, 9
+						},
+					},
+				},
+				nest4 = {
+					h = [3] {
+						1, 2, 3
+					},
+				},
+			},
+			nest1 = {
+				e = "oh",
+			},
+		}
+	);
+
+	const char* text = CUTE_STRINGIZE(
+		object = {
+			b = 5,
+			nest0 = {
+				c = "no",
+				nest4 = {
+					h = [3] {
+						4, 5, 6
+					}
+				}
+			}
+		}
+	);
+
+	kv_t* kv = kv_make();
+	kv_t* base = kv_make();
+	error_t err = kv_parse(base, base_text, CUTE_STRLEN(base_text));
+	if (err.is_error()) return -1;
+	err = kv_parse(kv, text, CUTE_STRLEN(text));
+	if (err.is_error()) return -1;
+	kv_set_base(kv, base);
+
+	int val;
+	const char* str;
+	size_t str_len;
+	int count;
+	int elements0[] = { 1, 2, 3 };
+	int elements1[] = { 10, 11, 12, 13, 14 };
+	int elements2[] = { 3, 4, 5, 6, 7, 8, 9 };
+	int elements3[] = { 4, 5, 6 };
+
+	kv_object_begin(kv, "object");
+		kv_key(kv, "a");
+		kv_val(kv, &val);
+		CUTE_TEST_ASSERT(val == 1);
+		kv_key(kv, "b");
+		kv_val(kv, &val);
+		CUTE_TEST_ASSERT(val == 5);
+		kv_object_begin(kv, "nest0");
+			kv_key(kv, "c");
+			kv_val_string(kv, &str, &str_len);
+			CUTE_TEST_ASSERT(!CUTE_STRNCMP("no", str, str_len));
+			kv_key(kv, "d");
+			kv_val_string(kv, &str, &str_len);
+			CUTE_TEST_ASSERT(!CUTE_STRNCMP("wow", str, str_len));
+			kv_object_begin(kv, "nest2");
+				kv_array_begin(kv, &count, "f");
+				for (int i = 0; i < count; ++i) {
+					kv_val(kv, &val);
+					CUTE_TEST_ASSERT(val == elements0[i]);
+				}
+				kv_array_end(kv);
+			kv_object_end(kv);
+			kv_object_begin(kv, "nest3");
+				kv_array_begin(kv, &count, "g");
+				CUTE_TEST_ASSERT(count == 2);
+					kv_array_begin(kv, &count);
+					for (int i = 0; i < count; ++i) {
+						kv_val(kv, &val);
+						CUTE_TEST_ASSERT(val == elements1[i]);
+					}
+					kv_array_end(kv);
+					kv_array_begin(kv, &count);
+					for (int i = 0; i < count; ++i) {
+						kv_val(kv, &val);
+						CUTE_TEST_ASSERT(val == elements2[i]);
+					}
+					kv_array_end(kv);
+				kv_array_end(kv);
+			kv_object_end(kv);
+		kv_object_end(kv);
+		kv_object_begin(kv, "nest1");
+			kv_key(kv, "e");
+			kv_val_string(kv, &str, &str_len);
+			CUTE_TEST_ASSERT(!CUTE_STRNCMP("oh", str, str_len));
+		kv_object_end(kv);
+		kv_object_begin(kv, "nest0");
+			kv_object_begin(kv, "nest4");
+				kv_array_begin(kv, &count, "h");
+				for (int i = 0; i < count; ++i) {
+					kv_val(kv, &val);
+					CUTE_TEST_ASSERT(val == elements3[i]);
+				}
+				kv_array_end(kv);
+			kv_object_end(kv);
+		kv_object_end(kv);
+	kv_object_end(kv);
+
+	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
+
+	kv_destroy(kv);
+	kv_destroy(base);
+
 	return 0;
 }
