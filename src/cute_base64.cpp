@@ -125,6 +125,7 @@ error_t base64_decode(void* dst, size_t dst_size, const void* src, size_t src_si
 {
 	if (!src_size) return error_success();
 	if (src_size % 4) return error_failure("`src_size` is not a multiple of 4 (all base64 streams must be padded to a multiple of four with `=` characters).");
+	if (dst_size < CUTE_BASE64_DECODED_SIZE(src_size)) return error_failure("'dst_size' is too small to decode.");
 	size_t quadruplets = src_size / 4;
 	
 	const uint8_t* in = (const uint8_t*)src;
