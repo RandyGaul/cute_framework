@@ -547,16 +547,16 @@ int test_kv_read_delta_array()
 	kv_t* base = kv_make();
 
 	const char* base_text = CUTE_STRINGIZE(
-		a = [3]{
+		a = [3] {
 			1, 2, 3
 		},
-		b = [3]{
+		b = [3] {
 			4, 5, 6
 		},
 	);
 
 	const char* text = CUTE_STRINGIZE(
-		b = [4]{
+		b = [4] {
 			7, 8, 9, 10
 		},
 	);
