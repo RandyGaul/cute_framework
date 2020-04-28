@@ -19,42 +19,28 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_KV_UTILS_H
-#define CUTE_KV_UTILS_H
-
-#include <cute_kv.h>
-#include <cute_ecs.h>
-
-#include <string>
-#include <vector>
+#include <internal/cute_ecs_internal.h>
+#include <internal/cute_app_internal.h>
 
 namespace cute
 {
 
-CUTE_INLINE error_t kv_val(kv_t* kv, std::string* val)
+error_t kv_val_entity(kv_t* kv, app_t* app, entity_t* entity)
 {
-	const char* ptr = val->data();
-	size_t len = val->length();
-	error_t err = kv_val_string(kv, &ptr, &len);
-	if (err.is_error()) return err;
-	val->assign(ptr, len);
-	return error_success();
-}
+	kv_state_t state = kv_get_state(kv);
+	CUTE_ASSERT(state != KV_STATE_UNITIALIZED);
 
-template <typename T>
-CUTE_INLINE error_t kv_val(kv_t* kv, std::vector<T>* val)
-{
-	int count = (int)val->size();
-	kv_array_begin(kv, &count);
-	val->resize(count);
-	for (int i = 0; i < count; ++i)
-	{
-		kv_val(kv, &(*val)[i]);
+	if (state == KV_STATE_READ) {
+		int index;
+		error_t err = kv_val(kv, &index);
+		if (err.is_error()) return err;
+		*entity = app->load_id_table->operator[](index);
+		return error_success();
+	} else {
+		int* index_ptr = app->save_id_table->find(*entity);
+		CUTE_ASSERT(index_ptr);
+		return kv_val(kv, index_ptr);
 	}
-	kv_array_end(kv);
-	return kv_error_state(kv);
 }
 
 }
-
-#endif // CUTE_KV_UTILS_H

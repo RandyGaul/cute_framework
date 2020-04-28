@@ -88,6 +88,7 @@ set(CUTE_SRCS
 	src/cute_typeless_array.cpp
 
 	src/internal/cute_transport_internal.cpp
+	src/internal/cute_ecs_internal.cpp
 
 	libraries/glad/glad.c
 )
@@ -128,6 +129,7 @@ set(CUTE_HDRS
 	src/cute_string.h
 	src/cute_string_utils.h
 	src/cute_typeless_array.h
+	src/cute_defer.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
@@ -140,6 +142,7 @@ set(CUTE_HDRS
 	src/internal/cute_protocol_internal.h
 	src/internal/cute_transport_internal.h
 	src/internal/cute_object_table_internal.h
+	src/internal/cute_ecs_internal.h
 
 	libraries/glad/glad.h
 )

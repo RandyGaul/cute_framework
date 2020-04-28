@@ -33,6 +33,8 @@
 namespace cute
 {
 
+struct kv_t;
+
 //--------------------------------------------------------------------------------------------------
 // Entity
 
@@ -45,14 +47,7 @@ struct entity_t
 	handle_t handle;
 };
 
-struct entity_schema_t
-{
-	// TODO: Should probably just be fully parsed and ready to go kv_t instance.
-	size_t size = 0;
-	const void* memory = NULL;
-};
-
-extern CUTE_API error_t CUTE_CALL app_register_entity_type(app_t* app, const entity_schema_t* schema);
+extern CUTE_API error_t CUTE_CALL app_register_entity_type(app_t* app, kv_t* schema);
 
 //--------------------------------------------------------------------------------------------------
 // Component
@@ -100,11 +95,15 @@ extern CUTE_API entity_t CUTE_CALL app_make_entity(app_t* app, entity_type_t typ
 extern CUTE_API void CUTE_CALL app_destroy_entity(app_t* app, entity_t entity);
 extern CUTE_API bool CUTE_CALL app_is_entity_valid(app_t* app, entity_t entity);
 
-// TODO: Should probably just be fully parsed and ready to go kv_t instance.
-extern CUTE_API error_t CUTE_CALL app_load_entities(app_t* app, const void* memory, size_t size);
+/**
+ * `kv` needs to be in `KV_STATE_READ` mode.
+ */
+extern CUTE_API error_t CUTE_CALL app_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out = NULL);
 
-// TODO: Should probably just be fully parsed and ready to go kv_t instance.
-extern CUTE_API error_t CUTE_CALL app_save_entities(app_t* app, const array<entity_t>& entities, void* memory, size_t size);
+/**
+ * `kv` needs to be in `KV_STATE_WRITE` mode.
+ */
+extern CUTE_API error_t CUTE_CALL app_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv);
 
 extern CUTE_API void CUTE_CALL app_update_systems(app_t* app);
 

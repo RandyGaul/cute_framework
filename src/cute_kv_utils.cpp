@@ -26,13 +26,4 @@
 namespace cute
 {
 
-error_t kv_val_entity(kv_t* kv, app_t* app, entity_t entity)
-{
-	dictionary<entity_t, int>* id_table = app->save_id_table;
-	int index;
-	error_t err = id_table->find(entity, &index);
-	if (err.is_error()) return err;
-	return kv_val(kv, &index);
-}
-
 }

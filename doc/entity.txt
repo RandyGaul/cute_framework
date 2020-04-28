@@ -321,3 +321,24 @@ SAVE
 * This is the order they are stored in file and implicitly defines ids
 * A table is constructed to go from entity id to index
 * Upon saving, all references are converted from runtime entity id to index
+
+---
+
+ya so saving is working
+next problem
+
+entity A refers to entity B
+A wants to mutate B
+how?
+
+worst case scenario
+	hit entity collection table, lookup by entity type
+	hit component tables, lookup by component type
+	hit component array, lookup by index
+
+but if it's intra-system
+	hit handle table to get index
+	hit component array by index
+
+so there should be two different kind of get component functions
+since one is cleary faster

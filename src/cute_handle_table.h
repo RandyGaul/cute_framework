@@ -61,6 +61,11 @@ struct handle_table_t
 		return handle_allocator_alloc(m_alloc, index);
 	}
 
+	CUTE_INLINE handle_t alloc_handle()
+	{
+		return handle_allocator_alloc(m_alloc, ~0);
+	}
+
 	CUTE_INLINE uint32_t get_index(handle_t handle)
 	{
 		return handle_allocator_get_index(m_alloc, handle);

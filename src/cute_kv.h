@@ -28,15 +28,51 @@
 namespace cute
 {
 
+/**
+ * "Key-value", or kv. Used for serialization either to/from an in-memory buffer. The design of the
+ * kv api is supposed to allow for *mostly* (but not completely) the same code to be used for both
+ * serialization and deserialization.
+ */
 struct kv_t;
 
 CUTE_API kv_t* CUTE_CALL kv_make(void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL kv_destroy(kv_t* kv);
 
+enum kv_state_t
+{
+	KV_STATE_UNITIALIZED,
+	KV_STATE_WRITE,
+	KV_STATE_READ,
+};
+
+CUTE_API kv_state_t CUTE_CALL kv_get_state(kv_t* kv);
+
+/**
+ * Parses the text at `data` in a single-pass. Sets the `kv` to read mode `KV_STATE_READ`.
+ */
 CUTE_API error_t CUTE_CALL kv_parse(kv_t* kv, const void* data, size_t size);
+
+/**
+ * Clears the `kv`'s internal state, but retains all previously parsed data. This can be useful
+ * to quickly reset the `kv` at any point, especially while in the middle of reading objects/arrays.
+ */
 CUTE_API void CUTE_CALL kv_reset_read_state(kv_t* kv);
 
+/**
+ * Sets the `kv` to write mode `KV_STATE_WRITE`, ready to serialize data to `buffer`.
+ */
 CUTE_API void CUTE_CALL kv_set_write_buffer(kv_t* kv, void* buffer, size_t size);
+
+/**
+ * Assigns a base to `kv`. The idea is to allow data inheritence. For example, if a particular key
+ * is missing from `kv`, then `base` will be searched. If a match is found in `base`, the match will
+ * be seamlessly returned. Only one base may be assigned to any `kv` instance. In this way, the base
+ * functionality sets up a singly linked list of data inheritence.
+ *
+ * Only works in read mode.
+ *
+ * TODO: Delta writing -- optimization to only write non-defaulted values when saving.
+ */
 CUTE_API void CUTE_CALL kv_set_base(kv_t* kv, kv_t* base);
 
 CUTE_API size_t CUTE_CALL kv_size_written(kv_t* kv);

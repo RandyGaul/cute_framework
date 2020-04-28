@@ -19,42 +19,17 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_KV_UTILS_H
-#define CUTE_KV_UTILS_H
+#ifndef CUTE_ECS_INTERNAL_H
+#define CUTE_ECS_INTERNAL_H
 
 #include <cute_kv.h>
 #include <cute_ecs.h>
 
-#include <string>
-#include <vector>
-
 namespace cute
 {
 
-CUTE_INLINE error_t kv_val(kv_t* kv, std::string* val)
-{
-	const char* ptr = val->data();
-	size_t len = val->length();
-	error_t err = kv_val_string(kv, &ptr, &len);
-	if (err.is_error()) return err;
-	val->assign(ptr, len);
-	return error_success();
-}
-
-template <typename T>
-CUTE_INLINE error_t kv_val(kv_t* kv, std::vector<T>* val)
-{
-	int count = (int)val->size();
-	kv_array_begin(kv, &count);
-	val->resize(count);
-	for (int i = 0; i < count; ++i)
-	{
-		kv_val(kv, &(*val)[i]);
-	}
-	kv_array_end(kv);
-	return kv_error_state(kv);
-}
+CUTE_API error_t CUTE_CALL kv_val_entity(kv_t* kv, app_t* app, entity_t* entity);
 
 }
 
-#endif // CUTE_KV_UTILS_H
+#endif // CUTE_ECS_INTERNAL_H

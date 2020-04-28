@@ -540,8 +540,8 @@ int test_kv_read_delta_deep()
 	return 0;
 }
 
-CUTE_TEST_CASE(test_kv_write_delta_array, "Writing an array with a delta.");
-int test_kv_write_delta_array()
+CUTE_TEST_CASE(test_kv_read_delta_array, "Reading an array with a delta.");
+int test_kv_read_delta_array()
 {
 	kv_t* kv = kv_make();
 	kv_t* base = kv_make();
@@ -590,8 +590,8 @@ int test_kv_write_delta_array()
 	return 0;
 }
 
-CUTE_TEST_CASE(test_kv_write_delta_blob, "Writing a blob with a delta.");
-int test_kv_write_delta_blob()
+CUTE_TEST_CASE(test_kv_read_and_write_delta_blob, "Reading and writing a blob with a delta.");
+int test_kv_read_and_write_delta_blob()
 {
 	char base_text[256];
 	char text[256];
@@ -644,8 +644,8 @@ int test_kv_write_delta_blob()
 	return 0;
 }
 
-CUTE_TEST_CASE(test_kv_write_delta_string, "Writing a string with a delta.");
-int test_kv_write_delta_string()
+CUTE_TEST_CASE(test_kv_read_delta_string, "Reading a string with a delta.");
+int test_kv_read_delta_string()
 {
 	kv_t* kv = kv_make();
 	kv_t* base = kv_make();
@@ -683,8 +683,8 @@ int test_kv_write_delta_string()
 	return 0;
 }
 
-CUTE_TEST_CASE(test_kv_write_delta_object, "Writing some objects with deltas.");
-int test_kv_write_delta_object()
+CUTE_TEST_CASE(test_kv_read_delta_object, "Reading some objects with deltas.");
+int test_kv_read_delta_object()
 {
 	const char* base_text = CUTE_STRINGIZE(
 		object = {

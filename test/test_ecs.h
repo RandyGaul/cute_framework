@@ -22,6 +22,8 @@
 #include <cute_ecs.h>
 #include <cute_kv_utils.h>
 
+#include <internal/cute_ecs_internal.h>
+
 using namespace cute;
 
 // -------------------------------------------------------------------------------------------------
@@ -56,6 +58,7 @@ struct test_component_octorok_t
 	int ai_state;
 	uint32_t pellet_count;
 	array<entity_t> pellets;
+	int buddy_said_hi;
 	entity_t buddy;
 };
 
@@ -109,6 +112,7 @@ void test_component_octorok_initialize(app_t* app, void* component, void* udata)
 	test_component_octorok_t* octorok = (test_component_octorok_t*)component;
 	octorok->ai_state = 0;
 	octorok->pellet_count = 3;
+	octorok->buddy_said_hi = 0;
 }
 
 error_t test_component_octorok_serialize(app_t* app, kv_t* kv, void* component, void* udata)
@@ -116,7 +120,7 @@ error_t test_component_octorok_serialize(app_t* app, kv_t* kv, void* component, 
 	test_component_octorok_t* octorok = (test_component_octorok_t*)component;
 	kv_key(kv, "ai_state"); kv_val(kv, &octorok->ai_state);
 	kv_key(kv, "pellet_count"); kv_val(kv, &octorok->pellet_count);
-	kv_key(kv, "buddy"); kv_val_entity(kv, app, octorok->buddy);
+	kv_key(kv, "buddy"); kv_val_entity(kv, app, &octorok->buddy);
 	return kv_error_state(kv);
 }
 
@@ -133,6 +137,10 @@ void update_test_octorok_system(float dt, test_component_transform_t* transform,
 	transform->x = 20.0f;
 	transform->y = 20.0f;
 	if (transform->x == 20.0f) s_octorok_system_ran_ok++;
+
+	// WORKING HERE
+	// Want to use buddy said hi.
+	// Need a way to retrieve component from an entity and mutate it.
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -194,10 +202,10 @@ int test_ecs_octorok()
 		},
 	);
 
-	entity_schema_t entity_schema;
-	entity_schema.size = CUTE_STRLEN(octorok_schema_string);
-	entity_schema.memory = octorok_schema_string;
-	err = app_register_entity_type(app, &entity_schema);
+	kv_t* entity_schema = kv_make();
+	err = kv_parse(entity_schema, octorok_schema_string, CUTE_STRLEN(octorok_schema_string));
+	if (err.is_error()) return -1;
+	err = app_register_entity_type(app, entity_schema);
 	if (err.is_error()) return -1;
 
 	// Register systems (just one, the Octorok system).
@@ -235,15 +243,21 @@ int test_ecs_octorok()
 		}
 	);
 
-	return 0;
-
-	// WORKING HERE
-	// Trying to run and test saving entities.
-	//err = app_save_entities(app, entities, 
-
 	// This crashes since id_table isn't hooked up yet.
-	err = app_load_entities(app, serialized_entities, CUTE_STRLEN(serialized_entities));
+	kv_t* parsed_entities = kv_make();
+	err = kv_parse(parsed_entities, serialized_entities, CUTE_STRLEN(serialized_entities));
 	if (err.is_error()) return -1;
+
+	array<entity_t> entities;
+	err = app_load_entities(app, parsed_entities, &entities);
+	if (err.is_error()) return -1;
+
+	kv_t* saved_entities = kv_make();
+	char entity_buffer[1024];
+	kv_set_write_buffer(saved_entities, entity_buffer, 1024);
+	err = app_save_entities(app, entities, saved_entities);
+	entity_buffer[kv_size_written(saved_entities)] = 0;
+	//printf("%s", entity_buffer);
 
 	// Update the systems.
 	s_octorok_system_ran_ok = 0;
