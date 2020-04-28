@@ -60,7 +60,7 @@ struct system_t
 struct entity_collection_t
 {
 	handle_table_t entity_handle_table;
-	array<handle_t> entity_handles;
+	array<handle_t> entity_handles; // TODO - Replace with a counter? Or delete?
 	array<component_type_t> component_types;
 	array<typeless_array> component_tables;
 };
@@ -82,6 +82,8 @@ struct app_t
 	// TODO: Set allocator context for these data structures.
 	array<system_t> systems;
 	dictionary<entity_type_t, entity_collection_t> entity_collections;
+	entity_type_t current_collection_type_being_iterated = CUTE_INVALID_ENTITY_TYPE;
+	entity_collection_t* current_collection_being_updated = NULL;
 
 	dictionary<const char*, component_type_t> component_name_to_type_table;
 	dictionary<component_type_t, component_config_t> component_configs;

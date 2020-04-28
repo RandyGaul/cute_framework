@@ -72,6 +72,7 @@ CUTE_API void CUTE_CALL kv_set_write_buffer(kv_t* kv, void* buffer, size_t size)
  * Only works in read mode.
  *
  * TODO: Delta writing -- optimization to only write non-defaulted values when saving.
+ *       Or maybe just default values? Delta writing is probably superior.
  */
 CUTE_API void CUTE_CALL kv_set_base(kv_t* kv, kv_t* base);
 

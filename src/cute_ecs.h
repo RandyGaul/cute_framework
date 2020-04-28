@@ -47,7 +47,7 @@ struct entity_t
 	handle_t handle;
 };
 
-extern CUTE_API error_t CUTE_CALL app_register_entity_type(app_t* app, kv_t* schema);
+extern CUTE_API error_t CUTE_CALL app_register_entity_type(app_t* app, kv_t* schema, entity_type_t* entity_type_out = NULL);
 
 //--------------------------------------------------------------------------------------------------
 // Component
@@ -70,6 +70,7 @@ struct component_config_t
 	void* serializer_fn_udata = NULL;
 	component_serialize_fn* serializer_fn = NULL;
 
+	// TODO - Enforce dependencies when registering a system.
 	int dependency_count = 0;
 	component_type_t* dependencies = NULL;
 };
@@ -91,9 +92,10 @@ void app_register_system(app_t* app, T system_update_function, component_type_t*
 //--------------------------------------------------------------------------------------------------
 // Run-time functions and entity lifetime management.
 
-extern CUTE_API entity_t CUTE_CALL app_make_entity(app_t* app, entity_type_t type);
+extern CUTE_API error_t CUTE_CALL app_make_entity(app_t* app, entity_type_t type, entity_t* entity_out = NULL);
 extern CUTE_API void CUTE_CALL app_destroy_entity(app_t* app, entity_t entity);
 extern CUTE_API bool CUTE_CALL app_is_entity_valid(app_t* app, entity_t entity);
+extern CUTE_API void* CUTE_CALL app_get_component(app_t* app, entity_t entity, component_type_t type);
 
 /**
  * `kv` needs to be in `KV_STATE_READ` mode.

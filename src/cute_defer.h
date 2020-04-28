@@ -39,10 +39,13 @@ static scope_exit<T> s_create_scope_helper(T func)
 	return scope_exit<T>(func);
 }
 
+#define CUTE_TOKEN_PASTE_HELPER(X, Y) X ## Y
+#define CUTE_TOKEN_PASTE(X, Y) CUTE_TOKEN_PASTE_HELPER(X, Y)
+
 /**
  * Runs a single line of code `L` whenever the scope the `CUTE_DEFER` macro resides within
  * exits. This is useful for closing files or cleaning things up when returning from a
- * function.
+ * function, especially when there are many different places to return from.
  *
  * Here is an example.
  *
@@ -68,6 +71,6 @@ static scope_exit<T> s_create_scope_helper(T func)
  *     // And finally, the defer line can run here too.
  * }
  */
-#define CUTE_DEFER(L) const auto& scope_exit##__LINE__ = s_create_scope_helper([&]() { L; })
+#define CUTE_DEFER(L) const auto& CUTE_TOKEN_PASTE(scope_exit, __LINE__) = s_create_scope_helper([&]() { L; })
 
 }

@@ -30,6 +30,30 @@
 namespace cute
 {
 
+static error_t s_load_from_schema(app_t* app, entity_type_t entity_type, component_config_t* config, void* component, void* udata)
+{
+	// Look for parent.
+	// If parent exists, load values from it first.
+	entity_type_t inherits_from;
+	error_t err = app->entity_schema_inheritence.find(entity_type, &inherits_from);
+	if (!err.is_error()) {
+		err = s_load_from_schema(app, inherits_from, config, component, udata);
+		if (err.is_error()) return err;
+	}
+
+	kv_t* schema;
+	err = app->entity_parsed_schemas.find(entity_type, &schema);
+	if (err.is_error()) return error_failure("Unable to find schema when loading entity.");
+
+	err = kv_key(schema, config->name);
+	if (err.is_error()) return err;
+
+	kv_object_begin(schema);
+	err = config->serializer_fn(app, schema, component, udata);
+	kv_object_end(schema);
+	return err;
+}
+
 //--------------------------------------------------------------------------------------------------
 
 void app_register_system(app_t* app, system_fn* system_update_function, component_type_t* types, int types_count)
@@ -39,13 +63,49 @@ void app_register_system(app_t* app, system_fn* system_update_function, componen
 	for (int i = 0; i < types_count; ++i) system.component_types.add(types[i]);
 }
 
-entity_t app_make_entity(app_t* app, entity_type_t type)
+error_t app_make_entity(app_t* app, entity_type_t type, entity_t* entity_out)
 {
-	// TODO: Implement me.
+	if (type == CUTE_INVALID_ENTITY_TYPE) {
+		return error_failure("`type` is not a valid entity type.");
+	}
+
 	entity_t entity;
-	entity.type = CUTE_INVALID_ENTITY_TYPE;
+	entity.type = type;
 	entity.handle = CUTE_INVALID_HANDLE;
-	return entity;
+
+	entity_collection_t* collection = app->entity_collections.find(type);
+	CUTE_ASSERT(collection);
+
+	const array<component_type_t>& component_types = collection->component_types;
+	for (int i = 0; i < component_types.count(); ++i)
+	{
+		component_type_t component_type = component_types[i];
+		component_config_t* config = app->component_configs.find(component_type);
+
+		if (!config) {
+			return error_failure("Unable to find component config.");
+		}
+
+		void* component = collection->component_tables[i].add();
+		config->initializer_fn(app, component, config->initializer_fn_udata);
+
+		error_t err = s_load_from_schema(app, type, config, component, config->serializer_fn_udata);
+		if (err.is_error()) {
+			// TODO - Unload the components that were added with `.add()` a couple lines above here.
+			return err;
+		}
+	}
+
+	int index = collection->entity_handles.count();
+	handle_t h = collection->entity_handle_table.alloc_handle(index);
+	collection->entity_handles.add(h);
+	entity.handle = h;
+
+	if (entity_out) {
+		*entity_out = entity;
+	}
+
+	return error_success();
 }
 
 void app_destroy_entity(app_t* app, entity_t entity)
@@ -58,83 +118,90 @@ bool app_is_entity_valid(app_t* app, entity_t entity)
 	return false; // TODO: Implement me.
 }
 
-static void s_1(float dt, system_fn* fn_uncasted, typeless_array& c0)
+void* app_get_component(app_t* app, entity_t entity, component_type_t type)
 {
-	auto fn = (void (*)(float, void*))fn_uncasted;
-	int count = c0.count();
+	entity_collection_t* collection = NULL;
+	if (entity.type == app->current_collection_type_being_iterated) {
+		collection = app->current_collection_being_updated;
+		CUTE_ASSERT(collection);
+	} else {
+		collection = app->entity_collections.find(entity.type);
+		if (!collection) return NULL;
+	}
 
-	for (int i = 0; i < count; ++i)
-		fn(dt, c0[i]);
+	const array<component_type_t>& component_types = collection->component_types;
+	for (int i = 0; i < component_types.count(); ++i)
+	{
+		if (component_types[i] == type) {
+			int index = collection->entity_handle_table.get_index(entity.handle);
+			return collection->component_tables[i][index];
+		}
+	}
+
+	return NULL;
 }
 
-static void s_2(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1)
+static void s_1(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0)
+{
+	auto fn = (void (*)(app_t* app, float, void*, int))fn_uncasted;
+	int count = c0.count();
+	fn(app, dt, c0.data(), count);
+}
+
+static void s_2(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1)
 {
 	CUTE_ASSERT(c0.count() == c1.count());
-	auto fn = (void (*)(float, void*, void*))fn_uncasted;
+	auto fn = (void (*)(app_t*, float, void*, void*, int))fn_uncasted;
 	int count = c0.count();
-
-	for (int i = 0; i < count; ++i)
-		fn(dt, c0[i], c1[i]);
+	fn(app, dt, c0.data(), c1.data(), count);
 }
 
-static void s_3(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2)
+static void s_3(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2)
 {
 	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count());
-	auto fn = (void (*)(float, void*, void*, void*))fn_uncasted;
+	auto fn = (void (*)(app_t*, float, void*, void*, void*, int))fn_uncasted;
 	int count = c0.count();
-
-	for (int i = 0; i < count; ++i)
-		fn(dt, c0[i], c1[i], c2[i]);
+	fn(app, dt, c0.data(), c1.data(), c2.data(), count);
 }
 
-static void s_4(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3)
+static void s_4(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3)
 {
 	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*))fn_uncasted;
+	auto fn = (void (*)(app_t*, float, void*, void*, void*, void*, int))fn_uncasted;
 	int count = c0.count();
-
-	for (int i = 0; i < count; ++i)
-		fn(dt, c0[i], c1[i], c2[i], c3[i]);
+	fn(app, dt, c0.data(), c1.data(), c2.data(), c3.data(), count);
 }
 
-static void s_5(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4)
+static void s_5(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4)
 {
 	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, void*))fn_uncasted;
+	auto fn = (void (*)(app_t*, float, void*, void*, void*, void*, void*, int))fn_uncasted;
 	int count = c0.count();
-
-	for (int i = 0; i < count; ++i)
-		fn(dt, c0[i], c1[i], c2[i], c3[i], c4[i]);
+	fn(app, dt, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), count);
 }
 
-static void s_6(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5)
+static void s_6(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5)
 {
 	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, void*, void*))fn_uncasted;
+	auto fn = (void (*)(app_t*, float, void*, void*, void*, void*, void*, void*, int))fn_uncasted;
 	int count = c0.count();
-
-	for (int i = 0; i < count; ++i)
-		fn(dt, c0[i], c1[i], c2[i], c3[i], c4[i], c5[i]);
+	fn(app, dt, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), c5.data(), count);
 }
 
-static void s_7(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5, typeless_array& c6)
+static void s_7(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5, typeless_array& c6)
 {
 	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count() && c0.count() == c6.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, void*, void*, void*))fn_uncasted;
+	auto fn = (void (*)(app_t*, float, void*, void*, void*, void*, void*, void*, void*, int))fn_uncasted;
 	int count = c0.count();
-
-	for (int i = 0; i < count; ++i)
-		fn(dt, c0[i], c1[i], c2[i], c3[i], c4[i], c5[i], c6[i]);
+	fn(app, dt, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), c5.data(), c6.data(), count);
 }
 
-static void s_8(float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5, typeless_array& c6, typeless_array& c7)
+static void s_8(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5, typeless_array& c6, typeless_array& c7)
 {
 	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count() && c0.count() == c6.count() && c0.count() == c7.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, void*, void*, void*, void*))fn_uncasted;
+	auto fn = (void (*)(app_t*, float, void*, void*, void*, void*, void*, void*, void*, void*, int))fn_uncasted;
 	int count = c0.count();
-
-	for (int i = 0; i < count; ++i)
-		fn(dt, c0[i], c1[i], c2[i], c3[i], c4[i], c5[i], c6[i], c7[i]);
+	fn(app, dt, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), c5.data(), c6.data(), c7.data(), count);
 }
 
 static inline void s_match(array<int>* matches, const array<component_type_t>& a, const array<component_type_t>& b)
@@ -144,7 +211,7 @@ static inline void s_match(array<int>* matches, const array<component_type_t>& a
 		for (int j = 0; j < b.count(); ++j)
 		{
 			if (a[i] == b[j]) {
-				matches->add(i);
+				matches->add(j);
 				break;
 			}
 		}
@@ -165,22 +232,27 @@ void app_update_systems(app_t* app)
 			entity_collection_t* collection = app->entity_collections.items() + j;
 			CUTE_ASSERT(collection->component_tables.count() == collection->component_types.count());
 			int component_count = collection->component_tables.count();
+			app->current_collection_type_being_iterated = app->entity_collections.keys()[j];
+			app->current_collection_being_updated = collection;
+			CUTE_DEFER(app->current_collection_type_being_iterated = CUTE_INVALID_ENTITY_TYPE);
+			CUTE_DEFER(app->current_collection_being_updated = NULL);
 
 			array<int> matches;
 			s_match(&matches, system->component_types, collection->component_types);
 
 			array<typeless_array>& tables = collection->component_tables;
-			if (matches.count() == component_count) {
-				switch (component_count)
+
+			if (matches.count()) {
+				switch (matches.count())
 				{
-				case 1: s_1(dt, func, tables[matches[0]]); break;
-				case 2: s_2(dt, func, tables[matches[0]], tables[matches[1]]); break;
-				case 3: s_3(dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]]); break;
-				case 4: s_4(dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]]); break;
-				case 5: s_5(dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]]); break;
-				case 6: s_6(dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]]); break;
-				case 7: s_7(dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]]); break;
-				case 8: s_8(dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]], tables[matches[7]]); break;
+				case 1: s_1(app, dt, func, tables[matches[0]]); break;
+				case 2: s_2(app, dt, func, tables[matches[0]], tables[matches[1]]); break;
+				case 3: s_3(app, dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]]); break;
+				case 4: s_4(app, dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]]); break;
+				case 5: s_5(app, dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]]); break;
+				case 6: s_6(app, dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]]); break;
+				case 7: s_7(app, dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]]); break;
+				case 8: s_8(app, dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]], tables[matches[7]]); break;
 				default: CUTE_ASSERT(0);
 				}
 			}
@@ -199,7 +271,7 @@ error_t app_register_component_type(app_t* app, const component_config_t* compon
 
 //--------------------------------------------------------------------------------------------------
 
-error_t app_register_entity_type(app_t* app, kv_t* schema)
+error_t app_register_entity_type(app_t* app, kv_t* schema, entity_type_t* entity_type_out)
 {
 	// Parse the schema.
 	error_t err = kv_key(schema, "entity_type");
@@ -252,31 +324,11 @@ error_t app_register_entity_type(app_t* app, kv_t* schema)
 		app->entity_schema_inheritence.insert(entity_type, inherits_from);
 	}
 
-	return error_success();
-}
-
-static error_t s_load_from_schema(app_t* app, entity_type_t entity_type, component_config_t* config, void* component, void* udata)
-{
-	// Look for parent.
-	// If parent exists, load values from it first.
-	entity_type_t inherits_from;
-	error_t err = app->entity_schema_inheritence.find(entity_type, &inherits_from);
-	if (!err.is_error()) {
-		err = s_load_from_schema(app, inherits_from, config, component, udata);
-		if (err.is_error()) return err;
+	if (entity_type_out) {
+		*entity_type_out = entity_type;
 	}
 
-	kv_t* schema;
-	err = app->entity_parsed_schemas.find(entity_type, &schema);
-	if (err.is_error()) return error_failure("Unable to find schema when loading entity.");
-
-	err = kv_key(schema, config->name);
-	if (err.is_error()) return err;
-
-	kv_object_begin(schema);
-	err = config->serializer_fn(app, schema, component, udata);
-	kv_object_end(schema);
-	return err;
+	return error_success();
 }
 
 static error_t s_fill_load_id_table(app_t* app, kv_t* kv)

@@ -127,20 +127,40 @@ error_t test_component_octorok_serialize(app_t* app, kv_t* kv, void* component, 
 // -------------------------------------------------------------------------------------------------
 
 int s_octorok_system_ran_ok;
-void update_test_octorok_system(float dt, test_component_transform_t* transform, test_component_sprite_t* sprite, test_component_collider_t* collider, test_component_octorok_t* octorok)
+void update_test_octorok_system(app_t* app, float dt, test_component_transform_t* transforms, test_component_sprite_t* sprites, test_component_collider_t* colliders, test_component_octorok_t* octoroks, int entity_count)
 {
-	CUTE_ASSERT(sprite->img_id == 2); // Overridden by schema, originally initialized to 7.
-	CUTE_ASSERT(collider->type == 4); // Overridden by schema, originally initialized to 3.
-	CUTE_ASSERT(collider->radius == 3.0f); // Overridden by schema, originally initialized to 14.0f.
-	CUTE_ASSERT(octorok->ai_state == 0);
-	CUTE_ASSERT(octorok->pellet_count == 3);
-	transform->x = 20.0f;
-	transform->y = 20.0f;
-	if (transform->x == 20.0f) s_octorok_system_ran_ok++;
+	for (int i = 0; i < entity_count; ++i) {
+		test_component_transform_t* transform = transforms + i;
+		test_component_sprite_t* sprite = sprites + i;
+		test_component_collider_t* collider = colliders + i;
+		test_component_octorok_t* octorok = octoroks + i;
 
-	// WORKING HERE
-	// Want to use buddy said hi.
-	// Need a way to retrieve component from an entity and mutate it.
+		CUTE_ASSERT(sprite->img_id == 2); // Overridden by schema, originally initialized to 7.
+		CUTE_ASSERT(collider->type == 4); // Overridden by schema, originally initialized to 3.
+		CUTE_ASSERT(collider->radius == 3.0f); // Overridden by schema, originally initialized to 14.0f.
+		CUTE_ASSERT(octorok->ai_state == 0);
+		CUTE_ASSERT(octorok->pellet_count == 3);
+
+		transform->x = 20.0f;
+		transform->y = 20.0f;
+		if (transform->x == 20.0f) s_octorok_system_ran_ok++;
+
+		test_component_octorok_t* buddy = (test_component_octorok_t*)app_get_component(app, octorok->buddy, test_component_octorok_type);
+		buddy->buddy_said_hi = 1;
+	}
+}
+
+// -------------------------------------------------------------------------------------------------
+
+int s_octorok_buddy_said_hi_count;
+void update_test_octorok_buddy_counter_system(app_t* app, float dt, test_component_octorok_t* octoroks, int entity_count)
+{
+	for (int i = 0; i < entity_count; ++i) {
+		test_component_octorok_t* octorok = octoroks + i;
+		if (octorok->buddy_said_hi) {
+			++s_octorok_buddy_said_hi_count;
+		}
+	}
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -203,9 +223,10 @@ int test_ecs_octorok()
 	);
 
 	kv_t* entity_schema = kv_make();
+	entity_type_t entity_type;
 	err = kv_parse(entity_schema, octorok_schema_string, CUTE_STRLEN(octorok_schema_string));
 	if (err.is_error()) return -1;
-	err = app_register_entity_type(app, entity_schema);
+	err = app_register_entity_type(app, entity_schema, &entity_type);
 	if (err.is_error()) return -1;
 
 	// Register systems (just one, the Octorok system).
@@ -215,7 +236,11 @@ int test_ecs_octorok()
 		test_component_collider_type,
 		test_component_octorok_type
 	};
+	component_type_t octorok_buddy_system_types[] = {
+		test_component_octorok_type
+	};
 	app_register_system(app, update_test_octorok_system, octorok_system_types, 4);
+	app_register_system(app, update_test_octorok_buddy_counter_system, octorok_buddy_system_types, 1);
 
 	// Load up serialized entities.
 	const char* serialized_entities = CUTE_STRINGIZE(
@@ -243,7 +268,6 @@ int test_ecs_octorok()
 		}
 	);
 
-	// This crashes since id_table isn't hooked up yet.
 	kv_t* parsed_entities = kv_make();
 	err = kv_parse(parsed_entities, serialized_entities, CUTE_STRLEN(serialized_entities));
 	if (err.is_error()) return -1;
@@ -251,20 +275,42 @@ int test_ecs_octorok()
 	array<entity_t> entities;
 	err = app_load_entities(app, parsed_entities, &entities);
 	if (err.is_error()) return -1;
+	kv_destroy(parsed_entities);
 
+	// Assert that saving the entities has matching values to what's in RAM currently.
 	kv_t* saved_entities = kv_make();
 	char entity_buffer[1024];
 	kv_set_write_buffer(saved_entities, entity_buffer, 1024);
 	err = app_save_entities(app, entities, saved_entities);
-	entity_buffer[kv_size_written(saved_entities)] = 0;
-	//printf("%s", entity_buffer);
+	size_t entity_buffer_size = kv_size_written(saved_entities);
+	entity_buffer[entity_buffer_size] = 0;
+	entity_buffer_size += 1;
+	kv_destroy(saved_entities);
+
+	saved_entities = kv_make();
+	kv_parse(saved_entities, entity_buffer, entity_buffer_size);
+
+	kv_key(saved_entities, "entities");
+	int c;
+	kv_array_begin(saved_entities, &c);
+		kv_object_begin(saved_entities);
+			entity_type_t serialized_entity_type;
+			kv_key(saved_entities, "entity_type");
+			kv_val(saved_entities, (int*)&serialized_entity_type);
+			CUTE_TEST_ASSERT(entity_type == serialized_entity_type);
+		kv_object_end(saved_entities);
+	kv_array_end(saved_entities);
+
+	kv_destroy(saved_entities);
 
 	// Update the systems.
 	s_octorok_system_ran_ok = 0;
+	s_octorok_buddy_said_hi_count = 0;
 	app_update_systems(app);
 
 	// Assert outcomes (make sure the systems actually ran).
 	CUTE_TEST_ASSERT(s_octorok_system_ran_ok == 2);
+	CUTE_TEST_ASSERT(s_octorok_buddy_said_hi_count == 2);
 
 	app_destroy(app);
 

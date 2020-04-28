@@ -397,8 +397,8 @@ static error_t s_parse_object(kv_t* kv, int* index, bool is_top_level)
 	while (1)
 	{
 		if (is_top_level) {
-			if (kv->in >= kv->in_end) {
-				CUTE_ASSERT(kv->in == kv->in_end);
+			if (kv->in >= kv->in_end || kv->in[0] == 0) {
+				CUTE_ASSERT(kv->in == kv->in_end || kv->in[0] == 0);
 				break;
 			}
 		} else {
@@ -476,7 +476,7 @@ error_t kv_parse(kv_t* kv, const void* data, size_t size)
 	uint8_t c;
 	while (kv->in != kv->in_end && s_isspace(c = *kv->in)) kv->in++;
 
-	if (kv->in != kv->in_end) {
+	if (kv->in != kv->in_end && kv->in[0] != 0) {
 		kv->err = error_failure("Unable to parse entire input `data`.");
 		return kv->err;
 	}
