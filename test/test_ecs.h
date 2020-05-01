@@ -168,7 +168,7 @@ void update_test_octorok_buddy_counter_system(app_t* app, float dt, test_compone
 CUTE_TEST_CASE(test_ecs_octorok, "Run ECS with a mock Octorok entity.");
 int test_ecs_octorok()
 {
-	app_t* app = app_make(NULL, 0, 0, 0, 0, APP_OPTIONS_HEADLESS);
+	app_t* app = app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HEADLESS);
 
 	// Register component types.
 	component_config_t transform_config;

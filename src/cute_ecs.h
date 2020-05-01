@@ -64,6 +64,7 @@ struct component_config_t
 	const char* name = NULL;
 	component_type_t type = CUTE_INVALID_COMPONENT_TYPE;
 
+	// TODO - Remove this and just use serializer?
 	void* initializer_fn_udata = NULL;
 	component_initialize_fn* initializer_fn = NULL;
 

@@ -67,6 +67,8 @@
 #define CUTE_STRINGIZE_INTERNAL(...) #__VA_ARGS__
 #define CUTE_STRINGIZE(...) CUTE_STRINGIZE_INTERNAL(__VA_ARGS__)
 
+#define CUTE_OFFSET_OF(T, member) ((size_t)(&((T*)0)->member))
+
 namespace cute
 {
 

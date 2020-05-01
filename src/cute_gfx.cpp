@@ -1,270 +1,56 @@
-#ifndef GFX_H
-#define GFX_H
+/*
+	Cute Framework
+	Copyright (C) 2019 Randy Gaul https://randygaul.net
 
-#include <stdint.h>
+	This software is provided 'as-is', without any express or implied
+	warranty.  In no event will the authors be held liable for any damages
+	arising from the use of this software.
 
-#define GFX_USE_DIRECTX_INCLUDES_AND_IMPORTS
-#define GFX_USE_D3D_ERR_LIB
+	Permission is granted to anyone to use this software for any purpose,
+	including commercial applications, and to alter it and redistribute it
+	freely, subject to the following restrictions:
 
-#define GFX_ASSERT assert
+	1. The origin of this software must not be misrepresented; you must not
+	   claim that you wrote the original software. If you use this software
+	   in a product, an acknowledgment in the product documentation would be
+	   appreciated but is not required.
+	2. Altered source versions must be plainly marked as such, and must not be
+	   misrepresented as being the original software.
+	3. This notice may not be removed or altered from any source distribution.
+*/
 
-#define GFX_ERROR_SUCCESS (0)
-#define GFX_ERROR_FAILURE (-1)
+#include <cute_gfx.h>
+#include <cute_defer.h>
+#include <cute_alloc.h>
 
-// HACK: Was originally gfx_error_raise. gfx.h needs a proper error handler thingy.
-#ifndef gfx_error_raise
-	#define gfx_error_raise(x) GFX_ERROR_FAILURE
-#endif // gfx_error_raise
-#define GFX_UNUSED(x) (void)x
+//#ifdef _WIN32
+//	#define GFX_USE_DIRECTX_INCLUDES_AND_IMPORTS
+//	#define GFX_USE_D3D_ERR_LIB
+//#endif
+//
+//#ifdef GFX_USE_DIRECTX_INCLUDES_AND_IMPORTS
 
-// the point of high level primitives is to avoid manually creating draw calls
-// the context can be used to store global render state
-// otherwise lower level primitives can be used for custom rendering or fx
+#pragma comment(lib, "d3d9.lib")
+#pragma comment(lib, "d3dx9.lib")
+#include <d3dx9.h>
 
-#define GFX_VERTEX_BUFFER_MAX_ATTRIBUTES (16)
-#define GFX_DRAW_CALL_MAX_TEXTURES (8)
-#define GFX_DRAW_CALL_MAX_UNIFORMS (16)
-#define GFX_OFFEST_OF(T, member) ((int)((uintptr_t)(&(((T*)0)->member))))
+//#ifdef GFX_USE_D3D_ERR_LIB
+#	pragma comment(lib, "dxerr.lib")
+#	pragma comment(lib, "legacy_stdio_definitions.lib")
+#	include <DxErr.h>
 
-struct gfx_t;
-
-enum gfx_vertex_buffer_type_t
-{
-	GFX_VERTEX_BUFFER_TYPE_STATIC,
-	GFX_VERTEX_BUFFER_TYPE_DYNAMIC
-};
-
-enum gfx_index_buffer_type_t
-{
-	GFX_INDEX_BUFFER_TYPE_NONE,
-	GFX_INDEX_BUFFER_TYPE_UINT16,
-	GFX_INDEX_BUFFER_TYPE_UINT32,
-};
-
-struct gfx_vertex_buffer_t;
-
-struct gfx_vertex_buffer_params_t
-{
-	gfx_vertex_buffer_type_t type = GFX_VERTEX_BUFFER_TYPE_DYNAMIC;
-	int attribute_count = 0;
-	int num_components[GFX_VERTEX_BUFFER_MAX_ATTRIBUTES];
-	int offsets[GFX_VERTEX_BUFFER_MAX_ATTRIBUTES];
-	int stride = 0;
-
-	int vertex_count = 0;
-	gfx_index_buffer_type_t index_type = GFX_INDEX_BUFFER_TYPE_NONE;
-	int index_count = 0;
-};
-
-inline void gfx_vertex_buffer_params_add_attribute(gfx_vertex_buffer_params_t* params, int num_components, int offset)
-{
-	int i = params->attribute_count++;
-	params->num_components[i] = num_components;
-	params->offsets[i] = offset;
-}
-
-gfx_vertex_buffer_t* gfx_vertex_buffer_new(gfx_t* gfx, gfx_vertex_buffer_params_t* params);
-void gfx_vertex_buffer_free(gfx_t* gfx, gfx_vertex_buffer_t* buffer);
-int gfx_vertex_buffer_map(gfx_t* gfx, gfx_vertex_buffer_t* buffer, int vertex_count, void** vertices, int index_count = 0, void** indices = NULL);
-int gfx_vertex_buffer_unmap(gfx_t* gfx, gfx_vertex_buffer_t* buffer);
-
-struct gfx_matrix_t
-{
-	float data[16];
-};
-
-void matrix_identity(gfx_matrix_t* m);
-
-void projection_ortho_2d(gfx_matrix_t* projection, float w, float h, float x, float y);
-
-inline gfx_matrix_t projection_identity()
-{
-	gfx_matrix_t projection;
-	memset(&projection, 0, sizeof(projection));
-	matrix_identity(&projection);
-	return projection;
-}
-
-enum gfx_pixel_format_t
-{
-	GFX_PIXEL_FORMAT_R8B8G8A8
-};
-
-enum gfx_wrap_mode_t
-{
-	GFX_WRAP_MODE_REPEAT,
-	GFX_WRAP_MODE_CLAMP_EDGE,
-	GFX_WRAP_MODE_CLAMP_BORDER,
-	GFX_WRAP_MODE_REPEAT_MIRRORED,
-};
-
-struct gfx_texture_t;
-
-struct gfx_texture_params_t
-{
-	int w = 0, h = 0;
-	gfx_pixel_format_t pixel_format = GFX_PIXEL_FORMAT_R8B8G8A8;
-	gfx_wrap_mode_t wrap_mode = GFX_WRAP_MODE_REPEAT;
-	void* pixels = 0;
-};
-
-gfx_texture_t *texture_create(gfx_t* gfx, gfx_texture_params_t* params);
-void texture_clean_up(gfx_t* gfx, gfx_texture_t* tex);
-
-struct gfx_render_texture_t;
-
-gfx_render_texture_t* render_texture_new(gfx_t* gfx, int w, int h, gfx_pixel_format_t pixel_format = GFX_PIXEL_FORMAT_R8B8G8A8, gfx_wrap_mode_t wrap_mode = GFX_WRAP_MODE_REPEAT);
-void render_texture_clean_up(gfx_t* gfx, gfx_render_texture_t* render_texture);
-
-enum gfx_uniform_type_t
-{
-	GFX_UNIFORM_TYPE_INVALID,
-	GFX_UNIFORM_TYPE_BOOL,
-	GFX_UNIFORM_TYPE_FLOAT,
-	GFX_UNIFORM_TYPE_FLOAT2,
-	GFX_UNIFORM_TYPE_FLOAT3,
-	GFX_UNIFORM_TYPE_FLOAT4,
-	GFX_UNIFORM_TYPE_INT,
-	GFX_UNIFORM_TYPE_TEXTURE,
-	GFX_UNIFORM_TYPE_MATRIX,
-};
-
-struct gfx_shader_t;
-
-struct gfx_shader_params_t
-{
-	gfx_vertex_buffer_t* buffer;
-	const char* vertex_shader;
-	const char* pixel_shader;
-};
-
-gfx_shader_t* gfx_shader_new(gfx_t* gfx, gfx_shader_params_t* params);
-void gfx_shader_free(gfx_t* gfx, gfx_shader_t* shader);
-int gfx_shader_set_uniform(gfx_t* gfx, gfx_shader_t* shader, const char* uniform_name, void* value, gfx_uniform_type_t type);
-int gfx_shader_set_mvp(gfx_t* gfx, gfx_shader_t* shader, gfx_matrix_t* mvp);
-int gfx_shader_set_screen_wh(gfx_t* gfx, gfx_shader_t* shader, float w, float h);
-
-struct gfx_viewport_t
-{
-	float x, y;
-	float w, h;
-};
-
-struct gfx_scissor_t
-{
-	int left;
-	int top;
-	int right;
-	int bottom;
-};
-
-struct gfx_uniform_t
-{
-	int dirty;
-	const char* name;
-	uint64_t h;
-	gfx_uniform_type_t type;
-	union
+	__declspec(thread) char d3d9_error_string_buffer[1024];
+	const char* get_error_string_d3d9(HRESULT hr)
 	{
-		float data[16];
-		void* texture_handle;
-	} u;
-};
+		snprintf(d3d9_error_string_buffer, 1024, "%s, %s.", DXGetErrorString(hr), DXGetErrorDescription(hr));
+		return d3d9_error_string_buffer;
+	}
 
-struct gfx_buffer_indices_t
-{
-	int index0 = 0;
-	int index1 = 0;
-	int element_count = 0;
-	int stride = 0;
-	int buffer_number = 0;
-};
-
-struct gfx_draw_call_t
-{
-	int use_mvp = 0;
-	gfx_matrix_t mvp;
-	gfx_shader_t* shader = NULL;
-	gfx_viewport_t* veiwport = NULL;
-	int use_scissor = 0;
-	gfx_scissor_t scissor;
-	gfx_vertex_buffer_t* buffer = NULL;
-	gfx_buffer_indices_t vertex_indices;
-	gfx_buffer_indices_t index_indices;
-	int texture_count = 0;
-	gfx_texture_t* textures[GFX_DRAW_CALL_MAX_TEXTURES];
-	const char* texture_uniform_names[GFX_DRAW_CALL_MAX_TEXTURES];
-	int uniform_count = 0;
-	gfx_uniform_t uniforms[GFX_DRAW_CALL_MAX_UNIFORMS];
-};
-
-// TODO:
-// Draw call and uniform can *not* store strings if rendering is moved off the main thread,
-// otherwise the pointers will dangle. Copy strings into local buffers or something!
-
-void gfx_draw_call_set_mvp(gfx_draw_call_t* call, gfx_matrix_t* mvp);
-void gfx_draw_call_set_scissor_box(gfx_draw_call_t* call, gfx_scissor_t* scissor);
-void gfx_draw_call_add_texture(gfx_draw_call_t* call, gfx_texture_t* texture, const char* uniform_name);
-void gfx_draw_call_add_verts(gfx_t* gfx, gfx_draw_call_t* call, void* verts, int vert_count);
-void gfx_draw_call_add_uniform(gfx_draw_call_t* call, const char* uniform_name, void* value, gfx_uniform_type_t type);
-
-enum gfx_type_t
-{
-	GFX_TYPE_D3D9,
-	GFX_TYPE_GL,
-	GFX_TYPE_GL_ES
-};
-
-enum gfx_upscale_maximum_t
-{
-	GFX_UPSCALE_MAXIMUM_ANY,
-	GFX_UPSCALE_MAXIMUM_4X,
-	GFX_UPSCALE_MAXIMUM_3X,
-	GFX_UPSCALE_MAXIMUM_2X,
-	GFX_UPSCALE_MAXIMUM_1X,
-};
-
-struct gfx_t;
-
-gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, int screen_h, int tex_w, int tex_h, gfx_upscale_maximum_t upscale, void* platform_handle = NULL);
-void gfx_clean_up(gfx_t* gfx);
-void gfx_push_draw_call(gfx_t* gfx, gfx_draw_call_t* call);
-void gfx_flush(gfx_t* gfx);
-void gfx_flush_to_texture(gfx_t* gfx, gfx_texture_t* render_texture);
-
-void gfx_set_alpha(gfx_t* gfx, int one_for_enabled);
-gfx_type_t gfx_type(gfx_t* gfx);
-
-void gfx_set_clear_color(gfx_t* gfx, int color);
-
-// texture wrap modes
-
-// ortho 2d
-// perspective
-// mul
-// identity
-// copy
-
-void gfx_line_mvp(gfx_t* gfx, gfx_matrix_t* projection);
-void gfx_line_color(gfx_t* gfx, float r, float g, float b);
-void gfx_line(gfx_t* gfx, float ax, float ay, float bx, float by);
-void gfx_line_width(gfx_t* gfx, float width);
-void gfx_line_depth_test(gfx_t* gfx, int zero_for_off);
-void gfx_line_submit_draw_call(gfx_t* gfx);
-
-// make/clean up framebuffer
-
-#endif // GFX_H
-
-#ifdef GFX_IMPLEMENTATION
-#ifndef GFX_IMPLEMENTATION_ONCE
-#define GFX_IMPLEMENTATION_ONCE
+#	define HR_CHECK(X) do { HRESULT hr = (X); if (FAILED(hr)) { error_failure(get_error_string_d3d9(hr)); } } while (0)
+//#endif
 
 // HACKS HERE
 #include <assert.h>
-#define GFX_ALLOC malloc
-#define GFX_FREE free
-#define GFX_MEMCPY memcpy
 
 #define GFX_DLIST_INIT(sentinel) \
 	do { \
@@ -311,27 +97,33 @@ void gfx_line_submit_draw_call(gfx_t* gfx);
 		if (ctx->count == ctx->capacity) \
 		{ \
 			int new_capacity = ctx->capacity ? ctx->capacity * 2 : initial; \
-			void* new_data = GFX_ALLOC(sizeof(type) * new_capacity); \
-			GFX_MEMCPY(new_data, ctx->data, sizeof(type) * ctx->count); \
-			GFX_FREE(ctx->data); \
+			void* new_data = CUTE_ALLOC(sizeof(type) * new_capacity, ctx->mem_ctx); \
+			CUTE_MEMCPY(new_data, ctx->data, sizeof(type) * ctx->count); \
+			CUTE_FREE(ctx->data, ctx->mem_ctx); \
 			ctx->data = (type*)new_data; \
 			ctx->capacity = new_capacity; \
 		} \
 	} while (0)
+	
+#define GFX_STR(X) #X
+// HACKS END
 
-enum gfx_dummy_enum_t { GFX_EDUMMY };
-inline void* operator new(size_t, gfx_dummy_enum_t, void* ptr) { return ptr; }
-#define GFX_PLACEMENT_NEW(ptr) new(GFX_EDUMMY, ptr)
-#define GFX_NEW(T) new(GFX_EDUMMY, GFX_ALLOC(sizeof(T))) T
+namespace cute
+{
+
+void gfx_vertex_buffer_params_add_attribute(gfx_vertex_buffer_params_t* params, int num_components, int offset)
+{
+	CUTE_ASSERT(params->attribute_count < CUTE_GFX_VERTEX_BUFFER_MAX_ATTRIBUTES);
+	int i = params->attribute_count++;
+	params->num_components[i] = num_components;
+	params->offsets[i] = offset;
+}
 
 struct gfx_vertex_t
 {
 	float x, y;
 	float u, v;
 };
-
-#define GFX_STR(X) #X
-// HACKS END
 
 struct gfx_line_vertex_t
 {
@@ -396,11 +188,12 @@ struct gfx_t
 	float line_width = 1.0f;
 	void* platform_handle = 0;
 	void* impl = 0;
+	void* mem_ctx;
 
 	gfx_texture_t* checker;
 };
 
-void s_shader_copy_uniform_data_from_draw_call(gfx_t* gfx, gfx_draw_call_t* call);
+error_t s_shader_copy_uniform_data_from_draw_call(gfx_t* gfx, gfx_draw_call_t* call);
 int s_is_lost(gfx_t* gfx);
 
 inline int calc_index_size(gfx_index_buffer_type_t type)
@@ -414,11 +207,10 @@ inline int calc_index_size(gfx_index_buffer_type_t type)
 	}
 }
 
-inline int advance_buffer_indices(gfx_vertex_buffer_type_t type, gfx_buffer_indices_t* indices, int count)
+inline error_t advance_buffer_indices(gfx_vertex_buffer_type_t type, gfx_buffer_indices_t* indices, int count)
 {
 	if (count > indices->element_count) {
-		gfx_error_raise("Attempted to map a vertex buffer segment larger than the vertex buffer itself.");
-		return GFX_ERROR_FAILURE;
+		return error_failure("Attempted to map a vertex buffer segment larger than the vertex buffer itself.");
 	}
 
 	int new_index = indices->index1 + count;
@@ -436,31 +228,8 @@ inline int advance_buffer_indices(gfx_vertex_buffer_type_t type, gfx_buffer_indi
 		indices->index1 = new_index;
 	}
 
-	return GFX_ERROR_SUCCESS;
+	return error_success();
 }
-
-#ifdef GFX_USE_DIRECTX_INCLUDES_AND_IMPORTS
-
-#pragma comment(lib, "d3d9.lib")
-#pragma comment(lib, "d3dx9.lib")
-#include <d3dx9.h>
-
-#ifdef GFX_USE_D3D_ERR_LIB
-#	pragma comment(lib, "dxerr.lib")
-#	pragma comment(lib, "legacy_stdio_definitions.lib")
-#	include <DxErr.h>
-
-	__declspec(thread) char d3d9_error_string_buffer[1024];
-	const char* get_error_string_d3d9(HRESULT hr)
-	{
-		snprintf(d3d9_error_string_buffer, 1024, "%s, %s.", DXGetErrorString(hr), DXGetErrorDescription(hr));
-		return d3d9_error_string_buffer;
-	}
-
-#	define HR_CHECK(X) do { HRESULT hr = (X); if (FAILED(hr)) { gfx_error_raise(get_error_string_d3d9(hr)); } } while (0)
-#endif
-
-int s_d3d9_compile_shader(gfx_t* gfx, gfx_shader_t* shader, const char* vs, const char* ps);
 
 struct d3d9_render_texture_t
 {
@@ -499,33 +268,30 @@ static void s_d3d9_setup_render_and_sampler_states(IDirect3DDevice9* dev)
 	HR_CHECK(dev->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT));
 }
 
-static void* s_d3d9_create_impl(gfx_t* gfx, void* platform_handle)
+static error_t s_d3d9_create_impl(gfx_t* gfx, void* platform_handle, void** impl_out)
 {
-	d3d9_context_t* impl = (d3d9_context_t*)GFX_ALLOC(sizeof(d3d9_context_t));
+	*impl_out = NULL;
+	d3d9_context_t* impl = (d3d9_context_t*)CUTE_ALLOC(sizeof(d3d9_context_t), gfx->mem_ctx);
 	impl->lost = 0;
 	IDirect3D9* d3d9 = Direct3DCreate9(D3D_SDK_VERSION);
 	if (!d3d9) {
-		gfx_error_raise("Failed to initialize Direct3D 9 - the application was built against the correct header files.");
-		return NULL;
+		return error_failure("Failed to initialize Direct3D 9 - the application was built against the correct header files.");
 	}
 
 	D3DDISPLAYMODE mode;
 	HRESULT res = d3d9->GetAdapterDisplayMode(D3DADAPTER_DEFAULT, &mode);
 	if (FAILED(res)) {
-		gfx_error_raise("Direct3D 9 was unable to get adapter display mode.");
-		return NULL;
+		return error_failure("Direct3D 9 was unable to get adapter display mode.");
 	}
 
 	res = d3d9->CheckDeviceType(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, mode.Format, D3DFMT_A8R8G8B8, true);
 	if (FAILED(res)) {
-		gfx_error_raise("HAL was detected as not supported by DirectD 9 for the D3DFMT_A8R8G8B8 adapter/backbuffer format.");
-		return NULL;
+		return error_failure("HAL was detected as not supported by DirectD 9 for the D3DFMT_A8R8G8B8 adapter/backbuffer format.");
 	}
 
 	res = d3d9->GetDeviceCaps(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, &impl->caps);
 	if (FAILED(res)) {
-		gfx_error_raise("Failed to gather Direct3D 9 device caps.");
-		return NULL;
+		return error_failure("Failed to gather Direct3D 9 device caps.");
 	}
 
 	int flags = D3DCREATE_FPU_PRESERVE;
@@ -544,7 +310,7 @@ static void* s_d3d9_create_impl(gfx_t* gfx, void* platform_handle)
 	// TODO: Think about if full screen mode should be supported.
 	// TODO: Think about how to enable depth/stencil buffers in the API.
 
-	memset(&impl->params, 0, sizeof(impl->params));
+	CUTE_MEMSET(&impl->params, 0, sizeof(impl->params));
 	impl->params.BackBufferWidth = gfx->screen_w;
 	impl->params.BackBufferHeight = gfx->screen_h;
 	impl->params.BackBufferFormat = D3DFMT_A8R8G8B8;
@@ -558,8 +324,7 @@ static void* s_d3d9_create_impl(gfx_t* gfx, void* platform_handle)
 	IDirect3DDevice9* dev;
 	res = d3d9->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, (HWND)platform_handle, flags, &impl->params, &dev);
 	if (FAILED(res)) {
-		gfx_error_raise("Failed to create Direct3D 9 device.");
-		return NULL;
+		return error_failure("Failed to create Direct3D 9 device.");
 	}
 
 	impl->dev = dev;
@@ -569,19 +334,16 @@ static void* s_d3d9_create_impl(gfx_t* gfx, void* platform_handle)
 	impl->ps_profile = "ps_2_0";
 
 	if (vs_profile[3] < impl->vs_profile[3]) {
-		gfx_error_raise("The user machine does not support vertex shader profile 2.0.");
-		return NULL;
+		return error_failure("The user machine does not support vertex shader profile 2.0.");
 	}
 
 	if (ps_profile[3] < impl->ps_profile[3]) {
-		gfx_error_raise("The user machine does not support pixel shader profile 2.0.");
-		return NULL;
+		return error_failure("The user machine does not support pixel shader profile 2.0.");
 	}
 
 	res = impl->dev->GetRenderTarget(0, &impl->screen_surface);
 	if (FAILED(res)) {
-		gfx_error_raise("Unable to get render target.");
-		return NULL;
+		return error_failure("Unable to get render target.");
 	}
 
 	impl->buffers = NULL;
@@ -589,27 +351,27 @@ static void* s_d3d9_create_impl(gfx_t* gfx, void* platform_handle)
 
 	s_d3d9_setup_render_and_sampler_states(dev);
 
-	return impl;
+	*impl_out = impl;
+	return error_success();
 }
 
-static int s_d3d9_vertex_buffer_map(gfx_vertex_buffer_t* buffer, int vertex_count, void** vertices, int index_count, void** indices)
+static error_t s_d3d9_vertex_buffer_map(gfx_vertex_buffer_t* buffer, int vertex_count, void** vertices, int index_count, void** indices)
 {
-	if (advance_buffer_indices(buffer->desc.type, &buffer->vertex_indices, vertex_count)) {
-		return GFX_ERROR_FAILURE;
-	}
+	error_t err = advance_buffer_indices(buffer->desc.type, &buffer->vertex_indices, vertex_count);
+	if (err.is_error()) return err;
 
 	IDirect3DVertexBuffer9* vbuf = (IDirect3DVertexBuffer9*)buffer->vertex_buffers[buffer->vertex_indices.buffer_number];
 	int offset = buffer->vertex_indices.index0 * buffer->desc.stride;
 	int stream_size = buffer->vertex_indices.index1 * buffer->desc.stride - offset;
 	HRESULT res = vbuf->Lock(offset, stream_size, vertices, D3DLOCK_NOOVERWRITE);
 	if (FAILED(res)) {
-		gfx_error_raise("Failed to lock vertex buffer.");
-		return GFX_ERROR_FAILURE;
+		return error_failure("Failed to lock vertex buffer.");
 	}
 
 	if (indices) {
-		if (advance_buffer_indices(buffer->desc.type, &buffer->index_indices, index_count)) {
-			return GFX_ERROR_FAILURE;
+		err = advance_buffer_indices(buffer->desc.type, &buffer->index_indices, index_count);
+		if (err.is_error()) {
+			return err;
 		}
 
 		IDirect3DIndexBuffer9* ibuf = (IDirect3DIndexBuffer9*)buffer->index_buffers[buffer->index_indices.buffer_number];
@@ -619,31 +381,30 @@ static int s_d3d9_vertex_buffer_map(gfx_vertex_buffer_t* buffer, int vertex_coun
 		ibuf->Lock(offset, stream_size, indices, D3DLOCK_NOOVERWRITE);
 
 		if (FAILED(res)) {
-			gfx_error_raise("Failed to lock index buffer.");
-			return GFX_ERROR_FAILURE;
+			return error_failure("Failed to lock index buffer.");
 		}
 	}
 
-	return GFX_ERROR_SUCCESS;
+	return error_success();
 }
 
-static int s_d3d9_vertex_buffer_unmap(gfx_vertex_buffer_t* buffer)
+static error_t s_d3d9_vertex_buffer_unmap(gfx_vertex_buffer_t* buffer)
 {
 	IDirect3DVertexBuffer9* vbuf = (IDirect3DVertexBuffer9*)buffer->vertex_buffers[buffer->vertex_indices.buffer_number];
 	HRESULT res = vbuf->Unlock();
 	if (FAILED(res)) {
-		return gfx_error_raise("Failed to lock vertex buffer.");
+		return error_failure("Failed to lock vertex buffer.");
 	}
 
 	if (buffer->index_type != GFX_INDEX_BUFFER_TYPE_NONE) {
 		IDirect3DIndexBuffer9* ibuf = (IDirect3DIndexBuffer9*)buffer->index_buffers[buffer->index_indices.buffer_number];
 		res = ibuf->Unlock();
 		if (FAILED(res)) {
-			return gfx_error_raise("Failed to lock vertex buffer.");
+			return error_failure("Failed to lock vertex buffer.");
 		}
 	}
 
-	return GFX_ERROR_SUCCESS;
+	return error_success();
 }
 
 static inline int s_num_components_to_D3DDECLTYPE(int num_components)
@@ -654,7 +415,7 @@ static inline int s_num_components_to_D3DDECLTYPE(int num_components)
 	case 2: return D3DDECLTYPE_FLOAT2;
 	case 3: return D3DDECLTYPE_FLOAT3;
 	case 4: return D3DDECLTYPE_FLOAT4;
-	default: return gfx_error_raise("The number of components for a vertex_buffer_desc_t must be > 0 and <= 4.");
+	default: CUTE_ASSERT(false); return D3DDECLTYPE_UNUSED; // The number of components for a vertex_buffer_desc_t must be > 0 and <= 4.
 	}
 }
 
@@ -663,17 +424,17 @@ static inline int s_num_components_to_D3DDECLTYPE(int num_components)
 // D3DXGetShaderInputSemantics
 // Introspect vertex stream input usage and usage index (POSITION0, POSITION1, TEXCOORD0, etc...)
 
-static int s_d3d9_vertex_buffer_init(gfx_vertex_buffer_t* buffer, d3d9_context_t* impl)
+static error_t s_d3d9_vertex_buffer_init(gfx_vertex_buffer_t* buffer, d3d9_context_t* impl)
 {
-	D3DVERTEXELEMENT9 attribute_descriptors[GFX_VERTEX_BUFFER_MAX_ATTRIBUTES + 1];
+	D3DVERTEXELEMENT9 attribute_descriptors[CUTE_GFX_VERTEX_BUFFER_MAX_ATTRIBUTES + 1];
 	IDirect3DVertexDeclaration9* decl;
 
-	if (GFX_VERTEX_BUFFER_MAX_ATTRIBUTES > MAXD3DDECLUSAGEINDEX + 1) {
-		return gfx_error_raise("VERTEX_BUFFER_MAX_ATTRIBUTES is defined as an invalid number. Please modify and recompile the source code.");
+	if (CUTE_GFX_VERTEX_BUFFER_MAX_ATTRIBUTES > MAXD3DDECLUSAGEINDEX + 1) {
+		return error_failure("VERTEX_BUFFER_MAX_ATTRIBUTES is defined as an invalid number. Please modify and recompile the source code.");
 	}
 
 	if (buffer->desc.attribute_count > MAXD3DDECLUSAGEINDEX) {
-		return gfx_error_raise("The max number of attributes for a vertex is VERTEX_BUFFER_MAX_ATTRIBUTES.");
+		return error_failure("The max number of attributes for a vertex is VERTEX_BUFFER_MAX_ATTRIBUTES.");
 	}
 
 	for (int i = 0; i < buffer->desc.attribute_count; ++i)
@@ -693,7 +454,7 @@ static int s_d3d9_vertex_buffer_init(gfx_vertex_buffer_t* buffer, d3d9_context_t
 	// create the generic decl
 	HRESULT res = impl->dev->CreateVertexDeclaration(attribute_descriptors, &decl);
 	if (FAILED(res)) {
-		return gfx_error_raise(get_error_string_d3d9(res));
+		return error_failure(get_error_string_d3d9(res));
 	}
 	buffer->desc_handle = decl;
 
@@ -710,7 +471,7 @@ static int s_d3d9_vertex_buffer_init(gfx_vertex_buffer_t* buffer, d3d9_context_t
 	{
 		res = impl->dev->CreateVertexBuffer(vertex_buffer_size, usage, 0, pool, &vertex_buffer, NULL);
 		if (FAILED(res)) {
-			return gfx_error_raise("Failed to create vertex buffer.");
+			return error_failure("Failed to create vertex buffer.");
 		} else {
 			buffer->vertex_buffers[i] = vertex_buffer;
 			buffer->vertex_indices.element_count = buffer->vertex_count;
@@ -720,7 +481,7 @@ static int s_d3d9_vertex_buffer_init(gfx_vertex_buffer_t* buffer, d3d9_context_t
 				IDirect3DIndexBuffer9* index_buffer;
 				res = impl->dev->CreateIndexBuffer(index_buffer_size, usage, buffer->index_type == GFX_INDEX_BUFFER_TYPE_UINT16 ? D3DFMT_INDEX16 : D3DFMT_INDEX32, pool, &index_buffer, NULL);
 				if (FAILED(res)) {
-					return gfx_error_raise("Failed to create index buffer.");
+					return error_failure("Failed to create index buffer.");
 				} else {
 					buffer->index_buffers[i] = index_buffer;
 					buffer->index_indices.element_count = buffer->index_count;
@@ -730,13 +491,13 @@ static int s_d3d9_vertex_buffer_init(gfx_vertex_buffer_t* buffer, d3d9_context_t
 		}
 	}
 
-	return GFX_ERROR_SUCCESS;
+	return error_success();
 }
 
 static gfx_vertex_buffer_t* s_d3d9_vertex_buffer_init(gfx_t* gfx, gfx_vertex_buffer_params_t* params)
 {
-	gfx_vertex_buffer_t* buffer = (gfx_vertex_buffer_t*)GFX_ALLOC(sizeof(gfx_vertex_buffer_t));
-	GFX_PLACEMENT_NEW(buffer) gfx_vertex_buffer_t;
+	gfx_vertex_buffer_t* buffer = (gfx_vertex_buffer_t*)CUTE_ALLOC(sizeof(gfx_vertex_buffer_t), gfx->mem_ctx);
+	CUTE_PLACEMENT_NEW(buffer) gfx_vertex_buffer_t;
 	if (!buffer) return NULL;
 	GFX_DLIST_INIT(buffer);
 	buffer->desc = *params;
@@ -745,8 +506,8 @@ static gfx_vertex_buffer_t* s_d3d9_vertex_buffer_init(gfx_t* gfx, gfx_vertex_buf
 	buffer->index_type = params->index_type;
 	buffer->vertex_indices.buffer_number = 0;
 	buffer->index_indices.buffer_number = 0;
-	if (s_d3d9_vertex_buffer_init(buffer, (d3d9_context_t*)gfx->impl)) {
-		GFX_FREE(buffer);
+	if (s_d3d9_vertex_buffer_init(buffer, (d3d9_context_t*)gfx->impl).is_error()) {
+		CUTE_FREE(buffer, gfx->mem_ctx);
 		return NULL;
 	} else {
 		if (params->index_type != params->type != GFX_VERTEX_BUFFER_TYPE_STATIC) {
@@ -757,6 +518,15 @@ static gfx_vertex_buffer_t* s_d3d9_vertex_buffer_init(gfx_t* gfx, gfx_vertex_buf
 	}
 }
 
+struct gfx_texture_params_t
+{
+	int w;
+	int h;
+	void* pixels;
+	gfx_pixel_format_t pixel_format;
+	gfx_wrap_mode_t wrap_mode;
+};
+
 static void* s_d3d9_texture_init(gfx_t* gfx, gfx_texture_params_t* params)
 {
 	d3d9_context_t* impl = (d3d9_context_t*)gfx->impl;
@@ -765,7 +535,6 @@ static void* s_d3d9_texture_init(gfx_t* gfx, gfx_texture_params_t* params)
 	int h = params->h;
 	HRESULT res = impl->dev->CreateTexture((UINT)w, (UINT)h, 0, 0, D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, &texture, NULL);
 	if (FAILED(res)) {
-		gfx_error_raise("Failed to create texture.");
 		return NULL;
 	}
 
@@ -826,7 +595,6 @@ static inline gfx_uniform_type_t s_d3d9_type_to_uniform_type(D3DXCONSTANT_DESC* 
 	}
 
 invalid_type:
-	gfx_error_raise("Unknown uniform type encountered in HLSL shader.");
 	return GFX_UNIFORM_TYPE_INVALID;
 }
 
@@ -844,18 +612,17 @@ static uint64_t s_gfx_FNV1a(const char* str)
 	return h;
 }
 
-static void s_d3d9_build_constant_table(d3d9_context_t* impl, gfx_shader_data_t* s, ID3DXConstantTable* table)
+static error_t s_d3d9_build_constant_table(gfx_t* gfx, d3d9_context_t* impl, gfx_shader_data_t* s, ID3DXConstantTable* table)
 {
 	D3DXCONSTANTTABLE_DESC table_desc;
 	HRESULT res = table->GetDesc(&table_desc);
 	if (FAILED(res)) {
-		gfx_error_raise("Failed to get constant description from D3DX shader constant table.");
-		return;
+		return error_failure("Failed to get constant description from D3DX shader constant table.");
 	}
 
 	int num_constants = table_desc.Constants;
 	s->uniform_count = num_constants;
-	s->uniforms = (gfx_uniform_t*)GFX_ALLOC(sizeof(gfx_uniform_t) * num_constants);
+	s->uniforms = (gfx_uniform_t*)CUTE_ALLOC(sizeof(gfx_uniform_t) * num_constants, gfx->mem_ctx);
 
 	D3DXCONSTANT_DESC descriptors[16];
 	for (int i = 0; i < num_constants; ++i)
@@ -865,8 +632,8 @@ static void s_d3d9_build_constant_table(d3d9_context_t* impl, gfx_shader_data_t*
 		table->GetConstantDesc(handle, descriptors, &desc_count);
 
 		if (desc_count != 1) {
-			gfx_error_raise("Unable to handle samplers appearing in more than one constant table.");
 			// https://docs.microsoft.com/en-us/windows/desktop/direct3d9/id3dxconstanttable--getconstantdesc
+			return error_failure("Unable to handle samplers appearing in more than one constant table.");
 		}
 
 		D3DXCONSTANT_DESC* desc = descriptors + 0;
@@ -886,13 +653,15 @@ static void s_d3d9_build_constant_table(d3d9_context_t* impl, gfx_shader_data_t*
 		{
 			gfx_uniform_t* b = s->uniforms + j;
 			if (a->h == b->h) {
-				gfx_error_raise("Duplicate shader uniform, or hash collision, was detected.");
+				return error_failure("Duplicate shader uniform, or hash collision, was detected.");
 			}
 		}
 	}
+
+	return error_success();
 }
 
-static gfx_shader_t* s_d3d9_compile_shader(gfx_t* gfx, gfx_shader_params_t* params)
+static error_t s_d3d9_compile_shader(gfx_t* gfx, gfx_vertex_buffer_t* buffer, const char* vertex_shader, const char* pixel_shader, gfx_shader_t** shader_out)
 {
 	d3d9_context_t* impl = (d3d9_context_t*)gfx->impl;
 
@@ -900,59 +669,53 @@ static gfx_shader_t* s_d3d9_compile_shader(gfx_t* gfx, gfx_shader_params_t* para
 	ID3DXBuffer* error_msgs;
 	ID3DXConstantTable* constant_table;
 
-	const char* vs = params->vertex_shader;
-	const char* ps = params->pixel_shader;
+	const char* vs = vertex_shader;
+	const char* ps = pixel_shader;
 
-	gfx_shader_t* shader = GFX_NEW(gfx_shader_t);
+	gfx_shader_t* shader = CUTE_NEW(gfx_shader_t, gfx->mem_ctx);
+	CUTE_DEFER(CUTE_FREE(shader, gfx->mem_ctx));
 
 	// TODO: Confirm if D3DXSHADER_PACKMATRIX_ROWMAJOR is needed or not for the flags param.
 	// Very nice info by Hodgman: https://www.gamedev.net/forums/topic/682063-vector-and-matrix-multiplication-order-in-diregfx-and-opengl/
 
 	// vertex shader
-	HRESULT res = D3DXCompileShader(vs, strlen(vs), NULL, NULL, "main", impl->vs_profile, 0, &compiled_shader, &error_msgs, &constant_table);
+	HRESULT res = D3DXCompileShader(vs, (UINT)CUTE_STRLEN(vs), NULL, NULL, "main", impl->vs_profile, 0, &compiled_shader, &error_msgs, &constant_table);
 	if (FAILED(res)) {
 		const char* error_str = (const char*)error_msgs->GetBufferPointer();
-		gfx_error_raise(error_str);
-		goto cleanup;
+		return error_failure(error_str);
 	} else {
 		IDirect3DVertexShader9* shader_handle;
 		res = impl->dev->CreateVertexShader((const DWORD*)compiled_shader->GetBufferPointer(), &shader_handle);
 		shader->vertex_shader.handle = shader_handle;
 		shader->vertex_shader.impl = constant_table;
-		s_d3d9_build_constant_table(impl, &shader->vertex_shader, constant_table);
-		if (FAILED(res)) {
-			gfx_error_raise("Failed to create shader.");
-			goto cleanup;
+		error_t err = s_d3d9_build_constant_table(gfx, impl, &shader->vertex_shader, constant_table);
+		if (err.is_error()) {
+			return err;
 		} else {
 			compiled_shader->Release();
 		}
 	}
 
 	// pixel shader
-	res = D3DXCompileShader(ps, strlen(ps), NULL, NULL, "main", impl->ps_profile, 0, &compiled_shader, &error_msgs, &constant_table);
+	res = D3DXCompileShader(ps, (UINT)CUTE_STRLEN(ps), NULL, NULL, "main", impl->ps_profile, 0, &compiled_shader, &error_msgs, &constant_table);
 	if (FAILED(res)) {
 		const char* error_str = (const char*)error_msgs->GetBufferPointer();
-		gfx_error_raise(error_str);
-		goto cleanup;
+		return error_failure(error_str);
 	} else {
 		IDirect3DPixelShader9* shader_handle;
 		res = impl->dev->CreatePixelShader((const DWORD*)compiled_shader->GetBufferPointer(), &shader_handle);
 		shader->pixel_shader.handle = shader_handle;
 		shader->pixel_shader.impl = constant_table;
-		s_d3d9_build_constant_table(impl, &shader->pixel_shader, constant_table);
-		if (FAILED(res)) {
-			gfx_error_raise("Failed to create pixel shader.");
-			goto cleanup;
+		error_t err = s_d3d9_build_constant_table(gfx, impl, &shader->pixel_shader, constant_table);
+		if (err.is_error()) {
+			return err;
 		} else {
 			compiled_shader->Release();
 		}
 	}
 
-	return shader;
-
-cleanup:
-	GFX_FREE(shader);
-	return NULL;
+	*shader_out = shader;
+	return error_success();
 }
 
 static void s_d3d9_free_shader(gfx_t* gfx, gfx_shader_t* shader)
@@ -961,7 +724,7 @@ static void s_d3d9_free_shader(gfx_t* gfx, gfx_shader_t* shader)
 	ID3DXConstantTable* constant_table = (ID3DXConstantTable*)shader->pixel_shader.impl;
 	constant_table->Release();
 	shader_handle->Release();
-	GFX_FREE(shader);
+	CUTE_FREE(shader, gfx->mem_ctx);
 }
 
 #if 0
@@ -979,7 +742,7 @@ void s_d3d9_shader_set_active(gfx_t* gfx, gfx_shader_t* shader)
 }
 #endif
 
-static int s_d3d9_shader_send_uniforms(gfx_t* gfx, gfx_shader_data_t* s)
+static error_t s_d3d9_shader_send_uniforms(gfx_t* gfx, gfx_shader_data_t* s)
 {
 	d3d9_context_t* impl = (d3d9_context_t*)gfx->impl;
 	IDirect3DVertexShader9* shader = (IDirect3DVertexShader9*)s->handle;
@@ -1038,23 +801,24 @@ static int s_d3d9_shader_send_uniforms(gfx_t* gfx, gfx_shader_data_t* s)
 		}
 
 		if (FAILED(res)) {
-			return gfx_error_raise(get_error_string_d3d9(res));
+			return error_failure(get_error_string_d3d9(res));
 		}
 	}
 
-	return GFX_ERROR_SUCCESS;
+	return error_success();
 }
 
-static int s_d3d9_shader_set_screen_wh(gfx_t* gfx, gfx_shader_t* shader, float w, float h)
+static error_t s_d3d9_shader_set_screen_wh(gfx_t* gfx, gfx_shader_t* shader, float w, float h)
 {
 	ID3DXConstantTable* table = (ID3DXConstantTable*)shader->vertex_shader.impl;
 	D3DXHANDLE uniform = table->GetConstantByName(0, "u_inv_screen_wh");
 	float wh[2] = { 1.0f / w, 1.0f / h };
 	HRESULT res = table->SetValue(((d3d9_context_t*)gfx->impl)->dev, uniform, (void*)wh, sizeof(float) * 2);
 	if (FAILED(res)) {
-		return gfx_error_raise(get_error_string_d3d9(res));
+		return error_failure(get_error_string_d3d9(res));
+	} else {
+		return error_success();
 	}
-	return GFX_ERROR_SUCCESS;
 }
 
 static void s_d3d9_vertex_buffer_release(gfx_vertex_buffer_t* buffer)
@@ -1081,33 +845,33 @@ static void vertex_buffer_clean_up_d3d9(gfx_t* gfx, gfx_vertex_buffer_t* buffer)
 	s_d3d9_vertex_buffer_release(buffer);
 }
 
-static int s_d3d9_render_texture_init(d3d9_context_t* impl, d3d9_render_texture_t* render_texture)
+static error_t s_d3d9_render_texture_init(d3d9_context_t* impl, d3d9_render_texture_t* render_texture)
 {
 	IDirect3DTexture9* texture;
 	HRESULT res = impl->dev->CreateTexture((UINT)render_texture->w, (UINT)render_texture->h, 0, D3DUSAGE_RENDERTARGET, D3DFMT_A8R8G8B8, D3DPOOL_DEFAULT, &texture, NULL);
 	if (FAILED(res)) {
-		return gfx_error_raise("Failed to create d3d9 texture.");
+		return error_failure("Failed to create d3d9 texture.");
 	}
 
 	IDirect3DSurface9* surface;
 	res = texture->GetSurfaceLevel(0, &surface);
 	if (FAILED(res)) {
-		return gfx_error_raise("Failed to get d3d9 surface level.");
+		return error_failure("Failed to get d3d9 surface level.");
 	}
 
 	render_texture->texture = texture;
 	render_texture->surface = surface;
 
-	return GFX_ERROR_SUCCESS;
+	return error_success();
 }
 
 static void* s_d3d9_render_texture_new(gfx_t* gfx, int w, int h, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode)
 {
-	GFX_UNUSED(pixel_format); // TODO: use.
-	GFX_UNUSED(wrap_mode); // TODO: use.
+	CUTE_UNUSED(pixel_format); // TODO: use.
+	CUTE_UNUSED(wrap_mode); // TODO: use.
 
 	d3d9_context_t* impl = (d3d9_context_t*)gfx->impl;
-	d3d9_render_texture_t* render_texture = (d3d9_render_texture_t*)GFX_ALLOC(sizeof(d3d9_render_texture_t));
+	d3d9_render_texture_t* render_texture = (d3d9_render_texture_t*)CUTE_ALLOC(sizeof(d3d9_render_texture_t), gfx->mem_ctx);
 	render_texture->w = w;
 	render_texture->h = h;
 	render_texture->pixel_format = pixel_format;
@@ -1115,7 +879,7 @@ static void* s_d3d9_render_texture_new(gfx_t* gfx, int w, int h, gfx_pixel_forma
 	GFX_DLIST_INIT(render_texture);
 	GFX_DLIST_HEAD_INSERT(impl->render_textures, render_texture);
 
-	if (s_d3d9_render_texture_init(impl, render_texture) != GFX_ERROR_SUCCESS) {
+	if (s_d3d9_render_texture_init(impl, render_texture).is_error()) {
 		return NULL;
 	}
 
@@ -1136,7 +900,7 @@ static void s_d3d9_render_texture_clean_up(gfx_t* gfx, void* render_texture)
 	d3d9_render_texture_t* tex = (d3d9_render_texture_t*)render_texture;
 	s_d3d9_render_texture_release(tex);
 	GFX_DLIST_HEAD_REMOVE(impl->render_textures, tex);
-	GFX_FREE(tex);
+	CUTE_FREE(tex, gfx->mem_ctx);
 }
 
 static void s_d3d9_on_device_lost(d3d9_context_t* impl)
@@ -1169,7 +933,7 @@ static void s_d3d9_on_device_lost(d3d9_context_t* impl)
 	impl->screen_surface = 0;
 }
 
-static int s_d3d9_on_device_reset(gfx_t* gfx, d3d9_context_t* impl)
+static error_t s_d3d9_on_device_reset(gfx_t* gfx, d3d9_context_t* impl)
 {
 	// Recreate everything used with D3DPOOL_DEFAULT.
 
@@ -1179,8 +943,9 @@ static int s_d3d9_on_device_reset(gfx_t* gfx, d3d9_context_t* impl)
 		if (buffer) {
 			do
 			{
-				if (s_d3d9_vertex_buffer_init(buffer, impl) != GFX_ERROR_SUCCESS) {
-					return GFX_ERROR_FAILURE;
+				error_t err = s_d3d9_vertex_buffer_init(buffer, impl);
+				if (err.is_error()) {
+					return err;
 				}
 
 				buffer = buffer->next;
@@ -1193,9 +958,10 @@ static int s_d3d9_on_device_reset(gfx_t* gfx, d3d9_context_t* impl)
 		d3d9_render_texture_t* sentinel = render_texture;
 		do
 		{
-			if (s_d3d9_render_texture_init(impl, render_texture) != GFX_ERROR_SUCCESS) {
-				return GFX_ERROR_FAILURE;
-			}
+			error_t err = s_d3d9_render_texture_init(impl, render_texture);
+				if (err.is_error()) {
+					return err;
+				}
 
 			render_texture = render_texture->next;
 		} while (render_texture != sentinel);
@@ -1203,22 +969,21 @@ static int s_d3d9_on_device_reset(gfx_t* gfx, d3d9_context_t* impl)
 
 	HRESULT res = impl->dev->GetRenderTarget(0, &impl->screen_surface);
 	if (FAILED(res)) {
-		return gfx_error_raise("Unable to get render target.");
+		return error_failure("Unable to get render target.");
 	}
 
 	s_d3d9_setup_render_and_sampler_states(impl->dev);
 	gfx_set_alpha(gfx, gfx->alpha_one_for_enabled); // Hacky env scoping, oh well.
 
-	return GFX_ERROR_SUCCESS;
+	return error_success();
 }
 
-static int s_d3d9_handle_lost_device(gfx_t* gfx, d3d9_context_t* impl)
+static error_t s_d3d9_handle_lost_device(gfx_t* gfx, d3d9_context_t* impl)
 {
 	HRESULT hr = impl->dev->TestCooperativeLevel();
 
 	if (hr == D3DERR_DEVICELOST) {
-		// Device is lost and cannot yet be reset.
-		return GFX_ERROR_FAILURE;
+		return error_failure("Device is lost and cannot yet be reset.");
 	} else if (hr == D3DERR_DEVICENOTRESET) {
 		// Device is lost and can be reset.
 		if (!impl->lost) {
@@ -1230,25 +995,30 @@ static int s_d3d9_handle_lost_device(gfx_t* gfx, d3d9_context_t* impl)
 		Sleep(1);
 
 		if (hr == D3DERR_INVALIDCALL) {
-			return gfx_error_raise("Reset d3d9 device failed. It is likely some resources have been leaked. Check for D3DX objects, anything allocated with D3DPOOL_DEFAULT, and any surfaces from render targets.");
+			return error_failure("Reset d3d9 device failed. It is likely some resources have been leaked. Check for D3DX objects, anything allocated with D3DPOOL_DEFAULT, and any surfaces from render targets.");
 		}
 
-		return FAILED(hr) ? GFX_ERROR_FAILURE : GFX_ERROR_SUCCESS;
+		if (FAILED(hr)) {
+			return error_failure("Device has not yet reset.");
+		} else {
+			return error_success();
+		}
 	} else {
 		if (impl->lost) {
-			if (s_d3d9_on_device_reset(gfx, impl) != GFX_ERROR_SUCCESS) {
-				return GFX_ERROR_FAILURE;
+			error_t err = s_d3d9_on_device_reset(gfx, impl);
+			if (err.is_error()) {
+				return err;
 			} else {
 				impl->lost = 0;
-				return GFX_ERROR_SUCCESS;
+				return error_success();
 			}
 		} else {
-			return GFX_ERROR_SUCCESS;
+			return error_success();
 		}
 	}
 }
 
-static int s_d3d9_do_draw_calls(gfx_t* gfx)
+static error_t s_d3d9_do_draw_calls(gfx_t* gfx)
 {
 	d3d9_context_t* impl = (d3d9_context_t*)gfx->impl;
 
@@ -1339,7 +1109,7 @@ static int s_d3d9_do_draw_calls(gfx_t* gfx)
 		{
 			UINT index = table->GetSamplerIndex(call.texture_uniform_names[i]);
 			if (index > 255) {
-				return gfx_error_raise("Invalid sampler index encountered.");
+				return error_failure("Invalid sampler index encountered.");
 			}
 			HR_CHECK(impl->dev->SetTexture(index, NULL));
 		}
@@ -1347,7 +1117,7 @@ static int s_d3d9_do_draw_calls(gfx_t* gfx)
 
 	gfx->draw_call_count = 0;
 
-	return GFX_ERROR_SUCCESS;
+	return error_success();
 }
 
 static void* s_gfx_get_render_texture_handle(gfx_t* gfx)
@@ -1356,11 +1126,12 @@ static void* s_gfx_get_render_texture_handle(gfx_t* gfx)
 	return (void*)render_texture->texture;
 }
 
-static void s_d3d9_gfx_flush_to_texture(gfx_t* gfx, gfx_texture_t* render_texture)
+static error_t s_d3d9_gfx_flush_to_texture(gfx_t* gfx, gfx_texture_t* render_texture)
 {
 	d3d9_context_t* impl = (d3d9_context_t*)gfx->impl;
-	if (s_d3d9_handle_lost_device(gfx, impl) != GFX_ERROR_SUCCESS) {
-		return;
+	error_t err = s_d3d9_handle_lost_device(gfx, impl);
+	if (err.is_error()) {
+		return err;
 	}
 
 	d3d9_render_texture_t* texture = (d3d9_render_texture_t*)render_texture;
@@ -1368,14 +1139,15 @@ static void s_d3d9_gfx_flush_to_texture(gfx_t* gfx, gfx_texture_t* render_textur
 	HR_CHECK(impl->dev->SetRenderTarget(0, texture->surface));
 	HR_CHECK(impl->dev->Clear(0, NULL, D3DCLEAR_TARGET, gfx->clear_color, 1.0f, 0));
 
-	s_d3d9_do_draw_calls(gfx);
+	return s_d3d9_do_draw_calls(gfx);
 }
 
-static void s_d3d9_flush(gfx_t* gfx)
+static error_t s_d3d9_flush(gfx_t* gfx)
 {
 	d3d9_context_t* impl = (d3d9_context_t*)gfx->impl;
-	if (s_d3d9_handle_lost_device(gfx, impl) != GFX_ERROR_SUCCESS) {
-		return;
+	error_t err = s_d3d9_handle_lost_device(gfx, impl);
+	if (err.is_error()) {
+		return err;
 	}
 
 	// Render all draw calls to render-texture.
@@ -1395,10 +1167,12 @@ static void s_d3d9_flush(gfx_t* gfx)
 	call.index_indices = call.buffer->index_indices;
 	gfx_push_draw_call(gfx, &call);
 
-	s_d3d9_do_draw_calls(gfx);
+	err = s_d3d9_do_draw_calls(gfx);
 
 	HR_CHECK(impl->dev->EndScene());
 	impl->dev->Present(NULL, NULL, NULL, NULL);
+
+	return err;
 }
 
 static void s_d3d9_gfx_set_alpha(gfx_t* gfx, int one_for_enabled)
@@ -1424,34 +1198,34 @@ void s_d3d9_free(d3d9_context_t* impl)
 	impl->dev->Release();
 	impl->d3d9->Release();
 
-	GFX_FREE(impl);
+	CUTE_FREE(impl, gfx->mem_ctx);
 }
 
-#else
+//#else
+//
+//// TODO: Stubs needed here.
+//
+//#endif // GFX_USE_DIRECTX_INCLUDES_AND_IMPORTS
 
-// TODO: Stubs needed here.
-
-#endif // GFX_USE_DIRECTX_INCLUDES_AND_IMPORTS
-
-int gfx_vertex_buffer_map(gfx_t* gfx, gfx_vertex_buffer_t* buffer, int vertex_count, void** vertices, int index_count, void** indices)
+error_t gfx_vertex_buffer_map(gfx_t* gfx, gfx_vertex_buffer_t* buffer, int vertex_count, void** vertices, int index_count, void** indices)
 {
 	if (s_is_lost(gfx)) {
-		return GFX_ERROR_FAILURE;
+		return error_failure("Cannot map buffer while device is lost.");
 	}
 
 	if (gfx->type == GFX_TYPE_D3D9) {
 		return s_d3d9_vertex_buffer_map(buffer, vertex_count, vertices, index_count, indices);
 	} else {
-		return gfx_error_raise("Not yet implemented.");
+		return error_failure("Not yet implemented.");
 	}
 }
 
-int gfx_vertex_buffer_unmap(gfx_t* gfx, gfx_vertex_buffer_t* buffer)
+error_t gfx_vertex_buffer_unmap(gfx_t* gfx, gfx_vertex_buffer_t* buffer)
 {
 	if (gfx->type == GFX_TYPE_D3D9) {
 		return s_d3d9_vertex_buffer_unmap(buffer);
 	} else {
-		return gfx_error_raise("Not yet implemented.");
+		return error_failure("Not yet implemented.");
 	}
 }
 
@@ -1460,7 +1234,7 @@ gfx_vertex_buffer_t* gfx_vertex_buffer_new(gfx_t* gfx, gfx_vertex_buffer_params_
 	if (gfx->type == GFX_TYPE_D3D9) {
 		return s_d3d9_vertex_buffer_init(gfx, params);
 	} else {
-		gfx_error_raise("Not yet implemented.");
+		// Not implemented yet.
 		return NULL;
 	}
 }
@@ -1470,29 +1244,29 @@ void gfx_vertex_buffer_free(gfx_t* gfx, gfx_vertex_buffer_t* buffer)
 	if (gfx->type == GFX_TYPE_D3D9) {
 		vertex_buffer_clean_up_d3d9(gfx, buffer);
 	} else {
-		gfx_error_raise("Not yet implemented.");
+		// Not implemented yet.
 	}
 
-	GFX_FREE(buffer);
+	CUTE_FREE(buffer, gfx->mem_ctx);
 }
 
 void matrix_identity(gfx_matrix_t* m)
 {
-	memset(m, 0, sizeof(*m));
+	CUTE_MEMSET(m, 0, sizeof(*m));
 	m->data[0] = 1.0f;
 	m->data[5] = 1.0f;
 	m->data[10] = 1.0f;
 	m->data[15] = 1.0f;
 }
 
-void projection_ortho_2d(gfx_matrix_t* projection, float w, float h, float x, float y)
+void matrix_ortho_2d(gfx_matrix_t* projection, float w, float h, float x, float y)
 {
 	float L = -w / 2.0f;
 	float R = w / 2.0f;
 	float T = h / 2.0f;
 	float B = -h / 2.0f;
 
-	memset(projection, 0, sizeof(*projection));
+	CUTE_MEMSET(projection, 0, sizeof(*projection));
 
 	// ortho
 	projection->data[0] = 2.0f / (R - L);
@@ -1505,12 +1279,19 @@ void projection_ortho_2d(gfx_matrix_t* projection, float w, float h, float x, fl
 	projection->data[13] = -y * projection->data[5];
 }
 
-gfx_texture_t *texture_create(gfx_t* gfx, gfx_texture_params_t* params)
+gfx_texture_t *texture_create(gfx_t* gfx, int w, int h, void* pixels, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode)
 {
+	gfx_texture_params_t params;
+	params.w = w;
+	params.h = h;
+	params.pixels = pixels;
+	params.pixel_format = pixel_format;
+	params.wrap_mode = wrap_mode;
+
 	if (gfx->type == GFX_TYPE_D3D9) {
-		return (gfx_texture_t*)s_d3d9_texture_init(gfx, params);
+		return (gfx_texture_t*)s_d3d9_texture_init(gfx, &params);
 	} else {
-		gfx_error_raise("Not yet implemented.");
+		// Not yet implemented.
 		return NULL;
 	}
 }
@@ -1520,16 +1301,23 @@ void texture_clean_up(gfx_t* gfx, gfx_texture_t* tex)
 	if (gfx->type == GFX_TYPE_D3D9) {
 		texture_clean_up_d3d9(tex);
 	} else {
-		gfx_error_raise("Not yet implemented.");
+		// Not yet implemented.
 	}
 }
 
-gfx_shader_t* gfx_shader_new(gfx_t* gfx, gfx_shader_params_t* params)
+gfx_shader_t* gfx_shader_new(gfx_t* gfx, gfx_vertex_buffer_t* buffer, const char* vertex_shader, const char* pixel_shader)
 {
+	gfx_shader_t* shader = NULL;
+
 	if (gfx->type == GFX_TYPE_D3D9) {
-		return s_d3d9_compile_shader(gfx, params);
+		error_t err = s_d3d9_compile_shader(gfx, buffer, vertex_shader, pixel_shader, &shader);
+		if (err.is_error()) {
+			return NULL;
+		} else {
+			return shader;
+		}
 	} else {
-		gfx_error_raise("Not yet implemented.");
+		// Not yet implemented.
 		return NULL;
 	}
 }
@@ -1539,7 +1327,7 @@ void gfx_shader_free(gfx_t* gfx, gfx_shader_t* shader)
 	if (gfx->type == GFX_TYPE_D3D9) {
 		return s_d3d9_free_shader(gfx, shader);
 	} else {
-		gfx_error_raise("Not yet implemented.");
+		// Not yet implemented.
 	}
 }
 
@@ -1555,7 +1343,7 @@ void shader_set_active(gfx_t* gfx, gfx_shader_t* shader)
 }
 #endif
 
-static void s_set_uniform_data(gfx_uniform_t* u, void* value, gfx_uniform_type_t type)
+static error_t s_set_uniform_data(gfx_uniform_t* u, void* value, gfx_uniform_type_t type)
 {
 	u->dirty = 1;
 	int size = 0;
@@ -1563,8 +1351,7 @@ static void s_set_uniform_data(gfx_uniform_t* u, void* value, gfx_uniform_type_t
 	switch (type) {
 	default: // fall-through
 	case GFX_UNIFORM_TYPE_INVALID:
-		gfx_error_raise("Invalid uniform type.");
-		return;
+		return error_failure("Invalid uniform type.");
 
 	case GFX_UNIFORM_TYPE_BOOL:   size = sizeof(bool); break;
 	case GFX_UNIFORM_TYPE_FLOAT:  size = sizeof(float); break;
@@ -1582,13 +1369,15 @@ static void s_set_uniform_data(gfx_uniform_t* u, void* value, gfx_uniform_type_t
 		break;
 	}
 
-	memcpy(&u->u, value, size);
+	CUTE_MEMCPY(&u->u, value, size);
+
+	return error_success();
 }
 
-static int s_set_uniform(gfx_shader_data_t* s, uint64_t h, void* value, gfx_uniform_type_t type)
+static error_t s_set_uniform(gfx_shader_data_t* s, uint64_t h, void* value, gfx_uniform_type_t type)
 {
 	if (!s) {
-		return gfx_error_raise("Unable to find uniform.");
+		return error_failure("Unable to find uniform.");
 	}
 
 	int found = 0;
@@ -1598,7 +1387,7 @@ static int s_set_uniform(gfx_shader_data_t* s, uint64_t h, void* value, gfx_unif
 		gfx_uniform_t* u = s->uniforms + i;
 		if (u->h == h) {
 			if (u->type != type) {
-				return gfx_error_raise("Type mismatch when assigning uniform.");
+				return error_failure("Type mismatch when assigning uniform.");
 			}
 			found = 1;
 			s_set_uniform_data(u, value, type);
@@ -1607,37 +1396,39 @@ static int s_set_uniform(gfx_shader_data_t* s, uint64_t h, void* value, gfx_unif
 	}
 
 	if (!found) {
-		return GFX_ERROR_FAILURE;
+		return error_failure("Unable to find uniform.");
 	}
 
-	return GFX_ERROR_SUCCESS;
+	return error_success();
 }
 
-int gfx_shader_set_uniform(gfx_t* gfx, gfx_shader_t* shader, const char* uniform_name, void* value, gfx_uniform_type_t type)
+error_t gfx_shader_set_uniform(gfx_t* gfx, gfx_shader_t* shader, const char* uniform_name, void* value, gfx_uniform_type_t type)
 {
 	uint64_t h = s_gfx_FNV1a(uniform_name);
 
-	if (s_set_uniform(&shader->vertex_shader, h, value, type) == GFX_ERROR_FAILURE) {
-		if (s_set_uniform(&shader->pixel_shader, h, value, type) == GFX_ERROR_FAILURE) {
-			return gfx_error_raise("Unable to find uniform.");
+	if (s_set_uniform(&shader->vertex_shader, h, value, type).is_error()) {
+		if (s_set_uniform(&shader->pixel_shader, h, value, type).is_error()) {
+			return error_failure("Unable to find uniform.");
 		} else {
-			return GFX_ERROR_SUCCESS;
+			return error_success();
 		}
 	} else {
-		return GFX_ERROR_SUCCESS;
+		return error_success();
 	}
 }
 
-static void s_shader_copy_uniform_data_from_draw_call(gfx_t* gfx, gfx_draw_call_t* call)
+static error_t s_shader_copy_uniform_data_from_draw_call(gfx_t* gfx, gfx_draw_call_t* call)
 {
 	for (int i = 0; i < call->uniform_count; ++i)
 	{
 		gfx_uniform_t* u = call->uniforms + i;
-		int error = gfx_shader_set_uniform(gfx, call->shader, u->name, &u->u, u->type);
-		if (error != GFX_ERROR_SUCCESS) {
-			gfx_error_raise("Unable to set shader uniform from draw call uniform.");
+		error_t err = gfx_shader_set_uniform(gfx, call->shader, u->name, &u->u, u->type);
+		if (err.is_error()) {
+			return err;
 		}
 	}
+
+	return error_success();
 }
 
 int s_is_lost(gfx_t* gfx)
@@ -1650,12 +1441,12 @@ int s_is_lost(gfx_t* gfx)
 	}
 }
 
-int gfx_shader_set_mvp(gfx_t* gfx, gfx_shader_t* shader, gfx_matrix_t* mvp)
+error_t gfx_shader_set_mvp(gfx_t* gfx, gfx_shader_t* shader, gfx_matrix_t* mvp)
 {
 	return gfx_shader_set_uniform(gfx, shader, "u_mvp", mvp->data, GFX_UNIFORM_TYPE_MATRIX);
 }
 
-int gfx_shader_set_screen_wh(gfx_t* gfx, gfx_shader_t* shader, float w, float h)
+error_t gfx_shader_set_screen_wh(gfx_t* gfx, gfx_shader_t* shader, float w, float h)
 {
 	float wh[] = { -1.0f / w, 1.0f / h };
 	return gfx_shader_set_uniform(gfx, shader, "u_inv_screen_wh", wh, GFX_UNIFORM_TYPE_FLOAT2);
@@ -1680,15 +1471,19 @@ void gfx_draw_call_set_scissor_box(gfx_draw_call_t* call, gfx_scissor_t* scissor
 	call->scissor = *scissor;
 }
 
-void gfx_draw_call_add_verts(gfx_t* gfx, gfx_draw_call_t* call, void* verts, int vert_count)
+error_t gfx_draw_call_add_verts(gfx_t* gfx, gfx_draw_call_t* call, void* verts, int vert_count)
 {
 	// Mapping verts can fail for d3d9 if the device is currently lost.
 	void* mapped_verts;
-	if (gfx_vertex_buffer_map(gfx, call->buffer, vert_count, &mapped_verts) == GFX_ERROR_SUCCESS) {
-		memcpy(mapped_verts, verts, call->buffer->desc.stride * vert_count);
+	error_t err = gfx_vertex_buffer_map(gfx, call->buffer, vert_count, &mapped_verts);
+	if (!err.is_error()) {
+		CUTE_MEMCPY(mapped_verts, verts, call->buffer->desc.stride * vert_count);
 		gfx_vertex_buffer_unmap(gfx, call->buffer);
 		call->vertex_indices = call->buffer->vertex_indices;
 		call->index_indices = call->buffer->index_indices;
+		return error_success();
+	} else {
+		return err;
 	}
 }
 
@@ -1701,7 +1496,7 @@ void gfx_draw_call_add_uniform(gfx_draw_call_t* call, const char* uniform_name, 
 	s_set_uniform_data(&u, value, type);
 	if (type == GFX_UNIFORM_TYPE_TEXTURE) __debugbreak();
 
-	GFX_ASSERT(call->uniform_count < GFX_DRAW_CALL_MAX_UNIFORMS);
+	CUTE_ASSERT(call->uniform_count < CUTE_GFX_DRAW_CALL_MAX_UNIFORMS);
 	call->uniforms[call->uniform_count++] = u;
 }
 
@@ -1722,9 +1517,9 @@ static void s_gfx_sprite_quad(float x, float y, float sx, float sy, gfx_vertex_t
 	}
 }
 
-gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, int screen_h, int tex_w, int tex_h, gfx_upscale_maximum_t upscale, void* platform_handle)
+gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, int screen_h, int tex_w, int tex_h, gfx_upscale_maximum_t upscale, void* platform_handle, void* user_mem_ctx)
 {
-	gfx_t* gfx = GFX_NEW(gfx_t);
+	gfx_t* gfx = CUTE_NEW(gfx_t, user_mem_ctx);
 	gfx->type = type;
 	gfx->screen_pixel_format = pixel_format;
 	gfx->screen_w = screen_w;
@@ -1732,25 +1527,28 @@ gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, i
 	gfx->clear_color = 0xFFFFFFFF;
 	gfx->upscale_max_setting = upscale;
 	gfx->viewport = { 0, 0, (float)screen_w, (float)screen_h };
-	gfx->default_projection = projection_identity();
+	matrix_identity(&gfx->default_projection);
 	gfx->draw_call_count = 0;
 	gfx->draw_call_capacity = 0;
 	gfx->draw_calls = NULL;
 
 	if (gfx->type == GFX_TYPE_D3D9) {
-		gfx->impl = s_d3d9_create_impl(gfx, platform_handle);
+		error_t err = s_d3d9_create_impl(gfx, platform_handle, &gfx->impl);
+		if (err.is_error()) {
+			return NULL;
+		}
 	} else {
-		gfx_error_raise("Not yet implemented.");
+		// Not yet (or likely ever will be) implemented.
 		return NULL;
 	}
 
 	// Setup the render target texture.
-	gfx->render_texture = render_texture_new(gfx, tex_w, tex_h, pixel_format);
+	gfx->render_texture = render_texture_new(gfx, tex_w, tex_h, pixel_format, GFX_WRAP_MODE_REPEAT);
 	gfx_vertex_buffer_params_t vertex_params;
 	vertex_params.type = GFX_VERTEX_BUFFER_TYPE_STATIC;
 	vertex_params.stride = sizeof(gfx_vertex_t);
-	gfx_vertex_buffer_params_add_attribute(&vertex_params, 2, GFX_OFFEST_OF(gfx_vertex_t, x));
-	gfx_vertex_buffer_params_add_attribute(&vertex_params, 2, GFX_OFFEST_OF(gfx_vertex_t, u));
+	gfx_vertex_buffer_params_add_attribute(&vertex_params, 2, CUTE_OFFSET_OF(gfx_vertex_t, x));
+	gfx_vertex_buffer_params_add_attribute(&vertex_params, 2, CUTE_OFFSET_OF(gfx_vertex_t, u));
 	vertex_params.vertex_count = 6;
 	gfx->static_render_texture_quad = gfx_vertex_buffer_new(gfx, &vertex_params);
 
@@ -1759,7 +1557,7 @@ gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, i
 	gfx_vertex_buffer_map(gfx, gfx->static_render_texture_quad, 6, &verts);
 	gfx_vertex_t quad[6];
 	s_gfx_sprite_quad(0, 0, 2.0f, 2.0f, quad);
-	memcpy(verts, quad, sizeof(gfx_vertex_t) * 6);
+	CUTE_MEMCPY(verts, quad, sizeof(gfx_vertex_t) * 6);
 	gfx_vertex_buffer_unmap(gfx, gfx->static_render_texture_quad);
 
 	// Calc max scaling factor.
@@ -1826,15 +1624,10 @@ gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, i
 		}
 	);
 
-	gfx_shader_params_t upscale_shader_params;
-	upscale_shader_params.pixel_shader = ps;
-	upscale_shader_params.vertex_shader = vs;
-	upscale_shader_params.buffer = gfx->static_render_texture_quad;
-
-	gfx->upscale_shader = gfx_shader_new(gfx, &upscale_shader_params);
+	gfx->upscale_shader = gfx_shader_new(gfx, gfx->static_render_texture_quad, vs, ps);
 	float vscale[] = { scale * (float)tex_w / (float)screen_w, scale * (float)tex_h / (float)screen_h };
 	gfx_shader_set_uniform(gfx, gfx->upscale_shader, "u_scale", vscale, GFX_UNIFORM_TYPE_FLOAT2);
-	gfx_shader_set_screen_wh(gfx, gfx->upscale_shader, screen_w, screen_h); // TODO: Rename to gfx set screen w/h or whatever and do upscales there
+	gfx_shader_set_screen_wh(gfx, gfx->upscale_shader, (float)screen_w, (float)screen_h); // TODO: Rename to gfx set screen w/h or whatever and do upscales there
 	//texture_t temp;
 	//temp.impl = s_gfx_get_render_texture_handle(gfx);
 	//shader_set_uniform(gfx, &gfx->upscale_shader, "u_screen_image", &temp, UNIFORM_TYPE_TEXTURE);
@@ -1843,8 +1636,8 @@ gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, i
 	gfx_vertex_buffer_params_t line_buffer_params;
 	line_buffer_params.type = GFX_VERTEX_BUFFER_TYPE_DYNAMIC;
 	line_buffer_params.stride = sizeof(gfx_line_vertex_t);
-	gfx_vertex_buffer_params_add_attribute(&line_buffer_params, 2, GFX_OFFEST_OF(gfx_line_vertex_t, x));
-	gfx_vertex_buffer_params_add_attribute(&line_buffer_params, 3, GFX_OFFEST_OF(gfx_line_vertex_t, r));
+	gfx_vertex_buffer_params_add_attribute(&line_buffer_params, 2, CUTE_OFFSET_OF(gfx_line_vertex_t, x));
+	gfx_vertex_buffer_params_add_attribute(&line_buffer_params, 3, CUTE_OFFSET_OF(gfx_line_vertex_t, r));
 	line_buffer_params.vertex_count = 1024 * 10;
 	gfx->line_buffer = gfx_vertex_buffer_new(gfx, &line_buffer_params);
 
@@ -1891,33 +1684,29 @@ gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, i
 		}
 	);
 
-	gfx_shader_params_t line_shader_params;
-	line_shader_params.pixel_shader = line_ps;
-	line_shader_params.vertex_shader = line_vs;
-	line_shader_params.buffer = gfx->line_buffer;
-	gfx->line_shader = gfx_shader_new(gfx, &line_shader_params);
+	gfx->line_shader = gfx_shader_new(gfx, gfx->line_buffer, line_vs, line_ps);
 	gfx->line_vert_count = 0;
 	gfx->line_vert_capacity = 1024 * 10;
-	gfx->line_verts = (float*)GFX_ALLOC(sizeof(gfx_line_vertex_t) * gfx->line_vert_capacity);
+	gfx->line_verts = (float*)CUTE_ALLOC(sizeof(gfx_line_vertex_t) * gfx->line_vert_capacity, gfx->mem_ctx);
 	gfx->line_depth_test = 0;
 	gfx_line_color(gfx, 1.0f, 1.0f, 1.0f);
-	gfx_shader_set_screen_wh(gfx, gfx->line_shader, screen_w, screen_h); // TODO: Rename to gfx set screen w/h or whatever and do upscales there
+	gfx_shader_set_screen_wh(gfx, gfx->line_shader, (float)screen_w, (float)screen_h); // TODO: Rename to gfx set screen w/h or whatever and do upscales there
 
 	return gfx;
 }
 
 void gfx_clean_up(gfx_t* gfx)
 {
-	GFX_FREE(gfx->line_verts);
+	CUTE_FREE(gfx->line_verts, gfx->mem_ctx);
 	// TODO: Cleanup debug line shader/buffer or others?
 
 	if (gfx->type == GFX_TYPE_D3D9) {
 		s_d3d9_free((d3d9_context_t*)gfx->impl);
 	} else {
-		gfx_error_raise("Not yet implemented.");
+		// Not yet implemented.
 	}
 
-	GFX_FREE(gfx);
+	CUTE_FREE(gfx, gfx->mem_ctx);
 }
 
 void gfx_push_draw_call(gfx_t* gfx, gfx_draw_call_t* call)
@@ -1926,12 +1715,12 @@ void gfx_push_draw_call(gfx_t* gfx, gfx_draw_call_t* call)
 	gfx->draw_calls[gfx->draw_call_count++] = *call;
 }
 
-void gfx_flush(gfx_t* gfx)
+error_t gfx_flush(gfx_t* gfx)
 {
 	if (gfx->type == GFX_TYPE_D3D9) {
-		s_d3d9_flush(gfx);
+		return s_d3d9_flush(gfx);
 	} else {
-		gfx_error_raise("Not yet implemented.");
+		return error_failure("Not yet implemented.");
 	}
 }
 
@@ -1940,7 +1729,7 @@ void gfx_set_alpha(gfx_t* gfx, int one_for_enabled)
 	if (gfx->type == GFX_TYPE_D3D9) {
 		s_d3d9_gfx_set_alpha(gfx, one_for_enabled);
 	} else {
-		gfx_error_raise("Not yet implemented.");
+		// Not yet implemented.
 	}
 }
 
@@ -1990,9 +1779,9 @@ void gfx_line(gfx_t* gfx, float ax, float ay, float bx, float by)
 	{
 		gfx->line_vert_capacity *= 2;
 		void* old_verts = gfx->line_verts;
-		gfx->line_verts = (float*)GFX_ALLOC(sizeof(gfx_line_vertex_t) * gfx->line_vert_capacity);
-		GFX_MEMCPY(gfx->line_verts, old_verts, sizeof(gfx_line_vertex_t) * gfx->line_vert_count);
-		GFX_FREE(old_verts);
+		gfx->line_verts = (float*)CUTE_ALLOC(sizeof(gfx_line_vertex_t) * gfx->line_vert_capacity, gfx->mem_ctx);
+		CUTE_MEMCPY(gfx->line_verts, old_verts, sizeof(gfx_line_vertex_t) * gfx->line_vert_count);
+		CUTE_FREE(old_verts, gfx->mem_ctx);
 	}
 
 	gfx_v2_t a0 = s_gfx_v2(ax, ay);
@@ -2014,7 +1803,7 @@ void gfx_line(gfx_t* gfx, float ax, float ay, float bx, float by)
 		{ c.x, c.y, rc, gc, bc },
 	};
 
-	GFX_MEMCPY(gfx->line_verts + gfx->line_vert_count * (sizeof(gfx_line_vertex_t) / sizeof(float)), verts, sizeof(verts));
+	CUTE_MEMCPY(gfx->line_verts + gfx->line_vert_count * (sizeof(gfx_line_vertex_t) / sizeof(float)), verts, sizeof(verts));
 	gfx->line_vert_count += 6;
 }
 
@@ -2043,30 +1832,32 @@ gfx_render_texture_t* render_texture_new(gfx_t* gfx, int w, int h, gfx_pixel_for
 	if (gfx->type == GFX_TYPE_D3D9) {
 		return (gfx_render_texture_t*)s_d3d9_render_texture_new(gfx, w, h, pixel_format, wrap_mode);
 	} else {
-		gfx_error_raise("Not yet implemented.");
+		// Not yet implemented.
 		return NULL;
 	}
 }
 
-void render_texture_clean_up(gfx_t* gfx, void* render_texture)
+void render_texture_clean_up(gfx_t* gfx, gfx_render_texture_t* render_texture)
 {
 	if (gfx->type == GFX_TYPE_D3D9) {
 		s_d3d9_render_texture_clean_up(gfx, render_texture);
 	} else {
-		gfx_error_raise("Not yet implemented.");
+		// Not yet implemented.
 	}
 }
 
-void gfx_flush_to_texture(gfx_t* gfx, gfx_texture_t* render_texture)
+error_t gfx_flush_to_texture(gfx_t* gfx, gfx_texture_t* render_texture)
 {
+	error_t err;
+
 	if (gfx->type == GFX_TYPE_D3D9) {
-		s_d3d9_gfx_flush_to_texture(gfx, render_texture);
+		err = s_d3d9_gfx_flush_to_texture(gfx, render_texture);
 	} else {
-		gfx_error_raise("Not yet implemented.");
+		err = error_failure("Not yet implemented.");
 	}
 
 	gfx->draw_call_count = 0;
+	return err;
 }
 
-#endif // GFX_IMPLEMENTATION_ONCE
-#endif // GFX_IMPLEMENTATION
+}

@@ -75,7 +75,7 @@
 * [x] time
 * [ ] net
 	* [x] socket
-	* [ ] connection handhsake
+	* [ ] connection handshake
 	* [ ] reliability
 		* [ ] packet ack and resend
 		* [ ] fragmentation and reassembly
@@ -108,9 +108,9 @@
 	* [ ] set position
 	* [ ] set destination + lerp time
 	* [ ] state machine driven
-* [.] ecs
+* [x] ecs
 	* [x] entity and components
-	* [ ] global state
+	* [x] global state
 * [ ] profile
 	* [ ] record capture data
 	* [ ] render capture data to screen

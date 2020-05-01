@@ -59,23 +59,23 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	app_t* app = (app_t*)CUTE_ALLOC(sizeof(app_t), user_allocator_context);
 	CUTE_CHECK_POINTER(app);
 
-	if (!(options & APP_OPTIONS_NO_GFX)) {
+	if (!(options & CUTE_APP_OPTIONS_NO_GFX)) {
 		SDL_InitSubSystem(SDL_INIT_VIDEO);
 	}
 
-	if (!(options & APP_OPTIONS_NO_AUDIO)) {
+	if (!(options & CUTE_APP_OPTIONS_NO_AUDIO)) {
 		SDL_InitSubSystem(SDL_INIT_AUDIO);
 	}
 
 	Uint32 flags = 0;
-	if (options & APP_OPTIONS_GFX_GL) flags |= SDL_WINDOW_OPENGL;
-	if (options & APP_OPTIONS_GFX_GLES) flags |= SDL_WINDOW_OPENGL;
-	if (options & APP_OPTIONS_FULLSCREEN) flags |= SDL_WINDOW_FULLSCREEN;
-	if (options & APP_OPTIONS_RESIZABLE) flags |= SDL_WINDOW_RESIZABLE;
-	if (options & APP_OPTIONS_HIDDEN) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
+	if (options & CUTE_APP_OPTIONS_GFX_GL) flags |= SDL_WINDOW_OPENGL;
+	if (options & CUTE_APP_OPTIONS_GFX_GLES) flags |= SDL_WINDOW_OPENGL;
+	if (options & CUTE_APP_OPTIONS_FULLSCREEN) flags |= SDL_WINDOW_FULLSCREEN;
+	if (options & CUTE_APP_OPTIONS_RESIZABLE) flags |= SDL_WINDOW_RESIZABLE;
+	if (options & CUTE_APP_OPTIONS_HIDDEN) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
 
 	SDL_Window* window;
-	if (options & APP_OPTIONS_WINDOW_POS_CENTERED) {
+	if (options & CUTE_APP_OPTIONS_WINDOW_POS_CENTERED) {
 		window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h, flags);
 	} else {
 		window = SDL_CreateWindow(window_title, x, y, w, h, flags);
@@ -85,25 +85,25 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	app->window = window;
 	app->mem_ctx = user_allocator_context;
 
-	if (options & APP_OPTIONS_GFX_GL) {
+	if (options & CUTE_APP_OPTIONS_GFX_GL) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 	}
 
-	if (options & APP_OPTIONS_GFX_GLES) {
+	if (options & CUTE_APP_OPTIONS_GFX_GLES) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 	}
 
-	if ((options & APP_OPTIONS_GFX_GL) | (options & APP_OPTIONS_GFX_GLES)) {
+	if ((options & CUTE_APP_OPTIONS_GFX_GL) | (options & CUTE_APP_OPTIONS_GFX_GLES)) {
 		SDL_GL_SetSwapInterval(0);
 		SDL_GL_CreateContext(window);
 		gladLoadGLLoader(SDL_GL_GetProcAddress);
 	}
 
-	if (!(options & APP_OPTIONS_NO_AUDIO)) {
+	if (!(options & CUTE_APP_OPTIONS_NO_AUDIO)) {
 		int max_simultaneous_sounds = 5000; // TODO: Expose this.
 		app->cute_sound = cs_make_context(NULL, 44100, 5, 1, max_simultaneous_sounds);
 		if (app->cute_sound) {
@@ -114,7 +114,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		}
 	}
 
-	if (!(options & APP_OPTIONS_NO_NET)) {
+	if (!(options & CUTE_APP_OPTIONS_NO_NET)) {
 		CUTE_CHECK(internal::crypto_init());
 		CUTE_CHECK(internal::net_init());
 	}

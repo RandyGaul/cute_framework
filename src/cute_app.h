@@ -27,22 +27,18 @@
 namespace cute
 {
 
-enum app_options_t
-{
-	APP_OPTIONS_NO_GFX               = (1 << 0),
-	APP_OPTIONS_NO_AUDIO             = (1 << 1),
-	APP_OPTIONS_NO_NET               = (1 << 2),
-	APP_OPTIONS_GFX_GL               = (1 << 3),
-	APP_OPTIONS_GFX_GLES             = (1 << 4),
-	APP_OPTIONS_GFX_D3D9             = (1 << 5),
-	APP_OPTIONS_FULLSCREEN           = (1 << 6),
-	APP_OPTIONS_RESIZABLE            = (1 << 7),
-	APP_OPTIONS_HIDDEN               = (1 << 8),
-	APP_OPTIONS_WINDOW_POS_CENTERED  = (1 << 9),
-};
-
-#define APP_OPTIONS_HEADLESS (APP_OPTIONS_NO_GFX | APP_OPTIONS_HIDDEN)
-#define APP_OPTIONS_SERVER (APP_OPTIONS_NO_GFX | APP_OPTIONS_NO_AUDIO | APP_OPTIONS_HIDDEN)
+#define CUTE_APP_OPTIONS_NO_GFX               (1 << 0)
+#define CUTE_APP_OPTIONS_NO_AUDIO             (1 << 1)
+#define CUTE_APP_OPTIONS_NO_NET               (1 << 2)
+#define CUTE_APP_OPTIONS_GFX_GL               (1 << 3)
+#define CUTE_APP_OPTIONS_GFX_GLES             (1 << 4)
+#define CUTE_APP_OPTIONS_GFX_D3D9             (1 << 5)
+#define CUTE_APP_OPTIONS_FULLSCREEN           (1 << 6)
+#define CUTE_APP_OPTIONS_RESIZABLE            (1 << 7)
+#define CUTE_APP_OPTIONS_HIDDEN               (1 << 8)
+#define CUTE_APP_OPTIONS_WINDOW_POS_CENTERED  (1 << 9)
+#define CUTE_APP_OPTIONS_HEADLESS (CUTE_APP_OPTIONS_NO_GFX | CUTE_APP_OPTIONS_HIDDEN)
+#define CUTE_APP_OPTIONS_SERVER (CUTE_APP_OPTIONS_NO_GFX | CUTE_APP_OPTIONS_NO_AUDIO | CUTE_APP_OPTIONS_HIDDEN)
 
 extern CUTE_API app_t* CUTE_CALL app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL app_destroy(app_t* app);

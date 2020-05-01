@@ -38,7 +38,6 @@ struct list_t
 	list_node_t nodes;
 };
 
-#define CUTE_OFFSET_OF(T, member) ((size_t)(&((T*)0)->member))
 #define CUTE_LIST_NODE(T, member, ptr) ((list_node_t*)((uintptr_t)ptr + CUTE_OFFSET_OF(T, member)))
 #define CUTE_LIST_HOST(T, member, ptr) ((T*)((uintptr_t)ptr - CUTE_OFFSET_OF(T, member)))
 

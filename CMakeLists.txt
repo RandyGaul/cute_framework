@@ -86,6 +86,7 @@ set(CUTE_SRCS
 	src/cute_string.cpp
 	src/cute_string_utils.cpp
 	src/cute_typeless_array.cpp
+	src/cute_gfx.cpp
 
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
@@ -130,6 +131,7 @@ set(CUTE_HDRS
 	src/cute_string_utils.h
 	src/cute_typeless_array.h
 	src/cute_defer.h
+	src/cute_gfx.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
@@ -147,14 +149,23 @@ set(CUTE_HDRS
 	libraries/glad/glad.h
 )
 
+# Handle DirectX 9 link directories.
+if (MSVC)
+	link_directories($ENV{DXSDK_DIR}/Lib/x86)
+endif()
+
 add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS})
 target_link_libraries(cute PRIVATE SDL2 physfs libsodium)
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)
 
+# Handle DirectX 9 include directories.
+if (MSVC)
+	target_include_directories(cute PRIVATE $ENV{DXSDK_DIR}/Include)
+endif()
+
 # Cute unit tests executable (optional, defaulted to also build).
 option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
 if (CUTE_FRAMEWORK_BUILD_TESTS)
-
 	set(CUTE_TEST_SRCS test/main.cpp)
 	set(CUTE_TEST_HDRS
 		test/test_circular_buffer.h
@@ -193,4 +204,12 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tests)
 		set_property(TARGET tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:tests>)
 	endif()
+endif()
+
+# Cute unit tests executable (optional, defaulted to also build).
+option(CUTE_BUILD_SNAKE "Build the Snake demo." ON)
+if (CUTE_BUILD_SNAKE)
+	set(CUTE_SNAKE_SRCS snake/main.cpp)
+	add_executable(snake ${CUTE_SNAKE_SRCS})
+	target_link_libraries(snake PRIVATE cute)
 endif()

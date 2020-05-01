@@ -141,9 +141,11 @@ void* app_get_component(app_t* app, entity_t entity, component_type_t type)
 	return NULL;
 }
 
+//--------------------------------------------------------------------------------------------------
+
 static void s_1(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0)
 {
-	auto fn = (void (*)(app_t* app, float, void*, int))fn_uncasted;
+	auto fn = (void (*)(app_t*, float, void*, int))fn_uncasted;
 	int count = c0.count();
 	fn(app, dt, c0.data(), count);
 }
@@ -269,7 +271,6 @@ error_t app_register_component_type(app_t* app, const component_config_t* compon
 	return error_success();
 }
 
-//--------------------------------------------------------------------------------------------------
 
 error_t app_register_entity_type(app_t* app, kv_t* schema, entity_type_t* entity_type_out)
 {

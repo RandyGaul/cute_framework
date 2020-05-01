@@ -19,26 +19,17 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_ALLOC_H
-#define CUTE_ALLOC_H
+#include <cute_app.h>
+#include <cute_timer.h>
 
-#if !defined(CUTE_ALLOC) && !defined(CUTE_FREE)
-#	ifdef _MSC_VER
-#		define _CRTDBG_MAP_ALLOC
-#		include <crtdbg.h>
-#	endif
-#	include <stdlib.h>
-#	define CUTE_ALLOC(size, user_ctx) malloc(size)
-#	define CUTE_FREE(ptr, user_ctx) free(ptr)
-#endif
+int main(int argc, const char** argv)
+{
+	cute::app_t* app = cute::app_make("Cute Snake", 0, 0, 640, 480, CUTE_APP_OPTIONS_GFX_D3D9 | CUTE_APP_OPTIONS_WINDOW_POS_CENTERED);
 
-#ifdef _MSC_VER
-#	pragma warning(disable:4291)
-#endif
+	while (cute::app_is_running(app)) {
+		float dt = cute::calc_dt();
+		cute::app_update(app, dt);
+	}
 
-enum cute_dummy_enum_t { CUTE_DUMMY_ENUM };
-inline void* operator new(size_t, cute_dummy_enum_t, void* ptr) { return ptr; }
-#define CUTE_PLACEMENT_NEW(ptr) new(CUTE_DUMMY_ENUM, ptr)
-#define CUTE_NEW(T, user_ctx) new(CUTE_DUMMY_ENUM, CUTE_ALLOC(sizeof(T), user_ctx)) T
-
-#endif // CUTE_ALLOC_H
+	return 0;
+}
