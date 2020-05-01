@@ -33,6 +33,14 @@
 
 #if !defined(CUTE_MATH2D_H)
 
+#include <cmath>
+
+#ifndef CUTE_MATH2D_NAMESPACE
+	#define CUTE_MATH2D_NAMESPACE
+#endif
+
+namespace CUTE_MATH2D_NAMESPACE {
+
 // 2d vector
 struct v2
 {
@@ -97,8 +105,6 @@ struct aabb_t
 
 #define CUTE_MATH2D_INLINE inline
 
-#include <cmath>
-
 // scalar ops
 CUTE_MATH2D_INLINE float min(float a, float b) { return a < b ? a : b; }
 CUTE_MATH2D_INLINE float max(float a, float b) { return b < a ? a : b; }
@@ -130,7 +136,7 @@ CUTE_MATH2D_INLINE float det2(v2 a, v2 b) { return a.x * b.y - a.y * b.x; }
 CUTE_MATH2D_INLINE v2 min(v2 a, v2 b) { return v2(min(a.x, b.x), min(a.y, b.y)); }
 CUTE_MATH2D_INLINE v2 max(v2 a, v2 b) { return v2(max(a.x, b.x), max(a.y, b.y)); }
 CUTE_MATH2D_INLINE v2 clamp(v2 a, v2 lo, v2 hi) { return max(lo, min(a, hi)); }
-CUTE_MATH2D_INLINE v2 abs(v2 a ) { return v2(abs(a.x), abs(a.y)); }
+CUTE_MATH2D_INLINE v2 abs(v2 a) { return v2(::abs(a.x), ::abs(a.y)); }
 CUTE_MATH2D_INLINE float hmin(v2 a ) { return min(a.x, a.y); }
 CUTE_MATH2D_INLINE float hmax(v2 a ) { return max(a.x, a.y); }
 CUTE_MATH2D_INLINE float len(v2 a) { return sqrt(dot(a, a)); }
@@ -143,15 +149,15 @@ CUTE_MATH2D_INLINE int operator<(v2 a, v2 b) { return a.x < b.x && a.y < b.y; }
 CUTE_MATH2D_INLINE int operator>(v2 a, v2 b) { return a.x > b.x && a.y > b.y; }
 CUTE_MATH2D_INLINE int operator<=(v2 a, v2 b) { return a.x <= b.x && a.y <= b.y; }
 CUTE_MATH2D_INLINE int operator>=(v2 a, v2 b) { return a.x >= b.x && a.y >= b.y; }
-CUTE_MATH2D_INLINE v2 floor(v2 a) { return v2(floor(a.x), floor(a.y)); }
-CUTE_MATH2D_INLINE v2 round(v2 a) { return v2(round(a.x), round(a.y)); }
+CUTE_MATH2D_INLINE v2 floor(v2 a) { return v2(::floor(a.x), ::floor(a.y)); }
+CUTE_MATH2D_INLINE v2 round(v2 a) { return v2(::round(a.x), ::round(a.y)); }
 CUTE_MATH2D_INLINE v2 invert_safe(v2 a) { return v2(invert_safe(a.x), invert_safe(a.y)); }
 
 CUTE_MATH2D_INLINE int parallel(v2 a, v2 b, float tol)
 {
 	float k = len(a) / len(b);
 	b =  b * k;
-	if (abs(a.x - b.x) < tol && abs(a.y - b.y) < tol ) return 1;
+	if (::abs(a.x - b.x) < tol && ::abs(a.y - b.y) < tol ) return 1;
 	return 0;
 }
 
@@ -231,8 +237,8 @@ CUTE_MATH2D_INLINE aabb_t make_aabb(v2* verts, int count)
 	v2 max = min;
 	for (int i = 0; i < count; ++i)
 	{
-		min = ::min(min, verts[i]);
-		max = ::max(max, verts[i]);
+		min = CUTE_MATH2D_NAMESPACE::min(min, verts[i]);
+		max = CUTE_MATH2D_NAMESPACE::max(max, verts[i]);
 	}
 	return make_aabb(min, max);
 }
@@ -276,7 +282,7 @@ CUTE_MATH2D_INLINE int ray_to_circle(ray_t A, circle_t B, raycast_t* out)
 	if (t >= 0 && t <= A.t)
 	{
 		out->t = t;
-		v2 impact = ::impact(A, t);
+		v2 impact = CUTE_MATH2D_NAMESPACE::impact(A, t);
 		out->n = norm(impact - p);
 		return 1;
 	}
@@ -304,6 +310,8 @@ CUTE_MATH2D_INLINE int ray_to_aabb(ray_t A, aabb_t B, raycast_t* out)
 		return 1;
 	}
 	return 0;
+}
+
 }
 
 #define CUTE_MATH2D_H

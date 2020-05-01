@@ -38,14 +38,14 @@
 	* [x] directory/archive mounting
 * [ ] graphics
 	* [ ] sprite batching
-	* [ ] shader
-	* [ ] vertex/index buffers
+	* [x] shader
+	* [x] vertex/index buffers
 	* [ ] blend states
 	* [ ] fbo (full-screen effect)
 	* [ ] render to texture
-	* [ ] debug rendering (line, shape, frames)
-	* [ ] draw calls
-	* [ ] projection
+	* [x] debug rendering (line, shape, frames)
+	* [x] draw calls
+	* [x] projection
 	* [ ] textures, wrap mode
 	* [ ] scissor
 	* [ ] viewport, resizing
@@ -56,9 +56,7 @@
 	* [ ] pixel upscale shader
 	* [ ] universal MVP in shaders
 	* [ ] CPU culling with DBVH
-	* [ ] network simulator
-	* [ ] matrix helpers
-	* [ ] d3d9
+	* [x] d3d9
 	* [ ] GL 3.2
 	* [ ] GLES 2.0
 	* [ ] color and helpers

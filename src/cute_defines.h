@@ -30,6 +30,8 @@
 #	define _CRT_NONSTDC_NO_DEPRECATE
 #endif
 
+#include <stdint.h>
+
 #ifndef NOMINMAX
 #	define NOMINMAX
 #endif
@@ -54,8 +56,6 @@
 
 #define CUTE_INLINE inline
 
-#include <stdint.h>
-
 #define CUTE_KB 1024
 #define CUTE_MB (CUTE_KB * CUTE_KB)
 #define CUTE_GB (CUTE_MB * CUTE_MB)
@@ -67,7 +67,7 @@
 #define CUTE_STRINGIZE_INTERNAL(...) #__VA_ARGS__
 #define CUTE_STRINGIZE(...) CUTE_STRINGIZE_INTERNAL(__VA_ARGS__)
 
-#define CUTE_OFFSET_OF(T, member) ((size_t)(&((T*)0)->member))
+#define CUTE_OFFSET_OF(T, member) ((size_t)((uintptr_t)(&(((T*)0)->member))))
 
 namespace cute
 {

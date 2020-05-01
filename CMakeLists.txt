@@ -87,6 +87,8 @@ set(CUTE_SRCS
 	src/cute_string_utils.cpp
 	src/cute_typeless_array.cpp
 	src/cute_gfx.cpp
+	src/cute_math.cpp
+	src/cute_sprite.cpp
 
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
@@ -132,6 +134,8 @@ set(CUTE_HDRS
 	src/cute_typeless_array.h
 	src/cute_defer.h
 	src/cute_gfx.h
+	src/cute_math.h
+	src/cute_sprite.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
@@ -151,7 +155,7 @@ set(CUTE_HDRS
 
 # Handle DirectX 9 link directories.
 if (MSVC)
-	link_directories($ENV{DXSDK_DIR}/Lib/x86)
+	link_directories($ENV{DXSDK_DIR}/Lib/x64)
 endif()
 
 add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS})

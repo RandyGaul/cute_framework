@@ -50,11 +50,11 @@ enum gfx_index_buffer_type_t
 struct gfx_vertex_buffer_params_t;
 struct gfx_vertex_buffer_t;
 
-void gfx_vertex_buffer_params_add_attribute(gfx_vertex_buffer_params_t* params, int num_components, int offset);
-gfx_vertex_buffer_t* gfx_vertex_buffer_new(gfx_t* gfx, gfx_vertex_buffer_params_t* params);
-void gfx_vertex_buffer_free(gfx_t* gfx, gfx_vertex_buffer_t* buffer);
-error_t gfx_vertex_buffer_map(gfx_t* gfx, gfx_vertex_buffer_t* buffer, int vertex_count, void** vertices, int index_count = 0, void** indices = NULL);
-error_t gfx_vertex_buffer_unmap(gfx_t* gfx, gfx_vertex_buffer_t* buffer);
+CUTE_API void CUTE_CALL gfx_vertex_buffer_params_add_attribute(gfx_vertex_buffer_params_t* params, int num_components, int offset);
+CUTE_API gfx_vertex_buffer_t* CUTE_CALL gfx_vertex_buffer_new(gfx_t* gfx, gfx_vertex_buffer_params_t* params);
+CUTE_API void CUTE_CALL gfx_vertex_buffer_free(gfx_t* gfx, gfx_vertex_buffer_t* buffer);
+CUTE_API error_t CUTE_CALL gfx_vertex_buffer_map(gfx_t* gfx, gfx_vertex_buffer_t* buffer, int vertex_count, void** vertices, int index_count = 0, void** indices = NULL);
+CUTE_API error_t CUTE_CALL gfx_vertex_buffer_unmap(gfx_t* gfx, gfx_vertex_buffer_t* buffer);
 
 // -------------------------------------------------------------------------------------------------
 // 4x4 matrix for setting a projection matrix in the graphics pipeline.
@@ -67,8 +67,8 @@ struct gfx_matrix_t
 	float data[16];
 };
 
-void matrix_identity(gfx_matrix_t* m);
-void matrix_ortho_2d(gfx_matrix_t* m, float w, float h, float x, float y);
+CUTE_API void CUTE_CALL matrix_identity(gfx_matrix_t* m);
+CUTE_API void CUTE_CALL matrix_ortho_2d(gfx_matrix_t* m, float w, float h, float x, float y);
 
 // -------------------------------------------------------------------------------------------------
 // Textures.
@@ -96,10 +96,10 @@ enum gfx_wrap_mode_t
 	GFX_WRAP_MODE_REPEAT_MIRRORED,
 };
 
-gfx_texture_t *texture_create(gfx_t* gfx, int w, int h, void* pixels, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode);
-void texture_clean_up(gfx_t* gfx, gfx_texture_t* tex);
-gfx_render_texture_t* render_texture_new(gfx_t* gfx, int w, int h, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode);
-void render_texture_clean_up(gfx_t* gfx, gfx_render_texture_t* render_texture);
+CUTE_API gfx_texture_t* CUTE_CALL texture_create(gfx_t* gfx, int w, int h, void* pixels, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode);
+CUTE_API void CUTE_CALL texture_clean_up(gfx_t* gfx, gfx_texture_t* tex);
+CUTE_API gfx_render_texture_t* CUTE_CALL render_texture_new(gfx_t* gfx, int w, int h, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode);
+CUTE_API void CUTE_CALL render_texture_clean_up(gfx_t* gfx, gfx_render_texture_t* render_texture);
 
 // -------------------------------------------------------------------------------------------------
 // Shaders and uniforms.
@@ -124,11 +124,11 @@ enum gfx_uniform_type_t
 	GFX_UNIFORM_TYPE_MATRIX,
 };
 
-gfx_shader_t* gfx_shader_new(gfx_t* gfx, gfx_vertex_buffer_t* buffer, const char* vertex_shader, const char* pixel_shader);
-void gfx_shader_free(gfx_t* gfx, gfx_shader_t* shader);
-error_t gfx_shader_set_uniform(gfx_t* gfx, gfx_shader_t* shader, const char* uniform_name, void* value, gfx_uniform_type_t type);
-error_t gfx_shader_set_mvp(gfx_t* gfx, gfx_shader_t* shader, gfx_matrix_t* mvp);
-error_t gfx_shader_set_screen_wh(gfx_t* gfx, gfx_shader_t* shader, float w, float h);
+CUTE_API gfx_shader_t* CUTE_CALL gfx_shader_new(gfx_t* gfx, gfx_vertex_buffer_t* buffer, const char* vertex_shader, const char* pixel_shader);
+CUTE_API void CUTE_CALL gfx_shader_free(gfx_t* gfx, gfx_shader_t* shader);
+CUTE_API error_t CUTE_CALL gfx_shader_set_uniform(gfx_t* gfx, gfx_shader_t* shader, const char* uniform_name, void* value, gfx_uniform_type_t type);
+CUTE_API error_t CUTE_CALL gfx_shader_set_mvp(gfx_t* gfx, gfx_shader_t* shader, gfx_matrix_t* mvp);
+CUTE_API error_t CUTE_CALL gfx_shader_set_screen_wh(gfx_t* gfx, gfx_shader_t* shader, float w, float h);
 
 // -------------------------------------------------------------------------------------------------
 // Draw calls.
@@ -158,11 +158,11 @@ struct gfx_scissor_t
 // Draw call and uniform can *not* store strings if rendering is moved off the main thread,
 // otherwise the pointers will dangle. Copy strings into local buffers or something!
 
-void gfx_draw_call_set_mvp(gfx_draw_call_t* call, gfx_matrix_t* mvp);
-void gfx_draw_call_set_scissor_box(gfx_draw_call_t* call, gfx_scissor_t* scissor);
-void gfx_draw_call_add_texture(gfx_draw_call_t* call, gfx_texture_t* texture, const char* uniform_name);
-error_t gfx_draw_call_add_verts(gfx_t* gfx, gfx_draw_call_t* call, void* verts, int vert_count);
-void gfx_draw_call_add_uniform(gfx_draw_call_t* call, const char* uniform_name, void* value, gfx_uniform_type_t type);
+CUTE_API void CUTE_CALL gfx_draw_call_set_mvp(gfx_draw_call_t* call, gfx_matrix_t* mvp);
+CUTE_API void CUTE_CALL gfx_draw_call_set_scissor_box(gfx_draw_call_t* call, gfx_scissor_t* scissor);
+CUTE_API void CUTE_CALL gfx_draw_call_add_texture(gfx_draw_call_t* call, gfx_texture_t* texture, const char* uniform_name);
+CUTE_API error_t CUTE_CALL gfx_draw_call_add_verts(gfx_t* gfx, gfx_draw_call_t* call, void* verts, int vert_count);
+CUTE_API void CUTE_CALL gfx_draw_call_add_uniform(gfx_draw_call_t* call, const char* uniform_name, void* value, gfx_uniform_type_t type);
 
 // -------------------------------------------------------------------------------------------------
 // `gfx_t` creation and management functions.
@@ -185,28 +185,21 @@ enum gfx_upscale_maximum_t
 
 struct gfx_t;
 
-gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, int screen_h, int tex_w, int tex_h, gfx_upscale_maximum_t upscale, void* platform_handle = NULL, void* user_mem_ctx = NULL);
-void gfx_clean_up(gfx_t* gfx);
-void gfx_push_draw_call(gfx_t* gfx, gfx_draw_call_t* call);
-error_t gfx_flush(gfx_t* gfx);
-error_t gfx_flush_to_texture(gfx_t* gfx, gfx_texture_t* render_texture);
-void gfx_set_alpha(gfx_t* gfx, int one_for_enabled);
-gfx_type_t gfx_type(gfx_t* gfx);
-void gfx_set_clear_color(gfx_t* gfx, int color);
+CUTE_API gfx_t* CUTE_CALL gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, int screen_h, int tex_w, int tex_h, gfx_upscale_maximum_t upscale, void* platform_handle = NULL, void* user_mem_ctx = NULL);
+CUTE_API void CUTE_CALL gfx_clean_up(gfx_t* gfx);
+CUTE_API void CUTE_CALL gfx_push_draw_call(gfx_t* gfx, gfx_draw_call_t* call);
+CUTE_API error_t CUTE_CALL gfx_flush(gfx_t* gfx);
+CUTE_API error_t CUTE_CALL gfx_flush_to_texture(gfx_t* gfx, gfx_texture_t* render_texture);
+CUTE_API void CUTE_CALL gfx_set_alpha(gfx_t* gfx, int one_for_enabled);
+CUTE_API gfx_type_t CUTE_CALL gfx_type(gfx_t* gfx);
+CUTE_API void CUTE_CALL gfx_set_clear_color(gfx_t* gfx, int color);
 
-// texture wrap modes
-// ortho 2d
-// perspective
-// mul
-// identity
-// copy
-
-void gfx_line_mvp(gfx_t* gfx, gfx_matrix_t* projection);
-void gfx_line_color(gfx_t* gfx, float r, float g, float b);
-void gfx_line(gfx_t* gfx, float ax, float ay, float bx, float by);
-void gfx_line_width(gfx_t* gfx, float width);
-void gfx_line_depth_test(gfx_t* gfx, int zero_for_off);
-void gfx_line_submit_draw_call(gfx_t* gfx);
+CUTE_API void CUTE_CALL gfx_line_mvp(gfx_t* gfx, gfx_matrix_t* projection);
+CUTE_API void CUTE_CALL gfx_line_color(gfx_t* gfx, float r, float g, float b);
+CUTE_API void CUTE_CALL gfx_line(gfx_t* gfx, float ax, float ay, float bx, float by);
+CUTE_API void CUTE_CALL gfx_line_width(gfx_t* gfx, float width);
+CUTE_API void CUTE_CALL gfx_line_depth_test(gfx_t* gfx, int zero_for_off);
+CUTE_API void CUTE_CALL gfx_line_submit_draw_call(gfx_t* gfx);
 
 // make/clean up framebuffer
 
@@ -216,7 +209,6 @@ void gfx_line_submit_draw_call(gfx_t* gfx);
 #define CUTE_GFX_VERTEX_BUFFER_MAX_ATTRIBUTES (16)
 #define CUTE_GFX_DRAW_CALL_MAX_TEXTURES (8)
 #define CUTE_GFX_DRAW_CALL_MAX_UNIFORMS (16)
-#define CUTE_GFX_OFFEST_OF(T, member) ((int)((uintptr_t)(&(((T*)0)->member))))
 
 struct gfx_vertex_buffer_params_t
 {

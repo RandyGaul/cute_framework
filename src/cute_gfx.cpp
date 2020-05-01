@@ -104,8 +104,6 @@
 			ctx->capacity = new_capacity; \
 		} \
 	} while (0)
-	
-#define GFX_STR(X) #X
 // HACKS END
 
 namespace cute
@@ -1578,7 +1576,7 @@ gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, i
 
 	// Create upscale shader for the full screen render texture.
 	// TODO: switch on type for shader code?
-	const char* vs = GFX_STR(
+	const char* vs = CUTE_STRINGIZE(
 		struct vertex_t
 		{
 			float2 pos : POSITION0;
@@ -1608,7 +1606,7 @@ gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, i
 		}
 	);
 
-	const char* ps = GFX_STR(
+	const char* ps = CUTE_STRINGIZE(
 		struct interp_t
 		{
 			float4 posH : POSITION0;
@@ -1642,7 +1640,7 @@ gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, i
 	gfx->line_buffer = gfx_vertex_buffer_new(gfx, &line_buffer_params);
 
 	// TODO: switch on type for shader code?
-	const char* line_vs = GFX_STR(
+	const char* line_vs = CUTE_STRINGIZE(
 		struct vertex_t
 		{
 			float2 pos : POSITION0;
@@ -1670,7 +1668,7 @@ gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, i
 		}
 	);
 
-	const char* line_ps = GFX_STR(
+	const char* line_ps = CUTE_STRINGIZE(
 		struct interp_t
 		{
 			float4 posH : POSITION0;
