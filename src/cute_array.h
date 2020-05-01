@@ -73,6 +73,8 @@ struct array
 	void unordered_remove(int index);
 	void clear();
 	void ensure_capacity(int num_elements);
+	void ensure_count(int count);
+	void set_count(int count);
 	void steal_from(array<T>* steal_from_me);
 
 	int capacity() const;
@@ -237,6 +239,20 @@ void array<T>::ensure_capacity(int num_elements)
 		m_items = new_items;
 		m_capacity = new_capacity;
 	}
+}
+
+template <typename T>
+void array<T>::set_count(int count)
+{
+	CUTE_ASSERT(count < m_capacity);
+	m_count = count;
+}
+
+template <typename T>
+void array<T>::ensure_count(int count)
+{
+	ensure_capacity(count);
+	m_count = count;
 }
 
 template <typename T>

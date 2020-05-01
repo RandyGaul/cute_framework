@@ -1277,7 +1277,7 @@ void matrix_ortho_2d(gfx_matrix_t* projection, float w, float h, float x, float 
 	projection->data[13] = -y * projection->data[5];
 }
 
-gfx_texture_t *texture_create(gfx_t* gfx, int w, int h, void* pixels, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode)
+gfx_texture_t *gfx_texture_create(gfx_t* gfx, int w, int h, void* pixels, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode)
 {
 	gfx_texture_params_t params;
 	params.w = w;
@@ -1294,7 +1294,7 @@ gfx_texture_t *texture_create(gfx_t* gfx, int w, int h, void* pixels, gfx_pixel_
 	}
 }
 
-void texture_clean_up(gfx_t* gfx, gfx_texture_t* tex)
+void gfx_texture_clean_up(gfx_t* gfx, gfx_texture_t* tex)
 {
 	if (gfx->type == GFX_TYPE_D3D9) {
 		texture_clean_up_d3d9(tex);
@@ -1541,7 +1541,7 @@ gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, i
 	}
 
 	// Setup the render target texture.
-	gfx->render_texture = render_texture_new(gfx, tex_w, tex_h, pixel_format, GFX_WRAP_MODE_REPEAT);
+	gfx->render_texture = gfx_render_texture_new(gfx, tex_w, tex_h, pixel_format, GFX_WRAP_MODE_REPEAT);
 	gfx_vertex_buffer_params_t vertex_params;
 	vertex_params.type = GFX_VERTEX_BUFFER_TYPE_STATIC;
 	vertex_params.stride = sizeof(gfx_vertex_t);
@@ -1825,7 +1825,7 @@ void gfx_line_submit_draw_call(gfx_t* gfx)
 	gfx->line_vert_count = 0;
 }
 
-gfx_render_texture_t* render_texture_new(gfx_t* gfx, int w, int h, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode)
+gfx_render_texture_t* gfx_render_texture_new(gfx_t* gfx, int w, int h, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode)
 {
 	if (gfx->type == GFX_TYPE_D3D9) {
 		return (gfx_render_texture_t*)s_d3d9_render_texture_new(gfx, w, h, pixel_format, wrap_mode);
@@ -1835,7 +1835,7 @@ gfx_render_texture_t* render_texture_new(gfx_t* gfx, int w, int h, gfx_pixel_for
 	}
 }
 
-void render_texture_clean_up(gfx_t* gfx, gfx_render_texture_t* render_texture)
+void gfx_render_texture_clean_up(gfx_t* gfx, gfx_render_texture_t* render_texture)
 {
 	if (gfx->type == GFX_TYPE_D3D9) {
 		s_d3d9_render_texture_clean_up(gfx, render_texture);

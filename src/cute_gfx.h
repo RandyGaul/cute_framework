@@ -96,10 +96,10 @@ enum gfx_wrap_mode_t
 	GFX_WRAP_MODE_REPEAT_MIRRORED,
 };
 
-CUTE_API gfx_texture_t* CUTE_CALL texture_create(gfx_t* gfx, int w, int h, void* pixels, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode);
-CUTE_API void CUTE_CALL texture_clean_up(gfx_t* gfx, gfx_texture_t* tex);
-CUTE_API gfx_render_texture_t* CUTE_CALL render_texture_new(gfx_t* gfx, int w, int h, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode);
-CUTE_API void CUTE_CALL render_texture_clean_up(gfx_t* gfx, gfx_render_texture_t* render_texture);
+CUTE_API gfx_texture_t* CUTE_CALL gfx_texture_create(gfx_t* gfx, int w, int h, void* pixels, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode);
+CUTE_API void CUTE_CALL gfx_texture_clean_up(gfx_t* gfx, gfx_texture_t* tex);
+CUTE_API gfx_render_texture_t* CUTE_CALL gfx_render_texture_new(gfx_t* gfx, int w, int h, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode);
+CUTE_API void CUTE_CALL gfx_render_texture_clean_up(gfx_t* gfx, gfx_render_texture_t* render_texture);
 
 // -------------------------------------------------------------------------------------------------
 // Shaders and uniforms.

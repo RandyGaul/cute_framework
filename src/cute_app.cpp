@@ -124,7 +124,9 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		app->threadpool = threadpool_create(num_cores, user_allocator_context);
 	}
 
-	CUTE_CHECK(internal::file_system_init(argv0));
+	if (internal::file_system_init(argv0).is_error()) {
+		goto cute_error;
+	}
 
 	//app->entity_allocator = ecs_allocator_make(sizeof(entity_t), 
 

@@ -27,7 +27,7 @@ namespace cute
 
 namespace internal
 {
-	int file_system_init(const char* argv0);
+	error_t file_system_init(const char* argv0);
 	void file_system_destroy();
 }
 
