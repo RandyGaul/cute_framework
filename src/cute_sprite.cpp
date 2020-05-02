@@ -29,6 +29,7 @@
 #include <cute_alloc.h>
 #include <cute_array.h>
 #include <cute_file_system.h>
+#include <cute_lru_cache.h>
 
 namespace cute
 {
@@ -45,6 +46,16 @@ enum sprite_batch_mode_t
 	SPRITE_BATCH_MODE_LRU,
 	SPRITE_BATCH_MODE_CUSTOM,
 };
+
+struct cached_image_t
+{
+	uint64_t id;
+	const char* path;
+	size_t size;
+	cp_image_t img;
+};
+
+using sprite_cache_t = lru_cache<uint64_t, cached_image_t*>;
 
 struct sprite_batch_t
 {
@@ -68,48 +79,12 @@ struct sprite_batch_t
 
 	const char** image_paths = NULL;
 	int image_paths_count = 0;
-	size_t cache_size_in_bytes = 0;
+	size_t cache_capacity = 0;
+	size_t cache_used = 0;
+	sprite_cache_t* cache = NULL;
 
 	void* mem_ctx = NULL;
 };
-
-//--------------------------------------------------------------------------------------------------
-
-sprite_batch_t* sprite_batch_make(gfx_t* gfx, int screen_w, int screen_h, void* mem_ctx)
-{
-	sprite_batch_t* sb = CUTE_NEW(sprite_batch_t, mem_ctx);
-	if (!sb) return NULL;
-
-	sb->w = (float)screen_w;
-	sb->h = (float)screen_h;
-	sb->gfx = gfx;
-	sb->mem_ctx = mem_ctx;
-	return sb;
-}
-
-void sprite_batch_destroy(sprite_batch_t* sb)
-{
-	spritebatch_term(&sb->sb);
-	sb->~sprite_batch_t();
-	CUTE_FREE(sb, sb->mem_ctx);
-}
-
-void sprite_batch_push(sprite_batch_t* sb, sprite_t sprite)
-{
-	sb->sprites.add(sprite);
-}
-
-error_t sprite_batch_flush(sprite_batch_t* sb)
-{
-	if (spritebatch_defrag(&sb->sb)) {
-		return error_failure("`spritebatch_defrag` failed.");
-	}
-	spritebatch_tick(&sb->sb);
-	if (spritebatch_flush(&sb->sb)) {
-		return error_failure("`spritebatch_flush` failed.");
-	}
-	return error_success();
-}
 
 //--------------------------------------------------------------------------------------------------
 // Internal functions.
@@ -325,6 +300,62 @@ static gfx_shader_t* s_load_shader(sprite_batch_t* sb, sprite_shader_type_t type
 	return shader;
 }
 
+static void s_free_cached_image(sprite_batch_t* sb, cached_image_t* cached_image)
+{
+	CUTE_FREE(cached_image->img.pix, NULL);
+	CUTE_FREE(cached_image, sb->mem_ctx);
+}
+
+static void s_free_all_images_in_cache(sprite_batch_t* sb)
+{
+	list_t* list = sb->cache->list();
+	for (list_node_t* n = list_begin(list); n != list_end(list); n = n->next) {
+		cached_image_t* cached_image = *sprite_cache_t::node_to_item(n);
+		s_free_cached_image(sb, cached_image);
+	}
+}
+
+//--------------------------------------------------------------------------------------------------
+
+sprite_batch_t* sprite_batch_make(gfx_t* gfx, int screen_w, int screen_h, void* mem_ctx)
+{
+	sprite_batch_t* sb = CUTE_NEW(sprite_batch_t, mem_ctx);
+	if (!sb) return NULL;
+
+	sb->w = (float)screen_w;
+	sb->h = (float)screen_h;
+	sb->gfx = gfx;
+	sb->mem_ctx = mem_ctx;
+	return sb;
+}
+
+void sprite_batch_destroy(sprite_batch_t* sb)
+{
+	spritebatch_term(&sb->sb);
+	s_free_all_images_in_cache(sb);
+	sb->cache->~sprite_cache_t();
+	CUTE_FREE(sb->cache, sb->mem_ctx);
+	sb->~sprite_batch_t();
+	CUTE_FREE(sb, sb->mem_ctx);
+}
+
+void sprite_batch_push(sprite_batch_t* sb, sprite_t sprite)
+{
+	sb->sprites.add(sprite);
+}
+
+error_t sprite_batch_flush(sprite_batch_t* sb)
+{
+	if (spritebatch_defrag(&sb->sb)) {
+		return error_failure("`spritebatch_defrag` failed.");
+	}
+	spritebatch_tick(&sb->sb);
+	if (spritebatch_flush(&sb->sb)) {
+		return error_failure("`spritebatch_flush` failed.");
+	}
+	return error_success();
+}
+
 //--------------------------------------------------------------------------------------------------
 // spritebatch_t callbacks.
 
@@ -368,12 +399,6 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	for (int i = 0; i < count; ++i)
 	{
 		spritebatch_sprite_t* s = sprites + i;
-
-		typedef struct v2
-		{
-			float x;
-			float y;
-		} v2;
 
 		v2 quad[] = {
 			{ -0.5f,  0.5f },
@@ -534,6 +559,10 @@ void sprite_batch_outlines_use_border(sprite_batch_t* sb, int use_border)
 
 error_t sprite_batch_enable_disk_LRU_cache(sprite_batch_t* sb, const char** image_paths, int image_paths_count, size_t cache_size_in_bytes)
 {
+	if (sb->mode != SPRITE_BATCH_MODE_UNINITIALIZED) {
+		return error_failure("The sprite batch is already initialized.");
+	}
+
 	spritebatch_config_t config;
 	spritebatch_set_default_config(&config);
 	config.atlas_use_border_pixels = 1;
@@ -550,7 +579,8 @@ error_t sprite_batch_enable_disk_LRU_cache(sprite_batch_t* sb, const char** imag
 	sb->mode = SPRITE_BATCH_MODE_LRU;
 	sb->image_paths = image_paths;
 	sb->image_paths_count = image_paths_count;
-	sb->cache_size_in_bytes = cache_size_in_bytes;
+	sb->cache_capacity = cache_size_in_bytes;
+	sb->cache = CUTE_NEW(sprite_cache_t, sb->mem_ctx)(256, sb->mem_ctx);
 
 	return error_success();
 }
@@ -561,7 +591,41 @@ error_t sprite_batch_LRU_cache_prefetch(sprite_batch_t* sb, uint64_t id)
 		return error_failure("Sprite batch is not in `SPRITE_BATCH_MODE_LRU` mode -- please call `sprite_batch_enable_disk_LRU_cache` to use this function.");
 	}
 
+	const char* path = sb->image_paths[id];
+	void* data;
+	size_t sz;
+	error_t err = file_system_read_entire_file_to_memory(path, &data, &sz, sb->mem_ctx);
+	if (err.is_error()) return err;
+
+	cp_image_t img = cp_load_png_mem(data, (int)sz);
+	CUTE_FREE(data, sb->mem_ctx);
+
+	if (sz > sb->cache_capacity) {
+		CUTE_FREE(img.pix, NULL);
+		return error_failure("The entire image is larger than the cache.");
+	}
+
+	while (sz + sb->cache_used > sb->cache_capacity) {
+		cached_image_t* cached_image = *sb->cache->lru();
+		sb->cache->remove(cached_image->id);
+		sb->cache_used -= cached_image->size;
+		s_free_cached_image(sb, cached_image);
+	}
+
+	cached_image_t* cached_image = CUTE_NEW(cached_image_t, sb->mem_ctx);
+	cached_image->id = id;
+	cached_image->path = path;
+	cached_image->size = sz;
+	cached_image->img = img;
+	sb->cache->insert(cached_image->id, cached_image);
+
 	return error_success();
+}
+
+void sprite_batch_LRU_cache_clear(sprite_batch_t* sb)
+{
+	s_free_all_images_in_cache(sb);
+	sb->cache->clear();
 }
 
 error_t sprite_batch_enable_custom_pixel_loader(sprite_batch_t* sb, void (*get_pixels_fn)(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata), void* udata)

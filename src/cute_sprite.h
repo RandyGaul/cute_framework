@@ -124,6 +124,11 @@ CUTE_API error_t CUTE_CALL sprite_batch_enable_disk_LRU_cache(sprite_batch_t* sb
 CUTE_API error_t CUTE_CALL sprite_batch_LRU_cache_prefetch(sprite_batch_t* sb, uint64_t id);
 
 /**
+ * Unloads all images in the cache and frees up they RAM used.
+ */
+CUTE_API void CUTE_CALL sprite_batch_LRU_cache_clear(sprite_batch_t* sb);
+
+/**
  * This is an advanced function. It is recommended to use `sprite_batch_enable_disk_LRU_cache`, unless you want to handle
  * memory in a custom way. `get_pixels_fn` will be called periodically from within `sprite_batch_flush` whenever access to
  * pixels in RAM are needed to construct internal texture atlases to be sent to the GPU.

@@ -57,7 +57,7 @@ struct dictionary
 	void swap(int index_a, int index_b);
 
 private:
-	hashtable_t table;
+	hashtable_t m_table;
 };
 
 // -------------------------------------------------------------------------------------------------
@@ -65,19 +65,19 @@ private:
 template <typename K, typename T>
 dictionary<K, T>::dictionary()
 {
-	hashtable_init(&table, sizeof(K), sizeof(T), 256, NULL);
+	hashtable_init(&m_table, sizeof(K), sizeof(T), 256, NULL);
 }
 
 template <typename K, typename T>
 dictionary<K, T>::dictionary(void* user_allocator_context)
 {
-	hashtable_init(&table, sizeof(K), sizeof(T), 256, user_allocator_context);
+	hashtable_init(&m_table, sizeof(K), sizeof(T), 256, user_allocator_context);
 }
 
 template <typename K, typename T>
 dictionary<K, T>::dictionary(int capacity, void* user_allocator_context)
 {
-	hashtable_init(&table, sizeof(K), sizeof(T), capacity, user_allocator_context);
+	hashtable_init(&m_table, sizeof(K), sizeof(T), capacity, user_allocator_context);
 }
 
 template <typename K, typename T>
@@ -86,25 +86,25 @@ dictionary<K, T>::~dictionary()
 	T* items_ptr = items();
 	int items_count = count();
 	for (int i = 0; i < items_count; ++i) (items_ptr + i)->~T();
-	hashtable_cleanup(&table);
+	hashtable_cleanup(&m_table);
 }
 
 template <typename K, typename T>
 T* dictionary<K, T>::find(const K& key)
 {
-	return (T*)hashtable_find(&table, &key);
+	return (T*)hashtable_find(&m_table, &key);
 }
 
 template <typename K, typename T>
 const T* dictionary<K, T>::find(const K& key) const
 {
-	return (const T*)hashtable_find(&table, &key);
+	return (const T*)hashtable_find(&m_table, &key);
 }
 
 template <typename K, typename T>
 error_t dictionary<K, T>::find(const K& key, T* val_out)
 {
-	T* ptr = (T*)hashtable_find(&table, &key);
+	T* ptr = (T*)hashtable_find(&m_table, &key);
 	if (ptr) {
 		*val_out = *ptr;
 		return error_success();
@@ -116,7 +116,7 @@ error_t dictionary<K, T>::find(const K& key, T* val_out)
 template <typename K, typename T>
 error_t dictionary<K, T>::find(const K& key, T* val_out) const
 {
-	const T* ptr = (const T*)hashtable_find(&table, &key);
+	const T* ptr = (const T*)hashtable_find(&m_table, &key);
 	if (ptr) {
 		*val_out = *ptr;
 		return error_success();
@@ -128,7 +128,7 @@ error_t dictionary<K, T>::find(const K& key, T* val_out) const
 template <typename K, typename T>
 T* dictionary<K, T>::insert(const K& key)
 {
-	T* slot = (T*)hashtable_insert(&table, &key, NULL);
+	T* slot = (T*)hashtable_insert(&m_table, &key, NULL);
 	CUTE_PLACEMENT_NEW(slot) T();
 	return slot;
 }
@@ -136,7 +136,7 @@ T* dictionary<K, T>::insert(const K& key)
 template <typename K, typename T>
 T* dictionary<K, T>::insert(const K& key, const T& val)
 {
-	T* slot = (T*)hashtable_insert(&table, &key, &val);
+	T* slot = (T*)hashtable_insert(&m_table, &key, &val);
 	CUTE_PLACEMENT_NEW(slot) T(val);
 	return slot;
 }
@@ -146,49 +146,49 @@ void dictionary<K, T>::remove(const K& key)
 {
 	T* slot = find(key);
 	slot->~T();
-	hashtable_remove(&table, &key);
+	hashtable_remove(&m_table, &key);
 }
 
 template <typename K, typename T>
 void dictionary<K, T>::clear()
 {
-	hashtable_clear(&table);
+	hashtable_clear(&m_table);
 }
 
 template <typename K, typename T>
 int dictionary<K, T>::count() const
 {
-	return hashtable_count(&table);
+	return hashtable_count(&m_table);
 }
 
 template <typename K, typename T>
 T* dictionary<K, T>::items()
 {
-	return (T*)hashtable_items(&table);
+	return (T*)hashtable_items(&m_table);
 }
 
 template <typename K, typename T>
 const T* dictionary<K, T>::items() const
 {
-	return (const T*)hashtable_items(&table);
+	return (const T*)hashtable_items(&m_table);
 }
 
 template <typename K, typename T>
 K* dictionary<K, T>::keys()
 {
-	return (K*)hashtable_keys(&table);
+	return (K*)hashtable_keys(&m_table);
 }
 
 template <typename K, typename T>
 const K* dictionary<K, T>::keys() const
 {
-	return (const K*)hashtable_keys(&table);
+	return (const K*)hashtable_keys(&m_table);
 }
 
 template <typename K, typename T>
 void dictionary<K, T>::swap(int index_a, int index_b)
 {
-	hashtable_swap(&table, index_a, index_b);
+	hashtable_swap(&m_table, index_a, index_b);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -253,59 +253,59 @@ struct dictionary<const char*, T>
 	void swap(int index_a, int index_b);
 
 private:
-	hashtable_t table;
+	hashtable_t m_table;
 };
 
 template <typename T>
 dictionary<const char*, T>::dictionary()
 {
-	hashtable_init(&table, sizeof(dictionary_string_block_t), sizeof(T), 256, NULL);
+	hashtable_init(&m_table, sizeof(dictionary_string_block_t), sizeof(T), 256, NULL);
 }
 
 template <typename T>
 dictionary<const char*, T>::dictionary(void* user_allocator_context)
 {
-	hashtable_init(&table, sizeof(dictionary_string_block_t), sizeof(T), 256, user_allocator_context);
+	hashtable_init(&m_table, sizeof(dictionary_string_block_t), sizeof(T), 256, user_allocator_context);
 }
 
 template <typename T>
 dictionary<const char*, T>::dictionary(int capacity, void* user_allocator_context)
 {
-	hashtable_init(&table, sizeof(dictionary_string_block_t), sizeof(T), capacity, user_allocator_context);
+	hashtable_init(&m_table, sizeof(dictionary_string_block_t), sizeof(T), capacity, user_allocator_context);
 }
 
 template <typename T>
 dictionary<const char*, T>::~dictionary()
 {
-	hashtable_cleanup(&table);
+	hashtable_cleanup(&m_table);
 }
 
 template <typename T>
 T* dictionary<const char*, T>::find(const char* key)
 {
 	dictionary_string_block_t block = s_dictionary_make_block(key);
-	return (T*)hashtable_find(&table, &block);
+	return (T*)hashtable_find(&m_table, &block);
 }
 
 template <typename T>
 const T* dictionary<const char*, T>::find(const char* key) const
 {
 	dictionary_string_block_t block = s_dictionary_make_block(key);
-	return (T*)hashtable_find(&table, &block);
+	return (T*)hashtable_find(&m_table, &block);
 }
 
 template <typename T>
 T* dictionary<const char*, T>::find(const char* key, size_t key_len)
 {
 	dictionary_string_block_t block = s_dictionary_make_block(key, key_len);
-	return (T*)hashtable_find(&table, &block);
+	return (T*)hashtable_find(&m_table, &block);
 }
 
 template <typename T>
 const T* dictionary<const char*, T>::find(const char* key, size_t key_len) const
 {
 	dictionary_string_block_t block = s_dictionary_make_block(key, key_len);
-	return (T*)hashtable_find(&table, &block);
+	return (T*)hashtable_find(&m_table, &block);
 }
 
 template <typename T>
@@ -336,70 +336,70 @@ template <typename T>
 T* dictionary<const char*, T>::insert(const char* key, const T& val)
 {
 	dictionary_string_block_t block = s_dictionary_make_block(key);
-	return (T*)hashtable_insert(&table, &block, &val);
+	return (T*)hashtable_insert(&m_table, &block, &val);
 }
 
 template <typename T>
 void dictionary<const char*, T>::remove(const char* key, size_t key_len)
 {
 	dictionary_string_block_t block = s_dictionary_make_block(key, key_len);
-	hashtable_remove(&table, &block);
+	hashtable_remove(&m_table, &block);
 }
 
 template <typename T>
 T* dictionary<const char*, T>::insert(const char* key, size_t key_len, const T& val)
 {
 	dictionary_string_block_t block = s_dictionary_make_block(key, key_len);
-	return (T*)hashtable_insert(&table, &block, &val);
+	return (T*)hashtable_insert(&m_table, &block, &val);
 }
 
 template <typename T>
 void dictionary<const char*, T>::remove(const char* key)
 {
 	dictionary_string_block_t block = s_dictionary_make_block(key);
-	hashtable_remove(&table, &block);
+	hashtable_remove(&m_table, &block);
 }
 
 template <typename T>
 void dictionary<const char*, T>::clear()
 {
-	hashtable_clear(&table);
+	hashtable_clear(&m_table);
 }
 
 template <typename T>
 int dictionary<const char*, T>::count() const
 {
-	return hashtable_count(&table);
+	return hashtable_count(&m_table);
 }
 
 template <typename T>
 T* dictionary<const char*, T>::items()
 {
-	return (T*)hashtable_items(&table);
+	return (T*)hashtable_items(&m_table);
 }
 
 template <typename T>
 const T* dictionary<const char*, T>::items() const
 {
-	return (const T*)hashtable_items(&table);
+	return (const T*)hashtable_items(&m_table);
 }
 
 template <typename T>
 dictionary_string_block_t* dictionary<const char*, T>::keys()
 {
-	return (dictionary_string_block_t*)hashtable_keys(&table);
+	return (dictionary_string_block_t*)hashtable_keys(&m_table);
 }
 
 template <typename T>
 const dictionary_string_block_t* dictionary<const char*, T>::keys() const
 {
-	return (const dictionary_string_block_t*)hashtable_keys(&table);
+	return (const dictionary_string_block_t*)hashtable_keys(&m_table);
 }
 
 template <typename T>
 void dictionary<const char*, T>::swap(int index_a, int index_b)
 {
-	hashtable_swap(&table, index_a, index_b);
+	hashtable_swap(&m_table, index_a, index_b);
 }
 
 }
