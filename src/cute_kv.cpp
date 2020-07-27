@@ -119,6 +119,11 @@ kv_t* kv_make(void* user_allocator_context)
 	kv_t* kv = (kv_t*)CUTE_ALLOC(sizeof(kv_t), user_allocator_context);
 	CUTE_PLACEMENT_NEW(kv) kv_t;
 	kv->mem_ctx = user_allocator_context;
+
+	kv_cache_t cache;
+	cache.kv = kv;
+	kv->cache.add(cache);
+
 	return kv;
 }
 
@@ -498,10 +503,23 @@ void kv_set_write_buffer(kv_t* kv, void* buffer, size_t size)
 	s_reset(kv, buffer, size, KV_STATE_WRITE);
 }
 
+static void s_build_cache(kv_t* kv)
+{
+	kv_t* base = kv->base;
+	while (base) {
+		CUTE_ASSERT(base->mode == KV_STATE_READ);
+		kv_cache_t cache;
+		cache.kv = base;
+		kv->cache.add();
+		base = base->base;
+	}
+}
+
 void kv_set_base(kv_t* kv, kv_t* base)
 {
 	CUTE_ASSERT(base->mode == KV_STATE_READ);
 	kv->base = base;
+	s_build_cache(kv);
 }
 
 void kv_reset_read_state(kv_t* kv)
@@ -611,26 +629,8 @@ static CUTE_INLINE kv_field_t* s_find_field(kv_object_t* object, const char* key
 	return NULL;
 }
 
-static void s_build_cache(kv_t* kv)
-{
-	kv_cache_t cache;
-	cache.kv = kv;
-	kv->cache.add(cache);
-
-	kv_t* base = kv->base;
-	while (base) {
-		CUTE_ASSERT(base->mode == KV_STATE_READ);
-		kv_cache_t cache;
-		cache.kv = base;
-		kv->cache.add();
-		base = base->base;
-	}
-}
-
 static void s_match_key(kv_t* kv, const char* key)
 {
-	s_build_cache(kv);
-
 	kv->matched_val = NULL;
 	kv->matched_cache_val = NULL;
 	kv->matched_cache_index = 0;
@@ -1215,6 +1215,7 @@ error_t kv_object_begin(kv_t* kv, const char* key)
 		kv_val_t* match = s_pop_val(kv, KV_TYPE_OBJECT, false);
 		kv_val_t* match_base = s_pop_base_val(kv, KV_TYPE_OBJECT, false);
 		if (match && !match_base) {
+			kv->cache[0].object_index = match->u.object_index;
 			s_push_read_mode_array(kv, NULL);
 		} else if (match && match_base) {
 			kv->object_skip_count++;
