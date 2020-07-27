@@ -510,7 +510,7 @@ static void s_build_cache(kv_t* kv)
 		CUTE_ASSERT(base->mode == KV_STATE_READ);
 		kv_cache_t cache;
 		cache.kv = base;
-		kv->cache.add();
+		kv->cache.add(cache);
 		base = base->base;
 	}
 }

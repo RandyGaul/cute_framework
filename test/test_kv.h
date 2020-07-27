@@ -293,7 +293,7 @@ int test_kv_write_delta_basic()
 {
 	kv_t* kv = kv_make();
 	kv_t* base = kv_make();
-	
+
 	const char* text_base = CUTE_STRINGIZE(
 		a = 1,
 		b = 2
@@ -408,9 +408,9 @@ int test_kv_write_delta_deep()
 
 	char buffer[1024];
 	kv_set_write_buffer(kv, buffer, 1024);
-	kv_set_base(kv, base2);
-	kv_set_base(base2, base1);
 	kv_set_base(base1, base0);
+	kv_set_base(base2, base1);
+	kv_set_base(kv, base2);
 
 	// No-ops.
 	int val = 1;
@@ -497,7 +497,7 @@ int test_kv_read_delta_deep()
 	if (err.is_error()) return -1;
 	err = kv_parse(base2, text_base2, CUTE_STRLEN(text_base2));
 	if (err.is_error()) return -1;
-	
+
 	const char* delta =
 	"b = 3,\n"
 	"d = 4,\n"
@@ -507,9 +507,9 @@ int test_kv_read_delta_deep()
 	err = kv_parse(kv, delta, CUTE_STRLEN(delta));
 	if (err.is_error()) return -1;
 
-	kv_set_base(kv, base2);
-	kv_set_base(base2, base1);
 	kv_set_base(base1, base0);
+	kv_set_base(base2, base1);
+	kv_set_base(kv, base2);
 
 	int val;
 	kv_key(kv, "a");
