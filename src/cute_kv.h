@@ -64,15 +64,8 @@ CUTE_API void CUTE_CALL kv_reset_read_state(kv_t* kv);
 CUTE_API void CUTE_CALL kv_set_write_buffer(kv_t* kv, void* buffer, size_t size);
 
 /**
- * Assigns a base to `kv`. The idea is to allow data inheritence. For example, if a particular key
- * is missing from `kv`, then `base` will be searched. If a match is found in `base`, the match will
- * be seamlessly returned. Only one base may be assigned to any `kv` instance. In this way, the base
- * functionality sets up a singly linked list of data inheritence.
- *
- * Only works in read mode.
- *
- * TODO: Delta writing -- optimization to only write non-defaulted values when saving.
- *       Or maybe just default values? Delta writing is probably superior.
+ * TODO - Write docs for me.
+ * The base must be in read mode.
  */
 CUTE_API void CUTE_CALL kv_set_base(kv_t* kv, kv_t* base);
 
