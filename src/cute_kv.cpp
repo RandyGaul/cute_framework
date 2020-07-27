@@ -615,7 +615,7 @@ static void s_build_cache(kv_t* kv)
 {
 	kv_cache_t cache;
 	cache.kv = kv;
-	kv->cache.add();
+	kv->cache.add(cache);
 
 	kv_t* base = kv->base;
 	while (base) {
@@ -638,6 +638,7 @@ static void s_match_key(kv_t* kv, const char* key)
 	for (int i = 0; i < kv->cache.count(); ++i) {
 		kv_cache_t cache = kv->cache[i];
 		kv_t* base = cache.kv;
+		if (!base->objects.count()) continue;
 		kv_object_t* object = base->objects + cache.object_index;
 		kv_field_t* field = s_find_field(object, key);
 		if (field) {
@@ -822,7 +823,6 @@ static CUTE_INLINE error_t s_end_val(kv_t* kv)
 
 static CUTE_INLINE kv_val_t* s_pop_val(kv_t* kv, kv_type_t type, bool pop_val = true)
 {
-	CUTE_ASSERT(kv->mode == KV_STATE_READ);
 	if (kv->read_mode_from_array) {
 		kv_val_t* array_val = kv->read_mode_array_stack.last();
 		int& index = kv->read_mode_array_index_stack.last();
@@ -886,7 +886,7 @@ static inline bool s_does_matched_base_equal_int64(kv_t* kv, T* val)
 		}
 	} else {
 		match_base = s_pop_base_val(kv, KV_TYPE_DOUBLE);
-		if (match_base->u.dval == (double)*val) {
+		if (match_base && match_base->u.dval == (double)*val) {
 			s_backup_base_key(kv);
 			return true;
 		}
@@ -1076,7 +1076,6 @@ error_t kv_val(kv_t* kv, float* val)
 				return error_success();
 			}
 		}
-		if (!match) return error_failure("No matching `kv_key` call was found.");
 		error_t err = s_begin_val(kv);
 		if (err.is_error()) return err;
 		err = s_write(kv, *val);
@@ -1110,7 +1109,6 @@ error_t kv_val(kv_t* kv, double* val)
 				return error_success();
 			}
 		}
-		if (!match) return error_failure("No matching `kv_key` call was found.");
 		error_t err = s_begin_val(kv);
 		if (err.is_error()) return err;
 		err = s_write(kv, *val);
@@ -1204,7 +1202,7 @@ error_t kv_object_begin(kv_t* kv, const char* key)
 	if (key) {
 		error_t err = kv_key(kv, key);
 		if (err.is_error()) return err;
-	} else return error_failure("`key` was NULL.");
+	}
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == KV_STATE_WRITE) {
 		error_t err = s_write_str_no_quotes(kv, "{\n", 2);
