@@ -37,6 +37,7 @@
 #include <internal/cute_net_internal.h>
 #include <internal/cute_crypto_internal.h>
 #include <internal/cute_audio_internal.h>
+#include <internal/cute_input_internal.h>
 
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
@@ -128,8 +129,6 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		goto cute_error;
 	}
 
-	//app->entity_allocator = ecs_allocator_make(sizeof(entity_t), 
-
 	return app;
 
 cute_error:
@@ -152,7 +151,7 @@ void app_destroy(app_t* app)
 	internal::file_system_destroy();
 }
 
-int app_is_running(app_t* app)
+bool app_is_running(app_t* app)
 {
 	return app->running;
 }
@@ -164,7 +163,8 @@ void app_stop_running(app_t* app)
 
 void app_update(app_t* app, float dt)
 {
-	CUTE_ASSERT(0);
+	app->dt = dt;
+	pump_input_msgs(app);
 }
 
 }

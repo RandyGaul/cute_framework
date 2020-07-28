@@ -23,6 +23,10 @@
 #include <cute_c_runtime.h>
 
 #include <internal/cute_app_internal.h>
+#include <internal/cute_input_internal.h>
+
+#define CUTE_UTF_IMPLEMENTATION
+#include <cute/cute_utf.h>
 
 #include <SDL2/SDL.h>
 
@@ -203,19 +207,19 @@ static int s_map_SDL_keys(int key)
 	return 0;
 }
 
-int key_is_down(app_t* app, key_button_t key)
+bool key_is_down(app_t* app, key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 	return app->keys[key] | app->keys_prev[key];
 }
 
-int key_is_up(app_t* app, key_button_t key)
+bool key_is_up(app_t* app, key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 	return !app->keys[key] & !app->keys_prev[key];
 }
 
-int key_was_pressed(app_t* app, key_button_t key)
+bool key_was_pressed(app_t* app, key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 
@@ -232,10 +236,15 @@ int key_was_pressed(app_t* app, key_button_t key)
 	return (app->keys[key] & !app->keys_prev[key]) | repeat_count;
 }
 
-int key_was_released(app_t* app, key_button_t key)
+bool key_was_released(app_t* app, key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 	return !app->keys[key] & app->keys_prev[key];
+}
+
+int key_mod_bit_flags(app_t* app)
+{
+	return app->key_mod;
 }
 
 int mouse_x(app_t* app)
@@ -248,7 +257,7 @@ int mouse_y(app_t* app)
 	return app->mouse.y;
 }
 
-int mouse_is_down(app_t* app, mouse_button_t button)
+bool mouse_is_down(app_t* app, mouse_button_t button)
 {
 	switch (button)
 	{
@@ -259,7 +268,7 @@ int mouse_is_down(app_t* app, mouse_button_t button)
 	return 0;
 }
 
-int mouse_is_up(app_t* app, mouse_button_t button)
+bool mouse_is_up(app_t* app, mouse_button_t button)
 {
 	switch (button)
 	{
@@ -270,7 +279,7 @@ int mouse_is_up(app_t* app, mouse_button_t button)
 	return 0;
 }
 
-int mouse_was_pressed(app_t* app, mouse_button_t button)
+bool mouse_was_pressed(app_t* app, mouse_button_t button)
 {
 	switch (button)
 	{
@@ -281,7 +290,7 @@ int mouse_was_pressed(app_t* app, mouse_button_t button)
 	return 0;
 }
 
-int mouse_was_released(app_t* app, mouse_button_t button)
+bool mouse_was_released(app_t* app, mouse_button_t button)
 {
 	switch (button)
 	{
@@ -292,39 +301,175 @@ int mouse_was_released(app_t* app, mouse_button_t button)
 	return 0;
 }
 
-int mouse_wheel_motion(app_t* app)
+bool mouse_wheel_motion(app_t* app)
 {
 	return app->mouse.wheel_motion;
 }
 
-int mouse_double_click(app_t* app, mouse_button_t button)
+bool mouse_is_down_double_click(app_t* app, mouse_button_t button)
 {
 	return mouse_is_down(app, button) && app->mouse.click_type == MOUSE_CLICK_DOUBLE;
 }
 
+bool mouse_double_click_was_pressed(app_t* app, mouse_button_t button)
+{
+	return mouse_was_pressed(app, button) && app->mouse.click_type == MOUSE_CLICK_DOUBLE;
+}
+
 void input_text_add_utf8(app_t* app, const char* text)
 {
+	while (*text) {
+		int cp;
+		text = cu_decode8(text, &cp);
+		app->input_text.add(cp);
+	}
 }
 
 int input_text_pop_utf32(app_t* app)
 {
-	return 0;
+	return app->input_text.pop();
 }
 
-int input_text_has_data(app_t* app)
+bool input_text_has_data(app_t* app)
 {
-	return 0;
+	return app->input_text.count() > 0 ? true : false;
 }
 
 void input_text_clear(app_t* app)
 {
 }
 
-namespace internal
+void pump_input_msgs(app_t* app)
 {
-	void pump_input_msgs(app_t* app)
+	// Clear any necessary single-frame state and copy to `prev` states.
+	app->mouse.xrel = 0;
+	app->mouse.yrel = 0;
+	memcpy(app->keys_prev, app->keys, sizeof(app->keys));
+	memcpy(&app->mouse_prev, &app->mouse, sizeof(app->mouse));
+	app->mouse.wheel_motion = 0;
+
+	// Update key durations to simulate "press and hold" style for `key_was_pressed`.
+	for (int i = 0; i < 512; ++i)
 	{
+		if (key_is_down(app, (key_button_t)i)) {
+			if (app->keys_duration[i] < 0) {
+				app->keys_duration[i] = 0;
+			} else {
+				app->keys_duration[i] += app->dt;
+			}
+		} else {
+			app->keys_duration[i] = -1.0f;
+		}
 	}
+
+	// Handle SDL messages.
+	SDL_Event event;
+	while (SDL_PollEvent(&event))
+	{
+		switch (event.type)
+		{
+		case SDL_QUIT:
+			app->running = false;
+			break;
+
+		case SDL_WINDOWEVENT:
+			switch (event.window.event)
+			{
+			case SDL_WINDOWEVENT_RESIZED:
+				//printf("Got a window resize event: %f %f\n", (float)event.window.data1, (float)event.window.data2);
+				//Reshape(event.window.data1, event.window.data2);
+				break;
+			}
+			break;
+
+		case SDL_KEYDOWN:
+		{
+			if (event.key.repeat) continue;
+			int key = event.key.keysym.sym;
+			key = s_map_SDL_keys(key);
+			CUTE_ASSERT(key >= 0 && key < 512);
+			app->keys[key] = 1;
+		}	break;
+
+		case SDL_KEYUP:
+		{
+			if (event.key.repeat) continue;
+			int key = event.key.keysym.sym;
+			key = s_map_SDL_keys(key);
+			CUTE_ASSERT(key >= 0 && key < 512);
+			app->keys[key] = 0;
+		}	break;
+
+		case SDL_TEXTINPUT:
+		{
+			input_text_add_utf8(app, event.text.text);
+		}	break;
+
+		case SDL_MOUSEMOTION:
+			app->mouse.x = event.motion.x;
+			app->mouse.y = event.motion.y;
+			app->mouse.xrel = event.motion.xrel;
+			app->mouse.yrel = -event.motion.yrel;
+			break;
+
+		case SDL_MOUSEBUTTONDOWN:
+			switch (event.button.button)
+			{
+			case SDL_BUTTON_LEFT: app->mouse.left_button = 1; break;
+			case SDL_BUTTON_RIGHT: app->mouse.right_button = 1; break;
+			case SDL_BUTTON_MIDDLE: app->mouse.wheel_button = 1; break;
+			}
+			app->mouse.x = event.button.x;
+			app->mouse.y = event.button.y;
+			if (event.button.clicks == 1) {
+				app->mouse.click_type = MOUSE_CLICK_SINGLE;
+			} else if (event.button.clicks == 2) {
+				app->mouse.click_type = MOUSE_CLICK_DOUBLE;
+			}
+			break;
+
+		case SDL_MOUSEBUTTONUP:
+			switch (event.button.button)
+			{
+			case SDL_BUTTON_LEFT: app->mouse.left_button = 0; break;
+			case SDL_BUTTON_RIGHT: app->mouse.right_button = 0; break;
+			case SDL_BUTTON_MIDDLE: app->mouse.wheel_button = 0; break;
+			}
+			app->mouse.x = event.button.x;
+			app->mouse.y = event.button.y;
+			if (event.button.clicks == 1) {
+				app->mouse.click_type = MOUSE_CLICK_SINGLE;
+			} else if (event.button.clicks == 2) {
+				app->mouse.click_type = MOUSE_CLICK_DOUBLE;
+			}
+			break;
+
+		case SDL_MOUSEWHEEL:
+			app->mouse.wheel_motion = event.wheel.y;
+			break;
+		}
+	}
+
+	if (key_is_down(app, KEY_NUMLOCKCLEAR)) app->key_mod |= CUTE_KEY_MOD_NUMLOCK;
+	else app->key_mod &= ~CUTE_KEY_MOD_NUMLOCK;
+	if (key_is_down(app, KEY_CAPSLOCK)) app->key_mod |= CUTE_KEY_MOD_CAPSLOCK;
+	else app->key_mod &= ~CUTE_KEY_MOD_CAPSLOCK;
+	if (key_is_down(app, KEY_LGUI)) app->key_mod |= CUTE_KEY_MOD_LGUI;
+	else app->key_mod &= ~CUTE_KEY_MOD_LGUI;
+	if (key_is_down(app, KEY_RGUI)) app->key_mod |= CUTE_KEY_MOD_RGUI;
+	else app->key_mod &= ~CUTE_KEY_MOD_RGUI;
+	if (key_is_down(app, KEY_LCTRL)) app->key_mod |= CUTE_KEY_MOD_LCTRL;
+	else app->key_mod &= ~CUTE_KEY_MOD_LCTRL;
+	if (key_is_down(app, KEY_RCTRL)) app->key_mod |= CUTE_KEY_MOD_RCTRL;
+	else app->key_mod &= ~CUTE_KEY_MOD_RCTRL;
+	if (key_is_down(app, KEY_LSHIFT)) app->key_mod |= CUTE_KEY_MOD_LSHIFT;
+	else app->key_mod &= ~CUTE_KEY_MOD_LSHIFT;
+	if (key_is_down(app, KEY_RSHIFT)) app->key_mod |= CUTE_KEY_MOD_RSHIFT;
+	else app->key_mod &= ~CUTE_KEY_MOD_RSHIFT;
+	if (key_is_down(app, KEY_RALT)) app->key_mod |= CUTE_KEY_MOD_RALT;
+	else app->key_mod &= ~CUTE_KEY_MOD_RALT;
+	if (key_is_down(app, KEY_RALT)) app->key_mod |= CUTE_KEY_MOD_RALT;
+	else app->key_mod &= ~CUTE_KEY_MOD_RALT;
 }
 
 }

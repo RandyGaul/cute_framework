@@ -166,10 +166,6 @@ int test_kv_basic()
 	"},\n"
 	;
 
-	printf("%s\n", buffer);
-	printf("---\n");
-	printf("%s\n", expected);
-
 	size_t size = kv_size_written(kv);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(buffer, expected, size));
 

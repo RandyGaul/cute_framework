@@ -19,8 +19,11 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#include <stdio.h>
+
 #include <cute_app.h>
 #include <cute_timer.h>
+#include <cute_input.h>
 
 int main(int argc, const char** argv)
 {
@@ -29,6 +32,18 @@ int main(int argc, const char** argv)
 	while (cute::app_is_running(app)) {
 		float dt = cute::calc_dt();
 		cute::app_update(app, dt);
+
+		if (cute::key_was_pressed(app, cute::KEY_SPACE)) {
+			printf("space\n");
+		}
+
+		if (cute::mouse_was_pressed(app, cute::MOUSE_BUTTON_LEFT)) {
+			printf("left click\n");
+		}
+
+		if (cute::mouse_double_click_was_pressed(app, cute::MOUSE_BUTTON_LEFT)) {
+			printf("left double click\n");
+		}
 	}
 
 	return 0;

@@ -43,6 +43,7 @@ struct mouse_state_t
 	int left_button = 0;
 	int right_button = 0;
 	int middle_button = 0;
+	int wheel_button = 0;
 	int wheel_motion = 0;
 	int x = 0;
 	int y = 0;
@@ -67,16 +68,18 @@ struct entity_collection_t
 
 struct app_t
 {
-	int running = 1;
+	float dt = 0;
+	bool running = true;
 	SDL_Window* window = NULL;
 	cs_context_t* cute_sound = NULL;
 	threadpool_t* threadpool = NULL;
 	audio_system_t* audio_system = NULL;
 
-	//buffer_t input_text = buffer_t(sizeof(int));
-	int keys[512];
-	int keys_prev[512];
-	float keys_duration[512];
+	array<int> input_text;
+	int keys[512] = { 0 };
+	int keys_prev[512] = { 0 };
+	float keys_duration[512] = { 0 };
+	int key_mod = 0;
 	mouse_state_t mouse, mouse_prev;
 
 	// TODO: Set allocator context for these data structures.

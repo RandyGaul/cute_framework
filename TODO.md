@@ -61,9 +61,9 @@
 	* [ ] GLES 2.0
 	* [ ] color and helpers
 * [ ] input
-	* [ ] mouse
+	* [x] mouse
 		* [ ] cursor
-	* [ ] keyboard
+	* [x] keyboard
 	* [ ] gamepad
 	* [ ] text input
 	* [ ] drag n drop file

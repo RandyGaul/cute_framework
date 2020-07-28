@@ -31,32 +31,27 @@ enum key_button_t : int;
 enum mouse_button_t : int;
 enum mouse_click_t : int;
 
-extern CUTE_API int CUTE_CALL key_is_down(app_t* app, key_button_t key);
-extern CUTE_API int CUTE_CALL key_is_up(app_t* app, key_button_t key);
-extern CUTE_API int CUTE_CALL key_was_pressed(app_t* app, key_button_t key);
-extern CUTE_API int CUTE_CALL key_was_released(app_t* app, key_button_t key);
+extern CUTE_API bool CUTE_CALL key_is_down(app_t* app, key_button_t key);
+extern CUTE_API bool CUTE_CALL key_is_up(app_t* app, key_button_t key);
+extern CUTE_API bool CUTE_CALL key_was_pressed(app_t* app, key_button_t key);
+extern CUTE_API bool CUTE_CALL key_was_released(app_t* app, key_button_t key);
+extern CUTE_API int CUTE_CALL key_mod_bit_flags(app_t* app);
 
 extern CUTE_API int CUTE_CALL mouse_x(app_t* app);
 extern CUTE_API int CUTE_CALL mouse_y(app_t* app);
 
-extern CUTE_API int CUTE_CALL mouse_is_down(app_t* app, mouse_button_t button);
-extern CUTE_API int CUTE_CALL mouse_is_up(app_t* app, mouse_button_t button);
-extern CUTE_API int CUTE_CALL mouse_was_pressed(app_t* app, mouse_button_t button);
-extern CUTE_API int CUTE_CALL mouse_was_released(app_t* app, mouse_button_t button);
-extern CUTE_API int CUTE_CALL mouse_wheel_motion(app_t* app);
-extern CUTE_API int CUTE_CALL mouse_double_click(app_t* app, mouse_button_t button);
+extern CUTE_API bool CUTE_CALL mouse_is_down(app_t* app, mouse_button_t button);
+extern CUTE_API bool CUTE_CALL mouse_is_up(app_t* app, mouse_button_t button);
+extern CUTE_API bool CUTE_CALL mouse_was_pressed(app_t* app, mouse_button_t button);
+extern CUTE_API bool CUTE_CALL mouse_was_released(app_t* app, mouse_button_t button);
+extern CUTE_API bool CUTE_CALL mouse_wheel_motion(app_t* app);
+extern CUTE_API bool CUTE_CALL mouse_is_down_double_click(app_t* app, mouse_button_t button);
+extern CUTE_API bool CUTE_CALL mouse_double_click_was_pressed(app_t* app, mouse_button_t button);
 
 extern CUTE_API void CUTE_CALL input_text_add_utf8(app_t* app, const char* text);
 extern CUTE_API int CUTE_CALL input_text_pop_utf32(app_t* app);
-extern CUTE_API int CUTE_CALL input_text_has_data(app_t* app);
+extern CUTE_API bool CUTE_CALL input_text_has_data(app_t* app);
 extern CUTE_API void CUTE_CALL input_text_clear(app_t* app);
-
-enum mouse_click_t : int
-{
-	MOUSE_CLICK_ZERO,
-	MOUSE_CLICK_ONE,
-	MOUSE_CLICK_DOUBLE,
-};
 
 enum mouse_button_t : int
 {
@@ -318,10 +313,22 @@ enum key_button_t : int
 	KEY_COUNT
 };
 
-namespace internal
-{
-	void pump_input_msgs(app_t* app);
-}
+#define CUTE_KEY_MOD_NONE     0x0000
+#define CUTE_KEY_MOD_LSHIFT   0x0001
+#define CUTE_KEY_MOD_RSHIFT   0x0002
+#define CUTE_KEY_MOD_LCTRL    0x0040
+#define CUTE_KEY_MOD_RCTRL    0x0080
+#define CUTE_KEY_MOD_LALT     0x0100
+#define CUTE_KEY_MOD_RALT     0x0200
+#define CUTE_KEY_MOD_LGUI     0x0400
+#define CUTE_KEY_MOD_RGUI     0x0800
+#define CUTE_KEY_MOD_NUMLOCK  0x1000
+#define CUTE_KEY_MOD_CAPSLOCK 0x2000
+
+#define CUTE_KEY_MOD_CTRL   (CUTE_KEY_MOD_LCTRL | CUTE_KEY_MOD_RCTRL)
+#define CUTE_KEY_MOD_SHIFT  (CUTE_KEY_MOD_LSHIFT | CUTE_KEY_MOD_RSHIFT)
+#define CUTE_KEY_MOD_ALT    (CUTE_KEY_MOD_LALT | CUTE_KEY_MOD_RALT)
+#define CUTE_KEY_MOD_GUI    (CUTE_KEY_MOD_LGUI | CUTE_KEY_MOD_RGUI)
 
 }
 

@@ -43,7 +43,7 @@ namespace cute
 extern CUTE_API app_t* CUTE_CALL app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL app_destroy(app_t* app);
 
-extern CUTE_API int CUTE_CALL app_is_running(app_t* app);
+extern CUTE_API bool CUTE_CALL app_is_running(app_t* app);
 extern CUTE_API void CUTE_CALL app_stop_running(app_t* app);
 extern CUTE_API void CUTE_CALL app_update(app_t* app, float dt);
 
