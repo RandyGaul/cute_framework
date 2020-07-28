@@ -1214,10 +1214,13 @@ error_t kv_object_begin(kv_t* kv, const char* key)
 	} else {
 		kv_val_t* match = s_pop_val(kv, KV_TYPE_OBJECT, false);
 		kv_val_t* match_base = s_pop_base_val(kv, KV_TYPE_OBJECT, false);
-		if (match && !match_base) {
+		if (match_base) {
+			kv->cache[kv->matched_cache_index].object_index = match_base->u.object_index;
+		}
+		if (match) {
 			kv->cache[0].object_index = match->u.object_index;
 			s_push_read_mode_array(kv, NULL);
-		} else if (match && match_base) {
+		} else if (match_base) {
 			kv->object_skip_count++;
 		} else {
 			kv->err = error_failure("Unable to get object, no matching `kv_key` call.");
@@ -1239,19 +1242,20 @@ error_t kv_object_end(kv_t* kv)
 		if (err.is_error()) return err;
 		s_pop_array(kv);
 	} else {
+		for (int i = 1; i < kv->cache.count(); ++i) {
+			kv_cache_t cache = kv->cache[i];
+			cache.object_index = cache.kv->objects[cache.object_index].parent_index;
+			if (cache.object_index == ~0) {
+				kv->err = error_failure("Tried to end kv object, but none was currently set.");
+				return kv->err;
+			}
+			kv->cache[i] = cache;
+		}
 		if (kv->object_skip_count) {
 			--kv->object_skip_count;
 		} else {
 			s_pop_read_mode_array(kv);
-			for (int i = 0; i < kv->cache.count(); ++i) {
-				kv_cache_t cache = kv->cache[i];
-				cache.object_index = cache.kv->objects[cache.object_index].parent_index;
-				if (cache.object_index == ~0) {
-					kv->err = error_failure("Tried to end kv object, but none was currently set.");
-					return kv->err;
-				}
-				kv->cache[i] = cache;
-			}
+			kv->cache[0].object_index = kv->objects[kv->cache[0].object_index].parent_index;
 		}
 	}
 	return error_success();
@@ -1277,8 +1281,8 @@ error_t kv_array_begin(kv_t* kv, int* count, const char* key)
 		if (err.is_error()) return err;
 		s_push_array(kv, CUTE_KV_IN_ARRAY_AND_FIRST_ELEMENT);
 	} else {
-		kv_val_t* match = s_pop_val(kv, KV_TYPE_ARRAY, false);
-		kv_val_t* match_base = s_pop_base_val(kv, KV_TYPE_ARRAY, false);
+		kv_val_t* match = s_pop_val(kv, KV_TYPE_ARRAY);
+		kv_val_t* match_base = s_pop_base_val(kv, KV_TYPE_ARRAY);
 		if (!match) match = match_base;
 		if (!match) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		s_push_read_mode_array(kv, match);
