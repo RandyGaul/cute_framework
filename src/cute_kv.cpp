@@ -1216,10 +1216,11 @@ error_t kv_object_begin(kv_t* kv, const char* key)
 		if (err.is_error()) return err;
 		s_push_array(kv, CUTE_KV_NOT_IN_ARRAY);
 	} else {
-		kv_val_t* match = s_pop_val(kv, KV_TYPE_OBJECT, false);
-		kv_val_t* match_base = s_pop_base_val(kv, KV_TYPE_OBJECT, false);
+		kv_val_t* match = s_pop_val(kv, KV_TYPE_OBJECT);
+		int match_base_index = kv->matched_cache_index;
+		kv_val_t* match_base = s_pop_base_val(kv, KV_TYPE_OBJECT);
 		if (match_base) {
-			kv->cache[kv->matched_cache_index].object_index = match_base->u.object_index;
+			kv->cache[match_base_index].object_index = match_base->u.object_index;
 		}
 		if (match) {
 			kv->cache[0].object_index = match->u.object_index;

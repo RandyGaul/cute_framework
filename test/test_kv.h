@@ -121,7 +121,6 @@ int test_kv_basic()
 	thing_t thing;
 	thing.a = 5;
 	thing.b = 10.3f;
-	thing.str = "Hello.";
 
 	CUTE_TEST_ASSERT(!do_serialize(kv, &thing).is_error());
 
@@ -167,6 +166,10 @@ int test_kv_basic()
 	"},\n"
 	;
 
+	printf("%s\n", buffer);
+	printf("---\n");
+	printf("%s\n", expected);
+
 	size_t size = kv_size_written(kv);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(buffer, expected, size));
 
@@ -177,7 +180,6 @@ int test_kv_basic()
 
 	thing_t expected_thing;
 	CUTE_TEST_ASSERT(!do_serialize(kv, &thing).is_error());
-	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&thing, &expected_thing, sizeof(thing_t)));
 
 	kv_destroy(kv);
 
