@@ -52,6 +52,17 @@ struct mouse_state_t
 	int click_type = 0;
 };
 
+struct window_state_t
+{
+	bool mouse_inside_window = false;
+	bool has_keyboard_focus = false;
+	bool minimized = false;
+	bool maximized = false;
+	bool restored = false;
+	bool resized = false;
+	bool moved = false;
+};
+
 struct system_t
 {
 	system_fn* update_func = NULL;
@@ -74,6 +85,12 @@ struct app_t
 	cs_context_t* cute_sound = NULL;
 	threadpool_t* threadpool = NULL;
 	audio_system_t* audio_system = NULL;
+	int w;
+	int h;
+	int x;
+	int y;
+	window_state_t window_state;
+	window_state_t window_state_prev;
 
 	array<int> input_text;
 	int keys[512] = { 0 };

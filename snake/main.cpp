@@ -24,10 +24,12 @@
 #include <cute_app.h>
 #include <cute_timer.h>
 #include <cute_input.h>
+#include <cute_window.h>
 
 int main(int argc, const char** argv)
 {
-	cute::app_t* app = cute::app_make("Cute Snake", 0, 0, 640, 480, CUTE_APP_OPTIONS_GFX_D3D9 | CUTE_APP_OPTIONS_WINDOW_POS_CENTERED);
+	int options = CUTE_APP_OPTIONS_GFX_D3D9 | CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
+	cute::app_t* app = cute::app_make("Cute Snake", 0, 0, 640, 480, options);
 
 	while (cute::app_is_running(app)) {
 		float dt = cute::calc_dt();
@@ -43,6 +45,42 @@ int main(int argc, const char** argv)
 
 		if (cute::mouse_double_click_was_pressed(app, cute::MOUSE_BUTTON_LEFT)) {
 			printf("left double click\n");
+		}
+
+		if (cute::app_window_mouse_entered(app)) {
+			printf("mouse entered\n");
+		}
+
+		if (cute::app_window_was_minimized(app)) {
+			printf("minimized\n");
+		}
+
+		if (cute::app_window_was_maximized(app)) {
+			printf("maximized\n");
+		}
+
+		if (cute::app_window_was_restored(app)) {
+			printf("restored\n");
+		}
+
+		if (cute::app_window_keyboard_gained_focus(app)) {
+			printf("gained keyboard focus\n");
+		}
+
+		if (cute::app_window_keyboard_lost_focus(app)) {
+			printf("lost keyboard focus\n");
+		}
+
+		if (cute::app_window_was_size_changed(app)) {
+			int w, h;
+			cute::app_window_size(app, &w, &h);
+			printf("size changed to %d, %d\n", w, h);
+		}
+
+		if (cute::app_window_was_moved(app)) {
+			int x, y;
+			cute::app_window_position(app, &x, &y);
+			printf("size moved to %d, %d\n", x, y);
 		}
 	}
 

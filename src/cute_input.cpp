@@ -337,6 +337,7 @@ bool input_text_has_data(app_t* app)
 
 void input_text_clear(app_t* app)
 {
+	app->input_text.clear();
 }
 
 void pump_input_msgs(app_t* app)
@@ -344,9 +345,13 @@ void pump_input_msgs(app_t* app)
 	// Clear any necessary single-frame state and copy to `prev` states.
 	app->mouse.xrel = 0;
 	app->mouse.yrel = 0;
-	memcpy(app->keys_prev, app->keys, sizeof(app->keys));
-	memcpy(&app->mouse_prev, &app->mouse, sizeof(app->mouse));
+	CUTE_MEMCPY(app->keys_prev, app->keys, sizeof(app->keys));
+	CUTE_MEMCPY(&app->mouse_prev, &app->mouse, sizeof(app->mouse));
+	CUTE_MEMCPY(&app->window_state_prev, &app->window_state, sizeof(app->window_state));
 	app->mouse.wheel_motion = 0;
+	app->window_state.moved = false;
+	app->window_state.restored = false;
+	app->window_state.resized = false;
 
 	// Update key durations to simulate "press and hold" style for `key_was_pressed`.
 	for (int i = 0; i < 512; ++i)
@@ -376,8 +381,43 @@ void pump_input_msgs(app_t* app)
 			switch (event.window.event)
 			{
 			case SDL_WINDOWEVENT_RESIZED:
-				//printf("Got a window resize event: %f %f\n", (float)event.window.data1, (float)event.window.data2);
-				//Reshape(event.window.data1, event.window.data2);
+				app->window_state.resized = true;
+				app->w = event.window.data1;
+				app->h = event.window.data2;
+				break;
+
+			case SDL_WINDOWEVENT_MOVED:
+				app->window_state.moved = true;
+				app->x = event.window.data1;
+				app->y = event.window.data2;
+				break;
+
+			case SDL_WINDOWEVENT_MINIMIZED:
+				app->window_state.minimized = true;
+				break;
+
+			case SDL_WINDOWEVENT_MAXIMIZED:
+				app->window_state.maximized = true;
+				break;
+
+			case SDL_WINDOWEVENT_RESTORED:
+				app->window_state.restored = true;
+				break;
+
+			case SDL_WINDOWEVENT_ENTER:
+				app->window_state.mouse_inside_window = true;
+				break;
+
+			case SDL_WINDOWEVENT_LEAVE:
+				app->window_state.mouse_inside_window = false;
+				break;
+
+			case SDL_WINDOWEVENT_FOCUS_GAINED:
+				app->window_state.has_keyboard_focus = true;
+				break;
+
+			case SDL_WINDOWEVENT_FOCUS_LOST:
+				app->window_state.has_keyboard_focus = false;
 				break;
 			}
 			break;
@@ -450,6 +490,7 @@ void pump_input_msgs(app_t* app)
 		}
 	}
 
+	// Keep track of key mod states (alt/shift etc).
 	if (key_is_down(app, KEY_NUMLOCKCLEAR)) app->key_mod |= CUTE_KEY_MOD_NUMLOCK;
 	else app->key_mod &= ~CUTE_KEY_MOD_NUMLOCK;
 	if (key_is_down(app, KEY_CAPSLOCK)) app->key_mod |= CUTE_KEY_MOD_CAPSLOCK;

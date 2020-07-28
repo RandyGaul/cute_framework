@@ -27,16 +27,16 @@
 namespace cute
 {
 
-#define CUTE_APP_OPTIONS_NO_GFX               (1 << 0)
-#define CUTE_APP_OPTIONS_NO_AUDIO             (1 << 1)
-#define CUTE_APP_OPTIONS_NO_NET               (1 << 2)
-#define CUTE_APP_OPTIONS_GFX_GL               (1 << 3)
-#define CUTE_APP_OPTIONS_GFX_GLES             (1 << 4)
-#define CUTE_APP_OPTIONS_GFX_D3D9             (1 << 5)
-#define CUTE_APP_OPTIONS_FULLSCREEN           (1 << 6)
-#define CUTE_APP_OPTIONS_RESIZABLE            (1 << 7)
-#define CUTE_APP_OPTIONS_HIDDEN               (1 << 8)
-#define CUTE_APP_OPTIONS_WINDOW_POS_CENTERED  (1 << 9)
+#define CUTE_APP_OPTIONS_NO_GFX              (1 << 0)
+#define CUTE_APP_OPTIONS_NO_AUDIO            (1 << 1)
+#define CUTE_APP_OPTIONS_NO_NET              (1 << 2)
+#define CUTE_APP_OPTIONS_GFX_GL              (1 << 3)
+#define CUTE_APP_OPTIONS_GFX_GLES            (1 << 4)
+#define CUTE_APP_OPTIONS_GFX_D3D9            (1 << 5)
+#define CUTE_APP_OPTIONS_FULLSCREEN          (1 << 6)
+#define CUTE_APP_OPTIONS_RESIZABLE           (1 << 7)
+#define CUTE_APP_OPTIONS_HIDDEN              (1 << 8)
+#define CUTE_APP_OPTIONS_WINDOW_POS_CENTERED (1 << 9)
 #define CUTE_APP_OPTIONS_HEADLESS (CUTE_APP_OPTIONS_NO_GFX | CUTE_APP_OPTIONS_HIDDEN)
 #define CUTE_APP_OPTIONS_SERVER (CUTE_APP_OPTIONS_NO_GFX | CUTE_APP_OPTIONS_NO_AUDIO | CUTE_APP_OPTIONS_HIDDEN)
 

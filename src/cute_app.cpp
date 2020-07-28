@@ -85,6 +85,10 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	CUTE_PLACEMENT_NEW(app) app_t;
 	app->window = window;
 	app->mem_ctx = user_allocator_context;
+	app->w = w;
+	app->h = h;
+	app->x = x;
+	app->y = y;
 
 	if (options & CUTE_APP_OPTIONS_GFX_GL) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);

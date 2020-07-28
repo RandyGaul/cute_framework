@@ -28,11 +28,12 @@
 	* [ ] stream then crossfade ogg
 	* [ ] music
 	* [ ] sounds
-* [ ] event
-	* [ ] poll event
-	* [ ] push event
-	* [ ] grab data out of event
-	* [ ] free event data
+* [ ] window
+	* [ ] resize/size changed
+	* [ ] moved
+	* [ ] focus (mouse/keyboard)
+	* [ ] minimize/maximize/restore
+	* [ ] shown/hidden
 * [x] file system
 	* [x] file io
 	* [x] directory/archive mounting
@@ -62,7 +63,7 @@
 	* [ ] color and helpers
 * [ ] input
 	* [x] mouse
-		* [ ] cursor
+		* [x] cursor
 	* [x] keyboard
 	* [ ] gamepad
 	* [ ] text input
