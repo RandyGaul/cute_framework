@@ -528,6 +528,10 @@ void kv_reset_read_state(kv_t* kv)
 	kv->read_mode_from_array = 0;
 	kv->read_mode_array_stack.clear();
 	kv->read_mode_array_index_stack.clear();
+	kv->object_skip_count = 0;
+	kv->matched_val = NULL;
+	kv->matched_cache_index = ~0;
+	kv->matched_cache_val = NULL;
 }
 
 size_t kv_size_written(kv_t* kv)

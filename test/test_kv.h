@@ -48,9 +48,13 @@ struct thing_t
 	};
 	struct
 	{
-		int some_integer = 5;
-		const char* some_string = "Hello.";
-	} array_of_objects[3];
+		int some_integer;
+		const char* some_string;
+	} array_of_objects[3] = {
+		{ 3, "Hi." },
+		{ 4, "Hi.." },
+		{ 5, "Hi..." },
+	};
 };
 
 error_t do_serialize(kv_t* kv, thing_t* thing)
@@ -96,7 +100,10 @@ error_t do_serialize(kv_t* kv, thing_t* thing)
 	{
 		CUTE_RETURN_IF_ERROR(kv_object_begin(kv));
 		CUTE_RETURN_IF_ERROR(kv_key(kv, "some_integer")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->array_of_objects[i].some_integer));
-		CUTE_RETURN_IF_ERROR(kv_key(kv, "some_string")); len = 6; CUTE_RETURN_IF_ERROR(kv_val_string(kv, &thing->array_of_objects[i].some_string, &len));
+		if (i == 0) len = 3;
+		else if (i == 1) len = 4;
+		else if (i == 2) len = 5;
+		CUTE_RETURN_IF_ERROR(kv_key(kv, "some_string")); CUTE_RETURN_IF_ERROR(kv_val_string(kv, &thing->array_of_objects[i].some_string, &len));
 		CUTE_RETURN_IF_ERROR(kv_object_end(kv));
 	}
 	CUTE_RETURN_IF_ERROR(kv_array_end(kv));
@@ -146,16 +153,16 @@ int test_kv_basic()
 	"},\n"
 	"array_of_objects = [3] {\n"
 	"	{\n"
-	"		some_integer = 5,\n"
-	"		some_string = \"Hello.\",\n"
+	"		some_integer = 3,\n"
+	"		some_string = \"Hi.\",\n"
+	"	},\n"
+	"	{\n"
+	"		some_integer = 4,\n"
+	"		some_string = \"Hi..\",\n"
 	"	},\n"
 	"	{\n"
 	"		some_integer = 5,\n"
-	"		some_string = \"Hello.\",\n"
-	"	},\n"
-	"	{\n"
-	"		some_integer = 5,\n"
-	"		some_string = \"Hello.\",\n"
+	"		some_string = \"Hi...\",\n"
 	"	},\n"
 	"},\n"
 	;
@@ -168,7 +175,9 @@ int test_kv_basic()
 
 	CUTE_MEMSET(&thing, 0, sizeof(thing_t));
 
+	thing_t expected_thing;
 	CUTE_TEST_ASSERT(!do_serialize(kv, &thing).is_error());
+	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&thing, &expected_thing, sizeof(thing_t)));
 
 	kv_destroy(kv);
 
