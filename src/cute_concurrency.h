@@ -97,7 +97,7 @@ typedef void (CUTE_CALL promise_fn)(error_t status, void* param, void* promise_u
 struct promise_t
 {
 	CUTE_INLINE promise_t () { }
-	CUTE_INLINE promise_t (promise_fn* callback, void* promise_udata) : callback(callback), promise_udata(promise_udata) { }
+	CUTE_INLINE promise_t (promise_fn* callback, void* promise_udata = NULL) : callback(callback), promise_udata(promise_udata) { }
 	CUTE_INLINE void invoke(error_t status, void* param) { callback(status, param, promise_udata); }
 
 	promise_fn* callback = NULL;

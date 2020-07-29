@@ -39,6 +39,7 @@
 #include <internal/cute_audio_internal.h>
 #include <internal/cute_input_internal.h>
 
+#define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
 
@@ -57,15 +58,21 @@ namespace cute
 // TODO: Refactor to error_t reporting.
 app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t options, const char* argv0, void* user_allocator_context)
 {
+	SDL_SetMainReady();
+
 	app_t* app = (app_t*)CUTE_ALLOC(sizeof(app_t), user_allocator_context);
 	CUTE_CHECK_POINTER(app);
 
-	if (!(options & CUTE_APP_OPTIONS_NO_GFX)) {
-		SDL_InitSubSystem(SDL_INIT_VIDEO);
+	if (SDL_Init(SDL_INIT_EVENTS)) {
+		CUTE_FREE(app, user_allocator_context);
+		return NULL;
 	}
 
-	if (!(options & CUTE_APP_OPTIONS_NO_AUDIO)) {
-		SDL_InitSubSystem(SDL_INIT_AUDIO);
+	if (!(options & CUTE_APP_OPTIONS_NO_GFX)) {
+		if (SDL_InitSubSystem(SDL_INIT_VIDEO)) {
+			CUTE_FREE(app, user_allocator_context);
+			return NULL;
+		}
 	}
 
 	Uint32 flags = 0;
@@ -108,20 +115,20 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		gladLoadGLLoader(SDL_GL_GetProcAddress);
 	}
 
+	if (!(options & CUTE_APP_OPTIONS_NO_NET)) {
+		CUTE_CHECK(internal::crypto_init());
+		CUTE_CHECK(internal::net_init());
+	}
+
 	if (!(options & CUTE_APP_OPTIONS_NO_AUDIO)) {
 		int max_simultaneous_sounds = 5000; // TODO: Expose this.
-		app->cute_sound = cs_make_context(NULL, 44100, 5, 1, max_simultaneous_sounds);
+		app->cute_sound = cs_make_context(NULL, 44100, 1024, max_simultaneous_sounds, app->mem_ctx);
 		if (app->cute_sound) {
 			cs_spawn_mix_thread(app->cute_sound);
 			app->audio_system = audio_system_make(app->mem_ctx);
 		} else {
 			// TODO: Return error message.
 		}
-	}
-
-	if (!(options & CUTE_APP_OPTIONS_NO_NET)) {
-		CUTE_CHECK(internal::crypto_init());
-		CUTE_CHECK(internal::net_init());
 	}
 
 	int num_cores = core_count() - 1;
@@ -169,6 +176,7 @@ void app_update(app_t* app, float dt)
 {
 	app->dt = dt;
 	pump_input_msgs(app);
+	if (app->audio_system) audio_system_update(app->audio_system, dt);
 }
 
 }

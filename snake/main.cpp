@@ -25,11 +25,33 @@
 #include <cute_timer.h>
 #include <cute_input.h>
 #include <cute_window.h>
+#include <cute_audio.h>
+#include <cute_file_system_utils.h>
+
+cute::audio_t* jump_audio = NULL;
+cute::audio_t* music_audio = NULL;
+
+void load_jump_promise(cute::error_t status, void* param, void* promise_udata)
+{
+	jump_audio = (cute::audio_t*)param;
+	printf("Loaded jump.wav\n");
+}
+
+void load_music_promise(cute::error_t status, void* param, void* promise_udata)
+{
+	music_audio = (cute::audio_t*)param;
+	printf("Loaded 3-6-19-blue-suit-jam.ogg\n");
+}
 
 int main(int argc, const char** argv)
 {
 	int options = CUTE_APP_OPTIONS_GFX_D3D9 | CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
 	cute::app_t* app = cute::app_make("Cute Snake", 0, 0, 640, 480, options);
+
+	cute::audio_stream_wav(app, "jump.wav", cute::promise_t(load_jump_promise));
+	cute::audio_stream_ogg(app, "3-6-19-blue-suit-jam.ogg", cute::promise_t(load_music_promise));
+
+	printf("Running from: %s\n", cute::file_system_get_working_directory());
 
 	while (cute::app_is_running(app)) {
 		float dt = cute::calc_dt();
@@ -37,6 +59,12 @@ int main(int argc, const char** argv)
 
 		if (cute::key_was_pressed(app, cute::KEY_SPACE)) {
 			printf("space\n");
+			if (jump_audio) cute::sound_play(app, jump_audio);
+		}
+
+		if (cute::key_was_pressed(app, cute::KEY_1)) {
+			printf("key 1\n");
+			if (music_audio) cute::music_play(app, music_audio);
 		}
 
 		if (cute::mouse_was_pressed(app, cute::MOUSE_BUTTON_LEFT)) {
@@ -83,6 +111,9 @@ int main(int argc, const char** argv)
 			printf("size moved to %d, %d\n", x, y);
 		}
 	}
+
+	if (jump_audio) cute::audio_destroy(jump_audio);
+	if (music_audio) cute::audio_destroy(music_audio);
 
 	return 0;
 }

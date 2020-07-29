@@ -256,7 +256,8 @@ void sound_play(app_t* app, audio_t* audio_source, sound_params_t params)
 	def.volume_left = params.volume;
 	def.volume_right = params.volume;
 	def.pan = params.pan;
-	def.pitch = params.pitch;
+	// TODO - Pitch.
+	// def.pitch = params.pitch;
 	def.delay = params.delay;
 	def.loaded = audio_source;
 	audio_instance_t* instance = cs_play_sound(app->cute_sound, def);
@@ -264,6 +265,7 @@ void sound_play(app_t* app, audio_t* audio_source, sound_params_t params)
 	if (instance) {
 		audio_system->playing_sounds.add(instance);
 	} else {
+		// TODO - Remove all logs and logging system.
 		log(CUTE_LOG_LEVEL_WARNING, "Unable to play sound. Audio instance buffer full.");
 	}
 }
@@ -329,6 +331,7 @@ void audio_set_sound_volume(app_t* app, float volume)
 }
 
 // -------------------------------------------------------------------------------------------------
+// Internal.
 
 audio_system_t* audio_system_make(void* mem_ctx)
 {

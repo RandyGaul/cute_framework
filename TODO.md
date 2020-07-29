@@ -28,12 +28,12 @@
 	* [ ] stream then crossfade ogg
 	* [ ] music
 	* [ ] sounds
-* [ ] window
-	* [ ] resize/size changed
-	* [ ] moved
-	* [ ] focus (mouse/keyboard)
-	* [ ] minimize/maximize/restore
-	* [ ] shown/hidden
+* [x] window
+	* [x] resize/size changed
+	* [x] moved
+	* [x] focus (mouse/keyboard)
+	* [x] minimize/maximize/restore
+	* [x] shown/hidden
 * [x] file system
 	* [x] file io
 	* [x] directory/archive mounting

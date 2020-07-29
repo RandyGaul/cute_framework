@@ -197,7 +197,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
-	target_link_libraries(tests PRIVATE cute)
+	target_link_libraries(tests PRIVATE cute SDL2 SDL2main)
 
 	# Copy over prebuilt binaries to output directory.
 	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs" $<TARGET_FILE_DIR:tests>)
@@ -214,9 +214,14 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 endif()
 
 # Cute unit tests executable (optional, defaulted to also build).
-option(CUTE_BUILD_SNAKE "Build the Snake demo." ON)
-if (CUTE_BUILD_SNAKE)
+option(CUTE_FRAMEWORK_BUILD_SNAKE "Build the Snake demo." ON)
+if (CUTE_FRAMEWORK_BUILD_SNAKE)
 	set(CUTE_SNAKE_SRCS snake/main.cpp)
 	add_executable(snake ${CUTE_SNAKE_SRCS})
-	target_link_libraries(snake PRIVATE cute)
+	target_link_libraries(snake PRIVATE cute SDL2 SDL2main)
+
+	# For convenience set working directory to the target output folder.
+	if (MSVC)
+		set_property(TARGET snake PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:snake>)
+	endif()
 endif()

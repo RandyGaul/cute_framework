@@ -185,8 +185,9 @@ const char* file_system_get_backend_specific_error_message()
 
 const char* file_system_get_working_directory()
 {
-	// TODO: Implement me.
-	return NULL;
+	static char buf[1024];
+	getcwd(buf, 1024);
+	return buf;
 }
 
 const char* file_system_get_user_directory()
