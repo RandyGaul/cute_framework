@@ -69,6 +69,8 @@
 
 #define CUTE_OFFSET_OF(T, member) ((size_t)((uintptr_t)(&(((T*)0)->member))))
 
+#define CUTE_DEBUG_PRINTF(...)
+
 namespace cute
 {
 

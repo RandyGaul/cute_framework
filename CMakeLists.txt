@@ -139,6 +139,7 @@ set(CUTE_HDRS
 	src/cute_sprite.h
 	src/cute_lru_cache.h
 	src/cute_window.h
+	src/cute_debug_printf.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h

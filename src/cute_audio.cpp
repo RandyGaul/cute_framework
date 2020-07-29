@@ -34,6 +34,13 @@
 #include <cute/cute_sound.h>
 // TODO: Hookup allocs to cute_sound internals
 
+#include <cute_debug_printf.h>
+
+static float s_smoothstep(float x)
+{
+	return x * x * (3.0f - 2.0f * x);
+}
+
 namespace cute
 {
 
@@ -203,7 +210,8 @@ enum music_state_t
 	MUSIC_STATE_PLAYING,
 	MUSIC_STATE_FADE_OUT,
 	MUSIC_STATE_FADE_IN,
-	MUSIC_STATE_FADE_SWITCH_TO,
+	MUSIC_STATE_FADE_SWITCH_TO_0,
+	MUSIC_STATE_FADE_SWITCH_TO_1,
 	MUSIC_STATE_FADE_CROSSFADE,
 	MUSIC_STATE_PAUSED
 };
@@ -214,8 +222,11 @@ struct audio_system_t
 	float music_volume = 1.0f;
 	float sound_volume = 1.0f;
 
+	float t = 0;
 	float fade = 0;
+	float fade_switch_1 = 0;
 	music_state_t music_state = MUSIC_STATE_NONE;
+	music_state_t music_state_to_resume_from_paused = MUSIC_STATE_NONE;
 	audio_instance_t* music_playing = NULL;
 	audio_instance_t* music_next = NULL;
 
@@ -224,6 +235,39 @@ struct audio_system_t
 	list_t free_sounds;
 	void* mem_ctx = NULL;
 };
+
+static audio_instance_t* s_inst(app_t* app, audio_t* src, float volume)
+{
+	audio_system_t* as = app->audio_system;
+	audio_instance_t* inst_ptr = CUTE_LIST_HOST(audio_instance_t, node, list_pop_back(&as->free_sounds));
+	inst_ptr->sound = cs_make_playing_sound(src);
+	inst_ptr->sound.paused = 0;
+	inst_ptr->sound.looped = 1;
+	inst_ptr->sound.volume0 = volume;
+	inst_ptr->sound.volume1 = volume;
+	cs_insert_sound(app->cute_sound, &inst_ptr->sound);
+	return inst_ptr;
+}
+
+static audio_instance_t* s_inst(app_t* app, audio_t* src, sound_params_t params)
+{
+	audio_system_t* as = app->audio_system;
+	audio_instance_t* inst_ptr = CUTE_LIST_HOST(audio_instance_t, node, list_pop_back(&as->free_sounds));
+	float pan = params.pan;
+	if (pan > 1.0f) pan = 1.0f;
+	else if (pan < 0.0f) pan = 0.0f;
+	float panl = 1.0f - pan;
+	float panr = pan;
+	inst_ptr->sound = cs_make_playing_sound(src);
+	inst_ptr->sound.paused = params.paused;
+	inst_ptr->sound.looped = params.looped;
+	inst_ptr->sound.volume0 = params.volume;
+	inst_ptr->sound.volume1 = params.volume;
+	inst_ptr->sound.pan0 = panl;
+	inst_ptr->sound.pan1 = panr;
+	cs_insert_sound(app->cute_sound, &inst_ptr->sound);
+	return inst_ptr;
+}
 
 error_t music_play(app_t* app, audio_t* audio_source, float fade_in_time)
 {
@@ -236,28 +280,26 @@ error_t music_play(app_t* app, audio_t* audio_source, float fade_in_time)
 	}
 
 	if (fade_in_time < 0) fade_in_time = 0;
-	if (fade_in_time) as->music_state = MUSIC_STATE_FADE_IN;
-	else as->music_state = MUSIC_STATE_PLAYING;
+	if (fade_in_time) {
+		as->music_state = MUSIC_STATE_FADE_IN;
+		CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_IN\n");
+	} else {
+		as->music_state = MUSIC_STATE_PLAYING;
+		CUTE_DEBUG_PRINTF("MUSIC_STATE_PLAYING\n");
+	}
 	as->fade = fade_in_time;
+	as->t = 0;
 
 	if (list_empty(&as->free_sounds)) {
 		return error_failure("Unable to play music. Audio instance buffer full.");
 	}
 
 	float initial_volume = fade_in_time == 0 ? as->music_volume : 0;
-	audio_instance_t* inst_ptr = CUTE_LIST_HOST(audio_instance_t, node, list_pop_back(&as->free_sounds));
-	inst_ptr->sound = cs_make_playing_sound(audio_source);
-	inst_ptr->sound.paused = 0;
-	inst_ptr->sound.looped = 1;
-	inst_ptr->sound.volume0 = initial_volume;
-	inst_ptr->sound.volume1 = initial_volume;
-	int ret = cs_insert_sound(app->cute_sound, &inst_ptr->sound);
-	if (!ret) return error_failure("cute_sound.h `cs_insert_sound` failed.");
-
 	CUTE_ASSERT(as->music_playing == NULL);
-	as->music_playing = inst_ptr;
-
-	list_push_back(&as->playing_sounds, &inst_ptr->node);
+	CUTE_ASSERT(as->music_next == NULL);
+	audio_instance_t* inst = s_inst(app, audio_source, initial_volume);
+	as->music_playing = inst;
+	list_push_back(&as->playing_sounds, &inst->node);
 
 	return error_success();
 }
@@ -266,6 +308,8 @@ error_t music_stop(app_t* app, float fade_out_time)
 {
 	audio_system_t* as = app->audio_system;
 
+	if (fade_out_time < 0) fade_out_time = 0;
+
 	if (fade_out_time == 0) {
 		// Immediately turn off all music if no fade out time.
 		if (as->music_playing) as->music_playing->sound.active = 0;
@@ -273,41 +317,166 @@ error_t music_stop(app_t* app, float fade_out_time)
 		as->music_playing = NULL;
 		as->music_next = NULL;
 		as->music_state = MUSIC_STATE_NONE;
+		CUTE_DEBUG_PRINTF("MUSIC_STATE_NONE\n");
 		return error_success();
 	} else {
-		// Otherwise enter fading out state.
-		/*
-			If playing, trivial.
-			If already fading in any way, simply use that fade time and then swap to fade out.
-			Special care to handle crossfade and whatnot.
-			Come back to this later.
-		*/
-		return error_failure("Not yet implemented.");
+		switch (as->music_state) {
+		case MUSIC_STATE_NONE:
+			break;
+
+		case MUSIC_STATE_PLAYING:
+			as->music_state = MUSIC_STATE_FADE_OUT;
+			CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_OUT\n");
+			as->fade = fade_out_time;
+			as->t = 0;
+			break;
+
+		case MUSIC_STATE_FADE_OUT:
+			return error_success();
+
+		case MUSIC_STATE_FADE_IN:
+		{
+			as->music_state = MUSIC_STATE_FADE_OUT;
+			CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_OUT\n");
+			as->t = s_smoothstep(((as->fade - as->t) / as->fade));
+			as->fade = fade_out_time;
+		}	break;
+
+		case MUSIC_STATE_FADE_SWITCH_TO_0:
+		case MUSIC_STATE_FADE_SWITCH_TO_1:
+		case MUSIC_STATE_FADE_CROSSFADE:
+
+		case MUSIC_STATE_PAUSED:
+			return error_failure("Can not start a fade out while the music is paused.");
+		}
+
+		return error_success();
 	}
 }
 
 void music_set_volume(app_t* app, float volume)
 {
+	audio_system_t* as = app->audio_system;
+
+	as->music_volume = volume;
+	float music_volume = as->global_volume * volume;
+
+	if (as->music_playing) cs_set_volume(&as->music_playing->sound, music_volume, music_volume);
+	if (as->music_next) cs_set_volume(&as->music_next->sound, music_volume, music_volume);
 }
 
 void music_set_pitch(app_t* app, float pitch)
 {
+	// Todo.
 }
 
 void music_set_loop(app_t* app, int loop)
 {
+	audio_system_t* as = app->audio_system;
+	if (as->music_playing) as->music_playing->sound.looped = 1;
+	if (as->music_next) as->music_next->sound.looped = 1;
 }
 
 void music_pause(app_t* app)
 {
+	audio_system_t* as = app->audio_system;
+	if (as->music_state == MUSIC_STATE_PAUSED) return;
+	if (as->music_playing) as->music_playing->sound.paused = 1;
+	if (as->music_next) as->music_next->sound.paused = 1;
+	as->music_state_to_resume_from_paused = as->music_state;
+	as->music_state = MUSIC_STATE_PAUSED;
+	CUTE_DEBUG_PRINTF("MUSIC_STATE_PAUSED\n");
 }
 
 void music_resume(app_t* app)
 {
+	audio_system_t* as = app->audio_system;
+	if (as->music_state != MUSIC_STATE_PAUSED) return;
+	if (as->music_playing) as->music_playing->sound.paused = 0;
+	if (as->music_next) as->music_next->sound.paused = 0;
+	as->music_state = as->music_state_to_resume_from_paused;
+	CUTE_DEBUG_PRINTF("music_state_to_resume_from_paused\n");
 }
 
 error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, float fade_in_time)
 {
+	audio_system_t* as = app->audio_system;
+
+	if (fade_in_time < 0) fade_in_time = 0;
+	if (fade_out_time < 0) fade_out_time = 0;
+
+	switch (as->music_state) {
+	case MUSIC_STATE_NONE:
+		return music_play(app, audio_source, fade_in_time);
+
+	case MUSIC_STATE_PLAYING:
+	{
+		CUTE_ASSERT(as->music_next == NULL);
+		audio_instance_t* inst = s_inst(app, audio_source, fade_in_time == 0 ? as->music_volume : 0);
+		as->music_next = inst;
+		list_push_back(&as->playing_sounds, &inst->node);
+
+		as->fade = fade_out_time;
+		as->fade_switch_1 = fade_in_time;
+		as->t = 0;
+		as->music_state = MUSIC_STATE_FADE_SWITCH_TO_0;
+		CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_SWITCH_TO_0\n");
+	}	break;
+
+	case MUSIC_STATE_FADE_OUT:
+	{
+		CUTE_ASSERT(as->music_next == NULL);
+		audio_instance_t* inst = s_inst(app, audio_source, fade_in_time == 0 ? as->music_volume : 0);
+		as->music_next = inst;
+		list_push_back(&as->playing_sounds, &inst->node);
+
+		as->fade_switch_1 = fade_in_time;
+		as->music_state = MUSIC_STATE_FADE_SWITCH_TO_0;
+		CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_SWITCH_TO_0\n");
+	}	break;
+
+	case MUSIC_STATE_FADE_IN:
+	{
+		CUTE_ASSERT(as->music_next == NULL);
+		audio_instance_t* inst = s_inst(app, audio_source, fade_in_time == 0 ? as->music_volume : 0);
+		as->music_next = inst;
+		list_push_back(&as->playing_sounds, &inst->node);
+
+		as->fade_switch_1 = fade_in_time;
+		as->t = s_smoothstep(((as->fade - as->t) / as->fade));
+		as->music_state = MUSIC_STATE_FADE_SWITCH_TO_0;
+		CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_SWITCH_TO_0\n");
+	}	break;
+
+	case MUSIC_STATE_FADE_SWITCH_TO_0:
+	{
+		CUTE_ASSERT(as->music_next != NULL);
+		audio_instance_t* inst = s_inst(app, audio_source, fade_in_time == 0 ? as->music_volume : 0);
+		as->music_next->sound.active = 0;
+		as->music_next = inst;
+		list_push_back(&as->playing_sounds, &inst->node);
+	}	break;
+
+	case MUSIC_STATE_FADE_SWITCH_TO_1:
+	{
+		CUTE_ASSERT(as->music_next != NULL);
+		audio_instance_t* inst = s_inst(app, audio_source, fade_in_time == 0 ? as->music_volume : 0);
+		as->music_playing = as->music_next;
+		as->music_next = inst;
+		list_push_back(&as->playing_sounds, &inst->node);
+
+		as->fade_switch_1 = fade_in_time;
+		as->t = s_smoothstep(((as->fade - as->t) / as->fade));
+		as->music_state = MUSIC_STATE_FADE_SWITCH_TO_0;
+		CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_SWITCH_TO_0\n");
+	}	break;
+
+	case MUSIC_STATE_FADE_CROSSFADE:
+
+	case MUSIC_STATE_PAUSED:
+		return error_failure("Can not switch music while paused.");
+	}
+
 	return error_success();
 }
 
@@ -327,25 +496,8 @@ error_t sound_play(app_t* app, audio_t* audio_source, sound_params_t params)
 		return error_failure("Unable to play music. Audio instance buffer full.");
 	}
 
-	float pan = params.pan;
-	if (pan > 1.0f) pan = 1.0f;
-	else if (pan < 0.0f) pan = 0.0f;
-	float panl = 1.0f - pan;
-	float panr = pan;
-
-	audio_instance_t* inst_ptr = CUTE_LIST_HOST(audio_instance_t, node, list_pop_back(&as->free_sounds));
-	inst_ptr->sound = cs_make_playing_sound(audio_source);
-	inst_ptr->sound.paused = params.paused;
-	inst_ptr->sound.looped = params.looped;
-	inst_ptr->sound.volume0 = params.volume;
-	inst_ptr->sound.volume1 = params.volume;
-	inst_ptr->sound.pan0 = panl;
-	inst_ptr->sound.pan1 = panr;
-	inst_ptr->sound.loaded_sound = audio_source;
-	int ret = cs_insert_sound(app->cute_sound, &inst_ptr->sound);
-	if (!ret) return error_failure("cute_sound.h `cs_insert_sound` failed.");
-
-	list_push_back(&as->playing_sounds, &inst_ptr->node);
+	audio_instance_t* inst = s_inst(app, audio_source, params);
+	list_push_back(&as->playing_sounds, &inst->node);
 
 	return error_success();
 }
@@ -355,7 +507,6 @@ error_t sound_play(app_t* app, audio_t* audio_source, sound_params_t params)
 void audio_set_pan(app_t* app, float pan)
 {
 	audio_system_t* as = app->audio_system;
-	if (!as) return;
 
 	if (list_empty(&as->playing_sounds)) return;
 	list_node_t* playing_sound = list_begin(&as->playing_sounds);
@@ -434,6 +585,9 @@ audio_system_t* audio_system_make(int pool_count, void* mem_ctx)
 	}
 
 	as->mem_ctx = mem_ctx;
+
+	CUTE_DEBUG_PRINTF("MUSIC_STATE_NONE\n");
+
 	return as;
 }
 
@@ -463,7 +617,74 @@ void audio_system_update(audio_system_t* as, float dt)
 		playing_sound = next;
 	} while (playing_sound != end);
 
-	// Update fades and crossfades.
+	switch (as->music_state) {
+	case MUSIC_STATE_FADE_OUT:
+	{
+		as->t += dt;
+		if (as->t >= as->fade) {
+			as->music_state = MUSIC_STATE_NONE;
+			CUTE_DEBUG_PRINTF("MUSIC_STATE_NONE\n");
+			as->music_playing->sound.active = 0;
+			as->music_playing = NULL;
+		} else {
+			float t = s_smoothstep(((as->fade - as->t) / as->fade));
+			float volume = as->music_volume * as->global_volume * t;
+			cs_set_volume(&as->music_playing->sound, volume, volume);
+		}
+	}	break;
+
+	case MUSIC_STATE_FADE_IN:
+	{
+		as->t += dt;
+		if (as->t >= as->fade) {
+			as->music_state = MUSIC_STATE_PLAYING;
+			CUTE_DEBUG_PRINTF("MUSIC_STATE_PLAYING\n");
+			as->t = as->fade;
+		}
+		float t = s_smoothstep(1.0f - ((as->fade - as->t) / as->fade));
+		float volume = as->music_volume * as->global_volume * t;
+		cs_set_volume(&as->music_playing->sound, volume, volume);
+	}	break;
+
+	case MUSIC_STATE_FADE_SWITCH_TO_0:
+	{
+		as->t += dt;
+		if (as->t >= as->fade) {
+			as->music_state = MUSIC_STATE_FADE_SWITCH_TO_1;
+			CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_SWITCH_TO_1\n");
+			as->music_playing->sound.active = 0;
+			cs_set_volume(&as->music_playing->sound, 0, 0);
+			as->t = 0;
+			as->fade = as->fade_switch_1;
+			as->fade_switch_1 = 0;
+		} else {
+			float t = s_smoothstep(((as->fade - as->t) / as->fade));
+			float volume = as->music_volume * as->global_volume * t;
+			cs_set_volume(&as->music_playing->sound, volume, volume);
+		}
+	}	break;
+
+	case MUSIC_STATE_FADE_SWITCH_TO_1:
+	{
+		as->t += dt;
+		if (as->t >= as->fade) {
+			as->music_state = MUSIC_STATE_PLAYING;
+			CUTE_DEBUG_PRINTF("MUSIC_STATE_PLAYING\n");
+			as->t = as->fade;
+			float volume = as->music_volume * as->global_volume;
+			cs_set_volume(&as->music_next->sound, volume, volume);
+			as->music_playing = as->music_next;
+			as->music_next = NULL;
+		} else {
+			float t = s_smoothstep(1.0f - ((as->fade - as->t) / as->fade));
+			float volume = as->music_volume * as->global_volume * t;
+			cs_set_volume(&as->music_next->sound, volume, volume);
+		}
+	}	break;
+
+	case MUSIC_STATE_FADE_CROSSFADE:
+		break;
+	}
 }
 
 int sound_instance_size()

@@ -30,6 +30,8 @@
 
 cute::audio_t* jump_audio = NULL;
 cute::audio_t* music_audio = NULL;
+cute::audio_t* cavestory = NULL;
+cute::audio_t* cemetary = NULL;
 
 void load_jump_promise(cute::error_t status, void* param, void* promise_udata)
 {
@@ -43,6 +45,18 @@ void load_music_promise(cute::error_t status, void* param, void* promise_udata)
 	printf("Loaded 3-6-19-blue-suit-jam.ogg\n");
 }
 
+void load_cavestory_promise(cute::error_t status, void* param, void* promise_udata)
+{
+	cavestory = (cute::audio_t*)param;
+	printf("Loaded cave_story.ogg\n");
+}
+
+void load_cemetary_promise(cute::error_t status, void* param, void* promise_udata)
+{
+	cemetary = (cute::audio_t*)param;
+	printf("Loaded cemetary.ogg\n");
+}
+
 int main(int argc, const char** argv)
 {
 	int options = CUTE_APP_OPTIONS_GFX_D3D9 | CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
@@ -50,12 +64,29 @@ int main(int argc, const char** argv)
 
 	cute::audio_stream_wav(app, "jump.wav", cute::promise_t(load_jump_promise));
 	cute::audio_stream_ogg(app, "3-6-19-blue-suit-jam.ogg", cute::promise_t(load_music_promise));
+	cute::audio_stream_ogg(app, "cave_story.ogg", cute::promise_t(load_cavestory_promise));
+	cute::audio_stream_ogg(app, "cemetary.ogg", cute::promise_t(load_cemetary_promise));
 
 	printf("Running from: %s\n", cute::file_system_get_working_directory());
 
 	while (cute::app_is_running(app)) {
 		float dt = cute::calc_dt();
 		cute::app_update(app, dt);
+
+		if (cute::key_was_pressed(app, cute::KEY_S)) {
+			printf("key S\n");
+			cute::music_stop(app, 2);
+		}
+
+		if (cute::key_was_pressed(app, cute::KEY_P)) {
+			printf("key P\n");
+			cute::music_pause(app);
+		}
+
+		if (cute::key_was_pressed(app, cute::KEY_R)) {
+			printf("key R\n");
+			cute::music_resume(app);
+		}
 
 		if (cute::key_was_pressed(app, cute::KEY_SPACE)) {
 			printf("space\n");
@@ -64,7 +95,17 @@ int main(int argc, const char** argv)
 
 		if (cute::key_was_pressed(app, cute::KEY_1)) {
 			printf("key 1\n");
-			if (music_audio) cute::music_play(app, music_audio);
+			if (music_audio) cute::music_switch_to(app, music_audio, 2, 2);
+		}
+
+		if (cute::key_was_pressed(app, cute::KEY_2)) {
+			printf("key 2\n");
+			if (cavestory) cute::music_switch_to(app, cavestory, 2, 2);
+		}
+
+		if (cute::key_was_pressed(app, cute::KEY_3)) {
+			printf("key 3\n");
+			if (cemetary) cute::music_switch_to(app, cemetary, 2, 2);
 		}
 
 		if (cute::mouse_was_pressed(app, cute::MOUSE_BUTTON_LEFT)) {
@@ -77,6 +118,10 @@ int main(int argc, const char** argv)
 
 		if (cute::app_window_mouse_entered(app)) {
 			printf("mouse entered\n");
+		}
+
+		if (cute::app_window_mouse_exited(app)) {
+			printf("mouse exited\n");
 		}
 
 		if (cute::app_window_was_minimized(app)) {
@@ -108,7 +153,7 @@ int main(int argc, const char** argv)
 		if (cute::app_window_was_moved(app)) {
 			int x, y;
 			cute::app_window_position(app, &x, &y);
-			printf("size moved to %d, %d\n", x, y);
+			printf("position moved to %d, %d\n", x, y);
 		}
 	}
 
