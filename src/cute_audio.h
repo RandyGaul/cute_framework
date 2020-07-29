@@ -44,8 +44,8 @@ extern CUTE_API int CUTE_CALL audio_ref_count(audio_t* audio);
 
 // -------------------------------------------------------------------------------------------------
 
-extern CUTE_API error_t CUTE_CALL music_play(app_t* app, audio_t* audio_source, float fade_in_time = 0, float delay = 0);
-extern CUTE_API void CUTE_CALL music_stop(app_t* app, float fade_out_time = 0);
+extern CUTE_API error_t CUTE_CALL music_play(app_t* app, audio_t* audio_source, float fade_in_time = 0);
+extern CUTE_API error_t CUTE_CALL music_stop(app_t* app, float fade_out_time = 0);
 extern CUTE_API void CUTE_CALL music_set_volume(app_t* app, float volume);
 extern CUTE_API void CUTE_CALL music_set_pitch(app_t* app, float pitch);
 extern CUTE_API void CUTE_CALL music_set_loop(app_t* app, int loop);
@@ -66,7 +66,7 @@ struct sound_params_t
 	float delay = 0;
 };
 
-extern CUTE_API void CUTE_CALL sound_play(app_t* app, audio_t* audio_source, sound_params_t params = sound_params_t());
+extern CUTE_API error_t CUTE_CALL sound_play(app_t* app, audio_t* audio_source, sound_params_t params = sound_params_t());
 
 // -------------------------------------------------------------------------------------------------
 

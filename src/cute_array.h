@@ -251,8 +251,13 @@ void array<T>::set_count(int count)
 template <typename T>
 void array<T>::ensure_count(int count)
 {
+	int old_count = m_count;
 	ensure_capacity(count);
 	m_count = count;
+	for (int i = old_count; i < count; ++i) {
+		T* slot = m_items + i;
+		CUTE_PLACEMENT_NEW(slot) T;
+	}
 }
 
 template <typename T>

@@ -22,7 +22,7 @@
 #include <cute_audio.h>
 #include <cute_alloc.h>
 #include <cute_array.h>
-#include <cute_log.h>
+#include <cute_doubly_list.h>
 
 #include <internal/cute_app_internal.h>
 
@@ -191,26 +191,99 @@ int audio_ref_count(audio_t* audio)
 
 // -------------------------------------------------------------------------------------------------
 
-using audio_instance_t = cs_playing_sound_t;
+struct audio_instance_t
+{
+	cs_playing_sound_t sound;
+	list_node_t node;
+};
+
+enum music_state_t
+{
+	MUSIC_STATE_NONE,
+	MUSIC_STATE_PLAYING,
+	MUSIC_STATE_FADE_OUT,
+	MUSIC_STATE_FADE_IN,
+	MUSIC_STATE_FADE_SWITCH_TO,
+	MUSIC_STATE_FADE_CROSSFADE,
+	MUSIC_STATE_PAUSED
+};
 
 struct audio_system_t
 {
 	float global_volume = 1.0f;
 	float music_volume = 1.0f;
 	float sound_volume = 1.0f;
+
+	float fade = 0;
+	music_state_t music_state = MUSIC_STATE_NONE;
 	audio_instance_t* music_playing = NULL;
 	audio_instance_t* music_next = NULL;
-	array<audio_instance_t*> playing_sounds;
+
+	audio_instance_t* playing_sounds_buffer;
+	list_t playing_sounds;
+	list_t free_sounds;
 	void* mem_ctx = NULL;
 };
 
-error_t music_play(app_t* app, audio_t* audio_source, float fade_in_time, float delay)
+error_t music_play(app_t* app, audio_t* audio_source, float fade_in_time)
 {
+	audio_system_t* as = app->audio_system;
+
+	if (as->music_state == MUSIC_STATE_PLAYING) {
+		return error_failure("Already playing some music. Use `music_switch_to` or `music_crossfade` instead.");
+	} else if (as->music_state != MUSIC_STATE_NONE) {
+		return error_failure("Currently fading other music, can not start playing new music right now.");
+	}
+
+	if (fade_in_time < 0) fade_in_time = 0;
+	if (fade_in_time) as->music_state = MUSIC_STATE_FADE_IN;
+	else as->music_state = MUSIC_STATE_PLAYING;
+	as->fade = fade_in_time;
+
+	if (list_empty(&as->free_sounds)) {
+		return error_failure("Unable to play music. Audio instance buffer full.");
+	}
+
+	float initial_volume = fade_in_time == 0 ? as->music_volume : 0;
+	audio_instance_t* inst_ptr = CUTE_LIST_HOST(audio_instance_t, node, list_pop_back(&as->free_sounds));
+	inst_ptr->sound = cs_make_playing_sound(audio_source);
+	inst_ptr->sound.paused = 0;
+	inst_ptr->sound.looped = 1;
+	inst_ptr->sound.volume0 = initial_volume;
+	inst_ptr->sound.volume1 = initial_volume;
+	int ret = cs_insert_sound(app->cute_sound, &inst_ptr->sound);
+	if (!ret) return error_failure("cute_sound.h `cs_insert_sound` failed.");
+
+	CUTE_ASSERT(as->music_playing == NULL);
+	as->music_playing = inst_ptr;
+
+	list_push_back(&as->playing_sounds, &inst_ptr->node);
+
 	return error_success();
 }
 
-void music_stop(app_t* app, float fade_out_time)
+error_t music_stop(app_t* app, float fade_out_time)
 {
+	audio_system_t* as = app->audio_system;
+
+	if (fade_out_time == 0) {
+		// Immediately turn off all music if no fade out time.
+		if (as->music_playing) as->music_playing->sound.active = 0;
+		if (as->music_next) as->music_next->sound.active = 0;
+		as->music_playing = NULL;
+		as->music_next = NULL;
+		as->music_state = MUSIC_STATE_NONE;
+		return error_success();
+	} else {
+		// Otherwise enter fading out state.
+		/*
+			If playing, trivial.
+			If already fading in any way, simply use that fade time and then swap to fade out.
+			Special care to handle crossfade and whatnot.
+			Come back to this later.
+		*/
+		return error_failure("Not yet implemented.");
+	}
 }
 
 void music_set_volume(app_t* app, float volume)
@@ -245,124 +318,150 @@ error_t music_crossfade_to(app_t* app, audio_t* audio_source, float cross_fade_t
 
 // -------------------------------------------------------------------------------------------------
 
-void sound_play(app_t* app, audio_t* audio_source, sound_params_t params)
+error_t sound_play(app_t* app, audio_t* audio_source, sound_params_t params)
 {
-	audio_system_t* audio_system = app->audio_system;
-	if (!audio_system) return;
+	audio_system_t* as = app->audio_system;
+	if (!as) return error_failure("Audio system not initialized.");
 
-	cs_play_sound_def_t def;
-	def.paused = params.paused;
-	def.looped = params.looped;
-	def.volume_left = params.volume;
-	def.volume_right = params.volume;
-	def.pan = params.pan;
-	// TODO - Pitch.
-	// def.pitch = params.pitch;
-	def.delay = params.delay;
-	def.loaded = audio_source;
-	audio_instance_t* instance = cs_play_sound(app->cute_sound, def);
-
-	if (instance) {
-		audio_system->playing_sounds.add(instance);
-	} else {
-		// TODO - Remove all logs and logging system.
-		log(CUTE_LOG_LEVEL_WARNING, "Unable to play sound. Audio instance buffer full.");
+	if (list_empty(&as->free_sounds)) {
+		return error_failure("Unable to play music. Audio instance buffer full.");
 	}
+
+	float pan = params.pan;
+	if (pan > 1.0f) pan = 1.0f;
+	else if (pan < 0.0f) pan = 0.0f;
+	float panl = 1.0f - pan;
+	float panr = pan;
+
+	audio_instance_t* inst_ptr = CUTE_LIST_HOST(audio_instance_t, node, list_pop_back(&as->free_sounds));
+	inst_ptr->sound = cs_make_playing_sound(audio_source);
+	inst_ptr->sound.paused = params.paused;
+	inst_ptr->sound.looped = params.looped;
+	inst_ptr->sound.volume0 = params.volume;
+	inst_ptr->sound.volume1 = params.volume;
+	inst_ptr->sound.pan0 = panl;
+	inst_ptr->sound.pan1 = panr;
+	inst_ptr->sound.loaded_sound = audio_source;
+	int ret = cs_insert_sound(app->cute_sound, &inst_ptr->sound);
+	if (!ret) return error_failure("cute_sound.h `cs_insert_sound` failed.");
+
+	list_push_back(&as->playing_sounds, &inst_ptr->node);
+
+	return error_success();
 }
 
 // -------------------------------------------------------------------------------------------------
 
 void audio_set_pan(app_t* app, float pan)
 {
-	audio_system_t* audio_system = app->audio_system;
-	if (!audio_system) return;
+	audio_system_t* as = app->audio_system;
+	if (!as) return;
 
-	int count = audio_system->playing_sounds.count();
-	audio_instance_t** instances = audio_system->playing_sounds.data();
+	if (list_empty(&as->playing_sounds)) return;
+	list_node_t* playing_sound = list_begin(&as->playing_sounds);
+	list_node_t* end = list_end(&as->playing_sounds);
 
-	for (int i = 0; i < count; ++i)
-	{
-		audio_instance_t* instance = instances[i];
-		cs_set_pan(instance, pan);
-	}
+	do {
+		audio_instance_t* inst = CUTE_LIST_HOST(audio_instance_t, node, playing_sound);
+		cs_set_pan(&inst->sound, pan);
+		playing_sound = playing_sound->next;
+	} while (playing_sound != end);
 
-	if (audio_system->music_playing) cs_set_pan(audio_system->music_playing, pan);
-	if (audio_system->music_next) cs_set_pan(audio_system->music_next, pan);
+	if (as->music_playing) cs_set_pan(&as->music_playing->sound, pan);
+	if (as->music_next) cs_set_pan(&as->music_next->sound, pan);
 }
 
 void audio_set_global_volume(app_t* app, float volume)
 {
-	audio_system_t* audio_system = app->audio_system;
-	if (!audio_system) return;
+	audio_system_t* as = app->audio_system;
+	if (!as) return;
 
-	audio_system->global_volume = volume;
-	float sound_volume = audio_system->sound_volume * volume;
-	float music_volume = audio_system->music_volume * volume;
+	as->global_volume = volume;
+	float sound_volume = as->sound_volume * volume;
+	float music_volume = as->music_volume * volume;
 
-	int count = audio_system->playing_sounds.count();
-	audio_instance_t** instances = audio_system->playing_sounds.data();
+	if (list_empty(&as->playing_sounds)) return;
+	list_node_t* playing_sound = list_begin(&as->playing_sounds);
+	list_node_t* end = list_end(&as->playing_sounds);
 
-	for (int i = 0; i < count; ++i)
-	{
-		audio_instance_t* instance = instances[i];
-		cs_set_volume(instance, sound_volume, sound_volume);
-	}
+	do {
+		audio_instance_t* inst = CUTE_LIST_HOST(audio_instance_t, node, playing_sound);
+		cs_set_volume(&inst->sound, sound_volume, sound_volume);
+		playing_sound = playing_sound->next;
+	} while (playing_sound != end);
 
-	if (audio_system->music_playing) cs_set_volume(audio_system->music_playing, music_volume, music_volume);
-	if (audio_system->music_next) cs_set_volume(audio_system->music_next, music_volume, music_volume);
+	if (as->music_playing) cs_set_volume(&as->music_playing->sound, music_volume, music_volume);
+	if (as->music_next) cs_set_volume(&as->music_next->sound, music_volume, music_volume);
 }
 
 void audio_set_sound_volume(app_t* app, float volume)
 {
-	audio_system_t* audio_system = app->audio_system;
-	if (!audio_system) return;
+	audio_system_t* as = app->audio_system;
+	if (!as) return;
 
-	audio_system->sound_volume = volume;
-	float sound_volume = audio_system->global_volume * volume;
+	as->sound_volume = volume;
+	float sound_volume = as->global_volume * volume;
 
-	int count = audio_system->playing_sounds.count();
-	audio_instance_t** instances = audio_system->playing_sounds.data();
+	if (list_empty(&as->playing_sounds)) return;
+	list_node_t* playing_sound = list_begin(&as->playing_sounds);
+	list_node_t* end = list_end(&as->playing_sounds);
 
-	for (int i = 0; i < count; ++i)
-	{
-		audio_instance_t* instance = instances[i];
-		cs_set_volume(instance, sound_volume, sound_volume);
-	}
+	do {
+		audio_instance_t* inst = CUTE_LIST_HOST(audio_instance_t, node, playing_sound);
+		if (inst != as->music_playing && inst != as->music_next) {
+			cs_set_volume(&inst->sound, sound_volume, sound_volume);
+		}
+		playing_sound = playing_sound->next;
+	} while (playing_sound != end);
 }
 
 // -------------------------------------------------------------------------------------------------
 // Internal.
 
-audio_system_t* audio_system_make(void* mem_ctx)
+audio_system_t* audio_system_make(int pool_count, void* mem_ctx)
 {
-	audio_system_t* audio_system = (audio_system_t*)CUTE_ALLOC(sizeof(audio_system_t), mem_ctx);
-	CUTE_ASSERT(audio_system);
-	CUTE_PLACEMENT_NEW(audio_system) audio_system_t;
-	audio_system->mem_ctx = mem_ctx;
-	return audio_system;
+	audio_system_t* as = (audio_system_t*)CUTE_ALLOC(sizeof(audio_system_t), mem_ctx);
+	CUTE_ASSERT(as);
+	CUTE_PLACEMENT_NEW(as) audio_system_t;
+	as->playing_sounds_buffer = (audio_instance_t*)CUTE_ALLOC(sizeof(audio_instance_t) * pool_count, mem_ctx);
+
+	list_init(&as->playing_sounds);
+	list_init(&as->free_sounds);
+	for (int i = 0; i < pool_count; ++i) {
+		audio_instance_t* inst = as->playing_sounds_buffer + i;
+		list_init_node(&inst->node);
+		list_push_back(&as->free_sounds, &inst->node);
+	}
+
+	as->mem_ctx = mem_ctx;
+	return as;
 }
 
 void audio_system_destroy(audio_system_t* audio_system)
 {
+	CUTE_FREE(audio_system->playing_sounds_buffer, audio_system->mem_ctx);
 	CUTE_FREE(audio_system, audio_system->mem_ctx);
 }
 
-void audio_system_update(audio_system_t* audio_system, float dt)
+void audio_system_update(audio_system_t* as, float dt)
 {
-	int count = audio_system->playing_sounds.count();
-	audio_instance_t** instances = audio_system->playing_sounds.data();
+	// Move any instances that finished playing to the free list.
+	// Don't gargbage collect the music instances though.
+	if (list_empty(&as->playing_sounds)) return;
+	list_node_t* playing_sound = list_begin(&as->playing_sounds);
+	list_node_t* end = list_end(&as->playing_sounds);
 
-	// Remove old instances that finished playing.
-	for (int i = 0; i < count;)
-	{
-		audio_instance_t* instance = instances[i];
-		if (!instance->active) {
-			audio_system->playing_sounds.unordered_remove(i);
-			--count;
-		} else {
-			++i;
+	do {
+		audio_instance_t* inst = CUTE_LIST_HOST(audio_instance_t, node, playing_sound);
+		list_node_t* next = playing_sound->next;
+		if (inst != as->music_playing && inst != as->music_next) {
+			if (!inst->sound.active) {
+				list_remove(&inst->node);
+				list_push_back(&as->free_sounds, &inst->node);
+			}
 		}
-	}
+		playing_sound = next;
+	} while (playing_sound != end);
 
 	// Update fades and crossfades.
 }

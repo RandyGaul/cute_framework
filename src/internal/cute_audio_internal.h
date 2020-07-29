@@ -27,7 +27,7 @@ namespace cute
 
 struct audio_system_t;
 
-audio_system_t* audio_system_make(void* mem_ctx = NULL);
+audio_system_t* audio_system_make(int pool_count, void* mem_ctx = NULL);
 void audio_system_destroy(audio_system_t* audio_system);
 void audio_system_update(audio_system_t* audio_system, float dt);
 

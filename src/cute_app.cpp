@@ -122,10 +122,10 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 
 	if (!(options & CUTE_APP_OPTIONS_NO_AUDIO)) {
 		int max_simultaneous_sounds = 5000; // TODO: Expose this.
-		app->cute_sound = cs_make_context(NULL, 44100, 1024, max_simultaneous_sounds, app->mem_ctx);
+		app->cute_sound = cs_make_context(NULL, 44100, 1024, 0, app->mem_ctx);
 		if (app->cute_sound) {
 			cs_spawn_mix_thread(app->cute_sound);
-			app->audio_system = audio_system_make(app->mem_ctx);
+			app->audio_system = audio_system_make(max_simultaneous_sounds, app->mem_ctx);
 		} else {
 			// TODO: Return error message.
 		}
