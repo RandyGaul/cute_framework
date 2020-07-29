@@ -105,7 +105,7 @@ int main(int argc, const char** argv)
 
 		if (cute::key_was_pressed(app, cute::KEY_3)) {
 			printf("key 3\n");
-			if (cemetary) cute::music_switch_to(app, cemetary, 2, 2);
+			if (cemetary) cute::music_crossfade(app, cemetary, 2);
 		}
 
 		if (cute::mouse_was_pressed(app, cute::MOUSE_BUTTON_LEFT)) {

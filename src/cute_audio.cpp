@@ -210,9 +210,9 @@ enum music_state_t
 	MUSIC_STATE_PLAYING,
 	MUSIC_STATE_FADE_OUT,
 	MUSIC_STATE_FADE_IN,
-	MUSIC_STATE_FADE_SWITCH_TO_0,
-	MUSIC_STATE_FADE_SWITCH_TO_1,
-	MUSIC_STATE_FADE_CROSSFADE,
+	MUSIC_STATE_SWITCH_TO_0,
+	MUSIC_STATE_SWITCH_TO_1,
+	MUSIC_STATE_CROSSFADE,
 	MUSIC_STATE_PAUSED
 };
 
@@ -241,7 +241,7 @@ static audio_instance_t* s_inst(app_t* app, audio_t* src, float volume)
 	audio_system_t* as = app->audio_system;
 	audio_instance_t* inst_ptr = CUTE_LIST_HOST(audio_instance_t, node, list_pop_back(&as->free_sounds));
 	inst_ptr->sound = cs_make_playing_sound(src);
-	inst_ptr->sound.paused = 0;
+	inst_ptr->sound.paused = 1;
 	inst_ptr->sound.looped = 1;
 	inst_ptr->sound.volume0 = volume;
 	inst_ptr->sound.volume1 = volume;
@@ -272,11 +272,11 @@ static audio_instance_t* s_inst(app_t* app, audio_t* src, sound_params_t params)
 error_t music_play(app_t* app, audio_t* audio_source, float fade_in_time)
 {
 	audio_system_t* as = app->audio_system;
+	if (!as) return error_failure("Audio system not initialized.");
 
-	if (as->music_state == MUSIC_STATE_PLAYING) {
-		return error_failure("Already playing some music. Use `music_switch_to` or `music_crossfade` instead.");
-	} else if (as->music_state != MUSIC_STATE_NONE) {
-		return error_failure("Currently fading other music, can not start playing new music right now.");
+	if (as->music_state != MUSIC_STATE_PLAYING) {
+		error_t err = music_stop(app, 0);
+		if (err.is_error()) return err;
 	}
 
 	if (fade_in_time < 0) fade_in_time = 0;
@@ -298,6 +298,7 @@ error_t music_play(app_t* app, audio_t* audio_source, float fade_in_time)
 	CUTE_ASSERT(as->music_playing == NULL);
 	CUTE_ASSERT(as->music_next == NULL);
 	audio_instance_t* inst = s_inst(app, audio_source, initial_volume);
+	inst->sound.paused = 0;
 	as->music_playing = inst;
 	list_push_back(&as->playing_sounds, &inst->node);
 
@@ -307,6 +308,7 @@ error_t music_play(app_t* app, audio_t* audio_source, float fade_in_time)
 error_t music_stop(app_t* app, float fade_out_time)
 {
 	audio_system_t* as = app->audio_system;
+	if (!as) return error_failure("Audio system not initialized.");
 
 	if (fade_out_time < 0) fade_out_time = 0;
 
@@ -342,9 +344,27 @@ error_t music_stop(app_t* app, float fade_out_time)
 			as->fade = fade_out_time;
 		}	break;
 
-		case MUSIC_STATE_FADE_SWITCH_TO_0:
-		case MUSIC_STATE_FADE_SWITCH_TO_1:
-		case MUSIC_STATE_FADE_CROSSFADE:
+		case MUSIC_STATE_SWITCH_TO_0:
+		{
+			as->music_state = MUSIC_STATE_FADE_OUT;
+			CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_OUT\n");
+			as->t = s_smoothstep(((as->fade - as->t) / as->fade));
+			as->fade = fade_out_time;
+			as->music_next = NULL;
+		}	break;
+
+		case MUSIC_STATE_SWITCH_TO_1:
+			// Fall-through.
+
+		case MUSIC_STATE_CROSSFADE:
+		{
+			as->music_state = MUSIC_STATE_FADE_OUT;
+			CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_OUT\n");
+			as->t = s_smoothstep(((as->fade - as->t) / as->fade));
+			as->fade = fade_out_time;
+			as->music_playing = as->music_next;
+			as->music_next = NULL;
+		}	break;
 
 		case MUSIC_STATE_PAUSED:
 			return error_failure("Can not start a fade out while the music is paused.");
@@ -357,6 +377,7 @@ error_t music_stop(app_t* app, float fade_out_time)
 void music_set_volume(app_t* app, float volume)
 {
 	audio_system_t* as = app->audio_system;
+	if (!as) return;
 
 	as->music_volume = volume;
 	float music_volume = as->global_volume * volume;
@@ -373,6 +394,7 @@ void music_set_pitch(app_t* app, float pitch)
 void music_set_loop(app_t* app, int loop)
 {
 	audio_system_t* as = app->audio_system;
+	if (!as) return;
 	if (as->music_playing) as->music_playing->sound.looped = 1;
 	if (as->music_next) as->music_next->sound.looped = 1;
 }
@@ -380,6 +402,7 @@ void music_set_loop(app_t* app, int loop)
 void music_pause(app_t* app)
 {
 	audio_system_t* as = app->audio_system;
+	if (!as) return;
 	if (as->music_state == MUSIC_STATE_PAUSED) return;
 	if (as->music_playing) as->music_playing->sound.paused = 1;
 	if (as->music_next) as->music_next->sound.paused = 1;
@@ -391,6 +414,7 @@ void music_pause(app_t* app)
 void music_resume(app_t* app)
 {
 	audio_system_t* as = app->audio_system;
+	if (!as) return;
 	if (as->music_state != MUSIC_STATE_PAUSED) return;
 	if (as->music_playing) as->music_playing->sound.paused = 0;
 	if (as->music_next) as->music_next->sound.paused = 0;
@@ -401,6 +425,7 @@ void music_resume(app_t* app)
 error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, float fade_in_time)
 {
 	audio_system_t* as = app->audio_system;
+	if (!as) return error_failure("Audio system not initialized.");
 
 	if (fade_in_time < 0) fade_in_time = 0;
 	if (fade_out_time < 0) fade_out_time = 0;
@@ -419,8 +444,8 @@ error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, 
 		as->fade = fade_out_time;
 		as->fade_switch_1 = fade_in_time;
 		as->t = 0;
-		as->music_state = MUSIC_STATE_FADE_SWITCH_TO_0;
-		CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_SWITCH_TO_0\n");
+		as->music_state = MUSIC_STATE_SWITCH_TO_0;
+		CUTE_DEBUG_PRINTF("MUSIC_STATE_SWITCH_TO_0\n");
 	}	break;
 
 	case MUSIC_STATE_FADE_OUT:
@@ -431,8 +456,8 @@ error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, 
 		list_push_back(&as->playing_sounds, &inst->node);
 
 		as->fade_switch_1 = fade_in_time;
-		as->music_state = MUSIC_STATE_FADE_SWITCH_TO_0;
-		CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_SWITCH_TO_0\n");
+		as->music_state = MUSIC_STATE_SWITCH_TO_0;
+		CUTE_DEBUG_PRINTF("MUSIC_STATE_SWITCH_TO_0\n");
 	}	break;
 
 	case MUSIC_STATE_FADE_IN:
@@ -444,20 +469,22 @@ error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, 
 
 		as->fade_switch_1 = fade_in_time;
 		as->t = s_smoothstep(((as->fade - as->t) / as->fade));
-		as->music_state = MUSIC_STATE_FADE_SWITCH_TO_0;
-		CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_SWITCH_TO_0\n");
+		as->music_state = MUSIC_STATE_SWITCH_TO_0;
+		CUTE_DEBUG_PRINTF("MUSIC_STATE_SWITCH_TO_0\n");
 	}	break;
 
-	case MUSIC_STATE_FADE_SWITCH_TO_0:
+	case MUSIC_STATE_SWITCH_TO_0:
 	{
 		CUTE_ASSERT(as->music_next != NULL);
 		audio_instance_t* inst = s_inst(app, audio_source, fade_in_time == 0 ? as->music_volume : 0);
 		as->music_next->sound.active = 0;
 		as->music_next = inst;
+		as->fade_switch_1 = fade_in_time;
 		list_push_back(&as->playing_sounds, &inst->node);
 	}	break;
 
-	case MUSIC_STATE_FADE_SWITCH_TO_1:
+	case MUSIC_STATE_CROSSFADE:
+	case MUSIC_STATE_SWITCH_TO_1:
 	{
 		CUTE_ASSERT(as->music_next != NULL);
 		audio_instance_t* inst = s_inst(app, audio_source, fade_in_time == 0 ? as->music_volume : 0);
@@ -465,13 +492,12 @@ error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, 
 		as->music_next = inst;
 		list_push_back(&as->playing_sounds, &inst->node);
 
-		as->fade_switch_1 = fade_in_time;
 		as->t = s_smoothstep(((as->fade - as->t) / as->fade));
-		as->music_state = MUSIC_STATE_FADE_SWITCH_TO_0;
-		CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_SWITCH_TO_0\n");
+		as->fade_switch_1 = fade_in_time;
+		as->fade = fade_out_time;
+		as->music_state = MUSIC_STATE_SWITCH_TO_0;
+		CUTE_DEBUG_PRINTF("MUSIC_STATE_SWITCH_TO_0\n");
 	}	break;
-
-	case MUSIC_STATE_FADE_CROSSFADE:
 
 	case MUSIC_STATE_PAUSED:
 		return error_failure("Can not switch music while paused.");
@@ -480,8 +506,85 @@ error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, 
 	return error_success();
 }
 
-error_t music_crossfade_to(app_t* app, audio_t* audio_source, float cross_fade_time)
+error_t music_crossfade(app_t* app, audio_t* audio_source, float cross_fade_time)
 {
+	audio_system_t* as = app->audio_system;
+	if (!as) return error_failure("Audio system not initialized.");
+
+	if (cross_fade_time < 0) cross_fade_time = 0;
+
+	switch (as->music_state) {
+	case MUSIC_STATE_NONE:
+		return music_play(app, audio_source, cross_fade_time);
+
+	case MUSIC_STATE_PLAYING:
+	{
+		CUTE_ASSERT(as->music_next == NULL);
+		as->music_state = MUSIC_STATE_CROSSFADE;
+		CUTE_DEBUG_PRINTF("MUSIC_STATE_CROSSFADE\n");
+
+		audio_instance_t* inst = s_inst(app, audio_source, cross_fade_time == 0 ? as->music_volume : 0);
+		inst->sound.paused = 0;
+		as->music_next = inst;
+		list_push_back(&as->playing_sounds, &inst->node);
+
+		as->fade = cross_fade_time;
+		as->t = 0;
+	}	break;
+
+	case MUSIC_STATE_FADE_OUT:
+		CUTE_ASSERT(as->music_next == NULL);
+		// Fall-through.
+
+	case MUSIC_STATE_FADE_IN:
+	{
+		as->music_state = MUSIC_STATE_CROSSFADE;
+		CUTE_DEBUG_PRINTF("MUSIC_STATE_CROSSFADE\n");
+
+		audio_instance_t* inst = s_inst(app, audio_source, cross_fade_time == 0 ? as->music_volume : 0);
+		inst->sound.paused = 0;
+		as->music_next = inst;
+		list_push_back(&as->playing_sounds, &inst->node);
+
+		as->fade = cross_fade_time;
+	}	break;
+
+	case MUSIC_STATE_SWITCH_TO_0:
+	{
+		as->music_state = MUSIC_STATE_CROSSFADE;
+		CUTE_DEBUG_PRINTF("MUSIC_STATE_CROSSFADE\n");
+		as->music_next->sound.active = 0;
+
+		audio_instance_t* inst = s_inst(app, audio_source, cross_fade_time == 0 ? as->music_volume : 0);
+		inst->sound.paused = 0;
+		as->music_next = inst;
+		list_push_back(&as->playing_sounds, &inst->node);
+
+		as->fade = cross_fade_time;
+	}	break;
+
+	case MUSIC_STATE_SWITCH_TO_1:
+		// Fall-through.
+
+	case MUSIC_STATE_CROSSFADE:
+	{
+		as->music_state = MUSIC_STATE_CROSSFADE;
+		CUTE_DEBUG_PRINTF("MUSIC_STATE_CROSSFADE\n");
+		as->music_playing->sound.active = 0;
+		as->music_playing = as->music_next;
+
+		audio_instance_t* inst = s_inst(app, audio_source, cross_fade_time == 0 ? as->music_volume : 0);
+		inst->sound.paused = 0;
+		as->music_next = inst;
+		list_push_back(&as->playing_sounds, &inst->node);
+
+		as->fade = cross_fade_time;
+	}	break;
+
+	case MUSIC_STATE_PAUSED:
+		return error_failure("Can not start a crossfade while music is paused.");
+	}
+
 	return error_success();
 }
 
@@ -507,6 +610,7 @@ error_t sound_play(app_t* app, audio_t* audio_source, sound_params_t params)
 void audio_set_pan(app_t* app, float pan)
 {
 	audio_system_t* as = app->audio_system;
+	if (!as) return;
 
 	if (list_empty(&as->playing_sounds)) return;
 	list_node_t* playing_sound = list_begin(&as->playing_sounds);
@@ -646,17 +750,18 @@ void audio_system_update(audio_system_t* as, float dt)
 		cs_set_volume(&as->music_playing->sound, volume, volume);
 	}	break;
 
-	case MUSIC_STATE_FADE_SWITCH_TO_0:
+	case MUSIC_STATE_SWITCH_TO_0:
 	{
 		as->t += dt;
 		if (as->t >= as->fade) {
-			as->music_state = MUSIC_STATE_FADE_SWITCH_TO_1;
-			CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_SWITCH_TO_1\n");
+			as->music_state = MUSIC_STATE_SWITCH_TO_1;
+			CUTE_DEBUG_PRINTF("MUSIC_STATE_SWITCH_TO_1\n");
 			as->music_playing->sound.active = 0;
 			cs_set_volume(&as->music_playing->sound, 0, 0);
 			as->t = 0;
 			as->fade = as->fade_switch_1;
 			as->fade_switch_1 = 0;
+			as->music_next->sound.paused = 0;
 		} else {
 			float t = s_smoothstep(((as->fade - as->t) / as->fade));
 			float volume = as->music_volume * as->global_volume * t;
@@ -664,7 +769,7 @@ void audio_system_update(audio_system_t* as, float dt)
 		}
 	}	break;
 
-	case MUSIC_STATE_FADE_SWITCH_TO_1:
+	case MUSIC_STATE_SWITCH_TO_1:
 	{
 		as->t += dt;
 		if (as->t >= as->fade) {
@@ -682,8 +787,25 @@ void audio_system_update(audio_system_t* as, float dt)
 		}
 	}	break;
 
-	case MUSIC_STATE_FADE_CROSSFADE:
-		break;
+	case MUSIC_STATE_CROSSFADE:
+	{
+		as->t += dt;
+		if (as->t >= as->fade) {
+			as->music_state = MUSIC_STATE_PLAYING;
+			CUTE_DEBUG_PRINTF("MUSIC_STATE_PLAYING\n");
+			float volume = as->music_volume * as->global_volume;
+			cs_set_volume(&as->music_next->sound, volume, volume);
+			as->music_playing = as->music_next;
+			as->music_next = NULL;
+		} else {
+			float t0 = s_smoothstep(((as->fade - as->t) / as->fade));
+			float t1 = s_smoothstep(1.0f - ((as->fade - as->t) / as->fade));
+			float v0 = as->music_volume * as->global_volume * t0;
+			float v1 = as->music_volume * as->global_volume * t1;
+			cs_set_volume(&as->music_playing->sound, v0, v0);
+			cs_set_volume(&as->music_next->sound, v1, v1);
+		}
+	}	break;
 	}
 }
 

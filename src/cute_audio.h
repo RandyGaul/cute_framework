@@ -52,7 +52,7 @@ extern CUTE_API void CUTE_CALL music_set_loop(app_t* app, int loop);
 extern CUTE_API void CUTE_CALL music_pause(app_t* app);
 extern CUTE_API void CUTE_CALL music_resume(app_t* app);
 extern CUTE_API error_t CUTE_CALL music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time = 0, float fade_in_time = 0);
-extern CUTE_API error_t CUTE_CALL music_crossfade_to(app_t* app, audio_t* audio_source, float cross_fade_time = 0);
+extern CUTE_API error_t CUTE_CALL music_crossfade(app_t* app, audio_t* audio_source, float cross_fade_time = 0);
 
 // -------------------------------------------------------------------------------------------------
 
