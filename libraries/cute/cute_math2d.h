@@ -269,6 +269,8 @@ CUTE_MATH2D_INLINE int ray_to_halfpsace(ray_t A, halfspace_t B, raycast_t* out)
 	out->t = intersect(da, db);
 }
 
+// These are implemented by cute_c2.h
+#if 0
 CUTE_MATH2D_INLINE int ray_to_circle(ray_t A, circle_t B, raycast_t* out)
 {
 	v2 p = B.p;
@@ -311,6 +313,7 @@ CUTE_MATH2D_INLINE int ray_to_aabb(ray_t A, aabb_t B, raycast_t* out)
 	}
 	return 0;
 }
+#endif
 
 }
 
