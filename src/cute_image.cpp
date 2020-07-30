@@ -31,6 +31,10 @@
 namespace cute
 {
 
+CUTE_STATIC_ASSERT(sizeof(pixel_t) == sizeof(cp_pixel_t), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(image_t) == sizeof(cp_image_t), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(image_indexed_t) == sizeof(cp_indexed_image_t), "Must be equal.");
+
 error_t image_load_png(const char* path, image_t* img, void* user_allocator_context)
 {
 	void* data;
@@ -70,10 +74,6 @@ error_t image_load_png_indexed(const char* path, image_indexed_t* img, void* use
 	if (err.is_error()) return err;
 	return image_load_png_mem_indexed(data, (int)sz, img);
 }
-
-CUTE_STATIC_ASSERT(sizeof(pixel_t) == sizeof(cp_pixel_t), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(image_t) == sizeof(cp_image_t), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(image_indexed_t) == sizeof(cp_indexed_image_t), "Must be equal.");
 
 error_t image_load_png_mem_indexed(const void* data, int size, image_indexed_t* img)
 {

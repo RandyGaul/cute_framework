@@ -27,6 +27,20 @@
 namespace cute
 {
 
+CUTE_STATIC_ASSERT(sizeof(v2) == sizeof(c2v), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(rotation_t) == sizeof(c2r), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(transform_t) == sizeof(c2x), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(m2) == sizeof(c2m), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(halfspace_t) == sizeof(c2h), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(ray_t) == sizeof(c2Ray), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(raycast_t) == sizeof(c2Raycast), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(manifold_t) == sizeof(c2Manifold), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(gjk_cache_t) == sizeof(c2GJKCache), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(circle_t) == sizeof(c2Circle), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(aabb_t) == sizeof(c2AABB), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(capsule_t) == sizeof(c2Capsule), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(poly_t) == sizeof(c2Poly), "Must be equal.");
+
 bool circle_to_circle(circle_t A, circle_t B)
 {
 	return !!c2CircletoCircle(*(c2Circle*)&A, *(c2Circle*)&B);
