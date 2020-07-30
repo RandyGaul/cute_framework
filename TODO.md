@@ -19,15 +19,15 @@
 	* [ ] example game
 * [ ] [cute](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute_t.md)
 	* [ ] executable icon
-* [ ] audio
+* [x] audio
 	* [x] load wav
 	* [x] load ogg
 	* [x] stream wav
 	* [x] stream ogg
-	* [ ] stream then switch ogg
-	* [ ] stream then crossfade ogg
-	* [ ] music
-	* [ ] sounds
+	* [x] stream then switch ogg
+	* [x] stream then crossfade ogg
+	* [x] music
+	* [x] sounds
 * [x] window
 	* [x] resize/size changed
 	* [x] moved
@@ -42,13 +42,13 @@
 	* [x] shader
 	* [x] vertex/index buffers
 	* [ ] blend states
-	* [ ] fbo (full-screen effect)
 	* [ ] render to texture
 	* [x] debug rendering (line, shape, frames)
 	* [x] draw calls
 	* [x] projection
 	* [ ] textures, wrap mode
 	* [ ] scissor
+	* [ ] stencil
 	* [ ] viewport, resizing
 	* [ ] pixel upscaling
 	* [ ] frame-based animation
@@ -61,15 +61,16 @@
 	* [ ] GL 3.2
 	* [ ] GLES 2.0
 	* [ ] color and helpers
-* [ ] input
+* [ ] font
+* [x] input
 	* [x] mouse
 		* [x] cursor
 	* [x] keyboard
 	* [ ] gamepad
 	* [ ] text input
 	* [ ] drag n drop file
-* [ ] math
-* [ ] collision detection
+* [x] math
+* [x] collision detection
 * [x] concurrency
 * [x] time
 * [ ] net
@@ -115,14 +116,11 @@
 	* [ ] render capture data to screen
 	* [ ] print capture data
 	* [ ] interpolate capture data
-* [ ] build/distro options
+* [x] build/distro options
 	* [ ] copy + paste all source into project
 	* [ ] build shared libs themselves
 	* [ ] download prebuilt release folder
 	* [x] cmake support
 	* [ ] single-file-header packer (still requires shared lib dependencies)
-* [ ] error
-	* [ ] thread local
-	* [x] error strings and handler
-	* [ ] dialogue box
+* [x] error
 * [x] unit test harness

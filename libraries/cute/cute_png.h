@@ -117,7 +117,8 @@ void cp_free_png(cp_image_t* img);
 void cp_flip_image_horizontal(cp_image_t* img);
 
 // Reads the w/h of the png without doing any other decompression or parsing.
-void cp_load_png_wh(const void* png_data, int png_length, int* w, int* h);
+// Returns 1 on error, 0 on success.
+int cp_load_png_wh(const void* png_data, int png_length, int* w, int* h);
 
 // loads indexed (paletted) pngs, but does not depalette the image into RGBA pixels
 // these two functions return cp_indexed_image_t::pix as 0 in event of errors
@@ -1065,7 +1066,7 @@ void cp_flip_image_horizontal(cp_image_t* img)
 	}
 }
 
-void cp_load_png_wh(const void* png_data, int png_length, int* w_out, int* h_out)
+int cp_load_png_wh(const void* png_data, int png_length, int* w_out, int* h_out)
 {
 	const char* sig = "\211PNG\r\n\032\n";
 	const uint8_t* ihdr;
@@ -1089,7 +1090,10 @@ void cp_load_png_wh(const void* png_data, int png_length, int* w_out, int* h_out
 	if (w_out) *w_out = w - 1;
 	if (h_out) *h_out = h;
 
-	cp_err:;
+	return 0;
+
+cp_err:
+	return 1;
 }
 
 cp_indexed_image_t cp_load_indexed_png(const char* file_name)

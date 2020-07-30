@@ -34,7 +34,7 @@
 #include <cute/cute_sound.h>
 // TODO: Hookup allocs to cute_sound internals
 
-#include <cute_debug_printf.h>
+//#include <cute_debug_printf.h>
 
 static float s_smoothstep(float x)
 {
