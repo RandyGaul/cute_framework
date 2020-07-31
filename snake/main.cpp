@@ -76,6 +76,12 @@ int main(int argc, const char** argv)
 		return -1;
 	}
 
+	err = cute::gfx_init_upscale(app, 320, 240, cute::GFX_UPSCALE_MAXIMUM_ANY);
+	if (err.is_error()) {
+		printf("%s\n", err.details);
+		return -1;
+	}
+
 	while (cute::app_is_running(app)) {
 		float dt = cute::calc_dt();
 		cute::app_update(app, dt);

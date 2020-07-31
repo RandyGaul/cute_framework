@@ -675,8 +675,9 @@ static error_t s_d3d9_compile_shader(gfx_t* gfx, gfx_vertex_buffer_t* buffer, co
 	const char* vs = vertex_shader;
 	const char* ps = pixel_shader;
 
+	error_t err = error_success();
 	gfx_shader_t* shader = CUTE_NEW(gfx_shader_t, gfx->mem_ctx);
-	CUTE_DEFER(CUTE_FREE(shader, gfx->mem_ctx));
+	CUTE_DEFER(if (err.is_error()) CUTE_FREE(shader, gfx->mem_ctx));
 
 	// TODO: Confirm if D3DXSHADER_PACKMATRIX_ROWMAJOR is needed or not for the flags param.
 	// Very nice info by Hodgman: https://www.gamedev.net/forums/topic/682063-vector-and-matrix-multiplication-order-in-diregfx-and-opengl/
@@ -691,7 +692,7 @@ static error_t s_d3d9_compile_shader(gfx_t* gfx, gfx_vertex_buffer_t* buffer, co
 		res = impl->dev->CreateVertexShader((const DWORD*)compiled_shader->GetBufferPointer(), &shader_handle);
 		shader->vertex_shader.handle = shader_handle;
 		shader->vertex_shader.impl = constant_table;
-		error_t err = s_d3d9_build_constant_table(gfx, impl, &shader->vertex_shader, constant_table);
+		err = s_d3d9_build_constant_table(gfx, impl, &shader->vertex_shader, constant_table);
 		if (err.is_error()) {
 			return err;
 		} else {
