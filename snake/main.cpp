@@ -27,6 +27,7 @@
 #include <cute_window.h>
 #include <cute_audio.h>
 #include <cute_file_system_utils.h>
+#include <cute_gfx.h>
 
 cute::audio_t* jump_audio = NULL;
 cute::audio_t* music_audio = NULL;
@@ -68,6 +69,12 @@ int main(int argc, const char** argv)
 	cute::audio_stream_ogg(app, "cemetary.ogg", cute::promise_t(load_cemetary_promise));
 
 	printf("Running from: %s\n", cute::file_system_get_working_directory());
+
+	cute::error_t err = cute::gfx_init(app);
+	if (err.is_error()) {
+		printf("%s\n", err.details);
+		return -1;
+	}
 
 	while (cute::app_is_running(app)) {
 		float dt = cute::calc_dt();
@@ -155,6 +162,8 @@ int main(int argc, const char** argv)
 			cute::app_window_position(app, &x, &y);
 			printf("position moved to %d, %d\n", x, y);
 		}
+
+		cute::gfx_flush(app);
 	}
 
 	if (jump_audio) cute::audio_destroy(jump_audio);

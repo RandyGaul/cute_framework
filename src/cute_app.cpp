@@ -171,6 +171,8 @@ void app_update(app_t* app, float dt)
 	if (app->audio_system) audio_system_update(app->audio_system, dt);
 }
 
+// TODO - Move these init functions into audio/net headers.
+
 error_t app_init_net(app_t* app)
 {
 	error_t err = crypto_init();

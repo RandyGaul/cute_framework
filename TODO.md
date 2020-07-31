@@ -51,10 +51,9 @@
 	* [ ] scissor
 	* [ ] stencil
 	* [ ] viewport, resizing
-	* [ ] pixel upscaling
+	* [x] pixel upscaling
 	* [ ] raster font
 	* [x] image loading
-	* [ ] pixel upscale shader
 	* [ ] universal MVP in shaders
 	* [x] d3d9
 	* [ ] GL 3.2

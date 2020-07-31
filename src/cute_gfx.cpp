@@ -1153,22 +1153,28 @@ static error_t s_d3d9_flush(gfx_t* gfx)
 		return err;
 	}
 
-	// Render all draw calls to render-texture.
 	HR_CHECK(impl->dev->BeginScene());
-	s_d3d9_gfx_flush_to_texture(gfx, (gfx_texture_t*)gfx->render_texture);
 
-	// Draw render-texture on screen via upscale shader.
-	HR_CHECK(impl->dev->SetRenderTarget(0, impl->screen_surface));
-	HR_CHECK(impl->dev->Clear(0, NULL, D3DCLEAR_TARGET, 0xFFFF0000, 1.0f, 0));
+	if (gfx->render_texture) {
+		// Flush to offscreen render-texture.
+		s_d3d9_gfx_flush_to_texture(gfx, (gfx_texture_t*)gfx->render_texture);
 
-	gfx_draw_call_t call;
-	call.buffer = gfx->static_render_texture_quad;
-	call.shader = gfx->upscale_shader;
-	gfx_texture_t* tex = (gfx_texture_t*)s_gfx_get_render_texture_handle(gfx);
-	gfx_draw_call_add_texture(&call, tex, "u_screen_image");
-	call.vertex_indices = call.buffer->vertex_indices;
-	call.index_indices = call.buffer->index_indices;
-	gfx_push_draw_call(gfx->app, &call);
+		// Draw render-texture on screen via upscale shader.
+		HR_CHECK(impl->dev->SetRenderTarget(0, impl->screen_surface));
+		HR_CHECK(impl->dev->Clear(0, NULL, D3DCLEAR_TARGET, 0xFFFF0000, 1.0f, 0));
+
+		gfx_draw_call_t call;
+		call.buffer = gfx->static_render_texture_quad;
+		call.shader = gfx->upscale_shader;
+		gfx_texture_t* tex = (gfx_texture_t*)s_gfx_get_render_texture_handle(gfx);
+		gfx_draw_call_add_texture(&call, tex, "u_screen_image");
+		call.vertex_indices = call.buffer->vertex_indices;
+		call.index_indices = call.buffer->index_indices;
+		gfx_push_draw_call(gfx->app, &call);
+	} else {
+		HR_CHECK(impl->dev->SetRenderTarget(0, impl->screen_surface));
+		HR_CHECK(impl->dev->Clear(0, NULL, D3DCLEAR_TARGET, gfx->clear_color, 1.0f, 0));
+	}
 
 	err = s_d3d9_do_draw_calls(gfx);
 
@@ -1615,6 +1621,7 @@ error_t gfx_init(app_t* app)
 	gfx_line_color(app, 1.0f, 1.0f, 1.0f);
 	gfx_shader_set_screen_wh(app, gfx->line_shader, (float)app->w, (float)app->h); // TODO: Rename to gfx set screen w/h or whatever and do upscales there
 
+	return error_success();
 }
 
 error_t gfx_init_upscale(app_t* app, int render_w, int render_h, gfx_upscale_maximum_t upscale_max)
@@ -1713,6 +1720,8 @@ error_t gfx_init_upscale(app_t* app, int render_w, int render_h, gfx_upscale_max
 	//texture_t temp;
 	//temp.impl = s_gfx_get_render_texture_handle(gfx);
 	//shader_set_uniform(gfx, &gfx->upscale_shader, "u_screen_image", &temp, UNIFORM_TYPE_TEXTURE);
+
+	return error_success();
 }
 
 void gfx_clean_up(app_t* app)

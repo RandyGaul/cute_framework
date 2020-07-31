@@ -184,8 +184,6 @@ enum gfx_upscale_maximum_t
 	GFX_UPSCALE_MAXIMUM_1X,
 };
 
-struct gfx_t;
-
 extern CUTE_API error_t CUTE_CALL gfx_init(app_t* app);
 extern CUTE_API error_t CUTE_CALL gfx_init_upscale(app_t* app, int render_w, int render_h, gfx_upscale_maximum_t upscale_max);
 
