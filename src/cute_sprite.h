@@ -27,6 +27,8 @@
 #include <cute_error.h>
 #include <cute_gfx.h>
 
+// TODO - Customizeability of the shader.
+
 namespace cute
 {
 
@@ -124,7 +126,7 @@ CUTE_API error_t CUTE_CALL sprite_batch_enable_disk_LRU_cache(sprite_batch_t* sb
 CUTE_API error_t CUTE_CALL sprite_batch_LRU_cache_prefetch(sprite_batch_t* sb, uint64_t id);
 
 /**
- * Unloads all images in the cache and frees up they RAM used.
+ * Unloads all images in the cache and frees up the RAM they used.
  */
 CUTE_API void CUTE_CALL sprite_batch_LRU_cache_clear(sprite_batch_t* sb);
 

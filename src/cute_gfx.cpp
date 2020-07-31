@@ -22,6 +22,9 @@
 #include <cute_gfx.h>
 #include <cute_defer.h>
 #include <cute_alloc.h>
+#include <cute_app.h>
+
+#include <internal/cute_app_internal.h>
 
 //#ifdef _WIN32
 //	#define GFX_USE_DIRECTX_INCLUDES_AND_IMPORTS
@@ -162,22 +165,24 @@ struct gfx_vertex_buffer_t
 
 struct gfx_t
 {
+	app_t* app = NULL;
 	gfx_type_t type;
 	int alpha_one_for_enabled = 1;
 	gfx_pixel_format_t screen_pixel_format;
 	int screen_w, screen_h;
+	int render_w, render_h;
 	int clear_color;
 	gfx_upscale_maximum_t upscale_max_setting;
 	gfx_viewport_t viewport;
 	gfx_matrix_t default_projection;
 	int draw_call_count = 0;
 	int draw_call_capacity = 0;
-	gfx_draw_call_t* draw_calls = 0;
-	gfx_render_texture_t* render_texture = 0;
-	gfx_vertex_buffer_t* static_render_texture_quad = 0;
-	gfx_shader_t* upscale_shader = 0;
-	gfx_shader_t* line_shader = 0;
-	gfx_vertex_buffer_t* line_buffer = 0;
+	gfx_draw_call_t* draw_calls = NULL;
+	gfx_render_texture_t* render_texture = NULL;
+	gfx_vertex_buffer_t* static_render_texture_quad = NULL;
+	gfx_shader_t* upscale_shader = NULL;
+	gfx_shader_t* line_shader = NULL;
+	gfx_vertex_buffer_t* line_buffer = NULL;
 	float r, g, b;
 	int line_vert_count = 0;
 	int line_vert_capacity = 0;
@@ -559,7 +564,7 @@ static void* s_d3d9_texture_init(gfx_t* gfx, gfx_texture_params_t* params)
 	return texture;
 }
 
-static void texture_clean_up_d3d9(gfx_texture_t* tex)
+static void s_d3d9_texture_clean_up(gfx_texture_t* tex)
 {
 	IDirect3DTexture9* texture = (IDirect3DTexture9*)tex;
 	texture->Release();
@@ -726,7 +731,7 @@ static void s_d3d9_free_shader(gfx_t* gfx, gfx_shader_t* shader)
 }
 
 #if 0
-void s_d3d9_shader_set_active(gfx_t* gfx, gfx_shader_t* shader)
+void s_d3d9_shader_set_active(app_t* app, gfx_shader_t* shader)
 {
 	d3d9_context_t* impl = (d3d9_context_t*)gfx->impl;
 
@@ -835,7 +840,7 @@ static void s_d3d9_vertex_buffer_release(gfx_vertex_buffer_t* buffer)
 	}
 }
 
-static void vertex_buffer_clean_up_d3d9(gfx_t* gfx, gfx_vertex_buffer_t* buffer)
+static void s_d3d9_vertex_buffer_clean_up(gfx_t* gfx, gfx_vertex_buffer_t* buffer)
 {
 	d3d9_context_t* impl = (d3d9_context_t*)gfx->impl;
 
@@ -971,7 +976,7 @@ static error_t s_d3d9_on_device_reset(gfx_t* gfx, d3d9_context_t* impl)
 	}
 
 	s_d3d9_setup_render_and_sampler_states(impl->dev);
-	gfx_set_alpha(gfx, gfx->alpha_one_for_enabled); // Hacky env scoping, oh well.
+	gfx_set_alpha(gfx->app, gfx->alpha_one_for_enabled); // Hacky env scoping, oh well.
 
 	return error_success();
 }
@@ -1041,7 +1046,7 @@ static error_t s_d3d9_do_draw_calls(gfx_t* gfx)
 
 		// Model-view-projection (mvp).
 		if (call.use_mvp) {
-			gfx_shader_set_mvp(gfx, call.shader, &call.mvp);
+			gfx_shader_set_mvp(gfx->app, call.shader, &call.mvp);
 		}
 
 		// TODO:
@@ -1163,7 +1168,7 @@ static error_t s_d3d9_flush(gfx_t* gfx)
 	gfx_draw_call_add_texture(&call, tex, "u_screen_image");
 	call.vertex_indices = call.buffer->vertex_indices;
 	call.index_indices = call.buffer->index_indices;
-	gfx_push_draw_call(gfx, &call);
+	gfx_push_draw_call(gfx->app, &call);
 
 	err = s_d3d9_do_draw_calls(gfx);
 
@@ -1205,42 +1210,48 @@ void s_d3d9_free(d3d9_context_t* impl)
 //
 //#endif // GFX_USE_DIRECTX_INCLUDES_AND_IMPORTS
 
-error_t gfx_vertex_buffer_map(gfx_t* gfx, gfx_vertex_buffer_t* buffer, int vertex_count, void** vertices, int index_count, void** indices)
+static gfx_type_t s_gfx_type(app_t* app)
 {
-	if (s_is_lost(gfx)) {
+	if (!app->gfx) return GFX_TYPE_NONE;
+	else return app->gfx->type;
+}
+
+error_t gfx_vertex_buffer_map(app_t* app, gfx_vertex_buffer_t* buffer, int vertex_count, void** vertices, int index_count, void** indices)
+{
+	if (s_is_lost(app->gfx)) {
 		return error_failure("Cannot map buffer while device is lost.");
 	}
 
-	if (gfx->type == GFX_TYPE_D3D9) {
+	if (s_gfx_type(app) == GFX_TYPE_D3D9) {
 		return s_d3d9_vertex_buffer_map(buffer, vertex_count, vertices, index_count, indices);
 	} else {
 		return error_failure("Not yet implemented.");
 	}
 }
 
-error_t gfx_vertex_buffer_unmap(gfx_t* gfx, gfx_vertex_buffer_t* buffer)
+error_t gfx_vertex_buffer_unmap(app_t* app, gfx_vertex_buffer_t* buffer)
 {
-	if (gfx->type == GFX_TYPE_D3D9) {
+	if (s_gfx_type(app) == GFX_TYPE_D3D9) {
 		return s_d3d9_vertex_buffer_unmap(buffer);
 	} else {
 		return error_failure("Not yet implemented.");
 	}
 }
 
-gfx_vertex_buffer_t* gfx_vertex_buffer_new(gfx_t* gfx, gfx_vertex_buffer_params_t* params)
+gfx_vertex_buffer_t* gfx_vertex_buffer_new(app_t* app, gfx_vertex_buffer_params_t* params)
 {
-	if (gfx->type == GFX_TYPE_D3D9) {
-		return s_d3d9_vertex_buffer_init(gfx, params);
+	if (s_gfx_type(app) == GFX_TYPE_D3D9) {
+		return s_d3d9_vertex_buffer_init(app->gfx, params);
 	} else {
 		// Not implemented yet.
 		return NULL;
 	}
 }
 
-void gfx_vertex_buffer_free(gfx_t* gfx, gfx_vertex_buffer_t* buffer)
+void gfx_vertex_buffer_free(app_t* app, gfx_vertex_buffer_t* buffer)
 {
-	if (gfx->type == GFX_TYPE_D3D9) {
-		vertex_buffer_clean_up_d3d9(gfx, buffer);
+	if (s_gfx_type(app) == GFX_TYPE_D3D9) {
+		s_d3d9_vertex_buffer_clean_up(app->gfx, buffer);
 	} else {
 		// Not implemented yet.
 	}
@@ -1277,7 +1288,7 @@ void matrix_ortho_2d(gfx_matrix_t* projection, float w, float h, float x, float 
 	projection->data[13] = -y * projection->data[5];
 }
 
-gfx_texture_t *gfx_texture_create(gfx_t* gfx, int w, int h, void* pixels, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode)
+gfx_texture_t *gfx_texture_create(app_t* app, int w, int h, void* pixels, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode)
 {
 	gfx_texture_params_t params;
 	params.w = w;
@@ -1286,29 +1297,29 @@ gfx_texture_t *gfx_texture_create(gfx_t* gfx, int w, int h, void* pixels, gfx_pi
 	params.pixel_format = pixel_format;
 	params.wrap_mode = wrap_mode;
 
-	if (gfx->type == GFX_TYPE_D3D9) {
-		return (gfx_texture_t*)s_d3d9_texture_init(gfx, &params);
+	if (s_gfx_type(app) == GFX_TYPE_D3D9) {
+		return (gfx_texture_t*)s_d3d9_texture_init(app->gfx, &params);
 	} else {
 		// Not yet implemented.
 		return NULL;
 	}
 }
 
-void gfx_texture_clean_up(gfx_t* gfx, gfx_texture_t* tex)
+void gfx_texture_clean_up(app_t* app, gfx_texture_t* tex)
 {
-	if (gfx->type == GFX_TYPE_D3D9) {
-		texture_clean_up_d3d9(tex);
+	if (s_gfx_type(app) == GFX_TYPE_D3D9) {
+		s_d3d9_texture_clean_up(tex);
 	} else {
 		// Not yet implemented.
 	}
 }
 
-gfx_shader_t* gfx_shader_new(gfx_t* gfx, gfx_vertex_buffer_t* buffer, const char* vertex_shader, const char* pixel_shader)
+gfx_shader_t* gfx_shader_new(app_t* app, gfx_vertex_buffer_t* buffer, const char* vertex_shader, const char* pixel_shader)
 {
 	gfx_shader_t* shader = NULL;
 
-	if (gfx->type == GFX_TYPE_D3D9) {
-		error_t err = s_d3d9_compile_shader(gfx, buffer, vertex_shader, pixel_shader, &shader);
+	if (s_gfx_type(app) == GFX_TYPE_D3D9) {
+		error_t err = s_d3d9_compile_shader(app->gfx, buffer, vertex_shader, pixel_shader, &shader);
 		if (err.is_error()) {
 			return NULL;
 		} else {
@@ -1320,10 +1331,10 @@ gfx_shader_t* gfx_shader_new(gfx_t* gfx, gfx_vertex_buffer_t* buffer, const char
 	}
 }
 
-void gfx_shader_free(gfx_t* gfx, gfx_shader_t* shader)
+void gfx_shader_free(app_t* app, gfx_shader_t* shader)
 {
-	if (gfx->type == GFX_TYPE_D3D9) {
-		return s_d3d9_free_shader(gfx, shader);
+	if (s_gfx_type(app) == GFX_TYPE_D3D9) {
+		return s_d3d9_free_shader(app->gfx, shader);
 	} else {
 		// Not yet implemented.
 	}
@@ -1331,7 +1342,7 @@ void gfx_shader_free(gfx_t* gfx, gfx_shader_t* shader)
 
 // Seems not needed -- instead set uniforms upon draw calls.
 #if 0
-void shader_set_active(gfx_t* gfx, gfx_shader_t* shader)
+void shader_set_active(app_t* app, gfx_shader_t* shader)
 {
 	if (gfx->type == GFX_TYPE_D3D9) {
 		s_d3d9_shader_set_active(gfx, shader);
@@ -1400,7 +1411,7 @@ static error_t s_set_uniform(gfx_shader_data_t* s, uint64_t h, void* value, gfx_
 	return error_success();
 }
 
-error_t gfx_shader_set_uniform(gfx_t* gfx, gfx_shader_t* shader, const char* uniform_name, void* value, gfx_uniform_type_t type)
+error_t gfx_shader_set_uniform(app_t* app, gfx_shader_t* shader, const char* uniform_name, void* value, gfx_uniform_type_t type)
 {
 	uint64_t h = s_gfx_FNV1a(uniform_name);
 
@@ -1420,7 +1431,7 @@ static error_t s_shader_copy_uniform_data_from_draw_call(gfx_t* gfx, gfx_draw_ca
 	for (int i = 0; i < call->uniform_count; ++i)
 	{
 		gfx_uniform_t* u = call->uniforms + i;
-		error_t err = gfx_shader_set_uniform(gfx, call->shader, u->name, &u->u, u->type);
+		error_t err = gfx_shader_set_uniform(gfx->app, call->shader, u->name, &u->u, u->type);
 		if (err.is_error()) {
 			return err;
 		}
@@ -1439,15 +1450,15 @@ int s_is_lost(gfx_t* gfx)
 	}
 }
 
-error_t gfx_shader_set_mvp(gfx_t* gfx, gfx_shader_t* shader, gfx_matrix_t* mvp)
+error_t gfx_shader_set_mvp(app_t* app, gfx_shader_t* shader, gfx_matrix_t* mvp)
 {
-	return gfx_shader_set_uniform(gfx, shader, "u_mvp", mvp->data, GFX_UNIFORM_TYPE_MATRIX);
+	return gfx_shader_set_uniform(app, shader, "u_mvp", mvp->data, GFX_UNIFORM_TYPE_MATRIX);
 }
 
-error_t gfx_shader_set_screen_wh(gfx_t* gfx, gfx_shader_t* shader, float w, float h)
+error_t gfx_shader_set_screen_wh(app_t* app, gfx_shader_t* shader, float w, float h)
 {
 	float wh[] = { -1.0f / w, 1.0f / h };
-	return gfx_shader_set_uniform(gfx, shader, "u_inv_screen_wh", wh, GFX_UNIFORM_TYPE_FLOAT2);
+	return gfx_shader_set_uniform(app, shader, "u_inv_screen_wh", wh, GFX_UNIFORM_TYPE_FLOAT2);
 }
 
 void gfx_draw_call_add_texture(gfx_draw_call_t* call, gfx_texture_t* texture, const char* uniform_name)
@@ -1469,14 +1480,14 @@ void gfx_draw_call_set_scissor_box(gfx_draw_call_t* call, gfx_scissor_t* scissor
 	call->scissor = *scissor;
 }
 
-error_t gfx_draw_call_add_verts(gfx_t* gfx, gfx_draw_call_t* call, void* verts, int vert_count)
+error_t gfx_draw_call_add_verts(app_t* app, gfx_draw_call_t* call, void* verts, int vert_count)
 {
 	// Mapping verts can fail for d3d9 if the device is currently lost.
 	void* mapped_verts;
-	error_t err = gfx_vertex_buffer_map(gfx, call->buffer, vert_count, &mapped_verts);
+	error_t err = gfx_vertex_buffer_map(app, call->buffer, vert_count, &mapped_verts);
 	if (!err.is_error()) {
 		CUTE_MEMCPY(mapped_verts, verts, call->buffer->desc.stride * vert_count);
-		gfx_vertex_buffer_unmap(gfx, call->buffer);
+		gfx_vertex_buffer_unmap(app, call->buffer);
 		call->vertex_indices = call->buffer->vertex_indices;
 		call->index_indices = call->buffer->index_indices;
 		return error_success();
@@ -1515,48 +1526,121 @@ static void s_gfx_sprite_quad(float x, float y, float sx, float sy, gfx_vertex_t
 	}
 }
 
-gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, int screen_h, int tex_w, int tex_h, gfx_upscale_maximum_t upscale, void* platform_handle, void* user_mem_ctx)
+error_t gfx_init(app_t* app)
 {
+	bool using_gl = app->options & CUTE_APP_OPTIONS_OPENGL_CONTEXT;
+	bool using_gl_es = app->options & CUTE_APP_OPTIONS_OPENG_GL_ES_CONTEXT;
 	gfx_t* gfx = CUTE_NEW(gfx_t, user_mem_ctx);
-	gfx->type = type;
-	gfx->screen_pixel_format = pixel_format;
-	gfx->screen_w = screen_w;
-	gfx->screen_h = screen_h;
+	if (using_gl) gfx->type = GFX_TYPE_GL;
+	else if (using_gl_es) gfx->type = GFX_TYPE_GL_ES;
+	else (gfx->type) = gfx->type = GFX_TYPE_D3D9;
+	gfx->app = app;
+	gfx->screen_pixel_format = GFX_PIXEL_FORMAT_R8B8G8A8;
+	gfx->screen_w = app->w;
+	gfx->screen_h = app->h;
 	gfx->clear_color = 0xFFFFFFFF;
-	gfx->upscale_max_setting = upscale;
-	gfx->viewport = { 0, 0, (float)screen_w, (float)screen_h };
+	gfx->viewport = { 0, 0, (float)app->w, (float)app->h };
 	matrix_identity(&gfx->default_projection);
 	gfx->draw_call_count = 0;
 	gfx->draw_call_capacity = 0;
 	gfx->draw_calls = NULL;
 
 	if (gfx->type == GFX_TYPE_D3D9) {
-		error_t err = s_d3d9_create_impl(gfx, platform_handle, &gfx->impl);
-		if (err.is_error()) {
-			return NULL;
-		}
+		error_t err = s_d3d9_create_impl(gfx, app->platform_handle, &gfx->impl);
+		if (err.is_error()) return err;
 	} else {
 		// Not yet (or likely ever will be) implemented.
-		return NULL;
+		return error_failure("Not yet implemented.");
 	}
 
+	app->gfx = gfx;
+
+	// Initialize the debug line rendering.
+	gfx_vertex_buffer_params_t line_buffer_params;
+	line_buffer_params.type = GFX_VERTEX_BUFFER_TYPE_DYNAMIC;
+	line_buffer_params.stride = sizeof(gfx_line_vertex_t);
+	gfx_vertex_buffer_params_add_attribute(&line_buffer_params, 2, CUTE_OFFSET_OF(gfx_line_vertex_t, x));
+	gfx_vertex_buffer_params_add_attribute(&line_buffer_params, 3, CUTE_OFFSET_OF(gfx_line_vertex_t, r));
+	line_buffer_params.vertex_count = 1024 * 10;
+	gfx->line_buffer = gfx_vertex_buffer_new(app, &line_buffer_params);
+
+	// TODO: switch on type for shader code?
+	const char* line_vs = CUTE_STRINGIZE(
+		struct vertex_t
+		{
+			float2 pos : POSITION0;
+			float3 col : TEXCOORD0;
+		};
+
+		struct interp_t
+		{
+			float4 posH : POSITION0;
+			float3 col  : TEXCOORD0;
+		};
+
+		float4x4 u_mvp;
+		float2 u_inv_screen_wh;
+
+		interp_t main(vertex_t vtx)
+		{
+			float4 posH = mul(float4(round(vtx.pos), 0, 1), u_mvp);
+
+			posH.xy += u_inv_screen_wh;
+			interp_t interp;
+			interp.posH = posH;
+			interp.col = vtx.col;
+			return interp;
+		}
+	);
+
+	const char* line_ps = CUTE_STRINGIZE(
+		struct interp_t
+		{
+			float4 posH : POSITION0;
+			float3 col  : TEXCOORD0;
+		};
+
+		float4 main(interp_t interp) : COLOR
+		{
+			float4 color = float4(interp.col, 1);
+			return color;
+		}
+	);
+
+	gfx->line_shader = gfx_shader_new(app, gfx->line_buffer, line_vs, line_ps);
+	gfx->line_vert_count = 0;
+	gfx->line_vert_capacity = 1024 * 10;
+	gfx->line_verts = (float*)CUTE_ALLOC(sizeof(gfx_line_vertex_t) * gfx->line_vert_capacity, gfx->mem_ctx);
+	gfx->line_depth_test = 0;
+	gfx_line_color(app, 1.0f, 1.0f, 1.0f);
+	gfx_shader_set_screen_wh(app, gfx->line_shader, (float)app->w, (float)app->h); // TODO: Rename to gfx set screen w/h or whatever and do upscales there
+
+}
+
+error_t gfx_init_upscale(app_t* app, int render_w, int render_h, gfx_upscale_maximum_t upscale_max)
+{
+	gfx_t* gfx = app->gfx;
+	if (!gfx) return error_failure("Graphics was not initialized properly yet.");
+
 	// Setup the render target texture.
-	gfx->render_texture = gfx_render_texture_new(gfx, tex_w, tex_h, pixel_format, GFX_WRAP_MODE_REPEAT);
+	gfx->render_w = render_w;
+	gfx->render_h = render_h;
+	gfx->render_texture = gfx_render_texture_new(app, render_w, render_h, gfx->screen_pixel_format, GFX_WRAP_MODE_REPEAT);
 	gfx_vertex_buffer_params_t vertex_params;
 	vertex_params.type = GFX_VERTEX_BUFFER_TYPE_STATIC;
 	vertex_params.stride = sizeof(gfx_vertex_t);
 	gfx_vertex_buffer_params_add_attribute(&vertex_params, 2, CUTE_OFFSET_OF(gfx_vertex_t, x));
 	gfx_vertex_buffer_params_add_attribute(&vertex_params, 2, CUTE_OFFSET_OF(gfx_vertex_t, u));
 	vertex_params.vertex_count = 6;
-	gfx->static_render_texture_quad = gfx_vertex_buffer_new(gfx, &vertex_params);
+	gfx->static_render_texture_quad = gfx_vertex_buffer_new(app, &vertex_params);
 
 	// Map full-screen quad (mesh) into a static buffer.
 	void* verts;
-	gfx_vertex_buffer_map(gfx, gfx->static_render_texture_quad, 6, &verts);
+	gfx_vertex_buffer_map(app, gfx->static_render_texture_quad, 6, &verts);
 	gfx_vertex_t quad[6];
 	s_gfx_sprite_quad(0, 0, 2.0f, 2.0f, quad);
 	CUTE_MEMCPY(verts, quad, sizeof(gfx_vertex_t) * 6);
-	gfx_vertex_buffer_unmap(gfx, gfx->static_render_texture_quad);
+	gfx_vertex_buffer_unmap(app, gfx->static_render_texture_quad);
 
 	// Calc max scaling factor.
 	float scale = 1.0f;
@@ -1564,8 +1648,8 @@ gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, i
 	while (1)
 	{
 		float new_scale = scale + 1;
-		int can_scale_x = new_scale * tex_w <= screen_w;
-		int can_scale_y = new_scale * tex_h <= screen_h;
+		int can_scale_x = new_scale * render_w <= app->w;
+		int can_scale_y = new_scale * render_h <= app->h;
 		if (can_scale_x && can_scale_y) {
 			++i;
 			scale = new_scale;
@@ -1622,79 +1706,20 @@ gfx_t* gfx_new(gfx_type_t type, gfx_pixel_format_t pixel_format, int screen_w, i
 		}
 	);
 
-	gfx->upscale_shader = gfx_shader_new(gfx, gfx->static_render_texture_quad, vs, ps);
-	float vscale[] = { scale * (float)tex_w / (float)screen_w, scale * (float)tex_h / (float)screen_h };
-	gfx_shader_set_uniform(gfx, gfx->upscale_shader, "u_scale", vscale, GFX_UNIFORM_TYPE_FLOAT2);
-	gfx_shader_set_screen_wh(gfx, gfx->upscale_shader, (float)screen_w, (float)screen_h); // TODO: Rename to gfx set screen w/h or whatever and do upscales there
+	gfx->upscale_shader = gfx_shader_new(app, gfx->static_render_texture_quad, vs, ps);
+	float vscale[] = { scale * (float)render_w / (float)app->w, scale * (float)render_h / (float)app->h };
+	gfx_shader_set_uniform(app, gfx->upscale_shader, "u_scale", vscale, GFX_UNIFORM_TYPE_FLOAT2);
+	gfx_shader_set_screen_wh(app, gfx->upscale_shader, (float)render_w, (float)render_h); // TODO: Rename to gfx set screen w/h or whatever and do upscales there
 	//texture_t temp;
 	//temp.impl = s_gfx_get_render_texture_handle(gfx);
 	//shader_set_uniform(gfx, &gfx->upscale_shader, "u_screen_image", &temp, UNIFORM_TYPE_TEXTURE);
-
-	// Initialize the debug line rendering.
-	gfx_vertex_buffer_params_t line_buffer_params;
-	line_buffer_params.type = GFX_VERTEX_BUFFER_TYPE_DYNAMIC;
-	line_buffer_params.stride = sizeof(gfx_line_vertex_t);
-	gfx_vertex_buffer_params_add_attribute(&line_buffer_params, 2, CUTE_OFFSET_OF(gfx_line_vertex_t, x));
-	gfx_vertex_buffer_params_add_attribute(&line_buffer_params, 3, CUTE_OFFSET_OF(gfx_line_vertex_t, r));
-	line_buffer_params.vertex_count = 1024 * 10;
-	gfx->line_buffer = gfx_vertex_buffer_new(gfx, &line_buffer_params);
-
-	// TODO: switch on type for shader code?
-	const char* line_vs = CUTE_STRINGIZE(
-		struct vertex_t
-		{
-			float2 pos : POSITION0;
-			float3 col : TEXCOORD0;
-		};
-
-		struct interp_t
-		{
-			float4 posH : POSITION0;
-			float3 col  : TEXCOORD0;
-		};
-
-		float4x4 u_mvp;
-		float2 u_inv_screen_wh;
-
-		interp_t main(vertex_t vtx)
-		{
-			float4 posH = mul(float4(round(vtx.pos), 0, 1), u_mvp);
-
-			posH.xy += u_inv_screen_wh;
-			interp_t interp;
-			interp.posH = posH;
-			interp.col = vtx.col;
-			return interp;
-		}
-	);
-
-	const char* line_ps = CUTE_STRINGIZE(
-		struct interp_t
-		{
-			float4 posH : POSITION0;
-			float3 col  : TEXCOORD0;
-		};
-
-		float4 main(interp_t interp) : COLOR
-		{
-			float4 color = float4(interp.col, 1);
-			return color;
-		}
-	);
-
-	gfx->line_shader = gfx_shader_new(gfx, gfx->line_buffer, line_vs, line_ps);
-	gfx->line_vert_count = 0;
-	gfx->line_vert_capacity = 1024 * 10;
-	gfx->line_verts = (float*)CUTE_ALLOC(sizeof(gfx_line_vertex_t) * gfx->line_vert_capacity, gfx->mem_ctx);
-	gfx->line_depth_test = 0;
-	gfx_line_color(gfx, 1.0f, 1.0f, 1.0f);
-	gfx_shader_set_screen_wh(gfx, gfx->line_shader, (float)screen_w, (float)screen_h); // TODO: Rename to gfx set screen w/h or whatever and do upscales there
-
-	return gfx;
 }
 
-void gfx_clean_up(gfx_t* gfx)
+void gfx_clean_up(app_t* app)
 {
+	gfx_t* gfx = app->gfx;
+	if (!gfx) return;
+
 	CUTE_FREE(gfx->line_verts, gfx->mem_ctx);
 	// TODO: Cleanup debug line shader/buffer or others?
 
@@ -1707,47 +1732,57 @@ void gfx_clean_up(gfx_t* gfx)
 	CUTE_FREE(gfx, gfx->mem_ctx);
 }
 
-void gfx_push_draw_call(gfx_t* gfx, gfx_draw_call_t* call)
+void gfx_push_draw_call(app_t* app, gfx_draw_call_t* call)
 {
+	gfx_t* gfx = app->gfx;
+	if (!gfx) return;
 	GFX_CHECK_BUFFER_GROW(gfx, draw_call_count, draw_call_capacity, draw_calls, gfx_draw_call_t, 64);
 	gfx->draw_calls[gfx->draw_call_count++] = *call;
 }
 
-error_t gfx_flush(gfx_t* gfx)
+error_t gfx_flush(app_t* app)
 {
-	if (gfx->type == GFX_TYPE_D3D9) {
-		return s_d3d9_flush(gfx);
+	if (s_gfx_type(app) == GFX_TYPE_D3D9) {
+		return s_d3d9_flush(app->gfx);
 	} else {
 		return error_failure("Not yet implemented.");
 	}
 }
 
-void gfx_set_alpha(gfx_t* gfx, int one_for_enabled)
+void gfx_set_alpha(app_t* app, int one_for_enabled)
 {
-	if (gfx->type == GFX_TYPE_D3D9) {
-		s_d3d9_gfx_set_alpha(gfx, one_for_enabled);
-	} else {
-		// Not yet implemented.
+	switch (s_gfx_type(app)) {
+	case GFX_TYPE_D3D9:
+		s_d3d9_gfx_set_alpha(app->gfx, one_for_enabled);
+
+	default:
+		break;
 	}
 }
 
-gfx_type_t gfx_type(gfx_t* gfx)
+gfx_type_t gfx_type(app_t* app)
 {
-	return gfx->type;
+	return s_gfx_type(app);
 }
 
-void gfx_set_clear_color(gfx_t* gfx, int color)
+void gfx_set_clear_color(app_t* app, int color)
 {
+	gfx_t* gfx = app->gfx;
+	if (!gfx) return;
 	gfx->clear_color = color;
 }
 
-void gfx_line_mvp(gfx_t* gfx, gfx_matrix_t* projection)
+void gfx_line_mvp(app_t* app, gfx_matrix_t* projection)
 {
-	gfx_shader_set_mvp(gfx, gfx->line_shader, projection);
+	gfx_t* gfx = app->gfx;
+	if (!gfx) return;
+	gfx_shader_set_mvp(app, gfx->line_shader, projection);
 }
 
-void gfx_line_color(gfx_t* gfx, float r, float g, float b)
+void gfx_line_color(app_t* app, float r, float g, float b)
 {
+	gfx_t* gfx = app->gfx;
+	if (!gfx) return;
 	gfx->r = r; gfx->g = g; gfx->b = b;
 }
 
@@ -1771,8 +1806,10 @@ static gfx_v2_t s_gfx_skew(gfx_v2_t v) { return s_gfx_v2(-v.y, v.x); }
 static float s_gfx_len(gfx_v2_t v) { return sqrtf(v.x * v.x + v.y * v.y); }
 static gfx_v2_t s_gfx_norm(gfx_v2_t v) { return v * (1.0f / s_gfx_len(v)); }
 
-void gfx_line(gfx_t* gfx, float ax, float ay, float bx, float by)
+void gfx_line(app_t* app, float ax, float ay, float bx, float by)
 {
+	gfx_t* gfx = app->gfx;
+	if (!gfx) return;
 	if (gfx->line_vert_count + 6 > gfx->line_vert_capacity)
 	{
 		gfx->line_vert_capacity *= 2;
@@ -1805,57 +1842,69 @@ void gfx_line(gfx_t* gfx, float ax, float ay, float bx, float by)
 	gfx->line_vert_count += 6;
 }
 
-void gfx_line_width(gfx_t* gfx, float width)
+void gfx_line_width(app_t* app, float width)
 {
+	gfx_t* gfx = app->gfx;
+	if (!gfx) return;
 	gfx->line_width = width;
 }
 
-void gfx_line_depth_test(gfx_t* gfx, int zero_for_off)
+void gfx_line_depth_test(app_t* app, int zero_for_off)
 {
+	gfx_t* gfx = app->gfx;
+	if (!gfx) return;
 	gfx->line_depth_test = zero_for_off;
 }
 
-void gfx_line_submit_draw_call(gfx_t* gfx)
+void gfx_line_submit_draw_call(app_t* app)
 {
+	gfx_t* gfx = app->gfx;
+	if (!gfx) return;
 	gfx_draw_call_t call;
 	call.buffer = gfx->line_buffer;
 	call.shader = gfx->line_shader;
-	gfx_draw_call_add_verts(gfx, &call, gfx->line_verts, gfx->line_vert_count);
-	gfx_push_draw_call(gfx, &call);
+	gfx_draw_call_add_verts(app, &call, gfx->line_verts, gfx->line_vert_count);
+	gfx_push_draw_call(app, &call);
 	gfx->line_vert_count = 0;
 }
 
-gfx_render_texture_t* gfx_render_texture_new(gfx_t* gfx, int w, int h, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode)
+gfx_render_texture_t* gfx_render_texture_new(app_t* app, int w, int h, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode)
 {
-	if (gfx->type == GFX_TYPE_D3D9) {
-		return (gfx_render_texture_t*)s_d3d9_render_texture_new(gfx, w, h, pixel_format, wrap_mode);
-	} else {
-		// Not yet implemented.
-		return NULL;
+	switch (s_gfx_type(app)) {
+	case GFX_TYPE_D3D9: return (gfx_render_texture_t*)s_d3d9_render_texture_new(app->gfx, w, h, pixel_format, wrap_mode);
+	default: return NULL;
 	}
 }
 
-void gfx_render_texture_clean_up(gfx_t* gfx, gfx_render_texture_t* render_texture)
+void gfx_render_texture_clean_up(app_t* app, gfx_render_texture_t* render_texture)
 {
-	if (gfx->type == GFX_TYPE_D3D9) {
-		s_d3d9_render_texture_clean_up(gfx, render_texture);
-	} else {
-		// Not yet implemented.
+	switch (s_gfx_type(app)) {
+	case GFX_TYPE_D3D9:
+		s_d3d9_render_texture_clean_up(app->gfx, render_texture);
+		break;
+
+	default:
+		break;
 	}
 }
 
-error_t gfx_flush_to_texture(gfx_t* gfx, gfx_texture_t* render_texture)
+error_t gfx_flush_to_texture(app_t* app, gfx_texture_t* render_texture)
 {
-	error_t err;
+	switch (s_gfx_type(app)) {
+	case GFX_TYPE_NONE:
+		return error_failure("Graphics is not initialized properly yet.");
+		break;
 
-	if (gfx->type == GFX_TYPE_D3D9) {
-		err = s_d3d9_gfx_flush_to_texture(gfx, render_texture);
-	} else {
-		err = error_failure("Not yet implemented.");
+	case GFX_TYPE_D3D9:
+	{
+		error_t err = s_d3d9_gfx_flush_to_texture(app->gfx, render_texture);
+		app->gfx->draw_call_count = 0;
+		return err;
+	}	break;
+
+	default:
+		return error_failure("Not yet implemented.");
 	}
-
-	gfx->draw_call_count = 0;
-	return err;
 }
 
 }

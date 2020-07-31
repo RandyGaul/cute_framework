@@ -59,7 +59,7 @@ void load_cemetary_promise(cute::error_t status, void* param, void* promise_udat
 
 int main(int argc, const char** argv)
 {
-	int options = CUTE_APP_OPTIONS_GFX_D3D9 | CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
+	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
 	cute::app_t* app = cute::app_make("Cute Snake", 0, 0, 640, 480, options);
 
 	cute::audio_stream_wav(app, "jump.wav", cute::promise_t(load_jump_promise));

@@ -508,27 +508,23 @@ int endpoint_equals(endpoint_t a, endpoint_t b)
 
 // -------------------------------------------------------------------------------------------------
 
-namespace internal
+error_t net_init()
 {
-	int net_init()
-	{
 #ifdef _MSC_VER
-		WSADATA wsa_data;
-		if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != NO_ERROR) {
-			error_set("Unable to initialize WSA.");
-			return -1;
-		}
+	WSADATA wsa_data;
+	if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != NO_ERROR) {
+		return error_failure("Unable to initialize WSA.");
+	}
 #else
 #endif
-		return 0;
-	}
+	return error_success();
+}
 
-	void net_cleanup()
-	{;
+void net_cleanup()
+{;
 #ifdef _MSC_VER
-		WSACleanup();
+	WSACleanup();
 #endif
-	}
 }
 
 }

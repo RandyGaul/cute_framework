@@ -24,6 +24,7 @@
 
 #include <cute_defines.h>
 #include <cute_net.h>
+#include <cute_error.h>
 
 #ifdef _MSC_VER
 #	include <winsock2.h>   // socket
@@ -58,11 +59,8 @@ extern CUTE_API void CUTE_CALL socket_cleanup(socket_t* socket);
 extern CUTE_API int CUTE_CALL socket_send(socket_t* socket, endpoint_t send_to, const void* data, int byte_count);
 extern CUTE_API int CUTE_CALL socket_receive(socket_t* socket, endpoint_t* from, void* data, int byte_count);
 
-namespace internal
-{
-	extern CUTE_API int CUTE_CALL net_init();
-	extern CUTE_API void CUTE_CALL net_cleanup();
-}
+extern CUTE_API error_t CUTE_CALL net_init();
+extern CUTE_API void CUTE_CALL net_cleanup();
 
 }
 

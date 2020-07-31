@@ -23,14 +23,12 @@
 #define CUTE_CRYPTO_INTERNAL_H
 
 #include <cute_defines.h>
+#include <cute_error.h>
 
 namespace cute
 {
 
-namespace internal
-{
-	extern CUTE_API int CUTE_CALL crypto_init();
-}
+extern CUTE_API error_t CUTE_CALL crypto_init();
 
 }
 

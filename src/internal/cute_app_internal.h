@@ -36,6 +36,7 @@ struct cs_context_t;
 namespace cute
 {
 
+struct gfx_t;
 struct audio_system_t;
 
 struct mouse_state_t
@@ -81,10 +82,13 @@ struct app_t
 {
 	float dt = 0;
 	bool running = true;
+	int options = 0;
+	void* platform_handle = NULL;
 	SDL_Window* window = NULL;
 	cs_context_t* cute_sound = NULL;
 	threadpool_t* threadpool = NULL;
 	audio_system_t* audio_system = NULL;
+	gfx_t* gfx = NULL;
 	int w;
 	int h;
 	int x;

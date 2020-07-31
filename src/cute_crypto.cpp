@@ -94,21 +94,16 @@ const char* crypto_sodium_version_linked()
 	return sodium_version_string();
 }
 
-namespace internal
+error_t crypto_init()
 {
-	int crypto_init()
-	{
-		if (sodium_init() < 0) {
-			error_set( "Unable to initialize crypto library. It is *not safe* to connect to the net.");
-			return -1;
-		}
-		if (crypto_box_publickeybytes() != crypto_box_secretkeybytes()) {
-			// The version of libsodium Cute was originally written with held this invariant.
-			error_set( "Unable to initialize crypto library. It is *not safe* to connect to the net.");
-			return -1;
-		}
-		return 0;
+	if (sodium_init() < 0) {
+		return error_failure("Unable to initialize crypto library. It is *not safe* to connect to the net.");
 	}
+	if (crypto_box_publickeybytes() != crypto_box_secretkeybytes()) {
+		// The version of libsodium Cute was originally written with held this invariant.
+		return error_failure( "Unable to initialize crypto library. It is *not safe* to connect to the net.");
+	}
+	return error_success();
 }
 
 }

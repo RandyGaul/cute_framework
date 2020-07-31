@@ -23,22 +23,17 @@
 #define CUTE_H
 
 #include <cute_defines.h>
+#include <cute_error.h>
 
 namespace cute
 {
 
-#define CUTE_APP_OPTIONS_NO_GFX              (1 << 0)
-#define CUTE_APP_OPTIONS_NO_AUDIO            (1 << 1)
-#define CUTE_APP_OPTIONS_NO_NET              (1 << 2)
-#define CUTE_APP_OPTIONS_GFX_GL              (1 << 3)
-#define CUTE_APP_OPTIONS_GFX_GLES            (1 << 4)
-#define CUTE_APP_OPTIONS_GFX_D3D9            (1 << 5)
-#define CUTE_APP_OPTIONS_FULLSCREEN          (1 << 6)
-#define CUTE_APP_OPTIONS_RESIZABLE           (1 << 7)
-#define CUTE_APP_OPTIONS_HIDDEN              (1 << 8)
-#define CUTE_APP_OPTIONS_WINDOW_POS_CENTERED (1 << 9)
-#define CUTE_APP_OPTIONS_HEADLESS (CUTE_APP_OPTIONS_NO_GFX | CUTE_APP_OPTIONS_HIDDEN)
-#define CUTE_APP_OPTIONS_SERVER (CUTE_APP_OPTIONS_NO_GFX | CUTE_APP_OPTIONS_NO_AUDIO | CUTE_APP_OPTIONS_HIDDEN)
+#define CUTE_APP_OPTIONS_OPENGL_CONTEXT      (1 << 0)
+#define CUTE_APP_OPTIONS_OPENG_GL_ES_CONTEXT (1 << 1)
+#define CUTE_APP_OPTIONS_FULLSCREEN          (1 << 2)
+#define CUTE_APP_OPTIONS_RESIZABLE           (1 << 3)
+#define CUTE_APP_OPTIONS_HIDDEN              (1 << 4)
+#define CUTE_APP_OPTIONS_WINDOW_POS_CENTERED (1 << 5)
 
 extern CUTE_API app_t* CUTE_CALL app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL app_destroy(app_t* app);
@@ -46,6 +41,9 @@ extern CUTE_API void CUTE_CALL app_destroy(app_t* app);
 extern CUTE_API bool CUTE_CALL app_is_running(app_t* app);
 extern CUTE_API void CUTE_CALL app_stop_running(app_t* app);
 extern CUTE_API void CUTE_CALL app_update(app_t* app, float dt);
+
+extern CUTE_API error_t CUTE_CALL app_init_net(app_t* app);
+extern CUTE_API error_t CUTE_CALL app_init_audio(app_t* app, int max_simultaneous_sounds = 5000);
 
 }
 

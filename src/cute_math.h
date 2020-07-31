@@ -31,7 +31,7 @@ namespace cute
 {
 
 // The majority of math types are in <cute/cute_math2d.h>, see this file for things like
-// the vector and matrix definitions.
+// the vector, matrix, and transformation functions.
 
 struct poly_t
 {

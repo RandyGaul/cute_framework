@@ -68,8 +68,8 @@ int main(int argc, const char** argv)
 	windows_turn_on_console_color();
 #endif
 
-	internal::net_init();
-	internal::crypto_init();
+	net_init();
+	crypto_init();
 
 	test_t tests[] = {
 		CUTE_TEST_CASE_ENTRY(test_handle_basic),
@@ -191,7 +191,7 @@ int main(int argc, const char** argv)
 		return -1;
 	}
 
-	internal::net_cleanup();
+	net_cleanup();
 
 	return fail_count ? -1 : 0;
 

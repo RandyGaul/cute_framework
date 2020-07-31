@@ -43,6 +43,7 @@
 	* [x] vertex/index buffers
 	* [ ] blend states
 	* [ ] render to texture
+	* [ ] post_fx on the render texture
 	* [x] debug rendering (line, shape, frames)
 	* [x] draw calls
 	* [x] projection
@@ -51,16 +52,18 @@
 	* [ ] stencil
 	* [ ] viewport, resizing
 	* [ ] pixel upscaling
-	* [ ] frame-based animation
 	* [ ] raster font
-	* [ ] image loading
+	* [x] image loading
 	* [ ] pixel upscale shader
 	* [ ] universal MVP in shaders
-	* [ ] CPU culling with DBVH
 	* [x] d3d9
 	* [ ] GL 3.2
 	* [ ] GLES 2.0
-	* [ ] color and helpers
+* [ ] camera
+	* [ ] track an entity
+	* [ ] set position
+	* [ ] set destination + lerp time
+	* [ ] state machine driven
 * [ ] font
 * [x] input
 	* [x] mouse
@@ -103,11 +106,6 @@
 	* [x] handle table
 * [x] allocators
 * [ ] ini
-* [ ] camera
-	* [ ] track an entity
-	* [ ] set position
-	* [ ] set destination + lerp time
-	* [ ] state machine driven
 * [x] ecs
 	* [x] entity and components
 	* [x] global state

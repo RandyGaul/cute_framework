@@ -30,6 +30,7 @@
 #include <cute_net.h>
 #include <cute_c_runtime.h>
 #include <cute_kv.h>
+#include <cute_gfx.h>
 
 #include <internal/cute_defines_internal.h>
 #include <internal/cute_app_internal.h>
@@ -43,6 +44,10 @@
 #include <SDL2/SDL.h>
 #include <glad/glad.h>
 
+#ifdef _WIN32
+#include <SDL2/SDL_syswm.h>
+#endif
+
 #define CUTE_SOUND_FORCE_SDL
 #include <cute/cute_sound.h>
 
@@ -55,29 +60,24 @@
 namespace cute
 {
 
-// TODO: Refactor to error_t reporting.
+// TODO: Refactor to use error_t reporting.
+
 app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t options, const char* argv0, void* user_allocator_context)
 {
 	SDL_SetMainReady();
 
 	app_t* app = (app_t*)CUTE_ALLOC(sizeof(app_t), user_allocator_context);
 	CUTE_CHECK_POINTER(app);
+	app->options = options;
 
-	if (SDL_Init(SDL_INIT_EVENTS)) {
+	if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO)) {
 		CUTE_FREE(app, user_allocator_context);
 		return NULL;
 	}
 
-	if (!(options & CUTE_APP_OPTIONS_NO_GFX)) {
-		if (SDL_InitSubSystem(SDL_INIT_VIDEO)) {
-			CUTE_FREE(app, user_allocator_context);
-			return NULL;
-		}
-	}
-
 	Uint32 flags = 0;
-	if (options & CUTE_APP_OPTIONS_GFX_GL) flags |= SDL_WINDOW_OPENGL;
-	if (options & CUTE_APP_OPTIONS_GFX_GLES) flags |= SDL_WINDOW_OPENGL;
+	if (options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) flags |= SDL_WINDOW_OPENGL;
+	if (options & CUTE_APP_OPTIONS_OPENG_GL_ES_CONTEXT) flags |= SDL_WINDOW_OPENGL;
 	if (options & CUTE_APP_OPTIONS_FULLSCREEN) flags |= SDL_WINDOW_FULLSCREEN;
 	if (options & CUTE_APP_OPTIONS_RESIZABLE) flags |= SDL_WINDOW_RESIZABLE;
 	if (options & CUTE_APP_OPTIONS_HIDDEN) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
@@ -97,43 +97,35 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	app->x = x;
 	app->y = y;
 
-	if (options & CUTE_APP_OPTIONS_GFX_GL) {
+#ifdef _WIN32
+	SDL_SysWMinfo wmInfo;
+	SDL_VERSION(&wmInfo.version);
+	SDL_GetWindowWMInfo(window, &wmInfo);
+	HWND hwnd = wmInfo.info.win.window;
+	app->platform_handle = hwnd;
+#endif
+
+	if (options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 	}
 
-	if (options & CUTE_APP_OPTIONS_GFX_GLES) {
+	if (options & CUTE_APP_OPTIONS_OPENG_GL_ES_CONTEXT) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 	}
 
-	if ((options & CUTE_APP_OPTIONS_GFX_GL) | (options & CUTE_APP_OPTIONS_GFX_GLES)) {
+	if ((options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) | (options & CUTE_APP_OPTIONS_OPENG_GL_ES_CONTEXT)) {
 		SDL_GL_SetSwapInterval(0);
 		SDL_GL_CreateContext(window);
 		gladLoadGLLoader(SDL_GL_GetProcAddress);
 	}
 
-	if (!(options & CUTE_APP_OPTIONS_NO_NET)) {
-		CUTE_CHECK(internal::crypto_init());
-		CUTE_CHECK(internal::net_init());
-	}
-
-	if (!(options & CUTE_APP_OPTIONS_NO_AUDIO)) {
-		int max_simultaneous_sounds = 5000; // TODO: Expose this.
-		app->cute_sound = cs_make_context(NULL, 44100, 1024, 0, app->mem_ctx);
-		if (app->cute_sound) {
-			cs_spawn_mix_thread(app->cute_sound);
-			app->audio_system = audio_system_make(max_simultaneous_sounds, app->mem_ctx);
-		} else {
-			// TODO: Return error message.
-		}
-	}
-
-	int num_cores = core_count() - 1;
-	if (num_cores) {
-		app->threadpool = threadpool_create(num_cores, user_allocator_context);
+	int num_threads_to_spawn = core_count() - 1;
+	if (num_threads_to_spawn) {
+		app->threadpool = threadpool_create(num_threads_to_spawn, user_allocator_context);
 	}
 
 	if (internal::file_system_init(argv0).is_error()) {
@@ -177,6 +169,25 @@ void app_update(app_t* app, float dt)
 	app->dt = dt;
 	pump_input_msgs(app);
 	if (app->audio_system) audio_system_update(app->audio_system, dt);
+}
+
+error_t app_init_net(app_t* app)
+{
+	error_t err = crypto_init();
+	if (err.is_error()) return err;
+	return net_init();
+}
+
+error_t app_init_audio(app_t* app, int max_simultaneous_sounds)
+{
+	app->cute_sound = cs_make_context(NULL, 44100, 1024, 0, app->mem_ctx);
+	if (app->cute_sound) {
+		cs_spawn_mix_thread(app->cute_sound);
+		app->audio_system = audio_system_make(max_simultaneous_sounds, app->mem_ctx);
+		return error_success();
+	} else {
+		return error_failure(cs_error_reason);
+	}
 }
 
 }

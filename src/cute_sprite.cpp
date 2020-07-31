@@ -31,6 +31,8 @@
 #include <cute_file_system.h>
 #include <cute_lru_cache.h>
 
+#include <internal/cute_app_internal.h>
+
 namespace cute
 {
 
@@ -60,7 +62,7 @@ using sprite_cache_t = lru_cache<uint64_t, cached_image_t*>;
 struct sprite_batch_t
 {
 	spritebatch_t sb;
-	gfx_t* gfx;
+	app_t* app;
 	sprite_batch_mode_t mode = SPRITE_BATCH_MODE_UNINITIALIZED;
 	float w = 0, h = 0;
 
@@ -287,15 +289,15 @@ static gfx_shader_t* s_load_shader(sprite_batch_t* sb, sprite_shader_type_t type
 		break;
 	}
 
-	gfx_t* gfx = sb->gfx;
+	app_t* app = sb->app;
 
 	// Compile the shader and remove the old shader.
 	gfx_matrix_t projection;
 	matrix_ortho_2d(&projection, sb->w, sb->h, 0, 0);
 
 	// Set common uniforms.
-	gfx_shader_t* shader = gfx_shader_new(gfx, sb->sprite_buffer, vs, ps);
-	gfx_shader_set_screen_wh(gfx, shader, sb->w, sb->h);
+	gfx_shader_t* shader = gfx_shader_new(app, sb->sprite_buffer, vs, ps);
+	gfx_shader_set_screen_wh(app, shader, sb->w, sb->h);
 
 	return shader;
 }
@@ -317,14 +319,14 @@ static void s_free_all_images_in_cache(sprite_batch_t* sb)
 
 //--------------------------------------------------------------------------------------------------
 
-sprite_batch_t* sprite_batch_make(gfx_t* gfx, int screen_w, int screen_h, void* mem_ctx)
+sprite_batch_t* sprite_batch_make(app_t* app, void* mem_ctx)
 {
 	sprite_batch_t* sb = CUTE_NEW(sprite_batch_t, mem_ctx);
 	if (!sb) return NULL;
 
-	sb->w = (float)screen_w;
-	sb->h = (float)screen_h;
-	sb->gfx = gfx;
+	sb->w = (float)app->w;
+	sb->h = (float)app->h;
+	sb->app = app;
 	sb->mem_ctx = mem_ctx;
 	return sb;
 }
@@ -465,11 +467,11 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	}
 
 	// Map verts onto GPU buffer.
-	gfx_draw_call_add_verts(sb->gfx, &draw_call, verts, vert_count);
+	gfx_draw_call_add_verts(sb->app, &draw_call, verts, vert_count);
 
 	// Push draw call onto the gfx stack.
 	gfx_draw_call_set_mvp(&draw_call, &sb->mvp);
-	gfx_push_draw_call(sb->gfx, &draw_call);
+	gfx_push_draw_call(sb->app, &draw_call);
 }
 
 static void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
@@ -496,7 +498,7 @@ static void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fi
 static SPRITEBATCH_U64 s_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
 	sprite_batch_t* sb = (sprite_batch_t*)udata;
-	return (SPRITEBATCH_U64)gfx_texture_create(sb->gfx, w, h, pixels, GFX_PIXEL_FORMAT_R8B8G8A8, GFX_WRAP_MODE_CLAMP_BORDER);
+	return (SPRITEBATCH_U64)gfx_texture_create(sb->app, w, h, pixels, GFX_PIXEL_FORMAT_R8B8G8A8, GFX_WRAP_MODE_CLAMP_BORDER);
 }
 
 static void s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)

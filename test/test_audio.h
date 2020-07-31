@@ -50,7 +50,7 @@ static void s_audio_promise(error_t status, void* param, void* udata)
 CUTE_TEST_CASE(test_audio_load_asynchronous, "Load and free wav/ogg files asynchronously.");
 int test_audio_load_asynchronous()
 {
-	app_t* app = app_make("audio test", 0, 0, 0, 0, CUTE_APP_OPTIONS_HEADLESS);
+	app_t* app = app_make("audio test", 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN);
 	CUTE_TEST_CHECK_POINTER(app);
 
 	promise_t promise;
