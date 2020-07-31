@@ -82,6 +82,10 @@ int main(int argc, const char** argv)
 		return -1;
 	}
 
+	cute::gfx_matrix_t mvp;
+	cute::matrix_ortho_2d(&mvp, 320, 240, 0, 0);
+	cute::gfx_line_mvp(app, &mvp);
+
 	while (cute::app_is_running(app)) {
 		float dt = cute::calc_dt();
 		cute::app_update(app, dt);
@@ -169,11 +173,18 @@ int main(int argc, const char** argv)
 			printf("position moved to %d, %d\n", x, y);
 		}
 
+		cute::gfx_line_width(app, 2);
+		cute::gfx_line_color(app, 0, 0, 0);
+		cute::gfx_line(app, 0, 0, 100, 0);
+		cute::gfx_line_submit_draw_call(app);
+
 		cute::gfx_flush(app);
 	}
 
 	if (jump_audio) cute::audio_destroy(jump_audio);
 	if (music_audio) cute::audio_destroy(music_audio);
+	if (cavestory) cute::audio_destroy(music_audio);
+	if (cemetary) cute::audio_destroy(cemetary);
 
 	return 0;
 }

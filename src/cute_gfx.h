@@ -26,11 +26,6 @@
 namespace cute
 {
 
-/**
- * Represents the global state for all of cute graphics.
- */
-struct gfx_t;
-
 // -------------------------------------------------------------------------------------------------
 // Vertex buffers.
 
@@ -165,7 +160,7 @@ CUTE_API error_t CUTE_CALL gfx_draw_call_add_verts(app_t* app, gfx_draw_call_t* 
 CUTE_API void CUTE_CALL gfx_draw_call_add_uniform(gfx_draw_call_t* call, const char* uniform_name, void* value, gfx_uniform_type_t type);
 
 // -------------------------------------------------------------------------------------------------
-// `gfx_t` creation and management functions.
+// Graphics initialization and management functions.
 
 enum gfx_type_t
 {
@@ -194,17 +189,24 @@ CUTE_API void CUTE_CALL gfx_set_alpha(app_t* app, int one_for_enabled);
 CUTE_API gfx_type_t CUTE_CALL gfx_type(app_t* app);
 CUTE_API void CUTE_CALL gfx_set_clear_color(app_t* app, int color);
 
-CUTE_API void CUTE_CALL gfx_line_mvp(app_t* app, gfx_matrix_t* projection);
+CUTE_API error_t CUTE_CALL gfx_line_mvp(app_t* app, gfx_matrix_t* projection);
 CUTE_API void CUTE_CALL gfx_line_color(app_t* app, float r, float g, float b);
 CUTE_API void CUTE_CALL gfx_line(app_t* app, float ax, float ay, float bx, float by);
 CUTE_API void CUTE_CALL gfx_line_width(app_t* app, float width);
 CUTE_API void CUTE_CALL gfx_line_depth_test(app_t* app, int zero_for_off);
-CUTE_API void CUTE_CALL gfx_line_submit_draw_call(app_t* app);
+CUTE_API error_t CUTE_CALL gfx_line_submit_draw_call(app_t* app);
 
-// make/clean up framebuffer
+// TODO
+// make/clean up render to texture
+// post FX
+// stencil
+// viewport
+// resizing based on window size
+// texture wrap modes
+// blend states
 
 // -------------------------------------------------------------------------------------------------
-// Inline definitions for inline and types intended to be used on C-runtime stack.
+// Definitions for inline and types intended to be used on C-runtime stack.
 
 #define CUTE_GFX_VERTEX_BUFFER_MAX_ATTRIBUTES (16)
 #define CUTE_GFX_DRAW_CALL_MAX_TEXTURES (8)

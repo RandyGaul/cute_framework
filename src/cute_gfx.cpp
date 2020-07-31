@@ -1464,7 +1464,7 @@ error_t gfx_shader_set_mvp(app_t* app, gfx_shader_t* shader, gfx_matrix_t* mvp)
 
 error_t gfx_shader_set_screen_wh(app_t* app, gfx_shader_t* shader, float w, float h)
 {
-	float wh[] = { -1.0f / w, 1.0f / h };
+	float wh[] = { w ? -1.0f / w : 0, h ? 1.0f / h : 0 };
 	return gfx_shader_set_uniform(app, shader, "u_inv_screen_wh", wh, GFX_UNIFORM_TYPE_FLOAT2);
 }
 
@@ -1717,7 +1717,7 @@ error_t gfx_init_upscale(app_t* app, int render_w, int render_h, gfx_upscale_max
 	gfx->upscale_shader = gfx_shader_new(app, gfx->static_render_texture_quad, vs, ps);
 	float vscale[] = { scale * (float)render_w / (float)app->w, scale * (float)render_h / (float)app->h };
 	gfx_shader_set_uniform(app, gfx->upscale_shader, "u_scale", vscale, GFX_UNIFORM_TYPE_FLOAT2);
-	gfx_shader_set_screen_wh(app, gfx->upscale_shader, (float)render_w, (float)render_h); // TODO: Rename to gfx set screen w/h or whatever and do upscales there
+	gfx_shader_set_screen_wh(app, gfx->upscale_shader, 0, 0); // TODO: Rename to gfx set screen w/h or whatever and do upscales there
 	//texture_t temp;
 	//temp.impl = s_gfx_get_render_texture_handle(gfx);
 	//shader_set_uniform(gfx, &gfx->upscale_shader, "u_screen_image", &temp, UNIFORM_TYPE_TEXTURE);
@@ -1782,11 +1782,11 @@ void gfx_set_clear_color(app_t* app, int color)
 	gfx->clear_color = color;
 }
 
-void gfx_line_mvp(app_t* app, gfx_matrix_t* projection)
+error_t gfx_line_mvp(app_t* app, gfx_matrix_t* projection)
 {
 	gfx_t* gfx = app->gfx;
-	if (!gfx) return;
-	gfx_shader_set_mvp(app, gfx->line_shader, projection);
+	if (!gfx) return error_failure("Graphics is not initialized properly yet.");
+	return gfx_shader_set_mvp(app, gfx->line_shader, projection);
 }
 
 void gfx_line_color(app_t* app, float r, float g, float b)
@@ -1866,16 +1866,18 @@ void gfx_line_depth_test(app_t* app, int zero_for_off)
 	gfx->line_depth_test = zero_for_off;
 }
 
-void gfx_line_submit_draw_call(app_t* app)
+error_t gfx_line_submit_draw_call(app_t* app)
 {
 	gfx_t* gfx = app->gfx;
-	if (!gfx) return;
+	if (!gfx) return error_failure("Graphics is not initialized properly yet.");
 	gfx_draw_call_t call;
 	call.buffer = gfx->line_buffer;
 	call.shader = gfx->line_shader;
-	gfx_draw_call_add_verts(app, &call, gfx->line_verts, gfx->line_vert_count);
+	error_t err = gfx_draw_call_add_verts(app, &call, gfx->line_verts, gfx->line_vert_count);
+	if (err.is_error()) return err;
 	gfx_push_draw_call(app, &call);
 	gfx->line_vert_count = 0;
+	return error_success();
 }
 
 gfx_render_texture_t* gfx_render_texture_new(app_t* app, int w, int h, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode)

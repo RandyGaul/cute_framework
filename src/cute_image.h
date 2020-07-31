@@ -24,6 +24,7 @@
 
 #include <cute_defines.h>
 #include <cute_error.h>
+#include <cute_color.h>
 
 namespace cute
 {
