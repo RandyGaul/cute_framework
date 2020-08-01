@@ -53,6 +53,7 @@
 //#endif
 
 // HACKS HERE
+// TODO - Use array<T> and cute_doubly_list.h
 #include <assert.h>
 
 #define GFX_DLIST_INIT(sentinel) \

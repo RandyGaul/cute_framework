@@ -91,6 +91,7 @@ set(CUTE_SRCS
 	src/cute_sprite.cpp
 	src/cute_window.cpp
 	src/cute_image.cpp
+	src/cute_font.cpp
 
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
@@ -143,6 +144,7 @@ set(CUTE_HDRS
 	src/cute_debug_printf.h
 	src/cute_image.h
 	src/cute_color.h
+	src/cute_font.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h

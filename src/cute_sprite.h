@@ -66,7 +66,7 @@ struct sprite_t
  */
 struct sprite_batch_t;
 
-CUTE_API sprite_batch_t* CUTE_CALL sprite_batch_make(gfx_t* gfx, int screen_w, int screen_h, void* mem_ctx = NULL);
+CUTE_API sprite_batch_t* CUTE_CALL sprite_batch_make(app_t* app, int screen_w, int screen_h, void* mem_ctx = NULL);
 CUTE_API void CUTE_CALL sprite_batch_destroy(sprite_batch_t* sb);
 
 /**
