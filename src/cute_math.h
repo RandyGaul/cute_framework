@@ -19,6 +19,9 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifndef CUTE_MATH_H
+#define CUTE_MATH_H
+
 #define CUTE_MATH2D_NAMESPACE cute
 #include <cute/cute_math2d.h>
 #include <cute/cute_c2.h>
@@ -199,3 +202,5 @@ extern CUTE_API void CUTE_CALL collide(const void* A, const transform_t* ax, sha
 extern CUTE_API bool CUTE_CALL cast_ray(ray_t A, const void* B, const transform_t* bx, shape_type_t typeB, raycast_t* out);
 
 }
+
+#endif // CUTE_MATH_H

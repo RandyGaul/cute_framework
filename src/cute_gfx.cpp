@@ -1477,10 +1477,10 @@ void gfx_draw_call_add_texture(gfx_draw_call_t* call, gfx_texture_t* texture, co
 	call->texture_uniform_names[i] = uniform_name;
 }
 
-void gfx_draw_call_set_mvp(gfx_draw_call_t* call, const gfx_matrix_t* mvp)
+void gfx_draw_call_set_mvp(gfx_draw_call_t* call, gfx_matrix_t mvp)
 {
 	call->use_mvp = 1;
-	call->mvp = *mvp;
+	call->mvp = mvp;
 }
 
 void gfx_draw_call_set_scissor_box(gfx_draw_call_t* call, gfx_scissor_t* scissor)

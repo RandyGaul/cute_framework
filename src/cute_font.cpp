@@ -36,8 +36,8 @@
 namespace cute
 {
 
-#include <data/courier_new_fnt.h>
-#include <data/courier_new_0_png.h>
+#include <data/fonts/courier_new_fnt.h>
+#include <data/fonts/courier_new_0_png.h>
 
 static CUTE_FONT_U64 s_generate_texture_handle(app_t* app, void* pixels, int w, int h)
 {
@@ -130,7 +130,7 @@ void font_push_verts(app_t* app, const font_t* font, const char* text, float x, 
 	font_verts.set_count(font_verts.count() + vert_count);
 }
 
-void font_submit_draw_call(app_t* app, const font_t* font, const gfx_matrix_t* mvp, color_t color)
+void font_submit_draw_call(app_t* app, const font_t* font, gfx_matrix_t mvp, color_t color)
 {
 	gfx_draw_call_t call;
 	gfx_draw_call_add_texture(&call, (gfx_texture_t*)((cute_font_t*)font)->atlas_id, "u_image");

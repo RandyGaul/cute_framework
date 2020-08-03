@@ -35,6 +35,11 @@
 namespace cute
 {
 
+const char* file_system_get_base_dir()
+{
+	return PHYSFS_getBaseDir();
+}
+
 error_t file_system_set_write_dir(const char* platform_dependent_directory)
 {
 	if (!PHYSFS_setWriteDir(platform_dependent_directory)) {

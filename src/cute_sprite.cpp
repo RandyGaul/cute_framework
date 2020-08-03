@@ -319,15 +319,15 @@ static void s_free_all_images_in_cache(sprite_batch_t* sb)
 
 //--------------------------------------------------------------------------------------------------
 
-sprite_batch_t* sprite_batch_make(app_t* app, void* mem_ctx)
+sprite_batch_t* sprite_batch_make(app_t* app)
 {
-	sprite_batch_t* sb = CUTE_NEW(sprite_batch_t, mem_ctx);
+	sprite_batch_t* sb = CUTE_NEW(sprite_batch_t, app->mem_ctx);
 	if (!sb) return NULL;
 
 	sb->w = (float)app->w;
 	sb->h = (float)app->h;
 	sb->app = app;
-	sb->mem_ctx = mem_ctx;
+	sb->mem_ctx = app->mem_ctx;
 	return sb;
 }
 
@@ -470,7 +470,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	gfx_draw_call_add_verts(sb->app, &draw_call, verts, vert_count);
 
 	// Push draw call onto the gfx stack.
-	gfx_draw_call_set_mvp(&draw_call, &sb->mvp);
+	gfx_draw_call_set_mvp(&draw_call, sb->mvp);
 	gfx_push_draw_call(sb->app, &draw_call);
 }
 

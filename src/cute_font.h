@@ -39,7 +39,7 @@ extern CUTE_API void CUTE_CALL font_free(font_t* font);
 
 extern CUTE_API const font_t* CUTE_CALL font_get_default(app_t* app);
 extern CUTE_API void CUTE_CALL font_push_verts(app_t* app, const font_t* font, const char* text, float x, float y, float wrap_w, const aabb_t* clip_box = NULL);
-extern CUTE_API void CUTE_CALL font_submit_draw_call(app_t* app, const font_t* font, const gfx_matrix_t* mvp, color_t color = color_black());
+extern CUTE_API void CUTE_CALL font_submit_draw_call(app_t* app, const font_t* font, gfx_matrix_t mvp, color_t color = color_black());
 
 // -------------------------------------------------------------------------------------------------
 // These functions can be used to isolate vert rendering on different threads.

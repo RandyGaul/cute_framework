@@ -48,6 +48,7 @@ struct stat_t
 	uint64_t last_accessed_time;
 };
 
+extern CUTE_API const char* CUTE_CALL file_system_get_base_dir();
 extern CUTE_API error_t CUTE_CALL file_system_set_write_dir(const char* platform_dependent_directory);
 extern CUTE_API error_t CUTE_CALL file_system_mount(const char* archive, const char* mount_point, int append_to_path);
 extern CUTE_API error_t CUTE_CALL file_system_dismount(const char* archive);

@@ -232,4 +232,7 @@ if (CUTE_FRAMEWORK_BUILD_SNAKE)
 	if (MSVC)
 		set_property(TARGET snake PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:snake>)
 	endif()
+
+	# Copy over any test data in the test/test_data folder.
+	add_custom_command(TARGET snake POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/snake/data" $<TARGET_FILE_DIR:snake>/data)
 endif()

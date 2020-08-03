@@ -156,7 +156,7 @@ struct gfx_scissor_t
 // Draw call and uniform can *not* store strings if rendering is moved off the main thread,
 // otherwise the pointers will dangle. Copy strings into local buffers or something!
 
-CUTE_API void CUTE_CALL gfx_draw_call_set_mvp(gfx_draw_call_t* call, const gfx_matrix_t* mvp);
+CUTE_API void CUTE_CALL gfx_draw_call_set_mvp(gfx_draw_call_t* call, gfx_matrix_t mvp);
 CUTE_API void CUTE_CALL gfx_draw_call_set_scissor_box(gfx_draw_call_t* call, gfx_scissor_t* scissor);
 CUTE_API void CUTE_CALL gfx_draw_call_add_texture(gfx_draw_call_t* call, gfx_texture_t* texture, const char* uniform_name);
 CUTE_API error_t CUTE_CALL gfx_draw_call_add_verts(app_t* app, gfx_draw_call_t* call, void* verts, int vert_count);
