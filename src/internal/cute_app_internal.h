@@ -19,14 +19,17 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_INTERNAL_H
-#define CUTE_INTERNAL_H
+#ifndef CUTE_APP_INTERNAL_H
+#define CUTE_APP_INTERNAL_H
+
+#include <cute/cute_font.h>
 
 #include <cute_buffer.h>
 #include <cute_audio.h>
 #include <cute_array.h>
 #include <cute_ecs.h>
 #include <cute_dictionary.h>
+#include <cute_gfx.h>
 
 #include <internal/cute_object_table_internal.h>
 
@@ -88,11 +91,17 @@ struct app_t
 	cs_context_t* cute_sound = NULL;
 	threadpool_t* threadpool = NULL;
 	audio_system_t* audio_system = NULL;
+	cute_font_t* courier_new = NULL;
+	array<cute_font_vert_t> font_verts;
+	gfx_vertex_buffer_t* font_buffer = NULL;
+	gfx_shader_t* font_shader = NULL;
 	gfx_t* gfx = NULL;
 	int w;
 	int h;
 	int x;
 	int y;
+	int render_w;
+	int render_h;
 	window_state_t window_state;
 	window_state_t window_state_prev;
 
@@ -122,4 +131,4 @@ struct app_t
 
 }
 
-#endif // CUTE_INTERNAL_H
+#endif // CUTE_APP_INTERNAL_H

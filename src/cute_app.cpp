@@ -96,6 +96,8 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	app->h = h;
 	app->x = x;
 	app->y = y;
+	app->render_w = w;
+	app->render_h = h;
 
 #ifdef _WIN32
 	SDL_SysWMinfo wmInfo;

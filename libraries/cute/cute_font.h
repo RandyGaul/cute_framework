@@ -268,7 +268,7 @@ struct hashtable_t
 
 #endif /* hashtable_t_h */
 
-#define HASHTABLE_IMPLEMENTATION
+//#define HASHTABLE_IMPLEMENTATION
 
 #ifdef HASHTABLE_IMPLEMENTATION
 #ifndef HASHTABLE_IMPLEMENTATION_ONCE
@@ -1402,7 +1402,7 @@ int cute_font_fill_vertex_buffer(cute_font_t* font, const char* text, float x0, 
 	float font_height = (float)font->font_height;
 	int i = 0;
 	const char* end_of_line = 0;
-	int wrap_enabled = wrap_w >= 0;
+	int wrap_enabled = wrap_w > 0;
 	cute_font_rect_t rect;
 	if (clip_rect) rect = *clip_rect;
 

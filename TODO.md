@@ -42,19 +42,18 @@
 	* [x] shader
 	* [x] vertex/index buffers
 	* [ ] blend states
-	* [ ] render to texture
+	* [x] render to texture
 	* [ ] post_fx on the render texture
 	* [x] debug rendering (line, shape, frames)
 	* [x] draw calls
 	* [x] projection
 	* [ ] textures, wrap mode
-	* [ ] scissor
+	* [x] scissor
 	* [ ] stencil
 	* [ ] viewport, resizing
 	* [x] pixel upscaling
 	* [ ] raster font
 	* [x] image loading
-	* [ ] universal MVP in shaders
 	* [x] d3d9
 	* [ ] GL 3.2
 	* [ ] GLES 2.0

@@ -25,6 +25,7 @@
 #include <cute_app.h>
 
 #include <internal/cute_app_internal.h>
+#include <internal/cute_font_internal.h>
 
 //#ifdef _WIN32
 //	#define GFX_USE_DIRECTX_INCLUDES_AND_IMPORTS
@@ -1476,7 +1477,7 @@ void gfx_draw_call_add_texture(gfx_draw_call_t* call, gfx_texture_t* texture, co
 	call->texture_uniform_names[i] = uniform_name;
 }
 
-void gfx_draw_call_set_mvp(gfx_draw_call_t* call, gfx_matrix_t* mvp)
+void gfx_draw_call_set_mvp(gfx_draw_call_t* call, const gfx_matrix_t* mvp)
 {
 	call->use_mvp = 1;
 	call->mvp = *mvp;
@@ -1623,6 +1624,8 @@ error_t gfx_init(app_t* app)
 	gfx_line_color(app, 1.0f, 1.0f, 1.0f);
 	gfx_shader_set_screen_wh(app, gfx->line_shader, (float)app->w, (float)app->h); // TODO: Rename to gfx set screen w/h or whatever and do upscales there
 
+	font_init(app);
+
 	return error_success();
 }
 
@@ -1632,6 +1635,8 @@ error_t gfx_init_upscale(app_t* app, int render_w, int render_h, gfx_upscale_max
 	if (!gfx) return error_failure("Graphics was not initialized properly yet.");
 
 	// Setup the render target texture.
+	app->render_w = render_w;
+	app->render_h = render_h;
 	gfx->render_w = render_w;
 	gfx->render_h = render_h;
 	gfx->render_texture = gfx_render_texture_new(app, render_w, render_h, gfx->screen_pixel_format, GFX_WRAP_MODE_REPEAT);
@@ -1718,10 +1723,7 @@ error_t gfx_init_upscale(app_t* app, int render_w, int render_h, gfx_upscale_max
 	gfx->upscale_shader = gfx_shader_new(app, gfx->static_render_texture_quad, vs, ps);
 	float vscale[] = { scale * (float)render_w / (float)app->w, scale * (float)render_h / (float)app->h };
 	gfx_shader_set_uniform(app, gfx->upscale_shader, "u_scale", vscale, GFX_UNIFORM_TYPE_FLOAT2);
-	gfx_shader_set_screen_wh(app, gfx->upscale_shader, 0, 0); // TODO: Rename to gfx set screen w/h or whatever and do upscales there
-	//texture_t temp;
-	//temp.impl = s_gfx_get_render_texture_handle(gfx);
-	//shader_set_uniform(gfx, &gfx->upscale_shader, "u_screen_image", &temp, UNIFORM_TYPE_TEXTURE);
+	gfx_shader_set_screen_wh(app, gfx->upscale_shader, (float)app->w, (float)app->h);
 
 	return error_success();
 }

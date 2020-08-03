@@ -28,6 +28,7 @@
 #include <cute_audio.h>
 #include <cute_file_system_utils.h>
 #include <cute_gfx.h>
+#include <cute_font.h>
 
 cute::audio_t* jump_audio = NULL;
 cute::audio_t* music_audio = NULL;
@@ -76,6 +77,9 @@ int main(int argc, const char** argv)
 		return -1;
 	}
 
+	cute::gfx_set_clear_color(app, 0xFF7095A4);
+	cute::gfx_set_alpha(app, 1);
+
 	err = cute::gfx_init_upscale(app, 320, 240, cute::GFX_UPSCALE_MAXIMUM_ANY);
 	if (err.is_error()) {
 		printf("%s\n", err.details);
@@ -85,6 +89,8 @@ int main(int argc, const char** argv)
 	cute::gfx_matrix_t mvp;
 	cute::matrix_ortho_2d(&mvp, 320, 240, 0, 0);
 	cute::gfx_line_mvp(app, &mvp);
+
+	const cute::font_t* font = cute::font_get_default(app);
 
 	while (cute::app_is_running(app)) {
 		float dt = cute::calc_dt();
@@ -177,6 +183,9 @@ int main(int argc, const char** argv)
 		cute::gfx_line_color(app, 0, 0, 0);
 		cute::gfx_line(app, 0, 0, 100, 0);
 		cute::gfx_line_submit_draw_call(app);
+
+		cute::font_push_verts(app, font, "Hi there :)", 0, 0, 0);
+		cute::font_submit_draw_call(app, font, &mvp);
 
 		cute::gfx_flush(app);
 	}
