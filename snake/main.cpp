@@ -35,16 +35,15 @@ int main(int argc, const char** argv)
 	gfx_init(app);
 	spritebatch_t* sb = sprite_batch_easy_make(app, "data");
 
-	ImGuiContext* imgui_context;
-	error_t err = app_init_imgui(app, &imgui_context);
-	if (err.is_error()) {
-		printf("%s\n", err.details);
+	ImGuiContext* imgui_context = app_init_imgui(app);
+	if (!imgui_context) {
+		printf("Unable to initialize ImGui.\n");
 		return -1;
 	}
 	ImGui::SetCurrentContext(imgui_context);
 
 	sprite_t cloud;
-	err = sprite_batch_easy_sprite(sb, "data/cloud.png", &cloud);
+	error_t err = sprite_batch_easy_sprite(sb, "data/cloud.png", &cloud);
 	if (err.is_error()) {
 		printf("%s\n", err.details);
 		return -1;

@@ -209,20 +209,21 @@ error_t app_init_audio(app_t* app, int max_simultaneous_sounds)
 	}
 }
 
-error_t app_init_imgui(app_t* app, ImGuiContext** context)
+ImGuiContext* app_init_imgui(app_t* app)
 {
-	if (!app->gfx) return error_failure("Graphics has not yet been properly initialized.");
+	if (!app->gfx) return NULL;
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	if (context) *context = ::ImGui::GetCurrentContext();
 	app->using_imgui = true;
 
 	ImGui::StyleColorsDark();
 	ImGui_ImplSDL2_InitForD3D(app->window);
 	ImGui_ImplDX9_Init((IDirect3DDevice9*)gfx_get_device(app));
 
-	return error_success();
+	// TODO - OpenGL/ES.
+
+	return ::ImGui::GetCurrentContext();
 }
 
 }
