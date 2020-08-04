@@ -3,8 +3,8 @@ project(cute_framework)
 
 # Force 64bit builds.
 if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-    message(FATAL_ERROR "Only 64-bit build is supported.")
-    return()
+	message(FATAL_ERROR "Only 64-bit build is supported.")
+	return()
 endif()
 
 # Disable annoying MSVC warnings.

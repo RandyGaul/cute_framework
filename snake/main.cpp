@@ -20,10 +20,9 @@
 */
 
 #include <stdio.h>
+#include <imgui/imgui.h>
 #include <cute.h>
 using namespace cute;
-
-#include <imgui/imgui.h>
 
 int main(int argc, const char** argv)
 {

@@ -141,6 +141,31 @@ int main(int argc, const char** argv)
 }
 ```
 
+#### Running Dear ImGui
+
+> Initialize and use Dear ImGui, a great built-in UI library.
+```cpp
+#include <cute.h>
+using namespace cute;
+
+int main(int argc, const char** argv)
+{
+	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
+	app_t* app = app_make("Cute Music", 0, 0, 640, 480, options);
+
+	app_init_audio(app);
+	audio_t* music = audio_load_ogg("music.ogg");
+	music_play(app, music, 2);
+
+	while (app_is_running(app)) {
+		float dt = calc_dt();
+		app_update(app, dt);
+	}
+
+	return 0;
+}
+```
+
 ## Examples
 
 Here are a few examples built with Cute.
