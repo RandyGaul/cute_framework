@@ -30,11 +30,13 @@
 #include <cute_font.h>
 #include <cute_sprite.h>
 #include <cute_array.h>
+#include <cute_dictionary.h>
 
 #define CUTE_PATH_IMPLEMENTATION
 #include <cute/cute_path.h>
 
 cute::array<const char*> s_paths;
+cute::dictionary<const char*, int> s_indices;
 
 static void s_image_paths()
 {
@@ -47,10 +49,24 @@ static void s_image_paths()
 			char path[CUTE_PATH_MAX_PATH];
 			path_concat("data", paths[i], path, CUTE_PATH_MAX_PATH);
 			s_paths.add(strdup(path));
+			s_indices.insert(path, i);
 		}
 		++i;
 	}
 	cute::file_system_free_enumerated_directory(paths);
+}
+
+static cute::sprite_t s_sprite(const char* path, int w, int h)
+{
+	cute::sprite_t sprite;
+	sprite.id = *s_indices.find(path);
+	sprite.w = w;
+	sprite.h = h;
+	sprite.scale_x = (float)w;
+	sprite.scale_y = (float)h;
+	sprite.transform.p = cute::v2(0, 0);
+	sprite.transform.r = cute::make_rotation(0);
+	return sprite;
 }
 
 int main(int argc, const char** argv)
@@ -77,15 +93,8 @@ int main(int argc, const char** argv)
 	s_image_paths();
 	cute::sprite_batch_enable_disk_LRU_cache(sb, s_paths.data(), s_paths.count(), CUTE_MB * 256);
 
-	cute::sprite_t sprite;
-	sprite.id = 0;
-	sprite.w = 16;
-	sprite.h = 16;
-	sprite.scale_x = 16;
-	sprite.scale_y = 16;
-	sprite.transform.p = cute::v2(0, 0);
-	sprite.transform.r = cute::make_rotation(0);
-
+	cute::sprite_t tile = s_sprite("data/tile0.png", 16, 16);
+	cute::sprite_t cloud = s_sprite("data/cloud.png", 94, 41);
 	float t = 0;
 
 	while (cute::app_is_running(app)) {
@@ -93,9 +102,14 @@ int main(int argc, const char** argv)
 		cute::app_update(app, dt);
 
 		t += dt;
-		sprite.transform.p.x = cos(t) * 100.0f;
-		sprite.transform.p.y = sin(t) * 100.0f;
-		cute::sprite_batch_push(sb, sprite);
+		tile.transform.p.x = cos(t) * 100.0f;
+		tile.transform.p.y = sin(t) * 100.0f;
+		cute::sprite_batch_push(sb, tile);
+
+		cloud.transform.p.x = cos(t) * 10.0f;
+		cloud.transform.p.y = sin(t) * 10.0f;
+		cute::sprite_batch_push(sb, cloud);
+
 		cute::sprite_batch_flush(sb);
 
 		cute::font_push_verts(app, font, "Boo! ~", -100, -75, 0);

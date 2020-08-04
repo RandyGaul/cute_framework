@@ -30,6 +30,7 @@
 #include <cute_array.h>
 #include <cute_file_system.h>
 #include <cute_lru_cache.h>
+#include <cute_defer.h>
 
 #include <internal/cute_app_internal.h>
 
@@ -57,7 +58,7 @@ struct cached_image_t
 	cp_image_t img;
 };
 
-using sprite_cache_t = lru_cache<uint64_t, cached_image_t*>;
+using sprite_cache_t = lru_cache<uint64_t, cached_image_t>;
 
 struct sprite_batch_t
 {
@@ -66,7 +67,6 @@ struct sprite_batch_t
 	sprite_batch_mode_t mode = SPRITE_BATCH_MODE_UNINITIALIZED;
 	float w = 0, h = 0;
 
-	array<sprite_t> sprites;
 	array<sprite_vertex_t> verts;
 	gfx_vertex_buffer_t* sprite_buffer = NULL;
 	gfx_shader_t* default_shader = 0;
@@ -300,15 +300,14 @@ static gfx_shader_t* s_load_shader(sprite_batch_t* sb, sprite_shader_type_t type
 static void s_free_cached_image(sprite_batch_t* sb, cached_image_t* cached_image)
 {
 	CUTE_FREE(cached_image->img.pix, NULL);
-	CUTE_FREE(cached_image, sb->mem_ctx);
 }
 
 static void s_free_all_images_in_cache(sprite_batch_t* sb)
 {
 	list_t* list = sb->cache->list();
 	for (list_node_t* n = list_begin(list); n != list_end(list); n = n->next) {
-		cached_image_t* cached_image = *sprite_cache_t::node_to_item(n);
-		s_free_cached_image(sb, cached_image);
+		cached_image_t cached_image = *sprite_cache_t::node_to_item(n);
+		s_free_cached_image(sb, &cached_image);
 	}
 }
 
@@ -350,17 +349,12 @@ void sprite_batch_destroy(sprite_batch_t* sb)
 
 void sprite_batch_push(sprite_batch_t* sb, sprite_t sprite)
 {
-	sb->sprites.add(sprite);
+	sprite_t s = sprite;
+	spritebatch_push(&sb->sb, s.id, s.w, s.h, s.transform.p.x, s.transform.p.y, s.scale_x, s.scale_y, s.transform.r.c, s.transform.r.s, 0);
 }
 
 error_t sprite_batch_flush(sprite_batch_t* sb)
 {
-	for (int i = 0; i < sb->sprites.count(); ++i) {
-		sprite_t s = sb->sprites[i];
-		spritebatch_push(&sb->sb, s.id, s.w, s.h, s.transform.p.x, s.transform.p.y, s.scale_x, s.scale_y, s.transform.r.c, s.transform.r.s, 0);
-	}
-	sb->sprites.clear();
-
 	spritebatch_tick(&sb->sb);
 	if (!spritebatch_defrag(&sb->sb)) {
 		return error_failure("`spritebatch_defrag` failed.");
@@ -490,19 +484,14 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 static void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
 {
 	sprite_batch_t* sb = (sprite_batch_t*)udata;
-	const char* path = sb->image_paths[image_id];
-	void* data;
-	size_t sz;
-	error_t err = file_system_read_entire_file_to_memory(path, &data, &sz, sb->mem_ctx);
-	if (err.is_error()) return;
-
-	cp_image_t img = cp_load_png_mem(data, (int)sz);
-	cp_flip_image_horizontal(&img);
-	CUTE_FREE(data, sb->mem_ctx);
-
-	CUTE_ASSERT(img.w * img.h * sizeof(cp_pixel_t) == bytes_to_fill);
-	CUTE_MEMCPY(buffer, img.pix, bytes_to_fill);
-	CUTE_FREE(img.pix, NULL); // TODO - Adjust cute_png for custom alloc ctx.
+	sprite_batch_LRU_cache_prefetch(sb, image_id);
+	cached_image_t cached_image;
+	if (!sb->cache->find(image_id, &cached_image).is_error()) {
+		CUTE_ASSERT(cached_image.size == bytes_to_fill);
+		CUTE_MEMCPY(buffer, cached_image.img.pix, bytes_to_fill);
+	} else {
+		CUTE_MEMSET(buffer, bytes_to_fill, 0);
+	}
 }
 
 static SPRITEBATCH_U64 s_generate_texture_handle(void* pixels, int w, int h, void* udata)
@@ -604,14 +593,19 @@ error_t sprite_batch_LRU_cache_prefetch(sprite_batch_t* sb, uint64_t id)
 		return error_failure("Sprite batch is not in `SPRITE_BATCH_MODE_LRU` mode -- please call `sprite_batch_enable_disk_LRU_cache` to use this function.");
 	}
 
+	if (sb->cache->find(id)) {
+		return error_success();
+	}
+
 	const char* path = sb->image_paths[id];
 	void* data;
 	size_t sz;
 	error_t err = file_system_read_entire_file_to_memory(path, &data, &sz, sb->mem_ctx);
+	CUTE_DEFER(CUTE_FREE(data, sb->mem_ctx));
 	if (err.is_error()) return err;
 
 	cp_image_t img = cp_load_png_mem(data, (int)sz);
-	CUTE_FREE(data, sb->mem_ctx);
+	cp_flip_image_horizontal(&img);
 
 	if (sz > sb->cache_capacity) {
 		CUTE_FREE(img.pix, NULL);
@@ -619,18 +613,18 @@ error_t sprite_batch_LRU_cache_prefetch(sprite_batch_t* sb, uint64_t id)
 	}
 
 	while (sz + sb->cache_used > sb->cache_capacity) {
-		cached_image_t* cached_image = *sb->cache->lru();
-		sb->cache->remove(cached_image->id);
-		sb->cache_used -= cached_image->size;
-		s_free_cached_image(sb, cached_image);
+		cached_image_t cached_image = *sb->cache->lru();
+		sb->cache->remove(cached_image.id);
+		sb->cache_used -= cached_image.size;
+		s_free_cached_image(sb, &cached_image);
 	}
 
-	cached_image_t* cached_image = CUTE_NEW(cached_image_t, sb->mem_ctx);
-	cached_image->id = id;
-	cached_image->path = path;
-	cached_image->size = sz;
-	cached_image->img = img;
-	sb->cache->insert(cached_image->id, cached_image);
+	cached_image_t cached_image;
+	cached_image.id = id;
+	cached_image.path = path;
+	cached_image.size = sizeof(cp_pixel_t) * img.w * img.h;
+	cached_image.img = img;
+	sb->cache->insert(cached_image.id, cached_image);
 
 	return error_success();
 }

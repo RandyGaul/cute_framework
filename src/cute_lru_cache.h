@@ -112,7 +112,7 @@ T* lru_cache<K, T>::find(const K& key)
 {
 	entry_t* entry = m_entries.find(key);
 	if (!entry) return NULL;
-	update(lru);
+	update(&entry->node);
 	return &entry->item;
 }
 
@@ -121,8 +121,8 @@ error_t lru_cache<K, T>::find(const K& key, T* val_out)
 {
 	entry_t* entry = m_entries.find(key);
 	if (!entry) error_failure("Unable to find dictionary entry.");
-	update(lru);
-	*val_out = &entry->item;
+	update(&entry->node);
+	*val_out = entry->item;
 	return error_success();
 }
 
