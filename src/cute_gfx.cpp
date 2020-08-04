@@ -26,6 +26,7 @@
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_font_internal.h>
+#include <internal/imgui/imgui_impl_dx9.h>
 
 //#ifdef _WIN32
 //	#define GFX_USE_DIRECTX_INCLUDES_AND_IMPORTS
@@ -909,7 +910,7 @@ static void s_d3d9_render_texture_clean_up(gfx_t* gfx, void* render_texture)
 	CUTE_FREE(tex, gfx->mem_ctx);
 }
 
-static void s_d3d9_on_device_lost(d3d9_context_t* impl)
+static void s_d3d9_on_device_lost(gfx_t* gfx, d3d9_context_t* impl)
 {
 	// Release everything used with D3DPOOL_DEFAULT.
 
@@ -937,6 +938,11 @@ static void s_d3d9_on_device_lost(d3d9_context_t* impl)
 
 	impl->screen_surface->Release();
 	impl->screen_surface = 0;
+
+	app_t* app = gfx->app;
+	if (app->using_imgui) {
+		ImGui_ImplDX9_InvalidateDeviceObjects();
+	}
 }
 
 static error_t s_d3d9_on_device_reset(gfx_t* gfx, d3d9_context_t* impl)
@@ -981,6 +987,11 @@ static error_t s_d3d9_on_device_reset(gfx_t* gfx, d3d9_context_t* impl)
 	s_d3d9_setup_render_and_sampler_states(impl->dev);
 	gfx_set_alpha(gfx->app, gfx->alpha_one_for_enabled); // Hacky env scoping, oh well.
 
+	app_t* app = gfx->app;
+	if (app->using_imgui) {
+		ImGui_ImplDX9_CreateDeviceObjects();
+	}
+
 	return error_success();
 }
 
@@ -993,7 +1004,7 @@ static error_t s_d3d9_handle_lost_device(gfx_t* gfx, d3d9_context_t* impl)
 	} else if (hr == D3DERR_DEVICENOTRESET) {
 		// Device is lost and can be reset.
 		if (!impl->lost) {
-			s_d3d9_on_device_lost(impl);
+			s_d3d9_on_device_lost(gfx, impl);
 			impl->lost = 1;
 		}
 
@@ -1181,6 +1192,14 @@ static error_t s_d3d9_flush(gfx_t* gfx)
 
 	err = s_d3d9_do_draw_calls(gfx);
 
+	app_t* app = gfx->app;
+	if (app->using_imgui) {
+		IDirect3DDevice9* dev = (IDirect3DDevice9*)gfx_get_device(app);
+		ImGui::EndFrame();
+		ImGui::Render();
+		ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
+	}
+
 	HR_CHECK(impl->dev->EndScene());
 	impl->dev->Present(NULL, NULL, NULL, NULL);
 
@@ -1203,9 +1222,9 @@ static void s_d3d9_gfx_set_alpha(gfx_t* gfx, int one_for_enabled)
 	HR_CHECK(impl->dev->SetRenderState(D3DRS_DESTBLENDALPHA, D3DBLEND_ONE));
 }
 
-void s_d3d9_free(d3d9_context_t* impl)
+void s_d3d9_free(gfx_t* gfx, d3d9_context_t* impl)
 {
-	s_d3d9_on_device_lost(impl);
+	s_d3d9_on_device_lost(gfx, impl);
 
 	impl->dev->Release();
 	impl->d3d9->Release();
@@ -1750,7 +1769,7 @@ void gfx_clean_up(app_t* app)
 	// TODO: Cleanup debug line shader/buffer or others?
 
 	if (gfx->type == GFX_TYPE_D3D9) {
-		s_d3d9_free((d3d9_context_t*)gfx->impl);
+		s_d3d9_free(gfx, (d3d9_context_t*)gfx->impl);
 	} else {
 		// Not yet implemented.
 	}

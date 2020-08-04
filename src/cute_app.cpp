@@ -57,9 +57,9 @@
 #define SERIALIZE_FWRITE(buffer, element_size, element_count, stream) cute::file_system_write((cute::file_t*)stream, buffer, element_size * element_count)
 #include <cute/cute_serialize.h>
 
+#include <imgui/imgui.h>
 #include <internal/imgui/imgui_impl_sdl.h>
 #include <internal/imgui/imgui_impl_dx9.h>
-#include <imgui/imgui.h>
 
 namespace cute
 {
@@ -209,8 +209,10 @@ error_t app_init_audio(app_t* app, int max_simultaneous_sounds)
 	}
 }
 
-error_t app_init_imgui(app_t* app, ImGui::ImGuiContext** context)
+error_t app_init_imgui(app_t* app, ImGuiContext** context)
 {
+	if (!app->gfx) return error_failure("Graphics has not yet been properly initialized.");
+
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	if (context) *context = ::ImGui::GetCurrentContext();
@@ -219,6 +221,8 @@ error_t app_init_imgui(app_t* app, ImGui::ImGuiContext** context)
 	ImGui::StyleColorsDark();
 	ImGui_ImplSDL2_InitForD3D(app->window);
 	ImGui_ImplDX9_Init((IDirect3DDevice9*)gfx_get_device(app));
+
+	return error_success();
 }
 
 }

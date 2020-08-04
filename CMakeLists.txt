@@ -98,6 +98,9 @@ set(CUTE_SRCS
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
 
+	src/internal/imgui/imgui_impl_dx9.cpp
+	src/internal/imgui/imgui_impl_sdl.cpp
+
 	libraries/imgui/imgui.cpp
 	libraries/imgui/imgui_demo.cpp
 	libraries/imgui/imgui_draw.cpp
@@ -173,6 +176,7 @@ set(CUTE_HDRS
 	src/internal/imgui/imgui_impl_sdl.h
 
 	libraries/glad/glad.h
+	libraries/imgui/imgui.h
 )
 
 # Handle DirectX 9 link directories.
@@ -236,7 +240,14 @@ endif()
 # Cute unit tests executable (optional, defaulted to also build).
 option(CUTE_FRAMEWORK_BUILD_SNAKE "Build the Snake demo." ON)
 if (CUTE_FRAMEWORK_BUILD_SNAKE)
-	set(CUTE_SNAKE_SRCS snake/main.cpp)
+	set(CUTE_SNAKE_SRCS
+		snake/main.cpp
+
+		libraries/imgui/imgui.cpp
+		libraries/imgui/imgui_demo.cpp
+		libraries/imgui/imgui_draw.cpp
+		libraries/imgui/imgui_widgets.cpp
+	)
 	add_executable(snake ${CUTE_SNAKE_SRCS})
 	target_link_libraries(snake PRIVATE cute)
 
