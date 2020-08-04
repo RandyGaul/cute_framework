@@ -188,13 +188,6 @@ const char* file_system_get_backend_specific_error_message()
 	return PHYSFS_getLastError();
 }
 
-const char* file_system_get_working_directory()
-{
-	static char buf[1024];
-	getcwd(buf, 1024);
-	return buf;
-}
-
 const char* file_system_get_user_directory()
 {
 	return PHYSFS_getUserDir();

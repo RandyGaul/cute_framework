@@ -21,6 +21,8 @@
 
 #include <cute_audio.h>
 #include <cute_app.h>
+#include <cute_concurrency.h>
+
 using namespace cute;
 
 CUTE_TEST_CASE(test_audio_load_synchronous, "Load and free wav/ogg files synchronously.");
@@ -43,7 +45,7 @@ static audio_t* s_audio;
 static void s_audio_promise(error_t status, void* param, void* udata)
 {
 	s_audio_error = status;
-	s_audio = (audio_t*)param;
+	atomic_ptr_set((void**)&s_audio, param);
 	CUTE_ASSERT(udata == NULL);
 }
 
@@ -60,16 +62,17 @@ int test_audio_load_asynchronous()
 	s_audio = NULL;
 	audio_stream_ogg(app, "3-6-19-blue-suit-jam.ogg", promise);
 
-	while (!s_audio)
+	while (!atomic_ptr_get((void**)&s_audio))
 		;
 
+	printf("here\n");
 	CUTE_TEST_ASSERT(!audio_destroy(s_audio).is_error());
 
 	s_audio_error = error_success();
 	s_audio = NULL;
 	audio_stream_wav(app, "jump.wav", promise);
 
-	while (!s_audio)
+	while (!atomic_ptr_get((void**)&s_audio))
 		;
 
 	CUTE_TEST_ASSERT(!audio_destroy(s_audio).is_error());
