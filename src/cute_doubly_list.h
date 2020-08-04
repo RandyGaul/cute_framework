@@ -104,6 +104,16 @@ CUTE_INLINE list_node_t* list_end(list_t* list)
 	return &list->nodes;
 }
 
+CUTE_INLINE list_node_t* list_front(list_t* list)
+{
+	return list->nodes.next;
+}
+
+CUTE_INLINE list_node_t* list_back(list_t* list)
+{
+	return list->nodes.prev;
+}
+
 }
 
 #endif // CUTE_DOUBLY_LINKED_LIST_H

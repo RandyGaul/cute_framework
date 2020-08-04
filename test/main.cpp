@@ -48,6 +48,7 @@
 #include <test_kv.h>
 #include <test_audio.h>
 #include <test_ecs.h>
+#include <test_lru_cache.h>
 
 int main(int argc, const char** argv)
 {
@@ -139,6 +140,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_audio_load_synchronous),
 		CUTE_TEST_CASE_ENTRY(test_audio_load_asynchronous),
 		CUTE_TEST_CASE_ENTRY(test_ecs_octorok),
+		CUTE_TEST_CASE_ENTRY(test_lru_cache),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

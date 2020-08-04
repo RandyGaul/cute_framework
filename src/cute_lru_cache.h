@@ -56,6 +56,7 @@ private:
 	struct entry_t
 	{
 		list_node_t node;
+		K key;
 		T item;
 	};
 
@@ -87,9 +88,8 @@ template <typename K, typename T>
 T* lru_cache<K, T>::mru()
 {
 	if (m_count) {
-		list_node_t* mru = list_begin(&m_list);
-		entry_t* entry = CUTE_LIST_HOST(entry_t, node, mru);
-		return &entry->item;
+		list_node_t* mru = list_front(&m_list);
+		return node_to_item(mru);
 	} else {
 		return NULL;
 	}
@@ -99,9 +99,8 @@ template <typename K, typename T>
 T* lru_cache<K, T>::lru()
 {
 	if (m_count) {
-		list_node_t* lru = list_end(&m_list);
-		entry_t* entry = CUTE_LIST_HOST(entry_t, node, lru);
-		return &entry->item;
+		list_node_t* lru = list_back(&m_list);
+		return node_to_item(lru);
 	} else {
 		return NULL;
 	}
@@ -132,11 +131,14 @@ T* lru_cache<K, T>::insert(const K& key)
 	if (m_count < m_capacity) {
 		m_count++;
 	} else {
-		list_node_t* lru = list_end(&m_list);
+		list_node_t* lru = list_back(&m_list);
 		list_remove(lru);
+		entry_t* entry = CUTE_LIST_HOST(entry_t, node, lru);
+		m_entries.remove(entry->key);
 	}
 
 	entry_t* entry = m_entries.insert(key);
+	entry->key = key;
 	list_init_node(&entry->node);
 	list_push_front(&m_list, &entry->node);
 	return &entry->item;
@@ -148,11 +150,14 @@ T* lru_cache<K, T>::insert(const K& key, const T& val)
 	if (m_count < m_capacity) {
 		m_count++;
 	} else {
-		list_node_t* lru = list_end(&m_list);
+		list_node_t* lru = list_back(&m_list);
 		list_remove(lru);
+		entry_t* entry = CUTE_LIST_HOST(entry_t, node, lru);
+		m_entries.remove(entry->key);
 	}
 
 	entry_t* entry = m_entries.insert(key);
+	entry->key = key;
 	entry->item = val;
 	list_init_node(&entry->node);
 	list_push_front(&m_list, &entry->node);

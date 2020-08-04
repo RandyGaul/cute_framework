@@ -699,8 +699,10 @@ audio_system_t* audio_system_make(int pool_count, void* mem_ctx)
 
 void audio_system_destroy(audio_system_t* audio_system)
 {
-	CUTE_FREE(audio_system->playing_sounds_buffer, audio_system->mem_ctx);
-	CUTE_FREE(audio_system, audio_system->mem_ctx);
+	if (audio_system) {
+		CUTE_FREE(audio_system->playing_sounds_buffer, audio_system->mem_ctx);
+		CUTE_FREE(audio_system, audio_system->mem_ctx);
+	}
 }
 
 void audio_system_update(audio_system_t* as, float dt)

@@ -49,19 +49,26 @@ int test_doubly_list()
 	CUTE_TEST_ASSERT(list.nodes.prev == &a);
 	CUTE_TEST_ASSERT(list.nodes.next->next == &list.nodes);
 	CUTE_TEST_ASSERT(list.nodes.prev->prev == &list.nodes);
+	CUTE_TEST_ASSERT(list_front(&list) == &a);
+	CUTE_TEST_ASSERT(list_back(&list) == &a);
 
 	list_push_front(&list, &b);
-	list_push_front(&list, &c);
+	CUTE_TEST_ASSERT(list_front(&list) == &b);
+	CUTE_TEST_ASSERT(list_back(&list) == &a);
 
-	list_node_t* nodes[3] = { &c, &b, &a };
+	list_push_back(&list, &c);
+	CUTE_TEST_ASSERT(list_front(&list) == &b);
+	CUTE_TEST_ASSERT(list_back(&list) == &c);
+
+	list_node_t* nodes[3] = { &b, &a, &c };
 	int index = 0;
 	for (list_node_t* n = list_begin(&list); n != list_end(&list); n = n->next)
 	{
 		CUTE_TEST_ASSERT(n == nodes[index++]);
 	}
 
-	CUTE_TEST_ASSERT(list_pop_front(&list) == &c);
 	CUTE_TEST_ASSERT(list_pop_front(&list) == &b);
+	CUTE_TEST_ASSERT(list_pop_back(&list) == &c);
 	CUTE_TEST_ASSERT(list_pop_back(&list) == &a);
 
 	CUTE_TEST_ASSERT(list_empty(&list));

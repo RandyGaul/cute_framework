@@ -202,6 +202,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_base64.h
 		test/test_audio.h
 		test/test_ecs.h
+		test/test_lru_cache.h
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
