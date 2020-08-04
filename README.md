@@ -145,21 +145,43 @@ int main(int argc, const char** argv)
 
 > Initialize and use Dear ImGui, a great built-in UI library.
 ```cpp
+#include <stdio.h>
+#include <imgui/imgui.h>
 #include <cute.h>
 using namespace cute;
 
 int main(int argc, const char** argv)
 {
 	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
-	app_t* app = app_make("Cute Music", 0, 0, 640, 480, options);
+	app_t* app = app_make("Cute ImGui", 0, 0, 640, 480, options);
 
-	app_init_audio(app);
-	audio_t* music = audio_load_ogg("music.ogg");
-	music_play(app, music, 2);
+	gfx_init(app);
+
+	ImGuiContext* imgui_context = app_init_imgui(app);
+	if (!imgui_context) {
+		printf("Unable to initialize ImGui.\n");
+		return -1;
+	}
+	ImGui::SetCurrentContext(imgui_context);
 
 	while (app_is_running(app)) {
 		float dt = calc_dt();
 		app_update(app, dt);
+
+		static bool hello_open = true;
+		if (hello_open) {
+			ImGui::Begin("Hello", &hello_open);
+			static bool push_me;
+			ImGui::Checkbox("Push Me", &push_me);
+			if (push_me) {
+				ImGui::Separator();
+				ImGui::Indent();
+				ImGui::Text("This is a Dear ImGui Window!");
+			}
+			ImGui::End();
+		}
+
+		gfx_flush(app);
 	}
 
 	return 0;
