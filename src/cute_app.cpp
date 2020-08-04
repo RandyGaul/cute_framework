@@ -130,7 +130,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		app->threadpool = threadpool_create(num_threads_to_spawn, user_allocator_context);
 	}
 
-	if (internal::file_system_init(argv0).is_error()) {
+	if (file_system_init(argv0).is_error()) {
 		goto cute_error;
 	}
 
@@ -153,7 +153,7 @@ void app_destroy(app_t* app)
 	for (int i = 0; i < schema_count; ++i) kv_destroy(schemas[i]);
 	app->~app_t();
 	CUTE_FREE(app, app->mem_ctx);
-	internal::file_system_destroy();
+	file_system_destroy();
 }
 
 bool app_is_running(app_t* app)

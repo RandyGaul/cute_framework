@@ -27,8 +27,10 @@
 #include <direct.h>
 
 #include <cute_c_runtime.h>
+#include <cute_file_system.h>
 #include <test_harness.h>
 #include <internal/cute_crypto_internal.h>
+#include <internal/cute_file_system_internal.h>
 
 #include <test_handle.h>
 #include <test_circular_buffer.h>
@@ -52,11 +54,9 @@
 
 int main(int argc, const char** argv)
 {
-	char buf[256];
-	getcwd(buf, 256);
-	printf("Tests are running from %s.\n", buf);
-
-	//log_set_level(CUTE_LOG_LEVEL_INFORMATIONAL);
+	file_system_init(argv[0]);
+	printf("Tests are running from \"%s\"\n\n", file_system_get_base_dir());
+	file_system_destroy();
 
 #ifdef _MSC_VER
 	_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
@@ -155,7 +155,7 @@ int main(int argc, const char** argv)
 		if (fail_count) {
 			fprintf(CUTE_TEST_IO_STREAM, "\033[31mFAILED\033[0m %d test case%s.\n\n", fail_count, fail_count > 1 ? "s" : "");
 		} else {
-			fprintf(CUTE_TEST_IO_STREAM, "All tests \033[32mPASSED\033[0m.\n\n");
+			fprintf(CUTE_TEST_IO_STREAM, "All %d tests \033[32mPASSED\033[0m.\n\n", test_count);
 		}
 	} else if (argc == 2) {
 		const char* soak = argv[1];

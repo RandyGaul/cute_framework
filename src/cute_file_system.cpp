@@ -27,6 +27,7 @@
 
 #include <internal/cute_defines_internal.h>
 #include <internal/cute_app_internal.h>
+#include <internal/cute_file_system_internal.h>
 
 #include <physfs/physfs.h>
 
@@ -297,21 +298,18 @@ cute_error:
 	return error_failure(PHYSFS_getLastError());
 }
 
-namespace internal
+error_t file_system_init(const char* argv0)
 {
-	error_t file_system_init(const char* argv0)
-	{
-		if (!PHYSFS_init(argv0)) {
-			return error_failure(PHYSFS_getLastError());
-		} else {
-			return error_success();
-		}
+	if (!PHYSFS_init(argv0)) {
+		return error_failure(PHYSFS_getLastError());
+	} else {
+		return error_success();
 	}
+}
 
-	void file_system_destroy()
-	{
-		PHYSFS_deinit();
-	}
+void file_system_destroy()
+{
+	PHYSFS_deinit();
 }
 
 }

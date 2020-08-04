@@ -22,14 +22,13 @@
 #ifndef CUTE_FILE_SYSTEM_INTERNAL_H
 #define CUTE_FILE_SYSTEM_INTERNAL_H
 
+#include <cute_error.h>
+
 namespace cute
 {
 
-namespace internal
-{
-	error_t file_system_init(const char* argv0);
-	void file_system_destroy();
-}
+extern CUTE_API error_t CUTE_CALL file_system_init(const char* argv0);
+extern CUTE_API void CUTE_CALL file_system_destroy();
 
 }
 

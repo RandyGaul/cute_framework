@@ -65,7 +65,6 @@ int test_audio_load_asynchronous()
 	while (!atomic_ptr_get((void**)&s_audio))
 		;
 
-	printf("here\n");
 	CUTE_TEST_ASSERT(!audio_destroy(s_audio).is_error());
 
 	s_audio_error = error_success();
