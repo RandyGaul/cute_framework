@@ -49,6 +49,8 @@ struct sprite_t
 	uint64_t id;
 
 	transform_t transform; // Position and location rotation of the sprite.
+	int w; // Width in pixels of the source image.
+	int h; // Height in pixels of the source image.
 	float scale_x; // Scaling along the sprite's local x-axis.
 	float scale_y; // Scaling along the sprite's local y-axis.
 };

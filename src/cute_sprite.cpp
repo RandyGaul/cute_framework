@@ -289,13 +289,8 @@ static gfx_shader_t* s_load_shader(sprite_batch_t* sb, sprite_shader_type_t type
 		break;
 	}
 
-	app_t* app = sb->app;
-
-	// Compile the shader and remove the old shader.
-	gfx_matrix_t projection;
-	matrix_ortho_2d(&projection, sb->w, sb->h, 0, 0);
-
 	// Set common uniforms.
+	app_t* app = sb->app;
 	gfx_shader_t* shader = gfx_shader_new(app, sb->sprite_buffer, vs, ps);
 	gfx_shader_set_screen_wh(app, shader, sb->w, sb->h);
 
@@ -328,6 +323,18 @@ sprite_batch_t* sprite_batch_make(app_t* app)
 	sb->h = (float)app->h;
 	sb->app = app;
 	sb->mem_ctx = app->mem_ctx;
+
+	gfx_vertex_buffer_params_t params;
+	params.type = GFX_VERTEX_BUFFER_TYPE_DYNAMIC;
+	params.stride = sizeof(sprite_vertex_t);
+	gfx_vertex_buffer_params_add_attribute(&params, 2, CUTE_OFFSET_OF(sprite_vertex_t, pos));
+	gfx_vertex_buffer_params_add_attribute(&params, 2, CUTE_OFFSET_OF(sprite_vertex_t, uv));
+	params.vertex_count = 1024 * 10;
+	sb->sprite_buffer = gfx_vertex_buffer_new(app, &params);
+	sb->active_shader = sb->default_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_DEFAULT);
+	sb->outline_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_OUTLINE);
+	sb->tint_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_TINT);
+
 	return sb;
 }
 
@@ -348,11 +355,17 @@ void sprite_batch_push(sprite_batch_t* sb, sprite_t sprite)
 
 error_t sprite_batch_flush(sprite_batch_t* sb)
 {
-	if (spritebatch_defrag(&sb->sb)) {
+	for (int i = 0; i < sb->sprites.count(); ++i) {
+		sprite_t s = sb->sprites[i];
+		spritebatch_push(&sb->sb, s.id, s.w, s.h, s.transform.p.x, s.transform.p.y, s.scale_x, s.scale_y, s.transform.r.c, s.transform.r.s, 0);
+	}
+	sb->sprites.clear();
+
+	spritebatch_tick(&sb->sb);
+	if (!spritebatch_defrag(&sb->sb)) {
 		return error_failure("`spritebatch_defrag` failed.");
 	}
-	spritebatch_tick(&sb->sb);
-	if (spritebatch_flush(&sb->sb)) {
+	if (!spritebatch_flush(&sb->sb)) {
 		return error_failure("`spritebatch_flush` failed.");
 	}
 	return error_success();
@@ -477,22 +490,19 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 static void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
 {
 	sprite_batch_t* sb = (sprite_batch_t*)udata;
-	if (image_id) {
-		const char* path = sb->image_paths[image_id];
-		void* data;
-		size_t sz;
-		error_t err = file_system_read_entire_file_to_memory(path, &data, &sz, sb->mem_ctx);
-		if (err.is_error()) return;
+	const char* path = sb->image_paths[image_id];
+	void* data;
+	size_t sz;
+	error_t err = file_system_read_entire_file_to_memory(path, &data, &sz, sb->mem_ctx);
+	if (err.is_error()) return;
 
-		cp_image_t img = cp_load_png_mem(data, (int)sz);
-		CUTE_FREE(data, sb->mem_ctx);
+	cp_image_t img = cp_load_png_mem(data, (int)sz);
+	cp_flip_image_horizontal(&img);
+	CUTE_FREE(data, sb->mem_ctx);
 
-		CUTE_ASSERT(img.w * img.h * sizeof(cp_pixel_t) == bytes_to_fill);
-		CUTE_MEMCPY(buffer, img.pix, bytes_to_fill);
-		CUTE_FREE(img.pix, NULL); // TODO - Adjust cute_png for custom alloc ctx.
-	} else {
-		CUTE_MEMSET(buffer, 0, bytes_to_fill);
-	}
+	CUTE_ASSERT(img.w * img.h * sizeof(cp_pixel_t) == bytes_to_fill);
+	CUTE_MEMCPY(buffer, img.pix, bytes_to_fill);
+	CUTE_FREE(img.pix, NULL); // TODO - Adjust cute_png for custom alloc ctx.
 }
 
 static SPRITEBATCH_U64 s_generate_texture_handle(void* pixels, int w, int h, void* udata)
@@ -504,6 +514,7 @@ static SPRITEBATCH_U64 s_generate_texture_handle(void* pixels, int w, int h, voi
 static void s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
 {
 	sprite_batch_t* sb = (sprite_batch_t*)udata;
+	gfx_texture_clean_up(sb->app, (gfx_texture_t*)texture_id);
 }
 
 //--------------------------------------------------------------------------------------------------

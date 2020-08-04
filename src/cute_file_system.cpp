@@ -275,10 +275,10 @@ error_t file_system_read_entire_file_to_memory(const char* virtual_path, void** 
 	uint64_t sz = file_system_size(file);
 	data = CUTE_ALLOC(sz, user_allocator_context);
 	CUTE_CHECK_POINTER(data);
-	uint64_t sz_read = file_system_read(file, *data_ptr, sz);
+	uint64_t sz_read = file_system_read(file, data, sz);
 	*data_ptr = data;
 	if (size) *size = sz_read;
-	CUTE_CHECK(sz == sz_read);
+	CUTE_CHECK_ASSERT(sz == sz_read);
 	file_system_close(file);
 	return error_success();
 
