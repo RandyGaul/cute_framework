@@ -72,6 +72,11 @@
 #	define CUTE_STRCMP strcmp
 #endif
 
+#ifndef CUTE_STRDUP
+#	include <string.h>
+#	define CUTE_STRDUP strdup
+#endif
+
 #ifndef CUTE_STRNCMP
 #	include <string.h>
 #	define CUTE_STRNCMP strncmp

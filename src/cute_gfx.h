@@ -48,11 +48,11 @@ enum gfx_index_buffer_type_t
 struct gfx_vertex_buffer_params_t;
 struct gfx_vertex_buffer_t;
 
-CUTE_API void CUTE_CALL gfx_vertex_buffer_params_add_attribute(gfx_vertex_buffer_params_t* params, int num_components, int offset);
-CUTE_API gfx_vertex_buffer_t* CUTE_CALL gfx_vertex_buffer_new(app_t* app, gfx_vertex_buffer_params_t* params);
-CUTE_API void CUTE_CALL gfx_vertex_buffer_free(app_t* app, gfx_vertex_buffer_t* buffer);
-CUTE_API error_t CUTE_CALL gfx_vertex_buffer_map(app_t* app, gfx_vertex_buffer_t* buffer, int vertex_count, void** vertices, int index_count = 0, void** indices = NULL);
-CUTE_API error_t CUTE_CALL gfx_vertex_buffer_unmap(app_t* app, gfx_vertex_buffer_t* buffer);
+extern CUTE_API void CUTE_CALL gfx_vertex_buffer_params_add_attribute(gfx_vertex_buffer_params_t* params, int num_components, int offset);
+extern CUTE_API gfx_vertex_buffer_t* CUTE_CALL gfx_vertex_buffer_new(app_t* app, gfx_vertex_buffer_params_t* params);
+extern CUTE_API void CUTE_CALL gfx_vertex_buffer_free(app_t* app, gfx_vertex_buffer_t* buffer);
+extern CUTE_API error_t CUTE_CALL gfx_vertex_buffer_map(app_t* app, gfx_vertex_buffer_t* buffer, int vertex_count, void** vertices, int index_count = 0, void** indices = NULL);
+extern CUTE_API error_t CUTE_CALL gfx_vertex_buffer_unmap(app_t* app, gfx_vertex_buffer_t* buffer);
 
 // -------------------------------------------------------------------------------------------------
 // 4x4 matrix for setting a projection matrix in the graphics pipeline.
@@ -65,8 +65,8 @@ struct gfx_matrix_t
 	float data[16];
 };
 
-CUTE_API void CUTE_CALL matrix_identity(gfx_matrix_t* m);
-CUTE_API void CUTE_CALL matrix_ortho_2d(gfx_matrix_t* m, float w, float h, float x, float y);
+extern CUTE_API gfx_matrix_t CUTE_CALL matrix_identity();
+extern CUTE_API gfx_matrix_t CUTE_CALL matrix_ortho_2d(float w, float h, float x, float y);
 
 // -------------------------------------------------------------------------------------------------
 // Textures.
@@ -94,10 +94,10 @@ enum gfx_wrap_mode_t
 	GFX_WRAP_MODE_REPEAT_MIRRORED,
 };
 
-CUTE_API gfx_texture_t* CUTE_CALL gfx_texture_create(app_t* app, int w, int h, void* pixels, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode);
-CUTE_API void CUTE_CALL gfx_texture_clean_up(app_t* app, gfx_texture_t* tex);
-CUTE_API gfx_render_texture_t* CUTE_CALL gfx_render_texture_new(app_t* app, int w, int h, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode);
-CUTE_API void CUTE_CALL gfx_render_texture_clean_up(app_t* app, gfx_render_texture_t* render_texture);
+extern CUTE_API gfx_texture_t* CUTE_CALL gfx_texture_create(app_t* app, int w, int h, void* pixels, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode);
+extern CUTE_API void CUTE_CALL gfx_texture_clean_up(app_t* app, gfx_texture_t* tex);
+extern CUTE_API gfx_render_texture_t* CUTE_CALL gfx_render_texture_new(app_t* app, int w, int h, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode);
+extern CUTE_API void CUTE_CALL gfx_render_texture_clean_up(app_t* app, gfx_render_texture_t* render_texture);
 
 // -------------------------------------------------------------------------------------------------
 // Shaders and uniforms.
@@ -122,11 +122,11 @@ enum gfx_uniform_type_t
 	GFX_UNIFORM_TYPE_MATRIX,
 };
 
-CUTE_API gfx_shader_t* CUTE_CALL gfx_shader_new(app_t* app, gfx_vertex_buffer_t* buffer, const char* vertex_shader, const char* pixel_shader);
-CUTE_API void CUTE_CALL gfx_shader_free(app_t* app, gfx_shader_t* shader);
-CUTE_API error_t CUTE_CALL gfx_shader_set_uniform(app_t* app, gfx_shader_t* shader, const char* uniform_name, void* value, gfx_uniform_type_t type);
-CUTE_API error_t CUTE_CALL gfx_shader_set_mvp(app_t* app, gfx_shader_t* shader, gfx_matrix_t* mvp);
-CUTE_API error_t CUTE_CALL gfx_shader_set_screen_wh(app_t* app, gfx_shader_t* shader, float w, float h);
+extern CUTE_API gfx_shader_t* CUTE_CALL gfx_shader_new(app_t* app, gfx_vertex_buffer_t* buffer, const char* vertex_shader, const char* pixel_shader);
+extern CUTE_API void CUTE_CALL gfx_shader_free(app_t* app, gfx_shader_t* shader);
+extern CUTE_API error_t CUTE_CALL gfx_shader_set_uniform(app_t* app, gfx_shader_t* shader, const char* uniform_name, void* value, gfx_uniform_type_t type);
+extern CUTE_API error_t CUTE_CALL gfx_shader_set_mvp(app_t* app, gfx_shader_t* shader, gfx_matrix_t* mvp);
+extern CUTE_API error_t CUTE_CALL gfx_shader_set_screen_wh(app_t* app, gfx_shader_t* shader, float w, float h);
 
 // -------------------------------------------------------------------------------------------------
 // Draw calls.
@@ -156,11 +156,11 @@ struct gfx_scissor_t
 // Draw call and uniform can *not* store strings if rendering is moved off the main thread,
 // otherwise the pointers will dangle. Copy strings into local buffers or something!
 
-CUTE_API void CUTE_CALL gfx_draw_call_set_mvp(gfx_draw_call_t* call, gfx_matrix_t mvp);
-CUTE_API void CUTE_CALL gfx_draw_call_set_scissor_box(gfx_draw_call_t* call, gfx_scissor_t* scissor);
-CUTE_API void CUTE_CALL gfx_draw_call_add_texture(gfx_draw_call_t* call, gfx_texture_t* texture, const char* uniform_name);
-CUTE_API error_t CUTE_CALL gfx_draw_call_add_verts(app_t* app, gfx_draw_call_t* call, void* verts, int vert_count);
-CUTE_API void CUTE_CALL gfx_draw_call_add_uniform(gfx_draw_call_t* call, const char* uniform_name, void* value, gfx_uniform_type_t type);
+extern CUTE_API void CUTE_CALL gfx_draw_call_set_mvp(gfx_draw_call_t* call, gfx_matrix_t mvp);
+extern CUTE_API void CUTE_CALL gfx_draw_call_set_scissor_box(gfx_draw_call_t* call, gfx_scissor_t* scissor);
+extern CUTE_API void CUTE_CALL gfx_draw_call_add_texture(gfx_draw_call_t* call, gfx_texture_t* texture, const char* uniform_name);
+extern CUTE_API error_t CUTE_CALL gfx_draw_call_add_verts(app_t* app, gfx_draw_call_t* call, void* verts, int vert_count);
+extern CUTE_API void CUTE_CALL gfx_draw_call_add_uniform(gfx_draw_call_t* call, const char* uniform_name, void* value, gfx_uniform_type_t type);
 
 // -------------------------------------------------------------------------------------------------
 // Graphics initialization and management functions.
@@ -184,20 +184,21 @@ enum gfx_upscale_maximum_t
 
 extern CUTE_API error_t CUTE_CALL gfx_init(app_t* app);
 extern CUTE_API error_t CUTE_CALL gfx_init_upscale(app_t* app, int render_w, int render_h, gfx_upscale_maximum_t upscale_max);
+extern CUTE_API void CUTE_CALL gfx_render_size(app_t* app, int* render_w, int* render_h);
 
-CUTE_API void CUTE_CALL gfx_push_draw_call(app_t* app, gfx_draw_call_t* call);
-CUTE_API error_t CUTE_CALL gfx_flush(app_t* app);
-CUTE_API error_t CUTE_CALL gfx_flush_to_texture(app_t* app, gfx_texture_t* render_texture);
-CUTE_API void CUTE_CALL gfx_set_alpha(app_t* app, int one_for_enabled);
-CUTE_API gfx_type_t CUTE_CALL gfx_type(app_t* app);
-CUTE_API void CUTE_CALL gfx_set_clear_color(app_t* app, int color);
+extern CUTE_API void CUTE_CALL gfx_push_draw_call(app_t* app, gfx_draw_call_t* call);
+extern CUTE_API error_t CUTE_CALL gfx_flush(app_t* app);
+extern CUTE_API error_t CUTE_CALL gfx_flush_to_texture(app_t* app, gfx_texture_t* render_texture);
+extern CUTE_API void CUTE_CALL gfx_set_alpha(app_t* app, int one_for_enabled);
+extern CUTE_API gfx_type_t CUTE_CALL gfx_type(app_t* app);
+extern CUTE_API void CUTE_CALL gfx_set_clear_color(app_t* app, int color);
 
-CUTE_API error_t CUTE_CALL gfx_line_mvp(app_t* app, gfx_matrix_t* projection);
-CUTE_API void CUTE_CALL gfx_line_color(app_t* app, float r, float g, float b);
-CUTE_API void CUTE_CALL gfx_line(app_t* app, float ax, float ay, float bx, float by);
-CUTE_API void CUTE_CALL gfx_line_width(app_t* app, float width);
-CUTE_API void CUTE_CALL gfx_line_depth_test(app_t* app, int zero_for_off);
-CUTE_API error_t CUTE_CALL gfx_line_submit_draw_call(app_t* app);
+extern CUTE_API error_t CUTE_CALL gfx_line_mvp(app_t* app, gfx_matrix_t* projection);
+extern CUTE_API void CUTE_CALL gfx_line_color(app_t* app, float r, float g, float b);
+extern CUTE_API void CUTE_CALL gfx_line(app_t* app, float ax, float ay, float bx, float by);
+extern CUTE_API void CUTE_CALL gfx_line_width(app_t* app, float width);
+extern CUTE_API void CUTE_CALL gfx_line_depth_test(app_t* app, int zero_for_off);
+extern CUTE_API error_t CUTE_CALL gfx_line_submit_draw_call(app_t* app);
 
 // TODO
 // make/clean up render to texture

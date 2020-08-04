@@ -52,7 +52,7 @@ void camera_pop_pos(camera_t* cam)
 
 void camera_calc_mvp(camera_t* cam)
 {
-	matrix_ortho_2d(&cam->mvp, cam->w, cam->h, cam->tx.p.x, cam->tx.p.y);
+	cam->mvp = matrix_ortho_2d(cam->w, cam->h, cam->tx.p.x, cam->tx.p.y);
 }
 
 gfx_matrix_t* camera_get_mvp(camera_t* cam)

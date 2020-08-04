@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_H
-#define CUTE_H
+#ifndef CUTE_APP_H
+#define CUTE_APP_H
 
 #include <cute_defines.h>
 #include <cute_error.h>
@@ -50,4 +50,4 @@ extern CUTE_API error_t CUTE_CALL app_init_audio(app_t* app, int max_simultaneou
 #include <cute_error.h>
 #include <cute_clipboard.h>
 
-#endif // CUTE_H
+#endif // CUTE_APP_H

@@ -17,26 +17,25 @@ Working with cute typically involves working with concise code-snippets that ant
 > Rendering a hello world string centered on the screen.
 ```cpp
 #include <cute.h>
+using namespace cute;
 
 int main(int argc, const char** argv)
 {
 	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
-	cute::app_t* app = cute::app_make("Cute Snake", 0, 0, 640, 480, options);
+	app_t* app = app_make("Cute Hello World", 0, 0, 640, 480, options);
 
-	cute::gfx_init(app);
-	cute::gfx_set_alpha(app, 1);
-	cute::gfx_matrix_t mvp;
-	cute::matrix_ortho_2d(&mvp, 320, 240, 0, 0);
-	const cute::font_t* font = cute::font_get_default(app);
+	gfx_init(app);
+	gfx_matrix_t mvp = matrix_ortho_2d(320, 240, 0, 0);
+	const font_t* font = font_get_default(app);
 
-	while (cute::app_is_running(app)) {
-		float dt = cute::calc_dt();
-		cute::app_update(app, dt);
+	while (app_is_running(app)) {
+		float dt = calc_dt();
+		app_update(app, dt);
 
-		cute::font_push_verts(app, font, "Hello world!", 0, 0, 0);
-		cute::font_submit_draw_call(app, font, mvp);
+		font_push_verts(app, font, "Hello world!", 0, 0, 0);
+		font_submit_draw_call(app, font, mvp);
 
-		cute::gfx_flush(app);
+		gfx_flush(app);
 	}
 
 	return 0;
@@ -45,20 +44,45 @@ int main(int argc, const char** argv)
 
 #### Drawing a Sprite
 
-> A ghost appears when pressing space (boo!).
+> A cloud moves in a circle while holding space.
 ```cpp
+#include <stdio.h>
 #include <cute.h>
+using namespace cute;
 
-cute::app_t* app = cute::app_make("Ghost Goes Boo!", x, y, w, h);
-cute::sprite_t ghost = cute::sprite_make("ghost.png");
-
-while (cute::is_running(app))
+int main(int argc, const char** argv)
 {
-	if (cute::key_is_pressed(app, cute::KEY_SPACE)) {
-		cute::sprite_push(app, ghost);
+	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
+	app_t* app = app_make("Cute Snake", 0, 0, 640, 480, options);
+
+	gfx_init(app);
+	spritebatch_t* sb = sprite_batch_easy_make(app, "data");
+
+	sprite_t cloud;
+	error_t err = sprite_batch_easy_sprite(sb, "data/cloud.png", &cloud);
+	if (err.is_error()) {
+		printf("%s\n", err.details);
+		return -1;
+	}
+	float t = 0;
+
+	while (app_is_running(app)) {
+		float dt = calc_dt();
+		app_update(app, dt);
+
+		if (key_is_down(app, KEY_SPACE)) {
+			t += dt * 1.5f;
+		}
+		cloud.transform.p.x = cos(t) * 20.0f;
+		cloud.transform.p.y = sin(t) * 20.0f;
+		sprite_batch_push(sb, cloud);
+
+		sprite_batch_flush(sb);
+
+		gfx_flush(app);
 	}
 
-	cute::app_update(app);
+	return 0;
 }
 ```
 
@@ -68,14 +92,14 @@ while (cute::is_running(app))
 ```cpp
 #include <cute.h>
 
-cute::app_t* app = cute::app_make("Did you hear something?", x, y, w, h);
-cute::audio_t* song = cute::audio_load_ogg("rad_song.ogg");
+app_t* app = app_make("Did you hear something?", x, y, w, h);
+audio_t* song = audio_load_ogg("rad_song.ogg");
 
-cute::music_play(app, song);
+music_play(app, song);
 
-while (cute::is_running(app))
+while (is_running(app))
 {
-	cute::app_update(app);
+	app_update(app);
 }
 ```
 

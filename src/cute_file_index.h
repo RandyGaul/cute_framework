@@ -19,45 +19,27 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <stdio.h>
-#include <cute.h>
-using namespace cute;
+#ifndef CUTE_FILE_INDEX_H
+#define CUTE_FILE_INDEX_H
 
-int main(int argc, const char** argv)
+#include <cute_error.h>
+#include <cute_array.h>
+#include <cute_dictionary.h>
+
+namespace cute
 {
-	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
-	app_t* app = app_make("Cute Snake", 0, 0, 640, 480, options);
 
-	const char* base_dir = file_system_get_base_dir();
-	file_system_mount(base_dir, "", 1);
+struct file_index_t;
 
-	gfx_init(app);
+extern CUTE_API file_index_t* CUTE_CALL file_index_make(void* user_allocator_context = NULL);
+extern CUTE_API void CUTE_CALL file_index_destroy(file_index_t* fi);
 
-	spritebatch_t* sb = sprite_batch_easy_make(app, "data");
+extern CUTE_API void CUTE_CALL file_index_add_file(file_index_t* fi, const char* path);
+extern CUTE_API void CUTE_CALL file_index_search_directory(file_index_t* fi, const char* path, const char* ext);
 
-	sprite_t cloud;
-	error_t err = sprite_batch_easy_sprite(sb, "data/cloud.png", &cloud);
-	if (err.is_error()) {
-		printf("%s\n", err.details);
-		return -1;
-	}
-	float t = 0;
-
-	while (app_is_running(app)) {
-		float dt = calc_dt();
-		app_update(app, dt);
-
-		if (key_is_down(app, KEY_SPACE)) {
-			t += dt * 1.5f;
-		}
-		cloud.transform.p.x = cos(t) * 20.0f;
-		cloud.transform.p.y = sin(t) * 20.0f;
-		sprite_batch_push(sb, cloud);
-
-		sprite_batch_flush(sb);
-
-		gfx_flush(app);
-	}
-
-	return 0;
+extern CUTE_API const char** CUTE_CALL file_index_get_paths(file_index_t* fi, int* count = NULL);
+extern CUTE_API void CUTE_CALL file_index_free_paths(file_index_t* fi, const char** paths);
+extern CUTE_API error_t CUTE_CALL file_index_find(file_index_t* fi, const char* path, uint64_t* index);
 }
+
+#endif // CUTE_FILE_INDEX_H

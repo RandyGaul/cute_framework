@@ -68,17 +68,23 @@ struct sprite_t
  * If you'd like to read more about the implementation of the batcher and why this is a good idea, go ahead and read
  * the documentation in `cute_spritebatch.h` in the `cute` folder.
  */
-struct sprite_batch_t;
+struct spritebatch_t;
 
-CUTE_API sprite_batch_t* CUTE_CALL sprite_batch_make(app_t* app);
-CUTE_API void CUTE_CALL sprite_batch_destroy(sprite_batch_t* sb);
+extern CUTE_API spritebatch_t* CUTE_CALL sprite_batch_make(app_t* app);
+extern CUTE_API void CUTE_CALL sprite_batch_destroy(spritebatch_t* sb);
+
+/**
+ * 
+ */
+extern CUTE_API spritebatch_t* CUTE_CALL sprite_batch_easy_make(app_t* app, const char* path);
+extern CUTE_API error_t CUTE_CALL sprite_batch_easy_sprite(spritebatch_t* sb, const char* path, sprite_t* sprite);
 
 /**
  * Pushes `sprite` onto an internal buffer. Does no other logic.
  * 
  * To get your sprite rendered, see `sprite_batch_flush`.
  */
-CUTE_API void CUTE_CALL sprite_batch_push(sprite_batch_t* sb, sprite_t sprite);
+extern CUTE_API void CUTE_CALL sprite_batch_push(spritebatch_t* sb, sprite_t sprite);
 
 /**
  * All sprites currently pushed onto the sprite batch (see `sprite_batch_push`) will be converted to an internal
@@ -86,7 +92,7 @@ CUTE_API void CUTE_CALL sprite_batch_push(sprite_batch_t* sb, sprite_t sprite);
  * 
  * To then get your sprites drawn, simply call `gfx_flush` on the `gfx` instance originally used for `sprite_batch_make`.
  */
-CUTE_API error_t CUTE_CALL sprite_batch_flush(sprite_batch_t* sb);
+extern CUTE_API error_t CUTE_CALL sprite_batch_flush(spritebatch_t* sb);
 
 enum sprite_shader_type_t
 {
@@ -95,11 +101,11 @@ enum sprite_shader_type_t
 	SPRITE_SHADER_TYPE_TINT
 };
 
-CUTE_API void CUTE_CALL sprite_batch_set_shader_type(sprite_batch_t* sb, sprite_shader_type_t type);
-CUTE_API void CUTE_CALL sprite_batch_set_mvp(sprite_batch_t* sb, gfx_matrix_t mvp);
-CUTE_API void CUTE_CALL sprite_batch_set_scissor_box(sprite_batch_t* sb, aabb_t scissor);
-CUTE_API void CUTE_CALL sprite_batch_no_scissor_box(sprite_batch_t* sb);
-CUTE_API void CUTE_CALL sprite_batch_outlines_use_border(sprite_batch_t* sb, int use_border);
+extern CUTE_API void CUTE_CALL sprite_batch_set_shader_type(spritebatch_t* sb, sprite_shader_type_t type);
+extern CUTE_API void CUTE_CALL sprite_batch_set_mvp(spritebatch_t* sb, gfx_matrix_t mvp);
+extern CUTE_API void CUTE_CALL sprite_batch_set_scissor_box(spritebatch_t* sb, aabb_t scissor);
+extern CUTE_API void CUTE_CALL sprite_batch_no_scissor_box(spritebatch_t* sb);
+extern CUTE_API void CUTE_CALL sprite_batch_outlines_use_border(spritebatch_t* sb, int use_border);
 
 /**
  * This is the recommended way to setup the sprite batch. The sprite batch periodically reads images from disk as-needed.
@@ -119,7 +125,7 @@ CUTE_API void CUTE_CALL sprite_batch_outlines_use_border(sprite_batch_t* sb, int
  * An LRU cache like this is not the only way to handle loading pixels onto the GPU -- see `sprite_batch_enable_custom_pixel_loader`
  * if you want full control over how pixels are dealt with.
  */
-CUTE_API error_t CUTE_CALL sprite_batch_enable_disk_LRU_cache(sprite_batch_t* sb, const char** image_paths, int image_paths_count, size_t cache_size_in_bytes);
+extern CUTE_API error_t CUTE_CALL sprite_batch_enable_disk_LRU_cache(spritebatch_t* sb, const char** image_paths, int image_paths_count, size_t cache_size_in_bytes);
 
 /**
  * This function is for advanced users. The idea is to allow optimizations to have more control over when the disk is accessed.
@@ -127,12 +133,12 @@ CUTE_API error_t CUTE_CALL sprite_batch_enable_disk_LRU_cache(sprite_batch_t* sb
  * This function will load the image associated with `id` (the index into `image_paths` used when you called
  * `sprite_batch_enable_disk_LRU_cache`) into the LRU cache. The least recently used images will be evicted to make room.
  */
-CUTE_API error_t CUTE_CALL sprite_batch_LRU_cache_prefetch(sprite_batch_t* sb, uint64_t id);
+extern CUTE_API error_t CUTE_CALL sprite_batch_LRU_cache_prefetch(spritebatch_t* sb, uint64_t id);
 
 /**
  * Unloads all images in the cache and frees up the RAM they used.
  */
-CUTE_API void CUTE_CALL sprite_batch_LRU_cache_clear(sprite_batch_t* sb);
+extern CUTE_API void CUTE_CALL sprite_batch_LRU_cache_clear(spritebatch_t* sb);
 
 /**
  * This is an advanced function. It is recommended to use `sprite_batch_enable_disk_LRU_cache`, unless you want to handle
@@ -144,7 +150,7 @@ CUTE_API void CUTE_CALL sprite_batch_LRU_cache_clear(sprite_batch_t* sb);
  * `bytes_to_fill` - Number of bytes to write to `buffer`.
  * `udata`         - The `udata` pointer that was originally passed to `sprite_batch_enable_custom_pixel_loader`.
  */
-CUTE_API error_t CUTE_CALL sprite_batch_enable_custom_pixel_loader(sprite_batch_t* sb, void (*get_pixels_fn)(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata), void* udata);
+extern CUTE_API error_t CUTE_CALL sprite_batch_enable_custom_pixel_loader(spritebatch_t* sb, void (*get_pixels_fn)(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata), void* udata);
 
 }
 

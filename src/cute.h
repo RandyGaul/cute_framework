@@ -19,45 +19,40 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <stdio.h>
-#include <cute.h>
-using namespace cute;
+#ifndef CUTE_H
+#define CUTE_H
 
-int main(int argc, const char** argv)
-{
-	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
-	app_t* app = app_make("Cute Snake", 0, 0, 640, 480, options);
+#include <cute_app.h>
+#include <cute_alloc.h>
+#include <cute_array.h>
+#include <cute_audio.h>
+#include <cute_base64.h>
+#include <cute_camera.h>
+#include <cute_circular_buffer.h>
+#include <cute_client.h>
+#include <cute_clipboard.h>
+#include <cute_color.h>
+#include <cute_concurrency.h>
+#include <cute_crypto.h>
+#include <cute_dictionary.h>
+#include <cute_doubly_list.h>
+#include <cute_ecs.h>
+#include <cute_file_index.h>
+#include <cute_file_system.h>
+#include <cute_font.h>
+#include <cute_gfx.h>
+#include <cute_image.h>
+#include <cute_input.h>
+#include <cute_kv.h>
+#include <cute_lru_cache.h>
+#include <cute_math.h>
+#include <cute_memory_pool.h>
+#include <cute_net.h>
+#include <cute_server.h>
+#include <cute_sprite.h>
+#include <cute_string.h>
+#include <cute_timer.h>
+#include <cute_version.h>
+#include <cute_window.h>
 
-	const char* base_dir = file_system_get_base_dir();
-	file_system_mount(base_dir, "", 1);
-
-	gfx_init(app);
-
-	spritebatch_t* sb = sprite_batch_easy_make(app, "data");
-
-	sprite_t cloud;
-	error_t err = sprite_batch_easy_sprite(sb, "data/cloud.png", &cloud);
-	if (err.is_error()) {
-		printf("%s\n", err.details);
-		return -1;
-	}
-	float t = 0;
-
-	while (app_is_running(app)) {
-		float dt = calc_dt();
-		app_update(app, dt);
-
-		if (key_is_down(app, KEY_SPACE)) {
-			t += dt * 1.5f;
-		}
-		cloud.transform.p.x = cos(t) * 20.0f;
-		cloud.transform.p.y = sin(t) * 20.0f;
-		sprite_batch_push(sb, cloud);
-
-		sprite_batch_flush(sb);
-
-		gfx_flush(app);
-	}
-
-	return 0;
-}
+#endif // CUTE_H

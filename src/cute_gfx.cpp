@@ -1268,33 +1268,38 @@ void gfx_vertex_buffer_free(app_t* app, gfx_vertex_buffer_t* buffer)
 	CUTE_FREE(buffer, gfx->mem_ctx);
 }
 
-void matrix_identity(gfx_matrix_t* m)
+gfx_matrix_t matrix_identity()
 {
-	CUTE_MEMSET(m, 0, sizeof(*m));
-	m->data[0] = 1.0f;
-	m->data[5] = 1.0f;
-	m->data[10] = 1.0f;
-	m->data[15] = 1.0f;
+	gfx_matrix_t m;
+	CUTE_MEMSET(&m, 0, sizeof(m));
+	m.data[0] = 1.0f;
+	m.data[5] = 1.0f;
+	m.data[10] = 1.0f;
+	m.data[15] = 1.0f;
+	return m;
 }
 
-void matrix_ortho_2d(gfx_matrix_t* projection, float w, float h, float x, float y)
+gfx_matrix_t matrix_ortho_2d(float w, float h, float x, float y)
 {
 	float L = -w / 2.0f;
 	float R = w / 2.0f;
 	float T = h / 2.0f;
 	float B = -h / 2.0f;
 
-	CUTE_MEMSET(projection, 0, sizeof(*projection));
+	gfx_matrix_t projection;
+	CUTE_MEMSET(&projection, 0, sizeof(projection));
 
 	// ortho
-	projection->data[0] = 2.0f / (R - L);
-	projection->data[5] = 2.0f / (T - B);
-	projection->data[10] = -0.5f;
-	projection->data[15] = 1.0f;
+	projection.data[0] = 2.0f / (R - L);
+	projection.data[5] = 2.0f / (T - B);
+	projection.data[10] = -0.5f;
+	projection.data[15] = 1.0f;
 
 	// translate
-	projection->data[12] = -x * projection->data[0];
-	projection->data[13] = -y * projection->data[5];
+	projection.data[12] = -x * projection.data[0];
+	projection.data[13] = -y * projection.data[5];
+
+	return projection;
 }
 
 gfx_texture_t *gfx_texture_create(app_t* app, int w, int h, void* pixels, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode)
@@ -1549,7 +1554,7 @@ error_t gfx_init(app_t* app)
 	gfx->screen_h = app->h;
 	gfx->clear_color = 0xFFFFFFFF;
 	gfx->viewport = { 0, 0, (float)app->w, (float)app->h };
-	matrix_identity(&gfx->default_projection);
+	gfx->default_projection = matrix_identity();
 	gfx->draw_call_count = 0;
 	gfx->draw_call_capacity = 0;
 	gfx->draw_calls = NULL;
@@ -1625,6 +1630,8 @@ error_t gfx_init(app_t* app)
 	gfx_shader_set_screen_wh(app, gfx->line_shader, (float)app->w, (float)app->h); // TODO: Rename to gfx set screen w/h or whatever and do upscales there
 
 	font_init(app);
+	gfx_set_alpha(app, 1);
+	gfx_set_clear_color(app, 0xFF7095A4);
 
 	return error_success();
 }
@@ -1726,6 +1733,12 @@ error_t gfx_init_upscale(app_t* app, int render_w, int render_h, gfx_upscale_max
 	gfx_shader_set_screen_wh(app, gfx->upscale_shader, (float)app->w, (float)app->h);
 
 	return error_success();
+}
+
+void gfx_render_size(app_t* app, int* render_w, int* render_h)
+{
+	*render_w = app->render_w;
+	*render_h = app->render_h;
 }
 
 void gfx_clean_up(app_t* app)

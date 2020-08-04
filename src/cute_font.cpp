@@ -227,8 +227,7 @@ void font_init(app_t* app)
 		}
 	);
 
-	gfx_matrix_t projection;
-	matrix_ortho_2d(&projection, (float)app->w, (float)app->h, 0, 0);
+	gfx_matrix_t projection = matrix_ortho_2d((float)app->w, (float)app->h, 0, 0);
 	app->font_shader = gfx_shader_new(app, app->font_buffer, vs, ps);
 	gfx_shader_set_screen_wh(app, app->font_shader, (float)app->w, (float)app->h);
 

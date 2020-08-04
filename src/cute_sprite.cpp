@@ -31,6 +31,7 @@
 #include <cute_file_system.h>
 #include <cute_lru_cache.h>
 #include <cute_defer.h>
+#include <cute_file_index.h>
 
 #include <internal/cute_app_internal.h>
 
@@ -60,9 +61,9 @@ struct cached_image_t
 
 using sprite_cache_t = lru_cache<uint64_t, cached_image_t>;
 
-struct sprite_batch_t
+struct spritebatch_t
 {
-	spritebatch_t sb;
+	::spritebatch_t sb;
 	app_t* app;
 	sprite_batch_mode_t mode = SPRITE_BATCH_MODE_UNINITIALIZED;
 	float w = 0, h = 0;
@@ -84,6 +85,9 @@ struct sprite_batch_t
 	size_t cache_capacity = 0;
 	size_t cache_used = 0;
 	sprite_cache_t* cache = NULL;
+
+	file_index_t* easy_images = NULL;
+	const char** easy_paths = NULL;
 
 	void* mem_ctx = NULL;
 };
@@ -108,7 +112,7 @@ static gfx_scissor_t s_scissor_from_aabb(aabb_t aabb, float w, float h)
 	return scissor;
 }
 
-static gfx_shader_t* s_load_shader(sprite_batch_t* sb, sprite_shader_type_t type)
+static gfx_shader_t* s_load_shader(spritebatch_t* sb, sprite_shader_type_t type)
 {
 	const char* default_vs = CUTE_STRINGIZE(
 		struct vertex_t
@@ -297,12 +301,12 @@ static gfx_shader_t* s_load_shader(sprite_batch_t* sb, sprite_shader_type_t type
 	return shader;
 }
 
-static void s_free_cached_image(sprite_batch_t* sb, cached_image_t* cached_image)
+static void s_free_cached_image(spritebatch_t* sb, cached_image_t* cached_image)
 {
 	CUTE_FREE(cached_image->img.pix, NULL);
 }
 
-static void s_free_all_images_in_cache(sprite_batch_t* sb)
+static void s_free_all_images_in_cache(spritebatch_t* sb)
 {
 	list_t* list = sb->cache->list();
 	for (list_node_t* n = list_begin(list); n != list_end(list); n = n->next) {
@@ -313,9 +317,9 @@ static void s_free_all_images_in_cache(sprite_batch_t* sb)
 
 //--------------------------------------------------------------------------------------------------
 
-sprite_batch_t* sprite_batch_make(app_t* app)
+spritebatch_t* sprite_batch_make(app_t* app)
 {
-	sprite_batch_t* sb = CUTE_NEW(sprite_batch_t, app->mem_ctx);
+	spritebatch_t* sb = CUTE_NEW(spritebatch_t, app->mem_ctx);
 	if (!sb) return NULL;
 
 	sb->w = (float)app->w;
@@ -337,23 +341,73 @@ sprite_batch_t* sprite_batch_make(app_t* app)
 	return sb;
 }
 
-void sprite_batch_destroy(sprite_batch_t* sb)
+void sprite_batch_destroy(spritebatch_t* sb)
 {
+	if (sb->easy_paths) {
+		file_index_free_paths(sb->easy_images, sb->easy_paths);
+		file_index_destroy(sb->easy_images);
+	}
+
 	spritebatch_term(&sb->sb);
 	s_free_all_images_in_cache(sb);
 	sb->cache->~sprite_cache_t();
 	CUTE_FREE(sb->cache, sb->mem_ctx);
-	sb->~sprite_batch_t();
+	sb->~spritebatch_t();
 	CUTE_FREE(sb, sb->mem_ctx);
 }
 
-void sprite_batch_push(sprite_batch_t* sb, sprite_t sprite)
+spritebatch_t* sprite_batch_easy_make(app_t* app, const char* path)
+{
+	spritebatch_t* sb = sprite_batch_make(app);
+
+	int w, h;
+	gfx_render_size(app, &w, &h);
+	gfx_matrix_t mvp = matrix_ortho_2d((float)w, (float)h, 0, 0);
+	sprite_batch_set_mvp(sb, mvp);
+
+	sb->easy_images = file_index_make();
+	file_index_search_directory(sb->easy_images, path, "png");
+	int paths_count;
+	const char** paths = file_index_get_paths(sb->easy_images, &paths_count);
+	sprite_batch_enable_disk_LRU_cache(sb, paths, paths_count, CUTE_MB * 256);
+	sb->easy_paths = paths;
+
+	return sb;
+}
+
+error_t sprite_batch_easy_sprite(spritebatch_t* sb, const char* path, sprite_t* out)
+{
+	uint64_t id;
+	error_t err = file_index_find(sb->easy_images, path, &id);
+	if (err.is_error()) return err;
+
+	sprite_batch_LRU_cache_prefetch(sb, id);
+
+	sprite_t sprite;
+	cached_image_t img;
+	err = sb->cache->find(id, &img);
+	if (err.is_error()) return err;
+
+	sprite.id = id;
+	sprite.w = img.img.w;
+	sprite.h = img.img.h;
+	sprite.scale_x = (float)img.img.w;
+	sprite.scale_y = (float)img.img.h;
+	sprite.transform.p = cute::v2(0, 0);
+	sprite.transform.r = cute::make_rotation(0);
+	sprite.sort_bits = 0;
+	*out = sprite;
+
+	return error_success();
+}
+
+void sprite_batch_push(spritebatch_t* sb, sprite_t sprite)
 {
 	sprite_t s = sprite;
 	spritebatch_push(&sb->sb, s.id, s.w, s.h, s.transform.p.x, s.transform.p.y, s.scale_x, s.scale_y, s.transform.r.c, s.transform.r.s, 0);
 }
 
-error_t sprite_batch_flush(sprite_batch_t* sb)
+error_t sprite_batch_flush(spritebatch_t* sb)
 {
 	spritebatch_tick(&sb->sb);
 	if (!spritebatch_defrag(&sb->sb)) {
@@ -370,7 +424,7 @@ error_t sprite_batch_flush(sprite_batch_t* sb)
 
 static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture_w, int texture_h, void* udata)
 {
-	sprite_batch_t* sb = (sprite_batch_t*)udata;
+	spritebatch_t* sb = (spritebatch_t*)udata;
 
 	// Build draw call.
 	gfx_draw_call_t draw_call;
@@ -483,7 +537,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 
 static void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
 {
-	sprite_batch_t* sb = (sprite_batch_t*)udata;
+	spritebatch_t* sb = (spritebatch_t*)udata;
 	sprite_batch_LRU_cache_prefetch(sb, image_id);
 	cached_image_t cached_image;
 	if (!sb->cache->find(image_id, &cached_image).is_error()) {
@@ -496,19 +550,19 @@ static void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fi
 
 static SPRITEBATCH_U64 s_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
-	sprite_batch_t* sb = (sprite_batch_t*)udata;
+	spritebatch_t* sb = (spritebatch_t*)udata;
 	return (SPRITEBATCH_U64)gfx_texture_create(sb->app, w, h, pixels, GFX_PIXEL_FORMAT_R8B8G8A8, GFX_WRAP_MODE_CLAMP_BORDER);
 }
 
 static void s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
 {
-	sprite_batch_t* sb = (sprite_batch_t*)udata;
+	spritebatch_t* sb = (spritebatch_t*)udata;
 	gfx_texture_clean_up(sb->app, (gfx_texture_t*)texture_id);
 }
 
 //--------------------------------------------------------------------------------------------------
 
-void sprite_batch_set_shader_type(sprite_batch_t* sb, sprite_shader_type_t type)
+void sprite_batch_set_shader_type(spritebatch_t* sb, sprite_shader_type_t type)
 {
 	sb->shader_type = type;
 
@@ -538,28 +592,28 @@ void sprite_batch_set_shader_type(sprite_batch_t* sb, sprite_shader_type_t type)
 	}
 }
 
-void sprite_batch_set_mvp(sprite_batch_t* sb, gfx_matrix_t mvp)
+void sprite_batch_set_mvp(spritebatch_t* sb, gfx_matrix_t mvp)
 {
 	sb->mvp = mvp;
 }
 
-void sprite_batch_set_scissor_box(sprite_batch_t* sb, aabb_t scissor)
+void sprite_batch_set_scissor_box(spritebatch_t* sb, aabb_t scissor)
 {
 	sb->scissor = scissor;
 	sb->use_scissor = 1;
 }
 
-void sprite_batch_no_scissor_box(sprite_batch_t* sb)
+void sprite_batch_no_scissor_box(spritebatch_t* sb)
 {
 	sb->use_scissor = 0;
 }
 
-void sprite_batch_outlines_use_border(sprite_batch_t* sb, int use_border)
+void sprite_batch_outlines_use_border(spritebatch_t* sb, int use_border)
 {
 	sb->outline_use_border = use_border ? 1.0f : 0;
 }
 
-error_t sprite_batch_enable_disk_LRU_cache(sprite_batch_t* sb, const char** image_paths, int image_paths_count, size_t cache_size_in_bytes)
+error_t sprite_batch_enable_disk_LRU_cache(spritebatch_t* sb, const char** image_paths, int image_paths_count, size_t cache_size_in_bytes)
 {
 	if (sb->mode != SPRITE_BATCH_MODE_UNINITIALIZED) {
 		return error_failure("The sprite batch is already initialized.");
@@ -587,7 +641,7 @@ error_t sprite_batch_enable_disk_LRU_cache(sprite_batch_t* sb, const char** imag
 	return error_success();
 }
 
-error_t sprite_batch_LRU_cache_prefetch(sprite_batch_t* sb, uint64_t id)
+error_t sprite_batch_LRU_cache_prefetch(spritebatch_t* sb, uint64_t id)
 {
 	if (sb->mode != SPRITE_BATCH_MODE_LRU) {
 		return error_failure("Sprite batch is not in `SPRITE_BATCH_MODE_LRU` mode -- please call `sprite_batch_enable_disk_LRU_cache` to use this function.");
@@ -629,13 +683,13 @@ error_t sprite_batch_LRU_cache_prefetch(sprite_batch_t* sb, uint64_t id)
 	return error_success();
 }
 
-void sprite_batch_LRU_cache_clear(sprite_batch_t* sb)
+void sprite_batch_LRU_cache_clear(spritebatch_t* sb)
 {
 	s_free_all_images_in_cache(sb);
 	sb->cache->clear();
 }
 
-error_t sprite_batch_enable_custom_pixel_loader(sprite_batch_t* sb, void (*get_pixels_fn)(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata), void* udata)
+error_t sprite_batch_enable_custom_pixel_loader(spritebatch_t* sb, void (*get_pixels_fn)(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata), void* udata)
 {
 	spritebatch_config_t config;
 	spritebatch_set_default_config(&config);
