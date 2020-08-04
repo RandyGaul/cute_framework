@@ -27,12 +27,14 @@ int main(int argc, const char** argv)
 	gfx_init(app);
 	gfx_matrix_t mvp = matrix_ortho_2d(320, 240, 0, 0);
 	const font_t* font = font_get_default(app);
+	float w = (float)font_text_width(font, "Hello world!");
+	float h = (float)font_text_height(font, "Hello world!");
 
 	while (app_is_running(app)) {
 		float dt = calc_dt();
 		app_update(app, dt);
 
-		font_push_verts(app, font, "Hello world!", 0, 0, 0);
+		font_push_verts(app, font, "Hello world!", -w / 2, h / 2, 0);
 		font_submit_draw_call(app, font, mvp);
 
 		gfx_flush(app);
@@ -53,7 +55,7 @@ using namespace cute;
 int main(int argc, const char** argv)
 {
 	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
-	app_t* app = app_make("Cute Snake", 0, 0, 640, 480, options);
+	app_t* app = app_make("Cute Cloud", 0, 0, 640, 480, options);
 
 	gfx_init(app);
 	spritebatch_t* sb = sprite_batch_easy_make(app, "data");
@@ -86,20 +88,56 @@ int main(int argc, const char** argv)
 }
 ```
 
-#### Playing Audio
+#### Playing a Sound Effect
 
-> An empty screen accompanied by some music.
+> Play a jump sound when pressing space.
 ```cpp
 #include <cute.h>
+using namespace cute;
 
-app_t* app = app_make("Did you hear something?", x, y, w, h);
-audio_t* song = audio_load_ogg("rad_song.ogg");
-
-music_play(app, song);
-
-while (is_running(app))
+int main(int argc, const char** argv)
 {
-	app_update(app);
+	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
+	app_t* app = app_make("Cute Jump Sound", 0, 0, 640, 480, options);
+
+	app_init_audio(app);
+	audio_t* jump_audio = audio_load_wav("jump.wav");
+
+	while (app_is_running(app)) {
+		float dt = calc_dt();
+		app_update(app, dt);
+
+		if (key_was_pressed(app, KEY_SPACE)) {
+			audio_play(app, jump_audio);
+		}
+	}
+
+	return 0;
+}
+```
+
+#### Playing some Music
+
+> Loads up then plays some music.
+```cpp
+#include <cute.h>
+using namespace cute;
+
+int main(int argc, const char** argv)
+{
+	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
+	app_t* app = app_make("Cute Music", 0, 0, 640, 480, options);
+
+	app_init_audio(app);
+	audio_t* music = audio_load_ogg("music.ogg");
+	music_play(app, music, 2);
+
+	while (app_is_running(app)) {
+		float dt = calc_dt();
+		app_update(app, dt);
+	}
+
+	return 0;
 }
 ```
 

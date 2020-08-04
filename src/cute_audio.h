@@ -66,7 +66,7 @@ struct sound_params_t
 	float delay = 0;
 };
 
-extern CUTE_API error_t CUTE_CALL sound_play(app_t* app, audio_t* audio_source, sound_params_t params = sound_params_t());
+extern CUTE_API error_t CUTE_CALL audio_play(app_t* app, audio_t* audio_source, sound_params_t params = sound_params_t());
 
 // -------------------------------------------------------------------------------------------------
 

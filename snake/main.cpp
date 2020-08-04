@@ -19,44 +19,21 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <stdio.h>
 #include <cute.h>
 using namespace cute;
 
 int main(int argc, const char** argv)
 {
 	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
-	app_t* app = app_make("Cute Snake", 0, 0, 640, 480, options);
+	app_t* app = app_make("Cute Hello World", 0, 0, 640, 480, options);
 
-	const char* base_dir = file_system_get_base_dir();
-	file_system_mount(base_dir, "", 1);
-
-	gfx_init(app);
-
-	spritebatch_t* sb = sprite_batch_easy_make(app, "data");
-
-	sprite_t cloud;
-	error_t err = sprite_batch_easy_sprite(sb, "data/cloud.png", &cloud);
-	if (err.is_error()) {
-		printf("%s\n", err.details);
-		return -1;
-	}
-	float t = 0;
+	app_init_audio(app);
+	audio_t* music = audio_load_ogg("3-6-19-blue-suit-jam.ogg");
+	music_play(app, music, 2);
 
 	while (app_is_running(app)) {
 		float dt = calc_dt();
 		app_update(app, dt);
-
-		if (key_is_down(app, KEY_SPACE)) {
-			t += dt * 1.5f;
-		}
-		cloud.transform.p.x = cos(t) * 20.0f;
-		cloud.transform.p.y = sin(t) * 20.0f;
-		sprite_batch_push(sb, cloud);
-
-		sprite_batch_flush(sb);
-
-		gfx_flush(app);
 	}
 
 	return 0;

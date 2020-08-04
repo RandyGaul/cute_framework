@@ -592,7 +592,7 @@ error_t music_crossfade(app_t* app, audio_t* audio_source, float cross_fade_time
 
 // -------------------------------------------------------------------------------------------------
 
-error_t sound_play(app_t* app, audio_t* audio_source, sound_params_t params)
+error_t audio_play(app_t* app, audio_t* audio_source, sound_params_t params)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return error_failure("Audio system not initialized.");

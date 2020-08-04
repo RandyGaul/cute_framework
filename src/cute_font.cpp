@@ -144,6 +144,16 @@ void font_submit_draw_call(app_t* app, const font_t* font, gfx_matrix_t mvp, col
 	app->font_verts.clear();
 }
 
+int font_text_width(const font_t* font, const char* text)
+{
+	return cute_font_text_width((cute_font_t*)font, text);
+}
+
+int font_text_height(const font_t* font, const char* text)
+{
+	return cute_font_text_height((cute_font_t*)font, text);
+}
+
 // -------------------------------------------------------------------------------------------------
 // Internal.
 
