@@ -40,6 +40,8 @@ int main(int argc, const char** argv)
 		gfx_flush(app);
 	}
 
+	app_destroy(app);
+
 	return 0;
 }
 ```
@@ -84,6 +86,8 @@ int main(int argc, const char** argv)
 		gfx_flush(app);
 	}
 
+	app_destroy(app);
+
 	return 0;
 }
 ```
@@ -112,6 +116,8 @@ int main(int argc, const char** argv)
 		}
 	}
 
+	app_destroy(app);
+
 	return 0;
 }
 ```
@@ -136,6 +142,8 @@ int main(int argc, const char** argv)
 		float dt = calc_dt();
 		app_update(app, dt);
 	}
+
+	app_destroy(app);
 
 	return 0;
 }
@@ -183,6 +191,8 @@ int main(int argc, const char** argv)
 
 		gfx_flush(app);
 	}
+
+	app_destroy(app);
 
 	return 0;
 }

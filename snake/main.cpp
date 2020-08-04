@@ -78,5 +78,7 @@ int main(int argc, const char** argv)
 		gfx_flush(app);
 	}
 
+	app_destroy(app);
+
 	return 0;
 }
