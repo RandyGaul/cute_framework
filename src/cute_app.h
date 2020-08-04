@@ -25,6 +25,8 @@
 #include <cute_defines.h>
 #include <cute_error.h>
 
+namespace ImGui { struct ImGuiContext; }
+
 namespace cute
 {
 
@@ -44,6 +46,7 @@ extern CUTE_API void CUTE_CALL app_update(app_t* app, float dt);
 
 extern CUTE_API error_t CUTE_CALL app_init_net(app_t* app);
 extern CUTE_API error_t CUTE_CALL app_init_audio(app_t* app, int max_simultaneous_sounds = 5000);
+extern CUTE_API error_t CUTE_CALL app_init_imgui(app_t* app, ImGui::ImGuiContext** context = NULL);
 
 }
 

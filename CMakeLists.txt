@@ -98,6 +98,11 @@ set(CUTE_SRCS
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
 
+	libraries/imgui/imgui.cpp
+	libraries/imgui/imgui_demo.cpp
+	libraries/imgui/imgui_draw.cpp
+	libraries/imgui/imgui_widgets.cpp
+
 	libraries/glad/glad.c
 )
 
@@ -163,6 +168,9 @@ set(CUTE_HDRS
 	src/internal/cute_transport_internal.h
 	src/internal/cute_object_table_internal.h
 	src/internal/cute_ecs_internal.h
+
+	src/internal/imgui/imgui_impl_dx9.h
+	src/internal/imgui/imgui_impl_sdl.h
 
 	libraries/glad/glad.h
 )

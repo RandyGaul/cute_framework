@@ -104,6 +104,7 @@ struct app_t
 	int render_h;
 	window_state_t window_state;
 	window_state_t window_state_prev;
+	bool using_imgui = false;
 
 	array<int> input_text;
 	int keys[512] = { 0 };

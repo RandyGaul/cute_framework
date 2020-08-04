@@ -24,6 +24,7 @@
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_input_internal.h>
+#include <internal/imgui/imgui_impl_sdl.h>
 
 #define CUTE_UTF_IMPLEMENTATION
 #include <cute/cute_utf.h>
@@ -371,6 +372,10 @@ void pump_input_msgs(app_t* app)
 	SDL_Event event;
 	while (SDL_PollEvent(&event))
 	{
+		if (app->using_imgui) {
+			ImGui_ImplSDL2_ProcessEvent(&event);
+		}
+
 		switch (event.type)
 		{
 		case SDL_QUIT:

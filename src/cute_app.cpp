@@ -57,6 +57,10 @@
 #define SERIALIZE_FWRITE(buffer, element_size, element_count, stream) cute::file_system_write((cute::file_t*)stream, buffer, element_size * element_count)
 #include <cute/cute_serialize.h>
 
+#include <internal/imgui/imgui_impl_sdl.h>
+#include <internal/imgui/imgui_impl_dx9.h>
+#include <imgui/imgui.h>
+
 namespace cute
 {
 
@@ -70,7 +74,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	CUTE_CHECK_POINTER(app);
 	app->options = options;
 
-	if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO)) {
+	if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER)) {
 		CUTE_FREE(app, user_allocator_context);
 		return NULL;
 	}
@@ -143,6 +147,12 @@ cute_error:
 
 void app_destroy(app_t* app)
 {
+	if (app->using_imgui) {
+		ImGui_ImplDX9_Shutdown();
+		ImGui_ImplSDL2_Shutdown();
+		ImGui::DestroyContext();
+		app->using_imgui = false;
+	}
 	if (app->cute_sound) cs_shutdown_context(app->cute_sound);
 	SDL_DestroyWindow(app->window);
 	SDL_Quit();
@@ -171,6 +181,11 @@ void app_update(app_t* app, float dt)
 	app->dt = dt;
 	pump_input_msgs(app);
 	if (app->audio_system) audio_system_update(app->audio_system, dt);
+	if (app->using_imgui) {
+		ImGui_ImplDX9_NewFrame();
+		ImGui_ImplSDL2_NewFrame(app->window);
+		ImGui::NewFrame();
+	}
 }
 
 // TODO - Move these init functions into audio/net headers.
@@ -192,6 +207,18 @@ error_t app_init_audio(app_t* app, int max_simultaneous_sounds)
 	} else {
 		return error_failure(cs_error_reason);
 	}
+}
+
+error_t app_init_imgui(app_t* app, ImGui::ImGuiContext** context)
+{
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	if (context) *context = ::ImGui::GetCurrentContext();
+	app->using_imgui = true;
+
+	ImGui::StyleColorsDark();
+	ImGui_ImplSDL2_InitForD3D(app->window);
+	ImGui_ImplDX9_Init((IDirect3DDevice9*)gfx_get_device(app));
 }
 
 }

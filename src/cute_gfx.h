@@ -200,6 +200,8 @@ extern CUTE_API void CUTE_CALL gfx_line_width(app_t* app, float width);
 extern CUTE_API void CUTE_CALL gfx_line_depth_test(app_t* app, int zero_for_off);
 extern CUTE_API error_t CUTE_CALL gfx_line_submit_draw_call(app_t* app);
 
+extern CUTE_API void* CUTE_CALL gfx_get_device(app_t* app);
+
 // TODO
 // make/clean up render to texture
 // post FX

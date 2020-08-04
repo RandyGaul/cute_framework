@@ -155,27 +155,27 @@ Cute covers all the low level guts required to build 2D games by implementing th
 
 Note: This has temporarily become a big TODO list. This list will eventually need to be converted into documentation categories.
 
-* [cute](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute_t.md)
+* [app](https://github.com/RandyGaul/cute_framework/blob/master/doc/app.md)
 * audio
-* event
+* camera
+* concurrency
+* clipboard
+* crypto
+* data structures
+* ecs
 * file system
+* font
 * graphics
+* image
 * input
+* serialization
 * math
 * collision detection
-* concurrency
+* sprite
+* string
 * time
-* net
 * utf8 (for localization support)
-* serialization
-* data structures
-* allocators
-* ini
-* camera
-* entity
-* profile
-* build/distro options
-* error
+* window
 
 ## Integrating Cute with your Project
 

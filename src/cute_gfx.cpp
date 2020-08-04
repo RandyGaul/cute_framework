@@ -1896,6 +1896,14 @@ error_t gfx_line_submit_draw_call(app_t* app)
 	return error_success();
 }
 
+void* gfx_get_device(app_t* app)
+{
+	gfx_t* gfx = app->gfx;
+	if (!gfx) return NULL;
+	d3d9_context_t* ctx = (d3d9_context_t*)gfx->impl;
+	return (void*)ctx->dev;
+}
+
 gfx_render_texture_t* gfx_render_texture_new(app_t* app, int w, int h, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode)
 {
 	switch (s_gfx_type(app)) {

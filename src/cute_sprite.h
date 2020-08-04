@@ -74,9 +74,19 @@ extern CUTE_API spritebatch_t* CUTE_CALL sprite_batch_make(app_t* app);
 extern CUTE_API void CUTE_CALL sprite_batch_destroy(spritebatch_t* sb);
 
 /**
- * 
+ * The easiest way to setup a spritebatch. Simply point to a `path` and all the png files within
+ * this path will be recursively searched for and found. Each png will map to one sprite, and can
+ * be found with the `sprite_batch_easy_sprite` function.
+ *
+ * This function is mostly just to get you started. You will may soon graduate to using 
+ * `sprite_batch_enable_disk_LRU_cache` instead, by building your own list of image paths yourself.
  */
 extern CUTE_API spritebatch_t* CUTE_CALL sprite_batch_easy_make(app_t* app, const char* path);
+
+/**
+ * Fills out a `sprite_t` struct for given .png path. This function can only be used if
+ * `sprite_batch_easy_make` is called to setup the spritebatch.
+ */
 extern CUTE_API error_t CUTE_CALL sprite_batch_easy_sprite(spritebatch_t* sb, const char* path, sprite_t* sprite);
 
 /**
