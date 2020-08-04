@@ -29,7 +29,7 @@
 	is represented by a `uint64_t`, and internally ref-counts inside of a global string-
 	interning system stored statically.
 
-	There is no support for string operations in a multi-threaded scenario.
+	There is no special support for string operations in a multi-threaded scenario.
 */
 
 namespace cute

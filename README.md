@@ -18,15 +18,29 @@ Working with cute typically involves working with concise code-snippets that ant
 ```cpp
 #include <cute.h>
 
-cute::app_t* app = cute::app_make("Fancy Window Title", x, y, w, h);
-
-while (cute::is_running(app))
+int main(int argc, const char** argv)
 {
-	int font_x = 0, font_y = 0;
-	cute::font_print(app, font_x, font_y, "Hello, world!");
-	cute::app_update(app);
-}
+	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
+	cute::app_t* app = cute::app_make("Cute Snake", 0, 0, 640, 480, options);
 
+	cute::gfx_init(app);
+	cute::gfx_set_alpha(app, 1);
+	cute::gfx_matrix_t mvp;
+	cute::matrix_ortho_2d(&mvp, 320, 240, 0, 0);
+	const cute::font_t* font = cute::font_get_default(app);
+
+	while (cute::app_is_running(app)) {
+		float dt = cute::calc_dt();
+		cute::app_update(app, dt);
+
+		cute::font_push_verts(app, font, "Hello world!", 0, 0, 0);
+		cute::font_submit_draw_call(app, font, mvp);
+
+		cute::gfx_flush(app);
+	}
+
+	return 0;
+}
 ```
 
 #### Drawing a Sprite
