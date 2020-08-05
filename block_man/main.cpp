@@ -163,20 +163,13 @@ int main(int argc, const char** argv)
 {
 	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
 	app_t* app = app_make("Block Man", 0, 0, 640, 480, options);
-
 	file_system_mount(file_system_get_base_dir(), "", 1);
-
 	gfx_init(app);
 	gfx_init_upscale(app, 320, 240, GFX_UPSCALE_MAXIMUM_ANY);
+	ImGui::SetCurrentContext(app_init_imgui(app));
+
 	sb = sprite_batch_easy_make(app, "data");
 
-	ImGuiContext* imgui_context = app_init_imgui(app);
-	if (!imgui_context) {
-		printf("Unable to initialize ImGui.\n");
-		return -1;
-	}
-	ImGui::SetCurrentContext(imgui_context);
-    
 	int vcount = sizeof(level1_raw_data) / sizeof(level1_raw_data[0]);
 	level_sprites.ensure_count(vcount);
 	level.data.ensure_count(vcount);
