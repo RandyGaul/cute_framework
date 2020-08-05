@@ -162,7 +162,7 @@ void HandleInput(app_t* app, float dt)
 int main(int argc, const char** argv)
 {
 	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
-	app_t* app = app_make("Cute ImGui", 0, 0, 640, 480, options);
+	app_t* app = app_make("Block Man", 0, 0, 640, 480, options);
 
 	file_system_mount(file_system_get_base_dir(), "", 1);
 

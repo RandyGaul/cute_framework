@@ -238,24 +238,24 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 endif()
 
 # Cute unit tests executable (optional, defaulted to also build).
-option(CUTE_FRAMEWORK_BUILD_SNAKE "Build the Snake demo." ON)
-if (CUTE_FRAMEWORK_BUILD_SNAKE)
-	set(CUTE_SNAKE_SRCS
-		snake/main.cpp
+option(CUTE_FRAMEWORK_BUILD_BLOCK_MAN "Build the Block Man game." ON)
+if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
+	set(CUTE_BLOCK_MAN_SRCS
+		block_man/main.cpp
 
 		libraries/imgui/imgui.cpp
 		libraries/imgui/imgui_demo.cpp
 		libraries/imgui/imgui_draw.cpp
 		libraries/imgui/imgui_widgets.cpp
 	)
-	add_executable(snake ${CUTE_SNAKE_SRCS})
-	target_link_libraries(snake PRIVATE cute)
+	add_executable(block_man ${CUTE_BLOCK_MAN_SRCS})
+	target_link_libraries(block_man PRIVATE cute)
 
 	# For convenience set working directory to the target output folder.
 	if (MSVC)
-		set_property(TARGET snake PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:snake>)
+		set_property(TARGET block_man PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:block_man>)
 	endif()
 
 	# Copy over any test data in the test/test_data folder.
-	add_custom_command(TARGET snake POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/snake/data" $<TARGET_FILE_DIR:snake>/data)
+	add_custom_command(TARGET block_man POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/block_man/data" $<TARGET_FILE_DIR:block_man>/data)
 endif()
