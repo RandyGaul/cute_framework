@@ -49,6 +49,9 @@ int main(int argc, const char** argv)
 	}
 	float t = 0;
 
+	threadpool_t* pool = threadpool_create(3);
+	threadpool_destroy(pool);
+
 	while (app_is_running(app)) {
 		float dt = calc_dt();
 		app_update(app, dt);
