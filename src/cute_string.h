@@ -42,16 +42,16 @@ struct string_t
 	CUTE_API string_t(const char* str);
 	CUTE_API string_t(const char* begin, const char* end);
 	CUTE_API string_t(void* null_pointer);
-    CUTE_API string_t(const string_t& other);
-    CUTE_API ~string_t();
+	CUTE_API string_t(const string_t& other);
+	CUTE_API ~string_t();
 
-    CUTE_API int len() const;
-    CUTE_API const char* c_str() const;
+	CUTE_API int len() const;
+	CUTE_API const char* c_str() const;
 
-    CUTE_API string_t& operator=(const string_t& rhs);
-    CUTE_API int operator==(const string_t& rhs) const;
-    CUTE_API int operator!=(const string_t& rhs) const;
-    CUTE_API char operator[](const int i) const;
+	CUTE_API string_t& operator=(const string_t& rhs);
+	CUTE_API int operator==(const string_t& rhs) const;
+	CUTE_API int operator!=(const string_t& rhs) const;
+	CUTE_API char operator[](const int i) const;
 
 	uint64_t id;
 };

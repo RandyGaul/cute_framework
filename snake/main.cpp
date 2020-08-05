@@ -29,122 +29,134 @@ array<sprite_t> sprites; // not sure if we need this
 
 struct Level
 {
-    v2 pstart;
-    array<array<char>> data;
+	int start_x;
+	int start_y;
+	array<array<char>> data;
 } level;
 
 struct Hero
 {
-    sprite_t sprite;
-    bool initialized = false;
+	int x, y;
+	sprite_t sprite;
+	bool initialized = false;
 } hero;
 
 struct Tile
 {
-    sprite_t sprite;
-    bool empty = true;
+	int x, y;
+	sprite_t sprite;
+	bool empty = true;
 };
 
-array<array<Tile>> level_sprites; // level sprites
+array<array<Tile>> level_sprites;
 
-string_t level1[] = {
-"11111111",
-"10000001",
-"10000p01",
-"10000001",
-"11111111",
+string_t level1_raw_data[] = {
+	"11111111",
+	"10000011",
+	"10100p01",
+	"10100001",
+	"11111111",
 };
+
+v2 tile2world(int x, int y)
+{
+	float w = 16;
+	float h = 16;
+	float y_offset = level_sprites.count() * h;
+	return v2((float)x * w, -(float)y * h + y_offset);
+}
 
 sprite_t AddSprite(string_t path)
 {
-    sprite_t sprite;
-    error_t err = sprite_batch_easy_sprite(sb, path.c_str(), &sprite);
-    if (err.is_error()) {
-        printf("%s\n", err.details);
-    }
-    sprites.add(sprite);
-    return sprite;
+	sprite_t sprite;
+	error_t err = sprite_batch_easy_sprite(sb, path.c_str(), &sprite);
+	if (err.is_error()) {
+		printf("%s\n", err.details);
+	}
+	sprites.add(sprite);
+	return sprite;
 }
+
 void LoadLevel(string_t* l, int vcount)
 {
-    Tile tile;
-    for (int i = 0; i < vcount; ++i)
-    {
-        for (int j = 0; j < l[i].len(); ++j)
-        {
-            switch (l[i][j])
-            {
-            case '1':
-                tile.empty = false;
-                tile.sprite = AddSprite("data/tile68.png");
-                tile.sprite.transform.p.x = j * tile.sprite.h;
-                tile.sprite.transform.p.y = -i * tile.sprite.w + vcount * tile.sprite.h;
-                level_sprites[i].add(tile);
-                break;
-            case '0':
-                tile.empty = true;
-                level_sprites[i].add(tile);
-                break;
-            case 'p':
-                CUTE_ASSERT(!hero.initialized);
-                hero.sprite = AddSprite("data/tile0.png");
-                hero.sprite.transform.p.x = j * tile.sprite.h;
-                hero.sprite.transform.p.y = -i * tile.sprite.w + vcount * tile.sprite.h;
-                pstart = hero.sprite.transform.p;
-                hero.initialized = true;
-                break;
-            }
-            level.data[i].add(l[i][j]); // add everything into the level data
-        }
-    }
+	for (int i = 0; i < vcount; ++i)
+	{
+		for (int j = 0; j < l[i].len(); ++j)
+		{
+			Tile tile;
+			tile.x = j;
+			tile.y = i;
+
+			switch (l[i][j])
+			{
+			case '1':
+				tile.empty = false;
+				tile.sprite = AddSprite("data/tile68.png");
+				tile.sprite.transform.p = tile2world(j, i);
+				break;
+
+			case '0':
+				tile.empty = true;
+				break;
+
+			case 'p':
+				CUTE_ASSERT(!hero.initialized);
+				hero.x = j;
+				hero.y = i;
+				hero.sprite = AddSprite("data/tile0.png");
+				hero.sprite.transform.p = tile2world(j, i);
+				level.start_x = j;
+				level.start_y = i;
+				hero.initialized = true;
+				break;
+			}
+
+			level_sprites[i].add(tile);
+			level.data[i].add(l[i][j]); // add everything into the level data
+		}
+	}
 }
+
 void BatchLevel(const array<array<Tile>>& grid)
 {
-    for (int i = 0; i < grid.count(); ++i)
-    {
-        for (int j = 0; j < grid[i].count(); ++j)
-        {
-            sprite_batch_push(sb, grid[i][j].sprite);
-        }
-    }
+	for (int i = 0; i < grid.count(); ++i)
+	{
+		for (int j = 0; j < grid[i].count(); ++j)
+		{
+			if (!grid[i][j].empty) {
+				sprite_batch_push(sb, grid[i][j].sprite);
+			}
+		}
+	}
 }
 
 void HandleInput(app_t* app, float dt)
 {
-    v2 newpos = hero.sprite.transform.p;
+	int x = hero.x;
+	int y = hero.y;
 
-    if (key_was_pressed(app, KEY_R))
-        newpos = level.pstart;
+	if (key_was_pressed(app, KEY_R)) {
+		x = level.start_x;
+		y = level.start_y;
+	}
 
-    if (key_was_pressed(app, KEY_W))
-        newpos.y += hero.sprite.h;
-    if (key_was_pressed(app, KEY_S))
-        newpos.y -= hero.sprite.h;
+	if (key_was_pressed(app, KEY_W))
+		y -= 1;
+	if (key_was_pressed(app, KEY_S))
+		y += 1;
 
-    if (key_was_pressed(app, KEY_D))
-        newpos.x += hero.sprite.w;
-    if (key_was_pressed(app, KEY_A))
-        newpos.x -= hero.sprite.w;
+	if (key_was_pressed(app, KEY_D))
+		x += 1;
+	if (key_was_pressed(app, KEY_A))
+		x -= 1;
 
-    /*if (key_was_pressed(app, KEY_R))
-        newpos = level.pstart;
-
-    if (key_was_pressed(app, KEY_W))
-        newpos.y += hero.sprite.h;
-    if (key_was_pressed(app, KEY_S))
-        newpos.y -= hero.sprite.h;
-
-    if (key_was_pressed(app, KEY_D))
-        newpos.x += hero.sprite.w;
-    if (key_was_pressed(app, KEY_A))
-        newpos.x -= hero.sprite.w;*/
-
-    // check for collisions
-    //int posToIndexY = int(hero.sprite.transform.p.y / level_sprites[0][0].sprite.w);
-    //int posToIndexX = int(hero.sprite.transform.p.x / level_sprites[0][0].sprite.w);
-
-    //if (level_sprites[posToIndexY][posToIndexX].empty) // if we did't collide, assign the new position
-        hero.sprite.transform.p = newpos;
+	// check for collisions
+	// if we did't collide, assign the new position
+	if (level_sprites[y][x].empty) {
+		hero.x = x;
+		hero.y = y;
+		hero.sprite.transform.p = tile2world(x, y);
+	}
 }
 
 int main(int argc, const char** argv)
@@ -155,7 +167,7 @@ int main(int argc, const char** argv)
 	file_system_mount(file_system_get_base_dir(), "", 1);
 
 	gfx_init(app);
-    //gfx_init_upscale(app, 320, 240, GFX_UPSCALE_MAXIMUM_ANY);
+	gfx_init_upscale(app, 320, 240, GFX_UPSCALE_MAXIMUM_ANY);
 	sb = sprite_batch_easy_make(app, "data");
 
 	ImGuiContext* imgui_context = app_init_imgui(app);
@@ -165,10 +177,10 @@ int main(int argc, const char** argv)
 	}
 	ImGui::SetCurrentContext(imgui_context);
     
-    int vcount = sizeof(level1) / sizeof(level1[0]);
-    level_sprites.ensure_count(vcount);
-    level.data.ensure_count(vcount);
-    LoadLevel(level1, vcount);
+	int vcount = sizeof(level1_raw_data) / sizeof(level1_raw_data[0]);
+	level_sprites.ensure_count(vcount);
+	level.data.ensure_count(vcount);
+	LoadLevel(level1_raw_data, vcount);
 
 	float t = 0;
 
@@ -176,11 +188,11 @@ int main(int argc, const char** argv)
 		float dt = calc_dt();
 		app_update(app, dt);
 
-        HandleInput(app, dt);
+		HandleInput(app, dt);
 
-        sprite_batch_push(sb, hero.sprite);
+		sprite_batch_push(sb, hero.sprite);
 
-        BatchLevel(level_sprites);
+		BatchLevel(level_sprites);
 
 		sprite_batch_flush(sb);
 

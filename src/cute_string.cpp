@@ -143,13 +143,13 @@ int string_t::operator==(const string_t& rhs) const
 
 int string_t::operator!=(const string_t& rhs) const
 {
-    return id != rhs.id;
+	return id != rhs.id;
 }
 
 char string_t::operator[](const int i) const
 {
-    CUTE_ASSERT(i >= 0 && i < len());
-    return c_str()[i];
+	CUTE_ASSERT(i >= 0 && i < len());
+	return c_str()[i];
 }
 
 void string_set_allocator_context(void* user_allocator_context)
