@@ -37,28 +37,29 @@ namespace cute
 
 struct string_t
 {
-	explicit string_t();
-	explicit string_t(char* str);
-	explicit string_t(const char* str);
-	explicit string_t(const char* begin, const char* end);
-	explicit string_t(void* null_pointer);
-	string_t(const string_t& other);
-	~string_t();
+	CUTE_API string_t();
+	CUTE_API string_t(char* str);
+	CUTE_API string_t(const char* str);
+	CUTE_API string_t(const char* begin, const char* end);
+	CUTE_API string_t(void* null_pointer);
+    CUTE_API string_t(const string_t& other);
+    CUTE_API ~string_t();
 
-	int len() const;
-	const char* c_str() const;
+    CUTE_API int len() const;
+    CUTE_API const char* c_str() const;
 
-	string_t& operator=(const string_t& rhs);
-	int operator==(const string_t& rhs) const;
-	int operator!=(const string_t& rhs) const;
+    CUTE_API string_t& operator=(const string_t& rhs);
+    CUTE_API int operator==(const string_t& rhs) const;
+    CUTE_API int operator!=(const string_t& rhs) const;
+    CUTE_API char operator[](const int i) const;
 
 	uint64_t id;
 };
 
-void string_set_allocator_context(void* user_allocator_context);
-void* string_get_allocator_context();
-void string_defrag();
-void string_nuke();
+CUTE_API void string_set_allocator_context(void* user_allocator_context);
+CUTE_API void* string_get_allocator_context();
+CUTE_API void string_defrag();
+CUTE_API void string_nuke();
 
 }
 
