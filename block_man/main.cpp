@@ -114,7 +114,7 @@ void DrawLevel(const Level& level)
                 break;
 
             case 'x':
-                sprite = AddSprite("data/tile35.png");
+                sprite = AddSprite("data/ice_block.png");
                 break;
 
             case 'c':
@@ -193,44 +193,26 @@ void HandleInput(app_t* app, float dt)
 
     }
 
-    if (key_was_pressed(app, KEY_W))
+    key_button_t keycodes[4] = { KEY_W , KEY_S, KEY_D, KEY_A };
+    int xdirs[4] = { 0 , 0, 1, -1 };
+    int ydirs[4] = { 1, -1, 0, 0 };
+    int xmove[4] = { 0, 0, 1, -1 };
+    int ymove[4] = { -1, 1, 0, 0 };
+
+    for (int i = 0; i < 4; ++i)
     {
-        if (hero.xdir == 0 && hero.ydir == 1)
-            y -= 1;
-        else
+        if (key_was_pressed(app, keycodes[i]))
         {
-            hero.xdir = 0;
-            hero.ydir = 1;
-        }
-    }
-	if (key_was_pressed(app, KEY_S))
-    {
-        if (hero.xdir == 0 && hero.ydir == -1)
-            y += 1;
-        else
-        {
-            hero.xdir = 0;
-            hero.ydir = -1;
-        }
-    }
-	if (key_was_pressed(app, KEY_D))
-    {
-        if (hero.xdir == 1 && hero.ydir == 0)
-            x += 1;
-        else
-        {
-            hero.xdir = 1;
-            hero.ydir = 0;
-        }
-    }
-	if (key_was_pressed(app, KEY_A))
-    {
-        if (hero.xdir == -1 && hero.ydir == 0)
-            x -= 1;
-        else
-        {
-            hero.xdir = -1;
-            hero.ydir = 0;
+            if (hero.xdir == xdirs[i] && hero.ydir == ydirs[i])
+            {
+                x += xmove[i];
+                y += ymove[i];
+            }
+            else
+            {
+                hero.xdir = xdirs[i];
+                hero.ydir = ydirs[i];
+            }
         }
     }
 
