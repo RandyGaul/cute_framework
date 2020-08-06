@@ -73,7 +73,14 @@ void LoadLevel(string_t* l, int vcount)
 	{
 		for (int j = 0; j < l[i].len(); ++j)
 		{
-			level.data[i].add(l[i][j]); // add everything into the level data
+			char c = l[i][j];
+			if (c == 'p') {
+				CUTE_ASSERT(hero.initialized == false);
+				hero.x = j;
+				hero.y = i;
+				hero.initialized = true;
+			}
+			level.data[i].add(c); // add everything into the level data
 		}
 	}
 }
@@ -85,7 +92,6 @@ void DrawLevel(const Level& level)
 		for (int j = 0; j < level.data[i].count(); ++j)
 		{
 			sprite_t sprite;
-            sprite.transform.p = tile2world(j, i);
 			bool empty = false;
 
 			switch (level.data[i][j])
@@ -108,6 +114,7 @@ void DrawLevel(const Level& level)
 			}
 
 			if (!empty) {
+				sprite.transform.p = tile2world(j, i);
 				sprite_batch_push(sb, sprite);
 			}
 		}
@@ -137,8 +144,10 @@ void HandleInput(app_t* app, float dt)
 	// check for collisions
 	// if we did't collide, assign the new position
 	if (level.data[y][x] == '0') {
+		level.data[hero.y][hero.x] = '0';
 		hero.x = x;
 		hero.y = y;
+		level.data[y][x] = 'p';
 	}
 }
 
