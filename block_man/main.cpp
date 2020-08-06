@@ -43,19 +43,23 @@ struct Hero
 } hero;
 
 string_t level1_raw_data[] = {
-	"11111111",
-	"10x00011",
-	"10100p01",
-	"10100001",
-	"11111111",
+	"111111111111111",
+	"10x000000000011",
+	"10100p000000001",
+    "101000000000001",
+    "101000000000001",
+    "101000000000001",
+    "101000000000001",
+    "101000000000001",
+    "111111111111111",
 };
 
 v2 tile2world(int x, int y)
 {
-	float w = 16;
+	float w = 16; // width of tiles in pixels
 	float h = 16;
 	float y_offset = level.data.count() * h;
-	return v2((float)x * w, -(float)y * h + y_offset);
+	return v2((float)(x-6) * w, -(float)(y+6) * h + y_offset);
 }
 
 bool in_grid(int x, int y, int w, int h)
@@ -139,10 +143,30 @@ void HandleInput(app_t* app, float dt)
         y = level.start_y;
     }*/
     if (key_was_pressed(app, KEY_SPACE)) {
-        if (level.data[y + hero.ydir][x + hero.xdir] == 'x')
+
+        // search forward from player to look for blocks to pick up
+        int sx = x + hero.xdir, sy = y - hero.ydir;
+        bool found = false;
+        while (in_grid(sy, sx, level.data.count(), level.data[0].count()))
         {
-            level.data[y + hero.ydir][x + hero.xdir] = '0';
+            if (level.data[sy][sx] == 'x')
+            {
+                found = true;
+                break;
+            }
+            else if (level.data[sy][sx] == '1')
+            {
+                break;
+            }
+            sx += hero.xdir;
+            sy -= hero.ydir;
         }
+        if (found)
+        {
+            level.data[sy][sx] = '0';
+            level.data[y - hero.ydir][x + hero.xdir] = 'x';
+        }
+
     }
 
     if (key_was_pressed(app, KEY_W))
@@ -223,7 +247,7 @@ int main(int argc, const char** argv)
 
 		sprite_batch_flush(sb);
 
-		static bool hello_open = true;
+		static bool hello_open = false;
 		if (hello_open) {
 			ImGui::Begin("Hello", &hello_open);
 			static bool push_me;
