@@ -61,7 +61,8 @@ sprite_t AddSprite(string_t path)
 	sprite_t sprite;
 	error_t err = sprite_batch_easy_sprite(sb, path.c_str(), &sprite);
 	if (err.is_error()) {
-		printf("%s\n", err.details);
+		printf("Can't find file %s.\n", path.c_str());
+		CUTE_ASSERT(false);
 	}
 	sprites.add(sprite);
 	return sprite;
