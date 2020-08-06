@@ -38,6 +38,8 @@ struct Hero
 {
 	int x, y;
 	bool initialized = false;
+    int xdir = 0;
+    int ydir = -1;
 } hero;
 
 string_t level1_raw_data[] = {
@@ -54,6 +56,11 @@ v2 tile2world(int x, int y)
 	float h = 16;
 	float y_offset = level.data.count() * h;
 	return v2((float)x * w, -(float)y * h + y_offset);
+}
+
+bool in_grid(int x, int y, int w, int h)
+{
+    return x >= 0 && y >= 0 && x < w && y < h;
 }
 
 sprite_t AddSprite(string_t path)
@@ -127,20 +134,57 @@ void HandleInput(app_t* app, float dt)
 	int x = hero.x;
 	int y = hero.y;
 
-	if (key_was_pressed(app, KEY_R)) {
-		x = level.start_x;
-		y = level.start_y;
-	}
+    /*if (key_was_pressed(app, KEY_R)) {
+        x = level.start_x;
+        y = level.start_y;
+    }*/
+    if (key_was_pressed(app, KEY_SPACE)) {
+        if (level.data[y + hero.ydir][x + hero.xdir] == 'x')
+        {
+            level.data[y + hero.ydir][x + hero.xdir] = '0';
+        }
+    }
 
-	if (key_was_pressed(app, KEY_W))
-		y -= 1;
+    if (key_was_pressed(app, KEY_W))
+    {
+        if (hero.xdir == 0 && hero.ydir == 1)
+            y -= 1;
+        else
+        {
+            hero.xdir = 0;
+            hero.ydir = 1;
+        }
+    }
 	if (key_was_pressed(app, KEY_S))
-		y += 1;
-
+    {
+        if (hero.xdir == 0 && hero.ydir == -1)
+            y += 1;
+        else
+        {
+            hero.xdir = 0;
+            hero.ydir = -1;
+        }
+    }
 	if (key_was_pressed(app, KEY_D))
-		x += 1;
+    {
+        if (hero.xdir == 1 && hero.ydir == 0)
+            x += 1;
+        else
+        {
+            hero.xdir = 1;
+            hero.ydir = 0;
+        }
+    }
 	if (key_was_pressed(app, KEY_A))
-		x -= 1;
+    {
+        if (hero.xdir == -1 && hero.ydir == 0)
+            x -= 1;
+        else
+        {
+            hero.xdir = -1;
+            hero.ydir = 0;
+        }
+    }
 
 	// check for collisions
 	// if we did't collide, assign the new position
