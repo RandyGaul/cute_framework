@@ -40,16 +40,17 @@ struct Hero
 	bool initialized = false;
     int xdir = 0;
     int ydir = -1;
+    bool holding = false;
 } hero;
 
 string_t level1_raw_data[] = {
 	"111111111111111",
 	"10x000000000011",
 	"10100p000000001",
+    "10100000000x001",
     "101000000000001",
-    "101000000000001",
-    "101000000000001",
-    "101000000000001",
+    "1010x0000000001",
+    "101000000000x01",
     "101000000000001",
     "111111111111111",
 };
@@ -116,6 +117,10 @@ void DrawLevel(const Level& level)
                 sprite = AddSprite("data/tile35.png");
                 break;
 
+            case 'c':
+                sprite = AddSprite("data/tile4.png");
+                break;
+
 			case '0':
 				empty = true;
 				break;
@@ -144,27 +149,46 @@ void HandleInput(app_t* app, float dt)
     }*/
     if (key_was_pressed(app, KEY_SPACE)) {
 
-        // search forward from player to look for blocks to pick up
-        int sx = x + hero.xdir, sy = y - hero.ydir;
-        bool found = false;
-        while (in_grid(sy, sx, level.data.count(), level.data[0].count()))
+        if (!hero.holding)
         {
-            if (level.data[sy][sx] == 'x')
+            // search forward from player to look for blocks to pick up
+            int sx = x + hero.xdir, sy = y - hero.ydir;
+            bool found = false;
+            while (in_grid(sy, sx, level.data.count(), level.data[0].count()))
             {
-                found = true;
-                break;
+                if (level.data[sy][sx] == 'x')
+                {
+                    found = true;
+                    break;
+                }
+                else if (level.data[sy][sx] == '1')
+                {
+                    break;
+                }
+                sx += hero.xdir;
+                sy -= hero.ydir;
             }
-            else if (level.data[sy][sx] == '1')
+            if (found)
             {
-                break;
+                level.data[sy][sx] = '0';
+                level.data[y - hero.ydir][x + hero.xdir] = 'c';
+                hero.holding = true;
             }
-            sx += hero.xdir;
-            sy -= hero.ydir;
         }
-        if (found)
+        else // hero.holding is true
         {
-            level.data[sy][sx] = '0';
-            level.data[y - hero.ydir][x + hero.xdir] = 'x';
+            // so we need to throw the block we are holding
+            int sx = x + hero.xdir * 2, sy = y - hero.ydir * 2;
+            while (in_grid(sy, sx, level.data.count(), level.data[0].count()))
+            {
+                if (level.data[sy][sx] != '0')
+                    break;
+                sx += hero.xdir;
+                sy -= hero.ydir;
+            }
+            level.data[y - hero.ydir][x + hero.xdir] = '0';
+            level.data[sy + hero.ydir][sx - hero.xdir] = 'x';
+            hero.holding = false;
         }
 
     }
