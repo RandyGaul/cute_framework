@@ -52,7 +52,7 @@ array<array<Tile>> level_sprites;
 
 string_t level1_raw_data[] = {
 	"11111111",
-	"10000011",
+	"10x00011",
 	"10100p01",
 	"10100001",
 	"11111111",
@@ -89,11 +89,17 @@ void LoadLevel(string_t* l, int vcount)
 
 			switch (l[i][j])
 			{
-			case '1':
-				tile.empty = false;
-				tile.sprite = AddSprite("data/tile68.png");
-				tile.sprite.transform.p = tile2world(j, i);
-				break;
+            case '1':
+                tile.empty = false;
+                tile.sprite = AddSprite("data/tile68.png");
+                tile.sprite.transform.p = tile2world(j, i);
+                break;
+
+            case 'x':
+                tile.empty = false;
+                tile.sprite = AddSprite("data/tile35.png");
+                tile.sprite.transform.p = tile2world(j, i);
+                break;
 
 			case '0':
 				tile.empty = true;
