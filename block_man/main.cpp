@@ -37,18 +37,8 @@ struct Level
 struct Hero
 {
 	int x, y;
-	sprite_t sprite;
 	bool initialized = false;
 } hero;
-
-struct Tile
-{
-	int x, y;
-	sprite_t sprite;
-	bool empty = true;
-};
-
-array<array<Tile>> level_sprites;
 
 string_t level1_raw_data[] = {
 	"11111111",
@@ -62,7 +52,7 @@ v2 tile2world(int x, int y)
 {
 	float w = 16;
 	float h = 16;
-	float y_offset = level_sprites.count() * h;
+	float y_offset = level.data.count() * h;
 	return v2((float)x * w, -(float)y * h + y_offset);
 }
 
@@ -83,54 +73,42 @@ void LoadLevel(string_t* l, int vcount)
 	{
 		for (int j = 0; j < l[i].len(); ++j)
 		{
-			Tile tile;
-			tile.x = j;
-			tile.y = i;
-
-			switch (l[i][j])
-			{
-            case '1':
-                tile.empty = false;
-                tile.sprite = AddSprite("data/tile68.png");
-                tile.sprite.transform.p = tile2world(j, i);
-                break;
-
-            case 'x':
-                tile.empty = false;
-                tile.sprite = AddSprite("data/tile35.png");
-                tile.sprite.transform.p = tile2world(j, i);
-                break;
-
-			case '0':
-				tile.empty = true;
-				break;
-
-			case 'p':
-				CUTE_ASSERT(!hero.initialized);
-				hero.x = j;
-				hero.y = i;
-				hero.sprite = AddSprite("data/tile0.png");
-				hero.sprite.transform.p = tile2world(j, i);
-				level.start_x = j;
-				level.start_y = i;
-				hero.initialized = true;
-				break;
-			}
-
-			level_sprites[i].add(tile);
 			level.data[i].add(l[i][j]); // add everything into the level data
 		}
 	}
 }
 
-void BatchLevel(const array<array<Tile>>& grid)
+void DrawLevel(const Level& level)
 {
-	for (int i = 0; i < grid.count(); ++i)
+	for (int i = 0; i < level.data.count(); ++i)
 	{
-		for (int j = 0; j < grid[i].count(); ++j)
+		for (int j = 0; j < level.data[i].count(); ++j)
 		{
-			if (!grid[i][j].empty) {
-				sprite_batch_push(sb, grid[i][j].sprite);
+			sprite_t sprite;
+            sprite.transform.p = tile2world(j, i);
+			bool empty = false;
+
+			switch (level.data[i][j])
+			{
+            case '1':
+                sprite = AddSprite("data/tile68.png");
+                break;
+
+            case 'x':
+                sprite = AddSprite("data/tile35.png");
+                break;
+
+			case '0':
+				empty = true;
+				break;
+
+			case 'p':
+				sprite = AddSprite("data/tile0.png");
+				break;
+			}
+
+			if (!empty) {
+				sprite_batch_push(sb, sprite);
 			}
 		}
 	}
@@ -158,10 +136,9 @@ void HandleInput(app_t* app, float dt)
 
 	// check for collisions
 	// if we did't collide, assign the new position
-	if (level_sprites[y][x].empty) {
+	if (level.data[y][x] == '0') {
 		hero.x = x;
 		hero.y = y;
-		hero.sprite.transform.p = tile2world(x, y);
 	}
 }
 
@@ -177,7 +154,6 @@ int main(int argc, const char** argv)
 	sb = sprite_batch_easy_make(app, "data");
 
 	int vcount = sizeof(level1_raw_data) / sizeof(level1_raw_data[0]);
-	level_sprites.ensure_count(vcount);
 	level.data.ensure_count(vcount);
 	LoadLevel(level1_raw_data, vcount);
 
@@ -189,9 +165,7 @@ int main(int argc, const char** argv)
 
 		HandleInput(app, dt);
 
-		sprite_batch_push(sb, hero.sprite);
-
-		BatchLevel(level_sprites);
+		DrawLevel(level);
 
 		sprite_batch_flush(sb);
 
