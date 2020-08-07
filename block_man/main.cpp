@@ -127,7 +127,7 @@ void DrawLevel(const Level& level)
 				break;
 
 			case 'p':
-				sprite = AddSprite("data/tile0.png");
+				sprite = AddSprite("data/girl_forward.png");
 				break;
 			}
 
