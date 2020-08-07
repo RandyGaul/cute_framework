@@ -41,6 +41,7 @@ struct Hero
     int xdir = 0;
     int ydir = -1;
     bool holding = false;
+    int aniframe = 0;
 } hero;
 
 string_t level1_raw_data[] = {
@@ -116,6 +117,13 @@ void DrawLevel(const Level& level)
 
             case 'x':
                 sprite = AddSprite("data/ice_block.png");
+                
+                // advance the animation
+                /*if (hero.aniframe < 1)
+                    hero.aniframe++;
+                else
+                    hero.aniframe = 0;*/
+
                 break;
 
             case 'c':
@@ -131,7 +139,17 @@ void DrawLevel(const Level& level)
 				break;
 
 			case 'p':
-				sprite = AddSprite("data/girl_forward.png");
+
+                if (hero.xdir == 0 && hero.ydir == -1)
+                    sprite = AddSprite("data/girl_forward.png");
+                else if (hero.xdir == 0 && hero.ydir == 1)
+                    sprite = AddSprite("data/girl_hold_up1.png");
+
+                else if (hero.xdir == 1 && hero.ydir == 0)
+                    sprite = AddSprite("data/girl_hold_side1.png");
+                else if (hero.xdir == -1 && hero.ydir == 0)
+                    sprite = AddSprite("data/girl_hold_side2.png");
+
 				break;
 			}
 
