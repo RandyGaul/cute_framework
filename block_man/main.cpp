@@ -205,8 +205,6 @@ void HandleInput(app_t* app, float dt)
         {
             if (hero.holding)
             {
-                // if turning 90 degrees, check to make sure we don't turn through a wall
-
                 // if moving backwards, keep same direction, just back up
                 if (hero.xdir == -xdirs[i] && hero.ydir == -ydirs[i])
                 {
@@ -247,6 +245,26 @@ void HandleInput(app_t* app, float dt)
                         hero.x = x;
                         hero.y = y;
                         level.data[y][x] = 'p';
+                    }
+                }
+                else // if turning 90 degrees
+                {
+                    // turn
+                    int xdirtemp = xdirs[i];
+                    int ydirtemp = ydirs[i];
+
+                    // check for something
+                    if (level.data[y - ydirtemp][x + xdirtemp] == '0')
+                    {
+                        // remove block
+                        level.data[y - hero.ydir][x + hero.xdir] = '0';
+
+                        // turn hero
+                        hero.xdir = xdirtemp;
+                        hero.ydir = ydirtemp;
+
+                        // and move block
+                        level.data[y - hero.ydir][x + hero.xdir] = 'c';
                     }
                 }
             }
