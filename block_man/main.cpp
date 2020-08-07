@@ -55,12 +55,13 @@ string_t level1_raw_data[] = {
     "111111111111111",
 };
 
-v2 tile2world(int x, int y)
+v2 tile2world(float sprite_h, int x, int y)
 {
 	float w = 16; // width of tiles in pixels
 	float h = 16;
 	float y_offset = level.data.count() * h;
-	return v2((float)(x-6) * w, -(float)(y+6) * h + y_offset);
+	float y_diff = sprite_h > 16 ? (sprite_h - h) / 2 : 0;
+	return v2((float)(x-6) * w, -(float)(y+6) * h + y_offset + y_diff);
 }
 
 bool in_grid(int x, int y, int w, int h)
@@ -131,7 +132,7 @@ void DrawLevel(const Level& level)
 			}
 
 			if (!empty) {
-				sprite.transform.p = tile2world(j, i);
+				sprite.transform.p = tile2world(sprite.scale_y, j, i);
 				sprite_batch_push(sb, sprite);
 			}
 		}
