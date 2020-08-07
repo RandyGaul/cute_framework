@@ -48,7 +48,7 @@ string_t level1_raw_data[] = {
 	"10x000000000011",
 	"10100p000000001",
     "10100000000x001",
-    "101000000000001",
+    "101000001000001",
     "1010x0000000001",
     "101000000000x01",
     "101000000000001",
@@ -115,7 +115,7 @@ void DrawLevel(const Level& level)
                 break;
 
             case 'x':
-                sprite = AddSprite("data/tile35.png");
+                sprite = AddSprite("data/ice_block.png");
                 break;
 
             case 'c':
@@ -194,55 +194,115 @@ void HandleInput(app_t* app, float dt)
 
     }
 
-    if (key_was_pressed(app, KEY_W))
+    key_button_t keycodes[4] = { KEY_W , KEY_S, KEY_D, KEY_A };
+    int xdirs[4] = { 0 , 0, 1, -1 };
+    int ydirs[4] = { 1, -1, 0, 0 };
+    int xmove[4] = { 0, 0, 1, -1 };
+    int ymove[4] = { -1, 1, 0, 0 };
+
+    for (int i = 0; i < 4; ++i)
     {
-        if (hero.xdir == 0 && hero.ydir == 1)
-            y -= 1;
-        else
+        if (key_was_pressed(app, keycodes[i]))
         {
-            hero.xdir = 0;
-            hero.ydir = 1;
-        }
-    }
-	if (key_was_pressed(app, KEY_S))
-    {
-        if (hero.xdir == 0 && hero.ydir == -1)
-            y += 1;
-        else
-        {
-            hero.xdir = 0;
-            hero.ydir = -1;
-        }
-    }
-	if (key_was_pressed(app, KEY_D))
-    {
-        if (hero.xdir == 1 && hero.ydir == 0)
-            x += 1;
-        else
-        {
-            hero.xdir = 1;
-            hero.ydir = 0;
-        }
-    }
-	if (key_was_pressed(app, KEY_A))
-    {
-        if (hero.xdir == -1 && hero.ydir == 0)
-            x -= 1;
-        else
-        {
-            hero.xdir = -1;
-            hero.ydir = 0;
+            if (hero.holding)
+            {
+                // if moving backwards, keep same direction, just back up
+                if (hero.xdir == -xdirs[i] && hero.ydir == -ydirs[i])
+                {
+                    // make sure we don't push block through a wall
+                    if (level.data[y + hero.ydir][x - hero.xdir] == '0')
+                    {
+                        // move backward
+                        x += xmove[i];
+                        y += ymove[i];
+
+                        // update hero position
+                        level.data[hero.y][hero.x] = '0';
+                        hero.x = x;
+                        hero.y = y;
+                        level.data[y][x] = 'p';
+
+                        // then, move the block
+                        level.data[y - hero.ydir * 2][x + hero.xdir * 2] = '0';
+                        level.data[y - hero.ydir][x + hero.xdir] = 'c';
+                    }
+                }
+                // if moving forwards
+                else if (hero.xdir == xdirs[i] && hero.ydir == ydirs[i])
+                {
+                    // make sure we don't push block through a wall
+                    if (level.data[y - hero.ydir * 2][x + hero.xdir * 2] == '0')
+                    {
+                        // first, move the block
+                        level.data[y - hero.ydir][x + hero.xdir] = '0';
+                        level.data[y - hero.ydir * 2][x + hero.xdir * 2] = 'c';
+
+                        // move forward
+                        x += xmove[i];
+                        y += ymove[i];
+
+                        // update hero position
+                        level.data[hero.y][hero.x] = '0';
+                        hero.x = x;
+                        hero.y = y;
+                        level.data[y][x] = 'p';
+                    }
+                }
+                else // if turning 90 degrees
+                {
+                    // turn
+                    int xdirtemp = xdirs[i];
+                    int ydirtemp = ydirs[i];
+
+                    // check for something
+                    if (level.data[y - ydirtemp][x + xdirtemp] == '0')
+                    {
+                        // also check to make sure we aren't turning through a block
+                        if (level.data[y - hero.ydir - ydirtemp][x + hero.xdir + xdirtemp] == '0')
+                        {
+                            // remove block
+                            level.data[y - hero.ydir][x + hero.xdir] = '0';
+
+                            // turn hero
+                            hero.xdir = xdirtemp;
+                            hero.ydir = ydirtemp;
+
+                            // and move block
+                            level.data[y - hero.ydir][x + hero.xdir] = 'c';
+                        }
+                    }
+
+                }
+            }
+            else // not holding a block
+            {
+                if (hero.xdir == xdirs[i] && hero.ydir == ydirs[i])
+                {
+                    // move forward
+                    x += xmove[i];
+                    y += ymove[i];
+                    
+                    // check for collisions
+                    // if we did't collide, assign the new position
+                    if (level.data[y][x] == '0') {
+                        // update hero position
+                        level.data[hero.y][hero.x] = '0';
+                        hero.x = x;
+                        hero.y = y;
+                        level.data[y][x] = 'p';
+                    }
+                }
+                else
+                {
+                    // turn 
+                    hero.xdir = xdirs[i];
+                    hero.ydir = ydirs[i];
+                }
+            }
         }
     }
 
-	// check for collisions
-	// if we did't collide, assign the new position
-	if (level.data[y][x] == '0') {
-		level.data[hero.y][hero.x] = '0';
-		hero.x = x;
-		hero.y = y;
-		level.data[y][x] = 'p';
-	}
+	
 }
 
 int main(int argc, const char** argv)
