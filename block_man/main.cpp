@@ -48,7 +48,7 @@ string_t level1_raw_data[] = {
 	"10x000000000011",
 	"10100p000000001",
     "10100000000x001",
-    "101000000000001",
+    "101000001000001",
     "1010x0000000001",
     "101000000000x01",
     "101000000000001",
@@ -256,19 +256,24 @@ void HandleInput(app_t* app, float dt)
                     // check for something
                     if (level.data[y - ydirtemp][x + xdirtemp] == '0')
                     {
-                        // remove block
-                        level.data[y - hero.ydir][x + hero.xdir] = '0';
+                        // also check to make sure we aren't turning through a block
+                        if (level.data[y - hero.ydir - ydirtemp][x + hero.xdir + xdirtemp] == '0')
+                        {
+                            // remove block
+                            level.data[y - hero.ydir][x + hero.xdir] = '0';
 
-                        // turn hero
-                        hero.xdir = xdirtemp;
-                        hero.ydir = ydirtemp;
+                            // turn hero
+                            hero.xdir = xdirtemp;
+                            hero.ydir = ydirtemp;
 
-                        // and move block
-                        level.data[y - hero.ydir][x + hero.xdir] = 'c';
+                            // and move block
+                            level.data[y - hero.ydir][x + hero.xdir] = 'c';
+                        }
                     }
+
                 }
             }
-            else // not holding
+            else // not holding a block
             {
                 if (hero.xdir == xdirs[i] && hero.ydir == ydirs[i])
                 {
