@@ -203,15 +203,42 @@ void HandleInput(app_t* app, float dt)
     {
         if (key_was_pressed(app, keycodes[i]))
         {
-            if (hero.xdir == xdirs[i] && hero.ydir == ydirs[i])
+            if (hero.holding)
             {
-                x += xmove[i];
-                y += ymove[i];
+                // if turning 90 degrees, check to make sure we don't turn through a wall
+
+                // if moving backwards, keep same direction, just back up
+
+                // if moving forwards
+                if (hero.xdir == xdirs[i] && hero.ydir == ydirs[i])
+                {
+                    // make sure we don't push block through a wall
+                    if (level.data[y - hero.ydir * 2][x + hero.xdir * 2] == '0')
+                    {
+                        // first, move the block
+                        level.data[y - hero.ydir][x + hero.xdir] = '0';
+                        level.data[y - hero.ydir * 2][x + hero.xdir * 2] = 'c';
+
+                        // move forward
+                        x += xmove[i];
+                        y += ymove[i];
+                    }
+                }
             }
-            else
+            else // not holding
             {
-                hero.xdir = xdirs[i];
-                hero.ydir = ydirs[i];
+                if (hero.xdir == xdirs[i] && hero.ydir == ydirs[i])
+                {
+                    // move forward
+                    x += xmove[i];
+                    y += ymove[i];
+                }
+                else
+                {
+                    // turn 
+                    hero.xdir = xdirs[i];
+                    hero.ydir = ydirs[i];
+                }
             }
         }
     }
