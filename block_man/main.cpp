@@ -208,9 +208,28 @@ void HandleInput(app_t* app, float dt)
                 // if turning 90 degrees, check to make sure we don't turn through a wall
 
                 // if moving backwards, keep same direction, just back up
+                if (hero.xdir == -xdirs[i] && hero.ydir == -ydirs[i])
+                {
+                    // make sure we don't push block through a wall
+                    if (level.data[y + hero.ydir][x - hero.xdir] == '0')
+                    {
+                        // move backward
+                        x += xmove[i];
+                        y += ymove[i];
 
+                        // update hero position
+                        level.data[hero.y][hero.x] = '0';
+                        hero.x = x;
+                        hero.y = y;
+                        level.data[y][x] = 'p';
+
+                        // then, move the block
+                        level.data[y - hero.ydir * 2][x + hero.xdir * 2] = '0';
+                        level.data[y - hero.ydir][x + hero.xdir] = 'c';
+                    }
+                }
                 // if moving forwards
-                if (hero.xdir == xdirs[i] && hero.ydir == ydirs[i])
+                else if (hero.xdir == xdirs[i] && hero.ydir == ydirs[i])
                 {
                     // make sure we don't push block through a wall
                     if (level.data[y - hero.ydir * 2][x + hero.xdir * 2] == '0')
@@ -222,6 +241,12 @@ void HandleInput(app_t* app, float dt)
                         // move forward
                         x += xmove[i];
                         y += ymove[i];
+
+                        // update hero position
+                        level.data[hero.y][hero.x] = '0';
+                        hero.x = x;
+                        hero.y = y;
+                        level.data[y][x] = 'p';
                     }
                 }
             }
@@ -232,6 +257,16 @@ void HandleInput(app_t* app, float dt)
                     // move forward
                     x += xmove[i];
                     y += ymove[i];
+                    
+                    // check for collisions
+                    // if we did't collide, assign the new position
+                    if (level.data[y][x] == '0') {
+                        // update hero position
+                        level.data[hero.y][hero.x] = '0';
+                        hero.x = x;
+                        hero.y = y;
+                        level.data[y][x] = 'p';
+                    }
                 }
                 else
                 {
@@ -243,14 +278,7 @@ void HandleInput(app_t* app, float dt)
         }
     }
 
-	// check for collisions
-	// if we did't collide, assign the new position
-	if (level.data[y][x] == '0') {
-		level.data[hero.y][hero.x] = '0';
-		hero.x = x;
-		hero.y = y;
-		level.data[y][x] = 'p';
-	}
+	
 }
 
 int main(int argc, const char** argv)
