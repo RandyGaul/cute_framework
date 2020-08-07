@@ -45,13 +45,13 @@ struct Hero
 
 string_t level1_raw_data[] = {
 	"111111111111111",
-	"10x000000000011",
-	"10100p000000001",
-    "10100000000x001",
-    "101000001000001",
-    "1010x0000000001",
-    "101000000000x01",
-    "101000000000001",
+	"1p0100xx0000011",
+	"100x00xx0010xx1",
+    "111111111111xx1",
+    "1000xxxxxxx0001",
+    "101111111111111",
+    "1000010x0010001",
+    "100000x10000e01",
     "111111111111111",
 };
 
@@ -120,6 +120,10 @@ void DrawLevel(const Level& level)
 
             case 'c':
                 sprite = AddSprite("data/tile4.png");
+                break;
+
+            case 'e':
+                sprite = AddSprite("data/hero.png");
                 break;
 
 			case '0':
