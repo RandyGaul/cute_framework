@@ -52,6 +52,26 @@ struct Hero
     array<Animation> anims;
 } hero;
 
+string_t GirlForward[17] = {
+    "data/girl_forward.png",
+    "data/girl_forward1.png",
+    "data/girl_forward2.png",
+    "data/girl_forward3.png",
+    "data/girl_forward4.png",
+    "data/girl_forward5.png",
+    "data/girl_forward6.png",
+    "data/girl_forward7.png",
+    "data/girl_forward8.png",
+    "data/girl_forward9.png",
+    "data/girl_forward10.png",
+    "data/girl_forward11.png",
+    "data/girl_forward12.png",
+    "data/girl_forward13.png",
+    "data/girl_forward14.png",
+    "data/girl_forward15.png",
+    "data/girl_forward16.png",
+};
+
 string_t level1_raw_data[] = {
 	"111111111111111",
 	"1p0100xx0000011",
@@ -159,60 +179,7 @@ void DrawLevel(const Level& level)
 
                 if (hero.xdir == 0 && hero.ydir == -1)
                 {
-                    switch (hero.anims[0].frame)
-                    {
-                    case 0:
-                        sprite = AddSprite("data/girl_forward.png");
-                        break;
-                    case 1:
-                        sprite = AddSprite("data/girl_forward1.png");
-                        break;
-                    case 2:
-                        sprite = AddSprite("data/girl_forward2.png");
-                        break;
-                    case 3:
-                        sprite = AddSprite("data/girl_forward3.png");
-                        break;
-                    case 4:
-                        sprite = AddSprite("data/girl_forward4.png");
-                        break;
-                    case 5:
-                        sprite = AddSprite("data/girl_forward5.png");
-                        break;
-                    case 6:
-                        sprite = AddSprite("data/girl_forward6.png");
-                        break;
-                    case 7:
-                        sprite = AddSprite("data/girl_forward7.png");
-                        break;
-                    case 8:
-                        sprite = AddSprite("data/girl_forward8.png");
-                        break;
-                    case 9:
-                        sprite = AddSprite("data/girl_forward9.png");
-                        break;
-                    case 10:
-                        sprite = AddSprite("data/girl_forward10.png");
-                        break;
-                    case 11:
-                        sprite = AddSprite("data/girl_forward11.png");
-                        break;
-                    case 12:
-                        sprite = AddSprite("data/girl_forward12.png");
-                        break;
-                    case 13:
-                        sprite = AddSprite("data/girl_forward13.png");
-                        break;
-                    case 14:
-                        sprite = AddSprite("data/girl_forward14.png");
-                        break;
-                    case 15:
-                        sprite = AddSprite("data/girl_forward15.png");
-                        break;
-                    case 16:
-                        sprite = AddSprite("data/girl_forward16.png");
-                        break;
-                    }
+                    sprite = AddSprite(GirlForward[hero.anims[0].frame]);
                     UpdateAnimation(hero.anims[0]);
                 }
                 else if (hero.xdir == 0 && hero.ydir == 1)
