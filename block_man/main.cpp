@@ -38,10 +38,12 @@ struct Level
 
 struct Animation
 {
+	string_t name;
+	string_t* frames;
     int frame = 0;
-    int speed = 25;
-    int counter = 0;
-    int limit = 0;
+    int frame_count = 0;
+	float t = 0;
+	float delay = 0.25f;
 };
 
 struct Hero
@@ -51,7 +53,12 @@ struct Hero
     int xdir = 0;
     int ydir = -1;
     bool holding = false;
-    array<Animation> anims;
+
+	Animation anim;
+    dictionary<string_t, Animation> anims;
+	void add_anim(Animation& a) { anims.insert(a.name, a); }
+	void switch_anim(string_t name) { error_t err = anims.find(name, &anim); if (err.is_error()) CUTE_ASSERT(false); }
+	string_t frame() { return anim.frames[anim.frame]; }
 } hero;
 
 string_t GirlForward[17] = {
@@ -73,6 +80,24 @@ string_t GirlForward[17] = {
     "data/girl_forward15.png",
     "data/girl_forward16.png",
 };
+
+string_t GirlHoldSide[2] = {
+    "data/girl_hold_side1.png",
+    "data/girl_hold_side2.png",
+};
+
+string_t GirlHoldUp[2] = {
+    "data/girl_hold_up1.png",
+    "data/girl_hold_up2.png",
+};
+
+string_t GirlHoldDown[2] = {
+    "data/girl_hold_down1.png",
+    "data/girl_hold_down2.png",
+};
+
+string_t GirlSide = "data/girl_side.png";
+string_t GirlUp = "data/girl_up.png";
 
 string_t level1_raw_data[] = {
 	"111111111111111",
@@ -112,20 +137,20 @@ sprite_t AddSprite(string_t path)
 	return sprite;
 }
 
-void UpdateAnimation(Animation& anim)
+void UpdateAnimation(Animation& anim, float dt)
 {
-    if (anim.counter == anim.speed)
+    if (anim.t >= anim.delay)
     {
-        anim.counter = 0; // reset
+        anim.t = 0; // reset
 
         // advance the animation
-        if (anim.frame < anim.limit)
+        if (anim.frame + 1 < anim.frame_count)
             anim.frame++;
         else
             anim.frame = 0;
     }
     else
-        ++anim.counter;
+        anim.t += dt;
 }
 
 void LoadLevel(string_t* l, int vcount)
@@ -163,10 +188,12 @@ void DrawLevel(const Level& level, float dt)
 			{
             case '1':
                 sprite = AddSprite("data/tile68.png");
+				sprite.transform.p = tile2world(sprite.scale_y, j, i);
                 break;
 
             case 'x':
                 sprite = AddSprite("data/ice_block.png");
+				sprite.transform.p = tile2world(sprite.scale_y, j, i);
                 break;
 
             case 'c':
@@ -184,10 +211,13 @@ void DrawLevel(const Level& level, float dt)
 				COROUTINE_END(co);
 
 				sprite = AddSprite("data/ice_block.png");
+				sprite.transform.p = tile2world(sprite.scale_y, j, i);
+				sprite.transform.p.y += floating_offset;
 			}	break;
 
             case 'e':
                 sprite = AddSprite("data/ladder.png");
+				sprite.transform.p = tile2world(sprite.scale_y, j, i);
                 break;
 
 			case '0':
@@ -195,31 +225,45 @@ void DrawLevel(const Level& level, float dt)
 				break;
 
 			case 'p':
+                UpdateAnimation(hero.anim, dt);
+                sprite = AddSprite(hero.frame());
 
-                if (hero.xdir == 0 && hero.ydir == -1)
+                if (hero.xdir == 1 && hero.ydir == 0)
                 {
-                    sprite = AddSprite(GirlForward[hero.anims[0].frame]);
-                    UpdateAnimation(hero.anims[0]);
-                }
-                else if (hero.xdir == 0 && hero.ydir == 1)
-                    sprite = AddSprite("data/girl_hold_up1.png");
-                else if (hero.xdir == 1 && hero.ydir == 0)
-                {
-                    sprite = AddSprite("data/girl_side.png");
                     sprite.scale_x *= -1;
                 }
-                else if (hero.xdir == -1 && hero.ydir == 0)
-                    sprite = AddSprite("data/girl_side.png");
 
+				sprite.transform.p = tile2world(sprite.scale_y, j, i);
 				break;
 			}
 
 			if (!empty) {
-				sprite.transform.p = tile2world(sprite.scale_y, j, i);
-				if (level.data[i][j] == 'c') {
-					sprite.transform.p.y += floating_offset;
-				}
 				sprite_batch_push(sb, sprite);
+			}
+		}
+	}
+}
+
+void SetHeroAnimBasedOnFacingDir()
+{
+	if (hero.holding) {
+		if (hero.xdir) {
+			hero.switch_anim("hold_side");
+		} else {
+			if (hero.ydir > 0) {
+				hero.switch_anim("hold_up");
+			} else {
+				hero.switch_anim("hold_down");
+			}
+		}
+	} else {
+		if (hero.xdir) {
+			hero.switch_anim("girl_side");
+		} else if (hero.ydir) {
+			if (hero.ydir > 0) {
+				hero.switch_anim("girl_up");
+			} else {
+				hero.switch_anim("idle");
 			}
 		}
 	}
@@ -260,6 +304,7 @@ void HandleInput(app_t* app, float dt)
                 level.data[sy][sx] = '0';
                 level.data[y - hero.ydir][x + hero.xdir] = 'c';
                 hero.holding = true;
+				SetHeroAnimBasedOnFacingDir();
             }
         }
         else // hero.holding is true
@@ -276,6 +321,7 @@ void HandleInput(app_t* app, float dt)
             level.data[y - hero.ydir][x + hero.xdir] = '0';
             level.data[sy + hero.ydir][sx - hero.xdir] = 'x';
             hero.holding = false;
+			SetHeroAnimBasedOnFacingDir();
         }
 
     }
@@ -290,6 +336,8 @@ void HandleInput(app_t* app, float dt)
     {
         if (key_was_pressed(app, keycodes[i]))
         {
+			bool update_hero_animation = false;
+
             if (hero.holding)
             {
                 // if moving backwards, keep same direction, just back up
@@ -358,6 +406,7 @@ void HandleInput(app_t* app, float dt)
                         }
                     }
 
+					update_hero_animation = true;
                 }
             }
             else // not holding a block
@@ -383,8 +432,11 @@ void HandleInput(app_t* app, float dt)
                     // turn 
                     hero.xdir = xdirs[i];
                     hero.ydir = ydirs[i];
+					update_hero_animation = true;
                 }
             }
+
+			if (update_hero_animation) SetHeroAnimBasedOnFacingDir();
         }
     }
 }
@@ -404,10 +456,49 @@ int main(int argc, const char** argv)
 	level.data.ensure_count(vcount);
 	LoadLevel(level1_raw_data, vcount);
 
-    Animation temp;
-    temp.speed = 120;
-    temp.limit = 16;
-    hero.anims.add(temp);
+    Animation idle;
+	idle.name = "idle";
+    idle.delay = 0.15f;
+	idle.frames = GirlForward;
+    idle.frame_count = sizeof(GirlForward) / sizeof(*GirlForward);
+
+	Animation hold_side;
+	hold_side.name = "hold_side";
+    hold_side.delay = 0.10f;
+	hold_side.frames = GirlHoldSide;
+    hold_side.frame_count = sizeof(GirlHoldSide) / sizeof(*GirlHoldSide);
+
+	Animation hold_up;
+	hold_up.name = "hold_up";
+    hold_up.delay = 0.10f;
+	hold_up.frames = GirlHoldUp;
+    hold_up.frame_count = sizeof(GirlHoldUp) / sizeof(*GirlHoldUp);
+
+	Animation hold_down;
+	hold_down.name = "hold_down";
+    hold_down.delay = 0.10f;
+	hold_down.frames = GirlHoldDown;
+    hold_down.frame_count = sizeof(GirlHoldDown) / sizeof(*GirlHoldDown);
+
+	Animation girl_side;
+	girl_side.name = "girl_side";
+    girl_side.delay = 0;
+	girl_side.frames = &GirlSide;
+    girl_side.frame_count = 1;
+
+	Animation girl_up;
+	girl_up.name = "girl_up";
+    girl_up.delay = 0;
+	girl_up.frames = &GirlUp;
+    girl_up.frame_count = 1;
+
+    hero.add_anim(idle);
+    hero.add_anim(hold_side);
+    hero.add_anim(hold_up);
+    hero.add_anim(hold_down);
+    hero.add_anim(girl_side);
+    hero.add_anim(girl_up);
+	hero.switch_anim("idle");
 
 	float t = 0;
 
