@@ -61,8 +61,16 @@ struct Hero
 	string_t frame() { return anim.frames[anim.frame]; }
 } hero;
 
-string_t GirlForward[17] = {
-    "data/girl_forward.png",
+string_t GirlForward[] = {
+    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png", // Hacky delay. Should have an array of delays.
+    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
+    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
+    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
+    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
+    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
+    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
+    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
+    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
     "data/girl_forward1.png",
     "data/girl_forward2.png",
     "data/girl_forward3.png",
@@ -81,17 +89,17 @@ string_t GirlForward[17] = {
     "data/girl_forward16.png",
 };
 
-string_t GirlHoldSide[2] = {
+string_t GirlHoldSide[] = {
     "data/girl_hold_side1.png",
     "data/girl_hold_side2.png",
 };
 
-string_t GirlHoldUp[2] = {
+string_t GirlHoldUp[] = {
     "data/girl_hold_up1.png",
     "data/girl_hold_up2.png",
 };
 
-string_t GirlHoldDown[2] = {
+string_t GirlHoldDown[] = {
     "data/girl_hold_down1.png",
     "data/girl_hold_down2.png",
 };
@@ -458,7 +466,7 @@ int main(int argc, const char** argv)
 
     Animation idle;
 	idle.name = "idle";
-    idle.delay = 0.15f;
+    idle.delay = 0.10f;
 	idle.frames = GirlForward;
     idle.frame_count = sizeof(GirlForward) / sizeof(*GirlForward);
 
