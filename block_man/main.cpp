@@ -27,7 +27,6 @@ using namespace cute;
 #include <cute/cute_coroutine.h>
 
 spritebatch_t* sb;
-array<sprite_t> sprites; // not sure if we need this
 
 struct Level
 {
@@ -141,7 +140,6 @@ sprite_t AddSprite(string_t path)
 		printf("Can't find file %s.\n", path.c_str());
 		CUTE_ASSERT(false);
 	}
-	sprites.add(sprite);
 	return sprite;
 }
 
