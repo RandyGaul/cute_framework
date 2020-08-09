@@ -24,6 +24,8 @@
 #include <cute.h>
 using namespace cute;
 
+#include <cute/cute_coroutine.h>
+
 spritebatch_t* sb;
 array<sprite_t> sprites; // not sure if we need this
 
@@ -144,8 +146,12 @@ void LoadLevel(string_t* l, int vcount)
 	}
 }
 
-void DrawLevel(const Level& level)
+void DrawLevel(const Level& level, float dt)
 {
+	static coroutine_t s_co;
+	coroutine_t* co = &s_co;
+	static float floating_offset = 0;
+
 	for (int i = 0; i < level.data.count(); ++i)
 	{
 		for (int j = 0; j < level.data[i].count(); ++j)
@@ -164,8 +170,20 @@ void DrawLevel(const Level& level)
                 break;
 
             case 'c':
-                sprite = AddSprite("data/tile4.png");
-                break;
+			{
+				COROUTINE_START(co);
+				floating_offset = 0;
+				COROUTINE_WAIT(co, 0.5f, dt);
+				floating_offset = 1.0f;
+				COROUTINE_WAIT(co, 0.5f, dt);
+				floating_offset = 2.0f;
+				COROUTINE_WAIT(co, 0.5f, dt);
+				floating_offset = 1.0f;
+				COROUTINE_WAIT(co, 0.5f, dt);
+				COROUTINE_END(co);
+
+				sprite = AddSprite("data/ice_block.png");
+			}	break;
 
             case 'e':
                 sprite = AddSprite("data/ladder.png");
@@ -197,6 +215,9 @@ void DrawLevel(const Level& level)
 
 			if (!empty) {
 				sprite.transform.p = tile2world(sprite.scale_y, j, i);
+				if (level.data[i][j] == 'c') {
+					sprite.transform.p.y += floating_offset;
+				}
 				sprite_batch_push(sb, sprite);
 			}
 		}
@@ -365,8 +386,6 @@ void HandleInput(app_t* app, float dt)
             }
         }
     }
-
-	
 }
 
 int main(int argc, const char** argv)
@@ -397,7 +416,7 @@ int main(int argc, const char** argv)
 
 		HandleInput(app, dt);
 
-		DrawLevel(level);
+		DrawLevel(level, dt);
 
 		sprite_batch_flush(sb);
 
