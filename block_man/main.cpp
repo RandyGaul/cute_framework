@@ -34,6 +34,14 @@ struct Level
 	array<array<char>> data;
 } level;
 
+struct Animation
+{
+    int frame = 0;
+    int speed = 25;
+    int counter = 0;
+    int limit = 0;
+};
+
 struct Hero
 {
 	int x, y;
@@ -41,8 +49,28 @@ struct Hero
     int xdir = 0;
     int ydir = -1;
     bool holding = false;
-    int aniframe = 0;
+    array<Animation> anims;
 } hero;
+
+string_t GirlForward[17] = {
+    "data/girl_forward.png",
+    "data/girl_forward1.png",
+    "data/girl_forward2.png",
+    "data/girl_forward3.png",
+    "data/girl_forward4.png",
+    "data/girl_forward5.png",
+    "data/girl_forward6.png",
+    "data/girl_forward7.png",
+    "data/girl_forward8.png",
+    "data/girl_forward9.png",
+    "data/girl_forward10.png",
+    "data/girl_forward11.png",
+    "data/girl_forward12.png",
+    "data/girl_forward13.png",
+    "data/girl_forward14.png",
+    "data/girl_forward15.png",
+    "data/girl_forward16.png",
+};
 
 string_t level1_raw_data[] = {
 	"111111111111111",
@@ -82,6 +110,22 @@ sprite_t AddSprite(string_t path)
 	return sprite;
 }
 
+void UpdateAnimation(Animation& anim)
+{
+    if (anim.counter == anim.speed)
+    {
+        anim.counter = 0; // reset
+
+        // advance the animation
+        if (anim.frame < anim.limit)
+            anim.frame++;
+        else
+            anim.frame = 0;
+    }
+    else
+        ++anim.counter;
+}
+
 void LoadLevel(string_t* l, int vcount)
 {
 	for (int i = 0; i < vcount; ++i)
@@ -117,13 +161,6 @@ void DrawLevel(const Level& level)
 
             case 'x':
                 sprite = AddSprite("data/ice_block.png");
-                
-                // advance the animation
-                /*if (hero.aniframe < 1)
-                    hero.aniframe++;
-                else
-                    hero.aniframe = 0;*/
-
                 break;
 
             case 'c':
@@ -141,14 +178,19 @@ void DrawLevel(const Level& level)
 			case 'p':
 
                 if (hero.xdir == 0 && hero.ydir == -1)
-                    sprite = AddSprite("data/girl_forward.png");
+                {
+                    sprite = AddSprite(GirlForward[hero.anims[0].frame]);
+                    UpdateAnimation(hero.anims[0]);
+                }
                 else if (hero.xdir == 0 && hero.ydir == 1)
                     sprite = AddSprite("data/girl_hold_up1.png");
-
                 else if (hero.xdir == 1 && hero.ydir == 0)
-                    sprite = AddSprite("data/girl_hold_side1.png");
+                {
+                    sprite = AddSprite("data/girl_side.png");
+                    sprite.scale_x *= -1;
+                }
                 else if (hero.xdir == -1 && hero.ydir == 0)
-                    sprite = AddSprite("data/girl_hold_side2.png");
+                    sprite = AddSprite("data/girl_side.png");
 
 				break;
 			}
@@ -341,6 +383,11 @@ int main(int argc, const char** argv)
 	int vcount = sizeof(level1_raw_data) / sizeof(level1_raw_data[0]);
 	level.data.ensure_count(vcount);
 	LoadLevel(level1_raw_data, vcount);
+
+    Animation temp;
+    temp.speed = 120;
+    temp.limit = 16;
+    hero.anims.add(temp);
 
 	float t = 0;
 
