@@ -171,15 +171,16 @@ void DrawLevel(const Level& level, float dt)
 
             case 'c':
 			{
+				float delay = 0.35f;
 				COROUTINE_START(co);
 				floating_offset = 0;
-				COROUTINE_WAIT(co, 0.5f, dt);
+				COROUTINE_WAIT(co, delay, dt);
 				floating_offset = 1.0f;
-				COROUTINE_WAIT(co, 0.5f, dt);
+				COROUTINE_WAIT(co, delay, dt);
 				floating_offset = 2.0f;
-				COROUTINE_WAIT(co, 0.5f, dt);
+				COROUTINE_WAIT(co, delay, dt);
 				floating_offset = 1.0f;
-				COROUTINE_WAIT(co, 0.5f, dt);
+				COROUTINE_WAIT(co, delay, dt);
 				COROUTINE_END(co);
 
 				sprite = AddSprite("data/ice_block.png");
