@@ -79,8 +79,8 @@ string_t level1_raw_data[] = {
     "111111111111xx1",
     "1000xxxxxxx0001",
     "101111111111111",
-    "1000010x0010001",
-    "100000x10000e01",
+    "1000010x0010e01",
+    "100000x10000001",
     "111111111111111",
 };
 
@@ -168,7 +168,7 @@ void DrawLevel(const Level& level)
                 break;
 
             case 'e':
-                sprite = AddSprite("data/hero.png");
+                sprite = AddSprite("data/ladder.png");
                 break;
 
 			case '0':
