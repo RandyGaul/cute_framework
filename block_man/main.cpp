@@ -285,7 +285,7 @@ void DrawLevel(const Level& level, float dt)
 				sprite.transform.p = tile2world(sprite.scale_y, j, i);
                 break;
 
-			case '0':
+			default:
 				empty = true;
 				break;
 
