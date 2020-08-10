@@ -58,7 +58,7 @@ struct Hero
 	int x0, y0;
 	bool moving = false;
 	float move_t = 0;
-	const float move_delay = 0.35f;
+	const float move_delay = 0.125f;
 	// For animating between tiles.
 	// ----------------------------
 
@@ -520,8 +520,6 @@ void UpdateGame(app_t* app, float dt)
 		HandleInput(app, dt);
 		DrawLevel(level, dt);
 		if (hero.moving) {
-			COROUTINE_YIELD(co);
-			hero.switch_anim("girl_spin");
 			goto hero_moving;
 		}
 	COROUTINE_YIELD(co);
@@ -535,22 +533,26 @@ void UpdateGame(app_t* app, float dt)
 			hero.moving = false;
 			level.data[hero.y][hero.x] = 'p';
 			DrawLevel(level, dt);
-			SetHeroAnimBasedOnFacingDir();
 			COROUTINE_YIELD(co);
 			goto update_game;
 		} else {
 			// Animating the player from one tile to another.
 			DrawLevel(level, dt);
+
+			// Calculate the t value for interpolating, and a y_offset.
 			float y_offsets[5] = { 0, 1, 2, 1, 0 };
-			float t = hero.move_t / hero.move_delay;
+			float t = smoothstep(hero.move_t / hero.move_delay);
 			int i = (int)(t * CUTE_ARRAY_SIZE(y_offsets));
 			float y_offset = y_offsets[i];
+
+			// Draw the hero.
 			UpdateAnimation(hero.anim, dt);
 			sprite_t sprite = AddSprite(hero.frame());
 			v2 p0 = tile2world((float)sprite.h, hero.x0, hero.y0);
 			v2 p = tile2world((float)sprite.h, hero.x, hero.y);
 			v2 p_delta = round(lerp(p0, p, t)) + v2(0, y_offset);
 			sprite.transform.p = p_delta;
+			if (hero.xdir == 1 && hero.ydir == 0) sprite.scale_x *= -1;
 			sprite_batch_push(sb, sprite);
 		}
 	COROUTINE_YIELD(co);

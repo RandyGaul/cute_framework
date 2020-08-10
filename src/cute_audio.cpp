@@ -23,6 +23,7 @@
 #include <cute_alloc.h>
 #include <cute_array.h>
 #include <cute_doubly_list.h>
+#include <cute_math.h>
 
 #include <internal/cute_app_internal.h>
 
@@ -37,11 +38,6 @@
 // TODO: Hookup allocs to cute_sound internals
 
 //#include <cute_debug_printf.h>
-
-static float s_smoothstep(float x)
-{
-	return x * x * (3.0f - 2.0f * x);
-}
 
 namespace cute
 {
@@ -342,7 +338,7 @@ error_t music_stop(app_t* app, float fade_out_time)
 		{
 			as->music_state = MUSIC_STATE_FADE_OUT;
 			CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_OUT\n");
-			as->t = s_smoothstep(((as->fade - as->t) / as->fade));
+			as->t = smoothstep(((as->fade - as->t) / as->fade));
 			as->fade = fade_out_time;
 		}	break;
 
@@ -350,7 +346,7 @@ error_t music_stop(app_t* app, float fade_out_time)
 		{
 			as->music_state = MUSIC_STATE_FADE_OUT;
 			CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_OUT\n");
-			as->t = s_smoothstep(((as->fade - as->t) / as->fade));
+			as->t = smoothstep(((as->fade - as->t) / as->fade));
 			as->fade = fade_out_time;
 			as->music_next = NULL;
 		}	break;
@@ -362,7 +358,7 @@ error_t music_stop(app_t* app, float fade_out_time)
 		{
 			as->music_state = MUSIC_STATE_FADE_OUT;
 			CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_OUT\n");
-			as->t = s_smoothstep(((as->fade - as->t) / as->fade));
+			as->t = smoothstep(((as->fade - as->t) / as->fade));
 			as->fade = fade_out_time;
 			as->music_playing = as->music_next;
 			as->music_next = NULL;
@@ -470,7 +466,7 @@ error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, 
 		list_push_back(&as->playing_sounds, &inst->node);
 
 		as->fade_switch_1 = fade_in_time;
-		as->t = s_smoothstep(((as->fade - as->t) / as->fade));
+		as->t = smoothstep(((as->fade - as->t) / as->fade));
 		as->music_state = MUSIC_STATE_SWITCH_TO_0;
 		CUTE_DEBUG_PRINTF("MUSIC_STATE_SWITCH_TO_0\n");
 	}	break;
@@ -494,7 +490,7 @@ error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, 
 		as->music_next = inst;
 		list_push_back(&as->playing_sounds, &inst->node);
 
-		as->t = s_smoothstep(((as->fade - as->t) / as->fade));
+		as->t = smoothstep(((as->fade - as->t) / as->fade));
 		as->fade_switch_1 = fade_in_time;
 		as->fade = fade_out_time;
 		as->music_state = MUSIC_STATE_SWITCH_TO_0;
@@ -735,7 +731,7 @@ void audio_system_update(audio_system_t* as, float dt)
 			as->music_playing->sound.active = 0;
 			as->music_playing = NULL;
 		} else {
-			float t = s_smoothstep(((as->fade - as->t) / as->fade));
+			float t = smoothstep(((as->fade - as->t) / as->fade));
 			float volume = as->music_volume * as->global_volume * t;
 			cs_set_volume(&as->music_playing->sound, volume, volume);
 		}
@@ -749,7 +745,7 @@ void audio_system_update(audio_system_t* as, float dt)
 			CUTE_DEBUG_PRINTF("MUSIC_STATE_PLAYING\n");
 			as->t = as->fade;
 		}
-		float t = s_smoothstep(1.0f - ((as->fade - as->t) / as->fade));
+		float t = smoothstep(1.0f - ((as->fade - as->t) / as->fade));
 		float volume = as->music_volume * as->global_volume * t;
 		cs_set_volume(&as->music_playing->sound, volume, volume);
 	}	break;
@@ -767,7 +763,7 @@ void audio_system_update(audio_system_t* as, float dt)
 			as->fade_switch_1 = 0;
 			as->music_next->sound.paused = 0;
 		} else {
-			float t = s_smoothstep(((as->fade - as->t) / as->fade));
+			float t = smoothstep(((as->fade - as->t) / as->fade));
 			float volume = as->music_volume * as->global_volume * t;
 			cs_set_volume(&as->music_playing->sound, volume, volume);
 		}
@@ -785,7 +781,7 @@ void audio_system_update(audio_system_t* as, float dt)
 			as->music_playing = as->music_next;
 			as->music_next = NULL;
 		} else {
-			float t = s_smoothstep(1.0f - ((as->fade - as->t) / as->fade));
+			float t = smoothstep(1.0f - ((as->fade - as->t) / as->fade));
 			float volume = as->music_volume * as->global_volume * t;
 			cs_set_volume(&as->music_next->sound, volume, volume);
 		}
@@ -802,8 +798,8 @@ void audio_system_update(audio_system_t* as, float dt)
 			as->music_playing = as->music_next;
 			as->music_next = NULL;
 		} else {
-			float t0 = s_smoothstep(((as->fade - as->t) / as->fade));
-			float t1 = s_smoothstep(1.0f - ((as->fade - as->t) / as->fade));
+			float t0 = smoothstep(((as->fade - as->t) / as->fade));
+			float t1 = smoothstep(1.0f - ((as->fade - as->t) / as->fade));
 			float v0 = as->music_volume * as->global_volume * t0;
 			float v1 = as->music_volume * as->global_volume * t1;
 			cs_set_volume(&as->music_playing->sound, v0, v0);

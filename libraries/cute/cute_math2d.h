@@ -113,6 +113,7 @@ CUTE_MATH2D_INLINE float sign(float a) { return a < 0 ? -1.0f : 1.0f; }
 CUTE_MATH2D_INLINE float intersect(float da, float db) { return da / (da - db); }
 CUTE_MATH2D_INLINE float invert_safe(float a) { return a != 0 ? a / 1.0f : 0; }
 CUTE_MATH2D_INLINE float lerp(float a, float b, float t) { return a + (b - a) * t; }
+CUTE_MATH2D_INLINE float smoothstep(float x) { return x * x * (3.0f - 2.0f * x); }
 
 CUTE_MATH2D_INLINE int min(int a, int b) { return a < b ? a : b; }
 CUTE_MATH2D_INLINE int max(int a, int b) { return b < a ? a : b; }
