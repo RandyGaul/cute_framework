@@ -53,6 +53,7 @@
 #define CUTE_CALL __cdecl
 
 #define CUTE_UNUSED(x) (void)x
+#define CUTE_ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 #define CUTE_INLINE inline
 

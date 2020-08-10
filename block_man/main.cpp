@@ -53,6 +53,15 @@ struct Hero
     int ydir = -1;
     bool holding = false;
 
+	// ----------------------------
+	// For animating between tiles.
+	int x0, y0;
+	bool moving = false;
+	float move_t = 0;
+	const float move_delay = 0.35f;
+	// For animating between tiles.
+	// ----------------------------
+
 	Animation anim;
     dictionary<string_t, Animation> anims;
 	void add_anim(Animation& a) { anims.insert(a.name, a); }
@@ -105,6 +114,56 @@ string_t GirlHoldDown[] = {
 
 string_t GirlSide = "data/girl_side.png";
 string_t GirlUp = "data/girl_up.png";
+
+string_t GirlSpin[] = {
+    "data/girl_spin1.png",
+    "data/girl_spin2.png",
+    "data/girl_spin3.png",
+    "data/girl_spin4.png",
+    "data/girl_spin5.png",
+    "data/girl_spin6.png",
+    "data/girl_spin7.png",
+    "data/girl_spin8.png",
+    "data/girl_spin9.png",
+    "data/girl_spin10.png",
+    "data/girl_spin11.png",
+    "data/girl_spin12.png",
+    "data/girl_spin13.png",
+    "data/girl_spin14.png",
+    "data/girl_spin15.png",
+    "data/girl_spin16.png",
+    "data/girl_spin17.png",
+    "data/girl_spin18.png",
+    "data/girl_spin19.png",
+    "data/girl_spin20.png",
+    "data/girl_spin21.png",
+    "data/girl_spin22.png",
+    "data/girl_spin23.png",
+    "data/girl_spin24.png",
+    "data/girl_spin25.png",
+    "data/girl_spin26.png",
+    "data/girl_spin27.png",
+    "data/girl_spin28.png",
+    "data/girl_spin29.png",
+    "data/girl_spin30.png",
+    "data/girl_spin31.png",
+    "data/girl_spin32.png",
+    "data/girl_spin33.png",
+    "data/girl_spin34.png",
+    "data/girl_spin35.png",
+    "data/girl_spin36.png",
+    "data/girl_spin37.png",
+    "data/girl_spin38.png",
+    "data/girl_spin39.png",
+    "data/girl_spin40.png",
+    "data/girl_spin41.png",
+    "data/girl_spin42.png",
+    "data/girl_spin43.png",
+    "data/girl_spin44.png",
+    "data/girl_spin45.png",
+    "data/girl_spin46.png",
+    "data/girl_spin47.png",
+};
 
 string_t level1_raw_data[] = {
 	"111111111111111",
@@ -428,9 +487,12 @@ void HandleInput(app_t* app, float dt)
                     if (level.data[y][x] == '0') {
                         // update hero position
                         level.data[hero.y][hero.x] = '0';
+						hero.x0 = hero.x;
+						hero.y0 = hero.y;
                         hero.x = x;
                         hero.y = y;
-                        level.data[y][x] = 'p';
+						hero.moving = true;
+                        level.data[y][x] = 'P'; // Big 'P' means player animating between tiles now.
                     }
                 }
                 else
@@ -447,6 +509,56 @@ void HandleInput(app_t* app, float dt)
     }
 }
 
+void UpdateGame(app_t* app, float dt)
+{
+	static coroutine_t s_co;
+	coroutine_t* co = &s_co;
+
+	COROUTINE_START(co);
+
+	COROUTINE_CASE(co, update_game);
+		HandleInput(app, dt);
+		DrawLevel(level, dt);
+		if (hero.moving) {
+			COROUTINE_YIELD(co);
+			hero.switch_anim("girl_spin");
+			goto hero_moving;
+		}
+	COROUTINE_YIELD(co);
+	goto update_game;
+
+	COROUTINE_CASE(co, hero_moving);
+		hero.move_t += dt;
+		if (hero.move_t >= hero.move_delay) {
+			// Hero finished animating from one tile to another.
+			hero.move_t = 0;
+			hero.moving = false;
+			level.data[hero.y][hero.x] = 'p';
+			DrawLevel(level, dt);
+			SetHeroAnimBasedOnFacingDir();
+			COROUTINE_YIELD(co);
+			goto update_game;
+		} else {
+			// Animating the player from one tile to another.
+			DrawLevel(level, dt);
+			float y_offsets[5] = { 0, 1, 2, 1, 0 };
+			float t = hero.move_t / hero.move_delay;
+			int i = (int)(t * CUTE_ARRAY_SIZE(y_offsets));
+			float y_offset = y_offsets[i];
+			UpdateAnimation(hero.anim, dt);
+			sprite_t sprite = AddSprite(hero.frame());
+			v2 p0 = tile2world((float)sprite.h, hero.x0, hero.y0);
+			v2 p = tile2world((float)sprite.h, hero.x, hero.y);
+			v2 p_delta = round(lerp(p0, p, t)) + v2(0, y_offset);
+			sprite.transform.p = p_delta;
+			sprite_batch_push(sb, sprite);
+		}
+	COROUTINE_YIELD(co);
+	goto hero_moving;
+
+	COROUTINE_END(co);
+}
+
 int main(int argc, const char** argv)
 {
 	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
@@ -458,7 +570,7 @@ int main(int argc, const char** argv)
 
 	sb = sprite_batch_easy_make(app, "data");
 
-	int vcount = sizeof(level1_raw_data) / sizeof(level1_raw_data[0]);
+	int vcount = CUTE_ARRAY_SIZE(level1_raw_data);
 	level.data.ensure_count(vcount);
 	LoadLevel(level1_raw_data, vcount);
 
@@ -466,25 +578,25 @@ int main(int argc, const char** argv)
 	idle.name = "idle";
     idle.delay = 0.10f;
 	idle.frames = GirlForward;
-    idle.frame_count = sizeof(GirlForward) / sizeof(*GirlForward);
+    idle.frame_count = CUTE_ARRAY_SIZE(GirlForward);
 
 	Animation hold_side;
 	hold_side.name = "hold_side";
     hold_side.delay = 0.10f;
 	hold_side.frames = GirlHoldSide;
-    hold_side.frame_count = sizeof(GirlHoldSide) / sizeof(*GirlHoldSide);
+    hold_side.frame_count = CUTE_ARRAY_SIZE(GirlHoldSide);
 
 	Animation hold_up;
 	hold_up.name = "hold_up";
     hold_up.delay = 0.10f;
 	hold_up.frames = GirlHoldUp;
-    hold_up.frame_count = sizeof(GirlHoldUp) / sizeof(*GirlHoldUp);
+    hold_up.frame_count = CUTE_ARRAY_SIZE(GirlHoldUp);
 
 	Animation hold_down;
 	hold_down.name = "hold_down";
     hold_down.delay = 0.10f;
 	hold_down.frames = GirlHoldDown;
-    hold_down.frame_count = sizeof(GirlHoldDown) / sizeof(*GirlHoldDown);
+    hold_down.frame_count = CUTE_ARRAY_SIZE(GirlHoldDown);
 
 	Animation girl_side;
 	girl_side.name = "girl_side";
@@ -498,12 +610,19 @@ int main(int argc, const char** argv)
 	girl_up.frames = &GirlUp;
     girl_up.frame_count = 1;
 
+	Animation girl_spin;
+	girl_spin.name = "girl_spin";
+    girl_spin.delay = hero.move_delay / (float)CUTE_ARRAY_SIZE(GirlSpin);
+	girl_spin.frames = GirlSpin;
+    girl_spin.frame_count = CUTE_ARRAY_SIZE(GirlSpin);
+
     hero.add_anim(idle);
     hero.add_anim(hold_side);
     hero.add_anim(hold_up);
     hero.add_anim(hold_down);
     hero.add_anim(girl_side);
     hero.add_anim(girl_up);
+    hero.add_anim(girl_spin);
 	hero.switch_anim("idle");
 
 	float t = 0;
@@ -512,9 +631,7 @@ int main(int argc, const char** argv)
 		float dt = calc_dt();
 		app_update(app, dt);
 
-		HandleInput(app, dt);
-
-		DrawLevel(level, dt);
+		UpdateGame(app, dt);
 
 		sprite_batch_flush(sb);
 
