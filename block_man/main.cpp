@@ -62,6 +62,26 @@ struct Hero
 	// For animating between tiles.
 	// ----------------------------
 
+	struct TranslatingBlock
+	{
+		bool is_moving = false;
+		bool is_sliding = false;
+		int x0, y0;
+		int x, y;
+		float t = 0;
+		const float delay = 0.125f;
+	} held_block;
+
+	struct RotatingBlock
+	{
+		bool is_rotating = false;
+		int x, y;
+		float angle;
+		float angle0;
+		float t = 0;
+		const float delay = 0.125f;
+	} rotating_block;
+
 	Animation anim;
     dictionary<string_t, Animation> anims;
 	void add_anim(Animation& a) { anims.insert(a.name, a); }
@@ -560,6 +580,9 @@ void UpdateGame(app_t* app, float dt)
 			sprite.transform.p = p_delta;
 			if (hero.xdir == 1 && hero.ydir == 0) sprite.scale_x *= -1;
 			sprite_batch_push(sb, sprite);
+		}
+
+		if (hero.holding) {
 		}
 	COROUTINE_YIELD(co);
 	goto hero_moving;
