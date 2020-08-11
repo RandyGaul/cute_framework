@@ -165,16 +165,70 @@ string_t GirlSpin[] = {
     "data/girl_spin47.png",
 };
 
+
 string_t level1_raw_data[] = {
-	"111111111111111",
-	"1p0100xx0000011",
-	"100x00xx0010xx1",
+    "011110",
+    "1p00x1",
+    "100xx1",
+    "10xxx1",
+    "1xxxe1",
+    "011110",
+};
+
+string_t level2_raw_data[] = {
+    "111111111111111",
+    "1p0100xx0000011",
+    "100x00xx0010xx1",
     "111111111111xx1",
     "1000xxxxxxx0001",
     "101111111111111",
     "1000010x0010e01",
     "100000x10000001",
     "111111111111111",
+};
+
+string_t level3_raw_data[] = {
+    "01110",
+    "1px01",
+    "10xe1",
+    "01110",
+};
+
+string_t level4_raw_data[] = {
+    "01110",
+    "1pxe1",
+    "10x01",
+    "01110",
+};
+string_t level5_raw_data[] = {
+    "01110",
+    "1pxe1",
+    "10x01",
+    "10xx1",
+    "01110",
+};
+string_t level6_raw_data[] = {
+    "01110",
+    "1p001",
+    "1x011",
+    "1xxe1",
+    "01110",
+};
+string_t level7_raw_data[] = {
+    "01110",
+    "1p001",
+    "1x001",
+    "1x111",
+    "1x0e1",
+    "01110",
+};
+string_t level8_raw_data[] = {
+    "011110",
+    "1p00x1",
+    "1x00x1",
+    "1111x1",
+    "1e00x1",
+    "011110",
 };
 
 v2 tile2world(float sprite_h, int x, int y)
@@ -340,8 +394,8 @@ void HandleInput(app_t* app, float dt)
 	int y = hero.y;
 
     /*if (key_was_pressed(app, KEY_R)) {
-        x = level.start_x;
-        y = level.start_y;
+        level.data.clear();
+        LoadLevel(level1_raw_data, CUTE_ARRAY_SIZE(level1_raw_data));
     }*/
     if (key_was_pressed(app, KEY_SPACE)) {
 
