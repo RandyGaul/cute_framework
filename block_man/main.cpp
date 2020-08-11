@@ -339,7 +339,7 @@ void DrawLevel(const Level& level, float dt)
 				sprite.transform.p = tile2world(sprite.scale_y, j, i);
                 break;
 
-			case '0':
+			default:
 				empty = true;
 				break;
 
@@ -471,9 +471,12 @@ void HandleInput(app_t* app, float dt)
 
                         // update hero position
                         level.data[hero.y][hero.x] = '0';
+						hero.x0 = hero.x;
+						hero.y0 = hero.y;
                         hero.x = x;
                         hero.y = y;
-                        level.data[y][x] = 'p';
+						hero.moving = true;
+                        level.data[y][x] = 'P'; // Big 'P' means player animating between tiles now.
 
                         // then, move the block
                         level.data[y - hero.ydir * 2][x + hero.xdir * 2] = '0';
@@ -496,9 +499,12 @@ void HandleInput(app_t* app, float dt)
 
                         // update hero position
                         level.data[hero.y][hero.x] = '0';
+						hero.x0 = hero.x;
+						hero.y0 = hero.y;
                         hero.x = x;
                         hero.y = y;
-                        level.data[y][x] = 'p';
+						hero.moving = true;
+                        level.data[y][x] = 'P'; // Big 'P' means player animating between tiles now.
                     }
                 }
                 else // if turning 90 degrees
