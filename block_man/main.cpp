@@ -39,8 +39,8 @@ struct Animation
 {
 	string_t name;
 	string_t* frames;
-    int frame = 0;
-    int frame_count = 0;
+	int frame = 0;
+	int frame_count = 0;
 	float t = 0;
 	float delay = 0.25f;
 };
@@ -49,9 +49,9 @@ struct Hero
 {
 	int x, y;
 	bool initialized = false;
-    int xdir = 0;
-    int ydir = -1;
-    bool holding = false;
+	int xdir = 0;
+	int ydir = -1;
+	bool holding = false;
 
 	// ----------------------------
 	// For animating between tiles.
@@ -62,14 +62,10 @@ struct Hero
 	// For animating between tiles.
 	// ----------------------------
 
-	struct TranslatingBlock
+	struct HeldBlock
 	{
-		bool is_moving = false;
-		bool is_sliding = false;
 		int x0, y0;
 		int x, y;
-		float t = 0;
-		const float delay = 0.125f;
 	} held_block;
 
 	struct RotatingBlock
@@ -83,172 +79,172 @@ struct Hero
 	} rotating_block;
 
 	Animation anim;
-    dictionary<string_t, Animation> anims;
+	dictionary<string_t, Animation> anims;
 	void add_anim(Animation& a) { anims.insert(a.name, a); }
 	void switch_anim(string_t name) { error_t err = anims.find(name, &anim); if (err.is_error()) CUTE_ASSERT(false); }
 	string_t frame() { return anim.frames[anim.frame]; }
 } hero;
 
 string_t GirlForward[] = {
-    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png", // Hacky delay. Should have an array of delays.
-    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-    "data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-    "data/girl_forward1.png",
-    "data/girl_forward2.png",
-    "data/girl_forward3.png",
-    "data/girl_forward4.png",
-    "data/girl_forward5.png",
-    "data/girl_forward6.png",
-    "data/girl_forward7.png",
-    "data/girl_forward8.png",
-    "data/girl_forward9.png",
-    "data/girl_forward10.png",
-    "data/girl_forward11.png",
-    "data/girl_forward12.png",
-    "data/girl_forward13.png",
-    "data/girl_forward14.png",
-    "data/girl_forward15.png",
-    "data/girl_forward16.png",
+	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png", // Hacky delay. Should have an array of delays.
+	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
+	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
+	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
+	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
+	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
+	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
+	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
+	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
+	"data/girl_forward1.png",
+	"data/girl_forward2.png",
+	"data/girl_forward3.png",
+	"data/girl_forward4.png",
+	"data/girl_forward5.png",
+	"data/girl_forward6.png",
+	"data/girl_forward7.png",
+	"data/girl_forward8.png",
+	"data/girl_forward9.png",
+	"data/girl_forward10.png",
+	"data/girl_forward11.png",
+	"data/girl_forward12.png",
+	"data/girl_forward13.png",
+	"data/girl_forward14.png",
+	"data/girl_forward15.png",
+	"data/girl_forward16.png",
 };
 
 string_t GirlHoldSide[] = {
-    "data/girl_hold_side1.png",
-    "data/girl_hold_side2.png",
+	"data/girl_hold_side1.png",
+	"data/girl_hold_side2.png",
 };
 
 string_t GirlHoldUp[] = {
-    "data/girl_hold_up1.png",
-    "data/girl_hold_up2.png",
+	"data/girl_hold_up1.png",
+	"data/girl_hold_up2.png",
 };
 
 string_t GirlHoldDown[] = {
-    "data/girl_hold_down1.png",
-    "data/girl_hold_down2.png",
+	"data/girl_hold_down1.png",
+	"data/girl_hold_down2.png",
 };
 
 string_t GirlSide = "data/girl_side.png";
 string_t GirlUp = "data/girl_up.png";
 
 string_t GirlSpin[] = {
-    "data/girl_spin1.png",
-    "data/girl_spin2.png",
-    "data/girl_spin3.png",
-    "data/girl_spin4.png",
-    "data/girl_spin5.png",
-    "data/girl_spin6.png",
-    "data/girl_spin7.png",
-    "data/girl_spin8.png",
-    "data/girl_spin9.png",
-    "data/girl_spin10.png",
-    "data/girl_spin11.png",
-    "data/girl_spin12.png",
-    "data/girl_spin13.png",
-    "data/girl_spin14.png",
-    "data/girl_spin15.png",
-    "data/girl_spin16.png",
-    "data/girl_spin17.png",
-    "data/girl_spin18.png",
-    "data/girl_spin19.png",
-    "data/girl_spin20.png",
-    "data/girl_spin21.png",
-    "data/girl_spin22.png",
-    "data/girl_spin23.png",
-    "data/girl_spin24.png",
-    "data/girl_spin25.png",
-    "data/girl_spin26.png",
-    "data/girl_spin27.png",
-    "data/girl_spin28.png",
-    "data/girl_spin29.png",
-    "data/girl_spin30.png",
-    "data/girl_spin31.png",
-    "data/girl_spin32.png",
-    "data/girl_spin33.png",
-    "data/girl_spin34.png",
-    "data/girl_spin35.png",
-    "data/girl_spin36.png",
-    "data/girl_spin37.png",
-    "data/girl_spin38.png",
-    "data/girl_spin39.png",
-    "data/girl_spin40.png",
-    "data/girl_spin41.png",
-    "data/girl_spin42.png",
-    "data/girl_spin43.png",
-    "data/girl_spin44.png",
-    "data/girl_spin45.png",
-    "data/girl_spin46.png",
-    "data/girl_spin47.png",
+	"data/girl_spin1.png",
+	"data/girl_spin2.png",
+	"data/girl_spin3.png",
+	"data/girl_spin4.png",
+	"data/girl_spin5.png",
+	"data/girl_spin6.png",
+	"data/girl_spin7.png",
+	"data/girl_spin8.png",
+	"data/girl_spin9.png",
+	"data/girl_spin10.png",
+	"data/girl_spin11.png",
+	"data/girl_spin12.png",
+	"data/girl_spin13.png",
+	"data/girl_spin14.png",
+	"data/girl_spin15.png",
+	"data/girl_spin16.png",
+	"data/girl_spin17.png",
+	"data/girl_spin18.png",
+	"data/girl_spin19.png",
+	"data/girl_spin20.png",
+	"data/girl_spin21.png",
+	"data/girl_spin22.png",
+	"data/girl_spin23.png",
+	"data/girl_spin24.png",
+	"data/girl_spin25.png",
+	"data/girl_spin26.png",
+	"data/girl_spin27.png",
+	"data/girl_spin28.png",
+	"data/girl_spin29.png",
+	"data/girl_spin30.png",
+	"data/girl_spin31.png",
+	"data/girl_spin32.png",
+	"data/girl_spin33.png",
+	"data/girl_spin34.png",
+	"data/girl_spin35.png",
+	"data/girl_spin36.png",
+	"data/girl_spin37.png",
+	"data/girl_spin38.png",
+	"data/girl_spin39.png",
+	"data/girl_spin40.png",
+	"data/girl_spin41.png",
+	"data/girl_spin42.png",
+	"data/girl_spin43.png",
+	"data/girl_spin44.png",
+	"data/girl_spin45.png",
+	"data/girl_spin46.png",
+	"data/girl_spin47.png",
 };
 
 
 string_t level1_raw_data[] = {
-    "011110",
-    "1p00x1",
-    "100xx1",
-    "10xxx1",
-    "1xxxe1",
-    "011110",
+	"011110",
+	"1p00x1",
+	"100xx1",
+	"10xxx1",
+	"1xxxe1",
+	"011110",
 };
 
 string_t level2_raw_data[] = {
-    "111111111111111",
-    "1p0100xx0000011",
-    "100x00xx0010xx1",
-    "111111111111xx1",
-    "1000xxxxxxx0001",
-    "101111111111111",
-    "1000010x0010e01",
-    "100000x10000001",
-    "111111111111111",
+	"111111111111111",
+	"1p0100xx0000011",
+	"100x00xx0010xx1",
+	"111111111111xx1",
+	"1000xxxxxxx0001",
+	"101111111111111",
+	"1000010x0010e01",
+	"100000x10000001",
+	"111111111111111",
 };
 
 string_t level3_raw_data[] = {
-    "01110",
-    "1px01",
-    "10xe1",
-    "01110",
+	"01110",
+	"1px01",
+	"10xe1",
+	"01110",
 };
 
 string_t level4_raw_data[] = {
-    "01110",
-    "1pxe1",
-    "10x01",
-    "01110",
+	"01110",
+	"1pxe1",
+	"10x01",
+	"01110",
 };
 string_t level5_raw_data[] = {
-    "01110",
-    "1pxe1",
-    "10x01",
-    "10xx1",
-    "01110",
+	"01110",
+	"1pxe1",
+	"10x01",
+	"10xx1",
+	"01110",
 };
 string_t level6_raw_data[] = {
-    "01110",
-    "1p001",
-    "1x011",
-    "1xxe1",
-    "01110",
+	"01110",
+	"1p001",
+	"1x011",
+	"1xxe1",
+	"01110",
 };
 string_t level7_raw_data[] = {
-    "01110",
-    "1p001",
-    "1x001",
-    "1x111",
-    "1x0e1",
-    "01110",
+	"01110",
+	"1p001",
+	"1x001",
+	"1x111",
+	"1x0e1",
+	"01110",
 };
 string_t level8_raw_data[] = {
-    "011110",
-    "1p00x1",
-    "1x00x1",
-    "1111x1",
-    "1e00x1",
-    "011110",
+	"011110",
+	"1p00x1",
+	"1x00x1",
+	"1111x1",
+	"1e00x1",
+	"011110",
 };
 
 v2 tile2world(float sprite_h, int x, int y)
@@ -262,7 +258,7 @@ v2 tile2world(float sprite_h, int x, int y)
 
 bool in_grid(int x, int y, int w, int h)
 {
-    return x >= 0 && y >= 0 && x < w && y < h;
+	return x >= 0 && y >= 0 && x < w && y < h;
 }
 
 sprite_t AddSprite(string_t path)
@@ -278,18 +274,18 @@ sprite_t AddSprite(string_t path)
 
 void UpdateAnimation(Animation& anim, float dt)
 {
-    if (anim.t >= anim.delay)
-    {
-        anim.t = 0; // reset
+	if (anim.t >= anim.delay)
+	{
+		anim.t = 0; // reset
 
-        // advance the animation
-        if (anim.frame + 1 < anim.frame_count)
-            anim.frame++;
-        else
-            anim.frame = 0;
-    }
-    else
-        anim.t += dt;
+		// advance the animation
+		if (anim.frame + 1 < anim.frame_count)
+			anim.frame++;
+		else
+			anim.frame = 0;
+	}
+	else
+		anim.t += dt;
 }
 
 void LoadLevel(string_t* l, int vcount)
@@ -310,6 +306,25 @@ void LoadLevel(string_t* l, int vcount)
 	}
 }
 
+void DrawAnimatingHeldBlocks()
+{
+	if (hero.moving && hero.holding) {
+		// Calculate the t value for interpolating, and a y_offset.
+		float y_offsets[5] = { 0, 1, 2, 1, 0 };
+		float t = smoothstep(hero.move_t / hero.move_delay);
+		int i = (int)(t * CUTE_ARRAY_SIZE(y_offsets));
+		float y_offset = y_offsets[i];
+
+		// Draw the held block.
+		sprite_t sprite = AddSprite("data/ice_block.png");
+		v2 p0 = tile2world((float)sprite.h, hero.held_block.x0, hero.held_block.y0);
+		v2 p = tile2world((float)sprite.h, hero.held_block.x, hero.held_block.y);
+		v2 p_delta = round(lerp(p0, p, t)) + v2(0, y_offset);
+		sprite.transform.p = p_delta;
+		sprite_batch_push(sb, sprite);
+	}
+}
+
 void DrawLevel(const Level& level, float dt)
 {
 	static coroutine_t s_co;
@@ -325,17 +340,17 @@ void DrawLevel(const Level& level, float dt)
 
 			switch (level.data[i][j])
 			{
-            case '1':
-                sprite = AddSprite("data/tile68.png");
+			case '1':
+				sprite = AddSprite("data/tile68.png");
 				sprite.transform.p = tile2world(sprite.scale_y, j, i);
-                break;
+				break;
 
-            case 'x':
-                sprite = AddSprite("data/ice_block.png");
+			case 'x':
+				sprite = AddSprite("data/ice_block.png");
 				sprite.transform.p = tile2world(sprite.scale_y, j, i);
-                break;
+				break;
 
-            case 'c':
+			case 'c':
 			{
 				float delay = 0.35f;
 				COROUTINE_START(co);
@@ -354,24 +369,19 @@ void DrawLevel(const Level& level, float dt)
 				sprite.transform.p.y += floating_offset;
 			}	break;
 
-            case 'e':
-                sprite = AddSprite("data/ladder.png");
+			case 'e':
+				sprite = AddSprite("data/ladder.png");
 				sprite.transform.p = tile2world(sprite.scale_y, j, i);
-                break;
+				break;
 
 			default:
 				empty = true;
 				break;
 
 			case 'p':
-                UpdateAnimation(hero.anim, dt);
-                sprite = AddSprite(hero.frame());
-
-                if (hero.xdir == 1 && hero.ydir == 0)
-                {
-                    sprite.scale_x *= -1;
-                }
-
+				UpdateAnimation(hero.anim, dt);
+				sprite = AddSprite(hero.frame());
+				if (hero.xdir == 1 && hero.ydir == 0) sprite.scale_x *= -1;
 				sprite.transform.p = tile2world(sprite.scale_y, j, i);
 				break;
 			}
@@ -413,180 +423,188 @@ void HandleInput(app_t* app, float dt)
 	int x = hero.x;
 	int y = hero.y;
 
-    /*if (key_was_pressed(app, KEY_R)) {
-        level.data.clear();
-        LoadLevel(level1_raw_data, CUTE_ARRAY_SIZE(level1_raw_data));
-    }*/
-    if (key_was_pressed(app, KEY_SPACE)) {
+	/*if (key_was_pressed(app, KEY_R)) {
+		level.data.clear();
+		LoadLevel(level1_raw_data, CUTE_ARRAY_SIZE(level1_raw_data));
+	}*/
+	if (key_was_pressed(app, KEY_SPACE)) {
 
-        if (!hero.holding)
-        {
-            // search forward from player to look for blocks to pick up
-            int sx = x + hero.xdir, sy = y - hero.ydir;
-            bool found = false;
-            while (in_grid(sy, sx, level.data.count(), level.data[0].count()))
-            {
-                if (level.data[sy][sx] == 'x')
-                {
-                    found = true;
-                    break;
-                }
-                else if (level.data[sy][sx] == '1')
-                {
-                    break;
-                }
-                sx += hero.xdir;
-                sy -= hero.ydir;
-            }
-            if (found)
-            {
-                level.data[sy][sx] = '0';
-                level.data[y - hero.ydir][x + hero.xdir] = 'c';
-                hero.holding = true;
+		if (!hero.holding)
+		{
+			// search forward from player to look for blocks to pick up
+			int sx = x + hero.xdir, sy = y - hero.ydir;
+			bool found = false;
+			while (in_grid(sy, sx, level.data.count(), level.data[0].count()))
+			{
+				if (level.data[sy][sx] == 'x')
+				{
+					found = true;
+					break;
+				}
+				else if (level.data[sy][sx] == '1')
+				{
+					break;
+				}
+				sx += hero.xdir;
+				sy -= hero.ydir;
+			}
+			if (found)
+			{
+				level.data[sy][sx] = '0';
+				level.data[y - hero.ydir][x + hero.xdir] = 'c';
+				hero.holding = true;
 				SetHeroAnimBasedOnFacingDir();
-            }
-        }
-        else // hero.holding is true
-        {
-            // so we need to throw the block we are holding
-            int sx = x + hero.xdir * 2, sy = y - hero.ydir * 2;
-            while (in_grid(sy, sx, level.data.count(), level.data[0].count()))
-            {
-                if (level.data[sy][sx] != '0')
-                    break;
-                sx += hero.xdir;
-                sy -= hero.ydir;
-            }
-            level.data[y - hero.ydir][x + hero.xdir] = '0';
-            level.data[sy + hero.ydir][sx - hero.xdir] = 'x';
-            hero.holding = false;
+			}
+		}
+		else // hero.holding is true
+		{
+			// so we need to throw the block we are holding
+			int sx = x + hero.xdir * 2, sy = y - hero.ydir * 2;
+			while (in_grid(sy, sx, level.data.count(), level.data[0].count()))
+			{
+				if (level.data[sy][sx] != '0')
+					break;
+				sx += hero.xdir;
+				sy -= hero.ydir;
+			}
+			level.data[y - hero.ydir][x + hero.xdir] = '0';
+			level.data[sy + hero.ydir][sx - hero.xdir] = 'x';
+			hero.holding = false;
 			SetHeroAnimBasedOnFacingDir();
-        }
+		}
 
-    }
+	}
 
-    key_button_t keycodes[4] = { KEY_W , KEY_S, KEY_D, KEY_A };
-    int xdirs[4] = { 0 , 0, 1, -1 };
-    int ydirs[4] = { 1, -1, 0, 0 };
-    int xmove[4] = { 0, 0, 1, -1 };
-    int ymove[4] = { -1, 1, 0, 0 };
+	key_button_t keycodes[4] = { KEY_W , KEY_S, KEY_D, KEY_A };
+	int xdirs[4] = { 0 , 0, 1, -1 };
+	int ydirs[4] = { 1, -1, 0, 0 };
+	int xmove[4] = { 0, 0, 1, -1 };
+	int ymove[4] = { -1, 1, 0, 0 };
 
-    for (int i = 0; i < 4; ++i)
-    {
-        if (key_was_pressed(app, keycodes[i]))
-        {
+	for (int i = 0; i < 4; ++i)
+	{
+		if (key_was_pressed(app, keycodes[i]))
+		{
 			bool update_hero_animation = false;
 
-            if (hero.holding)
-            {
-                // if moving backwards, keep same direction, just back up
-                if (hero.xdir == -xdirs[i] && hero.ydir == -ydirs[i])
-                {
-                    // make sure we don't push block through a wall
-                    if (level.data[y + hero.ydir][x - hero.xdir] == '0')
-                    {
-                        // move backward
-                        x += xmove[i];
-                        y += ymove[i];
+			if (hero.holding)
+			{
+				// if moving backwards, keep same direction, just back up
+				if (hero.xdir == -xdirs[i] && hero.ydir == -ydirs[i])
+				{
+					// make sure we don't push block through a wall
+					if (level.data[y + hero.ydir][x - hero.xdir] == '0')
+					{
+						// move backward
+						x += xmove[i];
+						y += ymove[i];
 
-                        // update hero position
-                        level.data[hero.y][hero.x] = '0';
+						// update hero position
+						level.data[hero.y][hero.x] = '0';
 						hero.x0 = hero.x;
 						hero.y0 = hero.y;
-                        hero.x = x;
-                        hero.y = y;
+						hero.x = x;
+						hero.y = y;
 						hero.moving = true;
-                        level.data[y][x] = 'P'; // Big 'P' means player animating between tiles now.
+						level.data[y][x] = 'P'; // Big 'P' means player animating between tiles now.
 
-                        // then, move the block
-                        level.data[y - hero.ydir * 2][x + hero.xdir * 2] = '0';
-                        level.data[y - hero.ydir][x + hero.xdir] = 'c';
-                    }
-                }
-                // if moving forwards
-                else if (hero.xdir == xdirs[i] && hero.ydir == ydirs[i])
-                {
-                    // make sure we don't push block through a wall
-                    if (level.data[y - hero.ydir * 2][x + hero.xdir * 2] == '0')
-                    {
-                        // first, move the block
-                        level.data[y - hero.ydir][x + hero.xdir] = '0';
-                        level.data[y - hero.ydir * 2][x + hero.xdir * 2] = 'c';
+						// then, move the block
+						level.data[y - hero.ydir * 2][x + hero.xdir * 2] = '0';
+						//level.data[y - hero.ydir][x + hero.xdir] = 'c';
+						hero.held_block.x0 = x + hero.xdir * 2;
+						hero.held_block.y0 = y - hero.ydir * 2;
+						hero.held_block.x = x + hero.xdir;
+						hero.held_block.y = y - hero.ydir;
+					}
+				}
+				// if moving forwards
+				else if (hero.xdir == xdirs[i] && hero.ydir == ydirs[i])
+				{
+					// make sure we don't push block through a wall
+					if (level.data[y - hero.ydir * 2][x + hero.xdir * 2] == '0')
+					{
+						// first, move the block
+						level.data[y - hero.ydir][x + hero.xdir] = '0';
+						//level.data[y - hero.ydir * 2][x + hero.xdir * 2] = 'c';
+						hero.held_block.x0 = x + hero.xdir;
+						hero.held_block.y0 = y - hero.ydir;
+						hero.held_block.x = x + hero.xdir * 2;
+						hero.held_block.y = y - hero.ydir * 2;
 
-                        // move forward
-                        x += xmove[i];
-                        y += ymove[i];
+						// move forward
+						x += xmove[i];
+						y += ymove[i];
 
-                        // update hero position
-                        level.data[hero.y][hero.x] = '0';
+						// update hero position
+						level.data[hero.y][hero.x] = '0';
 						hero.x0 = hero.x;
 						hero.y0 = hero.y;
-                        hero.x = x;
-                        hero.y = y;
+						hero.x = x;
+						hero.y = y;
 						hero.moving = true;
-                        level.data[y][x] = 'P'; // Big 'P' means player animating between tiles now.
-                    }
-                }
-                else // if turning 90 degrees
-                {
-                    // turn
-                    int xdirtemp = xdirs[i];
-                    int ydirtemp = ydirs[i];
+						level.data[y][x] = 'P'; // Big 'P' means player animating between tiles now.
+					}
+				}
+				else // if turning 90 degrees
+				{
+					// turn
+					int xdirtemp = xdirs[i];
+					int ydirtemp = ydirs[i];
 
-                    // check for something
-                    if (level.data[y - ydirtemp][x + xdirtemp] == '0')
-                    {
-                        // also check to make sure we aren't turning through a block
-                        if (level.data[y - hero.ydir - ydirtemp][x + hero.xdir + xdirtemp] == '0')
-                        {
-                            // remove block
-                            level.data[y - hero.ydir][x + hero.xdir] = '0';
+					// check for something
+					if (level.data[y - ydirtemp][x + xdirtemp] == '0')
+					{
+						// also check to make sure we aren't turning through a block
+						if (level.data[y - hero.ydir - ydirtemp][x + hero.xdir + xdirtemp] == '0')
+						{
+							// remove block
+							level.data[y - hero.ydir][x + hero.xdir] = '0';
 
-                            // turn hero
-                            hero.xdir = xdirtemp;
-                            hero.ydir = ydirtemp;
+							// turn hero
+							hero.xdir = xdirtemp;
+							hero.ydir = ydirtemp;
 
-                            // and move block
-                            level.data[y - hero.ydir][x + hero.xdir] = 'c';
-                        }
-                    }
+							// and move block
+							level.data[y - hero.ydir][x + hero.xdir] = 'c';
+						}
+					}
 
 					update_hero_animation = true;
-                }
-            }
-            else // not holding a block
-            {
-                if (hero.xdir == xdirs[i] && hero.ydir == ydirs[i])
-                {
-                    // move forward
-                    x += xmove[i];
-                    y += ymove[i];
-                    
-                    // check for collisions
-                    // if we did't collide, assign the new position
-                    if (level.data[y][x] == '0') {
-                        // update hero position
-                        level.data[hero.y][hero.x] = '0';
+				}
+			}
+			else // not holding a block
+			{
+				if (hero.xdir == xdirs[i] && hero.ydir == ydirs[i])
+				{
+					// move forward
+					x += xmove[i];
+					y += ymove[i];
+
+					// check for collisions
+					// if we did't collide, assign the new position
+					if (level.data[y][x] == '0') {
+						// update hero position
+						level.data[hero.y][hero.x] = '0';
 						hero.x0 = hero.x;
 						hero.y0 = hero.y;
-                        hero.x = x;
-                        hero.y = y;
+						hero.x = x;
+						hero.y = y;
 						hero.moving = true;
-                        level.data[y][x] = 'P'; // Big 'P' means player animating between tiles now.
-                    }
-                }
-                else
-                {
-                    // turn 
-                    hero.xdir = xdirs[i];
-                    hero.ydir = ydirs[i];
+						level.data[y][x] = 'P'; // Big 'P' means player animating between tiles now.
+					}
+				}
+				else
+				{
+					// turn 
+					hero.xdir = xdirs[i];
+					hero.ydir = ydirs[i];
 					update_hero_animation = true;
-                }
-            }
+				}
+			}
 
 			if (update_hero_animation) SetHeroAnimBasedOnFacingDir();
-        }
-    }
+		}
+	}
 }
 
 void UpdateGame(app_t* app, float dt)
@@ -607,12 +625,17 @@ void UpdateGame(app_t* app, float dt)
 
 	COROUTINE_CASE(co, hero_moving);
 		hero.move_t += dt;
+
 		if (hero.move_t >= hero.move_delay) {
 			// Hero finished animating from one tile to another.
 			hero.move_t = 0;
 			hero.moving = false;
 			level.data[hero.y][hero.x] = 'p';
+			if (hero.holding) {
+				level.data[hero.held_block.y][hero.held_block.x] = 'c';
+			}
 			DrawLevel(level, dt);
+			DrawAnimatingHeldBlocks();
 			COROUTINE_YIELD(co);
 			goto update_game;
 		} else {
@@ -627,6 +650,7 @@ void UpdateGame(app_t* app, float dt)
 
 			// Draw the hero.
 			UpdateAnimation(hero.anim, dt);
+			DrawAnimatingHeldBlocks();
 			sprite_t sprite = AddSprite(hero.frame());
 			v2 p0 = tile2world((float)sprite.h, hero.x0, hero.y0);
 			v2 p = tile2world((float)sprite.h, hero.x, hero.y);
@@ -634,9 +658,6 @@ void UpdateGame(app_t* app, float dt)
 			sprite.transform.p = p_delta;
 			if (hero.xdir == 1 && hero.ydir == 0) sprite.scale_x *= -1;
 			sprite_batch_push(sb, sprite);
-		}
-
-		if (hero.holding) {
 		}
 	COROUTINE_YIELD(co);
 	goto hero_moving;
@@ -655,59 +676,59 @@ int main(int argc, const char** argv)
 
 	sb = sprite_batch_easy_make(app, "data");
 
-	int vcount = CUTE_ARRAY_SIZE(level1_raw_data);
+	int vcount = CUTE_ARRAY_SIZE(level7_raw_data);
 	level.data.ensure_count(vcount);
-	LoadLevel(level1_raw_data, vcount);
+	LoadLevel(level7_raw_data, vcount);
 
-    Animation idle;
+	Animation idle;
 	idle.name = "idle";
-    idle.delay = 0.10f;
+	idle.delay = 0.10f;
 	idle.frames = GirlForward;
-    idle.frame_count = CUTE_ARRAY_SIZE(GirlForward);
+	idle.frame_count = CUTE_ARRAY_SIZE(GirlForward);
 
 	Animation hold_side;
 	hold_side.name = "hold_side";
-    hold_side.delay = 0.10f;
+	hold_side.delay = 0.10f;
 	hold_side.frames = GirlHoldSide;
-    hold_side.frame_count = CUTE_ARRAY_SIZE(GirlHoldSide);
+	hold_side.frame_count = CUTE_ARRAY_SIZE(GirlHoldSide);
 
 	Animation hold_up;
 	hold_up.name = "hold_up";
-    hold_up.delay = 0.10f;
+	hold_up.delay = 0.10f;
 	hold_up.frames = GirlHoldUp;
-    hold_up.frame_count = CUTE_ARRAY_SIZE(GirlHoldUp);
+	hold_up.frame_count = CUTE_ARRAY_SIZE(GirlHoldUp);
 
 	Animation hold_down;
 	hold_down.name = "hold_down";
-    hold_down.delay = 0.10f;
+	hold_down.delay = 0.10f;
 	hold_down.frames = GirlHoldDown;
-    hold_down.frame_count = CUTE_ARRAY_SIZE(GirlHoldDown);
+	hold_down.frame_count = CUTE_ARRAY_SIZE(GirlHoldDown);
 
 	Animation girl_side;
 	girl_side.name = "girl_side";
-    girl_side.delay = 0;
+	girl_side.delay = 0;
 	girl_side.frames = &GirlSide;
-    girl_side.frame_count = 1;
+	girl_side.frame_count = 1;
 
 	Animation girl_up;
 	girl_up.name = "girl_up";
-    girl_up.delay = 0;
+	girl_up.delay = 0;
 	girl_up.frames = &GirlUp;
-    girl_up.frame_count = 1;
+	girl_up.frame_count = 1;
 
 	Animation girl_spin;
 	girl_spin.name = "girl_spin";
-    girl_spin.delay = hero.move_delay / (float)CUTE_ARRAY_SIZE(GirlSpin);
+	girl_spin.delay = hero.move_delay / (float)CUTE_ARRAY_SIZE(GirlSpin);
 	girl_spin.frames = GirlSpin;
-    girl_spin.frame_count = CUTE_ARRAY_SIZE(GirlSpin);
+	girl_spin.frame_count = CUTE_ARRAY_SIZE(GirlSpin);
 
-    hero.add_anim(idle);
-    hero.add_anim(hold_side);
-    hero.add_anim(hold_up);
-    hero.add_anim(hold_down);
-    hero.add_anim(girl_side);
-    hero.add_anim(girl_up);
-    hero.add_anim(girl_spin);
+	hero.add_anim(idle);
+	hero.add_anim(hold_side);
+	hero.add_anim(hold_up);
+	hero.add_anim(hold_down);
+	hero.add_anim(girl_side);
+	hero.add_anim(girl_up);
+	hero.add_anim(girl_spin);
 	hero.switch_anim("idle");
 
 	float t = 0;
