@@ -52,6 +52,7 @@ struct Hero
 	int xdir = 0;
 	int ydir = -1;
 	bool holding = false;
+	bool won = false;
 
 	// ----------------------------
 	// For animating between tiles.
@@ -312,10 +313,36 @@ void UpdateAnimation(Animation& anim, float dt)
 		anim.t += dt;
 }
 
+void SetHeroAnimBasedOnFacingDir()
+{
+	if (hero.holding) {
+		if (hero.xdir) {
+			hero.switch_anim("hold_side");
+		} else {
+			if (hero.ydir > 0) {
+				hero.switch_anim("hold_up");
+			} else {
+				hero.switch_anim("hold_down");
+			}
+		}
+	} else {
+		if (hero.xdir) {
+			hero.switch_anim("girl_side");
+		} else if (hero.ydir) {
+			if (hero.ydir > 0) {
+				hero.switch_anim("girl_up");
+			} else {
+				hero.switch_anim("idle");
+			}
+		}
+	}
+}
+
 void LoadLevel(const array<string_t>& l)
 {
 	level.data.clear();
 	level.data.ensure_count(l.count());
+	hero.initialized = false;
 
 	for (int i = 0; i < l.count(); ++i)
 	{
@@ -329,7 +356,15 @@ void LoadLevel(const array<string_t>& l)
 				CUTE_ASSERT(hero.initialized == false);
 				hero.x = j;
 				hero.y = i;
+				hero.xdir = 0;
+				hero.ydir = -1;
+				hero.holding = 0;
+				hero.moving = 0;
 				hero.initialized = true;
+				hero.won = false;
+				hero.rotating_block.is_rotating = false;
+				hero.sliding_block.is_sliding = false;
+				SetHeroAnimBasedOnFacingDir();
 			}
 			level.data[i].add(c);
 		}
@@ -385,13 +420,13 @@ void DrawLevel(const Level& level, float dt)
 				float delay = 0.35f;
 				COROUTINE_START(co);
 				floating_offset = 1;
-				COROUTINE_WAIT(co, delay, dt);
+				COROUTINE_PAUSE(co, delay, dt);
 				floating_offset = 2.0f;
-				COROUTINE_WAIT(co, delay, dt);
+				COROUTINE_PAUSE(co, delay, dt);
 				floating_offset = 3.0f;
-				COROUTINE_WAIT(co, delay, dt);
+				COROUTINE_PAUSE(co, delay, dt);
 				floating_offset = 2.0f;
-				COROUTINE_WAIT(co, delay, dt);
+				COROUTINE_PAUSE(co, delay, dt);
 				COROUTINE_END(co);
 
 				sprite = AddSprite("data/ice_block.png");
@@ -423,40 +458,15 @@ void DrawLevel(const Level& level, float dt)
 	}
 }
 
-void SetHeroAnimBasedOnFacingDir()
-{
-	if (hero.holding) {
-		if (hero.xdir) {
-			hero.switch_anim("hold_side");
-		} else {
-			if (hero.ydir > 0) {
-				hero.switch_anim("hold_up");
-			} else {
-				hero.switch_anim("hold_down");
-			}
-		}
-	} else {
-		if (hero.xdir) {
-			hero.switch_anim("girl_side");
-		} else if (hero.ydir) {
-			if (hero.ydir > 0) {
-				hero.switch_anim("girl_up");
-			} else {
-				hero.switch_anim("idle");
-			}
-		}
-	}
-}
-
 void HandleInput(app_t* app, float dt)
 {
 	int x = hero.x;
 	int y = hero.y;
 
-	/*if (key_was_pressed(app, KEY_R)) {
-		level.data.clear();
-		LoadLevel(level1_raw_data, CUTE_ARRAY_SIZE(level1_raw_data));
-	}*/
+	if (key_was_pressed(app, KEY_R)) {
+		LoadLevel(levels[level_index]);
+	}
+
 	if (key_was_pressed(app, KEY_SPACE)) {
 
 		if (!hero.holding)
@@ -521,7 +531,6 @@ void HandleInput(app_t* app, float dt)
 			hero.holding = false;
 			SetHeroAnimBasedOnFacingDir();
 		}
-
 	}
 
 	key_button_t keycodes[4] = { KEY_W , KEY_S, KEY_D, KEY_A };
@@ -555,7 +564,6 @@ void HandleInput(app_t* app, float dt)
 						hero.x = x;
 						hero.y = y;
 						hero.moving = true;
-						level.data[y][x] = 'P'; // Big 'P' means player animating between tiles now.
 
 						// then, move the block
 						level.data[y - hero.ydir * 2][x + hero.xdir * 2] = '0';
@@ -591,7 +599,6 @@ void HandleInput(app_t* app, float dt)
 						hero.x = x;
 						hero.y = y;
 						hero.moving = true;
-						level.data[y][x] = 'P'; // Big 'P' means player animating between tiles now.
 					}
 				}
 				else // if turning 90 degrees
@@ -638,7 +645,9 @@ void HandleInput(app_t* app, float dt)
 
 					// check for collisions
 					// if we did't collide, assign the new position
-					if (level.data[y][x] == '0') {
+					if (level.data[y][x] == '0' || level.data[y][x] == 'e') {
+						bool won = level.data[y][x] == 'e';
+
 						// update hero position
 						level.data[hero.y][hero.x] = '0';
 						hero.x0 = hero.x;
@@ -646,7 +655,10 @@ void HandleInput(app_t* app, float dt)
 						hero.x = x;
 						hero.y = y;
 						hero.moving = true;
-						level.data[y][x] = 'P'; // Big 'P' means player animating between tiles now.
+
+						if (won) {
+							hero.won = true;
+						}
 					}
 				}
 				else
@@ -671,6 +683,7 @@ void UpdateGame(app_t* app, float dt)
 	COROUTINE_START(co);
 
 	COROUTINE_CASE(co, update_game);
+	{
 		HandleInput(app, dt);
 		DrawLevel(level, dt);
 		if (hero.moving) {
@@ -680,10 +693,12 @@ void UpdateGame(app_t* app, float dt)
 		} else if (hero.sliding_block.is_sliding) {
 			goto sliding_block;
 		}
+	}
 	COROUTINE_YIELD(co);
 	goto update_game;
 
 	COROUTINE_CASE(co, hero_moving);
+	{
 		hero.move_t += dt;
 
 		if (hero.move_t < hero.move_delay) {
@@ -710,19 +725,25 @@ void UpdateGame(app_t* app, float dt)
 			// Hero finished animating from one tile to another.
 			hero.move_t = 0;
 			hero.moving = false;
-			level.data[hero.y][hero.x] = 'p';
-			if (hero.holding) {
-				level.data[hero.held_block.y][hero.held_block.x] = 'c';
+			if (!hero.won) {
+				level.data[hero.y][hero.x] = 'p';
+				if (hero.holding) {
+					level.data[hero.held_block.y][hero.held_block.x] = 'c';
+				}
+			} else {
+				goto hero_won;
 			}
 			DrawLevel(level, dt);
 			DrawAnimatingHeldBlocks();
 			COROUTINE_YIELD(co);
 			goto update_game;
 		}
+	}
 	COROUTINE_YIELD(co);
 	goto hero_moving;
 
 	COROUTINE_CASE(co, hero_turning);
+	{
 		hero.rotating_block.t += dt;
 
 		if (hero.rotating_block.t < hero.rotating_block.delay) {
@@ -744,10 +765,12 @@ void UpdateGame(app_t* app, float dt)
 			COROUTINE_YIELD(co);
 			goto update_game;
 		}
+	}
 	COROUTINE_YIELD(co);
 	goto hero_turning;
 
 	COROUTINE_CASE(co, sliding_block);
+	{
 		hero.sliding_block.t += dt;
 
 		if (hero.sliding_block.t < hero.sliding_block.delay) {
@@ -766,13 +789,30 @@ void UpdateGame(app_t* app, float dt)
 			COROUTINE_YIELD(co);
 			goto update_game;
 		}
+	}
 	COROUTINE_YIELD(co);
 	goto sliding_block;
 
+	COROUTINE_CASE(co, hero_won);
+	hero.switch_anim("girl_spin");
+
+	COROUTINE_SEQUENCE_POINT(co);
+	{
+		DrawLevel(level, dt);
+		UpdateAnimation(hero.anim, dt);
+		sprite_t sprite = AddSprite(hero.frame());
+		sprite.transform.p = tile2world((float)sprite.h, hero.x, hero.y);
+		sprite_batch_push(sb, sprite);
+		COROUTINE_WAIT(co, 3, dt);
+		level_index = (level_index + 1) % levels.count();
+		LoadLevel(levels[level_index]);
+		goto update_game;
+	}
+	COROUTINE_YIELD(co);
+	goto hero_won;
+
 	COROUTINE_END(co);
 }
-
-#include <vector>
 
 int main(int argc, const char** argv)
 {
@@ -784,8 +824,6 @@ int main(int argc, const char** argv)
 	ImGui::SetCurrentContext(app_init_imgui(app));
 
 	sb = sprite_batch_easy_make(app, "data");
-
-	LoadLevel(level7_raw_data);
 
 	Animation idle;
 	idle.name = "idle";
@@ -830,6 +868,8 @@ int main(int argc, const char** argv)
 	hero.add_anim(girl_up);
 	hero.add_anim(girl_spin);
 	hero.switch_anim("idle");
+
+	LoadLevel(levels[level_index]);
 
 	while (app_is_running(app)) {
 		float dt = calc_dt();

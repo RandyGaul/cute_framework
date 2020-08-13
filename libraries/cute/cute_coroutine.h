@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_coroutine.h - v1.01
+	cute_coroutine.h - v1.02
 
 	SUMMARY
 
@@ -58,14 +58,14 @@
 
 				index = 0;
 				printf("%-8s", character_name);
-				COROUTINE_WAIT(co, 750, dt);
+				COROUTINE_PAUSE(co, 750, dt);
 
 				COROUTINE_CASE(co, print_char);
 				if (string[index]) {
 					c = string[index++];
 					printf("%c", c);
-					if (c == '.' || c == ',' || c == '?') COROUTINE_WAIT(co, 250, dt);
-					else COROUTINE_WAIT(co, milliseconds, dt);
+					if (c == '.' || c == ',' || c == '?') COROUTINE_PAUSE(co, 250, dt);
+					else COROUTINE_PAUSE(co, milliseconds, dt);
 					goto print_char;
 				}
 
@@ -78,25 +78,25 @@
 				int milliseconds = 1000;
 
 				COROUTINE_START(co);
-				COROUTINE_WAIT(co, milliseconds, dt);
+				COROUTINE_PAUSE(co, milliseconds, dt);
 				COROUTINE_CALL(co, print(co, dt, "Bob", "Yo Alice. I heard you like mudkips.\n"));
-				COROUTINE_WAIT(co, milliseconds, dt);
+				COROUTINE_PAUSE(co, milliseconds, dt);
 				COROUTINE_CALL(co, print(co, dt, "Alice", "No Bob. Not me. Who told you such a thing?\n"));
-				COROUTINE_WAIT(co, milliseconds, dt);
+				COROUTINE_PAUSE(co, milliseconds, dt);
 				COROUTINE_CALL(co, print(co, dt, "Bob", "Alice please, don't lie to me. We've known each other a long time.\n"));
-				COROUTINE_WAIT(co, milliseconds, dt);
+				COROUTINE_PAUSE(co, milliseconds, dt);
 				COROUTINE_CALL(co, print(co, dt, "Alice", "We have grown apart. I barely know myself.\n"));
-				COROUTINE_WAIT(co, milliseconds, dt);
+				COROUTINE_PAUSE(co, milliseconds, dt);
 				COROUTINE_CALL(co, print(co, dt, "Bob", "OK.\n"));
-				COROUTINE_WAIT(co, milliseconds, dt);
+				COROUTINE_PAUSE(co, milliseconds, dt);
 				COROUTINE_CALL(co, print(co, dt, "Alice", "Good bye Bob. I wish you the best.\n"));
-				COROUTINE_WAIT(co, milliseconds, dt);
+				COROUTINE_PAUSE(co, milliseconds, dt);
 				COROUTINE_CALL(co, print(co, dt, "Bob", "But do you like mudkips?\n"));
-				COROUTINE_WAIT(co, milliseconds, dt);
+				COROUTINE_PAUSE(co, milliseconds, dt);
 				COROUTINE_CALL(co, print(co, dt, "Alice", "<has left>\n"));
-				COROUTINE_WAIT(co, milliseconds, dt);
+				COROUTINE_PAUSE(co, milliseconds, dt);
 				COROUTINE_CALL(co, print(co, dt, "Bob", "Well, I like mudkips :)\n"));
-				COROUTINE_WAIT(co, milliseconds, dt);
+				COROUTINE_PAUSE(co, milliseconds, dt);
 				keep_going = 0;
 				COROUTINE_END(co);
 
@@ -159,6 +159,8 @@
 	Revision history:
 		1.0  (11/03/2018) initial release
 		1.01 (01/26/2020) added support for local variables
+		1.02 (08/13/2020) renamed `COROUTINE_WAIT` to `COROUTINE_PAUSE`, added `COROUTINE_WAIT`
+		                  and `COROUTINE_SEQUENCE_POINT`
 */
 
 #ifndef CUTE_COROUTINE_H
@@ -305,11 +307,23 @@ static inline T& coroutine_local_var(coroutine_t* co)
 #define COROUTINE_CASE(co, name)     case __LINE__: name: co->line[co->index] = __LINE__;
 
 /**
+ * Sets an unamed sequence point at this point in the coroutine.
+ */
+#define COROUTINE_SEQUENCE_POINT(co) case __LINE__: co->line[co->index] = __LINE__;
+
+/**
+ * Immediately exits the coroutine unless `time` has elapsed. Once elapsed the internal timer
+ * will be reset to zero. This does *not* set a sequence point! The previously set sequence
+ * point will be used. `dt` should be a float, represents delta-time.
+ */
+#define COROUTINE_WAIT(co, time, dt) do { co->elapsed += dt; do { if (co->elapsed < time) { co->flag = 1; goto __co_end; } else { co->elapsed = 0; } } while (0); } while (0)
+
+/**
  * Sets a timed sequence point. The coroutine will idle here until a certain time has elapsed.
- * This is similar to calling `COROUTINE_YIELD`, except will continue to yield until `time1`
+ * This is similar to calling `COROUTINE_YIELD`, except will continue to yield until `time`
  * has elapsed. `dt` should be a float, represents delta-time.
  */
-#define COROUTINE_WAIT(co, time, dt) do { case __LINE__: co->line[co->index] = __LINE__; co->elapsed += dt; do { if (co->elapsed < time) { co->flag = 1; goto __co_end; } else { co->elapsed = 0; } } while (0); } while (0)
+#define COROUTINE_PAUSE(co, time, dt) do { case __LINE__: co->line[co->index] = __LINE__; co->elapsed += dt; do { if (co->elapsed < time) { co->flag = 1; goto __co_end; } else { co->elapsed = 0; } } while (0); } while (0)
 
 /**
  * Jumps out of the coroutine, but does not set a sequence point. Returns exection to the top
@@ -349,7 +363,8 @@ static inline T& coroutine_local_var(coroutine_t* co)
  * If control flow naturally reaches `COROUTINE_END` without jumping, the sequence
  * point will be reset to `COROUTINE_START` to simply reset the whole coroutine.
  * However, the sequence point will not be set in the usual case of calling
- * `COROUTINE_YIELD`, `COROUTINE_WAIT` or `COROUTINE_EXIT`.
+ * `COROUTINE_YIELD`, `COROUTINE_WAIT`, `COROUTINE_PAUSE`, COROUTINE_SEQUENCE_POINT`,
+ *  or `COROUTINE_EXIT`.
  */
 #define COROUTINE_END(co)            } co->line[co->index] = 0; __co_end:; co->stack_pointer = 0; } while (0)
 
