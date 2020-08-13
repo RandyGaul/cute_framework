@@ -53,6 +53,7 @@ struct Hero
 	int ydir = -1;
 	bool holding = false;
 	bool won = false;
+    int moves = 0;
 
 	// ----------------------------
 	// For animating between tiles.
@@ -192,8 +193,7 @@ array<string_t> GirlSpin = {
 	"data/girl_spin47.png",
 };
 
-// 11 steps (if you go down first)
-// 12 (if you go right first)
+// 12
 array<string_t> level1_raw_data = {
     "01110",
     "1px01",
@@ -240,32 +240,32 @@ array<string_t> level5_raw_data = {
 	"011110",
 };
 
-// too many
+// 44 i think
 array<string_t> level6_raw_data = {
-	"111111111111111",
-	"1p0100xx0000011",
-	"100x00xx0010xx1",
-	"111111111111xx1",
-	"1000xxxxxxx0001",
-	"101111111111111",
-	"1000010x0010e01",
-	"100000x10000001",
-	"111111111111111",
+    "01111110",
+    "1100xx11",
+    "1p001xe1",
+    "1100xx11",
+    "01111110",
 };
 
+// 37
 array<string_t> level7_raw_data = {
-	"01110",
-	"1pxe1",
-	"10x01",
-	"01110",
+    "011110",
+    "1p0001",
+    "1xxxx1",
+    "1xx101",
+    "1000e1",
+    "011110",
 };
 
+// 57
 array<string_t> level8_raw_data = {
-    "01110",
-    "1pxe1",
-    "10x01",
-    "10xx1",
-    "01110",
+    "111111111",
+    "1p0011111",
+    "10xxxxxx1",
+    "1000111e1",
+    "111111111",
 };
 
 
@@ -275,9 +275,9 @@ array<array<string_t>> levels = {
 	level3_raw_data,
 	level4_raw_data,
 	level5_raw_data,
-	level6_raw_data,
-	level7_raw_data,
-	level8_raw_data,
+    level6_raw_data,
+    level7_raw_data,
+    level8_raw_data,
 };
 
 v2 tile2world(float sprite_h, int x, int y)
@@ -351,6 +351,7 @@ void LoadLevel(const array<string_t>& l)
 	level.data.clear();
 	level.data.ensure_count(l.count());
 	hero.initialized = false;
+    hero.moves = 0;
 
 	for (int i = 0; i < l.count(); ++i)
 	{
@@ -476,7 +477,6 @@ void HandleInput(app_t* app, float dt)
 	}
 
 	if (key_was_pressed(app, KEY_SPACE)) {
-
 		if (!hero.holding)
 		{
 			// search forward from player to look for blocks to pick up
@@ -501,6 +501,7 @@ void HandleInput(app_t* app, float dt)
 
 			if (found)
 			{
+                ++hero.moves;
 				level.data[sy][sx] = '0';
 				//level.data[y - hero.ydir][x + hero.xdir] = 'c';
 				hero.sliding_block.is_sliding = true;
@@ -516,6 +517,7 @@ void HandleInput(app_t* app, float dt)
 		}
 		else // hero.holding is true
 		{
+            ++hero.moves;
 			// so we need to throw the block we are holding
 			int sx = x + hero.xdir * 2, sy = y - hero.ydir * 2;
 			int distance = 0;
@@ -561,6 +563,7 @@ void HandleInput(app_t* app, float dt)
 					// make sure we don't push block through a wall
 					if (level.data[y + hero.ydir][x - hero.xdir] == '0')
 					{
+                        ++hero.moves;
 						// move backward
 						x += xmove[i];
 						y += ymove[i];
@@ -588,6 +591,7 @@ void HandleInput(app_t* app, float dt)
 					// make sure we don't push block through a wall
 					if (level.data[y - hero.ydir * 2][x + hero.xdir * 2] == '0')
 					{
+                        ++hero.moves;
 						// first, move the block
 						level.data[y - hero.ydir][x + hero.xdir] = '0';
 						//level.data[y - hero.ydir * 2][x + hero.xdir * 2] = 'c';
@@ -621,6 +625,7 @@ void HandleInput(app_t* app, float dt)
 						// also check to make sure we aren't turning through a block
 						if (level.data[y - hero.ydir - ydirtemp][x + hero.xdir + xdirtemp] == '0')
 						{
+                            ++hero.moves;
 							// remove block
 							level.data[y - hero.ydir][x + hero.xdir] = '0';
 							hero.rotating_block.v = v2((float)hero.xdir, (float)hero.ydir);
@@ -647,6 +652,7 @@ void HandleInput(app_t* app, float dt)
 			{
 				if (hero.xdir == xdirs[i] && hero.ydir == ydirs[i])
 				{
+                    ++hero.moves;
 					// move forward
 					x += xmove[i];
 					y += ymove[i];
@@ -671,6 +677,7 @@ void HandleInput(app_t* app, float dt)
 				}
 				else
 				{
+                    ++hero.moves;
 					// turn 
 					hero.xdir = xdirs[i];
 					hero.ydir = ydirs[i];
@@ -830,7 +837,7 @@ int main(int argc, const char** argv)
 	gfx_init(app);
 	gfx_init_upscale(app, 320, 240, GFX_UPSCALE_MAXIMUM_ANY);
 	ImGui::SetCurrentContext(app_init_imgui(app));
-
+    
 	sb = sprite_batch_easy_make(app, "data");
 
 	Animation idle;
@@ -879,6 +886,11 @@ int main(int argc, const char** argv)
 
 	LoadLevel(levels[level_index]);
 
+    gfx_matrix_t mvp = matrix_ortho_2d(320, 240, 0, -100);
+    const font_t* font = font_get_default(app);
+    float w = (float)font_text_width(font, "0000");
+    float h = (float)font_text_height(font, "0000");
+
 	while (app_is_running(app)) {
 		float dt = calc_dt();
 		app_update(app, dt);
@@ -886,6 +898,11 @@ int main(int argc, const char** argv)
 		UpdateGame(app, dt);
 
 		sprite_batch_flush(sb);
+
+        char buffer[4];
+        itoa(hero.moves, buffer, 10);
+        font_push_verts(app, font, buffer, -w / 2, h / 2, 0);
+        font_submit_draw_call(app, font, mvp);
 
 		static bool hello_open = false;
 		if (hello_open) {
