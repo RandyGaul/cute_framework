@@ -193,7 +193,46 @@ array<string_t> GirlSpin = {
 	"data/girl_spin47.png",
 };
 
+// 11 steps (if you go down first)
+// 12 (if you go right first)
 array<string_t> level1_raw_data = {
+    "01110",
+    "1px01",
+    "10xe1",
+    "01110",
+};
+
+// 13
+array<string_t> level2_raw_data = {
+    "01110",
+    "1p001",
+    "1x011",
+    "1xxe1",
+    "01110",
+};
+
+// 26
+array<string_t> level3_raw_data = {
+    "01110",
+    "1p001",
+    "1x001",
+    "1x111",
+    "1x0e1",
+    "01110",
+};
+
+// 28
+array<string_t> level4_raw_data = {
+    "011110",
+    "1p00x1",
+    "1x00x1",
+    "1111x1",
+    "1e00x1",
+    "011110",
+};
+
+// 23
+array<string_t> level5_raw_data = {
 	"011110",
 	"1p00x1",
 	"100xx1",
@@ -202,7 +241,8 @@ array<string_t> level1_raw_data = {
 	"011110",
 };
 
-array<string_t> level2_raw_data = {
+// too many
+array<string_t> level6_raw_data = {
 	"111111111111111",
 	"1p0100xx0000011",
 	"100x00xx0010xx1",
@@ -214,53 +254,21 @@ array<string_t> level2_raw_data = {
 	"111111111111111",
 };
 
-array<string_t> level3_raw_data = {
-	"01110",
-	"1px01",
-	"10xe1",
-	"01110",
-};
-
-array<string_t> level4_raw_data = {
-	"01110",
-	"1pxe1",
-	"10x01",
-	"01110",
-};
-
-array<string_t> level5_raw_data = {
-	"01110",
-	"1pxe1",
-	"10x01",
-	"10xx1",
-	"01110",
-};
-
-array<string_t> level6_raw_data = {
-	"01110",
-	"1p001",
-	"1x011",
-	"1xxe1",
-	"01110",
-};
-
 array<string_t> level7_raw_data = {
 	"01110",
-	"1p001",
-	"1x001",
-	"1x111",
-	"1x0e1",
+	"1pxe1",
+	"10x01",
 	"01110",
 };
 
 array<string_t> level8_raw_data = {
-	"011110",
-	"1p00x1",
-	"1x00x1",
-	"1111x1",
-	"1e00x1",
-	"011110",
+    "01110",
+    "1pxe1",
+    "10x01",
+    "10xx1",
+    "01110",
 };
+
 
 array<array<string_t>> levels = {
 	level1_raw_data,
