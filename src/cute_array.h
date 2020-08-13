@@ -47,9 +47,6 @@
 	   idea is to facilitate easy initializing of values stored in the array, such
 	   as working with an array of arrays.
 	4. No iterators.
-	5. No rvalue semantics are supported. Instead, the `steal_from` function can
-	   be used to cleanup any current items, and then steal items from another
-	   cute::array. `steal_from` is called within the assignment operator.
 */
 
 #include <initializer_list>
