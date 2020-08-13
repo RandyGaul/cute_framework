@@ -68,6 +68,7 @@ struct Hero
 	{
 		int x0, y0;
 		int x, y;
+		float floating_offset = 0;
 	} held_block;
 
 	struct RotatingBlock
@@ -404,17 +405,11 @@ void LoadLevel(const array<string_t>& l)
 void DrawAnimatingHeldBlocks()
 {
 	if (hero.moving && hero.holding) {
-		// Calculate the t value for interpolating, and a y_offset.
-		float y_offsets[5] = { 0, 1, 2, 1, 0 };
 		float t = smoothstep(hero.move_t / hero.move_delay);
-		int i = (int)(t * CUTE_ARRAY_SIZE(y_offsets));
-		float y_offset = y_offsets[i];
-
-		// Draw the held block.
 		sprite_t sprite = AddSprite("data/ice_block.png");
 		v2 p0 = tile2world(sprite.h, hero.held_block.x0, hero.held_block.y0);
 		v2 p = tile2world(sprite.h, hero.held_block.x, hero.held_block.y);
-		v2 p_delta = round(lerp(p0, p, t)) + v2(0, y_offset);
+		v2 p_delta = round(lerp(p0, p, t)) + v2(0, hero.held_block.floating_offset);
 		sprite.transform.p = p_delta;
 		sprite.sort_bits = sort_bits(sprite);
 		sprite_batch_push(sb, sprite);
@@ -425,7 +420,6 @@ void DrawLevel(const Level& level, float dt)
 {
 	static coroutine_t s_co;
 	coroutine_t* co = &s_co;
-	static float floating_offset = 0;
 
 	for (int i = 0; i < level.data.count(); ++i)
 	{
@@ -450,19 +444,19 @@ void DrawLevel(const Level& level, float dt)
 			{
 				float delay = 0.35f;
 				COROUTINE_START(co);
-				floating_offset = 1;
+				hero.held_block.floating_offset = 1;
 				COROUTINE_PAUSE(co, delay, dt);
-				floating_offset = 2.0f;
+				hero.held_block.floating_offset = 2.0f;
 				COROUTINE_PAUSE(co, delay, dt);
-				floating_offset = 3.0f;
+				hero.held_block.floating_offset = 3.0f;
 				COROUTINE_PAUSE(co, delay, dt);
-				floating_offset = 2.0f;
+				hero.held_block.floating_offset = 2.0f;
 				COROUTINE_PAUSE(co, delay, dt);
 				COROUTINE_END(co);
 
 				sprite = AddSprite("data/ice_block.png");
 				sprite.transform.p = tile2world(sprite.h, j, i);
-				sprite.transform.p.y += floating_offset;
+				sprite.transform.p.y += hero.held_block.floating_offset;
 			}	break;
 
 			case 'e':
