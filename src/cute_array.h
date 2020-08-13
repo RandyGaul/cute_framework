@@ -282,6 +282,17 @@ template <typename T>
 void array<T>::set_count(int count)
 {
 	CUTE_ASSERT(count < m_capacity);
+	if (m_count > count) {
+		for (int i = count; i < m_count; ++i) {
+			T* slot = m_items + i;
+			slot->~T();
+		}
+	} else if (m_count < count) {
+		for (int i = m_count; i < count; ++i) {
+			T* slot = m_items + i;
+			CUTE_PLACEMENT_NEW(slot) T;
+		}
+	}
 	m_count = count;
 }
 
@@ -399,6 +410,7 @@ const T* array<T>::operator+(int index) const
 template <typename T>
 const array<T>& array<T>::operator=(const array<T>& rhs)
 {
+	set_count(0);
 	ensure_capacity((int)other.count());
 	for (int i = 0; i < other.count(); ++i) {
 		add(other[i]);
