@@ -72,8 +72,8 @@ struct Hero
 	{
 		bool is_rotating = false;
 		int x, y;
-		float angle;
-		float angle0;
+		v2 v;
+		float a;
 		float t = 0;
 		const float delay = 0.125f;
 	} rotating_block;
@@ -559,13 +559,20 @@ void HandleInput(app_t* app, float dt)
 						{
 							// remove block
 							level.data[y - hero.ydir][x + hero.xdir] = '0';
+							hero.rotating_block.v = v2((float)hero.xdir, (float)hero.ydir);
 
 							// turn hero
 							hero.xdir = xdirtemp;
 							hero.ydir = ydirtemp;
 
 							// and move block
-							level.data[y - hero.ydir][x + hero.xdir] = 'c';
+							//level.data[y - hero.ydir][x + hero.xdir] = 'c';
+							hero.rotating_block.x = x + hero.xdir;
+							hero.rotating_block.y = y - hero.ydir;
+							hero.rotating_block.a = shortest_arc(hero.rotating_block.v, v2((float)hero.xdir, (float)hero.ydir));
+
+							hero.rotating_block.is_rotating = true;
+							hero.rotating_block.t = 0;
 						}
 					}
 
@@ -619,6 +626,8 @@ void UpdateGame(app_t* app, float dt)
 		DrawLevel(level, dt);
 		if (hero.moving) {
 			goto hero_moving;
+		} else if (hero.rotating_block.is_rotating) {
+			goto hero_turning;
 		}
 	COROUTINE_YIELD(co);
 	goto update_game;
@@ -626,19 +635,7 @@ void UpdateGame(app_t* app, float dt)
 	COROUTINE_CASE(co, hero_moving);
 		hero.move_t += dt;
 
-		if (hero.move_t >= hero.move_delay) {
-			// Hero finished animating from one tile to another.
-			hero.move_t = 0;
-			hero.moving = false;
-			level.data[hero.y][hero.x] = 'p';
-			if (hero.holding) {
-				level.data[hero.held_block.y][hero.held_block.x] = 'c';
-			}
-			DrawLevel(level, dt);
-			DrawAnimatingHeldBlocks();
-			COROUTINE_YIELD(co);
-			goto update_game;
-		} else {
+		if (hero.move_t < hero.move_delay) {
 			// Animating the player from one tile to another.
 			DrawLevel(level, dt);
 
@@ -658,9 +655,46 @@ void UpdateGame(app_t* app, float dt)
 			sprite.transform.p = p_delta;
 			if (hero.xdir == 1 && hero.ydir == 0) sprite.scale_x *= -1;
 			sprite_batch_push(sb, sprite);
+		} else {
+			// Hero finished animating from one tile to another.
+			hero.move_t = 0;
+			hero.moving = false;
+			level.data[hero.y][hero.x] = 'p';
+			if (hero.holding) {
+				level.data[hero.held_block.y][hero.held_block.x] = 'c';
+			}
+			DrawLevel(level, dt);
+			DrawAnimatingHeldBlocks();
+			COROUTINE_YIELD(co);
+			goto update_game;
 		}
 	COROUTINE_YIELD(co);
 	goto hero_moving;
+
+	COROUTINE_CASE(co, hero_turning);
+		hero.rotating_block.t += dt;
+
+		if (hero.rotating_block.t < hero.rotating_block.delay) {
+			DrawLevel(level, dt);
+			UpdateAnimation(hero.anim, dt);
+
+			float t = smoothstep(hero.rotating_block.t / hero.rotating_block.delay);
+			float a = lerp(0, hero.rotating_block.a, t);
+			rotation_t r = make_rotation(a);
+			v2 v = mul(r, hero.rotating_block.v) * 16.0f;
+			sprite_t sprite = AddSprite("data/ice_block.png");
+			sprite.transform.p = tile2world((float)sprite.h, hero.x, hero.y) + v;
+			sprite_batch_push(sb, sprite);
+		} else {
+			hero.rotating_block.is_rotating = false;
+			level.data[hero.rotating_block.y][hero.rotating_block.x] = 'c';
+			DrawLevel(level, dt);
+			UpdateAnimation(hero.anim, dt);
+			COROUTINE_YIELD(co);
+			goto update_game;
+		}
+	COROUTINE_YIELD(co);
+	goto hero_turning;
 
 	COROUTINE_END(co);
 }
@@ -730,8 +764,6 @@ int main(int argc, const char** argv)
 	hero.add_anim(girl_up);
 	hero.add_anim(girl_spin);
 	hero.switch_anim("idle");
-
-	float t = 0;
 
 	while (app_is_running(app)) {
 		float dt = calc_dt();

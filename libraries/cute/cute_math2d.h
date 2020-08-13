@@ -178,6 +178,21 @@ CUTE_MATH2D_INLINE v2 mulT(m2 a, v2 b) { v2 c; c.x = a.x.x * b.x + a.x.y * b.y; 
 CUTE_MATH2D_INLINE m2 mul(m2 a, m2 b)  { m2 c; c.x = mul(a,  b.x); c.y = mul(a,  b.y); return c; }
 CUTE_MATH2D_INLINE m2 mulT(m2 a, m2 b) { m2 c; c.x = mulT(a, b.x); c.y = mulT(a, b.y); return c; }
 
+// Remaps the result from atan2f to the continuous range of 0, 2*PI.
+CUTE_MATH2D_INLINE float atan2_360(float y, float x) { return atan2f(-y, -x) + 3.14159265f; }
+
+// Computes the shortest angle to rotate the vector a to the vector b.
+CUTE_MATH2D_INLINE float shortest_arc(v2 a, v2 b) {
+	float c = dot(a, b);
+	float s = det2(a, b);
+	float theta = acos(c);
+	if (s > 0) {
+		return theta;
+	} else {
+		return -theta;
+	}
+}
+
 // transform ops
 CUTE_MATH2D_INLINE transform_t make_transform() { transform_t x; x.p = v2(0, 0); x.r = make_rotation(); return x; }
 CUTE_MATH2D_INLINE transform_t make_transform(v2 p, float radians) { transform_t x; x.r = make_rotation(radians); x.p = p; return x; }
