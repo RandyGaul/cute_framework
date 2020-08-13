@@ -78,6 +78,16 @@ struct Hero
 		const float delay = 0.125f;
 	} rotating_block;
 
+	struct SlidingBlock
+	{
+		bool is_sliding = false;
+		int x0, y0;
+		int x, y;
+		float t = 0;
+		float delay;
+		const float delay_per_tile = 0.125f;
+	} sliding_block;
+
 	Animation anim;
 	dictionary<string_t, Animation> anims;
 	void add_anim(Animation& a) { anims.insert(a.name, a); }
@@ -354,13 +364,13 @@ void DrawLevel(const Level& level, float dt)
 			{
 				float delay = 0.35f;
 				COROUTINE_START(co);
-				floating_offset = 0;
-				COROUTINE_WAIT(co, delay, dt);
-				floating_offset = 1.0f;
+				floating_offset = 1;
 				COROUTINE_WAIT(co, delay, dt);
 				floating_offset = 2.0f;
 				COROUTINE_WAIT(co, delay, dt);
-				floating_offset = 1.0f;
+				floating_offset = 3.0f;
+				COROUTINE_WAIT(co, delay, dt);
+				floating_offset = 2.0f;
 				COROUTINE_WAIT(co, delay, dt);
 				COROUTINE_END(co);
 
@@ -434,6 +444,7 @@ void HandleInput(app_t* app, float dt)
 			// search forward from player to look for blocks to pick up
 			int sx = x + hero.xdir, sy = y - hero.ydir;
 			bool found = false;
+			int distance = 0;
 			while (in_grid(sy, sx, level.data.count(), level.data[0].count()))
 			{
 				if (level.data[sy][sx] == 'x')
@@ -447,11 +458,20 @@ void HandleInput(app_t* app, float dt)
 				}
 				sx += hero.xdir;
 				sy -= hero.ydir;
+				++distance;
 			}
+
 			if (found)
 			{
 				level.data[sy][sx] = '0';
-				level.data[y - hero.ydir][x + hero.xdir] = 'c';
+				//level.data[y - hero.ydir][x + hero.xdir] = 'c';
+				hero.sliding_block.is_sliding = true;
+				hero.sliding_block.x0 = sx;
+				hero.sliding_block.y0 = sy;
+				hero.sliding_block.x = x + hero.xdir;
+				hero.sliding_block.y = y - hero.ydir;
+				hero.sliding_block.t = 0;
+				hero.sliding_block.delay = hero.sliding_block.delay_per_tile * distance;
 				hero.holding = true;
 				SetHeroAnimBasedOnFacingDir();
 			}
@@ -460,15 +480,24 @@ void HandleInput(app_t* app, float dt)
 		{
 			// so we need to throw the block we are holding
 			int sx = x + hero.xdir * 2, sy = y - hero.ydir * 2;
+			int distance = 0;
 			while (in_grid(sy, sx, level.data.count(), level.data[0].count()))
 			{
 				if (level.data[sy][sx] != '0')
 					break;
 				sx += hero.xdir;
 				sy -= hero.ydir;
+				++distance;
 			}
 			level.data[y - hero.ydir][x + hero.xdir] = '0';
-			level.data[sy + hero.ydir][sx - hero.xdir] = 'x';
+			//level.data[sy + hero.ydir][sx - hero.xdir] = 'x';
+			hero.sliding_block.is_sliding = true;
+			hero.sliding_block.x0 = x + hero.xdir;
+			hero.sliding_block.y0 = y - hero.ydir;
+			hero.sliding_block.x = sx - hero.xdir;
+			hero.sliding_block.y = sy + hero.ydir;
+			hero.sliding_block.t = 0;
+			hero.sliding_block.delay = hero.sliding_block.delay_per_tile * distance;
 			hero.holding = false;
 			SetHeroAnimBasedOnFacingDir();
 		}
@@ -628,6 +657,8 @@ void UpdateGame(app_t* app, float dt)
 			goto hero_moving;
 		} else if (hero.rotating_block.is_rotating) {
 			goto hero_turning;
+		} else if (hero.sliding_block.is_sliding) {
+			goto sliding_block;
 		}
 	COROUTINE_YIELD(co);
 	goto update_game;
@@ -695,6 +726,28 @@ void UpdateGame(app_t* app, float dt)
 		}
 	COROUTINE_YIELD(co);
 	goto hero_turning;
+
+	COROUTINE_CASE(co, sliding_block);
+		hero.sliding_block.t += dt;
+
+		if (hero.sliding_block.t < hero.sliding_block.delay) {
+			DrawLevel(level, dt);
+			float t = smoothstep(hero.sliding_block.t / hero.sliding_block.delay);
+			sprite_t sprite = AddSprite("data/ice_block.png");
+			v2 p0 = tile2world((float)sprite.h, hero.sliding_block.x0, hero.sliding_block.y0);
+			v2 p = tile2world((float)sprite.h, hero.sliding_block.x, hero.sliding_block.y);
+			v2 p_delta = round(lerp(p0, p, t)) + v2(0, 2);
+			sprite.transform.p = p_delta;
+			sprite_batch_push(sb, sprite);
+		} else {
+			level.data[hero.sliding_block.y][hero.sliding_block.x] = hero.holding ? 'c' : 'x';
+			hero.sliding_block.is_sliding = false;
+			DrawLevel(level, dt);
+			COROUTINE_YIELD(co);
+			goto update_game;
+		}
+	COROUTINE_YIELD(co);
+	goto sliding_block;
 
 	COROUTINE_END(co);
 }
