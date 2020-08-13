@@ -52,6 +52,8 @@
 	   cute::array. `steal_from` is called within the assignment operator.
 */
 
+#include <initializer_list>
+
 namespace cute
 {
 
@@ -59,6 +61,9 @@ template <typename T>
 struct array
 {
 	array();
+	array(std::initializer_list<T> list);
+	array(const array<T>& other);
+	array(array<T>&& other);
 	explicit array(void* user_allocator_context);
 	explicit array(int capacity, void* user_allocator_context);
 	~array();
@@ -76,9 +81,16 @@ struct array
 	void ensure_count(int count);
 	void set_count(int count);
 	void steal_from(array<T>* steal_from_me);
+	void steal_from(array<T>& steal_from_me);
 
 	int capacity() const;
 	int count() const;
+	int size() const;
+
+	T* begin();
+	const T* begin() const;
+	T* end();
+	const T* end() const;
 
 	T& operator[](int index);
 	const T& operator[](int index) const;
@@ -86,7 +98,8 @@ struct array
 	T* operator+(int index);
 	const T* operator+(int index) const;
 
-	array<T>& operator=(array<T>& rhs);
+	const array<T>& operator=(const array<T>& rhs);
+	const array<T>& operator=(array<T>&& rhs);
 
 	T& last();
 	const T& last() const;
@@ -106,6 +119,30 @@ private:
 template <typename T>
 array<T>::array()
 {
+}
+
+template <typename T>
+array<T>::array(std::initializer_list<T> list)
+{
+	ensure_capacity((int)list.size());
+	for (const T* i = list.begin(); i < list.end(); ++i) {
+		add(*i);
+	}
+}
+
+template <typename T>
+array<T>::array(const array<T>& other)
+{
+	ensure_capacity((int)other.count());
+	for (int i = 0; i < other.count(); ++i) {
+		add(other[i]);
+	}
+}
+
+template <typename T>
+array<T>::array(array<T>&& other)
+{
+	steal_from(&other);
 }
 
 template <typename T>
@@ -272,6 +309,12 @@ void array<T>::steal_from(array<T>* steal_from_me)
 }
 
 template <typename T>
+void array<T>::steal_from(array<T>& steal_from_me)
+{
+	steal_from(&steal_from_me);
+}
+
+template <typename T>
 int array<T>::capacity() const
 {
 	return m_capacity;
@@ -281,6 +324,36 @@ template <typename T>
 int array<T>::count() const
 {
 	return m_count;
+}
+
+template <typename T>
+int array<T>::size() const
+{
+	return m_count;
+}
+
+template <typename T>
+T* array<T>::begin()
+{
+	return m_items;
+}
+
+template <typename T>
+const T* array<T>::begin() const
+{
+	return m_items;
+}
+
+template <typename T>
+T* array<T>::end()
+{
+	return m_items + m_count;
+}
+
+template <typename T>
+const T* array<T>::end() const
+{
+	return m_items + m_count;
 }
 
 template <typename T>
@@ -324,7 +397,17 @@ const T* array<T>::operator+(int index) const
 }
 
 template <typename T>
-array<T>& array<T>::operator=(array<T>& rhs)
+const array<T>& array<T>::operator=(const array<T>& rhs)
+{
+	ensure_capacity((int)other.count());
+	for (int i = 0; i < other.count(); ++i) {
+		add(other[i]);
+	}
+	return *this;
+}
+
+template <typename T>
+const array<T>& array<T>::operator=(array<T>&& rhs)
 {
 	steal_from(rhs);
 	return *this;

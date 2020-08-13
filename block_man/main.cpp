@@ -34,13 +34,13 @@ struct Level
 	int start_y;
 	array<array<char>> data;
 } level;
+int level_index = 0;
 
 struct Animation
 {
 	string_t name;
-	string_t* frames;
+	array<string_t>* frames;
 	int frame = 0;
-	int frame_count = 0;
 	float t = 0;
 	float delay = 0.25f;
 };
@@ -92,10 +92,10 @@ struct Hero
 	dictionary<string_t, Animation> anims;
 	void add_anim(Animation& a) { anims.insert(a.name, a); }
 	void switch_anim(string_t name) { error_t err = anims.find(name, &anim); if (err.is_error()) CUTE_ASSERT(false); }
-	string_t frame() { return anim.frames[anim.frame]; }
+	string_t frame() { return (*anim.frames)[anim.frame]; }
 } hero;
 
-string_t GirlForward[] = {
+array<string_t> GirlForward = {
 	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png", // Hacky delay. Should have an array of delays.
 	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
 	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
@@ -123,25 +123,25 @@ string_t GirlForward[] = {
 	"data/girl_forward16.png",
 };
 
-string_t GirlHoldSide[] = {
+array<string_t> GirlHoldSide = {
 	"data/girl_hold_side1.png",
 	"data/girl_hold_side2.png",
 };
 
-string_t GirlHoldUp[] = {
+array<string_t> GirlHoldUp = {
 	"data/girl_hold_up1.png",
 	"data/girl_hold_up2.png",
 };
 
-string_t GirlHoldDown[] = {
+array<string_t> GirlHoldDown = {
 	"data/girl_hold_down1.png",
 	"data/girl_hold_down2.png",
 };
 
-string_t GirlSide = "data/girl_side.png";
-string_t GirlUp = "data/girl_up.png";
+array<string_t> GirlSide = { "data/girl_side.png" };
+array<string_t> GirlUp = { "data/girl_up.png" };
 
-string_t GirlSpin[] = {
+array<string_t> GirlSpin = {
 	"data/girl_spin1.png",
 	"data/girl_spin2.png",
 	"data/girl_spin3.png",
@@ -191,8 +191,7 @@ string_t GirlSpin[] = {
 	"data/girl_spin47.png",
 };
 
-
-string_t level1_raw_data[] = {
+array<string_t> level1_raw_data = {
 	"011110",
 	"1p00x1",
 	"100xx1",
@@ -201,7 +200,7 @@ string_t level1_raw_data[] = {
 	"011110",
 };
 
-string_t level2_raw_data[] = {
+array<string_t> level2_raw_data = {
 	"111111111111111",
 	"1p0100xx0000011",
 	"100x00xx0010xx1",
@@ -213,34 +212,37 @@ string_t level2_raw_data[] = {
 	"111111111111111",
 };
 
-string_t level3_raw_data[] = {
+array<string_t> level3_raw_data = {
 	"01110",
 	"1px01",
 	"10xe1",
 	"01110",
 };
 
-string_t level4_raw_data[] = {
+array<string_t> level4_raw_data = {
 	"01110",
 	"1pxe1",
 	"10x01",
 	"01110",
 };
-string_t level5_raw_data[] = {
+
+array<string_t> level5_raw_data = {
 	"01110",
 	"1pxe1",
 	"10x01",
 	"10xx1",
 	"01110",
 };
-string_t level6_raw_data[] = {
+
+array<string_t> level6_raw_data = {
 	"01110",
 	"1p001",
 	"1x011",
 	"1xxe1",
 	"01110",
 };
-string_t level7_raw_data[] = {
+
+array<string_t> level7_raw_data = {
 	"01110",
 	"1p001",
 	"1x001",
@@ -248,13 +250,25 @@ string_t level7_raw_data[] = {
 	"1x0e1",
 	"01110",
 };
-string_t level8_raw_data[] = {
+
+array<string_t> level8_raw_data = {
 	"011110",
 	"1p00x1",
 	"1x00x1",
 	"1111x1",
 	"1e00x1",
 	"011110",
+};
+
+array<array<string_t>> levels = {
+	level1_raw_data,
+	level2_raw_data,
+	level3_raw_data,
+	level4_raw_data,
+	level5_raw_data,
+	level6_raw_data,
+	level7_raw_data,
+	level8_raw_data,
 };
 
 v2 tile2world(float sprite_h, int x, int y)
@@ -289,7 +303,7 @@ void UpdateAnimation(Animation& anim, float dt)
 		anim.t = 0; // reset
 
 		// advance the animation
-		if (anim.frame + 1 < anim.frame_count)
+		if (anim.frame + 1 < anim.frames->count())
 			anim.frame++;
 		else
 			anim.frame = 0;
@@ -298,20 +312,26 @@ void UpdateAnimation(Animation& anim, float dt)
 		anim.t += dt;
 }
 
-void LoadLevel(string_t* l, int vcount)
+void LoadLevel(const array<string_t>& l)
 {
-	for (int i = 0; i < vcount; ++i)
+	level.data.clear();
+	level.data.ensure_count(l.count());
+
+	for (int i = 0; i < l.count(); ++i)
 	{
-		for (int j = 0; j < l[i].len(); ++j)
+		const char* s = l[i].c_str();
+		int len = l[i].len();
+
+		for (int j = 0; j < len; ++j)
 		{
-			char c = l[i][j];
+			char c = s[j];
 			if (c == 'p') {
 				CUTE_ASSERT(hero.initialized == false);
 				hero.x = j;
 				hero.y = i;
 				hero.initialized = true;
 			}
-			level.data[i].add(c); // add everything into the level data
+			level.data[i].add(c);
 		}
 	}
 }
@@ -752,6 +772,8 @@ void UpdateGame(app_t* app, float dt)
 	COROUTINE_END(co);
 }
 
+#include <vector>
+
 int main(int argc, const char** argv)
 {
 	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
@@ -763,51 +785,42 @@ int main(int argc, const char** argv)
 
 	sb = sprite_batch_easy_make(app, "data");
 
-	int vcount = CUTE_ARRAY_SIZE(level7_raw_data);
-	level.data.ensure_count(vcount);
-	LoadLevel(level7_raw_data, vcount);
+	LoadLevel(level7_raw_data);
 
 	Animation idle;
 	idle.name = "idle";
 	idle.delay = 0.10f;
-	idle.frames = GirlForward;
-	idle.frame_count = CUTE_ARRAY_SIZE(GirlForward);
+	idle.frames = &GirlForward;
 
 	Animation hold_side;
 	hold_side.name = "hold_side";
 	hold_side.delay = 0.10f;
-	hold_side.frames = GirlHoldSide;
-	hold_side.frame_count = CUTE_ARRAY_SIZE(GirlHoldSide);
+	hold_side.frames = &GirlHoldSide;
 
 	Animation hold_up;
 	hold_up.name = "hold_up";
 	hold_up.delay = 0.10f;
-	hold_up.frames = GirlHoldUp;
-	hold_up.frame_count = CUTE_ARRAY_SIZE(GirlHoldUp);
+	hold_up.frames = &GirlHoldUp;
 
 	Animation hold_down;
 	hold_down.name = "hold_down";
 	hold_down.delay = 0.10f;
-	hold_down.frames = GirlHoldDown;
-	hold_down.frame_count = CUTE_ARRAY_SIZE(GirlHoldDown);
+	hold_down.frames = &GirlHoldDown;
 
 	Animation girl_side;
 	girl_side.name = "girl_side";
 	girl_side.delay = 0;
 	girl_side.frames = &GirlSide;
-	girl_side.frame_count = 1;
 
 	Animation girl_up;
 	girl_up.name = "girl_up";
 	girl_up.delay = 0;
 	girl_up.frames = &GirlUp;
-	girl_up.frame_count = 1;
 
 	Animation girl_spin;
 	girl_spin.name = "girl_spin";
-	girl_spin.delay = hero.move_delay / (float)CUTE_ARRAY_SIZE(GirlSpin);
-	girl_spin.frames = GirlSpin;
-	girl_spin.frame_count = CUTE_ARRAY_SIZE(GirlSpin);
+	girl_spin.delay = hero.move_delay / (float)GirlSpin.count();
+	girl_spin.frames = &GirlSpin;
 
 	hero.add_anim(idle);
 	hero.add_anim(hold_side);
