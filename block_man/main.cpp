@@ -564,6 +564,7 @@ void HandleInput(app_t* app, float dt)
 					if (level.data[y + hero.ydir][x - hero.xdir] == '0')
 					{
                         ++hero.moves;
+
 						// move backward
 						x += xmove[i];
 						y += ymove[i];
@@ -592,6 +593,7 @@ void HandleInput(app_t* app, float dt)
 					if (level.data[y - hero.ydir * 2][x + hero.xdir * 2] == '0')
 					{
                         ++hero.moves;
+
 						// first, move the block
 						level.data[y - hero.ydir][x + hero.xdir] = '0';
 						//level.data[y - hero.ydir * 2][x + hero.xdir * 2] = 'c';
@@ -626,6 +628,7 @@ void HandleInput(app_t* app, float dt)
 						if (level.data[y - hero.ydir - ydirtemp][x + hero.xdir + xdirtemp] == '0')
 						{
                             ++hero.moves;
+
 							// remove block
 							level.data[y - hero.ydir][x + hero.xdir] = '0';
 							hero.rotating_block.v = v2((float)hero.xdir, (float)hero.ydir);
@@ -652,7 +655,6 @@ void HandleInput(app_t* app, float dt)
 			{
 				if (hero.xdir == xdirs[i] && hero.ydir == ydirs[i])
 				{
-                    ++hero.moves;
 					// move forward
 					x += xmove[i];
 					y += ymove[i];
@@ -660,6 +662,8 @@ void HandleInput(app_t* app, float dt)
 					// check for collisions
 					// if we did't collide, assign the new position
 					if (level.data[y][x] == '0' || level.data[y][x] == 'e') {
+                        ++hero.moves;
+
 						bool won = level.data[y][x] == 'e';
 
 						// update hero position
