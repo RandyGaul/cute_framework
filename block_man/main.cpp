@@ -242,7 +242,7 @@ array<string_t> level5_raw_data = {
 	"011110",
 };
 
-// 44 i think
+// 44
 array<string_t> level6_raw_data = {
     "01111110",
     "1100xx11",
@@ -251,7 +251,7 @@ array<string_t> level6_raw_data = {
     "01111110",
 };
 
-// 37
+// 39
 array<string_t> level7_raw_data = {
     "011110",
     "1p0001",
