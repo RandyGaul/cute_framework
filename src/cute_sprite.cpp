@@ -404,7 +404,7 @@ error_t sprite_batch_easy_sprite(spritebatch_t* sb, const char* path, sprite_t* 
 void sprite_batch_push(spritebatch_t* sb, sprite_t sprite)
 {
 	sprite_t s = sprite;
-	spritebatch_push(&sb->sb, s.id, s.w, s.h, s.transform.p.x, s.transform.p.y, s.scale_x, s.scale_y, s.transform.r.c, s.transform.r.s, 0);
+	spritebatch_push(&sb->sb, s.id, s.w, s.h, s.transform.p.x, s.transform.p.y, s.scale_x, s.scale_y, s.transform.r.c, s.transform.r.s, sprite.sort_bits);
 }
 
 error_t sprite_batch_flush(spritebatch_t* sb)

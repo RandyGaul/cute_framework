@@ -32,6 +32,7 @@ struct Level
 {
 	int start_x;
 	int start_y;
+	int w, h;
 	array<array<char>> data;
 } level;
 int level_index = 0;
@@ -272,13 +273,32 @@ array<array<string_t>> levels = {
 	level8_raw_data,
 };
 
-v2 tile2world(float sprite_h, int x, int y)
+v2 tile2world(int sprite_h, int x, int y)
 {
 	float w = 16; // width of tiles in pixels
 	float h = 16;
 	float y_offset = level.data.count() * h;
 	float y_diff = sprite_h > 16 ? (sprite_h - h) / 2 : 0;
 	return v2((float)(x-6) * w, -(float)(y+6) * h + y_offset + y_diff);
+}
+
+void world2tile(int sprite_h, v2 p, int* x_out, int* y_out)
+{
+	float w = 16; // width of tiles in pixels
+	float h = 16;
+	float y_offset = level.data.count() * h;
+	float y_diff = sprite_h > 16 ? (sprite_h - h) / 2 : 0;
+	float x = p.x / w + 6;
+	float y = -((p.y - y_offset - y_diff) / h) - 6;
+	*x_out = (int)round(x);
+	*y_out = (int)round(y);
+}
+
+int sort_bits(sprite_t sprite)
+{
+	int x, y;
+	world2tile(sprite.h, sprite.transform.p, &x, &y);
+	return level.w * y + x;
 }
 
 bool in_grid(int x, int y, int w, int h)
@@ -342,6 +362,8 @@ void LoadLevel(const array<string_t>& l)
 {
 	level.data.clear();
 	level.data.ensure_count(l.count());
+	level.w = l[0].len();
+	level.h = l.count();
 	hero.initialized = false;
 
 	for (int i = 0; i < l.count(); ++i)
@@ -382,10 +404,11 @@ void DrawAnimatingHeldBlocks()
 
 		// Draw the held block.
 		sprite_t sprite = AddSprite("data/ice_block.png");
-		v2 p0 = tile2world((float)sprite.h, hero.held_block.x0, hero.held_block.y0);
-		v2 p = tile2world((float)sprite.h, hero.held_block.x, hero.held_block.y);
+		v2 p0 = tile2world(sprite.h, hero.held_block.x0, hero.held_block.y0);
+		v2 p = tile2world(sprite.h, hero.held_block.x, hero.held_block.y);
 		v2 p_delta = round(lerp(p0, p, t)) + v2(0, y_offset);
 		sprite.transform.p = p_delta;
+		sprite.sort_bits = sort_bits(sprite);
 		sprite_batch_push(sb, sprite);
 	}
 }
@@ -407,12 +430,12 @@ void DrawLevel(const Level& level, float dt)
 			{
 			case '1':
 				sprite = AddSprite("data/tile68.png");
-				sprite.transform.p = tile2world(sprite.scale_y, j, i);
+				sprite.transform.p = tile2world(sprite.h, j, i);
 				break;
 
 			case 'x':
 				sprite = AddSprite("data/ice_block.png");
-				sprite.transform.p = tile2world(sprite.scale_y, j, i);
+				sprite.transform.p = tile2world(sprite.h, j, i);
 				break;
 
 			case 'c':
@@ -430,13 +453,13 @@ void DrawLevel(const Level& level, float dt)
 				COROUTINE_END(co);
 
 				sprite = AddSprite("data/ice_block.png");
-				sprite.transform.p = tile2world(sprite.scale_y, j, i);
+				sprite.transform.p = tile2world(sprite.h, j, i);
 				sprite.transform.p.y += floating_offset;
 			}	break;
 
 			case 'e':
 				sprite = AddSprite("data/ladder.png");
-				sprite.transform.p = tile2world(sprite.scale_y, j, i);
+				sprite.transform.p = tile2world(sprite.h, j, i);
 				break;
 
 			default:
@@ -447,11 +470,12 @@ void DrawLevel(const Level& level, float dt)
 				UpdateAnimation(hero.anim, dt);
 				sprite = AddSprite(hero.frame());
 				if (hero.xdir == 1 && hero.ydir == 0) sprite.scale_x *= -1;
-				sprite.transform.p = tile2world(sprite.scale_y, j, i);
+				sprite.transform.p = tile2world(sprite.h, j, i);
 				break;
 			}
 
 			if (!empty) {
+				sprite.sort_bits = i * level.w + j;
 				sprite_batch_push(sb, sprite);
 			}
 		}
@@ -715,11 +739,12 @@ void UpdateGame(app_t* app, float dt)
 			UpdateAnimation(hero.anim, dt);
 			DrawAnimatingHeldBlocks();
 			sprite_t sprite = AddSprite(hero.frame());
-			v2 p0 = tile2world((float)sprite.h, hero.x0, hero.y0);
-			v2 p = tile2world((float)sprite.h, hero.x, hero.y);
+			v2 p0 = tile2world(sprite.h, hero.x0, hero.y0);
+			v2 p = tile2world(sprite.h, hero.x, hero.y);
 			v2 p_delta = round(lerp(p0, p, t)) + v2(0, y_offset);
 			sprite.transform.p = p_delta;
 			if (hero.xdir == 1 && hero.ydir == 0) sprite.scale_x *= -1;
+			sprite.sort_bits = sort_bits(sprite);
 			sprite_batch_push(sb, sprite);
 		} else {
 			// Hero finished animating from one tile to another.
@@ -755,7 +780,8 @@ void UpdateGame(app_t* app, float dt)
 			rotation_t r = make_rotation(a);
 			v2 v = mul(r, hero.rotating_block.v) * 16.0f;
 			sprite_t sprite = AddSprite("data/ice_block.png");
-			sprite.transform.p = tile2world((float)sprite.h, hero.x, hero.y) + v;
+			sprite.transform.p = tile2world(sprite.h, hero.x, hero.y) + v;
+			sprite.sort_bits = sort_bits(sprite);
 			sprite_batch_push(sb, sprite);
 		} else {
 			hero.rotating_block.is_rotating = false;
@@ -777,10 +803,11 @@ void UpdateGame(app_t* app, float dt)
 			DrawLevel(level, dt);
 			float t = smoothstep(hero.sliding_block.t / hero.sliding_block.delay);
 			sprite_t sprite = AddSprite("data/ice_block.png");
-			v2 p0 = tile2world((float)sprite.h, hero.sliding_block.x0, hero.sliding_block.y0);
-			v2 p = tile2world((float)sprite.h, hero.sliding_block.x, hero.sliding_block.y);
+			v2 p0 = tile2world(sprite.h, hero.sliding_block.x0, hero.sliding_block.y0);
+			v2 p = tile2world(sprite.h, hero.sliding_block.x, hero.sliding_block.y);
 			v2 p_delta = round(lerp(p0, p, t)) + v2(0, 2);
 			sprite.transform.p = p_delta;
+			sprite.sort_bits = sort_bits(sprite);
 			sprite_batch_push(sb, sprite);
 		} else {
 			level.data[hero.sliding_block.y][hero.sliding_block.x] = hero.holding ? 'c' : 'x';
@@ -801,7 +828,8 @@ void UpdateGame(app_t* app, float dt)
 		DrawLevel(level, dt);
 		UpdateAnimation(hero.anim, dt);
 		sprite_t sprite = AddSprite(hero.frame());
-		sprite.transform.p = tile2world((float)sprite.h, hero.x, hero.y);
+		sprite.transform.p = tile2world(sprite.h, hero.x, hero.y);
+		sprite.sort_bits = sort_bits(sprite);
 		sprite_batch_push(sb, sprite);
 		COROUTINE_WAIT(co, 3, dt);
 		level_index = (level_index + 1) % levels.count();
