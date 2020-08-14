@@ -36,6 +36,7 @@ struct Level
 	array<array<char>> data;
 } level;
 int level_index = 0;
+bool loaded_level_into_editor = false;
 
 sprite_t AddSprite(string_t path);
 
@@ -431,7 +432,8 @@ void LoadLevel(const array<string_t>& l)
 	level.w = l[0].len();
 	level.h = l.count();
 	hero.initialized = false;
-    hero.moves = 0;
+	hero.moves = 0;
+	loaded_level_into_editor = false;
 
 	for (int i = 0; i < l.count(); ++i)
 	{
@@ -502,7 +504,7 @@ void DrawLevel(const Level& level, float dt)
 			{
 				float delay = 0.35f;
 				COROUTINE_START(co);
-				hero.held_block.floating_offset = 1;
+				hero.held_block.floating_offset = 1.0f;
 				COROUTINE_PAUSE(co, delay, dt);
 				hero.held_block.floating_offset = 2.0f;
 				COROUTINE_PAUSE(co, delay, dt);
@@ -617,7 +619,7 @@ void HandleInput(app_t* app, float dt)
 			SetHeroAnimBasedOnFacingDir();
 		}
 	}
-	
+
 	key_button_t keycodes[4] = { KEY_W , KEY_S, KEY_D, KEY_A };
 	key_button_t keycodes_arrows[4] = { KEY_UP , KEY_DOWN, KEY_RIGHT, KEY_LEFT };
 	int xdirs[4] = { 0 , 0, 1, -1 };
@@ -914,15 +916,122 @@ void UpdateGame(app_t* app, float dt)
 	COROUTINE_END(co);
 }
 
+void LoadLevelIntoEditor(char* buf)
+{
+	int index = 0;
+	for (int i = 0; i < level.data.count(); ++i)
+	{
+		for (int j = 0; j < level.data[i].count(); ++j)
+		{
+			CUTE_ASSERT(index < 1024 * 10);
+			char c = level.data[i][j];
+			buf[index++] = c;
+		}
+		buf[index++] = '\n';
+		CUTE_ASSERT(index < 1024 * 10);
+	}
+}
+
+void DoImguiStuff(app_t* app, float dt)
+{
+	static bool open = false;
+	if (key_was_pressed(app, KEY_E)) {
+		open = !open;
+		if (!open) {
+			loaded_level_into_editor = false;
+		}
+	}
+	if (open) {
+		ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
+		ImGui::Begin("Level Editor", &open);
+		static char editor_buf[1024 * 10];
+		if (!loaded_level_into_editor) {
+			LoadLevelIntoEditor(editor_buf);
+			loaded_level_into_editor = true;
+		}
+		int flags = ImGuiInputTextFlags_AllowTabInput;
+		ImGui::Text("Level %d", level_index + 1);
+		ImGui::InputTextMultiline("", editor_buf, 1024 * 10, ImVec2(0, 200), ImGuiInputTextFlags_AllowTabInput);
+		if (ImGui::Button("Reload")) {
+			LoadLevelIntoEditor(editor_buf);
+		}
+		if (ImGui::Button("Commit")) {
+			char buf[1024];
+			int buf_index = 0;
+			levels[level_index].clear();
+			int i = 0;
+			char c;
+			while ((c = editor_buf[i++])) {
+				if (c == '\n') {
+					buf[buf_index] = 0;
+					levels[level_index].add(buf);
+					buf_index = 0;
+				} else {
+					CUTE_ASSERT(buf_index < 1024);
+					buf[buf_index++] = c;
+				}
+			}
+			LoadLevel(levels[level_index]);
+		}
+		static bool copied = false;
+		if (ImGui::Button("Copy to Clipboard")) {
+			array<char> buf;
+			int index = 0;
+			char c;
+			buf.add('\t');
+			buf.add('{');
+			buf.add('\n');
+			buf.add('\t');
+			buf.add('\t');
+			buf.add('\"');
+			while ((c = editor_buf[index++])) {
+				if (c == '\n') {
+					buf.add('\"');
+					buf.add(',');
+					buf.add('\n');
+					buf.add('\t');
+					buf.add('\t');
+					buf.add('\"');
+				} else {
+					buf.add(c);
+				}
+			}
+			buf.pop();
+			buf.pop();
+			buf.add('}');
+			buf.add(',');
+			buf.add('\n');
+			buf.add(0);
+			clipboard_set(buf.data());
+			copied = true;
+		}
+		if (copied) {
+			static coroutine_t s_co;
+			coroutine_t* co = &s_co;
+
+			COROUTINE_START(co);
+			float delay = 0.5f;
+			ImGui::SetNextWindowBgAlpha(1.0f - co->elapsed / delay);
+			ImGui::BeginTooltip();
+			ImGui::Text("Copied!");
+			ImGui::EndTooltip();
+			COROUTINE_WAIT(co, delay, dt);
+			copied = false;
+			COROUTINE_END(co);
+		}
+		ImGui::End();
+	}
+}
+
 int main(int argc, const char** argv)
 {
-	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
+	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED;
 	app_t* app = app_make("Block Man", 0, 0, 960, 720, options);
 	file_system_mount(file_system_get_base_dir(), "", 1);
 	gfx_init(app);
 	gfx_init_upscale(app, 320, 240, GFX_UPSCALE_MAXIMUM_ANY);
 	ImGui::SetCurrentContext(app_init_imgui(app));
-    
+
 	sb = sprite_batch_easy_make(app, "data");
 
 	Animation idle;
@@ -981,10 +1090,10 @@ int main(int argc, const char** argv)
 
 	LoadLevel(levels[level_index]);
 
-    gfx_matrix_t mvp = matrix_ortho_2d(320, 240, 0, -100);
-    const font_t* font = font_get_default(app);
-    float w = (float)font_text_width(font, "0000");
-    float h = (float)font_text_height(font, "0000");
+	gfx_matrix_t mvp = matrix_ortho_2d(320, 240, 0, -100);
+	const font_t* font = font_get_default(app);
+	float w = (float)font_text_width(font, "0000");
+	float h = (float)font_text_height(font, "0000");
 
 	while (app_is_running(app)) {
 		float dt = calc_dt();
@@ -1001,23 +1110,12 @@ int main(int argc, const char** argv)
 
 		sprite_batch_flush(sb);
 
-        char buffer[4];
-        itoa(hero.moves, buffer, 10);
-        font_push_verts(app, font, buffer, -w / 2, h / 2, 0);
-        font_submit_draw_call(app, font, mvp);
+		char buffer[4];
+		itoa(hero.moves, buffer, 10);
+		font_push_verts(app, font, buffer, -w / 2, h / 2, 0);
+		font_submit_draw_call(app, font, mvp);
 
-		static bool hello_open = false;
-		if (hello_open) {
-			ImGui::Begin("Hello", &hello_open);
-			static bool push_me;
-			ImGui::Checkbox("Push Me", &push_me);
-			if (push_me) {
-				ImGui::Separator();
-				ImGui::Indent();
-				ImGui::Text("This is a Dear ImGui Window!");
-			}
-			ImGui::End();
-		}
+		DoImguiStuff(app, dt);
 
 		gfx_flush(app);
 	}

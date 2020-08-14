@@ -298,7 +298,7 @@ static inline T& coroutine_local_var(coroutine_t* co)
  * Begins the coroutine. Code written between here and the next sequence point will be run
  * only once, making for a good "single time init" spot to write code.
  */
-#define COROUTINE_START(co)          do { co->flag = 0; switch (co->line[co->index]) { default: /* default is 0, and will run just once. */
+#define COROUTINE_START(co)          do { co->flag = 0; switch (co->line[co->index]) { case -1: default: /* default is 0, and will run just once. -1 is to remove warnings about default but no case. */
 
 /**
  * Sets a named sequence point. At any moment, a goto can be used to jump to `name`. Jumping to `name`
