@@ -937,10 +937,7 @@ void DoImguiStuff(app_t* app, float dt)
 {
 	static bool open = false;
 	if (key_was_pressed(app, KEY_E)) {
-		open = !open;
-		if (!open) {
-			loaded_level_into_editor = false;
-		}
+		open = true;
 	}
 	if (open) {
 		ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
