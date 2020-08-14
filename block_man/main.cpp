@@ -37,6 +37,8 @@ struct Level
 } level;
 int level_index = 0;
 
+sprite_t AddSprite(string_t path);
+
 struct Animation
 {
 	string_t name;
@@ -44,7 +46,11 @@ struct Animation
 	int frame = 0;
 	float t = 0;
 	float delay = 0.25f;
+
+	sprite_t current_sprite() { return AddSprite(frames->operator[](frame)); }
 };
+
+Animation ice_block;
 
 struct Hero
 {
@@ -96,7 +102,6 @@ struct Hero
 	dictionary<string_t, Animation> anims;
 	void add_anim(Animation& a) { anims.insert(a.name, a); }
 	void switch_anim(string_t name) { error_t err = anims.find(name, &anim); if (err.is_error()) CUTE_ASSERT(false); }
-	string_t frame() { return (*anim.frames)[anim.frame]; }
 } hero;
 
 array<string_t> GirlForward = {
@@ -195,91 +200,143 @@ array<string_t> GirlSpin = {
 	"data/girl_spin47.png",
 };
 
-// 12
-array<string_t> level1_raw_data = {
-    "01110",
-    "1px01",
-    "10xe1",
-    "01110",
+array<string_t> GirlLadder = {
+	"data/girl_ladder1.png",
+	"data/girl_ladder2.png",
+	"data/girl_ladder3.png",
+	"data/girl_ladder4.png",
+	"data/girl_ladder5.png",
+	"data/girl_ladder6.png",
+	"data/girl_ladder7.png",
+	"data/girl_ladder8.png",
+	"data/girl_ladder9.png",
+	"data/girl_ladder10.png",
+	"data/girl_ladder11.png",
+	"data/girl_ladder12.png",
+	"data/girl_ladder13.png",
+	"data/girl_ladder14.png",
+	"data/girl_ladder15.png",
+	"data/girl_ladder16.png",
+	"data/girl_ladder17.png",
+	"data/girl_ladder18.png",
+	"data/girl_ladder19.png",
+	"data/girl_ladder20.png",
+	"data/girl_ladder21.png",
+	"data/girl_ladder22.png",
+	"data/girl_ladder23.png",
+	"data/girl_ladder24.png",
+	"data/girl_ladder25.png",
+	"data/girl_ladder26.png",
+	"data/girl_ladder27.png",
+	"data/girl_ladder28.png",
+	"data/girl_ladder29.png",
+	"data/girl_ladder30.png",
+	"data/girl_ladder31.png",
+	"data/girl_ladder32.png",
+	"data/girl_ladder33.png",
+	"data/girl_ladder34.png",
+	"data/girl_ladder35.png",
+	"data/girl_ladder36.png",
+	"data/girl_ladder37.png",
+	"data/girl_ladder38.png",
+	"data/girl_ladder39.png",
+	"data/girl_ladder40.png",
+	"data/girl_ladder41.png",
+	"data/girl_ladder42.png",
+	"data/girl_ladder43.png",
+	"data/girl_ladder44.png",
 };
 
-// 13
-array<string_t> level2_raw_data = {
-    "01110",
-    "1p001",
-    "1x011",
-    "1xxe1",
-    "01110",
+array<string_t> IceBlockFrames = {
+	"data/ice_block1.png",
+	"data/ice_block2.png",
 };
-
-// 26
-array<string_t> level3_raw_data = {
-    "01110",
-    "1p001",
-    "1x001",
-    "1x111",
-    "1x0e1",
-    "01110",
-};
-
-// 28
-array<string_t> level4_raw_data = {
-    "011110",
-    "1p00x1",
-    "1x00x1",
-    "1111x1",
-    "1e00x1",
-    "011110",
-};
-
-// 23
-array<string_t> level5_raw_data = {
-	"011110",
-	"1p00x1",
-	"100xx1",
-	"10xxx1",
-	"1xxxe1",
-	"011110",
-};
-
-// 44
-array<string_t> level6_raw_data = {
-    "01111110",
-    "1100xx11",
-    "1p001xe1",
-    "1100xx11",
-    "01111110",
-};
-
-// 39
-array<string_t> level7_raw_data = {
-    "011110",
-    "1p0001",
-    "1xxxx1",
-    "1xx101",
-    "1000e1",
-    "011110",
-};
-
-// 57
-array<string_t> level8_raw_data = {
-    "111111111",
-    "1p0011111",
-    "10xxxxxx1",
-    "1000111e1",
-    "111111111",
-};
-
 
 array<array<string_t>> levels = {
-	level1_raw_data,
-	level2_raw_data,
-	level3_raw_data,
-	level4_raw_data,
-	level5_raw_data,
-    level6_raw_data,
-    level7_raw_data,
-    level8_raw_data,
+	{
+		"00000010",
+		"000001p1",
+		"00000101",
+		"011111x1",
+		"1exxx001",
+		"1xxx0001",
+		"1xx00001",
+		"1x000001",
+		"01111110",
+	},
+	{
+		"011110",
+		"1e0x01",
+		"10x0p1",
+		"1x0001",
+		"011110",
+	},
+	{
+		"011100",
+		"1px010",
+		"1xxx01",
+		"10xe10",
+		"011100",
+	},
+	{ // 12
+		"01110",
+		"1px01",
+		"10xe1",
+		"01110",
+	},
+	{ // 13
+		"01110",
+		"1p001",
+		"1x011",
+		"1xxe1",
+		"01110",
+	},
+	{ // 26
+		"01110",
+		"1p001",
+		"1x001",
+		"1x111",
+		"1x0e1",
+		"01110",
+	},
+	{ // 28
+		"011110",
+		"1p00x1",
+		"1x00x1",
+		"1111x1",
+		"1e00x1",
+		"011110",
+	},
+	{ // 23
+		"011110",
+		"1p00x1",
+		"100xx1",
+		"10xxx1",
+		"1xxxe1",
+		"011110",
+	},
+	{ // 44
+		"01111110",
+		"1100xx11",
+		"1p001xe1",
+		"1100xx11",
+		"01111110",
+	},
+	{ // 39
+		"011110",
+		"1p0001",
+		"1xxxx1",
+		"1xx101",
+		"1000e1",
+		"011110",
+	},
+	{ // 57
+		"111111111",
+		"1p0011111",
+		"10xxxxxx1",
+		"1000111e1",
+		"111111111",
+	},
 };
 
 v2 tile2world(int sprite_h, int x, int y)
@@ -407,7 +464,7 @@ void DrawAnimatingHeldBlocks()
 {
 	if (hero.moving && hero.holding) {
 		float t = smoothstep(hero.move_t / hero.move_delay);
-		sprite_t sprite = AddSprite("data/ice_block.png");
+		sprite_t sprite = ice_block.current_sprite();
 		v2 p0 = tile2world(sprite.h, hero.held_block.x0, hero.held_block.y0);
 		v2 p = tile2world(sprite.h, hero.held_block.x, hero.held_block.y);
 		v2 p_delta = round(lerp(p0, p, t)) + v2(0, hero.held_block.floating_offset);
@@ -437,7 +494,7 @@ void DrawLevel(const Level& level, float dt)
 				break;
 
 			case 'x':
-				sprite = AddSprite("data/ice_block.png");
+				sprite = ice_block.current_sprite();
 				sprite.transform.p = tile2world(sprite.h, j, i);
 				break;
 
@@ -455,7 +512,7 @@ void DrawLevel(const Level& level, float dt)
 				COROUTINE_PAUSE(co, delay, dt);
 				COROUTINE_END(co);
 
-				sprite = AddSprite("data/ice_block.png");
+				sprite = ice_block.current_sprite();
 				sprite.transform.p = tile2world(sprite.h, j, i);
 				sprite.transform.p.y += hero.held_block.floating_offset;
 			}	break;
@@ -471,7 +528,7 @@ void DrawLevel(const Level& level, float dt)
 
 			case 'p':
 				UpdateAnimation(hero.anim, dt);
-				sprite = AddSprite(hero.frame());
+				sprite = hero.anim.current_sprite();
 				if (hero.xdir == 1 && hero.ydir == 0) sprite.scale_x *= -1;
 				sprite.transform.p = tile2world(sprite.h, j, i);
 				break;
@@ -751,7 +808,7 @@ void UpdateGame(app_t* app, float dt)
 			// Draw the hero.
 			UpdateAnimation(hero.anim, dt);
 			DrawAnimatingHeldBlocks();
-			sprite_t sprite = AddSprite(hero.frame());
+			sprite_t sprite = hero.anim.current_sprite();
 			v2 p0 = tile2world(sprite.h, hero.x0, hero.y0);
 			v2 p = tile2world(sprite.h, hero.x, hero.y);
 			v2 p_delta = round(lerp(p0, p, t)) + v2(0, y_offset);
@@ -792,7 +849,7 @@ void UpdateGame(app_t* app, float dt)
 			float a = lerp(0, hero.rotating_block.a, t);
 			rotation_t r = make_rotation(a);
 			v2 v = mul(r, hero.rotating_block.v) * 16.0f;
-			sprite_t sprite = AddSprite("data/ice_block.png");
+			sprite_t sprite = ice_block.current_sprite();
 			sprite.transform.p = tile2world(sprite.h, hero.x, hero.y) + v;
 			sprite.sort_bits = sort_bits(sprite);
 			sprite_batch_push(sb, sprite);
@@ -815,7 +872,7 @@ void UpdateGame(app_t* app, float dt)
 		if (hero.sliding_block.t < hero.sliding_block.delay) {
 			DrawLevel(level, dt);
 			float t = smoothstep(hero.sliding_block.t / hero.sliding_block.delay);
-			sprite_t sprite = AddSprite("data/ice_block.png");
+			sprite_t sprite = ice_block.current_sprite();
 			v2 p0 = tile2world(sprite.h, hero.sliding_block.x0, hero.sliding_block.y0);
 			v2 p = tile2world(sprite.h, hero.sliding_block.x, hero.sliding_block.y);
 			v2 p_delta = round(lerp(p0, p, t)) + v2(0, 2);
@@ -834,17 +891,18 @@ void UpdateGame(app_t* app, float dt)
 	goto sliding_block;
 
 	COROUTINE_CASE(co, hero_won);
-	hero.switch_anim("girl_spin");
+	hero.switch_anim("girl_ladder");
 
 	COROUTINE_SEQUENCE_POINT(co);
 	{
 		DrawLevel(level, dt);
 		UpdateAnimation(hero.anim, dt);
-		sprite_t sprite = AddSprite(hero.frame());
+		sprite_t sprite = hero.anim.current_sprite();
 		sprite.transform.p = tile2world(sprite.h, hero.x, hero.y);
 		sprite.sort_bits = sort_bits(sprite);
 		sprite_batch_push(sb, sprite);
-		COROUTINE_WAIT(co, 3, dt);
+		float delay = hero.anim.delay * hero.anim.frames->count();
+		COROUTINE_WAIT(co, delay, dt);
 		level_index = (level_index + 1) % levels.count();
 		LoadLevel(levels[level_index]);
 		goto update_game;
@@ -858,7 +916,7 @@ void UpdateGame(app_t* app, float dt)
 int main(int argc, const char** argv)
 {
 	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_RESIZABLE;
-	app_t* app = app_make("Block Man", 0, 0, 640, 480, options);
+	app_t* app = app_make("Block Man", 0, 0, 960, 720, options);
 	file_system_mount(file_system_get_base_dir(), "", 1);
 	gfx_init(app);
 	gfx_init_upscale(app, 320, 240, GFX_UPSCALE_MAXIMUM_ANY);
@@ -901,6 +959,11 @@ int main(int argc, const char** argv)
 	girl_spin.delay = hero.move_delay / (float)GirlSpin.count();
 	girl_spin.frames = &GirlSpin;
 
+	Animation girl_ladder;
+	girl_ladder.name = "girl_ladder";
+	girl_ladder.delay = 0.085f;
+	girl_ladder.frames = &GirlLadder;
+
 	hero.add_anim(idle);
 	hero.add_anim(hold_side);
 	hero.add_anim(hold_up);
@@ -908,7 +971,12 @@ int main(int argc, const char** argv)
 	hero.add_anim(girl_side);
 	hero.add_anim(girl_up);
 	hero.add_anim(girl_spin);
+	hero.add_anim(girl_ladder);
 	hero.switch_anim("idle");
+
+	ice_block.delay = 0.35f;
+	ice_block.frames = &IceBlockFrames;
+	ice_block.name = "ice_block";
 
 	LoadLevel(levels[level_index]);
 
@@ -928,6 +996,7 @@ int main(int argc, const char** argv)
 		}
 
 		UpdateGame(app, dt);
+		UpdateAnimation(ice_block, dt);
 
 		sprite_batch_flush(sb);
 
