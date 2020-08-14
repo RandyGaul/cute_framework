@@ -956,19 +956,17 @@ void DoImguiStuff(app_t* app, float dt)
 			LoadLevelIntoEditor(editor_buf);
 		}
 		if (ImGui::Button("Commit")) {
-			char buf[1024];
-			int buf_index = 0;
+			array<char> buf;
 			levels[level_index].clear();
 			int i = 0;
 			char c;
 			while ((c = editor_buf[i++])) {
 				if (c == '\n') {
-					buf[buf_index] = 0;
-					levels[level_index].add(buf);
-					buf_index = 0;
+					buf.add(0);
+					levels[level_index].add(buf.data());
+					buf.clear();
 				} else {
-					CUTE_ASSERT(buf_index < 1024);
-					buf[buf_index++] = c;
+					buf.add(c);
 				}
 			}
 			LoadLevel(levels[level_index]);
