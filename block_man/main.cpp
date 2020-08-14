@@ -930,6 +930,7 @@ void LoadLevelIntoEditor(char* buf)
 		buf[index++] = '\n';
 		CUTE_ASSERT(index < 1024 * 10);
 	}
+	buf[index++] = 0;
 }
 
 void DoImguiStuff(app_t* app, float dt)
