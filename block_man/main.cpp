@@ -921,6 +921,12 @@ int main(int argc, const char** argv)
 		float dt = calc_dt();
 		app_update(app, dt);
 
+		if (key_was_pressed(app, KEY_Q)) {
+			// Cheat. For testing.
+			level_index = (level_index + 1) % levels.count();
+			LoadLevel(levels[level_index]);
+		}
+
 		UpdateGame(app, dt);
 
 		sprite_batch_flush(sb);
