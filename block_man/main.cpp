@@ -952,7 +952,7 @@ void DoImguiStuff(app_t* app, float dt)
 		int flags = ImGuiInputTextFlags_AllowTabInput;
 		ImGui::Text("Level %d", level_index + 1);
 		ImGui::InputTextMultiline("", editor_buf, 1024 * 10, ImVec2(0, 200), ImGuiInputTextFlags_AllowTabInput);
-		if (ImGui::Button("Reload")) {
+		if (ImGui::Button("Sync Editor Text")) {
 			LoadLevelIntoEditor(editor_buf);
 		}
 		if (ImGui::Button("Commit")) {
