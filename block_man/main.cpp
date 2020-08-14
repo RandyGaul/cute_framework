@@ -617,8 +617,9 @@ void HandleInput(app_t* app, float dt)
 			SetHeroAnimBasedOnFacingDir();
 		}
 	}
-
+	
 	key_button_t keycodes[4] = { KEY_W , KEY_S, KEY_D, KEY_A };
+	key_button_t keycodes_arrows[4] = { KEY_UP , KEY_DOWN, KEY_RIGHT, KEY_LEFT };
 	int xdirs[4] = { 0 , 0, 1, -1 };
 	int ydirs[4] = { 1, -1, 0, 0 };
 	int xmove[4] = { 0, 0, 1, -1 };
@@ -626,7 +627,7 @@ void HandleInput(app_t* app, float dt)
 
 	for (int i = 0; i < 4; ++i)
 	{
-		if (key_was_pressed(app, keycodes[i]))
+		if (key_was_pressed(app, keycodes[i]) || key_was_pressed(app, keycodes_arrows[i]))
 		{
 			bool update_hero_animation = false;
 
