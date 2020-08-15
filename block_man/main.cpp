@@ -633,7 +633,7 @@ void DrawLevel(const Level& level, float dt)
 				UpdateAnimation(hero.anim, dt);
 				sprite = hero.anim.current_sprite();
 				if (hero.xdir == 1 && hero.ydir == 0) sprite.scale_x *= -1;
-				sprite.transform.p = tile2world(sprite.h, j, i);
+				sprite.transform.p = tile2world(sprite.h, j, i) + v2(0, 2);
 				sprite.sort_bits = i * level.w + j;
 				sprite_batch_push(sb, sprite);
 				break;
@@ -915,7 +915,7 @@ void UpdateGame(app_t* app, float dt)
 			v2 p0 = tile2world(sprite.h, hero.x0, hero.y0);
 			v2 p = tile2world(sprite.h, hero.x, hero.y);
 			v2 p_delta = round(lerp(p0, p, t)) + v2(0, y_offset);
-			sprite.transform.p = p_delta;
+			sprite.transform.p = p_delta + v2(0, 2);
 			if (hero.xdir == 1 && hero.ydir == 0) sprite.scale_x *= -1;
 			sprite.sort_bits = sort_bits(sprite);
 			sprite_batch_push(sb, sprite);
