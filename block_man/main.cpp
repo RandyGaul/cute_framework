@@ -52,6 +52,7 @@ struct Animation
 };
 
 Animation ice_block;
+Animation ice_block_sheen;
 
 struct Hero
 {
@@ -70,6 +71,15 @@ struct Hero
 	float move_t = 0;
 	const float move_delay = 0.125f;
 	// For animating between tiles.
+	// ----------------------------
+
+	// ----------------------------
+	// For spinning upon level load.
+	v2 spin_p0, spin_p;
+	float spin_t = 0;
+	float spin_delay;
+	const float spin_delay_per_tile = 0.35f;
+	// For spinning upon level load.
 	// ----------------------------
 
 	struct HeldBlock
@@ -253,7 +263,81 @@ array<string_t> IceBlockFrames = {
 	"data/ice_block2.png",
 };
 
+array<string_t> IceBlockSheen = {
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
+	"data/ice_block_sheen2.png",
+	"data/ice_block_sheen3.png",
+	"data/ice_block_sheen4.png",
+	"data/ice_block_sheen5.png",
+	"data/ice_block_sheen6.png",
+	"data/ice_block_sheen7.png",
+	"data/ice_block_sheen8.png",
+	"data/ice_block_sheen9.png",
+	"data/ice_block_sheen10.png",
+	"data/ice_block_sheen11.png",
+	"data/ice_block_sheen12.png",
+	"data/ice_block_sheen13.png",
+	"data/ice_block_sheen14.png",
+	"data/ice_block_sheen15.png",
+	"data/ice_block_sheen16.png",
+	"data/ice_block_sheen17.png",
+	"data/ice_block_sheen18.png",
+	"data/ice_block_sheen19.png",
+	"data/ice_block_sheen20.png",
+	"data/ice_block_sheen21.png",
+	"data/ice_block_sheen22.png",
+	"data/ice_block_sheen23.png",
+	"data/ice_block_sheen24.png",
+	"data/ice_block_sheen25.png",
+	"data/ice_block_sheen26.png",
+	"data/ice_block_sheen27.png",
+	"data/ice_block_sheen28.png",
+	"data/ice_block_sheen29.png",
+	"data/ice_block_sheen30.png",
+	"data/ice_block_sheen31.png",
+	"data/ice_block_sheen32.png",
+	"data/ice_block_sheen33.png",
+	"data/ice_block_sheen34.png",
+	"data/ice_block_sheen35.png",
+};
+
 array<array<string_t>> levels = {
+	{
+		"01111110",
+		"1p0x0001",
+		"01101110",
+		"01101110",
+		"100x0001",
+		"1000xxx1",
+		"1000xex1",
+		"1000xxx1",
+		"01111110",
+	},
 	{
 		"00000010",
 		"000001p1",
@@ -473,6 +557,11 @@ void DrawAnimatingHeldBlocks()
 		sprite.transform.p = p_delta;
 		sprite.sort_bits = sort_bits(sprite);
 		sprite_batch_push(sb, sprite);
+
+		sprite = ice_block_sheen.current_sprite();
+		sprite.transform.p = p_delta;
+		sprite.sort_bits = sort_bits(sprite);
+		sprite_batch_push(sb, sprite);
 	}
 }
 
@@ -486,18 +575,21 @@ void DrawLevel(const Level& level, float dt)
 		for (int j = 0; j < level.data[i].count(); ++j)
 		{
 			sprite_t sprite;
-			bool empty = false;
 
 			switch (level.data[i][j])
 			{
 			case '1':
 				sprite = AddSprite("data/tile68.png");
 				sprite.transform.p = tile2world(sprite.h, j, i);
+				sprite.sort_bits = i * level.w + j;
+				sprite_batch_push(sb, sprite);
 				break;
 
 			case 'x':
 				sprite = ice_block.current_sprite();
 				sprite.transform.p = tile2world(sprite.h, j, i);
+				sprite.sort_bits = i * level.w + j;
+				sprite_batch_push(sb, sprite);
 				break;
 
 			case 'c':
@@ -517,15 +609,24 @@ void DrawLevel(const Level& level, float dt)
 				sprite = ice_block.current_sprite();
 				sprite.transform.p = tile2world(sprite.h, j, i);
 				sprite.transform.p.y += hero.held_block.floating_offset;
+				sprite.sort_bits = i * level.w + j;
+				sprite_batch_push(sb, sprite);
+
+				sprite = ice_block_sheen.current_sprite();
+				sprite.transform.p = tile2world(sprite.h, j, i);
+				sprite.transform.p.y += hero.held_block.floating_offset;
+				sprite.sort_bits = i * level.w + j;
+				sprite_batch_push(sb, sprite);
 			}	break;
 
 			case 'e':
 				sprite = AddSprite("data/ladder.png");
 				sprite.transform.p = tile2world(sprite.h, j, i);
+				sprite.sort_bits = i * level.w + j;
+				sprite_batch_push(sb, sprite);
 				break;
 
 			default:
-				empty = true;
 				break;
 
 			case 'p':
@@ -533,12 +634,9 @@ void DrawLevel(const Level& level, float dt)
 				sprite = hero.anim.current_sprite();
 				if (hero.xdir == 1 && hero.ydir == 0) sprite.scale_x *= -1;
 				sprite.transform.p = tile2world(sprite.h, j, i);
-				break;
-			}
-
-			if (!empty) {
 				sprite.sort_bits = i * level.w + j;
 				sprite_batch_push(sb, sprite);
+				break;
 			}
 		}
 	}
@@ -616,6 +714,8 @@ void HandleInput(app_t* app, float dt)
 			hero.sliding_block.t = 0;
 			hero.sliding_block.delay = hero.sliding_block.delay_per_tile * distance;
 			hero.holding = false;
+			ice_block_sheen.t = 0;
+			ice_block_sheen.frame = 0;
 			SetHeroAnimBasedOnFacingDir();
 		}
 	}
@@ -908,10 +1008,44 @@ void UpdateGame(app_t* app, float dt)
 		COROUTINE_WAIT(co, delay, dt);
 		level_index = (level_index + 1) % levels.count();
 		LoadLevel(levels[level_index]);
-		goto update_game;
+		goto hero_falling;
 	}
 	COROUTINE_YIELD(co);
 	goto hero_won;
+
+	COROUTINE_CASE(co, hero_falling);
+	hero.switch_anim("girl_spin");
+	level.data[hero.y][hero.x] = '0';
+	hero.spin_p = tile2world(hero.anim.current_sprite().h, hero.x, hero.y);
+	hero.spin_p0 = v2(hero.spin_p.x, 120 - 16);
+	hero.spin_delay = (hero.spin_p0.y - hero.spin_p.y) * hero.spin_delay_per_tile * (1.0f / 16.0f);
+
+		COROUTINE_SEQUENCE_POINT(co);
+		{
+			hero.spin_t += dt;
+			float t = hero.spin_t / hero.spin_delay;
+
+			// Animating the player from one tile to another.
+			DrawLevel(level, dt);
+
+			// Draw the hero.
+			UpdateAnimation(hero.anim, dt);
+			DrawAnimatingHeldBlocks();
+			sprite_t sprite = hero.anim.current_sprite();
+			v2 p_delta = round(lerp(hero.spin_p0, hero.spin_p, t));
+			sprite.transform.p = p_delta;
+			sprite.sort_bits = 100000;
+			sprite_batch_push(sb, sprite);
+			COROUTINE_WAIT(co, hero.spin_delay, dt);
+		}
+
+		hero.spin_t = 0;
+		level.data[hero.y][hero.x] = 'p';
+		hero.switch_anim("idle");
+		COROUTINE_YIELD(co);
+		goto update_game;
+	COROUTINE_YIELD(co);
+	goto update_game;
 
 	COROUTINE_END(co);
 }
@@ -1062,7 +1196,7 @@ int main(int argc, const char** argv)
 
 	Animation girl_spin;
 	girl_spin.name = "girl_spin";
-	girl_spin.delay = hero.move_delay / (float)GirlSpin.count();
+	girl_spin.delay = 1.0f / (float)GirlSpin.count();
 	girl_spin.frames = &GirlSpin;
 
 	Animation girl_ladder;
@@ -1084,6 +1218,10 @@ int main(int argc, const char** argv)
 	ice_block.frames = &IceBlockFrames;
 	ice_block.name = "ice_block";
 
+	ice_block_sheen.delay = 0.0075f;
+	ice_block_sheen.frames = &IceBlockSheen;
+	ice_block_sheen.name = "ice_block_sheen";
+
 	LoadLevel(levels[level_index]);
 
 	gfx_matrix_t mvp = matrix_ortho_2d(320, 240, 0, -100);
@@ -1103,6 +1241,7 @@ int main(int argc, const char** argv)
 
 		UpdateGame(app, dt);
 		UpdateAnimation(ice_block, dt);
+		UpdateAnimation(ice_block_sheen, dt);
 
 		sprite_batch_flush(sb);
 
