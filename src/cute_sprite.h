@@ -54,7 +54,7 @@ struct sprite_t
 	float scale_x; // Scaling along the sprite's local x-axis in pixels.
 	float scale_y; // Scaling along the sprite's local y-axis in pixels.
 
-	uint64_t sort_bits = 0;
+	int sort_bits = 0;
 };
 
 /**

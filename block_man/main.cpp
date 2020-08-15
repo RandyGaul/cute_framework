@@ -722,10 +722,10 @@ void HandleInput(app_t* app, float dt)
 
 	key_button_t keycodes[4] = { KEY_W , KEY_S, KEY_D, KEY_A };
 	key_button_t keycodes_arrows[4] = { KEY_UP , KEY_DOWN, KEY_RIGHT, KEY_LEFT };
-	int xdirs[4] = { 0 , 0, 1, -1 };
-	int ydirs[4] = { 1, -1, 0, 0 };
-	int xmove[4] = { 0, 0, 1, -1 };
-	int ymove[4] = { -1, 1, 0, 0 };
+	int xdirs[4] = {  0,  0,  1, -1 };
+	int ydirs[4] = {  1, -1,  0,  0 };
+	int xmove[4] = {  0,  0,  1, -1 };
+	int ymove[4] = { -1,  1,  0,  0 };
 
 	for (int i = 0; i < 4; ++i)
 	{
@@ -1023,7 +1023,7 @@ void UpdateGame(app_t* app, float dt)
 		COROUTINE_SEQUENCE_POINT(co);
 		{
 			hero.spin_t += dt;
-			float t = hero.spin_t / hero.spin_delay;
+			float t = ease_out_sin(hero.spin_t / hero.spin_delay);
 
 			// Animating the player from one tile to another.
 			DrawLevel(level, dt);
