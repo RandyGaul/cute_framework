@@ -129,6 +129,88 @@ extern CUTE_API error_t CUTE_CALL gfx_shader_set_mvp(app_t* app, gfx_shader_t* s
 extern CUTE_API error_t CUTE_CALL gfx_shader_set_screen_wh(app_t* app, gfx_shader_t* shader, float w, float h);
 
 // -------------------------------------------------------------------------------------------------
+// Blend state.
+
+enum blend_factor_t
+{
+	BLEND_FACTOR_ZERO,
+	BLEND_FACTOR_ONE,
+	BLEND_FACTOR_SRC_COLOR,
+	BLEND_FACTOR_ONE_MINUS_SRC_COLOR,
+	BLEND_FACTOR_SRC_ALPHA,
+	BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+	BLEND_FACTOR_DST_COLOR,
+	BLEND_FACTOR_ONE_MINUS_DST_COLOR,
+	BLEND_FACTOR_DST_ALPHA,
+	BLEND_FACTOR_ONE_MINUS_DST_ALPHA,
+	BLEND_FACTOR_SRC_ALPHA_SATURATED,
+	BLEND_FACTOR_BLEND_COLOR,
+	BLEND_FACTOR_ONE_MINUS_BLEND_COLOR,
+	BLEND_FACTOR_BLEND_ALPHA,
+	BLEND_FACTOR_ONE_MINUS_BLEND_ALPHA
+};
+
+enum blend_op_t
+{
+	BLEND_OP_ADD,
+	BLEND_OP_SUBTRACT,
+	BLEND_OP_REVERSE_SUBTRACT,
+	BLEND_OP_MIN,
+	BLEND_OP_MAX
+};
+
+struct blend_state_t
+{
+	bool enabled = true;
+	blend_op_t op_rgb = BLEND_OP_ADD;
+	blend_factor_t src_factor_rgb = BLEND_FACTOR_SRC_ALPHA;
+	blend_factor_t dst_factor_rgb = BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+	blend_op_t op_alpha = BLEND_OP_ADD;
+	blend_factor_t src_factor_alpha = BLEND_FACTOR_ONE_MINUS_DST_ALPHA;
+	blend_factor_t dst_factor_alpha = BLEND_FACTOR_ONE;
+};
+
+// -------------------------------------------------------------------------------------------------
+// Stenciling.
+
+enum stencil_cmp_t
+{
+	STENCIL_CMP_ALWAYS,
+	STENCIL_CMP_NEVER,
+	STENCIL_CMP_EQUAL,
+	STENCIL_CMP_NOT_EQUAL,
+	STENCIL_CMP_LESS,
+	STENCIL_CMP_LESS_EQUAL,
+	STENCIL_CMP_GREATER,
+	STENCIL_CMP_GREATER_EQUAL
+};
+
+enum stencil_op_t
+{
+	STENCIL_OP_KEEP,
+	STENCIL_OP_ZERO,
+	STENCIL_OP_REPLACE,
+	STENCIL_OP_INC_CLAMP,
+	STENCIL_OP_DEC_CLAMP,
+	STENCIL_OP_INC_WRAP,
+	STENCIL_OP_DEC_WRAP,
+	STENCIL_OP_INVERT
+};
+
+struct stencil_depth_state_t
+{
+	bool depth_write_enabled = true;
+	bool stencil_enabled = false;
+	int reference;
+	int read_mask;
+	int write_mask;
+	stencil_op_t depth_fail;
+	stencil_op_t stencil_fail;
+	stencil_op_t stencil_and_depth_both_pass;
+	stencil_cmp_t compare;
+};
+
+// -------------------------------------------------------------------------------------------------
 // Draw calls.
 
 /**
@@ -189,7 +271,6 @@ extern CUTE_API void CUTE_CALL gfx_render_size(app_t* app, int* render_w, int* r
 extern CUTE_API void CUTE_CALL gfx_push_draw_call(app_t* app, gfx_draw_call_t* call);
 extern CUTE_API error_t CUTE_CALL gfx_flush(app_t* app);
 extern CUTE_API error_t CUTE_CALL gfx_flush_to_texture(app_t* app, gfx_texture_t* render_texture);
-extern CUTE_API void CUTE_CALL gfx_set_alpha(app_t* app, int one_for_enabled);
 extern CUTE_API gfx_type_t CUTE_CALL gfx_type(app_t* app);
 extern CUTE_API void CUTE_CALL gfx_set_clear_color(app_t* app, int color);
 
@@ -258,9 +339,11 @@ struct gfx_draw_call_t
 	int use_mvp = 0;
 	gfx_matrix_t mvp;
 	gfx_shader_t* shader = NULL;
-	gfx_viewport_t* veiwport = NULL;
+	gfx_viewport_t viewport;
 	int use_scissor = 0;
 	gfx_scissor_t scissor;
+	blend_state_t blend_state;
+	stencil_depth_state_t stencil;
 	gfx_vertex_buffer_t* buffer = NULL;
 	gfx_buffer_indices_t vertex_indices;
 	gfx_buffer_indices_t index_indices;

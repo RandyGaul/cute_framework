@@ -19,14 +19,9 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <cute_gfx.h>
-#include <cute_defer.h>
-#include <cute_alloc.h>
-#include <cute_app.h>
-
-#include <internal/cute_app_internal.h>
-#include <internal/cute_font_internal.h>
-#include <internal/imgui/imgui_impl_dx9.h>
+#pragma comment(lib, "d3d9.lib")
+#pragma comment(lib, "d3dx9.lib")
+#include <d3dx9.h>
 
 //#ifdef _WIN32
 //	#define GFX_USE_DIRECTX_INCLUDES_AND_IMPORTS
@@ -35,14 +30,11 @@
 //
 //#ifdef GFX_USE_DIRECTX_INCLUDES_AND_IMPORTS
 
-#pragma comment(lib, "d3d9.lib")
-#pragma comment(lib, "d3dx9.lib")
-#include <d3dx9.h>
-
 //#ifdef GFX_USE_D3D_ERR_LIB
 #	pragma comment(lib, "dxerr.lib")
 #	pragma comment(lib, "legacy_stdio_definitions.lib")
 #	include <DxErr.h>
+#	include <stdio.h>
 
 	__declspec(thread) char d3d9_error_string_buffer[1024];
 	const char* get_error_string_d3d9(HRESULT hr)
@@ -51,12 +43,18 @@
 		return d3d9_error_string_buffer;
 	}
 
-#	define HR_CHECK(X) do { HRESULT hr = (X); if (FAILED(hr)) { error_failure(get_error_string_d3d9(hr)); } } while (0)
+#	define HR_CHECK(X) do { HRESULT hr = (X); if (FAILED(hr)) { return error_failure(get_error_string_d3d9(hr)); } } while (0)
+#	define HR_CHECK_NULL(X) do { HRESULT hr = (X); if (FAILED(hr)) { return NULL; } } while (0)
 //#endif
 
-// HACKS HERE
-// TODO - Use array<T> and cute_doubly_list.h
-#include <assert.h>
+#include <cute_gfx.h>
+#include <cute_defer.h>
+#include <cute_alloc.h>
+#include <cute_app.h>
+
+#include <internal/cute_app_internal.h>
+#include <internal/cute_font_internal.h>
+#include <internal/imgui/imgui_impl_dx9.h>
 
 #define GFX_DLIST_INIT(sentinel) \
 	do { \
@@ -170,7 +168,6 @@ struct gfx_t
 {
 	app_t* app = NULL;
 	gfx_type_t type;
-	int alpha_one_for_enabled = 1;
 	gfx_pixel_format_t screen_pixel_format;
 	int screen_w, screen_h;
 	int render_w, render_h;
@@ -262,16 +259,20 @@ struct d3d9_context_t
 	IDirect3DSurface9* screen_surface;
 };
 
-static void s_d3d9_setup_render_and_sampler_states(IDirect3DDevice9* dev)
+static error_t s_d3d9_setup_render_and_sampler_states(IDirect3DDevice9* dev)
 {
 	HR_CHECK(dev->SetRenderState(D3DRS_ZENABLE, D3DZB_FALSE));
+	HR_CHECK(dev->SetRenderState(D3DRS_ZWRITEENABLE, D3DZB_FALSE));
 	HR_CHECK(dev->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE));
 	HR_CHECK(dev->SetRenderState(D3DRS_LIGHTING, FALSE));
 	HR_CHECK(dev->SetRenderState(D3DRS_SCISSORTESTENABLE, D3DZB_TRUE));
+	HR_CHECK(dev->SetRenderState(D3DRS_ALPHABLENDENABLE, true));
+	HR_CHECK(dev->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, true));
 	HR_CHECK(dev->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP));
 	HR_CHECK(dev->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP));
 	HR_CHECK(dev->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT));
 	HR_CHECK(dev->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT));
+	return error_success();
 }
 
 static error_t s_d3d9_create_impl(gfx_t* gfx, void* platform_handle, void** impl_out)
@@ -314,14 +315,13 @@ static error_t s_d3d9_create_impl(gfx_t* gfx, void* platform_handle, void** impl
 	}
 
 	// TODO: Think about if full screen mode should be supported.
-	// TODO: Think about how to enable depth/stencil buffers in the API.
 
 	CUTE_MEMSET(&impl->params, 0, sizeof(impl->params));
 	impl->params.BackBufferWidth = gfx->screen_w;
 	impl->params.BackBufferHeight = gfx->screen_h;
 	impl->params.BackBufferFormat = D3DFMT_A8R8G8B8;
-	//impl->params.EnableAutoDepthStencil = 1;
-	//impl->params.AutoDepthStencilFormat = D3DFMT_D16;
+	impl->params.EnableAutoDepthStencil = 1;
+	impl->params.AutoDepthStencilFormat = D3DFMT_D24S8;
 	impl->params.SwapEffect = D3DSWAPEFFECT_DISCARD;
 	impl->params.hDeviceWindow = (HWND)platform_handle;
 	impl->params.Windowed = true;
@@ -545,7 +545,7 @@ static void* s_d3d9_texture_init(gfx_t* gfx, gfx_texture_params_t* params)
 	}
 
 	D3DLOCKED_RECT rect;
-	HR_CHECK(texture->LockRect(0, &rect, NULL, D3DUSAGE_WRITEONLY));
+	HR_CHECK_NULL(texture->LockRect(0, &rect, NULL, D3DUSAGE_WRITEONLY));
 
 	for (int i = 0; i < h; ++i)
 	{
@@ -562,7 +562,7 @@ static void* s_d3d9_texture_init(gfx_t* gfx, gfx_texture_params_t* params)
 		}
 	}
 
-	HR_CHECK(texture->UnlockRect(0));
+	HR_CHECK_NULL(texture->UnlockRect(0));
 
 	return texture;
 }
@@ -985,7 +985,6 @@ static error_t s_d3d9_on_device_reset(gfx_t* gfx, d3d9_context_t* impl)
 	}
 
 	s_d3d9_setup_render_and_sampler_states(impl->dev);
-	gfx_set_alpha(gfx->app, gfx->alpha_one_for_enabled); // Hacky env scoping, oh well.
 
 	app_t* app = gfx->app;
 	if (app->using_imgui) {
@@ -1035,6 +1034,70 @@ static error_t s_d3d9_handle_lost_device(gfx_t* gfx, d3d9_context_t* impl)
 	}
 }
 
+static int s_d3d9_stencil_cmp(stencil_cmp_t op)
+{
+	switch (op) {
+	case STENCIL_CMP_ALWAYS:        return D3DCMP_ALWAYS;
+	case STENCIL_CMP_NEVER:         return D3DCMP_NEVER;
+	case STENCIL_CMP_EQUAL:         return D3DCMP_EQUAL;
+	case STENCIL_CMP_NOT_EQUAL:     return D3DCMP_NOTEQUAL;
+	case STENCIL_CMP_LESS:          return D3DCMP_LESS;
+	case STENCIL_CMP_LESS_EQUAL:    return D3DCMP_LESSEQUAL;
+	case STENCIL_CMP_GREATER:       return D3DCMP_GREATER;
+	case STENCIL_CMP_GREATER_EQUAL: return D3DCMP_GREATEREQUAL;
+	}
+	return 0;
+}
+
+static int s_d3d9_stencil_op(stencil_op_t op)
+{
+	switch (op) {
+	case STENCIL_OP_KEEP:      return D3DSTENCILOP_KEEP;
+	case STENCIL_OP_ZERO:      return D3DSTENCILOP_ZERO;
+	case STENCIL_OP_REPLACE:   return D3DSTENCILOP_REPLACE;
+	case STENCIL_OP_INC_CLAMP: return D3DSTENCILOP_INCRSAT;
+	case STENCIL_OP_DEC_CLAMP: return D3DSTENCILOP_DECRSAT;
+	case STENCIL_OP_INC_WRAP:  return D3DSTENCILOP_INCR;
+	case STENCIL_OP_DEC_WRAP:  return D3DSTENCILOP_DECR;
+	case STENCIL_OP_INVERT:    return D3DSTENCILOP_INVERT;
+	}
+	return 0;
+}
+
+static int s_d3d9_blend_factor(blend_factor_t factor)
+{
+	switch (factor) {
+	case BLEND_FACTOR_ZERO:                  return D3DBLEND_ZERO;
+	case BLEND_FACTOR_ONE:                   return D3DBLEND_ONE;
+	case BLEND_FACTOR_SRC_COLOR:             return D3DBLEND_SRCCOLOR;
+	case BLEND_FACTOR_ONE_MINUS_SRC_COLOR:   return D3DBLEND_INVSRCCOLOR;
+	case BLEND_FACTOR_SRC_ALPHA:             return D3DBLEND_SRCALPHA;
+	case BLEND_FACTOR_ONE_MINUS_SRC_ALPHA:   return D3DBLEND_INVSRCALPHA;
+	case BLEND_FACTOR_DST_COLOR:             return D3DBLEND_DESTCOLOR;
+	case BLEND_FACTOR_ONE_MINUS_DST_COLOR:   return D3DBLEND_INVDESTCOLOR;
+	case BLEND_FACTOR_DST_ALPHA:             return D3DBLEND_DESTALPHA;
+	case BLEND_FACTOR_ONE_MINUS_DST_ALPHA:   return D3DBLEND_INVDESTALPHA;
+	case BLEND_FACTOR_SRC_ALPHA_SATURATED:   return D3DBLEND_SRCALPHASAT;
+	case BLEND_FACTOR_BLEND_COLOR:           return D3DBLEND_BLENDFACTOR;
+	case BLEND_FACTOR_ONE_MINUS_BLEND_COLOR: return D3DBLEND_INVBLENDFACTOR;
+	case BLEND_FACTOR_BLEND_ALPHA:           return D3DBLEND_BLENDFACTOR;
+	case BLEND_FACTOR_ONE_MINUS_BLEND_ALPHA: return D3DBLEND_INVBLENDFACTOR;
+	}
+	return 0;
+}
+
+static int s_d3d9_blend_op(blend_op_t op)
+{
+	switch (op) {
+	case BLEND_OP_ADD:              return D3DBLENDOP_ADD;
+	case BLEND_OP_SUBTRACT:         return D3DBLENDOP_SUBTRACT;
+	case BLEND_OP_REVERSE_SUBTRACT: return D3DBLENDOP_REVSUBTRACT;
+	case BLEND_OP_MIN:              return D3DBLENDOP_MIN;
+	case BLEND_OP_MAX:              return D3DBLENDOP_MAX;
+	}
+	return 0;
+}
+
 static error_t s_d3d9_do_draw_calls(gfx_t* gfx)
 {
 	d3d9_context_t* impl = (d3d9_context_t*)gfx->impl;
@@ -1063,10 +1126,6 @@ static error_t s_d3d9_do_draw_calls(gfx_t* gfx)
 			gfx_shader_set_mvp(gfx->app, call.shader, &call.mvp);
 		}
 
-		// TODO:
-		// Set blend state.
-		// Set viewport.
-
 		// Scissor boxing.
 		if (call.use_scissor) {
 			RECT rect;
@@ -1084,6 +1143,32 @@ static error_t s_d3d9_do_draw_calls(gfx_t* gfx)
 			rect.top = 0;
 			rect.bottom = h;
 			HR_CHECK(impl->dev->SetScissorRect(&rect));
+		}
+
+		// TODO: Set viewport.
+
+		if (call.blend_state.enabled) {
+			// TODO - Cache these.
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_BLENDOP, s_d3d9_blend_op(call.blend_state.op_rgb)));
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_SRCBLEND, s_d3d9_blend_factor(call.blend_state.src_factor_rgb)));
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_DESTBLEND, s_d3d9_blend_factor(call.blend_state.dst_factor_rgb)));
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_BLENDOPALPHA, s_d3d9_blend_op(call.blend_state.op_alpha)));
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_SRCBLENDALPHA, s_d3d9_blend_factor(call.blend_state.src_factor_alpha)));
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_DESTBLENDALPHA, s_d3d9_blend_factor(call.blend_state.dst_factor_alpha)));
+		}
+
+		if (call.stencil.stencil_enabled) {
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_STENCILENABLE, true));
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_ZWRITEENABLE, call.stencil.depth_write_enabled));
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_STENCILFUNC, s_d3d9_stencil_cmp(call.stencil.compare)));
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_STENCILREF, call.stencil.reference));
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_STENCILMASK, call.stencil.read_mask));
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_STENCILWRITEMASK, call.stencil.write_mask));
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_STENCILZFAIL, s_d3d9_stencil_op(call.stencil.depth_fail)));
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_STENCILFAIL, s_d3d9_stencil_op(call.stencil.stencil_fail)));
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_STENCILPASS, s_d3d9_stencil_op(call.stencil.stencil_and_depth_both_pass)));
+		} else {
+			HR_CHECK(impl->dev->SetRenderState(D3DRS_STENCILENABLE, false));
 		}
 
 		// Copy uniforms out from the draw call to the shader itself.
@@ -1154,7 +1239,7 @@ static error_t s_d3d9_gfx_flush_to_texture(gfx_t* gfx, gfx_texture_t* render_tex
 	d3d9_render_texture_t* texture = (d3d9_render_texture_t*)render_texture;
 
 	HR_CHECK(impl->dev->SetRenderTarget(0, texture->surface));
-	HR_CHECK(impl->dev->Clear(0, NULL, D3DCLEAR_TARGET, gfx->clear_color, 1.0f, 0));
+	HR_CHECK(impl->dev->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER | D3DCLEAR_STENCIL, gfx->clear_color, 1.0f, 0));
 
 	return s_d3d9_do_draw_calls(gfx);
 }
@@ -1204,22 +1289,6 @@ static error_t s_d3d9_flush(gfx_t* gfx)
 	impl->dev->Present(NULL, NULL, NULL, NULL);
 
 	return err;
-}
-
-static void s_d3d9_gfx_set_alpha(gfx_t* gfx, int one_for_enabled)
-{
-	gfx->alpha_one_for_enabled = one_for_enabled;
-	d3d9_context_t* impl = (d3d9_context_t*)gfx->impl;
-	HR_CHECK(impl->dev->SetRenderState(D3DRS_ALPHABLENDENABLE, one_for_enabled));
-	HR_CHECK(impl->dev->SetRenderState(D3DRS_SEPARATEALPHABLENDENABLE, one_for_enabled));
-
-	HR_CHECK(impl->dev->SetRenderState(D3DRS_BLENDOP, D3DBLENDOP_ADD));
-	HR_CHECK(impl->dev->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA));
-	HR_CHECK(impl->dev->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA));
-
-	HR_CHECK(impl->dev->SetRenderState(D3DRS_BLENDOPALPHA, D3DBLENDOP_ADD));
-	HR_CHECK(impl->dev->SetRenderState(D3DRS_SRCBLENDALPHA, D3DBLEND_INVDESTALPHA));
-	HR_CHECK(impl->dev->SetRenderState(D3DRS_DESTBLENDALPHA, D3DBLEND_ONE));
 }
 
 void s_d3d9_free(gfx_t* gfx, d3d9_context_t* impl)
@@ -1649,7 +1718,6 @@ error_t gfx_init(app_t* app)
 	gfx_shader_set_screen_wh(app, gfx->line_shader, (float)app->w, (float)app->h); // TODO: Rename to gfx set screen w/h or whatever and do upscales there
 
 	font_init(app);
-	gfx_set_alpha(app, 1);
 	gfx_set_clear_color(app, 0xFF7095A4);
 
 	return error_success();
@@ -1791,17 +1859,6 @@ error_t gfx_flush(app_t* app)
 		return s_d3d9_flush(app->gfx);
 	} else {
 		return error_failure("Not yet implemented.");
-	}
-}
-
-void gfx_set_alpha(app_t* app, int one_for_enabled)
-{
-	switch (s_gfx_type(app)) {
-	case GFX_TYPE_D3D9:
-		s_d3d9_gfx_set_alpha(app->gfx, one_for_enabled);
-
-	default:
-		break;
 	}
 }
 
