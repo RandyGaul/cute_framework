@@ -22,8 +22,6 @@
 #ifndef CUTE_APP_INTERNAL_H
 #define CUTE_APP_INTERNAL_H
 
-#include <cute/cute_font.h>
-
 #include <cute_buffer.h>
 #include <cute_audio.h>
 #include <cute_array.h>
@@ -32,6 +30,9 @@
 #include <cute_gfx.h>
 
 #include <internal/cute_object_table_internal.h>
+
+#include <cute/cute_font.h>
+#include <sokol/sokol_gfx.h>
 
 struct SDL_Window;
 struct cs_context_t;
@@ -93,9 +94,11 @@ struct app_t
 	audio_system_t* audio_system = NULL;
 	cute_font_t* courier_new = NULL;
 	array<cute_font_vert_t> font_verts;
-	gfx_vertex_buffer_t* font_buffer = NULL;
-	gfx_shader_t* font_shader = NULL;
-	gfx_t* gfx = NULL;
+	//gfx_vertex_buffer_t* font_buffer = NULL;
+	//gfx_shader_t* font_shader = NULL;
+	//gfx_t* gfx = NULL;
+	bool gfx_enabled = false;
+	sg_context_desc gfx_ctx;
 	int w;
 	int h;
 	int x;

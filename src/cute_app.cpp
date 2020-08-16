@@ -39,6 +39,7 @@
 #include <internal/cute_crypto_internal.h>
 #include <internal/cute_audio_internal.h>
 #include <internal/cute_input_internal.h>
+#include <internal/cute_dx11.h>
 
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
@@ -59,7 +60,7 @@
 
 #include <imgui/imgui.h>
 #include <internal/imgui/imgui_impl_sdl.h>
-#include <internal/imgui/imgui_impl_dx9.h>
+#include <internal/imgui/imgui_impl_dx11.h>
 
 namespace cute
 {
@@ -115,12 +116,14 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+		app->gfx_enabled = true;
 	}
 
 	if (options & CUTE_APP_OPTIONS_OPENG_GL_ES_CONTEXT) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+		app->gfx_enabled = true;
 	}
 
 	if ((options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) | (options & CUTE_APP_OPTIONS_OPENG_GL_ES_CONTEXT)) {
@@ -128,6 +131,14 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		SDL_GL_CreateContext(window);
 		gladLoadGLLoader(SDL_GL_GetProcAddress);
 	}
+
+#ifdef _WIN32
+	if (options & CUTE_APP_OPTIONS_D3D11_CONTEXT) {
+		dx11_init(hwnd, w, h, 1);
+		app->gfx_ctx = dx11_get_context();
+		app->gfx_enabled = true;
+	}
+#endif
 
 	int num_threads_to_spawn = core_count() - 1;
 	if (num_threads_to_spawn) {
@@ -148,7 +159,7 @@ cute_error:
 void app_destroy(app_t* app)
 {
 	if (app->using_imgui) {
-		ImGui_ImplDX9_Shutdown();
+		ImGui_ImplDX11_Shutdown();
 		ImGui_ImplSDL2_Shutdown();
 		ImGui::DestroyContext();
 		app->using_imgui = false;
@@ -182,7 +193,7 @@ void app_update(app_t* app, float dt)
 	pump_input_msgs(app);
 	if (app->audio_system) audio_system_update(app->audio_system, dt);
 	if (app->using_imgui) {
-		ImGui_ImplDX9_NewFrame();
+		ImGui_ImplDX11_NewFrame();
 		ImGui_ImplSDL2_NewFrame(app->window);
 		ImGui::NewFrame();
 	}
@@ -211,7 +222,7 @@ error_t app_init_audio(app_t* app, int max_simultaneous_sounds)
 
 ImGuiContext* app_init_imgui(app_t* app)
 {
-	if (!app->gfx) return NULL;
+	if (!app->gfx_enabled) return NULL;
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
@@ -219,7 +230,7 @@ ImGuiContext* app_init_imgui(app_t* app)
 
 	ImGui::StyleColorsDark();
 	ImGui_ImplSDL2_InitForD3D(app->window);
-	ImGui_ImplDX9_Init((IDirect3DDevice9*)gfx_get_device(app));
+	ImGui_ImplDX11_Init((ID3D11Device*)app->gfx_ctx.d3d11.device, (ID3D11DeviceContext*)app->gfx_ctx.d3d11.device_context);
 
 	// TODO - OpenGL/ES.
 

@@ -32,10 +32,11 @@ namespace cute
 
 #define CUTE_APP_OPTIONS_OPENGL_CONTEXT      (1 << 0)
 #define CUTE_APP_OPTIONS_OPENG_GL_ES_CONTEXT (1 << 1)
-#define CUTE_APP_OPTIONS_FULLSCREEN          (1 << 2)
-#define CUTE_APP_OPTIONS_RESIZABLE           (1 << 3)
-#define CUTE_APP_OPTIONS_HIDDEN              (1 << 4)
-#define CUTE_APP_OPTIONS_WINDOW_POS_CENTERED (1 << 5)
+#define CUTE_APP_OPTIONS_D3D11_CONTEXT       (1 << 2)
+#define CUTE_APP_OPTIONS_FULLSCREEN          (1 << 3)
+#define CUTE_APP_OPTIONS_RESIZABLE           (1 << 4)
+#define CUTE_APP_OPTIONS_HIDDEN              (1 << 5)
+#define CUTE_APP_OPTIONS_WINDOW_POS_CENTERED (1 << 6)
 
 extern CUTE_API app_t* CUTE_CALL app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
 extern CUTE_API void CUTE_CALL app_destroy(app_t* app);

@@ -97,8 +97,9 @@ set(CUTE_SRCS
 
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
+	src/internal/cute_dx11.cpp
 
-	src/internal/imgui/imgui_impl_dx9.cpp
+	src/internal/imgui/imgui_impl_dx11.cpp
 	src/internal/imgui/imgui_impl_sdl.cpp
 
 	libraries/imgui/imgui.cpp
@@ -171,27 +172,29 @@ set(CUTE_HDRS
 	src/internal/cute_transport_internal.h
 	src/internal/cute_object_table_internal.h
 	src/internal/cute_ecs_internal.h
+	src/internal/cute_dx11.h
 
-	src/internal/imgui/imgui_impl_dx9.h
+	src/internal/imgui/imgui_impl_dx11.h
 	src/internal/imgui/imgui_impl_sdl.h
 
 	libraries/glad/glad.h
 	libraries/imgui/imgui.h
+	libraries/sokol/sokol_gfx.h
 )
 
 # Handle DirectX 9 link directories.
-if (MSVC)
-	link_directories($ENV{DXSDK_DIR}/Lib/x64)
-endif()
+#if (MSVC)
+#	link_directories($ENV{DXSDK_DIR}/Lib/x64)
+#endif()
 
 add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS})
 target_link_libraries(cute PRIVATE SDL2 physfs libsodium)
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)
 
 # Handle DirectX 9 include directories.
-if (MSVC)
-	target_include_directories(cute PRIVATE $ENV{DXSDK_DIR}/Include)
-endif()
+#if (MSVC)
+#	target_include_directories(cute PRIVATE $ENV{DXSDK_DIR}/Include)
+#endif()
 
 # Cute unit tests executable (optional, defaulted to also build).
 option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)

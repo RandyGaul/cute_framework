@@ -50,6 +50,8 @@
 #	endif
 #endif
 
+#define SOKOL_API_DECL CUTE_API
+
 #define CUTE_CALL __cdecl
 
 #define CUTE_UNUSED(x) (void)x
