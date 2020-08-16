@@ -1147,6 +1147,7 @@ static error_t s_d3d9_do_draw_calls(gfx_t* gfx)
 
 		// TODO: Set viewport.
 
+		// Set blend state for color/alpha.
 		if (call.blend_state.enabled) {
 			// TODO - Cache these.
 			HR_CHECK(impl->dev->SetRenderState(D3DRS_BLENDOP, s_d3d9_blend_op(call.blend_state.op_rgb)));
@@ -1157,6 +1158,7 @@ static error_t s_d3d9_do_draw_calls(gfx_t* gfx)
 			HR_CHECK(impl->dev->SetRenderState(D3DRS_DESTBLENDALPHA, s_d3d9_blend_factor(call.blend_state.dst_factor_alpha)));
 		}
 
+		// Set stencil state.
 		if (call.stencil.stencil_enabled) {
 			HR_CHECK(impl->dev->SetRenderState(D3DRS_STENCILENABLE, true));
 			HR_CHECK(impl->dev->SetRenderState(D3DRS_ZWRITEENABLE, call.stencil.depth_write_enabled));
