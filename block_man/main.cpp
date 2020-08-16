@@ -1069,7 +1069,7 @@ void LoadLevelIntoEditor(char* buf)
 
 void DoImguiStuff(app_t* app, float dt)
 {
-	static bool open = false;
+	static bool open = true;
 	if (key_was_pressed(app, KEY_E)) {
 		open = true;
 	}

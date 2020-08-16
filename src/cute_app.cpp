@@ -203,10 +203,17 @@ void app_update(app_t* app, float dt)
 
 void app_present(app_t* app)
 {
+	sg_pass_action pass_action = { 0 };
+	pass_action.colors[0] = { SG_ACTION_CLEAR, { 1.0f, 0.0f, 0.0f, 1.0f } };
+
 	if (app->using_imgui) {
 		ImGui::EndFrame();
+
+		sg_begin_default_pass(&pass_action, app->w, app->h);
 		ImGui::Render();
 		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+		sg_end_pass();
+		sg_commit();
 	}
 
 	dx11_present();
