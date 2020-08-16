@@ -23,13 +23,9 @@
 
 #include <internal/cute_dx11.h>
 
-#define SOKOL_IMPL
-#define SOKOL_D3D11
-#define D3D11_NO_HELPERS
-#include <sokol/sokol_gfx.h>
-
 #define CINTERFACE
 #define COBJMACROS
+#define D3D11_NO_HELPERS
 #include <d3d11.h>
 #include <dxgi.h>
 
@@ -43,8 +39,8 @@ namespace cute
 static struct {
 	HWND hwnd;
 	DXGI_SWAP_CHAIN_DESC swap_chain_desc;
-	int width;
-	int height;
+	int w;
+	int h;
 	int sample_count;
 	ID3D11Device* device;
 	ID3D11DeviceContext* device_context;
@@ -63,8 +59,8 @@ void d3d11_create_default_render_target() {
 	CUTE_ASSERT(SUCCEEDED(hr) && state.render_target_view);
 
 	D3D11_TEXTURE2D_DESC ds_desc = { 0 };
-	ds_desc.Width = state.width;
-	ds_desc.Height = state.height;
+	ds_desc.Width = state.w;
+	ds_desc.Height = state.h;
 	ds_desc.MipLevels = 1;
 	ds_desc.ArraySize = 1;
 	ds_desc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;
@@ -92,7 +88,7 @@ void d3d11_destroy_default_render_target(void) {
 void d3d11_update_default_render_target(void) {
 	if (state.swap_chain) {
 		d3d11_destroy_default_render_target();
-		IDXGISwapChain_ResizeBuffers(state.swap_chain, 2, state.width, state.height, DXGI_FORMAT_B8G8R8A8_UNORM, 0);
+		IDXGISwapChain_ResizeBuffers(state.swap_chain, 2, state.w, state.h, DXGI_FORMAT_B8G8R8A8_UNORM, 0);
 		d3d11_create_default_render_target();
 	}
 }
@@ -100,10 +96,13 @@ void d3d11_update_default_render_target(void) {
 void dx11_init(void* hwnd, int w, int h, int sample_count)
 {
 	state.hwnd = (HWND)hwnd;
+	state.w = w;
+	state.h = h;
+	state.sample_count = 1;
 
 	/* create device and swap chain */
 	state.swap_chain_desc.BufferDesc.Width = w;
-	state.swap_chain_desc.BufferDesc.Height = w;
+	state.swap_chain_desc.BufferDesc.Height = h;
 	state.swap_chain_desc.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
 	state.swap_chain_desc.BufferDesc.RefreshRate.Numerator = 60;
 	state.swap_chain_desc.BufferDesc.RefreshRate.Denominator = 1;
@@ -159,6 +158,8 @@ static const void* s_d3d11_depth_stencil_view(void) {
 sg_context_desc dx11_get_context()
 {
 	sg_context_desc desc;
+	desc.color_format = SG_PIXELFORMAT_RGBA8;
+	desc.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;
 	desc.sample_count = state.sample_count;
 	desc.d3d11.device = s_d3d11_device();
 	desc.d3d11.device_context = s_d3d11_device_context();
@@ -176,12 +177,12 @@ void dx11_present()
 	if (GetClientRect(state.hwnd, &r)) {
 		const int cur_width = r.right - r.left;
 		const int cur_height = r.bottom - r.top;
-		if (((cur_width > 0) && (cur_width != state.width)) ||
-			((cur_height > 0) && (cur_height != state.height))) 
+		if (((cur_width > 0) && (cur_width != state.w)) ||
+			((cur_height > 0) && (cur_height != state.h))) 
 		{
 			/* need to reallocate the default render target */
-			state.width = cur_width;
-			state.height = cur_height;
+			state.w = cur_width;
+			state.h = cur_height;
 			d3d11_update_default_render_target();
 		}
 	}

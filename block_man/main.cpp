@@ -1155,11 +1155,10 @@ void DoImguiStuff(app_t* app, float dt)
 
 int main(int argc, const char** argv)
 {
-	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED;
+	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_D3D11_CONTEXT;
 	app_t* app = app_make("Block Man", 0, 0, 960, 720, options);
 	file_system_mount(file_system_get_base_dir(), "", 1);
-	gfx_init(app);
-	gfx_init_upscale(app, 320, 240, GFX_UPSCALE_MAXIMUM_ANY);
+	//gfx_init_upscale(app, 320, 240, GFX_UPSCALE_MAXIMUM_ANY);
 	ImGui::SetCurrentContext(app_init_imgui(app));
 
 	sb = sprite_batch_easy_make(app, "data");
@@ -1252,7 +1251,7 @@ int main(int argc, const char** argv)
 
 		DoImguiStuff(app, dt);
 
-		gfx_flush(app);
+		app_present(app);
 	}
 
 	app_destroy(app);

@@ -69,11 +69,13 @@ struct spritebatch_t
 	float w = 0, h = 0;
 
 	array<sprite_vertex_t> verts;
+#if 0
 	gfx_vertex_buffer_t* sprite_buffer = NULL;
 	gfx_shader_t* default_shader = 0;
 	gfx_shader_t* outline_shader = 0;
 	gfx_shader_t* tint_shader = 0;
 	gfx_shader_t* active_shader = 0;
+#endif
 	sprite_shader_type_t shader_type = SPRITE_SHADER_TYPE_DEFAULT;
 	aabb_t scissor;
 	int use_scissor = 0;
@@ -95,6 +97,7 @@ struct spritebatch_t
 //--------------------------------------------------------------------------------------------------
 // Internal functions.
 
+#if 0
 static gfx_scissor_t s_scissor_from_aabb(aabb_t aabb, float w, float h)
 {
 	gfx_scissor_t scissor;
@@ -300,6 +303,7 @@ static gfx_shader_t* s_load_shader(spritebatch_t* sb, sprite_shader_type_t type)
 
 	return shader;
 }
+#endif
 
 static void s_free_cached_image(spritebatch_t* sb, cached_image_t* cached_image)
 {
@@ -327,6 +331,7 @@ spritebatch_t* sprite_batch_make(app_t* app)
 	sb->app = app;
 	sb->mem_ctx = app->mem_ctx;
 
+#if 0
 	gfx_vertex_buffer_params_t params;
 	params.type = GFX_VERTEX_BUFFER_TYPE_DYNAMIC;
 	params.stride = sizeof(sprite_vertex_t);
@@ -337,6 +342,7 @@ spritebatch_t* sprite_batch_make(app_t* app)
 	sb->active_shader = sb->default_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_DEFAULT);
 	sb->outline_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_OUTLINE);
 	sb->tint_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_TINT);
+#endif
 
 	return sb;
 }
@@ -360,8 +366,8 @@ spritebatch_t* sprite_batch_easy_make(app_t* app, const char* path)
 {
 	spritebatch_t* sb = sprite_batch_make(app);
 
-	int w, h;
-	gfx_render_size(app, &w, &h);
+	int w = 0, h = 0;
+	//gfx_render_size(app, &w, &h);
 	gfx_matrix_t mvp = matrix_ortho_2d((float)w, (float)h, 0, 0);
 	sprite_batch_set_mvp(sb, mvp);
 
@@ -426,6 +432,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 {
 	spritebatch_t* sb = (spritebatch_t*)udata;
 
+#if 0
 	// Build draw call.
 	gfx_draw_call_t draw_call;
 	gfx_draw_call_add_texture(&draw_call, (gfx_texture_t*)sprites->texture_id, "u_image");
@@ -533,6 +540,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	// Push draw call onto the gfx stack.
 	gfx_draw_call_set_mvp(&draw_call, sb->mvp);
 	gfx_push_draw_call(sb->app, &draw_call);
+#endif
 }
 
 static void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
@@ -551,13 +559,13 @@ static void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fi
 static SPRITEBATCH_U64 s_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
 	spritebatch_t* sb = (spritebatch_t*)udata;
-	return (SPRITEBATCH_U64)gfx_texture_create(sb->app, w, h, pixels, GFX_PIXEL_FORMAT_R8B8G8A8, GFX_WRAP_MODE_CLAMP_BORDER);
+	return texture_make((pixel_t*)pixels, w, h);
 }
 
 static void s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
 {
 	spritebatch_t* sb = (spritebatch_t*)udata;
-	gfx_texture_clean_up(sb->app, (gfx_texture_t*)texture_id);
+	texture_destroy(texture_id);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -566,6 +574,7 @@ void sprite_batch_set_shader_type(spritebatch_t* sb, sprite_shader_type_t type)
 {
 	sb->shader_type = type;
 
+#if 0
 	// Load the shader, if needed, and set the active sprite system shader.
 	switch (type)
 	{
@@ -590,6 +599,7 @@ void sprite_batch_set_shader_type(spritebatch_t* sb, sprite_shader_type_t type)
 		sb->active_shader = sb->tint_shader;
 		break;
 	}
+#endif
 }
 
 void sprite_batch_set_mvp(spritebatch_t* sb, gfx_matrix_t mvp)

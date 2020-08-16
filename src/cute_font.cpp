@@ -39,14 +39,14 @@ namespace cute
 #include <data/fonts/courier_new_fnt.h>
 #include <data/fonts/courier_new_0_png.h>
 
-static CUTE_FONT_U64 s_generate_texture_handle(app_t* app, void* pixels, int w, int h)
+static CUTE_FONT_U64 s_generate_texture_handle(pixel_t* pixels, int w, int h)
 {
-	return (CUTE_FONT_U64)gfx_texture_create(app, w, h, pixels, GFX_PIXEL_FORMAT_R8B8G8A8, GFX_WRAP_MODE_CLAMP_BORDER);
+	return texture_make(pixels, w, h);
 }
 
-static void s_destroy_texture_handle(app_t* app, CUTE_FONT_U64 atlas_id)
+static void s_destroy_texture_handle(CUTE_FONT_U64 atlas_id)
 {
-	gfx_texture_clean_up(app, (gfx_texture_t*)atlas_id);
+	texture_destroy(atlas_id);
 }
 
 font_t* font_load_bmfont(app_t* app, const char* font_path, const char* font_image_path)
@@ -66,7 +66,7 @@ font_t* font_load_bmfont(app_t* app, const char* font_path, const char* font_ima
 	if (err.is_error()) return NULL;
 	image_flip_horizontal(&img);
 
-	CUTE_FONT_U64 texture_handle = s_generate_texture_handle(app, img.pix, img.w, img.h);
+	CUTE_FONT_U64 texture_handle = s_generate_texture_handle(img.pix, img.w, img.h);
 	font_t* font = (font_t*)cute_font_load_bmfont(texture_handle, font_data, (int)font_size, app->mem_ctx);
 	image_free(&img);
 
@@ -87,8 +87,8 @@ static void s_load_courier_new(app_t* app)
 		image_t img;
 		error_t err = image_load_png_mem(courier_new_0_png_data, courier_new_0_png_sz, &img);
 		image_flip_horizontal(&img);
-		gfx_texture_t* tex = gfx_texture_create(app, img.w, img.h, img.pix, GFX_PIXEL_FORMAT_R8B8G8A8, GFX_WRAP_MODE_CLAMP_EDGE);
-		cute_font_t* font = cute_font_load_bmfont((CUTE_FONT_U64)tex, courier_new_fnt_data, courier_new_fnt_sz, app->mem_ctx);
+		texture_t tex = texture_make(img.pix, img.w, img.h);
+		cute_font_t* font = cute_font_load_bmfont(tex, courier_new_fnt_data, courier_new_fnt_sz, app->mem_ctx);
 		app->courier_new = font;
 		image_free(&img);
 	}
@@ -132,6 +132,7 @@ void font_push_verts(app_t* app, const font_t* font, const char* text, float x, 
 
 void font_submit_draw_call(app_t* app, const font_t* font, gfx_matrix_t mvp, color_t color)
 {
+#if 0
 	gfx_draw_call_t call;
 	gfx_draw_call_add_texture(&call, (gfx_texture_t*)((cute_font_t*)font)->atlas_id, "u_image");
 	call.buffer = app->font_buffer;
@@ -140,6 +141,7 @@ void font_submit_draw_call(app_t* app, const font_t* font, gfx_matrix_t mvp, col
 	gfx_draw_call_add_uniform(&call, "u_text_color", &color, GFX_UNIFORM_TYPE_FLOAT4);
 	gfx_draw_call_set_mvp(&call, mvp);
 	gfx_push_draw_call(app, &call);
+#endif
 
 	app->font_verts.clear();
 }
@@ -161,6 +163,7 @@ void font_init(app_t* app)
 {
 	s_load_courier_new(app);
 
+#if 0
 	// Create the dedicated font shader data.
 	gfx_vertex_buffer_params_t vertex_params;
 	vertex_params.type = GFX_VERTEX_BUFFER_TYPE_DYNAMIC;
@@ -246,6 +249,7 @@ void font_init(app_t* app)
 
 	float use_border = 0;
 	gfx_shader_set_uniform(app, app->font_shader, "u_use_border", &use_border, GFX_UNIFORM_TYPE_FLOAT);
+#endif
 }
 
 }

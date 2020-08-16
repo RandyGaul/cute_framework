@@ -27,7 +27,6 @@
 #include <cute_array.h>
 #include <cute_ecs.h>
 #include <cute_dictionary.h>
-#include <cute_gfx.h>
 
 #include <internal/cute_object_table_internal.h>
 
@@ -98,7 +97,7 @@ struct app_t
 	//gfx_shader_t* font_shader = NULL;
 	//gfx_t* gfx = NULL;
 	bool gfx_enabled = false;
-	sg_context_desc gfx_ctx;
+	sg_context_desc gfx_ctx_params;
 	int w;
 	int h;
 	int x;

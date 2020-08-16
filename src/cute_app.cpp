@@ -30,7 +30,6 @@
 #include <cute_net.h>
 #include <cute_c_runtime.h>
 #include <cute_kv.h>
-#include <cute_gfx.h>
 
 #include <internal/cute_defines_internal.h>
 #include <internal/cute_app_internal.h>
@@ -135,7 +134,10 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 #ifdef _WIN32
 	if (options & CUTE_APP_OPTIONS_D3D11_CONTEXT) {
 		dx11_init(hwnd, w, h, 1);
-		app->gfx_ctx = dx11_get_context();
+		app->gfx_ctx_params = dx11_get_context();
+		sg_desc params = { 0 };
+		params.context = app->gfx_ctx_params;
+		sg_setup(params);
 		app->gfx_enabled = true;
 	}
 #endif
@@ -199,6 +201,17 @@ void app_update(app_t* app, float dt)
 	}
 }
 
+void app_present(app_t* app)
+{
+	if (app->using_imgui) {
+		ImGui::EndFrame();
+		ImGui::Render();
+		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+	}
+
+	dx11_present();
+}
+
 // TODO - Move these init functions into audio/net headers.
 
 error_t app_init_net(app_t* app)
@@ -230,7 +243,7 @@ ImGuiContext* app_init_imgui(app_t* app)
 
 	ImGui::StyleColorsDark();
 	ImGui_ImplSDL2_InitForD3D(app->window);
-	ImGui_ImplDX11_Init((ID3D11Device*)app->gfx_ctx.d3d11.device, (ID3D11DeviceContext*)app->gfx_ctx.d3d11.device_context);
+	ImGui_ImplDX11_Init((ID3D11Device*)app->gfx_ctx_params.d3d11.device, (ID3D11DeviceContext*)app->gfx_ctx_params.d3d11.device_context);
 
 	// TODO - OpenGL/ES.
 

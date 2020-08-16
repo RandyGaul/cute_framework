@@ -24,18 +24,10 @@
 
 #include <cute_defines.h>
 #include <cute_error.h>
-#include <cute_color.h>
+#include <cute_gfx.h>
 
 namespace cute
 {
-
-struct pixel_t
-{
-	uint8_t r;
-	uint8_t g;
-	uint8_t b;
-	uint8_t a;
-};
 
 struct image_t
 {
