@@ -26,6 +26,14 @@
 #ifndef CUTE_GFX_H
 #define CUTE_GFX_H
 
+// TODO
+// make/clean up render to texture
+// post FX
+// viewport
+// resizing based on window size
+// texture wrap modes
+// refactor draw call struct and init API
+
 namespace cute
 {
 
@@ -282,15 +290,6 @@ extern CUTE_API void CUTE_CALL gfx_line_depth_test(app_t* app, int zero_for_off)
 extern CUTE_API error_t CUTE_CALL gfx_line_submit_draw_call(app_t* app);
 
 extern CUTE_API void* CUTE_CALL gfx_get_device(app_t* app);
-
-// TODO
-// make/clean up render to texture
-// post FX
-// stencil
-// viewport
-// resizing based on window size
-// texture wrap modes
-// blend states
 
 // -------------------------------------------------------------------------------------------------
 // Definitions for inline and types intended to be used on C-runtime stack.

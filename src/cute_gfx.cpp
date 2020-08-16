@@ -1392,7 +1392,7 @@ gfx_matrix_t matrix_ortho_2d(float w, float h, float x, float y)
 	return projection;
 }
 
-gfx_texture_t *gfx_texture_create(app_t* app, int w, int h, void* pixels, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode)
+gfx_texture_t* gfx_texture_create(app_t* app, int w, int h, void* pixels, gfx_pixel_format_t pixel_format, gfx_wrap_mode_t wrap_mode)
 {
 	gfx_texture_params_t params;
 	params.w = w;
