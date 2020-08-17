@@ -55,7 +55,7 @@ void camera_calc_mvp(camera_t* cam)
 	cam->mvp = matrix_ortho_2d(cam->w, cam->h, cam->tx.p.x, cam->tx.p.y);
 }
 
-gfx_matrix_t* camera_get_mvp(camera_t* cam)
+matrix_t* camera_get_mvp(camera_t* cam)
 {
 	return &cam->mvp;
 }

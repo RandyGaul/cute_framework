@@ -45,27 +45,33 @@ using texture_t = uint64_t;
 CUTE_API texture_t CUTE_CALL texture_make(pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_CLAMP_TO_EDGE);
 CUTE_API void CUTE_CALL texture_destroy(texture_t texture);
 
-struct gfx_matrix_t
+struct matrix_t
 {
 	float data[16];
 };
 
-extern CUTE_API gfx_matrix_t CUTE_CALL matrix_identity();
-extern CUTE_API gfx_matrix_t CUTE_CALL matrix_ortho_2d(float w, float h, float x, float y);
+extern CUTE_API matrix_t CUTE_CALL matrix_identity();
+extern CUTE_API matrix_t CUTE_CALL matrix_ortho_2d(float w, float h, float x, float y);
 
 struct triple_buffer_t
 {
 	struct buffer_t
 	{
 		int stride = 0;
-		int element_count = 0;
-		int element_capacity = 0;
 		int buffer_number = 0;
+		int offset = 0;
 		sg_buffer buffer[3];
 	};
 
 	buffer_t vbuf;
 	buffer_t ibuf;
+
+	CUTE_INLINE void advance() {
+		++vbuf.buffer_number; vbuf.buffer_number %= 3;
+		++ibuf.buffer_number; ibuf.buffer_number %= 3;
+	}
+	CUTE_INLINE sg_buffer get_vbuf() { return vbuf.buffer[vbuf.buffer_number]; }
+	CUTE_INLINE sg_buffer get_ibuf() { return ibuf.buffer[ibuf.buffer_number]; }
 };
 
 CUTE_API triple_buffer_t CUTE_CALL triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count);

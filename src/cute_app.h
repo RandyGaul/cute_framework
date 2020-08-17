@@ -45,6 +45,7 @@ extern CUTE_API bool CUTE_CALL app_is_running(app_t* app);
 extern CUTE_API void CUTE_CALL app_stop_running(app_t* app);
 extern CUTE_API void CUTE_CALL app_update(app_t* app, float dt);
 extern CUTE_API void CUTE_CALL app_present(app_t* app);
+extern CUTE_API void CUTE_CALL app_render_size(app_t* app, int* w, int* h);
 
 extern CUTE_API error_t CUTE_CALL app_init_net(app_t* app);
 extern CUTE_API error_t CUTE_CALL app_init_audio(app_t* app, int max_simultaneous_sounds = 5000);

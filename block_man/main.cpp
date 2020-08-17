@@ -1223,7 +1223,7 @@ int main(int argc, const char** argv)
 
 	LoadLevel(levels[level_index]);
 
-	gfx_matrix_t mvp = matrix_ortho_2d(320, 240, 0, -100);
+	matrix_t mvp = matrix_ortho_2d(320, 240, 0, -100);
 	const font_t* font = font_get_default(app);
 	float w = (float)font_text_width(font, "0000");
 	float h = (float)font_text_height(font, "0000");

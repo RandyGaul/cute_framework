@@ -32,14 +32,14 @@ namespace cute
 
 struct font_t;
 struct app_t;
-struct gfx_matrix_t;
+struct matrix_t;
 
 extern CUTE_API font_t* CUTE_CALL font_load_bmfont(app_t* app, const char* font_path, const char* font_image_path);
 extern CUTE_API void CUTE_CALL font_free(font_t* font);
 
 extern CUTE_API const font_t* CUTE_CALL font_get_default(app_t* app);
 extern CUTE_API void CUTE_CALL font_push_verts(app_t* app, const font_t* font, const char* text, float x, float y, float wrap_w, const aabb_t* clip_box = NULL);
-extern CUTE_API void CUTE_CALL font_submit_draw_call(app_t* app, const font_t* font, gfx_matrix_t mvp, color_t color = color_black());
+extern CUTE_API void CUTE_CALL font_submit_draw_call(app_t* app, const font_t* font, matrix_t mvp, color_t color = color_black());
 
 extern CUTE_API int CUTE_CALL font_text_width(const font_t* font, const char* text);
 extern CUTE_API int CUTE_CALL font_text_height(const font_t* font, const char* text);

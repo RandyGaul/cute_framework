@@ -112,10 +112,10 @@ enum sprite_shader_type_t
 };
 
 extern CUTE_API void CUTE_CALL sprite_batch_set_shader_type(spritebatch_t* sb, sprite_shader_type_t type);
-extern CUTE_API void CUTE_CALL sprite_batch_set_mvp(spritebatch_t* sb, gfx_matrix_t mvp);
-extern CUTE_API void CUTE_CALL sprite_batch_set_scissor_box(spritebatch_t* sb, aabb_t scissor);
+extern CUTE_API void CUTE_CALL sprite_batch_set_mvp(spritebatch_t* sb, matrix_t mvp);
+extern CUTE_API void CUTE_CALL sprite_batch_set_scissor_box(spritebatch_t* sb, int x, int y, int w, int h);
 extern CUTE_API void CUTE_CALL sprite_batch_no_scissor_box(spritebatch_t* sb);
-extern CUTE_API void CUTE_CALL sprite_batch_outlines_use_border(spritebatch_t* sb, int use_border);
+extern CUTE_API void CUTE_CALL sprite_batch_outlines_use_border(spritebatch_t* sb, bool use_border);
 
 /**
  * This is the recommended way to setup the sprite batch. The sprite batch periodically reads images from disk as-needed.

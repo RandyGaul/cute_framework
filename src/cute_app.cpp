@@ -166,6 +166,10 @@ void app_destroy(app_t* app)
 		ImGui::DestroyContext();
 		app->using_imgui = false;
 	}
+	if (app->gfx_enabled) {
+		sg_shutdown();
+		dx11_shutdown();
+	}
 	if (app->cute_sound) cs_shutdown_context(app->cute_sound);
 	SDL_DestroyWindow(app->window);
 	SDL_Quit();
@@ -199,24 +203,29 @@ void app_update(app_t* app, float dt)
 		ImGui_ImplSDL2_NewFrame(app->window);
 		ImGui::NewFrame();
 	}
+
+	sg_pass_action pass_action = { 0 };
+	pass_action.colors[0] = { SG_ACTION_CLEAR, { 1.0f, 0.0f, 0.0f, 1.0f } };
+	sg_begin_default_pass(&pass_action, app->render_w, app->render_h);
 }
 
 void app_present(app_t* app)
 {
-	sg_pass_action pass_action = { 0 };
-	pass_action.colors[0] = { SG_ACTION_CLEAR, { 1.0f, 0.0f, 0.0f, 1.0f } };
-
 	if (app->using_imgui) {
 		ImGui::EndFrame();
-
-		sg_begin_default_pass(&pass_action, app->w, app->h);
 		ImGui::Render();
 		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
-		sg_end_pass();
-		sg_commit();
 	}
 
+	sg_end_pass();
+	sg_commit();
 	dx11_present();
+}
+
+void app_render_size(app_t* app, int* w, int* h)
+{
+	*w = app->render_w;
+	*h = app->render_h;
 }
 
 // TODO - Move these init functions into audio/net headers.
@@ -252,7 +261,7 @@ ImGuiContext* app_init_imgui(app_t* app)
 	ImGui_ImplSDL2_InitForD3D(app->window);
 	ImGui_ImplDX11_Init((ID3D11Device*)app->gfx_ctx_params.d3d11.device, (ID3D11DeviceContext*)app->gfx_ctx_params.d3d11.device_context);
 
-	// TODO - OpenGL/ES.
+	// TODO - OpenGL/ES/Metal.
 
 	return ::ImGui::GetCurrentContext();
 }

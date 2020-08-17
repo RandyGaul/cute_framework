@@ -265,3 +265,4 @@ Cute has a few internal dependencies, built straight from source as apart of Cut
 * [PhysicsFS](https://icculus.org/physfs/), used for [virtual file system](https://www.randygaul.net/2019/03/20/virtual-file-systems-in-games/).
 * [STB Vorbis](https://github.com/nothings/stb/blob/master/stb_vorbis.c), for parsing OGG files.
 * [Cute Headers](https://github.com/RandyGaul/cute_headers), used to implement all kinds of things. These headers were implemented by the author of the Cute Framework, and are used to implement the majority of the features in the Cute Framework. These headers are built by embedding the source directly, via single-file header format.
+* [sokol_gfx.h](https://github.com/floooh/sokol), used to implement all rendering and abstract away low level platform-specific hardware acceleration APIs.

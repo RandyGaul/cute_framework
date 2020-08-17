@@ -27,6 +27,8 @@
 #define D3D11_NO_HELPERS
 #include <sokol/sokol_gfx.h>
 
+#include <cute/cute_png.h>
+
 namespace cute
 {
 
@@ -39,6 +41,7 @@ texture_t texture_make(pixel_t* pixels, int w, int h, sg_wrap mode)
 	params.wrap_v = mode;
 	params.content.subimage[0][0].ptr = pixels;
 	params.content.subimage[0][0].size = w * h * sizeof(pixel_t);
+	params.num_mipmaps = 0;
 	sg_image img = sg_make_image(params);
 	return (texture_t)img.id;
 }
@@ -50,9 +53,9 @@ void texture_destroy(texture_t texture)
 	sg_destroy_image(img);
 }
 
-gfx_matrix_t matrix_identity()
+matrix_t matrix_identity()
 {
-	gfx_matrix_t m;
+	matrix_t m;
 	CUTE_MEMSET(&m, 0, sizeof(m));
 	m.data[0] = 1.0f;
 	m.data[5] = 1.0f;
@@ -61,14 +64,14 @@ gfx_matrix_t matrix_identity()
 	return m;
 }
 
-gfx_matrix_t matrix_ortho_2d(float w, float h, float x, float y)
+matrix_t matrix_ortho_2d(float w, float h, float x, float y)
 {
 	float L = -w / 2.0f;
 	float R = w / 2.0f;
 	float T = h / 2.0f;
 	float B = -h / 2.0f;
 
-	gfx_matrix_t projection;
+	matrix_t projection;
 	CUTE_MEMSET(&projection, 0, sizeof(projection));
 
 	// ortho
@@ -88,9 +91,7 @@ triple_buffer_t triple_buffer_make(int vertex_data_size, int vertex_stride, int 
 {
 	triple_buffer_t buf;
 	buf.vbuf.stride = vertex_stride;
-	buf.vbuf.element_capacity = vertex_data_size / vertex_stride;
-	buf.ibuf.stride = buf.vbuf.element_capacity < UINT16_MAX ? sizeof(uint16_t) : sizeof(uint32_t);
-	buf.ibuf.element_capacity = index_count;
+	buf.ibuf.stride = (vertex_data_size / vertex_stride) < UINT16_MAX ? sizeof(uint16_t) : sizeof(uint32_t);
 
 	sg_buffer_desc vparams = { 0 };
 	vparams.type = SG_BUFFERTYPE_VERTEXBUFFER;
@@ -102,34 +103,30 @@ triple_buffer_t triple_buffer_make(int vertex_data_size, int vertex_stride, int 
 	iparams.usage = SG_USAGE_STREAM;
 	iparams.size = index_count * buf.ibuf.stride;
 
-	for (int i = 0; i < 3; ++i) {
+	sg_buffer invalid = { SG_INVALID_ID };
+	for (int i = 0; i < 1; ++i) {
 		buf.vbuf.buffer[i] = sg_make_buffer(vparams);
-		buf.ibuf.buffer[i] = sg_make_buffer(iparams);
+		buf.ibuf.buffer[i] = index_count ? sg_make_buffer(iparams) : invalid;
 	}
 
 	return buf;
 }
 
-void static s_advance(triple_buffer_t::buffer_t* buffer, int element_count)
-{
-	if (buffer->element_count + element_count > buffer->element_capacity) {
-			++buffer->buffer_number;
-			buffer->buffer_number %= 3;
-			buffer->element_count = 0;
-	}
-}
-
 void triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count, const void* indices)
 {
-	s_advance(&buffer->vbuf, vertex_count);
-	int voffset = sg_append_buffer(buffer->vbuf.buffer[buffer->vbuf.buffer_number], vertices, vertex_count * buffer->vbuf.stride);
-	buffer->vbuf.element_count += vertex_count;
-	CUTE_ASSERT(voffset == buffer->vbuf.element_count * buffer->vbuf.stride);
+	int voffset = sg_append_buffer(buffer->get_vbuf(), vertices, vertex_count * buffer->vbuf.stride);
+	buffer->vbuf.offset = voffset;
+	bool overflowed = sg_query_buffer_overflow(buffer->get_vbuf());
+	CUTE_ASSERT(!overflowed);
+	//printf("%s\n", overflowed ? "overflow" : "no overflow");
+	//CUTE_ASSERT(voffset == buffer->vbuf.element_count * buffer->vbuf.stride);
 
-	s_advance(&buffer->ibuf, index_count);
-	int ioffset = sg_append_buffer(buffer->ibuf.buffer[buffer->ibuf.buffer_number], indices, index_count * buffer->ibuf.stride);
-	buffer->ibuf.element_count += vertex_count;
-	CUTE_ASSERT(ioffset == buffer->ibuf.element_count * buffer->ibuf.stride);
+	if (index_count) {
+		(&buffer->ibuf, index_count);
+		int ioffset = sg_append_buffer(buffer->get_ibuf(), indices, index_count * buffer->ibuf.stride);
+		buffer->ibuf.offset = ioffset;
+		//CUTE_ASSERT(ioffset == buffer->ibuf.element_count * buffer->ibuf.stride);
+	}
 }
 
 }

@@ -44,6 +44,13 @@ struct sprite_vertex_t
 	v2 uv;
 };
 
+struct vs_uniforms_t
+{
+	matrix_t mvp;
+	v2 texel_size;
+	float use_border;
+};
+
 enum sprite_batch_mode_t
 {
 	SPRITE_BATCH_MODE_UNINITIALIZED,
@@ -67,20 +74,21 @@ struct spritebatch_t
 	app_t* app;
 	sprite_batch_mode_t mode = SPRITE_BATCH_MODE_UNINITIALIZED;
 	float w = 0, h = 0;
-
+	
 	array<sprite_vertex_t> verts;
-#if 0
-	gfx_vertex_buffer_t* sprite_buffer = NULL;
-	gfx_shader_t* default_shader = 0;
-	gfx_shader_t* outline_shader = 0;
-	gfx_shader_t* tint_shader = 0;
-	gfx_shader_t* active_shader = 0;
-#endif
+	array<sprite_vertex_t> verts2;
+	triple_buffer_t sprite_buffer;
+	sg_shader default_shader = { 0 };
+	sg_shader outline_shader = { 0 };
+	sg_shader tint_shader = { 0 };
+	sg_shader active_shader = { 0 };
 	sprite_shader_type_t shader_type = SPRITE_SHADER_TYPE_DEFAULT;
-	aabb_t scissor;
-	int use_scissor = 0;
+	sg_pipeline pip = { 0 };
+	bool scissor_enabled = false;
+	int scissor_x, scissor_y;
+	int scissor_w, scissor_h;
 	float outline_use_border = 0;
-	gfx_matrix_t mvp;
+	matrix_t mvp;
 
 	const char** image_paths = NULL;
 	int image_paths_count = 0;
@@ -97,24 +105,73 @@ struct spritebatch_t
 //--------------------------------------------------------------------------------------------------
 // Internal functions.
 
-#if 0
-static gfx_scissor_t s_scissor_from_aabb(aabb_t aabb, float w, float h)
+static sg_shader s_load_shader(spritebatch_t* sb, sprite_shader_type_t type)
 {
-	gfx_scissor_t scissor;
-	scissor.left = (int)aabb.min.x;
-	scissor.right = (int)aabb.max.x;
-	scissor.top = (int)aabb.max.y;
-	scissor.bottom = (int)aabb.min.y;
+	sg_shader_desc params = { 0 };
 
-	// Transform to screen space (origin top left, downward y).
-	scissor.left = (int)(scissor.left + w / 2);
-	scissor.right = (int)(scissor.right + w / 2);
-	scissor.top = (int)(-scissor.top + h / 2);
-	scissor.bottom = (int)(-scissor.bottom + h / 2);
+	// Default sprite shader.
+	switch (type) {
+	case SPRITE_SHADER_TYPE_DEFAULT:
+		params.attrs[0].name = "pos";
+		params.attrs[0].sem_name = "POSITION";
+		params.attrs[0].sem_index = 0;
+		params.attrs[1].name = "uv";
+		params.attrs[1].sem_name = "TEXCOORD";
+		params.attrs[1].sem_index = 0;
+		params.vs.uniform_blocks[0].size = sizeof(vs_uniforms_t::mvp);
+		params.vs.uniform_blocks[0].uniforms[0].name = "u_mvp";
+		params.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_MAT4;
+		params.fs.images[0].name = "u_image";
+		params.fs.images[0].type = SG_IMAGETYPE_2D;
+		params.vs.source = CUTE_STRINGIZE(
+			cbuffer params : register(b0)
+			{
+				float4x4 u_mvp;
+			};
 
-	return scissor;
+			struct vs_in
+			{
+				float2 pos : POSITION;
+				float2 uv  : TEXCOORD0;
+			};
+
+			struct vs_out
+			{
+				float4 posH : SV_Position;
+				float2 uv   : TEXCOORD0;
+			};
+
+			vs_out main(vs_in vtx)
+			{
+				float4 posH = mul(float4(round(vtx.pos), 0, 1), u_mvp);
+
+				vs_out interp;
+				interp.posH = posH;
+				interp.uv = vtx.uv;
+				return interp;
+			}
+		);
+		params.fs.source = CUTE_STRINGIZE(
+			Texture2D<float4> u_image: register(t0);
+			sampler smp: register(s0);
+
+			float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target0
+			{
+				float4 color = u_image.Sample(smp, uv);
+				return color;
+			}
+		);
+		break;
+
+	default:
+		return { SG_INVALID_ID };
+	}
+
+	sg_shader shader = sg_make_shader(params);
+	return shader;
 }
 
+#if 0
 static gfx_shader_t* s_load_shader(spritebatch_t* sb, sprite_shader_type_t type)
 {
 	const char* default_vs = CUTE_STRINGIZE(
@@ -331,18 +388,31 @@ spritebatch_t* sprite_batch_make(app_t* app)
 	sb->app = app;
 	sb->mem_ctx = app->mem_ctx;
 
-#if 0
-	gfx_vertex_buffer_params_t params;
-	params.type = GFX_VERTEX_BUFFER_TYPE_DYNAMIC;
-	params.stride = sizeof(sprite_vertex_t);
-	gfx_vertex_buffer_params_add_attribute(&params, 2, CUTE_OFFSET_OF(sprite_vertex_t, pos));
-	gfx_vertex_buffer_params_add_attribute(&params, 2, CUTE_OFFSET_OF(sprite_vertex_t, uv));
-	params.vertex_count = 1024 * 10;
-	sb->sprite_buffer = gfx_vertex_buffer_new(app, &params);
-	sb->active_shader = sb->default_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_DEFAULT);
+	sg_pipeline_desc pip_params = { 0 };
+	pip_params.layout.buffers[0].stride = sizeof(sprite_vertex_t);
+	pip_params.layout.buffers[0].step_func = SG_VERTEXSTEP_PER_VERTEX;
+	pip_params.layout.buffers[0].step_rate = 1;
+	pip_params.layout.attrs[0].buffer_index = 0;
+	pip_params.layout.attrs[0].offset = CUTE_OFFSET_OF(sprite_vertex_t, pos);
+	pip_params.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
+	pip_params.layout.attrs[1].buffer_index = 0;
+	pip_params.layout.attrs[1].offset = CUTE_OFFSET_OF(sprite_vertex_t, uv);
+	pip_params.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
+	pip_params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
+	pip_params.shader = sb->default_shader = sb->active_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_DEFAULT);
+	pip_params.blend.enabled = true;
+	pip_params.blend.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
+	pip_params.blend.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	pip_params.blend.op_rgb = SG_BLENDOP_ADD;
+	pip_params.blend.src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
+	pip_params.blend.dst_factor_alpha = SG_BLENDFACTOR_ONE;
+	pip_params.blend.op_alpha = SG_BLENDOP_ADD;
+	sb->pip = sg_make_pipeline(pip_params);
+
 	sb->outline_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_OUTLINE);
 	sb->tint_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_TINT);
-#endif
+
+	sb->sprite_buffer = triple_buffer_make(sizeof(sprite_vertex_t) * 1024 * 10, sizeof(sprite_vertex_t), 0);
 
 	return sb;
 }
@@ -367,8 +437,8 @@ spritebatch_t* sprite_batch_easy_make(app_t* app, const char* path)
 	spritebatch_t* sb = sprite_batch_make(app);
 
 	int w = 0, h = 0;
-	//gfx_render_size(app, &w, &h);
-	gfx_matrix_t mvp = matrix_ortho_2d((float)w, (float)h, 0, 0);
+	app_render_size(app, &w, &h);
+	matrix_t mvp = matrix_ortho_2d((float)w, (float)h, 0, 0);
 	sprite_batch_set_mvp(sb, mvp);
 
 	sb->easy_images = file_index_make();
@@ -415,6 +485,7 @@ void sprite_batch_push(spritebatch_t* sb, sprite_t sprite)
 
 error_t sprite_batch_flush(spritebatch_t* sb)
 {
+	sb->verts2.clear();
 	spritebatch_tick(&sb->sb);
 	if (!spritebatch_defrag(&sb->sb)) {
 		return error_failure("`spritebatch_defrag` failed.");
@@ -431,35 +502,6 @@ error_t sprite_batch_flush(spritebatch_t* sb)
 static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture_w, int texture_h, void* udata)
 {
 	spritebatch_t* sb = (spritebatch_t*)udata;
-
-#if 0
-	// Build draw call.
-	gfx_draw_call_t draw_call;
-	gfx_draw_call_add_texture(&draw_call, (gfx_texture_t*)sprites->texture_id, "u_image");
-	draw_call.buffer = sb->sprite_buffer;
-	draw_call.shader = sb->active_shader;
-
-	if (sb->use_scissor) {
-		gfx_scissor_t scissor = s_scissor_from_aabb(sb->scissor, sb->w, sb->h);
-		gfx_draw_call_set_scissor_box(&draw_call, &scissor);
-	}
-
-	// Set shader-specific uniforms.
-	switch (sb->shader_type)
-	{
-	case SPRITE_SHADER_TYPE_DEFAULT:
-		break;
-
-	case SPRITE_SHADER_TYPE_OUTLINE:
-	{
-		v2 texel_size = v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
-		gfx_draw_call_add_uniform(&draw_call, "u_texel_size", &texel_size, GFX_UNIFORM_TYPE_FLOAT2);
-		gfx_draw_call_add_uniform(&draw_call, "u_use_border", &sb->outline_use_border, GFX_UNIFORM_TYPE_FLOAT);
-	}	break;
-
-	case SPRITE_SHADER_TYPE_TINT:
-		break;
-	}
 
 	// Build vertex buffer of all quads for each sprite.
 	int vert_count = count * 6;
@@ -534,13 +576,56 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 		out_verts[5].uv.y = s->miny;
 	}
 
-	// Map verts onto GPU buffer.
-	gfx_draw_call_add_verts(sb->app, &draw_call, verts, vert_count);
+	int base = sb->verts2.count();
+	for (int i = 0; i < vert_count; ++i)
+	{
+		sb->verts2.add(sb->verts[i]);
+	}
 
-	// Push draw call onto the gfx stack.
-	gfx_draw_call_set_mvp(&draw_call, sb->mvp);
-	gfx_push_draw_call(sb->app, &draw_call);
-#endif
+	// Map the vertex buffer with sprite vertex data.
+	triple_buffer_append(&sb->sprite_buffer, vert_count, &sb->verts2[base], 0, NULL);
+
+	// Start the pipeline.
+	sg_apply_pipeline(sb->pip);
+
+	// Setup resource bindings.
+	sg_bindings bind = { 0 };
+	bind.vertex_buffers[0] = sb->sprite_buffer.get_vbuf();
+	bind.vertex_buffer_offsets[0] = sb->sprite_buffer.vbuf.offset;
+	bind.index_buffer = sb->sprite_buffer.get_ibuf();
+	bind.index_buffer_offset = sb->sprite_buffer.ibuf.offset;
+	bind.fs_images[0].id = (uint32_t)sprites->texture_id;
+	sg_apply_bindings(bind);
+
+	vs_uniforms_t uniforms = {
+		sb->mvp,
+		v2(1.0f / (float)texture_w, 1.0f / (float)texture_h),
+		sb->outline_use_border
+	};
+
+	// Set shader-specific uniforms.
+	switch (sb->shader_type)
+	{
+	case SPRITE_SHADER_TYPE_DEFAULT:
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &uniforms.mvp, sizeof(uniforms.mvp));
+		break;
+
+	case SPRITE_SHADER_TYPE_OUTLINE:
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &uniforms, sizeof(uniforms));
+		break;
+
+	case SPRITE_SHADER_TYPE_TINT:
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &uniforms.mvp, sizeof(uniforms.mvp));
+		break;
+	}
+
+	if (sb->scissor_enabled) {
+		sg_apply_scissor_rect(sb->scissor_x, sb->scissor_y, sb->scissor_w, sb->scissor_h, false);
+	}
+
+	// Kick off a draw call.
+	int element_count = vert_count / 3;
+	sg_draw(0, element_count, 1);
 }
 
 static void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
@@ -574,51 +659,52 @@ void sprite_batch_set_shader_type(spritebatch_t* sb, sprite_shader_type_t type)
 {
 	sb->shader_type = type;
 
-#if 0
 	// Load the shader, if needed, and set the active sprite system shader.
 	switch (type)
 	{
 	case SPRITE_SHADER_TYPE_DEFAULT:
-		if (!sb->default_shader) {
+		if (sb->default_shader.id == SG_INVALID_ID) {
 			sb->default_shader = s_load_shader(sb, type);
 		}
 		sb->active_shader = sb->default_shader;
 		break;
 
 	case SPRITE_SHADER_TYPE_OUTLINE:
-		if (!sb->outline_shader) {
+		if (sb->outline_shader.id == SG_INVALID_ID) {
 			sb->outline_shader = s_load_shader(sb, type);
 		}
 		sb->active_shader = sb->outline_shader;
 		break;
 
 	case SPRITE_SHADER_TYPE_TINT:
-		if (!sb->tint_shader) {
+		if (sb->tint_shader.id == SG_INVALID_ID) {
 			sb->tint_shader = s_load_shader(sb, type);
 		}
 		sb->active_shader = sb->tint_shader;
 		break;
 	}
-#endif
 }
 
-void sprite_batch_set_mvp(spritebatch_t* sb, gfx_matrix_t mvp)
+void sprite_batch_set_mvp(spritebatch_t* sb, matrix_t mvp)
 {
 	sb->mvp = mvp;
 }
 
-void sprite_batch_set_scissor_box(spritebatch_t* sb, aabb_t scissor)
+void sprite_batch_set_scissor_box(spritebatch_t* sb, int x, int y, int w, int h)
 {
-	sb->scissor = scissor;
-	sb->use_scissor = 1;
+	sb->scissor_enabled = true;
+	sb->scissor_x = x;
+	sb->scissor_y = y;
+	sb->scissor_w = w;
+	sb->scissor_h = h;
 }
 
 void sprite_batch_no_scissor_box(spritebatch_t* sb)
 {
-	sb->use_scissor = 0;
+	sb->scissor_enabled = false;
 }
 
-void sprite_batch_outlines_use_border(spritebatch_t* sb, int use_border)
+void sprite_batch_outlines_use_border(spritebatch_t* sb, bool use_border)
 {
 	sb->outline_use_border = use_border ? 1.0f : 0;
 }

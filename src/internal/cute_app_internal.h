@@ -22,7 +22,7 @@
 #ifndef CUTE_APP_INTERNAL_H
 #define CUTE_APP_INTERNAL_H
 
-#include <cute_buffer.h>
+#include <cute_app.h>
 #include <cute_audio.h>
 #include <cute_array.h>
 #include <cute_ecs.h>

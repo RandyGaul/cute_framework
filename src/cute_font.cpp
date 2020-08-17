@@ -130,7 +130,7 @@ void font_push_verts(app_t* app, const font_t* font, const char* text, float x, 
 	font_verts.set_count(font_verts.count() + vert_count);
 }
 
-void font_submit_draw_call(app_t* app, const font_t* font, gfx_matrix_t mvp, color_t color)
+void font_submit_draw_call(app_t* app, const font_t* font, matrix_t mvp, color_t color)
 {
 #if 0
 	gfx_draw_call_t call;
