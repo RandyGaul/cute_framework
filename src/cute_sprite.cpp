@@ -74,9 +74,8 @@ struct spritebatch_t
 	app_t* app;
 	sprite_batch_mode_t mode = SPRITE_BATCH_MODE_UNINITIALIZED;
 	float w = 0, h = 0;
-	
+
 	array<sprite_vertex_t> verts;
-	array<sprite_vertex_t> verts2;
 	triple_buffer_t sprite_buffer;
 	sg_shader default_shader = { 0 };
 	sg_shader outline_shader = { 0 };
@@ -485,7 +484,14 @@ void sprite_batch_push(spritebatch_t* sb, sprite_t sprite)
 
 error_t sprite_batch_flush(spritebatch_t* sb)
 {
-	sb->verts2.clear();
+	// Start the pipeline.
+	sg_apply_pipeline(sb->pip);
+
+	if (sb->scissor_enabled) {
+		sg_apply_scissor_rect(sb->scissor_x, sb->scissor_y, sb->scissor_w, sb->scissor_h, false);
+	}
+
+	// Construct batches.
 	spritebatch_tick(&sb->sb);
 	if (!spritebatch_defrag(&sb->sb)) {
 		return error_failure("`spritebatch_defrag` failed.");
@@ -493,6 +499,10 @@ error_t sprite_batch_flush(spritebatch_t* sb)
 	if (!spritebatch_flush(&sb->sb)) {
 		return error_failure("`spritebatch_flush` failed.");
 	}
+
+	// Increment which vertex buffer to use -- triple buffering.
+	sb->sprite_buffer.advance();
+
 	return error_success();
 }
 
@@ -576,17 +586,8 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 		out_verts[5].uv.y = s->miny;
 	}
 
-	int base = sb->verts2.count();
-	for (int i = 0; i < vert_count; ++i)
-	{
-		sb->verts2.add(sb->verts[i]);
-	}
-
 	// Map the vertex buffer with sprite vertex data.
-	triple_buffer_append(&sb->sprite_buffer, vert_count, &sb->verts2[base], 0, NULL);
-
-	// Start the pipeline.
-	sg_apply_pipeline(sb->pip);
+	triple_buffer_append(&sb->sprite_buffer, vert_count, verts, 0, NULL);
 
 	// Setup resource bindings.
 	sg_bindings bind = { 0 };
@@ -619,13 +620,8 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 		break;
 	}
 
-	if (sb->scissor_enabled) {
-		sg_apply_scissor_rect(sb->scissor_x, sb->scissor_y, sb->scissor_w, sb->scissor_h, false);
-	}
-
 	// Kick off a draw call.
-	int element_count = vert_count / 3;
-	sg_draw(0, element_count, 1);
+	sg_draw(0, vert_count, 1);
 }
 
 static void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
@@ -755,7 +751,6 @@ error_t sprite_batch_LRU_cache_prefetch(spritebatch_t* sb, uint64_t id)
 	if (err.is_error()) return err;
 
 	cp_image_t img = cp_load_png_mem(data, (int)sz);
-	cp_flip_image_horizontal(&img);
 
 	if (sz > sb->cache_capacity) {
 		CUTE_FREE(img.pix, NULL);

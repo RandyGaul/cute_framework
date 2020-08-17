@@ -104,7 +104,7 @@ triple_buffer_t triple_buffer_make(int vertex_data_size, int vertex_stride, int 
 	iparams.size = index_count * buf.ibuf.stride;
 
 	sg_buffer invalid = { SG_INVALID_ID };
-	for (int i = 0; i < 1; ++i) {
+	for (int i = 0; i < 3; ++i) {
 		buf.vbuf.buffer[i] = sg_make_buffer(vparams);
 		buf.ibuf.buffer[i] = index_count ? sg_make_buffer(iparams) : invalid;
 	}
@@ -112,21 +112,22 @@ triple_buffer_t triple_buffer_make(int vertex_data_size, int vertex_stride, int 
 	return buf;
 }
 
-void triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count, const void* indices)
+error_t triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count, const void* indices)
 {
+	bool overflowed = false;
+
 	int voffset = sg_append_buffer(buffer->get_vbuf(), vertices, vertex_count * buffer->vbuf.stride);
 	buffer->vbuf.offset = voffset;
-	bool overflowed = sg_query_buffer_overflow(buffer->get_vbuf());
-	CUTE_ASSERT(!overflowed);
-	//printf("%s\n", overflowed ? "overflow" : "no overflow");
-	//CUTE_ASSERT(voffset == buffer->vbuf.element_count * buffer->vbuf.stride);
+	overflowed |= sg_query_buffer_overflow(buffer->get_vbuf());
 
 	if (index_count) {
-		(&buffer->ibuf, index_count);
 		int ioffset = sg_append_buffer(buffer->get_ibuf(), indices, index_count * buffer->ibuf.stride);
 		buffer->ibuf.offset = ioffset;
-		//CUTE_ASSERT(ioffset == buffer->ibuf.element_count * buffer->ibuf.stride);
+		overflowed |= sg_query_buffer_overflow(buffer->get_ibuf());
 	}
+
+	if (overflowed) return error_failure("Overflowed one of the internal buffers -- sokol_gfx will silently drop he associated draw calls.");
+	return error_success();
 }
 
 }

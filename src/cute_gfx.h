@@ -20,6 +20,7 @@
 */
 
 #include <cute_defines.h>
+#include <cute_error.h>
 #include <sokol/sokol_gfx.h>
 
 #ifndef CUTE_GFX_H
@@ -75,7 +76,7 @@ struct triple_buffer_t
 };
 
 CUTE_API triple_buffer_t CUTE_CALL triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count);
-CUTE_API void CUTE_CALL triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count, const void* indices);
+CUTE_API error_t CUTE_CALL triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count, const void* indices);
 
 }
 
