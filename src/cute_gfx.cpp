@@ -87,11 +87,11 @@ matrix_t matrix_ortho_2d(float w, float h, float x, float y)
 	return projection;
 }
 
-triple_buffer_t triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count)
+triple_buffer_t triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count, int index_stride)
 {
 	triple_buffer_t buf;
 	buf.vbuf.stride = vertex_stride;
-	buf.ibuf.stride = (vertex_data_size / vertex_stride) < UINT16_MAX ? sizeof(uint16_t) : sizeof(uint32_t);
+	buf.ibuf.stride = index_stride;
 
 	sg_buffer_desc vparams = { 0 };
 	vparams.type = SG_BUFFERTYPE_VERTEXBUFFER;

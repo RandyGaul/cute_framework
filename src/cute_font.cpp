@@ -305,7 +305,7 @@ void font_init(app_t* app)
 	pip_params.blend.op_alpha = SG_BLENDOP_ADD;
 	app->font_pip = sg_make_pipeline(pip_params);
 
-	app->font_buffer = triple_buffer_make(sizeof(font_vertex_t) * 1024 * 2, sizeof(font_vertex_t), 0);
+	app->font_buffer = triple_buffer_make(sizeof(font_vertex_t) * 1024 * 2, sizeof(font_vertex_t));
 
 	app->font_fs_uniforms.u_border_color = color_white();
 	app->font_fs_uniforms.use_border = 0;

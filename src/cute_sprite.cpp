@@ -417,7 +417,7 @@ spritebatch_t* sprite_batch_make(app_t* app)
 	sb->outline_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_OUTLINE);
 	sb->tint_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_TINT);
 
-	sb->sprite_buffer = triple_buffer_make(sizeof(sprite_vertex_t) * 1024 * 10, sizeof(sprite_vertex_t), 0);
+	sb->sprite_buffer = triple_buffer_make(sizeof(sprite_vertex_t) * 1024 * 10, sizeof(sprite_vertex_t));
 
 	return sb;
 }
