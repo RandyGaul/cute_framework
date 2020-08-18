@@ -40,10 +40,10 @@ struct sprite_t
 	/**
 	 * Unique identifier for this sprite's image.
 	 * 
-	 * If using LRU cache (see `sprite_batch_enable_disk_LRU_cache`) then this id lines up with the index
+	 * If using LRU cache (see `spritebatch_enable_disk_LRU_cache`) then this id lines up with the index
 	 * of `image_paths`.
 	 * 
-	 * If using a custom pixel loader (see `sprite_batch_enable_custom_pixel_loader`) then which sprite
+	 * If using a custom pixel loader (see `spritebatch_enable_custom_pixel_loader`) then which sprite
 	 * this id maps to is completely up to you.
 	 */
 	uint64_t id;
@@ -53,6 +53,7 @@ struct sprite_t
 	int h; // Height in pixels of the source image.
 	float scale_x; // Scaling along the sprite's local x-axis in pixels.
 	float scale_y; // Scaling along the sprite's local y-axis in pixels.
+	float alpha = 1.0f; // Applies additional alpha to this sprite.
 
 	int sort_bits = 0;
 };
@@ -70,39 +71,39 @@ struct sprite_t
  */
 struct spritebatch_t;
 
-extern CUTE_API spritebatch_t* CUTE_CALL sprite_batch_make(app_t* app);
-extern CUTE_API void CUTE_CALL sprite_batch_destroy(spritebatch_t* sb);
+extern CUTE_API spritebatch_t* CUTE_CALL spritebatch_make(app_t* app);
+extern CUTE_API void CUTE_CALL spritebatch_destroy(spritebatch_t* sb);
 
 /**
  * The easiest way to setup a spritebatch. Simply point to a `path` and all the png files within
  * this path will be recursively searched for and found. Each png will map to one sprite, and can
- * be found with the `sprite_batch_easy_sprite` function.
+ * be found with the `spritebatch_easy_sprite` function.
  *
  * This function is mostly just to get you started. You will may soon graduate to using 
- * `sprite_batch_enable_disk_LRU_cache` instead, by building your own list of image paths yourself.
+ * `spritebatch_enable_disk_LRU_cache` instead, by building your own list of image paths yourself.
  */
-extern CUTE_API spritebatch_t* CUTE_CALL sprite_batch_easy_make(app_t* app, const char* path);
+extern CUTE_API spritebatch_t* CUTE_CALL spritebatch_easy_make(app_t* app, const char* path);
 
 /**
  * Fills out a `sprite_t` struct for given .png path. This function can only be used if
- * `sprite_batch_easy_make` is called to setup the spritebatch.
+ * `spritebatch_easy_make` is called to setup the spritebatch.
  */
-extern CUTE_API error_t CUTE_CALL sprite_batch_easy_sprite(spritebatch_t* sb, const char* path, sprite_t* sprite);
+extern CUTE_API error_t CUTE_CALL spritebatch_easy_sprite(spritebatch_t* sb, const char* path, sprite_t* sprite);
 
 /**
  * Pushes `sprite` onto an internal buffer. Does no other logic.
  * 
- * To get your sprite rendered, see `sprite_batch_flush`.
+ * To get your sprite rendered, see `spritebatch_flush`.
  */
-extern CUTE_API void CUTE_CALL sprite_batch_push(spritebatch_t* sb, sprite_t sprite);
+extern CUTE_API void CUTE_CALL spritebatch_push(spritebatch_t* sb, sprite_t sprite);
 
 /**
- * All sprites currently pushed onto the sprite batch (see `sprite_batch_push`) will be converted to an internal
+ * All sprites currently pushed onto the sprite batch (see `spritebatch_push`) will be converted to an internal
  * `gfx_draw_call_t`, and the draw call will be pushed onto the `gfx` draw call buffer.
  * 
- * To then get your sprites drawn, simply call `gfx_flush` on the `gfx` instance originally used for `sprite_batch_make`.
+ * To then get your sprites drawn, simply call `gfx_flush` on the `gfx` instance originally used for `spritebatch_make`.
  */
-extern CUTE_API error_t CUTE_CALL sprite_batch_flush(spritebatch_t* sb);
+extern CUTE_API error_t CUTE_CALL spritebatch_flush(spritebatch_t* sb);
 
 enum sprite_shader_type_t
 {
@@ -111,11 +112,15 @@ enum sprite_shader_type_t
 	SPRITE_SHADER_TYPE_TINT
 };
 
-extern CUTE_API void CUTE_CALL sprite_batch_set_shader_type(spritebatch_t* sb, sprite_shader_type_t type);
-extern CUTE_API void CUTE_CALL sprite_batch_set_mvp(spritebatch_t* sb, matrix_t mvp);
-extern CUTE_API void CUTE_CALL sprite_batch_set_scissor_box(spritebatch_t* sb, int x, int y, int w, int h);
-extern CUTE_API void CUTE_CALL sprite_batch_no_scissor_box(spritebatch_t* sb);
-extern CUTE_API void CUTE_CALL sprite_batch_outlines_use_border(spritebatch_t* sb, bool use_border);
+extern CUTE_API void CUTE_CALL spritebatch_set_shader_type(spritebatch_t* sb, sprite_shader_type_t type);
+extern CUTE_API void CUTE_CALL spritebatch_set_mvp(spritebatch_t* sb, matrix_t mvp);
+extern CUTE_API void CUTE_CALL spritebatch_set_scissor_box(spritebatch_t* sb, int x, int y, int w, int h);
+extern CUTE_API void CUTE_CALL spritebatch_no_scissor_box(spritebatch_t* sb);
+extern CUTE_API void CUTE_CALL spritebatch_outlines_use_border(spritebatch_t* sb, bool use_border);
+extern CUTE_API void CUTE_CALL spritebatch_set_depth_stencil_state(spritebatch_t* sb, const sg_depth_stencil_state& depth_stencil_state);
+extern CUTE_API void CUTE_CALL spritebatch_set_depth_stencil_defaults(spritebatch_t* sb);
+extern CUTE_API void CUTE_CALL spritebatch_set_blend_state(spritebatch_t* sb, const sg_blend_state& blend_state);
+extern CUTE_API void CUTE_CALL spritebatch_set_blend_defaults(spritebatch_t* sb);
 
 /**
  * This is the recommended way to setup the sprite batch. The sprite batch periodically reads images from disk as-needed.
@@ -132,35 +137,35 @@ extern CUTE_API void CUTE_CALL sprite_batch_outlines_use_border(spritebatch_t* s
  * the cache, and whenever there isn't enough space the least recently used pixels will be evicted, and that memory
  * will be re-used for the next image that needs to be loaded into RAM.
  * 
- * An LRU cache like this is not the only way to handle loading pixels onto the GPU -- see `sprite_batch_enable_custom_pixel_loader`
+ * An LRU cache like this is not the only way to handle loading pixels onto the GPU -- see `spritebatch_enable_custom_pixel_loader`
  * if you want full control over how pixels are dealt with.
  */
-extern CUTE_API error_t CUTE_CALL sprite_batch_enable_disk_LRU_cache(spritebatch_t* sb, const char** image_paths, int image_paths_count, size_t cache_size_in_bytes);
+extern CUTE_API error_t CUTE_CALL spritebatch_enable_disk_LRU_cache(spritebatch_t* sb, const char** image_paths, int image_paths_count, size_t cache_size_in_bytes);
 
 /**
  * This function is for advanced users. The idea is to allow optimizations to have more control over when the disk is accessed.
  * 
  * This function will load the image associated with `id` (the index into `image_paths` used when you called
- * `sprite_batch_enable_disk_LRU_cache`) into the LRU cache. The least recently used images will be evicted to make room.
+ * `spritebatch_enable_disk_LRU_cache`) into the LRU cache. The least recently used images will be evicted to make room.
  */
-extern CUTE_API error_t CUTE_CALL sprite_batch_LRU_cache_prefetch(spritebatch_t* sb, uint64_t id);
+extern CUTE_API error_t CUTE_CALL spritebatch_LRU_cache_prefetch(spritebatch_t* sb, uint64_t id);
 
 /**
  * Unloads all images in the cache and frees up the RAM they used.
  */
-extern CUTE_API void CUTE_CALL sprite_batch_LRU_cache_clear(spritebatch_t* sb);
+extern CUTE_API void CUTE_CALL spritebatch_LRU_cache_clear(spritebatch_t* sb);
 
 /**
- * This is an advanced function. It is recommended to use `sprite_batch_enable_disk_LRU_cache`, unless you want to handle
- * memory in a custom way. `get_pixels_fn` will be called periodically from within `sprite_batch_flush` whenever access to
+ * This is an advanced function. It is recommended to use `spritebatch_enable_disk_LRU_cache`, unless you want to handle
+ * memory in a custom way. `get_pixels_fn` will be called periodically from within `spritebatch_flush` whenever access to
  * pixels in RAM are needed to construct internal texture atlases to be sent to the GPU.
  * 
  * `image_id`      - Uniquely maps to a single sprite, as specified by you.
  * `buffer`        - Pointer to the memory where you need to fill in pixel data.
  * `bytes_to_fill` - Number of bytes to write to `buffer`.
- * `udata`         - The `udata` pointer that was originally passed to `sprite_batch_enable_custom_pixel_loader`.
+ * `udata`         - The `udata` pointer that was originally passed to `spritebatch_enable_custom_pixel_loader`.
  */
-extern CUTE_API error_t CUTE_CALL sprite_batch_enable_custom_pixel_loader(spritebatch_t* sb, void (*get_pixels_fn)(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata), void* udata);
+extern CUTE_API error_t CUTE_CALL spritebatch_enable_custom_pixel_loader(spritebatch_t* sb, void (*get_pixels_fn)(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata), void* udata);
 
 }
 

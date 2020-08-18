@@ -52,8 +52,29 @@ struct Animation
 	sprite_t current_sprite() { return AddSprite(frames->operator[](frame)); }
 };
 
+array<sprite_t> ice_block_masks;
 Animation ice_block;
 Animation ice_block_sheen;
+
+sprite_t AddSprite(string_t path)
+{
+	sprite_t sprite;
+	error_t err = spritebatch_easy_sprite(sb, path.c_str(), &sprite);
+	if (err.is_error()) {
+		printf("Can't find file %s.\n", path.c_str());
+		CUTE_ASSERT(false);
+	}
+	return sprite;
+}
+
+void IceBlockMask(sprite_t ice_block_sprite)
+{
+	sprite_t mask = AddSprite("data/ice_block_mask.png");
+	uint64_t id = mask.id;
+	mask = ice_block_sprite;
+	mask.id = id;
+	ice_block_masks.add(mask);
+}
 
 struct Hero
 {
@@ -64,6 +85,7 @@ struct Hero
 	bool holding = false;
 	bool won = false;
     int moves = 0;
+	sprite_t reflection;
 
 	// ----------------------------
 	// For animating between tiles.
@@ -458,17 +480,6 @@ bool in_grid(int x, int y, int w, int h)
 	return x >= 0 && y >= 0 && x < w && y < h;
 }
 
-sprite_t AddSprite(string_t path)
-{
-	sprite_t sprite;
-	error_t err = sprite_batch_easy_sprite(sb, path.c_str(), &sprite);
-	if (err.is_error()) {
-		printf("Can't find file %s.\n", path.c_str());
-		CUTE_ASSERT(false);
-	}
-	return sprite;
-}
-
 void UpdateAnimation(Animation& anim, float dt)
 {
 	if (anim.t >= anim.delay)
@@ -557,12 +568,13 @@ void DrawAnimatingHeldBlocks()
 		v2 p_delta = round(lerp(p0, p, t)) + v2(0, hero.held_block.floating_offset);
 		sprite.transform.p = p_delta;
 		sprite.sort_bits = sort_bits(sprite);
-		sprite_batch_push(sb, sprite);
+		IceBlockMask(sprite);
+		spritebatch_push(sb, sprite);
 
 		sprite = ice_block_sheen.current_sprite();
 		sprite.transform.p = p_delta;
 		sprite.sort_bits = sort_bits(sprite);
-		sprite_batch_push(sb, sprite);
+		spritebatch_push(sb, sprite);
 	}
 }
 
@@ -583,14 +595,15 @@ void DrawLevel(const Level& level, float dt)
 				sprite = AddSprite("data/tile68.png");
 				sprite.transform.p = tile2world(sprite.h, j, i);
 				sprite.sort_bits = i * level.w + j;
-				sprite_batch_push(sb, sprite);
+				spritebatch_push(sb, sprite);
 				break;
 
 			case 'x':
 				sprite = ice_block.current_sprite();
 				sprite.transform.p = tile2world(sprite.h, j, i);
 				sprite.sort_bits = i * level.w + j;
-				sprite_batch_push(sb, sprite);
+				IceBlockMask(sprite);
+				spritebatch_push(sb, sprite);
 				break;
 
 			case 'c':
@@ -611,20 +624,21 @@ void DrawLevel(const Level& level, float dt)
 				sprite.transform.p = tile2world(sprite.h, j, i);
 				sprite.transform.p.y += hero.held_block.floating_offset;
 				sprite.sort_bits = i * level.w + j;
-				sprite_batch_push(sb, sprite);
+				spritebatch_push(sb, sprite);
 
 				sprite = ice_block_sheen.current_sprite();
 				sprite.transform.p = tile2world(sprite.h, j, i);
 				sprite.transform.p.y += hero.held_block.floating_offset;
 				sprite.sort_bits = i * level.w + j;
-				sprite_batch_push(sb, sprite);
+				IceBlockMask(sprite);
+				spritebatch_push(sb, sprite);
 			}	break;
 
 			case 'e':
 				sprite = AddSprite("data/ladder.png");
 				sprite.transform.p = tile2world(sprite.h, j, i);
 				sprite.sort_bits = i * level.w + j;
-				sprite_batch_push(sb, sprite);
+				spritebatch_push(sb, sprite);
 				break;
 
 			default:
@@ -636,7 +650,8 @@ void DrawLevel(const Level& level, float dt)
 				if (hero.xdir == 1 && hero.ydir == 0) sprite.scale_x *= -1;
 				sprite.transform.p = tile2world(sprite.h, j, i) + v2(0, 2);
 				sprite.sort_bits = i * level.w + j;
-				sprite_batch_push(sb, sprite);
+				hero.reflection = sprite;
+				spritebatch_push(sb, sprite);
 				break;
 			}
 		}
@@ -919,7 +934,8 @@ void UpdateGame(app_t* app, float dt)
 			sprite.transform.p = p_delta + v2(0, 2);
 			if (hero.xdir == 1 && hero.ydir == 0) sprite.scale_x *= -1;
 			sprite.sort_bits = sort_bits(sprite);
-			sprite_batch_push(sb, sprite);
+			hero.reflection = sprite;
+			spritebatch_push(sb, sprite);
 		} else {
 			// Hero finished animating from one tile to another.
 			hero.move_t = 0;
@@ -956,7 +972,8 @@ void UpdateGame(app_t* app, float dt)
 			sprite_t sprite = ice_block.current_sprite();
 			sprite.transform.p = tile2world(sprite.h, hero.x, hero.y) + v;
 			sprite.sort_bits = sort_bits(sprite);
-			sprite_batch_push(sb, sprite);
+			IceBlockMask(sprite);
+			spritebatch_push(sb, sprite);
 		} else {
 			hero.rotating_block.is_rotating = false;
 			level.data[hero.rotating_block.y][hero.rotating_block.x] = 'c';
@@ -982,7 +999,8 @@ void UpdateGame(app_t* app, float dt)
 			v2 p_delta = round(lerp(p0, p, t)) + v2(0, 2);
 			sprite.transform.p = p_delta;
 			sprite.sort_bits = sort_bits(sprite);
-			sprite_batch_push(sb, sprite);
+			IceBlockMask(sprite);
+			spritebatch_push(sb, sprite);
 		} else {
 			level.data[hero.sliding_block.y][hero.sliding_block.x] = hero.holding ? 'c' : 'x';
 			hero.sliding_block.is_sliding = false;
@@ -1004,7 +1022,8 @@ void UpdateGame(app_t* app, float dt)
 		sprite_t sprite = hero.anim.current_sprite();
 		sprite.transform.p = tile2world(sprite.h, hero.x, hero.y);
 		sprite.sort_bits = sort_bits(sprite);
-		sprite_batch_push(sb, sprite);
+		hero.reflection = sprite;
+		spritebatch_push(sb, sprite);
 		float delay = hero.anim.delay * hero.anim.frames->count();
 		COROUTINE_WAIT(co, delay, dt);
 		level_index = (level_index + 1) % levels.count();
@@ -1036,7 +1055,8 @@ void UpdateGame(app_t* app, float dt)
 			v2 p_delta = round(lerp(hero.spin_p0, hero.spin_p, t));
 			sprite.transform.p = p_delta + v2(0, 2);
 			sprite.sort_bits = 100000;
-			sprite_batch_push(sb, sprite);
+			hero.reflection = sprite;
+			spritebatch_push(sb, sprite);
 			COROUTINE_WAIT(co, hero.spin_delay, dt);
 		}
 
@@ -1154,6 +1174,55 @@ void DoImguiStuff(app_t* app, float dt)
 	}
 }
 
+void DrawGirlReflection()
+{
+	sg_depth_stencil_state stencil;
+	CUTE_MEMSET(&stencil, 0, sizeof(stencil));
+	stencil.stencil_front.fail_op = SG_STENCILOP_KEEP;
+	stencil.stencil_front.depth_fail_op = SG_STENCILOP_KEEP;
+	stencil.stencil_front.pass_op = SG_STENCILOP_REPLACE;
+	stencil.stencil_front.compare_func = SG_COMPAREFUNC_ALWAYS;
+	stencil.stencil_back = stencil.stencil_front;
+	stencil.stencil_enabled = true;
+	stencil.stencil_read_mask = 0xFF;
+	stencil.stencil_write_mask = 0xFF;
+	stencil.stencil_ref = 0x1;
+
+	sg_blend_state blend = { 0 };
+	blend.color_write_mask = SG_COLORMASK_NONE;
+
+	// Draw masks onto the stencil buffer.
+	spritebatch_set_depth_stencil_state(sb, stencil);
+	spritebatch_set_blend_state(sb, blend);
+	for (int i = 0; i < ice_block_masks.size(); ++i) {
+		spritebatch_push(sb, ice_block_masks[i]);
+	}
+	ice_block_masks.clear();
+	spritebatch_flush(sb);
+
+	// Cutout the player from the masks.
+	stencil.stencil_front.compare_func = SG_COMPAREFUNC_EQUAL;
+	stencil.stencil_front.pass_op = SG_STENCILOP_ZERO;
+	stencil.stencil_back = stencil.stencil_front;
+	spritebatch_set_depth_stencil_state(sb, stencil);
+	spritebatch_push(sb, hero.reflection);
+	spritebatch_flush(sb);
+
+	// Render girl over the masks.
+	stencil.stencil_front.compare_func = SG_COMPAREFUNC_EQUAL;
+	stencil.stencil_front.pass_op = SG_STENCILOP_KEEP;
+	stencil.stencil_back = stencil.stencil_front;
+	spritebatch_set_depth_stencil_state(sb, stencil);
+	spritebatch_set_blend_defaults(sb);
+
+	hero.reflection.transform.p += v2(0, 6);
+	hero.reflection.alpha = 0.35f;
+	spritebatch_push(sb, hero.reflection);
+	spritebatch_flush(sb);
+
+	spritebatch_set_depth_stencil_defaults(sb);
+}
+
 int main(int argc, const char** argv)
 {
 	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_D3D11_CONTEXT;
@@ -1162,7 +1231,7 @@ int main(int argc, const char** argv)
 	app_init_upscaling(app, UPSCALE_PIXEL_PERFECT_AT_LEAST_2X, 320, 240);
 	ImGui::SetCurrentContext(app_init_imgui(app));
 
-	sb = sprite_batch_easy_make(app, "data");
+	sb = spritebatch_easy_make(app, "data");
 
 	Animation idle;
 	idle.name = "idle";
@@ -1243,7 +1312,9 @@ int main(int argc, const char** argv)
 		UpdateAnimation(ice_block, dt);
 		UpdateAnimation(ice_block_sheen, dt);
 
-		sprite_batch_flush(sb);
+		spritebatch_flush(sb);
+
+		DrawGirlReflection();
 
 		char buffer[4];
 		itoa(hero.moves, buffer, 10);
