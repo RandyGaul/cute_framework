@@ -248,6 +248,9 @@ void app_present(app_t* app)
 
 	sg_commit();
 	dx11_present();
+
+	// Triple buffering on the font vertices.
+	app->font_buffer.advance();
 }
 
 // TODO - Move these init functions into audio/net headers.
