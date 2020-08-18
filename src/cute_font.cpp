@@ -150,7 +150,7 @@ void font_draw(app_t* app, const font_t* font, matrix_t mvp, color_t color)
 
 void font_borders(app_t* app, bool use_borders)
 {
-	app->font_fs_uniforms.use_border = use_borders ? 1 : 0;
+	app->font_fs_uniforms.use_border = use_borders ? 1.0f : 0.0f;
 }
 
 void font_toggle_borders(app_t* app)
