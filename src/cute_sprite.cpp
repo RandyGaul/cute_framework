@@ -593,7 +593,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	}
 
 	// Map the vertex buffer with sprite vertex data.
-	error_t err = triple_buffer_append(&sb->sprite_buffer, vert_count, verts, 0, NULL);
+	error_t err = triple_buffer_append(&sb->sprite_buffer, vert_count, verts);
 	CUTE_ASSERT(!err.is_error());
 
 	// Setup resource bindings.

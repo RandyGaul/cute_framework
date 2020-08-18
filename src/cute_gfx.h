@@ -87,7 +87,7 @@ struct triple_buffer_t
 };
 
 extern CUTE_API triple_buffer_t CUTE_CALL triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count);
-extern CUTE_API error_t CUTE_CALL triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count, const void* indices);
+extern CUTE_API error_t CUTE_CALL triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count = 0, const void* indices = NULL);
 
 }
 

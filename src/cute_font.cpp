@@ -132,7 +132,7 @@ void font_push_verts(app_t* app, const font_t* font, const char* text, float x, 
 
 void font_draw(app_t* app, const font_t* font, matrix_t mvp, color_t color)
 {
-	error_t err = triple_buffer_append(&app->font_buffer, app->font_verts.count(), app->font_verts.data(), 0, NULL);
+	error_t err = triple_buffer_append(&app->font_buffer, app->font_verts.count(), app->font_verts.data());
 	CUTE_ASSERT(!err.is_error());
 
 	sg_apply_pipeline(app->font_pip);
