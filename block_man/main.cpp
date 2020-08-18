@@ -1158,7 +1158,7 @@ int main(int argc, const char** argv)
 	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_D3D11_CONTEXT;
 	app_t* app = app_make("Block Man", 0, 0, 960, 720, options);
 	file_system_mount(file_system_get_base_dir(), "", 1);
-	//gfx_init_upscale(app, 320, 240, GFX_UPSCALE_MAXIMUM_ANY);
+	app_init_upscaling(app, UPSCALE_PIXEL_PERFECT_AT_LEAST_2X, 320, 240);
 	ImGui::SetCurrentContext(app_init_imgui(app));
 
 	sb = sprite_batch_easy_make(app, "data");
@@ -1247,7 +1247,7 @@ int main(int argc, const char** argv)
 		char buffer[4];
 		itoa(hero.moves, buffer, 10);
 		font_push_verts(app, font, buffer, -w / 2, h / 2, 0);
-		font_submit_draw_call(app, font, mvp);
+		font_draw(app, font, mvp);
 
 		DoImguiStuff(app, dt);
 

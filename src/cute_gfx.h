@@ -21,6 +21,8 @@
 
 #include <cute_defines.h>
 #include <cute_error.h>
+#include <cute_app.h>
+
 #include <sokol/sokol_gfx.h>
 
 #ifndef CUTE_GFX_H
@@ -43,8 +45,8 @@ union pixel_t
 
 using texture_t = uint64_t;
 
-CUTE_API texture_t CUTE_CALL texture_make(pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_CLAMP_TO_EDGE);
-CUTE_API void CUTE_CALL texture_destroy(texture_t texture);
+extern CUTE_API texture_t CUTE_CALL texture_make(pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_CLAMP_TO_EDGE);
+extern CUTE_API void CUTE_CALL texture_destroy(texture_t texture);
 
 struct matrix_t
 {
@@ -67,16 +69,25 @@ struct triple_buffer_t
 	buffer_t vbuf;
 	buffer_t ibuf;
 
-	CUTE_INLINE void advance() {
+	CUTE_INLINE void advance()
+	{
 		++vbuf.buffer_number; vbuf.buffer_number %= 3;
 		++ibuf.buffer_number; ibuf.buffer_number %= 3;
 	}
-	CUTE_INLINE sg_buffer get_vbuf() { return vbuf.buffer[vbuf.buffer_number]; }
-	CUTE_INLINE sg_buffer get_ibuf() { return ibuf.buffer[ibuf.buffer_number]; }
+
+	CUTE_INLINE sg_bindings bind()
+	{
+		sg_bindings bind = { 0 };
+		bind.vertex_buffers[0] = vbuf.buffer[vbuf.buffer_number];
+		bind.vertex_buffer_offsets[0] = vbuf.offset;
+		bind.index_buffer = ibuf.buffer[ibuf.buffer_number];
+		bind.index_buffer_offset = ibuf.offset;
+		return bind;
+	}
 };
 
-CUTE_API triple_buffer_t CUTE_CALL triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count);
-CUTE_API error_t CUTE_CALL triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count, const void* indices);
+extern CUTE_API triple_buffer_t CUTE_CALL triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count);
+extern CUTE_API error_t CUTE_CALL triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count, const void* indices);
 
 }
 

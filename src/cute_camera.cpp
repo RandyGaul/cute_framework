@@ -69,8 +69,8 @@ v2 mouse_pos_in_world_space(app_t* app, camera_t* cam)
 {
 	float w = (float)app->w;
 	float h = (float)app->h;
-	float rw = (float)app->render_w;
-	float rh = (float)app->render_h;
+	float rw = (float)app->offscreen_w;
+	float rh = (float)app->offscreen_h;
 	float ratio_x = w / rw;
 	float ratio_y = h / rh;
 	float x = (app->mouse.x - app->w / 2.0f) / ratio_x;

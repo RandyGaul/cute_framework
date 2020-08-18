@@ -27,11 +27,13 @@
 #include <cute_array.h>
 #include <cute_ecs.h>
 #include <cute_dictionary.h>
+#include <cute_math.h>
 
 #include <internal/cute_object_table_internal.h>
+#include <internal/cute_font_internal.h>
 
 #include <cute/cute_font.h>
-#include <sokol/sokol_gfx.h>
+#include <cute_gfx.h>
 
 struct SDL_Window;
 struct cs_context_t;
@@ -81,6 +83,11 @@ struct entity_collection_t
 	array<typeless_array> component_tables;
 };
 
+struct offscreen_uniforms_t
+{
+	v2 scale;
+};
+
 struct app_t
 {
 	float dt = 0;
@@ -93,17 +100,28 @@ struct app_t
 	audio_system_t* audio_system = NULL;
 	cute_font_t* courier_new = NULL;
 	array<cute_font_vert_t> font_verts;
-	//gfx_vertex_buffer_t* font_buffer = NULL;
-	//gfx_shader_t* font_shader = NULL;
-	//gfx_t* gfx = NULL;
+	sg_shader font_shader;
+	sg_pipeline font_pip;
+	triple_buffer_t font_buffer;
+	font_vs_uniforms_t font_vs_uniforms;
+	font_fs_uniforms_t font_fs_uniforms;
 	bool gfx_enabled = false;
+	upscale_t upscaling = UPSCALE_PIXEL_PERFECT_AUTO;
 	sg_context_desc gfx_ctx_params;
 	int w;
 	int h;
 	int x;
 	int y;
-	int render_w;
-	int render_h;
+	bool offscreen_enabled = false;
+	sg_image offscreen_color_buffer;
+	sg_image offscreen_depth_buffer;
+	sg_pass offscreen_pass;
+	sg_buffer quad;
+	sg_shader offscreen_shader;
+	sg_pipeline offscreen_to_screen_pip;
+	offscreen_uniforms_t offscreen_uniforms;
+	int offscreen_w;
+	int offscreen_h;
 	window_state_t window_state;
 	window_state_t window_state_prev;
 	bool using_imgui = false;

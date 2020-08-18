@@ -32,6 +32,7 @@
 #include <cute_gfx.h>
 
 #include <internal/cute_app_internal.h>
+#include <internal/cute_font_internal.h>
 
 namespace cute
 {
@@ -86,7 +87,6 @@ static void s_load_courier_new(app_t* app)
 	if (!app->courier_new) {
 		image_t img;
 		error_t err = image_load_png_mem(courier_new_0_png_data, courier_new_0_png_sz, &img);
-		image_flip_horizontal(&img);
 		texture_t tex = texture_make(img.pix, img.w, img.h);
 		cute_font_t* font = cute_font_load_bmfont(tex, courier_new_fnt_data, courier_new_fnt_sz, app->mem_ctx);
 		app->courier_new = font;
@@ -104,7 +104,7 @@ void font_push_verts(app_t* app, const font_t* font, const char* text, float x, 
 {
 	int vert_count = 0;
 	cute_font_t* cute_font = (cute_font_t*)font;
-	array<cute_font_vert_t>& font_verts = app->font_verts;
+	array<font_vertex_t>& font_verts = app->font_verts;
 	font_verts.ensure_capacity(256);
 
 	while (1)
@@ -117,7 +117,7 @@ void font_push_verts(app_t* app, const font_t* font, const char* text, float x, 
 			clip_rect.bottom = clip_box->min.y;
 		}
 		cute_font_rect_t* clip_rect_ptr = clip_box ? &clip_rect : NULL;
-		cute_font_vert_t* verts_ptr = font_verts.data() + font_verts.count();
+		font_vertex_t* verts_ptr = font_verts.data() + font_verts.count();
 		int no_overflow = cute_font_fill_vertex_buffer(cute_font, text, x, y, wrap_w, 0, clip_rect_ptr, verts_ptr, font_verts.capacity() - font_verts.count(), &vert_count);
 
 		if (no_overflow) {
@@ -130,20 +130,46 @@ void font_push_verts(app_t* app, const font_t* font, const char* text, float x, 
 	font_verts.set_count(font_verts.count() + vert_count);
 }
 
-void font_submit_draw_call(app_t* app, const font_t* font, matrix_t mvp, color_t color)
+void font_draw(app_t* app, const font_t* font, matrix_t mvp, color_t color)
 {
-#if 0
-	gfx_draw_call_t call;
-	gfx_draw_call_add_texture(&call, (gfx_texture_t*)((cute_font_t*)font)->atlas_id, "u_image");
-	call.buffer = app->font_buffer;
-	call.shader = app->font_shader;
-	gfx_draw_call_add_verts(app, &call, app->font_verts.data(), app->font_verts.count());
-	gfx_draw_call_add_uniform(&call, "u_text_color", &color, GFX_UNIFORM_TYPE_FLOAT4);
-	gfx_draw_call_set_mvp(&call, mvp);
-	gfx_push_draw_call(app, &call);
-#endif
+	error_t err = triple_buffer_append(&app->font_buffer, app->font_verts.count(), app->font_verts.data(), 0, NULL);
+	CUTE_ASSERT(!err.is_error());
+
+	sg_apply_pipeline(app->font_pip);
+	sg_bindings bind = app->font_buffer.bind();
+	bind.fs_images[0].id = (uint32_t)((cute_font_t*)font)->atlas_id;
+	sg_apply_bindings(bind);
+	app->font_vs_uniforms.mvp = mvp;
+	app->font_fs_uniforms.u_text_color = color;
+	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &app->font_vs_uniforms, sizeof(app->font_vs_uniforms));
+	sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &app->font_fs_uniforms, sizeof(app->font_fs_uniforms));
+	sg_draw(0, app->font_verts.count(), 1);
 
 	app->font_verts.clear();
+}
+
+void font_borders(app_t* app, bool use_borders)
+{
+	app->font_fs_uniforms.use_border = use_borders ? 1 : 0;
+}
+
+void font_toggle_borders(app_t* app)
+{
+	if (app->font_fs_uniforms.use_border) {
+		app->font_fs_uniforms.use_border = 0;
+	} else {
+		app->font_fs_uniforms.use_border = 1;
+	}
+}
+
+bool font_is_borders_on(app_t* app)
+{
+	return app->font_fs_uniforms.use_border ? true : false;
+}
+
+void font_border_color(app_t* app, color_t color)
+{
+	app->font_fs_uniforms.u_border_color = color;
 }
 
 int font_text_width(const font_t* font, const char* text)
@@ -163,93 +189,127 @@ void font_init(app_t* app)
 {
 	s_load_courier_new(app);
 
-#if 0
-	// Create the dedicated font shader data.
-	gfx_vertex_buffer_params_t vertex_params;
-	vertex_params.type = GFX_VERTEX_BUFFER_TYPE_DYNAMIC;
-	vertex_params.stride = sizeof(cute_font_vert_t);
-	gfx_vertex_buffer_params_add_attribute(&vertex_params, 2, CUTE_OFFSET_OF(cute_font_vert_t, x));
-	gfx_vertex_buffer_params_add_attribute(&vertex_params, 2, CUTE_OFFSET_OF(cute_font_vert_t, u));
-	vertex_params.vertex_count = 1024 * 10;
-	app->font_buffer = gfx_vertex_buffer_new(app, &vertex_params);
-
-	const char* vs = CUTE_STRINGIZE(
+	sg_shader_desc shader_params = { 0 };
+	shader_params.attrs[0].name = "pos";
+	shader_params.attrs[0].sem_name = "POSITION";
+	shader_params.attrs[0].sem_index = 0;
+	shader_params.attrs[1].name = "uv";
+	shader_params.attrs[1].sem_name = "TEXCOORD";
+	shader_params.attrs[1].sem_index = 0;
+	shader_params.vs.uniform_blocks[0].size = sizeof(font_vs_uniforms_t);
+	shader_params.vs.uniform_blocks[0].uniforms[0].name = "u_mvp";
+	shader_params.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_MAT4;
+	shader_params.fs.uniform_blocks[0].size = sizeof(font_fs_uniforms_t);
+	shader_params.fs.uniform_blocks[0].uniforms[0].name = "u_text_color";
+	shader_params.fs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
+	shader_params.fs.uniform_blocks[0].uniforms[1].name = "u_border_color";
+	shader_params.fs.uniform_blocks[0].uniforms[1].type = SG_UNIFORMTYPE_FLOAT4;
+	shader_params.fs.uniform_blocks[0].uniforms[2].name = "u_texel_size";
+	shader_params.fs.uniform_blocks[0].uniforms[2].type = SG_UNIFORMTYPE_FLOAT2;
+	shader_params.fs.uniform_blocks[0].uniforms[3].name = "u_use_border";
+	shader_params.fs.uniform_blocks[0].uniforms[3].type = SG_UNIFORMTYPE_FLOAT;
+	shader_params.fs.images[0].name = "u_image";
+	shader_params.fs.images[0].type = SG_IMAGETYPE_2D;
+	shader_params.vs.source = CUTE_STRINGIZE(
 		struct vertex_t
 		{
-			float2 pos : POSITION0;
+			float2 pos : POSITION;
 			float2 uv  : TEXCOORD0;
 		};
 
 		struct interp_t
 		{
-			float4 posH : POSITION0;
+			float4 posH : SV_Position;
 			float2 uv   : TEXCOORD0;
 		};
 
-		float4x4 u_mvp;
-		float2 u_inv_screen_wh;
+		cbuffer params : register(b0)
+		{
+			row_major float4x4 u_mvp;
+		};
 
 		interp_t main(vertex_t vtx)
 		{
-			float4 posH = mul(float4(round(vtx.pos), 0, 1), u_mvp);
+			float4 posH = mul(float4(vtx.pos, 0, 1), u_mvp);
 
-			posH.xy += u_inv_screen_wh;
 			interp_t interp;
 			interp.posH = posH;
 			interp.uv = vtx.uv;
 			return interp;
 		}
 	);
-
-	const char* ps = CUTE_STRINGIZE(
+	shader_params.fs.source = CUTE_STRINGIZE(
 		struct interp_t
 		{
-			float4 posH : POSITION;
+			float4 posH : SV_Position;
 			float2 uv   : TEXCOORD0;
 		};
 
-		sampler2D u_image;
-		float2 u_texel_size;
-		float u_use_border;
-		float4 u_text_color;
+		cbuffer params : register(b0)
+		{
+			float4 u_text_color;
+			float4 u_border_color;
+			float2 u_texel_size;
+			float u_use_border;
+		};
 
-		float4 main(interp_t interp) : COLOR
+		Texture2D<float4> u_image: register(t0);
+		sampler smp: register(s0);
+
+		float4 main(interp_t interp) : SV_Target0
 		{
 			float2 uv = interp.uv;
 
 			// Border detection for pixel outlines.
-			float a = tex2D(u_image, uv + float2(0,  u_texel_size.y)).r;
-			float b = tex2D(u_image, uv + float2(0, -u_texel_size.y)).r;
-			float c = tex2D(u_image, uv + float2(u_texel_size.x,  0)).r;
-			float d = tex2D(u_image, uv + float2(-u_texel_size.x, 0)).r;
-			float e = tex2D(u_image, uv + float2(-u_texel_size.x, -u_texel_size.y)).r;
-			float f = tex2D(u_image, uv + float2(-u_texel_size.x,  u_texel_size.y)).r;
-			float g = tex2D(u_image, uv + float2( u_texel_size.x, -u_texel_size.y)).r;
-			float h = tex2D(u_image, uv + float2( u_texel_size.x,  u_texel_size.y)).r;
-			float i = tex2D(u_image, uv).r;
+			float a = u_image.Sample(smp, uv + float2(0,  u_texel_size.y)).r;
+			float b = u_image.Sample(smp, uv + float2(0, -u_texel_size.y)).r;
+			float c = u_image.Sample(smp, uv + float2(u_texel_size.x,  0)).r;
+			float d = u_image.Sample(smp, uv + float2(-u_texel_size.x, 0)).r;
+			float e = u_image.Sample(smp, uv + float2(-u_texel_size.x, -u_texel_size.y)).r;
+			float f = u_image.Sample(smp, uv + float2(-u_texel_size.x,  u_texel_size.y)).r;
+			float g = u_image.Sample(smp, uv + float2( u_texel_size.x, -u_texel_size.y)).r;
+			float h = u_image.Sample(smp, uv + float2( u_texel_size.x,  u_texel_size.y)).r;
+			float i = u_image.Sample(smp, uv).r;
 			float border = max(a, max(b, max(c, max(d, max(e, max(f, max(g, h))))))) * (1 - i);
 
 			border *= u_use_border;
 
 			// Pick black for font and white for border.
-			float4 border_color = float4(1, 1, 1, 1);
+			float4 border_color = u_border_color;
 			float4 text_color = u_text_color * i;
 			float4 color = lerp(text_color, border_color, border);
 
 			return color;
 		}
 	);
+	app->font_shader = sg_make_shader(shader_params);
 
-	gfx_matrix_t projection = matrix_ortho_2d((float)app->w, (float)app->h, 0, 0);
-	app->font_shader = gfx_shader_new(app, app->font_buffer, vs, ps);
-	gfx_shader_set_screen_wh(app, app->font_shader, (float)app->w, (float)app->h);
+	sg_pipeline_desc pip_params = { 0 };
+	pip_params.layout.buffers[0].stride = sizeof(font_vertex_t);
+	pip_params.layout.buffers[0].step_func = SG_VERTEXSTEP_PER_VERTEX;
+	pip_params.layout.buffers[0].step_rate = 1;
+	pip_params.layout.attrs[0].buffer_index = 0;
+	pip_params.layout.attrs[0].offset = 0;
+	pip_params.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
+	pip_params.layout.attrs[1].buffer_index = 0;
+	pip_params.layout.attrs[1].offset = sizeof(float) * 2;
+	pip_params.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
+	pip_params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
+	pip_params.shader = app->font_shader;
+	pip_params.blend.enabled = true;
+	pip_params.blend.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
+	pip_params.blend.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	pip_params.blend.op_rgb = SG_BLENDOP_ADD;
+	pip_params.blend.src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
+	pip_params.blend.dst_factor_alpha = SG_BLENDFACTOR_ONE;
+	pip_params.blend.op_alpha = SG_BLENDOP_ADD;
+	app->font_pip = sg_make_pipeline(pip_params);
 
-	v2 texel_size = v2(1.0f / (float)app->courier_new->atlas_w, 1.0f / (float)app->courier_new->atlas_h);
-	gfx_shader_set_uniform(app, app->font_shader, "u_texel_size", &texel_size, GFX_UNIFORM_TYPE_FLOAT2);
+	app->font_buffer = triple_buffer_make(sizeof(font_vertex_t) * 1024 * 2, sizeof(font_vertex_t), 0);
 
-	float use_border = 0;
-	gfx_shader_set_uniform(app, app->font_shader, "u_use_border", &use_border, GFX_UNIFORM_TYPE_FLOAT);
-#endif
+	app->font_fs_uniforms.u_border_color = color_white();
+	app->font_fs_uniforms.use_border = 0;
+	app->font_fs_uniforms.u_texel_size = v2(1.0f / (float)app->courier_new->atlas_w, 1.0f / (float)app->courier_new->atlas_h);
 }
 
 }

@@ -22,10 +22,28 @@
 #ifndef CUTE_FONT_INTERNAL_H
 #define CUTE_FONT_INTERNAL_H
 
+#include <cute/cute_font.h>
+#include <cute_gfx.h>
+#include <cute_color.h>
+#include <cute_math.h>
+
 namespace cute
 {
 
-struct app_t;
+using font_vertex_t = cute_font_vert_t;
+
+struct font_vs_uniforms_t
+{
+	matrix_t mvp;
+};
+
+struct font_fs_uniforms_t
+{
+	color_t u_text_color;
+	color_t u_border_color;
+	v2 u_texel_size;
+	float use_border;
+};
 
 void font_init(app_t* app);
 

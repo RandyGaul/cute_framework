@@ -39,7 +39,12 @@ extern CUTE_API void CUTE_CALL font_free(font_t* font);
 
 extern CUTE_API const font_t* CUTE_CALL font_get_default(app_t* app);
 extern CUTE_API void CUTE_CALL font_push_verts(app_t* app, const font_t* font, const char* text, float x, float y, float wrap_w, const aabb_t* clip_box = NULL);
-extern CUTE_API void CUTE_CALL font_submit_draw_call(app_t* app, const font_t* font, matrix_t mvp, color_t color = color_black());
+extern CUTE_API void CUTE_CALL font_draw(app_t* app, const font_t* font, matrix_t mvp, color_t color = color_black());
+
+extern CUTE_API void CUTE_CALL font_borders(app_t* app, bool use_borders);
+extern CUTE_API void CUTE_CALL font_toggle_borders(app_t* app);
+extern CUTE_API bool CUTE_CALL font_is_borders_on(app_t* app);
+extern CUTE_API void CUTE_CALL font_border_color(app_t* app, color_t color);
 
 extern CUTE_API int CUTE_CALL font_text_width(const font_t* font, const char* text);
 extern CUTE_API int CUTE_CALL font_text_height(const font_t* font, const char* text);
@@ -51,7 +56,7 @@ struct font_vert_buffer_t;
 
 extern CUTE_API font_vert_buffer_t* CUTE_CALL font_vert_buffer_make(app_t* app, const font_t* font);
 extern CUTE_API error_t CUTE_CALL font_push_verts(font_vert_buffer_t* verts, const font_t* font, const char* text, float x, float y, float wrap_w, const aabb_t* clip_box = NULL);
-extern CUTE_API void CUTE_CALL font_submit_draw_call(app_t* app, font_vert_buffer_t* verts, color_t color = color_black());
+extern CUTE_API void CUTE_CALL font_draw(app_t* app, font_vert_buffer_t* verts, color_t color = color_black());
 
 }
 

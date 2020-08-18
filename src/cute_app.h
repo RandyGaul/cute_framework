@@ -45,11 +45,22 @@ extern CUTE_API bool CUTE_CALL app_is_running(app_t* app);
 extern CUTE_API void CUTE_CALL app_stop_running(app_t* app);
 extern CUTE_API void CUTE_CALL app_update(app_t* app, float dt);
 extern CUTE_API void CUTE_CALL app_present(app_t* app);
-extern CUTE_API void CUTE_CALL app_render_size(app_t* app, int* w, int* h);
 
 extern CUTE_API error_t CUTE_CALL app_init_net(app_t* app);
 extern CUTE_API error_t CUTE_CALL app_init_audio(app_t* app, int max_simultaneous_sounds = 5000);
 extern CUTE_API ImGuiContext* CUTE_CALL app_init_imgui(app_t* app);
+
+enum upscale_t
+{
+	UPSCALE_PIXEL_PERFECT_AUTO,
+	UPSCALE_PIXEL_PERFECT_AT_LEAST_2X,
+	UPSCALE_PIXEL_PERFECT_AT_LEAST_3X,
+	UPSCALE_PIXEL_PERFECT_AT_LEAST_4X,
+	UPSCALE_STRETCH,
+};
+
+extern CUTE_API error_t CUTE_CALL app_init_upscaling(app_t* app, upscale_t upscaling, int offscreen_w, int offscreen_h);
+extern CUTE_API void CUTE_CALL app_offscreen_size(app_t* app, int* offscreen_w, int* offscreen_h);
 
 }
 

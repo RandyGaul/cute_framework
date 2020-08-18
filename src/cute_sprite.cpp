@@ -123,40 +123,46 @@ static sg_shader s_load_shader(spritebatch_t* sb, sprite_shader_type_t type)
 		params.fs.images[0].name = "u_image";
 		params.fs.images[0].type = SG_IMAGETYPE_2D;
 		params.vs.source = CUTE_STRINGIZE(
-			cbuffer params : register(b0)
-			{
-				float4x4 u_mvp;
-			};
-
-			struct vs_in
+			struct vertex_t
 			{
 				float2 pos : POSITION;
 				float2 uv  : TEXCOORD0;
 			};
 
-			struct vs_out
+			struct interp_t
 			{
 				float4 posH : SV_Position;
 				float2 uv   : TEXCOORD0;
 			};
 
-			vs_out main(vs_in vtx)
+			cbuffer params : register(b0)
 			{
-				float4 posH = mul(float4(round(vtx.pos), 0, 1), u_mvp);
+				row_major float4x4 u_mvp;
+			};
 
-				vs_out interp;
+			interp_t main(vertex_t vtx)
+			{
+				float4 posH = mul(float4(vtx.pos, 0, 1), u_mvp);
+
+				interp_t interp;
 				interp.posH = posH;
 				interp.uv = vtx.uv;
 				return interp;
 			}
 		);
 		params.fs.source = CUTE_STRINGIZE(
+			struct interp_t
+			{
+				float4 posH : SV_Position;
+				float2 uv   : TEXCOORD0;
+			};
+
 			Texture2D<float4> u_image: register(t0);
 			sampler smp: register(s0);
 
-			float4 main(float4 pos : SV_Position, float2 uv : TEXCOORD0) : SV_Target0
+			float4 main(interp_t interp) : SV_Target0
 			{
-				float4 color = u_image.Sample(smp, uv);
+				float4 color = u_image.Sample(smp, interp.uv);
 				return color;
 			}
 		);
@@ -387,26 +393,26 @@ spritebatch_t* sprite_batch_make(app_t* app)
 	sb->app = app;
 	sb->mem_ctx = app->mem_ctx;
 
-	sg_pipeline_desc pip_params = { 0 };
-	pip_params.layout.buffers[0].stride = sizeof(sprite_vertex_t);
-	pip_params.layout.buffers[0].step_func = SG_VERTEXSTEP_PER_VERTEX;
-	pip_params.layout.buffers[0].step_rate = 1;
-	pip_params.layout.attrs[0].buffer_index = 0;
-	pip_params.layout.attrs[0].offset = CUTE_OFFSET_OF(sprite_vertex_t, pos);
-	pip_params.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
-	pip_params.layout.attrs[1].buffer_index = 0;
-	pip_params.layout.attrs[1].offset = CUTE_OFFSET_OF(sprite_vertex_t, uv);
-	pip_params.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
-	pip_params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
-	pip_params.shader = sb->default_shader = sb->active_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_DEFAULT);
-	pip_params.blend.enabled = true;
-	pip_params.blend.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
-	pip_params.blend.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	pip_params.blend.op_rgb = SG_BLENDOP_ADD;
-	pip_params.blend.src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
-	pip_params.blend.dst_factor_alpha = SG_BLENDFACTOR_ONE;
-	pip_params.blend.op_alpha = SG_BLENDOP_ADD;
-	sb->pip = sg_make_pipeline(pip_params);
+	sg_pipeline_desc params = { 0 };
+	params.layout.buffers[0].stride = sizeof(sprite_vertex_t);
+	params.layout.buffers[0].step_func = SG_VERTEXSTEP_PER_VERTEX;
+	params.layout.buffers[0].step_rate = 1;
+	params.layout.attrs[0].buffer_index = 0;
+	params.layout.attrs[0].offset = CUTE_OFFSET_OF(sprite_vertex_t, pos);
+	params.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
+	params.layout.attrs[1].buffer_index = 0;
+	params.layout.attrs[1].offset = CUTE_OFFSET_OF(sprite_vertex_t, uv);
+	params.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
+	params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
+	params.shader = sb->default_shader = sb->active_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_DEFAULT);
+	params.blend.enabled = true;
+	params.blend.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
+	params.blend.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	params.blend.op_rgb = SG_BLENDOP_ADD;
+	params.blend.src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
+	params.blend.dst_factor_alpha = SG_BLENDFACTOR_ONE;
+	params.blend.op_alpha = SG_BLENDOP_ADD;
+	sb->pip = sg_make_pipeline(params);
 
 	sb->outline_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_OUTLINE);
 	sb->tint_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_TINT);
@@ -436,7 +442,7 @@ spritebatch_t* sprite_batch_easy_make(app_t* app, const char* path)
 	spritebatch_t* sb = sprite_batch_make(app);
 
 	int w = 0, h = 0;
-	app_render_size(app, &w, &h);
+	app_offscreen_size(app, &w, &h);
 	matrix_t mvp = matrix_ortho_2d((float)w, (float)h, 0, 0);
 	sprite_batch_set_mvp(sb, mvp);
 
@@ -587,17 +593,16 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	}
 
 	// Map the vertex buffer with sprite vertex data.
-	triple_buffer_append(&sb->sprite_buffer, vert_count, verts, 0, NULL);
+	error_t err = triple_buffer_append(&sb->sprite_buffer, vert_count, verts, 0, NULL);
+	CUTE_ASSERT(!err.is_error());
 
 	// Setup resource bindings.
-	sg_bindings bind = { 0 };
-	bind.vertex_buffers[0] = sb->sprite_buffer.get_vbuf();
-	bind.vertex_buffer_offsets[0] = sb->sprite_buffer.vbuf.offset;
-	bind.index_buffer = sb->sprite_buffer.get_ibuf();
-	bind.index_buffer_offset = sb->sprite_buffer.ibuf.offset;
+	sg_bindings bind = sb->sprite_buffer.bind();
 	bind.fs_images[0].id = (uint32_t)sprites->texture_id;
 	sg_apply_bindings(bind);
 
+	// Apply uniforms.
+	// TODO - Move MVP to the spritebatch_flush function as an optimization.
 	vs_uniforms_t uniforms = {
 		sb->mvp,
 		v2(1.0f / (float)texture_w, 1.0f / (float)texture_h),

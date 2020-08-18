@@ -116,14 +116,14 @@ error_t triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const vo
 {
 	bool overflowed = false;
 
-	int voffset = sg_append_buffer(buffer->get_vbuf(), vertices, vertex_count * buffer->vbuf.stride);
+	int voffset = sg_append_buffer(buffer->vbuf.buffer[buffer->vbuf.buffer_number], vertices, vertex_count * buffer->vbuf.stride);
 	buffer->vbuf.offset = voffset;
-	overflowed |= sg_query_buffer_overflow(buffer->get_vbuf());
+	overflowed |= sg_query_buffer_overflow(buffer->vbuf.buffer[buffer->vbuf.buffer_number]);
 
 	if (index_count) {
-		int ioffset = sg_append_buffer(buffer->get_ibuf(), indices, index_count * buffer->ibuf.stride);
+		int ioffset = sg_append_buffer(buffer->ibuf.buffer[buffer->ibuf.buffer_number], indices, index_count * buffer->ibuf.stride);
 		buffer->ibuf.offset = ioffset;
-		overflowed |= sg_query_buffer_overflow(buffer->get_ibuf());
+		overflowed |= sg_query_buffer_overflow(buffer->ibuf.buffer[buffer->ibuf.buffer_number]);
 	}
 
 	if (overflowed) return error_failure("Overflowed one of the internal buffers -- sokol_gfx will silently drop he associated draw calls.");
