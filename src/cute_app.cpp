@@ -226,9 +226,9 @@ static void s_imgui_present(app_t* app)
 
 void app_present(app_t* app)
 {
-	sg_end_pass();
-
 	if (app->offscreen_enabled) {
+		sg_end_pass();
+
 		sg_bindings bind = { 0 };
 		bind.vertex_buffers[0] = app->quad;
 		bind.fs_images[0] = app->offscreen_color_buffer;
@@ -244,6 +244,7 @@ void app_present(app_t* app)
 		sg_end_pass();
 	} else {
 		s_imgui_present(app);
+		sg_end_pass();
 	}
 
 	sg_commit();
@@ -286,7 +287,7 @@ ImGuiContext* app_init_imgui(app_t* app)
 	ImGui_ImplSDL2_InitForD3D(app->window);
 	ImGui_ImplDX11_Init((ID3D11Device*)app->gfx_ctx_params.d3d11.device, (ID3D11DeviceContext*)app->gfx_ctx_params.d3d11.device_context);
 
-	// TODO - OpenGL/ES/Metal.
+	// TODO - OpenGL/ES/Metal. It's just shader differences, and should render imgui through sokol_gfx.
 
 	return ::ImGui::GetCurrentContext();
 }
