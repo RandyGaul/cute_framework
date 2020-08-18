@@ -108,7 +108,7 @@ void dx11_init(void* hwnd, int w, int h, int sample_count)
 	state.swap_chain_desc.BufferDesc.RefreshRate.Denominator = 1;
 	state.swap_chain_desc.OutputWindow = state.hwnd;
 	state.swap_chain_desc.Windowed = true;
-	state.swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_DISCARD;
+	state.swap_chain_desc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
 	state.swap_chain_desc.BufferCount = 2;
 	state.swap_chain_desc.SampleDesc.Count = state.sample_count;
 	state.swap_chain_desc.SampleDesc.Quality = state.sample_count > 1 ? D3D11_STANDARD_MULTISAMPLE_PATTERN : 0;

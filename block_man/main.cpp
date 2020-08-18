@@ -19,10 +19,11 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <stdio.h>
-#include <imgui/imgui.h>
 #include <cute.h>
 using namespace cute;
+
+#include <stdio.h>
+#include <imgui/imgui.h>
 
 #include <cute/cute_coroutine.h>
 
@@ -1033,7 +1034,7 @@ void UpdateGame(app_t* app, float dt)
 			DrawAnimatingHeldBlocks();
 			sprite_t sprite = hero.anim.current_sprite();
 			v2 p_delta = round(lerp(hero.spin_p0, hero.spin_p, t));
-			sprite.transform.p = p_delta;
+			sprite.transform.p = p_delta + v2(0, 2);
 			sprite.sort_bits = 100000;
 			sprite_batch_push(sb, sprite);
 			COROUTINE_WAIT(co, hero.spin_delay, dt);
