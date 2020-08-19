@@ -55,6 +55,7 @@ struct Animation
 array<sprite_t> ice_block_masks;
 Animation ice_block;
 Animation ice_block_sheen;
+array<sprite_t> background_bricks;
 
 sprite_t AddSprite(string_t path)
 {
@@ -369,16 +370,21 @@ array<string_t> BricksOdd = {
 
 array<array<string_t>> Maps = {
 	{
-		"XXXX0000XXXX0000",
-		"XXXX00000XXXXXX0",
-		"00000000000XXX00",
-		"00000000000XXX00",
-		"00XX000000000000",
-		"00XXX000XX000000",
-		"00XXXX00XX000000",
-		"0000XX000000XXXX",
-		"XXX0000XX000XXXX",
-		"XXX0000XX000XXXX",
+		"XXXX0000XXXX00000XXX",
+		"XXXX00000XXXXXX000XX",
+		"00XX0000000XXX000000",
+		"00000000000XXX0000XX",
+		"00XX000000000X00XXXX",
+		"00XXX000XX00XXX00XX0",
+		"00XXXX00XX0000000000",
+		"0000XX0000XX00XXX000",
+		"XXX0000XX0XX00XXX000",
+		"XXX0000XX000XXXX0000",
+		"XXXX000XX00XXXXX00XX",
+		"XXXX000XX00XXXXX00X0",
+		"XXX0000XX000XXX0000X",
+		"XXX00XXXX000XXX00XXX",
+		"XXX00XXXX000XXX00XX0",
 	},
 };
 
@@ -554,6 +560,39 @@ void SetHeroAnimBasedOnFacingDir()
 	}
 }
 
+void InitBackgroundBricks(int seed)
+{
+	rnd_t rnd = rnd_seed(seed);
+	int background_index = rnd_next_range(rnd, 0, Maps.count() - 1);
+
+	background_bricks.clear();
+	for (int i = 0; i < 15; ++i) {
+		for (int j = 0; j < 20; ++j) {
+			string_t path;
+			if (Maps[background_index][i][j] == 'X') {
+				if ((i & 1) ^ (j & 1)) {
+					path = BricksEven[rnd_next_range(rnd, 0, BricksEven.count() - 1)];
+				} else {
+					path = BricksOdd[rnd_next_range(rnd, 0, BricksOdd.count() - 1)];
+				}
+			} else {
+				path = "data/brick_empty.png";
+			}
+			sprite_t s = AddSprite(path);
+			s.transform.p = v2((float)(j * 16 + 8 - 320/2), (float)((15 - 1 - i) * 16 + 8 - 240/2));
+			background_bricks.add(s);
+		}
+	}
+}
+
+void DrawBackgroundBricks()
+{
+	for (int i = 0; i < background_bricks.count(); ++i) {
+		spritebatch_push(sb, background_bricks[i]);
+	}
+	spritebatch_flush(sb);
+}
+
 void LoadLevel(const array<string_t>& l)
 {
 	level.data.clear();
@@ -589,6 +628,8 @@ void LoadLevel(const array<string_t>& l)
 			level.data[i].add(c);
 		}
 	}
+
+	InitBackgroundBricks(level_index);
 }
 
 void DrawAnimatingHeldBlocks()
@@ -1340,6 +1381,8 @@ int main(int argc, const char** argv)
 			level_index = (level_index + 1) % levels.count();
 			LoadLevel(levels[level_index]);
 		}
+
+		DrawBackgroundBricks();
 
 		UpdateGame(app, dt);
 		UpdateAnimation(ice_block, dt);
