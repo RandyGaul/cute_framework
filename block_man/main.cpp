@@ -349,6 +349,39 @@ array<string_t> IceBlockSheen = {
 	"data/ice_block_sheen35.png",
 };
 
+array<string_t> BricksEven = {
+	"data/bricks_even1.png",
+	"data/bricks_even2.png",
+	"data/bricks_even3.png",
+	"data/bricks_even4.png",
+	"data/bricks_even5.png",
+	"data/bricks_even6.png",
+};
+
+array<string_t> BricksOdd = {
+	"data/bricks_odd1.png",
+	"data/bricks_odd2.png",
+	"data/bricks_odd3.png",
+	"data/bricks_odd4.png",
+	"data/bricks_odd5.png",
+	"data/bricks_odd6.png",
+};
+
+array<array<string_t>> Maps = {
+	{
+		"XXXX0000XXXX0000",
+		"XXXX00000XXXXXX0",
+		"00000000000XXX00",
+		"00000000000XXX00",
+		"00XX000000000000",
+		"00XXX000XX000000",
+		"00XXXX00XX000000",
+		"0000XX000000XXXX",
+		"XXX0000XX000XXXX",
+		"XXX0000XX000XXXX",
+	},
+};
+
 array<array<string_t>> levels = {
 	{
 		"01111110",
