@@ -368,7 +368,7 @@ array<string_t> BricksOdd = {
 	"data/bricks_odd6.png",
 };
 
-array<array<string_t>> Maps = {
+array<array<string_t>> BackgroundMaps = {
 	{
 		"XXXX0000XXXX00000XXX",
 		"XXXX00000XXXXXX000XX",
@@ -379,10 +379,27 @@ array<array<string_t>> Maps = {
 		"00XXXX00XX0000000000",
 		"0000XX0000XX00XXX000",
 		"XXX0000XX0XX00XXX000",
-		"XXX0000XX000XXXX0000",
-		"XXXX000XX00XXXXX00XX",
-		"XXXX000XX00XXXXX00X0",
+		"XXX0XX0XX000XXXX0000",
+		"XXXXXX0XX00XXXXX00XX",
+		"XXXX0X0XX00XXXXX00X0",
 		"XXX0000XX000XXX0000X",
+		"XXX00XXXX000XXX00XXX",
+		"XXX00XXXX000XXX00XX0",
+	},
+	{
+		"00000000000XXX0000XX",
+		"XXXX00000XXXXXX000XX",
+		"00XX0000000XXX000000",
+		"XXXX0X0XX00XXXXX00X0",
+		"00XX000000000X00XXXX",
+		"00XXX000XX00XXX00XX0",
+		"XXXX0000XXXX00000XXX",
+		"00XXXX00XX0000000000",
+		"0000XX0000XX00XXX000",
+		"XXX0000XX000XXX0000X",
+		"XXX0000XX0XX00XXX000",
+		"XXX0XX0XX000XXXX0000",
+		"XXXXXX0XX00XXXXX00XX",
 		"XXX00XXXX000XXX00XXX",
 		"XXX00XXXX000XXX00XX0",
 	},
@@ -563,13 +580,13 @@ void SetHeroAnimBasedOnFacingDir()
 void InitBackgroundBricks(int seed)
 {
 	rnd_t rnd = rnd_seed(seed);
-	int background_index = rnd_next_range(rnd, 0, Maps.count() - 1);
+	int background_index = rnd_next_range(rnd, 0, BackgroundMaps.count() - 1);
 
 	background_bricks.clear();
 	for (int i = 0; i < 15; ++i) {
 		for (int j = 0; j < 20; ++j) {
 			string_t path;
-			if (Maps[background_index][i][j] == 'X') {
+			if (BackgroundMaps[background_index][i][j] == 'X') {
 				if ((i & 1) ^ (j & 1)) {
 					path = BricksEven[rnd_next_range(rnd, 0, BricksEven.count() - 1)];
 				} else {
