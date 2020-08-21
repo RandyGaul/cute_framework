@@ -153,5 +153,5 @@ static CUTE_INLINE float    rnd_next_range(rnd_t& rnd, float min, float max) { r
 static CUTE_INLINE double   rnd_next_range(rnd_t& rnd, double min, double max) { return rnd_next_range(&rnd, min, max); }
 
 }
- 
+
 #endif // CUTE_RND_H
