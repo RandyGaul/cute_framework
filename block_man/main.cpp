@@ -520,7 +520,7 @@ void world2tile(int sprite_h, v2 p, int* x_out, int* y_out)
 	float y_diff = sprite_h > 16 ? (sprite_h - h) / 2 : 0;
 	float x = p.x / w + 6;
 	float y = -((p.y - y_offset - y_diff) / h) - 6;
-	*x_out = (int)round(x);
+	*x_out = (int)round(x);               
 	*y_out = (int)round(y);
 }
 
