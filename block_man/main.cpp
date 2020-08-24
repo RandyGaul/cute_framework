@@ -27,6 +27,9 @@ using namespace cute;
 
 #include <cute/cute_coroutine.h>
 
+#define CUTE_ASEPRITE_IMPLEMENTATION
+#include <cute/cute_aseprite.h>
+
 spritebatch_t* sb;
 
 struct Level
@@ -1323,6 +1326,11 @@ int main(int argc, const char** argv)
 	ImGui::SetCurrentContext(app_init_imgui(app));
 
 	sb = spritebatch_easy_make(app, "data");
+
+	size_t sz;
+	void* data;
+	file_system_read_entire_file_to_memory("data/girl.aseprite", &data, &sz, NULL);
+	cute_aseprite_load_from_memory(data, (int)sz, NULL);
 
 	Animation idle;
 	idle.name = "idle";
