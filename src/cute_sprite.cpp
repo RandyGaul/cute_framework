@@ -19,865 +19,154 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-struct sprite_udata_t
-{
-	float alpha;
-};
-
-#define SPRITEBATCH_SPRITE_USERDATA sprite_udata_t
-#define SPRITEBATCH_IMPLEMENTATION
-#include <cute/cute_spritebatch.h>
-
-#define CUTE_PNG_IMPLEMENTATION
-#include <cute/cute_png.h>
-
 #include <cute_sprite.h>
-#include <cute_alloc.h>
-#include <cute_array.h>
-#include <cute_file_system.h>
-#include <cute_lru_cache.h>
-#include <cute_defer.h>
-#include <cute_file_index.h>
+#include <cute_debug_printf.h>
 
 #include <internal/cute_app_internal.h>
+
+#define CUTE_ASEPRITE_IMPLEMENTATION
+#include <cute/cute_aseprite.h>
 
 namespace cute
 {
 
-struct sprite_vertex_t
+static void s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata)
 {
-	v2 pos;
-	v2 uv;
-	float alpha;
+	aseprite_cache_t* cache = (aseprite_cache_t*)udata;
+	void* pixels = cache->id_to_pixels.find(image_id);
+	if (!pixels) {
+		CUTE_DEBUG_PRINTF("Aseprite cache -- unable to find id %d.", image_id);
+		CUTE_MEMSET(buffer, 0, bytes_to_fill);
+	} else {
+		CUTE_MEMCPY(buffer, pixels, bytes_to_fill);
+	}
+}
+
+struct aseprite_cache_entry_t
+{
+	string_t path;
+	ase_t* ase;
+	animation_table_t* animations;
+	v2 local_offset;
 };
 
-struct vs_uniforms_t
+struct aseprite_cache_t
 {
-	matrix_t mvp;
-	v2 texel_size;
-	float use_border;
-};
-
-enum spritebatch_mode_t
-{
-	SPRITE_BATCH_MODE_UNINITIALIZED,
-	SPRITE_BATCH_MODE_LRU,
-	SPRITE_BATCH_MODE_CUSTOM,
-};
-
-struct cached_image_t
-{
-	uint64_t id;
-	const char* path;
-	size_t size;
-	cp_image_t img;
-};
-
-using sprite_cache_t = lru_cache<uint64_t, cached_image_t>;
-
-struct spritebatch_t
-{
-	::spritebatch_t sb;
-	app_t* app;
-	spritebatch_mode_t mode = SPRITE_BATCH_MODE_UNINITIALIZED;
-	float w = 0, h = 0;
-
-	array<sprite_vertex_t> verts;
-	triple_buffer_t sprite_buffer;
-	sg_shader default_shader = { 0 };
-	sg_shader outline_shader = { 0 };
-	sg_shader tint_shader = { 0 };
-	sg_shader active_shader = { 0 };
-	sprite_shader_type_t shader_type = SPRITE_SHADER_TYPE_DEFAULT;
-	bool pip_dirty = true;
-	sg_pipeline pip = { 0 };
-	sg_blend_state blend_state;
-	sg_depth_stencil_state depth_stencil_state;
-	bool scissor_enabled = false;
-	int scissor_x, scissor_y;
-	int scissor_w, scissor_h;
-	float outline_use_border = 0;
-	matrix_t mvp;
-
-	const char** image_paths = NULL;
-	int image_paths_count = 0;
-	size_t cache_capacity = 0;
-	size_t cache_used = 0;
-	sprite_cache_t* cache = NULL;
-
-	file_index_t* easy_images = NULL;
-	const char** easy_paths = NULL;
-
+	dictionary<string_t, aseprite_cache_entry_t> aseprites;
+	dictionary<uint64_t, void*> id_to_pixels;
+	batch_t* batch = NULL;
+	uint64_t id_gen = 0;
 	void* mem_ctx = NULL;
 };
 
-//--------------------------------------------------------------------------------------------------
-// Internal functions.
-
-static sg_shader s_load_shader(spritebatch_t* sb, sprite_shader_type_t type)
+aseprite_cache_t* aseprite_cache_make(app_t* app)
 {
-	sg_shader_desc params = { 0 };
-
-	// Default sprite shader.
-	switch (type) {
-	case SPRITE_SHADER_TYPE_DEFAULT:
-		params.attrs[0].name = "pos";
-		params.attrs[0].sem_name = "POSITION";
-		params.attrs[0].sem_index = 0;
-		params.attrs[1].name = "uv";
-		params.attrs[1].sem_name = "TEXCOORD";
-		params.attrs[1].sem_index = 0;
-		params.attrs[1].name = "uv";
-		params.attrs[2].sem_name = "TEXCOORD";
-		params.attrs[2].sem_index = 1;
-		params.attrs[2].name = "alpha";
-		params.vs.uniform_blocks[0].size = sizeof(vs_uniforms_t::mvp);
-		params.vs.uniform_blocks[0].uniforms[0].name = "u_mvp";
-		params.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_MAT4;
-		params.fs.images[0].name = "u_image";
-		params.fs.images[0].type = SG_IMAGETYPE_2D;
-		params.vs.source = CUTE_STRINGIZE(
-			struct vertex_t
-			{
-				float2 pos : POSITION;
-				float2 uv  : TEXCOORD0;
-				float alpha : TEXCOORD1;
-			};
-
-			struct interp_t
-			{
-				float4 posH : SV_Position;
-				float2 uv   : TEXCOORD0;
-				float alpha : TEXCOORD1;
-			};
-
-			cbuffer params : register(b0)
-			{
-				row_major float4x4 u_mvp;
-			};
-
-			interp_t main(vertex_t vtx)
-			{
-				float4 posH = mul(float4(vtx.pos, 0, 1), u_mvp);
-
-				interp_t interp;
-				interp.posH = posH;
-				interp.uv = vtx.uv;
-				interp.alpha = vtx.alpha;
-				return interp;
-			}
-		);
-		params.fs.source = CUTE_STRINGIZE(
-			struct interp_t
-			{
-				float4 posH : SV_Position;
-				float2 uv   : TEXCOORD0;
-				float alpha : TEXCOORD1;
-			};
-
-			Texture2D<float4> u_image: register(t0);
-			sampler smp: register(s0);
-
-			float4 main(interp_t interp) : SV_Target0
-			{
-				float4 color = u_image.Sample(smp, interp.uv);
-				color.a = color.a * interp.alpha;
-				clip(color.a - 0.00001);
-				return color;
-			}
-		);
-		break;
-
-	default:
-		return { SG_INVALID_ID };
-	}
-
-	sg_shader shader = sg_make_shader(params);
-	return shader;
+	aseprite_cache_t* cache = CUTE_NEW(aseprite_cache_t, app->mem_ctx);
+	cache->batch = batch_make(app, s_get_pixels, cache);
+	cache->mem_ctx = app->mem_ctx;
+	return cache;
 }
 
-#if 0
-static gfx_shader_t* s_load_shader(spritebatch_t* sb, sprite_shader_type_t type)
+void aseprite_cache_destroy(aseprite_cache_t* cache)
 {
-	const char* default_vs = CUTE_STRINGIZE(
-		struct vertex_t
-		{
-			float2 pos : POSITION0;
-			float2 uv  : TEXCOORD0;
-		};
-
-		struct interp_t
-		{
-			float4 posH : POSITION0;
-			float2 uv   : TEXCOORD0;
-		};
-
-		float4x4 u_mvp;
-		float2 u_inv_screen_wh;
-
-		interp_t main(vertex_t vtx)
-		{
-			float4 posH = mul(float4(round(vtx.pos), 0, 1), u_mvp);
-
-			posH.xy += u_inv_screen_wh;
-			interp_t interp;
-			interp.posH = posH;
-			interp.uv = vtx.uv;
-			return interp;
-		}
-	);
-
-	const char* default_ps = CUTE_STRINGIZE(
-		struct interp_t
-		{
-			float4 posH : POSITION;
-			float2 uv   : TEXCOORD0;
-		};
-
-		sampler2D u_image;
-
-		float4 main(interp_t interp) : COLOR
-		{
-			float2 uv = interp.uv;
-			float4 color = tex2D(u_image, uv);
-			return color;
-		}
-	);
-
-	const char* outline_vs = CUTE_STRINGIZE(
-		struct vertex_t
-		{
-			float2 pos : POSITION0;
-			float2 uv  : TEXCOORD0;
-		};
-
-		struct interp_t
-		{
-			float4 posH : POSITION0;
-			float2 uv   : TEXCOORD0;
-		};
-
-		float4x4 u_mvp;
-		float2 u_inv_screen_wh;
-
-		interp_t main(vertex_t vtx)
-		{
-			float4 posH = mul(float4(round(vtx.pos), 0, 1), u_mvp);
-
-			posH.xy += u_inv_screen_wh;
-			interp_t interp;
-			interp.posH = posH;
-			interp.uv = vtx.uv;
-			return interp;
-		}
-	);
-
-	const char* outline_ps = CUTE_STRINGIZE(
-		struct interp_t
-		{
-			float4 posH : POSITION;
-			float2 uv   : TEXCOORD0;
-		};
-
-		sampler2D u_image;
-		float2 u_texel_size;
-		float u_use_border;
-
-		float4 main(interp_t interp) : COLOR
-		{
-			float2 uv = interp.uv;
-
-			// Border detection for pixel outlines.
-			float a = (float)any(tex2D(u_image, uv + float2(0,  u_texel_size.y)).rgb);
-			float b = (float)any(tex2D(u_image, uv + float2(0, -u_texel_size.y)).rgb);
-			float c = (float)any(tex2D(u_image, uv + float2(u_texel_size.x,  0)).rgb);
-			float d = (float)any(tex2D(u_image, uv + float2(-u_texel_size.x, 0)).rgb);
-			float e = (float)any(tex2D(u_image, uv + float2(-u_texel_size.x, -u_texel_size.y)).rgb);
-			float f = (float)any(tex2D(u_image, uv + float2(-u_texel_size.x,  u_texel_size.y)).rgb);
-			float g = (float)any(tex2D(u_image, uv + float2( u_texel_size.x, -u_texel_size.y)).rgb);
-			float h = (float)any(tex2D(u_image, uv + float2( u_texel_size.x,  u_texel_size.y)).rgb);
-
-			float4 image_color = tex2D(u_image, uv);
-			float image_mask = (float)any(image_color.rgb);
-
-			float border = max(a, max(b, max(c, max(d, max(e, max(f, max(g, h))))))) * (1 - image_mask);
-			border *= u_use_border;
-
-			// Pick between white border or sprite color.
-			float4 border_color = float4(1, 1, 1, 1);
-			float4 color = lerp(image_color * image_mask, border_color, border);
-
-			return color;
-		}
-	);
-
-	const char* tint_vs = CUTE_STRINGIZE(
-		struct vertex_t
-		{
-			float2 pos : POSITION0;
-			float2 uv  : TEXCOORD0;
-		};
-
-		struct interp_t
-		{
-			float4 posH : POSITION0;
-			float2 uv   : TEXCOORD0;
-		};
-
-		float4x4 u_mvp;
-		float2 u_inv_screen_wh;
-
-		interp_t main(vertex_t vtx)
-		{
-			float4 posH = mul(float4(round(vtx.pos), 0, 1), u_mvp);
-
-			posH.xy += u_inv_screen_wh;
-			interp_t interp;
-			interp.posH = posH;
-			interp.uv = vtx.uv;
-			return interp;
-		}
-	);
-
-	const char* tint_ps = CUTE_STRINGIZE(
-		struct interp_t
-		{
-			float4 posH : POSITION;
-			float2 uv   : TEXCOORD0;
-		};
-
-		sampler2D u_image;
-
-		float4 main(interp_t interp) : COLOR
-		{
-			float2 uv = interp.uv;
-			float4 color = tex2D(u_image, uv);
-			return color;
-		}
-	);
-
-	// Grab the shader strings.
-	const char* vs = NULL;
-	const char* ps = NULL;
-
-	switch (type)
-	{
-	case SPRITE_SHADER_TYPE_DEFAULT:
-		vs = default_vs;
-		ps = default_ps;
-		break;
-
-	case SPRITE_SHADER_TYPE_OUTLINE:
-		vs = outline_vs;
-		ps = outline_ps;
-		break;
-
-	case SPRITE_SHADER_TYPE_TINT:
-		vs = tint_vs;
-		ps = tint_ps;
-		break;
-	}
-
-	// Set common uniforms.
-	app_t* app = sb->app;
-	gfx_shader_t* shader = gfx_shader_new(app, sb->sprite_buffer, vs, ps);
-	gfx_shader_set_screen_wh(app, shader, sb->w, sb->h);
-
-	return shader;
-}
-#endif
-
-static void s_free_cached_image(spritebatch_t* sb, cached_image_t* cached_image)
-{
-	CUTE_FREE(cached_image->img.pix, NULL);
+	cache->~aseprite_cache_t();
 }
 
-static void s_free_all_images_in_cache(spritebatch_t* sb)
+static play_direction_t s_play_direction(ase_animation_direction_t direction)
 {
-	list_t* list = sb->cache->list();
-	for (list_node_t* n = list_begin(list); n != list_end(list); n = n->next) {
-		cached_image_t cached_image = *sprite_cache_t::node_to_item(n);
-		s_free_cached_image(sb, &cached_image);
+	switch (direction) {
+	case ASE_ANIMATION_DIRECTION_FORWARDS: return PLAY_DIRECTION_FORWARDS;
+	case ASE_ANIMATION_DIRECTION_BACKWORDS: return PLAY_DIRECTION_BACKWARDS;
+	case ASE_ANIMATION_DIRECTION_PINGPONG: return PLAY_DIRECTION_PINGPONG;
 	}
 }
 
-//--------------------------------------------------------------------------------------------------
-
-static void s_sync_pip(spritebatch_t* sb)
+static void s_sprite(aseprite_cache_t* cache, aseprite_cache_entry_t entry, sprite_t* sprite)
 {
-	if (sb->pip_dirty) {
-		if (sb->pip.id != SG_INVALID_ID) sg_destroy_pipeline(sb->pip);
-		sg_pipeline_desc params = { 0 };
-		params.layout.buffers[0].stride = sizeof(sprite_vertex_t);
-		params.layout.buffers[0].step_func = SG_VERTEXSTEP_PER_VERTEX;
-		params.layout.buffers[0].step_rate = 1;
-		params.layout.attrs[0].buffer_index = 0;
-		params.layout.attrs[0].offset = CUTE_OFFSET_OF(sprite_vertex_t, pos);
-		params.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
-		params.layout.attrs[1].buffer_index = 0;
-		params.layout.attrs[1].offset = CUTE_OFFSET_OF(sprite_vertex_t, uv);
-		params.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
-		params.layout.attrs[1].buffer_index = 0;
-		params.layout.attrs[2].offset = CUTE_OFFSET_OF(sprite_vertex_t, alpha);
-		params.layout.attrs[2].format = SG_VERTEXFORMAT_FLOAT;
-		params.layout.attrs[2].buffer_index = 0;
-		params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
-		params.shader = sb->active_shader;
-		params.depth_stencil = sb->depth_stencil_state;
-		params.blend = sb->blend_state;
-		sb->pip = sg_make_pipeline(params);
-		sb->pip_dirty = false;
-	}
+	sprite->name = entry.path;
+	sprite->animations = entry.animations;
+	sprite->batch = cache->batch;
+	sprite->w = entry.ase->w;
+	sprite->h = entry.ase->h;
+	sprite->local_offset = entry.local_offset;
 }
 
-spritebatch_t* spritebatch_make(app_t* app)
+error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite)
 {
-	spritebatch_t* sb = CUTE_NEW(spritebatch_t, app->mem_ctx);
-	if (!sb) return NULL;
-
-	sb->w = (float)app->w;
-	sb->h = (float)app->h;
-	sb->app = app;
-	sb->mem_ctx = app->mem_ctx;
-
-	spritebatch_set_depth_stencil_defaults(sb);
-	spritebatch_set_blend_defaults(sb);
-	sb->default_shader = sb->active_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_DEFAULT);
-	sb->outline_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_OUTLINE);
-	sb->tint_shader = s_load_shader(sb, SPRITE_SHADER_TYPE_TINT);
-	sb->sprite_buffer = triple_buffer_make(sizeof(sprite_vertex_t) * 1024 * 10, sizeof(sprite_vertex_t));
-
-	return sb;
-}
-
-void spritebatch_destroy(spritebatch_t* sb)
-{
-	if (sb->easy_paths) {
-		file_index_free_paths(sb->easy_images, sb->easy_paths);
-		file_index_destroy(sb->easy_images);
-	}
-
-	spritebatch_term(&sb->sb);
-	s_free_all_images_in_cache(sb);
-	sb->cache->~sprite_cache_t();
-	CUTE_FREE(sb->cache, sb->mem_ctx);
-	sb->~spritebatch_t();
-	CUTE_FREE(sb, sb->mem_ctx);
-}
-
-spritebatch_t* spritebatch_easy_make(app_t* app, const char* path)
-{
-	spritebatch_t* sb = spritebatch_make(app);
-
-	int w = 0, h = 0;
-	app_offscreen_size(app, &w, &h);
-	matrix_t mvp = matrix_ortho_2d((float)w, (float)h, 0, 0);
-	spritebatch_set_mvp(sb, mvp);
-
-	sb->easy_images = file_index_make();
-	file_index_search_directory(sb->easy_images, path, "png");
-	int paths_count;
-	const char** paths = file_index_get_paths(sb->easy_images, &paths_count);
-	spritebatch_enable_disk_LRU_cache(sb, paths, paths_count, CUTE_MB * 256);
-	sb->easy_paths = paths;
-
-	return sb;
-}
-
-error_t spritebatch_easy_sprite(spritebatch_t* sb, const char* path, sprite_t* out)
-{
-	uint64_t id;
-	error_t err = file_index_find(sb->easy_images, path, &id);
-	if (err.is_error()) return err;
-
-	spritebatch_LRU_cache_prefetch(sb, id);
-
-	sprite_t sprite;
-	cached_image_t img;
-	err = sb->cache->find(id, &img);
-	if (err.is_error()) return err;
-
-	sprite.id = id;
-	sprite.w = img.img.w;
-	sprite.h = img.img.h;
-	sprite.scale_x = (float)img.img.w;
-	sprite.scale_y = (float)img.img.h;
-	sprite.transform.p = cute::v2(0, 0);
-	sprite.transform.r = cute::make_rotation(0);
-	sprite.sort_bits = 0;
-	*out = sprite;
-
-	return error_success();
-}
-
-void spritebatch_push(spritebatch_t* sb, sprite_t sprite)
-{
-	spritebatch_sprite_t s;
-	s.image_id = sprite.id;
-	s.w = sprite.w;
-	s.h = sprite.h;
-	s.x = sprite.transform.p.x;
-	s.y = sprite.transform.p.y;
-	s.sx = sprite.scale_x;
-	s.sy = sprite.scale_y;
-	s.s = sprite.transform.r.s;
-	s.c = sprite.transform.r.c;
-	s.sort_bits = (uint64_t)sprite.sort_bits << 32;
-	s.udata.alpha = sprite.alpha;
-	spritebatch_push(&sb->sb, s);
-}
-
-error_t spritebatch_flush(spritebatch_t* sb)
-{
-	// Start the pipeline.
-	s_sync_pip(sb);
-	sg_apply_pipeline(sb->pip);
-
-	if (sb->scissor_enabled) {
-		sg_apply_scissor_rect(sb->scissor_x, sb->scissor_y, sb->scissor_w, sb->scissor_h, false);
-	}
-
-	// Construct batches.
-	spritebatch_tick(&sb->sb);
-	if (!spritebatch_defrag(&sb->sb)) {
-		return error_failure("`spritebatch_defrag` failed.");
-	}
-	if (!spritebatch_flush(&sb->sb)) {
-		return error_failure("`spritebatch_flush` failed.");
-	}
-
-	// Increment which vertex buffer to use -- triple buffering.
-	sb->sprite_buffer.advance();
-
-	return error_success();
-}
-
-//--------------------------------------------------------------------------------------------------
-// spritebatch_t callbacks.
-
-static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture_w, int texture_h, void* udata)
-{
-	spritebatch_t* sb = (spritebatch_t*)udata;
-
-	// Build vertex buffer of all quads for each sprite.
-	int vert_count = count * 6;
-	sb->verts.ensure_count(vert_count);
-	sprite_vertex_t* verts = sb->verts.data();
-
-	for (int i = 0; i < count; ++i)
-	{
-		spritebatch_sprite_t* s = sprites + i;
-
-		v2 quad[] = {
-			{ -0.5f,  0.5f },
-			{  0.5f,  0.5f },
-			{  0.5f, -0.5f },
-			{ -0.5f, -0.5f },
-		};
-
-		for (int j = 0; j < 4; ++j)
-		{
-			float x = quad[j].x;
-			float y = quad[j].y;
-
-			// rotate sprite about origin
-			float x0 = s->c * x - s->s * y;
-			float y0 = s->s * x + s->c * y;
-			x = x0;
-			y = y0;
-
-			// scale sprite about origin
-			x *= s->sx;
-			y *= s->sy;
-
-			// translate sprite into the world
-			x += s->x;
-			y += s->y;
-
-			quad[j].x = x;
-			quad[j].y = y;
-		}
-
-		// output transformed quad into CPU buffer
-		sprite_vertex_t* out_verts = verts + i * 6;
-
-		for (int i = 0; i < 6; ++i) {
-			out_verts[i].alpha = s->udata.alpha;
-		}
-
-		out_verts[0].pos.x = quad[0].x;
-		out_verts[0].pos.y = quad[0].y;
-		out_verts[0].uv.x = s->minx;
-		out_verts[0].uv.y = s->maxy;
-
-		out_verts[1].pos.x = quad[3].x;
-		out_verts[1].pos.y = quad[3].y;
-		out_verts[1].uv.x = s->minx;
-		out_verts[1].uv.y = s->miny;
-
-		out_verts[2].pos.x = quad[1].x;
-		out_verts[2].pos.y = quad[1].y;
-		out_verts[2].uv.x = s->maxx;
-		out_verts[2].uv.y = s->maxy;
-
-		out_verts[3].pos.x = quad[1].x;
-		out_verts[3].pos.y = quad[1].y;
-		out_verts[3].uv.x = s->maxx;
-		out_verts[3].uv.y = s->maxy;
-
-		out_verts[4].pos.x = quad[3].x;
-		out_verts[4].pos.y = quad[3].y;
-		out_verts[4].uv.x = s->minx;
-		out_verts[4].uv.y = s->miny;
-
-		out_verts[5].pos.x = quad[2].x;
-		out_verts[5].pos.y = quad[2].y;
-		out_verts[5].uv.x = s->maxx;
-		out_verts[5].uv.y = s->miny;
-	}
-
-	// Map the vertex buffer with sprite vertex data.
-	error_t err = triple_buffer_append(&sb->sprite_buffer, vert_count, verts);
-	CUTE_ASSERT(!err.is_error());
-
-	// Setup resource bindings.
-	sg_bindings bind = sb->sprite_buffer.bind();
-	bind.fs_images[0].id = (uint32_t)sprites->texture_id;
-	sg_apply_bindings(bind);
-
-	// Apply uniforms.
-	// TODO - Move MVP to the spritebatch_flush function as an optimization.
-	vs_uniforms_t uniforms = {
-		sb->mvp,
-		v2(1.0f / (float)texture_w, 1.0f / (float)texture_h),
-		sb->outline_use_border
-	};
-
-	// Set shader-specific uniforms.
-	switch (sb->shader_type)
-	{
-	case SPRITE_SHADER_TYPE_DEFAULT:
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &uniforms.mvp, sizeof(uniforms.mvp));
-		break;
-
-	case SPRITE_SHADER_TYPE_OUTLINE:
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &uniforms, sizeof(uniforms));
-		break;
-
-	case SPRITE_SHADER_TYPE_TINT:
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &uniforms.mvp, sizeof(uniforms.mvp));
-		break;
-	}
-
-	// Kick off a draw call.
-	sg_draw(0, vert_count, 1);
-}
-
-static void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
-{
-	spritebatch_t* sb = (spritebatch_t*)udata;
-	spritebatch_LRU_cache_prefetch(sb, image_id);
-	cached_image_t cached_image;
-	if (!sb->cache->find(image_id, &cached_image).is_error()) {
-		CUTE_ASSERT(cached_image.size == bytes_to_fill);
-		CUTE_MEMCPY(buffer, cached_image.img.pix, bytes_to_fill);
-	} else {
-		CUTE_MEMSET(buffer, bytes_to_fill, 0);
-	}
-}
-
-static SPRITEBATCH_U64 s_generate_texture_handle(void* pixels, int w, int h, void* udata)
-{
-	spritebatch_t* sb = (spritebatch_t*)udata;
-	return texture_make((pixel_t*)pixels, w, h);
-}
-
-static void s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
-{
-	spritebatch_t* sb = (spritebatch_t*)udata;
-	texture_destroy(texture_id);
-}
-
-//--------------------------------------------------------------------------------------------------
-
-void spritebatch_set_shader_type(spritebatch_t* sb, sprite_shader_type_t type)
-{
-	sb->shader_type = type;
-
-	// Load the shader, if needed, and set the active sprite system shader.
-	switch (type)
-	{
-	case SPRITE_SHADER_TYPE_DEFAULT:
-		if (sb->default_shader.id == SG_INVALID_ID) {
-			sb->default_shader = s_load_shader(sb, type);
-		}
-		sb->active_shader = sb->default_shader;
-		break;
-
-	case SPRITE_SHADER_TYPE_OUTLINE:
-		if (sb->outline_shader.id == SG_INVALID_ID) {
-			sb->outline_shader = s_load_shader(sb, type);
-		}
-		sb->active_shader = sb->outline_shader;
-		break;
-
-	case SPRITE_SHADER_TYPE_TINT:
-		if (sb->tint_shader.id == SG_INVALID_ID) {
-			sb->tint_shader = s_load_shader(sb, type);
-		}
-		sb->active_shader = sb->tint_shader;
-		break;
-	}
-}
-
-void spritebatch_set_mvp(spritebatch_t* sb, matrix_t mvp)
-{
-	sb->mvp = mvp;
-}
-
-void spritebatch_set_scissor_box(spritebatch_t* sb, int x, int y, int w, int h)
-{
-	sb->scissor_enabled = true;
-	sb->scissor_x = x;
-	sb->scissor_y = y;
-	sb->scissor_w = w;
-	sb->scissor_h = h;
-}
-
-void spritebatch_no_scissor_box(spritebatch_t* sb)
-{
-	sb->scissor_enabled = false;
-}
-
-void spritebatch_outlines_use_border(spritebatch_t* sb, bool use_border)
-{
-	sb->outline_use_border = use_border ? 1.0f : 0;
-}
-
-void spritebatch_set_depth_stencil_state(spritebatch_t* sb, const sg_depth_stencil_state& depth_stencil_state)
-{
-	sb->depth_stencil_state = depth_stencil_state;
-	sb->pip_dirty = true;
-}
-
-void spritebatch_set_depth_stencil_defaults(spritebatch_t* sb)
-{
-	CUTE_MEMSET(&sb->depth_stencil_state, 0, sizeof(sb->depth_stencil_state));
-	sb->pip_dirty = true;
-}
-
-void spritebatch_set_blend_state(spritebatch_t* sb, const sg_blend_state& blend_state)
-{
-	sb->blend_state = blend_state;
-	sb->pip_dirty = true;
-}
-
-void spritebatch_set_blend_defaults(spritebatch_t* sb)
-{
-	CUTE_MEMSET(&sb->blend_state, 0, sizeof(sb->blend_state));
-	sb->blend_state.enabled = true;
-	sb->blend_state.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
-	sb->blend_state.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	sb->blend_state.op_rgb = SG_BLENDOP_ADD;
-	sb->blend_state.src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
-	sb->blend_state.dst_factor_alpha = SG_BLENDFACTOR_ONE;
-	sb->blend_state.op_alpha = SG_BLENDOP_ADD;
-	sb->pip_dirty = true;
-}
-
-error_t spritebatch_enable_disk_LRU_cache(spritebatch_t* sb, const char** image_paths, int image_paths_count, size_t cache_size_in_bytes)
-{
-	if (sb->mode != SPRITE_BATCH_MODE_UNINITIALIZED) {
-		return error_failure("The sprite batch is already initialized.");
-	}
-
-	spritebatch_config_t config;
-	spritebatch_set_default_config(&config);
-	config.atlas_use_border_pixels = 1;
-	config.batch_callback = s_batch_report;
-	config.get_pixels_callback = s_get_pixels;
-	config.generate_texture_callback = s_generate_texture_handle;
-	config.delete_texture_callback = s_destroy_texture_handle;
-	config.allocator_context = sb->mem_ctx;
-
-	if (spritebatch_init(&sb->sb, &config, sb)) {
-		return error_failure("Unable to initialize `spritebatch_t`.");
-	}
-
-	sb->mode = SPRITE_BATCH_MODE_LRU;
-	sb->image_paths = image_paths;
-	sb->image_paths_count = image_paths_count;
-	sb->cache_capacity = cache_size_in_bytes;
-	sb->cache = CUTE_NEW(sprite_cache_t, sb->mem_ctx)(256, sb->mem_ctx);
-
-	return error_success();
-}
-
-error_t spritebatch_LRU_cache_prefetch(spritebatch_t* sb, uint64_t id)
-{
-	if (sb->mode != SPRITE_BATCH_MODE_LRU) {
-		return error_failure("Sprite batch is not in `SPRITE_BATCH_MODE_LRU` mode -- please call `spritebatch_enable_disk_LRU_cache` to use this function.");
-	}
-
-	if (sb->cache->find(id)) {
+	// First see if this ase was already cached.
+	aseprite_cache_entry_t entry;
+	if (!cache->aseprites.find(aseprite_path, &entry).is_error()) {
+		s_sprite(cache, entry, sprite);
 		return error_success();
 	}
 
-	const char* path = sb->image_paths[id];
-	void* data;
-	size_t sz;
-	error_t err = file_system_read_entire_file_to_memory(path, &data, &sz, sb->mem_ctx);
-	CUTE_DEFER(CUTE_FREE(data, sb->mem_ctx));
-	if (err.is_error()) return err;
+	// Load the aseprite file.
+	ase_t* ase = cute_aseprite_load_from_file(aseprite_path, cache->mem_ctx);
+	if (!ase) return error_failure("Unable to find ase file at `aseprite_path`.");
 
-	cp_image_t img = cp_load_png_mem(data, (int)sz);
+	// Allocate internal cache data structure entries.
+	animation_table_t* animations = CUTE_NEW(animation_table_t, cache->mem_ctx);
+	array<uint64_t> ids;
+	ids.ensure_capacity(ase->frame_count);
 
-	if (sz > sb->cache_capacity) {
-		CUTE_FREE(img.pix, NULL);
-		return error_failure("The entire image is larger than the cache.");
+	for (int i = 0; i < ase->frame_count; ++i) {
+		uint64_t id = cache->id_gen++;
+		ids.add(id);
+		cache->id_to_pixels.insert(id, ase->frames[i].pixels);
 	}
 
-	while (sz + sb->cache_used > sb->cache_capacity) {
-		cached_image_t cached_image = *sb->cache->lru();
-		sb->cache->remove(cached_image.id);
-		sb->cache_used -= cached_image.size;
-		s_free_cached_image(sb, &cached_image);
+	// Fill out the animation table from the aseprite file.
+	for (int i = 0; i < ase->tag_count; ++i) {
+		ase_tag_t* tag = ase->tags + i;
+		int from = tag->from_frame;
+		int to = tag->to_frame;
+		animation_t* animation = CUTE_NEW(animation_t, cache->mem_ctx);
+		animation->name = tag->name;
+		animation->play_direction = s_play_direction(tag->loop_animation_direction);
+		for (int i = from; i <= to; ++i) {
+			uint64_t id = ids[i];
+			frame_t frame;
+			frame.delay = ase->frames[i].duration_milliseconds;
+			frame.id = id;
+			animation->frames.add(frame);
+		}
+		animations->insert(animation->name, animation);
 	}
 
-	cached_image_t cached_image;
-	cached_image.id = id;
-	cached_image.path = path;
-	cached_image.size = sizeof(cp_pixel_t) * img.w * img.h;
-	cached_image.img = img;
-	sb->cache->insert(cached_image.id, cached_image);
+	// Look for pivot information to define the sprite's local offset.
+	if (ase->slice_count == 1) {
+		entry.local_offset = v2(entry.ase->slices[0].pivot_x, entry.ase->slices[0].pivot_y);
+	} else if (ase->slice_count > 1) {
+		CUTE_DEBUG_PRINTF("Aseprite cache -- Ase file found with %d sclies, but expected a single slice which would represent the sprite's local origin via slice pivot.", entry.ase->slice_count);
+		entry.local_offset = v2(0, 0);
+	} else {
+		entry.local_offset = v2(0, 0);
+	}
 
+	// Cache the ase and animation.
+	entry.ase = ase;
+	entry.animations = animations;
+	cache->aseprites.insert(aseprite_path, entry);
+
+	s_sprite(cache, entry, sprite);
 	return error_success();
 }
 
-void spritebatch_LRU_cache_clear(spritebatch_t* sb)
+void aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path)
 {
-	s_free_all_images_in_cache(sb);
-	sb->cache->clear();
-}
+	aseprite_cache_entry_t entry;
+	if (cache->aseprites.find(aseprite_path, &entry).is_error()) return;
 
-error_t spritebatch_enable_custom_pixel_loader(spritebatch_t* sb, void (*get_pixels_fn)(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata), void* udata)
-{
-	spritebatch_config_t config;
-	spritebatch_set_default_config(&config);
-	config.atlas_use_border_pixels = 1;
-	config.batch_callback = s_batch_report;
-	config.get_pixels_callback = get_pixels_fn;
-	config.generate_texture_callback = s_generate_texture_handle;
-	config.delete_texture_callback = s_destroy_texture_handle;
-	config.allocator_context = sb->mem_ctx;
+	int animation_count = entry.animations->count();
+	const animation_t** animations = entry.animations->items();
 
-	if (spritebatch_init(&sb->sb, &config, udata)) {
-		return error_failure("Unable to initialize `spritebatch_t`.");
+	for (int i = 0; i < animation_count; ++i) {
+		animations[i]->~animation_t();
+		CUTE_FREE((animation_t*)animations[i], cache->mem_ctx);
 	}
 
-	sb->mode = SPRITE_BATCH_MODE_CUSTOM;
-
-	return error_success();
+	CUTE_FREE(entry.animations);
+	cache->aseprites.remove(aseprite_path);
 }
 
 }

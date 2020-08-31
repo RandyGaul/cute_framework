@@ -27,13 +27,7 @@ using namespace cute;
 
 #include <cute/cute_coroutine.h>
 
-#define CUTE_PNG_IMPLEMENTATION
-#include <cute/cute_png.h>
-
-#define CUTE_ASEPRITE_IMPLEMENTATION
-#include <cute/cute_aseprite.h>
-
-spritebatch_t* sb;
+aseprite_cache_t* sprite_cache;
 
 struct Level
 {
@@ -45,40 +39,15 @@ struct Level
 int level_index = 0;
 bool loaded_level_into_editor = false;
 
-sprite_t AddSprite(string_t path);
-
-struct Animation
-{
-	string_t name;
-	array<string_t>* frames;
-	int frame = 0;
-	float t = 0;
-	float delay = 0.25f;
-
-	sprite_t current_sprite() { return AddSprite(frames->operator[](frame)); }
-};
-
-array<sprite_t> ice_block_masks;
-Animation ice_block;
-Animation ice_block_sheen;
-array<sprite_t> background_bricks;
-
-sprite_t AddSprite(string_t path)
-{
-	sprite_t sprite;
-	error_t err = spritebatch_easy_sprite(sb, path.c_str(), &sprite);
-	if (err.is_error()) {
-		printf("Can't find file %s.\n", path.c_str());
-		CUTE_ASSERT(false);
-	}
-	return sprite;
-}
+array<batch_quad_t> ice_block_masks;
+sprite_t ice_block;
+sprite_t ice_block_sheen;
+array<batch_quad_t> background_bricks;
 
 void IceBlockMask(sprite_t ice_block_sprite)
 {
-	sprite_t mask = AddSprite("data/ice_block_mask.png");
+	batch_quad_t mask = ice_block_sprite.quad();
 	uint64_t id = mask.id;
-	mask = ice_block_sprite;
 	mask.id = id;
 	ice_block_masks.add(mask);
 }
@@ -92,7 +61,8 @@ struct Hero
 	bool holding = false;
 	bool won = false;
     int moves = 0;
-	sprite_t reflection;
+	batch_quad_t reflection;
+	sprite_t sprite;
 
 	// ----------------------------
 	// For animating between tiles.
@@ -139,222 +109,8 @@ struct Hero
 		const float delay_per_tile = 0.125f;
 	} sliding_block;
 
-	Animation anim;
-	dictionary<string_t, Animation> anims;
-	void add_anim(Animation& a) { anims.insert(a.name, a); }
-	void switch_anim(string_t name) { error_t err = anims.find(name, &anim); if (err.is_error()) CUTE_ASSERT(false); }
+	void switch_anim(string_t name) { sprite.play(name); }
 } hero;
-
-array<string_t> GirlForward = {
-	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png", // Hacky delay. Should have an array of delays.
-	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-	"data/girl_forward.png", "data/girl_forward.png", "data/girl_forward.png",
-	"data/girl_forward1.png",
-	"data/girl_forward2.png",
-	"data/girl_forward3.png",
-	"data/girl_forward4.png",
-	"data/girl_forward5.png",
-	"data/girl_forward6.png",
-	"data/girl_forward7.png",
-	"data/girl_forward8.png",
-	"data/girl_forward9.png",
-	"data/girl_forward10.png",
-	"data/girl_forward11.png",
-	"data/girl_forward12.png",
-	"data/girl_forward13.png",
-	"data/girl_forward14.png",
-	"data/girl_forward15.png",
-	"data/girl_forward16.png",
-};
-
-array<string_t> GirlHoldSide = {
-	"data/girl_hold_side1.png",
-	"data/girl_hold_side2.png",
-};
-
-array<string_t> GirlHoldUp = {
-	"data/girl_hold_up1.png",
-	"data/girl_hold_up2.png",
-};
-
-array<string_t> GirlHoldDown = {
-	"data/girl_hold_down1.png",
-	"data/girl_hold_down2.png",
-};
-
-array<string_t> GirlSide = { "data/girl_side.png" };
-array<string_t> GirlUp = { "data/girl_up.png" };
-
-array<string_t> GirlSpin = {
-	"data/girl_spin1.png",
-	"data/girl_spin2.png",
-	"data/girl_spin3.png",
-	"data/girl_spin4.png",
-	"data/girl_spin5.png",
-	"data/girl_spin6.png",
-	"data/girl_spin7.png",
-	"data/girl_spin8.png",
-	"data/girl_spin9.png",
-	"data/girl_spin10.png",
-	"data/girl_spin11.png",
-	"data/girl_spin12.png",
-	"data/girl_spin13.png",
-	"data/girl_spin14.png",
-	"data/girl_spin15.png",
-	"data/girl_spin16.png",
-	"data/girl_spin17.png",
-	"data/girl_spin18.png",
-	"data/girl_spin19.png",
-	"data/girl_spin20.png",
-	"data/girl_spin21.png",
-	"data/girl_spin22.png",
-	"data/girl_spin23.png",
-	"data/girl_spin24.png",
-	"data/girl_spin25.png",
-	"data/girl_spin26.png",
-	"data/girl_spin27.png",
-	"data/girl_spin28.png",
-	"data/girl_spin29.png",
-	"data/girl_spin30.png",
-	"data/girl_spin31.png",
-	"data/girl_spin32.png",
-	"data/girl_spin33.png",
-	"data/girl_spin34.png",
-	"data/girl_spin35.png",
-	"data/girl_spin36.png",
-	"data/girl_spin37.png",
-	"data/girl_spin38.png",
-	"data/girl_spin39.png",
-	"data/girl_spin40.png",
-	"data/girl_spin41.png",
-	"data/girl_spin42.png",
-	"data/girl_spin43.png",
-	"data/girl_spin44.png",
-	"data/girl_spin45.png",
-	"data/girl_spin46.png",
-	"data/girl_spin47.png",
-};
-
-array<string_t> GirlLadder = {
-	"data/girl_ladder1.png",
-	"data/girl_ladder2.png",
-	"data/girl_ladder3.png",
-	"data/girl_ladder4.png",
-	"data/girl_ladder5.png",
-	"data/girl_ladder6.png",
-	"data/girl_ladder7.png",
-	"data/girl_ladder8.png",
-	"data/girl_ladder9.png",
-	"data/girl_ladder10.png",
-	"data/girl_ladder11.png",
-	"data/girl_ladder12.png",
-	"data/girl_ladder13.png",
-	"data/girl_ladder14.png",
-	"data/girl_ladder15.png",
-	"data/girl_ladder16.png",
-	"data/girl_ladder17.png",
-	"data/girl_ladder18.png",
-	"data/girl_ladder19.png",
-	"data/girl_ladder20.png",
-	"data/girl_ladder21.png",
-	"data/girl_ladder22.png",
-	"data/girl_ladder23.png",
-	"data/girl_ladder24.png",
-	"data/girl_ladder25.png",
-	"data/girl_ladder26.png",
-	"data/girl_ladder27.png",
-	"data/girl_ladder28.png",
-	"data/girl_ladder29.png",
-	"data/girl_ladder30.png",
-	"data/girl_ladder31.png",
-	"data/girl_ladder32.png",
-	"data/girl_ladder33.png",
-	"data/girl_ladder34.png",
-	"data/girl_ladder35.png",
-	"data/girl_ladder36.png",
-	"data/girl_ladder37.png",
-	"data/girl_ladder38.png",
-	"data/girl_ladder39.png",
-	"data/girl_ladder40.png",
-	"data/girl_ladder41.png",
-	"data/girl_ladder42.png",
-	"data/girl_ladder43.png",
-	"data/girl_ladder44.png",
-};
-
-array<string_t> IceBlockFrames = {
-	"data/ice_block1.png",
-	"data/ice_block2.png",
-};
-
-array<string_t> IceBlockSheen = {
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png", "data/ice_block_sheen1.png",
-	"data/ice_block_sheen2.png",
-	"data/ice_block_sheen3.png",
-	"data/ice_block_sheen4.png",
-	"data/ice_block_sheen5.png",
-	"data/ice_block_sheen6.png",
-	"data/ice_block_sheen7.png",
-	"data/ice_block_sheen8.png",
-	"data/ice_block_sheen9.png",
-	"data/ice_block_sheen10.png",
-	"data/ice_block_sheen11.png",
-	"data/ice_block_sheen12.png",
-	"data/ice_block_sheen13.png",
-	"data/ice_block_sheen14.png",
-	"data/ice_block_sheen15.png",
-	"data/ice_block_sheen16.png",
-	"data/ice_block_sheen17.png",
-	"data/ice_block_sheen18.png",
-	"data/ice_block_sheen19.png",
-	"data/ice_block_sheen20.png",
-	"data/ice_block_sheen21.png",
-	"data/ice_block_sheen22.png",
-	"data/ice_block_sheen23.png",
-	"data/ice_block_sheen24.png",
-	"data/ice_block_sheen25.png",
-	"data/ice_block_sheen26.png",
-	"data/ice_block_sheen27.png",
-	"data/ice_block_sheen28.png",
-	"data/ice_block_sheen29.png",
-	"data/ice_block_sheen30.png",
-	"data/ice_block_sheen31.png",
-	"data/ice_block_sheen32.png",
-	"data/ice_block_sheen33.png",
-	"data/ice_block_sheen34.png",
-	"data/ice_block_sheen35.png",
-};
 
 array<string_t> BricksEven = {
 	"data/bricks_even1.png",
@@ -530,32 +286,16 @@ void world2tile(int sprite_h, v2 p, int* x_out, int* y_out)
 	*y_out = (int)round(y);
 }
 
-int sort_bits(sprite_t sprite)
+int sort_bits(batch_quad_t q)
 {
 	int x, y;
-	world2tile(sprite.h, sprite.transform.p, &x, &y);
+	world2tile(q.h, q.transform.p, &x, &y);
 	return level.w * y + x;
 }
 
 bool in_grid(int x, int y, int w, int h)
 {
 	return x >= 0 && y >= 0 && x < w && y < h;
-}
-
-void UpdateAnimation(Animation& anim, float dt)
-{
-	if (anim.t >= anim.delay)
-	{
-		anim.t = 0; // reset
-
-		// advance the animation
-		if (anim.frame + 1 < anim.frames->count())
-			anim.frame++;
-		else
-			anim.frame = 0;
-	}
-	else
-		anim.t += dt;
 }
 
 void SetHeroAnimBasedOnFacingDir()
@@ -1329,6 +1069,16 @@ int main(int argc, const char** argv)
 	ImGui::SetCurrentContext(app_init_imgui(app));
 
 	sb = spritebatch_easy_make(app, "data");
+
+	size_t sz;
+	void* data;
+	file_system_read_entire_file_to_memory("data/girl.aseprite", &data, &sz, NULL);
+	ase_t* ase = cute_aseprite_load_from_memory(data, (int)sz, NULL);
+	cp_image_t img;
+	img.w = ase->w;
+	img.h = ase->h;
+	img.pix = (cp_pixel_t*)ase->frames[0].pixels;
+	cp_save_png("test.png", &img);
 
 	Animation idle;
 	idle.name = "idle";

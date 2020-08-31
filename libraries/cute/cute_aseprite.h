@@ -26,6 +26,19 @@
 		Does not support very old versions of Aseprite (with old palette chunks
 		0x0004 or 0x0011). Also does not support deprecrated mask chunk.
 
+		sRGB and ICC profiles are parsed but completely ignored when blending
+		frames together. If you want these to be used when composing frames you
+		have to do this yourself.
+
+
+	SPECIAL THANKS
+
+		Special thanks to Noel Berry for the blend code in his reference C++
+		implementation (https://github.com/NoelFB/blah).
+
+		Special thanks to Richard Mitton for the initial implementation of the
+		zlib inflater.
+
 
 	Revision history:
 		1.00 (08/25/2020) initial release
@@ -58,9 +71,9 @@
 
 	DATA STRUCTURES
 
-		Aseprite files have frames, layers, and cels. A single frame is one from of an
+		Aseprite files have frames, layers, and cels. A single frame is one frame of an
 		animation, formed by blending all the cels of an animation together. There is
-		one cel per layer in the entire file. Each cel contains its own pixel data.
+		one cel per layer per frame. Each cel contains its own pixel data.
 
 		The frame's pixels are automatically assumed to have been blended by the `normal`
 		blend mode. A warning is emit if any other blend mode is encountered. Feel free
@@ -72,6 +85,18 @@
 #define CUTE_ASEPRITE_H
 
 typedef struct ase_t ase_t;
+
+ase_t* cute_aseprite_load_from_file(const char* path, void* mem_ctx);
+ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ctx);
+void cute_aseprite_free(ase_t* aseprite);
+
+#define CUTE_ASEPRITE_MAX_LAYERS (64)
+#define CUTE_ASEPRITE_MAX_SLICES (128)
+#define CUTE_ASEPRITE_MAX_PALETTE_ENTRIES (256)
+#define CUTE_ASEPRITE_MAX_TAGS (256)
+
+#include <stdint.h>
+
 typedef struct ase_frame_t ase_frame_t;
 typedef struct ase_layer_t ase_layer_t;
 typedef struct ase_cel_t ase_cel_t;
@@ -85,18 +110,15 @@ typedef struct ase_color_profile_t ase_color_profile_t;
 typedef struct ase_fixed_t ase_fixed_t;
 typedef struct ase_cel_extra_chunk_t ase_cel_extra_chunk_t;
 
-ase_t* cute_aseprite_load_from_file(const char* path, void* mem_ctx);
-ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ctx);
-void cute_aseprite_free(ase_t* aseprite);
-
-#define CUTE_ASEPRITE_MAX_LAYERS (64)
-#define CUTE_ASEPRITE_MAX_SLICES (128)
-#define CUTE_ASEPRITE_MAX_PALETTE_ENTRIES (256)
-#define CUTE_ASEPRITE_MAX_TAGS (256)
-
 struct ase_color_t
 {
 	uint8_t r, g, b, a;
+};
+
+struct ase_fixed_t
+{
+	uint16_t a;
+	uint16_t b;
 };
 
 struct ase_udata_t
@@ -134,26 +156,35 @@ struct ase_layer_t
 	ase_udata_t udata;
 };
 
-struct ase_fixed_t
+struct ase_cel_extra_chunk_t
 {
-	uint16_t a;
-	uint16_t b;
+	int precise_bounds_are_set;
+	ase_fixed_t precise_x;
+	ase_fixed_t precise_y;
+	ase_fixed_t w, h;
 };
 
-typedef enum ase_color_profile_type_t
+struct ase_cel_t
 {
-	ASE_COLOR_PROFILE_TYPE_NONE,
-	ASE_COLOR_PROFILE_TYPE_SRGB,
-	ASE_COLOR_PROFILE_TYPE_EMBEDDED_ICC,
-} ase_color_profile_type_t;
+	ase_layer_t* layer;
+	void* pixels;
+	int w, h;
+	int x, y;
+	float opacity;
+	int is_linked;
+	uint16_t linked_frame_index;
+	int has_extra;
+	ase_cel_extra_chunk_t extra;
+	ase_udata_t udata;
+};
 
-struct ase_color_profile_t
+struct ase_frame_t
 {
-	ase_color_profile_type_t type;
-	int use_fixed_gamma;
-	ase_fixed_t gamma;
-	uint32_t icc_profile_data_length;
-	void* icc_profile_data;
+	ase_t* ase;
+	int duration_milliseconds;
+	ase_color_t* pixels;
+	int cel_count;
+	ase_cel_t cels[CUTE_ASEPRITE_MAX_LAYERS];
 };
 
 typedef enum ase_animation_direction_t
@@ -170,25 +201,6 @@ struct ase_tag_t
 	ase_animation_direction_t loop_animation_direction;
 	uint8_t r, g, b;
 	const char* name;
-};
-
-typedef enum ase_mode_t
-{
-	ASE_MODE_RGBA,
-	ASE_MODE_GRAYSCALE,
-	ASE_MODE_INDEXED
-} ase_mode_t;
-
-struct ase_palette_entry_t
-{
-	ase_color_t color;
-	const char* color_name;
-};
-
-struct ase_palette_t
-{
-	int entry_count;
-	ase_palette_entry_t entries[CUTE_ASEPRITE_MAX_PALETTE_ENTRIES];
 };
 
 struct ase_slice_t
@@ -211,6 +223,41 @@ struct ase_slice_t
 
 	ase_udata_t udata;
 };
+
+struct ase_palette_entry_t
+{
+	ase_color_t color;
+	const char* color_name;
+};
+
+struct ase_palette_t
+{
+	int entry_count;
+	ase_palette_entry_t entries[CUTE_ASEPRITE_MAX_PALETTE_ENTRIES];
+};
+
+typedef enum ase_color_profile_type_t
+{
+	ASE_COLOR_PROFILE_TYPE_NONE,
+	ASE_COLOR_PROFILE_TYPE_SRGB,
+	ASE_COLOR_PROFILE_TYPE_EMBEDDED_ICC,
+} ase_color_profile_type_t;
+
+struct ase_color_profile_t
+{
+	ase_color_profile_type_t type;
+	int use_fixed_gamma;
+	ase_fixed_t gamma;
+	uint32_t icc_profile_data_length;
+	void* icc_profile_data;
+};
+
+typedef enum ase_mode_t
+{
+	ASE_MODE_RGBA,
+	ASE_MODE_GRAYSCALE,
+	ASE_MODE_INDEXED
+} ase_mode_t;
 
 struct ase_t
 {
@@ -241,37 +288,6 @@ struct ase_t
 	ase_slice_t slices[CUTE_ASEPRITE_MAX_SLICES];
 
 	void* mem_ctx;
-};
-
-struct ase_cel_extra_chunk_t
-{
-	int precise_bounds_are_set;
-	ase_fixed_t precise_x;
-	ase_fixed_t precise_y;
-	ase_fixed_t w, h;
-};
-
-struct ase_cel_t
-{
-	ase_layer_t* layer;
-	void* pixels;
-	int w, h;
-	int x, y;
-	float opacity;
-	int is_linked;
-	uint16_t linked_frame_index;
-	int has_extra;
-	ase_cel_extra_chunk_t extra;
-	ase_udata_t udata;
-};
-
-struct ase_frame_t
-{
-	ase_t* ase;
-	int duration_milliseconds;
-	ase_color_t* pixels;
-	int cel_count;
-	ase_cel_t cels[CUTE_ASEPRITE_MAX_LAYERS];
 };
 
 #endif // CUTE_ASEPRITE_H
@@ -328,11 +344,9 @@ static const char* s_error_reason;      // Used to capture errors during DEFLATE
 	{
 		s_error_cline = line;
 		const char *error_file = s_error_file ? s_error_file : "MEMORY";
-		printf("WARNING (cute_tiled.h:%i): %s (%s)\n", s_error_cline, warning, error_file);
+		printf("WARNING (cute_aseprite.h:%i): %s (%s)\n", s_error_cline, warning, error_file);
 	}
 #endif
-
-#include <stdint.h>
 
 #define CUTE_ASEPRITE_FAIL() do { goto ase_err; } while (0)
 #define CUTE_ASEPRITE_CHECK(X, Y) do { if (!(X)) { s_error_reason = Y; CUTE_ASEPRITE_FAIL(); } } while (0)
@@ -796,32 +810,46 @@ static int s_mul_un8(int a, int b)
 	return (((t >> 8) + t) >> 8);
 }
 
-static ase_color_t s_blend(ase_color_t dst, ase_color_t src, uint8_t opacity)
+static ase_color_t s_blend(ase_color_t src, ase_color_t dst, uint8_t opacity)
 {
-	int r, g, b, a;
-
-	if (dst.a == 0) {
-		r = src.r;
-		g = src.g;
-		b = src.b;
-	} else if (src.a == 0) {
-		r = dst.r;
-		g = dst.g;
-		b = dst.b;
+	src.a = s_mul_un8(src.a, opacity);
+	int a = src.a + dst.a - s_mul_un8(src.a, dst.a);
+	int r, g, b;
+	if (a == 0) {
+		r = g = b = 0;
 	} else {
-		r = (dst.r + s_mul_un8((src.r - dst.r), opacity));
-		g = (dst.g + s_mul_un8((src.g - dst.g), opacity));
-		b = (dst.b + s_mul_un8((src.b - dst.b), opacity));
+		r = dst.r + (src.r - dst.r) * src.a / a;
+		g = dst.g + (src.g - dst.g) * src.a / a;
+		b = dst.b + (src.b - dst.b) * src.a / a;
 	}
+	return { (uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a };
+}
 
-	a = (dst.a + s_mul_un8((src.a - dst.a), opacity));
-	if (a == 0) r = g = b = 0;
+static int s_min(int a, int b)
+{
+	return a < b ? a : b;
+}
 
+static int s_max(int a, int b)
+{
+	return a < b ? b : a;
+}
+
+static ase_color_t s_color(ase_t* ase, void* src, int index)
+{
 	ase_color_t result;
-	result.r = (uint8_t)r;
-	result.g = (uint8_t)g;
-	result.b = (uint8_t)b;
-	result.a = (uint8_t)a;
+	if (ase->mode == ASE_MODE_RGBA) {
+		result = ((ase_color_t*)src)[index];
+	} else if (ase->mode == ASE_MODE_GRAYSCALE) {
+		uint8_t saturation = ((uint8_t*)src)[index * 2];
+		uint8_t a = ((uint8_t*)src)[index * 2 + 1];
+		result.r = result.g = result.b = saturation;
+		result.a = a;
+	} else {
+		CUTE_ASEPRITE_ASSERT(ase->mode == ASE_MODE_INDEXED);
+		uint8_t palette_index = ((uint8_t*)src)[index];
+		result = ase->palette.entries[palette_index].color;
+	}
 	return result;
 }
 
@@ -837,7 +865,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 	s->mem_ctx = mem_ctx;
 
 	s_skip(s, sizeof(uint32_t)); // File size.
-	CUTE_ASSERT(s_read_uint16(s) == 0xA5E0);
+	CUTE_ASEPRITE_ASSERT(s_read_uint16(s) == 0xA5E0);
 
 	ase->frame_count = (int)s_read_uint16(s);
 	ase->w = s_read_uint16(s);
@@ -876,7 +904,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 		ase_frame_t* frame = ase->frames + i;
 		frame->ase = ase;
 		s_skip(s, sizeof(uint32_t)); // Frame size.
-		CUTE_ASSERT(s_read_uint16(s) == 0xF1FA);
+		CUTE_ASEPRITE_ASSERT(s_read_uint16(s) == 0xF1FA);
 		int chunk_count = (int)s_read_uint16(s);
 		frame->duration_milliseconds = s_read_uint16(s);
 		if (frame->duration_milliseconds == 0) frame->duration_milliseconds = speed;
@@ -893,7 +921,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 			switch (chunk_type) {
 			case 0x2004: // Layer chunk.
 			{
-				CUTE_ASSERT(ase->layer_count < CUTE_ASEPRITE_MAX_LAYERS);
+				CUTE_ASEPRITE_ASSERT(ase->layer_count < CUTE_ASEPRITE_MAX_LAYERS);
 				ase_layer_t* layer = ase->layers + ase->layer_count++;
 				layer->flags = (ase_layer_flags_t)s_read_uint16(s);
 				layer->type = (ase_layer_type_t)s_read_uint16(s);
@@ -910,7 +938,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 
 			case 0x2005: // Cel chunk.
 			{
-				CUTE_ASSERT(frame->cel_count < CUTE_ASEPRITE_MAX_LAYERS);
+				CUTE_ASEPRITE_ASSERT(frame->cel_count < CUTE_ASEPRITE_MAX_LAYERS);
 				ase_cel_t* cel = frame->cels + frame->cel_count++;
 				int layer_index = (int)s_read_uint16(s);
 				cel->layer = ase->layers + layer_index;
@@ -929,6 +957,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 					break;
 
 				case 1: // Linked cel.
+					cel->is_linked = 1;
 					cel->linked_frame_index = s_read_uint16(s);
 					break;
 
@@ -970,7 +999,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 			{
 				ase->has_color_profile = 1;
 				ase->color_profile.type = (ase_color_profile_type_t)s_read_uint16(s);
-				ase->color_profile.use_fixed_gamma = (int)s_read_uint16(s);
+				ase->color_profile.use_fixed_gamma = (int)s_read_uint16(s) & 1;
 				ase->color_profile.gamma = s_read_fixed(s);
 				s_skip(s, 8); // For future use (set to zero).
 				if (ase->color_profile.type == ASE_COLOR_PROFILE_TYPE_EMBEDDED_ICC) {
@@ -1088,25 +1117,33 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 		ase_color_t* dst = frame->pixels;
 		for (int j = 0; j < frame->cel_count; ++j) {
 			ase_cel_t* cel = frame->cels + j;
+			if (!(cel->layer->flags & ASE_LAYER_FLAGS_VISIBLE)) {
+				continue;
+			}
+			while (cel->is_linked) {
+				cel = ase->frames[cel->linked_frame_index].cels + j;
+			}
 			void* src = cel->pixels;
 			uint8_t opacity = (uint8_t)(cel->opacity * cel->layer->opacity * 255.0f);
-			int pixel_count = cel->w * cel->h;
-			for (int k = 0; k < pixel_count; ++k) {
-				ase_color_t src_color;
-				if (ase->mode == ASE_MODE_RGBA) {
-					src_color = ((ase_color_t*)src)[k];
-				} else if (ase->mode == ASE_MODE_GRAYSCALE) {
-					uint8_t saturation = ((uint8_t*)src)[k * 2];
-					uint8_t a = ((uint8_t*)src)[k * 2 + 1];
-					src_color.r = src_color.g = src_color.b = saturation;
-					src_color.a = a;
-				} else {
-					CUTE_ASEPRITE_ASSERT(ase->mode == ASE_MODE_INDEXED);
-					uint8_t index = ((uint8_t*)src)[k];
-					src_color = ase->palette.entries[index].color;
+			int cx = cel->x;
+			int cy = cel->y;
+			int cw = cel->w;
+			int ch = cel->h;
+			int cl = -s_min(cx, 0);
+			int ct = -s_min(cy, 0);
+			int dl = s_max(cx, 0);
+			int dt = s_max(cy, 0);
+			int dr = s_min(ase->w, cw + cx);
+			int db = s_min(ase->h, ch + cy);
+			int aw = ase->w;
+			for (int dx = dl, sx = cl; dx < dr; dx++, sx++) {
+				for (int dy = dt, sy = ct; dy < db; dy++, sy++) {
+					int dst_index = aw * dy + dx;
+					ase_color_t src_color = s_color(ase, src, cw * sy + sx);
+					ase_color_t dst_color = dst[dst_index];
+					ase_color_t result = s_blend(src_color, dst_color, opacity);
+					dst[dst_index] = result;
 				}
-				ase_color_t result = s_blend(dst[k], src_color, opacity);
-				dst[k] = result;
 			}
 		}
 	}

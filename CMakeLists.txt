@@ -87,13 +87,14 @@ set(CUTE_SRCS
 	src/cute_string_utils.cpp
 	src/cute_typeless_array.cpp
 	src/cute_math.cpp
-	src/cute_sprite.cpp
+	src/cute_batch.cpp
 	src/cute_window.cpp
 	src/cute_image.cpp
 	src/cute_font.cpp
 	src/cute_camera.cpp
 	src/cute_file_index.cpp
 	src/cute_gfx.cpp
+	src/cute_sprite.cpp
 
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
@@ -148,7 +149,7 @@ set(CUTE_HDRS
 	src/cute_typeless_array.h
 	src/cute_defer.h
 	src/cute_math.h
-	src/cute_sprite.h
+	src/cute_batch.h
 	src/cute_lru_cache.h
 	src/cute_window.h
 	src/cute_debug_printf.h
@@ -160,6 +161,7 @@ set(CUTE_HDRS
 	src/cute.h
 	src/cute_gfx.h
 	src/cute_rnd.h
+	src/cute_sprite.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
