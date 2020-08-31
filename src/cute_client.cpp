@@ -33,8 +33,6 @@
 #include <internal/cute_app_internal.h>
 #include <internal/cute_protocol_internal.h>
 
-#include <cute/cute_serialize.h>
-
 #include <time.h>
 
 #define CUTE_CLIENT_SEND_BUFFER_SIZE (2 * CUTE_MB)

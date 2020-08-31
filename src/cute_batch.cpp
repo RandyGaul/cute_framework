@@ -62,7 +62,6 @@ struct batch_t
 {
 	::spritebatch_t sb;
 	app_t* app;
-	float w = 0, h = 0;
 
 	array<quad_vertex_t> verts;
 	triple_buffer_t sprite_buffer;
@@ -364,120 +363,6 @@ static gfx_shader_t* s_load_shader(batch_t* b, sprite_shader_type_t type)
 #endif
 
 //--------------------------------------------------------------------------------------------------
-
-static void s_sync_pip(batch_t* b)
-{
-	if (b->pip_dirty) {
-		if (b->pip.id != SG_INVALID_ID) sg_destroy_pipeline(b->pip);
-		sg_pipeline_desc params = { 0 };
-		params.layout.buffers[0].stride = sizeof(quad_vertex_t);
-		params.layout.buffers[0].step_func = SG_VERTEXSTEP_PER_VERTEX;
-		params.layout.buffers[0].step_rate = 1;
-		params.layout.attrs[0].buffer_index = 0;
-		params.layout.attrs[0].offset = CUTE_OFFSET_OF(quad_vertex_t, pos);
-		params.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
-		params.layout.attrs[1].buffer_index = 0;
-		params.layout.attrs[1].offset = CUTE_OFFSET_OF(quad_vertex_t, uv);
-		params.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
-		params.layout.attrs[1].buffer_index = 0;
-		params.layout.attrs[2].offset = CUTE_OFFSET_OF(quad_vertex_t, alpha);
-		params.layout.attrs[2].format = SG_VERTEXFORMAT_FLOAT;
-		params.layout.attrs[2].buffer_index = 0;
-		params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
-		params.shader = b->active_shader;
-		params.depth_stencil = b->depth_stencil_state;
-		params.blend = b->blend_state;
-		b->pip = sg_make_pipeline(params);
-		b->pip_dirty = false;
-	}
-}
-
-batch_t* batch_make(app_t* app, get_pixels_fn* get_pixels, void* get_pixels_udata)
-{
-	batch_t* b = CUTE_NEW(batch_t, app->mem_ctx);
-	if (!b) return NULL;
-
-	b->w = (float)app->w;
-	b->h = (float)app->h;
-	b->app = app;
-	b->get_pixels = get_pixels;
-	b->get_pixels_udata = b->get_pixels_udata;
-	b->mem_ctx = app->mem_ctx;
-
-	batch_set_depth_stencil_defaults(b);
-	batch_set_blend_defaults(b);
-	b->default_shader = b->active_shader = s_load_shader(b, BATCH_QUAD_SHADER_TYPE_DEFAULT);
-	b->outline_shader = s_load_shader(b, BATCH_QUAD_SHADER_TYPE_OUTLINE);
-	b->tint_shader = s_load_shader(b, BATCH_QUAD_SHADER_TYPE_TINT);
-	b->sprite_buffer = triple_buffer_make(sizeof(quad_vertex_t) * 1024 * 10, sizeof(quad_vertex_t));
-
-	spritebatch_config_t config;
-	spritebatch_set_default_config(&config);
-	config.atlas_use_border_pixels = 1;
-	config.batch_callback = s_batch_report;
-	config.get_pixels_callback = s_get_pixels;
-	config.generate_texture_callback = s_generate_texture_handle;
-	config.delete_texture_callback = s_destroy_texture_handle;
-	config.allocator_context = b->mem_ctx;
-
-	if (spritebatch_init(&b->sb, &config, b)) {
-		CUTE_FREE(b, app->mem_ctx);
-		if (!b) return NULL;
-	}
-
-	return b;
-}
-
-void batch_destroy(batch_t* b)
-{
-	spritebatch_term(&b->sb);
-	b->~batch_t();
-	CUTE_FREE(b, b->mem_ctx);
-}
-
-void batch_push(batch_t* b, batch_quad_t q)
-{
-	spritebatch_sprite_t s;
-	s.image_id = q.id;
-	s.w = q.w;
-	s.h = q.h;
-	s.x = q.transform.p.x;
-	s.y = q.transform.p.y;
-	s.sx = q.scale_x;
-	s.sy = q.scale_y;
-	s.s = q.transform.r.s;
-	s.c = q.transform.r.c;
-	s.sort_bits = (uint64_t)q.sort_bits << 32;
-	s.udata.alpha = q.alpha;
-	spritebatch_push(&b->sb, s);
-}
-
-error_t batch_flush(batch_t* b)
-{
-	// Start the pipeline.
-	s_sync_pip(b);
-	sg_apply_pipeline(b->pip);
-
-	if (b->scissor_enabled) {
-		sg_apply_scissor_rect(b->scissor_x, b->scissor_y, b->scissor_w, b->scissor_h, false);
-	}
-
-	// Construct batches.
-	spritebatch_tick(&b->sb);
-	if (!spritebatch_defrag(&b->sb)) {
-		return error_failure("`spritebatch_defrag` failed.");
-	}
-	if (!spritebatch_flush(&b->sb)) {
-		return error_failure("`spritebatch_flush` failed.");
-	}
-
-	// Increment which vertex buffer to use -- triple buffering.
-	b->sprite_buffer.advance();
-
-	return error_success();
-}
-
-//--------------------------------------------------------------------------------------------------
 // spritebatch_t callbacks.
 
 static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture_w, int texture_h, void* udata)
@@ -614,6 +499,124 @@ static void s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
 {
 	batch_t* b = (batch_t*)udata;
 	texture_destroy(texture_id);
+}
+
+//--------------------------------------------------------------------------------------------------
+
+static void s_sync_pip(batch_t* b)
+{
+	if (b->pip_dirty) {
+		if (b->pip.id != SG_INVALID_ID) sg_destroy_pipeline(b->pip);
+		sg_pipeline_desc params = { 0 };
+		params.layout.buffers[0].stride = sizeof(quad_vertex_t);
+		params.layout.buffers[0].step_func = SG_VERTEXSTEP_PER_VERTEX;
+		params.layout.buffers[0].step_rate = 1;
+		params.layout.attrs[0].buffer_index = 0;
+		params.layout.attrs[0].offset = CUTE_OFFSET_OF(quad_vertex_t, pos);
+		params.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
+		params.layout.attrs[1].buffer_index = 0;
+		params.layout.attrs[1].offset = CUTE_OFFSET_OF(quad_vertex_t, uv);
+		params.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
+		params.layout.attrs[1].buffer_index = 0;
+		params.layout.attrs[2].offset = CUTE_OFFSET_OF(quad_vertex_t, alpha);
+		params.layout.attrs[2].format = SG_VERTEXFORMAT_FLOAT;
+		params.layout.attrs[2].buffer_index = 0;
+		params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
+		params.shader = b->active_shader;
+		params.depth_stencil = b->depth_stencil_state;
+		params.blend = b->blend_state;
+		b->pip = sg_make_pipeline(params);
+		b->pip_dirty = false;
+	}
+}
+
+batch_t* batch_make(app_t* app, get_pixels_fn* get_pixels, void* get_pixels_udata)
+{
+	batch_t* b = CUTE_NEW(batch_t, app->mem_ctx);
+	if (!b) return NULL;
+
+	int w = 0, h = 0;
+	app_offscreen_size(app, &w, &h);
+	matrix_t mvp = matrix_ortho_2d((float)w, (float)h, 0, 0);
+	b->mvp = mvp;
+
+	b->app = app;
+	b->get_pixels = get_pixels;
+	b->get_pixels_udata = get_pixels_udata;
+	b->mem_ctx = app->mem_ctx;
+
+	batch_set_depth_stencil_defaults(b);
+	batch_set_blend_defaults(b);
+	b->default_shader = b->active_shader = s_load_shader(b, BATCH_QUAD_SHADER_TYPE_DEFAULT);
+	b->outline_shader = s_load_shader(b, BATCH_QUAD_SHADER_TYPE_OUTLINE);
+	b->tint_shader = s_load_shader(b, BATCH_QUAD_SHADER_TYPE_TINT);
+	b->sprite_buffer = triple_buffer_make(sizeof(quad_vertex_t) * 1024 * 10, sizeof(quad_vertex_t));
+
+	spritebatch_config_t config;
+	spritebatch_set_default_config(&config);
+	config.atlas_use_border_pixels = 1;
+	config.batch_callback = s_batch_report;
+	config.get_pixels_callback = s_get_pixels;
+	config.generate_texture_callback = s_generate_texture_handle;
+	config.delete_texture_callback = s_destroy_texture_handle;
+	config.allocator_context = b->mem_ctx;
+	//config.lonely_buffer_count_till_flush = 1;
+
+	if (spritebatch_init(&b->sb, &config, b)) {
+		CUTE_FREE(b, app->mem_ctx);
+		if (!b) return NULL;
+	}
+
+	return b;
+}
+
+void batch_destroy(batch_t* b)
+{
+	spritebatch_term(&b->sb);
+	b->~batch_t();
+	CUTE_FREE(b, b->mem_ctx);
+}
+
+void batch_push(batch_t* b, batch_quad_t q)
+{
+	spritebatch_sprite_t s;
+	s.image_id = q.id;
+	s.w = q.w;
+	s.h = q.h;
+	s.x = q.transform.p.x;
+	s.y = q.transform.p.y;
+	s.sx = q.scale_x;
+	s.sy = q.scale_y;
+	s.s = q.transform.r.s;
+	s.c = q.transform.r.c;
+	s.sort_bits = (uint64_t)q.sort_bits << 32;
+	s.udata.alpha = q.alpha;
+	spritebatch_push(&b->sb, s);
+}
+
+error_t batch_flush(batch_t* b)
+{
+	// Start the pipeline.
+	s_sync_pip(b);
+	sg_apply_pipeline(b->pip);
+
+	if (b->scissor_enabled) {
+		sg_apply_scissor_rect(b->scissor_x, b->scissor_y, b->scissor_w, b->scissor_h, false);
+	}
+
+	// Construct batches.
+	spritebatch_tick(&b->sb);
+	if (!spritebatch_defrag(&b->sb)) {
+		return error_failure("`spritebatch_defrag` failed.");
+	}
+	if (!spritebatch_flush(&b->sb)) {
+		return error_failure("`spritebatch_flush` failed.");
+	}
+
+	// Increment which vertex buffer to use -- triple buffering.
+	b->sprite_buffer.advance();
+
+	return error_success();
 }
 
 //--------------------------------------------------------------------------------------------------

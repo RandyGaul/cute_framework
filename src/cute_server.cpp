@@ -30,8 +30,6 @@
 #include <internal/cute_net_internal.h>
 #include <internal/cute_protocol_internal.h>
 
-#include <cute/cute_serialize.h>
-
 #define CUTE_SERVER_SEND_BUFFER_SIZE (20 * CUTE_MB)
 #define CUTE_SERVER_RECEIVE_BUFFER_SIZE (20 * CUTE_MB)
 

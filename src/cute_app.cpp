@@ -52,12 +52,6 @@
 #define CUTE_SOUND_FORCE_SDL
 #include <cute/cute_sound.h>
 
-#define CUTE_SERIALIZE_IMPLEMENTATION
-#define SERIALIZE_UNIT_TESTS
-#define SERIALIZE_FREAD(buffer, element_size, element_count, stream) cute::file_system_read((cute::file_t*)stream, buffer, element_size * element_count)
-#define SERIALIZE_FWRITE(buffer, element_size, element_count, stream) cute::file_system_write((cute::file_t*)stream, buffer, element_size * element_count)
-#include <cute/cute_serialize.h>
-
 #include <imgui/imgui.h>
 #include <internal/imgui/imgui_impl_sdl.h>
 #include <internal/imgui/imgui_impl_dx11.h>

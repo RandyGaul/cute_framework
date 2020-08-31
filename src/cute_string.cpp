@@ -152,6 +152,16 @@ char string_t::operator[](const int i) const
 	return c_str()[i];
 }
 
+void string_t::incref()
+{
+	s_incref(id);
+}
+
+void string_t::decref()
+{
+	s_decref(id);
+}
+
 void string_set_allocator_context(void* user_allocator_context)
 {
 	s_mem_ctx = user_allocator_context;

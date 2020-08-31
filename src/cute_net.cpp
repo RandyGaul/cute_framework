@@ -31,8 +31,6 @@
 #include <internal/cute_defines_internal.h>
 #include <internal/cute_serialize_internal.h>
 
-#include <cute/cute_serialize.h>
-
 #include <array>
 
 namespace cute

@@ -184,6 +184,18 @@ set(CUTE_HDRS
 	libraries/glad/glad.h
 	libraries/imgui/imgui.h
 	libraries/sokol/sokol_gfx.h
+
+	libraries/cute/cute_aseprite.h
+	libraries/cute/cute_c2.h
+	libraries/cute/cute_coroutine.h
+	libraries/cute/cute_font.h
+	libraries/cute/cute_math2d.h
+	libraries/cute/cute_path.h
+	libraries/cute/cute_png.h
+	libraries/cute/cute_sound.h
+	libraries/cute/cute_spritebatch.h
+	libraries/cute/cute_sync.h
+	libraries/cute/cute_utf.h
 )
 
 # Handle DirectX 9 link directories.

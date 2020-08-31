@@ -53,6 +53,9 @@ struct string_t
 	CUTE_API int operator!=(const string_t& rhs) const;
 	CUTE_API char operator[](const int i) const;
 
+	CUTE_API void incref();
+	CUTE_API void decref();
+
 	uint64_t id;
 };
 

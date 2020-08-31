@@ -168,8 +168,8 @@ struct spritebatch_sprite_t
 	float x, y;       // x and y position
 	float sx, sy;     // scale on x and y axis
 	float c, s;       // cosine and sine (represents cos(angle) and sin(angle))
-	float minx, miny; // u coordinate
-	float maxx, maxy; // v coordinate
+	float minx, miny; // u coordinate -- This value is for internal use only -- do not set.
+	float maxx, maxy; // v coordinate -- This value is for internal use only -- do not set.
 
 	// This field is *completely optional* -- just set it to zero if you don't wanter to bother.
 	// User-defined sorting key, see: http://realtimecollisiondetection.net/blog/?p=86

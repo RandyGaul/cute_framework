@@ -36,11 +36,13 @@ namespace cute
 struct sprite_t;
 struct aseprite_cache_t;
 
-aseprite_cache_t* aseprite_cache_make(app_t* app);
-void aseprite_cache_destroy(aseprite_cache_t* cache);
+extern CUTE_API aseprite_cache_t* CUTE_CALL aseprite_cache_make(app_t* app);
+extern CUTE_API void CUTE_CALL aseprite_cache_destroy(aseprite_cache_t* cache);
 
-error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite);
-void aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path);
+extern CUTE_API error_t CUTE_CALL aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite);
+extern CUTE_API void CUTE_CALL aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path);
+
+extern CUTE_API batch_t* CUTE_CALL aseprite_cache_get_batch_ptr(aseprite_cache_t* cache);
 
 //--------------------------------------------------------------------------------------------------
 
@@ -77,15 +79,21 @@ struct sprite_t
 	CUTE_INLINE void pause();
 	CUTE_INLINE void unpause();
 	CUTE_INLINE void toggle_pause();
+	CUTE_INLINE void flip_x();
+	CUTE_INLINE void flip_y();
+	CUTE_INLINE int frame_count();
+	CUTE_INLINE float frame_delay();
+	CUTE_INLINE float animation_delay();
 
 	string_t name;
 	int w = 0;
 	int h = 0;
 	bool visible = true;
-	transform_t tx = make_transform();
+	transform_t transform = make_transform();
 	v2 scale = v2(1, 1);
 	v2 local_offset = v2(0, 0);
 	float opacity = 1.0f;
+	int sort_bits = 0;
 
 	int frame_index = 0;
 	int loop_count = 0;
@@ -99,6 +107,8 @@ struct sprite_t
 };
 
 //--------------------------------------------------------------------------------------------------
+
+#include <cute_debug_printf.h>
 
 void sprite_t::update(float dt)
 {
@@ -121,7 +131,10 @@ void sprite_t::update(float dt)
 void sprite_t::play(string_t animation)
 {
 	this->animation = NULL;
-	animations->find(animation, &this->animation);
+	if (animations->find(animation, &this->animation).is_error()) {
+		CUTE_DEBUG_PRINTF("Unable to find animation %s within sprite %s.\n", animation.c_str(), name.c_str());
+		CUTE_ASSERT(false);
+	}
 	reset();
 }
 
@@ -142,12 +155,13 @@ batch_quad_t sprite_t::quad()
 {
 	batch_quad_t q;
 	q.id = animation->frames[frame_index].id;
-	q.transform = tx;
+	q.transform = transform;
 	q.transform.p += local_offset;
 	q.w = w;
 	q.h = h;
 	q.scale_x = scale.x * w;
 	q.scale_y = scale.y * h;
+	q.sort_bits = sort_bits;
 	q.alpha = opacity;
 	return q;
 }
@@ -165,6 +179,37 @@ void sprite_t::unpause()
 void sprite_t::toggle_pause()
 {
 	paused = !paused;
+}
+
+
+void sprite_t::flip_x()
+{
+	scale.x *= -1.0f;
+}
+
+void sprite_t::flip_y()
+{
+	scale.y *= -1.0f;
+}
+
+int sprite_t::frame_count()
+{
+	return animation->frames.count();
+}
+
+float sprite_t::frame_delay()
+{
+	return animation->frames[frame_index].delay;
+}
+
+float sprite_t::animation_delay()
+{
+	int count = frame_count();
+	float delay = 0;
+	for (int i = 0; i < count; ++i) {
+		delay += animation->frames[i].delay;
+	}
+	return delay;
 }
 
 }

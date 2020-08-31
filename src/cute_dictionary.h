@@ -25,6 +25,7 @@
 #include <cute_defines.h>
 #include <cute_hashtable.h>
 #include <cute_c_runtime.h>
+#include <cute_error.h>
 
 namespace cute
 {
@@ -193,10 +194,10 @@ void dictionary<K, T>::swap(int index_a, int index_b)
 
 // -------------------------------------------------------------------------------------------------
 // const char* specialization
-// Forces all strings to be less than 64 characters, and asserts otherwise.
+// Forces all strings to be less than `DICTIONARY_STRING_BLOCK_MAX` characters, asserts otherwise.
 // The limitation is for simplicity of implementation.
 
-#define DICTIONARY_STRING_BLOCK_MAX 64
+#define DICTIONARY_STRING_BLOCK_MAX 128
 
 struct dictionary_string_block_t
 {
@@ -234,6 +235,8 @@ struct dictionary<const char*, T>
 	const T* find(const char* key) const;
 	T* find(const char* key, size_t key_len);
 	const T* find(const char* key, size_t key_len) const;
+	error_t find(const char* key, T* val_out);
+	error_t find(const char* key, T* val_out) const;
 	error_t find(const char* key, size_t key_len, T* val_out);
 	error_t find(const char* key, size_t key_len, T* val_out) const;
 
@@ -306,6 +309,32 @@ const T* dictionary<const char*, T>::find(const char* key, size_t key_len) const
 {
 	dictionary_string_block_t block = s_dictionary_make_block(key, key_len);
 	return (T*)hashtable_find(&m_table, &block);
+}
+
+template <typename T>
+error_t dictionary<const char*, T>::find(const char* key, T* val_out)
+{
+	dictionary_string_block_t block = s_dictionary_make_block(key);
+	T* ptr = (T*)hashtable_find(&m_table, &block);
+	if (ptr) {
+		*val_out = *ptr;
+		return error_success();
+	} else {
+		return error_failure("Unable to find dictionary entry.");
+	}
+}
+
+template <typename T>
+error_t dictionary<const char*, T>::find(const char* key, T* val_out) const
+{
+	dictionary_string_block_t block = s_dictionary_make_block(key);
+	T* ptr = (T*)hashtable_find(&m_table, &block);
+	if (ptr) {
+		*val_out = *ptr;
+		return error_success();
+	} else {
+		return error_failure("Unable to find dictionary entry.");
+	}
 }
 
 template <typename T>

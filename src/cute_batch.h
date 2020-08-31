@@ -25,6 +25,7 @@
 #include <cute_defines.h>
 #include <cute_math.h>
 #include <cute_error.h>
+#include <cute_gfx.h>
 
 // TODO - Customizeability of the shader.
 
