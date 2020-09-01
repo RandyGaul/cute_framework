@@ -26,7 +26,7 @@
 #include <cute_lru_cache.h>
 #include <cute_defer.h>
 #include <cute_file_index.h>
-#include <cute_debug_printf.h>
+//#include <cute_debug_printf.h>
 
 #include <internal/cute_app_internal.h>
 
@@ -39,7 +39,7 @@ struct quad_udata_t
 
 #define SPRITEBATCH_SPRITE_USERDATA quad_udata_t
 #define SPRITEBATCH_IMPLEMENTATION
-#define SPRITEBATCH_LOG CUTE_DEBUG_PRINTF
+//#define SPRITEBATCH_LOG CUTE_DEBUG_PRINTF
 #include <cute/cute_spritebatch.h>
 
 #define CUTE_PNG_IMPLEMENTATION
@@ -137,7 +137,7 @@ static sg_shader s_load_shader(batch_t* b, batch_quad_shader_type_t type)
 
 			interp_t main(vertex_t vtx)
 			{
-				float4 posH = mul(float4(vtx.pos, 0, 1), u_mvp);
+				float4 posH = mul(float4(ceil(vtx.pos), 0, 1), u_mvp);
 
 				interp_t interp;
 				interp.posH = posH;

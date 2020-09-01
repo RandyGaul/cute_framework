@@ -230,7 +230,7 @@ void font_init(app_t* app)
 
 		interp_t main(vertex_t vtx)
 		{
-			float4 posH = mul(float4(vtx.pos, 0, 1), u_mvp);
+			float4 posH = mul(float4(ceil(vtx.pos), 0, 1), u_mvp);
 
 			interp_t interp;
 			interp.posH = posH;
