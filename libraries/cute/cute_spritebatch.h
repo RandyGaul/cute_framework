@@ -120,10 +120,10 @@
 		SPRITEBATCH_MALLOC
 		SPRITEBATCH_MEMCPY
 		SPRITEBATCH_MEMSET
+		SPRITEBATCH_MEMMOVE
 		SPRITEBATCH_ASSERT
 		SPRITEBATCH_ATLAS_FLIP_Y_AXIS_FOR_UV
 		SPRITEBATCH_ATLAS_EMPTY_COLOR
-		SPRITEBATCH_ALLOCA
 		SPRITEBATCH_LOG
 
 	Revision history:
@@ -256,7 +256,12 @@ struct spritebatch_config_t
 	int atlas_height_in_pixels;
 	int atlas_use_border_pixels;
 	int ticks_to_decay_texture;         // number of ticks it takes for a texture handle to be destroyed via `destroy_texture_handle_fn`
-	int lonely_buffer_count_till_flush; // number of unique textures until an atlas is constructed
+	int lonely_buffer_count_till_flush; // Number of unique textures allowed to persist that are not a part of an atlas yet, each one allowed is another draw call.
+	                                    // These are called "lonely textures", since they don't belong to any atlas yet. Set this to 0 if you want all textures to be
+	                                    // immediately put into atlases. Setting a higher number, like 64, will buffer up 64 unique textures (which means up to an
+	                                    // additional 64 draw calls) before flushing them into atlases. Too low of a lonely buffer count combined with a low tick
+	                                    // to decay rate will cause performance problems where atlases are constantly created and immedately destroyed -- you have
+	                                    // been warned! Use `SPRITEBATCH_LOG` to gain some insight on what's going on inside the spritebatch when tuning these settings.
 	float ratio_to_decay_atlas;         // from 0 to 1, once ratio is less than `ratio_to_decay_atlas`, flush active textures in atlas to lonely buffer
 	float ratio_to_merge_atlases;       // from 0 to 0.5, attempts to merge atlases with some ratio of empty space
 	submit_batch_fn* batch_callback;
@@ -460,6 +465,11 @@ struct spritebatch_t
 	#define SPRITEBATCH_MEMSET(ptr, val, n) memset(ptr, val, n)
 #endif
 
+#ifndef SPRITEBATCH_MEMMOVE
+	#include <string.h>
+	#define SPRITEBATCH_MEMMOVE(dst, src, n) memmove(dst, src, n)
+#endif
+
 #ifndef SPRITEBATCH_ASSERT
 	#include <assert.h>
 	#define SPRITEBATCH_ASSERT(condition) assert(condition)
@@ -477,15 +487,6 @@ struct spritebatch_t
 
 #ifndef SPRITEBATCH_ATLAS_EMPTY_COLOR
 	#define SPRITEBATCH_ATLAS_EMPTY_COLOR 0x000000FF
-#endif
-
-#ifndef SPRITEBATCH_ALLOCA
-	#ifdef _WIN32
-		#include <malloc.h>
-	#else
-		#include <alloca.h>
-	#endif
-	#define SPRITEBATCH_ALLOCA(ctx, size) alloca(size)
 #endif
 
 #ifndef SPRITEBATCH_LOG
@@ -1099,7 +1100,7 @@ static inline void spritebatch_internal_get_pixels(spritebatch_t* sb, SPRITEBATC
 		if (!sb->pixel_buffer) return;
 	}
 
-	memset(sb->pixel_buffer, size, 0);
+	SPRITEBATCH_MEMSET(sb->pixel_buffer, 0, size);
 	int size_from_user = sb->pixel_stride * w * h;
 	sb->get_pixels_callback(image_id, sb->pixel_buffer, size_from_user, sb->udata);
 
@@ -1117,18 +1118,18 @@ static inline void spritebatch_internal_get_pixels(spritebatch_t* sb, SPRITEBATC
 		{
 			char* src_row = buffer + (h0 - i - 1) * src_row_stride;
 			char* dst_row = buffer + (h - i - 2) * dst_row_stride + src_row_offset;
-			memmove(dst_row, src_row, src_row_stride);
+			SPRITEBATCH_MEMMOVE(dst_row, src_row, src_row_stride);
 		}
 
 		// Clear the border pixels.
 		int pixel_stride = sb->pixel_stride;
-		memset(buffer, 0, dst_row_stride);
+		SPRITEBATCH_MEMSET(buffer, 0, dst_row_stride);
 		for (int i = 1; i < h - 1; ++i)
 		{
-			memset(buffer + i * dst_row_stride, 0, pixel_stride);
-			memset(buffer + i * dst_row_stride + src_row_stride + src_row_offset, 0, pixel_stride);
+			SPRITEBATCH_MEMSET(buffer + i * dst_row_stride, 0, pixel_stride);
+			SPRITEBATCH_MEMSET(buffer + i * dst_row_stride + src_row_stride + src_row_offset, 0, pixel_stride);
 		}
-		memset(buffer + (h - 1) * dst_row_stride, 0, dst_row_stride);
+		SPRITEBATCH_MEMSET(buffer + (h - 1) * dst_row_stride, 0, dst_row_stride);
 	}
 }
 
@@ -1192,6 +1193,8 @@ int spritebatch_internal_push_sprite(spritebatch_t* sb, spritebatch_internal_spr
 	sprite.sort_bits = s->sort_bits;
 	sprite.x = s->x;
 	sprite.y = s->y;
+	sprite.w = s->w;
+	sprite.h = s->h;
 	sprite.sx = s->sx;
 	sprite.sy = s->sy;
 	sprite.c = s->c;
@@ -1209,8 +1212,8 @@ int spritebatch_internal_push_sprite(spritebatch_t* sb, spritebatch_internal_spr
 		spritebatch_internal_texture_t* tex = (spritebatch_internal_texture_t*)hashtable_find(&atlas->sprites_to_textures, s->image_id);
 		SPRITEBATCH_ASSERT(tex);
 		tex->timestamp = 0;
-		tex->w = s->w;
-		tex->h = s->h;
+		sprite.w = tex->w;
+		sprite.h = tex->h;
 		sprite.minx = tex->minx;
 		sprite.miny = tex->miny;
 		sprite.maxx = tex->maxx;
@@ -1335,6 +1338,9 @@ int spritebatch_flush(spritebatch_t* sb)
 	}
 
 	sb->sprite_count = 0;
+	if (count > 1) {
+		SPRITEBATCH_LOG("Flushed %d batches.\n", count);
+	}
 
 	return count;
 }
@@ -1558,7 +1564,7 @@ void spritebatch_make_atlas(spritebatch_t* sb, spritebatch_internal_atlas_t* atl
 	atlas_image_size = atlas_width * atlas_height * pixel_stride;
 	atlas_pixels = SPRITEBATCH_MALLOC(atlas_image_size, mem_ctx);
 	SPRITEBATCH_CHECK(atlas_image_size, "out of mem");
-	memset(atlas_pixels, SPRITEBATCH_ATLAS_EMPTY_COLOR, atlas_image_size);
+	SPRITEBATCH_MEMSET(atlas_pixels, SPRITEBATCH_ATLAS_EMPTY_COLOR, atlas_image_size);
 
 	for (int i = 0; i < img_count; ++i)
 	{
@@ -1701,7 +1707,14 @@ void spritebatch_internal_flush_atlas(spritebatch_t* sb, spritebatch_internal_at
 		spritebatch_internal_texture_t* atlas_texture = textures + i;
 		if (atlas_texture->timestamp < ticks_to_decay_texture)
 		{
-			spritebatch_internal_lonely_texture_t* lonely_texture = spritebatch_internal_lonelybuffer_push(sb, atlas_texture->image_id, atlas_texture->w, atlas_texture->h, 0);
+			int w = atlas_texture->w;
+			int h = atlas_texture->h;
+			if (sb->atlas_use_border_pixels)
+			{
+				w -= 2;
+				h -= 2;
+			}
+			spritebatch_internal_lonely_texture_t* lonely_texture = spritebatch_internal_lonelybuffer_push(sb, atlas_texture->image_id, w, h, 0);
 			lonely_texture->timestamp = atlas_texture->timestamp;
 		}
 		hashtable_remove(&sb->sprites_to_atlases, atlas_texture->image_id);

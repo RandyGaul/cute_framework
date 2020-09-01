@@ -26,6 +26,7 @@
 #include <cute_lru_cache.h>
 #include <cute_defer.h>
 #include <cute_file_index.h>
+#include <cute_debug_printf.h>
 
 #include <internal/cute_app_internal.h>
 
@@ -34,8 +35,11 @@ struct quad_udata_t
 	float alpha;
 };
 
+#include <cute/cute_png.h>
+
 #define SPRITEBATCH_SPRITE_USERDATA quad_udata_t
 #define SPRITEBATCH_IMPLEMENTATION
+#define SPRITEBATCH_LOG CUTE_DEBUG_PRINTF
 #include <cute/cute_spritebatch.h>
 
 #define CUTE_PNG_IMPLEMENTATION
@@ -555,12 +559,13 @@ batch_t* batch_make(app_t* app, get_pixels_fn* get_pixels, void* get_pixels_udat
 	spritebatch_config_t config;
 	spritebatch_set_default_config(&config);
 	config.atlas_use_border_pixels = 1;
+	config.ticks_to_decay_texture = 100000;
 	config.batch_callback = s_batch_report;
 	config.get_pixels_callback = s_get_pixels;
 	config.generate_texture_callback = s_generate_texture_handle;
 	config.delete_texture_callback = s_destroy_texture_handle;
 	config.allocator_context = b->mem_ctx;
-	//config.lonely_buffer_count_till_flush = 1;
+	config.lonely_buffer_count_till_flush = 0;
 
 	if (spritebatch_init(&b->sb, &config, b)) {
 		CUTE_FREE(b, app->mem_ctx);

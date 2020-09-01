@@ -114,7 +114,7 @@ void sprite_t::update(float dt)
 {
 	if (paused) return;
 
-	t += dt;
+	t += dt * play_speed_multiplier;
 	if (t >= animation->frames[frame_index].delay) {
 		frame_index++;
 		if (frame_index == animation->frames.count()) {
