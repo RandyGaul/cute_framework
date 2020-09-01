@@ -43,7 +43,9 @@ static strpool_t* s_pool(int nuke = 0)
 {
 	strpool_t* instance = &s_pool_instance;
 	if (nuke) {
-		strpool_term(instance);
+		if (s_pool_init) {
+			strpool_term(instance);
+		}
 		s_pool_init = 0;
 		return NULL;
 	} else {
@@ -179,8 +181,7 @@ void string_defrag()
 
 void string_nuke()
 {
-	strpool_t* pool = s_pool(1);
-	strpool_term(pool);
+	s_pool(1);
 }
 
 }

@@ -66,4 +66,4 @@ CUTE_API void string_nuke();
 
 }
 
-#endif // STRING_H
+#endif // CUTE_STRING_H
