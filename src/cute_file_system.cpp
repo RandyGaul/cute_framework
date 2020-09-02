@@ -50,9 +50,9 @@ error_t file_system_set_write_dir(const char* platform_dependent_directory)
 	}
 }
 
-error_t file_system_mount(const char* archive, const char* mount_point, int append_to_path)
+error_t file_system_mount(const char* archive, const char* mount_point, bool append_to_path)
 {
-	if (!PHYSFS_mount(archive, mount_point, append_to_path)) {
+	if (!PHYSFS_mount(archive, mount_point, (int)append_to_path)) {
 		return error_failure(PHYSFS_getLastError());
 	} else {
 		return error_success();

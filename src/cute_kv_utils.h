@@ -24,12 +24,23 @@
 
 #include <cute_kv.h>
 #include <cute_ecs.h>
+#include <cute_string.h>
 
 #include <string>
 #include <vector>
 
 namespace cute
 {
+
+CUTE_INLINE error_t kv_val(kv_t* kv, string_t* string)
+{
+	const char* ptr = string->c_str();
+	size_t len = string->len();
+	error_t err = kv_val_string(kv, &ptr, &len);
+	if (err.is_error()) return err;
+	*string = string_t(ptr, ptr + len);
+	return error_success();
+}
 
 CUTE_INLINE error_t kv_val(kv_t* kv, std::string* val)
 {

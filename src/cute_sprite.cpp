@@ -26,13 +26,16 @@
 
 #define CUTE_ASEPRITE_IMPLEMENTATION
 #include <cute/cute_aseprite.h>
+#include <mattiasgustavsson/strpool.h>
+
+#define INJECT(s) strpool_inject(cache->strpool, s, (int)CUTE_STRLEN(s))
 
 namespace cute
 {
 
 struct aseprite_cache_entry_t
 {
-	string_t path;
+	STRPOOL_U64 path;
 	ase_t* ase;
 	animation_table_t* animations;
 	v2 local_offset;
@@ -40,10 +43,12 @@ struct aseprite_cache_entry_t
 
 struct aseprite_cache_t
 {
-	dictionary<string_t, aseprite_cache_entry_t> aseprites;
+	dictionary<STRPOOL_U64, aseprite_cache_entry_t> aseprites;
 	dictionary<uint64_t, void*> id_to_pixels;
 	batch_t* batch = NULL;
 	uint64_t id_gen = 0;
+	strpool_t strpool_instance;
+	strpool_t* strpool = NULL;
 	void* mem_ctx = NULL;
 };
 
@@ -63,6 +68,10 @@ aseprite_cache_t* aseprite_cache_make(app_t* app)
 {
 	aseprite_cache_t* cache = CUTE_NEW(aseprite_cache_t, app->mem_ctx);
 	cache->batch = batch_make(app, s_get_pixels, cache);
+	strpool_config_t config = strpool_default_config;
+	config.memctx = app->mem_ctx;
+	strpool_init(&cache->strpool_instance, &config);
+	cache->strpool = &cache->strpool_instance;
 	cache->mem_ctx = app->mem_ctx;
 	return cache;
 }
@@ -84,7 +93,7 @@ static play_direction_t s_play_direction(ase_animation_direction_t direction)
 
 static void s_sprite(aseprite_cache_t* cache, aseprite_cache_entry_t entry, sprite_t* sprite)
 {
-	sprite->name = entry.path;
+	sprite->name = strpool_cstr(cache->strpool, entry.path);
 	sprite->animations = entry.animations;
 	sprite->batch = cache->batch;
 	sprite->w = entry.ase->w;
@@ -97,13 +106,10 @@ static void s_sprite(aseprite_cache_t* cache, aseprite_cache_entry_t entry, spri
 
 error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite)
 {
-	// Lock in the path's string id to prevent id thrashing.
-	string_t s = aseprite_path;
-	s.incref();
-
 	// First see if this ase was already cached.
+	STRPOOL_U64 path = INJECT(aseprite_path);
 	aseprite_cache_entry_t entry;
-	if (!cache->aseprites.find(aseprite_path, &entry).is_error()) {
+	if (!cache->aseprites.find(path, &entry).is_error()) {
 		s_sprite(cache, entry, sprite);
 		return error_success();
 	}
@@ -168,10 +174,10 @@ error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, 
 	}
 
 	// Cache the ase and animation.
-	entry.path = aseprite_path;
+	entry.path = path;
 	entry.ase = ase;
 	entry.animations = animations;
-	cache->aseprites.insert(aseprite_path, entry);
+	cache->aseprites.insert(path, entry);
 
 	s_sprite(cache, entry, sprite);
 	return error_success();
@@ -179,11 +185,9 @@ error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, 
 
 void aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path)
 {
-	string_t s = aseprite_path;
-	s.decref();
-
+	STRPOOL_U64 path = INJECT(aseprite_path);
 	aseprite_cache_entry_t entry;
-	if (cache->aseprites.find(aseprite_path, &entry).is_error()) return;
+	if (cache->aseprites.find(path, &entry).is_error()) return;
 	
 	int animation_count = entry.animations->count();
 	const animation_t** animations = entry.animations->items();
@@ -199,12 +203,17 @@ void aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path)
 
 	entry.animations->~animation_table_t();
 	CUTE_FREE(entry.animations, cache->mem_ctx);
-	cache->aseprites.remove(aseprite_path);
+	cache->aseprites.remove(path);
 }
 
 batch_t* aseprite_cache_get_batch_ptr(aseprite_cache_t* cache)
 {
 	return cache->batch;
+}
+
+strpool_t* aseprite_cache_get_strpool_ptr(aseprite_cache_t* cache)
+{
+	return cache->strpool;
 }
 
 }

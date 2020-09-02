@@ -147,6 +147,11 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		goto cute_error;
 	}
 
+	strpool_config_t strpool_config = strpool_default_config;
+	strpool_config.memctx = user_allocator_context;
+	strpool_init(&app->strpool_instance, &strpool_config);
+	app->strpool = &app->strpool_instance;
+
 	return app;
 
 cute_error:
@@ -156,6 +161,7 @@ cute_error:
 
 void app_destroy(app_t* app)
 {
+	strpool_term(app->strpool);
 	if (app->using_imgui) {
 		ImGui_ImplDX11_Shutdown();
 		ImGui_ImplSDL2_Shutdown();

@@ -1134,6 +1134,28 @@ error_t kv_val(kv_t* kv, double* val)
 	return error_success();
 }
 
+error_t kv_val(kv_t* kv, bool* val)
+{
+	if (kv->mode == KV_STATE_READ) {
+		const char* string;
+		size_t sz;
+		error_t err = kv_val_string(kv, &string, &sz);
+		if (sz == 4 && !CUTE_STRNCMP("true", string, sz)) *val = true;
+		else *val = false;
+		return err;
+	} else {
+		if (*val) {
+			const char* string = "true";
+			size_t sz = 4;
+			return kv_val_string(kv, &string, &sz);
+		} else {
+			const char* string = "false";
+			size_t sz = 5;
+			return kv_val_string(kv, &string, &sz);
+		}
+	}
+}
+
 error_t kv_val_string(kv_t* kv, const char** str, size_t* size)
 {
 	if (kv->mode == KV_STATE_READ) {

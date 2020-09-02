@@ -23,24 +23,27 @@
 #define CUTE_STRING_UTIL_H
 
 #include <cute_string.h>
+#include <cute_array.h>
 
 #include <varargs.h>
 
 namespace cute
 {
 
-string_t operator+(const string_t& a, const string_t& b);
+CUTE_API string_t operator+(const string_t& a, const string_t& b);
 
-int to_int(const string_t& x);
-float to_float(const string_t& x);
+CUTE_API int to_int(const string_t& x);
+CUTE_API float to_float(const string_t& x);
 
-string_t format(string_t fmt, ...);
+CUTE_API string_t format(string_t fmt, ...);
 
-string_t to_string(int x);
-string_t to_string(uint64_t x);
-string_t to_string(float x);
+CUTE_API string_t to_string(int x, strpool_t* pool = NULL);
+CUTE_API string_t to_string(uint64_t x, strpool_t* pool = NULL);
+CUTE_API string_t to_string(float x, strpool_t* pool = NULL);
+CUTE_API array<char> to_array(const char* s);
+CUTE_API array<char> to_array(const char* s, size_t sz);
 
-void string_utils_cleanup_static_memory();
+CUTE_API void string_utils_cleanup_static_memory();
 
 }
 

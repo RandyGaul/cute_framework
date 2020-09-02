@@ -28,14 +28,6 @@ using namespace cute;
 
 // -------------------------------------------------------------------------------------------------
 
-enum test_component_types_t : uint32_t
-{
-	test_component_transform_type,
-	test_component_sprite_type,
-	test_component_collider_type,
-	test_component_octorok_type,
-};
-
 struct test_component_transform_t
 {
 	float x;
@@ -64,7 +56,7 @@ struct test_component_octorok_t
 
 // -------------------------------------------------------------------------------------------------
 
-void test_component_transform_initialize(app_t* app, void* component, void* udata)
+void test_component_transform_initialize(app_t* app, entity_t entity, void* component, void* udata)
 {
 	test_component_transform_t* transform = (test_component_transform_t*)component;
 	transform->x = 0;
@@ -79,20 +71,20 @@ error_t test_component_transform_serialize(app_t* app, kv_t* kv, void* component
 	return kv_error_state(kv);
 }
 
-void test_component_sprite_initialize(app_t* app, void* component, void* udata)
+void test_component_sprite_initialize(app_t* app, entity_t entity, void* component, void* udata)
 {
 	test_component_sprite_t* sprite = (test_component_sprite_t*)component;
 	sprite->img_id = 7;
 }
 
-error_t test_component_sprite_serialize(app_t* app, kv_t* kv, void* component, void* udata)
+error_t test_component_sprite_serialize(app_t* app,  kv_t* kv, void* component, void* udata)
 {
 	test_component_sprite_t* sprite = (test_component_sprite_t*)component;
 	kv_key(kv, "img_id"); kv_val(kv, &sprite->img_id);
 	return kv_error_state(kv);
 }
 
-void test_component_collider_initialize(app_t* app, void* component, void* udata)
+void test_component_collider_initialize(app_t* app, entity_t entity, void* component, void* udata)
 {
 	test_component_collider_t* collider = (test_component_collider_t*)component;
 	collider->type = 3;
@@ -107,7 +99,7 @@ error_t test_component_collider_serialize(app_t* app, kv_t* kv, void* component,
 	return kv_error_state(kv);
 }
 
-void test_component_octorok_initialize(app_t* app, void* component, void* udata)
+void test_component_octorok_initialize(app_t* app, entity_t entity, void* component, void* udata)
 {
 	test_component_octorok_t* octorok = (test_component_octorok_t*)component;
 	octorok->ai_state = 0;
@@ -127,7 +119,7 @@ error_t test_component_octorok_serialize(app_t* app, kv_t* kv, void* component, 
 // -------------------------------------------------------------------------------------------------
 
 int s_octorok_system_ran_ok;
-void update_test_octorok_system(app_t* app, float dt, test_component_transform_t* transforms, test_component_sprite_t* sprites, test_component_collider_t* colliders, test_component_octorok_t* octoroks, int entity_count)
+void update_test_octorok_system(app_t* app, float dt, void* udata, test_component_transform_t* transforms, test_component_sprite_t* sprites, test_component_collider_t* colliders, test_component_octorok_t* octoroks, int entity_count)
 {
 	for (int i = 0; i < entity_count; ++i) {
 		test_component_transform_t* transform = transforms + i;
@@ -145,7 +137,7 @@ void update_test_octorok_system(app_t* app, float dt, test_component_transform_t
 		transform->y = 20.0f;
 		if (transform->x == 20.0f) s_octorok_system_ran_ok++;
 
-		test_component_octorok_t* buddy = (test_component_octorok_t*)app_get_component(app, octorok->buddy, test_component_octorok_type);
+		test_component_octorok_t* buddy = (test_component_octorok_t*)app_get_component(app, octorok->buddy, "test_component_octorok_t");
 		buddy->buddy_said_hi = 1;
 	}
 }
@@ -153,7 +145,7 @@ void update_test_octorok_system(app_t* app, float dt, test_component_transform_t
 // -------------------------------------------------------------------------------------------------
 
 int s_octorok_buddy_said_hi_count;
-void update_test_octorok_buddy_counter_system(app_t* app, float dt, test_component_octorok_t* octoroks, int entity_count)
+void update_test_octorok_buddy_counter_system(app_t* app, float dt, void* udata, test_component_octorok_t* octoroks, int entity_count)
 {
 	for (int i = 0; i < entity_count; ++i) {
 		test_component_octorok_t* octorok = octoroks + i;
@@ -174,43 +166,34 @@ int test_ecs_octorok()
 	component_config_t transform_config;
 	transform_config.size_of_component = sizeof(test_component_transform_t);
 	transform_config.name = CUTE_STRINGIZE(test_component_transform_t);
-	transform_config.type = test_component_transform_type;
 	transform_config.initializer_fn = test_component_transform_initialize;
 	transform_config.serializer_fn = test_component_transform_serialize;
-	error_t err = app_register_component_type(app, &transform_config);
-	if (err.is_error()) return -1;
+	app_register_component_type(app, transform_config);
 
 	component_config_t sprite_config;
 	sprite_config.size_of_component = sizeof(test_component_sprite_t);
 	sprite_config.name = CUTE_STRINGIZE(test_component_sprite_t);
-	sprite_config.type = test_component_sprite_type;
 	sprite_config.initializer_fn = test_component_sprite_initialize;
 	sprite_config.serializer_fn = test_component_sprite_serialize;
-	err = app_register_component_type(app, &sprite_config);
-	if (err.is_error()) return -1;
+	app_register_component_type(app, sprite_config);
 
 	component_config_t collider_config;
 	collider_config.size_of_component = sizeof(test_component_collider_t);
 	collider_config.name = CUTE_STRINGIZE(test_component_collider_t);
-	collider_config.type = test_component_collider_type;
 	collider_config.initializer_fn = test_component_collider_initialize;
 	collider_config.serializer_fn = test_component_collider_serialize;
-	err = app_register_component_type(app, &collider_config);
-	if (err.is_error()) return -1;
+	app_register_component_type(app, collider_config);
 
 	component_config_t octorok_config;
 	octorok_config.size_of_component = sizeof(test_component_octorok_t);
 	octorok_config.name = CUTE_STRINGIZE(test_component_octorok_t);
-	octorok_config.type = test_component_octorok_type;
 	octorok_config.initializer_fn = test_component_octorok_initialize;
 	octorok_config.serializer_fn = test_component_octorok_serialize;
-	err = app_register_component_type(app, &octorok_config);
-	if (err.is_error()) return -1;
+	app_register_component_type(app, octorok_config);
 
 	// Register entity types (just one, the octorok).
 	const char* octorok_schema_string = CUTE_STRINGIZE(
-		entity_name = "Octorok",
-		entity_type = 0,
+		entity_type = "Octorok",
 		test_component_transform_t = { },
 		test_component_octorok_t = { },
 		test_component_sprite_t = {
@@ -222,31 +205,31 @@ int test_ecs_octorok()
 		},
 	);
 
-	kv_t* entity_schema = kv_make();
-	entity_type_t entity_type;
-	err = kv_parse(entity_schema, octorok_schema_string, CUTE_STRLEN(octorok_schema_string));
-	if (err.is_error()) return -1;
-	err = app_register_entity_type(app, entity_schema, &entity_type);
-	if (err.is_error()) return -1;
+	entity_type_t entity_type = app_register_entity_type(app, octorok_schema_string);
+	if (entity_type == CUTE_INVALID_ENTITY_TYPE) return -1;
 
-	// Register systems (just one, the Octorok system).
-	component_type_t octorok_system_types[] = {
-		test_component_transform_type,
-		test_component_sprite_type,
-		test_component_collider_type,
-		test_component_octorok_type
-	};
-	component_type_t octorok_buddy_system_types[] = {
-		test_component_octorok_type
-	};
-	app_register_system(app, update_test_octorok_system, octorok_system_types, 4);
-	app_register_system(app, update_test_octorok_buddy_counter_system, octorok_buddy_system_types, 1);
+	// Register systems.
+	app_register_system(app, {
+		NULL,
+		update_test_octorok_system, {
+			"test_component_transform_t",
+			"test_component_sprite_t",
+			"test_component_collider_t",
+			"test_component_octorok_t"
+		}
+	});
+	app_register_system(app, {
+		NULL,
+		update_test_octorok_buddy_counter_system, {
+			"test_component_octorok_t"
+		}
+	});
 
 	// Load up serialized entities.
 	const char* serialized_entities = CUTE_STRINGIZE(
 		entities = [2] {
 			{
-				entity_type = 0,
+				entity_type = "Octorok",
 				test_component_transform_t = {
 					x = 10.0,
 					y = 15.0,
@@ -256,7 +239,7 @@ int test_ecs_octorok()
 				},
 			},
 			{
-				entity_type = 0,
+				entity_type = "Octorok",
 				test_component_transform_t = {
 					x = 30,
 					y = 40,
@@ -269,7 +252,7 @@ int test_ecs_octorok()
 	);
 
 	kv_t* parsed_entities = kv_make();
-	err = kv_parse(parsed_entities, serialized_entities, CUTE_STRLEN(serialized_entities));
+	error_t err = kv_parse(parsed_entities, serialized_entities, CUTE_STRLEN(serialized_entities));
 	if (err.is_error()) return -1;
 
 	array<entity_t> entities;
@@ -282,6 +265,7 @@ int test_ecs_octorok()
 	char entity_buffer[1024];
 	kv_set_write_buffer(saved_entities, entity_buffer, 1024);
 	err = app_save_entities(app, entities, saved_entities);
+	if (err.is_error()) return -1;
 	size_t entity_buffer_size = kv_size_written(saved_entities);
 	entity_buffer[entity_buffer_size] = 0;
 	entity_buffer_size += 1;
@@ -306,7 +290,7 @@ int test_ecs_octorok()
 	// Update the systems.
 	s_octorok_system_ran_ok = 0;
 	s_octorok_buddy_said_hi_count = 0;
-	app_update_systems(app);
+	app_update_systems(app, 0);
 
 	// Assert outcomes (make sure the systems actually ran).
 	CUTE_TEST_ASSERT(s_octorok_system_ran_ok == 2);

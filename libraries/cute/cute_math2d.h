@@ -202,15 +202,15 @@ CUTE_MATH2D_INLINE transform_t make_transform() { transform_t x; x.p = v2(0, 0);
 CUTE_MATH2D_INLINE transform_t make_transform(v2 p, float radians) { transform_t x; x.r = make_rotation(radians); x.p = p; return x; }
 CUTE_MATH2D_INLINE v2 mul(transform_t a, v2 b) { return mul(a.r, b) + a.p; }
 CUTE_MATH2D_INLINE v2 mulT(transform_t a, v2 b) { return mulT(a.r, b - a.p); }
-CUTE_MATH2D_INLINE transform_t mul(transform_t a, transform_t b) { transform_t c; c.r = mul(a.r, b.r); c.p = mul( a.r, b.p ) + a.p; return c; }
+CUTE_MATH2D_INLINE transform_t mul(transform_t a, transform_t b) { transform_t c; c.r = mul(a.r, b.r); c.p = mul(a.r, b.p) + a.p; return c; }
 CUTE_MATH2D_INLINE transform_t mulT(transform_t a, transform_t b) { transform_t c; c.r = mulT(a.r, b.r); c.p = mulT(a.r, b.p - a.p); return c; }
 
 // halfspace ops
 CUTE_MATH2D_INLINE v2 origin(halfspace_t h) { return h.n * h.d; }
 CUTE_MATH2D_INLINE float distance(halfspace_t h, v2 p) { return dot(h.n, p) - h.d; }
 CUTE_MATH2D_INLINE v2 project(halfspace_t h, v2 p) { return p - h.n * distance(h, p); }
-CUTE_MATH2D_INLINE halfspace_t mul(transform_t a, halfspace_t b) { halfspace_t c; c.n = mul(a.r, b.n); c.d = dot(mul(a, origin(b) ), c.n); return c; }
-CUTE_MATH2D_INLINE halfspace_t mulT(transform_t a, halfspace_t b) { halfspace_t c; c.n = mulT(a.r, b.n); c.d = dot(mulT(a, origin(b) ), c.n); return c; }
+CUTE_MATH2D_INLINE halfspace_t mul(transform_t a, halfspace_t b) { halfspace_t c; c.n = mul(a.r, b.n); c.d = dot(mul(a, origin(b)), c.n); return c; }
+CUTE_MATH2D_INLINE halfspace_t mulT(transform_t a, halfspace_t b) { halfspace_t c; c.n = mulT(a.r, b.n); c.d = dot(mulT(a, origin(b)), c.n); return c; }
 CUTE_MATH2D_INLINE v2 intersect(v2 a, v2 b, float da, float db) { return a + (b - a) * (da / (da - db)); }
 
 // aabb helpers

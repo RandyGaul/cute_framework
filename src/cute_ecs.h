@@ -47,55 +47,47 @@ struct entity_t
 	handle_t handle;
 };
 
-extern CUTE_API error_t CUTE_CALL app_register_entity_type(app_t* app, kv_t* schema, entity_type_t* entity_type_out = NULL);
+extern CUTE_API entity_type_t CUTE_CALL app_register_entity_type(app_t* app, const char* schema);
+extern CUTE_API const char* CUTE_CALL app_entity_type_string(app_t* app, entity_type_t type);
 
 //--------------------------------------------------------------------------------------------------
 // Component
 
-using component_type_t = uint32_t;
-#define CUTE_INVALID_COMPONENT_TYPE ((component_type_t)(~0))
-
-typedef void (component_initialize_fn)(app_t* app, void* component, void* udata);
-typedef error_t (component_serialize_fn)(app_t* app, struct kv_t* kv, void* component, void* udata);
+typedef void (component_initialize_fn)(app_t* app, entity_t entity, void* component, void* udata);
+typedef error_t (component_serialize_fn)(app_t* app, kv_t* kv, void* component, void* udata);
 
 struct component_config_t
 {
-	size_t size_of_component = 0;
 	const char* name = NULL;
-	component_type_t type = CUTE_INVALID_COMPONENT_TYPE;
-
+	size_t size_of_component = 0;
 	void* initializer_fn_udata = NULL;
 	component_initialize_fn* initializer_fn = NULL;
-
 	void* serializer_fn_udata = NULL;
 	component_serialize_fn* serializer_fn = NULL;
-
-	// TODO - Enforce dependencies when registering a system.
-	int dependency_count = 0;
-	component_type_t* dependencies = NULL;
 };
 
-extern CUTE_API error_t CUTE_CALL app_register_component_type(app_t* app, const component_config_t* component_config);
+extern CUTE_API void CUTE_CALL app_register_component_type(app_t* app, component_config_t component_config);
 
 //--------------------------------------------------------------------------------------------------
 // System
 
-typedef void system_fn();
-extern CUTE_API void CUTE_CALL app_register_system(app_t* app, system_fn* system_update_function, component_type_t* types, int types_count);
-
-template <typename T>
-void app_register_system(app_t* app, T system_update_function, component_type_t* types, int types_count)
+struct system_t
 {
-	app_register_system(app, (system_fn*)system_update_function, types, types_count);
-}
+	void* udata = NULL;
+	void* update_fn = NULL;
+	array<const char*> component_types;
+};
+
+extern CUTE_API void CUTE_CALL app_register_system(app_t* app, system_t system);
+extern CUTE_API void CUTE_CALL app_update_systems(app_t* app, float dt);
 
 //--------------------------------------------------------------------------------------------------
 // Run-time functions and entity lifetime management.
 
-extern CUTE_API error_t CUTE_CALL app_make_entity(app_t* app, entity_type_t type, entity_t* entity_out = NULL);
+extern CUTE_API error_t CUTE_CALL app_make_entity(app_t* app, const char* entity_type, entity_t* entity_out = NULL);
 extern CUTE_API void CUTE_CALL app_destroy_entity(app_t* app, entity_t entity);
 extern CUTE_API bool CUTE_CALL app_is_entity_valid(app_t* app, entity_t entity);
-extern CUTE_API void* CUTE_CALL app_get_component(app_t* app, entity_t entity, component_type_t type);
+extern CUTE_API void* CUTE_CALL app_get_component(app_t* app, entity_t entity, const char* name);
 
 /**
  * `kv` needs to be in `KV_STATE_READ` mode.
@@ -107,7 +99,6 @@ extern CUTE_API error_t CUTE_CALL app_load_entities(app_t* app, kv_t* kv, array<
  */
 extern CUTE_API error_t CUTE_CALL app_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv);
 
-extern CUTE_API void CUTE_CALL app_update_systems(app_t* app);
 
 }
 

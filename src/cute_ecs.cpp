@@ -24,8 +24,11 @@
 #include <cute_kv.h>
 #include <cute_log.h>
 #include <cute_defer.h>
+#include <cute_string.h>
 
 #include <internal/cute_app_internal.h>
+
+#define INJECT(s) strpool_inject(app->strpool, s, (int)CUTE_STRLEN(s))
 
 namespace cute
 {
@@ -56,15 +59,21 @@ static error_t s_load_from_schema(app_t* app, entity_type_t entity_type, compone
 
 //--------------------------------------------------------------------------------------------------
 
-void app_register_system(app_t* app, system_fn* system_update_function, component_type_t* types, int types_count)
+void app_register_system(app_t* app, system_t system)
 {
-	system_t& system = app->systems.add();
-	system.update_func = system_update_function;
-	for (int i = 0; i < types_count; ++i) system.component_types.add(types[i]);
+	system_internal_t system_internal;
+	system_internal.udata = system.udata;
+	system_internal.update_fn = system.update_fn;
+	for (int i = 0; i < system.component_types.count(); ++i) {
+		system_internal.component_types.add(INJECT(system.component_types[i]));
+	}
+	app->systems.add(system_internal);
 }
 
-error_t app_make_entity(app_t* app, entity_type_t type, entity_t* entity_out)
+error_t app_make_entity(app_t* app, const char* entity_type, entity_t* entity_out)
 {
+	entity_type_t type = CUTE_INVALID_ENTITY_TYPE;
+	app->entity_type_string_to_id.find(INJECT(entity_type), &type);
 	if (type == CUTE_INVALID_ENTITY_TYPE) {
 		return error_failure("`type` is not a valid entity type.");
 	}
@@ -76,10 +85,15 @@ error_t app_make_entity(app_t* app, entity_type_t type, entity_t* entity_out)
 	entity_collection_t* collection = app->entity_collections.find(type);
 	CUTE_ASSERT(collection);
 
-	const array<component_type_t>& component_types = collection->component_types;
+	int index = collection->entity_handles.count();
+	handle_t h = collection->entity_handle_table.alloc_handle(index);
+	collection->entity_handles.add(h);
+	entity.handle = h;
+
+	const array<STRPOOL_U64>& component_types = collection->component_types;
 	for (int i = 0; i < component_types.count(); ++i)
 	{
-		component_type_t component_type = component_types[i];
+		STRPOOL_U64 component_type = component_types[i];
 		component_config_t* config = app->component_configs.find(component_type);
 
 		if (!config) {
@@ -87,7 +101,7 @@ error_t app_make_entity(app_t* app, entity_type_t type, entity_t* entity_out)
 		}
 
 		void* component = collection->component_tables[i].add();
-		config->initializer_fn(app, component, config->initializer_fn_udata);
+		config->initializer_fn(app, entity, component, config->initializer_fn_udata);
 
 		error_t err = s_load_from_schema(app, type, config, component, config->serializer_fn_udata);
 		if (err.is_error()) {
@@ -95,11 +109,6 @@ error_t app_make_entity(app_t* app, entity_type_t type, entity_t* entity_out)
 			return err;
 		}
 	}
-
-	int index = collection->entity_handles.count();
-	handle_t h = collection->entity_handle_table.alloc_handle(index);
-	collection->entity_handles.add(h);
-	entity.handle = h;
 
 	if (entity_out) {
 		*entity_out = entity;
@@ -118,8 +127,10 @@ bool app_is_entity_valid(app_t* app, entity_t entity)
 	return false; // TODO: Implement me.
 }
 
-void* app_get_component(app_t* app, entity_t entity, component_type_t type)
+void* app_get_component(app_t* app, entity_t entity, const char* component_type)
 {
+	STRPOOL_U64 type = INJECT(component_type);
+	// Fast path -- check the current entity collection for this entity type first.
 	entity_collection_t* collection = NULL;
 	if (entity.type == app->current_collection_type_being_iterated) {
 		collection = app->current_collection_being_updated;
@@ -129,7 +140,8 @@ void* app_get_component(app_t* app, entity_t entity, component_type_t type)
 		if (!collection) return NULL;
 	}
 
-	const array<component_type_t>& component_types = collection->component_types;
+	// Slightly slower path -- lookup collection first.
+	const array<STRPOOL_U64>& component_types = collection->component_types;
 	for (int i = 0; i < component_types.count(); ++i)
 	{
 		if (component_types[i] == type) {
@@ -143,70 +155,76 @@ void* app_get_component(app_t* app, entity_t entity, component_type_t type)
 
 //--------------------------------------------------------------------------------------------------
 
-static void s_1(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0)
+static void s_0(app_t* app, float dt, void* fn_uncasted, void* udata)
 {
-	auto fn = (void (*)(app_t*, float, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(app, dt, c0.data(), count);
+	auto fn = (void (*)(app_t*, float, void*))fn_uncasted;
+	fn(app, dt, udata);
 }
 
-static void s_2(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1)
+static void s_1(app_t* app, float dt, void* fn_uncasted, void* udata, typeless_array& c0)
 {
-	CUTE_ASSERT(c0.count() == c1.count());
 	auto fn = (void (*)(app_t*, float, void*, void*, int))fn_uncasted;
 	int count = c0.count();
-	fn(app, dt, c0.data(), c1.data(), count);
+	fn(app, dt, udata, c0.data(), count);
 }
 
-static void s_3(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2)
+static void s_2(app_t* app, float dt, void* fn_uncasted, void* udata, typeless_array& c0, typeless_array& c1)
 {
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count());
+	CUTE_ASSERT(c0.count() == c1.count());
 	auto fn = (void (*)(app_t*, float, void*, void*, void*, int))fn_uncasted;
 	int count = c0.count();
-	fn(app, dt, c0.data(), c1.data(), c2.data(), count);
+	fn(app, dt, udata, c0.data(), c1.data(), count);
 }
 
-static void s_4(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3)
+static void s_3(app_t* app, float dt, void* fn_uncasted, void* udata, typeless_array& c0, typeless_array& c1, typeless_array& c2)
 {
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count());
+	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count());
 	auto fn = (void (*)(app_t*, float, void*, void*, void*, void*, int))fn_uncasted;
 	int count = c0.count();
-	fn(app, dt, c0.data(), c1.data(), c2.data(), c3.data(), count);
+	fn(app, dt, udata, c0.data(), c1.data(), c2.data(), count);
 }
 
-static void s_5(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4)
+static void s_4(app_t* app, float dt, void* fn_uncasted, void* udata, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3)
 {
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count());
+	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count());
 	auto fn = (void (*)(app_t*, float, void*, void*, void*, void*, void*, int))fn_uncasted;
 	int count = c0.count();
-	fn(app, dt, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), count);
+	fn(app, dt, udata, c0.data(), c1.data(), c2.data(), c3.data(), count);
 }
 
-static void s_6(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5)
+static void s_5(app_t* app, float dt, void* fn_uncasted, void* udata, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4)
 {
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count());
+	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count());
 	auto fn = (void (*)(app_t*, float, void*, void*, void*, void*, void*, void*, int))fn_uncasted;
 	int count = c0.count();
-	fn(app, dt, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), c5.data(), count);
+	fn(app, dt, udata, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), count);
 }
 
-static void s_7(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5, typeless_array& c6)
+static void s_6(app_t* app, float dt, void* fn_uncasted, void* udata, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5)
 {
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count() && c0.count() == c6.count());
+	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count());
 	auto fn = (void (*)(app_t*, float, void*, void*, void*, void*, void*, void*, void*, int))fn_uncasted;
 	int count = c0.count();
-	fn(app, dt, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), c5.data(), c6.data(), count);
+	fn(app, dt, udata, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), c5.data(), count);
 }
 
-static void s_8(app_t* app, float dt, system_fn* fn_uncasted, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5, typeless_array& c6, typeless_array& c7)
+static void s_7(app_t* app, float dt, void* fn_uncasted, void* udata, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5, typeless_array& c6)
 {
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count() && c0.count() == c6.count() && c0.count() == c7.count());
+	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count() && c0.count() == c6.count());
 	auto fn = (void (*)(app_t*, float, void*, void*, void*, void*, void*, void*, void*, void*, int))fn_uncasted;
 	int count = c0.count();
-	fn(app, dt, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), c5.data(), c6.data(), c7.data(), count);
+	fn(app, dt, udata, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), c5.data(), c6.data(), count);
 }
 
-static inline void s_match(array<int>* matches, const array<component_type_t>& a, const array<component_type_t>& b)
+static void s_8(app_t* app, float dt, void* fn_uncasted, void* udata, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5, typeless_array& c6, typeless_array& c7)
+{
+	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count() && c0.count() == c6.count() && c0.count() == c7.count());
+	auto fn = (void (*)(app_t*, float, void*, void*, void*, void*, void*, void*, void*, void*, void*, int))fn_uncasted;
+	int count = c0.count();
+	fn(app, dt, udata, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), c5.data(), c6.data(), c7.data(), count);
+}
+
+static inline void s_match(array<int>* matches, const array<STRPOOL_U64>& a, const array<STRPOOL_U64>& b)
 {
 	for (int i = 0; i < a.count(); ++i)
 	{
@@ -220,14 +238,14 @@ static inline void s_match(array<int>* matches, const array<component_type_t>& a
 	}
 }
 
-void app_update_systems(app_t* app)
+void app_update_systems(app_t* app, float dt)
 {
-	float dt = 0;
 	int system_count = app->systems.count();
 	for (int i = 0; i < system_count; ++i)
 	{
-		system_t* system = app->systems + i;
-		system_fn* func = system->update_func;
+		system_internal_t* system = app->systems + i;
+		void* update_fn = system->update_fn;
+		void* udata = system->udata;
 
 		for (int j = 0; j < app->entity_collections.count(); ++j)
 		{
@@ -247,14 +265,15 @@ void app_update_systems(app_t* app)
 			if (matches.count()) {
 				switch (matches.count())
 				{
-				case 1: s_1(app, dt, func, tables[matches[0]]); break;
-				case 2: s_2(app, dt, func, tables[matches[0]], tables[matches[1]]); break;
-				case 3: s_3(app, dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]]); break;
-				case 4: s_4(app, dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]]); break;
-				case 5: s_5(app, dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]]); break;
-				case 6: s_6(app, dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]]); break;
-				case 7: s_7(app, dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]]); break;
-				case 8: s_8(app, dt, func, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]], tables[matches[7]]); break;
+				case 0: s_0(app, dt, update_fn, udata); break;
+				case 1: s_1(app, dt, update_fn, udata, tables[matches[0]]); break;
+				case 2: s_2(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]]); break;
+				case 3: s_3(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]]); break;
+				case 4: s_4(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]]); break;
+				case 5: s_5(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]]); break;
+				case 6: s_6(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]]); break;
+				case 7: s_7(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]]); break;
+				case 8: s_8(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]], tables[matches[7]]); break;
 				default: CUTE_ASSERT(0);
 				}
 			}
@@ -264,52 +283,71 @@ void app_update_systems(app_t* app)
 
 //--------------------------------------------------------------------------------------------------
 
-error_t app_register_component_type(app_t* app, const component_config_t* component_config)
+void app_register_component_type(app_t* app, component_config_t component_config)
 {
-	app->component_name_to_type_table.insert(component_config->name, component_config->type);
-	app->component_configs.insert(component_config->type, *component_config);
-	return error_success();
+	app->component_configs.insert(INJECT(component_config.name), component_config);
 }
 
+static STRPOOL_U64 s_kv_string(app_t* app, kv_t* kv, const char* key)
+{
+	error_t err = kv_key(kv, key);
+	if (err.is_error()) {
+		CUTE_DEBUG_PRINTF("Unable to find the `%s` key.", key);
+		return 0;
+	}
 
-error_t app_register_entity_type(app_t* app, kv_t* schema, entity_type_t* entity_type_out)
+	const char* string_raw;
+	size_t string_sz;
+	err = kv_val_string(kv, &string_raw, &string_sz);
+	if (err.is_error()) {
+		CUTE_DEBUG_PRINTF("`%s` key found, but is not a string.", key);
+		return 0;
+	}
+
+	return strpool_inject(app->strpool, string_raw, (int)string_sz);
+}
+
+entity_type_t app_register_entity_type(app_t* app, const char* schema)
 {
 	// Parse the schema.
-	error_t err = kv_key(schema, "entity_type");
-	if (err.is_error()) return err;
+	kv_t* kv = kv_make();
+	bool cleanup_kv = true;
+	CUTE_DEFER(if (cleanup_kv) kv_destroy(kv));
 
-	entity_type_t entity_type;
-	err = kv_val(schema, &entity_type);
-	if (err.is_error()) return err;
+	error_t err = kv_parse(kv, schema, CUTE_STRLEN(schema));
+	if (err.is_error()) {
+		CUTE_DEBUG_PRINTF("Unable to parse the schema when registering entity type.");
+		return CUTE_INVALID_ENTITY_TYPE;
+	}
 
+	STRPOOL_U64 entity_type_string = s_kv_string(app, kv, "entity_type");
+	if (!strpool_isvalid(app->strpool, entity_type_string)) return CUTE_INVALID_ENTITY_TYPE;
+	
+	STRPOOL_U64 inherits_from_string = s_kv_string(app, kv, "inherits_from");
 	entity_type_t inherits_from = CUTE_INVALID_ENTITY_TYPE;
-	err = kv_key(schema, "inherits_from");
-	if (!err.is_error()) {
-		err = kv_val(schema, &inherits_from);
+	if (strpool_isvalid(app->strpool, inherits_from)) {
+		app->entity_type_string_to_id.find(inherits_from_string, &inherits_from);
 	}
 
 	// Search for all component types present in the schema.
 	int component_config_count = app->component_configs.count();
 	const component_config_t* component_configs = app->component_configs.items();
-	array<component_type_t> component_types;
+	array<STRPOOL_U64> component_types;
 	for (int i = 0; i < component_config_count; ++i)
 	{
 		const component_config_t* config = component_configs + i;
 
-		err = kv_key(schema, config->name);
+		err = kv_key(kv, config->name);
 		if (!err.is_error()) {
-			component_type_t* component_type = app->component_name_to_type_table.find(config->name);
-			if (!component_type) {
-				log(CUTE_LOG_LEVEL_ERROR, "Unable to find type for component name %s.\n", config->name);
-				return error_failure("Encountered invalid component name.");
-			} else {
-				component_types.add(*component_type);
-			}
+			component_types.add(INJECT(config->name));
 		}
 	}
-	kv_reset_read_state(schema);
+	kv_reset_read_state(kv);
 
 	// Register component types.
+	entity_type_t entity_type = app->entity_type_gen++;
+	app->entity_type_string_to_id.insert(entity_type_string, entity_type);
+	app->entity_type_id_to_string.add(entity_type_string);
 	entity_collection_t* collection = app->entity_collections.insert(entity_type);
 	for (int i = 0; i < component_types.count(); ++i)
 	{
@@ -320,16 +358,27 @@ error_t app_register_entity_type(app_t* app, kv_t* schema, entity_type_t* entity
 	}
 
 	// Store the parsed schema.
-	app->entity_parsed_schemas.insert(entity_type, schema);
-	if (inherits_from != CUTE_INVALID_COMPONENT_TYPE) {
+	app->entity_parsed_schemas.insert(entity_type, kv);
+	if (inherits_from != CUTE_INVALID_ENTITY_TYPE) {
 		app->entity_schema_inheritence.insert(entity_type, inherits_from);
 	}
 
-	if (entity_type_out) {
-		*entity_type_out = entity_type;
-	}
+	cleanup_kv = false;
+	return entity_type;
+}
 
-	return error_success();
+const char* app_entity_type_string(app_t* app, entity_type_t type)
+{
+	return strpool_cstr(app->strpool, app->entity_type_id_to_string[type]);
+}
+
+entity_type_t s_entity_type(app_t* app, kv_t* kv, const char* key)
+{
+	STRPOOL_U64 entity_type_string = s_kv_string(app, kv, key);
+	if (!strpool_isvalid(app->strpool, entity_type_string)) return CUTE_INVALID_ENTITY_TYPE;
+	entity_type_t entity_type = CUTE_INVALID_ENTITY_TYPE;
+	app->entity_type_string_to_id.find(entity_type_string, &entity_type);
+	return entity_type;
 }
 
 static error_t s_fill_load_id_table(app_t* app, kv_t* kv)
@@ -349,10 +398,7 @@ static error_t s_fill_load_id_table(app_t* app, kv_t* kv)
 	{
 		kv_object_begin(kv);
 
-		entity_type_t entity_type = CUTE_INVALID_ENTITY_TYPE;
-		kv_key(kv, "entity_type");
-		kv_val(kv, &entity_type);
-
+		entity_type_t entity_type = s_entity_type(app, kv, "entity_type");
 		if (entity_type == CUTE_INVALID_ENTITY_TYPE) {
 			return error_failure("Unable to find entity type.");
 		}
@@ -401,14 +447,13 @@ error_t app_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
 		return error_failure("The `entities` key is not an array.");
 	}
 
+	int entity_index = 0;
 	while (entity_count--)
 	{
+		entity_t entity = load_id_table[entity_index++];
 		kv_object_begin(kv);
 
-		entity_type_t entity_type = CUTE_INVALID_ENTITY_TYPE;
-		kv_key(kv, "entity_type");
-		kv_val(kv, &entity_type);
-
+		entity_type_t entity_type = s_entity_type(app, kv, "entity_type");
 		if (entity_type == CUTE_INVALID_ENTITY_TYPE) {
 			return error_failure("Unable to find entity type.");
 		}
@@ -416,10 +461,10 @@ error_t app_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
 		entity_collection_t* collection = app->entity_collections.find(entity_type);
 		CUTE_ASSERT(collection);
 
-		const array<component_type_t>& component_types = collection->component_types;
+		const array<STRPOOL_U64>& component_types = collection->component_types;
 		for (int i = 0; i < component_types.count(); ++i)
 		{
-			component_type_t component_type = component_types[i];
+			STRPOOL_U64 component_type = component_types[i];
 			component_config_t* config = app->component_configs.find(component_type);
 
 			if (!config) {
@@ -427,7 +472,7 @@ error_t app_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
 			}
 
 			void* component = collection->component_tables[i].add();
-			config->initializer_fn(app, component, config->initializer_fn_udata);
+			config->initializer_fn(app, entity, component, config->initializer_fn_udata);
 
 			// First load values from the schema.
 			err = s_load_from_schema(app, entity_type, config, component, config->serializer_fn_udata);
@@ -496,13 +541,15 @@ error_t app_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv)
 		kv_object_begin(kv);
 
 		kv_key(kv, "entity_type");
-		kv_val(kv, &entity.type);
+		const char* entity_type_string = strpool_cstr(app->strpool, app->entity_type_id_to_string[entity.type]);
+		size_t entity_type_string_len = CUTE_STRLEN(entity_type_string);
+		kv_val_string(kv, &entity_type_string, &entity_type_string_len);
 
-		const array<component_type_t>& component_types = collection->component_types;
+		const array<STRPOOL_U64>& component_types = collection->component_types;
 		const array<typeless_array>& component_tables = collection->component_tables;
 		for (int j = 0; j < component_types.count(); ++j)
 		{
-			component_type_t component_type = component_types[j];
+			STRPOOL_U64 component_type = component_types[j];
 			const typeless_array& component_table = component_tables[j];
 			component_config_t* config = app->component_configs.find(component_type);
 			const void* component = component_table[index];

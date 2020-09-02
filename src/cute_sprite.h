@@ -26,9 +26,9 @@
 #include <cute_array.h>
 #include <cute_dictionary.h>
 #include <cute_batch.h>
-#include <cute_string.h>
 
 #include <cute/cute_aseprite.h>
+#include <mattiasgustavsson/strpool.h>
 
 namespace cute
 {
@@ -43,6 +43,7 @@ extern CUTE_API error_t CUTE_CALL aseprite_cache_load(aseprite_cache_t* cache, c
 extern CUTE_API void CUTE_CALL aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path);
 
 extern CUTE_API batch_t* CUTE_CALL aseprite_cache_get_batch_ptr(aseprite_cache_t* cache);
+extern CUTE_API strpool_t* CUTE_CALL aseprite_cache_get_strpool_ptr(aseprite_cache_t* cache);
 
 //--------------------------------------------------------------------------------------------------
 
@@ -61,17 +62,17 @@ enum play_direction_t
 
 struct animation_t
 {
-	string_t name;
+	const char* name;
 	play_direction_t play_direction = PLAY_DIRECTION_FORWARDS;
 	array<frame_t> frames;
 };
 
-using animation_table_t = dictionary<string_t, const animation_t*>;
+using animation_table_t = dictionary<const char*, const animation_t*>;
 
 struct sprite_t
 {
 	CUTE_INLINE void update(float dt);
-	CUTE_INLINE void play(string_t animation);
+	CUTE_INLINE void play(const char* animation);
 	CUTE_INLINE void reset();
 	CUTE_INLINE void draw();
 	CUTE_INLINE batch_quad_t quad();
@@ -85,7 +86,7 @@ struct sprite_t
 	CUTE_INLINE float frame_delay();
 	CUTE_INLINE float animation_delay();
 
-	string_t name;
+	const char* name;
 	int w = 0;
 	int h = 0;
 	bool visible = true;
@@ -128,11 +129,11 @@ void sprite_t::update(float dt)
 	}
 }
 
-void sprite_t::play(string_t animation)
+void sprite_t::play(const char* animation)
 {
 	this->animation = NULL;
 	if (animations->find(animation, &this->animation).is_error()) {
-		CUTE_DEBUG_PRINTF("Unable to find animation %s within sprite %s.\n", animation.c_str(), name.c_str());
+		CUTE_DEBUG_PRINTF("Unable to find animation %s within sprite %s.\n", animation, name);
 		CUTE_ASSERT(false);
 	}
 	reset();

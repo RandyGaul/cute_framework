@@ -34,9 +34,8 @@ static char* s_temp_str;
 
 static char* s_temp(int size)
 {
-	void* mem_ctx = string_get_allocator_context();
 	if (s_temp_str_size < size + 1) {
-		CUTE_FREE(s_temp_str, mem_ctx);
+		CUTE_FREE(s_temp_str, NULL);
 		s_temp_str_size = size + 1;
 		s_temp_str = (char*)CUTE_ALLOC(size + 1, );
 	}
@@ -45,7 +44,7 @@ static char* s_temp(int size)
 
 void string_utils_cleanup_static_memory()
 {
-	CUTE_FREE(s_temp_str, mem_ctx);
+	CUTE_FREE(s_temp_str, NULL);
 	s_temp_str = NULL;
 }
 
@@ -53,13 +52,14 @@ void string_utils_cleanup_static_memory()
 
 string_t operator+(const string_t& a, const string_t& b)
 {
+	CUTE_ASSERT(a.pool == b.pool);
 	int len_a = a.len();
 	int len_b = b.len();
 	char* temp = s_temp(len_a + len_b);
 	CUTE_MEMCPY(temp, a.c_str(), len_a);
 	CUTE_MEMCPY(temp + len_a, b.c_str(), len_b);
 	temp[len_a + len_b] = 0;
-	return string_t(temp);
+	return string_t(temp, a.pool);
 }
 
 int to_int(const string_t& x)
@@ -95,10 +95,10 @@ string_t format(string_t fmt, ...)
 	#endif
 
 	va_end(args);
-	return string_t(temp);
+	return string_t(temp, fmt.pool);
 }
 
-string_t to_string(int x)
+string_t to_string(int x, strpool_t* pool)
 {
 	const char* fmt = "%d";
 	char* temp = s_temp(256);
@@ -113,10 +113,10 @@ string_t to_string(int x)
 
 	snprintf(temp, size, fmt, x);
 
-	return string_t(temp);
+	return string_t(temp, pool);
 }
 
-string_t to_string(uint64_t x)
+string_t to_string(uint64_t x, strpool_t* pool)
 {
 	const char* fmt = "%" PRIu64;
 	char* temp = s_temp(256);
@@ -131,10 +131,10 @@ string_t to_string(uint64_t x)
 
 	snprintf(temp, size, fmt, x);
 
-	return string_t(temp);
+	return string_t(temp, pool);
 }
 
-string_t to_string(float x)
+string_t to_string(float x, strpool_t* pool)
 {
 	const char* fmt = "%f";
 	char* temp = s_temp(256);
@@ -149,7 +149,24 @@ string_t to_string(float x)
 
 	snprintf(temp, size, fmt, x);
 
-	return string_t(temp);
+	return string_t(temp, pool);
+}
+
+array<char> to_array(const char* s)
+{
+	array<char> result;
+	char c;
+	while ((c = *s++)) result.add(c);
+	result.add(0);
+	return result;
+}
+
+array<char> to_array(const char* s, size_t sz)
+{
+	array<char> result;
+	while (sz--) result.add(*s++);
+	result.add(0);
+	return result;
 }
 
 }

@@ -70,7 +70,7 @@ int do_test(test_t* test, int i)
 	}
 	fprintf(CUTE_TEST_IO_STREAM, "Result:       %s", result_string);
 
-	cute::string_nuke();
+	cute::string_nuke_static_pool();
 
 #ifdef _MSC_VER
 	_CrtDumpMemoryLeaks();

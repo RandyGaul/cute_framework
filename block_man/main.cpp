@@ -27,6 +27,9 @@ using namespace cute;
 
 #include <cute/cute_coroutine.h>
 
+#define STRPOOL_IMPLEMENTATION
+#include <mattiasgustavsson/strpool.h>
+
 aseprite_cache_t* cache;
 batch_t* batch;
 
@@ -110,7 +113,7 @@ struct Hero
 		const float delay_per_tile = 0.125f;
 	} sliding_block;
 
-	void switch_anim(string_t name) { sprite.play(name); }
+	void switch_anim(string_t name) { sprite.play(name.c_str()); }
 } hero;
 
 sprite_t load_sprite(string_t path)
@@ -1053,16 +1056,178 @@ void DrawGirlReflection()
 	batch_set_depth_stencil_defaults(batch);
 }
 
+error_t serialize_v2(kv_t* kv, v2 v)
+{
+	kv_key(kv, "x"); kv_val(kv, &v.x);
+	kv_key(kv, "y"); kv_val(kv, &v.y);
+	return kv_error_state(kv);
+}
+
+error_t serialize_rotation(kv_t* kv, rotation_t rotation)
+{
+	kv_key(kv, "s"); kv_val(kv, &rotation.s);
+	kv_key(kv, "c"); kv_val(kv, &rotation.c);
+	return kv_error_state(kv);
+}
+
+error_t serialize_transform(kv_t* kv, transform_t transform)
+{
+	serialize_v2(kv, transform.p);
+	serialize_rotation(kv, transform.r);
+	return kv_error_state(kv);
+}
+
+error_t kv_val(kv_t* kv, const char** string)
+{
+	size_t len = *string ? CUTE_STRLEN(*string) : 0;
+	kv_val_string(kv, string, &len);
+	strpool_t* strpool = aseprite_cache_get_strpool_ptr(cache);
+	STRPOOL_U64 id = strpool_inject(strpool, *string, (int)len);
+	*string = strpool_cstr(strpool, id);
+	return kv_error_state(kv);
+}
+
+struct Transform
+{
+	transform_t transform;
+};
+
+void transform_init(app_t* app, entity_t entity, void* component, void* udata)
+{
+	Transform* transform = (Transform*)component;
+	transform->transform = make_transform();
+}
+
+error_t transform_serialize(app_t* app, kv_t* kv, void* component, void* udata)
+{
+	Transform* transform = (Transform*)component;
+	return serialize_transform(kv, transform->transform);
+}
+
+struct Animator
+{
+	sprite_t sprite;
+};
+
+void animator_init(app_t* app, entity_t entity, void* component, void* udata)
+{
+	Animator* animator = (Animator*)component;
+	animator->sprite = sprite_t();
+}
+
+error_t animator_serialize(app_t* app, kv_t* kv, void* component, void* udata)
+{
+	Animator* animator = (Animator*)component;
+	kv_key(kv, "name"); kv_val(kv, &animator->sprite.name);
+	if (kv_get_state(kv) == KV_STATE_READ) {
+		animator->sprite = load_sprite(animator->sprite.name);
+	}
+	serialize_transform(kv, animator->sprite.transform);
+	kv_key(kv, "visibile"); kv_val(kv, &animator->sprite.visible);
+	kv_key(kv, "opacity"); kv_val(kv, &animator->sprite.opacity);
+	kv_key(kv, "play_speed_multiplier"); kv_val(kv, &animator->sprite.play_speed_multiplier);
+	kv_key(kv, "t"); kv_val(kv, &animator->sprite.t);
+	kv_key(kv, "paused"); kv_val(kv, &animator->sprite.paused);
+	return kv_error_state(kv);
+}
+
+struct Player
+{
+	int placeholder;
+};
+
+void player_init(app_t* app, entity_t entity, void* component, void* udata)
+{
+	Player* player = (Player*)component;
+	Animator* animator = (Animator*)app_get_component(app, entity, "Animator");
+	animator->sprite.play("idle");
+}
+
+error_t player_serialize(app_t* app, kv_t* kv, void* component, void* udata)
+{
+	Player* player = (Player*)component;
+	return kv_error_state(kv);
+}
+
+void sprite_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, int entity_count)
+{
+	for (int i = 0; i < entity_count; ++i) {
+		Transform* transform = transforms + i;
+		Animator* animator = animators + i;
+
+		animator->sprite.update(dt);
+
+		// Draw sprite relative to the transform component.
+		transform_t local = animator->sprite.transform;
+		animator->sprite.transform = mul(transform->transform, local);
+		animator->sprite.draw();
+		animator->sprite.transform = local;
+	}
+
+	batch_flush(batch);
+}
+
+void ecs_registration(app_t* app)
+{
+	app_register_component_type(app, {
+		CUTE_STRINGIZE(Transform),
+		sizeof(Transform),
+		NULL, transform_init,
+		NULL, transform_serialize,
+	});
+
+	app_register_component_type(app, {
+		CUTE_STRINGIZE(Animator),
+		sizeof(Animator),
+		NULL, animator_init,
+		NULL, animator_serialize,
+	});
+
+	app_register_component_type(app, {
+		CUTE_STRINGIZE(Player),
+		sizeof(Player),
+		NULL, player_init,
+		NULL, player_serialize,
+	});
+
+	app_register_entity_type(app, CUTE_STRINGIZE(
+		entity_type = "Player",
+		Transform = { },
+		Animator = { name = "data/girl.aseprite", },
+		Player = { },
+	));
+
+	app_register_system(app, {
+		NULL, sprite_system_update, {
+			"Transform",
+			"Animator",
+		}
+	});
+}
+
 int main(int argc, const char** argv)
 {
 	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_D3D11_CONTEXT;
 	app_t* app = app_make("Block Man", 0, 0, 960, 720, options);
-	file_system_mount(file_system_get_base_dir(), "", 1);
+	file_system_mount(file_system_get_base_dir(), "");
 	app_init_upscaling(app, UPSCALE_PIXEL_PERFECT_AT_LEAST_2X, 320, 240);
 	ImGui::SetCurrentContext(app_init_imgui(app));
 
 	cache = aseprite_cache_make(app);
 	batch = aseprite_cache_get_batch_ptr(cache);
+
+	ecs_registration(app);
+
+	entity_t player;
+	app_make_entity(app, "Player", &player);
+
+	kv_t* kv = kv_make();
+	char buf[1024];
+	kv_set_write_buffer(kv, buf, 1024);
+	app_save_entities(app, { player }, kv);
+	buf[kv_size_written(kv)] = 0;
+	kv_destroy(kv);
+	printf("%s", buf);
 
 	hero.sprite = load_sprite("data/girl.aseprite");
 	hero.switch_anim("idle");
@@ -1099,6 +1264,8 @@ int main(int argc, const char** argv)
 		batch_flush(batch);
 
 		DrawGirlReflection();
+
+		app_update_systems(app, dt);
 
 		char buffer[4];
 		itoa(hero.moves, buffer, 10);

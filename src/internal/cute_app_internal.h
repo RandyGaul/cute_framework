@@ -35,6 +35,8 @@
 #include <cute/cute_font.h>
 #include <cute_gfx.h>
 
+#include <mattiasgustavsson/strpool.h>
+
 struct SDL_Window;
 struct cs_context_t;
 
@@ -69,18 +71,19 @@ struct window_state_t
 	bool moved = false;
 };
 
-struct system_t
-{
-	system_fn* update_func = NULL;
-	array<component_type_t> component_types;
-};
-
 struct entity_collection_t
 {
 	handle_table_t entity_handle_table;
 	array<handle_t> entity_handles; // TODO - Replace with a counter? Or delete?
-	array<component_type_t> component_types;
+	array<STRPOOL_U64> component_types;
 	array<typeless_array> component_tables;
+};
+
+struct system_internal_t
+{
+	void* udata = NULL;
+	void* update_fn = NULL;
+	array<STRPOOL_U64> component_types;
 };
 
 struct offscreen_uniforms_t
@@ -125,6 +128,8 @@ struct app_t
 	window_state_t window_state;
 	window_state_t window_state_prev;
 	bool using_imgui = false;
+	strpool_t strpool_instance = { 0 };
+	strpool_t* strpool = NULL;
 
 	array<int> input_text;
 	int keys[512] = { 0 };
@@ -134,13 +139,15 @@ struct app_t
 	mouse_state_t mouse, mouse_prev;
 
 	// TODO: Set allocator context for these data structures.
-	array<system_t> systems;
+	array<system_internal_t> systems;
+	entity_type_t entity_type_gen = 0;
+	dictionary<STRPOOL_U64, entity_type_t> entity_type_string_to_id;
+	array<STRPOOL_U64> entity_type_id_to_string;
 	dictionary<entity_type_t, entity_collection_t> entity_collections;
 	entity_type_t current_collection_type_being_iterated = CUTE_INVALID_ENTITY_TYPE;
 	entity_collection_t* current_collection_being_updated = NULL;
 
-	dictionary<const char*, component_type_t> component_name_to_type_table;
-	dictionary<component_type_t, component_config_t> component_configs;
+	dictionary<STRPOOL_U64, component_config_t> component_configs;
 	dictionary<entity_type_t, kv_t*> entity_parsed_schemas;
 	dictionary<entity_type_t, entity_type_t> entity_schema_inheritence;
 
