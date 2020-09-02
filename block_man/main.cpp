@@ -1092,13 +1092,13 @@ struct Transform
 	transform_t transform;
 };
 
-void transform_init(app_t* app, entity_t entity, void* component, void* udata)
+void Transform_init(app_t* app, entity_t entity, void* component, void* udata)
 {
 	Transform* transform = (Transform*)component;
 	transform->transform = make_transform();
 }
 
-error_t transform_serialize(app_t* app, kv_t* kv, void* component, void* udata)
+error_t Transform_serialize(app_t* app, kv_t* kv, void* component, void* udata)
 {
 	Transform* transform = (Transform*)component;
 	return serialize_transform(kv, transform->transform);
@@ -1109,13 +1109,13 @@ struct Animator
 	sprite_t sprite;
 };
 
-void animator_init(app_t* app, entity_t entity, void* component, void* udata)
+void Animator_init(app_t* app, entity_t entity, void* component, void* udata)
 {
 	Animator* animator = (Animator*)component;
 	animator->sprite = sprite_t();
 }
 
-error_t animator_serialize(app_t* app, kv_t* kv, void* component, void* udata)
+error_t Animator_serialize(app_t* app, kv_t* kv, void* component, void* udata)
 {
 	Animator* animator = (Animator*)component;
 	kv_key(kv, "name"); kv_val(kv, &animator->sprite.name);
@@ -1136,14 +1136,14 @@ struct Player
 	int placeholder;
 };
 
-void player_init(app_t* app, entity_t entity, void* component, void* udata)
+void Player_init(app_t* app, entity_t entity, void* component, void* udata)
 {
 	Player* player = (Player*)component;
 	Animator* animator = (Animator*)app_get_component(app, entity, "Animator");
 	animator->sprite.play("idle");
 }
 
-error_t player_serialize(app_t* app, kv_t* kv, void* component, void* udata)
+error_t Player_serialize(app_t* app, kv_t* kv, void* component, void* udata)
 {
 	Player* player = (Player*)component;
 	return kv_error_state(kv);
@@ -1167,28 +1167,19 @@ void sprite_system_update(app_t* app, float dt, void* udata, Transform* transfor
 	batch_flush(batch);
 }
 
+#define REGISTER_COMPONENT(name) \
+	app_register_component_type(app, { \
+		CUTE_STRINGIZE(name), \
+		sizeof(name), \
+		NULL, name##_init, \
+		NULL, name##_serialize, \
+	})
+
 void ecs_registration(app_t* app)
 {
-	app_register_component_type(app, {
-		CUTE_STRINGIZE(Transform),
-		sizeof(Transform),
-		NULL, transform_init,
-		NULL, transform_serialize,
-	});
-
-	app_register_component_type(app, {
-		CUTE_STRINGIZE(Animator),
-		sizeof(Animator),
-		NULL, animator_init,
-		NULL, animator_serialize,
-	});
-
-	app_register_component_type(app, {
-		CUTE_STRINGIZE(Player),
-		sizeof(Player),
-		NULL, player_init,
-		NULL, player_serialize,
-	});
+	REGISTER_COMPONENT(Transform);
+	REGISTER_COMPONENT(Animator);
+	REGISTER_COMPONENT(Player);
 
 	app_register_entity_type(app, CUTE_STRINGIZE(
 		entity_type = "Player",

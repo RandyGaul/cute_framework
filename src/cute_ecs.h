@@ -67,6 +67,7 @@ struct component_config_t
 };
 
 extern CUTE_API void CUTE_CALL app_register_component_type(app_t* app, component_config_t component_config);
+// TODO - Dependencies.
 
 //--------------------------------------------------------------------------------------------------
 // System
