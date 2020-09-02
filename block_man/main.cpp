@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2020 Randy Gaul https://randygaul.net
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -30,100 +30,33 @@ using namespace cute;
 #define STRPOOL_IMPLEMENTATION
 #include <mattiasgustavsson/strpool.h>
 
-aseprite_cache_t* cache;
-batch_t* batch;
+#include <world.h>
+#include <serialize.h>
 
-struct Level
+struct System_IceBlocks
 {
-	int start_x;
-	int start_y;
-	int w, h;
-	array<array<char>> data;
-} level;
-int level_index = 0;
-bool loaded_level_into_editor = false;
+	array<batch_quad_t> ice_block_masks;
+	sprite_t ice_block;
+	sprite_t ice_block_sheen;
+	sprite_t ice_block_mask;
+};
 
-array<batch_quad_t> ice_block_masks;
-sprite_t ice_block;
-sprite_t ice_block_sheen;
-sprite_t ice_block_mask;
-array<batch_quad_t> background_bricks;
+struct IceBlock
+{
+	bool is_held = false;
+	float floating_offset = 0;
+};
+
+struct Reflection
+{
+	sprite_t reflection;
+};
 
 void add_ice_block_mask(sprite_t ice_block_sprite)
 {
 	ice_block_mask.transform = ice_block_sprite.transform;
 	ice_block_mask.sort_bits = ice_block_sprite.sort_bits;
 	ice_block_masks.add(ice_block_mask.quad());
-}
-
-struct Hero
-{
-	int x, y;
-	bool initialized = false;
-	int xdir = 0;
-	int ydir = -1;
-	bool holding = false;
-	bool won = false;
-	int moves = 0;
-	sprite_t reflection;
-	sprite_t sprite;
-
-	// ----------------------------
-	// For animating between tiles.
-	int x0, y0;
-	bool moving = false;
-	float move_t = 0;
-	const float move_delay = 0.125f;
-	// For animating between tiles.
-	// ----------------------------
-
-	// ----------------------------
-	// For spinning upon level load.
-	v2 spin_p0, spin_p;
-	float spin_t = 0;
-	float spin_delay;
-	const float spin_delay_per_tile = 0.35f;
-	// For spinning upon level load.
-	// ----------------------------
-
-	struct HeldBlock
-	{
-		int x0, y0;
-		int x, y;
-		float floating_offset = 0;
-	} held_block;
-
-	struct RotatingBlock
-	{
-		bool is_rotating = false;
-		int x, y;
-		v2 v;
-		float a;
-		float t = 0;
-		const float delay = 0.125f;
-	} rotating_block;
-
-	struct SlidingBlock
-	{
-		bool is_sliding = false;
-		int x0, y0;
-		int x, y;
-		float t = 0;
-		float delay;
-		const float delay_per_tile = 0.125f;
-	} sliding_block;
-
-	void switch_anim(string_t name) { sprite.play(name.c_str()); }
-} hero;
-
-sprite_t load_sprite(string_t path)
-{
-	sprite_t s;
-	error_t err = aseprite_cache_load(cache, path.c_str(), &s);
-	if (err.is_error()) {
-		printf("ERROR - %s, at path (%s)\n", err.details, path.c_str());
-	}
-	return s;
 }
 
 array<array<string_t>> BackgroundMaps = {
@@ -261,62 +194,16 @@ array<array<string_t>> levels = {
 	},
 };
 
-v2 tile2world(int sprite_h, int x, int y)
-{
-	float w = 16; // width of tiles in pixels
-	float h = 16;
-	float y_offset = level.data.count() * h;
-	float y_diff = sprite_h > 16 ? (sprite_h - h) / 2 : 0;
-	return v2((float)(x-6) * w, -(float)(y+6) * h + y_offset + y_diff);
-}
-
-void world2tile(int sprite_h, v2 p, int* x_out, int* y_out)
-{
-	float w = 16; // width of tiles in pixels
-	float h = 16;
-	float y_offset = level.data.count() * h;
-	float y_diff = sprite_h > 16 ? (sprite_h - h) / 2 : 0;
-	float x = p.x / w + 6;
-	float y = -((p.y - y_offset - y_diff) / h) - 6;
-	*x_out = (int)round(x);
-	*y_out = (int)round(y);
-}
-
 int sort_bits(batch_quad_t q)
 {
 	int x, y;
 	world2tile(q.h, q.transform.p, &x, &y);
-	return level.w * y + x;
+	return world->level.w * y + x;
 }
 
 bool in_grid(int x, int y, int w, int h)
 {
 	return x >= 0 && y >= 0 && x < w && y < h;
-}
-
-void SetHeroAnimBasedOnFacingDir()
-{
-	if (hero.holding) {
-		if (hero.xdir) {
-			hero.switch_anim("hold_side");
-		} else {
-			if (hero.ydir > 0) {
-				hero.switch_anim("hold_up");
-			} else {
-				hero.switch_anim("hold_down");
-			}
-		}
-	} else {
-		if (hero.xdir) {
-			hero.switch_anim("side");
-		} else if (hero.ydir) {
-			if (hero.ydir > 0) {
-				hero.switch_anim("up");
-			} else {
-				hero.switch_anim("idle");
-			}
-		}
-	}
 }
 
 void InitBackgroundBricks(int seed)
@@ -904,6 +791,7 @@ void UpdateGame(app_t* app, float dt)
 	COROUTINE_END(co);
 }
 
+#if 0
 void LoadLevelIntoEditor(char* buf)
 {
 	int index = 0;
@@ -1006,6 +894,7 @@ void DoImguiStuff(app_t* app, float dt)
 		ImGui::End();
 	}
 }
+#endif
 
 void DrawGirlReflection()
 {
@@ -1056,172 +945,10 @@ void DrawGirlReflection()
 	batch_set_depth_stencil_defaults(batch);
 }
 
-error_t serialize_v2(kv_t* kv, v2 v)
-{
-	kv_key(kv, "x"); kv_val(kv, &v.x);
-	kv_key(kv, "y"); kv_val(kv, &v.y);
-	return kv_error_state(kv);
-}
-
-error_t serialize_rotation(kv_t* kv, rotation_t rotation)
-{
-	kv_key(kv, "s"); kv_val(kv, &rotation.s);
-	kv_key(kv, "c"); kv_val(kv, &rotation.c);
-	return kv_error_state(kv);
-}
-
-error_t serialize_transform(kv_t* kv, transform_t transform)
-{
-	serialize_v2(kv, transform.p);
-	serialize_rotation(kv, transform.r);
-	return kv_error_state(kv);
-}
-
-error_t kv_val(kv_t* kv, const char** string)
-{
-	size_t len = *string ? CUTE_STRLEN(*string) : 0;
-	kv_val_string(kv, string, &len);
-	strpool_t* strpool = aseprite_cache_get_strpool_ptr(cache);
-	STRPOOL_U64 id = strpool_inject(strpool, *string, (int)len);
-	*string = strpool_cstr(strpool, id);
-	return kv_error_state(kv);
-}
-
-struct Transform
-{
-	transform_t transform;
-};
-
-void Transform_init(app_t* app, entity_t entity, void* component, void* udata)
-{
-	Transform* transform = (Transform*)component;
-	transform->transform = make_transform();
-}
-
-error_t Transform_serialize(app_t* app, kv_t* kv, void* component, void* udata)
-{
-	Transform* transform = (Transform*)component;
-	return serialize_transform(kv, transform->transform);
-}
-
-struct Animator
-{
-	sprite_t sprite;
-};
-
-void Animator_init(app_t* app, entity_t entity, void* component, void* udata)
-{
-	Animator* animator = (Animator*)component;
-	animator->sprite = sprite_t();
-}
-
-error_t Animator_serialize(app_t* app, kv_t* kv, void* component, void* udata)
-{
-	Animator* animator = (Animator*)component;
-	kv_key(kv, "name"); kv_val(kv, &animator->sprite.name);
-	if (kv_get_state(kv) == KV_STATE_READ) {
-		animator->sprite = load_sprite(animator->sprite.name);
-	}
-	serialize_transform(kv, animator->sprite.transform);
-	kv_key(kv, "visibile"); kv_val(kv, &animator->sprite.visible);
-	kv_key(kv, "opacity"); kv_val(kv, &animator->sprite.opacity);
-	kv_key(kv, "play_speed_multiplier"); kv_val(kv, &animator->sprite.play_speed_multiplier);
-	kv_key(kv, "t"); kv_val(kv, &animator->sprite.t);
-	kv_key(kv, "paused"); kv_val(kv, &animator->sprite.paused);
-	return kv_error_state(kv);
-}
-
-struct Player
-{
-	int placeholder;
-};
-
-void Player_init(app_t* app, entity_t entity, void* component, void* udata)
-{
-	Player* player = (Player*)component;
-	Animator* animator = (Animator*)app_get_component(app, entity, "Animator");
-	animator->sprite.play("idle");
-}
-
-error_t Player_serialize(app_t* app, kv_t* kv, void* component, void* udata)
-{
-	Player* player = (Player*)component;
-	return kv_error_state(kv);
-}
-
-void sprite_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, int entity_count)
-{
-	for (int i = 0; i < entity_count; ++i) {
-		Transform* transform = transforms + i;
-		Animator* animator = animators + i;
-
-		animator->sprite.update(dt);
-
-		// Draw sprite relative to the transform component.
-		transform_t local = animator->sprite.transform;
-		animator->sprite.transform = mul(transform->transform, local);
-		animator->sprite.draw();
-		animator->sprite.transform = local;
-	}
-
-	batch_flush(batch);
-}
-
-#define REGISTER_COMPONENT(name) \
-	app_register_component_type(app, { \
-		CUTE_STRINGIZE(name), \
-		sizeof(name), \
-		NULL, name##_init, \
-		NULL, name##_serialize, \
-	})
-
-void ecs_registration(app_t* app)
-{
-	REGISTER_COMPONENT(Transform);
-	REGISTER_COMPONENT(Animator);
-	REGISTER_COMPONENT(Player);
-
-	app_register_entity_type(app, CUTE_STRINGIZE(
-		entity_type = "Player",
-		Transform = { },
-		Animator = { name = "data/girl.aseprite", },
-		Player = { },
-	));
-
-	app_register_system(app, {
-		NULL, sprite_system_update, {
-			"Transform",
-			"Animator",
-		}
-	});
-}
-
 int main(int argc, const char** argv)
 {
-	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_D3D11_CONTEXT;
-	app_t* app = app_make("Block Man", 0, 0, 960, 720, options);
-	file_system_mount(file_system_get_base_dir(), "");
-	app_init_upscaling(app, UPSCALE_PIXEL_PERFECT_AT_LEAST_2X, 320, 240);
-	ImGui::SetCurrentContext(app_init_imgui(app));
+	init_world();
 
-	cache = aseprite_cache_make(app);
-	batch = aseprite_cache_get_batch_ptr(cache);
-
-	ecs_registration(app);
-
-	entity_t player;
-	app_make_entity(app, "Player", &player);
-
-	kv_t* kv = kv_make();
-	char buf[1024];
-	kv_set_write_buffer(kv, buf, 1024);
-	app_save_entities(app, { player }, kv);
-	buf[kv_size_written(kv)] = 0;
-	kv_destroy(kv);
-	printf("%s", buf);
-
-	hero.sprite = load_sprite("data/girl.aseprite");
-	hero.switch_anim("idle");
 	ice_block = load_sprite("data/ice_block.aseprite");
 	ice_block.play("idle");
 	ice_block_sheen = ice_block;
@@ -1240,21 +967,21 @@ int main(int argc, const char** argv)
 		float dt = calc_dt();
 		app_update(app, dt);
 
-		if (key_was_pressed(app, KEY_Q)) {
-			// Cheat. For testing.
-			level_index = (level_index + 1) % levels.count();
-			LoadLevel(levels[level_index]);
-		}
+		//if (key_was_pressed(app, KEY_Q)) {
+		//	// Cheat. For testing.
+		//	level_index = (level_index + 1) % levels.count();
+		//	LoadLevel(levels[level_index]);
+		//}
 
-		DrawBackgroundBricks();
+		//DrawBackgroundBricks();
 
-		UpdateGame(app, dt);
-		ice_block.update(dt);
-		ice_block_sheen.update(dt);
+		//UpdateGame(app, dt);
+		//ice_block.update(dt);
+		//ice_block_sheen.update(dt);
 
-		batch_flush(batch);
+		//batch_flush(batch);
 
-		DrawGirlReflection();
+		//DrawGirlReflection();
 
 		app_update_systems(app, dt);
 

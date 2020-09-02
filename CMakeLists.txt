@@ -263,14 +263,54 @@ option(CUTE_FRAMEWORK_BUILD_BLOCK_MAN "Build the Block Man game." ON)
 if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 	set(CUTE_BLOCK_MAN_SRCS
 		block_man/main.cpp
+		block_man/world.h
+		block_man/world.cpp
+		block_man/serialize.h
+		block_man/serialize.cpp
+	)
 
+	set(CUTE_BLOCK_MAN_IMGUI_SRCS
 		libraries/imgui/imgui.cpp
 		libraries/imgui/imgui_demo.cpp
 		libraries/imgui/imgui_draw.cpp
 		libraries/imgui/imgui_widgets.cpp
 	)
-	add_executable(block_man ${CUTE_BLOCK_MAN_SRCS})
+
+	set(CUTE_BLOCK_MAN_COMPONENT_SRCS
+		block_man/components/animator.h
+		block_man/components/board_piece.h
+		block_man/components/ice_block.h
+		block_man/components/ladder.h
+		block_man/components/player.h
+		block_man/components/reflection.h
+		block_man/components/transform.h
+	)
+
+	set(CUTE_BLOCK_MAN_SYSTEM_SRCS
+		block_man/systems/animator_system.h
+		block_man/systems/animator_system.cpp
+		block_man/systems/board_system.h
+		block_man/systems/board_system.cpp
+		block_man/systems/ice_block_system.h
+		block_man/systems/ice_block_system.cpp
+		block_man/systems/player_system.h
+		block_man/systems/player_system.cpp
+		block_man/systems/reflection_system.h
+		block_man/systems/reflection_system.cpp
+	)
+
+	add_executable(block_man
+		${CUTE_BLOCK_MAN_SRCS}
+		${CUTE_BLOCK_MAN_IMGUI_SRCS}
+		${CUTE_BLOCK_MAN_COMPONENT_SRCS}
+		${CUTE_BLOCK_MAN_SYSTEM_SRCS}
+	)
+	source_group("game" FILES ${CUTE_BLOCK_MAN_SRCS})
+	source_group("imgui" FILES ${CUTE_BLOCK_MAN_IMGUI_SRCS})
+	source_group("components" FILES ${CUTE_BLOCK_MAN_COMPONENT_SRCS})
+	source_group("systems" FILES ${CUTE_BLOCK_MAN_SYSTEM_SRCS})
 	target_link_libraries(block_man PRIVATE cute)
+	target_include_directories(block_man PUBLIC "${PROJECT_SOURCE_DIR}/block_man")
 
 	# For convenience set working directory to the target output folder.
 	if (MSVC)

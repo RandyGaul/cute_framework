@@ -47,6 +47,15 @@ extern CUTE_API bool CUTE_CALL app_window_mouse_entered(app_t* app);
 extern CUTE_API bool CUTE_CALL app_window_mouse_exited(app_t* app);
 extern CUTE_API bool CUTE_CALL app_window_mouse_inside(app_t* app);
 
+enum app_message_box_type_t
+{
+	APP_MESSAGE_BOX_TYPE_ERROR,
+	APP_MESSAGE_BOX_TYPE_WARNING,
+	APP_MESSAGE_BOX_TYPE_INFORMATION,
+};
+
+extern CUTE_API void CUTE_CALL app_window_message_box(app_t* app, app_message_box_type_t type, const char* title, const char* text);
+
 }
 
 #endif // CUTE_APP_WINDOW_H

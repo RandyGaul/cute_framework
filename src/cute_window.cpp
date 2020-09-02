@@ -22,6 +22,7 @@
 #include <cute_window.h>
 
 #include <internal/cute_app_internal.h>
+#include <SDL2/SDL.h>
 
 namespace cute
 {
@@ -101,6 +102,22 @@ bool app_window_mouse_exited(app_t* app)
 bool app_window_mouse_inside(app_t* app)
 {
 	return app->window_state.mouse_inside_window;
+}
+
+static int s_message_box_flags(app_message_box_type_t type)
+{
+	switch (type)
+	{
+	case APP_MESSAGE_BOX_TYPE_ERROR: return SDL_MESSAGEBOX_ERROR;
+	case APP_MESSAGE_BOX_TYPE_WARNING: return SDL_MESSAGEBOX_WARNING;
+	case APP_MESSAGE_BOX_TYPE_INFORMATION: return SDL_MESSAGEBOX_INFORMATION;
+	}
+	return SDL_MESSAGEBOX_ERROR;
+}
+
+void app_window_message_box(app_t* app, app_message_box_type_t type, const char* title, const char* text)
+{
+	SDL_ShowSimpleMessageBox(s_message_box_flags(type), title, text, app->window);
 }
 
 }

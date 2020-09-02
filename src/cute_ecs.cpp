@@ -33,26 +33,26 @@
 namespace cute
 {
 
-static error_t s_load_from_schema(app_t* app, entity_type_t entity_type, component_config_t* config, void* component, void* udata)
+static error_t s_load_from_schema(app_t* app, entity_type_t schema_type, entity_t entity, component_config_t* config, void* component, void* udata)
 {
 	// Look for parent.
 	// If parent exists, load values from it first.
 	entity_type_t inherits_from;
-	error_t err = app->entity_schema_inheritence.find(entity_type, &inherits_from);
+	error_t err = app->entity_schema_inheritence.find(schema_type, &inherits_from);
 	if (!err.is_error()) {
-		err = s_load_from_schema(app, inherits_from, config, component, udata);
+		err = s_load_from_schema(app, inherits_from, entity, config, component, udata);
 		if (err.is_error()) return err;
 	}
 
 	kv_t* schema;
-	err = app->entity_parsed_schemas.find(entity_type, &schema);
+	err = app->entity_parsed_schemas.find(schema_type, &schema);
 	if (err.is_error()) return error_failure("Unable to find schema when loading entity.");
 
 	err = kv_key(schema, config->name);
 	if (err.is_error()) return err;
 
 	kv_object_begin(schema);
-	err = config->serializer_fn(app, schema, component, udata);
+	err = config->serializer_fn(app, schema, entity, component, udata);
 	kv_object_end(schema);
 	return err;
 }
@@ -62,7 +62,7 @@ static error_t s_load_from_schema(app_t* app, entity_type_t entity_type, compone
 void app_register_system(app_t* app, system_t system)
 {
 	system_internal_t system_internal;
-	system_internal.udata = system.udata;
+	system_internal.udata = system.update_fn_udata;
 	system_internal.update_fn = system.update_fn;
 	for (int i = 0; i < system.component_types.count(); ++i) {
 		system_internal.component_types.add(INJECT(system.component_types[i]));
@@ -101,9 +101,7 @@ error_t app_make_entity(app_t* app, const char* entity_type, entity_t* entity_ou
 		}
 
 		void* component = collection->component_tables[i].add();
-		config->initializer_fn(app, entity, component, config->initializer_fn_udata);
-
-		error_t err = s_load_from_schema(app, type, config, component, config->serializer_fn_udata);
+		error_t err = s_load_from_schema(app, type, entity, config, component, config->serializer_fn_udata);
 		if (err.is_error()) {
 			// TODO - Unload the components that were added with `.add()` a couple lines above here.
 			return err;
@@ -471,11 +469,9 @@ error_t app_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
 				return error_failure("Unable to find component config.");
 			}
 
-			void* component = collection->component_tables[i].add();
-			config->initializer_fn(app, entity, component, config->initializer_fn_udata);
-
 			// First load values from the schema.
-			err = s_load_from_schema(app, entity_type, config, component, config->serializer_fn_udata);
+			void* component = collection->component_tables[i].add();
+			err = s_load_from_schema(app, entity.type, entity, config, component, config->serializer_fn_udata);
 			if (err.is_error()) {
 				return error_failure("Unable to parse component from schema.");
 			}
@@ -484,7 +480,7 @@ error_t app_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
 			error_t err = kv_key(kv, config->name);
 			if (!err.is_error()) {
 				kv_object_begin(kv);
-				err = config->serializer_fn(app, kv, component, config->serializer_fn_udata);
+				err = config->serializer_fn(app, kv, entity, component, config->serializer_fn_udata);
 				kv_object_end(kv);
 				if (err.is_error()) {
 					return error_failure("Unable to parse component.");
@@ -557,7 +553,7 @@ error_t app_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv)
 			error_t err = kv_key(kv, config->name);
 			if (!err.is_error()) {
 				kv_object_begin(kv);
-				err = config->serializer_fn(app, kv, (void*)component, config->serializer_fn_udata);
+				err = config->serializer_fn(app, kv, entity, (void*)component, config->serializer_fn_udata);
 				kv_object_end(kv);
 				if (err.is_error()) {
 					return error_failure("Unable to save component.");

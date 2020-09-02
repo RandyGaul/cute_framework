@@ -26,33 +26,18 @@
 #include <cute_c_runtime.h>
 #include <cute_alloc.h>
 
-/*
-	Implements a basic growable array data structure for POD items. Items can
-	use constructors and destructors, but must have trivial "memcpy" assignment
-	operators (such as the default compiler-generated assignment operator).
-
-	cute::array does *not* work as a drop-in replacement for std::vector as it
-	has a few special properties. Here is the list of important points for using
-	this array data structure.
-
-	1. Items stored in the array is assumed to be POD. Sometimes the assignment
-	   operator is used, and sometimes `CUTE_MEMCPY` or `CUTE_MEMMOVE` is used.
-	   Items in the array should *not* have specialized assignment operators
-	   beyond simply copying byte-for-byte POD data.
-	2. There is no way to perform a proper "deep-copy" by using the assignment
-	   operator on cute::array. Instead, assignment steals the pointer from one
-	   array to another (like an rvalue reference) with the `steal_from` function.
-	3. Items stored in the array do have constructors and destructors called, but
-	   only upon insertion or removal (not during grow or other operations). The
-	   idea is to facilitate easy initializing of values stored in the array, such
-	   as working with an array of arrays.
-	4. No iterators.
-*/
-
 #include <initializer_list>
 
 namespace cute
 {
+
+/**
+ * Implements a basic growable array data structure. Constructors and destructors are called, but this
+ * class does *not* act as a drop-in replacement for std::vector, as there are no iterators.
+ *
+ * The main purpose of this class is to reduce the lines of code included compared to std::vector,
+ * and also more importantly to have fast debug performance.
+ */
 
 template <typename T>
 struct array

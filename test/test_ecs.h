@@ -56,60 +56,48 @@ struct test_component_octorok_t
 
 // -------------------------------------------------------------------------------------------------
 
-void test_component_transform_initialize(app_t* app, entity_t entity, void* component, void* udata)
+error_t test_component_transform_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	test_component_transform_t* transform = (test_component_transform_t*)component;
-	transform->x = 0;
-	transform->y = 0;
-}
-
-error_t test_component_transform_serialize(app_t* app, kv_t* kv, void* component, void* udata)
-{
-	test_component_transform_t* transform = (test_component_transform_t*)component;
+	if (kv_get_state(kv) == KV_STATE_READ) {
+		transform->x = 0;
+		transform->y = 0;
+	}
 	kv_key(kv, "x"); kv_val(kv, &transform->x);
 	kv_key(kv, "y"); kv_val(kv, &transform->y);
 	return kv_error_state(kv);
 }
 
-void test_component_sprite_initialize(app_t* app, entity_t entity, void* component, void* udata)
+error_t test_component_sprite_serialize(app_t* app,  kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	test_component_sprite_t* sprite = (test_component_sprite_t*)component;
-	sprite->img_id = 7;
-}
-
-error_t test_component_sprite_serialize(app_t* app,  kv_t* kv, void* component, void* udata)
-{
-	test_component_sprite_t* sprite = (test_component_sprite_t*)component;
+	if (kv_get_state(kv) == KV_STATE_READ) {
+		sprite->img_id = 7;
+	}
 	kv_key(kv, "img_id"); kv_val(kv, &sprite->img_id);
 	return kv_error_state(kv);
 }
 
-void test_component_collider_initialize(app_t* app, entity_t entity, void* component, void* udata)
+error_t test_component_collider_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	test_component_collider_t* collider = (test_component_collider_t*)component;
-	collider->type = 3;
-	collider->radius = 14.0f;
-}
-
-error_t test_component_collider_serialize(app_t* app, kv_t* kv, void* component, void* udata)
-{
-	test_component_collider_t* collider = (test_component_collider_t*)component;
+	if (kv_get_state(kv) == KV_STATE_READ) {
+		collider->type = 3;
+		collider->radius = 14.0f;
+	}
 	kv_key(kv, "type"); kv_val(kv, &collider->type);
 	kv_key(kv, "radius"); kv_val(kv, &collider->radius);
 	return kv_error_state(kv);
 }
 
-void test_component_octorok_initialize(app_t* app, entity_t entity, void* component, void* udata)
+error_t test_component_octorok_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	test_component_octorok_t* octorok = (test_component_octorok_t*)component;
-	octorok->ai_state = 0;
-	octorok->pellet_count = 3;
-	octorok->buddy_said_hi = 0;
-}
-
-error_t test_component_octorok_serialize(app_t* app, kv_t* kv, void* component, void* udata)
-{
-	test_component_octorok_t* octorok = (test_component_octorok_t*)component;
+	if (kv_get_state(kv) == KV_STATE_READ) {
+		octorok->ai_state = 0;
+		octorok->pellet_count = 3;
+		octorok->buddy_said_hi = 0;
+	}
 	kv_key(kv, "ai_state"); kv_val(kv, &octorok->ai_state);
 	kv_key(kv, "pellet_count"); kv_val(kv, &octorok->pellet_count);
 	kv_key(kv, "buddy"); kv_val_entity(kv, app, &octorok->buddy);
@@ -166,28 +154,24 @@ int test_ecs_octorok()
 	component_config_t transform_config;
 	transform_config.size_of_component = sizeof(test_component_transform_t);
 	transform_config.name = CUTE_STRINGIZE(test_component_transform_t);
-	transform_config.initializer_fn = test_component_transform_initialize;
 	transform_config.serializer_fn = test_component_transform_serialize;
 	app_register_component_type(app, transform_config);
 
 	component_config_t sprite_config;
 	sprite_config.size_of_component = sizeof(test_component_sprite_t);
 	sprite_config.name = CUTE_STRINGIZE(test_component_sprite_t);
-	sprite_config.initializer_fn = test_component_sprite_initialize;
 	sprite_config.serializer_fn = test_component_sprite_serialize;
 	app_register_component_type(app, sprite_config);
 
 	component_config_t collider_config;
 	collider_config.size_of_component = sizeof(test_component_collider_t);
 	collider_config.name = CUTE_STRINGIZE(test_component_collider_t);
-	collider_config.initializer_fn = test_component_collider_initialize;
 	collider_config.serializer_fn = test_component_collider_serialize;
 	app_register_component_type(app, collider_config);
 
 	component_config_t octorok_config;
 	octorok_config.size_of_component = sizeof(test_component_octorok_t);
 	octorok_config.name = CUTE_STRINGIZE(test_component_octorok_t);
-	octorok_config.initializer_fn = test_component_octorok_initialize;
 	octorok_config.serializer_fn = test_component_octorok_serialize;
 	app_register_component_type(app, octorok_config);
 
@@ -278,10 +262,11 @@ int test_ecs_octorok()
 	int c;
 	kv_array_begin(saved_entities, &c);
 		kv_object_begin(saved_entities);
-			entity_type_t serialized_entity_type;
+			const char* serialized_entity_type;
+			size_t len;
 			kv_key(saved_entities, "entity_type");
-			kv_val(saved_entities, (int*)&serialized_entity_type);
-			CUTE_TEST_ASSERT(entity_type == serialized_entity_type);
+			kv_val_string(saved_entities, &serialized_entity_type, &len);
+			CUTE_TEST_ASSERT(!CUTE_STRNCMP(app_entity_type_string(app, entity_type), serialized_entity_type, len));
 		kv_object_end(saved_entities);
 	kv_array_end(saved_entities);
 

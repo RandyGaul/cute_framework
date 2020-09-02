@@ -30,6 +30,16 @@
 namespace cute
 {
 
+/**
+ * `dictionary` implements a thin type wrapper with templates over a C-style hashtable implementation.
+ * Internally no contructors or destructors are ever called, meaning all data stored is considered POD.
+ *
+ * There is a specialization in the latter portion for const char* keys -- strings are stored in-place
+ * inside of blocks of size `DICTIONARY_STRING_BLOCK_MAX`. The implementation will break if any key is
+ * ever longer than this max. This limitation is here to keep the implementation and cache behavior
+ * as simple as possible.
+ */
+
 template <typename K, typename T>
 struct dictionary
 {

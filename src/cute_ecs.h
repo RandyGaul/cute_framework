@@ -53,15 +53,12 @@ extern CUTE_API const char* CUTE_CALL app_entity_type_string(app_t* app, entity_
 //--------------------------------------------------------------------------------------------------
 // Component
 
-typedef void (component_initialize_fn)(app_t* app, entity_t entity, void* component, void* udata);
-typedef error_t (component_serialize_fn)(app_t* app, kv_t* kv, void* component, void* udata);
+typedef error_t (component_serialize_fn)(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata);
 
 struct component_config_t
 {
 	const char* name = NULL;
 	size_t size_of_component = 0;
-	void* initializer_fn_udata = NULL;
-	component_initialize_fn* initializer_fn = NULL;
 	void* serializer_fn_udata = NULL;
 	component_serialize_fn* serializer_fn = NULL;
 };
@@ -74,7 +71,7 @@ extern CUTE_API void CUTE_CALL app_register_component_type(app_t* app, component
 
 struct system_t
 {
-	void* udata = NULL;
+	void* update_fn_udata = NULL;
 	void* update_fn = NULL;
 	array<const char*> component_types;
 };
