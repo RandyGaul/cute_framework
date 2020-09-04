@@ -29,16 +29,19 @@ using namespace cute;
 
 struct Transform
 {
-	transform_t transform;
+	transform_t world = make_transform();
+	transform_t local = make_transform();
+
+	CUTE_INLINE transform_t get() const { return mul(local, world); }
 };
 
 CUTE_INLINE error_t Transform_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	Transform* transform = (Transform*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
-		transform->transform = make_transform();
+		CUTE_PLACEMENT_NEW(transform) Transform;
 	}
-	return serialize_transform(kv, "transform", &transform->transform);
+	return serialize_transform(kv, "world", &transform->world);
 }
 
 #endif // TRANSFORM_H

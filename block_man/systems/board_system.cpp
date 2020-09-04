@@ -35,6 +35,6 @@ void board_system_update(app_t* app, float dt, void* udata, Transform* transform
 		BoardPiece* board_piece = board_pieces + i;
 
 		// Set the initial transform each frame tick.
-		transform->transform.p = tile2world(animator->sprite.h, board_piece->x, board_piece->y);
+		transform->local.p = tile2world(animator->sprite.h, board_piece->x, board_piece->y);
 	}
 }

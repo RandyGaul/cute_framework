@@ -31,12 +31,11 @@ void animator_system_update(app_t* app, float dt, void* udata, Transform* transf
 
 		animator->sprite.update(dt);
 
-		// Draw sprite relative to the transform component.
-		animator->transform_local = make_transform();
-		animator->transform_local.p = animator->sprite.local_offset;
-		animator->transform_world = mul(animator->transform_local, transform->transform);
+		transform_t tx = transform->get();
+		tx.p += animator->sprite.local_offset;
 		if (animator->visible) {
-			animator->sprite.draw(batch, animator->transform_world);
+			animator->sprite.sort_bits = sort_bits(animator->sprite.h, tx.p);
+			animator->sprite.draw(batch, tx);
 		}
 	}
 }

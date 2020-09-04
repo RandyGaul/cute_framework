@@ -58,6 +58,6 @@ void load_level(int level_index);
 sprite_t load_sprite(string_t path);
 v2 tile2world(int sprite_h, int x, int y);
 void world2tile(int sprite_h, v2 p, int* x_out, int* y_out);
-int sort_bits(batch_quad_t q);
+int sort_bits(int sprite_h, v2 p);
 
 #endif // WORLD_H

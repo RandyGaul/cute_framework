@@ -296,6 +296,8 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 		block_man/systems/player_system.cpp
 		block_man/systems/reflection_system.h
 		block_man/systems/reflection_system.cpp
+		block_man/systems/transform_system.h
+		block_man/systems/transform_system.cpp
 	)
 
 	add_executable(block_man

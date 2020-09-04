@@ -67,7 +67,7 @@ void reflection_system_update(app_t* app, float dt, void* udata, Transform* tran
 		Reflection* reflection = reflections + i;
 
 		// Collect all sprites that will be reflected.
-		reflection_system->quads.add(animator->sprite.quad(transform->transform));
+		reflection_system->quads.add(animator->sprite.quad(transform->get()));
 	}
 }
 

@@ -85,7 +85,7 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 		// Pulse up and down while floating.
 		COROUTINE_CASE(co, FLOATING_INNER);
 		{
-			transform->transform.p.y += s_float_offset(ice_block, dt);
+			transform->local.p.y += s_float_offset(ice_block, dt);
 
 			if (!board_piece->is_moving) {
 				ice_block->is_held = 0;
@@ -100,7 +100,7 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 		// Small vertical offset while sliding.
 		COROUTINE_CASE(co, SLIDING);
 		{
-			transform->transform.p.y += 2.0f;
+			transform->local.p.y += 2.0f;
 
 			if (!board_piece->is_moving) {
 				ice_block->is_sliding = 0;
@@ -116,6 +116,6 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 
 		// Push masks onto the reflection system.
 		ice_block_mask.sort_bits = animator->sprite.sort_bits;
-		reflection_system->masks.add(ice_block_mask.quad(transform->transform));
+		reflection_system->masks.add(ice_block_mask.quad(transform->get()));
 	}
 }

@@ -32,8 +32,6 @@ struct Animator
 {
 	bool visible = true;
 	sprite_t sprite = sprite_t();
-	transform_t transform_local = make_transform();
-	transform_t transform_world = make_transform();
 };
 
 CUTE_INLINE error_t Animator_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
@@ -46,8 +44,6 @@ CUTE_INLINE error_t Animator_serialize(app_t* app, kv_t* kv, entity_t entity, vo
 	if (kv_get_state(kv) == KV_STATE_READ) {
 		animator->sprite = load_sprite(animator->sprite.name);
 	}
-	serialize_transform(kv, "transform_local", &animator->transform_local);
-	serialize_transform(kv, "transform_world", &animator->transform_world);
 	kv_key(kv, "visibile"); kv_val(kv, &animator->visible);
 	kv_key(kv, "opacity"); kv_val(kv, &animator->sprite.opacity);
 	kv_key(kv, "play_speed_multiplier"); kv_val(kv, &animator->sprite.play_speed_multiplier);

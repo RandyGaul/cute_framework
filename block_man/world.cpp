@@ -27,6 +27,7 @@
 #include <systems/ice_block_system.h>
 #include <systems/player_system.h>
 #include <systems/reflection_system.h>
+#include <systems/transform_system.h>
 
 #include <components/animator.h>
 #include <components/board_piece.h>
@@ -109,11 +110,31 @@ void ecs_registration(app_t* app)
 	       call system post update
 	*/
 	app_register_system(app, {
-		NULL,                        // udata
-		NULL,                        // pre update
-		animator_system_update,      // update (called N times, once per matching entity type)
-		animator_system_post_update, // post update
-		{                            // component types to loop over (entities with these components)
+		NULL,                    // udata
+		NULL,                    // pre update
+		transform_system_update, // update (called N times, once per matching entity type)
+		NULL,                    // post update
+		{                        // component types to loop over (entities with these components)
+			"Transform",
+		}
+	});
+	app_register_system(app, {
+		NULL,
+		NULL,
+		board_system_update,
+		NULL,
+		{
+			"Transform",
+			"Animator",
+			"BoardPiece",
+		}
+	});
+	app_register_system(app, {
+		NULL,
+		NULL,
+		animator_system_update,
+		animator_system_post_update,
+		{
 			"Transform",
 			"Animator",
 		}
@@ -302,10 +323,10 @@ array<array<string_t>> levels = {
 	},
 };
 
-int sort_bits(batch_quad_t q)
+int sort_bits(int sprite_h, v2 p)
 {
 	int x, y;
-	world2tile(q.h, q.transform.p, &x, &y);
+	world2tile(sprite_h, p, &x, &y);
 	return world->board.w * y + x;
 }
 
@@ -372,6 +393,11 @@ void load_level(int level_index)
 			space.entity = e;
 			space.is_empty = c == '0' ? true : false;
 			space.is_ladder = c == 'l' ? true : false;
+			if (!space.is_empty) {
+				BoardPiece* board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
+				board_piece->x = j;
+				board_piece->y = i;
+			}
 			world->board.data[i].add(space);
 		}
 	}
