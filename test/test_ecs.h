@@ -194,8 +194,7 @@ int test_ecs_octorok()
 
 	// Register systems.
 	app_register_system(app, {
-		NULL,
-		update_test_octorok_system, {
+		NULL, NULL, update_test_octorok_system, NULL, {
 			"test_component_transform_t",
 			"test_component_sprite_t",
 			"test_component_collider_t",
@@ -203,8 +202,7 @@ int test_ecs_octorok()
 		}
 	});
 	app_register_system(app, {
-		NULL,
-		update_test_octorok_buddy_counter_system, {
+		NULL, NULL, update_test_octorok_buddy_counter_system, NULL, {
 			"test_component_octorok_t"
 		}
 	});

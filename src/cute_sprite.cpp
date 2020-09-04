@@ -95,7 +95,6 @@ static void s_sprite(aseprite_cache_t* cache, aseprite_cache_entry_t entry, spri
 {
 	sprite->name = strpool_cstr(cache->strpool, entry.path);
 	sprite->animations = entry.animations;
-	sprite->batch = cache->batch;
 	sprite->w = entry.ase->w;
 	sprite->h = entry.ase->h;
 	sprite->local_offset = entry.local_offset;

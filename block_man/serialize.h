@@ -25,9 +25,9 @@
 #include <cute.h>
 using namespace cute;
 
-error_t serialize_v2(kv_t* kv, v2 v);
-error_t serialize_rotation(kv_t* kv, rotation_t rotation);
-error_t serialize_transform(kv_t* kv, transform_t transform);
+error_t serialize_v2(kv_t* kv, const char* key, v2* v);
+error_t serialize_rotation(kv_t* kv, const char* key, rotation_t* rotation);
+error_t serialize_transform(kv_t* kv, const char* key, transform_t* transform);
 error_t kv_val(kv_t* kv, const char** string);
 
 #endif // SERIALIZE_H

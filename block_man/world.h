@@ -25,22 +25,27 @@
 #include <cute.h>
 using namespace cute;
 
+struct BoardSpace
+{
+	bool is_empty = true;
+	bool is_ladder = false;
+	entity_t entity = INVALID_ENTITY;
+};
+
 struct Board
 {
 	int start_x;
 	int start_y;
 	int w, h;
-	array<array<char>> data;
+	array<array<BoardSpace>> data;
 	array<batch_quad_t> background_bricks;
 };
 
 struct World
 {
-	int level_index = 0;
-	array<string_t> level_paths;
+	entity_t player;
 	Board board;
 	bool loaded_level_into_editor = false;
-
 };
 
 extern World* world;
@@ -52,5 +57,6 @@ void init_world();
 sprite_t load_sprite(string_t path);
 v2 tile2world(int sprite_h, int x, int y);
 void world2tile(int sprite_h, v2 p, int* x_out, int* y_out);
+int sort_bits(batch_quad_t q);
 
 #endif // WORLD_H

@@ -25,6 +25,8 @@
 #include <cute.h>
 using namespace cute;
 
+#include <serialize.h>
+
 struct Transform
 {
 	transform_t transform;
@@ -36,7 +38,7 @@ CUTE_INLINE error_t Transform_serialize(app_t* app, kv_t* kv, entity_t entity, v
 	if (kv_get_state(kv) == KV_STATE_READ) {
 		transform->transform = make_transform();
 	}
-	return serialize_transform(kv, transform->transform);
+	return serialize_transform(kv, "transform", &transform->transform);
 }
 
 #endif // TRANSFORM_H

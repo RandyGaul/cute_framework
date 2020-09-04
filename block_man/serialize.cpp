@@ -22,15 +22,33 @@
 #include <serialize.h>
 #include <world.h>
 
+#define STRPOOL_IMPLEMENTATION
+#include <mattiasgustavsson/strpool.h>
+
+error_t serialize_v2(kv_t* kv, const char* key, v2* v)
+{
+	kv_object_begin(kv, key);
+		kv_key(kv, "x"); kv_val(kv, &v->x);
+		kv_key(kv, "y"); kv_val(kv, &v->y);
+	kv_object_end(kv);
+	return kv_error_state(kv);
+}
+
+error_t serialize_rotation(kv_t* kv, const char* key, rotation_t* rotation)
+{
+	kv_object_begin(kv, key);
+		kv_key(kv, "s"); kv_val(kv, &rotation->s);
+		kv_key(kv, "c"); kv_val(kv, &rotation->c);
+	kv_object_end(kv);
+	return kv_error_state(kv);
+}
+
 error_t serialize_transform(kv_t* kv, const char* key, transform_t* transform)
 {
 	kv_object_begin(kv, key);
-		kv_key(kv, "x"); kv_val(kv, &transform->p.x);
-		kv_key(kv, "y"); kv_val(kv, &transform->p.y);
-		kv_key(kv, "s"); kv_val(kv, &transform->r.s);
-		kv_key(kv, "c"); kv_val(kv, &transform->r.c);
+		serialize_rotation(kv, "r", &transform->r);
+		serialize_v2(kv, "p", &transform->p);
 	kv_object_end(kv);
-
 	return kv_error_state(kv);
 }
 

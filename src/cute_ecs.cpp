@@ -59,11 +59,13 @@ static error_t s_load_from_schema(app_t* app, entity_type_t schema_type, entity_
 
 //--------------------------------------------------------------------------------------------------
 
-void app_register_system(app_t* app, system_t system)
+void app_register_system(app_t* app, const system_t& system)
 {
 	system_internal_t system_internal;
-	system_internal.udata = system.update_fn_udata;
+	system_internal.pre_update_fn = system.pre_update_fn;
+	system_internal.udata = system.udata;
 	system_internal.update_fn = system.update_fn;
+	system_internal.post_update_fn = system.post_update_fn;
 	for (int i = 0; i < system.component_types.count(); ++i) {
 		system_internal.component_types.add(INJECT(system.component_types[i]));
 	}
@@ -101,7 +103,7 @@ error_t app_make_entity(app_t* app, const char* entity_type, entity_t* entity_ou
 		}
 
 		void* component = collection->component_tables[i].add();
-		error_t err = s_load_from_schema(app, type, entity, config, component, config->serializer_fn_udata);
+		error_t err = s_load_from_schema(app, type, entity, config, component, config->udata);
 		if (err.is_error()) {
 			// TODO - Unload the components that were added with `.add()` a couple lines above here.
 			return err;
@@ -115,6 +117,21 @@ error_t app_make_entity(app_t* app, const char* entity_type, entity_t* entity_ou
 	return error_success();
 }
 
+static entity_collection_t* s_collection(app_t* app, entity_t entity)
+{
+	entity_collection_t* collection = NULL;
+	if (entity.type == app->current_collection_type_being_iterated) {
+		// Fast path -- check the current entity collection for this entity type first.
+		collection = app->current_collection_being_updated;
+		CUTE_ASSERT(collection);
+	} else {
+		// Slightly slower path -- lookup collection first.
+		collection = app->entity_collections.find(entity.type);
+		if (!collection) return NULL;
+	}
+	return collection;
+}
+
 void app_destroy_entity(app_t* app, entity_t entity)
 {
 	// TODO: Implement me.
@@ -122,23 +139,15 @@ void app_destroy_entity(app_t* app, entity_t entity)
 
 bool app_is_entity_valid(app_t* app, entity_t entity)
 {
-	return false; // TODO: Implement me.
+	entity_collection_t* collection = s_collection(app, entity);
+	return collection->entity_handle_table.is_valid(entity.handle);
 }
 
 void* app_get_component(app_t* app, entity_t entity, const char* component_type)
 {
-	STRPOOL_U64 type = INJECT(component_type);
-	// Fast path -- check the current entity collection for this entity type first.
-	entity_collection_t* collection = NULL;
-	if (entity.type == app->current_collection_type_being_iterated) {
-		collection = app->current_collection_being_updated;
-		CUTE_ASSERT(collection);
-	} else {
-		collection = app->entity_collections.find(entity.type);
-		if (!collection) return NULL;
-	}
+	entity_collection_t* collection = s_collection(app, entity);
 
-	// Slightly slower path -- lookup collection first.
+	STRPOOL_U64 type = INJECT(component_type);
 	const array<STRPOOL_U64>& component_types = collection->component_types;
 	for (int i = 0; i < component_types.count(); ++i)
 	{
@@ -149,6 +158,11 @@ void* app_get_component(app_t* app, entity_t entity, const char* component_type)
 	}
 
 	return NULL;
+}
+
+bool app_has_component(app_t* app, entity_t entity, const char* name)
+{
+	return app_get_component(app, entity, name) ? true : false;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -243,7 +257,11 @@ void app_update_systems(app_t* app, float dt)
 	{
 		system_internal_t* system = app->systems + i;
 		void* update_fn = system->update_fn;
+		auto pre_update_fn = system->pre_update_fn;
+		auto post_update_fn = system->post_update_fn;
 		void* udata = system->udata;
+
+		if (pre_update_fn) pre_update_fn(app, dt, udata);
 
 		for (int j = 0; j < app->entity_collections.count(); ++j)
 		{
@@ -276,6 +294,8 @@ void app_update_systems(app_t* app, float dt)
 				}
 			}
 		}
+
+		if (post_update_fn) post_update_fn(app, dt, udata);
 	}
 }
 
@@ -471,7 +491,7 @@ error_t app_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
 
 			// First load values from the schema.
 			void* component = collection->component_tables[i].add();
-			err = s_load_from_schema(app, entity.type, entity, config, component, config->serializer_fn_udata);
+			err = s_load_from_schema(app, entity.type, entity, config, component, config->udata);
 			if (err.is_error()) {
 				return error_failure("Unable to parse component from schema.");
 			}
@@ -480,7 +500,7 @@ error_t app_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
 			error_t err = kv_key(kv, config->name);
 			if (!err.is_error()) {
 				kv_object_begin(kv);
-				err = config->serializer_fn(app, kv, entity, component, config->serializer_fn_udata);
+				err = config->serializer_fn(app, kv, entity, component, config->udata);
 				kv_object_end(kv);
 				if (err.is_error()) {
 					return error_failure("Unable to parse component.");
@@ -553,7 +573,7 @@ error_t app_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv)
 			error_t err = kv_key(kv, config->name);
 			if (!err.is_error()) {
 				kv_object_begin(kv);
-				err = config->serializer_fn(app, kv, entity, (void*)component, config->serializer_fn_udata);
+				err = config->serializer_fn(app, kv, entity, (void*)component, config->udata);
 				kv_object_end(kv);
 				if (err.is_error()) {
 					return error_failure("Unable to save component.");

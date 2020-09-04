@@ -74,8 +74,8 @@ struct sprite_t
 	CUTE_INLINE void update(float dt);
 	CUTE_INLINE void play(const char* animation);
 	CUTE_INLINE void reset();
-	CUTE_INLINE void draw();
-	CUTE_INLINE batch_quad_t quad();
+	CUTE_INLINE void draw(batch_t* batch, transform_t transform);
+	CUTE_INLINE batch_quad_t quad(transform_t transform);
 
 	CUTE_INLINE void pause();
 	CUTE_INLINE void unpause();
@@ -89,8 +89,6 @@ struct sprite_t
 	const char* name;
 	int w = 0;
 	int h = 0;
-	bool visible = true;
-	transform_t transform = make_transform();
 	v2 scale = v2(1, 1);
 	v2 local_offset = v2(0, 0);
 	float opacity = 1.0f;
@@ -103,8 +101,7 @@ struct sprite_t
 
 	bool paused = false;
 	float t = 0;
-	const animation_table_t* animations;
-	batch_t* batch;
+	const animation_table_t* animations = NULL;
 };
 
 //--------------------------------------------------------------------------------------------------
@@ -147,12 +144,12 @@ void sprite_t::reset()
 	t = 0;
 }
 
-void sprite_t::draw()
+void sprite_t::draw(batch_t* batch, transform_t transform)
 {
-	batch_push(batch, quad());
+	batch_push(batch, quad(transform));
 }
 
-batch_quad_t sprite_t::quad()
+batch_quad_t sprite_t::quad(transform_t transform)
 {
 	batch_quad_t q;
 	q.id = animation->frames[frame_index].id;

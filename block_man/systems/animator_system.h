@@ -29,5 +29,6 @@ struct Transform;
 struct Animator;
 
 void animator_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, int entity_count);
+void animator_system_post_update(app_t* app, float dt, void* udata);
 
 #endif // ANIMATOR_SYSTEM_H

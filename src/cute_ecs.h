@@ -39,13 +39,16 @@ struct kv_t;
 // Entity
 
 using entity_type_t = uint32_t;
-#define CUTE_INVALID_ENTITY_TYPE ((entity_type_t)(~0))
 
 struct entity_t
 {
+	CUTE_INLINE bool operator==(const entity_t& other) { return type == other.type && handle == other.handle; }
 	entity_type_t type;
 	handle_t handle;
 };
+
+#define CUTE_INVALID_ENTITY_TYPE ((entity_type_t)(~0))
+static constexpr entity_t INVALID_ENTITY = { CUTE_INVALID_ENTITY_TYPE, CUTE_INVALID_HANDLE };
 
 extern CUTE_API entity_type_t CUTE_CALL app_register_entity_type(app_t* app, const char* schema);
 extern CUTE_API const char* CUTE_CALL app_entity_type_string(app_t* app, entity_type_t type);
@@ -59,7 +62,7 @@ struct component_config_t
 {
 	const char* name = NULL;
 	size_t size_of_component = 0;
-	void* serializer_fn_udata = NULL;
+	void* udata = NULL;
 	component_serialize_fn* serializer_fn = NULL;
 };
 
@@ -71,12 +74,14 @@ extern CUTE_API void CUTE_CALL app_register_component_type(app_t* app, component
 
 struct system_t
 {
-	void* update_fn_udata = NULL;
+	void* udata = NULL;
+	void (*pre_update_fn)(app_t* app, float dt, void* udata) = NULL;
 	void* update_fn = NULL;
+	void (*post_update_fn)(app_t* app, float dt, void* udata) = NULL;
 	array<const char*> component_types;
 };
 
-extern CUTE_API void CUTE_CALL app_register_system(app_t* app, system_t system);
+extern CUTE_API void CUTE_CALL app_register_system(app_t* app, const system_t& system);
 extern CUTE_API void CUTE_CALL app_update_systems(app_t* app, float dt);
 
 //--------------------------------------------------------------------------------------------------
@@ -86,6 +91,7 @@ extern CUTE_API error_t CUTE_CALL app_make_entity(app_t* app, const char* entity
 extern CUTE_API void CUTE_CALL app_destroy_entity(app_t* app, entity_t entity);
 extern CUTE_API bool CUTE_CALL app_is_entity_valid(app_t* app, entity_t entity);
 extern CUTE_API void* CUTE_CALL app_get_component(app_t* app, entity_t entity, const char* name);
+extern CUTE_API bool CUTE_CALL app_has_component(app_t* app, entity_t entity, const char* name);
 
 /**
  * `kv` needs to be in `KV_STATE_READ` mode.
@@ -96,7 +102,6 @@ extern CUTE_API error_t CUTE_CALL app_load_entities(app_t* app, kv_t* kv, array<
  * `kv` needs to be in `KV_STATE_WRITE` mode.
  */
 extern CUTE_API error_t CUTE_CALL app_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv);
-
 
 }
 

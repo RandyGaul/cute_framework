@@ -25,11 +25,16 @@
 #include <components/animator.h>
 #include <components/board_piece.h>
 
+#include <world.h>
+
 void board_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, int entity_count)
 {
 	for (int i = 0; i < entity_count; ++i) {
 		Transform* transform = transforms + i;
 		Animator* animator = animators + i;
 		BoardPiece* board_piece = board_pieces + i;
+
+		// Set the initial transform each frame tick.
+		transform->transform.p = tile2world(animator->sprite.h, board_piece->x, board_piece->y);
 	}
 }

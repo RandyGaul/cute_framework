@@ -280,7 +280,6 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 		block_man/components/animator.h
 		block_man/components/board_piece.h
 		block_man/components/ice_block.h
-		block_man/components/ladder.h
 		block_man/components/player.h
 		block_man/components/reflection.h
 		block_man/components/transform.h

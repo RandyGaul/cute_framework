@@ -27,7 +27,6 @@ using namespace cute;
 
 struct BoardPiece
 {
-	uint8_t code = '1';
 	int x = 0;
 	int y = 0;
 	int x0 = 0;
@@ -37,14 +36,7 @@ struct BoardPiece
 	float delay = 0.125f;
 	v2 a, c0, b;
 
-	enum state_t
-	{
-		STATE_IDLE,
-		STATE_START_MOVING,
-		STATE_IS_MOVING,
-	};
-
-	state_t state;
+	bool is_moving = false;
 };
 
 CUTE_INLINE error_t BoardPiece_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
@@ -53,7 +45,6 @@ CUTE_INLINE error_t BoardPiece_serialize(app_t* app, kv_t* kv, entity_t entity, 
 	if (kv_get_state(kv) == KV_STATE_READ) {
 		CUTE_PLACEMENT_NEW(board_piece) BoardPiece;
 	}
-	kv_key(kv, "code"); kv_val(kv, &board_piece->code);
 	kv_key(kv, "x"); kv_val(kv, &board_piece->x);
 	kv_key(kv, "y"); kv_val(kv, &board_piece->y);
 	return kv_error_state(kv);

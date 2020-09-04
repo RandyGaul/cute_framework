@@ -82,7 +82,9 @@ struct entity_collection_t
 struct system_internal_t
 {
 	void* udata = NULL;
+	void (*pre_update_fn)(app_t* app, float dt, void* udata) = NULL;
 	void* update_fn = NULL;
+	void (*post_update_fn)(app_t* app, float dt, void* udata) = NULL;
 	array<STRPOOL_U64> component_types;
 };
 
