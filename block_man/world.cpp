@@ -53,16 +53,16 @@ const char* schema_box = CUTE_STRINGIZE(
 	entity_type = "Box",
 	Transform = { },
 	Animator = { name = "data/box.aseprite" },
+	Reflection = { },
 	BoardPiece = { },
-	IceBlock = { },
 );
 
 const char* schema_ladder = CUTE_STRINGIZE(
 	entity_type = "Ladder",
 	Transform = { },
 	Animator = { name = "data/ladder.aseprite" },
+	Reflection = { },
 	BoardPiece = { },
-	IceBlock = { },
 );
 
 const char* schema_player = CUTE_STRINGIZE(
@@ -167,7 +167,7 @@ void world2tile(int sprite_h, v2 p, int* x_out, int* y_out)
 	*y_out = (int)round(y);
 }
 
-array<array<string_t>> BackgroundMaps = {
+array<array<string_t>> background_maps = {
 	{
 		"XXXX0000XXXX00000XXX",
 		"XXXX00000XXXXXX000XX",
@@ -314,17 +314,17 @@ bool in_grid(int x, int y, int w, int h)
 	return x >= 0 && y >= 0 && x < w && y < h;
 }
 
-void InitBackgroundBricks(int seed)
+void init_bg_bricks(int seed)
 {
 	rnd_t rnd = rnd_seed(seed);
-	int background_index = rnd_next_range(rnd, 0, BackgroundMaps.count() - 1);
+	int background_index = rnd_next_range(rnd, 0, background_maps.count() - 1);
 
 	world->board.background_bricks.clear();
 	transform_t transform = make_transform();
 	for (int i = 0; i < 15; ++i) {
 		for (int j = 0; j < 20; ++j) {
 			sprite_t sprite;
-			if (BackgroundMaps[background_index][i][j] == 'X') {
+			if (background_maps[background_index][i][j] == 'X') {
 				if ((i & 1) ^ (j & 1)) {
 					sprite = load_sprite("data/bricks_even.aseprite");
 				} else {
@@ -340,7 +340,7 @@ void InitBackgroundBricks(int seed)
 	}
 }
 
-void LoadLevel(int level_index)
+void load_level(int level_index)
 {
 	const array<string_t>& l = levels[level_index];
 	world->board.data.clear();
@@ -376,5 +376,5 @@ void LoadLevel(int level_index)
 		}
 	}
 
-	InitBackgroundBricks(level_index);
+	init_bg_bricks(level_index);
 }

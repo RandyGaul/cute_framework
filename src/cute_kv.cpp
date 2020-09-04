@@ -1140,8 +1140,10 @@ error_t kv_val(kv_t* kv, bool* val)
 		const char* string;
 		size_t sz;
 		error_t err = kv_val_string(kv, &string, &sz);
-		if (sz == 4 && !CUTE_STRNCMP("true", string, sz)) *val = true;
-		else *val = false;
+		if (!err.is_error()) {
+			if (sz == 4 && !CUTE_STRNCMP("true", string, sz)) *val = true;
+			else *val = false;
+		}
 		return err;
 	} else {
 		if (*val) {

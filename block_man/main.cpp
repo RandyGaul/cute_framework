@@ -138,6 +138,7 @@ void DoImguiStuff(app_t* app, float dt)
 int main(int argc, const char** argv)
 {
 	init_world();
+	load_level(0);
 
 	matrix_t mvp = matrix_ortho_2d(320, 240, 0, -100);
 	const font_t* font = font_get_default(app);

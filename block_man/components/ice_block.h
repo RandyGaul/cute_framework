@@ -25,8 +25,8 @@
 #include <cute.h>
 using namespace cute;
 
+#include <components/animator.h>
 #include <cute/cute_coroutine.h>
-
 
 struct IceBlock
 {
@@ -43,6 +43,8 @@ CUTE_INLINE error_t IceBlock_serialize(app_t* app, kv_t* kv, entity_t entity, vo
 	IceBlock* ice_block = (IceBlock*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
 		CUTE_PLACEMENT_NEW(ice_block) IceBlock;
+		Animator* animator = (Animator*)app_get_component(app, entity, "Animator");
+		animator->sprite.play("idle");
 	}
 	return kv_error_state(kv);
 }

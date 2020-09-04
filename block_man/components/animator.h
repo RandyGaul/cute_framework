@@ -31,16 +31,16 @@ using namespace cute;
 struct Animator
 {
 	bool visible = true;
-	sprite_t sprite;
-	transform_t transform_local;
-	transform_t transform_world;
+	sprite_t sprite = sprite_t();
+	transform_t transform_local = make_transform();
+	transform_t transform_world = make_transform();
 };
 
 CUTE_INLINE error_t Animator_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	Animator* animator = (Animator*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
-		animator->sprite = sprite_t();
+		CUTE_PLACEMENT_NEW(animator) Animator;
 	}
 	kv_key(kv, "name"); kv_val(kv, &animator->sprite.name);
 	if (kv_get_state(kv) == KV_STATE_READ) {

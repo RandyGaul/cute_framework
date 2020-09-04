@@ -54,6 +54,7 @@ extern batch_t* batch;
 extern app_t* app;
 
 void init_world();
+void load_level(int level_index);
 sprite_t load_sprite(string_t path);
 v2 tile2world(int sprite_h, int x, int y);
 void world2tile(int sprite_h, v2 p, int* x_out, int* y_out);

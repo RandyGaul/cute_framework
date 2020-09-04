@@ -51,9 +51,12 @@ static error_t s_load_from_schema(app_t* app, entity_type_t schema_type, entity_
 	err = kv_key(schema, config->name);
 	if (err.is_error()) return err;
 
-	kv_object_begin(schema);
-	err = config->serializer_fn(app, schema, entity, component, udata);
-	kv_object_end(schema);
+	err = kv_object_begin(schema);
+	if (!err.is_error()) {
+		err = config->serializer_fn(app, schema, entity, component, udata);
+		if (err.is_error()) return err;
+		err = kv_object_end(schema);
+	}
 	return err;
 }
 
