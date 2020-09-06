@@ -143,7 +143,8 @@ void app_destroy_entity(app_t* app, entity_t entity)
 bool app_is_entity_valid(app_t* app, entity_t entity)
 {
 	entity_collection_t* collection = s_collection(app, entity);
-	return collection->entity_handle_table.is_valid(entity.handle);
+	if (collection) return collection->entity_handle_table.is_valid(entity.handle);
+	else return NULL;
 }
 
 void* app_get_component(app_t* app, entity_t entity, const char* component_type)
@@ -281,7 +282,7 @@ void app_update_systems(app_t* app, float dt)
 
 			array<typeless_array>& tables = collection->component_tables;
 
-			if (matches.count()) {
+			if (matches.count() == system->component_types.count()) {
 				switch (matches.count())
 				{
 				case 0: s_0(app, dt, update_fn, udata); break;
@@ -391,6 +392,12 @@ entity_type_t app_register_entity_type(app_t* app, const char* schema)
 const char* app_entity_type_string(app_t* app, entity_type_t type)
 {
 	return strpool_cstr(app->strpool, app->entity_type_id_to_string[type]);
+}
+
+bool app_entity_is_type(app_t* app, entity_t entity, const char* entity_type_name)
+{
+	if (!app_is_entity_valid(app, entity)) return false;
+	return !CUTE_STRCMP(app_entity_type_string(app, entity.type), entity_type_name);
 }
 
 entity_type_t s_entity_type(app_t* app, kv_t* kv, const char* key)

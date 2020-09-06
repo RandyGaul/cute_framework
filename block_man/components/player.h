@@ -29,10 +29,14 @@ using namespace cute;
 
 struct Player
 {
+	static constexpr float move_delay = 0.125f;
+
+	entity_t entity;
 	int xdir = 0;
 	int ydir = -1;
 	bool holding = false;
 	bool won = false;
+	bool busy = false;
 	int moves = 0;
 
 	// ----------------------------
@@ -50,6 +54,7 @@ CUTE_INLINE error_t Player_serialize(app_t* app, kv_t* kv, entity_t entity, void
 	Player* player = (Player*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
 		CUTE_PLACEMENT_NEW(player) Player;
+		player->entity = entity;
 		Animator* animator = (Animator*)app_get_component(app, entity, "Animator");
 		animator->sprite.play("idle");
 	}

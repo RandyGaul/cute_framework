@@ -27,16 +27,54 @@ using namespace cute;
 
 struct BoardPiece
 {
+	bool is_moving = false;
+	entity_t notify_player_when_done = INVALID_ENTITY;
+
 	int x = 0;
 	int y = 0;
 	int x0 = 0;
 	int y0 = 0;
 
 	float t = 0;
-	float delay = 0.125f;
+	float delay = 0;
 	v2 a, c0, b;
 
-	bool is_moving = false;
+	CUTE_INLINE void linear(int sprite_h, int to_x, int to_y, float delay)
+	{
+		is_moving = true;
+		x0 = x, y0 = y, x = to_x, y = to_y;
+		a = tile2world(sprite_h, x0, y0);
+		b = tile2world(sprite_h, x, y);
+		c0 = (a + b) * 0.5f;
+		this->delay = delay;
+	}
+
+	CUTE_INLINE void hop(int sprite_h, int to_x, int to_y, float delay)
+	{
+		is_moving = true;
+		x0 = x, y0 = y, x = to_x, y = to_y;
+		a = tile2world(sprite_h, x0, y0);
+		b = tile2world(sprite_h, x, y);
+		c0 = (a + b) * 0.5f + v2(0, 5);
+		this->delay = delay;
+	}
+
+	CUTE_INLINE void rotate(int sprite_h, int to_x, int to_y, int about_x, int about_y, float delay)
+	{
+		is_moving = true;
+		x0 = x, y0 = y, x = to_x, y = to_y;
+		a = tile2world(sprite_h, x0, y0);
+		b = tile2world(sprite_h, x, y);
+		v2 about = tile2world(sprite_h, about_x, about_y);
+		v2 mid = (a + b) * 0.5f;
+		c0 = mid + norm(mid - about) * sqrt(2.0f) * 16.0f / 2.0f;
+		this->delay = delay;
+	}
+
+	CUTE_INLINE v2 interpolate() const
+	{
+		return bezier(a, c0, b, smoothstep(t / delay));
+	}
 };
 
 CUTE_INLINE error_t BoardPiece_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)

@@ -32,6 +32,10 @@ struct Animator
 {
 	bool visible = true;
 	sprite_t sprite = sprite_t();
+
+	bool flipped_x = false;
+	CUTE_INLINE void flip_x() { if (!flipped_x) { flipped_x = true; sprite.flip_x(); } }
+	CUTE_INLINE void unflip_x() { if (flipped_x) { flipped_x = false; sprite.flip_x(); } }
 };
 
 CUTE_INLINE error_t Animator_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)

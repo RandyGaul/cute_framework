@@ -29,6 +29,7 @@ using namespace cute;
 
 struct Transform
 {
+	entity_t entity = INVALID_ENTITY;
 	transform_t world = make_transform();
 	transform_t local = make_transform();
 
@@ -40,6 +41,7 @@ CUTE_INLINE error_t Transform_serialize(app_t* app, kv_t* kv, entity_t entity, v
 	Transform* transform = (Transform*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
 		CUTE_PLACEMENT_NEW(transform) Transform;
+		transform->entity = entity;
 	}
 	return serialize_transform(kv, "world", &transform->world);
 }

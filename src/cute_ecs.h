@@ -52,6 +52,7 @@ static constexpr entity_t INVALID_ENTITY = { CUTE_INVALID_ENTITY_TYPE, CUTE_INVA
 
 extern CUTE_API entity_type_t CUTE_CALL app_register_entity_type(app_t* app, const char* schema);
 extern CUTE_API const char* CUTE_CALL app_entity_type_string(app_t* app, entity_type_t type);
+extern CUTE_API bool CUTE_CALL app_entity_is_type(app_t* app, entity_t entity, const char* entity_type_name);
 
 //--------------------------------------------------------------------------------------------------
 // Component

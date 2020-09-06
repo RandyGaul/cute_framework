@@ -148,24 +148,7 @@ int main(int argc, const char** argv)
 	while (app_is_running(app)) {
 		float dt = calc_dt();
 		app_update(app, dt);
-
-		//if (key_was_pressed(app, KEY_Q)) {
-		//	// Cheat. For testing.
-		//	level_index = (level_index + 1) % levels.count();
-		//	LoadLevel(levels[level_index]);
-		//}
-
-		//DrawBackgroundBricks();
-
 		app_update_systems(app, dt);
-
-		//char buffer[4];
-		//itoa(hero.moves, buffer, 10);
-		//font_push_verts(app, font, buffer, -w / 2, h / 2, 0);
-		//font_draw(app, font, mvp);
-		//
-		//DoImguiStuff(app, dt);
-
 		app_present(app);
 	}
 

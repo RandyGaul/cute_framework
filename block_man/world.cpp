@@ -121,6 +121,18 @@ void ecs_registration(app_t* app)
 	app_register_system(app, {
 		NULL,
 		NULL,
+		player_system_update,
+		NULL,
+		{
+			"Transform",
+			"Animator",
+			"BoardPiece",
+			"Player",
+		}
+	});
+	app_register_system(app, {
+		NULL,
+		NULL,
 		board_system_update,
 		NULL,
 		{
