@@ -97,7 +97,7 @@ bool handle_input(app_t* app, float dt, int sprite_h, BoardPiece* board_piece, P
 				++player->moves;
 				entity_t block = world->board.data[sy][sx].entity;
 				BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
-				block_board_piece->linear(sprite_h, x + player->xdir, y - player->ydir, Player::move_delay * distance);
+				block_board_piece->linear(x + player->xdir, y - player->ydir, Player::move_delay * distance);
 				block_board_piece->notify_player_when_done = player->entity;
 				player->holding = true;
 				update_hero_animation = true;
@@ -122,7 +122,7 @@ bool handle_input(app_t* app, float dt, int sprite_h, BoardPiece* board_piece, P
 			}
 			entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
 			BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
-			block_board_piece->linear(sprite_h, sx - player->xdir, sy + player->ydir, Player::move_delay * distance);
+			block_board_piece->linear(sx - player->xdir, sy + player->ydir, Player::move_delay * distance);
 			block_board_piece->notify_player_when_done = player->entity;
 			player->holding = false;
 			player->busy = true;
@@ -158,13 +158,13 @@ bool handle_input(app_t* app, float dt, int sprite_h, BoardPiece* board_piece, P
 						y += ymove[i];
 
 						// update hero position
-						board_piece->hop(sprite_h, x, y, Player::move_delay);
+						board_piece->hop(x, y, Player::move_delay);
 						player->busy = true;
 
 						// then, move the block
 						entity_t block = world->board.data[y - player->ydir * 2][x + player->xdir * 2].entity;
 						BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
-						block_board_piece->linear(sprite_h, x + player->xdir, y - player->ydir, Player::move_delay);
+						block_board_piece->linear(x + player->xdir, y - player->ydir, Player::move_delay);
 					}
 				}
 				// if moving forwards
@@ -178,7 +178,7 @@ bool handle_input(app_t* app, float dt, int sprite_h, BoardPiece* board_piece, P
 						// first, move the block
 						entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
 						BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
-						block_board_piece->linear(sprite_h, x + player->xdir * 2, y - player->ydir * 2, Player::move_delay);
+						block_board_piece->linear(x + player->xdir * 2, y - player->ydir * 2, Player::move_delay);
 						block_board_piece->notify_player_when_done = player->entity;
 
 						// move forward
@@ -186,7 +186,7 @@ bool handle_input(app_t* app, float dt, int sprite_h, BoardPiece* board_piece, P
 						y += ymove[i];
 
 						// update hero position
-						board_piece->hop(sprite_h, x, y, Player::move_delay);
+						board_piece->hop(x, y, Player::move_delay);
 						player->busy = true;
 					}
 				}
@@ -212,7 +212,7 @@ bool handle_input(app_t* app, float dt, int sprite_h, BoardPiece* board_piece, P
 
 							// and move block
 							BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
-							block_board_piece->rotate(sprite_h, x + player->xdir, y - player->ydir, x, y, Player::move_delay);
+							block_board_piece->rotate(x + player->xdir, y - player->ydir, x, y, Player::move_delay);
 							block_board_piece->notify_player_when_done = player->entity;
 						}
 					}
@@ -236,7 +236,7 @@ bool handle_input(app_t* app, float dt, int sprite_h, BoardPiece* board_piece, P
 						bool won = world->board.data[y][x].is_ladder;
 
 						// update hero position
-						board_piece->hop(sprite_h, x, y, Player::move_delay);
+						board_piece->hop(x, y, Player::move_delay);
 						player->busy = true;
 						board_piece->notify_player_when_done = player->entity;
 

@@ -35,7 +35,7 @@ void board_system_update(app_t* app, float dt, void* udata, Transform* transform
 		Animator* animator = animators + i;
 		BoardPiece* board_piece = board_pieces + i;
 
-		v2 p = tile2world(animator->sprite.h, board_piece->x, board_piece->y);
+		v2 p = tile2world(board_piece->x, board_piece->y);
 
 		if (board_piece->is_moving) {
 			board_piece->t += dt;
@@ -58,7 +58,6 @@ void board_system_update(app_t* app, float dt, void* udata, Transform* transform
 			}
 		}
 
-		// Set the initial transform each frame tick.
-		transform->local.p = p;
+		transform->world.p += p;
 	}
 }

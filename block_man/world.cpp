@@ -123,6 +123,16 @@ void ecs_registration(app_t* app)
 	app_register_system(app, {
 		NULL,
 		NULL,
+		animator_transform_system_update,
+		NULL,
+		{
+			"Transform",
+			"Animator",
+		}
+	});
+	app_register_system(app, {
+		NULL,
+		NULL,
 		player_system_update,
 		NULL,
 		{
@@ -212,23 +222,21 @@ sprite_t load_sprite(string_t path)
 	return s;
 }
 
-v2 tile2world(int sprite_h, int x, int y)
+v2 tile2world(int x, int y)
 {
 	float w = 16; // width of tiles in pixels
 	float h = 16;
 	float y_offset = world->board.data.count() * h;
-	float y_diff = sprite_h > 16 ? (sprite_h - h) / 2 : 0;
-	return v2((float)(x-6) * w, -(float)(y+6) * h + y_offset + y_diff);
+	return v2((float)(x-6) * w, -(float)(y+6) * h + y_offset);
 }
 
-void world2tile(int sprite_h, v2 p, int* x_out, int* y_out)
+void world2tile(v2 p, int* x_out, int* y_out)
 {
 	float w = 16; // width of tiles in pixels
 	float h = 16;
 	float y_offset = world->board.data.count() * h;
-	float y_diff = sprite_h > 16 ? (sprite_h - h) / 2 : 0;
 	float x = p.x / w + 6;
-	float y = -((p.y - y_offset - y_diff) / h) - 6;
+	float y = -((p.y - y_offset) / h) - 6;
 	*x_out = (int)round(x);
 	*y_out = (int)round(y);
 }
@@ -368,10 +376,10 @@ array<array<string_t>> levels = {
 	},
 };
 
-int sort_bits(int sprite_h, v2 p)
+int sort_bits(v2 p)
 {
 	int x, y;
-	world2tile(sprite_h, p, &x, &y);
+	world2tile(p, &x, &y);
 	return world->board.w * y + x;
 }
 

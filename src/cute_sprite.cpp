@@ -162,14 +162,23 @@ error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, 
 		animations->insert(animation->name, animation);
 	}
 
-	// Look for pivot information to define the sprite's local offset.
-	if (ase->slice_count == 1) {
-		entry.local_offset = v2((float)entry.ase->slices[0].pivot_x, (float)entry.ase->slices[0].pivot_y);
-	} else if (ase->slice_count > 1) {
-		CUTE_DEBUG_PRINTF("Aseprite cache -- Ase file found with %d sclies, but expected a single slice which would represent the sprite's local origin via slice pivot.", entry.ase->slice_count);
-		entry.local_offset = v2(0, 0);
-	} else {
-		entry.local_offset = v2(0, 0);
+	// Look for slice information to define the sprite's local offset.
+	// The slice named "origin"'s center is used to define the local offset.
+	entry.local_offset = v2(0, 0);
+	for (int i = 0; i < ase->slice_count; ++i) {
+		ase_slice_t* slice = ase->slices + i;
+		if (!CUTE_STRCMP(slice->name, "origin")) {
+			// Invert y-axis since ase saves slice as (0, 0) top-left.
+			float y = (float)slice->origin_y + (float)slice->h * 0.25f;
+			y = (float)ase->h - y - 1;
+			float x = (float)slice->origin_x + (float)slice->w * 0.25f;
+
+			// Transform from top-left coordinates to center of sprite.
+			v2 origin = v2(x, y);
+			v2 offset = v2((float)ase->w - 1, (float)ase->h - 1) * 0.5f - origin;
+			entry.local_offset = offset;
+			break;
+		}
 	}
 
 	// Cache the ase and animation.

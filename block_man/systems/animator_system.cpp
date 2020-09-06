@@ -23,6 +23,16 @@
 #include <components/transform.h>
 #include <components/animator.h>
 
+void animator_transform_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, int entity_count)
+{
+	for (int i = 0; i < entity_count; ++i) {
+		Transform* transform = transforms + i;
+		Animator* animator = animators + i;
+
+		transform->local.p += animator->sprite.local_offset;
+	}
+}
+
 void animator_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, int entity_count)
 {
 	for (int i = 0; i < entity_count; ++i) {
@@ -32,9 +42,8 @@ void animator_system_update(app_t* app, float dt, void* udata, Transform* transf
 		animator->sprite.update(dt);
 
 		transform_t tx = transform->get();
-		transform->local.p += animator->sprite.local_offset;
 		if (animator->visible) {
-			animator->sprite.sort_bits = sort_bits(animator->sprite.h, tx.p);
+			animator->sprite.sort_bits = sort_bits(tx.p);
 			animator->sprite.draw(batch, tx);
 		}
 	}

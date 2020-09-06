@@ -29,7 +29,9 @@ void transform_system_update(app_t* app, float dt, void* udata, Transform* trans
 	for (int i = 0; i < entity_count; ++i) {
 		Transform* transform = transforms + i;
 
-		// Clear the local transform for each new game tick.
+		// Clear the transforms for each new game tick.
+		// The other components build these up additively each game tick.
+		transform->world = make_transform();
 		transform->local = make_transform();
 	}
 }
