@@ -143,7 +143,7 @@ void ecs_registration(app_t* app)
 	});
 	app_register_system(app, {
 		NULL,
-		NULL,
+		ice_block_system_pre_update,
 		ice_block_system_update,
 		NULL,
 		{
@@ -152,6 +152,13 @@ void ecs_registration(app_t* app)
 			"BoardPiece",
 			"IceBlock",
 		}
+	});
+	app_register_system(app, {
+		NULL,
+		draw_background_bricks_system_pre_update,
+		NULL,
+		NULL,
+		{ }
 	});
 	app_register_system(app, {
 		NULL,
@@ -395,6 +402,14 @@ void init_bg_bricks(int seed)
 			world->board.background_bricks.add(sprite.quad(transform));
 		}
 	}
+}
+
+void draw_background_bricks_system_pre_update(app_t* app, float dt, void* udata)
+{
+	for (int i = 0; i < world->board.background_bricks.count(); ++i) {
+		batch_push(batch, world->board.background_bricks[i]);
+	}
+	batch_flush(batch);
 }
 
 void load_level(int level_index)

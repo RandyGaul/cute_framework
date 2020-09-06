@@ -267,34 +267,36 @@ void app_update_systems(app_t* app, float dt)
 
 		if (pre_update_fn) pre_update_fn(app, dt, udata);
 
-		for (int j = 0; j < app->entity_collections.count(); ++j)
-		{
-			entity_collection_t* collection = app->entity_collections.items() + j;
-			CUTE_ASSERT(collection->component_tables.count() == collection->component_types.count());
-			int component_count = collection->component_tables.count();
-			app->current_collection_type_being_iterated = app->entity_collections.keys()[j];
-			app->current_collection_being_updated = collection;
-			CUTE_DEFER(app->current_collection_type_being_iterated = CUTE_INVALID_ENTITY_TYPE);
-			CUTE_DEFER(app->current_collection_being_updated = NULL);
+		if (update_fn) {
+			for (int j = 0; j < app->entity_collections.count(); ++j)
+			{
+				entity_collection_t* collection = app->entity_collections.items() + j;
+				CUTE_ASSERT(collection->component_tables.count() == collection->component_types.count());
+				int component_count = collection->component_tables.count();
+				app->current_collection_type_being_iterated = app->entity_collections.keys()[j];
+				app->current_collection_being_updated = collection;
+				CUTE_DEFER(app->current_collection_type_being_iterated = CUTE_INVALID_ENTITY_TYPE);
+				CUTE_DEFER(app->current_collection_being_updated = NULL);
 
-			array<int> matches;
-			s_match(&matches, system->component_types, collection->component_types);
+				array<int> matches;
+				s_match(&matches, system->component_types, collection->component_types);
 
-			array<typeless_array>& tables = collection->component_tables;
+				array<typeless_array>& tables = collection->component_tables;
 
-			if (matches.count() == system->component_types.count()) {
-				switch (matches.count())
-				{
-				case 0: s_0(app, dt, update_fn, udata); break;
-				case 1: s_1(app, dt, update_fn, udata, tables[matches[0]]); break;
-				case 2: s_2(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]]); break;
-				case 3: s_3(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]]); break;
-				case 4: s_4(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]]); break;
-				case 5: s_5(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]]); break;
-				case 6: s_6(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]]); break;
-				case 7: s_7(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]]); break;
-				case 8: s_8(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]], tables[matches[7]]); break;
-				default: CUTE_ASSERT(0);
+				if (matches.count() == system->component_types.count()) {
+					switch (matches.count())
+					{
+					case 0: s_0(app, dt, update_fn, udata); break;
+					case 1: s_1(app, dt, update_fn, udata, tables[matches[0]]); break;
+					case 2: s_2(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]]); break;
+					case 3: s_3(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]]); break;
+					case 4: s_4(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]]); break;
+					case 5: s_5(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]]); break;
+					case 6: s_6(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]]); break;
+					case 7: s_7(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]]); break;
+					case 8: s_8(app, dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]], tables[matches[7]]); break;
+					default: CUTE_ASSERT(0);
+					}
 				}
 			}
 		}

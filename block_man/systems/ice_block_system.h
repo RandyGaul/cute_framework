@@ -32,6 +32,7 @@ struct IceBlock;
 
 void ice_block_system_init();
 
+void ice_block_system_pre_update(app_t* app, float dt, void* udata);
 void ice_block_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, IceBlock* ice_blocks, int entity_count);
 
 #endif // ICE_BLOCK_SYSTEM_H

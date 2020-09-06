@@ -27,29 +27,36 @@
 #include <components/ice_block.h>
 #include <components/transform.h>
 
+sprite_t ice_block_idle;
 sprite_t ice_block_mask;
 
 void ice_block_system_init()
 {
-	ice_block_mask = load_sprite("data/ice_block.aseprite");
+	ice_block_mask = ice_block_idle = load_sprite("data/ice_block.aseprite");
+	ice_block_idle.play("idle");
 	ice_block_mask.play("mask");
 }
 
 static float s_float_offset(IceBlock* ice_block, float dt)
 {
 	static float floating_offset = 0;
-	coroutine_t* float_co = &ice_block->float_co;
-	COROUTINE_START(float_co);
+	coroutine_t* co = &ice_block->float_co;
+	COROUTINE_START(co);
 	floating_offset = 1.0f;
-	COROUTINE_PAUSE(float_co, IceBlock::float_delay, dt);
+	COROUTINE_PAUSE(co, IceBlock::float_delay, dt);
 	floating_offset = 2.0f;
-	COROUTINE_PAUSE(float_co, IceBlock::float_delay, dt);
+	COROUTINE_PAUSE(co, IceBlock::float_delay, dt);
 	floating_offset = 3.0f;
-	COROUTINE_PAUSE(float_co, IceBlock::float_delay, dt);
+	COROUTINE_PAUSE(co, IceBlock::float_delay, dt);
 	floating_offset = 2.0f;
-	COROUTINE_PAUSE(float_co, IceBlock::float_delay, dt);
-	COROUTINE_END(float_co);
+	COROUTINE_PAUSE(co, IceBlock::float_delay, dt);
+	COROUTINE_END(co);
 	return floating_offset;
+}
+
+void ice_block_system_pre_update(app_t* app, float dt, void* udata)
+{
+	ice_block_idle.update(dt);
 }
 
 void ice_block_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, IceBlock* ice_blocks, int entity_count)
@@ -77,6 +84,10 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 				}
 			}
 			COROUTINE_YIELD(co);
+			// Overwrite the Animator's sprite with this static one to keep all of them in-sync
+			// together no matter what. If different ice block idle animations start playing out
+			// of sync it looks visiually jarring.
+			animator->sprite = ice_block_idle;
 			goto IDLE_INNER;
 		}
 

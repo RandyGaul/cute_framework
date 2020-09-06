@@ -60,5 +60,6 @@ v2 tile2world(int sprite_h, int x, int y);
 void world2tile(int sprite_h, v2 p, int* x_out, int* y_out);
 int sort_bits(int sprite_h, v2 p);
 bool in_grid(int x, int y, int w, int h);
+void draw_background_bricks_system_pre_update(app_t* app, float dt, void* udata);
 
 #endif // WORLD_H
