@@ -108,6 +108,8 @@ void ecs_registration(app_t* app)
 	       for each entity type with matching component set
 	           call system update
 	       call system post update
+
+	   Please note that each of these three callbacks are optional and can be NULL.
 	*/
 	app_register_system(app, {
 		NULL,                    // udata
