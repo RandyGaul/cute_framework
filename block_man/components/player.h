@@ -27,6 +27,8 @@ using namespace cute;
 
 #include <components/animator.h>
 
+#include <cute/cute_coroutine.h>
+
 struct Player
 {
 	static constexpr float move_delay = 0.125f;
@@ -38,6 +40,7 @@ struct Player
 	bool won = false;
 	bool busy = false;
 	int moves = 0;
+	coroutine_t co = { 0 };
 
 	// ----------------------------
 	// For spinning upon level load.

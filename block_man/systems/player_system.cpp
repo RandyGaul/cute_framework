@@ -271,8 +271,23 @@ void player_system_update(app_t* app, float dt, void* udata, Transform* transfor
 		if (player->busy) continue;
 
 		if (!board_piece->is_moving) {
-			bool update_anim = handle_input(app, dt, animator->sprite.h, board_piece, player);
-			if (update_anim) set_player_animation_based_on_facing_direction(player, animator);
+			if (!player->won) {
+				bool update_anim = handle_input(app, dt, animator->sprite.h, board_piece, player);
+				if (update_anim) set_player_animation_based_on_facing_direction(player, animator);
+			} else {
+				coroutine_t* co = &player->co;
+				COROUTINE_START(co);
+				animator->sprite.play("ladder");
+				COROUTINE_CASE(co, GOING_DOWN_LADDER);
+				if (!animator->sprite.loop_count) {
+					COROUTINE_YIELD(co);
+					goto GOING_DOWN_LADDER;
+				} else {
+					player->won = false;
+					printf("win\n");
+				}
+				COROUTINE_END(co);
+			}
 		}
 	}
 }

@@ -428,7 +428,7 @@ void load_level(int level_index)
 			BoardSpace space;
 			space.entity = e;
 			space.is_empty = c == '0' ? true : false;
-			space.is_ladder = c == 'l' ? true : false;
+			space.is_ladder = c == 'e' ? true : false;
 			if (!space.is_empty) {
 				BoardPiece* board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
 				board_piece->x = j;
