@@ -30,8 +30,6 @@ ReflectionSystem* reflection_system = &reflection_system_instance;
 
 void reflection_system_pre_update(app_t* app, float dt, void* udata)
 {
-	ReflectionSystem* reflection_system = (ReflectionSystem*)udata;
-
 	sg_depth_stencil_state stencil;
 	CUTE_MEMSET(&stencil, 0, sizeof(stencil));
 	stencil.stencil_front.fail_op = SG_STENCILOP_KEEP;
@@ -59,22 +57,21 @@ void reflection_system_pre_update(app_t* app, float dt, void* udata)
 
 void reflection_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, Reflection* reflections, int entity_count)
 {
-	ReflectionSystem* reflection_system = (ReflectionSystem*)udata;
-
 	for (int i = 0; i < entity_count; ++i) {
 		Transform* transform = transforms + i;
 		Animator* animator = animators + i;
 		Reflection* reflection = reflections + i;
 
 		// Collect all sprites that will be reflected.
-		reflection_system->quads.add(animator->sprite.quad(transform->get()));
+		transform_t tx = transform->get();
+		batch_quad_t q = animator->sprite.quad(tx);
+		q.sort_bits = sort_bits(animator->sprite.h, tx.p);
+		reflection_system->quads.add(q);
 	}
 }
 
 void reflection_system_post_update(app_t* app, float dt, void* udata)
 {
-	ReflectionSystem* reflection_system = (ReflectionSystem*)udata;
-
 	sg_depth_stencil_state stencil;
 	CUTE_MEMSET(&stencil, 0, sizeof(stencil));
 	stencil.stencil_front.fail_op = SG_STENCILOP_KEEP;
@@ -86,9 +83,6 @@ void reflection_system_post_update(app_t* app, float dt, void* udata)
 	stencil.stencil_read_mask = 0xFF;
 	stencil.stencil_write_mask = 0xFF;
 	stencil.stencil_ref = 0x1;
-
-	sg_blend_state blend = { 0 };
-	blend.color_write_mask = SG_COLORMASK_NONE;
 
 	// Cutout the reflection sprite from the masks.
 	stencil.stencil_front.compare_func = SG_COMPAREFUNC_EQUAL;

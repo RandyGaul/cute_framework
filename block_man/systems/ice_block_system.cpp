@@ -31,13 +31,13 @@ sprite_t ice_block_mask;
 
 void ice_block_system_init()
 {
-	sprite_t ice_block_mask = load_sprite("data/ice_block.aseprite");
+	ice_block_mask = load_sprite("data/ice_block.aseprite");
 	ice_block_mask.play("mask");
 }
 
 static float s_float_offset(IceBlock* ice_block, float dt)
 {
-	float floating_offset = 0;
+	static float floating_offset = 0;
 	coroutine_t* float_co = &ice_block->float_co;
 	COROUTINE_START(float_co);
 	floating_offset = 1.0f;
@@ -66,13 +66,18 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 		// Do nothing when idling.
 		COROUTINE_CASE(co, IDLE);
 		{
+			animator->sprite.play("idle");
+
+			COROUTINE_CASE(co, IDLE_INNER);
 			if (ice_block->is_held) {
-				goto FLOATING;
-			} else if (ice_block->is_sliding) {
-				goto SLIDING;
+				if (!board_piece->is_moving) {
+					goto FLOATING;
+				} else {
+					goto SLIDING;
+				}
 			}
 			COROUTINE_YIELD(co);
-			goto IDLE;
+			goto IDLE_INNER;
 		}
 
 		// Switch to sheen animation when beginning to float.
@@ -87,8 +92,10 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 		{
 			transform->local.p.y += s_float_offset(ice_block, dt);
 
-			if (!board_piece->is_moving) {
-				ice_block->is_held = 0;
+			if (!ice_block->is_held) {
+				if (board_piece->is_moving) {
+					goto SLIDING;
+				}
 				COROUTINE_YIELD(co);
 				goto IDLE;
 			} else {
@@ -103,7 +110,6 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 			transform->local.p.y += 2.0f;
 
 			if (!board_piece->is_moving) {
-				ice_block->is_sliding = 0;
 				COROUTINE_YIELD(co);
 				goto IDLE;
 			} else {
@@ -115,7 +121,8 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 		COROUTINE_END(co);
 
 		// Push masks onto the reflection system.
-		ice_block_mask.sort_bits = animator->sprite.sort_bits;
-		reflection_system->masks.add(ice_block_mask.quad(transform->get()));
+		transform_t tx = transform->get();
+		ice_block_mask.sort_bits = sort_bits(animator->sprite.h, tx.p);
+		reflection_system->masks.add(ice_block_mask.quad(tx));
 	}
 }

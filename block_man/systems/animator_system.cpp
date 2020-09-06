@@ -32,7 +32,7 @@ void animator_system_update(app_t* app, float dt, void* udata, Transform* transf
 		animator->sprite.update(dt);
 
 		transform_t tx = transform->get();
-		tx.p += animator->sprite.local_offset;
+		transform->local.p += animator->sprite.local_offset;
 		if (animator->visible) {
 			animator->sprite.sort_bits = sort_bits(animator->sprite.h, tx.p);
 			animator->sprite.draw(batch, tx);

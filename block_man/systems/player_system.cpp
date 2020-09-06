@@ -25,6 +25,7 @@
 #include <components/animator.h>
 #include <components/board_piece.h>
 #include <components/player.h>
+#include <components/ice_block.h>
 
 void set_player_animation_based_on_facing_direction(Player* player, Animator* animator)
 {
@@ -101,6 +102,8 @@ bool handle_input(app_t* app, float dt, int sprite_h, BoardPiece* board_piece, P
 				player->holding = true;
 				update_hero_animation = true;
 				player->busy = true;
+				IceBlock* ice_block = (IceBlock*)app_get_component(app, block, "IceBlock");
+				ice_block->is_held = true;
 			}
 		}
 		else // player->holding is true
@@ -124,6 +127,8 @@ bool handle_input(app_t* app, float dt, int sprite_h, BoardPiece* board_piece, P
 			player->holding = false;
 			player->busy = true;
 			update_hero_animation = true;
+			IceBlock* ice_block = (IceBlock*)app_get_component(app, block, "IceBlock");
+			ice_block->is_held = false;
 		}
 	}
 

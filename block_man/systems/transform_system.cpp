@@ -19,33 +19,17 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef ICE_BLOCK_H
-#define ICE_BLOCK_H
-
 #include <cute.h>
 using namespace cute;
 
-#include <components/animator.h>
-#include <cute/cute_coroutine.h>
+#include <components/transform.h>
 
-struct IceBlock
+void transform_system_update(app_t* app, float dt, void* udata, Transform* transforms, int entity_count)
 {
-	static constexpr float float_delay = 0.35f;
+	for (int i = 0; i < entity_count; ++i) {
+		Transform* transform = transforms + i;
 
-	bool is_held = false;
-	coroutine_t co = { 0 };
-	coroutine_t float_co = { 0 };
-};
-
-CUTE_INLINE error_t IceBlock_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
-{
-	IceBlock* ice_block = (IceBlock*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
-		CUTE_PLACEMENT_NEW(ice_block) IceBlock;
-		Animator* animator = (Animator*)app_get_component(app, entity, "Animator");
-		animator->sprite.play("idle");
+		// Clear the local transform for each new game tick.
+		transform->local = make_transform();
 	}
-	return kv_error_state(kv);
 }
-
-#endif // ICE_BLOCK_H

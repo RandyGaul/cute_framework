@@ -144,11 +144,34 @@ void ecs_registration(app_t* app)
 	app_register_system(app, {
 		NULL,
 		NULL,
+		ice_block_system_update,
+		NULL,
+		{
+			"Transform",
+			"Animator",
+			"BoardPiece",
+			"IceBlock",
+		}
+	});
+	app_register_system(app, {
+		NULL,
+		NULL,
 		animator_system_update,
 		animator_system_post_update,
 		{
 			"Transform",
 			"Animator",
+		}
+	});
+	app_register_system(app, {
+		NULL,
+		reflection_system_pre_update,
+		reflection_system_update,
+		reflection_system_post_update,
+		{
+			"Transform",
+			"Animator",
+			"Reflection",
 		}
 	});
 }
@@ -165,6 +188,7 @@ void init_world()
 	batch = aseprite_cache_get_batch_ptr(cache);
 
 	ecs_registration(app);
+	ice_block_system_init();
 }
 
 sprite_t load_sprite(string_t path)
