@@ -28,6 +28,7 @@
 #include <systems/player_system.h>
 #include <systems/reflection_system.h>
 #include <systems/transform_system.h>
+#include <systems/shadow_system.h>
 
 #include <components/animator.h>
 #include <components/board_piece.h>
@@ -35,6 +36,7 @@
 #include <components/player.h>
 #include <components/reflection.h>
 #include <components/transform.h>
+#include <components/shadow.h>
 
 World world_instance;
 World* world = &world_instance;
@@ -48,6 +50,7 @@ const char* schema_ice_block = CUTE_STRINGIZE(
 	Animator = { name = "data/ice_block.aseprite" },
 	BoardPiece = { },
 	IceBlock = { },
+	Shadow = { },
 );
 
 const char* schema_box = CUTE_STRINGIZE(
@@ -56,6 +59,7 @@ const char* schema_box = CUTE_STRINGIZE(
 	Animator = { name = "data/box.aseprite" },
 	Reflection = { },
 	BoardPiece = { },
+	Shadow = { },
 );
 
 const char* schema_ladder = CUTE_STRINGIZE(
@@ -73,6 +77,7 @@ const char* schema_player = CUTE_STRINGIZE(
 	Reflection = { },
 	BoardPiece = { },
 	Player = { },
+	Shadow = { small = "true" },
 );
 
 #define REGISTER_COMPONENT(name) \
@@ -91,6 +96,7 @@ void ecs_registration(app_t* app)
 	REGISTER_COMPONENT(Player);
 	REGISTER_COMPONENT(Reflection);
 	REGISTER_COMPONENT(Transform);
+	REGISTER_COMPONENT(Shadow);
 
 	// Order of entity registration matters if using `inherits_from`.
 	// Any time `inherits_from` is used, that type must have been already registered.
@@ -175,6 +181,18 @@ void ecs_registration(app_t* app)
 	app_register_system(app, {
 		NULL,
 		NULL,
+		shadow_system_update,
+		shadow_system_post_update,
+		{
+			"Transform",
+			"Animator",
+			"BoardPiece",
+			"Shadow",
+		}
+	});
+	app_register_system(app, {
+		NULL,
+		NULL,
 		animator_system_update,
 		animator_system_post_update,
 		{
@@ -208,6 +226,7 @@ void init_world()
 
 	ecs_registration(app);
 	ice_block_system_init();
+	shadow_system_init();
 }
 
 sprite_t load_sprite(string_t path)

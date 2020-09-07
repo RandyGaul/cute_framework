@@ -283,6 +283,7 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 		block_man/components/player.h
 		block_man/components/reflection.h
 		block_man/components/transform.h
+		block_man/components/shadow.h
 	)
 
 	set(CUTE_BLOCK_MAN_SYSTEM_SRCS
@@ -298,6 +299,8 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 		block_man/systems/reflection_system.cpp
 		block_man/systems/transform_system.h
 		block_man/systems/transform_system.cpp
+		block_man/systems/shadow_system.h
+		block_man/systems/shadow_system.cpp
 	)
 
 	add_executable(block_man

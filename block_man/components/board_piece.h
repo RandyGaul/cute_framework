@@ -25,6 +25,8 @@
 #include <cute.h>
 using namespace cute;
 
+#include <world.h>
+
 struct BoardPiece
 {
 	bool is_moving = false;
