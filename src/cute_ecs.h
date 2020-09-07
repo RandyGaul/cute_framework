@@ -89,6 +89,7 @@ extern CUTE_API void CUTE_CALL app_update_systems(app_t* app, float dt);
 // Run-time functions and entity lifetime management.
 
 extern CUTE_API error_t CUTE_CALL app_make_entity(app_t* app, const char* entity_type, entity_t* entity_out = NULL);
+extern CUTE_API void CUTE_CALL app_delayed_destroy_entity(app_t* app, entity_t entity);
 extern CUTE_API void CUTE_CALL app_destroy_entity(app_t* app, entity_t entity);
 extern CUTE_API bool CUTE_CALL app_is_entity_valid(app_t* app, entity_t entity);
 extern CUTE_API void* CUTE_CALL app_get_component(app_t* app, entity_t entity, const char* name);

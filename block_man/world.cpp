@@ -422,23 +422,42 @@ void draw_background_bricks_system_pre_update(app_t* app, float dt, void* udata)
 	batch_flush(batch);
 }
 
-void load_level(int level_index)
+void load_level()
 {
-	const array<string_t>& l = levels[level_index];
+	world->load_level_dirty_flag = false;
+
+	if (world->level_index >= levels.size()) {
+		char buf[1024];
+		sprintf(buf, "Tried to load level %d, but the highest is %d. Loading level 0 instead.", world->level_index, levels.size() - 1);
+		app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "BAD LEVEL INDEX", buf);
+		world->level_index = 0;
+	}
+
+	const array<string_t>& l = levels[world->level_index];
+
+	// Delete old entities.
+	for (int i = 0; i < world->board.data.count(); ++i) {
+		int len = world->board.data[i].count();
+
+		for (int j = 0; j < len; ++j) {
+			BoardSpace space = world->board.data[i][j];
+			if (!space.is_empty) {
+				app_destroy_entity(app, space.entity);
+			}
+		}
+	}
+
 	world->board.data.clear();
 	world->board.data.ensure_count(l.count());
 	world->board.w = l[0].len();
 	world->board.h = l.count();
 
-	// TODO - Delete old entities.
-
-	for (int i = 0; i < l.count(); ++i)
-	{
+	// Load up new entities.
+	for (int i = 0; i < l.count(); ++i) {
 		const char* s = l[i].c_str();
 		int len = l[i].len();
 
-		for (int j = 0; j < len; ++j)
-		{
+		for (int j = 0; j < len; ++j) {
 			char c = s[j];
 			entity_t e = INVALID_ENTITY;
 			error_t err;
@@ -463,5 +482,5 @@ void load_level(int level_index)
 		}
 	}
 
-	init_bg_bricks(level_index);
+	init_bg_bricks(world->level_index);
 }

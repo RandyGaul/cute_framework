@@ -43,9 +43,16 @@ struct Board
 
 struct World
 {
+	bool load_level_dirty_flag = false;
+	int level_index = 0;
 	entity_t player;
 	Board board;
-	bool loaded_level_into_editor = false;
+
+	CUTE_INLINE void next_level(int index)
+	{
+		load_level_dirty_flag = true;
+		level_index = index + 1;
+	}
 };
 
 extern World* world;
@@ -54,7 +61,7 @@ extern batch_t* batch;
 extern app_t* app;
 
 void init_world();
-void load_level(int level_index);
+void load_level();
 sprite_t load_sprite(string_t path);
 v2 tile2world(int x, int y);
 void world2tile(v2 p, int* x_out, int* y_out);

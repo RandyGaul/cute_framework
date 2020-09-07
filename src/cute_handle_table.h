@@ -71,7 +71,7 @@ struct handle_table_t
 		return handle_allocator_get_index(m_alloc, handle);
 	}
 
-	CUTE_INLINE void get_index(handle_t handle, uint32_t index)
+	CUTE_INLINE void update_index(handle_t handle, uint32_t index)
 	{
 		handle_allocator_update_index(m_alloc, handle, index);
 	}

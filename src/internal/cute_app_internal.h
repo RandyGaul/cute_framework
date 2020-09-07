@@ -148,6 +148,7 @@ struct app_t
 	dictionary<entity_type_t, entity_collection_t> entity_collections;
 	entity_type_t current_collection_type_being_iterated = CUTE_INVALID_ENTITY_TYPE;
 	entity_collection_t* current_collection_being_updated = NULL;
+	array<entity_t> delayed_destroy_entities;
 
 	dictionary<STRPOOL_U64, component_config_t> component_configs;
 	dictionary<entity_type_t, kv_t*> entity_parsed_schemas;

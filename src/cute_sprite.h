@@ -85,6 +85,7 @@ struct sprite_t
 	CUTE_INLINE int frame_count();
 	CUTE_INLINE float frame_delay();
 	CUTE_INLINE float animation_delay();
+	CUTE_INLINE bool will_finish(float dt);
 
 	const char* name;
 	int w = 0;
@@ -208,6 +209,16 @@ float sprite_t::animation_delay()
 		delay += animation->frames[i].delay;
 	}
 	return delay;
+}
+
+bool sprite_t::will_finish(float dt)
+{
+	// TODO -- Backwards and pingpong.
+	if (frame_index == frame_count() - 1) {
+		return t + dt * play_speed_multiplier >= animation->frames[frame_index].delay;
+	} else {
+		return false;
+	}
 }
 
 }

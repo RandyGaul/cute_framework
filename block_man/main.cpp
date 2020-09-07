@@ -138,7 +138,7 @@ void DoImguiStuff(app_t* app, float dt)
 int main(int argc, const char** argv)
 {
 	init_world();
-	load_level(0);
+	load_level();
 
 	matrix_t mvp = matrix_ortho_2d(320, 240, 0, -100);
 	const font_t* font = font_get_default(app);
@@ -148,6 +148,7 @@ int main(int argc, const char** argv)
 	while (app_is_running(app)) {
 		float dt = calc_dt();
 		app_update(app, dt);
+		if (world->load_level_dirty_flag) load_level();
 		app_update_systems(app, dt);
 		app_present(app);
 	}

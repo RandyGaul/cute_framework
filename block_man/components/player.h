@@ -33,7 +33,7 @@ struct Player
 {
 	static constexpr float move_delay = 0.125f;
 
-	entity_t entity;
+	entity_t entity = INVALID_ENTITY;
 	int xdir = 0;
 	int ydir = -1;
 	bool holding = false;
@@ -41,6 +41,7 @@ struct Player
 	bool busy = false;
 	int moves = 0;
 	coroutine_t co = { 0 };
+	entity_t ladder = INVALID_ENTITY;
 
 	// ----------------------------
 	// For spinning upon level load.

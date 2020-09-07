@@ -135,9 +135,33 @@ static entity_collection_t* s_collection(app_t* app, entity_t entity)
 	return collection;
 }
 
+void app_delayed_destroy_entity(app_t* app, entity_t entity)
+{
+	app->delayed_destroy_entities.add(entity);
+}
+
 void app_destroy_entity(app_t* app, entity_t entity)
 {
-	// TODO: Implement me.
+	entity_collection_t* collection = app->entity_collections.find(entity.type);
+	CUTE_ASSERT(collection);
+
+	if (collection->entity_handle_table.is_valid(entity.handle)) {
+		// Free the handle.
+		int index = collection->entity_handle_table.get_index(entity.handle);
+		collection->entity_handles.unordered_remove(index);
+		collection->entity_handle_table.free_handle(entity.handle);
+
+		// Free each component.
+		for (int i = 0; i < collection->component_tables.count(); ++i) {
+			collection->component_tables[i].unordered_remove(index);
+		}
+
+		// Update handle of the swapped entity.
+		if (index < collection->entity_handles.size()) {
+			uint64_t h = collection->entity_handles[index];
+			collection->entity_handle_table.update_index(h, index);
+		}
+	}
 }
 
 bool app_is_entity_valid(app_t* app, entity_t entity)
@@ -302,6 +326,11 @@ void app_update_systems(app_t* app, float dt)
 		}
 
 		if (post_update_fn) post_update_fn(app, dt, udata);
+	}
+
+	for (int i = 0; i < app->delayed_destroy_entities.count(); ++i) {
+		entity_t e = app->delayed_destroy_entities[i];
+		app_destroy_entity(app, e);
 	}
 }
 

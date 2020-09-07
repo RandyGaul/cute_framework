@@ -60,7 +60,7 @@ void set_player_animation_based_on_facing_direction(Player* player, Animator* an
 	else animator->unflip_x();
 }
 
-bool handle_input(app_t* app, float dt, int sprite_h, BoardPiece* board_piece, Player* player)
+bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 {
 	bool update_hero_animation = false;
 	int x = board_piece->x;
@@ -242,6 +242,7 @@ bool handle_input(app_t* app, float dt, int sprite_h, BoardPiece* board_piece, P
 
 						if (won) {
 							player->won = true;
+							player->ladder = world->board.data[y][x].entity;
 						}
 					}
 				}
@@ -272,19 +273,24 @@ void player_system_update(app_t* app, float dt, void* udata, Transform* transfor
 
 		if (!board_piece->is_moving) {
 			if (!player->won) {
-				bool update_anim = handle_input(app, dt, animator->sprite.h, board_piece, player);
+				bool update_anim = handle_input(app, dt, board_piece, player);
 				if (update_anim) set_player_animation_based_on_facing_direction(player, animator);
 			} else {
 				coroutine_t* co = &player->co;
 				COROUTINE_START(co);
 				animator->sprite.play("ladder");
 				COROUTINE_CASE(co, GOING_DOWN_LADDER);
-				if (!animator->sprite.loop_count) {
+				if (!animator->sprite.will_finish(dt)) {
 					COROUTINE_YIELD(co);
 					goto GOING_DOWN_LADDER;
 				} else {
+					// When the player moves onto a ladder it steals the board space of the ladder, which prevents
+					// the world from cleaning up. Trigger a delayed cleanup of the ladder entity right here so it
+					// doesn't leak.
+					app_delayed_destroy_entity(app, player->ladder);
 					player->won = false;
-					printf("win\n");
+					animator->visible = false; // Animation looped once -- don't want to see a frame of girl on top of ladder again.
+					world->next_level(world->level_index + 1);
 				}
 				COROUTINE_END(co);
 			}

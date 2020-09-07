@@ -63,10 +63,12 @@ void reflection_system_update(app_t* app, float dt, void* udata, Transform* tran
 		Reflection* reflection = reflections + i;
 
 		// Collect all sprites that will be reflected.
-		transform_t tx = transform->get();
-		batch_quad_t q = animator->sprite.quad(tx);
-		q.sort_bits = sort_bits(tx.p);
-		reflection_system->quads.add(q);
+		if (animator->visible) {
+			transform_t tx = transform->get();
+			batch_quad_t q = animator->sprite.quad(tx);
+			q.sort_bits = sort_bits(tx.p);
+			reflection_system->quads.add(q);
+		}
 	}
 }
 
