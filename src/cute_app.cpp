@@ -53,8 +53,10 @@
 #include <cute/cute_sound.h>
 
 #include <imgui/imgui.h>
+#define SOKOL_IMGUI_IMPL
+#define SOKOL_IMGUI_NO_SOKOL_APP
+#include <internal/imgui/sokol_imgui.h>
 #include <internal/imgui/imgui_impl_sdl.h>
-#include <internal/imgui/imgui_impl_dx11.h>
 
 namespace cute
 {
@@ -98,13 +100,11 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	app->offscreen_w = w;
 	app->offscreen_h = h;
 
-#ifdef _WIN32
 	SDL_SysWMinfo wmInfo;
 	SDL_VERSION(&wmInfo.version);
 	SDL_GetWindowWMInfo(window, &wmInfo);
 	HWND hwnd = wmInfo.info.win.window;
 	app->platform_handle = hwnd;
-#endif
 
 	if (options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -126,7 +126,6 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		gladLoadGLLoader(SDL_GL_GetProcAddress);
 	}
 
-#ifdef _WIN32
 	if (options & CUTE_APP_OPTIONS_D3D11_CONTEXT) {
 		dx11_init(hwnd, w, h, 1);
 		app->gfx_ctx_params = dx11_get_context();
@@ -136,7 +135,6 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		app->gfx_enabled = true;
 		font_init(app);
 	}
-#endif
 
 	int num_threads_to_spawn = core_count() - 1;
 	if (num_threads_to_spawn) {
@@ -163,9 +161,8 @@ void app_destroy(app_t* app)
 {
 	strpool_term(app->strpool);
 	if (app->using_imgui) {
-		ImGui_ImplDX11_Shutdown();
+		simgui_shutdown();
 		ImGui_ImplSDL2_Shutdown();
-		ImGui::DestroyContext();
 		app->using_imgui = false;
 	}
 	if (app->gfx_enabled) {
@@ -201,9 +198,8 @@ void app_update(app_t* app, float dt)
 	pump_input_msgs(app);
 	if (app->audio_system) audio_system_update(app->audio_system, dt);
 	if (app->using_imgui) {
-		ImGui_ImplDX11_NewFrame();
+		simgui_new_frame(app->w, app->h, dt);
 		ImGui_ImplSDL2_NewFrame(app->window);
-		ImGui::NewFrame();
 	}
 
 	sg_pass_action pass_action = { 0 };
@@ -220,7 +216,7 @@ static void s_imgui_present(app_t* app)
 	if (app->using_imgui) {
 		ImGui::EndFrame();
 		ImGui::Render();
-		ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+		simgui_render();
 	}
 }
 
@@ -284,10 +280,9 @@ ImGuiContext* app_init_imgui(app_t* app)
 	app->using_imgui = true;
 
 	ImGui::StyleColorsDark();
-	ImGui_ImplSDL2_InitForD3D(app->window);
-	ImGui_ImplDX11_Init((ID3D11Device*)app->gfx_ctx_params.d3d11.device, (ID3D11DeviceContext*)app->gfx_ctx_params.d3d11.device_context);
-
-	// TODO - OpenGL/ES/Metal. It's just shader differences, and should render imgui through sokol_gfx.
+	ImGui_SDL2_Init(app->window);
+	simgui_desc_t imgui_params = { 0 };
+	simgui_setup(imgui_params);
 
 	return ::ImGui::GetCurrentContext();
 }

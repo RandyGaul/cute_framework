@@ -30,16 +30,15 @@ using namespace cute;
 #include <world.h>
 #include <serialize.h>
 
-#if 0
-void LoadLevelIntoEditor(char* buf)
+void load_level_into_editor(char* buf)
 {
 	int index = 0;
-	for (int i = 0; i < level.data.count(); ++i)
+	for (int i = 0; i < world->board.data.count(); ++i)
 	{
-		for (int j = 0; j < level.data[i].count(); ++j)
+		for (int j = 0; j < world->board.data[i].count(); ++j)
 		{
 			CUTE_ASSERT(index < 1024 * 10);
-			char c = level.data[i][j];
+			char c = world->board.data[i][j].code;
 			buf[index++] = c;
 		}
 		buf[index++] = '\n';
@@ -48,7 +47,7 @@ void LoadLevelIntoEditor(char* buf)
 	buf[index++] = 0;
 }
 
-void DoImguiStuff(app_t* app, float dt)
+void do_imgui_stuff(app_t* app, float dt)
 {
 	static bool open = true;
 	if (key_was_pressed(app, KEY_E)) {
@@ -58,31 +57,31 @@ void DoImguiStuff(app_t* app, float dt)
 		ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
 		ImGui::Begin("Level Editor", &open);
 		static char editor_buf[1024 * 10];
-		if (!loaded_level_into_editor) {
-			LoadLevelIntoEditor(editor_buf);
-			loaded_level_into_editor = true;
+		if (!world->loaded_level_into_editor) {
+			load_level_into_editor(editor_buf);
+			world->loaded_level_into_editor = true;
 		}
 		int flags = ImGuiInputTextFlags_AllowTabInput;
-		ImGui::Text("Level %d", level_index + 1);
+		ImGui::Text("Level %d", world->level_index + 1);
 		ImGui::InputTextMultiline("", editor_buf, 1024 * 10, ImVec2(0, 200), ImGuiInputTextFlags_AllowTabInput);
 		if (ImGui::Button("Sync Editor Text")) {
-			LoadLevelIntoEditor(editor_buf);
+			load_level_into_editor(editor_buf);
 		}
 		if (ImGui::Button("Commit")) {
 			array<char> buf;
-			levels[level_index].clear();
+			levels[world->level_index].clear();
 			int i = 0;
 			char c;
 			while ((c = editor_buf[i++])) {
 				if (c == '\n') {
 					buf.add(0);
-					levels[level_index].add(buf.data());
+					levels[world->level_index].add(buf.data());
 					buf.clear();
 				} else {
 					buf.add(c);
 				}
 			}
-			LoadLevel(levels[level_index]);
+			load_level();
 		}
 		static bool copied = false;
 		if (ImGui::Button("Copy to Clipboard")) {
@@ -133,7 +132,6 @@ void DoImguiStuff(app_t* app, float dt)
 		ImGui::End();
 	}
 }
-#endif
 
 int main(int argc, const char** argv)
 {
@@ -150,6 +148,7 @@ int main(int argc, const char** argv)
 		app_update(app, dt);
 		if (world->load_level_dirty_flag) load_level();
 		app_update_systems(app, dt);
+		do_imgui_stuff(app, dt);
 		app_present(app);
 	}
 

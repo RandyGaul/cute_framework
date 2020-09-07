@@ -7,6 +7,34 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
 	return()
 endif()
 
+# Platform detection.
+if(WIN32)
+	set(WINDOWS TRUE)
+elseif(UNIX AND NOT APPLE)
+	if(CMAKE_SYSTEM_NAME MATCHES ".*Linux")
+		set(LINUX TRUE)
+	else()
+		message(FATAL_ERROR, "No supported platform detected.")
+	endif()
+elseif(APPLE)
+	if(CMAKE_SYSTEM_NAME MATCHES ".*MacOS.*")
+		set(MACOSX TRUE)
+	else()
+		message(FATAL_ERROR, "No supported platform detected.")
+	endif()
+else()
+	message(FATAL_ERROR, "No supported platform detected.")
+endif()
+
+# Defines for cross-platform shader support.
+if(WINDOWS)
+	add_definitions(-DCUTE_WINDOWS)
+elseif(LINUX)
+	add_definitions(-DCUTE_LINUX)
+elseif(MACOSX)
+	add_definitions(-DCUTE_MACOSX)
+endif()
+
 # Disable annoying MSVC warnings.
 if(MSVC)
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -49,7 +77,7 @@ set(PHYSFS_SRCS
 	libraries/physfs/physfs.h
 )
 
-if(APPLE)
+if(MACOSX)
 	set(PHYSFS_SRCS ${PHYSFS_SRCS}
 		libraries/physfs/physfs_platform_apple.m
 	)
@@ -100,7 +128,6 @@ set(CUTE_SRCS
 	src/internal/cute_ecs_internal.cpp
 	src/internal/cute_dx11.cpp
 
-	src/internal/imgui/imgui_impl_dx11.cpp
 	src/internal/imgui/imgui_impl_sdl.cpp
 
 	libraries/imgui/imgui.cpp
@@ -178,7 +205,7 @@ set(CUTE_HDRS
 	src/internal/cute_ecs_internal.h
 	src/internal/cute_dx11.h
 
-	src/internal/imgui/imgui_impl_dx11.h
+	src/internal/imgui/sokol_imgui.h
 	src/internal/imgui/imgui_impl_sdl.h
 
 	libraries/glad/glad.h

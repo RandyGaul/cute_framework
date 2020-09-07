@@ -215,7 +215,12 @@ void ecs_registration(app_t* app)
 
 void init_world()
 {
-	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | CUTE_APP_OPTIONS_D3D11_CONTEXT;
+	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED;
+#ifdef CUTE_WINDOWS
+	options |= CUTE_APP_OPTIONS_D3D11_CONTEXT;
+#else
+	options |= CUTE_APP_OPTIONS_OPENGL_CONTEXT;
+#endif
 	app = app_make("Block Man", 0, 0, 960, 720, options);
 	file_system_mount(file_system_get_base_dir(), "");
 	app_init_upscaling(app, UPSCALE_PIXEL_PERFECT_AT_LEAST_2X, 320, 240);
@@ -489,6 +494,7 @@ void load_level()
 			}
 			CUTE_ASSERT(!err.is_error());
 			BoardSpace space;
+			space.code = c;
 			space.entity = e;
 			space.is_empty = c == '0' ? true : false;
 			space.is_ladder = c == 'e' ? true : false;

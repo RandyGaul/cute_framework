@@ -50,8 +50,6 @@
 #	endif
 #endif
 
-#define SOKOL_API_DECL CUTE_API
-
 #define CUTE_CALL __cdecl
 
 #define CUTE_UNUSED(x) (void)x
@@ -73,6 +71,16 @@
 #define CUTE_OFFSET_OF(T, member) ((size_t)((uintptr_t)(&(((T*)0)->member))))
 
 #define CUTE_DEBUG_PRINTF(...)
+
+#define SOKOL_API_DECL CUTE_API
+
+#if defined(CUTE_WINDOWS)
+#	define SOKOL_D3D11
+#elif defined(CUTE_LINUX)
+#	define SOKOL_GLCORE33
+#elif defined(CUTE_MACOSX)
+#	define SOKOL_GLCORE33
+#endif
 
 namespace cute
 {

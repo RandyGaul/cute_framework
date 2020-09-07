@@ -27,6 +27,7 @@ using namespace cute;
 
 struct BoardSpace
 {
+	char code;
 	bool is_empty = true;
 	bool is_ladder = false;
 	entity_t entity = INVALID_ENTITY;
@@ -47,6 +48,7 @@ struct World
 	int level_index = 0;
 	entity_t player;
 	Board board;
+	bool loaded_level_into_editor = false;
 
 	CUTE_INLINE void next_level(int index)
 	{
@@ -55,6 +57,7 @@ struct World
 	}
 };
 
+extern array<array<string_t>> levels;
 extern World* world;
 extern aseprite_cache_t* cache;
 extern batch_t* batch;

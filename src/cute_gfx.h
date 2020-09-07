@@ -19,14 +19,14 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifndef CUTE_GFX_H
+#define CUTE_GFX_H
+
 #include <cute_defines.h>
 #include <cute_error.h>
 #include <cute_app.h>
 
 #include <sokol/sokol_gfx.h>
-
-#ifndef CUTE_GFX_H
-#define CUTE_GFX_H
 
 namespace cute
 {
