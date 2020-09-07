@@ -30,6 +30,9 @@
 
 #include <internal/cute_app_internal.h>
 
+#define SOKOL_D3D11
+#include <shaders/sprite_shader.h>
+
 struct quad_udata_t
 {
 	float alpha;
@@ -53,13 +56,6 @@ struct quad_vertex_t
 	v2 pos;
 	v2 uv;
 	float alpha;
-};
-
-struct vs_uniforms_t
-{
-	matrix_t mvp;
-	v2 texel_size;
-	float use_border;
 };
 
 struct batch_t
@@ -100,71 +96,7 @@ static sg_shader s_load_shader(batch_t* b, batch_quad_shader_type_t type)
 	// Default sprite shader.
 	switch (type) {
 	case BATCH_QUAD_SHADER_TYPE_DEFAULT:
-		params.attrs[0].name = "pos";
-		params.attrs[0].sem_name = "POSITION";
-		params.attrs[0].sem_index = 0;
-		params.attrs[1].name = "uv";
-		params.attrs[1].sem_name = "TEXCOORD";
-		params.attrs[1].sem_index = 0;
-		params.attrs[1].name = "uv";
-		params.attrs[2].sem_name = "TEXCOORD";
-		params.attrs[2].sem_index = 1;
-		params.attrs[2].name = "alpha";
-		params.vs.uniform_blocks[0].size = sizeof(vs_uniforms_t::mvp);
-		params.vs.uniform_blocks[0].uniforms[0].name = "u_mvp";
-		params.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_MAT4;
-		params.fs.images[0].name = "u_image";
-		params.fs.images[0].type = SG_IMAGETYPE_2D;
-		params.vs.source = CUTE_STRINGIZE(
-			struct vertex_t
-			{
-				float2 pos : POSITION;
-				float2 uv  : TEXCOORD0;
-				float alpha : TEXCOORD1;
-			};
-
-			struct interp_t
-			{
-				float4 posH : SV_Position;
-				float2 uv   : TEXCOORD0;
-				float alpha : TEXCOORD1;
-			};
-
-			cbuffer params : register(b0)
-			{
-				row_major float4x4 u_mvp;
-			};
-
-			interp_t main(vertex_t vtx)
-			{
-				float4 posH = mul(float4(ceil(vtx.pos), 0, 1), u_mvp);
-
-				interp_t interp;
-				interp.posH = posH;
-				interp.uv = vtx.uv;
-				interp.alpha = vtx.alpha;
-				return interp;
-			}
-		);
-		params.fs.source = CUTE_STRINGIZE(
-			struct interp_t
-			{
-				float4 posH : SV_Position;
-				float2 uv   : TEXCOORD0;
-				float alpha : TEXCOORD1;
-			};
-
-			Texture2D<float4> u_image: register(t0);
-			sampler smp: register(s0);
-
-			float4 main(interp_t interp) : SV_Target0
-			{
-				float4 color = u_image.Sample(smp, interp.uv);
-				color.a = color.a * interp.alpha;
-				clip(color.a - 0.00001);
-				return color;
-			}
-		);
+		params = *default_sprite_shader_desc();
 		break;
 
 	default:
@@ -461,26 +393,32 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 
 	// Apply uniforms.
 	// TODO - Move MVP to the spritebatch_flush function as an optimization.
-	vs_uniforms_t uniforms = {
-		b->mvp,
-		v2(1.0f / (float)texture_w, 1.0f / (float)texture_h),
-		b->outline_use_border
-	};
 
 	// Set shader-specific uniforms.
 	switch (b->shader_type)
 	{
 	case BATCH_QUAD_SHADER_TYPE_DEFAULT:
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &uniforms.mvp, sizeof(uniforms.mvp));
-		break;
+	{
+		default_vs_params_t params = {
+			b->mvp
+		};
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &params, sizeof(params));
+	}	break;
 
 	case BATCH_QUAD_SHADER_TYPE_OUTLINE:
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &uniforms, sizeof(uniforms));
-		break;
+	{
+		//vs_uniforms_t uniforms = {
+		//	b->mvp,
+		//	v2(1.0f / (float)texture_w, 1.0f / (float)texture_h),
+		//	b->outline_use_border
+		//};
+		//sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &params, sizeof(params));
+	}	break;
 
 	case BATCH_QUAD_SHADER_TYPE_TINT:
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &uniforms.mvp, sizeof(uniforms.mvp));
-		break;
+	{
+		//sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &params, sizeof(params));
+	}	break;
 	}
 
 	// Kick off a draw call.
