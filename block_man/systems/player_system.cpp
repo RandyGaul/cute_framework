@@ -282,6 +282,7 @@ void player_system_update(app_t* app, float dt, void* udata, Transform* transfor
 				COROUTINE_CASE(co, GOING_DOWN_LADDER);
 				if (!animator->sprite.will_finish(dt)) {
 					COROUTINE_YIELD(co);
+					transform->local.p -= animator->sprite.local_offset;
 					goto GOING_DOWN_LADDER;
 				} else {
 					// When the player moves onto a ladder it steals the board space of the ladder, which prevents
