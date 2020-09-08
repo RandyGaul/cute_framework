@@ -117,100 +117,100 @@ void ecs_registration(app_t* app)
 
 	   Please note that each of these three callbacks are optional and can be NULL.
 	*/
-	app_register_system(app, {
-		NULL,                    // udata
-		NULL,                    // pre update
-		transform_system_update, // update (called N times, once per matching entity type)
-		NULL,                    // post update
-		{                        // component types to loop over (entities with these components)
-			"Transform",
-		}
-	});
-	app_register_system(app, {
-		NULL,
-		NULL,
-		animator_transform_system_update,
-		NULL,
-		{
+	system_t s;
+	s.udata = NULL;
+	s.pre_update_fn = NULL;
+	s.update_fn = transform_system_update;
+	s.post_update_fn = NULL;
+	s.component_types = {
+		"Transform",
+	};
+	app_register_system(app, s);
+
+	s.udata = NULL;
+	s.pre_update_fn = NULL;
+	s.update_fn = animator_transform_system_update;
+	s.post_update_fn = NULL;
+	s.component_types = {
 			"Transform",
 			"Animator",
-		}
-	});
-	app_register_system(app, {
-		NULL,
-		NULL,
-		player_system_update,
-		NULL,
-		{
+	};
+	app_register_system(app, s);
+
+	s.udata = NULL;
+	s.pre_update_fn = NULL;
+	s.update_fn = player_system_update;
+	s.post_update_fn = NULL;
+	s.component_types = {
 			"Transform",
 			"Animator",
 			"BoardPiece",
 			"Player",
-		}
-	});
-	app_register_system(app, {
-		NULL,
-		NULL,
-		board_system_update,
-		NULL,
-		{
+	};
+	app_register_system(app, s);
+
+	s.udata = NULL;
+	s.pre_update_fn = NULL;
+	s.update_fn = board_system_update;
+	s.post_update_fn = NULL;
+	s.component_types = {
 			"Transform",
 			"Animator",
 			"BoardPiece",
-		}
-	});
-	app_register_system(app, {
-		NULL,
-		ice_block_system_pre_update,
-		ice_block_system_update,
-		NULL,
-		{
+	};
+	app_register_system(app, s);
+
+	s.udata = NULL;
+	s.pre_update_fn = ice_block_system_pre_update;
+	s.update_fn = ice_block_system_update;
+	s.post_update_fn = NULL;
+	s.component_types = {
 			"Transform",
 			"Animator",
 			"BoardPiece",
 			"IceBlock",
-		}
-	});
-	app_register_system(app, {
-		NULL,
-		draw_background_bricks_system_pre_update,
-		NULL,
-		NULL,
-		{ }
-	});
-	app_register_system(app, {
-		NULL,
-		NULL,
-		shadow_system_update,
-		shadow_system_post_update,
-		{
+	};
+	app_register_system(app, s);
+
+	s.udata = NULL;
+	s.pre_update_fn = draw_background_bricks_system_pre_update;
+	s.update_fn = NULL;
+	s.post_update_fn = NULL;
+	s.component_types = { };
+	app_register_system(app, s);
+
+	s.udata = NULL;
+	s.pre_update_fn = NULL;
+	s.update_fn = shadow_system_update;
+	s.post_update_fn = shadow_system_post_update;
+	s.component_types = {
 			"Transform",
 			"Animator",
 			"BoardPiece",
 			"Shadow",
-		}
-	});
-	app_register_system(app, {
-		NULL,
-		NULL,
-		animator_system_update,
-		animator_system_post_update,
-		{
+	};
+	app_register_system(app, s);
+
+	s.udata = NULL;
+	s.pre_update_fn = NULL;
+	s.update_fn = animator_system_update;
+	s.post_update_fn = animator_system_post_update;
+	s.component_types = {
 			"Transform",
 			"Animator",
-		}
-	});
-	app_register_system(app, {
-		NULL,
-		reflection_system_pre_update,
-		reflection_system_update,
-		reflection_system_post_update,
-		{
+	};
+	app_register_system(app, s);
+
+	s.udata = NULL;
+	s.pre_update_fn = reflection_system_pre_update;
+	s.update_fn = reflection_system_update;
+	s.post_update_fn = reflection_system_post_update;
+	s.component_types = {
 			"Transform",
 			"Animator",
 			"Reflection",
-		}
-	});
+	};
+	app_register_system(app, s);
 }
 
 void init_world()

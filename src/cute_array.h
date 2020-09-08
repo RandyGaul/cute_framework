@@ -46,8 +46,8 @@ struct array
 	array(std::initializer_list<T> list);
 	array(const array<T>& other);
 	array(array<T>&& other);
-	explicit array(void* user_allocator_context);
-	explicit array(int capacity, void* user_allocator_context);
+	array(void* user_allocator_context);
+	array(int capacity, void* user_allocator_context);
 	~array();
 
 	T& add();
