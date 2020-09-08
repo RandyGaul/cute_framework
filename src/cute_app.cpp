@@ -109,11 +109,15 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	app->offscreen_w = w;
 	app->offscreen_h = h;
 
+#ifdef CUTE_WINDOWS
 	SDL_SysWMinfo wmInfo;
 	SDL_VERSION(&wmInfo.version);
 	SDL_GetWindowWMInfo(window, &wmInfo);
 	HWND hwnd = wmInfo.info.win.window;
 	app->platform_handle = hwnd;
+#else
+	void* hwnd = NULL;
+#endif
 
 	if (options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
