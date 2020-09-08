@@ -56,7 +56,7 @@ struct test_component_octorok_t
 
 // -------------------------------------------------------------------------------------------------
 
-error_t test_component_transform_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+cute::error_t test_component_transform_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	test_component_transform_t* transform = (test_component_transform_t*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
@@ -68,7 +68,7 @@ error_t test_component_transform_serialize(app_t* app, kv_t* kv, entity_t entity
 	return kv_error_state(kv);
 }
 
-error_t test_component_sprite_serialize(app_t* app,  kv_t* kv, entity_t entity, void* component, void* udata)
+cute::error_t test_component_sprite_serialize(app_t* app,  kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	test_component_sprite_t* sprite = (test_component_sprite_t*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
@@ -78,7 +78,7 @@ error_t test_component_sprite_serialize(app_t* app,  kv_t* kv, entity_t entity, 
 	return kv_error_state(kv);
 }
 
-error_t test_component_collider_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+cute::error_t test_component_collider_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	test_component_collider_t* collider = (test_component_collider_t*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
@@ -90,7 +90,7 @@ error_t test_component_collider_serialize(app_t* app, kv_t* kv, entity_t entity,
 	return kv_error_state(kv);
 }
 
-error_t test_component_octorok_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+cute::error_t test_component_octorok_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	test_component_octorok_t* octorok = (test_component_octorok_t*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
@@ -234,7 +234,7 @@ int test_ecs_octorok()
 	);
 
 	kv_t* parsed_entities = kv_make();
-	error_t err = kv_parse(parsed_entities, serialized_entities, CUTE_STRLEN(serialized_entities));
+	cute::error_t err = kv_parse(parsed_entities, serialized_entities, CUTE_STRLEN(serialized_entities));
 	if (err.is_error()) return -1;
 
 	array<entity_t> entities;

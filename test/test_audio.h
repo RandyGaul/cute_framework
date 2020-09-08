@@ -39,10 +39,10 @@ int test_audio_load_synchronous()
 	return 0;
 }
 
-static error_t s_audio_error;
+static cute::error_t s_audio_error;
 static audio_t* s_audio;
 
-static void s_audio_promise(error_t status, void* param, void* udata)
+static void s_audio_promise(cute::error_t status, void* param, void* udata)
 {
 	s_audio_error = status;
 	atomic_ptr_set((void**)&s_audio, param);

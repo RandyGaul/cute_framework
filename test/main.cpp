@@ -24,8 +24,6 @@
 #include <crtdbg.h>
 #endif
 
-#include <direct.h>
-
 #include <cute_c_runtime.h>
 #include <cute_file_system.h>
 #include <test_harness.h>

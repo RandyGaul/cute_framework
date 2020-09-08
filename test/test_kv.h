@@ -57,7 +57,7 @@ struct thing_t
 	};
 };
 
-error_t do_serialize(kv_t* kv, thing_t* thing)
+cute::error_t do_serialize(kv_t* kv, thing_t* thing)
 {
 	size_t len;
 	CUTE_RETURN_IF_ERROR(kv_key(kv, "a")); CUTE_RETURN_IF_ERROR(kv_val(kv, &thing->a));
@@ -169,7 +169,7 @@ int test_kv_basic()
 	size_t size = kv_size_written(kv);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(buffer, expected, size));
 
-	error_t err = kv_parse(kv, buffer, size);
+	cute::error_t err = kv_parse(kv, buffer, size);
 	CUTE_TEST_ASSERT(!err.is_error());
 
 	CUTE_MEMSET(&thing, 0, sizeof(thing_t));
@@ -306,7 +306,7 @@ int test_kv_write_delta_basic()
 		b = 2
 	);
 
-	error_t err = kv_parse(base, text_base, CUTE_STRLEN(text_base));
+	cute::error_t err = kv_parse(base, text_base, CUTE_STRLEN(text_base));
 	if (err.is_error()) return -1;
 
 	char buffer[1024];
@@ -350,7 +350,7 @@ int test_kv_read_delta_basic()
 		b = 2
 	);
 
-	error_t err = kv_parse(base, text_base, CUTE_STRLEN(text_base));
+	cute::error_t err = kv_parse(base, text_base, CUTE_STRLEN(text_base));
 	if (err.is_error()) return -1;
 	
 	const char* delta =
@@ -406,7 +406,7 @@ int test_kv_write_delta_deep()
 		d = 8
 	);
 
-	error_t err = kv_parse(base0, text_base0, CUTE_STRLEN(text_base0));
+	cute::error_t err = kv_parse(base0, text_base0, CUTE_STRLEN(text_base0));
 	if (err.is_error()) return -1;
 	err = kv_parse(base1, text_base1, CUTE_STRLEN(text_base1));
 	if (err.is_error()) return -1;
@@ -498,7 +498,7 @@ int test_kv_read_delta_deep()
 		d = 8
 	);
 
-	error_t err = kv_parse(base0, text_base0, CUTE_STRLEN(text_base0));
+	cute::error_t err = kv_parse(base0, text_base0, CUTE_STRLEN(text_base0));
 	if (err.is_error()) return -1;
 	err = kv_parse(base1, text_base1, CUTE_STRLEN(text_base1));
 	if (err.is_error()) return -1;
@@ -568,7 +568,7 @@ int test_kv_read_delta_array()
 		},
 	);
 
-	error_t err = kv_parse(base, base_text, CUTE_STRLEN(base_text));
+	cute::error_t err = kv_parse(base, base_text, CUTE_STRLEN(base_text));
 	if (err.is_error()) return -1;
 	err = kv_parse(kv, text, CUTE_STRLEN(text));
 	if (err.is_error()) return -1;
@@ -627,7 +627,7 @@ int test_kv_read_and_write_delta_blob()
 	kv_t* kv = kv_make();
 	kv_t* base = kv_make();
 
-	error_t err = kv_parse(base, base_text, CUTE_STRLEN(base_text));
+	cute::error_t err = kv_parse(base, base_text, CUTE_STRLEN(base_text));
 	if (err.is_error()) return -1;
 	err = kv_parse(kv, text, CUTE_STRLEN(text));
 	if (err.is_error()) return -1;
@@ -666,7 +666,7 @@ int test_kv_read_delta_string()
 		b = "c"
 	);
 
-	error_t err = kv_parse(base, base_text, CUTE_STRLEN(base_text));
+	cute::error_t err = kv_parse(base, base_text, CUTE_STRLEN(base_text));
 	if (err.is_error()) return -1;
 	err = kv_parse(kv, text, CUTE_STRLEN(text));
 	if (err.is_error()) return -1;
@@ -743,7 +743,7 @@ int test_kv_read_delta_object()
 
 	kv_t* kv = kv_make();
 	kv_t* base = kv_make();
-	error_t err = kv_parse(base, base_text, CUTE_STRLEN(base_text));
+	cute::error_t err = kv_parse(base, base_text, CUTE_STRLEN(base_text));
 	if (err.is_error()) return -1;
 	err = kv_parse(kv, text, CUTE_STRLEN(text));
 	if (err.is_error()) return -1;
