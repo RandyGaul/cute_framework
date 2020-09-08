@@ -57,7 +57,7 @@ static void s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, voi
 	aseprite_cache_t* cache = (aseprite_cache_t*)udata;
 	void* pixels = NULL;
 	if (cache->id_to_pixels.find(image_id, &pixels).is_error()) {
-		CUTE_DEBUG_PRINTF("Aseprite cache -- unable to find id %lld.", image_id);
+		CUTE_DEBUG_PRINTF("Aseprite cache -- unable to find id %lld.", (long long int)image_id);
 		CUTE_MEMSET(buffer, 0, bytes_to_fill);
 	} else {
 		CUTE_MEMCPY(buffer, pixels, bytes_to_fill);

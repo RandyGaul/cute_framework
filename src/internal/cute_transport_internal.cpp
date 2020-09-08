@@ -815,7 +815,7 @@ static void s_transport_send_fragments(transport_t* transport)
 		uint8_t* data_ptr = item->packet + item->fragment_index * fragment_size;
 		int fragment_count_left = item->fragment_count - item->fragment_index;
 		int fragment_count_to_send = fragments_space_available_send < fragment_count_left ? fragments_space_available_send : fragment_count_left;
-		if (item->fragment_index + fragment_count_to_send > item->fragment_count) __debugbreak();
+		//if (item->fragment_index + fragment_count_to_send > item->fragment_count) __debugbreak();
 		CUTE_ASSERT(item->fragment_index + fragment_count_to_send <= item->fragment_count);
 
 		for (int i = 0; i < fragment_count_to_send; ++i)

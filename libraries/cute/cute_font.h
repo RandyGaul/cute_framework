@@ -177,7 +177,7 @@ const char* cute_font_decode_utf8(const char* text, int* cp);
 
 #ifndef HASHTABLE_MALLOC
 	#define HASHTABLE_MALLOC(ctx, size) CUTE_FONT_ALLOC(size, ctx)
-#endif HASHTABLE_MALLOC
+#endif
 
 #ifndef HASHTABLE_FREE
 	#define HASHTABLE_FREE(ctx, ptr) CUTE_FONT_FREE(ptr, ctx)
