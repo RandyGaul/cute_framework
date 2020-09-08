@@ -49,7 +49,9 @@
 
 // SDL
 #include <SDL2/SDL.h>
+#ifdef _WIN32
 #include <SDL2/SDL_syswm.h>
+#endif
 #if defined(__APPLE__)
 #include "TargetConditionals.h"
 #endif

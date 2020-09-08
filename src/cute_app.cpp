@@ -43,7 +43,7 @@
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
 
-#ifdef _WIN32
+#ifdef CUTE_WINDOWS
 #include <SDL2/SDL_syswm.h>
 #endif
 
