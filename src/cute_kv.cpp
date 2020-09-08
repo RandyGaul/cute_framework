@@ -333,7 +333,7 @@ static CUTE_INLINE error_t s_parse_number(kv_t* kv, kv_val_t* val)
 	return error_success();
 }
 
-error_t s_parse_value(kv_t* kv, kv_val_t* val);
+static error_t s_parse_value(kv_t* kv, kv_val_t* val);
 
 static error_t s_parse_array(kv_t* kv, array<kv_val_t>* array_val)
 {
@@ -358,7 +358,7 @@ static error_t s_parse_array(kv_t* kv, array<kv_val_t>* array_val)
 	return error_success();
 }
 
-error_t s_parse_object(kv_t* kv, int* index, bool is_top_level = false);
+static error_t s_parse_object(kv_t* kv, int* index, bool is_top_level = false);
 
 static error_t s_parse_value(kv_t* kv, kv_val_t* val)
 {
@@ -719,7 +719,7 @@ static int s_to_string(kv_t* kv, uint64_t val)
 	#ifdef _WIN32
 		int size = _scprintf(fmt, val) + 1;
 	#else
-		int size = snprintf(temp, 0, fmt, val) + 1;
+		int size = snprintf((char*)temp, 0, fmt, val) + 1;
 	#endif
 
 	temp = s_temp(kv, size);
@@ -735,7 +735,7 @@ static int s_to_string(kv_t* kv, int64_t val)
 	#ifdef _WIN32
 		int size = _scprintf(fmt, val) + 1;
 	#else
-		int size = snprintf(temp, 0, fmt, val) + 1;
+		int size = snprintf((char*)temp, 0, fmt, val) + 1;
 	#endif
 
 	temp = s_temp(kv, size);
@@ -751,7 +751,7 @@ static int s_to_string(kv_t* kv, float val)
 	#ifdef _WIN32
 		int size = _scprintf(fmt, val) + 1;
 	#else
-		int size = snprintf(temp, 0, fmt, val) + 1;
+		int size = snprintf((char*)temp, 0, fmt, val) + 1;
 	#endif
 
 	temp = s_temp(kv, size);
@@ -767,7 +767,7 @@ static int s_to_string(kv_t* kv, double val)
 	#ifdef _WIN32
 		int size = _scprintf(fmt, val) + 1;
 	#else
-		int size = snprintf(temp, 0, fmt, val) + 1;
+		int size = snprintf((char*)temp, 0, fmt, val) + 1;
 	#endif
 
 	temp = s_temp(kv, size);
