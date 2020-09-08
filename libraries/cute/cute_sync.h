@@ -343,15 +343,6 @@ struct cute_rw_lock_t
 	#define CUTE_SYNC_MEMCPY memcpy
 #endif
 
-#if !defined(CUTE_SYNC_ALIGN)
-	#ifdef _MSC_VER
-		#define CUTE_SYNC_ALIGN(X) __declspec(align(X))
-	#else
-		#define CUTE_SYNC_ALIGN(X) __attribute__((aligned(X)))
-	#endif
-	// Add your own platform here.
-#endif
-
 #if !defined(CUTE_SYNC_YIELD)
 	#ifdef CUTE_SYNC_WINDOWS
 		#define WIN32_LEAN_AND_MEAN
@@ -1052,11 +1043,6 @@ typedef struct cute_task_t
 	void* param;
 } cute_task_t;
 
-typedef struct CUTE_SYNC_ALIGN(CUTE_SYNC_CACHELINE_SIZE) cute_aligned_thread_t
-{
-	cute_thread_t* thread;
-} cute_aligned_thread_t;
-
 typedef struct cute_threadpool_t
 {
 	int task_capacity;
@@ -1065,7 +1051,7 @@ typedef struct cute_threadpool_t
 	cute_mutex_t task_mutex;
 
 	int thread_count;
-	cute_aligned_thread_t* threads;
+	cute_thread_t** threads;
 
 	cute_atomic_int_t running;
 	cute_mutex_t sem_mutex;
@@ -1111,14 +1097,14 @@ cute_threadpool_t* cute_threadpool_create(int thread_count, void* mem_ctx)
 	pool->tasks = (cute_task_t*)cute_malloc_aligned(sizeof(cute_task_t) * pool->task_capacity, CUTE_SYNC_CACHELINE_SIZE, mem_ctx);
 	pool->task_mutex = cute_mutex_create();
 	pool->thread_count = thread_count;
-	pool->threads = (cute_aligned_thread_t*)cute_malloc_aligned(sizeof(cute_aligned_thread_t) * thread_count, CUTE_SYNC_CACHELINE_SIZE, mem_ctx);
+	pool->threads = (cute_thread_t**)cute_malloc_aligned(sizeof(cute_thread_t*) * thread_count, CUTE_SYNC_CACHELINE_SIZE, mem_ctx);
 	cute_atomic_set(&pool->running, 1);
 	pool->sem_mutex = cute_mutex_create();
 	pool->semaphore = cute_semaphore_create(0);
 	pool->mem_ctx = mem_ctx;
 
 	for (int i = 0; i < thread_count; ++i) {
-		pool->threads[i].thread = cute_thread_create(cute_worker_thread_internal, 0, pool);
+		pool->threads[i] = cute_thread_create(cute_worker_thread_internal, 0, pool);
 	}
 
 	return pool;
@@ -1178,7 +1164,7 @@ void cute_threadpool_destroy(cute_threadpool_t* pool)
 	}
 
 	for (int i = 0; i < pool->thread_count; ++i) {
-		cute_thread_wait(pool->threads[i].thread);
+		cute_thread_wait(pool->threads[i]);
 	}
 
 	cute_free_aligned(pool->tasks, pool->mem_ctx);
