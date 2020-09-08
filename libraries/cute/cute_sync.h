@@ -529,12 +529,12 @@ cute_cv_t cute_cv_create()
 
 int cute_cv_wake_all(cute_cv_t* cv)
 {
-	return !SDL_CondBroadcast((SDL_cond*)cv);
+	return !SDL_CondBroadcast((SDL_cond*)cv->align);
 }
 
 int cute_cv_wake_one(cute_cv_t* cv)
 {
-	return !SDL_CondSignal((SDL_cond*)cv);
+	return !SDL_CondSignal((SDL_cond*)cv->align);
 }
 
 int cute_cv_wait(cute_cv_t* cv, cute_mutex_t* mutex)
@@ -544,7 +544,7 @@ int cute_cv_wait(cute_cv_t* cv, cute_mutex_t* mutex)
 
 void cute_cv_destroy(cute_cv_t* cv)
 {
-	SDL_DestroyCond((SDL_cond*)cv);
+	SDL_DestroyCond((SDL_cond*)cv->align);
 }
 
 cute_semaphore_t cute_semaphore_create(int initial_count)
@@ -562,22 +562,22 @@ int cute_semaphore_post(cute_semaphore_t* semaphore)
 
 int cute_semaphore_try(cute_semaphore_t* semaphore)
 {
-	return !SDL_SemTryWait((SDL_sem*)semaphore);
+	return !SDL_SemTryWait((SDL_sem*)semaphore->id);
 }
 
 int cute_semaphore_wait(cute_semaphore_t* semaphore)
 {
-	return !SDL_SemWait((SDL_sem*)semaphore);
+	return !SDL_SemWait((SDL_sem*)semaphore->id);
 }
 
 int cute_semaphore_value(cute_semaphore_t* semaphore)
 {
-	return SDL_SemValue((SDL_sem*)semaphore);
+	return SDL_SemValue((SDL_sem*)semaphore->id);
 }
 
 void cute_semaphore_destroy(cute_semaphore_t* semaphore)
 {
-	SDL_DestroySemaphore((SDL_sem*)semaphore);
+	SDL_DestroySemaphore((SDL_sem*)semaphore->id);
 }
 
 cute_thread_t* cute_thread_create(cute_thread_fn func, const char* name, void* udata)
