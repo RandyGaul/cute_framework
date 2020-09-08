@@ -502,22 +502,22 @@ cute_mutex_t cute_mutex_create()
 
 int cute_lock(cute_mutex_t* mutex)
 {
-	return !SDL_LockMutex((SDL_mutex*)mutex);
+	return !SDL_LockMutex((SDL_mutex*)mutex->align);
 }
 
 int cute_unlock(cute_mutex_t* mutex)
 {
-	return !SDL_UnlockMutex((SDL_mutex*)mutex);
+	return !SDL_UnlockMutex((SDL_mutex*)mutex->align);
 }
 
 int cute_trylock(cute_mutex_t* mutex)
 {
-	return !SDL_TryLockMutex((SDL_mutex*)mutex);
+	return !SDL_TryLockMutex((SDL_mutex*)mutex->align);
 }
 
 void cute_mutex_destroy(cute_mutex_t* mutex)
 {
-	SDL_DestroyMutex((SDL_mutex*)mutex);
+	SDL_DestroyMutex((SDL_mutex*)mutex->align);
 }
 
 cute_cv_t cute_cv_create()
@@ -539,7 +539,7 @@ int cute_cv_wake_one(cute_cv_t* cv)
 
 int cute_cv_wait(cute_cv_t* cv, cute_mutex_t* mutex)
 {
-	return !SDL_CondWait((SDL_cond*)cv, (SDL_mutex*)mutex);
+	return !SDL_CondWait((SDL_cond*)cv, (SDL_mutex*)mutex->align);
 }
 
 void cute_cv_destroy(cute_cv_t* cv)
