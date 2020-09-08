@@ -31,8 +31,10 @@ if(WINDOWS)
 	add_definitions(-DCUTE_WINDOWS)
 elseif(LINUX)
 	add_definitions(-DCUTE_LINUX)
+	set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 elseif(MACOSX)
 	add_definitions(-DCUTE_MACOSX)
+	set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 endif()
 
 # Disable annoying MSVC warnings.
