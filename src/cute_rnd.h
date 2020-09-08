@@ -41,23 +41,23 @@ struct rnd_t
 	uint64_t state[2];
 };
 
-rnd_t CUTE_CALL rnd_seed(uint64_t seed);
+static CUTE_INLINE rnd_t CUTE_CALL rnd_seed(uint64_t seed);
 
-uint64_t CUTE_CALL rnd_next(rnd_t* rnd);
-float    CUTE_CALL rnd_next_float(rnd_t* rnd);
-double   CUTE_CALL rnd_next_double(rnd_t* rnd);
-int      CUTE_CALL rnd_next_range(rnd_t* rnd, int min, int max);
-uint64_t CUTE_CALL rnd_next_range(rnd_t* rnd, uint64_t min, uint64_t max);
-float    CUTE_CALL rnd_next_range(rnd_t* rnd, float min, float max);
-double   CUTE_CALL rnd_next_range(rnd_t* rnd, double min, double max);
+static CUTE_INLINE uint64_t CUTE_CALL rnd_next(rnd_t* rnd);
+static CUTE_INLINE float    CUTE_CALL rnd_next_float(rnd_t* rnd);
+static CUTE_INLINE double   CUTE_CALL rnd_next_double(rnd_t* rnd);
+static CUTE_INLINE int      CUTE_CALL rnd_next_range(rnd_t* rnd, int min, int max);
+static CUTE_INLINE uint64_t CUTE_CALL rnd_next_range(rnd_t* rnd, uint64_t min, uint64_t max);
+static CUTE_INLINE float    CUTE_CALL rnd_next_range(rnd_t* rnd, float min, float max);
+static CUTE_INLINE double   CUTE_CALL rnd_next_range(rnd_t* rnd, double min, double max);
 
-uint64_t CUTE_CALL rnd_next(rnd_t& rnd);
-float    CUTE_CALL rnd_next_float(rnd_t& rnd);
-double   CUTE_CALL rnd_next_double(rnd_t& rnd);
-int      CUTE_CALL rnd_next_range(rnd_t& rnd, int min, int max);
-uint64_t CUTE_CALL rnd_next_range(rnd_t& rnd, uint64_t min, uint64_t max);
-float    CUTE_CALL rnd_next_range(rnd_t& rnd, float min, float max);
-double   CUTE_CALL rnd_next_range(rnd_t& rnd, double min, double max);
+static CUTE_INLINE uint64_t CUTE_CALL rnd_next(rnd_t& rnd);
+static CUTE_INLINE float    CUTE_CALL rnd_next_float(rnd_t& rnd);
+static CUTE_INLINE double   CUTE_CALL rnd_next_double(rnd_t& rnd);
+static CUTE_INLINE int      CUTE_CALL rnd_next_range(rnd_t& rnd, int min, int max);
+static CUTE_INLINE uint64_t CUTE_CALL rnd_next_range(rnd_t& rnd, uint64_t min, uint64_t max);
+static CUTE_INLINE float    CUTE_CALL rnd_next_range(rnd_t& rnd, float min, float max);
+static CUTE_INLINE double   CUTE_CALL rnd_next_range(rnd_t& rnd, double min, double max);
 
 // -------------------------------------------------------------------------------------------------
 
