@@ -897,7 +897,7 @@ int transport_send_reliably_and_in_order(transport_t* transport, void* data, int
 	CUTE_MEMCPY(send_item.packet, data, size);
 
 	if (s_send_queue_push(&transport->send_queue, &send_item) < 0) {
-		error_set("Send queue for reliable-and-in-order packets is full. Increase `CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES` or send packets less frequently.");
+		//error_set("Send queue for reliable-and-in-order packets is full. Increase `CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES` or send packets less frequently.");
 		return -1;
 	}
 

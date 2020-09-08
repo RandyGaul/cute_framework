@@ -208,7 +208,7 @@ void array<T>::remove(int index)
 	T* slot = m_items + index;
 	slot->~T();
 	int count_to_move = m_count - 1 - index;
-	CUTE_MEMMOVE(items + index, items + index + 1, sizeof(T) * count_to_move);
+	CUTE_MEMMOVE(m_items + index, m_items + index + 1, sizeof(T) * count_to_move);
 	--m_count;
 }
 
@@ -393,9 +393,9 @@ template <typename T>
 const array<T>& array<T>::operator=(const array<T>& rhs)
 {
 	set_count(0);
-	ensure_capacity((int)other.count());
-	for (int i = 0; i < other.count(); ++i) {
-		add(other[i]);
+	ensure_capacity((int)rhs.count());
+	for (int i = 0; i < rhs.count(); ++i) {
+		add(rhs[i]);
 	}
 	return *this;
 }

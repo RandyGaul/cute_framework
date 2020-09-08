@@ -60,7 +60,7 @@ static int s_socket_init(socket_t* socket, address_type_t address_type, int send
 	if (socket->handle <= 0)
 #endif
 	{
-		error_set("Failed to create socket.");
+		//error_set("Failed to create socket.");
 		return -1;
 	}
 
@@ -71,7 +71,7 @@ static int s_socket_init(socket_t* socket, address_type_t address_type, int send
 		int enable = 1;
 		if (setsockopt(socket->handle, IPPROTO_IPV6, IPV6_V6ONLY, (char*)&enable, sizeof(enable)) != 0)
 		{
-			error_set("Failed to strictly set socket only ipv6.");
+			//error_set("Failed to strictly set socket only ipv6.");
 			socket_cleanup(socket);
 			return -1;
 		}
@@ -80,7 +80,7 @@ static int s_socket_init(socket_t* socket, address_type_t address_type, int send
 	// Increase socket send buffer size.
 	if (setsockopt(socket->handle, SOL_SOCKET, SO_SNDBUF, (char*)&send_buffer_size, sizeof(int)) != 0)
 	{
-		error_set("Failed to set socket send buffer size.");
+		//error_set("Failed to set socket send buffer size.");
 		socket_cleanup(socket);
 		return -1;
 	}
@@ -88,7 +88,7 @@ static int s_socket_init(socket_t* socket, address_type_t address_type, int send
 	// Increase socket receive buffer size.
 	if (setsockopt(socket->handle, SOL_SOCKET, SO_RCVBUF, (char*)&receive_buffer_size, sizeof(int)) != 0)
 	{
-		error_set("Failed to set socket receive buffer size.");
+		//error_set("Failed to set socket receive buffer size.");
 		socket_cleanup(socket);
 		return -1;
 	}
@@ -107,7 +107,7 @@ static int s_socket_bind_port_and_set_non_blocking(socket_t* socket, address_typ
 			socklen_t len = sizeof(sin);
 			if (getsockname(socket->handle, (sockaddr*)&sin, &len) == -1)
 			{
-				error_set("Failed to get ipv6 socket's assigned port number when binding to port 0.");
+				//error_set("Failed to get ipv6 socket's assigned port number when binding to port 0.");
 				socket_cleanup(socket);
 				return -1;
 			}
@@ -119,7 +119,7 @@ static int s_socket_bind_port_and_set_non_blocking(socket_t* socket, address_typ
 			socklen_t len = sizeof(sin);
 			if (getsockname(socket->handle, (struct sockaddr*)&sin, &len) == -1)
 			{
-				error_set("Failed to get ipv4 socket's assigned port number when binding to port 0.");
+				//error_set("Failed to get ipv4 socket's assigned port number when binding to port 0.");
 				socket_cleanup(socket);
 				return -1;
 			}
@@ -133,7 +133,7 @@ static int s_socket_bind_port_and_set_non_blocking(socket_t* socket, address_typ
 	DWORD non_blocking = 1;
 	if (ioctlsocket(socket->handle, FIONBIO, &non_blocking) != 0)
 	{
-		error_set("Failed to set socket to non blocking io.");
+		//error_set("Failed to set socket to non blocking io.");
 		socket_cleanup(socket);
 		return -1;
 	}
@@ -143,7 +143,7 @@ static int s_socket_bind_port_and_set_non_blocking(socket_t* socket, address_typ
 	int non_blocking = 1;
 	if (fcntl(socket->handle, F_SETFL, O_NONBLOCK, non_blocking) == -1)
 	{
-		error_set("Failed to set socket to non blocking io.");
+		//error_set("Failed to set socket to non blocking io.");
 		socket_cleanup(socket);
 		return -1;
 	}
@@ -174,7 +174,7 @@ int socket_init(socket_t* socket, address_type_t address_type, uint16_t port, in
 
 		if (bind(socket->handle, (sockaddr*)&socket_endpoint, sizeof(socket_endpoint)) < 0)
 		{
-			error_set("Failed to bind ipv6 socket.");
+			//error_set("Failed to bind ipv6 socket.");
 			socket_cleanup(socket);
 			return -1;
 		}
@@ -189,7 +189,7 @@ int socket_init(socket_t* socket, address_type_t address_type, uint16_t port, in
 
 		if (bind(socket->handle, (sockaddr*)&socket_endpoint, sizeof(socket_endpoint)) < 0)
 		{
-			error_set("Failed to bind ipv4 socket.");
+			//error_set("Failed to bind ipv4 socket.");
 			socket_cleanup(socket);
 			return -1;
 		}
@@ -226,7 +226,7 @@ int socket_init(socket_t* socket, const char* address_and_port, int send_buffer_
 
 		if (bind(socket->handle, (sockaddr*)&socket_endpoint, sizeof(socket_endpoint)) < 0)
 		{
-			error_set("Failed to bind ipv6 socket.");
+			//error_set("Failed to bind ipv6 socket.");
 			socket_cleanup(socket);
 			return -1;
 		}
@@ -244,7 +244,7 @@ int socket_init(socket_t* socket, const char* address_and_port, int send_buffer_
 
 		if (bind(socket->handle, (sockaddr*)&socket_endpoint, sizeof(socket_endpoint)) < 0)
 		{
-			error_set("Failed to bind ipv4 socket.");
+			//error_set("Failed to bind ipv4 socket.");
 			socket_cleanup(socket);
 			return -1;
 		}
@@ -319,14 +319,14 @@ int socket_receive(socket_t* socket, endpoint_t* from, void* data, int byte_coun
 	{
 		int error = WSAGetLastError();
 		if (error == WSAEWOULDBLOCK || error == WSAECONNRESET) return 0;
-		error_set("The function recvfrom failed.");
+		//error_set("The function recvfrom failed.");
 		return -1;
 	}
 #else
 	if (result <= 0)
 	{
 		if (errno == EAGAIN) return 0;
-		error_set("The function recvfrom failed.");
+		//error_set("The function recvfrom failed.");
 		return -1;
 	}
 #endif
@@ -355,7 +355,7 @@ int socket_receive(socket_t* socket, endpoint_t* from, void* data, int byte_coun
 	else
 	{
 		CUTE_ASSERT(0);
-		error_set("The function recvfrom returned an invalid ip format.");
+		//error_set("The function recvfrom returned an invalid ip format.");
 		return -1;
 	}
   

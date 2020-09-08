@@ -96,7 +96,7 @@ struct audio_param_t
 {
 	const char* path = NULL;
 	void* memory = NULL;
-	int byte_count = NULL;
+	int byte_count = 0;
 	promise_t user_promise;
 	void* mem_ctx = NULL;
 };

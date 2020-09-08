@@ -24,28 +24,4 @@
 namespace cute
 {
 
-// TODO: Thread local on these is probably best.
-static const char* s_error;
-static error_handler_fn* s_handler;
-static void* s_udata;
-
-const char* error_get()
-{
-	return s_error;
-}
-
-void error_set(const char* error_string)
-{
-	s_error = error_string;
-	if (s_handler) {
-		s_handler(error_string, s_udata);
-	}
-}
-
-void error_handler_set(error_handler_fn* handler, void* udata)
-{
-	s_handler = handler;
-	s_udata = udata;
-}
-
 }

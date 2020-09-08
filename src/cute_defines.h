@@ -50,7 +50,11 @@
 #	endif
 #endif
 
-#define CUTE_CALL __cdecl
+#ifdef CUTE_WINDOWS
+#	define CUTE_CALL __cdecl
+#else
+#	define CUTE_CALL
+#endif
 
 #define CUTE_UNUSED(x) (void)x
 #define CUTE_ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
@@ -81,6 +85,8 @@
 #elif defined(CUTE_MACOSX)
 #	define SOKOL_GLCORE33
 #endif
+
+#include <stdlib.h> // NULL
 
 namespace cute
 {

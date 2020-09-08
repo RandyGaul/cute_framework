@@ -65,7 +65,7 @@ memory_pool_t* memory_pool_make(int element_size, int element_count, void* user_
 void memory_pool_destroy(memory_pool_t* pool)
 {
 	if (pool->overflow_count) {
-		error_set("Attempted to destroy pool without freeing all overflow allocations.");
+		//error_set("Attempted to destroy pool without freeing all overflow allocations.");
 		CUTE_ASSERT(pool->overflow_count == 0);
 	}
 	CUTE_FREE(pool, pool->mem_ctx);
@@ -105,7 +105,7 @@ void memory_pool_free(memory_pool_t* pool, void* element)
 		*(void**)element = pool->free_list;
 		pool->free_list = element;
 	} else {
-		error_set("Pointer was outside of arena bounds, or a double free was detected, in `memory_pool_t`.");
+		//error_set("Pointer was outside of arena bounds, or a double free was detected, in `memory_pool_t`.");
 		assert(0);
 	}
 }
