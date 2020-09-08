@@ -44,7 +44,6 @@ memory_pool_t* memory_pool_make(int element_size, int element_count, void* user_
 	size_t stride = element_size > sizeof(void*) ? element_size : sizeof(void*);
 	size_t arena_size = sizeof(memory_pool_t) + stride * element_count;
 	memory_pool_t* pool = (memory_pool_t*)CUTE_ALLOC(arena_size, user_allocator_context);
-	CUTE_CHECK_POINTER(pool);
 
 	pool->element_size = element_size;
 	pool->arena_size = (int)(arena_size - sizeof(memory_pool_t));
@@ -63,10 +62,6 @@ memory_pool_t* memory_pool_make(int element_size, int element_count, void* user_
 	*last_element = NULL;
 
 	return pool;
-
-cute_error:
-	CUTE_FREE(pool, user_allocator_context);
-	return NULL;
 }
 
 void memory_pool_destroy(memory_pool_t* pool)

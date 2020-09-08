@@ -64,12 +64,10 @@ int hashtable_init(hashtable_t* table, int key_size, int item_size, int capacity
 	table->item_size = item_size;
 	int slots_size = (int)(table->slot_capacity * sizeof(*table->slots));
 	table->slots = (hashtable_slot_t*)CUTE_ALLOC((size_t)slots_size, mem_ctx);
-	CUTE_CHECK_POINTER(table->slots);
 	CUTE_MEMSET(table->slots, 0, (size_t) slots_size);
 
 	table->item_capacity = s_next_prime(capacity + capacity / 2);
 	table->items_key = CUTE_ALLOC(table->item_capacity * (table->key_size + sizeof(*table->items_slot_index) + table->item_size) + table->item_size + table->key_size, mem_ctx);
-	CUTE_CHECK_POINTER(table->items_key);
 	table->items_slot_index = (int*)((uint8_t*)table->items_key + table->item_capacity * table->key_size);
 	table->items_data = (void*)(table->items_slot_index + table->item_capacity);
 	table->temp_key = (void*)(((uintptr_t)table->items_data) + table->item_size * table->item_capacity);
@@ -77,11 +75,6 @@ int hashtable_init(hashtable_t* table, int key_size, int item_size, int capacity
 	table->mem_ctx = mem_ctx;
 
 	return 0;
-
-cute_error:
-	CUTE_FREE(table->slots, mem_ctx);
-	CUTE_FREE(table->items_key, mem_ctx);
-	return -1;
 }
 
 void hashtable_cleanup(hashtable_t* table)

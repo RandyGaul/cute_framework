@@ -25,7 +25,11 @@
 #include <SDL2/SDL.h>
 
 #define CUTE_SYNC_IMPLEMENTATION
-#define CUTE_SYNC_WINDOWS
+#ifdef CUTE_WINDOWS
+#   define CUTE_SYNC_WINDOWS
+#else
+#   define CUTE_SYNC_SDL
+#endif
 #define CUTE_THREAD_ALLOC CUTE_ALLOC
 #define CUTE_THREAD_FREE CUTE_FREE
 #include <cute/cute_sync.h>

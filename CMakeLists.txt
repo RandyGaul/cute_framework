@@ -193,7 +193,6 @@ set(CUTE_HDRS
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
 	src/internal/cute_crypto_internal.h
-	src/internal/cute_defines_internal.h
 	src/internal/cute_file_system_internal.h
 	src/internal/cute_font_internal.h
 	src/internal/cute_input_internal.h

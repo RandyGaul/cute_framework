@@ -34,6 +34,8 @@
 
 namespace cute
 {
+	
+#define CUTE_CHECK(X) if (X) ret = -1;
 
 // Sequence buffer implementation strategy comes from Glenn's online articles:
 // https://gafferongames.com/post/reliable_ordered_messages/
@@ -44,19 +46,12 @@ int sequence_buffer_init(sequence_buffer_t* buffer, int capacity, int stride, vo
 	buffer->capacity = capacity;
 	buffer->stride = stride;
 	buffer->entry_sequence = (uint32_t*)CUTE_ALLOC(sizeof(uint32_t) * capacity, mem_ctx);
-	CUTE_CHECK_POINTER(buffer->entry_sequence);
 	buffer->entry_data = (uint8_t*)CUTE_ALLOC(stride * capacity, mem_ctx);
-	CUTE_CHECK_POINTER(buffer->entry_data);
 	buffer->udata = udata;
 	buffer->mem_ctx = mem_ctx;
 	CUTE_MEMSET(buffer->entry_sequence, ~0, sizeof(uint32_t) * buffer->capacity);
 	sequence_buffer_reset(buffer);
 	return 0;
-
-cute_error:
-	CUTE_FREE(buffer->entry_sequence, mem_ctx);
-	CUTE_FREE(buffer->entry_data, mem_ctx);
-	return -1;
 }
 
 void sequence_buffer_cleanup(sequence_buffer_t* buffer, sequence_buffer_cleanup_entry_fn* cleanup_fn)
@@ -263,6 +258,7 @@ struct received_packet_t
 
 ack_system_t* ack_system_make(const ack_system_config_t* config)
 {
+	int ret = 0;
 	int sent_packets_init = 0;
 	int received_packets_init = 0;
 	void* mem_ctx = config->user_allocator_context;
@@ -297,16 +293,16 @@ ack_system_t* ack_system_make(const ack_system_config_t* config)
 		ack_system->counters[i] = 0;
 	}
 
-	return ack_system;
-
-cute_error:
-	if (ack_system)
-	{
-		if (sent_packets_init) sequence_buffer_cleanup(&ack_system->sent_packets);
-		if (received_packets_init) sequence_buffer_cleanup(&ack_system->received_packets);
+	if (ret) {
+		if (ack_system)
+		{
+			if (sent_packets_init) sequence_buffer_cleanup(&ack_system->sent_packets);
+			if (received_packets_init) sequence_buffer_cleanup(&ack_system->received_packets);
+		}
+		CUTE_FREE(ack_system, config->user_allocator_context);
 	}
-	CUTE_FREE(ack_system, config->user_allocator_context);
-	return NULL;
+
+	return ret ? NULL : ack_system;
 }
 
 void ack_system_destroy(ack_system_t* ack_system)
@@ -585,6 +581,7 @@ static void s_fragment_reassembly_entry_cleanup(void* data, uint16_t sequence, v
 
 static int s_packet_assembly_init(packet_assembly_t* assembly, int max_fragments_in_flight, void* mem_ctx)
 {
+	int ret = 0;
 	int reassembly_init = 0;
 
 	assembly->reassembly_sequence = 0;
@@ -593,11 +590,11 @@ static int s_packet_assembly_init(packet_assembly_t* assembly, int max_fragments
 	reassembly_init = 1;
 	packet_queue_init(&assembly->assembled_packets);
 
-	return 0;
+	if (ret) {
+		if (reassembly_init) sequence_buffer_cleanup(&assembly->fragment_reassembly);
+	}
 
-cute_error:
-	if (reassembly_init) sequence_buffer_cleanup(&assembly->fragment_reassembly);
-	return -1;
+	return ret;
 }
 
 static void s_packet_assembly_cleanup(packet_assembly_t* assembly)
@@ -708,6 +705,7 @@ struct fragment_entry_t
 
 transport_t* transport_make(const transport_config_t* config)
 {
+	int ret = 0;
 	int table_init = 0;
 	int sequence_sent_fragments_init = 0;
 	int assembly_reliable_init = 0;
@@ -728,7 +726,6 @@ transport_t* transport_make(const transport_config_t* config)
 	transport->mem_ctx = config->user_allocator_context;
 
 	transport->fragment_handle_table = handle_allocator_make(transport->max_fragments_in_flight, transport->mem_ctx);
-	CUTE_CHECK_POINTER(transport->fragment_handle_table);
 	table_init = 1;
 	CUTE_CHECK(sequence_buffer_init(&transport->sent_fragments, transport->max_fragments_in_flight, sizeof(fragment_entry_t), transport, transport->mem_ctx));
 	sequence_sent_fragments_init = 1;
@@ -740,15 +737,15 @@ transport_t* transport_make(const transport_config_t* config)
 
 	s_send_queue_init(&transport->send_queue);
 
-	return transport;
+	if (ret) {
+		if (table_init) handle_allocator_destroy(transport->fragment_handle_table);
+		if (sequence_sent_fragments_init) sequence_buffer_cleanup(&transport->sent_fragments);
+		if (assembly_reliable_init) s_packet_assembly_cleanup(&transport->reliable_and_in_order_assembly);
+		if (assembly_unreliable_init) s_packet_assembly_cleanup(&transport->fire_and_forget_assembly);
+		CUTE_FREE(transport, config->user_allocator_context);
+	}
 
-cute_error:
-	if (table_init) handle_allocator_destroy(transport->fragment_handle_table);
-	if (sequence_sent_fragments_init) sequence_buffer_cleanup(&transport->sent_fragments);
-	if (assembly_reliable_init) s_packet_assembly_cleanup(&transport->reliable_and_in_order_assembly);
-	if (assembly_unreliable_init) s_packet_assembly_cleanup(&transport->fire_and_forget_assembly);
-	CUTE_FREE(transport, config->user_allocator_context);
-	return NULL;
+	return ret ? NULL : transport;
 }
 
 static void s_transport_cleanup_packet_queue(transport_t* transport, packet_queue_t* q)

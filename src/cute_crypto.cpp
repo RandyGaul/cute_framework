@@ -25,6 +25,8 @@
 
 #include <internal/cute_crypto_internal.h>
 
+CUTE_STATIC_ASSERT(sizeof(uint64_t) == sizeof(long long unsigned int), "Must be equal.");
+
 namespace cute
 {
 

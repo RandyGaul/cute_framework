@@ -44,7 +44,7 @@ const char* file_system_get_base_dir()
 error_t file_system_set_write_dir(const char* platform_dependent_directory)
 {
 	if (!PHYSFS_setWriteDir(platform_dependent_directory)) {
-		return error_failure(PHYSFS_getLastError());
+		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	} else {
 		return error_success();
 	}
@@ -53,7 +53,7 @@ error_t file_system_set_write_dir(const char* platform_dependent_directory)
 error_t file_system_mount(const char* archive, const char* mount_point, bool append_to_path)
 {
 	if (!PHYSFS_mount(archive, mount_point, (int)append_to_path)) {
-		return error_failure(PHYSFS_getLastError());
+		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	} else {
 		return error_success();
 	}
@@ -62,7 +62,7 @@ error_t file_system_mount(const char* archive, const char* mount_point, bool app
 error_t file_system_dismount(const char* archive)
 {
 	if (!PHYSFS_unmount(archive)) {
-		return error_failure(PHYSFS_getLastError());
+		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	} else {
 		return error_success();
 	}
@@ -83,7 +83,7 @@ error_t file_system_stat(const char* virtual_path, stat_t* stat)
 {
 	PHYSFS_Stat physfs_stat;
 	if (!PHYSFS_stat(virtual_path, &physfs_stat)) {
-		return error_failure(PHYSFS_getLastError());
+		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	} else {
 		stat->type = s_file_type(physfs_stat.filetype);
 		stat->is_read_only = physfs_stat.readonly;
@@ -146,7 +146,7 @@ file_t* file_system_open_file_for_read(const char* virtual_path)
 error_t file_system_close(file_t* file)
 {
 	if (!PHYSFS_close((PHYSFS_file*)file)) {
-		return error_failure(PHYSFS_getLastError());
+		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	} else {
 		return error_success();
 	}
@@ -155,7 +155,7 @@ error_t file_system_close(file_t* file)
 error_t file_system_delete(const char* virtual_path)
 {
 	if (!PHYSFS_delete(virtual_path)) {
-		return error_failure(PHYSFS_getLastError());
+		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	} else {
 		return error_success();
 	}
@@ -164,7 +164,7 @@ error_t file_system_delete(const char* virtual_path)
 error_t file_system_create_dir(const char* virtual_path)
 {
 	if (!PHYSFS_mkdir(virtual_path)) {
-		return error_failure(PHYSFS_getLastError());
+		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	} else {
 		return error_success();
 	}
@@ -186,12 +186,12 @@ void file_system_free_enumerated_directory(const char** directory_list)
 
 const char* file_system_get_backend_specific_error_message()
 {
-	return PHYSFS_getLastError();
+	return PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode());
 }
 
-const char* file_system_get_user_directory()
+const char* file_system_get_user_directory(const char* org, const char* app)
 {
-	return PHYSFS_getUserDir();
+	return PHYSFS_getPrefDir(org, app);
 }
 
 const char* file_system_get_actual_path(const char* virtual_path)
@@ -207,7 +207,7 @@ void file_system_enable_symlinks()
 error_t file_system_file_exists(const char* virtual_path)
 {
 	if (!PHYSFS_exists(virtual_path)) {
-		return error_failure(PHYSFS_getLastError());
+		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	} else {
 		return error_success();
 	}
@@ -226,7 +226,7 @@ uint64_t file_system_write(file_t* file, const void* buffer, uint64_t bytes)
 error_t file_system_eof(file_t* file)
 {
 	if (!PHYSFS_eof((PHYSFS_file*)file)) {
-		return error_failure(PHYSFS_getLastError());
+		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	} else {
 		return error_success();
 	}
@@ -240,7 +240,7 @@ uint64_t file_system_tell(file_t* file)
 error_t file_system_seek(file_t* file, uint64_t position)
 {
 	if (!PHYSFS_seek((PHYSFS_file*)file, position)) {
-		return error_failure(PHYSFS_getLastError());
+		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	} else {
 		return error_success();
 	}
@@ -254,7 +254,7 @@ uint64_t file_system_size(file_t* file)
 error_t file_system_flush(file_t* file)
 {
 	if (!PHYSFS_flush((PHYSFS_file*)file)) {
-		return error_failure(PHYSFS_getLastError());
+		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	} else {
 		return error_success();
 	}
@@ -265,43 +265,33 @@ error_t file_system_read_entire_file_to_memory(const char* virtual_path, void** 
 	CUTE_ASSERT(data_ptr);
 	file_t* file = file_system_open_file_for_read(virtual_path);
 	void* data = NULL;
-	CUTE_CHECK_POINTER(file);
+	if (!file) return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	uint64_t sz = file_system_size(file);
 	data = CUTE_ALLOC(sz, user_allocator_context);
-	CUTE_CHECK_POINTER(data);
 	uint64_t sz_read = file_system_read(file, data, sz);
 	*data_ptr = data;
 	if (size) *size = sz_read;
-	CUTE_CHECK_ASSERT(sz == sz_read);
+	CUTE_ASSERT(sz == sz_read);
 	file_system_close(file);
 	return error_success();
-
-cute_error:
-	CUTE_FREE(data, user_allocator_ctx);
-	if (file) file_system_close(file);
-	return error_failure(PHYSFS_getLastError());
 }
 
 error_t file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, uint64_t size)
 {
 	file_t* file = file_system_open_file_for_read(virtual_path);
-	CUTE_CHECK_POINTER(file);
+	if (!file) return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	uint64_t sz = file_system_write(file, data, size);
 	if (sz != size) {
-		return error_failure(PHYSFS_getLastError());
+		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	}
 	file_system_close(file);
 	return error_success();
-
-cute_error:
-	if (file) file_system_close(file);
-	return error_failure(PHYSFS_getLastError());
 }
 
 error_t file_system_init(const char* argv0)
 {
 	if (!PHYSFS_init(argv0)) {
-		return error_failure(PHYSFS_getLastError());
+		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	} else {
 		return error_success();
 	}

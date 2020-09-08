@@ -54,6 +54,8 @@ CUTE_STATIC_ASSERT(CUTE_CRYPTO_HMAC_BYTES == 16, "Cute Protocol standard calls f
 CUTE_STATIC_ASSERT(CUTE_PROTOCOL_VERSION_STRING_LEN == 10, "Cute Protocol standard calls for the version string to be 10 bytes.");
 CUTE_STATIC_ASSERT(CUTE_CONNECT_TOKEN_PACKET_SIZE == 1024, "Cute Protocol standard calls for connect token packet to be exactly 1024 bytes.");
 
+#define CUTE_CHECK(X) if (X) ret = -1;
+
 int generate_connect_token(
 	uint64_t application_id,
 	uint64_t creation_timestamp,
@@ -72,6 +74,7 @@ int generate_connect_token(
 	CUTE_ASSERT(address_count >= 1 && address_count <= 32);
 	CUTE_ASSERT(creation_timestamp < expiration_timestamp);
 
+	int ret = 0;
 	uint8_t** p = &token_ptr_out;
 
 	// Write the REST SECTION.
@@ -127,10 +130,7 @@ int generate_connect_token(
 	CUTE_CHECK(crypto_encrypt_bignonce(shared_secret_key, secret_section, CUTE_CONNECT_TOKEN_SECRET_SECTION_SIZE, public_section, 656, big_nonce));
 	CUTE_ASSERT(bytes_written + CUTE_CRYPTO_HMAC_BYTES == CUTE_CONNECT_TOKEN_PACKET_SIZE);
 
-	return 0;
-
-cute_error:
-	return -1;
+	return ret;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -179,6 +179,7 @@ void replay_buffer_update(replay_buffer_t* replay_buffer, uint64_t sequence)
 
 int read_connect_token_packet_public_section(uint8_t* buffer, uint64_t application_id, uint64_t current_time, packet_connect_token_t* packet)
 {
+	int ret = 0;
 	uint8_t* buffer_start = buffer;
 
 	// Read public section.
@@ -201,10 +202,7 @@ int read_connect_token_packet_public_section(uint8_t* buffer, uint64_t applicati
 	bytes_read = (int)(buffer - buffer_start);
 	CUTE_ASSERT(bytes_read == 656);
 
-	return 0;
-
-cute_error:
-	return -1;
+	return ret;
 }
 
 static CUTE_INLINE uint8_t* s_header(uint8_t** p, uint8_t type, uint64_t sequence)
@@ -223,6 +221,7 @@ static CUTE_INLINE void s_associated_data(uint8_t** p, uint8_t type, uint64_t ap
 
 int packet_write(void* packet_ptr, uint8_t* buffer, uint64_t application_id, uint64_t sequence, const crypto_key_t* key)
 {
+	int ret = 0;
 	uint8_t type = *(uint8_t*)packet_ptr;
 
 	if (type == PACKET_TYPE_CONNECT_TOKEN) {
@@ -295,14 +294,13 @@ int packet_write(void* packet_ptr, uint8_t* buffer, uint64_t application_id, uin
 
 	CUTE_CHECK(crypto_encrypt(key, payload, payload_size, associated_data, sizeof(associated_data), sequence));
 
+	if (ret) return ret;
 	return (int)(buffer - buffer_start) + CUTE_CRYPTO_HMAC_BYTES;
-
-cute_error:
-	return -1;
 }
 
 void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t application_id, packet_allocator_t* pa, replay_buffer_t* replay_buffer, uint64_t* sequence_ptr)
 {
+	int ret = 0;
 	uint8_t* buffer_start = buffer;
 	uint8_t type = read_uint8(&buffer);
 
@@ -348,7 +346,7 @@ void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t a
 		packet->client_handle = read_uint64(&buffer);
 		packet->max_clients = read_uint32(&buffer);
 		packet->connection_timeout = read_uint32(&buffer);
-		return packet;
+		return ret ? NULL : packet;
 	}	break;
 
 	case PACKET_TYPE_CONNECTION_DENIED:
@@ -362,14 +360,14 @@ void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t a
 	{
 		packet_keepalive_t* packet = (packet_keepalive_t*)packet_allocator_alloc(pa, (packet_type_t)type);
 		packet->packet_type = type;
-		return packet;
+		return ret ? NULL : packet;
 	}	break;
 
 	case PACKET_TYPE_DISCONNECT:
 	{
 		packet_disconnect_t* packet = (packet_disconnect_t*)packet_allocator_alloc(pa, (packet_type_t)type);
 		packet->packet_type = type;
-		return packet;
+		return ret ? NULL : packet;
 	}	break;
 
 	case PACKET_TYPE_CHALLENGE_REQUEST: // fall-thru
@@ -379,7 +377,7 @@ void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t a
 		packet->packet_type = type;
 		packet->challenge_nonce = read_uint64(&buffer);
 		CUTE_MEMCPY(packet->challenge_data, buffer, CUTE_CHALLENGE_DATA_SIZE);
-		return packet;
+		return ret ? NULL : packet;
 	}	break;
 
 	case PACKET_TYPE_PAYLOAD:
@@ -388,11 +386,10 @@ void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t a
 		packet->packet_type = type;
 		packet->payload_size = read_uint16(&buffer);
 		CUTE_MEMCPY(packet->payload, buffer, packet->payload_size);
-		return packet;
+		return ret ? NULL : packet;
 	}	break;
 	}
 
-cute_error:
 	return NULL;
 }
 
@@ -456,6 +453,7 @@ void packet_allocator_free(packet_allocator_t* packet_allocator, packet_type_t t
 
 uint8_t* client_read_connect_token_from_web_service(uint8_t* buffer, uint64_t application_id, uint64_t current_time, connect_token_t* token)
 {
+	int ret = 0;
 	uint8_t* buffer_start = buffer;
 
 	// Read rest section.
@@ -475,14 +473,13 @@ uint8_t* client_read_connect_token_from_web_service(uint8_t* buffer, uint64_t ap
 	token->endpoint_count = packet.endpoint_count;
 	CUTE_MEMCPY(token->endpoints, packet.endpoints, sizeof(endpoint_t) * token->endpoint_count);
 
-	return connect_token_packet;
-
-cute_error:
-	return NULL;
+	return ret ? NULL : connect_token_packet;
 }
 
 int CUTE_CALL server_decrypt_connect_token_packet(uint8_t* packet_buffer, const crypto_key_t* secret_key, uint64_t application_id, uint64_t current_time, connect_token_decrypted_t* token)
 {
+	int ret = 0;
+
 	// Read public section.
 	packet_connect_token_t packet;
 	CUTE_CHECK(read_connect_token_packet_public_section(packet_buffer, application_id, current_time, &packet));
@@ -508,10 +505,7 @@ int CUTE_CALL server_decrypt_connect_token_packet(uint8_t* packet_buffer, const 
 	token->server_to_client_key = read_key(&secret_section);
 	CUTE_MEMCPY(token->user_data, secret_section, CUTE_CONNECT_TOKEN_USER_DATA_SIZE);
 
-	return 0;
-
-cute_error:
-	return -1;
+	return ret;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -602,14 +596,12 @@ int hashtable_init(hashtable_t* table, int key_size, int item_size, int capacity
 	table->item_size = item_size;
 	int slots_size = (int)(table->slot_capacity * sizeof(*table->slots));
 	table->slots = (hashtable_slot_t*)CUTE_ALLOC((size_t)slots_size, mem_ctx);
-	CUTE_CHECK_POINTER(table->slots);
 	CUTE_MEMSET(table->slots, 0, (size_t) slots_size);
 
 	crypto_shorthash_keygen(table->secret_key);
 
 	table->item_capacity = s_get_next_prime(capacity + capacity / 2);
 	table->items_key = CUTE_ALLOC(table->item_capacity * (table->key_size + sizeof(*table->items_slot_index) + table->item_size) + table->item_size + table->key_size, mem_ctx);
-	CUTE_CHECK_POINTER(table->items_key);
 	table->items_slot_index = (int*)((uint8_t*)table->items_key + table->item_capacity * table->key_size);
 	table->items_data = (void*)(table->items_slot_index + table->item_capacity);
 	table->temp_key = (void*)(((uintptr_t)table->items_data) + table->item_size * table->item_capacity);
@@ -617,11 +609,6 @@ int hashtable_init(hashtable_t* table, int key_size, int item_size, int capacity
 	table->mem_ctx = mem_ctx;
 
 	return 0;
-
-cute_error:
-	CUTE_FREE(table->slots, mem_ctx);
-	CUTE_FREE(table->items_key, mem_ctx);
-	return -1;
 }
 
 void hashtable_cleanup(hashtable_t* table)
@@ -816,12 +803,12 @@ void hashtable_swap(hashtable_t* table, int index_a, int index_b)
 
 int connect_token_cache_init(connect_token_cache_t* cache, int capacity, void* mem_ctx)
 {
+	int ret = 0;
 	cache->capacity = capacity;
 	CUTE_CHECK(hashtable_init(&cache->table, CUTE_CRYPTO_HMAC_BYTES, sizeof(connect_token_cache_entry_t), capacity, mem_ctx));
 	list_init(&cache->list);
 	list_init(&cache->free_list);
 	cache->node_memory = (connect_token_cache_node_t*)CUTE_ALLOC(sizeof(connect_token_cache_node_t) * capacity, mem_ctx);
-	CUTE_CHECK_POINTER(cache->node_memory);
 
 	for (int i = 0; i < capacity; ++i)
 	{
@@ -832,10 +819,7 @@ int connect_token_cache_init(connect_token_cache_t* cache, int capacity, void* m
 
 	cache->mem_ctx = mem_ctx;
 
-	return 0;
-
-cute_error:
-	return -1;
+	return ret;
 }
 
 void connect_token_cache_cleanup(connect_token_cache_t* cache)
@@ -990,18 +974,12 @@ static void s_client_set_state(client_t* client, client_state_t state)
 client_t* client_make(uint16_t port, const char* web_service_address, uint64_t application_id, void* user_allocator_context)
 {
 	client_t* client = (client_t*)CUTE_ALLOC(sizeof(client_t), app->mem_ctx);
-	CUTE_CHECK_POINTER(client);
 	CUTE_MEMSET(client, 0, sizeof(client_t));
 	s_client_set_state(client, CLIENT_STATE_DISCONNECTED);
 	client->application_id = application_id;
 	client->mem_ctx = user_allocator_context;
 	client->packet_queue = circular_buffer_make(CUTE_MB, client->mem_ctx);
-	CUTE_CHECK_POINTER(client->packet_queue.data);
 	return client;
-
-cute_error:
-	CUTE_FREE(client, app->mem_ctx);
-	return NULL;
 }
 
 void client_destroy(client_t* client)
@@ -1020,6 +998,7 @@ struct payload_t
 
 int client_connect(client_t* client, const uint8_t* connect_token)
 {
+	int ret = 0;
 	uint8_t* connect_token_packet = client_read_connect_token_from_web_service(
 		(uint8_t*)connect_token,
 		client->application_id,
@@ -1028,7 +1007,7 @@ int client_connect(client_t* client, const uint8_t* connect_token)
 	);
 	if (!connect_token_packet) {
 		s_client_set_state(client, CLIENT_STATE_INVALID_CONNECT_TOKEN);
-		goto cute_error;
+		ret = -1;
 	}
 
 	CUTE_MEMCPY(client->connect_token_packet, connect_token_packet, CUTE_CONNECT_TOKEN_PACKET_SIZE);
@@ -1044,10 +1023,7 @@ int client_connect(client_t* client, const uint8_t* connect_token)
 	s_client_set_state(client, CLIENT_STATE_SENDING_CONNECTION_REQUEST);
 	client->goto_next_server_tentative_state = CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT;
 
-	return 0;
-
-cute_error:
-	return -1;
+	return ret;
 }
 
 static CUTE_INLINE endpoint_t s_server_endpoint(client_t* client)
@@ -1378,23 +1354,16 @@ uint16_t client_get_port(client_t* client)
 server_t* server_make(uint64_t application_id, const crypto_key_t* secret_key, void* mem_ctx)
 {
 	server_t* server = (server_t*)CUTE_ALLOC(sizeof(server_t), mem_ctx);
-	CUTE_CHECK_POINTER(server);
 	CUTE_MEMSET(server, 0, sizeof(server_t));
 
 	server->running = 0;
 	server->application_id = application_id;
 	server->packet_allocator = packet_allocator_make(mem_ctx);
-	//CUTE_CHECK_POINTER(server->packet_allocator); TODO
 	server->event_queue = circular_buffer_make(CUTE_MB * 10, mem_ctx);
 	server->secret_key = *secret_key;
 	server->mem_ctx = mem_ctx;
 
 	return server;
-
-cute_error:
-	if (server) packet_allocator_destroy(server->packet_allocator);
-	CUTE_FREE(server, mem_ctx);
-	return NULL;
 }
 
 void server_destroy(server_t* server)
@@ -1406,6 +1375,7 @@ void server_destroy(server_t* server)
 
 int server_start(server_t* server, const char* address, uint32_t connection_timeout)
 {
+	int ret = 0;
 	int cleanup_map = 0;
 	int cleanup_cache = 0;
 	int cleanup_handles = 0;
@@ -1417,7 +1387,6 @@ int server_start(server_t* server, const char* address, uint32_t connection_time
 	CUTE_CHECK(connect_token_cache_init(&server->token_cache, CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX, server->mem_ctx));
 	cleanup_cache = 1;
 	server->client_handle_table = handle_allocator_make(CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx);
-	CUTE_CHECK_POINTER(server->client_handle_table);
 	cleanup_handles = 1;
 	CUTE_CHECK(socket_init(&server->socket, address, CUTE_PROTOCOL_SERVER_SEND_BUFFER_SIZE, CUTE_PROTOCOL_SERVER_RECEIVE_BUFFER_SIZE));
 	cleanup_socket = 1;
@@ -1431,16 +1400,16 @@ int server_start(server_t* server, const char* address, uint32_t connection_time
 	server->client_count = 0;
 	server->connection_timeout = connection_timeout;
 
-	return 0;
+	if (ret) {
+		if (cleanup_map) encryption_map_cleanup(&server->encryption_map);
+		if (cleanup_cache) connect_token_cache_cleanup(&server->token_cache);
+		if (cleanup_handles) handle_allocator_destroy(server->client_handle_table);
+		if (cleanup_socket) socket_cleanup(&server->socket);
+		if (cleanup_endpoint_table) hashtable_cleanup(&server->client_endpoint_table);
+		if (cleanup_client_id_table) hashtable_cleanup(&server->client_id_table);
+	}
 
-cute_error:
-	if (cleanup_map) encryption_map_cleanup(&server->encryption_map);
-	if (cleanup_cache) connect_token_cache_cleanup(&server->token_cache);
-	if (cleanup_handles) handle_allocator_destroy(server->client_handle_table);
-	if (cleanup_socket) socket_cleanup(&server->socket);
-	if (cleanup_endpoint_table) hashtable_cleanup(&server->client_endpoint_table);
-	if (cleanup_client_id_table) hashtable_cleanup(&server->client_id_table);
-	return -1;
+	return ret;
 }
 
 static CUTE_INLINE int s_server_event_pull(server_t* server, server_event_t* event)

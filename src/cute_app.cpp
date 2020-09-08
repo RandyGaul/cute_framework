@@ -98,9 +98,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	} else {
 		window = SDL_CreateWindow(window_title, x, y, w, h, flags);
 	}
-	CUTE_CHECK_POINTER(window);
 	app_t* app = (app_t*)CUTE_ALLOC(sizeof(app_t), user_allocator_context);
-	CUTE_CHECK_POINTER(app);
 	CUTE_PLACEMENT_NEW(app) app_t;
 	app->options = options;
 	app->window = window;
@@ -164,7 +162,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	}
 
 	if (file_system_init(argv0).is_error()) {
-		goto cute_error;
+		CUTE_ASSERT(0);
 	}
 
 	strpool_config_t strpool_config = strpool_default_config;
@@ -173,10 +171,6 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	app->strpool = &app->strpool_instance;
 
 	return app;
-
-cute_error:
-	CUTE_FREE(app, user_allocator_ctx);
-	return NULL;
 }
 
 void app_destroy(app_t* app)
