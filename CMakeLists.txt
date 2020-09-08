@@ -237,7 +237,7 @@ set(CUTE_HDRS
 #endif()
 
 add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS})
-target_link_libraries(cute PRIVATE SDL2 physfs libsodium)
+target_link_libraries(cute PRIVATE SDL2 physfs sodium)
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)
 
 # Handle DirectX 9 include directories.
