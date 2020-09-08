@@ -28,7 +28,6 @@
 #include <cute_memory_pool.h>
 
 #include <internal/cute_net_internal.h>
-#include <internal/cute_defines_internal.h>
 #include <internal/cute_serialize_internal.h>
 
 #include <array>

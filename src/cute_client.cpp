@@ -28,7 +28,6 @@
 #include <cute_circular_buffer.h>
 #include <cute_protocol.h>
 
-#include <internal/cute_defines_internal.h>
 #include <internal/cute_net_internal.h>
 #include <internal/cute_app_internal.h>
 #include <internal/cute_protocol_internal.h>

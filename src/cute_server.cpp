@@ -26,7 +26,6 @@
 #include <cute_c_runtime.h>
 #include <cute_protocol.h>
 
-#include <internal/cute_defines_internal.h>
 #include <internal/cute_net_internal.h>
 #include <internal/cute_protocol_internal.h>
 

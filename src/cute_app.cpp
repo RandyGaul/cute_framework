@@ -31,7 +31,6 @@
 #include <cute_c_runtime.h>
 #include <cute_kv.h>
 
-#include <internal/cute_defines_internal.h>
 #include <internal/cute_app_internal.h>
 #include <internal/cute_file_system_internal.h>
 #include <internal/cute_net_internal.h>

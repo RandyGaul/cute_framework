@@ -25,7 +25,6 @@
 #include <cute_handle_table.h>
 #include <cute_error.h>
 
-#include <internal/cute_defines_internal.h>
 #include <internal/cute_transport_internal.h>
 #include <internal/cute_serialize_internal.h>
 
