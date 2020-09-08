@@ -237,7 +237,7 @@ void init_world()
 sprite_t load_sprite(string_t path)
 {
 	sprite_t s;
-	error_t err = aseprite_cache_load(cache, path.c_str(), &s);
+	cute::error_t err = aseprite_cache_load(cache, path.c_str(), &s);
 	if (err.is_error()) {
 		char buf[1024];
 		sprintf(buf, "Unable to load sprite at path \"%s\".\n", path.c_str());
@@ -484,7 +484,7 @@ void load_level()
 		for (int j = 0; j < len; ++j) {
 			char c = s[j];
 			entity_t e = INVALID_ENTITY;
-			error_t err;
+			cute::error_t err;
 			switch (c) {
 			case '0': break;
 			case '1': err = app_make_entity(app, "Box", &e); break;

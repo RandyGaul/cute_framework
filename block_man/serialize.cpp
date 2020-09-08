@@ -25,7 +25,7 @@
 #define STRPOOL_IMPLEMENTATION
 #include <mattiasgustavsson/strpool.h>
 
-error_t serialize_v2(kv_t* kv, const char* key, v2* v)
+cute::error_t serialize_v2(kv_t* kv, const char* key, v2* v)
 {
 	if (!kv_object_begin(kv, key).is_error()) {
 		kv_key(kv, "x"); kv_val(kv, &v->x);
@@ -35,7 +35,7 @@ error_t serialize_v2(kv_t* kv, const char* key, v2* v)
 	return kv_error_state(kv);
 }
 
-error_t serialize_rotation(kv_t* kv, const char* key, rotation_t* rotation)
+cute::error_t serialize_rotation(kv_t* kv, const char* key, rotation_t* rotation)
 {
 	if (!kv_object_begin(kv, key).is_error()) {
 		kv_key(kv, "s"); kv_val(kv, &rotation->s);
@@ -45,7 +45,7 @@ error_t serialize_rotation(kv_t* kv, const char* key, rotation_t* rotation)
 	return kv_error_state(kv);
 }
 
-error_t serialize_transform(kv_t* kv, const char* key, transform_t* transform)
+cute::error_t serialize_transform(kv_t* kv, const char* key, transform_t* transform)
 {
 	if (!kv_object_begin(kv, key).is_error()) {
 		serialize_rotation(kv, "r", &transform->r);
@@ -55,7 +55,7 @@ error_t serialize_transform(kv_t* kv, const char* key, transform_t* transform)
 	return kv_error_state(kv);
 }
 
-error_t kv_val(kv_t* kv, const char** string)
+cute::error_t kv_val(kv_t* kv, const char** string)
 {
 	size_t len = *string ? CUTE_STRLEN(*string) : 0;
 	kv_val_string(kv, string, &len);

@@ -33,7 +33,7 @@ struct Shadow
 	bool small = false;
 };
 
-CUTE_INLINE error_t Shadow_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Shadow_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	Shadow* shadow = (Shadow*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {

@@ -53,7 +53,7 @@ struct Player
 	// ----------------------------
 };
 
-CUTE_INLINE error_t Player_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Player_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	Player* player = (Player*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {

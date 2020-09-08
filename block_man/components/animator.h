@@ -38,7 +38,7 @@ struct Animator
 	CUTE_INLINE void unflip_x() { if (flipped_x) { flipped_x = false; sprite.flip_x(); } }
 };
 
-CUTE_INLINE error_t Animator_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Animator_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	Animator* animator = (Animator*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {

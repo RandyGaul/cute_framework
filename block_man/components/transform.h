@@ -36,7 +36,7 @@ struct Transform
 	CUTE_INLINE transform_t get() const { return mul(local, world); }
 };
 
-CUTE_INLINE error_t Transform_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Transform_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	Transform* transform = (Transform*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {

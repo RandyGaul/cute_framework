@@ -79,7 +79,7 @@ struct BoardPiece
 	}
 };
 
-CUTE_INLINE error_t BoardPiece_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t BoardPiece_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	BoardPiece* board_piece = (BoardPiece*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {

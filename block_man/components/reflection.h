@@ -29,7 +29,7 @@ struct Reflection
 {
 };
 
-CUTE_INLINE error_t Reflection_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Reflection_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	Reflection* reflection = (Reflection*)component;
 	return kv_error_state(kv);

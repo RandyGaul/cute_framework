@@ -37,7 +37,7 @@ struct IceBlock
 	coroutine_t float_co = { 0 };
 };
 
-CUTE_INLINE error_t IceBlock_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t IceBlock_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	IceBlock* ice_block = (IceBlock*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
