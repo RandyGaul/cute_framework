@@ -74,10 +74,10 @@ float to_float(const string_t& x)
 	return strtof(s, NULL);
 }
 
-string_t format(string_t fmt, ...)
+string_t format(string_t fmt, int n, ...)
 {
 	va_list args;
-	va_start(args);
+	va_start(args, n);
 	char* temp = s_temp(256);
 
 	#ifdef _WIN32

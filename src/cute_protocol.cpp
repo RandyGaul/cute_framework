@@ -305,13 +305,13 @@ void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t a
 
 	switch (type)
 	{
-	case PACKET_TYPE_CONNECTION_ACCEPTED: CUTE_CHECK(size != 16 + 25); break;
-	case PACKET_TYPE_CONNECTION_DENIED: CUTE_CHECK(size != 25); break;
-	case PACKET_TYPE_KEEPALIVE: CUTE_CHECK(size != 25); break;
-	case PACKET_TYPE_DISCONNECT: CUTE_CHECK(size != 25); break;
-	case PACKET_TYPE_CHALLENGE_REQUEST: CUTE_CHECK(size != 264 + 25); break;
-	case PACKET_TYPE_CHALLENGE_RESPONSE: CUTE_CHECK(size != 264 + 25); break;
-	case PACKET_TYPE_PAYLOAD: CUTE_CHECK((size - 25 < 1) | (size - 25 > 1255)); break;
+	case PACKET_TYPE_CONNECTION_ACCEPTED: CUTE_CHECK(size != 16 + 25); if (ret) return NULL; break;
+	case PACKET_TYPE_CONNECTION_DENIED: CUTE_CHECK(size != 25); if (ret) return NULL; break;
+	case PACKET_TYPE_KEEPALIVE: CUTE_CHECK(size != 25); if (ret) return NULL; break;
+	case PACKET_TYPE_DISCONNECT: CUTE_CHECK(size != 25); if (ret) return NULL; break;
+	case PACKET_TYPE_CHALLENGE_REQUEST: CUTE_CHECK(size != 264 + 25); if (ret) return NULL; break;
+	case PACKET_TYPE_CHALLENGE_RESPONSE: CUTE_CHECK(size != 264 + 25); if (ret) return NULL; break;
+	case PACKET_TYPE_PAYLOAD: CUTE_CHECK((size - 25 < 1) | (size - 25 > 1255)); if (ret) return NULL; break;
 	}
 
 	uint64_t sequence = read_uint64(&buffer);
@@ -320,6 +320,7 @@ void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t a
 
 	if (replay_buffer) {
 		CUTE_CHECK(replay_buffer_cull_duplicate(replay_buffer, sequence));
+		if (ret) return NULL;
 	}
 
 	uint8_t associated_data[1 + CUTE_PROTOCOL_VERSION_STRING_LEN + 8];
@@ -327,6 +328,7 @@ void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t a
 	s_associated_data(&ad_ptr, type, application_id);
 
 	CUTE_CHECK(crypto_decrypt(key, buffer, size - bytes_read, associated_data, sizeof(associated_data), sequence));
+	if (ret) return NULL;
 
 	if (replay_buffer) {
 		replay_buffer_update(replay_buffer, sequence);
@@ -345,7 +347,7 @@ void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t a
 		packet->client_handle = read_uint64(&buffer);
 		packet->max_clients = read_uint32(&buffer);
 		packet->connection_timeout = read_uint32(&buffer);
-		return ret ? NULL : packet;
+		return packet;
 	}	break;
 
 	case PACKET_TYPE_CONNECTION_DENIED:
@@ -359,14 +361,14 @@ void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t a
 	{
 		packet_keepalive_t* packet = (packet_keepalive_t*)packet_allocator_alloc(pa, (packet_type_t)type);
 		packet->packet_type = type;
-		return ret ? NULL : packet;
+		return packet;
 	}	break;
 
 	case PACKET_TYPE_DISCONNECT:
 	{
 		packet_disconnect_t* packet = (packet_disconnect_t*)packet_allocator_alloc(pa, (packet_type_t)type);
 		packet->packet_type = type;
-		return ret ? NULL : packet;
+		return packet;
 	}	break;
 
 	case PACKET_TYPE_CHALLENGE_REQUEST: // fall-thru
@@ -376,7 +378,7 @@ void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t a
 		packet->packet_type = type;
 		packet->challenge_nonce = read_uint64(&buffer);
 		CUTE_MEMCPY(packet->challenge_data, buffer, CUTE_CHALLENGE_DATA_SIZE);
-		return ret ? NULL : packet;
+		return packet;
 	}	break;
 
 	case PACKET_TYPE_PAYLOAD:
@@ -385,7 +387,7 @@ void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t a
 		packet->packet_type = type;
 		packet->payload_size = read_uint16(&buffer);
 		CUTE_MEMCPY(packet->payload, buffer, packet->payload_size);
-		return ret ? NULL : packet;
+		return packet;
 	}	break;
 	}
 

@@ -64,10 +64,6 @@ int do_test(test_t* test, int i)
 	fprintf(CUTE_TEST_IO_STREAM, "Running test #%d\n\tName:         %s\n\tDescription:  %s\n\t", i, test_name, description);
 	int result = test->fn_ptr();
 	const char* result_string = result ? "\033[31mFAILED\033[0m\n\n" : "\033[32mPASSED\033[0m\n\n";
-	if (result) {
-		const char* cute_error_str = cute::error_get();
-		fprintf(CUTE_TEST_IO_STREAM, "Error string: %s\n\t", cute_error_str);
-	}
 	fprintf(CUTE_TEST_IO_STREAM, "Result:       %s", result_string);
 
 	cute::string_nuke_static_pool();

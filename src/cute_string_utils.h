@@ -25,7 +25,7 @@
 #include <cute_string.h>
 #include <cute_array.h>
 
-#include <varargs.h>
+#include <stdarg.h>
 
 namespace cute
 {
