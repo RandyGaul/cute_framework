@@ -120,7 +120,7 @@ void ecs_registration(app_t* app)
 	system_t s;
 	s.udata = NULL;
 	s.pre_update_fn = NULL;
-	s.update_fn = transform_system_update;
+	s.update_fn = (void*)transform_system_update;
 	s.post_update_fn = NULL;
 	s.component_types = {
 		"Transform",
@@ -129,7 +129,7 @@ void ecs_registration(app_t* app)
 
 	s.udata = NULL;
 	s.pre_update_fn = NULL;
-	s.update_fn = animator_transform_system_update;
+	s.update_fn = (void*)animator_transform_system_update;
 	s.post_update_fn = NULL;
 	s.component_types = {
 			"Transform",
@@ -139,7 +139,7 @@ void ecs_registration(app_t* app)
 
 	s.udata = NULL;
 	s.pre_update_fn = NULL;
-	s.update_fn = player_system_update;
+	s.update_fn = (void*)player_system_update;
 	s.post_update_fn = NULL;
 	s.component_types = {
 			"Transform",
@@ -151,7 +151,7 @@ void ecs_registration(app_t* app)
 
 	s.udata = NULL;
 	s.pre_update_fn = NULL;
-	s.update_fn = board_system_update;
+	s.update_fn = (void*)board_system_update;
 	s.post_update_fn = NULL;
 	s.component_types = {
 			"Transform",
@@ -162,7 +162,7 @@ void ecs_registration(app_t* app)
 
 	s.udata = NULL;
 	s.pre_update_fn = ice_block_system_pre_update;
-	s.update_fn = ice_block_system_update;
+	s.update_fn = (void*)ice_block_system_update;
 	s.post_update_fn = NULL;
 	s.component_types = {
 			"Transform",
@@ -181,7 +181,7 @@ void ecs_registration(app_t* app)
 
 	s.udata = NULL;
 	s.pre_update_fn = NULL;
-	s.update_fn = shadow_system_update;
+	s.update_fn = (void*)shadow_system_update;
 	s.post_update_fn = shadow_system_post_update;
 	s.component_types = {
 			"Transform",
@@ -193,7 +193,7 @@ void ecs_registration(app_t* app)
 
 	s.udata = NULL;
 	s.pre_update_fn = NULL;
-	s.update_fn = animator_system_update;
+	s.update_fn = (void*)animator_system_update;
 	s.post_update_fn = animator_system_post_update;
 	s.component_types = {
 			"Transform",
@@ -203,7 +203,7 @@ void ecs_registration(app_t* app)
 
 	s.udata = NULL;
 	s.pre_update_fn = reflection_system_pre_update;
-	s.update_fn = reflection_system_update;
+	s.update_fn = (void*)reflection_system_update;
 	s.post_update_fn = reflection_system_post_update;
 	s.component_types = {
 			"Transform",
