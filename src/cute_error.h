@@ -42,7 +42,7 @@ CUTE_INLINE error_t error_make(int code, const char* details) { error_t error; e
 CUTE_INLINE error_t error_failure(const char* details) { error_t error; error.code = CUTE_ERROR_FAILURE; error.details = details; return error; }
 CUTE_INLINE error_t error_success() { error_t error; error.code = CUTE_ERROR_SUCCESS; error.details = NULL; return error; }
 
-#define CUTE_RETURN_IF_ERROR(x) do { error_t err = (x); if (err.is_error()) return err; } while (0)
+#define CUTE_RETURN_IF_ERROR(x) do { cute::error_t err = (x); if (err.is_error()) return err; } while (0)
 
 }
 

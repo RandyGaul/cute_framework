@@ -193,19 +193,27 @@ int test_ecs_octorok()
 	if (entity_type == CUTE_INVALID_ENTITY_TYPE) return -1;
 
 	// Register systems.
-	app_register_system(app, {
-		NULL, NULL, update_test_octorok_system, NULL, {
+	system_t s;
+	s.udata = NULL;
+	s.pre_update_fn = NULL;
+	s.update_fn = (void*)update_test_octorok_system;
+	s.post_update_fn = NULL;
+	s.component_types = {
 			"test_component_transform_t",
 			"test_component_sprite_t",
 			"test_component_collider_t",
 			"test_component_octorok_t"
-		}
-	});
-	app_register_system(app, {
-		NULL, NULL, update_test_octorok_buddy_counter_system, NULL, {
+	};
+	app_register_system(app, s);
+
+	s.udata = NULL;
+	s.pre_update_fn = NULL;
+	s.update_fn = (void*)update_test_octorok_buddy_counter_system;
+	s.post_update_fn = NULL;
+	s.component_types = {
 			"test_component_octorok_t"
-		}
-	});
+	};
+	app_register_system(app, s);
 
 	// Load up serialized entities.
 	const char* serialized_entities = CUTE_STRINGIZE(
