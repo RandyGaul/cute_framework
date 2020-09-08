@@ -22,12 +22,15 @@
 #include <cute_c_runtime.h>
 #include <cute_gfx.h>
 
-#define SOKOL_IMPL
-#define SOKOL_D3D11
-#define D3D11_NO_HELPERS
 #include <sokol/sokol_gfx.h>
 
 #include <cute/cute_png.h>
+
+#ifdef CUTE_WINDOWS
+#	pragma comment (lib, "dxgi.lib")
+#	pragma comment (lib, "d3d11.lib")
+#	pragma comment (lib, "dxguid.lib")
+#endif
 
 namespace cute
 {

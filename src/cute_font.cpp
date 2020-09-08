@@ -34,6 +34,8 @@
 #include <internal/cute_app_internal.h>
 #include <internal/cute_font_internal.h>
 
+#include <shaders/upscale_shader.h>
+
 namespace cute
 {
 
@@ -189,100 +191,7 @@ void font_init(app_t* app)
 {
 	s_load_courier_new(app);
 
-	sg_shader_desc shader_params = { 0 };
-	shader_params.attrs[0].name = "pos";
-	shader_params.attrs[0].sem_name = "POSITION";
-	shader_params.attrs[0].sem_index = 0;
-	shader_params.attrs[1].name = "uv";
-	shader_params.attrs[1].sem_name = "TEXCOORD";
-	shader_params.attrs[1].sem_index = 0;
-	shader_params.vs.uniform_blocks[0].size = sizeof(font_vs_uniforms_t);
-	shader_params.vs.uniform_blocks[0].uniforms[0].name = "u_mvp";
-	shader_params.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_MAT4;
-	shader_params.fs.uniform_blocks[0].size = sizeof(font_fs_uniforms_t);
-	shader_params.fs.uniform_blocks[0].uniforms[0].name = "u_text_color";
-	shader_params.fs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
-	shader_params.fs.uniform_blocks[0].uniforms[1].name = "u_border_color";
-	shader_params.fs.uniform_blocks[0].uniforms[1].type = SG_UNIFORMTYPE_FLOAT4;
-	shader_params.fs.uniform_blocks[0].uniforms[2].name = "u_texel_size";
-	shader_params.fs.uniform_blocks[0].uniforms[2].type = SG_UNIFORMTYPE_FLOAT2;
-	shader_params.fs.uniform_blocks[0].uniforms[3].name = "u_use_border";
-	shader_params.fs.uniform_blocks[0].uniforms[3].type = SG_UNIFORMTYPE_FLOAT;
-	shader_params.fs.images[0].name = "u_image";
-	shader_params.fs.images[0].type = SG_IMAGETYPE_2D;
-	shader_params.vs.source = CUTE_STRINGIZE(
-		struct vertex_t
-		{
-			float2 pos : POSITION;
-			float2 uv  : TEXCOORD0;
-		};
-
-		struct interp_t
-		{
-			float4 posH : SV_Position;
-			float2 uv   : TEXCOORD0;
-		};
-
-		cbuffer params : register(b0)
-		{
-			row_major float4x4 u_mvp;
-		};
-
-		interp_t main(vertex_t vtx)
-		{
-			float4 posH = mul(float4(ceil(vtx.pos), 0, 1), u_mvp);
-
-			interp_t interp;
-			interp.posH = posH;
-			interp.uv = vtx.uv;
-			return interp;
-		}
-	);
-	shader_params.fs.source = CUTE_STRINGIZE(
-		struct interp_t
-		{
-			float4 posH : SV_Position;
-			float2 uv   : TEXCOORD0;
-		};
-
-		cbuffer params : register(b0)
-		{
-			float4 u_text_color;
-			float4 u_border_color;
-			float2 u_texel_size;
-			float u_use_border;
-		};
-
-		Texture2D<float4> u_image: register(t0);
-		sampler smp: register(s0);
-
-		float4 main(interp_t interp) : SV_Target0
-		{
-			float2 uv = interp.uv;
-
-			// Border detection for pixel outlines.
-			float a = u_image.Sample(smp, uv + float2(0,  u_texel_size.y)).r;
-			float b = u_image.Sample(smp, uv + float2(0, -u_texel_size.y)).r;
-			float c = u_image.Sample(smp, uv + float2(u_texel_size.x,  0)).r;
-			float d = u_image.Sample(smp, uv + float2(-u_texel_size.x, 0)).r;
-			float e = u_image.Sample(smp, uv + float2(-u_texel_size.x, -u_texel_size.y)).r;
-			float f = u_image.Sample(smp, uv + float2(-u_texel_size.x,  u_texel_size.y)).r;
-			float g = u_image.Sample(smp, uv + float2( u_texel_size.x, -u_texel_size.y)).r;
-			float h = u_image.Sample(smp, uv + float2( u_texel_size.x,  u_texel_size.y)).r;
-			float i = u_image.Sample(smp, uv).r;
-			float border = max(a, max(b, max(c, max(d, max(e, max(f, max(g, h))))))) * (1 - i);
-
-			border *= u_use_border;
-
-			// Pick black for font and white for border.
-			float4 border_color = u_border_color;
-			float4 text_color = u_text_color * i;
-			float4 color = lerp(text_color, border_color, border);
-
-			return color;
-		}
-	);
-	app->font_shader = sg_make_shader(shader_params);
+	app->font_shader = sg_make_shader(upscale_upscale_shader_desc());
 
 	sg_pipeline_desc pip_params = { 0 };
 	pip_params.layout.buffers[0].stride = sizeof(font_vertex_t);

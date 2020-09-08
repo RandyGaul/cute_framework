@@ -43,7 +43,6 @@
 
 #define SDL_MAIN_HANDLED
 #include <SDL2/SDL.h>
-#include <glad/glad.h>
 
 #ifdef _WIN32
 #include <SDL2/SDL_syswm.h>
@@ -53,10 +52,24 @@
 #include <cute/cute_sound.h>
 
 #include <imgui/imgui.h>
+
+#ifdef SOKOL_GLCORE33
+#	include <glad/glad.h>
+#endif
+
+#define SOKOL_IMPL
+#ifdef SOKOL_D3D11
+#	define SOKOL_D3D11
+#	define D3D11_NO_HELPERS
+#endif
+#include <sokol/sokol_gfx.h>
+
 #define SOKOL_IMGUI_IMPL
 #define SOKOL_IMGUI_NO_SOKOL_APP
 #include <internal/imgui/sokol_imgui.h>
 #include <internal/imgui/imgui_impl_sdl.h>
+
+#include <shaders/upscale_shader.h>
 
 namespace cute
 {
@@ -67,12 +80,8 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 {
 	SDL_SetMainReady();
 
-	app_t* app = (app_t*)CUTE_ALLOC(sizeof(app_t), user_allocator_context);
-	CUTE_CHECK_POINTER(app);
-	app->options = options;
 
 	if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER)) {
-		CUTE_FREE(app, user_allocator_context);
 		return NULL;
 	}
 
@@ -90,7 +99,10 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		window = SDL_CreateWindow(window_title, x, y, w, h, flags);
 	}
 	CUTE_CHECK_POINTER(window);
+	app_t* app = (app_t*)CUTE_ALLOC(sizeof(app_t), user_allocator_context);
+	CUTE_CHECK_POINTER(app);
 	CUTE_PLACEMENT_NEW(app) app_t;
+	app->options = options;
 	app->window = window;
 	app->mem_ctx = user_allocator_context;
 	app->w = w;
@@ -108,7 +120,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 
 	if (options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 		app->gfx_enabled = true;
 	}
@@ -123,7 +135,17 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	if ((options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) | (options & CUTE_APP_OPTIONS_OPENG_GL_ES_CONTEXT)) {
 		SDL_GL_SetSwapInterval(0);
 		SDL_GL_CreateContext(window);
+#ifdef __glad_h_
 		gladLoadGLLoader(SDL_GL_GetProcAddress);
+#endif
+		CUTE_MEMSET(&app->gfx_ctx_params, 0, sizeof(app->gfx_ctx_params));
+		app->gfx_ctx_params.color_format = SG_PIXELFORMAT_RGBA8;
+		app->gfx_ctx_params.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;
+		sg_desc params = { 0 };
+		params.context = app->gfx_ctx_params;
+		sg_setup(params);
+		app->gfx_enabled = true;
+		font_init(app);
 	}
 
 	if (options & CUTE_APP_OPTIONS_D3D11_CONTEXT) {
@@ -234,7 +256,8 @@ void app_present(app_t* app)
 		sg_begin_default_pass(&clear_to_black, app->w, app->h);
 		sg_apply_pipeline(app->offscreen_to_screen_pip);
 		sg_apply_bindings(bind);
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &app->offscreen_uniforms, sizeof(app->offscreen_uniforms));
+		upscale_vs_params_t vs_params = { app->upscale };
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &vs_params, sizeof(vs_params));
 		sg_draw(0, 6, 1);
 		s_imgui_present(app);
 		sg_end_pass();
@@ -245,6 +268,9 @@ void app_present(app_t* app)
 
 	sg_commit();
 	dx11_present();
+	if (app->options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) {
+		SDL_GL_SwapWindow(app->window);
+	}
 
 	// Triple buffering on the font vertices.
 	app->font_buffer.advance();
@@ -385,70 +411,12 @@ error_t app_init_upscaling(app_t* app, upscale_t upscaling, int offscreen_w, int
 	if (app->quad.id == SG_INVALID_ID) return error_failure("Unable create static quad buffer.");
 
 	// Setup upscaling shader, to draw the offscreen buffer onto the screen as a textured quad.
-	sg_shader_desc shader_params = { 0 };
-	shader_params.attrs[0].name = "pos";
-	shader_params.attrs[0].sem_name = "POSITION";
-	shader_params.attrs[0].sem_index = 0;
-	shader_params.attrs[1].name = "uv";
-	shader_params.attrs[1].sem_name = "TEXCOORD";
-	shader_params.attrs[1].sem_index = 0;
-	shader_params.vs.uniform_blocks[0].size = sizeof(float) * 2;
-	shader_params.vs.uniform_blocks[0].uniforms[0].name = "u_scale";
-	shader_params.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT2;
-	shader_params.fs.images[0].name = "u_image";
-	shader_params.fs.images[0].type = SG_IMAGETYPE_2D;
-	shader_params.vs.source = CUTE_STRINGIZE(
-		struct vertex_t
-		{
-			float2 pos : POSITION;
-			float2 uv  : TEXCOORD0;
-		};
-
-		struct interp_t
-		{
-			float4 posH : SV_Position;
-			float2 uv   : TEXCOORD0;
-		};
-
-		cbuffer params : register(b0)
-		{
-			float2 u_scale;
-		};
-
-		interp_t main(vertex_t vtx)
-		{
-			vtx.pos.x *= u_scale.x;
-			vtx.pos.y *= u_scale.y;
-			float4 posH = float4(vtx.pos, 0, 1);
-
-			interp_t interp;
-			interp.posH = posH;
-			interp.uv = vtx.uv;
-			return interp;
-		}
-	);
-	shader_params.fs.source = CUTE_STRINGIZE(
-		struct interp_t
-		{
-			float4 posH : SV_Position;
-			float2 uv   : TEXCOORD0;
-		};
-
-		Texture2D<float4> u_image: register(t0);
-		sampler smp: register(s0);
-
-		float4 main(interp_t interp) : SV_Target0
-		{
-			float4 color = u_image.Sample(smp, interp.uv);
-			return color;
-		}
-	);
-	app->offscreen_shader = sg_make_shader(shader_params);
+	app->offscreen_shader = sg_make_shader(upscale_upscale_shader_desc());
 	if (app->offscreen_shader.id == SG_INVALID_ID) return error_failure("Unable create offscreen shader.");
 
 	float scale = s_max_scaling_factor(app);
 	scale = s_enforce_scale(app->upscaling, scale);
-	app->offscreen_uniforms.scale = { scale * (float)app->offscreen_w / (float)app->w, scale * (float)app->offscreen_h / (float)app->h };
+	app->upscale = { scale * (float)app->offscreen_w / (float)app->w, scale * (float)app->offscreen_h / (float)app->h };
 
 	// Setup offscreen rendering pipeline, to draw the offscreen buffer onto the screen.
 	sg_pipeline_desc params = { 0 };

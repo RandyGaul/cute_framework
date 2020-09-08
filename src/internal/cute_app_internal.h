@@ -88,11 +88,6 @@ struct system_internal_t
 	array<STRPOOL_U64> component_types;
 };
 
-struct offscreen_uniforms_t
-{
-	v2 scale;
-};
-
 struct app_t
 {
 	float dt = 0;
@@ -124,7 +119,7 @@ struct app_t
 	sg_buffer quad;
 	sg_shader offscreen_shader;
 	sg_pipeline offscreen_to_screen_pip;
-	offscreen_uniforms_t offscreen_uniforms;
+	v2 upscale;
 	int offscreen_w;
 	int offscreen_h;
 	window_state_t window_state;

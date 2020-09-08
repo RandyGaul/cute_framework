@@ -30,7 +30,6 @@
 
 #include <internal/cute_app_internal.h>
 
-#define SOKOL_D3D11
 #include <shaders/sprite_shader.h>
 
 struct quad_udata_t

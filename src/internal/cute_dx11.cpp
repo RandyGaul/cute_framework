@@ -21,9 +21,9 @@
 
 #include <cute_c_runtime.h>
 
-#ifdef CUTE_WINDOWS
+#include <internal/cute_dx11.h>
 
-	#include <internal/cute_dx11.h>
+#ifdef SOKOL_D3D11
 
 	#define CINTERFACE
 	#define COBJMACROS
@@ -205,7 +205,7 @@
 	namespace cute
 	{
 		void dx11_init(void* hwnd, int w, int h, int sample_count) { CUTE_UNUSED(hwnd); CUTE_UNUSED(w); CUTE_UNUSED(h); CUTE_UNUSED(sample_count); }
-		sg_context_desc dx11_get_context() { return { 0 }; }
+		sg_context_desc dx11_get_context() { sg_context_desc desc; CUTE_MEMSET(&desc, 0, sizeof(desc)); return desc; }
 		void dx11_present() { }
 		void dx11_shutdown() { }
 	}

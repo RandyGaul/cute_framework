@@ -208,7 +208,12 @@ set(CUTE_HDRS
 	src/internal/imgui/sokol_imgui.h
 	src/internal/imgui/imgui_impl_sdl.h
 
+	src/shaders/sprite_shader.h
+	src/shaders/font_shader.h
+	src/shaders/upscale_shader.h
+
 	libraries/glad/glad.h
+	libraries/KHR/khrplatform.h
 	libraries/imgui/imgui.h
 	libraries/sokol/sokol_gfx.h
 
