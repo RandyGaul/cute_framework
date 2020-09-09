@@ -37,7 +37,6 @@
 #include <cute_dictionary.h>
 #include <cute_doubly_list.h>
 #include <cute_ecs.h>
-#include <cute_file_index.h>
 #include <cute_file_system.h>
 #include <cute_font.h>
 #include <cute_gfx.h>

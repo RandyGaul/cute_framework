@@ -20,7 +20,6 @@
 */
 
 #include <cute_file_system.h>
-#include <cute_buffer.h>
 #include <cute_error.h>
 #include <cute_c_runtime.h>
 #include <cute_alloc.h>

@@ -21,7 +21,6 @@
 
 #include <cute_app.h>
 #include <cute_alloc.h>
-#include <cute_buffer.h>
 #include <cute_audio.h>
 #include <cute_concurrency.h>
 #include <cute_crypto_utils.h>

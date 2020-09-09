@@ -25,7 +25,6 @@
 #include <cute_file_system.h>
 #include <cute_lru_cache.h>
 #include <cute_defer.h>
-#include <cute_file_index.h>
 //#include <cute_debug_printf.h>
 
 #include <internal/cute_app_internal.h>

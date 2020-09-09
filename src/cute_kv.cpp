@@ -21,7 +21,6 @@
 
 #include <cute_kv.h>
 #include <cute_c_runtime.h>
-#include <cute_buffer.h>
 #include <cute_base64.h>
 #include <cute_array.h>
 #include <cute_error.h>

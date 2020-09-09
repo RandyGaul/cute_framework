@@ -44,7 +44,7 @@ if(MSVC)
 endif()
 
 # Common directories for compiler/linker path.
-include_directories(src libraries test libraries/datalibrary)
+include_directories(src libraries test)
 link_directories(shared_libs)
 
 # PhysicsFS, statically linked.
@@ -91,7 +91,6 @@ add_library(physfs STATIC ${PHYSFS_SRCS})
 set(CUTE_SRCS
 	src/cute_app.cpp
 	src/cute_audio.cpp
-	src/cute_buffer.cpp
 	src/cute_circular_buffer.cpp
 	src/cute_client.cpp
 	src/cute_clipboard.cpp
@@ -110,7 +109,6 @@ set(CUTE_SRCS
 	src/cute_kv.cpp
 	src/cute_kv_utils.cpp
 	src/cute_base64.cpp
-	src/cute_log.cpp
 	src/cute_hashtable.cpp
 	src/cute_ecs.cpp
 	src/cute_string.cpp
@@ -122,7 +120,6 @@ set(CUTE_SRCS
 	src/cute_image.cpp
 	src/cute_font.cpp
 	src/cute_camera.cpp
-	src/cute_file_index.cpp
 	src/cute_gfx.cpp
 	src/cute_sprite.cpp
 
@@ -144,7 +141,6 @@ set(CUTE_HDRS
 	src/cute_alloc.h
 	src/cute_app.h
 	src/cute_audio.h
-	src/cute_buffer.h
 	src/cute_c_runtime.h
 	src/cute_circular_buffer.h
 	src/cute_client.h
@@ -168,7 +164,6 @@ set(CUTE_HDRS
 	src/cute_kv.h
 	src/cute_kv_utils.h
 	src/cute_base64.h
-	src/cute_log.h
 	src/cute_array.h
 	src/cute_hashtable.h
 	src/cute_dictionary.h
@@ -186,7 +181,6 @@ set(CUTE_HDRS
 	src/cute_color.h
 	src/cute_font.h
 	src/cute_camera.h
-	src/cute_file_index.h
 	src/cute.h
 	src/cute_gfx.h
 	src/cute_rnd.h

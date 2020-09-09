@@ -21,9 +21,9 @@
 
 #include <cute_alloc.h>
 #include <cute_c_runtime.h>
-#include <cute_buffer.h>
 #include <cute_handle_table.h>
 #include <cute_error.h>
+#include <cute_array.h>
 
 #include <internal/cute_transport_internal.h>
 #include <internal/cute_serialize_internal.h>
@@ -215,7 +215,6 @@ struct ack_system_t
 {
 	double time;
 	int max_packet_size;
-	int initial_ack_capacity;
 
 	int (*send_packet_fn)(uint16_t sequence, void* packet, int size, void* udata);
 	int (*open_packet_fn)(uint16_t sequence, void* packet, int size, void* udata);
@@ -224,7 +223,7 @@ struct ack_system_t
 	void* mem_ctx;
 
 	uint16_t sequence;
-	buffer_t acks;
+	array<uint16_t> acks;
 	sequence_buffer_t sent_packets;
 	sequence_buffer_t received_packets;
 
@@ -270,14 +269,14 @@ ack_system_t* ack_system_make(const ack_system_config_t* config)
 
 	ack_system->time = 0;
 	ack_system->max_packet_size = config->max_packet_size;
-	ack_system->initial_ack_capacity = config->initial_ack_capacity;
 	ack_system->send_packet_fn = config->send_packet_fn;
 	ack_system->open_packet_fn = config->open_packet_fn;
 	ack_system->udata = config->udata;
 	ack_system->mem_ctx = config->user_allocator_context;
 
 	ack_system->sequence = 0;
-	ack_system->acks = buffer_make(sizeof(uint16_t));
+	CUTE_PLACEMENT_NEW(&ack_system->acks) array<uint16_t>(config->user_allocator_context);
+	ack_system->acks.ensure_capacity(config->initial_ack_capacity);
 	CUTE_CHECK(sequence_buffer_init(&ack_system->sent_packets, config->sent_packets_sequence_buffer_size, sizeof(sent_packet_t), NULL, mem_ctx));
 	sent_packets_init = 1;
 	CUTE_CHECK(sequence_buffer_init(&ack_system->received_packets, config->received_packets_sequence_buffer_size, sizeof(received_packet_t), NULL, mem_ctx));
@@ -306,7 +305,7 @@ ack_system_t* ack_system_make(const ack_system_config_t* config)
 
 void ack_system_destroy(ack_system_t* ack_system)
 {
-	buffer_free(&ack_system->acks);
+	ack_system->acks.~array<uint16_t>();
 	sequence_buffer_cleanup(&ack_system->sent_packets);
 	sequence_buffer_cleanup(&ack_system->received_packets);
 	CUTE_FREE(ack_system, ack_system->mem_ctx);
@@ -316,7 +315,7 @@ void ack_system_reset(ack_system_t* ack_system)
 {
 	ack_system->sequence = 0;
 
-	buffer_clear(&ack_system->acks);
+	ack_system->acks.clear();
 	sequence_buffer_reset(&ack_system->sent_packets);
 	sequence_buffer_reset(&ack_system->received_packets);
 
@@ -434,8 +433,7 @@ int ack_system_receive_packet(ack_system_t* ack_system, void* data, int size)
 			sent_packet_t* sent_packet = (sent_packet_t*)sequence_buffer_find(&ack_system->sent_packets, ack_sequence);
 
 			if (sent_packet && !sent_packet->acked) {
-				buffer_check_grow(&ack_system->acks, ack_system->initial_ack_capacity);
-				buffer_push(&ack_system->acks, &ack_sequence);
+				ack_system->acks.add(ack_sequence);
 				ack_system->counters[ACK_SYSTEM_COUNTERS_PACKETS_ACKED]++;
 				sent_packet->acked = 1;
 
@@ -451,17 +449,17 @@ int ack_system_receive_packet(ack_system_t* ack_system, void* data, int size)
 
 uint16_t* ack_system_get_acks(ack_system_t* ack_system)
 {
-	return (uint16_t*)ack_system->acks.data;
+	return ack_system->acks.data();
 }
 
 int ack_system_get_acks_count(ack_system_t* ack_system)
 {
-	return ack_system->acks.count;
+	return ack_system->acks.count();
 }
 
 void ack_system_clear_acks(ack_system_t* ack_system)
 {
-	buffer_clear(&ack_system->acks);
+	ack_system->acks.clear();
 }
 
 static CUTE_INLINE float s_calc_packet_loss(float packet_loss, sequence_buffer_t* sent_packets)
@@ -682,9 +680,7 @@ struct transport_t
 
 	send_queue_t send_queue;
 
-	int fragment_count;
-	int fragment_capacity;
-	fragment_t* fragments;
+	array<fragment_t> fragments;
 	handle_allocator_t* fragment_handle_table;
 	sequence_buffer_t sent_fragments;
 
@@ -717,9 +713,7 @@ transport_t* transport_make(const transport_config_t* config)
 	transport->max_fragments_in_flight = config->max_fragments_in_flight;
 	transport->max_size_single_send = config->max_size_single_send;
 
-	transport->fragment_count = 0;
-	transport->fragment_capacity = 0;
-	transport->fragments = NULL;
+	CUTE_PLACEMENT_NEW(&transport->fragments) array<fragment_t>(config->user_allocator_context);
 
 	transport->ack_system = config->ack_system;
 	transport->mem_ctx = config->user_allocator_context;
@@ -767,12 +761,12 @@ void transport_destroy(transport_t* transport)
 	handle_allocator_destroy(transport->fragment_handle_table);
 	s_packet_assembly_cleanup(&transport->reliable_and_in_order_assembly);
 	s_packet_assembly_cleanup(&transport->fire_and_forget_assembly);
-	for (int i = 0; i < transport->fragment_count; ++i)
+	for (int i = 0; i < transport->fragments.count(); ++i)
 	{
 		fragment_t* fragment = transport->fragments + i;
 		CUTE_FREE(fragment->data, transport->mem_ctx);
 	}
-	CUTE_FREE(transport->fragments, transport->mem_ctx);
+	transport->fragments.~array<fragment_t>();
 	CUTE_FREE(transport, config->user_allocator_context);
 }
 
@@ -795,14 +789,14 @@ static CUTE_INLINE int s_transport_write_header(uint8_t* buffer, int size, uint8
 
 static void s_transport_send_fragments(transport_t* transport)
 {
-	CUTE_ASSERT(transport->fragment_count <= transport->max_fragments_in_flight);
-	if (transport->fragment_count == transport->max_fragments_in_flight) {
+	CUTE_ASSERT(transport->fragments.count() <= transport->max_fragments_in_flight);
+	if (transport->fragments.count() == transport->max_fragments_in_flight) {
 		return;
 	}
 
 	double timestamp = transport->ack_system->time;
 	uint16_t reassembly_sequence = transport->reliable_and_in_order_assembly.reassembly_sequence;
-	int fragments_space_available_send = transport->max_fragments_in_flight - transport->fragment_count;
+	int fragments_space_available_send = transport->max_fragments_in_flight - transport->fragments.count();
 	int fragment_size = transport->fragment_size;
 
 	while (fragments_space_available_send)
@@ -826,10 +820,8 @@ static void s_transport_send_fragments(transport_t* transport)
 			uint8_t* fragment_src = data_ptr + fragment_size * i;
 			CUTE_ASSERT(this_fragment_size <= CUTE_ACK_SYSTEM_MAX_PACKET_SIZE);
 
-			CUTE_CHECK_BUFFER_GROW(transport, fragment_count, fragment_capacity, fragments, fragment_t, 256, transport->mem_ctx);
-			if (!transport->fragments) return;
-			int fragment_index = transport->fragment_count++;
-			fragment_t* fragment = transport->fragments + fragment_index;
+			int fragment_index = transport->fragments.count();
+			fragment_t* fragment = &transport->fragments.add();
 			handle_t fragment_handle = handle_allocator_alloc(transport->fragment_handle_table, fragment_index);
 
 			fragment->index = fragment_header_index;
@@ -844,7 +836,7 @@ static void s_transport_send_fragments(transport_t* transport)
 			int header_size = s_transport_write_header(fragment->data, this_fragment_size + CUTE_TRANSPORT_HEADER_SIZE, 1, reassembly_sequence, item->fragment_count, fragment_header_index, (uint16_t)this_fragment_size);
 			if (header_size != CUTE_TRANSPORT_HEADER_SIZE) {
 				CUTE_FREE(fragment->data, transport->mem_ctx);
-				transport->fragment_count--;
+				transport->fragments.pop();
 				return;
 			}
 
@@ -855,7 +847,7 @@ static void s_transport_send_fragments(transport_t* transport)
 			uint16_t sequence;
 			if (ack_system_send_packet(transport->ack_system, fragment->data, this_fragment_size + CUTE_TRANSPORT_HEADER_SIZE, &sequence) < 0) {
 				CUTE_FREE(fragment->data, transport->mem_ctx);
-				transport->fragment_count--;
+				transport->fragments.pop();
 				return;
 			}
 
@@ -1077,15 +1069,15 @@ void transport_process_acks(transport_t* transport)
 			handle_t h = fragment_entry->fragment_handle;
 			if (handle_allocator_is_handle_valid(transport->fragment_handle_table, h)) {
 				uint32_t index = handle_allocator_get_index(transport->fragment_handle_table, h);
-				CUTE_ASSERT((int)index < transport->fragment_count);
+				CUTE_ASSERT((int)index < transport->fragments.count());
 				handle_allocator_free(transport->fragment_handle_table, h);
 				fragment_t* fragment = transport->fragments + index;
 				CUTE_FREE(fragment->data, transport->mem_ctx);
-				handle_t last_handle = transport->fragments[transport->fragment_count - 1].handle;
+				handle_t last_handle = transport->fragments[transport->fragments.count() - 1].handle;
 				if (handle_allocator_is_handle_valid(transport->fragment_handle_table, last_handle)) {
 					handle_allocator_update_index(transport->fragment_handle_table, last_handle, index);
 				}
-				CUTE_BUFFER_SWAP_WITH_LAST(transport, index, fragment_count, fragments);
+				transport->fragments.unordered_remove(index);
 				sequence_buffer_remove(&transport->sent_fragments, sequence);
 			}
 		}
@@ -1102,8 +1094,8 @@ void transport_clear_acks(transport_t* transport)
 void transport_resend_unacked_fragments(transport_t* transport)
 {
 	// Resend unacked fragments which were previously sent.
-	int count = transport->fragment_count;
-	fragment_t* fragments = transport->fragments;
+	int count = transport->fragments.count();
+	fragment_t* fragments = transport->fragments.data();
 
 	for (int i = 0; i < count;)
 	{
@@ -1122,7 +1114,7 @@ void transport_resend_unacked_fragments(transport_t* transport)
 			// Remove failed fragments (this should never happen, and is only here for safety).
 			handle_allocator_free(transport->fragment_handle_table, fragment->handle);
 			CUTE_FREE(fragment->data, transport->mem_ctx);
-			CUTE_BUFFER_SWAP_WITH_LAST(transport, i, fragment_count, fragments);
+			transport->fragments.unordered_remove(i);
 			--count;
 			continue;
 		} else {
@@ -1140,7 +1132,7 @@ void transport_resend_unacked_fragments(transport_t* transport)
 
 int transport_unacked_fragment_count(transport_t* transport)
 {
-	return transport->fragment_count;
+	return transport->fragments.count();
 }
 
 }
