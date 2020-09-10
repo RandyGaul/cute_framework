@@ -222,7 +222,6 @@ void init_world()
 	options |= CUTE_APP_OPTIONS_OPENGL_CONTEXT;
 #endif
 	app = app_make("Block Man", 0, 0, 960, 720, options);
-	file_system_mount(file_system_get_base_dir(), "");
 	app_init_upscaling(app, UPSCALE_PIXEL_PERFECT_AT_LEAST_2X, 320, 240);
 	ImGui::SetCurrentContext(app_init_imgui(app));
 

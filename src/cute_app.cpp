@@ -164,6 +164,8 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 
 	if (file_system_init(argv0).is_error()) {
 		CUTE_ASSERT(0);
+	} else if (!(options & CUTE_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT)) {
+		file_system_mount(file_system_get_base_dir(), "");
 	}
 
 	strpool_config_t strpool_config = strpool_default_config;
