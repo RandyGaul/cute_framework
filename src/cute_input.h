@@ -53,6 +53,22 @@ extern CUTE_API int CUTE_CALL input_text_pop_utf32(app_t* app);
 extern CUTE_API bool CUTE_CALL input_text_has_data(app_t* app);
 extern CUTE_API void CUTE_CALL input_text_clear(app_t* app);
 
+extern CUTE_API void CUTE_CALL input_enable_ime();
+extern CUTE_API void CUTE_CALL input_disable_ime();
+extern CUTE_API bool CUTE_CALL input_is_ime_enabled();
+extern CUTE_API bool CUTE_CALL input_has_ime_keyboard_support();
+extern CUTE_API bool CUTE_CALL input_is_ime_keyboard_shown(app_t* app);
+extern CUTE_API void CUTE_CALL input_set_ime_rect(int x, int y, int w, int h);
+
+struct ime_composition_t
+{
+	const char* composition;
+	int cursor;
+	int selection_len;
+};
+
+extern CUTE_API bool CUTE_CALL input_get_ime_composition(app_t* app, ime_composition_t* composition);
+
 enum mouse_button_t : int
 {
 	MOUSE_BUTTON_LEFT,

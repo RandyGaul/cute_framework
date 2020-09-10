@@ -128,6 +128,9 @@ struct app_t
 	strpool_t strpool_instance = { 0 };
 	strpool_t* strpool = NULL;
 
+	array<char> ime_composition;
+	int ime_composition_cursor = 0;
+	int ime_composition_selection_len = 0;
 	array<int> input_text;
 	int keys[512] = { 0 };
 	int keys_prev[512] = { 0 };

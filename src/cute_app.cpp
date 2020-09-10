@@ -43,7 +43,7 @@
 #include <SDL2/SDL.h>
 
 #ifdef CUTE_WINDOWS
-#include <SDL2/SDL_syswm.h>
+#	include <SDL2/SDL_syswm.h>
 #endif
 
 #define CUTE_SOUND_FORCE_SDL
@@ -77,7 +77,6 @@ namespace cute
 app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t options, const char* argv0, void* user_allocator_context)
 {
 	SDL_SetMainReady();
-
 
 	if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER)) {
 		return NULL;

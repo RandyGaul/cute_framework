@@ -340,6 +340,44 @@ void input_text_clear(app_t* app)
 {
 	app->input_text.clear();
 }
+void input_enable_ime()
+{
+	SDL_StartTextInput();
+}
+
+void input_disable_ime()
+{
+	SDL_StopTextInput();
+}
+
+bool input_is_ime_enabled()
+{
+	return SDL_IsTextInputActive();
+}
+
+bool input_has_ime_keyboard_support()
+{
+	return SDL_HasScreenKeyboardSupport();
+}
+
+bool input_is_ime_keyboard_shown(app_t* app)
+{
+	return SDL_IsScreenKeyboardShown(app->window);
+}
+
+void input_set_ime_rect(int x, int y, int w, int h)
+{
+	SDL_Rect r = { x, y, w, h };
+	SDL_SetTextInputRect(&r);
+}
+
+bool input_get_ime_composition(app_t* app, ime_composition_t* composition)
+{
+	composition->composition = app->ime_composition.data();
+	composition->cursor = app->ime_composition_cursor;
+	composition->selection_len = app->ime_composition_selection_len;
+	return app->ime_composition.count() ? true : false;
+}
 
 void pump_input_msgs(app_t* app)
 {

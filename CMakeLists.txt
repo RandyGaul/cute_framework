@@ -7,6 +7,9 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
 	return()
 endif()
 
+# Must have at least C++11
+set(CMAKE_CXX_STANDARD 11)
+
 # Platform detection.
 if(WIN32)
 	set(WINDOWS TRUE)
@@ -17,7 +20,7 @@ elseif(UNIX AND NOT APPLE)
 		message(FATAL_ERROR, "No supported platform detected.")
 	endif()
 elseif(APPLE)
-	if(CMAKE_SYSTEM_NAME MATCHES ".*MacOS.*")
+	if(CMAKE_SYSTEM_NAME MATCHES ".*MacOS.*" OR CMAKE_SYSTEM_NAME MATCHES ".*Darwin.*")
 		set(MACOSX TRUE)
 	else()
 		message(FATAL_ERROR, "No supported platform detected.")
