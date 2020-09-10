@@ -49,7 +49,7 @@ struct image_indexed_t
 // PNG loading.
 
 extern CUTE_API error_t CUTE_CALL image_load_png(const char* path, image_t* img, void* user_allocator_context = NULL);
-extern CUTE_API error_t CUTE_CALL image_load_png_mem(const void* data, int size, image_t* img);
+extern CUTE_API error_t CUTE_CALL image_load_png_mem(const void* data, int size, image_t* img, void* user_allocator_context = NULL);
 extern CUTE_API error_t CUTE_CALL image_load_png_wh(const void* data, int size, int* w, int* h);
 extern CUTE_API void CUTE_CALL image_free(image_t* img);
 

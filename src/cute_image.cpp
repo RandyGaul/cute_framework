@@ -41,10 +41,11 @@ error_t image_load_png(const char* path, image_t* img, void* user_allocator_cont
 	size_t sz;
 	error_t err = file_system_read_entire_file_to_memory(path, &data, &sz, user_allocator_context);
 	if (err.is_error()) return err;
-	return image_load_png_mem(data, (int)sz, img);
+	return image_load_png_mem(data, (int)sz, img, user_allocator_context);
 }
 
-error_t image_load_png_mem(const void* data, int size, image_t* img)
+// TODO - Use `user_allocator_context`.
+error_t image_load_png_mem(const void* data, int size, image_t* img, void* user_allocator_context)
 {
 	cp_image_t cp_img = cp_load_png_mem(data, size);
 	if (!cp_img.pix) return error_failure(cp_error_reason);

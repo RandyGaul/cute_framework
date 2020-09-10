@@ -76,7 +76,7 @@ struct batch_t;
  */
 typedef void (get_pixels_fn)(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata);
 
-extern CUTE_API batch_t* CUTE_CALL batch_make(app_t* app, get_pixels_fn* get_pixels, void* get_pixels_udata);
+extern CUTE_API batch_t* CUTE_CALL batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem_ctx = NULL);
 extern CUTE_API void CUTE_CALL batch_destroy(batch_t* b);
 
 /**

@@ -27,6 +27,18 @@
 namespace cute
 {
 
+union pixel_t
+{
+	struct
+	{
+		uint8_t r;
+		uint8_t g;
+		uint8_t b;
+		uint8_t a;
+	} colors;
+	uint32_t val;
+};
+
 struct color_t
 {
 	float r;
@@ -51,6 +63,21 @@ inline color_t operator+(color_t a, color_t b) { return make_color(a.r + b.r, a.
 inline color_t operator-(color_t a, color_t b) { return make_color(a.r - b.r, a.g - b.g, a.b - b.b, a.a - b.a); }
 
 inline color_t lerp(color_t a, color_t b, float s) { return a + (b - a) * s; }
+
+inline pixel_t to_pixel(color_t c)
+{
+	pixel_t p;
+	p.colors.r = (int)((uint8_t)(c.r * 255.0f));
+	p.colors.g = (int)((uint8_t)(c.g * 255.0f));
+	p.colors.b = (int)((uint8_t)(c.b * 255.0f));
+	p.colors.a = (int)((uint8_t)(c.a * 255.0f));
+	return p;
+}
+
+inline color_t to_color(pixel_t p)
+{
+	return make_color((int)p.val);
+}
 
 }
 

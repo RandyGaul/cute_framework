@@ -27,25 +27,8 @@
 #include <cute_dictionary.h>
 #include <cute_batch.h>
 
-#include <cute/cute_aseprite.h>
-#include <mattiasgustavsson/strpool.h>
-
 namespace cute
 {
-
-struct sprite_t;
-struct aseprite_cache_t;
-
-extern CUTE_API aseprite_cache_t* CUTE_CALL aseprite_cache_make(app_t* app);
-extern CUTE_API void CUTE_CALL aseprite_cache_destroy(aseprite_cache_t* cache);
-
-extern CUTE_API error_t CUTE_CALL aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite);
-extern CUTE_API void CUTE_CALL aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path);
-
-extern CUTE_API batch_t* CUTE_CALL aseprite_cache_get_batch_ptr(aseprite_cache_t* cache);
-extern CUTE_API strpool_t* CUTE_CALL aseprite_cache_get_strpool_ptr(aseprite_cache_t* cache);
-
-//--------------------------------------------------------------------------------------------------
 
 struct frame_t
 {
@@ -62,7 +45,7 @@ enum play_direction_t
 
 struct animation_t
 {
-	const char* name;
+	const char* name = NULL;
 	play_direction_t play_direction = PLAY_DIRECTION_FORWARDS;
 	array<frame_t> frames;
 };
@@ -87,7 +70,7 @@ struct sprite_t
 	CUTE_INLINE float animation_delay();
 	CUTE_INLINE bool will_finish(float dt);
 
-	const char* name;
+	const char* name = NULL;
 	int w = 0;
 	int h = 0;
 	v2 scale = v2(1, 1);

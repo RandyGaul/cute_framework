@@ -124,7 +124,8 @@ set(CUTE_SRCS
 	src/cute_font.cpp
 	src/cute_camera.cpp
 	src/cute_gfx.cpp
-	src/cute_sprite.cpp
+	src/cute_aseprite_cache.cpp
+	src/cute_png_cache.cpp
 
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
@@ -188,6 +189,8 @@ set(CUTE_HDRS
 	src/cute_gfx.h
 	src/cute_rnd.h
 	src/cute_sprite.h
+	src/cute_aseprite_cache.h
+	src/cute_png_cache.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
@@ -269,6 +272,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_lru_cache.h
 		test/test_array.h
 		test/test_aseprite.h
+		test/test_png_cache.h
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})

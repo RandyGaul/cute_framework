@@ -486,6 +486,17 @@ void pump_input_msgs(app_t* app)
 		case SDL_TEXTINPUT:
 		{
 			input_text_add_utf8(app, event.text.text);
+			app->ime_composition.clear();
+			app->ime_composition_cursor = 0;
+			app->ime_composition_selection_len = 0;
+		}	break;
+
+		case SDL_TEXTEDITING:
+		{
+			const char* text = event.edit.text;
+			while (*text) app->ime_composition.add(*text++);
+			app->ime_composition_cursor = event.edit.start;
+			app->ime_composition_selection_len = event.edit.length;
 		}	break;
 
 		case SDL_MOUSEMOTION:

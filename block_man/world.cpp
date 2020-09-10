@@ -227,7 +227,8 @@ void init_world()
 	ImGui::SetCurrentContext(app_init_imgui(app));
 
 	cache = aseprite_cache_make(app);
-	batch = aseprite_cache_get_batch_ptr(cache);
+	batch = batch_make(aseprite_cache_get_pixels_fn(cache), cache);
+	batch_set_mvp(batch, matrix_ortho_2d(320, 240, 0, 0));
 
 	ecs_registration(app);
 	ice_block_system_init();

@@ -25,6 +25,7 @@
 #include <cute_app.h>
 #include <cute_alloc.h>
 #include <cute_array.h>
+#include <cute_aseprite_cache.h>
 #include <cute_audio.h>
 #include <cute_base64.h>
 #include <cute_camera.h>
@@ -47,6 +48,7 @@
 #include <cute_math.h>
 #include <cute_memory_pool.h>
 #include <cute_net.h>
+#include <cute_png_cache.h>
 #include <cute_server.h>
 #include <cute_sprite.h>
 #include <cute_string.h>

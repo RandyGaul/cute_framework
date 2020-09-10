@@ -25,23 +25,12 @@
 #include <cute_defines.h>
 #include <cute_error.h>
 #include <cute_app.h>
+#include <cute_color.h>
 
 #include <sokol/sokol_gfx.h>
 
 namespace cute
 {
-
-union pixel_t
-{
-	struct
-	{
-		uint8_t r;
-		uint8_t g;
-		uint8_t b;
-		uint8_t a;
-	} colors;
-	uint32_t val;
-};
 
 using texture_t = uint64_t;
 

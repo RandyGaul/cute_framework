@@ -59,7 +59,6 @@ struct quad_vertex_t
 struct batch_t
 {
 	::spritebatch_t sb;
-	app_t* app;
 
 	array<quad_vertex_t> verts;
 	triple_buffer_t sprite_buffer;
@@ -470,20 +469,15 @@ static void s_sync_pip(batch_t* b)
 	}
 }
 
-batch_t* batch_make(app_t* app, get_pixels_fn* get_pixels, void* get_pixels_udata)
+batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem_ctx)
 {
 	batch_t* b = CUTE_NEW(batch_t, app->mem_ctx);
 	if (!b) return NULL;
 
-	int w = 0, h = 0;
-	app_offscreen_size(app, &w, &h);
-	matrix_t mvp = matrix_ortho_2d((float)w, (float)h, 0, 0);
-	b->mvp = mvp;
-
-	b->app = app;
+	b->mvp = matrix_identity();
 	b->get_pixels = get_pixels;
 	b->get_pixels_udata = get_pixels_udata;
-	b->mem_ctx = app->mem_ctx;
+	b->mem_ctx = mem_ctx;
 
 	batch_set_depth_stencil_defaults(b);
 	batch_set_blend_defaults(b);

@@ -51,6 +51,7 @@
 #include <test_lru_cache.h>
 #include <test_array.h>
 #include <test_aseprite.h>
+#include <test_png_cache.h>
 
 int main(int argc, const char** argv)
 {
@@ -143,6 +144,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_lru_cache),
 		CUTE_TEST_CASE_ENTRY(test_array_list_init),
 		CUTE_TEST_CASE_ENTRY(test_aseprite_make_destroy),
+		CUTE_TEST_CASE_ENTRY(test_png_cache),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;
