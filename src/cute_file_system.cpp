@@ -211,14 +211,14 @@ error_t file_system_file_exists(const char* virtual_path)
 	}
 }
 
-uint64_t file_system_read(file_t* file, void* buffer, uint64_t bytes)
+size_t file_system_read(file_t* file, void* buffer, size_t bytes)
 {
-	return PHYSFS_readBytes((PHYSFS_file*)file, buffer, bytes);
+	return (size_t)PHYSFS_readBytes((PHYSFS_file*)file, buffer, (PHYSFS_uint64)bytes);
 }
 
-uint64_t file_system_write(file_t* file, const void* buffer, uint64_t bytes)
+size_t file_system_write(file_t* file, const void* buffer, size_t bytes)
 {
-	return PHYSFS_writeBytes((PHYSFS_file*)file, buffer, bytes);
+	return (size_t)PHYSFS_writeBytes((PHYSFS_file*)file, buffer, (PHYSFS_uint64)bytes);
 }
 
 error_t file_system_eof(file_t* file)
@@ -230,23 +230,23 @@ error_t file_system_eof(file_t* file)
 	}
 }
 
-uint64_t file_system_tell(file_t* file)
+size_t file_system_tell(file_t* file)
 {
-	return PHYSFS_tell((PHYSFS_file*)file);
+	return (size_t)PHYSFS_tell((PHYSFS_file*)file);
 }
 
-error_t file_system_seek(file_t* file, uint64_t position)
+error_t file_system_seek(file_t* file, size_t position)
 {
-	if (!PHYSFS_seek((PHYSFS_file*)file, position)) {
+	if (!PHYSFS_seek((PHYSFS_file*)file, (PHYSFS_uint64)position)) {
 		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	} else {
 		return error_success();
 	}
 }
 
-uint64_t file_system_size(file_t* file)
+size_t file_system_size(file_t* file)
 {
-	return PHYSFS_fileLength((PHYSFS_file*)file);
+	return (size_t)PHYSFS_fileLength((PHYSFS_file*)file);
 }
 
 error_t file_system_flush(file_t* file)
@@ -258,15 +258,15 @@ error_t file_system_flush(file_t* file)
 	}
 }
 
-error_t file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, uint64_t* size, void* user_allocator_context)
+error_t file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size, void* user_allocator_context)
 {
 	CUTE_ASSERT(data_ptr);
 	file_t* file = file_system_open_file_for_read(virtual_path);
 	void* data = NULL;
 	if (!file) return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
-	uint64_t sz = file_system_size(file);
+	size_t sz = file_system_size(file);
 	data = CUTE_ALLOC(sz, user_allocator_context);
-	uint64_t sz_read = file_system_read(file, data, sz);
+	size_t sz_read = file_system_read(file, data, sz);
 	*data_ptr = data;
 	if (size) *size = sz_read;
 	CUTE_ASSERT(sz == sz_read);
@@ -274,11 +274,11 @@ error_t file_system_read_entire_file_to_memory(const char* virtual_path, void** 
 	return error_success();
 }
 
-error_t file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, uint64_t size)
+error_t file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size)
 {
 	file_t* file = file_system_open_file_for_read(virtual_path);
 	if (!file) return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
-	uint64_t sz = file_system_write(file, data, size);
+	uint64_t sz = file_system_write(file, data, (PHYSFS_uint64)size);
 	if (sz != size) {
 		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	}
