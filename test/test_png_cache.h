@@ -52,6 +52,8 @@ int test_png_cache()
 
 	png_cache_destroy(cache);
 
+	file_system_destroy();
+
 	return 0;
 }
 

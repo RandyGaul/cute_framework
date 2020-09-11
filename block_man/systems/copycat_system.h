@@ -19,32 +19,17 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <systems/animator_system.h>
-#include <components/transform.h>
-#include <components/animator.h>
+#ifndef COPYCAT_SYSTEM_H
+#define COPYCAT_SYSTEM_H
 
-void animator_transform_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, int entity_count)
-{
-	for (int i = 0; i < entity_count; ++i) {
-		Transform* transform = transforms + i;
-		Animator* animator = animators + i;
+#include <cute.h>
+using namespace cute;
 
-		transform->local.p += animator->sprite.local_offset;
-	}
-}
+struct Transform;
+struct Animator;
+struct BoardPiece;
+struct CopyCat;
 
-void animator_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, int entity_count)
-{
-	for (int i = 0; i < entity_count; ++i) {
-		Transform* transform = transforms + i;
-		Animator* animator = animators + i;
+void copycat_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, CopyCat* copycats, int entity_count);
 
-		animator->update(dt);
-		animator->draw(batch, transform->get());
-	}
-}
-
-void animator_system_post_update(app_t* app, float dt, void* udata)
-{
-	batch_flush(batch);
-}
+#endif // COPYCAT_SYSTEM_H

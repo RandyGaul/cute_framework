@@ -86,7 +86,9 @@ void png_cache_destroy(png_cache_t* cache)
 	}
 
 	strpool_term(cache->strpool);
+	void* mem_ctx = cache->mem_ctx;
 	cache->~png_cache_t();
+	CUTE_FREE(cache, mem_ctx);
 }
 
 error_t png_cache_load(png_cache_t* cache, const char* png_path, png_t* png)

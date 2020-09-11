@@ -29,6 +29,7 @@
 #include <systems/reflection_system.h>
 #include <systems/transform_system.h>
 #include <systems/shadow_system.h>
+#include <systems/copycat_system.h>
 
 #include <components/animator.h>
 #include <components/board_piece.h>
@@ -37,6 +38,7 @@
 #include <components/reflection.h>
 #include <components/transform.h>
 #include <components/shadow.h>
+#include <components/copycat.h>
 
 World world_instance;
 World* world = &world_instance;
@@ -80,6 +82,16 @@ const char* schema_player = CUTE_STRINGIZE(
 	Shadow = { small = "true" },
 );
 
+const char* schema_copycat = CUTE_STRINGIZE(
+	entity_type = "CopyCat",
+	Transform = { },
+	Animator = { name = "data/copycat.aseprite", },
+	Reflection = { },
+	BoardPiece = { },
+	CopyCat = { },
+	Shadow = { },
+);
+
 #define REGISTER_COMPONENT(name) \
 	app_register_component_type(app, { \
 		CUTE_STRINGIZE(name), \
@@ -97,6 +109,7 @@ void ecs_registration(app_t* app)
 	REGISTER_COMPONENT(Reflection);
 	REGISTER_COMPONENT(Transform);
 	REGISTER_COMPONENT(Shadow);
+	REGISTER_COMPONENT(CopyCat);
 
 	// Order of entity registration matters if using `inherits_from`.
 	// Any time `inherits_from` is used, that type must have been already registered.
@@ -104,6 +117,7 @@ void ecs_registration(app_t* app)
 	app_register_entity_type(app, schema_box);
 	app_register_entity_type(app, schema_ladder);
 	app_register_entity_type(app, schema_player);
+	app_register_entity_type(app, schema_copycat);
 
 	/*
 	   Order of system registration is the order updates are called.
@@ -169,6 +183,18 @@ void ecs_registration(app_t* app)
 			"Animator",
 			"BoardPiece",
 			"IceBlock",
+	};
+	app_register_system(app, s);
+
+	s.udata = NULL;
+	s.pre_update_fn = NULL;
+	s.update_fn = (void*)copycat_system_update;
+	s.post_update_fn = NULL;
+	s.component_types = {
+			"Transform",
+			"Animator",
+			"BoardPiece",
+			"CopyCat",
 	};
 	app_register_system(app, s);
 
@@ -305,6 +331,17 @@ array<array<string_t>> background_maps = {
 array<array<string_t>> levels = {
 	{
 		"01111110",
+		"10000001",
+		"10000001",
+		"10000001",
+		"10000001",
+		"10000001",
+		"10000001",
+		"10000001",
+		"01111110",
+	},
+	{
+		"01111110",
 		"1p0x0001",
 		"01101110",
 		"01101110",
@@ -407,9 +444,19 @@ int sort_bits(v2 p)
 	return world->board.w * y + x;
 }
 
+int sort_bits(int x, int y)
+{
+	return world->board.w * y + x;
+}
+
 bool in_grid(int x, int y, int w, int h)
 {
 	return x >= 0 && y >= 0 && x < w && y < h;
+}
+
+bool in_board(int x, int y)
+{
+	return in_grid(x, y, world->board.w, world->board.h);
 }
 
 void init_bg_bricks(int seed)
@@ -491,6 +538,7 @@ void load_level()
 			case 'x': err = app_make_entity(app, "IceBlock", &e); break;
 			case 'p': err = app_make_entity(app, "Player", &e); break;
 			case 'e': err = app_make_entity(app, "Ladder", &e); break;
+			case 'c': err = app_make_entity(app, "CopyCat", &e); break;
 			}
 			CUTE_ASSERT(!err.is_error());
 			BoardSpace space;

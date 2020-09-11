@@ -56,6 +56,7 @@ struct sprite_t
 {
 	CUTE_INLINE void update(float dt);
 	CUTE_INLINE void play(const char* animation);
+	CUTE_INLINE bool is_playing(const char* animation);
 	CUTE_INLINE void reset();
 	CUTE_INLINE void draw(batch_t* batch, transform_t transform);
 	CUTE_INLINE batch_quad_t quad(transform_t transform);
@@ -118,6 +119,11 @@ void sprite_t::play(const char* animation)
 		CUTE_ASSERT(false);
 	}
 	reset();
+}
+
+bool sprite_t::is_playing(const char* animation)
+{
+	return !CUTE_STRCMP(animation, this->animation->name);
 }
 
 void sprite_t::reset()

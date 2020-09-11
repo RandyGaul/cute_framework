@@ -59,6 +59,14 @@ void ice_block_system_pre_update(app_t* app, float dt, void* udata)
 	ice_block_idle.update(dt);
 }
 
+static BoardPiece* s_get_piece(int x, int y, int xdir, int ydir)
+{
+	if (!in_board(x + xdir, y - ydir)) return NULL;
+	BoardSpace space = world->board.data[y - ydir][x + xdir];
+	if (space.is_empty || space.is_ladder) return NULL;
+	return (BoardPiece*)app_get_component(app, space.entity, "BoardPiece");
+}
+
 void ice_block_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, IceBlock* ice_blocks, int entity_count)
 {
 	for (int i = 0; i < entity_count; ++i) {
@@ -75,6 +83,15 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 		{
 			animator->sprite.play("idle");
 
+			if (ice_block->was_thrown) {
+				ice_block->was_thrown = false;
+				CUTE_ASSERT(ice_block->xdir || ice_block->ydir);
+				BoardPiece* other = s_get_piece(board_piece->x, board_piece->y, ice_block->xdir, ice_block->ydir);
+				if (other) {
+					other->was_bonked = true;
+				}
+			}
+
 			COROUTINE_CASE(co, IDLE_INNER);
 			if (ice_block->is_held) {
 				if (!board_piece->is_moving) {
@@ -87,7 +104,9 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 			// Overwrite the Animator's sprite with this static one to keep all of them in-sync
 			// together no matter what. If different ice block idle animations start playing out
 			// of sync it looks visiually jarring.
+			int sort_bits = animator->sprite.sort_bits;
 			animator->sprite = ice_block_idle;
+			animator->sprite.sort_bits = sort_bits;
 			goto IDLE_INNER;
 		}
 
@@ -133,7 +152,7 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 
 		// Push masks onto the reflection system.
 		transform_t tx = transform->get();
-		ice_block_mask.sort_bits = sort_bits(tx.p);
+		ice_block_mask.sort_bits = sort_bits(board_piece->x, board_piece->y);
 		reflection_system->masks.add(ice_block_mask.quad(tx));
 	}
 }

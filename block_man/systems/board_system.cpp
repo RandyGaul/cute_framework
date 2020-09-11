@@ -59,5 +59,6 @@ void board_system_update(app_t* app, float dt, void* udata, Transform* transform
 		}
 
 		transform->world.p += p;
+		animator->sprite.sort_bits = sort_bits(board_piece->x, board_piece->y);
 	}
 }

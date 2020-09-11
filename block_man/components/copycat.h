@@ -19,32 +19,34 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <systems/animator_system.h>
-#include <components/transform.h>
+#ifndef COPYCAT_H
+#define COPYCAT_H
+
+#include <cute.h>
+using namespace cute;
+
 #include <components/animator.h>
 
-void animator_transform_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, int entity_count)
-{
-	for (int i = 0; i < entity_count; ++i) {
-		Transform* transform = transforms + i;
-		Animator* animator = animators + i;
+#include <cute/cute_coroutine.h>
 
-		transform->local.p += animator->sprite.local_offset;
+struct CopyCat
+{
+	bool busy = false;
+	bool awake = false;
+	float t = 0;
+	static constexpr float awake_delay = 5.0f;
+	static constexpr float hop_delay = 0.35f;
+};
+
+CUTE_INLINE cute::error_t CopyCat_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+{
+	CopyCat* copycat = (CopyCat*)component;
+	if (kv_get_state(kv) == KV_STATE_READ) {
+		CUTE_PLACEMENT_NEW(copycat) CopyCat;
+		Animator* animator = (Animator*)app_get_component(app, entity, "Animator");
+		animator->sprite.play("sleeping");
 	}
+	return kv_error_state(kv);
 }
 
-void animator_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, int entity_count)
-{
-	for (int i = 0; i < entity_count; ++i) {
-		Transform* transform = transforms + i;
-		Animator* animator = animators + i;
-
-		animator->update(dt);
-		animator->draw(batch, transform->get());
-	}
-}
-
-void animator_system_post_update(app_t* app, float dt, void* udata)
-{
-	batch_flush(batch);
-}
+#endif // COPYCAT_H

@@ -33,9 +33,56 @@ struct Animator
 	bool visible = true;
 	sprite_t sprite = sprite_t();
 
+	CUTE_INLINE void update(float dt)
+	{
+		if (is_squeezing) {
+			squeeze_t += dt;
+			if (squeeze_t >= squeeze_delay) {
+				squeeze_t = 0;
+				is_squeezing = false;
+				sprite.scale = scale;
+			}
+		}
+		sprite.update(dt);
+	}
+
+	CUTE_INLINE void draw(batch_t* batch, transform_t tx)
+	{
+		if (is_squeezing) {
+			float t = smoothstep(squeeze_t / squeeze_delay);
+			if (t < 0.5f) {
+				scale_interpolated = lerp(scale, scale_to, t);
+			} else {
+				scale_interpolated = lerp(scale_to, scale, t);
+			}
+
+			sprite.scale = scale_interpolated;
+		}
+		
+		if (visible) {
+			sprite.draw(batch, tx);
+		}
+	}
+
 	bool flipped_x = false;
 	CUTE_INLINE void flip_x() { if (!flipped_x) { flipped_x = true; sprite.flip_x(); } }
 	CUTE_INLINE void unflip_x() { if (flipped_x) { flipped_x = false; sprite.flip_x(); } }
+
+	v2 scale = v2(1, 1);
+	v2 scale_interpolated = v2(1, 1);
+	v2 scale_to = v2(1, 1);
+	float squeeze_t = 0;
+	float squeeze_delay = 0.125f;
+	bool is_squeezing = false;
+	CUTE_INLINE void squeeze(v2 scale_to, float delay)
+	{
+		scale = sprite.scale;
+		this->scale_to = scale_to;
+		if (flipped_x) this->scale_to.x *= -1;
+		squeeze_t = 0;
+		squeeze_delay = delay;
+		is_squeezing = true;
+	}
 };
 
 CUTE_INLINE cute::error_t Animator_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)

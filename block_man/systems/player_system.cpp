@@ -129,6 +129,9 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			update_hero_animation = true;
 			IceBlock* ice_block = (IceBlock*)app_get_component(app, block, "IceBlock");
 			ice_block->is_held = false;
+			ice_block->xdir = player->xdir;
+			ice_block->ydir = player->ydir;
+			ice_block->was_thrown = true;
 		}
 	}
 
@@ -165,6 +168,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 						entity_t block = world->board.data[y - player->ydir * 2][x + player->xdir * 2].entity;
 						BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
 						block_board_piece->linear(x + player->xdir, y - player->ydir, Player::move_delay);
+						break;
 					}
 				}
 				// if moving forwards
@@ -188,6 +192,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 						// update hero position
 						board_piece->hop(x, y, Player::move_delay);
 						player->busy = true;
+						break;
 					}
 				}
 				else // if turning 90 degrees
@@ -218,6 +223,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 					}
 
 					update_hero_animation = true;
+					break;
 				}
 			}
 			else // not holding a block
@@ -244,6 +250,8 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 							player->won = true;
 							player->ladder = world->board.data[y][x].entity;
 						}
+
+						break;
 					}
 				}
 				else
@@ -253,6 +261,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 					player->xdir = xdirs[i];
 					player->ydir = ydirs[i];
 					update_hero_animation = true;
+					break;
 				}
 			}
 		}

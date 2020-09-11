@@ -29,6 +29,7 @@ using namespace cute;
 
 struct BoardPiece
 {
+	bool was_bonked = false;
 	bool is_moving = false;
 	entity_t notify_player_when_done = INVALID_ENTITY;
 
@@ -51,13 +52,13 @@ struct BoardPiece
 		this->delay = delay;
 	}
 
-	CUTE_INLINE void hop(int to_x, int to_y, float delay)
+	CUTE_INLINE void hop(int to_x, int to_y, float delay, float h = 5.0f)
 	{
 		is_moving = true;
 		x0 = x, y0 = y, x = to_x, y = to_y;
 		a = tile2world(x0, y0);
 		b = tile2world(x, y);
-		c0 = (a + b) * 0.5f + v2(0, 5);
+		c0 = (a + b) * 0.5f + v2(0, h);
 		this->delay = delay;
 	}
 
