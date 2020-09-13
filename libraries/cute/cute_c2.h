@@ -701,6 +701,9 @@ static C2_INLINE void c2MakeProxy(const void* shape, C2_TYPE type, c2Proxy* p)
 		p->count = poly->count;
 		for (int i = 0; i < p->count; ++i) p->verts[i] = poly->verts[i];
 	}	break;
+
+	case C2_TYPE_NONE:
+		break;
 	}
 }
 
@@ -1281,6 +1284,9 @@ void c2Inflate(void* shape, C2_TYPE type, float skin_factor)
 		c2Poly* poly = (c2Poly*)shape;
 		*poly = c2InflatePoly(*poly, skin_factor);
 	}	break;
+
+	case C2_TYPE_NONE:
+		break;
 	}
 }
 
