@@ -620,7 +620,7 @@ void c2Collide(const void* A, const c2x* ax, C2_TYPE typeA, const void* B, const
 		}
 		break;
 
-	case C2_NONE:
+	case C2_TYPE_NONE:
 		break;
 	}
 }
@@ -633,7 +633,7 @@ int c2CastRay(c2Ray A, const void* B, const c2x* bx, C2_TYPE typeB, c2Raycast* o
 	case C2_TYPE_AABB:    return c2RaytoAABB(A, *(c2AABB*)B, out);
 	case C2_TYPE_CAPSULE: return c2RaytoCapsule(A, *(c2Capsule*)B, out);
 	case C2_TYPE_POLY:    return c2RaytoPoly(A, (const c2Poly*)B, bx, out);
-	case C2_NONE:         break;
+	case C2_TYPE_NONE:         break;
 	}
 
 	return 0;
