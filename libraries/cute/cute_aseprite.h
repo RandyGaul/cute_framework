@@ -43,7 +43,7 @@
 	Revision history:
 		1.00 (08/25/2020) initial release
 		1.01 (08/31/2020) fixed memleaks, tag parsing bug (crash), blend bugs
-/*
+*/
 
 /*
 	DOCUMENTATION
@@ -1073,7 +1073,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 					last_udata->text = s_read_string(s);
 				}
 				if (flags & 2) {
-					last_udata->has_color;
+					last_udata->has_color = 1;
 					last_udata->color.r = s_read_uint8(s);
 					last_udata->color.g = s_read_uint8(s);
 					last_udata->color.b = s_read_uint8(s);

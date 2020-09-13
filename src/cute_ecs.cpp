@@ -167,7 +167,7 @@ bool app_is_entity_valid(app_t* app, entity_t entity)
 {
 	entity_collection_t* collection = s_collection(app, entity);
 	if (collection) return collection->entity_handle_table.is_valid(entity.handle);
-	else return NULL;
+	else return false;
 }
 
 void* app_get_component(app_t* app, entity_t entity, const char* component_type)
