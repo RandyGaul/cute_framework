@@ -290,6 +290,7 @@ CUTE_MATH2D_INLINE int ray_to_halfpsace(ray_t A, halfspace_t B, raycast_t* out)
 	if (da * db > 0) return 0;
 	out->n = B.n * sign(da);
 	out->t = intersect(da, db);
+	return 1;
 }
 
 // These are implemented by cute_c2.h

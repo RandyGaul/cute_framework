@@ -1185,6 +1185,9 @@ static void s_receive_packets(client_t* client)
 				should_break = 1;
 			}
 			break;
+
+		default:
+			break;
 		}
 
 		if (free_packet) {
@@ -1223,6 +1226,9 @@ static void s_send_packets(client_t* client)
 			packet.packet_type = PACKET_TYPE_KEEPALIVE;
 			s_send(client, &packet);
 		}
+		break;
+
+	default:
 		break;
 	}
 }

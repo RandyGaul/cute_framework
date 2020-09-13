@@ -806,6 +806,9 @@ void audio_system_update(audio_system_t* as, float dt)
 			cs_set_volume(&as->music_next->sound, v1, v1);
 		}
 	}	break;
+
+	default:
+		break;
 	}
 }
 
