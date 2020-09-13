@@ -670,7 +670,7 @@ static error_t s_write_key(kv_t* kv, const char* key, kv_type_t* type)
 
 error_t kv_key(kv_t* kv, const char* key, kv_type_t* type)
 {
-	if (kv->mode == -1) return error_failure("Read or write mode have not been set.");
+	if (kv->mode == KV_STATE_UNITIALIZED) return error_failure("Read or write mode have not been set.");
 	if (kv->err.is_error()) return kv->err;
 	s_match_key(kv, key);
 	if (kv->mode == KV_STATE_WRITE) {
