@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.8.4)
+cmake_minimum_required(VERSION 3.0)
 project(cute_framework)
 
 # Force 64bit builds.
@@ -237,7 +237,23 @@ set(CUTE_HDRS
 #endif()
 
 add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS})
-target_link_libraries(cute PRIVATE SDL2 physfs sodium)
+
+if(MACOSX)
+	find_package(SDL2 REQUIRED)
+
+	# This adds the current directory to the cmake path, so it can
+	# use Findsodium.cmake script to locate the sodium folders.
+	list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/.")
+	find_package(Sodium REQUIRED)
+
+	find_library(IOKIT IOKit)
+	find_library(FOUNDATION Foundation)
+
+	target_link_libraries(cute PRIVATE ${SDL2_LIBRARIES} sodium physfs ${IOKIT} ${FOUNDATION})
+else()
+	target_link_libraries(cute PRIVATE SDL2 sodium physfs)
+endif()
+
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)
 
 # Handle DirectX 9 include directories.
