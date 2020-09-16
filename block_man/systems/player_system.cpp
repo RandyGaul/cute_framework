@@ -144,7 +144,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 
 	for (int i = 0; i < 4; ++i)
 	{
-		if (key_was_pressed(app, keycodes[i]) || key_was_pressed(app, keycodes_arrows[i]))
+		if (!key_mod_bit_flags(app) && key_was_pressed(app, keycodes[i]) || key_was_pressed(app, keycodes_arrows[i]))
 		{
 			if (player->holding)
 			{

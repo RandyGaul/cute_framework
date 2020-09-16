@@ -92,32 +92,125 @@ const char* schema_copycat = CUTE_STRINGIZE(
 	Shadow = { },
 );
 
-#define REGISTER_COMPONENT(name) \
+const char* schema_zzz = CUTE_STRINGIZE(
+	entity_type = "zzz",
+	Transform = { },
+	Animator = { name = "data/z.aseprite", },
+);
+
+array<const char*> schemas = {
+	schema_ice_block,
+	schema_box,
+	schema_ladder,
+	schema_player,
+	schema_copycat,
+	schema_zzz,
+};
+
+array<schema_preview_t> schema_previews;
+
+#define REGISTER_COMPONENT(name, cleanup_fn) \
 	app_register_component_type(app, { \
 		CUTE_STRINGIZE(name), \
 		sizeof(name), \
-		NULL, name##_serialize, \
+		NULL, name##_serialize, cleanup_fn \
 	})
+
+// Previews are shown in the level editor in place of an actual entity.
+void add_schema_preview(const char* schema)
+{
+	// Lookup the "name" key of the Animator component. Use it as the preview image.
+	kv_t* kv = kv_make();
+	error_t err = kv_parse(kv, schema, CUTE_STRLEN(schema));
+	CUTE_ASSERT(!err.is_error());
+	kv_object_begin(kv, "Animator");
+	kv_key(kv, "name");
+
+	const char* string_raw;
+	size_t string_sz;
+	err = kv_val_string(kv, &string_raw, &string_sz);
+	CUTE_ASSERT(!err.is_error());
+	STRPOOL_U64 id = strpool_inject(app_get_strpool(app), string_raw, (int)string_sz);
+	const char* ase_path = strpool_cstr(app_get_strpool(app), id);
+
+	kv_object_end(kv);
+
+	// Lookup the entity type string.
+	kv_key(kv, "entity_type");
+	err = kv_val_string(kv, &string_raw, &string_sz);
+	CUTE_ASSERT(!err.is_error());
+	id = strpool_inject(app_get_strpool(app), string_raw, (int)string_sz);
+	const char* entity_type = strpool_cstr(app_get_strpool(app), id);
+
+	kv_destroy(kv);
+
+	ase_t* ase;
+	aseprite_cache_load_ase(cache, ase_path, &ase);
+
+	pixel_t* pixels = (pixel_t*)CUTE_ALLOC(sizeof(pixel_t) * (ase->w + 2) * (ase->h + 2), NULL);
+	CUTE_MEMCPY(pixels, (pixel_t*)ase->frames[0].pixels, sizeof(pixel_t) * ase->w * ase->h);
+
+	// Expand image from top-left corner, offset by (1, 1).
+	// This expansion is so ImGui renders a "selected" border around ImGui::ImageButton.
+	int w = ase->w;
+	int h = ase->h;
+	int w0 = w;
+	int h0 = h;
+	w += 2;
+	h += 2;
+	char* buffer = (char*)pixels;
+	int dst_row_stride = w * sizeof(pixel_t);
+	int src_row_stride = w0 * sizeof(pixel_t);
+	int src_row_offset = sizeof(pixel_t);
+	for (int i = 0; i < h - 2; ++i)
+	{
+		char* src_row = buffer + (h0 - i - 1) * src_row_stride;
+		char* dst_row = buffer + (h - i - 2) * dst_row_stride + src_row_offset;
+		CUTE_MEMMOVE(dst_row, src_row, src_row_stride);
+	}
+
+	// Clear the border pixels.
+	int pixel_stride = sizeof(pixel_t);
+	CUTE_MEMSET(buffer, 0, dst_row_stride);
+	for (int i = 1; i < h - 1; ++i)
+	{
+		CUTE_MEMSET(buffer + i * dst_row_stride, 0, pixel_stride);
+		CUTE_MEMSET(buffer + i * dst_row_stride + src_row_stride + src_row_offset, 0, pixel_stride);
+	}
+	CUTE_MEMSET(buffer + (h - 1) * dst_row_stride, 0, dst_row_stride);
+
+	texture_t tex = texture_make(pixels, w, h);
+	CUTE_FREE(pixels, NULL);
+
+	// Make an actual preview entry. These are dealt with in main.cpp in the ImGui code.
+	schema_preview_t preview;
+	preview.entity_type = entity_type;
+	aseprite_cache_load(cache, ase_path, &preview.sprite);
+	preview.tex = tex;
+	preview.w = w * 2.0f;
+	preview.h = h * 2.0f;
+	schema_previews.add(preview);
+}
 
 void ecs_registration(app_t* app)
 {
 	// Order of component registration does not matter.
-	REGISTER_COMPONENT(Animator);
-	REGISTER_COMPONENT(BoardPiece);
-	REGISTER_COMPONENT(IceBlock);
-	REGISTER_COMPONENT(Player);
-	REGISTER_COMPONENT(Reflection);
-	REGISTER_COMPONENT(Transform);
-	REGISTER_COMPONENT(Shadow);
-	REGISTER_COMPONENT(CopyCat);
+	REGISTER_COMPONENT(Animator, NULL);
+	REGISTER_COMPONENT(BoardPiece, NULL);
+	REGISTER_COMPONENT(IceBlock, NULL);
+	REGISTER_COMPONENT(Player, NULL);
+	REGISTER_COMPONENT(Reflection, NULL);
+	REGISTER_COMPONENT(Transform, NULL);
+	REGISTER_COMPONENT(Shadow, NULL);
+	REGISTER_COMPONENT(CopyCat, CopyCat_cleanup);
 
 	// Order of entity registration matters if using `inherits_from`.
 	// Any time `inherits_from` is used, that type must have been already registered.
-	app_register_entity_type(app, schema_ice_block);
-	app_register_entity_type(app, schema_box);
-	app_register_entity_type(app, schema_ladder);
-	app_register_entity_type(app, schema_player);
-	app_register_entity_type(app, schema_copycat);
+	for (int i = 0; i < schemas.count(); ++i) {
+		const char* schema = schemas[i];
+		app_register_entity_type(app, schema);
+		add_schema_preview(schema);
+	}
 
 	/*
 	   Order of system registration is the order updates are called.
@@ -264,9 +357,17 @@ sprite_t load_sprite(string_t path)
 {
 	sprite_t s;
 	cute::error_t err = aseprite_cache_load(cache, path.c_str(), &s);
+	char buf[1024];
 	if (err.is_error()) {
-		char buf[1024];
 		sprintf(buf, "Unable to load sprite at path \"%s\".\n", path.c_str());
+		app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
+	}
+	if (is_odd(s.w)) {
+		sprintf(buf, "Sprite \"%s\" has an odd width of %d (should be even).\n", path.c_str(), s.w);
+		app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
+	}
+	if (is_odd(s.h)) {
+		sprintf(buf, "Sprite \"%s\" has an odd height of %d (should be even).\n", path.c_str(), s.h);
 		app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
 	}
 	return s;
@@ -274,21 +375,23 @@ sprite_t load_sprite(string_t path)
 
 v2 tile2world(int x, int y)
 {
-	float w = 16; // width of tiles in pixels
-	float h = 16;
-	float y_offset = world->board.data.count() * h;
-	return v2((float)(x-6) * w, -(float)(y+6) * h + y_offset);
+	int bw = world->board.w / 2;
+	int bh = world->board.h / 2;
+	float x_offset = World::TILE_H / 2.0f;
+	float y_offset = (float)(world->board.data.count() * World::TILE_H);
+	return v2((float)(x-bw) * World::TILE_W + x_offset, -(float)(y+bh+1) * World::TILE_H + y_offset);
 }
 
 void world2tile(v2 p, int* x_out, int* y_out)
 {
-	float w = 16; // width of tiles in pixels
-	float h = 16;
-	float y_offset = world->board.data.count() * h;
-	float x = p.x / w + 6;
-	float y = -((p.y - y_offset) / h) - 6;
+	int bw = world->board.w / 2;
+	int bh = world->board.h / 2;
+	float x_offset = World::TILE_H / 2.0f;
+	float y_offset = (float)(world->board.data.count() * World::TILE_H);
+	float x = (p.x - x_offset) / World::TILE_W + bw;
+	float y = -((p.y - y_offset) / World::TILE_H) - bh;
 	*x_out = (int)round(x);
-	*y_out = (int)round(y);
+	*y_out = (int)round(y) - 1;
 }
 
 array<array<string_t>> background_maps = {
@@ -330,110 +433,21 @@ array<array<string_t>> background_maps = {
 
 array<array<string_t>> levels = {
 	{
-		"01111110",
-		"1xxx0001",
-		"1xxx0p01",
-		"1xxx0001",
-		"1xxxxxx1",
-		"1xxx0001",
-		"1xe0xcx1",
-		"1xxx0001",
-		"01111110",
-	},
-	{
-		"01111110",
-		"1p0x0001",
-		"01101110",
-		"01101110",
-		"100x0001",
-		"1000xxx1",
-		"1000xex1",
-		"1000xxx1",
-		"01111110",
-	},
-	{
-		"00000010",
-		"000001p1",
-		"00000101",
-		"011111x1",
-		"1exxx001",
-		"1xxx0001",
-		"1xx00001",
-		"1x000001",
-		"01111110",
-	},
-	{
-		"011110",
-		"1e0x01",
-		"10x0p1",
-		"1x0001",
-		"011110",
-	},
-	{
-		"011100",
-		"1px010",
-		"1xxx01",
-		"10xe10",
-		"011100",
-	},
-	{ // 12
-		"01110",
-		"1px01",
-		"10xe1",
-		"01110",
-	},
-	{ // 13
-		"01110",
-		"1p001",
-		"1x011",
-		"1xxe1",
-		"01110",
-	},
-	{ // 26
-		"01110",
-		"1p001",
-		"1x001",
-		"1x111",
-		"1x0e1",
-		"01110",
-	},
-	{ // 28
-		"011110",
-		"1p00x1",
-		"1x00x1",
-		"1111x1",
-		"1e00x1",
-		"011110",
-	},
-	{ // 23
-		"011110",
-		"1p00x1",
-		"100xx1",
-		"10xxx1",
-		"1xxxe1",
-		"011110",
-	},
-	{ // 44
-		"01111110",
-		"1100xx11",
-		"1p001xe1",
-		"1100xx11",
-		"01111110",
-	},
-	{ // 39
-		"011110",
-		"1p0001",
-		"1xxxx1",
-		"1xx101",
-		"1000e1",
-		"011110",
-	},
-	{ // 57
-		"111111111",
-		"1p0011111",
-		"10xxxxxx1",
-		"1000111e1",
-		"111111111",
+		"x000000000000000000x",
+		"00000000000000000000",
+		"00000000000000000000",
+		"00000000000000000000",
+		"00000000000000000000",
+		"00000000000000000000",
+		"00000000111100000000",
+		"00000000100100000000",
+		"00000000100100000000",
+		"00000000111100000000",
+		"00000000000000000000",
+		"00000000000000000000",
+		"00000000000000000000",
+		"00000000000000000000",
+		"x000000000000000000x",
 	},
 };
 
@@ -493,6 +507,51 @@ void draw_background_bricks_system_pre_update(app_t* app, float dt, void* udata)
 	batch_flush(batch);
 }
 
+array<char> entity_codes = {
+	'x', // IceBlock
+	'1', // Box
+	'e', // Ladder
+	'p', // Player
+	'c', // CopyCat
+};
+
+void make_entity_at(int selection, int x, int y)
+{
+	const char* entity_type = schema_previews[selection].entity_type;
+	entity_t e = INVALID_ENTITY;
+	cute::error_t err;
+	err = app_make_entity(app, entity_type, &e);
+	CUTE_ASSERT(!err.is_error());
+	BoardSpace space;
+	space.entity = e;
+	space.code = entity_codes[selection];
+	space.is_empty = false;
+	space.is_ladder = !CUTE_STRCMP(entity_type, "ladder") ? true : false;
+	BoardPiece* board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
+	board_piece->x = board_piece->x0 = x;
+	board_piece->y = board_piece->y0 = y;
+	BoardSpace old_space = world->board.data[y][x];
+	if (!old_space.is_empty || old_space.is_ladder) {
+		app_destroy_entity(app, old_space.entity);
+	}
+	CUTE_ASSERT(!err.is_error());
+	world->board.data[y][x] = space;
+}
+
+void destroy_entity_at(int x, int y)
+{
+	BoardSpace old_space = world->board.data[y][x];
+	if (!old_space.is_empty || old_space.is_ladder) {
+		app_destroy_entity(app, old_space.entity);
+	}
+	BoardSpace space;
+	space.entity = INVALID_ENTITY;
+	space.code = '0';
+	space.is_empty = true;
+	space.is_ladder = false;
+	world->board.data[y][x] = space;
+}
+
 void load_level()
 {
 	world->load_level_dirty_flag = false;
@@ -548,8 +607,8 @@ void load_level()
 			space.is_ladder = c == 'e' ? true : false;
 			if (!space.is_empty) {
 				BoardPiece* board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
-				board_piece->x = j;
-				board_piece->y = i;
+				board_piece->x = board_piece->x0 = j;
+				board_piece->y = board_piece->y0 = i;
 			}
 			world->board.data[i].add(space);
 		}

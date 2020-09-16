@@ -30,10 +30,17 @@ using namespace cute;
 struct Transform
 {
 	entity_t entity = INVALID_ENTITY;
+	entity_t relative_to = INVALID_ENTITY;
 	transform_t world = make_transform();
 	transform_t local = make_transform();
 
-	CUTE_INLINE transform_t get() const { return mul(local, world); }
+	app_t* app = NULL;
+	CUTE_INLINE transform_t get() const
+	{
+		Transform* other = (Transform*)app_get_component(app, relative_to, "Transform");
+		transform_t relative = other ? other->get() : make_transform();
+		return mul(relative, mul(local, world));
+	}
 };
 
 CUTE_INLINE cute::error_t Transform_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
@@ -41,6 +48,7 @@ CUTE_INLINE cute::error_t Transform_serialize(app_t* app, kv_t* kv, entity_t ent
 	Transform* transform = (Transform*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
 		CUTE_PLACEMENT_NEW(transform) Transform;
+		transform->app = app;
 		transform->entity = entity;
 	}
 	return serialize_transform(kv, "world", &transform->world);

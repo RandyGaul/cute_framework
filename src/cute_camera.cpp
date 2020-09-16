@@ -65,20 +65,4 @@ aabb_t camera_get_cull_aabb(camera_t* cam)
 	return make_aabb(cam->tx.p, cam->w, cam->h);
 }
 
-v2 mouse_pos_in_world_space(app_t* app, camera_t* cam)
-{
-	float w = (float)app->w;
-	float h = (float)app->h;
-	float rw = (float)app->offscreen_w;
-	float rh = (float)app->offscreen_h;
-	float ratio_x = w / rw;
-	float ratio_y = h / rh;
-	float x = (app->mouse.x - app->w / 2.0f) / ratio_x;
-	float y = (-(app->mouse.y - app->h / 2.0f)) / ratio_y;
-	x = clamp(x, -rw, rw);
-	y = clamp(y, -rh, rh);
-	v2 p = v2(x, y) + cam->tx.p;
-	return p;
-}
-
 }

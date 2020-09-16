@@ -29,8 +29,14 @@ using namespace cute;
 
 struct BoardPiece
 {
+	int xdir = 0;
+	int ydir = 0;
 	bool was_bonked = false;
+	int bonk_xdir = 0;
+	int bonk_ydir = 0;
+
 	bool is_moving = false;
+	entity_t self = INVALID_ENTITY;
 	entity_t notify_player_when_done = INVALID_ENTITY;
 
 	int x = 0;
@@ -50,6 +56,7 @@ struct BoardPiece
 		b = tile2world(x, y);
 		c0 = (a + b) * 0.5f;
 		this->delay = delay;
+		move();
 	}
 
 	CUTE_INLINE void hop(int to_x, int to_y, float delay, float h = 5.0f)
@@ -60,6 +67,7 @@ struct BoardPiece
 		b = tile2world(x, y);
 		c0 = (a + b) * 0.5f + v2(0, h);
 		this->delay = delay;
+		move();
 	}
 
 	CUTE_INLINE void rotate(int to_x, int to_y, int about_x, int about_y, float delay)
@@ -72,11 +80,24 @@ struct BoardPiece
 		v2 mid = (a + b) * 0.5f;
 		c0 = mid + norm(mid - about) * sqrt(2.0f) * 16.0f / 2.0f;
 		this->delay = delay;
+		move();
 	}
 
 	CUTE_INLINE v2 interpolate() const
 	{
 		return bezier(a, c0, b, smoothstep(t / delay));
+	}
+
+private:
+	CUTE_INLINE void move()
+	{
+		xdir = safe_norm(x - x0);
+		ydir = safe_norm(y - y0);
+		CUTE_ASSERT(world->board.data[y0][x0].entity == self);
+		world->board.data[y0][x0].entity = INVALID_ENTITY;
+		world->board.data[y0][x0].is_empty = true;
+		world->board.data[y][x].entity = self;
+		world->board.data[y][x].is_empty = false;
 	}
 };
 
@@ -85,6 +106,7 @@ CUTE_INLINE cute::error_t BoardPiece_serialize(app_t* app, kv_t* kv, entity_t en
 	BoardPiece* board_piece = (BoardPiece*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
 		CUTE_PLACEMENT_NEW(board_piece) BoardPiece;
+		board_piece->self = entity;
 	}
 	kv_key(kv, "x"); kv_val(kv, &board_piece->x);
 	kv_key(kv, "y"); kv_val(kv, &board_piece->y);

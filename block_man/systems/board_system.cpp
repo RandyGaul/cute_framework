@@ -43,12 +43,6 @@ void board_system_update(app_t* app, float dt, void* udata, Transform* transform
 				board_piece->is_moving = false;
 				board_piece->t = 0;
 				board_piece->delay = 0;
-				if (transform->entity == world->board.data[board_piece->y0][board_piece->x0].entity) {
-					world->board.data[board_piece->y0][board_piece->x0].entity = INVALID_ENTITY;
-					world->board.data[board_piece->y0][board_piece->x0].is_empty = true;
-				}
-				world->board.data[board_piece->y][board_piece->x].entity = transform->entity;
-				world->board.data[board_piece->y][board_piece->x].is_empty = false;
 				if (app_is_entity_valid(app, board_piece->notify_player_when_done)) {
 					Player* player = (Player*)app_get_component(app, board_piece->notify_player_when_done, "Player");
 					player->busy = false;

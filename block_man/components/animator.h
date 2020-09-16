@@ -50,6 +50,7 @@ struct Animator
 	{
 		if (is_squeezing) {
 			float t = smoothstep(squeeze_t / squeeze_delay);
+			t = clamp(t, 0.0f, 1.0f);
 			if (t < 0.5f) {
 				scale_interpolated = lerp(scale, scale_to, t);
 			} else {
@@ -82,6 +83,13 @@ struct Animator
 		squeeze_t = 0;
 		squeeze_delay = delay;
 		is_squeezing = true;
+	}
+
+	CUTE_INLINE void no_squeeze()
+	{
+		squeeze_t = 0;
+		is_squeezing = false;
+		sprite.scale = scale;
 	}
 };
 

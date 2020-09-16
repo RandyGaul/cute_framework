@@ -46,8 +46,6 @@ extern CUTE_API void CUTE_CALL camera_calc_mvp(camera_t* cam);
 extern CUTE_API matrix_t* CUTE_CALL camera_get_mvp(camera_t* cam);
 extern CUTE_API aabb_t CUTE_CALL camera_get_cull_aabb(camera_t* cam);
 
-extern CUTE_API v2 CUTE_CALL mouse_pos_in_world_space(app_t* app, camera_t* cam);
-
 }
 
 #endif // CUTE_CAMERA_H

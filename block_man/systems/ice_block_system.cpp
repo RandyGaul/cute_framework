@@ -89,6 +89,8 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 				BoardPiece* other = s_get_piece(board_piece->x, board_piece->y, ice_block->xdir, ice_block->ydir);
 				if (other) {
 					other->was_bonked = true;
+					other->bonk_xdir = board_piece->xdir;
+					other->bonk_ydir = board_piece->ydir;
 				}
 			}
 

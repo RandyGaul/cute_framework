@@ -42,7 +42,15 @@ void copycat_system_update(app_t* app, float dt, void* udata, Transform* transfo
 
 		if (board_piece->was_bonked) {
 			board_piece->was_bonked = false;
-			animator->sprite.play("awakened");
+			if (animator->sprite.is_playing("sleeping")) {
+				animator->sprite.play("awakened");
+				animator->no_squeeze();
+				Animator* zzz_animator = (Animator*)app_get_component(app, copycat->zzz, "Animator");
+				zzz_animator->visible = false;
+				zzz_animator->sprite.opacity = 1.0f;
+ 				if (board_piece->bonk_xdir < 0) copycat->going_left = true;
+				else if (board_piece->bonk_xdir > 0) copycat->going_left = false;
+			}
 		}
 
 		if (animator->sprite.is_playing("awakened")) {
@@ -57,63 +65,76 @@ void copycat_system_update(app_t* app, float dt, void* udata, Transform* transfo
 			if (copycat->t >= CopyCat::awake_delay) {
 				copycat->awake = false;
 				animator->sprite.play("sleeping");
+				Animator* zzz_animator = (Animator*)app_get_component(app, copycat->zzz, "Animator");
+				zzz_animator->visible = true;
+				zzz_animator->sprite.opacity = 0;
+			}
+		}
+
+		if (animator->sprite.is_playing("sleeping")) {
+			if (animator->sprite.on_loop()) {
+				animator->squeeze(v2(1.2f, 1.0f), animator->sprite.animation_delay());
+			}
+			Animator* zzz_animator = (Animator*)app_get_component(app, copycat->zzz, "Animator");
+			float t = smoothstep(animator->sprite.animation_interpolant());
+			if (t > 0.3f && t < 0.6f) {
+				zzz_animator->sprite.opacity = remap(t, 0.3f, 0.6f);
+			} else if (t > 0.6f) {
+				zzz_animator->sprite.opacity = 1.0f - remap(t, 0.6f, 1.0f);
 			}
 		}
 
 		if (copycat->awake) {
-			bool try_move = false;
-			int x = -1, y = -1;
-			const char* next_anim = NULL;
-			bool flip = false;
-			float hop_h = 0;
-			v2 squeeze;
+			bool move = false;
+			coroutine_t* co = &copycat->pacing_co;
+			COROUTINE_START(co);
+			COROUTINE_PAUSE(co, 1.0f, dt);
+			move = true;
+			COROUTINE_END(co);
 
-			if (key_was_pressed(app, KEY_A) || key_was_pressed(app, KEY_LEFT)) {
-				x = board_piece->x - 1;
-				y = board_piece->y;
-				try_move = true;
-				next_anim = "side";
-				flip = true;
-				hop_h = 10.0f;
-				squeeze = v2(0.75f, 1.5f);
-			}
+			if (move) {
+				int x = board_piece->x, y = board_piece->y;
+				const char* next_anim = "side";
+				bool flip = false;
+				float hop_h = 15.0f;
+				v2 squeeze = v2(0.75f, 1.5f);
 
-			else if (key_was_pressed(app, KEY_D) || key_was_pressed(app, KEY_RIGHT)) {
-				x = board_piece->x + 1;
-				y = board_piece->y;
-				try_move = true;
-				next_anim = "side";
-				hop_h = 10.0f;
-				squeeze = v2(0.75f, 1.5f);
-			}
+				if (copycat->going_left) {
+					flip = true;
+					x = x - 1;
+				} else {
+					x = x + 1;
+				}
 
-			else if (key_was_pressed(app, KEY_W) || key_was_pressed(app, KEY_UP)) {
-				x = board_piece->x;
-				y = board_piece->y - 1;
-				try_move = true;
-				next_anim = "back";
-				hop_h = 20.0f;
-				squeeze = v2(0.65f, 1.75f);
-			}
-
-			else if (key_was_pressed(app, KEY_S) || key_was_pressed(app, KEY_DOWN)) {
-				x = board_piece->x;
-				y = board_piece->y + 1;
-				try_move = true;
-				next_anim = "idle";
-				hop_h = 15.0f;
-				squeeze = v2(0.75f, 1.5f);
-			}
-
-			if (try_move) {
 				if (in_board(x, y)) {
 					BoardSpace space = world->board.data[y][x];
 					if (space.is_empty) {
-						board_piece->hop(x, y, CopyCat::hop_delay, 15.0f);
+						board_piece->hop(x, y, CopyCat::hop_delay, hop_h);
 						animator->sprite.play(next_anim);
 						if (flip) animator->flip_x();
 						else animator->unflip_x();
 						animator->squeeze(squeeze, CopyCat::hop_delay);
+					} else {
+						if (copycat->going_left) {
+							flip = false;
+							x = x + 1;
+							copycat->going_left = false;
+						} else {
+							flip = true;
+							x = x - 1;
+							copycat->going_left = true;
+						}
+
+						space = world->board.data[y][x];
+						if (space.is_empty) {
+							board_piece->hop(x, y, CopyCat::hop_delay, hop_h);
+							animator->sprite.play(next_anim);
+							if (flip) animator->flip_x();
+							else animator->unflip_x();
+							animator->squeeze(squeeze, CopyCat::hop_delay);
+						} else {
+							animator->sprite.play("idle");
+						}
 					}
 				}
 			}

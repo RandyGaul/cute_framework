@@ -7,7 +7,7 @@ if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
 	return()
 endif()
 
-# Must have at least C++11
+# Must have at least C++14.
 set(CMAKE_CXX_STANDARD 14)
 
 # Platform detection.
@@ -231,21 +231,17 @@ set(CUTE_HDRS
 	libraries/cute/cute_utf.h
 )
 
-# Handle DirectX 9 link directories.
-#if (MSVC)
-#	link_directories($ENV{DXSDK_DIR}/Lib/x64)
-#endif()
-
 add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS})
 
 if(MACOSX)
 	find_package(SDL2 REQUIRED)
 
 	# This adds the current directory to the cmake path, so it can
-	# use Findsodium.cmake script to locate the sodium folders.
+	# use FindSodium.cmake script to locate the sodium folders.
 	list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/.")
 	find_package(Sodium REQUIRED)
 
+	# These are needed to link to PHYSFS.
 	find_library(IOKIT IOKit)
 	find_library(FOUNDATION Foundation)
 
@@ -255,11 +251,6 @@ else()
 endif()
 
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)
-
-# Handle DirectX 9 include directories.
-#if (MSVC)
-#	target_include_directories(cute PRIVATE $ENV{DXSDK_DIR}/Include)
-#endif()
 
 # Cute unit tests executable (optional, defaulted to also build).
 option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)

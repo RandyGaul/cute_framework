@@ -26,6 +26,7 @@
 #include <cute_error.h>
 
 struct ImGuiContext;
+struct strpool_t;
 
 namespace cute
 {
@@ -50,6 +51,7 @@ extern CUTE_API void CUTE_CALL app_present(app_t* app);
 extern CUTE_API error_t CUTE_CALL app_init_net(app_t* app);
 extern CUTE_API error_t CUTE_CALL app_init_audio(app_t* app, int max_simultaneous_sounds = 5000);
 extern CUTE_API ImGuiContext* CUTE_CALL app_init_imgui(app_t* app);
+extern CUTE_API strpool_t* CUTE_CALL app_get_strpool(app_t* app);
 
 enum upscale_t
 {

@@ -16,7 +16,7 @@
 		vec2 pos = in_pos;
 		pos.x *= u_scale.x;
 		pos.y *= u_scale.y;
-		vec4 posH = vec4(ceil(pos), 0, 1);
+		vec4 posH = vec4(round(pos), 0, 1);
 		uv = in_uv;
 		gl_Position = posH;
 }

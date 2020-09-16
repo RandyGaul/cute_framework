@@ -145,8 +145,21 @@ void app_destroy_entity(app_t* app, entity_t entity)
 	CUTE_ASSERT(collection);
 
 	if (collection->entity_handle_table.is_valid(entity.handle)) {
-		// Free the handle.
 		int index = collection->entity_handle_table.get_index(entity.handle);
+
+		// Call cleanup function on each component.
+		for (int i = 0; i < collection->component_tables.count(); ++i) {
+			component_config_t config;
+			app->component_configs.find(collection->component_types[i], &config);
+			if (config.cleanup_fn) {
+				config.cleanup_fn(app, entity, collection->component_tables[i][index], config.udata);
+			}
+		}
+
+		// Update index in case user changed it (by destroying enties).
+		index = collection->entity_handle_table.get_index(entity.handle);
+
+		// Free the handle.
 		collection->entity_handles.unordered_remove(index);
 		collection->entity_handle_table.free_handle(entity.handle);
 
@@ -173,6 +186,7 @@ bool app_is_entity_valid(app_t* app, entity_t entity)
 void* app_get_component(app_t* app, entity_t entity, const char* component_type)
 {
 	entity_collection_t* collection = s_collection(app, entity);
+	if (!collection) return NULL;
 
 	STRPOOL_U64 type = INJECT(component_type);
 	const array<STRPOOL_U64>& component_types = collection->component_types;

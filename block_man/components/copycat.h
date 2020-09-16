@@ -26,6 +26,7 @@
 using namespace cute;
 
 #include <components/animator.h>
+#include <components/transform.h>
 
 #include <cute/cute_coroutine.h>
 
@@ -33,9 +34,12 @@ struct CopyCat
 {
 	bool busy = false;
 	bool awake = false;
+	bool going_left = true;
+	coroutine_t pacing_co = { 0 };
 	float t = 0;
-	static constexpr float awake_delay = 5.0f;
-	static constexpr float hop_delay = 0.35f;
+	static constexpr float awake_delay = 3.0f;
+	static constexpr float hop_delay = 0.25f;
+	entity_t zzz = INVALID_ENTITY;
 };
 
 CUTE_INLINE cute::error_t CopyCat_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
@@ -45,8 +49,23 @@ CUTE_INLINE cute::error_t CopyCat_serialize(app_t* app, kv_t* kv, entity_t entit
 		CUTE_PLACEMENT_NEW(copycat) CopyCat;
 		Animator* animator = (Animator*)app_get_component(app, entity, "Animator");
 		animator->sprite.play("sleeping");
+
+		error_t err = app_make_entity(app, "zzz", &copycat->zzz);
+		CUTE_ASSERT(!err.is_error());
+		Transform* zzz_transform = (Transform*)app_get_component(app, copycat->zzz, "Transform");
+		zzz_transform->relative_to = entity;
+		Animator* zzz_animator = (Animator*)app_get_component(app, copycat->zzz, "Animator");
+		zzz_animator->sprite.sort_bits = 10000;
+		zzz_animator->sprite.opacity = 0;
 	}
 	return kv_error_state(kv);
+}
+
+CUTE_INLINE void CopyCat_cleanup(app_t* app, entity_t entity, void* component, void* udata)
+{
+	CopyCat* copycat = (CopyCat*)component;
+	app_destroy_entity(app, copycat->zzz);
+	copycat->zzz = INVALID_ENTITY;
 }
 
 #endif // COPYCAT_H

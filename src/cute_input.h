@@ -39,6 +39,7 @@ extern CUTE_API int CUTE_CALL key_mod_bit_flags(app_t* app);
 
 extern CUTE_API int CUTE_CALL mouse_x(app_t* app);
 extern CUTE_API int CUTE_CALL mouse_y(app_t* app);
+extern CUTE_API struct v2 CUTE_CALL mouse_pos_in_world_space(app_t* app);
 
 extern CUTE_API bool CUTE_CALL mouse_is_down(app_t* app, mouse_button_t button);
 extern CUTE_API bool CUTE_CALL mouse_is_up(app_t* app, mouse_button_t button);

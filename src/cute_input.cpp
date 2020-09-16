@@ -21,6 +21,7 @@
 
 #include <cute_input.h>
 #include <cute_c_runtime.h>
+#include <cute_math.h>
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_input_internal.h>
@@ -256,6 +257,22 @@ int mouse_x(app_t* app)
 int mouse_y(app_t* app)
 {
 	return app->mouse.y;
+}
+
+v2 mouse_pos_in_world_space(app_t* app)
+{
+	float w = (float)app->w;
+	float h = (float)app->h;
+	float rw = (float)app->offscreen_w;
+	float rh = (float)app->offscreen_h;
+	float ratio_x = w / rw;
+	float ratio_y = h / rh;
+	float x = (app->mouse.x - app->w / 2.0f) / ratio_x;
+	float y = (-(app->mouse.y - app->h / 2.0f)) / ratio_y;
+	x = clamp(x, -rw, rw);
+	y = clamp(y, -rh, rh);
+	v2 p = v2(x, y);
+	return p;
 }
 
 bool mouse_is_down(app_t* app, mouse_button_t button)

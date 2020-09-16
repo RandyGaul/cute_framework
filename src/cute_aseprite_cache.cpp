@@ -100,6 +100,8 @@ static void s_sprite(aseprite_cache_t* cache, aseprite_cache_entry_t entry, spri
 	sprite->local_offset = entry.local_offset;
 	if (entry.ase->tag_count == 0) {
 		sprite->play("default");
+	} else {
+		sprite->play((const char*)sprite->animations->keys()[0].data);
 	}
 }
 
@@ -212,6 +214,22 @@ void aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path)
 	entry.animations->~animation_table_t();
 	CUTE_FREE(entry.animations, cache->mem_ctx);
 	cache->aseprites.remove(path);
+}
+
+error_t aseprite_cache_load_ase(aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase)
+{
+	sprite_t s;
+	error_t err = aseprite_cache_load(cache, aseprite_path, &s);
+	if (err.is_error()) return err;
+
+	STRPOOL_U64 path = INJECT(aseprite_path);
+	aseprite_cache_entry_t entry;
+	if (!cache->aseprites.find(path, &entry).is_error()) {
+		*ase = entry.ase;
+		return error_success();
+	} else {
+		return error_failure("Unable to load aseprite.");
+	}
 }
 
 get_pixels_fn* aseprite_cache_get_pixels_fn(aseprite_cache_t* cache)

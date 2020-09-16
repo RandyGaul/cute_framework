@@ -58,6 +58,7 @@ extern CUTE_API bool CUTE_CALL app_entity_is_type(app_t* app, entity_t entity, c
 // Component
 
 typedef error_t (component_serialize_fn)(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata);
+typedef void (component_cleanup_fn)(app_t* app, entity_t entity, void* component, void* udata);
 
 struct component_config_t
 {
@@ -65,6 +66,7 @@ struct component_config_t
 	size_t size_of_component = 0;
 	void* udata = NULL;
 	component_serialize_fn* serializer_fn = NULL;
+	component_cleanup_fn* cleanup_fn = NULL;
 };
 
 extern CUTE_API void CUTE_CALL app_register_component_type(app_t* app, component_config_t component_config);

@@ -44,6 +44,9 @@ struct Board
 
 struct World
 {
+	static constexpr int TILE_W = 16;
+	static constexpr int TILE_H = 16;
+
 	bool load_level_dirty_flag = false;
 	int level_index = 0;
 	entity_t player;
@@ -62,6 +65,16 @@ extern World* world;
 extern aseprite_cache_t* cache;
 extern batch_t* batch;
 extern app_t* app;
+extern array<const char*> schemas;
+
+struct schema_preview_t
+{
+	const char* entity_type;
+	sprite_t sprite;
+	texture_t tex;
+	float w, h;
+};
+extern array<schema_preview_t> schema_previews;
 
 void init_world();
 void load_level();
@@ -73,5 +86,7 @@ int sort_bits(int x, int y);
 bool in_grid(int x, int y, int w, int h);
 bool in_board(int x, int y);
 void draw_background_bricks_system_pre_update(app_t* app, float dt, void* udata);
+void make_entity_at(int selection, int x, int y);
+void destroy_entity_at(int x, int y);
 
 #endif // WORLD_H

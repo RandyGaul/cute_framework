@@ -310,6 +310,11 @@ ImGuiContext* app_init_imgui(app_t* app)
 	return ::ImGui::GetCurrentContext();
 }
 
+strpool_t* app_get_strpool(app_t* app)
+{
+	return app->strpool;
+}
+
 static void s_quad(float x, float y, float sx, float sy, float* out)
 {
 	struct vertex_t
