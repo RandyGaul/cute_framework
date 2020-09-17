@@ -46,7 +46,7 @@ void do_imgui_stuff(app_t* app, float dt)
 	if (open) {
 		// Editor UI.
 		ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
-		ImGui::Begin("Level Editor", &open);
+		ImGui::Begin("Dev Tool", &open);
 
 		if (mouse_was_pressed(app, MOUSE_BUTTON_RIGHT)) {
 			selected = -1;
@@ -150,10 +150,12 @@ void do_imgui_stuff(app_t* app, float dt)
 				selected = i;
 				erase = false;
 			}
-			if (((i + 1) % 3) != 0) {
+			if (((i + 1) % 3) != 0 && i != schema_previews.count() - 1) {
 				ImGui::SameLine();
 			}
 		}
+		ImGui::Separator();
+		ImGui::Text("Moves: %d", world->moves);
 		ImGui::End();
 
 		if (erase) {
@@ -180,7 +182,6 @@ void do_imgui_stuff(app_t* app, float dt)
 				destroy_entity_at(mx, my);
 			}
 		}
-
 
 		if (selected != -1) {
 			schema_preview_t preview = schema_previews[selected];

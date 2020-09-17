@@ -92,6 +92,10 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 					other->bonk_xdir = board_piece->xdir;
 					other->bonk_ydir = board_piece->ydir;
 				}
+				if (ice_block->fire != INVALID_ENTITY) {
+					delayed_destroy_entity_at(board_piece->x, board_piece->y);
+					app_delayed_destroy_entity(app, ice_block->fire);
+				}
 			}
 
 			COROUTINE_CASE(co, IDLE_INNER);

@@ -39,7 +39,6 @@ struct Player
 	bool holding = false;
 	bool won = false;
 	bool busy = false;
-	int moves = 0;
 	coroutine_t co = { 0 };
 	entity_t ladder = INVALID_ENTITY;
 

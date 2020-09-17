@@ -53,6 +53,7 @@ struct World
 	entity_t player = INVALID_ENTITY;
 	Board board;
 	bool loaded_level_into_editor = false;
+	int moves = 0;
 
 	array<const char*> levels;
 	array<const char*> level_names;
@@ -61,6 +62,7 @@ struct World
 	{
 		load_level_dirty_flag = true;
 		level_index = index;
+		moves = 0;
 	}
 };
 
@@ -94,5 +96,6 @@ void draw_background_bricks_system_pre_update(app_t* app, float dt, void* udata)
 void make_entity_at(const char* entity_type, int x, int y);
 void make_entity_at(int selection, int x, int y);
 void destroy_entity_at(int x, int y);
+void delayed_destroy_entity_at(int x, int y);
 
 #endif // WORLD_H

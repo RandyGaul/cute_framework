@@ -87,7 +87,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			}
 
 			if (found) {
-				++player->moves;
+				++world->moves;
 				entity_t block = world->board.data[sy][sx].entity;
 				BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
 				block_board_piece->linear(x + player->xdir, y - player->ydir, Player::move_delay * distance);
@@ -100,29 +100,43 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			}
 		} else {
 			// Pushing blocks forward.
-			++player->moves;
+			++world->moves;
 			int sx = x + player->xdir * 2, sy = y - player->ydir * 2;
 			int distance = 0;
+			bool found_fire = false;
 			while (in_grid(sy, sx, world->board.data.count(), world->board.data[0].count()))
 			{
 				if (!world->board.data[sy][sx].is_empty)
+				{
+					if (app_get_component(app, world->board.data[sy][sx].entity, "Fire")) {
+						found_fire = true;
+					}
 					break;
+				}
 				sx += player->xdir;
 				sy -= player->ydir;
 				++distance;
 			}
 			entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
-			BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
-			block_board_piece->linear(sx - player->xdir, sy + player->ydir, Player::move_delay * distance);
-			block_board_piece->notify_player_when_done = player->entity;
-			player->holding = false;
-			player->busy = true;
-			update_hero_animation = true;
 			IceBlock* ice_block = (IceBlock*)app_get_component(app, block, "IceBlock");
 			ice_block->is_held = false;
 			ice_block->xdir = player->xdir;
 			ice_block->ydir = player->ydir;
 			ice_block->was_thrown = true;
+			if (found_fire) {
+				ice_block->fire = world->board.data[sy][sx].entity;
+			}
+			BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
+			if (found_fire) {
+				// Move one farther onto the fire space itself.
+				block_board_piece->linear(sx, sy, Player::move_delay * (distance + 1));
+			} else {
+				block_board_piece->linear(sx - player->xdir, sy + player->ydir, Player::move_delay * distance);
+			}
+			block_board_piece->notify_player_when_done = player->entity;
+			player->holding = false;
+			player->busy = true;
+			update_hero_animation = true;
 		}
 	} else {
 		// Handling movement keys.
@@ -145,7 +159,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 						// make sure we don't push block through a wall
 						if (world->board.data[y + player->ydir][x - player->xdir].is_empty)
 						{
-							++player->moves;
+							++world->moves;
 
 							// move backward
 							x += xmove[i];
@@ -168,7 +182,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 						// make sure we don't push block through a wall
 						if (world->board.data[y - player->ydir * 2][x + player->xdir * 2].is_empty)
 						{
-							++player->moves;
+							++world->moves;
 
 							// first, move the block
 							entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
@@ -198,7 +212,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 							// also check to make sure we aren't turning through a block
 							if (world->board.data[y - player->ydir - ydirtemp][x + player->xdir + xdirtemp].is_empty)
 							{
-								++player->moves;
+								++world->moves;
 								entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
 
 								// turn hero
@@ -228,7 +242,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 						// check for collisions
 						// if we did't collide, assign the new position
 						if (world->board.data[y][x].is_empty || world->board.data[y][x].is_ladder) {
-							++player->moves;
+							++world->moves;
 
 							bool won = world->board.data[y][x].is_ladder;
 							if (won) {
@@ -245,7 +259,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 					}
 					else
 					{
-						++player->moves;
+						++world->moves;
 						// turn 
 						player->xdir = xdirs[i];
 						player->ydir = ydirs[i];

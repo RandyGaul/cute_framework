@@ -326,6 +326,8 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 		block_man/components/transform.h
 		block_man/components/shadow.h
 		block_man/components/mochi.h
+		block_man/components/fire.h
+		block_man/components/patrol.h
 	)
 
 	set(CUTE_BLOCK_MAN_SYSTEM_SRCS

@@ -19,38 +19,23 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef ICE_BLOCK_H
-#define ICE_BLOCK_H
+#ifndef FIRE_H
+#define FIRE_H
 
 #include <cute.h>
 using namespace cute;
 
-#include <components/animator.h>
-#include <cute/cute_coroutine.h>
-
-struct IceBlock
+struct Fire
 {
-	static constexpr float float_delay = 0.35f;
-
-	bool is_held = false;
-	coroutine_t co = { 0 };
-	coroutine_t float_co = { 0 };
-
-	bool was_thrown = false;
-	int xdir = 0;
-	int ydir = 0;
-	entity_t fire = INVALID_ENTITY;
 };
 
-CUTE_INLINE cute::error_t IceBlock_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Fire_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
-	IceBlock* ice_block = (IceBlock*)component;
+	Fire* fire = (Fire*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
-		CUTE_PLACEMENT_NEW(ice_block) IceBlock;
-		Animator* animator = (Animator*)app_get_component(app, entity, "Animator");
-		animator->sprite.play("idle");
+		CUTE_PLACEMENT_NEW(fire) Fire;
 	}
 	return kv_error_state(kv);
 }
 
-#endif // ICE_BLOCK_H
+#endif // FIRE_H

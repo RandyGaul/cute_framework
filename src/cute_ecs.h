@@ -43,6 +43,7 @@ using entity_type_t = uint32_t;
 struct entity_t
 {
 	CUTE_INLINE bool operator==(const entity_t& other) { return type == other.type && handle == other.handle; }
+	CUTE_INLINE bool operator!=(const entity_t& other) { return !(*this == other); }
 	entity_type_t type;
 	handle_t handle;
 };

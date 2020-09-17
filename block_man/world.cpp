@@ -39,6 +39,7 @@
 #include <components/transform.h>
 #include <components/shadow.h>
 #include <components/mochi.h>
+#include <components/fire.h>
 
 #define CUTE_PATH_IMPLEMENTATION
 #include <cute/cute_path.h>
@@ -101,6 +102,16 @@ const char* schema_zzz = CUTE_STRINGIZE(
 	Animator = { name = "z.aseprite", },
 );
 
+const char* schema_fire = CUTE_STRINGIZE(
+	entity_type = "Fire",
+	Transform = { },
+	Animator = { name = "fire.aseprite", },
+	Reflection = { },
+	BoardPiece = { },
+	Shadow = { small = "true" },
+	Fire = { },
+);
+
 array<const char*> schemas = {
 	schema_ice_block,
 	schema_box,
@@ -108,6 +119,7 @@ array<const char*> schemas = {
 	schema_player,
 	schema_mochi,
 	schema_zzz,
+	schema_fire,
 };
 
 array<schema_preview_t> schema_previews;
@@ -207,6 +219,7 @@ void ecs_registration(app_t* app)
 	REGISTER_COMPONENT(Transform, NULL);
 	REGISTER_COMPONENT(Shadow, NULL);
 	REGISTER_COMPONENT(Mochi, Mochi_cleanup);
+	REGISTER_COMPONENT(Fire, NULL);
 
 	// Order of entity registration matters if using `inherits_from`.
 	// Any time `inherits_from` is used, that type must have been already registered.
@@ -349,6 +362,11 @@ void load_all_levels_from_disk_into_ram()
 {
 	s_add_level("level0.txt");
 	s_add_level("level1.txt");
+	s_add_level("level2.txt");
+	s_add_level("level3.txt");
+	s_add_level("level4.txt");
+	s_add_level("level5.txt");
+	s_add_level("level6.txt");
 }
 
 void setup_write_directory()
@@ -534,6 +552,8 @@ array<char> entity_codes = {
 	'e', // Ladder
 	'p', // Player
 	'c', // Mochi
+	'0', // zzz
+	'f', // Fire
 };
 
 void make_entity_at(const char* entity_type, int x, int y)
@@ -574,6 +594,20 @@ void destroy_entity_at(int x, int y)
 	BoardSpace old_space = world->board.data[y][x];
 	if (!old_space.is_empty || old_space.is_ladder) {
 		app_destroy_entity(app, old_space.entity);
+	}
+	BoardSpace space;
+	space.entity = INVALID_ENTITY;
+	space.code = '0';
+	space.is_empty = true;
+	space.is_ladder = false;
+	world->board.data[y][x] = space;
+}
+
+void delayed_destroy_entity_at(int x, int y)
+{
+	BoardSpace old_space = world->board.data[y][x];
+	if (!old_space.is_empty || old_space.is_ladder) {
+		app_delayed_destroy_entity(app, old_space.entity);
 	}
 	BoardSpace space;
 	space.entity = INVALID_ENTITY;
@@ -633,6 +667,7 @@ void select_level(int index)
 		case 'p': err = app_make_entity(app, "Player", &e); break;
 		case 'e': err = app_make_entity(app, "Ladder", &e); break;
 		case 'c': err = app_make_entity(app, "Mochi", &e); break;
+		case 'f': err = app_make_entity(app, "Fire", &e); break;
 		}
 		CUTE_ASSERT(!err.is_error());
 		BoardSpace space;
