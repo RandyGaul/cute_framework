@@ -79,6 +79,7 @@ void do_imgui_stuff(app_t* app, float dt)
 			if (ImGui::Button("OK", ImVec2(120,0)) || key_was_pressed(app, KEY_RETURN)) {
 				ImGui::CloseCurrentPopup();
 				if (buf[0]) {
+					reload_level(buf);
 				}
 			}
 			ImGui::SameLine();
@@ -99,8 +100,8 @@ void do_imgui_stuff(app_t* app, float dt)
 				if (buf[0]) {
 					saved = true;
 					file_t* fp = file_system_open_file_for_write(buf);
-					for (int i = 0; i < world->board.h; ++i) {
-						for (int j = 0; j < world->board.w; ++j) {
+					for (int i = 0; i < World::LEVEL_H; ++i) {
+						for (int j = 0; j < World::LEVEL_W; ++j) {
 							char c = world->board.data[i][j].code;
 							file_system_write(fp, &c, 1);
 						}
@@ -132,9 +133,12 @@ void do_imgui_stuff(app_t* app, float dt)
 			saved = false;
 			COROUTINE_END(co);
 		}
-		if (ImGui::Checkbox("Erase", &erase)) {
+		if (ImGui::Checkbox("Eraser", &erase) || (key_was_pressed(app, KEY_E) && !ImGui::IsPopupOpen("Open") && !ImGui::IsPopupOpen("Save As"))) {
 			selected = -1;
+			erase = true;
 		}
+		ImGui::SameLine();
+		ImGui::TextUnformatted("(E)");
 		for (int i = 0; i < schema_previews.count(); ++i) {
 			float w = schema_previews[i].w;
 			float h = schema_previews[i].h;
@@ -157,7 +161,7 @@ void do_imgui_stuff(app_t* app, float dt)
 			static sprite_t sprite;
 			static bool erase_sprite_loaded = false;
 			if (!erase_sprite_loaded) {
-				aseprite_cache_load(cache, "data/editor_select.aseprite", &sprite);
+				aseprite_cache_load(cache, "editor_select.aseprite", &sprite);
 			}
 
 			transform_t tx = make_transform();
@@ -169,7 +173,7 @@ void do_imgui_stuff(app_t* app, float dt)
 			batch_flush(batch);
 
 			// Delete entities on left-click.
-			if (!ImGui::IsAnyWindowHovered() && mouse_was_pressed(app, MOUSE_BUTTON_LEFT)) {
+			if (!ImGui::IsAnyWindowHovered() && !ImGui::IsAnyWindowFocused() && mouse_is_down(app, MOUSE_BUTTON_LEFT)) {
 				v2 mpw = mouse_pos_in_world_space(app);
 				int mx, my;
 				world2tile(mpw, &mx, &my);
@@ -191,7 +195,7 @@ void do_imgui_stuff(app_t* app, float dt)
 			batch_flush(batch);
 
 			// Create entities on left-click.
-			if (!ImGui::IsAnyWindowHovered() && mouse_was_pressed(app, MOUSE_BUTTON_LEFT)) {
+			if (!ImGui::IsAnyWindowHovered() && !ImGui::IsAnyWindowFocused() && mouse_is_down(app, MOUSE_BUTTON_LEFT)) {
 				make_entity_at(selected, mx, my);
 			}
 		}
@@ -201,11 +205,7 @@ void do_imgui_stuff(app_t* app, float dt)
 int main(int argc, const char** argv)
 {
 	init_world();
-	load_level();
-
-	char write_dir_path[1024];
-	sprintf(write_dir_path, "%s%s", file_system_get_base_dir(), "../../block_man/data");
-	file_system_set_write_dir(write_dir_path);
+	select_level(0);
 
 	matrix_t mvp = matrix_ortho_2d(320, 240, 0, -100);
 	const font_t* font = font_get_default(app);
@@ -215,7 +215,7 @@ int main(int argc, const char** argv)
 	while (app_is_running(app)) {
 		float dt = calc_dt();
 		app_update(app, dt);
-		if (world->load_level_dirty_flag) load_level();
+		if (world->load_level_dirty_flag) select_level(world->level_index);
 		app_update_systems(app, dt);
 		do_imgui_stuff(app, dt);
 		app_present(app);

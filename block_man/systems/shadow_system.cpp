@@ -33,7 +33,7 @@ sprite_t shadow_sprite_small;
 
 void shadow_system_init()
 {
-	shadow_sprite = load_sprite("data/shadow.aseprite");
+	shadow_sprite = load_sprite("shadow.aseprite");
 	shadow_sprite_small = shadow_sprite;
 	shadow_sprite_small.frame_index++;
 }

@@ -32,9 +32,9 @@ int test_png_cache()
 
 	png_t white;
 	png_t black;
-	error_t err = png_cache_load(cache, "white_pixel.png", &white);
+	error_t err = png_cache_load(cache, "test_data/white_pixel.png", &white);
 	CUTE_TEST_ASSERT(!err.is_error());
-	err = png_cache_load(cache, "black_pixel.png", &black);
+	err = png_cache_load(cache, "test_data/black_pixel.png", &black);
 	CUTE_TEST_ASSERT(!err.is_error());
 
 	const animation_t* blink_anim = png_cache_make_animation(cache, "blink", { white, black }, { 0.5f, 0.5f });

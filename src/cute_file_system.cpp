@@ -267,9 +267,26 @@ error_t file_system_read_entire_file_to_memory(const char* virtual_path, void** 
 	size_t sz = file_system_size(file);
 	data = CUTE_ALLOC(sz, user_allocator_context);
 	size_t sz_read = file_system_read(file, data, sz);
+	CUTE_ASSERT(sz == sz_read);
 	*data_ptr = data;
 	if (size) *size = sz_read;
-	CUTE_ASSERT(sz == sz_read);
+	file_system_close(file);
+	return error_success();
+}
+
+error_t file_system_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size, void* user_allocator_context)
+{
+	CUTE_ASSERT(data_ptr);
+	file_t* file = file_system_open_file_for_read(virtual_path);
+	void* data = NULL;
+	if (!file) return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+	size_t sz = file_system_size(file) + 1;
+	data = CUTE_ALLOC(sz, user_allocator_context);
+	size_t sz_read = file_system_read(file, data, sz);
+	CUTE_ASSERT(sz == sz_read + 1);
+	*data_ptr = data;
+	((char*)data)[sz - 1] = 0;
+	if (size) *size = sz;
 	file_system_close(file);
 	return error_success();
 }

@@ -345,6 +345,7 @@ void app_update_systems(app_t* app, float dt)
 		entity_t e = app->delayed_destroy_entities[i];
 		app_destroy_entity(app, e);
 	}
+	app->delayed_destroy_entities.clear();
 }
 
 //--------------------------------------------------------------------------------------------------

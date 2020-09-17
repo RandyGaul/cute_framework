@@ -27,7 +27,7 @@ using namespace cute;
 
 struct BoardSpace
 {
-	char code;
+	char code = '0';
 	bool is_empty = true;
 	bool is_ladder = false;
 	entity_t entity = INVALID_ENTITY;
@@ -37,7 +37,6 @@ struct Board
 {
 	int start_x;
 	int start_y;
-	int w, h;
 	array<array<BoardSpace>> data;
 	array<batch_quad_t> background_bricks;
 };
@@ -46,21 +45,25 @@ struct World
 {
 	static constexpr int TILE_W = 16;
 	static constexpr int TILE_H = 16;
+	static constexpr int LEVEL_W = 20;
+	static constexpr int LEVEL_H = 15;
 
 	bool load_level_dirty_flag = false;
 	int level_index = 0;
-	entity_t player;
+	entity_t player = INVALID_ENTITY;
 	Board board;
 	bool loaded_level_into_editor = false;
+
+	array<const char*> levels;
+	array<const char*> level_names;
 
 	CUTE_INLINE void next_level(int index)
 	{
 		load_level_dirty_flag = true;
-		level_index = index + 1;
+		level_index = index;
 	}
 };
 
-extern array<array<string_t>> levels;
 extern World* world;
 extern aseprite_cache_t* cache;
 extern batch_t* batch;
@@ -77,7 +80,9 @@ struct schema_preview_t
 extern array<schema_preview_t> schema_previews;
 
 void init_world();
-void load_level();
+void select_level(int index);
+int select_level(const char* name);
+void reload_level(const char* name);
 sprite_t load_sprite(string_t path);
 v2 tile2world(int x, int y);
 void world2tile(v2 p, int* x_out, int* y_out);
@@ -86,6 +91,7 @@ int sort_bits(int x, int y);
 bool in_grid(int x, int y, int w, int h);
 bool in_board(int x, int y);
 void draw_background_bricks_system_pre_update(app_t* app, float dt, void* udata);
+void make_entity_at(const char* entity_type, int x, int y);
 void make_entity_at(int selection, int x, int y);
 void destroy_entity_at(int x, int y);
 

@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef COPYCAT_SYSTEM_H
-#define COPYCAT_SYSTEM_H
+#ifndef MOCHI_SYSTEM_H
+#define MOCHI_SYSTEM_H
 
 #include <cute.h>
 using namespace cute;
@@ -28,8 +28,8 @@ using namespace cute;
 struct Transform;
 struct Animator;
 struct BoardPiece;
-struct CopyCat;
+struct Mochi;
 
-void copycat_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, CopyCat* copycats, int entity_count);
+void mochi_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, Mochi* mochis, int entity_count);
 
-#endif // COPYCAT_SYSTEM_H
+#endif // MOCHI_SYSTEM_H

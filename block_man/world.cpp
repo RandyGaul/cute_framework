@@ -29,7 +29,7 @@
 #include <systems/reflection_system.h>
 #include <systems/transform_system.h>
 #include <systems/shadow_system.h>
-#include <systems/copycat_system.h>
+#include <systems/mochi_system.h>
 
 #include <components/animator.h>
 #include <components/board_piece.h>
@@ -38,7 +38,10 @@
 #include <components/reflection.h>
 #include <components/transform.h>
 #include <components/shadow.h>
-#include <components/copycat.h>
+#include <components/mochi.h>
+
+#define CUTE_PATH_IMPLEMENTATION
+#include <cute/cute_path.h>
 
 World world_instance;
 World* world = &world_instance;
@@ -49,7 +52,7 @@ app_t* app;
 const char* schema_ice_block = CUTE_STRINGIZE(
 	entity_type = "IceBlock",
 	Transform = { },
-	Animator = { name = "data/ice_block.aseprite" },
+	Animator = { name = "ice_block.aseprite" },
 	BoardPiece = { },
 	IceBlock = { },
 	Shadow = { },
@@ -58,7 +61,7 @@ const char* schema_ice_block = CUTE_STRINGIZE(
 const char* schema_box = CUTE_STRINGIZE(
 	entity_type = "Box",
 	Transform = { },
-	Animator = { name = "data/box.aseprite" },
+	Animator = { name = "box.aseprite" },
 	Reflection = { },
 	BoardPiece = { },
 	Shadow = { },
@@ -67,7 +70,7 @@ const char* schema_box = CUTE_STRINGIZE(
 const char* schema_ladder = CUTE_STRINGIZE(
 	entity_type = "Ladder",
 	Transform = { },
-	Animator = { name = "data/ladder.aseprite" },
+	Animator = { name = "ladder.aseprite" },
 	Reflection = { },
 	BoardPiece = { },
 );
@@ -75,27 +78,27 @@ const char* schema_ladder = CUTE_STRINGIZE(
 const char* schema_player = CUTE_STRINGIZE(
 	entity_type = "Player",
 	Transform = { },
-	Animator = { name = "data/girl.aseprite", },
+	Animator = { name = "girl.aseprite", },
 	Reflection = { },
 	BoardPiece = { },
 	Player = { },
 	Shadow = { small = "true" },
 );
 
-const char* schema_copycat = CUTE_STRINGIZE(
-	entity_type = "CopyCat",
+const char* schema_mochi = CUTE_STRINGIZE(
+	entity_type = "Mochi",
 	Transform = { },
-	Animator = { name = "data/copycat.aseprite", },
+	Animator = { name = "mochi.aseprite", },
 	Reflection = { },
 	BoardPiece = { },
-	CopyCat = { },
+	Mochi = { },
 	Shadow = { },
 );
 
 const char* schema_zzz = CUTE_STRINGIZE(
 	entity_type = "zzz",
 	Transform = { },
-	Animator = { name = "data/z.aseprite", },
+	Animator = { name = "z.aseprite", },
 );
 
 array<const char*> schemas = {
@@ -103,7 +106,7 @@ array<const char*> schemas = {
 	schema_box,
 	schema_ladder,
 	schema_player,
-	schema_copycat,
+	schema_mochi,
 	schema_zzz,
 };
 
@@ -144,8 +147,9 @@ void add_schema_preview(const char* schema)
 
 	kv_destroy(kv);
 
-	ase_t* ase;
+	ase_t* ase = NULL;
 	aseprite_cache_load_ase(cache, ase_path, &ase);
+	CUTE_ASSERT(ase);
 
 	pixel_t* pixels = (pixel_t*)CUTE_ALLOC(sizeof(pixel_t) * (ase->w + 2) * (ase->h + 2), NULL);
 	CUTE_MEMCPY(pixels, (pixel_t*)ase->frames[0].pixels, sizeof(pixel_t) * ase->w * ase->h);
@@ -202,7 +206,7 @@ void ecs_registration(app_t* app)
 	REGISTER_COMPONENT(Reflection, NULL);
 	REGISTER_COMPONENT(Transform, NULL);
 	REGISTER_COMPONENT(Shadow, NULL);
-	REGISTER_COMPONENT(CopyCat, CopyCat_cleanup);
+	REGISTER_COMPONENT(Mochi, Mochi_cleanup);
 
 	// Order of entity registration matters if using `inherits_from`.
 	// Any time `inherits_from` is used, that type must have been already registered.
@@ -281,13 +285,13 @@ void ecs_registration(app_t* app)
 
 	s.udata = NULL;
 	s.pre_update_fn = NULL;
-	s.update_fn = (void*)copycat_system_update;
+	s.update_fn = (void*)mochi_system_update;
 	s.post_update_fn = NULL;
 	s.component_types = {
 			"Transform",
 			"Animator",
 			"BoardPiece",
-			"CopyCat",
+			"Mochi",
 	};
 	app_register_system(app, s);
 
@@ -332,6 +336,41 @@ void ecs_registration(app_t* app)
 	app_register_system(app, s);
 }
 
+static void s_add_level(const char* name)
+{
+	void* data;
+	size_t sz;
+	file_system_read_entire_file_to_memory_and_nul_terminate(name, &data, &sz);
+	world->levels.add((const char*)data);
+	world->level_names.add(name);
+}
+
+void load_all_levels_from_disk_into_ram()
+{
+	s_add_level("level0.txt");
+	s_add_level("level1.txt");
+}
+
+void setup_write_directory()
+{
+	// Setup the write directory for development. This will be changed to something else
+	// when the game is finally being released. For now it just finds the "block_man/data" folder.
+	char buf[1024];
+	const char* base = file_system_get_base_dir();
+
+	path_pop(base, NULL, buf);
+	if (!CUTE_STRCMP(buf, "cute_framework")) {
+		sprintf(buf, "%s%s", file_system_get_base_dir(), "../block_man/data");
+	} else {
+		// On windows MSVC puts executable into cute_framework/build/Debug or Release folders.
+		CUTE_ASSERT(!CUTE_STRCMP(buf, "Debug") || !CUTE_STRCMP(buf, "Release"));
+		sprintf(buf, "%s%s", file_system_get_base_dir(), "../../block_man/data");
+	}
+
+	file_system_set_write_dir(buf);
+	file_system_mount(buf, "");
+}
+
 void init_world()
 {
 	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED;
@@ -343,6 +382,7 @@ void init_world()
 	app = app_make("Block Man", 0, 0, 960, 720, options);
 	app_init_upscaling(app, UPSCALE_PIXEL_PERFECT_AT_LEAST_2X, 320, 240);
 	ImGui::SetCurrentContext(app_init_imgui(app));
+	setup_write_directory();
 
 	cache = aseprite_cache_make(app);
 	batch = batch_make(aseprite_cache_get_pixels_fn(cache), cache);
@@ -351,6 +391,7 @@ void init_world()
 	ecs_registration(app);
 	ice_block_system_init();
 	shadow_system_init();
+	load_all_levels_from_disk_into_ram();
 }
 
 sprite_t load_sprite(string_t path)
@@ -375,8 +416,8 @@ sprite_t load_sprite(string_t path)
 
 v2 tile2world(int x, int y)
 {
-	int bw = world->board.w / 2;
-	int bh = world->board.h / 2;
+	int bw = World::LEVEL_W / 2;
+	int bh = World::LEVEL_H / 2;
 	float x_offset = World::TILE_H / 2.0f;
 	float y_offset = (float)(world->board.data.count() * World::TILE_H);
 	return v2((float)(x-bw) * World::TILE_W + x_offset, -(float)(y+bh+1) * World::TILE_H + y_offset);
@@ -384,8 +425,8 @@ v2 tile2world(int x, int y)
 
 void world2tile(v2 p, int* x_out, int* y_out)
 {
-	int bw = world->board.w / 2;
-	int bh = world->board.h / 2;
+	int bw = World::LEVEL_W / 2;
+	int bh = World::LEVEL_H / 2;
 	float x_offset = World::TILE_H / 2.0f;
 	float y_offset = (float)(world->board.data.count() * World::TILE_H);
 	float x = (p.x - x_offset) / World::TILE_W + bw;
@@ -431,36 +472,16 @@ array<array<string_t>> background_maps = {
 	},
 };
 
-array<array<string_t>> levels = {
-	{
-		"x000000000000000000x",
-		"00000000000000000000",
-		"00000000000000000000",
-		"00000000000000000000",
-		"00000000000000000000",
-		"00000000000000000000",
-		"00000000111100000000",
-		"00000000100100000000",
-		"00000000100100000000",
-		"00000000111100000000",
-		"00000000000000000000",
-		"00000000000000000000",
-		"00000000000000000000",
-		"00000000000000000000",
-		"x000000000000000000x",
-	},
-};
-
 int sort_bits(v2 p)
 {
 	int x, y;
 	world2tile(p, &x, &y);
-	return world->board.w * y + x;
+	return World::LEVEL_W * y + x;
 }
 
 int sort_bits(int x, int y)
 {
-	return world->board.w * y + x;
+	return World::LEVEL_W * y + x;
 }
 
 bool in_grid(int x, int y, int w, int h)
@@ -470,7 +491,7 @@ bool in_grid(int x, int y, int w, int h)
 
 bool in_board(int x, int y)
 {
-	return in_grid(x, y, world->board.w, world->board.h);
+	return in_grid(x, y, World::LEVEL_W, World::LEVEL_H);
 }
 
 void init_bg_bricks(int seed)
@@ -485,12 +506,12 @@ void init_bg_bricks(int seed)
 			sprite_t sprite;
 			if (background_maps[background_index][i][j] == 'X') {
 				if ((i & 1) ^ (j & 1)) {
-					sprite = load_sprite("data/bricks_even.aseprite");
+					sprite = load_sprite("bricks_even.aseprite");
 				} else {
-					sprite = load_sprite("data/bricks_odd.aseprite");
+					sprite = load_sprite("bricks_odd.aseprite");
 				}
 			} else {
-				sprite = load_sprite("data/bricks_empty.aseprite");
+				sprite = load_sprite("bricks_empty.aseprite");
 			}
 			sprite.frame_index = rnd_next_range(rnd, 0, sprite.frame_count() - 1);
 			transform.p = v2((float)(j * 16 + 8 - 320/2), (float)((15 - 1 - i) * 16 + 8 - 240/2));
@@ -512,8 +533,18 @@ array<char> entity_codes = {
 	'1', // Box
 	'e', // Ladder
 	'p', // Player
-	'c', // CopyCat
+	'c', // Mochi
 };
+
+void make_entity_at(const char* entity_type, int x, int y)
+{
+	for (int i = 0; i < schema_previews.count(); ++i) {
+		if (!CUTE_STRCMP(entity_type, schema_previews[i].entity_type)) {
+			make_entity_at(i, x, y);
+			break;
+		}
+	}
+}
 
 void make_entity_at(int selection, int x, int y)
 {
@@ -526,7 +557,7 @@ void make_entity_at(int selection, int x, int y)
 	space.entity = e;
 	space.code = entity_codes[selection];
 	space.is_empty = false;
-	space.is_ladder = !CUTE_STRCMP(entity_type, "ladder") ? true : false;
+	space.is_ladder = !CUTE_STRCMP(entity_type, "Ladder") ? true : false;
 	BoardPiece* board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
 	board_piece->x = board_piece->x0 = x;
 	board_piece->y = board_piece->y0 = y;
@@ -552,18 +583,16 @@ void destroy_entity_at(int x, int y)
 	world->board.data[y][x] = space;
 }
 
-void load_level()
+void select_level(int index)
 {
 	world->load_level_dirty_flag = false;
 
-	if (world->level_index >= levels.size()) {
+	if (world->level_index >= world->levels.size()) {
 		char buf[1024];
-		sprintf(buf, "Tried to load level %d, but the highest is %d. Loading level 0 instead.", world->level_index, levels.size() - 1);
+		sprintf(buf, "Tried to load level %d, but the highest is %d. Loading level 0 instead.", world->level_index, world->levels.size() - 1);
 		app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "BAD LEVEL INDEX", buf);
-		world->level_index = 0;
+		world->level_index = index = 0;
 	}
-
-	const array<string_t>& l = levels[world->level_index];
 
 	// Delete old entities.
 	for (int i = 0; i < world->board.data.count(); ++i) {
@@ -577,42 +606,82 @@ void load_level()
 		}
 	}
 
+	// Reset board data.
 	world->board.data.clear();
-	world->board.data.ensure_count(l.count());
-	world->board.w = l[0].len();
-	world->board.h = l.count();
+	world->board.data.ensure_count(World::LEVEL_H);
+	for (int i = 0; i < World::LEVEL_H; ++i) {
+		world->board.data[i].ensure_count(World::LEVEL_W);
+	}
 
 	// Load up new entities.
-	for (int i = 0; i < l.count(); ++i) {
-		const char* s = l[i].c_str();
-		int len = l[i].len();
-
-		for (int j = 0; j < len; ++j) {
-			char c = s[j];
-			entity_t e = INVALID_ENTITY;
-			cute::error_t err;
-			switch (c) {
-			case '0': break;
-			case '1': err = app_make_entity(app, "Box", &e); break;
-			case 'x': err = app_make_entity(app, "IceBlock", &e); break;
-			case 'p': err = app_make_entity(app, "Player", &e); break;
-			case 'e': err = app_make_entity(app, "Ladder", &e); break;
-			case 'c': err = app_make_entity(app, "CopyCat", &e); break;
-			}
-			CUTE_ASSERT(!err.is_error());
-			BoardSpace space;
-			space.code = c;
-			space.entity = e;
-			space.is_empty = c == '0' ? true : false;
-			space.is_ladder = c == 'e' ? true : false;
-			if (!space.is_empty) {
-				BoardPiece* board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
-				board_piece->x = board_piece->x0 = j;
-				board_piece->y = board_piece->y0 = i;
-			}
-			world->board.data[i].add(space);
+	const char* level_string = world->levels[index];
+	int i = 0, j = 0;
+	char c;
+	while ((c = *level_string++)) {
+		if (c == '\n') {
+			++i;
+			j = 0;
+			continue;
 		}
+
+		entity_t e = INVALID_ENTITY;
+		cute::error_t err;
+		switch (c) {
+		case '0': break;
+		case '1': err = app_make_entity(app, "Box", &e); break;
+		case 'x': err = app_make_entity(app, "IceBlock", &e); break;
+		case 'p': err = app_make_entity(app, "Player", &e); break;
+		case 'e': err = app_make_entity(app, "Ladder", &e); break;
+		case 'c': err = app_make_entity(app, "Mochi", &e); break;
+		}
+		CUTE_ASSERT(!err.is_error());
+		BoardSpace space;
+		space.code = c;
+		space.entity = e;
+		space.is_empty = c == '0' ? true : false;
+		space.is_ladder = c == 'e' ? true : false;
+		if (!space.is_empty) {
+			BoardPiece* board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
+			board_piece->x = board_piece->x0 = j;
+			board_piece->y = board_piece->y0 = i;
+		}
+		world->board.data[i][j] = space;
+
+		++j;
 	}
 
 	init_bg_bricks(world->level_index);
+}
+
+int select_level(const char* name)
+{
+	int index = 0;
+	bool found = false;
+	for (int i = 0; i < world->level_names.count(); ++i) {
+		if (!CUTE_STRCMP(name, world->level_names[i])) {
+			world->next_level(i);
+			found = true;
+			index = i;
+			break;
+		}
+	}
+
+	if (!found) {
+		char buf[1024];
+		sprintf("Unable to select level file %s.", name);
+		app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "LEVEL FILE NOT FOUND", buf);
+	}
+
+	return index;
+}
+
+void reload_level(const char* name)
+{
+	int index = select_level(name);
+	void* data;
+	size_t sz;
+	file_system_read_entire_file_to_memory_and_nul_terminate(name, &data, &sz);
+	CUTE_FREE((void*)world->levels[index], NULL);
+	world->levels[index] = (const char*)data;
+	world->level_names[index] = name;
 }

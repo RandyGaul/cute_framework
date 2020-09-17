@@ -165,6 +165,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	if (file_system_init(argv0).is_error()) {
 		CUTE_ASSERT(0);
 	} else if (!(options & CUTE_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT)) {
+		// Put the base directory (the path to the exe) onto the file system search path.
 		file_system_mount(file_system_get_base_dir(), "");
 	}
 

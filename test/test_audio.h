@@ -28,11 +28,11 @@ using namespace cute;
 CUTE_TEST_CASE(test_audio_load_synchronous, "Load and free wav/ogg files synchronously.");
 int test_audio_load_synchronous()
 {
-	audio_t* audio = audio_load_ogg("3-6-19-blue-suit-jam.ogg");
+	audio_t* audio = audio_load_ogg("test_data/3-6-19-blue-suit-jam.ogg");
 	CUTE_TEST_CHECK_POINTER(audio);
 	CUTE_TEST_ASSERT(!audio_destroy(audio).is_error());
 
-	audio = audio_load_wav("jump.wav");
+	audio = audio_load_wav("test_data/jump.wav");
 	CUTE_TEST_CHECK_POINTER(audio);
 	CUTE_TEST_ASSERT(!audio_destroy(audio).is_error());
 
@@ -60,7 +60,7 @@ int test_audio_load_asynchronous()
 
 	s_audio_error = error_success();
 	s_audio = NULL;
-	audio_stream_ogg(app, "3-6-19-blue-suit-jam.ogg", promise);
+	audio_stream_ogg(app, "test_data/3-6-19-blue-suit-jam.ogg", promise);
 
 	while (!atomic_ptr_get((void**)&s_audio))
 		;
@@ -69,7 +69,7 @@ int test_audio_load_asynchronous()
 
 	s_audio_error = error_success();
 	s_audio = NULL;
-	audio_stream_wav(app, "jump.wav", promise);
+	audio_stream_wav(app, "test_data/jump.wav", promise);
 
 	while (!atomic_ptr_get((void**)&s_audio))
 		;

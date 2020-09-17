@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef COPYCAT_H
-#define COPYCAT_H
+#ifndef MOCHI_H
+#define MOCHI_H
 
 #include <cute.h>
 using namespace cute;
@@ -30,7 +30,7 @@ using namespace cute;
 
 #include <cute/cute_coroutine.h>
 
-struct CopyCat
+struct Mochi
 {
 	bool busy = false;
 	bool awake = false;
@@ -42,30 +42,30 @@ struct CopyCat
 	entity_t zzz = INVALID_ENTITY;
 };
 
-CUTE_INLINE cute::error_t CopyCat_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Mochi_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
-	CopyCat* copycat = (CopyCat*)component;
+	Mochi* mochi = (Mochi*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
-		CUTE_PLACEMENT_NEW(copycat) CopyCat;
+		CUTE_PLACEMENT_NEW(mochi) Mochi;
 		Animator* animator = (Animator*)app_get_component(app, entity, "Animator");
 		animator->sprite.play("sleeping");
 
-		error_t err = app_make_entity(app, "zzz", &copycat->zzz);
+		error_t err = app_make_entity(app, "zzz", &mochi->zzz);
 		CUTE_ASSERT(!err.is_error());
-		Transform* zzz_transform = (Transform*)app_get_component(app, copycat->zzz, "Transform");
+		Transform* zzz_transform = (Transform*)app_get_component(app, mochi->zzz, "Transform");
 		zzz_transform->relative_to = entity;
-		Animator* zzz_animator = (Animator*)app_get_component(app, copycat->zzz, "Animator");
+		Animator* zzz_animator = (Animator*)app_get_component(app, mochi->zzz, "Animator");
 		zzz_animator->sprite.sort_bits = 10000;
 		zzz_animator->sprite.opacity = 0;
 	}
 	return kv_error_state(kv);
 }
 
-CUTE_INLINE void CopyCat_cleanup(app_t* app, entity_t entity, void* component, void* udata)
+CUTE_INLINE void Mochi_cleanup(app_t* app, entity_t entity, void* component, void* udata)
 {
-	CopyCat* copycat = (CopyCat*)component;
-	app_destroy_entity(app, copycat->zzz);
-	copycat->zzz = INVALID_ENTITY;
+	Mochi* mochi = (Mochi*)component;
+	app_destroy_entity(app, mochi->zzz);
+	mochi->zzz = INVALID_ENTITY;
 }
 
-#endif // COPYCAT_H
+#endif // MOCHI_H

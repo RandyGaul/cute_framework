@@ -66,19 +66,13 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 	int x = board_piece->x;
 	int y = board_piece->y;
 
-	//if (key_was_pressed(app, KEY_R)) {
-	//	LoadLevel(levels[level_index]);
-	//}
-
-	if (key_was_pressed(app, KEY_SPACE)) {
-		if (!player->holding)
-		{
+	if (key_was_pressed(app, KEY_Z) | key_was_pressed(app, KEY_SPACE)) {
+		if (!player->holding) {
 			// search forward from player to look for blocks to pick up
 			int sx = x + player->xdir, sy = y - player->ydir;
 			bool found = false;
 			int distance = 0;
-			while (in_grid(sy, sx, world->board.data.count(), world->board.data[0].count()))
-			{
+			while (in_grid(sy, sx, world->board.data.count(), world->board.data[0].count())) {
 				bool has_something = !world->board.data[sy][sx].is_empty;
 				bool is_ice_block = has_something && app_entity_is_type(app, world->board.data[sy][sx].entity, "IceBlock");
 				if (is_ice_block) {
@@ -92,8 +86,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 				++distance;
 			}
 
-			if (found)
-			{
+			if (found) {
 				++player->moves;
 				entity_t block = world->board.data[sy][sx].entity;
 				BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
@@ -105,11 +98,9 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 				IceBlock* ice_block = (IceBlock*)app_get_component(app, block, "IceBlock");
 				ice_block->is_held = true;
 			}
-		}
-		else // player->holding is true
-		{
+		} else {
+			// Pushing blocks forward.
 			++player->moves;
-			// so we need to throw the block we are holding
 			int sx = x + player->xdir * 2, sy = y - player->ydir * 2;
 			int distance = 0;
 			while (in_grid(sy, sx, world->board.data.count(), world->board.data[0].count()))
@@ -133,135 +124,134 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			ice_block->ydir = player->ydir;
 			ice_block->was_thrown = true;
 		}
-	}
+	} else {
+		// Handling movement keys.
+		key_button_t keycodes[4] = { KEY_W , KEY_S, KEY_D, KEY_A };
+		key_button_t keycodes_arrows[4] = { KEY_UP , KEY_DOWN, KEY_RIGHT, KEY_LEFT };
+		int xdirs[4] = {  0,  0,  1, -1 };
+		int ydirs[4] = {  1, -1,  0,  0 };
+		int xmove[4] = {  0,  0,  1, -1 };
+		int ymove[4] = { -1,  1,  0,  0 };
 
-	key_button_t keycodes[4] = { KEY_W , KEY_S, KEY_D, KEY_A };
-	key_button_t keycodes_arrows[4] = { KEY_UP , KEY_DOWN, KEY_RIGHT, KEY_LEFT };
-	int xdirs[4] = {  0,  0,  1, -1 };
-	int ydirs[4] = {  1, -1,  0,  0 };
-	int xmove[4] = {  0,  0,  1, -1 };
-	int ymove[4] = { -1,  1,  0,  0 };
-
-	for (int i = 0; i < 4; ++i)
-	{
-		if (!key_mod_bit_flags(app) && key_was_pressed(app, keycodes[i]) || key_was_pressed(app, keycodes_arrows[i]))
+		for (int i = 0; i < 4; ++i)
 		{
-			if (player->holding)
+			if (!key_mod_bit_flags(app) && key_was_pressed(app, keycodes[i]) || key_was_pressed(app, keycodes_arrows[i]))
 			{
-				// if moving backwards, keep same direction, just back up
-				if (player->xdir == -xdirs[i] && player->ydir == -ydirs[i])
+				if (player->holding)
 				{
-					// make sure we don't push block through a wall
-					if (world->board.data[y + player->ydir][x - player->xdir].is_empty)
+					// if moving backwards, keep same direction, just back up
+					if (player->xdir == -xdirs[i] && player->ydir == -ydirs[i])
 					{
-						++player->moves;
+						// make sure we don't push block through a wall
+						if (world->board.data[y + player->ydir][x - player->xdir].is_empty)
+						{
+							++player->moves;
 
-						// move backward
-						x += xmove[i];
-						y += ymove[i];
+							// move backward
+							x += xmove[i];
+							y += ymove[i];
 
-						// update hero position
-						board_piece->hop(x, y, Player::move_delay);
-						player->busy = true;
+							// update hero position
+							board_piece->hop(x, y, Player::move_delay);
+							player->busy = true;
 
-						// then, move the block
-						entity_t block = world->board.data[y - player->ydir * 2][x + player->xdir * 2].entity;
-						BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
-						block_board_piece->linear(x + player->xdir, y - player->ydir, Player::move_delay);
+							// then, move the block
+							entity_t block = world->board.data[y - player->ydir * 2][x + player->xdir * 2].entity;
+							BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
+							block_board_piece->linear(x + player->xdir, y - player->ydir, Player::move_delay);
+							break;
+						}
+					}
+					// if moving forwards
+					else if (player->xdir == xdirs[i] && player->ydir == ydirs[i])
+					{
+						// make sure we don't push block through a wall
+						if (world->board.data[y - player->ydir * 2][x + player->xdir * 2].is_empty)
+						{
+							++player->moves;
+
+							// first, move the block
+							entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
+							BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
+							block_board_piece->linear(x + player->xdir * 2, y - player->ydir * 2, Player::move_delay);
+							block_board_piece->notify_player_when_done = player->entity;
+
+							// move forward
+							x += xmove[i];
+							y += ymove[i];
+
+							// update hero position
+							board_piece->hop(x, y, Player::move_delay);
+							player->busy = true;
+							break;
+						}
+					}
+					else // if turning 90 degrees
+					{
+						// turn
+						int xdirtemp = xdirs[i];
+						int ydirtemp = ydirs[i];
+
+						// check for something
+						if (world->board.data[y - ydirtemp][x + xdirtemp].is_empty)
+						{
+							// also check to make sure we aren't turning through a block
+							if (world->board.data[y - player->ydir - ydirtemp][x + player->xdir + xdirtemp].is_empty)
+							{
+								++player->moves;
+								entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
+
+								// turn hero
+								player->xdir = xdirtemp;
+								player->ydir = ydirtemp;
+								player->busy = true;
+
+								// and move block
+								BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
+								block_board_piece->rotate(x + player->xdir, y - player->ydir, x, y, Player::move_delay);
+								block_board_piece->notify_player_when_done = player->entity;
+							}
+						}
+
+						update_hero_animation = true;
 						break;
 					}
 				}
-				// if moving forwards
-				else if (player->xdir == xdirs[i] && player->ydir == ydirs[i])
+				else // not holding a block
 				{
-					// make sure we don't push block through a wall
-					if (world->board.data[y - player->ydir * 2][x + player->xdir * 2].is_empty)
+					if (player->xdir == xdirs[i] && player->ydir == ydirs[i])
 					{
-						++player->moves;
-
-						// first, move the block
-						entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
-						BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
-						block_board_piece->linear(x + player->xdir * 2, y - player->ydir * 2, Player::move_delay);
-						block_board_piece->notify_player_when_done = player->entity;
-
 						// move forward
 						x += xmove[i];
 						y += ymove[i];
 
-						// update hero position
-						board_piece->hop(x, y, Player::move_delay);
-						player->busy = true;
-						break;
-					}
-				}
-				else // if turning 90 degrees
-				{
-					// turn
-					int xdirtemp = xdirs[i];
-					int ydirtemp = ydirs[i];
-
-					// check for something
-					if (world->board.data[y - ydirtemp][x + xdirtemp].is_empty)
-					{
-						// also check to make sure we aren't turning through a block
-						if (world->board.data[y - player->ydir - ydirtemp][x + player->xdir + xdirtemp].is_empty)
-						{
+						// check for collisions
+						// if we did't collide, assign the new position
+						if (world->board.data[y][x].is_empty || world->board.data[y][x].is_ladder) {
 							++player->moves;
-							entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
 
-							// turn hero
-							player->xdir = xdirtemp;
-							player->ydir = ydirtemp;
+							bool won = world->board.data[y][x].is_ladder;
+							if (won) {
+								player->won = true;
+								player->ladder = world->board.data[y][x].entity;
+							}
+
+							// update hero position
+							board_piece->hop(x, y, Player::move_delay);
 							player->busy = true;
-
-							// and move block
-							BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
-							block_board_piece->rotate(x + player->xdir, y - player->ydir, x, y, Player::move_delay);
-							block_board_piece->notify_player_when_done = player->entity;
+							board_piece->notify_player_when_done = player->entity;
+							break;
 						}
 					}
-
-					update_hero_animation = true;
-					break;
-				}
-			}
-			else // not holding a block
-			{
-				if (player->xdir == xdirs[i] && player->ydir == ydirs[i])
-				{
-					// move forward
-					x += xmove[i];
-					y += ymove[i];
-
-					// check for collisions
-					// if we did't collide, assign the new position
-					if (world->board.data[y][x].is_empty || world->board.data[y][x].is_ladder) {
+					else
+					{
 						++player->moves;
-
-						bool won = world->board.data[y][x].is_ladder;
-
-						// update hero position
-						board_piece->hop(x, y, Player::move_delay);
-						player->busy = true;
-						board_piece->notify_player_when_done = player->entity;
-
-						if (won) {
-							player->won = true;
-							player->ladder = world->board.data[y][x].entity;
-						}
-
+						// turn 
+						player->xdir = xdirs[i];
+						player->ydir = ydirs[i];
+						update_hero_animation = true;
 						break;
 					}
-				}
-				else
-				{
-					++player->moves;
-					// turn 
-					player->xdir = xdirs[i];
-					player->ydir = ydirs[i];
-					update_hero_animation = true;
-					break;
 				}
 			}
 		}

@@ -289,7 +289,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs" $<TARGET_FILE_DIR:tests>)
 
 	# Copy over any test data in the test/test_data folder.
-	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:tests>)
+	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:tests>/test_data)
 
 	# For convenience make tests the startup project in Visual Studio.
 	# Also set working directory to the target output folder.
@@ -325,7 +325,7 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 		block_man/components/reflection.h
 		block_man/components/transform.h
 		block_man/components/shadow.h
-		block_man/components/copycat.h
+		block_man/components/mochi.h
 	)
 
 	set(CUTE_BLOCK_MAN_SYSTEM_SRCS
@@ -343,8 +343,8 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 		block_man/systems/transform_system.cpp
 		block_man/systems/shadow_system.h
 		block_man/systems/shadow_system.cpp
-		block_man/systems/copycat_system.h
-		block_man/systems/copycat_system.cpp
+		block_man/systems/mochi_system.h
+		block_man/systems/mochi_system.cpp
 	)
 
 	add_executable(block_man
@@ -364,7 +364,4 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 	if (MSVC)
 		set_property(TARGET block_man PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:block_man>)
 	endif()
-
-	# Copy over any test data in the test/test_data folder.
-	add_custom_command(TARGET block_man POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/block_man/data" $<TARGET_FILE_DIR:block_man>/data)
 endif()

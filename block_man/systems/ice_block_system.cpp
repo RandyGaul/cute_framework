@@ -32,7 +32,7 @@ sprite_t ice_block_mask;
 
 void ice_block_system_init()
 {
-	ice_block_mask = ice_block_idle = load_sprite("data/ice_block.aseprite");
+	ice_block_mask = ice_block_idle = load_sprite("ice_block.aseprite");
 	ice_block_idle.play("idle");
 	ice_block_mask.play("mask");
 }

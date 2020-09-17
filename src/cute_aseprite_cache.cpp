@@ -22,6 +22,8 @@
 #include <cute_aseprite_cache.h>
 #include <cute_sprite.h>
 #include <cute_debug_printf.h>
+#include <cute_file_system.h>
+#include <cute_defer.h>
 
 #include <internal/cute_app_internal.h>
 
@@ -116,7 +118,11 @@ error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, 
 	}
 
 	// Load the aseprite file.
-	ase_t* ase = cute_aseprite_load_from_file(aseprite_path, cache->mem_ctx);
+	void* data;
+	size_t sz;
+	file_system_read_entire_file_to_memory(aseprite_path, &data, &sz);
+	CUTE_DEFER(CUTE_FREE(data, cache->mem_ctx));
+	ase_t* ase = cute_aseprite_load_from_memory(data, (int)sz, cache->mem_ctx);
 	if (!ase) return error_failure("Unable to open ase file at `aseprite_path`.");
 
 	// Allocate internal cache data structure entries.

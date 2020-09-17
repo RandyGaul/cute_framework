@@ -21,21 +21,21 @@
 
 #include <components/animator.h>
 #include <components/board_piece.h>
-#include <components/copycat.h>
+#include <components/mochi.h>
 #include <components/transform.h>
 
-#include <systems/copycat_system.h>
+#include <systems/mochi_system.h>
 
-void copycat_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, CopyCat* copycats, int entity_count)
+void mochi_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, Mochi* mochis, int entity_count)
 {
 	for (int i = 0; i < entity_count; ++i) {
 		Transform* transform = transforms + i;
 		Animator* animator = animators + i;
 		BoardPiece* board_piece = board_pieces + i;
-		CopyCat* copycat = copycats + i;
+		Mochi* mochi = mochis + i;
 
-		if (copycat->awake) {
-			copycat->t += dt;
+		if (mochi->awake) {
+			mochi->t += dt;
 		}
 
 		if (board_piece->is_moving) continue;
@@ -45,27 +45,27 @@ void copycat_system_update(app_t* app, float dt, void* udata, Transform* transfo
 			if (animator->sprite.is_playing("sleeping")) {
 				animator->sprite.play("awakened");
 				animator->no_squeeze();
-				Animator* zzz_animator = (Animator*)app_get_component(app, copycat->zzz, "Animator");
+				Animator* zzz_animator = (Animator*)app_get_component(app, mochi->zzz, "Animator");
 				zzz_animator->visible = false;
 				zzz_animator->sprite.opacity = 1.0f;
- 				if (board_piece->bonk_xdir < 0) copycat->going_left = true;
-				else if (board_piece->bonk_xdir > 0) copycat->going_left = false;
+ 				if (board_piece->bonk_xdir < 0) mochi->going_left = true;
+				else if (board_piece->bonk_xdir > 0) mochi->going_left = false;
 			}
 		}
 
 		if (animator->sprite.is_playing("awakened")) {
 			if (animator->sprite.will_finish(dt)) {
 				animator->sprite.play("idle");
-				copycat->t = 0;
-				copycat->awake = true;
+				mochi->t = 0;
+				mochi->awake = true;
 			}
 		}
 
-		if (copycat->awake) {
-			if (copycat->t >= CopyCat::awake_delay) {
-				copycat->awake = false;
+		if (mochi->awake) {
+			if (mochi->t >= Mochi::awake_delay) {
+				mochi->awake = false;
 				animator->sprite.play("sleeping");
-				Animator* zzz_animator = (Animator*)app_get_component(app, copycat->zzz, "Animator");
+				Animator* zzz_animator = (Animator*)app_get_component(app, mochi->zzz, "Animator");
 				zzz_animator->visible = true;
 				zzz_animator->sprite.opacity = 0;
 			}
@@ -75,7 +75,7 @@ void copycat_system_update(app_t* app, float dt, void* udata, Transform* transfo
 			if (animator->sprite.on_loop()) {
 				animator->squeeze(v2(1.2f, 1.0f), animator->sprite.animation_delay());
 			}
-			Animator* zzz_animator = (Animator*)app_get_component(app, copycat->zzz, "Animator");
+			Animator* zzz_animator = (Animator*)app_get_component(app, mochi->zzz, "Animator");
 			float t = smoothstep(animator->sprite.animation_interpolant());
 			if (t > 0.3f && t < 0.6f) {
 				zzz_animator->sprite.opacity = remap(t, 0.3f, 0.6f);
@@ -84,9 +84,9 @@ void copycat_system_update(app_t* app, float dt, void* udata, Transform* transfo
 			}
 		}
 
-		if (copycat->awake) {
+		if (mochi->awake) {
 			bool move = false;
-			coroutine_t* co = &copycat->pacing_co;
+			coroutine_t* co = &mochi->pacing_co;
 			COROUTINE_START(co);
 			COROUTINE_PAUSE(co, 1.0f, dt);
 			move = true;
@@ -99,7 +99,7 @@ void copycat_system_update(app_t* app, float dt, void* udata, Transform* transfo
 				float hop_h = 15.0f;
 				v2 squeeze = v2(0.75f, 1.5f);
 
-				if (copycat->going_left) {
+				if (mochi->going_left) {
 					flip = true;
 					x = x - 1;
 				} else {
@@ -109,29 +109,29 @@ void copycat_system_update(app_t* app, float dt, void* udata, Transform* transfo
 				if (in_board(x, y)) {
 					BoardSpace space = world->board.data[y][x];
 					if (space.is_empty) {
-						board_piece->hop(x, y, CopyCat::hop_delay, hop_h);
+						board_piece->hop(x, y, Mochi::hop_delay, hop_h);
 						animator->sprite.play(next_anim);
 						if (flip) animator->flip_x();
 						else animator->unflip_x();
-						animator->squeeze(squeeze, CopyCat::hop_delay);
+						animator->squeeze(squeeze, Mochi::hop_delay);
 					} else {
-						if (copycat->going_left) {
+						if (mochi->going_left) {
 							flip = false;
 							x = x + 1;
-							copycat->going_left = false;
+							mochi->going_left = false;
 						} else {
 							flip = true;
 							x = x - 1;
-							copycat->going_left = true;
+							mochi->going_left = true;
 						}
 
 						space = world->board.data[y][x];
 						if (space.is_empty) {
-							board_piece->hop(x, y, CopyCat::hop_delay, hop_h);
+							board_piece->hop(x, y, Mochi::hop_delay, hop_h);
 							animator->sprite.play(next_anim);
 							if (flip) animator->flip_x();
 							else animator->unflip_x();
-							animator->squeeze(squeeze, CopyCat::hop_delay);
+							animator->squeeze(squeeze, Mochi::hop_delay);
 						} else {
 							animator->sprite.play("idle");
 						}

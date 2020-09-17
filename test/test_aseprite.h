@@ -29,7 +29,7 @@ using namespace cute;
 CUTE_TEST_CASE(test_aseprite_make_destroy, "Load an aseprite file and destroy it.");
 int test_aseprite_make_destroy()
 {
-	ase_t* ase = cute_aseprite_load_from_file("girl.aseprite", NULL);
+	ase_t* ase = cute_aseprite_load_from_file("test_data/girl.aseprite", NULL);
 	cute_aseprite_free(ase);
 	return 0;
 }

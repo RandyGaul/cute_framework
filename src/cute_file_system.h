@@ -71,6 +71,7 @@ extern CUTE_API error_t CUTE_CALL file_system_seek(file_t* file, size_t position
 extern CUTE_API size_t CUTE_CALL file_system_size(file_t* file);
 extern CUTE_API error_t CUTE_CALL file_system_flush(file_t* file);
 extern CUTE_API error_t CUTE_CALL file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size = NULL, void* user_allocator_context = NULL);
+extern CUTE_API error_t CUTE_CALL file_system_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size = NULL, void* user_allocator_context = NULL);
 extern CUTE_API error_t CUTE_CALL file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
 
 }
