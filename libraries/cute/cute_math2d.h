@@ -114,12 +114,11 @@ CUTE_MATH2D_INLINE float intersect(float da, float db) { return da / (da - db); 
 CUTE_MATH2D_INLINE float invert_safe(float a) { return a != 0 ? a / 1.0f : 0; }
 CUTE_MATH2D_INLINE float lerp(float a, float b, float t) { return a + (b - a) * t; }
 CUTE_MATH2D_INLINE float remap(float t, float lo, float hi) { return (hi - lo) != 0 ? (t - lo) / (hi - lo) : 0; }
-
+CUTE_MATH2D_INLINE float mod(float x, float m) { return x - (int)(x / m) * m; }
+CUTE_MATH2D_INLINE int sign(int a) { return a < 0 ? -1 : 1; }
 CUTE_MATH2D_INLINE int min(int a, int b) { return a < b ? a : b; }
 CUTE_MATH2D_INLINE int max(int a, int b) { return b < a ? a : b; }
 CUTE_MATH2D_INLINE int clamp(int a, int lo, int hi) { return max(lo, min(a, hi)); }
-CUTE_MATH2D_INLINE int sign(int a) { return a < 0 ? -1 : 1; }
-
 CUTE_MATH2D_INLINE bool is_even(int x) { return (x % 2) == 0; }
 CUTE_MATH2D_INLINE bool is_odd(int x) { return !is_even(x); }
 
@@ -204,6 +203,8 @@ CUTE_MATH2D_INLINE float shortest_arc(v2 a, v2 b) {
 		return -theta;
 	}
 }
+
+CUTE_MATH2D_INLINE float angle_diff(float radians_a, float radians_b) { return mod((radians_b - radians_a) + 3.14159265f, 2.0f * 3.14159265f) - 3.14159265f; }
 
 // transform ops
 CUTE_MATH2D_INLINE transform_t make_transform() { transform_t x; x.p = v2(0, 0); x.r = make_rotation(); return x; }
