@@ -30,6 +30,7 @@
 #include <systems/transform_system.h>
 #include <systems/shadow_system.h>
 #include <systems/mochi_system.h>
+#include <systems/light_system.h>
 
 #include <components/animator.h>
 #include <components/board_piece.h>
@@ -40,6 +41,7 @@
 #include <components/shadow.h>
 #include <components/mochi.h>
 #include <components/fire.h>
+#include <components/light.h>
 
 #define CUTE_PATH_IMPLEMENTATION
 #include <cute/cute_path.h>
@@ -84,6 +86,7 @@ const char* schema_player = CUTE_STRINGIZE(
 	BoardPiece = { },
 	Player = { },
 	Shadow = { small = "true" },
+	Light = { },
 );
 
 const char* schema_mochi = CUTE_STRINGIZE(
@@ -220,6 +223,7 @@ void ecs_registration(app_t* app)
 	REGISTER_COMPONENT(Shadow, NULL);
 	REGISTER_COMPONENT(Mochi, Mochi_cleanup);
 	REGISTER_COMPONENT(Fire, NULL);
+	REGISTER_COMPONENT(Light, NULL);
 
 	// Order of entity registration matters if using `inherits_from`.
 	// Any time `inherits_from` is used, that type must have been already registered.
@@ -347,6 +351,16 @@ void ecs_registration(app_t* app)
 			"Reflection",
 	};
 	app_register_system(app, s);
+
+	s.udata = NULL;
+	s.pre_update_fn = NULL;
+	s.update_fn = (void*)light_system_update;
+	s.post_update_fn = light_system_post_update;
+	s.component_types = {
+			"Transform",
+			"Light",
+	};
+	app_register_system(app, s);
 }
 
 static void s_add_level(const char* name)
@@ -409,6 +423,7 @@ void init_world()
 	ecs_registration(app);
 	ice_block_system_init();
 	shadow_system_init();
+	light_system_init();
 	load_all_levels_from_disk_into_ram();
 }
 

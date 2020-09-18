@@ -32,12 +32,12 @@ void reflection_system_pre_update(app_t* app, float dt, void* udata)
 {
 	sg_depth_stencil_state stencil;
 	CUTE_MEMSET(&stencil, 0, sizeof(stencil));
+	stencil.stencil_enabled = true;
 	stencil.stencil_front.fail_op = SG_STENCILOP_KEEP;
 	stencil.stencil_front.depth_fail_op = SG_STENCILOP_KEEP;
 	stencil.stencil_front.pass_op = SG_STENCILOP_REPLACE;
 	stencil.stencil_front.compare_func = SG_COMPAREFUNC_ALWAYS;
 	stencil.stencil_back = stencil.stencil_front;
-	stencil.stencil_enabled = true;
 	stencil.stencil_read_mask = 0xFF;
 	stencil.stencil_write_mask = 0xFF;
 	stencil.stencil_ref = 0x1;
@@ -76,12 +76,12 @@ void reflection_system_post_update(app_t* app, float dt, void* udata)
 {
 	sg_depth_stencil_state stencil;
 	CUTE_MEMSET(&stencil, 0, sizeof(stencil));
+	stencil.stencil_enabled = true;
 	stencil.stencil_front.fail_op = SG_STENCILOP_KEEP;
 	stencil.stencil_front.depth_fail_op = SG_STENCILOP_KEEP;
 	stencil.stencil_front.pass_op = SG_STENCILOP_REPLACE;
 	stencil.stencil_front.compare_func = SG_COMPAREFUNC_ALWAYS;
 	stencil.stencil_back = stencil.stencil_front;
-	stencil.stencil_enabled = true;
 	stencil.stencil_read_mask = 0xFF;
 	stencil.stencil_write_mask = 0xFF;
 	stencil.stencil_ref = 0x1;

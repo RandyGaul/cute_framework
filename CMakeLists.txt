@@ -308,6 +308,7 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 		block_man/world.cpp
 		block_man/serialize.h
 		block_man/serialize.cpp
+		block_man/shaders/light_shader.h
 	)
 
 	set(CUTE_BLOCK_MAN_IMGUI_SRCS
@@ -328,6 +329,7 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 		block_man/components/mochi.h
 		block_man/components/fire.h
 		block_man/components/patrol.h
+		block_man/components/light.h
 	)
 
 	set(CUTE_BLOCK_MAN_SYSTEM_SRCS
@@ -347,6 +349,8 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 		block_man/systems/shadow_system.cpp
 		block_man/systems/mochi_system.h
 		block_man/systems/mochi_system.cpp
+		block_man/systems/light_system.h
+		block_man/systems/light_system.cpp
 	)
 
 	add_executable(block_man
