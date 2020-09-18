@@ -105,6 +105,8 @@ struct aabb_t
 
 #define CUTE_MATH2D_INLINE inline
 
+#define CUTE_MATH2D_PI 3.14159265f
+
 // scalar ops
 CUTE_MATH2D_INLINE float min(float a, float b) { return a < b ? a : b; }
 CUTE_MATH2D_INLINE float max(float a, float b) { return b < a ? a : b; }
@@ -124,8 +126,10 @@ CUTE_MATH2D_INLINE bool is_odd(int x) { return !is_even(x); }
 
 // easing functions
 CUTE_MATH2D_INLINE float smoothstep(float x) { return x * x * (3.0f - 2.0f * x); }
-CUTE_MATH2D_INLINE float ease_out_sin(float x) { return sin((x * 3.14159265f) * 0.5f); }
-CUTE_MATH2D_INLINE float ease_in_sin(float x) { return 1.0f - cos((x * 3.14159265f) * 0.5f); }
+CUTE_MATH2D_INLINE float ease_out_sin(float x) { return sin((x * CUTE_MATH2D_PI) * 0.5f); }
+CUTE_MATH2D_INLINE float ease_in_sin(float x) { return 1.0f - cos((x * CUTE_MATH2D_PI) * 0.5f); }
+CUTE_MATH2D_INLINE float ease_in_quart(float x) { return x * x * x * x; }
+CUTE_MATH2D_INLINE float ease_out_quart(float x) { return 1.0f - ease_in_quart(1.0f - x); }
 
 // vector ops
 CUTE_MATH2D_INLINE v2 operator+(v2 a, v2 b) { return v2(a.x + b.x, a.y + b.y); }
@@ -190,7 +194,7 @@ CUTE_MATH2D_INLINE m2 mul(m2 a, m2 b)  { m2 c; c.x = mul(a,  b.x); c.y = mul(a, 
 CUTE_MATH2D_INLINE m2 mulT(m2 a, m2 b) { m2 c; c.x = mulT(a, b.x); c.y = mulT(a, b.y); return c; }
 
 // Remaps the result from atan2f to the continuous range of 0, 2*PI.
-CUTE_MATH2D_INLINE float atan2_360(float y, float x) { return atan2f(-y, -x) + 3.14159265f; }
+CUTE_MATH2D_INLINE float atan2_360(float y, float x) { return atan2f(-y, -x) + CUTE_MATH2D_PI; }
 
 // Computes the shortest angle to rotate the vector a to the vector b.
 CUTE_MATH2D_INLINE float shortest_arc(v2 a, v2 b) {
@@ -204,7 +208,8 @@ CUTE_MATH2D_INLINE float shortest_arc(v2 a, v2 b) {
 	}
 }
 
-CUTE_MATH2D_INLINE float angle_diff(float radians_a, float radians_b) { return mod((radians_b - radians_a) + 3.14159265f, 2.0f * 3.14159265f) - 3.14159265f; }
+CUTE_MATH2D_INLINE float angle_diff(float radians_a, float radians_b) { return mod((radians_b - radians_a) + CUTE_MATH2D_PI, 2.0f * CUTE_MATH2D_PI) - CUTE_MATH2D_PI; }
+CUTE_MATH2D_INLINE v2 from_angle(float radians) { return v2(cos(radians), sin(radians)); }
 
 // transform ops
 CUTE_MATH2D_INLINE transform_t make_transform() { transform_t x; x.p = v2(0, 0); x.r = make_rotation(); return x; }

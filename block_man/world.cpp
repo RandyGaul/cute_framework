@@ -260,8 +260,19 @@ void ecs_registration(app_t* app)
 	s.update_fn = (void*)animator_transform_system_update;
 	s.post_update_fn = NULL;
 	s.component_types = {
-			"Transform",
-			"Animator",
+		"Transform",
+		"Animator",
+	};
+	app_register_system(app, s);
+
+	s.udata = NULL;
+	s.pre_update_fn = NULL;
+	s.update_fn = (void*)board_transform_system_update;
+	s.post_update_fn = NULL;
+	s.component_types = {
+		"Transform",
+		"Animator",
+		"BoardPiece",
 	};
 	app_register_system(app, s);
 
@@ -270,10 +281,10 @@ void ecs_registration(app_t* app)
 	s.update_fn = (void*)player_system_update;
 	s.post_update_fn = NULL;
 	s.component_types = {
-			"Transform",
-			"Animator",
-			"BoardPiece",
-			"Player",
+		"Transform",
+		"Animator",
+		"BoardPiece",
+		"Player",
 	};
 	app_register_system(app, s);
 
@@ -282,9 +293,7 @@ void ecs_registration(app_t* app)
 	s.update_fn = (void*)board_system_update;
 	s.post_update_fn = NULL;
 	s.component_types = {
-			"Transform",
-			"Animator",
-			"BoardPiece",
+		"BoardPiece",
 	};
 	app_register_system(app, s);
 
@@ -293,10 +302,10 @@ void ecs_registration(app_t* app)
 	s.update_fn = (void*)ice_block_system_update;
 	s.post_update_fn = NULL;
 	s.component_types = {
-			"Transform",
-			"Animator",
-			"BoardPiece",
-			"IceBlock",
+		"Transform",
+		"Animator",
+		"BoardPiece",
+		"IceBlock",
 	};
 	app_register_system(app, s);
 
@@ -305,10 +314,10 @@ void ecs_registration(app_t* app)
 	s.update_fn = (void*)mochi_system_update;
 	s.post_update_fn = NULL;
 	s.component_types = {
-			"Transform",
-			"Animator",
-			"BoardPiece",
-			"Mochi",
+		"Transform",
+		"Animator",
+		"BoardPiece",
+		"Mochi",
 	};
 	app_register_system(app, s);
 
@@ -324,10 +333,10 @@ void ecs_registration(app_t* app)
 	s.update_fn = (void*)shadow_system_update;
 	s.post_update_fn = shadow_system_post_update;
 	s.component_types = {
-			"Transform",
-			"Animator",
-			"BoardPiece",
-			"Shadow",
+		"Transform",
+		"Animator",
+		"BoardPiece",
+		"Shadow",
 	};
 	app_register_system(app, s);
 
@@ -336,8 +345,8 @@ void ecs_registration(app_t* app)
 	s.update_fn = (void*)animator_system_update;
 	s.post_update_fn = animator_system_post_update;
 	s.component_types = {
-			"Transform",
-			"Animator",
+		"Transform",
+		"Animator",
 	};
 	app_register_system(app, s);
 
@@ -346,9 +355,9 @@ void ecs_registration(app_t* app)
 	s.update_fn = (void*)reflection_system_update;
 	s.post_update_fn = reflection_system_post_update;
 	s.component_types = {
-			"Transform",
-			"Animator",
-			"Reflection",
+		"Transform",
+		"Animator",
+		"Reflection",
 	};
 	app_register_system(app, s);
 
@@ -357,8 +366,8 @@ void ecs_registration(app_t* app)
 	s.update_fn = (void*)light_system_update;
 	s.post_update_fn = light_system_post_update;
 	s.component_types = {
-			"Transform",
-			"Light",
+		"Transform",
+		"Light",
 	};
 	app_register_system(app, s);
 }

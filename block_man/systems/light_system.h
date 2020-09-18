@@ -28,6 +28,13 @@ using namespace cute;
 struct Transform;
 struct Light;
 
+namespace Darkness
+{
+	static constexpr float radius_max = 100.0f;
+	extern float radius;
+	extern v2 center;
+};
+
 void light_system_init();
 
 void light_system_update(app_t* app, float dt, void* udata, Transform* transforms, Light* lights, int entity_count);

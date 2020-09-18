@@ -30,6 +30,8 @@ using namespace cute;
 #include <world.h>
 #include <serialize.h>
 
+#include <systems/light_system.h>
+
 void do_imgui_stuff(app_t* app, float dt)
 {
 	static bool open = true;
@@ -156,6 +158,7 @@ void do_imgui_stuff(app_t* app, float dt)
 		}
 		ImGui::Separator();
 		ImGui::Text("Moves: %d", world->moves);
+		ImGui::SliderFloat("Darkess Radius", &Darkness::radius, 0.0f, 100.0f, "%.3f", 1.5f);
 		ImGui::End();
 
 		if (erase) {

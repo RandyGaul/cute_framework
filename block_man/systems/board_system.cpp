@@ -28,7 +28,7 @@
 
 #include <world.h>
 
-void board_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, int entity_count)
+void board_transform_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, int entity_count)
 {
 	for (int i = 0; i < entity_count; ++i) {
 		Transform* transform = transforms + i;
@@ -36,6 +36,20 @@ void board_system_update(app_t* app, float dt, void* udata, Transform* transform
 		BoardPiece* board_piece = board_pieces + i;
 
 		v2 p = tile2world(board_piece->x, board_piece->y);
+
+		if (board_piece->is_moving) {
+			p = board_piece->interpolate();
+		}
+
+		transform->world.p += p;
+		animator->sprite.sort_bits = sort_bits(board_piece->x, board_piece->y);
+	}
+}
+
+void board_system_update(app_t* app, float dt, void* udata, BoardPiece* board_pieces, int entity_count)
+{
+	for (int i = 0; i < entity_count; ++i) {
+		BoardPiece* board_piece = board_pieces + i;
 
 		if (board_piece->is_moving) {
 			board_piece->t += dt;
@@ -47,12 +61,7 @@ void board_system_update(app_t* app, float dt, void* udata, Transform* transform
 					Player* player = (Player*)app_get_component(app, board_piece->notify_player_when_done, "Player");
 					player->busy = false;
 				}
-			} else {
-				p = board_piece->interpolate();
 			}
 		}
-
-		transform->world.p += p;
-		animator->sprite.sort_bits = sort_bits(board_piece->x, board_piece->y);
 	}
 }

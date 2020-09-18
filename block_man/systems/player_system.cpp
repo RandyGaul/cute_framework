@@ -20,6 +20,7 @@
 */
 
 #include <systems/player_system.h>
+#include <systems/light_system.h>
 
 #include <components/transform.h>
 #include <components/animator.h>
@@ -281,6 +282,9 @@ void player_system_update(app_t* app, float dt, void* udata, Transform* transfor
 		Animator* animator = animators + i;
 		BoardPiece* board_piece = board_pieces + i;
 		Player* player = players + i;
+
+		// Center all of the darkness onto the player.
+		Darkness::center = transform->get().p;
 
 		if (player->busy) continue;
 
