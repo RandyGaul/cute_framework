@@ -277,13 +277,13 @@ static void s_pulser(float r, v2 p)
 	}
 }
 
-static void s_draw_crawlies()
+static void s_draw_crawlies(float t)
 {
 	sg_apply_pipeline(s_just_draw);
 	error_t err = triple_buffer_append(&s_buf, Darkness::verts.count(), Darkness::verts.data());
 	CUTE_ASSERT(!err.is_error());
 	sg_apply_bindings(s_buf.bind());
-	s_uniforms(matrix_ortho_2d(320, 240, 0, 0), color_black());
+	s_uniforms(matrix_ortho_2d(320, 240, 0, 0), make_color(0.0f, 0.0f, 0.0f, t));
 	sg_draw(0, Darkness::verts.count(), 1);
 	s_buf.advance();
 	Darkness::verts.clear();
@@ -296,13 +296,13 @@ static void s_pulsers(float dt)
 	float pulse = s_pulse(&pulse_co, dt);
 	float r = 7.0f + Darkness::radius;
 	float t = remap(Darkness::radius / Darkness::radius_max, 0.0f, 0.5f);
-	int iters = 35;
+	int iters = 15;
 
 	for (int i = 0; i < iters; ++i) {
 		v2 d = from_angle(rnd_next_range(&rnd, 0.0f, 2.0f * CUTE_MATH2D_PI));
 		v2 p = Darkness::center + d * r + v2(rnd_next_range(&rnd, -1.0f, 1.0f), rnd_next_range(&rnd, -1.0f, 1.0f)) * 2;
-		float pulse_r = rnd_next_range(&rnd, 1.0f, 5.0f) + pulse + clamp(t, 0.5f, 1.0f) * 10.0f;
-		v2 p_offset = d * t * pulse_r;
+		float pulse_r = rnd_next_range(&rnd, 1.0f, 5.0f) + pulse + t * 10.0f;
+		v2 p_offset = d * t * pulse_r * 0.5f;
 		s_pulser(pulse_r, p + p_offset);
 	}
 } 
@@ -311,25 +311,25 @@ static void s_spinners(float dt)
 {
 	rnd_t rnd = rnd_seed(0);
 	float t = remap(Darkness::radius / Darkness::radius_max, 0.0f, 0.5f);
-	int iters = 7;
+	int iters = 3;
 
 	for (int i = 0; i < iters; ++i) {
-		float r = rnd_next_range(&rnd, 8.0f, 64.0f);
-		float thickness = rnd_next_range(&rnd, 3.0f, 10.0f);
+		float r = rnd_next_range(&rnd, 16.0f, 32.0f);
+		float thickness = rnd_next_range(&rnd, 3.0f, 6.0f);
 		float timescale = rnd_next_range(&rnd, 0.5f, 1.0f);
 		float a_max = rnd_next_range(&rnd, CUTE_MATH2D_PI * 0.5f, CUTE_MATH2D_PI * 1.5f);
-		v2 d = from_angle(rnd_next_range(&rnd, 0.0f, 2.0f * CUTE_MATH2D_PI));
-		v2 p = d * (Darkness::radius + r * 0.5f);
-		v2 offset = d * t * r * 0.7f;
-		s_spinner(r, thickness, 0, a_max, p + offset, timescale);
+		v2 d = from_angle(rnd_next_range(&rnd, 0.0f, rnd_next_range(&rnd, CUTE_MATH2D_PI*(3.0f/2.0f), CUTE_MATH2D_PI*(3.0f/2.0f) + CUTE_MATH2D_PI*0.5f)));
+		v2 p = d * (Darkness::radius + r);
+		v2 offset = d * 3.5f;
+		s_spinner(r, thickness, 0, a_max, p - offset, timescale);
 	}
 }
 
-static void s_do_crawlies(float dt)
+static void s_do_crawlies(float dt, float t)
 {
 	s_spinners(dt);
 	s_pulsers(dt);
-	s_draw_crawlies();
+	s_draw_crawlies(t);
 }
 
 void light_system_post_update(app_t* app, float dt, void* udata)
@@ -342,6 +342,7 @@ void light_system_post_update(app_t* app, float dt, void* udata)
 	s_do_lights(&s_verts1, s_darkness_color);
 
 	if (s_darkness_color.a == 1) {
-		s_do_crawlies(dt);
+		float crawlies_t = clamp(remap(t, 0.5f, 0.6f), 0.0f, 1.0f);
+		s_do_crawlies(dt, crawlies_t);
 	}
 }
