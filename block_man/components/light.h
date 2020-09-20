@@ -29,8 +29,9 @@ using namespace cute;
 
 struct Light
 {
+	bool is_lamp = false;
+	float radius = 11;
 	float radius_delta = 0;
-	float radius = 16;
 	coroutine_t co = { 0 };
 };
 
@@ -40,6 +41,8 @@ CUTE_INLINE cute::error_t Light_serialize(app_t* app, kv_t* kv, entity_t entity,
 	if (kv_get_state(kv) == KV_STATE_READ) {
 		CUTE_PLACEMENT_NEW(light) Light;
 	}
+	kv_key(kv, "is_lamp"); kv_val(kv, &light->is_lamp);
+	kv_key(kv, "radius"); kv_val(kv, &light->radius);
 	return kv_error_state(kv);
 }
 

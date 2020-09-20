@@ -111,6 +111,7 @@ struct aabb_t
 CUTE_MATH2D_INLINE float min(float a, float b) { return a < b ? a : b; }
 CUTE_MATH2D_INLINE float max(float a, float b) { return b < a ? a : b; }
 CUTE_MATH2D_INLINE float clamp(float a, float lo, float hi) { return max(lo, min(a, hi)); }
+CUTE_MATH2D_INLINE float clamp01(float a) { return max(0.0f, min(a, 1.0f)); }
 CUTE_MATH2D_INLINE float sign(float a) { return a < 0 ? -1.0f : 1.0f; }
 CUTE_MATH2D_INLINE float intersect(float da, float db) { return da / (da - db); }
 CUTE_MATH2D_INLINE float invert_safe(float a) { return a != 0 ? a / 1.0f : 0; }
@@ -121,6 +122,7 @@ CUTE_MATH2D_INLINE int sign(int a) { return a < 0 ? -1 : 1; }
 CUTE_MATH2D_INLINE int min(int a, int b) { return a < b ? a : b; }
 CUTE_MATH2D_INLINE int max(int a, int b) { return b < a ? a : b; }
 CUTE_MATH2D_INLINE int clamp(int a, int lo, int hi) { return max(lo, min(a, hi)); }
+CUTE_MATH2D_INLINE int clamp01(int a) { return max(0, min(a, 1)); }
 CUTE_MATH2D_INLINE bool is_even(int x) { return (x % 2) == 0; }
 CUTE_MATH2D_INLINE bool is_odd(int x) { return !is_even(x); }
 
@@ -149,6 +151,7 @@ CUTE_MATH2D_INLINE float det2(v2 a, v2 b) { return a.x * b.y - a.y * b.x; }
 CUTE_MATH2D_INLINE v2 min(v2 a, v2 b) { return v2(min(a.x, b.x), min(a.y, b.y)); }
 CUTE_MATH2D_INLINE v2 max(v2 a, v2 b) { return v2(max(a.x, b.x), max(a.y, b.y)); }
 CUTE_MATH2D_INLINE v2 clamp(v2 a, v2 lo, v2 hi) { return max(lo, min(a, hi)); }
+CUTE_MATH2D_INLINE v2 clamp01(v2 a) { return max(v2(0, 0), min(a, v2(1, 1))); }
 CUTE_MATH2D_INLINE v2 abs(v2 a) { return v2(::abs(a.x), ::abs(a.y)); }
 CUTE_MATH2D_INLINE float hmin(v2 a ) { return min(a.x, a.y); }
 CUTE_MATH2D_INLINE float hmax(v2 a ) { return max(a.x, a.y); }

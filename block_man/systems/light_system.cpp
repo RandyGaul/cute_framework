@@ -30,8 +30,12 @@
 
 static color_t s_gradient = make_color(0.0f, 0.0f, 0.0f, 0.25f);
 static color_t s_darkness_color = make_color(0.0f, 0.0f, 0.0f, 0.25f);
+static color_t s_crawlies_color = make_color(0.0f, 0.0f, 0.0f, 1.0f);
+static color_t s_non_lamp_color = make_color(0.0f, 0.0f, 0.0f, 1.0f);
 static array<v2> s_verts0;
 static array<v2> s_verts1;
+static array<v2> s_lamp_verts;
+static array<v2> s_non_lamp_verts;
 static sg_shader s_shd;
 static sg_pipeline s_just_draw;
 static sg_pipeline s_darkness;
@@ -115,7 +119,7 @@ void light_system_init()
 	params.depth_stencil = stencil;
 	s_just_draw = sg_make_pipeline(params);
 
-	s_buf = triple_buffer_make(sizeof(v2) * 1024 * 10, sizeof(v2));
+	s_buf = triple_buffer_make(sizeof(v2) * 1024 * 5, sizeof(v2));
 
 	v2 fullscreen_quad[6] = {
 		v2(-1, -1),
@@ -139,7 +143,7 @@ static void s_add_light(Light* light, v2 p, float r_offset, array<v2>* verts)
 {
 	float r = light->radius + light->radius_delta + r_offset;
 	v2 prev = v2(r, 0);
-	int iters = 20;
+	int iters = 40;
 
 	for (int i = 1; i <= iters; ++i) {
 		float a = (i / (float)iters) * (2.0f * 3.14159265f);
@@ -183,11 +187,26 @@ void light_system_update(app_t* app, float dt, void* udata, Transform* transform
 		Transform* transform = transforms + i;
 		Light* light = lights + i;
 
-		light->radius = Darkness::radius;
+		if (light->is_lamp) {
+			light->radius = Darkness::radius;
+		}
 		light->radius_delta = s_pulse(&light->co, dt);
 		v2 p = transform->get().p;
-		s_add_light(light, p, 0, &s_verts0);
+
+		// This if-else-if-statement prevents a weird artifact where non-lamp lights cutout
+		// the gradient section of the lamp lights.
+		if (!light->is_lamp && s_darkness_color.a != 1) {
+			s_add_light(light, p, 0, &s_verts0);
+		} else if (light->is_lamp) {
+			s_add_light(light, p, 0, &s_verts0);
+		}
+
 		s_add_light(light, p, 3, &s_verts1);
+		if (!light->is_lamp) {
+			s_add_light(light, p, 3, &s_non_lamp_verts);
+		} else {
+			s_add_light(light, p, 3, &s_lamp_verts);
+		}
 	}
 }
 
@@ -221,7 +240,6 @@ static void s_do_lights(array<v2>* verts, color_t color)
 		s_uniforms(matrix_ortho_2d(320, 240, 0, 0), color);
 		sg_draw(0, verts->count(), 1);
 		s_buf.advance();
-		verts->clear();
 	}
 
 	// Render the darkness.
@@ -229,6 +247,39 @@ static void s_do_lights(array<v2>* verts, color_t color)
 	sg_apply_bindings(bind);
 	s_uniforms(matrix_identity(), color);
 	sg_draw(0, 6, 1);
+}
+
+static void s_non_lamp_lights(color_t color)
+{
+	if (s_non_lamp_verts.count()) {
+		// Set stencil buffer to all 1's on the non-lamp lights.
+		sg_apply_pipeline(s_clear);
+		error_t err = triple_buffer_append(&s_buf, s_non_lamp_verts.count(), s_non_lamp_verts.data());
+		CUTE_ASSERT(!err.is_error());
+		sg_apply_bindings(s_buf.bind());
+		s_uniforms(matrix_ortho_2d(320, 240, 0, 0), color);
+		sg_draw(0, s_non_lamp_verts.count(), 1);
+		s_buf.advance();
+
+		// Cutout lamp radii.
+		if (s_lamp_verts.count()) {
+			sg_apply_pipeline(s_cutout);
+			error_t err = triple_buffer_append(&s_buf, s_lamp_verts.count(), s_lamp_verts.data());
+			CUTE_ASSERT(!err.is_error());
+			sg_apply_bindings(s_buf.bind());
+			s_uniforms(matrix_ortho_2d(320, 240, 0, 0), color);
+			sg_draw(0, s_lamp_verts.count(), 1);
+			s_buf.advance();
+		}
+
+		// Render the darkness.
+		sg_apply_pipeline(s_darkness);
+		sg_bindings bind = { 0 };
+		bind.vertex_buffers[0] = s_quad;
+		sg_apply_bindings(bind);
+		s_uniforms(matrix_identity(), color);
+		sg_draw(0, 6, 1);
+	}
 }
 
 static void s_spinner(float r, float thickness, float a0, float a1, v2 offset, float timescale)
@@ -277,13 +328,13 @@ static void s_pulser(float r, v2 p)
 	}
 }
 
-static void s_draw_crawlies(float t)
+static void s_draw_crawlies()
 {
 	sg_apply_pipeline(s_just_draw);
 	error_t err = triple_buffer_append(&s_buf, Darkness::verts.count(), Darkness::verts.data());
 	CUTE_ASSERT(!err.is_error());
 	sg_apply_bindings(s_buf.bind());
-	s_uniforms(matrix_ortho_2d(320, 240, 0, 0), make_color(0.0f, 0.0f, 0.0f, t));
+	s_uniforms(matrix_ortho_2d(320, 240, 0, 0), s_crawlies_color);
 	sg_draw(0, Darkness::verts.count(), 1);
 	s_buf.advance();
 	Darkness::verts.clear();
@@ -325,24 +376,31 @@ static void s_spinners(float dt)
 	}
 }
 
-static void s_do_crawlies(float dt, float t)
+static void s_do_crawlies(float dt)
 {
 	s_spinners(dt);
 	s_pulsers(dt);
-	s_draw_crawlies(t);
+	s_draw_crawlies();
 }
 
 void light_system_post_update(app_t* app, float dt, void* udata)
 {
 	Darkness::t = Darkness::t + CUTE_MATH2D_PI * dt * 0.5f;
 	float t = 1.0f - Darkness::radius / Darkness::radius_max;
-	s_darkness_color.a = clamp(remap(t, 0, 0.5f), 0.0f, 1.0f);
+	s_darkness_color.a = clamp01(remap(t, 0, 0.6f));
+	s_crawlies_color.a = clamp01(remap(t, 0.6f, 0.7f));
+	s_non_lamp_color.a = clamp01(remap(t, 0.5f, 0.6f));
 
 	s_do_lights(&s_verts0, s_gradient);
 	s_do_lights(&s_verts1, s_darkness_color);
+	s_non_lamp_lights(s_non_lamp_color);
 
 	if (s_darkness_color.a == 1) {
-		float crawlies_t = clamp(remap(t, 0.5f, 0.6f), 0.0f, 1.0f);
-		s_do_crawlies(dt, crawlies_t);
+		s_do_crawlies(dt);
 	}
+
+	s_verts0.clear();
+	s_verts1.clear();
+	s_lamp_verts.clear();
+	s_non_lamp_verts.clear();
 }

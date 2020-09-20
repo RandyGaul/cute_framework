@@ -86,7 +86,7 @@ const char* schema_player = CUTE_STRINGIZE(
 	BoardPiece = { },
 	Player = { },
 	Shadow = { small = "true" },
-	Light = { },
+	Light = { is_lamp = "true", radius = 16 },
 );
 
 const char* schema_mochi = CUTE_STRINGIZE(
@@ -113,6 +113,7 @@ const char* schema_fire = CUTE_STRINGIZE(
 	BoardPiece = { },
 	Shadow = { small = "true" },
 	Fire = { },
+	Light = { },
 );
 
 array<const char*> schemas = {
