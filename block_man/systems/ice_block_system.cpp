@@ -63,7 +63,7 @@ static BoardPiece* s_get_piece(int x, int y, int xdir, int ydir)
 {
 	if (!in_board(x + xdir, y - ydir)) return NULL;
 	BoardSpace space = world->board.data[y - ydir][x + xdir];
-	if (space.is_empty || space.is_ladder) return NULL;
+	if (space.is_empty) return NULL;
 	return (BoardPiece*)app_get_component(app, space.entity, "BoardPiece");
 }
 

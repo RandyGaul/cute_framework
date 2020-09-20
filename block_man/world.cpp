@@ -42,6 +42,9 @@
 #include <components/mochi.h>
 #include <components/fire.h>
 #include <components/light.h>
+#include <components/oil.h>
+#include <components/lamp.h>
+#include <components/ladder.h>
 
 #define CUTE_PATH_IMPLEMENTATION
 #include <cute/cute_path.h>
@@ -76,6 +79,7 @@ const char* schema_ladder = CUTE_STRINGIZE(
 	Animator = { name = "ladder.aseprite" },
 	Reflection = { },
 	BoardPiece = { },
+	Ladder = { },
 );
 
 const char* schema_player = CUTE_STRINGIZE(
@@ -116,6 +120,27 @@ const char* schema_fire = CUTE_STRINGIZE(
 	Light = { },
 );
 
+const char* schema_oil = CUTE_STRINGIZE(
+	entity_type = "Oil",
+	Transform = { },
+	Animator = { name = "oil.aseprite", },
+	Reflection = { },
+	BoardPiece = { },
+	Shadow = { small = "true" },
+	Oil = { },
+);
+
+const char* schema_lamp = CUTE_STRINGIZE(
+	entity_type = "Lamp",
+	Transform = { },
+	Animator = { name = "lamp.aseprite", },
+	Reflection = { },
+	BoardPiece = { },
+	Shadow = { small = "true" },
+	Light = { is_lamp = "true", radius = 16 },
+	Lamp = { }
+);
+
 array<const char*> schemas = {
 	schema_ice_block,
 	schema_box,
@@ -124,6 +149,8 @@ array<const char*> schemas = {
 	schema_mochi,
 	schema_zzz,
 	schema_fire,
+	schema_oil,
+	schema_lamp,
 };
 
 array<schema_preview_t> schema_previews;
@@ -225,6 +252,9 @@ void ecs_registration(app_t* app)
 	REGISTER_COMPONENT(Mochi, Mochi_cleanup);
 	REGISTER_COMPONENT(Fire, NULL);
 	REGISTER_COMPONENT(Light, NULL);
+	REGISTER_COMPONENT(Oil, NULL);
+	REGISTER_COMPONENT(Lamp, NULL);
+	REGISTER_COMPONENT(Ladder, NULL);
 
 	// Order of entity registration matters if using `inherits_from`.
 	// Any time `inherits_from` is used, that type must have been already registered.
@@ -579,6 +609,8 @@ array<char> entity_codes = {
 	'c', // Mochi
 	'0', // zzz
 	'f', // Fire
+	'o', // Oil
+	'L', // Lamp
 };
 
 void make_entity_at(const char* entity_type, int x, int y)
@@ -602,12 +634,11 @@ void make_entity_at(int selection, int x, int y)
 	space.entity = e;
 	space.code = entity_codes[selection];
 	space.is_empty = false;
-	space.is_ladder = !CUTE_STRCMP(entity_type, "Ladder") ? true : false;
 	BoardPiece* board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
 	board_piece->x = board_piece->x0 = x;
 	board_piece->y = board_piece->y0 = y;
 	BoardSpace old_space = world->board.data[y][x];
-	if (!old_space.is_empty || old_space.is_ladder) {
+	if (!old_space.is_empty) {
 		app_destroy_entity(app, old_space.entity);
 	}
 	CUTE_ASSERT(!err.is_error());
@@ -617,28 +648,26 @@ void make_entity_at(int selection, int x, int y)
 void destroy_entity_at(int x, int y)
 {
 	BoardSpace old_space = world->board.data[y][x];
-	if (!old_space.is_empty || old_space.is_ladder) {
+	if (!old_space.is_empty) {
 		app_destroy_entity(app, old_space.entity);
 	}
 	BoardSpace space;
 	space.entity = INVALID_ENTITY;
 	space.code = '0';
 	space.is_empty = true;
-	space.is_ladder = false;
 	world->board.data[y][x] = space;
 }
 
 void delayed_destroy_entity_at(int x, int y)
 {
 	BoardSpace old_space = world->board.data[y][x];
-	if (!old_space.is_empty || old_space.is_ladder) {
+	if (!old_space.is_empty) {
 		app_delayed_destroy_entity(app, old_space.entity);
 	}
 	BoardSpace space;
 	space.entity = INVALID_ENTITY;
 	space.code = '0';
 	space.is_empty = true;
-	space.is_ladder = false;
 	world->board.data[y][x] = space;
 }
 
@@ -693,13 +722,14 @@ void select_level(int index)
 		case 'e': err = app_make_entity(app, "Ladder", &e); break;
 		case 'c': err = app_make_entity(app, "Mochi", &e); break;
 		case 'f': err = app_make_entity(app, "Fire", &e); break;
+		case 'o': err = app_make_entity(app, "Oil", &e); break;
+		case 'L': err = app_make_entity(app, "Lamp", &e); break;
 		}
 		CUTE_ASSERT(!err.is_error());
 		BoardSpace space;
 		space.code = c;
 		space.entity = e;
 		space.is_empty = c == '0' ? true : false;
-		space.is_ladder = c == 'e' ? true : false;
 		if (!space.is_empty) {
 			BoardPiece* board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
 			board_piece->x = board_piece->x0 = j;

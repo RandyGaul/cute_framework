@@ -19,51 +19,23 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef PLAYER_H
-#define PLAYER_H
+#ifndef OIL_H
+#define OIL_H
 
 #include <cute.h>
 using namespace cute;
 
-#include <components/animator.h>
-
-#include <cute/cute_coroutine.h>
-
-struct Player
+struct Oil
 {
-	static constexpr float move_delay = 0.125f;
-
-	entity_t entity = INVALID_ENTITY;
-	int xdir = 0;
-	int ydir = -1;
-	bool holding = false;
-	bool won = false;
-	bool busy = false;
-	coroutine_t co = { 0 };
-	entity_t ladder = INVALID_ENTITY;
-	entity_t oil = INVALID_ENTITY;
-	int oil_count = 0;
-
-	// ----------------------------
-	// For spinning upon level load.
-	v2 spin_p0, spin_p;
-	float spin_t = 0;
-	float spin_delay;
-	const float spin_delay_per_tile = 0.35f;
-	// For spinning upon level load.
-	// ----------------------------
 };
 
-CUTE_INLINE cute::error_t Player_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Oil_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
-	Player* player = (Player*)component;
+	Oil* oil = (Oil*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
-		CUTE_PLACEMENT_NEW(player) Player;
-		player->entity = entity;
-		Animator* animator = (Animator*)app_get_component(app, entity, "Animator");
-		animator->sprite.play("idle");
+		CUTE_PLACEMENT_NEW(oil) Oil;
 	}
 	return kv_error_state(kv);
 }
 
-#endif // PLAYER_H
+#endif // OIL_H

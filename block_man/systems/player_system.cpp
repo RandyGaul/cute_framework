@@ -27,6 +27,7 @@
 #include <components/board_piece.h>
 #include <components/player.h>
 #include <components/ice_block.h>
+#include <components/lamp.h>
 
 void set_player_animation_based_on_facing_direction(Player* player, Animator* animator)
 {
@@ -61,6 +62,15 @@ void set_player_animation_based_on_facing_direction(Player* player, Animator* an
 	else animator->unflip_x();
 }
 
+static bool s_player_can_move_here(int x, int y)
+{
+	entity_t e = world->board.data[y][x].entity;
+	if (world->board.data[y][x].is_empty) return true;
+	else if (app_entity_is_type(app, e, "Ladder")) return true;
+	else if (app_entity_is_type(app, e, "Oil")) return true;
+	return false;
+}
+
 bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 {
 	bool update_hero_animation = false;
@@ -73,10 +83,16 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			int sx = x + player->xdir, sy = y - player->ydir;
 			bool found = false;
 			int distance = 0;
+			bool is_ice_block = false;
+			bool is_lamp = false;
 			while (in_grid(sy, sx, world->board.data.count(), world->board.data[0].count())) {
 				bool has_something = !world->board.data[sy][sx].is_empty;
-				bool is_ice_block = has_something && app_entity_is_type(app, world->board.data[sy][sx].entity, "IceBlock");
+				is_ice_block = has_something && app_entity_is_type(app, world->board.data[sy][sx].entity, "IceBlock");
+				is_lamp = has_something && app_entity_is_type(app, world->board.data[sy][sx].entity, "Lamp");
 				if (is_ice_block) {
+					found = true;
+					break;
+				} else if (is_lamp && distance == 0) {
 					found = true;
 					break;
 				} else if (has_something) {
@@ -96,8 +112,13 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 				player->holding = true;
 				update_hero_animation = true;
 				player->busy = true;
-				IceBlock* ice_block = (IceBlock*)app_get_component(app, block, "IceBlock");
-				ice_block->is_held = true;
+				if (is_ice_block) {
+					IceBlock* ice_block = (IceBlock*)app_get_component(app, block, "IceBlock");
+					ice_block->is_held = true;
+				} else if (is_lamp) {
+					Lamp* lamp = (Lamp*)app_get_component(app, block, "Lamp");
+					lamp->is_held = true;
+				}
 			}
 		} else {
 			// Pushing blocks forward.
@@ -242,13 +263,16 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 
 						// check for collisions
 						// if we did't collide, assign the new position
-						if (world->board.data[y][x].is_empty || world->board.data[y][x].is_ladder) {
+						if (s_player_can_move_here(x, y)) {
 							++world->moves;
 
-							bool won = world->board.data[y][x].is_ladder;
+							entity_t e = world->board.data[y][x].entity;
+							bool won = app_entity_is_type(app, e, "Ladder");
 							if (won) {
 								player->won = true;
 								player->ladder = world->board.data[y][x].entity;
+							} else if (app_entity_is_type(app, e, "Oil")) {
+								player->oil = e;
 							}
 
 							// update hero position
@@ -292,6 +316,11 @@ void player_system_update(app_t* app, float dt, void* udata, Transform* transfor
 			if (!player->won) {
 				bool update_anim = handle_input(app, dt, board_piece, player);
 				if (update_anim) set_player_animation_based_on_facing_direction(player, animator);
+				if (player->oil != INVALID_ENTITY) {
+					app_delayed_destroy_entity(app, player->oil);
+					player->oil = INVALID_ENTITY;
+					player->oil_count++;
+				}
 			} else {
 				coroutine_t* co = &player->co;
 				COROUTINE_START(co);

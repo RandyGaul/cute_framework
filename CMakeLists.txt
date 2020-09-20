@@ -330,6 +330,9 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 		block_man/components/fire.h
 		block_man/components/patrol.h
 		block_man/components/light.h
+		block_man/components/oil.h
+		block_man/components/lamp.h
+		block_man/components/ladder.h
 	)
 
 	set(CUTE_BLOCK_MAN_SYSTEM_SRCS

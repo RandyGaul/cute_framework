@@ -29,7 +29,6 @@ struct BoardSpace
 {
 	char code = '0';
 	bool is_empty = true;
-	bool is_ladder = false;
 	entity_t entity = INVALID_ENTITY;
 };
 
