@@ -49,6 +49,7 @@ struct World
 
 	bool load_level_dirty_flag = false;
 	int level_index = 0;
+	const char* level_name = NULL;
 	entity_t player = INVALID_ENTITY;
 	Board board;
 	bool loaded_level_into_editor = false;

@@ -30,6 +30,8 @@ using namespace cute;
 #include <world.h>
 #include <serialize.h>
 
+#include <components/lamp.h>
+
 #include <systems/light_system.h>
 
 void do_imgui_stuff(app_t* app, float dt)
@@ -74,6 +76,9 @@ void do_imgui_stuff(app_t* app, float dt)
 
 		if (ImGui::BeginPopupModal("Open")) {
 			static char buf[1024];
+			if (ImGui::IsWindowAppearing()) {
+				sprintf(buf, "%s", world->level_name);
+			}
 			if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0)) {
 				ImGui::SetKeyboardFocusHere(0);
 			}
@@ -93,6 +98,9 @@ void do_imgui_stuff(app_t* app, float dt)
 
 		if (ImGui::BeginPopupModal("Save As")) {
 			static char buf[1024];
+			if (ImGui::IsWindowAppearing()) {
+				sprintf(buf, "%s", world->level_name);
+			}
 			if (!ImGui::IsAnyItemFocused() && !ImGui::IsAnyItemActive() && !ImGui::IsMouseClicked(0)) {
 				ImGui::SetKeyboardFocusHere(0);
 			}
@@ -158,7 +166,10 @@ void do_imgui_stuff(app_t* app, float dt)
 		}
 		ImGui::Separator();
 		ImGui::Text("Moves: %d", world->moves);
-		ImGui::SliderFloat("Darkess Radius", &Darkness::radius, 0.0f, 100.0f, "%.3f", 1.5f);
+		ImGui::Text("Oil: %d out of %d", LAMP->oil_count, LAMP->oil_capacity);
+		if (ImGui::Button("Add 5 Oil")) {
+			LAMP->add_oil(5);
+		}
 		ImGui::End();
 
 		if (erase) {

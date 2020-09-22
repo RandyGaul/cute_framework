@@ -23,6 +23,7 @@
 
 #include <components/transform.h>
 #include <components/light.h>
+#include <components/lamp.h>
 
 #include <systems/light_system.h>
 
@@ -45,6 +46,8 @@ static triple_buffer_t s_buf;
 static sg_buffer s_quad;
 static rnd_t s_rnd;
 
+Lamp* LAMP;
+
 namespace Darkness
 {
 	static array<v2> verts;
@@ -52,6 +55,42 @@ namespace Darkness
 
 	float radius = 16;
 	v2 center = v2(0, 0);
+
+	struct lerp_pair_t
+	{
+		float a, b;
+	};
+	array<lerp_pair_t> lerps;
+	float lerp_t = 0;
+	float radius_t = 1.0f;
+
+	void lerp_to(float t)
+	{
+		lerp_pair_t pair;
+		pair.a = lerps.count() ? lerps.last().b : radius_t;
+		pair.b = t;
+		lerps.add(pair);
+	}
+
+	void do_lerp(float dt)
+	{
+		if (!lerps.count()) {
+			radius = radius_max * Darkness::radius_t;
+			return;
+		}
+		lerp_pair_t pair = lerps[0];
+		lerp_t += dt;
+		if (lerp_t >= lerp_delay) {
+			lerp_t = 0;
+			lerps.remove(0);
+			Darkness::radius_t = pair.b;
+		} else {
+			float t = lerp_t / lerp_delay;
+			Darkness::radius_t = lerp(pair.a, pair.b, smoothstep(t));
+		}
+
+		radius = radius_max * Darkness::radius_t;
+	}
 };
 
 void light_system_init()
@@ -189,6 +228,9 @@ void light_system_update(app_t* app, float dt, void* udata, Transform* transform
 
 		if (light->is_lamp) {
 			light->radius = Darkness::radius;
+
+			// Center all of the darkness onto the lamp.
+			Darkness::center = transform->get().p;
 		}
 		light->radius_delta = s_pulse(&light->co, dt);
 		v2 p = transform->get().p;
@@ -385,8 +427,9 @@ static void s_do_crawlies(float dt)
 
 void light_system_post_update(app_t* app, float dt, void* udata)
 {
+	Darkness::do_lerp(dt);
 	Darkness::t = Darkness::t + CUTE_MATH2D_PI * dt * 0.5f;
-	float t = 1.0f - Darkness::radius / Darkness::radius_max;
+	float t = 1.0f - Darkness::radius_t;
 	s_darkness_color.a = clamp01(remap(t, 0, 0.6f));
 	s_crawlies_color.a = clamp01(remap(t, 0.6f, 0.7f));
 	s_non_lamp_color.a = clamp01(remap(t, 0.5f, 0.6f));

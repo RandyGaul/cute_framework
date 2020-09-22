@@ -33,7 +33,10 @@ namespace Darkness
 	static constexpr float radius_max = 100.0f;
 	extern float radius;
 	extern v2 center;
-};
+
+	static constexpr float lerp_delay = 0.15f;
+	void lerp_to(float t);
+}
 
 void light_system_init();
 

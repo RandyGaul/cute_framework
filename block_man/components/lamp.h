@@ -25,18 +25,31 @@
 #include <cute.h>
 using namespace cute;
 
+#include <systems/light_system.h>
+
 struct Lamp
 {
-	int oil_count = 10;
-	int oil_capacity = 10;
+	int oil_count = 50;
+	int oil_capacity = 50;
 	bool is_held = false;
+
+	CUTE_INLINE void add_oil(int oil)
+	{
+		oil_count = clamp(oil_count + oil, 0, oil_capacity);
+		float t = (float)oil_count / oil_capacity;
+		Darkness::lerp_to(t);
+	}
 };
+
+extern Lamp* LAMP;
 
 CUTE_INLINE cute::error_t Lamp_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
 {
 	Lamp* lamp = (Lamp*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
 		CUTE_PLACEMENT_NEW(lamp) Lamp;
+		LAMP = lamp;
+		Darkness::lerp_to(1.0f);
 	}
 	return kv_error_state(kv);
 }

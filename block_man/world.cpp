@@ -90,7 +90,6 @@ const char* schema_player = CUTE_STRINGIZE(
 	BoardPiece = { },
 	Player = { },
 	Shadow = { small = "true" },
-	Light = { is_lamp = "true", radius = 16 },
 );
 
 const char* schema_mochi = CUTE_STRINGIZE(
@@ -740,6 +739,7 @@ void select_level(int index)
 		++j;
 	}
 
+	world->level_name = world->level_names[world->level_index];
 	init_bg_bricks(world->level_index);
 }
 
@@ -774,4 +774,5 @@ void reload_level(const char* name)
 	CUTE_FREE((void*)world->levels[index], NULL);
 	world->levels[index] = (const char*)data;
 	world->level_names[index] = name;
+	world->level_name = name;
 }

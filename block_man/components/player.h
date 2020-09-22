@@ -42,7 +42,6 @@ struct Player
 	coroutine_t co = { 0 };
 	entity_t ladder = INVALID_ENTITY;
 	entity_t oil = INVALID_ENTITY;
-	int oil_count = 0;
 
 	// ----------------------------
 	// For spinning upon level load.

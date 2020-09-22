@@ -104,7 +104,9 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			}
 
 			if (found) {
-				++world->moves;
+				if (distance) {
+					++world->moves;
+				}
 				entity_t block = world->board.data[sy][sx].entity;
 				BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
 				block_board_piece->linear(x + player->xdir, y - player->ydir, Player::move_delay * distance);
@@ -122,7 +124,6 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			}
 		} else {
 			// Pushing blocks forward.
-			++world->moves;
 			int sx = x + player->xdir * 2, sy = y - player->ydir * 2;
 			int distance = 0;
 			bool found_fire = false;
@@ -130,7 +131,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			{
 				if (!world->board.data[sy][sx].is_empty)
 				{
-					if (app_get_component(app, world->board.data[sy][sx].entity, "Fire")) {
+					if (app_entity_is_type(app, world->board.data[sy][sx].entity, "Fire")) {
 						found_fire = true;
 					}
 					break;
@@ -139,25 +140,33 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 				sy -= player->ydir;
 				++distance;
 			}
-			entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
-			IceBlock* ice_block = (IceBlock*)app_get_component(app, block, "IceBlock");
-			ice_block->is_held = false;
-			ice_block->xdir = player->xdir;
-			ice_block->ydir = player->ydir;
-			ice_block->was_thrown = true;
-			if (found_fire) {
-				ice_block->fire = world->board.data[sy][sx].entity;
+			if (distance) {
+				++world->moves;
 			}
-			BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
-			if (found_fire) {
-				// Move one farther onto the fire space itself.
-				block_board_piece->linear(sx, sy, Player::move_delay * (distance + 1));
+			entity_t e = world->board.data[y - player->ydir][x + player->xdir].entity;
+			if (app_entity_is_type(app, e, "IceBlock")) {
+				IceBlock* ice_block = (IceBlock*)app_get_component(app, e, "IceBlock");
+				ice_block->is_held = false;
+				ice_block->xdir = player->xdir;
+				ice_block->ydir = player->ydir;
+				ice_block->was_thrown = true;
+				if (found_fire) {
+					ice_block->fire = world->board.data[sy][sx].entity;
+				}
+				BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
+				if (found_fire) {
+					// Move one farther onto the fire space itself.
+					block_board_piece->linear(sx, sy, Player::move_delay * (distance + 1));
+				} else {
+					block_board_piece->linear(sx - player->xdir, sy + player->ydir, Player::move_delay * distance);
+				}
+				block_board_piece->notify_player_when_done = player->entity;
+				player->busy = true;
 			} else {
-				block_board_piece->linear(sx - player->xdir, sy + player->ydir, Player::move_delay * distance);
+				Lamp* lamp = (Lamp*)app_get_component(app, e, "Lamp");
+				lamp->is_held = false;
 			}
-			block_board_piece->notify_player_when_done = player->entity;
 			player->holding = false;
-			player->busy = true;
 			update_hero_animation = true;
 		}
 	} else {
@@ -284,7 +293,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 					}
 					else
 					{
-						++world->moves;
+						//++world->moves;
 						// turn 
 						player->xdir = xdirs[i];
 						player->ydir = ydirs[i];
@@ -307,19 +316,20 @@ void player_system_update(app_t* app, float dt, void* udata, Transform* transfor
 		BoardPiece* board_piece = board_pieces + i;
 		Player* player = players + i;
 
-		// Center all of the darkness onto the player.
-		Darkness::center = transform->get().p;
-
 		if (player->busy) continue;
 
 		if (!board_piece->is_moving) {
 			if (!player->won) {
+				int old_moves = world->moves;
 				bool update_anim = handle_input(app, dt, board_piece, player);
+				if (old_moves != world->moves) {
+					LAMP->add_oil(-1);
+				}
 				if (update_anim) set_player_animation_based_on_facing_direction(player, animator);
 				if (player->oil != INVALID_ENTITY) {
 					app_delayed_destroy_entity(app, player->oil);
 					player->oil = INVALID_ENTITY;
-					player->oil_count++;
+					LAMP->add_oil(30);
 				}
 			} else {
 				coroutine_t* co = &player->co;
