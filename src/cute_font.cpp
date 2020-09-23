@@ -174,6 +174,16 @@ void font_border_color(app_t* app, color_t color)
 	app->font_fs_uniforms.u_border_color = color;
 }
 
+int font_height(const font_t* font)
+{
+	return ((cute_font_t*)font)->font_height;
+}
+
+int font_line_height(const font_t* font)
+{
+	return ((cute_font_t*)font)->line_height;
+}
+
 int font_text_width(const font_t* font, const char* text)
 {
 	return cute_font_text_width((cute_font_t*)font, text);

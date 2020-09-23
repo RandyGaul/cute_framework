@@ -230,23 +230,44 @@ void draw_text(const char* text, int x, int y)
 
 bool button_text(const char* text, int x, int y)
 {
+	struct state_t
+	{
+		bool clicked = false;
+	};
+
+	static dictionary<const char*, state_t> s_state;
+	state_t* s = s_state.find(text);
+	if (!s) {
+		state_t state;
+		s = s_state.insert(text, state);
+	}
+
 	const font_t* font = font_get_default(app);
 	float w = (float)font_text_width(font, text);
 	float h = (float)font_text_height(font, text);
 	font_push_verts(app, font, text, x + -w / 2, y + h / 2, 0);
-	aabb_t bb = make_aabb(v2((float)x, (float)y - 3), w, h);
+	int height_diff = font_line_height(font) - font_height(font) - 1;
+	aabb_t bb = make_aabb(v2((float)x, (float)y - height_diff), w, h);
+	bb = expand(bb, v2(2, 2));
+
+	bool result = false;
 
 	v2 mp = mouse_pos_in_world_space(app);
 	if (contains(bb, mp)) {
-		batch_quad(batch, bb, color_white());
-		if (mouse_was_pressed(app, MOUSE_BUTTON_LEFT)) {
-			return true;
+		if (!s->clicked && mouse_was_pressed(app, MOUSE_BUTTON_LEFT)) {
+			s->clicked = true;
+		} else if (s->clicked && mouse_was_released(app, MOUSE_BUTTON_LEFT)) {
+			s->clicked = false;
+			result = true;
+		}
+		batch_quad_line(batch, bb, 1, color_white());
+		if (mouse_is_down(app, MOUSE_BUTTON_LEFT)) {
+			batch_quad(batch, expand(bb, -v2(2, 2)), color_white());
 		}
 	}
 
-	return false;
+	return result;
 }
-
 
 int main(int argc, const char** argv)
 {
@@ -261,25 +282,27 @@ int main(int argc, const char** argv)
 		if (world->load_level_dirty_flag) select_level(world->level_index);
 		app_update_systems(app, dt);
 		if (world->lose_screen) {
-			destroy_all_entities();
-			draw_text("Uh oh!", 0, 0);
-			button_text("Retry?", -30, -20);
-			button_text("Nah.", 30, -20);
-
 			static float at = 0;
 			static float delay = 1.5f;
 			float t = clamp(at / delay, 0.0f, 1.0f);
 			at += dt;
-			color_t color = color_white();
-			color.a = ease_in_sin(t);
-			font_draw(app, font_get_default(app), mvp, color);
-			batch_flush(batch);
-			if (t >= 1.0f && key_was_pressed(app, KEY_SPACE)) {
+
+			destroy_all_entities();
+			draw_text("Uh oh!", 0, 0);
+			if (button_text("Retry?", -30, -20)) {
 				world->lose_screen = false;
 				reload_level(world->level_name);
 				Darkness::reset();
 				at = 0;
 			}
+			if (button_text("Nah.", 30, -20)) {
+				printf("nah\n");
+			}
+
+			color_t color = color_white();
+			color.a = ease_in_sin(t);
+			font_draw(app, font_get_default(app), mvp, color);
+			batch_flush(batch);
 		}
 		do_imgui_stuff(app, dt);
 		app_present(app);

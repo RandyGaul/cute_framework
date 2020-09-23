@@ -686,7 +686,7 @@ void batch_set_blend_defaults(batch_t* b)
 void batch_quad(batch_t* b, aabb_t bb, color_t c)
 {
 	v2 verts[4];
-	aabb_verts(verts, &bb);
+	aabb_verts(verts, bb);
 	batch_quad(b, verts[0], verts[1], verts[2], verts[3], c);
 }
 
@@ -719,17 +719,28 @@ void batch_quad(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, color_t c0, color_t c1, 
 
 void batch_quad_line(batch_t* b, aabb_t bb, float thickness, color_t c)
 {
-	CUTE_ASSERT(0);
+	v2 verts[4];
+	aabb_verts(verts, bb);
+	batch_quad_line(b, verts[0], verts[1], verts[2], verts[3], thickness, c);
 }
 
 void batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, float thickness, color_t c)
 {
-	CUTE_ASSERT(0);
+	batch_quad_line(b, p0, p1, p2, p3, thickness, c, c, c, c);
 }
 
 void batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, float thickness, color_t c0, color_t c1, color_t c2, color_t c3)
 {
-	CUTE_ASSERT(0);
+	float sqrt_2 = 1.41421356237f;
+	v2 n = v2(sqrt_2, sqrt_2) * thickness;
+	v2 q0 = p0 + v2(-n.x, -n.y);
+	v2 q1 = p1 + v2( n.x, -n.y);
+	v2 q2 = p2 + v2( n.x,  n.y);
+	v2 q3 = p3 + v2(-n.x,  n.y);
+	batch_quad(b, p0, p1, q1, q0, c0, c1, c2, c3);
+	batch_quad(b, p1, p2, q2, q1, c0, c1, c2, c3);
+	batch_quad(b, p2, p3, q3, q2, c0, c1, c2, c3);
+	batch_quad(b, p3, p0, q0, q3, c0, c1, c2, c3);
 }
 
 void batch_circle(batch_t* b, v2 p, float r, int iters, color_t c)

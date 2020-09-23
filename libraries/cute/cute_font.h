@@ -50,16 +50,17 @@ extern const char* cute_font_error_reason;
 
 typedef struct cute_font_glyph_t
 {
-	float minx, miny;
-	float maxx, maxy;
-	float w, h;
-	int xoffset, yoffset;
-	int xadvance;
+	float minx, miny;     // U coordinate for texture mapping.
+	float maxx, maxy;     // V coordinate for texture mapping.
+	float w, h;           // The width/height of the character image in the texture.
+	int xoffset, yoffset; // How much the current position should be offset when copying the image from the texture to the screen.
+	int xadvance;         // How much the current position should be advanced after drawing the character.
 } cute_font_glyph_t;
 
 typedef struct cute_font_t
 {
-	int font_height;
+	int line_height; // This is the distance in pixels between each line of text.
+	int font_height; // The number of pixels from the absolute top of the line to the base of the characters.
 	int glyph_count;
 	cute_font_glyph_t* glyphs;
 	int* codes;
@@ -663,8 +664,7 @@ const char* cute_font_decode_utf8(const char* text, int* cp)
 	else if (c >= 0xC0) { *cp = c & 0x1F; extra = 1; min = 0x80; }
 	else if (c >= 0x80) { *cp = 0xFFFD; }
 	else *cp = c;
-	while (extra--)
-	{
+	while (extra--) {
 		c = *text++;
 		if ((c & 0xC0) != 0x80) { *cp = 0xFFFD; break; }
 		(*cp) = ((*cp) << 6) | (c & 0x3F);
@@ -695,10 +695,8 @@ static int cute_font_is_border(cute_font_img_t* img, int x, int y)
 
 static void cute_font_scan(cute_font_img_t* img, int *x, int *y, int *row_height)
 {
-	while (*y < img->h)
-	{
-		if (*x >= img->w)
-		{
+	while (*y < img->h) {
+		if (*x >= img->w) {
 			*x = 0;
 			(*y) += *row_height;
 			*row_height = 1;
@@ -736,8 +734,7 @@ cute_font_t* cute_font_load(CUTE_FONT_U64 atlas_id, const void* pixels, int w, i
 	img.h = h;
 	img.stride = stride;
 
-	switch (codepage)
-	{
+	switch (codepage) {
 	case 0:    font->glyph_count = 128 - 32; break;
 	case 1252: font->glyph_count = 256 - 32; break;
 	default: CUTE_FONT_CHECK(0, "Unknown codepage encountered.");
@@ -747,8 +744,7 @@ cute_font_t* cute_font_load(CUTE_FONT_U64 atlas_id, const void* pixels, int w, i
 	font->atlas_id = atlas_id;
 	font->kern = 0;
 
-	for (int i = 32; i < font->glyph_count + 32; ++i)
-	{
+	for (int i = 32; i < font->glyph_count + 32; ++i) {
 		cute_font_glyph_t* glyph = NULL;
 		int w = 0, h = 0;
 		cute_font_scan(&img, &x, &y, &font_height);
@@ -779,10 +775,8 @@ cute_font_t* cute_font_load(CUTE_FONT_U64 atlas_id, const void* pixels, int w, i
 	font->font_height = font_height;
 
 	// sort by codepoint for non-ascii code pages
-	if (codepage)
-	{
-		for (int i = 1; i < font->glyph_count; ++i)
-		{
+	if (codepage) {
+		for (int i = 1; i < font->glyph_count; ++i) {
 			cute_font_glyph_t glyph = font->glyphs[i];
 			int code = font->codes[i];
 			int j = i;
@@ -854,8 +848,7 @@ cute_font_err:
 
 static char cute_font_parse_char(char c)
 {
-	switch (c)
-	{
+	switch (c) {
 		case '\\': return '\\';
 		case '\'': return '\'';
 		case '"': return '"';
@@ -881,14 +874,12 @@ static int cute_font_read_string_internal(cute_font_parse_t* p)
 	int done = 0;
 	cute_font_expect(p, '"');
 
-	while (!done)
-	{
+	while (!done) {
 		char c = 0;
 		CUTE_FONT_CHECK(count < CUTE_FONT_INTERNAL_BUFFER_MAX, "String too large to parse.");
 		cute_font_next(p, &c);
 
-		switch (c)
-		{
+		switch (c) {
 		case '"':
 			p->scratch[count] = 0;
 			done = 1;
@@ -925,8 +916,7 @@ static int cute_font_read_identifier_internal(cute_font_parse_t* p)
 	int count = 0;
 	int done = 0;
 
-	while (1)
-	{
+	while (1) {
 		char c = 0;
 		CUTE_FONT_CHECK(p->in < p->end, "Attempted to read past input buffer.");
 		CUTE_FONT_CHECK(count < CUTE_FONT_INTERNAL_BUFFER_MAX, "String too large to parse.");
@@ -935,21 +925,18 @@ static int cute_font_read_identifier_internal(cute_font_parse_t* p)
 		p->in++;
 	}
 
-	while (!done)
-	{
+	while (!done) {
 		char c = 0;
 		CUTE_FONT_CHECK(p->in < p->end, "Attempted to read past input buffer.");
 		CUTE_FONT_CHECK(count < CUTE_FONT_INTERNAL_BUFFER_MAX, "String too large to parse.");
 		c = *p->in++;
 
-		if (cute_font_isspace(c))
-		{
+		if (cute_font_isspace(c)) {
 			p->scratch[count] = 0;
 			break;
 		}
 
-		switch (c)
-		{
+		switch (c) {
 		case '=':
 			p->scratch[count] = 0;
 			done = 1;
@@ -1092,7 +1079,7 @@ cute_font_t* cute_font_load_bmfont(CUTE_FONT_U64 atlas_id, const void* fnt, int 
 
 	cute_font_expect_identifier(p, "common");
 	cute_font_expect_identifier(p, "lineHeight");
-	cute_font_read_identifier(p);
+	cute_font_read_int(p, &font->line_height);
 	cute_font_expect_identifier(p, "base");
 	cute_font_read_int(p, &font->font_height);
 	cute_font_expect_identifier(p, "scaleW");
@@ -1133,8 +1120,7 @@ cute_font_t* cute_font_load_bmfont(CUTE_FONT_U64 atlas_id, const void* fnt, int 
 	hTol = h0 * div;
 
 	// Read in each glyph.
-	for (int i = 0; i < font->glyph_count; ++i)
-	{
+	for (int i = 0; i < font->glyph_count; ++i) {
 		int x = 0, y = 0;
 		int width = 0, height = 0;
 
@@ -1171,8 +1157,7 @@ cute_font_t* cute_font_load_bmfont(CUTE_FONT_U64 atlas_id, const void* fnt, int 
 		cute_font_read_identifier(p);
 	}
 
-	if (p->end - p->in > 8)
-	{
+	if (p->end - p->in > 8) {
 		int kern_count = 0;
 		cute_font_kern_t* kern = NULL;
 		cute_font_expect_identifier(p, "kernings");
@@ -1182,8 +1167,7 @@ cute_font_t* cute_font_load_bmfont(CUTE_FONT_U64 atlas_id, const void* fnt, int 
 		font->kern = kern;
 		hashtable_init(&kern->table, sizeof(int), kern_count, mem_ctx);
 
-		for (int i = 0; i < kern_count; ++i)
-		{
+		for (int i = 0; i < kern_count; ++i) {
 			int first, second, amount;
 			cute_font_expect_identifier(p, "kerning");
 			cute_font_expect_identifier(p, "first");
@@ -1194,7 +1178,7 @@ cute_font_t* cute_font_load_bmfont(CUTE_FONT_U64 atlas_id, const void* fnt, int 
 			cute_font_read_int(p, &amount);
 
 			CUTE_FONT_U64 key = (CUTE_FONT_U64)first << 32 | (CUTE_FONT_U64)second;
-			hashtable_insert(&kern->table, key, (void*)(size_t)amount);
+			hashtable_insert(&kern->table, key, &amount);
 		}
 	}
 
@@ -1215,21 +1199,28 @@ void cute_font_free(cute_font_t* font)
 	CUTE_FONT_FREE(font, mem_ctx);
 }
 
+static int cute_font_advance(cute_font_t* font, int cp0, int cp1)
+{
+	int advance_by = cute_font_get_glyph(font, cute_font_get_glyph_index(font, cp0))->xadvance;
+	if (cp1 >= 0) advance_by += cute_font_kerning(font, cp0, cp1);
+	return advance_by;
+}
+
 int cute_font_text_width(cute_font_t* font, const char* text)
 {
 	int x = 0;
 	int w = 0;
+	int prev = -1;
 
-	while (*text)
-	{
+	while (*text) {
 		int c;
 		text = cute_font_decode_utf8(text, &c);
 		if (c == '\n' || c == '\r') x = 0;
-		else
-		{
-			x += cute_font_get_glyph(font, cute_font_get_glyph_index(font, c))->xadvance;
+		else {
+			x += cute_font_advance(font, c, prev);
 			w = (x > w) ? x : w;
 		}
+		prev = c;
 	}
 
 	return w;
@@ -1240,8 +1231,7 @@ int cute_font_text_height(cute_font_t* font, const char* text)
 	int font_height, h;
 	h = font_height = font->font_height;
 
-	while (*text)
-	{
+	while (*text) {
 		int c;
 		text = cute_font_decode_utf8(text, &c);
 		if (c == '\n' && *text) h += font_height; 
@@ -1254,8 +1244,7 @@ int cute_font_max_glyph_height(cute_font_t* font, const char* text)
 {
 	int max_height = 0;
 
-	while (*text)
-	{
+	while (*text) {
 		int c;
 		text = cute_font_decode_utf8(text, &c);
 		int h = (int)cute_font_get_glyph(font, cute_font_get_glyph_index(font, c))->h;
@@ -1270,8 +1259,7 @@ int cute_font_get_glyph_index(cute_font_t* font, int code)
 	int lo = 0;
 	int hi = font->glyph_count;
 
-	while (lo < hi)
-	{
+	while (lo < hi) {
 		int guess = (lo + hi) / 2;
 		if (code < font->codes[guess]) hi = guess;
 		else lo = guess + 1;
@@ -1288,7 +1276,9 @@ cute_font_glyph_t* cute_font_get_glyph(cute_font_t* font, int index)
 
 int cute_font_kerning(cute_font_t* font, int code0, int code1)
 {
-	return (int)(size_t)hashtable_find(&font->kern->table, (CUTE_FONT_U64)code0 << 32 | (CUTE_FONT_U64)code1);
+	if (!font->kern) return 0;
+	int* kern_ptr = (int*)hashtable_find(&font->kern->table, (CUTE_FONT_U64)code0 << 32 | (CUTE_FONT_U64)code1);
+	return kern_ptr ? *kern_ptr : 0;
 }
 
 cute_font_t* cute_font_create_blank(int font_height, int glyph_count)
@@ -1304,21 +1294,19 @@ cute_font_t* cute_font_create_blank(int font_height, int glyph_count)
 
 void cute_font_add_kerning_pair(cute_font_t* font, int code0, int code1, int kerning)
 {
-	if (!font->kern)
-	{
+	if (!font->kern) {
 		cute_font_kern_t* kern = (cute_font_kern_t*)CUTE_FONT_ALLOC(sizeof(cute_font_kern_t), font->mem_ctx);
 		font->kern = kern;
 		hashtable_init(&kern->table, sizeof(int), 256, font->mem_ctx);
 	}
 
 	CUTE_FONT_U64 key = (CUTE_FONT_U64)code0 << 32 | (CUTE_FONT_U64)code1;
-	hashtable_insert(&font->kern->table, key, (void*)(size_t)kerning);
+	hashtable_insert(&font->kern->table, key, &kerning);
 }
 
 static int s_is_space(int c)
 {
-	switch (c)
-	{
+	switch (c) {
 	case ' ':
 	case '\n':
 	case '\t':
@@ -1335,49 +1323,38 @@ static const char* s_find_end_of_line(cute_font_t* font, const char* text, float
 	float x = 0;
 	const char* start_of_word = 0;
 	float word_w = 0;
+	int prev_cp = -1;
 
-	while (*text)
-	{
+	while (*text) {
 		int cp;
 		const char* text_prev = text;
 		text = cute_font_decode_utf8(text, &cp);
-		cute_font_glyph_t* glyph = cute_font_get_glyph(font, cute_font_get_glyph_index(font, cp));
+		int advance = cute_font_advance(font, cp, prev_cp);
 
-		if (cp == '\n')
-		{
+		if (cp == '\n') {
 			x = 0;
 			word_w = 0;
 			start_of_word = 0;
+			prev_cp = cp;
 			continue;
-		}
-		else if (cp == '\r') continue;
-		else
-		{
-			if (s_is_space(cp))
-			{
-				x += word_w + glyph->xadvance;
+		} else if (cp == '\r') {
+			prev_cp = cp;
+			continue;
+		} else {
+			if (s_is_space(cp)) {
+				x += word_w + advance;
 				word_w = 0;
 				start_of_word = 0;
-			}
-			else
-			{
+			} else {
 				if (!start_of_word) start_of_word = text_prev;
-
-				if (x + word_w + glyph->xadvance < wrap_width)
-				{
-					word_w += glyph->xadvance;
-				}
-				else
-				{
-					// Put entire word on the next line.
-					if (word_w + glyph->xadvance < wrap_width)
-					{
+				if (x + word_w + advance < wrap_width) {
+					word_w += advance;
+				} else {
+					if (word_w + advance < wrap_width) {
+						// Put entire word on the next line.
 						return start_of_word;
-					}
-
-					// Word itself does not fit on one line, so just cut it here.
-					else
-					{
+					} else {
+						// Word itself does not fit on one line, so just cut it here.
 						return text;
 					}
 				}
@@ -1408,50 +1385,49 @@ int cute_font_fill_vertex_buffer(cute_font_t* font, const char* text, float x0, 
 	int i = 0;
 	const char* end_of_line = 0;
 	int wrap_enabled = wrap_w > 0;
+	int prev_cp = -1;
 	cute_font_rect_t rect;
 	if (clip_rect) rect = *clip_rect;
 
-	while (*text)
-	{
+	while (*text) {
 		int cp;
 		const char* prev_text = text;
 		text = cute_font_decode_utf8(text, &cp);
 
 		// Word wrapping logic.
-		if (wrap_enabled)
-		{
-			if (!end_of_line)
-			{
+		if (wrap_enabled) {
+			if (!end_of_line) {
 				end_of_line = s_find_end_of_line(font, prev_text, wrap_w);
 			}
 
 			int finished_rendering_line = !(text < end_of_line);
-			if (finished_rendering_line)
-			{
+			if (finished_rendering_line) {
 				end_of_line = 0;
 				x = x0;
 				y -= font_height + line_height;
 
 				// Skip whitespace at the beginning of new lines.
-				while (cp)
-				{
+				while (cp) {
 					cp = *text;
 					if (s_is_space(cp)) ++text;
 					else if (cp == '\n') { text++; break; }
 					else break;
 				}
 
+				prev_cp = cp;
 				continue;
 			}
 		}
 
-		if (cp == '\n')
-		{
+		if (cp == '\n') {
 			x = x0;
 			y -= font_height + line_height;
+			prev_cp = cp;
+			continue;
+		} else if (cp == '\r') {
+			prev_cp = cp;
 			continue;
 		}
-		else if (cp == '\r') continue;
 
 		cute_font_glyph_t* glyph = cute_font_get_glyph(font, cute_font_get_glyph_index(font, cp));
 		float x0 = (float)glyph->xoffset;
@@ -1471,33 +1447,27 @@ int cute_font_fill_vertex_buffer(cute_font_t* font, const char* text, float x0, 
 
 		int clipped_away = 0;
 
-		if (clip_rect)
-		{
+		if (clip_rect) {
 			int inside_clip_x_axis = ((x + x0) < rect.right) | (x + glyph->w + x0 > rect.left);
 			clipped_away = !inside_clip_x_axis;
 
-			if (inside_clip_x_axis)
-			{
-				if (ax < rect.left)
-				{
+			if (inside_clip_x_axis) {
+				if (ax < rect.left) {
 					au = s_intersect(ax, bx, au, bu, rect.left);
 					ax = rect.left;
 				}
 
-				if (bx > rect.right)
-				{
+				if (bx > rect.right) {
 					bu = s_intersect(ax, bx, au, bu, rect.right);
 					bx = rect.right;
 				}
 
-				if (ay < rect.bottom)
-				{
+				if (ay < rect.bottom) {
 					av = s_intersect(ay, by, av, bv, rect.bottom);
 					ay = rect.bottom;
 				}
 
-				if (by > rect.top)
-				{
+				if (by > rect.top) {
 					bv = s_intersect(ay, by, av, bv, rect.top);
 					by = rect.top;
 				}
@@ -1506,8 +1476,7 @@ int cute_font_fill_vertex_buffer(cute_font_t* font, const char* text, float x0, 
 			}
 		}
 
-		if (!clipped_away)
-		{
+		if (!clipped_away) {
 			// Quad is set up as:
 			//
 			// a----d
@@ -1560,7 +1529,8 @@ int cute_font_fill_vertex_buffer(cute_font_t* font, const char* text, float x0, 
 			buffer[i++] = c;
 		}
 
-		x += glyph->xadvance;
+		x += cute_font_advance(font, cp, prev_cp);
+		prev_cp = cp;
 	}
 
 	*count_written = i;

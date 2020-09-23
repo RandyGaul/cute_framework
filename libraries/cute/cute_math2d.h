@@ -281,12 +281,12 @@ CUTE_MATH2D_INLINE aabb_t make_aabb(v2* verts, int count)
 	return make_aabb(min, max);
 }
 
-CUTE_MATH2D_INLINE void aabb_verts(v2* out, aabb_t* bb)
+CUTE_MATH2D_INLINE void aabb_verts(v2* out, aabb_t bb)
 {
-	out[0] = bb->min;
-	out[1] = v2(bb->max.x, bb->min.y);
-	out[2] = bb->max;
-	out[3] = v2(bb->min.x, bb->max.y);
+	out[0] = bb.min;
+	out[1] = v2(bb.max.x, bb.min.y);
+	out[2] = bb.max;
+	out[3] = v2(bb.min.x, bb.max.y);
 }
 
 // circle helpers
