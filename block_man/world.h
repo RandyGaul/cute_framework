@@ -37,7 +37,7 @@ struct Board
 	int start_x;
 	int start_y;
 	array<array<BoardSpace>> data;
-	array<batch_quad_t> background_bricks;
+	array<batch_sprite_t> background_bricks;
 };
 
 struct World
@@ -57,6 +57,8 @@ struct World
 
 	array<const char*> levels;
 	array<const char*> level_names;
+
+	bool lose_screen = false;
 
 	CUTE_INLINE void next_level(int index)
 	{
@@ -82,6 +84,7 @@ struct schema_preview_t
 extern array<schema_preview_t> schema_previews;
 
 void init_world();
+void destroy_all_entities();
 void select_level(int index);
 int select_level(const char* name);
 void reload_level(const char* name);

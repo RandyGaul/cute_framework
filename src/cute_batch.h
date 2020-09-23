@@ -35,7 +35,7 @@ namespace cute
 /**
  * Represents a single image rendered as a quad.
  */
-struct batch_quad_t
+struct batch_sprite_t
 {
 	/**
 	 * Unique identifier for this quad's image, as determined by you.
@@ -80,25 +80,25 @@ extern CUTE_API batch_t* CUTE_CALL batch_make(get_pixels_fn* get_pixels, void* g
 extern CUTE_API void CUTE_CALL batch_destroy(batch_t* b);
 
 /**
- * Pushes quad onto an internal buffer. Does no other logic.
+ * Pushes sprite quad onto an internal buffer. Does no other logic.
  * 
  * To get your quad rendered, see `batch_flush`.
  */
-extern CUTE_API void CUTE_CALL batch_push(batch_t* b, batch_quad_t quad);
+extern CUTE_API void CUTE_CALL batch_push(batch_t* b, batch_sprite_t sprite);
 
 /**
  * All quads currently pushed onto the batch (see `batch_push`) will be converted to an internal draw call.
  */
 extern CUTE_API error_t CUTE_CALL batch_flush(batch_t* b);
 
-enum batch_quad_shader_type_t
+enum batch_sprite_shader_type_t
 {
-	BATCH_QUAD_SHADER_TYPE_DEFAULT,
-	BATCH_QUAD_SHADER_TYPE_OUTLINE,
-	BATCH_QUAD_SHADER_TYPE_TINT
+	BATCH_SPRITE_SHADER_TYPE_DEFAULT,
+	BATCH_SPRITE_SHADER_TYPE_OUTLINE,
+	BATCH_SPRITE_SHADER_TYPE_TINT
 };
 
-extern CUTE_API void CUTE_CALL batch_set_shader_type(batch_t* b, batch_quad_shader_type_t type);
+extern CUTE_API void CUTE_CALL batch_set_shader_type(batch_t* b, batch_sprite_shader_type_t type);
 extern CUTE_API void CUTE_CALL batch_set_mvp(batch_t* b, matrix_t mvp);
 extern CUTE_API void CUTE_CALL batch_set_scissor_box(batch_t* b, int x, int y, int w, int h);
 extern CUTE_API void CUTE_CALL batch_no_scissor_box(batch_t* b);
@@ -107,6 +107,24 @@ extern CUTE_API void CUTE_CALL batch_set_depth_stencil_state(batch_t* b, const s
 extern CUTE_API void CUTE_CALL batch_set_depth_stencil_defaults(batch_t* b);
 extern CUTE_API void CUTE_CALL batch_set_blend_state(batch_t* b, const sg_blend_state& blend_state);
 extern CUTE_API void CUTE_CALL batch_set_blend_defaults(batch_t* b);
+
+extern CUTE_API void CUTE_CALL batch_quad(batch_t* b, aabb_t bb, color_t c);
+extern CUTE_API void CUTE_CALL batch_quad(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, color_t c);
+extern CUTE_API void CUTE_CALL batch_quad(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, color_t c0, color_t c1, color_t c2, color_t c3);
+extern CUTE_API void CUTE_CALL batch_quad_line(batch_t* b, aabb_t bb, float thickness, color_t c);
+extern CUTE_API void CUTE_CALL batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, float thickness, color_t c);
+extern CUTE_API void CUTE_CALL batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, float thickness, color_t c1, color_t c2, color_t c3);
+
+extern CUTE_API void CUTE_CALL batch_circle(batch_t* b, v2 p, float r, int iters, color_t c);
+extern CUTE_API void CUTE_CALL batch_circle_line(batch_t* b, v2 p, float r, int iters, float thickness, color_t c);
+
+extern CUTE_API void CUTE_CALL batch_tri(batch_t* b, v2 p0, v2 p1, v2 p2, color_t c);
+extern CUTE_API void CUTE_CALL batch_tri(batch_t* b, v2 p0, v2 p1, v2 p2, color_t c0, color_t c1, color_t c2);
+extern CUTE_API void CUTE_CALL batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float thickness, color_t c);
+extern CUTE_API void CUTE_CALL batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float thickness, color_t c0, color_t c1, color_t c2);
+
+extern CUTE_API void CUTE_CALL batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c);
+extern CUTE_API void CUTE_CALL batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c0, color_t c1);
 
 }
 

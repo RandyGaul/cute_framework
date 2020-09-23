@@ -200,6 +200,7 @@ void spritebatch_tick(spritebatch_t* sb);
 // the `submit_batch_fn` function for each batch of sprites and return them as an array. Any `image_id`
 // within the `spritebatch_push` buffer that do not yet have a texture handle will request pixels
 // from the image via `get_pixels_fn` and request a texture handle via `generate_texture_handle_fn`.
+// Returns the number of batches created and submitted.
 int spritebatch_flush(spritebatch_t* sb);
 
 // All textures created so far by `spritebatch_flush` will be considered as candidates for creating

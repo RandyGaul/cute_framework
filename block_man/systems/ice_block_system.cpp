@@ -159,6 +159,6 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 		// Push masks onto the reflection system.
 		transform_t tx = transform->get();
 		ice_block_mask.sort_bits = sort_bits(board_piece->x, board_piece->y);
-		reflection_system->masks.add(ice_block_mask.quad(tx));
+		reflection_system->masks.add(ice_block_mask.batch_sprite(tx));
 	}
 }

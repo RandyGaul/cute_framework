@@ -30,12 +30,14 @@ struct Light;
 
 namespace Darkness
 {
+	extern bool is_dark;
 	static constexpr float radius_max = 100.0f;
 	extern float radius;
 	extern v2 center;
 
 	static constexpr float lerp_delay = 0.15f;
 	void lerp_to(float t);
+	void reset();
 }
 
 void light_system_init();

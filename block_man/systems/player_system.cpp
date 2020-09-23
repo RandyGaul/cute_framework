@@ -308,6 +308,13 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 	return update_hero_animation;
 }
 
+static float s_dist(int ax, int ay, int bx, int by)
+{
+	float d0 = (float)(ax - bx);
+	float d1 = (float)(ay - by);
+	return sqrt(d0 * d0 + d1 * d1);
+}
+
 void player_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, Player* players, int entity_count)
 {
 	for (int i = 0; i < entity_count; ++i) {
@@ -320,6 +327,17 @@ void player_system_update(app_t* app, float dt, void* udata, Transform* transfor
 
 		if (!board_piece->is_moving) {
 			if (!player->won) {
+				if (Darkness::is_dark) {
+					int lamp_x, lamp_y;
+					LAMP->position(&lamp_x, &lamp_y);
+					float d = s_dist(lamp_x, lamp_y, board_piece->x, board_piece->y);
+					float r = Darkness::radius / 16.0f;
+					if (r - d < -0.5f) {
+						LAMP->add_oil(-100);
+						world->lose_screen = true;
+					}
+				}
+
 				int old_moves = world->moves;
 				bool update_anim = handle_input(app, dt, board_piece, player);
 				if (old_moves != world->moves) {

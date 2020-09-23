@@ -31,8 +31,8 @@ struct Reflection;
 
 struct ReflectionSystem
 {
-	array<batch_quad_t> masks;
-	array<batch_quad_t> quads;
+	array<batch_sprite_t> masks;
+	array<batch_sprite_t> quads;
 };
 
 extern ReflectionSystem* reflection_system;

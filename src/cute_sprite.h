@@ -59,7 +59,7 @@ struct sprite_t
 	CUTE_INLINE bool is_playing(const char* animation);
 	CUTE_INLINE void reset();
 	CUTE_INLINE void draw(batch_t* batch, transform_t transform);
-	CUTE_INLINE batch_quad_t quad(transform_t transform);
+	CUTE_INLINE batch_sprite_t batch_sprite(transform_t transform);
 
 	CUTE_INLINE void pause();
 	CUTE_INLINE void unpause();
@@ -138,12 +138,12 @@ void sprite_t::reset()
 
 void sprite_t::draw(batch_t* batch, transform_t transform)
 {
-	batch_push(batch, quad(transform));
+	batch_push(batch, batch_sprite(transform));
 }
 
-batch_quad_t sprite_t::quad(transform_t transform)
+batch_sprite_t sprite_t::batch_sprite(transform_t transform)
 {
-	batch_quad_t q;
+	batch_sprite_t q;
 	q.id = animation->frames[frame_index].id;
 	q.transform = transform;
 	q.transform.p += local_offset;

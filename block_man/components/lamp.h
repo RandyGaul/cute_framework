@@ -25,10 +25,13 @@
 #include <cute.h>
 using namespace cute;
 
+#include <components/board_piece.h>
+
 #include <systems/light_system.h>
 
 struct Lamp
 {
+	entity_t self;
 	int oil_count = 50;
 	int oil_capacity = 50;
 	bool is_held = false;
@@ -39,6 +42,13 @@ struct Lamp
 		float t = (float)oil_count / oil_capacity;
 		Darkness::lerp_to(t);
 	}
+
+	CUTE_INLINE void position(int* x, int* y)
+	{
+		BoardPiece* board_piece = (BoardPiece*)app_get_component(app, self, "BoardPiece");
+		*x = board_piece->x;
+		*y = board_piece->y;
+	}
 };
 
 extern Lamp* LAMP;
@@ -48,6 +58,7 @@ CUTE_INLINE cute::error_t Lamp_serialize(app_t* app, kv_t* kv, entity_t entity, 
 	Lamp* lamp = (Lamp*)component;
 	if (kv_get_state(kv) == KV_STATE_READ) {
 		CUTE_PLACEMENT_NEW(lamp) Lamp;
+		lamp->self = entity;
 		LAMP = lamp;
 		Darkness::lerp_to(1.0f);
 	}

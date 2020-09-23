@@ -137,7 +137,17 @@ const char* schema_lamp = CUTE_STRINGIZE(
 	BoardPiece = { },
 	Shadow = { small = "true" },
 	Light = { is_lamp = "true", radius = 16 },
-	Lamp = { }
+	Lamp = { },
+);
+
+const char* schema_torch = CUTE_STRINGIZE(
+	entity_type = "Torch",
+	Transform = { },
+	Animator = { name = "torch.aseprite", },
+	Reflection = { },
+	BoardPiece = { },
+	Shadow = { small = "true" },
+	Light = { radius = 32 },
 );
 
 array<const char*> schemas = {
@@ -150,6 +160,7 @@ array<const char*> schemas = {
 	schema_fire,
 	schema_oil,
 	schema_lamp,
+	schema_torch,
 };
 
 array<schema_preview_t> schema_previews;
@@ -587,7 +598,7 @@ void init_bg_bricks(int seed)
 			}
 			sprite.frame_index = rnd_next_range(rnd, 0, sprite.frame_count() - 1);
 			transform.p = v2((float)(j * 16 + 8 - 320/2), (float)((15 - 1 - i) * 16 + 8 - 240/2));
-			world->board.background_bricks.add(sprite.quad(transform));
+			world->board.background_bricks.add(sprite.batch_sprite(transform));
 		}
 	}
 }
@@ -610,6 +621,7 @@ array<char> entity_codes = {
 	'f', // Fire
 	'o', // Oil
 	'L', // Lamp
+	't', // Torch
 };
 
 void make_entity_at(const char* entity_type, int x, int y)
@@ -670,17 +682,8 @@ void delayed_destroy_entity_at(int x, int y)
 	world->board.data[y][x] = space;
 }
 
-void select_level(int index)
+void destroy_all_entities()
 {
-	world->load_level_dirty_flag = false;
-
-	if (world->level_index >= world->levels.size()) {
-		char buf[1024];
-		sprintf(buf, "Tried to load level %d, but the highest is %d. Loading level 0 instead.", world->level_index, world->levels.size() - 1);
-		app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "BAD LEVEL INDEX", buf);
-		world->level_index = index = 0;
-	}
-
 	// Delete old entities.
 	for (int i = 0; i < world->board.data.count(); ++i) {
 		int len = world->board.data[i].count();
@@ -699,6 +702,20 @@ void select_level(int index)
 	for (int i = 0; i < World::LEVEL_H; ++i) {
 		world->board.data[i].ensure_count(World::LEVEL_W);
 	}
+}
+
+void select_level(int index)
+{
+	world->load_level_dirty_flag = false;
+
+	if (world->level_index >= world->levels.size()) {
+		char buf[1024];
+		sprintf(buf, "Tried to load level %d, but the highest is %d. Loading level 0 instead.", world->level_index, world->levels.size() - 1);
+		app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "BAD LEVEL INDEX", buf);
+		world->level_index = index = 0;
+	}
+
+	destroy_all_entities();
 
 	// Load up new entities.
 	const char* level_string = world->levels[index];
@@ -723,6 +740,7 @@ void select_level(int index)
 		case 'f': err = app_make_entity(app, "Fire", &e); break;
 		case 'o': err = app_make_entity(app, "Oil", &e); break;
 		case 'L': err = app_make_entity(app, "Lamp", &e); break;
+		case 't': err = app_make_entity(app, "Torch", &e); break;
 		}
 		CUTE_ASSERT(!err.is_error());
 		BoardSpace space;

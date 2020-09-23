@@ -36,17 +36,19 @@
 #	define NOMINMAX
 #endif
 
-#ifdef _MSC_VER
-#	ifdef CUTE_EXPORT
-#		define CUTE_API __declspec(dllexport)
+#ifndef CUTE_STATIC
+#	ifdef _MSC_VER
+#		ifdef CUTE_EXPORT
+#			define CUTE_API __declspec(dllexport)
+#		else
+#			define CUTE_API __declspec(dllimport)
+#		endif
 #	else
-#		define CUTE_API __declspec(dllimport)
-#	endif
-#else
-#	if ((__GNUC__ >= 4) || defined(__clang__))
-#		define CUTE_API __attribute__((visibility("default")))
-#	else
-#		define CUTE_API
+#		if ((__GNUC__ >= 4) || defined(__clang__))
+#			define CUTE_API __attribute__((visibility("default")))
+#		else
+#			define CUTE_API
+#		endif
 #	endif
 #endif
 

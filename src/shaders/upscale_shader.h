@@ -6,8 +6,8 @@
 
     Overview:
 
-        Shader program 'upscale':
-            Get shader desc: upscale_upscale_shader_desc()
+        Shader program 'shd':
+            Get shader desc: upscale_shd_shader_desc()
             Vertex shader: vs
                 Attribute slots:
                     ATTR_upscale_vs_in_pos = 0
@@ -24,7 +24,7 @@
 
     Shader descriptor structs:
 
-        sg_shader upscale = sg_make_shader(upscale_upscale_shader_desc());
+        sg_shader shd = sg_make_shader(upscale_shd_shader_desc());
 
     Vertex attribute locations for vertex shader 'vs':
 
@@ -477,7 +477,7 @@ static const char upscale_fs_source_metal_macos[433] = {
 #if !defined(SOKOL_GFX_INCLUDED)
   #error "Please include sokol_gfx.h before upscale_shader.h"
 #endif
-static inline const sg_shader_desc* upscale_upscale_shader_desc(void) {
+static inline const sg_shader_desc* upscale_shd_shader_desc(void) {
   #if defined(SOKOL_GLCORE33)
   if (sg_query_backend() == SG_BACKEND_GLCORE33) {
     static sg_shader_desc desc;
@@ -497,7 +497,7 @@ static inline const sg_shader_desc* upscale_upscale_shader_desc(void) {
       desc.fs.images[0].name = "u_image";
       desc.fs.images[0].type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
-      desc.label = "upscale_upscale_shader";
+      desc.label = "upscale_shd_shader";
     };
     return &desc;
   }
@@ -522,7 +522,7 @@ static inline const sg_shader_desc* upscale_upscale_shader_desc(void) {
       desc.fs.images[0].name = "u_image";
       desc.fs.images[0].type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
-      desc.label = "upscale_upscale_shader";
+      desc.label = "upscale_shd_shader";
     };
     return &desc;
   }
@@ -541,7 +541,7 @@ static inline const sg_shader_desc* upscale_upscale_shader_desc(void) {
       desc.fs.images[0].name = "u_image";
       desc.fs.images[0].type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
-      desc.label = "upscale_upscale_shader";
+      desc.label = "upscale_shd_shader";
     };
     return &desc;
   }

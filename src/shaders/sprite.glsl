@@ -11,7 +11,7 @@
 	layout (location = 0) out vec2 uv;
 	layout (location = 1) out float alpha;
 
-	layout(binding = 0) uniform vs_params {
+	layout (binding = 0) uniform vs_params {
 		mat4 u_mvp;
 	};
 
@@ -30,7 +30,7 @@
 
 	out vec4 result;
 
-	layout(binding = 0) uniform sampler2D u_image;
+	layout (binding = 0) uniform sampler2D u_image;
 
 	void main()
 	{

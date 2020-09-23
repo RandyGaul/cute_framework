@@ -1,6 +1,7 @@
 @module font
 @ctype mat4 cute::matrix_t
 @ctype vec2 cute::v2
+@ctype vec4 cute::color_t
 
 @vs vs
 @glsl_options flip_vert_y
@@ -27,10 +28,13 @@
 	out vec4 result;
 
 	layout(binding = 0) uniform sampler2D u_image;
-	layout (location = 0)uniform vec4 u_text_color;
-	layout (location = 1)uniform vec4 u_border_color;
-	layout (location = 2)uniform vec2 u_texel_size;
-	layout (location = 3)uniform float u_use_border;
+
+	layout(binding = 0) uniform fs_params {
+		vec4 u_text_color;
+		vec4 u_border_color;
+		vec2 u_texel_size;
+		float u_use_border;
+	};
 
 	void main()
 	{
@@ -50,8 +54,8 @@
 		// Pick black for font and white for border.
 		vec4 border_color = u_border_color;
 		vec4 text_color = u_text_color * i;
-		vec4 result = mix(text_color, border_color, border);
+		result = mix(text_color, border_color, border);
 	}
 @end
 
-@program font vs fs
+@program shd vs fs

@@ -34,7 +34,7 @@
 #include <internal/cute_app_internal.h>
 #include <internal/cute_font_internal.h>
 
-#include <shaders/upscale_shader.h>
+#include <shaders/font_shader.h>
 
 namespace cute
 {
@@ -141,7 +141,7 @@ void font_draw(app_t* app, const font_t* font, matrix_t mvp, color_t color)
 	sg_bindings bind = app->font_buffer.bind();
 	bind.fs_images[0].id = (uint32_t)((cute_font_t*)font)->atlas_id;
 	sg_apply_bindings(bind);
-	app->font_vs_uniforms.mvp = mvp;
+	app->font_vs_uniforms.u_mvp = mvp;
 	app->font_fs_uniforms.u_text_color = color;
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &app->font_vs_uniforms, sizeof(app->font_vs_uniforms));
 	sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &app->font_fs_uniforms, sizeof(app->font_fs_uniforms));
@@ -152,21 +152,21 @@ void font_draw(app_t* app, const font_t* font, matrix_t mvp, color_t color)
 
 void font_borders(app_t* app, bool use_borders)
 {
-	app->font_fs_uniforms.use_border = use_borders ? 1.0f : 0.0f;
+	app->font_fs_uniforms.u_use_border = use_borders ? 1.0f : 0.0f;
 }
 
 void font_toggle_borders(app_t* app)
 {
-	if (app->font_fs_uniforms.use_border) {
-		app->font_fs_uniforms.use_border = 0;
+	if (app->font_fs_uniforms.u_use_border) {
+		app->font_fs_uniforms.u_use_border = 0;
 	} else {
-		app->font_fs_uniforms.use_border = 1;
+		app->font_fs_uniforms.u_use_border = 1;
 	}
 }
 
 bool font_is_borders_on(app_t* app)
 {
-	return app->font_fs_uniforms.use_border ? true : false;
+	return app->font_fs_uniforms.u_use_border ? true : false;
 }
 
 void font_border_color(app_t* app, color_t color)
@@ -191,7 +191,7 @@ void font_init(app_t* app)
 {
 	s_load_courier_new(app);
 
-	app->font_shader = sg_make_shader(upscale_upscale_shader_desc());
+	app->font_shader = sg_make_shader(font_shd_shader_desc());
 
 	sg_pipeline_desc pip_params = { 0 };
 	pip_params.layout.buffers[0].stride = sizeof(font_vertex_t);
@@ -217,7 +217,7 @@ void font_init(app_t* app)
 	app->font_buffer = triple_buffer_make(sizeof(font_vertex_t) * 1024 * 2, sizeof(font_vertex_t));
 
 	app->font_fs_uniforms.u_border_color = color_white();
-	app->font_fs_uniforms.use_border = 0;
+	app->font_fs_uniforms.u_use_border = false;
 	app->font_fs_uniforms.u_texel_size = v2(1.0f / (float)app->courier_new->atlas_w, 1.0f / (float)app->courier_new->atlas_h);
 }
 

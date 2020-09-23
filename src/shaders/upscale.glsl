@@ -36,4 +36,4 @@
 	}
 @end
 
-@program upscale vs fs
+@program shd vs fs

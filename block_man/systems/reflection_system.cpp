@@ -65,7 +65,7 @@ void reflection_system_update(app_t* app, float dt, void* udata, Transform* tran
 		// Collect all sprites that will be reflected.
 		if (animator->visible) {
 			transform_t tx = transform->get();
-			batch_quad_t q = animator->sprite.quad(tx);
+			batch_sprite_t q = animator->sprite.batch_sprite(tx);
 			//q.sort_bits = sort_bits(tx.p);
 			reflection_system->quads.add(q);
 		}
@@ -92,7 +92,7 @@ void reflection_system_post_update(app_t* app, float dt, void* udata)
 	stencil.stencil_back = stencil.stencil_front;
 	batch_set_depth_stencil_state(batch, stencil);
 	for (int i = 0; i < reflection_system->quads.count(); ++i) {
-		batch_quad_t quad = reflection_system->quads[i];
+		batch_sprite_t quad = reflection_system->quads[i];
 		batch_push(batch, quad);
 	}
 
@@ -105,7 +105,7 @@ void reflection_system_post_update(app_t* app, float dt, void* udata)
 	batch_set_depth_stencil_state(batch, stencil);
 	batch_set_blend_defaults(batch);
 	for (int i = 0; i < reflection_system->quads.count(); ++i) {
-		batch_quad_t quad = reflection_system->quads[i];
+		batch_sprite_t quad = reflection_system->quads[i];
 		quad.transform.p += v2(0, 6);
 		quad.alpha = 0.35f;
 		batch_push(batch, quad);

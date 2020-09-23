@@ -170,6 +170,9 @@ void do_imgui_stuff(app_t* app, float dt)
 		if (ImGui::Button("Add 5 Oil")) {
 			LAMP->add_oil(5);
 		}
+		if (ImGui::Button("Subtract 5 Oil")) {
+			LAMP->add_oil(-5);
+		}
 		ImGui::End();
 
 		if (erase) {
@@ -185,7 +188,7 @@ void do_imgui_stuff(app_t* app, float dt)
 			int mx, my;
 			world2tile(mpw, &mx, &my);
 			tx.p = tile2world(mx, my) + sprite.local_offset;
-			batch_push(batch, sprite.quad(tx));
+			batch_push(batch, sprite.batch_sprite(tx));
 			batch_flush(batch);
 
 			// Delete entities on left-click.
@@ -206,7 +209,7 @@ void do_imgui_stuff(app_t* app, float dt)
 			int mx, my;
 			world2tile(mpw, &mx, &my);
 			tx.p = tile2world(mx, my) + preview.sprite.local_offset;
-			batch_push(batch, preview.sprite.quad(tx));
+			batch_push(batch, preview.sprite.batch_sprite(tx));
 			batch_flush(batch);
 
 			// Create entities on left-click.
@@ -217,21 +220,67 @@ void do_imgui_stuff(app_t* app, float dt)
 	}
 }
 
+void draw_text(const char* text, int x, int y)
+{
+	const font_t* font = font_get_default(app);
+	float w = (float)font_text_width(font, text);
+	float h = (float)font_text_height(font, text);
+	font_push_verts(app, font, text, x + -w / 2, y + h / 2, 0);
+}
+
+bool button_text(const char* text, int x, int y)
+{
+	const font_t* font = font_get_default(app);
+	float w = (float)font_text_width(font, text);
+	float h = (float)font_text_height(font, text);
+	font_push_verts(app, font, text, x + -w / 2, y + h / 2, 0);
+	aabb_t bb = make_aabb(v2((float)x, (float)y - 3), w, h);
+
+	v2 mp = mouse_pos_in_world_space(app);
+	if (contains(bb, mp)) {
+		batch_quad(batch, bb, color_white());
+		if (mouse_was_pressed(app, MOUSE_BUTTON_LEFT)) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+
 int main(int argc, const char** argv)
 {
 	init_world();
 	select_level(0);
 
-	matrix_t mvp = matrix_ortho_2d(320, 240, 0, -100);
-	const font_t* font = font_get_default(app);
-	float w = (float)font_text_width(font, "0000");
-	float h = (float)font_text_height(font, "0000");
+	matrix_t mvp = matrix_ortho_2d(320, 240, 0, 0);
 
 	while (app_is_running(app)) {
 		float dt = calc_dt();
 		app_update(app, dt);
 		if (world->load_level_dirty_flag) select_level(world->level_index);
 		app_update_systems(app, dt);
+		if (world->lose_screen) {
+			destroy_all_entities();
+			draw_text("Uh oh!", 0, 0);
+			button_text("Retry?", -30, -20);
+			button_text("Nah.", 30, -20);
+
+			static float at = 0;
+			static float delay = 1.5f;
+			float t = clamp(at / delay, 0.0f, 1.0f);
+			at += dt;
+			color_t color = color_white();
+			color.a = ease_in_sin(t);
+			font_draw(app, font_get_default(app), mvp, color);
+			batch_flush(batch);
+			if (t >= 1.0f && key_was_pressed(app, KEY_SPACE)) {
+				world->lose_screen = false;
+				reload_level(world->level_name);
+				Darkness::reset();
+				at = 0;
+			}
+		}
 		do_imgui_stuff(app, dt);
 		app_present(app);
 	}

@@ -251,8 +251,8 @@ CUTE_MATH2D_INLINE v2 top_left(aabb_t bb) { return v2(bb.min.x, bb.max.y); }
 CUTE_MATH2D_INLINE v2 top_right(aabb_t bb) { return v2(bb.max.x, bb.max.y); }
 CUTE_MATH2D_INLINE v2 bottom_left(aabb_t bb) { return v2(bb.min.x, bb.min.y); }
 CUTE_MATH2D_INLINE v2 bottom_right(aabb_t bb) { return v2(bb.max.x, bb.min.y); }
-CUTE_MATH2D_INLINE int contains(aabb_t bb, v2 p) { return p >= bb.min && p <= bb.max; }
-CUTE_MATH2D_INLINE int contains(aabb_t a, aabb_t b) { return a.min >= b.min && a.max <= b.max; }
+CUTE_MATH2D_INLINE bool contains(aabb_t bb, v2 p) { return p >= bb.min && p <= bb.max; }
+CUTE_MATH2D_INLINE bool contains(aabb_t a, aabb_t b) { return a.min >= b.min && a.max <= b.max; }
 CUTE_MATH2D_INLINE float surface_area(aabb_t bb) { return 2.0f * width(bb) * height(bb); }
 CUTE_MATH2D_INLINE float area(aabb_t bb) { return width(bb) * height(bb); }
 CUTE_MATH2D_INLINE v2 clamp(aabb_t bb, v2 p) { return clamp(p, bb.min, bb.max); }

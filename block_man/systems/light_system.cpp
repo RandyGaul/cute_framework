@@ -53,7 +53,8 @@ namespace Darkness
 	static array<v2> verts;
 	static float t;
 
-	float radius = 16;
+	bool is_dark = false;
+	float radius = radius_max;
 	v2 center = v2(0, 0);
 
 	struct lerp_pair_t
@@ -90,6 +91,15 @@ namespace Darkness
 		}
 
 		radius = radius_max * Darkness::radius_t;
+	}
+
+	void reset()
+	{
+		Darkness::radius = Darkness::radius_max;
+		lerp_t = 0;
+		radius_t = 1.0f;
+		lerps.clear();
+		is_dark = false;
 	}
 };
 
@@ -439,6 +449,7 @@ void light_system_post_update(app_t* app, float dt, void* udata)
 	s_non_lamp_lights(s_non_lamp_color);
 
 	if (s_darkness_color.a == 1) {
+		Darkness::is_dark = true;
 		s_do_crawlies(dt);
 	}
 

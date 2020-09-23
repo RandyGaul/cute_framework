@@ -414,7 +414,7 @@ error_t app_init_upscaling(app_t* app, upscale_t upscaling, int offscreen_w, int
 	if (app->quad.id == SG_INVALID_ID) return error_failure("Unable create static quad buffer.");
 
 	// Setup upscaling shader, to draw the offscreen buffer onto the screen as a textured quad.
-	app->offscreen_shader = sg_make_shader(upscale_upscale_shader_desc());
+	app->offscreen_shader = sg_make_shader(upscale_shd_shader_desc());
 	if (app->offscreen_shader.id == SG_INVALID_ID) return error_failure("Unable create offscreen shader.");
 
 	float scale = s_max_scaling_factor(app);

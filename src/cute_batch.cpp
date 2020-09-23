@@ -30,6 +30,7 @@
 #include <internal/cute_app_internal.h>
 
 #include <shaders/sprite_shader.h>
+#include <shaders/geom_shader.h>
 
 struct quad_udata_t
 {
@@ -56,17 +57,27 @@ struct quad_vertex_t
 	float alpha;
 };
 
+struct vertex_t
+{
+	v2 p;
+	color_t c;
+};
+
 struct batch_t
 {
 	::spritebatch_t sb;
 
-	array<quad_vertex_t> verts;
+	sg_pipeline geom_pip;
+	triple_buffer_t geom_buffer;
+	array<vertex_t> geom_verts;
+
+	array<quad_vertex_t> sprite_verts;
 	triple_buffer_t sprite_buffer;
-	sg_shader default_shader = { 0 };
-	sg_shader outline_shader = { 0 };
-	sg_shader tint_shader = { 0 };
-	sg_shader active_shader = { 0 };
-	batch_quad_shader_type_t shader_type = BATCH_QUAD_SHADER_TYPE_DEFAULT;
+	sg_shader default_shd = { 0 };
+	sg_shader outline_shd = { 0 };
+	sg_shader tint_shd = { 0 };
+	sg_shader active_shd = { 0 };
+	batch_sprite_shader_type_t sprite_shd_type = BATCH_SPRITE_SHADER_TYPE_DEFAULT;
 	bool pip_dirty = true;
 	sg_pipeline pip = { 0 };
 	sg_blend_state blend_state;
@@ -86,13 +97,13 @@ struct batch_t
 //--------------------------------------------------------------------------------------------------
 // Internal functions.
 
-static sg_shader s_load_shader(batch_t* b, batch_quad_shader_type_t type)
+static sg_shader s_load_shader(batch_t* b, batch_sprite_shader_type_t type)
 {
 	sg_shader_desc params = { 0 };
 
 	// Default sprite shader.
 	switch (type) {
-	case BATCH_QUAD_SHADER_TYPE_DEFAULT:
+	case BATCH_SPRITE_SHADER_TYPE_DEFAULT:
 		params = *default_sprite_shader_desc();
 		break;
 
@@ -304,8 +315,8 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 
 	// Build vertex buffer of all quads for each sprite.
 	int vert_count = count * 6;
-	b->verts.ensure_count(vert_count);
-	quad_vertex_t* verts = b->verts.data();
+	b->sprite_verts.ensure_count(vert_count);
+	quad_vertex_t* verts = b->sprite_verts.data();
 
 	for (int i = 0; i < count; ++i)
 	{
@@ -392,9 +403,9 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	// TODO - Move MVP to the spritebatch_flush function as an optimization.
 
 	// Set shader-specific uniforms.
-	switch (b->shader_type)
+	switch (b->sprite_shd_type)
 	{
-	case BATCH_QUAD_SHADER_TYPE_DEFAULT:
+	case BATCH_SPRITE_SHADER_TYPE_DEFAULT:
 	{
 		default_vs_params_t params = {
 			b->mvp
@@ -402,7 +413,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &params, sizeof(params));
 	}	break;
 
-	case BATCH_QUAD_SHADER_TYPE_OUTLINE:
+	case BATCH_SPRITE_SHADER_TYPE_OUTLINE:
 	{
 		//vs_uniforms_t uniforms = {
 		//	b->mvp,
@@ -412,7 +423,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 		//sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &params, sizeof(params));
 	}	break;
 
-	case BATCH_QUAD_SHADER_TYPE_TINT:
+	case BATCH_SPRITE_SHADER_TYPE_TINT:
 	{
 		//sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &params, sizeof(params));
 	}	break;
@@ -456,12 +467,11 @@ static void s_sync_pip(batch_t* b)
 		params.layout.attrs[1].buffer_index = 0;
 		params.layout.attrs[1].offset = CUTE_OFFSET_OF(quad_vertex_t, uv);
 		params.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
-		params.layout.attrs[1].buffer_index = 0;
+		params.layout.attrs[2].buffer_index = 0;
 		params.layout.attrs[2].offset = CUTE_OFFSET_OF(quad_vertex_t, alpha);
 		params.layout.attrs[2].format = SG_VERTEXFORMAT_FLOAT;
-		params.layout.attrs[2].buffer_index = 0;
 		params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
-		params.shader = b->active_shader;
+		params.shader = b->active_shd;
 		params.depth_stencil = b->depth_stencil_state;
 		params.blend = b->blend_state;
 		b->pip = sg_make_pipeline(params);
@@ -479,11 +489,33 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 	b->get_pixels_udata = get_pixels_udata;
 	b->mem_ctx = mem_ctx;
 
+	sg_pipeline_desc params = { 0 };
+	params.layout.buffers[0].stride = sizeof(vertex_t);
+	params.layout.buffers[0].step_func = SG_VERTEXSTEP_PER_VERTEX;
+	params.layout.buffers[0].step_rate = 1;
+	params.layout.attrs[0].buffer_index = 0;
+	params.layout.attrs[0].offset = CUTE_OFFSET_OF(vertex_t, p);
+	params.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
+	params.layout.attrs[1].buffer_index = 0;
+	params.layout.attrs[1].offset = CUTE_OFFSET_OF(vertex_t, c);
+	params.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT4;
+	params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
+	params.shader = sg_make_shader(geom_shd_shader_desc());
+	params.blend.enabled = true;
+	params.blend.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
+	params.blend.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	params.blend.op_rgb = SG_BLENDOP_ADD;
+	params.blend.src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
+	params.blend.dst_factor_alpha = SG_BLENDFACTOR_ONE;
+	params.blend.op_alpha = SG_BLENDOP_ADD;
+	b->geom_pip = sg_make_pipeline(params);
+	b->geom_buffer = triple_buffer_make(sizeof(vertex_t) * 1024 * 10, sizeof(vertex_t));
+
 	batch_set_depth_stencil_defaults(b);
 	batch_set_blend_defaults(b);
-	b->default_shader = b->active_shader = s_load_shader(b, BATCH_QUAD_SHADER_TYPE_DEFAULT);
-	b->outline_shader = s_load_shader(b, BATCH_QUAD_SHADER_TYPE_OUTLINE);
-	b->tint_shader = s_load_shader(b, BATCH_QUAD_SHADER_TYPE_TINT);
+	b->default_shd = b->active_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_DEFAULT);
+	b->outline_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_OUTLINE);
+	b->tint_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_TINT);
 	b->sprite_buffer = triple_buffer_make(sizeof(quad_vertex_t) * 1024 * 10, sizeof(quad_vertex_t));
 
 	spritebatch_config_t config;
@@ -512,7 +544,7 @@ void batch_destroy(batch_t* b)
 	CUTE_FREE(b, b->mem_ctx);
 }
 
-void batch_push(batch_t* b, batch_quad_t q)
+void batch_push(batch_t* b, batch_sprite_t q)
 {
 	spritebatch_sprite_t s;
 	s.image_id = q.id;
@@ -531,7 +563,7 @@ void batch_push(batch_t* b, batch_quad_t q)
 
 error_t batch_flush(batch_t* b)
 {
-	// Start the pipeline.
+	// Draw sprites.
 	s_sync_pip(b);
 	sg_apply_pipeline(b->pip);
 
@@ -539,49 +571,59 @@ error_t batch_flush(batch_t* b)
 		sg_apply_scissor_rect(b->scissor_x, b->scissor_y, b->scissor_w, b->scissor_h, false);
 	}
 
-	// Construct batches.
 	spritebatch_tick(&b->sb);
 	if (!spritebatch_defrag(&b->sb)) {
 		return error_failure("`spritebatch_defrag` failed.");
 	}
-	if (!spritebatch_flush(&b->sb)) {
-		return error_failure("`spritebatch_flush` failed.");
-	}
+	spritebatch_flush(&b->sb);
 
-	// Increment which vertex buffer to use -- triple buffering.
 	b->sprite_buffer.advance();
+
+	// Draw geometry.
+	if (b->geom_verts.count()) {
+		sg_apply_pipeline(b->geom_pip);
+		geom_vs_params_t params;
+		params.u_mvp = b->mvp;
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &params, sizeof(params));
+		error_t err = triple_buffer_append(&b->geom_buffer, b->geom_verts.count(), b->geom_verts.data());
+		CUTE_ASSERT(!err.is_error());
+		sg_apply_bindings(b->geom_buffer.bind());
+		sg_draw(0, b->geom_verts.count(), 1);
+		b->geom_verts.clear();
+		b->geom_buffer.advance();
+	}
 
 	return error_success();
 }
 
 //--------------------------------------------------------------------------------------------------
 
-void batch_set_shader_type(batch_t* b, batch_quad_shader_type_t type)
+void batch_set_shader_type(batch_t* b, batch_sprite_shader_type_t type)
 {
-	b->shader_type = type;
+	b->sprite_shd_type = type;
 
 	// Load the shader, if needed, and set the active sprite system shader.
 	switch (type)
 	{
-	case BATCH_QUAD_SHADER_TYPE_DEFAULT:
-		if (b->default_shader.id == SG_INVALID_ID) {
-			b->default_shader = s_load_shader(b, type);
+	case BATCH_SPRITE_SHADER_TYPE_DEFAULT:
+		if (b->default_shd.id == SG_INVALID_ID) {
+			b->default_shd = s_load_shader(b, type);
 		}
-		b->active_shader = b->default_shader;
+		b->active_shd = b->default_shd;
 		break;
 
-	case BATCH_QUAD_SHADER_TYPE_OUTLINE:
-		if (b->outline_shader.id == SG_INVALID_ID) {
-			b->outline_shader = s_load_shader(b, type);
+	case BATCH_SPRITE_SHADER_TYPE_OUTLINE:
+		if (b->outline_shd.id == SG_INVALID_ID) {
+			b->outline_shd = s_load_shader(b, type);
 		}
-		b->active_shader = b->outline_shader;
+		b->active_shd = b->outline_shd;
 		break;
 
-	case BATCH_QUAD_SHADER_TYPE_TINT:
-		if (b->tint_shader.id == SG_INVALID_ID) {
-			b->tint_shader = s_load_shader(b, type);
+	case BATCH_SPRITE_SHADER_TYPE_TINT:
+		if (b->tint_shd.id == SG_INVALID_ID) {
+			b->tint_shd = s_load_shader(b, type);
 		}
-		b->active_shader = b->tint_shader;
+		b->active_shd = b->tint_shd;
 		break;
 	}
 }
@@ -639,6 +681,100 @@ void batch_set_blend_defaults(batch_t* b)
 	b->blend_state.dst_factor_alpha = SG_BLENDFACTOR_ONE;
 	b->blend_state.op_alpha = SG_BLENDOP_ADD;
 	b->pip_dirty = true;
+}
+
+void batch_quad(batch_t* b, aabb_t bb, color_t c)
+{
+	v2 verts[4];
+	aabb_verts(verts, &bb);
+	batch_quad(b, verts[0], verts[1], verts[2], verts[3], c);
+}
+
+#define PUSH_VERT(P, C) \
+	do { \
+		vertex_t v; \
+		v.p = P; \
+		v.c = C; \
+		b->geom_verts.add(v); \
+	} while (0)
+
+#define PUSH_TRI(p0, p1, p2, c0, c1, c2) \
+	do { \
+		PUSH_VERT(p0, c0); \
+		PUSH_VERT(p1, c1); \
+		PUSH_VERT(p2, c2); \
+	} while (0)
+
+void batch_quad(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, color_t c)
+{
+	PUSH_TRI(p0, p1, p2, c, c, c);
+	PUSH_TRI(p2, p3, p0, c, c, c);
+}
+
+void batch_quad(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, color_t c0, color_t c1, color_t c2, color_t c3)
+{
+	PUSH_TRI(p0, p1, p2, c0, c1, c2);
+	PUSH_TRI(p2, p3, p0, c0, c1, c2);
+}
+
+void batch_quad_line(batch_t* b, aabb_t bb, float thickness, color_t c)
+{
+	CUTE_ASSERT(0);
+}
+
+void batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, float thickness, color_t c)
+{
+	CUTE_ASSERT(0);
+}
+
+void batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, float thickness, color_t c0, color_t c1, color_t c2, color_t c3)
+{
+	CUTE_ASSERT(0);
+}
+
+void batch_circle(batch_t* b, v2 p, float r, int iters, color_t c)
+{
+	CUTE_ASSERT(0);
+}
+
+void batch_circle_line(batch_t* b, v2 p, float r, int iters, float thickness, color_t c)
+{
+	CUTE_ASSERT(0);
+}
+
+void batch_tri(batch_t* b, v2 p0, v2 p1, v2 p2, color_t c)
+{
+	PUSH_TRI(p0, p1, p2, c, c, c);
+}
+
+void batch_tri(batch_t* b, v2 p0, v2 p1, v2 p2, color_t c0, color_t c1, color_t c2)
+{
+	PUSH_TRI(p0, p1, p2, c0, c1, c2);
+}
+
+void batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float thickness, color_t c)
+{
+	CUTE_ASSERT(0);
+}
+
+void batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float thickness, color_t c0, color_t c1, color_t c2)
+{
+	CUTE_ASSERT(0);
+}
+
+void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c)
+{
+	batch_line(b, p0, p1, thickness, c, c);
+}
+
+void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c0, color_t c1)
+{
+	v2 n = skew(norm(p1 - p0));
+	v2 q0 = p0 + n * thickness * 0.5f;
+	v2 q1 = p1 + n * thickness * 0.5f;
+	v2 q2 = p1 - n * thickness * 0.5f;
+	v2 q3 = p0 - n * thickness * 0.5f;
+	batch_quad(b, q0, q1, q2, q3, c0, c0, c1, c1);
 }
 
 }
