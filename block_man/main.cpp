@@ -274,14 +274,6 @@ bool button_text(const char* text, int x, int y)
 
 void do_lose_screen_stuff(float dt)
 {
-	/*
-		1. turn on red blinking outline for character
-		2. fade out the light
-		3. turn off outline
-		4. some kind of FX to officiate death -- white puff cloud animation
-		5. fade in death menu text
-	*/
-
 	static coroutine_t s_co;
 	coroutine_t* co = &s_co;
 	static sprite_t player;
@@ -313,22 +305,26 @@ void do_lose_screen_stuff(float dt)
 
 	COROUTINE_END(co);
 
-	draw_text("Uh oh!", 0, 0);
-	if (button_text("Retry?", -30, -20)) {
-		world->lose_screen = false;
-		reload_level(world->level_name);
-		Darkness::reset();
-		s_co = { 0 };
-		show_text = false;
-		show_girl = true;
-		batch_no_tint(batch);
-	}
-	if (button_text("Nah.", 30, -20)) {
-		printf("nah\n");
+	if (t != 1) {
+		draw_text("Uh oh!", 0, 0);
+	} else {
+		draw_text("Uh oh!", 0, 0);
+		if (button_text("Retry?", -30, -20)) {
+			world->lose_screen = false;
+			reload_level(world->level_name);
+			Darkness::reset();
+			s_co = { 0 };
+			show_text = false;
+			show_girl = true;
+			batch_no_tint(batch);
+		}
+		if (button_text("Nah.", 30, -20)) {
+			printf("nah\n");
+		}
 	}
 
 	color_t color = color_white();
-	color.a = ease_in_sin(t);
+	color.a = ease_in_sin(t * t * t * t);
 	font_draw(app, font_get_default(app), matrix_ortho_2d(320, 240, 0, 0), color);
 	batch_flush(batch);
 
