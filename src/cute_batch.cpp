@@ -30,6 +30,7 @@
 #include <internal/cute_app_internal.h>
 
 #include <shaders/sprite_shader.h>
+#include <shaders/sprite_outline_shader.h>
 #include <shaders/geom_shader.h>
 
 struct quad_udata_t
@@ -75,7 +76,6 @@ struct batch_t
 	triple_buffer_t sprite_buffer;
 	sg_shader default_shd = { 0 };
 	sg_shader outline_shd = { 0 };
-	sg_shader tint_shd = { 0 };
 	sg_shader active_shd = { 0 };
 	batch_sprite_shader_type_t sprite_shd_type = BATCH_SPRITE_SHADER_TYPE_DEFAULT;
 	bool pip_dirty = true;
@@ -87,6 +87,7 @@ struct batch_t
 	int scissor_w, scissor_h;
 	float outline_use_border = 0;
 	matrix_t mvp;
+	color_t tint = make_color(0.5f, 0.0f, 0.0f, 1.0f);
 
 	get_pixels_fn* get_pixels = NULL;
 	void* get_pixels_udata = NULL;
@@ -104,207 +105,17 @@ static sg_shader s_load_shader(batch_t* b, batch_sprite_shader_type_t type)
 	// Default sprite shader.
 	switch (type) {
 	case BATCH_SPRITE_SHADER_TYPE_DEFAULT:
-		params = *default_sprite_shader_desc();
+		params = *sprite_default_shd_shader_desc();
 		break;
 
 	default:
-		return { SG_INVALID_ID };
+		params = *sprite_outline_shd_shader_desc();
+		break;
 	}
 
 	sg_shader shader = sg_make_shader(params);
 	return shader;
 }
-
-#if 0
-static gfx_shader_t* s_load_shader(batch_t* b, sprite_shader_type_t type)
-{
-	const char* default_vs = CUTE_STRINGIZE(
-		struct vertex_t
-		{
-			float2 pos : POSITION0;
-			float2 uv  : TEXCOORD0;
-		};
-
-		struct interp_t
-		{
-			float4 posH : POSITION0;
-			float2 uv   : TEXCOORD0;
-		};
-
-		float4x4 u_mvp;
-		float2 u_inv_screen_wh;
-
-		interp_t main(vertex_t vtx)
-		{
-			float4 posH = mul(float4(round(vtx.pos), 0, 1), u_mvp);
-
-			posH.xy += u_inv_screen_wh;
-			interp_t interp;
-			interp.posH = posH;
-			interp.uv = vtx.uv;
-			return interp;
-		}
-	);
-
-	const char* default_ps = CUTE_STRINGIZE(
-		struct interp_t
-		{
-			float4 posH : POSITION;
-			float2 uv   : TEXCOORD0;
-		};
-
-		sampler2D u_image;
-
-		float4 main(interp_t interp) : COLOR
-		{
-			float2 uv = interp.uv;
-			float4 color = tex2D(u_image, uv);
-			return color;
-		}
-	);
-
-	const char* outline_vs = CUTE_STRINGIZE(
-		struct vertex_t
-		{
-			float2 pos : POSITION0;
-			float2 uv  : TEXCOORD0;
-		};
-
-		struct interp_t
-		{
-			float4 posH : POSITION0;
-			float2 uv   : TEXCOORD0;
-		};
-
-		float4x4 u_mvp;
-		float2 u_inv_screen_wh;
-
-		interp_t main(vertex_t vtx)
-		{
-			float4 posH = mul(float4(round(vtx.pos), 0, 1), u_mvp);
-
-			posH.xy += u_inv_screen_wh;
-			interp_t interp;
-			interp.posH = posH;
-			interp.uv = vtx.uv;
-			return interp;
-		}
-	);
-
-	const char* outline_ps = CUTE_STRINGIZE(
-		struct interp_t
-		{
-			float4 posH : POSITION;
-			float2 uv   : TEXCOORD0;
-		};
-
-		sampler2D u_image;
-		float2 u_texel_size;
-		float u_use_border;
-
-		float4 main(interp_t interp) : COLOR
-		{
-			float2 uv = interp.uv;
-
-			// Border detection for pixel outlines.
-			float a = (float)any(tex2D(u_image, uv + float2(0,  u_texel_size.y)).rgb);
-			float b = (float)any(tex2D(u_image, uv + float2(0, -u_texel_size.y)).rgb);
-			float c = (float)any(tex2D(u_image, uv + float2(u_texel_size.x,  0)).rgb);
-			float d = (float)any(tex2D(u_image, uv + float2(-u_texel_size.x, 0)).rgb);
-			float e = (float)any(tex2D(u_image, uv + float2(-u_texel_size.x, -u_texel_size.y)).rgb);
-			float f = (float)any(tex2D(u_image, uv + float2(-u_texel_size.x,  u_texel_size.y)).rgb);
-			float g = (float)any(tex2D(u_image, uv + float2( u_texel_size.x, -u_texel_size.y)).rgb);
-			float h = (float)any(tex2D(u_image, uv + float2( u_texel_size.x,  u_texel_size.y)).rgb);
-
-			float4 image_color = tex2D(u_image, uv);
-			float image_mask = (float)any(image_color.rgb);
-
-			float border = max(a, max(b, max(c, max(d, max(e, max(f, max(g, h))))))) * (1 - image_mask);
-			border *= u_use_border;
-
-			// Pick between white border or sprite color.
-			float4 border_color = float4(1, 1, 1, 1);
-			float4 color = lerp(image_color * image_mask, border_color, border);
-
-			return color;
-		}
-	);
-
-	const char* tint_vs = CUTE_STRINGIZE(
-		struct vertex_t
-		{
-			float2 pos : POSITION0;
-			float2 uv  : TEXCOORD0;
-		};
-
-		struct interp_t
-		{
-			float4 posH : POSITION0;
-			float2 uv   : TEXCOORD0;
-		};
-
-		float4x4 u_mvp;
-		float2 u_inv_screen_wh;
-
-		interp_t main(vertex_t vtx)
-		{
-			float4 posH = mul(float4(round(vtx.pos), 0, 1), u_mvp);
-
-			posH.xy += u_inv_screen_wh;
-			interp_t interp;
-			interp.posH = posH;
-			interp.uv = vtx.uv;
-			return interp;
-		}
-	);
-
-	const char* tint_ps = CUTE_STRINGIZE(
-		struct interp_t
-		{
-			float4 posH : POSITION;
-			float2 uv   : TEXCOORD0;
-		};
-
-		sampler2D u_image;
-
-		float4 main(interp_t interp) : COLOR
-		{
-			float2 uv = interp.uv;
-			float4 color = tex2D(u_image, uv);
-			return color;
-		}
-	);
-
-	// Grab the shader strings.
-	const char* vs = NULL;
-	const char* ps = NULL;
-
-	switch (type)
-	{
-	case SPRITE_SHADER_TYPE_DEFAULT:
-		vs = default_vs;
-		ps = default_ps;
-		break;
-
-	case SPRITE_SHADER_TYPE_OUTLINE:
-		vs = outline_vs;
-		ps = outline_ps;
-		break;
-
-	case SPRITE_SHADER_TYPE_TINT:
-		vs = tint_vs;
-		ps = tint_ps;
-		break;
-	}
-
-	// Set common uniforms.
-	app_t* app = b->app;
-	gfx_shader_t* shader = gfx_shader_new(app, b->sprite_buffer, vs, ps);
-	gfx_shader_set_screen_wh(app, shader, b->w, b->h);
-
-	return shader;
-}
-#endif
 
 //--------------------------------------------------------------------------------------------------
 // spritebatch_t callbacks.
@@ -407,25 +218,28 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	{
 	case BATCH_SPRITE_SHADER_TYPE_DEFAULT:
 	{
-		default_vs_params_t params = {
+		sprite_default_vs_params_t vs_params = {
 			b->mvp
 		};
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &params, sizeof(params));
+		sprite_default_fs_params_t fs_params = {
+			b->tint
+		};
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &vs_params, sizeof(vs_params));
+		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &fs_params, sizeof(fs_params));
 	}	break;
 
 	case BATCH_SPRITE_SHADER_TYPE_OUTLINE:
 	{
-		//vs_uniforms_t uniforms = {
-		//	b->mvp,
-		//	v2(1.0f / (float)texture_w, 1.0f / (float)texture_h),
-		//	b->outline_use_border
-		//};
-		//sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &params, sizeof(params));
-	}	break;
-
-	case BATCH_SPRITE_SHADER_TYPE_TINT:
-	{
-		//sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &params, sizeof(params));
+		sprite_outline_vs_params_t vs_params = {
+			b->mvp,
+		};
+		sprite_outline_fs_params_t fs_params = {
+			b->tint,
+			v2(1.0f / (float)texture_w, 1.0f / (float)texture_h),
+			b->outline_use_border
+		};
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &vs_params, sizeof(vs_params));
+		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &fs_params, sizeof(fs_params));
 	}	break;
 	}
 
@@ -515,7 +329,6 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 	batch_set_blend_defaults(b);
 	b->default_shd = b->active_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_DEFAULT);
 	b->outline_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_OUTLINE);
-	b->tint_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_TINT);
 	b->sprite_buffer = triple_buffer_make(sizeof(quad_vertex_t) * 1024 * 10, sizeof(quad_vertex_t));
 
 	spritebatch_config_t config;
@@ -618,13 +431,6 @@ void batch_set_shader_type(batch_t* b, batch_sprite_shader_type_t type)
 		}
 		b->active_shd = b->outline_shd;
 		break;
-
-	case BATCH_SPRITE_SHADER_TYPE_TINT:
-		if (b->tint_shd.id == SG_INVALID_ID) {
-			b->tint_shd = s_load_shader(b, type);
-		}
-		b->active_shd = b->tint_shd;
-		break;
 	}
 }
 
@@ -681,6 +487,19 @@ void batch_set_blend_defaults(batch_t* b)
 	b->blend_state.dst_factor_alpha = SG_BLENDFACTOR_ONE;
 	b->blend_state.op_alpha = SG_BLENDOP_ADD;
 	b->pip_dirty = true;
+}
+void batch_set_tint_color(batch_t* b, color_t c)
+{
+	b->tint = c;
+}
+void batch_no_tint(batch_t* b)
+{
+	b->tint = make_color(0.0f, 0.0f, 0.0f, 0.0f);
+}
+
+void batch_set_tint_color(batch_t* b, color_t c)
+{
+	b->tint = c;
 }
 
 void batch_quad(batch_t* b, aabb_t bb, color_t c)

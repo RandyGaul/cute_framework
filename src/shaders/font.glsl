@@ -1,7 +1,7 @@
 @module font
 @ctype mat4 cute::matrix_t
-@ctype vec2 cute::v2
 @ctype vec4 cute::color_t
+@ctype vec2 cute::v2
 
 @vs vs
 @glsl_options flip_vert_y
@@ -41,8 +41,8 @@
 		// Border detection for pixel outlines.
 		float a = texture(u_image, uv + vec2(0,  u_texel_size.y)).r;
 		float b = texture(u_image, uv + vec2(0, -u_texel_size.y)).r;
-		float c = texture(u_image, uv + vec2(u_texel_size.x,  0)).r;
-		float d = texture(u_image, uv + vec2(-u_texel_size.x, 0)).r;
+		float c = texture(u_image, uv + vec2( u_texel_size.x,  0)).r;
+		float d = texture(u_image, uv + vec2(-u_texel_size.x,  0)).r;
 		float e = texture(u_image, uv + vec2(-u_texel_size.x, -u_texel_size.y)).r;
 		float f = texture(u_image, uv + vec2(-u_texel_size.x,  u_texel_size.y)).r;
 		float g = texture(u_image, uv + vec2( u_texel_size.x, -u_texel_size.y)).r;
@@ -51,7 +51,6 @@
 		float border = max(a, max(b, max(c, max(d, max(e, max(f, max(g, h))))))) * (1 - i);
 		border *= u_use_border;
 
-		// Pick black for font and white for border.
 		vec4 border_color = u_border_color;
 		vec4 text_color = u_text_color * i;
 		result = mix(text_color, border_color, border);

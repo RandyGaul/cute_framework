@@ -173,6 +173,9 @@ void do_imgui_stuff(app_t* app, float dt)
 		if (ImGui::Button("Subtract 5 Oil")) {
 			LAMP->add_oil(-5);
 		}
+		static color_t tint = make_color(0.5f, 0.5f, 0.5f, 1.0f);
+		ImGui::ColorPicker4("Tint", (float*)&tint);
+		batch_set_tint_color(batch, tint);
 		ImGui::End();
 
 		if (erase) {

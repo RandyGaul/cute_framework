@@ -95,7 +95,6 @@ enum batch_sprite_shader_type_t
 {
 	BATCH_SPRITE_SHADER_TYPE_DEFAULT,
 	BATCH_SPRITE_SHADER_TYPE_OUTLINE,
-	BATCH_SPRITE_SHADER_TYPE_TINT
 };
 
 extern CUTE_API void CUTE_CALL batch_set_shader_type(batch_t* b, batch_sprite_shader_type_t type);
@@ -107,6 +106,8 @@ extern CUTE_API void CUTE_CALL batch_set_depth_stencil_state(batch_t* b, const s
 extern CUTE_API void CUTE_CALL batch_set_depth_stencil_defaults(batch_t* b);
 extern CUTE_API void CUTE_CALL batch_set_blend_state(batch_t* b, const sg_blend_state& blend_state);
 extern CUTE_API void CUTE_CALL batch_set_blend_defaults(batch_t* b);
+extern CUTE_API void CUTE_CALL batch_set_tint_color(batch_t* b, color_t c);
+extern CUTE_API void CUTE_CALL batch_no_tint(batch_t* b);
 
 extern CUTE_API void CUTE_CALL batch_quad(batch_t* b, aabb_t bb, color_t c);
 extern CUTE_API void CUTE_CALL batch_quad(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, color_t c);

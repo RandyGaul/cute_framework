@@ -1,5 +1,6 @@
-@module default
+@module sprite_default
 @ctype mat4 cute::matrix_t
+@ctype vec4 cute::color_t
 @ctype vec2 cute::v2
 
 @vs vs
@@ -32,13 +33,25 @@
 
 	layout (binding = 0) uniform sampler2D u_image;
 
+	layout (binding = 0) uniform fs_params {
+		vec4 u_tint;
+	};
+
+	vec4 overlay(vec4 base, vec4 blend)
+	{
+		float opacity = blend.a;
+		vec3 rgb = 2 * base.rgb * blend.rgb * opacity + base.rgb * (1.0 - opacity);
+		return vec4(rgb, base.a);
+	}
+
 	void main()
 	{
 		vec4 color = texture(u_image, uv);
+		color = overlay(color, u_tint);
 		color.a = color.a * alpha;
 		if (color.a < 0.00001) discard;
 		result = color;
 	}
 @end
 
-@program sprite vs fs
+@program shd vs fs

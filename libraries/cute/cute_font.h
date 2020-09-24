@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	tinyfont.h - v1.01
+	tinyfont.h - v1.02
 
 	To create implementation (the function definitions)
 		#define CUTE_FONT_IMPLEMENTATION
@@ -37,9 +37,10 @@
 		WARNING: Currently does *not* support more than one texture page.
 
 	Revision history:
-		1.0  (05/13/2018) initial release
+		1.00 (05/13/2018) initial release
 		1.01 (01/25/2019) added word-wrapping and CPU-side clipping support to
 		                  the function `cute_font_fill_vertex_buffer`
+		1.02 (09/23/2020) fix various kerning bugs, added line_height to fonts
 */
 
 #if !defined(CUTE_FONT_H)
