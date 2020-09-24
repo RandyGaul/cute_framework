@@ -94,6 +94,7 @@ struct batch_t
 	int scissor_w, scissor_h;
 	float outline_use_border = 1.0f;
 	float outline_use_corners = 0;
+	color_t outline_color = color_white();
 	matrix_t mvp;
 	color_t tint = make_color(0.5f, 0.0f, 0.0f, 1.0f);
 
@@ -146,6 +147,8 @@ static void s_set_shd_type(batch_t* b, batch_sprite_shader_type_t type)
 		b->active_shd = b->outline_shd;
 		break;
 	}
+
+	b->pip_dirty = true;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -266,6 +269,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 		};
 		sprite_outline_fs_params_t fs_params = {
 			b->tint,
+			b->outline_color,
 			v2(1.0f / (float)texture_w, 1.0f / (float)texture_h),
 			b->outline_use_border,
 			b->outline_use_corners
@@ -462,10 +466,10 @@ void batch_no_scissor_box(batch_t* b)
 	b->scissor_enabled = false;
 }
 
-void batch_outlines_use_border(batch_t* b, bool use_border)
+void batch_outlines(batch_t* b, bool use_outlines)
 {
-	b->outline_use_border = use_border ? 1.0f : 0;
-	if (use_border) {
+	b->outline_use_border = use_outlines ? 1.0f : 0;
+	if (use_outlines) {
 		s_set_shd_type(b, BATCH_SPRITE_SHADER_TYPE_OUTLINE);
 	} else {
 		s_set_shd_type(b, BATCH_SPRITE_SHADER_TYPE_DEFAULT);
@@ -475,6 +479,11 @@ void batch_outlines_use_border(batch_t* b, bool use_border)
 void batch_outlines_use_corners(batch_t* b, bool use_corners)
 {
 	b->outline_use_corners = use_corners ? 1.0f : 0;
+}
+
+void batch_outlines_color(batch_t* b, color_t c)
+{
+	b->outline_color = c;
 }
 
 void batch_set_depth_stencil_state(batch_t* b, const sg_depth_stencil_state& depth_stencil_state)

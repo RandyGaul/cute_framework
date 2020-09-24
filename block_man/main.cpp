@@ -32,6 +32,7 @@ using namespace cute;
 
 #include <components/lamp.h>
 
+#include <systems/player_system.h>
 #include <systems/light_system.h>
 
 void do_imgui_stuff(app_t* app, float dt)
@@ -273,18 +274,54 @@ bool button_text(const char* text, int x, int y)
 
 void do_lose_screen_stuff(float dt)
 {
-	static float at = 0;
-	static float delay = 1.5f;
-	float t = clamp(at / delay, 0.0f, 1.0f);
-	at += dt;
+	/*
+		1. turn on red blinking outline for character
+		2. fade out the light
+		3. turn off outline
+		4. some kind of FX to officiate death -- white puff cloud animation
+		5. fade in death menu text
+	*/
+
+	static coroutine_t s_co;
+	coroutine_t* co = &s_co;
+	static sprite_t player;
+	static bool show_text = false;
+	static bool show_girl = true;
+	float t = 0;
+
+	COROUTINE_START(co);
+	Darkness::lerp_to(0);
+	aseprite_cache_load(cache, "girl.aseprite", &player);
+	player.play("idle");
+
+	if (Darkness::radius != 0) {
+		COROUTINE_EXIT(co);
+	}
 
 	destroy_all_entities();
+
+	COROUTINE_SEQUENCE_POINT(co);
+	t = co->elapsed / 2.0f;
+	show_girl = mod(t, 0.25f) < 0.25f * 0.5f;
+	COROUTINE_WAIT(co, 2.0f, dt);
+
+	COROUTINE_CASE(co, idle);
+	show_text = true;
+	t = 1.0f;
+	COROUTINE_YIELD(co);
+	goto idle;
+
+	COROUTINE_END(co);
+
 	draw_text("Uh oh!", 0, 0);
 	if (button_text("Retry?", -30, -20)) {
 		world->lose_screen = false;
 		reload_level(world->level_name);
 		Darkness::reset();
-		at = 0;
+		s_co = { 0 };
+		show_text = false;
+		show_girl = true;
+		batch_no_tint(batch);
 	}
 	if (button_text("Nah.", 30, -20)) {
 		printf("nah\n");
@@ -294,6 +331,16 @@ void do_lose_screen_stuff(float dt)
 	color.a = ease_in_sin(t);
 	font_draw(app, font_get_default(app), matrix_ortho_2d(320, 240, 0, 0), color);
 	batch_flush(batch);
+
+	if (show_girl) {
+		batch_outlines(batch, true);
+		batch_outlines_color(batch, make_color(0.8f, 0.1f, 0.1f));
+		batch_set_tint_color(batch, color_black());
+		player.draw(batch, player_last_tx());
+		batch_flush(batch);
+		batch_outlines(batch, false);
+		batch_outlines_color(batch, color_white());
+	}
 }
 
 int main(int argc, const char** argv)

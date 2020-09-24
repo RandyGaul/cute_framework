@@ -315,6 +315,13 @@ static float s_dist(int ax, int ay, int bx, int by)
 	return sqrt(d0 * d0 + d1 * d1);
 }
 
+static transform_t s_last_tx;
+
+transform_t player_last_tx()
+{
+	return s_last_tx;
+}
+
 void player_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, Player* players, int entity_count)
 {
 	for (int i = 0; i < entity_count; ++i) {
@@ -322,6 +329,8 @@ void player_system_update(app_t* app, float dt, void* udata, Transform* transfor
 		Animator* animator = animators + i;
 		BoardPiece* board_piece = board_pieces + i;
 		Player* player = players + i;
+
+		s_last_tx = transform->get();
 
 		if (player->busy) continue;
 

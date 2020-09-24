@@ -30,6 +30,8 @@ struct Animator;
 struct BoardPiece;
 struct Player;
 
+transform_t player_last_tx();
+
 void player_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, Player* players, int entity_count);
 
 #endif // PLAYER_SYSTEM_H

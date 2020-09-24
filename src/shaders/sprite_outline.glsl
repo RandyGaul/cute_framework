@@ -38,6 +38,7 @@
 
 	layout (binding = 0) uniform fs_params {
 		vec4 u_tint;
+		vec4 u_border_color;
 		vec2 u_texel_size;
 		float u_use_border;
 		float u_use_corners;
@@ -51,9 +52,7 @@
 		vec4 image_color = texture(u_image, uv);
 		float image_mask = float(image_color.a != 0.0);
 		float border = outline(u_image, u_texel_size, image_mask, u_use_border, u_use_corners);
-		vec4 border_color = vec4(1, 1, 1, 1);
-		vec4 color = image_color * image_mask + border_color * border;
-		color = overlay(color, u_tint);
+		vec4 color = overlay(image_color, u_tint) * image_mask + u_border_color * border;
 		color.a = color.a * alpha;
 		result = color;
 	}
