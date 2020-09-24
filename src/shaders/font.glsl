@@ -29,9 +29,9 @@
 
 	out vec4 result;
 
-	layout(binding = 0) uniform sampler2D u_image;
+	layout (binding = 0) uniform sampler2D u_image;
 
-	layout(binding = 0) uniform fs_params {
+	layout (binding = 0) uniform fs_params {
 		vec4 u_text_color;
 		vec4 u_border_color;
 		vec2 u_texel_size;
@@ -43,7 +43,6 @@
 
 	void main()
 	{
-		// Border detection for pixel outlines.
 		float image_mask = texture(u_image, uv).a;
 		float border = outline(u_image, u_texel_size, image_mask, u_use_border, u_use_corners);
 		result = u_text_color * image_mask + u_border_color * border;

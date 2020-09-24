@@ -46,7 +46,7 @@
 		vec4 color = texture(u_image, uv);
 		color = overlay(color, u_tint);
 		color.a = color.a * alpha;
-		if (color.a < 0.00001) discard;
+		if (color.a == 0) discard;
 		result = color;
 	}
 @end

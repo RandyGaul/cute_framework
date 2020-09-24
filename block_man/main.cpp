@@ -271,12 +271,35 @@ bool button_text(const char* text, int x, int y)
 	return result;
 }
 
+void do_lose_screen_stuff(float dt)
+{
+	static float at = 0;
+	static float delay = 1.5f;
+	float t = clamp(at / delay, 0.0f, 1.0f);
+	at += dt;
+
+	destroy_all_entities();
+	draw_text("Uh oh!", 0, 0);
+	if (button_text("Retry?", -30, -20)) {
+		world->lose_screen = false;
+		reload_level(world->level_name);
+		Darkness::reset();
+		at = 0;
+	}
+	if (button_text("Nah.", 30, -20)) {
+		printf("nah\n");
+	}
+
+	color_t color = color_white();
+	color.a = ease_in_sin(t);
+	font_draw(app, font_get_default(app), matrix_ortho_2d(320, 240, 0, 0), color);
+	batch_flush(batch);
+}
+
 int main(int argc, const char** argv)
 {
 	init_world();
 	select_level(0);
-
-	matrix_t mvp = matrix_ortho_2d(320, 240, 0, 0);
 
 	while (app_is_running(app)) {
 		float dt = calc_dt();
@@ -284,27 +307,7 @@ int main(int argc, const char** argv)
 		if (world->load_level_dirty_flag) select_level(world->level_index);
 		app_update_systems(app, dt);
 		if (world->lose_screen) {
-			static float at = 0;
-			static float delay = 1.5f;
-			float t = clamp(at / delay, 0.0f, 1.0f);
-			at += dt;
-
-			destroy_all_entities();
-			draw_text("Uh oh!", 0, 0);
-			if (button_text("Retry?", -30, -20)) {
-				world->lose_screen = false;
-				reload_level(world->level_name);
-				Darkness::reset();
-				at = 0;
-			}
-			if (button_text("Nah.", 30, -20)) {
-				printf("nah\n");
-			}
-
-			color_t color = color_white();
-			color.a = ease_in_sin(t);
-			font_draw(app, font_get_default(app), mvp, color);
-			batch_flush(batch);
+			do_lose_screen_stuff(dt);
 		}
 		do_imgui_stuff(app, dt);
 		app_present(app);

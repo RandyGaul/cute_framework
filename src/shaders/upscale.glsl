@@ -27,7 +27,7 @@
 
 	out vec4 result;
 
-	layout(binding = 0) uniform sampler2D u_image;
+	layout (binding = 0) uniform sampler2D u_image;
 
 	void main()
 	{
