@@ -85,7 +85,8 @@ struct batch_t
 	bool scissor_enabled = false;
 	int scissor_x, scissor_y;
 	int scissor_w, scissor_h;
-	float outline_use_border = 0;
+	float outline_use_border = 1.0f;
+	float outline_use_corners = 0;
 	matrix_t mvp;
 	color_t tint = make_color(0.5f, 0.0f, 0.0f, 1.0f);
 
@@ -236,7 +237,8 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 		sprite_outline_fs_params_t fs_params = {
 			b->tint,
 			v2(1.0f / (float)texture_w, 1.0f / (float)texture_h),
-			b->outline_use_border
+			b->outline_use_border,
+			b->outline_use_corners
 		};
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &vs_params, sizeof(vs_params));
 		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &fs_params, sizeof(fs_params));
@@ -458,6 +460,11 @@ void batch_outlines_use_border(batch_t* b, bool use_border)
 	b->outline_use_border = use_border ? 1.0f : 0;
 }
 
+void batch_outlines_use_corners(batch_t* b, bool use_corners)
+{
+	b->outline_use_corners = use_corners ? 1.0f : 0;
+}
+
 void batch_set_depth_stencil_state(batch_t* b, const sg_depth_stencil_state& depth_stencil_state)
 {
 	b->depth_stencil_state = depth_stencil_state;
@@ -495,11 +502,6 @@ void batch_set_tint_color(batch_t* b, color_t c)
 void batch_no_tint(batch_t* b)
 {
 	b->tint = make_color(0.0f, 0.0f, 0.0f, 0.0f);
-}
-
-void batch_set_tint_color(batch_t* b, color_t c)
-{
-	b->tint = c;
 }
 
 void batch_quad(batch_t* b, aabb_t bb, color_t c)

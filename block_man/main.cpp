@@ -49,7 +49,6 @@ void do_imgui_stuff(app_t* app, float dt)
 
 	if (open) {
 		// Editor UI.
-		ImGui::SetNextWindowPos(ImVec2(30, 30), ImGuiCond_FirstUseEver);
 		ImGui::Begin("Dev Tool", &open);
 
 		if (mouse_was_pressed(app, MOUSE_BUTTON_RIGHT)) {

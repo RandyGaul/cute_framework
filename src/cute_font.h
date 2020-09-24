@@ -45,6 +45,7 @@ extern CUTE_API void CUTE_CALL font_borders(app_t* app, bool use_borders);
 extern CUTE_API void CUTE_CALL font_toggle_borders(app_t* app);
 extern CUTE_API bool CUTE_CALL font_is_borders_on(app_t* app);
 extern CUTE_API void CUTE_CALL font_border_color(app_t* app, color_t color);
+extern CUTE_API void CUTE_CALL font_border_use_corners(app_t* app, bool use_corners);
 
 extern CUTE_API int CUTE_CALL font_height(const font_t* font);
 extern CUTE_API int CUTE_CALL font_line_height(const font_t* font);

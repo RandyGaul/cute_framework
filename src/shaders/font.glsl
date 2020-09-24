@@ -3,6 +3,8 @@
 @ctype vec4 cute::color_t
 @ctype vec2 cute::v2
 
+@include includes/outline.glsl
+
 @vs vs
 @glsl_options flip_vert_y
 	layout (location = 0) in vec2 in_pos;
@@ -34,26 +36,23 @@
 		vec4 u_border_color;
 		vec2 u_texel_size;
 		float u_use_border;
+		float u_use_corners;
 	};
+
+	@include_block outline
 
 	void main()
 	{
 		// Border detection for pixel outlines.
-		float a = texture(u_image, uv + vec2(0,  u_texel_size.y)).r;
-		float b = texture(u_image, uv + vec2(0, -u_texel_size.y)).r;
-		float c = texture(u_image, uv + vec2( u_texel_size.x,  0)).r;
-		float d = texture(u_image, uv + vec2(-u_texel_size.x,  0)).r;
-		float e = texture(u_image, uv + vec2(-u_texel_size.x, -u_texel_size.y)).r;
-		float f = texture(u_image, uv + vec2(-u_texel_size.x,  u_texel_size.y)).r;
-		float g = texture(u_image, uv + vec2( u_texel_size.x, -u_texel_size.y)).r;
-		float h = texture(u_image, uv + vec2( u_texel_size.x,  u_texel_size.y)).r;
-		float i = texture(u_image, uv).r;
-		float border = max(a, max(b, max(c, max(d, max(e, max(f, max(g, h))))))) * (1 - i);
-		border *= u_use_border;
+		float side = sides(u_image, u_texel_size);
+		float corner = corners(u_image, u_texel_size);
+
+		// Skip corners if turned off.
+		corner *= u_use_corners;
 
 		vec4 border_color = u_border_color;
-		vec4 text_color = u_text_color * i;
-		result = mix(text_color, border_color, border);
+		vec4 text_color = u_text_color;
+		result = mix(text_color, border_color, max(side, corner));
 	}
 @end
 

@@ -3,6 +3,9 @@
 @ctype vec4 cute::color_t
 @ctype vec2 cute::v2
 
+@include includes/overlay.glsl
+@include includes/outline.glsl
+
 @vs vs
 @glsl_options flip_vert_y
 	layout (location = 0) in vec2 in_pos;
@@ -37,31 +40,25 @@
 		vec4 u_tint;
 		vec2 u_texel_size;
 		float u_use_border;
+		float u_use_corners;
 	};
 
-	vec4 overlay(vec4 base, vec4 blend)
-	{
-		float opacity = blend.a;
-		vec3 rgb = 2 * base.rgb * blend.rgb * opacity + base.rgb * (1.0 - opacity);
-		return vec4(rgb, base.a);
-	}
+	@include_block overlay
+	@include_block outline
 
 	void main()
 	{
 		// Border detection for pixel outlines.
-		float a = texture(u_image, uv + vec2(0,  u_texel_size.y)).a;
-		float b = texture(u_image, uv + vec2(0, -u_texel_size.y)).a;
-		float c = texture(u_image, uv + vec2( u_texel_size.x,  0)).a;
-		float d = texture(u_image, uv + vec2(-u_texel_size.x,  0)).a;
-		float e = texture(u_image, uv + vec2(-u_texel_size.x, -u_texel_size.y)).a;
-		float f = texture(u_image, uv + vec2(-u_texel_size.x,  u_texel_size.y)).a;
-		float g = texture(u_image, uv + vec2( u_texel_size.x, -u_texel_size.y)).a;
-		float h = texture(u_image, uv + vec2( u_texel_size.x,  u_texel_size.y)).a;
+		float side = sides(u_image, u_texel_size);
+		float corner = corners(u_image, u_texel_size);
+
+		// Skip corners if turned off.
+		corner *= u_use_corners;
 
 		vec4 image_color = texture(u_image, uv);
-		float image_mask = float(any(notEqual(image_color.rgb, vec3(0.0, 0.0, 0.0))));
+		float image_mask = float(image_color.a != 0.0);
 
-		float border = max(a, max(b, max(c, max(d, max(e, max(f, max(g, h))))))) * (1 - image_mask);
+		float border = max(side, corner) * (1 - image_mask);
 		border *= u_use_border;
 
 		// Pick between white border or sprite color.

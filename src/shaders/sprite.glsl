@@ -3,6 +3,8 @@
 @ctype vec4 cute::color_t
 @ctype vec2 cute::v2
 
+@include includes/overlay.glsl
+
 @vs vs
 @glsl_options flip_vert_y
 	layout (location = 0) in vec2 in_pos;
@@ -37,12 +39,7 @@
 		vec4 u_tint;
 	};
 
-	vec4 overlay(vec4 base, vec4 blend)
-	{
-		float opacity = blend.a;
-		vec3 rgb = 2 * base.rgb * blend.rgb * opacity + base.rgb * (1.0 - opacity);
-		return vec4(rgb, base.a);
-	}
+	@include_block overlay
 
 	void main()
 	{

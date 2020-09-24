@@ -143,6 +143,7 @@ void font_draw(app_t* app, const font_t* font, matrix_t mvp, color_t color)
 	sg_apply_bindings(bind);
 	app->font_vs_uniforms.u_mvp = mvp;
 	app->font_fs_uniforms.u_text_color = color;
+	app->font_fs_uniforms.u_use_corners = app->font_outline_use_corners;
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &app->font_vs_uniforms, sizeof(app->font_vs_uniforms));
 	sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &app->font_fs_uniforms, sizeof(app->font_fs_uniforms));
 	sg_draw(0, app->font_verts.count(), 1);
@@ -172,6 +173,11 @@ bool font_is_borders_on(app_t* app)
 void font_border_color(app_t* app, color_t color)
 {
 	app->font_fs_uniforms.u_border_color = color;
+}
+
+void font_border_use_corners(app_t* app, bool use_corners)
+{
+	app->font_outline_use_corners = use_corners ? 1.0f : 0.0f;
 }
 
 int font_height(const font_t* font)
