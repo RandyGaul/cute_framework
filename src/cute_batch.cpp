@@ -64,6 +64,13 @@ struct vertex_t
 	color_t c;
 };
 
+
+enum batch_sprite_shader_type_t
+{
+	BATCH_SPRITE_SHADER_TYPE_DEFAULT,
+	BATCH_SPRITE_SHADER_TYPE_OUTLINE,
+};
+
 struct batch_t
 {
 	::spritebatch_t sb;
@@ -116,6 +123,29 @@ static sg_shader s_load_shader(batch_t* b, batch_sprite_shader_type_t type)
 
 	sg_shader shader = sg_make_shader(params);
 	return shader;
+}
+
+static void s_set_shd_type(batch_t* b, batch_sprite_shader_type_t type)
+{
+	b->sprite_shd_type = type;
+
+	// Load the shader, if needed, and set the active sprite system shader.
+	switch (type)
+	{
+	case BATCH_SPRITE_SHADER_TYPE_DEFAULT:
+		if (b->default_shd.id == SG_INVALID_ID) {
+			b->default_shd = s_load_shader(b, type);
+		}
+		b->active_shd = b->default_shd;
+		break;
+
+	case BATCH_SPRITE_SHADER_TYPE_OUTLINE:
+		if (b->outline_shd.id == SG_INVALID_ID) {
+			b->outline_shd = s_load_shader(b, type);
+		}
+		b->active_shd = b->outline_shd;
+		break;
+	}
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -413,29 +443,6 @@ error_t batch_flush(batch_t* b)
 
 //--------------------------------------------------------------------------------------------------
 
-void batch_set_shader_type(batch_t* b, batch_sprite_shader_type_t type)
-{
-	b->sprite_shd_type = type;
-
-	// Load the shader, if needed, and set the active sprite system shader.
-	switch (type)
-	{
-	case BATCH_SPRITE_SHADER_TYPE_DEFAULT:
-		if (b->default_shd.id == SG_INVALID_ID) {
-			b->default_shd = s_load_shader(b, type);
-		}
-		b->active_shd = b->default_shd;
-		break;
-
-	case BATCH_SPRITE_SHADER_TYPE_OUTLINE:
-		if (b->outline_shd.id == SG_INVALID_ID) {
-			b->outline_shd = s_load_shader(b, type);
-		}
-		b->active_shd = b->outline_shd;
-		break;
-	}
-}
-
 void batch_set_mvp(batch_t* b, matrix_t mvp)
 {
 	b->mvp = mvp;
@@ -458,6 +465,11 @@ void batch_no_scissor_box(batch_t* b)
 void batch_outlines_use_border(batch_t* b, bool use_border)
 {
 	b->outline_use_border = use_border ? 1.0f : 0;
+	if (use_border) {
+		s_set_shd_type(b, BATCH_SPRITE_SHADER_TYPE_OUTLINE);
+	} else {
+		s_set_shd_type(b, BATCH_SPRITE_SHADER_TYPE_DEFAULT);
+	}
 }
 
 void batch_outlines_use_corners(batch_t* b, bool use_corners)

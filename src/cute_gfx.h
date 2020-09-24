@@ -34,7 +34,7 @@ namespace cute
 
 using texture_t = uint64_t;
 
-extern CUTE_API texture_t CUTE_CALL texture_make(pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_CLAMP_TO_EDGE);
+extern CUTE_API texture_t CUTE_CALL texture_make(pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_REPEAT);
 extern CUTE_API void CUTE_CALL texture_destroy(texture_t texture);
 
 struct matrix_t

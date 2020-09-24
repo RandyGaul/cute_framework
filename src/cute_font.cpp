@@ -52,6 +52,19 @@ static void s_destroy_texture_handle(CUTE_FONT_U64 atlas_id)
 	texture_destroy(atlas_id);
 }
 
+static void s_r_splat(image_t* img)
+{
+	// Shader reads only from the alpha channel to see if there's any visible pixel.
+	int pixel_count = img->w * img->h;
+	for (int i = 0; i < pixel_count; ++i) {
+		pixel_t p = img->pix[i];
+		p.colors.g = p.colors.r;
+		p.colors.b = p.colors.r;
+		p.colors.a = p.colors.r;
+		img->pix[i] = p;
+	}
+}
+
 font_t* font_load_bmfont(app_t* app, const char* font_path, const char* font_image_path)
 {
 	void* font_data;
@@ -67,7 +80,8 @@ font_t* font_load_bmfont(app_t* app, const char* font_path, const char* font_ima
 	image_t img;
 	err = image_load_png_mem(image_data, (int)image_size, &img);
 	if (err.is_error()) return NULL;
-	image_flip_horizontal(&img);
+	image_flip_horizontal(&img); // TODO: Is this needed?
+	s_r_splat(&img);
 
 	CUTE_FONT_U64 texture_handle = s_generate_texture_handle(img.pix, img.w, img.h);
 	font_t* font = (font_t*)cute_font_load_bmfont(texture_handle, font_data, (int)font_size, app->mem_ctx);
@@ -89,6 +103,7 @@ static void s_load_courier_new(app_t* app)
 	if (!app->courier_new) {
 		image_t img;
 		error_t err = image_load_png_mem(courier_new_0_png_data, courier_new_0_png_sz, &img);
+		s_r_splat(&img);
 		texture_t tex = texture_make(img.pix, img.w, img.h);
 		cute_font_t* font = cute_font_load_bmfont(tex, courier_new_fnt_data, courier_new_fnt_sz, app->mem_ctx);
 		app->courier_new = font;
@@ -143,7 +158,6 @@ void font_draw(app_t* app, const font_t* font, matrix_t mvp, color_t color)
 	sg_apply_bindings(bind);
 	app->font_vs_uniforms.u_mvp = mvp;
 	app->font_fs_uniforms.u_text_color = color;
-	app->font_fs_uniforms.u_use_corners = app->font_outline_use_corners;
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &app->font_vs_uniforms, sizeof(app->font_vs_uniforms));
 	sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &app->font_fs_uniforms, sizeof(app->font_fs_uniforms));
 	sg_draw(0, app->font_verts.count(), 1);
@@ -177,7 +191,7 @@ void font_border_color(app_t* app, color_t color)
 
 void font_border_use_corners(app_t* app, bool use_corners)
 {
-	app->font_outline_use_corners = use_corners ? 1.0f : 0.0f;
+	app->font_fs_uniforms.u_use_corners = use_corners ? 1.0f : 0.0f;
 }
 
 int font_height(const font_t* font)
@@ -235,6 +249,7 @@ void font_init(app_t* app)
 	app->font_fs_uniforms.u_border_color = color_white();
 	app->font_fs_uniforms.u_use_border = false;
 	app->font_fs_uniforms.u_texel_size = v2(1.0f / (float)app->courier_new->atlas_w, 1.0f / (float)app->courier_new->atlas_h);
+	app->font_fs_uniforms.u_use_corners = false;
 }
 
 }

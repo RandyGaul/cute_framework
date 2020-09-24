@@ -44,15 +44,9 @@
 	void main()
 	{
 		// Border detection for pixel outlines.
-		float side = sides(u_image, u_texel_size);
-		float corner = corners(u_image, u_texel_size);
-
-		// Skip corners if turned off.
-		corner *= u_use_corners;
-
-		vec4 border_color = u_border_color;
-		vec4 text_color = u_text_color;
-		result = mix(text_color, border_color, max(side, corner));
+		float image_mask = texture(u_image, uv).a;
+		float border = outline(u_image, u_texel_size, image_mask, u_use_border, u_use_corners);
+		result = u_text_color * image_mask + u_border_color * border;
 	}
 @end
 

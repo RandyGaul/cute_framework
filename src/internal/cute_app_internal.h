@@ -105,7 +105,6 @@ struct app_t
 	triple_buffer_t font_buffer;
 	font_vs_params_t font_vs_uniforms;
 	font_fs_params_t font_fs_uniforms;
-	float font_outline_use_corners = 1.0f;
 	bool gfx_enabled = false;
 	upscale_t upscaling = UPSCALE_PIXEL_PERFECT_AUTO;
 	sg_context_desc gfx_ctx_params;

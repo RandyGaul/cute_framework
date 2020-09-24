@@ -91,13 +91,6 @@ extern CUTE_API void CUTE_CALL batch_push(batch_t* b, batch_sprite_t sprite);
  */
 extern CUTE_API error_t CUTE_CALL batch_flush(batch_t* b);
 
-enum batch_sprite_shader_type_t
-{
-	BATCH_SPRITE_SHADER_TYPE_DEFAULT,
-	BATCH_SPRITE_SHADER_TYPE_OUTLINE,
-};
-
-extern CUTE_API void CUTE_CALL batch_set_shader_type(batch_t* b, batch_sprite_shader_type_t type);
 extern CUTE_API void CUTE_CALL batch_set_mvp(batch_t* b, matrix_t mvp);
 extern CUTE_API void CUTE_CALL batch_set_scissor_box(batch_t* b, int x, int y, int w, int h);
 extern CUTE_API void CUTE_CALL batch_no_scissor_box(batch_t* b);
