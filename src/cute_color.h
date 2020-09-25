@@ -55,6 +55,8 @@ inline color_t make_color(int hex)                                    { return m
 
 inline color_t color_black()             { return make_color(0.0f, 0.0f, 0.0f); }
 inline color_t color_red()               { return make_color(1.0f, 0.0f, 0.0f); }
+inline color_t color_green()               { return make_color(0.0f, 1.0f, 0.0f); }
+inline color_t color_blue()               { return make_color(0.0f, 0.0f, 1.0f); }
 inline color_t color_white()             { return make_color(1.0f, 1.0f, 1.0f); }
 inline color_t color_invisible()         { return make_color(0.0f, 0.0f, 0.0f, 0.0f); }
 

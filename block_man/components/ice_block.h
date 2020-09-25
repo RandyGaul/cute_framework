@@ -32,6 +32,7 @@ struct IceBlock
 {
 	static constexpr float float_delay = 0.35f;
 
+	bool big = false;
 	bool is_held = false;
 	coroutine_t co = { 0 };
 	coroutine_t float_co = { 0 };
@@ -50,6 +51,7 @@ CUTE_INLINE cute::error_t IceBlock_serialize(app_t* app, kv_t* kv, entity_t enti
 		Animator* animator = (Animator*)app_get_component(app, entity, "Animator");
 		animator->sprite.play("idle");
 	}
+	kv_key(kv, "big"); kv_val(kv, &ice_block->big);
 	return kv_error_state(kv);
 }
 

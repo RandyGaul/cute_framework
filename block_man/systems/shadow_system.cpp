@@ -30,12 +30,14 @@
 
 sprite_t shadow_sprite;
 sprite_t shadow_sprite_small;
+sprite_t shadow_sprite_big;
 
 void shadow_system_init()
 {
 	shadow_sprite = load_sprite("shadow.aseprite");
 	shadow_sprite_small = shadow_sprite;
 	shadow_sprite_small.frame_index++;
+	shadow_sprite_big = load_sprite("big_shadow.aseprite");
 }
 
 void shadow_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, Shadow* shadows, int entity_count)
@@ -51,9 +53,11 @@ void shadow_system_update(app_t* app, float dt, void* udata, Transform* transfor
 			if (board_piece->is_moving && board_piece->a.y == board_piece->b.y) {
 				tx.p.y = board_piece->a.y;
 			}
-			tx.p.y -= 7.0f - animator->sprite.local_offset.y;
+			tx.p.y -= 7.0f;
 			if (shadow->small) {
 				shadow_sprite_small.draw(batch, tx);
+			} else if (shadow->big) {
+				shadow_sprite_big.draw(batch, tx);
 			} else {
 				shadow_sprite.draw(batch, tx);
 			}

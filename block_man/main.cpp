@@ -190,7 +190,7 @@ void do_imgui_stuff(app_t* app, float dt)
 			v2 mpw = mouse_pos_in_world_space(app);
 			int mx, my;
 			world2tile(mpw, &mx, &my);
-			tx.p = tile2world(mx, my) + sprite.local_offset;
+			tx.p = tile2world(mx, my);
 			batch_push(batch, sprite.batch_sprite(tx));
 			batch_flush(batch);
 
@@ -211,7 +211,7 @@ void do_imgui_stuff(app_t* app, float dt)
 			v2 mpw = mouse_pos_in_world_space(app);
 			int mx, my;
 			world2tile(mpw, &mx, &my);
-			tx.p = tile2world(mx, my) + preview.sprite.local_offset;
+			tx.p = tile2world(mx, my);
 			batch_push(batch, preview.sprite.batch_sprite(tx));
 			batch_flush(batch);
 
@@ -305,10 +305,8 @@ void do_lose_screen_stuff(float dt)
 
 	COROUTINE_END(co);
 
-	if (t != 1) {
-		draw_text("Uh oh!", 0, 0);
-	} else {
-		draw_text("Uh oh!", 0, 0);
+	draw_text("YOU DIED", 0, 0);
+	if (t == 1) {
 		if (button_text("Retry?", -30, -20)) {
 			world->lose_screen = false;
 			reload_level(world->level_name);
@@ -318,13 +316,13 @@ void do_lose_screen_stuff(float dt)
 			show_girl = true;
 			batch_no_tint(batch);
 		}
-		if (button_text("Nah.", 30, -20)) {
+		if (button_text("Nah.", 40, -20)) {
 			printf("nah\n");
 		}
 	}
 
 	color_t color = color_white();
-	color.a = ease_in_sin(t * t * t * t);
+	color.a = ease_in_sin(t * t * t);
 	font_draw(app, font_get_default(app), matrix_ortho_2d(320, 240, 0, 0), color);
 	batch_flush(batch);
 

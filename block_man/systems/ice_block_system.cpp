@@ -29,12 +29,17 @@
 
 sprite_t ice_block_idle;
 sprite_t ice_block_mask;
+sprite_t big_ice_block_idle;
+sprite_t big_ice_block_mask;
 
 void ice_block_system_init()
 {
 	ice_block_mask = ice_block_idle = load_sprite("ice_block.aseprite");
 	ice_block_idle.play("idle");
 	ice_block_mask.play("mask");
+	big_ice_block_mask = big_ice_block_idle = load_sprite("big_ice_block.aseprite");
+	big_ice_block_idle.play("idle");
+	big_ice_block_mask.play("mask");
 }
 
 static float s_float_offset(IceBlock* ice_block, float dt)
@@ -57,6 +62,7 @@ static float s_float_offset(IceBlock* ice_block, float dt)
 void ice_block_system_pre_update(app_t* app, float dt, void* udata)
 {
 	ice_block_idle.update(dt);
+	big_ice_block_idle.update(dt);
 }
 
 static BoardPiece* s_get_piece(int x, int y, int xdir, int ydir)
@@ -111,7 +117,7 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 			// together no matter what. If different ice block idle animations start playing out
 			// of sync it looks visiually jarring.
 			int sort_bits = animator->sprite.sort_bits;
-			animator->sprite = ice_block_idle;
+			animator->sprite = ice_block->big ? big_ice_block_idle : ice_block_idle;
 			animator->sprite.sort_bits = sort_bits;
 			goto IDLE_INNER;
 		}
@@ -158,7 +164,12 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 
 		// Push masks onto the reflection system.
 		transform_t tx = transform->get();
-		ice_block_mask.sort_bits = sort_bits(board_piece->x, board_piece->y);
-		reflection_system->masks.add(ice_block_mask.batch_sprite(tx));
+		if (ice_block->big) {
+			big_ice_block_mask.sort_bits = sort_bits(board_piece->x, board_piece->y);
+			reflection_system->masks.add(big_ice_block_mask.batch_sprite(tx));
+		} else {
+			ice_block_mask.sort_bits = sort_bits(board_piece->x, board_piece->y);
+			reflection_system->masks.add(ice_block_mask.batch_sprite(tx));
+		}
 	}
 }

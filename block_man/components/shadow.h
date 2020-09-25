@@ -31,6 +31,7 @@ struct Shadow
 {
 	bool visible = true;
 	bool small = false;
+	bool big = false;
 };
 
 CUTE_INLINE cute::error_t Shadow_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
@@ -41,6 +42,7 @@ CUTE_INLINE cute::error_t Shadow_serialize(app_t* app, kv_t* kv, entity_t entity
 	}
 	kv_key(kv, "visible"); kv_val(kv, &shadow->visible);
 	kv_key(kv, "small"); kv_val(kv, &shadow->small);
+	kv_key(kv, "big"); kv_val(kv, &shadow->big);
 	return kv_error_state(kv);
 }
 

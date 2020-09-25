@@ -29,7 +29,8 @@ void animator_transform_system_update(app_t* app, float dt, void* udata, Transfo
 		Transform* transform = transforms + i;
 		Animator* animator = animators + i;
 
-		transform->local.p += animator->sprite.local_offset;
+		// Look this is already done inside the sprite itself... So no need!
+		//transform->local.p -= animator->sprite.local_offset;
 	}
 }
 
@@ -39,8 +40,11 @@ void animator_system_update(app_t* app, float dt, void* udata, Transform* transf
 		Transform* transform = transforms + i;
 		Animator* animator = animators + i;
 
+		transform_t tx = transform->get();
 		animator->update(dt);
-		animator->draw(batch, transform->get());
+		animator->draw(batch, tx);
+		//batch_quad(batch, make_aabb(tx.p, 2.0f, 2.0f), color_red());
+		//batch_quad(batch, make_aabb(transform->world.p, 2.0f, 2.0f), color_blue());
 	}
 }
 

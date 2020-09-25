@@ -87,7 +87,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			bool is_lamp = false;
 			while (in_grid(sy, sx, world->board.data.count(), world->board.data[0].count())) {
 				bool has_something = !world->board.data[sy][sx].is_empty;
-				is_ice_block = has_something && app_entity_is_type(app, world->board.data[sy][sx].entity, "IceBlock");
+				is_ice_block = has_something && app_has_component(app, world->board.data[sy][sx].entity, "IceBlock");
 				is_lamp = has_something && app_entity_is_type(app, world->board.data[sy][sx].entity, "Lamp");
 				if (is_ice_block) {
 					found = true;
@@ -144,8 +144,8 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 				++world->moves;
 			}
 			entity_t e = world->board.data[y - player->ydir][x + player->xdir].entity;
-			if (app_entity_is_type(app, e, "IceBlock")) {
-				IceBlock* ice_block = (IceBlock*)app_get_component(app, e, "IceBlock");
+			IceBlock* ice_block = (IceBlock*)app_get_component(app, e, "IceBlock");
+			if (ice_block) {
 				ice_block->is_held = false;
 				ice_block->xdir = player->xdir;
 				ice_block->ydir = player->ydir;

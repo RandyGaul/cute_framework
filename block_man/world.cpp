@@ -150,6 +150,15 @@ const char* schema_torch = CUTE_STRINGIZE(
 	Light = { radius = 32 },
 );
 
+const char* schema_big_ice_block = CUTE_STRINGIZE(
+	entity_type = "BigIceBlock",
+	Transform = { },
+	Animator = { name = "big_ice_block.aseprite" },
+	BoardPiece = { },
+	IceBlock = { big = "true" },
+	Shadow = { big = "true" },
+);
+
 array<const char*> schemas = {
 	schema_ice_block,
 	schema_box,
@@ -161,6 +170,7 @@ array<const char*> schemas = {
 	schema_oil,
 	schema_lamp,
 	schema_torch,
+	schema_big_ice_block,
 };
 
 array<schema_preview_t> schema_previews;
@@ -431,6 +441,7 @@ void load_all_levels_from_disk_into_ram()
 	s_add_level("level4.txt");
 	s_add_level("level5.txt");
 	s_add_level("level6.txt");
+	s_add_level("test.txt");
 }
 
 void setup_write_directory()
@@ -622,6 +633,7 @@ array<char> entity_codes = {
 	'o', // Oil
 	'L', // Lamp
 	't', // Torch
+	'X', // BigIceBlock
 };
 
 void make_entity_at(const char* entity_type, int x, int y)
@@ -741,6 +753,7 @@ void select_level(int index)
 		case 'o': err = app_make_entity(app, "Oil", &e); break;
 		case 'L': err = app_make_entity(app, "Lamp", &e); break;
 		case 't': err = app_make_entity(app, "Torch", &e); break;
+		case 'X': err = app_make_entity(app, "BigIceBlock", &e); break;
 		}
 		CUTE_ASSERT(!err.is_error());
 		BoardSpace space;
