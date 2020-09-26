@@ -340,7 +340,7 @@ void do_lose_screen_stuff(float dt)
 int main(int argc, const char** argv)
 {
 	init_world();
-	select_level(0);
+	select_level(7);
 
 	while (app_is_running(app)) {
 		float dt = calc_dt();
