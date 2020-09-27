@@ -154,7 +154,7 @@ const char* schema_big_ice_block = CUTE_STRINGIZE(
 	entity_type = "BigIceBlock",
 	Transform = { },
 	Animator = { name = "big_ice_block.aseprite" },
-	BoardPiece = { },
+	BoardPiece = { big = "true" },
 	IceBlock = { big = "true" },
 	Shadow = { big = "true" },
 );
@@ -660,9 +660,24 @@ void make_entity_at(int selection, int x, int y)
 	BoardPiece* board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
 	board_piece->x = board_piece->x0 = x;
 	board_piece->y = board_piece->y0 = y;
+	if (board_piece->has_replicas) {
+		board_piece->x_replicas[0] = board_piece->x + 1;
+		board_piece->x_replicas[1] = board_piece->x + 1;
+		board_piece->x_replicas[2] = board_piece->x;
+		board_piece->y_replicas[0] = board_piece->y;
+		board_piece->y_replicas[1] = board_piece->y - 1;
+		board_piece->y_replicas[2] = board_piece->y - 1;
+	}
 	BoardSpace old_space = world->board.data[y][x];
 	if (!old_space.is_empty) {
-		app_destroy_entity(app, old_space.entity);
+		destroy_entity_at(x, y);
+	}
+	if (board_piece->has_replicas) {
+		for (int i = 0; i < 3; ++i) {
+			int rx = board_piece->x_replicas[i];
+			int ry = board_piece->y_replicas[i];
+			destroy_entity_at(rx, ry);
+		}
 	}
 	CUTE_ASSERT(!err.is_error());
 	world->board.data[y][x] = space;
@@ -670,15 +685,25 @@ void make_entity_at(int selection, int x, int y)
 
 void destroy_entity_at(int x, int y)
 {
+	BoardSpace empty;
+	empty.entity = INVALID_ENTITY;
+	empty.code = '0';
+	empty.is_empty = true;
+
 	BoardSpace old_space = world->board.data[y][x];
 	if (!old_space.is_empty) {
+		BoardPiece* board_piece = (BoardPiece*)app_get_component(app, old_space.entity, "BoardPiece");
+		if (board_piece->has_replicas) {
+			for (int i = 0; i < 3; ++i) {
+				int rx = board_piece->x_replicas[i];
+				int ry = board_piece->y_replicas[i];
+				world->board.data[ry][rx] = empty;
+			}
+			world->board.data[board_piece->y][board_piece->x] = empty;
+		}
 		app_destroy_entity(app, old_space.entity);
 	}
-	BoardSpace space;
-	space.entity = INVALID_ENTITY;
-	space.code = '0';
-	space.is_empty = true;
-	world->board.data[y][x] = space;
+	world->board.data[y][x] = empty;
 }
 
 void delayed_destroy_entity_at(int x, int y)
@@ -692,6 +717,21 @@ void delayed_destroy_entity_at(int x, int y)
 	space.code = '0';
 	space.is_empty = true;
 	world->board.data[y][x] = space;
+}
+
+void debug_draw_non_empty_board_spaces()
+{
+	for (int i = 0; i < world->board.data.count(); ++i) {
+		int len = world->board.data[i].count();
+		for (int j = 0; j < len; ++j) {
+			BoardSpace space = world->board.data[i][j];
+			if (!space.is_empty) {
+				v2 p = tile2world(j, i);
+				batch_quad(batch, expand(make_aabb(p, p), v2(2, 2)), color_white());
+			}
+		}
+	}
+	batch_flush(batch);
 }
 
 void destroy_all_entities()
@@ -764,6 +804,15 @@ void select_level(int index)
 			BoardPiece* board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
 			board_piece->x = board_piece->x0 = j;
 			board_piece->y = board_piece->y0 = i;
+			if (c == 'X') {
+				board_piece->has_replicas = true;
+				board_piece->x_replicas[0] = board_piece->x + 1;
+				board_piece->x_replicas[1] = board_piece->x + 1;
+				board_piece->x_replicas[2] = board_piece->x;
+				board_piece->y_replicas[0] = board_piece->y;
+				board_piece->y_replicas[1] = board_piece->y - 1;
+				board_piece->y_replicas[2] = board_piece->y - 1;
+			}
 		}
 		world->board.data[i][j] = space;
 
@@ -772,6 +821,7 @@ void select_level(int index)
 
 	world->level_name = world->level_names[world->level_index];
 	init_bg_bricks(world->level_index);
+	board_system_spread_out_replicas();
 }
 
 int select_level(const char* name)

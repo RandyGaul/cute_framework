@@ -26,6 +26,7 @@
 using namespace cute;
 
 #include <components/animator.h>
+#include <components/board_piece.h>
 #include <cute/cute_coroutine.h>
 
 struct IceBlock

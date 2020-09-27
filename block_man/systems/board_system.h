@@ -29,8 +29,8 @@ struct Transform;
 struct Animator;
 struct BoardPiece;
 
+void board_system_spread_out_replicas();
 void board_transform_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, int entity_count);
-
 void board_system_update(app_t* app, float dt, void* udata, BoardPiece* board_pieces, int entity_count);
 
 #endif // BOARD_SYSTEM_H

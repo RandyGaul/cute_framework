@@ -96,7 +96,7 @@ struct batch_t
 	float outline_use_corners = 0;
 	color_t outline_color = color_white();
 	matrix_t mvp;
-	color_t tint = make_color(0.5f, 0.0f, 0.0f, 1.0f);
+	color_t tint = make_color(0.5f, 0.5f, 0.5f, 1.0f);
 
 	get_pixels_fn* get_pixels = NULL;
 	void* get_pixels_udata = NULL;

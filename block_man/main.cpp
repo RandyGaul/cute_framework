@@ -34,6 +34,7 @@ using namespace cute;
 
 #include <systems/player_system.h>
 #include <systems/light_system.h>
+#include <systems/board_system.h>
 
 void do_imgui_stuff(app_t* app, float dt)
 {
@@ -216,8 +217,14 @@ void do_imgui_stuff(app_t* app, float dt)
 			batch_flush(batch);
 
 			// Create entities on left-click.
-			if (!ImGui::IsAnyWindowHovered() && !ImGui::IsAnyWindowFocused() && mouse_is_down(app, MOUSE_BUTTON_LEFT)) {
-				make_entity_at(selected, mx, my);
+			static int last_mx, last_my;
+			if (mouse_is_down(app, MOUSE_BUTTON_LEFT)) {
+				if (!ImGui::IsAnyWindowHovered() && !ImGui::IsAnyWindowFocused() && !(last_mx == mx && last_my == my)) {
+					make_entity_at(selected, mx, my);
+					board_system_spread_out_replicas();
+					last_mx = mx;
+					last_my = my;
+				}
 			}
 		}
 	}
@@ -351,6 +358,7 @@ int main(int argc, const char** argv)
 			do_lose_screen_stuff(dt);
 		}
 		do_imgui_stuff(app, dt);
+		debug_draw_non_empty_board_spaces();
 		app_present(app);
 	}
 

@@ -64,11 +64,56 @@ void set_player_animation_based_on_facing_direction(Player* player, Animator* an
 
 static bool s_player_can_move_here(int x, int y)
 {
+	if (!in_board(x, y)) return false;
 	entity_t e = world->board.data[y][x].entity;
 	if (world->board.data[y][x].is_empty) return true;
 	else if (app_entity_is_type(app, e, "Ladder")) return true;
 	else if (app_entity_is_type(app, e, "Oil")) return true;
 	return false;
+}
+
+bool fit_check(int px, int py, BoardPiece* board_piece, int x, int y)
+{
+	if (x == px && y == py) return true; // Skip checking the player.
+	if (!in_board(x, y)) return false;
+	BoardSpace space = world->board.data[y][x];
+	if (!space.is_empty && space.entity != board_piece->self) {
+		return false;
+	}
+
+	return true;
+}
+
+bool can_big_ice_block_fit(int px, int py, BoardPiece* board_piece, int dx, int dy)
+{
+	if (!fit_check(px, py, board_piece, board_piece->x + dx, board_piece->y + dy)) {
+		return false;
+	}
+
+	if (board_piece->has_replicas) {
+		for (int k = 0; k < 3; ++k) {
+			int x = board_piece->x_replicas[k] + dx;
+			int y = board_piece->y_replicas[k] + dy;
+			if (!fit_check(px, py, board_piece, x, y)) {
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
+bool can_big_ice_block_slide(int px, int py, int sx, int sy, int xdir, int ydir, int distance)
+{
+	BoardPiece* board_piece = (BoardPiece*)app_get_component(app, world->board.data[sy][sx].entity, "BoardPiece");
+	if (!board_piece->has_replicas) return true;
+	for (int i = 1; i < distance; ++i) {
+		if (!can_big_ice_block_fit(px, py, board_piece, -xdir * i, ydir * i)) {
+			return false;
+		}
+	}
+
+	return true;
 }
 
 bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
@@ -90,6 +135,9 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 				is_ice_block = has_something && app_has_component(app, world->board.data[sy][sx].entity, "IceBlock");
 				is_lamp = has_something && app_entity_is_type(app, world->board.data[sy][sx].entity, "Lamp");
 				if (is_ice_block) {
+ 					if (!can_big_ice_block_slide(x, y, sx, sy, player->xdir, player->ydir, distance + 1)) {
+						break;
+					}
 					found = true;
 					break;
 				} else if (is_lamp && distance == 0) {
@@ -109,7 +157,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 				}
 				entity_t block = world->board.data[sy][sx].entity;
 				BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
-				block_board_piece->linear(x + player->xdir, y - player->ydir, Player::move_delay * distance);
+				block_board_piece->linear(block_board_piece->x + x + player->xdir - sx, block_board_piece->y + y - player->ydir - sy, Player::move_delay * distance);
 				block_board_piece->notify_player_when_done = player->entity;
 				player->holding = true;
 				update_hero_animation = true;
@@ -124,18 +172,30 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			}
 		} else {
 			// Pushing blocks forward.
+			int dx = player->xdir;
+			int dy = -player->ydir;
 			int sx = x + player->xdir * 2, sy = y - player->ydir * 2;
 			int distance = 0;
 			bool found_fire = false;
+			entity_t e = world->board.data[y - player->ydir][x + player->xdir].entity;
+			IceBlock* ice_block = (IceBlock*)app_get_component(app, e, "IceBlock");
+			BoardPiece* ice_board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
 			while (in_grid(sy, sx, world->board.data.count(), world->board.data[0].count()))
 			{
-				if (!world->board.data[sy][sx].is_empty)
+				// Need the "has_replicas" check because the `can_big_ice_block_fit` function does not
+				// work with fires at all the same way as little ice.
+				if (board_piece->has_replicas && !can_big_ice_block_fit(x, y, ice_board_piece, dx, dy)) {
+					break;
+				}
+				if (!world->board.data[sy][sx].is_empty && world->board.data[sy][sx].entity != e)
 				{
 					if (app_entity_is_type(app, world->board.data[sy][sx].entity, "Fire")) {
 						found_fire = true;
 					}
 					break;
 				}
+				dx += player->xdir;
+				dy -= player->ydir;
 				sx += player->xdir;
 				sy -= player->ydir;
 				++distance;
@@ -143,8 +203,6 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			if (distance) {
 				++world->moves;
 			}
-			entity_t e = world->board.data[y - player->ydir][x + player->xdir].entity;
-			IceBlock* ice_block = (IceBlock*)app_get_component(app, e, "IceBlock");
 			if (ice_block) {
 				ice_block->is_held = false;
 				ice_block->xdir = player->xdir;
@@ -158,7 +216,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 					// Move one farther onto the fire space itself.
 					block_board_piece->linear(sx, sy, Player::move_delay * (distance + 1));
 				} else {
-					block_board_piece->linear(sx - player->xdir, sy + player->ydir, Player::move_delay * distance);
+					block_board_piece->linear(block_board_piece->x + dx - player->xdir, block_board_piece->y + dy + player->ydir, Player::move_delay * distance);
 				}
 				block_board_piece->notify_player_when_done = player->entity;
 				player->busy = true;
@@ -187,9 +245,15 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 					// if moving backwards, keep same direction, just back up
 					if (player->xdir == -xdirs[i] && player->ydir == -ydirs[i])
 					{
+						if (!in_board(x - player->xdir, y + player->ydir)) break;
 						// make sure we don't push block through a wall
 						if (world->board.data[y + player->ydir][x - player->xdir].is_empty)
 						{
+							entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
+							BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
+							if (!can_big_ice_block_fit(x, y, block_board_piece, -player->xdir, player->ydir)) {
+								break;
+							}
 							++world->moves;
 
 							// move backward
@@ -201,9 +265,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 							player->busy = true;
 
 							// then, move the block
-							entity_t block = world->board.data[y - player->ydir * 2][x + player->xdir * 2].entity;
-							BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
-							block_board_piece->linear(x + player->xdir, y - player->ydir, Player::move_delay);
+							block_board_piece->linear(block_board_piece->x - player->xdir, block_board_piece->y + player->ydir, Player::move_delay);
 							break;
 						}
 					}
@@ -211,14 +273,22 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 					else if (player->xdir == xdirs[i] && player->ydir == ydirs[i])
 					{
 						// make sure we don't push block through a wall
-						if (world->board.data[y - player->ydir * 2][x + player->xdir * 2].is_empty)
+						int sx = x + player->xdir * 2;
+						int sy = y - player->ydir * 2;
+						if (!in_board(sx, sy)) break;
+						int dx = player->xdir;
+						int dy = -player->ydir;
+						entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
+						BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
+						if (world->board.data[sy][sx].is_empty || world->board.data[sy][sx].entity == block)
 						{
+							if (!can_big_ice_block_fit(x, y, block_board_piece, dx, dy)) {
+								break;
+							}
 							++world->moves;
 
 							// first, move the block
-							entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
-							BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
-							block_board_piece->linear(x + player->xdir * 2, y - player->ydir * 2, Player::move_delay);
+							block_board_piece->linear(block_board_piece->x + dx, block_board_piece->y + dy, Player::move_delay);
 							block_board_piece->notify_player_when_done = player->entity;
 
 							// move forward
@@ -243,8 +313,10 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 							// also check to make sure we aren't turning through a block
 							if (world->board.data[y - player->ydir - ydirtemp][x + player->xdir + xdirtemp].is_empty)
 							{
-								++world->moves;
 								entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
+								BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
+								if (block_board_piece->has_replicas) break;
+								++world->moves;
 
 								// turn hero
 								player->xdir = xdirtemp;
@@ -252,7 +324,6 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 								player->busy = true;
 
 								// and move block
-								BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
 								block_board_piece->rotate(x + player->xdir, y - player->ydir, x, y, Player::move_delay);
 								block_board_piece->notify_player_when_done = player->entity;
 							}

@@ -48,6 +48,10 @@ struct BoardPiece
 	float delay = 0;
 	v2 a, c0, b;
 
+	bool has_replicas = false;
+	int x_replicas[3];
+	int y_replicas[3];
+
 	CUTE_INLINE void linear(int to_x, int to_y, float delay)
 	{
 		is_moving = true;
@@ -91,13 +95,37 @@ struct BoardPiece
 private:
 	CUTE_INLINE void move()
 	{
-		xdir = safe_norm(x - x0);
-		ydir = safe_norm(y - y0);
+		int dx = x - x0;
+		int dy = y - y0;
+		xdir = safe_norm(dx);
+		ydir = safe_norm(dy);
+
+		// Clear the old board spaces.
 		CUTE_ASSERT(world->board.data[y0][x0].entity == self);
 		world->board.data[y0][x0].entity = INVALID_ENTITY;
 		world->board.data[y0][x0].is_empty = true;
+		if (has_replicas) {
+			for (int k = 0; k < 3; ++k) {
+				int x0 = x_replicas[k];
+				int y0 = y_replicas[k];
+				CUTE_ASSERT(world->board.data[y0][x0].entity == self);
+				world->board.data[y0][x0].entity = INVALID_ENTITY;
+				world->board.data[y0][x0].is_empty = true;
+			}
+		}
+
+		// Set new board spaces.
 		world->board.data[y][x].entity = self;
 		world->board.data[y][x].is_empty = false;
+		if (has_replicas) {
+			for (int k = 0; k < 3; ++k) {
+				int x = x_replicas[k] += dx;
+				int y = y_replicas[k] += dy;
+				CUTE_ASSERT(world->board.data[y][x].is_empty || world->board.data[y][x].entity == self);
+				world->board.data[y][x].entity = self;
+				world->board.data[y][x].is_empty = false;
+			}
+		}
 	}
 };
 
@@ -110,6 +138,7 @@ CUTE_INLINE cute::error_t BoardPiece_serialize(app_t* app, kv_t* kv, entity_t en
 	}
 	kv_key(kv, "x"); kv_val(kv, &board_piece->x);
 	kv_key(kv, "y"); kv_val(kv, &board_piece->y);
+	kv_key(kv, "big"); kv_val(kv, &board_piece->has_replicas);
 	return kv_error_state(kv);
 }
 

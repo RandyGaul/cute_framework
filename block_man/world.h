@@ -100,5 +100,6 @@ void make_entity_at(const char* entity_type, int x, int y);
 void make_entity_at(int selection, int x, int y);
 void destroy_entity_at(int x, int y);
 void delayed_destroy_entity_at(int x, int y);
+void debug_draw_non_empty_board_spaces();
 
 #endif // WORLD_H
