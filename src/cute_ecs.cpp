@@ -442,7 +442,8 @@ const char* app_entity_type_string(app_t* app, entity_type_t type)
 bool app_entity_is_type(app_t* app, entity_t entity, const char* entity_type_name)
 {
 	if (!app_is_entity_valid(app, entity)) return false;
-	return !CUTE_STRCMP(app_entity_type_string(app, entity.type), entity_type_name);
+	const char* type_string = app_entity_type_string(app, entity.type);
+	return !CUTE_STRCMP(type_string, entity_type_name);
 }
 
 entity_type_t s_entity_type(app_t* app, kv_t* kv, const char* key)

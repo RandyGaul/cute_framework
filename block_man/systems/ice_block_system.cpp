@@ -42,6 +42,17 @@ void ice_block_system_init()
 	big_ice_block_mask.play("mask");
 }
 
+array<entity_t> fires;
+array<float> fires_t;
+array<float> fires_delay;
+
+void ice_block_system_add_fire_to_smash_by_big_block(entity_t fire, float t)
+{
+	fires.add(fire);
+	fires_t.add(0);
+	fires_delay.add(t);
+}
+
 static float s_float_offset(IceBlock* ice_block, float dt)
 {
 	static float floating_offset = 0;
@@ -63,6 +74,18 @@ void ice_block_system_pre_update(app_t* app, float dt, void* udata)
 {
 	ice_block_idle.update(dt);
 	big_ice_block_idle.update(dt);
+
+	for (int i = 0; i < fires_t.count(); /* no-op */) {
+		fires_t[i] += dt;
+		if (fires_t[i] > fires_delay[i]) {
+			app_destroy_entity(app, fires[i]);
+			fires.unordered_remove(i);
+			fires_t.unordered_remove(i);
+			fires_delay.unordered_remove(i);
+		} else {
+			++i;
+		}
+	}
 }
 
 static BoardPiece* s_get_piece(int x, int y, int xdir, int ydir)

@@ -21,6 +21,7 @@
 
 #include <systems/player_system.h>
 #include <systems/light_system.h>
+#include <systems/ice_block_system.h>
 
 #include <components/transform.h>
 #include <components/animator.h>
@@ -72,21 +73,26 @@ static bool s_player_can_move_here(int x, int y)
 	return false;
 }
 
-bool fit_check(int px, int py, BoardPiece* board_piece, int x, int y)
+static bool s_is_type(int x, int y, const char* type)
+{
+	return app_entity_is_type(app, world->board.data[y][x].entity, type);
+}
+
+bool fit_check(int px, int py, BoardPiece* board_piece, int x, int y, bool skip_fires = true)
 {
 	if (x == px && y == py) return true; // Skip checking the player.
 	if (!in_board(x, y)) return false;
 	BoardSpace space = world->board.data[y][x];
-	if (!space.is_empty && space.entity != board_piece->self) {
+	if (!space.is_empty && space.entity != board_piece->self && (skip_fires ? true : !s_is_type(x, y, "Fire"))) {
 		return false;
 	}
 
 	return true;
 }
 
-bool can_big_ice_block_fit(int px, int py, BoardPiece* board_piece, int dx, int dy)
+bool can_big_ice_block_fit(int px, int py, BoardPiece* board_piece, int dx, int dy, bool skip_fires = true)
 {
-	if (!fit_check(px, py, board_piece, board_piece->x + dx, board_piece->y + dy)) {
+	if (!fit_check(px, py, board_piece, board_piece->x + dx, board_piece->y + dy, skip_fires)) {
 		return false;
 	}
 
@@ -94,7 +100,7 @@ bool can_big_ice_block_fit(int px, int py, BoardPiece* board_piece, int dx, int 
 		for (int k = 0; k < 3; ++k) {
 			int x = board_piece->x_replicas[k] + dx;
 			int y = board_piece->y_replicas[k] + dy;
-			if (!fit_check(px, py, board_piece, x, y)) {
+			if (!fit_check(px, py, board_piece, x, y, skip_fires)) {
 				return false;
 			}
 		}
@@ -180,15 +186,41 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			entity_t e = world->board.data[y - player->ydir][x + player->xdir].entity;
 			IceBlock* ice_block = (IceBlock*)app_get_component(app, e, "IceBlock");
 			BoardPiece* ice_board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
-			while (in_grid(sy, sx, world->board.data.count(), world->board.data[0].count()))
+			array<entity_t> fires;
+			array<int> fires_distance;
+			BoardSpace empty_space;
+			empty_space.entity = INVALID_ENTITY;
+			empty_space.code = '0';
+			empty_space.is_empty = true;
+			while (in_board(sx, sy))
 			{
 				// Need the "has_replicas" check because the `can_big_ice_block_fit` function does not
 				// work with fires at all the same way as little ice.
-				if (board_piece->has_replicas && !can_big_ice_block_fit(x, y, ice_board_piece, dx, dy)) {
-					break;
-				}
-				if (!world->board.data[sy][sx].is_empty && world->board.data[sy][sx].entity != e)
-				{
+				if (ice_board_piece->has_replicas && !can_big_ice_block_fit(x, y, ice_board_piece, dx, dy)) {
+					// Look for fires.
+					if (!world->board.data[sy][sx].is_empty) {
+						if (s_is_type(sx, sy, "Fire")) {
+							fires.add(world->board.data[sy][sx].entity);
+							world->board.data[sy][sx] = empty_space;
+							fires_distance.add(distance);
+						}
+					}
+					for (int k = 0; k < 3; ++k) {
+						int rx = ice_board_piece->x_replicas[k] + dx;
+						int ry = ice_board_piece->y_replicas[k] + dy;
+						if (in_board(rx, ry) && !world->board.data[ry][rx].is_empty) {
+							if (s_is_type(rx, ry, "Fire")) {
+								fires.add(world->board.data[ry][rx].entity);
+								world->board.data[ry][rx] = empty_space;
+								fires_distance.add(distance);
+							}
+						}
+					}
+					// See if still can not fit while ignoring fires.
+					if (!can_big_ice_block_fit(x, y, ice_board_piece, dx, dy, false)) {
+						break;
+					}
+				} else if (!ice_board_piece->has_replicas && !world->board.data[sy][sx].is_empty) {
 					if (app_entity_is_type(app, world->board.data[sy][sx].entity, "Fire")) {
 						found_fire = true;
 					}
@@ -202,6 +234,9 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			}
 			if (distance) {
 				++world->moves;
+			}
+			for (int i = 0; i < fires.count(); ++i) {
+				ice_block_system_add_fire_to_smash_by_big_block(fires[i], Player::move_delay * fires_distance[i]);
 			}
 			if (ice_block) {
 				ice_block->is_held = false;

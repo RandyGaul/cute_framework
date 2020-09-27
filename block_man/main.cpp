@@ -358,7 +358,7 @@ int main(int argc, const char** argv)
 			do_lose_screen_stuff(dt);
 		}
 		do_imgui_stuff(app, dt);
-		debug_draw_non_empty_board_spaces();
+		//debug_draw_non_empty_board_spaces();
 		app_present(app);
 	}
 

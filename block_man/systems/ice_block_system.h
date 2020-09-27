@@ -31,6 +31,7 @@ struct BoardPiece;
 struct IceBlock;
 
 void ice_block_system_init();
+void ice_block_system_add_fire_to_smash_by_big_block(entity_t fire, float t);
 
 void ice_block_system_pre_update(app_t* app, float dt, void* udata);
 void ice_block_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, IceBlock* ice_blocks, int entity_count);
