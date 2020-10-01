@@ -50,6 +50,8 @@
 #			define CUTE_API
 #		endif
 #	endif
+#else
+#	define CUTE_API
 #endif
 
 #ifdef CUTE_WINDOWS

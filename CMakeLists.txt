@@ -94,6 +94,8 @@ endif()
 
 add_library(physfs STATIC ${PHYSFS_SRCS})
 
+option(CUTE_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
+
 # Cute Framework shared library.
 set(CUTE_SRCS
 	src/cute_app.cpp
@@ -247,7 +249,12 @@ set(CUTE_HDRS
 	libraries/cute/cute_utf.h
 )
 
-add_library(cute STATIC ${CUTE_SRCS} ${CUTE_HDRS} ${GLAD_SRCS} ${GLAD_HDRS})
+if(CUTE_FRAMEWORK_STATIC)
+	add_definitions(-DCUTE_STATIC)
+	add_library(cute STATIC ${CUTE_SRCS} ${CUTE_HDRS} ${GLAD_SRCS} ${GLAD_HDRS})
+else()
+	add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS} ${GLAD_SRCS} ${GLAD_HDRS})
+endif()
 target_include_directories(cute PRIVATE ${GLAD_INCLUDE_DIRECTORY})
 
 if(MACOSX)
