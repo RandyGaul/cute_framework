@@ -12,7 +12,7 @@ Cute runs everywhere SDL2 can run.
 - [x] Nintendo Switch
 - [x] And more (see SDL2's supported platforms list https://wiki.libsdl.org/Installation)
 
-The underlying idea of Cute draws inspiration from the SDL2 library. A lot of focus placed on documentation and examples makes development with Cute as painless as possible, without getting in the way.
+The underlying idea of Cute puts practicality up above all else. A lot of focus placed on documentation and examples makes development with Cute as painless as possible, without getting in the way of how you prefer to develop.
 
 ## Download Cute
 
