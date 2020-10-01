@@ -262,7 +262,7 @@ Contributions are welcome, so feel free to open a [pull-request](https://github.
 
 ## Dependencies
 
-Cute has a few external dependencies, linked as shared libraries.
+Cute has a few external dependencies, linked as shared libraries. This means your game will need to ship with the SDL2 shared library, and the Sodium shared library.
 * [SDL2](https://www.libsdl.org/), used for platform handling and GL context creation.
 * [libsodium](https://libsodium.gitbook.io/doc/), used for encryption + authentication.
 
@@ -272,3 +272,7 @@ Cute has a few internal dependencies, built straight from source as apart of Cut
 * [STB Vorbis](https://github.com/nothings/stb/blob/master/stb_vorbis.c), for parsing OGG files.
 * [Cute Headers](https://github.com/RandyGaul/cute_headers), used to implement all kinds of things. These headers were implemented by the author of the Cute Framework, and are used to implement the majority of the features in the Cute Framework. These headers are built by embedding the source directly, via single-file header format.
 * [sokol_gfx.h](https://github.com/floooh/sokol), used to implement all rendering and abstract away low level platform-specific hardware acceleration APIs.
+
+### Why use External Dependencies at all?
+
+Some people really dislike external dependencies (requiring a shared library to be present when shipping your game). There's a lot to talk about here, but to keep things short Cute uses dynamic libraries here to simplify the build process. Since SDL2 and Sodium are written in C their ABIs are stable, so on Windows Cute can be downloaded with prebuilt binaries and hooked up without much effort. Supporting static linking would complicate the build process significantly without providing much of a benefit.
