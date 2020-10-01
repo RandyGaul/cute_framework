@@ -32,6 +32,9 @@
 
 #define CUTE_SOUND_IMPLEMENTATION
 #define CUTE_SOUND_FORCE_SDL
+#ifdef CUTE_EMSCRIPTEN
+#	define CUTE_SOUND_SCALAR_MODE
+#endif
 #include <cute/cute_sound.h>
 
 // TODO - Use cute file system to access disk

@@ -51,13 +51,12 @@
 
 #include <imgui/imgui.h>
 
-#ifdef SOKOL_GLCORE33
+#if defined(SOKOL_GLCORE33) || defined(SOKOL_GLES3)
 #	include <glad/glad.h>
 #endif
 
 #define SOKOL_IMPL
 #ifdef SOKOL_D3D11
-#	define SOKOL_D3D11
 #	define D3D11_NO_HELPERS
 #endif
 #include <sokol/sokol_gfx.h>
@@ -84,10 +83,22 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 
 	Uint32 flags = 0;
 	if (options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) flags |= SDL_WINDOW_OPENGL;
-	if (options & CUTE_APP_OPTIONS_OPENG_GL_ES_CONTEXT) flags |= SDL_WINDOW_OPENGL;
+	if (options & CUTE_APP_OPTIONS_OPENGLES_CONTEXT) flags |= SDL_WINDOW_OPENGL;
 	if (options & CUTE_APP_OPTIONS_FULLSCREEN) flags |= SDL_WINDOW_FULLSCREEN;
 	if (options & CUTE_APP_OPTIONS_RESIZABLE) flags |= SDL_WINDOW_RESIZABLE;
 	if (options & CUTE_APP_OPTIONS_HIDDEN) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
+
+	if (options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) {
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+	}
+
+	if (options & CUTE_APP_OPTIONS_OPENGLES_CONTEXT) {
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+	}
 
 	SDL_Window* window;
 	if (options & CUTE_APP_OPTIONS_WINDOW_POS_CENTERED) {
@@ -117,26 +128,21 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	void* hwnd = NULL;
 #endif
 
-	if (options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) {
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-		app->gfx_enabled = true;
-	}
-
-	if (options & CUTE_APP_OPTIONS_OPENG_GL_ES_CONTEXT) {
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
-		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-		app->gfx_enabled = true;
-	}
-
-	if ((options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) | (options & CUTE_APP_OPTIONS_OPENG_GL_ES_CONTEXT)) {
+	if ((options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) | (options & CUTE_APP_OPTIONS_OPENGLES_CONTEXT)) {
 		SDL_GL_SetSwapInterval(0);
-		SDL_GL_CreateContext(window);
+		SDL_GLContext ctx = SDL_GL_CreateContext(window);
+		if (!ctx) {
+			CUTE_DEBUG_PRINTF("Unable to create OpenGL context.");
+			CUTE_FREE(app, user_allocator_context);
+			return NULL;
+		}
 #ifdef __glad_h_
+#	ifdef CUTE_EMSCRIPTEN
+		gladLoadGLES2Loader(SDL_GL_GetProcAddress);
+#	else
 		gladLoadGLLoader(SDL_GL_GetProcAddress);
-#endif
+#	endif // CUTE_EMSCRIPTEN
+#endif // __glad_h_
 		CUTE_MEMSET(&app->gfx_ctx_params, 0, sizeof(app->gfx_ctx_params));
 		app->gfx_ctx_params.color_format = SG_PIXELFORMAT_RGBA8;
 		app->gfx_ctx_params.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;
@@ -162,7 +168,8 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		app->threadpool = threadpool_create(num_threads_to_spawn, user_allocator_context);
 	}
 
-	if (file_system_init(argv0).is_error()) {
+	error_t err = file_system_init(argv0);
+	if (err.is_error()) {
 		CUTE_ASSERT(0);
 	} else if (!(options & CUTE_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT)) {
 		// Put the base directory (the path to the exe) onto the file system search path.

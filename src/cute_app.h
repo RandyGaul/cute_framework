@@ -32,7 +32,7 @@ namespace cute
 {
 
 #define CUTE_APP_OPTIONS_OPENGL_CONTEXT                 (1 << 0)
-#define CUTE_APP_OPTIONS_OPENG_GL_ES_CONTEXT            (1 << 1)
+#define CUTE_APP_OPTIONS_OPENGLES_CONTEXT               (1 << 1)
 #define CUTE_APP_OPTIONS_D3D11_CONTEXT                  (1 << 2)
 #define CUTE_APP_OPTIONS_FULLSCREEN                     (1 << 3)
 #define CUTE_APP_OPTIONS_RESIZABLE                      (1 << 4)

@@ -2,16 +2,18 @@ cmake_minimum_required(VERSION 3.0)
 project(cute_framework)
 
 # Force 64bit builds.
-if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-	message(FATAL_ERROR "Only 64-bit build is supported.")
-	return()
-endif()
+# if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
+# 	message(FATAL_ERROR "Only 64-bit build is supported.")
+# 	return()
+# endif()
 
 # Must have at least C++14.
 set(CMAKE_CXX_STANDARD 14)
 
 # Platform detection.
-if(WIN32)
+if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
+	set(EMSCRIPTEN TRUE)
+elseif(WIN32)
 	set(WINDOWS TRUE)
 elseif(UNIX AND NOT APPLE)
 	if(CMAKE_SYSTEM_NAME MATCHES ".*Linux")
@@ -38,6 +40,8 @@ elseif(LINUX)
 elseif(MACOSX)
 	add_definitions(-DCUTE_MACOSX)
 	set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
+elseif(EMSCRIPTEN)
+	add_definitions(-DCUTE_EMSCRIPTEN)
 endif()
 
 # Disable annoying MSVC warnings.
@@ -137,9 +141,23 @@ set(CUTE_SRCS
 	libraries/imgui/imgui_demo.cpp
 	libraries/imgui/imgui_draw.cpp
 	libraries/imgui/imgui_widgets.cpp
-
-	libraries/glad/glad.c
 )
+
+if(EMSCRIPTEN)
+	set(GLAD_SRCS libraries/glad/gles3/glad/glad.c)
+	set(GLAD_HDRS
+		libraries/glad/gles3/glad/glad.h
+		libraries/glad/gles3/KHR/khrplatform.h
+	)
+	set(GLAD_INCLUDE_DIRECTORY libraries/glad/gles3)
+else()
+	set(GLAD_SRCS libraries/glad/gl33/glad/glad.c)
+	set(GLAD_HDRS
+		libraries/glad/gl33/glad/glad.h
+		libraries/glad/gl33/KHR/khrplatform.h
+	)
+	set(GLAD_INCLUDE_DIRECTORY libraries/glad/gl33)
+endif()
 
 set(CUTE_HDRS
 	src/cute_alloc.h
@@ -213,8 +231,6 @@ set(CUTE_HDRS
 	src/shaders/font_shader.h
 	src/shaders/upscale_shader.h
 
-	libraries/glad/glad.h
-	libraries/KHR/khrplatform.h
 	libraries/imgui/imgui.h
 	libraries/sokol/sokol_gfx.h
 
@@ -231,7 +247,8 @@ set(CUTE_HDRS
 	libraries/cute/cute_utf.h
 )
 
-add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS})
+add_library(cute STATIC ${CUTE_SRCS} ${CUTE_HDRS} ${GLAD_SRCS} ${GLAD_HDRS})
+target_include_directories(cute PRIVATE ${GLAD_INCLUDE_DIRECTORY})
 
 if(MACOSX)
 	find_package(SDL2 REQUIRED)
@@ -246,6 +263,8 @@ if(MACOSX)
 	find_library(FOUNDATION Foundation)
 
 	target_link_libraries(cute PRIVATE ${SDL2_LIBRARIES} sodium physfs ${IOKIT} ${FOUNDATION})
+elseif(EMSCRIPTEN)
+	target_link_libraries(cute PRIVATE sodium physfs "-s USE_WEBGL2=1 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1")
 else()
 	target_link_libraries(cute PRIVATE SDL2 sodium physfs)
 endif()
@@ -367,6 +386,10 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 	source_group("components" FILES ${CUTE_BLOCK_MAN_COMPONENT_SRCS})
 	source_group("systems" FILES ${CUTE_BLOCK_MAN_SYSTEM_SRCS})
 	target_link_libraries(block_man PRIVATE cute)
+	if(EMSCRIPTEN)
+		set(CMAKE_EXECUTABLE_SUFFIX ".html")
+		target_link_options(block_man PRIVATE -o block_man.html --preload-file ../block_man/data --emrun)
+	endif()
 	target_include_directories(block_man PUBLIC "${PROJECT_SOURCE_DIR}/block_man")
 
 	# For convenience set working directory to the target output folder.

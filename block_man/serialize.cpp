@@ -22,7 +22,6 @@
 #include <serialize.h>
 #include <world.h>
 
-#define STRPOOL_IMPLEMENTATION
 #include <mattiasgustavsson/strpool.h>
 
 cute::error_t serialize_v2(kv_t* kv, const char* key, v2* v)

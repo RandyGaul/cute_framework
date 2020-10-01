@@ -86,6 +86,9 @@
 #	define SOKOL_GLCORE33
 #elif defined(CUTE_MACOSX)
 #	define SOKOL_GLCORE33
+#elif defined(CUTE_EMSCRIPTEN)
+#	define SOKOL_GLES3
+#	include <emscripten.h>
 #endif
 
 #include <stdlib.h> // NULL

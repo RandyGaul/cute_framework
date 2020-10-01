@@ -83,7 +83,7 @@ struct schema_preview_t
 };
 extern array<schema_preview_t> schema_previews;
 
-void init_world();
+void init_world(int argc, const char** argv);
 void destroy_all_entities();
 void select_level(int index);
 int select_level(const char* name);

@@ -486,7 +486,7 @@ static PHYSFS_Io *handleIo_duplicate(PHYSFS_Io *io)
     memcpy(retval, io, sizeof (PHYSFS_Io));
     retval->opaque = newfh;
     return retval;
-    
+
 handleIo_dupe_failed:
     if (newfh)
     {
@@ -1199,29 +1199,45 @@ int PHYSFS_init(const char *argv0)
     if (!externalAllocator)
         setDefaultAllocator();
 
-    if ((allocator.Init != NULL) && (!allocator.Init())) return 0;
+    if ((allocator.Init != NULL) && (!allocator.Init())) {
+		printf("fuck 0\n");
+		return 0;
+	}
 
     if (!__PHYSFS_platformInit())
     {
         if (allocator.Deinit != NULL) allocator.Deinit();
+		printf("fuck 1\n");
         return 0;
     } /* if */
 
     /* everything below here can be cleaned up safely by doDeinit(). */
 
-    if (!initializeMutexes()) goto initFailed;
+    if (!initializeMutexes()) {
+		printf("fuck 2\n");
+		goto initFailed;
+	}
 
     baseDir = calculateBaseDir(argv0);
-    if (!baseDir) goto initFailed;
+    if (!baseDir) {
+		printf("fuck 3\n");
+		goto initFailed;
+	}
 
     userDir = __PHYSFS_platformCalcUserDir();
-    if (!userDir) goto initFailed;
+    if (!userDir) {
+		printf("fuck 4\n");
+		goto initFailed;
+	}
 
     /* Platform layer is required to append a dirsep. */
     assert(baseDir[strlen(baseDir) - 1] == __PHYSFS_platformDirSeparator);
     assert(userDir[strlen(userDir) - 1] == __PHYSFS_platformDirSeparator);
 
-    if (!initStaticArchivers()) goto initFailed;
+    if (!initStaticArchivers()) {
+		printf("fuck 5\n");
+		goto initFailed;
+	}
 
     initialized = 1;
 

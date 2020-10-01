@@ -452,7 +452,9 @@ void setup_write_directory()
 	const char* base = file_system_get_base_dir();
 
 	path_pop(base, NULL, buf);
-	if (!CUTE_STRCMP(buf, "cute_framework")) {
+	bool on_emscripten = !CUTE_STRCMP(base, "./");
+	bool under_development = !CUTE_STRCMP(buf, "cute_framework");
+	if (under_development || on_emscripten) {
 		sprintf(buf, "%s%s", file_system_get_base_dir(), "../block_man/data");
 	} else {
 		// On windows MSVC puts executable into cute_framework/build/Debug or Release folders.
@@ -464,15 +466,17 @@ void setup_write_directory()
 	file_system_mount(buf, "");
 }
 
-void init_world()
+void init_world(int argc, const char** argv)
 {
 	int options = CUTE_APP_OPTIONS_WINDOW_POS_CENTERED;
 #ifdef CUTE_WINDOWS
 	options |= CUTE_APP_OPTIONS_D3D11_CONTEXT;
+#elif defined(CUTE_EMSCRIPTEN)
+	options |= CUTE_APP_OPTIONS_OPENGLES_CONTEXT;
 #else
 	options |= CUTE_APP_OPTIONS_OPENGL_CONTEXT;
 #endif
-	app = app_make("Block Man", 0, 0, 960, 720, options);
+	app = app_make("Block Man", 0, 0, 960, 720, options, argv[0]);
 	app_init_upscaling(app, UPSCALE_PIXEL_PERFECT_AT_LEAST_2X, 320, 240);
 	ImGui::SetCurrentContext(app_init_imgui(app));
 	setup_write_directory();
@@ -839,7 +843,7 @@ int select_level(const char* name)
 
 	if (!found) {
 		char buf[1024];
-		sprintf("Unable to select level file %s.", name);
+		sprintf(buf, "Unable to select level file %s.", name);
 		app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "LEVEL FILE NOT FOUND", buf);
 	}
 

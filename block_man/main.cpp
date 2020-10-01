@@ -344,23 +344,32 @@ void do_lose_screen_stuff(float dt)
 	}
 }
 
+void do_main_loop_once()
+{
+	float dt = calc_dt();
+	app_update(app, dt);
+	if (world->load_level_dirty_flag) select_level(world->level_index);
+	app_update_systems(app, dt);
+	if (world->lose_screen) {
+		do_lose_screen_stuff(dt);
+	}
+	do_imgui_stuff(app, dt);
+	//debug_draw_non_empty_board_spaces();
+	app_present(app);
+}
+
 int main(int argc, const char** argv)
 {
-	init_world();
+	init_world(argc, argv);
 	select_level(7);
 
+#ifdef CUTE_EMSCRIPTEN
+	emscripten_set_main_loop(do_main_loop_once, 0, true);
+#else
 	while (app_is_running(app)) {
-		float dt = calc_dt();
-		app_update(app, dt);
-		if (world->load_level_dirty_flag) select_level(world->level_index);
-		app_update_systems(app, dt);
-		if (world->lose_screen) {
-			do_lose_screen_stuff(dt);
-		}
-		do_imgui_stuff(app, dt);
-		//debug_draw_non_empty_board_spaces();
-		app_present(app);
+		do_main_loop_once();
 	}
+#endif
 
 	app_destroy(app);
 
