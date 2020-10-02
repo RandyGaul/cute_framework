@@ -31,28 +31,28 @@ namespace cute
 
 struct audio_t;
 
-extern CUTE_API audio_t* CUTE_CALL audio_load_ogg(const char* path, void* user_allocator_context = NULL);
-extern CUTE_API audio_t* CUTE_CALL audio_load_wav(const char* path, void* user_allocator_context = NULL);
-extern CUTE_API audio_t* CUTE_CALL audio_load_ogg_from_memory(void* memory, int byte_count, void* user_allocator_context = NULL);
-extern CUTE_API audio_t* CUTE_CALL audio_load_wav_from_memory(void* memory, int byte_count, void* user_allocator_context = NULL);
-extern CUTE_API void CUTE_CALL audio_stream_ogg(app_t* app, const char* path, promise_t promise, void* user_allocator_context = NULL);
-extern CUTE_API void CUTE_CALL audio_stream_wav(app_t* app, const char* path, promise_t promise, void* user_allocator_context = NULL);
-extern CUTE_API void CUTE_CALL audio_stream_ogg_from_memory(app_t* app, void* memory, int byte_count, promise_t promise, void* user_allocator_context = NULL);
-extern CUTE_API void CUTE_CALL audio_stream_wav_from_memory(app_t* app, void* memory, int byte_count, promise_t promise, void* user_allocator_context = NULL);
-extern CUTE_API error_t CUTE_CALL audio_destroy(audio_t* audio);
-extern CUTE_API int CUTE_CALL audio_ref_count(audio_t* audio);
+CUTE_API audio_t* CUTE_CALL audio_load_ogg(const char* path, void* user_allocator_context = NULL);
+CUTE_API audio_t* CUTE_CALL audio_load_wav(const char* path, void* user_allocator_context = NULL);
+CUTE_API audio_t* CUTE_CALL audio_load_ogg_from_memory(void* memory, int byte_count, void* user_allocator_context = NULL);
+CUTE_API audio_t* CUTE_CALL audio_load_wav_from_memory(void* memory, int byte_count, void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL audio_stream_ogg(app_t* app, const char* path, promise_t promise, void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL audio_stream_wav(app_t* app, const char* path, promise_t promise, void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL audio_stream_ogg_from_memory(app_t* app, void* memory, int byte_count, promise_t promise, void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL audio_stream_wav_from_memory(app_t* app, void* memory, int byte_count, promise_t promise, void* user_allocator_context = NULL);
+CUTE_API error_t CUTE_CALL audio_destroy(audio_t* audio);
+CUTE_API int CUTE_CALL audio_ref_count(audio_t* audio);
 
 // -------------------------------------------------------------------------------------------------
 
-extern CUTE_API error_t CUTE_CALL music_play(app_t* app, audio_t* audio_source, float fade_in_time = 0);
-extern CUTE_API error_t CUTE_CALL music_stop(app_t* app, float fade_out_time = 0);
-extern CUTE_API void CUTE_CALL music_set_volume(app_t* app, float volume);
-extern CUTE_API void CUTE_CALL music_set_pitch(app_t* app, float pitch);
-extern CUTE_API void CUTE_CALL music_set_loop(app_t* app, int loop);
-extern CUTE_API void CUTE_CALL music_pause(app_t* app);
-extern CUTE_API void CUTE_CALL music_resume(app_t* app);
-extern CUTE_API error_t CUTE_CALL music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time = 0, float fade_in_time = 0);
-extern CUTE_API error_t CUTE_CALL music_crossfade(app_t* app, audio_t* audio_source, float cross_fade_time = 0);
+CUTE_API error_t CUTE_CALL music_play(app_t* app, audio_t* audio_source, float fade_in_time = 0);
+CUTE_API error_t CUTE_CALL music_stop(app_t* app, float fade_out_time = 0);
+CUTE_API void CUTE_CALL music_set_volume(app_t* app, float volume);
+CUTE_API void CUTE_CALL music_set_pitch(app_t* app, float pitch);
+CUTE_API void CUTE_CALL music_set_loop(app_t* app, int loop);
+CUTE_API void CUTE_CALL music_pause(app_t* app);
+CUTE_API void CUTE_CALL music_resume(app_t* app);
+CUTE_API error_t CUTE_CALL music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time = 0, float fade_in_time = 0);
+CUTE_API error_t CUTE_CALL music_crossfade(app_t* app, audio_t* audio_source, float cross_fade_time = 0);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -66,13 +66,13 @@ struct sound_params_t
 	float delay = 0;
 };
 
-extern CUTE_API error_t CUTE_CALL audio_play(app_t* app, audio_t* audio_source, sound_params_t params = sound_params_t());
+CUTE_API error_t CUTE_CALL audio_play(app_t* app, audio_t* audio_source, sound_params_t params = sound_params_t());
 
 // -------------------------------------------------------------------------------------------------
 
-extern CUTE_API void CUTE_CALL audio_set_pan(app_t* app, float pan);
-extern CUTE_API void CUTE_CALL audio_set_global_volume(app_t* app, float volume);
-extern CUTE_API void CUTE_CALL audio_set_sound_volume(app_t* app, float volume);
+CUTE_API void CUTE_CALL audio_set_pan(app_t* app, float pan);
+CUTE_API void CUTE_CALL audio_set_global_volume(app_t* app, float volume);
+CUTE_API void CUTE_CALL audio_set_sound_volume(app_t* app, float volume);
 
 }
 

@@ -27,7 +27,7 @@
 namespace cute
 {
 
-extern CUTE_API float CUTE_CALL calc_dt();
+CUTE_API float CUTE_CALL calc_dt();
 
 struct timer_t
 {
@@ -35,9 +35,9 @@ struct timer_t
 	uint64_t prev;
 };
 
-extern CUTE_API timer_t CUTE_CALL timer_make();
-extern CUTE_API float CUTE_CALL timer_dt(timer_t* timer);
-extern CUTE_API float CUTE_CALL timer_elapsed(timer_t* timer);
+CUTE_API timer_t CUTE_CALL timer_make();
+CUTE_API float CUTE_CALL timer_dt(timer_t* timer);
+CUTE_API float CUTE_CALL timer_elapsed(timer_t* timer);
 
 }
 

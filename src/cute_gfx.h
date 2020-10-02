@@ -34,16 +34,16 @@ namespace cute
 
 using texture_t = uint64_t;
 
-extern CUTE_API texture_t CUTE_CALL texture_make(pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_REPEAT);
-extern CUTE_API void CUTE_CALL texture_destroy(texture_t texture);
+CUTE_API texture_t CUTE_CALL texture_make(pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_REPEAT);
+CUTE_API void CUTE_CALL texture_destroy(texture_t texture);
 
 struct matrix_t
 {
 	float data[16];
 };
 
-extern CUTE_API matrix_t CUTE_CALL matrix_identity();
-extern CUTE_API matrix_t CUTE_CALL matrix_ortho_2d(float w, float h, float x, float y);
+CUTE_API matrix_t CUTE_CALL matrix_identity();
+CUTE_API matrix_t CUTE_CALL matrix_ortho_2d(float w, float h, float x, float y);
 
 struct triple_buffer_t
 {
@@ -75,8 +75,8 @@ struct triple_buffer_t
 	}
 };
 
-extern CUTE_API triple_buffer_t CUTE_CALL triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count = 0, int index_stride = 0);
-extern CUTE_API error_t CUTE_CALL triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count = 0, const void* indices = NULL);
+CUTE_API triple_buffer_t CUTE_CALL triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count = 0, int index_stride = 0);
+CUTE_API error_t CUTE_CALL triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count = 0, const void* indices = NULL);
 
 }
 

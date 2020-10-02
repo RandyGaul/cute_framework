@@ -38,13 +38,13 @@ struct camera_t
 	array<v2> pos_stack;
 };
 
-extern CUTE_API void CUTE_CALL camera_set_wh(camera_t* cam, int w, int h);
-extern CUTE_API void CUTE_CALL camera_set_pos(camera_t* cam, v2 pos);
-extern CUTE_API void CUTE_CALL camera_push_pos(camera_t* cam, v2 pos);
-extern CUTE_API void CUTE_CALL camera_pop_pos(camera_t* cam);
-extern CUTE_API void CUTE_CALL camera_calc_mvp(camera_t* cam);
-extern CUTE_API matrix_t* CUTE_CALL camera_get_mvp(camera_t* cam);
-extern CUTE_API aabb_t CUTE_CALL camera_get_cull_aabb(camera_t* cam);
+CUTE_API void CUTE_CALL camera_set_wh(camera_t* cam, int w, int h);
+CUTE_API void CUTE_CALL camera_set_pos(camera_t* cam, v2 pos);
+CUTE_API void CUTE_CALL camera_push_pos(camera_t* cam, v2 pos);
+CUTE_API void CUTE_CALL camera_pop_pos(camera_t* cam);
+CUTE_API void CUTE_CALL camera_calc_mvp(camera_t* cam);
+CUTE_API matrix_t* CUTE_CALL camera_get_mvp(camera_t* cam);
+CUTE_API aabb_t CUTE_CALL camera_get_cull_aabb(camera_t* cam);
 
 }
 

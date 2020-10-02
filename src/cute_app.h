@@ -40,18 +40,18 @@ namespace cute
 #define CUTE_APP_OPTIONS_WINDOW_POS_CENTERED            (1 << 6)
 #define CUTE_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT (1 << 7)
 
-extern CUTE_API app_t* CUTE_CALL app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
-extern CUTE_API void CUTE_CALL app_destroy(app_t* app);
+CUTE_API app_t* CUTE_CALL app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL app_destroy(app_t* app);
 
-extern CUTE_API bool CUTE_CALL app_is_running(app_t* app);
-extern CUTE_API void CUTE_CALL app_stop_running(app_t* app);
-extern CUTE_API void CUTE_CALL app_update(app_t* app, float dt);
-extern CUTE_API void CUTE_CALL app_present(app_t* app);
+CUTE_API bool CUTE_CALL app_is_running(app_t* app);
+CUTE_API void CUTE_CALL app_stop_running(app_t* app);
+CUTE_API void CUTE_CALL app_update(app_t* app, float dt);
+CUTE_API void CUTE_CALL app_present(app_t* app);
 
-extern CUTE_API error_t CUTE_CALL app_init_net(app_t* app);
-extern CUTE_API error_t CUTE_CALL app_init_audio(app_t* app, int max_simultaneous_sounds = 5000);
-extern CUTE_API ImGuiContext* CUTE_CALL app_init_imgui(app_t* app);
-extern CUTE_API strpool_t* CUTE_CALL app_get_strpool(app_t* app);
+CUTE_API error_t CUTE_CALL app_init_net(app_t* app);
+CUTE_API error_t CUTE_CALL app_init_audio(app_t* app, int max_simultaneous_sounds = 5000);
+CUTE_API ImGuiContext* CUTE_CALL app_init_imgui(app_t* app);
+CUTE_API strpool_t* CUTE_CALL app_get_strpool(app_t* app);
 
 enum upscale_t
 {
@@ -62,12 +62,9 @@ enum upscale_t
 	UPSCALE_STRETCH,
 };
 
-extern CUTE_API error_t CUTE_CALL app_init_upscaling(app_t* app, upscale_t upscaling, int offscreen_w, int offscreen_h);
-extern CUTE_API void CUTE_CALL app_offscreen_size(app_t* app, int* offscreen_w, int* offscreen_h);
+CUTE_API error_t CUTE_CALL app_init_upscaling(app_t* app, upscale_t upscaling, int offscreen_w, int offscreen_h);
+CUTE_API void CUTE_CALL app_offscreen_size(app_t* app, int* offscreen_w, int* offscreen_h);
 
 }
-
-#include <cute_error.h>
-#include <cute_clipboard.h>
 
 #endif // CUTE_APP_H

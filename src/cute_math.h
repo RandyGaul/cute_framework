@@ -66,41 +66,41 @@ struct manifold_t
 
 // boolean collision detection
 // these versions are faster than the manifold versions, but only give a YES/NO result
-extern CUTE_API bool CUTE_CALL circle_to_circle(circle_t A, circle_t B);
-extern CUTE_API bool CUTE_CALL circle_to_aabb(circle_t A, aabb_t B);
-extern CUTE_API bool CUTE_CALL circle_to_capsule(circle_t A, capsule_t B);
-extern CUTE_API bool CUTE_CALL aabb_to_aabb(aabb_t A, aabb_t B);
-extern CUTE_API bool CUTE_CALL aabb_to_capsule(aabb_t A, capsule_t B);
-extern CUTE_API bool CUTE_CALL capsule_to_capsule(capsule_t A, capsule_t B);
-extern CUTE_API bool CUTE_CALL circle_to_poly(circle_t A, const poly_t* B, const transform_t* bx);
-extern CUTE_API bool CUTE_CALL aabb_to_poly(aabb_t A, const poly_t* B, const transform_t* bx);
-extern CUTE_API bool CUTE_CALL capsule_to_poly(capsule_t A, const poly_t* B, const transform_t* bx);
-extern CUTE_API bool CUTE_CALL poly_to_poly(const poly_t* A, const transform_t* ax, const poly_t* B, const transform_t* bx);
+CUTE_API bool CUTE_CALL circle_to_circle(circle_t A, circle_t B);
+CUTE_API bool CUTE_CALL circle_to_aabb(circle_t A, aabb_t B);
+CUTE_API bool CUTE_CALL circle_to_capsule(circle_t A, capsule_t B);
+CUTE_API bool CUTE_CALL aabb_to_aabb(aabb_t A, aabb_t B);
+CUTE_API bool CUTE_CALL aabb_to_capsule(aabb_t A, capsule_t B);
+CUTE_API bool CUTE_CALL capsule_to_capsule(capsule_t A, capsule_t B);
+CUTE_API bool CUTE_CALL circle_to_poly(circle_t A, const poly_t* B, const transform_t* bx);
+CUTE_API bool CUTE_CALL aabb_to_poly(aabb_t A, const poly_t* B, const transform_t* bx);
+CUTE_API bool CUTE_CALL capsule_to_poly(capsule_t A, const poly_t* B, const transform_t* bx);
+CUTE_API bool CUTE_CALL poly_to_poly(const poly_t* A, const transform_t* ax, const poly_t* B, const transform_t* bx);
 
 // ray operations
 // output is placed into the raycast_t struct, which represents the hit location
 // of the ray. the out param contains no meaningful information if these funcs
 // return 0
-extern CUTE_API bool CUTE_CALL ray_to_circle(ray_t A, circle_t B, raycast_t* out);
-extern CUTE_API bool CUTE_CALL ray_to_aabb(ray_t A, aabb_t B, raycast_t* out);
-extern CUTE_API bool CUTE_CALL ray_to_capsule(ray_t A, capsule_t B, raycast_t* out);
-extern CUTE_API bool CUTE_CALL ray_to_poly(ray_t A, const poly_t* B, const transform_t* bx_ptr, raycast_t* out);
+CUTE_API bool CUTE_CALL ray_to_circle(ray_t A, circle_t B, raycast_t* out);
+CUTE_API bool CUTE_CALL ray_to_aabb(ray_t A, aabb_t B, raycast_t* out);
+CUTE_API bool CUTE_CALL ray_to_capsule(ray_t A, capsule_t B, raycast_t* out);
+CUTE_API bool CUTE_CALL ray_to_poly(ray_t A, const poly_t* B, const transform_t* bx_ptr, raycast_t* out);
 
 // manifold generation
 // these functions are (generally) slower than the boolean versions, but will compute one
 // or two points that represent the plane of contact. This information is
 // is usually needed to resolve and prevent shapes from colliding. If no coll
 // ision occured the count member of the manifold struct is set to 0.
-extern CUTE_API void CUTE_CALL circle_to_circle_manifold(circle_t A, circle_t B, manifold_t* m);
-extern CUTE_API void CUTE_CALL circle_to_aabb_manifold(circle_t A, aabb_t B, manifold_t* m);
-extern CUTE_API void CUTE_CALL circle_to_capsule_manifold(circle_t A, capsule_t B, manifold_t* m);
-extern CUTE_API void CUTE_CALL aabb_to_aabb_manifold(aabb_t A, aabb_t B, manifold_t* m);
-extern CUTE_API void CUTE_CALL aabb_to_capsule_manifold(aabb_t A, capsule_t B, manifold_t* m);
-extern CUTE_API void CUTE_CALL capsule_to_capsule_manifold(capsule_t A, capsule_t B, manifold_t* m);
-extern CUTE_API void CUTE_CALL circle_to_poly_manifold(circle_t A, const poly_t* B, const transform_t* bx, manifold_t* m);
-extern CUTE_API void CUTE_CALL aabb_to_poly_manifold(aabb_t A, const poly_t* B, const transform_t* bx, manifold_t* m);
-extern CUTE_API void CUTE_CALL capsule_to_poly_manifold(capsule_t A, const poly_t* B, const transform_t* bx, manifold_t* m);
-extern CUTE_API void CUTE_CALL poly_to_poly_manifold(const poly_t* A, const transform_t* ax, const poly_t* B, const transform_t* bx, manifold_t* m);
+CUTE_API void CUTE_CALL circle_to_circle_manifold(circle_t A, circle_t B, manifold_t* m);
+CUTE_API void CUTE_CALL circle_to_aabb_manifold(circle_t A, aabb_t B, manifold_t* m);
+CUTE_API void CUTE_CALL circle_to_capsule_manifold(circle_t A, capsule_t B, manifold_t* m);
+CUTE_API void CUTE_CALL aabb_to_aabb_manifold(aabb_t A, aabb_t B, manifold_t* m);
+CUTE_API void CUTE_CALL aabb_to_capsule_manifold(aabb_t A, capsule_t B, manifold_t* m);
+CUTE_API void CUTE_CALL capsule_to_capsule_manifold(capsule_t A, capsule_t B, manifold_t* m);
+CUTE_API void CUTE_CALL circle_to_poly_manifold(circle_t A, const poly_t* B, const transform_t* bx, manifold_t* m);
+CUTE_API void CUTE_CALL aabb_to_poly_manifold(aabb_t A, const poly_t* B, const transform_t* bx, manifold_t* m);
+CUTE_API void CUTE_CALL capsule_to_poly_manifold(capsule_t A, const poly_t* B, const transform_t* bx, manifold_t* m);
+CUTE_API void CUTE_CALL poly_to_poly_manifold(const poly_t* A, const transform_t* ax, const poly_t* B, const transform_t* bx, manifold_t* m);
 
 enum shape_type_t
 {
@@ -138,7 +138,7 @@ struct gjk_cache_t
 // collision shapes are not gigantic. For example, try to keep the volume of all your shapes
 // less than 100.0f. If you need large shapes, you should use tiny collision geometry for all
 // cute c2 function, and simply render the geometry larger on-screen by scaling it up.
-extern CUTE_API float CUTE_CALL gjk(const void* A, shape_type_t typeA, const transform_t* ax_ptr, const void* B, shape_type_t typeB, const transform_t* bx_ptr, v2* outA, v2* outB, int use_radius, int* iterations, gjk_cache_t* cache);
+CUTE_API float CUTE_CALL gjk(const void* A, shape_type_t typeA, const transform_t* ax_ptr, const void* B, shape_type_t typeB, const transform_t* bx_ptr, v2* outA, v2* outB, int use_radius, int* iterations, gjk_cache_t* cache);
 
 // This is an advanced function, intended to be used by people who know what they're doing.
 //
@@ -169,7 +169,7 @@ extern CUTE_API float CUTE_CALL gjk(const void* A, shape_type_t typeA, const tra
 //    See the function `c2Inflate` for some more details.
 // 4. Compute the collision manifold between the inflated shapes (for example, use poly_ttoPolyManifold).
 // 5. Gently push the shapes apart. This will give the next call to c2TOI some breathing room.
-extern CUTE_API float CUTE_CALL toi(const void* A, shape_type_t typeA, const transform_t* ax_ptr, v2 vA, const void* B, shape_type_t typeB, const transform_t* bx_ptr, v2 vB, int use_radius, int* iterations);
+CUTE_API float CUTE_CALL toi(const void* A, shape_type_t typeA, const transform_t* ax_ptr, v2 vA, const void* B, shape_type_t typeB, const transform_t* bx_ptr, v2 vB, int use_radius, int* iterations);
 
 // Inflating a shape.
 //
@@ -183,23 +183,23 @@ extern CUTE_API float CUTE_CALL toi(const void* A, shape_type_t typeA, const tra
 // Deflating a shape can avoid this problem, but deflating a very small shape can invert
 // the planes and result in something that is no longer convex. Make sure to pick an
 // appropriately small skin factor, for example 1.0e-6f.
-extern CUTE_API void CUTE_CALL inflate(void* shape, shape_type_t type, float skin_factor);
+CUTE_API void CUTE_CALL inflate(void* shape, shape_type_t type, float skin_factor);
 
 // Computes 2D convex hull. Will not do anything if less than two verts supplied. If
 // more than C2_MAX_POLYGON_VERTS are supplied extras are ignored.
-extern CUTE_API int CUTE_CALL hull(v2* verts, int count);
-extern CUTE_API void CUTE_CALL norms(v2* verts, v2* norms, int count);
+CUTE_API int CUTE_CALL hull(v2* verts, int count);
+CUTE_API void CUTE_CALL norms(v2* verts, v2* norms, int count);
 
 // runs c2Hull and c2Norms, assumes p->verts and p->count are both set to valid values
-extern CUTE_API void CUTE_CALL make_poly(poly_t* p);
+CUTE_API void CUTE_CALL make_poly(poly_t* p);
 
 // Generic collision detection routines, useful for games that want to use some poly-
 // morphism to write more generic-styled code. Internally calls various above functions.
 // For AABBs/Circles/Capsules ax and bx are ignored. For polys ax and bx can define
 // model to world transformations (for polys only), or be NULL for identity transforms.
-extern CUTE_API int CUTE_CALL collided(const void* A, const transform_t* ax, shape_type_t typeA, const void* B, const transform_t* bx, shape_type_t typeB);
-extern CUTE_API void CUTE_CALL collide(const void* A, const transform_t* ax, shape_type_t typeA, const void* B, const transform_t* bx, shape_type_t typeB, manifold_t* m);
-extern CUTE_API bool CUTE_CALL cast_ray(ray_t A, const void* B, const transform_t* bx, shape_type_t typeB, raycast_t* out);
+CUTE_API int CUTE_CALL collided(const void* A, const transform_t* ax, shape_type_t typeA, const void* B, const transform_t* bx, shape_type_t typeB);
+CUTE_API void CUTE_CALL collide(const void* A, const transform_t* ax, shape_type_t typeA, const void* B, const transform_t* bx, shape_type_t typeB, manifold_t* m);
+CUTE_API bool CUTE_CALL cast_ray(ray_t A, const void* B, const transform_t* bx, shape_type_t typeB, raycast_t* out);
 
 }
 

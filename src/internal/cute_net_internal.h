@@ -53,14 +53,14 @@ struct socket_t
 	endpoint_t endpoint;
 };
 
-extern CUTE_API int CUTE_CALL socket_init(socket_t* socket, const char* address_and_port, int send_buffer_size, int receive_buffer_size);
-extern CUTE_API int CUTE_CALL socket_init(socket_t* socket, address_type_t address_type, uint16_t port, int send_buffer_size, int receive_buffer_size);
-extern CUTE_API void CUTE_CALL socket_cleanup(socket_t* socket);
-extern CUTE_API int CUTE_CALL socket_send(socket_t* socket, endpoint_t send_to, const void* data, int byte_count);
-extern CUTE_API int CUTE_CALL socket_receive(socket_t* socket, endpoint_t* from, void* data, int byte_count);
+CUTE_API int CUTE_CALL socket_init(socket_t* socket, const char* address_and_port, int send_buffer_size, int receive_buffer_size);
+CUTE_API int CUTE_CALL socket_init(socket_t* socket, address_type_t address_type, uint16_t port, int send_buffer_size, int receive_buffer_size);
+CUTE_API void CUTE_CALL socket_cleanup(socket_t* socket);
+CUTE_API int CUTE_CALL socket_send(socket_t* socket, endpoint_t send_to, const void* data, int byte_count);
+CUTE_API int CUTE_CALL socket_receive(socket_t* socket, endpoint_t* from, void* data, int byte_count);
 
-extern CUTE_API error_t CUTE_CALL net_init();
-extern CUTE_API void CUTE_CALL net_cleanup();
+CUTE_API error_t CUTE_CALL net_init();
+CUTE_API void CUTE_CALL net_cleanup();
 
 }
 

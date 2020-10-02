@@ -37,9 +37,9 @@ struct crypto_key_t
 	uint8_t key[crypto_aead_xchacha20poly1305_ietf_KEYBYTES];
 };
 
-extern CUTE_API void CUTE_CALL crypto_random_bytes(void* data, int byte_count);
-extern CUTE_API crypto_key_t CUTE_CALL crypto_generate_key();
-extern CUTE_API const char* CUTE_CALL crypto_sodium_version_linked();
+CUTE_API void CUTE_CALL crypto_random_bytes(void* data, int byte_count);
+CUTE_API crypto_key_t CUTE_CALL crypto_generate_key();
+CUTE_API const char* CUTE_CALL crypto_sodium_version_linked();
 
 }
 

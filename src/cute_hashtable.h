@@ -52,17 +52,17 @@ struct hashtable_t
 	void* mem_ctx;
 };
 
-extern CUTE_API int CUTE_CALL hashtable_init(hashtable_t* table, int key_size, int item_size, int capacity, void* mem_ctx);
-extern CUTE_API void CUTE_CALL hashtable_cleanup(hashtable_t* table);
+CUTE_API int CUTE_CALL hashtable_init(hashtable_t* table, int key_size, int item_size, int capacity, void* mem_ctx);
+CUTE_API void CUTE_CALL hashtable_cleanup(hashtable_t* table);
 
-extern CUTE_API void* CUTE_CALL hashtable_insert(hashtable_t* table, const void* key, const void* item);
-extern CUTE_API void CUTE_CALL hashtable_remove(hashtable_t* table, const void* key);
-extern CUTE_API void CUTE_CALL hashtable_clear(hashtable_t* table);
-extern CUTE_API void* CUTE_CALL hashtable_find(const hashtable_t* table, const void* key);
-extern CUTE_API int CUTE_CALL hashtable_count(const hashtable_t* table);
-extern CUTE_API void* CUTE_CALL hashtable_items(const hashtable_t* table);
-extern CUTE_API void* CUTE_CALL hashtable_keys(const hashtable_t* table);
-extern CUTE_API void CUTE_CALL hashtable_swap(hashtable_t* table, int index_a, int index_b);
+CUTE_API void* CUTE_CALL hashtable_insert(hashtable_t* table, const void* key, const void* item);
+CUTE_API void CUTE_CALL hashtable_remove(hashtable_t* table, const void* key);
+CUTE_API void CUTE_CALL hashtable_clear(hashtable_t* table);
+CUTE_API void* CUTE_CALL hashtable_find(const hashtable_t* table, const void* key);
+CUTE_API int CUTE_CALL hashtable_count(const hashtable_t* table);
+CUTE_API void* CUTE_CALL hashtable_items(const hashtable_t* table);
+CUTE_API void* CUTE_CALL hashtable_keys(const hashtable_t* table);
+CUTE_API void CUTE_CALL hashtable_swap(hashtable_t* table, int index_a, int index_b);
 
 }
 

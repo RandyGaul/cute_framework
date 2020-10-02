@@ -35,15 +35,15 @@ namespace cute
 struct sprite_t;
 struct aseprite_cache_t;
 
-extern CUTE_API aseprite_cache_t* CUTE_CALL aseprite_cache_make(void* mem_ctx = NULL);
-extern CUTE_API void CUTE_CALL aseprite_cache_destroy(aseprite_cache_t* cache);
+CUTE_API aseprite_cache_t* CUTE_CALL aseprite_cache_make(void* mem_ctx = NULL);
+CUTE_API void CUTE_CALL aseprite_cache_destroy(aseprite_cache_t* cache);
 
-extern CUTE_API error_t CUTE_CALL aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite);
-extern CUTE_API void CUTE_CALL aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path);
-extern CUTE_API error_t CUTE_CALL aseprite_cache_load_ase(aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase);
+CUTE_API error_t CUTE_CALL aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite);
+CUTE_API void CUTE_CALL aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path);
+CUTE_API error_t CUTE_CALL aseprite_cache_load_ase(aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase);
 
-extern CUTE_API get_pixels_fn* CUTE_CALL aseprite_cache_get_pixels_fn(aseprite_cache_t* cache);
-extern CUTE_API strpool_t* CUTE_CALL aseprite_cache_get_strpool_ptr(aseprite_cache_t* cache);
+CUTE_API get_pixels_fn* CUTE_CALL aseprite_cache_get_pixels_fn(aseprite_cache_t* cache);
+CUTE_API strpool_t* CUTE_CALL aseprite_cache_get_strpool_ptr(aseprite_cache_t* cache);
 
 }
 

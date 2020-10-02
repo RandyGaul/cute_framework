@@ -51,16 +51,16 @@ struct sequence_buffer_t
 // TODO: Place this on the sequence buffer itself to minimize parameters.
 typedef void (sequence_buffer_cleanup_entry_fn)(void* data, uint16_t sequence, void* udata, void* mem_ctx);
 
-extern CUTE_API int CUTE_CALL sequence_buffer_init(sequence_buffer_t* buffer, int capacity, int stride, void* udata, void* mem_ctx);
-extern CUTE_API void CUTE_CALL sequence_buffer_cleanup(sequence_buffer_t* buffer, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
-extern CUTE_API void CUTE_CALL sequence_buffer_reset(sequence_buffer_t* buffer, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
+CUTE_API int CUTE_CALL sequence_buffer_init(sequence_buffer_t* buffer, int capacity, int stride, void* udata, void* mem_ctx);
+CUTE_API void CUTE_CALL sequence_buffer_cleanup(sequence_buffer_t* buffer, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
+CUTE_API void CUTE_CALL sequence_buffer_reset(sequence_buffer_t* buffer, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
 
-extern CUTE_API void* CUTE_CALL sequence_buffer_insert(sequence_buffer_t* buffer, uint16_t sequence, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
-extern CUTE_API void CUTE_CALL sequence_buffer_remove(sequence_buffer_t* buffer, uint16_t sequence, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
-extern CUTE_API int CUTE_CALL sequence_buffer_is_empty(sequence_buffer_t* sequence_buffer, uint16_t sequence);
-extern CUTE_API void* CUTE_CALL sequence_buffer_find(sequence_buffer_t* sequence_buffer, uint16_t sequence);
-extern CUTE_API void* CUTE_CALL sequence_buffer_at_index(sequence_buffer_t* sequence_buffer, int index);
-extern CUTE_API void CUTE_CALL sequence_buffer_generate_ack_bits(sequence_buffer_t* sequence_buffer, uint16_t* ack, uint32_t* ack_bits);
+CUTE_API void* CUTE_CALL sequence_buffer_insert(sequence_buffer_t* buffer, uint16_t sequence, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
+CUTE_API void CUTE_CALL sequence_buffer_remove(sequence_buffer_t* buffer, uint16_t sequence, sequence_buffer_cleanup_entry_fn* cleanup_fn = NULL);
+CUTE_API int CUTE_CALL sequence_buffer_is_empty(sequence_buffer_t* sequence_buffer, uint16_t sequence);
+CUTE_API void* CUTE_CALL sequence_buffer_find(sequence_buffer_t* sequence_buffer, uint16_t sequence);
+CUTE_API void* CUTE_CALL sequence_buffer_at_index(sequence_buffer_t* sequence_buffer, int index);
+CUTE_API void CUTE_CALL sequence_buffer_generate_ack_bits(sequence_buffer_t* sequence_buffer, uint16_t* ack, uint32_t* ack_bits);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -75,9 +75,9 @@ struct packet_queue_t
 	void* packets[CUTE_PACKET_QUEUE_MAX_ENTRIES];
 };
 
-extern CUTE_API void CUTE_CALL packet_queue_init(packet_queue_t* q);
-extern CUTE_API int CUTE_CALL packet_queue_push(packet_queue_t* q, void* packet, int size);
-extern CUTE_API int CUTE_CALL packet_queue_pop(packet_queue_t* q, void** packet, int *size);
+CUTE_API void CUTE_CALL packet_queue_init(packet_queue_t* q);
+CUTE_API int CUTE_CALL packet_queue_push(packet_queue_t* q, void* packet, int size);
+CUTE_API int CUTE_CALL packet_queue_pop(packet_queue_t* q, void** packet, int *size);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -102,23 +102,23 @@ struct ack_system_config_t
 
 struct ack_system_t;
 
-extern CUTE_API ack_system_t* CUTE_CALL ack_system_make(const ack_system_config_t* config);
-extern CUTE_API void CUTE_CALL ack_system_destroy(ack_system_t* transport);
-extern CUTE_API void CUTE_CALL ack_system_reset(ack_system_t* transport);
+CUTE_API ack_system_t* CUTE_CALL ack_system_make(const ack_system_config_t* config);
+CUTE_API void CUTE_CALL ack_system_destroy(ack_system_t* transport);
+CUTE_API void CUTE_CALL ack_system_reset(ack_system_t* transport);
 
-extern CUTE_API uint16_t CUTE_CALL ack_system_get_sequence(ack_system_t* ack_system);
-extern CUTE_API int CUTE_CALL ack_system_send_packet(ack_system_t* transport, void* data, int size, uint16_t* sequence = NULL);
-extern CUTE_API int CUTE_CALL ack_system_receive_packet(ack_system_t* transport, void* data, int size);
+CUTE_API uint16_t CUTE_CALL ack_system_get_sequence(ack_system_t* ack_system);
+CUTE_API int CUTE_CALL ack_system_send_packet(ack_system_t* transport, void* data, int size, uint16_t* sequence = NULL);
+CUTE_API int CUTE_CALL ack_system_receive_packet(ack_system_t* transport, void* data, int size);
 
-extern CUTE_API uint16_t* CUTE_CALL ack_system_get_acks(ack_system_t* transport);
-extern CUTE_API int CUTE_CALL ack_system_get_acks_count(ack_system_t* transport);
-extern CUTE_API void CUTE_CALL ack_system_clear_acks(ack_system_t* transport);
+CUTE_API uint16_t* CUTE_CALL ack_system_get_acks(ack_system_t* transport);
+CUTE_API int CUTE_CALL ack_system_get_acks_count(ack_system_t* transport);
+CUTE_API void CUTE_CALL ack_system_clear_acks(ack_system_t* transport);
 
-extern CUTE_API void CUTE_CALL ack_system_update(ack_system_t* transport, float dt);
-extern CUTE_API float CUTE_CALL ack_system_rtt(ack_system_t* transport);
-extern CUTE_API float CUTE_CALL ack_system_packet_loss(ack_system_t* transport);
-extern CUTE_API float CUTE_CALL ack_system_bandwidth_outgoing_kbps(ack_system_t* transport);
-extern CUTE_API float CUTE_CALL ack_system_bandwidth_incoming_kbps(ack_system_t* transport);
+CUTE_API void CUTE_CALL ack_system_update(ack_system_t* transport, float dt);
+CUTE_API float CUTE_CALL ack_system_rtt(ack_system_t* transport);
+CUTE_API float CUTE_CALL ack_system_packet_loss(ack_system_t* transport);
+CUTE_API float CUTE_CALL ack_system_bandwidth_outgoing_kbps(ack_system_t* transport);
+CUTE_API float CUTE_CALL ack_system_bandwidth_incoming_kbps(ack_system_t* transport);
 
 enum ack_system_counter_t
 {
@@ -133,7 +133,7 @@ enum ack_system_counter_t
 	ACK_SYSTEM_COUNTERS_MAX
 };
 
-extern CUTE_API uint64_t CUTE_CALL ack_system_get_counter(ack_system_t* transport, ack_system_counter_t counter);
+CUTE_API uint64_t CUTE_CALL ack_system_get_counter(ack_system_t* transport, ack_system_counter_t counter);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -157,22 +157,22 @@ struct transport_config_t
 
 struct transport_t;
 
-extern CUTE_API transport_t* CUTE_CALL transport_make(const transport_config_t* config);
-extern CUTE_API void CUTE_CALL transport_destroy(transport_t* transport);
-extern CUTE_API void CUTE_CALL transport_reset(transport_t* tranpsport);
+CUTE_API transport_t* CUTE_CALL transport_make(const transport_config_t* config);
+CUTE_API void CUTE_CALL transport_destroy(transport_t* transport);
+CUTE_API void CUTE_CALL transport_reset(transport_t* tranpsport);
 
-extern CUTE_API int CUTE_CALL transport_send_reliably_and_in_order(transport_t* transport, void* data, int size);
-extern CUTE_API int CUTE_CALL transport_send_fire_and_forget(transport_t* transport, void* data, int size);
+CUTE_API int CUTE_CALL transport_send_reliably_and_in_order(transport_t* transport, void* data, int size);
+CUTE_API int CUTE_CALL transport_send_fire_and_forget(transport_t* transport, void* data, int size);
 
-extern CUTE_API int CUTE_CALL transport_recieve_reliably_and_in_order(transport_t* transport, void** data, int* size);
-extern CUTE_API int CUTE_CALL transport_recieve_fire_and_forget(transport_t* transport, void** data, int* size);
-extern CUTE_API void CUTE_CALL transport_free(transport_t* transport, void* data);
+CUTE_API int CUTE_CALL transport_recieve_reliably_and_in_order(transport_t* transport, void** data, int* size);
+CUTE_API int CUTE_CALL transport_recieve_fire_and_forget(transport_t* transport, void** data, int* size);
+CUTE_API void CUTE_CALL transport_free(transport_t* transport, void* data);
 
-extern CUTE_API int CUTE_CALL transport_process_packet(transport_t* transport, void* data, int size, uint16_t sequence);
-extern CUTE_API void CUTE_CALL transport_process_acks(transport_t* transport);
-extern CUTE_API void CUTE_CALL transport_clear_acks(transport_t* transport);
-extern CUTE_API void CUTE_CALL transport_resend_unacked_fragments(transport_t* transport);
-extern CUTE_API int CUTE_CALL transport_unacked_fragment_count(transport_t* transport);
+CUTE_API int CUTE_CALL transport_process_packet(transport_t* transport, void* data, int size, uint16_t sequence);
+CUTE_API void CUTE_CALL transport_process_acks(transport_t* transport);
+CUTE_API void CUTE_CALL transport_clear_acks(transport_t* transport);
+CUTE_API void CUTE_CALL transport_resend_unacked_fragments(transport_t* transport);
+CUTE_API int CUTE_CALL transport_unacked_fragment_count(transport_t* transport);
 
 }
 

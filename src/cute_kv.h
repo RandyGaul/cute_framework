@@ -113,6 +113,4 @@ CUTE_API void CUTE_CALL kv_print(kv_t* kv);
 
 }
 
-#include <cute_kv_utils.h>
-
 #endif // CUTE_KV_H

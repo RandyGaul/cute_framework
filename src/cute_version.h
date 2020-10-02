@@ -29,7 +29,7 @@
 namespace cute
 {
 
-extern CUTE_API const char* CUTE_CALL version_string_linked();
+CUTE_API const char* CUTE_CALL version_string_linked();
 
 }
 

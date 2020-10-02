@@ -28,7 +28,7 @@
 namespace cute
 {
 
-extern CUTE_API error_t CUTE_CALL crypto_init();
+CUTE_API error_t CUTE_CALL crypto_init();
 
 }
 

@@ -29,12 +29,12 @@ namespace cute
 
 struct memory_pool_t;
 
-extern CUTE_API memory_pool_t* CUTE_CALL memory_pool_make(int element_size, int element_count, void* user_allocator_context = NULL);
-extern CUTE_API void CUTE_CALL memory_pool_destroy(memory_pool_t* pool);
+CUTE_API memory_pool_t* CUTE_CALL memory_pool_make(int element_size, int element_count, void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL memory_pool_destroy(memory_pool_t* pool);
 
-extern CUTE_API void* CUTE_CALL memory_pool_alloc(memory_pool_t* pool);
-extern CUTE_API void* CUTE_CALL memory_pool_try_alloc(memory_pool_t* pool);
-extern CUTE_API void CUTE_CALL memory_pool_free(memory_pool_t* pool, void* element);
+CUTE_API void* CUTE_CALL memory_pool_alloc(memory_pool_t* pool);
+CUTE_API void* CUTE_CALL memory_pool_try_alloc(memory_pool_t* pool);
+CUTE_API void CUTE_CALL memory_pool_free(memory_pool_t* pool, void* element);
 
 }
 

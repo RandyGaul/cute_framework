@@ -36,8 +36,8 @@ namespace cute
 
 struct png_cache_t;
 
-extern CUTE_API png_cache_t* CUTE_CALL png_cache_make(void* mem_ctx = NULL);
-extern CUTE_API void CUTE_CALL png_cache_destroy(png_cache_t* cache);
+CUTE_API png_cache_t* CUTE_CALL png_cache_make(void* mem_ctx = NULL);
+CUTE_API void CUTE_CALL png_cache_destroy(png_cache_t* cache);
 
 struct png_t
 {
@@ -48,18 +48,18 @@ struct png_t
 	int h = 0;
 };
 
-extern CUTE_API error_t CUTE_CALL png_cache_load(png_cache_t* cache, const char* png_path, png_t* png = NULL);
-extern CUTE_API error_t CUTE_CALL png_cache_load_mem(png_cache_t* cache, const char* png_path, const void* memory, size_t size, png_t* png = NULL);
-extern CUTE_API void CUTE_CALL png_cache_unload(png_cache_t* cache, png_t* png);
+CUTE_API error_t CUTE_CALL png_cache_load(png_cache_t* cache, const char* png_path, png_t* png = NULL);
+CUTE_API error_t CUTE_CALL png_cache_load_mem(png_cache_t* cache, const char* png_path, const void* memory, size_t size, png_t* png = NULL);
+CUTE_API void CUTE_CALL png_cache_unload(png_cache_t* cache, png_t* png);
 
-extern CUTE_API get_pixels_fn* CUTE_CALL png_cache_get_pixels_fn(png_cache_t* cache);
-extern CUTE_API strpool_t* CUTE_CALL png_cache_get_strpool_ptr(png_cache_t* cache);
+CUTE_API get_pixels_fn* CUTE_CALL png_cache_get_pixels_fn(png_cache_t* cache);
+CUTE_API strpool_t* CUTE_CALL png_cache_get_strpool_ptr(png_cache_t* cache);
 
-extern CUTE_API const animation_t* CUTE_CALL png_cache_make_animation(png_cache_t* cache, const char* name, const array<png_t>& pngs, const array<float>& delays);
-extern CUTE_API const animation_t* CUTE_CALL png_cache_get_animation(png_cache_t* cache, const char* name);
-extern CUTE_API const animation_table_t* CUTE_CALL png_cache_make_animation_table(png_cache_t* cache, const char* sprite_name, const array<const animation_t*>& animations);
-extern CUTE_API const animation_table_t* CUTE_CALL png_cache_get_animation_table(png_cache_t* cache, const char* sprite_name);
-extern CUTE_API sprite_t CUTE_CALL png_cache_make_sprite(png_cache_t* cache, const char* sprite_name, const animation_table_t* table = NULL);
+CUTE_API const animation_t* CUTE_CALL png_cache_make_animation(png_cache_t* cache, const char* name, const array<png_t>& pngs, const array<float>& delays);
+CUTE_API const animation_t* CUTE_CALL png_cache_get_animation(png_cache_t* cache, const char* name);
+CUTE_API const animation_table_t* CUTE_CALL png_cache_make_animation_table(png_cache_t* cache, const char* sprite_name, const array<const animation_t*>& animations);
+CUTE_API const animation_table_t* CUTE_CALL png_cache_get_animation_table(png_cache_t* cache, const char* sprite_name);
+CUTE_API sprite_t CUTE_CALL png_cache_make_sprite(png_cache_t* cache, const char* sprite_name, const animation_table_t* table = NULL);
 
 }
 

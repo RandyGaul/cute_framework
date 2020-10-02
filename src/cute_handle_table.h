@@ -32,14 +32,14 @@ struct handle_allocator_t;
 using handle_t = uint64_t;
 #define CUTE_INVALID_HANDLE (~0ULL)
 
-extern CUTE_API handle_allocator_t* CUTE_CALL handle_allocator_make(int initial_capacity, void* user_allocator_context = NULL);
-extern CUTE_API void CUTE_CALL handle_allocator_destroy(handle_allocator_t* table);
+CUTE_API handle_allocator_t* CUTE_CALL handle_allocator_make(int initial_capacity, void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL handle_allocator_destroy(handle_allocator_t* table);
 
-extern CUTE_API handle_t CUTE_CALL handle_allocator_alloc(handle_allocator_t* table, uint32_t index);
-extern CUTE_API uint32_t CUTE_CALL handle_allocator_get_index(handle_allocator_t* table, handle_t handle);
-extern CUTE_API void CUTE_CALL handle_allocator_update_index(handle_allocator_t* table, handle_t handle, uint32_t index);
-extern CUTE_API void CUTE_CALL handle_allocator_free(handle_allocator_t* table, handle_t handle);
-extern CUTE_API int CUTE_CALL handle_allocator_is_handle_valid(handle_allocator_t* table, handle_t handle);
+CUTE_API handle_t CUTE_CALL handle_allocator_alloc(handle_allocator_t* table, uint32_t index);
+CUTE_API uint32_t CUTE_CALL handle_allocator_get_index(handle_allocator_t* table, handle_t handle);
+CUTE_API void CUTE_CALL handle_allocator_update_index(handle_allocator_t* table, handle_t handle, uint32_t index);
+CUTE_API void CUTE_CALL handle_allocator_free(handle_allocator_t* table, handle_t handle);
+CUTE_API int CUTE_CALL handle_allocator_is_handle_valid(handle_allocator_t* table, handle_t handle);
 
 // -------------------------------------------------------------------------------------------------
 

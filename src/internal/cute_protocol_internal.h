@@ -53,18 +53,18 @@ struct replay_buffer_t
 	uint64_t entries[CUTE_REPLAY_BUFFER_SIZE];
 };
 
-extern CUTE_API void CUTE_CALL replay_buffer_init(replay_buffer_t* replay_buffer);
-extern CUTE_API int CUTE_CALL replay_buffer_cull_duplicate(replay_buffer_t* replay_buffer, uint64_t sequence);
-extern CUTE_API void CUTE_CALL replay_buffer_update(replay_buffer_t* replay_buffer, uint64_t sequence);
+CUTE_API void CUTE_CALL replay_buffer_init(replay_buffer_t* replay_buffer);
+CUTE_API int CUTE_CALL replay_buffer_cull_duplicate(replay_buffer_t* replay_buffer, uint64_t sequence);
+CUTE_API void CUTE_CALL replay_buffer_update(replay_buffer_t* replay_buffer, uint64_t sequence);
 
 // -------------------------------------------------------------------------------------------------
 
 struct packet_allocator_t;
 
-extern CUTE_API packet_allocator_t* CUTE_CALL packet_allocator_make(void* user_allocator_context = NULL);
-extern CUTE_API void CUTE_CALL packet_allocator_destroy(packet_allocator_t* packet_allocator);
-extern CUTE_API void* CUTE_CALL packet_allocator_alloc(packet_allocator_t* packet_allocator, packet_type_t type);
-extern CUTE_API void CUTE_CALL packet_allocator_free(packet_allocator_t* packet_allocator, packet_type_t type, void* packet);
+CUTE_API packet_allocator_t* CUTE_CALL packet_allocator_make(void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL packet_allocator_destroy(packet_allocator_t* packet_allocator);
+CUTE_API void* CUTE_CALL packet_allocator_alloc(packet_allocator_t* packet_allocator, packet_type_t type);
+CUTE_API void CUTE_CALL packet_allocator_free(packet_allocator_t* packet_allocator, packet_type_t type, void* packet);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -114,8 +114,8 @@ struct packet_payload_t
 	uint8_t payload[CUTE_PROTOCOL_PACKET_PAYLOAD_MAX];
 };
 
-extern CUTE_API int CUTE_CALL packet_write(void* packet_ptr, uint8_t* buffer, uint64_t application_id, uint64_t sequence, const crypto_key_t* key);
-extern CUTE_API void* CUTE_CALL packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t application_id, packet_allocator_t* pa, replay_buffer_t* replay_buffer = NULL, uint64_t* sequence_ptr = NULL);
+CUTE_API int CUTE_CALL packet_write(void* packet_ptr, uint8_t* buffer, uint64_t application_id, uint64_t sequence, const crypto_key_t* key);
+CUTE_API void* CUTE_CALL packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t application_id, packet_allocator_t* pa, replay_buffer_t* replay_buffer = NULL, uint64_t* sequence_ptr = NULL);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -145,8 +145,8 @@ struct connect_token_decrypted_t
 	uint8_t hmac_bytes[CUTE_CRYPTO_HMAC_BYTES];
 };
 
-extern CUTE_API uint8_t* CUTE_CALL client_read_connect_token_from_web_service(uint8_t* buffer, uint64_t application_id, uint64_t current_time, connect_token_t* token);
-extern CUTE_API int CUTE_CALL server_decrypt_connect_token_packet(uint8_t* packet_buffer, const crypto_key_t* secret_key, uint64_t application_id, uint64_t current_time, connect_token_decrypted_t* token);
+CUTE_API uint8_t* CUTE_CALL client_read_connect_token_from_web_service(uint8_t* buffer, uint64_t application_id, uint64_t current_time, connect_token_t* token);
+CUTE_API int CUTE_CALL server_decrypt_connect_token_packet(uint8_t* packet_buffer, const crypto_key_t* secret_key, uint64_t application_id, uint64_t current_time, connect_token_decrypted_t* token);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -182,17 +182,17 @@ struct hashtable_t
 	void* mem_ctx;
 };
 
-extern CUTE_API int CUTE_CALL hashtable_init(hashtable_t* table, int key_size, int item_size, int capacity, void* mem_ctx);
-extern CUTE_API void CUTE_CALL hashtable_cleanup(hashtable_t* table);
+CUTE_API int CUTE_CALL hashtable_init(hashtable_t* table, int key_size, int item_size, int capacity, void* mem_ctx);
+CUTE_API void CUTE_CALL hashtable_cleanup(hashtable_t* table);
 
-extern CUTE_API void* CUTE_CALL hashtable_insert(hashtable_t* table, const void* key, const void* item);
-extern CUTE_API void CUTE_CALL hashtable_remove(hashtable_t* table, const void* key);
-extern CUTE_API void CUTE_CALL hashtable_clear(hashtable_t* table);
-extern CUTE_API void* CUTE_CALL hashtable_find(const hashtable_t* table, const void* key);
-extern CUTE_API int CUTE_CALL hashtable_count(const hashtable_t* table);
-extern CUTE_API void* CUTE_CALL hashtable_items(const hashtable_t* table);
-extern CUTE_API void* CUTE_CALL hashtable_keys(const hashtable_t* table);
-extern CUTE_API void CUTE_CALL hashtable_swap(hashtable_t* table, int index_a, int index_b);
+CUTE_API void* CUTE_CALL hashtable_insert(hashtable_t* table, const void* key, const void* item);
+CUTE_API void CUTE_CALL hashtable_remove(hashtable_t* table, const void* key);
+CUTE_API void CUTE_CALL hashtable_clear(hashtable_t* table);
+CUTE_API void* CUTE_CALL hashtable_find(const hashtable_t* table, const void* key);
+CUTE_API int CUTE_CALL hashtable_count(const hashtable_t* table);
+CUTE_API void* CUTE_CALL hashtable_items(const hashtable_t* table);
+CUTE_API void* CUTE_CALL hashtable_keys(const hashtable_t* table);
+CUTE_API void CUTE_CALL hashtable_swap(hashtable_t* table, int index_a, int index_b);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -219,11 +219,11 @@ struct connect_token_cache_t
 	void* mem_ctx;
 };
 
-extern CUTE_API int CUTE_CALL connect_token_cache_init(connect_token_cache_t* cache, int capacity, void* mem_ctx);
-extern CUTE_API void CUTE_CALL connect_token_cache_cleanup(connect_token_cache_t* cache);
+CUTE_API int CUTE_CALL connect_token_cache_init(connect_token_cache_t* cache, int capacity, void* mem_ctx);
+CUTE_API void CUTE_CALL connect_token_cache_cleanup(connect_token_cache_t* cache);
 
-extern CUTE_API connect_token_cache_entry_t* CUTE_CALL connect_token_cache_find(connect_token_cache_t* cache, const uint8_t* hmac_bytes);
-extern CUTE_API void CUTE_CALL connect_token_cache_add(connect_token_cache_t* cache, const uint8_t* hmac_bytes);
+CUTE_API connect_token_cache_entry_t* CUTE_CALL connect_token_cache_find(connect_token_cache_t* cache, const uint8_t* hmac_bytes);
+CUTE_API void CUTE_CALL connect_token_cache_add(connect_token_cache_t* cache, const uint8_t* hmac_bytes);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -247,18 +247,18 @@ struct encryption_map_t
 	hashtable_t table;
 };
 
-extern CUTE_API int CUTE_CALL encryption_map_init(encryption_map_t* map, void* mem_ctx);
-extern CUTE_API void CUTE_CALL encryption_map_cleanup(encryption_map_t* map);
-extern CUTE_API void CUTE_CALL encryption_map_clear(encryption_map_t* map);
-extern CUTE_API int CUTE_CALL encryption_map_count(encryption_map_t* map);
+CUTE_API int CUTE_CALL encryption_map_init(encryption_map_t* map, void* mem_ctx);
+CUTE_API void CUTE_CALL encryption_map_cleanup(encryption_map_t* map);
+CUTE_API void CUTE_CALL encryption_map_clear(encryption_map_t* map);
+CUTE_API int CUTE_CALL encryption_map_count(encryption_map_t* map);
 
-extern CUTE_API void CUTE_CALL encryption_map_insert(encryption_map_t* map, endpoint_t endpoint, const encryption_state_t* state);
-extern CUTE_API encryption_state_t* CUTE_CALL encryption_map_find(encryption_map_t* map, endpoint_t endpoint);
-extern CUTE_API void CUTE_CALL encryption_map_remove(encryption_map_t* map, endpoint_t endpoint);
-extern CUTE_API endpoint_t* CUTE_CALL encryption_map_get_endpoints(encryption_map_t* map);
-extern CUTE_API encryption_state_t* CUTE_CALL encryption_map_get_states(encryption_map_t* map);
+CUTE_API void CUTE_CALL encryption_map_insert(encryption_map_t* map, endpoint_t endpoint, const encryption_state_t* state);
+CUTE_API encryption_state_t* CUTE_CALL encryption_map_find(encryption_map_t* map, endpoint_t endpoint);
+CUTE_API void CUTE_CALL encryption_map_remove(encryption_map_t* map, endpoint_t endpoint);
+CUTE_API endpoint_t* CUTE_CALL encryption_map_get_endpoints(encryption_map_t* map);
+CUTE_API encryption_state_t* CUTE_CALL encryption_map_get_states(encryption_map_t* map);
 
-extern CUTE_API void CUTE_CALL encryption_map_look_for_timeouts_or_expirations(encryption_map_t* map, float dt, uint64_t time);
+CUTE_API void CUTE_CALL encryption_map_look_for_timeouts_or_expirations(encryption_map_t* map, float dt, uint64_t time);
 
 // -------------------------------------------------------------------------------------------------
 

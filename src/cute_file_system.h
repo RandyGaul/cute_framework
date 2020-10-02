@@ -48,31 +48,31 @@ struct stat_t
 	uint64_t last_accessed_time;
 };
 
-extern CUTE_API const char* CUTE_CALL file_system_get_base_dir();
-extern CUTE_API error_t CUTE_CALL file_system_set_write_dir(const char* platform_dependent_directory);
-extern CUTE_API error_t CUTE_CALL file_system_mount(const char* archive, const char* mount_point, bool append_to_path = true);
-extern CUTE_API error_t CUTE_CALL file_system_dismount(const char* archive);
-extern CUTE_API error_t CUTE_CALL file_system_stat(const char* virtual_path, stat_t* stat);
-extern CUTE_API file_t* CUTE_CALL file_system_create_file(const char* virtual_path);
-extern CUTE_API file_t* CUTE_CALL file_system_open_file_for_write(const char* virtual_path);
-extern CUTE_API file_t* CUTE_CALL file_system_open_file_for_append(const char* virtual_path);
-extern CUTE_API file_t* CUTE_CALL file_system_open_file_for_read(const char* virtual_path);
-extern CUTE_API error_t CUTE_CALL file_system_close(file_t* file);
-extern CUTE_API error_t CUTE_CALL file_system_delete(const char* virtual_path);
-extern CUTE_API error_t CUTE_CALL file_system_create_dir(const char* virtual_path);
-extern CUTE_API const char** CUTE_CALL file_system_enumerate_directory(const char* virtual_path);
-extern CUTE_API void CUTE_CALL file_system_free_enumerated_directory(const char** directory_list);
-extern CUTE_API error_t CUTE_CALL file_system_file_exists(const char* virtual_path);
-extern CUTE_API size_t CUTE_CALL file_system_read(file_t* file, void* buffer, size_t bytes);
-extern CUTE_API size_t CUTE_CALL file_system_write(file_t* file, const void* buffer, size_t bytes);
-extern CUTE_API error_t CUTE_CALL file_system_eof(file_t* file);
-extern CUTE_API size_t CUTE_CALL file_system_tell(file_t* file);
-extern CUTE_API error_t CUTE_CALL file_system_seek(file_t* file, size_t position);
-extern CUTE_API size_t CUTE_CALL file_system_size(file_t* file);
-extern CUTE_API error_t CUTE_CALL file_system_flush(file_t* file);
-extern CUTE_API error_t CUTE_CALL file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size = NULL, void* user_allocator_context = NULL);
-extern CUTE_API error_t CUTE_CALL file_system_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size = NULL, void* user_allocator_context = NULL);
-extern CUTE_API error_t CUTE_CALL file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
+CUTE_API const char* CUTE_CALL file_system_get_base_dir();
+CUTE_API error_t CUTE_CALL file_system_set_write_dir(const char* platform_dependent_directory);
+CUTE_API error_t CUTE_CALL file_system_mount(const char* archive, const char* mount_point, bool append_to_path = true);
+CUTE_API error_t CUTE_CALL file_system_dismount(const char* archive);
+CUTE_API error_t CUTE_CALL file_system_stat(const char* virtual_path, stat_t* stat);
+CUTE_API file_t* CUTE_CALL file_system_create_file(const char* virtual_path);
+CUTE_API file_t* CUTE_CALL file_system_open_file_for_write(const char* virtual_path);
+CUTE_API file_t* CUTE_CALL file_system_open_file_for_append(const char* virtual_path);
+CUTE_API file_t* CUTE_CALL file_system_open_file_for_read(const char* virtual_path);
+CUTE_API error_t CUTE_CALL file_system_close(file_t* file);
+CUTE_API error_t CUTE_CALL file_system_delete(const char* virtual_path);
+CUTE_API error_t CUTE_CALL file_system_create_dir(const char* virtual_path);
+CUTE_API const char** CUTE_CALL file_system_enumerate_directory(const char* virtual_path);
+CUTE_API void CUTE_CALL file_system_free_enumerated_directory(const char** directory_list);
+CUTE_API error_t CUTE_CALL file_system_file_exists(const char* virtual_path);
+CUTE_API size_t CUTE_CALL file_system_read(file_t* file, void* buffer, size_t bytes);
+CUTE_API size_t CUTE_CALL file_system_write(file_t* file, const void* buffer, size_t bytes);
+CUTE_API error_t CUTE_CALL file_system_eof(file_t* file);
+CUTE_API size_t CUTE_CALL file_system_tell(file_t* file);
+CUTE_API error_t CUTE_CALL file_system_seek(file_t* file, size_t position);
+CUTE_API size_t CUTE_CALL file_system_size(file_t* file);
+CUTE_API error_t CUTE_CALL file_system_flush(file_t* file);
+CUTE_API error_t CUTE_CALL file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size = NULL, void* user_allocator_context = NULL);
+CUTE_API error_t CUTE_CALL file_system_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size = NULL, void* user_allocator_context = NULL);
+CUTE_API error_t CUTE_CALL file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
 
 }
 

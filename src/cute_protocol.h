@@ -54,7 +54,7 @@ namespace cute
 namespace protocol
 {
 
-extern CUTE_API int CUTE_CALL generate_connect_token(
+CUTE_API int CUTE_CALL generate_connect_token(
 	uint64_t application_id,
 	uint64_t creation_timestamp,
 	const crypto_key_t* client_to_server_key,
@@ -87,39 +87,39 @@ enum client_state_t : int
 	CLIENT_STATE_CONNECTED                     =  3,
 };
 
-extern CUTE_API client_t* CUTE_CALL client_make(uint16_t port, const char* web_service_address, uint64_t application_id, void* user_allocator_context = NULL);
-extern CUTE_API void CUTE_CALL client_destroy(client_t* client);
+CUTE_API client_t* CUTE_CALL client_make(uint16_t port, const char* web_service_address, uint64_t application_id, void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL client_destroy(client_t* client);
 
-extern CUTE_API int CUTE_CALL client_connect(client_t* client, const uint8_t* connect_token);
-extern CUTE_API void CUTE_CALL client_disconnect(client_t* client);
-extern CUTE_API void CUTE_CALL client_update(client_t* client, float dt, uint64_t current_time);
+CUTE_API int CUTE_CALL client_connect(client_t* client, const uint8_t* connect_token);
+CUTE_API void CUTE_CALL client_disconnect(client_t* client);
+CUTE_API void CUTE_CALL client_update(client_t* client, float dt, uint64_t current_time);
 
-extern CUTE_API int CUTE_CALL client_get_packet(client_t* client, void** data, int* size, uint64_t* sequence);
-extern CUTE_API void CUTE_CALL client_free_packet(client_t* client, void* packet);
-extern CUTE_API int CUTE_CALL client_send_data(client_t* client, const void* data, int size);
+CUTE_API int CUTE_CALL client_get_packet(client_t* client, void** data, int* size, uint64_t* sequence);
+CUTE_API void CUTE_CALL client_free_packet(client_t* client, void* packet);
+CUTE_API int CUTE_CALL client_send_data(client_t* client, const void* data, int size);
 
-extern CUTE_API client_state_t CUTE_CALL client_get_state(client_t* client);
-extern CUTE_API uint64_t CUTE_CALL client_get_handle(client_t* client);
-extern CUTE_API uint32_t CUTE_CALL client_get_max_clients(client_t* client);
-extern CUTE_API endpoint_t CUTE_CALL client_get_server_address(client_t* client);
-extern CUTE_API uint16_t CUTE_CALL client_get_port(client_t* client);
+CUTE_API client_state_t CUTE_CALL client_get_state(client_t* client);
+CUTE_API uint64_t CUTE_CALL client_get_handle(client_t* client);
+CUTE_API uint32_t CUTE_CALL client_get_max_clients(client_t* client);
+CUTE_API endpoint_t CUTE_CALL client_get_server_address(client_t* client);
+CUTE_API uint16_t CUTE_CALL client_get_port(client_t* client);
 
 // -------------------------------------------------------------------------------------------------
 
 struct server_t;
 
-extern CUTE_API server_t* CUTE_CALL server_make(uint64_t application_id, const crypto_key_t* secret_key, void* mem_ctx);
-extern CUTE_API void CUTE_CALL server_destroy(server_t* server);
+CUTE_API server_t* CUTE_CALL server_make(uint64_t application_id, const crypto_key_t* secret_key, void* mem_ctx);
+CUTE_API void CUTE_CALL server_destroy(server_t* server);
 
-extern CUTE_API int CUTE_CALL server_start(server_t* server, const char* address, uint32_t connection_timeout);
-extern CUTE_API void CUTE_CALL server_stop(server_t* server);
-extern CUTE_API int CUTE_CALL server_running(server_t* server);
+CUTE_API int CUTE_CALL server_start(server_t* server, const char* address, uint32_t connection_timeout);
+CUTE_API void CUTE_CALL server_stop(server_t* server);
+CUTE_API int CUTE_CALL server_running(server_t* server);
 
-extern CUTE_API void CUTE_CALL server_update(server_t* server, float dt, uint64_t current_time);
-extern CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_handle);
+CUTE_API void CUTE_CALL server_update(server_t* server, float dt, uint64_t current_time);
+CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_handle);
 
-extern CUTE_API int CUTE_CALL server_client_count(server_t* server);
-extern CUTE_API uint64_t CUTE_CALL server_get_client_id_from_handle(server_t* server, handle_t client_handle);
+CUTE_API int CUTE_CALL server_client_count(server_t* server);
+CUTE_API uint64_t CUTE_CALL server_get_client_id_from_handle(server_t* server, handle_t client_handle);
 
 enum server_event_type_t : int
 {
@@ -152,12 +152,12 @@ struct server_event_t
 	} u;
 };
 
-extern CUTE_API int CUTE_CALL server_poll_event(server_t* server, server_event_t* event);
-extern CUTE_API void CUTE_CALL server_free_packet(server_t* server, void* packet);
-extern CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_handle);
-extern CUTE_API void CUTE_CALL server_broadcast_to_all_clients(server_t* server, const void* packet, int size);
-extern CUTE_API void CUTE_CALL server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t client_handle);
-extern CUTE_API int CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, handle_t client_handle);
+CUTE_API int CUTE_CALL server_poll_event(server_t* server, server_event_t* event);
+CUTE_API void CUTE_CALL server_free_packet(server_t* server, void* packet);
+CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_handle);
+CUTE_API void CUTE_CALL server_broadcast_to_all_clients(server_t* server, const void* packet, int size);
+CUTE_API void CUTE_CALL server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t client_handle);
+CUTE_API int CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, handle_t client_handle);
 
 // -------------------------------------------------------------------------------------------------
 

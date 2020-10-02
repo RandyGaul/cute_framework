@@ -46,9 +46,9 @@ struct endpoint_t
 	} u;
 };
 
-extern CUTE_API int CUTE_CALL endpoint_init(endpoint_t* endpoint, const char* address_and_port_string);
-extern CUTE_API void CUTE_CALL endpoint_to_string(endpoint_t endpoint, char* buffer, int buffer_size);
-extern CUTE_API int CUTE_CALL endpoint_equals(endpoint_t a, endpoint_t b);
+CUTE_API int CUTE_CALL endpoint_init(endpoint_t* endpoint, const char* address_and_port_string);
+CUTE_API void CUTE_CALL endpoint_to_string(endpoint_t endpoint, char* buffer, int buffer_size);
+CUTE_API int CUTE_CALL endpoint_equals(endpoint_t a, endpoint_t b);
 
 }
 

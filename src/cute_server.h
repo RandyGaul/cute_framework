@@ -45,23 +45,23 @@ struct server_config_t
 	int event_queue_can_grow = 1;
 };
 
-extern CUTE_API server_t* CUTE_CALL server_alloc(void* user_allocator_context = NULL);
-extern CUTE_API void CUTE_CALL server_destroy(server_t* server);
+CUTE_API server_t* CUTE_CALL server_alloc(void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL server_destroy(server_t* server);
 
-extern CUTE_API int CUTE_CALL server_start(server_t* server, const char* address_and_port, const crypto_key_t* public_key, const crypto_key_t* secret_key, const server_config_t* config = NULL);
-extern CUTE_API void CUTE_CALL server_stop(server_t* server);
+CUTE_API int CUTE_CALL server_start(server_t* server, const char* address_and_port, const crypto_key_t* public_key, const crypto_key_t* secret_key, const server_config_t* config = NULL);
+CUTE_API void CUTE_CALL server_stop(server_t* server);
 
-extern CUTE_API void CUTE_CALL server_update(server_t* server, float dt);
-extern CUTE_API int CUTE_CALL server_poll_event(server_t* server, server_event_t* event);
-extern CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_id, int send_notification_to_client = 1);
-extern CUTE_API void CUTE_CALL server_look_for_and_disconnected_timed_out_clients(server_t* server);
-extern CUTE_API void CUTE_CALL server_broadcast_to_all_clients(server_t* server, const void* packet, int size, int reliable);
-extern CUTE_API void CUTE_CALL server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t client_id, int reliable);
-extern CUTE_API void CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, handle_t client_id, int reliable);
+CUTE_API void CUTE_CALL server_update(server_t* server, float dt);
+CUTE_API int CUTE_CALL server_poll_event(server_t* server, server_event_t* event);
+CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_id, int send_notification_to_client = 1);
+CUTE_API void CUTE_CALL server_look_for_and_disconnected_timed_out_clients(server_t* server);
+CUTE_API void CUTE_CALL server_broadcast_to_all_clients(server_t* server, const void* packet, int size, int reliable);
+CUTE_API void CUTE_CALL server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t client_id, int reliable);
+CUTE_API void CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, handle_t client_id, int reliable);
 
-extern CUTE_API float CUTE_CALL server_get_last_packet_recieved_time_from_client(server_t* server, handle_t client_id);
+CUTE_API float CUTE_CALL server_get_last_packet_recieved_time_from_client(server_t* server, handle_t client_id);
 
-extern CUTE_API handle_t CUTE_CALL server_connect_loopback_client();
+CUTE_API handle_t CUTE_CALL server_connect_loopback_client();
 
 enum server_event_type_t
 {
