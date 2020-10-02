@@ -10,7 +10,7 @@ Cute runs everywhere SDL2 can run.
 - [ ] Android
 - [x] Web browsers
 - [x] Nintendo Switch
-- [x] And more (see SDL2's supported platforms list https://wiki.libsdl.org/Installation)
+- [x] And more (see [SDL2's supported platforms](https://wiki.libsdl.org/Installation))
 
 The underlying idea of Cute puts practicality up above all else. A lot of focus placed on documentation and examples makes development with Cute as painless as possible, without getting in the way of how you prefer to develop.
 
@@ -242,15 +242,29 @@ Note: This has temporarily become a big TODO list. This list will eventually nee
 
 ## Integrating Cute with your Project
 
-Cute has a couple options for integration into your project. Which one your pick depends on your preferences. If you are unsure which to pick, go with option #1 since it is the most traditional.
+Cute was not designed for dynamic linking as a shared library (DLL on Windows and .a elsewhere). You can build Cute as a shared library but there is no benefit to doing so. Instead, there are two encouraged ways to use Cute.
 
-1. Download prebuilt binaries and headers for your platform.
-2. Download the single-file header format of Cute, with prebuilt dependencies.
-3. Download the source code of Cute and run the build scripts yourself.
+1. Build Cute as a static library and link against it, including the Cute headers into your game.
+2. Build all of Cute's source as apart of your game directly.
 
-Options #1 and #2 are nearly identical, except #1 has multiple headers and prebuilt shared libraries, while #2 provides Cute as a single-file header along with libsodium as a prebuilt shared library (which must be linked agianst).
+#### Static Linking with Cute
 
-Option #3 should work out-of-the-box for Windows, Linux, Mac OSX, iOS, and Android. Other platforms will require manual tinkering for support.
+The most versatile way to build Cute as a shared library is to use [cmake](https://cmake.org/). However, if you don't want to use cmake there are some other easy to use options for Windows and MacOSX users.
+
+Instructions for cmake.
+
+Single-click instructions for Windows .cmd/.bat file.
+
+Instructions for MacOSX using make with Clang.
+
+
+#### Cute as a Single File Header
+
+Blah.
+
+#### Installing Dependencies
+
+Blah.
 
 ## Support
 
@@ -262,9 +276,10 @@ Contributions are welcome, so feel free to open a [pull-request](https://github.
 
 ## Dependencies
 
-Cute has a few external dependencies, linked as shared libraries. This means your game will need to ship with the SDL2 shared library, and the Sodium shared library.
+Cute has a few external dependencies, linked as shared libraries.
 * [SDL2](https://www.libsdl.org/), used for platform handling and GL context creation.
 * [libsodium](https://libsodium.gitbook.io/doc/), used for encryption + authentication.
+* [mbedtls](https://libsodium.gitbook.io/doc/), used for encryption + authentication.
 
 Cute has a few internal dependencies, built straight from source as apart of Cute.
 * [glad](https://github.com/Dav1dde/glad), used to load OpenGL function pointers on the Windows platform.
@@ -273,6 +288,6 @@ Cute has a few internal dependencies, built straight from source as apart of Cut
 * [Cute Headers](https://github.com/RandyGaul/cute_headers), used to implement all kinds of things. These headers were implemented by the author of the Cute Framework, and are used to implement the majority of the features in the Cute Framework. These headers are built by embedding the source directly, via single-file header format.
 * [sokol_gfx.h](https://github.com/floooh/sokol), used to implement all rendering and abstract away low level platform-specific hardware acceleration APIs.
 
-### Why use External Dependencies at all?
+#### Why use External Dependencies at all?
 
-Some people really dislike external dependencies (requiring a shared library to be present when shipping your game). There's a lot to talk about here, but to keep things short Cute uses dynamic libraries here to simplify the build process. Since SDL2 and Sodium are written in C their ABIs are stable, so on Windows Cute can be downloaded with prebuilt binaries and hooked up without much effort. Supporting static linking would complicate the build process significantly without providing much of a benefit.
+Some people really dislike external dependencies (requiring a shared library to be present when shipping your game). It can be annoying to have to try and remember to ship shared libraries along with the game's executable. There's a lot to talk about here, but to keep things short Cute uses dynamic libraries here to simplify the build process. Since SDL2 and Sodium are written in C their ABIs are stable, so on Windows Cute can be downloaded with prebuilt binaries and hooked up without much effort. Supporting static linking would complicate the build process significantly without providing much of a benefit.
