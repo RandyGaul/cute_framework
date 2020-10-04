@@ -36,6 +36,8 @@ using namespace cute;
 #include <systems/light_system.h>
 #include <systems/board_system.h>
 
+float volume = 0.35f;
+
 void do_imgui_stuff(app_t* app, float dt)
 {
 	static bool open = true;
@@ -51,10 +53,12 @@ void do_imgui_stuff(app_t* app, float dt)
 
 	if (open) {
 		// Editor UI.
-		//ImGui::SetNextWindowCollapsed(true, ImGuiCond_Appearing);
+		ImGui::SetNextWindowCollapsed(true, ImGuiCond_Appearing);
 		ImGui::Begin("Dev Tool", &open);
 
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		ImGui::Text("Level %d", world->level_index);
+		ImGui::Text("%.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		ImGui::SliderFloat("Volume", &volume, 0, 1);
 
 		if (ImGui::Button("Next Level")) {
 			world->next_level(world->level_index + 1);
@@ -121,6 +125,15 @@ void do_imgui_stuff(app_t* app, float dt)
 					for (int i = 0; i < World::LEVEL_H; ++i) {
 						for (int j = 0; j < World::LEVEL_W; ++j) {
 							char c = world->board.data[i][j].code;
+							if (c == 'X') {
+								// Only save bottom left corner of big ice blocks.
+								// This is consistent with their initialization expectation.
+								entity_t e = world->board.data[i][j].entity;
+								BoardPiece* board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
+								if (!(board_piece->x == j && board_piece->y == i)) {
+									c = '0';
+								}
+							}
 							file_system_write(fp, &c, 1);
 						}
 						char c = '\n';
@@ -358,6 +371,7 @@ void do_lose_screen_stuff(float dt)
 void do_main_loop_once()
 {
 	float dt = calc_dt();
+	music_set_volume(app, volume * volume);
 	app_update(app, dt);
 	if (world->load_level_dirty_flag) select_level(world->level_index);
 	app_update_systems(app, dt);
@@ -377,10 +391,8 @@ int main(int argc, const char** argv)
 	audio_t* audio = audio_load_ogg("BlockGirl.ogg");
 	error_t err = app_init_audio(app);
 	if (err.is_error()) printf("%s\n", err.details);
-	music_set_volume(app, 0.35f);
 	music_set_loop(app, true);
 	music_play(app, audio);
-	music_set_volume(app, 0);
 
 #ifdef CUTE_EMSCRIPTEN
 	emscripten_set_main_loop(do_main_loop_once, 0, true);
