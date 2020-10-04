@@ -48,7 +48,7 @@ CUTE_API error_t CUTE_CALL music_play(app_t* app, audio_t* audio_source, float f
 CUTE_API error_t CUTE_CALL music_stop(app_t* app, float fade_out_time = 0);
 CUTE_API void CUTE_CALL music_set_volume(app_t* app, float volume);
 CUTE_API void CUTE_CALL music_set_pitch(app_t* app, float pitch);
-CUTE_API void CUTE_CALL music_set_loop(app_t* app, int loop);
+CUTE_API void CUTE_CALL music_set_loop(app_t* app, bool true_to_loop);
 CUTE_API void CUTE_CALL music_pause(app_t* app);
 CUTE_API void CUTE_CALL music_resume(app_t* app);
 CUTE_API error_t CUTE_CALL music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time = 0, float fade_in_time = 0);

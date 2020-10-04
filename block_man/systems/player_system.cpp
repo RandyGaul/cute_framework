@@ -442,7 +442,7 @@ void player_system_update(app_t* app, float dt, void* udata, Transform* transfor
 
 		if (!board_piece->is_moving) {
 			if (!player->won) {
-				if (Darkness::is_dark) {
+				if (LAMP && Darkness::is_dark) {
 					int lamp_x, lamp_y;
 					LAMP->position(&lamp_x, &lamp_y);
 					float d = s_dist(lamp_x, lamp_y, board_piece->x, board_piece->y);
@@ -456,13 +456,13 @@ void player_system_update(app_t* app, float dt, void* udata, Transform* transfor
 				int old_moves = world->moves;
 				bool update_anim = handle_input(app, dt, board_piece, player);
 				if (old_moves != world->moves) {
-					LAMP->add_oil(-1);
+					if (LAMP) LAMP->add_oil(-1);
 				}
 				if (update_anim) set_player_animation_based_on_facing_direction(player, animator);
 				if (player->oil != INVALID_ENTITY) {
 					app_delayed_destroy_entity(app, player->oil);
 					player->oil = INVALID_ENTITY;
-					LAMP->add_oil(30);
+					if (LAMP) LAMP->add_oil(30);
 				}
 			} else {
 				coroutine_t* co = &player->co;

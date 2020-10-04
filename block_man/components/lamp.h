@@ -65,4 +65,9 @@ CUTE_INLINE cute::error_t Lamp_serialize(app_t* app, kv_t* kv, entity_t entity, 
 	return kv_error_state(kv);
 }
 
+CUTE_INLINE void Lamp_cleanup(app_t* app, entity_t entity, void* component, void* udata)
+{
+	LAMP = NULL;
+}
+
 #endif // LAMP_H

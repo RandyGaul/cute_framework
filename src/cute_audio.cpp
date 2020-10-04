@@ -24,6 +24,7 @@
 #include <cute_array.h>
 #include <cute_doubly_list.h>
 #include <cute_math.h>
+#include <cute_file_system.h>
 
 #include <internal/cute_app_internal.h>
 
@@ -52,7 +53,7 @@ struct audio_t : public cs_loaded_sound_t
 
 	promise_t user_promise;
 	promise_t play_promise;
-	void* mem_ctx;
+	void* mem_ctx = NULL;
 };
 
 using sound_t = cs_playing_sound_t;
@@ -71,13 +72,23 @@ static CUTE_INLINE audio_t* s_audio_make(audio_t audio_struct, void* user_alloca
 
 audio_t* audio_load_ogg(const char* path, void* user_allocator_context)
 {
-	audio_t audio_struct = cs_load_ogg(path);
+	void* data;
+	size_t sz;
+	file_system_read_entire_file_to_memory(path, &data, &sz);
+	audio_t audio_struct;
+	cs_read_mem_ogg(data, (int)sz, &audio_struct);
+	CUTE_FREE(data, NULL);
 	return s_audio_make(audio_struct, user_allocator_context);
 }
 
 audio_t* audio_load_wav(const char* path, void* user_allocator_context)
 {
-	audio_t audio_struct = cs_load_wav(path);
+	void* data;
+	size_t sz;
+	file_system_read_entire_file_to_memory(path, &data, &sz);
+	audio_t audio_struct;
+	cs_read_mem_wav(data, (int)sz, &audio_struct);
+	CUTE_FREE(data, NULL);
 	return s_audio_make(audio_struct, user_allocator_context);
 }
 
@@ -392,12 +403,12 @@ void music_set_pitch(app_t* app, float pitch)
 	// Todo.
 }
 
-void music_set_loop(app_t* app, int loop)
+void music_set_loop(app_t* app, bool true_to_loop)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return;
-	if (as->music_playing) as->music_playing->sound.looped = 1;
-	if (as->music_next) as->music_next->sound.looped = 1;
+	if (as->music_playing) as->music_playing->sound.looped = true_to_loop ? 1 : 0;
+	if (as->music_next) as->music_next->sound.looped = true_to_loop ? 1 : 0;
 }
 
 void music_pause(app_t* app)

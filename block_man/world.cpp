@@ -147,7 +147,7 @@ const char* schema_torch = CUTE_STRINGIZE(
 	Reflection = { },
 	BoardPiece = { },
 	Shadow = { small = "true" },
-	Light = { radius = 32 },
+	Light = { radius = 64 },
 );
 
 const char* schema_big_ice_block = CUTE_STRINGIZE(
@@ -273,7 +273,7 @@ void ecs_registration(app_t* app)
 	REGISTER_COMPONENT(Fire, NULL);
 	REGISTER_COMPONENT(Light, NULL);
 	REGISTER_COMPONENT(Oil, NULL);
-	REGISTER_COMPONENT(Lamp, NULL);
+	REGISTER_COMPONENT(Lamp, Lamp_cleanup);
 	REGISTER_COMPONENT(Ladder, NULL);
 
 	// Order of entity registration matters if using `inherits_from`.

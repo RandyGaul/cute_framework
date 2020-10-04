@@ -51,7 +51,7 @@
 
 #include <imgui/imgui.h>
 
-#if defined(SOKOL_GLCORE33) || defined(SOKOL_GLES3)
+#if defined(SOKOL_GLCORE33) || defined(SOKOL_GLES3) || defined(SOKOL_GLES2)
 #	include <glad/glad.h>
 #endif
 
@@ -223,7 +223,12 @@ void app_update(app_t* app, float dt)
 {
 	app->dt = dt;
 	pump_input_msgs(app);
-	if (app->audio_system) audio_system_update(app->audio_system, dt);
+	if (app->audio_system) {
+		audio_system_update(app->audio_system, dt);
+#ifdef CUTE_EMSCRIPTEN
+		app_do_mixing(app);
+#endif // CUTE_EMSCRIPTEN
+	}
 	if (app->using_imgui) {
 		simgui_new_frame(app->w, app->h, dt);
 		ImGui_ImplSDL2_NewFrame(app->window);
@@ -290,16 +295,32 @@ error_t app_init_net(app_t* app)
 	return net_init();
 }
 
-error_t app_init_audio(app_t* app, int max_simultaneous_sounds)
+error_t app_init_audio(app_t* app, bool spawn_mix_thread, int max_simultaneous_sounds)
 {
-	app->cute_sound = cs_make_context(NULL, 44100, 1024, 0, app->mem_ctx);
+	app->cute_sound = cs_make_context(NULL, 44100, 1024 * 4, 0, app->mem_ctx);
 	if (app->cute_sound) {
-		cs_spawn_mix_thread(app->cute_sound);
+#ifndef CUTE_EMSCRIPTEN
+		if (spawn_mix_thread) {
+			cs_spawn_mix_thread(app->cute_sound);
+			app->spawned_mix_thread = true;
+		}
+#endif // CUTE_EMSCRIPTEN
 		app->audio_system = audio_system_make(max_simultaneous_sounds, app->mem_ctx);
 		return error_success();
 	} else {
 		return error_failure(cs_error_reason);
 	}
+}
+
+void app_do_mixing(app_t* app)
+{
+#ifdef CUTE_EMSCRIPTEN
+	cs_mix(app->cute_sound);
+#else
+	if (app->spawned_mix_thread) {
+		cs_mix(app->cute_sound);
+	}
+#endif // CUTE_EMSCRIPTEN
 }
 
 ImGuiContext* app_init_imgui(app_t* app)

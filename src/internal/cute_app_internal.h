@@ -96,6 +96,7 @@ struct app_t
 	void* platform_handle = NULL;
 	SDL_Window* window = NULL;
 	cs_context_t* cute_sound = NULL;
+	bool spawned_mix_thread = false;
 	threadpool_t* threadpool = NULL;
 	audio_system_t* audio_system = NULL;
 	cute_font_t* courier_new = NULL;

@@ -51,7 +51,14 @@ void do_imgui_stuff(app_t* app, float dt)
 
 	if (open) {
 		// Editor UI.
+		//ImGui::SetNextWindowCollapsed(true, ImGuiCond_Appearing);
 		ImGui::Begin("Dev Tool", &open);
+
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+		if (ImGui::Button("Next Level")) {
+			world->next_level(world->level_index + 1);
+		}
 
 		if (mouse_was_pressed(app, MOUSE_BUTTON_RIGHT)) {
 			selected = -1;
@@ -155,24 +162,28 @@ void do_imgui_stuff(app_t* app, float dt)
 			float h = schema_previews[i].h;
 			ImVec2 uv0 = ImVec2(0, 0);
 			ImVec2 uv1 = ImVec2(1, 1);
-			int frame_padding = -1;
+			int frame_padding = 3;
 			ImVec4 bg_color = i == selected ? ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive) : ImVec4(0, 0, 0, 0);
+			ImGui::PushID(i);
 			if (ImGui::ImageButton((ImTextureID)schema_previews[i].tex, ImVec2(w, h), uv0, uv1, frame_padding, bg_color)) {
 				selected = i;
 				erase = false;
 			}
+			ImGui::PopID();
 			if (((i + 1) % 3) != 0 && i != schema_previews.count() - 1) {
 				ImGui::SameLine();
 			}
 		}
 		ImGui::Separator();
 		ImGui::Text("Moves: %d", world->moves);
-		ImGui::Text("Oil: %d out of %d", LAMP->oil_count, LAMP->oil_capacity);
-		if (ImGui::Button("Add 5 Oil")) {
-			LAMP->add_oil(5);
-		}
-		if (ImGui::Button("Subtract 5 Oil")) {
-			LAMP->add_oil(-5);
+		if (LAMP) {
+			ImGui::Text("Oil: %d out of %d", LAMP->oil_count, LAMP->oil_capacity);
+			if (ImGui::Button("Add 5 Oil")) {
+				LAMP->add_oil(5);
+			}
+			if (ImGui::Button("Subtract 5 Oil")) {
+				LAMP->add_oil(-5);
+			}
 		}
 		static color_t tint = make_color(0.5f, 0.5f, 0.5f, 1.0f);
 		ImGui::ColorPicker4("Tint", (float*)&tint);
@@ -361,7 +372,15 @@ void do_main_loop_once()
 int main(int argc, const char** argv)
 {
 	init_world(argc, argv);
-	select_level(7);
+	select_level(0);
+
+	audio_t* audio = audio_load_ogg("BlockGirl.ogg");
+	error_t err = app_init_audio(app);
+	if (err.is_error()) printf("%s\n", err.details);
+	music_set_volume(app, 0.35f);
+	music_set_loop(app, true);
+	music_play(app, audio);
+	music_set_volume(app, 0);
 
 #ifdef CUTE_EMSCRIPTEN
 	emscripten_set_main_loop(do_main_loop_once, 0, true);
@@ -369,7 +388,7 @@ int main(int argc, const char** argv)
 	while (app_is_running(app)) {
 		do_main_loop_once();
 	}
-#endif
+#endif // CUTE_EMSCRIPTEN
 
 	app_destroy(app);
 

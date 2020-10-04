@@ -278,8 +278,8 @@ Contributions are welcome, so feel free to open a [pull-request](https://github.
 
 Cute has a few external dependencies, linked as shared libraries.
 * [SDL2](https://www.libsdl.org/), used for platform handling and GL context creation.
-* [libsodium](https://libsodium.gitbook.io/doc/), used for encryption + authentication.
-* [mbedtls](https://libsodium.gitbook.io/doc/), used for encryption + authentication.
+* [libsodium](https://libsodium.gitbook.io/doc/), used for encryption + authentication during gameplay.
+* [mbedtls](https://libsodium.gitbook.io/doc/), used to setup TLS tunnels for HTTPS.
 
 Cute has a few internal dependencies, built straight from source as apart of Cute.
 * [glad](https://github.com/Dav1dde/glad), used to load OpenGL function pointers on the Windows platform.

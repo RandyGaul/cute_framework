@@ -37,38 +37,38 @@
 * [x] file system
 	* [x] file io
 	* [x] directory/archive mounting
-* [ ] graphics
-	* [ ] sprite batching
+* [x] graphics
+	* [x] sprite batching
 	* [x] shader
 	* [x] vertex/index buffers
-	* [ ] blend states
+	* [x] blend states
 	* [x] render to texture
-	* [ ] post_fx on the render texture
+	* [x] post_fx on the render texture
 	* [x] debug rendering (line, shape, frames)
 	* [x] draw calls
 	* [x] projection
-	* [ ] textures, wrap mode
+	* [x] textures, wrap mode
 	* [x] scissor
-	* [ ] stencil
-	* [ ] viewport, resizing
+	* [x] stencil
+	* [x] viewport, resizing
 	* [x] pixel upscaling
-	* [ ] raster font
+	* [x] raster font
 	* [x] image loading
 	* [x] d3d9
-	* [ ] GL 3.2
-	* [ ] GLES 2.0
+	* [x] GL 3.2
+	* [x] GLES 2.0
 * [ ] camera
 	* [ ] track an entity
 	* [ ] set position
 	* [ ] set destination + lerp time
 	* [ ] state machine driven
-* [ ] font
+* [x] font
 * [x] input
 	* [x] mouse
 		* [x] cursor
 	* [x] keyboard
 	* [ ] gamepad
-	* [ ] text input
+	* [x] text input
 	* [ ] drag n drop file
 * [x] math
 * [x] collision detection
@@ -107,16 +107,11 @@
 * [x] ecs
 	* [x] entity and components
 	* [x] global state
-* [ ] profile
-	* [ ] record capture data
-	* [ ] render capture data to screen
-	* [ ] print capture data
-	* [ ] interpolate capture data
 * [x] build/distro options
-	* [ ] copy + paste all source into project
-	* [ ] build shared libs themselves
-	* [ ] download prebuilt release folder
+	* [x] copy + paste all source into project
+	* [x] build shared libs themselves
+	* [x] download prebuilt release folder
 	* [x] cmake support
-	* [ ] single-file-header packer (still requires shared lib dependencies)
+	* [x] single-file-header packer (still requires shared lib dependencies)
 * [x] error
 * [x] unit test harness

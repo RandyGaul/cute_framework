@@ -49,7 +49,8 @@ CUTE_API void CUTE_CALL app_update(app_t* app, float dt);
 CUTE_API void CUTE_CALL app_present(app_t* app);
 
 CUTE_API error_t CUTE_CALL app_init_net(app_t* app);
-CUTE_API error_t CUTE_CALL app_init_audio(app_t* app, int max_simultaneous_sounds = 5000);
+CUTE_API error_t CUTE_CALL app_init_audio(app_t* app, bool spawn_mix_thread = true, int max_simultaneous_sounds = 5000);
+CUTE_API void CUTE_CALL app_do_mixing(app_t* app);
 CUTE_API ImGuiContext* CUTE_CALL app_init_imgui(app_t* app);
 CUTE_API strpool_t* CUTE_CALL app_get_strpool(app_t* app);
 

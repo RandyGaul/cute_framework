@@ -1,12 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 project(cute_framework)
 
-# Force 64bit builds.
-# if(NOT CMAKE_SIZEOF_VOID_P EQUAL 8)
-# 	message(FATAL_ERROR "Only 64-bit build is supported.")
-# 	return()
-# endif()
-
 # Must have at least C++14.
 set(CMAKE_CXX_STANDARD 14)
 
@@ -271,7 +265,8 @@ if(MACOSX)
 
 	target_link_libraries(cute PRIVATE ${SDL2_LIBRARIES} sodium physfs ${IOKIT} ${FOUNDATION})
 elseif(EMSCRIPTEN)
-	target_link_libraries(cute PRIVATE sodium physfs "-s USE_WEBGL2=1 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1")
+	target_compile_options(cute PUBLIC -O1 -fno-rtti -fno-exceptions)
+	target_link_libraries(cute PRIVATE sodium physfs "-s USE_WEBGL2=1 -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1")
 else()
 	target_link_libraries(cute PRIVATE SDL2 sodium physfs)
 endif()
@@ -395,7 +390,8 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 	target_link_libraries(block_man PRIVATE cute)
 	if(EMSCRIPTEN)
 		set(CMAKE_EXECUTABLE_SUFFIX ".html")
-		target_link_options(block_man PRIVATE -o block_man.html --preload-file ../block_man/data --emrun)
+		target_compile_options(block_man PUBLIC -O1 -fno-rtti -fno-exceptions)
+		target_link_options(block_man PRIVATE -o block_man.html --preload-file ../block_man/data --emrun -O1)
 	endif()
 	target_include_directories(block_man PUBLIC "${PROJECT_SOURCE_DIR}/block_man")
 
