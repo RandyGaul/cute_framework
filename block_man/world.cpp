@@ -788,6 +788,8 @@ void select_level(int index)
 			++i;
 			j = 0;
 			continue;
+		} else if (c == '\r') {
+			continue;
 		}
 
 		entity_t e = INVALID_ENTITY;

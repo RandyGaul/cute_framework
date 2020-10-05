@@ -36,7 +36,7 @@ using namespace cute;
 #include <systems/light_system.h>
 #include <systems/board_system.h>
 
-float volume = 0.35f;
+float volume = 0;
 
 void do_imgui_stuff(app_t* app, float dt)
 {
@@ -201,6 +201,55 @@ void do_imgui_stuff(app_t* app, float dt)
 		static color_t tint = make_color(0.5f, 0.5f, 0.5f, 1.0f);
 		ImGui::ColorPicker4("Tint", (float*)&tint);
 		batch_set_tint_color(batch, tint);
+
+		if (ImGui::Button("Up")) {
+			for (int i = 1; i < world->LEVEL_H; ++i) {
+				for (int j = 0; j < world->LEVEL_W; ++j) {
+					destroy_entity_at(j, i - 1);
+					if (!world->board.data[i][j].is_empty) {
+						make_entity_at(app_entity_type_string(app, world->board.data[i][j].entity.type), j, i - 1);
+						destroy_entity_at(j, i);
+					}
+				}
+			}
+		}
+
+		if (ImGui::Button("Down")) {
+			for (int i = world->LEVEL_H - 1; i > 0; --i) {
+				for (int j = 0; j < world->LEVEL_W; ++j) {
+					destroy_entity_at(j, i);
+					if (!world->board.data[i - 1][j].is_empty) {
+						make_entity_at(app_entity_type_string(app, world->board.data[i - 1][j].entity.type), j, i);
+						destroy_entity_at(j, i - 1);
+					}
+				}
+			}
+		}
+
+		if (ImGui::Button("Left")) {
+			for (int i = 0; i < world->LEVEL_H; ++i) {
+				for (int j = 1; j < world->LEVEL_W; ++j) {
+					destroy_entity_at(j - 1, i);
+					if (!world->board.data[i][j].is_empty) {
+						make_entity_at(app_entity_type_string(app, world->board.data[i][j].entity.type), j - 1, i);
+						destroy_entity_at(j, i);
+					}
+				}
+			}
+		}
+
+		if (ImGui::Button("Right")) {
+			for (int i = 0; i < world->LEVEL_H; ++i) {
+				for (int j = world->LEVEL_W - 1; j > 0; --j) {
+					destroy_entity_at(j, i);
+					if (!world->board.data[i][j - 1].is_empty) {
+						make_entity_at(app_entity_type_string(app, world->board.data[i][j - 1].entity.type), j, i);
+						destroy_entity_at(j - 1, i);
+					}
+				}
+			}
+		}
+
 		ImGui::End();
 
 		if (erase) {
