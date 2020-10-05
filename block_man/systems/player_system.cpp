@@ -174,6 +174,8 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 				} else if (is_lamp) {
 					Lamp* lamp = (Lamp*)app_get_component(app, block, "Lamp");
 					lamp->is_held = true;
+					Animator* lamp_anim = (Animator*)app_get_component(app, block, "Animator");
+					lamp_anim->sprite.local_offset.y += 1;
 				}
 			}
 		} else {
@@ -258,6 +260,8 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			} else {
 				Lamp* lamp = (Lamp*)app_get_component(app, e, "Lamp");
 				lamp->is_held = false;
+				Animator* lamp_anim = (Animator*)app_get_component(app, e, "Animator");
+				lamp_anim->sprite.local_offset.y -= 1;
 			}
 			player->holding = false;
 			update_hero_animation = true;

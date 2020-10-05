@@ -451,6 +451,8 @@ void light_system_post_update(app_t* app, float dt, void* udata)
 	if (s_darkness_color.a == 1) {
 		Darkness::is_dark = true;
 		s_do_crawlies(dt);
+	} else {
+		Darkness::is_dark = false;
 	}
 
 	s_verts0.clear();

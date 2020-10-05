@@ -447,7 +447,13 @@ void load_all_levels_from_disk_into_ram()
 	s_add_level("level10.txt");
 	s_add_level("level11.txt");
 	s_add_level("level12.txt");
-	s_add_level("test.txt");
+	s_add_level("level13.txt");
+	s_add_level("level14.txt");
+	s_add_level("level15.txt");
+	s_add_level("level16.txt");
+	s_add_level("level17.txt");
+	s_add_level("level18.txt");
+	s_add_level("level19.txt");
 }
 
 void setup_write_directory()

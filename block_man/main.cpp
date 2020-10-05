@@ -36,7 +36,7 @@ using namespace cute;
 #include <systems/light_system.h>
 #include <systems/board_system.h>
 
-float volume = 0;
+float volume = 0.35f;
 
 void do_imgui_stuff(app_t* app, float dt)
 {
@@ -252,6 +252,7 @@ void do_imgui_stuff(app_t* app, float dt)
 
 		ImGui::End();
 
+		static int last_mx, last_my;
 		if (erase) {
 			// Draw erase selection.
 			static sprite_t sprite;
@@ -274,6 +275,7 @@ void do_imgui_stuff(app_t* app, float dt)
 				int mx, my;
 				world2tile(mpw, &mx, &my);
 				destroy_entity_at(mx, my);
+				last_mx = last_my = -1;
 			}
 		}
 
@@ -290,7 +292,6 @@ void do_imgui_stuff(app_t* app, float dt)
 			batch_flush(batch);
 
 			// Create entities on left-click.
-			static int last_mx, last_my;
 			if (mouse_is_down(app, MOUSE_BUTTON_LEFT)) {
 				if (!ImGui::IsAnyWindowHovered() && !ImGui::IsAnyWindowFocused() && !(last_mx == mx && last_my == my)) {
 					make_entity_at(selected, mx, my);
