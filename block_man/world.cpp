@@ -111,7 +111,7 @@ const char* schema_zzz = CUTE_STRINGIZE(
 const char* schema_fire = CUTE_STRINGIZE(
 	entity_type = "Fire",
 	Transform = { },
-	Animator = { name = "fire.aseprite", },
+	Animator = { name = "fire.aseprite", floating = "true" },
 	Reflection = { },
 	BoardPiece = { },
 	Shadow = { small = "true" },
@@ -132,7 +132,7 @@ const char* schema_oil = CUTE_STRINGIZE(
 const char* schema_lamp = CUTE_STRINGIZE(
 	entity_type = "Lamp",
 	Transform = { },
-	Animator = { name = "lamp.aseprite", },
+	Animator = { name = "lamp.aseprite" },
 	Reflection = { },
 	BoardPiece = { },
 	Shadow = { small = "true" },

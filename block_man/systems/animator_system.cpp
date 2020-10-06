@@ -23,6 +23,23 @@
 #include <components/transform.h>
 #include <components/animator.h>
 
+static float s_float_offset(Animator* animator, float dt)
+{
+	static float floating_offset = 0;
+	coroutine_t* co = &animator->float_co;
+	COROUTINE_START(co);
+	floating_offset = 1.0f;
+	COROUTINE_PAUSE(co, Animator::float_delay, dt);
+	floating_offset = 2.0f;
+	COROUTINE_PAUSE(co, Animator::float_delay, dt);
+	floating_offset = 3.0f;
+	COROUTINE_PAUSE(co, Animator::float_delay, dt);
+	floating_offset = 2.0f;
+	COROUTINE_PAUSE(co, Animator::float_delay, dt);
+	COROUTINE_END(co);
+	return floating_offset;
+}
+
 void animator_transform_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, int entity_count)
 {
 	for (int i = 0; i < entity_count; ++i) {
@@ -31,6 +48,10 @@ void animator_transform_system_update(app_t* app, float dt, void* udata, Transfo
 
 		// Look this is already done inside the sprite itself... So no need!
 		//transform->local.p -= animator->sprite.local_offset;
+
+		if (animator->floating) {
+			transform->local.p.y += s_float_offset(animator, dt);
+		}
 	}
 }
 

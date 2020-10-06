@@ -349,7 +349,6 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 		block_man/components/shadow.h
 		block_man/components/mochi.h
 		block_man/components/fire.h
-		block_man/components/patrol.h
 		block_man/components/light.h
 		block_man/components/oil.h
 		block_man/components/lamp.h

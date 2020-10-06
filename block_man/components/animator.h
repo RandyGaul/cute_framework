@@ -28,10 +28,16 @@ using namespace cute;
 #include <serialize.h>
 #include <world.h>
 
+#include <cute/cute_coroutine.h>
+
 struct Animator
 {
 	bool visible = true;
 	sprite_t sprite = sprite_t();
+
+	bool floating = false;
+	static constexpr float float_delay = 0.35f;
+	coroutine_t float_co = { 0 };
 
 	CUTE_INLINE void update(float dt)
 	{
@@ -108,6 +114,7 @@ CUTE_INLINE cute::error_t Animator_serialize(app_t* app, kv_t* kv, entity_t enti
 	kv_key(kv, "play_speed_multiplier"); kv_val(kv, &animator->sprite.play_speed_multiplier);
 	kv_key(kv, "t"); kv_val(kv, &animator->sprite.t);
 	kv_key(kv, "paused"); kv_val(kv, &animator->sprite.paused);
+	kv_key(kv, "floating"); kv_val(kv, &animator->floating);
 	return kv_error_state(kv);
 }
 

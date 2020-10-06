@@ -27,6 +27,10 @@
 
 CUTE_STATIC_ASSERT(sizeof(uint64_t) == sizeof(long long unsigned int), "Must be equal.");
 
+#ifdef CUTE_WINDOWS
+#	pragma comment (lib, "sodium.lib")
+#endif
+
 namespace cute
 {
 
