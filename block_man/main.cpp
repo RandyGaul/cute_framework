@@ -435,6 +435,14 @@ void do_main_loop_once()
 
 int main(int argc, const char** argv)
 {
+	https_t* https = https_make();
+	https_connect(https, "httpwatch.com", "443", true);
+	https_get(https, "https://www.httpwatch.com/httpgallery/chunked/chunkedimage.aspx?0.0414628466492879");
+	https_process(https);
+	https_disconnect(https);
+	printf("%s", https_response(https));
+	https_destroy(https);
+
 	init_world(argc, argv);
 	select_level(0);
 

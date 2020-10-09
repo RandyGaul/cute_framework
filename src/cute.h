@@ -41,6 +41,7 @@
 #include <cute_file_system.h>
 #include <cute_font.h>
 #include <cute_gfx.h>
+#include <cute_https.h>
 #include <cute_image.h>
 #include <cute_input.h>
 #include <cute_kv.h>

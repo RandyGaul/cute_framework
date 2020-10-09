@@ -97,4 +97,14 @@
 #	define CUTE_STRTOD strtod
 #endif
 
+#ifndef CUTE_TOLOWER
+#	include <ctype.h>
+#	define CUTE_TOLOWER tolower
+#endif
+
+#ifndef CUTE_TOUPPER
+#	include <ctype.h>
+#	define CUTE_TOUPPER toupper
+#endif
+
 #endif // CUTE_C_RUNTIME_H

@@ -114,7 +114,7 @@ const char* schema_fire = CUTE_STRINGIZE(
 	Animator = { name = "fire.aseprite", floating = "true" },
 	Reflection = { },
 	BoardPiece = { },
-	Shadow = { small = "true" },
+	Shadow = { tiny = "true" },
 	Fire = { },
 	Light = { },
 );

@@ -4,6 +4,28 @@ project(cute_framework)
 # Must have at least C++14.
 set(CMAKE_CXX_STANDARD 14)
 
+# Used to hide dependencies in filters for Visual Studio.
+# From: https://stackoverflow.com/a/45176243
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+define_property(
+	TARGET
+	PROPERTY FOLDER
+	INHERITED
+	BRIEF_DOCS "Set the folder name."
+	FULL_DOCS  "Use to organize targets in an IDE."
+)
+function(add_subdirectory_with_folder _folder _folder_name)
+	add_subdirectory(${_folder} ${ARGN})
+	set_property(DIRECTORY "${_folder}" PROPERTY FOLDER "${_folder_name}")
+endfunction()
+
+option(CUTE_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
+option(CUTE_FRAMEWORK_WITH_PLATFORM "Build Cute Framework with platform support from SDL2 (zlib license)." ON)
+option(CUTE_FRAMEWORK_WITH_HTTPS "Build Cute Framework with mbedtls for HTTPS support (Apache 2.0 license)." ON)
+option(CUTE_FRAMEWORK_WITH_SODIUM "Build Cute Framework with cryptography + authentication support from Sodium for networking support (ISC license)." ON)
+option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
+option(CUTE_FRAMEWORK_BUILD_BLOCK_MAN "Build the Block Man game." ON)
+
 # Platform detection.
 if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
 	set(EMSCRIPTEN TRUE)
@@ -48,7 +70,7 @@ endif()
 include_directories(src libraries test)
 link_directories(shared_libs)
 
-# PhysicsFS, statically linked.
+# PhysicsFS, always statically linked.
 set(PHYSFS_SRCS
 	libraries/physfs/physfs_archiver_7z.c
 	libraries/physfs/physfs_archiver_dir.c
@@ -88,7 +110,10 @@ endif()
 
 add_library(physfs STATIC ${PHYSFS_SRCS})
 
-option(CUTE_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
+# Optional mbedtls for HTTPS support.
+if(CUTE_FRAMEWORK_WITH_HTTPS)
+	add_subdirectory_with_folder(libraries/mbedtls/mbedtls-2.24.0 "mbedtls")
+endif()
 
 # Cute Framework shared library.
 set(CUTE_SRCS
@@ -126,6 +151,7 @@ set(CUTE_SRCS
 	src/cute_gfx.cpp
 	src/cute_aseprite_cache.cpp
 	src/cute_png_cache.cpp
+	src/cute_https.cpp
 
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
@@ -205,6 +231,7 @@ set(CUTE_HDRS
 	src/cute_sprite.h
 	src/cute_aseprite_cache.h
 	src/cute_png_cache.h
+	src/cute_https.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
@@ -271,10 +298,13 @@ else()
 	target_link_libraries(cute PRIVATE SDL2 sodium physfs)
 endif()
 
+if(CUTE_FRAMEWORK_WITH_HTTPS)
+	target_link_libraries(cute PRIVATE mbedx509 mbedtls mbedcrypto)
+endif()
+
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)
 
 # Cute unit tests executable (optional, defaulted to also build).
-option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
 if (CUTE_FRAMEWORK_BUILD_TESTS)
 	set(CUTE_TEST_SRCS test/main.cpp)
 	set(CUTE_TEST_HDRS
@@ -321,7 +351,6 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 endif()
 
 # Cute unit tests executable (optional, defaulted to also build).
-option(CUTE_FRAMEWORK_BUILD_BLOCK_MAN "Build the Block Man game." ON)
 if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 	set(CUTE_BLOCK_MAN_SRCS
 		block_man/main.cpp

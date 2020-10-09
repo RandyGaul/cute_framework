@@ -30,6 +30,7 @@
 
 sprite_t shadow_sprite;
 sprite_t shadow_sprite_small;
+sprite_t shadow_sprite_tiny;
 sprite_t shadow_sprite_big;
 
 void shadow_system_init()
@@ -37,6 +38,8 @@ void shadow_system_init()
 	shadow_sprite = load_sprite("shadow.aseprite");
 	shadow_sprite_small = shadow_sprite;
 	shadow_sprite_small.frame_index++;
+	shadow_sprite_tiny = shadow_sprite_small;
+	shadow_sprite_tiny.frame_index++;
 	shadow_sprite_big = load_sprite("big_shadow.aseprite");
 }
 
@@ -56,6 +59,8 @@ void shadow_system_update(app_t* app, float dt, void* udata, Transform* transfor
 			tx.p.y -= 7.0f;
 			if (shadow->small) {
 				shadow_sprite_small.draw(batch, tx);
+			} else if (shadow->tiny) {
+				shadow_sprite_tiny.draw(batch, tx);
 			} else if (shadow->big) {
 				shadow_sprite_big.draw(batch, tx);
 			} else {
