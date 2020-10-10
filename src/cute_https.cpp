@@ -50,14 +50,6 @@ struct https_decoder_t;
 typedef bool (https_decode_fn)(https_decoder_t* h, const char* data, size_t size, size_t* bytes_read);
 typedef bool (https_process_line_fn)(https_decoder_t* h);
 
-enum transfer_encoding_t
-{
-	TRANSFER_ENCODING_CHUNKED             = 0x01,
-	TRANSFER_ENCODING_GZIP                = 0x02,
-	TRANSFER_ENCODING_DEFLATE             = 0x04,
-	TRANSFER_ENCODING_DEPRECATED_COMPRESS = 0x08,
-};
-
 struct https_decoder_t
 {
 	https_decode_fn* decode = NULL;
@@ -680,6 +672,7 @@ size_t https_process(https_t* https)
 	https->response.content = https->h.buffer.data();
 	https->response.headers.steal_from(https->h.headers);
 	https->response.content_len = https->h.buffer.count() - 1;
+	https->response.transfer_encoding_flags = https->h.transfer_encoding;
 	https->state = HTTPS_STATE_COMPLETED;
 	return https->bytes_read;
 }

@@ -120,6 +120,15 @@ struct https_header_t
 	https_string_t content;
 };
 
+enum transfer_encoding_t
+{
+	TRANSFER_ENCODING_NONE                = 0x00,
+	TRANSFER_ENCODING_CHUNKED             = 0x01,
+	TRANSFER_ENCODING_GZIP                = 0x02,
+	TRANSFER_ENCODING_DEFLATE             = 0x04,
+	TRANSFER_ENCODING_DEPRECATED_COMPRESS = 0x08,
+};
+
 /**
  * Represents the response from a server after a successful process loop via `https_process`, where the
  * status returned from `https_state` is `HTTPS_STATE_COMPLETED`.
@@ -129,6 +138,16 @@ struct https_response_t
 	size_t content_len;
 	const char* content;
 	array<https_header_t> headers;
+
+	/**
+	 * Flags from `transfer_encoding_t`. For example, if content is gzip'd, you can tell by using
+	 * something like so: `bool is_gzip = !!(response->transfer_encoding & TRANSFER_ENCODING_GZIP);`
+	 * 
+	 * Please note that if the encoding is `TRANSFER_ENCODING_CHUNKED` the `content` buffer will not
+	 * contain any chunked encoding -- all chunked data has been decoded already. For gzip/deflate
+	 * the `content` buffer will need to be decompressed by you.
+	 */
+	int transfer_encoding_flags;
 
 	/**
 	 * Convenience function to find a specific header. Returns true if the header was found, and false
