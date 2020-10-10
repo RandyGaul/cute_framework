@@ -45,7 +45,59 @@
 namespace cute
 {
 
-size_t min(size_t a, size_t b) { return a < b ? a : b; }
+struct https_decoder_t;
+
+typedef bool (https_decode_fn)(https_decoder_t* h, const char* data, size_t size, size_t* bytes_read);
+typedef bool (https_process_line_fn)(https_decoder_t* h);
+
+enum transfer_encoding_t
+{
+	TRANSFER_ENCODING_CHUNKED             = 0x01,
+	TRANSFER_ENCODING_GZIP                = 0x02,
+	TRANSFER_ENCODING_DEFLATE             = 0x04,
+	TRANSFER_ENCODING_DEPRECATED_COMPRESS = 0x08,
+};
+
+struct https_decoder_t
+{
+	https_decode_fn* decode = NULL;
+	https_process_line_fn* process_line = NULL;
+	int transfer_encoding = 0;
+	size_t content_processed = 0;
+	size_t content_length = 0;
+	size_t chunk_processed = 0;
+	size_t chunk_size = 0;
+	bool found_last_chunk = false;
+	size_t buffer_offset = 0;
+	int response_code = 0;
+	array<char> buffer;
+	array<https_header_t> headers;
+	error_t err = error_success();
+
+	void next(https_process_line_fn* process_line)
+	{
+		this->process_line = process_line;
+		buffer.clear();
+		buffer_offset = 0;
+	}
+
+	char* data()
+	{
+		return buffer.data() + buffer_offset;
+	}
+
+	size_t data_left()
+	{
+		return buffer.count() - buffer_offset;
+	}
+
+	bool advance(size_t size)
+	{
+		CUTE_ASSERT(buffer_offset + size <= buffer.count());
+		buffer_offset += size;
+		return buffer_offset == buffer.count();
+	}
+};
 
 struct https_t
 {
@@ -58,48 +110,55 @@ struct https_t
 
 	const char* host = NULL;
 	const char* port = NULL;
-	https_status_t status = HTTPS_STATUS_NOT_CONNECTED; // TODO - Atomic this.
+	https_state_t state = HTTPS_STATE_PENDING; // TODO - Atomic this.
 	array<char> request;
-	array<char> response;
+	array<char> response_buffer;
+	https_response_t response;
 
 	bool request_sent = false;
+
+	int bytes_read = 0;
+	https_decoder_t h;
 };
 
 https_t* https_make()
 {
-	https_t* http = CUTE_NEW(https_t, NULL);
+	https_t* https = CUTE_NEW(https_t, NULL);
 
-	mbedtls_net_init(&http->server_fd);
-	mbedtls_ssl_init(&http->ssl);
-	mbedtls_ssl_config_init(&http->conf);
-	mbedtls_x509_crt_init(&http->cacert);
-	mbedtls_ctr_drbg_init(&http->ctr_drbg);
-	mbedtls_entropy_init(&http->entropy);
+	mbedtls_net_init(&https->server_fd);
+	mbedtls_ssl_init(&https->ssl);
+	mbedtls_ssl_config_init(&https->conf);
+	mbedtls_x509_crt_init(&https->cacert);
+	mbedtls_ctr_drbg_init(&https->ctr_drbg);
+	mbedtls_entropy_init(&https->entropy);
 
 	const char* seed = "Cute Framework";
 
-	if (mbedtls_ctr_drbg_seed(&http->ctr_drbg, mbedtls_entropy_func, &http->entropy, (const unsigned char*)seed, CUTE_STRLEN(seed))) {
-		CUTE_FREE(http, NULL);
+	if (mbedtls_ctr_drbg_seed(&https->ctr_drbg, mbedtls_entropy_func, &https->entropy, (const unsigned char*)seed, CUTE_STRLEN(seed))) {
+		https->~https_t();
+		CUTE_FREE(https, NULL);
 		return NULL;
 	}
 
-	if (mbedtls_x509_crt_parse(&http->cacert, (const unsigned char*)mbedtls_test_cas_pem, mbedtls_test_cas_pem_len) < 0) {
-		CUTE_FREE(http, NULL);
+	if (mbedtls_x509_crt_parse(&https->cacert, (const unsigned char*)mbedtls_test_cas_pem, mbedtls_test_cas_pem_len) < 0) {
+		https->~https_t();
+		CUTE_FREE(https, NULL);
 		return NULL;
 	}
 
-	return http;
+	return https;
 }
 
-void https_destroy(https_t* http)
+void https_destroy(https_t* https)
 {
-	mbedtls_net_free(&http->server_fd);
-	mbedtls_x509_crt_free(&http->cacert);
-	mbedtls_ssl_free(&http->ssl);
-	mbedtls_ssl_config_free(&http->conf);
-	mbedtls_ctr_drbg_free(&http->ctr_drbg);
-	mbedtls_entropy_free(&http->entropy);
-	CUTE_FREE(http, NULL);
+	mbedtls_net_free(&https->server_fd);
+	mbedtls_x509_crt_free(&https->cacert);
+	mbedtls_ssl_free(&https->ssl);
+	mbedtls_ssl_config_free(&https->conf);
+	mbedtls_ctr_drbg_free(&https->ctr_drbg);
+	mbedtls_entropy_free(&https->entropy);
+	https->~https_t();
+	CUTE_FREE(https, NULL);
 }
 
 static void s_tls_log(void* param, int debug_level, const char* file_name, int line_number, const char*  message)
@@ -226,7 +285,7 @@ error_t https_connect(https_t* https, const char* host, const char* port, bool v
 
 	https->host = host;
 	https->port = port;
-	https->status = HTTPS_STATUS_PENDING;
+	https->state = HTTPS_STATE_PENDING;
 	return error_success();
 }
 
@@ -235,92 +294,61 @@ void https_disconnect(https_t* https)
 	mbedtls_ssl_close_notify(&https->ssl);
 }
 
-void https_get(https_t* https, const char* url)
+https_t* https_get(const char* host, const char* port, const char* uri, error_t* err_out, bool verify_cert)
 {
-	if (https->status != HTTPS_STATUS_PENDING && https->status != HTTPS_STATUS_COMPLETED) return;
+	https_t* https = https_make();
+	error_t err = https_connect(https, host, port, verify_cert);
+	if (err.is_error()) {
+		https_destroy(https);
+		if (err_out) *err_out = err;
+		return NULL;
+	}
+
 	const char* fmt =
 		"GET %s HTTP/1.1\r\n"
 		"Host: %s\r\n"
-		"Accept: text/html\r\n"
-		"User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/85.0.4183.121 Safari/537.36\r\n"
 		"\r\n";
-	size_t len = 64 + CUTE_STRLEN(url);
+	size_t len = 64 + CUTE_STRLEN(uri) + CUTE_STRLEN(host);
 	https->request.ensure_count((int)len);
-	sprintf(https->request.data(), fmt, url, https->host);
+	sprintf(https->request.data(), fmt, uri, https->host);
 	https->request_sent = false;
-	https->status = HTTPS_STATUS_PENDING;
+	if (err_out) *err_out = error_success();
+
+	return https;
 }
 
-const char* https_response(https_t* https)
+https_t* https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, error_t* err_out, bool verify_cert)
 {
-	if (https->status != HTTPS_STATUS_COMPLETED) return NULL;
-	return https->response.data();
+	https_t* https = https_make();
+	error_t err = https_connect(https, host, port, verify_cert);
+	if (err.is_error()) {
+		https_destroy(https);
+		if (err_out) *err_out = err;
+		return NULL;
+	}
+
+	const char* fmt =
+		"POST %s HTTP/1.1\r\n"
+		"Host: %s\r\n"
+		"Content-Length: %zu\r\n"
+		"\r\n";
+	size_t len = 64 + CUTE_STRLEN(uri) + CUTE_STRLEN(host);
+	https->request.ensure_count((int)len);
+	sprintf(https->request.data(), fmt, uri, https->host, size);
+	https->request_sent = false;
+	len = CUTE_STRLEN(https->request.data());
+	https->request.ensure_count((int)(len + size));
+	CUTE_MEMCPY(https->request.data() + len, data, size);
+	if (err_out) *err_out = error_success();
+
+	return https;
 }
 
-struct https_decoder_t;
-
-typedef bool (https_decode_fn)(https_decoder_t* h, const char* data, size_t size, size_t* bytes_read);
-typedef bool (https_process_line_fn)(https_decoder_t* h);
-
-enum transfer_encoding_t
+const https_response_t* https_response(https_t* https)
 {
-	TRANSFER_ENCODING_CHUNKED             = 0x01,
-	TRANSFER_ENCODING_GZIP                = 0x02,
-	TRANSFER_ENCODING_DEFLATE             = 0x04,
-	TRANSFER_ENCODING_DEPRECATED_COMPRESS = 0x08,
-};
-
-struct https_string_t
-{
-	const char* ptr;
-	size_t len;
-};
-
-struct https_header_t
-{
-	https_string_t name;
-	https_string_t content;
-};
-
-struct https_decoder_t
-{
-	https_decode_fn* decode = NULL;
-	https_process_line_fn* process_line = NULL;
-	int transfer_encoding = 0;
-	size_t content_processed = 0;
-	size_t content_length = 0;
-	size_t chunk_processed = 0;
-	size_t chunk_size = 0;
-	size_t buffer_offset = 0;
-	int response_code = 0;
-	array<char> buffer;
-	array<https_header_t> headers;
-	error_t err = error_success();
-
-	void next(https_process_line_fn* process_line)
-	{
-		this->process_line = process_line;
-		buffer.clear();
-		buffer_offset = 0;
-	}
-
-	char* data()
-	{
-		return buffer.data() + buffer_offset;
-	}
-
-	size_t data_left()
-	{
-		return buffer.count() - buffer_offset;
-	}
-
-	bool advance(size_t size)
-	{
-		CUTE_ASSERT(buffer_offset + size <= buffer.count());
-		buffer_offset += size;
-		return buffer_offset == buffer.count();
-	}
-};
+	if (https->state != HTTPS_STATE_COMPLETED) return NULL;
+	return &https->response;
+}
 
 static bool s_crlf(https_decoder_t* h, const char* data, size_t size, size_t* bytes_read)
 {
@@ -383,22 +411,16 @@ static bool s_no_chunks(https_decoder_t* h)
 	return finished;
 }
 
-static bool s_chunk_terminator(https_decoder_t* h) {
-	// RFC-7230 section 4.1 Chunked Transfer Encoding - \r\n expected at the end of each chunk.
-	// The \r\n was skipped already by the line fetching functions above.
-	// So here we just make sure that the end of this input terminated without any extraneous data.
-	h->process_line = s_chunk_size;
-	h->chunk_size = 0;
-	h->chunk_processed = 0;
-	return false;
-}
-
 static bool s_state_chunk(https_decoder_t* h) {
+	// RFC-7230 section 4.1 Chunked Transfer Encoding
 	size_t bytes_read = 0;
 	CUTE_ASSERT(h->chunk_processed < h->chunk_size);
 	h->chunk_processed = h->buffer.count() - 2;
 	bool finished = h->chunk_processed == h->chunk_size;
-	if (finished) h->next(s_chunk_terminator);
+	if (finished) {
+		h->chunk_processed = 0;
+		h->next(s_chunk_size);
+	}
 	return false;
 }
 
@@ -431,6 +453,7 @@ static bool s_chunk_size(https_decoder_t* h) {
 
 	bool was_last_chunk = h->chunk_size == 0;
 	if (was_last_chunk) {
+		h->found_last_chunk = true;
 		h->next(s_header);
 		return false;
 	}
@@ -476,22 +499,15 @@ static https_string_t s_scan(https_decoder_t* h, char delimiter, bool must_find 
 	return string;
 }
 
-static bool s_strcmp(const char* lit, https_string_t string)
-{
-	size_t len = min(CUTE_STRLEN(lit), string.len);
-	for (size_t i = 0; i < len; ++i) {
-		if (CUTE_TOLOWER(lit[i]) != CUTE_TOLOWER(string.ptr[i])) {
-			return true;
-		}
-	}
-	return false;
-}
-
 static bool s_header(https_decoder_t* h)
 {
 	// RFC-7230 section 3 Message Format
 	if (h->data_left() == 2) {
 		if (h->transfer_encoding & TRANSFER_ENCODING_CHUNKED) {
+			if (h->found_last_chunk) {
+				// TODO - Possible to start logic for trailers here.
+				return true;
+			}
 			h->next(s_chunk_size);
 		} else if (h->content_length > 0) {
 			h->next(s_no_chunks);
@@ -508,7 +524,7 @@ static bool s_header(https_decoder_t* h)
 	https_string_t content = s_scan(h, '\r');
 	if (!content.ptr) return true;
 
-	if (!s_strcmp("Content-Length", name)) {
+	if (!https_strcmp("Content-Length", name)) {
 		if (h->transfer_encoding) {
 			h->err = error_failure("Found illegal combo of headers for both content-length and transfer-encoding.");
 			return true;
@@ -518,7 +534,7 @@ static bool s_header(https_decoder_t* h)
 			h->err = error_failure("Failed to read content length.");
 			return true;
 		}
-	} else if (!s_strcmp("Transfer-Encoding", name)) {
+	} else if (!https_strcmp("Transfer-Encoding", name)) {
 		if (h->content_length) {
 			h->err = error_failure("Found illegal combo of headers for both content-length and transfer-encoding.");
 			return true;
@@ -530,13 +546,13 @@ static bool s_header(https_decoder_t* h)
 		while (string.ptr) {
 			int prev_flags = h->transfer_encoding;
 
-			if (!s_strcmp("chunked", string)) {
+			if (!https_strcmp("chunked", string)) {
 				h->transfer_encoding |= TRANSFER_ENCODING_CHUNKED;
-			} else if (!s_strcmp("compress", string) || !s_strcmp("x_compress", string)) {
+			} else if (!https_strcmp("compress", string) || !https_strcmp("x_compress", string)) {
 				h->transfer_encoding |= TRANSFER_ENCODING_DEPRECATED_COMPRESS;
-			} else if (!s_strcmp("deflate", string)) {
+			} else if (!https_strcmp("deflate", string)) {
 				h->transfer_encoding |= TRANSFER_ENCODING_DEFLATE;
-			} else if (!s_strcmp("gzip", string) || !s_strcmp("x_gzip", string)) {
+			} else if (!https_strcmp("gzip", string) || !https_strcmp("x_gzip", string)) {
 				h->transfer_encoding |= TRANSFER_ENCODING_GZIP;
 			} else if (string.len > 0) {
 				h->err = error_failure("Unrecognized transfer encoding encountered.");
@@ -572,7 +588,7 @@ static bool s_request(https_decoder_t* h)
 	https_string_t version = s_scan(h, ' ', false);
 	if (!version.ptr) return true;
 
-	if (!s_strcmp("HTTP/1.1", version)) {
+	if (!https_strcmp("HTTP/1.1", version)) {
 		h->err = error_failure("Expected HTTP/1.1");
 		return true;
 	}
@@ -589,7 +605,7 @@ static bool s_response(https_decoder_t* h) {
 	https_string_t phrase = s_scan(h, ' ', false);
 	if (!phrase.ptr) return true;
 
-	if (s_strcmp("HTTP/1.1", version)) {
+	if (https_strcmp("HTTP/1.1", version)) {
 		h->err = error_failure("Expected HTTP/1.1");
 		return true;
 	}
@@ -621,50 +637,51 @@ static bool s_decode(https_decoder_t* h, const char* data, size_t size)
 	return done;
 }
 
-https_status_t https_process(https_t* https)
+https_state_t https_state(https_t* https)
 {
-	if (https->status == HTTPS_STATUS_NOT_CONNECTED) return HTTPS_STATUS_NOT_CONNECTED;
-	if (https->status == HTTPS_STATUS_FAILED) return HTTPS_STATUS_FAILED;
+	return https->state;
+}
+
+size_t https_process(https_t* https)
+{
+	if (https->state != HTTPS_STATE_PENDING) return https->bytes_read;
 
 	if (!https->request_sent) {
 		const char* request = https->request.data();
 		int result;
 		while ((result = mbedtls_ssl_write(&https->ssl, (uint8_t*)request, CUTE_STRLEN(request))) <= 0) {
 			if (result != MBEDTLS_ERR_SSL_WANT_READ && result != MBEDTLS_ERR_SSL_WANT_WRITE) {
-				https->status = HTTPS_STATUS_FAILED;
-				return HTTPS_STATUS_FAILED;
+				https->state = HTTPS_STATE_FAILED;
+				return https->bytes_read;
 			}
 		}
 		https->request_sent = true;
+		https->h.decode = s_get_line;
+		https->h.process_line = s_response;
 	}
+;
+	https->response_buffer.ensure_count(https->bytes_read + 1024 * 10);
 
-	https_decoder_t h;
-	h.decode = s_get_line;
-	h.process_line = s_response;
+	int result;
+	const char* data = https->response_buffer.data() + https->bytes_read;
+	result = mbedtls_ssl_read(&https->ssl, (uint8_t*)(https->response_buffer.data() + https->bytes_read), https->response_buffer.count() - https->bytes_read - 1);
 
-	int bytes_read = 0;
-	while (1) {
-		https->response.ensure_count(bytes_read + 1024 * 10);
+	const char* err = mbedtls_high_level_strerr(result);
 
-		int result;
-		const char* data = https->response.data() + bytes_read;
-		result = mbedtls_ssl_read(&https->ssl, (uint8_t*)(https->response.data() + bytes_read), https->response.count() - bytes_read - 1);
+	if (result == MBEDTLS_ERR_SSL_WANT_READ || result == MBEDTLS_ERR_SSL_WANT_WRITE) return https->bytes_read;
+	else if (result == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) return https->bytes_read;
+	else if (result <= 0) return https->bytes_read;
 
-		const char* err = mbedtls_high_level_strerr(result);
+	https->bytes_read += result;
+	bool done = s_decode(&https->h, data, result);
+	if (!done) return https->bytes_read;
 
-		if (result == MBEDTLS_ERR_SSL_WANT_READ || result == MBEDTLS_ERR_SSL_WANT_WRITE) continue;
-		else if (result == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) break;
-		else if (result <= 0) break;
-
-		bytes_read += result;
-		bool done = s_decode(&h, data, result);
-		if (done) break;
-	}
-
-	https->response.steal_from(h.buffer);
-	https->response.add(0);
-	https->status = HTTPS_STATUS_COMPLETED;
-	return HTTPS_STATUS_COMPLETED;
+	https->h.buffer.add(0);
+	https->response.content = https->h.buffer.data();
+	https->response.headers.steal_from(https->h.headers);
+	https->response.content_len = https->h.buffer.count() - 1;
+	https->state = HTTPS_STATE_COMPLETED;
+	return https->bytes_read;
 }
 
 }

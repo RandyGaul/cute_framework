@@ -298,25 +298,25 @@ static inline T& coroutine_local_var(coroutine_t* co)
  * Begins the coroutine. Code written between here and the next sequence point will be run
  * only once, making for a good "single time init" spot to write code.
  */
-#define COROUTINE_START(co)          do { co->flag = 0; switch (co->line[co->index]) { case -1: default: /* default is 0, and will run just once. -1 is to remove warnings about default but no case. */
+#define COROUTINE_START(co)           do { co->flag = 0; switch (co->line[co->index]) { case -1: default: /* default is 0, and will run just once. -1 is to remove warnings about default but no case. */
 
 /**
  * Sets a named sequence point. At any moment, a goto can be used to jump to `name`. Jumping to `name`
  * will set a sequence point at this location in the coroutine.
  */
-#define COROUTINE_CASE(co, name)     case __LINE__: name: co->line[co->index] = __LINE__;
+#define COROUTINE_CASE(co, name)      case __LINE__: name: co->line[co->index] = __LINE__;
 
 /**
  * Sets an unamed sequence point at this point in the coroutine.
  */
-#define COROUTINE_SEQUENCE_POINT(co) case __LINE__: co->line[co->index] = __LINE__;
+#define COROUTINE_SEQUENCE_POINT(co)  case __LINE__: co->line[co->index] = __LINE__;
 
 /**
  * Immediately exits the coroutine unless `time` has elapsed. Once elapsed the internal timer
  * will be reset to zero. This does *not* set a sequence point! The previously set sequence
  * point will be used. `dt` should be a float, represents delta-time.
  */
-#define COROUTINE_WAIT(co, time, dt) do { co->elapsed += dt; do { if (co->elapsed < time) { co->flag = 1; goto __co_end; } else { co->elapsed = 0; } } while (0); } while (0)
+#define COROUTINE_WAIT(co, time, dt)  do { co->elapsed += dt; do { if (co->elapsed < time) { co->flag = 1; goto __co_end; } else { co->elapsed = 0; } } while (0); } while (0)
 
 /**
  * Sets a timed sequence point. The coroutine will idle here until a certain time has elapsed.
@@ -329,14 +329,14 @@ static inline T& coroutine_local_var(coroutine_t* co)
  * Jumps out of the coroutine, but does not set a sequence point. Returns exection to the top
  * level `COROUTINE_END` call.
  */
-#define COROUTINE_EXIT(co)           do { co->flag = 1; goto __co_end; } while (0)
+#define COROUTINE_EXIT(co)            do { co->flag = 1; goto __co_end; } while (0)
 
 /**
  * Jumps out of the coroutine, and sets a sequence point. The next time the coroutine
  * is entered, this sequence point will be resumed. Returns execution to the top level
  * `COROUTINE_END`.
  */
-#define COROUTINE_YIELD(co)          do { co->line[co->index] = __LINE__; COROUTINE_EXIT(co); case __LINE__:; } while (0)
+#define COROUTINE_YIELD(co)           do { co->line[co->index] = __LINE__; COROUTINE_EXIT(co); case __LINE__:; } while (0)
 
 /**
  * Used as a wrapper to enter into a subroutine from within a coroutine. Will set a
@@ -353,7 +353,7 @@ static inline T& coroutine_local_var(coroutine_t* co)
  *
  *     `COROUTINE_CALL(co, call_some_other_func(co, my_params));`
  */
-#define COROUTINE_CALL(co, ...)      co->flag = 0; case __LINE__: COROUTINE_ASSERT(co->index < COROUTINE_MAX_DEPTH); co->line[co->index++] = __LINE__; __VA_ARGS__; co->index--; do { if (co->flag) { goto __co_end; } else { case __LINE__ + COROUTINE_CASE_OFFSET: co->line[co->index] = __LINE__ + COROUTINE_CASE_OFFSET; } } while (0)
+#define COROUTINE_CALL(co, ...)       co->flag = 0; case __LINE__: COROUTINE_ASSERT(co->index < COROUTINE_MAX_DEPTH); co->line[co->index++] = __LINE__; __VA_ARGS__; co->index--; do { if (co->flag) { goto __co_end; } else { case __LINE__ + COROUTINE_CASE_OFFSET: co->line[co->index] = __LINE__ + COROUTINE_CASE_OFFSET; } } while (0)
 
 /**
  * Must be called at the very end of the coroutine. Does not set a sequence point;
@@ -366,7 +366,7 @@ static inline T& coroutine_local_var(coroutine_t* co)
  * `COROUTINE_YIELD`, `COROUTINE_WAIT`, `COROUTINE_PAUSE`, COROUTINE_SEQUENCE_POINT`,
  *  or `COROUTINE_EXIT`.
  */
-#define COROUTINE_END(co)            } co->line[co->index] = 0; __co_end:; co->stack_pointer = 0; } while (0)
+#define COROUTINE_END(co)             } co->line[co->index] = 0; __co_end:; co->stack_pointer = 0; } while (0)
 
 #define CUTE_COROUTINE_H
 #endif // CUTE_COROUTINE_H
