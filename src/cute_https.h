@@ -105,6 +105,8 @@ CUTE_API https_state_t CUTE_CALL https_state(https_t* https);
  * or `https_post` is called for as long as `https_state` returns `HTTPS_STATE_PENDING`. You can call
  * this function from within its own loop, put it on another thread within a loop, or call it once per
  * game tick -- whichever you prefer.
+ * 
+ * Returns the bytes recieved so far.
  */
 CUTE_API size_t CUTE_CALL https_process(https_t* https);
 
@@ -158,7 +160,7 @@ struct https_response_t
 
 /**
  * A response can be retrieved from the `https` object after `https_state` returns `HTTPS_STATE_COMPLETED`.
- * Calling this function otherwise will get you a NULL pointer returned. This will get claned up automatically
+ * Calling this function otherwise will get you a NULL pointer returned. This will get cleaned up automatically
  * when `https_destroy` is called.
  */
 CUTE_API const https_response_t* CUTE_CALL https_response(https_t* https);
