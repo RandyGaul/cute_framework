@@ -107,4 +107,9 @@
 #	define CUTE_TOUPPER toupper
 #endif
 
+#ifndef CUTE_STRCHR
+#	include <string.h>
+#	define CUTE_STRCHR strchr
+#endif
+
 #endif // CUTE_C_RUNTIME_H

@@ -435,27 +435,11 @@ void do_main_loop_once()
 
 int main(int argc, const char** argv)
 {
-	error_t err;
-	https_t* https = https_get("raw.githubusercontent.com", "443", "/mattiasgustavsson/libs/main/http.h", &err);
-	if (https) {
-		while (https_state(https) == HTTPS_STATE_PENDING) {
-			size_t bytes_read = https_process(https);
-			printf("Received %zu bytes...\n", bytes_read);
-		}
-		if (https_state(https) == HTTPS_STATE_COMPLETED) {
-			const https_response_t* response = https_response(https);
-			printf("%s", response->content);
-		}
-		https_destroy(https);
-	} else {
-		printf("HTTPS request failed: %s\n", err.details);
-	}
-
 	init_world(argc, argv);
 	select_level(0);
 
 	audio_t* audio = audio_load_ogg("BlockGirl.ogg");
-	err = app_init_audio(app);
+	error_t err = app_init_audio(app);
 	if (err.is_error()) printf("%s\n", err.details);
 	music_set_loop(app, true);
 	music_play(app, audio);

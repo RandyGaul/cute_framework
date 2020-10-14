@@ -687,6 +687,7 @@ struct https_t
 	https_state_t state = HTTPS_STATE_PENDING; // TODO - Atomic this.
 	const void* data = NULL;
 	size_t size = 0;
+	const char** unpacked_headers = NULL;
 	int response_code = 0;
 	https_response_t response;
 	bool request_sent = false;
@@ -707,15 +708,80 @@ EMSCRIPTEN_KEEPALIVE void s_response_code(void* https_ptr, int code)
 	https->response.code = code;
 }
 
-EMSCRIPTEN_KEEPALIVE void s_add_response_header(void* https_ptr, const char* header_name, const char* header_content)
+static char* s_trim(char* s)
+{
+	size_t i = CUTE_STRLEN(s);
+	while (i && *s == ' ') {
+		++s;
+		--i;
+	}
+	while (i && s[i - 1] == ' ') {
+		s[i - 1] = 0;
+		--i;
+	}
+	return s;
+}
+
+static const char** s_unpack_headers(const char* headers)
+{
+	size_t count = 0;
+	for (const char* pos = CUTE_STRCHR(headers, '\n'); pos; pos = CUTE_STRCHR(pos + 1, '\n')) {
+		count++;
+	}
+
+	char **unpacked_headers = (char**)CUTE_ALLOC(sizeof(char*) * ((count * 2) + 1), NULL);
+	unpacked_headers[count * 2] = NULL;
+
+	const char* row_start = headers;
+	const char* row_end = CUTE_STRCHR(row_start, '\n');
+	for (size_t i = 0; row_end; i += 2) {
+		const char* split = CUTE_STRCHR(row_start, ':');
+		size_t key_size = (size_t)split - (size_t)row_start;
+		char* key = (char*)CUTE_ALLOC(key_size + 1, NULL);
+		CUTE_STRNCPY(key, row_start, key_size);
+		key[key_size] = '\0';
+
+		size_t content_size = (size_t)row_end - (size_t)split - 1;
+		char* value = (char*)CUTE_ALLOC(content_size + 1, NULL);
+		CUTE_STRNCPY(value, split + 1, content_size);
+		value[content_size] = '\0';
+
+		unpacked_headers[i] = CUTE_STRDUP(s_trim(key));
+		unpacked_headers[i + 1] = CUTE_STRDUP(s_trim(value));
+		CUTE_FREE(key, NULL);
+		CUTE_FREE(value, NULL);
+
+		row_start = row_end + 1;
+		row_end = CUTE_STRCHR(row_start, '\n');
+	}
+
+	return (const char**)unpacked_headers;
+}
+
+static void s_free_unpacked_headers(const char** unpacked_headers)
+{
+	for (int i = 0; unpacked_headers[i]; ++i)
+		CUTE_FREE((void*)unpacked_headers[i], NULL);
+	CUTE_FREE((void*)unpacked_headers, NULL);
+}
+
+EMSCRIPTEN_KEEPALIVE void s_response_headers(void* https_ptr, const char* headers)
 {
 	https_t* https = (https_t*)https_ptr;
-	https_header_t header;
-	header.name.ptr = header_name;
-	header.name.len = CUTE_STRLEN(header_name);
-	header.content.ptr = header_content;
-	header.content.len = CUTE_STRLEN(header_content);
-	https->response.headers.add(header);
+
+	const char** unpacked_headers = s_unpack_headers(headers);
+	https->unpacked_headers = unpacked_headers;
+
+	for (int i = 0; unpacked_headers[i]; i += 2) {
+		const char* header_name = unpacked_headers[i];
+		const char* header_content = unpacked_headers[i + 1];
+		https_header_t header;
+		header.name.ptr = header_name;
+		header.name.len = CUTE_STRLEN(header_name);
+		header.content.ptr = header_content;
+		header.content.len = CUTE_STRLEN(header_content);
+		https->response.headers.add(header);
+	}
 }
 
 EMSCRIPTEN_KEEPALIVE void s_content(void* https_ptr, void* data, size_t size)
@@ -748,25 +814,18 @@ EM_JS(void, s_js_get, (void* https_ptr, const char* c_host, const char* c_uri),
 	var request = new XMLHttpRequest();
 
 	function progress_fn(e) {
-		_s_bytes_downloaded(https_ptr, e.loaded);
+		_s_loaded(https_ptr, e.loaded);
 	}
 
 	function load_fn(e) {
 		_s_response_code(https_ptr, request.status);
 		var headers = request.getAllResponseHeaders();
-		var header_array = headers.trim().split(/[\r\n]+/);
-		header_array.forEach(function (line) {
-			var parts = line.split(': ');
-			var header = parts.shift();
-			var value = parts.join(': ');
-			var c_header = allocate(intArrayFromString(header), ALLOC_NORMAL);
-			var c_value = allocate(intArrayFromString(value), ALLOC_NORMAL);
-			_s_add_response_header(https_ptr, c_header, c_value);
-		});
-		var size = (req.response.length + 1) * req.response.BYTES_PER_ELEMENT;
-		var u8_array = Module._malloc(size);
-		Module.HEAPU8.set(req.response, u8_array);
-		_s_content(https_ptr, u8_array, size);
+		var c_headers = allocate(intArrayFromString(headers), ALLOC_NORMAL);
+		_s_response_headers(https_ptr, c_headers);
+		var u8_array = new Uint8Array(request.response);
+		var c_buffer = Module._malloc(u8_array.length);
+		Module.HEAPU8.set(u8_array, c_buffer);
+		_s_content(https_ptr, c_buffer, u8_array.length);
 		_s_loaded(https_ptr);
 	}
 
@@ -791,25 +850,18 @@ EM_JS(void, s_js_post, (void* https_ptr, const char* c_host, const char* c_uri, 
 	request.setRequestHeader("Host", host);
 
 	function progress_fn(e) {
-		_s_bytes_downloaded(https_ptr, e.loaded);
+		_s_loaded(https_ptr, e.loaded);
 	}
 
 	function load_fn(e) {
 		_s_response_code(https_ptr, request.status);
 		var headers = request.getAllResponseHeaders();
-		var header_array = headers.trim().split(/[\r\n]+/);
-		header_array.forEach(function (line) {
-			var parts = line.split(': ');
-			var header = parts.shift();
-			var value = parts.join(': ');
-			var c_header = allocate(intArrayFromString(header), ALLOC_NORMAL);
-			var c_value = allocate(intArrayFromString(value), ALLOC_NORMAL);
-			_s_add_response_header(https_ptr, c_header, c_value);
-		});
-		var size = req.response.length * req.response.BYTES_PER_ELEMENT;
-		var u8_array = Module._malloc(size);
-		Module.HEAPU8.set(req.response, u8_array);
-		_s_content(https_ptr, u8_array, size);
+		var c_headers = allocate(intArrayFromString(headers), ALLOC_NORMAL);
+		_s_response_headers(https_ptr, c_headers);
+		var u8_array = new Uint8Array(request.response);
+		var c_buffer = Module._malloc(u8_array.length);
+		Module.HEAPU8.set(u8_array, c_buffer);
+		_s_content(https_ptr, c_buffer, u8_array.length);
 		_s_loaded(https_ptr);
 	}
 
@@ -851,8 +903,8 @@ https_t* https_post(const char* host, const char* port, const char* uri, const v
 
 void https_destroy(https_t* https)
 {
-	// free up each header string pair
-	// free the response data
+	s_free_unpacked_headers(https->unpacked_headers);
+	free((void*)https->response.content);
 	https->~https_t();
 	CUTE_FREE(https, NULL);
 }

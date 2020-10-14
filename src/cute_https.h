@@ -68,6 +68,10 @@ struct https_t;
  * `verify_cert` will verify the server's x509 certificate, but can be disabled (dangerous).
  * 
  * Returns an `https_t` pointer which needs to be processed with `https_process` and cleaned up by `https_destroy`.
+ * 
+ * `host` and `port` are unused when building with emscripten -- this is since an XMLHttpRequest is used
+ * underneath, meaning only files from the server this code came from can be loaded, and as such the `uri`
+ * should only be a relative path on the server.
  */
 CUTE_API https_t* CUTE_CALL https_get(const char* host, const char* port, const char* uri, error_t* err = NULL, bool verify_cert = true);
 
@@ -80,6 +84,10 @@ CUTE_API https_t* CUTE_CALL https_get(const char* host, const char* port, const 
  * `verify_cert` will verify the server's x509 certificate, but can be disabled (dangerous).
  * 
  * Returns an `https_t` pointer which needs to be processed with `https_process` and cleaned up by `https_destroy`.
+ * 
+ * `host` and `port` are unused when building with emscripten -- this is since an XMLHttpRequest is used
+ * underneath, meaning only files from the server this code came from can be loaded, and as such the `uri`
+ * should only be a relative path on the server.
  */
 CUTE_API https_t* CUTE_CALL https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, error_t* err = NULL, bool verify_cert = true);
 
