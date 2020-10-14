@@ -137,6 +137,7 @@ enum transfer_encoding_t
  */
 struct https_response_t
 {
+	int code;
 	size_t content_len;
 	const char* content;
 	array<https_header_t> headers;

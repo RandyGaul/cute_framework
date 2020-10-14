@@ -44,6 +44,7 @@
 
 namespace cute
 {
+#ifndef CUTE_EMSCRIPTEN
 
 struct https_decoder_t;
 
@@ -109,7 +110,7 @@ struct https_t
 
 	bool request_sent = false;
 
-	int bytes_read = 0;
+	int bytes_read = 0; // TODO - Atomic this.
 	https_decoder_t h;
 };
 
@@ -217,7 +218,6 @@ static error_t s_load_platform_certs(https_t* https)
 #else
 
 	// TODO - Android, iOS (probably the same as CUTE_MACOSX section).
-	// emscripten -- https://emscripten.org/docs/api_reference/fetch.html
 
 #	error Platform not yet supported for https.
 
@@ -669,6 +669,7 @@ size_t https_process(https_t* https)
 	if (!done) return https->bytes_read;
 
 	https->h.buffer.add(0);
+	https->response.code = https->h.response_code;
 	https->response.content = https->h.buffer.data();
 	https->response.headers.steal_from(https->h.headers);
 	https->response.content_len = https->h.buffer.count() - 1;
@@ -676,5 +677,213 @@ size_t https_process(https_t* https)
 	https->state = HTTPS_STATE_COMPLETED;
 	return https->bytes_read;
 }
+
+#else // CUTE_EMSCRIPTEN
+
+struct https_t
+{
+	const char* host = NULL;
+	const char* uri = NULL;
+	https_state_t state = HTTPS_STATE_PENDING; // TODO - Atomic this.
+	const void* data = NULL;
+	size_t size = 0;
+	int response_code = 0;
+	https_response_t response;
+	bool request_sent = false;
+	int bytes_read = 0; // TODO - Atomic this.
+};
+
+extern "C" {
+
+EMSCRIPTEN_KEEPALIVE void s_bytes_downloaded(void* https_ptr, size_t size)
+{
+	https_t* https = (https_t*)https_ptr;
+	https->bytes_read = size;
+}
+
+EMSCRIPTEN_KEEPALIVE void s_response_code(void* https_ptr, int code)
+{
+	https_t* https = (https_t*)https_ptr;
+	https->response.code = code;
+}
+
+EMSCRIPTEN_KEEPALIVE void s_add_response_header(void* https_ptr, const char* header_name, const char* header_content)
+{
+	https_t* https = (https_t*)https_ptr;
+	https_header_t header;
+	header.name.ptr = header_name;
+	header.name.len = CUTE_STRLEN(header_name);
+	header.content.ptr = header_content;
+	header.content.len = CUTE_STRLEN(header_content);
+	https->response.headers.add(header);
+}
+
+EMSCRIPTEN_KEEPALIVE void s_content(void* https_ptr, void* data, size_t size)
+{
+	https_t* https = (https_t*)https_ptr;
+	((char*)data)[size - 1] = 0;
+	https->response.content = (const char*)data;
+	https->response.content_len = size - 1;
+}
+
+EMSCRIPTEN_KEEPALIVE void s_loaded(void* https_ptr)
+{
+	https_t* https = (https_t*)https_ptr;
+	https->state = HTTPS_STATE_COMPLETED;
+}
+
+EMSCRIPTEN_KEEPALIVE void s_error(void* https_ptr)
+{
+	https_t* https = (https_t*)https_ptr;
+	https->state = HTTPS_STATE_FAILED;
+}
+
+}
+
+EM_JS(void, s_js_get, (void* https_ptr, const char* c_host, const char* c_uri),
+{
+	var host = UTF8ToString(c_host);
+	var uri = UTF8ToString(c_uri);
+	var url = host + uri;
+	var request = new XMLHttpRequest();
+
+	function progress_fn(e) {
+		_s_bytes_downloaded(https_ptr, e.loaded);
+	}
+
+	function load_fn(e) {
+		_s_response_code(https_ptr, request.status);
+		var headers = request.getAllResponseHeaders();
+		var header_array = headers.trim().split(/[\r\n]+/);
+		header_array.forEach(function (line) {
+			var parts = line.split(': ');
+			var header = parts.shift();
+			var value = parts.join(': ');
+			var c_header = allocate(intArrayFromString(header), ALLOC_NORMAL);
+			var c_value = allocate(intArrayFromString(value), ALLOC_NORMAL);
+			_s_add_response_header(https_ptr, c_header, c_value);
+		});
+		var size = (req.response.length + 1) * req.response.BYTES_PER_ELEMENT;
+		var u8_array = Module._malloc(size);
+		Module.HEAPU8.set(req.response, u8_array);
+		_s_content(https_ptr, u8_array, size);
+		_s_loaded(https_ptr);
+	}
+
+	function error_fn(e) {
+		_s_error(https_ptr);
+	}
+
+	request.addEventListener("progress", progress_fn);
+	request.addEventListener("load", load_fn);
+	request.addEventListener("error", error_fn);
+	request.open("GET", url);
+	request.responseType = "arraybuffer";
+	request.send();
+});
+
+EM_JS(void, s_js_post, (void* https_ptr, const char* c_host, const char* c_uri, const void* data, size_t size),
+{
+	var host = UTF8ToString(c_host);
+	var uri = UTF8ToString(c_uri);
+	var url = host + uri;
+	var request = new XMLHttpRequest();
+	request.setRequestHeader("Host", host);
+
+	function progress_fn(e) {
+		_s_bytes_downloaded(https_ptr, e.loaded);
+	}
+
+	function load_fn(e) {
+		_s_response_code(https_ptr, request.status);
+		var headers = request.getAllResponseHeaders();
+		var header_array = headers.trim().split(/[\r\n]+/);
+		header_array.forEach(function (line) {
+			var parts = line.split(': ');
+			var header = parts.shift();
+			var value = parts.join(': ');
+			var c_header = allocate(intArrayFromString(header), ALLOC_NORMAL);
+			var c_value = allocate(intArrayFromString(value), ALLOC_NORMAL);
+			_s_add_response_header(https_ptr, c_header, c_value);
+		});
+		var size = req.response.length * req.response.BYTES_PER_ELEMENT;
+		var u8_array = Module._malloc(size);
+		Module.HEAPU8.set(req.response, u8_array);
+		_s_content(https_ptr, u8_array, size);
+		_s_loaded(https_ptr);
+	}
+
+	function error_fn(e) {
+		_s_error(https_ptr);
+	}
+
+	var data_array = (data && size) ? HEAPU8.slice(data, data + size) : null;
+
+	request.addEventListener("progress", progress_fn);
+	request.addEventListener("load", load_fn);
+	request.addEventListener("error", error_fn);
+	request.open("POST", url);
+	request.responseType = "arraybuffer";
+	request.send(data_array);
+});
+
+https_t* https_get(const char* host, const char* port, const char* uri, error_t* err, bool verify_cert)
+{
+	https_t* https = CUTE_NEW(https_t, NULL);
+	https->host = host;
+	https->uri = uri;
+	// `port` and `verify_cert` are not used with emscripten.
+	if (err) *err = error_success();
+	return https;
+}
+
+https_t* https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, error_t* err, bool verify_cert)
+{
+	https_t* https = CUTE_NEW(https_t, NULL);
+	https->host = host;
+	https->uri = uri;
+	https->data = data;
+	https->size = size;
+	// `port` and `verify_cert` are not used with emscripten.
+	if (err) *err = error_success();
+	return https;
+}
+
+void https_destroy(https_t* https)
+{
+	// free up each header string pair
+	// free the response data
+	https->~https_t();
+	CUTE_FREE(https, NULL);
+}
+
+https_state_t https_state(https_t* https)
+{
+	return https->state;
+}
+
+size_t https_process(https_t* https)
+{
+	if (https->state != HTTPS_STATE_PENDING) return https->bytes_read;
+
+	if (!https->request_sent) {
+		if (https->data) {
+			s_js_post(https, https->host, https->uri, https->data, https->size);
+		} else {
+			s_js_get(https, https->host, https->uri);
+		}
+		https->request_sent = true;
+	}
+
+	return https->bytes_read;
+}
+
+const https_response_t* https_response(https_t* https)
+{
+	if (https->state != HTTPS_STATE_COMPLETED) return NULL;
+	return &https->response;
+}
+
+#endif // CUTE_EMSCRIPTEN
 
 }
