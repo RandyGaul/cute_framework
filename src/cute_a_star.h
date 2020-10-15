@@ -19,38 +19,13 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_INPUT_INTERNAL_H
-#define CUTE_INPUT_INTERNAL_H
+#ifndef CUTE_A_STAR_H
+#define CUTE_A_STAR_H
 
-#include <cute_input.h>
-#include <cute_joypad.h>
-#include <cute_doubly_list.h>
-
-#include <SDL2/SDL.h>
+#include <cute_defines.h>
 
 namespace cute
 {
-
-enum mouse_click_t : int
-{
-	MOUSE_CLICK_SINGLE,
-	MOUSE_CLICK_DOUBLE,
-};
-
-struct joypad_t
-{
-	list_node_t node;
-	SDL_GameController* controller = NULL;
-	SDL_JoystickID id = -1;
-	int buttons[JOYPAD_BUTTON_COUNT] = { 0 };
-	int buttons_prev[JOYPAD_BUTTON_COUNT] = { 0 };
-	int axes[JOYPAD_AXIS_COUNT] = { 0 };
-};
-
-struct app_t;
-
-void pump_input_msgs(app_t* app);
-
 }
 
-#endif // CUTE_INPUT_INTERNAL_H
+#endif // CUTE_A_STAR_H

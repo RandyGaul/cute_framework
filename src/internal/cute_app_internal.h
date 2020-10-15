@@ -28,6 +28,7 @@
 #include <cute_ecs.h>
 #include <cute_dictionary.h>
 #include <cute_math.h>
+#include <cute_doubly_list.h>
 
 #include <internal/cute_object_table_internal.h>
 #include <internal/cute_font_internal.h>
@@ -138,6 +139,7 @@ struct app_t
 	float keys_duration[512] = { 0 };
 	int key_mod = 0;
 	mouse_state_t mouse, mouse_prev;
+	list_t joypads;
 
 	// TODO: Set allocator context for these data structures.
 	array<system_internal_t> systems;

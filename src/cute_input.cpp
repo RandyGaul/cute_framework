@@ -396,6 +396,15 @@ bool input_get_ime_composition(app_t* app, ime_composition_t* composition)
 	return app->ime_composition.count() ? true : false;
 }
 
+static joypad_t* s_joy(app_t* app, SDL_JoystickID id)
+{
+	for (list_node_t* n = list_begin(&app->joypads); n != list_end(&app->joypads); n = n->next) {
+		joypad_t* joypad = CUTE_LIST_HOST(joypad_t, node, n);
+		if (joypad->id == id) return joypad;
+	}
+	return NULL;
+}
+
 void pump_input_msgs(app_t* app)
 {
 	// Clear any necessary single-frame state and copy to `prev` states.
@@ -404,6 +413,10 @@ void pump_input_msgs(app_t* app)
 	CUTE_MEMCPY(app->keys_prev, app->keys, sizeof(app->keys));
 	CUTE_MEMCPY(&app->mouse_prev, &app->mouse, sizeof(app->mouse));
 	CUTE_MEMCPY(&app->window_state_prev, &app->window_state, sizeof(app->window_state));
+	for (list_node_t* n = list_begin(&app->joypads); n != list_end(&app->joypads); n = n->next) {
+		joypad_t* joypad = CUTE_LIST_HOST(joypad_t, node, n);
+		CUTE_MEMCPY(joypad->buttons_prev, joypad->buttons, sizeof(joypad->buttons));
+	}
 	app->mouse.wheel_motion = 0;
 	app->window_state.moved = false;
 	app->window_state.restored = false;
@@ -558,6 +571,40 @@ void pump_input_msgs(app_t* app)
 		case SDL_MOUSEWHEEL:
 			app->mouse.wheel_motion = event.wheel.y;
 			break;
+
+		case SDL_CONTROLLERBUTTONUP:
+		{
+			SDL_JoystickID id = event.cbutton.which;
+			joypad_t* joypad = s_joy(app, id);
+			if (joypad) {
+				int button = (int)event.cbutton.button;
+				CUTE_ASSERT(button >= 0 && button < JOYPAD_BUTTON_COUNT);
+				joypad->buttons[button] = 1;
+			}
+		}	break;
+
+		case SDL_CONTROLLERBUTTONDOWN:
+		{
+			SDL_JoystickID id = event.cbutton.which;
+			joypad_t* joypad = s_joy(app, id);
+			if (joypad) {
+				int button = (int)event.cbutton.button;
+				CUTE_ASSERT(button >= 0 && button < JOYPAD_BUTTON_COUNT);
+				joypad->buttons[button] = 0;
+			}
+		}	break;
+
+		case SDL_CONTROLLERAXISMOTION:
+		{
+			SDL_JoystickID id = event.caxis.which;
+			joypad_t* joypad = s_joy(app, id);
+			if (joypad) {
+				int axis = (int)event.caxis.axis;
+				int value = (int)event.caxis.value;
+				CUTE_ASSERT(axis >= 0 && axis < JOYPAD_AXIS_COUNT);
+				joypad->axes[axis] = value;
+			}
+		}	break;
 		}
 	}
 

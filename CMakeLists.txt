@@ -152,6 +152,8 @@ set(CUTE_SRCS
 	src/cute_aseprite_cache.cpp
 	src/cute_png_cache.cpp
 	src/cute_https.cpp
+	src/cute_joypad.cpp
+	src/cute_a_star.cpp
 
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
@@ -232,6 +234,9 @@ set(CUTE_HDRS
 	src/cute_aseprite_cache.h
 	src/cute_png_cache.h
 	src/cute_https.h
+	src/cute_joypad.h
+	src/cute_priority_queue.h
+	src/cute_a_star.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h

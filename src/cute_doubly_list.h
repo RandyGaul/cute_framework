@@ -29,8 +29,8 @@ namespace cute
 
 struct list_node_t
 {
-	list_node_t* next;
-	list_node_t* prev;
+	list_node_t* next = this;
+	list_node_t* prev = this;
 };
 
 struct list_t
