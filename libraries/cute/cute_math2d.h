@@ -108,6 +108,8 @@ struct aabb_t
 #define CUTE_MATH2D_PI 3.14159265f
 
 // scalar ops
+
+CUTE_MATH2D_INLINE float min(float a, float b) { return a < b ? a : b; }
 CUTE_MATH2D_INLINE float min(float a, float b) { return a < b ? a : b; }
 CUTE_MATH2D_INLINE float max(float a, float b) { return b < a ? a : b; }
 CUTE_MATH2D_INLINE float clamp(float a, float lo, float hi) { return max(lo, min(a, hi)); }
@@ -121,6 +123,7 @@ CUTE_MATH2D_INLINE float mod(float x, float m) { return x - (int)(x / m) * m; }
 CUTE_MATH2D_INLINE int sign(int a) { return a < 0 ? -1 : 1; }
 CUTE_MATH2D_INLINE int min(int a, int b) { return a < b ? a : b; }
 CUTE_MATH2D_INLINE int max(int a, int b) { return b < a ? a : b; }
+CUTE_MATH2D_INLINE int abs(int a) { int mask = a >> ((sizeof(int) * 8) - 1); return (a + mask) ^ mask; }
 CUTE_MATH2D_INLINE int clamp(int a, int lo, int hi) { return max(lo, min(a, hi)); }
 CUTE_MATH2D_INLINE int clamp01(int a) { return max(0, min(a, 1)); }
 CUTE_MATH2D_INLINE bool is_even(int x) { return (x % 2) == 0; }

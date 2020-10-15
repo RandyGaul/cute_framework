@@ -31,10 +31,14 @@ template <typename T>
 struct priority_queue
 {
 	void push_min(const T& val, float cost);
-	bool pop_min(T* val, float* cost);
+	bool pop_min(T* val = NULL, float* cost = NULL);
 
 	void push_max(const T& val, float cost);
-	bool pop_max(T* val, float* cost);
+	bool pop_max(T* val = NULL, float* cost = NULL);
+
+	int count();
+	int count() const;
+	void clear();
 
 private:
 	array<T> m_values;
@@ -66,8 +70,8 @@ bool priority_queue<T>::pop_min(T* val, float* cost)
 {
 	int count = m_values.count();
 	if (!count) return false;
-	*val = m_values[0];
-	*cost = m_costs[0];
+	if (val) *val = m_values[0];
+	if (cost) *cost = m_costs[0];
 
 	count--;
 	m_values.unordered_remove(0);
@@ -111,8 +115,8 @@ bool priority_queue<T>::pop_max(T* val, float* cost)
 {
 	int count = m_values.count();
 	if (!count) return false;
-	*val = m_values[0];
-	*cost = m_costs[0];
+	if (val) *val = m_values[0];
+	if (cost) *cost = m_costs[0];
 
 	count--;
 	m_values.unordered_remove(0);
@@ -135,6 +139,25 @@ bool priority_queue<T>::pop_max(T* val, float* cost)
 	}
 
 	return true;
+}
+
+template <typename T>
+int priority_queue<T>::count()
+{
+	return m_values.count();
+}
+
+template <typename T>
+int priority_queue<T>::count() const
+{
+	return m_values.count();
+}
+
+template <typename T>
+void priority_queue<T>::clear()
+{
+	m_values.clear();
+	m_costs.clear();
 }
 
 template <typename T>

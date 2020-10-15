@@ -64,6 +64,7 @@ struct array
 	void set_count(int count);
 	void steal_from(array<T>* steal_from_me);
 	void steal_from(array<T>& steal_from_me);
+	void reverse();
 
 	int capacity() const;
 	int count() const;
@@ -301,6 +302,21 @@ void array<T>::steal_from(array<T>* steal_from_me)
 	m_items = steal_from_me->m_items;
 	m_mem_ctx = steal_from_me->m_mem_ctx;
 	CUTE_PLACEMENT_NEW(steal_from_me) array<T>();
+}
+
+template <typename T>
+void array<T>::reverse()
+{
+	T* a = m_data;
+	T* b = m_data + (m_count - 1);
+
+	while (a < b) {
+		T t = *a;
+		*a = *b;
+		*b = t;
+		++a;
+		--b;
+	}
 }
 
 template <typename T>
