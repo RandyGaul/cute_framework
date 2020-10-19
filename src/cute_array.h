@@ -307,8 +307,8 @@ void array<T>::steal_from(array<T>* steal_from_me)
 template <typename T>
 void array<T>::reverse()
 {
-	T* a = m_data;
-	T* b = m_data + (m_count - 1);
+	T* a = m_items;
+	T* b = m_items + (m_count - 1);
 
 	while (a < b) {
 		T t = *a;

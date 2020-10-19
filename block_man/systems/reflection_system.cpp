@@ -46,13 +46,15 @@ void reflection_system_pre_update(app_t* app, float dt, void* udata)
 	blend.color_write_mask = SG_COLORMASK_NONE;
 
 	// Draw masks onto the stencil buffer.
-	batch_set_depth_stencil_state(batch, stencil);
-	batch_set_blend_state(batch, blend);
+	batch_push_depth_stencil_state(batch, stencil);
+	batch_push_blend_state(batch, blend);
 	for (int i = 0; i < reflection_system->masks.size(); ++i) {
 		batch_push(batch, reflection_system->masks[i]);
 	}
 	reflection_system->masks.clear();
 	batch_flush(batch);
+	batch_pop_depth_stencil_state(batch);
+	batch_pop_blend_state(batch);
 }
 
 void reflection_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, Reflection* reflections, int entity_count)
@@ -90,20 +92,21 @@ void reflection_system_post_update(app_t* app, float dt, void* udata)
 	stencil.stencil_front.compare_func = SG_COMPAREFUNC_EQUAL;
 	stencil.stencil_front.pass_op = SG_STENCILOP_ZERO;
 	stencil.stencil_back = stencil.stencil_front;
-	batch_set_depth_stencil_state(batch, stencil);
+	batch_push_depth_stencil_state(batch, stencil);
 	for (int i = 0; i < reflection_system->quads.count(); ++i) {
 		batch_sprite_t quad = reflection_system->quads[i];
 		batch_push(batch, quad);
 	}
 
 	batch_flush(batch);
+	batch_pop_depth_stencil_state(batch);
 
 	// Draw reflection sprite slightly above itself.
 	stencil.stencil_front.compare_func = SG_COMPAREFUNC_EQUAL;
 	stencil.stencil_front.pass_op = SG_STENCILOP_KEEP;
 	stencil.stencil_back = stencil.stencil_front;
-	batch_set_depth_stencil_state(batch, stencil);
-	batch_set_blend_defaults(batch);
+	batch_push_depth_stencil_state(batch, stencil);
+	batch_push_blend_defaults(batch);
 	for (int i = 0; i < reflection_system->quads.count(); ++i) {
 		batch_sprite_t quad = reflection_system->quads[i];
 		quad.transform.p += v2(0, 6);
@@ -112,6 +115,7 @@ void reflection_system_post_update(app_t* app, float dt, void* udata)
 	}
 
 	batch_flush(batch);
-	batch_set_depth_stencil_defaults(batch);
+	batch_pop_depth_stencil_state(batch);
+	batch_pop_blend_state(batch);
 	reflection_system->quads.clear();
 }

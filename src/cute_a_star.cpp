@@ -68,11 +68,11 @@ struct a_star_grid_t
 	}
 };
 
-static float s_cost(iv2 a, iv2 b)
+static float s_heuristic(iv2 a, iv2 b, float allow_diagonals)
 {
 	float dx = (float)abs(a.x - b.x);
 	float dy = (float)abs(a.y - b.y);
-	float diagonal = min(dx, dy);
+	float diagonal = min(dx, dy) * allow_diagonals;
 	float manhattan = dx + dy;
 	float chebyshev = 1.4142135f * diagonal + (manhattan - 2.0f * diagonal);
 	return chebyshev;
@@ -102,6 +102,7 @@ bool a_star(const a_star_grid_t* const_grid, const a_star_input_t* input, a_star
 	iv2 s = { input->start_x, input->start_y };
 	iv2 e = { input->end_x, input->end_y };
 	bool allow_diagonal_movement = input->allow_diagonal_movement;
+	float allow_diagonals = allow_diagonal_movement ? 1.0f : 0;
 	node_t* nodes = grid->nodes.data();
 	const float* cell_to_cost = input->cell_to_cost;
 	const int* cells = grid->cells;
@@ -124,7 +125,7 @@ bool a_star(const a_star_grid_t* const_grid, const a_star_input_t* input, a_star
 	int index = s.y * w + s.x;
 	node_t* initial = nodes + index;
 	initial->g = 0;
-	initial->h = s_cost(s, e);
+	initial->h = s_heuristic(s, e, allow_diagonals);
 	initial->f = initial->h;
 	initial->visited = true;
 	open_list.push_min(initial, initial->f);
@@ -178,7 +179,7 @@ bool a_star(const a_star_grid_t* const_grid, const a_star_input_t* input, a_star
 			if (non_traversable) continue;
 			if (n->g <= g) continue;
 
-			float h = s_cost(n->p, e);
+			float h = s_heuristic(n->p, e, allow_diagonals);
 			n->g = g;
 			n->h = h;
 			n->f = g + h;

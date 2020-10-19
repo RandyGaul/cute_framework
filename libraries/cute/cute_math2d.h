@@ -34,6 +34,7 @@
 #if !defined(CUTE_MATH2D_H)
 
 #include <cmath>
+#include <initializer_list>
 
 #ifndef CUTE_MATH2D_NAMESPACE
 	#define CUTE_MATH2D_NAMESPACE
@@ -46,29 +47,38 @@ struct v2
 {
 	v2() {}
 	v2(float x, float y) : x(x), y(y) {}
+	v2(std::initializer_list<float> list) : x(list.begin()[0]), y(list.begin()[1]) {};
 	float x;
 	float y;
 };
 
-// 2d rotation composed of cos/sin pair
-struct rotation_t
+// Rotation about an axis composed of cos/sin pair
+struct sincos_t
 {
 	float s;
 	float c;
 };
 
-// 2d matrix
+// 2x2 matrix
 struct m2
 {
 	v2 x;
 	v2 y;
 };
 
-// 2d affine transformation
+// 2d transformation, mostly useful for graphics and not physics colliders, since it supports scale
+struct m3x2
+{
+	m2 m;
+	v2 p;
+};
+
+
+// 2d transformation, mostly useful for physics colliders since there's no scale
 struct transform_t
 {
-	rotation_t r;
-	v2 p; // translation, or position
+	sincos_t r;
+	v2 p;
 };
 
 // 2d plane, aka line
@@ -108,8 +118,6 @@ struct aabb_t
 #define CUTE_MATH2D_PI 3.14159265f
 
 // scalar ops
-
-CUTE_MATH2D_INLINE float min(float a, float b) { return a < b ? a : b; }
 CUTE_MATH2D_INLINE float min(float a, float b) { return a < b ? a : b; }
 CUTE_MATH2D_INLINE float max(float a, float b) { return b < a ? a : b; }
 CUTE_MATH2D_INLINE float clamp(float a, float lo, float hi) { return max(lo, min(a, hi)); }
@@ -185,19 +193,14 @@ CUTE_MATH2D_INLINE int parallel(v2 a, v2 b, float tol)
 }
 
 // rotation ops
-CUTE_MATH2D_INLINE rotation_t make_rotation(float radians) { rotation_t r; r.s = sin(radians); r.c = cos(radians); return r; }
-CUTE_MATH2D_INLINE rotation_t make_rotation() { rotation_t r; r.c = 1.0f; r.s = 0; return r; }
-CUTE_MATH2D_INLINE v2 x_axis(rotation_t r) { return v2(r.c, r.s); }
-CUTE_MATH2D_INLINE v2 y_axis(rotation_t r) { return v2(-r.s, r.c); }
-CUTE_MATH2D_INLINE v2 mul(rotation_t a, v2 b) { return v2(a.c * b.x - a.s * b.y,  a.s * b.x + a.c * b.y); }
-CUTE_MATH2D_INLINE v2 mulT(rotation_t a, v2 b) { return v2(a.c * b.x + a.s * b.y, -a.s * b.x + a.c * b.y); }
-CUTE_MATH2D_INLINE rotation_t mul(rotation_t a, rotation_t b)  { rotation_t c; c.c = a.c * b.c - a.s * b.s; c.s = a.s * b.c + a.c * b.s; return c; }
-CUTE_MATH2D_INLINE rotation_t mulT(rotation_t a, rotation_t b) { rotation_t c; c.c = a.c * b.c + a.s * b.s; c.s = a.c * b.s - a.s * b.c; return c; }
-
-CUTE_MATH2D_INLINE v2 mul(m2 a, v2 b)  { v2 c; c.x = a.x.x * b.x + a.y.x * b.y; c.y = a.x.y * b.x + a.y.y * b.y; return c; }
-CUTE_MATH2D_INLINE v2 mulT(m2 a, v2 b) { v2 c; c.x = a.x.x * b.x + a.x.y * b.y; c.y = a.y.x * b.x + a.y.y * b.y; return c; }
-CUTE_MATH2D_INLINE m2 mul(m2 a, m2 b)  { m2 c; c.x = mul(a,  b.x); c.y = mul(a,  b.y); return c; }
-CUTE_MATH2D_INLINE m2 mulT(m2 a, m2 b) { m2 c; c.x = mulT(a, b.x); c.y = mulT(a, b.y); return c; }
+CUTE_MATH2D_INLINE sincos_t sincos(float radians) { sincos_t r; r.s = sin(radians); r.c = cos(radians); return r; }
+CUTE_MATH2D_INLINE sincos_t sincos() { sincos_t r; r.c = 1.0f; r.s = 0; return r; }
+CUTE_MATH2D_INLINE v2 x_axis(sincos_t r) { return v2(r.c, r.s); }
+CUTE_MATH2D_INLINE v2 y_axis(sincos_t r) { return v2(-r.s, r.c); }
+CUTE_MATH2D_INLINE v2 mul(sincos_t a, v2 b) { return v2(a.c * b.x - a.s * b.y,  a.s * b.x + a.c * b.y); }
+CUTE_MATH2D_INLINE v2 mulT(sincos_t a, v2 b) { return v2(a.c * b.x + a.s * b.y, -a.s * b.x + a.c * b.y); }
+CUTE_MATH2D_INLINE sincos_t mul(sincos_t a, sincos_t b)  { sincos_t c; c.c = a.c * b.c - a.s * b.s; c.s = a.s * b.c + a.c * b.s; return c; }
+CUTE_MATH2D_INLINE sincos_t mulT(sincos_t a, sincos_t b) { sincos_t c; c.c = a.c * b.c + a.s * b.s; c.s = a.c * b.s - a.s * b.c; return c; }
 
 // Remaps the result from atan2f to the continuous range of 0, 2*PI.
 CUTE_MATH2D_INLINE float atan2_360(float y, float x) { return atan2f(-y, -x) + CUTE_MATH2D_PI; }
@@ -217,9 +220,31 @@ CUTE_MATH2D_INLINE float shortest_arc(v2 a, v2 b) {
 CUTE_MATH2D_INLINE float angle_diff(float radians_a, float radians_b) { return mod((radians_b - radians_a) + CUTE_MATH2D_PI, 2.0f * CUTE_MATH2D_PI) - CUTE_MATH2D_PI; }
 CUTE_MATH2D_INLINE v2 from_angle(float radians) { return v2(cos(radians), sin(radians)); }
 
+// m2 ops
+CUTE_MATH2D_INLINE v2 mul(m2 a, v2 b)  { v2 c; c.x = a.x.x * b.x + a.y.x * b.y; c.y = a.x.y * b.x + a.y.y * b.y; return c; }
+CUTE_MATH2D_INLINE v2 mulT(m2 a, v2 b) { v2 c; c.x = a.x.x * b.x + a.x.y * b.y; c.y = a.y.x * b.x + a.y.y * b.y; return c; }
+CUTE_MATH2D_INLINE m2 mul(m2 a, m2 b)  { m2 c; c.x = mul(a,  b.x); c.y = mul(a,  b.y); return c; }
+CUTE_MATH2D_INLINE m2 mulT(m2 a, m2 b) { m2 c; c.x = mulT(a, b.x); c.y = mulT(a, b.y); return c; }
+
+// m3x2 ops
+CUTE_MATH2D_INLINE v2 mul(m3x2 a, v2 b)  { return mul(a.m, b) + a.p; }
+CUTE_MATH2D_INLINE v2 mulT(m3x2 a, v2 b) { return mulT(a.m, b - a.p); }
+CUTE_MATH2D_INLINE m3x2 mul(m3x2 a, m3x2 b)  { m3x2 c; c.m = mul(a.m, b.m); c.p = mul(a.m, b.p) + a.p; return c; }
+CUTE_MATH2D_INLINE m3x2 mulT(m3x2 a, m3x2 b)  { m3x2 c; c.m = mulT(a.m, b.m); c.p = mulT(a.m, b.p - a.p); return c; }
+CUTE_MATH2D_INLINE m3x2 make_identity() { m3x2 m; m.m.x = v2(1, 0); m.m.y = v2(0, 1); m.p = v2(0, 0); return m; }
+CUTE_MATH2D_INLINE m3x2 make_translation(float x, float y) { m3x2 m; m.m.x = v2(1, 0); m.m.y = v2(0, 1); m.p = v2(x, y); return m; }
+CUTE_MATH2D_INLINE m3x2 make_translation(v2 p) { return make_translation(p.x, p.y); }
+CUTE_MATH2D_INLINE m3x2 make_scale(v2 s) { m3x2 m; m.m.x = v2(s.x, 0); m.m.y = v2(0, s.y); m.p = v2(0, 0); return m; }
+CUTE_MATH2D_INLINE m3x2 make_scale(float s) { return make_scale(v2(s, s)); }
+CUTE_MATH2D_INLINE m3x2 make_scale(v2 s, v2 p) { m3x2 m; m.m.x = v2(s.x, 0); m.m.y = v2(0, s.y); m.p = p; return m; }
+CUTE_MATH2D_INLINE m3x2 make_scale(float s, v2 p) { return make_scale(v2(s, s), p); }
+CUTE_MATH2D_INLINE m3x2 make_scale(float sx, float sy, v2 p) { return make_scale(v2(sx, sy), p); }
+CUTE_MATH2D_INLINE m3x2 make_rotation(float radians) { sincos_t sc = sincos(radians); m3x2 m; m.m.x = v2(sc.c, -sc.s); m.m.y = v2(sc.s, sc.c); m.p = v2(0, 0); return m; }
+CUTE_MATH2D_INLINE m3x2 make_transform(v2 p, v2 s, float radians) { sincos_t sc = sincos(radians); m3x2 m; m.m.x = v2(sc.c, -sc.s) * s.x; m.m.y = v2(sc.s, sc.c) * s.y; m.p = p; return m; }
+
 // transform ops
-CUTE_MATH2D_INLINE transform_t make_transform() { transform_t x; x.p = v2(0, 0); x.r = make_rotation(); return x; }
-CUTE_MATH2D_INLINE transform_t make_transform(v2 p, float radians) { transform_t x; x.r = make_rotation(radians); x.p = p; return x; }
+CUTE_MATH2D_INLINE transform_t make_transform() { transform_t x; x.p = v2(0, 0); x.r = sincos(); return x; }
+CUTE_MATH2D_INLINE transform_t make_transform(v2 p, float radians) { transform_t x; x.r = sincos(radians); x.p = p; return x; }
 CUTE_MATH2D_INLINE v2 mul(transform_t a, v2 b) { return mul(a.r, b) + a.p; }
 CUTE_MATH2D_INLINE v2 mulT(transform_t a, v2 b) { return mulT(a.r, b - a.p); }
 CUTE_MATH2D_INLINE transform_t mul(transform_t a, transform_t b) { transform_t c; c.r = mul(a.r, b.r); c.p = mul(a.r, b.p) + a.p; return c; }

@@ -37,7 +37,7 @@ cute::error_t serialize_v2(kv_t* kv, const char* key, v2* v)
 	return kv_error_state(kv);
 }
 
-cute::error_t serialize_rotation(kv_t* kv, const char* key, rotation_t* rotation)
+cute::error_t serialize_rotation(kv_t* kv, const char* key, sincos_t* rotation)
 {
 	if (!kv_object_begin(kv, key).is_error()) {
 		kv_key(kv, "s"); kv_val(kv, &rotation->s);

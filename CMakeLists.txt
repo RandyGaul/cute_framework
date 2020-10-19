@@ -147,7 +147,6 @@ set(CUTE_SRCS
 	src/cute_window.cpp
 	src/cute_image.cpp
 	src/cute_font.cpp
-	src/cute_camera.cpp
 	src/cute_gfx.cpp
 	src/cute_aseprite_cache.cpp
 	src/cute_png_cache.cpp
@@ -226,7 +225,6 @@ set(CUTE_HDRS
 	src/cute_image.h
 	src/cute_color.h
 	src/cute_font.h
-	src/cute_camera.h
 	src/cute.h
 	src/cute_gfx.h
 	src/cute_rnd.h

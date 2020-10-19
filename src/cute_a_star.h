@@ -74,10 +74,14 @@ struct a_star_output_t
 };
 
 /**
- * Calculates the shortest path from start to end within the `input` struct upon `grid`.
- * Only works with grids. Arbitrary graphs are not supported.
+ * Calculates the shortest path from start to end from `input` upon `grid`.
+ * Only works with 2d grids. Arbitrary graphs are not supported.
  * The `output` struct is optional and can be NULL.
  * Returns true if a valid path was found, false otherwise.
+ * 
+ * Note: `grid` cannot be used by two different `a_star` calls simultaneously. If you want to
+ * perform many different A* computations in a concurrent way, you need a different `grid`
+ * pointer for each multithreaded call.
  */
 CUTE_API bool CUTE_CALL a_star(const a_star_grid_t* grid, const a_star_input_t* input, a_star_output_t* output = NULL);
 

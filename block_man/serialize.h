@@ -26,7 +26,7 @@
 using namespace cute;
 
 cute::error_t serialize_v2(kv_t* kv, const char* key, v2* v);
-cute::error_t serialize_rotation(kv_t* kv, const char* key, rotation_t* rotation);
+cute::error_t serialize_rotation(kv_t* kv, const char* key, sincos_t* rotation);
 cute::error_t serialize_transform(kv_t* kv, const char* key, transform_t* transform);
 cute::error_t kv_val(kv_t* kv, const char** string);
 

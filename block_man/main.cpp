@@ -199,8 +199,10 @@ void do_imgui_stuff(app_t* app, float dt)
 			}
 		}
 		static color_t tint = make_color(0.5f, 0.5f, 0.5f, 1.0f);
-		ImGui::ColorPicker4("Tint", (float*)&tint);
-		batch_set_tint_color(batch, tint);
+		if (ImGui::ColorPicker4("Tint", (float*)&tint)) {
+			batch_pop_tint(batch);
+			batch_push_tint(batch, tint);
+		}
 
 		if (ImGui::Button("Up")) {
 			for (int i = 1; i < world->LEVEL_H; ++i) {
@@ -387,6 +389,7 @@ void do_lose_screen_stuff(float dt)
 	COROUTINE_END(co);
 
 	draw_text("YOU DIED", 0, 0);
+	bool pop_tint = false;
 	if (t == 1) {
 		if (button_text("Retry?", -30, -20)) {
 			world->lose_screen = false;
@@ -395,7 +398,8 @@ void do_lose_screen_stuff(float dt)
 			s_co = { 0 };
 			show_text = false;
 			show_girl = true;
-			batch_no_tint(batch);
+			batch_push_tint(batch, make_color(0));
+			pop_tint = true;
 		}
 		if (button_text("Nah.", 40, -20)) {
 			printf("nah\n");
@@ -406,13 +410,15 @@ void do_lose_screen_stuff(float dt)
 	color.a = ease_in_sin(t * t * t);
 	font_draw(app, font_get_default(app), matrix_ortho_2d(320, 240, 0, 0), color);
 	batch_flush(batch);
+	if (pop_tint) batch_pop_tint(batch);
 
 	if (show_girl) {
 		batch_outlines(batch, true);
 		batch_outlines_color(batch, make_color(0.8f, 0.1f, 0.1f));
-		batch_set_tint_color(batch, color_black());
+		batch_push_tint(batch, color_black());
 		player.draw(batch, player_last_tx());
 		batch_flush(batch);
+		batch_pop_tint(batch);
 		batch_outlines(batch, false);
 		batch_outlines_color(batch, color_white());
 	}

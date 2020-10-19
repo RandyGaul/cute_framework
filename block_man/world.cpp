@@ -495,7 +495,7 @@ void init_world(int argc, const char** argv)
 
 	cache = aseprite_cache_make(app);
 	batch = batch_make(aseprite_cache_get_pixels_fn(cache), cache);
-	batch_set_mvp(batch, matrix_ortho_2d(320, 240, 0, 0));
+	batch_set_projection(batch, matrix_ortho_2d(320, 240, 0, 0));
 
 	ecs_registration(app);
 	ice_block_system_init();

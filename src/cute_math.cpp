@@ -28,7 +28,7 @@ namespace cute
 {
 
 CUTE_STATIC_ASSERT(sizeof(v2) == sizeof(c2v), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(rotation_t) == sizeof(c2r), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(sincos_t) == sizeof(c2r), "Must be equal.");
 CUTE_STATIC_ASSERT(sizeof(transform_t) == sizeof(c2x), "Must be equal.");
 CUTE_STATIC_ASSERT(sizeof(m2) == sizeof(c2m), "Must be equal.");
 CUTE_STATIC_ASSERT(sizeof(halfspace_t) == sizeof(c2h), "Must be equal.");

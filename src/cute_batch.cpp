@@ -71,6 +71,13 @@ enum batch_sprite_shader_type_t
 	BATCH_SPRITE_SHADER_TYPE_OUTLINE,
 };
 
+struct scissor_t
+{
+	int x, y, w, h;
+};
+
+static const color_t DEFAULT_TINT = make_color(0.5f, 0.5f, 0.5f, 1.0f);
+
 struct batch_t
 {
 	::spritebatch_t sb;
@@ -87,16 +94,16 @@ struct batch_t
 	batch_sprite_shader_type_t sprite_shd_type = BATCH_SPRITE_SHADER_TYPE_DEFAULT;
 	bool pip_dirty = true;
 	sg_pipeline pip = { 0 };
-	sg_blend_state blend_state;
-	sg_depth_stencil_state depth_stencil_state;
-	bool scissor_enabled = false;
-	int scissor_x, scissor_y;
-	int scissor_w, scissor_h;
 	float outline_use_border = 1.0f;
 	float outline_use_corners = 0;
 	color_t outline_color = color_white();
-	matrix_t mvp;
-	color_t tint = make_color(0.5f, 0.5f, 0.5f, 1.0f);
+	matrix_t projection;
+
+	array<m3x2> m3x2s;
+	array<sg_blend_state> blend_states;
+	array<sg_depth_stencil_state> depth_stencil_states;
+	array<scissor_t> scissors;
+	array<color_t> tints = { DEFAULT_TINT };
 
 	get_pixels_fn* get_pixels = NULL;
 	void* get_pixels_udata = NULL;
@@ -163,6 +170,11 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	b->sprite_verts.ensure_count(vert_count);
 	quad_vertex_t* verts = b->sprite_verts.data();
 
+	m3x2 m = make_identity();
+	if (b->m3x2s.count()) {
+		m = b->m3x2s.last();
+	}
+
 	for (int i = 0; i < count; ++i)
 	{
 		spritebatch_sprite_t* s = sprites + i;
@@ -179,22 +191,26 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 			float x = quad[j].x;
 			float y = quad[j].y;
 
-			// rotate sprite about origin
+			// Rotate sprite about origin.
 			float x0 = s->c * x - s->s * y;
 			float y0 = s->s * x + s->c * y;
 			x = x0;
 			y = y0;
 
-			// scale sprite about origin
+			// Scale sprite about origin.
 			x *= s->sx;
 			y *= s->sy;
 
-			// translate sprite into the world
+			// Translate sprite into the world.
 			x += s->x;
 			y += s->y;
 
-			quad[j].x = x;
-			quad[j].y = y;
+			// Apply final batch transformation.
+			v2 p = v2(x, y);
+			p = mul(m, p);
+
+			quad[j].x = p.x;
+			quad[j].y = p.y;
 		}
 
 		// output transformed quad into CPU buffer
@@ -253,10 +269,10 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	case BATCH_SPRITE_SHADER_TYPE_DEFAULT:
 	{
 		sprite_default_vs_params_t vs_params = {
-			b->mvp
+			b->projection
 		};
 		sprite_default_fs_params_t fs_params = {
-			b->tint
+			b->tints.last()
 		};
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &vs_params, sizeof(vs_params));
 		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &fs_params, sizeof(fs_params));
@@ -265,10 +281,10 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	case BATCH_SPRITE_SHADER_TYPE_OUTLINE:
 	{
 		sprite_outline_vs_params_t vs_params = {
-			b->mvp,
+			b->projection,
 		};
 		sprite_outline_fs_params_t fs_params = {
-			b->tint,
+			b->tints.last(),
 			b->outline_color,
 			v2(1.0f / (float)texture_w, 1.0f / (float)texture_h),
 			b->outline_use_border,
@@ -322,8 +338,8 @@ static void s_sync_pip(batch_t* b)
 		params.layout.attrs[2].format = SG_VERTEXFORMAT_FLOAT;
 		params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
 		params.shader = b->active_shd;
-		params.depth_stencil = b->depth_stencil_state;
-		params.blend = b->blend_state;
+		params.depth_stencil = b->depth_stencil_states.last();
+		params.blend = b->blend_states.last();
 		b->pip = sg_make_pipeline(params);
 		b->pip_dirty = false;
 	}
@@ -334,7 +350,7 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 	batch_t* b = CUTE_NEW(batch_t, app->mem_ctx);
 	if (!b) return NULL;
 
-	b->mvp = matrix_identity();
+	b->projection = matrix_identity();
 	b->get_pixels = get_pixels;
 	b->get_pixels_udata = get_pixels_udata;
 	b->mem_ctx = mem_ctx;
@@ -361,8 +377,8 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 	b->geom_pip = sg_make_pipeline(params);
 	b->geom_buffer = triple_buffer_make(sizeof(vertex_t) * 1024 * 10, sizeof(vertex_t));
 
-	batch_set_depth_stencil_defaults(b);
-	batch_set_blend_defaults(b);
+	batch_push_depth_stencil_defaults(b);
+	batch_push_blend_defaults(b);
 	b->default_shd = b->active_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_DEFAULT);
 	b->outline_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_OUTLINE);
 	b->sprite_buffer = triple_buffer_make(sizeof(quad_vertex_t) * 1024 * 10, sizeof(quad_vertex_t));
@@ -416,8 +432,9 @@ error_t batch_flush(batch_t* b)
 	s_sync_pip(b);
 	sg_apply_pipeline(b->pip);
 
-	if (b->scissor_enabled) {
-		sg_apply_scissor_rect(b->scissor_x, b->scissor_y, b->scissor_w, b->scissor_h, false);
+	if (b->scissors.count()) {
+		scissor_t scissor = b->scissors.last();
+		sg_apply_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h, false);
 	}
 
 	spritebatch_tick(&b->sb);
@@ -432,7 +449,7 @@ error_t batch_flush(batch_t* b)
 	if (b->geom_verts.count()) {
 		sg_apply_pipeline(b->geom_pip);
 		geom_vs_params_t params;
-		params.u_mvp = b->mvp;
+		params.u_mvp = b->projection;
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &params, sizeof(params));
 		error_t err = triple_buffer_append(&b->geom_buffer, b->geom_verts.count(), b->geom_verts.data());
 		CUTE_ASSERT(!err.is_error());
@@ -447,23 +464,9 @@ error_t batch_flush(batch_t* b)
 
 //--------------------------------------------------------------------------------------------------
 
-void batch_set_mvp(batch_t* b, matrix_t mvp)
+void batch_set_projection(batch_t* b, matrix_t projection)
 {
-	b->mvp = mvp;
-}
-
-void batch_set_scissor_box(batch_t* b, int x, int y, int w, int h)
-{
-	b->scissor_enabled = true;
-	b->scissor_x = x;
-	b->scissor_y = y;
-	b->scissor_w = w;
-	b->scissor_h = h;
-}
-
-void batch_no_scissor_box(batch_t* b)
-{
-	b->scissor_enabled = false;
+	b->projection = projection;
 }
 
 void batch_outlines(batch_t* b, bool use_outlines)
@@ -486,43 +489,90 @@ void batch_outlines_color(batch_t* b, color_t c)
 	b->outline_color = c;
 }
 
-void batch_set_depth_stencil_state(batch_t* b, const sg_depth_stencil_state& depth_stencil_state)
+void batch_push_m3x2(batch_t* b, m3x2 m)
 {
-	b->depth_stencil_state = depth_stencil_state;
+	b->m3x2s.add(m);
+}
+
+void batch_pop_m3x2(batch_t* b)
+{
+	if (b->m3x2s.count()) {
+		b->m3x2s.pop();
+	}
+}
+
+void batch_push_scissor_box(batch_t* b, int x, int y, int w, int h)
+{
+	scissor_t scissor = { x, y, w, h };
+	b->scissors.add(scissor);
+}
+
+void batch_pop_scissor_box(batch_t* b)
+{
+	if (b->scissors.count()) {
+		b->scissors.pop();
+	}
+}
+
+void batch_push_depth_stencil_state(batch_t* b, const sg_depth_stencil_state& depth_stencil_state)
+{
+	b->depth_stencil_states.add(depth_stencil_state);
 	b->pip_dirty = true;
 }
 
-void batch_set_depth_stencil_defaults(batch_t* b)
+void batch_push_depth_stencil_defaults(batch_t* b)
 {
-	CUTE_MEMSET(&b->depth_stencil_state, 0, sizeof(b->depth_stencil_state));
+	sg_depth_stencil_state depth_stencil_state;
+	CUTE_MEMSET(&depth_stencil_state, 0, sizeof(depth_stencil_state));
+	batch_push_depth_stencil_state(b, depth_stencil_state);
+}
+
+void batch_pop_depth_stencil_state(batch_t* b)
+{
+	if (b->depth_stencil_states.count() > 1) {
+		b->depth_stencil_states.pop();
+		b->pip_dirty = true;
+	}
+}
+
+void batch_push_blend_state(batch_t* b, const sg_blend_state& blend_state)
+{
+	b->blend_states.add(blend_state);
 	b->pip_dirty = true;
 }
 
-void batch_set_blend_state(batch_t* b, const sg_blend_state& blend_state)
+void batch_push_blend_defaults(batch_t* b)
 {
-	b->blend_state = blend_state;
-	b->pip_dirty = true;
+	sg_blend_state blend_state;
+	CUTE_MEMSET(&blend_state, 0, sizeof(blend_state));
+	blend_state.enabled = true;
+	blend_state.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
+	blend_state.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	blend_state.op_rgb = SG_BLENDOP_ADD;
+	blend_state.src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
+	blend_state.dst_factor_alpha = SG_BLENDFACTOR_ONE;
+	blend_state.op_alpha = SG_BLENDOP_ADD;
+	batch_push_blend_state(b, blend_state);
 }
 
-void batch_set_blend_defaults(batch_t* b)
+void batch_pop_blend_state(batch_t* b)
 {
-	CUTE_MEMSET(&b->blend_state, 0, sizeof(b->blend_state));
-	b->blend_state.enabled = true;
-	b->blend_state.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
-	b->blend_state.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	b->blend_state.op_rgb = SG_BLENDOP_ADD;
-	b->blend_state.src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
-	b->blend_state.dst_factor_alpha = SG_BLENDFACTOR_ONE;
-	b->blend_state.op_alpha = SG_BLENDOP_ADD;
-	b->pip_dirty = true;
+	if (b->blend_states.count() > 1) {
+		b->blend_states.pop();
+		b->pip_dirty = true;
+	}
 }
-void batch_set_tint_color(batch_t* b, color_t c)
+
+void batch_push_tint(batch_t* b, color_t c)
 {
-	b->tint = c;
+	b->tints.add(c);
 }
-void batch_no_tint(batch_t* b)
+
+void batch_pop_tint(batch_t* b)
 {
-	b->tint = make_color(0.0f, 0.0f, 0.0f, 0.0f);
+	if (b->tints.count() > 1) {
+		b->tints.pop();
+	}
 }
 
 void batch_quad(batch_t* b, aabb_t bb, color_t c)

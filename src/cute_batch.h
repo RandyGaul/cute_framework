@@ -91,18 +91,23 @@ CUTE_API void CUTE_CALL batch_push(batch_t* b, batch_sprite_t sprite);
  */
 CUTE_API error_t CUTE_CALL batch_flush(batch_t* b);
 
-CUTE_API void CUTE_CALL batch_set_mvp(batch_t* b, matrix_t mvp);
-CUTE_API void CUTE_CALL batch_set_scissor_box(batch_t* b, int x, int y, int w, int h);
-CUTE_API void CUTE_CALL batch_no_scissor_box(batch_t* b);
+CUTE_API void CUTE_CALL batch_set_projection(batch_t* b, matrix_t projection);
 CUTE_API void CUTE_CALL batch_outlines(batch_t* b, bool use_outlines);
 CUTE_API void CUTE_CALL batch_outlines_use_corners(batch_t* b, bool use_corners);
 CUTE_API void CUTE_CALL batch_outlines_color(batch_t* b, color_t c);
-CUTE_API void CUTE_CALL batch_set_depth_stencil_state(batch_t* b, const sg_depth_stencil_state& depth_stencil_state);
-CUTE_API void CUTE_CALL batch_set_depth_stencil_defaults(batch_t* b);
-CUTE_API void CUTE_CALL batch_set_blend_state(batch_t* b, const sg_blend_state& blend_state);
-CUTE_API void CUTE_CALL batch_set_blend_defaults(batch_t* b);
-CUTE_API void CUTE_CALL batch_set_tint_color(batch_t* b, color_t c);
-CUTE_API void CUTE_CALL batch_no_tint(batch_t* b);
+
+CUTE_API void CUTE_CALL batch_push_m3x2(batch_t* b, m3x2 m);
+CUTE_API void CUTE_CALL batch_pop_m3x2(batch_t* b);
+CUTE_API void CUTE_CALL batch_push_scissor_box(batch_t* b, int x, int y, int w, int h);
+CUTE_API void CUTE_CALL batch_pop_scissor_box(batch_t* b);
+CUTE_API void CUTE_CALL batch_push_depth_stencil_state(batch_t* b, const sg_depth_stencil_state& depth_stencil_state);
+CUTE_API void CUTE_CALL batch_push_depth_stencil_defaults(batch_t* b);
+CUTE_API void CUTE_CALL batch_pop_depth_stencil_state(batch_t* b);
+CUTE_API void CUTE_CALL batch_push_blend_state(batch_t* b, const sg_blend_state& blend_state);
+CUTE_API void CUTE_CALL batch_push_blend_defaults(batch_t* b);
+CUTE_API void CUTE_CALL batch_pop_blend_state(batch_t* b);
+CUTE_API void CUTE_CALL batch_push_tint(batch_t* b, color_t c);
+CUTE_API void CUTE_CALL batch_pop_tint(batch_t* b);
 
 CUTE_API void CUTE_CALL batch_quad(batch_t* b, aabb_t bb, color_t c);
 CUTE_API void CUTE_CALL batch_quad(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, color_t c);
