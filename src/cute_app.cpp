@@ -470,4 +470,18 @@ void app_offscreen_size(app_t* app, int* offscreen_w, int* offscreen_h)
 	*offscreen_h = app->offscreen_h;
 }
 
+power_info_t app_power_info(app_t* app)
+{
+	power_info_t info;
+	SDL_PowerState state = SDL_GetPowerInfo(&info.seconds_left, &info.percentage_left);
+	switch (state) {
+	case SDL_POWERSTATE_UNKNOWN: info.state = POWER_STATE_UNKNOWN;
+	case SDL_POWERSTATE_ON_BATTERY: info.state = POWER_STATE_ON_BATTERY;
+	case SDL_POWERSTATE_NO_BATTERY: info.state = POWER_STATE_NO_BATTERY;
+	case SDL_POWERSTATE_CHARGING: info.state = POWER_STATE_CHARGING;
+	case SDL_POWERSTATE_CHARGED: info.state = POWER_STATE_CHARGED;
+	}
+	return info;
+}
+
 }

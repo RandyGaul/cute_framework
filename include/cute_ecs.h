@@ -28,8 +28,6 @@
 #include <cute_typeless_array.h>
 #include <cute_dictionary.h>
 
-#include <internal/cute_object_table_internal.h>
-
 namespace cute
 {
 

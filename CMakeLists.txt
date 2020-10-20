@@ -155,6 +155,8 @@ set(CUTE_SRCS
 	src/cute_a_star.cpp
 	src/cute_aabb_tree.cpp
 	src/cute_strpool.cpp
+	src/cute_symbol.cpp
+	src/cute_haptics.cpp
 
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
@@ -238,6 +240,8 @@ set(CUTE_HDRS
 	include/cute_a_star.h
 	include/cute_aabb_tree.h
 	include/cute_strpool.h
+	include/cute_symbol.h
+	include/cute_haptics.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h

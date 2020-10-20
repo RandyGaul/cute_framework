@@ -26,6 +26,7 @@
 #include <cute_string.h>
 
 #include <internal/cute_app_internal.h>
+#include <internal/cute_object_table_internal.h>
 
 #define INJECT(s) strpool_inject(app->strpool, s, (int)CUTE_STRLEN(s))
 

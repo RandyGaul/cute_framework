@@ -67,6 +67,24 @@ enum upscale_t
 CUTE_API error_t CUTE_CALL app_init_upscaling(app_t* app, upscale_t upscaling, int offscreen_w, int offscreen_h);
 CUTE_API void CUTE_CALL app_offscreen_size(app_t* app, int* offscreen_w, int* offscreen_h);
 
+enum power_state_t
+{
+	POWER_STATE_UNKNOWN,    // Cannot determine power status.
+	POWER_STATE_ON_BATTERY, // Not plugged in and running on battery.
+	POWER_STATE_NO_BATTERY, // Plugged in with no battery available.
+	POWER_STATE_CHARGING,   // Plugged in and charging battery.
+	POWER_STATE_CHARGED,    // Plugged in and battery is charged.
+};
+
+struct power_info_t
+{
+	power_state_t state;
+	int seconds_left;    // The seconds of battery life left. -1 means not running on the battery, or unable to get a valid value.
+	int percentage_left; // The percentage of battery life left from 0 to 100. -1 means not running on the battery, or unable to get a valid value.
+};
+
+CUTE_API power_info_t CUTE_CALL app_power_info(app_t* app);
+
 }
 
 #endif // CUTE_APP_H

@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2021 Randy Gaul https://randygaul.net
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -30,6 +30,7 @@
 #define AABB_TREE_EXPAND_CONSTANT 2.0f
 #define AABB_TREE_STACK_QUERY_CAPACITY 256
 #define AABB_TREE_NULL_NODE_INDEX -1
+#define AABB_TREE_MOVE_CONSTANT 4.0f
 
 namespace cute
 {
@@ -703,7 +704,7 @@ void aabb_tree_remove(aabb_tree_t* tree, leaf_t leaf)
 	s_push_freelist(tree, index);
 }
 
-void aabb_tree_update_leaf(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb)
+bool aabb_tree_update_leaf(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb)
 {
 	// Can only update leaves.
 	CUTE_ASSERT(tree->nodes[leaf.id].index_a == AABB_TREE_NULL_NODE_INDEX);
@@ -711,12 +712,56 @@ void aabb_tree_update_leaf(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb)
 
 	if (contains(tree->aabbs[leaf.id], aabb)) {
 		tree->aabbs[leaf.id] = aabb;
-		return;
+		return false;
 	}
 
 	void* udata = tree->udatas[leaf.id];
 	aabb_tree_remove(tree, leaf);
 	aabb_tree_insert(tree, expand(aabb, AABB_TREE_EXPAND_CONSTANT), udata);
+
+	return true;
+}
+
+bool aabb_tree_move(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb, v2 offset)
+{
+	// Can only update leaves.
+	CUTE_ASSERT(tree->nodes[leaf.id].index_a == AABB_TREE_NULL_NODE_INDEX);
+	CUTE_ASSERT(tree->nodes[leaf.id].index_b == AABB_TREE_NULL_NODE_INDEX);
+
+	aabb = expand(aabb, AABB_TREE_EXPAND_CONSTANT);
+	v2 delta = offset * AABB_TREE_MOVE_CONSTANT;
+
+	if (delta.x < 0) {
+		aabb.min.x += delta.x;
+	} else {
+		aabb.max.x += delta.x;
+	}
+
+	if (delta.y < 0) {
+		aabb.min.y += delta.y;
+	} else {
+		aabb.max.y += delta.y;
+	}
+
+	aabb_t old_aabb = tree->aabbs[leaf.id];
+	if (contains(old_aabb, aabb)) {
+		aabb_t big_aabb = expand(aabb, AABB_TREE_MOVE_CONSTANT);
+		bool old_aabb_is_not_way_too_huge = contains(big_aabb, old_aabb);
+		if (old_aabb_is_not_way_too_huge) {
+			return false;
+		}
+	}
+
+	void* udata = tree->udatas[leaf.id];
+	aabb_tree_remove(tree, leaf);
+	aabb_tree_insert(tree, aabb, udata);
+
+	return true;
+}
+
+aabb_t aabb_tree_get_aabb(aabb_tree_t* tree, leaf_t leaf)
+{
+	return tree->aabbs[leaf.id];
 }
 
 void* aabb_tree_get_udata(aabb_tree_t* tree, leaf_t leaf)

@@ -34,6 +34,8 @@
 #include <mbedtls/error.h>
 #include <mbedtls/certs.h>
 
+#include <SDL2/SDL.h>
+
 #if defined(CUTE_WINDOWS)
 #	include <windows.h>
 #	include <wincrypt.h>

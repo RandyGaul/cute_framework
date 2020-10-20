@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2021 Randy Gaul https://randygaul.net
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -32,64 +32,81 @@ struct aabb_tree_t;
 struct leaf_t { int id; };
 typedef bool (aabb_tree_query_fn)(leaf_t leaf, aabb_t aabb, void* leaf_udata, void* fn_udata);
 
-aabb_tree_t* create_aabb_tree(int initial_capacity = 0, void* user_allocator_context = NULL);
-aabb_tree_t* create_aabb_tree_from_memory(const void* buffer, size_t size, void* user_allocator_context = NULL);
-void destroy_aabb_tree(aabb_tree_t* tree);
+CUTE_API aabb_tree_t* CUTE_CALL create_aabb_tree(int initial_capacity = 0, void* user_allocator_context = NULL);
+CUTE_API aabb_tree_t* CUTE_CALL create_aabb_tree_from_memory(const void* buffer, size_t size, void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL destroy_aabb_tree(aabb_tree_t* tree);
 
 /**
  * Adds a new leaf to the tree, and rebalances as necessary.
  */
-leaf_t aabb_tree_insert(aabb_tree_t* tree, aabb_t aabb, void* udata = NULL);
+CUTE_API leaf_t CUTE_CALL aabb_tree_insert(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb, void* udata = NULL);
 
 /**
  * Removes a leaf from the tree, and rebalances as necessary.
  */
-void aabb_tree_remove(aabb_tree_t* tree, leaf_t leaf);
+CUTE_API void CUTE_CALL aabb_tree_remove(aabb_tree_t* tree, leaf_t leaf);
 
 /**
  * Use this function when an aabb needs to be updated. Leafs need to be updated whenever the shape
  * inside the leaf's aabb moves. Internally there are some optimizations so that the tree is only
  * adjusted if the aabb is moved enough.
+ * Returns true if the leaf was updated, false otherwise.
  */
-void aabb_tree_update_leaf(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb);
+CUTE_API bool CUTE_CALL aabb_tree_update_leaf(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb);
+
+/**
+ * Updates a leaf with a new aabb (if needed) with the new `aabb` and an `offset` for how far the new
+ * aabb will be moving.
+ * This function does more optimizations than `aabb_tree_update_leaf` by attempting to use the `offset`
+ * to predict motion and avoid restructering of the tree.
+ * Returns true if the leaf was updated, false otherwise.
+ */
+CUTE_API bool CUTE_CALL aabb_tree_move(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb, v2 offset);
+
+/**
+ * Returns the internal "expanded" aabb. This is useful for when you want to generate all pairs of
+ * potential overlaps for a specific leaf. Just simply use `aabb_tree_query` on the the return value
+ * of this function.
+ */
+CUTE_API aabb_t CUTE_CALL aabb_tree_get_aabb(aabb_tree_t* tree, leaf_t leaf);
 
 /**
  * Returns the `udata` pointer from `aabb_tree_insert`.
  */
-void* aabb_tree_get_udata(aabb_tree_t* tree, leaf_t leaf);
+CUTE_API void* CUTE_CALL aabb_tree_get_udata(aabb_tree_t* tree, leaf_t leaf);
 
 /**
  * Finds all leafs overlapping `aabb`. The `fn` callback is called once per overlap. If you want to stop
  * searching, return false from `fn`, otherwise keep returning true.
  */
-void aabb_tree_query(const aabb_tree_t* tree, aabb_tree_query_fn* fn, aabb_t aabb, void* fn_udata = NULL);
+CUTE_API void CUTE_CALL aabb_tree_query(const aabb_tree_t* tree, aabb_tree_query_fn* fn, aabb_t aabb, void* fn_udata = NULL);
 
 /**
  * Finds all leafs hit by `ray`. The `fn` callback is called once per overlap. If you want to stop
  * searching, return false from `fn`, otherwise keep returning true.
  */
-void aabb_tree_query(const aabb_tree_t* tree, aabb_tree_query_fn* fn, ray_t ray, void* fn_udata = NULL);
+CUTE_API void CUTE_CALL aabb_tree_query(const aabb_tree_t* tree, aabb_tree_query_fn* fn, ray_t ray, void* fn_udata = NULL);
 
 /**
  * Returns a cost heuristic value to quantify the quality of the tree.
  */
-float aabb_tree_cost(const aabb_tree_t* tree);
+CUTE_API float CUTE_CALL aabb_tree_cost(const aabb_tree_t* tree);
 
 /**
  * Asserts the internal structure is correct. Just for debugging.
  */
-void aabb_tree_validate(const aabb_tree_t* tree);
+CUTE_API void CUTE_CALL aabb_tree_validate(const aabb_tree_t* tree);
 
 /**
  * Returns the size of the tree if it were serialized into a buffer.
  */
-size_t aabb_tree_serialized_size(const aabb_tree_t* tree);
+CUTE_API size_t CUTE_CALL aabb_tree_serialized_size(const aabb_tree_t* tree);
 
 /**
  * Writes the tree to `buffer`. The buffer should be at least `aabb_tree_serialized_size` bytes large.
  * Returns true on success, false otherwise.
  */
-bool aabb_tree_serialize(const aabb_tree_t* tree, void* buffer, size_t size);
+CUTE_API bool CUTE_CALL aabb_tree_serialize(const aabb_tree_t* tree, void* buffer, size_t size);
 
 }
 
