@@ -46,7 +46,7 @@
 #endif
 
 #define CUTE_SOUND_FORCE_SDL
-#include "cute/cute_sound.h"
+#include <cute/cute_sound.h>
 
 #include <imgui/imgui.h>
 
