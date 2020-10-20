@@ -23,7 +23,6 @@
 #include <cute_alloc.h>
 #include <cute_audio.h>
 #include <cute_concurrency.h>
-#include <cute_crypto_utils.h>
 #include <cute_file_system.h>
 #include <cute_file_system_utils.h>
 #include <cute_net.h>
@@ -47,7 +46,7 @@
 #endif
 
 #define CUTE_SOUND_FORCE_SDL
-#include <cute/cute_sound.h>
+#include "cute/cute_sound.h"
 
 #include <imgui/imgui.h>
 
@@ -176,17 +175,14 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		file_system_mount(file_system_get_base_dir(), "");
 	}
 
-	strpool_config_t strpool_config = strpool_default_config;
-	strpool_config.memctx = user_allocator_context;
-	strpool_init(&app->strpool_instance, &strpool_config);
-	app->strpool = &app->strpool_instance;
+	app->strpool = create_strpool();
 
 	return app;
 }
 
 void app_destroy(app_t* app)
 {
-	strpool_term(app->strpool);
+	destroy_strpool(app->strpool);
 	if (app->using_imgui) {
 		simgui_shutdown();
 		ImGui_ImplSDL2_Shutdown();

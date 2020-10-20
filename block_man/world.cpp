@@ -196,7 +196,7 @@ void add_schema_preview(const char* schema)
 	size_t string_sz;
 	err = kv_val_string(kv, &string_raw, &string_sz);
 	CUTE_ASSERT(!err.is_error());
-	STRPOOL_U64 id = strpool_inject(app_get_strpool(app), string_raw, (int)string_sz);
+	strpool_id id = strpool_inject(app_get_strpool(app), string_raw, (int)string_sz);
 	const char* ase_path = strpool_cstr(app_get_strpool(app), id);
 
 	kv_object_end(kv);

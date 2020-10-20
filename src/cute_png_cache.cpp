@@ -33,10 +33,9 @@ struct png_cache_t
 {
 	dictionary<uint64_t, png_t> pngs;
 	dictionary<uint64_t, void*> id_to_pixels;
-	dictionary<STRPOOL_U64, animation_t*> animations;
-	dictionary<STRPOOL_U64, animation_table_t*> animation_tables;
+	dictionary<strpool_id, animation_t*> animations;
+	dictionary<strpool_id, animation_table_t*> animation_tables;
 	uint64_t id_gen = 0;
-	strpool_t strpool_instance;
 	strpool_t* strpool = NULL;
 	void* mem_ctx = NULL;
 };
@@ -56,10 +55,7 @@ static void s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, voi
 png_cache_t* png_cache_make(void* mem_ctx)
 {
 	png_cache_t* cache = CUTE_NEW(png_cache_t, app->mem_ctx);
-	strpool_config_t config = strpool_default_config;
-	config.memctx = mem_ctx;
-	strpool_init(&cache->strpool_instance, &config);
-	cache->strpool = &cache->strpool_instance;
+	cache->strpool = create_strpool(mem_ctx);
 	cache->mem_ctx = mem_ctx;
 	return cache;
 }
@@ -85,7 +81,7 @@ void png_cache_destroy(png_cache_t* cache)
 		png_cache_unload(cache, &png);
 	}
 
-	strpool_term(cache->strpool);
+	destroy_strpool(cache->strpool);
 	void* mem_ctx = cache->mem_ctx;
 	cache->~png_cache_t();
 	CUTE_FREE(cache, mem_ctx);
@@ -150,7 +146,7 @@ strpool_t* png_cache_get_strpool_ptr(png_cache_t* cache)
 const animation_t* png_cache_make_animation(png_cache_t* cache, const char* name, const array<png_t>& pngs, const array<float>& delays)
 {
 	CUTE_ASSERT(pngs.count() == delays.count());
-	STRPOOL_U64 name_id = INJECT(name);
+	strpool_id name_id = INJECT(name);
 
 	// If already made, just return the old animation.
 	animation_t* animation;
@@ -188,7 +184,7 @@ const animation_t* png_cache_make_animation(png_cache_t* cache, const char* name
 
 const animation_table_t* png_cache_make_animation_table(png_cache_t* cache, const char* sprite_name, const array<const animation_t*>& animations)
 {
-	STRPOOL_U64 name_id = INJECT(sprite_name);
+	strpool_id name_id = INJECT(sprite_name);
 
 	// If already made, just return the old table.
 	animation_table_t* table;

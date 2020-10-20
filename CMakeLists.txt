@@ -153,6 +153,8 @@ set(CUTE_SRCS
 	src/cute_https.cpp
 	src/cute_joypad.cpp
 	src/cute_a_star.cpp
+	src/cute_aabb_tree.cpp
+	src/cute_strpool.cpp
 
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
@@ -183,58 +185,59 @@ else()
 endif()
 
 set(CUTE_HDRS
-	src/cute_alloc.h
-	src/cute_app.h
-	src/cute_audio.h
-	src/cute_c_runtime.h
-	src/cute_circular_buffer.h
-	src/cute_client.h
-	src/cute_clipboard.h
-	src/cute_concurrency.h
-	src/cute_crypto.h
-	src/cute_crypto_utils.h
-	src/cute_defines.h
-	src/cute_error.h
-	src/cute_file_system.h
-	src/cute_file_system_utils.h
-	src/cute_handle_table.h
-	src/cute_input.h
-	src/cute_net.h
-	src/cute_server.h
-	src/cute_timer.h
-	src/cute_version.h
-	src/cute_memory_pool.h
-	src/cute_protocol.h
-	src/cute_doubly_list.h
-	src/cute_kv.h
-	src/cute_kv_utils.h
-	src/cute_base64.h
-	src/cute_array.h
-	src/cute_hashtable.h
-	src/cute_dictionary.h
-	src/cute_ecs.h
-	src/cute_string.h
-	src/cute_string_utils.h
-	src/cute_typeless_array.h
-	src/cute_defer.h
-	src/cute_math.h
-	src/cute_batch.h
-	src/cute_lru_cache.h
-	src/cute_window.h
-	src/cute_debug_printf.h
-	src/cute_image.h
-	src/cute_color.h
-	src/cute_font.h
-	src/cute.h
-	src/cute_gfx.h
-	src/cute_rnd.h
-	src/cute_sprite.h
-	src/cute_aseprite_cache.h
-	src/cute_png_cache.h
-	src/cute_https.h
-	src/cute_joypad.h
-	src/cute_priority_queue.h
-	src/cute_a_star.h
+	include/cute_alloc.h
+	include/cute_app.h
+	include/cute_audio.h
+	include/cute_c_runtime.h
+	include/cute_circular_buffer.h
+	include/cute_client.h
+	include/cute_clipboard.h
+	include/cute_concurrency.h
+	include/cute_crypto.h
+	include/cute_defines.h
+	include/cute_error.h
+	include/cute_file_system.h
+	include/cute_file_system_utils.h
+	include/cute_handle_table.h
+	include/cute_input.h
+	include/cute_net.h
+	include/cute_server.h
+	include/cute_timer.h
+	include/cute_version.h
+	include/cute_memory_pool.h
+	include/cute_protocol.h
+	include/cute_doubly_list.h
+	include/cute_kv.h
+	include/cute_kv_utils.h
+	include/cute_base64.h
+	include/cute_array.h
+	include/cute_hashtable.h
+	include/cute_dictionary.h
+	include/cute_ecs.h
+	include/cute_string.h
+	include/cute_string_utils.h
+	include/cute_typeless_array.h
+	include/cute_defer.h
+	include/cute_math.h
+	include/cute_batch.h
+	include/cute_lru_cache.h
+	include/cute_window.h
+	include/cute_debug_printf.h
+	include/cute_image.h
+	include/cute_color.h
+	include/cute_font.h
+	include/cute.h
+	include/cute_gfx.h
+	include/cute_rnd.h
+	include/cute_sprite.h
+	include/cute_aseprite_cache.h
+	include/cute_png_cache.h
+	include/cute_https.h
+	include/cute_joypad.h
+	include/cute_priority_queue.h
+	include/cute_a_star.h
+	include/cute_aabb_tree.h
+	include/cute_strpool.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
@@ -258,19 +261,20 @@ set(CUTE_HDRS
 	src/shaders/upscale_shader.h
 
 	libraries/imgui/imgui.h
-	libraries/sokol/sokol_gfx.h
 
-	libraries/cute/cute_aseprite.h
-	libraries/cute/cute_c2.h
-	libraries/cute/cute_coroutine.h
-	libraries/cute/cute_font.h
-	libraries/cute/cute_math2d.h
-	libraries/cute/cute_path.h
-	libraries/cute/cute_png.h
-	libraries/cute/cute_sound.h
-	libraries/cute/cute_spritebatch.h
-	libraries/cute/cute_sync.h
-	libraries/cute/cute_utf.h
+	include/sokol/sokol_gfx.h
+
+	include/cute/cute_aseprite.h
+	include/cute/cute_c2.h
+	include/cute/cute_coroutine.h
+	include/cute/cute_font.h
+	include/cute/cute_math2d.h
+	include/cute/cute_path.h
+	include/cute/cute_png.h
+	include/cute/cute_sound.h
+	include/cute/cute_spritebatch.h
+	include/cute/cute_sync.h
+	include/cute/cute_utf.h
 )
 
 if(CUTE_FRAMEWORK_STATIC)
@@ -280,6 +284,7 @@ else()
 	add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS} ${GLAD_SRCS} ${GLAD_HDRS})
 endif()
 target_include_directories(cute PRIVATE ${GLAD_INCLUDE_DIRECTORY})
+include_directories(cute PRIVATE "include")
 
 if(MACOSX)
 	find_package(SDL2 REQUIRED)

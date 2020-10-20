@@ -24,12 +24,12 @@
 #include <cute_debug_printf.h>
 #include <cute_file_system.h>
 #include <cute_defer.h>
+#include <cute_strpool.h>
 
 #include <internal/cute_app_internal.h>
 
 #define CUTE_ASEPRITE_IMPLEMENTATION
 #include <cute/cute_aseprite.h>
-#include <mattiasgustavsson/strpool.h>
 
 #define INJECT(s) strpool_inject(cache->strpool, s, (int)CUTE_STRLEN(s))
 
@@ -38,7 +38,7 @@ namespace cute
 
 struct aseprite_cache_entry_t
 {
-	STRPOOL_U64 path;
+	strpool_id path;
 	ase_t* ase;
 	animation_table_t* animations;
 	v2 local_offset;
@@ -46,10 +46,9 @@ struct aseprite_cache_entry_t
 
 struct aseprite_cache_t
 {
-	dictionary<STRPOOL_U64, aseprite_cache_entry_t> aseprites;
+	dictionary<strpool_id, aseprite_cache_entry_t> aseprites;
 	dictionary<uint64_t, void*> id_to_pixels;
 	uint64_t id_gen = 0;
-	strpool_t strpool_instance;
 	strpool_t* strpool = NULL;
 	void* mem_ctx = NULL;
 };
@@ -69,17 +68,14 @@ static void s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, voi
 aseprite_cache_t* aseprite_cache_make(void* mem_ctx)
 {
 	aseprite_cache_t* cache = CUTE_NEW(aseprite_cache_t, mem_ctx);
-	strpool_config_t config = strpool_default_config;
-	config.memctx = mem_ctx;
-	strpool_init(&cache->strpool_instance, &config);
-	cache->strpool = &cache->strpool_instance;
+	cache->strpool = create_strpool();
 	cache->mem_ctx = mem_ctx;
 	return cache;
 }
 
 void aseprite_cache_destroy(aseprite_cache_t* cache)
 {
-	strpool_term(cache->strpool);
+	destroy_strpool(cache->strpool);
 	cache->~aseprite_cache_t();
 }
 
@@ -110,7 +106,7 @@ static void s_sprite(aseprite_cache_t* cache, aseprite_cache_entry_t entry, spri
 error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite)
 {
 	// First see if this ase was already cached.
-	STRPOOL_U64 path = INJECT(aseprite_path);
+	strpool_id path = INJECT(aseprite_path);
 	aseprite_cache_entry_t entry;
 	if (!cache->aseprites.find(path, &entry).is_error()) {
 		s_sprite(cache, entry, sprite);
@@ -201,7 +197,7 @@ error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, 
 
 void aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path)
 {
-	STRPOOL_U64 path = INJECT(aseprite_path);
+	strpool_id path = INJECT(aseprite_path);
 	aseprite_cache_entry_t entry;
 	if (cache->aseprites.find(path, &entry).is_error()) return;
 	
@@ -228,7 +224,7 @@ error_t aseprite_cache_load_ase(aseprite_cache_t* cache, const char* aseprite_pa
 	error_t err = aseprite_cache_load(cache, aseprite_path, &s);
 	if (err.is_error()) return err;
 
-	STRPOOL_U64 path = INJECT(aseprite_path);
+	strpool_id path = INJECT(aseprite_path);
 	aseprite_cache_entry_t entry;
 	if (!cache->aseprites.find(path, &entry).is_error()) {
 		*ase = entry.ase;

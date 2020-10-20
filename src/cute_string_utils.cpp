@@ -29,10 +29,10 @@
 namespace cute
 {
 
-static int s_temp_str_size;
+static size_t s_temp_str_size;
 static char* s_temp_str;
 
-static char* s_temp(int size)
+static char* s_temp(size_t size)
 {
 	if (s_temp_str_size < size + 1) {
 		CUTE_FREE(s_temp_str, NULL);
@@ -53,8 +53,8 @@ void string_utils_cleanup_static_memory()
 string_t operator+(const string_t& a, const string_t& b)
 {
 	CUTE_ASSERT(a.pool == b.pool);
-	int len_a = a.len();
-	int len_b = b.len();
+	size_t len_a = a.len();
+	size_t len_b = b.len();
 	char* temp = s_temp(len_a + len_b);
 	CUTE_MEMCPY(temp, a.c_str(), len_a);
 	CUTE_MEMCPY(temp + len_a, b.c_str(), len_b);

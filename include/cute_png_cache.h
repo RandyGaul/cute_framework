@@ -27,9 +27,9 @@
 #include <cute_color.h>
 #include <cute_sprite.h>
 #include <cute_batch.h>
+#include <cute_strpool.h>
 
 #include <cute/cute_png.h>
-#include <mattiasgustavsson/strpool.h>
 
 namespace cute
 {

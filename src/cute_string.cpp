@@ -21,13 +21,9 @@
 
 #include <cute_string.h>
 #include <cute_alloc.h>
+#include <cute_strpool.h>
 
 #include <internal/cute_app_internal.h>
-
-#define STRPOOL_IMPLEMENTATION
-#define STRPOOL_MALLOC(ctx, size) CUTE_ALLOC(size, ctx)
-#define STRPOOL_FREE(ctx, ptr) CUTE_FREE(ptr, ctx)
-#include <mattiasgustavsson/strpool.h>
 
 namespace cute
 {
@@ -37,20 +33,21 @@ namespace cute
 
 static void* s_mem_ctx;
 static bool s_pool_init;
-static strpool_t s_pool_instance;
+static strpool_t* s_pool_instance;
 
 static strpool_t* s_pool(int nuke = 0)
 {
-	strpool_t* instance = &s_pool_instance;
+	strpool_t* instance = s_pool_instance;
 	if (nuke) {
 		if (s_pool_init) {
-			strpool_term(instance);
+			destroy_strpool(instance);
+			s_pool_instance = NULL;
 		}
 		s_pool_init = 0;
 		return NULL;
 	} else {
 		if (!s_pool_init) {
-			strpool_init(instance, &strpool_default_config);
+			s_pool_instance = instance = create_strpool();
 			s_pool_init = 1;
 		}
 		return instance;
@@ -125,7 +122,7 @@ string_t::~string_t()
 	s_decref(pool, id);
 }
 
-int string_t::len() const
+size_t string_t::len() const
 {
 	return strpool_length(s_pool(), id);
 }

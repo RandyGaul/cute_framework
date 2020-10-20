@@ -206,6 +206,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 			y += s->y;
 
 			// Apply final batch transformation.
+			// TODO - This in shaders.
 			v2 p = v2(x, y);
 			p = mul(m, p);
 

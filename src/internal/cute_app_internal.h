@@ -29,14 +29,13 @@
 #include <cute_dictionary.h>
 #include <cute_math.h>
 #include <cute_doubly_list.h>
+#include <cute_strpool.h>
 
 #include <internal/cute_object_table_internal.h>
 #include <internal/cute_font_internal.h>
 
 #include <cute/cute_font.h>
 #include <cute_gfx.h>
-
-#include <mattiasgustavsson/strpool.h>
 
 struct SDL_Window;
 struct cs_context_t;
@@ -76,7 +75,7 @@ struct entity_collection_t
 {
 	handle_table_t entity_handle_table;
 	array<handle_t> entity_handles; // TODO - Replace with a counter? Or delete?
-	array<STRPOOL_U64> component_types;
+	array<strpool_id> component_types;
 	array<typeless_array> component_tables;
 };
 
@@ -86,7 +85,7 @@ struct system_internal_t
 	void (*pre_update_fn)(app_t* app, float dt, void* udata) = NULL;
 	void* update_fn = NULL;
 	void (*post_update_fn)(app_t* app, float dt, void* udata) = NULL;
-	array<STRPOOL_U64> component_types;
+	array<strpool_id> component_types;
 };
 
 struct app_t
@@ -127,7 +126,6 @@ struct app_t
 	window_state_t window_state;
 	window_state_t window_state_prev;
 	bool using_imgui = false;
-	strpool_t strpool_instance = { 0 };
 	strpool_t* strpool = NULL;
 
 	array<char> ime_composition;
@@ -144,14 +142,14 @@ struct app_t
 	// TODO: Set allocator context for these data structures.
 	array<system_internal_t> systems;
 	entity_type_t entity_type_gen = 0;
-	dictionary<STRPOOL_U64, entity_type_t> entity_type_string_to_id;
-	array<STRPOOL_U64> entity_type_id_to_string;
+	dictionary<strpool_id, entity_type_t> entity_type_string_to_id;
+	array<strpool_id> entity_type_id_to_string;
 	dictionary<entity_type_t, entity_collection_t> entity_collections;
 	entity_type_t current_collection_type_being_iterated = CUTE_INVALID_ENTITY_TYPE;
 	entity_collection_t* current_collection_being_updated = NULL;
 	array<entity_t> delayed_destroy_entities;
 
-	dictionary<STRPOOL_U64, component_config_t> component_configs;
+	dictionary<strpool_id, component_config_t> component_configs;
 	dictionary<entity_type_t, kv_t*> entity_parsed_schemas;
 	dictionary<entity_type_t, entity_type_t> entity_schema_inheritence;
 

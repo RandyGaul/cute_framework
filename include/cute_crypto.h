@@ -24,10 +24,9 @@
 
 #include <cute_defines.h>
 
-#include <libsodium/sodium.h>
-
-#define CUTE_CRYPTO_HMAC_BYTES ((int)crypto_aead_xchacha20poly1305_ietf_ABYTES)
-#define CUTE_CRYPTO_NONCE_BYTES ((int)crypto_aead_xchacha20poly1305_ietf_NPUBBYTES)
+#define CUTE_CRYPTO_HMAC_BYTES ((int)16U)
+#define CUTE_CRYPTO_NONCE_BYTES ((int)24U)
+#define CUTE_CRYPTO_KEY_BYTES ((int)32U)
 
 namespace cute
 {
@@ -40,8 +39,15 @@ CUTE_API int CUTE_CALL crypto_decrypt(const crypto_key_t* key, uint8_t* data, in
 CUTE_API int CUTE_CALL crypto_encrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* associated_data, int associated_data_size, const uint8_t* sequence_nonce);
 CUTE_API int CUTE_CALL crypto_decrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* associated_data, int associated_data_size, const uint8_t* sequence_nonce);
 
-}
+struct crypto_key_t
+{
+	uint8_t key[CUTE_CRYPTO_KEY_BYTES];
+};
 
-#include <cute_crypto_utils.h>
+CUTE_API void CUTE_CALL crypto_random_bytes(void* data, int byte_count);
+CUTE_API crypto_key_t CUTE_CALL crypto_generate_key();
+CUTE_API const char* CUTE_CALL crypto_sodium_version_linked();
+
+}
 
 #endif // CUTE_CRYPTO_H

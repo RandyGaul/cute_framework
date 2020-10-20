@@ -28,6 +28,8 @@
 
 #include <internal/cute_net_internal.h>
 
+#include <libsodium/sodium.h>
+
 namespace cute
 {
 namespace protocol

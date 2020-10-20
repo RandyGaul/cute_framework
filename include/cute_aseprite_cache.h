@@ -27,7 +27,8 @@
 #include <cute_batch.h>
 
 #include <cute/cute_aseprite.h>
-#include <mattiasgustavsson/strpool.h>
+
+struct strpool_t;
 
 namespace cute
 {

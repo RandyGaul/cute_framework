@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2021 Randy Gaul https://randygaul.net
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,28 +19,34 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_CRYPTO_UTILS_H
-#define CUTE_CRYPTO_UTILS_H
+#ifndef CUTE_STRPOOL_H
+#define CUTE_STRPOOL_H
 
-#include <libsodium/sodium.h>
+#include <cute_defines.h>
 
 namespace cute
 {
 
-static_assert(
-	crypto_aead_xchacha20poly1305_ietf_KEYBYTES == crypto_aead_chacha20poly1305_ietf_KEYBYTES,
-	"For simplicity of this API all key sizes are assumed to be the same, as defined by libsodium."
-);
+struct strpool_t;
+using strpool_id = uint64_t;
 
-struct crypto_key_t
-{
-	uint8_t key[crypto_aead_xchacha20poly1305_ietf_KEYBYTES];
-};
+strpool_t* create_strpool(void* user_allocator_context = NULL);
+void destroy_strpool(strpool_t* pool);
 
-CUTE_API void CUTE_CALL crypto_random_bytes(void* data, int byte_count);
-CUTE_API crypto_key_t CUTE_CALL crypto_generate_key();
-CUTE_API const char* CUTE_CALL crypto_sodium_version_linked();
+strpool_id strpool_inject(strpool_t* pool, const char* string, int length);
+void strpool_discard(strpool_t* pool, strpool_id id);
+
+void strpool_defrag(strpool_t* pool);
+
+int strpool_incref(strpool_t* pool, strpool_id id);
+int strpool_decref(strpool_t* pool, strpool_id id);
+int strpool_getref(strpool_t* pool, strpool_id id);
+
+bool strpool_isvalid(const strpool_t* pool, strpool_id id);
+
+const char* strpool_cstr(const strpool_t* pool, strpool_id id);
+size_t strpool_length(const strpool_t* pool, strpool_id id);
 
 }
 
-#endif // CUTE_CRYPTO_UTILS_H
+#endif // CUTE_STRPOOL_H

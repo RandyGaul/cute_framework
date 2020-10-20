@@ -22,11 +22,6 @@
 #include <serialize.h>
 #include <world.h>
 
-#ifndef CUTE_STATIC
-#	define STRPOOL_IMPLEMENTATION
-#endif
-#include <mattiasgustavsson/strpool.h>
-
 cute::error_t serialize_v2(kv_t* kv, const char* key, v2* v)
 {
 	if (!kv_object_begin(kv, key).is_error()) {
@@ -61,8 +56,8 @@ cute::error_t kv_val(kv_t* kv, const char** string)
 {
 	size_t len = *string ? CUTE_STRLEN(*string) : 0;
 	kv_val_string(kv, string, &len);
-	strpool_t* strpool = aseprite_cache_get_strpool_ptr(cache);
-	STRPOOL_U64 id = strpool_inject(strpool, *string, (int)len);
+	cute::strpool_t* strpool = aseprite_cache_get_strpool_ptr(cache);
+	strpool_id id = strpool_inject(strpool, *string, (int)len);
 	*string = strpool_cstr(strpool, id);
 	return kv_error_state(kv);
 }

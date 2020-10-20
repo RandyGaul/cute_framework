@@ -24,18 +24,20 @@
 
 #include <cute_defines.h>
 
-#include <mattiasgustavsson/strpool.h>
-
 /*
 	Implements a *single-threaded* string-interning system where each string on the stack
 	is represented by a `uint64_t`, and internally ref-counts inside of a global string-
 	interning system stored statically.
 
-	There is no special support for string operations in a multi-threaded scenario.
+	There is no special support for string operations in a multi-threaded scenario. Simply
+	make sure there is only one pool in a specific thread, if you really want to use string_t
+	between threads.
 */
 
 namespace cute
 {
+
+struct strpool_t;
 
 struct string_t
 {
@@ -46,7 +48,7 @@ struct string_t
 	CUTE_API string_t(const string_t& other, strpool_t* pool = NULL);
 	CUTE_API ~string_t();
 
-	CUTE_API int len() const;
+	CUTE_API size_t len() const;
 	CUTE_API const char* c_str() const;
 
 	CUTE_API string_t& operator=(const string_t& rhs);

@@ -50,6 +50,17 @@ CUTE_INLINE void write_uint32(uint8_t** p, uint32_t value)
 	*p += 4;
 }
 
+CUTE_INLINE void write_float(uint8_t** p, float value)
+{
+	union
+	{
+		uint32_t as_uint32;
+		float as_float;
+	} val;
+	val.as_float = value;
+	write_uint32(p, val.as_uint32);
+}
+
 CUTE_INLINE void write_uint64(uint8_t** p, uint64_t value)
 {
 	(*p)[0] = value & 0xFF;
@@ -99,6 +110,14 @@ CUTE_INLINE void write_key(uint8_t** p, const crypto_key_t* key)
 	write_bytes(p, (const uint8_t*)key, sizeof(*key));
 }
 
+CUTE_INLINE void write_fourcc(uint8_t** p, const char* fourcc)
+{
+	write_uint8(p, fourcc[0]);
+	write_uint8(p, fourcc[1]);
+	write_uint8(p, fourcc[2]);
+	write_uint8(p, fourcc[3]);
+}
+
 CUTE_INLINE uint8_t read_uint8(uint8_t** p)
 {
 	uint8_t value = **p;
@@ -124,6 +143,17 @@ CUTE_INLINE uint32_t read_uint32(uint8_t** p)
 	value |= (((uint32_t)((*p)[3])) << 24);
 	*p += 4;
 	return value;
+}
+
+CUTE_INLINE float read_float(uint8_t** p)
+{
+	union
+	{
+		uint32_t as_uint32;
+		float as_float;
+	} val;
+	val.as_uint32 = read_uint32(p);
+	return val.as_float;
 }
 
 CUTE_INLINE uint64_t read_uint64(uint8_t** p)
@@ -179,6 +209,14 @@ CUTE_INLINE crypto_key_t read_key(uint8_t** p)
 	crypto_key_t key;
 	read_bytes(p, (uint8_t*)&key, sizeof(key));
 	return key;
+}
+
+CUTE_INLINE void read_fourcc(uint8_t** p, uint8_t* fourcc)
+{
+	fourcc[0] = read_uint8(p);
+	fourcc[1] = read_uint8(p);
+	fourcc[2] = read_uint8(p);
+	fourcc[3] = read_uint8(p);
 }
 
 }

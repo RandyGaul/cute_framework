@@ -26,10 +26,11 @@
 #include <cute_error.h>
 
 struct ImGuiContext;
-struct strpool_t;
 
 namespace cute
 {
+
+struct strpool_t;
 
 #define CUTE_APP_OPTIONS_OPENGL_CONTEXT                 (1 << 0)
 #define CUTE_APP_OPTIONS_OPENGLES_CONTEXT               (1 << 1)
