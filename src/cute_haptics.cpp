@@ -31,7 +31,8 @@ namespace cute
 
 struct haptic_t
 {
-	SDL_Haptic* ptr;
+	SDL_Haptic* ptr = NULL;
+	bool rumble_initialized = false;
 };
 
 haptic_t* haptic_open(joypad_t* joypad)
@@ -78,7 +79,9 @@ bool haptic_supports(haptic_t* haptic, haptic_type_t type)
 
 void haptic_set_gain(haptic_t* haptic, float gain)
 {
-	SDL_HapticSetGain(haptic->ptr, gain);
+	if (gain > 1.0f) gain = 1.0f;
+	else if (gain < 0) gain = 0;
+	SDL_HapticSetGain(haptic->ptr, (int)(gain * 100.0f + 0.5f));
 }
 
 static Sint16 s_f32_to_s16(float a)
@@ -153,7 +156,7 @@ haptic_effect_t haptic_create_effect(haptic_t* haptic, haptic_data_t data)
 
 void haptic_run_effect(haptic_t* haptic, haptic_effect_t effect, int iterations)
 {
-	SDL_HapticRunEffect(haptic->ptr, effect.id, (Uint32)iterations);
+	SDL_HapticRunEffect(haptic->ptr, effect.id, s_saturate32(iterations));
 }
 
 void haptic_update_effect(haptic_t* haptic, haptic_effect_t effect, haptic_data_t data)
@@ -195,7 +198,11 @@ bool haptic_rumble_supported(haptic_t* haptic)
 
 void haptic_rumble_play(haptic_t* haptic, float strength, int duration_milliseconds)
 {
-	SDL_HapticRumblePlay(haptic->ptr, strength, (Uint32)duration_milliseconds);
+	if (!haptic->rumble_initialized) {
+		SDL_HapticRumbleInit(haptic->ptr);
+		haptic->rumble_initialized = true;
+	}
+	SDL_HapticRumblePlay(haptic->ptr, strength, s_saturate32(duration_milliseconds));
 }
 
 void haptic_rumble_stop(haptic_t* haptic)

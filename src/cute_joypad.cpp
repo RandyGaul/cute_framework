@@ -117,15 +117,15 @@ bool joypad_button_is_up(joypad_t* joypad, joypad_button_t button)
 
 bool joypad_button_was_pressed(joypad_t* joypad, joypad_button_t button)
 {
-	return joypad->buttons[button] && !joypad->buttons[button];
+	return joypad->buttons[button] && !joypad->buttons_prev[button];
 }
 
 bool joypad_button_was_released(joypad_t* joypad, joypad_button_t button)
 {
-	return !joypad->buttons[button] && joypad->buttons[button];
+	return !joypad->buttons[button] && joypad->buttons_prev[button];
 }
 
-uint16_t joypad_axis(joypad_t* joypad, joypad_axis_t axis)
+int16_t joypad_axis(joypad_t* joypad, joypad_axis_t axis)
 {
 	return joypad->axes[axis];
 }

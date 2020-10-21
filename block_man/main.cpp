@@ -436,6 +436,7 @@ void do_main_loop_once()
 	}
 	do_imgui_stuff(app, dt);
 	//debug_draw_non_empty_board_spaces();
+
 	app_present(app);
 }
 

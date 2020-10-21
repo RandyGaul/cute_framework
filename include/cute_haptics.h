@@ -145,6 +145,8 @@ struct haptic_data_t
 	} u;
 };
 
+// -------------------------------------------------------------------------------------------------
+
 struct joypad_t;
 
 /**
@@ -215,6 +217,8 @@ CUTE_API void CUTE_CALL haptic_unpause(haptic_t* haptic);
  * Stops all haptics on the device. The effects are not destroyed.
  */
 CUTE_API void CUTE_CALL haptic_stop_all(haptic_t* haptic);
+
+// -------------------------------------------------------------------------------------------------
 
 /**
  * Checks to see if a simple sine/leftright haptic can be supported on the device. Creates

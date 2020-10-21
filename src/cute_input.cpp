@@ -579,7 +579,7 @@ void pump_input_msgs(app_t* app)
 			if (joypad) {
 				int button = (int)event.cbutton.button;
 				CUTE_ASSERT(button >= 0 && button < JOYPAD_BUTTON_COUNT);
-				joypad->buttons[button] = 1;
+				joypad->buttons[button] = 0;
 			}
 		}	break;
 
@@ -590,7 +590,7 @@ void pump_input_msgs(app_t* app)
 			if (joypad) {
 				int button = (int)event.cbutton.button;
 				CUTE_ASSERT(button >= 0 && button < JOYPAD_BUTTON_COUNT);
-				joypad->buttons[button] = 0;
+				joypad->buttons[button] = 1;
 			}
 		}	break;
 

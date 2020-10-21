@@ -47,7 +47,7 @@ CUTE_API bool CUTE_CALL joypad_button_is_down(joypad_t* joypad, joypad_button_t 
 CUTE_API bool CUTE_CALL joypad_button_is_up(joypad_t* joypad, joypad_button_t button);
 CUTE_API bool CUTE_CALL joypad_button_was_pressed(joypad_t* joypad, joypad_button_t button);
 CUTE_API bool CUTE_CALL joypad_button_was_released(joypad_t* joypad, joypad_button_t button);
-CUTE_API uint16_t CUTE_CALL joypad_axis(joypad_t* joypad, joypad_axis_t axis);
+CUTE_API int16_t CUTE_CALL joypad_axis(joypad_t* joypad, joypad_axis_t axis);
 
 enum joypad_power_level_t : int
 {
@@ -63,7 +63,7 @@ enum joypad_power_level_t : int
 
 enum joypad_button_t : int
 {
-	JOYPAD_BUTTON_INVALID,
+	JOYPAD_BUTTON_INVALID = -1,
 	JOYPAD_BUTTON_A,
 	JOYPAD_BUTTON_B,
 	JOYPAD_BUTTON_X,
@@ -85,7 +85,7 @@ enum joypad_button_t : int
 
 enum joypad_axis_t : int
 {
-	JOYPAD_AXIS_INVALID,
+	JOYPAD_AXIS_INVALID = -1,
 	JOYPAD_AXIS_LEFTX,
 	JOYPAD_AXIS_LEFTY,
 	JOYPAD_AXIS_RIGHTX,
