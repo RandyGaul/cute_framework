@@ -22,6 +22,7 @@
 #include <cute_joypad.h>
 #include <cute_c_runtime.h>
 #include <cute_alloc.h>
+#include <cute_haptics.h>
 
 #include <internal/cute_input_internal.h>
 #include <internal/cute_app_internal.h>
@@ -71,6 +72,9 @@ joypad_t* joypad_open(app_t* app, int index)
 void joypad_close(joypad_t* joypad)
 {
 	list_remove(&joypad->node);
+	if (joypad->haptic) {
+		haptic_close(joypad->haptic);
+	}
 	SDL_GameControllerClose(joypad->controller);
 	CUTE_FREE(joypad, NULL);
 }

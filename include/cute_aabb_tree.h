@@ -39,7 +39,7 @@ CUTE_API void CUTE_CALL destroy_aabb_tree(aabb_tree_t* tree);
 /**
  * Adds a new leaf to the tree, and rebalances as necessary.
  */
-CUTE_API leaf_t CUTE_CALL aabb_tree_insert(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb, void* udata = NULL);
+CUTE_API leaf_t CUTE_CALL aabb_tree_insert(aabb_tree_t* tree, aabb_t aabb, void* udata = NULL);
 
 /**
  * Removes a leaf from the tree, and rebalances as necessary.

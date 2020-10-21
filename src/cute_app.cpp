@@ -76,7 +76,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 {
 	SDL_SetMainReady();
 
-	if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER)) {
+	if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC)) {
 		return NULL;
 	}
 

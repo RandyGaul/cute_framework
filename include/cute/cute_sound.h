@@ -1446,6 +1446,8 @@ struct cs_context_t
 
 	int plugin_count;
 	cs_plugin_interface_t plugins[CUTE_SOUND_PLUGINS_MAX];
+
+	void* mem_ctx;
 };
 
 static void cs_release_context(cs_context_t* ctx)
@@ -2009,7 +2011,7 @@ cs_context_t* cs_make_context(void* unused, unsigned play_frequency_in_Hz, int b
 	ctx->sleep_milliseconds = 0;
 	ctx->plugin_count = 0;
 	ctx->mem_ctx = user_allocator_ctx;
-	
+
 	SDL_memset(&wanted, 0, sizeof(wanted));
 	SDL_memset(&have, 0, sizeof(have));
 	wanted.freq = play_frequency_in_Hz;

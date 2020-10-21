@@ -37,10 +37,13 @@ enum mouse_click_t : int
 	MOUSE_CLICK_DOUBLE,
 };
 
+struct haptic_t;
+
 struct joypad_t
 {
 	list_node_t node;
 	SDL_GameController* controller = NULL;
+	haptic_t* haptic = NULL;
 	SDL_JoystickID id = -1;
 	int buttons[JOYPAD_BUTTON_COUNT] = { 0 };
 	int buttons_prev[JOYPAD_BUTTON_COUNT] = { 0 };
