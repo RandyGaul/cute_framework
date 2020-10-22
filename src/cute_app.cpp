@@ -76,7 +76,12 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 {
 	SDL_SetMainReady();
 
-	if (SDL_Init(SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC)) {
+#ifdef CUTE_EMSCRIPTEN
+	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER;
+#else
+	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC;
+#endif
+	if (SDL_Init(sdl_options)) {
 		return NULL;
 	}
 
@@ -293,7 +298,11 @@ error_t app_init_net(app_t* app)
 
 error_t app_init_audio(app_t* app, bool spawn_mix_thread, int max_simultaneous_sounds)
 {
-	app->cute_sound = cs_make_context(NULL, 44100, 1024 * 4, 0, app->mem_ctx);
+	int more_on_emscripten = 1;
+#ifdef CUTE_EMSCRIPTEN
+	more_on_emscripten = 4;
+#endif
+	app->cute_sound = cs_make_context(NULL, 44100, 1024 * more_on_emscripten, 0, app->mem_ctx);
 	if (app->cute_sound) {
 #ifndef CUTE_EMSCRIPTEN
 		if (spawn_mix_thread) {

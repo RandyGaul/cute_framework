@@ -141,7 +141,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 				is_ice_block = has_something && app_has_component(app, world->board.data[sy][sx].entity, "IceBlock");
 				is_lamp = has_something && app_entity_is_type(app, world->board.data[sy][sx].entity, "Lamp");
 				if (is_ice_block) {
- 					if (!can_big_ice_block_slide(x, y, sx, sy, player->xdir, player->ydir, distance + 1)) {
+					if (!can_big_ice_block_slide(x, y, sx, sy, player->xdir, player->ydir, distance + 1)) {
 						break;
 					}
 					found = true;
@@ -171,11 +171,13 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 				if (is_ice_block) {
 					IceBlock* ice_block = (IceBlock*)app_get_component(app, block, "IceBlock");
 					ice_block->is_held = true;
+					play_sound("block_grab.wav", 2.0f);
 				} else if (is_lamp) {
 					Lamp* lamp = (Lamp*)app_get_component(app, block, "Lamp");
 					lamp->is_held = true;
 					Animator* lamp_anim = (Animator*)app_get_component(app, block, "Animator");
 					lamp_anim->sprite.local_offset.y += 1;
+					play_sound("lamp_pick_up.wav", 2.0f);
 				}
 			}
 		} else {
@@ -257,11 +259,13 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 				}
 				block_board_piece->notify_player_when_done = player->entity;
 				player->busy = true;
+				play_sound("block_throw.wav", 2.0f);
 			} else {
 				Lamp* lamp = (Lamp*)app_get_component(app, e, "Lamp");
 				lamp->is_held = false;
 				Animator* lamp_anim = (Animator*)app_get_component(app, e, "Animator");
 				lamp_anim->sprite.local_offset.y -= 1;
+				play_sound("lamp_put_down.wav", 2.0f);
 			}
 			player->holding = false;
 			update_hero_animation = true;
@@ -275,19 +279,14 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 		int xmove[4] = {  0,  0,  1, -1 };
 		int ymove[4] = { -1,  1,  0,  0 };
 
-		for (int i = 0; i < 4; ++i)
-		{
-			if (!key_mod_bit_flags(app) && key_was_pressed(app, keycodes[i]) || key_was_pressed(app, keycodes_arrows[i]))
-			{
-				if (player->holding)
-				{
+		for (int i = 0; i < 4; ++i) {
+			if (!key_mod_bit_flags(app) && key_was_pressed(app, keycodes[i]) || key_was_pressed(app, keycodes_arrows[i])) {
+				if (player->holding) {
 					// if moving backwards, keep same direction, just back up
-					if (player->xdir == -xdirs[i] && player->ydir == -ydirs[i])
-					{
+					if (player->xdir == -xdirs[i] && player->ydir == -ydirs[i]) {
 						if (!in_board(x - player->xdir, y + player->ydir)) break;
 						// make sure we don't push block through a wall
-						if (world->board.data[y + player->ydir][x - player->xdir].is_empty)
-						{
+						if (world->board.data[y + player->ydir][x - player->xdir].is_empty) {
 							entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
 							BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
 							if (!can_big_ice_block_fit(x, y, block_board_piece, -player->xdir, player->ydir)) {
@@ -307,10 +306,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 							block_board_piece->linear(block_board_piece->x - player->xdir, block_board_piece->y + player->ydir, Player::move_delay);
 							break;
 						}
-					}
-					// if moving forwards
-					else if (player->xdir == xdirs[i] && player->ydir == ydirs[i])
-					{
+					} else if (player->xdir == xdirs[i] && player->ydir == ydirs[i]) { // if moving forwards
 						// make sure we don't push block through a wall
 						int sx = x + player->xdir * 2;
 						int sy = y - player->ydir * 2;
@@ -319,8 +315,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 						int dy = -player->ydir;
 						entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
 						BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
-						if (world->board.data[sy][sx].is_empty || world->board.data[sy][sx].entity == block)
-						{
+						if (world->board.data[sy][sx].is_empty || world->board.data[sy][sx].entity == block) {
 							if (!can_big_ice_block_fit(x, y, block_board_piece, dx, dy)) {
 								break;
 							}
@@ -337,21 +332,18 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 							// update hero position
 							board_piece->hop(x, y, Player::move_delay);
 							player->busy = true;
+							play_sound("step.wav", 2.0f);
 							break;
 						}
-					}
-					else // if turning 90 degrees
-					{
+					} else { // if turning 90 degrees
 						// turn
 						int xdirtemp = xdirs[i];
 						int ydirtemp = ydirs[i];
 
 						// check for something
-						if (world->board.data[y - ydirtemp][x + xdirtemp].is_empty)
-						{
+						if (world->board.data[y - ydirtemp][x + xdirtemp].is_empty) {
 							// also check to make sure we aren't turning through a block
-							if (world->board.data[y - player->ydir - ydirtemp][x + player->xdir + xdirtemp].is_empty)
-							{
+							if (world->board.data[y - player->ydir - ydirtemp][x + player->xdir + xdirtemp].is_empty) {
 								entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
 								BoardPiece* block_board_piece = (BoardPiece*)app_get_component(app, block, "BoardPiece");
 								if (block_board_piece->has_replicas) break;
@@ -371,11 +363,8 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 						update_hero_animation = true;
 						break;
 					}
-				}
-				else // not holding a block
-				{
-					if (player->xdir == xdirs[i] && player->ydir == ydirs[i])
-					{
+				} else { // not holding a block
+					if (player->xdir == xdirs[i] && player->ydir == ydirs[i]) {
 						// move forward
 						x += xmove[i];
 						y += ymove[i];
@@ -398,11 +387,10 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 							board_piece->hop(x, y, Player::move_delay);
 							player->busy = true;
 							board_piece->notify_player_when_done = player->entity;
+							play_sound("step.wav", 2.0f);
 							break;
 						}
-					}
-					else
-					{
+					} else {
 						//++world->moves;
 						// turn 
 						player->xdir = xdirs[i];
@@ -467,6 +455,7 @@ void player_system_update(app_t* app, float dt, void* udata, Transform* transfor
 					app_delayed_destroy_entity(app, player->oil);
 					player->oil = INVALID_ENTITY;
 					if (LAMP) LAMP->add_oil(30);
+					play_sound("oil_get.wav", 2.0f);
 				}
 			} else {
 				coroutine_t* co = &player->co;
@@ -476,6 +465,11 @@ void player_system_update(app_t* app, float dt, void* udata, Transform* transfor
 				if (!animator->sprite.will_finish(dt)) {
 					COROUTINE_YIELD(co);
 					transform->local.p -= animator->sprite.local_offset;
+					static int last_index = 0;
+					if (last_index - animator->sprite.frame_index < -1) {
+						last_index = animator->sprite.frame_index;
+						play_sound("ladder_down.wav");
+					}
 					goto GOING_DOWN_LADDER;
 				} else {
 					// When the player moves onto a ladder it steals the board space of the ladder, which prevents

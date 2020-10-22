@@ -875,3 +875,22 @@ void reload_level(const char* name)
 	world->level_names[index] = name;
 	world->level_name = name;
 }
+
+void play_sound(const char* path, float volume)
+{
+	static dictionary<const char*, audio_t*> sounds;
+	audio_t* audio;
+	if (sounds.find(path, &audio).is_error()) {
+		audio = audio_load_wav(path);
+		if (!audio) {
+			char buf[1024];
+			snprintf(buf, 1024, "Unable to find audio file %s.\n", path);
+			app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "File Not Found", buf);
+			return;
+		}
+		sounds.insert(path, audio);
+	}
+	sound_params_t params;
+	params.volume = volume;
+	audio_play(app, audio, params);
+}

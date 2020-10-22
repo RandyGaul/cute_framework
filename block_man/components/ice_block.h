@@ -37,6 +37,7 @@ struct IceBlock
 	bool is_held = false;
 	coroutine_t co = { 0 };
 	coroutine_t float_co = { 0 };
+	coroutine_t slide_co = { 0 };
 
 	bool was_thrown = false;
 	int xdir = 0;

@@ -26,6 +26,7 @@
 #include <components/board_piece.h>
 #include <components/ice_block.h>
 #include <components/transform.h>
+#include <components/player.h>
 
 sprite_t ice_block_idle;
 sprite_t ice_block_mask;
@@ -68,6 +69,17 @@ static float s_float_offset(IceBlock* ice_block, float dt)
 	COROUTINE_PAUSE(co, IceBlock::float_delay, dt);
 	COROUTINE_END(co);
 	return floating_offset;
+}
+
+static bool s_slide_sound(IceBlock* ice_block, float dt)
+{
+	bool result = false;
+	coroutine_t* co = &ice_block->slide_co;
+	COROUTINE_START(co);
+	result = true;
+	COROUTINE_PAUSE(co, Player::move_delay, dt);
+	COROUTINE_END(co);
+	return result;
 }
 
 void ice_block_system_pre_update(app_t* app, float dt, void* udata)
@@ -124,6 +136,9 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 				if (ice_block->fire != INVALID_ENTITY) {
 					delayed_destroy_entity_at(board_piece->x, board_piece->y);
 					app_delayed_destroy_entity(app, ice_block->fire);
+					play_sound("cube_melt.wav", 2.0f);
+				} else {
+					play_sound("hard_collide.wav");
 				}
 			}
 
@@ -132,6 +147,7 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 				if (!board_piece->is_moving) {
 					goto FLOATING;
 				} else {
+					ice_block->slide_co = { 0 };
 					goto SLIDING;
 				}
 			}
@@ -159,6 +175,7 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 
 			if (!ice_block->is_held) {
 				if (board_piece->is_moving) {
+					ice_block->slide_co = { 0 };
 					goto SLIDING;
 				}
 				COROUTINE_YIELD(co);
@@ -173,6 +190,9 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 		COROUTINE_CASE(co, SLIDING);
 		{
 			transform->local.p.y += 2.0f;
+			if (s_slide_sound(ice_block, dt)) {
+				play_sound("block_skate_short.wav");
+			}
 
 			if (!board_piece->is_moving) {
 				COROUTINE_YIELD(co);

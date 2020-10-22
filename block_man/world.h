@@ -102,4 +102,6 @@ void destroy_entity_at(int x, int y);
 void delayed_destroy_entity_at(int x, int y);
 void debug_draw_non_empty_board_spaces();
 
+void play_sound(const char* path, float volume = 1.0f);
+
 #endif // WORLD_H
