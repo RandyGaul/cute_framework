@@ -264,8 +264,8 @@ error_t https_connect(https_t* https, const char* host, const char* port, bool v
 		if (result != MBEDTLS_ERR_SSL_WANT_READ && result != MBEDTLS_ERR_SSL_WANT_WRITE) {
 			char buf[1024];
 			mbedtls_strerror(result, buf, 1024);
-			const char* high = mbedtls_high_level_strerr(result);
-			const char* low = mbedtls_low_level_strerr(result);
+			//const char* high = mbedtls_high_level_strerr(result);
+			//const char* low = mbedtls_low_level_strerr(result);
 			return error_failure("TLS handshake failed with mbedtls_ssl_handshake.");
 		}
 	}
@@ -441,7 +441,7 @@ static bool s_read_int(https_decoder_t* h, int radix, uint64_t* out)
 }
 
 static bool s_chunk_size(https_decoder_t* h) {
-	if (s_read_int(h, 16, &h->chunk_size)) {
+	if (s_read_int(h, 16, (uint64_t*)&h->chunk_size)) {
 		return true;
 	}
 
@@ -524,7 +524,7 @@ static bool s_header(https_decoder_t* h)
 			return true;
 		}
 
-		if (s_int(content, 10, &h->content_length)) {
+		if (s_int(content, 10, (uint64_t*)&h->content_length)) {
 			h->err = error_failure("Failed to read content length.");
 			return true;
 		}
