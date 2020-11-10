@@ -828,7 +828,6 @@ static void s_transport_send_fragments(transport_t* transport)
 			fragment->timestamp = timestamp;
 			fragment->handle = fragment_handle;
 			fragment->data = (uint8_t*)CUTE_ALLOC(fragment_size + CUTE_TRANSPORT_HEADER_SIZE, transport->mem_ctx);
-			static int count;
 			fragment->size = this_fragment_size;
 			// TODO: Memory pool on sent fragments.
 
