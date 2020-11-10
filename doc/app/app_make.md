@@ -1,11 +1,11 @@
-# cute_make
+# app_make
 
-Use this function to construct an instance of your game. This function initializes your window, graphics, and audio.
+Use this function to construct an instance of your application window. This function initializes your window and any associated graphics context (if requested with the app options).
 
 ## Syntax
 
 ```cpp
-cute_t* cute_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0);
+app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
 ```
 
 ## Function Parameters
@@ -17,35 +17,46 @@ x | The x position of the window.
 y | The y position of the window.
 w | The width of the window in pixels.
 h | The height of the window in pixels.
-options | 0 by default; a bitmask of [cute_options_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_options_t.md) flags.
+options | 0 by default; a bitmask of [app options](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_options.md) flags.
+argv0 | The first argument passed to your main function in the `argv` parameter.
+user_allocator_context | Used for custom allocators, this can be set to `NULL`. See (TODO) for more details.
 
 ## Return Value
 
-Returns a pointer to a `cute_t` instance, representing a mixture of the application window, optional audio, and optional graphics. Returns `NULL` on failure; call [error_get](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/error_get.md) for more information.
+Returns a pointer to an `app_t` instance. Destroy it with [app_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_destroy.md) when you're done with it. Returns `NULL` on failure.
 
 ## Code Example
 
-> Creating a window and printing out a string to the screen with Cute's default font.
+> Creating a window and closing it.
 
 ```cpp
 #include <cute.h>
 using namespace cute;
 
-// Initialize the cute framework, make a window, initialize audio, and setup DirectX 9.
-cute_t* cute = cute_make("Fancy Window Title", 0, 0, 640, 480, CUTE_OPTIONS_GFX_D3D9);
-
-while (is_running(cute))
+int main(int argc, const char** argv)
 {
-	int font_x = 0, font_y = 0;
-	font_print(cute, font_x, font_y, "Hello, world!");
-	cute_update(cute);
+	// Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
+	app_t* app = app_make("Fancy Window Title", 0, 0, 640, 480, CUTE_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+
+	while (app_is_running(app))
+	{
+		dt = calc_dt();
+		app_update(app, dt);
+		app_present(app);
+	}
+	
+	app_destroy(app);
+	
+	return 0;
 }
 ```
 
 ## Remarks
 
-The [options](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_options_t.md) parameter is a flag. Different options can be OR'd together. Parameters **w** and **h** are ignored if Cute is initialized to fullscreen.
+The [options](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_options.md) parameter is a bitmask of flags. Different flags can be OR'd together. Parameters **w** and **h** are ignored if Cute is initialized to fullscreen.
 
 ## Related Functions
 
-[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md)
+[app_is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_is_running.md)
+[app_update](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_update.md)
+[app_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_destroy.md)
