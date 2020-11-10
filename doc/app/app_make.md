@@ -57,8 +57,6 @@ The [options](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/ap
 
 ## Related Functions
 
-[app_is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_is_running.md)
-
-[app_update](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_update.md)
-
-[app_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_destroy.md)
+[app_is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_is_running.md)  
+[app_update](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_update.md)  
+[app_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_destroy.md)  
