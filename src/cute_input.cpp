@@ -319,7 +319,7 @@ bool mouse_was_released(app_t* app, mouse_button_t button)
 	return 0;
 }
 
-bool mouse_wheel_motion(app_t* app)
+int mouse_wheel_motion(app_t* app)
 {
 	return app->mouse.wheel_motion;
 }

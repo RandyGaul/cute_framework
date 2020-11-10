@@ -30,12 +30,18 @@
 namespace cute
 {
 
+/**
+ * Represents one frame of animation within a sprite.
+ */
 struct frame_t
 {
 	uint64_t id;
 	float delay;
 };
 
+/**
+ * The direction a sprite plays frames.
+ */
 enum play_direction_t
 {
 	PLAY_DIRECTION_FORWARDS,
@@ -43,6 +49,10 @@ enum play_direction_t
 	PLAY_DIRECTION_PINGPONG,
 };
 
+/**
+ * A single sprite (`sprite_t`) contains a set of animations (`animation_t`). Each animation
+ * can define its own frames, and a playing direction for the frames.
+ */
 struct animation_t
 {
 	const char* name = NULL;
@@ -50,27 +60,89 @@ struct animation_t
 	array<frame_t> frames;
 };
 
+/**
+ * An animation table is a set of animations a particular sprite references.
+ * Each sprite instance contains a pointer to an animation table in a "read-only" fashion.
+ */
 using animation_table_t = dictionary<const char*, const animation_t*>;
 
+/**
+ * The sprite (`sprite_t`) represents a set of drawable animations. Each animation is a collection
+ * of frames, where each frame is one image to display on screen. The frames themselves are stored
+ * elsewhere, and the sprite simply refers to them by read-only pointer.
+ * 
+ * Switching between animations can be done by calling the `play` and passing the name of the animation
+ * to the `play` method.
+ */
 struct sprite_t
 {
+	/**
+	 * Updates the sprite's internal timer to flip through different frames.
+	 */
 	CUTE_INLINE void update(float dt);
-	CUTE_INLINE void play(const char* animation);
-	CUTE_INLINE bool is_playing(const char* animation);
-	CUTE_INLINE void reset();
-	CUTE_INLINE void draw(batch_t* batch, transform_t transform);
-	CUTE_INLINE batch_sprite_t batch_sprite(transform_t transform);
 
+	/**
+	 * Switches to a new aninmation and starts playing it from the beginning.
+	 */
+	CUTE_INLINE void play(const char* animation);
+
+	/**
+	 * Returns true if `animation` the is currently playing animation.
+	 */
+	CUTE_INLINE bool is_playing(const char* animation);
+
+	/**
+	 * Resets the currently playing animation and unpauses the animation.
+	 */
+	CUTE_INLINE void reset();
+
+	/**
+	 * Pushes an instance of this sprite onto the `batch`, which will be drawn the next time
+	 * `batch_flush` is called on `batch`.
+	 */
+	CUTE_INLINE void draw(batch_t* batch, transform_t transform);
+
+	/**
+	 * A lower level utility function used within the `draw` method. This is useful to prepare
+	 * the sprite's drawable quad in a specific way before handing it off to a `batch`, to implement
+	 * custom graphics effects.
+	 */
+	CUTE_INLINE batch_sprite_t batch_sprite(transform_t transform);
+	
 	CUTE_INLINE void pause();
 	CUTE_INLINE void unpause();
 	CUTE_INLINE void toggle_pause();
 	CUTE_INLINE void flip_x();
 	CUTE_INLINE void flip_y();
 	CUTE_INLINE int frame_count();
+
+	/**
+	 * Returns the `delay` member of the currently playing frame, in milliseconds.
+	 */
 	CUTE_INLINE float frame_delay();
+
+	/**
+	 * Sums all the delays of each frame in the animation, and returns the total, in milliseconds.
+	 */
 	CUTE_INLINE float animation_delay();
+
+	/**
+	 * Returns a value from 0 to 1 representing how far along the animation has played. 0 means
+	 * just started, while 1 means finished.
+	 */
 	CUTE_INLINE float animation_interpolant();
+
+	/**
+	 * Returns true if the animation will loop around and finish if `update` is called. This is useful
+	 * to see if you're currently on the last frame of animation, and will finish in the particular
+	 * `dt` tick.
+	 */
 	CUTE_INLINE bool will_finish(float dt);
+
+	/**
+	 * Returns true whenever at the very beginning of the animation sequence. This is useful for polling
+	 * on when the animation restarts itself, for example, polling within an if-statement each game tick.
+	 */
 	CUTE_INLINE bool on_loop();
 
 	const char* name = NULL;
@@ -92,6 +164,7 @@ struct sprite_t
 };
 
 //--------------------------------------------------------------------------------------------------
+// In-line implementation of `sprite_t` member functions.
 
 #include <cute_debug_printf.h>
 

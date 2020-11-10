@@ -27,6 +27,13 @@
 namespace cute
 {
 
+/**
+ * Calculates the time, in seconds, since the last time this function was called.
+ * No special care is taken to handle multi-threading (this function uses static memory).
+ * Returns 0 on the first call.
+ * 
+ * For more fine-grained measuring of time, try using `timer_t`.
+ */
 CUTE_API float CUTE_CALL calc_dt();
 
 struct timer_t
@@ -35,8 +42,20 @@ struct timer_t
 	uint64_t prev;
 };
 
-CUTE_API timer_t CUTE_CALL timer_make();
+/**
+ * Initializes a new `timer_t` on the stack.
+ */
+CUTE_API timer_t CUTE_CALL timer_init();
+
+/**
+ * Returns the time elapsed since the last call to `timer_dt` was made.
+ */
 CUTE_API float CUTE_CALL timer_dt(timer_t* timer);
+
+/**
+ * Returns the time elapsed since the last call to `timer_dt` was made. Use this function
+ * to repeatedly measure the time since the last `timer_dt` call.
+ */
 CUTE_API float CUTE_CALL timer_elapsed(timer_t* timer);
 
 }

@@ -45,7 +45,7 @@ CUTE_API bool CUTE_CALL mouse_is_down(app_t* app, mouse_button_t button);
 CUTE_API bool CUTE_CALL mouse_is_up(app_t* app, mouse_button_t button);
 CUTE_API bool CUTE_CALL mouse_was_pressed(app_t* app, mouse_button_t button);
 CUTE_API bool CUTE_CALL mouse_was_released(app_t* app, mouse_button_t button);
-CUTE_API bool CUTE_CALL mouse_wheel_motion(app_t* app);
+CUTE_API int CUTE_CALL mouse_wheel_motion(app_t* app);
 CUTE_API bool CUTE_CALL mouse_is_down_double_click(app_t* app, mouse_button_t button);
 CUTE_API bool CUTE_CALL mouse_double_click_was_pressed(app_t* app, mouse_button_t button);
 

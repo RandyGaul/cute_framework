@@ -27,6 +27,13 @@
 namespace cute
 {
 
+/**
+ * Implements a dynamically growable array without any type information (no templates).
+ * 
+ * This data structure is mostly here to implement cute_ecs.cpp, but is publicly available
+ * here just in case someone has a use for it.
+ */
+
 struct typeless_array
 {
 	typeless_array();

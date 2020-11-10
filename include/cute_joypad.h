@@ -34,13 +34,51 @@ enum joypad_power_level_t : int;
 enum joypad_button_t : int;
 enum joypad_axis_t : int;
 
+/**
+ * Call this once before calling `joypad_open`.
+ */
 CUTE_API void CUTE_CALL joypad_system_init();
+
+/**
+ * Adds an SDL2 mapping to the joypad system. This means for each valid mapping string added, another
+ * kind of joypad is supported.
+ * 
+ * The function `joypad_system_init` initializes many mappings from the community organized mapping
+ * database on GitHub (https://github.com/gabomdq/SDL_GameControllerDB), so you probably don't need
+ * to ever call this function.
+ */
 CUTE_API error_t CUTE_CALL joypad_add_mapping(const char* mapping);
+
+/**
+ * Returns the number of joypads currently connected to the system.
+ */
 CUTE_API int CUTE_CALL joypad_count();
+
+/**
+ * Opens a joypad on the system.
+ * `index` is a number from 0 to `joypad_count`. The first joypad connected to the system is 0,
+ * the second is 1, and so on.
+ */
 CUTE_API joypad_t* CUTE_CALL joypad_open(app_t* app, int index);
+
+/**
+ * Destroys a joypad previously opened by `joypad_open`.
+ */
 CUTE_API void CUTE_CALL joypad_close(joypad_t* joypad);
+
+/**
+ * Tests to see if the joypad is still connected to the system (returns true if it is).
+ */
 CUTE_API bool CUTE_CALL joypad_is_connected(joypad_t* joypad);
+
+/**
+ * Returns the power level of the joypad.
+ */
 CUTE_API joypad_power_level_t CUTE_CALL joypad_power_level(joypad_t* joypad);
+
+/**
+ * Returns the name of the joypad.
+ */
 CUTE_API const char* CUTE_CALL joypad_name(joypad_t* joypad);
 
 CUTE_API bool CUTE_CALL joypad_button_is_down(joypad_t* joypad, joypad_button_t button);

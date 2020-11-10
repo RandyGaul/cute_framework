@@ -26,17 +26,17 @@
 namespace cute
 {
 
-shared_library_t* cute_load_shared_library(const char* path)
+shared_library_t* load_shared_library(const char* path)
 {
 	return SDL_LoadObject(path);
 }
 
-void cute_unload_shared_library(shared_library_t* library)
+void unload_shared_library(shared_library_t* library)
 {
 	SDL_UnloadObject(library);
 }
 
-void* cute_load_function(shared_library_t* library, const char* function_name)
+void* load_function(shared_library_t* library, const char* function_name)
 {
 	return SDL_LoadFunction(library, function_name);
 }

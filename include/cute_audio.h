@@ -58,8 +58,8 @@ CUTE_API error_t CUTE_CALL music_crossfade(app_t* app, audio_t* audio_source, fl
 
 struct sound_params_t
 {
-	int paused = 0;
-	int looped = 0;
+	bool paused = false;
+	bool looped = false;
 	float volume = 1.0f;
 	float pan = 0.5f;
 	float pitch = 1.0f;
@@ -68,11 +68,15 @@ struct sound_params_t
 
 CUTE_API error_t CUTE_CALL audio_play(app_t* app, audio_t* audio_source, sound_params_t params = sound_params_t());
 
+// TODO - Sample index + fade manipulation, and clear lifetime management.
+
 // -------------------------------------------------------------------------------------------------
 
 CUTE_API void CUTE_CALL audio_set_pan(app_t* app, float pan);
 CUTE_API void CUTE_CALL audio_set_global_volume(app_t* app, float volume);
 CUTE_API void CUTE_CALL audio_set_sound_volume(app_t* app, float volume);
+
+// TODO - Global pause/fade.
 
 }
 

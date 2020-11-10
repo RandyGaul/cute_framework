@@ -45,7 +45,7 @@ float calc_dt()
 	return dt;
 }
 
-timer_t timer_make()
+timer_t timer_init()
 {
 	timer_t timer;
 	timer.prev = SDL_GetPerformanceCounter();

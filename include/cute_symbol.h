@@ -26,8 +26,23 @@ namespace
 
 using shared_library_t = void;
 
-CUTE_API shared_library_t* CUTE_CALL cute_load_shared_library(const char* path);
-CUTE_API void cute_unload_shared_library(shared_library_t* library);
-CUTE_API void* cute_load_function(shared_library_t* library, const char* function_name);
+/**
+ * Loads a shared library from disk and returns a pointer to the library.
+ * Returns `NULL` in the case of errors, and can be unloaded by calling `unload_shared_library`.
+ */
+CUTE_API shared_library_t* CUTE_CALL load_shared_library(const char* path);
+
+/**
+ * Unloads a shared library previously loaded with `load_shared_library`.
+ */
+CUTE_API void unload_shared_library(shared_library_t* library);
+
+/**
+ * Loads a function pointer out of a shared library openened previously with `load_shared_library`.
+ * The function pointer is not valid after calling `unload_shared_library`.
+ * After obtaining the function pointer with `load_function` you must typecast it yourself.
+ * Returns `NULL` in the case of errors.
+ */
+CUTE_API void* load_function(shared_library_t* library, const char* function_name);
 
 }

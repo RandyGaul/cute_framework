@@ -64,15 +64,36 @@ CUTE_API void CUTE_CALL kv_reset_read_state(kv_t* kv);
 CUTE_API void CUTE_CALL kv_set_write_buffer(kv_t* kv, void* buffer, size_t size);
 
 /**
- * TODO - Write docs for me.
- * The base must be in read mode.
+ * The base must be in read mode. This function is used to support data inheritence and delta encoding.
+ * 
+ * Data Inheritence
+ * 
+ *     If a kv is in read mode any value missing from a kv will be fetched recursively from the base.
+ * 
+ * Delta Encoding
+ * 
+ *     If the kv is in write mode any value will first be recursively looked up in base. If found, it
+ *     is only written if the new value is different from the value to be written.
  */
 CUTE_API void CUTE_CALL kv_set_base(kv_t* kv, kv_t* base);
 
+/**
+ * Returns the size written to the buffer from `kv_set_write_buffer` so far.
+ */
 CUTE_API size_t CUTE_CALL kv_size_written(kv_t* kv);
+
+/**
+ * Returns the error state of the kv instance.
+ */
 CUTE_API error_t CUTE_CALL kv_error_state(kv_t* kv);
 
 // -------------------------------------------------------------------------------------------------
+// Key and Value functions.
+// The pattern is to call `kv_key` first and then `kv_val` for the corresponding value.
+// The behavior is different if the kv is set to read or write mode.
+// For read mode, if a key is found and the correct type of kv_val function is called, the value is
+// loaded into the supplied `val` pointer.
+// For write mode keys and values are written to the buffer set with `kv_set_write_bffer`.
 
 enum kv_type_t
 {

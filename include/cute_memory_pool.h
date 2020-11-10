@@ -27,13 +27,46 @@
 namespace cute
 {
 
+/**
+ * Memory pool is useful mainly as an optimization for one of two purposes.
+ * 
+ *     1. Avoid memory fragmentation over time.
+ *     2. Avoid synchronization (mutex) within `malloc`.
+ * 
+ * The idea is to allocate a block of memory once, and then manually allocate from that block
+ * different chunks of a fixed size.
+ */
 struct memory_pool_t;
 
+/**
+ * Constructs a new memory pool.
+ * `element_size` is the fixed size each internal allocation will be.
+ * `element_count` determins how big the internal pool will be.
+ */
 CUTE_API memory_pool_t* CUTE_CALL memory_pool_make(int element_size, int element_count, void* user_allocator_context = NULL);
+
+/**
+ * Destroys a memory pool previously created with `memory_pool_make`. Does not clean up any leftover
+ * allocations from `memory_pool_alloc` that overflowed to the `malloc` backup. See `memory_pool_alloc`
+ * for more details.
+ */
 CUTE_API void CUTE_CALL memory_pool_destroy(memory_pool_t* pool);
 
+/**
+ * Returns a block of memory of `element_size` bytes. If the number of allocations in the pool exceeds
+ * `element_count` then `malloc` is used as a fallback.
+ */
 CUTE_API void* CUTE_CALL memory_pool_alloc(memory_pool_t* pool);
+
+/**
+ * The same as `memory_pool_alloc` without the `malloc` fallback -- returns `NULL` if the memory pool
+ * is all used up.
+ */
 CUTE_API void* CUTE_CALL memory_pool_try_alloc(memory_pool_t* pool);
+
+/**
+ * Frees an allocation previously acquired by `memory_pool_alloc` or `memory_pool_try_alloc`.
+ */
 CUTE_API void CUTE_CALL memory_pool_free(memory_pool_t* pool, void* element);
 
 }

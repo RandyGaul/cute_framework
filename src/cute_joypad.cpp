@@ -37,8 +37,12 @@ namespace cute
 
 void joypad_system_init()
 {
-	int result = SDL_GameControllerAddMapping((const char*)joypad_mapping_db_data);
-	CUTE_ASSERT(result != -1);
+	static bool init;
+	if (!init) {
+		init = true;
+		int result = SDL_GameControllerAddMapping((const char*)joypad_mapping_db_data);
+		CUTE_ASSERT(result != -1);
+	}
 }
 
 error_t joypad_add_mapping(const char* mapping)

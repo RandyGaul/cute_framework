@@ -23,7 +23,7 @@
 #define CUTE_MATH_H
 
 #define CUTE_MATH2D_NAMESPACE cute
-#include <cute/cute_math2d.h>
+#include <cute/cute_math2d.h> // TODO - Copy paste this in, in its entirety?
 #include <cute/cute_c2.h>
 
 #include <cute_defines.h>

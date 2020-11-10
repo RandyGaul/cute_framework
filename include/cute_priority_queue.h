@@ -27,6 +27,13 @@
 namespace cute
 {
 
+/**
+ * Implements a heap data structure in order to implement other more advanced algorithms within Cute Framework,
+ * such as A* or branch-and-bound for the AABB tree.
+ * 
+ * Currently not thoroughly tested.
+ */
+
 template <typename T>
 struct priority_queue
 {

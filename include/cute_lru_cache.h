@@ -28,6 +28,14 @@
 namespace cute
 {
 
+/**
+ * Implements a least-recently-used cache. Not particularly well tested. This is here to
+ * potentially implement an upper limit in RAM consumption for png/aseprite caches, but is
+ * not yet used within Cute Framework.
+ * 
+ * Use at your own risk.
+ */
+
 template <typename K, typename T>
 struct lru_cache
 {
