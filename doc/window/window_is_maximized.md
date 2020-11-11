@@ -1,7 +1,7 @@
 
 # window_is_maximized
 
-Returns whether or not the window was maximized.
+Returns whether or not the window is maximized.
 
 ## Syntax
 
