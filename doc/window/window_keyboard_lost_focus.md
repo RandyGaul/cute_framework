@@ -11,7 +11,7 @@ bool window_keyboard_lost_focus(app_t* app);
 
 ## Return Value
 
-Returns true if the window has keyboard focus, false otherwise.
+Returns true if the window has lost keyboard focus, false otherwise.
 
 ## Related Functions
 
