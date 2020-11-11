@@ -15,5 +15,5 @@ Returns true if the window has gained keyboard focus, false otherwise.
 
 ## Related Functions
 
-[window_keyboard_gained_focus](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/window_keyboard_gained_focus.md)  
+[window_keyboard_lost_focus](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/window_keyboard_gained_focus.md)  
 [window_keyboard_has_focus](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/window_keyboard_has_focus.md)  
