@@ -1,21 +1,21 @@
-# stop_running
+# app_offscreen_size
 
-Signals to Cute to stop running, and will cause [is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md) to return `0`.
+Fetches the offscreen resolution setup with the [app_init_upscaling](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_init_upscaling.md) function.
 
 ## Syntax
 
 ```cpp
-void stop_running(cute_t* cute);
+void app_offscreen_size(app_t* app, int* offscreen_w, int* offscreen_h);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-cute | The instance of the Cute framework to signal to stop running.
+app | The application.
+w | The width set by [app_init_upscaling](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_init_upscaling.md).
+h | The height set by [app_init_upscaling](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_init_upscaling.md).
 
 ## Related Functions
 
-[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md),
-[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md),
-[is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md)
+[app_init_upscaling](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_init_upscaling.md)  
