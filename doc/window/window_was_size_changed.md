@@ -11,7 +11,7 @@ bool window_was_size_changed(app_t* app);
 
 ## Return Value
 
-Returns true if the window was moved, false otherwise.
+Returns true if the window sized changed, false otherwise.
 
 ## Related Functions
 
