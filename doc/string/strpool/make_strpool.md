@@ -1,7 +1,7 @@
 
 # make_strpool
 
-Returns a new string pool, used for string pooling/interning - an efficient way of dealing with strings in a single-threaded manner.
+Returns a new string pool, used for string pooling/interning - an efficient way of dealing with strings in a single-threaded manner. [See here](https://github.com/RandyGaul/cute_framework/tree/master/doc/string/strpool) for a description of the string pooling API.
 
 ## Syntax
 
