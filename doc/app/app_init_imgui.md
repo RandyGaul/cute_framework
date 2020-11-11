@@ -26,9 +26,9 @@ Returns a pointer to the Dear ImGui context. Pass this to `ImGui::SetCurrentCont
 > Creating a window and closing it.
 
 ```cpp
-ImGuiContext* ctx = app_init_imgui(app);
-if (ctx) {
-	ImGui::SetCurrentContext(ctx);
+ImGuiContext* imgui_ctx = app_init_imgui(app);
+if (imgui_ctx) {
+	ImGui::SetCurrentContext(imgui_ctx);
 } else {
 	app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "Unable to initialize Dear ImGui.");
 }
