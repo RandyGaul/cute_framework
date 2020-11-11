@@ -5,3 +5,4 @@ The docs for Cute Framework are organized by categories. Select one of the categ
 [app](https://github.com/RandyGaul/cute_framework/tree/master/doc/app)  
 [clipboard](https://github.com/RandyGaul/cute_framework/tree/master/doc/clipboard)  
 [window](https://github.com/RandyGaul/cute_framework/tree/master/doc/window)  
+[time](https://github.com/RandyGaul/cute_framework/tree/master/doc/time)  
