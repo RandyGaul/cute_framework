@@ -1,29 +1,29 @@
-# is_running
+# app_is_running
 
 Use this function to control your main loop. This function will return true until a window or game event is signaled to shutdown the process (such as clicking the exit button on a window).
 
 ## Syntax
 
 ```cpp
-int is_running(cute_t* cute);
+bool app_is_running(app_t* app);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-cute | The instance of the Cute framework to check the running status of.
+app | The application.
 
 ## Return Value
 
-Returns `1` until a signal is received that Cute needs to shutdown, then it will return `0`.
+Returns `true` until a signal is received that Cute needs to shutdown, then it will return `false`.
 
 ## Code Example
 
 > Running an infinite loop, until ready to destroy Cute.
 
 ```cpp
-while (is_running(cute))
+while (app_is_running(app))
 {
 	// your code here ...
 }
@@ -31,10 +31,10 @@ while (is_running(cute))
 
 ## Remarks
 
-The function [stop_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/stop_running.md) can be used to force `is_running` to return `0` on the next call.
+The function [app_stop_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_stop_running.md) can be used to force `app_is_running` to return `false` on the next call.
 
 ## Related Functions
 
-[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md),
-[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md),
-[stop_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/stop_running.md)
+[app_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_make.md)  
+[app_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_destroy.md)  
+[app_stop_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_stop_running.md)  
