@@ -14,8 +14,10 @@ Parameter Name | Description
 --- | ---
 app | The application.
 
+## Remarks
+
+This function may only be called if the application has audio initialized without a mixing thread. See [app_init_audio](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_init_audio.md) for more details.
+
 ## Related Functions
 
-[app_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_make.md)  
-[app_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_destroy.md)  
-[app_is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_is_running.md)  
+[app_init_audio](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_init_audio.md)  
