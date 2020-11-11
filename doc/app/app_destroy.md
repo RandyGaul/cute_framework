@@ -12,7 +12,7 @@ void app_destroy(app_t* app);
 
 Parameter Name | Description
 --- | ---
-cute | The application to destroy.
+app | The application to destroy.
 
 ## Related Functions
 
