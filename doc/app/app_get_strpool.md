@@ -1,21 +1,19 @@
-# stop_running
+# app_get_strpool
 
-Signals to Cute to stop running, and will cause [is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md) to return `0`.
+Retrieves the `strpool_t` instance for the application. This is a low-level function for advanced users only. Please do not use this function unless you know what you're doing!
 
 ## Syntax
 
 ```cpp
-void stop_running(cute_t* cute);
+void app_get_strpool(app_t* app);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-cute | The instance of the Cute framework to signal to stop running.
+app | The application.
 
-## Related Functions
+### Return Value
 
-[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md),
-[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md),
-[is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md)
+A pointer to the `strpool_t` instance for the application.
