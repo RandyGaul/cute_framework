@@ -4,6 +4,8 @@ Cute's strpool API is a wrapper around [Mattias Gustavsson's](https://github.com
 
 The overall idea of the string pool is to store many strings in one large pool and avoid duplicate entries. Strings can be referred to by a 64-bit id, making comparisons and copies simply integer comparisons or copies. However, there is some extra overhead for translating from id to actual c-string, which is just a hash table lookup. There is also the downside that changing the pool contents is a single-threaded operation, making string pools difficult to use across multiple threads.
 
+If you're looking for something more like a string class, check out Cute's single-threaded [string](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string) implementation.
+
 [make_strpool](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/make_strpool.md)  
 [destroy_strpool](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/destroy_strpool.md)  
 [strpool_inject](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/strpool_inject.md)  
