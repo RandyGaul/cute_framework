@@ -1,21 +1,22 @@
-# stop_running
+# app_power_info
 
-Signals to Cute to stop running, and will cause [is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md) to return `0`.
+Returns the power information for the application. See remarks for details.
 
 ## Syntax
 
 ```cpp
-void stop_running(cute_t* cute);
+power_info_t app_power_info(app_t* app);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-cute | The instance of the Cute framework to signal to stop running.
+app | The application.
 
-## Related Functions
+## Remarks
 
-[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md),
-[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md),
-[is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md)
+struct | power_info_t | Description
+--- | --- | ---
+power_state_t | state | The seconds of battery life left. -1 means not running on the battery, or unable to get a valid value.
+int | percentage_left | The percentage of battery life left from 0 to 100. -1 means not running on the battery, or unable to get a valid value.
