@@ -1,7 +1,7 @@
 
 # window_was_size_changed
 
-Retrieves the size of the window in screen coordinates. If high DPI mode is enabled the coordinates may not be a 1:1 pixel ratio.
+Returns whether or not the window size was changed.
 
 ## Syntax
 
