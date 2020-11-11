@@ -1,21 +1,31 @@
-# stop_running
+# app_init_upscaling
 
-Signals to Cute to stop running, and will cause [is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md) to return `0`.
+Sets up the upscaling system. This is used for pixel art games that want to render to a small resolution and then upscale onto the screen at a higher resolution. For non-pixel art games `UPSCALE_STRETCH` can be used.
 
 ## Syntax
 
 ```cpp
-void stop_running(cute_t* cute);
+error_t app_init_upscaling(app_t* app, upscale_t upscaling, int offscreen_w, int offscreen_h);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-cute | The instance of the Cute framework to signal to stop running.
+app | The application.
+upscaling | The upscale settings, remarks below for more details.
+
+## Remarks
+
+
+`upscale_t` Enumeration | Description
+--- | ---
+UPSCALE_PIXEL_PERFECT_AT_LEAST_1X | Upscales to the maximum factor while still fitting within the window. Prevents the window from resizing smaller than a factor of 1x.
+UPSCALE_PIXEL_PERFECT_AT_LEAST_2X | Upscales to the maximum factor while still fitting within the window, and prevents the window from resizing below a factor of 2x.
+UPSCALE_PIXEL_PERFECT_AT_LEAST_3X | Upscales to the maximum factor while still fitting within the window, and prevents the window from resizing below a factor of 3x.
+UPSCALE_PIXEL_PERFECT_AT_LEAST_4X | Upscales to the maximum factor while still fitting within the window, and prevents the window from resizing below a factor of 4x.
+UPSCALE_STRETCH | Simply stretches the the offscreen buffer to the window. Not useful for pixel art games.
 
 ## Related Functions
 
-[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md),
-[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md),
-[is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md)
+[app_offscreen_size](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_offscreen_size.md)  
