@@ -1,21 +1,21 @@
-# stop_running
+# app_do_mixing
 
-Signals to Cute to stop running, and will cause [is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md) to return `0`.
+Performs mixing operations for all currently playing sounds and mixing in a single-threaded way.
 
 ## Syntax
 
 ```cpp
-void stop_running(cute_t* cute);
+void app_do_mixing(app_t* app);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-cute | The instance of the Cute framework to signal to stop running.
+app | The application.
 
 ## Related Functions
 
-[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md),
-[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md),
-[is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md)
+[app_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_make.md),
+[app_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_destroy.md),
+[app_is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_is_running.md)
