@@ -14,6 +14,6 @@ Parameter Name | Description
 --- | ---
 app | The application.
 
-### Return Value
+## Return Value
 
 A pointer to the `strpool_t` instance for the application.
