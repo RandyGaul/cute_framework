@@ -16,6 +16,6 @@ app | The application.
 
 ## Related Functions
 
-[app_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_make.md),
-[app_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_destroy.md),
-[app_is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_is_running.md)
+[app_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_make.md)  
+[app_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_destroy.md)  
+[app_is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_is_running.md)  
