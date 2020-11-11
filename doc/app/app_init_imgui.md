@@ -30,6 +30,6 @@ ImGuiContext* imgui_ctx = app_init_imgui(app);
 if (imgui_ctx) {
 	ImGui::SetCurrentContext(imgui_ctx);
 } else {
-	app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "Unable to initialize Dear ImGui.");
+	window_message_box(app, WINDOW_MESSAGE_BOX_TYPE_ERROR, "Unable to initialize Dear ImGui.");
 }
 ```
