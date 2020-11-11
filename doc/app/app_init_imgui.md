@@ -1,21 +1,35 @@
-# stop_running
+# app_init_imgui
 
-Signals to Cute to stop running, and will cause [is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md) to return `0`.
+This function is for anyone who wants to use the [Dear ImGui](https://github.com/ocornut/imgui) library with Cute Framework.
+
+Initializes a valid Dear ImGui context pointer. This should be passed to `ImGui::SetCurrentContext`.
 
 ## Syntax
 
 ```cpp
-void stop_running(cute_t* cute);
+ImGuiContext* app_init_imgui(app_t* app);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-cute | The instance of the Cute framework to signal to stop running.
+app | The application.
 
-## Related Functions
+## Return Value
 
-[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md),
-[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md),
-[is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md)
+Returns a pointer to the Dear ImGui context. Pass this to `ImGui::SetCurrentContext`.
+
+
+## Code Example
+
+> Creating a window and closing it.
+
+```cpp
+ImGuiContext* ctx = app_init_imgui(app);
+if (ctx) {
+	ImGui::SetCurrentContext(ctx);
+} else {
+	app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "Unable to initialize Dear ImGui.");
+}
+```
