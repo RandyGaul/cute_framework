@@ -1,7 +1,7 @@
 
 # window_is_minimized
 
-Returns whether or not the window was minimized.
+Returns whether or not the window is minimized.
 
 ## Syntax
 
