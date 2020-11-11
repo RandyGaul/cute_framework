@@ -19,5 +19,4 @@ h | The current height of the window in screen coordinates.
 
 ## Related Functions
 
-[window_position](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/window_position.md)  
 [window_was_size_changed](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/window_was_size_changed.md)  
