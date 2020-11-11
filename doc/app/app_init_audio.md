@@ -1,21 +1,21 @@
-# stop_running
+# app_init_audio
 
-Signals to Cute to stop running, and will cause [is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md) to return `0`.
+Initializes the audio system for the application.
 
 ## Syntax
 
 ```cpp
-void stop_running(cute_t* cute);
+void app_init_audio(app_t* app, bool spawn_mix_thread = true, int max_simultaneous_sounds = 5000);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-cute | The instance of the Cute framework to signal to stop running.
+app | The application.
+spawn_mix_thread | If true a dedicated thread for mixing will be spawned. If this is false you must call [app_do_mixing](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_do_mixing.md) yourself.
+max_simultaneous_sounds | The number of simultaneously playing sound instances allowed at any given time.
 
 ## Related Functions
 
-[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md),
-[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md),
-[is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md)
+[app_do_mixing](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_do_mixing.md)  
