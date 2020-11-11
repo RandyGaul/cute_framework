@@ -5,7 +5,7 @@ Use this function to set the clipboard text as a utf8 encoded string.
 ## Syntax
 
 ```cpp
-int clipboard_set(cute_t* cute, const char* string);
+error_t clipboard_set(cute_t* cute, const char* string);
 ```
 
 ## Function Parameters
@@ -17,8 +17,8 @@ string | The utf8 encoded string containing the clipboard text.
 
 ## Return Value
 
-Returns `0` on success, and `-1` on failure; call [error_get](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/error_get.md) for more information.
+Returns an `error_t` containing any error details, if any.
 
 ## Related Functions
 
-[clipboard_get](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/clipboard_get.md)
+[clipboard_get](https://github.com/RandyGaul/cute_framework/blob/master/doc/clipboard/clipboard_get.md)
