@@ -15,7 +15,7 @@ strpool_id strpool_inject(strpool_t* pool, const char* string);
 Parameter Name | Description
 --- | ---
 pool | The string pool to insert the string into.
-string | The string to insert into the pool. The string does not need to be NUL terminated for the first overload (with the `length` parameter included), but whenever it is fetched by [strpool_cstr](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/strpool_cstr.md) it will be NUL terminated. In the second function overload `string` must be NUL terminated, as `length` is not provided as a parameter at all.
+string | The string to insert into the pool. The string does not need to be NUL terminated for the first overload (with the `length` parameter included), but whenever it is fetched by [strpool_cstr](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/strpool_cstr.md) the returned string will be NUL terminated. In the second function overload `string` must be NUL terminated, as `length` is not provided as a parameter at all.
 length | The length of the `string` parameter.
 
 ## Return Value
