@@ -26,7 +26,7 @@ using namespace cute;
 
 int main(int argc, const char** argv)
 {
-  uint32_t options = CUTE_APP_OPTIONS_D3D11_CONTEXT | CUTE_APP_OPTIONS_RESIZABLE;
+	uint32_t options = CUTE_APP_OPTIONS_D3D11_CONTEXT | CUTE_APP_OPTIONS_RESIZABLE;
 	app_t* app = app_make("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
 	app_destroy(app);
 	return 0;
@@ -35,9 +35,7 @@ int main(int argc, const char** argv)
 
 ## Remarks
 
-The `options` parameter of [cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/cute_make.md) defaults to `0`. The default behavior is to initialize a DirectX 9 context on Windows, OpenGL 3.2 context on Mac/Linux, and OpenGL ES 2.0 context on mobile devices (like iOS and Android). The default behavior also initializes audio. To select a specific graphics context and override the default behavior, OR one of the GFX enumerations onto your options.
-
-Cute can be initialized without any graphics or audio (for example, to implement a game server) by passing in `CUTE_OPTIONS_NO_GFX` or `CUTE_OPTIONS_NO_AUDIO` in the `options` parameter of [cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/cute_make.md).
+The `options` parameter of [cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/cute_make.md) is a bitmask flag. Simply take the `CUTE_APP_OPTIONS_*` flags listed above and OR them together.
 
 ## Related Functions
 
