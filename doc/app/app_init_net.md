@@ -1,21 +1,15 @@
-# stop_running
+# app_init_net
 
-Signals to Cute to stop running, and will cause [is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md) to return `0`.
+This function is not fully implemented yet.
 
 ## Syntax
 
 ```cpp
-void stop_running(cute_t* cute);
+error_t app_init_net(app_t* app);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-cute | The instance of the Cute framework to signal to stop running.
-
-## Related Functions
-
-[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md),
-[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md),
-[is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md)
+app | The application.
