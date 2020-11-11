@@ -15,8 +15,11 @@ Parameter Name | Description
 app | The application.
 upscaling | The upscale settings, remarks below for more details.
 
-## Remarks
+## Return Value
 
+Returns an `error_t` containing any related error details.
+
+## Remarks
 
 `upscale_t` Enumeration | Description
 --- | ---
