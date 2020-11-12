@@ -15,6 +15,6 @@ Decrements the old string's reference count, and increments the new one copied.
 
 ## Related Functions
 
-[string_t::string_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/string_t.md)  
-[string_t::incref](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/incref.md)  
-[string_t::decref](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/decref.md)  
+[string_t::string_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/string_t.md)  
+[string_t::incref](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/incref.md)  
+[string_t::decref](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/decref.md)  
