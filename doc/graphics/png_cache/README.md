@@ -10,7 +10,7 @@ It's a cache, which means it actually caches images loaded in RAM, so subsequent
 
 ## Animations and Sprites
 
-Since png files do not contain any kind of animation information (frame delays or sets of frames) you must specify all of the animation data yourself in order to make sprites. The various functions in this section are for setting up animation data. If you don't want to call all of these fairly complicated functions, a simpler alternative would be to use the [aseprite_cache](https://github.com/RandyGaul/cute_framework/new/master/doc/graphics/aseprite_cache), as aseprite files contain animation data inside of them.
+Since png files do not contain any kind of animation information (frame delays or sets of frames) you must specify all of the animation data yourself in order to make sprites. The various functions in this section are for setting up animation data. If you don't want to call all of these fairly complicated functions, a simpler alternative would be to use the [aseprite_cache](https://github.com/RandyGaul/cute_framework/new/master/doc/graphics/aseprite_cache), as aseprite files contain animation data inside of them. The png cache is basically a lower-level version of the aseprite cache.
 
 * [png_cache_make_animation](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/png_cache/png_cache_make_animation.md)
 * [png_cache_get_animation](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/png_cache/png_cache_get_animation.md)
