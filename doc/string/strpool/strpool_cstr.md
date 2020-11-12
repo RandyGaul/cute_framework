@@ -1,7 +1,7 @@
 
 # strpool_cstr
 
-Returns the c-string for a given string id.
+Returns the NUL terminated c-string for a given string id.
 
 ## Syntax
 
