@@ -6,6 +6,7 @@ Returns the next random number in the sequence.
 
 ```cpp
 uint64_t rnd_next(rnd_t* rnd);
+uint64_t rnd_next(rnd_t& rnd);
 ```
 
 ## Function Parameters
