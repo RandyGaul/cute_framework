@@ -37,5 +37,5 @@ Please note this function takes no special care to handle malformed utf8 strings
 
 [encode8](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/utf8/encode8.md)  
 [codepoint8_size](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/utf8/codepoint8_size.md)  
-[codepoint8_size](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/utf8/codepoint8_size.md)  
+[widen](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/utf8/widen.md)  
 [shorten](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/utf8/shorten.md)  
