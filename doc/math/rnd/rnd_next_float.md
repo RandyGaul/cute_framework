@@ -5,7 +5,7 @@ Returns the next random float in the sequence.
 ## Syntax
 
 ```cpp
-float rnd_next_float(rnd_t* rnd);
+float rnd_next_float(rnd_t& rnd);
 ```
 
 ## Function Parameters
