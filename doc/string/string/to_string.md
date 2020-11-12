@@ -15,7 +15,7 @@ string_t to_string(float x);
 
 Parameter Name | Description
 --- | ---
-x | The string to convert.
+x | The value to convert to a string.
 
 ## Return value
 
