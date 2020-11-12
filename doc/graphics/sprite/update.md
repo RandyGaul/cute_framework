@@ -5,7 +5,7 @@ Updates the sprite's internal timer to flip through different frames.
 ## Syntax
 
 ```cpp
-void update(float dt)
+void update(float dt);
 ```
 
 ## Function Parameters
