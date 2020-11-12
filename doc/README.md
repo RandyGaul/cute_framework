@@ -7,3 +7,5 @@ The docs for Cute Framework are organized by categories. Select one of the categ
 [window](https://github.com/RandyGaul/cute_framework/tree/master/doc/window)  
 [string](https://github.com/RandyGaul/cute_framework/tree/master/doc/string)  
 [time](https://github.com/RandyGaul/cute_framework/tree/master/doc/time)  
+[graphics](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics)  
+[sound](https://github.com/RandyGaul/cute_framework/tree/master/doc/sound)  
