@@ -2,16 +2,16 @@
 
 Cute comes packaged with a few useful data structures. Here's the list of them in no particular order.
 
-* Doubly linked list
-* Hash table
-* Dictionary
-* Handle table
-* Array
-* Dynamic AABB tree
-* Priority queue
-* LRU cache
-* Circular buffer
-* Typeless array
+* [Doubly linked list](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_doubly_list.h)
+* [Hash table](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_hashtable.h)
+* [Dictionary](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_dictionary.h)
+* [Handle table](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_handle_table.h)
+* [Array](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)
+* [Dynamic AABB tree](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)
+* [Priority queue](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_priority_queue.h)
+* [LRU cache](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_lru_cache.h)
+* [Circular buffer](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_circular_buffer.h)
+* [Typeless array](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_typeless_array.h)
 
 Rather than documenting every single function on each of these data structures details about each one is listed right here in this document, along with some short notes on why each data stucture might be useful to you with hypothetical examples.
 
