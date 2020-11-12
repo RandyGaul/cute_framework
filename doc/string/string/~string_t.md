@@ -11,4 +11,4 @@ Destructs a `string_t` instance.
 
 ## Related Functions
 
-[string_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/string_t.md)  
+[string_t::string_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/string_t.md)  
