@@ -10,6 +10,13 @@ string_t to_string(int x);
 string_t to_string(uint64_t x);
 string_t to_string(float x);
 ```
+
+## Function Parameters
+
+Parameter Name | Description
+--- | ---
+x | The string to convert.
+
 ## Return value
 
 Returns an string after performing a conversion operation. An invalid string is returned if conversion fails.
