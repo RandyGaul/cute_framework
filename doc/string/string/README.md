@@ -1,6 +1,6 @@
 ## String Class
 
-Cute's string class is implemented by Cute's [string pool](https://github.com/RandyGaul/cute_framework/tree/master/doc/string/strpool) implementation. This means that the strings stored by the string class are subject to two major limitations.
+Cute's string class is implemented by Cute's [string pool](https://github.com/RandyGaul/cute_framework/tree/master/doc/string/strpool) implementation. This means the strings are subject to two major limitations.
 
 1. Raw c-strings retrieved from strings must not be stored, and only used temporarily.
 2. The string pool behind the string class implementation is fundamentally single-threaded, so passing strings over multiple threads is a big no-no, unless you know what you're doing.
