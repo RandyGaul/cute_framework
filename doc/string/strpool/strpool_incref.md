@@ -23,3 +23,4 @@ This function is for implementing reference counting. The reference counting mus
 ## Related Functions
   
 [strpool_decref](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/strpool_decref.md)  
+[strpool_getref](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/strpool_getref.md)  
