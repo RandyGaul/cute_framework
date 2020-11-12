@@ -157,6 +157,7 @@ set(CUTE_SRCS
 	src/cute_strpool.cpp
 	src/cute_symbol.cpp
 	src/cute_haptics.cpp
+	src/cute_utf8.cpp
 
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
@@ -242,6 +243,7 @@ set(CUTE_HDRS
 	include/cute_strpool.h
 	include/cute_symbol.h
 	include/cute_haptics.h
+	include/cute_utf8.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
@@ -305,7 +307,7 @@ if(MACOSX)
 	target_link_libraries(cute PRIVATE ${SDL2_LIBRARIES} sodium physfs ${IOKIT} ${FOUNDATION})
 elseif(EMSCRIPTEN)
 	target_compile_options(cute PUBLIC -O1 -fno-rtti -fno-exceptions)
-	target_link_libraries(cute PRIVATE sodium physfs "-s USE_WEBGL2=1 -s ASSERTIONS=1 -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1")
+	target_link_libraries(cute PRIVATE sodium physfs "-s USE_WEBGL2=1 -s ASSERTIONS=1  -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1")
 else()
 	target_link_libraries(cute PRIVATE SDL2 sodium physfs)
 endif()

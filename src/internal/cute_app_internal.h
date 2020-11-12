@@ -107,7 +107,7 @@ struct app_t
 	font_vs_params_t font_vs_uniforms;
 	font_fs_params_t font_fs_uniforms;
 	bool gfx_enabled = false;
-	upscale_t upscaling = UPSCALE_PIXEL_PERFECT_AUTO;
+	upscale_t upscaling = UPSCALE_PIXEL_PERFECT_AT_LEAST_1X;
 	sg_context_desc gfx_ctx_params;
 	int w;
 	int h;

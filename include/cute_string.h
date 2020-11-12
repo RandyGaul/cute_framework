@@ -41,28 +41,27 @@ struct strpool_t;
 
 struct string_t
 {
-	CUTE_API string_t(strpool_t* pool = NULL);
-	CUTE_API string_t(char* str, strpool_t* pool = NULL);
-	CUTE_API string_t(const char* str, strpool_t* pool = NULL);
-	CUTE_API string_t(const char* begin, const char* end, strpool_t* pool = NULL);
-	CUTE_API string_t(const string_t& other, strpool_t* pool = NULL);
+	CUTE_API string_t();
+	CUTE_API string_t(char* str);
+	CUTE_API string_t(const char* str);
+	CUTE_API string_t(const char* begin, const char* end);
+	CUTE_API string_t(const string_t& other);
 	CUTE_API ~string_t();
 
 	CUTE_API size_t len() const;
 	CUTE_API const char* c_str() const;
 
 	CUTE_API string_t& operator=(const string_t& rhs);
-	CUTE_API int operator==(const string_t& rhs) const;
-	CUTE_API int operator!=(const string_t& rhs) const;
+	CUTE_API bool operator==(const string_t& rhs) const;
+	CUTE_API bool operator!=(const string_t& rhs) const;
 	CUTE_API char operator[](const int i) const;
 
 	CUTE_API void incref();
 	CUTE_API void decref();
 
-	CUTE_API bool is_valid();
+	CUTE_API bool is_valid() const;
 
 	uint64_t id;
-	strpool_t* pool;
 };
 
 CUTE_API void string_defrag_static_pool();

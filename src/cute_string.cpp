@@ -47,25 +47,24 @@ static strpool_t* s_pool(int nuke = 0)
 		return NULL;
 	} else {
 		if (!s_pool_init) {
-			s_pool_instance = instance = create_strpool();
+			s_pool_instance = instance = make_strpool();
 			s_pool_init = 1;
 		}
 		return instance;
 	}
 }
 
-static void s_incref(strpool_t* pool, uint64_t id)
+static void s_incref(uint64_t id)
 {
-	pool = pool ? pool : s_pool();
 	if (id) {
-		strpool_incref(pool, id);
+		strpool_incref(s_pool(), id);
 	}
 }
 
-static void s_decref(strpool_t* pool, uint64_t id)
+static void s_decref(uint64_t id)
 {
-	pool = pool ? pool : s_pool();
 	if (id) {
+		strpool_t* pool = s_pool();
 		if (strpool_decref(pool, id) <= 0) {
 			strpool_discard(pool, id);
 		}
@@ -74,52 +73,47 @@ static void s_decref(strpool_t* pool, uint64_t id)
 
 //--------------------------------------------------------------------------------------------------
 
-string_t::string_t(strpool_t* pool)
+string_t::string_t()
 	: id(0)
-	, pool(pool)
 {
 }
 
-string_t::string_t(char* str, strpool_t* pool)
+string_t::string_t(char* str)
 {
 	int len = (int)CUTE_STRLEN(str);
 	if (len) {
-		id = strpool_inject(pool = pool ? pool : s_pool(), str, len);
-		s_incref(pool, id);
+		id = strpool_inject(s_pool(), str, len);
+		s_incref(id);
 	} else id = 0;
-	this->pool = pool;
 }
 
-string_t::string_t(const char* str, strpool_t* pool)
+string_t::string_t(const char* str)
 {
 	int len = str ? (int)CUTE_STRLEN(str) : 0;
 	if (len) {
-		id = strpool_inject(pool = pool ? pool : s_pool(), str, len);
-		s_incref(pool, id);
+		id = strpool_inject(s_pool(), str, len);
+		s_incref(id);
 	} else id = 0;
-	this->pool = pool;
 }
 
-string_t::string_t(const char* begin, const char* end, strpool_t* pool)
+string_t::string_t(const char* begin, const char* end)
 {
 	int len = begin ? (end ? (int)(end - begin) : (int)CUTE_STRLEN(begin)) : 0;
 	if (len) {
-		id = strpool_inject(pool = pool ? pool : s_pool(), begin, len);
-		s_incref(pool, id);
+		id = strpool_inject(s_pool(), begin, len);
+		s_incref(id);
 	} else id = 0;
-	this->pool = pool;
 }
 
-string_t::string_t(const string_t& other, strpool_t* pool)
+string_t::string_t(const string_t& other)
 	: id(other.id)
-	, pool(pool ? pool : other.pool)
 {
-	s_incref(pool, id);
+	s_incref(id);
 }
 
 string_t::~string_t()
 {
-	s_decref(pool, id);
+	s_decref(id);
 }
 
 size_t string_t::len() const
@@ -134,21 +128,20 @@ const char* string_t::c_str() const
 
 string_t& string_t::operator=(const string_t& rhs)
 {
-	s_incref(rhs.pool, rhs.id);
-	s_decref(pool, id);
+	s_incref(rhs.id);
+	s_decref(id);
 	id = rhs.id;
-	pool = rhs.pool;
 	return *this;
 }
 
-int string_t::operator==(const string_t& rhs) const
+bool string_t::operator==(const string_t& rhs) const
 {
-	return id == rhs.id && pool == rhs.pool;
+	return id == rhs.id;
 }
 
-int string_t::operator!=(const string_t& rhs) const
+bool string_t::operator!=(const string_t& rhs) const
 {
-	return id != rhs.id && pool != rhs.pool;
+	return id != rhs.id;
 }
 
 char string_t::operator[](const int i) const
@@ -159,17 +152,17 @@ char string_t::operator[](const int i) const
 
 void string_t::incref()
 {
-	s_incref(pool, id);
+	s_incref(id);
 }
 
 void string_t::decref()
 {
-	s_decref(pool, id);
+	s_decref(id);
 }
 
-bool string_t::is_valid()
+bool string_t::is_valid() const
 {
-	return strpool_isvalid(pool ? pool : s_pool(), id);
+	return strpool_isvalid(s_pool(), id);
 }
 
 void string_defrag_static_pool()

@@ -30,22 +30,23 @@ namespace cute
 struct strpool_t;
 using strpool_id = uint64_t;
 
-strpool_t* create_strpool(void* user_allocator_context = NULL);
-void destroy_strpool(strpool_t* pool);
+CUTE_API strpool_t* CUTE_CALL make_strpool(void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL destroy_strpool(strpool_t* pool);
 
-strpool_id strpool_inject(strpool_t* pool, const char* string, int length);
-void strpool_discard(strpool_t* pool, strpool_id id);
+CUTE_API strpool_id CUTE_CALL strpool_inject(strpool_t* pool, const char* string, int length);
+CUTE_API strpool_id CUTE_CALL strpool_inject(strpool_t* pool, const char* string);
+CUTE_API void CUTE_CALL strpool_discard(strpool_t* pool, strpool_id id);
 
-void strpool_defrag(strpool_t* pool);
+CUTE_API void CUTE_CALL strpool_defrag(strpool_t* pool);
 
-int strpool_incref(strpool_t* pool, strpool_id id);
-int strpool_decref(strpool_t* pool, strpool_id id);
-int strpool_getref(strpool_t* pool, strpool_id id);
+CUTE_API int CUTE_CALL strpool_incref(strpool_t* pool, strpool_id id);
+CUTE_API int CUTE_CALL strpool_decref(strpool_t* pool, strpool_id id);
+CUTE_API int CUTE_CALL strpool_getref(strpool_t* pool, strpool_id id);
 
-bool strpool_isvalid(const strpool_t* pool, strpool_id id);
+CUTE_API bool CUTE_CALL strpool_isvalid(const strpool_t* pool, strpool_id id);
 
-const char* strpool_cstr(const strpool_t* pool, strpool_id id);
-size_t strpool_length(const strpool_t* pool, strpool_id id);
+CUTE_API const char* CUTE_CALL strpool_cstr(const strpool_t* pool, strpool_id id);
+CUTE_API size_t CUTE_CALL strpool_length(const strpool_t* pool, strpool_id id);
 
 }
 

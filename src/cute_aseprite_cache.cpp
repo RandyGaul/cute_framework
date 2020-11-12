@@ -68,7 +68,7 @@ static void s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, voi
 aseprite_cache_t* aseprite_cache_make(void* mem_ctx)
 {
 	aseprite_cache_t* cache = CUTE_NEW(aseprite_cache_t, mem_ctx);
-	cache->strpool = create_strpool();
+	cache->strpool = make_strpool();
 	cache->mem_ctx = mem_ctx;
 	return cache;
 }

@@ -180,7 +180,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		file_system_mount(file_system_get_base_dir(), "");
 	}
 
-	app->strpool = create_strpool();
+	app->strpool = make_strpool();
 
 	return app;
 }
@@ -401,7 +401,7 @@ static float s_enforce_scale(upscale_t upscaling, float scale)
 	case UPSCALE_PIXEL_PERFECT_AT_LEAST_2X: return max(scale, 2.0f);
 	case UPSCALE_PIXEL_PERFECT_AT_LEAST_3X: return max(scale, 3.0f);
 	case UPSCALE_PIXEL_PERFECT_AT_LEAST_4X: return max(scale, 4.0f);
-	case UPSCALE_PIXEL_PERFECT_AUTO: // Fall-thru.
+	case UPSCALE_PIXEL_PERFECT_AT_LEAST_1X: // Fall-thru.
 	case UPSCALE_STRETCH: // Fall-thru.
 	default: return scale;
 	}

@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2021 Randy Gaul https://randygaul.net
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,18 +19,65 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_CLIPBOARD_H
-#define CUTE_CLIPBOARD_H
-
-#include <cute_defines.h>
-#include <cute_error.h>
+#include <cute_utf8.h>
 
 namespace cute
 {
 
-CUTE_API char* CUTE_CALL clipboard_get();
-CUTE_API error_t CUTE_CALL clipboard_set(const char* string);
-
+const char* decode8(const char* text, int* cp)
+{
 }
 
-#endif // CUTE_CLIPBOARD_H
+char* encode8(char *text, int cp)
+{
+}
+
+int codepoint8_size(int cp)
+{
+}
+
+const wchar_t* decode16(const wchar_t* text, int* cp)
+{
+}
+
+wchar_t* encode16(wchar_t* text, int cp)
+{
+}
+
+int codepoint16_size(int cp)
+{
+}
+
+void widen(const char* in, wchar_t* out)
+{
+}
+
+void widen(const char* in, int in_len, wchar_t* out)
+{
+}
+
+void widen(const char* in, wchar_t* out, int out_len)
+{
+}
+
+void widen(const char* in, int in_len, wchar_t* out, int out_len)
+{
+}
+
+void shorten(const wchar_t* in, char* out)
+{
+}
+
+void shorten(const wchar_t* in, int in_len, char* out)
+{
+}
+
+void shorten(const wchar_t* in, char* out, int out_len)
+{
+}
+
+void shorten(const wchar_t* in, int in_len, char* out, int out_len)
+{
+}
+
+}

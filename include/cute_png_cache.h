@@ -26,10 +26,9 @@
 #include <cute_error.h>
 #include <cute_color.h>
 #include <cute_batch.h>
+#include <cute_sprite.h>
 
 #include <cute/cute_png.h>
-
-struct strpool_t;
 
 namespace cute
 {
@@ -48,8 +47,7 @@ namespace cute
  * the image is currently cached in RAM.
  */
 struct png_cache_t;
-struct sprite_t;
-struct animation_t;
+struct strpool_t;
 
 /**
  * Constructs a new png cache. Destroy it with `png_cache_destroy` when done with it.

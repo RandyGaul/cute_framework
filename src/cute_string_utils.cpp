@@ -52,20 +52,19 @@ void string_utils_cleanup_static_memory()
 
 string_t operator+(const string_t& a, const string_t& b)
 {
-	CUTE_ASSERT(a.pool == b.pool);
 	size_t len_a = a.len();
 	size_t len_b = b.len();
 	char* temp = s_temp(len_a + len_b);
 	CUTE_MEMCPY(temp, a.c_str(), len_a);
 	CUTE_MEMCPY(temp + len_a, b.c_str(), len_b);
 	temp[len_a + len_b] = 0;
-	return string_t(temp, a.pool);
+	return string_t(temp);
 }
 
 int to_int(const string_t& x)
 {
 	const char* s = x.c_str();
-	return strtol(s, NULL, 10);
+	return (int)CUTE_STRTOLL(s, NULL, 10);
 }
 
 float to_float(const string_t& x)
@@ -95,10 +94,10 @@ string_t format(string_t fmt, int n, ...)
 	#endif
 
 	va_end(args);
-	return string_t(temp, fmt.pool);
+	return string_t(temp);
 }
 
-string_t to_string(int x, strpool_t* pool)
+string_t to_string(int x)
 {
 	const char* fmt = "%d";
 	char* temp = s_temp(256);
@@ -113,10 +112,10 @@ string_t to_string(int x, strpool_t* pool)
 
 	snprintf(temp, size, fmt, x);
 
-	return string_t(temp, pool);
+	return string_t(temp);
 }
 
-string_t to_string(uint64_t x, strpool_t* pool)
+string_t to_string(uint64_t x)
 {
 	const char* fmt = "%" PRIu64;
 	char* temp = s_temp(256);
@@ -131,10 +130,10 @@ string_t to_string(uint64_t x, strpool_t* pool)
 
 	snprintf(temp, size, fmt, x);
 
-	return string_t(temp, pool);
+	return string_t(temp);
 }
 
-string_t to_string(float x, strpool_t* pool)
+string_t to_string(float x)
 {
 	const char* fmt = "%f";
 	char* temp = s_temp(256);
@@ -149,7 +148,7 @@ string_t to_string(float x, strpool_t* pool)
 
 	snprintf(temp, size, fmt, x);
 
-	return string_t(temp, pool);
+	return string_t(temp);
 }
 
 array<char> to_array(const char* s)

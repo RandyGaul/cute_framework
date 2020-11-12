@@ -511,15 +511,15 @@ sprite_t load_sprite(string_t path)
 	char buf[1024];
 	if (err.is_error()) {
 		sprintf(buf, "Unable to load sprite at path \"%s\".\n", path.c_str());
-		app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
+		window_message_box(app, WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
 	}
 	if (is_odd(s.w)) {
 		sprintf(buf, "Sprite \"%s\" has an odd width of %d (should be even).\n", path.c_str(), s.w);
-		app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
+		window_message_box(app, WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
 	}
 	if (is_odd(s.h)) {
 		sprintf(buf, "Sprite \"%s\" has an odd height of %d (should be even).\n", path.c_str(), s.h);
-		app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
+		window_message_box(app, WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
 	}
 	return s;
 }
@@ -779,7 +779,7 @@ void select_level(int index)
 	if (world->level_index >= world->levels.size()) {
 		char buf[1024];
 		sprintf(buf, "Tried to load level %d, but the highest is %d. Loading level 0 instead.", world->level_index, world->levels.size() - 1);
-		app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "BAD LEVEL INDEX", buf);
+		window_message_box(app, WINDOW_MESSAGE_BOX_TYPE_ERROR, "BAD LEVEL INDEX", buf);
 		world->level_index = index = 0;
 	}
 
@@ -858,7 +858,7 @@ int select_level(const char* name)
 	if (!found) {
 		char buf[1024];
 		sprintf(buf, "Unable to select level file %s.", name);
-		app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "LEVEL FILE NOT FOUND", buf);
+		window_message_box(app, WINDOW_MESSAGE_BOX_TYPE_ERROR, "LEVEL FILE NOT FOUND", buf);
 	}
 
 	return index;
@@ -885,7 +885,7 @@ void play_sound(const char* path, float volume)
 		if (!audio) {
 			char buf[1024];
 			snprintf(buf, 1024, "Unable to find audio file %s.\n", path);
-			app_window_message_box(app, APP_MESSAGE_BOX_TYPE_ERROR, "File Not Found", buf);
+			window_message_box(app, WINDOW_MESSAGE_BOX_TYPE_ERROR, "File Not Found", buf);
 			return;
 		}
 		sounds.insert(path, audio);

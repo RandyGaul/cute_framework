@@ -50,7 +50,7 @@ enum play_direction_t
 };
 
 /**
- * A single sprite (`sprite_t`) contains a set of animations (`animation_t`). Each animation
+ * A single `sprite_t` contains a set of `animation_t`. Each animation
  * can define its own frames, and a playing direction for the frames.
  */
 struct animation_t
@@ -67,7 +67,7 @@ struct animation_t
 using animation_table_t = dictionary<const char*, const animation_t*>;
 
 /**
- * The sprite (`sprite_t`) represents a set of drawable animations. Each animation is a collection
+ * The `sprite_t` represents a set of drawable animations. Each animation is a collection
  * of frames, where each frame is one image to display on screen. The frames themselves are stored
  * elsewhere, and the sprite simply refers to them by read-only pointer.
  * 

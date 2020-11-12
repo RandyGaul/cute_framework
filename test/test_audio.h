@@ -28,6 +28,9 @@ using namespace cute;
 CUTE_TEST_CASE(test_audio_load_synchronous, "Load and free wav/ogg files synchronously.");
 int test_audio_load_synchronous()
 {
+	file_system_init(NULL);
+	file_system_mount(file_system_get_base_dir(), "");
+
 	audio_t* audio = audio_load_ogg("test_data/3-6-19-blue-suit-jam.ogg");
 	CUTE_TEST_CHECK_POINTER(audio);
 	CUTE_TEST_ASSERT(!audio_destroy(audio).is_error());
@@ -35,6 +38,8 @@ int test_audio_load_synchronous()
 	audio = audio_load_wav("test_data/jump.wav");
 	CUTE_TEST_CHECK_POINTER(audio);
 	CUTE_TEST_ASSERT(!audio_destroy(audio).is_error());
+
+	file_system_destroy();
 
 	return 0;
 }

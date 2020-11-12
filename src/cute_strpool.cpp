@@ -21,6 +21,7 @@
 
 #include <cute_strpool.h>
 #include <cute_alloc.h>
+#include <cute_c_runtime.h>
 
 #ifndef STRPOOL_IMPLEMENTATION
 #	define STRPOOL_IMPLEMENTATION
@@ -38,7 +39,7 @@ struct strpool_t
 	void* mem_ctx;
 };
 
-strpool_t* create_strpool(void* user_allocator_context)
+strpool_t* make_strpool(void* user_allocator_context)
 {
 	strpool_t* pool = (strpool_t*)CUTE_ALLOC(sizeof(strpool_t), user_allocator_context);
 	strpool_config_t strpool_config = strpool_default_config;
@@ -57,6 +58,11 @@ void destroy_strpool(strpool_t* pool)
 strpool_id strpool_inject(strpool_t* pool, const char* string, int length)
 {
 	return ::strpool_inject(&pool->inst, string, length);
+}
+
+strpool_id strpool_inject(strpool_t* pool, const char* string)
+{
+	return ::strpool_inject(&pool->inst, string, CUTE_STRLEN(string));
 }
 
 void strpool_discard(strpool_t* pool, strpool_id id)

@@ -28,8 +28,6 @@
 
 #include <cute/cute_aseprite.h>
 
-struct strpool_t;
-
 namespace cute
 {
 
@@ -48,6 +46,7 @@ namespace cute
  */
 struct aseprite_cache_t;
 struct sprite_t;
+struct strpool_t;
 
 /**
  * Constructs a new aseprite cache. Destroy it with `aseprite_cache_destroy` when done with it.

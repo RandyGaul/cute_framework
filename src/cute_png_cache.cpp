@@ -21,6 +21,7 @@
 
 #include <cute_png_cache.h>
 #include <cute_image.h>
+#include <cute_sprite.h>
 
 #include <internal/cute_app_internal.h>
 
@@ -55,7 +56,7 @@ static void s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, voi
 png_cache_t* png_cache_make(void* mem_ctx)
 {
 	png_cache_t* cache = CUTE_NEW(png_cache_t, app->mem_ctx);
-	cache->strpool = create_strpool(mem_ctx);
+	cache->strpool = make_strpool(mem_ctx);
 	cache->mem_ctx = mem_ctx;
 	return cache;
 }
