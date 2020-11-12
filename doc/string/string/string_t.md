@@ -27,6 +27,12 @@ other | Another `string_t` instance to make a copy from.
 
 Be careful about threading concerns. No special care is taken here to handle multi-threading when constructing or dealing with `string_t` instances. If you really want to support multi-threading you can specify your own string pool by setting the pool parameter of any of the constructors. The idea would be to use a different pool for each thread, and so sharing strings across threads would be a no-no, unless you really know what you're doing.
 
+There is no constructor with a `size_t` len value. Simply use the `begin` and `end` overload.
+
+```cpp
+string_t s = string_t(c_string, c_string + len);
+```
+
 ## Related Functions
 
 [~string_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/~string_t.md)  
