@@ -29,6 +29,7 @@ The flow is to follow these steps by calling the above functions.
 [png_cache_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/png_cache/png_cache_make.md)  
 [png_cache_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/png_cache/png_cache_destroy.md)  
 [png_cache_load](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/png_cache/png_cache_load.md)  
+[png_cache_load_mem](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/png_cache/png_cache_load_mem.md)  
 [png_cache_unload](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/png_cache/png_cache_unload.md)  
 [png_cache_get_pixels_fn](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/png_cache/png_cache_get_pixels_fn.md)  
 [png_cache_get_strpool_ptr](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/png_cache/png_cache_get_strpool_ptr.md)  
