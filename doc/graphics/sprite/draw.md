@@ -1,6 +1,6 @@
 # sprite_t::draw
 
-Pushes an instance of this sprite onto the `batch`, which will be drawn the next time `batch_flush` is called on `batch`.
+Pushes an instance of this sprite onto the `batch`, which will be drawn the next time (batch_flush)[https://github.com/RandyGaul/cute_framework/edit/master/doc/TODO_fill_me_in] is called on `batch`.
 
 ## Syntax
 
