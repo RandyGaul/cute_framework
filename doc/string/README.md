@@ -4,3 +4,4 @@ Cute has a utility string class available for single-threaded use cases. Cute [s
 
 [string](https://github.com/RandyGaul/cute_framework/tree/master/doc/string/string)  
 [strpool](https://github.com/RandyGaul/cute_framework/tree/master/doc/string/strpool)  
+[utf8](https://github.com/RandyGaul/cute_framework/tree/master/doc/string/utf8)  
