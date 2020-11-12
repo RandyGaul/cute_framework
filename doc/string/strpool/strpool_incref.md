@@ -6,14 +6,15 @@ Increments a counter associated with one string and returns the new value.
 ## Syntax
 
 ```cpp
-void strpool_defrag(strpool_t* pool);
+void strpool_defrag(strpool_t* pool, strpool_id id);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-pool | The string pool to degfragment.
+pool | The string pool.
+id | The string to increment the reference count of.
 
 ## Remarks
 
