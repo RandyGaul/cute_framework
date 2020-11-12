@@ -1,4 +1,4 @@
-# update
+# sprite_t::update
 
 Updates the sprite's internal timer to flip through different frames.
 
