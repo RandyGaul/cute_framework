@@ -33,6 +33,8 @@ std::vector<string_id> names = get_names();
 
 for (int i = 0; i < names.size(); ++i) {
 	string_id string = names[i];
+	
+	// Lookup a c-string for a given id, but do not store the c-string anywhere.
 	const char* c_string = strpool_cstr(pool, string);
 	printf("Name %s is present.\n", c_string);
 }
