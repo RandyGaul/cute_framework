@@ -26,7 +26,7 @@ Widening or shortening a string is a useful operation on the Windows platform, a
 
 These functions don't perform any logic for range checking. It is up to you to make sure no buffers are overrun. One simple strategy is to size the output buffer to the worst case maximum size.
 
-Please note these functions take no special care to handle malformed utf8 strings -- do not widen/shorten unsecure strings, especially from the net.
+Please note these functions take no special care to handle malformed strings -- do not widen/shorten unsecure strings, especially from the net.
 
 ## Related Functions
 
