@@ -8,6 +8,7 @@ Cute's string class is implemented by Cute's [string pool](https://github.com/Ra
 For more details on these limitations read the documentation of Cute's [string pool here](https://github.com/RandyGaul/cute_framework/tree/master/doc/string/strpool).
 
 [string_t::string_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/string_t.md)  
+[string_t::~string_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/~string_t.md)  
 [string_t::len](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/len.md)  
 [string_t::c_str](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/c_str.md)  
 [string_t::operator=](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/operator=.md)  
