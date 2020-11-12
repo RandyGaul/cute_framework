@@ -1,6 +1,6 @@
 # Window
 
-These functions deal directly with the application's window, such as resizing the window or receiving events for when the window gains or loses focus.
+These functions deal directly with the application's window, such as resizing the window or receiving events for when the window gains or loses focus. Most of these functions are intended to be used by polling once per game tick.
 
 [window_size](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/window_size.md)  
 [window_position](https://github.com/RandyGaul/cute_framework/blob/master/doc/window/window_position.md)  
