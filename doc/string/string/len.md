@@ -11,4 +11,4 @@ size_t len() const;
 
 ## Related Functions
 
-[string_t::c_str](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/c_str.md)  
+[string_t::c_str](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/c_str.md)  
