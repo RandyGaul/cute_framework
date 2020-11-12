@@ -5,7 +5,7 @@ Loads an ogg file from disk.
 ## Syntax
 
 ```cpp
-audio_t* audio_load_ogg(const char* path, void* user_allocator_context = NULL)
+audio_t* audio_load_ogg(const char* path, void* user_allocator_context = NULL);
 ```
 
 ## Function Parameters
