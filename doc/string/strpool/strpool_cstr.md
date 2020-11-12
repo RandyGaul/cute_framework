@@ -22,7 +22,7 @@ Returns the NUL terminated c-string for the given string id. Returns NULL if the
 
 ## Remarks
 
-The c-string returned is only valid while [destroy_strpool](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/destroy_strpool.md), [strpool_defrag](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/strpool_defrag.md), and [strpool_discard](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/strpool_discard.md) are not called. Therefor it is recommended to only store the string id associated with a string, and not the c-string itself. Any time you need the c-string, simply look it up briefly with [strpool_cstr](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/strpool_cstr.md).
+The c-string returned is only valid while [destroy_strpool](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/destroy_strpool.md), [strpool_defrag](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/strpool_defrag.md), and [strpool_discard](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/strpool_discard.md) are not called. Therefor it is recommended to only store the string id associated with a string, and not the raw c-string itself. Any time you need the c-string, simply look it up briefly with [strpool_cstr](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/strpool_cstr.md).
 
 This function call does contain a small overhead of a hash table lookup - however, it is quite optimized and can be called many times within a single game-tick without any worry about performance cost.
 
