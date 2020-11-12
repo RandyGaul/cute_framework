@@ -30,6 +30,7 @@ This function call does contain a small overhead of a hash table lookup - howeve
 
 ```cpp
 std::vector<string_id> names = get_names();
+
 for (int i = 0; i < names.size(); ++i) {
 	string_id string = names[i];
 	const char* c_string = strpool_cstr(pool, string);
