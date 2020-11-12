@@ -6,7 +6,7 @@ Increments a counter associated with one string and returns the new value.
 ## Syntax
 
 ```cpp
-void strpool_defrag(strpool_t* pool, strpool_id id);
+int strpool_incref(strpool_t* pool, strpool_id id);
 ```
 
 ## Function Parameters
