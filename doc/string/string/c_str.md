@@ -35,4 +35,4 @@ for (int i = 0; i < names.size(); ++i) {
 
 ## Related Functions
 
-[string_t::len](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/len.md)  
+[string_t::len](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/len.md)  
