@@ -33,6 +33,8 @@ There is no constructor with a `size_t` len value. Simply use the `begin` and `e
 string_t s = string_t(c_string, c_string + len);
 ```
 
+The string's reference count is incremented by one.
+
 ## Related Functions
 
 [string_t::~string_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/~string_t.md)  
