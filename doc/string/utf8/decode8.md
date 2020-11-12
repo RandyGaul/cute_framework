@@ -29,6 +29,10 @@ while (*text) {
 }
 ```
 
+## Remarks
+
+Please note this function takes no special care to handle malformed utf8 strings -- do not decode unsecure strings, especially from the net.
+
 ## Related Functions
 
 [encode8](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/utf8/encode8.md)  
