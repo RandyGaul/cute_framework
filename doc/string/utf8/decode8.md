@@ -31,4 +31,7 @@ while (*text) {
 
 ## Related Functions
 
-[encode8]()  
+[encode8](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/utf8/encode8.md)  
+[codepoint8_size](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/utf8/codepoint8_size.md)  
+[codepoint8_size](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/utf8/codepoint8_size.md)  
+[shorten](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/utf8/shorten.md)  
