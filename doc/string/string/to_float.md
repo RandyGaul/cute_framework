@@ -8,6 +8,13 @@ Converts a string to float.
 ```cpp
 float to_float(const string_t& x);
 ```
+
+## Function Parameters
+
+Parameter Name | Description
+--- | ---
+x | The string to convert.
+
 ## Return value
 
 Returns an float after performing a string conversion operation. 0 is returned on a failed conversion.
