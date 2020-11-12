@@ -18,6 +18,7 @@ This function uses some static memory, and is a *single-threaded* operation. The
 
 ## Related Functions
 
+[format](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/format.md)  
 [to_float](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/to_float.md)  
 [to_string](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/to_string.md)  
 [to_array](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/to_array.md)  
