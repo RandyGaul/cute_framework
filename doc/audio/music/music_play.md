@@ -22,6 +22,8 @@ Returns any error details upon failure.
 
 ## Remarks
 
+Any previously playing music will be stopped instantly.
+
 The music API is a higher level version of the [sound_play](https://github.com/RandyGaul/cute_framework/blob/master/doc/audio/sound/sound_play.md) function, and is mostly for convenience when wanting to fade or crossfade one or two music tracks together. For more fine-grained and custom control, use the [sound_play](https://github.com/RandyGaul/cute_framework/blob/master/doc/audio/sound/sound_play.md) function.
 
 ## Related Functions
