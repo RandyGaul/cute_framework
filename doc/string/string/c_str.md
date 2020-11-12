@@ -11,7 +11,7 @@ const char* c_str() const;
 
 ## Return Value
 
-Returns the raw c-string stored within the underlying string pool.
+Returns the raw c-string stored within the underlying string pool. More information about the [string pool's limitations can be found here](https://github.com/RandyGaul/cute_framework/tree/master/doc/string/string).
 
 ## Remarks
 
