@@ -38,7 +38,7 @@ for (int i = 0; i < codepoints.size(); ++i) {
 
 ## Remarks
 
-Please note this function takes no special care to handle malformed utf8 strings -- do not decode unsecure strings, especially from the net.
+Please note this function takes no special care to handle malformed utf8 strings -- do not encode unsecure strings, especially from the net.
 
 ## Related Functions
 
