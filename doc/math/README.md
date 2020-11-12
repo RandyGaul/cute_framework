@@ -10,7 +10,7 @@ All of the collision functions reside in [cute_math.h](https://github.com/RandyG
 * Polygon
 * Ray
 
-There is too much information to document right here, so please check out the following files for more information.
+There is too much information to document right here, so please check out the following files for more information. Not to worry! These files are filled with a lot of very good documentation on the header comments :)
 
 * [cute_math2d.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute/cute_math2d.h) for basic math types and linear algebra functions.
 * [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h) for collision functions.
