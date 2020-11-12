@@ -13,8 +13,7 @@ void strpool_defrag(strpool_t* pool);
 
 Parameter Name | Description
 --- | ---
-pool | The string pool to remove the string from.
-id | The string to be removed.
+pool | The string pool to degfragment.
 
 ## Remarks
 
