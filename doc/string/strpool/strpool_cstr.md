@@ -18,7 +18,7 @@ id | The string to lookup.
 
 ## Return Value
 
-Returns the NUL terminated c-string for the given string id.
+Returns the NUL terminated c-string for the given string id. Returns NULL if the id is invalid.
 
 ## Remarks
 
