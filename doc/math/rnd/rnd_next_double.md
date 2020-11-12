@@ -6,6 +6,7 @@ Returns the next random double in the sequence.
 
 ```cpp
 float rnd_next_double(rnd_t* rnd);
+float rnd_next_double(rnd_t& rnd);
 ```
 
 ## Function Parameters
