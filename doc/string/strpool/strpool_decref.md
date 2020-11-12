@@ -6,7 +6,7 @@ Decrements a counter associated with one string and returns the new value. Will 
 ## Syntax
 
 ```cpp
-void strpool_decref(strpool_t* pool);
+int strpool_decref(strpool_t* pool, strpool_id id);
 ```
 
 ## Function Parameters
