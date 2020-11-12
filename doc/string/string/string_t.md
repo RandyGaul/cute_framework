@@ -35,4 +35,4 @@ string_t s = string_t(c_string, c_string + len);
 
 ## Related Functions
 
-[~string_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/~string_t.md)  
+[string_t::~string_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/~string_t.md)  
