@@ -21,7 +21,7 @@ Returns an instance of the raw audio samples.
 
 ## Remarks
 
-This function is synchronous. For the async io please try using [virtual path](https://github.com/RandyGaul/cute_framework/blob/master/doc/audio/audio_stream_ogg.md).
+This function is synchronous. For the async io please try using [audio_stream_ogg](https://github.com/RandyGaul/cute_framework/blob/master/doc/audio/audio_stream_ogg.md).
 
 ## Related Functions
 
