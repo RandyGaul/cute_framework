@@ -16,4 +16,7 @@ dt | Delta-time for the last game tick, such as from [calc_dt](https://github.co
 
 ## Related Functions
 
-[play]()  
+[play](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/play.md)  
+[reset](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/reset.md)  
+[pause](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/pause.md)  
+[unpause](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/unpause.md)  
