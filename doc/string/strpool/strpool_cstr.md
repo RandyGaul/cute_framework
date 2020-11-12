@@ -29,8 +29,8 @@ This function call does contain a small overhead of a hash table lookup - howeve
 > An example to show storing a string id, and only temporarily using the c-string on an as-needed basis.
 
 ```cpp
-array<string_id> names = get_names();
-for (int i = 0; i < names.count(); ++i) {
+std::vector<string_id> names = get_names();
+for (int i = 0; i < names.size(); ++i) {
 	string_id string = names[i];
 	const char* c_string = strpool_cstr(pool, string);
 	printf("Name %s is present.\n", c_string);
