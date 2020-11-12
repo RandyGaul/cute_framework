@@ -2,7 +2,7 @@
 
 Cute implements both utf8 and utf16 functions. There is a great website called http://utf8everywhere.org/ that contains a lot of great info on why you should simlpy use the utf8 encoding for all your strings everywhere. The gist is that utf8 is quite superior to all other encodings and should be used for pretty much everything all the time.
 
-## Some advantages of UTF8.
+## Some advantages of UTF8
 
 * Can encode anything utf32 can encode
 * Is very widely used on the web and everywhere else
