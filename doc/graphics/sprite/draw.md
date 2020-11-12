@@ -18,3 +18,4 @@ transform | A transform to draw the sprite relative to.
 ## Related Functions
 
 [sprite_t::batch_sprite](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/batch_sprite.md)  
+[batch_flush](https://github.com/RandyGaul/cute_framework/edit/master/doc/TODO_fill_me_in)  
