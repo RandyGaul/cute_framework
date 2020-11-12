@@ -1,6 +1,6 @@
 # music_pause
 
-Pauses the music
+Pauses the music.
 
 ## Syntax
 
