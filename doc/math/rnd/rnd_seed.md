@@ -18,6 +18,10 @@ seed | The seed to initialize `rnd_t` with.
 
 Returns a ready-to-go psuedo-random number generator.
 
+## Remarks
+
+`rnd_t` is returned by value. It's a very small struct of two `uint64_t` integers, so simply copying it around the stack is encouraged.
+
 ## Related Functions
 
 [rnd_next](https://github.com/RandyGaul/cute_framework/blob/master/doc/math/rnd/rnd_next.md)  
