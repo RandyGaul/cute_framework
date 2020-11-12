@@ -16,6 +16,10 @@ Parameter Name | Description
 pool | The string pool.
 id | The string to lookup.
 
+## Return Value
+
+Returns the NUL terminated c-string for the given string id.
+
 ## Remarks
 
 The c-string returned is only valid while [destroy_strpool](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/destroy_strpool.md), [strpool_defrag](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/strpool_defrag.md), and [strpool_discard](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/strpool_discard.md) are not called. Therefor it is recommended to only store the string id associated with a string, and not the c-string itself. Any time you need the c-string, simply look it up briefly with [strpool_cstr](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/strpool_cstr.md).
