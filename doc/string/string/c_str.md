@@ -11,11 +11,11 @@ const char* c_str() const;
 
 ## Return Value
 
-The raw c-string stored within the underlying string pool.
+Returns the raw c-string stored within the underlying string pool.
 
 ## Remarks
 
-The c-string returned is only valid while temporarily - it can become invalid whenever [string_t::~string_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/~string_t.md) is called. Therefor it is recommended to only store `string_t` instances, and not the raw c-string itself. Any time you need the c-string, simply look it up briefly with [string_t::c_str](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/c_str.md).
+The c-string returned is only valid temporarily - it can become invalid whenever [string_t::~string_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/string/~string_t.md) is called. Therefor it is recommended to only store `string_t` instances, and not the raw c-string itself. Any time you need the c-string, simply look it up briefly with [string_t::c_str](https://github.com/RandyGaul/cute_framework/blob/master/doc/string/strpool/c_str.md).
 
 This function call does contain a small overhead of a hash table lookup - however, it is quite optimized and can be called many times within a single game-tick without any worry about performance cost.
 
