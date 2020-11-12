@@ -12,7 +12,7 @@ void string_defrag_static_pool();
 
 Over time as strings are added and removed empty space between strings causes memory fragmentation. This causes the string pool to take up more memory than necessary. It can be useful to periodically or strategically degragment the pool to avoid this inefficiency.
 
-The `string_t` class uses a default static [string pool](https://github.com/RandyGaul/cute_framework/tree/master/doc/string/strpool). This function operates on that static pool. If you constructed your `string_t` instance by providing a pointer to your own string pool, this function will not effect your own string pool.
+The `string_t` class uses a default static [string pool](https://github.com/RandyGaul/cute_framework/tree/master/doc/string/strpool). This function operates on that static pool.
 
 ## Related Functions
 
