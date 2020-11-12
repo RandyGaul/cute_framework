@@ -1,6 +1,6 @@
 ## String Pool
 
-Cute's strpool API is a wrapper around [Mattias Gustavsson's](https://github.com/mattiasgustavsson/libs) Public Domain string pool/intern single-file C header. String pooling is a very efficient way to deal with strings, while coming at the cost of extra difficulty when dealing with multi-threading.
+Cute's string pool API is a wrapper around [Mattias Gustavsson's](https://github.com/mattiasgustavsson/libs) Public Domain string pool/intern single-file C header. String pooling is a very efficient way to deal with strings, while coming at the cost of extra difficulty when dealing with multi-threading.
 
 The overall idea of the string pool is to store many strings in one large pool and avoid duplicate entries. Strings can be referred to by a 64-bit id, making comparisons and copies simply integer comparisons or copies. However, there is some extra overhead for translating from id to actual c-string, which is just a hash table lookup. There is also the downside that changing the pool contents is a single-threaded operation, making string pools difficult to use across multiple threads.
 
