@@ -21,5 +21,5 @@ This function uses the sokol blend state struct `sg_blend_state`. In order to le
 
 ## Related Functions
  
-[batch_push_blend_defaults](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/batch/batch_push_blend_defaults)  
-[batch_pop_blend_state](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/batch/batch_pop_blend_state)  
+[batch_push_blend_defaults](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/batch/batch_push_blend_defaults.md)  
+[batch_pop_blend_state](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/batch/batch_pop_blend_state.md)  
