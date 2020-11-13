@@ -21,5 +21,5 @@ This function uses the sokol depth and stencil state struct `sg_depth_stencil_st
 
 ## Related Functions
  
-[batch_push_depth_stencil_defaults](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/batch/batch_push_depth_stencil_defaults)  
-[batch_pop_depth_stencil_state](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/batch/batch_pop_depth_stencil_state)  
+[batch_push_depth_stencil_defaults](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/batch/batch_push_depth_stencil_defaults.md)  
+[batch_pop_depth_stencil_state](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/batch/batch_pop_depth_stencil_state.md)  
