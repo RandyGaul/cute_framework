@@ -132,7 +132,7 @@ CUTE_API const animation_table_t* CUTE_CALL png_cache_get_animation_table(png_ca
 /**
  * Makes a sprite. Each sprite must refer to an animation table previously constructed by `png_cache_make_animation_table`.
  * You can supply the pointer to the animation table yourself in `table`, or just leave it NULL.
- * If table is `NULL` 
+ * If table is `NULL` then `sprite_name` is used to lookup the table within the png cache.
  */
 CUTE_API sprite_t CUTE_CALL png_cache_make_sprite(png_cache_t* cache, const char* sprite_name, const animation_table_t* table = NULL);
 
