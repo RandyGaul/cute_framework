@@ -15,7 +15,7 @@ Parameter Name | Description
 image_id | Uniquely maps to a single image, as determined by you.
 buffer | Pointer to the memory where you need to fill in pixel data.
 bytes_to_fill | Number of bytes to write to `buffer`.
-udata | The `udata` pointer that was originally passed to `batch_enable_custom_pixel_loader`.
+udata | The `udata` pointer that was originally passed to [batch_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/batch/batch_make.md).
 
 ## Remarks
 
