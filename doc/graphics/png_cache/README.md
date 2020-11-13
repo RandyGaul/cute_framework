@@ -8,6 +8,8 @@ The png cache is used to load png images from disk in order to make sprites. You
 
 It's a cache, which means it actually caches images loaded in RAM, so subsequent calls to [png_cache_load](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/png_cache/png_cache_load.md) won't have to fetch the image off of disk, as long as the image is currently cached in RAM.
 
+The purpose of the cache is to hook up to Cute's batching mechanism. The function to do so is [png_cache_get_pixels_fn](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/png_cache/png_cache_get_pixels_fn.md).
+
 ## Animations and Sprites
 
 Since png files do not contain any kind of animation information (frame delays or sets of frames) you must specify all of the animation data yourself in order to make sprites. The various functions in this section are for setting up animation data. If you don't want to call all of these fairly complicated functions, a simpler alternative would be to use the [aseprite_cache](https://github.com/RandyGaul/cute_framework/new/master/doc/graphics/aseprite_cache), as aseprite files contain animation data inside of them. The png cache is basically a lower-level version of the aseprite cache.
