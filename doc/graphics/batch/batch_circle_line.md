@@ -15,6 +15,7 @@ Parameter Name | Description
 b | The batch.
 r | Radius of the circle.
 iters | Number of line segments to draw the circle with.
+thickness | The thickness, in pixels, of lines to render the quad with.
 c | Color to render with.
 
 ## Related Functions
