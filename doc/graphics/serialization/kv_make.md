@@ -6,7 +6,7 @@ Makes a kv instance.
 ## Syntax
 
 ```cpp
-kv_t* kv_make(void* user_allocator_context = NULL)
+kv_t* kv_make(void* user_allocator_context = NULL);
 ```
 
 ## Function Parameters
