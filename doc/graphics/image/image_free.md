@@ -7,6 +7,7 @@ Frees an image.
 
 ```cpp
 void image_free(image_t* img);
+void image_free(image_indexed_t* img);
 ```
 
 ## Function Parameters
