@@ -6,7 +6,7 @@ Destroys a kv instance.
 ## Syntax
 
 ```cpp
-void kv_destroy(kv_t* kv)
+void kv_destroy(kv_t* kv);
 ```
 
 ## Function Parameters
