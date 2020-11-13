@@ -5,7 +5,7 @@ Sets the color for sprite outlines, if used.
 ## Syntax
 
 ```cpp
-void CUTE_CALL batch_outlines_color(batch_t* b, color_t c);
+void batch_outlines_color(batch_t* b, color_t c);
 ```
 
 ## Function Parameters
