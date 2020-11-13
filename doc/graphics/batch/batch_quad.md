@@ -1,6 +1,6 @@
 # batch_quad
 
-Pops the last tint pushed onto the batch.
+Pushes a quad onto the batch.
 
 ## Syntax
 
