@@ -4,7 +4,7 @@ Cute uses a high-quality library called [sokol_gfx.h](https://github.com/floooh/
 
 For basic sprite drawing Cute's sprite batching system internally uses sokol_gfx. Cute's pixel art upscale feature also makes use of sokol_gfx for the render to texture and scaling effect.
 
-Learning how to use Sokol GFX isn't necessary unless you want to start implementing your own custom shader effects. In this case there are [some tutorials online](https://floooh.github.io/2017/07/29/sokol-gfx-tour.html) available!
+Learning how to use Sokol GFX isn't necessary unless you want to start implementing your own custom shader effects. In this case there are [some tutorials online](https://floooh.github.io/2017/07/29/sokol-gfx-tour.html) available! However, the best place to learn about sokol_gfx.h is to look at the [source code directly](https://github.com/RandyGaul/cute_framework/blob/master/include/sokol/sokol_gfx.h), as the code is *heavily documented* with top-notch documentation.
 
 # Sokol Shader Compiler
 
