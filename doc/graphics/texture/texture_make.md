@@ -24,7 +24,7 @@ Returns the new texture.
 
 ## Remarks
 
-This function creates a sokol_gfx.h texture (a `sg_image` instance). In order to learn how to properly use sokol graphics take a peek at the [primer](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sokol.md) here.
+This function creates a sokol_gfx.h texture (a `sg_image` instance). In order to learn how to properly use sokol graphics take a peek at the [primer here](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sokol.md).
 
 If you just want to draw sprites on screen it is recommend you use [aseprite_cache](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/aseprite_cache) instead.
 
