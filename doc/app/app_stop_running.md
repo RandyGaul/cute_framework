@@ -1,6 +1,6 @@
 # app_stop_running
 
-Signals to Cute to stop running, and will cause [is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/is_running.md) to return `false`.
+Signals to Cute to stop running, and will cause [app_is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/app_is_running.md) to return `false`.
 
 ## Syntax
 
