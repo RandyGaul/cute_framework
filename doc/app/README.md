@@ -15,3 +15,5 @@ Here are the functions related to `app_t`. These functions are for querying devi
 [app_init_upscaling](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_init_upscaling.md)  
 [app_offscreen_size](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_offscreen_size.md)  
 [app_power_info](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_power_info.md)  
+[app_update](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_update.md)  
+[app_present](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_present.md)  
