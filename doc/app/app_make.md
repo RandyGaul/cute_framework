@@ -40,7 +40,7 @@ int main(int argc, const char** argv)
 
 	while (app_is_running(app))
 	{
-		dt = calc_dt();
+		float dt = calc_dt();
 		app_update(app, dt);
 		app_present(app);
 	}
