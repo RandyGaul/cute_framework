@@ -1,5 +1,5 @@
 # app
-`app_t` is the instance of the Cute framework and represents the application, created by the [app_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/app_make.md) function.
+`app_t` is the instance of the Cute framework and represents the application, created by the [app_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_make.md) function.
 
 Here are the functions related to `app_t`. These functions are for querying device info (like CPU/Memory statistics), initializing graphics, initializing audio, along with window initialization and related events.
 
