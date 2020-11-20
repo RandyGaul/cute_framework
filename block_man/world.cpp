@@ -296,7 +296,7 @@ void ecs_registration(app_t* app)
 
 	   Please note that each of these three callbacks are optional and can be NULL.
 	*/
-	system_t s;
+	system_config_t s;
 	s.udata = NULL;
 	s.pre_update_fn = NULL;
 	s.update_fn = (void*)transform_system_update;
@@ -892,5 +892,5 @@ void play_sound(const char* path, float volume)
 	}
 	sound_params_t params;
 	params.volume = volume;
-	audio_play(app, audio, params);
+	sound_play(app, audio, params);
 }

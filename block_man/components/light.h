@@ -35,10 +35,10 @@ struct Light
 	coroutine_t co = { 0 };
 };
 
-CUTE_INLINE cute::error_t Light_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Light_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	Light* light = (Light*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		CUTE_PLACEMENT_NEW(light) Light;
 	}
 	kv_key(kv, "is_lamp"); kv_val(kv, &light->is_lamp);

@@ -26,26 +26,32 @@ namespace cute
 
 const char* decode8(const char* text, int* cp)
 {
+	return NULL;
 }
 
 char* encode8(char *text, int cp)
 {
+	return NULL;
 }
 
 int codepoint8_size(int cp)
 {
+	return 0;
 }
 
 const wchar_t* decode16(const wchar_t* text, int* cp)
 {
+	return NULL;
 }
 
 wchar_t* encode16(wchar_t* text, int cp)
 {
+	return NULL;
 }
 
 int codepoint16_size(int cp)
 {
+	return 0;
 }
 
 void widen(const char* in, wchar_t* out)

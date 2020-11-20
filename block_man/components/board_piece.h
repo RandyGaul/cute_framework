@@ -129,10 +129,10 @@ private:
 	}
 };
 
-CUTE_INLINE cute::error_t BoardPiece_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t BoardPiece_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	BoardPiece* board_piece = (BoardPiece*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		CUTE_PLACEMENT_NEW(board_piece) BoardPiece;
 		board_piece->self = entity;
 	}

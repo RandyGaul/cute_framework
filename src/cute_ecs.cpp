@@ -44,17 +44,18 @@ static error_t s_load_from_schema(app_t* app, entity_type_t schema_type, entity_
 		if (err.is_error()) return err;
 	}
 
-	kv_t* schema;
+	kv_t* schema = NULL;
 	err = app->entity_parsed_schemas.find(schema_type, &schema);
 	if (err.is_error()) {
-		err = config->serializer_fn(app, schema, entity, component, udata);
+		err = error_success();
+		if (config->serializer_fn) err = config->serializer_fn(app, schema, true, entity, component, udata);
 	} else {
 		err = kv_key(schema, config->name);
 		if (err.is_error()) return err;
 
 		err = kv_object_begin(schema);
 		if (!err.is_error()) {
-			err = config->serializer_fn(app, schema, entity, component, udata);
+			if (config->serializer_fn) err = config->serializer_fn(app, schema, true, entity, component, udata);
 			if (err.is_error()) return err;
 			err = kv_object_end(schema);
 		}
@@ -65,7 +66,7 @@ static error_t s_load_from_schema(app_t* app, entity_type_t schema_type, entity_
 
 //--------------------------------------------------------------------------------------------------
 
-void app_register_system(app_t* app, const system_t& system)
+void app_register_system(app_t* app, const system_config_t& system)
 {
 	system_internal_t system_internal;
 	system_internal.pre_update_fn = system.pre_update_fn;
@@ -295,7 +296,7 @@ static inline void s_match(array<int>* matches, const array<strpool_id>& a, cons
 	}
 }
 
-void app_update_systems(app_t* app, float dt)
+void app_run_ecs_systems(app_t* app, float dt)
 {
 	int system_count = app->systems.count();
 	for (int i = 0; i < system_count; ++i)
@@ -474,6 +475,8 @@ entity_type_t app_register_entity_type(app_t* app, array<const char*> component_
 		component_config_t* config = app->component_configs.find(component_type_ids[i]);
 		table.m_element_size = config->size_of_component;
 	}
+
+	return entity_type;
 }
 
 const char* app_entity_type_string(app_t* app, entity_type_t type)
@@ -598,7 +601,7 @@ error_t app_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
 			error_t err = kv_key(kv, config->name);
 			if (!err.is_error()) {
 				kv_object_begin(kv);
-				err = config->serializer_fn(app, kv, entity, component, config->udata);
+				err = config->serializer_fn(app, kv, true, entity, component, config->udata);
 				kv_object_end(kv);
 				if (err.is_error()) {
 					return error_failure("Unable to parse component.");
@@ -671,7 +674,7 @@ error_t app_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv)
 			error_t err = kv_key(kv, config->name);
 			if (!err.is_error()) {
 				kv_object_begin(kv);
-				err = config->serializer_fn(app, kv, entity, (void*)component, config->udata);
+				err = config->serializer_fn(app, kv, false, entity, (void*)component, config->udata);
 				kv_object_end(kv);
 				if (err.is_error()) {
 					return error_failure("Unable to save component.");
@@ -722,7 +725,7 @@ error_t app_save_entities(app_t* app, const array<entity_t>& entities)
 			component_config_t* config = app->component_configs.find(component_type);
 			const void* component = component_table[index];
 
-			error_t err = config->serializer_fn(app, NULL, entity, (void*)component, config->udata);
+			error_t err = config->serializer_fn(app, NULL, false, entity, (void*)component, config->udata);
 			if (err.is_error()) {
 				return error_failure("Unable to save component.");
 			}

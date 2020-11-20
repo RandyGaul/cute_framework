@@ -540,6 +540,7 @@ size_t kv_size_written(kv_t* kv)
 
 error_t kv_error_state(kv_t* kv)
 {
+	if (!kv) return error_success();
 	return kv->err;
 }
 

@@ -43,10 +43,10 @@ struct Transform
 	}
 };
 
-CUTE_INLINE cute::error_t Transform_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Transform_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	Transform* transform = (Transform*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		CUTE_PLACEMENT_NEW(transform) Transform;
 		transform->app = app;
 		transform->entity = entity;

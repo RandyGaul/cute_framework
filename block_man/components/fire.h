@@ -29,10 +29,10 @@ struct Fire
 {
 };
 
-CUTE_INLINE cute::error_t Fire_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Fire_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	Fire* fire = (Fire*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		CUTE_PLACEMENT_NEW(fire) Fire;
 	}
 	return kv_error_state(kv);

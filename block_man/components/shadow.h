@@ -35,10 +35,10 @@ struct Shadow
 	bool big = false;
 };
 
-CUTE_INLINE cute::error_t Shadow_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Shadow_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	Shadow* shadow = (Shadow*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		CUTE_PLACEMENT_NEW(shadow) Shadow;
 	}
 	kv_key(kv, "visible"); kv_val(kv, &shadow->visible);

@@ -29,10 +29,10 @@ struct Oil
 {
 };
 
-CUTE_INLINE cute::error_t Oil_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Oil_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	Oil* oil = (Oil*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		CUTE_PLACEMENT_NEW(oil) Oil;
 	}
 	return kv_error_state(kv);

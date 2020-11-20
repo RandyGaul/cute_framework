@@ -29,10 +29,10 @@ struct Ladder
 {
 };
 
-CUTE_INLINE cute::error_t Ladder_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Ladder_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	Ladder* ladder = (Ladder*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		CUTE_PLACEMENT_NEW(ladder) Ladder;
 	}
 	return kv_error_state(kv);

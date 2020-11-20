@@ -430,7 +430,7 @@ void do_main_loop_once()
 	music_set_volume(app, volume * volume);
 	app_update(app, dt);
 	if (world->load_level_dirty_flag) select_level(world->level_index);
-	app_update_systems(app, dt);
+	app_run_ecs_systems(app, dt);
 	if (world->lose_screen) {
 		do_lose_screen_stuff(dt);
 	}

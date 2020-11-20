@@ -99,14 +99,14 @@ struct Animator
 	}
 };
 
-CUTE_INLINE cute::error_t Animator_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Animator_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	Animator* animator = (Animator*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		CUTE_PLACEMENT_NEW(animator) Animator;
 	}
 	kv_key(kv, "name"); kv_val(kv, &animator->sprite.name);
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		animator->sprite = load_sprite(animator->sprite.name);
 	}
 	kv_key(kv, "visibile"); kv_val(kv, &animator->visible);

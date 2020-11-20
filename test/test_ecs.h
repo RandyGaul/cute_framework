@@ -56,10 +56,10 @@ struct test_component_octorok_t
 
 // -------------------------------------------------------------------------------------------------
 
-cute::error_t test_component_transform_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+cute::error_t test_component_transform_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	test_component_transform_t* transform = (test_component_transform_t*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		transform->x = 0;
 		transform->y = 0;
 	}
@@ -68,20 +68,20 @@ cute::error_t test_component_transform_serialize(app_t* app, kv_t* kv, entity_t 
 	return kv_error_state(kv);
 }
 
-cute::error_t test_component_sprite_serialize(app_t* app,  kv_t* kv, entity_t entity, void* component, void* udata)
+cute::error_t test_component_sprite_serialize(app_t* app,  kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	test_component_sprite_t* sprite = (test_component_sprite_t*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		sprite->img_id = 7;
 	}
 	kv_key(kv, "img_id"); kv_val(kv, &sprite->img_id);
 	return kv_error_state(kv);
 }
 
-cute::error_t test_component_collider_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+cute::error_t test_component_collider_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	test_component_collider_t* collider = (test_component_collider_t*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		collider->type = 3;
 		collider->radius = 14.0f;
 	}
@@ -90,10 +90,10 @@ cute::error_t test_component_collider_serialize(app_t* app, kv_t* kv, entity_t e
 	return kv_error_state(kv);
 }
 
-cute::error_t test_component_octorok_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+cute::error_t test_component_octorok_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	test_component_octorok_t* octorok = (test_component_octorok_t*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		octorok->ai_state = 0;
 		octorok->pellet_count = 3;
 		octorok->buddy_said_hi = 0;
@@ -193,7 +193,7 @@ int test_ecs_octorok()
 	if (entity_type == CUTE_INVALID_ENTITY_TYPE) return -1;
 
 	// Register systems.
-	system_t s;
+	system_config_t s;
 	s.udata = NULL;
 	s.pre_update_fn = NULL;
 	s.update_fn = (void*)update_test_octorok_system;
@@ -281,11 +281,66 @@ int test_ecs_octorok()
 	// Update the systems.
 	s_octorok_system_ran_ok = 0;
 	s_octorok_buddy_said_hi_count = 0;
-	app_update_systems(app, 0);
+	app_run_ecs_systems(app, 0);
 
 	// Assert outcomes (make sure the systems actually ran).
 	CUTE_TEST_ASSERT(s_octorok_system_ran_ok == 2);
 	CUTE_TEST_ASSERT(s_octorok_buddy_said_hi_count == 2);
+
+	app_destroy(app);
+
+	return 0;
+}
+
+// -------------------------------------------------------------------------------------------------
+
+struct dummy_component_t
+{
+	int iters = 0;
+};
+
+cute::error_t dummy_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+{
+	dummy_component_t* dummy = (dummy_component_t*)component;
+	if (reading) {
+		CUTE_PLACEMENT_NEW(dummy) dummy_component_t;
+	}
+	return error_success();
+}
+
+void update_dummy_system(app_t* app, float dt, void* udata, dummy_component_t* dummies, int entity_count)
+{
+	for (int i = 0; i < entity_count; ++i) {
+		dummy_component_t* dummy = dummies + i;
+		dummy->iters++;
+	}
+}
+
+CUTE_TEST_CASE(test_ecs_no_kv, "Run ECS without kv at all.");
+int test_ecs_no_kv()
+{
+	app_t* app = app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN);
+
+	component_config_t config;
+	config.name = "Dummy";
+	config.size_of_component = sizeof(dummy_component_t);
+	config.serializer_fn = dummy_serialize;
+	app_register_component_type(app, config);
+
+	system_config_t system;
+	system.component_types.add("Dummy");
+	system.update_fn = update_dummy_system;
+	app_register_system(app, system);
+
+	app_register_entity_type(app, { "Dummy" }, "Dummy_Entity");
+
+	entity_t e;
+	app_make_entity(app, "Dummy_Entity", &e);
+
+	app_run_ecs_systems(app, 0);
+
+	dummy_component_t* dummy = (dummy_component_t*)app_get_component(app, e, "Dummy");
+	CUTE_TEST_ASSERT(dummy->iters == 1);
 
 	app_destroy(app);
 

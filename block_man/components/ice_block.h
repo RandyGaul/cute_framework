@@ -45,10 +45,10 @@ struct IceBlock
 	entity_t fire = INVALID_ENTITY;
 };
 
-CUTE_INLINE cute::error_t IceBlock_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t IceBlock_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	IceBlock* ice_block = (IceBlock*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		CUTE_PLACEMENT_NEW(ice_block) IceBlock;
 		Animator* animator = (Animator*)app_get_component(app, entity, "Animator");
 		animator->sprite.play("idle");

@@ -53,10 +53,10 @@ struct Player
 	// ----------------------------
 };
 
-CUTE_INLINE cute::error_t Player_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Player_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	Player* player = (Player*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		CUTE_PLACEMENT_NEW(player) Player;
 		player->entity = entity;
 		Animator* animator = (Animator*)app_get_component(app, entity, "Animator");

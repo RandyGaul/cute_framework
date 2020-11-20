@@ -53,10 +53,10 @@ struct Lamp
 
 extern Lamp* LAMP;
 
-CUTE_INLINE cute::error_t Lamp_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Lamp_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	Lamp* lamp = (Lamp*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		CUTE_PLACEMENT_NEW(lamp) Lamp;
 		lamp->self = entity;
 		LAMP = lamp;

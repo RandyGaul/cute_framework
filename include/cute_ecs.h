@@ -57,7 +57,7 @@ CUTE_API bool CUTE_CALL app_entity_is_type(app_t* app, entity_t entity, const ch
 //--------------------------------------------------------------------------------------------------
 // Component
 
-typedef error_t (component_serialize_fn)(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata);
+typedef error_t (component_serialize_fn)(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata);
 typedef void (component_cleanup_fn)(app_t* app, entity_t entity, void* component, void* udata);
 
 struct component_config_t
@@ -75,7 +75,7 @@ CUTE_API void CUTE_CALL app_register_component_type(app_t* app, component_config
 //--------------------------------------------------------------------------------------------------
 // System
 
-struct system_t
+struct system_config_t
 {
 	void* udata = NULL;
 	void (*pre_update_fn)(app_t* app, float dt, void* udata) = NULL;
@@ -84,8 +84,8 @@ struct system_t
 	array<const char*> component_types;
 };
 
-CUTE_API void CUTE_CALL app_register_system(app_t* app, const system_t& system);
-CUTE_API void CUTE_CALL app_update_systems(app_t* app, float dt);
+CUTE_API void CUTE_CALL app_register_system(app_t* app, const system_config_t& system);
+CUTE_API void CUTE_CALL app_run_ecs_systems(app_t* app, float dt);
 
 //--------------------------------------------------------------------------------------------------
 // Run-time functions and entity lifetime management.

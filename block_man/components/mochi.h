@@ -42,10 +42,10 @@ struct Mochi
 	entity_t zzz = INVALID_ENTITY;
 };
 
-CUTE_INLINE cute::error_t Mochi_serialize(app_t* app, kv_t* kv, entity_t entity, void* component, void* udata)
+CUTE_INLINE cute::error_t Mochi_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	Mochi* mochi = (Mochi*)component;
-	if (kv_get_state(kv) == KV_STATE_READ) {
+	if (reading) {
 		CUTE_PLACEMENT_NEW(mochi) Mochi;
 		Animator* animator = (Animator*)app_get_component(app, entity, "Animator");
 		animator->sprite.play("sleeping");
