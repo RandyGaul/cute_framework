@@ -164,7 +164,7 @@ struct https_response_t
 	 * Convenience function to find a specific header. Returns true if the header was found, and false
 	 * otherwise.
 	 */
-	CUTE_INLINE bool find_header(const char* header_name, https_header_t* header_out = NULL);
+	CUTE_INLINE bool find_header(const char* header_name, https_header_t* header_out = NULL) const;
 };
 
 /**
@@ -189,7 +189,7 @@ CUTE_INLINE bool https_strcmp(const char* lit, https_string_t string)
 	return false;
 }
 
-CUTE_INLINE bool https_response_t::find_header(const char* header_name, https_header_t* header_out)
+CUTE_INLINE bool https_response_t::find_header(const char* header_name, https_header_t* header_out) const
 {
 	*header_out = { 0 };
 	for (int i = 0; i < headers.count(); ++i) {
