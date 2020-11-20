@@ -46,17 +46,20 @@ static error_t s_load_from_schema(app_t* app, entity_type_t schema_type, entity_
 
 	kv_t* schema;
 	err = app->entity_parsed_schemas.find(schema_type, &schema);
-	if (err.is_error()) return error_failure("Unable to find schema when loading entity.");
-
-	err = kv_key(schema, config->name);
-	if (err.is_error()) return err;
-
-	err = kv_object_begin(schema);
-	if (!err.is_error()) {
+	if (err.is_error()) {
 		err = config->serializer_fn(app, schema, entity, component, udata);
+	} else {
+		err = kv_key(schema, config->name);
 		if (err.is_error()) return err;
-		err = kv_object_end(schema);
+
+		err = kv_object_begin(schema);
+		if (!err.is_error()) {
+			err = config->serializer_fn(app, schema, entity, component, udata);
+			if (err.is_error()) return err;
+			err = kv_object_end(schema);
+		}
 	}
+
 	return err;
 }
 
@@ -435,6 +438,44 @@ entity_type_t app_register_entity_type(app_t* app, const char* schema)
 	return entity_type;
 }
 
+entity_type_t app_register_entity_type(app_t* app, array<const char*> component_types, const char* entity_type_string)
+{
+	// Search for all component types present in the schema.
+	int component_config_count = app->component_configs.count();
+	const component_config_t* component_configs = app->component_configs.items();
+	array<strpool_id> component_type_ids;
+	for (int i = 0; i < component_config_count; ++i)
+	{
+		const component_config_t* config = component_configs + i;
+
+		bool found = false;
+		for (int i = 0; i < component_types.count(); ++i) {
+			if (!CUTE_STRCMP(component_types[i], config->name)) {
+				found = true;
+				break;
+			}
+		}
+
+		if (found) {
+			component_type_ids.add(INJECT(config->name));
+		}
+	}
+
+	// Register component types.
+	strpool_id entity_type_string_id = INJECT(entity_type_string);
+	entity_type_t entity_type = app->entity_type_gen++;
+	app->entity_type_string_to_id.insert(entity_type_string_id, entity_type);
+	app->entity_type_id_to_string.add(entity_type_string_id);
+	entity_collection_t* collection = app->entity_collections.insert(entity_type);
+	for (int i = 0; i < component_type_ids.count(); ++i)
+	{
+		collection->component_types.add(component_type_ids[i]);
+		typeless_array& table = collection->component_tables.add();
+		component_config_t* config = app->component_configs.find(component_type_ids[i]);
+		table.m_element_size = config->size_of_component;
+	}
+}
+
 const char* app_entity_type_string(app_t* app, entity_type_t type)
 {
 	return strpool_cstr(app->strpool, app->entity_type_id_to_string[type]);
@@ -642,6 +683,51 @@ error_t app_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv)
 	}
 
 	kv_array_end(kv);
+
+	return error_success();
+}
+
+error_t app_save_entities(app_t* app, const array<entity_t>& entities)
+{
+	dictionary<entity_t, int> id_table;
+	for (int i = 0; i < entities.count(); ++i)
+		id_table.insert(entities[i], i);
+
+	app->save_id_table = &id_table;
+	CUTE_DEFER(app->save_id_table = NULL);
+
+	int entity_count = entities.count();
+	for (int i = 0; i < entities.count(); ++i)
+	{
+		entity_t entity = entities[i];
+		entity_collection_t* collection = app->entity_collections.find(entity.type);
+		if (!collection) {
+			return error_failure("Unable to find entity type.");
+		}
+
+		bool is_valid = collection->entity_handle_table.is_valid(entity.handle);
+		if (!is_valid) {
+			return error_failure("Attempted to save an invalid entity.");
+		}
+		uint32_t index = collection->entity_handle_table.get_index(entity.handle);
+
+		const char* entity_type_string = strpool_cstr(app->strpool, app->entity_type_id_to_string[entity.type]);
+
+		const array<strpool_id>& component_types = collection->component_types;
+		const array<typeless_array>& component_tables = collection->component_tables;
+		for (int j = 0; j < component_types.count(); ++j)
+		{
+			strpool_id component_type = component_types[j];
+			const typeless_array& component_table = component_tables[j];
+			component_config_t* config = app->component_configs.find(component_type);
+			const void* component = component_table[index];
+
+			error_t err = config->serializer_fn(app, NULL, entity, (void*)component, config->udata);
+			if (err.is_error()) {
+				return error_failure("Unable to save component.");
+			}
+		}
+	}
 
 	return error_success();
 }

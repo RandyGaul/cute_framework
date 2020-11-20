@@ -50,8 +50,9 @@ struct entity_t
 static constexpr entity_t INVALID_ENTITY = { CUTE_INVALID_ENTITY_TYPE, CUTE_INVALID_HANDLE };
 
 CUTE_API entity_type_t CUTE_CALL app_register_entity_type(app_t* app, const char* schema);
+CUTE_API entity_type_t CUTE_CALL app_register_entity_type(app_t* app, array<const char*> component_types, const char* entity_type);
 CUTE_API const char* CUTE_CALL app_entity_type_string(app_t* app, entity_type_t type);
-CUTE_API bool CUTE_CALL app_entity_is_type(app_t* app, entity_t entity, const char* entity_type_name);
+CUTE_API bool CUTE_CALL app_entity_is_type(app_t* app, entity_t entity, const char* entity_type);
 
 //--------------------------------------------------------------------------------------------------
 // Component
@@ -105,6 +106,7 @@ CUTE_API error_t CUTE_CALL app_load_entities(app_t* app, kv_t* kv, array<entity_
  * `kv` needs to be in `KV_STATE_WRITE` mode.
  */
 CUTE_API error_t CUTE_CALL app_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv);
+CUTE_API error_t CUTE_CALL app_save_entities(app_t* app, const array<entity_t>& entities);
 
 }
 

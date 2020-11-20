@@ -55,9 +55,9 @@ struct batch_sprite_t
 /**
  * The batch is used to buffer up many different drawable things and organize them into draw calls suitable for high-
  * performance rendering on the GPU. However, this batch is not your typical batcher. This one will build texture
- * atlases internally on the the fly, and periodically will need to fetch pixels to build atlases.
+ * atlases internally on the the fly, and periodically needs to fetch pixels to build atlases.
  * 
- * This means you don't have to worry about texture atlases at all, and can build and ship your game with separate
+ * You don't have to worry about texture atlases at all and can build and ship your game with separate
  * images on disk.
  * 
  * If you'd like to read more about the implementation of the batcher and why this is a good idea, go ahead and read
@@ -72,7 +72,7 @@ struct batch_t;
  * `image_id`      - Uniquely maps to a single image, as determined by you.
  * `buffer`        - Pointer to the memory where you need to fill in pixel data.
  * `bytes_to_fill` - Number of bytes to write to `buffer`.
- * `udata`         - The `udata` pointer that was originally passed to `batch_make`.
+ * `udata`         - The `udata` pointer that was originally passed to `batch_make` as `get_pixels_udata`.
  */
 typedef void (get_pixels_fn)(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata);
 
