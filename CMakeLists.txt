@@ -25,6 +25,7 @@ option(CUTE_FRAMEWORK_WITH_HTTPS "Build Cute Framework with mbedtls for HTTPS su
 option(CUTE_FRAMEWORK_WITH_SODIUM "Build Cute Framework with cryptography + authentication support from Sodium for networking support (ISC license)." ON)
 option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
 option(CUTE_FRAMEWORK_BUILD_BLOCK_MAN "Build the Block Man game." ON)
+option(CUTE_PONG "Build Pong by Tony." ON)
 
 # Platform detection.
 if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
