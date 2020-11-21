@@ -52,4 +52,4 @@ CUTE_API void CUTE_CALL shorten(const wchar_t* in, int in_len, char* out, int ou
 
 }
 
-#endif CUTE_UTF8
+#endif // CUTE_UTF8

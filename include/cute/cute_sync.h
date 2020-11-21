@@ -319,6 +319,9 @@ struct cute_rw_lock_t
 #if defined(CUTE_SYNC_SDL)
 #elif defined(CUTE_SYNC_WINDOWS)
 	#define WIN32_LEAN_AND_MEAN
+	#ifndef WINVER
+		#define WINVER 0x0600
+	#endif
 	#include <Windows.h>
 #elif defined(CUTE_SYNC_POSIX)
 	#error CUTE_SYNC_POSIX is not yet implemented.

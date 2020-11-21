@@ -329,7 +329,7 @@ int test_ecs_no_kv()
 
 	system_config_t system;
 	system.component_types.add("Dummy");
-	system.update_fn = update_dummy_system;
+	system.update_fn = (void*)update_dummy_system;
 	app_register_system(app, system);
 
 	app_register_entity_type(app, { "Dummy" }, "Dummy_Entity");

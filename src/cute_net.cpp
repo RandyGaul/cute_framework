@@ -41,7 +41,7 @@ void socket_cleanup(socket_t* socket)
 
 	if (socket->handle != 0)
 	{
-#if _MSC_VER
+#if CUTE_WINDOWS
 		closesocket(socket->handle);
 #else
 		close(socket->handle);
@@ -54,7 +54,7 @@ static int s_socket_init(socket_t* socket, address_type_t address_type, int send
 {
 	socket->handle = ::socket(address_type == ADDRESS_TYPE_IPV6 ? AF_INET6 : AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 
-#ifdef _MSC_VER
+#ifdef CUTE_WINDOWS
 	if (socket->handle == INVALID_SOCKET)
 #else
 	if (socket->handle <= 0)
@@ -128,7 +128,7 @@ static int s_socket_bind_port_and_set_non_blocking(socket_t* socket, address_typ
 	}
 
 	// Set non-blocking io.
-#ifdef _MSC_VER
+#ifdef CUTE_WINDOWS
 
 	DWORD non_blocking = 1;
 	if (ioctlsocket(socket->handle, FIONBIO, &non_blocking) != 0)
@@ -304,7 +304,7 @@ int socket_receive(socket_t* socket, endpoint_t* from, void* data, int byte_coun
 	CUTE_ASSERT(data);
 	CUTE_ASSERT(byte_count >= 0);
 
-#ifdef _MSC_VER
+#ifdef CUTE_WINDOWS
 	typedef int socklen_t;
 #endif
 
@@ -313,8 +313,8 @@ int socket_receive(socket_t* socket, endpoint_t* from, void* data, int byte_coun
 	sockaddr_storage sockaddr_from;
 	socklen_t from_length = sizeof(sockaddr_from);
 	int result = recvfrom(socket->handle, (char*)data, byte_count, 0, (sockaddr*)&sockaddr_from, &from_length);
-	
-#ifdef _MSC_VER
+
+#ifdef CUTE_WINDOWS
 	if (result == SOCKET_ERROR)
 	{
 		int error = WSAGetLastError();
@@ -358,7 +358,7 @@ int socket_receive(socket_t* socket, endpoint_t* from, void* data, int byte_coun
 		//error_set("The function recvfrom returned an invalid ip format.");
 		return -1;
 	}
-  
+
 	CUTE_ASSERT(result >= 0);
 	int bytes_read = result;
 	return bytes_read;
@@ -465,17 +465,17 @@ void endpoint_to_string(endpoint_t endpoint, char* buffer, int buffer_size)
 		}
 	} else if (endpoint.type == ADDRESS_TYPE_IPV4) {
 		if (endpoint.port != 0) {
-			CUTE_SNPRINTF(buffer, CUTE_ENDPOINT_STRING_MAX_LENGTH, "%d.%d.%d.%d:%d", 
-				endpoint.u.ipv4[0], 
-				endpoint.u.ipv4[1], 
-				endpoint.u.ipv4[2], 
-				endpoint.u.ipv4[3], 
+			CUTE_SNPRINTF(buffer, CUTE_ENDPOINT_STRING_MAX_LENGTH, "%d.%d.%d.%d:%d",
+				endpoint.u.ipv4[0],
+				endpoint.u.ipv4[1],
+				endpoint.u.ipv4[2],
+				endpoint.u.ipv4[3],
 				endpoint.port);
 		} else {
-			CUTE_SNPRINTF(buffer, CUTE_ENDPOINT_STRING_MAX_LENGTH, "%d.%d.%d.%d", 
-				endpoint.u.ipv4[0], 
-				endpoint.u.ipv4[1], 
-				endpoint.u.ipv4[2], 
+			CUTE_SNPRINTF(buffer, CUTE_ENDPOINT_STRING_MAX_LENGTH, "%d.%d.%d.%d",
+				endpoint.u.ipv4[0],
+				endpoint.u.ipv4[1],
+				endpoint.u.ipv4[2],
 				endpoint.u.ipv4[3]);
 		}
 	} else {
@@ -507,7 +507,7 @@ int endpoint_equals(endpoint_t a, endpoint_t b)
 
 error_t net_init()
 {
-#ifdef _MSC_VER
+#ifdef CUTE_WINDOWS
 	WSADATA wsa_data;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != NO_ERROR) {
 		return error_failure("Unable to initialize WSA.");
@@ -519,7 +519,7 @@ error_t net_init()
 
 void net_cleanup()
 {;
-#ifdef _MSC_VER
+#ifdef CUTE_WINDOWS
 	WSACleanup();
 #endif
 }

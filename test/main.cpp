@@ -29,6 +29,7 @@
 #include <test_harness.h>
 #include <internal/cute_crypto_internal.h>
 #include <internal/cute_file_system_internal.h>
+#include <internal/cute_net_internal.h>
 
 #include <test_handle.h>
 #include <test_circular_buffer.h>

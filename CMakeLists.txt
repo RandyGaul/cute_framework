@@ -68,7 +68,19 @@ endif()
 
 # Common directories for compiler/linker path.
 include_directories(src libraries test)
-link_directories(shared_libs)
+
+if(WINDOWS)
+	link_directories(shared_libs/windows)
+elseif(MINGW)
+	link_directories(shared_libs/mingw)
+elseif(LINUX)
+elseif(MACOSX)
+elseif(EMSCRIPTEN)
+	link_directories(shared_libs/emscripten)
+endif()
+
+message(FUCKER)
+message(${CMAKE_SYSTEM_NAME})
 
 # PhysicsFS, always statically linked.
 set(PHYSFS_SRCS
@@ -309,7 +321,11 @@ elseif(EMSCRIPTEN)
 	target_compile_options(cute PUBLIC -O1 -fno-rtti -fno-exceptions)
 	target_link_libraries(cute PRIVATE sodium physfs "-s USE_WEBGL2=1 -s ASSERTIONS=1  -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1")
 else()
-	target_link_libraries(cute PRIVATE SDL2 sodium physfs)
+	if(MINGW)
+		target_link_libraries(cute PRIVATE SDL2 sodium physfs d3d11)
+	else()
+		target_link_libraries(cute PRIVATE SDL2 sodium physfs)
+	endif()
 endif()
 
 if(CUTE_FRAMEWORK_WITH_HTTPS)

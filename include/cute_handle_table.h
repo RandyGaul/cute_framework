@@ -29,7 +29,7 @@ namespace cute
 
 struct handle_allocator_t;
 
-using handle_t = uint64_t;
+typedef uint64_t handle_t;
 #define CUTE_INVALID_HANDLE (~0ULL)
 
 CUTE_API handle_allocator_t* CUTE_CALL handle_allocator_make(int initial_capacity, void* user_allocator_context = NULL);

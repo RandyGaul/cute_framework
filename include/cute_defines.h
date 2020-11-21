@@ -30,6 +30,17 @@
 #	define _CRT_NONSTDC_NO_DEPRECATE
 #endif
 
+#ifdef CUTE_WINDOWS
+	// Vista and later only. This helps MingW builds.
+	#include <SDKDDKVer.h>
+	#ifdef _WIN32_WINNT
+		#if _WIN32_WINNT < 0x0600
+			#undef _WIN32_WINNT
+			#define _WIN32_WINNT 0x0600
+		#endif
+	#endif
+#endif
+
 #include <stdint.h>
 
 #ifndef NOMINMAX

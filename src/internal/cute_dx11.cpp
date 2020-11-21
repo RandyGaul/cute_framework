@@ -141,7 +141,7 @@
 		d3d11_create_default_render_target();
 	}
 
-	static const void* s_d3d11_device(void) { 
+	static const void* s_d3d11_device(void) {
 		return (const void*)state.device;
 	}
 
@@ -180,7 +180,7 @@
 			const int cur_width = r.right - r.left;
 			const int cur_height = r.bottom - r.top;
 			if (((cur_width > 0) && (cur_width != state.w)) ||
-				((cur_height > 0) && (cur_height != state.h))) 
+				((cur_height > 0) && (cur_height != state.h)))
 			{
 				/* need to reallocate the default render target */
 				state.w = cur_width;
