@@ -385,7 +385,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 	endif()
 endif()
 
-# Cute unit tests executable (optional, defaulted to also build).
+# Cute block man demo game.
 if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 	set(CUTE_BLOCK_MAN_SRCS
 		block_man/main.cpp
@@ -472,5 +472,49 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 	# For convenience set working directory to the target output folder.
 	if (MSVC)
 		set_property(TARGET block_man PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:block_man>)
+	endif()
+endif()
+
+# Pong by Tony.
+if (CUTE_PONG)
+	set(CUTE_PONG_SRCS
+		pong/main.cpp
+	)
+
+	set(CUTE_PONG_IMGUI_SRCS
+		libraries/imgui/imgui.cpp
+		libraries/imgui/imgui_demo.cpp
+		libraries/imgui/imgui_draw.cpp
+		libraries/imgui/imgui_widgets.cpp
+	)
+
+	add_executable(pong
+		${CUTE_PONG_SRCS}
+		${CUTE_PONG_IMGUI_SRCS}
+	)
+	source_group("pong" FILES ${CUTE_PONG_SRCS})
+	source_group("imgui" FILES ${CUTE_PONG_IMGUI_SRCS})
+	target_link_libraries(pong PRIVATE cute)
+	if(EMSCRIPTEN)
+		set(CMAKE_EXECUTABLE_SUFFIX ".html")
+		target_compile_options(pong PUBLIC -O1 -fno-rtti -fno-exceptions)
+		target_link_options(pong PRIVATE -o pong.html --preload-file ../pong/data --emrun -O1)
+	endif()
+	target_include_directories(pong PUBLIC "${PROJECT_SOURCE_DIR}/pong")
+
+	# Copy over prebuilt binaries to output directory.
+	if(WINDOWS)
+		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/windows" $<TARGET_FILE_DIR:tests>)
+	elseif(MINGW)
+		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/mingw" $<TARGET_FILE_DIR:tests>)
+	elseif(LINUX)
+	elseif(MACOSX)
+	elseif(EMSCRIPTEN)
+		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/emscripten" $<TARGET_FILE_DIR:tests>)
+	endif()
+
+	# For convenience set working directory to the target output folder.
+	if (MSVC)
+		set_property(TARGET pong PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:pong>)
 	endif()
 endif()
