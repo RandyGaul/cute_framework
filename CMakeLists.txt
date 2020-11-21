@@ -79,9 +79,6 @@ elseif(EMSCRIPTEN)
 	link_directories(shared_libs/emscripten)
 endif()
 
-message(FUCKER)
-message(${CMAKE_SYSTEM_NAME})
-
 # PhysicsFS, always statically linked.
 set(PHYSFS_SRCS
 	libraries/physfs/physfs_archiver_7z.c
