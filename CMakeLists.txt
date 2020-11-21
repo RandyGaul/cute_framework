@@ -364,7 +364,15 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 	target_link_libraries(tests PRIVATE cute)
 
 	# Copy over prebuilt binaries to output directory.
-	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs" $<TARGET_FILE_DIR:tests>)
+	if(WINDOWS)
+		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/windows" $<TARGET_FILE_DIR:tests>)
+	elseif(MINGW)
+		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/mingw" $<TARGET_FILE_DIR:tests>)
+	elseif(LINUX)
+	elseif(MACOSX)
+	elseif(EMSCRIPTEN)
+		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/emscripten" $<TARGET_FILE_DIR:tests>)
+	endif()
 
 	# Copy over any test data in the test/test_data folder.
 	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:tests>/test_data)
@@ -449,6 +457,17 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 		target_link_options(block_man PRIVATE -o block_man.html --preload-file ../block_man/data --emrun -O1)
 	endif()
 	target_include_directories(block_man PUBLIC "${PROJECT_SOURCE_DIR}/block_man")
+
+	# Copy over prebuilt binaries to output directory.
+	if(WINDOWS)
+		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/windows" $<TARGET_FILE_DIR:tests>)
+	elseif(MINGW)
+		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/mingw" $<TARGET_FILE_DIR:tests>)
+	elseif(LINUX)
+	elseif(MACOSX)
+	elseif(EMSCRIPTEN)
+		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/emscripten" $<TARGET_FILE_DIR:tests>)
+	endif()
 
 	# For convenience set working directory to the target output folder.
 	if (MSVC)
