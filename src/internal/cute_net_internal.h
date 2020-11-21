@@ -26,7 +26,7 @@
 #include <cute_net.h>
 #include <cute_error.h>
 
-#ifdef _MSC_VER
+#ifdef CUTE_WINDOWS
 #	include <winsock2.h>   // socket
 #	include <ws2tcpip.h>   // WSA stuff
 #	pragma comment(lib, "ws2_32.lib")
@@ -41,7 +41,7 @@
 namespace cute
 {
 
-#ifdef _MSC_VER
+#ifdef CUTE_WINDOWS
 	using socket_handle_t = uint64_t;
 #else
 	using socket_handle_t = int;
