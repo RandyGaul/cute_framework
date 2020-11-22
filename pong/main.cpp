@@ -20,11 +20,22 @@ int main(int argc, const char** argv)
 		//			OpenGL ES	(mobile)	= CUTE_APP_OPTIONS_OPENGLES_CONTEXT
 		//			...ref: doc > app > app_options
 	
+	// -- USER CODE -- //
+	g_init();			//@GAM:	init
+	//
+	
+	// App main-loop
 	while (app_is_running(app))	//@CUTE:	main loop (app-scope)
 	{
 		float dt = calc_dt();	//@CUTE:	dt (time-elapsed since last frame)
-		app_update(app, dt);	//@CUTE:	update (app-scope)
-		app_present(app);		//@CUTE:	draw (app-scope)
+		app_update(app, dt);	//@CUTE:	update (app-scope)	...overhead utils, not game
+		
+		// -- USER CODE -- //
+		g_update();		//@GAM:	update
+		g_draw();		//@GAM:	draw
+		//
+		
+		app_present(app);		//@CUTE:	draw (app-scope)	...final render, to screen
 	}
 	
 	
@@ -39,19 +50,19 @@ int main(int argc, const char** argv)
 // -- BASICS -- //
 
 // INIT
-void init()
+void g_init()
 {
 	//@STUB
 }
 
 // UPDATE
-void update()
+void g_update()
 {
 	//@STUB
 }
 
 // DRAW
-void draw()
+void g_draw()
 {
 	//@STUB
 }
