@@ -42,6 +42,7 @@ int main(int argc, const char** argv)
 	{
 		float dt = calc_dt();
 		app_update(app, dt);
+		// All your game logic and updates go here...
 		app_present(app);
 	}
 	
