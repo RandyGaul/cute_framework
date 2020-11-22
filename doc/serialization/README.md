@@ -94,7 +94,9 @@ a was 10
 b was 12
 ```
 
-### kv_key and Objects
+## Write Mode
+
+## Objects
 
 In kv objects are values wrapped in curly braces. In the following example there is an object called `data`.
 
@@ -126,6 +128,15 @@ kv_object_end(kv);
 
 Please note that objects can be arbitrarily nested.
 
-### Arrays
+## Arrays
 
-WORKING HERE
+## Strings
+
+## Base64 Blobs
+
+## Type Conversions
+
+## Data Inheritence
+
+## Delta Encoding
+
