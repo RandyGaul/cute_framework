@@ -5,14 +5,14 @@ Updates the application by gathering inputs and window events.
 ## Syntax
 
 ```cpp
-void app_update(cute_t* cute);
+void app_update(app_t* app);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-cute | The instance of the Cute framework to update.
+app | The application.
 
 ## Remarks
 
