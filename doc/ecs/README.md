@@ -6,31 +6,34 @@ The main purpose of using the ECS is to answer the question of "where does the c
 
 * An **Entity** is a game object, defined as a collection of components and registered with a name.
 * A **Component** is an aspect or trait of an entity. They are like building-blocks that can be mix-and-matched to create different entities.
-* A **System** is a function that performs gameplay logic on entities (that match their criteria). They are how behavior is handled in the ECS.
+* A **System** is a function that performs gameplay logic on entities. They are how behavior is handled in ECS.
 
-In laymen's terms, entities are things, components are parts of things, and systems are how things work.
+In laymen's terms, entities are things, components are parts of things, and systems are how things behave.
 
 When developing a game, typically you think about what entities your game needs. After an idea of what entities are needed, try to break down each entity into separate and reusable components. Lastly the systems are defined. A system updates a specific set of component types. Each system represents a different major feature of your game.
 
 ## Entities
 
-An entity is merely a collection of components that represents a "thing" in your game, like an enemy, the player, or other game features. Before an entity instance can be created an entity type must be defined and registered with the ECS. How to make components is in the next section.
+An entity is merely a collection of components that represents a "thing" in your game, like an enemy, the player, or other game features. Before an entity instance can be created an entity type must be defined and registered with the ECS (like a blueprint). How to make components is explained in the next section.
 
-> Registering a new type of entity with the ECS. This registers an entity type named `Octorok` along with a list of components that each Octorok entity possesses.
+> Registering a new type of entity with the ECS and naming it `Octorok`.
 
 ```cpp
+//define - as a collection of components
 array<const char*> component_types = {
 	"Transform",
 	"GridObject",
 	"Sprite",
-	"Octorok"
+	"Octorok"	//the component "Octorok"
 };
-app_register_entity_type(app, component_types, "Octorok");
+
+//register - that collection with a name
+app_register_entity_type(app, component_types, "Octorok");	//naming the entity type as "Octorok"
 ```
 
-Each Octorok entity has a Transform component, along with GridObject, Sprite, and an Octorok component. All components are defined by you. In this example only Octorok is shown to keep this readme small, but in your game you would have had to implement all components yourself, and pick their names during registration.
+Each Octorok entity has a Transform, GridObject, Sprite, and Octorok component. All components are defined by you (see Components section below). In this example, only Octorok is shown to keep this readme small, but in your game, you will have to implement all components yourself and give them names during registration.
 
-Once registered an entity can be made by calling a single function `app_make_entity`.
+Once registered, an entity instance can be made by calling a single function `app_make_entity`.
 
 ```cpp
 entity_t e;
