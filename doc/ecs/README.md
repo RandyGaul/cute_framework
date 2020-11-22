@@ -12,7 +12,7 @@ When developing a game typically you think about what entities your game needs. 
 
 ## Entities
 
-An entity is merely a collection of components that represents a "thing" in your game, like an enemy, the player, or other game features. Before an entity can be made an entity type must be registered with the ECS. How to make components is in the next section.
+An entity is merely a collection of components that represents a "thing" in your game, like an enemy, the player, or other game features. Before an entity instance can be created an entity type must be defined and registered with the ECS. How to make components is in the next section.
 
 > Registering a new type of entity with the ECS. This registers an entity type named `Octorok` along with a list of components that each Octorok entity possesses.
 
