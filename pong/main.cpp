@@ -4,6 +4,19 @@
 #include <cute.h>
 using namespace cute;
 
+// -------------------------------------------------------------------------- //
+
+// -- GLOBALS -- //
+struct paddle
+{
+	
+};
+
+struct ball
+{
+	
+};
+
 
 // -------------------------------------------------------------------------- //
 
@@ -31,13 +44,16 @@ int main(int argc, const char** argv)
 		app_update(app, dt);	//@CUTE:	update (app-scope)	...overhead utils, not game
 		
 		// -- USER CODE -- //
-		g_update();		//@GAM:	update
+		g_update(dt);		//@GAM:	update
 		g_draw();		//@GAM:	draw
 		//
 		
 		app_present(app);		//@CUTE:	draw (app-scope)	...final render, to screen
 	}
 	
+	// -- USER CODE -- //
+	g_destroy();		//@GAM:	destroy
+	//
 	
 	app_destroy(app);			//@CUTE:	terminate (app-scope)
 	
@@ -56,13 +72,19 @@ void g_init()
 }
 
 // UPDATE
-void g_update()
+void g_update(float dt)
 {
 	//@STUB
 }
 
 // DRAW
 void g_draw()
+{
+	//@STUB
+}
+
+// DESTROY
+void g_destroy()
 {
 	//@STUB
 }
