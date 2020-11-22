@@ -22,7 +22,7 @@ struct Octorok
 {
 	int pellet_count = 0;
 	Pellet pellets[3];
-	OCTOROK_STATE state;
+	OCTOROK_STATE state = OCTOROK_STATE_IDLE;
 };
 ```
 
