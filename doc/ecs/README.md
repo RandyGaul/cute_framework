@@ -6,7 +6,7 @@ The main purpose of using the ECS is to answer the question of "where does the c
 
 * **Entity** is like a game object, defined by a collection of components.
 * **Component** is sort of like a typical [Object-Oriented](https://en.wikipedia.org/wiki/Object-oriented_programming) object. It is a class or struct that you define for your game.
-* **System** is a function holding gameplay logic, and is used to update specific components.
+* **System** is a function holding gameplay logic, and is used to update entities with specific components.
 
 ## Component
 
