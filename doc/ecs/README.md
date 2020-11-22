@@ -83,7 +83,7 @@ config.serializer_fn = octorok_serialize;
 app_register_component_type(app, config);
 ```
 
-## Creating or Destroying Components
+### Creating or Destroying Components
 
 In the above section the `octorok_serialize` was not explained. This is a function pointer to be called whenever a new instance of a component is loaded or saved. The function pointer type looks like this.
 
