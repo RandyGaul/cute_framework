@@ -1,3 +1,6 @@
+// main.cpp
+//
+
 #include <cute.h>
 using namespace cute;
 
@@ -9,7 +12,7 @@ using namespace cute;
 int main(int argc, const char** argv)
 {
 	// Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
-	app_t* app = app_make("Fancy Window Title", 0, 0, 640, 480, CUTE_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+	app_t* app = app_make("CUTE PONG", 0, 0, 640, 480, CUTE_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
 
 	while (app_is_running(app))
 	{
@@ -31,21 +34,25 @@ int main(int argc, const char** argv)
 // INIT
 void init()
 {
-	
+	//@STUB
 }
 
 // UPDATE
 void update()
 {
-	
+	//@STUB
 }
 
 // DRAW
 void draw()
 {
-	
+	//@STUB
 }
 
 
 // -------------------------------------------------------------------------- //
 
+
+
+
+// -------------------------------------------------------------------------- //
