@@ -25,7 +25,7 @@ array<const char*> component_types = {
 	"Sprite",
 	"Octorok"	//the component "Octorok"
 };
-app_register_entity_type(app, component_types, "Octorok");	//naming the entity type "Octorok"
+app_register_entity_type(app, component_types, "Octorok");	//entity type "Octorok"
 ```
 
 Each Octorok entity has a Transform, GridObject, Sprite, and Octorok component. All components are defined by you (see Components section below). In this example, only Octorok is shown to keep this readme small, but in your game, you will have to implement all components yourself and give them names during registration.
