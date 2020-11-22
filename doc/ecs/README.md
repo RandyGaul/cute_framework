@@ -8,6 +8,49 @@ The main purpose of using the ECS is to answer the question of "where does the c
 * **Component** is sort of like a typical [Object-Oriented](https://en.wikipedia.org/wiki/Object-oriented_programming) object. It is a class or struct that you define for your game. A component is a singular aspect or trait used to add functionality to an entity.
 * **System** is a function holding gameplay logic, and is used to update entities with specific components.
 
+When developing a game typically you think about what entities your game needs. After an idea of what entities are needed try to break down each entity into separate and reusable components. Lastly, what systems might be useful is considered by thinking of which components can be updated together. The specific way a system updates components defines the features and behaviors of your game.
+
+## Entities
+
+An entity is merely a collection of components that represents a "thing" in your game, like an enemy, the player, or other game features. Before an entity can be made an entity type must be registered with the ECS. How to make components is in the next section.
+
+> Registering a new type of entity with the ECS. This registers an entity type named `Octorok` along with a list of components that each Octorok entity possesses.
+
+```cpp
+array<const char*> component_types = {
+	"Transform",
+	"GridObject",
+	"Sprite",
+	"Octorok"
+};
+app_register_entity_type(app, component_types, "Octorok");
+```
+
+Each Octorok entity has a Transform component, along with GridObject, Sprite, and an Octorok component. All components are defined by you. In this example only Octorok is shown to keep this readme small, but in your game you would have had to implement all components yourself, and pick their names during registration.
+
+Once registered an entity can be made by calling a single function `app_make_entity`.
+
+```cpp
+entity_t e;
+app_make_entity(app, "Octorok", &e);
+```
+
+From here you can call a few different functions upon the entity.
+
+```cpp
+void app_delayed_destroy_entity(app_t* app, entity_t entity);
+void app_destroy_entity(app_t* app, entity_t entity);
+bool app_is_entity_valid(app_t* app, entity_t entity);
+void* app_get_component(app_t* app, entity_t entity, const char* name);
+bool app_has_component(app_t* app, entity_t entity, const char* name);
+```
+
+Here's an example of how to use `app_get_component`.
+
+```cpp
+Octorok* octorok = (Octorok*)app_get_component(app, e, "Octorok");
+```
+
 ## Component
 
 A component is merely some memory to hold a struct or class. Cute's ECS requires you to register component types. This tells the ECS some critical information like the size and name of your component. Here is an example of registering a component.
@@ -62,47 +105,6 @@ error_t octorok_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, v
 ```
 
 For a detailed description of all the pieces of this function please see [here TODO](broken_link). Briefly: If this function is called for making a new component then `reading` is true, and false when saving. `entity` is the entity id for the new entity being created. The rest can be ignored for now.
-
-## Entities
-
-An entity is merely a collection of components that represents a "thing" in your game, like an enemy, the player, or other game features. Before an entity can be made an entity type must be registered with the ECS.
-
-> Registering a new type of entity with the ECS. This registers an entity type named `Octorok` along with a list of components that each Octorok entity possesses.
-
-```cpp
-array<const char*> component_types = {
-	"Transform",
-	"GridObject",
-	"Sprite",
-	"Octorok"
-};
-app_register_entity_type(app, component_types, "Octorok");
-```
-
-Each Octorok entity has a Transform component, along with GridObject, Sprite, and an Octorok component. All components are defined by you. In this example only Octorok is shown to keep this readme small, but in your game you would have had to implement all components yourself, and pick their names during registration.
-
-Once registered an entity can be made by calling a single function `app_make_entity`.
-
-```cpp
-entity_t e;
-app_make_entity(app, "Octorok", &e);
-```
-
-From here you can call a few different functions upon the entity.
-
-```cpp
-void app_delayed_destroy_entity(app_t* app, entity_t entity);
-void app_destroy_entity(app_t* app, entity_t entity);
-bool app_is_entity_valid(app_t* app, entity_t entity);
-void* app_get_component(app_t* app, entity_t entity, const char* name);
-bool app_has_component(app_t* app, entity_t entity, const char* name);
-```
-
-Here's an example of how to use `app_get_component`.
-
-```cpp
-Octorok* octorok = (Octorok*)app_get_component(app, e, "Octorok");
-```
 
 ## System
 
