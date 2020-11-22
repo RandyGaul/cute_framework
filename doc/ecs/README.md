@@ -26,7 +26,7 @@ struct Octorok
 };
 ```
 
-> Registering the Octorok.
+> Registering the Octorok component.
 
 ```cpp
 component_config_t config;
