@@ -13,15 +13,22 @@ int main(int argc, const char** argv)
 {
 	// Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
 	app_t* app = app_make("CUTE PONG", 50, 50, 640, 480, CUTE_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
-
-	while (app_is_running(app))
+		//@CUTE:	app display window
+		//
+		//			DirectX 11	(Win10)		= CUTE_APP_OPTIONS_D3D11_CONTEXT
+		//			OpenGL		(UNIX)		= CUTE_APP_OPTIONS_OPENGL_CONTEXT
+		//			OpenGL ES	(mobile)	= CUTE_APP_OPTIONS_OPENGLES_CONTEXT
+		//			...ref: doc > app > app_options
+	
+	while (app_is_running(app))	//@CUTE:	main loop (app-scope)
 	{
-		float dt = calc_dt();
-		app_update(app, dt);
-		app_present(app);
+		float dt = calc_dt();	//@CUTE:	dt (time-elapsed since last frame)
+		app_update(app, dt);	//@CUTE:	update (app-scope)
+		app_present(app);		//@CUTE:	draw (app-scope)
 	}
 	
-	app_destroy(app);
+	
+	app_destroy(app);			//@CUTE:	terminate (app-scope)
 	
 	return 0;
 }
