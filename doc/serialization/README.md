@@ -1,6 +1,6 @@
 # kv - Key Value Serialization
 
-"Key-value", or kv. Used for text-based serialization either to/from an in-memory buffer. The design of the kv api is supposed to allow for *mostly* (but not completely) the same code to be used for both to and from buffer.
+"Key-value", or kv, is for text-based serialization to/from an in-memory buffer. The design of the kv api is supposed to allow for *mostly* (but not completely) the same code to be used for both to and from buffer.
 
 ## kv Format
 
