@@ -4,6 +4,10 @@ The [Entity Component System](https://en.wikipedia.org/wiki/Entity_component_sys
 
 The main purpose of using the ECS is to answer the question of "where does the code that does X belong", where X is some gameplay feature.
 
+* **Entity** is like a game object, defined by a collection of components.
+* **Component** is sort of like a typical [Object-Oriented](https://en.wikipedia.org/wiki/Object-oriented_programming) object. It is a class or struct that you define for your game.
+* **System** is a function holding gameplay logic, and is used to update specific components.
+
 ## Component
 
 A component is merely some memory to hold a struct or class. Cute's ECS requires you to register component types. This tells the ECS some critical information like the size and name of your component. Here is an example of registering a component.
