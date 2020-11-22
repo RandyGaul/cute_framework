@@ -1,8 +1,8 @@
 # Entity Component System
 
-The [Entity Component System](https://en.wikipedia.org/wiki/Entity_component_system) (ECS) is an optional feature of Cute Framework used to organize your game code and gameplay logic. The idea is to write systems to hold your gameplay logic, components to hold your data, and entities to define collections of components.
+The [Entity Component System](https://en.wikipedia.org/wiki/Entity_component_system) (ECS) is an optional feature in Cute Framework used to organize your game code and gameplay logic. The idea is to clearly separate data from logic and make game object composition modular.
 
-The main purpose of using the ECS is to answer the question of "where does the code that does X belong", where X is some gameplay feature.
+A key motivation of using the ECS to answer the question of "where does the code that does X belong", where X is some gameplay feature. Write systems to hold your gameplay logic, components to hold your data, and entities to define grouped collections of components.
 
 * An **Entity** is a game object, defined as a collection of components and registered with a name.
 * A **Component** is an aspect or trait of an entity. They are like building-blocks that can be mix-and-matched to create different entities.
@@ -10,25 +10,27 @@ The main purpose of using the ECS is to answer the question of "where does the c
 
 In laymen's terms, entities are things, components are parts of things, and systems are how things behave.
 
-When developing a game, typically you think about what entities your game needs. After an idea of what entities are needed, try to break down each entity into separate and reusable components. Lastly the systems are defined. A system updates a specific set of component types. Each system represents a different major feature of your game.
+When developing a game with ECS, typically you think about what entities your game needs, break them down into reusable components, and define systems to handle their behaviors.
+
+**Disclaimer**: This is an oversimplification of ECS, but it is one that serves our purpose while minimizing confusion for now. For a full understanding, please consult your local [Google](https://www.google.com).
 
 ## Entities
 
 An entity is merely a collection of components that represents a "thing" in your game, like an enemy, the player, or other game features. Before an entity instance can be created an entity type must be defined and registered with the ECS (like a blueprint). How to make components is explained in the next section.
 
-> Registering a new type of entity with the ECS and naming it `Octorok`.
+> Registering a collection of 4 components as a new entity type called `Octorok`.
 
 ```cpp
 array<const char*> component_types = {
 	"Transform",
 	"GridObject",
 	"Sprite",
-	"Octorok"	//the component
+	"Octorok"	//Octorok component
 };
 app_register_entity_type(app, component_types, "Octorok");
 ```
 
-Each Octorok entity has a Transform, GridObject, Sprite, and Octorok component. All components are defined by you (see Components section below). In this example, only Octorok is shown to keep this readme small, but in your game, you will have to implement all components yourself and give them names during registration.
+All components are user defined (see Components section).
 
 Once registered, an entity instance can be made by calling a single function `app_make_entity`.
 
@@ -158,9 +160,3 @@ void update_sprite_system(app_t* app, float dt, void* udata, Transform* transfor
 ```
 
 If a particular entity contained many kinds of components, but also still contained a `Sprite` and a `Transform` component, then the `update_sprite_system` will still be called on that entity's `Sprite` and `Transform` component. In this way systems find and match any entity with the correct types of components, even if there are other types which will be ignored, and runs upon the matched components.
-
-To have all systems looked for matched entities and run upon their components call the `app_run_ecs_systems` function [TODO link here](broken_link).
-
-```cpp
-void app_run_ecs_systems(app_t* app, float dt);
-```
