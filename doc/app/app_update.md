@@ -14,8 +14,12 @@ Parameter Name | Description
 --- | ---
 cute | The instance of the Cute framework to update.
 
+## Remarks
+
+This is not the Entity Component System update, all it does is update the application window and internal utilities. If you're looking for how to update the Entity Component System, please see the [ECS docs](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs).
+
 ## Related Functions
 
-[cute_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_make.md)  
-[cute_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/cute_destroy.md)  
-[app_is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/cute/app_is_running.md)  
+[app_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_make.md)  
+[app_destroy](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_destroy.md)  
+[app_is_running](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_is_running.md)  
