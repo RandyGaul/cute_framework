@@ -19,16 +19,13 @@ An entity is merely a collection of components that represents a "thing" in your
 > Registering a new type of entity with the ECS and naming it `Octorok`.
 
 ```cpp
-//define - as a collection of components
 array<const char*> component_types = {
 	"Transform",
 	"GridObject",
 	"Sprite",
 	"Octorok"	//the component "Octorok"
 };
-
-//register - that collection with a name
-app_register_entity_type(app, component_types, "Octorok");	//naming the entity type as "Octorok"
+app_register_entity_type(app, component_types, "Octorok");	//naming the entity type "Octorok"
 ```
 
 Each Octorok entity has a Transform, GridObject, Sprite, and Octorok component. All components are defined by you (see Components section below). In this example, only Octorok is shown to keep this readme small, but in your game, you will have to implement all components yourself and give them names during registration.
