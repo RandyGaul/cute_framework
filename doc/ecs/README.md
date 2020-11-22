@@ -158,3 +158,9 @@ void update_sprite_system(app_t* app, float dt, void* udata, Transform* transfor
 ```
 
 If a particular entity contained many kinds of components, but also still contained a `Sprite` and a `Transform` component, then the `update_sprite_system` will still be called on that entity's `Sprite` and `Transform` component. In this way systems find and match any entity with the correct types of components, even if there are other types which will be ignored, and runs upon the matched components.
+
+To have all systems looked for matched entities and run upon their components call the `app_run_ecs_systems` function (TODO link here)[broken_link].
+
+```cpp
+void app_run_ecs_systems(app_t* app, float dt);
+```
