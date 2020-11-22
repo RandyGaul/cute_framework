@@ -2,15 +2,13 @@
 
 The [Entity Component System](https://en.wikipedia.org/wiki/Entity_component_system) (ECS) is an optional feature in Cute Framework used to organize your game code and gameplay logic. The idea is to clearly separate data from logic and make game object composition modular.
 
-A key motivation of using the ECS to answer the question of "where does the code that does X belong", where X is some gameplay feature. Write systems to hold your gameplay logic, components to hold your data, and entities to define grouped collections of components.
+A key benefit of using the ECS is having a clear answer to the question "where does the code that does X belong", where X is some gameplay feature. Write systems to hold your gameplay logic, components to hold your data, and entities to define grouped collections of components. With ECS, typically you think about what entities your game needs, break them down into reusable components, and define systems to handle their behaviors.
 
 * An **Entity** is a game object, defined as a collection of components and registered with a name.
 * A **Component** is an aspect or trait of an entity. They are like building-blocks that can be mix-and-matched to create different entities.
 * A **System** is a function that performs gameplay logic on entities. They are how behavior is handled in ECS.
 
 In laymen's terms, entities are things, components are parts of things, and systems are how things behave.
-
-When developing a game with ECS, typically you think about what entities your game needs, break them down into reusable components, and define systems to handle their behaviors.
 
 **Disclaimer**: This is an oversimplification of ECS, but it is one that serves our purpose while minimizing confusion for now. For a full understanding, please consult your local [Google](https://www.google.com).
 
