@@ -8,7 +8,7 @@ The main purpose of using the ECS is to answer the question of "where does the c
 
 A component is merely some memory to hold a struct or class. Cute's ECS requires you to register component types. This tells the ECS some critical information like the size and name of your component. Here is an example of registering a component.
 
-> An example of a struct you might make, used for gameplay. Octorok is a type of enemy from Zelda games.
+> An example of a struct you might make for your game. Octorok is a type of enemy from Zelda games.
 
 ```cpp
 enum OCTOROK_STATE
