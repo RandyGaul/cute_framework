@@ -4,11 +4,13 @@ The [Entity Component System](https://en.wikipedia.org/wiki/Entity_component_sys
 
 The main purpose of using the ECS is to answer the question of "where does the code that does X belong", where X is some gameplay feature.
 
-* **Entity** is like a game object, defined by a collection of components.
-* **Component** is sort of like a typical [Object-Oriented](https://en.wikipedia.org/wiki/Object-oriented_programming) object. It is a class or struct that you define for your game. A component is a singular aspect or trait used to add functionality to an entity.
-* **System** is a function holding gameplay logic, and is used to update entities with specific components.
+* An **Entity** is a game object, defined as a collection of components and registered with a name.
+* A **Component** is an aspect or trait of an entity. They are like building-blocks that can be mix-and-matched to create different entities.
+* A **System** is a function that performs gameplay logic on entities (that match their criteria). They are how behavior is handled in the ECS.
 
-When developing a game typically you think about what entities your game needs. After an idea of what entities are needed try to break down each entity into separate and reusable components. Lastly the systems are defined. A system updates a specific set of component types. Each system represents a different major feature of your game.
+In laymen's terms, entities are things, components are parts of things, and systems are how things work.
+
+When developing a game, typically you think about what entities your game needs. After an idea of what entities are needed, try to break down each entity into separate and reusable components. Lastly the systems are defined. A system updates a specific set of component types. Each system represents a different major feature of your game.
 
 ## Entities
 
