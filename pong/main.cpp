@@ -9,7 +9,7 @@ using namespace cute;
 int main(int argc, const char** argv)
 {
 	// Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
-	uint32_t options = CUTE_APP_OPTIONS_D3D11_CONTEXT | CUTE_APP_OPTIONS_RESIZABLE;
+	uint32_t options = CUTE_APP_OPTIONS_D3D11_CONTEXT | CUTE_APP_OPTIONS_RESIZABLE | CUTE_APP_OPTIONS_WINDOW_POS_CENTERED;
 	app_t* app = app_make("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
 
 	while (app_is_running(app))
