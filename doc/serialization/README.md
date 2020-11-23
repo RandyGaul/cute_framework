@@ -388,3 +388,5 @@ b = -2,
 ```
 
 The key "a" was non-existent in the base, and so it is written. The key "b" existed in the base, but since a new updated value of `-2` was used "b" is written. The key "c" exists in the base and the value to be written is `3`, which matches the base value. In this case a matching base value was found, and so "c" is entirely skipped.
+
+Please note that the chain of base instances can be hooked together arbitrarily, forming potentially long chains of data baselines to reference when writing.
