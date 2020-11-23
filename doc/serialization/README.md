@@ -79,12 +79,12 @@ To read the value `10` from the key `a` followed by the value `12` from key `b` 
 int value;
 
 kv_key(kv, "a");
-kv_val(kv, &val);
-printf("a was %d\n", val);
+kv_val(kv, &value);
+printf("a was %d\n", value);
 
 kv_key(kv, "b");
-kv_val(kv, &val);
-printf("b was %d\n", val);
+kv_val(kv, &value);
+printf("b was %d\n", value);
 ```
 
 Which would print the following.
@@ -95,6 +95,39 @@ b was 12
 ```
 
 ## Write Mode
+
+To select write mode call `kv_set_write_buffer` like so.
+
+```cpp
+kv_set_write_buffer(kv, buffer, size);
+```
+
+As in the previous section values can be written to the buffer the same way they were read, by calling `kv_key` followed by `kv_val`.
+
+```cpp
+int a = 10;
+int b = 12;
+
+kv_key(kv, "a");
+kv_val(kv, &a);
+
+kv_key(kv, "b");
+kv_val(kv, &b);
+```
+
+The resulting buffer will be filled with the following text (without the NUL terminator).
+
+```
+a = 10,
+b = 12,
+```
+
+To add the NUL terminator to the buffer you can use `kv_size_written`.
+
+```
+char* ptr = (char*)buffer;
+ptr[kv_size_written(kv)] = 0;
+```
 
 ## Objects
 
