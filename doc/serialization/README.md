@@ -163,11 +163,100 @@ Please note that objects can be arbitrarily nested.
 
 ## Arrays
 
+Arrays in kv must be entered and exited explicitly by calling `kv_array_begin` and `kv_array_end`. Once `kv_array_begin` is called a consecutive series of `kv_val` calls can be made, one for each element of the array.
+
+Here is an example of reading from an array.
+
+```
+data = [5] {
+	5, 3, 2, -7, 12,
+},
+```
+
+```cpp
+kv_key(kv, "data");
+int count = 0;
+kv_array_begin(kv, &count);
+
+for (int i = 0; i < count; ++i) {
+	int val = 0;
+	kv_val(kv, &val);
+	printf("%d\n", val);
+}
+```
+
+Which prints the following output.
+
+```
+5
+3
+2
+-7
+12
+```
+
 ## Strings
+
+Strings in kv are dealt with by the `kv_val_string` string function, just like the other `kv_val` functions.
+
+```cpp
+const char* string = "Hello.";
+size_t size = strlen(string);
+
+kv_key(kv, "data");
+kv_val_string(kv, &string, &size);
+```
 
 ## Base64 Blobs
 
+Blobs in kv are for storing binary data. The data is encoded in base64 format. The purpose of using base64 format is to ensure the binary data is safe to copy + paste manually and transmit via text without bugs.
+
+Blobs are serialized as a string. If the contents of the string form a balid base64 blob then `kv_val_blob` can be used instead of `kv_val_string`. `kv_val_blob` performs base64 encoding and decoding internally, depending on if the kv is in read or write mode.
+
+For example say we have this blob in a kv formatted buffer.
+
+```
+blob = "SGVsbG8gdGhlcmUgOik=",
+```
+
+It can be decoded and printed like so.
+
+```cpp
+size_t blob_len = 0;
+kv_key(kv, "blob");
+kv_val_blob(kv, buffer, size, &blob_len);
+printf("%.*s\n", buffer, blob_len);
+```
+
+Which prints the following output.
+
+```
+Hello there :)
+```
+
 ## Type Conversions
+
+When parsing kv stores all integers in 64-bit format internally. Similarly all floats are stored internally as doubles. Whenever `kv_val` is called the requested type of the `val` parameter will be typecasted internally when dealing with integers and floats.
+
+For example if we have this kv string.
+
+```
+val = 100.5,
+```
+
+The value can be pulled out of the string in a few ways, all completely valid with different internal typecasts.
+
+```cpp
+uint64_t u64;
+float f;
+double d;
+char c;
+
+kv_key(kv, "val"); kv_val(kv, &u64); // u64 is now 100
+kv_key(kv, "val"); kv_val(kv, &f);   // f is now 100.5f
+kv_key(kv, "val"); kv_val(kv, &d);   // d is now 100.5
+kv_key(kv, "val"); kv_val(kv, &c);   // c is now 100
+```
 
 ## Data Inheritence
 
