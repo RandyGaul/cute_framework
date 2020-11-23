@@ -390,3 +390,39 @@ b = -2,
 The key "a" was non-existent in the base, and so it is written. The key "b" existed in the base, but since a new updated value of `-2` was used "b" is written. The key "c" exists in the base and the value to be written is `3`, which matches the base value. In this case a matching base value was found, and so "c" is entirely skipped.
 
 Please note that the chain of base instances can be hooked together arbitrarily, forming potentially long chains of data baselines to reference when writing.
+
+## Full Program Example
+
+Here is a quick example of a full program you can copy + paste and compile. It simply reads some integers from a kv string.
+
+```cpp
+#include <cute.h>
+using namespace cute;
+
+int main(void)
+{
+	const char* string =
+		"a = 10,\n"
+		"b = 13,\n"
+	;
+	size_t len = CUTE_STRLEN(string);
+	
+	kv_t* kv = kv_make();
+	kv_parse(kv, (void*)string, len);
+	
+	int val;
+	kv_key(kv, "a"); kv_val(kv, &val); printf("a was %d\n", val);
+	kv_key(kv, "b"); kv_val(kv, &val); printf("b was %d\n", val);
+	
+	kv_destroy(kv);
+	
+	return 0;
+}
+```
+
+Which prints the following.
+
+```
+a was 10
+b was 13
+```
