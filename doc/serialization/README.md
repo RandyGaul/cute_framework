@@ -21,8 +21,8 @@ codes = [3] {
 
 kv supports a few types of data listed here.
 
-- Integers
-- Floats
+- integers
+- floats
 - strings
 - [base64](https://en.wikipedia.org/wiki/Base64) encoded blobs, as strings
 - arrays
