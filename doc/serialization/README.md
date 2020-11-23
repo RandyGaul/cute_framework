@@ -287,5 +287,104 @@ kv_key(kv, "val"); kv_val(kv, &c);   // c is now 100
 
 ## Data Inheritence
 
+kv has a special function called `kv_set_base`. This function works very differently for read and write mode. For read mode `kv_set_base` enables data inheritence. When searching for a key via `kv_key` any missing key will be fetched recursively from the base. What this means is best demonstrated by example. Take a look at the following kv text.
+
+```
+a = 5,
+b = 10,
+c = -3,
+```
+
+It is parsed like so.
+
+```cpp
+kv_t* kv = kv_make();
+kv_parse(kv, text, len);
+```
+
+Next, a base kv is setup with a different kv string called `base_string`. Notice that the base kv string has some extra fields and different values.
+
+> The `base_string` contents.
+
+```
+a = 0,
+b = 10,
+c = -3,
+d = 15,
+e = 100,
+```
+
+```cpp
+kv_t* base = kv_make();
+kv_parse(base, base_string, base_len);
+```
+
+Finally, the base is set on the original kv.
+
+```cpp
+kv_set_base(kv, base);
+```
+
+The magic can now happen. Observe what happens as keys "a" through "e" are queried.
+
+```cpp
+int val;
+kv_key(kv, "a"); kv_val(kv, &val); printf("%d\n", val);
+kv_key(kv, "b"); kv_val(kv, &val); printf("%d\n", val);
+kv_key(kv, "c"); kv_val(kv, &val); printf("%d\n", val);
+kv_key(kv, "d"); kv_val(kv, &val); printf("%d\n", val);
+kv_key(kv, "e"); kv_val(kv, &val); printf("%d\n", val);
+```
+
+The above code snippet would print the following.
+
+```
+5
+10
+-3
+15
+100
+```
+
+Since keys "d" and "e" did not exist in kv they are then searched for within the base. If found in the base, the base value is returned. The operation of searching for missing keys in the base happens recursively. This means any number of base kv instances can be chained together to form an inheritence hierarchy for your data.
+
 ## Delta Encoding
 
+> Important Note - Make sure you've read the above section on Data Inheritence before reading this section.
+
+If the kv is in write mode and `kv_set_base` is called then delta encoding is supported. Delta encoding is where any key will first be recursively looked up in base heirarchy. If found, the key and associated value are only written if the new value is different from the value within the base.
+
+The purpose here is to only save data that has changed or is non-existent in the base heirarchy. This is useful to avoid saving unnecessary data as an optimization. Here is a quick example.
+
+> The base string to reference when writing data, called `base_string`.
+
+```
+b = 7,
+c = 3,
+```
+
+```cpp
+kv_t* base = kv_make();
+kv_parse(base, base_string, base_len);
+
+kv_t* kv = kv_make();
+kv_set_write_buffer(kv, buffer, len);
+kv_set_base(kv, base);
+
+int a_val = 5;
+int b_val = -2;
+int c_val = 3;
+
+kv_key(kv, "a"); kv_val(kv, a_val);
+kv_key(kv, "b"); kv_val(kv, b_val);
+kv_key(kv, "c"); kv_val(kv, c_val);
+```
+
+The resulting buffer will be filled with the following contents.
+
+```
+a = 5,
+b = -2,
+```
+
+The key "a" was non-existent in the base, and so it is written. The key "b" existed in the base, but since a new updated value of `-2` was used "b" is written. The key "c" exists in the base and the value to be written is `3`, which matches the base value. In this case a matching base value was found, and so "c" is entirely skipped.
