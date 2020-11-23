@@ -352,11 +352,11 @@ Since keys "d" and "e" did not exist in kv they are then searched for within the
 
 > Important Note - Make sure you've read the above section on Data Inheritence before reading this section.
 
-If the kv is in write mode and `kv_set_base` is called then delta encoding is supported. Delta encoding is where any key will first be recursively looked up in base heirarchy. If found, the key and associated value are only written if the new value is different from the value within the base.
+If the kv is in write mode and `kv_set_base` is called then [delta encoding](https://en.wikipedia.org/wiki/Delta_encoding) is supported. Delta encoding is where any key will first be recursively looked up in base heirarchy. If found, the key and associated value are only written if the new value is different from the value within the base.
 
 The purpose here is to only save data that has changed or is non-existent in the base heirarchy. This is useful to avoid saving unnecessary data as an optimization. Here is a quick example.
 
-> The base string to reference when writing data, called `base_string`.
+> The base string to reference when writing data, called `base_string`. In delta encoding terms, this string is the *baseline*.
 
 ```
 b = 7,
