@@ -159,7 +159,21 @@ Now any calls to `kv_key` will search within the `data` object. Once finished pu
 kv_object_end(kv);
 ```
 
-Please note that objects can be arbitrarily nested.
+Please note that objects can be arbitrarily nested, like so.
+
+```
+a = {
+	b = 10,
+	c = {
+		d = "stuff",
+		e = 100.0,
+	},
+	f = {
+		x = 0,
+		y = 0,
+	},
+}
+```
 
 ## Arrays
 
@@ -193,6 +207,19 @@ Which prints the following output.
 2
 -7
 12
+```
+
+Please note that arrays can be arbitrarily nested, like so.
+
+```
+data = [2] {
+	[3] {
+		3, 5, 2,
+	},
+	[7] {
+		10, -2, 0, 102, 3, 4, 1,
+	},
+}
 ```
 
 ## Strings
