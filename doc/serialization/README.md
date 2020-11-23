@@ -24,7 +24,7 @@ kv supports a few types of data listed here.
 - Integers
 - Floats
 - strings
-- base64 encoded blobs, as strings
+- [base64](https://en.wikipedia.org/wiki/Base64) encoded blobs, as strings
 - arrays
 - objects
 
@@ -209,7 +209,7 @@ kv_val_string(kv, &string, &size);
 
 ## Base64 Blobs
 
-Blobs in kv are for storing binary data. The data is encoded in base64 format. The purpose of using base64 format is to ensure the binary data is safe to copy + paste manually and transmit via text without bugs.
+Blobs in kv are for storing binary data. The data is encoded in [base64 format](https://en.wikipedia.org/wiki/Base64). The purpose of using base64 format is to ensure the binary data is safe to copy + paste manually and transmit via text without bugs.
 
 Blobs are serialized as a string. If the contents of the string form a balid base64 blob then `kv_val_blob` can be used instead of `kv_val_string`. `kv_val_blob` performs base64 encoding and decoding internally, depending on if the kv is in read or write mode.
 
