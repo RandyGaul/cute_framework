@@ -23,7 +23,8 @@ array<const char*> component_types = {
 	"Transform",
 	"GridObject",
 	"Sprite",
-	"Octorok"	//Octorok component
+	"OctorokComponent" // Named with "Component" at the end to avoid confusion with
+	                   // the entity type string "Octorok".
 };
 app_register_entity_type(app, component_types, "Octorok");
 ```
@@ -50,7 +51,7 @@ bool app_has_component(app_t* app, entity_t entity, const char* name);
 Here's an example of how to use `app_get_component`.
 
 ```cpp
-Octorok* octorok = (Octorok*)app_get_component(app, e, "Octorok");
+OctorokComponent* octorok = (OctorokComponent*)app_get_component(app, e, "OctorokComponent");
 ```
 
 ## Component
@@ -67,7 +68,7 @@ enum OCTOROK_STATE
 	OCTOROK_STATE_FIRE,
 };
 
-struct Octorok
+struct OctorokComponent
 {
 	int pellet_count = 0;
 	Pellet pellets[3];
@@ -79,9 +80,9 @@ struct Octorok
 
 ```cpp
 component_config_t config;
-config.name = "Octorok";
-config.size_of_component = sizeof(Octorok);
-config.serializer_fn = octorok_serialize;
+config.name = "OctorokComponent";
+config.size_of_component = sizeof(OctorokComponent);
+config.serializer_fn = octorok_component_serialize;
 app_register_component_type(app, config);
 ```
 
@@ -96,11 +97,11 @@ typedef error_t (*serialize_fn)(app_t* app, kv_t* kv, bool reading, entity_t ent
 For the Octorok example the implemented function might look like this.
 
 ```cpp
-error_t octorok_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+error_t octorok_component_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
-	Octorok* octorok = (Octorok*)component;
+	OctorokComponent* octorok = (OctorokComponent*)component;
 	if (reading) {
-		CUTE_PLACEMENT_NEW(octorok) Octorok;
+		CUTE_PLACEMENT_NEW(octorok) OctorokComponent;
 	}
 	return error_success();
 }
@@ -116,7 +117,7 @@ Systems are just functions. The purpose is to write your gameplay code systems. 
 
 ```cpp
 system_config_t system;
-system.component_types.add("Octorok");
+system.component_types.add("OctorokComponent");
 system.update_fn = (void*)update_octorok_system;
 app_register_system(app, system);
 ```
@@ -124,10 +125,10 @@ app_register_system(app, system);
 > An example of an empty (unimplemented) system for the Octorok component.
 
 ```cpp
-void update_octorok_system(app_t* app, float dt, void* udata, Octorok* octoroks, int entity_count)
+void update_octorok_system(app_t* app, float dt, void* udata, OctorokComponent* octoroks, int entity_count)
 {
 	for (int i = 0; i < entity_count; ++i) {
-		Octorok* octorok = octoroks + i;
+		OctorokComponent* octorok = octoroks + i;
 		// Update octoroks here ...
 	}
 }
