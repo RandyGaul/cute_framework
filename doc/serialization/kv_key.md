@@ -29,4 +29,4 @@ This function is a part of the kv (key-value) serialization API. You can read mo
 
 ## Related Functions
   
-[kv_val](https://github.com/RandyGaul/cute_framework/blob/master/doc/serialization/kv_val.md) will not do anything.  
+[kv_val](https://github.com/RandyGaul/cute_framework/blob/master/doc/serialization/kv_val.md)  
