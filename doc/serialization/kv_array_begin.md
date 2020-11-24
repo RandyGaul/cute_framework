@@ -23,4 +23,6 @@ This function is a part of the kv (key-value) serialization API. You can read mo
 
 ## Related Functions
   
+[kv_object_begin](https://github.com/RandyGaul/cute_framework/blob/master/doc/serialization/kv_object_begin.md)  
+[kv_object_end](https://github.com/RandyGaul/cute_framework/blob/master/doc/serialization/kv_object_end.md)  
 [kv_array_end](https://github.com/RandyGaul/cute_framework/blob/master/doc/serialization/kv_array_end.md)  
