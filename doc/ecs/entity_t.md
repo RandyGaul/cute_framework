@@ -24,6 +24,7 @@ if (err.is_error()) {
 ## Related Functions
 
 [app_make_entity](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/app_make_entity.md)  
+[app_destroy_entity](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/app_destroy_entity.md)  
 [app_delayed_destroy_entity](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/app_delayed_destroy_entity.md)  
 [app_is_entity_valid](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/app_is_entity_valid.md)  
 [app_get_component](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/app_get_component.md)  
