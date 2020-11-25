@@ -16,6 +16,7 @@ Parameter Name | Description
 app | The application.
 schema | The schema string, see remarks for details.
 component_types | The type of each component that comprise this kind of entity.
+entity_type | The name for this type of entity.
 
 ## Return Value
 
