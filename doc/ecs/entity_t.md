@@ -11,7 +11,7 @@ handle_t | handle | A handle for internal use.
 
 ## Code Example
 
-> Making an instance of an entity (the entity must have been already registered with [app_register_entity_type](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/app_register_entity_type.md).
+> Making an instance of an entity (the entity must have been already registered with [app_register_entity_type](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/app_register_entity_type.md)).
 
 ```cpp
 entity e = INVALID_ENTITY;
