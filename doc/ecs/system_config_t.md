@@ -8,7 +8,7 @@ type | name | Description
 --- | --- | ---
 void* | udata | A user data pointer for your convenience, it is the `udata` parameter passed to one of the system update functions, `pre_update_fn`, `post_update_fn`, or `post_update_fn`.
 `void (*)(app_t* app, float dt, void* udata)` | pre_update_fn | Called once before `update_fn` is called.
-void* | update_fn | Called to update components. Can be called multiple times within a single game tick.
+void* | update_fn | Called to update components. Can be called multiple times within a single game tick. Use a typecast to assign this value. See the Code Example below for an example.
 `void (*)(app_t* app, float dt, void* udata)` | post_update_fn | Called once after `update_fn` is done being called.
 
 ## Code Example
