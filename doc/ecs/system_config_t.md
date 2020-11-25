@@ -6,7 +6,7 @@ All the parameters needed to call [app_register_system](https://github.com/Randy
 
 type | name | Description
 --- | --- | ---
-udata | A user data pointer for your convenience, it is the `udata` parameter passed to one of the system update functions, `pre_update_fn`, `post_update_fn`, or `post_update_fn`.
+void* | udata | A user data pointer for your convenience, it is the `udata` parameter passed to one of the system update functions, `pre_update_fn`, `post_update_fn`, or `post_update_fn`.
 `void (*)(app_t* app, float dt, void* udata)` | pre_update_fn | Called once before `update_fn` is called.
 void* | update_fn | Called to update components. Can be called multiple times within a single game tick.
 `void (*)(app_t* app, float dt, void* udata)` | post_update_fn | Called once after `update_fn` is done being called.
