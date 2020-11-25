@@ -1,6 +1,6 @@
 # component_serialize_fn
 
-Serializes a component. This can be a read or write operation.
+Serializes a component. This can be a read or write operation. This is for a member of [component_config_t](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/component_config_t.md).
 
 ## Syntax
 
