@@ -10,7 +10,7 @@ A key benefit of using the ECS is having a clear answer to the question "where d
 
 In laymen's terms, entities are things, components are parts of things, and systems are how things behave.
 
-**Disclaimer**: This is an oversimplification of ECS, but it is one that serves our purpose while minimizing confusion for now. For a full understanding, please consult your local [Google](https://www.google.com).
+**Disclaimer**: This is an oversimplification of ECS, but it is one that serves our purpose while minimizing confusion for now. For a full understanding, please consult your local [Google](http://www.google.com/search?q=entity+component+system).
 
 ## Entities
 
