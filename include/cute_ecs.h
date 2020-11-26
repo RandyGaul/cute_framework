@@ -64,9 +64,9 @@ struct component_config_t
 {
 	const char* name = NULL;
 	size_t size_of_component = 0;
-	void* udata = NULL;
 	component_serialize_fn* serializer_fn = NULL;
 	component_cleanup_fn* cleanup_fn = NULL;
+	void* udata = NULL;
 };
 
 CUTE_API void CUTE_CALL app_register_component_type(app_t* app, component_config_t component_config);
@@ -77,11 +77,12 @@ CUTE_API void CUTE_CALL app_register_component_type(app_t* app, component_config
 
 struct system_config_t
 {
-	void* udata = NULL;
-	void (*pre_update_fn)(app_t* app, float dt, void* udata) = NULL;
 	void* update_fn = NULL;
-	void (*post_update_fn)(app_t* app, float dt, void* udata) = NULL;
 	array<const char*> component_type_tuple;
+	
+	void (*pre_update_fn)(app_t* app, float dt, void* udata) = NULL;
+	void (*post_update_fn)(app_t* app, float dt, void* udata) = NULL;
+	void* udata = NULL;
 };
 
 CUTE_API void CUTE_CALL app_register_system(app_t* app, const system_config_t& system);
