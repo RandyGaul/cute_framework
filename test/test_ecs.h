@@ -189,8 +189,7 @@ int test_ecs_octorok()
 		},
 	);
 
-	entity_type_t entity_type = app_register_entity_type(app, octorok_schema_string);
-	if (entity_type == CUTE_INVALID_ENTITY_TYPE) return -1;
+	app_register_entity_type(app, octorok_schema_string);
 
 	// Register systems.
 	system_config_t s;
@@ -198,7 +197,7 @@ int test_ecs_octorok()
 	s.pre_update_fn = NULL;
 	s.update_fn = (void*)update_test_octorok_system;
 	s.post_update_fn = NULL;
-	s.component_types = {
+	s.component_type_tuple = {
 			"test_component_transform_t",
 			"test_component_sprite_t",
 			"test_component_collider_t",
@@ -210,7 +209,7 @@ int test_ecs_octorok()
 	s.pre_update_fn = NULL;
 	s.update_fn = (void*)update_test_octorok_buddy_counter_system;
 	s.post_update_fn = NULL;
-	s.component_types = {
+	s.component_type_tuple = {
 			"test_component_octorok_t"
 	};
 	app_register_system(app, s);
@@ -272,7 +271,7 @@ int test_ecs_octorok()
 			size_t len;
 			kv_key(saved_entities, "entity_type");
 			kv_val_string(saved_entities, &serialized_entity_type, &len);
-			CUTE_TEST_ASSERT(!CUTE_STRNCMP(app_entity_type_string(app, entity_type), serialized_entity_type, len));
+			CUTE_TEST_ASSERT(!CUTE_STRNCMP("Octorok", serialized_entity_type, len));
 		kv_object_end(saved_entities);
 	kv_array_end(saved_entities);
 
@@ -328,7 +327,7 @@ int test_ecs_no_kv()
 	app_register_component_type(app, config);
 
 	system_config_t system;
-	system.component_types.add("Dummy");
+	system.component_type_tuple.add("Dummy");
 	system.update_fn = (void*)update_dummy_system;
 	app_register_system(app, system);
 

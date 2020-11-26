@@ -209,7 +209,7 @@ void do_imgui_stuff(app_t* app, float dt)
 				for (int j = 0; j < world->LEVEL_W; ++j) {
 					destroy_entity_at(j, i - 1);
 					if (!world->board.data[i][j].is_empty) {
-						make_entity_at(app_entity_type_string(app, world->board.data[i][j].entity.type), j, i - 1);
+						make_entity_at(app_entity_type_string(app, world->board.data[i][j].entity), j, i - 1);
 						destroy_entity_at(j, i);
 					}
 				}
@@ -221,7 +221,7 @@ void do_imgui_stuff(app_t* app, float dt)
 				for (int j = 0; j < world->LEVEL_W; ++j) {
 					destroy_entity_at(j, i);
 					if (!world->board.data[i - 1][j].is_empty) {
-						make_entity_at(app_entity_type_string(app, world->board.data[i - 1][j].entity.type), j, i);
+						make_entity_at(app_entity_type_string(app, world->board.data[i - 1][j].entity), j, i);
 						destroy_entity_at(j, i - 1);
 					}
 				}
@@ -233,7 +233,7 @@ void do_imgui_stuff(app_t* app, float dt)
 				for (int j = 1; j < world->LEVEL_W; ++j) {
 					destroy_entity_at(j - 1, i);
 					if (!world->board.data[i][j].is_empty) {
-						make_entity_at(app_entity_type_string(app, world->board.data[i][j].entity.type), j - 1, i);
+						make_entity_at(app_entity_type_string(app, world->board.data[i][j].entity), j - 1, i);
 						destroy_entity_at(j, i);
 					}
 				}
@@ -245,7 +245,7 @@ void do_imgui_stuff(app_t* app, float dt)
 				for (int j = world->LEVEL_W - 1; j > 0; --j) {
 					destroy_entity_at(j, i);
 					if (!world->board.data[i][j - 1].is_empty) {
-						make_entity_at(app_entity_type_string(app, world->board.data[i][j - 1].entity.type), j, i);
+						make_entity_at(app_entity_type_string(app, world->board.data[i][j - 1].entity), j, i);
 						destroy_entity_at(j - 1, i);
 					}
 				}

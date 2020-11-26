@@ -36,22 +36,20 @@ struct kv_t;
 //--------------------------------------------------------------------------------------------------
 // Entity
 
-using entity_type_t = uint32_t;
-
 struct entity_t
 {
 	CUTE_INLINE bool operator==(const entity_t& other) { return type == other.type && handle == other.handle; }
 	CUTE_INLINE bool operator!=(const entity_t& other) { return !(*this == other); }
-	entity_type_t type;
+
+	uint32_t type;
 	handle_t handle;
 };
 
-#define CUTE_INVALID_ENTITY_TYPE ((entity_type_t)(~0))
-static constexpr entity_t INVALID_ENTITY = { CUTE_INVALID_ENTITY_TYPE, CUTE_INVALID_HANDLE };
+static constexpr entity_t INVALID_ENTITY = { ~0, CUTE_INVALID_HANDLE };
 
-CUTE_API entity_type_t CUTE_CALL app_register_entity_type(app_t* app, const char* schema);
-CUTE_API entity_type_t CUTE_CALL app_register_entity_type(app_t* app, array<const char*> component_types, const char* entity_type);
-CUTE_API const char* CUTE_CALL app_entity_type_string(app_t* app, entity_type_t type);
+CUTE_API void CUTE_CALL app_register_entity_type(app_t* app, const char* schema);
+CUTE_API void CUTE_CALL app_register_entity_type(app_t* app, array<const char*> component_types, const char* entity_type);
+CUTE_API const char* CUTE_CALL app_entity_type_string(app_t* app, entity_t entity);
 CUTE_API bool CUTE_CALL app_entity_is_type(app_t* app, entity_t entity, const char* entity_type);
 
 //--------------------------------------------------------------------------------------------------
