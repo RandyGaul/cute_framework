@@ -5,7 +5,7 @@ Returns the string associated with an entity integer type `entity_type_t`.
 ## Syntax
 
 ```cpp
-const char* app_entity_type_string(app_t* app, entity_type_t type);
+const char* app_entity_type_string(app_t* app, entity_t entity);
 ```
 
 ## Function Parameters
@@ -13,11 +13,11 @@ const char* app_entity_type_string(app_t* app, entity_type_t type);
 Parameter Name | Description
 --- | ---
 app | The application.
-entity_type | The type of entity.
+entity | The entity to fetch the type of.
 
 ## Return Value
 
-Returns the string associated with an entity integer type `entity_type_t`.
+Returns the string associated with an entity's type.
 
 ## Related Functions
 
