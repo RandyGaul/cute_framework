@@ -117,8 +117,8 @@ Systems are just functions. The purpose is to write your gameplay code systems. 
 
 ```cpp
 system_config_t system;
-system.component_type_tuple.add("OctorokComponent");
 system.update_fn = (void*)update_octorok_system;
+system.component_type_tuple.add("OctorokComponent");
 app_register_system(app, system);
 ```
 
