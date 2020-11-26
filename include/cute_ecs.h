@@ -81,7 +81,7 @@ struct system_config_t
 	void (*pre_update_fn)(app_t* app, float dt, void* udata) = NULL;
 	void* update_fn = NULL;
 	void (*post_update_fn)(app_t* app, float dt, void* udata) = NULL;
-	array<const char*> component_types;
+	array<const char*> component_type_tuple;
 };
 
 CUTE_API void CUTE_CALL app_register_system(app_t* app, const system_config_t& system);
