@@ -13,7 +13,7 @@ void app_delayed_destroy_entity(app_t* app, entity_t entity);
 Parameter Name | Description
 --- | ---
 app | The application.
-entity | The type of entity to create.
+entity | The entity to destroy.
 
 ## Related Functions
 
