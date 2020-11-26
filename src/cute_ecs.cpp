@@ -33,11 +33,11 @@
 namespace cute
 {
 
-static error_t s_load_from_schema(app_t* app, entity_type_t schema_type, entity_t entity, component_config_t* config, void* component, void* udata)
+static error_t s_load_from_schema(app_t* app, uint32_t schema_type, entity_t entity, component_config_t* config, void* component, void* udata)
 {
 	// Look for parent.
 	// If parent exists, load values from it first.
-	entity_type_t inherits_from;
+	uint32_t inherits_from;
 	error_t err = app->entity_schema_inheritence.find(schema_type, &inherits_from);
 	if (!err.is_error()) {
 		err = s_load_from_schema(app, inherits_from, entity, config, component, udata);
@@ -73,17 +73,17 @@ void app_register_system(app_t* app, const system_config_t& system)
 	system_internal.udata = system.udata;
 	system_internal.update_fn = system.update_fn;
 	system_internal.post_update_fn = system.post_update_fn;
-	for (int i = 0; i < system.component_types.count(); ++i) {
-		system_internal.component_types.add(INJECT(system.component_types[i]));
+	for (int i = 0; i < system.component_type_tuple.count(); ++i) {
+		system_internal.component_type_tuple.add(INJECT(system.component_type_tuple[i]));
 	}
 	app->systems.add(system_internal);
 }
 
 error_t app_make_entity(app_t* app, const char* entity_type, entity_t* entity_out)
 {
-	entity_type_t type = CUTE_INVALID_ENTITY_TYPE;
+	uint32_t type = ~0;
 	app->entity_type_string_to_id.find(INJECT(entity_type), &type);
-	if (type == CUTE_INVALID_ENTITY_TYPE) {
+	if (type == ~0) {
 		return error_failure("`type` is not a valid entity type.");
 	}
 
@@ -99,10 +99,10 @@ error_t app_make_entity(app_t* app, const char* entity_type, entity_t* entity_ou
 	collection->entity_handles.add(h);
 	entity.handle = h;
 
-	const array<strpool_id>& component_types = collection->component_types;
-	for (int i = 0; i < component_types.count(); ++i)
+	const array<strpool_id>& component_type_tuple = collection->component_type_tuple;
+	for (int i = 0; i < component_type_tuple.count(); ++i)
 	{
-		strpool_id component_type = component_types[i];
+		strpool_id component_type = component_type_tuple[i];
 		component_config_t* config = app->component_configs.find(component_type);
 
 		if (!config) {
@@ -155,7 +155,7 @@ void app_destroy_entity(app_t* app, entity_t entity)
 		// Call cleanup function on each component.
 		for (int i = 0; i < collection->component_tables.count(); ++i) {
 			component_config_t config;
-			app->component_configs.find(collection->component_types[i], &config);
+			app->component_configs.find(collection->component_type_tuple[i], &config);
 			if (config.cleanup_fn) {
 				config.cleanup_fn(app, entity, collection->component_tables[i][index], config.udata);
 			}
@@ -194,10 +194,10 @@ void* app_get_component(app_t* app, entity_t entity, const char* component_type)
 	if (!collection) return NULL;
 
 	strpool_id type = INJECT(component_type);
-	const array<strpool_id>& component_types = collection->component_types;
-	for (int i = 0; i < component_types.count(); ++i)
+	const array<strpool_id>& component_type_tuple = collection->component_type_tuple;
+	for (int i = 0; i < component_type_tuple.count(); ++i)
 	{
-		if (component_types[i] == type) {
+		if (component_type_tuple[i] == type) {
 			int index = collection->entity_handle_table.get_index(entity.handle);
 			return collection->component_tables[i][index];
 		}
@@ -313,19 +313,19 @@ void app_run_ecs_systems(app_t* app, float dt)
 			for (int j = 0; j < app->entity_collections.count(); ++j)
 			{
 				entity_collection_t* collection = app->entity_collections.items() + j;
-				CUTE_ASSERT(collection->component_tables.count() == collection->component_types.count());
+				CUTE_ASSERT(collection->component_tables.count() == collection->component_type_tuple.count());
 				int component_count = collection->component_tables.count();
 				app->current_collection_type_being_iterated = app->entity_collections.keys()[j];
 				app->current_collection_being_updated = collection;
-				CUTE_DEFER(app->current_collection_type_being_iterated = CUTE_INVALID_ENTITY_TYPE);
+				CUTE_DEFER(app->current_collection_type_being_iterated = ~0);
 				CUTE_DEFER(app->current_collection_being_updated = NULL);
 
 				array<int> matches;
-				s_match(&matches, system->component_types, collection->component_types);
+				s_match(&matches, system->component_type_tuple, collection->component_type_tuple);
 
 				array<typeless_array>& tables = collection->component_tables;
 
-				if (matches.count() == system->component_types.count()) {
+				if (matches.count() == system->component_type_tuple.count()) {
 					switch (matches.count())
 					{
 					case 0: s_0(app, dt, update_fn, udata); break;
@@ -379,7 +379,7 @@ static strpool_id s_kv_string(app_t* app, kv_t* kv, const char* key)
 	return strpool_inject(app->strpool, string_raw, (int)string_sz);
 }
 
-entity_type_t app_register_entity_type(app_t* app, const char* schema)
+void app_register_entity_type(app_t* app, const char* schema)
 {
 	// Parse the schema.
 	kv_t* kv = kv_make();
@@ -389,14 +389,14 @@ entity_type_t app_register_entity_type(app_t* app, const char* schema)
 	error_t err = kv_parse(kv, schema, CUTE_STRLEN(schema));
 	if (err.is_error()) {
 		CUTE_DEBUG_PRINTF("Unable to parse the schema when registering entity type.");
-		return CUTE_INVALID_ENTITY_TYPE;
+		return;
 	}
 
 	strpool_id entity_type_string = s_kv_string(app, kv, "entity_type");
-	if (!strpool_isvalid(app->strpool, entity_type_string)) return CUTE_INVALID_ENTITY_TYPE;
+	if (!strpool_isvalid(app->strpool, entity_type_string)) return;
 	
 	strpool_id inherits_from_string = s_kv_string(app, kv, "inherits_from");
-	entity_type_t inherits_from = CUTE_INVALID_ENTITY_TYPE;
+	uint32_t inherits_from = ~0;
 	if (strpool_isvalid(app->strpool, inherits_from)) {
 		app->entity_type_string_to_id.find(inherits_from_string, &inherits_from);
 	}
@@ -404,42 +404,41 @@ entity_type_t app_register_entity_type(app_t* app, const char* schema)
 	// Search for all component types present in the schema.
 	int component_config_count = app->component_configs.count();
 	const component_config_t* component_configs = app->component_configs.items();
-	array<strpool_id> component_types;
+	array<strpool_id> component_type_tuple;
 	for (int i = 0; i < component_config_count; ++i)
 	{
 		const component_config_t* config = component_configs + i;
 
 		err = kv_key(kv, config->name);
 		if (!err.is_error()) {
-			component_types.add(INJECT(config->name));
+			component_type_tuple.add(INJECT(config->name));
 		}
 	}
 	kv_reset_read_state(kv);
 
 	// Register component types.
-	entity_type_t entity_type = app->entity_type_gen++;
+	uint32_t entity_type = app->entity_type_gen++;
 	app->entity_type_string_to_id.insert(entity_type_string, entity_type);
 	app->entity_type_id_to_string.add(entity_type_string);
 	entity_collection_t* collection = app->entity_collections.insert(entity_type);
-	for (int i = 0; i < component_types.count(); ++i)
+	for (int i = 0; i < component_type_tuple.count(); ++i)
 	{
-		collection->component_types.add(component_types[i]);
+		collection->component_type_tuple.add(component_type_tuple[i]);
 		typeless_array& table = collection->component_tables.add();
-		component_config_t* config = app->component_configs.find(component_types[i]);
+		component_config_t* config = app->component_configs.find(component_type_tuple[i]);
 		table.m_element_size = config->size_of_component;
 	}
 
 	// Store the parsed schema.
 	app->entity_parsed_schemas.insert(entity_type, kv);
-	if (inherits_from != CUTE_INVALID_ENTITY_TYPE) {
+	if (inherits_from != ~0) {
 		app->entity_schema_inheritence.insert(entity_type, inherits_from);
 	}
 
 	cleanup_kv = false;
-	return entity_type;
 }
 
-entity_type_t app_register_entity_type(app_t* app, array<const char*> component_types, const char* entity_type_string)
+void app_register_entity_type(app_t* app, array<const char*> component_type_tuple, const char* entity_type_string)
 {
 	// Search for all component types present in the schema.
 	int component_config_count = app->component_configs.count();
@@ -450,8 +449,8 @@ entity_type_t app_register_entity_type(app_t* app, array<const char*> component_
 		const component_config_t* config = component_configs + i;
 
 		bool found = false;
-		for (int i = 0; i < component_types.count(); ++i) {
-			if (!CUTE_STRCMP(component_types[i], config->name)) {
+		for (int i = 0; i < component_type_tuple.count(); ++i) {
+			if (!CUTE_STRCMP(component_type_tuple[i], config->name)) {
 				found = true;
 				break;
 			}
@@ -464,38 +463,36 @@ entity_type_t app_register_entity_type(app_t* app, array<const char*> component_
 
 	// Register component types.
 	strpool_id entity_type_string_id = INJECT(entity_type_string);
-	entity_type_t entity_type = app->entity_type_gen++;
+	uint32_t entity_type = app->entity_type_gen++;
 	app->entity_type_string_to_id.insert(entity_type_string_id, entity_type);
 	app->entity_type_id_to_string.add(entity_type_string_id);
 	entity_collection_t* collection = app->entity_collections.insert(entity_type);
 	for (int i = 0; i < component_type_ids.count(); ++i)
 	{
-		collection->component_types.add(component_type_ids[i]);
+		collection->component_type_tuple.add(component_type_ids[i]);
 		typeless_array& table = collection->component_tables.add();
 		component_config_t* config = app->component_configs.find(component_type_ids[i]);
 		table.m_element_size = config->size_of_component;
 	}
-
-	return entity_type;
 }
 
-const char* app_entity_type_string(app_t* app, entity_type_t type)
+const char* app_entity_type_string(app_t* app, entity_t entity)
 {
-	return strpool_cstr(app->strpool, app->entity_type_id_to_string[type]);
+	return strpool_cstr(app->strpool, app->entity_type_id_to_string[entity.type]);
 }
 
 bool app_entity_is_type(app_t* app, entity_t entity, const char* entity_type_name)
 {
 	if (!app_is_entity_valid(app, entity)) return false;
-	const char* type_string = app_entity_type_string(app, entity.type);
+	const char* type_string = app_entity_type_string(app, entity);
 	return !CUTE_STRCMP(type_string, entity_type_name);
 }
 
-entity_type_t s_entity_type(app_t* app, kv_t* kv, const char* key)
+uint32_t s_entity_type(app_t* app, kv_t* kv, const char* key)
 {
 	strpool_id entity_type_string = s_kv_string(app, kv, key);
-	if (!strpool_isvalid(app->strpool, entity_type_string)) return CUTE_INVALID_ENTITY_TYPE;
-	entity_type_t entity_type = CUTE_INVALID_ENTITY_TYPE;
+	if (!strpool_isvalid(app->strpool, entity_type_string)) return ~0;
+	uint32_t entity_type = ~0;
 	app->entity_type_string_to_id.find(entity_type_string, &entity_type);
 	return entity_type;
 }
@@ -517,8 +514,8 @@ static error_t s_fill_load_id_table(app_t* app, kv_t* kv)
 	{
 		kv_object_begin(kv);
 
-		entity_type_t entity_type = s_entity_type(app, kv, "entity_type");
-		if (entity_type == CUTE_INVALID_ENTITY_TYPE) {
+		uint32_t entity_type = s_entity_type(app, kv, "entity_type");
+		if (entity_type == ~0) {
 			return error_failure("Unable to find entity type.");
 		}
 
@@ -572,18 +569,18 @@ error_t app_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
 		entity_t entity = load_id_table[entity_index++];
 		kv_object_begin(kv);
 
-		entity_type_t entity_type = s_entity_type(app, kv, "entity_type");
-		if (entity_type == CUTE_INVALID_ENTITY_TYPE) {
+		uint32_t entity_type = s_entity_type(app, kv, "entity_type");
+		if (entity_type == ~0) {
 			return error_failure("Unable to find entity type.");
 		}
 
 		entity_collection_t* collection = app->entity_collections.find(entity_type);
 		CUTE_ASSERT(collection);
 
-		const array<strpool_id>& component_types = collection->component_types;
-		for (int i = 0; i < component_types.count(); ++i)
+		const array<strpool_id>& component_type_tuple = collection->component_type_tuple;
+		for (int i = 0; i < component_type_tuple.count(); ++i)
 		{
-			strpool_id component_type = component_types[i];
+			strpool_id component_type = component_type_tuple[i];
 			component_config_t* config = app->component_configs.find(component_type);
 
 			if (!config) {
@@ -662,11 +659,11 @@ error_t app_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv)
 		size_t entity_type_string_len = CUTE_STRLEN(entity_type_string);
 		kv_val_string(kv, &entity_type_string, &entity_type_string_len);
 
-		const array<strpool_id>& component_types = collection->component_types;
+		const array<strpool_id>& component_type_tuple = collection->component_type_tuple;
 		const array<typeless_array>& component_tables = collection->component_tables;
-		for (int j = 0; j < component_types.count(); ++j)
+		for (int j = 0; j < component_type_tuple.count(); ++j)
 		{
-			strpool_id component_type = component_types[j];
+			strpool_id component_type = component_type_tuple[j];
 			const typeless_array& component_table = component_tables[j];
 			component_config_t* config = app->component_configs.find(component_type);
 			const void* component = component_table[index];
@@ -716,11 +713,11 @@ error_t app_save_entities(app_t* app, const array<entity_t>& entities)
 
 		const char* entity_type_string = strpool_cstr(app->strpool, app->entity_type_id_to_string[entity.type]);
 
-		const array<strpool_id>& component_types = collection->component_types;
+		const array<strpool_id>& component_type_tuple = collection->component_type_tuple;
 		const array<typeless_array>& component_tables = collection->component_tables;
-		for (int j = 0; j < component_types.count(); ++j)
+		for (int j = 0; j < component_type_tuple.count(); ++j)
 		{
-			strpool_id component_type = component_types[j];
+			strpool_id component_type = component_type_tuple[j];
 			const typeless_array& component_table = component_tables[j];
 			component_config_t* config = app->component_configs.find(component_type);
 			const void* component = component_table[index];

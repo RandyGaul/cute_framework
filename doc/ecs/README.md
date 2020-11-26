@@ -10,7 +10,7 @@ A key benefit of using the ECS is having a clear answer to the question "where d
 
 In laymen's terms, entities are things, components are parts of things, and systems are how things behave.
 
-**Disclaimer**: This is an oversimplification of ECS, but it is one that serves our purpose while minimizing confusion for now. For a full understanding, please consult your local [Google](https://www.google.com).
+**Disclaimer**: This is an oversimplification of ECS, but it is one that serves our purpose while minimizing confusion for now. For a full understanding, please consult your local [Google](http://www.google.com/search?q=entity+component+system).
 
 ## Entities
 
@@ -117,8 +117,8 @@ Systems are just functions. The purpose is to write your gameplay code systems. 
 
 ```cpp
 system_config_t system;
-system.component_types.add("OctorokComponent");
 system.update_fn = (void*)update_octorok_system;
+system.component_type_tuple.add("OctorokComponent");
 app_register_system(app, system);
 ```
 

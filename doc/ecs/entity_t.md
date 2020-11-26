@@ -6,12 +6,12 @@ Represents an instance of an entity.
 
 type | name | Description
 --- | --- | ---
-entity_type_t | type | `uint32_t` representing the entity type, as defined by [app_register_entity_type](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/app_register_entity_type.md). You can fetch the associated type string by calling [app_entity_type_string](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/app_entity_type_string.md).
+uint32_t | type | Represents the entity type, as defined by [app_register_entity_type](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/app_register_entity_type.md). You can fetch the associated type string by calling [app_entity_type_string](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/app_entity_type_string.md).
 handle_t | handle | A handle for internal use.
 
 ## Code Example
 
-> Making an instance of an entity (the entity must have been already registered with [app_register_entity_type](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/app_register_entity_type.md).
+> Making an instance of an entity (the entity must have been already registered with [app_register_entity_type](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/app_register_entity_type.md)).
 
 ```cpp
 entity e = INVALID_ENTITY;

@@ -175,12 +175,16 @@ array<const char*> schemas = {
 
 array<schema_preview_t> schema_previews;
 
-#define REGISTER_COMPONENT(name, cleanup_fn) \
-	app_register_component_type(app, { \
-		CUTE_STRINGIZE(name), \
-		sizeof(name), \
-		NULL, name##_serialize, cleanup_fn \
-	})
+#define REGISTER_COMPONENT(component_name, cleanup_fn_ptr) \
+	do { \
+		component_config_t c; \
+		c.name = CUTE_STRINGIZE(component_name); \
+		c.size_of_component = sizeof(component_name); \
+		c.serializer_fn = component_name##_serialize; \
+		c.cleanup_fn = cleanup_fn_ptr; \
+		c.udata = NULL; \
+		app_register_component_type(app, c); \
+	} while (0)
 
 // Previews are shown in the level editor in place of an actual entity.
 void add_schema_preview(const char* schema)
@@ -301,7 +305,7 @@ void ecs_registration(app_t* app)
 	s.pre_update_fn = NULL;
 	s.update_fn = (void*)transform_system_update;
 	s.post_update_fn = NULL;
-	s.component_types = {
+	s.component_type_tuple = {
 		"Transform",
 	};
 	app_register_system(app, s);
@@ -310,7 +314,7 @@ void ecs_registration(app_t* app)
 	s.pre_update_fn = NULL;
 	s.update_fn = (void*)animator_transform_system_update;
 	s.post_update_fn = NULL;
-	s.component_types = {
+	s.component_type_tuple = {
 		"Transform",
 		"Animator",
 	};
@@ -320,7 +324,7 @@ void ecs_registration(app_t* app)
 	s.pre_update_fn = NULL;
 	s.update_fn = (void*)board_transform_system_update;
 	s.post_update_fn = NULL;
-	s.component_types = {
+	s.component_type_tuple = {
 		"Transform",
 		"Animator",
 		"BoardPiece",
@@ -331,7 +335,7 @@ void ecs_registration(app_t* app)
 	s.pre_update_fn = NULL;
 	s.update_fn = (void*)player_system_update;
 	s.post_update_fn = NULL;
-	s.component_types = {
+	s.component_type_tuple = {
 		"Transform",
 		"Animator",
 		"BoardPiece",
@@ -343,7 +347,7 @@ void ecs_registration(app_t* app)
 	s.pre_update_fn = NULL;
 	s.update_fn = (void*)board_system_update;
 	s.post_update_fn = NULL;
-	s.component_types = {
+	s.component_type_tuple = {
 		"BoardPiece",
 	};
 	app_register_system(app, s);
@@ -352,7 +356,7 @@ void ecs_registration(app_t* app)
 	s.pre_update_fn = ice_block_system_pre_update;
 	s.update_fn = (void*)ice_block_system_update;
 	s.post_update_fn = NULL;
-	s.component_types = {
+	s.component_type_tuple = {
 		"Transform",
 		"Animator",
 		"BoardPiece",
@@ -364,7 +368,7 @@ void ecs_registration(app_t* app)
 	s.pre_update_fn = NULL;
 	s.update_fn = (void*)mochi_system_update;
 	s.post_update_fn = NULL;
-	s.component_types = {
+	s.component_type_tuple = {
 		"Transform",
 		"Animator",
 		"BoardPiece",
@@ -376,14 +380,14 @@ void ecs_registration(app_t* app)
 	s.pre_update_fn = draw_background_bricks_system_pre_update;
 	s.update_fn = NULL;
 	s.post_update_fn = NULL;
-	s.component_types = { };
+	s.component_type_tuple = { };
 	app_register_system(app, s);
 
 	s.udata = NULL;
 	s.pre_update_fn = NULL;
 	s.update_fn = (void*)shadow_system_update;
 	s.post_update_fn = shadow_system_post_update;
-	s.component_types = {
+	s.component_type_tuple = {
 		"Transform",
 		"Animator",
 		"BoardPiece",
@@ -395,7 +399,7 @@ void ecs_registration(app_t* app)
 	s.pre_update_fn = NULL;
 	s.update_fn = (void*)animator_system_update;
 	s.post_update_fn = animator_system_post_update;
-	s.component_types = {
+	s.component_type_tuple = {
 		"Transform",
 		"Animator",
 	};
@@ -405,7 +409,7 @@ void ecs_registration(app_t* app)
 	s.pre_update_fn = reflection_system_pre_update;
 	s.update_fn = (void*)reflection_system_update;
 	s.post_update_fn = reflection_system_post_update;
-	s.component_types = {
+	s.component_type_tuple = {
 		"Transform",
 		"Animator",
 		"Reflection",
@@ -416,7 +420,7 @@ void ecs_registration(app_t* app)
 	s.pre_update_fn = NULL;
 	s.update_fn = (void*)light_system_update;
 	s.post_update_fn = light_system_post_update;
-	s.component_types = {
+	s.component_type_tuple = {
 		"Transform",
 		"Light",
 	};
