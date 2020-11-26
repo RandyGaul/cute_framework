@@ -10,6 +10,7 @@ void* | udata | A user data pointer for your convenience, it is the `udata` para
 `void (*)(app_t* app, float dt, void* udata)` | pre_update_fn | Called once before `update_fn` is called.
 void* | update_fn | Called to update components. Can be called multiple times within a single game tick. Use a typecast to assign this value. See the Code Example below for an example.
 `void (*)(app_t* app, float dt, void* udata)` | post_update_fn | Called once after `update_fn` is done being called.
+array<const char*> | component_type_tuple | An array of component types by string. `component_type_tuple` defines the order and type of each component this system will update.
 
 ## Code Example
 
@@ -17,7 +18,7 @@ void* | update_fn | Called to update components. Can be called multiple times wi
 
 ```cpp
 system_config_t system;
-system.component_types.add("OctorokComponent");
+system.component_type_tuple.add("OctorokComponent");
 system.update_fn = (void*)update_octorok_system;
 app_register_system(app, system);
 ```
