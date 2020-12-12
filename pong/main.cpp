@@ -17,7 +17,7 @@ using namespace cute;
 
 app_t* app;
 
-struct input_map
+struct Input_map
 {
 	key_button_t up;		//i.e. row toggle, menu nav
 	key_button_t down;		//i.e. row toggle, menu nav
@@ -34,7 +34,7 @@ struct Player
 	int id;
 	int lives;
 	//
-	input_map inputs;
+	Input_map inputs;
 };
 
 struct HUD
@@ -46,6 +46,9 @@ struct Paddle
 {
 	enum Buff {fast=1, big=2, stricky=3, bar=4};
 	enum Debuff {slow=1, small=2, inverted=3, stun=4};
+	//
+	static float base_accel;
+	static float base_max_speed;
 	
 	int id;				//match to player-ID
 	//
@@ -54,10 +57,10 @@ struct Paddle
 	int width;
 	int height;
 	//
-	v2 dir;				//direction (vec2)
-	float speed;
-	float speed_max;
+	float dx;
+	float dy;
 	float accel;
+	float max_speed;
 	//
 	array<Buff> buffs;		//@CONSIDER:	using a bitfield
 	array<Debuff> debuffs; 	//@CONSIDER:	using a bitfield
