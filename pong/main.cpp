@@ -68,14 +68,36 @@ struct Paddle
 
 struct Ball
 {
-	static float base_speed = 1.0f;		//baseline ball speed
-	static float speed_mult = 2.0f;		//multiplier (on speed-up)
+	static float base_speed;	// = 1.0f;		//baseline ball speed
+	static float speed_mult;	// = 2.0f;		//multiplier (on speed-up)
 	
 	int x;
 	int y;
 	float speed;
 	v2 dir;
 };
+
+
+// -------------------------------------------------------------------------- //
+
+// -- FUNC DECLARATIONS -- //
+
+void g_init();
+void g_update(float dt);
+void g_draw();
+void g_destroy();
+//
+void make_entity(const char* name, array<const char*> component_types);
+void make_component(const char* name, int size_of_component, void* udata, 
+					component_serialize_fn* serializer_fn, 
+					component_cleanup_fn* cleanup_fn
+				   );
+void make_component(component_config_t c_config);
+void make_system(void* update_fn, array<const char*> component_type_tuple, void* udata, 
+				 void (*pre_update_fn)(app_t* app, float dt, void* udata), 
+				 void (*post_update_fn)(app_t* app, float dt, void* udata)
+				);
+void make_system(system_config_t s_config);
 
 
 // -------------------------------------------------------------------------- //
@@ -204,8 +226,8 @@ void make_component(const char* name, int size_of_component, void* udata = NULL,
 	c_config.name = name;
 	c_config.size_of_component = size_of_component;
 	c_config.udata = udata;
-	c_config.serializer_fn = serializer;
-	c_config.cleanup_fn = cleanup;
+	c_config.serializer_fn = serializer_fn;
+	c_config.cleanup_fn = cleanup_fn;
 	//
 	app_register_component_type(app, c_config);
 }
