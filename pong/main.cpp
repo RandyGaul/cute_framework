@@ -1,5 +1,12 @@
 // main.cpp
 //
+// NOTES:	Cute Pong is a Pong-ish game.
+//			+ upward facing layout
+//			+ hit the ceiling to break it
+//			+ buffs from achieving long combos (opt)
+//			+ debuffs from stage interference (opt)
+//			+ perception warping effects on stage (opt)
+//
 
 #include <cute.h>
 using namespace cute;
@@ -10,19 +17,61 @@ using namespace cute;
 
 app_t* app;
 
+struct input_map
+{
+	key_button_t up;		//i.e. row toggle, menu nav
+	key_button_t down;		//i.e. row toggle, menu nav
+	//
+	key_button_t left;		//basic movement
+	key_button_t right;		//basic movement
+	//
+	key_button_t action;	//i.e. launch ball, confirm, etc.
+};
+
+struct Player
+{
+	//@TODO:	player state
+	int id;
+	int lives;
+	//
+	input_map inputs;
+};
+
 struct HUD
 {
-	
+	//@TODO:	HUD display object
 };
 
-struct paddle
+struct Paddle
 {
+	enum Buff {fast=1, big=2, stricky=3, bar=4};
+	enum Debuff {slow=1, small=2, inverted=3, stun=4};
 	
+	int id;				//match to player-ID
+	//
+	int x;
+	int y;
+	int width;
+	int height;
+	//
+	v2 dir;				//direction (vec2)
+	float speed;
+	float speed_max;
+	float accel;
+	//
+	array<Buff> buffs;		//@CONSIDER:	using a bitfield
+	array<Debuff> debuffs; 	//@CONSIDER:	using a bitfield
 };
 
-struct ball
+struct Ball
 {
+	static float base_speed = 1.0f;		//baseline ball speed
+	static float speed_mult = 2.0f;		//multiplier (on speed-up)
 	
+	int x;
+	int y;
+	float speed;
+	v2 dir;
 };
 
 
