@@ -45,7 +45,7 @@ struct entity_t
 	handle_t handle;
 };
 
-static constexpr entity_t INVALID_ENTITY = { ~0, CUTE_INVALID_HANDLE };
+static constexpr entity_t INVALID_ENTITY = { ~0ULL, CUTE_INVALID_HANDLE };
 
 CUTE_API void CUTE_CALL app_register_entity_type(app_t* app, const char* schema);
 CUTE_API void CUTE_CALL app_register_entity_type(app_t* app, array<const char*> component_types, const char* entity_type);
