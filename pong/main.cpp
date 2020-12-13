@@ -62,8 +62,8 @@ struct Paddle
 	float accel;
 	float max_speed;
 	//
-	array<Buff> buffs;		//@CONSIDER:	using a bitfield
-	array<Debuff> debuffs; 	//@CONSIDER:	using a bitfield
+	array<Buff> buffs;			//@CONSIDER:	using a bitfield
+	array<Debuff> debuffs; 		//@CONSIDER:	using a bitfield
 };
 
 struct Ball
@@ -98,6 +98,7 @@ void make_system(void* update_fn, array<const char*> component_type_tuple, void*
 				 void (*post_update_fn)(app_t* app, float dt, void* udata)
 				);
 void make_system(system_config_t s_config);
+//
 
 
 // -------------------------------------------------------------------------- //
