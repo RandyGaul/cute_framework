@@ -1,2 +1,3 @@
 build/*
 build_emscripten/*
+pong/to_render_sprite.cpp
