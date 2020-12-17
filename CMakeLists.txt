@@ -480,6 +480,9 @@ endif()
 if (CUTE_PONG)
 	set(CUTE_PONG_SRCS
 		pong/main.cpp
+		pong/pong_global.h
+		pong/pong_utils.h
+		pong/pong_game.h
 	)
 
 	set(CUTE_PONG_IMGUI_SRCS
