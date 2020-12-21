@@ -30,6 +30,8 @@
 #include <cute_math.h>
 #include <cute_doubly_list.h>
 #include <cute_strpool.h>
+#include <cute_aseprite_cache.h>
+#include <cute_batch.h>
 
 #include <internal/cute_object_table_internal.h>
 #include <internal/cute_font_internal.h>
@@ -138,6 +140,9 @@ struct app_t
 	int key_mod = 0;
 	mouse_state_t mouse, mouse_prev;
 	list_t joypads;
+
+	batch_t* batch = NULL;
+	aseprite_cache_t* ase_cache = NULL;
 
 	// TODO: Set allocator context for these data structures.
 	array<system_internal_t> systems;

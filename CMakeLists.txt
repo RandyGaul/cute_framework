@@ -168,6 +168,7 @@ set(CUTE_SRCS
 	src/cute_symbol.cpp
 	src/cute_haptics.cpp
 	src/cute_utf8.cpp
+	src/cute_sprite.cpp
 
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
