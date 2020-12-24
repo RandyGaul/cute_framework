@@ -154,7 +154,7 @@ struct sprite_t
 	v2 scale = v2(1, 1);
 	v2 local_offset = v2(0, 0);
 	float opacity = 1.0f;
-	int sort_bits = 0;
+	int layer = 0;
 
 	int frame_index = 0;
 	int loop_count = 0;
@@ -248,7 +248,7 @@ batch_sprite_t sprite_t::batch_sprite(transform_t transform)
 	q.h = h;
 	q.scale_x = scale.x * w;
 	q.scale_y = scale.y * h;
-	q.sort_bits = sort_bits;
+	q.sort_bits = layer;
 	q.alpha = opacity;
 	return q;
 }

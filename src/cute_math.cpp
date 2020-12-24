@@ -24,6 +24,8 @@
 
 #include <cute_math.h>
 
+CUTE_STATIC_ASSERT(CUTE_POLY_MAX_VERTS == C2_MAX_POLYGON_VERTS, "Must be equal.");
+
 namespace cute
 {
 

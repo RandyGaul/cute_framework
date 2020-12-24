@@ -55,7 +55,7 @@ CUTE_INLINE cute::error_t Mochi_serialize(app_t* app, kv_t* kv, bool reading, en
 		Transform* zzz_transform = (Transform*)app_get_component(app, mochi->zzz, "Transform");
 		zzz_transform->relative_to = entity;
 		Animator* zzz_animator = (Animator*)app_get_component(app, mochi->zzz, "Animator");
-		zzz_animator->sprite.sort_bits = 10000;
+		zzz_animator->sprite.layer = 10000;
 		zzz_animator->sprite.opacity = 0;
 	}
 	return kv_error_state(kv);

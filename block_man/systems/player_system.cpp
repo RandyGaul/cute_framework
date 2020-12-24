@@ -410,7 +410,7 @@ static float s_dist(int ax, int ay, int bx, int by)
 {
 	float d0 = (float)(ax - bx);
 	float d1 = (float)(ay - by);
-	return sqrt(d0 * d0 + d1 * d1);
+	return sqrtf(d0 * d0 + d1 * d1);
 }
 
 static transform_t s_last_tx;
