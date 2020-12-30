@@ -136,7 +136,7 @@ void update_octorok_system(app_t* app, float dt, void* udata, OctorokComponent* 
 }
 ```
 
-A system can operate on more than just one kind of component, but the above example only operates on the Octorok component. The above system will be called updated *all entities that contain an Octorok component*.
+A system can operate on more than just one kind of component, but the above example only operates on the Octorok component. The above system will be called updated *all entities that contain an `Octorok` component*.
 
 Here's an example of a different system that operates on two different component types. The below system will operate on *all entities that contain a `Transform` and a `Sprite` component*.
 
