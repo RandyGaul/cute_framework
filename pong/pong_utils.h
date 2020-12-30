@@ -39,13 +39,13 @@ struct Input_map
 // -- FUNC SIGS -- //
 
 void make_entity(const char* name, array<const char*> component_types);
-void make_component(const char* name, int size_of_component, void* udata, 
+void make_component(const char* name, int size_of_component,
 					component_serialize_fn* serializer_fn = NULL, void* serializer_udata = NULL,
 					component_cleanup_fn* cleanup_fn = NULL, void* cleanup_udata = NULL
 				   );
-void make_system(void* update_fn, array<const char*> component_type_tuple, void* udata, 
-				 void (*pre_update_fn)(app_t* app, float dt, void* udata), 
-				 void (*post_update_fn)(app_t* app, float dt, void* udata)
+void make_system(void* update_fn, array<const char*> component_type_tuple, void* udata = NULL, 
+				 void (*pre_update_fn)(app_t* app, float dt, void* udata) = NULL, 
+				 void (*post_update_fn)(app_t* app, float dt, void* udata) = NULL
 				);
 //
 
@@ -55,7 +55,7 @@ void make_system(void* update_fn, array<const char*> component_type_tuple, void*
 // -- FUNC DEFINITIONS -- //
 
 // make_entity()
-// --> formulates & registers entity w/ name
+// --> configures & registers entity w/ name
 // --> convenience function
 // --> basic: make_entity( name, {components-list} )
 // --> reqs: components listed in ... must exist (and registered)
@@ -75,8 +75,8 @@ void make_entity(const char* name, array<const char*> component_types)
 // --> reqs: component-struct definition w/ same name (created separately)
 // --> basic: make_component( name, size_of_component )
 void make_component(const char* name, int size_of_component, 
-					component_serialize_fn* serializer_fn = NULL, void* serializer_udata = NULL,
-					component_cleanup_fn* cleanup_fn = NULL, void* cleanup_udata = NULL
+					component_serialize_fn* serializer_fn, void* serializer_udata,
+					component_cleanup_fn* cleanup_fn, void* cleanup_udata
 				   )
 {
 	ecs_component_begin(app);
@@ -93,9 +93,9 @@ void make_component(const char* name, int size_of_component,
 // --> convenience function
 // --> note: component_type_tuple = component-combo required for entity targeting
 // --> basic: make_system( update_fn, {components-list} )
-void make_system(void* update_fn, array<const char*> component_type_tuple, void* udata = NULL, 
-				 void (*pre_update_fn)(app_t* app, float dt, void* udata) = NULL, 
-				 void (*post_update_fn)(app_t* app, float dt, void* udata) = NULL
+void make_system(void* update_fn, array<const char*> component_type_tuple, void* udata, 
+				 void (*pre_update_fn)(app_t* app, float dt, void* udata), 
+				 void (*post_update_fn)(app_t* app, float dt, void* udata)
 				)
 {
 	ecs_system_begin(app);
