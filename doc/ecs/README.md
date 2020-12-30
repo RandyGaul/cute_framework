@@ -30,7 +30,7 @@ ecs_entity_end(app);                               // the entity type string "Oc
 
 All components are user defined (see Components section).
 
-Once registered, an entity instance can be made by calling a single function `app_make_entity`.
+Once registered, an entity instance can be made by calling a single function `entity_make`.
 
 ```cpp
 entity_t e = entity_make(app, "Octorok");
