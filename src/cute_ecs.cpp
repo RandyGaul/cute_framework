@@ -81,7 +81,7 @@ void ecs_system_set_update(app_t* app, void* update_fn)
 	app->system_internal_builder.update_fn = update_fn;
 }
 
-void ecs_system_add_component(app_t* app, const char* component_type)
+void ecs_system_require_component(app_t* app, const char* component_type)
 {
 	app->system_internal_builder.component_type_tuple.add(INJECT(component_type));
 }

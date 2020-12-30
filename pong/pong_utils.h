@@ -101,7 +101,7 @@ void make_system(void* update_fn, array<const char*> component_type_tuple, void*
 	ecs_system_begin(app);
 	ecs_system_set_update(app, update_fn);
 	for (int i = 0; i < component_type_tuple.size(); ++i) {
-		ecs_system_add_component(app, component_type_tuple[i]);
+		ecs_system_require_component(app, component_type_tuple[i]);
 	}
 	ecs_system_set_optional_pre_update(app, pre_update_fn);
 	ecs_system_set_optional_post_update(app, post_update_fn);

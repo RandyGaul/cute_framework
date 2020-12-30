@@ -92,7 +92,7 @@ CUTE_API void CUTE_CALL ecs_component_set_optional_cleanup(app_t* app, component
 CUTE_API void CUTE_CALL ecs_system_begin(app_t* app);
 CUTE_API void CUTE_CALL ecs_system_end(app_t* app);
 CUTE_API void CUTE_CALL ecs_system_set_update(app_t* app, void* update_fn);
-CUTE_API void CUTE_CALL ecs_system_add_component(app_t* app, const char* component_type);
+CUTE_API void CUTE_CALL ecs_system_require_component(app_t* app, const char* component_type);
 CUTE_API void CUTE_CALL ecs_system_set_optional_pre_update(app_t* app, void (*pre_update_fn)(app_t* app, float dt, void* udata));
 CUTE_API void CUTE_CALL ecs_system_set_optional_post_update(app_t* app, void (*post_update_fn)(app_t* app, float dt, void* udata));
 CUTE_API void CUTE_CALL ecs_system_set_optional_update_udata(app_t* app, void* udata);

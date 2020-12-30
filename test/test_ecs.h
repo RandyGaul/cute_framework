@@ -196,15 +196,15 @@ int test_ecs_octorok()
 	// Register systems.
 	ecs_system_begin(app);
 	ecs_system_set_update(app, (void*)update_test_octorok_system);
-	ecs_system_add_component(app, "test_component_transform_t");
-	ecs_system_add_component(app, "test_component_sprite_t");
-	ecs_system_add_component(app, "test_component_collider_t");
-	ecs_system_add_component(app, "test_component_octorok_t");
+	ecs_system_require_component(app, "test_component_transform_t");
+	ecs_system_require_component(app, "test_component_sprite_t");
+	ecs_system_require_component(app, "test_component_collider_t");
+	ecs_system_require_component(app, "test_component_octorok_t");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
 	ecs_system_set_update(app, (void*)update_test_octorok_buddy_counter_system);
-	ecs_system_add_component(app, "test_component_octorok_t");
+	ecs_system_require_component(app, "test_component_octorok_t");
 	ecs_system_end(app);
 
 	// Load up serialized entities.
@@ -321,7 +321,7 @@ int test_ecs_no_kv()
 
 	ecs_system_begin(app);
 	ecs_system_set_update(app, (void*)update_dummy_system);
-	ecs_system_add_component(app, "Dummy");
+	ecs_system_require_component(app, "Dummy");
 	ecs_system_end(app);
 
 	ecs_entity_type_begin(app);

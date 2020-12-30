@@ -359,50 +359,50 @@ void ecs_registration(app_t* app)
 	*/
 	ecs_system_begin(app);
 	ecs_system_set_update(app, transform_system_update);
-	ecs_system_add_component(app, "Transform");
+	ecs_system_require_component(app, "Transform");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
 	ecs_system_set_update(app, animator_transform_system_update);
-	ecs_system_add_component(app, "Transform");
-	ecs_system_add_component(app, "Animator");
+	ecs_system_require_component(app, "Transform");
+	ecs_system_require_component(app, "Animator");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
 	ecs_system_set_update(app, board_transform_system_update);
-	ecs_system_add_component(app, "Transform");
-	ecs_system_add_component(app, "Animator");
-	ecs_system_add_component(app, "BoardPiece");
+	ecs_system_require_component(app, "Transform");
+	ecs_system_require_component(app, "Animator");
+	ecs_system_require_component(app, "BoardPiece");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
 	ecs_system_set_update(app, player_system_update);
-	ecs_system_add_component(app, "Transform");
-	ecs_system_add_component(app, "Animator");
-	ecs_system_add_component(app, "BoardPiece");
-	ecs_system_add_component(app, "Player");
+	ecs_system_require_component(app, "Transform");
+	ecs_system_require_component(app, "Animator");
+	ecs_system_require_component(app, "BoardPiece");
+	ecs_system_require_component(app, "Player");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
 	ecs_system_set_update(app, board_system_update);
-	ecs_system_add_component(app, "BoardPiece");
+	ecs_system_require_component(app, "BoardPiece");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
 	ecs_system_set_update(app, board_system_update);
 	ecs_system_set_optional_pre_update(app, ice_block_system_pre_update);
-	ecs_system_add_component(app, "Transform");
-	ecs_system_add_component(app, "Animator");
-	ecs_system_add_component(app, "BoardPiece");
-	ecs_system_add_component(app, "IceBlock");
+	ecs_system_require_component(app, "Transform");
+	ecs_system_require_component(app, "Animator");
+	ecs_system_require_component(app, "BoardPiece");
+	ecs_system_require_component(app, "IceBlock");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
 	ecs_system_set_update(app, mochi_system_update);
-	ecs_system_add_component(app, "Transform");
-	ecs_system_add_component(app, "Animator");
-	ecs_system_add_component(app, "BoardPiece");
-	ecs_system_add_component(app, "Mochi");
+	ecs_system_require_component(app, "Transform");
+	ecs_system_require_component(app, "Animator");
+	ecs_system_require_component(app, "BoardPiece");
+	ecs_system_require_component(app, "Mochi");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
@@ -412,33 +412,33 @@ void ecs_registration(app_t* app)
 	ecs_system_begin(app);
 	ecs_system_set_update(app, shadow_system_update);
 	ecs_system_set_optional_post_update(app, shadow_system_post_update);
-	ecs_system_add_component(app, "Transform");
-	ecs_system_add_component(app, "Animator");
-	ecs_system_add_component(app, "BoardPiece");
-	ecs_system_add_component(app, "Shadow");
+	ecs_system_require_component(app, "Transform");
+	ecs_system_require_component(app, "Animator");
+	ecs_system_require_component(app, "BoardPiece");
+	ecs_system_require_component(app, "Shadow");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
 	ecs_system_set_update(app, animator_system_update);
 	ecs_system_set_optional_post_update(app, animator_system_post_update);
-	ecs_system_add_component(app, "Transform");
-	ecs_system_add_component(app, "Animator");
+	ecs_system_require_component(app, "Transform");
+	ecs_system_require_component(app, "Animator");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
 	ecs_system_set_update(app, reflection_system_update);
 	ecs_system_set_optional_pre_update(app, reflection_system_pre_update);
 	ecs_system_set_optional_post_update(app, reflection_system_post_update);
-	ecs_system_add_component(app, "Transform");
-	ecs_system_add_component(app, "Animator");
-	ecs_system_add_component(app, "Reflection");
+	ecs_system_require_component(app, "Transform");
+	ecs_system_require_component(app, "Animator");
+	ecs_system_require_component(app, "Reflection");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
 	ecs_system_set_update(app, light_system_update);
 	ecs_system_set_optional_post_update(app, reflection_system_post_update);
-	ecs_system_add_component(app, "Transform");
-	ecs_system_add_component(app, "Light");
+	ecs_system_require_component(app, "Transform");
+	ecs_system_require_component(app, "Light");
 	ecs_system_end(app);
 }
 
