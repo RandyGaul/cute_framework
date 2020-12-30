@@ -2,6 +2,28 @@
 
 Represents an instance of an entity.
 
+## Operators
+
+Entities can be used with the equals `==` and not equals `!=` operators. Here is an example.
+
+```cpp
+entity_t a = entity_make(app, "EntityTypeA");
+entity_t b = entity_make(app, "EntityTypeB");
+entity_t c = a;
+
+printf("a %s b\n", a == b ? "equals" : "does not equal");
+printf("b %s c\n", b == c ? "equals" : "does not equal");
+printf("a %s c\n", a == c ? "equals" : "does not equal");
+```
+
+Which prints the following.
+
+```
+a does not equal b
+b does not equal c
+a equals c
+```
+
 ## Data Fields
 
 All data fields are for internal use only.
