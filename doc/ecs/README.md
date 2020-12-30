@@ -6,7 +6,7 @@ A key benefit of using the ECS is having a clear answer to the question "where d
 
 * An **Entity** is a game object, defined as a collection of components and registered with a name.
 * A **Component** is an aspect or trait of an entity. They are like building-blocks that can be mix-and-matched to create different entities.
-* A **System** is a function that performs gameplay logic on entities. They are how behavior is handled in ECS.
+* A **System** is a function that performs gameplay logic on entities. They are how behavior is implemented within the ECS.
 
 In laymen's terms, entities are things, components are parts of things, and systems are how things behave.
 
@@ -14,19 +14,19 @@ In laymen's terms, entities are things, components are parts of things, and syst
 
 ## Entities
 
-An entity is merely a collection of components that represents a "thing" in your game, like an enemy, the player, or other game features. Before an entity instance can be created an entity type must be defined and registered with the ECS (like a blueprint). How to make components is explained in the next section.
+An entity is merely a collection of components that represents a "thing" in your game, like an enemy, the player, or other game features. Before an entity instance can be created an entity type must be defined and registered with the ECS (like a blueprint, or archetype). How to make components is explained in the next section.
 
 > Registering a collection of 4 components as a new entity type called `Octorok`.
 
 ```cpp
-array<const char*> component_types = {
-	"Transform",
-	"GridObject",
-	"Sprite",
-	"OctorokComponent" // Named with "Component" at the end to avoid confusion with
-	                   // the entity type string "Octorok".
-};
-app_register_entity_type(app, component_types, "Octorok");
+ecs_entity_begin(app);
+ecs_entity_set_name(app, "Octorok");
+ecs_entity_add_component(app, "Transform");
+ecs_entity_add_component(app, "GridObject");
+ecs_entity_add_component(app, "Sprite");
+ecs_entity_add_component(app, "OctorokComponent"); // Named with "Component" at the end to avoid confusion with
+                                                   // the entity type string "Octorok".
+ecs_entity_end(app);
 ```
 
 All components are user defined (see Components section).
@@ -34,31 +34,33 @@ All components are user defined (see Components section).
 Once registered, an entity instance can be made by calling a single function `app_make_entity`.
 
 ```cpp
-entity_t e;
-app_make_entity(app, "Octorok", &e);
+entity_t e = entity_make(app, "Octorok");
 ```
 
 From here you can call a few different functions upon the entity.
 
 ```cpp
-void app_delayed_destroy_entity(app_t* app, entity_t entity);
-void app_destroy_entity(app_t* app, entity_t entity);
-bool app_is_entity_valid(app_t* app, entity_t entity);
-void* app_get_component(app_t* app, entity_t entity, const char* name);
-bool app_has_component(app_t* app, entity_t entity, const char* name);
+entity_t entity_make(app_t* app, const char* entity_type, error_t* err = NULL);
+bool entity_is_valid(app_t* app, entity_t entity);
+bool entity_is_type(app_t* app, entity_t entity, const char* entity_type);
+const char* entity_get_type_string(app_t* app, entity_t entity);
+bool entity_has_component(app_t* app, entity_t entity, const char* name);
+void* entity_get_component(app_t* app, entity_t entity, const char* name);
+void entity_destroy(app_t* app, entity_t entity);
+void entity_delayed_destroy(app_t* app, entity_t entity);
 ```
 
-Here's an example of how to use `app_get_component`.
+Here's an example of how to use `entity_get_component`.
 
 ```cpp
-OctorokComponent* octorok = (OctorokComponent*)app_get_component(app, e, "OctorokComponent");
+OctorokComponent* octorok = (OctorokComponent*)entity_get_component(app, e, "OctorokComponent");
 ```
 
 ## Component
 
 A component is merely some memory to hold a struct or class. Cute's ECS requires you to register component types. This tells the ECS some critical information like the size and name of your component. Here is an example of registering a component.
 
-> An example of a component you might make for your game. Octorok is a type of enemy from Zelda games.
+> An example of a component you might make for your game. Octorok is a type of enemy from Zelda games. In this example there is the `Octorok` entity, and the `OctorokComponent`.
 
 ```cpp
 enum OCTOROK_STATE
@@ -79,11 +81,11 @@ struct OctorokComponent
 > Registering the Octorok component.
 
 ```cpp
-component_config_t config;
-config.name = "OctorokComponent";
-config.size_of_component = sizeof(OctorokComponent);
-config.serializer_fn = octorok_component_serialize;
-app_register_component_type(app, config);
+ecs_component_begin(app);
+ecs_component_set_name(app, "OctorokComponent");
+ecs_component_set_size(app, sizeof(OctorokComponent));
+ecs_component_set_optional_serializer(app, octorok_component_serialize);
+ecs_component_end(app);
 ```
 
 ### Creating or Destroying Components
@@ -111,15 +113,16 @@ For a detailed description of all the pieces of this function please see [here T
 
 ## System
 
-Systems are just functions. The purpose is to write your gameplay code systems. Each system must be registered into the ECS. The order the systems are updated is the order in which they are registered.
+In the ECS systems are just functions. The purpose is to write your gameplay code systems. Each system must be registered into the ECS. The order the systems are updated is the order in which they are registered.
 
 > Registering a system. This system only intakes a single type of component, the Octorok component. Systems can also intake up to 8 different kinds of components.
 
 ```cpp
-system_config_t system;
-system.update_fn = (void*)update_octorok_system;
-system.component_type_tuple.add("OctorokComponent");
-app_register_system(app, system);
+ecs_system_begin(app);
+ecs_system_set_update(app, (void*)update_octorok_system);
+ecs_system_require_component(app, "OctorokComponent");
+// Require more component types here by calling `ecs_system_require_component` up to 7 more times, for a total of 8.
+ecs_system_end(app);
 ```
 
 > An example of an empty (unimplemented) system for the Octorok component.
@@ -134,19 +137,17 @@ void update_octorok_system(app_t* app, float dt, void* udata, OctorokComponent* 
 }
 ```
 
-A system can operate on more than just one kind of component, but the above example only operates on the Octorok component. This system will be called updated *all entities that contain an Octorok component*.
+A system can operate on more than just one kind of component, but the above example only operates on the Octorok component. The above system will be called updated *all entities that contain an Octorok component*.
 
-Here's an example of a different system that operates on two different component types.
+Here's an example of a different system that operates on two different component types. The below system will operate on *all entities that contain a `Transform` and a `Sprite` component*.
 
 
 ```cpp
-system_config_t system;
-system.component_types = {
-	"Transform",
-	"Sprite"
-};
-system.update_fn = (void*)update_sprite_system;
-app_register_system(app, system);
+ecs_system_begin(app);
+ecs_system_set_update(app, (void*)update_sprite_system);
+ecs_system_require_component(app, "Transform");
+ecs_system_require_component(app, "Sprite");
+ecs_system_end(app);
 
 void update_sprite_system(app_t* app, float dt, void* udata, Transform* transforms, Sprite* sprites, int entity_count)
 {
