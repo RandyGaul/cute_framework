@@ -168,7 +168,7 @@ Due to a limitation of the C programming language (and a disinterest in using co
 void ecs_system_set_update(app_t* app, void* update_fn);
 ```
 
-`update_fn` is a `void*` to signify that many different kinds of function signatures are acceptable. However, some care is needed to follow the a format. The basic form of a system that has no components looks like this.
+`update_fn` is a `void*` to signify that many different kinds of function signatures are acceptable. However, some care is needed to follow a strict pattern. The basic form of a system that has no components looks like this.
 
 ```cpp
 void system_with_no_components(app_t* app, float dt, void* udata);
