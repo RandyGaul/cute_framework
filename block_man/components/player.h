@@ -59,7 +59,7 @@ CUTE_INLINE cute::error_t Player_serialize(app_t* app, kv_t* kv, bool reading, e
 	if (reading) {
 		CUTE_PLACEMENT_NEW(player) Player;
 		player->entity = entity;
-		Animator* animator = (Animator*)ecs_get_component(app, entity, "Animator");
+		Animator* animator = (Animator*)entity_get_component(app, entity, "Animator");
 		animator->sprite.play("idle");
 	}
 	return kv_error_state(kv);

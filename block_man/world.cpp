@@ -339,9 +339,9 @@ void ecs_registration(app_t* app)
 	// Any time `inherits_from` is used, that type must have been already registered.
 	for (int i = 0; i < schemas.count(); ++i) {
 		const char* schema = schemas[i];
-		ecs_entity_type_begin(app);
-		ecs_entity_type_set_optional_schema(app, schema);
-		ecs_entity_type_end(app);
+		ecs_entity_begin(app);
+		ecs_entity_set_optional_schema(app, schema);
+		ecs_entity_end(app);
 		add_schema_preview(schema);
 	}
 
@@ -389,7 +389,7 @@ void ecs_registration(app_t* app)
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
-	ecs_system_set_update(app, board_system_update);
+	ecs_system_set_update(app, ice_block_system_update);
 	ecs_system_set_optional_pre_update(app, ice_block_system_pre_update);
 	ecs_system_require_component(app, "Transform");
 	ecs_system_require_component(app, "Animator");
@@ -406,7 +406,7 @@ void ecs_registration(app_t* app)
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
-	ecs_system_set_update(app, draw_background_bricks_system_pre_update);
+	ecs_system_set_optional_pre_update(app, draw_background_bricks_system_pre_update);
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
@@ -685,13 +685,13 @@ void make_entity_at(int selection, int x, int y)
 {
 	const char* entity_type = schema_previews[selection].entity_type;
 	cute::error_t err;
-	entity_t e = ecs_make_entity(app, entity_type, &err);
+	entity_t e = entity_make(app, entity_type, &err);
 	CUTE_ASSERT(!err.is_error());
 	BoardSpace space;
 	space.entity = e;
 	space.code = entity_codes[selection];
 	space.is_empty = false;
-	BoardPiece* board_piece = (BoardPiece*)ecs_get_component(app, e, "BoardPiece");
+	BoardPiece* board_piece = (BoardPiece*)entity_get_component(app, e, "BoardPiece");
 	board_piece->x = board_piece->x0 = x;
 	board_piece->y = board_piece->y0 = y;
 	if (board_piece->has_replicas) {
@@ -726,7 +726,7 @@ void destroy_entity_at(int x, int y)
 
 	BoardSpace old_space = world->board.data[y][x];
 	if (!old_space.is_empty) {
-		BoardPiece* board_piece = (BoardPiece*)ecs_get_component(app, old_space.entity, "BoardPiece");
+		BoardPiece* board_piece = (BoardPiece*)entity_get_component(app, old_space.entity, "BoardPiece");
 		if (board_piece->has_replicas) {
 			for (int i = 0; i < 3; ++i) {
 				int rx = board_piece->x_replicas[i];
@@ -735,7 +735,7 @@ void destroy_entity_at(int x, int y)
 			}
 			world->board.data[board_piece->y][board_piece->x] = empty;
 		}
-		ecs_destroy_entity(app, old_space.entity);
+		entity_destroy(app, old_space.entity);
 	}
 	world->board.data[y][x] = empty;
 }
@@ -744,7 +744,7 @@ void delayed_destroy_entity_at(int x, int y)
 {
 	BoardSpace old_space = world->board.data[y][x];
 	if (!old_space.is_empty) {
-		ecs_delayed_destroy_entity(app, old_space.entity);
+		entity_delayed_destroy(app, old_space.entity);
 	}
 	BoardSpace space;
 	space.entity = INVALID_ENTITY;
@@ -777,7 +777,7 @@ void destroy_all_entities()
 		for (int j = 0; j < len; ++j) {
 			BoardSpace space = world->board.data[i][j];
 			if (!space.is_empty) {
-				ecs_destroy_entity(app, space.entity);
+				entity_destroy(app, space.entity);
 			}
 		}
 	}
@@ -820,16 +820,16 @@ void select_level(int index)
 		cute::error_t err;
 		switch (c) {
 		case '0': break;
-		case '1': e = ecs_make_entity(app, "Box", &err); break;
-		case 'x': e = ecs_make_entity(app, "IceBlock", &err); break;
-		case 'p': e = ecs_make_entity(app, "Player", &err); break;
-		case 'e': e = ecs_make_entity(app, "Ladder", &err); break;
-		case 'c': e = ecs_make_entity(app, "Mochi", &err); break;
-		case 'f': e = ecs_make_entity(app, "Fire", &err); break;
-		case 'o': e = ecs_make_entity(app, "Oil", &err); break;
-		case 'L': e = ecs_make_entity(app, "Lamp", &err); break;
-		case 't': e = ecs_make_entity(app, "Torch", &err); break;
-		case 'X': e = ecs_make_entity(app, "BigIceBlock", &err); break;
+		case '1': e = entity_make(app, "Box", &err); break;
+		case 'x': e = entity_make(app, "IceBlock", &err); break;
+		case 'p': e = entity_make(app, "Player", &err); break;
+		case 'e': e = entity_make(app, "Ladder", &err); break;
+		case 'c': e = entity_make(app, "Mochi", &err); break;
+		case 'f': e = entity_make(app, "Fire", &err); break;
+		case 'o': e = entity_make(app, "Oil", &err); break;
+		case 'L': e = entity_make(app, "Lamp", &err); break;
+		case 't': e = entity_make(app, "Torch", &err); break;
+		case 'X': e = entity_make(app, "BigIceBlock", &err); break;
 		}
 		CUTE_ASSERT(!err.is_error());
 		BoardSpace space;
@@ -837,7 +837,7 @@ void select_level(int index)
 		space.entity = e;
 		space.is_empty = c == '0' ? true : false;
 		if (!space.is_empty) {
-			BoardPiece* board_piece = (BoardPiece*)ecs_get_component(app, e, "BoardPiece");
+			BoardPiece* board_piece = (BoardPiece*)entity_get_component(app, e, "BoardPiece");
 			board_piece->x = board_piece->x0 = j;
 			board_piece->y = board_piece->y0 = i;
 			if (c == 'X') {

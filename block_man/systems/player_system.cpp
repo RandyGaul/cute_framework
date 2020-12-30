@@ -68,14 +68,14 @@ static bool s_player_can_move_here(int x, int y)
 	if (!in_board(x, y)) return false;
 	entity_t e = world->board.data[y][x].entity;
 	if (world->board.data[y][x].is_empty) return true;
-	else if (ecs_entity_is_type(app, e, "Ladder")) return true;
-	else if (ecs_entity_is_type(app, e, "Oil")) return true;
+	else if (entity_is_type(app, e, "Ladder")) return true;
+	else if (entity_is_type(app, e, "Oil")) return true;
 	return false;
 }
 
 static bool s_is_type(int x, int y, const char* type)
 {
-	return ecs_entity_is_type(app, world->board.data[y][x].entity, type);
+	return entity_is_type(app, world->board.data[y][x].entity, type);
 }
 
 bool fit_check(int px, int py, BoardPiece* board_piece, int x, int y, bool skip_fires = true)
@@ -111,7 +111,7 @@ bool can_big_ice_block_fit(int px, int py, BoardPiece* board_piece, int dx, int 
 
 bool can_big_ice_block_slide(int px, int py, int sx, int sy, int xdir, int ydir, int distance)
 {
-	BoardPiece* board_piece = (BoardPiece*)ecs_get_component(app, world->board.data[sy][sx].entity, "BoardPiece");
+	BoardPiece* board_piece = (BoardPiece*)entity_get_component(app, world->board.data[sy][sx].entity, "BoardPiece");
 	if (!board_piece->has_replicas) return true;
 	for (int i = 1; i < distance; ++i) {
 		if (!can_big_ice_block_fit(px, py, board_piece, -xdir * i, ydir * i)) {
@@ -138,8 +138,8 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			bool is_lamp = false;
 			while (in_grid(sy, sx, world->board.data.count(), world->board.data[0].count())) {
 				bool has_something = !world->board.data[sy][sx].is_empty;
-				is_ice_block = has_something && ecs_has_component(app, world->board.data[sy][sx].entity, "IceBlock");
-				is_lamp = has_something && ecs_entity_is_type(app, world->board.data[sy][sx].entity, "Lamp");
+				is_ice_block = has_something && entity_has_component(app, world->board.data[sy][sx].entity, "IceBlock");
+				is_lamp = has_something && entity_is_type(app, world->board.data[sy][sx].entity, "Lamp");
 				if (is_ice_block) {
 					if (!can_big_ice_block_slide(x, y, sx, sy, player->xdir, player->ydir, distance + 1)) {
 						break;
@@ -162,20 +162,20 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 					++world->moves;
 				}
 				entity_t block = world->board.data[sy][sx].entity;
-				BoardPiece* block_board_piece = (BoardPiece*)ecs_get_component(app, block, "BoardPiece");
+				BoardPiece* block_board_piece = (BoardPiece*)entity_get_component(app, block, "BoardPiece");
 				block_board_piece->linear(block_board_piece->x + x + player->xdir - sx, block_board_piece->y + y - player->ydir - sy, Player::move_delay * distance);
 				block_board_piece->notify_player_when_done = player->entity;
 				player->holding = true;
 				update_hero_animation = true;
 				player->busy = true;
 				if (is_ice_block) {
-					IceBlock* ice_block = (IceBlock*)ecs_get_component(app, block, "IceBlock");
+					IceBlock* ice_block = (IceBlock*)entity_get_component(app, block, "IceBlock");
 					ice_block->is_held = true;
 					play_sound("block_grab.wav", 2.0f);
 				} else if (is_lamp) {
-					Lamp* lamp = (Lamp*)ecs_get_component(app, block, "Lamp");
+					Lamp* lamp = (Lamp*)entity_get_component(app, block, "Lamp");
 					lamp->is_held = true;
-					Animator* lamp_anim = (Animator*)ecs_get_component(app, block, "Animator");
+					Animator* lamp_anim = (Animator*)entity_get_component(app, block, "Animator");
 					lamp_anim->sprite.local_offset.y += 1;
 					play_sound("lamp_pick_up.wav", 2.0f);
 				}
@@ -188,8 +188,8 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 			int distance = 0;
 			bool found_fire = false;
 			entity_t e = world->board.data[y - player->ydir][x + player->xdir].entity;
-			IceBlock* ice_block = (IceBlock*)ecs_get_component(app, e, "IceBlock");
-			BoardPiece* ice_board_piece = (BoardPiece*)ecs_get_component(app, e, "BoardPiece");
+			IceBlock* ice_block = (IceBlock*)entity_get_component(app, e, "IceBlock");
+			BoardPiece* ice_board_piece = (BoardPiece*)entity_get_component(app, e, "BoardPiece");
 			array<entity_t> fires;
 			array<int> fires_distance;
 			BoardSpace empty_space;
@@ -225,7 +225,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 						break;
 					}
 				} else if (!ice_board_piece->has_replicas && !world->board.data[sy][sx].is_empty) {
-					if (ecs_entity_is_type(app, world->board.data[sy][sx].entity, "Fire")) {
+					if (entity_is_type(app, world->board.data[sy][sx].entity, "Fire")) {
 						found_fire = true;
 					}
 					break;
@@ -250,7 +250,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 				if (found_fire) {
 					ice_block->fire = world->board.data[sy][sx].entity;
 				}
-				BoardPiece* block_board_piece = (BoardPiece*)ecs_get_component(app, e, "BoardPiece");
+				BoardPiece* block_board_piece = (BoardPiece*)entity_get_component(app, e, "BoardPiece");
 				if (found_fire) {
 					// Move one farther onto the fire space itself.
 					block_board_piece->linear(sx, sy, Player::move_delay * (distance + 1));
@@ -261,9 +261,9 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 				player->busy = true;
 				play_sound("block_throw.wav", 2.0f);
 			} else {
-				Lamp* lamp = (Lamp*)ecs_get_component(app, e, "Lamp");
+				Lamp* lamp = (Lamp*)entity_get_component(app, e, "Lamp");
 				lamp->is_held = false;
-				Animator* lamp_anim = (Animator*)ecs_get_component(app, e, "Animator");
+				Animator* lamp_anim = (Animator*)entity_get_component(app, e, "Animator");
 				lamp_anim->sprite.local_offset.y -= 1;
 				play_sound("lamp_put_down.wav", 2.0f);
 			}
@@ -288,7 +288,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 						// make sure we don't push block through a wall
 						if (world->board.data[y + player->ydir][x - player->xdir].is_empty) {
 							entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
-							BoardPiece* block_board_piece = (BoardPiece*)ecs_get_component(app, block, "BoardPiece");
+							BoardPiece* block_board_piece = (BoardPiece*)entity_get_component(app, block, "BoardPiece");
 							if (!can_big_ice_block_fit(x, y, block_board_piece, -player->xdir, player->ydir)) {
 								break;
 							}
@@ -314,7 +314,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 						int dx = player->xdir;
 						int dy = -player->ydir;
 						entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
-						BoardPiece* block_board_piece = (BoardPiece*)ecs_get_component(app, block, "BoardPiece");
+						BoardPiece* block_board_piece = (BoardPiece*)entity_get_component(app, block, "BoardPiece");
 						if (world->board.data[sy][sx].is_empty || world->board.data[sy][sx].entity == block) {
 							if (!can_big_ice_block_fit(x, y, block_board_piece, dx, dy)) {
 								break;
@@ -345,7 +345,7 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 							// also check to make sure we aren't turning through a block
 							if (world->board.data[y - player->ydir - ydirtemp][x + player->xdir + xdirtemp].is_empty) {
 								entity_t block = world->board.data[y - player->ydir][x + player->xdir].entity;
-								BoardPiece* block_board_piece = (BoardPiece*)ecs_get_component(app, block, "BoardPiece");
+								BoardPiece* block_board_piece = (BoardPiece*)entity_get_component(app, block, "BoardPiece");
 								if (block_board_piece->has_replicas) break;
 								++world->moves;
 
@@ -375,11 +375,11 @@ bool handle_input(app_t* app, float dt, BoardPiece* board_piece, Player* player)
 							++world->moves;
 
 							entity_t e = world->board.data[y][x].entity;
-							bool won = ecs_entity_is_type(app, e, "Ladder");
+							bool won = entity_is_type(app, e, "Ladder");
 							if (won) {
 								player->won = true;
 								player->ladder = world->board.data[y][x].entity;
-							} else if (ecs_entity_is_type(app, e, "Oil")) {
+							} else if (entity_is_type(app, e, "Oil")) {
 								player->oil = e;
 							}
 
@@ -452,7 +452,7 @@ void player_system_update(app_t* app, float dt, void* udata, Transform* transfor
 				}
 				if (update_anim) set_player_animation_based_on_facing_direction(player, animator);
 				if (player->oil != INVALID_ENTITY) {
-					ecs_delayed_destroy_entity(app, player->oil);
+					entity_delayed_destroy(app, player->oil);
 					player->oil = INVALID_ENTITY;
 					if (LAMP) LAMP->add_oil(30);
 					play_sound("oil_get.wav", 2.0f);
@@ -475,7 +475,7 @@ void player_system_update(app_t* app, float dt, void* udata, Transform* transfor
 					// When the player moves onto a ladder it steals the board space of the ladder, which prevents
 					// the world from cleaning up. Trigger a delayed cleanup of the ladder entity right here so it
 					// doesn't leak.
-					ecs_delayed_destroy_entity(app, player->ladder);
+					entity_delayed_destroy(app, player->ladder);
 					player->won = false;
 					animator->visible = false; // Animation looped once -- don't want to see a frame of girl on top of ladder again.
 					world->next_level(world->level_index + 1);

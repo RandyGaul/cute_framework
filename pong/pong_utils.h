@@ -61,12 +61,12 @@ void make_system(void* update_fn, array<const char*> component_type_tuple, void*
 // --> reqs: components listed in ... must exist (and registered)
 void make_entity(const char* name, array<const char*> component_types)
 {
-	ecs_entity_type_begin(app);
-	ecs_entity_type_set_name(app, name);
+	ecs_entity_begin(app);
+	ecs_entity_set_name(app, name);
 	for (int i = 0; i < component_types.size(); ++i) {
-		ecs_entity_type_add_component(app, component_types[i]);
+		ecs_entity_add_component(app, component_types[i]);
 	}
-	ecs_entity_type_end(app);
+	ecs_entity_end(app);
 }
 
 // make_component()

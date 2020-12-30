@@ -45,7 +45,7 @@ struct Lamp
 
 	CUTE_INLINE void position(int* x, int* y)
 	{
-		BoardPiece* board_piece = (BoardPiece*)ecs_get_component(app, self, "BoardPiece");
+		BoardPiece* board_piece = (BoardPiece*)entity_get_component(app, self, "BoardPiece");
 		*x = board_piece->x;
 		*y = board_piece->y;
 	}

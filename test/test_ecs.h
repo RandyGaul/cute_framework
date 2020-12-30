@@ -125,7 +125,7 @@ void update_test_octorok_system(app_t* app, float dt, void* udata, test_componen
 		transform->y = 20.0f;
 		if (transform->x == 20.0f) s_octorok_system_ran_ok++;
 
-		test_component_octorok_t* buddy = (test_component_octorok_t*)ecs_get_component(app, octorok->buddy, "test_component_octorok_t");
+		test_component_octorok_t* buddy = (test_component_octorok_t*)entity_get_component(app, octorok->buddy, "test_component_octorok_t");
 		buddy->buddy_said_hi = 1;
 	}
 }
@@ -189,9 +189,9 @@ int test_ecs_octorok()
 		},
 	);
 
-	ecs_entity_type_begin(app);
-	ecs_entity_type_set_optional_schema(app, octorok_schema_string);
-	ecs_entity_type_end(app);
+	ecs_entity_begin(app);
+	ecs_entity_set_optional_schema(app, octorok_schema_string);
+	ecs_entity_end(app);
 
 	// Register systems.
 	ecs_system_begin(app);
@@ -324,16 +324,16 @@ int test_ecs_no_kv()
 	ecs_system_require_component(app, "Dummy");
 	ecs_system_end(app);
 
-	ecs_entity_type_begin(app);
-	ecs_entity_type_set_name(app, "Dummy_Entity");
-	ecs_entity_type_add_component(app, "Dummy");
-	ecs_entity_type_end(app);
+	ecs_entity_begin(app);
+	ecs_entity_set_name(app, "Dummy_Entity");
+	ecs_entity_add_component(app, "Dummy");
+	ecs_entity_end(app);
 
-	entity_t e = ecs_make_entity(app, "Dummy_Entity");
+	entity_t e = entity_make(app, "Dummy_Entity");
 	CUTE_TEST_ASSERT(e != INVALID_ENTITY);
 	ecs_run_systems(app, 0);
 
-	dummy_component_t* dummy = (dummy_component_t*)ecs_get_component(app, e, "Dummy");
+	dummy_component_t* dummy = (dummy_component_t*)entity_get_component(app, e, "Dummy");
 	CUTE_TEST_ASSERT(dummy->iters == 1);
 
 	app_destroy(app);

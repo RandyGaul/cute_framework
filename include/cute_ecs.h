@@ -47,20 +47,20 @@ struct entity_t
 
 static constexpr entity_t INVALID_ENTITY = { (uint32_t)~0, CUTE_INVALID_HANDLE };
 
-CUTE_API void CUTE_CALL ecs_entity_type_begin(app_t* app);
-CUTE_API void CUTE_CALL ecs_entity_type_end(app_t* app);
-CUTE_API void CUTE_CALL ecs_entity_type_set_name(app_t* app, const char* entity_type);
-CUTE_API void CUTE_CALL ecs_entity_type_add_component(app_t* app, const char* component_type);
-CUTE_API void CUTE_CALL ecs_entity_type_set_optional_schema(app_t* app, const char* schema);
+CUTE_API void CUTE_CALL ecs_entity_begin(app_t* app);
+CUTE_API void CUTE_CALL ecs_entity_end(app_t* app);
+CUTE_API void CUTE_CALL ecs_entity_set_name(app_t* app, const char* entity_type);
+CUTE_API void CUTE_CALL ecs_entity_add_component(app_t* app, const char* component_type);
+CUTE_API void CUTE_CALL ecs_entity_set_optional_schema(app_t* app, const char* schema);
 
-CUTE_API entity_t CUTE_CALL ecs_make_entity(app_t* app, const char* entity_type, error_t* err = NULL);
-CUTE_API bool CUTE_CALL ecs_is_entity_valid(app_t* app, entity_t entity);
-CUTE_API bool CUTE_CALL ecs_entity_is_type(app_t* app, entity_t entity, const char* entity_type);
-CUTE_API const char* CUTE_CALL ecs_get_entity_type_string(app_t* app, entity_t entity);
-CUTE_API bool CUTE_CALL ecs_has_component(app_t* app, entity_t entity, const char* name);
-CUTE_API void* CUTE_CALL ecs_get_component(app_t* app, entity_t entity, const char* name);
-CUTE_API void CUTE_CALL ecs_destroy_entity(app_t* app, entity_t entity);
-CUTE_API void CUTE_CALL ecs_delayed_destroy_entity(app_t* app, entity_t entity);
+CUTE_API entity_t CUTE_CALL entity_make(app_t* app, const char* entity_type, error_t* err = NULL);
+CUTE_API bool CUTE_CALL entity_is_valid(app_t* app, entity_t entity);
+CUTE_API bool CUTE_CALL entity_is_type(app_t* app, entity_t entity, const char* entity_type);
+CUTE_API const char* CUTE_CALL entity_get_type_string(app_t* app, entity_t entity);
+CUTE_API bool CUTE_CALL entity_has_component(app_t* app, entity_t entity, const char* name);
+CUTE_API void* CUTE_CALL entity_get_component(app_t* app, entity_t entity, const char* name);
+CUTE_API void CUTE_CALL entity_destroy(app_t* app, entity_t entity);
+CUTE_API void CUTE_CALL entity_delayed_destroy(app_t* app, entity_t entity);
 
 /**
  * `kv` needs to be in `KV_STATE_READ` mode.

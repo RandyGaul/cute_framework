@@ -45,7 +45,7 @@ void mochi_system_update(app_t* app, float dt, void* udata, Transform* transform
 			if (animator->sprite.is_playing("sleeping")) {
 				animator->sprite.play("awakened");
 				animator->no_squeeze();
-				Animator* zzz_animator = (Animator*)ecs_get_component(app, mochi->zzz, "Animator");
+				Animator* zzz_animator = (Animator*)entity_get_component(app, mochi->zzz, "Animator");
 				zzz_animator->visible = false;
 				zzz_animator->sprite.opacity = 1.0f;
  				if (board_piece->bonk_xdir < 0) mochi->going_left = true;
@@ -65,7 +65,7 @@ void mochi_system_update(app_t* app, float dt, void* udata, Transform* transform
 			if (mochi->t >= Mochi::awake_delay) {
 				mochi->awake = false;
 				animator->sprite.play("sleeping");
-				Animator* zzz_animator = (Animator*)ecs_get_component(app, mochi->zzz, "Animator");
+				Animator* zzz_animator = (Animator*)entity_get_component(app, mochi->zzz, "Animator");
 				zzz_animator->visible = true;
 				zzz_animator->sprite.opacity = 0;
 			}
@@ -75,7 +75,7 @@ void mochi_system_update(app_t* app, float dt, void* udata, Transform* transform
 			if (animator->sprite.on_loop()) {
 				animator->squeeze(v2(1.2f, 1.0f), animator->sprite.animation_delay());
 			}
-			Animator* zzz_animator = (Animator*)ecs_get_component(app, mochi->zzz, "Animator");
+			Animator* zzz_animator = (Animator*)entity_get_component(app, mochi->zzz, "Animator");
 			float t = smoothstep(animator->sprite.animation_interpolant());
 			if (t > 0.3f && t < 0.6f) {
 				zzz_animator->sprite.opacity = remap(t, 0.3f, 0.6f);

@@ -101,7 +101,7 @@ void ecs_system_set_optional_update_udata(app_t* app, void* udata)
 	app->system_internal_builder.udata = udata;
 }
 
-entity_t ecs_make_entity(app_t* app, const char* entity_type, error_t* err_out)
+entity_t entity_make(app_t* app, const char* entity_type, error_t* err_out)
 {
 	uint32_t type = ~0;
 	app->entity_type_string_to_id.find(INJECT(entity_type), &type);
@@ -160,12 +160,12 @@ static entity_collection_t* s_collection(app_t* app, entity_t entity)
 	return collection;
 }
 
-void ecs_delayed_destroy_entity(app_t* app, entity_t entity)
+void entity_delayed_destroy(app_t* app, entity_t entity)
 {
 	app->delayed_destroy_entities.add(entity);
 }
 
-void ecs_destroy_entity(app_t* app, entity_t entity)
+void entity_destroy(app_t* app, entity_t entity)
 {
 	entity_collection_t* collection = app->entity_collections.find(entity.type);
 	CUTE_ASSERT(collection);
@@ -202,14 +202,14 @@ void ecs_destroy_entity(app_t* app, entity_t entity)
 	}
 }
 
-bool ecs_is_entity_valid(app_t* app, entity_t entity)
+bool entity_is_valid(app_t* app, entity_t entity)
 {
 	entity_collection_t* collection = s_collection(app, entity);
 	if (collection) return collection->entity_handle_table.is_valid(entity.handle);
 	else return false;
 }
 
-void* ecs_get_component(app_t* app, entity_t entity, const char* component_type)
+void* entity_get_component(app_t* app, entity_t entity, const char* component_type)
 {
 	entity_collection_t* collection = s_collection(app, entity);
 	if (!collection) return NULL;
@@ -227,9 +227,9 @@ void* ecs_get_component(app_t* app, entity_t entity, const char* component_type)
 	return NULL;
 }
 
-bool ecs_has_component(app_t* app, entity_t entity, const char* name)
+bool entity_has_component(app_t* app, entity_t entity, const char* name)
 {
-	return ecs_get_component(app, entity, name) ? true : false;
+	return entity_get_component(app, entity, name) ? true : false;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -369,7 +369,7 @@ void ecs_run_systems(app_t* app, float dt)
 
 	for (int i = 0; i < app->delayed_destroy_entities.count(); ++i) {
 		entity_t e = app->delayed_destroy_entities[i];
-		ecs_destroy_entity(app, e);
+		entity_destroy(app, e);
 	}
 	app->delayed_destroy_entities.clear();
 }
@@ -525,12 +525,12 @@ static void s_register_entity_type(app_t* app, array<const char*> component_type
 }
 
 
-void ecs_entity_type_begin(app_t* app)
+void ecs_entity_begin(app_t* app)
 {
 	app->entity_config_builder.clear();
 }
 
-void ecs_entity_type_end(app_t* app)
+void ecs_entity_end(app_t* app)
 {
 	if (app->entity_config_builder.schema) {
 		s_register_entity_type(app, app->entity_config_builder.schema);
@@ -539,30 +539,30 @@ void ecs_entity_type_end(app_t* app)
 	}
 }
 
-void ecs_entity_type_set_name(app_t* app, const char* entity_type)
+void ecs_entity_set_name(app_t* app, const char* entity_type)
 {
 	app->entity_config_builder.entity_type = entity_type;
 }
 
-void ecs_entity_type_add_component(app_t* app, const char* component_type)
+void ecs_entity_add_component(app_t* app, const char* component_type)
 {
 	app->entity_config_builder.component_types.add(component_type);
 }
 
-void ecs_entity_type_set_optional_schema(app_t* app, const char* schema)
+void ecs_entity_set_optional_schema(app_t* app, const char* schema)
 {
 	app->entity_config_builder.schema = schema;
 }
 
-const char* ecs_get_entity_type_string(app_t* app, entity_t entity)
+const char* entity_get_type_string(app_t* app, entity_t entity)
 {
 	return strpool_cstr(app->strpool, app->entity_type_id_to_string[entity.type]);
 }
 
-bool ecs_entity_is_type(app_t* app, entity_t entity, const char* entity_type_name)
+bool entity_is_type(app_t* app, entity_t entity, const char* entity_type_name)
 {
-	if (!ecs_is_entity_valid(app, entity)) return false;
-	const char* type_string = ecs_get_entity_type_string(app, entity);
+	if (!entity_is_valid(app, entity)) return false;
+	const char* type_string = entity_get_type_string(app, entity);
 	return !CUTE_STRCMP(type_string, entity_type_name);
 }
 

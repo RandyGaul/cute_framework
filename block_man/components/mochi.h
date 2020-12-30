@@ -47,15 +47,15 @@ CUTE_INLINE cute::error_t Mochi_serialize(app_t* app, kv_t* kv, bool reading, en
 	Mochi* mochi = (Mochi*)component;
 	if (reading) {
 		CUTE_PLACEMENT_NEW(mochi) Mochi;
-		Animator* animator = (Animator*)ecs_get_component(app, entity, "Animator");
+		Animator* animator = (Animator*)entity_get_component(app, entity, "Animator");
 		animator->sprite.play("sleeping");
 
 		error_t err;
-		mochi->zzz = ecs_make_entity(app, "zzz", &err);
+		mochi->zzz = entity_make(app, "zzz", &err);
 		CUTE_ASSERT(!err.is_error());
-		Transform* zzz_transform = (Transform*)ecs_get_component(app, mochi->zzz, "Transform");
+		Transform* zzz_transform = (Transform*)entity_get_component(app, mochi->zzz, "Transform");
 		zzz_transform->relative_to = entity;
-		Animator* zzz_animator = (Animator*)ecs_get_component(app, mochi->zzz, "Animator");
+		Animator* zzz_animator = (Animator*)entity_get_component(app, mochi->zzz, "Animator");
 		zzz_animator->sprite.layer = 10000;
 		zzz_animator->sprite.opacity = 0;
 	}
@@ -65,7 +65,7 @@ CUTE_INLINE cute::error_t Mochi_serialize(app_t* app, kv_t* kv, bool reading, en
 CUTE_INLINE void Mochi_cleanup(app_t* app, entity_t entity, void* component, void* udata)
 {
 	Mochi* mochi = (Mochi*)component;
-	ecs_destroy_entity(app, mochi->zzz);
+	entity_destroy(app, mochi->zzz);
 	mochi->zzz = INVALID_ENTITY;
 }
 
