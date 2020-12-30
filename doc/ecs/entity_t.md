@@ -24,5 +24,7 @@ if (err.is_error()) {
 [entity_destroy](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_destroy.md)  
 [entity_delayed_destroy](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_delayed_destroy.md)  
 [entity_is_valid](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_is_valid.md)  
+[entity_is_type](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_is_type.md)  
+[entity_get_type_string](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_get_type_string.md)  
 [entity_get_component](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_get_component.md)  
 [entity_has_component](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_has_component.md)  
