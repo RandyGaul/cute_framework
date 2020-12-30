@@ -159,3 +159,33 @@ void update_sprite_system(app_t* app, float dt, void* udata, Transform* transfor
 ```
 
 If a particular entity contained many kinds of components, but also still contained a `Sprite` and a `Transform` component, then the `update_sprite_system` will still be called on that entity's `Sprite` and `Transform` component. In this way systems find and match any entity with the correct types of components, even if there are other types which will be ignored, and runs upon the matched components.
+
+### void* System Signature
+
+Due to a limitation of the C programming language (and a disinterest in using complicated C++ templates) there is one quirk in Cute's ECS API regarding the system update function. When registering a system the `ecs_system_set_update` function is used. Notice that the `update_fn` parameter is merely a `void*`.
+
+```cpp
+void ecs_system_set_update(app_t* app, void* update_fn);
+```
+
+`update_fn` is a `void*` to signify that many different kinds of function signatures are acceptable. However, some care is needed to follow the a format. The basic form of a system that has no components looks like this.
+
+```cpp
+void system_with_no_components(app_t* app, float dt, void* udata);
+```
+
+Here is the form of a system taking one component. Notice that an array of `Transform` components is added, along with the `entity_count`.
+
+```cpp
+void system_with_no_components(app_t* app, float dt, void* udata, Transform* transforms, int entity_count);
+```
+
+Here is an example of the form for two components.
+
+```cpp
+void system_with_no_components(app_t* app, float dt, void* udata, Transform* transforms, Sprite* sprites, int entity_count);
+```
+
+`transforms` and `sprites` are both arrays of the same length (of length `entity_count`), where each index represents a different entity. Requiring more components types, as required by calling `ecs_system_require_component`, will increase the number of parameters expected for your system to intake as parameters. The order of the component types is the same as the order in which `ecs_system_require_component` was originally called. The maximum number of different components a system can require is 8. If you want to go above 8 different types of components it is suggested to redesign your components to abide by this limitation, or modify the source code of Cute yourself.
+
+**Important Note** - If care is not taken to require components in the same order as the associated system's signature _no error checking will occur whatsoever_. Your system will be called and the pointers will be mismatched, resulting in undefined behavior (likely immediate crashes and/or heap corruption). Cute's ECS is designed to run very efficiently in a simple way, so type checking will be performed here.
