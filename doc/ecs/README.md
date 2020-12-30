@@ -25,8 +25,7 @@ ecs_entity_add_component(app, "Transform");
 ecs_entity_add_component(app, "GridObject");
 ecs_entity_add_component(app, "Sprite");
 ecs_entity_add_component(app, "OctorokComponent"); // Named with "Component" at the end to avoid confusion with
-                                                   // the entity type string "Octorok".
-ecs_entity_end(app);
+ecs_entity_end(app);                               // the entity type string "Octorok".
 ```
 
 All components are user defined (see Components section).
