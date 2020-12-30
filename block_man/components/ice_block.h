@@ -50,7 +50,7 @@ CUTE_INLINE cute::error_t IceBlock_serialize(app_t* app, kv_t* kv, bool reading,
 	IceBlock* ice_block = (IceBlock*)component;
 	if (reading) {
 		CUTE_PLACEMENT_NEW(ice_block) IceBlock;
-		Animator* animator = (Animator*)app_get_component(app, entity, "Animator");
+		Animator* animator = (Animator*)ecs_get_component(app, entity, "Animator");
 		animator->sprite.play("idle");
 	}
 	kv_key(kv, "big"); kv_val(kv, &ice_block->big);

@@ -175,17 +175,6 @@ array<const char*> schemas = {
 
 array<schema_preview_t> schema_previews;
 
-#define REGISTER_COMPONENT(component_name, cleanup_fn_ptr) \
-	do { \
-		component_config_t c; \
-		c.name = CUTE_STRINGIZE(component_name); \
-		c.size_of_component = sizeof(component_name); \
-		c.serializer_fn = component_name##_serialize; \
-		c.cleanup_fn = cleanup_fn_ptr; \
-		c.udata = NULL; \
-		app_register_component_type(app, c); \
-	} while (0)
-
 // Previews are shown in the level editor in place of an actual entity.
 void add_schema_preview(const char* schema)
 {
@@ -266,25 +255,93 @@ void add_schema_preview(const char* schema)
 void ecs_registration(app_t* app)
 {
 	// Order of component registration does not matter.
-	REGISTER_COMPONENT(Animator, NULL);
-	REGISTER_COMPONENT(BoardPiece, NULL);
-	REGISTER_COMPONENT(IceBlock, NULL);
-	REGISTER_COMPONENT(Player, NULL);
-	REGISTER_COMPONENT(Reflection, NULL);
-	REGISTER_COMPONENT(Transform, NULL);
-	REGISTER_COMPONENT(Shadow, NULL);
-	REGISTER_COMPONENT(Mochi, Mochi_cleanup);
-	REGISTER_COMPONENT(Fire, NULL);
-	REGISTER_COMPONENT(Light, NULL);
-	REGISTER_COMPONENT(Oil, NULL);
-	REGISTER_COMPONENT(Lamp, Lamp_cleanup);
-	REGISTER_COMPONENT(Ladder, NULL);
+	ecs_component_begin(app);
+	ecs_component_set_name(app, "Animator");
+	ecs_component_set_size(app, sizeof(Animator));
+	ecs_component_set_optional_serializer(app, Animator_serialize);
+	ecs_component_end(app);
+	
+	ecs_component_begin(app);
+	ecs_component_set_name(app, "BoardPiece");
+	ecs_component_set_size(app, sizeof(BoardPiece));
+	ecs_component_set_optional_serializer(app, BoardPiece_serialize);
+	ecs_component_end(app);
+
+	ecs_component_begin(app);
+	ecs_component_set_name(app, "IceBlock");
+	ecs_component_set_size(app, sizeof(IceBlock));
+	ecs_component_set_optional_serializer(app, IceBlock_serialize);
+	ecs_component_end(app);
+
+	ecs_component_begin(app);
+	ecs_component_set_name(app, "Player");
+	ecs_component_set_size(app, sizeof(Player));
+	ecs_component_set_optional_serializer(app, Player_serialize);
+	ecs_component_end(app);
+
+	ecs_component_begin(app);
+	ecs_component_set_name(app, "Reflection");
+	ecs_component_set_size(app, sizeof(Reflection));
+	ecs_component_set_optional_serializer(app, Reflection_serialize);
+	ecs_component_end(app);
+
+	ecs_component_begin(app);
+	ecs_component_set_name(app, "Transform");
+	ecs_component_set_size(app, sizeof(Transform));
+	ecs_component_set_optional_serializer(app, Transform_serialize);
+	ecs_component_end(app);
+
+	ecs_component_begin(app);
+	ecs_component_set_name(app, "Shadow");
+	ecs_component_set_size(app, sizeof(Shadow));
+	ecs_component_set_optional_serializer(app, Shadow_serialize);
+	ecs_component_end(app);
+
+	ecs_component_begin(app);
+	ecs_component_set_name(app, "Mochi");
+	ecs_component_set_size(app, sizeof(Mochi));
+	ecs_component_set_optional_serializer(app, Mochi_serialize);
+	ecs_component_set_optional_cleanup(app, Mochi_cleanup);
+	ecs_component_end(app);
+
+	ecs_component_begin(app);
+	ecs_component_set_name(app, "Fire");
+	ecs_component_set_size(app, sizeof(Fire));
+	ecs_component_set_optional_serializer(app, Fire_serialize);
+	ecs_component_end(app);
+
+	ecs_component_begin(app);
+	ecs_component_set_name(app, "Light");
+	ecs_component_set_size(app, sizeof(Light));
+	ecs_component_set_optional_serializer(app, Light_serialize);
+	ecs_component_end(app);
+
+	ecs_component_begin(app);
+	ecs_component_set_name(app, "Oil");
+	ecs_component_set_size(app, sizeof(Oil));
+	ecs_component_set_optional_serializer(app, Oil_serialize);
+	ecs_component_end(app);
+
+	ecs_component_begin(app);
+	ecs_component_set_name(app, "Lamp");
+	ecs_component_set_size(app, sizeof(Lamp));
+	ecs_component_set_optional_serializer(app, Lamp_serialize);
+	ecs_component_set_optional_cleanup(app, Lamp_cleanup);
+	ecs_component_end(app);
+
+	ecs_component_begin(app);
+	ecs_component_set_name(app, "Ladder");
+	ecs_component_set_size(app, sizeof(Ladder));
+	ecs_component_set_optional_serializer(app, Ladder_serialize);
+	ecs_component_end(app);
 
 	// Order of entity registration matters if using `inherits_from`.
 	// Any time `inherits_from` is used, that type must have been already registered.
 	for (int i = 0; i < schemas.count(); ++i) {
 		const char* schema = schemas[i];
-		app_register_entity_type(app, schema);
+		ecs_entity_type_begin(app);
+		ecs_entity_type_set_optional_schema(app, schema);
+		ecs_entity_type_end(app);
 		add_schema_preview(schema);
 	}
 
@@ -300,131 +357,89 @@ void ecs_registration(app_t* app)
 
 	   Please note that each of these three callbacks are optional and can be NULL.
 	*/
-	system_config_t s;
-	s.udata = NULL;
-	s.pre_update_fn = NULL;
-	s.update_fn = (void*)transform_system_update;
-	s.post_update_fn = NULL;
-	s.component_type_tuple = {
-		"Transform",
-	};
-	app_register_system(app, s);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, transform_system_update);
+	ecs_system_add_component(app, "Transform");
+	ecs_system_end(app);
 
-	s.udata = NULL;
-	s.pre_update_fn = NULL;
-	s.update_fn = (void*)animator_transform_system_update;
-	s.post_update_fn = NULL;
-	s.component_type_tuple = {
-		"Transform",
-		"Animator",
-	};
-	app_register_system(app, s);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, animator_transform_system_update);
+	ecs_system_add_component(app, "Transform");
+	ecs_system_add_component(app, "Animator");
+	ecs_system_end(app);
 
-	s.udata = NULL;
-	s.pre_update_fn = NULL;
-	s.update_fn = (void*)board_transform_system_update;
-	s.post_update_fn = NULL;
-	s.component_type_tuple = {
-		"Transform",
-		"Animator",
-		"BoardPiece",
-	};
-	app_register_system(app, s);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, board_transform_system_update);
+	ecs_system_add_component(app, "Transform");
+	ecs_system_add_component(app, "Animator");
+	ecs_system_add_component(app, "BoardPiece");
+	ecs_system_end(app);
 
-	s.udata = NULL;
-	s.pre_update_fn = NULL;
-	s.update_fn = (void*)player_system_update;
-	s.post_update_fn = NULL;
-	s.component_type_tuple = {
-		"Transform",
-		"Animator",
-		"BoardPiece",
-		"Player",
-	};
-	app_register_system(app, s);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, player_system_update);
+	ecs_system_add_component(app, "Transform");
+	ecs_system_add_component(app, "Animator");
+	ecs_system_add_component(app, "BoardPiece");
+	ecs_system_add_component(app, "Player");
+	ecs_system_end(app);
 
-	s.udata = NULL;
-	s.pre_update_fn = NULL;
-	s.update_fn = (void*)board_system_update;
-	s.post_update_fn = NULL;
-	s.component_type_tuple = {
-		"BoardPiece",
-	};
-	app_register_system(app, s);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, board_system_update);
+	ecs_system_add_component(app, "BoardPiece");
+	ecs_system_end(app);
 
-	s.udata = NULL;
-	s.pre_update_fn = ice_block_system_pre_update;
-	s.update_fn = (void*)ice_block_system_update;
-	s.post_update_fn = NULL;
-	s.component_type_tuple = {
-		"Transform",
-		"Animator",
-		"BoardPiece",
-		"IceBlock",
-	};
-	app_register_system(app, s);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, board_system_update);
+	ecs_system_set_optional_pre_update(app, ice_block_system_pre_update);
+	ecs_system_add_component(app, "Transform");
+	ecs_system_add_component(app, "Animator");
+	ecs_system_add_component(app, "BoardPiece");
+	ecs_system_add_component(app, "IceBlock");
+	ecs_system_end(app);
 
-	s.udata = NULL;
-	s.pre_update_fn = NULL;
-	s.update_fn = (void*)mochi_system_update;
-	s.post_update_fn = NULL;
-	s.component_type_tuple = {
-		"Transform",
-		"Animator",
-		"BoardPiece",
-		"Mochi",
-	};
-	app_register_system(app, s);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, mochi_system_update);
+	ecs_system_add_component(app, "Transform");
+	ecs_system_add_component(app, "Animator");
+	ecs_system_add_component(app, "BoardPiece");
+	ecs_system_add_component(app, "Mochi");
+	ecs_system_end(app);
 
-	s.udata = NULL;
-	s.pre_update_fn = draw_background_bricks_system_pre_update;
-	s.update_fn = NULL;
-	s.post_update_fn = NULL;
-	s.component_type_tuple = { };
-	app_register_system(app, s);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, draw_background_bricks_system_pre_update);
+	ecs_system_end(app);
 
-	s.udata = NULL;
-	s.pre_update_fn = NULL;
-	s.update_fn = (void*)shadow_system_update;
-	s.post_update_fn = shadow_system_post_update;
-	s.component_type_tuple = {
-		"Transform",
-		"Animator",
-		"BoardPiece",
-		"Shadow",
-	};
-	app_register_system(app, s);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, shadow_system_update);
+	ecs_system_set_optional_post_update(app, shadow_system_post_update);
+	ecs_system_add_component(app, "Transform");
+	ecs_system_add_component(app, "Animator");
+	ecs_system_add_component(app, "BoardPiece");
+	ecs_system_add_component(app, "Shadow");
+	ecs_system_end(app);
 
-	s.udata = NULL;
-	s.pre_update_fn = NULL;
-	s.update_fn = (void*)animator_system_update;
-	s.post_update_fn = animator_system_post_update;
-	s.component_type_tuple = {
-		"Transform",
-		"Animator",
-	};
-	app_register_system(app, s);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, animator_system_update);
+	ecs_system_set_optional_post_update(app, animator_system_post_update);
+	ecs_system_add_component(app, "Transform");
+	ecs_system_add_component(app, "Animator");
+	ecs_system_end(app);
 
-	s.udata = NULL;
-	s.pre_update_fn = reflection_system_pre_update;
-	s.update_fn = (void*)reflection_system_update;
-	s.post_update_fn = reflection_system_post_update;
-	s.component_type_tuple = {
-		"Transform",
-		"Animator",
-		"Reflection",
-	};
-	app_register_system(app, s);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, reflection_system_update);
+	ecs_system_set_optional_pre_update(app, reflection_system_pre_update);
+	ecs_system_set_optional_post_update(app, reflection_system_post_update);
+	ecs_system_add_component(app, "Transform");
+	ecs_system_add_component(app, "Animator");
+	ecs_system_add_component(app, "Reflection");
+	ecs_system_end(app);
 
-	s.udata = NULL;
-	s.pre_update_fn = NULL;
-	s.update_fn = (void*)light_system_update;
-	s.post_update_fn = light_system_post_update;
-	s.component_type_tuple = {
-		"Transform",
-		"Light",
-	};
-	app_register_system(app, s);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, light_system_update);
+	ecs_system_set_optional_post_update(app, reflection_system_post_update);
+	ecs_system_add_component(app, "Transform");
+	ecs_system_add_component(app, "Light");
+	ecs_system_end(app);
 }
 
 static void s_add_level(const char* name)
@@ -669,15 +684,14 @@ void make_entity_at(const char* entity_type, int x, int y)
 void make_entity_at(int selection, int x, int y)
 {
 	const char* entity_type = schema_previews[selection].entity_type;
-	entity_t e = INVALID_ENTITY;
 	cute::error_t err;
-	err = app_make_entity(app, entity_type, &e);
+	entity_t e = ecs_make_entity(app, entity_type, &err);
 	CUTE_ASSERT(!err.is_error());
 	BoardSpace space;
 	space.entity = e;
 	space.code = entity_codes[selection];
 	space.is_empty = false;
-	BoardPiece* board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
+	BoardPiece* board_piece = (BoardPiece*)ecs_get_component(app, e, "BoardPiece");
 	board_piece->x = board_piece->x0 = x;
 	board_piece->y = board_piece->y0 = y;
 	if (board_piece->has_replicas) {
@@ -712,7 +726,7 @@ void destroy_entity_at(int x, int y)
 
 	BoardSpace old_space = world->board.data[y][x];
 	if (!old_space.is_empty) {
-		BoardPiece* board_piece = (BoardPiece*)app_get_component(app, old_space.entity, "BoardPiece");
+		BoardPiece* board_piece = (BoardPiece*)ecs_get_component(app, old_space.entity, "BoardPiece");
 		if (board_piece->has_replicas) {
 			for (int i = 0; i < 3; ++i) {
 				int rx = board_piece->x_replicas[i];
@@ -721,7 +735,7 @@ void destroy_entity_at(int x, int y)
 			}
 			world->board.data[board_piece->y][board_piece->x] = empty;
 		}
-		app_destroy_entity(app, old_space.entity);
+		ecs_destroy_entity(app, old_space.entity);
 	}
 	world->board.data[y][x] = empty;
 }
@@ -730,7 +744,7 @@ void delayed_destroy_entity_at(int x, int y)
 {
 	BoardSpace old_space = world->board.data[y][x];
 	if (!old_space.is_empty) {
-		app_delayed_destroy_entity(app, old_space.entity);
+		ecs_delayed_destroy_entity(app, old_space.entity);
 	}
 	BoardSpace space;
 	space.entity = INVALID_ENTITY;
@@ -763,7 +777,7 @@ void destroy_all_entities()
 		for (int j = 0; j < len; ++j) {
 			BoardSpace space = world->board.data[i][j];
 			if (!space.is_empty) {
-				app_destroy_entity(app, space.entity);
+				ecs_destroy_entity(app, space.entity);
 			}
 		}
 	}
@@ -806,16 +820,16 @@ void select_level(int index)
 		cute::error_t err;
 		switch (c) {
 		case '0': break;
-		case '1': err = app_make_entity(app, "Box", &e); break;
-		case 'x': err = app_make_entity(app, "IceBlock", &e); break;
-		case 'p': err = app_make_entity(app, "Player", &e); break;
-		case 'e': err = app_make_entity(app, "Ladder", &e); break;
-		case 'c': err = app_make_entity(app, "Mochi", &e); break;
-		case 'f': err = app_make_entity(app, "Fire", &e); break;
-		case 'o': err = app_make_entity(app, "Oil", &e); break;
-		case 'L': err = app_make_entity(app, "Lamp", &e); break;
-		case 't': err = app_make_entity(app, "Torch", &e); break;
-		case 'X': err = app_make_entity(app, "BigIceBlock", &e); break;
+		case '1': e = ecs_make_entity(app, "Box", &err); break;
+		case 'x': e = ecs_make_entity(app, "IceBlock", &err); break;
+		case 'p': e = ecs_make_entity(app, "Player", &err); break;
+		case 'e': e = ecs_make_entity(app, "Ladder", &err); break;
+		case 'c': e = ecs_make_entity(app, "Mochi", &err); break;
+		case 'f': e = ecs_make_entity(app, "Fire", &err); break;
+		case 'o': e = ecs_make_entity(app, "Oil", &err); break;
+		case 'L': e = ecs_make_entity(app, "Lamp", &err); break;
+		case 't': e = ecs_make_entity(app, "Torch", &err); break;
+		case 'X': e = ecs_make_entity(app, "BigIceBlock", &err); break;
 		}
 		CUTE_ASSERT(!err.is_error());
 		BoardSpace space;
@@ -823,7 +837,7 @@ void select_level(int index)
 		space.entity = e;
 		space.is_empty = c == '0' ? true : false;
 		if (!space.is_empty) {
-			BoardPiece* board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
+			BoardPiece* board_piece = (BoardPiece*)ecs_get_component(app, e, "BoardPiece");
 			board_piece->x = board_piece->x0 = j;
 			board_piece->y = board_piece->y0 = i;
 			if (c == 'X') {

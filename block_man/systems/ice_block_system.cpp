@@ -90,7 +90,7 @@ void ice_block_system_pre_update(app_t* app, float dt, void* udata)
 	for (int i = 0; i < fires_t.count(); /* no-op */) {
 		fires_t[i] += dt;
 		if (fires_t[i] > fires_delay[i]) {
-			app_destroy_entity(app, fires[i]);
+			ecs_destroy_entity(app, fires[i]);
 			fires.unordered_remove(i);
 			fires_t.unordered_remove(i);
 			fires_delay.unordered_remove(i);
@@ -105,7 +105,7 @@ static BoardPiece* s_get_piece(int x, int y, int xdir, int ydir)
 	if (!in_board(x + xdir, y - ydir)) return NULL;
 	BoardSpace space = world->board.data[y - ydir][x + xdir];
 	if (space.is_empty) return NULL;
-	return (BoardPiece*)app_get_component(app, space.entity, "BoardPiece");
+	return (BoardPiece*)ecs_get_component(app, space.entity, "BoardPiece");
 }
 
 void ice_block_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, IceBlock* ice_blocks, int entity_count)
@@ -135,7 +135,7 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 				}
 				if (ice_block->fire != INVALID_ENTITY) {
 					delayed_destroy_entity_at(board_piece->x, board_piece->y);
-					app_delayed_destroy_entity(app, ice_block->fire);
+					ecs_delayed_destroy_entity(app, ice_block->fire);
 					play_sound("cube_melt.wav", 2.0f);
 				} else {
 					play_sound("hard_collide.wav");

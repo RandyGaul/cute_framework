@@ -37,7 +37,7 @@ struct Transform
 	app_t* app = NULL;
 	CUTE_INLINE transform_t get() const
 	{
-		Transform* other = (Transform*)app_get_component(app, relative_to, "Transform");
+		Transform* other = (Transform*)ecs_get_component(app, relative_to, "Transform");
 		transform_t relative = other ? other->get() : make_transform();
 		return mul(relative, mul(local, world));
 	}

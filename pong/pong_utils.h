@@ -40,15 +40,13 @@ struct Input_map
 
 void make_entity(const char* name, array<const char*> component_types);
 void make_component(const char* name, int size_of_component, void* udata, 
-					component_serialize_fn* serializer_fn, 
-					component_cleanup_fn* cleanup_fn
+					component_serialize_fn* serializer_fn = NULL, void* serializer_udata = NULL,
+					component_cleanup_fn* cleanup_fn = NULL, void* cleanup_udata = NULL
 				   );
-void make_component(component_config_t c_config);
 void make_system(void* update_fn, array<const char*> component_type_tuple, void* udata, 
 				 void (*pre_update_fn)(app_t* app, float dt, void* udata), 
 				 void (*post_update_fn)(app_t* app, float dt, void* udata)
 				);
-void make_system(system_config_t s_config);
 //
 
 
@@ -63,7 +61,12 @@ void make_system(system_config_t s_config);
 // --> reqs: components listed in ... must exist (and registered)
 void make_entity(const char* name, array<const char*> component_types)
 {
-	app_register_entity_type(app, component_types, name);
+	ecs_entity_type_begin(app);
+	ecs_entity_type_set_name(app, name);
+	for (int i = 0; i < component_types.size(); ++i) {
+		ecs_entity_type_add_component(app, component_types[i]);
+	}
+	ecs_entity_type_end(app);
 }
 
 // make_component()
@@ -71,25 +74,19 @@ void make_entity(const char* name, array<const char*> component_types)
 // --> convenience function
 // --> reqs: component-struct definition w/ same name (created separately)
 // --> basic: make_component( name, size_of_component )
-void make_component(const char* name, int size_of_component, void* udata = NULL, 
-					component_serialize_fn* serializer_fn = NULL, 
-					component_cleanup_fn* cleanup_fn = NULL
+void make_component(const char* name, int size_of_component, 
+					component_serialize_fn* serializer_fn = NULL, void* serializer_udata = NULL,
+					component_cleanup_fn* cleanup_fn = NULL, void* cleanup_udata = NULL
 				   )
 {
-	component_config_t c_config;
-	c_config.name = name;
-	c_config.size_of_component = size_of_component;
-	c_config.udata = udata;
-	c_config.serializer_fn = serializer_fn;
-	c_config.cleanup_fn = cleanup_fn;
-	//
-	app_register_component_type(app, c_config);
+	ecs_component_begin(app);
+	ecs_component_set_name(app, name);
+	ecs_component_set_size(app, size_of_component);
+	ecs_component_set_optional_serializer(app, serializer_fn, serializer_udata);
+	ecs_component_set_optional_cleanup(app, cleanup_fn, cleanup_udata);
+	ecs_component_end(app);
 }
 //
-void make_component(component_config_t c_config)
-{
-	app_register_component_type(app, c_config);
-}
 
 // make_system()
 // --> configures & registers system
@@ -101,19 +98,17 @@ void make_system(void* update_fn, array<const char*> component_type_tuple, void*
 				 void (*post_update_fn)(app_t* app, float dt, void* udata) = NULL
 				)
 {
-	system_config_t s_config;
-	s_config.update_fn = (void*)update_fn;
-	s_config.component_type_tuple = component_type_tuple;
-	s_config.pre_update_fn = pre_update_fn;
-	s_config.post_update_fn = post_update_fn;
-	//
-	app_register_system(app, s_config);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, update_fn);
+	for (int i = 0; i < component_type_tuple.size(); ++i) {
+		ecs_system_add_component(app, component_type_tuple[i]);
+	}
+	ecs_system_set_optional_pre_update(app, pre_update_fn);
+	ecs_system_set_optional_post_update(app, post_update_fn);
+	ecs_system_set_optional_update_udata(app, udata);
+	ecs_system_end(app);
 }
 //
-void make_system(system_config_t s_config)
-{
-	app_register_system(app, s_config);
-}
 
 // -------------------------------------------------------------------------- //
 

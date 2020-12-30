@@ -41,16 +41,37 @@ struct entity_t
 	CUTE_INLINE bool operator==(const entity_t& other) { return type == other.type && handle == other.handle; }
 	CUTE_INLINE bool operator!=(const entity_t& other) { return !(*this == other); }
 
-	uint32_t type;
-	handle_t handle;
+	uint32_t type;   // For internal use -- don't touch.
+	handle_t handle; // For internal use -- don't touch.
 };
 
 static constexpr entity_t INVALID_ENTITY = { (uint32_t)~0, CUTE_INVALID_HANDLE };
 
-CUTE_API void CUTE_CALL app_register_entity_type(app_t* app, const char* schema);
-CUTE_API void CUTE_CALL app_register_entity_type(app_t* app, array<const char*> component_types, const char* entity_type);
-CUTE_API const char* CUTE_CALL app_entity_type_string(app_t* app, entity_t entity);
-CUTE_API bool CUTE_CALL app_entity_is_type(app_t* app, entity_t entity, const char* entity_type);
+CUTE_API void CUTE_CALL ecs_entity_type_begin(app_t* app);
+CUTE_API void CUTE_CALL ecs_entity_type_end(app_t* app);
+CUTE_API void CUTE_CALL ecs_entity_type_set_name(app_t* app, const char* entity_type);
+CUTE_API void CUTE_CALL ecs_entity_type_add_component(app_t* app, const char* component_type);
+CUTE_API void CUTE_CALL ecs_entity_type_set_optional_schema(app_t* app, const char* schema);
+
+CUTE_API entity_t CUTE_CALL ecs_make_entity(app_t* app, const char* entity_type, error_t* err = NULL);
+CUTE_API bool CUTE_CALL ecs_is_entity_valid(app_t* app, entity_t entity);
+CUTE_API bool CUTE_CALL ecs_entity_is_type(app_t* app, entity_t entity, const char* entity_type);
+CUTE_API const char* CUTE_CALL ecs_get_entity_type_string(app_t* app, entity_t entity);
+CUTE_API bool CUTE_CALL ecs_has_component(app_t* app, entity_t entity, const char* name);
+CUTE_API void* CUTE_CALL ecs_get_component(app_t* app, entity_t entity, const char* name);
+CUTE_API void CUTE_CALL ecs_destroy_entity(app_t* app, entity_t entity);
+CUTE_API void CUTE_CALL ecs_delayed_destroy_entity(app_t* app, entity_t entity);
+
+/**
+ * `kv` needs to be in `KV_STATE_READ` mode.
+ */
+CUTE_API error_t CUTE_CALL ecs_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out = NULL);
+
+/**
+ * `kv` needs to be in `KV_STATE_WRITE` mode.
+ */
+CUTE_API error_t CUTE_CALL ecs_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv);
+CUTE_API error_t CUTE_CALL ecs_save_entities(app_t* app, const array<entity_t>& entities);
 
 //--------------------------------------------------------------------------------------------------
 // Component
@@ -58,54 +79,25 @@ CUTE_API bool CUTE_CALL app_entity_is_type(app_t* app, entity_t entity, const ch
 typedef error_t (component_serialize_fn)(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata);
 typedef void (component_cleanup_fn)(app_t* app, entity_t entity, void* component, void* udata);
 
-struct component_config_t
-{
-	const char* name = NULL;
-	size_t size_of_component = 0;
-	component_serialize_fn* serializer_fn = NULL;
-	component_cleanup_fn* cleanup_fn = NULL;
-	void* udata = NULL;
-};
-
-CUTE_API void CUTE_CALL app_register_component_type(app_t* app, component_config_t component_config);
-// TODO - Dependencies.
+CUTE_API void CUTE_CALL ecs_component_begin(app_t* app);
+CUTE_API void CUTE_CALL ecs_component_end(app_t* app);
+CUTE_API void CUTE_CALL ecs_component_set_name(app_t* app, const char* name);
+CUTE_API void CUTE_CALL ecs_component_set_size(app_t* app, size_t size);
+CUTE_API void CUTE_CALL ecs_component_set_optional_serializer(app_t* app, component_serialize_fn* serializer_fn, void* udata = NULL);
+CUTE_API void CUTE_CALL ecs_component_set_optional_cleanup(app_t* app, component_cleanup_fn* cleanup_fn, void* udata = NULL);
 
 //--------------------------------------------------------------------------------------------------
 // System
 
-struct system_config_t
-{
-	void* update_fn = NULL;
-	array<const char*> component_type_tuple;
-	
-	void (*pre_update_fn)(app_t* app, float dt, void* udata) = NULL;
-	void (*post_update_fn)(app_t* app, float dt, void* udata) = NULL;
-	void* udata = NULL;
-};
+CUTE_API void CUTE_CALL ecs_system_begin(app_t* app);
+CUTE_API void CUTE_CALL ecs_system_end(app_t* app);
+CUTE_API void CUTE_CALL ecs_system_set_update(app_t* app, void* update_fn);
+CUTE_API void CUTE_CALL ecs_system_add_component(app_t* app, const char* component_type);
+CUTE_API void CUTE_CALL ecs_system_set_optional_pre_update(app_t* app, void (*pre_update_fn)(app_t* app, float dt, void* udata));
+CUTE_API void CUTE_CALL ecs_system_set_optional_post_update(app_t* app, void (*post_update_fn)(app_t* app, float dt, void* udata));
+CUTE_API void CUTE_CALL ecs_system_set_optional_update_udata(app_t* app, void* udata);
 
-CUTE_API void CUTE_CALL app_register_system(app_t* app, const system_config_t& system);
-CUTE_API void CUTE_CALL app_run_ecs_systems(app_t* app, float dt);
-
-//--------------------------------------------------------------------------------------------------
-// Run-time functions and entity lifetime management.
-
-CUTE_API error_t CUTE_CALL app_make_entity(app_t* app, const char* entity_type, entity_t* entity_out = NULL);
-CUTE_API void CUTE_CALL app_delayed_destroy_entity(app_t* app, entity_t entity);
-CUTE_API void CUTE_CALL app_destroy_entity(app_t* app, entity_t entity);
-CUTE_API bool CUTE_CALL app_is_entity_valid(app_t* app, entity_t entity);
-CUTE_API void* CUTE_CALL app_get_component(app_t* app, entity_t entity, const char* name);
-CUTE_API bool CUTE_CALL app_has_component(app_t* app, entity_t entity, const char* name);
-
-/**
- * `kv` needs to be in `KV_STATE_READ` mode.
- */
-CUTE_API error_t CUTE_CALL app_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out = NULL);
-
-/**
- * `kv` needs to be in `KV_STATE_WRITE` mode.
- */
-CUTE_API error_t CUTE_CALL app_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv);
-CUTE_API error_t CUTE_CALL app_save_entities(app_t* app, const array<entity_t>& entities);
+CUTE_API void CUTE_CALL ecs_run_systems(app_t* app, float dt);
 
 }
 

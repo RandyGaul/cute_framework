@@ -129,7 +129,7 @@ void do_imgui_stuff(app_t* app, float dt)
 								// Only save bottom left corner of big ice blocks.
 								// This is consistent with their initialization expectation.
 								entity_t e = world->board.data[i][j].entity;
-								BoardPiece* board_piece = (BoardPiece*)app_get_component(app, e, "BoardPiece");
+								BoardPiece* board_piece = (BoardPiece*)ecs_get_component(app, e, "BoardPiece");
 								if (!(board_piece->x == j && board_piece->y == i)) {
 									c = '0';
 								}
@@ -209,7 +209,7 @@ void do_imgui_stuff(app_t* app, float dt)
 				for (int j = 0; j < world->LEVEL_W; ++j) {
 					destroy_entity_at(j, i - 1);
 					if (!world->board.data[i][j].is_empty) {
-						make_entity_at(app_entity_type_string(app, world->board.data[i][j].entity), j, i - 1);
+						make_entity_at(ecs_get_entity_type_string(app, world->board.data[i][j].entity), j, i - 1);
 						destroy_entity_at(j, i);
 					}
 				}
@@ -221,7 +221,7 @@ void do_imgui_stuff(app_t* app, float dt)
 				for (int j = 0; j < world->LEVEL_W; ++j) {
 					destroy_entity_at(j, i);
 					if (!world->board.data[i - 1][j].is_empty) {
-						make_entity_at(app_entity_type_string(app, world->board.data[i - 1][j].entity), j, i);
+						make_entity_at(ecs_get_entity_type_string(app, world->board.data[i - 1][j].entity), j, i);
 						destroy_entity_at(j, i - 1);
 					}
 				}
@@ -233,7 +233,7 @@ void do_imgui_stuff(app_t* app, float dt)
 				for (int j = 1; j < world->LEVEL_W; ++j) {
 					destroy_entity_at(j - 1, i);
 					if (!world->board.data[i][j].is_empty) {
-						make_entity_at(app_entity_type_string(app, world->board.data[i][j].entity), j - 1, i);
+						make_entity_at(ecs_get_entity_type_string(app, world->board.data[i][j].entity), j - 1, i);
 						destroy_entity_at(j, i);
 					}
 				}
@@ -245,7 +245,7 @@ void do_imgui_stuff(app_t* app, float dt)
 				for (int j = world->LEVEL_W - 1; j > 0; --j) {
 					destroy_entity_at(j, i);
 					if (!world->board.data[i][j - 1].is_empty) {
-						make_entity_at(app_entity_type_string(app, world->board.data[i][j - 1].entity), j, i);
+						make_entity_at(ecs_get_entity_type_string(app, world->board.data[i][j - 1].entity), j, i);
 						destroy_entity_at(j - 1, i);
 					}
 				}
@@ -433,7 +433,7 @@ void do_main_loop_once()
 	music_set_volume(app, volume * volume);
 	app_update(app, dt);
 	if (world->load_level_dirty_flag) select_level(world->level_index);
-	app_run_ecs_systems(app, dt);
+	ecs_run_systems(app, dt);
 	if (world->lose_screen) {
 		do_lose_screen_stuff(dt);
 	}
