@@ -177,13 +177,13 @@ void system_with_no_components(app_t* app, float dt, void* udata);
 Here is the form of a system taking one component. Notice that an array of `Transform` components is added, along with the `entity_count`.
 
 ```cpp
-void system_with_no_components(app_t* app, float dt, void* udata, Transform* transforms, int entity_count);
+void system_with_one_component(app_t* app, float dt, void* udata, Transform* transforms, int entity_count);
 ```
 
 Here is an example of the form for two components.
 
 ```cpp
-void system_with_no_components(app_t* app, float dt, void* udata, Transform* transforms, Sprite* sprites, int entity_count);
+void system_with_two_components(app_t* app, float dt, void* udata, Transform* transforms, Sprite* sprites, int entity_count);
 ```
 
 `transforms` and `sprites` are both arrays of the same length (of length `entity_count`), where each index represents a different entity. Requiring more components types, as required by calling `ecs_system_require_component`, will increase the number of parameters expected for your system to intake as parameters. The order of the component types is the same as the order in which `ecs_system_require_component` was originally called. The maximum number of different components a system can require is 8. If you want to go above 8 different types of components it is suggested to redesign your components to abide by this limitation, or modify the source code of Cute yourself.
