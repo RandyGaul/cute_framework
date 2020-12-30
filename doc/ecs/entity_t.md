@@ -4,18 +4,15 @@ Represents an instance of an entity.
 
 ## Data Fields
 
-type | name | Description
---- | --- | ---
-uint32_t | type | Represents the entity type, as defined by [app_register_entity_type](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/app_register_entity_type.md). You can fetch the associated type string by calling [app_entity_type_string](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/app_entity_type_string.md).
-handle_t | handle | A handle for internal use.
+All data fields are for internal use only.
 
 ## Code Example
 
-> Making an instance of an entity (the entity must have been already registered with [app_register_entity_type](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/app_register_entity_type.md)).
+> Making an instance of an entity (the entity must have been already registered with the ECS. You can learn how to register entities in the [ECS readme](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/README.md)).
 
 ```cpp
-entity e = INVALID_ENTITY;
-error_t err = app_make_entity(app, "YourEntityType", &entity);
+error_t err;
+entity e = entity_make(app, "YourEntityType", &err);
 if (err.is_error()) {
 	// Unable to make entity...
 }
@@ -23,9 +20,9 @@ if (err.is_error()) {
 
 ## Related Functions
 
-[app_make_entity](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/app_make_entity.md)  
-[app_destroy_entity](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/app_destroy_entity.md)  
-[app_delayed_destroy_entity](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/app_delayed_destroy_entity.md)  
-[app_is_entity_valid](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/app_is_entity_valid.md)  
-[app_get_component](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/app_get_component.md)  
-[app_has_component](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/app_has_component.md)  
+[entity_make](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_make.md)  
+[entity_destroy](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_destroy.md)  
+[entity_delayed_destroy](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_delayed_destroy.md)  
+[entity_is_valid](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_is_valid.md)  
+[entity_get_component](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_get_component.md)  
+[entity_has_component](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_has_component.md)  
