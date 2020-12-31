@@ -27,13 +27,7 @@
 namespace cute
 {
 
-/**
- * Reads `text` and will return `text` + 1..4 depending on the decoded code point.
- * The decoded code point is stored in `cp`.
- * The string is returned just after the decoded code point.
- */
 CUTE_API const char* CUTE_CALL decode8(const char* text, int* cp);
-
 CUTE_API char* CUTE_CALL encode8(char *text, int cp);
 CUTE_API int codepoint8_size(int cp);
 

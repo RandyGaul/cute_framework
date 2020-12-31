@@ -280,17 +280,6 @@ set(CUTE_HDRS
 	libraries/imgui/imgui.h
 
 	include/sokol/sokol_gfx.h
-
-	include/cute/cute_aseprite.h
-	include/cute/cute_c2.h
-	include/cute/cute_coroutine.h
-	include/cute/cute_font.h
-	include/cute/cute_path.h
-	include/cute/cute_png.h
-	include/cute/cute_sound.h
-	include/cute/cute_spritebatch.h
-	include/cute/cute_sync.h
-	include/cute/cute_utf.h
 )
 
 if(CUTE_FRAMEWORK_STATIC)
