@@ -189,3 +189,43 @@ void system_with_two_components(app_t* app, float dt, void* udata, Transform* tr
 `transforms` and `sprites` are both arrays of the same length (of length `entity_count`), where each index represents a different entity. Requiring more components types, as required by calling `ecs_system_require_component`, will increase the number of components expected for your system to intake as parameters. The order of the component types is the same as the order in which `ecs_system_require_component` was originally called. The maximum number of different components a system can require is 8. If you want to go above 8 different types of components it is suggested to redesign your components to abide by this limitation, or modify the source code of Cute yourself.
 
 **Important Note** - If care is not taken to require components in the same order as the associated system's signature _no error checking will occur whatsoever_. Your system will be called and the pointers will be mismatched, resulting in undefined behavior (likely immediate crashes and/or heap corruption). Cute's ECS is designed to run very efficiently in a simple way, so type checking will **not** be performed here.
+
+# API List
+
+[entity_t](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_t.md)  
+[ecs_entity_begin](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_entity_begin.md)  
+[ecs_entity_end](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_entity_end.md)  
+[ecs_entity_set_name](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_entity_set_name.md)  
+[ecs_entity_add_component](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_entity_add_component.md)  
+[ecs_entity_set_optional_schema](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_entity_set_optional_schema.md)  
+
+[entity_make](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_make.md)  
+[entity_is_valid](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_is_valid.md)  
+[entity_is_type](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_is_type.md)  
+[entity_get_type_string](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_get_type_string.md)  
+[entity_has_component](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_has_component.md)  
+[entity_get_component](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_get_component.md)  
+[entity_destroy](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_destroy.md)  
+[entity_delayed_destroy](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_delayed_destroy.md)  
+
+[ecs_load_entities](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_load_entities.md)  
+[ecs_save_entities](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_save_entities.md)  
+
+[component_serialize_fn](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/component_serialize_fn.md)  
+[component_cleanup_fn](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/component_cleanup_fn.md)  
+
+[ecs_component_begin](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_component_begin.md)  
+[ecs_component_end](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_component_end.md)  
+[ecs_component_set_name](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_component_set_name.md)  
+[ecs_component_set_size](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_component_set_size.md)  
+[ecs_component_set_optional_serializer](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_component_set_optional_serializer.md)  
+[ecs_component_set_optional_cleanup](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_component_set_optional_cleanup.md)  
+
+[ecs_system_begin](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_system_begin.md)  
+[ecs_system_end](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_system_end.md)  
+[ecs_system_set_update](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_system_set_update.md)  
+[ecs_system_require_component](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_system_require_component.md)  
+[ecs_system_set_optional_pre_update](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_system_set_optional_pre_update.md)  
+[ecs_system_set_optional_post_update](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_system_set_optional_post_update.md)  
+[ecs_system_set_optional_update_udata](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_system_set_optional_update_udata.md)  
+[ecs_run_systems](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_run_systems.md)  
