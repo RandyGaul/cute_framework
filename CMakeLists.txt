@@ -125,6 +125,11 @@ if(CUTE_FRAMEWORK_WITH_HTTPS)
 	add_subdirectory_with_folder(libraries/mbedtls/mbedtls-2.24.0 "mbedtls")
 endif()
 
+# Optional SDL2 for platform support.
+if(CUTE_FRAMEWORK_WITH_PLATFORM)
+	add_subdirectory_with_folder(libraries/SDL2/SDL2-2.0.14 "SDL2")
+endif()
+
 # Cute Framework shared library.
 set(CUTE_SRCS
 	src/cute_app.cpp
@@ -311,7 +316,7 @@ else()
 	if(MINGW)
 		target_link_libraries(cute PRIVATE SDL2 sodium physfs d3d11)
 	else()
-		target_link_libraries(cute PRIVATE SDL2 sodium physfs)
+		target_link_libraries(cute PRIVATE SDL2-static sodium physfs)
 	endif()
 endif()
 

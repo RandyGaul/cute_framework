@@ -22,13 +22,11 @@
 #include <cute_input.h>
 #include <cute_c_runtime.h>
 #include <cute_math.h>
+#include <cute_utf8.h>
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_input_internal.h>
 #include <internal/imgui/imgui_impl_sdl.h>
-
-#define CUTE_UTF_IMPLEMENTATION
-#include <cute/cute_utf.h>
 
 #include <SDL2/SDL.h>
 
@@ -338,7 +336,7 @@ void input_text_add_utf8(app_t* app, const char* text)
 {
 	while (*text) {
 		int cp;
-		text = cu_decode8(text, &cp);
+		text = decode8(text, &cp);
 		app->input_text.add(cp);
 	}
 }

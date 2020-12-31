@@ -62,7 +62,7 @@ strpool_id strpool_inject(strpool_t* pool, const char* string, int length)
 
 strpool_id strpool_inject(strpool_t* pool, const char* string)
 {
-	return ::strpool_inject(&pool->inst, string, CUTE_STRLEN(string));
+	return ::strpool_inject(&pool->inst, string, (int)CUTE_STRLEN(string));
 }
 
 void strpool_discard(strpool_t* pool, strpool_id id)
