@@ -6,7 +6,7 @@ A key benefit of using the ECS is having a clear answer to the question "where d
 
 * An **Entity** is a game object, defined as a collection of components and registered with a name.
 * A **Component** is an aspect or trait of an entity. They are like building-blocks that can be mix-and-matched to create different entities.
-* A **System** is a function that performs gameplay logic on entities. They are how behavior is handled in ECS.
+* A **System** is a function that performs gameplay logic on entities. They are how behavior is implemented within the ECS.
 
 In laymen's terms, entities are things, components are parts of things, and systems are how things behave.
 
@@ -14,51 +14,52 @@ In laymen's terms, entities are things, components are parts of things, and syst
 
 ## Entities
 
-An entity is merely a collection of components that represents a "thing" in your game, like an enemy, the player, or other game features. Before an entity instance can be created an entity type must be defined and registered with the ECS (like a blueprint). How to make components is explained in the next section.
+An entity is merely a collection of components that represents a "thing" in your game, like an enemy, the player, or other game features. Before an entity instance can be created an entity type must be defined and registered with the ECS (like a blueprint, or archetype). How to make components is explained in the next section.
 
 > Registering a collection of 4 components as a new entity type called `Octorok`.
 
 ```cpp
-array<const char*> component_types = {
-	"Transform",
-	"GridObject",
-	"Sprite",
-	"OctorokComponent" // Named with "Component" at the end to avoid confusion with
-	                   // the entity type string "Octorok".
-};
-app_register_entity_type(app, component_types, "Octorok");
+ecs_entity_begin(app);
+ecs_entity_set_name(app, "Octorok");
+ecs_entity_add_component(app, "Transform");
+ecs_entity_add_component(app, "GridObject");
+ecs_entity_add_component(app, "Sprite");
+ecs_entity_add_component(app, "OctorokComponent"); // Named with "Component" at the end to avoid confusion with
+ecs_entity_end(app);                               // the entity type string "Octorok".
 ```
 
 All components are user defined (see Components section).
 
-Once registered, an entity instance can be made by calling a single function `app_make_entity`.
+Once registered, an entity instance can be made by calling a single function `entity_make`.
 
 ```cpp
-entity_t e;
-app_make_entity(app, "Octorok", &e);
+entity_t e = entity_make(app, "Octorok");
 ```
 
 From here you can call a few different functions upon the entity.
 
 ```cpp
-void app_delayed_destroy_entity(app_t* app, entity_t entity);
-void app_destroy_entity(app_t* app, entity_t entity);
-bool app_is_entity_valid(app_t* app, entity_t entity);
-void* app_get_component(app_t* app, entity_t entity, const char* name);
-bool app_has_component(app_t* app, entity_t entity, const char* name);
+entity_t entity_make(app_t* app, const char* entity_type, error_t* err = NULL);
+bool entity_is_valid(app_t* app, entity_t entity);
+bool entity_is_type(app_t* app, entity_t entity, const char* entity_type);
+const char* entity_get_type_string(app_t* app, entity_t entity);
+bool entity_has_component(app_t* app, entity_t entity, const char* name);
+void* entity_get_component(app_t* app, entity_t entity, const char* name);
+void entity_destroy(app_t* app, entity_t entity);
+void entity_delayed_destroy(app_t* app, entity_t entity);
 ```
 
-Here's an example of how to use `app_get_component`.
+Here's an example of how to use `entity_get_component`.
 
 ```cpp
-OctorokComponent* octorok = (OctorokComponent*)app_get_component(app, e, "OctorokComponent");
+OctorokComponent* octorok = (OctorokComponent*)entity_get_component(app, e, "OctorokComponent");
 ```
 
 ## Component
 
 A component is merely some memory to hold a struct or class. Cute's ECS requires you to register component types. This tells the ECS some critical information like the size and name of your component. Here is an example of registering a component.
 
-> An example of a component you might make for your game. Octorok is a type of enemy from Zelda games.
+> An example of a component you might make for your game. Octorok is a type of enemy from Zelda games. In this example there is the `Octorok` entity, and the `OctorokComponent`.
 
 ```cpp
 enum OCTOROK_STATE
@@ -79,11 +80,11 @@ struct OctorokComponent
 > Registering the Octorok component.
 
 ```cpp
-component_config_t config;
-config.name = "OctorokComponent";
-config.size_of_component = sizeof(OctorokComponent);
-config.serializer_fn = octorok_component_serialize;
-app_register_component_type(app, config);
+ecs_component_begin(app);
+ecs_component_set_name(app, "OctorokComponent");
+ecs_component_set_size(app, sizeof(OctorokComponent));
+ecs_component_set_optional_serializer(app, octorok_component_serialize);
+ecs_component_end(app);
 ```
 
 ### Creating or Destroying Components
@@ -111,15 +112,16 @@ For a detailed description of all the pieces of this function please see [here T
 
 ## System
 
-Systems are just functions. The purpose is to write your gameplay code systems. Each system must be registered into the ECS. The order the systems are updated is the order in which they are registered.
+In the ECS systems are just functions. The purpose is to write your gameplay code systems. Each system must be registered into the ECS. The order the systems are updated is the order in which they are registered.
 
 > Registering a system. This system only intakes a single type of component, the Octorok component. Systems can also intake up to 8 different kinds of components.
 
 ```cpp
-system_config_t system;
-system.update_fn = (void*)update_octorok_system;
-system.component_type_tuple.add("OctorokComponent");
-app_register_system(app, system);
+ecs_system_begin(app);
+ecs_system_set_update(app, (void*)update_octorok_system);
+ecs_system_require_component(app, "OctorokComponent");
+// Require more component types here by calling `ecs_system_require_component` up to 7 more times, for a total of 8.
+ecs_system_end(app);
 ```
 
 > An example of an empty (unimplemented) system for the Octorok component.
@@ -134,19 +136,17 @@ void update_octorok_system(app_t* app, float dt, void* udata, OctorokComponent* 
 }
 ```
 
-A system can operate on more than just one kind of component, but the above example only operates on the Octorok component. This system will be called updated *all entities that contain an Octorok component*.
+A system can operate on more than just one kind of component, but the above example only operates on the Octorok component. The above system will be called updated *all entities that contain an `Octorok` component*.
 
-Here's an example of a different system that operates on two different component types.
+Here's an example of a different system that operates on two different component types. The below system will operate on *all entities that contain a `Transform` and a `Sprite` component*.
 
 
 ```cpp
-system_config_t system;
-system.component_types = {
-	"Transform",
-	"Sprite"
-};
-system.update_fn = (void*)update_sprite_system;
-app_register_system(app, system);
+ecs_system_begin(app);
+ecs_system_set_update(app, (void*)update_sprite_system);
+ecs_system_require_component(app, "Transform");
+ecs_system_require_component(app, "Sprite");
+ecs_system_end(app);
 
 void update_sprite_system(app_t* app, float dt, void* udata, Transform* transforms, Sprite* sprites, int entity_count)
 {
@@ -159,3 +159,75 @@ void update_sprite_system(app_t* app, float dt, void* udata, Transform* transfor
 ```
 
 If a particular entity contained many kinds of components, but also still contained a `Sprite` and a `Transform` component, then the `update_sprite_system` will still be called on that entity's `Sprite` and `Transform` component. In this way systems find and match any entity with the correct types of components, even if there are other types which will be ignored, and runs upon the matched components.
+
+### void* System Signature
+
+Due to a limitation of the C programming language (and a disinterest in using complicated C++ templates) there is one quirk in Cute's ECS API regarding the system update function. When registering a system the `ecs_system_set_update` function is used. Notice that the `update_fn` parameter is merely a `void*`.
+
+```cpp
+void ecs_system_set_update(app_t* app, void* update_fn);
+```
+
+`update_fn` is a `void*` to signify that many different kinds of function signatures are acceptable. However, some care is needed to follow a strict pattern. The basic form of a system that has no components looks like this.
+
+```cpp
+void system_with_no_components(app_t* app, float dt, void* udata);
+```
+
+Here is the form of a system taking one component. Notice that an array of `Transform` components is added, along with the `entity_count`.
+
+```cpp
+void system_with_one_component(app_t* app, float dt, void* udata, Transform* transforms, int entity_count);
+```
+
+Here is an example of the form for two components.
+
+```cpp
+void system_with_two_components(app_t* app, float dt, void* udata, Transform* transforms, Sprite* sprites, int entity_count);
+```
+
+`transforms` and `sprites` are both arrays of the same length (of length `entity_count`), where each index represents a different entity. Requiring more components types, as required by calling `ecs_system_require_component`, will increase the number of components expected for your system to intake as parameters. The order of the component types is the same as the order in which `ecs_system_require_component` was originally called. The maximum number of different components a system can require is 8. If you want to go above 8 different types of components it is suggested to redesign your components to abide by this limitation, or modify the source code of Cute yourself.
+
+**Important Note** - If care is not taken to require components in the same order as the associated system's signature _no error checking will occur whatsoever_. Your system will be called and the pointers will be mismatched, resulting in undefined behavior (likely immediate crashes and/or heap corruption). Cute's ECS is designed to run very efficiently in a simple way, so type checking will **not** be performed here.
+
+# API List
+
+[entity_t](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_t.md)  
+
+[ecs_entity_begin](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_entity_begin.md)  
+[ecs_entity_end](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_entity_end.md)  
+[ecs_entity_set_name](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_entity_set_name.md)  
+[ecs_entity_add_component](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_entity_add_component.md)  
+[ecs_entity_set_optional_schema](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_entity_set_optional_schema.md)  
+
+[entity_make](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_make.md)  
+[entity_is_valid](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_is_valid.md)  
+[entity_is_type](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_is_type.md)  
+[entity_get_type_string](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_get_type_string.md)  
+[entity_has_component](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_has_component.md)  
+[entity_get_component](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_get_component.md)  
+[entity_destroy](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_destroy.md)  
+[entity_delayed_destroy](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/entity_delayed_destroy.md)  
+
+[ecs_load_entities](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_load_entities.md)  
+[ecs_save_entities](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_save_entities.md)  
+
+[component_serialize_fn](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/component_serialize_fn.md)  
+[component_cleanup_fn](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/component_cleanup_fn.md)  
+
+[ecs_component_begin](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_component_begin.md)  
+[ecs_component_end](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_component_end.md)  
+[ecs_component_set_name](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_component_set_name.md)  
+[ecs_component_set_size](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_component_set_size.md)  
+[ecs_component_set_optional_serializer](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_component_set_optional_serializer.md)  
+[ecs_component_set_optional_cleanup](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_component_set_optional_cleanup.md)  
+
+[ecs_system_begin](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_system_begin.md)  
+[ecs_system_end](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_system_end.md)  
+[ecs_system_set_update](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_system_set_update.md)  
+[ecs_system_require_component](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_system_require_component.md)  
+[ecs_system_set_optional_pre_update](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_system_set_optional_pre_update.md)  
+[ecs_system_set_optional_post_update](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_system_set_optional_post_update.md)  
+[ecs_system_set_optional_update_udata](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_system_set_optional_update_udata.md)  
+
+[ecs_run_systems](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs/ecs_run_systems.md)  

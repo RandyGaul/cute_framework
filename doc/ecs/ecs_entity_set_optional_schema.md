@@ -1,12 +1,11 @@
-# app_register_entity_type
+# ecs_entity_set_optional_schema
 
-Registers a new type of entity.
+Adds an optional schema string during entity registration.
 
 ## Syntax
 
 ```cpp
-entity_type_t app_register_entity_type(app_t* app, const char* schema);
-entity_type_t app_register_entity_type(app_t* app, array<const char*> component_types, const char* entity_type);
+void ecs_entity_set_optional_schema(app_t* app, const char* schema);
 ```
 
 ## Function Parameters
@@ -14,13 +13,7 @@ entity_type_t app_register_entity_type(app_t* app, array<const char*> component_
 Parameter Name | Description
 --- | ---
 app | The application.
-schema | The schema string, see remarks for details.
-component_types | The type of each component that comprise this kind of entity.
-entity_type | The name for this type of entity.
-
-## Return Value
-
-Returns the entity type encoded as a 32-bit integer `entity_type_t`.
+schema | The kv serialized schema.
 
 ## Remarks
 
@@ -46,7 +39,11 @@ The rest of the top-level keys are names of components this entity uses. In the 
 
 Keys within components will be used to serialize the component. For example the `name` key of the `Animator` component will be set to "ice_block.aseprite" when serializing.
 
+For entities registered with this function, calling `ecs_entity_add_component` is not necessary as the components have been specified within the schema itself.
+
 ## Related Functions
 
-[app_entity_type_string](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/app_entity_type_string.md)  
-[app_entity_is_type](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/app_entity_is_type.md)  
+[ecs_entity_begin](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/ecs_entity_begin.md)  
+[ecs_entity_end](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/ecs_entity_end.md)  
+[ecs_entity_set_name](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/ecs_entity_set_name.md)  
+[ecs_entity_add_component](https://github.com/RandyGaul/cute_framework/blob/master/doc/ecs/ecs_entity_add_component.md)  
