@@ -76,6 +76,7 @@ if(CUTE_FRAMEWORK_WITH_SODIUM)
 	if(WINDOWS OR MACOSX)
 		set(sodium_USE_STATIC_LIBS ON)
 
+		# FindSodium.cmake expects sodium_DIR to be set.
 		if(MINGW)
 			set(sodium_DIR prebuilt_libs/mingw/sodium)
 		else()
@@ -89,6 +90,7 @@ if(CUTE_FRAMEWORK_WITH_SODIUM)
 	elseif(EMSCRIPTEN)
 		link_directories(prebuilt_libs/emscripten)
 	endif()
+	# FindSodium.cmake has set sodium_INCLUDE_DIR.
 	include_directories(${sodium_INCLUDE_DIR})
 endif()
 
@@ -139,6 +141,9 @@ endif()
 
 # Optional SDL2 for platform support.
 if(CUTE_FRAMEWORK_WITH_PLATFORM)
+	# Just don't build the shared library at all, it's not needed.
+	set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
+
 	if(WINDOWS)
 		# This is for static linking on Windows.
 		add_subdirectory_with_folder(libraries/SDL2/SDL2-2.0.14 "SDL2")
