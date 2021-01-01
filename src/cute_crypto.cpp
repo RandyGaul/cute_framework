@@ -25,7 +25,7 @@
 
 #include <internal/cute_crypto_internal.h>
 
-#include <libsodium/sodium.h>
+#include <sodium.h>
 
 CUTE_STATIC_ASSERT(CUTE_CRYPTO_HMAC_BYTES == (int)crypto_aead_xchacha20poly1305_ietf_ABYTES, "Must be equal.");
 CUTE_STATIC_ASSERT(CUTE_CRYPTO_NONCE_BYTES == (int)crypto_aead_xchacha20poly1305_ietf_NPUBBYTES, "Must be equal.");

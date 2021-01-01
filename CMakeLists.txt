@@ -89,6 +89,7 @@ if(CUTE_FRAMEWORK_WITH_SODIUM)
 	elseif(EMSCRIPTEN)
 		link_directories(prebuilt_libs/emscripten)
 	endif()
+	include_directories(${sodium_INCLUDE_DIR})
 endif()
 
 # PhysicsFS, always statically linked.
@@ -335,54 +336,6 @@ endif()
 
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)
 
-# Cute unit tests executable (optional, defaulted to also build).
-if (CUTE_FRAMEWORK_BUILD_TESTS)
-	set(CUTE_TEST_SRCS test/main.cpp)
-	set(CUTE_TEST_HDRS
-		test/test_circular_buffer.h
-		test/test_crypto.h
-		test/test_handle.h
-		test/test_harness.h
-		test/test_replay_buffer.h
-		test/test_socket.h
-		test/test_connect_token.h
-		test/test_packets.h
-		test/test_hashtable.h
-		test/test_encryption_map.h
-		test/test_doubly_list.h
-		test/test_connect_token_cache.h
-		test/test_client_server.h
-		test/test_sequence_buffer.h
-		test/test_transport.h
-		test/test_kv.h
-		test/test_base64.h
-		test/test_audio.h
-		test/test_ecs.h
-		test/test_lru_cache.h
-		test/test_array.h
-		test/test_aseprite.h
-		test/test_png_cache.h
-	)
-
-	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
-	target_link_libraries(tests PRIVATE cute)
-
-	# Copy over prebuilt binaries to output directory.
-	if(EMSCRIPTEN)
-		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/prebuilt_libs/emscripten" $<TARGET_FILE_DIR:tests>)
-	endif()
-
-	# Copy over any test data in the test/test_data folder.
-	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:tests>/test_data)
-
-	# For convenience make tests the startup project in Visual Studio.
-	# Also set working directory to the target output folder.
-	if (MSVC)
-		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tests)
-		set_property(TARGET tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:tests>)
-	endif()
-endif()
-
 # Cute block man demo game.
 if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 	set(CUTE_BLOCK_MAN_SRCS
@@ -464,6 +417,54 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 	# For convenience set working directory to the target output folder.
 	if (MSVC)
 		set_property(TARGET block_man PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:block_man>)
+	endif()
+endif()
+
+# Cute unit tests executable (optional, defaulted to also build).
+if (CUTE_FRAMEWORK_BUILD_TESTS)
+	set(CUTE_TEST_SRCS test/main.cpp)
+	set(CUTE_TEST_HDRS
+		test/test_circular_buffer.h
+		test/test_crypto.h
+		test/test_handle.h
+		test/test_harness.h
+		test/test_replay_buffer.h
+		test/test_socket.h
+		test/test_connect_token.h
+		test/test_packets.h
+		test/test_hashtable.h
+		test/test_encryption_map.h
+		test/test_doubly_list.h
+		test/test_connect_token_cache.h
+		test/test_client_server.h
+		test/test_sequence_buffer.h
+		test/test_transport.h
+		test/test_kv.h
+		test/test_base64.h
+		test/test_audio.h
+		test/test_ecs.h
+		test/test_lru_cache.h
+		test/test_array.h
+		test/test_aseprite.h
+		test/test_png_cache.h
+	)
+
+	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
+	target_link_libraries(tests PRIVATE cute)
+
+	# Copy over prebuilt binaries to output directory.
+	if(EMSCRIPTEN)
+		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/prebuilt_libs/emscripten" $<TARGET_FILE_DIR:tests>)
+	endif()
+
+	# Copy over any test data in the test/test_data folder.
+	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:tests>/test_data)
+
+	# For convenience make tests the startup project in Visual Studio.
+	# Also set working directory to the target output folder.
+	if (MSVC)
+		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tests)
+		set_property(TARGET tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:tests>)
 	endif()
 endif()
 

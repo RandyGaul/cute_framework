@@ -28,7 +28,7 @@
 
 #include <internal/cute_net_internal.h>
 
-#include <libsodium/sodium.h>
+#include <sodium.h>
 
 namespace cute
 {
