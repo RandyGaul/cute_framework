@@ -151,7 +151,7 @@ string_t to_string(float x)
 	return string_t(temp);
 }
 
-string_t to_bool(bool x)
+string_t to_string(bool x)
 {
 	if (x) return "true";
 	else return "false";
