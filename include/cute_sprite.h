@@ -97,10 +97,12 @@ struct sprite_t
 	CUTE_INLINE void reset();
 
 	/**
-	 * Pushes an instance of this sprite onto the `batch`, which will be drawn the next time
+	 * Pushes an instance of this sprite onto the `batch` member, which will be drawn the next time
 	 * `batch_flush` is called on `batch`.
+	 * 
+	 * `batch` member must not be NULL.
 	 */
-	CUTE_INLINE void draw(batch_t* batch, transform_t transform);
+	CUTE_INLINE void draw();
 
 	/**
 	 * A lower level utility function used within the `draw` method. This is useful to prepare
@@ -114,7 +116,8 @@ struct sprite_t
 	CUTE_INLINE void toggle_pause();
 	CUTE_INLINE void flip_x();
 	CUTE_INLINE void flip_y();
-	CUTE_INLINE int frame_count();
+	CUTE_INLINE int frame_count() const;
+	CUTE_INLINE int current_frame() const;
 
 	/**
 	 * Returns the `delay` member of the currently playing frame, in milliseconds.
@@ -151,7 +154,7 @@ struct sprite_t
 	v2 scale = v2(1, 1);
 	v2 local_offset = v2(0, 0);
 	float opacity = 1.0f;
-	int sort_bits = 0;
+	int layer = 0;
 
 	int frame_index = 0;
 	int loop_count = 0;
@@ -161,7 +164,27 @@ struct sprite_t
 	bool paused = false;
 	float t = 0;
 	const animation_table_t* animations = NULL;
+
+	batch_t* batch = NULL;
+	transform_t transform = make_transform();
 };
+
+/**
+ * Loads a sprite from an aseprite file. This function may be called many times in a row without
+ * any significant performance penalties due to internal caching.
+ */
+CUTE_API sprite_t CUTE_CALL sprite_make(app_t* app, const char* aseprite_path);
+
+/**
+ * Unloads the sprites image resources from the internal cache. Any live `sprite_t` instances for
+ * the given `aseprite_path` will now be "dangling" and invalid.
+ */
+CUTE_API void CUTE_CALL sprite_unload(app_t* app, const char* aseprite_path);
+
+/**
+ * Renders all sprites that have been drawn with sprite_t::draw onto the screen.
+ */
+CUTE_API void CUTE_CALL flush_sprites(app_t* app);
 
 //--------------------------------------------------------------------------------------------------
 // In-line implementation of `sprite_t` member functions.
@@ -209,8 +232,9 @@ void sprite_t::reset()
 	t = 0;
 }
 
-void sprite_t::draw(batch_t* batch, transform_t transform)
+void sprite_t::draw()
 {
+	CUTE_ASSERT(batch);
 	batch_push(batch, batch_sprite(transform));
 }
 
@@ -224,7 +248,7 @@ batch_sprite_t sprite_t::batch_sprite(transform_t transform)
 	q.h = h;
 	q.scale_x = scale.x * w;
 	q.scale_y = scale.y * h;
-	q.sort_bits = sort_bits;
+	q.sort_bits = layer;
 	q.alpha = opacity;
 	return q;
 }
@@ -255,9 +279,14 @@ void sprite_t::flip_y()
 	scale.y *= -1.0f;
 }
 
-int sprite_t::frame_count()
+int sprite_t::frame_count() const
 {
 	return animation->frames.count();
+}
+
+int sprite_t::current_frame() const
+{
+	return frame_index;
 }
 
 float sprite_t::frame_delay()

@@ -70,14 +70,28 @@ endif()
 # Common directories for compiler/linker path.
 include_directories(src libraries test)
 
-if(WINDOWS)
-	link_directories(shared_libs/windows)
-elseif(MINGW)
-	link_directories(shared_libs/mingw)
-elseif(LINUX)
-elseif(MACOSX)
-elseif(EMSCRIPTEN)
-	link_directories(shared_libs/emscripten)
+# Optional Sodium for security.
+if(CUTE_FRAMEWORK_WITH_SODIUM)
+	add_definitions(-DSODIUM_STATIC)
+	if(WINDOWS OR MACOSX)
+		set(sodium_USE_STATIC_LIBS ON)
+
+		# FindSodium.cmake expects sodium_DIR to be set.
+		if(MINGW)
+			set(sodium_DIR prebuilt_libs/mingw/sodium)
+		else()
+			set(sodium_DIR prebuilt_libs/windows/sodium)
+		endif()
+
+		# This adds the current directory to the cmake path, so it can
+		# use FindSodium.cmake script to locate the sodium folders.
+		list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/.")
+		find_package(Sodium REQUIRED)
+	elseif(EMSCRIPTEN)
+		link_directories(prebuilt_libs/emscripten)
+	endif()
+	# FindSodium.cmake has set sodium_INCLUDE_DIR.
+	include_directories(${sodium_INCLUDE_DIR})
 endif()
 
 # PhysicsFS, always statically linked.
@@ -125,6 +139,17 @@ if(CUTE_FRAMEWORK_WITH_HTTPS)
 	add_subdirectory_with_folder(libraries/mbedtls/mbedtls-2.24.0 "mbedtls")
 endif()
 
+# Optional SDL2 for platform support.
+if(CUTE_FRAMEWORK_WITH_PLATFORM)
+	# Just don't build the shared library at all, it's not needed.
+	set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
+
+	if(WINDOWS)
+		# This is for static linking on Windows.
+		add_subdirectory_with_folder(libraries/SDL2/SDL2-2.0.14 "SDL2")
+	endif()
+endif()
+
 # Cute Framework shared library.
 set(CUTE_SRCS
 	src/cute_app.cpp
@@ -168,6 +193,7 @@ set(CUTE_SRCS
 	src/cute_symbol.cpp
 	src/cute_haptics.cpp
 	src/cute_utf8.cpp
+	src/cute_sprite.cpp
 
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
@@ -279,18 +305,6 @@ set(CUTE_HDRS
 	libraries/imgui/imgui.h
 
 	include/sokol/sokol_gfx.h
-
-	include/cute/cute_aseprite.h
-	include/cute/cute_c2.h
-	include/cute/cute_coroutine.h
-	include/cute/cute_font.h
-	include/cute/cute_math2d.h
-	include/cute/cute_path.h
-	include/cute/cute_png.h
-	include/cute/cute_sound.h
-	include/cute/cute_spritebatch.h
-	include/cute/cute_sync.h
-	include/cute/cute_utf.h
 )
 
 if(CUTE_FRAMEWORK_STATIC)
@@ -305,11 +319,6 @@ include_directories(cute PRIVATE "include")
 if(MACOSX)
 	find_package(SDL2 REQUIRED)
 
-	# This adds the current directory to the cmake path, so it can
-	# use FindSodium.cmake script to locate the sodium folders.
-	list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/.")
-	find_package(Sodium REQUIRED)
-
 	# These are needed to link to PHYSFS.
 	find_library(IOKIT IOKit)
 	find_library(FOUNDATION Foundation)
@@ -320,9 +329,9 @@ elseif(EMSCRIPTEN)
 	target_link_libraries(cute PRIVATE sodium physfs "-s USE_WEBGL2=1 -s ASSERTIONS=1  -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1")
 else()
 	if(MINGW)
-		target_link_libraries(cute PRIVATE SDL2 sodium physfs d3d11)
+		target_link_libraries(cute PRIVATE SDL2-static sodium physfs d3d11)
 	else()
-		target_link_libraries(cute PRIVATE SDL2 sodium physfs)
+		target_link_libraries(cute PRIVATE SDL2-static sodium physfs)
 	endif()
 endif()
 
@@ -331,60 +340,6 @@ if(CUTE_FRAMEWORK_WITH_HTTPS)
 endif()
 
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)
-
-# Cute unit tests executable (optional, defaulted to also build).
-if (CUTE_FRAMEWORK_BUILD_TESTS)
-	set(CUTE_TEST_SRCS test/main.cpp)
-	set(CUTE_TEST_HDRS
-		test/test_circular_buffer.h
-		test/test_crypto.h
-		test/test_handle.h
-		test/test_harness.h
-		test/test_replay_buffer.h
-		test/test_socket.h
-		test/test_connect_token.h
-		test/test_packets.h
-		test/test_hashtable.h
-		test/test_encryption_map.h
-		test/test_doubly_list.h
-		test/test_connect_token_cache.h
-		test/test_client_server.h
-		test/test_sequence_buffer.h
-		test/test_transport.h
-		test/test_kv.h
-		test/test_base64.h
-		test/test_audio.h
-		test/test_ecs.h
-		test/test_lru_cache.h
-		test/test_array.h
-		test/test_aseprite.h
-		test/test_png_cache.h
-	)
-
-	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
-	target_link_libraries(tests PRIVATE cute)
-
-	# Copy over prebuilt binaries to output directory.
-	if(WINDOWS)
-		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/windows" $<TARGET_FILE_DIR:tests>)
-	elseif(MINGW)
-		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/mingw" $<TARGET_FILE_DIR:tests>)
-	elseif(LINUX)
-	elseif(MACOSX)
-	elseif(EMSCRIPTEN)
-		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/emscripten" $<TARGET_FILE_DIR:tests>)
-	endif()
-
-	# Copy over any test data in the test/test_data folder.
-	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:tests>/test_data)
-
-	# For convenience make tests the startup project in Visual Studio.
-	# Also set working directory to the target output folder.
-	if (MSVC)
-		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tests)
-		set_property(TARGET tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:tests>)
-	endif()
-endif()
 
 # Cute block man demo game.
 if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
@@ -460,19 +415,61 @@ if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
 	target_include_directories(block_man PUBLIC "${PROJECT_SOURCE_DIR}/block_man")
 
 	# Copy over prebuilt binaries to output directory.
-	if(WINDOWS)
-		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/windows" $<TARGET_FILE_DIR:tests>)
-	elseif(MINGW)
-		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/mingw" $<TARGET_FILE_DIR:tests>)
-	elseif(LINUX)
-	elseif(MACOSX)
-	elseif(EMSCRIPTEN)
-		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/emscripten" $<TARGET_FILE_DIR:tests>)
+	if(EMSCRIPTEN)
+		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/prebuilt_libs/emscripten" $<TARGET_FILE_DIR:tests>)
 	endif()
 
 	# For convenience set working directory to the target output folder.
 	if (MSVC)
 		set_property(TARGET block_man PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:block_man>)
+	endif()
+endif()
+
+# Cute unit tests executable (optional, defaulted to also build).
+if (CUTE_FRAMEWORK_BUILD_TESTS)
+	set(CUTE_TEST_SRCS test/main.cpp)
+	set(CUTE_TEST_HDRS
+		test/test_circular_buffer.h
+		test/test_crypto.h
+		test/test_handle.h
+		test/test_harness.h
+		test/test_replay_buffer.h
+		test/test_socket.h
+		test/test_connect_token.h
+		test/test_packets.h
+		test/test_hashtable.h
+		test/test_encryption_map.h
+		test/test_doubly_list.h
+		test/test_connect_token_cache.h
+		test/test_client_server.h
+		test/test_sequence_buffer.h
+		test/test_transport.h
+		test/test_kv.h
+		test/test_base64.h
+		test/test_audio.h
+		test/test_ecs.h
+		test/test_lru_cache.h
+		test/test_array.h
+		test/test_aseprite.h
+		test/test_png_cache.h
+	)
+
+	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
+	target_link_libraries(tests PRIVATE cute)
+
+	# Copy over prebuilt binaries to output directory.
+	if(EMSCRIPTEN)
+		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/prebuilt_libs/emscripten" $<TARGET_FILE_DIR:tests>)
+	endif()
+
+	# Copy over any test data in the test/test_data folder.
+	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:tests>/test_data)
+
+	# For convenience make tests the startup project in Visual Studio.
+	# Also set working directory to the target output folder.
+	if (MSVC)
+		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tests)
+		set_property(TARGET tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:tests>)
 	endif()
 endif()
 
@@ -508,14 +505,8 @@ if (CUTE_PONG)
 	target_include_directories(pong PUBLIC "${PROJECT_SOURCE_DIR}/pong")
 
 	# Copy over prebuilt binaries to output directory.
-	if(WINDOWS)
-		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/windows" $<TARGET_FILE_DIR:tests>)
-	elseif(MINGW)
-		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/mingw" $<TARGET_FILE_DIR:tests>)
-	elseif(LINUX)
-	elseif(MACOSX)
-	elseif(EMSCRIPTEN)
-		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/shared_libs/emscripten" $<TARGET_FILE_DIR:tests>)
+	if(EMSCRIPTEN)
+		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/prebuilt_libs/emscripten" $<TARGET_FILE_DIR:tests>)
 	endif()
 
 	# For convenience set working directory to the target output folder.

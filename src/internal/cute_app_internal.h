@@ -30,6 +30,8 @@
 #include <cute_math.h>
 #include <cute_doubly_list.h>
 #include <cute_strpool.h>
+#include <cute_aseprite_cache.h>
+#include <cute_batch.h>
 
 #include <internal/cute_object_table_internal.h>
 #include <internal/cute_font_internal.h>
@@ -81,11 +83,56 @@ struct entity_collection_t
 
 struct system_internal_t
 {
+	void clear()
+	{
+		name = ~0ULL;
+		udata = NULL;
+		pre_update_fn = NULL;
+		update_fn = NULL;
+		post_update_fn = NULL;
+		component_type_tuple.clear();
+	}
+
+	strpool_id name = ~0ULL;
 	void* udata = NULL;
 	void (*pre_update_fn)(app_t* app, float dt, void* udata) = NULL;
 	void* update_fn = NULL;
 	void (*post_update_fn)(app_t* app, float dt, void* udata) = NULL;
 	array<strpool_id> component_type_tuple;
+};
+
+struct component_config_t
+{
+	void clear()
+	{
+		name = NULL;
+		size_of_component = 0;
+		serializer_fn = NULL;
+		cleanup_fn = NULL;
+		serializer_udata = NULL;
+		cleanup_udata = NULL;
+	}
+
+	const char* name = NULL;
+	size_t size_of_component = 0;
+	component_serialize_fn* serializer_fn = NULL;
+	component_cleanup_fn* cleanup_fn = NULL;
+	void* serializer_udata = NULL;
+	void* cleanup_udata = NULL;
+};
+
+struct entity_config_t
+{
+	void clear()
+	{
+		entity_type = NULL;
+		component_types.clear();
+		schema = NULL;
+	}
+
+	const char* entity_type = NULL;
+	array<const char*> component_types;
+	const char* schema = NULL;
 };
 
 struct app_t
@@ -139,8 +186,13 @@ struct app_t
 	mouse_state_t mouse, mouse_prev;
 	list_t joypads;
 
+	batch_t* batch = NULL;
+	aseprite_cache_t* ase_cache = NULL;
+
 	// TODO: Set allocator context for these data structures.
+	system_internal_t system_internal_builder;
 	array<system_internal_t> systems;
+	entity_config_t entity_config_builder;
 	uint32_t entity_type_gen = 0;
 	dictionary<strpool_id, uint32_t> entity_type_string_to_id;
 	array<strpool_id> entity_type_id_to_string;
@@ -149,6 +201,7 @@ struct app_t
 	entity_collection_t* current_collection_being_updated = NULL;
 	array<entity_t> delayed_destroy_entities;
 
+	component_config_t component_config_builder;
 	dictionary<strpool_id, component_config_t> component_configs;
 	dictionary<uint32_t, kv_t*> entity_parsed_schemas;
 	dictionary<uint32_t, uint32_t> entity_schema_inheritence;

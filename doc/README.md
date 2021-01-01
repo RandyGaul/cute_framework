@@ -9,3 +9,4 @@ The docs for Cute Framework are organized by categories. Select one of the categ
 [time](https://github.com/RandyGaul/cute_framework/tree/master/doc/time)  
 [graphics](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics)  
 [audio](https://github.com/RandyGaul/cute_framework/tree/master/doc/audio)  
+[ecs](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs)  

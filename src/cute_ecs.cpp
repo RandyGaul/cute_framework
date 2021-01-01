@@ -66,25 +66,53 @@ static error_t s_load_from_schema(app_t* app, uint32_t schema_type, entity_t ent
 
 //--------------------------------------------------------------------------------------------------
 
-void app_register_system(app_t* app, const system_config_t& system)
+void ecs_system_begin(app_t* app)
 {
-	system_internal_t system_internal;
-	system_internal.pre_update_fn = system.pre_update_fn;
-	system_internal.udata = system.udata;
-	system_internal.update_fn = system.update_fn;
-	system_internal.post_update_fn = system.post_update_fn;
-	for (int i = 0; i < system.component_type_tuple.count(); ++i) {
-		system_internal.component_type_tuple.add(INJECT(system.component_type_tuple[i]));
-	}
-	app->systems.add(system_internal);
+	app->system_internal_builder.clear();
 }
 
-error_t app_make_entity(app_t* app, const char* entity_type, entity_t* entity_out)
+void ecs_system_end(app_t* app)
+{
+	app->systems.add(app->system_internal_builder);
+}
+
+void ecs_system_set_name(app_t* app, const char* name)
+{
+	app->system_internal_builder.name = INJECT(name);
+}
+
+void ecs_system_set_update(app_t* app, void* update_fn)
+{
+	app->system_internal_builder.update_fn = update_fn;
+}
+
+void ecs_system_require_component(app_t* app, const char* component_type)
+{
+	app->system_internal_builder.component_type_tuple.add(INJECT(component_type));
+}
+
+void ecs_system_set_optional_pre_update(app_t* app, void (*pre_update_fn)(app_t* app, float dt, void* udata))
+{
+	app->system_internal_builder.pre_update_fn = pre_update_fn;
+}
+
+void ecs_system_set_optional_post_update(app_t* app, void (*post_update_fn)(app_t* app, float dt, void* udata))
+{
+	app->system_internal_builder.post_update_fn = post_update_fn;
+}
+
+void ecs_system_set_optional_update_udata(app_t* app, void* udata)
+{
+	app->system_internal_builder.udata = udata;
+}
+
+entity_t entity_make(app_t* app, const char* entity_type, error_t* err_out)
 {
 	uint32_t type = ~0;
 	app->entity_type_string_to_id.find(INJECT(entity_type), &type);
 	if (type == ~0) {
-		return error_failure("`type` is not a valid entity type.");
+		if (err_out) *err_out = error_failure("`type` is not a valid entity type.");
+		return INVALID_ENTITY;
 	}
 
 	entity_t entity;
@@ -106,22 +134,20 @@ error_t app_make_entity(app_t* app, const char* entity_type, entity_t* entity_ou
 		component_config_t* config = app->component_configs.find(component_type);
 
 		if (!config) {
-			return error_failure("Unable to find component config.");
+			if (err_out) *err_out = error_failure("Unable to find component config.");
+			return INVALID_ENTITY;
 		}
 
 		void* component = collection->component_tables[i].add();
-		error_t err = s_load_from_schema(app, type, entity, config, component, config->udata);
+		error_t err = s_load_from_schema(app, type, entity, config, component, config->serializer_udata);
 		if (err.is_error()) {
 			// TODO - Unload the components that were added with `.add()` a couple lines above here.
-			return err;
+			return INVALID_ENTITY;
 		}
 	}
 
-	if (entity_out) {
-		*entity_out = entity;
-	}
-
-	return error_success();
+	if (err_out) *err_out = error_success();
+	return entity;
 }
 
 static entity_collection_t* s_collection(app_t* app, entity_t entity)
@@ -139,12 +165,12 @@ static entity_collection_t* s_collection(app_t* app, entity_t entity)
 	return collection;
 }
 
-void app_delayed_destroy_entity(app_t* app, entity_t entity)
+void entity_delayed_destroy(app_t* app, entity_t entity)
 {
 	app->delayed_destroy_entities.add(entity);
 }
 
-void app_destroy_entity(app_t* app, entity_t entity)
+void entity_destroy(app_t* app, entity_t entity)
 {
 	entity_collection_t* collection = app->entity_collections.find(entity.type);
 	CUTE_ASSERT(collection);
@@ -157,7 +183,7 @@ void app_destroy_entity(app_t* app, entity_t entity)
 			component_config_t config;
 			app->component_configs.find(collection->component_type_tuple[i], &config);
 			if (config.cleanup_fn) {
-				config.cleanup_fn(app, entity, collection->component_tables[i][index], config.udata);
+				config.cleanup_fn(app, entity, collection->component_tables[i][index], config.cleanup_udata);
 			}
 		}
 
@@ -181,14 +207,14 @@ void app_destroy_entity(app_t* app, entity_t entity)
 	}
 }
 
-bool app_is_entity_valid(app_t* app, entity_t entity)
+bool entity_is_valid(app_t* app, entity_t entity)
 {
 	entity_collection_t* collection = s_collection(app, entity);
 	if (collection) return collection->entity_handle_table.is_valid(entity.handle);
 	else return false;
 }
 
-void* app_get_component(app_t* app, entity_t entity, const char* component_type)
+void* entity_get_component(app_t* app, entity_t entity, const char* component_type)
 {
 	entity_collection_t* collection = s_collection(app, entity);
 	if (!collection) return NULL;
@@ -206,9 +232,9 @@ void* app_get_component(app_t* app, entity_t entity, const char* component_type)
 	return NULL;
 }
 
-bool app_has_component(app_t* app, entity_t entity, const char* name)
+bool entity_has_component(app_t* app, entity_t entity, const char* component_type)
 {
-	return app_get_component(app, entity, name) ? true : false;
+	return entity_get_component(app, entity, component_type) ? true : false;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -296,7 +322,7 @@ static inline void s_match(array<int>* matches, const array<strpool_id>& a, cons
 	}
 }
 
-void app_run_ecs_systems(app_t* app, float dt)
+void ecs_run_systems(app_t* app, float dt)
 {
 	int system_count = app->systems.count();
 	for (int i = 0; i < system_count; ++i)
@@ -348,16 +374,43 @@ void app_run_ecs_systems(app_t* app, float dt)
 
 	for (int i = 0; i < app->delayed_destroy_entities.count(); ++i) {
 		entity_t e = app->delayed_destroy_entities[i];
-		app_destroy_entity(app, e);
+		entity_destroy(app, e);
 	}
 	app->delayed_destroy_entities.clear();
 }
 
 //--------------------------------------------------------------------------------------------------
 
-void app_register_component_type(app_t* app, component_config_t component_config)
+void ecs_component_begin(app_t* app)
 {
-	app->component_configs.insert(INJECT(component_config.name), component_config);
+	app->component_config_builder.clear();
+}
+
+void ecs_component_end(app_t* app)
+{
+	app->component_configs.insert(INJECT(app->component_config_builder.name), app->component_config_builder);
+}
+
+void ecs_component_set_name(app_t* app, const char* name)
+{
+	app->component_config_builder.name = name;
+}
+
+void ecs_component_set_size(app_t* app, size_t size)
+{
+	app->component_config_builder.size_of_component = size;
+}
+
+void ecs_component_set_optional_serializer(app_t* app, component_serialize_fn* serializer_fn, void* udata)
+{
+	app->component_config_builder.serializer_fn = serializer_fn;
+	app->component_config_builder.serializer_udata = udata;
+}
+
+void ecs_component_set_optional_cleanup(app_t* app, component_cleanup_fn* cleanup_fn, void* udata)
+{
+	app->component_config_builder.cleanup_fn = cleanup_fn;
+	app->component_config_builder.cleanup_udata = udata;
 }
 
 static strpool_id s_kv_string(app_t* app, kv_t* kv, const char* key)
@@ -379,7 +432,7 @@ static strpool_id s_kv_string(app_t* app, kv_t* kv, const char* key)
 	return strpool_inject(app->strpool, string_raw, (int)string_sz);
 }
 
-void app_register_entity_type(app_t* app, const char* schema)
+static void s_register_entity_type(app_t* app, const char* schema)
 {
 	// Parse the schema.
 	kv_t* kv = kv_make();
@@ -438,7 +491,7 @@ void app_register_entity_type(app_t* app, const char* schema)
 	cleanup_kv = false;
 }
 
-void app_register_entity_type(app_t* app, array<const char*> component_type_tuple, const char* entity_type_string)
+static void s_register_entity_type(app_t* app, array<const char*> component_type_tuple, const char* entity_type_string)
 {
 	// Search for all component types present in the schema.
 	int component_config_count = app->component_configs.count();
@@ -476,15 +529,45 @@ void app_register_entity_type(app_t* app, array<const char*> component_type_tupl
 	}
 }
 
-const char* app_entity_type_string(app_t* app, entity_t entity)
+
+void ecs_entity_begin(app_t* app)
+{
+	app->entity_config_builder.clear();
+}
+
+void ecs_entity_end(app_t* app)
+{
+	if (app->entity_config_builder.schema) {
+		s_register_entity_type(app, app->entity_config_builder.schema);
+	} else {
+		s_register_entity_type(app, app->entity_config_builder.component_types, app->entity_config_builder.entity_type);
+	}
+}
+
+void ecs_entity_set_name(app_t* app, const char* entity_type)
+{
+	app->entity_config_builder.entity_type = entity_type;
+}
+
+void ecs_entity_add_component(app_t* app, const char* component_type)
+{
+	app->entity_config_builder.component_types.add(component_type);
+}
+
+void ecs_entity_set_optional_schema(app_t* app, const char* schema)
+{
+	app->entity_config_builder.schema = schema;
+}
+
+const char* entity_get_type_string(app_t* app, entity_t entity)
 {
 	return strpool_cstr(app->strpool, app->entity_type_id_to_string[entity.type]);
 }
 
-bool app_entity_is_type(app_t* app, entity_t entity, const char* entity_type_name)
+bool entity_is_type(app_t* app, entity_t entity, const char* entity_type_name)
 {
-	if (!app_is_entity_valid(app, entity)) return false;
-	const char* type_string = app_entity_type_string(app, entity);
+	if (!entity_is_valid(app, entity)) return false;
+	const char* type_string = entity_get_type_string(app, entity);
 	return !CUTE_STRCMP(type_string, entity_type_name);
 }
 
@@ -539,7 +622,7 @@ static error_t s_fill_load_id_table(app_t* app, kv_t* kv)
 	return error_success();
 }
 
-error_t app_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
+error_t ecs_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
 {
 	if (kv_get_state(kv) != KV_STATE_READ) {
 		return error_failure("`kv` must be in `KV_STATE_READ` mode.");
@@ -589,7 +672,7 @@ error_t app_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
 
 			// First load values from the schema.
 			void* component = collection->component_tables[i].add();
-			err = s_load_from_schema(app, entity.type, entity, config, component, config->udata);
+			err = s_load_from_schema(app, entity.type, entity, config, component, config->serializer_udata);
 			if (err.is_error()) {
 				return error_failure("Unable to parse component from schema.");
 			}
@@ -598,7 +681,7 @@ error_t app_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
 			error_t err = kv_key(kv, config->name);
 			if (!err.is_error()) {
 				kv_object_begin(kv);
-				err = config->serializer_fn(app, kv, true, entity, component, config->udata);
+				err = config->serializer_fn(app, kv, true, entity, component, config->serializer_udata);
 				kv_object_end(kv);
 				if (err.is_error()) {
 					return error_failure("Unable to parse component.");
@@ -618,7 +701,7 @@ error_t app_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
 	return error_success();
 }
 
-error_t app_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv)
+error_t ecs_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv)
 {
 	if (kv_get_state(kv) != KV_STATE_WRITE) {
 		return error_failure("`kv` must be in `KV_STATE_WRITE` mode.");
@@ -671,7 +754,7 @@ error_t app_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv)
 			error_t err = kv_key(kv, config->name);
 			if (!err.is_error()) {
 				kv_object_begin(kv);
-				err = config->serializer_fn(app, kv, false, entity, (void*)component, config->udata);
+				err = config->serializer_fn(app, kv, false, entity, (void*)component, config->serializer_udata);
 				kv_object_end(kv);
 				if (err.is_error()) {
 					return error_failure("Unable to save component.");
@@ -687,7 +770,7 @@ error_t app_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv)
 	return error_success();
 }
 
-error_t app_save_entities(app_t* app, const array<entity_t>& entities)
+error_t ecs_save_entities(app_t* app, const array<entity_t>& entities)
 {
 	dictionary<entity_t, int> id_table;
 	for (int i = 0; i < entities.count(); ++i)
@@ -722,7 +805,7 @@ error_t app_save_entities(app_t* app, const array<entity_t>& entities)
 			component_config_t* config = app->component_configs.find(component_type);
 			const void* component = component_table[index];
 
-			error_t err = config->serializer_fn(app, NULL, false, entity, (void*)component, config->udata);
+			error_t err = config->serializer_fn(app, NULL, false, entity, (void*)component, config->serializer_udata);
 			if (err.is_error()) {
 				return error_failure("Unable to save component.");
 			}
@@ -730,6 +813,47 @@ error_t app_save_entities(app_t* app, const array<entity_t>& entities)
 	}
 
 	return error_success();
+}
+
+array<const char*> ecs_get_entity_list(app_t* app)
+{
+	array<const char*> names;
+
+	for (int i = 0; i < app->entity_type_id_to_string.count(); ++i) {
+		strpool_id id = app->entity_type_id_to_string[i];
+		const char* name = strpool_cstr(app->strpool, id);
+		names.add(name);
+	}
+
+	return names;
+}
+
+array<const char*> ecs_get_component_list(app_t* app)
+{
+	array<const char*> names;
+	int count = app->component_configs.count();
+	strpool_id* ids = app->component_configs.keys();
+
+	for (int i = 0; i < count; ++i) {
+		strpool_id id = ids[i];
+		const char* name = strpool_cstr(app->strpool, id);
+		names.add(name);
+	}
+
+	return names;
+}
+
+array<const char*> ecs_get_system_list(app_t* app)
+{
+	array<const char*> names;
+
+	for (int i = 0; i < app->systems.count(); ++i) {
+		strpool_id id = app->systems[i].name;
+		const char* name = id != ~0ULL ? strpool_cstr(app->strpool, id) : "System name was not set.";
+		names.add(name);
+	}
+
+	return names;
 }
 
 }

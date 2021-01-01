@@ -90,7 +90,7 @@ void ice_block_system_pre_update(app_t* app, float dt, void* udata)
 	for (int i = 0; i < fires_t.count(); /* no-op */) {
 		fires_t[i] += dt;
 		if (fires_t[i] > fires_delay[i]) {
-			app_destroy_entity(app, fires[i]);
+			entity_destroy(app, fires[i]);
 			fires.unordered_remove(i);
 			fires_t.unordered_remove(i);
 			fires_delay.unordered_remove(i);
@@ -105,7 +105,7 @@ static BoardPiece* s_get_piece(int x, int y, int xdir, int ydir)
 	if (!in_board(x + xdir, y - ydir)) return NULL;
 	BoardSpace space = world->board.data[y - ydir][x + xdir];
 	if (space.is_empty) return NULL;
-	return (BoardPiece*)app_get_component(app, space.entity, "BoardPiece");
+	return (BoardPiece*)entity_get_component(app, space.entity, "BoardPiece");
 }
 
 void ice_block_system_update(app_t* app, float dt, void* udata, Transform* transforms, Animator* animators, BoardPiece* board_pieces, IceBlock* ice_blocks, int entity_count)
@@ -135,7 +135,7 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 				}
 				if (ice_block->fire != INVALID_ENTITY) {
 					delayed_destroy_entity_at(board_piece->x, board_piece->y);
-					app_delayed_destroy_entity(app, ice_block->fire);
+					entity_delayed_destroy(app, ice_block->fire);
 					play_sound("cube_melt.wav", 2.0f);
 				} else {
 					play_sound("hard_collide.wav");
@@ -155,9 +155,9 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 			// Overwrite the Animator's sprite with this static one to keep all of them in-sync
 			// together no matter what. If different ice block idle animations start playing out
 			// of sync it looks visiually jarring.
-			int sort_bits = animator->sprite.sort_bits;
+			int sort_bits = animator->sprite.layer;
 			animator->sprite = ice_block->big ? big_ice_block_idle : ice_block_idle;
-			animator->sprite.sort_bits = sort_bits;
+			animator->sprite.layer = sort_bits;
 			goto IDLE_INNER;
 		}
 
@@ -208,10 +208,10 @@ void ice_block_system_update(app_t* app, float dt, void* udata, Transform* trans
 		// Push masks onto the reflection system.
 		transform_t tx = transform->get();
 		if (ice_block->big) {
-			big_ice_block_mask.sort_bits = sort_bits(board_piece->x, board_piece->y);
+			big_ice_block_mask.layer = sort_bits(board_piece->x, board_piece->y);
 			reflection_system->masks.add(big_ice_block_mask.batch_sprite(tx));
 		} else {
-			ice_block_mask.sort_bits = sort_bits(board_piece->x, board_piece->y);
+			ice_block_mask.layer = sort_bits(board_piece->x, board_piece->y);
 			reflection_system->masks.add(ice_block_mask.batch_sprite(tx));
 		}
 	}

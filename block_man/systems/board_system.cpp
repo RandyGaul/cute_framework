@@ -34,7 +34,7 @@ void board_system_spread_out_replicas()
 		for (int j = 0; j < world->board.data[i].count(); ++j) {
 			BoardSpace space = world->board.data[i][j];
 			if (!space.is_empty) {
-				BoardPiece* board_piece = (BoardPiece*)app_get_component(app, space.entity, "BoardPiece");
+				BoardPiece* board_piece = (BoardPiece*)entity_get_component(app, space.entity, "BoardPiece");
 				if (board_piece->has_replicas) {
 					for (int k = 0; k < 3; ++k) {
 						int x = board_piece->x_replicas[k];
@@ -62,7 +62,7 @@ void board_transform_system_update(app_t* app, float dt, void* udata, Transform*
 		}
 
 		transform->world.p += p;
-		animator->sprite.sort_bits = sort_bits(board_piece->x, board_piece->y);
+		animator->sprite.layer = sort_bits(board_piece->x, board_piece->y);
 	}
 }
 
@@ -77,8 +77,8 @@ void board_system_update(app_t* app, float dt, void* udata, BoardPiece* board_pi
 				board_piece->is_moving = false;
 				board_piece->t = 0;
 				board_piece->delay = 0;
-				if (app_is_entity_valid(app, board_piece->notify_player_when_done)) {
-					Player* player = (Player*)app_get_component(app, board_piece->notify_player_when_done, "Player");
+				if (entity_is_valid(app, board_piece->notify_player_when_done)) {
+					Player* player = (Player*)entity_get_component(app, board_piece->notify_player_when_done, "Player");
 					player->busy = false;
 				}
 			}

@@ -125,7 +125,7 @@ void update_test_octorok_system(app_t* app, float dt, void* udata, test_componen
 		transform->y = 20.0f;
 		if (transform->x == 20.0f) s_octorok_system_ran_ok++;
 
-		test_component_octorok_t* buddy = (test_component_octorok_t*)app_get_component(app, octorok->buddy, "test_component_octorok_t");
+		test_component_octorok_t* buddy = (test_component_octorok_t*)entity_get_component(app, octorok->buddy, "test_component_octorok_t");
 		buddy->buddy_said_hi = 1;
 	}
 }
@@ -151,29 +151,29 @@ int test_ecs_octorok()
 	app_t* app = app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN);
 
 	// Register component types.
-	component_config_t transform_config;
-	transform_config.size_of_component = sizeof(test_component_transform_t);
-	transform_config.name = CUTE_STRINGIZE(test_component_transform_t);
-	transform_config.serializer_fn = test_component_transform_serialize;
-	app_register_component_type(app, transform_config);
+	ecs_component_begin(app);
+	ecs_component_set_size(app, sizeof(test_component_transform_t));
+	ecs_component_set_name(app, CUTE_STRINGIZE(test_component_transform_t));
+	ecs_component_set_optional_serializer(app, test_component_transform_serialize);
+	ecs_component_end(app);
 
-	component_config_t sprite_config;
-	sprite_config.size_of_component = sizeof(test_component_sprite_t);
-	sprite_config.name = CUTE_STRINGIZE(test_component_sprite_t);
-	sprite_config.serializer_fn = test_component_sprite_serialize;
-	app_register_component_type(app, sprite_config);
+	ecs_component_begin(app);
+	ecs_component_set_size(app, sizeof(test_component_sprite_t));
+	ecs_component_set_name(app, CUTE_STRINGIZE(test_component_sprite_t));
+	ecs_component_set_optional_serializer(app, test_component_sprite_serialize);
+	ecs_component_end(app);
 
-	component_config_t collider_config;
-	collider_config.size_of_component = sizeof(test_component_collider_t);
-	collider_config.name = CUTE_STRINGIZE(test_component_collider_t);
-	collider_config.serializer_fn = test_component_collider_serialize;
-	app_register_component_type(app, collider_config);
+	ecs_component_begin(app);
+	ecs_component_set_size(app, sizeof(test_component_collider_t));
+	ecs_component_set_name(app, CUTE_STRINGIZE(test_component_collider_t));
+	ecs_component_set_optional_serializer(app, test_component_collider_serialize);
+	ecs_component_end(app);
 
-	component_config_t octorok_config;
-	octorok_config.size_of_component = sizeof(test_component_octorok_t);
-	octorok_config.name = CUTE_STRINGIZE(test_component_octorok_t);
-	octorok_config.serializer_fn = test_component_octorok_serialize;
-	app_register_component_type(app, octorok_config);
+	ecs_component_begin(app);
+	ecs_component_set_size(app, sizeof(test_component_octorok_t));
+	ecs_component_set_name(app, CUTE_STRINGIZE(test_component_octorok_t));
+	ecs_component_set_optional_serializer(app, test_component_octorok_serialize);
+	ecs_component_end(app);
 
 	// Register entity types (just one, the octorok).
 	const char* octorok_schema_string = CUTE_STRINGIZE(
@@ -189,30 +189,23 @@ int test_ecs_octorok()
 		},
 	);
 
-	app_register_entity_type(app, octorok_schema_string);
+	ecs_entity_begin(app);
+	ecs_entity_set_optional_schema(app, octorok_schema_string);
+	ecs_entity_end(app);
 
 	// Register systems.
-	system_config_t s;
-	s.udata = NULL;
-	s.pre_update_fn = NULL;
-	s.update_fn = (void*)update_test_octorok_system;
-	s.post_update_fn = NULL;
-	s.component_type_tuple = {
-			"test_component_transform_t",
-			"test_component_sprite_t",
-			"test_component_collider_t",
-			"test_component_octorok_t"
-	};
-	app_register_system(app, s);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, (void*)update_test_octorok_system);
+	ecs_system_require_component(app, "test_component_transform_t");
+	ecs_system_require_component(app, "test_component_sprite_t");
+	ecs_system_require_component(app, "test_component_collider_t");
+	ecs_system_require_component(app, "test_component_octorok_t");
+	ecs_system_end(app);
 
-	s.udata = NULL;
-	s.pre_update_fn = NULL;
-	s.update_fn = (void*)update_test_octorok_buddy_counter_system;
-	s.post_update_fn = NULL;
-	s.component_type_tuple = {
-			"test_component_octorok_t"
-	};
-	app_register_system(app, s);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, (void*)update_test_octorok_buddy_counter_system);
+	ecs_system_require_component(app, "test_component_octorok_t");
+	ecs_system_end(app);
 
 	// Load up serialized entities.
 	const char* serialized_entities = CUTE_STRINGIZE(
@@ -245,7 +238,7 @@ int test_ecs_octorok()
 	if (err.is_error()) return -1;
 
 	array<entity_t> entities;
-	err = app_load_entities(app, parsed_entities, &entities);
+	err = ecs_load_entities(app, parsed_entities, &entities);
 	if (err.is_error()) return -1;
 	kv_destroy(parsed_entities);
 
@@ -253,7 +246,7 @@ int test_ecs_octorok()
 	kv_t* saved_entities = kv_make();
 	char entity_buffer[1024];
 	kv_set_write_buffer(saved_entities, entity_buffer, 1024);
-	err = app_save_entities(app, entities, saved_entities);
+	err = ecs_save_entities(app, entities, saved_entities);
 	if (err.is_error()) return -1;
 	size_t entity_buffer_size = kv_size_written(saved_entities);
 	entity_buffer[entity_buffer_size] = 0;
@@ -280,7 +273,7 @@ int test_ecs_octorok()
 	// Update the systems.
 	s_octorok_system_ran_ok = 0;
 	s_octorok_buddy_said_hi_count = 0;
-	app_run_ecs_systems(app, 0);
+	ecs_run_systems(app, 0);
 
 	// Assert outcomes (make sure the systems actually ran).
 	CUTE_TEST_ASSERT(s_octorok_system_ran_ok == 2);
@@ -320,25 +313,27 @@ int test_ecs_no_kv()
 {
 	app_t* app = app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN);
 
-	component_config_t config;
-	config.name = "Dummy";
-	config.size_of_component = sizeof(dummy_component_t);
-	config.serializer_fn = dummy_serialize;
-	app_register_component_type(app, config);
+	ecs_component_begin(app);
+	ecs_component_set_name(app, "Dummy");
+	ecs_component_set_size(app, sizeof(dummy_component_t));
+	ecs_component_set_optional_serializer(app, dummy_serialize);
+	ecs_component_end(app);
 
-	system_config_t system;
-	system.component_type_tuple.add("Dummy");
-	system.update_fn = (void*)update_dummy_system;
-	app_register_system(app, system);
+	ecs_system_begin(app);
+	ecs_system_set_update(app, (void*)update_dummy_system);
+	ecs_system_require_component(app, "Dummy");
+	ecs_system_end(app);
 
-	app_register_entity_type(app, { "Dummy" }, "Dummy_Entity");
+	ecs_entity_begin(app);
+	ecs_entity_set_name(app, "Dummy_Entity");
+	ecs_entity_add_component(app, "Dummy");
+	ecs_entity_end(app);
 
-	entity_t e;
-	app_make_entity(app, "Dummy_Entity", &e);
+	entity_t e = entity_make(app, "Dummy_Entity");
+	CUTE_TEST_ASSERT(e != INVALID_ENTITY);
+	ecs_run_systems(app, 0);
 
-	app_run_ecs_systems(app, 0);
-
-	dummy_component_t* dummy = (dummy_component_t*)app_get_component(app, e, "Dummy");
+	dummy_component_t* dummy = (dummy_component_t*)entity_get_component(app, e, "Dummy");
 	CUTE_TEST_ASSERT(dummy->iters == 1);
 
 	app_destroy(app);

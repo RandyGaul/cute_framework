@@ -19,7 +19,7 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <libsodium/sodium.h>
+#include <sodium.h>
 
 #include <cute_protocol.h>
 #include <cute_c_runtime.h>

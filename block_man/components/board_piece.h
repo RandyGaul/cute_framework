@@ -82,7 +82,7 @@ struct BoardPiece
 		b = tile2world(x, y);
 		v2 about = tile2world(about_x, about_y);
 		v2 mid = (a + b) * 0.5f;
-		c0 = mid + norm(mid - about) * sqrt(2.0f) * 16.0f / 2.0f;
+		c0 = mid + norm(mid - about) * sqrtf(2.0f) * 16.0f / 2.0f;
 		this->delay = delay;
 		move();
 	}
