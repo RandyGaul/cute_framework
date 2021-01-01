@@ -151,6 +151,12 @@ string_t to_string(float x)
 	return string_t(temp);
 }
 
+string_t to_bool(bool x)
+{
+	if (x) return "true";
+	else return "false";
+}
+
 array<char> to_array(const char* s)
 {
 	array<char> result;
