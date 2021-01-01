@@ -85,6 +85,7 @@ struct system_internal_t
 {
 	void clear()
 	{
+		name = ~0ULL;
 		udata = NULL;
 		pre_update_fn = NULL;
 		update_fn = NULL;
@@ -92,6 +93,7 @@ struct system_internal_t
 		component_type_tuple.clear();
 	}
 
+	strpool_id name = ~0ULL;
 	void* udata = NULL;
 	void (*pre_update_fn)(app_t* app, float dt, void* udata) = NULL;
 	void* update_fn = NULL;

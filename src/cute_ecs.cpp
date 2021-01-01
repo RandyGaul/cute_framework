@@ -76,6 +76,11 @@ void ecs_system_end(app_t* app)
 	app->systems.add(app->system_internal_builder);
 }
 
+void ecs_system_set_name(app_t* app, const char* name)
+{
+	app->system_internal_builder.name = INJECT(name);
+}
+
 void ecs_system_set_update(app_t* app, void* update_fn)
 {
 	app->system_internal_builder.update_fn = update_fn;
@@ -227,9 +232,9 @@ void* entity_get_component(app_t* app, entity_t entity, const char* component_ty
 	return NULL;
 }
 
-bool entity_has_component(app_t* app, entity_t entity, const char* name)
+bool entity_has_component(app_t* app, entity_t entity, const char* component_type)
 {
-	return entity_get_component(app, entity, name) ? true : false;
+	return entity_get_component(app, entity, component_type) ? true : false;
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -808,6 +813,47 @@ error_t ecs_save_entities(app_t* app, const array<entity_t>& entities)
 	}
 
 	return error_success();
+}
+
+array<const char*> ecs_get_entity_list(app_t* app)
+{
+	array<const char*> names;
+
+	for (int i = 0; i < app->entity_type_id_to_string.count(); ++i) {
+		strpool_id id = app->entity_type_id_to_string[i];
+		const char* name = strpool_cstr(app->strpool, id);
+		names.add(name);
+	}
+
+	return names;
+}
+
+array<const char*> ecs_get_component_list(app_t* app)
+{
+	array<const char*> names;
+	int count = app->component_configs.count();
+	strpool_id* ids = app->component_configs.keys();
+
+	for (int i = 0; i < count; ++i) {
+		strpool_id id = ids[i];
+		const char* name = strpool_cstr(app->strpool, id);
+		names.add(name);
+	}
+
+	return names;
+}
+
+array<const char*> ecs_get_system_list(app_t* app)
+{
+	array<const char*> names;
+
+	for (int i = 0; i < app->systems.count(); ++i) {
+		strpool_id id = app->systems[i].name;
+		const char* name = id != ~0ULL ? strpool_cstr(app->strpool, id) : "System name was not set.";
+		names.add(name);
+	}
+
+	return names;
 }
 
 }

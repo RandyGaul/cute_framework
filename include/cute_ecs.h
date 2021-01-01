@@ -57,8 +57,8 @@ CUTE_API entity_t CUTE_CALL entity_make(app_t* app, const char* entity_type, err
 CUTE_API bool CUTE_CALL entity_is_valid(app_t* app, entity_t entity);
 CUTE_API bool CUTE_CALL entity_is_type(app_t* app, entity_t entity, const char* entity_type);
 CUTE_API const char* CUTE_CALL entity_get_type_string(app_t* app, entity_t entity);
-CUTE_API bool CUTE_CALL entity_has_component(app_t* app, entity_t entity, const char* name);
-CUTE_API void* CUTE_CALL entity_get_component(app_t* app, entity_t entity, const char* name);
+CUTE_API bool CUTE_CALL entity_has_component(app_t* app, entity_t entity, const char* component_type);
+CUTE_API void* CUTE_CALL entity_get_component(app_t* app, entity_t entity, const char* component_type);
 CUTE_API void CUTE_CALL entity_destroy(app_t* app, entity_t entity);
 CUTE_API void CUTE_CALL entity_delayed_destroy(app_t* app, entity_t entity);
 
@@ -91,6 +91,7 @@ CUTE_API void CUTE_CALL ecs_component_set_optional_cleanup(app_t* app, component
 
 CUTE_API void CUTE_CALL ecs_system_begin(app_t* app);
 CUTE_API void CUTE_CALL ecs_system_end(app_t* app);
+CUTE_API void CUTE_CALL ecs_system_set_name(app_t* app, const char* name);
 CUTE_API void CUTE_CALL ecs_system_set_update(app_t* app, void* update_fn);
 CUTE_API void CUTE_CALL ecs_system_require_component(app_t* app, const char* component_type);
 CUTE_API void CUTE_CALL ecs_system_set_optional_pre_update(app_t* app, void (*pre_update_fn)(app_t* app, float dt, void* udata));
@@ -98,6 +99,13 @@ CUTE_API void CUTE_CALL ecs_system_set_optional_post_update(app_t* app, void (*p
 CUTE_API void CUTE_CALL ecs_system_set_optional_update_udata(app_t* app, void* udata);
 
 CUTE_API void CUTE_CALL ecs_run_systems(app_t* app, float dt);
+
+//--------------------------------------------------------------------------------------------------
+// Miscellaneous
+
+CUTE_API array<const char*> CUTE_CALL ecs_get_entity_list(app_t* app);
+CUTE_API array<const char*> CUTE_CALL ecs_get_component_list(app_t* app);
+CUTE_API array<const char*> CUTE_CALL ecs_get_system_list(app_t* app);
 
 }
 
