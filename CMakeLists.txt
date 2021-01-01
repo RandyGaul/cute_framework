@@ -73,13 +73,13 @@ include_directories(src libraries test)
 # Optional Sodium for security.
 if(CUTE_FRAMEWORK_WITH_SODIUM)
 	add_definitions(-DSODIUM_STATIC)
-	if(WINDOWS OR MINGW OR MACOSX)
+	if(WINDOWS OR MACOSX)
 		set(sodium_USE_STATIC_LIBS ON)
 
-		if(WINDOWS)
-			set(sodium_DIR prebuilt_libs/windows/sodium)
-		elseif(MINGW)
+		if(MINGW)
 			set(sodium_DIR prebuilt_libs/mingw/sodium)
+		else()
+			set(sodium_DIR prebuilt_libs/windows/sodium)
 		endif()
 
 		# This adds the current directory to the cmake path, so it can

@@ -260,7 +260,7 @@ void ecs_registration(app_t* app)
 	ecs_component_set_size(app, sizeof(Animator));
 	ecs_component_set_optional_serializer(app, Animator_serialize);
 	ecs_component_end(app);
-	
+
 	ecs_component_begin(app);
 	ecs_component_set_name(app, "BoardPiece");
 	ecs_component_set_size(app, sizeof(BoardPiece));
@@ -358,25 +358,25 @@ void ecs_registration(app_t* app)
 	   Please note that each of these three callbacks are optional and can be NULL.
 	*/
 	ecs_system_begin(app);
-	ecs_system_set_update(app, transform_system_update);
+	ecs_system_set_update(app, (void*)transform_system_update);
 	ecs_system_require_component(app, "Transform");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
-	ecs_system_set_update(app, animator_transform_system_update);
+	ecs_system_set_update(app, (void*)animator_transform_system_update);
 	ecs_system_require_component(app, "Transform");
 	ecs_system_require_component(app, "Animator");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
-	ecs_system_set_update(app, board_transform_system_update);
+	ecs_system_set_update(app, (void*)board_transform_system_update);
 	ecs_system_require_component(app, "Transform");
 	ecs_system_require_component(app, "Animator");
 	ecs_system_require_component(app, "BoardPiece");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
-	ecs_system_set_update(app, player_system_update);
+	ecs_system_set_update(app, (void*)player_system_update);
 	ecs_system_require_component(app, "Transform");
 	ecs_system_require_component(app, "Animator");
 	ecs_system_require_component(app, "BoardPiece");
@@ -384,12 +384,12 @@ void ecs_registration(app_t* app)
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
-	ecs_system_set_update(app, board_system_update);
+	ecs_system_set_update(app, (void*)board_system_update);
 	ecs_system_require_component(app, "BoardPiece");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
-	ecs_system_set_update(app, ice_block_system_update);
+	ecs_system_set_update(app, (void*)ice_block_system_update);
 	ecs_system_set_optional_pre_update(app, ice_block_system_pre_update);
 	ecs_system_require_component(app, "Transform");
 	ecs_system_require_component(app, "Animator");
@@ -398,7 +398,7 @@ void ecs_registration(app_t* app)
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
-	ecs_system_set_update(app, mochi_system_update);
+	ecs_system_set_update(app, (void*)mochi_system_update);
 	ecs_system_require_component(app, "Transform");
 	ecs_system_require_component(app, "Animator");
 	ecs_system_require_component(app, "BoardPiece");
@@ -410,7 +410,7 @@ void ecs_registration(app_t* app)
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
-	ecs_system_set_update(app, shadow_system_update);
+	ecs_system_set_update(app, (void*)shadow_system_update);
 	ecs_system_set_optional_post_update(app, shadow_system_post_update);
 	ecs_system_require_component(app, "Transform");
 	ecs_system_require_component(app, "Animator");
@@ -419,14 +419,14 @@ void ecs_registration(app_t* app)
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
-	ecs_system_set_update(app, animator_system_update);
+	ecs_system_set_update(app, (void*)animator_system_update);
 	ecs_system_set_optional_post_update(app, animator_system_post_update);
 	ecs_system_require_component(app, "Transform");
 	ecs_system_require_component(app, "Animator");
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
-	ecs_system_set_update(app, reflection_system_update);
+	ecs_system_set_update(app, (void*)reflection_system_update);
 	ecs_system_set_optional_pre_update(app, reflection_system_pre_update);
 	ecs_system_set_optional_post_update(app, reflection_system_post_update);
 	ecs_system_require_component(app, "Transform");
@@ -435,7 +435,7 @@ void ecs_registration(app_t* app)
 	ecs_system_end(app);
 
 	ecs_system_begin(app);
-	ecs_system_set_update(app, light_system_update);
+	ecs_system_set_update(app, (void*)light_system_update);
 	ecs_system_set_optional_post_update(app, reflection_system_post_update);
 	ecs_system_require_component(app, "Transform");
 	ecs_system_require_component(app, "Light");
@@ -483,6 +483,9 @@ void setup_write_directory()
 	const char* base = file_system_get_base_dir();
 
 	path_pop(base, NULL, buf);
+#ifdef __MINGW32__
+	sprintf(buf, "%s%s", file_system_get_base_dir(), "../block_man/data");
+#else
 	bool on_emscripten = !CUTE_STRCMP(base, "./");
 	bool under_development = !CUTE_STRCMP(buf, "cute_framework");
 	if (under_development || on_emscripten) {
@@ -492,6 +495,7 @@ void setup_write_directory()
 		CUTE_ASSERT(!CUTE_STRCMP(buf, "Debug") || !CUTE_STRCMP(buf, "Release"));
 		sprintf(buf, "%s%s", file_system_get_base_dir(), "../../block_man/data");
 	}
+#endif
 
 	file_system_set_write_dir(buf);
 	file_system_mount(buf, "");

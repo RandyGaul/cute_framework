@@ -104,7 +104,7 @@ struct component_config_t
 	void clear()
 	{
 		name = NULL;
-		size_of_component = NULL;
+		size_of_component = 0;
 		serializer_fn = NULL;
 		cleanup_fn = NULL;
 		serializer_udata = NULL;
