@@ -482,6 +482,7 @@ if (CUTE_PONG)
 		pong/main.cpp
 		pong/pong_global.h
 		pong/pong_utils.h
+		pong/pong_graphics.h
 		pong/pong_game.h
 	)
 
