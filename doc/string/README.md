@@ -16,7 +16,7 @@ string_t to_upper(string_t s)
 {
     array<char> a = to_array(s);
     for (int i = 0; i < a.size(); ++i) {
-        a[i] = toupper(a[i];
+        a[i] = toupper(a[i]);
     }
     return to_string(a);
 }
