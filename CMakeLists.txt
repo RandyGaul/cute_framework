@@ -24,8 +24,6 @@ option(CUTE_FRAMEWORK_WITH_PLATFORM "Build Cute Framework with platform support 
 option(CUTE_FRAMEWORK_WITH_HTTPS "Build Cute Framework with mbedtls for HTTPS support (Apache 2.0 license)." ON)
 option(CUTE_FRAMEWORK_WITH_SODIUM "Build Cute Framework with cryptography + authentication support from Sodium for networking support (ISC license)." ON)
 option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
-option(CUTE_FRAMEWORK_BUILD_BLOCK_MAN "Build the Block Man game." ON)
-option(CUTE_PONG "Build Pong by Tony." ON)
 
 # Platform detection.
 if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
@@ -340,90 +338,6 @@ if(CUTE_FRAMEWORK_WITH_HTTPS)
 endif()
 
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)
-
-# Cute block man demo game.
-if (CUTE_FRAMEWORK_BUILD_BLOCK_MAN)
-	set(CUTE_BLOCK_MAN_SRCS
-		block_man/main.cpp
-		block_man/world.h
-		block_man/world.cpp
-		block_man/serialize.h
-		block_man/serialize.cpp
-		block_man/shaders/light_shader.h
-	)
-
-	set(CUTE_BLOCK_MAN_IMGUI_SRCS
-		libraries/imgui/imgui.cpp
-		libraries/imgui/imgui_demo.cpp
-		libraries/imgui/imgui_draw.cpp
-		libraries/imgui/imgui_widgets.cpp
-	)
-
-	set(CUTE_BLOCK_MAN_COMPONENT_SRCS
-		block_man/components/animator.h
-		block_man/components/board_piece.h
-		block_man/components/ice_block.h
-		block_man/components/player.h
-		block_man/components/reflection.h
-		block_man/components/transform.h
-		block_man/components/shadow.h
-		block_man/components/mochi.h
-		block_man/components/fire.h
-		block_man/components/light.h
-		block_man/components/oil.h
-		block_man/components/lamp.h
-		block_man/components/ladder.h
-	)
-
-	set(CUTE_BLOCK_MAN_SYSTEM_SRCS
-		block_man/systems/animator_system.h
-		block_man/systems/animator_system.cpp
-		block_man/systems/board_system.h
-		block_man/systems/board_system.cpp
-		block_man/systems/ice_block_system.h
-		block_man/systems/ice_block_system.cpp
-		block_man/systems/player_system.h
-		block_man/systems/player_system.cpp
-		block_man/systems/reflection_system.h
-		block_man/systems/reflection_system.cpp
-		block_man/systems/transform_system.h
-		block_man/systems/transform_system.cpp
-		block_man/systems/shadow_system.h
-		block_man/systems/shadow_system.cpp
-		block_man/systems/mochi_system.h
-		block_man/systems/mochi_system.cpp
-		block_man/systems/light_system.h
-		block_man/systems/light_system.cpp
-	)
-
-	add_executable(block_man
-		${CUTE_BLOCK_MAN_SRCS}
-		${CUTE_BLOCK_MAN_IMGUI_SRCS}
-		${CUTE_BLOCK_MAN_COMPONENT_SRCS}
-		${CUTE_BLOCK_MAN_SYSTEM_SRCS}
-	)
-	source_group("game" FILES ${CUTE_BLOCK_MAN_SRCS})
-	source_group("imgui" FILES ${CUTE_BLOCK_MAN_IMGUI_SRCS})
-	source_group("components" FILES ${CUTE_BLOCK_MAN_COMPONENT_SRCS})
-	source_group("systems" FILES ${CUTE_BLOCK_MAN_SYSTEM_SRCS})
-	target_link_libraries(block_man PRIVATE cute)
-	if(EMSCRIPTEN)
-		set(CMAKE_EXECUTABLE_SUFFIX ".html")
-		target_compile_options(block_man PUBLIC -O1 -fno-rtti -fno-exceptions)
-		target_link_options(block_man PRIVATE -o block_man.html --preload-file ../block_man/data --emrun -O1)
-	endif()
-	target_include_directories(block_man PUBLIC "${PROJECT_SOURCE_DIR}/block_man")
-
-	# Copy over prebuilt binaries to output directory.
-	if(EMSCRIPTEN)
-		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/prebuilt_libs/emscripten" $<TARGET_FILE_DIR:tests>)
-	endif()
-
-	# For convenience set working directory to the target output folder.
-	if (MSVC)
-		set_property(TARGET block_man PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:block_man>)
-	endif()
-endif()
 
 # Cute unit tests executable (optional, defaulted to also build).
 if (CUTE_FRAMEWORK_BUILD_TESTS)
