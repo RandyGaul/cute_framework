@@ -18,6 +18,9 @@ using namespace cute;
 
 //@STUB:	constants, enums, global-vars
 
+extern const int SCREEN_WIDTH;
+extern const int SCREEN_HEIGHT;
+//
 extern app_t* app;
 
 

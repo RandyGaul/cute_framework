@@ -473,12 +473,15 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 	endif()
 endif()
 
+# ----------------------------------------------------------------------------------------
+
 # Pong by Tony.
 if (CUTE_PONG)
 	set(CUTE_PONG_SRCS
 		pong/main.cpp
 		pong/pong_global.h
 		pong/pong_utils.h
+		pong/pong_graphics.h
 		pong/pong_game.h
 	)
 

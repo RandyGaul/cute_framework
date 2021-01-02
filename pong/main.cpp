@@ -11,6 +11,7 @@
 #include <cute.h>
 #include <pong_global.h>
 #include <pong_utils.h>
+#include <pong_graphics.h>
 #include <pong_game.h>
 using namespace cute;
 
@@ -18,7 +19,9 @@ using namespace cute;
 
 // -- GLOBALS -- //
 
-app_t* app;
+const int SCREEN_WIDTH = 320;	//pong_global.h (extern)
+const int SCREEN_HEIGHT = 240;	//pong_global.h (extern)
+app_t* app;						//pong_global.h (extern)
 
 // -------------------------------------------------------------------------- //
 
@@ -57,7 +60,7 @@ int main(int argc, const char** argv)
 		app_update(app, dt);	//@CUTE:	update (app-scope)	...overhead utils, not game
 		
 		// -- USER CODE -- //
-		g_update(dt);		//@GAM:	update
+		g_update(dt);	//@GAM:	update
 		g_draw();		//@GAM:	draw
 		//
 		
@@ -82,6 +85,10 @@ int main(int argc, const char** argv)
 void g_init()
 {
 	//@STUB
+	
+	//@TESTING...
+	Spriter spr = spriter_make();
+	//
 	
 	//init states
 	//init HUD

@@ -1,5 +1,7 @@
 // pong_utils.h
 // 
+// Note:	General utility features.
+// 			(not system-specific)
 
 #ifndef PONG_UTILS
 #define PONG_UTILS
@@ -20,7 +22,9 @@ using namespace cute;
 
 // -------------------------------------------------------------------------- //
 
-// -- STRUCTS -- //
+// -- OBJECTS -- //
+
+//@STUB:	structs, fixed arrays, etc.
 
 struct Input_map
 {
