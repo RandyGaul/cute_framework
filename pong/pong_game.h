@@ -1,8 +1,7 @@
 // pong_game.h
 // 
-// Note:	Replace HG_NAME with your own header-guard name.
-// 			This is just a blank slate to start new files with.
-// 			Save As into your own new filename.
+// Note:	Game objects & features. Top level.
+// 			
 
 #ifndef PONG_GAME
 #define PONG_GAME

@@ -473,6 +473,8 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 	endif()
 endif()
 
+# ----------------------------------------------------------------------------------------
+
 # Pong by Tony.
 if (CUTE_PONG)
 	set(CUTE_PONG_SRCS

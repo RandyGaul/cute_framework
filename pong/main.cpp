@@ -60,7 +60,7 @@ int main(int argc, const char** argv)
 		app_update(app, dt);	//@CUTE:	update (app-scope)	...overhead utils, not game
 		
 		// -- USER CODE -- //
-		g_update(dt);		//@GAM:	update
+		g_update(dt);	//@GAM:	update
 		g_draw();		//@GAM:	draw
 		//
 		
