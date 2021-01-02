@@ -176,6 +176,11 @@ string_t to_string(char x)
 	return a.data();
 }
 
+array<char> to_array(string_t s)
+{
+	return to_array(s.c_str());
+}
+
 array<char> to_array(const char* s)
 {
 	array<char> result;

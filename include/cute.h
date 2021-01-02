@@ -54,6 +54,7 @@
 #include <cute_server.h>
 #include <cute_sprite.h>
 #include <cute_string.h>
+#include <cute_string_utils.h>
 #include <cute_strpool.h>
 #include <cute_rnd.h>
 #include <cute_timer.h>

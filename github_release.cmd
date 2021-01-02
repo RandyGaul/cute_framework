@@ -16,12 +16,12 @@ rem MingW
 mkdir build_mingw > nul 2> nul
 cmake -G "Unix Makefiles" -Bbuild_mingw .
 cmake --build build_mingw
-robocopy "build_mingw" "github_release/mingw/" "libcute.dll" > nul
-robocopy "build_mingw" "github_release/mingw/" "libcute.dll.a" > nul
+robocopy "build_mingw" "github_release/mingw/" "libcute.dll" /IM > nul
+robocopy "build_mingw" "github_release/mingw/" "libcute.dll.a" /IM > nul
 
 rem Include headers
-robocopy "include" "github_release/include" > nul
-robocopy "include/cute" "github_release/include/cute" > nul
-robocopy "include/sokol" "github_release/include/sokol" > nul
+robocopy "include" "github_release/include" /IM > nul
+robocopy "include/cute" "github_release/include/cute" /IM > nul
+robocopy "include/sokol" "github_release/include/sokol" /IM > nul
 
 7z a -tzip cute_framework.zip ./github_release/*
