@@ -22,7 +22,7 @@ string_t to_upper(string_t s)
 }
 ```
 
-## API List
+## String Categories
 
 [string](https://github.com/RandyGaul/cute_framework/tree/master/doc/string/string)  
 [strpool](https://github.com/RandyGaul/cute_framework/tree/master/doc/string/strpool)  
