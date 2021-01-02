@@ -236,7 +236,7 @@ error_t https_connect(https_t* https, const char* host, const char* port, bool v
 	if ((result = mbedtls_net_connect(&https->server_fd, host, port, MBEDTLS_NET_PROTO_TCP))) {
 		return error_failure("Failed to connect TCP socket to host with mbedtls_net_connect.");
 	}
-	
+
 	if ((result = mbedtls_net_set_nonblock(&https->server_fd))) {
 		return error_failure("Failed to set socket to non-blocking.");
 	}

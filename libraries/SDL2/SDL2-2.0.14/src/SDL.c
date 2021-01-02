@@ -548,23 +548,23 @@ SDL_IsTablet()
 
 #if defined(__WIN32__)
 
-#if (!defined(HAVE_LIBC) || defined(__WATCOMC__)) && !defined(SDL_STATIC_LIB)
-/* Need to include DllMain() on Watcom C for some reason.. */
-
-BOOL APIENTRY
-_DllMainCRTStartup(HANDLE hModule,
-                   DWORD ul_reason_for_call, LPVOID lpReserved)
-{
-    switch (ul_reason_for_call) {
-    case DLL_PROCESS_ATTACH:
-    case DLL_THREAD_ATTACH:
-    case DLL_THREAD_DETACH:
-    case DLL_PROCESS_DETACH:
-        break;
-    }
-    return TRUE;
-}
-#endif /* Building DLL */
+//#if (!defined(HAVE_LIBC) || defined(__WATCOMC__)) && !defined(SDL_STATIC_LIB)
+///* Need to include DllMain() on Watcom C for some reason.. */
+//
+//BOOL APIENTRY
+//_DllMainCRTStartup(HANDLE hModule,
+//                   DWORD ul_reason_for_call, LPVOID lpReserved)
+//{
+//    switch (ul_reason_for_call) {
+//    case DLL_PROCESS_ATTACH:
+//    case DLL_THREAD_ATTACH:
+//    case DLL_THREAD_DETACH:
+//    case DLL_PROCESS_DETACH:
+//        break;
+//    }
+//    return TRUE;
+//}
+//#endif /* Building DLL */
 
 #endif /* __WIN32__ */
 
