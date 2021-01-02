@@ -168,6 +168,14 @@ string_t to_string(const array<char>& x)
 	}
 }
 
+string_t to_string(char x)
+{
+	array<char> a;
+	a.add(x);
+	a.add(0);
+	return a.data();
+}
+
 array<char> to_array(const char* s)
 {
 	array<char> result;
