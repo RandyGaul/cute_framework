@@ -157,6 +157,17 @@ string_t to_string(bool x)
 	else return "false";
 }
 
+string_t to_string(const array<char>& x)
+{
+	if (x.last() != 0) {
+		array<char> a = x;
+		a.add(0);
+		return a.data();
+	} else {
+		return x.data();
+	}
+}
+
 array<char> to_array(const char* s)
 {
 	array<char> result;
