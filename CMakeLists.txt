@@ -48,15 +48,11 @@ endif()
 
 # Defines for cross-platform shader support.
 if(WINDOWS)
-	add_definitions(-DCUTE_WINDOWS)
 elseif(LINUX)
-	add_definitions(-DCUTE_LINUX)
 	set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 elseif(MACOSX)
-	add_definitions(-DCUTE_MACOSX)
 	set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 elseif(EMSCRIPTEN)
-	add_definitions(-DCUTE_EMSCRIPTEN)
 endif()
 
 # Disable annoying MSVC warnings.
@@ -83,7 +79,7 @@ if(CUTE_FRAMEWORK_WITH_SODIUM)
 
 		# This adds the current directory to the cmake path, so it can
 		# use FindSodium.cmake script to locate the sodium folders.
-		list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/.")
+		list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/prebuilt_libs")
 		find_package(Sodium REQUIRED)
 	elseif(EMSCRIPTEN)
 		link_directories(prebuilt_libs/emscripten)

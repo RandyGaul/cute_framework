@@ -496,7 +496,7 @@ void pump_input_msgs(app_t* app)
 		case SDL_KEYDOWN:
 		{
 			if (event.key.repeat) continue;
-			int key = event.key.keysym.sym;
+			int key = SDL_SCANCODE_TO_KEYCODE(event.key.keysym.scancode);
 			key = s_map_SDL_keys(key);
 			CUTE_ASSERT(key >= 0 && key < 512);
 			app->keys[key] = 1;
@@ -505,7 +505,7 @@ void pump_input_msgs(app_t* app)
 		case SDL_KEYUP:
 		{
 			if (event.key.repeat) continue;
-			int key = event.key.keysym.sym;
+			int key = SDL_SCANCODE_TO_KEYCODE(event.key.keysym.scancode);
 			key = s_map_SDL_keys(key);
 			CUTE_ASSERT(key >= 0 && key < 512);
 			app->keys[key] = 0;

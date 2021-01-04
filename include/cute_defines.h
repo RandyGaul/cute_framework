@@ -30,15 +30,34 @@
 #	define _CRT_NONSTDC_NO_DEPRECATE
 #endif
 
+#if defined(_WIN32)
+#	define CUTE_WINDOWS 1
+#elif defined(__linux__) || defined(__unix__) && !defined(__APPLE__)
+#	define CUTE_LINUX 1
+#elif defined(__APPLE__)
+#	include <TargetConditionals.h>
+#	if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE
+#		define CUTE_IOS 1
+#	elif TARGET_OS_MAC
+#		define CUTE_MACOSX 1
+#	else
+#		error "Unknown Apple platform"
+#	endif
+#elif defined(__ANDROID__)
+#	define CUTE_ANDROID 1
+#elif defined(__EMSCRIPTEN__)
+#	define CUTE_EMSCRIPTEN 1
+#endif
+
+// Vista and later only. This helps MingW builds.
 #ifdef CUTE_WINDOWS
-	// Vista and later only. This helps MingW builds.
-	#include <SDKDDKVer.h>
-	#ifdef _WIN32_WINNT
-		#if _WIN32_WINNT < 0x0600
-			#undef _WIN32_WINNT
-			#define _WIN32_WINNT 0x0600
-		#endif
-	#endif
+#	include <sdkddkver.h>
+#	ifdef _WIN32_WINNT
+#		if _WIN32_WINNT < 0x0600
+#			undef _WIN32_WINNT
+#			define _WIN32_WINNT 0x0600
+#		endif
+#	endif
 #endif
 
 #include <stdint.h>

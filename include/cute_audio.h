@@ -66,7 +66,11 @@ struct sound_params_t
 	float delay = 0;
 };
 
-CUTE_API error_t CUTE_CALL sound_play(app_t* app, audio_t* audio_source, sound_params_t params = sound_params_t());
+struct sound_t { uint64_t id; };
+
+CUTE_API sound_t CUTE_CALL sound_play(app_t* app, audio_t* audio_source, error_t* err = NULL, sound_params_t params = sound_params_t());
+
+CUTE_API bool sound_is_active(app_t* app, sound_t sound);
 
 // TODO - Sample index + fade manipulation, and clear lifetime management.
 
