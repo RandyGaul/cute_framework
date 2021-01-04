@@ -54,6 +54,7 @@ sprite_t sprite_make(app_t* app, const char* aseprite_path)
 		sprintf(buf, "Unable to load sprite at path \"%s\".\n", aseprite_path);
 		window_message_box(app, WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
 	}
+	s.batch = app->batch;
 	return s;
 }
 

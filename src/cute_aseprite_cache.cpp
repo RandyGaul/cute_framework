@@ -76,7 +76,24 @@ aseprite_cache_t* aseprite_cache_make(void* mem_ctx)
 void aseprite_cache_destroy(aseprite_cache_t* cache)
 {
 	destroy_strpool(cache->strpool);
+	int count = cache->aseprites.count();
+	aseprite_cache_entry_t* entries = cache->aseprites.items();
+	for (int i = 0; i < count; ++i) 
+	{
+		aseprite_cache_entry_t* entry = entries + i;
+		int animation_count = entry->animations->count();
+		animation_t** animations = (animation_t**)entry->animations->items();
+		for (int j = 0; j < animation_count; ++j) {
+			animations[j]->~animation_t();
+			CUTE_FREE(animations[j], cache->mem_ctx);
+		}
+		entry->animations->~dictionary();
+		CUTE_FREE(entry->animations, cache->mem_ctx);
+		cute_aseprite_free(entry->ase);
+	}
+	void* mem_ctx = cache->mem_ctx;
 	cache->~aseprite_cache_t();
+	CUTE_FREE(cache, mem_ctx);
 }
 
 static play_direction_t s_play_direction(ase_animation_direction_t direction)

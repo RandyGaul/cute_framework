@@ -22,14 +22,15 @@
 #include <cute.h>
 using namespace cute;
 
-#define CUTE_ASEPRITE_IMPLEMENTATION
-#include <cute/cute_aseprite.h>
-
-CUTE_TEST_CASE(test_aseprite_make_destroy, "Load an aseprite file and destroy it.");
-int test_aseprite_make_destroy()
+CUTE_TEST_CASE(test_sprite_make, "Load a sprite destroy it.");
+int test_sprite_make()
 {
-	ase_t* ase = cute_aseprite_load_from_file("test_data/girl.aseprite", NULL);
-	cute_aseprite_free(ase);
+	app_t* app = app_make("sprite test", 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN | CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT);
+	CUTE_TEST_CHECK_POINTER(app);
+
+	sprite_make(app, "test_data/girl.aseprite");
+
+	app_destroy(app);
+
 	return 0;
 }
-

@@ -28,6 +28,7 @@
 #include <cute_net.h>
 #include <cute_c_runtime.h>
 #include <cute_kv.h>
+#include <cute_font.h>
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_file_system_internal.h>
@@ -83,6 +84,22 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 #endif
 	if (SDL_Init(sdl_options)) {
 		return NULL;
+	}
+
+	if (options & CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT) {
+#ifdef CUTE_WINDOWS
+		options |= CUTE_APP_OPTIONS_D3D11_CONTEXT;
+#elif CUTE_EMSCRIPTEN
+		options |= CUTE_APP_OPTIONS_OPENGLES_CONTEXT;
+#else
+		options |= CUTE_APP_OPTIONS_OPENGL_CONTEXT;
+#endif
+	}
+
+	if (options & (CUTE_APP_OPTIONS_D3D11_CONTEXT | CUTE_APP_OPTIONS_OPENGLES_CONTEXT | CUTE_APP_OPTIONS_OPENGL_CONTEXT)) {
+		// D3D11 crashes if w/h are not positive.
+		w = w <= 0 ? 1 : w;
+		h = h <= 0 ? 1 : h;
 	}
 
 	Uint32 flags = 0;
@@ -205,6 +222,14 @@ void app_destroy(app_t* app)
 	int schema_count = app->entity_parsed_schemas.count();
 	kv_t** schemas = app->entity_parsed_schemas.items();
 	for (int i = 0; i < schema_count; ++i) kv_destroy(schemas[i]);
+	if (app->ase_cache) {
+		CUTE_ASSERT(app->ase_cache);
+		aseprite_cache_destroy(app->ase_cache);
+		batch_destroy(app->batch);
+	}
+	if (app->courier_new) {
+		font_free((font_t*)app->courier_new);
+	}
 	app->~app_t();
 	CUTE_FREE(app, app->mem_ctx);
 	file_system_destroy();
