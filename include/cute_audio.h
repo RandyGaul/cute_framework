@@ -66,21 +66,26 @@ struct sound_params_t
 	float delay = 0;
 };
 
-struct sound_t { uint64_t id; };
+struct sound_t { uint64_t id = 0; };
 
 CUTE_API sound_t CUTE_CALL sound_play(app_t* app, audio_t* audio_source, error_t* err = NULL, sound_params_t params = sound_params_t());
 
-CUTE_API bool sound_is_active(app_t* app, sound_t sound);
-
-// TODO - Sample index + fade manipulation, and clear lifetime management.
+CUTE_API bool CUTE_CALL sound_is_active(app_t* app, sound_t sound);
+CUTE_API bool CUTE_CALL sound_get_is_paused(app_t* app, sound_t sound);
+CUTE_API bool CUTE_CALL sound_get_is_looped(app_t* app, sound_t sound);
+CUTE_API float CUTE_CALL sound_get_volume(app_t* app, sound_t sound);
+CUTE_API int CUTE_CALL sound_get_sample_index(app_t* app, sound_t sound);
+CUTE_API void CUTE_CALL sound_set_is_paused(app_t* app, sound_t sound, bool true_for_paused);
+CUTE_API void CUTE_CALL sound_set_is_looped(app_t* app, sound_t sound, bool true_for_looped);
+CUTE_API void CUTE_CALL sound_set_volume(app_t* app, sound_t sound, float volume);
+CUTE_API void CUTE_CALL sound_set_sample_index(app_t* app, sound_t sound, int sample_index);
 
 // -------------------------------------------------------------------------------------------------
 
 CUTE_API void CUTE_CALL audio_set_pan(app_t* app, float pan);
 CUTE_API void CUTE_CALL audio_set_global_volume(app_t* app, float volume);
 CUTE_API void CUTE_CALL audio_set_sound_volume(app_t* app, float volume);
-
-// TODO - Global pause/fade.
+CUTE_API void CUTE_CALL audio_set_pause(app_t* app, bool true_for_paused);
 
 }
 

@@ -56,7 +56,7 @@ struct audio_t : public cs_loaded_sound_t
 	void* mem_ctx = NULL;
 };
 
-using sound_t = cs_playing_sound_t;
+using cs_sound_t = cs_playing_sound_t;
 
 static CUTE_INLINE audio_t* s_audio_make(audio_t audio_struct, void* user_allocator_context)
 {
@@ -212,6 +212,7 @@ int audio_ref_count(audio_t* audio)
 
 struct audio_instance_t
 {
+	uint64_t id;
 	cs_playing_sound_t sound;
 	list_node_t node;
 };
@@ -242,6 +243,8 @@ struct audio_system_t
 	audio_instance_t* music_playing = NULL;
 	audio_instance_t* music_next = NULL;
 
+	uint64_t instance_id_gen = 1;
+	dictionary<uint64_t, audio_instance_t*> instance_map;
 	audio_instance_t* playing_sounds_buffer;
 	list_t playing_sounds;
 	list_t free_sounds;
@@ -278,6 +281,8 @@ static audio_instance_t* s_inst(app_t* app, audio_t* src, sound_params_t params)
 	inst_ptr->sound.pan0 = panl;
 	inst_ptr->sound.pan1 = panr;
 	cs_insert_sound(app->cute_sound, &inst_ptr->sound);
+	inst_ptr->id = as->instance_id_gen++;
+	as->instance_map.insert(inst_ptr->id, inst_ptr);
 	return inst_ptr;
 }
 
@@ -602,19 +607,128 @@ error_t music_crossfade(app_t* app, audio_t* audio_source, float cross_fade_time
 
 // -------------------------------------------------------------------------------------------------
 
-error_t sound_play(app_t* app, audio_t* audio_source, sound_params_t params)
+sound_t sound_play(app_t* app, audio_t* audio_source, error_t* err, sound_params_t params)
 {
 	audio_system_t* as = app->audio_system;
-	if (!as) return error_failure("Audio system not initialized.");
+	if (!as) {
+		if (err) *err = error_failure("Audio system not initialized.");
+		return sound_t();
+	}
 
 	if (list_empty(&as->free_sounds)) {
-		return error_failure("Unable to play music. Audio instance buffer full.");
+		if (err) *err = error_failure("Unable to play music. Audio instance buffer full.");
+		return sound_t();
 	}
 
 	audio_instance_t* inst = s_inst(app, audio_source, params);
 	list_push_back(&as->playing_sounds, &inst->node);
 
-	return error_success();
+	if (err) *err = error_success();
+	sound_t sound;
+	sound.id = inst->id;
+	return sound;
+}
+
+static audio_instance_t* s_get_inst(app_t* app, sound_t sound)
+{
+	audio_system_t* as = app->audio_system;
+	CUTE_ASSERT(as);
+	audio_instance_t* inst;
+	if (as->instance_map.find(sound.id, &inst).is_error()) {
+		return inst;
+	} else {
+		return NULL;
+	}
+}
+
+bool sound_is_active(app_t* app, sound_t sound)
+{
+	return s_get_inst(app, sound) ? true : false;
+}
+
+bool sound_get_is_paused(app_t* app, sound_t sound)
+{
+	audio_instance_t* inst = s_get_inst(app, sound);
+	if (inst) {
+		cs_lock(app->cute_sound);
+		bool paused = inst->sound.paused;
+		cs_unlock(app->cute_sound);
+		return paused;
+	} else return 0;
+}
+
+bool sound_get_is_looped(app_t* app, sound_t sound)
+{
+	audio_instance_t* inst = s_get_inst(app, sound);
+	if (inst) {
+		cs_lock(app->cute_sound);
+		bool looped = inst->sound.looped;
+		cs_unlock(app->cute_sound);
+		return looped;
+	} else return 0;
+}
+
+float sound_get_volume(app_t* app, sound_t sound)
+{
+	audio_instance_t* inst = s_get_inst(app, sound);
+	if (inst) {
+		cs_lock(app->cute_sound);
+		float volume = inst->sound.volume0;
+		cs_unlock(app->cute_sound);
+		return volume;
+	} else return 0;
+}
+
+int sound_get_sample_index(app_t* app, sound_t sound)
+{
+	audio_instance_t* inst = s_get_inst(app, sound);
+	if (inst) {
+		cs_lock(app->cute_sound);
+		int index = inst->sound.sample_index;
+		cs_unlock(app->cute_sound);
+		return index;
+	} else return 0;
+}
+
+void sound_set_is_paused(app_t* app, sound_t sound, bool true_for_paused)
+{
+	audio_instance_t* inst = s_get_inst(app, sound);
+	if (inst) {
+		cs_lock(app->cute_sound);
+		inst->sound.paused = true_for_paused;
+		cs_unlock(app->cute_sound);
+	}
+}
+
+void sound_set_is_looped(app_t* app, sound_t sound, bool true_for_looped)
+{
+	audio_instance_t* inst = s_get_inst(app, sound);
+	if (inst) {
+		cs_lock(app->cute_sound);
+		inst->sound.looped = true_for_looped;
+		cs_unlock(app->cute_sound);
+	}
+}
+
+void sound_set_volume(app_t* app, sound_t sound, float volume)
+{
+	audio_instance_t* inst = s_get_inst(app, sound);
+	if (inst) {
+		cs_lock(app->cute_sound);
+		inst->sound.volume0 = volume;
+		inst->sound.volume1 = volume;
+		cs_unlock(app->cute_sound);
+	}
+}
+
+void sound_set_sample_index(app_t* app, sound_t sound, int sample_index)
+{
+	audio_instance_t* inst = s_get_inst(app, sound);
+	if (inst) {
+		cs_lock(app->cute_sound);
+		inst->sound.sample_index = sample_index;
+		cs_unlock(app->cute_sound);
+	}
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -642,6 +756,10 @@ void audio_set_global_volume(app_t* app, float volume)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return;
+
+	// TODO -- Optimizaton.
+	// Can expose global volume in cute_sound.h and simply pass it along, so this can be
+	// done within the mixer, instead of touching every single instance.
 
 	as->global_volume = volume;
 	float sound_volume = as->sound_volume * volume;
@@ -682,6 +800,11 @@ void audio_set_sound_volume(app_t* app, float volume)
 	} while (playing_sound != end);
 }
 
+void audio_set_pause(app_t* app, bool true_for_paused)
+{
+	// TODO -- Expose a global paused variable in cute sound context.
+}
+
 // -------------------------------------------------------------------------------------------------
 // Internal.
 
@@ -711,6 +834,7 @@ void audio_system_destroy(audio_system_t* audio_system)
 {
 	if (audio_system) {
 		CUTE_FREE(audio_system->playing_sounds_buffer, audio_system->mem_ctx);
+		audio_system->~audio_system_t();
 		CUTE_FREE(audio_system, audio_system->mem_ctx);
 	}
 }
@@ -728,6 +852,7 @@ void audio_system_update(audio_system_t* as, float dt)
 		list_node_t* next = playing_sound->next;
 		if (inst != as->music_playing && inst != as->music_next) {
 			if (!inst->sound.active) {
+				as->instance_map.remove(inst->id);
 				list_remove(&inst->node);
 				list_push_back(&as->free_sounds, &inst->node);
 			}
@@ -828,7 +953,7 @@ void audio_system_update(audio_system_t* as, float dt)
 
 int sound_instance_size()
 {
-	return sizeof(sound_t);
+	return sizeof(cs_sound_t);
 }
 
 }
