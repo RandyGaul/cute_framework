@@ -27,8 +27,12 @@ int test_sprite_make()
 {
 	app_t* app = app_make("sprite test", 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN | CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT);
 	CUTE_TEST_CHECK_POINTER(app);
+	app_init_upscaling(app, UPSCALE_PIXEL_PERFECT_AT_LEAST_2X, 160, 120);
 
-	sprite_make(app, "test_data/girl.aseprite");
+	sprite_t s = sprite_make(app, "test_data/girl.aseprite");
+	batch_t* batch = sprite_get_batch(app);
+	batch_flush(batch);
+	app_present(app);
 
 	app_destroy(app);
 

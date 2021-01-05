@@ -33,7 +33,10 @@ static aseprite_cache_t* s_cache(app_t* app)
 	if (!app->batch) {
 		CUTE_ASSERT(!app->ase_cache);
 		app->ase_cache = aseprite_cache_make(app->mem_ctx);
-		app->batch = batch_make(aseprite_cache_get_pixels_fn(app->ase_cache), app, app->mem_ctx);
+		app->batch = batch_make(aseprite_cache_get_pixels_fn(app->ase_cache), app->ase_cache, app->mem_ctx);
+		int w, h;
+		app_offscreen_size(app, &w, &h);
+		batch_set_projection(app->batch, matrix_ortho_2d((float)w, (float)h, 0, 0));
 	}
 	return app->ase_cache;
 }
@@ -54,7 +57,6 @@ sprite_t sprite_make(app_t* app, const char* aseprite_path)
 		sprintf(buf, "Unable to load sprite at path \"%s\".\n", aseprite_path);
 		window_message_box(app, WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
 	}
-	s.batch = app->batch;
 	return s;
 }
 
@@ -64,9 +66,10 @@ void sprite_unload(app_t* app, const char* aseprite_path)
 	aseprite_cache_unload(cache, aseprite_path);
 }
 
-void flush_sprites(app_t* app)
+batch_t* sprite_get_batch(app_t* app)
 {
-	batch_flush(s_batch(app));
+	s_cache(app);
+	return app->batch;
 }
 
 }

@@ -68,7 +68,7 @@ struct sound_params_t
 
 struct sound_t { uint64_t id = 0; };
 
-CUTE_API sound_t CUTE_CALL sound_play(app_t* app, audio_t* audio_source, error_t* err = NULL, sound_params_t params = sound_params_t());
+CUTE_API sound_t CUTE_CALL sound_play(app_t* app, audio_t* audio_source, sound_params_t params = sound_params_t(), error_t* err = NULL);
 
 CUTE_API bool CUTE_CALL sound_is_active(app_t* app, sound_t sound);
 CUTE_API bool CUTE_CALL sound_get_is_paused(app_t* app, sound_t sound);

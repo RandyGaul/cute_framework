@@ -100,9 +100,9 @@ struct sprite_t
 	 * Pushes an instance of this sprite onto the `batch` member, which will be drawn the next time
 	 * `batch_flush` is called on `batch`.
 	 * 
-	 * `batch` member must not be NULL.
+	 * `batch` must not be NULL.
 	 */
-	CUTE_INLINE void draw();
+	CUTE_INLINE void draw(batch_t* batch);
 
 	/**
 	 * A lower level utility function used within the `draw` method. This is useful to prepare
@@ -165,9 +165,11 @@ struct sprite_t
 	float t = 0;
 	const animation_table_t* animations = NULL;
 
-	batch_t* batch = NULL;
 	transform_t transform = make_transform();
 };
+
+//--------------------------------------------------------------------------------------------------
+// Easy sprite API.
 
 /**
  * Loads a sprite from an aseprite file. This function may be called many times in a row without
@@ -182,9 +184,10 @@ CUTE_API sprite_t CUTE_CALL sprite_make(app_t* app, const char* aseprite_path);
 CUTE_API void CUTE_CALL sprite_unload(app_t* app, const char* aseprite_path);
 
 /**
- * Renders all sprites that have been drawn with sprite_t::draw onto the screen.
+ * Gets the internal batch used for `sprite_make` and `sprite_unload`. The batch is used to get
+ * sprites onto the screen by calling `batch_flush`.
  */
-CUTE_API void CUTE_CALL flush_sprites(app_t* app);
+CUTE_API batch_t* CUTE_CALL sprite_get_batch(app_t* app);
 
 //--------------------------------------------------------------------------------------------------
 // In-line implementation of `sprite_t` member functions.
@@ -232,7 +235,7 @@ void sprite_t::reset()
 	t = 0;
 }
 
-void sprite_t::draw()
+void sprite_t::draw(batch_t* batch)
 {
 	CUTE_ASSERT(batch);
 	batch_push(batch, batch_sprite(transform));
