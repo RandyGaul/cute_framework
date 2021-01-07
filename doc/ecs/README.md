@@ -110,6 +110,10 @@ error_t octorok_component_serialize(app_t* app, kv_t* kv, bool reading, entity_t
 
 For a detailed description of all the pieces of this function please see [here TODO](broken_link). Briefly: If this function is called for making a new component then `reading` is true, and false when saving. `entity` is the entity id for the new entity being created. The rest can be ignored for now.
 
+### Component Dependency
+
+Other ECS's out there have the notion of component depencenies, where a component can not be added to an entity based on what other components the entity has. CF does not have any kind of dependency API. Instead it is suggested for users to enforce their own dependencies rules. Either the registration functions can be wrapped, or, within component serialize functions the `entity_has_component` function can be used to enforce custom dependencies.
+
 ## System
 
 In the ECS systems are just functions. The purpose is to write your gameplay code systems. Each system must be registered into the ECS. The order the systems are updated is the order in which they are registered.
