@@ -116,7 +116,7 @@ Other ECS's out there have the notion of component depencenies, where a componen
 
 For example, say there is a `BlueComponent` but it requires a `RedComponent`. Make sure that `BlueComponent` is required *afteR* `RedComponent`.
 
-```
+```cpp
 void register_components(app_t* app)
 {
 	ecs_entity_begin(app);
