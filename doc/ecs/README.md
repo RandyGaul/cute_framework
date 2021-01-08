@@ -114,7 +114,7 @@ For a detailed description of all the pieces of this function please see [here T
 
 Other ECS's out there have the notion of component depencenies, where a component can not be added to an entity based on what other components the entity has. CF does not have any kind of dependency API. Instead it is suggested for users to enforce their own dependencies rules. Either the registration functions can be wrapped, or, within component serialize functions the `entity_has_component` function can be used to enforce custom dependencies.
 
-For example, say there is a `BlueComponent` but it requires a `RedComponent`. Make sure that `BlueComponent` is required *afteR* `RedComponent`.
+For example, say there is a `BlueComponent` but it requires a `RedComponent`. Make sure that `BlueComponent` is required *after* `RedComponent`.
 
 ```cpp
 void register_components(app_t* app)
@@ -146,7 +146,7 @@ error_t blue_component_serialize(app_t* app, kv_t* kv, bool reading, entity_t en
 
 ### Component `self` Reference
 
-Other ECS's usually have components share a lot of common functionality. For example in Unity components store a reference to the owning entity. However, in CF components are 100% controlled by you, so unless added explicitly there will be no references to any entities at all.
+Other ECS's usually have components share a lot of common functionality. For example in [Unity](https://unity.com/) components store a reference to the owning entity. However, in CF components are 100% controlled by you, so unless added explicitly there will be no references to any entities at all.
 
 If you'd like your components to reference the owning entities simply store the reference in your component when initialized (with the serializer `ecs_set_optional_serializer`).
 
