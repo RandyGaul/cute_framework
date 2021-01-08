@@ -114,6 +114,54 @@ For a detailed description of all the pieces of this function please see [here T
 
 Other ECS's out there have the notion of component depencenies, where a component can not be added to an entity based on what other components the entity has. CF does not have any kind of dependency API. Instead it is suggested for users to enforce their own dependencies rules. Either the registration functions can be wrapped, or, within component serialize functions the `entity_has_component` function can be used to enforce custom dependencies.
 
+For example, say there is a `BlueComponent` but it requires a `RedComponent`. Make sure that `BlueComponent` is required *afteR* `RedComponent`.
+
+```
+void register_components(app_t* app)
+{
+	ecs_entity_begin(app);
+	ecs_entity_set_name(app, "MyEntity");
+	ecs_entity_require_component(app, "RedComponent");
+	ecs_entity_require_component(app, "BlueComponent");
+	ecs_entity_end(app);
+}
+```
+
+The order components are required is the order they are constructed and initialized. This means when a `BlueComponent` is created it can lookup on the entity to see if the `RedComponent` is present. If it does not exist an error can be reported about the missing dependency.
+
+```cpp
+error_t blue_component_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+{
+	BlueComponent* blue = (BlueComponent*)component;
+	if (reading) {
+		CUTE_PLACEMENT_NEW(blue) BlueComponent;
+		if (!entity_has_component(app, entity, "RedComponent")) {
+			// Report the error.
+			return error_failure("The BlueComponent requires the RedComponent be present.");
+		}
+	}
+	return error_success();
+}
+```
+
+### Component `self` Reference
+
+Other ECS's usually have components share a lot of common functionality. For example in Unity components store a reference to the owning entity. However, in CF components are 100% controlled by you, so unless added explicitly there will be no references to any entities at all.
+
+If you'd like your components to reference the owning entities simply store the reference in your component when initialized (with the serializer `ecs_set_optional_serializer`).
+
+```cpp
+error_t blue_component_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+{
+	MyComponent* my_component = (MyComponent*)component;
+	if (reading) {
+		CUTE_PLACEMENT_NEW(my_component) MyComponent;
+		my_component->self = entity; // Assign the "self" reference here, upon initialization.
+	}
+	return error_success();
+}
+```
+
 ## System
 
 In the ECS systems are just functions. The purpose is to write your gameplay code systems. Each system must be registered into the ECS. The order the systems are updated is the order in which they are registered.
