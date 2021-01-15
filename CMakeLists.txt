@@ -188,6 +188,7 @@ set(CUTE_SRCS
 	src/cute_haptics.cpp
 	src/cute_utf8.cpp
 	src/cute_sprite.cpp
+	src/cute_coroutine.cpp
 
 	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
@@ -274,6 +275,7 @@ set(CUTE_HDRS
 	include/cute_symbol.h
 	include/cute_haptics.h
 	include/cute_utf8.h
+	include/cute_coroutine.h
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
