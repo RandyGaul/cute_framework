@@ -54,6 +54,7 @@
 #include <test_aseprite.h>
 #include <test_png_cache.h>
 #include <test_sprite.h>
+#include <test_coroutine.h>
 
 int main(int argc, const char** argv)
 {
@@ -149,6 +150,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_aseprite_make_destroy),
 		CUTE_TEST_CASE_ENTRY(test_png_cache),
 		CUTE_TEST_CASE_ENTRY(test_sprite_make),
+		CUTE_TEST_CASE_ENTRY(test_coroutine),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

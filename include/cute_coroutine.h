@@ -27,8 +27,8 @@ namespace cute
 	struct coroutine_t;
 	typedef void (coroutine_fn)(coroutine_t* co);
 
-	coroutine_t* coroutine_make(coroutine_fn* fn, void* udata = NULL, void* mem_ctx = NULL);
-	void coroutine_destroy(coroutine_t* co);
+	CUTE_API coroutine_t* CUTE_CALL coroutine_make(coroutine_fn* fn, void* udata = NULL, void* mem_ctx = NULL);
+	CUTE_API void CUTE_CALL coroutine_destroy(coroutine_t* co);
 
 	enum coroutine_state_t
 	{
@@ -38,15 +38,15 @@ namespace cute
 		COROUTINE_STATE_SUSPENDED,
 	};
 
-	error_t coroutine_resume(coroutine_t* co);
-	error_t coroutine_yield(coroutine_t* co);
-	coroutine_state_t coroutine_state(coroutine_t* co);
-	void* coroutine_get_udata(coroutine_t* co);
+	CUTE_API error_t CUTE_CALL coroutine_resume(coroutine_t* co);
+	CUTE_API error_t CUTE_CALL coroutine_yield(coroutine_t* co);
+	CUTE_API coroutine_state_t CUTE_CALL coroutine_state(coroutine_t* co);
+	CUTE_API void* CUTE_CALL coroutine_get_udata(coroutine_t* co);
 
-	error_t coroutine_push(coroutine_t* co, const void* data, size_t size);
-	void* coroutine_pop(coroutine_t* co, size_t size);
-	error_t coroutine_pull(coroutine_t* co, void* data, size_t size);
-	size_t coroutine_bytes_remaining(coroutine_t* co);
+	CUTE_API error_t CUTE_CALL coroutine_push(coroutine_t* co, const void* data, size_t size);
+	CUTE_API error_t CUTE_CALL coroutine_pop(coroutine_t* co, void* data, size_t size);
+	CUTE_API size_t CUTE_CALL coroutine_bytes_pushed(coroutine_t* co);
+	CUTE_API size_t CUTE_CALL coroutine_space_remaining(coroutine_t* co);
 
-	coroutine_t* coroutine_currently_running();
+	CUTE_API coroutine_t* CUTE_CALL coroutine_currently_running();
 }

@@ -33,6 +33,7 @@
 #include <cute_clipboard.h>
 #include <cute_color.h>
 #include <cute_concurrency.h>
+#include <cute_coroutine.h>
 #include <cute_crypto.h>
 #include <cute_dictionary.h>
 #include <cute_doubly_list.h>

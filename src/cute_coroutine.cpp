@@ -46,4 +46,87 @@ void coroutine_destroy(coroutine_t* _co)
 	assert(res == MCO_SUCCESS);
 }
 
+error_t coroutine_resume(coroutine_t* _co)
+{
+	mco_coro* co = (mco_coro*)_co;
+	mco_result res = mco_resume(co);
+	if (res != MCO_SUCCESS) {
+		return error_failure(mco_result_description(res));
+	} else {
+		return error_success();
+	}
+}
+
+error_t coroutine_yield(coroutine_t* _co)
+{
+	mco_coro* co = (mco_coro*)_co;
+	mco_result res = mco_yield(co);
+	if (res != MCO_SUCCESS) {
+		return error_failure(mco_result_description(res));
+	}
+	else {
+		return error_success();
+	}
+}
+
+coroutine_state_t coroutine_state(coroutine_t* _co)
+{
+	mco_coro* co = (mco_coro*)_co;
+	mco_state s = mco_status(co);
+	switch (s) {
+	default:
+		case MCO_DEAD: return COROUTINE_STATE_DEAD;
+		case MCO_NORMAL: return COROUTINE_STATE_ACTIVE_BUT_RESUMED_ANOTHER;
+		case MCO_RUNNING: return COROUTINE_STATE_ACTIVE_AND_RUNNING;
+		case MCO_SUSPENDED: return COROUTINE_STATE_SUSPENDED;
+	}
+}
+
+void* coroutine_get_udata(coroutine_t* _co)
+{
+	mco_coro* co = (mco_coro*)_co;
+	return mco_get_user_data(co);
+}
+
+error_t coroutine_push(coroutine_t* _co, const void* data, size_t size)
+{
+	mco_coro* co = (mco_coro*)_co;
+	mco_result res = mco_push(co, data, size);
+	if (res != MCO_SUCCESS) {
+		return error_failure(mco_result_description(res));
+	}
+	else {
+		return error_success();
+	}
+}
+
+error_t coroutine_pop(coroutine_t* _co, void* data, size_t size)
+{
+	mco_coro* co = (mco_coro*)_co;
+	mco_result res = mco_pop(co, data, size);
+	if (res != MCO_SUCCESS) {
+		return error_failure(mco_result_description(res));
+	}
+	else {
+		return error_success();
+	}
+}
+
+size_t coroutine_bytes_pushed(coroutine_t* _co)
+{
+	mco_coro* co = (mco_coro*)_co;
+	return mco_get_bytes_stored(co);
+}
+
+size_t coroutine_space_remaining(coroutine_t* _co)
+{
+	mco_coro* co = (mco_coro*)_co;
+	return mco_get_storage_size(co) - mco_get_bytes_stored(co);
+}
+
+coroutine_t* coroutine_currently_running()
+{
+	return (coroutine_t*)mco_running();
+}
+
 }

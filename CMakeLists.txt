@@ -365,6 +365,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_aseprite.h
 		test/test_png_cache.h
 		test/test_sprite.h
+		test/test_coroutine.h
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
