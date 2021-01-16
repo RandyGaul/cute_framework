@@ -318,8 +318,9 @@ if(MACOSX)
 	# These are needed to link to PHYSFS.
 	find_library(IOKIT IOKit)
 	find_library(FOUNDATION Foundation)
+	find_library(SECURITY Security)
 
-	target_link_libraries(cute PRIVATE ${SDL2_LIBRARIES} ${sodium_LIBRARIES} physfs ${IOKIT} ${FOUNDATION})
+	target_link_libraries(cute PRIVATE ${SDL2_LIBRARIES} ${sodium_LIBRARIES} physfs ${IOKIT} ${FOUNDATION} ${SECURITY})
 elseif(EMSCRIPTEN)
 	target_compile_options(cute PUBLIC -O1 -fno-rtti -fno-exceptions)
 	target_link_libraries(cute PRIVATE sodium physfs "-s USE_WEBGL2=1 -s ASSERTIONS=1  -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1")
@@ -332,7 +333,7 @@ else()
 endif()
 
 if(CUTE_FRAMEWORK_WITH_HTTPS)
-	target_link_libraries(cute PRIVATE mbedx509 mbedtls mbedcrypto crypt32)
+	target_link_libraries(cute PRIVATE mbedx509 mbedtls mbedcrypto)
 endif()
 
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)

@@ -1,3 +1,2 @@
-build/*
-build_emscripten/*
-pong/to_render_sprite.cpp
+build_*/
+.DS_Store
