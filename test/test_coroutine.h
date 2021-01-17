@@ -34,6 +34,14 @@ void coroutine_func(coroutine_t* co)
 	coroutine_push(co, &c, sizeof(c));
 }
 
+void coroutine_wait_func(coroutine_t* co)
+{
+	coroutine_wait(co, 1.0f);
+
+	int a = 3;
+	coroutine_push(co, &a, sizeof(a));
+}
+
 CUTE_TEST_CASE(test_coroutine, "Call some coroutine functions or whatever.");
 int test_coroutine()
 {
@@ -48,7 +56,39 @@ int test_coroutine()
 	coroutine_resume(co);
 	coroutine_pop(co, &c, sizeof(c));
 	CUTE_TEST_ASSERT(c == 50);
+	coroutine_destroy(co);
 
+	co = coroutine_make(coroutine_func);
+	a = 5;
+	b = 10;
+	c = 0;
+	coroutine_push(co, &a, sizeof(a));
+	coroutine_push(co, &b, sizeof(b));
+	coroutine_resume(co);
+	CUTE_TEST_ASSERT(c == 0);
+	coroutine_resume(co);
+	coroutine_pop(co, &c, sizeof(c));
+	CUTE_TEST_ASSERT(c == 50);
+	coroutine_destroy(co);
+
+	co = coroutine_make(coroutine_wait_func);
+	coroutine_resume(co);
+	size_t bytes = coroutine_bytes_pushed(co);
+	CUTE_TEST_ASSERT(bytes == 0);
+	coroutine_resume(co);
+	coroutine_resume(co);
+	coroutine_resume(co);
+	bytes = coroutine_bytes_pushed(co);
+	CUTE_TEST_ASSERT(bytes == 0);
+	coroutine_resume(co, 0.5f);
+	bytes = coroutine_bytes_pushed(co);
+	CUTE_TEST_ASSERT(bytes == 0);
+	coroutine_resume(co, 0.5f);
+	bytes = coroutine_bytes_pushed(co);
+	CUTE_TEST_ASSERT(bytes == sizeof(int));
+	coroutine_pop(co, &a, sizeof(a));
+	CUTE_TEST_ASSERT(a == 3);
+	CUTE_TEST_ASSERT(coroutine_state(co) == COROUTINE_STATE_DEAD);
 	coroutine_destroy(co);
 
 	return 0;

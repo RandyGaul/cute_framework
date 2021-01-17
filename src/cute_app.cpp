@@ -260,12 +260,14 @@ void app_update(app_t* app, float dt)
 		ImGui_ImplSDL2_NewFrame(app->window);
 	}
 
-	sg_pass_action pass_action = { 0 };
-	pass_action.colors[0] = { SG_ACTION_CLEAR, { 0.4f, 0.65f, 0.7f, 1.0f } };
-	if (app->offscreen_enabled) {
-		sg_begin_pass(app->offscreen_pass, pass_action);
-	} else {
-		sg_begin_default_pass(pass_action, app->w, app->h);
+	if (app->gfx_enabled) {
+		sg_pass_action pass_action = { 0 };
+		pass_action.colors[0] = { SG_ACTION_CLEAR, { 0.4f, 0.65f, 0.7f, 1.0f } };
+		if (app->offscreen_enabled) {
+			sg_begin_pass(app->offscreen_pass, pass_action);
+		} else {
+			sg_begin_default_pass(pass_action, app->w, app->h);
+		}
 	}
 }
 

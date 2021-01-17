@@ -32,12 +32,12 @@
 #include <cute_strpool.h>
 #include <cute_aseprite_cache.h>
 #include <cute_batch.h>
+#include <cute_gfx.h>
 
 #include <internal/cute_object_table_internal.h>
 #include <internal/cute_font_internal.h>
 
 #include <cute/cute_font.h>
-#include <cute_gfx.h>
 
 struct SDL_Window;
 struct cs_context_t;

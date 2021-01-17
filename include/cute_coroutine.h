@@ -19,6 +19,9 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifndef CUTE_COROUTINE_H
+#define CUTE_COROUTINE_H
+
 #include <cute_defines.h>
 #include <cute_error.h>
 
@@ -27,7 +30,7 @@ namespace cute
 	struct coroutine_t;
 	typedef void (coroutine_fn)(coroutine_t* co);
 
-	CUTE_API coroutine_t* CUTE_CALL coroutine_make(coroutine_fn* fn, void* udata = NULL, void* mem_ctx = NULL);
+	CUTE_API coroutine_t* CUTE_CALL coroutine_make(coroutine_fn* fn, void* udata = NULL);
 	CUTE_API void CUTE_CALL coroutine_destroy(coroutine_t* co);
 
 	enum coroutine_state_t
@@ -38,8 +41,9 @@ namespace cute
 		COROUTINE_STATE_SUSPENDED,
 	};
 
-	CUTE_API error_t CUTE_CALL coroutine_resume(coroutine_t* co);
-	CUTE_API error_t CUTE_CALL coroutine_yield(coroutine_t* co);
+	CUTE_API error_t CUTE_CALL coroutine_resume(coroutine_t* co, float dt = 0);
+	CUTE_API float CUTE_CALL coroutine_yield(coroutine_t* co, error_t* err = NULL);
+	CUTE_API error_t CUTE_CALL coroutine_wait(coroutine_t* co, float seconds);
 	CUTE_API coroutine_state_t CUTE_CALL coroutine_state(coroutine_t* co);
 	CUTE_API void* CUTE_CALL coroutine_get_udata(coroutine_t* co);
 
@@ -50,3 +54,5 @@ namespace cute
 
 	CUTE_API coroutine_t* CUTE_CALL coroutine_currently_running();
 }
+
+#endif // CUTE_COROUTINE_H
