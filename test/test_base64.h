@@ -75,5 +75,7 @@ int test_base64_encode()
 	CUTE_TEST_ASSERT(base64_decode(buffer, 256, "foo", 3).is_error());
 	CUTE_TEST_ASSERT(base64_decode(buffer, 256, "\\!@$", 4).is_error());
 
+	CUTE_TEST_CHECK(base64_decode(buffer, 256, "zzz=", 4).is_error());
+
 	return 0;
 }
