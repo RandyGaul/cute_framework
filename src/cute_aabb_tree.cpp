@@ -284,7 +284,7 @@ struct PriorityQueue
 		int u = 0, v = 1;
 		while (u != v) {
 			u = v;
-			if (2 * u - 1 <= m_count) {
+			if (2 * u + 1 <= m_count) {
 				if (predicate(u - 1, 2 * u - 1) <= 0) v = 2 * u;
 				if (predicate(v - 1, 2 * u + 1 - 1) <= 0) v = 2 * u + 1;
 			} else if (2 * u <= m_count) {
