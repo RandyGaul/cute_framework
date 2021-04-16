@@ -678,6 +678,7 @@ void aabb_tree_remove(aabb_tree_t* tree, leaf_t leaf)
 		{
 			if (parent->index_a == index) tree->root = parent->index_b;
 			else tree->root = parent->index_a;
+			nodes[tree->root].index_parent = AABB_TREE_NULL_NODE_INDEX;
 		} else {
 			int index_grandparent = parent->index_parent;
 			aabb_tree_t::node_t* grandparent = nodes + index_grandparent;
