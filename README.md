@@ -36,14 +36,29 @@ int main(int argc, const char** argv)
 Select one of the categories below to learn more about them. Each category contains information about functions, structs, enums, and anything else relevant in the various Cute Framework header files.
 
 [app](https://github.com/RandyGaul/cute_framework/tree/master/doc/app)  
+[audio](https://github.com/RandyGaul/cute_framework/tree/master/doc/audio)  
 [clipboard](https://github.com/RandyGaul/cute_framework/tree/master/doc/clipboard)  
-[window](https://github.com/RandyGaul/cute_framework/tree/master/doc/window)  
+[data structures](https://github.com/RandyGaul/cute_framework/tree/master/doc/data_structures)  
+[ecs](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs)  
+[graphics](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics)  
+[math](https://github.com/RandyGaul/cute_framework/tree/master/doc/math)  
+[serialization](https://github.com/RandyGaul/cute_framework/tree/master/doc/serialization)  
 [string](https://github.com/RandyGaul/cute_framework/tree/master/doc/string)  
 [time](https://github.com/RandyGaul/cute_framework/tree/master/doc/time)  
-[graphics](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics)  
-[audio](https://github.com/RandyGaul/cute_framework/tree/master/doc/audio)  
-[ecs](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs)  
+[window](https://github.com/RandyGaul/cute_framework/tree/master/doc/window)  
 
 # Docs by API List
 
 TODO
+
+# Download
+
+TODO
+
+# Community and Support
+
+Feel free to open up an [issue right here on GitHub](https://github.com/RandyGaul/cute_framework/issues) to ask any questions. If you'd like to make a pull request I highly recommend opening a GitHub issue first to start a discussion on any changes you would like to make.
+
+Here's a [link to the discord chat](https://discord.gg/2DFHRmX) for Cute Framework and the [Cute Headers](https://github.com/RandyGaul/cute_headers). Feel free to pop in and ask questions, make suggestions, or have a discussion.
+
+Another easy way to get a hold of the author of Cute Framework is on twitter [@randypgaul](https://twitter.com/RandyPGaul).
