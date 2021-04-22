@@ -8,6 +8,6 @@ CF comes with a [2D math library](https://github.com/RandyGaul/cute_framework/bl
 * Polygon
 * Ray
 
-There is too much information to document right here, so please check out the following files for more information. Not to worry! These files are filled with a lot of very good documentation on the header comments :)
+There is too much information to document right here, so please check out the [math header itself](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h) for a bunch of in-comments documentation.
 
 There is also a custom implementation of psuedo-random number generation documented in the [rnd](https://github.com/RandyGaul/cute_framework/tree/master/doc/math/rnd) section.
