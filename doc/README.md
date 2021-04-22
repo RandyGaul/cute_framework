@@ -11,3 +11,4 @@ The docs for Cute Framework are organized by categories. Select one of the categ
 [audio](https://github.com/RandyGaul/cute_framework/tree/master/doc/audio)  
 [ecs](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs)  
 [data structures](https://github.com/RandyGaul/cute_framework/tree/master/doc/data_structures)  
+[serialization](https://github.com/RandyGaul/cute_framework/tree/master/doc/serialization)
