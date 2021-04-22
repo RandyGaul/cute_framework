@@ -7,19 +7,20 @@ Here's a quick code snippet of making and drawing a sprite from an aseprite file
 ```cpp
 sprite s;
 
-void init()
+void init(app_t* app)
 {
     s = sprite_make(app, "data/sprite.ase");
 }
 
-void update(fload dt)
+void update(app_t* app, fload dt)
 {
     s.update(dt);
 }
 
-void draw()
+void draw(app_t* app)
 {
-    s.draw();
+    batch_t* b = sprite_get_batch(app);
+    s.draw(b);
     flush_sprites(app);
 }
 ```
