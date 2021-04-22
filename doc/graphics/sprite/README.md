@@ -24,13 +24,17 @@ void draw()
 }
 ```
 
-# Sprite Functions
+# Easy Sprite API
+
+These functions are the "easy" API for creating and destroying sprites. These functions setup default values for an [aseprite cache](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/aseprite_cache) and a [batch](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/batch). This is great to get some sprites drawing on the screen quickly with minimal effort. For more advanced graphics usages custom caches or batches need to be created and managed yourself, but these three functions below are great to start with.
 
 [sprite_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/sprite_make.md)  
 [sprite_unload](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/sprite_unload.md)  
 [flush_sprites](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/flush_sprites.md)  
 
 # Sprite Member Functions
+
+Calling the member functions on sprites is recommended over directly accessing the member variables (documented below). These member functions are generally easy to use without causing unintended problems. If you know what you're doing you can directly access or alter the member variables (documented below).
 
 [update](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/update.md)  
 [play](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/play.md)  
@@ -53,15 +57,24 @@ void draw()
 
 # Sprite Member Variables
 
-[name](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/name.md)  
-[w](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/h.md)  
-[h](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/h.md)  
-[scale](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/scale.md)  
-[local_offset](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/local_offset.md)  
-[opacity](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/opacity.md)  
-[layer](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/layer.md)  
-[frame_index](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/frame_index.md)  
-[loop_count](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/loop_count.md)  
-[play_speed_multiplier](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/play_speed_multiplier.md)  
-[batch](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/batch.md)  
-[transform](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/transform.md)  
+Calling the member functions on sprites (documented above) is recommended over directly accessing these member variables. The member functions are generally easy to use without causing unintended problems. If you know what you're doing you can directly access or alter these member variables.
+
+Please note it is always safe to *read* from a member variable, but writing to or changing the value of a member variable can cause problems if you are unsure of what you are doing.
+
+Member Variable Name | Type | Description
+--- | --- | ---
+name | `const char*` | Name of the sprite, mostly useful for debugging purposes. Can safely be `NULL`.
+w | `int` | Width of the sprite in pixels.
+h | `int` | Height of the sprite in pixels.
+scale | `v2` | Scaling factor for the sprite in the local x-y axes, default is `(1, 1)`.
+local_offset | `v2` | An offset from the local origin of the sprite, default is `(0, 0)`.
+opacity | `float` | Value from 0 to 1 for how opaque the sprite is. 0 means invisible, 1 is fully visible. Default is 1.
+layer | `int` | Used for sorting sprites based on "depth" or their sprite "layer". Default is 0. Larger numbers are drawn last.
+frame_index | `int` | The current frame to be drawn for the sprite's currently playing animation.
+loop_count | `int` | Incremented each time the current animation of the sprite has reset after completing.
+play_speed_multiplier | `float` | Used to multiply time passed to the [update](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/update.md) member function of the sprite. Default value is 1. 0.5 means the sprite plays at half speed, while 2.0 means the sprite plays at double speed.
+animation | `animation_t` | The currently playing animation.
+paused | `bool` | Whether or not the sprite is currently paused. True means paused. Default is `false`.
+t | `float` | The current time elapsed while playing an animation. This gets incremented when [update](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/update.md) is called.
+animations | `animation_table_t` | The table of all animations. These animations can be loaded from [sprite_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/sprite_make.md), or loaded with more customizability with your own [aseprite cache](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/aseprite_cache), or built up from scratch from various png files manually with [png cache](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/png_cache).
+transform | `transform_t` | The transform used to place the sprite in the world when drawn.
