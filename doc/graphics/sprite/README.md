@@ -53,9 +53,7 @@ void draw()
 
 # Sprite Member Variables
 
-[on_loop](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/on_loop.md)  
 [name](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/name.md)  
-[on_loop](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/on_loop.md)  
 [w](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/h.md)  
 [h](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/h.md)  
 [scale](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/scale.md)  
