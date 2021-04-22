@@ -12,7 +12,7 @@ void init(app_t* app)
     s = sprite_make(app, "data/sprite.ase");
 }
 
-void update(app_t* app, fload dt)
+void update(app_t* app, float dt)
 {
     s.update(dt);
 }
