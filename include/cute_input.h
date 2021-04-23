@@ -70,6 +70,17 @@ struct ime_composition_t
 
 CUTE_API bool CUTE_CALL input_get_ime_composition(app_t* app, ime_composition_t* composition);
 
+struct touch_t
+{
+	uint64_t id;
+	float x;
+	float y;
+	float pressure;
+};
+
+CUTE_API array<touch_t> CUTE_CALL touch_get_all(app_t* app);
+CUTE_API bool CUTE_CALL touch_get(app_t* app, uint64_t id, touch_t* touch);
+
 enum mouse_button_t : int
 {
 	MOUSE_BUTTON_LEFT,

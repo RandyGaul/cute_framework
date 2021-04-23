@@ -35,6 +35,7 @@ namespace cute
 
 static int s_map_SDL_keys(int key)
 {
+	SDL_FingerID;
 	if (key < 128) return key;
 	switch (key)
 	{
@@ -394,6 +395,32 @@ bool input_get_ime_composition(app_t* app, ime_composition_t* composition)
 	return app->ime_composition.count() ? true : false;
 }
 
+static void s_touch_remove(app_t* app, uint64_t id)
+{
+	for (int i = 0; i < app->touches.size(); ++i) {
+		if (app->touches[i].id == id) {
+			app->touches.unordered_remove(i);
+			break;
+		}
+	}
+}
+
+array<touch_t> touch_get_all(app_t* app)
+{
+	return app->touches;
+}
+
+bool touch_get(app_t* app, uint64_t id, touch_t* touch)
+{
+	for (int i = 0; i < app->touches.size(); ++i) {
+		if (app->touches[i].id == id) {
+			*touch = app->touches[i];
+			return true;
+		}
+	}
+	return false;
+}
+
 static joypad_t* s_joy(app_t* app, SDL_JoystickID id)
 {
 	for (list_node_t* n = list_begin(&app->joypads); n != list_end(&app->joypads); n = n->next) {
@@ -602,6 +629,40 @@ void pump_input_msgs(app_t* app)
 				CUTE_ASSERT(axis >= 0 && axis < JOYPAD_AXIS_COUNT);
 				joypad->axes[axis] = value;
 			}
+		}	break;
+
+		case SDL_FINGERDOWN:
+		{
+			uint64_t id = (uint64_t)event.tfinger.fingerId;
+			s_touch_remove(app, id);
+			touch_t& touch = app->touches.add();
+			touch.id = id;
+			touch.pressure = event.tfinger.pressure;
+			touch.x = event.tfinger.x * app->w; // NOTE: Probably wrong for high-DPI.
+			touch.y = event.tfinger.y * app->h; // NOTE: Probably wrong for high-DPI.
+		}	break;
+
+		case SDL_FINGERMOTION:
+		{
+			uint64_t id = (uint64_t)event.tfinger.fingerId;
+			touch_t touch;
+			if (touch_get(app, id, &touch)) {
+				touch.pressure = event.tfinger.pressure;
+				touch.x = event.tfinger.x * app->w; // NOTE: Probably wrong for high-DPI.
+				touch.y = event.tfinger.y * app->h; // NOTE: Probably wrong for high-DPI.
+			} else {
+				touch_t& touch = app->touches.add();
+				touch.id = id;
+				touch.pressure = event.tfinger.pressure;
+				touch.x = event.tfinger.x * app->w; // NOTE: Probably wrong for high-DPI.
+				touch.y = event.tfinger.y * app->h; // NOTE: Probably wrong for high-DPI.
+			}
+		}	break;
+
+		case SDL_FINGERUP:
+		{
+			uint64_t id = (uint64_t)event.tfinger.fingerId;
+			s_touch_remove(app, id);
 		}	break;
 		}
 	}

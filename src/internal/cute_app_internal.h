@@ -185,6 +185,7 @@ struct app_t
 	int key_mod = 0;
 	mouse_state_t mouse, mouse_prev;
 	list_t joypads;
+	array<touch_t> touches;
 
 	batch_t* batch = NULL;
 	aseprite_cache_t* ase_cache = NULL;
