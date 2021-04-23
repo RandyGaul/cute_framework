@@ -65,6 +65,8 @@ Another easy way to get a hold of the author of Cute Framework is on twitter [@r
 
 # Building from Source
 
+It's highly recommended to download a prebuilt version of CF, but if you for some reason want to build from source yourself, then read on...
+
 Install [cmake](https://cmake.org/).
 Perform the usual cmake dance (make folder, -G to generate the build files, and the finally trigger the build), for example on Windows with Visual Studio 2019.
 
