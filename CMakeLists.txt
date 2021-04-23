@@ -389,3 +389,6 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		set_property(TARGET tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:tests>)
 	endif()
 endif()
+
+install(TARGETS cute EXPORT cute DESTINATION "lib/cute_framework")
+install(FILES ${CUTE_HDRS} DESTINATION "include/cute_framework")
