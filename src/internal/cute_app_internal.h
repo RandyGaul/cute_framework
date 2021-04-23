@@ -33,6 +33,7 @@
 #include <cute_aseprite_cache.h>
 #include <cute_batch.h>
 #include <cute_gfx.h>
+#include <cute_input.h>
 
 #include <internal/cute_object_table_internal.h>
 #include <internal/cute_font_internal.h>

@@ -32,10 +32,8 @@
 
 namespace cute
 {
-
 static int s_map_SDL_keys(int key)
 {
-	SDL_FingerID;
 	if (key < 128) return key;
 	switch (key)
 	{
