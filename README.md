@@ -62,3 +62,17 @@ Feel free to open up an [issue right here on GitHub](https://github.com/RandyGau
 Here's a [link to the discord chat](https://discord.gg/2DFHRmX) for Cute Framework and the [Cute Headers](https://github.com/RandyGaul/cute_headers). Feel free to pop in and ask questions, make suggestions, or have a discussion.
 
 Another easy way to get a hold of the author of Cute Framework is on twitter [@randypgaul](https://twitter.com/RandyPGaul).
+
+# Building from Source
+
+Install [cmake](https://cmake.org/).
+Perform the usual cmake dance (make folder, -G to generate the build files, and the finally trigger the build), for example on Windows with Visual Studio 2019.
+
+```cmake
+mkdir build_msvc_2019 > nul 2> nul
+cmake -G "Visual Studio 16 2019" -A x64 -Bbuild_msvc_2019 .
+cmake --build build_msvc_2019 --config Debug
+cmake --build build_msvc_2019 --config Release
+```
+
+Some scripts for running this cmake process are laying around in the top-level folder, such as `apple_make.sh` for apple machines, or `mingw.cmd` for building against a MingW compiler on Windows. Feel free to use or ignore these scripts as you wish.
