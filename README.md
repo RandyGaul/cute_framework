@@ -2,8 +2,6 @@
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/logo.png>
 </p>
 
-# Welcome to Cute Framework (CF)
-
 Cute Framework (CF for short) is the *cutest* framework available for making 2D games in C/C++. CF comprises of different features, where the various features avoid inter-dependencies. In this way using CF is about picking and choosing which pieces are needed for your game.
 
 ## Important Note on Version
