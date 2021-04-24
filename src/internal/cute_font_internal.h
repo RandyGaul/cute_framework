@@ -22,7 +22,7 @@
 #ifndef CUTE_FONT_INTERNAL_H
 #define CUTE_FONT_INTERNAL_H
 
-#include <cute/cute_font.h>
+#include "../../include/cute/cute_font.h"
 #include <cute_gfx.h>
 #include <cute_color.h>
 #include <cute_math.h>
