@@ -22,8 +22,8 @@
 #ifndef CUTE_INPUT_H
 #define CUTE_INPUT_H
 
-#include <cute_defines.h>
-#include <cute_array.h>
+#include "cute_defines.h"
+#include "cute_array.h"
 
 namespace cute
 {

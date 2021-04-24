@@ -22,8 +22,8 @@
 #ifndef CUTE_LRU_CACHE_H
 #define CUTE_LRU_CACHE_H
 
-#include <cute_dictionary.h>
-#include <cute_doubly_list.h>
+#include "cute_dictionary.h"
+#include "cute_doubly_list.h"
 
 namespace cute
 {

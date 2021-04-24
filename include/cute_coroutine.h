@@ -22,8 +22,8 @@
 #ifndef CUTE_COROUTINE_H
 #define CUTE_COROUTINE_H
 
-#include <cute_defines.h>
-#include <cute_error.h>
+#include "cute_defines.h"
+#include "cute_error.h"
 
 namespace cute
 {

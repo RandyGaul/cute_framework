@@ -19,10 +19,10 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <cute_defines.h>
-#include <cute_error.h>
-#include <cute_c_runtime.h>
-#include <cute_array.h>
+#include "cute_defines.h"
+#include "cute_error.h"
+#include "cute_c_runtime.h"
+#include "cute_array.h"
 
 namespace cute
 {

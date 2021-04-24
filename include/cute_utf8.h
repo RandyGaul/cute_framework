@@ -22,7 +22,7 @@
 #ifndef CUTE_UTF8
 #define CUTE_UTF8
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 namespace cute
 {

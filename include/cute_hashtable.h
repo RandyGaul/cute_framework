@@ -22,7 +22,7 @@
 #ifndef CUTE_HASHTABLE_H
 #define CUTE_HASHTABLE_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 namespace cute
 {

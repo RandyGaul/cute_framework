@@ -22,7 +22,7 @@
 #ifndef CUTE_APP_WINDOW_H
 #define CUTE_APP_WINDOW_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 namespace cute
 {

@@ -22,8 +22,8 @@
 #ifndef CUTE_STRING_UTIL_H
 #define CUTE_STRING_UTIL_H
 
-#include <cute_string.h>
-#include <cute_array.h>
+#include "cute_string.h"
+#include "cute_array.h"
 
 #include <stdarg.h>
 

@@ -22,9 +22,9 @@
 #ifndef CUTE_KV_UTILS_H
 #define CUTE_KV_UTILS_H
 
-#include <cute_kv.h>
-#include <cute_ecs.h>
-#include <cute_string.h>
+#include "cute_kv.h"
+#include "cute_ecs.h"
+#include "cute_string.h"
 
 #include <string>
 #include <vector>

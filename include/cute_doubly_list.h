@@ -22,7 +22,7 @@
 #ifndef CUTE_DOUBLY_LINKED_LIST_H
 #define CUTE_DOUBLY_LINKED_LIST_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 namespace cute
 {

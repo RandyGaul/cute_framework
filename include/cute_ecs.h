@@ -22,11 +22,11 @@
 #ifndef CUTE_ECS_H
 #define CUTE_ECS_H
 
-#include <cute_error.h>
-#include <cute_handle_table.h>
-#include <cute_array.h>
-#include <cute_typeless_array.h>
-#include <cute_dictionary.h>
+#include "cute_error.h"
+#include "cute_handle_table.h"
+#include "cute_array.h"
+#include "cute_typeless_array.h"
+#include "cute_dictionary.h"
 
 namespace cute
 {

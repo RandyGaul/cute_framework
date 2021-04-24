@@ -22,7 +22,7 @@
 #ifndef CUTE_TYPELESS_ARRAY_H
 #define CUTE_TYPELESS_ARRAY_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 namespace cute
 {

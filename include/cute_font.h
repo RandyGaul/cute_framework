@@ -22,10 +22,10 @@
 #ifndef CUTE_FRAMEWORK_FONT_H
 #define CUTE_FRAMEWORK_FONT_H
 
-#include <cute_defines.h>
-#include <cute_math.h>
-#include <cute_error.h>
-#include <cute_color.h>
+#include "cute_defines.h"
+#include "cute_math.h"
+#include "cute_error.h"
+#include "cute_color.h"
 
 namespace cute
 {

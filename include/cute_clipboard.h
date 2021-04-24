@@ -22,8 +22,8 @@
 #ifndef CUTE_CLIPBOARD_H
 #define CUTE_CLIPBOARD_H
 
-#include <cute_defines.h>
-#include <cute_error.h>
+#include "cute_defines.h"
+#include "cute_error.h"
 
 namespace cute
 {

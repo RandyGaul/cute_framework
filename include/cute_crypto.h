@@ -22,7 +22,7 @@
 #ifndef CUTE_CRYPTO_H
 #define CUTE_CRYPTO_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 #define CUTE_CRYPTO_HMAC_BYTES ((int)16U)
 #define CUTE_CRYPTO_NONCE_BYTES ((int)24U)

@@ -22,10 +22,10 @@
 #ifndef CUTE_PROTOCOL_H
 #define CUTE_PROTOCOL_H
 
-#include <cute_defines.h>
-#include <cute_crypto.h>
-#include <cute_net.h>
-#include <cute_handle_table.h>
+#include "cute_defines.h"
+#include "cute_crypto.h"
+#include "cute_net.h"
+#include "cute_handle_table.h"
 
 #define CUTE_PROTOCOL_VERSION_STRING ((const uint8_t*)"CUTE 1.00")
 #define CUTE_PROTOCOL_VERSION_STRING_LEN (9 + 1)

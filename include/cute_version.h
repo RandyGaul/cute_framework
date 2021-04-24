@@ -22,7 +22,7 @@
 #ifndef CUTE_VERSION_H
 #define CUTE_VERSION_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 #define CUTE_VERSION_STRING_COMPILED "Cute Framework Version 0.0"
 

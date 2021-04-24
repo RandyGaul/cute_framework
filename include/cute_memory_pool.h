@@ -22,7 +22,7 @@
 #ifndef CUTE_MEMORY_POOL_H
 #define CUTE_MEMORY_POOL_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 namespace cute
 {

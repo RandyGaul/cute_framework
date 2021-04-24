@@ -22,7 +22,7 @@
 #ifndef CUTE_HAPTICS_H
 #define CUTE_HAPTICS_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 namespace cute
 {

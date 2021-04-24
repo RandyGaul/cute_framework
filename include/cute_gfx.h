@@ -22,12 +22,12 @@
 #ifndef CUTE_GFX_H
 #define CUTE_GFX_H
 
-#include <cute_defines.h>
-#include <cute_error.h>
-#include <cute_app.h>
-#include <cute_color.h>
+#include "cute_defines.h"
+#include "cute_error.h"
+#include "cute_app.h"
+#include "cute_color.h"
 
-#include <sokol/sokol_gfx.h>
+#include "sokol/sokol_gfx.h"
 
 namespace cute
 {

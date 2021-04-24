@@ -22,7 +22,7 @@
 #ifndef CUTE_MATH_H
 #define CUTE_MATH_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 #include <initializer_list>
 #include <math.h>

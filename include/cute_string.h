@@ -22,7 +22,7 @@
 #ifndef CUTE_STRING_H
 #define CUTE_STRING_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 /*
 	Implements a *single-threaded* string-interning system where each string on the stack

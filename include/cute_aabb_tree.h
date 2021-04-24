@@ -22,8 +22,8 @@
 #ifndef CUTE_AABB_TREE_H
 #define CUTE_AABB_TREE_H
 
-#include <cute_defines.h>
-#include <cute_math.h>
+#include "cute_defines.h"
+#include "cute_math.h"
 
 namespace cute
 {

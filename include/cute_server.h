@@ -22,10 +22,10 @@
 #ifndef CUTE_SERVER_H
 #define CUTE_SERVER_H
 
-#include <cute_defines.h>
-#include <cute_net.h>
-#include <cute_crypto.h>
-#include <cute_handle_table.h>
+#include "cute_defines.h"
+#include "cute_net.h"
+#include "cute_crypto.h"
+#include "cute_handle_table.h"
 
 #define CUTE_SERVER_MAX_CLIENTS 256
 

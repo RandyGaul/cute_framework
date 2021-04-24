@@ -22,9 +22,9 @@
 #ifndef CUTE_AUDIO_H
 #define CUTE_AUDIO_H
 
-#include <cute_defines.h>
-#include <cute_concurrency.h>
-#include <cute_error.h>
+#include "cute_defines.h"
+#include "cute_concurrency.h"
+#include "cute_error.h"
 
 namespace cute
 {

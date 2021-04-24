@@ -22,8 +22,8 @@
 #ifndef CUTE_DX11_H
 #define CUTE_DX11_H
 
-#include <cute_defines.h>
-#include <sokol/sokol_gfx.h>
+#include "cute_defines.h"
+#include "sokol/sokol_gfx.h"
 
 namespace cute
 {

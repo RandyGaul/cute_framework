@@ -22,10 +22,10 @@
 #ifndef CUTE_DICTIONARY_H
 #define CUTE_DICTIONARY_H
 
-#include <cute_defines.h>
-#include <cute_hashtable.h>
-#include <cute_c_runtime.h>
-#include <cute_error.h>
+#include "cute_defines.h"
+#include "cute_hashtable.h"
+#include "cute_c_runtime.h"
+#include "cute_error.h"
 
 namespace cute
 {

@@ -22,8 +22,8 @@
 #ifndef CUTE_CIRCULAR_BUFFER_H
 #define CUTE_CIRCULAR_BUFFER_H
 
-#include <cute_defines.h>
-#include <cute_concurrency.h>
+#include "cute_defines.h"
+#include "cute_concurrency.h"
 
 namespace cute
 {

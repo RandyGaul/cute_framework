@@ -22,8 +22,8 @@
 #ifndef CUTE_KV_H
 #define CUTE_KV_H
 
-#include <cute_defines.h>
-#include <cute_error.h>
+#include "cute_defines.h"
+#include "cute_error.h"
 
 namespace cute
 {

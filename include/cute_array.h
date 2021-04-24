@@ -22,9 +22,9 @@
 #ifndef CUTE_ARRAY_H
 #define CUTE_ARRAY_H
 
-#include <cute_defines.h>
-#include <cute_c_runtime.h>
-#include <cute_alloc.h>
+#include "cute_defines.h"
+#include "cute_c_runtime.h"
+#include "cute_alloc.h"
 
 #include <initializer_list>
 

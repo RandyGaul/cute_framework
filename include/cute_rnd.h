@@ -22,7 +22,7 @@
 #ifndef CUTE_RND_H
 #define CUTE_RND_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 namespace cute
 {

@@ -22,8 +22,8 @@
 #ifndef CUTE_APP_H
 #define CUTE_APP_H
 
-#include <cute_defines.h>
-#include <cute_error.h>
+#include "cute_defines.h"
+#include "cute_error.h"
 
 struct ImGuiContext;
 

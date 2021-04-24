@@ -22,11 +22,11 @@
 #ifndef CUTE_ASEPRITE_CACHE_H
 #define CUTE_ASEPRITE_CACHE_H
 
-#include <cute_defines.h>
-#include <cute_error.h>
-#include <cute_batch.h>
+#include "cute_defines.h"
+#include "cute_error.h"
+#include "cute_batch.h"
 
-#include <cute/cute_aseprite.h>
+#include "cute/cute_aseprite.h"
 
 namespace cute
 {

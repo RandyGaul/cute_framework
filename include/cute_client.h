@@ -22,7 +22,7 @@
 #ifndef CUTE_CLIENT_H
 #define CUTE_CLIENT_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 #define CUTE_CLIENT_RECONNECT_SECONDS 5.0f
 

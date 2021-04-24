@@ -22,13 +22,13 @@
 #ifndef CUTE_PNG_CACHE_H
 #define CUTE_PNG_CACHE_H
 
-#include <cute_defines.h>
-#include <cute_error.h>
-#include <cute_color.h>
-#include <cute_batch.h>
-#include <cute_sprite.h>
+#include "cute_defines.h"
+#include "cute_error.h"
+#include "cute_color.h"
+#include "cute_batch.h"
+#include "cute_sprite.h"
 
-#include <cute/cute_png.h>
+#include "cute/cute_png.h"
 
 namespace cute
 {

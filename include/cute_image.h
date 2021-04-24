@@ -22,9 +22,9 @@
 #ifndef CUTE_IMAGE_H
 #define CUTE_IMAGE_H
 
-#include <cute_defines.h>
-#include <cute_error.h>
-#include <cute_gfx.h>
+#include "cute_defines.h"
+#include "cute_error.h"
+#include "cute_gfx.h"
 
 namespace cute
 {

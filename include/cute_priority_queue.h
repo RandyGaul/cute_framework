@@ -22,7 +22,7 @@
 #ifndef CUTE_PRIORITY_QUEUE_H
 #define CUTE_PRIORITY_QUEUE_H
 
-#include <cute_array.h>
+#include "cute_array.h"
 
 namespace cute
 {

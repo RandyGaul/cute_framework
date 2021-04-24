@@ -22,7 +22,7 @@
 #ifndef CUTE_ERROR_H
 #define CUTE_ERROR_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 namespace cute
 {

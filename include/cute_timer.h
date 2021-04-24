@@ -22,7 +22,7 @@
 #ifndef CUTE_TIMER_H
 #define CUTE_TIMER_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 namespace cute
 {

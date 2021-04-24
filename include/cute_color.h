@@ -22,7 +22,7 @@
 #ifndef CUTE_COLOR_H
 #define CUTE_COLOR_H
 
-#include <cute_defines.h>
+#include "cute_defines.h"
 
 namespace cute
 {

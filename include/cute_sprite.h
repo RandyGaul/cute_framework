@@ -22,10 +22,10 @@
 #ifndef CUTE_SPRITE_H
 #define CUTE_SPRITE_H
 
-#include <cute_defines.h>
-#include <cute_array.h>
-#include <cute_dictionary.h>
-#include <cute_batch.h>
+#include "cute_defines.h"
+#include "cute_array.h"
+#include "cute_dictionary.h"
+#include "cute_batch.h"
 
 namespace cute
 {

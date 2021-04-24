@@ -22,10 +22,10 @@
 #ifndef CUTE_CONCURRENCY_H
 #define CUTE_CONCURRENCY_H
 
-#include <cute_defines.h>
-#include <cute_error.h>
+#include "cute_defines.h"
+#include "cute_error.h"
 
-#include <cute/cute_sync.h>
+#include "cute/cute_sync.h"
 
 namespace cute
 {
