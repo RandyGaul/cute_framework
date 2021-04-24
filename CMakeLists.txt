@@ -218,7 +218,7 @@ else()
 	set(GLAD_INCLUDE_DIRECTORY libraries/glad/gl33)
 endif()
 
-set(CUTE_HDRS
+set(CUTE_PUBLIC_HDRS
 	include/cute_alloc.h
 	include/cute_app.h
 	include/cute_audio.h
@@ -276,6 +276,34 @@ set(CUTE_HDRS
 	include/cute_haptics.h
 	include/cute_utf8.h
 	include/cute_coroutine.h
+)
+
+set(CUTE_IMGUI_HDRS
+	libraries/imgui/imgui.h
+)
+
+set(CUTE_SOKOL_HDRS
+	include/sokol/sokol_gfx.h
+)
+
+set(CUTE_CUTE_HDRS
+	include/cute/cute_aseprite.h
+	include/cute/cute_c2.h
+	include/cute/cute_coroutine.h
+	include/cute/cute_font.h
+	include/cute/cute_path.h
+	include/cute/cute_png.h
+	include/cute/cute_sound.h
+	include/cute/cute_spritebatch.h
+	include/cute/cute_sync.h
+	include/cute/cute_utf.h
+)
+
+set(CUTE_HDRS
+	${CUTE_PUBLIC_HDRS}
+	${CUTE_IMGUI_HDRS}
+	${CUTE_SOKOL_HDRS}
+	${CUTE_CUTE_HDRS}
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
@@ -297,10 +325,6 @@ set(CUTE_HDRS
 	src/shaders/sprite_shader.h
 	src/shaders/font_shader.h
 	src/shaders/upscale_shader.h
-
-	libraries/imgui/imgui.h
-
-	include/sokol/sokol_gfx.h
 )
 
 if(CUTE_FRAMEWORK_STATIC)
@@ -391,4 +415,6 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 endif()
 
 install(TARGETS cute EXPORT cute DESTINATION "lib/cute_framework")
-install(FILES ${CUTE_HDRS} DESTINATION "include/cute_framework")
+install(FILES ${CUTE_PUBLIC_HDRS} DESTINATION "include/cute_framework")
+install(FILES ${CUTE_SOKOL_HDRS} DESTINATION "include/cute_framework/sokol")
+install(FILES ${CUTE_CUTE_HDRS} DESTINATION "include/cute_framework/cute")
