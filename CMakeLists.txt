@@ -414,7 +414,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 	endif()
 endif()
 
-install(TARGETS cute EXPORT cute DESTINATION "lib/cute_framework")
+install(TARGETS cute EXPORT cute DESTINATION "lib")
 install(FILES ${CUTE_PUBLIC_HDRS} DESTINATION "include/cute_framework")
 install(FILES ${CUTE_SOKOL_HDRS} DESTINATION "include/cute_framework/sokol")
 install(FILES ${CUTE_CUTE_HDRS} DESTINATION "include/cute_framework/cute")
