@@ -15,7 +15,7 @@ define_property(
 	FULL_DOCS  "Use to organize targets in an IDE."
 )
 function(add_subdirectory_with_folder _folder _folder_name)
-	add_subdirectory(${_folder} ${ARGN})
+	add_subdirectory(${_folder} ${ARGN} EXCLUDE_FROM_ALL)
 	set_property(DIRECTORY "${_folder}" PROPERTY FOLDER "${_folder_name}")
 endfunction()
 
