@@ -192,7 +192,7 @@ CUTE_API batch_t* CUTE_CALL sprite_get_batch(app_t* app);
 //--------------------------------------------------------------------------------------------------
 // In-line implementation of `sprite_t` member functions.
 
-#include <cute_debug_printf.h>
+#include "cute_debug_printf.h"
 
 void sprite_t::update(float dt)
 {

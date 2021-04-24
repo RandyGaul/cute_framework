@@ -76,6 +76,6 @@ CUTE_API error_t CUTE_CALL file_system_write_entire_buffer_to_file(const char* v
 
 }
 
-#include <cute_file_system_utils.h>
+#include "cute_file_system_utils.h"
 
 #endif // CUTE_FILE_SYSTEM_H
