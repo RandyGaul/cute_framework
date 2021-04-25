@@ -15,7 +15,7 @@ Setting up an application and getting started is quite easy. Simply visit [the a
 > Creating a window and closing it.
 
 ```cpp
-#include <cute.h>
+#include <cute/cute.h>
 using namespace cute;
 
 int main(int argc, const char** argv)
