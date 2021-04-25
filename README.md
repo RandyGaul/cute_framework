@@ -75,7 +75,7 @@ It's highly recommended to download a prebuilt version of CF if you're on Window
 
 Install [cmake](https://cmake.org/).
 Make sure to [install libsodium](https://doc.libsodium.org/installation). If you're on Mac you can use [brew to install Sodium](https://formulae.brew.sh/formula/libsodium). On Windows/Emscripten prebuilt binaries for libsodium are already provided.
-Perform the usual cmake dance (make folder, -G to generate the build files, and the finally trigger the build), for example on Windows with Visual Studio 2019.
+Perform the usual cmake dance (make folder, -G to generate the build files, and then finally trigger the build), for example on Windows with Visual Studio 2019.
 
 ```cmake
 mkdir build_msvc_2019 > nul 2> nul
