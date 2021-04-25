@@ -59,7 +59,7 @@ TODO
 
 # Download
 
-TODO
+Prebuilt binaries for Windows are available in the [releases section](https://github.com/RandyGaul/cute_framework/releases). Please build and install from source for Mac/Linux users. Note - CF is designed for *64-bit only*.
 
 # Community and Support
 
@@ -71,7 +71,7 @@ Another easy way to get a hold of the author of Cute Framework is on twitter [@r
 
 # Building from Source
 
-It's highly recommended to download a prebuilt version of CF, but if you for some reason want to build from source yourself, then read on...
+It's highly recommended to download a prebuilt version of CF if you're on Windows found in the [releases section](https://github.com/RandyGaul/cute_framework/releases), but if you're not on Windows cmake can be used to build and install from source.
 
 Install [cmake](https://cmake.org/).
 Perform the usual cmake dance (make folder, -G to generate the build files, and the finally trigger the build), for example on Windows with Visual Studio 2019.
@@ -84,3 +84,9 @@ cmake --build build_msvc_2019 --config Release
 ```
 
 Some scripts for running this cmake process are laying around in the top-level folder, such as `apple_make.sh` for apple machines, or `mingw.cmd` for building against a MingW compiler on Windows. Feel free to use or ignore these scripts as you wish.
+
+Once built go ahead and use cmake to install the headers and shared library for CF.
+
+```cmake
+cmake --install your_build_folder_name
+```
