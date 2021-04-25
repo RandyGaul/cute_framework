@@ -74,6 +74,7 @@ Another easy way to get a hold of the author of Cute Framework is on twitter [@r
 It's highly recommended to download a prebuilt version of CF if you're on Windows found in the [releases section](https://github.com/RandyGaul/cute_framework/releases), but if you're not on Windows cmake can be used to build and install from source.
 
 Install [cmake](https://cmake.org/).
+Make sure to [install libsodium](https://doc.libsodium.org/installation). If you're on Mac you can use [brew to install Sodium](https://formulae.brew.sh/formula/libsodium). On Windows/Emscripten prebuilt binaries for libsodium are already provided.
 Perform the usual cmake dance (make folder, -G to generate the build files, and the finally trigger the build), for example on Windows with Visual Studio 2019.
 
 ```cmake
