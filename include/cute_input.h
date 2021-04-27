@@ -339,6 +339,8 @@ enum key_button_t : int
 	KEY_EJECT,
 	KEY_SLEEP,
 
+	KEY_ANY,
+
 	KEY_COUNT
 };
 

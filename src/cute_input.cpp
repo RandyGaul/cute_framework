@@ -525,6 +525,7 @@ void pump_input_msgs(app_t* app)
 			key = s_map_SDL_keys(key);
 			CUTE_ASSERT(key >= 0 && key < 512);
 			app->keys[key] = 1;
+			app->keys[KEY_ANY] = 1;
 		}	break;
 
 		case SDL_KEYUP:
