@@ -63,7 +63,7 @@ coroutine_t* coroutine_make(coroutine_fn* fn, void* udata)
 void coroutine_destroy(coroutine_t* co)
 {
 	mco_state state = mco_status(co->mco);
-	CUTE_ASSERT(state == MCO_DEAD);
+	CUTE_ASSERT(state == MCO_DEAD || state == MCO_SUSPENDED);
 	mco_result res = mco_destroy(co->mco);
 	CUTE_ASSERT(res == MCO_SUCCESS);
 	CUTE_FREE(co, NULL);
