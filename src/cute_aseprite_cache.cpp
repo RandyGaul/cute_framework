@@ -131,9 +131,10 @@ error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, 
 	}
 
 	// Load the aseprite file.
-	void* data;
-	size_t sz;
+	void* data = NULL;
+	size_t sz = 0;
 	file_system_read_entire_file_to_memory(aseprite_path, &data, &sz);
+	if (!data) return error_failure("Unable to open ase file at `aseprite_path`.");
 	CUTE_DEFER(CUTE_FREE(data, cache->mem_ctx));
 	ase_t* ase = cute_aseprite_load_from_memory(data, (int)sz, cache->mem_ctx);
 	if (!ase) return error_failure("Unable to open ase file at `aseprite_path`.");
