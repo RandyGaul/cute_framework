@@ -414,6 +414,9 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 	endif()
 endif()
 
+# Propogate public headers.
+target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+
 install(TARGETS cute EXPORT cute DESTINATION "lib")
 install(FILES ${CUTE_PUBLIC_HDRS} DESTINATION "include/cute")
 install(FILES ${CUTE_SOKOL_HDRS} DESTINATION "include/cute/sokol")
