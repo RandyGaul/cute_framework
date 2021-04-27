@@ -241,6 +241,12 @@ bool key_was_released(app_t* app, key_button_t key)
 	return !app->keys[key] && app->keys_prev[key];
 }
 
+void clear_all_key_state(app_t* app)
+{
+	CUTE_MEMSET(app->keys, 0, sizeof(app->keys));
+	CUTE_MEMSET(app->keys_prev, 0, sizeof(app->keys_prev));
+}
+
 int key_mod_bit_flags(app_t* app)
 {
 	return app->key_mod;

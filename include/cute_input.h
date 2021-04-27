@@ -36,6 +36,7 @@ CUTE_API bool CUTE_CALL key_is_down(app_t* app, key_button_t key);
 CUTE_API bool CUTE_CALL key_is_up(app_t* app, key_button_t key);
 CUTE_API bool CUTE_CALL key_was_pressed(app_t* app, key_button_t key);
 CUTE_API bool CUTE_CALL key_was_released(app_t* app, key_button_t key);
+CUTE_API void CUTE_CALL clear_all_key_state(app_t* app);
 CUTE_API int CUTE_CALL key_mod_bit_flags(app_t* app);
 
 CUTE_API int CUTE_CALL mouse_x(app_t* app);
