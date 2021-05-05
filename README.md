@@ -57,6 +57,12 @@ Select one of the categories below to learn more about them. Each category conta
 
 TODO
 
+# Examples, Tutorials, and Articles
+
+- [Cute Snake, example game implemented in CF](https://github.com/RandyGaul/cute_snake)
+- [KV Serialization in CF docs](https://github.com/RandyGaul/cute_framework/tree/master/doc/serialization)
+- [ECS in CF docs](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs)
+
 # Download
 
 Prebuilt binaries for Windows are available in the [releases section](https://github.com/RandyGaul/cute_framework/releases). Please build and install from source for Mac/Linux users. Note - CF is designed for *64-bit only*.
