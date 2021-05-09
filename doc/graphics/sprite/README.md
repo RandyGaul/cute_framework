@@ -27,11 +27,19 @@ void draw(app_t* app)
 
 # Easy Sprite API
 
-These functions are the "easy" API for creating and destroying sprites. These functions setup default values for an [aseprite cache](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/aseprite_cache) and a [batch](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/batch). This is great to get some sprites drawing on the screen quickly with minimal effort. For more advanced graphics usages custom caches or batches need to be created and managed yourself, but these three functions below are great to start with.
+These functions are great for beginners or testing if you just want to load a single-frame sprite with no animations from a single .png file. If you want animations the preferred API is the Aseprite Sprite API (in the next section).
+
+[easy_sprite_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/sprite_make.md)  
+[easy_sprite_unload](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/sprite_unload.md)  
+[easy_sprite_get_batch](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/easy_sprite_get_batch.md)  
+
+# Aseprite Sprite API
+
+These functions are the preferred API for creating and destroying sprites by directloy loading from .ase or .aseprite files. These functions setup default values for an [aseprite cache](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/aseprite_cache) and a [batch](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics/batch). This is great to get some sprites drawing on the screen quickly with minimal effort. For more advanced graphics usages custom caches or batches need to be created and managed yourself, but these three functions below are great to start with.
 
 [sprite_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/sprite_make.md)  
 [sprite_unload](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/sprite_unload.md)  
-[flush_sprites](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/flush_sprites.md)  
+[sprite_get_batch](https://github.com/RandyGaul/cute_framework/blob/master/doc/graphics/sprite/sprite_get_batch.md)  
 
 # Sprite Member Functions
 
