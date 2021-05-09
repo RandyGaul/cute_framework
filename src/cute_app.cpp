@@ -223,9 +223,12 @@ void app_destroy(app_t* app)
 	kv_t** schemas = app->entity_parsed_schemas.items();
 	for (int i = 0; i < schema_count; ++i) kv_destroy(schemas[i]);
 	if (app->ase_cache) {
-		CUTE_ASSERT(app->ase_cache);
 		aseprite_cache_destroy(app->ase_cache);
-		batch_destroy(app->batch);
+		batch_destroy(app->ase_batch);
+	}
+	if (app->png_cache) {
+		png_cache_destroy(app->png_cache);
+		batch_destroy(app->png_batch);
 	}
 	if (app->courier_new) {
 		font_free((font_t*)app->courier_new);

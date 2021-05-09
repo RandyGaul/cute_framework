@@ -318,6 +318,7 @@ set(CUTE_HDRS
 	src/internal/cute_object_table_internal.h
 	src/internal/cute_ecs_internal.h
 	src/internal/cute_dx11.h
+	src/internal/cute_png_cache_internal.h
 
 	src/internal/imgui/sokol_imgui.h
 	src/internal/imgui/imgui_impl_sdl.h

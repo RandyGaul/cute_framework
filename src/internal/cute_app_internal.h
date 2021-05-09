@@ -31,6 +31,7 @@
 #include <cute_doubly_list.h>
 #include <cute_strpool.h>
 #include <cute_aseprite_cache.h>
+#include <cute_png_cache.h>
 #include <cute_batch.h>
 #include <cute_gfx.h>
 #include <cute_input.h>
@@ -188,8 +189,10 @@ struct app_t
 	list_t joypads;
 	array<touch_t> touches;
 
-	batch_t* batch = NULL;
+	batch_t* ase_batch = NULL;
 	aseprite_cache_t* ase_cache = NULL;
+	batch_t* png_batch = NULL;
+	png_cache_t* png_cache = NULL;
 
 	// TODO: Set allocator context for these data structures.
 	system_internal_t system_internal_builder;

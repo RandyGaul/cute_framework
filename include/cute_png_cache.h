@@ -34,7 +34,11 @@ namespace cute
 {
 
 /**
- * The png cache is used to load png images from disk in order to make sprites.
+ * The png cache is used to load png images from disk in order to make sprites. The png cache
+ * system is an advanced option for people who want lower level access to creating their own
+ * custom sprites, for example by loading sprites from their own custom animation format. If you just
+ * want a really easy way to load sprites, look at cute_sprite.h for the easy sprite API (search for
+ * `easy_sprite_make` or `sprite_make` functions).
  * 
  * You will mostly just care about these three functions.
  * 

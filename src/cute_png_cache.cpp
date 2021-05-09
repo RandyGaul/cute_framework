@@ -23,23 +23,13 @@
 #include <cute_image.h>
 #include <cute_sprite.h>
 
+#include <internal/cute_png_cache_internal.h>
 #include <internal/cute_app_internal.h>
 
 #define INJECT(s) strpool_inject(cache->strpool, s, (int)CUTE_STRLEN(s))
 
 namespace cute
 {
-
-struct png_cache_t
-{
-	dictionary<uint64_t, png_t> pngs;
-	dictionary<uint64_t, void*> id_to_pixels;
-	dictionary<strpool_id, animation_t*> animations;
-	dictionary<strpool_id, animation_table_t*> animation_tables;
-	uint64_t id_gen = 0;
-	strpool_t* strpool = NULL;
-	void* mem_ctx = NULL;
-};
 
 static void s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata)
 {
@@ -233,6 +223,7 @@ sprite_t png_cache_make_sprite(png_cache_t* cache, const char* sprite_name, cons
 	sprite.w = png.w;
 	sprite.h = png.h;
 	sprite.animations = table;
+	sprite.play((const char*)sprite.animations->keys()[0].data);
 
 	return sprite;
 }
