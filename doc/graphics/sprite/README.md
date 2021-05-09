@@ -21,7 +21,7 @@ void draw(app_t* app)
 {
     batch_t* b = sprite_get_batch(app);
     s.draw(b);
-    flush_sprites(app);
+    batch_flush(app);
 }
 ```
 
