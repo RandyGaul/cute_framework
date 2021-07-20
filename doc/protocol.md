@@ -308,7 +308,7 @@ When decrypting packets the following steps must occur, in order, before a packe
 
 Packet Type | `encrypted bytes` Size
 --- | ---
-*connect token packet* | 1008 bytes
+*connect token packet* | 960 bytes
 *keepalive packet* | 0 bytes
 *connection denied packet* | 0 bytes
 *payload packet* | In the range of [1-1207] bytes
