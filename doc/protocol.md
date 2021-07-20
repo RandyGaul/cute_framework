@@ -214,11 +214,12 @@ All packets except for the *connect token packet* are encrypted before sent. Eac
 
 ```
 packet type      1 byte
+sequence nonce   uint64_t
 signature        64 bytes
 encrypted bytes  <variable length>
 ```
 
-All packets are 1280 bytes or smaller, so the maximum size of the `encrypted bytes` is 1215 bytes.
+All packets are 1280 bytes or smaller, so the maximum size of the `encrypted bytes` is 1207 bytes.
 
 The *connect token packet* does not get encrypted by the client before being sent, as it is already encrypted by the web service using a secret key only known to the web service and the backend dedicated game servers. This means the client cannot read, modify, or generate the SECRET SECTION of the *connect token packet*.
 
@@ -294,7 +295,7 @@ The *disconnect packet* can be sent by the client or the server during the clien
 
 ## Decrypting Packets
 
-When decrypting packets the following steps must occur, in order, before a packet can be considered valid for further processing.
+When decrypting packets the following steps must occur, in order, before a packet can be considered valid for further processing (NOTE - further processing includes updating any replay buffer implementation you might have).
 
 1. If an incoming packet is less than 65 bytes, ignore the packet.
 2. If the `packet type` byte is greater than 7, ignore the packet.
