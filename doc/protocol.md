@@ -311,7 +311,7 @@ Packet Type | `encrypted bytes` Size
 *connect token packet* | 1008 bytes
 *keepalive packet* | 0 bytes
 *connection denied packet* | 0 bytes
-*payload packet* | In the range of [1-1255] bytes
+*payload packet* | In the range of [1-1207] bytes
 *connection accepted packet* | 16 bytes
 *challenge request packet* | 264 bytes
 *challenge response packet* | 264 bytes
