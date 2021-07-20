@@ -501,7 +501,7 @@ int read_packet(
 
 ### Packet Sniffing
 
-One may wonder if the *connect token packet* is susceptible to packet sniffing. What if someone grabs the packet and sends a copy to the server before the valid client's copy reaches the server? In this case the server will start up two *encryption state*'s, one for each potential client. The server will cache the *connect token packet* keyed by the `HMAC bytes` of the packet. This will ensure only one copy of the connect token is cached.
+One may wonder if the *connect token packet* is susceptible to packet sniffing. What if someone grabs the packet and sends a copy to the server before the valid client's copy reaches the server? In this case the server will start up two *encryption state*'s, one for each potential client. The server will cache the *connect token packet* keyed by the `signature` of the packet. This will ensure only one copy of the connect token is cached.
 
 The server will also setup two *encryption state*'s, one for each IP address. In the case where the malicious potential client spoofed their IP to match the valid user's IP, only one *encryption state* will be setup.
 
