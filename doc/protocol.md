@@ -343,7 +343,7 @@ Here are the steps for processing the *connect token packet*.
 5. Read and make sure the `application id` matches the expected id for the user's application.
 6. Read the `expiration timestamp`. If the token has expired, ignore the packet.
 7. The connect token is deemed invalid if the number of server addresses is outside the range of [1, 32], or if an IP address type is not in the range [1, 2], or if the creation timestamp is more recent than the expiration timestamp. If any of these checks fail, ignore the packet.
-8. Decrypt and read the *connect token packet* SECRET SECTION. Please remember that the PUBLIC SECTION must be used within the Associated Data in the AEAD primitive. If the *connect token packet* fails to decrypt, ignore the packet.
+8. Decrypt and read the *connect token packet* SECRET SECTION. Please remember that the PUBLIC SECTION must be used within the Associated Data in the AEAD primitive. If the *connect token packet* fails to decrypt, ignore the packet. The HMAC and nonce for your AEAD primitive are stored within the `signature`.
 
 #### Setting Up an *encryption state*
 
@@ -360,8 +360,8 @@ The `client to server key` and `server to client key` are used to perform encryp
 1. If the server is not in the list of IP addresses in the *connect token packet*, ignore the packet.
 2. If a client is already connected with the same IP address and port, ignore the packet.
 3. If a matching `client id` already connected, ignore the packet.
-4. Lookup in the *connect token cache* with the *connect token packet* `HMAC bytes` as the key. If it is in the cache this means the token was already used; ignore the packet.
-	* The *connect token cache* is a [set data structure](https://en.wikipedia.org/wiki/Set_(abstract_data_type)) where the `HMAC bytes` are used as the unique values. It is recommended to use a rolling cache to automatically evict old connect token entries that will have likely already expired.
+4. Lookup in the *connect token cache* with the *connect token packet* `signature` as the key. If it is in the cache this means the token was already used; ignore the packet.
+	* The *connect token cache* is a [set data structure](https://en.wikipedia.org/wiki/Set_(abstract_data_type)) where the `signature` of the *connect token packet* is used as the unique values for keys. It is recommended to use a rolling cache to automatically evict old connect token entries that will have likely already expired.
 5. If the server is full, respond with a *connection denied packet*.
 6. Setup an *encryption state* with the client, keyed by the client IP address and port.
 
@@ -379,7 +379,7 @@ Once the connect token has been validated, and the encryption state is successfu
 4. If a client is already connected with the same IP address and port, ignore the packet.
 5. If a matching `client id` already connected, ignore the packet.
 6. If all checks passed, make sure there is still space available for the client to connect. If the server is full, respond with a *connection denied packet* and terminate the handshake.
-7. The client is now considered *connected*, but not *confirmed*. Insert the `hmac bytes` from the *encryption state* into the *connect token cache*. Increment the `sequence nonce` of the *encryption state*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
+7. The client is now considered *connected*, but not *confirmed*. Insert the `signature` from the *encryption state* into the *connect token cache*. Increment the `sequence nonce` of the *encryption state*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
 8. Once the client responds with a *payload packet*, or a *keepalive packet*, consider the client *confirmed*.
 9. Once a client is *connected* the server may start sending *payload packet*'s. If the client is not yet confirmed, the server **must** send an additional *connection accepted packet* just before sending a *payload packet*. Once the client is *confirmed* preceding *connection accepted packet*'s are no longer necessary. The purpose of extra *connection accepted packet*'s is an optimization: the server can start streaming payload packets earlier, but also ensures the client receives a *connection accepted packet*.
 
