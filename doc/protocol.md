@@ -57,9 +57,9 @@ Once a client receives a connect token from the web service, the REST SECTION an
 The entire *connect token packet* is not modifiable or forge-able, and the SECRET SECTION is not readable by anyone except the web service and dedicated game servers. The entire *connect token packet* is protected by a cryptographically secure AEAD ([Authenticated Encryption with Associated Data](https://en.wikipedia.org/wiki/Authenticated_encryption#Authenticated_encryption_with_associated_data)) primitive. The key used for the AEAD primitive is a shared secret known by all dedicated game servers, and the web service. It is recommended to implement a mechanism to rotate this key periodically, though the mechanism to do so is out of scope for this document.
 
 ##### Note:
-> The AEAD primitive is a function that encrypts a chunk of data, and computes an HMAC ([keyed-hash message authentication code](https://en.wikipedia.org/wiki/HMAC)). The HMAC is a 16 byte value used to authenticate the message, and prevent tampering/modification of the message (i.e. maintain integrity of the message). The encryption ensures only those who know the key can read the message. The Associated Data (the AD in AEAD) is a chunk of data that is not encrypted, but "mixed-in" to the computation of the HMAC.
+> The AEAD primitive is a function that encrypts a chunk of data, and computes an HMAC ([keyed-hash message authentication code](https://en.wikipedia.org/wiki/HMAC)). The HMAC is a multi-byte value used to authenticate the message, and prevent tampering/modification of the message (i.e. maintain integrity of the message). The encryption ensures only those who know the key can read the message. The HMAC provides authentication (know who sent the message, and that it wasn't tampered). The HMAC is stored within the `signature` of the *connect token packet*. The `signature` is a 64 byte zone used to store the HMAC, along with any other data such as an initialization vector or nonce. How the signature bits are defined is up to the implementor to decide, and as such different implementations of Cute Protocol are _by design not necessarily compatible_. The `signature` can be treated as a black box depending on which crypto API the implementor uses, and is designed flexible for ease of implementation.
 
-The PUBLIC SECTION of the *connect token packet* is used as Associated Data for the AEAD, where the SECRET SECTION is encrypted by the AEAD. Once the AEAD is used, the output HMAC is appended to the final 16 bytes of the token, thus completing the full 1024 bytes *connect token packet*. This means the PUBLIC SECTION is not modifiable or forgeable by anyone except the web service or the dedicated backend servers, since they share the secret key used for the AEAD to encrypt the SECRET SECTION, using the PUBLIC SECTION as the Associated Data.
+The PUBLIC SECTION of the *connect token packet* can be used as Associated Data for the AEAD, where the SECRET SECTION is encrypted by the AEAD. Once the AEAD is used, the output *signature* is appended to the token, thus completing the full 1024 bytes *connect token packet*. This means the PUBLIC SECTION is not modifiable or forgeable by anyone except the web service or the dedicated backend servers, since they share the secret key used for the AEAD to encrypt the SECRET SECTION, using the PUBLIC SECTION as the Associated Data.
 
 ### The Connect Token Format
 ```
@@ -97,16 +97,16 @@ number of server endpoints     uint32_t   The number of servers in the following
         port                   uint16_t
     <end if>
 <end for>
-<zeroes padded to 656 bytes>              Counting from the end of the REST SECTION.
+<zeroes padded to 624 bytes>              Counting from the beginning of the PUBLIC SECTION.
 ---  END PUBLIC SECTION  ---
-connect token nonce            24 bytes
 --  BEGIN SECRET SECTION  --
+encryption signature           64 bytes   Optional storage to make certain APIs easier to use -- clear to zero if unused.
 client id                      uint64_t   Unique identifier for a particular client.
 client to server key           32 bytes   Client uses to encrypt packets, server uses to decrypt packets.
 server to client key           32 bytes   Server uses to encrypt packets, client uses to decrypt packets.
 user data                      256 bytes  Space for the user to store whatever auxiliary data they need.
 ---  END SECRET SECTION  ---
-HMAC bytes                     16 bytes   Written and used by encryption primitives to verify key signature.
+signature                      64 bytes
 ```
 
 The *connect token packet* is sent as-is without modification to a game server in the list. All game servers are valid choices, but it is recommended to start by making an attempt to connect to the first server in the list. If a failure occurs (for example the server is full), the client can move onto the next server in the list. Storing only a single server in the list is acceptable, but it is recommended to have more than one if possible, to improve the chances a client can successfully connect to a game server and play.
@@ -214,27 +214,15 @@ The Packet Type Value is used to write the `packet type` byte as described in th
 All packets except for the *connect token packet* are encrypted before sent. Each encrypted packet has the following form.
 
 ```
-packet type      1 byte
-sequence nonce   uint64_t
-encrypted bytes  <variable length>
-HMAC bytes       16 bytes
+packet type       1 byte
+sequence nonce    8 bytes
+signature         64 bytes
+encrypted bytes   <variable length>
 ```
 
-All packets are 1280 bytes or smaller, so the maximum size of the `encrypted bytes`	 is 1255 bytes.
+All packets are 1280 bytes or smaller, so the maximum size of the `encrypted bytes` is 1207 bytes.
 
 The *connect token packet* does not get encrypted by the client before being sent, as it is already encrypted by the web service using a secret key only known to the web service and the backend dedicated game servers. This means the client cannot read, modify, or generate the SECRET SECTION of the *connect token packet*.
-
-### Associated Data for Encrypted Packets
-
-Each encrypted packet uses a buffer for Associated Data in the AEAD, except for the special case of the *connect token packet* (instead, the *connect token packet* uses the PUBLIC SECTION as the Associated Data). The buffer is defined as so.
-
-```
-packet type      1 byte
-version info     10         "Cute 1.00" ASCII, including nul byte.
-application id   uint64_t   User chosen value to identify the game.
-```
-
-This buffer is constructed locally inside both the client and the server for each packet received or sent. The `packet type` byte should be read from the packet and copied in front of the Associated Data buffer used by the AEAD.
 
 ## Unencrypted Packets
 
@@ -285,7 +273,7 @@ challenge bytes     256 bytes
 
 The *challenge request packet* is sent from the server as a part of the connection handshake process. This challenge response sequence is used to prevent IP spoofing and *connect token packet* sniffing. For more information about how, see the [Sending Challenge Response](#sending-challenge-response) section.
 
-The `challenge nonce` is an incrementing counter starting at 0, initialized upon server restart.
+The `challenge nonce` is an incrementing counter starting at 0, initialized upon server restart. Increment the nonce once after each challenge packet is created.
 
 The `challenge bytes` are simply 256 bytes of data. The data can be anything, including randomized bits. Exactly what bits are the `challenge bytes` is left to the implementation. To fulfill the purpose of this packet, the client merely needs to decrypt the packet with the `server to client` key, encrypt it with the `client to server key`, and send it back to the server. The contents of the `challenge bytes` are ignored by the client. This packet is intentionally smaller than the *connect token packet* to prevent [DDoS amplification](https://en.wikipedia.org/wiki/Denial-of-service_attack#Amplification).
 
@@ -308,9 +296,9 @@ The *disconnect packet* can be sent by the client or the server during the clien
 
 ## Decrypting Packets
 
-When decrypting packets the following steps must occur, in order, before a packet can be considered valid for further processing.
+When decrypting packets the following steps must occur, in order, before a packet can be considered valid for further processing (NOTE - further processing includes updating any replay buffer implementation you might have).
 
-1. If an incoming packet is less than 26 bytes, ignore the packet.
+1. If an incoming packet is less than 45 bytes, ignore the packet.
 2. If the `packet type` byte is greater than 7, ignore the packet.
 3. The server ignores packets of types *challenge response packet*, *connection denied packet*, and *connection accepted packet*.
 4. The client ignores packets of types *challenge request packet* and *connect token packet*.
@@ -323,7 +311,7 @@ Packet Type | `encrypted bytes` Size
 *connect token packet* | 1008 bytes
 *keepalive packet* | 0 bytes
 *connection denied packet* | 0 bytes
-*payload packet* | In the range of [1-1255] bytes
+*payload packet* | In the range of [1-1207] bytes
 *connection accepted packet* | 16 bytes
 *challenge request packet* | 264 bytes
 *challenge response packet* | 264 bytes
@@ -357,7 +345,7 @@ Here are the steps for processing the *connect token packet*.
 5. Read and make sure the `application id` matches the expected id for the user's application.
 6. Read the `expiration timestamp`. If the token has expired, ignore the packet.
 7. The connect token is deemed invalid if the number of server addresses is outside the range of [1, 32], or if an IP address type is not in the range [1, 2], or if the creation timestamp is more recent than the expiration timestamp. If any of these checks fail, ignore the packet.
-8. Decrypt and read the *connect token packet* SECRET SECTION, using the `connect token nonce` from the *connect token packet* as the nonce for the AEAD. The PUBLIC SECTION is used as the Associated Data in the AEAD primitive. If the *connect token packet* fails to decrypt, ignore the packet.
+8. Decrypt and read the *connect token packet* SECRET SECTION. Please remember that the PUBLIC SECTION must be used within the Associated Data in the AEAD primitive. If the *connect token packet* fails to decrypt, ignore the packet. The HMAC and nonce for your AEAD primitive are stored within the `signature`.
 
 #### Setting Up an *encryption state*
 
@@ -374,8 +362,8 @@ The `client to server key` and `server to client key` are used to perform encryp
 1. If the server is not in the list of IP addresses in the *connect token packet*, ignore the packet.
 2. If a client is already connected with the same IP address and port, ignore the packet.
 3. If a matching `client id` already connected, ignore the packet.
-4. Lookup in the *connect token cache* with the *connect token packet* `HMAC bytes` as the key. If it is in the cache this means the token was already used; ignore the packet.
-	* The *connect token cache* is a [set data structure](https://en.wikipedia.org/wiki/Set_(abstract_data_type)) where the `HMAC bytes` are used as the unique values. It is recommended to use a rolling cache to automatically evict old connect token entries that will have likely already expired.
+4. Lookup in the *connect token cache* with the *connect token packet* `signature` as the key. If it is in the cache this means the token was already used; ignore the packet.
+	* The *connect token cache* is a [set data structure](https://en.wikipedia.org/wiki/Set_(abstract_data_type)) where the `signature` of the *connect token packet* is used as the unique values for keys. It is recommended to use a rolling cache to automatically evict old connect token entries that will have likely already expired.
 5. If the server is full, respond with a *connection denied packet*.
 6. Setup an *encryption state* with the client, keyed by the client IP address and port.
 
@@ -393,7 +381,7 @@ Once the connect token has been validated, and the encryption state is successfu
 4. If a client is already connected with the same IP address and port, ignore the packet.
 5. If a matching `client id` already connected, ignore the packet.
 6. If all checks passed, make sure there is still space available for the client to connect. If the server is full, respond with a *connection denied packet* and terminate the handshake.
-7. The client is now considered *connected*, but not *confirmed*. Insert the `hmac bytes` from the *encryption state* into the *connect token cache*. Increment the `sequence nonce` of the *encryption state*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
+7. The client is now considered *connected*, but not *confirmed*. Insert the `signature` from the *encryption state* into the *connect token cache*. Increment the `sequence nonce` of the *encryption state*. Construct a new client entry. Periodically send the client the *connection accepted packet* with the data referencing the newly created client entry. Send the *connection accepted packet* at the rate of PACKET_SEND_FREQUENCY.
 8. Once the client responds with a *payload packet*, or a *keepalive packet*, consider the client *confirmed*.
 9. Once a client is *connected* the server may start sending *payload packet*'s. If the client is not yet confirmed, the server **must** send an additional *connection accepted packet* just before sending a *payload packet*. Once the client is *confirmed* preceding *connection accepted packet*'s are no longer necessary. The purpose of extra *connection accepted packet*'s is an optimization: the server can start streaming payload packets earlier, but also ensures the client receives a *connection accepted packet*.
 
@@ -419,13 +407,13 @@ Cute Protocol takes measures to defend itself against many common attacks. This 
 
 ### Replay Protection
 
-Replay protection is to guard against [replay attacks](https://en.wikipedia.org/wiki/Replay_attack). Cute Protocol uses incrementing sequence numbers as the nonce for the AEAD primitive to guard against replay attacks.
+Replay protection is to guard against [replay attacks](https://en.wikipedia.org/wiki/Replay_attack). Cute Protocol uses incrementing sequence numbers as the nonce for the AEAD primitive to guard against replay attacks. For all encrypted packets, and the *connect token packet*, the `signature` bytes should be used to store the nonce.
 
 Replay protection is enabled for the *disconnect packet*, *keepalive packet*, and *payload packet*. All other packet types are already protected by replay attacks by other means (like the connect token handling process, or replay attacks simply do nothing in other cases and are safely ignored).
 
-The replay algorithm uses an array of `uint64_t` elements called the *replay buffer*. The size of the *replay buffer* is tunable by REPLAY_BUFFER_SIZE tunable (see [Tuning Parameters](#tuning-parameters)). Here is the replay protection algorithm.
+Here is an _example_ replay protection algorithm. The replay algorithm uses an array of `uint64_t` elements called the *replay buffer*. The size of the *replay buffer* is tunable by REPLAY_BUFFER_SIZE tunable (see [Tuning Parameters](#tuning-parameters)). Here is the replay protection algorithm.
 
-1. All encrypted packets are prefixed with a `uint64_t` sequence number, starting at zero and incrementing. This sequence number is the `sequence nonce` stored within the associated *encryption state*. In this way, there is a different incrementing counter and encryption key-set for each connection.
+1. All encrypted packets are prefixed with a `uint64_t` sequence number, starting at zero and incrementing, and resides within the `signature` bytes. This sequence number is the `sequence nonce` stored within the associated *encryption state*. In this way, there is a different incrementing counter and encryption key-set for each connection.
 2. The sequence number of a received packet is read prior to decryption. It cannot be modified without detection by the AEAD primitive since it is used as a nonce in the AEAD.
 3. The maximum sequence number is tracked, called *max sequence*.
 4. If the sequence number + REPLAY_BUFFER_SIZE is less than *max sequence*, ignore the packet. This means either the packet is very old, and should be dropped (since this UDP), or it was an attempted replay attack/duplicated packet.
@@ -515,7 +503,7 @@ int read_packet(
 
 ### Packet Sniffing
 
-One may wonder if the *connect token packet* is susceptible to packet sniffing. What if someone grabs the packet and sends a copy to the server before the valid client's copy reaches the server? In this case the server will start up two *encryption state*'s, one for each potential client. The server will cache the *connect token packet* keyed by the `HMAC bytes` of the packet. This will ensure only one copy of the connect token is cached.
+One may wonder if the *connect token packet* is susceptible to packet sniffing. What if someone grabs the packet and sends a copy to the server before the valid client's copy reaches the server? In this case the server will start up two *encryption state*'s, one for each potential client. The server will cache the *connect token packet* keyed by the `signature` of the packet. This will ensure only one copy of the connect token is cached.
 
 The server will also setup two *encryption state*'s, one for each IP address. In the case where the malicious potential client spoofed their IP to match the valid user's IP, only one *encryption state* will be setup.
 
