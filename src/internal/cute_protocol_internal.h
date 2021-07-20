@@ -28,7 +28,7 @@
 
 #include <internal/cute_net_internal.h>
 
-#include <sodium.h>
+#include <hydrogen.h>
 
 namespace cute
 {
@@ -116,8 +116,8 @@ struct packet_payload_t
 	uint8_t payload[CUTE_PROTOCOL_PACKET_PAYLOAD_MAX];
 };
 
-CUTE_API int CUTE_CALL packet_write(void* packet_ptr, uint8_t* buffer, uint64_t application_id, uint64_t sequence, const crypto_key_t* key);
-CUTE_API void* CUTE_CALL packet_open(uint8_t* buffer, int size, const crypto_key_t* key, uint64_t application_id, packet_allocator_t* pa, replay_buffer_t* replay_buffer = NULL, uint64_t* sequence_ptr = NULL);
+CUTE_API int CUTE_CALL packet_write(void* packet_ptr, uint8_t* buffer, uint64_t sequence, const crypto_key_t* key);
+CUTE_API void* CUTE_CALL packet_open(uint8_t* buffer, int size, const crypto_key_t* key, packet_allocator_t* pa, replay_buffer_t* replay_buffer = NULL, uint64_t* sequence_ptr = NULL);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -144,18 +144,16 @@ struct connect_token_decrypted_t
 	crypto_key_t client_to_server_key;
 	crypto_key_t server_to_client_key;
 	uint8_t user_data[CUTE_CONNECT_TOKEN_USER_DATA_SIZE];
-	uint8_t hmac_bytes[CUTE_CRYPTO_HMAC_BYTES];
+	crypto_signature_t signature;
 };
 
 CUTE_API uint8_t* CUTE_CALL client_read_connect_token_from_web_service(uint8_t* buffer, uint64_t application_id, uint64_t current_time, connect_token_t* token);
-CUTE_API int CUTE_CALL server_decrypt_connect_token_packet(uint8_t* packet_buffer, const crypto_key_t* secret_key, uint64_t application_id, uint64_t current_time, connect_token_decrypted_t* token);
+CUTE_API error_t CUTE_CALL server_decrypt_connect_token_packet(uint8_t* packet_buffer, const crypto_sign_public_t* public_key, const crypto_sign_secret_t* secret_key, uint64_t application_id, uint64_t current_time, connect_token_decrypted_t* token);
 
 // -------------------------------------------------------------------------------------------------
 
-#define CUTE_PROTOCOL_HASHTABLE_KEY_BYTES (crypto_shorthash_KEYBYTES)
-#define CUTE_PROTOCOL_HASHTABLE_HASH_BYTES (crypto_shorthash_BYTES)
-
-CUTE_STATIC_ASSERT(CUTE_PROTOCOL_HASHTABLE_HASH_BYTES == 8, "The hash output must be 8 in order to fit nicely into a `uint64_t` hash.");
+#define CUTE_PROTOCOL_HASHTABLE_KEY_BYTES (hydro_hash_KEYBYTES)
+#define CUTE_PROTOCOL_HASHTABLE_HASH_BYTES (hydro_hash_BYTES)
 
 struct hashtable_slot_t
 {
@@ -184,7 +182,7 @@ struct hashtable_t
 	void* mem_ctx;
 };
 
-CUTE_API int CUTE_CALL hashtable_init(hashtable_t* table, int key_size, int item_size, int capacity, void* mem_ctx);
+CUTE_API void CUTE_CALL hashtable_init(hashtable_t* table, int key_size, int item_size, int capacity, void* mem_ctx);
 CUTE_API void CUTE_CALL hashtable_cleanup(hashtable_t* table);
 
 CUTE_API void* CUTE_CALL hashtable_insert(hashtable_t* table, const void* key, const void* item);
@@ -207,7 +205,7 @@ struct connect_token_cache_entry_t
 
 struct connect_token_cache_node_t
 {
-	uint8_t hmac_bytes[CUTE_CRYPTO_HMAC_BYTES];
+	crypto_signature_t signature;
 	list_node_t node;
 };
 
@@ -221,7 +219,7 @@ struct connect_token_cache_t
 	void* mem_ctx;
 };
 
-CUTE_API int CUTE_CALL connect_token_cache_init(connect_token_cache_t* cache, int capacity, void* mem_ctx);
+CUTE_API void CUTE_CALL connect_token_cache_init(connect_token_cache_t* cache, int capacity, void* mem_ctx);
 CUTE_API void CUTE_CALL connect_token_cache_cleanup(connect_token_cache_t* cache);
 
 CUTE_API connect_token_cache_entry_t* CUTE_CALL connect_token_cache_find(connect_token_cache_t* cache, const uint8_t* hmac_bytes);
@@ -241,7 +239,7 @@ struct encryption_state_t
 	crypto_key_t client_to_server_key;
 	crypto_key_t server_to_client_key;
 	uint64_t client_id;
-	uint8_t hmac_bytes[CUTE_CRYPTO_HMAC_BYTES];
+	crypto_signature_t signature;
 };
 
 struct encryption_map_t
@@ -249,7 +247,7 @@ struct encryption_map_t
 	hashtable_t table;
 };
 
-CUTE_API int CUTE_CALL encryption_map_init(encryption_map_t* map, void* mem_ctx);
+CUTE_API void CUTE_CALL encryption_map_init(encryption_map_t* map, void* mem_ctx);
 CUTE_API void CUTE_CALL encryption_map_cleanup(encryption_map_t* map);
 CUTE_API void CUTE_CALL encryption_map_clear(encryption_map_t* map);
 CUTE_API int CUTE_CALL encryption_map_count(encryption_map_t* map);
@@ -302,7 +300,8 @@ struct server_t
 	uint64_t current_time;
 	socket_t socket;
 	protocol::packet_allocator_t* packet_allocator;
-	crypto_key_t secret_key;
+	crypto_sign_public_t public_key;
+	crypto_sign_secret_t secret_key;
 	uint32_t connection_timeout;
 	circular_buffer_t event_queue;
 

@@ -25,90 +25,69 @@
 
 #include <internal/cute_crypto_internal.h>
 
-#include <sodium.h>
+#include <hydrogen.h>
 
-CUTE_STATIC_ASSERT(CUTE_CRYPTO_HMAC_BYTES == (int)crypto_aead_xchacha20poly1305_ietf_ABYTES, "Must be equal.");
-CUTE_STATIC_ASSERT(CUTE_CRYPTO_NONCE_BYTES == (int)crypto_aead_xchacha20poly1305_ietf_NPUBBYTES, "Must be equal.");
-CUTE_STATIC_ASSERT(CUTE_CRYPTO_KEY_BYTES == (int)crypto_aead_xchacha20poly1305_ietf_KEYBYTES, "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(uint64_t) == sizeof(long long unsigned int), "Must be equal.");
+#define CUTE_CRYPTO_CONTEXT "CUTE_CTX"
 
 namespace cute
 {
 
-int crypto_encrypt(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* associated_data, int associated_data_size, uint64_t sequence_nonce)
-{
-	uint8_t nonce_bytes[crypto_aead_chacha20poly1305_ietf_NPUBBYTES];
-	CUTE_MEMSET(nonce_bytes, 0, sizeof(nonce_bytes));
-	*((uint64_t*)(nonce_bytes + sizeof(nonce_bytes) - sizeof(uint64_t))) = sequence_nonce;
+CUTE_STATIC_ASSERT(CUTE_CRYPTO_HEADER_BYTES == (int)hydro_secretbox_HEADERBYTES, "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(crypto_signature_t) == hydro_sign_BYTES, "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(uint64_t) == sizeof(long long unsigned int), "Must be equal.");
 
-	uint64_t encrypted_sz;
-	int ret = crypto_aead_chacha20poly1305_ietf_encrypt(data, (long long unsigned*)&encrypted_sz, data, (uint64_t)data_size, associated_data, associated_data_size, NULL, nonce_bytes, key->key);
-	if (ret < 0) return -1;
-	CUTE_ASSERT(encrypted_sz == data_size + CUTE_CRYPTO_HMAC_BYTES);
-	return ret;
+void crypto_encrypt(const crypto_key_t* key, uint8_t* data, int data_size, uint64_t msg_id)
+{
+	hydro_secretbox_encrypt(data, data, (uint64_t)data_size, msg_id, CUTE_CRYPTO_CONTEXT, key->key);
 }
 
-int crypto_decrypt(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* associated_data, int associated_data_size, uint64_t sequence_nonce)
+error_t crypto_decrypt(const crypto_key_t* key, uint8_t* data, int data_size, uint64_t msg_id)
 {
-	uint8_t nonce_bytes[crypto_aead_chacha20poly1305_ietf_NPUBBYTES];
-	CUTE_MEMSET(nonce_bytes, 0, sizeof(nonce_bytes));
-	*((uint64_t*)(nonce_bytes + sizeof(nonce_bytes) - sizeof(uint64_t))) = sequence_nonce;
-
-	uint64_t encrypted_sz;
-	int ret = crypto_aead_chacha20poly1305_ietf_decrypt(data, (long long unsigned*)&encrypted_sz, NULL, data, (uint64_t)data_size, associated_data, associated_data_size, nonce_bytes, key->key);
-	if (ret < 0) return -1;
-	CUTE_ASSERT(encrypted_sz == data_size - CUTE_CRYPTO_HMAC_BYTES);
-	return ret;
-}
-
-int crypto_encrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* associated_data, int associated_data_size, const uint8_t* sequence_nonce)
-{
-	uint64_t encrypted_sz;
-	int ret = crypto_aead_xchacha20poly1305_ietf_encrypt(data, (long long unsigned*)&encrypted_sz, data, (uint64_t)data_size, associated_data, associated_data_size, NULL, sequence_nonce, key->key);
-	if (ret < 0) return -1;
-	CUTE_ASSERT(encrypted_sz == data_size + CUTE_CRYPTO_HMAC_BYTES);
-	return ret;
-}
-
-int crypto_decrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* associated_data, int associated_data_size, const uint8_t* sequence_nonce)
-{
-	uint64_t decrypted_sz;
-	int ret = crypto_aead_xchacha20poly1305_ietf_decrypt(data, (long long unsigned*)&decrypted_sz, NULL, data, (uint64_t)data_size, associated_data, (uint64_t)associated_data_size, sequence_nonce, key->key);
-	if (ret < 0) return -1;
-	CUTE_ASSERT(decrypted_sz == data_size - CUTE_CRYPTO_HMAC_BYTES);
-	return ret;
-}
-
-int crypto_generate_keypair(crypto_key_t* public_key, crypto_key_t* private_key)
-{
-	return crypto_box_keypair(public_key->key, private_key->key);
+	if (hydro_secretbox_decrypt(data, data, (size_t)data_size, msg_id, CUTE_CRYPTO_CONTEXT, key->key) != 0) {
+		return error_failure("Message forged.");
+	} else {
+		return error_success();
+	}
 }
 
 crypto_key_t crypto_generate_key()
 {
 	crypto_key_t key;
-	crypto_secretbox_keygen(key.key);
+	hydro_secretbox_keygen(key.key);
 	return key;
 }
 
 void crypto_random_bytes(void* data, int byte_count)
 {
-	randombytes_buf(data, byte_count);
+	hydro_random_buf(data, byte_count);
 }
 
-const char* crypto_sodium_version_linked()
+void crypto_sign_keygen(crypto_sign_public_t* public_key, crypto_sign_secret_t* secret_key)
 {
-	return sodium_version_string();
+	hydro_sign_keypair key_pair;
+	hydro_sign_keygen(&key_pair);
+	CUTE_MEMCPY(public_key->key, key_pair.pk, 32);
+	CUTE_MEMCPY(secret_key->key, key_pair.sk, 64);
+}
+
+void crypto_sign_create(const crypto_sign_secret_t* secret_key, crypto_signature_t* signature, const uint8_t* data, int data_size)
+{
+	hydro_sign_create(signature->bytes, data, (size_t)data_size, CUTE_CRYPTO_CONTEXT, secret_key->key);
+}
+
+error_t crypto_sign_verify(const crypto_sign_public_t* public_key, const crypto_signature_t* signature, const uint8_t* data, int data_size)
+{
+	if (hydro_sign_verify(signature->bytes, data, (size_t)data_size, CUTE_CRYPTO_CONTEXT, public_key->key) != 0) {
+		return error_failure("Message forged.");
+	} else {
+		return error_success();
+	}
 }
 
 error_t crypto_init()
 {
-	if (sodium_init() < 0) {
+	if (hydro_init() != 0) {
 		return error_failure("Unable to initialize crypto library. It is *not safe* to connect to the net.");
-	}
-	if (crypto_box_publickeybytes() != crypto_box_secretkeybytes()) {
-		// The version of libsodium Cute was originally written with held this invariant.
-		return error_failure( "Unable to initialize crypto library. It is *not safe* to connect to the net.");
 	}
 	return error_success();
 }

@@ -30,7 +30,7 @@ int test_encryption_map_basic()
 	using namespace protocol;
 	encryption_map_t map;
 
-	CUTE_TEST_CHECK(encryption_map_init(&map, NULL));
+	encryption_map_init(&map, NULL);
 
 	encryption_state_t state;
 	state.sequence = 0;
@@ -63,7 +63,7 @@ int test_encryption_map_timeout_and_expiration()
 	using namespace protocol;
 	encryption_map_t map;
 
-	CUTE_TEST_CHECK(encryption_map_init(&map, NULL));
+	encryption_map_init(&map, NULL);
 
 	encryption_state_t state0;
 	state0.sequence = 0;

@@ -20,9 +20,8 @@ function(add_subdirectory_with_folder _folder _folder_name)
 endfunction()
 
 option(CUTE_FRAMEWORK_STATIC "Build static library for Cute Framework." OFF)
-option(CUTE_FRAMEWORK_WITH_PLATFORM "Build Cute Framework with platform support from SDL2 (zlib license)." ON)
 option(CUTE_FRAMEWORK_WITH_HTTPS "Build Cute Framework with mbedtls for HTTPS support (Apache 2.0 license)." ON)
-option(CUTE_FRAMEWORK_WITH_SODIUM "Build Cute Framework with cryptography + authentication support from Sodium for networking support (ISC license)." ON)
+option(CUTE_FRAMEWORK_WITH_HYDROGEN "Build Cute Framework with cryptography + authentication support from Hydrogen for networking support (ISC license)." ON)
 option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
 
 # Platform detection.
@@ -66,28 +65,15 @@ endif()
 # Common directories for compiler/linker path.
 include_directories(src libraries test)
 
-# Optional Sodium for security.
-if(CUTE_FRAMEWORK_WITH_SODIUM)
-	add_definitions(-DSODIUM_STATIC)
-	if(WINDOWS OR MACOSX)
-		set(sodium_USE_STATIC_LIBS ON)
-
-		# FindSodium.cmake expects sodium_DIR to be set.
-		if(MINGW)
-			set(sodium_DIR prebuilt_libs/mingw/sodium)
-		else()
-			set(sodium_DIR prebuilt_libs/windows/sodium)
-		endif()
-
-		# This adds the current directory to the cmake path, so it can
-		# use FindSodium.cmake script to locate the sodium folders.
-		list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/prebuilt_libs")
-		find_package(Sodium REQUIRED)
-	elseif(EMSCRIPTEN)
-		link_directories(prebuilt_libs/emscripten)
-	endif()
-	# FindSodium.cmake has set sodium_INCLUDE_DIR.
-	include_directories(${sodium_INCLUDE_DIR})
+# Optional Hydrogen for security.
+if(CUTE_FRAMEWORK_WITH_HYDROGEN)
+	set(HYDROGEN_HDRS
+		libraries/libhydrogen/hydrogen.h
+	)
+	set(HYDROGEN_SRCS
+		libraries/libhydrogen/hydrogen.c
+	)
+	include_directories(libraries/libhydrogen)
 endif()
 
 # PhysicsFS, always statically linked.
@@ -135,15 +121,13 @@ if(CUTE_FRAMEWORK_WITH_HTTPS)
 	add_subdirectory_with_folder(libraries/mbedtls/mbedtls-2.24.0 "mbedtls")
 endif()
 
-# Optional SDL2 for platform support.
-if(CUTE_FRAMEWORK_WITH_PLATFORM)
-	# Just don't build the shared library at all, it's not needed.
-	set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
+# SDL2 for platform support.
+# Just don't build the shared library at all, it's not needed.
+set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
 
-	if(WINDOWS)
-		# This is for static linking on Windows.
-		add_subdirectory_with_folder(libraries/SDL2/SDL2-2.0.14 "SDL2")
-	endif()
+if(WINDOWS)
+	# This is for static linking on Windows.
+	add_subdirectory_with_folder(libraries/SDL2/SDL2-2.0.14 "SDL2")
 endif()
 
 # Cute Framework shared library.
@@ -332,9 +316,9 @@ set(CUTE_HDRS
 
 if(CUTE_FRAMEWORK_STATIC)
 	add_definitions(-DCUTE_STATIC)
-	add_library(cute STATIC ${CUTE_SRCS} ${CUTE_HDRS} ${GLAD_SRCS} ${GLAD_HDRS})
+	add_library(cute STATIC ${CUTE_SRCS} ${CUTE_HDRS} ${GLAD_SRCS} ${GLAD_HDRS} ${HYDROGEN_SRCS} ${HYDROGEN_HDRS})
 else()
-	add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS} ${GLAD_SRCS} ${GLAD_HDRS})
+	add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS} ${GLAD_SRCS} ${GLAD_HDRS} ${HYDROGEN_SRCS} ${HYDROGEN_HDRS})
 endif()
 target_include_directories(cute PRIVATE ${GLAD_INCLUDE_DIRECTORY})
 include_directories(cute PRIVATE "include")
@@ -347,17 +331,18 @@ if(MACOSX)
 	find_library(FOUNDATION Foundation)
 	find_library(SECURITY Security)
 
-	target_link_libraries(cute PRIVATE ${SDL2_LIBRARIES} ${sodium_LIBRARIES} physfs ${IOKIT} ${FOUNDATION} ${SECURITY})
+	target_link_libraries(cute PRIVATE ${SDL2_LIBRARIES} physfs ${IOKIT} ${FOUNDATION} ${SECURITY})
 elseif(EMSCRIPTEN)
 	target_compile_options(cute PUBLIC -O1 -fno-rtti -fno-exceptions)
-	target_link_libraries(cute PRIVATE sodium physfs "-s USE_WEBGL2=1 -s ASSERTIONS=1  -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1")
+	target_link_libraries(cute PRIVATE physfs "-s USE_WEBGL2=1 -s ASSERTIONS=1  -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1")
 else()
 	if(MINGW)
-		target_link_libraries(cute PRIVATE SDL2-static ${sodium_LIBRARIES} physfs d3d11 crypt32)
+		# TODO - Can remove crypt32 with Hydrogen?
+		target_link_libraries(cute PRIVATE SDL2-static physfs d3d11 crypt32)
 	elseif(WINDOWS)
-		target_link_libraries(cute PRIVATE SDL2-static ${sodium_LIBRARIES} physfs crypt32)
+		target_link_libraries(cute PRIVATE SDL2-static physfs crypt32)
 	else()
-		target_link_libraries(cute PRIVATE SDL2-static ${sodium_LIBRARIES} physfs)
+		target_link_libraries(cute PRIVATE SDL2-static physfs)
 	endif()
 endif()
 
@@ -417,7 +402,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 	endif()
 endif()
 
-# Propogate public headers.
+# Propogate public headers to other cmake scripts including this subdirectory.
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 
 install(TARGETS cute EXPORT cute DESTINATION "lib")

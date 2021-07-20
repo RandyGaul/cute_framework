@@ -28,7 +28,7 @@ CUTE_TEST_CASE(test_hash_table_basic, "Create table, insert some elements, remov
 int test_hash_table_basic()
 {
 	protocol::hashtable_t table;
-	CUTE_TEST_CHECK(protocol::hashtable_init(&table, 8, 8, 20, NULL));
+	protocol::hashtable_init(&table, 8, 8, 20, NULL);
 
 	uint64_t key = 5;
 	uint64_t item = 10;
@@ -48,7 +48,7 @@ CUTE_TEST_CASE(test_hash_table_hammer, "Fill up table, many lookups, and reset, 
 int test_hash_table_hammer()
 {
 	protocol::hashtable_t table;
-	CUTE_TEST_CHECK(protocol::hashtable_init(&table, 8, 8, 128, NULL));
+	protocol::hashtable_init(&table, 8, 8, 128, NULL);
 
 	uint64_t keys[128];
 	uint64_t items[128];
@@ -84,7 +84,7 @@ CUTE_TEST_CASE(test_hash_table_set, "Make sure the table also operates as a set 
 int test_hash_table_set()
 {
 	protocol::hashtable_t table;
-	CUTE_TEST_CHECK(protocol::hashtable_init(&table, 8, 0, 20, NULL));
+	protocol::hashtable_init(&table, 8, 0, 20, NULL);
 
 	uint64_t key = 5;
 

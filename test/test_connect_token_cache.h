@@ -29,16 +29,16 @@ int test_connect_token_cache()
 {
 	int capacity = 3;
 	protocol::connect_token_cache_t cache;
-	CUTE_TEST_CHECK(protocol::connect_token_cache_init(&cache, capacity, NULL));
+	protocol::connect_token_cache_init(&cache, capacity, NULL);
 
 	endpoint_t endpoint;
 	CUTE_TEST_CHECK(endpoint_init(&endpoint, "[::]:5000"));
 
-	uint8_t hmac_bytes_a[CUTE_CRYPTO_HMAC_BYTES];
-	uint8_t hmac_bytes_b[CUTE_CRYPTO_HMAC_BYTES];
-	uint8_t hmac_bytes_c[CUTE_CRYPTO_HMAC_BYTES];
-	uint8_t hmac_bytes_d[CUTE_CRYPTO_HMAC_BYTES];
-	uint8_t hmac_bytes_e[CUTE_CRYPTO_HMAC_BYTES];
+	uint8_t hmac_bytes_a[CUTE_CRYPTO_HEADER_BYTES];
+	uint8_t hmac_bytes_b[CUTE_CRYPTO_HEADER_BYTES];
+	uint8_t hmac_bytes_c[CUTE_CRYPTO_HEADER_BYTES];
+	uint8_t hmac_bytes_d[CUTE_CRYPTO_HEADER_BYTES];
+	uint8_t hmac_bytes_e[CUTE_CRYPTO_HEADER_BYTES];
 	crypto_random_bytes(hmac_bytes_a, sizeof(hmac_bytes_a));
 	crypto_random_bytes(hmac_bytes_b, sizeof(hmac_bytes_b));
 	crypto_random_bytes(hmac_bytes_c, sizeof(hmac_bytes_c));

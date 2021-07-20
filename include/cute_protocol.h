@@ -31,16 +31,16 @@
 #define CUTE_PROTOCOL_VERSION_STRING_LEN (9 + 1)
 #define CUTE_PROTOCOL_SERVER_MAX_CLIENTS 32
 #define CUTE_PROTOCOL_PACKET_SIZE_MAX (CUTE_KB + 256)
-#define CUTE_PROTOCOL_PACKET_PAYLOAD_MAX (1255 - 2)
+#define CUTE_PROTOCOL_PACKET_PAYLOAD_MAX (1207 - 2)
 #define CUTE_PROTOCOL_SERVER_SEND_BUFFER_SIZE (CUTE_MB * 16)
 #define CUTE_PROTOCOL_SERVER_RECEIVE_BUFFER_SIZE (CUTE_MB * 16)
 #define CUTE_PROTOCOL_EVENT_QUEUE_SIZE (CUTE_MB * 4)
+#define CUTE_PROTOCOL_SIGNATURE_SIZE 64
 
 #define CUTE_CONNECT_TOKEN_PACKET_SIZE 1024
 #define CUTE_CONNECT_TOKEN_SIZE 1114
 #define CUTE_CONNECT_TOKEN_USER_DATA_SIZE 256
-#define CUTE_CONNECT_TOKEN_NONCE_SIZE CUTE_CRYPTO_NONCE_BYTES
-#define CUTE_CONNECT_TOKEN_SECRET_SECTION_SIZE (8 + 32 + 32 + 256)
+#define CUTE_CONNECT_TOKEN_SECRET_SECTION_SIZE (64 + 8 + 32 + 32 + 256)
 #define CUTE_CONNECT_TOKEN_ENDPOINT_MAX 32
 
 #define CUTE_REPLAY_BUFFER_SIZE 256
@@ -54,7 +54,7 @@ namespace cute
 namespace protocol
 {
 
-CUTE_API int CUTE_CALL generate_connect_token(
+CUTE_API error_t CUTE_CALL generate_connect_token(
 	uint64_t application_id,
 	uint64_t creation_timestamp,
 	const crypto_key_t* client_to_server_key,
@@ -65,7 +65,7 @@ CUTE_API int CUTE_CALL generate_connect_token(
 	const char** endpoint_list,
 	uint64_t client_id,
 	const uint8_t* user_data,
-	const crypto_key_t* shared_secret_key,
+	const crypto_sign_secret_t* shared_secret_key,
 	uint8_t* token_ptr_out
 );
 
@@ -108,12 +108,12 @@ CUTE_API uint16_t CUTE_CALL client_get_port(client_t* client);
 
 struct server_t;
 
-CUTE_API server_t* CUTE_CALL server_make(uint64_t application_id, const crypto_key_t* secret_key, void* mem_ctx);
+CUTE_API server_t* CUTE_CALL server_make(uint64_t application_id, const crypto_sign_public_t* public_key, const crypto_sign_secret_t* secret_key, void* mem_ctx);
 CUTE_API void CUTE_CALL server_destroy(server_t* server);
 
-CUTE_API int CUTE_CALL server_start(server_t* server, const char* address, uint32_t connection_timeout);
+CUTE_API error_t CUTE_CALL server_start(server_t* server, const char* address, uint32_t connection_timeout);
 CUTE_API void CUTE_CALL server_stop(server_t* server);
-CUTE_API int CUTE_CALL server_running(server_t* server);
+CUTE_API bool CUTE_CALL server_running(server_t* server);
 
 CUTE_API void CUTE_CALL server_update(server_t* server, float dt, uint64_t current_time);
 CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_handle);

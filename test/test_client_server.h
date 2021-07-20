@@ -29,10 +29,12 @@ CUTE_TEST_CASE(test_protocol_client_server, "Create client and server, perform c
 int test_protocol_client_server()
 {
 	using namespace protocol;
-	
+
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -59,17 +61,17 @@ int test_protocol_client_server()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 
-	server_t* server = server_make(application_id, &secret_key, NULL);
+	server_t* server = server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
 
 	client_t* client = client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
 	CUTE_TEST_CHECK(client_connect(client, connect_token));
 
 	int iters = 0;
@@ -101,7 +103,9 @@ int test_protocol_client_no_server_responses()
 	
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -130,9 +134,9 @@ int test_protocol_client_no_server_responses()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 
 	client_t* client = client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
@@ -161,7 +165,9 @@ int test_protocol_client_server_list()
 	
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -190,17 +196,17 @@ int test_protocol_client_server_list()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 
-	server_t* server = server_make(application_id, &secret_key, NULL);
+	server_t* server = server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
 
 	client_t* client = client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5002", 5));
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5002", 5).is_error());
 	CUTE_TEST_CHECK(client_connect(client, connect_token));
 
 	int iters = 0;
@@ -232,7 +238,9 @@ int test_protocol_server_challenge_response_timeout()
 	
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -259,17 +267,17 @@ int test_protocol_server_challenge_response_timeout()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 
-	server_t* server = server_make(application_id, &secret_key, NULL);
+	server_t* server = server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
 
 	client_t* client = client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
 	CUTE_TEST_CHECK(client_connect(client, connect_token));
 
 	int iters = 0;
@@ -304,7 +312,9 @@ int test_protocol_client_expired_token()
 	
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -331,9 +341,9 @@ int test_protocol_client_expired_token()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 
 	client_t* client = client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
@@ -354,7 +364,9 @@ int test_protocol_client_connect_expired_token()
 	
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -381,17 +393,17 @@ int test_protocol_client_connect_expired_token()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 
-	server_t* server = server_make(application_id, &secret_key, NULL);
+	server_t* server = server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
 
 	client_t* client = client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
 	CUTE_TEST_CHECK(client_connect(client, connect_token));
 
 	int iters = 0;
@@ -424,7 +436,9 @@ int test_protocol_server_connect_expired_token()
 	
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -451,17 +465,17 @@ int test_protocol_server_connect_expired_token()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 
-	server_t* server = server_make(application_id, &secret_key, NULL);
+	server_t* server = server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
 
 	client_t* client = client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
 	CUTE_TEST_CHECK(client_connect(client, connect_token));
 
 	int iters = 0;
@@ -495,7 +509,9 @@ int test_protocol_client_bad_keys()
 	
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -522,17 +538,17 @@ int test_protocol_client_bad_keys()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 
-	server_t* server = server_make(application_id, &secret_key, NULL);
+	server_t* server = server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
 
 	client_t* client = client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
 	CUTE_TEST_CHECK(client_connect(client, connect_token));
 
 	// Invalidate client keys.
@@ -568,7 +584,9 @@ int test_protocol_server_not_in_list_but_gets_request()
 	
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5001",
@@ -595,17 +613,17 @@ int test_protocol_server_not_in_list_but_gets_request()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 
-	server_t* server = server_make(application_id, &secret_key, NULL);
+	server_t* server = server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
 
 	client_t* client = client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
 	CUTE_TEST_CHECK(client_connect(client, connect_token));
 
 	// This will make packets arrive to correct server address, but connect token has the wrong address.
@@ -640,7 +658,9 @@ int test_protocol_connect_a_few_clients()
 	
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -668,9 +688,9 @@ int test_protocol_connect_a_few_clients()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 	client_t* client0 = client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client0);
 	CUTE_TEST_CHECK(client_connect(client0, connect_token));
@@ -689,9 +709,9 @@ int test_protocol_connect_a_few_clients()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 	client_t* client1 = client_make(5002, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client1);
 	CUTE_TEST_CHECK(client_connect(client1, connect_token));
@@ -710,16 +730,16 @@ int test_protocol_connect_a_few_clients()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 	client_t* client2 = client_make(5003, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client2);
 	CUTE_TEST_CHECK(client_connect(client2, connect_token));
 
-	server_t* server = server_make(application_id, &secret_key, NULL);
+	server_t* server = server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
 
 	int iters = 0;
 	float dt = 1.0f / 60.0f;
@@ -763,7 +783,9 @@ int test_protocol_keepalive()
 
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -791,16 +813,16 @@ int test_protocol_keepalive()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 	client_t* client = client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 	CUTE_TEST_CHECK(client_connect(client, connect_token));
 
-	server_t* server = server_make(application_id, &secret_key, NULL);
+	server_t* server = server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
 
 	int iters = 0;
 	float dt = 1.0f / 60.0f;
@@ -831,7 +853,9 @@ int test_protocol_client_initiated_disconnect()
 
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -859,16 +883,16 @@ int test_protocol_client_initiated_disconnect()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 	client_t* client = client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 	CUTE_TEST_CHECK(client_connect(client, connect_token));
 
-	server_t* server = server_make(application_id, &secret_key, NULL);
+	server_t* server = server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
 
 	int iters = 0;
 	float dt = 1.0f / 60.0f;
@@ -907,7 +931,9 @@ int test_protocol_server_initiated_disconnect()
 
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -935,16 +961,16 @@ int test_protocol_server_initiated_disconnect()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 	client_t* client = client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 	CUTE_TEST_CHECK(client_connect(client, connect_token));
 
-	server_t* server = server_make(application_id, &secret_key, NULL);
+	server_t* server = server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
 
 	cute::handle_t client_handle;
 
@@ -991,7 +1017,9 @@ int test_protocol_client_server_payloads()
 
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -1018,17 +1046,17 @@ int test_protocol_client_server_payloads()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 
-	server_t* server = server_make(application_id, &secret_key, NULL);
+	server_t* server = server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
 
 	client_t* client = client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
 	CUTE_TEST_CHECK(client_connect(client, connect_token));
 
 	cute::handle_t client_handle = CUTE_INVALID_HANDLE;
@@ -1097,7 +1125,9 @@ int test_protocol_multiple_connections_and_payloads()
 {
 	using namespace protocol;
 
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -1106,9 +1136,9 @@ int test_protocol_multiple_connections_and_payloads()
 	const int max_clients = 5;
 	uint64_t application_id = 100;
 
-	server_t* server = server_make(application_id, &secret_key, NULL);
+	server_t* server = server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 2));
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 2).is_error());
 
 	uint64_t current_timestamp = 0;
 	uint64_t expiration_timestamp = 1;
@@ -1136,9 +1166,9 @@ int test_protocol_multiple_connections_and_payloads()
 			endpoints,
 			client_id,
 			user_data,
-			&secret_key,
+			&sk,
 			connect_token
-		));
+		).is_error());
 		client_t* client = client_make(5000 + i, NULL, application_id, NULL);
 		CUTE_TEST_CHECK_POINTER(client);
 		CUTE_TEST_CHECK(client_connect(client, connect_token));
@@ -1260,7 +1290,9 @@ int test_protocol_client_reconnect()
 	
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -1287,17 +1319,17 @@ int test_protocol_client_reconnect()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 
-	server_t* server = server_make(application_id, &secret_key, NULL);
+	server_t* server = server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
 
 	client_t* client = client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5));
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
 	CUTE_TEST_CHECK(client_connect(client, connect_token));
 
 	// Connect client.
@@ -1338,9 +1370,9 @@ int test_protocol_client_reconnect()
 		endpoints,
 		client_id,
 		user_data,
-		&secret_key,
+		&sk,
 		connect_token
-	));
+	).is_error());
 
 	// Reconnect client.
 	CUTE_TEST_CHECK(client_connect(client, connect_token));

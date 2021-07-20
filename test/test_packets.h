@@ -28,7 +28,6 @@ CUTE_TEST_CASE(test_packet_connection_accepted, "Write, encrypt, decrypt, and as
 int test_packet_connection_accepted()
 {
 	crypto_key_t key = crypto_generate_key();
-	uint64_t application_id = ~0ULL;
 	uint64_t sequence = 100;
 
 	protocol::packet_connection_accepted_t packet;
@@ -39,10 +38,10 @@ int test_packet_connection_accepted()
 
 	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 
-	int bytes_written = protocol::packet_write(&packet, buffer, application_id, sequence, &key);
+	int bytes_written = protocol::packet_write(&packet, buffer, sequence, &key);
 	CUTE_TEST_ASSERT(bytes_written > 0);
 
-	void* packet_ptr = protocol::packet_open(buffer, bytes_written, &key, application_id, NULL, NULL);
+	void* packet_ptr = protocol::packet_open(buffer, bytes_written, &key, NULL, NULL);
 	CUTE_TEST_CHECK_POINTER(packet_ptr);
 	protocol::packet_connection_accepted_t* packet_val = (protocol::packet_connection_accepted_t*)packet_ptr;
 
@@ -60,7 +59,6 @@ CUTE_TEST_CASE(test_packet_connection_denied, "Write, encrypt, decrypt, and asse
 int test_packet_connection_denied()
 {
 	crypto_key_t key = crypto_generate_key();
-	uint64_t application_id = ~0ULL;
 	uint64_t sequence = 100;
 
 	protocol::packet_connection_denied_t packet;
@@ -68,10 +66,10 @@ int test_packet_connection_denied()
 
 	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 
-	int bytes_written = protocol::packet_write(&packet, buffer, application_id, sequence, &key);
+	int bytes_written = protocol::packet_write(&packet, buffer, sequence, &key);
 	CUTE_TEST_ASSERT(bytes_written > 0);
 
-	void* packet_ptr = protocol::packet_open(buffer, bytes_written, &key, application_id, NULL, NULL);
+	void* packet_ptr = protocol::packet_open(buffer, bytes_written, &key, NULL, NULL);
 	CUTE_TEST_CHECK_POINTER(packet_ptr);
 	protocol::packet_connection_denied_t* packet_val = (protocol::packet_connection_denied_t*)packet_ptr;
 
@@ -86,7 +84,6 @@ CUTE_TEST_CASE(test_packet_keepalive, "Write, encrypt, decrypt, and assert the *
 int test_packet_keepalive()
 {
 	crypto_key_t key = crypto_generate_key();
-	uint64_t application_id = ~0ULL;
 	uint64_t sequence = 100;
 
 	protocol::packet_keepalive_t packet;
@@ -94,10 +91,10 @@ int test_packet_keepalive()
 
 	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 
-	int bytes_written = protocol::packet_write(&packet, buffer, application_id, sequence, &key);
+	int bytes_written = protocol::packet_write(&packet, buffer, sequence, &key);
 	CUTE_TEST_ASSERT(bytes_written > 0);
 
-	void* packet_ptr = protocol::packet_open(buffer, bytes_written, &key, application_id, NULL, NULL);
+	void* packet_ptr = protocol::packet_open(buffer, bytes_written, &key, NULL, NULL);
 	CUTE_TEST_CHECK_POINTER(packet_ptr);
 	protocol::packet_keepalive_t* packet_val = (protocol::packet_keepalive_t*)packet_ptr;
 
@@ -112,7 +109,6 @@ CUTE_TEST_CASE(test_packet_disconnect, "Write, encrypt, decrypt, and assert the 
 int test_packet_disconnect()
 {
 	crypto_key_t key = crypto_generate_key();
-	uint64_t application_id = ~0ULL;
 	uint64_t sequence = 100;
 
 	protocol::packet_disconnect_t packet;
@@ -120,10 +116,10 @@ int test_packet_disconnect()
 
 	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 
-	int bytes_written = protocol::packet_write(&packet, buffer, application_id, sequence, &key);
+	int bytes_written = protocol::packet_write(&packet, buffer, sequence, &key);
 	CUTE_TEST_ASSERT(bytes_written > 0);
 
-	void* packet_ptr = protocol::packet_open(buffer, bytes_written, &key, application_id, NULL, NULL);
+	void* packet_ptr = protocol::packet_open(buffer, bytes_written, &key, NULL, NULL);
 	CUTE_TEST_CHECK_POINTER(packet_ptr);
 	protocol::packet_disconnect_t* packet_val = (protocol::packet_disconnect_t*)packet_ptr;
 
@@ -138,7 +134,6 @@ CUTE_TEST_CASE(test_packet_challenge, "Write, encrypt, decrypt, and assert the *
 int test_packet_challenge()
 {
 	crypto_key_t key = crypto_generate_key();
-	uint64_t application_id = ~0ULL;
 	uint64_t sequence = 100;
 
 	protocol::packet_challenge_t packet;
@@ -148,10 +143,10 @@ int test_packet_challenge()
 
 	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 
-	int bytes_written = protocol::packet_write(&packet, buffer, application_id, sequence, &key);
+	int bytes_written = protocol::packet_write(&packet, buffer, sequence, &key);
 	CUTE_TEST_ASSERT(bytes_written > 0);
 
-	void* packet_ptr = protocol::packet_open(buffer, bytes_written, &key, application_id, NULL, NULL);
+	void* packet_ptr = protocol::packet_open(buffer, bytes_written, &key, NULL, NULL);
 	CUTE_TEST_CHECK_POINTER(packet_ptr);
 	protocol::packet_challenge_t* packet_val = (protocol::packet_challenge_t*)packet_ptr;
 
@@ -168,7 +163,6 @@ CUTE_TEST_CASE(test_packet_payload, "Write, encrypt, decrypt, and assert the *pa
 int test_packet_payload()
 {
 	crypto_key_t key = crypto_generate_key();
-	uint64_t application_id = ~0ULL;
 	uint64_t sequence = 100;
 
 	protocol::packet_payload_t packet;
@@ -178,10 +172,10 @@ int test_packet_payload()
 
 	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 
-	int bytes_written = protocol::packet_write(&packet, buffer, application_id, sequence, &key);
+	int bytes_written = protocol::packet_write(&packet, buffer, sequence, &key);
 	CUTE_TEST_ASSERT(bytes_written > 0);
 
-	void* packet_ptr = protocol::packet_open(buffer, bytes_written, &key, application_id, NULL, NULL);
+	void* packet_ptr = protocol::packet_open(buffer, bytes_written, &key, NULL, NULL);
 	CUTE_TEST_CHECK_POINTER(packet_ptr);
 	protocol::packet_payload_t* packet_val = (protocol::packet_payload_t*)packet_ptr;
 

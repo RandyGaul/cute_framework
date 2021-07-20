@@ -23,30 +23,42 @@
 #define CUTE_CRYPTO_H
 
 #include "cute_defines.h"
+#include "cute_error.h"
 
-#define CUTE_CRYPTO_HMAC_BYTES ((int)16U)
-#define CUTE_CRYPTO_NONCE_BYTES ((int)24U)
-#define CUTE_CRYPTO_KEY_BYTES ((int)32U)
 
 namespace cute
 {
 
-struct crypto_key_t;
-
-CUTE_API int CUTE_CALL crypto_encrypt(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* associated_data, int associated_data_size, uint64_t sequence_nonce);
-CUTE_API int CUTE_CALL crypto_decrypt(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* associated_data, int associated_data_size, uint64_t sequence_nonce);
-
-CUTE_API int CUTE_CALL crypto_encrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* associated_data, int associated_data_size, const uint8_t* sequence_nonce);
-CUTE_API int CUTE_CALL crypto_decrypt_bignonce(const crypto_key_t* key, uint8_t* data, int data_size, const uint8_t* associated_data, int associated_data_size, const uint8_t* sequence_nonce);
-
 struct crypto_key_t
 {
-	uint8_t key[CUTE_CRYPTO_KEY_BYTES];
+	uint8_t key[32];
 };
 
-CUTE_API void CUTE_CALL crypto_random_bytes(void* data, int byte_count);
+#define CUTE_CRYPTO_HEADER_BYTES ((int)(20 + 16))
+
 CUTE_API crypto_key_t CUTE_CALL crypto_generate_key();
-CUTE_API const char* CUTE_CALL crypto_sodium_version_linked();
+CUTE_API void CUTE_CALL crypto_encrypt(const crypto_key_t* key, uint8_t* data, int data_size, uint64_t msg_id = 0);
+CUTE_API error_t CUTE_CALL crypto_decrypt(const crypto_key_t* key, uint8_t* data, int data_size, uint64_t msg_id = 0);
+CUTE_API void CUTE_CALL crypto_random_bytes(void* data, int byte_count);
+
+struct crypto_sign_public_t
+{
+	uint8_t key[32];
+};
+
+struct crypto_sign_secret_t
+{
+	uint8_t key[64];
+};
+
+struct crypto_signature_t
+{
+	uint8_t bytes[64];
+};
+
+CUTE_API void CUTE_CALL crypto_sign_keygen(crypto_sign_public_t* public_key, crypto_sign_secret_t* secret_key);
+CUTE_API void CUTE_CALL crypto_sign_create(const crypto_sign_secret_t* secret_key, crypto_signature_t* signature, const uint8_t* data, int data_size);
+CUTE_API error_t CUTE_CALL crypto_sign_verify(const crypto_sign_public_t* public_key, const crypto_signature_t* signature, const uint8_t* data, int data_size);
 
 }
 

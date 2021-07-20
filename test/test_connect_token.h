@@ -29,7 +29,9 @@ int test_generate_connect_token()
 {
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
-	crypto_key_t shared_secret_key = crypto_generate_key();
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
 
 	const char* endpoints[] = {
 		"[::1]:5000",
@@ -58,9 +60,9 @@ int test_generate_connect_token()
 		endpoints,
 		client_id,
 		user_data,
-		&shared_secret_key,
+		&sk,
 		token_buffer
-	));
+	).is_error());
 
 	// Assert reading token from web service as a client.
 	protocol::connect_token_t token;
@@ -82,7 +84,7 @@ int test_generate_connect_token()
 
 	// Assert reading *connect token packet* as server, and decrypting it successfully.
 	protocol::connect_token_decrypted_t decrypted_token;
-	CUTE_TEST_CHECK(protocol::server_decrypt_connect_token_packet(connect_token_packet, &shared_secret_key, application_id, current_timestamp, &decrypted_token));
+	CUTE_TEST_CHECK(protocol::server_decrypt_connect_token_packet(connect_token_packet, &pk, &sk, application_id, current_timestamp, &decrypted_token).is_error());
 	CUTE_TEST_ASSERT(decrypted_token.expiration_timestamp == expiration_timestamp);
 	CUTE_TEST_ASSERT(decrypted_token.handshake_timeout == handshake_timeout);
 	CUTE_TEST_ASSERT(decrypted_token.endpoint_count == 3);
@@ -95,7 +97,6 @@ int test_generate_connect_token()
 	CUTE_TEST_ASSERT(decrypted_token.client_id == client_id);
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&client_to_server_key, &decrypted_token.client_to_server_key, sizeof(crypto_key_t)));
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&server_to_client_key, &decrypted_token.server_to_client_key, sizeof(crypto_key_t)));
-	CUTE_TEST_ASSERT(!CUTE_MEMCMP(&user_data, &decrypted_token.user_data, CUTE_CONNECT_TOKEN_USER_DATA_SIZE));
 
 	return 0;
 }
