@@ -57,7 +57,7 @@ Once a client receives a connect token from the web service, the REST SECTION an
 The entire *connect token packet* is not modifiable or forge-able, and the SECRET SECTION is not readable by anyone except the web service and dedicated game servers. The entire *connect token packet* is protected by a cryptographically secure AEAD ([Authenticated Encryption with Associated Data](https://en.wikipedia.org/wiki/Authenticated_encryption#Authenticated_encryption_with_associated_data)) primitive. The key used for the AEAD primitive is a shared secret known by all dedicated game servers, and the web service. It is recommended to implement a mechanism to rotate this key periodically, though the mechanism to do so is out of scope for this document.
 
 ##### Note:
-> The AEAD primitive is a function that encrypts a chunk of data, and computes an HMAC ([keyed-hash message authentication code](https://en.wikipedia.org/wiki/HMAC)). The HMAC is a multi-byte value used to authenticate the message, and prevent tampering/modification of the message (i.e. maintain integrity of the message). The encryption ensures only those who know the key can read the message. The HMAC provides authentication (know who sent the message, and that it wasn't tampered). The HMAC is stored within the `signature` of the *connect token packet*. The `signature` is 64 bytes and can and should contain an HMAC along with nonce information. Depending on which primitives used, the bits for the HMAC and nonce can be allocated as seen fit by the implementor.
+> The AEAD primitive is a function that encrypts a chunk of data, and computes an HMAC ([keyed-hash message authentication code](https://en.wikipedia.org/wiki/HMAC)). The HMAC is a multi-byte value used to authenticate the message, and prevent tampering/modification of the message (i.e. maintain integrity of the message). The encryption ensures only those who know the key can read the message. The HMAC provides authentication (know who sent the message, and that it wasn't tampered). The HMAC is stored within the `signature` of the *connect token packet*. The `signature` is 20 byte initialization vector (IV for short) followed by a 16 byte HMAC.
 
 The PUBLIC SECTION of the *connect token packet* can be used as Associated Data for the AEAD, where the SECRET SECTION is encrypted by the AEAD. Once the AEAD is used, the output *signature* is appended to the token, thus completing the full 1024 bytes *connect token packet*. This means the PUBLIC SECTION is not modifiable or forgeable by anyone except the web service or the dedicated backend servers, since they share the secret key used for the AEAD to encrypt the SECRET SECTION, using the PUBLIC SECTION as the Associated Data.
 
@@ -100,12 +100,13 @@ number of server endpoints     uint32_t   The number of servers in the following
 <zeroes padded to 632 bytes>              Counting from the beginning of the PUBLIC SECTION.
 ---  END PUBLIC SECTION  ---
 --  BEGIN SECRET SECTION  --
+encryption signature           36 bytes   Optional storage to make certain APIs easier to use -- clear to zero if unused.
 client id                      uint64_t   Unique identifier for a particular client.
 client to server key           32 bytes   Client uses to encrypt packets, server uses to decrypt packets.
 server to client key           32 bytes   Server uses to encrypt packets, client uses to decrypt packets.
 user data                      256 bytes  Space for the user to store whatever auxiliary data they need.
 ---  END SECRET SECTION  ---
-signature                      64 bytes
+signature                      36 bytes
 ```
 
 The *connect token packet* is sent as-is without modification to a game server in the list. All game servers are valid choices, but it is recommended to start by making an attempt to connect to the first server in the list. If a failure occurs (for example the server is full), the client can move onto the next server in the list. Storing only a single server in the list is acceptable, but it is recommended to have more than one if possible, to improve the chances a client can successfully connect to a game server and play.
@@ -213,13 +214,20 @@ The Packet Type Value is used to write the `packet type` byte as described in th
 All packets except for the *connect token packet* are encrypted before sent. Each encrypted packet has the following form.
 
 ```
-packet type      1 byte
-sequence nonce   uint64_t
-signature        64 bytes
-encrypted bytes  <variable length>
+packet type       1 byte
+sequence nonce    8 bytes
+signature         36 bytes
+encrypted bytes   <variable length>
 ```
 
-All packets are 1280 bytes or smaller, so the maximum size of the `encrypted bytes` is 1207 bytes.
+Where the signature is a 20 byte initialization vector followed by a 16 byte HMAC.
+
+```
+initialization vector  20 bytes
+HMAC                   16 bytes
+```
+
+All packets are 1280 bytes or smaller, so the maximum size of the `encrypted bytes` is 1235 bytes.
 
 The *connect token packet* does not get encrypted by the client before being sent, as it is already encrypted by the web service using a secret key only known to the web service and the backend dedicated game servers. This means the client cannot read, modify, or generate the SECRET SECTION of the *connect token packet*.
 
@@ -297,7 +305,7 @@ The *disconnect packet* can be sent by the client or the server during the clien
 
 When decrypting packets the following steps must occur, in order, before a packet can be considered valid for further processing (NOTE - further processing includes updating any replay buffer implementation you might have).
 
-1. If an incoming packet is less than 65 bytes, ignore the packet.
+1. If an incoming packet is less than 45 bytes, ignore the packet.
 2. If the `packet type` byte is greater than 7, ignore the packet.
 3. The server ignores packets of types *challenge response packet*, *connection denied packet*, and *connection accepted packet*.
 4. The client ignores packets of types *challenge request packet* and *connect token packet*.
