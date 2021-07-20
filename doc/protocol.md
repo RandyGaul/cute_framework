@@ -97,7 +97,7 @@ number of server endpoints     uint32_t   The number of servers in the following
         port                   uint16_t
     <end if>
 <end for>
-<zeroes padded to 632 bytes>              Counting from the beginning of the PUBLIC SECTION.
+<zeroes padded to 624 bytes>              Counting from the beginning of the PUBLIC SECTION.
 ---  END PUBLIC SECTION  ---
 --  BEGIN SECRET SECTION  --
 encryption signature           36 bytes   Optional storage to make certain APIs easier to use -- clear to zero if unused.
