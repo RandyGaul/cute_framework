@@ -22,7 +22,7 @@
 #include <internal/cute_transport_internal.h>
 using namespace cute;
 
-struct test_ack_system_data_t
+struct test_transport_data_t
 {
 	int drop_packet = 0;
 	int id = ~0;
@@ -32,9 +32,9 @@ struct test_ack_system_data_t
 	transport_t* transport_b = NULL;
 };
 
-int test_send_packet_fn(int index, uint16_t sequence, void* packet, int size, void* udata)
+int test_send_packet_fn(int index, void* packet, int size, void* udata)
 {
-	test_ack_system_data_t* data = (test_ack_system_data_t*)udata;
+	test_transport_data_t* data = (test_transport_data_t*)udata;
 	if (data->drop_packet) {
 		return 0;
 	}
@@ -48,7 +48,7 @@ int test_send_packet_fn(int index, uint16_t sequence, void* packet, int size, vo
 	return 0;
 }
 
-int test_open_packet_fn(int index, uint16_t sequence, void* packet, int size, void* udata)
+int test_open_packet_fn(int index, void* packet, int size, void* udata)
 {
 	uint64_t* val_ptr = (uint64_t*)packet;
 	if (*val_ptr != 100) {
@@ -61,8 +61,8 @@ int test_open_packet_fn(int index, uint16_t sequence, void* packet, int size, vo
 CUTE_TEST_CASE(test_ack_system_basic, "Create ack system, send a few packets, and receive them. Make sure some drop. Assert acks.");
 int test_ack_system_basic()
 {
-	test_ack_system_data_t data_a;
-	test_ack_system_data_t data_b;
+	test_transport_data_t data_a;
+	test_transport_data_t data_b;
 	data_a.id = 0;
 	data_b.id = 1;
 
@@ -128,41 +128,41 @@ int test_ack_system_basic()
 	return 0;
 }
 
-int test_transport_open_packet_fn(int index, uint16_t sequence, void* packet, int size, void* udata)
+int test_transport_send_packet_fn(int index, void* packet, int size, void* udata)
 {
-	test_ack_system_data_t* data = (test_ack_system_data_t*)udata;
-	if (data->id) {
-		return transport_process_packet(data->transport_b, packet, size, sequence);
-	} else {
-		return transport_process_packet(data->transport_a, packet, size, sequence);
+	test_transport_data_t* data = (test_transport_data_t*)udata;
+	if (data->drop_packet) {
+		return 0;
 	}
+	
+	if (data->id) {
+		return transport_process_packet(data->transport_a, packet, size);
+	} else {
+		return transport_process_packet(data->transport_b, packet, size);
+	}
+}
+
+int test_transport_open_packet_fn(int index, void* packet, int size, void* udata)
+{
+	test_transport_data_t* data = (test_transport_data_t*)udata;
+	return 0;
 }
 
 CUTE_TEST_CASE(test_transport_basic, "Create transport, send a couple packets, receive them.");
 int test_transport_basic()
 {
-	test_ack_system_data_t data_a;
-	test_ack_system_data_t data_b;
+	test_transport_data_t data_a;
+	test_transport_data_t data_b;
 	data_a.id = 0;
 	data_b.id = 1;
 
-	ack_system_config_t config;
-	config.send_packet_fn = test_send_packet_fn;
+	transport_config_t config;
+	config.send_packet_fn = test_transport_send_packet_fn;
 	config.open_packet_fn = test_transport_open_packet_fn;
 	config.udata = &data_a;
-	ack_system_t* ack_system_a = ack_system_make(&config);
+	transport_t* transport_a = transport_make(&config);
 	config.udata = &data_b;
-	ack_system_t* ack_system_b = ack_system_make(&config);
-	data_a.ack_system_a = ack_system_a;
-	data_a.ack_system_b = ack_system_b;
-	data_b.ack_system_a = ack_system_a;
-	data_b.ack_system_b = ack_system_b;
-
-	transport_config_t transport_config;
-	transport_config.ack_system = ack_system_a;
-	transport_t* transport_a = transport_make(&transport_config);
-	transport_config.ack_system = ack_system_b;
-	transport_t* transport_b = transport_make(&transport_config);
+	transport_t* transport_b = transport_make(&config);
 	data_a.transport_a = transport_a;
 	data_a.transport_b = transport_b;
 	data_b.transport_a = transport_a;
@@ -174,19 +174,19 @@ int test_transport_basic()
 
 	CUTE_TEST_CHECK(transport_send_reliably_and_in_order(transport_a, packet, packet_size));
 	CUTE_TEST_CHECK(transport_send_reliably_and_in_order(transport_b, packet, packet_size));
-
+	
 	transport_process_acks(transport_a);
 	transport_process_acks(transport_b);
 
 	void* packet_received;
 	int packet_received_size;
 
-	CUTE_TEST_CHECK(transport_recieve_reliably_and_in_order(transport_a, &packet_received, &packet_received_size));
+	CUTE_TEST_CHECK(transport_receive_reliably_and_in_order(transport_a, &packet_received, &packet_received_size));
 	CUTE_TEST_ASSERT(packet_size == packet_received_size);
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(packet, packet_received, packet_size));
 	transport_free(transport_a, packet_received);
 
-	CUTE_TEST_CHECK(transport_recieve_reliably_and_in_order(transport_b, &packet_received, &packet_received_size));
+	CUTE_TEST_CHECK(transport_receive_reliably_and_in_order(transport_b, &packet_received, &packet_received_size));
 	CUTE_TEST_ASSERT(packet_size == packet_received_size);
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(packet, packet_received, packet_size));
 	transport_free(transport_b, packet_received);
@@ -197,12 +197,12 @@ int test_transport_basic()
 	transport_process_acks(transport_a);
 	transport_process_acks(transport_b);
 
-	CUTE_TEST_CHECK(transport_recieve_fire_and_forget(transport_a, &packet_received, &packet_received_size));
+	CUTE_TEST_CHECK(transport_receive_fire_and_forget(transport_a, &packet_received, &packet_received_size));
 	CUTE_TEST_ASSERT(packet_size == packet_received_size);
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(packet, packet_received, packet_size));
 	transport_free(transport_a, packet_received);
 
-	CUTE_TEST_CHECK(transport_recieve_fire_and_forget(transport_b, &packet_received, &packet_received_size));
+	CUTE_TEST_CHECK(transport_receive_fire_and_forget(transport_b, &packet_received, &packet_received_size));
 	CUTE_TEST_ASSERT(packet_size == packet_received_size);
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(packet, packet_received, packet_size));
 	transport_free(transport_b, packet_received);
@@ -212,37 +212,24 @@ int test_transport_basic()
 	transport_destroy(transport_a);
 	transport_destroy(transport_b);
 
-	ack_system_destroy(ack_system_a);
-	ack_system_destroy(ack_system_b);
-
 	return 0;
 }
 
 CUTE_TEST_CASE(test_transport_drop_fragments, "Create transport, send a couple packets, receive them under packet loss.");
 int test_transport_drop_fragments()
 {
-	test_ack_system_data_t data_a;
-	test_ack_system_data_t data_b;
+	test_transport_data_t data_a;
+	test_transport_data_t data_b;
 	data_a.id = 0;
 	data_b.id = 1;
 
-	ack_system_config_t config;
-	config.send_packet_fn = test_send_packet_fn;
+	transport_config_t config;
+	config.send_packet_fn = test_transport_send_packet_fn;
 	config.open_packet_fn = test_transport_open_packet_fn;
 	config.udata = &data_a;
-	ack_system_t* ack_system_a = ack_system_make(&config);
+	transport_t* transport_a = transport_make(&config);
 	config.udata = &data_b;
-	ack_system_t* ack_system_b = ack_system_make(&config);
-	data_a.ack_system_a = ack_system_a;
-	data_a.ack_system_b = ack_system_b;
-	data_b.ack_system_a = ack_system_a;
-	data_b.ack_system_b = ack_system_b;
-
-	transport_config_t transport_config;
-	transport_config.ack_system = ack_system_a;
-	transport_t* transport_a = transport_make(&transport_config);
-	transport_config.ack_system = ack_system_b;
-	transport_t* transport_b = transport_make(&transport_config);
+	transport_t* transport_b = transport_make(&config);
 	data_a.transport_a = transport_a;
 	data_a.transport_b = transport_b;
 	data_b.transport_a = transport_a;
@@ -263,11 +250,11 @@ int test_transport_drop_fragments()
 	void* packet_received;
 	int packet_received_size;
 
-	CUTE_TEST_ASSERT(transport_recieve_reliably_and_in_order(transport_a, &packet_received, &packet_received_size) < 0);
+	CUTE_TEST_ASSERT(transport_receive_reliably_and_in_order(transport_a, &packet_received, &packet_received_size) < 0);
 	CUTE_TEST_ASSERT(0 == packet_received_size);
 	CUTE_TEST_ASSERT(packet_received == NULL);
 
-	CUTE_TEST_CHECK(transport_recieve_reliably_and_in_order(transport_b, &packet_received, &packet_received_size));
+	CUTE_TEST_CHECK(transport_receive_reliably_and_in_order(transport_b, &packet_received, &packet_received_size));
 	CUTE_TEST_ASSERT(packet_size == packet_received_size);
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(packet, packet_received, packet_size));
 	transport_free(transport_b, packet_received);
@@ -276,7 +263,7 @@ int test_transport_drop_fragments()
 
 	transport_resend_unacked_fragments(transport_b);
 
-	CUTE_TEST_CHECK(transport_recieve_reliably_and_in_order(transport_a, &packet_received, &packet_received_size));
+	CUTE_TEST_CHECK(transport_receive_reliably_and_in_order(transport_a, &packet_received, &packet_received_size));
 	CUTE_TEST_ASSERT(packet_size == packet_received_size);
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(packet, packet_received, packet_size));
 	transport_free(transport_a, packet_received);
@@ -289,12 +276,12 @@ int test_transport_drop_fragments()
 	transport_process_acks(transport_a);
 	transport_process_acks(transport_b);
 
-	CUTE_TEST_CHECK(transport_recieve_fire_and_forget(transport_a, &packet_received, &packet_received_size));
+	CUTE_TEST_CHECK(transport_receive_fire_and_forget(transport_a, &packet_received, &packet_received_size));
 	CUTE_TEST_ASSERT(packet_size == packet_received_size);
 	CUTE_TEST_ASSERT(!CUTE_MEMCMP(packet, packet_received, packet_size));
 	transport_free(transport_a, packet_received);
 
-	CUTE_TEST_ASSERT(transport_recieve_reliably_and_in_order(transport_b, &packet_received, &packet_received_size) < 0);
+	CUTE_TEST_ASSERT(transport_receive_reliably_and_in_order(transport_b, &packet_received, &packet_received_size) < 0);
 	CUTE_TEST_ASSERT(0 == packet_received_size);
 	CUTE_TEST_ASSERT(packet_received == NULL);
 
@@ -303,21 +290,12 @@ int test_transport_drop_fragments()
 	transport_destroy(transport_a);
 	transport_destroy(transport_b);
 
-	ack_system_destroy(ack_system_a);
-	ack_system_destroy(ack_system_b);
-
 	return 0;
 }
-int test_send_packet_many_drops_fn(int index, uint16_t sequence, void* packet, int size, void* udata)
+int test_send_packet_many_drops_fn(int index, void* packet, int size, void* udata)
 {
-	test_ack_system_data_t* data = (test_ack_system_data_t*)udata;
+	test_transport_data_t* data = (test_transport_data_t*)udata;
 	if (rand() % 100 != 0) return 0;
-
-	if (data->id) {
-		ack_system_receive_packet(data->ack_system_a, packet, size);
-	} else {
-		ack_system_receive_packet(data->ack_system_b, packet, size);
-	}
 
 	return 0;
 }
@@ -327,28 +305,18 @@ int test_transport_drop_fragments_reliable_hammer()
 {
 	srand(0);
 
-	test_ack_system_data_t data_a;
-	test_ack_system_data_t data_b;
+	test_transport_data_t data_a;
+	test_transport_data_t data_b;
 	data_a.id = 0;
 	data_b.id = 1;
 
-	ack_system_config_t config;
-	config.send_packet_fn = test_send_packet_many_drops_fn;
+	transport_config_t config;
+	config.send_packet_fn = test_transport_send_packet_fn;
 	config.open_packet_fn = test_transport_open_packet_fn;
 	config.udata = &data_a;
-	ack_system_t* ack_system_a = ack_system_make(&config);
+	transport_t* transport_a = transport_make(&config);
 	config.udata = &data_b;
-	ack_system_t* ack_system_b = ack_system_make(&config);
-	data_a.ack_system_a = ack_system_a;
-	data_a.ack_system_b = ack_system_b;
-	data_b.ack_system_a = ack_system_a;
-	data_b.ack_system_b = ack_system_b;
-
-	transport_config_t transport_config;
-	transport_config.ack_system = ack_system_a;
-	transport_t* transport_a = transport_make(&transport_config);
-	transport_config.ack_system = ack_system_b;
-	transport_t* transport_b = transport_make(&transport_config);
+	transport_t* transport_b = transport_make(&config);
 	data_a.transport_a = transport_a;
 	data_a.transport_b = transport_b;
 	data_b.transport_a = transport_a;
@@ -375,22 +343,22 @@ int test_transport_drop_fragments_reliable_hammer()
 	{
 		CUTE_TEST_CHECK(transport_send_fire_and_forget(transport_a, fire_and_forget_packet, fire_and_forget_packet_size));
 		CUTE_TEST_CHECK(transport_send_fire_and_forget(transport_b, fire_and_forget_packet, fire_and_forget_packet_size));
-
+	
 		transport_process_acks(transport_a);
 		transport_clear_acks(transport_b);
-
+	
 		iters++;
 		if (iters % 10 == 0) {
 			transport_resend_unacked_fragments(transport_a);
 		}
-
-		if (transport_recieve_reliably_and_in_order(transport_b, &packet_received, &packet_received_size) == 0) {
+	
+		if (transport_receive_reliably_and_in_order(transport_b, &packet_received, &packet_received_size) == 0) {
 			CUTE_TEST_ASSERT(packet_size == packet_received_size);
 			CUTE_TEST_ASSERT(!CUTE_MEMCMP(packet, packet_received, packet_size));
 			received = 1;
 			transport_free(transport_b, packet_received);
 		}
-
+	
 		if (received && transport_unacked_fragment_count(transport_a) == 0) {
 			break;
 		}
@@ -402,9 +370,6 @@ int test_transport_drop_fragments_reliable_hammer()
 
 	transport_destroy(transport_a);
 	transport_destroy(transport_b);
-
-	ack_system_destroy(ack_system_a);
-	ack_system_destroy(ack_system_b);
 
 	return 0;
 }

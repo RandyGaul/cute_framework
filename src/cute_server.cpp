@@ -57,13 +57,13 @@ struct server_t
 	protocol::server_t* p_server = NULL;
 };
 
-static int s_send_packet_fn(int client_index, uint16_t sequence, void* packet, int size, void* udata)
+static int s_send_packet_fn(int client_index, void* packet, int size, void* udata)
 {
 	server_t* server = (server_t*)udata;
 	return protocol::server_send_to_client(server->p_server, packet, size, client_index);
 }
 
-static int s_open_packet_fn(int index, uint16_t sequence, void* packet, int size, void* udata)
+static int s_open_packet_fn(int index, void* packet, int size, void* udata)
 {
 	server_t* server = (server_t*)udata;
 	return 0;
@@ -77,15 +77,11 @@ server_t* server_create(server_config_t* config, void* user_allocator_context)
 	server->p_server = protocol::server_make(config->application_id, &server->config.public_key, &server->config.secret_key, server->mem_ctx);
 
 	for (int i = 0; i < CUTE_SERVER_MAX_CLIENTS; ++i) {
-		ack_system_config_t ack_config;
-		ack_config.index = i;
-		ack_config.send_packet_fn = s_send_packet_fn;
-		ack_config.open_packet_fn = s_open_packet_fn;
-		ack_config.udata = server;
-		ack_config.user_allocator_context = user_allocator_context;
-
 		transport_config_t transport_config;
-		transport_config.ack_system = ack_system_make(&ack_config);
+		transport_config.index = i;
+		transport_config.send_packet_fn = s_send_packet_fn;
+		transport_config.open_packet_fn = s_open_packet_fn;
+		transport_config.udata = server;
 		transport_config.user_allocator_context = user_allocator_context;
 		server->client_transports[i] = transport_make(&transport_config);
 	}
@@ -119,8 +115,36 @@ void server_update(server_t* server, float dt)
 	//s_server_send_packets(server, dt);
 }
 
-bool server_poll_event(server_t* server, server_event_t* event)
+bool server_pop_event(server_t* server, server_event_t* event)
 {
+	protocol::server_event_t p_event;
+	server_event_t e;
+	if (protocol::server_pop_event(server->p_server, &p_event)) {
+		switch (p_event.type) {
+		case protocol::SERVER_EVENT_NEW_CONNECTION:
+		{
+			e.type = SERVER_EVENT_TYPE_NEW_CONNECTION;
+			e.u.new_connection.client_index = p_event.u.new_connection.client_index;
+			e.u.new_connection.endpoint = p_event.u.new_connection.endpoint;
+			*event = e;
+		}	break;
+
+		case protocol::SERVER_EVENT_DISCONNECTED:
+		{
+		}	break;
+
+		case protocol::SERVER_EVENT_PAYLOAD_PACKET:
+		{
+			int index = p_event.u.payload_packet.client_index;
+			void* data = p_event.u.payload_packet.data;
+			int size = p_event.u.payload_packet.size;
+			transport_process_packet(server->client_transports[index], data, size);
+		}	break;
+		}
+
+		return true;
+	}
+	
 	return false;
 }
 

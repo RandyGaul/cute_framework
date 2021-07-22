@@ -1461,6 +1461,7 @@ static void s_server_connect_client(server_t* server, endpoint_t endpoint, encry
 	server_event_t event;
 	event.type = SERVER_EVENT_NEW_CONNECTION;
 	event.u.new_connection.client_index = index;
+	event.u.new_connection.endpoint = endpoint;
 	if (s_server_event_push(server, &event) < 0) return;
 
 	hashtable_insert(&server->client_id_table, &state->client_id, &index);

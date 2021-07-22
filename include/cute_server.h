@@ -63,32 +63,32 @@ struct server_event_t
 	{
 		struct
 		{
-			handle_t client_id;
+			int client_index;
 			endpoint_t endpoint;
 		} new_connection;
 
 		struct
 		{
-			handle_t client_id;
+			int client_index;
 		} disconnected;
 
 		struct
 		{
-			handle_t client_id;
+			int client_index;
 			const void* data;
 			int size;
 		} user_packet;
 	} u;
 };
 
-CUTE_API bool CUTE_CALL server_poll_event(server_t* server, server_event_t* event);
+CUTE_API bool CUTE_CALL server_pop_event(server_t* server, server_event_t* event);
 
 CUTE_API void CUTE_CALL server_update(server_t* server, float dt);
-CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_id, bool send_notification_to_client = true);
+CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, int client_index, bool send_notification_to_client = true);
 CUTE_API void CUTE_CALL server_find_and_disconnect_timed_out_clients(server_t* server, float timeout);
-CUTE_API void CUTE_CALL server_send(server_t* server, const void* packet, int size, handle_t client_id, bool send_reliably);
+CUTE_API void CUTE_CALL server_send(server_t* server, const void* packet, int size, int client_index, bool send_reliably);
 CUTE_API void CUTE_CALL server_send_to_all_clients(server_t* server, const void* packet, int size, bool send_reliably);
-CUTE_API void CUTE_CALL server_send_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t client_id, bool send_reliably);
+CUTE_API void CUTE_CALL server_send_to_all_but_one_client(server_t* server, const void* packet, int size, int client_index, bool send_reliably);
 
 CUTE_API float CUTE_CALL server_time_of_last_packet_recieved_from_client(server_t* server, handle_t client_id);
 

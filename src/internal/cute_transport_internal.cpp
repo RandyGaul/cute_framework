@@ -211,30 +211,161 @@ int packet_queue_pop(packet_queue_t* q, void** packet, int* size)
 
 // -------------------------------------------------------------------------------------------------
 
-struct ack_system_t
+struct send_queue_item_t
 {
-	double time;
-	int max_packet_size;
+	int fragment_index;
+	int fragment_count;
+	int final_fragment_size;
 
-	int index;
-	int (*send_packet_fn)(int client_index, uint16_t sequence, void* packet, int size, void* udata);
-	int (*open_packet_fn)(int client_index, uint16_t sequence, void* packet, int size, void* udata);
-
-	void* udata;
-	void* mem_ctx;
-
-	uint16_t sequence;
-	array<uint16_t> acks;
-	sequence_buffer_t sent_packets;
-	sequence_buffer_t received_packets;
-
-	float rtt;
-	float packet_loss;
-	float outgoing_bandwidth_kbps;
-	float incoming_bandwidth_kbps;
-
-	uint64_t counters[ACK_SYSTEM_COUNTERS_MAX];
+	int size;
+	uint8_t* packet;
 };
+
+struct send_queue_t
+{
+	int count;
+	int index0;
+	int index1;
+	send_queue_item_t items[CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES];
+};
+
+static void s_send_queue_init(send_queue_t* q)
+{
+	q->count = 0;
+	q->index0 = 0;
+	q->index1 = 0;
+}
+
+static int s_send_queue_push(send_queue_t* q, const send_queue_item_t* item)
+{
+	CUTE_ASSERT(q->count >= 0 && q->count < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
+	CUTE_ASSERT(q->index0 >= 0 && q->index0 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
+	CUTE_ASSERT(q->index1 >= 0 && q->index1 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
+
+	if (q->count < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES) {
+		int next_index = (q->index1 + 1) % CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES;
+		q->items[next_index] = *item;
+		q->index1 = next_index;
+		++q->count;
+		return 0;
+	} else {
+		return -1;
+	}
+}
+
+static void s_send_queue_pop(send_queue_t* q)
+{
+	CUTE_ASSERT(q->count >= 0 && q->count < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
+	CUTE_ASSERT(q->index0 >= 0 && q->index0 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
+	CUTE_ASSERT(q->index1 >= 0 && q->index1 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
+
+	int next_index = (q->index0 + 1) % CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES;
+	q->index0 = next_index;
+	--q->count;
+}
+
+static int s_send_queue_peek(send_queue_t* q, send_queue_item_t** item)
+{
+	CUTE_ASSERT(q->count >= 0 && q->count < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
+	CUTE_ASSERT(q->index0 >= 0 && q->index0 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
+	CUTE_ASSERT(q->index1 >= 0 && q->index1 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
+
+	if (q->count > 0) {
+		int next_index = (q->index0 + 1) % CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES;
+		*item = q->items + next_index;
+		return 0;
+	} else {
+		return -1;
+	}
+}
+
+// -------------------------------------------------------------------------------------------------
+
+struct fragment_t
+{
+	int index;
+	double timestamp;
+	handle_t handle;
+	uint8_t* data;
+	int size;
+};
+
+struct fragment_reassembly_entry_t
+{
+	int received_final_fragment;
+	int packet_size;
+	uint8_t* packet;
+
+	int fragment_count_so_far;
+	int fragments_total;
+	uint8_t* fragment_received;
+};
+
+struct packet_assembly_t
+{
+	uint16_t reassembly_sequence;
+	sequence_buffer_t fragment_reassembly;
+	packet_queue_t assembled_packets;
+};
+
+static void s_fragment_reassembly_entry_cleanup(void* data, uint16_t sequence, void* udata, void* mem_ctx)
+{
+	fragment_reassembly_entry_t* reassembly = (fragment_reassembly_entry_t*)data;
+	CUTE_FREE(reassembly->packet, mem_ctx);
+	CUTE_FREE(reassembly->fragment_received, mem_ctx);
+}
+
+static int s_packet_assembly_init(packet_assembly_t* assembly, int max_fragments_in_flight, void* mem_ctx)
+{
+	int ret = 0;
+	int reassembly_init = 0;
+
+	assembly->reassembly_sequence = 0;
+
+	CUTE_CHECK(sequence_buffer_init(&assembly->fragment_reassembly, max_fragments_in_flight, sizeof(fragment_reassembly_entry_t), NULL, mem_ctx));
+	reassembly_init = 1;
+	packet_queue_init(&assembly->assembled_packets);
+
+	if (ret) {
+		if (reassembly_init) sequence_buffer_cleanup(&assembly->fragment_reassembly);
+	}
+
+	return ret;
+}
+
+static void s_packet_assembly_cleanup(packet_assembly_t* assembly)
+{
+	sequence_buffer_cleanup(&assembly->fragment_reassembly, s_fragment_reassembly_entry_cleanup);
+}
+
+// -------------------------------------------------------------------------------------------------
+
+struct ack_system_t;
+
+struct transport_t
+{
+	int fragment_size;
+	int max_packet_size;
+	int max_fragments_in_flight;
+	int max_size_single_send;
+
+	send_queue_t send_queue;
+
+	array<fragment_t> fragments;
+	handle_allocator_t* fragment_handle_table;
+	sequence_buffer_t sent_fragments;
+
+	ack_system_t* ack_system;
+	packet_assembly_t reliable_and_in_order_assembly;
+	packet_assembly_t fire_and_forget_assembly;
+
+	void* mem_ctx;
+	void* udata;
+
+	uint8_t fire_and_forget_buffer[CUTE_TRANSPORT_MAX_FRAGMENT_SIZE + CUTE_TRANSPORT_HEADER_SIZE];
+};
+
+// -------------------------------------------------------------------------------------------------
 
 struct sent_packet_t
 {
@@ -364,14 +495,14 @@ int ack_system_send_packet(ack_system_t* ack_system, void* data, int size, uint1
 	CUTE_ASSERT(header_size == CUTE_ACK_SYSTEM_HEADER_SIZE);
 	CUTE_ASSERT(size + header_size < CUTE_TRANSPORT_PACKET_PAYLOAD_MAX);
 	CUTE_MEMCPY(buffer + header_size, data, size);
-	if (ack_system->send_packet_fn(ack_system->index, sequence, buffer, size + header_size, ack_system->udata) < 0) {
+	if (sequence_out) *sequence_out = sequence;
+	if (ack_system->send_packet_fn(ack_system->index, buffer, size + header_size, ack_system->udata) < 0) {
 		ack_system->counters[ACK_SYSTEM_COUNTERS_PACKETS_INVALID]++;
 		return -1;
 	}
 
 	ack_system->counters[ACK_SYSTEM_COUNTERS_PACKETS_SENT]++;
 
-	if (sequence_out) *sequence_out = sequence;
 	return 0;
 }
 
@@ -413,10 +544,6 @@ int ack_system_receive_packet(ack_system_t* ack_system, void* data, int size)
 
 	if (s_sequence_is_stale(&ack_system->received_packets, sequence)) {
 		ack_system->counters[ACK_SYSTEM_COUNTERS_PACKETS_STALE]++;
-		return -1;
-	}
-
-	if (ack_system->open_packet_fn(ack_system->index, sequence, buffer + header_size, size - header_size, ack_system->udata) < 0) {
 		return -1;
 	}
 
@@ -544,157 +671,6 @@ uint64_t ack_system_get_counter(ack_system_t* ack_system, ack_system_counter_t c
 
 // -------------------------------------------------------------------------------------------------
 
-struct fragment_t
-{
-	int index;
-	double timestamp;
-	handle_t handle;
-	uint8_t* data;
-	int size;
-};
-
-struct fragment_reassembly_entry_t
-{
-	int received_final_fragment;
-	int packet_size;
-	uint8_t* packet;
-
-	int fragment_count_so_far;
-	int fragments_total;
-	uint8_t* fragment_received;
-};
-
-struct packet_assembly_t
-{
-	uint16_t reassembly_sequence;
-	sequence_buffer_t fragment_reassembly;
-	packet_queue_t assembled_packets;
-};
-
-static void s_fragment_reassembly_entry_cleanup(void* data, uint16_t sequence, void* udata, void* mem_ctx)
-{
-	fragment_reassembly_entry_t* reassembly = (fragment_reassembly_entry_t*)data;
-	CUTE_FREE(reassembly->packet, mem_ctx);
-	CUTE_FREE(reassembly->fragment_received, mem_ctx);
-}
-
-static int s_packet_assembly_init(packet_assembly_t* assembly, int max_fragments_in_flight, void* mem_ctx)
-{
-	int ret = 0;
-	int reassembly_init = 0;
-
-	assembly->reassembly_sequence = 0;
-
-	CUTE_CHECK(sequence_buffer_init(&assembly->fragment_reassembly, max_fragments_in_flight, sizeof(fragment_reassembly_entry_t), NULL, mem_ctx));
-	reassembly_init = 1;
-	packet_queue_init(&assembly->assembled_packets);
-
-	if (ret) {
-		if (reassembly_init) sequence_buffer_cleanup(&assembly->fragment_reassembly);
-	}
-
-	return ret;
-}
-
-static void s_packet_assembly_cleanup(packet_assembly_t* assembly)
-{
-	sequence_buffer_cleanup(&assembly->fragment_reassembly, s_fragment_reassembly_entry_cleanup);
-}
-
-// -------------------------------------------------------------------------------------------------
-
-struct send_queue_item_t
-{
-	int fragment_index;
-	int fragment_count;
-	int final_fragment_size;
-
-	int size;
-	uint8_t* packet;
-};
-
-struct send_queue_t
-{
-	int count;
-	int index0;
-	int index1;
-	send_queue_item_t items[CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES];
-};
-
-static void s_send_queue_init(send_queue_t* q)
-{
-	q->count = 0;
-	q->index0 = 0;
-	q->index1 = 0;
-}
-
-static int s_send_queue_push(send_queue_t* q, const send_queue_item_t* item)
-{
-	CUTE_ASSERT(q->count >= 0 && q->count < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
-	CUTE_ASSERT(q->index0 >= 0 && q->index0 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
-	CUTE_ASSERT(q->index1 >= 0 && q->index1 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
-
-	if (q->count < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES) {
-		int next_index = (q->index1 + 1) % CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES;
-		q->items[next_index] = *item;
-		q->index1 = next_index;
-		++q->count;
-		return 0;
-	} else {
-		return -1;
-	}
-}
-
-static void s_send_queue_pop(send_queue_t* q)
-{
-	CUTE_ASSERT(q->count >= 0 && q->count < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
-	CUTE_ASSERT(q->index0 >= 0 && q->index0 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
-	CUTE_ASSERT(q->index1 >= 0 && q->index1 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
-
-	int next_index = (q->index0 + 1) % CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES;
-	q->index0 = next_index;
-	--q->count;
-}
-
-static int s_send_queue_peek(send_queue_t* q, send_queue_item_t** item)
-{
-	CUTE_ASSERT(q->count >= 0 && q->count < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
-	CUTE_ASSERT(q->index0 >= 0 && q->index0 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
-	CUTE_ASSERT(q->index1 >= 0 && q->index1 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
-
-	if (q->count > 0) {
-		int next_index = (q->index0 + 1) % CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES;
-		*item = q->items + next_index;
-		return 0;
-	} else {
-		return -1;
-	}
-}
-
-// -------------------------------------------------------------------------------------------------
-
-struct transport_t
-{
-	int fragment_size;
-	int max_packet_size;
-	int max_fragments_in_flight;
-	int max_size_single_send;
-
-	send_queue_t send_queue;
-
-	array<fragment_t> fragments;
-	handle_allocator_t* fragment_handle_table;
-	sequence_buffer_t sent_fragments;
-
-	ack_system_t* ack_system;
-	packet_assembly_t reliable_and_in_order_assembly;
-	packet_assembly_t fire_and_forget_assembly;
-
-	void* mem_ctx;
-
-	uint8_t fire_and_forget_buffer[CUTE_TRANSPORT_MAX_FRAGMENT_SIZE + CUTE_TRANSPORT_HEADER_SIZE];
-};
-
 struct fragment_entry_t
 {
 	handle_t fragment_handle;
@@ -702,6 +678,8 @@ struct fragment_entry_t
 
 transport_t* transport_make(const transport_config_t* config)
 {
+	if (!config->send_packet_fn || !config->open_packet_fn) return NULL;
+
 	int ret = 0;
 	int table_init = 0;
 	int sequence_sent_fragments_init = 0;
@@ -714,10 +692,16 @@ transport_t* transport_make(const transport_config_t* config)
 	transport->max_packet_size = config->max_packet_size;
 	transport->max_fragments_in_flight = config->max_fragments_in_flight;
 	transport->max_size_single_send = config->max_size_single_send;
+	transport->udata = config->udata;
 
 	CUTE_PLACEMENT_NEW(&transport->fragments) array<fragment_t>(config->user_allocator_context);
 
-	transport->ack_system = config->ack_system;
+	ack_system_config_t ack_config;
+	ack_config.index = config->index;
+	ack_config.send_packet_fn = config->send_packet_fn;
+	ack_config.open_packet_fn = config->open_packet_fn;
+	ack_config.udata = config->udata;
+	transport->ack_system = ack_system_make(&ack_config);
 	transport->mem_ctx = config->user_allocator_context;
 
 	transport->fragment_handle_table = handle_allocator_make(transport->max_fragments_in_flight, transport->mem_ctx);
@@ -769,12 +753,14 @@ void transport_destroy(transport_t* transport)
 		CUTE_FREE(fragment->data, transport->mem_ctx);
 	}
 	transport->fragments.~array<fragment_t>();
+	ack_system_destroy(transport->ack_system);
 	CUTE_FREE(transport, config->user_allocator_context);
 }
 
-void transport_reset(transport_t* tranpsport)
+void transport_reset(transport_t* transport)
 {
 	CUTE_ASSERT(0); // TODO: Implement me.
+	ack_system_reset(transport->ack_system);
 }
 
 static CUTE_INLINE int s_transport_write_header(uint8_t* buffer, int size, uint8_t prefix, uint16_t sequence, uint16_t fragment_count, uint16_t fragment_index, uint16_t fragment_size)
@@ -939,7 +925,7 @@ int transport_send_fire_and_forget(transport_t* transport, void* data, int size)
 	return 0;
 }
 
-int transport_recieve_reliably_and_in_order(transport_t* transport, void** data, int* size)
+int transport_receive_reliably_and_in_order(transport_t* transport, void** data, int* size)
 {
 	packet_assembly_t* assembly = &transport->reliable_and_in_order_assembly;
 	if (packet_queue_pop(&assembly->assembled_packets, data, size) < 0) {
@@ -951,7 +937,7 @@ int transport_recieve_reliably_and_in_order(transport_t* transport, void** data,
 	}
 }
 
-int transport_recieve_fire_and_forget(transport_t* transport, void** data, int* size)
+int transport_receive_fire_and_forget(transport_t* transport, void** data, int* size)
 {
 	packet_assembly_t* assembly = &transport->fire_and_forget_assembly;
 	if (packet_queue_pop(&assembly->assembled_packets, data, size) < 0) {
@@ -968,12 +954,16 @@ void transport_free(transport_t* transport, void* data)
 	CUTE_FREE(data, transport->mem_ctx);
 }
 
-int transport_process_packet(transport_t* transport, void* data, int size, uint16_t sequence)
+int transport_process_packet(transport_t* transport, void* data, int size)
 {
 	if (size < CUTE_TRANSPORT_HEADER_SIZE) return -1;
 
+	if (ack_system_receive_packet(transport->ack_system, data, size) < 0) {
+		return -1;
+	}
+
 	// Read transport header.
-	uint8_t* buffer = (uint8_t*)data;
+	uint8_t* buffer = (uint8_t*)data + CUTE_ACK_SYSTEM_HEADER_SIZE;
 	uint8_t prefix = read_uint8(&buffer);
 	uint16_t reassembly_sequence = read_uint16(&buffer);
 	uint16_t fragment_count = read_uint16(&buffer);
@@ -1111,7 +1101,8 @@ void transport_resend_unacked_fragments(transport_t* transport)
 
 		// Send to ack system.
 		uint16_t sequence;
-		if (ack_system_send_packet(transport->ack_system, fragment->data, fragment->size + CUTE_TRANSPORT_HEADER_SIZE, &sequence) < 0) {
+		fragment_size = ack_system_send_packet(transport->ack_system, fragment->data, fragment->size + CUTE_TRANSPORT_HEADER_SIZE, &sequence);
+		if (fragment_size < 0) {
 			// Remove failed fragments (this should never happen, and is only here for safety).
 			handle_allocator_free(transport->fragment_handle_table, fragment->handle);
 			CUTE_FREE(fragment->data, transport->mem_ctx);

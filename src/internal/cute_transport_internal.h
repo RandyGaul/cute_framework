@@ -23,6 +23,7 @@
 #define CUTE_TRANSPORT_INTERNAL_H
 
 #include <cute_defines.h>
+#include <cute_array.h>
 
 #define CUTE_TRANSPORT_PACKET_PAYLOAD_MAX (1200)
 
@@ -86,40 +87,18 @@ CUTE_API int CUTE_CALL packet_queue_pop(packet_queue_t* q, void** packet, int *s
 
 struct ack_system_config_t
 {
-	bool use_ipv4 = 0;
-	bool use_ipv6 = 1;
 	int max_packet_size = CUTE_ACK_SYSTEM_MAX_PACKET_SIZE;
 	int initial_ack_capacity = 256;
 	int sent_packets_sequence_buffer_size = 256;
 	int received_packets_sequence_buffer_size = 256;
 
 	int index = -1;
-	int (*send_packet_fn)(int index, uint16_t sequence, void* packet, int size, void* udata) = NULL;
-	int (*open_packet_fn)(int index, uint16_t sequence, void* packet, int size, void* udata) = NULL;
+	int (*send_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
+	int (*open_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
 
 	void* udata = NULL;
 	void* user_allocator_context = NULL;
 };
-
-struct ack_system_t;
-
-CUTE_API ack_system_t* CUTE_CALL ack_system_make(const ack_system_config_t* config);
-CUTE_API void CUTE_CALL ack_system_destroy(ack_system_t* transport);
-CUTE_API void CUTE_CALL ack_system_reset(ack_system_t* transport);
-
-CUTE_API uint16_t CUTE_CALL ack_system_get_sequence(ack_system_t* ack_system);
-CUTE_API int CUTE_CALL ack_system_send_packet(ack_system_t* transport, void* data, int size, uint16_t* sequence = NULL);
-CUTE_API int CUTE_CALL ack_system_receive_packet(ack_system_t* transport, void* data, int size);
-
-CUTE_API uint16_t* CUTE_CALL ack_system_get_acks(ack_system_t* transport);
-CUTE_API int CUTE_CALL ack_system_get_acks_count(ack_system_t* transport);
-CUTE_API void CUTE_CALL ack_system_clear_acks(ack_system_t* transport);
-
-CUTE_API void CUTE_CALL ack_system_update(ack_system_t* transport, float dt);
-CUTE_API float CUTE_CALL ack_system_rtt(ack_system_t* transport);
-CUTE_API float CUTE_CALL ack_system_packet_loss(ack_system_t* transport);
-CUTE_API float CUTE_CALL ack_system_bandwidth_outgoing_kbps(ack_system_t* transport);
-CUTE_API float CUTE_CALL ack_system_bandwidth_incoming_kbps(ack_system_t* transport);
 
 enum ack_system_counter_t
 {
@@ -134,7 +113,50 @@ enum ack_system_counter_t
 	ACK_SYSTEM_COUNTERS_MAX
 };
 
-CUTE_API uint64_t CUTE_CALL ack_system_get_counter(ack_system_t* transport, ack_system_counter_t counter);
+struct ack_system_t
+{
+	double time;
+	int max_packet_size;
+
+	void* udata;
+	void* mem_ctx;
+
+	uint16_t sequence;
+	array<uint16_t> acks;
+	sequence_buffer_t sent_packets;
+	sequence_buffer_t received_packets;
+
+	float rtt;
+	float packet_loss;
+	float outgoing_bandwidth_kbps;
+	float incoming_bandwidth_kbps;
+
+	int index;
+	int (*send_packet_fn)(int client_index, void* packet, int size, void* udata);
+	int (*open_packet_fn)(int client_index, void* packet, int size, void* udata);
+
+	uint64_t counters[ACK_SYSTEM_COUNTERS_MAX];
+};
+
+CUTE_API ack_system_t* CUTE_CALL ack_system_make(const ack_system_config_t* config);
+CUTE_API void CUTE_CALL ack_system_destroy(ack_system_t* ack_system);
+CUTE_API void CUTE_CALL ack_system_reset(ack_system_t* ack_system);
+
+CUTE_API uint16_t CUTE_CALL ack_system_get_sequence(ack_system_t* ack_system);
+CUTE_API int CUTE_CALL ack_system_send_packet(ack_system_t* ack_system, void* data, int size, uint16_t* sequence = NULL);
+CUTE_API int CUTE_CALL ack_system_receive_packet(ack_system_t* ack_system, void* data, int size);
+
+CUTE_API uint16_t* CUTE_CALL ack_system_get_acks(ack_system_t* ack_system);
+CUTE_API int CUTE_CALL ack_system_get_acks_count(ack_system_t* ack_system);
+CUTE_API void CUTE_CALL ack_system_clear_acks(ack_system_t* ack_system);
+
+CUTE_API void CUTE_CALL ack_system_update(ack_system_t* ack_system, float dt);
+CUTE_API float CUTE_CALL ack_system_rtt(ack_system_t* ack_system);
+CUTE_API float CUTE_CALL ack_system_packet_loss(ack_system_t* ack_system);
+CUTE_API float CUTE_CALL ack_system_bandwidth_outgoing_kbps(ack_system_t* ack_system);
+CUTE_API float CUTE_CALL ack_system_bandwidth_incoming_kbps(ack_system_t* ack_system);
+
+CUTE_API uint64_t CUTE_CALL ack_system_get_counter(ack_system_t* ack_system, ack_system_counter_t counter);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -150,24 +172,33 @@ struct transport_config_t
 	int max_packet_size = CUTE_TRANSPORT_MAX_FRAGMENT_SIZE * 4;
 	int max_fragments_in_flight = 8;
 	int max_size_single_send = CUTE_MB * 20;
-	ack_system_t* ack_system = NULL;
 	void* user_allocator_context = NULL;
+	void* udata = NULL;
+
+	int index = -1;
+	int (*send_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
+	int (*open_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
 };
 
 struct transport_t;
 
 CUTE_API transport_t* CUTE_CALL transport_make(const transport_config_t* config);
 CUTE_API void CUTE_CALL transport_destroy(transport_t* transport);
-CUTE_API void CUTE_CALL transport_reset(transport_t* tranpsport);
+CUTE_API void CUTE_CALL transport_reset(transport_t* transport);
 
+// WORKING HERE -- A single send function with send_reliably boolean?
 CUTE_API int CUTE_CALL transport_send_reliably_and_in_order(transport_t* transport, void* data, int size);
 CUTE_API int CUTE_CALL transport_send_fire_and_forget(transport_t* transport, void* data, int size);
 
-CUTE_API int CUTE_CALL transport_recieve_reliably_and_in_order(transport_t* transport, void** data, int* size);
-CUTE_API int CUTE_CALL transport_recieve_fire_and_forget(transport_t* transport, void** data, int* size);
+// WORKING HERE -- A single receive function?
+CUTE_API int CUTE_CALL transport_receive_reliably_and_in_order(transport_t* transport, void** data, int* size);
+CUTE_API int CUTE_CALL transport_receive_fire_and_forget(transport_t* transport, void** data, int* size);
 CUTE_API void CUTE_CALL transport_free(transport_t* transport, void* data);
 
-CUTE_API int CUTE_CALL transport_process_packet(transport_t* transport, void* data, int size, uint16_t sequence);
+CUTE_API int CUTE_CALL transport_process_packet(transport_t* transport, void* data, int size);
+
+// WORKING HERE - A single update function?
+
 CUTE_API void CUTE_CALL transport_process_acks(transport_t* transport);
 CUTE_API void CUTE_CALL transport_clear_acks(transport_t* transport);
 CUTE_API void CUTE_CALL transport_resend_unacked_fragments(transport_t* transport);
