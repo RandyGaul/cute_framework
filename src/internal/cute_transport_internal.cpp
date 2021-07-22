@@ -216,8 +216,9 @@ struct ack_system_t
 	double time;
 	int max_packet_size;
 
-	int (*send_packet_fn)(uint16_t sequence, void* packet, int size, void* udata);
-	int (*open_packet_fn)(uint16_t sequence, void* packet, int size, void* udata);
+	int index;
+	int (*send_packet_fn)(int client_index, uint16_t sequence, void* packet, int size, void* udata);
+	int (*open_packet_fn)(int client_index, uint16_t sequence, void* packet, int size, void* udata);
 
 	void* udata;
 	void* mem_ctx;
@@ -269,6 +270,7 @@ ack_system_t* ack_system_make(const ack_system_config_t* config)
 
 	ack_system->time = 0;
 	ack_system->max_packet_size = config->max_packet_size;
+	ack_system->index = config->index;
 	ack_system->send_packet_fn = config->send_packet_fn;
 	ack_system->open_packet_fn = config->open_packet_fn;
 	ack_system->udata = config->udata;
@@ -362,7 +364,7 @@ int ack_system_send_packet(ack_system_t* ack_system, void* data, int size, uint1
 	CUTE_ASSERT(header_size == CUTE_ACK_SYSTEM_HEADER_SIZE);
 	CUTE_ASSERT(size + header_size < CUTE_TRANSPORT_PACKET_PAYLOAD_MAX);
 	CUTE_MEMCPY(buffer + header_size, data, size);
-	if (ack_system->send_packet_fn(sequence, buffer, size + header_size, ack_system->udata) < 0) {
+	if (ack_system->send_packet_fn(ack_system->index, sequence, buffer, size + header_size, ack_system->udata) < 0) {
 		ack_system->counters[ACK_SYSTEM_COUNTERS_PACKETS_INVALID]++;
 		return -1;
 	}
@@ -414,7 +416,7 @@ int ack_system_receive_packet(ack_system_t* ack_system, void* data, int size)
 		return -1;
 	}
 
-	if (ack_system->open_packet_fn(sequence, buffer + header_size, size - header_size, ack_system->udata) < 0) {
+	if (ack_system->open_packet_fn(ack_system->index, sequence, buffer + header_size, size - header_size, ack_system->udata) < 0) {
 		return -1;
 	}
 

@@ -32,7 +32,7 @@ int test_packet_connection_accepted()
 
 	protocol::packet_connection_accepted_t packet;
 	packet.packet_type = protocol::PACKET_TYPE_CONNECTION_ACCEPTED;
-	packet.client_handle = 7;
+	packet.client_id = 7;
 	packet.max_clients = 32;
 	packet.connection_timeout = 10;
 
@@ -46,7 +46,7 @@ int test_packet_connection_accepted()
 	protocol::packet_connection_accepted_t* packet_val = (protocol::packet_connection_accepted_t*)packet_ptr;
 
 	CUTE_TEST_ASSERT(packet_val->packet_type == packet.packet_type);
-	CUTE_TEST_ASSERT(packet_val->client_handle == packet.client_handle);
+	CUTE_TEST_ASSERT(packet_val->client_id == packet.client_id);
 	CUTE_TEST_ASSERT(packet_val->max_clients == packet.max_clients);
 	CUTE_TEST_ASSERT(packet_val->connection_timeout == packet.connection_timeout);
 

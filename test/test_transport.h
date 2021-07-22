@@ -32,7 +32,7 @@ struct test_ack_system_data_t
 	transport_t* transport_b = NULL;
 };
 
-int test_send_packet_fn(uint16_t sequence, void* packet, int size, void* udata)
+int test_send_packet_fn(int index, uint16_t sequence, void* packet, int size, void* udata)
 {
 	test_ack_system_data_t* data = (test_ack_system_data_t*)udata;
 	if (data->drop_packet) {
@@ -48,7 +48,7 @@ int test_send_packet_fn(uint16_t sequence, void* packet, int size, void* udata)
 	return 0;
 }
 
-int test_open_packet_fn(uint16_t sequence, void* packet, int size, void* udata)
+int test_open_packet_fn(int index, uint16_t sequence, void* packet, int size, void* udata)
 {
 	uint64_t* val_ptr = (uint64_t*)packet;
 	if (*val_ptr != 100) {
@@ -128,7 +128,7 @@ int test_ack_system_basic()
 	return 0;
 }
 
-int test_transport_open_packet_fn(uint16_t sequence, void* packet, int size, void* udata)
+int test_transport_open_packet_fn(int index, uint16_t sequence, void* packet, int size, void* udata)
 {
 	test_ack_system_data_t* data = (test_ack_system_data_t*)udata;
 	if (data->id) {
@@ -308,7 +308,7 @@ int test_transport_drop_fragments()
 
 	return 0;
 }
-int test_send_packet_many_drops_fn(uint16_t sequence, void* packet, int size, void* udata)
+int test_send_packet_many_drops_fn(int index, uint16_t sequence, void* packet, int size, void* udata)
 {
 	test_ack_system_data_t* data = (test_ack_system_data_t*)udata;
 	if (rand() % 100 != 0) return 0;

@@ -59,7 +59,7 @@ struct packet_connect_token_t
 struct packet_connection_accepted_t
 {
 	uint8_t packet_type;
-	uint64_t client_handle;
+	uint64_t client_id;
 	uint32_t max_clients;
 	uint32_t connection_timeout;
 };
@@ -247,7 +247,7 @@ struct client_t
 	float last_packet_sent_time;
 	uint64_t application_id;
 	uint64_t current_time;
-	uint64_t client_handle;
+	uint64_t client_id;
 	int max_clients;
 	float connection_timeout;
 	int has_sent_disconnect_packets;
@@ -286,12 +286,11 @@ struct server_t
 	connect_token_cache_t token_cache;
 
 	int client_count;
-	handle_allocator_t* client_handle_table;
 	hashtable_t client_endpoint_table;
 	hashtable_t client_id_table;
 	uint64_t client_id[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	handle_t client_handle[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	int client_is_confirmed[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	bool client_is_connected[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	bool client_is_confirmed[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	float client_last_packet_received_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	float client_last_packet_sent_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	endpoint_t client_endpoint[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];

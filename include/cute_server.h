@@ -35,15 +35,18 @@ struct server_t;
 
 struct server_config_t
 {
-	int max_clients = 64;
+	int application_id;
 	int max_incoming_bytes_per_second = 0;
 	int max_outgoing_bytes_per_second = 0;
+	uint32_t connection_timeout;
+	crypto_sign_public_t public_key;
+	crypto_sign_secret_t secret_key;
 };
 
 CUTE_API server_t* CUTE_CALL server_create(server_config_t* config = NULL, void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL server_destroy(server_t* server);
 
-CUTE_API error_t CUTE_CALL server_start(server_t* server, const char* address_and_port, const crypto_sign_public_t* public_key, const crypto_sign_secret_t* secret_key, const server_config_t* config = NULL);
+CUTE_API error_t CUTE_CALL server_start(server_t* server, const char* address_and_port, const crypto_sign_public_t* public_key, const crypto_sign_secret_t* secret_key);
 CUTE_API void CUTE_CALL server_stop(server_t* server);
 
 enum server_event_type_t

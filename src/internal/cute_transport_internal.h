@@ -86,15 +86,16 @@ CUTE_API int CUTE_CALL packet_queue_pop(packet_queue_t* q, void** packet, int *s
 
 struct ack_system_config_t
 {
-	int use_ipv4 = 0;
-	int use_ipv6 = 1;
+	bool use_ipv4 = 0;
+	bool use_ipv6 = 1;
 	int max_packet_size = CUTE_ACK_SYSTEM_MAX_PACKET_SIZE;
 	int initial_ack_capacity = 256;
 	int sent_packets_sequence_buffer_size = 256;
 	int received_packets_sequence_buffer_size = 256;
 
-	int (*send_packet_fn)(uint16_t sequence, void* packet, int size, void* udata) = NULL;
-	int (*open_packet_fn)(uint16_t sequence, void* packet, int size, void* udata) = NULL;
+	int index = -1;
+	int (*send_packet_fn)(int index, uint16_t sequence, void* packet, int size, void* udata) = NULL;
+	int (*open_packet_fn)(int index, uint16_t sequence, void* packet, int size, void* udata) = NULL;
 
 	void* udata = NULL;
 	void* user_allocator_context = NULL;
@@ -149,9 +150,7 @@ struct transport_config_t
 	int max_packet_size = CUTE_TRANSPORT_MAX_FRAGMENT_SIZE * 4;
 	int max_fragments_in_flight = 8;
 	int max_size_single_send = CUTE_MB * 20;
-
 	ack_system_t* ack_system = NULL;
-
 	void* user_allocator_context = NULL;
 };
 

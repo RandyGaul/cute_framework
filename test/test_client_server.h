@@ -28,8 +28,6 @@ using namespace cute;
 CUTE_TEST_CASE(test_protocol_client_server, "Create client and server, perform connection handshake, then disconnect.");
 int test_protocol_client_server()
 {
-	using namespace protocol;
-
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
 	crypto_sign_public_t pk;
@@ -50,7 +48,7 @@ int test_protocol_client_server()
 	crypto_random_bytes(user_data, sizeof(user_data));
 
 	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
-	CUTE_TEST_CHECK(generate_connect_token(
+	CUTE_TEST_CHECK(protocol::generate_connect_token(
 		application_id,
 		current_timestamp,
 		&client_to_server_key,
@@ -65,33 +63,33 @@ int test_protocol_client_server()
 		connect_token
 	).is_error());
 
-	server_t* server = server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
 
-	client_t* client = client_make(5001, NULL, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
-	CUTE_TEST_CHECK(client_connect(client, connect_token));
+	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
+	CUTE_TEST_CHECK(protocol::client_connect(client, connect_token));
 
 	int iters = 0;
 	while (iters++ < 100)
 	{
-		client_update(client, 0, 0);
-		server_update(server, 0, 0);
+		protocol::client_update(client, 0, 0);
+		protocol::server_update(server, 0, 0);
 
-		if (client_get_state(client) <= 0) break;
-		if (client_get_state(client) == CLIENT_STATE_CONNECTED) break;
+		if (protocol::client_get_state(client) <= 0) break;
+		if (protocol::client_get_state(client) == protocol::CLIENT_STATE_CONNECTED) break;
 	}
-	CUTE_TEST_ASSERT(server_running(server));
+	CUTE_TEST_ASSERT(protocol::server_running(server));
 	CUTE_TEST_ASSERT(iters < 100);
-	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_CONNECTED);
+	CUTE_TEST_ASSERT(protocol::client_get_state(client) == protocol::CLIENT_STATE_CONNECTED);
 
-	client_disconnect(client);
-	client_destroy(client);
+	protocol::client_disconnect(client);
+	protocol::client_destroy(client);
 
-	server_stop(server);
-	server_destroy(server);
+	protocol::server_stop(server);
+	protocol::server_destroy(server);
 
 	return 0;
 }
@@ -99,8 +97,6 @@ int test_protocol_client_server()
 CUTE_TEST_CASE(test_protocol_client_no_server_responses, "Client tries to connect to servers, but none respond at all.");
 int test_protocol_client_no_server_responses()
 {
-	using namespace protocol;
-	
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
 	crypto_sign_public_t pk;
@@ -123,7 +119,7 @@ int test_protocol_client_no_server_responses()
 	crypto_random_bytes(user_data, sizeof(user_data));
 
 	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
-	CUTE_TEST_CHECK(generate_connect_token(
+	CUTE_TEST_CHECK(protocol::generate_connect_token(
 		application_id,
 		current_timestamp,
 		&client_to_server_key,
@@ -138,22 +134,22 @@ int test_protocol_client_no_server_responses()
 		connect_token
 	).is_error());
 
-	client_t* client = client_make(5001, NULL, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
-	CUTE_TEST_CHECK(client_connect(client, connect_token));
+	CUTE_TEST_CHECK(protocol::client_connect(client, connect_token));
 
 	int iters = 0;
 	while (iters++ < 100)
 	{
-		client_update(client, 10, 0);
+		protocol::client_update(client, 10, 0);
 
-		if (client_get_state(client) <= 0) break;
+		if (protocol::client_get_state(client) <= 0) break;
 	}
 	CUTE_TEST_ASSERT(iters < 100);
-	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT);
+	CUTE_TEST_ASSERT(protocol::client_get_state(client) == protocol::CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT);
 
-	client_disconnect(client);
-	client_destroy(client);
+	protocol::client_disconnect(client);
+	protocol::client_destroy(client);
 
 	return 0;
 }
@@ -161,8 +157,6 @@ int test_protocol_client_no_server_responses()
 CUTE_TEST_CASE(test_protocol_client_server_list, "Client tries to connect to servers, but only third responds.");
 int test_protocol_client_server_list()
 {
-	using namespace protocol;
-	
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
 	crypto_sign_public_t pk;
@@ -185,7 +179,7 @@ int test_protocol_client_server_list()
 	crypto_random_bytes(user_data, sizeof(user_data));
 
 	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
-	CUTE_TEST_CHECK(generate_connect_token(
+	CUTE_TEST_CHECK(protocol::generate_connect_token(
 		application_id,
 		current_timestamp,
 		&client_to_server_key,
@@ -200,33 +194,33 @@ int test_protocol_client_server_list()
 		connect_token
 	).is_error());
 
-	server_t* server = server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
 
-	client_t* client = client_make(5001, NULL, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5002", 5).is_error());
-	CUTE_TEST_CHECK(client_connect(client, connect_token));
+	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5002", 5).is_error());
+	CUTE_TEST_CHECK(protocol::client_connect(client, connect_token));
 
 	int iters = 0;
 	while (iters++ < 100)
 	{
-		client_update(client, 1, 0);
-		server_update(server, 0, 0);
+		protocol::client_update(client, 1, 0);
+		protocol::server_update(server, 0, 0);
 
-		if (client_get_state(client) <= 0) break;
-		if (client_get_state(client) == CLIENT_STATE_CONNECTED) break;
+		if (protocol::client_get_state(client) <= 0) break;
+		if (protocol::client_get_state(client) == protocol::CLIENT_STATE_CONNECTED) break;
 	}
-	CUTE_TEST_ASSERT(server_running(server));
+	CUTE_TEST_ASSERT(protocol::server_running(server));
 	CUTE_TEST_ASSERT(iters < 100);
-	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_CONNECTED);
+	CUTE_TEST_ASSERT(protocol::client_get_state(client) == protocol::CLIENT_STATE_CONNECTED);
 
-	client_disconnect(client);
-	client_destroy(client);
+	protocol::client_disconnect(client);
+	protocol::client_destroy(client);
 
-	server_stop(server);
-	server_destroy(server);
+	protocol::server_stop(server);
+	protocol::server_destroy(server);
 
 	return 0;
 }
@@ -234,8 +228,6 @@ int test_protocol_client_server_list()
 CUTE_TEST_CASE(test_protocol_server_challenge_response_timeout, "Client times out when sending challenge response.");
 int test_protocol_server_challenge_response_timeout()
 {
-	using namespace protocol;
-	
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
 	crypto_sign_public_t pk;
@@ -256,7 +248,7 @@ int test_protocol_server_challenge_response_timeout()
 	crypto_random_bytes(user_data, sizeof(user_data));
 
 	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
-	CUTE_TEST_CHECK(generate_connect_token(
+	CUTE_TEST_CHECK(protocol::generate_connect_token(
 		application_id,
 		current_timestamp,
 		&client_to_server_key,
@@ -271,36 +263,36 @@ int test_protocol_server_challenge_response_timeout()
 		connect_token
 	).is_error());
 
-	server_t* server = server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
 
-	client_t* client = client_make(5001, NULL, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
-	CUTE_TEST_CHECK(client_connect(client, connect_token));
+	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
+	CUTE_TEST_CHECK(protocol::client_connect(client, connect_token));
 
 	int iters = 0;
 	while (iters++ < 100)
 	{
-		client_update(client, 1, 0);
+		protocol::client_update(client, 1, 0);
 
-		if (client_get_state(client) != CLIENT_STATE_SENDING_CHALLENGE_RESPONSE) {
-			server_update(server, 0, 0);
+		if (protocol::client_get_state(client) != protocol::CLIENT_STATE_SENDING_CHALLENGE_RESPONSE) {
+			protocol::server_update(server, 0, 0);
 		}
 
-		if (client_get_state(client) <= 0) break;
-		if (client_get_state(client) == CLIENT_STATE_CONNECTED) break;
+		if (protocol::client_get_state(client) <= 0) break;
+		if (protocol::client_get_state(client) == protocol::CLIENT_STATE_CONNECTED) break;
 	}
-	CUTE_TEST_ASSERT(server_running(server));
+	CUTE_TEST_ASSERT(protocol::server_running(server));
 	CUTE_TEST_ASSERT(iters < 100);
-	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_CHALLENGED_RESPONSE_TIMED_OUT);
+	CUTE_TEST_ASSERT(protocol::client_get_state(client) == protocol::CLIENT_STATE_CHALLENGED_RESPONSE_TIMED_OUT);
 
-	client_disconnect(client);
-	client_destroy(client);
+	protocol::client_disconnect(client);
+	protocol::client_destroy(client);
 
-	server_stop(server);
-	server_destroy(server);
+	protocol::server_stop(server);
+	protocol::server_destroy(server);
 
 	return 0;
 }
@@ -308,8 +300,6 @@ int test_protocol_server_challenge_response_timeout()
 CUTE_TEST_CASE(test_protocol_client_expired_token, "Client gets an expired token before connecting.");
 int test_protocol_client_expired_token()
 {
-	using namespace protocol;
-	
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
 	crypto_sign_public_t pk;
@@ -330,7 +320,7 @@ int test_protocol_client_expired_token()
 	crypto_random_bytes(user_data, sizeof(user_data));
 
 	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
-	CUTE_TEST_CHECK(generate_connect_token(
+	CUTE_TEST_CHECK(protocol::generate_connect_token(
 		application_id,
 		current_timestamp,
 		&client_to_server_key,
@@ -345,14 +335,14 @@ int test_protocol_client_expired_token()
 		connect_token
 	).is_error());
 
-	client_t* client = client_make(5001, NULL, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
-	CUTE_TEST_CHECK(client_connect(client, connect_token));
-	client_update(client, 0, 1);
-	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_CONNECT_TOKEN_EXPIRED);
+	CUTE_TEST_CHECK(protocol::client_connect(client, connect_token));
+	protocol::client_update(client, 0, 1);
+	CUTE_TEST_ASSERT(protocol::client_get_state(client) == protocol::CLIENT_STATE_CONNECT_TOKEN_EXPIRED);
 
-	client_disconnect(client);
-	client_destroy(client);
+	protocol::client_disconnect(client);
+	protocol::client_destroy(client);
 
 	return 0;
 }
@@ -382,7 +372,7 @@ int test_protocol_client_connect_expired_token()
 	crypto_random_bytes(user_data, sizeof(user_data));
 
 	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
-	CUTE_TEST_CHECK(generate_connect_token(
+	CUTE_TEST_CHECK(protocol::generate_connect_token(
 		application_id,
 		current_timestamp,
 		&client_to_server_key,
@@ -397,34 +387,34 @@ int test_protocol_client_connect_expired_token()
 		connect_token
 	).is_error());
 
-	server_t* server = server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
 
-	client_t* client = client_make(5001, NULL, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
-	CUTE_TEST_CHECK(client_connect(client, connect_token));
+	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
+	CUTE_TEST_CHECK(protocol::client_connect(client, connect_token));
 
 	int iters = 0;
 	uint64_t time = 0;
 	while (iters++ < 100)
 	{
-		client_update(client, 0, time++);
-		server_update(server, 0, 0);
+		protocol::client_update(client, 0, time++);
+		protocol::server_update(server, 0, 0);
 
-		if (client_get_state(client) <= 0) break;
-		if (client_get_state(client) == CLIENT_STATE_CONNECTED) break;
+		if (protocol::client_get_state(client) <= 0) break;
+		if (protocol::client_get_state(client) == protocol::CLIENT_STATE_CONNECTED) break;
 	}
-	CUTE_TEST_ASSERT(server_running(server));
+	CUTE_TEST_ASSERT(protocol::server_running(server));
 	CUTE_TEST_ASSERT(iters < 100);
-	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_CONNECT_TOKEN_EXPIRED);
+	CUTE_TEST_ASSERT(protocol::client_get_state(client) == protocol::CLIENT_STATE_CONNECT_TOKEN_EXPIRED);
 
-	client_disconnect(client);
-	client_destroy(client);
+	protocol::client_disconnect(client);
+	protocol::client_destroy(client);
 
-	server_stop(server);
-	server_destroy(server);
+	protocol::server_stop(server);
+	protocol::server_destroy(server);
 
 	return 0;
 }
@@ -927,8 +917,6 @@ int test_protocol_client_initiated_disconnect()
 CUTE_TEST_CASE(test_protocol_server_initiated_disconnect, "Server initiates disconnect, assert disconnect occurs cleanly.");
 int test_protocol_server_initiated_disconnect()
 {
-	using namespace protocol;
-
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
 	crypto_sign_public_t pk;
@@ -950,7 +938,7 @@ int test_protocol_server_initiated_disconnect()
 
 	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
 
-	CUTE_TEST_CHECK(generate_connect_token(
+	CUTE_TEST_CHECK(protocol::generate_connect_token(
 		application_id,
 		current_timestamp,
 		&client_to_server_key,
@@ -964,48 +952,48 @@ int test_protocol_server_initiated_disconnect()
 		&sk,
 		connect_token
 	).is_error());
-	client_t* client = client_make(5001, NULL, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
-	CUTE_TEST_CHECK(client_connect(client, connect_token));
+	CUTE_TEST_CHECK(protocol::client_connect(client, connect_token));
 
-	server_t* server = server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
+	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
 
-	cute::handle_t client_handle;
+	int client_index;
 
 	int iters = 0;
 	float dt = 1.0f / 60.0f;
 	while (iters++ < 1000)
 	{
-		client_update(client, dt, 0);
-		server_update(server, dt, 0);
+		protocol::client_update(client, dt, 0);
+		protocol::server_update(server, dt, 0);
 
 		if (iters == 100) {
-			CUTE_TEST_ASSERT(server_client_count(server) == 1);
-			server_event_t event;
-			CUTE_TEST_CHECK(server_poll_event(server, &event));
-			CUTE_TEST_ASSERT(event.type == SERVER_EVENT_NEW_CONNECTION);
-			client_handle = event.u.new_connection.client_handle;
-			server_disconnect_client(server, event.u.new_connection.client_handle);
+			CUTE_TEST_ASSERT(protocol::server_client_count(server) == 1);
+			protocol::server_event_t event;
+			CUTE_TEST_CHECK(protocol::server_pop_event(server, &event));
+			CUTE_TEST_ASSERT(event.type == protocol::SERVER_EVENT_NEW_CONNECTION);
+			client_index = event.u.new_connection.client_index;
+			protocol::server_disconnect_client(server, client_index);
 		}
 
 		if (iters == 110) break;
 	}
-	CUTE_TEST_ASSERT(server_running(server));
-	CUTE_TEST_ASSERT(server_client_count(server) == 0);
+	CUTE_TEST_ASSERT(protocol::server_running(server));
+	CUTE_TEST_ASSERT(protocol::server_client_count(server) == 0);
 	CUTE_TEST_ASSERT(iters == 110);
-	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_DISCONNECTED);
-	server_event_t event;
-	CUTE_TEST_CHECK(server_poll_event(server, &event));
-	CUTE_TEST_ASSERT(event.type == SERVER_EVENT_DISCONNECTED);
-	CUTE_TEST_ASSERT(event.u.disconnected.client_handle == client_handle);
+	CUTE_TEST_ASSERT(protocol::client_get_state(client) == protocol::CLIENT_STATE_DISCONNECTED);
+	protocol::server_event_t event;
+	CUTE_TEST_CHECK(protocol::server_pop_event(server, &event));
+	CUTE_TEST_ASSERT(event.type == protocol::SERVER_EVENT_DISCONNECTED);
+	CUTE_TEST_ASSERT(event.u.disconnected.client_index == client_index);
 
-	client_disconnect(client);
-	client_destroy(client);
+	protocol::client_disconnect(client);
+	protocol::client_destroy(client);
 
-	server_stop(server);
-	server_destroy(server);
+	protocol::server_stop(server);
+	protocol::server_destroy(server);
 
 	return 0;
 }
@@ -1013,8 +1001,6 @@ int test_protocol_server_initiated_disconnect()
 CUTE_TEST_CASE(test_protocol_client_server_payloads, "Client and server connect and send payload packets. Server should confirm client.");
 int test_protocol_client_server_payloads()
 {
-	using namespace protocol;
-
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
 	crypto_sign_public_t pk;
@@ -1035,7 +1021,7 @@ int test_protocol_client_server_payloads()
 	crypto_random_bytes(user_data, sizeof(user_data));
 
 	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
-	CUTE_TEST_CHECK(generate_connect_token(
+	CUTE_TEST_CHECK(protocol::generate_connect_token(
 		application_id,
 		current_timestamp,
 		&client_to_server_key,
@@ -1050,16 +1036,16 @@ int test_protocol_client_server_payloads()
 		connect_token
 	).is_error());
 
-	server_t* server = server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
 
-	client_t* client = client_make(5001, NULL, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
-	CUTE_TEST_CHECK(client_connect(client, connect_token));
+	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
+	CUTE_TEST_CHECK(protocol::client_connect(client, connect_token));
 
-	cute::handle_t client_handle = CUTE_INVALID_HANDLE;
+	int client_index;
 	uint64_t to_server_data = 3;
 	uint64_t to_client_data = 4;
 
@@ -1069,20 +1055,21 @@ int test_protocol_client_server_payloads()
 	int payloads_received_by_client = 0;
 	while (iters++ < 1000)
 	{
-		client_update(client, dt, 0);
-		server_update(server, dt, 0);
+		protocol::client_update(client, dt, 0);
+		protocol::server_update(server, dt, 0);
 
-		server_event_t event;
-		if (!server_poll_event(server, &event)) {
-			CUTE_TEST_ASSERT(event.type != SERVER_EVENT_DISCONNECTED);
-			if (event.type == SERVER_EVENT_NEW_CONNECTION) {
-				client_handle = event.u.new_connection.client_handle;
+		protocol::server_event_t event;
+		if (!protocol::server_pop_event(server, &event)) {
+			CUTE_TEST_ASSERT(event.type != protocol::SERVER_EVENT_DISCONNECTED);
+			if (event.type == protocol::SERVER_EVENT_NEW_CONNECTION) {
+				client_index = event.u.new_connection.client_index;
+				CUTE_TEST_ASSERT(protocol::server_get_client_id(server, client_index) == client_id);
 			} else {
-				CUTE_TEST_ASSERT(client_handle == event.u.payload_packet.client_handle);
+				CUTE_TEST_ASSERT(client_index == event.u.payload_packet.client_index);
 				CUTE_TEST_ASSERT(sizeof(uint64_t) == event.u.payload_packet.size);
 				uint64_t* data = (uint64_t*)event.u.payload_packet.data;
 				CUTE_TEST_ASSERT(*data == to_server_data);
-				server_free_packet(server, data);
+				protocol::server_free_packet(server, data);
 				++payloads_received_by_server;
 			}
 		}
@@ -1090,32 +1077,31 @@ int test_protocol_client_server_payloads()
 		void* packet = NULL;
 		uint64_t sequence = ~0ULL;
 		int size;
-		if (!client_get_packet(client, &packet, &size, &sequence)) {
+		if (!protocol::client_get_packet(client, &packet, &size, &sequence)) {
 			CUTE_TEST_ASSERT(sizeof(uint64_t) == size);
 			uint64_t* data = (uint64_t*)packet;
 			CUTE_TEST_ASSERT(*data == to_client_data);
-			client_free_packet(client, packet);
+			protocol::client_free_packet(client, packet);
 			++payloads_received_by_client;
 		}
 
-		if (client_get_state(client) <= 0) break;
-		if (client_get_state(client) == CLIENT_STATE_CONNECTED) {
-			CUTE_TEST_ASSERT(client_handle != CUTE_INVALID_HANDLE);
-			CUTE_TEST_CHECK(client_send_data(client, &to_server_data, sizeof(uint64_t)));
-			CUTE_TEST_CHECK(server_send_to_client(server, &to_client_data, sizeof(uint64_t), client_handle));
+		if (protocol::client_get_state(client) <= 0) break;
+		if (protocol::client_get_state(client) == protocol::CLIENT_STATE_CONNECTED) {
+			CUTE_TEST_CHECK(protocol::client_send_data(client, &to_server_data, sizeof(uint64_t)));
+			CUTE_TEST_CHECK(protocol::server_send_to_client(server, &to_client_data, sizeof(uint64_t), client_index));
 		}
 
 		if (payloads_received_by_server >= 10 && payloads_received_by_client >= 10) break;
 	}
-	CUTE_TEST_ASSERT(server_running(server));
+	CUTE_TEST_ASSERT(protocol::server_running(server));
 	CUTE_TEST_ASSERT(iters < 1000);
-	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_CONNECTED);
+	CUTE_TEST_ASSERT(protocol::client_get_state(client) == protocol::CLIENT_STATE_CONNECTED);
 
-	client_disconnect(client);
-	client_destroy(client);
+	protocol::client_disconnect(client);
+	protocol::client_destroy(client);
 
-	server_stop(server);
-	server_destroy(server);
+	protocol::server_stop(server);
+	protocol::server_destroy(server);
 
 	return 0;
 }
@@ -1123,8 +1109,6 @@ int test_protocol_client_server_payloads()
 CUTE_TEST_CASE(test_protocol_multiple_connections_and_payloads, "A server hosts multiple simultaneous clients with payloads and random disconnects/connects.");
 int test_protocol_multiple_connections_and_payloads()
 {
-	using namespace protocol;
-
 	crypto_sign_public_t pk;
 	crypto_sign_secret_t sk;
 	crypto_sign_keygen(&pk, &sk);
@@ -1136,9 +1120,9 @@ int test_protocol_multiple_connections_and_payloads()
 	const int max_clients = 5;
 	uint64_t application_id = 100;
 
-	server_t* server = server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 2).is_error());
+	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 2).is_error());
 
 	uint64_t current_timestamp = 0;
 	uint64_t expiration_timestamp = 1;
@@ -1147,7 +1131,7 @@ int test_protocol_multiple_connections_and_payloads()
 	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
 	crypto_random_bytes(user_data, sizeof(user_data));
 
-	client_t** clients = (client_t**)CUTE_ALLOC(sizeof(client_t*) * max_clients, NULL);
+	protocol::client_t** clients = (protocol::client_t**)CUTE_ALLOC(sizeof(protocol::client_t*) * max_clients, NULL);
 
 	for (int i = 0; i < max_clients; ++i)
 	{
@@ -1155,7 +1139,7 @@ int test_protocol_multiple_connections_and_payloads()
 		crypto_key_t server_to_client_key = crypto_generate_key();
 		uint64_t client_id = (uint64_t)i;
 
-		CUTE_TEST_CHECK(generate_connect_token(
+		CUTE_TEST_CHECK(protocol::generate_connect_token(
 			application_id,
 			current_timestamp,
 			&client_to_server_key,
@@ -1169,17 +1153,17 @@ int test_protocol_multiple_connections_and_payloads()
 			&sk,
 			connect_token
 		).is_error());
-		client_t* client = client_make(5000 + i, NULL, application_id, NULL);
+		protocol::client_t* client = protocol::client_make(5000 + i, NULL, application_id, NULL);
 		CUTE_TEST_CHECK_POINTER(client);
-		CUTE_TEST_CHECK(client_connect(client, connect_token));
+		CUTE_TEST_CHECK(protocol::client_connect(client, connect_token));
 		clients[i] = client;
 	}
 
 	uint64_t to_server_data = 3;
 	uint64_t to_client_data = 4;
 	int client_handle_index = 0;
-	cute::handle_t* client_handles = (cute::handle_t*)CUTE_ALLOC(sizeof(cute::handle_t) * max_clients, NULL);
-	for (int i = 0; i < max_clients; ++i) client_handles[i] = CUTE_INVALID_HANDLE;
+	int* client_indices = (int*)CUTE_ALLOC(sizeof(int) * max_clients, NULL);
+	for (int i = 0; i < max_clients; ++i) client_indices[i] = -1;
 
 	int iters = 0;
 	float dt = 1.0f / 20.0f;
@@ -1190,12 +1174,12 @@ int test_protocol_multiple_connections_and_payloads()
 	while (iters++ < 100)
 	{
 		for (int i = 0; i < client_count; ++i)
-			client_update(clients[i], dt, 0);
+			protocol::client_update(clients[i], dt, 0);
 
-		server_update(server, dt, 0);
+		protocol::server_update(server, dt, 0);
 
 		for (int i = 0; i < client_count; ++i)
-			if (client_get_state(clients[i]) <= 0) break;
+			if (protocol::client_get_state(clients[i]) <= 0) break;
 
 		if (iters == 4) {
 			client_count += 3;
@@ -1205,17 +1189,17 @@ int test_protocol_multiple_connections_and_payloads()
 			client_count -= 2;
 		}
 
-		server_event_t event;
-		while (!server_poll_event(server, &event)) {
-			if (event.type == SERVER_EVENT_NEW_CONNECTION) {
+		protocol::server_event_t event;
+		while (!protocol::server_pop_event(server, &event)) {
+			if (event.type == protocol::SERVER_EVENT_NEW_CONNECTION) {
 				CUTE_TEST_ASSERT(client_handle_index < client_count);
-				client_handles[client_handle_index++] = event.u.new_connection.client_handle;
-			} else if (event.type == SERVER_EVENT_PAYLOAD_PACKET) {
+				client_indices[client_handle_index++] = event.u.new_connection.client_index;
+			} else if (event.type == protocol::SERVER_EVENT_PAYLOAD_PACKET) {
 				int is_valid_handle = 0;
 				int client_index = ~0;
 				for (int i = 0; i < client_handle_index; ++i)
 				{
-					if (client_handles[i] == event.u.payload_packet.client_handle)
+					if (client_indices[i] == event.u.payload_packet.client_index)
 					{
 						is_valid_handle = 1;
 						client_index = i;
@@ -1228,7 +1212,7 @@ int test_protocol_multiple_connections_and_payloads()
 				CUTE_TEST_ASSERT(sizeof(uint64_t) == event.u.payload_packet.size);
 				uint64_t* data = (uint64_t*)event.u.payload_packet.data;
 				CUTE_TEST_ASSERT(*data == to_server_data);
-				server_free_packet(server, data);
+				protocol::server_free_packet(server, data);
 				++payloads_received_by_server;
 			}
 		}
@@ -1238,20 +1222,20 @@ int test_protocol_multiple_connections_and_payloads()
 			void* packet = NULL;
 			uint64_t sequence = ~0ULL;
 			int size;
-			if (!client_get_packet(clients[i], &packet, &size, &sequence)) {
+			if (!protocol::client_get_packet(clients[i], &packet, &size, &sequence)) {
 				CUTE_TEST_ASSERT(sizeof(uint64_t) == size);
 				uint64_t* data = (uint64_t*)packet;
 				CUTE_TEST_ASSERT(*data == to_client_data);
-				client_free_packet(clients[i], packet);
+				protocol::client_free_packet(clients[i], packet);
 				payloads_received_by_client[i]++;
 			}
 		}
 
 		for (int i = 0; i < client_count; ++i)
 		{
-			if (client_get_state(clients[i]) == CLIENT_STATE_CONNECTED) {
-				CUTE_TEST_CHECK(client_send_data(clients[i], &to_server_data, sizeof(uint64_t)));
-				CUTE_TEST_CHECK(server_send_to_client(server, &to_client_data, sizeof(uint64_t), client_handles[i]));
+			if (protocol::client_get_state(clients[i]) == protocol::CLIENT_STATE_CONNECTED) {
+				CUTE_TEST_CHECK(protocol::client_send_data(clients[i], &to_server_data, sizeof(uint64_t)));
+				CUTE_TEST_CHECK(protocol::server_send_to_client(server, &to_client_data, sizeof(uint64_t), client_indices[i]));
 			}
 		}
 	}
@@ -1259,25 +1243,25 @@ int test_protocol_multiple_connections_and_payloads()
 	{
 		CUTE_TEST_ASSERT(payloads_received_by_client[i] >= 1);
 	}
-	CUTE_TEST_ASSERT(server_running(server));
+	CUTE_TEST_ASSERT(protocol::server_running(server));
 	for (int i = 0; i < max_clients; ++i)
 	{
-		client_update(clients[i], 0, 0);
+		protocol::client_update(clients[i], 0, 0);
 		if (i >= client_count) {
-			CUTE_TEST_ASSERT(client_get_state(clients[i]) == CLIENT_STATE_DISCONNECTED);
+			CUTE_TEST_ASSERT(protocol::client_get_state(clients[i]) == protocol::CLIENT_STATE_DISCONNECTED);
 		} else {
-			CUTE_TEST_ASSERT(client_get_state(clients[i]) == CLIENT_STATE_CONNECTED);
+			CUTE_TEST_ASSERT(protocol::client_get_state(clients[i]) == protocol::CLIENT_STATE_CONNECTED);
 		}
-		client_disconnect(clients[i]);
-		client_destroy(clients[i]);
+		protocol::client_disconnect(clients[i]);
+		protocol::client_destroy(clients[i]);
 	}
 
-	server_update(server, dt, 0);
-	server_stop(server);
-	server_destroy(server);
+	protocol::server_update(server, dt, 0);
+	protocol::server_stop(server);
+	protocol::server_destroy(server);
 
 	CUTE_FREE(clients, NULL);
-	CUTE_FREE(client_handles, NULL);
+	CUTE_FREE(client_indices, NULL);
 	CUTE_FREE(payloads_received_by_client, NULL);
 
 	return 0;
@@ -1286,8 +1270,6 @@ int test_protocol_multiple_connections_and_payloads()
 CUTE_TEST_CASE(test_protocol_client_reconnect, "Client connects to server, disconnects, and reconnects.");
 int test_protocol_client_reconnect()
 {
-	using namespace protocol;
-	
 	crypto_key_t client_to_server_key = crypto_generate_key();
 	crypto_key_t server_to_client_key = crypto_generate_key();
 	crypto_sign_public_t pk;
@@ -1308,7 +1290,7 @@ int test_protocol_client_reconnect()
 	crypto_random_bytes(user_data, sizeof(user_data));
 
 	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
-	CUTE_TEST_CHECK(generate_connect_token(
+	CUTE_TEST_CHECK(protocol::generate_connect_token(
 		application_id,
 		current_timestamp,
 		&client_to_server_key,
@@ -1323,43 +1305,43 @@ int test_protocol_client_reconnect()
 		connect_token
 	).is_error());
 
-	server_t* server = server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
 	CUTE_TEST_CHECK_POINTER(server);
 
-	client_t* client = client_make(5001, NULL, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, NULL, application_id, NULL);
 	CUTE_TEST_CHECK_POINTER(client);
 
-	CUTE_TEST_CHECK(server_start(server, "[::1]:5000", 5).is_error());
-	CUTE_TEST_CHECK(client_connect(client, connect_token));
+	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
+	CUTE_TEST_CHECK(protocol::client_connect(client, connect_token));
 
 	// Connect client.
 	int iters = 0;
 	while (iters++ < 100)
 	{
-		client_update(client, 0, 0);
-		server_update(server, 0, 0);
+		protocol::client_update(client, 0, 0);
+		protocol::server_update(server, 0, 0);
 
-		if (client_get_state(client) <= 0) break;
-		if (client_get_state(client) == CLIENT_STATE_CONNECTED) break;
+		if (protocol::client_get_state(client) <= 0) break;
+		if (protocol::client_get_state(client) == protocol::CLIENT_STATE_CONNECTED) break;
 	}
-	CUTE_TEST_ASSERT(server_running(server));
+	CUTE_TEST_ASSERT(protocol::server_running(server));
 	CUTE_TEST_ASSERT(iters < 100);
-	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_CONNECTED);
+	CUTE_TEST_ASSERT(protocol::client_get_state(client) == protocol::CLIENT_STATE_CONNECTED);
 
 	// Disonnect client.
-	client_disconnect(client);
-	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_DISCONNECTED);
+	protocol::client_disconnect(client);
+	CUTE_TEST_ASSERT(protocol::client_get_state(client) == protocol::CLIENT_STATE_DISCONNECTED);
 
 	iters = 0;
 	while (iters++ < 100)
 	{
-		server_update(server, 0, 0);
-		if (server_client_count(server) == 0) break;
+		protocol::server_update(server, 0, 0);
+		if (protocol::server_client_count(server) == 0) break;
 	}
 	CUTE_TEST_ASSERT(iters < 100);
 
 	// Generate new connect token.
-	CUTE_TEST_CHECK(generate_connect_token(
+	CUTE_TEST_CHECK(protocol::generate_connect_token(
 		application_id,
 		current_timestamp,
 		&client_to_server_key,
@@ -1375,26 +1357,26 @@ int test_protocol_client_reconnect()
 	).is_error());
 
 	// Reconnect client.
-	CUTE_TEST_CHECK(client_connect(client, connect_token));
+	CUTE_TEST_CHECK(protocol::client_connect(client, connect_token));
 	iters = 0;
 	while (iters++ < 100)
 	{
-		client_update(client, 0, 0);
-		server_update(server, 0, 0);
+		protocol::client_update(client, 0, 0);
+		protocol::server_update(server, 0, 0);
 
-		if (client_get_state(client) <= 0) break;
-		if (client_get_state(client) == CLIENT_STATE_CONNECTED) break;
+		if (protocol::client_get_state(client) <= 0) break;
+		if (protocol::client_get_state(client) == protocol::CLIENT_STATE_CONNECTED) break;
 	}
-	CUTE_TEST_ASSERT(server_running(server));
+	CUTE_TEST_ASSERT(protocol::server_running(server));
 	CUTE_TEST_ASSERT(iters < 100);
-	CUTE_TEST_ASSERT(client_get_state(client) == CLIENT_STATE_CONNECTED);
+	CUTE_TEST_ASSERT(protocol::client_get_state(client) == protocol::CLIENT_STATE_CONNECTED);
 
-	client_disconnect(client);
-	client_destroy(client);
+	protocol::client_disconnect(client);
+	protocol::client_destroy(client);
 
-	server_update(server, 0, 0);
-	server_stop(server);
-	server_destroy(server);
+	protocol::server_update(server, 0, 0);
+	protocol::server_stop(server);
+	protocol::server_destroy(server);
 
 	return 0;
 }

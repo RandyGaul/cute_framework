@@ -235,7 +235,7 @@ int packet_write(void* packet_ptr, uint8_t* buffer, uint64_t sequence, const cry
 	case PACKET_TYPE_CONNECTION_ACCEPTED:
 	{
 		packet_connection_accepted_t* packet = (packet_connection_accepted_t*)packet_ptr;
-		write_uint64(&buffer, packet->client_handle);
+		write_uint64(&buffer, packet->client_id);
 		write_uint32(&buffer, packet->max_clients);
 		write_uint32(&buffer, packet->connection_timeout);
 		payload_size = (int)(buffer - payload);
@@ -336,7 +336,7 @@ void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, packet_all
 	{
 		packet_connection_accepted_t* packet = (packet_connection_accepted_t*)packet_allocator_alloc(pa, (packet_type_t)type);
 		packet->packet_type = type;
-		packet->client_handle = read_uint64(&buffer);
+		packet->client_id = read_uint64(&buffer);
 		packet->max_clients = read_uint32(&buffer);
 		packet->connection_timeout = read_uint32(&buffer);
 		return packet;
@@ -1127,7 +1127,7 @@ static void s_receive_packets(client_t* client)
 		case CLIENT_STATE_SENDING_CHALLENGE_RESPONSE:
 			if (type == PACKET_TYPE_CONNECTION_ACCEPTED) {
 				packet_connection_accepted_t* packet = (packet_connection_accepted_t*)packet_ptr;
-				client->client_handle = packet->client_handle;
+				client->client_id = packet->client_id;
 				client->max_clients = packet->max_clients;
 				client->connection_timeout = (float)packet->connection_timeout;
 				s_client_set_state(client, CLIENT_STATE_CONNECTED);
@@ -1317,9 +1317,9 @@ client_state_t client_get_state(client_t* client)
 	return client->state;
 }
 
-uint64_t client_get_handle(client_t* client)
+uint64_t client_get_id(client_t* client)
 {
-	return client->client_handle;
+	return client->client_id;
 }
 
 uint32_t client_get_max_clients(client_t* client)
@@ -1375,13 +1375,11 @@ error_t server_start(server_t* server, const char* address, uint32_t connection_
 	cleanup_map = 1;
 	connect_token_cache_init(&server->token_cache, CUTE_PROTOCOL_CONNECT_TOKEN_ENTRIES_MAX, server->mem_ctx);
 	cleanup_cache = 1;
-	server->client_handle_table = handle_allocator_make(CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx);
-	cleanup_handles = 1;
 	if (socket_init(&server->socket, address, CUTE_PROTOCOL_SERVER_SEND_BUFFER_SIZE, CUTE_PROTOCOL_SERVER_RECEIVE_BUFFER_SIZE)) ret = -1;
 	cleanup_socket = 1;
-	hashtable_init(&server->client_endpoint_table, sizeof(endpoint_t), sizeof(handle_t), CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx);
+	hashtable_init(&server->client_endpoint_table, sizeof(endpoint_t), sizeof(uint64_t), CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx);
 	cleanup_endpoint_table = 1;
-	hashtable_init(&server->client_id_table, sizeof(uint64_t), 0, CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx);
+	hashtable_init(&server->client_id_table, sizeof(uint64_t), sizeof(int), CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx);
 	cleanup_client_id_table = 1;
 
 	server->running = 1;
@@ -1392,7 +1390,6 @@ error_t server_start(server_t* server, const char* address, uint32_t connection_
 	if (ret) {
 		if (cleanup_map) encryption_map_cleanup(&server->encryption_map);
 		if (cleanup_cache) connect_token_cache_cleanup(&server->token_cache);
-		if (cleanup_handles) handle_allocator_destroy(server->client_handle_table);
 		if (cleanup_socket) socket_cleanup(&server->socket);
 		if (cleanup_endpoint_table) hashtable_cleanup(&server->client_endpoint_table);
 		if (cleanup_client_id_table) hashtable_cleanup(&server->client_id_table);
@@ -1436,7 +1433,6 @@ void server_stop(server_t* server)
 
 	encryption_map_cleanup(&server->encryption_map);
 	connect_token_cache_cleanup(&server->token_cache);
-	handle_allocator_destroy(server->client_handle_table);
 	socket_cleanup(&server->socket);
 	hashtable_cleanup(&server->client_endpoint_table);
 	hashtable_cleanup(&server->client_id_table);
@@ -1448,32 +1444,31 @@ bool server_running(server_t* server)
 	return server->running ? true : false;
 }
 
-static CUTE_INLINE uint32_t s_client_index(server_t* server, handle_t h)
-{
-	return handle_allocator_get_index(server->client_handle_table, h);
-}
-
 static void s_server_connect_client(server_t* server, endpoint_t endpoint, encryption_state_t* state)
 {
+	int index = -1;
+	for (int i = 0; i < CUTE_PROTOCOL_SERVER_MAX_CLIENTS; ++i) {
+		if (!server->client_is_connected[i]) {
+			index = i;
+			break;
+		}
+	}
+	if (index == -1) return;
 
+	server->client_count++;
 	CUTE_ASSERT(server->client_count < CUTE_PROTOCOL_SERVER_MAX_CLIENTS);
-	int index = server->client_count++;
-
-	//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Connecting client %" PRIu64 ".", state->client_id);
-
-	handle_t h = handle_allocator_alloc(server->client_handle_table, index);
 
 	server_event_t event;
 	event.type = SERVER_EVENT_NEW_CONNECTION;
-	event.u.new_connection.client_handle = h;
+	event.u.new_connection.client_index = index;
 	if (s_server_event_push(server, &event) < 0) return;
 
-	hashtable_insert(&server->client_id_table, &state->client_id, NULL);
-	hashtable_insert(&server->client_endpoint_table, &endpoint, &h);
+	hashtable_insert(&server->client_id_table, &state->client_id, &index);
+	hashtable_insert(&server->client_endpoint_table, &endpoint, &state->client_id);
 
 	server->client_id[index] = state->client_id;
-	server->client_handle[index] = h;
-	server->client_is_confirmed[index] = 0;
+	server->client_is_connected[index] = true;
+	server->client_is_confirmed[index] = false;
 	server->client_last_packet_received_time[index] = 0;
 	server->client_last_packet_sent_time[index] = 0;
 	server->client_endpoint[index] = endpoint;
@@ -1487,7 +1482,7 @@ static void s_server_connect_client(server_t* server, endpoint_t endpoint, encry
 
 	packet_connection_accepted_t packet;
 	packet.packet_type = PACKET_TYPE_CONNECTION_ACCEPTED;
-	packet.client_handle = h;
+	packet.client_id = state->client_id;
 	packet.max_clients = CUTE_PROTOCOL_SERVER_MAX_CLIENTS;
 	packet.connection_timeout = server->connection_timeout;
 	if (packet_write(&packet, server->buffer, server->client_sequence[index]++, server->client_server_to_client_key + index) == 16 + 73) {
@@ -1509,13 +1504,13 @@ static void s_server_disconnect_sequence(server_t* server, uint32_t index)
 	}
 }
 
-static void s_server_disconnect_client(server_t* server, uint32_t index, int send_packets)
+static void s_server_disconnect_client(server_t* server, uint32_t index, bool send_packets)
 {
 	//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Disconnecting client %" PRIu64 ".", server->client_id[index]);
 
 	server_event_t event;
 	event.type = SERVER_EVENT_DISCONNECTED;
-	event.u.disconnected.client_handle = server->client_handle[index];
+	event.u.disconnected.client_index = index;
 	if (s_server_event_push(server, &event) < 0) return;
 
 	if (send_packets) {
@@ -1524,18 +1519,14 @@ static void s_server_disconnect_client(server_t* server, uint32_t index, int sen
 
 	// Free client resources.
 	server->client_is_confirmed[index] = 0;
-	handle_allocator_free(server->client_handle_table, server->client_handle[index]);
 	hashtable_remove(&server->client_id_table, server->client_id + index);
 	hashtable_remove(&server->client_endpoint_table, server->client_endpoint + index);
 
 	// Move client in back to the empty slot.
 	int last_index = --server->client_count;
 	if (last_index != index) {
-		handle_t h = server->client_handle[last_index];
-		handle_allocator_update_index(server->client_handle_table, h, index);
-
 		server->client_id[index]                        = server->client_id[last_index];
-		server->client_handle[index]                    = server->client_handle[last_index];
+		server->client_is_connected[index]              = server->client_is_connected[last_index];
 		server->client_is_confirmed[index]              = server->client_is_confirmed[last_index];
 		server->client_last_packet_received_time[index] = server->client_last_packet_received_time[last_index];
 		server->client_last_packet_sent_time[index]     = server->client_last_packet_sent_time[last_index];
@@ -1630,21 +1621,20 @@ static void s_server_receive_packets(server_t* server)
 				}
 			}
 		} else {
-			handle_t* handle_ptr = (handle_t*)hashtable_find(&server->client_endpoint_table, &from);
+			uint64_t* client_id_ptr = (uint64_t*)hashtable_find(&server->client_endpoint_table, &from);
 			replay_buffer_t* replay_buffer = NULL;
 			const crypto_key_t* client_to_server_key;
 			encryption_state_t* state = NULL;
 			uint32_t index = ~0;
 
-			int endpoint_already_connected = !!handle_ptr;
+			int endpoint_already_connected = !!client_id_ptr;
 			if (endpoint_already_connected) {
 				if (type == PACKET_TYPE_CHALLENGE_RESPONSE) {
 					// Someone already connected with this address.
 					continue;
 				}
 
-				handle_t handle = *handle_ptr;
-				index = s_client_index(server, handle);
+				index = (uint32_t)*(int*)hashtable_find(&server->client_id_table, client_id_ptr);
 				replay_buffer = server->client_replay_buffer + index;
 				client_to_server_key = server->client_client_to_server_key + index;
 			} else {
@@ -1704,7 +1694,7 @@ static void s_server_receive_packets(server_t* server)
 				packet_payload_t* packet = (packet_payload_t*)packet_ptr;
 				server_event_t event;
 				event.type = SERVER_EVENT_PAYLOAD_PACKET;
-				event.u.payload_packet.client_handle = server->client_handle[index];
+				event.u.payload_packet.client_index = index;
 				event.u.payload_packet.size = packet->payload_size;
 				event.u.payload_packet.data = packet->payload;
 				if (s_server_event_push(server, &event) < 0) {
@@ -1763,10 +1753,10 @@ static void s_server_send_packets(server_t* server, float dt)
 
 	// Send keepalive packets.
 	//int* is_loopback = server->client_is_loopback;
-	int* confirmed = server->client_is_confirmed;
+	bool* confirmed = server->client_is_confirmed;
 	uint64_t* sequences = server->client_sequence;
 	crypto_key_t* server_to_client_keys = server->client_server_to_client_key;
-	handle_t* handles = server->client_handle;
+	handle_t* ids = server->client_id;
 	uint32_t connection_timeout = server->connection_timeout;
 	for (int i = 0; i < client_count; ++i)
 	{
@@ -1777,7 +1767,7 @@ static void s_server_send_packets(server_t* server, float dt)
 				if (!confirmed[i]) {
 					packet_connection_accepted_t packet;
 					packet.packet_type = PACKET_TYPE_CONNECTION_ACCEPTED;
-					packet.client_handle = handles[i];
+					packet.client_id = ids[i];
 					packet.max_clients = CUTE_PROTOCOL_SERVER_MAX_CLIENTS;
 					packet.connection_timeout = connection_timeout;
 					if (packet_write(&packet, buffer, sequences[i]++, server_to_client_keys + i) == 16 + 73) {
@@ -1797,7 +1787,7 @@ static void s_server_send_packets(server_t* server, float dt)
 	}
 }
 
-int server_poll_event(server_t* server, server_event_t* event)
+int server_pop_event(server_t* server, server_event_t* event)
 {
 	return s_server_event_pull(server, event);
 }
@@ -1808,47 +1798,23 @@ void server_free_packet(server_t* server, void* packet)
 	packet_allocator_free(server->packet_allocator, (packet_type_t)payload_packet->packet_type, payload_packet);
 }
 
-void server_disconnect_client(server_t* server, handle_t client_handle)
+void server_disconnect_client(server_t* server, int client_index)
 {
 	CUTE_ASSERT(server->client_count >= 1);
-	uint32_t index = handle_allocator_get_index(server->client_handle_table, client_handle);
-	s_server_disconnect_client(server, index, 1);
+	s_server_disconnect_client(server, client_index, true);
 }
 
-void server_broadcast_to_all_clients(server_t* server, const void* packet, int size)
-{
-	int count = server->client_count;
-	handle_t* handles = server->client_handle;
-	for (int i = 0; i < count; ++i)
-	{
-		server_send_to_client(server, packet, size, handles[i]);
-	}
-}
-
-void server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t client_handle)
-{
-	int count = server->client_count;
-	handle_t* handles = server->client_handle;
-	for (int i = 0; i < count; ++i)
-	{
-		if (handles[i] == client_handle) continue;
-		server_send_to_client(server, packet, size, handles[i]);
-	}
-}
-
-int server_send_to_client(server_t* server, const void* packet, int size, handle_t client_handle)
+int server_send_to_client(server_t* server, const void* packet, int size, int client_index)
 {
 	if (size < 1) return -1;
 	if (size > CUTE_PROTOCOL_PACKET_PAYLOAD_MAX) return -1;
+	CUTE_ASSERT(server->client_count >= 1 && client_index >= 0 && client_index < CUTE_PROTOCOL_SERVER_MAX_CLIENTS);
 
-	CUTE_ASSERT(server->client_count >= 1);
-	// TODO: Make a waya to assert client_id is valid.
-	uint32_t index = handle_allocator_get_index(server->client_handle_table, client_handle);
-
+	int index = client_index;
 	if (!server->client_is_confirmed[index]) {
 		packet_connection_accepted_t packet;
 		packet.packet_type = PACKET_TYPE_CONNECTION_ACCEPTED;
-		packet.client_handle = server->client_handle[index];
+		packet.client_id = server->client_id[index];
 		packet.max_clients = CUTE_PROTOCOL_SERVER_MAX_CLIENTS;
 		packet.connection_timeout = server->connection_timeout;
 		if (packet_write(&packet, server->buffer, server->client_sequence[index]++, server->client_server_to_client_key + index) == 16 + 73) {
@@ -1885,7 +1851,7 @@ static void s_server_look_for_timeouts(server_t* server)
 		if (last_received_times[i] >= (float)server->connection_timeout) {
 			--client_count;
 			//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Client %" PRIu64 " has timed out.", server->client_id[i]);
-			server_disconnect_client(server, server->client_handle[i]);
+			server_disconnect_client(server, i);
 		} else {
 			 ++i;
 		}
@@ -1906,12 +1872,10 @@ int server_client_count(server_t* server)
 	return server->client_count;
 }
 
-uint64_t server_get_client_id_from_handle(server_t* server, handle_t client_handle)
+uint64_t server_get_client_id(server_t* server, int client_index)
 {
-	CUTE_ASSERT(server->client_count >= 1);
-	// TODO: Make a waya to assert client_id is valid.
-	uint32_t index = handle_allocator_get_index(server->client_handle_table, client_handle);
-	return server->client_id[index];
+	CUTE_ASSERT(server->client_count >= 1 && client_index >= 0 && client_index < CUTE_PROTOCOL_SERVER_MAX_CLIENTS);
+	return server->client_id[client_index];
 }
 
 }

@@ -29,6 +29,7 @@
 
 #include <internal/cute_net_internal.h>
 #include <internal/cute_protocol_internal.h>
+#include <internal/cute_transport_internal.h>
 
 #define CUTE_SERVER_SEND_BUFFER_SIZE (20 * CUTE_MB)
 #define CUTE_SERVER_RECEIVE_BUFFER_SIZE (20 * CUTE_MB)
@@ -50,53 +51,65 @@ struct server_t
 	void* mem_ctx = NULL;
 
 	int connection_denied_count = 0;
-	handle_table_t client_handle_table;
 	int client_count = 0;
-	handle_t client_handle[CUTE_SERVER_MAX_CLIENTS];
-	bool client_is_connected[CUTE_SERVER_MAX_CLIENTS];
-	float client_last_packet_recieved_time[CUTE_SERVER_MAX_CLIENTS];
-	float client_last_packet_sent_time[CUTE_SERVER_MAX_CLIENTS];
-	endpoint_t client_endpoint[CUTE_SERVER_MAX_CLIENTS];
+	transport_t* client_transports[CUTE_SERVER_MAX_CLIENTS];
+
+	protocol::server_t* p_server = NULL;
 };
 
-server_t* server_alloc(void* user_allocator_context)
+static int s_send_packet_fn(int client_index, uint16_t sequence, void* packet, int size, void* udata)
 {
-	return NULL;
+	server_t* server = (server_t*)udata;
+	return protocol::server_send_to_client(server->p_server, packet, size, client_index);
+}
+
+static int s_open_packet_fn(int index, uint16_t sequence, void* packet, int size, void* udata)
+{
+	server_t* server = (server_t*)udata;
+	return 0;
+}
+
+server_t* server_create(server_config_t* config, void* user_allocator_context)
+{
+	server_t* server = CUTE_NEW(server_t, user_allocator_context);
+	server->config = *config;
+
+	server->p_server = protocol::server_make(config->application_id, &server->config.public_key, &server->config.secret_key, server->mem_ctx);
+
+	for (int i = 0; i < CUTE_SERVER_MAX_CLIENTS; ++i) {
+		ack_system_config_t ack_config;
+		ack_config.index = i;
+		ack_config.send_packet_fn = s_send_packet_fn;
+		ack_config.open_packet_fn = s_open_packet_fn;
+		ack_config.udata = server;
+		ack_config.user_allocator_context = user_allocator_context;
+
+		transport_config_t transport_config;
+		transport_config.ack_system = ack_system_make(&ack_config);
+		transport_config.user_allocator_context = user_allocator_context;
+		server->client_transports[i] = transport_make(&transport_config);
+	}
+
+	return server;
 }
 
 void server_destroy(server_t* server)
 {
 }
 
-int server_start(server_t* server, const char* address_and_port, const crypto_key_t* public_key, const crypto_key_t* secret_key, const server_config_t* config)
+error_t server_start(server_t* server, const char* address_and_port)
 {
-	return 0;
+	error_t err = protocol::server_start(server->p_server, address_and_port, server->config.connection_timeout);
+	if (err.is_error()) return err;
+	return error_success();
 }
 
 void server_stop(server_t* server)
 {
-	while(server->client_count)
-	{
-		server_disconnect_client(server, server->client_handle[0]);
-	}
-}
-
-static uint32_t s_client_index_from_endpoint(server_t* server, endpoint_t endpoint)
-{
-	endpoint_t* endpoints = server->client_endpoint;
-	int count = server->client_count;
-	for (int i = 0; i < count; ++i)
-	{
-		if (endpoint_equals(endpoints[i], endpoint)) {
-			return i;
-		}
-	}
-	return UINT32_MAX;
-}
-
-static CUTE_INLINE uint32_t s_client_index_from_handle(server_t* server, handle_t h)
-{
-	return server->client_handle_table.get_index(h);
+	//while(server->client_count)
+	//{
+	//	server_disconnect_client(server, server->client_handle[0]);
+	//}
 }
 
 void server_update(server_t* server, float dt)
@@ -104,15 +117,6 @@ void server_update(server_t* server, float dt)
 	server->connection_denied_count = 0;
 	//s_server_recieve_packets(server);
 	//s_server_send_packets(server, dt);
-
-	int client_count = server->client_count;
-	float* last_recieved_times = server->client_last_packet_recieved_time;
-	float* last_sent_times = server->client_last_packet_sent_time;
-	for (int i = 0; i < client_count; ++i)
-	{
-		last_recieved_times[i] += dt;
-		last_sent_times[i] += dt;
-	}
 }
 
 bool server_poll_event(server_t* server, server_event_t* event)
@@ -122,44 +126,22 @@ bool server_poll_event(server_t* server, server_event_t* event)
 
 void server_disconnect_client(server_t* server, handle_t client_id, bool send_notification_to_client)
 {
-	CUTE_ASSERT(server->client_count >= 1);
-	uint32_t index = server->client_handle_table.get_index(client_id);
-	if (send_notification_to_client) {
-		//s_server_send_packet_no_payload(server, index, protocol::PACKET_TYPE_DISCONNECT);
-	}
-
-	// Free client resources.
-	server->client_is_connected[index] = 0;
-	server->client_handle_table.free_handle(client_id);
-
-	// Move client in back to the empty slot.
-	int last_index = --server->client_count;
-	if (last_index) {
-		handle_t h = server->client_handle[index];
-		server->client_handle_table.update_index(h, index);
-
-		server->client_handle[index]                    = server->client_handle[last_index];
-		server->client_is_connected[index]              = server->client_is_connected[last_index];
-		server->client_last_packet_recieved_time[index] = server->client_last_packet_recieved_time[last_index];
-		server->client_last_packet_sent_time[index]     = server->client_last_packet_sent_time[last_index];
-		server->client_endpoint[index]                  = server->client_endpoint[last_index];
-	}
 }
 
 void server_look_for_and_disconnected_timed_out_clients(server_t* server)
 {
-	int client_count = server->client_count;
-	float* last_recieved_times = server->client_last_packet_recieved_time;
-	for (int i = 0; i < client_count;)
-	{
-		const float keepalive_rate = 3.0f;
-		if (last_recieved_times[i] >= keepalive_rate) {
-			--client_count;
-			server_disconnect_client(server, server->client_handle[i], 1);
-		} else {
-			 ++i;
-		}
-	}
+	//int client_count = server->client_count;
+	//float* last_recieved_times = server->client_last_packet_recieved_time;
+	//for (int i = 0; i < client_count;)
+	//{
+	//	const float keepalive_rate = 3.0f;
+	//	if (last_recieved_times[i] >= keepalive_rate) {
+	//		--client_count;
+	//		server_disconnect_client(server, server->client_handle[i], 1);
+	//	} else {
+	//		 ++i;
+	//	}
+	//}
 }
 
 void server_broadcast_to_all_clients(server_t* server, const void* packet, int size, int reliable)
@@ -176,10 +158,11 @@ void server_send_to_client(server_t* server, const void* packet, int size, handl
 
 float server_get_last_packet_recieved_time_from_client(server_t* server, handle_t client_id)
 {
-	uint32_t index = s_client_index_from_handle(server, client_id);
-	if (index == UINT32_MAX) return -1.0f;
-	CUTE_ASSERT(server->client_is_connected[index]);
-	return server->client_last_packet_recieved_time[index];
+	//uint32_t index = s_client_index_from_handle(server, client_id);
+	//if (index == UINT32_MAX) return -1.0f;
+	//CUTE_ASSERT(server->client_is_connected[index]);
+	//return server->client_last_packet_recieved_time[index];
+	return 0;
 }
 
 }
