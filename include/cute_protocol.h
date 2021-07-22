@@ -175,10 +175,10 @@ struct server_event_t
 	} u;
 };
 
-CUTE_API int CUTE_CALL server_pop_event(server_t* server, server_event_t* event);
+CUTE_API bool CUTE_CALL server_pop_event(server_t* server, server_event_t* event);
 CUTE_API void CUTE_CALL server_free_packet(server_t* server, void* packet);
 CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, int client_index);
-CUTE_API int CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, int client_index);
+CUTE_API error_t CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, int client_index);
 
 // -------------------------------------------------------------------------------------------------
 

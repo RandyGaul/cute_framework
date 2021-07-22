@@ -57,16 +57,16 @@ struct server_t
 	protocol::server_t* p_server = NULL;
 };
 
-static int s_send_packet_fn(int client_index, void* packet, int size, void* udata)
+static error_t s_send_packet_fn(int client_index, void* packet, int size, void* udata)
 {
 	server_t* server = (server_t*)udata;
 	return protocol::server_send_to_client(server->p_server, packet, size, client_index);
 }
 
-static int s_open_packet_fn(int index, void* packet, int size, void* udata)
+static error_t s_open_packet_fn(int index, void* packet, int size, void* udata)
 {
 	server_t* server = (server_t*)udata;
-	return 0;
+	return error_success();
 }
 
 server_t* server_create(server_config_t* config, void* user_allocator_context)

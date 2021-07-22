@@ -1788,9 +1788,9 @@ static void s_server_send_packets(server_t* server, float dt)
 	}
 }
 
-int server_pop_event(server_t* server, server_event_t* event)
+bool server_pop_event(server_t* server, server_event_t* event)
 {
-	return s_server_event_pull(server, event);
+	return s_server_event_pull(server, event) ? true : false;
 }
 
 void server_free_packet(server_t* server, void* packet)
@@ -1805,10 +1805,10 @@ void server_disconnect_client(server_t* server, int client_index)
 	s_server_disconnect_client(server, client_index, true);
 }
 
-int server_send_to_client(server_t* server, const void* packet, int size, int client_index)
+error_t server_send_to_client(server_t* server, const void* packet, int size, int client_index)
 {
-	if (size < 1) return -1;
-	if (size > CUTE_PROTOCOL_PACKET_PAYLOAD_MAX) return -1;
+	if (size < 1) return error_failure("`size` is negative.");
+	if (size > CUTE_PROTOCOL_PACKET_PAYLOAD_MAX) return error_failure("`size` exceeds `CUTE_PROTOCOL_PACKET_PAYLOAD_MAX`.");
 	CUTE_ASSERT(server->client_count >= 1 && client_index >= 0 && client_index < CUTE_PROTOCOL_SERVER_MAX_CLIENTS);
 
 	int index = client_index;
@@ -1823,7 +1823,7 @@ int server_send_to_client(server_t* server, const void* packet, int size, int cl
 			//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[index]);
 			server->client_last_packet_sent_time[index] = 0;
 		} else {
-			return -1;
+			return error_failure("Failed to write packet.");
 		}
 	}
 
@@ -1837,10 +1837,10 @@ int server_send_to_client(server_t* server, const void* packet, int size, int cl
 		//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(payload.packet_type), server->client_id[index]);
 		server->client_last_packet_sent_time[index] = 0;
 	} else {
-		return -1;
+		return error_failure("Failed to write packet.");
 	}
 
-	return 0;
+	return error_success();
 }
 
 static void s_server_look_for_timeouts(server_t* server)

@@ -27,13 +27,15 @@
 
 #define CUTE_TRANSPORT_PACKET_PAYLOAD_MAX (1200)
 
+CUTE_STATIC_ASSERT(CUTE_TRANSPORT_PACKET_PAYLOAD_MAX < 1207, "Cute Protocol max payload is 1207.");
+
 // TODO: Pack header sizes down to a minimum.
 // TODO: Look for optimizations on single-fragment sending.
 // TODO: Audit default values and sizes.
 // TODO: Look for places to use memory pools.
 // TODO: Audit bounds checking.
 // TODO: Fire and forget should have an upper-bound on packet size (configurable) and a max configurable size.
-// TODO: Reliable resending rate.
+// TODO: Reliable resending rate upon failures -- wind down on successive failures -- configurable.
 
 namespace cute
 {
@@ -83,7 +85,7 @@ CUTE_API int CUTE_CALL packet_queue_pop(packet_queue_t* q, void** packet, int *s
 // -------------------------------------------------------------------------------------------------
 
 #define CUTE_ACK_SYSTEM_HEADER_SIZE (2 + 2 + 4)
-#define CUTE_ACK_SYSTEM_MAX_PACKET_SIZE 1200
+#define CUTE_ACK_SYSTEM_MAX_PACKET_SIZE 1180
 
 struct ack_system_config_t
 {
@@ -93,8 +95,8 @@ struct ack_system_config_t
 	int received_packets_sequence_buffer_size = 256;
 
 	int index = -1;
-	int (*send_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
-	int (*open_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
+	error_t (*send_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
+	error_t (*open_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
 
 	void* udata = NULL;
 	void* user_allocator_context = NULL;
@@ -132,8 +134,8 @@ struct ack_system_t
 	float incoming_bandwidth_kbps;
 
 	int index;
-	int (*send_packet_fn)(int client_index, void* packet, int size, void* udata);
-	int (*open_packet_fn)(int client_index, void* packet, int size, void* udata);
+	error_t (*send_packet_fn)(int client_index, void* packet, int size, void* udata);
+	error_t (*open_packet_fn)(int client_index, void* packet, int size, void* udata);
 
 	uint64_t counters[ACK_SYSTEM_COUNTERS_MAX];
 };
@@ -143,8 +145,8 @@ CUTE_API void CUTE_CALL ack_system_destroy(ack_system_t* ack_system);
 CUTE_API void CUTE_CALL ack_system_reset(ack_system_t* ack_system);
 
 CUTE_API uint16_t CUTE_CALL ack_system_get_sequence(ack_system_t* ack_system);
-CUTE_API int CUTE_CALL ack_system_send_packet(ack_system_t* ack_system, void* data, int size, uint16_t* sequence = NULL);
-CUTE_API int CUTE_CALL ack_system_receive_packet(ack_system_t* ack_system, void* data, int size);
+CUTE_API error_t CUTE_CALL ack_system_send_packet(ack_system_t* ack_system, void* data, int size, uint16_t* sequence = NULL);
+CUTE_API error_t CUTE_CALL ack_system_receive_packet(ack_system_t* ack_system, void* data, int size);
 
 CUTE_API uint16_t* CUTE_CALL ack_system_get_acks(ack_system_t* ack_system);
 CUTE_API int CUTE_CALL ack_system_get_acks_count(ack_system_t* ack_system);
@@ -164,7 +166,7 @@ CUTE_API uint64_t CUTE_CALL ack_system_get_counter(ack_system_t* ack_system, ack
 #define CUTE_TRANSPORT_MAX_FRAGMENT_SIZE 1100
 #define CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES (1024)
 
-CUTE_STATIC_ASSERT(CUTE_ACK_SYSTEM_MAX_PACKET_SIZE + CUTE_TRANSPORT_HEADER_SIZE < 1253, "Must fit within Cute Protocol's payload limit.");
+CUTE_STATIC_ASSERT(CUTE_ACK_SYSTEM_MAX_PACKET_SIZE + CUTE_TRANSPORT_HEADER_SIZE < CUTE_TRANSPORT_PACKET_PAYLOAD_MAX, "Must fit within Cute Protocol's payload limit.");
 
 struct transport_config_t
 {
@@ -176,8 +178,8 @@ struct transport_config_t
 	void* udata = NULL;
 
 	int index = -1;
-	int (*send_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
-	int (*open_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
+	error_t (*send_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
+	error_t (*open_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
 };
 
 struct transport_t;
@@ -186,21 +188,15 @@ CUTE_API transport_t* CUTE_CALL transport_make(const transport_config_t* config)
 CUTE_API void CUTE_CALL transport_destroy(transport_t* transport);
 CUTE_API void CUTE_CALL transport_reset(transport_t* transport);
 
-// WORKING HERE -- A single send function with send_reliably boolean?
-CUTE_API int CUTE_CALL transport_send_reliably_and_in_order(transport_t* transport, void* data, int size);
-CUTE_API int CUTE_CALL transport_send_fire_and_forget(transport_t* transport, void* data, int size);
+CUTE_API error_t CUTE_CALL transport_send(transport_t* transport, void* data, int size, bool send_reliably);
 
-// WORKING HERE -- A single receive function?
-CUTE_API int CUTE_CALL transport_receive_reliably_and_in_order(transport_t* transport, void** data, int* size);
-CUTE_API int CUTE_CALL transport_receive_fire_and_forget(transport_t* transport, void** data, int* size);
+CUTE_API error_t CUTE_CALL transport_receive_reliably_and_in_order(transport_t* transport, void** data, int* size);
+CUTE_API error_t CUTE_CALL transport_receive_fire_and_forget(transport_t* transport, void** data, int* size);
 CUTE_API void CUTE_CALL transport_free(transport_t* transport, void* data);
 
-CUTE_API int CUTE_CALL transport_process_packet(transport_t* transport, void* data, int size);
-
-// WORKING HERE - A single update function?
+CUTE_API error_t CUTE_CALL transport_process_packet(transport_t* transport, void* data, int size);
 
 CUTE_API void CUTE_CALL transport_process_acks(transport_t* transport);
-CUTE_API void CUTE_CALL transport_clear_acks(transport_t* transport);
 CUTE_API void CUTE_CALL transport_resend_unacked_fragments(transport_t* transport);
 CUTE_API int CUTE_CALL transport_unacked_fragment_count(transport_t* transport);
 

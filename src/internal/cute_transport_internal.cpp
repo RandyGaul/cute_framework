@@ -471,11 +471,11 @@ static int s_write_ack_system_header(uint8_t* buffer, uint16_t sequence, uint16_
 	return (int)(buffer - buffer_start);
 }
 
-int ack_system_send_packet(ack_system_t* ack_system, void* data, int size, uint16_t* sequence_out)
+error_t ack_system_send_packet(ack_system_t* ack_system, void* data, int size, uint16_t* sequence_out)
 {
 	if (size > ack_system->max_packet_size || size > CUTE_ACK_SYSTEM_MAX_PACKET_SIZE) {
 		ack_system->counters[ACK_SYSTEM_COUNTERS_PACKETS_TOO_LARGE_TO_SEND]++;
-		return -1;
+		return error_failure("Exceeded max packet size in ack system.");
 	}
 
 	uint16_t sequence = ack_system->sequence++;
@@ -496,14 +496,15 @@ int ack_system_send_packet(ack_system_t* ack_system, void* data, int size, uint1
 	CUTE_ASSERT(size + header_size < CUTE_TRANSPORT_PACKET_PAYLOAD_MAX);
 	CUTE_MEMCPY(buffer + header_size, data, size);
 	if (sequence_out) *sequence_out = sequence;
-	if (ack_system->send_packet_fn(ack_system->index, buffer, size + header_size, ack_system->udata) < 0) {
+	error_t err = ack_system->send_packet_fn(ack_system->index, buffer, size + header_size, ack_system->udata);
+	if (err.is_error()) {
 		ack_system->counters[ACK_SYSTEM_COUNTERS_PACKETS_INVALID]++;
-		return -1;
+		return err;
 	}
 
 	ack_system->counters[ACK_SYSTEM_COUNTERS_PACKETS_SENT]++;
 
-	return 0;
+	return error_success();
 }
 
 uint16_t ack_system_get_sequence(ack_system_t* ack_system)
@@ -521,11 +522,11 @@ static int s_read_ack_system_header(uint8_t* buffer, int size, uint16_t* sequenc
 	return (int)(buffer - buffer_start);
 }
 
-int ack_system_receive_packet(ack_system_t* ack_system, void* data, int size)
+error_t ack_system_receive_packet(ack_system_t* ack_system, void* data, int size)
 {
 	if (size > ack_system->max_packet_size || size > CUTE_ACK_SYSTEM_MAX_PACKET_SIZE) {
 		ack_system->counters[ACK_SYSTEM_COUNTERS_PACKETS_TOO_LARGE_TO_RECEIVE]++;
-		return -1;
+		return error_failure("Exceeded max packet size in ack system.");
 	}
 
 	ack_system->counters[ACK_SYSTEM_COUNTERS_PACKETS_RECEIVED]++;
@@ -538,13 +539,13 @@ int ack_system_receive_packet(ack_system_t* ack_system, void* data, int size)
 	int header_size = s_read_ack_system_header(buffer, size, &sequence, &ack, &ack_bits);
 	if (header_size < 0) {
 		ack_system->counters[ACK_SYSTEM_COUNTERS_PACKETS_INVALID]++;
-		return -1;
+		return error_failure("Failed to write ack header.");
 	}
 	CUTE_ASSERT(header_size == CUTE_ACK_SYSTEM_HEADER_SIZE);
 
 	if (s_sequence_is_stale(&ack_system->received_packets, sequence)) {
 		ack_system->counters[ACK_SYSTEM_COUNTERS_PACKETS_STALE]++;
-		return -1;
+		return error_failure("The provided sequence number was stale.");
 	}
 
 	received_packet_t* packet = (received_packet_t*)sequence_buffer_insert(&ack_system->received_packets, sequence);
@@ -573,7 +574,7 @@ int ack_system_receive_packet(ack_system_t* ack_system, void* data, int size)
 		}
 	}
 
-	return 0;
+	return error_success();
 }
 
 uint16_t* ack_system_get_acks(ack_system_t* ack_system)
@@ -775,11 +776,11 @@ static CUTE_INLINE int s_transport_write_header(uint8_t* buffer, int size, uint8
 	return (int)(buffer - buffer_start);
 }
 
-static void s_transport_send_fragments(transport_t* transport)
+static error_t s_transport_send_fragments(transport_t* transport)
 {
 	CUTE_ASSERT(transport->fragments.count() <= transport->max_fragments_in_flight);
 	if (transport->fragments.count() == transport->max_fragments_in_flight) {
-		return;
+		return error_failure("Too many fragments already in flight.");
 	}
 
 	double timestamp = transport->ack_system->time;
@@ -824,7 +825,7 @@ static void s_transport_send_fragments(transport_t* transport)
 			if (header_size != CUTE_TRANSPORT_HEADER_SIZE) {
 				CUTE_FREE(fragment->data, transport->mem_ctx);
 				transport->fragments.pop();
-				return;
+				return error_failure("Failed to write transport header.");
 			}
 
 			// Copy over the `data` from user.
@@ -832,10 +833,11 @@ static void s_transport_send_fragments(transport_t* transport)
 
 			// Send to ack system.
 			uint16_t sequence;
-			if (ack_system_send_packet(transport->ack_system, fragment->data, this_fragment_size + CUTE_TRANSPORT_HEADER_SIZE, &sequence) < 0) {
+			error_t err = ack_system_send_packet(transport->ack_system, fragment->data, this_fragment_size + CUTE_TRANSPORT_HEADER_SIZE, &sequence);
+			if (err.is_error()) {
 				CUTE_FREE(fragment->data, transport->mem_ctx);
 				transport->fragments.pop();
-				return;
+				return err;
 			}
 
 			// If all succeeds, record fragment entry. Hopefully it will be acked later.
@@ -854,12 +856,14 @@ static void s_transport_send_fragments(transport_t* transport)
 
 		fragments_space_available_send -= fragment_count_to_send;
 	}
+
+	return error_success();
 }
 
-int transport_send_reliably_and_in_order(transport_t* transport, void* data, int size)
+error_t s_send_reliably(transport_t* transport, void* data, int size)
 {
-	if (size < 1) return -1;
-	if (size > transport->max_size_single_send) return -1;
+	if (size < 1) return error_failure("Negative `size` not allowed.");
+	if (size > transport->max_size_single_send) return error_failure("`size` exceeded `max_size_single_send` from `transport->config`.");
 
 	int fragment_size = transport->fragment_size;
 	int fragment_count = size / fragment_size;
@@ -872,23 +876,22 @@ int transport_send_reliably_and_in_order(transport_t* transport, void* data, int
 	send_item.final_fragment_size = final_fragment_size;
 	send_item.size = size;
 	send_item.packet = (uint8_t*)CUTE_ALLOC(size, transport->mem_ctx);
-	if (!send_item.packet) return -1;
+	if (!send_item.packet) return error_failure("Failed allocation.");
 	CUTE_MEMCPY(send_item.packet, data, size);
 
 	if (s_send_queue_push(&transport->send_queue, &send_item) < 0) {
-		//error_set("Send queue for reliable-and-in-order packets is full. Increase `CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES` or send packets less frequently.");
-		return -1;
+		return error_failure("Send queue for reliable-and-in-order packets is full. Increase `CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES` or send packets less frequently.");
 	}
 
 	s_transport_send_fragments(transport);
 
-	return 0;
+	return error_success();
 }
 
-int transport_send_fire_and_forget(transport_t* transport, void* data, int size)
+error_t s_send(transport_t* transport, void* data, int size)
 {
-	if (size < 1) return -1;
-	if (size > transport->max_size_single_send) return -1;
+	if (size < 1) return error_failure("Negative `size` is not valid.");
+	if (size > transport->max_size_single_send) return error_failure("`size` exceeded `max_size_single_send` config param.");
 
 	int fragment_size = transport->fragment_size;
 	int fragment_count = size / fragment_size;
@@ -909,7 +912,7 @@ int transport_send_fire_and_forget(transport_t* transport, void* data, int size)
 		// Write the transport header.
 		int header_size = s_transport_write_header(buffer, this_fragment_size + CUTE_TRANSPORT_HEADER_SIZE, 0, reassembly_sequence, fragment_count, (uint16_t)i, (uint16_t)this_fragment_size);
 		if (header_size != CUTE_TRANSPORT_HEADER_SIZE) {
-			return -1;
+			return error_failure("Failed writing transport header -- incorrect size of bytes written (this is probably a bug).");
 		}
 
 		// Copy over fragment data from src.
@@ -917,35 +920,43 @@ int transport_send_fire_and_forget(transport_t* transport, void* data, int size)
 
 		// Send to ack system.
 		uint16_t sequence;
-		if (ack_system_send_packet(transport->ack_system, buffer, this_fragment_size + CUTE_TRANSPORT_HEADER_SIZE, &sequence) < 0) {
-			return -1;
-		}
+		error_t err = ack_system_send_packet(transport->ack_system, buffer, this_fragment_size + CUTE_TRANSPORT_HEADER_SIZE, &sequence);
+		if (err.is_error()) return err;
 	}
 
-	return 0;
+	return error_success();
 }
 
-int transport_receive_reliably_and_in_order(transport_t* transport, void** data, int* size)
+error_t transport_send(transport_t* transport, void* data, int size, bool send_reliably)
+{
+	if (send_reliably) {
+		return s_send_reliably(transport, data, size);
+	} else {
+		return s_send(transport, data, size);
+	}
+}
+
+error_t transport_receive_reliably_and_in_order(transport_t* transport, void** data, int* size)
 {
 	packet_assembly_t* assembly = &transport->reliable_and_in_order_assembly;
 	if (packet_queue_pop(&assembly->assembled_packets, data, size) < 0) {
 		*data = NULL;
 		*size = 0;
-		return -1;
+		return error_failure("No data.");
 	} else {
-		return 0;
+		return error_success();
 	}
 }
 
-int transport_receive_fire_and_forget(transport_t* transport, void** data, int* size)
+error_t transport_receive_fire_and_forget(transport_t* transport, void** data, int* size)
 {
 	packet_assembly_t* assembly = &transport->fire_and_forget_assembly;
 	if (packet_queue_pop(&assembly->assembled_packets, data, size) < 0) {
 		*data = NULL;
 		*size = 0;
-		return -1;
+		return error_failure("No data.");
 	} else {
-		return 0;
+		return error_success();
 	}
 }
 
@@ -954,13 +965,11 @@ void transport_free(transport_t* transport, void* data)
 	CUTE_FREE(data, transport->mem_ctx);
 }
 
-int transport_process_packet(transport_t* transport, void* data, int size)
+error_t transport_process_packet(transport_t* transport, void* data, int size)
 {
-	if (size < CUTE_TRANSPORT_HEADER_SIZE) return -1;
-
-	if (ack_system_receive_packet(transport->ack_system, data, size) < 0) {
-		return -1;
-	}
+	if (size < CUTE_TRANSPORT_HEADER_SIZE) return error_failure("`size` is too small to fit `CUTE_TRANSPORT_HEADER_SIZE`.");
+	error_t err = ack_system_receive_packet(transport->ack_system, data, size);
+	if (err.is_error()) return err;
 
 	// Read transport header.
 	uint8_t* buffer = (uint8_t*)data + CUTE_ACK_SYSTEM_HEADER_SIZE;
@@ -972,15 +981,15 @@ int transport_process_packet(transport_t* transport, void* data, int size)
 	int total_packet_size = fragment_count * transport->fragment_size;
 
 	if (total_packet_size > transport->max_size_single_send) {
-		return -1;
+		return error_failure("Packet exceeded `max_size_single_send` limit.");
 	}
 
 	if (fragment_index > fragment_count) {
-		return -1;
+		return error_failure("Fragment index out of bounds.");
 	}
 
 	if (fragment_size > transport->fragment_size) {
-		return -1;
+		return error_failure("Fragment size somehow didn't match `transport->fragment_size`.");
 	}
 
 	packet_assembly_t* assembly;
@@ -995,17 +1004,16 @@ int transport_process_packet(transport_t* transport, void* data, int size)
 	if (!reassembly) {
 		reassembly = (fragment_reassembly_entry_t*)sequence_buffer_insert(&assembly->fragment_reassembly, reassembly_sequence, s_fragment_reassembly_entry_cleanup);
 		if (!reassembly) {
-			// TODO: Log. Sequence is stale.
-			return -1;
+			return error_failure("Sequence for this reassembly is stale.");
 		}
 		reassembly->received_final_fragment = 0;
 		reassembly->packet_size = total_packet_size;
 		reassembly->packet = (uint8_t*)CUTE_ALLOC(total_packet_size, transport->mem_ctx);
-		if (!reassembly->packet) return -1;
+		if (!reassembly->packet) return error_failure("Failed allocation.");
 		reassembly->fragment_received = (uint8_t*)CUTE_ALLOC(fragment_count, transport->mem_ctx);
 		if (!reassembly->fragment_received) {
 			CUTE_FREE(reassembly->packet, transport->mem_ctx);
-			return -1;
+			return error_failure("Full packet not yet received.");
 		}
 		CUTE_MEMSET(reassembly->fragment_received, 0, fragment_count);
 		reassembly->fragment_count_so_far = 0;
@@ -1013,11 +1021,11 @@ int transport_process_packet(transport_t* transport, void* data, int size)
 	}
 
 	if (fragment_count != reassembly->fragments_total) {
-		return -1;
+		return error_failure("Full packet not yet received.");
 	}
 
 	if (reassembly->fragment_received[fragment_index]) {
-		return 0;
+		return error_success();
 	}
 
 	// Copy in fragment pieces into a single large packet buffer.
@@ -1044,7 +1052,7 @@ int transport_process_packet(transport_t* transport, void* data, int size)
 		sequence_buffer_remove(&assembly->fragment_reassembly, reassembly_sequence, s_fragment_reassembly_entry_cleanup);
 	}
 
-	return 0;
+	return error_success();
 }
 
 void transport_process_acks(transport_t* transport)
@@ -1077,11 +1085,6 @@ void transport_process_acks(transport_t* transport)
 	ack_system_clear_acks(transport->ack_system);
 }
 
-void transport_clear_acks(transport_t* transport)
-{
-	ack_system_clear_acks(transport->ack_system);
-}
-
 void transport_resend_unacked_fragments(transport_t* transport)
 {
 	// Resend unacked fragments which were previously sent.
@@ -1101,8 +1104,8 @@ void transport_resend_unacked_fragments(transport_t* transport)
 
 		// Send to ack system.
 		uint16_t sequence;
-		fragment_size = ack_system_send_packet(transport->ack_system, fragment->data, fragment->size + CUTE_TRANSPORT_HEADER_SIZE, &sequence);
-		if (fragment_size < 0) {
+		error_t err = ack_system_send_packet(transport->ack_system, fragment->data, fragment->size + CUTE_TRANSPORT_HEADER_SIZE, &sequence);
+		if (err.is_error()) {
 			// Remove failed fragments (this should never happen, and is only here for safety).
 			handle_allocator_free(transport->fragment_handle_table, fragment->handle);
 			CUTE_FREE(fragment->data, transport->mem_ctx);
