@@ -25,6 +25,7 @@
 #include <cute_alloc.h>
 #include <cute_net.h>
 #include <cute_handle_table.h>
+#include <cute_memory_pool.h>
 
 #include <internal/cute_serialize_internal.h>
 #include <internal/cute_protocol_internal.h>
@@ -387,17 +388,7 @@ void* packet_open(uint8_t* buffer, int size, const crypto_key_t* key, packet_all
 
 // -------------------------------------------------------------------------------------------------
 
-
-packet_allocator_t* packet_allocator_make(void* user_allocator_context)
-{
-	return NULL;
-}
-
-void packet_allocator_destroy(packet_allocator_t* packet_allocator)
-{
-}
-
-void* packet_allocator_alloc(packet_allocator_t* packet_allocator, packet_type_t type)
+static int s_packet_size(packet_type_t type)
 {
 	int size = 0;
 
@@ -433,12 +424,55 @@ void* packet_allocator_alloc(packet_allocator_t* packet_allocator, packet_type_t
 		break;
 	}
 
-	return CUTE_ALLOC(size, NULL);
+	return size;
+}
+
+struct packet_allocator_t
+{
+	memory_pool_t* pools[PACKET_TYPE_COUNT];
+	void* user_allocator_context;
+};
+
+packet_allocator_t* packet_allocator_create(void* user_allocator_context)
+{
+	packet_allocator_t* packet_allocator = (packet_allocator_t*)CUTE_ALLOC(sizeof(packet_allocator_t), user_allocator_context);
+	packet_allocator->pools[PACKET_TYPE_CONNECT_TOKEN] = memory_pool_make(s_packet_size(PACKET_TYPE_CONNECT_TOKEN), 256, user_allocator_context);
+	packet_allocator->pools[PACKET_TYPE_CONNECTION_ACCEPTED] = memory_pool_make(s_packet_size(PACKET_TYPE_CONNECTION_ACCEPTED), 256, user_allocator_context);
+	packet_allocator->pools[PACKET_TYPE_CONNECTION_DENIED] = memory_pool_make(s_packet_size(PACKET_TYPE_CONNECTION_DENIED), 256, user_allocator_context);
+	packet_allocator->pools[PACKET_TYPE_KEEPALIVE] = memory_pool_make(s_packet_size(PACKET_TYPE_KEEPALIVE), 1024, user_allocator_context);
+	packet_allocator->pools[PACKET_TYPE_DISCONNECT] = memory_pool_make(s_packet_size(PACKET_TYPE_DISCONNECT), 256, user_allocator_context);
+	packet_allocator->pools[PACKET_TYPE_CHALLENGE_REQUEST] = memory_pool_make(s_packet_size(PACKET_TYPE_CHALLENGE_REQUEST), 256, user_allocator_context);
+	packet_allocator->pools[PACKET_TYPE_CHALLENGE_RESPONSE] = memory_pool_make(s_packet_size(PACKET_TYPE_CHALLENGE_RESPONSE), 256, user_allocator_context);
+	packet_allocator->pools[PACKET_TYPE_PAYLOAD] = memory_pool_make(s_packet_size(PACKET_TYPE_PAYLOAD), 1024 * 10, user_allocator_context);
+	packet_allocator->user_allocator_context = user_allocator_context;
+	return packet_allocator;
+}
+
+void packet_allocator_destroy(packet_allocator_t* packet_allocator)
+{
+	for (int i = 0; i < PACKET_TYPE_COUNT; ++i) {
+		memory_pool_destroy(packet_allocator->pools[i]);
+	}
+	CUTE_FREE(packet_allocator, packet_allocator->user_allocator_context);
+}
+
+void* packet_allocator_alloc(packet_allocator_t* packet_allocator, packet_type_t type)
+{
+	if (!packet_allocator) {
+		return CUTE_ALLOC(s_packet_size(type), NULL);
+	} else {
+		void* packet = memory_pool_alloc(packet_allocator->pools[type]);
+		return packet;
+	}
 }
 
 void packet_allocator_free(packet_allocator_t* packet_allocator, packet_type_t type, void* packet)
 {
-	CUTE_FREE(packet, NULL);
+	if (!packet_allocator) {
+		return CUTE_FREE(packet, NULL);
+	} else {
+		memory_pool_free(packet_allocator->pools[type], packet);
+	}
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -958,7 +992,6 @@ int client_connect(client_t* client, const uint8_t* connect_token)
 
 	CUTE_MEMCPY(client->connect_token_packet, connect_token_packet, CUTE_CONNECT_TOKEN_PACKET_SIZE);
 
-	client->packet_allocator = packet_allocator_make(client->mem_ctx);
 	// CUTE_CHECK_POINTER(client->packet_allocator); TODO
 	CUTE_CHECK(socket_init(&client->socket, ADDRESS_TYPE_IPV6, 0, CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE, CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE));
 	replay_buffer_init(&client->replay_buffer);
@@ -1022,8 +1055,6 @@ static void s_disconnect(client_t* client, client_state_t state, int send_packet
 	}
 
 	socket_cleanup(&client->socket);
-	packet_allocator_destroy(client->packet_allocator);
-	client->packet_allocator = NULL;
 	circular_buffer_reset(&client->packet_queue);
 
 	s_client_set_state(client, state);
@@ -1067,7 +1098,7 @@ static void s_receive_packets(client_t* client)
 		}
 
 		uint64_t sequence = ~0;
-		void* packet_ptr = packet_open(buffer, sz, &client->connect_token.server_to_client_key, client->packet_allocator, &client->replay_buffer, &sequence);
+		void* packet_ptr = packet_open(buffer, sz, &client->connect_token.server_to_client_key, NULL, &client->replay_buffer, &sequence);
 		if (!packet_ptr) continue;
 
 		// Handle packet based on client's current state.
@@ -1127,6 +1158,11 @@ static void s_receive_packets(client_t* client)
 				client->last_packet_recieved_time = 0;
 			} else if (type == PACKET_TYPE_DISCONNECT) {
 				//log(CUTE_LOG_LEVEL_WARNING, "Protocol Client: Received DISCONNECT packet from server.");
+				if (free_packet) {
+					packet_allocator_free(NULL, (packet_type_t)type, packet_ptr);
+					free_packet = 0;
+					packet_ptr = NULL;
+				}
 				s_disconnect(client, CLIENT_STATE_DISCONNECTED, 0);
 				should_break = 1;
 			}
@@ -1137,7 +1173,7 @@ static void s_receive_packets(client_t* client)
 		}
 
 		if (free_packet) {
-			packet_allocator_free(client->packet_allocator, (packet_type_t)type, packet_ptr);
+			packet_allocator_free(NULL, (packet_type_t)type, packet_ptr);
 		}
 
 		if (should_break) {
@@ -1261,7 +1297,7 @@ int client_get_packet(client_t* client, void** data, int* size, uint64_t* sequen
 void client_free_packet(client_t* client, void* packet)
 {
 	packet_payload_t* payload_packet = (packet_payload_t*)((uint8_t*)packet - CUTE_OFFSET_OF(packet_payload_t, payload));
-	packet_allocator_free(client->packet_allocator, (packet_type_t)payload_packet->packet_type, payload_packet);
+	packet_allocator_free(NULL, (packet_type_t)payload_packet->packet_type, payload_packet);
 }
 
 int client_send_data(client_t* client, const void* data, int size)
@@ -1310,7 +1346,7 @@ server_t* server_make(uint64_t application_id, const crypto_sign_public_t* publi
 
 	server->running = 0;
 	server->application_id = application_id;
-	server->packet_allocator = packet_allocator_make(mem_ctx);
+	server->packet_allocator = packet_allocator_create(mem_ctx);
 	server->event_queue = circular_buffer_make(CUTE_MB * 10, mem_ctx);
 	server->public_key = *public_key;
 	server->secret_key = *secret_key;

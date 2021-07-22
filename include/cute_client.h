@@ -23,34 +23,29 @@
 #define CUTE_CLIENT_H
 
 #include "cute_defines.h"
-
-#define CUTE_CLIENT_RECONNECT_SECONDS 5.0f
+#include "cute_error.h"
 
 namespace cute
 {
 
 struct client_t;
-struct endpoint_t;
-struct crypto_key_t;
 
 CUTE_API client_t* CUTE_CALL client_alloc(void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL client_destroy(client_t* client);
 
-// TODO: Loopback support.
-CUTE_API int CUTE_CALL client_connect(client_t* client, uint8_t* connect_token);
+CUTE_API error_t CUTE_CALL client_connect(client_t* client, const uint8_t* connect_token);
 CUTE_API void CUTE_CALL client_disconnect(client_t* client);
 
 CUTE_API void CUTE_CALL client_update(client_t* client, float dt);
-CUTE_API int CUTE_CALL client_get_packet(client_t* client, void* data, int* size);
-CUTE_API int CUTE_CALL client_send_data(client_t* client, const void* data, int size);
-CUTE_API int CUTE_CALL client_send_data_unreliable(client_t* client, const void* data, int size);
+CUTE_API bool CUTE_CALL client_poll(client_t* client, const void* packet, int* size);
+CUTE_API error_t CUTE_CALL client_send(client_t* client, const void* packet, int size, bool send_reliably);
 
 enum client_state_t : int
 {
 	CLIENT_STATE_CONNECT_TOKEN_EXPIRED         = -6,
 	CLIENT_STATE_INVALID_CONNECT_TOKEN         = -5,
 	CLIENT_STATE_CONNECTION_TIMED_OUT          = -4,
-	CLIENT_STATE_CHALLENGE_RESPONSE_TIMED_OUT = -3,
+	CLIENT_STATE_CHALLENGE_RESPONSE_TIMED_OUT  = -3,
 	CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT  = -2,
 	CLIENT_STATE_CONNECTION_DENIED             = -1,
 	CLIENT_STATE_DISCONNECTED                  = 0,
@@ -60,8 +55,7 @@ enum client_state_t : int
 };
 
 CUTE_API client_state_t CUTE_CALL client_state_get(const client_t* client);
-CUTE_API float CUTE_CALL client_get_last_packet_recieved_time(const client_t* client);
-CUTE_API int CUTE_CALL client_is_loopback(const client_t* client);
+CUTE_API float CUTE_CALL client_time_of_last_packet_recieved(const client_t* client);
 
 }
 

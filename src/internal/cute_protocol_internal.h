@@ -35,20 +35,6 @@ namespace cute
 namespace protocol
 {
 
-enum packet_type_t : uint8_t
-{
-	PACKET_TYPE_CONNECT_TOKEN,
-	PACKET_TYPE_CONNECTION_ACCEPTED,
-	PACKET_TYPE_CONNECTION_DENIED,
-	PACKET_TYPE_KEEPALIVE,
-	PACKET_TYPE_DISCONNECT,
-	PACKET_TYPE_CHALLENGE_REQUEST,
-	PACKET_TYPE_CHALLENGE_RESPONSE,
-	PACKET_TYPE_PAYLOAD,
-};
-
-// -------------------------------------------------------------------------------------------------
-
 struct replay_buffer_t
 {
 	uint64_t max;
@@ -58,15 +44,6 @@ struct replay_buffer_t
 CUTE_API void CUTE_CALL replay_buffer_init(replay_buffer_t* replay_buffer);
 CUTE_API int CUTE_CALL replay_buffer_cull_duplicate(replay_buffer_t* replay_buffer, uint64_t sequence);
 CUTE_API void CUTE_CALL replay_buffer_update(replay_buffer_t* replay_buffer, uint64_t sequence);
-
-// -------------------------------------------------------------------------------------------------
-
-struct packet_allocator_t;
-
-CUTE_API packet_allocator_t* CUTE_CALL packet_allocator_make(void* user_allocator_context = NULL);
-CUTE_API void CUTE_CALL packet_allocator_destroy(packet_allocator_t* packet_allocator);
-CUTE_API void* CUTE_CALL packet_allocator_alloc(packet_allocator_t* packet_allocator, packet_type_t type);
-CUTE_API void CUTE_CALL packet_allocator_free(packet_allocator_t* packet_allocator, packet_type_t type, void* packet);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -283,7 +260,6 @@ struct client_t
 	endpoint_t web_service_endpoint;
 	socket_t socket;
 	uint64_t sequence;
-	packet_allocator_t* packet_allocator;
 	circular_buffer_t packet_queue;
 	replay_buffer_t replay_buffer;
 	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];

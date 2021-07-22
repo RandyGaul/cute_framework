@@ -23,45 +23,28 @@
 #define CUTE_SERVER_H
 
 #include "cute_defines.h"
-#include "cute_net.h"
-#include "cute_crypto.h"
+#include "cute_error.h"
 #include "cute_handle_table.h"
 
-#define CUTE_SERVER_MAX_CLIENTS 256
+#define CUTE_SERVER_MAX_CLIENTS 32
 
 namespace cute
 {
 
 struct server_t;
-struct server_event_t;
 
 struct server_config_t
 {
 	int max_clients = 64;
-	float client_timeout_time = 20.0f;
 	int max_incoming_bytes_per_second = 0;
 	int max_outgoing_bytes_per_second = 0;
-	int event_queue_initial_capacity = 1024;
-	int event_queue_can_grow = 1;
 };
 
-CUTE_API server_t* CUTE_CALL server_alloc(void* user_allocator_context = NULL);
+CUTE_API server_t* CUTE_CALL server_create(server_config_t* config = NULL, void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL server_destroy(server_t* server);
 
-CUTE_API int CUTE_CALL server_start(server_t* server, const char* address_and_port, const crypto_key_t* public_key, const crypto_key_t* secret_key, const server_config_t* config = NULL);
+CUTE_API error_t CUTE_CALL server_start(server_t* server, const char* address_and_port, const crypto_sign_public_t* public_key, const crypto_sign_secret_t* secret_key, const server_config_t* config = NULL);
 CUTE_API void CUTE_CALL server_stop(server_t* server);
-
-CUTE_API void CUTE_CALL server_update(server_t* server, float dt);
-CUTE_API int CUTE_CALL server_poll_event(server_t* server, server_event_t* event);
-CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_id, int send_notification_to_client = 1);
-CUTE_API void CUTE_CALL server_look_for_and_disconnected_timed_out_clients(server_t* server);
-CUTE_API void CUTE_CALL server_broadcast_to_all_clients(server_t* server, const void* packet, int size, int reliable);
-CUTE_API void CUTE_CALL server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t client_id, int reliable);
-CUTE_API void CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, handle_t client_id, int reliable);
-
-CUTE_API float CUTE_CALL server_get_last_packet_recieved_time_from_client(server_t* server, handle_t client_id);
-
-CUTE_API handle_t CUTE_CALL server_connect_loopback_client();
 
 enum server_event_type_t
 {
@@ -89,32 +72,22 @@ struct server_event_t
 		struct
 		{
 			handle_t client_id;
-			void* data;
+			const void* data;
 			int size;
 		} user_packet;
 	} u;
 };
 
-/*
-	Server API - WIP
-	server update func
-	poll event func (dequeue)
-		get user packet from event
-		accept new connections via event
-	look for timed out clients feature
-	disconnect client function
-	thread to receive packets from socket
-	broadcast funcs - to all, to all but one, to one
+CUTE_API bool CUTE_CALL server_poll_event(server_t* server, server_event_t* event);
 
-	get client data by id
-		endpoint
-		is loopback
+CUTE_API void CUTE_CALL server_update(server_t* server, float dt);
+CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, handle_t client_id, bool send_notification_to_client = true);
+CUTE_API void CUTE_CALL server_find_and_disconnect_timed_out_clients(server_t* server, float timeout);
+CUTE_API void CUTE_CALL server_send(server_t* server, const void* packet, int size, handle_t client_id, bool send_reliably);
+CUTE_API void CUTE_CALL server_send_to_all_clients(server_t* server, const void* packet, int size, bool send_reliably);
+CUTE_API void CUTE_CALL server_send_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t client_id, bool send_reliably);
 
-	loopback functions
-		send packet
-		recieve packet
-		client userdata
-*/
+CUTE_API float CUTE_CALL server_time_of_last_packet_recieved_from_client(server_t* server, handle_t client_id);
 
 }
 

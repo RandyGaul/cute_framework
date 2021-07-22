@@ -54,6 +54,29 @@ namespace cute
 namespace protocol
 {
 
+enum packet_type_t : uint8_t
+{
+	PACKET_TYPE_CONNECT_TOKEN,
+	PACKET_TYPE_CONNECTION_ACCEPTED,
+	PACKET_TYPE_CONNECTION_DENIED,
+	PACKET_TYPE_KEEPALIVE,
+	PACKET_TYPE_DISCONNECT,
+	PACKET_TYPE_CHALLENGE_REQUEST,
+	PACKET_TYPE_CHALLENGE_RESPONSE,
+	PACKET_TYPE_PAYLOAD,
+
+	PACKET_TYPE_COUNT,
+};
+
+struct packet_allocator_t;
+
+CUTE_API packet_allocator_t* CUTE_CALL packet_allocator_create(void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL packet_allocator_destroy(packet_allocator_t* packet_allocator);
+CUTE_API void* CUTE_CALL packet_allocator_alloc(packet_allocator_t* packet_allocator, packet_type_t type);
+CUTE_API void CUTE_CALL packet_allocator_free(packet_allocator_t* packet_allocator, packet_type_t type, void* packet);
+
+// -------------------------------------------------------------------------------------------------
+
 CUTE_API error_t CUTE_CALL generate_connect_token(
 	uint64_t application_id,
 	uint64_t creation_timestamp,
