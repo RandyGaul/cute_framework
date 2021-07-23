@@ -250,7 +250,7 @@ The *connection denied packet* can be sent by the server during the connection h
 
 ```
 payload size        uint16_t
-payload data        In the range of [1, 1253] bytes.
+payload data        In the range of [1, 1207] bytes.
 ```
 
 The *payload packet* can be sent by the client or the server during the *connected* state of the client. They contain game specific user data.
