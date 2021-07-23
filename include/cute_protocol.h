@@ -159,6 +159,7 @@ struct server_event_t
 		struct
 		{
 			int client_index;
+			uint64_t client_id;
 			endpoint_t endpoint;
 		} new_connection;
 

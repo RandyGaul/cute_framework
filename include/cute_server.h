@@ -63,6 +63,7 @@ struct server_event_t
 		struct
 		{
 			int client_index;
+			uint64_t client_id;
 			endpoint_t endpoint;
 		} new_connection;
 
@@ -83,7 +84,7 @@ struct server_event_t
 CUTE_API bool CUTE_CALL server_pop_event(server_t* server, server_event_t* event);
 CUTE_API void CUTE_CALL server_free_packet(server_t* server, int client_index, void* data);
 
-CUTE_API void CUTE_CALL server_update(server_t* server, float dt);
+CUTE_API void CUTE_CALL server_update(server_t* server, float dt, uint64_t current_time);
 CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, int client_index, bool notify_client = true);
 CUTE_API void CUTE_CALL server_find_and_disconnect_timed_out_clients(server_t* server, float timeout);
 CUTE_API void CUTE_CALL server_send(server_t* server, const void* packet, int size, int client_index, bool send_reliably);

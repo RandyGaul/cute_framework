@@ -29,14 +29,6 @@
 
 CUTE_STATIC_ASSERT(CUTE_TRANSPORT_PACKET_PAYLOAD_MAX < 1207, "Cute Protocol max payload is 1207.");
 
-// TODO: Pack header sizes down to a minimum.
-// TODO: Look for optimizations on single-fragment sending.
-// TODO: Audit default values and sizes.
-// TODO: Look for places to use memory pools.
-// TODO: Audit bounds checking.
-// TODO: Fire and forget should have an upper-bound on packet size (configurable) and a max configurable size.
-// TODO: Reliable resending rate upon failures -- wind down on successive failures -- configurable.
-
 namespace cute
 {
 

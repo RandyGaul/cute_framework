@@ -1436,10 +1436,6 @@ static void s_server_disconnect_client(server_t* server, uint32_t index, bool se
 	}
 
 	if (send_packets) {
-		server_event_t event;
-		event.type = SERVER_EVENT_DISCONNECTED;
-		event.u.disconnected.client_index = index;
-		s_server_event_push(server, &event);
 		s_server_disconnect_sequence(server, index);
 	}
 
@@ -1449,6 +1445,12 @@ static void s_server_disconnect_client(server_t* server, uint32_t index, bool se
 	server->client_is_confirmed[index] = false;
 	hashtable_remove(&server->client_id_table, server->client_id + index);
 	hashtable_remove(&server->client_endpoint_table, server->client_endpoint + index);
+
+	// Create a user notification.
+	server_event_t event;
+	event.type = SERVER_EVENT_DISCONNECTED;
+	event.u.disconnected.client_index = index;
+	s_server_event_push(server, &event);
 }
 
 void server_stop(server_t* server)
@@ -1499,6 +1501,7 @@ static void s_server_connect_client(server_t* server, endpoint_t endpoint, encry
 	server_event_t event;
 	event.type = SERVER_EVENT_NEW_CONNECTION;
 	event.u.new_connection.client_index = index;
+	event.u.new_connection.client_id = state->client_id;
 	event.u.new_connection.endpoint = endpoint;
 	if (s_server_event_push(server, &event) < 0) return;
 

@@ -119,10 +119,10 @@ static CUTE_INLINE int s_server_event_push(server_t* server, server_event_t* eve
 	}
 }
 
-void server_update(server_t* server, float dt)
+void server_update(server_t* server, float dt, uint64_t current_time)
 {
 	// Update the protocol server.
-	protocol::server_update(server->p_server, dt, 0);
+	protocol::server_update(server->p_server, dt, current_time);
 
 	// Capture any events from the protocol server and process them.
 	protocol::server_event_t p_event;
@@ -133,6 +133,7 @@ void server_update(server_t* server, float dt)
 			server_event_t e;
 			e.type = SERVER_EVENT_TYPE_NEW_CONNECTION;
 			e.u.new_connection.client_index = p_event.u.new_connection.client_index;
+			e.u.new_connection.client_id = p_event.u.new_connection.client_id;
 			e.u.new_connection.endpoint = p_event.u.new_connection.endpoint;
 			s_server_event_push(server, &e);
 		}	break;
@@ -194,7 +195,7 @@ void server_update(server_t* server, float dt)
 
 bool server_pop_event(server_t* server, server_event_t* event)
 {
-	return s_server_event_pull(server, event) ? true : false;
+	return s_server_event_pull(server, event) ? false : true;
 }
 
 void server_free_packet(server_t* server, int client_index, void* data)

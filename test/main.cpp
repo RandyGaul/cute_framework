@@ -79,6 +79,7 @@ int main(int argc, const char** argv)
 
 	test_t tests[] = {
 		CUTE_TEST_CASE_ENTRY(test_client_server),
+		CUTE_TEST_CASE_ENTRY(test_client_server_payload),
 		CUTE_TEST_CASE_ENTRY(test_handle_basic),
 		CUTE_TEST_CASE_ENTRY(test_handle_large_loop),
 		CUTE_TEST_CASE_ENTRY(test_handle_large_loop_and_free),

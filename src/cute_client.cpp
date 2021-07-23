@@ -35,8 +35,6 @@
 
 #include <time.h>
 
-#define CUTE_CLIENT_MAX_RECONNECT_TRIES 3
-
 namespace cute
 {
 
@@ -65,6 +63,7 @@ client_t* client_make(uint16_t port, uint64_t application_id, void* user_allocat
 	transport_config_t config;
 	config.send_packet_fn = s_send;
 	config.user_allocator_context = user_allocator_context;
+	config.udata = client;
 	client->transport = transport_make(&config);
 
 	return client;
@@ -89,9 +88,9 @@ void client_disconnect(client_t* client)
 	protocol::client_disconnect(client->p_client);
 }
 
-void client_update(client_t* client, float dt)
+void client_update(client_t* client, float dt, uint64_t current_time)
 {
-	protocol::client_update(client->p_client, dt, 0);
+	protocol::client_update(client->p_client, dt, current_time);
 
 	if (protocol::client_get_state(client->p_client) == protocol::CLIENT_STATE_CONNECTED) {
 		transport_process_acks(client->transport);
@@ -110,6 +109,11 @@ bool client_pop_packet(client_t* client, void** packet, int* size)
 		got = transport_receive_fire_and_forget(client->transport, packet, size).is_error();
 	}
 	return got;
+}
+
+void client_free_packet(client_t* client, void* packet)
+{
+	transport_free_packet(client->transport, packet);
 }
 
 error_t client_send(client_t* client, const void* packet, int size, bool send_reliably)
