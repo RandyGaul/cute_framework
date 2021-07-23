@@ -96,7 +96,6 @@ struct ack_system_config_t
 
 	int index = -1;
 	error_t (*send_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
-	error_t (*open_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
 
 	void* udata = NULL;
 	void* user_allocator_context = NULL;
@@ -135,7 +134,6 @@ struct ack_system_t
 
 	int index;
 	error_t (*send_packet_fn)(int client_index, void* packet, int size, void* udata);
-	error_t (*open_packet_fn)(int client_index, void* packet, int size, void* udata);
 
 	uint64_t counters[ACK_SYSTEM_COUNTERS_MAX];
 };
@@ -179,7 +177,6 @@ struct transport_config_t
 
 	int index = -1;
 	error_t (*send_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
-	error_t (*open_packet_fn)(int client_index, void* packet, int size, void* udata) = NULL;
 };
 
 struct transport_t;
@@ -188,11 +185,11 @@ CUTE_API transport_t* CUTE_CALL transport_make(const transport_config_t* config)
 CUTE_API void CUTE_CALL transport_destroy(transport_t* transport);
 CUTE_API void CUTE_CALL transport_reset(transport_t* transport);
 
-CUTE_API error_t CUTE_CALL transport_send(transport_t* transport, void* data, int size, bool send_reliably);
+CUTE_API error_t CUTE_CALL transport_send(transport_t* transport, const void* data, int size, bool send_reliably);
 
 CUTE_API error_t CUTE_CALL transport_receive_reliably_and_in_order(transport_t* transport, void** data, int* size);
 CUTE_API error_t CUTE_CALL transport_receive_fire_and_forget(transport_t* transport, void** data, int* size);
-CUTE_API void CUTE_CALL transport_free(transport_t* transport, void* data);
+CUTE_API void CUTE_CALL transport_free_packet(transport_t* transport, void* data);
 
 CUTE_API error_t CUTE_CALL transport_process_packet(transport_t* transport, void* data, int size);
 

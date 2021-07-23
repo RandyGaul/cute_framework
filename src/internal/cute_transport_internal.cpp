@@ -393,7 +393,7 @@ ack_system_t* ack_system_make(const ack_system_config_t* config)
 	int received_packets_init = 0;
 	void* mem_ctx = config->user_allocator_context;
 
-	if (!config->send_packet_fn || !config->open_packet_fn) return NULL;
+	if (!config->send_packet_fn) return NULL;
 	if (config->max_packet_size > CUTE_TRANSPORT_PACKET_PAYLOAD_MAX) return NULL;
 
 	ack_system_t* ack_system = (ack_system_t*)CUTE_ALLOC(sizeof(ack_system_t), mem_ctx);
@@ -403,7 +403,6 @@ ack_system_t* ack_system_make(const ack_system_config_t* config)
 	ack_system->max_packet_size = config->max_packet_size;
 	ack_system->index = config->index;
 	ack_system->send_packet_fn = config->send_packet_fn;
-	ack_system->open_packet_fn = config->open_packet_fn;
 	ack_system->udata = config->udata;
 	ack_system->mem_ctx = config->user_allocator_context;
 
@@ -679,7 +678,7 @@ struct fragment_entry_t
 
 transport_t* transport_make(const transport_config_t* config)
 {
-	if (!config->send_packet_fn || !config->open_packet_fn) return NULL;
+	if (!config->send_packet_fn) return NULL;
 
 	int ret = 0;
 	int table_init = 0;
@@ -700,7 +699,6 @@ transport_t* transport_make(const transport_config_t* config)
 	ack_system_config_t ack_config;
 	ack_config.index = config->index;
 	ack_config.send_packet_fn = config->send_packet_fn;
-	ack_config.open_packet_fn = config->open_packet_fn;
 	ack_config.udata = config->udata;
 	transport->ack_system = ack_system_make(&ack_config);
 	transport->mem_ctx = config->user_allocator_context;
@@ -741,6 +739,7 @@ static void s_transport_cleanup_packet_queue(transport_t* transport, packet_queu
 
 void transport_destroy(transport_t* transport)
 {
+	if (!transport) return;
 	s_transport_cleanup_packet_queue(transport, &transport->reliable_and_in_order_assembly.assembled_packets);
 	s_transport_cleanup_packet_queue(transport, &transport->fire_and_forget_assembly.assembled_packets);
 
@@ -860,7 +859,7 @@ static error_t s_transport_send_fragments(transport_t* transport)
 	return error_success();
 }
 
-error_t s_send_reliably(transport_t* transport, void* data, int size)
+error_t s_send_reliably(transport_t* transport, const void* data, int size)
 {
 	if (size < 1) return error_failure("Negative `size` not allowed.");
 	if (size > transport->max_size_single_send) return error_failure("`size` exceeded `max_size_single_send` from `transport->config`.");
@@ -888,7 +887,7 @@ error_t s_send_reliably(transport_t* transport, void* data, int size)
 	return error_success();
 }
 
-error_t s_send(transport_t* transport, void* data, int size)
+error_t s_send(transport_t* transport, const void* data, int size)
 {
 	if (size < 1) return error_failure("Negative `size` is not valid.");
 	if (size > transport->max_size_single_send) return error_failure("`size` exceeded `max_size_single_send` config param.");
@@ -927,7 +926,7 @@ error_t s_send(transport_t* transport, void* data, int size)
 	return error_success();
 }
 
-error_t transport_send(transport_t* transport, void* data, int size, bool send_reliably)
+error_t transport_send(transport_t* transport, const void* data, int size, bool send_reliably)
 {
 	if (send_reliably) {
 		return s_send_reliably(transport, data, size);
@@ -960,7 +959,7 @@ error_t transport_receive_fire_and_forget(transport_t* transport, void** data, i
 	}
 }
 
-void transport_free(transport_t* transport, void* data)
+void transport_free_packet(transport_t* transport, void* data)
 {
 	CUTE_FREE(data, transport->mem_ctx);
 }

@@ -368,7 +368,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_encryption_map.h
 		test/test_doubly_list.h
 		test/test_connect_token_cache.h
-		test/test_client_server.h
+		test/test_protocol_client_server.h
 		test/test_sequence_buffer.h
 		test/test_transport.h
 		test/test_kv.h
@@ -381,6 +381,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_png_cache.h
 		test/test_sprite.h
 		test/test_coroutine.h
+		test/test_client_server.h
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})

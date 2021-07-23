@@ -595,8 +595,9 @@ void hashtable_init(hashtable_t* table, int key_size, int item_size, int capacit
 
 void hashtable_cleanup(hashtable_t* table)
 {
-	CUTE_FREE(table->slots, mem_ctx);
-	CUTE_FREE(table->items_key, mem_ctx);
+	CUTE_FREE(table->slots, table->mem_ctx);
+	CUTE_FREE(table->items_key, table->mem_ctx);
+	CUTE_MEMSET(table, 0, sizeof(hashtable_t));
 }
 
 static CUTE_INLINE int s_keys_equal(const hashtable_t* table, const void* a, const void* b)
@@ -806,6 +807,7 @@ void connect_token_cache_cleanup(connect_token_cache_t* cache)
 {
 	hashtable_cleanup(&cache->table);
 	CUTE_FREE(cache->node_memory, cache->mem_ctx);
+	cache->node_memory = NULL;
 }
 
 connect_token_cache_entry_t* connect_token_cache_find(connect_token_cache_t* cache, const uint8_t* hmac_bytes)
@@ -951,7 +953,7 @@ static void s_client_set_state(client_t* client, client_state_t state)
 	//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Client: Switching to state %s.", s_client_state_str(state));
 }
 
-client_t* client_make(uint16_t port, const char* web_service_address, uint64_t application_id, void* user_allocator_context)
+client_t* client_make(uint16_t port, uint64_t application_id, void* user_allocator_context)
 {
 	client_t* client = (client_t*)CUTE_ALLOC(sizeof(client_t), app->mem_ctx);
 	CUTE_MEMSET(client, 0, sizeof(client_t));
@@ -976,9 +978,8 @@ struct payload_t
 	void* data;
 };
 
-int client_connect(client_t* client, const uint8_t* connect_token)
+error_t client_connect(client_t* client, const uint8_t* connect_token)
 {
-	int ret = 0;
 	uint8_t* connect_token_packet = client_read_connect_token_from_web_service(
 		(uint8_t*)connect_token,
 		client->application_id,
@@ -987,22 +988,22 @@ int client_connect(client_t* client, const uint8_t* connect_token)
 	);
 	if (!connect_token_packet) {
 		s_client_set_state(client, CLIENT_STATE_INVALID_CONNECT_TOKEN);
-		ret = -1;
+		return error_failure("Invalid connect token.");
 	}
 
 	CUTE_MEMCPY(client->connect_token_packet, connect_token_packet, CUTE_CONNECT_TOKEN_PACKET_SIZE);
 
-	// CUTE_CHECK_POINTER(client->packet_allocator); TODO
-	CUTE_CHECK(socket_init(&client->socket, ADDRESS_TYPE_IPV6, 0, CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE, CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE));
+	if (socket_init(&client->socket, ADDRESS_TYPE_IPV6, 0, CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE, CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE)) {
+		return error_failure("Unable to open socket.");
+	}
+
 	replay_buffer_init(&client->replay_buffer);
-
 	client->server_endpoint_index = 0;
-
 	client->last_packet_sent_time = CUTE_PROTOCOL_SEND_RATE;
 	s_client_set_state(client, CLIENT_STATE_SENDING_CONNECTION_REQUEST);
 	client->goto_next_server_tentative_state = CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT;
 
-	return ret;
+	return error_success();
 }
 
 static CUTE_INLINE endpoint_t s_server_endpoint(client_t* client)
@@ -1041,7 +1042,7 @@ static void s_send(client_t* client, void* packet)
 static void s_disconnect(client_t* client, client_state_t state, int send_packets)
 {
 	void* packet = NULL;
-	while (!client_get_packet(client, &packet, NULL, NULL)) {
+	while (client_get_packet(client, &packet, NULL, NULL)) {
 		client_free_packet(client, packet);
 	}
 
@@ -1280,18 +1281,18 @@ void client_update(client_t* client, float dt, uint64_t current_time)
 	}
 }
 
-int client_get_packet(client_t* client, void** data, int* size, uint64_t* sequence)
+bool client_get_packet(client_t* client, void** data, int* size, uint64_t* sequence)
 {
 	payload_t payload;
 	if (circular_buffer_pull(&client->packet_queue, &payload, sizeof(payload_t)) < 0) {
-		return -1;
+		return false;
 	}
 
 	if (sequence) *sequence = payload.sequence;
 	if (size) *size = payload.size;
 	*data = payload.data;
 
-	return 0;
+	return true;
 }
 
 void client_free_packet(client_t* client, void* packet)
@@ -1300,16 +1301,16 @@ void client_free_packet(client_t* client, void* packet)
 	packet_allocator_free(NULL, (packet_type_t)payload_packet->packet_type, payload_packet);
 }
 
-int client_send_data(client_t* client, const void* data, int size)
+error_t client_send(client_t* client, const void* data, int size)
 {
-	if (size < 1) return -1;
-	if (size > CUTE_PROTOCOL_PACKET_PAYLOAD_MAX) return -1;
+	if (size < 1) return error_failure("`size` can not be negative.");
+	if (size > CUTE_PROTOCOL_PACKET_PAYLOAD_MAX) return error_failure("`size` exceeded `CUTE_PROTOCOL_PACKET_PAYLOAD_MAX`.");
 	packet_payload_t packet;
 	packet.packet_type = PACKET_TYPE_PAYLOAD;
 	packet.payload_size = size;
 	CUTE_MEMCPY(packet.payload, data, size);
 	s_send(client, &packet);
-	return 0;
+	return error_success();
 }
 
 client_state_t client_get_state(client_t* client)
@@ -1382,7 +1383,7 @@ error_t server_start(server_t* server, const char* address, uint32_t connection_
 	hashtable_init(&server->client_id_table, sizeof(uint64_t), sizeof(int), CUTE_PROTOCOL_SERVER_MAX_CLIENTS, server->mem_ctx);
 	cleanup_client_id_table = 1;
 
-	server->running = 1;
+	server->running = true;
 	server->challenge_nonce = 0;
 	server->client_count = 0;
 	server->connection_timeout = connection_timeout;
@@ -1407,7 +1408,6 @@ static CUTE_INLINE int s_server_event_pull(server_t* server, server_event_t* eve
 static CUTE_INLINE int s_server_event_push(server_t* server, server_event_t* event)
 {
 	if (circular_buffer_push(&server->event_queue, event, sizeof(server_event_t)) < 0) {
-		//log(CUTE_LOG_LEVEL_WARNING, "Protocol Server: Event queue is full; growing (doubling in size) to %d bytes", server->event_queue.capacity * 2);
 		if (circular_buffer_grow(&server->event_queue, server->event_queue.capacity * 2) < 0) {
 			return -1;
 		}
@@ -1417,9 +1417,47 @@ static CUTE_INLINE int s_server_event_push(server_t* server, server_event_t* eve
 	}
 }
 
+static void s_server_disconnect_sequence(server_t* server, uint32_t index)
+{
+	for (int i = 0; i < CUTE_DISCONNECT_REDUNDANT_PACKET_COUNT; ++i)
+	{
+		packet_disconnect_t packet;
+		packet.packet_type = PACKET_TYPE_DISCONNECT;
+		if (packet_write(&packet, server->buffer, server->client_sequence[index]++, server->client_server_to_client_key + index) == 73) {
+			socket_send(&server->socket, server->client_endpoint[index], server->buffer, 73);
+		}
+	}
+}
+
+static void s_server_disconnect_client(server_t* server, uint32_t index, bool send_packets)
+{
+	if (!server->client_is_connected[index]) {
+		return;
+	}
+
+	if (send_packets) {
+		server_event_t event;
+		event.type = SERVER_EVENT_DISCONNECTED;
+		event.u.disconnected.client_index = index;
+		s_server_event_push(server, &event);
+		s_server_disconnect_sequence(server, index);
+	}
+
+	// Free client resources.
+	server->client_count--;
+	server->client_is_connected[index] = false;
+	server->client_is_confirmed[index] = false;
+	hashtable_remove(&server->client_id_table, server->client_id + index);
+	hashtable_remove(&server->client_endpoint_table, server->client_endpoint + index);
+}
+
 void server_stop(server_t* server)
 {
-	server->running = 0;
+	server->running = false;
+
+	for (int i = 0; i < CUTE_PROTOCOL_SERVER_MAX_CLIENTS; ++i) {
+		s_server_disconnect_client(server, i, false);
+	}
 
 	// Free any lingering payload packets.
 	while (1)
@@ -1441,7 +1479,7 @@ void server_stop(server_t* server)
 
 bool server_running(server_t* server)
 {
-	return server->running ? true : false;
+	return server->running;
 }
 
 static void s_server_connect_client(server_t* server, endpoint_t endpoint, encryption_state_t* state)
@@ -1488,54 +1526,6 @@ static void s_server_connect_client(server_t* server, endpoint_t endpoint, encry
 	packet.connection_timeout = server->connection_timeout;
 	if (packet_write(&packet, server->buffer, server->client_sequence[index]++, server->client_server_to_client_key + index) == 16 + 73) {
 		socket_send(&server->socket, server->client_endpoint[index], server->buffer, 16 + 73);
-		//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[index]);
-	}
-}
-
-static void s_server_disconnect_sequence(server_t* server, uint32_t index)
-{
-	for (int i = 0; i < CUTE_DISCONNECT_REDUNDANT_PACKET_COUNT; ++i)
-	{
-		packet_disconnect_t packet;
-		packet.packet_type = PACKET_TYPE_DISCONNECT;
-		if (packet_write(&packet, server->buffer, server->client_sequence[index]++, server->client_server_to_client_key + index) == 73) {
-			socket_send(&server->socket, server->client_endpoint[index], server->buffer, 73);
-			//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[index]);
-		}
-	}
-}
-
-static void s_server_disconnect_client(server_t* server, uint32_t index, bool send_packets)
-{
-	//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Disconnecting client %" PRIu64 ".", server->client_id[index]);
-
-	server_event_t event;
-	event.type = SERVER_EVENT_DISCONNECTED;
-	event.u.disconnected.client_index = index;
-	if (s_server_event_push(server, &event) < 0) return;
-
-	if (send_packets) {
-		s_server_disconnect_sequence(server, index);
-	}
-
-	// Free client resources.
-	server->client_is_confirmed[index] = 0;
-	hashtable_remove(&server->client_id_table, server->client_id + index);
-	hashtable_remove(&server->client_endpoint_table, server->client_endpoint + index);
-
-	// Move client in back to the empty slot.
-	int last_index = --server->client_count;
-	if (last_index != index) {
-		server->client_id[index]                        = server->client_id[last_index];
-		server->client_is_connected[index]              = server->client_is_connected[last_index];
-		server->client_is_confirmed[index]              = server->client_is_confirmed[last_index];
-		server->client_last_packet_received_time[index] = server->client_last_packet_received_time[last_index];
-		server->client_last_packet_sent_time[index]     = server->client_last_packet_sent_time[last_index];
-		server->client_endpoint[index]                  = server->client_endpoint[last_index];
-		server->client_sequence[index]                  = server->client_sequence[last_index];
-		server->client_client_to_server_key[index]      = server->client_client_to_server_key[last_index];
-		server->client_server_to_client_key[index]      = server->client_server_to_client_key[last_index];
-		server->client_replay_buffer[index]             = server->client_replay_buffer[last_index];
 	}
 }
 
@@ -1743,25 +1733,24 @@ static void s_server_send_packets(server_t* server, float dt)
 	}
 
 	// Update client timers.
-	int client_count = server->client_count;
 	float* last_received_times = server->client_last_packet_received_time;
 	float* last_sent_times = server->client_last_packet_sent_time;
-	for (int i = 0; i < client_count; ++i)
-	{
-		last_received_times[i] += dt;
-		last_sent_times[i] += dt;
+	bool* connected = server->client_is_connected;
+	for (int i = 0; i < CUTE_PROTOCOL_SERVER_MAX_CLIENTS; ++i) {
+		if (connected[i]) {
+			last_received_times[i] += dt;
+			last_sent_times[i] += dt;
+		}
 	}
 
 	// Send keepalive packets.
-	//int* is_loopback = server->client_is_loopback;
 	bool* confirmed = server->client_is_confirmed;
 	uint64_t* sequences = server->client_sequence;
 	crypto_key_t* server_to_client_keys = server->client_server_to_client_key;
 	handle_t* ids = server->client_id;
 	uint32_t connection_timeout = server->connection_timeout;
-	for (int i = 0; i < client_count; ++i)
-	{
-		//if (!is_loopback[i]) {
+	for (int i = 0; i < CUTE_PROTOCOL_SERVER_MAX_CLIENTS; ++i) {
+		if (connected[i]) {
 			if (last_sent_times[i] >= CUTE_PROTOCOL_SEND_RATE) {
 				last_sent_times[i] = 0;
 
@@ -1784,13 +1773,13 @@ static void s_server_send_packets(server_t* server, float dt)
 					//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[i]);
 				}
 			}
-		//}
+		}
 	}
 }
 
 bool server_pop_event(server_t* server, server_event_t* event)
 {
-	return s_server_event_pull(server, event) ? true : false;
+	return s_server_event_pull(server, event) ? false : true;
 }
 
 void server_free_packet(server_t* server, void* packet)
@@ -1799,10 +1788,10 @@ void server_free_packet(server_t* server, void* packet)
 	packet_allocator_free(server->packet_allocator, (packet_type_t)payload_packet->packet_type, payload_packet);
 }
 
-void server_disconnect_client(server_t* server, int client_index)
+void server_disconnect_client(server_t* server, int client_index, bool notify_client)
 {
 	CUTE_ASSERT(server->client_count >= 1);
-	s_server_disconnect_client(server, client_index, true);
+	s_server_disconnect_client(server, client_index, notify_client);
 }
 
 error_t server_send_to_client(server_t* server, const void* packet, int size, int client_index)
@@ -1845,16 +1834,17 @@ error_t server_send_to_client(server_t* server, const void* packet, int size, in
 
 static void s_server_look_for_timeouts(server_t* server)
 {
-	int client_count = server->client_count;
 	float* last_received_times = server->client_last_packet_received_time;
-	for (int i = 0; i < client_count;)
-	{
-		if (last_received_times[i] >= (float)server->connection_timeout) {
-			--client_count;
-			//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Client %" PRIu64 " has timed out.", server->client_id[i]);
-			server_disconnect_client(server, i);
+	for (int i = 0; i < CUTE_PROTOCOL_SERVER_MAX_CLIENTS;) {
+		if (server->client_is_connected[i]) {
+			if (last_received_times[i] >= (float)server->connection_timeout) {
+				//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Client %" PRIu64 " has timed out.", server->client_id[i]);
+				server_disconnect_client(server, i, true);
+			} else {
+				 ++i;
+			}
 		} else {
-			 ++i;
+			++i;
 		}
 	}
 }
@@ -1877,6 +1867,13 @@ uint64_t server_get_client_id(server_t* server, int client_index)
 {
 	CUTE_ASSERT(server->client_count >= 1 && client_index >= 0 && client_index < CUTE_PROTOCOL_SERVER_MAX_CLIENTS);
 	return server->client_id[client_index];
+}
+
+bool server_is_client_connected(server_t* server, int client_index)
+{
+	// Confirmed means validated connect token, not just an alive connection.
+	// Merely checking server->client_is_connected[client_index] is not what we're looking for.
+	return server->client_is_confirmed[client_index];
 }
 
 }

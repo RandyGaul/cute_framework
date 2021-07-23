@@ -271,7 +271,7 @@ struct client_t
 
 struct server_t
 {
-	int running;
+	bool running;
 	uint64_t application_id;
 	uint64_t current_time;
 	socket_t socket;

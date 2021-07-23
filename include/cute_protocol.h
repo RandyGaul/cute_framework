@@ -109,16 +109,16 @@ enum client_state_t : int
 	CLIENT_STATE_CONNECTED                     =  3,
 };
 
-CUTE_API client_t* CUTE_CALL client_make(uint16_t port, const char* web_service_address, uint64_t application_id, void* user_allocator_context = NULL);
+CUTE_API client_t* CUTE_CALL client_make(uint16_t port, uint64_t application_id, void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL client_destroy(client_t* client);
 
-CUTE_API int CUTE_CALL client_connect(client_t* client, const uint8_t* connect_token);
+CUTE_API error_t CUTE_CALL client_connect(client_t* client, const uint8_t* connect_token);
 CUTE_API void CUTE_CALL client_disconnect(client_t* client);
 CUTE_API void CUTE_CALL client_update(client_t* client, float dt, uint64_t current_time);
 
-CUTE_API int CUTE_CALL client_get_packet(client_t* client, void** data, int* size, uint64_t* sequence);
+CUTE_API bool CUTE_CALL client_get_packet(client_t* client, void** data, int* size, uint64_t* sequence);
 CUTE_API void CUTE_CALL client_free_packet(client_t* client, void* packet);
-CUTE_API int CUTE_CALL client_send_data(client_t* client, const void* data, int size);
+CUTE_API error_t CUTE_CALL client_send(client_t* client, const void* data, int size);
 
 CUTE_API client_state_t CUTE_CALL client_get_state(client_t* client);
 CUTE_API uint64_t CUTE_CALL client_get_id(client_t* client);
@@ -138,10 +138,11 @@ CUTE_API void CUTE_CALL server_stop(server_t* server);
 CUTE_API bool CUTE_CALL server_running(server_t* server);
 
 CUTE_API void CUTE_CALL server_update(server_t* server, float dt, uint64_t current_time);
-CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, int client_index);
+CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, int client_index, bool notify_client);
 
 CUTE_API int CUTE_CALL server_client_count(server_t* server);
 CUTE_API uint64_t CUTE_CALL server_get_client_id(server_t* server, int client_index);
+CUTE_API bool CUTE_CALL server_is_client_connected(server_t* server, int client_index);
 
 enum server_event_type_t : int
 {
@@ -177,7 +178,7 @@ struct server_event_t
 
 CUTE_API bool CUTE_CALL server_pop_event(server_t* server, server_event_t* event);
 CUTE_API void CUTE_CALL server_free_packet(server_t* server, void* packet);
-CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, int client_index);
+CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, int client_index, bool notify_client);
 CUTE_API error_t CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, int client_index);
 
 // -------------------------------------------------------------------------------------------------

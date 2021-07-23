@@ -31,30 +31,22 @@
 #include <internal/cute_protocol_internal.h>
 #include <internal/cute_transport_internal.h>
 
-#define CUTE_SERVER_SEND_BUFFER_SIZE (20 * CUTE_MB)
-#define CUTE_SERVER_RECEIVE_BUFFER_SIZE (20 * CUTE_MB)
-
-#define CUTE_SERVER_CONNECTION_DENIED_MAX_COUNT (1024)
-
 namespace cute
 {
 
 struct server_t
 {
-	bool running = 0;
+	bool running = false;
 	endpoint_t endpoint;
 	crypto_sign_public_t public_key;
 	crypto_sign_secret_t secret_key;
 	server_config_t config;
 	socket_t socket;
 	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
-	void* mem_ctx = NULL;
-
-	int connection_denied_count = 0;
-	int client_count = 0;
+	circular_buffer_t event_queue;
 	transport_t* client_transports[CUTE_SERVER_MAX_CLIENTS];
-
 	protocol::server_t* p_server = NULL;
+	void* mem_ctx = NULL;
 };
 
 static error_t s_send_packet_fn(int client_index, void* packet, int size, void* udata)
@@ -63,96 +55,163 @@ static error_t s_send_packet_fn(int client_index, void* packet, int size, void* 
 	return protocol::server_send_to_client(server->p_server, packet, size, client_index);
 }
 
-static error_t s_open_packet_fn(int index, void* packet, int size, void* udata)
-{
-	server_t* server = (server_t*)udata;
-	return error_success();
-}
-
 server_t* server_create(server_config_t* config, void* user_allocator_context)
 {
 	server_t* server = CUTE_NEW(server_t, user_allocator_context);
 	server->config = *config;
-
+	server->event_queue = circular_buffer_make(CUTE_MB * 10, user_allocator_context);
 	server->p_server = protocol::server_make(config->application_id, &server->config.public_key, &server->config.secret_key, server->mem_ctx);
-
-	for (int i = 0; i < CUTE_SERVER_MAX_CLIENTS; ++i) {
-		transport_config_t transport_config;
-		transport_config.index = i;
-		transport_config.send_packet_fn = s_send_packet_fn;
-		transport_config.open_packet_fn = s_open_packet_fn;
-		transport_config.udata = server;
-		transport_config.user_allocator_context = user_allocator_context;
-		server->client_transports[i] = transport_make(&transport_config);
-	}
 
 	return server;
 }
 
 void server_destroy(server_t* server)
 {
+	server_stop(server);
+	protocol::server_destroy(server->p_server);
+	void* mem_ctx = server->mem_ctx;
+	circular_buffer_free(&server->event_queue);
+	server->~server_t();
+	CUTE_FREE(server, mem_ctx);
 }
 
 error_t server_start(server_t* server, const char* address_and_port)
 {
 	error_t err = protocol::server_start(server->p_server, address_and_port, server->config.connection_timeout);
 	if (err.is_error()) return err;
+
+	for (int i = 0; i < CUTE_SERVER_MAX_CLIENTS; ++i) {
+		transport_config_t transport_config;
+		transport_config.index = i;
+		transport_config.send_packet_fn = s_send_packet_fn;
+		transport_config.udata = server;
+		transport_config.user_allocator_context = server->mem_ctx;
+		server->client_transports[i] = transport_make(&transport_config);
+	}
+
 	return error_success();
 }
 
 void server_stop(server_t* server)
 {
-	//while(server->client_count)
-	//{
-	//	server_disconnect_client(server, server->client_handle[0]);
-	//}
+	circular_buffer_reset(&server->event_queue);
+	protocol::server_stop(server->p_server);
+	for (int i = 0; i < CUTE_SERVER_MAX_CLIENTS; ++i) {
+		transport_destroy(server->client_transports[i]);
+		server->client_transports[i] = NULL;
+	}
+}
+
+static CUTE_INLINE int s_server_event_pull(server_t* server, server_event_t* event)
+{
+	return circular_buffer_pull(&server->event_queue, event, sizeof(server_event_t));
+}
+
+static CUTE_INLINE int s_server_event_push(server_t* server, server_event_t* event)
+{
+	if (circular_buffer_push(&server->event_queue, event, sizeof(server_event_t)) < 0) {
+		if (circular_buffer_grow(&server->event_queue, server->event_queue.capacity * 2) < 0) {
+			return -1;
+		}
+		return circular_buffer_push(&server->event_queue, event, sizeof(server_event_t));
+	} else {
+		return 0;
+	}
 }
 
 void server_update(server_t* server, float dt)
 {
-	server->connection_denied_count = 0;
-	//s_server_recieve_packets(server);
-	//s_server_send_packets(server, dt);
-}
+	// Update the protocol server.
+	protocol::server_update(server->p_server, dt, 0);
 
-bool server_pop_event(server_t* server, server_event_t* event)
-{
+	// Capture any events from the protocol server and process them.
 	protocol::server_event_t p_event;
-	server_event_t e;
-	if (protocol::server_pop_event(server->p_server, &p_event)) {
+	while (protocol::server_pop_event(server->p_server, &p_event)) {
 		switch (p_event.type) {
 		case protocol::SERVER_EVENT_NEW_CONNECTION:
 		{
+			server_event_t e;
 			e.type = SERVER_EVENT_TYPE_NEW_CONNECTION;
 			e.u.new_connection.client_index = p_event.u.new_connection.client_index;
 			e.u.new_connection.endpoint = p_event.u.new_connection.endpoint;
-			*event = e;
+			s_server_event_push(server, &e);
 		}	break;
 
 		case protocol::SERVER_EVENT_DISCONNECTED:
 		{
+			server_event_t e;
+			e.type = SERVER_EVENT_TYPE_DISCONNECTED;
+			e.u.disconnected.client_index = p_event.u.disconnected.client_index;
+			s_server_event_push(server, &e);
 		}	break;
 
+		// Protocol packets are processed by the reliability transport layer before they
+		// are converted into user-facing server events.
 		case protocol::SERVER_EVENT_PAYLOAD_PACKET:
 		{
 			int index = p_event.u.payload_packet.client_index;
 			void* data = p_event.u.payload_packet.data;
 			int size = p_event.u.payload_packet.size;
 			transport_process_packet(server->client_transports[index], data, size);
+			protocol::server_free_packet(server->p_server, data);
 		}	break;
 		}
-
-		return true;
 	}
-	
-	return false;
+
+	// Update all client reliability transports.
+	for (int i = 0; i < CUTE_SERVER_MAX_CLIENTS; ++i) {
+		if (protocol::server_is_client_connected(server->p_server, i)) {
+			transport_process_acks(server->client_transports[i]);
+			transport_resend_unacked_fragments(server->client_transports[i]);
+		}
+	}
+
+	// Look for any packets to receive from the reliability layer.
+	// Convert these into server payload events.
+	for (int i = 0; i < CUTE_SERVER_MAX_CLIENTS; ++i) {
+		if (protocol::server_is_client_connected(server->p_server, i)) {
+			void* data;
+			int size;
+			while (!transport_receive_reliably_and_in_order(server->client_transports[i], &data, &size).is_error()) {
+				server_event_t e;
+				e.type = SERVER_EVENT_TYPE_PAYLOAD_PACKET;
+				e.u.payload_packet.client_index = i;
+				e.u.payload_packet.data = data;
+				e.u.payload_packet.size = size;
+				s_server_event_push(server, &e);
+			}
+			while (!transport_receive_fire_and_forget(server->client_transports[i], &data, &size).is_error()) {
+				server_event_t e;
+				e.type = SERVER_EVENT_TYPE_PAYLOAD_PACKET;
+				e.u.payload_packet.client_index = i;
+				e.u.payload_packet.data = data;
+				e.u.payload_packet.size = size;
+				s_server_event_push(server, &e);
+			}
+		}
+	}
 }
 
-void server_disconnect_client(server_t* server, handle_t client_id, bool send_notification_to_client)
+bool server_pop_event(server_t* server, server_event_t* event)
 {
+	return s_server_event_pull(server, event) ? true : false;
 }
 
-void server_look_for_and_disconnected_timed_out_clients(server_t* server)
+void server_free_packet(server_t* server, int client_index, void* data)
+{
+	CUTE_ASSERT(client_index >= 0 && client_index < CUTE_SERVER_MAX_CLIENTS);
+	CUTE_ASSERT(protocol::server_is_client_connected(server->p_server, client_index));
+	transport_free_packet(server->client_transports[client_index], data);
+}
+
+void server_disconnect_client(server_t* server, int client_index, bool notify_client)
+{
+	CUTE_ASSERT(client_index >= 0 && client_index < CUTE_SERVER_MAX_CLIENTS);
+	CUTE_ASSERT(protocol::server_is_client_connected(server->p_server, client_index));
+	protocol::server_disconnect_client(server->p_server, client_index, notify_client);
+}
+
+void server_find_and_disconnect_timed_out_clients(server_t* server, float timeout)
 {
 	//int client_count = server->client_count;
 	//float* last_recieved_times = server->client_last_packet_recieved_time;
@@ -168,25 +227,37 @@ void server_look_for_and_disconnected_timed_out_clients(server_t* server)
 	//}
 }
 
-void server_broadcast_to_all_clients(server_t* server, const void* packet, int size, int reliable)
+void server_send(server_t* server, const void* packet, int size, int client_index, bool send_reliably)
+{
+	CUTE_ASSERT(client_index >= 0 && client_index < CUTE_SERVER_MAX_CLIENTS);
+	CUTE_ASSERT(protocol::server_is_client_connected(server->p_server, client_index));
+	transport_send(server->client_transports[client_index], packet, size, send_reliably);
+}
+
+void server_send_to_all_clients(server_t* server, const void* packet, int size, bool send_reliably)
 {
 }
 
-void server_broadcast_to_all_but_one_client(server_t* server, const void* packet, int size, handle_t id, int reliable)
+void server_send_to_all_but_one_client(server_t* server, const void* packet, int size, int client_index, bool send_reliably)
 {
+	CUTE_ASSERT(client_index >= 0 && client_index < CUTE_SERVER_MAX_CLIENTS);
+	CUTE_ASSERT(protocol::server_is_client_connected(server->p_server, client_index));
 }
 
-void server_send_to_client(server_t* server, const void* packet, int size, handle_t id, int reliable)
+float server_time_of_last_packet_recieved_from_client(server_t* server, int client_index)
 {
-}
-
-float server_get_last_packet_recieved_time_from_client(server_t* server, handle_t client_id)
-{
+	CUTE_ASSERT(client_index >= 0 && client_index < CUTE_SERVER_MAX_CLIENTS);
+	CUTE_ASSERT(protocol::server_is_client_connected(server->p_server, client_index));
 	//uint32_t index = s_client_index_from_handle(server, client_id);
 	//if (index == UINT32_MAX) return -1.0f;
 	//CUTE_ASSERT(server->client_is_connected[index]);
 	//return server->client_last_packet_recieved_time[index];
 	return 0;
+}
+
+bool server_is_client_connected(server_t* server, int client_index)
+{
+	return protocol::server_is_client_connected(server->p_server, client_index);
 }
 
 }

@@ -42,7 +42,7 @@
 #include <test_encryption_map.h>
 #include <test_doubly_list.h>
 #include <test_connect_token_cache.h>
-#include <test_client_server.h>
+#include <test_protocol_client_server.h>
 #include <test_sequence_buffer.h>
 #include <test_transport.h>
 #include <test_base64.h>
@@ -55,6 +55,7 @@
 #include <test_png_cache.h>
 #include <test_sprite.h>
 #include <test_coroutine.h>
+#include <test_client_server.h>
 
 int main(int argc, const char** argv)
 {
@@ -77,6 +78,7 @@ int main(int argc, const char** argv)
 	crypto_init();
 
 	test_t tests[] = {
+		CUTE_TEST_CASE_ENTRY(test_client_server),
 		CUTE_TEST_CASE_ENTRY(test_handle_basic),
 		CUTE_TEST_CASE_ENTRY(test_handle_large_loop),
 		CUTE_TEST_CASE_ENTRY(test_handle_large_loop_and_free),
