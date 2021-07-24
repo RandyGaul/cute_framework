@@ -95,14 +95,13 @@ void client_update(client_t* client, double dt, uint64_t current_time)
 	void* packet;
 	int size;
 	uint64_t sequence;
-	if (protocol::client_get_packet(client->p_client, &packet, &size, &sequence)) {
+	while (protocol::client_get_packet(client->p_client, &packet, &size, &sequence)) {
 		transport_process_packet(client->transport, packet, size);
 		protocol::client_free_packet(client->p_client, packet);
 	}
 
 	if (protocol::client_get_state(client->p_client) == protocol::CLIENT_STATE_CONNECTED) {
-		transport_process_acks(client->transport);
-		transport_resend_unacked_fragments(client->transport);
+		transport_update(client->transport, dt);
 	}
 }
 

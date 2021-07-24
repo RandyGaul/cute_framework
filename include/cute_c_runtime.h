@@ -24,7 +24,8 @@
 
 #ifndef CUTE_ASSERT
 #	include <assert.h>
-#	define CUTE_ASSERT assert
+//#	define CUTE_ASSERT assert
+#define CUTE_ASSERT(x) do { if (!(x)) __debugbreak(); } while (0)
 #endif
 
 #ifndef CUTE_MEMCPY

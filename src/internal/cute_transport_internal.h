@@ -119,10 +119,10 @@ struct ack_system_t
 	sequence_buffer_t sent_packets;
 	sequence_buffer_t received_packets;
 
-	float rtt;
-	float packet_loss;
-	float outgoing_bandwidth_kbps;
-	float incoming_bandwidth_kbps;
+	double rtt;
+	double packet_loss;
+	double outgoing_bandwidth_kbps;
+	double incoming_bandwidth_kbps;
 
 	int index;
 	error_t (*send_packet_fn)(int client_index, void* packet, int size, void* udata);
@@ -143,10 +143,10 @@ CUTE_API int CUTE_CALL ack_system_get_acks_count(ack_system_t* ack_system);
 CUTE_API void CUTE_CALL ack_system_clear_acks(ack_system_t* ack_system);
 
 CUTE_API void CUTE_CALL ack_system_update(ack_system_t* ack_system, float dt);
-CUTE_API float CUTE_CALL ack_system_rtt(ack_system_t* ack_system);
-CUTE_API float CUTE_CALL ack_system_packet_loss(ack_system_t* ack_system);
-CUTE_API float CUTE_CALL ack_system_bandwidth_outgoing_kbps(ack_system_t* ack_system);
-CUTE_API float CUTE_CALL ack_system_bandwidth_incoming_kbps(ack_system_t* ack_system);
+CUTE_API double CUTE_CALL ack_system_rtt(ack_system_t* ack_system);
+CUTE_API double CUTE_CALL ack_system_packet_loss(ack_system_t* ack_system);
+CUTE_API double CUTE_CALL ack_system_bandwidth_outgoing_kbps(ack_system_t* ack_system);
+CUTE_API double CUTE_CALL ack_system_bandwidth_incoming_kbps(ack_system_t* ack_system);
 
 CUTE_API uint64_t CUTE_CALL ack_system_get_counter(ack_system_t* ack_system, ack_system_counter_t counter);
 
@@ -185,6 +185,7 @@ CUTE_API void CUTE_CALL transport_free_packet(transport_t* transport, void* data
 
 CUTE_API error_t CUTE_CALL transport_process_packet(transport_t* transport, void* data, int size);
 
+CUTE_API void CUTE_CALL transport_update(transport_t* transport, double dt);
 CUTE_API void CUTE_CALL transport_process_acks(transport_t* transport);
 CUTE_API void CUTE_CALL transport_resend_unacked_fragments(transport_t* transport);
 CUTE_API int CUTE_CALL transport_unacked_fragment_count(transport_t* transport);

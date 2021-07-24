@@ -591,7 +591,7 @@ void ack_system_clear_acks(ack_system_t* ack_system)
 	ack_system->acks.clear();
 }
 
-static CUTE_INLINE float s_calc_packet_loss(float packet_loss, sequence_buffer_t* sent_packets)
+static CUTE_INLINE double s_calc_packet_loss(double packet_loss, sequence_buffer_t* sent_packets)
 {
 	int packet_count = 0;
 	int packet_drop_count = 0;
@@ -605,13 +605,13 @@ static CUTE_INLINE float s_calc_packet_loss(float packet_loss, sequence_buffer_t
 		}
 	}
 
-	float loss = (float)packet_drop_count / (float)packet_count;
-	packet_loss += (loss - packet_loss) * 0.1f;
+	double loss = (double)packet_drop_count / (double)packet_count;
+	packet_loss += (loss - packet_loss) * 0.1;
 	if (packet_loss < 0) packet_loss = 0;
 	return packet_loss;
 }
 
-static CUTE_INLINE float s_calc_bandwidth(float bandwidth, sequence_buffer_t* sent_packets)
+static CUTE_INLINE double s_calc_bandwidth(double bandwidth, sequence_buffer_t* sent_packets)
 {
 	int bytes_sent = 0;
 	double start_timestamp = DBL_MAX;
@@ -628,7 +628,7 @@ static CUTE_INLINE float s_calc_bandwidth(float bandwidth, sequence_buffer_t* se
 	}
 
 	if (start_timestamp != DBL_MAX) {
-		float sent_bandwidth = (float)(((double)bytes_sent / 1024.0) / (end_timestamp - start_timestamp));
+		double sent_bandwidth = (((double)bytes_sent / 1024.0) / (end_timestamp - start_timestamp));
 		bandwidth += (sent_bandwidth - bandwidth) * 0.1f;
 		if (bandwidth < 0) bandwidth = 0;
 	}
@@ -636,7 +636,7 @@ static CUTE_INLINE float s_calc_bandwidth(float bandwidth, sequence_buffer_t* se
 	return bandwidth;
 }
 
-void ack_system_update(ack_system_t* ack_system, float dt)
+void ack_system_update(ack_system_t* ack_system, double dt)
 {
 	ack_system->time += dt;
 	ack_system->packet_loss = s_calc_packet_loss(ack_system->packet_loss, &ack_system->sent_packets);
@@ -644,22 +644,22 @@ void ack_system_update(ack_system_t* ack_system, float dt)
 	ack_system->outgoing_bandwidth_kbps = s_calc_bandwidth(ack_system->outgoing_bandwidth_kbps, &ack_system->received_packets);
 }
 
-float ack_system_rtt(ack_system_t* ack_system)
+double ack_system_rtt(ack_system_t* ack_system)
 {
 	return ack_system->rtt;
 }
 
-float ack_system_packet_loss(ack_system_t* ack_system)
+double ack_system_packet_loss(ack_system_t* ack_system)
 {
 	return ack_system->packet_loss;
 }
 
-float ack_system_bandwidth_outgoing_kbps(ack_system_t* ack_system)
+double ack_system_bandwidth_outgoing_kbps(ack_system_t* ack_system)
 {
 	return ack_system->outgoing_bandwidth_kbps;
 }
 
-float ack_system_bandwidth_incoming_kbps(ack_system_t* ack_system)
+double ack_system_bandwidth_incoming_kbps(ack_system_t* ack_system)
 {
 	return ack_system->incoming_bandwidth_kbps;
 }
@@ -1058,6 +1058,13 @@ error_t transport_process_packet(transport_t* transport, void* data, int size)
 	return error_success();
 }
 
+void transport_update(transport_t* transport, double dt)
+{
+	transport_process_acks(transport);
+	transport_resend_unacked_fragments(transport);
+	ack_system_update(transport->ack_system, dt);
+}
+
 void transport_process_acks(transport_t* transport)
 {
 	uint16_t* acks = ack_system_get_acks(transport->ack_system);
@@ -1091,19 +1098,17 @@ void transport_process_acks(transport_t* transport)
 void transport_resend_unacked_fragments(transport_t* transport)
 {
 	// Resend unacked fragments which were previously sent.
+	double timestamp = transport->ack_system->time;
 	int count = transport->fragments.count();
 	fragment_t* fragments = transport->fragments.data();
 
 	for (int i = 0; i < count;)
 	{
 		fragment_t* fragment = fragments + i;
-
-		uint8_t* buffer = (uint8_t*)fragment->data;
-		uint8_t prefix = read_uint8(&buffer);
-		uint16_t reassembly_sequence = read_uint16(&buffer);
-		uint16_t fragment_count = read_uint16(&buffer);
-		uint16_t fragment_index = read_uint16(&buffer);
-		uint16_t fragment_size = read_uint16(&buffer);
+		if (fragment->timestamp + 0.01f >= timestamp) {
+			++i;
+			continue;
+		}
 
 		// Send to ack system.
 		uint16_t sequence;
@@ -1119,6 +1124,7 @@ void transport_resend_unacked_fragments(transport_t* transport)
 			 ++i;
 		}
 
+		fragment->timestamp = timestamp;
 		fragment_entry_t* fragment_entry = (fragment_entry_t*)sequence_buffer_insert(&transport->sent_fragments, sequence);
 		CUTE_ASSERT(fragment_entry);
 		fragment_entry->fragment_handle = fragment->handle;

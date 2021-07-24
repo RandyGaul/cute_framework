@@ -267,14 +267,14 @@ int test_client_server_sim()
 	CUTE_TEST_ASSERT(e.u.new_connection.client_index == 0);
 	CUTE_TEST_ASSERT(e.u.new_connection.client_id == client_id);
 
-	//client_enable_network_simulator(client, 0, 0, 0, 0);
-	//server_enable_network_simulator(server, 0, 0, 0, 0);
+	client_enable_network_simulator(client, 0, 0, 0.5, 0);
+	server_enable_network_simulator(server, 0, 0, 0.5, 0);
 
 	bool soak = false;
 	bool do_send = true;
-	int packet_size = 10000;
+	int packet_size = 100000;
 	void* packet = CUTE_ALLOC(packet_size, NULL);
-	double dt = 1.0/60.0;
+	double dt = 1.0/600.0;
 	iters = 0;
 
 	uint64_t keepalive = ~0ULL;
@@ -307,10 +307,11 @@ int test_client_server_sim()
 			CUTE_TEST_ASSERT(!CUTE_MEMCMP(data, packet, packet_size));
 			do_send = true;
 			++iters;
+			printf("iter %d\n", iters);
 			server_free_packet(server, 0, data);
 		}
 
-		if (!soak && iters == 100) {
+		if (!soak && iters == 10) {
 			break;
 		}
 	}

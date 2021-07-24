@@ -162,8 +162,7 @@ void server_update(server_t* server, double dt, uint64_t current_time)
 	// Update all client reliability transports.
 	for (int i = 0; i < CUTE_SERVER_MAX_CLIENTS; ++i) {
 		if (protocol::server_is_client_connected(server->p_server, i)) {
-			transport_process_acks(server->client_transports[i]);
-			transport_resend_unacked_fragments(server->client_transports[i]);
+			transport_update(server->client_transports[i], dt);
 		}
 	}
 
