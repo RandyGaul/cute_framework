@@ -211,8 +211,8 @@ struct encryption_state_t
 	uint64_t sequence;
 	uint64_t expiration_timestamp;
 	uint32_t handshake_timeout;
-	float last_packet_recieved_time;
-	float last_packet_sent_time;
+	double last_packet_recieved_time;
+	double last_packet_sent_time;
 	crypto_key_t client_to_server_key;
 	crypto_key_t server_to_client_key;
 	uint64_t client_id;
@@ -235,21 +235,23 @@ CUTE_API void CUTE_CALL encryption_map_remove(encryption_map_t* map, endpoint_t 
 CUTE_API endpoint_t* CUTE_CALL encryption_map_get_endpoints(encryption_map_t* map);
 CUTE_API encryption_state_t* CUTE_CALL encryption_map_get_states(encryption_map_t* map);
 
-CUTE_API void CUTE_CALL encryption_map_look_for_timeouts_or_expirations(encryption_map_t* map, float dt, uint64_t time);
+CUTE_API void CUTE_CALL encryption_map_look_for_timeouts_or_expirations(encryption_map_t* map, double dt, uint64_t time);
 
 // -------------------------------------------------------------------------------------------------
+
+struct net_simulator_t;
 
 struct client_t
 {
 	client_state_t state;
 	int loopback;
-	float last_packet_recieved_time;
-	float last_packet_sent_time;
+	double last_packet_recieved_time;
+	double last_packet_sent_time;
 	uint64_t application_id;
 	uint64_t current_time;
 	uint64_t client_id;
 	int max_clients;
-	float connection_timeout;
+	double connection_timeout;
 	int has_sent_disconnect_packets;
 	connect_token_t connect_token;
 	uint64_t challenge_nonce;
@@ -262,6 +264,7 @@ struct client_t
 	uint64_t sequence;
 	circular_buffer_t packet_queue;
 	replay_buffer_t replay_buffer;
+	net_simulator_t* sim;
 	uint8_t buffer[CUTE_PROTOCOL_PACKET_SIZE_MAX];
 	uint8_t connect_token_packet[CUTE_CONNECT_TOKEN_PACKET_SIZE];
 	void* mem_ctx;
@@ -280,6 +283,7 @@ struct server_t
 	crypto_sign_secret_t secret_key;
 	uint32_t connection_timeout;
 	circular_buffer_t event_queue;
+	net_simulator_t* sim;
 
 	uint64_t challenge_nonce;
 	encryption_map_t encryption_map;
@@ -291,8 +295,8 @@ struct server_t
 	uint64_t client_id[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	bool client_is_connected[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	bool client_is_confirmed[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	float client_last_packet_received_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
-	float client_last_packet_sent_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	double client_last_packet_received_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
+	double client_last_packet_sent_time[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	endpoint_t client_endpoint[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	uint64_t client_sequence[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];
 	crypto_key_t client_client_to_server_key[CUTE_PROTOCOL_SERVER_MAX_CLIENTS];

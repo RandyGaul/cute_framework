@@ -88,9 +88,17 @@ void client_disconnect(client_t* client)
 	protocol::client_disconnect(client->p_client);
 }
 
-void client_update(client_t* client, float dt, uint64_t current_time)
+void client_update(client_t* client, double dt, uint64_t current_time)
 {
 	protocol::client_update(client->p_client, dt, current_time);
+
+	void* packet;
+	int size;
+	uint64_t sequence;
+	if (protocol::client_get_packet(client->p_client, &packet, &size, &sequence)) {
+		transport_process_packet(client->transport, packet, size);
+		protocol::client_free_packet(client->p_client, packet);
+	}
 
 	if (protocol::client_get_state(client->p_client) == protocol::CLIENT_STATE_CONNECTED) {
 		transport_process_acks(client->transport);
@@ -106,7 +114,7 @@ bool client_pop_packet(client_t* client, void** packet, int* size)
 
 	bool got = !transport_receive_reliably_and_in_order(client->transport, packet, size).is_error();
 	if (!got) {
-		got = transport_receive_fire_and_forget(client->transport, packet, size).is_error();
+		got = !transport_receive_fire_and_forget(client->transport, packet, size).is_error();
 	}
 	return got;
 }
@@ -133,6 +141,11 @@ client_state_t client_state_get(const client_t* client)
 float client_time_of_last_packet_recieved(const client_t* client)
 {
 	return 0;
+}
+
+void client_enable_network_simulator(client_t* client, double latency, double jitter, double drop_chance, double duplicate_chance)
+{
+	protocol::client_enable_network_simulator(client->p_client, latency, jitter, drop_chance, duplicate_chance);
 }
 
 }

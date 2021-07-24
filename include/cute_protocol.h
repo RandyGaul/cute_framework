@@ -114,7 +114,7 @@ CUTE_API void CUTE_CALL client_destroy(client_t* client);
 
 CUTE_API error_t CUTE_CALL client_connect(client_t* client, const uint8_t* connect_token);
 CUTE_API void CUTE_CALL client_disconnect(client_t* client);
-CUTE_API void CUTE_CALL client_update(client_t* client, float dt, uint64_t current_time);
+CUTE_API void CUTE_CALL client_update(client_t* client, double dt, uint64_t current_time);
 
 CUTE_API bool CUTE_CALL client_get_packet(client_t* client, void** data, int* size, uint64_t* sequence);
 CUTE_API void CUTE_CALL client_free_packet(client_t* client, void* packet);
@@ -125,6 +125,7 @@ CUTE_API uint64_t CUTE_CALL client_get_id(client_t* client);
 CUTE_API uint32_t CUTE_CALL client_get_max_clients(client_t* client);
 CUTE_API endpoint_t CUTE_CALL client_get_server_address(client_t* client);
 CUTE_API uint16_t CUTE_CALL client_get_port(client_t* client);
+CUTE_API void CUTE_CALL client_enable_network_simulator(client_t* client, double latency, double jitter, double drop_chance, double duplicate_chance);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -137,7 +138,7 @@ CUTE_API error_t CUTE_CALL server_start(server_t* server, const char* address, u
 CUTE_API void CUTE_CALL server_stop(server_t* server);
 CUTE_API bool CUTE_CALL server_running(server_t* server);
 
-CUTE_API void CUTE_CALL server_update(server_t* server, float dt, uint64_t current_time);
+CUTE_API void CUTE_CALL server_update(server_t* server, double dt, uint64_t current_time);
 CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, int client_index, bool notify_client);
 
 CUTE_API int CUTE_CALL server_client_count(server_t* server);
@@ -181,6 +182,7 @@ CUTE_API bool CUTE_CALL server_pop_event(server_t* server, server_event_t* event
 CUTE_API void CUTE_CALL server_free_packet(server_t* server, void* packet);
 CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, int client_index, bool notify_client);
 CUTE_API error_t CUTE_CALL server_send_to_client(server_t* server, const void* packet, int size, int client_index);
+CUTE_API void CUTE_CALL server_enable_network_simulator(server_t* server, double latency, double jitter, double drop_chance, double duplicate_chance);
 
 // -------------------------------------------------------------------------------------------------
 

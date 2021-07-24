@@ -78,6 +78,7 @@ int main(int argc, const char** argv)
 	crypto_init();
 
 	test_t tests[] = {
+		CUTE_TEST_CASE_ENTRY(test_client_server_sim),
 		CUTE_TEST_CASE_ENTRY(test_client_server),
 		CUTE_TEST_CASE_ENTRY(test_client_server_payload),
 		CUTE_TEST_CASE_ENTRY(test_handle_basic),

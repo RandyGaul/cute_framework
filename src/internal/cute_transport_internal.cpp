@@ -993,14 +993,17 @@ error_t transport_process_packet(transport_t* transport, void* data, int size)
 
 	packet_assembly_t* assembly;
 	if (prefix) {
-		assembly = assembly = &transport->reliable_and_in_order_assembly;
+		assembly = &transport->reliable_and_in_order_assembly;
 	} else {
-		assembly = assembly = &transport->fire_and_forget_assembly;
+		assembly = &transport->fire_and_forget_assembly;
 	}
 
 	// Build reassembly if it doesn't exist yet.
 	fragment_reassembly_entry_t* reassembly = (fragment_reassembly_entry_t*)sequence_buffer_find(&assembly->fragment_reassembly, reassembly_sequence);
 	if (!reassembly) {
+		if (s_sequence_less_than(reassembly_sequence, assembly->fragment_reassembly.sequence)) {
+			return error_failure("Old sequence encountered (this packet was already reassembled fully).");
+		}
 		reassembly = (fragment_reassembly_entry_t*)sequence_buffer_insert(&assembly->fragment_reassembly, reassembly_sequence, s_fragment_reassembly_entry_cleanup);
 		if (!reassembly) {
 			return error_failure("Sequence for this reassembly is stale.");
@@ -1046,6 +1049,7 @@ error_t transport_process_packet(transport_t* transport, void* data, int size)
 		if (packet_queue_push(&assembly->assembled_packets, reassembly->packet, reassembly->packet_size) < 0) {
 			//TODO: Log. Dropped packet since reassembly buffer was too small.
 			CUTE_FREE(reassembly->packet, transport->mem_ctx);
+			CUTE_ASSERT(false); // ??? Is this allowed ???
 		}
 		reassembly->packet = NULL;
 		sequence_buffer_remove(&assembly->fragment_reassembly, reassembly_sequence, s_fragment_reassembly_entry_cleanup);

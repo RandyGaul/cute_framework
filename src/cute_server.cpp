@@ -119,7 +119,7 @@ static CUTE_INLINE int s_server_event_push(server_t* server, server_event_t* eve
 	}
 }
 
-void server_update(server_t* server, float dt, uint64_t current_time)
+void server_update(server_t* server, double dt, uint64_t current_time)
 {
 	// Update the protocol server.
 	protocol::server_update(server->p_server, dt, current_time);
@@ -259,6 +259,11 @@ float server_time_of_last_packet_recieved_from_client(server_t* server, int clie
 bool server_is_client_connected(server_t* server, int client_index)
 {
 	return protocol::server_is_client_connected(server->p_server, client_index);
+}
+
+void server_enable_network_simulator(server_t* server, double latency, double jitter, double drop_chance, double duplicate_chance)
+{
+	protocol::server_enable_network_simulator(server->p_server, latency, jitter, drop_chance, duplicate_chance);
 }
 
 }

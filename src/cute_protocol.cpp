@@ -26,6 +26,7 @@
 #include <cute_net.h>
 #include <cute_handle_table.h>
 #include <cute_memory_pool.h>
+#include <cute_rnd.h>
 
 #include <internal/cute_serialize_internal.h>
 #include <internal/cute_protocol_internal.h>
@@ -51,7 +52,101 @@ CUTE_STATIC_ASSERT(CUTE_PROTOCOL_VERSION_STRING_LEN == 10, "Cute Protocol standa
 CUTE_STATIC_ASSERT(CUTE_CONNECT_TOKEN_PACKET_SIZE == 1024, "Cute Protocol standard calls for connect token packet to be exactly 1024 bytes.");
 CUTE_STATIC_ASSERT(CUTE_PROTOCOL_SIGNATURE_SIZE == sizeof(crypto_signature_t), "Must be equal.");
 
+// TODO - Remove me.
 #define CUTE_CHECK(X) if (X) ret = -1;
+
+// -------------------------------------------------------------------------------------------------
+
+#define CUTE_PROTOCOL_NET_SIMULATOR_MAX_PACKETS (1024 * 5)
+
+struct net_simulator_packet_t
+{
+	double delay;
+	endpoint_t to;
+	void* data;
+	int size;
+};
+
+struct net_simulator_t
+{
+	socket_t* socket = NULL;
+	double latency = 0;
+	double jitter = 0;
+	double drop_chance = 0;
+	double duplicate_chance = 0;
+	rnd_t rnd;
+	int index = 0;
+	void* mem_ctx = NULL;
+	net_simulator_packet_t packets[CUTE_PROTOCOL_NET_SIMULATOR_MAX_PACKETS];
+};
+
+net_simulator_t* net_simulator_create(socket_t* socket, void* mem_ctx)
+{
+	net_simulator_t* sim = CUTE_NEW(net_simulator_t, mem_ctx);
+	CUTE_MEMSET(sim, 0, sizeof(*sim));
+	sim->socket = socket;
+	sim->rnd = rnd_seed(0);
+	sim->mem_ctx = mem_ctx;
+	return sim;
+}
+
+void net_simulator_destroy(net_simulator_t* sim)
+{
+	if (!sim) return;
+	for (int i = 0; i < CUTE_PROTOCOL_NET_SIMULATOR_MAX_PACKETS; ++i) {
+		net_simulator_packet_t* p = sim->packets + i;
+		if (p->data) CUTE_FREE(p->data, sim->mem_ctx);
+	}
+	CUTE_FREE(sim, sim->mem_ctx);
+}
+
+void net_simulator_add(net_simulator_t* sim, endpoint_t to, const void* packet, int size)
+{
+	bool drop = rnd_next_double(&sim->rnd) < sim->drop_chance;
+	if (drop) return;
+
+	int index = sim->index++ % CUTE_PROTOCOL_NET_SIMULATOR_MAX_PACKETS;
+	net_simulator_packet_t* p = sim->packets + index;
+	if (p->data) CUTE_FREE(p->data, sim->mem_ctx);
+	p->delay = sim->latency + rnd_next_double(&sim->rnd) * sim->jitter;
+	p->to = to;
+	p->data = CUTE_ALLOC(size, sim->mem_ctx);
+	p->size = size;
+	CUTE_MEMCPY(p->data, packet, size);
+}
+
+void net_simulator_update(net_simulator_t* sim, double dt)
+{
+	if (!sim) return;
+	for (int i = 0; i < CUTE_PROTOCOL_NET_SIMULATOR_MAX_PACKETS; ++i) {
+		net_simulator_packet_t* p = sim->packets + i;
+		if (p->data) {
+			p->delay -= dt;
+			if (p->delay < 0) {
+				socket_send(sim->socket, p->to, p->data, p->size);
+				bool duplicate = rnd_next_double(&sim->rnd) < sim->duplicate_chance;
+				if (!duplicate) {
+					CUTE_FREE(p->data, sim->mem_ctx);
+					p->data = NULL;
+				} else {
+					p->delay = rnd_next_double(&sim->rnd) * sim->jitter;
+				}
+			}
+		}
+	}
+}
+
+int s_send(socket_t* socket, net_simulator_t* sim, endpoint_t to, const void* data, int size)
+{
+	if (sim) {
+		net_simulator_add(sim, to, data, size);
+		return size;
+	} else {
+		return socket_send(socket, to, data, size);
+	}
+}
+
+// -------------------------------------------------------------------------------------------------
 
 error_t generate_connect_token(
 	uint64_t application_id,
@@ -904,7 +999,7 @@ encryption_state_t* encryption_map_get_states(encryption_map_t* map)
 	return (encryption_state_t*)hashtable_items(&map->table);
 }
 
-void encryption_map_look_for_timeouts_or_expirations(encryption_map_t* map, float dt, uint64_t time)
+void encryption_map_look_for_timeouts_or_expirations(encryption_map_t* map, double dt, uint64_t time)
 {
 	int index = 0;
 	int count = encryption_map_count(map);
@@ -967,6 +1062,7 @@ client_t* client_make(uint16_t port, uint64_t application_id, void* user_allocat
 void client_destroy(client_t* client)
 {
 	// TODO: Detect if disconnect was not called yet.
+	net_simulator_destroy(client->sim);
 	circular_buffer_free(&client->packet_queue);
 	CUTE_FREE(client, client->app->mem_ctx);
 }
@@ -1028,12 +1124,12 @@ static CUTE_INLINE const char* s_packet_str(uint8_t type)
 	return NULL;
 }
 
-static void s_send(client_t* client, void* packet)
+static void s_client_send(client_t* client, void* packet)
 {
 	int sz = packet_write(packet, client->buffer, client->sequence++, &client->connect_token.client_to_server_key);
 
 	if (sz >= 73) {
-		socket_send(&client->socket, s_server_endpoint(client), client->buffer, sz);
+		s_send(&client->socket, client->sim, s_server_endpoint(client), client->buffer, sz);
 		client->last_packet_sent_time = 0;
 		//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Client: Sent %s packet to server.", s_packet_str(*(uint8_t*)packet));
 	}
@@ -1051,7 +1147,7 @@ static void s_disconnect(client_t* client, client_state_t state, int send_packet
 		packet.packet_type = PACKET_TYPE_DISCONNECT;
 		for (int i = 0; i < CUTE_PROTOCOL_REDUNDANT_DISCONNECT_PACKET_COUNT; ++i)
 		{
-			s_send(client, &packet);
+			s_client_send(client, &packet);
 		}
 	}
 
@@ -1130,7 +1226,7 @@ static void s_receive_packets(client_t* client)
 				packet_connection_accepted_t* packet = (packet_connection_accepted_t*)packet_ptr;
 				client->client_id = packet->client_id;
 				client->max_clients = packet->max_clients;
-				client->connection_timeout = (float)packet->connection_timeout;
+				client->connection_timeout = (double)packet->connection_timeout;
 				s_client_set_state(client, CLIENT_STATE_CONNECTED);
 				client->last_packet_recieved_time = 0;
 			} else if (type == PACKET_TYPE_CONNECTION_DENIED) {
@@ -1189,7 +1285,7 @@ static void s_send_packets(client_t* client)
 	{
 	case CLIENT_STATE_SENDING_CONNECTION_REQUEST:
 		if (client->last_packet_sent_time >= CUTE_PROTOCOL_SEND_RATE) {
-			s_send(client, client->connect_token_packet);
+			s_client_send(client, client->connect_token_packet);
 		}
 		break;
 
@@ -1199,7 +1295,7 @@ static void s_send_packets(client_t* client)
 			packet.packet_type = PACKET_TYPE_CHALLENGE_RESPONSE;
 			packet.challenge_nonce = client->challenge_nonce;
 			CUTE_MEMCPY(packet.challenge_data, client->challenge_data, CUTE_CHALLENGE_DATA_SIZE);
-			s_send(client, &packet);
+			s_client_send(client, &packet);
 		}
 		break;
 
@@ -1207,7 +1303,7 @@ static void s_send_packets(client_t* client)
 		if (client->last_packet_sent_time >= CUTE_PROTOCOL_SEND_RATE) {
 			packet_keepalive_t packet;
 			packet.packet_type = PACKET_TYPE_KEEPALIVE;
-			s_send(client, &packet);
+			s_client_send(client, &packet);
 		}
 		break;
 
@@ -1239,7 +1335,7 @@ static int s_goto_next_server(client_t* client)
 	return 1;
 }
 
-void client_update(client_t* client, float dt, uint64_t current_time)
+void client_update(client_t* client, double dt, uint64_t current_time)
 {
 	if (client->state <= 0) {
 		return;
@@ -1249,6 +1345,7 @@ void client_update(client_t* client, float dt, uint64_t current_time)
 	client->last_packet_recieved_time += dt;
 	client->last_packet_sent_time += dt;
 
+	net_simulator_update(client->sim, dt);
 	s_receive_packets(client);
 	s_send_packets(client);
 
@@ -1309,7 +1406,7 @@ error_t client_send(client_t* client, const void* data, int size)
 	packet.packet_type = PACKET_TYPE_PAYLOAD;
 	packet.payload_size = size;
 	CUTE_MEMCPY(packet.payload, data, size);
-	s_send(client, &packet);
+	s_client_send(client, &packet);
 	return error_success();
 }
 
@@ -1338,6 +1435,16 @@ uint16_t client_get_port(client_t* client)
 	return client->socket.endpoint.port;
 }
 
+void client_enable_network_simulator(client_t* client, double latency, double jitter, double drop_chance, double duplicate_chance)
+{
+	net_simulator_t* sim = net_simulator_create(&client->socket, client->mem_ctx);
+	sim->latency = latency;
+	sim->jitter = jitter;
+	sim->drop_chance = drop_chance;
+	sim->duplicate_chance = duplicate_chance;
+	client->sim = sim;
+}
+
 // -------------------------------------------------------------------------------------------------
 
 server_t* server_make(uint64_t application_id, const crypto_sign_public_t* public_key, const crypto_sign_secret_t* secret_key, void* mem_ctx)
@@ -1358,6 +1465,7 @@ server_t* server_make(uint64_t application_id, const crypto_sign_public_t* publi
 
 void server_destroy(server_t* server)
 {
+	net_simulator_destroy(server->sim);
 	packet_allocator_destroy(server->packet_allocator);
 	circular_buffer_free(&server->event_queue);
 	CUTE_FREE(server, server->mem_ctx);
@@ -1424,7 +1532,7 @@ static void s_server_disconnect_sequence(server_t* server, uint32_t index)
 		packet_disconnect_t packet;
 		packet.packet_type = PACKET_TYPE_DISCONNECT;
 		if (packet_write(&packet, server->buffer, server->client_sequence[index]++, server->client_server_to_client_key + index) == 73) {
-			socket_send(&server->socket, server->client_endpoint[index], server->buffer, 73);
+			s_send(&server->socket, server->sim, server->client_endpoint[index], server->buffer, 73);
 		}
 	}
 }
@@ -1477,6 +1585,19 @@ void server_stop(server_t* server)
 	hashtable_cleanup(&server->client_endpoint_table);
 	hashtable_cleanup(&server->client_id_table);
 	circular_buffer_reset(&server->event_queue);
+
+	if (server->sim) {
+		double latency = server->sim->latency;
+		double jitter = server->sim->jitter;
+		double drop_chance = server->sim->drop_chance;
+		double duplicate_chance = server->sim->duplicate_chance;
+		net_simulator_destroy(server->sim);
+		server->sim = net_simulator_create(&server->socket, server->mem_ctx);
+		server->sim->latency = server->sim->latency;
+		server->sim->jitter = server->sim->jitter;
+		server->sim->drop_chance = server->sim->drop_chance;
+		server->sim->duplicate_chance = server->sim->duplicate_chance;
+	}
 }
 
 bool server_running(server_t* server)
@@ -1528,7 +1649,7 @@ static void s_server_connect_client(server_t* server, endpoint_t endpoint, encry
 	packet.max_clients = CUTE_PROTOCOL_SERVER_MAX_CLIENTS;
 	packet.connection_timeout = server->connection_timeout;
 	if (packet_write(&packet, server->buffer, server->client_sequence[index]++, server->client_server_to_client_key + index) == 16 + 73) {
-		socket_send(&server->socket, server->client_endpoint[index], server->buffer, 16 + 73);
+		s_send(&server->socket, server->sim, server->client_endpoint[index], server->buffer, 16 + 73);
 	}
 }
 
@@ -1610,7 +1731,7 @@ static void s_server_receive_packets(server_t* server)
 				packet_connection_denied_t packet;
 				packet.packet_type = PACKET_TYPE_CONNECTION_DENIED;
 				if (packet_write(&packet, server->buffer, state->sequence++, &token.server_to_client_key) == 73) {
-					socket_send(&server->socket, from, server->buffer, 73);
+					s_send(&server->socket, server->sim, from, server->buffer, 73);
 					//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to potential client (server is full).", s_packet_str(packet.packet_type));
 				}
 			}
@@ -1671,7 +1792,7 @@ static void s_server_receive_packets(server_t* server)
 					packet_connection_denied_t packet;
 					packet.packet_type = PACKET_TYPE_CONNECTION_DENIED;
 					if (packet_write(&packet, server->buffer, state->sequence++, &state->server_to_client_key) == 73) {
-						socket_send(&server->socket, from, server->buffer, 73);
+						s_send(&server->socket, server->sim, from, server->buffer, 73);
 						//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to potential client (server is full).", s_packet_str(packet.packet_type));
 					}
 				} else {
@@ -1705,7 +1826,7 @@ static void s_server_receive_packets(server_t* server)
 	}
 }
 
-static void s_server_send_packets(server_t* server, float dt)
+static void s_server_send_packets(server_t* server, double dt)
 {
 	CUTE_ASSERT(server->running);
 
@@ -1715,6 +1836,7 @@ static void s_server_send_packets(server_t* server, float dt)
 	endpoint_t* endpoints = encryption_map_get_endpoints(&server->encryption_map);
 	uint8_t* buffer = server->buffer;
 	socket_t* socket = &server->socket;
+	net_simulator_t* sim = server->sim;
 	for (int i = 0; i < state_count; ++i)
 	{
 		encryption_state_t* state = states + i;
@@ -1729,15 +1851,15 @@ static void s_server_send_packets(server_t* server, float dt)
 			crypto_random_bytes(packet.challenge_data, sizeof(packet.challenge_data));
 
 			if (packet_write(&packet, buffer, state->sequence++, &state->server_to_client_key) == 264 + 73) {
-				socket_send(socket, endpoints[i], buffer, 264 + 73);
+				s_send(socket, sim, endpoints[i], buffer, 264 + 73);
 				//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to potential client %" PRIu64 ".", s_packet_str(packet.packet_type), state->client_id);
 			}
 		}
 	}
 
 	// Update client timers.
-	float* last_received_times = server->client_last_packet_received_time;
-	float* last_sent_times = server->client_last_packet_sent_time;
+	double* last_received_times = server->client_last_packet_received_time;
+	double* last_sent_times = server->client_last_packet_sent_time;
 	bool* connected = server->client_is_connected;
 	for (int i = 0; i < CUTE_PROTOCOL_SERVER_MAX_CLIENTS; ++i) {
 		if (connected[i]) {
@@ -1764,7 +1886,7 @@ static void s_server_send_packets(server_t* server, float dt)
 					packet.max_clients = CUTE_PROTOCOL_SERVER_MAX_CLIENTS;
 					packet.connection_timeout = connection_timeout;
 					if (packet_write(&packet, buffer, sequences[i]++, server_to_client_keys + i) == 16 + 73) {
-						socket_send(socket, endpoints[i], buffer, 16 + 73);
+						s_send(socket, sim, endpoints[i], buffer, 16 + 73);
 						//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[i]);
 					}
 				}
@@ -1772,7 +1894,7 @@ static void s_server_send_packets(server_t* server, float dt)
 				packet_keepalive_t packet;
 				packet.packet_type = PACKET_TYPE_KEEPALIVE;
 				if (packet_write(&packet, buffer, sequences[i]++, server_to_client_keys + i) == 73) {
-					socket_send(socket, endpoints[i], buffer, 73);
+					s_send(socket, sim, endpoints[i], buffer, 73);
 					//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[i]);
 				}
 			}
@@ -1811,7 +1933,7 @@ error_t server_send_to_client(server_t* server, const void* packet, int size, in
 		packet.max_clients = CUTE_PROTOCOL_SERVER_MAX_CLIENTS;
 		packet.connection_timeout = server->connection_timeout;
 		if (packet_write(&packet, server->buffer, server->client_sequence[index]++, server->client_server_to_client_key + index) == 16 + 73) {
-			socket_send(&server->socket, server->client_endpoint[index], server->buffer, 16 + 73);
+			s_send(&server->socket, server->sim, server->client_endpoint[index], server->buffer, 16 + 73);
 			//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(packet.packet_type), server->client_id[index]);
 			server->client_last_packet_sent_time[index] = 0;
 		} else {
@@ -1825,7 +1947,7 @@ error_t server_send_to_client(server_t* server, const void* packet, int size, in
 	CUTE_MEMCPY(payload.payload, packet, size);
 	int sz = packet_write(&payload, server->buffer, server->client_sequence[index]++, server->client_server_to_client_key + index);
 	if (sz > 73) {
-		socket_send(&server->socket, server->client_endpoint[index], server->buffer, sz);
+		s_send(&server->socket, server->sim, server->client_endpoint[index], server->buffer, sz);
 		//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Sent %s to client %" PRIu64 ".", s_packet_str(payload.packet_type), server->client_id[index]);
 		server->client_last_packet_sent_time[index] = 0;
 	} else {
@@ -1837,10 +1959,10 @@ error_t server_send_to_client(server_t* server, const void* packet, int size, in
 
 static void s_server_look_for_timeouts(server_t* server)
 {
-	float* last_received_times = server->client_last_packet_received_time;
+	double* last_received_times = server->client_last_packet_received_time;
 	for (int i = 0; i < CUTE_PROTOCOL_SERVER_MAX_CLIENTS;) {
 		if (server->client_is_connected[i]) {
-			if (last_received_times[i] >= (float)server->connection_timeout) {
+			if (last_received_times[i] >= (double)server->connection_timeout) {
 				//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Client %" PRIu64 " has timed out.", server->client_id[i]);
 				server_disconnect_client(server, i, true);
 			} else {
@@ -1852,10 +1974,11 @@ static void s_server_look_for_timeouts(server_t* server)
 	}
 }
 
-void server_update(server_t* server, float dt, uint64_t current_time)
+void server_update(server_t* server, double dt, uint64_t current_time)
 {
 	server->current_time = current_time;
 
+	net_simulator_update(server->sim, dt);
 	s_server_receive_packets(server);
 	s_server_send_packets(server, dt);
 	s_server_look_for_timeouts(server);
@@ -1874,9 +1997,17 @@ uint64_t server_get_client_id(server_t* server, int client_index)
 
 bool server_is_client_connected(server_t* server, int client_index)
 {
-	// Confirmed means validated connect token, not just an alive connection.
-	// Merely checking server->client_is_connected[client_index] is not what we're looking for.
-	return server->client_is_confirmed[client_index];
+	return server->client_is_connected[client_index];
+}
+
+void server_enable_network_simulator(server_t* server, double latency, double jitter, double drop_chance, double duplicate_chance)
+{
+	net_simulator_t* sim = net_simulator_create(&server->socket, server->mem_ctx);
+	sim->latency = latency;
+	sim->jitter = jitter;
+	sim->drop_chance = drop_chance;
+	sim->duplicate_chance = duplicate_chance;
+	server->sim = sim;
 }
 
 }

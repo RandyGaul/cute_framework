@@ -88,6 +88,7 @@ int test_client_server()
 		}
 	}
 	CUTE_TEST_ASSERT(iters < 100);
+	CUTE_TEST_ASSERT(server_is_client_connected(server, 0));
 
 	client_disconnect(client);
 	server_update(server, 0, 0);
@@ -163,6 +164,7 @@ int test_client_server_payload()
 		}
 	}
 	CUTE_TEST_ASSERT(iters < 100);
+	CUTE_TEST_ASSERT(server_is_client_connected(server, 0));
 
 	uint64_t packet = 12345678;
 	CUTE_TEST_CHECK(client_send(client, &packet, sizeof(packet), false).is_error());
@@ -189,6 +191,132 @@ int test_client_server_payload()
 
 	client_destroy(client);
 	server_stop(server);
+	server_destroy(server);
+
+	return 0;
+}
+
+CUTE_TEST_CASE(test_client_server_sim, "Run network simulator between a client and server.");
+int test_client_server_sim()
+{
+	crypto_key_t client_to_server_key = crypto_generate_key();
+	crypto_key_t server_to_client_key = crypto_generate_key();
+	uint64_t application_id = 333;
+	uint64_t current_timestamp = 0;
+	uint64_t expiration_timestamp = 1;
+	uint32_t handshake_timeout = 5;
+	uint64_t client_id = 17;
+	const char* endpoints[] = {
+		"[::1]:5000",
+	};
+	crypto_sign_public_t pk;
+	crypto_sign_secret_t sk;
+	crypto_sign_keygen(&pk, &sk);
+
+	uint8_t user_data[CUTE_CONNECT_TOKEN_USER_DATA_SIZE];
+	crypto_random_bytes(user_data, sizeof(user_data));
+
+	uint8_t connect_token[CUTE_CONNECT_TOKEN_SIZE];
+	CUTE_TEST_CHECK(protocol::generate_connect_token(
+		application_id,
+		current_timestamp,
+		&client_to_server_key,
+		&server_to_client_key,
+		expiration_timestamp,
+		handshake_timeout,
+		sizeof(endpoints) / sizeof(endpoints[0]),
+		endpoints,
+		client_id,
+		user_data,
+		&sk,
+		connect_token
+	).is_error());
+
+	server_config_t config;
+	config.public_key = pk;
+	config.secret_key = sk;
+	config.application_id = application_id;
+	server_t* server = server_create(&config);
+	client_t* client = client_make(5000, application_id);
+	CUTE_TEST_ASSERT(server);
+	CUTE_TEST_ASSERT(client);
+
+	CUTE_TEST_CHECK(server_start(server, "[::1]:5000").is_error());
+	CUTE_TEST_CHECK(client_connect(client, connect_token).is_error());
+
+	int iters = 0;
+	while (1) {
+		client_update(client, 0, 0);
+		server_update(server, 0, 0);
+
+		if (client_state_get(client) < 0 || ++iters == 100) {
+			CUTE_TEST_ASSERT(false);
+			break;
+		}
+
+		if (client_state_get(client) == CLIENT_STATE_CONNECTED) {
+			break;
+		}
+	}
+	CUTE_TEST_ASSERT(iters < 100);
+	CUTE_TEST_ASSERT(server_is_client_connected(server, 0));
+
+	server_event_t e;
+	CUTE_TEST_ASSERT(server_pop_event(server, &e));
+	CUTE_TEST_ASSERT(e.type == SERVER_EVENT_TYPE_NEW_CONNECTION);
+	CUTE_TEST_ASSERT(e.u.new_connection.client_index == 0);
+	CUTE_TEST_ASSERT(e.u.new_connection.client_id == client_id);
+
+	//client_enable_network_simulator(client, 0, 0, 0, 0);
+	//server_enable_network_simulator(server, 0, 0, 0, 0);
+
+	bool soak = false;
+	bool do_send = true;
+	int packet_size = 10000;
+	void* packet = CUTE_ALLOC(packet_size, NULL);
+	double dt = 1.0/60.0;
+	iters = 0;
+
+	uint64_t keepalive = ~0ULL;
+
+	while (1) {
+		if (do_send) {
+			crypto_random_bytes(packet, packet_size);
+			client_send(client, packet, packet_size, true);
+			do_send = false;
+		}
+
+		client_update(client, dt, 0);
+		server_update(server, dt, 0);
+
+		server_send(server, &keepalive, sizeof(keepalive), 0, true);
+		void* client_packet;
+		int client_packet_size;
+		if (client_pop_packet(client, &client_packet, &client_packet_size)) {
+			CUTE_TEST_ASSERT(client_packet_size == sizeof(keepalive));
+			CUTE_TEST_ASSERT(*(uint64_t*)client_packet == keepalive);
+			client_free_packet(client, client_packet);
+		}
+
+		server_event_t e;
+		if (server_pop_event(server, &e)) {
+			CUTE_TEST_ASSERT(e.type == SERVER_EVENT_TYPE_PAYLOAD_PACKET);
+			void* data = e.u.payload_packet.data;
+			int size = e.u.payload_packet.size;
+			CUTE_TEST_ASSERT(size == packet_size);
+			CUTE_TEST_ASSERT(!CUTE_MEMCMP(data, packet, packet_size));
+			do_send = true;
+			++iters;
+			server_free_packet(server, 0, data);
+		}
+
+		if (!soak && iters == 100) {
+			break;
+		}
+	}
+
+	CUTE_FREE(packet, NULL);
+	client_destroy(client);
 	server_destroy(server);
 
 	return 0;

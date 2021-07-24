@@ -36,7 +36,7 @@ CUTE_API void CUTE_CALL client_destroy(client_t* client);
 CUTE_API error_t CUTE_CALL client_connect(client_t* client, const uint8_t* connect_token);
 CUTE_API void CUTE_CALL client_disconnect(client_t* client);
 
-CUTE_API void CUTE_CALL client_update(client_t* client, float dt, uint64_t current_time);
+CUTE_API void CUTE_CALL client_update(client_t* client, double dt, uint64_t current_time);
 CUTE_API bool CUTE_CALL client_pop_packet(client_t* client, void** packet, int* size);
 CUTE_API void CUTE_CALL client_free_packet(client_t* client, void* packet);
 CUTE_API error_t CUTE_CALL client_send(client_t* client, const void* packet, int size, bool send_reliably);
@@ -57,6 +57,7 @@ enum client_state_t : int
 
 CUTE_API client_state_t CUTE_CALL client_state_get(const client_t* client);
 CUTE_API float CUTE_CALL client_time_of_last_packet_recieved(const client_t* client);
+CUTE_API void CUTE_CALL client_enable_network_simulator(client_t* client, double latency, double jitter, double drop_chance, double duplicate_chance);
 
 }
 
