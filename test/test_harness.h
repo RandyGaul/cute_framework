@@ -76,7 +76,7 @@ int do_test(test_t* test, int i)
 }
 
 #define CUTE_TEST_PRINT_FILE_LINE(s) do { fprintf(CUTE_TEST_IO_STREAM, "Extra info:   %s\n\tLine number:  %d\n\tFile:         %s\n\t", s, __LINE__, __FILE__); } while (0)
-#define CUTE_TEST_ASSERT(x) do { if (!(x)) { CUTE_TEST_PRINT_FILE_LINE("Assertion was false."); __debugbreak(); return -1; } } while (0)
+#define CUTE_TEST_ASSERT(x) do { if (!(x)) { CUTE_TEST_PRINT_FILE_LINE("Assertion was false."); return -1; } } while (0)
 #define CUTE_TEST_CHECK(x) do { if (x) { CUTE_TEST_PRINT_FILE_LINE("Return code failed check."); return -1; } } while (0)
 #define CUTE_TEST_CHECK_POINTER(x) do { if (!(x)) { CUTE_TEST_PRINT_FILE_LINE("Pointer failed check."); return -1; } } while (0)
 

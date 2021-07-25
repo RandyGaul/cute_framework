@@ -187,8 +187,6 @@ CUTE_API void CUTE_CALL transport_free_packet(transport_t* transport, void* data
 CUTE_API error_t CUTE_CALL transport_process_packet(transport_t* transport, void* data, int size);
 
 CUTE_API void CUTE_CALL transport_update(transport_t* transport, double dt);
-CUTE_API void CUTE_CALL transport_process_acks(transport_t* transport);
-CUTE_API void CUTE_CALL transport_resend_unacked_fragments(transport_t* transport);
 CUTE_API int CUTE_CALL transport_unacked_fragment_count(transport_t* transport);
 
 }

@@ -1058,13 +1058,6 @@ error_t transport_process_packet(transport_t* transport, void* data, int size)
 	return error_success();
 }
 
-void transport_update(transport_t* transport, double dt)
-{
-	ack_system_update(transport->ack_system, dt);
-	transport_process_acks(transport);
-	transport_resend_unacked_fragments(transport);
-}
-
 void transport_process_acks(transport_t* transport)
 {
 	uint16_t* acks = ack_system_get_acks(transport->ack_system);
@@ -1137,6 +1130,13 @@ void transport_resend_unacked_fragments(transport_t* transport)
 int transport_unacked_fragment_count(transport_t* transport)
 {
 	return transport->fragments.count();
+}
+
+void transport_update(transport_t* transport, double dt)
+{
+	ack_system_update(transport->ack_system, dt);
+	transport_process_acks(transport);
+	transport_resend_unacked_fragments(transport);
 }
 
 }

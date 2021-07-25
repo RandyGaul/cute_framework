@@ -267,12 +267,12 @@ int test_client_server_sim()
 	CUTE_TEST_ASSERT(e.u.new_connection.client_index == 0);
 	CUTE_TEST_ASSERT(e.u.new_connection.client_id == client_id);
 
-	client_enable_network_simulator(client, 0, 0, 0.99, 0);
-	server_enable_network_simulator(server, 0, 0, 0.99, 0);
+	client_enable_network_simulator(client, 0.02f, 0.005f, 0.5, 0.05f);
+	server_enable_network_simulator(server, 0.02f, 0.005f, 0.5, 0.05f);
 
 	bool soak = false;
 	bool do_send = true;
-	int packet_size = 1024 * 5;
+	int packet_size = 1024 * 3;
 	void* packet = CUTE_ALLOC(packet_size, NULL);
 	double dt = 1.0/60.0;
 	iters = 0;

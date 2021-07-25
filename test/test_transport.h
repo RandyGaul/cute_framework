@@ -153,6 +153,7 @@ int test_transport_basic()
 	data_a.transport_b = transport_b;
 	data_b.transport_a = transport_a;
 	data_b.transport_b = transport_b;
+	double dt = 1.0/60.0;
 
 	int packet_size = 4000;
 	uint8_t* packet = (uint8_t*)CUTE_ALLOC(packet_size, NULL);
@@ -160,9 +161,9 @@ int test_transport_basic()
 
 	CUTE_TEST_CHECK(transport_send(transport_a, packet, packet_size, true).is_error());
 	CUTE_TEST_CHECK(transport_send(transport_b, packet, packet_size, true).is_error());
-	
-	transport_process_acks(transport_a);
-	transport_process_acks(transport_b);
+
+	transport_update(transport_a, dt);
+	transport_update(transport_b, dt);
 
 	void* packet_received;
 	int packet_received_size;
@@ -180,8 +181,8 @@ int test_transport_basic()
 	CUTE_TEST_CHECK(transport_send(transport_a, packet, packet_size, false).is_error());
 	CUTE_TEST_CHECK(transport_send(transport_b, packet, packet_size, false).is_error());
 
-	transport_process_acks(transport_a);
-	transport_process_acks(transport_b);
+	transport_update(transport_a, dt);
+	transport_update(transport_b, dt);
 
 	CUTE_TEST_CHECK(transport_receive_fire_and_forget(transport_a, &packet_received, &packet_received_size).is_error());
 	CUTE_TEST_ASSERT(packet_size == packet_received_size);
@@ -219,6 +220,7 @@ int test_transport_drop_fragments()
 	data_a.transport_b = transport_b;
 	data_b.transport_a = transport_a;
 	data_b.transport_b = transport_b;
+	double dt = 1.0/60.0;
 
 	int packet_size = 4000;
 	uint8_t* packet = (uint8_t*)CUTE_ALLOC(packet_size, NULL);
@@ -229,8 +231,8 @@ int test_transport_drop_fragments()
 	CUTE_TEST_CHECK(transport_send(transport_a, packet, packet_size, true).is_error());
 	CUTE_TEST_CHECK(transport_send(transport_b, packet, packet_size, true).is_error());
 
-	transport_process_acks(transport_a);
-	transport_process_acks(transport_b);
+	transport_update(transport_a, dt);
+	transport_update(transport_b, dt);
 
 	void* packet_received;
 	int packet_received_size;
@@ -245,10 +247,7 @@ int test_transport_drop_fragments()
 	transport_free_packet(transport_b, packet_received);
 
 	data_b.drop_packet = 0;
-
-	// WORKING HERE - Resend needs delta time! Rewrite this test (and other below if any).
-
-	transport_resend_unacked_fragments(transport_b);
+	transport_update(transport_b, dt);
 
 	CUTE_TEST_CHECK(transport_receive_reliably_and_in_order(transport_a, &packet_received, &packet_received_size).is_error());
 	CUTE_TEST_ASSERT(packet_size == packet_received_size);
@@ -260,8 +259,8 @@ int test_transport_drop_fragments()
 	CUTE_TEST_CHECK(transport_send(transport_a, packet, packet_size, false).is_error());
 	CUTE_TEST_CHECK(transport_send(transport_b, packet, packet_size, false).is_error());
 
-	transport_process_acks(transport_a);
-	transport_process_acks(transport_b);
+	transport_update(transport_a, dt);
+	transport_update(transport_b, dt);
 
 	CUTE_TEST_CHECK(transport_receive_fire_and_forget(transport_a, &packet_received, &packet_received_size).is_error());
 	CUTE_TEST_ASSERT(packet_size == packet_received_size);
@@ -296,6 +295,7 @@ int test_transport_drop_fragments_reliable_hammer()
 	test_transport_data_t data_b;
 	data_a.id = 0;
 	data_b.id = 1;
+	double dt = 1.0/60.0;
 
 	transport_config_t config;
 	config.send_packet_fn = test_transport_send_packet_fn;
@@ -329,14 +329,9 @@ int test_transport_drop_fragments_reliable_hammer()
 	{
 		CUTE_TEST_CHECK(transport_send(transport_a, fire_and_forget_packet, fire_and_forget_packet_size, false).is_error());
 		CUTE_TEST_CHECK(transport_send(transport_b, fire_and_forget_packet, fire_and_forget_packet_size, false).is_error());
-	
-		transport_process_acks(transport_a);
-		transport_process_acks(transport_b);
-	
-		iters++;
-		if (iters % 10 == 0) {
-			transport_resend_unacked_fragments(transport_a);
-		}
+
+		transport_update(transport_a, dt);
+		transport_update(transport_b, dt);
 	
 		if (!transport_receive_reliably_and_in_order(transport_b, &packet_received, &packet_received_size).is_error()) {
 			CUTE_TEST_ASSERT(packet_size == packet_received_size);
@@ -348,10 +343,14 @@ int test_transport_drop_fragments_reliable_hammer()
 		if (received && transport_unacked_fragment_count(transport_a) == 0) {
 			break;
 		}
+
+		if (iters++ == 100) {
+			CUTE_TEST_ASSERT(false);
+			break;
+		}
 	}
 
 	CUTE_TEST_ASSERT(received);
-
 	CUTE_FREE(packet, NULL);
 
 	transport_destroy(transport_a);
