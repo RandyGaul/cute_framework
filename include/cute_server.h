@@ -37,7 +37,8 @@ struct server_config_t
 	uint64_t application_id = 0;
 	int max_incoming_bytes_per_second = 0;
 	int max_outgoing_bytes_per_second = 0;
-	uint32_t connection_timeout = 60;
+	int connection_timeout = 60;
+	double resend_rate = 0.1f;
 	crypto_sign_public_t public_key;
 	crypto_sign_secret_t secret_key;
 };

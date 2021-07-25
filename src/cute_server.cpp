@@ -31,6 +31,8 @@
 #include <internal/cute_protocol_internal.h>
 #include <internal/cute_transport_internal.h>
 
+CUTE_STATIC_ASSERT(CUTE_SERVER_MAX_CLIENTS == CUTE_PROTOCOL_SERVER_MAX_CLIENTS, "Must be equal for a simple implementation.");
+
 namespace cute
 {
 
@@ -77,7 +79,7 @@ void server_destroy(server_t* server)
 
 error_t server_start(server_t* server, const char* address_and_port)
 {
-	error_t err = protocol::server_start(server->p_server, address_and_port, server->config.connection_timeout);
+	error_t err = protocol::server_start(server->p_server, address_and_port, (uint32_t)server->config.connection_timeout);
 	if (err.is_error()) return err;
 
 	for (int i = 0; i < CUTE_SERVER_MAX_CLIENTS; ++i) {
@@ -236,12 +238,24 @@ void server_send(server_t* server, const void* packet, int size, int client_inde
 
 void server_send_to_all_clients(server_t* server, const void* packet, int size, bool send_reliably)
 {
+	for (int i = 0; i < CUTE_SERVER_MAX_CLIENTS; ++i) {
+		if (server_is_client_connected(server, i)) {
+			server_send(server, packet, size, i, send_reliably);
+		}
+	}
 }
 
 void server_send_to_all_but_one_client(server_t* server, const void* packet, int size, int client_index, bool send_reliably)
 {
 	CUTE_ASSERT(client_index >= 0 && client_index < CUTE_SERVER_MAX_CLIENTS);
 	CUTE_ASSERT(protocol::server_is_client_connected(server->p_server, client_index));
+
+	for (int i = 0; i < CUTE_SERVER_MAX_CLIENTS; ++i) {
+		if (i == client_index) continue;
+		if (server_is_client_connected(server, i)) {
+			server_send(server, packet, size, i, send_reliably);
+		}
+	}
 }
 
 float server_time_of_last_packet_recieved_from_client(server_t* server, int client_index)

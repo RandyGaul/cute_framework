@@ -92,16 +92,16 @@ void client_update(client_t* client, double dt, uint64_t current_time)
 {
 	protocol::client_update(client->p_client, dt, current_time);
 
-	void* packet;
-	int size;
-	uint64_t sequence;
-	while (protocol::client_get_packet(client->p_client, &packet, &size, &sequence)) {
-		transport_process_packet(client->transport, packet, size);
-		protocol::client_free_packet(client->p_client, packet);
-	}
-
 	if (protocol::client_get_state(client->p_client) == protocol::CLIENT_STATE_CONNECTED) {
 		transport_update(client->transport, dt);
+
+		void* packet;
+		int size;
+		uint64_t sequence;
+		while (protocol::client_get_packet(client->p_client, &packet, &size, &sequence)) {
+			transport_process_packet(client->transport, packet, size);
+			protocol::client_free_packet(client->p_client, packet);
+		}
 	}
 }
 
