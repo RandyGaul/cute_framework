@@ -22,8 +22,10 @@
 #include <cute.h>
 using namespace cute;
 
-#define CUTE_ASEPRITE_IMPLEMENTATION
-#include <cute/cute_aseprite.h>
+#ifndef CUTE_STATIC
+#	define CUTE_ASEPRITE_IMPLEMENTATION
+#	include <cute/cute_aseprite.h>
+#endif
 
 CUTE_TEST_CASE(test_aseprite_make_destroy, "Load an aseprite file and destroy it.");
 int test_aseprite_make_destroy()

@@ -315,8 +315,8 @@ set(CUTE_HDRS
 )
 
 if(CUTE_FRAMEWORK_STATIC)
-	add_definitions(-DCUTE_STATIC)
 	add_library(cute STATIC ${CUTE_SRCS} ${CUTE_HDRS} ${GLAD_SRCS} ${GLAD_HDRS} ${HYDROGEN_SRCS} ${HYDROGEN_HDRS})
+	target_compile_definitions(cute PUBLIC CUTE_STATIC)
 else()
 	add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS} ${GLAD_SRCS} ${GLAD_HDRS} ${HYDROGEN_SRCS} ${HYDROGEN_HDRS})
 endif()
@@ -337,7 +337,6 @@ elseif(EMSCRIPTEN)
 	target_link_libraries(cute PRIVATE physfs "-s USE_WEBGL2=1 -s ASSERTIONS=1  -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1")
 else()
 	if(MINGW)
-		# TODO - Can remove crypt32 with Hydrogen?
 		target_link_libraries(cute PRIVATE SDL2-static physfs d3d11 crypt32)
 	elseif(WINDOWS)
 		target_link_libraries(cute PRIVATE SDL2-static physfs crypt32)
