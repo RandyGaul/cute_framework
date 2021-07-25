@@ -238,7 +238,7 @@ static void s_send_queue_init(send_queue_t* q)
 
 static int s_send_queue_push(send_queue_t* q, const send_queue_item_t* item)
 {
-	CUTE_ASSERT(q->count >= 0 && q->count < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
+	CUTE_ASSERT(q->count >= 0);
 	CUTE_ASSERT(q->index0 >= 0 && q->index0 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
 	CUTE_ASSERT(q->index1 >= 0 && q->index1 < CUTE_TRANSPORT_SEND_QUEUE_MAX_ENTRIES);
 
@@ -703,14 +703,14 @@ transport_t* transport_make(const transport_config_t* config)
 	transport->ack_system = ack_system_make(&ack_config);
 	transport->mem_ctx = config->user_allocator_context;
 
-	transport->fragment_handle_table = handle_allocator_make(transport->max_fragments_in_flight, transport->mem_ctx);
+	transport->fragment_handle_table = handle_allocator_make(config->send_receive_queue_size, transport->mem_ctx);
 	table_init = 1;
-	CUTE_CHECK(sequence_buffer_init(&transport->sent_fragments, transport->max_fragments_in_flight, sizeof(fragment_entry_t), transport, transport->mem_ctx));
+	CUTE_CHECK(sequence_buffer_init(&transport->sent_fragments, config->send_receive_queue_size, sizeof(fragment_entry_t), transport, transport->mem_ctx));
 	sequence_sent_fragments_init = 1;
 
-	CUTE_CHECK(s_packet_assembly_init(&transport->reliable_and_in_order_assembly, transport->max_fragments_in_flight, transport->mem_ctx));
+	CUTE_CHECK(s_packet_assembly_init(&transport->reliable_and_in_order_assembly, config->send_receive_queue_size, transport->mem_ctx));
 	assembly_reliable_init = 1;
-	CUTE_CHECK(s_packet_assembly_init(&transport->fire_and_forget_assembly, 256, transport->mem_ctx));
+	CUTE_CHECK(s_packet_assembly_init(&transport->fire_and_forget_assembly, config->send_receive_queue_size, transport->mem_ctx));
 	assembly_unreliable_init = 1;
 
 	s_send_queue_init(&transport->send_queue);
@@ -1060,9 +1060,9 @@ error_t transport_process_packet(transport_t* transport, void* data, int size)
 
 void transport_update(transport_t* transport, double dt)
 {
+	ack_system_update(transport->ack_system, dt);
 	transport_process_acks(transport);
 	transport_resend_unacked_fragments(transport);
-	ack_system_update(transport->ack_system, dt);
 }
 
 void transport_process_acks(transport_t* transport)

@@ -164,6 +164,7 @@ struct transport_config_t
 	int max_packet_size = CUTE_TRANSPORT_MAX_FRAGMENT_SIZE * 4;
 	int max_fragments_in_flight = 8;
 	int max_size_single_send = CUTE_MB * 20;
+	int send_receive_queue_size = 1024;
 	void* user_allocator_context = NULL;
 	void* udata = NULL;
 

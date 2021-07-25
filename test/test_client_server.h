@@ -267,14 +267,14 @@ int test_client_server_sim()
 	CUTE_TEST_ASSERT(e.u.new_connection.client_index == 0);
 	CUTE_TEST_ASSERT(e.u.new_connection.client_id == client_id);
 
-	client_enable_network_simulator(client, 0, 0, 0.5, 0);
-	server_enable_network_simulator(server, 0, 0, 0.5, 0);
+	client_enable_network_simulator(client, 0, 0, 0.99, 0);
+	server_enable_network_simulator(server, 0, 0, 0.99, 0);
 
 	bool soak = false;
 	bool do_send = true;
-	int packet_size = 100000;
+	int packet_size = 1024 * 5;
 	void* packet = CUTE_ALLOC(packet_size, NULL);
-	double dt = 1.0/600.0;
+	double dt = 1.0/60.0;
 	iters = 0;
 
 	uint64_t keepalive = ~0ULL;
@@ -282,14 +282,15 @@ int test_client_server_sim()
 	while (1) {
 		if (do_send) {
 			crypto_random_bytes(packet, packet_size);
-			client_send(client, packet, packet_size, true);
+			error_t err = client_send(client, packet, packet_size, true);
+			CUTE_TEST_ASSERT(!err.is_error());
 			do_send = false;
 		}
 
 		client_update(client, dt, 0);
 		server_update(server, dt, 0);
+		server_send(server, &keepalive, sizeof(keepalive), 0, false);
 
-		server_send(server, &keepalive, sizeof(keepalive), 0, true);
 		void* client_packet;
 		int client_packet_size;
 		if (client_pop_packet(client, &client_packet, &client_packet_size)) {
@@ -307,11 +308,10 @@ int test_client_server_sim()
 			CUTE_TEST_ASSERT(!CUTE_MEMCMP(data, packet, packet_size));
 			do_send = true;
 			++iters;
-			printf("iter %d\n", iters);
 			server_free_packet(server, 0, data);
 		}
 
-		if (!soak && iters == 10) {
+		if (!soak && iters == 3) {
 			break;
 		}
 	}

@@ -246,6 +246,8 @@ int test_transport_drop_fragments()
 
 	data_b.drop_packet = 0;
 
+	// WORKING HERE - Resend needs delta time! Rewrite this test (and other below if any).
+
 	transport_resend_unacked_fragments(transport_b);
 
 	CUTE_TEST_CHECK(transport_receive_reliably_and_in_order(transport_a, &packet_received, &packet_received_size).is_error());
