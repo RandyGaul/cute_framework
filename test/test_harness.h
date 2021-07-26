@@ -69,7 +69,7 @@ int do_test(test_t* test, int i)
 	cute::string_nuke_static_pool();
 
 #ifdef _MSC_VER
-	_CrtDumpMemoryLeaks();
+	//_CrtDumpMemoryLeaks();
 #endif
 
 	return result;

@@ -1875,6 +1875,7 @@ static void s_server_send_packets(server_t* server, double dt)
 	uint64_t* sequences = server->client_sequence;
 	crypto_key_t* server_to_client_keys = server->client_server_to_client_key;
 	handle_t* ids = server->client_id;
+	endpoints = server->client_endpoint;
 	uint32_t connection_timeout = server->connection_timeout;
 	for (int i = 0; i < CUTE_PROTOCOL_SERVER_MAX_CLIENTS; ++i) {
 		if (connected[i]) {

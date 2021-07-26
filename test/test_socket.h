@@ -37,6 +37,7 @@ int test_socket_init_send_recieve_shutdown()
 	CUTE_TEST_ASSERT(bytes_sent == message_length);
 	CUTE_MEMSET(message_buffer, 0, message_length);
 	CUTE_TEST_ASSERT(CUTE_MEMCMP(message_buffer, message_string, message_length));
+	sleep(1);
 
 	endpoint_t from;
 	int bytes_recieved = socket_receive(&socket, &from, message_buffer, message_length);

@@ -172,7 +172,7 @@ int test_protocol_client_server_list()
 	uint64_t application_id = 100;
 	uint64_t current_timestamp = 0;
 	uint64_t expiration_timestamp = 1;
-	uint32_t handshake_timeout = 5;
+	uint32_t handshake_timeout = 15;
 	uint64_t client_id = 17;
 
 	uint8_t user_data[CUTE_CONNECT_TOKEN_USER_DATA_SIZE];
@@ -275,7 +275,7 @@ int test_protocol_server_challenge_response_timeout()
 	int iters = 0;
 	while (iters++ < 100)
 	{
-		protocol::client_update(client, 1, 0);
+		protocol::client_update(client, 0.1, 0);
 
 		if (protocol::client_get_state(client) != protocol::CLIENT_STATE_SENDING_CHALLENGE_RESPONSE) {
 			protocol::server_update(server, 0, 0);
