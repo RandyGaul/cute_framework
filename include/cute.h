@@ -52,6 +52,7 @@
 #include "cute_memory_pool.h"
 #include "cute_net.h"
 #include "cute_png_cache.h"
+#include "cute_protocol.h"
 #include "cute_server.h"
 #include "cute_sprite.h"
 #include "cute_string.h"

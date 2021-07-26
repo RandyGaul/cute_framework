@@ -37,13 +37,13 @@ struct server_config_t
 	uint64_t application_id = 0;
 	int max_incoming_bytes_per_second = 0;
 	int max_outgoing_bytes_per_second = 0;
-	int connection_timeout = 60;
+	int connection_timeout = 10;
 	double resend_rate = 0.1f;
 	crypto_sign_public_t public_key;
 	crypto_sign_secret_t secret_key;
 };
 
-CUTE_API server_t* CUTE_CALL server_create(server_config_t* config = NULL, void* user_allocator_context = NULL);
+CUTE_API server_t* CUTE_CALL server_create(server_config_t* config, void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL server_destroy(server_t* server);
 
 CUTE_API error_t CUTE_CALL server_start(server_t* server, const char* address_and_port);
@@ -87,12 +87,10 @@ CUTE_API void CUTE_CALL server_free_packet(server_t* server, int client_index, v
 
 CUTE_API void CUTE_CALL server_update(server_t* server, double dt, uint64_t current_time);
 CUTE_API void CUTE_CALL server_disconnect_client(server_t* server, int client_index, bool notify_client = true);
-CUTE_API void CUTE_CALL server_find_and_disconnect_timed_out_clients(server_t* server, float timeout);
 CUTE_API void CUTE_CALL server_send(server_t* server, const void* packet, int size, int client_index, bool send_reliably);
 CUTE_API void CUTE_CALL server_send_to_all_clients(server_t* server, const void* packet, int size, bool send_reliably);
 CUTE_API void CUTE_CALL server_send_to_all_but_one_client(server_t* server, const void* packet, int size, int client_index, bool send_reliably);
 
-CUTE_API float CUTE_CALL server_time_of_last_packet_recieved_from_client(server_t* server, int client_index);
 CUTE_API bool CUTE_CALL server_is_client_connected(server_t* server, int client_index);
 CUTE_API void CUTE_CALL server_enable_network_simulator(server_t* server, double latency, double jitter, double drop_chance, double duplicate_chance);
 

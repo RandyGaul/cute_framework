@@ -71,6 +71,7 @@ client_t* client_make(uint16_t port, uint64_t application_id, void* user_allocat
 
 void client_destroy(client_t* client)
 {
+	if (!client) return NULL;
 	protocol::client_destroy(client->p_client);
 	transport_destroy(client->transport);
 	void* mem_ctx = client->mem_ctx;
@@ -135,6 +136,24 @@ error_t client_send(client_t* client, const void* packet, int size, bool send_re
 client_state_t client_state_get(const client_t* client)
 {
 	return (client_state_t)protocol::client_get_state(client->p_client);
+}
+
+const char* client_state_string(client_state_t state)
+{
+	switch (state) {
+	case CLIENT_STATE_CONNECT_TOKEN_EXPIRED: return "CLIENT_STATE_CONNECT_TOKEN_EXPIRED";
+	case CLIENT_STATE_INVALID_CONNECT_TOKEN: return "CLIENT_STATE_INVALID_CONNECT_TOKEN";
+	case CLIENT_STATE_CONNECTION_TIMED_OUT: return "CLIENT_STATE_CONNECTION_TIMED_OUT";
+	case CLIENT_STATE_CHALLENGE_RESPONSE_TIMED_OUT: return "CLIENT_STATE_CHALLENGE_RESPONSE_TIMED_OUT";
+	case CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT: return "CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT";
+	case CLIENT_STATE_CONNECTION_DENIED: return "CLIENT_STATE_CONNECTION_DENIED";
+	case CLIENT_STATE_DISCONNECTED: return "CLIENT_STATE_DISCONNECTED";
+	case CLIENT_STATE_SENDING_CONNECTION_REQUEST: return "CLIENT_STATE_SENDING_CONNECTION_REQUEST";
+	case CLIENT_STATE_SENDING_CHALLENGE_RESPONSE: return "CLIENT_STATE_SENDING_CHALLENGE_RESPONSE";
+	case CLIENT_STATE_CONNECTED: return "CLIENT_STATE_CONNECTED";
+	}
+	CUTE_ASSERT(false);
+	return NULL;
 }
 
 float client_time_of_last_packet_recieved(const client_t* client)

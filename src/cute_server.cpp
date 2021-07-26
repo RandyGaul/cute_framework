@@ -59,6 +59,7 @@ static error_t s_send_packet_fn(int client_index, void* packet, int size, void* 
 
 server_t* server_create(server_config_t* config, void* user_allocator_context)
 {
+	CUTE_ASSERT(config);
 	server_t* server = CUTE_NEW(server_t, user_allocator_context);
 	server->config = *config;
 	server->event_queue = circular_buffer_make(CUTE_MB * 10, user_allocator_context);
@@ -69,6 +70,7 @@ server_t* server_create(server_config_t* config, void* user_allocator_context)
 
 void server_destroy(server_t* server)
 {
+	if (!server) return;
 	server_stop(server);
 	protocol::server_destroy(server->p_server);
 	void* mem_ctx = server->mem_ctx;
@@ -96,6 +98,7 @@ error_t server_start(server_t* server, const char* address_and_port)
 
 void server_stop(server_t* server)
 {
+	if (!server) return;
 	circular_buffer_reset(&server->event_queue);
 	protocol::server_stop(server->p_server);
 	for (int i = 0; i < CUTE_SERVER_MAX_CLIENTS; ++i) {
@@ -213,22 +216,6 @@ void server_disconnect_client(server_t* server, int client_index, bool notify_cl
 	protocol::server_disconnect_client(server->p_server, client_index, notify_client);
 }
 
-void server_find_and_disconnect_timed_out_clients(server_t* server, float timeout)
-{
-	//int client_count = server->client_count;
-	//float* last_recieved_times = server->client_last_packet_recieved_time;
-	//for (int i = 0; i < client_count;)
-	//{
-	//	const float keepalive_rate = 3.0f;
-	//	if (last_recieved_times[i] >= keepalive_rate) {
-	//		--client_count;
-	//		server_disconnect_client(server, server->client_handle[i], 1);
-	//	} else {
-	//		 ++i;
-	//	}
-	//}
-}
-
 void server_send(server_t* server, const void* packet, int size, int client_index, bool send_reliably)
 {
 	CUTE_ASSERT(client_index >= 0 && client_index < CUTE_SERVER_MAX_CLIENTS);
@@ -256,17 +243,6 @@ void server_send_to_all_but_one_client(server_t* server, const void* packet, int
 			server_send(server, packet, size, i, send_reliably);
 		}
 	}
-}
-
-float server_time_of_last_packet_recieved_from_client(server_t* server, int client_index)
-{
-	CUTE_ASSERT(client_index >= 0 && client_index < CUTE_SERVER_MAX_CLIENTS);
-	CUTE_ASSERT(protocol::server_is_client_connected(server->p_server, client_index));
-	//uint32_t index = s_client_index_from_handle(server, client_id);
-	//if (index == UINT32_MAX) return -1.0f;
-	//CUTE_ASSERT(server->client_is_connected[index]);
-	//return server->client_last_packet_recieved_time[index];
-	return 0;
 }
 
 bool server_is_client_connected(server_t* server, int client_index)
