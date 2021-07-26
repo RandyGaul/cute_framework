@@ -71,7 +71,7 @@ client_t* client_make(uint16_t port, uint64_t application_id, void* user_allocat
 
 void client_destroy(client_t* client)
 {
-	if (!client) return NULL;
+	if (!client) return;
 	protocol::client_destroy(client->p_client);
 	transport_destroy(client->transport);
 	void* mem_ctx = client->mem_ctx;
