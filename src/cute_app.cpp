@@ -523,4 +523,9 @@ power_info_t app_power_info(app_t* app)
 	return info;
 }
 
+void sleep(int milliseconds)
+{
+	SDL_Delay((Uint32)milliseconds);
+}
+
 }

@@ -86,6 +86,9 @@ struct power_info_t
 
 CUTE_API power_info_t CUTE_CALL app_power_info(app_t* app);
 
+// TODO - Where to put this?
+CUTE_API void CUTE_CALL sleep(int milliseconds);
+
 }
 
 #endif // CUTE_APP_H

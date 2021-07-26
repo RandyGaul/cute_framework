@@ -514,6 +514,11 @@ static int s_packet_size(packet_type_t type)
 	case PACKET_TYPE_PAYLOAD:
 		size = sizeof(packet_payload_t);
 		break;
+
+	default:
+		size = -1;
+		CUTE_ASSERT(false);
+		break;
 	}
 
 	return size;
