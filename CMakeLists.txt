@@ -48,9 +48,9 @@ endif()
 # Defines for cross-platform shader support.
 if(WINDOWS)
 elseif(LINUX)
-	set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
+	#set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 elseif(MACOSX)
-	set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
+	#set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 elseif(EMSCRIPTEN)
 endif()
 
@@ -127,8 +127,6 @@ set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
 
 # Static linking for simplicity.
 # TODO - Replace with FetchContent?
-set(SDL_STATIC ON CACHE BOOL "" FORCE)
-set(SDL_SHARED OFF CACHE BOOL "" FORCE)
 add_subdirectory_with_folder(libraries/SDL2/SDL2-2.0.14 "SDL2")
 
 # Cute Framework shared library.
