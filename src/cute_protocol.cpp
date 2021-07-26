@@ -36,9 +36,6 @@
 
 #include <hydrogen.h>
 
-#define CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE (2 * CUTE_MB)
-#define CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE (2 * CUTE_MB)
-
 #define CUTE_PROTOCOL_CONTEXT "CUTE_CTX"
 
 namespace cute
@@ -1771,14 +1768,14 @@ static void s_server_receive_packets(server_t* server)
 			switch (type)
 			{
 			case PACKET_TYPE_KEEPALIVE:
-				CUTE_ASSERT(index != ~0);
+				if (index == ~0) break;
 				server->client_last_packet_received_time[index] = 0;
 				if (!server->client_is_confirmed[index]) //log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Client %" PRIu64 " is now *confirmed*.", server->client_id[index]);
 				server->client_is_confirmed[index] = 1;
 				break;
 
 			case PACKET_TYPE_DISCONNECT:
-				CUTE_ASSERT(index != ~0);
+				if (index == ~0) break;
 				//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Client %" PRIu64 " has sent the server a DISCONNECT packet.", server->client_id[index]);
 				s_server_disconnect_client(server, index, 0);
 				break;
@@ -1801,7 +1798,7 @@ static void s_server_receive_packets(server_t* server)
 			}	break;
 
 			case PACKET_TYPE_PAYLOAD:
-				CUTE_ASSERT(index != ~0);
+				if (index == ~0) break;
 				server->client_last_packet_received_time[index] = 0;
 				if (!server->client_is_confirmed[index]) //log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Server: Client %" PRIu64 " is now *confirmed*.", server->client_id[index]);
 				server->client_is_confirmed[index] = 1;

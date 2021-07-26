@@ -34,11 +34,11 @@ int test_connect_token_cache()
 	endpoint_t endpoint;
 	CUTE_TEST_CHECK(endpoint_init(&endpoint, "[::]:5000"));
 
-	uint8_t hmac_bytes_a[CUTE_CRYPTO_HEADER_BYTES];
-	uint8_t hmac_bytes_b[CUTE_CRYPTO_HEADER_BYTES];
-	uint8_t hmac_bytes_c[CUTE_CRYPTO_HEADER_BYTES];
-	uint8_t hmac_bytes_d[CUTE_CRYPTO_HEADER_BYTES];
-	uint8_t hmac_bytes_e[CUTE_CRYPTO_HEADER_BYTES];
+	uint8_t hmac_bytes_a[sizeof(crypto_signature_t)];
+	uint8_t hmac_bytes_b[sizeof(crypto_signature_t)];
+	uint8_t hmac_bytes_c[sizeof(crypto_signature_t)];
+	uint8_t hmac_bytes_d[sizeof(crypto_signature_t)];
+	uint8_t hmac_bytes_e[sizeof(crypto_signature_t)];
 	crypto_random_bytes(hmac_bytes_a, sizeof(hmac_bytes_a));
 	crypto_random_bytes(hmac_bytes_b, sizeof(hmac_bytes_b));
 	crypto_random_bytes(hmac_bytes_c, sizeof(hmac_bytes_c));
