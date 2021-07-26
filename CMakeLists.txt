@@ -325,8 +325,6 @@ target_include_directories(cute PRIVATE ${GLAD_INCLUDE_DIRECTORY})
 include_directories(cute PRIVATE "include")
 
 if(MACOSX)
-	find_package(SDL2 REQUIRED)
-
 	# These are needed to link to PHYSFS.
 	find_library(IOKIT IOKit)
 	find_library(FOUNDATION Foundation)
