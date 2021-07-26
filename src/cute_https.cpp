@@ -213,7 +213,7 @@ static error_t s_load_platform_certs(https_t* https)
 
 #elif defined(CUTE_LINUX)
 
-	if (mbedtls_x509_crt_parse_path(chain, "/etc/ssl/certs/") < 0) {
+	if (mbedtls_x509_crt_parse_path(&https->cacert, "/etc/ssl/certs/") < 0) {
 		return error_failure("mbedtls_x509_crt_parse_path failed.");
 	}
 
