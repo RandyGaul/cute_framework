@@ -125,12 +125,11 @@ endif()
 # Just don't build the shared library at all, it's not needed.
 set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
 
-if(WINDOWS)
-	# This is for static linking on Windows.
-	set(SDL_STATIC ON CACHE BOOL "" FORCE)
-	set(SDL_SHARED OFF CACHE BOOL "" FORCE)
-	add_subdirectory_with_folder(libraries/SDL2/SDL2-2.0.14 "SDL2")
-endif()
+# Static linking for simplicity.
+# TODO - Replace with FetchContent?
+set(SDL_STATIC ON CACHE BOOL "" FORCE)
+set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+add_subdirectory_with_folder(libraries/SDL2/SDL2-2.0.14 "SDL2")
 
 # Cute Framework shared library.
 set(CUTE_SRCS
