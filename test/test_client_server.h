@@ -168,6 +168,7 @@ int test_client_server_payload()
 
 	uint64_t packet = 12345678;
 	CUTE_TEST_CHECK(client_send(client, &packet, sizeof(packet), false).is_error());
+	client_update(client, 0, 0);
 	server_update(server, 0, 0);
 
 	server_event_t e;
