@@ -19,7 +19,7 @@ function(add_subdirectory_with_folder _folder _folder_name)
 	set_property(DIRECTORY "${_folder}" PROPERTY FOLDER "${_folder_name}")
 endfunction()
 
-option(CUTE_FRAMEWORK_STATIC "Build static library for Cute Framework." OFF)
+option(CUTE_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
 option(CUTE_FRAMEWORK_WITH_HTTPS "Build Cute Framework with mbedtls for HTTPS support (Apache 2.0 license)." ON)
 option(CUTE_FRAMEWORK_WITH_HYDROGEN "Build Cute Framework with cryptography + authentication support from Hydrogen for networking support (ISC license)." ON)
 option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
