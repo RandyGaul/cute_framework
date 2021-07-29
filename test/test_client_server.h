@@ -283,7 +283,7 @@ int test_client_server_sim()
 	while (1) {
 		if (do_send) {
 			crypto_random_bytes(packet, packet_size);
-			error_t err = client_send(client, packet, packet_size, true);
+			cute::error_t err = client_send(client, packet, packet_size, true);
 			CUTE_TEST_ASSERT(!err.is_error());
 			do_send = false;
 		}

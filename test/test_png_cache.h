@@ -32,7 +32,7 @@ int test_png_cache()
 
 	png_t white;
 	png_t black;
-	error_t err = png_cache_load(cache, "test_data/white_pixel.png", &white);
+	cute::error_t err = png_cache_load(cache, "test_data/white_pixel.png", &white);
 	CUTE_TEST_ASSERT(!err.is_error());
 	err = png_cache_load(cache, "test_data/black_pixel.png", &black);
 	CUTE_TEST_ASSERT(!err.is_error());
