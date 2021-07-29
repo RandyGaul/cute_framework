@@ -32,7 +32,7 @@ struct test_transport_data_t
 	transport_t* transport_b = NULL;
 };
 
-error_t test_send_packet_fn(int index, void* packet, int size, void* udata)
+cute::error_t test_send_packet_fn(int index, void* packet, int size, void* udata)
 {
 	test_transport_data_t* data = (test_transport_data_t*)udata;
 	if (data->drop_packet) {
@@ -115,7 +115,7 @@ int test_ack_system_basic()
 	return 0;
 }
 
-error_t test_transport_send_packet_fn(int index, void* packet, int size, void* udata)
+cute::error_t test_transport_send_packet_fn(int index, void* packet, int size, void* udata)
 {
 	test_transport_data_t* data = (test_transport_data_t*)udata;
 	if (data->drop_packet) {
@@ -129,7 +129,7 @@ error_t test_transport_send_packet_fn(int index, void* packet, int size, void* u
 	}
 }
 
-error_t test_transport_open_packet_fn(int index, void* packet, int size, void* udata)
+cute::error_t test_transport_open_packet_fn(int index, void* packet, int size, void* udata)
 {
 	test_transport_data_t* data = (test_transport_data_t*)udata;
 	return error_success();

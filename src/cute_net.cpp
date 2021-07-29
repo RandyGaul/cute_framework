@@ -457,7 +457,6 @@ void endpoint_to_string(endpoint_t endpoint, char* buffer, int buffer_size)
 			for (int i = 0; i < 8; ++i) ipv6_network_order[i] = htons(endpoint.u.ipv6[i]);
 			inet_ntop(AF_INET6, (void*)ipv6_network_order, buffer, CUTE_ENDPOINT_STRING_MAX_LENGTH);
 		} else {
-			char buffer[INET6_ADDRSTRLEN];
 			uint16_t ipv6_network_order[8];
 			for (int i = 0; i < 8; ++i) ipv6_network_order[i] = htons(endpoint.u.ipv6[i]);
 			inet_ntop(AF_INET6, (void*)ipv6_network_order, buffer, INET6_ADDRSTRLEN);
