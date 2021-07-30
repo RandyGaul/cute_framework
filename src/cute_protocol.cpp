@@ -1050,11 +1050,12 @@ static void s_client_set_state(client_t* client, client_state_t state)
 	//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Client: Switching to state %s.", s_client_state_str(state));
 }
 
-client_t* client_make(uint16_t port, uint64_t application_id, void* user_allocator_context)
+client_t* client_make(uint16_t port, uint64_t application_id, bool use_ipv6, void* user_allocator_context)
 {
 	client_t* client = (client_t*)CUTE_ALLOC(sizeof(client_t), app->mem_ctx);
 	CUTE_MEMSET(client, 0, sizeof(client_t));
 	s_client_set_state(client, CLIENT_STATE_DISCONNECTED);
+	client->use_ipv6;
 	client->application_id = application_id;
 	client->mem_ctx = user_allocator_context;
 	client->packet_queue = circular_buffer_make(CUTE_MB, client->mem_ctx);
@@ -1091,7 +1092,7 @@ error_t client_connect(client_t* client, const uint8_t* connect_token)
 
 	CUTE_MEMCPY(client->connect_token_packet, connect_token_packet, CUTE_CONNECT_TOKEN_PACKET_SIZE);
 
-	if (socket_init(&client->socket, ADDRESS_TYPE_IPV6, 0, CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE, CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE)) {
+	if (socket_init(&client->socket, client->use_ipv6 ? ADDRESS_TYPE_IPV6 : ADDRESS_TYPE_IPV4, 0, CUTE_PROTOCOL_CLIENT_SEND_BUFFER_SIZE, CUTE_PROTOCOL_CLIENT_RECEIVE_BUFFER_SIZE)) {
 		return error_failure("Unable to open socket.");
 	}
 

@@ -243,8 +243,8 @@ struct net_simulator_t;
 
 struct client_t
 {
+	bool use_ipv6;
 	client_state_t state;
-	int loopback;
 	double last_packet_recieved_time;
 	double last_packet_sent_time;
 	uint64_t application_id;

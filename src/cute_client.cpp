@@ -51,14 +51,14 @@ static error_t s_send(int client_index, void* packet, int size, void* udata)
 	return protocol::client_send(client->p_client, packet, size);
 }
 
-client_t* client_make(uint16_t port, uint64_t application_id, void* user_allocator_context)
+client_t* client_make(uint16_t port, uint64_t application_id, bool use_ipv6, void* user_allocator_context)
 {
-	protocol::client_t* p_client = protocol::client_make(port, application_id, user_allocator_context);
+	protocol::client_t* p_client = protocol::client_make(port, application_id, use_ipv6, user_allocator_context);
 	if (!p_client) return NULL;
 
 	client_t* client = CUTE_NEW(client_t, user_allocator_context);
-	client->mem_ctx = user_allocator_context;
 	client->p_client = p_client;
+	client->mem_ctx = user_allocator_context;
 
 	transport_config_t config;
 	config.send_packet_fn = s_send;

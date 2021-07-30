@@ -30,7 +30,7 @@ namespace cute
 
 struct client_t;
 
-CUTE_API client_t* CUTE_CALL client_make(uint16_t port, uint64_t application_id, void* user_allocator_context = NULL);
+CUTE_API client_t* CUTE_CALL client_make(uint16_t port, uint64_t application_id, bool use_ipv6 = false, void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL client_destroy(client_t* client);
 
 CUTE_API error_t CUTE_CALL client_connect(client_t* client, const uint8_t* connect_token);
