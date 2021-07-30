@@ -757,12 +757,6 @@ void transport_destroy(transport_t* transport)
 	CUTE_FREE(transport, config->user_allocator_context);
 }
 
-void transport_reset(transport_t* transport)
-{
-	CUTE_ASSERT(0); // TODO: Implement me.
-	ack_system_reset(transport->ack_system);
-}
-
 static CUTE_INLINE int s_transport_write_header(uint8_t* buffer, int size, uint8_t prefix, uint16_t sequence, uint16_t fragment_count, uint16_t fragment_index, uint16_t fragment_size)
 {
 	if (size < CUTE_TRANSPORT_HEADER_SIZE) return -1;

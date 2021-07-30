@@ -149,6 +149,13 @@ void server_update(server_t* server, double dt, uint64_t current_time)
 			e.type = SERVER_EVENT_TYPE_DISCONNECTED;
 			e.u.disconnected.client_index = p_event.u.disconnected.client_index;
 			s_server_event_push(server, &e);
+			transport_destroy(server->client_transports[e.u.disconnected.client_index]);
+			transport_config_t transport_config;
+			transport_config.index = e.u.disconnected.client_index;
+			transport_config.send_packet_fn = s_send_packet_fn;
+			transport_config.udata = server;
+			transport_config.user_allocator_context = server->mem_ctx;
+			server->client_transports[e.u.disconnected.client_index] = transport_make(&transport_config);
 		}	break;
 
 		// Protocol packets are processed by the reliability transport layer before they

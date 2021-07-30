@@ -176,7 +176,6 @@ struct transport_t;
 
 CUTE_API transport_t* CUTE_CALL transport_make(const transport_config_t* config);
 CUTE_API void CUTE_CALL transport_destroy(transport_t* transport);
-CUTE_API void CUTE_CALL transport_reset(transport_t* transport);
 
 CUTE_API error_t CUTE_CALL transport_send(transport_t* transport, const void* data, int size, bool send_reliably);
 
