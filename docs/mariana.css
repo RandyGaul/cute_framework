@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css?family=IBM+Plex+Mono|IBM+Plex+Sans:300,400,600");
+@import url("https://fonts.googleapis.com/css?family=IBM+Plex+Mono|Open+Sans:300,400,600");
 * {
   -webkit-font-smoothing: antialiased !important;
   -webkit-overflow-scrolling: touch;
@@ -58,7 +58,7 @@ body {
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
   color: #bac5d8;
-  font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+  font-family: 'Open Sans', 'Helvetica Neue', Arial, sans-serif;
   font-size: 1.2rem;
   letter-spacing: 0;
   margin: 0;
@@ -724,7 +724,7 @@ body {
   border-radius: 2px;
   color: #c695c6;
   margin: 0 2px;
-  padding: 3px 5px;
+  padding: 2px 5px;
   white-space: pre-wrap;
 }
 .markdown-section > :not(h1):not(h2):not(h3):not(h4):not(h5):not(h6) code {
