@@ -10,4 +10,4 @@ CF comes with a [2D math library](https://github.com/RandyGaul/cute_framework/bl
 
 There is too much information to document right here, so please check out the [math header itself](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h) for a bunch of in-comments documentation.
 
-There is also a custom implementation of psuedo-random number generation documented in the [rnd](https://github.com/RandyGaul/cute_framework/tree/master/docs/math/rnd) section.
+There is also a custom implementation of psuedo-random number generation documented in the [rnd](https://github.com/RandyGaul/cute_framework/tree/master/docs/math/rnd/) section.

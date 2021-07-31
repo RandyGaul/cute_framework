@@ -24,6 +24,6 @@ string_t to_upper(string_t s)
 
 ## String Categories
 
-[string](https://github.com/RandyGaul/cute_framework/tree/master/docs/string/string)  
-[strpool](https://github.com/RandyGaul/cute_framework/tree/master/docs/string/strpool)  
-[utf8](https://github.com/RandyGaul/cute_framework/tree/master/docs/string/utf8)  
+[string](https://github.com/RandyGaul/cute_framework/tree/master/docs/string/string/)  
+[strpool](https://github.com/RandyGaul/cute_framework/tree/master/docs/string/strpool/)  
+[utf8](https://github.com/RandyGaul/cute_framework/tree/master/docs/string/utf8/)  
