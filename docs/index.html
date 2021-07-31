@@ -22,8 +22,8 @@
       maxLevel: 3,
       subMaxLevel: 3,
       alias: {
-        '/cute_framework_test/.*/_sidebar.md': '/cute_framework_test/_sidebar.md',
-        '/cute_framework_test/.*/_navbar.md': '/cute_framework_test/_navbar.md'
+        '/.*/_sidebar.md': '/_sidebar.md',
+        '/.*/_navbar.md': '/_navbar.md'
       },
       search: {
         maxAge: 86400000, 
@@ -41,6 +41,7 @@
       plugins: [
         function (hook, vm) {
           hook.beforeEach(function (html) {
+            console.log(hook, vm)
             html = html.replace(
               /https:\/\/github.com\/RandyGaul\/cute_framework\/(blob|tree)\/master\/docs\//gi,
               '/'
