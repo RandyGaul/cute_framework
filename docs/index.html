@@ -41,7 +41,6 @@
       plugins: [
         function (hook, vm) {
           hook.beforeEach(function (html) {
-            console.log(hook, vm)
             html = html.replace(
               /https:\/\/github.com\/RandyGaul\/cute_framework\/(blob|tree)\/master\/docs\//gi,
               '/'
