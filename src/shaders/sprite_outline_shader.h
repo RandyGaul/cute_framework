@@ -1774,7 +1774,7 @@ static inline const sg_shader_desc* sprite_outline_shd_shader_desc(void) {
       desc.fs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
       desc.fs.uniform_blocks[0].uniforms[0].array_count = 3;
       desc.fs.images[0].name = "u_image";
-      desc.fs.images[0].type = SG_IMAGETYPE_2D;
+      desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
       desc.label = "sprite_outline_shd_shader";
     };
@@ -1803,7 +1803,7 @@ static inline const sg_shader_desc* sprite_outline_shd_shader_desc(void) {
       desc.fs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
       desc.fs.uniform_blocks[0].uniforms[0].array_count = 3;
       desc.fs.images[0].name = "u_image";
-      desc.fs.images[0].type = SG_IMAGETYPE_2D;
+      desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
       desc.label = "sprite_outline_shd_shader";
     };
@@ -1832,7 +1832,7 @@ static inline const sg_shader_desc* sprite_outline_shd_shader_desc(void) {
       desc.fs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
       desc.fs.uniform_blocks[0].uniforms[0].array_count = 3;
       desc.fs.images[0].name = "u_image";
-      desc.fs.images[0].type = SG_IMAGETYPE_2D;
+      desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
       desc.label = "sprite_outline_shd_shader";
     };
@@ -1860,7 +1860,7 @@ static inline const sg_shader_desc* sprite_outline_shd_shader_desc(void) {
       desc.fs.entry = "main";
       desc.fs.uniform_blocks[0].size = 48;
       desc.fs.images[0].name = "u_image";
-      desc.fs.images[0].type = SG_IMAGETYPE_2D;
+      desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
       desc.label = "sprite_outline_shd_shader";
     };
@@ -1880,7 +1880,7 @@ static inline const sg_shader_desc* sprite_outline_shd_shader_desc(void) {
       desc.fs.entry = "main0";
       desc.fs.uniform_blocks[0].size = 48;
       desc.fs.images[0].name = "u_image";
-      desc.fs.images[0].type = SG_IMAGETYPE_2D;
+      desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
       desc.label = "sprite_outline_shd_shader";
     };

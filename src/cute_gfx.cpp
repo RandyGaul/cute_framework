@@ -42,8 +42,8 @@ texture_t texture_make(pixel_t* pixels, int w, int h, sg_wrap mode)
 	params.height = h;
 	params.wrap_u = mode;
 	params.wrap_v = mode;
-	params.content.subimage[0][0].ptr = pixels;
-	params.content.subimage[0][0].size = w * h * sizeof(pixel_t);
+	params.data.subimage[0][0].ptr = pixels;
+	params.data.subimage[0][0].size = w * h * sizeof(pixel_t);
 	params.num_mipmaps = 0;
 	sg_image img = sg_make_image(params);
 	return (texture_t)img.id;
@@ -119,12 +119,17 @@ error_t triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const vo
 {
 	bool overflowed = false;
 
-	int voffset = sg_append_buffer(buffer->vbuf.buffer[buffer->vbuf.buffer_number], vertices, vertex_count * buffer->vbuf.stride);
+	sg_range range;
+	range.ptr = vertices;
+	range.size = vertex_count * buffer->vbuf.stride;
+	int voffset = sg_append_buffer(buffer->vbuf.buffer[buffer->vbuf.buffer_number], range);
 	buffer->vbuf.offset = voffset;
 	overflowed |= sg_query_buffer_overflow(buffer->vbuf.buffer[buffer->vbuf.buffer_number]);
 
 	if (index_count) {
-		int ioffset = sg_append_buffer(buffer->ibuf.buffer[buffer->ibuf.buffer_number], indices, index_count * buffer->ibuf.stride);
+		range.ptr = indices;
+		range.size = index_count * buffer->ibuf.stride;
+		int ioffset = sg_append_buffer(buffer->ibuf.buffer[buffer->ibuf.buffer_number], range);
 		buffer->ibuf.offset = ioffset;
 		overflowed |= sg_query_buffer_overflow(buffer->ibuf.buffer[buffer->ibuf.buffer_number]);
 	}

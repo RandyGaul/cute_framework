@@ -101,7 +101,8 @@ struct batch_t
 
 	array<m3x2> m3x2s;
 	array<sg_blend_state> blend_states;
-	array<sg_depth_stencil_state> depth_stencil_states;
+	array<sg_depth_state> depth_states;
+	array<sg_stencil_state> stencil_states;
 	array<scissor_t> scissors;
 	array<color_t> tints = { DEFAULT_TINT };
 
@@ -275,8 +276,8 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 		sprite_default_fs_params_t fs_params = {
 			b->tints.last()
 		};
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &vs_params, sizeof(vs_params));
-		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &fs_params, sizeof(fs_params));
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
+		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE(fs_params));
 	}	break;
 
 	case BATCH_SPRITE_SHADER_TYPE_OUTLINE:
@@ -291,8 +292,8 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 			b->outline_use_border,
 			b->outline_use_corners
 		};
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &vs_params, sizeof(vs_params));
-		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &fs_params, sizeof(fs_params));
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
+		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE(fs_params));
 	}	break;
 	}
 
@@ -339,8 +340,8 @@ static void s_sync_pip(batch_t* b)
 		params.layout.attrs[2].format = SG_VERTEXFORMAT_FLOAT;
 		params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
 		params.shader = b->active_shd;
-		params.depth_stencil = b->depth_stencil_states.last();
-		params.blend = b->blend_states.last();
+		params.stencil = b->stencil_states.last();
+		params.colors[0].blend = b->blend_states.last();
 		b->pip = sg_make_pipeline(params);
 		b->pip_dirty = false;
 	}
@@ -368,17 +369,17 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 	params.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT4;
 	params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
 	params.shader = sg_make_shader(geom_shd_shader_desc());
-	params.blend.enabled = true;
-	params.blend.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
-	params.blend.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	params.blend.op_rgb = SG_BLENDOP_ADD;
-	params.blend.src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
-	params.blend.dst_factor_alpha = SG_BLENDFACTOR_ONE;
-	params.blend.op_alpha = SG_BLENDOP_ADD;
+	params.colors[0].blend.enabled = true;
+	params.colors[0].blend.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
+	params.colors[0].blend.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	params.colors[0].blend.op_rgb = SG_BLENDOP_ADD;
+	params.colors[0].blend.src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
+	params.colors[0].blend.dst_factor_alpha = SG_BLENDFACTOR_ONE;
+	params.colors[0].blend.op_alpha = SG_BLENDOP_ADD;
 	b->geom_pip = sg_make_pipeline(params);
 	b->geom_buffer = triple_buffer_make(sizeof(vertex_t) * 1024 * 10, sizeof(vertex_t));
 
-	batch_push_depth_stencil_defaults(b);
+	batch_push_stencil_defaults(b);
 	batch_push_blend_defaults(b);
 	b->default_shd = b->active_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_DEFAULT);
 	b->outline_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_OUTLINE);
@@ -451,7 +452,7 @@ error_t batch_flush(batch_t* b)
 		sg_apply_pipeline(b->geom_pip);
 		geom_vs_params_t params;
 		params.u_mvp = b->projection;
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &params, sizeof(params));
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(params));
 		error_t err = triple_buffer_append(&b->geom_buffer, b->geom_verts.count(), b->geom_verts.data());
 		CUTE_ASSERT(!err.is_error());
 		sg_apply_bindings(b->geom_buffer.bind());
@@ -515,23 +516,44 @@ void batch_pop_scissor_box(batch_t* b)
 	}
 }
 
-void batch_push_depth_stencil_state(batch_t* b, const sg_depth_stencil_state& depth_stencil_state)
+void batch_push_depth_state(batch_t* b, const sg_depth_state& depth_state)
 {
-	b->depth_stencil_states.add(depth_stencil_state);
+	b->depth_states.add(depth_state);
 	b->pip_dirty = true;
 }
 
-void batch_push_depth_stencil_defaults(batch_t* b)
+void batch_push_depth_defaults(batch_t* b)
 {
-	sg_depth_stencil_state depth_stencil_state;
-	CUTE_MEMSET(&depth_stencil_state, 0, sizeof(depth_stencil_state));
-	batch_push_depth_stencil_state(b, depth_stencil_state);
+	sg_depth_state depth_state;
+	CUTE_MEMSET(&depth_state, 0, sizeof(depth_state));
+	batch_push_depth_state(b, depth_state);
 }
 
-void batch_pop_depth_stencil_state(batch_t* b)
+void batch_pop_depth_state(batch_t* b)
 {
-	if (b->depth_stencil_states.count() > 1) {
-		b->depth_stencil_states.pop();
+	if (b->depth_states.count() > 1) {
+		b->depth_states.pop();
+		b->pip_dirty = true;
+	}
+}
+
+void batch_push_stencil_state(batch_t* b, const sg_stencil_state& stencil_state)
+{
+	b->stencil_states.add(stencil_state);
+	b->pip_dirty = true;
+}
+
+void batch_push_stencil_defaults(batch_t* b)
+{
+	sg_stencil_state stencil_state;
+	CUTE_MEMSET(&stencil_state, 0, sizeof(stencil_state));
+	batch_push_stencil_state(b, stencil_state);
+}
+
+void batch_pop_stencil_state(batch_t* b)
+{
+	if (b->stencil_states.count() > 1) {
+		b->stencil_states.pop();
 		b->pip_dirty = true;
 	}
 }

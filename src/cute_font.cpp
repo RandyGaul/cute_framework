@@ -158,8 +158,8 @@ void font_draw(app_t* app, const font_t* font, matrix_t mvp, color_t color)
 	sg_apply_bindings(bind);
 	app->font_vs_uniforms.u_mvp = mvp;
 	app->font_fs_uniforms.u_text_color = color;
-	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &app->font_vs_uniforms, sizeof(app->font_vs_uniforms));
-	sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, &app->font_fs_uniforms, sizeof(app->font_fs_uniforms));
+	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(app->font_vs_uniforms));
+	sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE(app->font_fs_uniforms));
 	sg_draw(0, app->font_verts.count(), 1);
 
 	app->font_verts.clear();
@@ -235,13 +235,13 @@ void font_init(app_t* app)
 	pip_params.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
 	pip_params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
 	pip_params.shader = app->font_shader;
-	pip_params.blend.enabled = true;
-	pip_params.blend.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
-	pip_params.blend.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	pip_params.blend.op_rgb = SG_BLENDOP_ADD;
-	pip_params.blend.src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
-	pip_params.blend.dst_factor_alpha = SG_BLENDFACTOR_ONE;
-	pip_params.blend.op_alpha = SG_BLENDOP_ADD;
+	pip_params.colors[0].blend.enabled = true;
+	pip_params.colors[0].blend.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
+	pip_params.colors[0].blend.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	pip_params.colors[0].blend.op_rgb = SG_BLENDOP_ADD;
+	pip_params.colors[0].blend.src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
+	pip_params.colors[0].blend.dst_factor_alpha = SG_BLENDFACTOR_ONE;
+	pip_params.colors[0].blend.op_alpha = SG_BLENDOP_ADD;
 	app->font_pip = sg_make_pipeline(pip_params);
 
 	app->font_buffer = triple_buffer_make(sizeof(font_vertex_t) * 1024 * 2, sizeof(font_vertex_t));

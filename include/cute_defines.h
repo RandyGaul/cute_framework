@@ -80,6 +80,7 @@
 #			define CUTE_API
 #		endif
 #	endif
+#	define SOKOL_DLL
 #else
 #	define CUTE_API
 #endif

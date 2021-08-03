@@ -50,12 +50,14 @@
 #include <cute/cute_sound.h>
 
 #include <imgui/imgui.h>
+#include <imgui/imgui_internal.h>
 
 #if defined(SOKOL_GLCORE33) || defined(SOKOL_GLES3) || defined(SOKOL_GLES2)
 #	include <glad/glad.h>
 #endif
 
 #define SOKOL_IMPL
+#define SOKOL_TRACE_HOOKS
 #ifdef SOKOL_D3D11
 #	define D3D11_NO_HELPERS
 #endif
@@ -65,6 +67,7 @@
 #define SOKOL_IMGUI_NO_SOKOL_APP
 #include <internal/imgui/sokol_imgui.h>
 #include <internal/imgui/imgui_impl_sdl.h>
+#include <sokol/sokol_gfx_imgui.h>
 
 #include <shaders/upscale_shader.h>
 
@@ -302,7 +305,7 @@ void app_present(app_t* app)
 		sg_apply_pipeline(app->offscreen_to_screen_pip);
 		sg_apply_bindings(bind);
 		upscale_vs_params_t vs_params = { app->upscale };
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, &vs_params, sizeof(vs_params));
+		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
 		sg_draw(0, 6, 1);
 		s_imgui_present(app);
 		sg_end_pass();
@@ -476,7 +479,7 @@ error_t app_init_upscaling(app_t* app, upscale_t upscaling, int offscreen_w, int
 	s_quad(0, 0, 2, 2, quad);
 	sg_buffer_desc quad_params = { 0 };
 	quad_params.size = sizeof(quad);
-	quad_params.content = quad;
+	quad_params.data = SG_RANGE(quad);
 	app->quad = sg_make_buffer(quad_params);
 	if (app->quad.id == SG_INVALID_ID) return error_failure("Unable create static quad buffer.");
 

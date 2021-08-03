@@ -184,6 +184,7 @@ set(CUTE_SRCS
 	libraries/imgui/imgui.cpp
 	libraries/imgui/imgui_demo.cpp
 	libraries/imgui/imgui_draw.cpp
+	libraries/imgui/imgui_tables.cpp
 	libraries/imgui/imgui_widgets.cpp
 )
 

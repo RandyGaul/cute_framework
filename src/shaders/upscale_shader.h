@@ -648,7 +648,7 @@ static inline const sg_shader_desc* upscale_shd_shader_desc(void) {
       desc.fs.source = upscale_fs_source_glsl330;
       desc.fs.entry = "main";
       desc.fs.images[0].name = "u_image";
-      desc.fs.images[0].type = SG_IMAGETYPE_2D;
+      desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
       desc.label = "upscale_shd_shader";
     };
@@ -672,7 +672,7 @@ static inline const sg_shader_desc* upscale_shd_shader_desc(void) {
       desc.fs.source = upscale_fs_source_glsl100;
       desc.fs.entry = "main";
       desc.fs.images[0].name = "u_image";
-      desc.fs.images[0].type = SG_IMAGETYPE_2D;
+      desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
       desc.label = "upscale_shd_shader";
     };
@@ -696,7 +696,7 @@ static inline const sg_shader_desc* upscale_shd_shader_desc(void) {
       desc.fs.source = upscale_fs_source_glsl300es;
       desc.fs.entry = "main";
       desc.fs.images[0].name = "u_image";
-      desc.fs.images[0].type = SG_IMAGETYPE_2D;
+      desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
       desc.label = "upscale_shd_shader";
     };
@@ -721,7 +721,7 @@ static inline const sg_shader_desc* upscale_shd_shader_desc(void) {
       desc.fs.d3d11_target = "ps_5_0";
       desc.fs.entry = "main";
       desc.fs.images[0].name = "u_image";
-      desc.fs.images[0].type = SG_IMAGETYPE_2D;
+      desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
       desc.label = "upscale_shd_shader";
     };
@@ -740,7 +740,7 @@ static inline const sg_shader_desc* upscale_shd_shader_desc(void) {
       desc.fs.source = upscale_fs_source_metal_macos;
       desc.fs.entry = "main0";
       desc.fs.images[0].name = "u_image";
-      desc.fs.images[0].type = SG_IMAGETYPE_2D;
+      desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
       desc.label = "upscale_shd_shader";
     };
