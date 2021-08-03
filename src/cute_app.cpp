@@ -215,6 +215,7 @@ void app_destroy(app_t* app)
 	if (app->using_imgui) {
 		simgui_shutdown();
 		ImGui_ImplSDL2_Shutdown();
+		sg_imgui_discard(&app->sg_imgui);
 		app->using_imgui = false;
 	}
 	if (app->gfx_enabled) {
@@ -307,10 +308,16 @@ void app_present(app_t* app)
 		upscale_vs_params_t vs_params = { app->upscale };
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
 		sg_draw(0, 6, 1);
-		s_imgui_present(app);
+		if (app->using_imgui) {
+			sg_imgui_draw(&app->sg_imgui);
+			s_imgui_present(app);
+		}
 		sg_end_pass();
 	} else {
-		s_imgui_present(app);
+		if (app->using_imgui) {
+			sg_imgui_draw(&app->sg_imgui);
+			s_imgui_present(app);
+		}
 		sg_end_pass();
 	}
 
@@ -377,8 +384,15 @@ ImGuiContext* app_init_imgui(app_t* app)
 	ImGui_SDL2_Init(app->window);
 	simgui_desc_t imgui_params = { 0 };
 	simgui_setup(imgui_params);
+	sg_imgui_init(&app->sg_imgui);
 
 	return ::ImGui::GetCurrentContext();
+}
+
+sg_imgui_t* app_get_sokol_imgui(app_t* app)
+{
+	if (!app->using_imgui) return NULL;
+	return &app->sg_imgui;
 }
 
 strpool_t* app_get_strpool(app_t* app)

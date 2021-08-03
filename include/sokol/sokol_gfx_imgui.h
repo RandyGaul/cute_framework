@@ -616,7 +616,7 @@ typedef struct {
     bool open;
 } sg_imgui_caps_t;
 
-typedef struct {
+typedef struct sg_imgui_t {
     uint32_t init_tag;
     sg_imgui_buffers_t buffers;
     sg_imgui_images_t images;

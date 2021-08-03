@@ -41,6 +41,8 @@
 
 #include <cute/cute_font.h>
 
+#include <sokol/sokol_gfx_imgui.h>
+
 struct SDL_Window;
 struct cs_context_t;
 
@@ -175,6 +177,7 @@ struct app_t
 	window_state_t window_state;
 	window_state_t window_state_prev;
 	bool using_imgui = false;
+	sg_imgui_t sg_imgui;
 	strpool_t* strpool = NULL;
 
 	array<char> ime_composition;
