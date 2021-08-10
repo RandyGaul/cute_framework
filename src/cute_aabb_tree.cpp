@@ -718,7 +718,7 @@ bool aabb_tree_update_leaf(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb)
 
 	void* udata = tree->udatas[leaf.id];
 	aabb_tree_remove(tree, leaf);
-	aabb_tree_insert(tree, expand(aabb, AABB_TREE_EXPAND_CONSTANT), udata);
+	aabb_tree_insert(tree, aabb, udata);
 
 	return true;
 }
