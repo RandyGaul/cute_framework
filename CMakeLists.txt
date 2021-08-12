@@ -52,7 +52,6 @@ elseif(LINUX)
 elseif(MACOSX)
 	#set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 elseif(EMSCRIPTEN)
-	add_definitions(-DCUTE_EMSCRIPTEN)
 endif()
 
 # Disable annoying MSVC warnings.
@@ -387,6 +386,12 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 
 	# Copy over any test data in the test/test_data folder.
 	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:tests>/test_data)
+
+	if(EMSCRIPTEN)
+		set(CMAKE_EXECUTABLE_SUFFIX ".html")
+		target_compile_options(tests PUBLIC -O1 -fno-rtti -fno-exceptions)
+		target_link_options(tests PRIVATE -o tests.html --preload-file $<TARGET_FILE_DIR:tests>/test_data --emrun -O1)
+	endif()
 
 	# For convenience make tests the startup project in Visual Studio.
 	# Also set working directory to the target output folder.

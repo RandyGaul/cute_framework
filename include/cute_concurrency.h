@@ -33,7 +33,7 @@ namespace cute
 using mutex_t       = cute_mutex_t;
 using cv_t          = cute_cv_t;
 using atomic_int_t  = cute_atomic_int_t;
-using sem_t         = cute_semaphore_t;
+using semaphore_t   = cute_semaphore_t;
 using thread_t      = cute_thread_t;
 using thread_id_t   = cute_thread_id_t;
 using thread_func_t = cute_thread_fn;
@@ -52,12 +52,12 @@ CUTE_API error_t CUTE_CALL cv_wake_all(cv_t* cv);
 CUTE_API error_t CUTE_CALL cv_wake_one(cv_t* cv);
 CUTE_API error_t CUTE_CALL cv_wait(cv_t* cv, mutex_t* mutex);
 
-CUTE_API sem_t CUTE_CALL sem_create(int initial_count);
-CUTE_API void CUTE_CALL sem_destroy(sem_t* semaphore);
-CUTE_API error_t CUTE_CALL sem_post(sem_t* semaphore);
-CUTE_API error_t CUTE_CALL sem_try(sem_t* semaphore);
-CUTE_API error_t CUTE_CALL sem_wait(sem_t* semaphore);
-CUTE_API error_t CUTE_CALL sem_value(sem_t* semaphore);
+CUTE_API semaphore_t CUTE_CALL sem_create(int initial_count);
+CUTE_API void CUTE_CALL sem_destroy(semaphore_t* semaphore);
+CUTE_API error_t CUTE_CALL sem_post(semaphore_t* semaphore);
+CUTE_API error_t CUTE_CALL sem_try(semaphore_t* semaphore);
+CUTE_API error_t CUTE_CALL sem_wait(semaphore_t* semaphore);
+CUTE_API error_t CUTE_CALL sem_value(semaphore_t* semaphore);
 
 CUTE_API thread_t* CUTE_CALL thread_create(thread_func_t func, const char* name, void* udata);
 CUTE_API void CUTE_CALL thread_detach(thread_t* thread);

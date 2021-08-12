@@ -739,7 +739,7 @@ static int hashtable_internal_find_slot(const hashtable_t* table, const void* ke
 
 		if (slot_hash) {
 			int slot_base = (int)(slot_hash % (uint64_t)table->slot_capacity);
-			if (slot_base == base_slot) 
+			if (slot_base == base_slot)
 			{
 				CUTE_ASSERT(base_count > 0);
 				--base_count;
@@ -770,7 +770,7 @@ void* hashtable_insert(hashtable_t* table, const void* key, const void* item)
 		uint64_t slot_hash = table->slots[slot].key_hash;
 		if (slot_hash == 0 && table->slots[first_free].key_hash != 0) first_free = slot;
 		int slot_base = (int)(slot_hash % (uint64_t)table->slot_capacity);
-		if (slot_base == base_slot) 
+		if (slot_base == base_slot)
 			--base_count;
 		slot = (slot + 1) % table->slot_capacity;
 	}
@@ -822,7 +822,7 @@ void hashtable_remove(hashtable_t* table, const void* key)
 		table->slots[table->items_slot_index[last_index]].item_index = index;
 	}
 	--table->count;
-} 
+}
 
 void hashtable_clear(hashtable_t* table)
 {
@@ -1055,7 +1055,7 @@ client_t* client_make(uint16_t port, uint64_t application_id, bool use_ipv6, voi
 	client_t* client = (client_t*)CUTE_ALLOC(sizeof(client_t), app->mem_ctx);
 	CUTE_MEMSET(client, 0, sizeof(client_t));
 	s_client_set_state(client, CLIENT_STATE_DISCONNECTED);
-	client->use_ipv6;
+	client->use_ipv6 = use_ipv6;
 	client->application_id = application_id;
 	client->mem_ctx = user_allocator_context;
 	client->packet_queue = circular_buffer_make(CUTE_MB, client->mem_ctx);
@@ -1324,7 +1324,7 @@ static int s_goto_next_server(client_t* client)
 	}
 
 	int index = ++client->server_endpoint_index;
-	
+
 	//log(CUTE_LOG_LEVEL_INFORMATIONAL, "Protocol Client: Unable to connect to server index %d; now attempting index %d.", index - 1, index);
 
 	client->last_packet_recieved_time = 0;

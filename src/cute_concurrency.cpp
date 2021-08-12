@@ -87,32 +87,32 @@ error_t cv_wait(cv_t* cv, mutex_t* mutex)
 	return error_make(cute_cv_wait(cv, mutex), NULL);
 }
 
-sem_t sem_create(int initial_count)
+semaphore_t sem_create(int initial_count)
 {
 	return cute_semaphore_create(initial_count);
 }
 
-void sem_destroy(sem_t* semaphore)
+void sem_destroy(semaphore_t* semaphore)
 {
 	cute_semaphore_destroy(semaphore);
 }
 
-error_t sem_post(sem_t* semaphore)
+error_t sem_post(semaphore_t* semaphore)
 {
 	return error_make(cute_semaphore_post(semaphore), NULL);
 }
 
-error_t sem_try(sem_t* semaphore)
+error_t sem_try(semaphore_t* semaphore)
 {
 	return error_make(cute_semaphore_try(semaphore), NULL);
 }
 
-error_t sem_wait(sem_t* semaphore)
+error_t sem_wait(semaphore_t* semaphore)
 {
 	return error_make(cute_semaphore_wait(semaphore), NULL);
 }
 
-error_t sem_value(sem_t* semaphore)
+error_t sem_value(semaphore_t* semaphore)
 {
 	return error_make(cute_semaphore_value(semaphore), NULL);
 }
