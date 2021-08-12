@@ -1,6 +1,6 @@
 /*
 Minimal asymmetric stackful cross-platform coroutine library in pure C.
-minicoro
+minicoro - v0.1.2 - 13/Feb/2021
 Eduardo Bart - edub4rt@gmail.com
 https://github.com/edubart/minicoro
 
@@ -26,20 +26,19 @@ The API is inspired by Lua coroutines but with C use in mind.
 - Error prone API, returning proper error codes on misuse.
 - Support running with Valgrind, ASan (AddressSanitizer) and TSan (ThreadSanitizer).
 
-# Implementation details
+# Supported Platforms
 
-Most platforms are supported through different methods.
+Most platforms are supported through different methods:
 
-| Architecture | System      | Method    |
-|--------------|-------------|-----------|
-| x86_32       | (any OS)    | assembly  |
-| x86_64       | (any OS)    | assembly  |
-| ARM          | (any OS)    | assembly  |
-| ARM64        | (any OS)    | assembly  |
-| (any CPU)    | (any OS)    | ucontext  |
-| x86_64       | Windows     | assembly  |
-| (any CPU)    | Windows     | fibers    |
-| WebAssembly  | Web         | fibers    |
+| Platform     | Assembly Method  | Fallback Method   |
+|--------------|------------------|-------------------|
+| Android      | ARM/ARM64        | N/A               |
+| Windows      | x86_64           | Windows fibers    |
+| Linux        | x86_64/i686      | ucontext          |
+| Mac OS X     | x86_64           | ucontext          |
+| Browser      | N/A              | Emscripten fibers |
+| Raspberry Pi | ARM              | ucontext          |
+| RISC-V       | rv64/rv32        | ucontext          |
 
 The assembly method is used by default if supported by the compiler and CPU,
 otherwise ucontext or fiber method is used as a fallback.
@@ -54,8 +53,8 @@ to create, resume, yield or destroy a coroutine.
 - To use in multithread applications, you must compile with C compiler that supports `thread_local` qualifier.
 - Some unsupported sanitizers for C may trigger false warnings when using coroutines.
 - The `mco_coro` object is not thread safe, you should lock each coroutine into a thread.
-- Take care to not cause stack overflows, otherwise your program may crash or not, the behavior is undefined.
-- Some older operating systems may have defective ucontext implementations because this feature is not widely used, upgrade your OS.
+- Stack space is fixed, it cannot grow. By default it has about 56KB of space, this can be changed on coroutine creation.
+- Take care to not cause stack overflows (run out of stack space), otherwise your program may crash or not, the behavior is undefined.
 - On WebAssembly you must compile with emscripten flag `-s ASYNCIFY=1`.
 
 # Introduction
@@ -82,7 +81,7 @@ you can  optionally set `user_data` on its creation and later retrieve with `mco
 
 To pass values between resume and yield,
 you can optionally use `mco_push` and `mco_pop` APIs,
-they are intended to pass temporary values using a FIFO style buffer.
+they are intended to pass temporary values using a LIFO style buffer.
 The storage system can also be used to send and receive initial values on coroutine creation or before it finishes.
 
 # Usage
@@ -216,7 +215,7 @@ typedef enum mco_state {
   MCO_DEAD = 0,  /* The coroutine has finished normally or was uninitialized before finishing. */
   MCO_NORMAL,    /* The coroutine is active but not running (that is, it has resumed another coroutine). */
   MCO_RUNNING,   /* The coroutine is active and running. */
-  MCO_SUSPENDED, /* The coroutine is suspended (in a call to yield, or it has not started running yet). */
+  MCO_SUSPENDED  /* The coroutine is suspended (in a call to yield, or it has not started running yet). */
 } mco_state;
 
 /* Coroutine result codes. */
@@ -270,7 +269,7 @@ typedef struct mco_desc {
 } mco_desc;
 
 /* Coroutine functions. */
-MCO_API mco_desc mco_desc_init(void (*func)(mco_coro* co), size_t stack_size);  /* Initialize description of a coroutine. When stack size is 0 then MCO_DEFAULT_STACK_SIZE is be used. */
+MCO_API mco_desc mco_desc_init(void (*func)(mco_coro* co), size_t stack_size);  /* Initialize description of a coroutine. When stack size is 0 then MCO_DEFAULT_STACK_SIZE is used. */
 MCO_API mco_result mco_init(mco_coro* co, mco_desc* desc);                      /* Initialize the coroutine. */
 MCO_API mco_result mco_uninit(mco_coro* co);                                    /* Uninitialize the coroutine, may fail if it's not dead or suspended. */
 MCO_API mco_result mco_create(mco_coro** out_co, mco_desc* desc);               /* Allocates and initializes a new coroutine. */
@@ -327,7 +326,10 @@ extern "C" {
     #define MCO_USE_FIBERS
   #else
     #if __GNUC__ >= 3 /* Assembly extension supported. */
-      #if defined(__x86_64__) || defined(__i386) || defined(__i386__) || defined(__ARM_EABI__) || defined(__aarch64__)
+      #if defined(__x86_64__) || \
+          defined(__i386) || defined(__i386__) || \
+          defined(__ARM_EABI__) || defined(__aarch64__) || \
+          defined(__riscv)
         #define MCO_USE_ASM
       #else
         #define MCO_USE_UCONTEXT
@@ -512,6 +514,34 @@ static void _mco_main(mco_coro* co) {
 
 #if defined(MCO_USE_UCONTEXT) || defined(MCO_USE_ASM)
 
+/*
+Some of the following assembly code is taken from LuaCoco by Mike Pall.
+See https://coco.luajit.org/index.html
+
+MIT license
+
+Copyright (C) 2004-2016 Mike Pall. All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+*/
+
 #ifdef MCO_USE_ASM
 
 #if defined(__x86_64__) || defined(_M_X64)
@@ -519,16 +549,16 @@ static void _mco_main(mco_coro* co) {
 #ifdef _WIN32
 
 typedef struct _mco_ctxbuf {
-  void* buf[10]; /* rip, rsp, rbp, rbx, r12, r13, r14, r15, rdi, rsi */
-  void* xmm[10*2]; /* xmm6, xmm7, xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15 */
+  void *rip, *rsp, *rbp, *rbx, *r12, *r13, *r14, *r15, *rdi, *rsi;
+  void* xmm[20]; /* xmm6, xmm7, xmm8, xmm9, xmm10, xmm11, xmm12, xmm13, xmm14, xmm15 */
   void* fiber_storage;
   void* dealloc_stack;
   void* stack_limit;
   void* stack_base;
 } _mco_ctxbuf;
 
-#ifdef __GNUC__
-#define _MCO_ASM_BLOB __attribute__((section(".text#")))
+#if defined(__GNUC__)
+#define _MCO_ASM_BLOB __attribute__((section(".text")))
 #elif defined(_MSC_VER)
 #define _MCO_ASM_BLOB __declspec(allocate(".text"))
 #pragma section(".text")
@@ -611,10 +641,10 @@ static mco_result _mco_makectx(mco_coro* co, _mco_ctxbuf* ctx, void* stack_base,
   stack_size = stack_size - 32; /* Reserve 32 bytes for the shadow space. */
   void** stack_high_ptr = (void**)((size_t)stack_base + stack_size - sizeof(size_t));
   stack_high_ptr[0] = (void*)(0xdeaddeaddeaddead);  /* Dummy return address. */
-  ctx->buf[0] = (void*)(_mco_wrap_main);
-  ctx->buf[1] = (void*)(stack_high_ptr);
-  ctx->buf[4] = (void*)(_mco_main);
-  ctx->buf[5] = (void*)(co);
+  ctx->rip = (void*)(_mco_wrap_main);
+  ctx->rsp = (void*)(stack_high_ptr);
+  ctx->r12 = (void*)(_mco_main);
+  ctx->r13 = (void*)(co);
   void* stack_top = (void*)((size_t)stack_base + stack_size);
   ctx->stack_base = stack_top;
   ctx->stack_limit = stack_base;
@@ -625,113 +655,337 @@ static mco_result _mco_makectx(mco_coro* co, _mco_ctxbuf* ctx, void* stack_base,
 #else /* not _WIN32 */
 
 typedef struct _mco_ctxbuf {
-  void* buf[8]; /* rip, rsp, rbp, rbx, r12, r13, r14, r15 */
+  void *rip, *rsp, *rbp, *rbx, *r12, *r13, *r14, *r15;
 } _mco_ctxbuf;
 
-static void _mco_wrap_main(void) {
-  __asm__ __volatile__ (
-    "movq %r13, %rdi\n\t"
-#if defined(__APPLE__)
-    "sub $8, %rsp\n\t"
-#endif
-    "jmpq *%r12");
-}
+void _mco_wrap_main(void);
+int _mco_switch(_mco_ctxbuf* from, _mco_ctxbuf* to);
 
-static MCO_FORCE_INLINE void _mco_switch(_mco_ctxbuf* from, _mco_ctxbuf* to) {
-  __asm__ __volatile__ (
-    "leaq 1f(%%rip), %%rax\n\t"
-    "movq %%rax, (%0)\n\t"
-    "movq %%rsp, 8(%0)\n\t"
-    "movq %%rbp, 16(%0)\n\t"
-    "movq %%rbx, 24(%0)\n\t"
-    "movq %%r12, 32(%0)\n\t"
-    "movq %%r13, 40(%0)\n\t"
-    "movq %%r14, 48(%0)\n\t"
-    "movq %%r15, 56(%0)\n\t"
-    "movq 56(%1), %%r15\n\t"
-    "movq 48(%1), %%r14\n\t"
-    "movq 40(%1), %%r13\n\t"
-    "movq 32(%1), %%r12\n\t"
-    "movq 24(%1), %%rbx\n\t"
-    "movq 16(%1), %%rbp\n\t"
-    "movq 8(%1), %%rsp\n\t"
-    "jmpq *(%1)\n"
-    "1:\n"
-    : "+S" (from), "+D" (to) :
-    : "rax", "rcx", "rdx", "r8", "r9", "r10", "r11", "memory", "cc");
-}
+__asm__(
+  ".text\n"
+#ifdef __MACH__ /* Mac OS X assembler */
+  ".globl __mco_wrap_main\n"
+  "__mco_wrap_main:\n"
+#else /* Linux assembler */
+  ".globl _mco_wrap_main\n"
+  ".type _mco_wrap_main @function\n"
+  ".hidden _mco_wrap_main\n"
+  "_mco_wrap_main:\n"
+#endif
+  "  movq %r13, %rdi\n"
+  "  jmpq *%r12\n"
+#ifndef __MACH__
+  ".size _mco_wrap_main, .-_mco_wrap_main\n"
+#endif
+);
+
+__asm__(
+  ".text\n"
+#ifdef __MACH__ /* Mac OS assembler */
+  ".globl __mco_switch\n"
+  "__mco_switch:\n"
+#else /* Linux assembler */
+  ".globl _mco_switch\n"
+  ".type _mco_switch @function\n"
+  ".hidden _mco_switch\n"
+  "_mco_switch:\n"
+#endif
+  "  leaq 0x3d(%rip), %rax\n"
+  "  movq %rax, (%rdi)\n"
+  "  movq %rsp, 8(%rdi)\n"
+  "  movq %rbp, 16(%rdi)\n"
+  "  movq %rbx, 24(%rdi)\n"
+  "  movq %r12, 32(%rdi)\n"
+  "  movq %r13, 40(%rdi)\n"
+  "  movq %r14, 48(%rdi)\n"
+  "  movq %r15, 56(%rdi)\n"
+  "  movq 56(%rsi), %r15\n"
+  "  movq 48(%rsi), %r14\n"
+  "  movq 40(%rsi), %r13\n"
+  "  movq 32(%rsi), %r12\n"
+  "  movq 24(%rsi), %rbx\n"
+  "  movq 16(%rsi), %rbp\n"
+  "  movq 8(%rsi), %rsp\n"
+  "  jmpq *(%rsi)\n"
+  "  ret\n"
+#ifndef __MACH__
+  ".size _mco_switch, .-_mco_switch\n"
+#endif
+);
 
 static mco_result _mco_makectx(mco_coro* co, _mco_ctxbuf* ctx, void* stack_base, size_t stack_size) {
   stack_size = stack_size - 128; /* Reserve 128 bytes for the Red Zone space (System V AMD64 ABI). */
   void** stack_high_ptr = (void**)((size_t)stack_base + stack_size - sizeof(size_t));
   stack_high_ptr[0] = (void*)(0xdeaddeaddeaddead);  /* Dummy return address. */
-  ctx->buf[0] = (void*)(_mco_wrap_main);
-  ctx->buf[1] = (void*)(stack_high_ptr);
-  ctx->buf[4] = (void*)(_mco_main);
-  ctx->buf[5] = (void*)(co);
+  ctx->rip = (void*)(_mco_wrap_main);
+  ctx->rsp = (void*)(stack_high_ptr);
+  ctx->r12 = (void*)(_mco_main);
+  ctx->r13 = (void*)(co);
   return MCO_SUCCESS;
 }
 
 #endif /* not _WIN32 */
 
+#elif defined(__riscv)
+
+typedef struct _mco_ctxbuf {
+  void* s[12]; /* s0-s11 */
+  void* ra;
+  void* pc;
+  void* sp;
+#ifdef __riscv_flen
+#if __riscv_flen == 64
+  double fs[12]; /* fs0-fs11 */
+#elif __riscv_flen == 32
+  float fs[12]; /* fs0-fs11 */
+#endif
+#endif /* __riscv_flen */
+} _mco_ctxbuf;
+
+void _mco_wrap_main(void);
+int _mco_switch(_mco_ctxbuf* from, _mco_ctxbuf* to);
+
+__asm__(
+  ".text\n"
+  ".globl _mco_wrap_main\n"
+  ".type _mco_wrap_main @function\n"
+  ".hidden _mco_wrap_main\n"
+  "_mco_wrap_main:\n"
+  "  mv a0, s0\n"
+  "  jr s1\n"
+  ".size _mco_wrap_main, .-_mco_wrap_main\n"
+);
+
+__asm__(
+  ".text\n"
+  ".globl _mco_switch\n"
+  ".type _mco_switch @function\n"
+  ".hidden _mco_switch\n"
+  "_mco_switch:\n"
+  #if __riscv_xlen == 64
+    "  sd s0, 0x00(a0)\n"
+    "  sd s1, 0x08(a0)\n"
+    "  sd s2, 0x10(a0)\n"
+    "  sd s3, 0x18(a0)\n"
+    "  sd s4, 0x20(a0)\n"
+    "  sd s5, 0x28(a0)\n"
+    "  sd s6, 0x30(a0)\n"
+    "  sd s7, 0x38(a0)\n"
+    "  sd s8, 0x40(a0)\n"
+    "  sd s9, 0x48(a0)\n"
+    "  sd s10, 0x50(a0)\n"
+    "  sd s11, 0x58(a0)\n"
+    "  sd ra, 0x60(a0)\n"
+    "  sd ra, 0x68(a0)\n" /* pc */
+    "  sd sp, 0x70(a0)\n"
+    #ifdef __riscv_flen
+    #if __riscv_flen == 64
+    "  fsd fs0, 0x78(a0)\n"
+    "  fsd fs1, 0x80(a0)\n"
+    "  fsd fs2, 0x88(a0)\n"
+    "  fsd fs3, 0x90(a0)\n"
+    "  fsd fs4, 0x98(a0)\n"
+    "  fsd fs5, 0xa0(a0)\n"
+    "  fsd fs6, 0xa8(a0)\n"
+    "  fsd fs7, 0xb0(a0)\n"
+    "  fsd fs8, 0xb8(a0)\n"
+    "  fsd fs9, 0xc0(a0)\n"
+    "  fsd fs10, 0xc8(a0)\n"
+    "  fsd fs11, 0xd0(a0)\n"
+    "  fld fs0, 0x78(a1)\n"
+    "  fld fs1, 0x80(a1)\n"
+    "  fld fs2, 0x88(a1)\n"
+    "  fld fs3, 0x90(a1)\n"
+    "  fld fs4, 0x98(a1)\n"
+    "  fld fs5, 0xa0(a1)\n"
+    "  fld fs6, 0xa8(a1)\n"
+    "  fld fs7, 0xb0(a1)\n"
+    "  fld fs8, 0xb8(a1)\n"
+    "  fld fs9, 0xc0(a1)\n"
+    "  fld fs10, 0xc8(a1)\n"
+    "  fld fs11, 0xd0(a1)\n"
+    #else
+    #error "Unsupported RISC-V FLEN"
+    #endif
+    #endif /* __riscv_flen */
+    "  ld s0, 0x00(a1)\n"
+    "  ld s1, 0x08(a1)\n"
+    "  ld s2, 0x10(a1)\n"
+    "  ld s3, 0x18(a1)\n"
+    "  ld s4, 0x20(a1)\n"
+    "  ld s5, 0x28(a1)\n"
+    "  ld s6, 0x30(a1)\n"
+    "  ld s7, 0x38(a1)\n"
+    "  ld s8, 0x40(a1)\n"
+    "  ld s9, 0x48(a1)\n"
+    "  ld s10, 0x50(a1)\n"
+    "  ld s11, 0x58(a1)\n"
+    "  ld ra, 0x60(a1)\n"
+    "  ld a2, 0x68(a1)\n" /* pc */
+    "  ld sp, 0x70(a1)\n"
+    "  jr a2\n"
+  #elif __riscv_xlen == 32
+    "  sw s0, 0x00(a0)\n"
+    "  sw s1, 0x04(a0)\n"
+    "  sw s2, 0x08(a0)\n"
+    "  sw s3, 0x0c(a0)\n"
+    "  sw s4, 0x10(a0)\n"
+    "  sw s5, 0x14(a0)\n"
+    "  sw s6, 0x18(a0)\n"
+    "  sw s7, 0x1c(a0)\n"
+    "  sw s8, 0x20(a0)\n"
+    "  sw s9, 0x24(a0)\n"
+    "  sw s10, 0x28(a0)\n"
+    "  sw s11, 0x2c(a0)\n"
+    "  sw ra, 0x30(a0)\n"
+    "  sw ra, 0x34(a0)\n" /* pc */
+    "  sw sp, 0x38(a0)\n"
+    #ifdef __riscv_flen
+    #if __riscv_flen == 64
+    "  fsd fs0, 0x3c(a0)\n"
+    "  fsd fs1, 0x44(a0)\n"
+    "  fsd fs2, 0x4c(a0)\n"
+    "  fsd fs3, 0x54(a0)\n"
+    "  fsd fs4, 0x5c(a0)\n"
+    "  fsd fs5, 0x64(a0)\n"
+    "  fsd fs6, 0x6c(a0)\n"
+    "  fsd fs7, 0x74(a0)\n"
+    "  fsd fs8, 0x7c(a0)\n"
+    "  fsd fs9, 0x84(a0)\n"
+    "  fsd fs10, 0x8c(a0)\n"
+    "  fsd fs11, 0x94(a0)\n"
+    "  fld fs0, 0x3c(a1)\n"
+    "  fld fs1, 0x44(a1)\n"
+    "  fld fs2, 0x4c(a1)\n"
+    "  fld fs3, 0x54(a1)\n"
+    "  fld fs4, 0x5c(a1)\n"
+    "  fld fs5, 0x64(a1)\n"
+    "  fld fs6, 0x6c(a1)\n"
+    "  fld fs7, 0x74(a1)\n"
+    "  fld fs8, 0x7c(a1)\n"
+    "  fld fs9, 0x84(a1)\n"
+    "  fld fs10, 0x8c(a1)\n"
+    "  fld fs11, 0x94(a1)\n"
+    #elif __riscv_flen == 32
+    "  fsw fs0, 0x3c(a0)\n"
+    "  fsw fs1, 0x40(a0)\n"
+    "  fsw fs2, 0x44(a0)\n"
+    "  fsw fs3, 0x48(a0)\n"
+    "  fsw fs4, 0x4c(a0)\n"
+    "  fsw fs5, 0x50(a0)\n"
+    "  fsw fs6, 0x54(a0)\n"
+    "  fsw fs7, 0x58(a0)\n"
+    "  fsw fs8, 0x5c(a0)\n"
+    "  fsw fs9, 0x60(a0)\n"
+    "  fsw fs10, 0x64(a0)\n"
+    "  fsw fs11, 0x68(a0)\n"
+    "  flw fs0, 0x3c(a1)\n"
+    "  flw fs1, 0x40(a1)\n"
+    "  flw fs2, 0x44(a1)\n"
+    "  flw fs3, 0x48(a1)\n"
+    "  flw fs4, 0x4c(a1)\n"
+    "  flw fs5, 0x50(a1)\n"
+    "  flw fs6, 0x54(a1)\n"
+    "  flw fs7, 0x58(a1)\n"
+    "  flw fs8, 0x5c(a1)\n"
+    "  flw fs9, 0x60(a1)\n"
+    "  flw fs10, 0x64(a1)\n"
+    "  flw fs11, 0x68(a1)\n"
+    #else
+    #error "Unsupported RISC-V FLEN"
+    #endif
+    #endif /* __riscv_flen */
+    "  lw s0, 0x00(a1)\n"
+    "  lw s1, 0x04(a1)\n"
+    "  lw s2, 0x08(a1)\n"
+    "  lw s3, 0x0c(a1)\n"
+    "  lw s4, 0x10(a1)\n"
+    "  lw s5, 0x14(a1)\n"
+    "  lw s6, 0x18(a1)\n"
+    "  lw s7, 0x1c(a1)\n"
+    "  lw s8, 0x20(a1)\n"
+    "  lw s9, 0x24(a1)\n"
+    "  lw s10, 0x28(a1)\n"
+    "  lw s11, 0x2c(a1)\n"
+    "  lw ra, 0x30(a1)\n"
+    "  lw a2, 0x34(a1)\n" /* pc */
+    "  lw sp, 0x38(a1)\n"
+    "  jr a2\n"
+  #else
+    #error "Unsupported RISC-V XLEN"
+  #endif /* __riscv_xlen */
+  ".size _mco_switch, .-_mco_switch\n"
+);
+
+static mco_result _mco_makectx(mco_coro* co, _mco_ctxbuf* ctx, void* stack_base, size_t stack_size) {
+  ctx->s[0] = (void*)(co);
+  ctx->s[1] = (void*)(_mco_main);
+  ctx->pc = (void*)(_mco_wrap_main);
+#if __riscv_xlen == 64
+  ctx->ra = (void*)(0xdeaddeaddeaddead);
+#elif __riscv_xlen == 32
+  ctx->ra = (void*)(0xdeaddead);
+#endif
+  ctx->sp = (void*)((size_t)stack_base + stack_size);
+  return MCO_SUCCESS;
+}
+
 #elif defined(__i386) || defined(__i386__)
 
-#ifdef __PIC__
 typedef struct _mco_ctxbuf {
-  void* buf[4]; /* eip, esp, ebp, ebx */
+  void *eip, *esp, *ebp, *ebx, *esi, *edi;
 } _mco_ctxbuf;
-static MCO_FORCE_INLINE void _mco_switch(_mco_ctxbuf* from, _mco_ctxbuf* to) {
-  __asm__ __volatile__ (
-    "call 1f\n"
-    "1:\tpopl %%eax\n\t"
-    "addl $(2f-1b),%%eax\n\t"
-    "movl %%eax, (%0)\n\t"
-    "movl %%esp, 4(%0)\n\t"
-    "movl %%ebp, 8(%0)\n\t"
-    "movl %%ebx, 12(%0)\n\t"
-    "movl 12(%1), %%ebx\n\t"
-    "movl 8(%1), %%ebp\n\t"
-    "movl 4(%1), %%esp\n\t"
-    "jmp *(%1)\n"
-    "2:\n"
-    : "+S" (from), "+D" (to) : : "eax", "ecx", "edx", "memory", "cc");
-}
-#else
-typedef struct _mco_ctxbuf {
-  void* buf[3]; /* eip, esp, ebp */
-} _mco_ctxbuf;
-static MCO_FORCE_INLINE void _mco_switch(_mco_ctxbuf* from, _mco_ctxbuf* to) {
-  __asm__ __volatile__ (
-    "movl $1f, (%0)\n\t"
-    "movl %%esp, 4(%0)\n\t"
-    "movl %%ebp, 8(%0)\n\t"
-    "movl 8(%1), %%ebp\n\t"
-    "movl 4(%1), %%esp\n\t"
-    "jmp *(%1)\n"
-    "1:\n"
-    : "+S" (from), "+D" (to) : : "eax", "ebx", "ecx", "edx", "memory", "cc");
-}
-#endif /* __PIC__ */
+
+void _mco_switch(_mco_ctxbuf* from, _mco_ctxbuf* to);
+
+__asm__(
+  ".text\n"
+  ".globl _mco_switch\n"
+  ".type _mco_switch @function\n"
+  ".hidden _mco_switch\n"
+  "_mco_switch:\n"
+  "  call 1f\n"
+  "  1:\n"
+  "  popl %ecx\n"
+  "  addl $(2f-1b), %ecx\n"
+  "  movl 4(%esp), %eax\n"
+  "  movl 8(%esp), %edx\n"
+  "  movl %ecx, (%eax)\n"
+  "  movl %esp, 4(%eax)\n"
+  "  movl %ebp, 8(%eax)\n"
+  "  movl %ebx, 12(%eax)\n"
+  "  movl %esi, 16(%eax)\n"
+  "  movl %edi, 20(%eax)\n"
+  "  movl 20(%edx), %edi\n"
+  "  movl 16(%edx), %esi\n"
+  "  movl 12(%edx), %ebx\n"
+  "  movl 8(%edx), %ebp\n"
+  "  movl 4(%edx), %esp\n"
+  "  jmp *(%edx)\n"
+  "  2:\n"
+  "  ret\n"
+  ".size _mco_switch, .-_mco_switch\n"
+);
 
 static mco_result _mco_makectx(mco_coro* co, _mco_ctxbuf* ctx, void* stack_base, size_t stack_size) {
   void** stack_high_ptr = (void**)((size_t)stack_base + stack_size - 16 - 1*sizeof(size_t));
   stack_high_ptr[0] = (void*)(0xdeaddead);  /* Dummy return address. */
   stack_high_ptr[1] = (void*)(co);
-  ctx->buf[0] = (void*)(_mco_main);
-  ctx->buf[1] = (void*)(stack_high_ptr);
+  ctx->eip = (void*)(_mco_main);
+  ctx->esp = (void*)(stack_high_ptr);
   return MCO_SUCCESS;
 }
 
 #elif defined(__ARM_EABI__)
 
-#if __SOFTFP__
-#define _MCO_FLOAT_SAVE   0
-#else
-#define _MCO_FLOAT_SAVE   16
-#endif
-
 typedef struct _mco_ctxbuf {
-  void* buf[_MCO_FLOAT_SAVE + 10]; /* [d8-d15,] r4-r11, lr, sp */
+#ifndef __SOFTFP__
+  void* f[16];
+#endif
+  void *d[4]; /* d8-d15 */
+  void *r[4]; /* r4-r11 */
+  void *lr;
+  void *sp;
 } _mco_ctxbuf;
 
 void _mco_wrap_main(void);
@@ -743,12 +997,12 @@ __asm__(
   ".type _mco_switch #function\n"
   ".hidden _mco_switch\n"
   "_mco_switch:\n"
-#if _MCO_FLOAT_SAVE
+#ifndef __SOFTFP__
   "  vstmia r0!, {d8-d15}\n"
 #endif
   "  stmia r0, {r4-r11, lr}\n"
   "  str sp, [r0, #9*4]\n"
-#if _MCO_FLOAT_SAVE
+#ifndef __SOFTFP__
   "  vldmia r1!, {d8-d15}\n"
 #endif
   "  ldr sp, [r1, #9*4]\n"
@@ -770,19 +1024,21 @@ __asm__(
 );
 
 static mco_result _mco_makectx(mco_coro* co, _mco_ctxbuf* ctx, void* stack_base, size_t stack_size) {
-  void** stack_high_ptr = (void**)((size_t)stack_base + stack_size);
-  ctx->buf[_MCO_FLOAT_SAVE+0] = (void*)(co);
-  ctx->buf[_MCO_FLOAT_SAVE+1] = (void*)(_mco_main);
-  ctx->buf[_MCO_FLOAT_SAVE+2] = (void*)(0xdeaddead); /* Dummy return address. */
-  ctx->buf[_MCO_FLOAT_SAVE+8] = (void*)(_mco_wrap_main);
-  ctx->buf[_MCO_FLOAT_SAVE+9] = stack_high_ptr;
+  ctx->d[0] = (void*)(co);
+  ctx->d[1] = (void*)(_mco_main);
+  ctx->d[2] = (void*)(0xdeaddead); /* Dummy return address. */
+  ctx->lr = (void*)(_mco_wrap_main);
+  ctx->sp = (void*)((size_t)stack_base + stack_size);
   return MCO_SUCCESS;
 }
 
 #elif defined(__aarch64__)
 
 typedef struct _mco_ctxbuf {
-  void* buf[22]; /* x19-x30, sp, lr, d8-d15 */
+  void *x[12]; /* x19-x30 */
+  void *sp;
+  void *lr;
+  void *d[8]; /* d8-d15 */
 } _mco_ctxbuf;
 
 void _mco_wrap_main(void);
@@ -836,12 +1092,11 @@ __asm__(
 );
 
 static mco_result _mco_makectx(mco_coro* co, _mco_ctxbuf* ctx, void* stack_base, size_t stack_size) {
-  void** stack_high_ptr = (void**)((size_t)stack_base + stack_size);
-  ctx->buf[0] = (void*)(co);
-  ctx->buf[1] = (void*)(_mco_main);
-  ctx->buf[2] = (void*)(0xdeaddeaddeaddead); /* Dummy return address. */
-  ctx->buf[12] = (void*)((size_t)(stack_high_ptr) & ~15);
-  ctx->buf[13] = (void*)(_mco_wrap_main);
+  ctx->x[0] = (void*)(co);
+  ctx->x[1] = (void*)(_mco_main);
+  ctx->x[2] = (void*)(0xdeaddeaddeaddead); /* Dummy return address. */
+  ctx->sp = (void*)((size_t)stack_base + stack_size);
+  ctx->lr = (void*)(_mco_wrap_main);
   return MCO_SUCCESS;
 }
 
@@ -984,6 +1239,9 @@ static MCO_FORCE_INLINE void _mco_init_desc_sizes(mco_desc* desc, size_t stack_s
 
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0400
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
 
@@ -1472,9 +1730,8 @@ const char* mco_result_description(mco_result res) {
       return "Invalid arguments";
     case MCO_INVALID_OPERATION:
       return "Invalid operation";
-    default:
-      return "Unknown error";
   }
+  return "Unknown error";
 }
 
 #ifdef __cplusplus
