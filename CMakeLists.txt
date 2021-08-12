@@ -127,7 +127,11 @@ set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
 
 # Static linking for simplicity.
 # TODO - Replace with FetchContent?
-add_subdirectory_with_folder(libraries/SDL2/SDL2-2.0.14 "SDL2")
+if(EMSCRIPTEN)
+	# Emscripten provides its own SDL2.
+else()
+	add_subdirectory_with_folder(libraries/SDL2/SDL2-2.0.14 "SDL2")
+endif()
 
 # Cute Framework shared library.
 set(CUTE_SRCS
@@ -384,13 +388,13 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
 	target_link_libraries(tests PRIVATE cute)
 
-	# Copy over any test data in the test/test_data folder.
-	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:tests>/test_data)
-
 	if(EMSCRIPTEN)
 		set(CMAKE_EXECUTABLE_SUFFIX ".html")
 		target_compile_options(tests PUBLIC -O1 -fno-rtti -fno-exceptions)
-		target_link_options(tests PRIVATE -o tests.html --preload-file $<TARGET_FILE_DIR:tests>/test_data --emrun -O1)
+		target_link_options(tests PRIVATE -o tests.html --preload-file ${CMAKE_SOURCE_DIR}/test/test_data --emrun -O1)
+	else()
+		# Copy over any test data in the test/test_data folder.
+		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:tests>/test_data)
 	endif()
 
 	# For convenience make tests the startup project in Visual Studio.
