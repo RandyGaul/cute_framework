@@ -391,7 +391,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 	if(EMSCRIPTEN)
 		set(CMAKE_EXECUTABLE_SUFFIX ".html")
 		target_compile_options(tests PUBLIC -O1 -fno-rtti -fno-exceptions)
-		target_link_options(tests PRIVATE -o tests.html --preload-file ${CMAKE_SOURCE_DIR}/test/test_data --emrun -O1)
+		target_link_options(tests PRIVATE -o tests.html --preload-file ${PROJECT_SOURCE_DIR}/test/test_data --emrun -O1)
 	else()
 		# Copy over any test data in the test/test_data folder.
 		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:tests>/test_data)
