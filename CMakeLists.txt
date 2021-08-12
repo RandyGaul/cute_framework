@@ -52,6 +52,7 @@ elseif(LINUX)
 elseif(MACOSX)
 	#set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
 elseif(EMSCRIPTEN)
+	add_definitions(-DCUTE_EMSCRIPTEN)
 endif()
 
 # Disable annoying MSVC warnings.
@@ -383,11 +384,6 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
 	target_link_libraries(tests PRIVATE cute)
-
-	# Copy over prebuilt binaries to output directory.
-	if(EMSCRIPTEN)
-		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/prebuilt_libs/emscripten" $<TARGET_FILE_DIR:tests>)
-	endif()
 
 	# Copy over any test data in the test/test_data folder.
 	add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:tests>/test_data)
