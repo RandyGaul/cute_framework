@@ -30,9 +30,9 @@ int main(int argc, const char** argv)
 		// All your game logic and updates go here...
 		app_present(app);
 	}
-	
+
 	app_destroy(app);
-	
+
 	return 0;
 }
 ```
@@ -41,17 +41,17 @@ int main(int argc, const char** argv)
 
 Select one of the categories below to learn more about them. Each category contains information about functions, structs, enums, and anything else relevant in the various Cute Framework header files.
 
-[app](https://github.com/RandyGaul/cute_framework/tree/master/doc/app)  
-[audio](https://github.com/RandyGaul/cute_framework/tree/master/doc/audio)  
-[clipboard](https://github.com/RandyGaul/cute_framework/tree/master/doc/clipboard)  
-[data structures](https://github.com/RandyGaul/cute_framework/tree/master/doc/data_structures)  
-[ecs](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs)  
-[graphics](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics)  
-[math](https://github.com/RandyGaul/cute_framework/tree/master/doc/math)  
-[serialization](https://github.com/RandyGaul/cute_framework/tree/master/doc/serialization)  
-[string](https://github.com/RandyGaul/cute_framework/tree/master/doc/string)  
-[time](https://github.com/RandyGaul/cute_framework/tree/master/doc/time)  
-[window](https://github.com/RandyGaul/cute_framework/tree/master/doc/window)  
+[app](https://github.com/RandyGaul/cute_framework/tree/master/doc/app)
+[audio](https://github.com/RandyGaul/cute_framework/tree/master/doc/audio)
+[clipboard](https://github.com/RandyGaul/cute_framework/tree/master/doc/clipboard)
+[data structures](https://github.com/RandyGaul/cute_framework/tree/master/doc/data_structures)
+[ecs](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs)
+[graphics](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics)
+[math](https://github.com/RandyGaul/cute_framework/tree/master/doc/math)
+[serialization](https://github.com/RandyGaul/cute_framework/tree/master/doc/serialization)
+[string](https://github.com/RandyGaul/cute_framework/tree/master/doc/string)
+[time](https://github.com/RandyGaul/cute_framework/tree/master/doc/time)
+[window](https://github.com/RandyGaul/cute_framework/tree/master/doc/window)
 
 # Docs by API List
 
@@ -88,10 +88,24 @@ cmake --build build_msvc_2019 --config Debug
 cmake --build build_msvc_2019 --config Release
 ```
 
-Some scripts for running this cmake process are laying around in the top-level folder, such as `apple_make.sh` for apple machines, or `mingw.cmd` for building against a MingW compiler on Windows. Feel free to use or ignore these scripts as you wish.
+Some scripts for running this cmake process are laying around in the top-level folder, such as `build_bash.sh` for apple/linux machines, or `mingw.cmd` for building against a MingW compiler on Windows. Feel free to use or ignore these scripts as you wish.
 
 Once built go ahead and use cmake to install the headers and shared library for CF.
 
 ```cmake
 cmake --install your_build_folder_name
+```
+
+# Emscripten Builds
+
+Make sure [emscripten is installed](https://emscripten.org/docs/getting_started/downloads.html) on your machine. If on Windows go ahead and run the `emscripten.cmd` file. This will build libcute.a.
+
+Additionally you can add something like the following to your cmake build script for your own project.
+
+```cmake
+if(${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
+	set(CMAKE_EXECUTABLE_SUFFIX ".html")
+	target_compile_options(your_game PUBLIC -O1 -fno-rtti -fno-exceptions)
+	target_link_options(your_game PRIVATE -o your_game.html --preload-file ${CMAKE_SOURCE_DIR}/content --emrun -O1)
+endif()
 ```
