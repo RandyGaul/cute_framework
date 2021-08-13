@@ -96,7 +96,7 @@ cmake --install your_build_folder_name
 
 # Emscripten Builds
 
-Make sure [emscripten is installed](https://emscripten.org/docs/getting_started/downloads.html) on your machine. If on Windows go ahead and run the `emscripten.cmd` file. This will build libcute.a.
+Make sure [emscripten is installed](https://emscripten.org/docs/getting_started/downloads.html) on your machine. If on Windows go ahead and run the `emscripten.cmd` file. This will build libcute.a. Though if you're using something Ninja the commands will be slightly different, as you'll need to consult [emscripten docs](https://emscripten.org/docs/compiling/Building-Projects.html#integrating-with-a-build-system).
 
 Additionally you can add something like the following to your cmake build script for your own project.
 
