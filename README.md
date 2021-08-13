@@ -109,3 +109,5 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
 	target_link_options(your_game PRIVATE -o your_game.html --preload-file ${CMAKE_SOURCE_DIR}/content --emrun -O1)
 endif()
 ```
+
+Also don't forget to call `emscripten_set_main_loop` from your `main` function!
