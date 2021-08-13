@@ -75,8 +75,6 @@ Another easy way to get a hold of the author of Cute Framework is on twitter [@r
 
 # Building from Source
 
-It's highly recommended to download a prebuilt version of CF if you're on Windows found in the [releases section](https://github.com/RandyGaul/cute_framework/releases), but if you're not on Windows cmake can be used to build and install from source.
-
 Install [cmake](https://cmake.org/). Then perform the usual cmake dance (make folder, -G to generate the build files, and then finally trigger the build), for example on Windows with Visual Studio 2019.
 
 ```cmake
@@ -93,6 +91,10 @@ Once built go ahead and use cmake to install the headers and shared library for 
 ```cmake
 cmake --install your_build_folder_name
 ```
+
+## Prebuilt Releases
+
+Prebuilt releases are planned for Windows and MacOS, but not actively setup right now since CF has yet to hit first release. Building from source is recommended for now.
 
 # Emscripten Builds
 
