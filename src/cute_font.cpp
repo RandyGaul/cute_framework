@@ -221,7 +221,7 @@ void font_init(app_t* app)
 {
 	s_load_courier_new(app);
 
-	app->font_shader = sg_make_shader(font_shd_shader_desc());
+	app->font_shader = sg_make_shader(font_shd_shader_desc(sg_query_backend()));
 
 	sg_pipeline_desc pip_params = { 0 };
 	pip_params.layout.buffers[0].stride = sizeof(font_vertex_t);

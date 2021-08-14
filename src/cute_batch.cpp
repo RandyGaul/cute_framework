@@ -122,11 +122,11 @@ static sg_shader s_load_shader(batch_t* b, batch_sprite_shader_type_t type)
 	// Default sprite shader.
 	switch (type) {
 	case BATCH_SPRITE_SHADER_TYPE_DEFAULT:
-		params = *sprite_default_shd_shader_desc();
+		params = *sprite_default_shd_shader_desc(sg_query_backend());
 		break;
 
 	default:
-		params = *sprite_outline_shd_shader_desc();
+		params = *sprite_outline_shd_shader_desc(sg_query_backend());
 		break;
 	}
 
@@ -368,7 +368,7 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 	params.layout.attrs[1].offset = CUTE_OFFSET_OF(vertex_t, c);
 	params.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT4;
 	params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
-	params.shader = sg_make_shader(geom_shd_shader_desc());
+	params.shader = sg_make_shader(geom_shd_shader_desc(sg_query_backend()));
 	params.colors[0].blend.enabled = true;
 	params.colors[0].blend.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
 	params.colors[0].blend.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
