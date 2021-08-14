@@ -28,7 +28,7 @@
 #include <internal/cute_input_internal.h>
 #include <internal/imgui/imgui_impl_sdl.h>
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 namespace cute
 {

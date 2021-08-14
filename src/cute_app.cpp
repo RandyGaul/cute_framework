@@ -40,10 +40,10 @@
 #include <internal/cute_font_internal.h>
 
 #define SDL_MAIN_HANDLED
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #ifdef CUTE_WINDOWS
-#	include <SDL2/SDL_syswm.h>
+#	include <SDL_syswm.h>
 #endif
 
 #define CUTE_SOUND_FORCE_SDL

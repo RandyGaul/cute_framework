@@ -28,7 +28,7 @@
 
 #include <internal/cute_net_internal.h>
 
-#include <hydrogen.h>
+#include <libhydrogen/hydrogen.h>
 
 namespace cute
 {

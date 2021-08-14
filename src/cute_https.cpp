@@ -24,7 +24,7 @@
 #include <cute_c_runtime.h>
 #include <cute_array.h>
 
-#include <mbedtls/config.h>
+#include <mbedtls/build_info.h>
 #include <mbedtls/platform.h>
 #include <mbedtls/net_sockets.h>
 #include <mbedtls/debug.h>
@@ -32,9 +32,8 @@
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
 #include <mbedtls/error.h>
-#include <mbedtls/certs.h>
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #if defined(CUTE_WINDOWS)
 #	include <windows.h>
@@ -130,12 +129,6 @@ https_t* https_make()
 	const char* seed = "Cute Framework";
 
 	if (mbedtls_ctr_drbg_seed(&https->ctr_drbg, mbedtls_entropy_func, &https->entropy, (const unsigned char*)seed, CUTE_STRLEN(seed))) {
-		https->~https_t();
-		CUTE_FREE(https, NULL);
-		return NULL;
-	}
-
-	if (mbedtls_x509_crt_parse(&https->cacert, (const unsigned char*)mbedtls_test_cas_pem, mbedtls_test_cas_pem_len) < 0) {
 		https->~https_t();
 		CUTE_FREE(https, NULL);
 		return NULL;

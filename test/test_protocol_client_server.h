@@ -63,10 +63,10 @@ int test_protocol_client_server()
 		connect_token
 	).is_error());
 
-	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk);
 	CUTE_TEST_CHECK_POINTER(server);
 
-	protocol::client_t* client = protocol::client_make(5001, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client);
 
 	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
@@ -134,7 +134,7 @@ int test_protocol_client_no_server_responses()
 		connect_token
 	).is_error());
 
-	protocol::client_t* client = protocol::client_make(5001, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client);
 	CUTE_TEST_CHECK(protocol::client_connect(client, connect_token).is_error());
 
@@ -194,10 +194,10 @@ int test_protocol_client_server_list()
 		connect_token
 	).is_error());
 
-	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk);
 	CUTE_TEST_CHECK_POINTER(server);
 
-	protocol::client_t* client = protocol::client_make(5001, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client);
 
 	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5002", 5).is_error());
@@ -263,10 +263,10 @@ int test_protocol_server_challenge_response_timeout()
 		connect_token
 	).is_error());
 
-	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk);
 	CUTE_TEST_CHECK_POINTER(server);
 
-	protocol::client_t* client = protocol::client_make(5001, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client);
 
 	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
@@ -335,7 +335,7 @@ int test_protocol_client_expired_token()
 		connect_token
 	).is_error());
 
-	protocol::client_t* client = protocol::client_make(5001, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client);
 	CUTE_TEST_CHECK(protocol::client_connect(client, connect_token).is_error());
 	protocol::client_update(client, 0, 1);
@@ -387,10 +387,10 @@ int test_protocol_client_connect_expired_token()
 		connect_token
 	).is_error());
 
-	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk);
 	CUTE_TEST_CHECK_POINTER(server);
 
-	protocol::client_t* client = protocol::client_make(5001, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client);
 
 	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
@@ -457,10 +457,10 @@ int test_protocol_server_connect_expired_token()
 		connect_token
 	).is_error());
 
-	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk);
 	CUTE_TEST_CHECK_POINTER(server);
 
-	protocol::client_t* client = protocol::client_make(5001, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client);
 
 	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
@@ -528,10 +528,10 @@ int test_protocol_client_bad_keys()
 		connect_token
 	).is_error());
 
-	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk);
 	CUTE_TEST_CHECK_POINTER(server);
 
-	protocol::client_t* client = protocol::client_make(5001, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client);
 
 	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
@@ -601,10 +601,10 @@ int test_protocol_server_not_in_list_but_gets_request()
 		connect_token
 	).is_error());
 
-	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk);
 	CUTE_TEST_CHECK_POINTER(server);
 
-	protocol::client_t* client = protocol::client_make(5001, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client);
 
 	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
@@ -673,7 +673,7 @@ int test_protocol_connect_a_few_clients()
 		&sk,
 		connect_token
 	).is_error());
-	protocol::client_t* client0 = protocol::client_make(5001, application_id, NULL);
+	protocol::client_t* client0 = protocol::client_make(5001, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client0);
 	CUTE_TEST_CHECK(protocol::client_connect(client0, connect_token).is_error());
 
@@ -694,7 +694,7 @@ int test_protocol_connect_a_few_clients()
 		&sk,
 		connect_token
 	).is_error());
-	protocol::client_t* client1 = protocol::client_make(5002, application_id, NULL);
+	protocol::client_t* client1 = protocol::client_make(5002, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client1);
 	CUTE_TEST_CHECK(protocol::client_connect(client1, connect_token).is_error());
 
@@ -715,11 +715,11 @@ int test_protocol_connect_a_few_clients()
 		&sk,
 		connect_token
 	).is_error());
-	protocol::client_t* client2 = protocol::client_make(5003, application_id, NULL);
+	protocol::client_t* client2 = protocol::client_make(5003, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client2);
 	CUTE_TEST_CHECK(protocol::client_connect(client2, connect_token).is_error());
 
-	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk);
 	CUTE_TEST_CHECK_POINTER(server);
 	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
 
@@ -796,11 +796,11 @@ int test_protocol_keepalive()
 		&sk,
 		connect_token
 	).is_error());
-	protocol::client_t* client = protocol::client_make(5001, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client);
 	CUTE_TEST_CHECK(protocol::client_connect(client, connect_token).is_error());
 
-	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk);
 	CUTE_TEST_CHECK_POINTER(server);
 	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
 
@@ -864,11 +864,11 @@ int test_protocol_client_initiated_disconnect()
 		&sk,
 		connect_token
 	).is_error());
-	protocol::client_t* client = protocol::client_make(5001, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client);
 	CUTE_TEST_CHECK(protocol::client_connect(client, connect_token).is_error());
 
-	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk);
 	CUTE_TEST_CHECK_POINTER(server);
 	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
 
@@ -940,11 +940,11 @@ int test_protocol_server_initiated_disconnect()
 		&sk,
 		connect_token
 	).is_error());
-	protocol::client_t* client = protocol::client_make(5001, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client);
 	CUTE_TEST_CHECK(protocol::client_connect(client, connect_token).is_error());
 
-	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk);
 	CUTE_TEST_CHECK_POINTER(server);
 	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
 
@@ -1024,10 +1024,10 @@ int test_protocol_client_server_payloads()
 		connect_token
 	).is_error());
 
-	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk);
 	CUTE_TEST_CHECK_POINTER(server);
 
-	protocol::client_t* client = protocol::client_make(5001, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client);
 
 	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());
@@ -1141,7 +1141,7 @@ int test_protocol_multiple_connections_and_payloads()
 			&sk,
 			connect_token
 		).is_error());
-		protocol::client_t* client = protocol::client_make(5000 + i, application_id, NULL);
+		protocol::client_t* client = protocol::client_make(5000 + i, application_id, true);
 		CUTE_TEST_CHECK_POINTER(client);
 		CUTE_TEST_CHECK(protocol::client_connect(client, connect_token).is_error());
 		clients[i] = client;
@@ -1269,10 +1269,10 @@ int test_protocol_client_reconnect()
 		connect_token
 	).is_error());
 
-	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk, NULL);
+	protocol::server_t* server = protocol::server_make(application_id, &pk, &sk);
 	CUTE_TEST_CHECK_POINTER(server);
 
-	protocol::client_t* client = protocol::client_make(5001, application_id, NULL);
+	protocol::client_t* client = protocol::client_make(5001, application_id, true);
 	CUTE_TEST_CHECK_POINTER(client);
 
 	CUTE_TEST_CHECK(protocol::server_start(server, "[::1]:5000", 5).is_error());

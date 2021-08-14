@@ -4,8 +4,9 @@ project(cute_framework)
 # Must have at least C++14.
 set(CMAKE_CXX_STANDARD 14)
 
-# Used to hide dependencies in filters for Visual Studio.
-# From: https://stackoverflow.com/a/45176243
+# These are needed for how we use FetchContent.
+include(FetchContent)
+Set(FETCHCONTENT_QUIET FALSE)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 define_property(
 	TARGET
@@ -14,11 +15,19 @@ define_property(
 	BRIEF_DOCS "Set the folder name."
 	FULL_DOCS  "Use to organize targets in an IDE."
 )
-function(add_subdirectory_with_folder _folder _folder_name)
-	add_subdirectory(${_folder} ${ARGN} EXCLUDE_FROM_ALL)
-	set_property(DIRECTORY "${_folder}" PROPERTY FOLDER "${_folder_name}")
+function(fetch_content_with_folder _name)
+	FetchContent_Declare(
+		${_name}
+		${ARGN}
+		GIT_PROGRESS TRUE
+	)
+	FetchContent_Populate(${_name})
+	string(TOLOWER "${_name}" lc_name)
+	add_subdirectory(${${lc_name}_SOURCE_DIR} ${${lc_name}_BINARY_DIR} EXCLUDE_FROM_ALL)
+	set_property(DIRECTORY "${${lc_name}_SOURCE_DIR}" PROPERTY FOLDER "${_name}")
 endfunction()
 
+# Todo - Fix how turning some of these off breaks the build.
 option(CUTE_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
 option(CUTE_FRAMEWORK_WITH_HTTPS "Build Cute Framework with mbedtls for HTTPS support (Apache 2.0 license)." ON)
 option(CUTE_FRAMEWORK_WITH_HYDROGEN "Build Cute Framework with cryptography + authentication support from Hydrogen for networking support (ISC license)." ON)
@@ -45,15 +54,6 @@ else()
 	message(FATAL_ERROR, "No supported platform detected.")
 endif()
 
-# Defines for cross-platform shader support.
-if(WINDOWS)
-elseif(LINUX)
-	#set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
-elseif(MACOSX)
-	#set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
-elseif(EMSCRIPTEN)
-endif()
-
 # Disable annoying MSVC warnings.
 if(MSVC)
 	add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -64,74 +64,6 @@ endif()
 
 # Common directories for compiler/linker path.
 include_directories(src libraries test)
-
-# Optional Hydrogen for security.
-if(CUTE_FRAMEWORK_WITH_HYDROGEN)
-	set(HYDROGEN_HDRS
-		libraries/libhydrogen/hydrogen.h
-	)
-	set(HYDROGEN_SRCS
-		libraries/libhydrogen/hydrogen.c
-	)
-	include_directories(libraries/libhydrogen)
-endif()
-
-# PhysicsFS, always statically linked.
-set(PHYSFS_SRCS
-	libraries/physfs/physfs_archiver_7z.c
-	libraries/physfs/physfs_archiver_dir.c
-	libraries/physfs/physfs_archiver_grp.c
-	libraries/physfs/physfs_archiver_hog.c
-	libraries/physfs/physfs_archiver_iso9660.c
-	libraries/physfs/physfs_archiver_mvl.c
-	libraries/physfs/physfs_archiver_qpak.c
-	libraries/physfs/physfs_archiver_slb.c
-	libraries/physfs/physfs_archiver_unpacked.c
-	libraries/physfs/physfs_archiver_vdf.c
-	libraries/physfs/physfs_archiver_wad.c
-	libraries/physfs/physfs_archiver_zip.c
-	libraries/physfs/physfs_byteorder.c
-	libraries/physfs/physfs_casefolding.h
-	libraries/physfs/physfs_internal.h
-	libraries/physfs/physfs_lzmasdk.h
-	libraries/physfs/physfs_miniz.h
-	libraries/physfs/physfs_platform_haiku.cpp
-	libraries/physfs/physfs_platform_os2.c
-	libraries/physfs/physfs_platform_posix.c
-	libraries/physfs/physfs_platform_qnx.c
-	libraries/physfs/physfs_platform_unix.c
-	libraries/physfs/physfs_platform_windows.c
-	libraries/physfs/physfs_platform_winrt.cpp
-	libraries/physfs/physfs_platforms.h
-	libraries/physfs/physfs_unicode.c
-	libraries/physfs/physfs.c
-	libraries/physfs/physfs.h
-)
-
-if(MACOSX)
-	set(PHYSFS_SRCS ${PHYSFS_SRCS}
-		libraries/physfs/physfs_platform_apple.m
-	)
-endif()
-
-add_library(physfs STATIC ${PHYSFS_SRCS})
-
-# Optional mbedtls for HTTPS support.
-if(CUTE_FRAMEWORK_WITH_HTTPS)
-	add_subdirectory_with_folder(libraries/mbedtls/mbedtls-2.24.0 "mbedtls")
-endif()
-
-# SDL2 for platform support.
-# Just don't build the shared library at all, it's not needed.
-set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
-
-# Static linking for simplicity.
-# TODO - Replace with FetchContent?
-if(EMSCRIPTEN)
-	# Emscripten provides its own SDL2.
-else()
-	add_subdirectory_with_folder(libraries/SDL2/SDL2-2.0.14 "SDL2")
-endif()
 
 # Cute Framework shared library.
 set(CUTE_SRCS
@@ -192,6 +124,7 @@ set(CUTE_SRCS
 	libraries/imgui/imgui_widgets.cpp
 )
 
+# Glad loader for GL.
 if(EMSCRIPTEN)
 	set(GLAD_SRCS libraries/glad/gles3/glad/glad.c)
 	set(GLAD_HDRS
@@ -206,6 +139,16 @@ else()
 		libraries/glad/gl33/KHR/khrplatform.h
 	)
 	set(GLAD_INCLUDE_DIRECTORY libraries/glad/gl33)
+endif()
+
+# Optional Hydrogen for security.
+if(CUTE_FRAMEWORK_WITH_HYDROGEN)
+	set(HYDROGEN_HDRS
+		libraries/libhydrogen/hydrogen.h
+	)
+	set(HYDROGEN_SRCS
+		libraries/libhydrogen/hydrogen.c
+	)
 endif()
 
 set(CUTE_PUBLIC_HDRS
@@ -324,34 +267,102 @@ if(CUTE_FRAMEWORK_STATIC)
 else()
 	add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS} ${GLAD_SRCS} ${GLAD_HDRS} ${HYDROGEN_SRCS} ${HYDROGEN_HDRS})
 endif()
-target_include_directories(cute PRIVATE ${GLAD_INCLUDE_DIRECTORY})
-include_directories(cute PRIVATE "include")
+target_include_directories(cute PRIVATE ${GLAD_INCLUDE_DIRECTORY} "include" "libraries/libhydrogen")
+target_compile_definitions(cute PRIVATE CUTE_EXPORT)
+
+# PhysicsFS, always statically linked.
+set(PHYSFS_SRCS
+	libraries/physfs/physfs_archiver_7z.c
+	libraries/physfs/physfs_archiver_dir.c
+	libraries/physfs/physfs_archiver_grp.c
+	libraries/physfs/physfs_archiver_hog.c
+	libraries/physfs/physfs_archiver_iso9660.c
+	libraries/physfs/physfs_archiver_mvl.c
+	libraries/physfs/physfs_archiver_qpak.c
+	libraries/physfs/physfs_archiver_slb.c
+	libraries/physfs/physfs_archiver_unpacked.c
+	libraries/physfs/physfs_archiver_vdf.c
+	libraries/physfs/physfs_archiver_wad.c
+	libraries/physfs/physfs_archiver_zip.c
+	libraries/physfs/physfs_byteorder.c
+	libraries/physfs/physfs_casefolding.h
+	libraries/physfs/physfs_internal.h
+	libraries/physfs/physfs_lzmasdk.h
+	libraries/physfs/physfs_miniz.h
+	libraries/physfs/physfs_platform_haiku.cpp
+	libraries/physfs/physfs_platform_os2.c
+	libraries/physfs/physfs_platform_posix.c
+	libraries/physfs/physfs_platform_qnx.c
+	libraries/physfs/physfs_platform_unix.c
+	libraries/physfs/physfs_platform_windows.c
+	libraries/physfs/physfs_platform_winrt.cpp
+	libraries/physfs/physfs_platforms.h
+	libraries/physfs/physfs_unicode.c
+	libraries/physfs/physfs.c
+	libraries/physfs/physfs.h
+)
 
 if(MACOSX)
-	# These are needed to link to PHYSFS.
+	set(PHYSFS_SRCS ${PHYSFS_SRCS}
+		libraries/physfs/physfs_platform_apple.m
+	)
 	find_library(IOKIT IOKit)
 	find_library(FOUNDATION Foundation)
 	find_library(SECURITY Security)
+	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY})
+endif()
 
-	target_link_libraries(cute PRIVATE ${SDL2_LIBRARIES} physfs ${IOKIT} ${FOUNDATION} ${SECURITY})
-elseif(EMSCRIPTEN)
-	target_compile_options(cute PUBLIC -O1 -fno-rtti -fno-exceptions)
-	target_link_libraries(cute PRIVATE physfs "-s USE_WEBGL2=1 -s ASSERTIONS=1 -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1 -s ASYNCIFY=1")
+add_library(physfs STATIC ${PHYSFS_SRCS})
+set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} physfs)
+
+# Optional mbedtls for HTTPS support.
+if(CUTE_FRAMEWORK_WITH_HTTPS)
+	fetch_content_with_folder(
+		mbedtls
+		GIT_REPOSITORY https://github.com/ARMmbed/mbedtls
+		GIT_TAG v3.0.0
+		GIT_PROGRESS TRUE
+	)
+	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} mbedx509 mbedtls mbedcrypto)
+endif()
+
+# SDL2 for platform support.
+# Just don't build the shared library at all, it's not needed.
+set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
+if(EMSCRIPTEN)
+	# Emscripten provides its own SDL2.
 else()
-	if(MINGW)
-		target_link_libraries(cute PRIVATE SDL2-static physfs d3d11 crypt32)
-	elseif(WINDOWS)
-		target_link_libraries(cute PRIVATE SDL2-static physfs crypt32)
+	# Try to find SDL2
+	if (DEFINED SDL2_LIBRARIES AND DEFINED SDL2_INCLUDE_DIRS)
+		set(SDL2_FOUND true)
 	else()
-		target_link_libraries(cute PRIVATE SDL2-static physfs)
+		find_package(SDL2 QUIET)
+	endif()
+
+	# Download CMake if it wasn't found.
+	if (NOT ${SDL2_FOUND})
+		fetch_content_with_folder(
+			SDL2
+			GIT_REPOSITORY https://github.com/libsdl-org/SDL
+			GIT_TAG release-2.0.14
+			GIT_PROGRESS TRUE
+		)
 	endif()
 endif()
+set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} SDL2-static)
 
-if(CUTE_FRAMEWORK_WITH_HTTPS)
-	target_link_libraries(cute PRIVATE mbedx509 mbedtls mbedcrypto)
+# Some platform specific settings.
+if(EMSCRIPTEN)
+	target_compile_options(cute PUBLIC -O1 -fno-rtti -fno-exceptions)
+	target_link_libraries(cute PRIVATE "-s USE_WEBGL2=1 -s ASSERTIONS=1 -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1 -s ASYNCIFY=1")
+elseif(MINGW)
+	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} d3d11 crypt32)
+elseif(WINDOWS)
+	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} crypt32)
 endif()
 
-target_compile_definitions(cute PRIVATE CUTE_EXPORT)
+# Link up all dependencies to Cute.
+target_link_libraries(cute PUBLIC ${CUTE_LINK_LIBS})
 
 # Cute unit tests executable (optional, defaulted to also build).
 if (CUTE_FRAMEWORK_BUILD_TESTS)

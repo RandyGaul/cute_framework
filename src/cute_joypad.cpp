@@ -28,7 +28,7 @@
 #include <internal/cute_app_internal.h>
 #include <data/cute_joypad_mapping_db.h>
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 namespace cute
 {

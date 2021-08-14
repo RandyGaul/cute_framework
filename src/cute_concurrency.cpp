@@ -22,7 +22,7 @@
 #include <cute_concurrency.h>
 #include <cute_alloc.h>
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #define CUTE_SYNC_IMPLEMENTATION
 #ifdef CUTE_WINDOWS

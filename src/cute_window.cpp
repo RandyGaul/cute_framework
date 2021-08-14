@@ -22,7 +22,7 @@
 #include <cute_window.h>
 
 #include <internal/cute_app_internal.h>
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 namespace cute
 {

@@ -66,7 +66,7 @@ int test_client_server()
 	config.secret_key = sk;
 	config.application_id = application_id;
 	server_t* server = server_create(&config);
-	client_t* client = client_make(5000, application_id);
+	client_t* client = client_make(5000, application_id, true);
 	CUTE_TEST_ASSERT(server);
 	CUTE_TEST_ASSERT(client);
 
@@ -142,7 +142,7 @@ int test_client_server_payload()
 	config.secret_key = sk;
 	config.application_id = application_id;
 	server_t* server = server_create(&config);
-	client_t* client = client_make(5000, application_id);
+	client_t* client = client_make(5000, application_id, true);
 	CUTE_TEST_ASSERT(server);
 	CUTE_TEST_ASSERT(client);
 
@@ -238,7 +238,7 @@ int test_client_server_sim()
 	config.secret_key = sk;
 	config.application_id = application_id;
 	server_t* server = server_create(&config);
-	client_t* client = client_make(5000, application_id);
+	client_t* client = client_make(5000, application_id, true);
 	CUTE_TEST_ASSERT(server);
 	CUTE_TEST_ASSERT(client);
 

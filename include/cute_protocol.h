@@ -133,7 +133,7 @@ CUTE_API void CUTE_CALL client_enable_network_simulator(client_t* client, double
 
 struct server_t;
 
-CUTE_API server_t* CUTE_CALL server_make(uint64_t application_id, const crypto_sign_public_t* public_key, const crypto_sign_secret_t* secret_key, void* mem_ctx);
+CUTE_API server_t* CUTE_CALL server_make(uint64_t application_id, const crypto_sign_public_t* public_key, const crypto_sign_secret_t* secret_key, void* mem_ctx = NULL);
 CUTE_API void CUTE_CALL server_destroy(server_t* server);
 
 CUTE_API error_t CUTE_CALL server_start(server_t* server, const char* address, uint32_t connection_timeout);

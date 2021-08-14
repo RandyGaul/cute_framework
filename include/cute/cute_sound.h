@@ -625,7 +625,7 @@ cs_plugin_id_t cs_add_plugin(cs_context_t* ctx, const cs_plugin_interface_t* plu
 
 #elif CUTE_SOUND_PLATFORM == CUTE_SOUND_SDL
 
-	#include <SDL2/SDL.h>
+	#include <SDL.h>
 	#ifndef _WIN32
 		#include <alloca.h>
 	#endif

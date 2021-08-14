@@ -26,7 +26,7 @@
 #include <cute_joypad.h>
 #include <cute_doubly_list.h>
 
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 namespace cute
 {
