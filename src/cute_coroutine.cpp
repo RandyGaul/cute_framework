@@ -48,7 +48,7 @@ static void s_co_fn(mco_coro* mco)
 
 coroutine_t* coroutine_make(coroutine_fn* fn, void* udata)
 {
-	mco_desc desc = mco_desc_init(s_co_fn, 0);
+	mco_desc desc = mco_desc_init(s_co_fn, CUTE_MB);
 	coroutine_t* co = CUTE_NEW(coroutine_t, NULL);
 	desc.user_data = (void*)co;
 	mco_coro* mco;
