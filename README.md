@@ -39,17 +39,17 @@ int main(int argc, const char** argv)
 
 Select one of the categories below to learn more about them. Each category contains information about functions, structs, enums, and anything else relevant in the various Cute Framework header files.
 
-[app](https://randygaul.github.io/cute_framework/#/app)
+[app](https://randygaul.github.io/cute_framework/#/app/)
 [audio](https://randygaul.github.io/cute_framework/#/audio/)
-[clipboard](https://randygaul.github.io/cute_framework/#/clipboard)
-[data structures](https://randygaul.github.io/cute_framework/#/data_structures)
-[ecs](https://randygaul.github.io/cute_framework/#/ecs)
-[graphics](https://randygaul.github.io/cute_framework/#/graphics)
-[math](https://randygaul.github.io/cute_framework/#/math)
-[serialization](https://randygaul.github.io/cute_framework/#/serialization)
-[string](https://randygaul.github.io/cute_framework/#/string)
-[time](https://randygaul.github.io/cute_framework/#/time)
-[window](https://randygaul.github.io/cute_framework/#/window)
+[clipboard](https://randygaul.github.io/cute_framework/#/clipboard/)
+[data structures](https://randygaul.github.io/cute_framework/#/data_structures/)
+[ecs](https://randygaul.github.io/cute_framework/#/ecs/)
+[graphics](https://randygaul.github.io/cute_framework/#/graphics/)
+[math](https://randygaul.github.io/cute_framework/#/math/)
+[serialization](https://randygaul.github.io/cute_framework/#/serialization/)
+[string](https://randygaul.github.io/cute_framework/#/string/)
+[time](https://randygaul.github.io/cute_framework/#/time/)
+[window](https://randygaul.github.io/cute_framework/#/window/)
 
 # Docs by API List
 
