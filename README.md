@@ -8,7 +8,7 @@ CF is not quite ready for the official first release! This repository is public 
 
 # Gettin' all Cute
 
-Setting up an application and getting started is quite easy. Simply visit [the app docs](https://github.com/RandyGaul/cute_framework/tree/master/doc/app), grab the following code snippet for [app_make](https://github.com/RandyGaul/cute_framework/blob/master/doc/app/app_make.md), and off you go.
+Setting up an application and getting started is quite easy. Simply visit [the app docs](https://randygaul.github.io/cute_framework/#/app/), grab the following code snippet for [app_make](https://randygaul.github.io/cute_framework/#/app/app_make), and off you go.
 
 > Creating a window and closing it.
 
@@ -39,17 +39,17 @@ int main(int argc, const char** argv)
 
 Select one of the categories below to learn more about them. Each category contains information about functions, structs, enums, and anything else relevant in the various Cute Framework header files.
 
-[app](https://github.com/RandyGaul/cute_framework/tree/master/doc/app)
-[audio](https://github.com/RandyGaul/cute_framework/tree/master/doc/audio)
-[clipboard](https://github.com/RandyGaul/cute_framework/tree/master/doc/clipboard)
-[data structures](https://github.com/RandyGaul/cute_framework/tree/master/doc/data_structures)
-[ecs](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs)
-[graphics](https://github.com/RandyGaul/cute_framework/tree/master/doc/graphics)
-[math](https://github.com/RandyGaul/cute_framework/tree/master/doc/math)
-[serialization](https://github.com/RandyGaul/cute_framework/tree/master/doc/serialization)
-[string](https://github.com/RandyGaul/cute_framework/tree/master/doc/string)
-[time](https://github.com/RandyGaul/cute_framework/tree/master/doc/time)
-[window](https://github.com/RandyGaul/cute_framework/tree/master/doc/window)
+[app](https://randygaul.github.io/cute_framework/#/app)
+[audio](https://randygaul.github.io/cute_framework/#/audio/)
+[clipboard](https://randygaul.github.io/cute_framework/#/clipboard)
+[data structures](https://randygaul.github.io/cute_framework/#/data_structures)
+[ecs](https://randygaul.github.io/cute_framework/#/ecs)
+[graphics](https://randygaul.github.io/cute_framework/#/graphics)
+[math](https://randygaul.github.io/cute_framework/#/math)
+[serialization](https://randygaul.github.io/cute_framework/#/serialization)
+[string](https://randygaul.github.io/cute_framework/#/string)
+[time](https://randygaul.github.io/cute_framework/#/time)
+[window](https://randygaul.github.io/cute_framework/#/window)
 
 # Docs by API List
 
@@ -58,10 +58,12 @@ TODO
 # Examples, Tutorials, and Articles
 
 - [Cute Snake, example game implemented in CF](https://github.com/RandyGaul/cute_snake)
-- [KV Serialization in CF docs](https://github.com/RandyGaul/cute_framework/tree/master/doc/serialization)
-- [ECS in CF docs](https://github.com/RandyGaul/cute_framework/tree/master/doc/ecs)
+- [KV Serialization in CF docs](https://randygaul.github.io/cute_framework/#/serialization/)
+- [ECS in CF docs](https://randygaul.github.io/cute_framework/#/ecs/)
 
 # Download
+
+Fow now it's recommended to build CF from source, at least until CF hits a first official release. See the Building from Source section below.
 
 Prebuilt binaries for Windows are available in the [releases section](https://github.com/RandyGaul/cute_framework/releases). Please build and install from source for Mac/Linux users. Note - CF is designed for *64-bit only*.
 
