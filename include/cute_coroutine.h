@@ -30,7 +30,7 @@ namespace cute
 	struct coroutine_t;
 	typedef void (coroutine_fn)(coroutine_t* co);
 
-	CUTE_API coroutine_t* CUTE_CALL coroutine_make(coroutine_fn* fn, void* udata = NULL);
+	CUTE_API coroutine_t* CUTE_CALL coroutine_make(coroutine_fn* fn, int stack_size = 0, void* udata = NULL);
 	CUTE_API void CUTE_CALL coroutine_destroy(coroutine_t* co);
 
 	enum coroutine_state_t
