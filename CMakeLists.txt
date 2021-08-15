@@ -222,7 +222,6 @@ set(CUTE_SOKOL_HDRS
 set(CUTE_CUTE_HDRS
 	include/cute/cute_aseprite.h
 	include/cute/cute_c2.h
-	include/cute/cute_coroutine.h
 	include/cute/cute_font.h
 	include/cute/cute_path.h
 	include/cute/cute_png.h
