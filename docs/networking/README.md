@@ -53,3 +53,7 @@ The function [generate_connect_token](https://github.com/RandyGaul/cute_framewor
 ## Dedicated Game Servers
 
 The game server itself is an instance of `server_t` created by calling [server_create](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/server/server_create.md). The server mediates connections from all clients; the server can at any moment force a client to disconnect, and only accepts new connections with clients that provide a valid connect token and pass the security handshake.
+
+## Example Client and Server
+
+Here is a [quick and dirty demonstration](https://github.com/RandyGaul/cf_net_test) showing how to setup a client and server for testing purposes. This shows basic usage of the client and server API, where multiple clients can connect to a single server. The connect tokens are generated on the dedicated server instead of using a web service, which is a great way to test things out during development.
