@@ -13,7 +13,7 @@ client_t* client_make(uint16_t port, uint64_t application_id, bool use_ipv6 = fa
 Parameter Name | Description
 --- | ---
 port | Port for opening a UDP socket.
-application_id | A unique number to identify your game, can be whatever value you like.
+application_id | A unique number to identify your game, can be whatever value you like. This must be the same number as in [server_create](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/server/server_create.md).
 use_ipv6 | Whether or not the socket should turn on ipv6. Some users will not have ipv6 enabled, so this defaults to false.
 user_allocator_context | Used for custom allocators, this can be set to `NULL`.
 
