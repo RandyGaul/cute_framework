@@ -46,7 +46,7 @@ Select one of the categories below to learn more about them. Each category conta
 [ecs](https://randygaul.github.io/cute_framework/#/ecs/)  
 [graphics](https://randygaul.github.io/cute_framework/#/graphics/)  
 [math](https://randygaul.github.io/cute_framework/#/math/)  
-[networking](https://github.com/RandyGaul/cute_framework/tree/master/docs/networking/)  
+[networking](https://randygaul.github.io/cute_framework/#/networking/)  
 [serialization](https://randygaul.github.io/cute_framework/#/serialization/)  
 [string](https://randygaul.github.io/cute_framework/#/string/)  
 [time](https://randygaul.github.io/cute_framework/#/time/)  
