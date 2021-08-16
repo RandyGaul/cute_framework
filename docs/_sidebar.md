@@ -8,7 +8,7 @@
     - [Data_structures](/data_structures/)
     - [Ecs](/ecs/)
     - [Graphics](/graphics/)
-    - [Input](/input/input/)
+    - [Input](/input/)
     - [Math](/math/)
     - [Networking](/networking/)
     - [Serialization](/serialization/)
