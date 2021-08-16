@@ -9,6 +9,7 @@ The docs for Cute Framework are organized by categories. Select one of the categ
 [ecs](https://github.com/RandyGaul/cute_framework/tree/master/docs/ecs/)  
 [graphics](https://github.com/RandyGaul/cute_framework/tree/master/docs/graphics/)  
 [math](https://github.com/RandyGaul/cute_framework/tree/master/docs/math/)  
+[networking](https://github.com/RandyGaul/cute_framework/tree/master/docs/networking/)  
 [serialization](https://github.com/RandyGaul/cute_framework/tree/master/docs/serialization/)  
 [string](https://github.com/RandyGaul/cute_framework/tree/master/docs/string/)  
 [time](https://github.com/RandyGaul/cute_framework/tree/master/docs/time/)  
