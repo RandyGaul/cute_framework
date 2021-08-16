@@ -25,8 +25,7 @@ The `server_config_t` must be filled out to create a server instance. It contain
 
 Member Variable Name | Type | Description
 --- | --- | ---
-application_id | `uint64_t` | 
-A unique number to identify your game, can be whatever value you like. This must be the same number as in [client_make](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_make.md).
+application_id | `uint64_t` | A unique number to identify your game, can be whatever value you like. This must be the same number as in [client_make](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_make.md).
 connection_timeout | `int` | The number of seconds before consider a connection as timed out when not receiving any packets on the connection.
 resend_rate | `double` | The number of seconds to wait before resending a packet that has not been acknowledge as received by a client.
 public_key | `crypto_sign_public_t` | The public part of your public key cryptography used for [connect tokens](https://github.com/RandyGaul/cute_framework/tree/master/docs/networking/). This can be safely shared with your players publicly.
