@@ -11,8 +11,8 @@ For those curious, the lower level guts of the client server API are implemented
 
 ## Networking Categories
 
-[client](https://github.com/RandyGaul/cute_framework/tree/master/docs/string/string/)  
-[server](https://github.com/RandyGaul/cute_framework/tree/master/docs/string/strpool/)  
+[client](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/)  
+[server](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/server/)  
 [protocol](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/protocol/)  
 
 ## Connect Tokens
