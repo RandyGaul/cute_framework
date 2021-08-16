@@ -4,14 +4,14 @@ The client can use a [Connect Token](https://github.com/RandyGaul/cute_framework
 
 Once connected the client can send and receive packets from the server.
 
-[client_make](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_make.md)
-[client_destroy](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_destroy.md)
-[client_connect](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_connect.md)
-[client_disconnect](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_disconnect.md)
-[client_update](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_update.md)
-[client_pop_packet](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_pop_packet.md)
-[client_send](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_send.md)
-[client_state_get](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_state_get.md)
-[client_state_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_state_string.md
-[client_time_of_last_packet_recieved](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_time_of_last_packet_recieved_get.md)  )
-[client_enable_network_simulator](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_enable_network_simulator.md)
+[client_make](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_make.md)  
+[client_destroy](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_destroy.md)  
+[client_connect](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_connect.md)  
+[client_disconnect](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_disconnect.md)  
+[client_update](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_update.md)  
+[client_pop_packet](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_pop_packet.md)  
+[client_send](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_send.md)  
+[client_state_get](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_state_get.md)  
+[client_state_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_state_string.md)  
+[client_time_of_last_packet_recieved](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_time_of_last_packet_recieved_get.md)  
+[client_enable_network_simulator](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/client/client_enable_network_simulator.md)  
