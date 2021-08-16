@@ -7,13 +7,13 @@ CF's networking model uses a [client server networking architecture](https://en.
 * Packet fragmentation and reassembly, for larger packets over the [MTU](https://en.wikipedia.org/wiki/Maximum_transmission_unit).
 * Basic client and server abstractions.
 
-For those curious, the lower level guts of the client server API are implemented on top of the [Cute Protocol](https://github.com/RandyGaul/cute_framework/blob/master/docs/protocol.md).
+For those curious, the lower level guts of the client server API are implemented on top of the [Cute Protocol](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/protocol/protocol.md).
 
 ## Networking Categories
 
-[client](https://github.com/RandyGaul/cute_framework/tree/master/docs/string/string/)
-[server](https://github.com/RandyGaul/cute_framework/tree/master/docs/string/strpool/)
-[protocol](https://github.com/RandyGaul/cute_framework/blob/master/docs/protocol.md)
+[client](https://github.com/RandyGaul/cute_framework/tree/master/docs/string/string/)  
+[server](https://github.com/RandyGaul/cute_framework/tree/master/docs/string/strpool/)  
+[protocol](https://github.com/RandyGaul/cute_framework/blob/master/docs/networking/protocol/)  
 
 ## Connect Tokens
 
