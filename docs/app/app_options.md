@@ -9,6 +9,7 @@ Enumeration Entry | Description
 CUTE_APP_OPTIONS_OPENGL_CONTEXT | Creates an Open GL 3.3 context.
 CUTE_APP_OPTIONS_OPENGLES_CONTEXT | Creates an Open GL ES 3.0 context.
 CUTE_APP_OPTIONS_D3D11_CONTEXT | Initializes a DirectX 11 context.
+CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT | Picks a good default graphics context for the given platform.
 CUTE_APP_OPTIONS_FULLSCREEN | Starts the application in borderless full-screen mode.
 CUTE_APP_OPTIONS_RESIZABLE | Allows the window to be resized.
 CUTE_APP_OPTIONS_HIDDEN | Starts the application with the window hidden.
