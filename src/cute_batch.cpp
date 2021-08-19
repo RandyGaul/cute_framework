@@ -670,21 +670,90 @@ void batch_circle(batch_t* b, v2 p, float r, int iters, color_t c)
 	}
 }
 
-void batch_circle_line(batch_t* b, v2 p, float r, int iters, float thickness, color_t c)
+void batch_circle_line(batch_t* batch, v2 p, float r, int iters, float thickness, color_t color)
 {
 	v2 p0 = v2(p.x + r - thickness, p.y);
 	v2 p1 = v2(p.x + r, p.y);
+	float half_thickness = thickness * 0.5f;
 
-	for (int i = 1; i <= iters; i++)
-	{
+	for (int i = 1; i <= iters; i++) {
 		float a = (i / (float)iters) * (2.0f * CUTE_PI);
 		v2 n = from_angle(a);
-		v2 p2 = v2(p.x + n.x * r, p.y + n.y * r);
-		v2 p3 = v2(p.x + n.x * (r - thickness), p.y + n.y * (r - thickness));
-		batch_quad(b, p0, p1, p2, p3, c);
+		v2 p2 = p + n * (r + half_thickness);
+		v2 p3 = p + n * (r - half_thickness);
+		batch_quad(batch, p0, p1, p2, p3, color);
 		p1 = p2;
 		p0 = p3;
 	}
+}
+
+void batch_circle_arc(batch_t* batch, v2 p, v2 center_of_arc, float range, int iters, color_t color)
+{
+	float r = len(center_of_arc - p);
+	v2 d = norm(center_of_arc - p);
+	sincos_t m = sincos(range * 0.5f);
+
+	v2 t = mulT(m, d);
+	v2 p0 = p + t * r;
+	d = norm(p0 - p);
+	float inc = range / iters;
+
+	for (int i = 1; i <= iters; i++) {
+		m = sincos(i * inc);
+		t = mul(m, d);
+		v2 p1 = p + t * r;
+		batch_tri(batch, p, p1, p0, color);
+		p0 = p1;
+	}
+}
+
+void batch_circle_arc_line(batch_t* batch, v2 p, v2 center_of_arc, float range, int iters, float thickness, color_t color)
+{
+	float r = len(center_of_arc - p);
+	v2 d = norm(center_of_arc - p);
+	sincos_t m = sincos(range * 0.5f);
+
+	float half_thickness = thickness * 0.5f;
+	v2 t = mulT(m, d);
+	v2 p0 = p + t * (r + half_thickness);
+	v2 p1 = p + t * (r - half_thickness);
+	d = norm(p0 - p);
+	float inc = range / iters;
+
+	for (int i = 1; i <= iters; i++) {
+		m = sincos(i * inc);
+		t = mul(m, d);
+		v2 p2 = p + t * (r + half_thickness);
+		v2 p3 = p + t * (r - half_thickness);
+		batch_quad(batch, p0, p1, p2, p3, color);
+		p1 = p2;
+		p0 = p3;
+	}
+}
+
+void batch_capsule(batch_t* batch, v2 a, v2 b, float r, int iters, color_t c)
+{
+	batch_circle_arc(batch, a, a + norm(a - b) * r, CUTE_PI, iters, c);
+	batch_circle_arc(batch, b, b + norm(b - a) * r, CUTE_PI, iters, c);
+	v2 n = skew(norm(b - a)) * r;
+	v2 q0 = a + n;
+	v2 q1 = b + n;
+	v2 q2 = b - n;
+	v2 q3 = a - n;
+	batch_quad(batch, q0, q1, q2, q3, c);
+}
+
+void batch_capsule_line(batch_t* batch, v2 a, v2 b, float r, int iters, float thickness, color_t c)
+{
+	batch_circle_arc_line(batch, a, a + norm(a - b) * r, CUTE_PI, iters, thickness, c);
+	batch_circle_arc_line(batch, b, b + norm(b - a) * r, CUTE_PI, iters, thickness, c);
+	v2 n = skew(norm(b - a)) * r * thickness * 0.5f;
+	v2 q0 = a + n;
+	v2 q1 = b + n;
+	v2 q2 = b - n;
+	v2 q3 = a - n;
+	batch_line(batch, q0, q1, thickness, c);
+	batch_line(batch, q2, q3, thickness, c);
 }
 
 void batch_tri(batch_t* b, v2 p0, v2 p1, v2 p2, color_t c)
@@ -714,11 +783,11 @@ void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c)
 
 void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c0, color_t c1)
 {
-	v2 n = skew(norm(p1 - p0));
-	v2 q0 = p0 + n * thickness * 0.5f;
-	v2 q1 = p1 + n * thickness * 0.5f;
-	v2 q2 = p1 - n * thickness * 0.5f;
-	v2 q3 = p0 - n * thickness * 0.5f;
+	v2 n = skew(norm(p1 - p0)) * thickness * 0.5f;
+	v2 q0 = p0 + n;
+	v2 q1 = p1 + n;
+	v2 q2 = p1 - n;
+	v2 q3 = p0 - n;
 	batch_quad(b, q0, q1, q2, q3, c0, c0, c1, c1);
 }
 

@@ -121,6 +121,11 @@ CUTE_API void CUTE_CALL batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, 
 
 CUTE_API void CUTE_CALL batch_circle(batch_t* b, v2 p, float r, int iters, color_t c);
 CUTE_API void CUTE_CALL batch_circle_line(batch_t* b, v2 p, float r, int iters, float thickness, color_t c);
+CUTE_API void CUTE_CALL batch_circle_arc(batch_t* batch, v2 p, v2 center_of_arc, float range, int iters, color_t color);
+CUTE_API void CUTE_CALL batch_circle_arc_line(batch_t* batch, v2 p, v2 center_of_arc, float range, int iters, float thickness, color_t color);
+
+CUTE_API void CUTE_CALL batch_capsule(batch_t* batch, v2 a, v2 b, float r, int iters, color_t c);
+CUTE_API void CUTE_CALL batch_capsule_line(batch_t* batch, v2 a, v2 b, float r, int iters, float thickness, color_t c);
 
 CUTE_API void CUTE_CALL batch_tri(batch_t* b, v2 p0, v2 p1, v2 p2, color_t c);
 CUTE_API void CUTE_CALL batch_tri(batch_t* b, v2 p0, v2 p1, v2 p2, color_t c0, color_t c1, color_t c2);
