@@ -660,12 +660,31 @@ void batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, float thickness, co
 
 void batch_circle(batch_t* b, v2 p, float r, int iters, color_t c)
 {
-	CUTE_ASSERT(0);
+	v2 prev = v2(r, 0);
+
+	for (int i = 1; i <= iters; ++i) {
+		float a = (i / (float)iters) * (2.0f * CUTE_PI);
+		v2 next = from_angle(a) * r;
+		batch_tri(b, p + prev, p + next, p, c);
+		prev = next;
+	}
 }
 
 void batch_circle_line(batch_t* b, v2 p, float r, int iters, float thickness, color_t c)
 {
-	CUTE_ASSERT(0);
+	v2 p0 = v2(p.x + r - thickness, p.y);
+	v2 p1 = v2(p.x + r, p.y);
+
+	for (int i = 1; i <= iters; i++)
+	{
+		float a = (i / (float)iters) * (2.0f * CUTE_PI);
+		v2 n = from_angle(a);
+		v2 p2 = v2(p.x + n.x * r, p.y + n.y * r);
+		v2 p3 = v2(p.x + n.x * (r - thickness), p.y + n.y * (r - thickness));
+		batch_quad(b, p0, p1, p2, p3, c);
+		p1 = p2;
+		p0 = p3;
+	}
 }
 
 void batch_tri(batch_t* b, v2 p0, v2 p1, v2 p2, color_t c)
