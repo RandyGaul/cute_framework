@@ -117,6 +117,7 @@ CUTE_INLINE float mod(float x, float m) { return x - (int)(x / m) * m; }
 CUTE_INLINE int sign(int a) { return a < 0 ? -1 : 1; }
 CUTE_INLINE int min(int a, int b) { return a < b ? a : b; }
 CUTE_INLINE int max(int a, int b) { return b < a ? a : b; }
+CUTE_INLINE float abs(float a) { return fabsf(a); }
 CUTE_INLINE int abs(int a) { int mask = a >> ((sizeof(int) * 8) - 1); return (a + mask) ^ mask; }
 CUTE_INLINE int clamp(int a, int lo, int hi) { return max(lo, min(a, hi)); }
 CUTE_INLINE int clamp01(int a) { return max(0, min(a, 1)); }
@@ -237,12 +238,15 @@ CUTE_INLINE transform_t mul(transform_t a, transform_t b) { transform_t c; c.r =
 CUTE_INLINE transform_t mulT(transform_t a, transform_t b) { transform_t c; c.r = mulT(a.r, b.r); c.p = mulT(a.r, b.p - a.p); return c; }
 
 // halfspace ops
+CUTE_INLINE halfspace_t plane(v2 n, float d) { halfspace_t h; h.n = n; h.d = d; return h; }
+CUTE_INLINE halfspace_t plane(v2 n, v2 p) { halfspace_t h; h.n = n; h.d = dot(n, p); return h; }
 CUTE_INLINE v2 origin(halfspace_t h) { return h.n * h.d; }
 CUTE_INLINE float distance(halfspace_t h, v2 p) { return dot(h.n, p) - h.d; }
 CUTE_INLINE v2 project(halfspace_t h, v2 p) { return p - h.n * distance(h, p); }
 CUTE_INLINE halfspace_t mul(transform_t a, halfspace_t b) { halfspace_t c; c.n = mul(a.r, b.n); c.d = dot(mul(a, origin(b)), c.n); return c; }
 CUTE_INLINE halfspace_t mulT(transform_t a, halfspace_t b) { halfspace_t c; c.n = mulT(a.r, b.n); c.d = dot(mulT(a, origin(b)), c.n); return c; }
 CUTE_INLINE v2 intersect(v2 a, v2 b, float da, float db) { return a + (b - a) * (da / (da - db)); }
+CUTE_INLINE v2 intersect(halfspace_t h, v2 a, v2 b) { return intersect(a, b, distance(h, a), distance(h, b)); }
 
 // aabb helpers
 CUTE_INLINE aabb_t make_aabb(v2 min, v2 max) { aabb_t bb; bb.min = min; bb.max = max; return bb; }
@@ -320,6 +324,26 @@ CUTE_INLINE int ray_to_halfpsace(ray_t A, halfspace_t B, raycast_t* out)
 	out->n = B.n * sign(da);
 	out->t = intersect(da, db);
 	return 1;
+}
+
+// Nice line segment funcs.
+// http://www.randygaul.net/2014/07/23/distance-point-to-line-segment/
+CUTE_INLINE float distance_sq(v2 a, v2 b, v2 p)
+{
+	v2 n = b - a;
+	v2 pa = a - p;
+	float c = dot(n, pa);
+
+	// Closest point is a
+	if (c > 0.0f) return dot(pa, pa);
+
+	// Closest point is b
+	v2 bp = p - b;
+	if (dot(n, bp) > 0.0f) return dot(bp, bp);
+
+	// Closest point is between a and b
+	v2 e = pa - n * (c / dot(n, n));
+	return dot(e, e);
 }
 
 #define CUTE_POLY_MAX_VERTS 8
