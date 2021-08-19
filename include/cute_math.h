@@ -91,8 +91,8 @@ struct raycast_t
 
 struct circle_t
 {
-	float r;
 	v2 p;
+	float r;
 };
 
 struct aabb_t
