@@ -372,7 +372,7 @@ void app_do_mixing(app_t* app)
 #endif // CUTE_EMSCRIPTEN
 }
 
-ImGuiContext* app_init_imgui(app_t* app)
+ImGuiContext* app_init_imgui(app_t* app, bool no_default_font)
 {
 	if (!app->gfx_enabled) return NULL;
 
@@ -383,6 +383,8 @@ ImGuiContext* app_init_imgui(app_t* app)
 	ImGui::StyleColorsDark();
 	ImGui_SDL2_Init(app->window);
 	simgui_desc_t imgui_params = { 0 };
+	imgui_params.no_default_font = no_default_font;
+	imgui_params.ini_filename = "imgui.ini";
 	simgui_setup(imgui_params);
 	sg_imgui_init(&app->sg_imgui);
 
