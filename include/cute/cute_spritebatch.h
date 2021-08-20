@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_spritebatch.h - v1.02
+	cute_spritebatch.h - v1.04
 
 	To create implementation (the function definitions)
 		#define SPRITEBATCH_IMPLEMENTATION
@@ -45,7 +45,7 @@
 
 		The `spritebatch_defrag` function performs atlas creation and texture management. It
 		should be called periodically. It can be called once per game tick (once per render),
-		or optionally called at a different frequency (once ever N game ticks).
+		or optionally called at a different frequency (once every N game ticks).
 
 	PROS AND CONS:
 
@@ -70,11 +70,13 @@
 		  which implies a RAM hit as well as more things to clog the CPU cache.
 		- If each texture comes from a separate image on-disk, opening individual files on
 		  disk can be very slow. For example on Windows just performing permissions and
-		  related work to open a file is time-consuming.
+		  related work to open a file is time-consuming. This can be mitigated by moving
+		  assets into a single larger file, for example a .zip archive and read from using
+		  a file io abstraction like PHYSFS.
 		- For large numbers of separate images, some file abstraction is necessary to avoid
 		  a large performance hit on opening/closing many individual files. This problem is
 		  *not* solved by cute_spritebatch.h, and instead should be solved by some separate
-		  file abstraction system.
+		  file abstraction system. PHYSFS is a good example of a solid file io abstraciton.
 
 	EXAMPLE USAGE:
 
@@ -135,6 +137,9 @@
 		                  with memory management, added support for pixel padding along
 		                  the edges of all textures (useful for certain shader effects)
 		1.03 (08/18/2020) refactored `spritebatch_push` so that sprites can have userdata
+		1.04 (08/20/2021) qsort -> mergesort to avoid bugs, optional macro to override
+		                  default sorting routines provided by Kariem, added new func-
+		                  tion `spritebatch_prefetch`
 */
 
 #ifndef SPRITEBATCH_H
@@ -173,12 +178,7 @@ struct spritebatch_sprite_t
 
 	// This field is *completely optional* -- just set it to zero if you don't wanter to bother.
 	// User-defined sorting key, see: http://realtimecollisiondetection.net/blog/?p=86
-	// The first 32-bits store the user's sort bits. The bottom 32-bits are for internal
-	// usage, and are not ever set by the user. Internally sprites are sorted first
-	// based on `sort_bits`, and to break ties they are sorted on `texture_id`. Feel free
-	// to change the sort predicate `spritebatch_internal_instance_pred` in the
-	// implementation section.
-	SPRITEBATCH_U64 sort_bits;
+	int sort_bits;
 
 	// This is a *completely optional* field. The idea is that the `SPRITEBATCH_SPRITE_USERDATA`
 	// macro can be defined to insert arbitrary data into sprites. For example, if you want to
@@ -192,6 +192,13 @@ struct spritebatch_sprite_t
 
 // Pushes a sprite onto an internal buffer. Does no other logic.
 int spritebatch_push(spritebatch_t* sb, spritebatch_sprite_t sprite);
+
+// Ensures the image associated with your unique `image_id` is loaded up into spritebatch. This
+// function pretends to draw a sprite referencing `image_id` but doesn't actually do any
+// drawing at all. Use this function as an optimization to pre-load images you know will be
+// drawn very soon, e.g. prefetch all ten images within a single animation just as it starts
+// playing.
+void spritebatch_prefetch(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h);
 
 // Increments internal timestamps on all textures, for use in `spritebatch_defrag`.
 void spritebatch_tick(spritebatch_t* sb);
@@ -364,7 +371,7 @@ struct hashtable_t
 typedef struct
 {
 	SPRITEBATCH_U64 image_id;
-	SPRITEBATCH_U64 sort_bits;
+	int sort_bits;
 	int w;
 	int h;
 	float x, y;
@@ -412,6 +419,7 @@ struct spritebatch_t
 	int sprite_count;
 	int sprite_capacity;
 	spritebatch_sprite_t* sprites;
+	spritebatch_sprite_t* sprites_scratch;
 
 	int key_buffer_count;
 	int key_buffer_capacity;
@@ -950,7 +958,9 @@ int spritebatch_init(spritebatch_t* sb, spritebatch_config_t* config, void* udat
 	sb->sprite_count = 0;
 	sb->sprite_capacity = 1024;
 	sb->sprites = (spritebatch_sprite_t*)SPRITEBATCH_MALLOC(sizeof(spritebatch_sprite_t) * sb->sprite_capacity, sb->mem_ctx);
+	sb->sprites_scratch = (spritebatch_sprite_t*)SPRITEBATCH_MALLOC(sizeof(spritebatch_sprite_t) * sb->sprite_capacity, sb->mem_ctx);
 	if (!sb->sprites) return 1;
+	if (!sb->sprites_scratch) return 1;
 
 	// initialize key buffer (for marking hash table entries for deletion)
 	sb->key_buffer_count = 0;
@@ -974,6 +984,7 @@ void spritebatch_term(spritebatch_t* sb)
 {
 	SPRITEBATCH_FREE(sb->input_buffer, sb->mem_ctx);
 	SPRITEBATCH_FREE(sb->sprites, sb->mem_ctx);
+	SPRITEBATCH_FREE(sb->sprites_scratch, sb->mem_ctx);
 	SPRITEBATCH_FREE(sb->key_buffer, sb->mem_ctx);
 	SPRITEBATCH_FREE(sb->pixel_buffer, ctx->mem_ctx);
 	hashtable_term(&sb->sprites_to_lonely_textures);
@@ -1034,11 +1045,6 @@ void spritebatch_set_default_config(spritebatch_config_t* config)
 		} \
 	} while (0)
 
-static SPRITEBATCH_U64 spritebatch_make_sort_key(int index, int sort_bits)
-{
-	return (((SPRITEBATCH_U64)sort_bits) << 32) | ((SPRITEBATCH_U64)index);
-}
-
 int spritebatch_push(spritebatch_t* sb, spritebatch_sprite_t sprite)
 {
 	SPRITEBATCH_ASSERT(sprite.w <= sb->atlas_width_in_pixels);
@@ -1046,7 +1052,7 @@ int spritebatch_push(spritebatch_t* sb, spritebatch_sprite_t sprite)
 	SPRITEBATCH_CHECK_BUFFER_GROW(sb, input_count, input_capacity, input_buffer, spritebatch_internal_sprite_t);
 	spritebatch_internal_sprite_t sprite_out;
 	sprite_out.image_id = sprite.image_id;
-	sprite_out.sort_bits = spritebatch_make_sort_key(sb->input_count, (int)(sprite.sort_bits >> 32));
+	sprite_out.sort_bits = sprite.sort_bits;
 	sprite_out.w = sprite.w;
 	sprite_out.h = sprite.h;
 	sprite_out.x = sprite.x;
@@ -1062,61 +1068,48 @@ int spritebatch_push(spritebatch_t* sb, spritebatch_sprite_t sprite)
 	return 1;
 }
 
-static int spritebatch_internal_sprite_less_than(spritebatch_sprite_t* a, spritebatch_sprite_t* b)
+int spritebatch_internal_lonely_sprite(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h, spritebatch_sprite_t* sprite_out, int skip_missing_textures);
+
+void spritebatch_prefetch(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h)
 {
-	if (a->sort_bits < b->sort_bits) return 1;
-	else if(a->sort_bits == b->sort_bits) return a->texture_id < b->texture_id;
+	void* atlas_ptr = hashtable_find(&sb->sprites_to_atlases, image_id);
+	if (!atlas_ptr) spritebatch_internal_lonely_sprite(sb, image_id, w, h, NULL, 0);
+}
+
+static int spritebatch_internal_sprite_less_than_or_equal(spritebatch_sprite_t* a, spritebatch_sprite_t* b)
+{
+	if (a->sort_bits <= b->sort_bits) return 1;
+	else if (a->texture_id <= b->texture_id) return 1;
 	else return 0;
 }
 
-static int spritebatch_internal_sprite_greater_than(spritebatch_sprite_t* a, spritebatch_sprite_t* b)
+void spritebatch_internal_merge_sort_iteration(spritebatch_sprite_t* a, int lo, int split, int hi, spritebatch_sprite_t* b)
 {
-	if (a->sort_bits > b->sort_bits) return 1;
-	else if(a->sort_bits == b->sort_bits) return a->texture_id > b->texture_id;
-	else return 0;
-}
-
-static void spritebatch_internal_sprite_swap(spritebatch_sprite_t* a, int i, int j)
-{
-	spritebatch_sprite_t t = a[i];
-	a[i] = a[j];
-	a[j] = t;
-}
-
-static void spritebatch_internal_sprite_partition_three_way(spritebatch_sprite_t* a, int pivot, int lo, int hi, int* out_lo, int* out_hi)
-{
-	int l = lo;
-	int r = lo;
-	int u = hi;
-
-	while (r <= u) {
-		if (spritebatch_internal_sprite_less_than(a + r, a + pivot)) {
-			spritebatch_internal_sprite_swap(a, l++, r++);
-		} else if (spritebatch_internal_sprite_greater_than(a + r, a + pivot)) {
-			spritebatch_internal_sprite_swap(a, r, u--);
+	int i = lo, j = split;
+	for (int k = lo; k < hi; k++) {
+		if (i < split && (j >= hi || spritebatch_internal_sprite_less_than_or_equal(a + i, a + j))) {
+			b[k] = a[i];
+			i = i + 1;
 		} else {
-			r++;
+			b[k] = a[j];
+			j = j + 1;
 		}
 	}
-
-	*out_lo = l;
-	*out_hi = r;
 }
 
-static void spritebatch_internal_sprite_quick_sort(spritebatch_sprite_t* a, int lo, int hi)
+void spritebatch_internal_merge_sort_recurse(spritebatch_sprite_t* b, int lo, int hi, spritebatch_sprite_t* a)
 {
-	if (lo < hi) {
-		int pivot = (lo + hi) / 2;
-		int left, right;
-		spritebatch_internal_sprite_partition_three_way(a, pivot, lo, hi, &left, &right);
-		spritebatch_internal_sprite_quick_sort(a, lo, left - 1);
-		spritebatch_internal_sprite_quick_sort(a, right, hi);
-	}
+	if (hi - lo <= 1) return;
+	int split = (lo + hi) / 2;
+	spritebatch_internal_merge_sort_recurse(a, lo,  split, b);
+	spritebatch_internal_merge_sort_recurse(a, split, hi, b);
+	spritebatch_internal_merge_sort_iteration(b, lo, split, hi, a);
 }
 
-static void spritebatch_internal_sprite_sort(spritebatch_sprite_t* items, int count)
+void spritebatch_internal_merge_sort(spritebatch_sprite_t* a, spritebatch_sprite_t* b, int n)
 {
-	spritebatch_internal_sprite_quick_sort(items, 0, count - 1);
+	SPRITEBATCH_MEMCPY(b, a, sizeof(spritebatch_sprite_t) * n);
+	spritebatch_internal_merge_sort_recurse(b, 0, n, a);
 }
 
 static inline void spritebatch_internal_get_pixels(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h)
@@ -1185,30 +1178,33 @@ spritebatch_internal_lonely_texture_t* spritebatch_internal_lonelybuffer_push(sp
 	return (spritebatch_internal_lonely_texture_t*)hashtable_insert(&sb->sprites_to_lonely_textures, image_id, &texture);
 }
 
-int spritebatch_internal_lonely_sprite(spritebatch_t* sb, spritebatch_internal_sprite_t* s, spritebatch_sprite_t* sprite, int skip_missing_textures)
+int spritebatch_internal_lonely_sprite(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h, spritebatch_sprite_t* sprite_out, int skip_missing_textures)
 {
-	spritebatch_internal_lonely_texture_t* tex = (spritebatch_internal_lonely_texture_t*)hashtable_find(&sb->sprites_to_lonely_textures, s->image_id);
+	spritebatch_internal_lonely_texture_t* tex = (spritebatch_internal_lonely_texture_t*)hashtable_find(&sb->sprites_to_lonely_textures, image_id);
 
 	if (skip_missing_textures)
 	{
-		if (!tex) spritebatch_internal_lonelybuffer_push(sb, s->image_id, s->w, s->h, 0);
+		if (!tex) spritebatch_internal_lonelybuffer_push(sb, image_id, w, h, 0);
 		return 1;
 	}
 
 	else
 	{
-		if (!tex) tex = spritebatch_internal_lonelybuffer_push(sb, s->image_id, s->w, s->h, 1);
-		else if (tex->texture_id == ~0) tex->texture_id = spritebatch_internal_generate_texture_handle(sb, s->image_id, s->w, s->h);
+		if (!tex) tex = spritebatch_internal_lonelybuffer_push(sb, image_id, w, h, 1);
+		else if (tex->texture_id == ~0) tex->texture_id = spritebatch_internal_generate_texture_handle(sb, image_id, w, h);
 		tex->timestamp = 0;
-		sprite->texture_id = tex->texture_id;
-		sprite->minx = sprite->miny = 0;
-		sprite->maxx = sprite->maxy = 1.0f;
 
-		if (SPRITEBATCH_LONELY_FLIP_Y_AXIS_FOR_UV)
-		{
-			float tmp = sprite->miny;
-			sprite->miny = sprite->maxy;
-			sprite->maxy = tmp;
+		if (sprite_out) {
+			sprite_out->texture_id = tex->texture_id;
+			sprite_out->minx = sprite_out->miny = 0;
+			sprite_out->maxx = sprite_out->maxy = 1.0f;
+
+			if (SPRITEBATCH_LONELY_FLIP_Y_AXIS_FOR_UV)
+			{
+				float tmp = sprite_out->miny;
+				sprite_out->miny = sprite_out->maxy;
+				sprite_out->maxy = tmp;
+			}
 		}
 
 		return 0;
@@ -1250,11 +1246,22 @@ int spritebatch_internal_push_sprite(spritebatch_t* sb, spritebatch_internal_spr
 		sprite.maxy = tex->maxy;
 	}
 
-	else skipped_tex = spritebatch_internal_lonely_sprite(sb, s, &sprite, skip_missing_textures);
+	else skipped_tex = spritebatch_internal_lonely_sprite(sb, s->image_id, s->w, s->h, &sprite, skip_missing_textures);
 
 	if (!skipped_tex)
 	{
-		SPRITEBATCH_CHECK_BUFFER_GROW(sb, sprite_count, sprite_capacity, sprites, spritebatch_sprite_t);
+		if (sb->sprite_count >= sb->sprite_capacity) {
+			int new_capacity = sb->sprite_capacity * 2;
+			void* new_data = SPRITEBATCH_MALLOC(sizeof(spritebatch_sprite_t) * new_capacity, sb->mem_ctx);
+			if (!new_data) return 0;
+			SPRITEBATCH_MEMCPY(new_data, sb->sprites, sizeof(spritebatch_sprite_t) * sb->sprite_count);
+			SPRITEBATCH_FREE(sb->sprites, sb->mem_ctx);
+			sb->sprites = (spritebatch_sprite_t*)new_data;
+			sb->sprite_capacity = new_capacity;
+
+			SPRITEBATCH_FREE(sb->sprites_scratch, sb->mem_ctx);
+			sb->sprites_scratch = SPRITEBATCH_MALLOC(sizeof(spritebatch_sprite_t) * new_capacity, sb->mem_ctx);
+		}
 		sb->sprites[sb->sprite_count++] = sprite;
 	}
 	return skipped_tex;
@@ -1311,7 +1318,7 @@ int spritebatch_flush(spritebatch_t* sb)
 	}
 
 	// sort internal sprite buffer and submit batches
-	spritebatch_internal_sprite_sort(sb->sprites, sb->sprite_count);
+	spritebatch_internal_merge_sort(sb->sprites, sb->sprites_scratch, sb->sprite_count);
 
 	int min = 0;
 	int max = 0;
@@ -1446,61 +1453,40 @@ static spritebatch_internal_atlas_node_t* spritebatch_best_fit(int sp, int w, in
 	return best_node;
 }
 
-static int spritebatch_internal_image_less_than(spritebatch_internal_integer_image_t* a, spritebatch_internal_integer_image_t* b)
+static int spritebatch_internal_image_less_than_or_equal(spritebatch_internal_integer_image_t* a, spritebatch_internal_integer_image_t* b)
 {
 	int perimeterA = 2 * (a->size.x + a->size.y);
 	int perimeterB = 2 * (b->size.x + b->size.y);
-	return perimeterB < perimeterA;
+	return perimeterB <= perimeterA;
 }
 
-static int spritebatch_internal_image_greater_than(spritebatch_internal_integer_image_t* a, spritebatch_internal_integer_image_t* b)
+void spritebatch_internal_image_merge_sort_iteration(spritebatch_internal_integer_image_t* a, int lo, int split, int hi, spritebatch_internal_integer_image_t* b)
 {
-	int perimeterA = 2 * (a->size.x + a->size.y);
-	int perimeterB = 2 * (b->size.x + b->size.y);
-	return perimeterB > perimeterA;
-}
-
-static void spritebatch_internal_image_swap(spritebatch_internal_integer_image_t* a, int i, int j)
-{
-	spritebatch_internal_integer_image_t t = a[i];
-	a[i] = a[j];
-	a[j] = t;
-}
-
-static void spritebatch_internal_image_partition_three_way(spritebatch_internal_integer_image_t* a, int pivot, int lo, int hi, int* out_lo, int* out_hi)
-{
-	int l = lo;
-	int r = lo;
-	int u = hi;
-
-	while (r <= u) {
-		if (spritebatch_internal_image_less_than(a + r, a + pivot)) {
-			spritebatch_internal_image_swap(a, l++, r++);
-		} else if (spritebatch_internal_image_greater_than(a + r, a + pivot)) {
-			spritebatch_internal_image_swap(a, r, u--);
+	int i = lo, j = split;
+	for (int k = lo; k < hi; k++) {
+		if (i < split && (j >= hi || spritebatch_internal_image_less_than_or_equal(a + i, a + j))) {
+			b[k] = a[i];
+			i = i + 1;
 		} else {
-			r++;
+			b[k] = a[j];
+			j = j + 1;
 		}
 	}
-
-	*out_lo = l;
-	*out_hi = r;
 }
 
-static void spritebatch_internal_image_quick_sort(spritebatch_internal_integer_image_t* a, int lo, int hi)
+void spritebatch_internal_image_merge_sort_recurse(spritebatch_internal_integer_image_t* b, int lo, int hi, spritebatch_internal_integer_image_t* a)
 {
-	if (lo < hi) {
-		int pivot = (lo + hi) / 2;
-		int left, right;
-		spritebatch_internal_image_partition_three_way(a, pivot, lo, hi, &left, &right);
-		spritebatch_internal_image_quick_sort(a, lo, left - 1);
-		spritebatch_internal_image_quick_sort(a, right, hi);
-	}
+	if (hi - lo <= 1) return;
+	int split = (lo + hi) / 2;
+	spritebatch_internal_image_merge_sort_recurse(a, lo,  split, b);
+	spritebatch_internal_image_merge_sort_recurse(a, split, hi, b);
+	spritebatch_internal_image_merge_sort_iteration(b, lo, split, hi, a);
 }
 
-static void spritebatch_internal_image_sort(spritebatch_internal_integer_image_t* items, int count)
+void spritebatch_internal_image_merge_sort(spritebatch_internal_integer_image_t* a, spritebatch_internal_integer_image_t* b, int n)
 {
-	spritebatch_internal_image_quick_sort(items, 0, count - 1);
+	SPRITEBATCH_MEMCPY(b, a, sizeof(spritebatch_internal_integer_image_t) * n);
+	spritebatch_internal_image_merge_sort_recurse(b, 0, n, a);
 }
 
 typedef struct
@@ -1521,6 +1507,7 @@ void spritebatch_make_atlas(spritebatch_t* sb, spritebatch_internal_atlas_t* atl
 	void* atlas_pixels = 0;
 	int atlas_node_capacity = img_count * 2;
 	spritebatch_internal_integer_image_t* images = 0;
+	spritebatch_internal_integer_image_t* images_scratch = 0;
 	spritebatch_internal_atlas_node_t* nodes = 0;
 	int pixel_stride = sb->pixel_stride;
 	int atlas_width = sb->atlas_width_in_pixels;
@@ -1528,6 +1515,7 @@ void spritebatch_make_atlas(spritebatch_t* sb, spritebatch_internal_atlas_t* atl
 	float volume_used = 0;
 
 	images = (spritebatch_internal_integer_image_t*)SPRITEBATCH_MALLOC(sizeof(spritebatch_internal_integer_image_t) * img_count, sb->mem_ctx);
+	images_scratch = (spritebatch_internal_integer_image_t*)SPRITEBATCH_MALLOC(sizeof(spritebatch_internal_integer_image_t) * img_count, sb->mem_ctx);
 	nodes = (spritebatch_internal_atlas_node_t*)SPRITEBATCH_MALLOC(sizeof(spritebatch_internal_atlas_node_t) * atlas_node_capacity, sb->mem_ctx);
 	SPRITEBATCH_CHECK(images, "out of mem");
 	SPRITEBATCH_CHECK(nodes, "out of mem");
@@ -1542,7 +1530,7 @@ void spritebatch_make_atlas(spritebatch_t* sb, spritebatch_internal_atlas_t* atl
 	}
 
 	// Sort PNGs from largest to smallest
-	spritebatch_internal_image_sort(images, img_count);
+	spritebatch_internal_image_merge_sort(images, images_scratch, img_count);
 
 	// stack pointer, the stack is the nodes array which we will
 	// allocate nodes from as necessary.
@@ -1717,6 +1705,7 @@ sb_err:
 	SPRITEBATCH_FREE(atlas_pixels, mem_ctx);
 	SPRITEBATCH_FREE(nodes, mem_ctx);
 	SPRITEBATCH_FREE(images, mem_ctx);
+	SPRITEBATCH_FREE(images_scratch, mem_ctx);
 	return;
 }
 
