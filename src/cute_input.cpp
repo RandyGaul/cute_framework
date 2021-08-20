@@ -56,7 +56,7 @@ static int s_map_SDL_keys(int key)
 		case SDLK_INSERT: return KEY_INSERT;
 		case SDLK_HOME: return KEY_HOME;
 		case SDLK_PAGEUP: return KEY_PAGEUP;
-		case KEY_DELETE: return KEY_DELETE;
+		case SDLK_DELETE: return KEY_DELETE;
 		case SDLK_END: return KEY_END;
 		case SDLK_PAGEDOWN: return KEY_PAGEDOWN;
 		case SDLK_RIGHT: return KEY_RIGHT;
