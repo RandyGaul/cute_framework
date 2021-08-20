@@ -34,7 +34,7 @@ namespace cute
 {
 static int s_map_SDL_keys(int key)
 {
-	if (key < 128) return key;
+	if (key < 127) return key;
 	switch (key)
 	{
 		case SDLK_CAPSLOCK: return KEY_CAPSLOCK;
