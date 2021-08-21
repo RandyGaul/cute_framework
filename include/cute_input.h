@@ -50,6 +50,7 @@ CUTE_API bool CUTE_CALL mouse_was_released(app_t* app, mouse_button_t button);
 CUTE_API int CUTE_CALL mouse_wheel_motion(app_t* app);
 CUTE_API bool CUTE_CALL mouse_is_down_double_click(app_t* app, mouse_button_t button);
 CUTE_API bool CUTE_CALL mouse_double_click_was_pressed(app_t* app, mouse_button_t button);
+CUTE_API bool CUTE_CALL mouse_double_click_was_pressed(app_t* app, mouse_button_t button);
 
 CUTE_API void CUTE_CALL input_text_add_utf8(app_t* app, const char* text);
 CUTE_API int CUTE_CALL input_text_pop_utf32(app_t* app);

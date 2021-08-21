@@ -5,6 +5,7 @@
     - [App](/app/)
     - [Audio](/audio/)
     - [Clipboard](/clipboard/)
+    - [Coroutines](/coroutines/)
     - [Data_structures](/data_structures/)
     - [Ecs](/ecs/)
     - [Graphics](/graphics/)

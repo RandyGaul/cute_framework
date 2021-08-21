@@ -337,6 +337,12 @@ bool mouse_double_click_was_pressed(app_t* app, mouse_button_t button)
 	return mouse_was_pressed(app, button) && app->mouse.click_type == MOUSE_CLICK_DOUBLE;
 }
 
+void clear_all_mouse_state(app_t* app)
+{
+	CUTE_MEMSET(&app->mouse, 0, sizeof(app->mouse));
+	CUTE_MEMSET(&app->mouse_prev, 0, sizeof(app->mouse_prev));
+}
+
 void input_text_add_utf8(app_t* app, const char* text)
 {
 	while (*text) {
