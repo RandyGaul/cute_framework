@@ -29,7 +29,7 @@ In C the typical state machine comprises of a loop and some branching (if-statem
 
 Imagine we are making a tool to construct collision geometry for a game. It can support a variety of shape types: circle, capsule, aabb, polygon, and polyline are all supported. Undo/redo support is required, along with copy + paste. Implementing this tool from scratch will require some kind of state machines. Here is how building a circle should work.
 
-![screenshot 0](/cf_sge_0.gif?raw=true)
+![screenshot 0](/docs/coroutine/cf_sge_0.gif?raw=true)
 
 It works by recording a down-click, tracking the mouse movement, then recording when the button is released, thus defining the circle center and radius. How might this be implemented with a typical state machine?
 
@@ -130,7 +130,7 @@ The state enumerations `EDITOR_STATE_BUILD_CIRCLE_START` and `EDITOR_STATE_BUILD
 
 The circle building example lacks complexity. Let us implement a more complicated interaction with more states, and see what it might look like with coroutines. Here is a clip of a convex polygon builder and editing tools.
 
-![screenshot 1](/cf_sge_1.gif?raw=true)
+![screenshot 1](/docs/coroutine/cf_sge_1.gif?raw=true)
 
 First, an example implementation for the polygon construction function.
 
