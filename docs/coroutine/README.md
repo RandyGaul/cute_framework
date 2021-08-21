@@ -130,7 +130,7 @@ The state enumerations `EDITOR_STATE_BUILD_CIRCLE_START` and `EDITOR_STATE_BUILD
 
 The circle building example lacks complexity. Let us implement a more complicated interaction with more states, and see what it might look like with coroutines. Here is a clip of a convex polygon builder and editing tools.
 
-![screenshot 1](https://github.com/RandyGaul/cute_framework/blob/master/screenshots/cf_sge_1.gif)
+![screenshot 1](https://github.com/RandyGaul/cute_framework/blob/master/screenshots/cf_sge_1.gif?raw=true)
 
 First, an example implementation for the polygon construction function.
 
