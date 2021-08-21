@@ -5,6 +5,7 @@ The docs for Cute Framework are organized by categories. Select one of the categ
 [app](https://github.com/RandyGaul/cute_framework/tree/master/docs/app/)  
 [audio](https://github.com/RandyGaul/cute_framework/tree/master/docs/audio/)  
 [clipboard](https://github.com/RandyGaul/cute_framework/tree/master/docs/clipboard/)  
+[coroutine](https://github.com/RandyGaul/cute_framework/tree/master/docs/coroutine/)  
 [data structures](https://github.com/RandyGaul/cute_framework/tree/master/docs/data_structures/)  
 [ecs](https://github.com/RandyGaul/cute_framework/tree/master/docs/ecs/)  
 [graphics](https://github.com/RandyGaul/cute_framework/tree/master/docs/graphics/)  
