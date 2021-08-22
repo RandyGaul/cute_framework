@@ -757,7 +757,7 @@ void batch_capsule_line(batch_t* batch, v2 a, v2 b, float r, int iters, float th
 {
 	batch_circle_arc_line(batch, a, a + norm(a - b) * r, CUTE_PI, iters, thickness, c);
 	batch_circle_arc_line(batch, b, b + norm(b - a) * r, CUTE_PI, iters, thickness, c);
-	v2 n = skew(norm(b - a)) * r * thickness * 0.5f;
+	v2 n = skew(norm(b - a)) * r;
 	v2 q0 = a + n;
 	v2 q1 = b + n;
 	v2 q2 = b - n;
