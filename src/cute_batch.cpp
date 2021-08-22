@@ -449,6 +449,16 @@ error_t batch_flush(batch_t* b)
 
 	// Draw geometry.
 	if (b->geom_verts.count()) {
+		// Transform verts.
+		m3x2 m = make_identity();
+		if (b->m3x2s.count()) {
+			m = b->m3x2s.last();
+		}
+		for (int i = 0; i < b->geom_verts.count(); ++i) {
+			b->geom_verts[i].p = mul(m, b->geom_verts[i].p);
+		}
+
+		// Issue draw call.
 		sg_apply_pipeline(b->geom_pip);
 		geom_vs_params_t params;
 		params.u_mvp = b->projection;
