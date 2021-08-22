@@ -217,6 +217,8 @@ template <typename T>
 T& array<T>::pop()
 {
 	CUTE_ASSERT(m_count > 0);
+	T* slot = m_items + m_count - 1;
+	slot->~T();
 	return m_items[--m_count];
 }
 
