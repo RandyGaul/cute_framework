@@ -19,7 +19,9 @@ A [coroutine](https://en.wikipedia.org/wiki/Coroutine) is a function that can be
 
 ## Why use Coroutines?
 
-The point of including coroutines in CF is for streamlining state machines. Traditional state machines have a few problems.
+The short answer: a much easier time making clean state machines.
+
+Traditional state machines have a few problems.
 
 1. State machines are complicated, take a long time to develop, and are bug prone.
 2. They break code flow by jumping around, like switches or if statements. Following along and reading the code gets difficult since relevant sections are far away from each other in the source file.
