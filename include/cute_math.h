@@ -414,13 +414,13 @@ CUTE_API void CUTE_CALL aabb_to_poly_manifold(aabb_t A, const poly_t* B, const t
 CUTE_API void CUTE_CALL capsule_to_poly_manifold(capsule_t A, const poly_t* B, const transform_t* bx, manifold_t* m);
 CUTE_API void CUTE_CALL poly_to_poly_manifold(const poly_t* A, const transform_t* ax, const poly_t* B, const transform_t* bx, manifold_t* m);
 
-enum shape_type_t
+enum cute_shape_type_t
 {
-	SHAPE_TYPE_NONE,
-	SHAPE_TYPE_CIRCLE,
-	SHAPE_TYPE_AABB,
-	SHAPE_TYPE_CAPSULE,
-	SHAPE_TYPE_POLY
+	CUTE_SHAPE_TYPE_NONE,
+	CUTE_SHAPE_TYPE_CIRCLE,
+	CUTE_SHAPE_TYPE_AABB,
+	CUTE_SHAPE_TYPE_CAPSULE,
+	CUTE_SHAPE_TYPE_POLY
 };
 
 // This struct is only for advanced usage of the c2GJK function. See comments inside of the
@@ -450,7 +450,7 @@ struct gjk_cache_t
 // collision shapes are not gigantic. For example, try to keep the volume of all your shapes
 // less than 100.0f. If you need large shapes, you should use tiny collision geometry for all
 // cute c2 function, and simply render the geometry larger on-screen by scaling it up.
-CUTE_API float CUTE_CALL gjk(const void* A, shape_type_t typeA, const transform_t* ax_ptr, const void* B, shape_type_t typeB, const transform_t* bx_ptr, v2* outA, v2* outB, int use_radius, int* iterations, gjk_cache_t* cache);
+CUTE_API float CUTE_CALL gjk(const void* A, cute_shape_type_t typeA, const transform_t* ax_ptr, const void* B, cute_shape_type_t typeB, const transform_t* bx_ptr, v2* outA, v2* outB, int use_radius, int* iterations, gjk_cache_t* cache);
 
 // This is an advanced function, intended to be used by people who know what they're doing.
 //
@@ -481,7 +481,7 @@ CUTE_API float CUTE_CALL gjk(const void* A, shape_type_t typeA, const transform_
 //    See the function `c2Inflate` for some more details.
 // 4. Compute the collision manifold between the inflated shapes (for example, use poly_ttoPolyManifold).
 // 5. Gently push the shapes apart. This will give the next call to c2TOI some breathing room.
-CUTE_API float CUTE_CALL toi(const void* A, shape_type_t typeA, const transform_t* ax_ptr, v2 vA, const void* B, shape_type_t typeB, const transform_t* bx_ptr, v2 vB, int use_radius, int* iterations);
+CUTE_API float CUTE_CALL toi(const void* A, cute_shape_type_t typeA, const transform_t* ax_ptr, v2 vA, const void* B, cute_shape_type_t typeB, const transform_t* bx_ptr, v2 vB, int use_radius, int* iterations);
 
 // Inflating a shape.
 //
@@ -495,7 +495,7 @@ CUTE_API float CUTE_CALL toi(const void* A, shape_type_t typeA, const transform_
 // Deflating a shape can avoid this problem, but deflating a very small shape can invert
 // the planes and result in something that is no longer convex. Make sure to pick an
 // appropriately small skin factor, for example 1.0e-6f.
-CUTE_API void CUTE_CALL inflate(void* shape, shape_type_t type, float skin_factor);
+CUTE_API void CUTE_CALL inflate(void* shape, cute_shape_type_t type, float skin_factor);
 
 // Computes 2D convex hull. Will not do anything if less than two verts supplied. If
 // more than C2_MAX_POLYGON_VERTS are supplied extras are ignored.
@@ -509,9 +509,9 @@ CUTE_API void CUTE_CALL make_poly(poly_t* p);
 // morphism to write more generic-styled code. Internally calls various above functions.
 // For AABBs/Circles/Capsules ax and bx are ignored. For polys ax and bx can define
 // model to world transformations (for polys only), or be NULL for identity transforms.
-CUTE_API int CUTE_CALL collided(const void* A, const transform_t* ax, shape_type_t typeA, const void* B, const transform_t* bx, shape_type_t typeB);
-CUTE_API void CUTE_CALL collide(const void* A, const transform_t* ax, shape_type_t typeA, const void* B, const transform_t* bx, shape_type_t typeB, manifold_t* m);
-CUTE_API bool CUTE_CALL cast_ray(ray_t A, const void* B, const transform_t* bx, shape_type_t typeB, raycast_t* out);
+CUTE_API int CUTE_CALL collided(const void* A, const transform_t* ax, cute_shape_type_t typeA, const void* B, const transform_t* bx, cute_shape_type_t typeB);
+CUTE_API void CUTE_CALL collide(const void* A, const transform_t* ax, cute_shape_type_t typeA, const void* B, const transform_t* bx, cute_shape_type_t typeB, manifold_t* m);
+CUTE_API bool CUTE_CALL cast_ray(ray_t A, const void* B, const transform_t* bx, cute_shape_type_t typeB, raycast_t* out);
 
 }
 
