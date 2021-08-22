@@ -266,7 +266,7 @@ void array<T>::ensure_capacity(int num_elements)
 template <typename T>
 void array<T>::set_count(int count)
 {
-	CUTE_ASSERT(count < m_capacity);
+	CUTE_ASSERT(count < m_capacity || !count);
 	if (m_count > count) {
 		for (int i = count; i < m_count; ++i) {
 			T* slot = m_items + i;
