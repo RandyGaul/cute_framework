@@ -248,3 +248,7 @@ Coroutines are rather lightweight and don't consume too many resources. Calling 
 If your game only has about 100 active entities at any given time, where each one makes use of a coroutine for state machines, it comes to about 6MB of memory total on default settings.
 
 The more shallow the stack size means the risk of a [stack overflow](https://en.wikipedia.org/wiki/Stack_Overflow) is more likely. However, since the coroutine stack is on the heap the stack overflow will cause heap corruption, which can be quite a bit trickier to diagnose as opposed to a traditional stack overflow, where the usual debug mechanisms catch and report stack overflows reliably. You've been warned.
+
+## Credit
+
+Coroutines in CF are implemenetd by [minicoro.h](https://github.com/edubart/minicoro) from [edubart](https://twitter.com/edubart), special thanks to him for his open source code and commitment to maintenance of his minicoro.h library!
