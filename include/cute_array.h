@@ -56,7 +56,7 @@ struct array
 	T& insert(int index, const T& item);
 	void set(int index, const T& item);
 	void remove(int index);
-	T& pop();
+	T pop();
 	void unordered_remove(int index);
 	void clear();
 	void ensure_capacity(int num_elements);
@@ -214,12 +214,13 @@ void array<T>::remove(int index)
 }
 
 template <typename T>
-T& array<T>::pop()
+T array<T>::pop()
 {
 	CUTE_ASSERT(m_count > 0);
+	T val = m_items[--m_count]; // Annoying perf hit, but not worth rvalue complexity.
 	T* slot = m_items + m_count - 1;
 	slot->~T();
-	return m_items[--m_count];
+	return val;
 }
 
 template <typename T>
