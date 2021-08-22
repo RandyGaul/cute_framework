@@ -217,8 +217,8 @@ template <typename T>
 T array<T>::pop()
 {
 	CUTE_ASSERT(m_count > 0);
-	T val = m_items[--m_count]; // Annoying perf hit, but not worth rvalue complexity.
 	T* slot = m_items + m_count - 1;
+	T val = m_items[--m_count]; // Annoying perf hit, but not worth rvalue complexity.
 	slot->~T();
 	return val;
 }
