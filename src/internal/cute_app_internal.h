@@ -57,7 +57,6 @@ struct mouse_state_t
 	int left_button = 0;
 	int right_button = 0;
 	int middle_button = 0;
-	int wheel_button = 0;
 	int wheel_motion = 0;
 	int x = 0;
 	int y = 0;
