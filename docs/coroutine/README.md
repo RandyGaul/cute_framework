@@ -17,7 +17,7 @@ A [coroutine](https://en.wikipedia.org/wiki/Coroutine) is a function that can be
 [coroutine_space_remaining](https://github.com/RandyGaul/cute_framework/blob/master/docs/coroutine/coroutine_space_remaining.md)  
 [coroutine_currently_running](https://github.com/RandyGaul/cute_framework/blob/master/docs/coroutine/coroutine_currently_running.md)  
 
-## What's the Point?
+## Why use Coroutines?
 
 Why do coroutines matter? Is it some kind of multi-threading, or networking thing?
 
