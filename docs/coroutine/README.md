@@ -1,6 +1,6 @@
 # Coroutines
 
-A [coroutine](https://en.wikipedia.org/wiki/Coroutine) is a function that can be paused and resumed at a later time. When paused all local variables, along with the [stack frame + call stack](https://en.wikipedia.org/wiki/Call_stack), are preserved. The call stack of a function allocates memory for local variables with a stack data structure. Typically a program will be assigned some stack space by the operating system to run on, for example 1MB with Microsoft Visual Studio. Each coroutine must have some space allocated for its own call stack. CF allocates some space on the heap for each coroutine.
+A [coroutine](https://en.wikipedia.org/wiki/Coroutine) is a function that can be paused and resumed at a later time. When paused all local variables, along with the [stack frame + call stack](https://en.wikipedia.org/wiki/Call_stack), are preserved. For a very quick description of coroutines I highly recommend checking out the [Pico8 documentation](https://pico-8.fandom.com/wiki/Cocreate) if you are a complete beginner.
 
 ## API List
 
@@ -19,9 +19,25 @@ A [coroutine](https://en.wikipedia.org/wiki/Coroutine) is a function that can be
 
 ## What's the Point?
 
-So a coroutine is a function that can be paused and resumed... Why does that matter? Is it some kind of multi-threading thing?
+Why do coroutines matter? Is it some kind of multi-threading, or networking thing?
 
-The straightforward answer is: **Coroutines have nothing to do with multithreading or concurrency**. Sure, it's possible to implement some interesting concurrent abstractions with coroutines, but that's not where the real value lies. The point of including coroutines in CF is to implement state machines.
+The straightforward answer is: **Coroutines have nothing to do with multithreading or concurrency or networking**. Sure, it's possible to implement some interesting concurrent abstractions with coroutines, but that's not where the _real value lies_. The point of including coroutines in CF is streamline state machines. Traditional state machines have a few problems.
+
+1. State machines are complicated, take a long time to develop, and are bug prone.
+2. They break code flow by jumping around, like switches or if statements. Following along and reading the code gets difficult since relevant sections are far away from each other in the source file.
+3. Storing persistant variables in the state machine is really tough.
+
+With some time investment on the reader's part to learn some new concepts about coroutines, a different way to implement state machines might be right around the corner. The easier it is to create state machines the more features can get into a game project, the more one-off cutscenes, sequences, and animations can exist.
+
+## Overview of this Article
+
+The best way to get into the real meat of coroutines, after the basics are grasped (have you read the [Pico8 article](https://pico-8.fandom.com/wiki/Cocreate) on coroutines yet?), is to go through transforming a full example of a complex state machine written in a traditional manner to one written with a coroutine.
+
+Instead of talking about a full example in the context of a game, which [Elias Daler has done wonderfully here](https://eliasdaler.github.io/how-to-implement-action-sequences-and-cutscenes/), a very tight example has been chosen of making a game editor tool. Editors are typically very complex and riddled with little bits of state machines everywhere. The lessons to learn from the rest of the document are the following points.
+
+1. Reducing extreme code duplication for storing state outside the state machine, like ad-hoc stacks or persistant data.
+2. Rewriting the code so it reads like a script from a play. The state machine should list actions in chronological order: Do task A, then task B, then task C, etc. A traditional state machine cuts up the tasks and jumps around with switches or if-else chains, breaking code flow.
+3. Reduce the amount of code and boilerplate needed to added new state machines.
 
 ## State Machines and Stacks
 
