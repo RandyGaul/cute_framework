@@ -682,9 +682,9 @@ void batch_circle(batch_t* b, v2 p, float r, int iters, color_t c)
 
 void batch_circle_line(batch_t* batch, v2 p, float r, int iters, float thickness, color_t color)
 {
-	v2 p0 = v2(p.x + r - thickness, p.y);
-	v2 p1 = v2(p.x + r, p.y);
 	float half_thickness = thickness * 0.5f;
+	v2 p0 = v2(p.x + r - half_thickness, p.y);
+	v2 p1 = v2(p.x + r + half_thickness, p.y);
 
 	for (int i = 1; i <= iters; i++) {
 		float a = (i / (float)iters) * (2.0f * CUTE_PI);

@@ -577,7 +577,7 @@ void pump_input_msgs(app_t* app)
 			{
 			case SDL_BUTTON_LEFT: app->mouse.left_button = 1; break;
 			case SDL_BUTTON_RIGHT: app->mouse.right_button = 1; break;
-			case SDL_BUTTON_MIDDLE: app->mouse.wheel_button = 1; break;
+			case SDL_BUTTON_MIDDLE: app->mouse.middle_button = 1; break;
 			}
 			app->mouse.x = event.button.x;
 			app->mouse.y = event.button.y;
@@ -593,7 +593,7 @@ void pump_input_msgs(app_t* app)
 			{
 			case SDL_BUTTON_LEFT: app->mouse.left_button = 0; break;
 			case SDL_BUTTON_RIGHT: app->mouse.right_button = 0; break;
-			case SDL_BUTTON_MIDDLE: app->mouse.wheel_button = 0; break;
+			case SDL_BUTTON_MIDDLE: app->mouse.middle_button = 0; break;
 			}
 			app->mouse.x = event.button.x;
 			app->mouse.y = event.button.y;
