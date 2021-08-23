@@ -507,7 +507,7 @@ CUTE_API void CUTE_CALL norms(v2* verts, v2* norms, int count);
 
 // runs c2Hull and c2Norms, assumes p->verts and p->count are both set to valid values
 CUTE_API void CUTE_CALL make_poly(poly_t* p);
-CUTE_API v2 CUTE_CALL centroid(v2* verts, int count);
+CUTE_API v2 CUTE_CALL centroid(const v2* verts, int count);
 
 // Generic collision detection routines, useful for games that want to use some poly-
 // morphism to write more generic-styled code. Internally calls various above functions.

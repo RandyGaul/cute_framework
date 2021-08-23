@@ -193,7 +193,7 @@ void make_poly(poly_t* p)
 	c2MakePoly((c2Poly*)p);
 }
 
-v2 centroid(v2* verts, int count)
+v2 centroid(const v2* verts, int count)
 {
 	if (count == 0) return v2(0, 0);
 	else if (count == 1) return verts[0];
