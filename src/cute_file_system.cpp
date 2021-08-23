@@ -289,7 +289,7 @@ error_t file_system_read_entire_file_to_memory_and_nul_terminate(const char* vir
 
 error_t file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size)
 {
-	file_t* file = file_system_open_file_for_read(virtual_path);
+	file_t* file = file_system_open_file_for_write(virtual_path);
 	if (!file) return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	uint64_t sz = file_system_write(file, data, (PHYSFS_uint64)size);
 	if (sz != size) {
