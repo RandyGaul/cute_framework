@@ -244,17 +244,14 @@ int test_ecs_octorok()
 
 	// Assert that saving the entities has matching values to what's in RAM currently.
 	kv_t* saved_entities = kv_make();
-	char entity_buffer[1024];
-	kv_set_write_buffer(saved_entities, entity_buffer, 1024);
+	kv_write_mode(saved_entities);
 	err = ecs_save_entities(app, entities, saved_entities);
 	if (err.is_error()) return -1;
-	size_t entity_buffer_size = kv_size_written(saved_entities);
-	entity_buffer[entity_buffer_size] = 0;
-	entity_buffer_size += 1;
+	kv_nul_terminate(saved_entities);
 	kv_destroy(saved_entities);
 
 	saved_entities = kv_make();
-	kv_parse(saved_entities, entity_buffer, entity_buffer_size);
+	kv_parse(saved_entities, kv_get_buffer(saved_entities), kv_size_written(saved_entities));
 
 	kv_key(saved_entities, "entities");
 	int c;

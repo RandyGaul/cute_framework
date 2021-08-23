@@ -86,6 +86,7 @@ struct kv_t
 	uint8_t* in = NULL;
 	uint8_t* in_end = NULL;
 	uint8_t* start = NULL;
+	array<uint8_t> write_buffer;
 
 	// Reading state.
 	int object_skip_count = 0;
@@ -455,6 +456,7 @@ static void s_reset(kv_t* kv, const void* ptr, size_t size, kv_state_t mode)
 	kv->in = (uint8_t*)ptr;
 	kv->in_end = kv->in + size;
 	kv->mode = mode;
+	kv->write_buffer.clear();
 
 	kv->backup_base_key_bytes = 0;
 	kv->base = NULL;
@@ -497,9 +499,19 @@ error_t kv_parse(kv_t* kv, const void* data, size_t size)
 	return error_success();
 }
 
-void kv_set_write_buffer(kv_t* kv, void* buffer, size_t size)
+void CUTE_CALL kv_write_mode(kv_t* kv)
 {
-	s_reset(kv, buffer, size, KV_STATE_WRITE);
+	s_reset(kv, NULL, 0, KV_STATE_WRITE);
+}
+
+void* kv_get_buffer(kv_t* kv)
+{
+	return (void*)kv->write_buffer.data();
+}
+
+void kv_nul_terminate(kv_t* kv)
+{
+	kv->write_buffer.add(0);
 }
 
 static void s_build_cache(kv_t* kv)
@@ -535,7 +547,7 @@ void kv_reset_read_state(kv_t* kv)
 
 size_t kv_size_written(kv_t* kv)
 {
-	return kv->in - kv->start;
+	return kv->write_buffer.size();
 }
 
 error_t kv_error_state(kv_t* kv)
@@ -544,30 +556,22 @@ error_t kv_error_state(kv_t* kv)
 	return kv->err;
 }
 
-static CUTE_INLINE error_t s_write_u8(kv_t* kv, uint8_t val)
+static CUTE_INLINE void s_write_u8(kv_t* kv, uint8_t val)
 {
-	uint8_t* in = kv->in;
-	uint8_t* end = kv->in + 1;
-	if (end >= kv->in_end) {
-		kv->err = error_failure("Attempted to write uint8_t beyond buffer.");
-		return kv->err;
-	}
-	*in = val;
-	kv->in = end;
-	return error_success();
+	kv->write_buffer.add(val);
 }
 
 static CUTE_INLINE void s_try_consume_one_tab(kv_t* kv)
 {
-	if (kv->in - 1 >= kv->start && kv->in[-1] == '\t') {
-		kv->in--;
-	}
+	CUTE_ASSERT(kv->mode == KV_STATE_WRITE);
+	if (kv->write_buffer.size() && kv->write_buffer.last() == '\t') kv->write_buffer.pop();
 }
 
 static CUTE_INLINE void s_try_consume_whitespace(kv_t* kv)
 {
-	while (kv->in - 1 >= kv->start && s_isspace(kv->in[-1])) {
-		kv->in--;
+	CUTE_ASSERT(kv->mode == KV_STATE_WRITE);
+	while (kv->write_buffer.size() && s_isspace(kv->write_buffer.last())) {
+		kv->write_buffer.pop();
 	}
 }
 
@@ -576,46 +580,31 @@ static CUTE_INLINE void s_tabs_delta(kv_t* kv, int delta)
 	kv->tabs += delta;
 }
 
-static CUTE_INLINE error_t s_tabs(kv_t* kv)
+static CUTE_INLINE void s_tabs(kv_t* kv)
 {
 	int tabs = kv->tabs;
-	for (int i = 0; i < tabs; ++i)
-	{
-		error_t err = s_write_u8(kv, '\t');
-		if (err.is_error()) return err;
+	for (int i = 0; i < tabs; ++i) {
+		s_write_u8(kv, '\t');
 	}
-	return error_success();
 }
 
-static CUTE_INLINE error_t s_write_str_no_quotes(kv_t* kv, const char* str, size_t len)
+static CUTE_INLINE void s_write_str_no_quotes(kv_t* kv, const char* str, size_t len)
 {
-	uint8_t* in = kv->in;
-	uint8_t* end = kv->in + len;
-	if (end >= kv->in_end) {
-		kv->err = error_failure("Attempted to write string beyond buffer.");
-		return kv->err;
-	}
-	CUTE_STRNCPY((char*)in, str, len);
-	kv->in = end;
-	return error_success();
+	int old_count = kv->write_buffer.count();
+	kv->write_buffer.ensure_count((int)(old_count + len));
+	CUTE_STRNCPY((char*)kv->write_buffer.data() + old_count, str, len);
 }
 
-static CUTE_INLINE error_t s_write_str(kv_t* kv, const char* str, size_t len)
+static CUTE_INLINE void s_write_str(kv_t* kv, const char* str, size_t len)
 {
-	error_t err = s_write_u8(kv, '"');
-	if (err.is_error()) return err;
-	err = s_write_str_no_quotes(kv, str, len);
-	if (err.is_error()) return err;
-	err = s_write_u8(kv, '"');
-	if (err.is_error()) return err;
-	return error_success();
+	s_write_u8(kv, '"');
+	s_write_str_no_quotes(kv, str, len);
+	s_write_u8(kv, '"');
 }
 
-static CUTE_INLINE error_t s_write_str(kv_t* kv, const char* str)
+static CUTE_INLINE void s_write_str(kv_t* kv, const char* str)
 {
-	error_t err = s_write_str(kv, str, (int)CUTE_STRLEN(str));
-	if (err.is_error()) return err;
-	return error_success();
+	s_write_str(kv, str, (int)CUTE_STRLEN(str));
 }
 
 static CUTE_INLINE kv_field_t* s_find_field(kv_object_t* object, const char* key)
@@ -659,14 +648,11 @@ static void s_match_key(kv_t* kv, const char* key)
 	}
 }
 
-static error_t s_write_key(kv_t* kv, const char* key, kv_type_t* type)
+static void s_write_key(kv_t* kv, const char* key, kv_type_t* type)
 {
-	error_t err = s_write_str_no_quotes(kv, key, (int)CUTE_STRLEN(key));
-	if (err.is_error()) return err;
-	err = s_write_str_no_quotes(kv, " = ", 3);
-	if (err.is_error()) return err;
 	CUTE_UNUSED(type);
-	return error_success();
+	s_write_str_no_quotes(kv, key, (int)CUTE_STRLEN(key));
+	s_write_str_no_quotes(kv, " = ", 3);
 }
 
 error_t kv_key(kv_t* kv, const char* key, kv_type_t* type)
@@ -675,11 +661,10 @@ error_t kv_key(kv_t* kv, const char* key, kv_type_t* type)
 	if (kv->err.is_error()) return kv->err;
 	s_match_key(kv, key);
 	if (kv->mode == KV_STATE_WRITE) {
-		uint8_t* in = kv->in;
-		error_t err = s_write_key(kv, key, type);
-		size_t bytes_written = kv->in - in;
-		kv->backup_base_key_bytes = bytes_written;
-		return err;
+		size_t bytes_written = kv_size_written(kv);
+		s_write_key(kv, key, type);
+		kv->backup_base_key_bytes = kv_size_written(kv) - bytes_written;
+		return error_success();
 	} else {
 		if (kv->read_mode_from_array) {
 			return error_failure("Can not lookup key while reading from array.");
@@ -775,54 +760,48 @@ static int s_to_string(kv_t* kv, double val)
 	return size - 1;
 }
 
-static error_t s_write(kv_t* kv, uint64_t val)
+static void s_write(kv_t* kv, uint64_t val)
 {
 	int size = s_to_string(kv, val);
-	return s_write_str_no_quotes(kv, (char*)kv->temp, size);
+	s_write_str_no_quotes(kv, (char*)kv->temp, size);
 }
 
-static error_t s_write(kv_t* kv, int64_t val)
+static void s_write(kv_t* kv, int64_t val)
 {
 	int size = s_to_string(kv, val);
-	return s_write_str_no_quotes(kv, (char*)kv->temp, size);
+	s_write_str_no_quotes(kv, (char*)kv->temp, size);
 }
 
-static error_t s_write(kv_t* kv, float val)
+static void s_write(kv_t* kv, float val)
 {
 	int size = s_to_string(kv, val);
-	return s_write_str_no_quotes(kv, (char*)kv->temp, size);
+	s_write_str_no_quotes(kv, (char*)kv->temp, size);
 }
 
-static error_t s_write(kv_t* kv, double val)
+static void s_write(kv_t* kv, double val)
 {
 	int size = s_to_string(kv, val);
-	return s_write_str_no_quotes(kv, (char*)kv->temp, size);
+	s_write_str_no_quotes(kv, (char*)kv->temp, size);
 }
 
-static CUTE_INLINE error_t s_begin_val(kv_t* kv)
+static CUTE_INLINE void s_begin_val(kv_t* kv)
 {
 	if (kv->in_array) {
 		if (kv->in_array == CUTE_KV_IN_ARRAY_AND_FIRST_ELEMENT) {
 			kv->in_array = CUTE_KV_IN_ARRAY;
 		} else {
-			error_t err = s_write_u8(kv, ' ');
-			if (err.is_error()) return err;
+			s_write_u8(kv, ' ');
 		}
 	}
-	return error_success();
 }
 
-static CUTE_INLINE error_t s_end_val(kv_t* kv)
+static CUTE_INLINE void s_end_val(kv_t* kv)
 {
-	error_t err = s_write_u8(kv, ',');
-	if (err.is_error()) return err;
+	s_write_u8(kv, ',');
 	if (!kv->in_array) {
-		err = s_write_u8(kv, '\n');
-		if (err.is_error()) return err;
-		err = s_tabs(kv);
-		if (err.is_error()) return err;
+		s_write_u8(kv, '\n');
+		s_tabs(kv);
 	}
-	return error_success();
 }
 
 static CUTE_INLINE kv_val_t* s_pop_val(kv_t* kv, kv_type_t type, bool pop_val = true)
@@ -875,8 +854,11 @@ static kv_val_t* s_pop_base_val(kv_t* kv, kv_type_t type, bool pop_val = true)
 
 static void s_backup_base_key(kv_t* kv)
 {
-	kv->in -= kv->backup_base_key_bytes;
-	kv->backup_base_key_bytes = 0;
+	if (kv->backup_base_key_bytes) {
+		while (kv->backup_base_key_bytes--) {
+			kv->write_buffer.pop();
+		}
+	}
 }
 
 template <typename T>
@@ -923,12 +905,9 @@ error_t kv_val(kv_t* kv, uint8_t* val)
 		if (s_does_matched_base_equal_int64(kv, val)) {
 			return error_success();
 		}
-		error_t err = s_begin_val(kv);
-		if (err.is_error()) return err;
-		err = s_write_u8(kv, *val);
-		if (err.is_error()) return err;
-		err = s_end_val(kv);
-		if (err.is_error()) return err;
+		s_begin_val(kv);
+		s_write_u8(kv, *val);
+		s_end_val(kv);
 	} else {
 		return s_find_match_int64(kv, val);
 	}
@@ -942,12 +921,9 @@ error_t kv_val(kv_t* kv, uint16_t* val)
 		if (s_does_matched_base_equal_int64(kv, val)) {
 			return error_success();
 		}
-		error_t err = s_begin_val(kv);
-		if (err.is_error()) return err;
-		err = s_write(kv, (uint64_t)*(uint16_t*)val);
-		if (err.is_error()) return err;
-		err = s_end_val(kv);
-		if (err.is_error()) return err;
+		s_begin_val(kv);
+		s_write(kv, (uint64_t)*(uint16_t*)val);
+		s_end_val(kv);
 	} else {
 		return s_find_match_int64(kv, val);
 	}
@@ -961,12 +937,9 @@ error_t kv_val(kv_t* kv, uint32_t* val)
 		if (s_does_matched_base_equal_int64(kv, val)) {
 			return error_success();
 		}
-		error_t err = s_begin_val(kv);
-		if (err.is_error()) return err;
-		err = s_write(kv, (uint64_t)*(uint32_t*)val);
-		if (err.is_error()) return err;
-		err = s_end_val(kv);
-		if (err.is_error()) return err;
+		s_begin_val(kv);
+		s_write(kv, (uint64_t)*(uint32_t*)val);
+		s_end_val(kv);
 	} else {
 		return s_find_match_int64(kv, val);
 	}
@@ -980,12 +953,9 @@ error_t kv_val(kv_t* kv, uint64_t* val)
 		if (s_does_matched_base_equal_int64(kv, val)) {
 			return error_success();
 		}
-		error_t err = s_begin_val(kv);
-		if (err.is_error()) return err;
-		err = s_write(kv, *(uint64_t*)val);
-		if (err.is_error()) return err;
-		err = s_end_val(kv);
-		if (err.is_error()) return err;
+		s_begin_val(kv);
+		s_write(kv, *(uint64_t*)val);
+		s_end_val(kv);
 	} else {
 		return s_find_match_int64(kv, val);
 	}
@@ -999,12 +969,9 @@ error_t kv_val(kv_t* kv, int8_t* val)
 		if (s_does_matched_base_equal_int64(kv, val)) {
 			return error_success();
 		}
-		error_t err = s_begin_val(kv);
-		if (err.is_error()) return err;
-		err = s_write(kv, (int64_t)*(int8_t*)val);
-		if (err.is_error()) return err;
-		err = s_end_val(kv);
-		if (err.is_error()) return err;
+		s_begin_val(kv);
+		s_write(kv, (int64_t)*(int8_t*)val);
+		s_end_val(kv);
 	} else {
 		return s_find_match_int64(kv, val);
 	}
@@ -1018,12 +985,9 @@ error_t kv_val(kv_t* kv, int16_t* val)
 		if (s_does_matched_base_equal_int64(kv, val)) {
 			return error_success();
 		}
-		error_t err = s_begin_val(kv);
-		if (err.is_error()) return err;
-		err = s_write(kv, (int64_t)*(int16_t*)val);
-		if (err.is_error()) return err;
-		err = s_end_val(kv);
-		if (err.is_error()) return err;
+		s_begin_val(kv);
+		s_write(kv, (int64_t)*(int16_t*)val);
+		s_end_val(kv);
 	} else {
 		return s_find_match_int64(kv, val);
 	}
@@ -1037,12 +1001,9 @@ error_t kv_val(kv_t* kv, int32_t* val)
 		if (s_does_matched_base_equal_int64(kv, val)) {
 			return error_success();
 		}
-		error_t err = s_begin_val(kv);
-		if (err.is_error()) return err;
-		err = s_write(kv, (int64_t)*(int32_t*)val);
-		if (err.is_error()) return err;
-		err = s_end_val(kv);
-		if (err.is_error()) return err;
+		s_begin_val(kv);
+		s_write(kv, (int64_t)*(int32_t*)val);
+		s_end_val(kv);
 	} else {
 		return s_find_match_int64(kv, val);
 	}
@@ -1056,12 +1017,9 @@ error_t kv_val(kv_t* kv, int64_t* val)
 		if (s_does_matched_base_equal_int64(kv, val)) {
 			return error_success();
 		}
-		error_t err = s_begin_val(kv);
-		if (err.is_error()) return err;
-		err = s_write(kv, *(int64_t*)val);
-		if (err.is_error()) return err;
-		err = s_end_val(kv);
-		if (err.is_error()) return err;
+		s_begin_val(kv);
+		s_write(kv, *(int64_t*)val);
+		s_end_val(kv);
 	} else {
 		return s_find_match_int64(kv, val);
 	}
@@ -1080,12 +1038,9 @@ error_t kv_val(kv_t* kv, float* val)
 				return error_success();
 			}
 		}
-		error_t err = s_begin_val(kv);
-		if (err.is_error()) return err;
-		err = s_write(kv, *val);
-		if (err.is_error()) return err;
-		err = s_end_val(kv);
-		if (err.is_error()) return err;
+		s_begin_val(kv);
+		s_write(kv, *val);
+		s_end_val(kv);
 	} else {
 		if (!match) match = match_base;
 		if (!match) {
@@ -1113,12 +1068,9 @@ error_t kv_val(kv_t* kv, double* val)
 				return error_success();
 			}
 		}
-		error_t err = s_begin_val(kv);
-		if (err.is_error()) return err;
-		err = s_write(kv, *val);
-		if (err.is_error()) return err;
-		err = s_end_val(kv);
-		if (err.is_error()) return err;
+		s_begin_val(kv);
+		s_write(kv, *val);
+		s_end_val(kv);
 	} else {
 		if (!match) match = match_base;
 		if (!match) {
@@ -1174,12 +1126,9 @@ error_t kv_val_string(kv_t* kv, const char** str, size_t* size)
 				return error_success();
 			}
 		}
-		error_t err = s_begin_val(kv);
-		if (err.is_error()) return err;
-		err = s_write_str(kv, *str, *size);
-		if (err.is_error()) return err;
-		err = s_end_val(kv);
-		if (err.is_error()) return err;
+		s_begin_val(kv);
+		s_write_str(kv, *str, *size);
+		s_end_val(kv);
 	} else {
 		if (!match) match = match_base;
 		if (!match) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
@@ -1204,12 +1153,9 @@ error_t kv_val_blob(kv_t* kv, void* data, size_t data_capacity, size_t* data_len
 		}
 		size_t buffer_size = CUTE_BASE64_ENCODED_SIZE(*data_len);
 		uint8_t* buffer = s_temp(kv, buffer_size);
-		error_t err = base64_encode(buffer, buffer_size, data, *data_len);
-		if (err.is_error()) return err;
-		err = s_write_str(kv, (const char*)buffer, buffer_size);
-		if (err.is_error()) return err;
-		err = s_end_val(kv);
-		if (err.is_error()) return err;
+		base64_encode(buffer, buffer_size, data, *data_len);
+		s_write_str(kv, (const char*)buffer, buffer_size);
+		s_end_val(kv);
 	} else {
 		if (!match) match = match_base;
 		if (!match) return error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
@@ -1233,11 +1179,9 @@ error_t kv_object_begin(kv_t* kv, const char* key)
 	}
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == KV_STATE_WRITE) {
-		error_t err = s_write_str_no_quotes(kv, "{\n", 2);
-		if (err.is_error()) return err;
+		s_write_str_no_quotes(kv, "{\n", 2);
 		s_tabs_delta(kv, 1);
-		err = s_tabs(kv);
-		if (err.is_error()) return err;
+		s_tabs(kv);
 		s_push_array(kv, CUTE_KV_NOT_IN_ARRAY);
 	} else {
 		kv_val_t* match = s_pop_val(kv, KV_TYPE_OBJECT);
@@ -1265,10 +1209,8 @@ error_t kv_object_end(kv_t* kv)
 	if (kv->mode == KV_STATE_WRITE) {
 		s_tabs_delta(kv, -1);
 		s_try_consume_one_tab(kv);
-		error_t err = s_write_str_no_quotes(kv, "},\n", 3);
-		if (err.is_error()) return err;
-		err = s_tabs(kv);
-		if (err.is_error()) return err;
+		s_write_str_no_quotes(kv, "},\n", 3);
+		s_tabs(kv);
 		s_pop_array(kv);
 	} else {
 		for (int i = 1; i < kv->cache.count(); ++i) {
@@ -1300,14 +1242,10 @@ error_t kv_array_begin(kv_t* kv, int* count, const char* key)
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == KV_STATE_WRITE) {
 		s_tabs_delta(kv, 1);
-		error_t err = s_write_u8(kv, '[');
-		if (err.is_error()) return err;
-		err = s_write(kv, (int64_t)*count);
-		if (err.is_error()) return err;
-		err = s_write_str_no_quotes(kv, "] {\n", 4);
-		if (err.is_error()) return err;
-		err = s_tabs(kv);
-		if (err.is_error()) return err;
+		s_write_u8(kv, '[');
+		s_write(kv, (int64_t)*count);
+		s_write_str_no_quotes(kv, "] {\n", 4);
+		s_tabs(kv);
 		s_push_array(kv, CUTE_KV_IN_ARRAY_AND_FIRST_ELEMENT);
 	} else {
 		kv_val_t* match = s_pop_val(kv, KV_TYPE_ARRAY);
@@ -1323,20 +1261,15 @@ error_t kv_array_begin(kv_t* kv, int* count, const char* key)
 error_t kv_array_end(kv_t* kv)
 {
 	if (kv->err.is_error()) return kv->err;
-	error_t err;
 	if (kv->mode == KV_STATE_WRITE) {
 		s_tabs_delta(kv, -1);
 		s_try_consume_whitespace(kv);
 		if (kv->in_array) {
-			err = s_write_u8(kv, '\n');
-			if (err.is_error()) return err;
+			s_write_u8(kv, '\n');
 		}
-		err = s_tabs(kv);
-		if (err.is_error()) return err;
-		err = s_write_str_no_quotes(kv, "},\n", 3);
-		if (err.is_error()) return err;
-		err = s_tabs(kv);
-		if (err.is_error()) return err;
+		s_tabs(kv);
+		s_write_str_no_quotes(kv, "},\n", 3);
+		s_tabs(kv);
 		s_pop_array(kv);
 	} else {
 		s_pop_read_mode_array(kv);

@@ -59,9 +59,27 @@ CUTE_API error_t CUTE_CALL kv_parse(kv_t* kv, const void* data, size_t size);
 CUTE_API void CUTE_CALL kv_reset_read_state(kv_t* kv);
 
 /**
- * Sets the `kv` to write mode `KV_STATE_WRITE`, ready to serialize data to `buffer`.
+ * Sets the `kv` to write mode `KV_STATE_WRITE`. Data will be serialized and written to an internal
+ * write buffer.
  */
-CUTE_API void CUTE_CALL kv_set_write_buffer(kv_t* kv, void* buffer, size_t size);
+CUTE_API void CUTE_CALL kv_write_mode(kv_t* kv);
+
+/**
+ * Fetches the write buffer pointer containing any data serialized so far.
+ */
+CUTE_API void* CUTE_CALL kv_get_buffer(kv_t* kv);
+
+/**
+ * Returns the size written to the write buffer so far.
+ */
+CUTE_API size_t CUTE_CALL kv_size_written(kv_t* kv);
+
+/**
+ * If the `kv` is in write mode `KV_STATE_WRITE` a nul-terminator '\0' is added to the end of the
+ * buffer. This function is for convenience, to be called when serializing is done, and the buffer is
+ * ready to be treated as a nul-terminated c-string.
+ */
+CUTE_API void CUTE_CALL kv_nul_terminate(kv_t* kv);
 
 /**
  * The base must be in read mode. This function is used to support data inheritence and delta encoding.
@@ -76,11 +94,6 @@ CUTE_API void CUTE_CALL kv_set_write_buffer(kv_t* kv, void* buffer, size_t size)
  *     is only written if the new value is different from the value to be written.
  */
 CUTE_API void CUTE_CALL kv_set_base(kv_t* kv, kv_t* base);
-
-/**
- * Returns the size written to the buffer from `kv_set_write_buffer` so far.
- */
-CUTE_API size_t CUTE_CALL kv_size_written(kv_t* kv);
 
 /**
  * Returns the error state of the kv instance.

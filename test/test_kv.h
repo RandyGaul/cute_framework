@@ -114,9 +114,7 @@ CUTE_TEST_CASE(test_kv_basic, "Fairly comprehensive test for basic kv to and fro
 int test_kv_basic()
 {
 	kv_t* kv = kv_make();
-
-	char buffer[1024];
-	kv_set_write_buffer(kv, buffer, sizeof(buffer));
+	kv_write_mode(kv);
 
 	thing_t thing;
 	thing.a = 5;
@@ -167,6 +165,7 @@ int test_kv_basic()
 	;
 
 	size_t size = kv_size_written(kv);
+	char* buffer = (char*)kv_get_buffer(kv);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(buffer, expected, size));
 
 	cute::error_t err = kv_parse(kv, buffer, size);
@@ -192,17 +191,14 @@ int test_kv_std_string_to_disk()
 	size_t s1_len = CUTE_STRLEN(s1);
 
 	kv_t* kv = kv_make();
-	CUTE_TEST_CHECK_POINTER(kv);
-
-	char buffer[1024];
-	kv_set_write_buffer(kv, buffer, sizeof(buffer));
+	kv_write_mode(kv);
 
 	kv_key(kv, "book_title");
 	kv_val_string(kv, &s1, &s1_len);
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
 	size_t size = kv_size_written(kv);
-	CUTE_TEST_ASSERT(!kv_parse(kv, buffer, size).is_error());
+	CUTE_TEST_ASSERT(!kv_parse(kv, kv_get_buffer(kv), size).is_error());
 
 	kv_key(kv, "book_title");
 	kv_val(kv, &s0);
@@ -226,17 +222,14 @@ int test_kv_std_string_from_disk()
 	size_t s1_len = s1.length();
 
 	kv_t* kv = kv_make();
-	CUTE_TEST_CHECK_POINTER(kv);
-
-	char buffer[1024];
-	kv_set_write_buffer(kv, buffer, sizeof(buffer));
+	kv_write_mode(kv);
 
 	kv_key(kv, "book_title");
 	kv_val(kv, &s1);
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
 	size_t size = kv_size_written(kv);
-	CUTE_TEST_ASSERT(!kv_parse(kv, buffer, size).is_error());
+	CUTE_TEST_ASSERT(!kv_parse(kv, kv_get_buffer(kv), size).is_error());
 
 	kv_key(kv, "book_title");
 	kv_val_string(kv, &s0, &s0_len);
@@ -254,10 +247,7 @@ CUTE_TEST_CASE(test_kv_std_vector, "Testing kv utility for std::vector support."
 int test_kv_std_vector()
 {
 	kv_t* kv = kv_make();
-	CUTE_TEST_CHECK_POINTER(kv);
-
-	char buffer[1024];
-	kv_set_write_buffer(kv, buffer, sizeof(buffer));
+	kv_write_mode(kv);
 
 	std::vector<int> v;
 	v.push_back(10);
@@ -274,7 +264,7 @@ int test_kv_std_vector()
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
 	size_t size = kv_size_written(kv);
-	CUTE_TEST_ASSERT(!kv_parse(kv, buffer, size).is_error());
+	CUTE_TEST_ASSERT(!kv_parse(kv, kv_get_buffer(kv), size).is_error());
 
 	v.clear();
 	kv_key(kv, "vector_of_ints");
@@ -309,8 +299,7 @@ int test_kv_write_delta_basic()
 	cute::error_t err = kv_parse(base, text_base, CUTE_STRLEN(text_base));
 	if (err.is_error()) return -1;
 
-	char buffer[1024];
-	kv_set_write_buffer(kv, buffer, 1024);
+	kv_write_mode(kv);
 	kv_set_base(kv, base);
 
 	int val = 1;
@@ -329,8 +318,8 @@ int test_kv_write_delta_basic()
 	"b = 3,\n"
 	"c = 17,\n"
 	;
-
 	size_t size = kv_size_written(kv);
+	const char* buffer = (const char*)kv_get_buffer(kv);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(buffer, expected, size));
 
 	kv_destroy(base);
@@ -413,8 +402,7 @@ int test_kv_write_delta_deep()
 	err = kv_parse(base2, text_base2, CUTE_STRLEN(text_base2));
 	if (err.is_error()) return -1;
 
-	char buffer[1024];
-	kv_set_write_buffer(kv, buffer, 1024);
+	kv_write_mode(kv);
 	kv_set_base(base1, base0);
 	kv_set_base(base2, base1);
 	kv_set_base(kv, base2);
@@ -464,7 +452,7 @@ int test_kv_write_delta_deep()
 	;
 
 	size_t size = kv_size_written(kv);
-	CUTE_TEST_ASSERT(!CUTE_STRNCMP(buffer, expected, size));
+	CUTE_TEST_ASSERT(!CUTE_STRNCMP((char*)kv_get_buffer(kv), expected, size));
 
 	kv_destroy(base0);
 	kv_destroy(base1);
@@ -600,33 +588,30 @@ int test_kv_read_delta_array()
 CUTE_TEST_CASE(test_kv_read_and_write_delta_blob, "Reading and writing a blob with a delta.");
 int test_kv_read_and_write_delta_blob()
 {
-	char base_text[256];
-	char text[256];
-	size_t sz;
-
 	const char* blob0 = "Blob me up baby!";
 	const char* blob1 = "I am the delta.";
+	size_t blob0_size = CUTE_STRLEN(blob0) + 1;
+	size_t blob1_size = CUTE_STRLEN(blob0) + 1;
 
-	kv_t* writer = kv_make();
-	kv_set_write_buffer(writer, base_text, 256);
-
-	kv_key(writer, "a");
-	sz = CUTE_STRLEN(blob0) + 1;
-	kv_val_blob(writer, (void*)blob0, 256, &sz);
-	kv_key(writer, "b");
-	kv_val_blob(writer, (void*)blob0, 256, &sz);
-	base_text[kv_size_written(writer)] = 0;
-
-	kv_set_write_buffer(writer, text, 256);
-	kv_key(writer, "b");
-	sz = CUTE_STRLEN(blob1) + 1;
-	kv_val_blob(writer, (void*)blob1, 256, &sz);
-	text[kv_size_written(writer)] = 0;
-	kv_destroy(writer);
+	kv_t* writer0 = kv_make();
+	kv_write_mode(writer0);
+	kv_key(writer0, "a");
+	kv_val_blob(writer0, (void*)blob0, 0, &blob0_size);
+	kv_key(writer0, "b");
+	kv_val_blob(writer0, (void*)blob0, 0, &blob0_size);
+	kv_nul_terminate(writer0);
+	
+	kv_t* writer1 = kv_make();
+	kv_write_mode(writer1);
+	kv_key(writer1, "b");
+	kv_val_blob(writer1, (void*)blob1, 0, &blob1_size);
+	kv_nul_terminate(writer1);
 
 	kv_t* kv = kv_make();
 	kv_t* base = kv_make();
 
+	const char* base_text = (const char*)kv_get_buffer(writer0);
+	const char* text = (const char*)kv_get_buffer(writer1);
 	cute::error_t err = kv_parse(base, base_text, CUTE_STRLEN(base_text));
 	if (err.is_error()) return -1;
 	err = kv_parse(kv, text, CUTE_STRLEN(text));
@@ -644,7 +629,9 @@ int test_kv_read_and_write_delta_blob()
 	kv_key(kv, "b");
 	kv_val_blob(kv, &buffer, 256, &size_decoded);
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(buffer, blob1));
-
+	
+	kv_destroy(writer0);
+	kv_destroy(writer1);
 	kv_destroy(kv);
 	kv_destroy(base);
 
