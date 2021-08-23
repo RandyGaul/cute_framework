@@ -199,7 +199,7 @@ v2 centroid(v2* verts, int count)
 	else if (count == 1) return verts[0];
 	else if (count == 2) return (verts[0] + verts[1]) * 0.5f;
 	v2 c = v2(0, 0);
-	float area = 0;
+	float area_sum = 0;
 	v2 p0 = verts[0];
 	for (int i = 0; i < count; ++i) {
 		v2 p1 = verts[0] - p0;
@@ -207,10 +207,11 @@ v2 centroid(v2* verts, int count)
 		v2 p3 = (i + 1 == count ? verts[0] : verts[i + 1]) - p0;
 		v2 e1 = p2 - p1;
 		v2 e2 = p3 - p1;
-		area += 0.5f * cross(e1, e2);
+		float area = 0.5f * cross(e1, e2);
+		area_sum += area;
 		c += (p1 + p2 + p3) * area * (1.0f/3.0f);
 	}
-	return c = c * (1.0f / area) + p0;
+	return c * (1.0f / area_sum) + p0;
 }
 
 int collided(const void* A, const transform_t* ax, cute_shape_type_t typeA, const void* B, const transform_t* bx, cute_shape_type_t typeB)
