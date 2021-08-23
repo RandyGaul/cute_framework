@@ -146,6 +146,9 @@ CUTE_INLINE v2& operator/=(v2& a, float b) { return a = a / b; }
 CUTE_INLINE v2 skew(v2 a) { return v2(-a.y, a.x); }
 CUTE_INLINE v2 ccw90(v2 a) { return v2(a.y, -a.x); }
 CUTE_INLINE float det2(v2 a, v2 b) { return a.x * b.y - a.y * b.x; }
+CUTE_INLINE float cross(v2 a, v2 b) { det2(a, b); }
+CUTE_INLINE v2 cross(v2 a, float b) { return v2(b * a.y, -b * a.x); }
+CUTE_INLINE v2 cross(float a, v2 b) { return v2(-a * b.y, a * b.x); }
 CUTE_INLINE v2 min(v2 a, v2 b) { return v2(min(a.x, b.x), min(a.y, b.y)); }
 CUTE_INLINE v2 max(v2 a, v2 b) { return v2(max(a.x, b.x), max(a.y, b.y)); }
 CUTE_INLINE v2 clamp(v2 a, v2 lo, v2 hi) { return max(lo, min(a, hi)); }
@@ -504,6 +507,7 @@ CUTE_API void CUTE_CALL norms(v2* verts, v2* norms, int count);
 
 // runs c2Hull and c2Norms, assumes p->verts and p->count are both set to valid values
 CUTE_API void CUTE_CALL make_poly(poly_t* p);
+CUTE_API v2 CUTE_CALL centroid(v2* verts, int count);
 
 // Generic collision detection routines, useful for games that want to use some poly-
 // morphism to write more generic-styled code. Internally calls various above functions.

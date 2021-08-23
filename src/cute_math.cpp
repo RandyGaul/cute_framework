@@ -193,6 +193,26 @@ void make_poly(poly_t* p)
 	c2MakePoly((c2Poly*)p);
 }
 
+v2 centroid(v2* verts, int count)
+{
+	if (count == 0) return v2(0, 0);
+	else if (count == 1) return verts[0];
+	else if (count == 2) return (verts[0] + verts[1]) * 0.5f;
+	v2 c = v2(0, 0);
+	float area = 0;
+	v2 p0 = verts[0];
+	for (int i = 0; i < count; ++i) {
+		v2 p1 = verts[0] - p0;
+		v2 p2 = verts[i] - p0;
+		v2 p3 = (i + 1 == count ? verts[0] : verts[i + 1]) - p0;
+		v2 e1 = p2 - p1;
+		v2 e2 = p3 - p1;
+		area += 0.5f * cross(e1, e2);
+		c += (p1 + p2 + p3) * area * (1.0f/3.0f);
+	}
+	return c;
+}
+
 int collided(const void* A, const transform_t* ax, cute_shape_type_t typeA, const void* B, const transform_t* bx, cute_shape_type_t typeB)
 {
 	return c2Collided(A, (c2x*)ax, (C2_TYPE)typeA, B, (c2x*)bx, (C2_TYPE)typeB);
