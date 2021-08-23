@@ -202,13 +202,9 @@ void file_system_enable_symlinks()
 	PHYSFS_permitSymbolicLinks(1);
 }
 
-error_t file_system_file_exists(const char* virtual_path)
+bool file_system_file_exists(const char* virtual_path)
 {
-	if (!PHYSFS_exists(virtual_path)) {
-		return error_failure(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
-	} else {
-		return error_success();
-	}
+	return PHYSFS_exists(virtual_path) ? true : false;
 }
 
 size_t file_system_read(file_t* file, void* buffer, size_t bytes)

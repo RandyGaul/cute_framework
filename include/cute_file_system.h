@@ -62,7 +62,7 @@ CUTE_API error_t CUTE_CALL file_system_delete(const char* virtual_path);
 CUTE_API error_t CUTE_CALL file_system_create_dir(const char* virtual_path);
 CUTE_API const char** CUTE_CALL file_system_enumerate_directory(const char* virtual_path);
 CUTE_API void CUTE_CALL file_system_free_enumerated_directory(const char** directory_list);
-CUTE_API error_t CUTE_CALL file_system_file_exists(const char* virtual_path);
+CUTE_API bool CUTE_CALL file_system_file_exists(const char* virtual_path);
 CUTE_API size_t CUTE_CALL file_system_read(file_t* file, void* buffer, size_t bytes);
 CUTE_API size_t CUTE_CALL file_system_write(file_t* file, const void* buffer, size_t bytes);
 CUTE_API error_t CUTE_CALL file_system_eof(file_t* file);
