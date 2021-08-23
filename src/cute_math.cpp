@@ -210,7 +210,7 @@ v2 centroid(v2* verts, int count)
 		area += 0.5f * cross(e1, e2);
 		c += (p1 + p2 + p3) * area * (1.0f/3.0f);
 	}
-	return c;
+	return c = c * (1.0f / area) + p0;
 }
 
 int collided(const void* A, const transform_t* ax, cute_shape_type_t typeA, const void* B, const transform_t* bx, cute_shape_type_t typeB)
