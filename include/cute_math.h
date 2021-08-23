@@ -173,6 +173,7 @@ CUTE_INLINE int operator>=(v2 a, v2 b) { return a.x >= b.x && a.y >= b.y; }
 CUTE_INLINE v2 floor(v2 a) { return v2(floorf(a.x), floorf(a.y)); }
 CUTE_INLINE v2 round(v2 a) { return v2(roundf(a.x), roundf(a.y)); }
 CUTE_INLINE v2 invert_safe(v2 a) { return v2(invert_safe(a.x), invert_safe(a.y)); }
+CUTE_INLINE v2 sign(v2 a) { return v2(sign(a.x), sign(a.y)); }
 
 CUTE_INLINE int parallel(v2 a, v2 b, float tol)
 {
