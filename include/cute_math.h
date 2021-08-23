@@ -146,7 +146,7 @@ CUTE_INLINE v2& operator/=(v2& a, float b) { return a = a / b; }
 CUTE_INLINE v2 skew(v2 a) { return v2(-a.y, a.x); }
 CUTE_INLINE v2 ccw90(v2 a) { return v2(a.y, -a.x); }
 CUTE_INLINE float det2(v2 a, v2 b) { return a.x * b.y - a.y * b.x; }
-CUTE_INLINE float cross(v2 a, v2 b) { det2(a, b); }
+CUTE_INLINE float cross(v2 a, v2 b) { return det2(a, b); }
 CUTE_INLINE v2 cross(v2 a, float b) { return v2(b * a.y, -b * a.x); }
 CUTE_INLINE v2 cross(float a, v2 b) { return v2(-a * b.y, a * b.x); }
 CUTE_INLINE v2 min(v2 a, v2 b) { return v2(min(a.x, b.x), min(a.y, b.y)); }
