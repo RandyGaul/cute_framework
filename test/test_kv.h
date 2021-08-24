@@ -259,16 +259,14 @@ int test_kv_std_vector()
 	v.push_back(6);
 	v.push_back(-2);
 
-	kv_key(kv, "vector_of_ints");
-	kv_val(kv, &v);
+	kv_val(kv, &v, "vector_of_ints");
 
 	CUTE_TEST_ASSERT(!kv_error_state(kv).is_error());
 	size_t size = kv_size_written(kv);
 	CUTE_TEST_ASSERT(!kv_parse(kv, kv_get_buffer(kv), size).is_error());
 
 	v.clear();
-	kv_key(kv, "vector_of_ints");
-	kv_val(kv, &v);
+	kv_val(kv, &v, "vector_of_ints");
 
 	CUTE_TEST_ASSERT(v.size() == 8);
 	CUTE_TEST_ASSERT(v[0] == 10);

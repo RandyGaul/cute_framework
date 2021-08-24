@@ -50,10 +50,7 @@ static error_t s_load_from_schema(app_t* app, uint32_t schema_type, entity_t ent
 		err = error_success();
 		if (config->serializer_fn) err = config->serializer_fn(app, schema, true, entity, component, udata);
 	} else {
-		err = kv_key(schema, config->name);
-		if (err.is_error()) return err;
-
-		err = kv_object_begin(schema);
+		err = kv_object_begin(schema, config->name);
 		if (!err.is_error()) {
 			if (config->serializer_fn) err = config->serializer_fn(app, schema, true, entity, component, udata);
 			if (err.is_error()) return err;
@@ -450,7 +447,7 @@ static void s_register_entity_type(app_t* app, const char* schema)
 	
 	strpool_id inherits_from_string = s_kv_string(app, kv, "inherits_from");
 	uint32_t inherits_from = ~0;
-	if (strpool_isvalid(app->strpool, inherits_from)) {
+	if (strpool_isvalid(app->strpool, inherits_from_string)) {
 		app->entity_type_string_to_id.find(inherits_from_string, &inherits_from);
 	}
 
@@ -582,15 +579,10 @@ uint32_t s_entity_type(app_t* app, kv_t* kv, const char* key)
 
 static error_t s_fill_load_id_table(app_t* app, kv_t* kv)
 {
-	error_t err = kv_key(kv, "entities");
+	int entity_count;
+	error_t err = kv_array_begin(kv, &entity_count, "entities");
 	if (err.is_error()) {
 		return error_failure("Unable to find `entities` array in kv file.");
-	}
-
-	int entity_count;
-	err = kv_array_begin(kv, &entity_count);
-	if (err.is_error()) {
-		return error_failure("The `entities` key is not an array.");
 	}
 
 	while (entity_count--)
@@ -635,15 +627,10 @@ error_t ecs_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
 	error_t err = s_fill_load_id_table(app, kv);
 	if (err.is_error()) return err;
 
-	err = kv_key(kv, "entities");
+	int entity_count;
+	err = kv_array_begin(kv, &entity_count, "entities");
 	if (err.is_error()) {
 		return error_failure("Unable to find `entities` array in kv file.");
-	}
-
-	int entity_count;
-	err = kv_array_begin(kv, &entity_count);
-	if (err.is_error()) {
-		return error_failure("The `entities` key is not an array.");
 	}
 
 	int entity_index = 0;
@@ -678,9 +665,8 @@ error_t ecs_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out)
 			}
 
 			// Then load values from the instance.
-			error_t err = kv_key(kv, config->name);
+			error_t err = kv_object_begin(kv, config->name);
 			if (!err.is_error()) {
-				kv_object_begin(kv);
 				err = config->serializer_fn(app, kv, true, entity, component, config->serializer_udata);
 				kv_object_end(kv);
 				if (err.is_error()) {
@@ -714,11 +700,8 @@ error_t ecs_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv)
 	app->save_id_table = &id_table;
 	CUTE_DEFER(app->save_id_table = NULL);
 
-	error_t err = kv_key(kv, "entities");
-	if (err.is_error()) return err;
-
 	int entity_count = entities.count();
-	err = kv_array_begin(kv, &entity_count);
+	error_t err = kv_array_begin(kv, &entity_count, "entities");
 	if (err.is_error()) return err;
 
 	for (int i = 0; i < entities.count(); ++i)
@@ -751,9 +734,8 @@ error_t ecs_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv)
 			component_config_t* config = app->component_configs.find(component_type);
 			const void* component = component_table[index];
 
-			error_t err = kv_key(kv, config->name);
+			error_t err = kv_object_begin(kv, config->name);
 			if (!err.is_error()) {
-				kv_object_begin(kv);
 				err = config->serializer_fn(app, kv, false, entity, (void*)component, config->serializer_udata);
 				kv_object_end(kv);
 				if (err.is_error()) {

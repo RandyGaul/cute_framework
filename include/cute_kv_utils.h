@@ -53,10 +53,10 @@ CUTE_INLINE error_t kv_val(kv_t* kv, std::string* val)
 }
 
 template <typename T>
-CUTE_INLINE error_t kv_val(kv_t* kv, std::vector<T>* val)
+CUTE_INLINE error_t kv_val(kv_t* kv, std::vector<T>* val, const char* key = NULL)
 {
 	int count = (int)val->size();
-	kv_array_begin(kv, &count);
+	kv_array_begin(kv, &count, key);
 	val->resize(count);
 	for (int i = 0; i < count; ++i)
 	{

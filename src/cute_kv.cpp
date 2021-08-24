@@ -1176,9 +1176,10 @@ error_t kv_object_begin(kv_t* kv, const char* key)
 	if (key) {
 		error_t err = kv_key(kv, key);
 		if (err.is_error()) return err;
-	} else if (!kv->in_array) return error_failure("`key` must be supplied if not in an array.");
+	}
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == KV_STATE_WRITE) {
+		if (!key && kv->in_array == CUTE_KV_NOT_IN_ARRAY) return error_failure("`key` must be supplied if not in an array.");
 		s_write_str_no_quotes(kv, "{\n", 2);
 		s_tabs_delta(kv, 1);
 		s_tabs(kv);
@@ -1237,10 +1238,11 @@ error_t kv_array_begin(kv_t* kv, int* count, const char* key)
 	if (key) {
 		error_t err = kv_key(kv, key);
 		if (err.is_error()) return err;
-	} else if (!kv->in_array) return error_failure("`key` must be supplied if not in an array.");
+	}
 	if (kv->mode == KV_STATE_READ) *count = 0;
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == KV_STATE_WRITE) {
+		if (!key && kv->in_array == CUTE_KV_NOT_IN_ARRAY) return error_failure("`key` must be supplied if not in an array.");
 		s_tabs_delta(kv, 1);
 		s_write_u8(kv, '[');
 		s_write(kv, (int64_t)*count);
