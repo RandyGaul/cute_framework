@@ -52,8 +52,10 @@ struct array
 
 	T& add();
 	T& add(const T& item);
+	T& add(T&& item);
 	T& insert(int index);
 	T& insert(int index, const T& item);
+	T& insert(int index, T&& item);
 	void set(int index, const T& item);
 	void remove(int index);
 	T pop();
@@ -146,8 +148,7 @@ array<T>::array(int capacity, void* user_allocator_context)
 template <typename T>
 array<T>::~array()
 {
-	for (int i = 0; i < m_count; ++i)
-	{
+	for (int i = 0; i < m_count; ++i) {
 		T* slot = m_items + i;
 		slot->~T();
 	}
@@ -173,6 +174,15 @@ T& array<T>::add(const T& item)
 }
 
 template <typename T>
+T& array<T>::add(T&& item)
+{
+	ensure_capacity(m_count + 1);
+	T* slot = m_items + m_count++;
+	CUTE_PLACEMENT_NEW(slot) T(move(item));
+	return *slot;
+}
+
+template <typename T>
 T& array<T>::insert(int index)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
@@ -191,6 +201,18 @@ T& array<T>::insert(int index, const T& item)
 	CUTE_MEMMOVE(m_items + index + 1, m_items + index, sizeof(T) * count_to_move);
 	T* slot = m_items + index;
 	CUTE_PLACEMENT_NEW(slot) T(item);
+	return *slot;
+}
+
+template <typename T>
+T& array<T>::insert(int index, T&& item)
+{
+	CUTE_ASSERT(index >= 0 && index < m_count);
+	add();
+	int count_to_move = m_count - 1 - index;
+	CUTE_MEMMOVE(m_items + index + 1, m_items + index, sizeof(T) * count_to_move);
+	T* slot = m_items + index;
+	CUTE_PLACEMENT_NEW(slot) T(move(item));
 	return *slot;
 }
 
@@ -218,7 +240,7 @@ T array<T>::pop()
 {
 	CUTE_ASSERT(m_count > 0);
 	T* slot = m_items + m_count - 1;
-	T val = m_items[--m_count]; // Annoying perf hit, but not worth rvalue complexity.
+	T val = move(m_items[--m_count]);
 	slot->~T();
 	return val;
 }
@@ -235,8 +257,7 @@ void array<T>::unordered_remove(int index)
 template <typename T>
 void array<T>::clear()
 {
-	for (int i = 0; i < m_count; ++i)
-	{
+	for (int i = 0; i < m_count; ++i) {
 		T* slot = m_items + i;
 		slot->~T();
 	}
@@ -248,8 +269,7 @@ void array<T>::ensure_capacity(int num_elements)
 {
 	if (num_elements > m_capacity) {
 		int new_capacity = m_capacity ? m_capacity * 2 : 256;
-		while (new_capacity < num_elements)
-		{
+		while (new_capacity < num_elements) {
 			new_capacity <<= 1;
 			CUTE_ASSERT(new_capacity); // Detect overflow.
 		}
