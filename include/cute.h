@@ -35,6 +35,7 @@
 #include "cute_concurrency.h"
 #include "cute_coroutine.h"
 #include "cute_crypto.h"
+#include "cute_defer.h"
 #include "cute_dictionary.h"
 #include "cute_doubly_list.h"
 #include "cute_ecs.h"
