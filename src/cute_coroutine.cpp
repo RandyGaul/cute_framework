@@ -27,8 +27,6 @@
 #define MINICORO_IMPL
 #include <edubart/minicoro.h>
 
-#include <vector>
-
 namespace cute
 {
 
