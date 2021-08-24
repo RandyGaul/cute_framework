@@ -26,8 +26,6 @@
 #include "cute_c_runtime.h"
 #include "cute_alloc.h"
 
-#include <initializer_list>
-
 namespace cute
 {
 
@@ -43,7 +41,7 @@ template <typename T>
 struct array
 {
 	array();
-	array(std::initializer_list<T> list);
+	array(initializer_list<T> list);
 	array(const array<T>& other);
 	array(array<T>&& other);
 	array(void* user_allocator_context);
@@ -107,7 +105,7 @@ array<T>::array()
 }
 
 template <typename T>
-array<T>::array(std::initializer_list<T> list)
+array<T>::array(initializer_list<T> list)
 {
 	ensure_capacity((int)list.size());
 	for (const T* i = list.begin(); i < list.end(); ++i) {

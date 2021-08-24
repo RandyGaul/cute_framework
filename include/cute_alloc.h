@@ -41,28 +41,4 @@ inline void* operator new(size_t, cute_dummy_enum_t, void* ptr) { return ptr; }
 #define CUTE_PLACEMENT_NEW(ptr) new(CUTE_DUMMY_ENUM, ptr)
 #define CUTE_NEW(T, user_ctx) new(CUTE_DUMMY_ENUM, CUTE_ALLOC(sizeof(T), user_ctx)) T
 
-template <class T>
-struct remove_reference
-{
-	using type = T;
-};
-
-template <class T>
-struct remove_reference<T&>
-{
-	using type = T;
-};
-
-template <class T>
-struct remove_reference<T&&>
-{
-	using type = T;
-};
-
-template <class T>
-constexpr typename remove_reference<T>::type&& move(T&& arg) noexcept
-{
-	return static_cast<typename remove_reference<T>::type&&>(arg);
-}
-
 #endif // CUTE_ALLOC_H

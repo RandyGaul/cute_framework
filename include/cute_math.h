@@ -24,7 +24,6 @@
 
 #include "cute_defines.h"
 
-#include <initializer_list>
 #include <math.h>
 
 namespace cute
@@ -35,7 +34,7 @@ struct v2
 {
 	v2() {}
 	v2(float x, float y) : x(x), y(y) {}
-	v2(std::initializer_list<float> list) : x(list.begin()[0]), y(list.begin()[1]) {};
+	v2(initializer_list<float> list) : x(list.begin()[0]), y(list.begin()[1]) {};
 	float x;
 	float y;
 };

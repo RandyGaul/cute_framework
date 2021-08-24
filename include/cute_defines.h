@@ -133,4 +133,87 @@ struct app_t;
 
 }
 
+// -------------------------------------------------------------------------------------------------
+// Avoid including <utility> header.
+
+template <class T>
+struct remove_reference
+{
+	using type = T;
+};
+
+template <class T>
+struct remove_reference<T&>
+{
+	using type = T;
+};
+
+template <class T>
+struct remove_reference<T&&>
+{
+	using type = T;
+};
+
+template <class T>
+constexpr typename remove_reference<T>::type&& move(T&& arg) noexcept
+{
+	return (typename remove_reference<T>::type&&)arg;
+}
+
+// -------------------------------------------------------------------------------------------------
+// Avoid including <initializer_list> header.
+// Unfortunately this class *must* be in the std:: namespace or things won't compile. So we try to
+// avoid defining this class if someone already included <initializer_list> before including
+// cute framework <cute.h>.
+
+#if !defined(_INITIALIZER_LIST_) && !defined(_INITIALIZER_LIST) && !defined(_LIBCPP_INITIALIZER_LIST)
+#define _INITIALIZER_LIST_ // MSVC
+#define _INITIALIZER_LIST  // GCC
+#define _LIBCPP_INITIALIZER_LIST // Clang
+
+namespace std {
+template <class t>
+class initializer_list {
+public:
+    using value_type      = t;
+    using reference       = const t&;
+    using const_reference = const t&;
+    using size_type       = size_t;
+
+    using iterator       = const t*;
+    using const_iterator = const t*;
+
+    constexpr initializer_list() noexcept
+		: m_first(0)
+		, m_last(0)
+	{
+	}
+
+    constexpr initializer_list(const t* first, const t* last) noexcept
+        : m_first(first)
+		, m_last(last)
+	{
+	}
+
+    constexpr const t* begin() const noexcept { return m_first; }
+    constexpr const t* end() const noexcept { return m_last; }
+    constexpr size_t size() const noexcept { return (size_t)(m_last - m_first); }
+
+private:
+    const t* m_first;
+    const t* m_last;
+};
+
+template <class t> constexpr const t* begin(initializer_list<t> list) noexcept { return list.begin(); }
+template <class t> constexpr const t* end(initializer_list<t> list) noexcept { return list.end(); }
+}
+
+#endif
+
+namespace cute
+{
+	template <typename T>
+	using initializer_list = std::initializer_list<T>;
+}
+
 #endif // CUTE_DEFINES_H
