@@ -171,41 +171,42 @@ constexpr typename remove_reference<T>::type&& move(T&& arg) noexcept
 #define _INITIALIZER_LIST  // GCC
 #define _LIBCPP_INITIALIZER_LIST // Clang
 
-namespace std {
-template <class t>
-class initializer_list {
-public:
-    using value_type      = t;
-    using reference       = const t&;
-    using const_reference = const t&;
-    using size_type       = size_t;
+namespace std
+{
+	template <typename T>
+	class initializer_list {
+	public:
+		using value_type      = T;
+		using reference       = const T&;
+		using const_reference = const T&;
+		using size_type       = size_t;
 
-    using iterator       = const t*;
-    using const_iterator = const t*;
+		using iterator       = const T*;
+		using const_iterator = const T*;
 
-    constexpr initializer_list() noexcept
-		: m_first(0)
-		, m_last(0)
-	{
-	}
+		constexpr initializer_list() noexcept
+			: m_first(0)
+			, m_last(0)
+		{
+		}
 
-    constexpr initializer_list(const t* first, const t* last) noexcept
-        : m_first(first)
-		, m_last(last)
-	{
-	}
+		constexpr initializer_list(const T* first, const T* last) noexcept
+			: m_first(first)
+			, m_last(last)
+		{
+		}
 
-    constexpr const t* begin() const noexcept { return m_first; }
-    constexpr const t* end() const noexcept { return m_last; }
-    constexpr size_t size() const noexcept { return (size_t)(m_last - m_first); }
+		constexpr const T* begin() const noexcept { return m_first; }
+		constexpr const T* end() const noexcept { return m_last; }
+		constexpr size_t size() const noexcept { return (size_t)(m_last - m_first); }
 
-private:
-    const t* m_first;
-    const t* m_last;
-};
+	private:
+		const T* m_first;
+		const T* m_last;
+	};
 
-template <class t> constexpr const t* begin(initializer_list<t> list) noexcept { return list.begin(); }
-template <class t> constexpr const t* end(initializer_list<t> list) noexcept { return list.end(); }
+	template <class T> constexpr const T* begin(initializer_list<T> list) noexcept { return list.begin(); }
+	template <class T> constexpr const T* end(initializer_list<T> list) noexcept { return list.end(); }
 }
 
 #endif
