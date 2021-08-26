@@ -35,6 +35,7 @@
 #include <cute_batch.h>
 #include <cute_gfx.h>
 #include <cute_input.h>
+#include <cute_string.h>
 
 #include <internal/cute_object_table_internal.h>
 #include <internal/cute_font_internal.h>
@@ -130,12 +131,12 @@ struct entity_config_t
 	{
 		entity_type = NULL;
 		component_types.clear();
-		schema = NULL;
+		schema.id = 0;
 	}
 
 	const char* entity_type = NULL;
 	array<const char*> component_types;
-	const char* schema = NULL;
+	string_t schema;
 };
 
 struct app_t

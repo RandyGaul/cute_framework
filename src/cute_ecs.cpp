@@ -534,8 +534,8 @@ void ecs_entity_begin(app_t* app)
 
 void ecs_entity_end(app_t* app)
 {
-	if (app->entity_config_builder.schema) {
-		s_register_entity_type(app, app->entity_config_builder.schema);
+	if (app->entity_config_builder.schema.is_valid()) {
+		s_register_entity_type(app, app->entity_config_builder.schema.c_str());
 	} else {
 		s_register_entity_type(app, app->entity_config_builder.component_types, app->entity_config_builder.entity_type);
 	}
