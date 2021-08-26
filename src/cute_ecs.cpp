@@ -414,7 +414,9 @@ static strpool_id s_kv_string(app_t* app, kv_t* kv, const char* key)
 {
 	error_t err = kv_key(kv, key);
 	if (err.is_error()) {
-		CUTE_DEBUG_PRINTF("Unable to find the `%s` key.", key);
+		if (CUTE_STRCMP(key, "inherits_from")) {
+			CUTE_DEBUG_PRINTF("Unable to find the `%s` key.\n", key);
+		}
 		return 0;
 	}
 
@@ -422,7 +424,7 @@ static strpool_id s_kv_string(app_t* app, kv_t* kv, const char* key)
 	size_t string_sz;
 	err = kv_val_string(kv, &string_raw, &string_sz);
 	if (err.is_error()) {
-		CUTE_DEBUG_PRINTF("`%s` key found, but is not a string.", key);
+		CUTE_DEBUG_PRINTF("`%s` key found, but is not a string.\n", key);
 		return 0;
 	}
 
