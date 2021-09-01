@@ -561,6 +561,7 @@ aabb_tree_t* create_aabb_tree(int initial_capacity, void* user_allocator_context
 {
 	aabb_tree_t* tree = CUTE_NEW(aabb_tree_t, user_allocator_context);
 	if (!initial_capacity) initial_capacity = 64;
+	tree->node_capacity = initial_capacity;
 	tree->nodes.ensure_count(initial_capacity);
 	tree->aabbs.ensure_count(initial_capacity);
 	tree->udatas.ensure_count(initial_capacity);
