@@ -730,24 +730,24 @@ bool aabb_tree_move(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb, v2 offset)
 	CUTE_ASSERT(tree->nodes[leaf.id].index_a == AABB_TREE_NULL_NODE_INDEX);
 	CUTE_ASSERT(tree->nodes[leaf.id].index_b == AABB_TREE_NULL_NODE_INDEX);
 
-	aabb = expand(aabb, AABB_TREE_EXPAND_CONSTANT);
+	aabb_t expanded_aabb = expand(aabb, AABB_TREE_EXPAND_CONSTANT);
 	v2 delta = offset * AABB_TREE_MOVE_CONSTANT;
 
 	if (delta.x < 0) {
-		aabb.min.x += delta.x;
+		expanded_aabb.min.x += delta.x;
 	} else {
-		aabb.max.x += delta.x;
+		expanded_aabb.max.x += delta.x;
 	}
 
 	if (delta.y < 0) {
-		aabb.min.y += delta.y;
+		expanded_aabb.min.y += delta.y;
 	} else {
-		aabb.max.y += delta.y;
+		expanded_aabb.max.y += delta.y;
 	}
 
 	aabb_t old_aabb = tree->aabbs[leaf.id];
-	if (contains(old_aabb, aabb)) {
-		aabb_t big_aabb = expand(aabb, AABB_TREE_MOVE_CONSTANT);
+	if (contains(old_aabb, expanded_aabb)) {
+		aabb_t big_aabb = expand(expanded_aabb, AABB_TREE_MOVE_CONSTANT);
 		bool old_aabb_is_not_way_too_huge = contains(big_aabb, old_aabb);
 		if (old_aabb_is_not_way_too_huge) {
 			return false;
