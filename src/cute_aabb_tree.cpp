@@ -599,10 +599,9 @@ void destroy_aabb_tree(aabb_tree_t* tree)
 	CUTE_FREE(tree, mem_ctx);
 }
 
-leaf_t aabb_tree_insert(aabb_tree_t* tree, aabb_t aabb, void* udata)
+static leaf_t s_insert(aabb_tree_t* tree, aabb_t aabb, void* udata)
 {
 	// Make a new node.
-	aabb = expand(aabb, AABB_TREE_EXPAND_CONSTANT);
 	int new_index = s_pop_freelist(tree, aabb, udata);
 	int search_index = tree->root;
 
@@ -658,6 +657,12 @@ leaf_t aabb_tree_insert(aabb_tree_t* tree, aabb_t aabb, void* udata)
 	aabb_tree_validate(tree);
 
 	return { new_index };
+}
+
+leaf_t aabb_tree_insert(aabb_tree_t* tree, aabb_t aabb, void* udata)
+{
+	aabb = expand(aabb, AABB_TREE_EXPAND_CONSTANT);
+	return s_insert(tree, aabb, udata);
 }
 
 void aabb_tree_remove(aabb_tree_t* tree, leaf_t leaf)
@@ -730,24 +735,24 @@ bool aabb_tree_move(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb, v2 offset)
 	CUTE_ASSERT(tree->nodes[leaf.id].index_a == AABB_TREE_NULL_NODE_INDEX);
 	CUTE_ASSERT(tree->nodes[leaf.id].index_b == AABB_TREE_NULL_NODE_INDEX);
 
-	aabb_t expanded_aabb = expand(aabb, AABB_TREE_EXPAND_CONSTANT);
+	aabb = expand(aabb, AABB_TREE_EXPAND_CONSTANT);
 	v2 delta = offset * AABB_TREE_MOVE_CONSTANT;
 
 	if (delta.x < 0) {
-		expanded_aabb.min.x += delta.x;
+		aabb.min.x += delta.x;
 	} else {
-		expanded_aabb.max.x += delta.x;
+		aabb.max.x += delta.x;
 	}
 
 	if (delta.y < 0) {
-		expanded_aabb.min.y += delta.y;
+		aabb.min.y += delta.y;
 	} else {
-		expanded_aabb.max.y += delta.y;
+		aabb.max.y += delta.y;
 	}
 
 	aabb_t old_aabb = tree->aabbs[leaf.id];
-	if (contains(old_aabb, expanded_aabb)) {
-		aabb_t big_aabb = expand(expanded_aabb, AABB_TREE_MOVE_CONSTANT);
+	if (contains(old_aabb, aabb)) {
+		aabb_t big_aabb = expand(aabb, AABB_TREE_MOVE_CONSTANT);
 		bool old_aabb_is_not_way_too_huge = contains(big_aabb, old_aabb);
 		if (old_aabb_is_not_way_too_huge) {
 			return false;
@@ -756,8 +761,7 @@ bool aabb_tree_move(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb, v2 offset)
 
 	void* udata = tree->udatas[leaf.id];
 	aabb_tree_remove(tree, leaf);
-	leaf_t leaf = aabb_tree_insert(tree, aabb, udata);
-	tree->aabbs[leaf.id] = expanded_aabb;
+	s_insert(tree, aabb, udata);
 
 	return true;
 }
