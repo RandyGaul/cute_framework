@@ -756,7 +756,8 @@ bool aabb_tree_move(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb, v2 offset)
 
 	void* udata = tree->udatas[leaf.id];
 	aabb_tree_remove(tree, leaf);
-	aabb_tree_insert(tree, aabb, udata);
+	leaf_t leaf = aabb_tree_insert(tree, aabb, udata);
+	tree->aabbs[leaf.id] = expanded_aabb;
 
 	return true;
 }
