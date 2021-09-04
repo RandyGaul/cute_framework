@@ -22,7 +22,7 @@
 #ifndef CUTE_STRING_H
 #define CUTE_STRING_H
 
-#include "cute_defines.h"
+#include "cute_strpool.h"
 
 /*
 	Implements a *single-threaded* string-interning system where each string on the stack
@@ -37,8 +37,6 @@
 namespace cute
 {
 
-struct strpool_t;
-
 struct string_t
 {
 	CUTE_API string_t();
@@ -46,6 +44,7 @@ struct string_t
 	CUTE_API string_t(const char* str);
 	CUTE_API string_t(const char* begin, const char* end);
 	CUTE_API string_t(const string_t& other);
+	CUTE_API string_t(strpool_id id);
 	CUTE_API ~string_t();
 
 	CUTE_API size_t len() const;
@@ -61,7 +60,7 @@ struct string_t
 
 	CUTE_API bool is_valid() const;
 
-	uint64_t id;
+	strpool_id id;
 };
 
 CUTE_API void string_defrag_static_pool();

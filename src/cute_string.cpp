@@ -54,16 +54,16 @@ static strpool_t* s_pool(int nuke = 0)
 	}
 }
 
-static void s_incref(uint64_t id)
+static void s_incref(strpool_id id)
 {
-	if (id) {
+	if (id.val) {
 		strpool_incref(s_pool(), id);
 	}
 }
 
-static void s_decref(uint64_t id)
+static void s_decref(strpool_id id)
 {
-	if (id) {
+	if (id.val) {
 		strpool_t* pool = s_pool();
 		if (strpool_decref(pool, id) <= 0) {
 			strpool_discard(pool, id);
@@ -74,7 +74,7 @@ static void s_decref(uint64_t id)
 //--------------------------------------------------------------------------------------------------
 
 string_t::string_t()
-	: id(0)
+	: id({ 0 })
 {
 }
 
@@ -84,7 +84,7 @@ string_t::string_t(char* str)
 	if (len) {
 		id = strpool_inject(s_pool(), str, len);
 		s_incref(id);
-	} else id = 0;
+	} else id.val = 0;
 }
 
 string_t::string_t(const char* str)
@@ -93,7 +93,7 @@ string_t::string_t(const char* str)
 	if (len) {
 		id = strpool_inject(s_pool(), str, len);
 		s_incref(id);
-	} else id = 0;
+	} else id.val = 0;
 }
 
 string_t::string_t(const char* begin, const char* end)
@@ -102,13 +102,18 @@ string_t::string_t(const char* begin, const char* end)
 	if (len) {
 		id = strpool_inject(s_pool(), begin, len);
 		s_incref(id);
-	} else id = 0;
+	} else id.val = 0;
 }
 
 string_t::string_t(const string_t& other)
 	: id(other.id)
 {
 	s_incref(id);
+}
+
+string_t::string_t(strpool_id id)
+	: id(id)
+{
 }
 
 string_t::~string_t()
@@ -136,12 +141,12 @@ string_t& string_t::operator=(const string_t& rhs)
 
 bool string_t::operator==(const string_t& rhs) const
 {
-	return id == rhs.id;
+	return id.val == rhs.id.val;
 }
 
 bool string_t::operator!=(const string_t& rhs) const
 {
-	return id != rhs.id;
+	return id.val != rhs.id.val;
 }
 
 char string_t::operator[](const int i) const

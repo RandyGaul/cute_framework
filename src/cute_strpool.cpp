@@ -57,17 +57,17 @@ void destroy_strpool(strpool_t* pool)
 
 strpool_id strpool_inject(strpool_t* pool, const char* string, int length)
 {
-	return ::strpool_inject(&pool->inst, string, length);
+	return { ::strpool_inject(&pool->inst, string, length) };
 }
 
 strpool_id strpool_inject(strpool_t* pool, const char* string)
 {
-	return ::strpool_inject(&pool->inst, string, (int)CUTE_STRLEN(string));
+	return { ::strpool_inject(&pool->inst, string, (int)CUTE_STRLEN(string)) };
 }
 
 void strpool_discard(strpool_t* pool, strpool_id id)
 {
-	::strpool_discard(&pool->inst, id);
+	::strpool_discard(&pool->inst, id.val);
 }
 
 void strpool_defrag(strpool_t* pool)
@@ -77,32 +77,32 @@ void strpool_defrag(strpool_t* pool)
 
 int strpool_incref(strpool_t* pool, strpool_id id)
 {
-	return ::strpool_incref(&pool->inst, id);
+	return ::strpool_incref(&pool->inst, id.val);
 }
 
 int strpool_decref(strpool_t* pool, strpool_id id)
 {
-	return ::strpool_decref(&pool->inst, id);
+	return ::strpool_decref(&pool->inst, id.val);
 }
 
 int strpool_getref(strpool_t* pool, strpool_id id)
 {
-	return ::strpool_getref(&pool->inst, id);
+	return ::strpool_getref(&pool->inst, id.val);
 }
 
 bool strpool_isvalid(const strpool_t* pool, strpool_id id)
 {
-	return ::strpool_isvalid(&pool->inst, id);
+	return ::strpool_isvalid(&pool->inst, id.val);
 }
 
 const char* strpool_cstr(const strpool_t* pool, strpool_id id)
 {
-	return ::strpool_cstr(&pool->inst, id);
+	return ::strpool_cstr(&pool->inst, id.val);
 }
 
 size_t strpool_length(const strpool_t* pool, strpool_id id)
 {
-	return (size_t)::strpool_length(&pool->inst, id);
+	return (size_t)::strpool_length(&pool->inst, id.val);
 }
 
 }

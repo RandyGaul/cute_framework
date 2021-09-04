@@ -28,7 +28,7 @@ namespace cute
 {
 
 struct strpool_t;
-using strpool_id = uint64_t;
+struct strpool_id { uint64_t val; };
 
 CUTE_API strpool_t* CUTE_CALL make_strpool(void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL destroy_strpool(strpool_t* pool);

@@ -220,7 +220,7 @@ void* entity_get_component(app_t* app, entity_t entity, const char* component_ty
 	const array<strpool_id>& component_type_tuple = collection->component_type_tuple;
 	for (int i = 0; i < component_type_tuple.count(); ++i)
 	{
-		if (component_type_tuple[i] == type) {
+		if (component_type_tuple[i].val == type.val) {
 			int index = collection->entity_handle_table.get_index(entity.handle);
 			return collection->component_tables[i][index];
 		}
@@ -311,7 +311,7 @@ static inline void s_match(array<int>* matches, const array<strpool_id>& a, cons
 	{
 		for (int j = 0; j < b.count(); ++j)
 		{
-			if (a[i] == b[j]) {
+			if (a[i].val == b[j].val) {
 				matches->add(j);
 				break;
 			}
@@ -417,7 +417,7 @@ static strpool_id s_kv_string(app_t* app, kv_t* kv, const char* key)
 		if (CUTE_STRCMP(key, "inherits_from")) {
 			CUTE_DEBUG_PRINTF("Unable to find the `%s` key.\n", key);
 		}
-		return 0;
+		return { 0 };
 	}
 
 	const char* string_raw;
@@ -425,7 +425,7 @@ static strpool_id s_kv_string(app_t* app, kv_t* kv, const char* key)
 	err = kv_val_string(kv, &string_raw, &string_sz);
 	if (err.is_error()) {
 		CUTE_DEBUG_PRINTF("`%s` key found, but is not a string.\n", key);
-		return 0;
+		return { 0 };
 	}
 
 	return strpool_inject(app->strpool, string_raw, (int)string_sz);
@@ -833,7 +833,7 @@ array<const char*> ecs_get_system_list(app_t* app)
 
 	for (int i = 0; i < app->systems.count(); ++i) {
 		strpool_id id = app->systems[i].name;
-		const char* name = id != ~0ULL ? strpool_cstr(app->strpool, id) : "System name was not set.";
+		const char* name = id.val != 0 ? strpool_cstr(app->strpool, id) : "System name was not set.";
 		names.add(name);
 	}
 

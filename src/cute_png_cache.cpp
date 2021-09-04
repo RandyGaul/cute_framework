@@ -208,7 +208,7 @@ const animation_table_t* png_cache_get_animation_table(png_cache_t* cache, const
 
 sprite_t png_cache_make_sprite(png_cache_t* cache, const char* sprite_name, const animation_table_t* table)
 {
-	uint64_t name_id = INJECT(sprite_name);
+	strpool_id name_id = INJECT(sprite_name);
 	if (!table) {
 		error_t err = cache->animation_tables.find(name_id, (animation_table_t**)&table);
 		CUTE_ASSERT(!err.is_error());

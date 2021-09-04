@@ -89,7 +89,7 @@ struct system_internal_t
 {
 	void clear()
 	{
-		name = ~0ULL;
+		name = { 0 };
 		udata = NULL;
 		pre_update_fn = NULL;
 		update_fn = NULL;
@@ -97,7 +97,7 @@ struct system_internal_t
 		component_type_tuple.clear();
 	}
 
-	strpool_id name = ~0ULL;
+	strpool_id name = { 0 };
 	void* udata = NULL;
 	void (*pre_update_fn)(app_t* app, float dt, void* udata) = NULL;
 	void* update_fn = NULL;
@@ -131,7 +131,7 @@ struct entity_config_t
 	{
 		entity_type = NULL;
 		component_types.clear();
-		schema.id = 0;
+		schema.id.val = 0;
 	}
 
 	const char* entity_type = NULL;
