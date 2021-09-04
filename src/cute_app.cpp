@@ -280,6 +280,10 @@ void app_update(app_t* app, float dt)
 			sg_begin_default_pass(pass_action, app->w, app->h);
 		}
 	}
+
+	if (app->ase_batch) {
+		batch_update(app->ase_batch);
+	}
 }
 
 static void s_imgui_present(app_t* app)

@@ -83,6 +83,7 @@ CUTE_API void CUTE_CALL batch_destroy(batch_t* b);
  * Pushes sprite quad onto an internal buffer. Does no other logic.
  * 
  * To get your quad rendered, see `batch_flush`.
+ * Don't forget to call `batch_update` at the beginning of each game loop.
  */
 CUTE_API void CUTE_CALL batch_push(batch_t* b, batch_sprite_t sprite);
 
@@ -90,6 +91,11 @@ CUTE_API void CUTE_CALL batch_push(batch_t* b, batch_sprite_t sprite);
  * All quads currently pushed onto the batch (see `batch_push`) will be converted to an internal draw call.
  */
 CUTE_API error_t CUTE_CALL batch_flush(batch_t* b);
+
+/**
+ * Call this once at the beginning of each game loop.
+ */
+CUTE_API void CUTE_CALL batch_update(batch_t* b);
 
 CUTE_API void CUTE_CALL batch_set_projection(batch_t* b, matrix_t projection);
 CUTE_API void CUTE_CALL batch_outlines(batch_t* b, bool use_outlines);
@@ -134,6 +140,22 @@ CUTE_API void CUTE_CALL batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float th
 
 CUTE_API void CUTE_CALL batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c);
 CUTE_API void CUTE_CALL batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c0, color_t c1);
+
+
+/**
+ * Temporal texture information for a sprite. Is valid until the next call to `batch_flush`
+ * is issued. Useful to render a sprite in an external system, e.g. Dear ImGui.
+ */
+struct temporary_image_t
+{
+	texture_t texture_id; // A handle representing the texture for this image.
+	int w; // Width in pixels of the image.
+	int h; // Height in pixels of the image.
+	v2 u; // u coordinate of the image in the texture.
+	v2 v; // v coordinate of the image in the texture.
+};
+
+CUTE_API temporary_image_t CUTE_CALL batch_fetch(batch_t* b, batch_sprite_t sprite);
 
 }
 

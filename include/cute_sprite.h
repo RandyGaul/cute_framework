@@ -110,6 +110,7 @@ struct sprite_t
 	 * custom graphics effects.
 	 */
 	CUTE_INLINE batch_sprite_t batch_sprite(transform_t transform);
+	CUTE_INLINE batch_sprite_t batch_sprite();
 	
 	CUTE_INLINE void pause();
 	CUTE_INLINE void unpause();
@@ -268,6 +269,21 @@ void sprite_t::draw(batch_t* batch)
 }
 
 batch_sprite_t sprite_t::batch_sprite(transform_t transform)
+{
+	batch_sprite_t q;
+	q.id = animation->frames[frame_index].id;
+	q.transform = transform;
+	q.transform.p += local_offset;
+	q.w = w;
+	q.h = h;
+	q.scale_x = scale.x * w;
+	q.scale_y = scale.y * h;
+	q.sort_bits = layer;
+	q.alpha = opacity;
+	return q;
+}
+
+batch_sprite_t sprite_t::batch_sprite()
 {
 	batch_sprite_t q;
 	q.id = animation->frames[frame_index].id;

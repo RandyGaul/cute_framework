@@ -439,10 +439,6 @@ error_t batch_flush(batch_t* b)
 		sg_apply_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h, false);
 	}
 
-	spritebatch_tick(&b->sb);
-	if (!spritebatch_defrag(&b->sb)) {
-		return error_failure("`spritebatch_defrag` failed.");
-	}
 	spritebatch_flush(&b->sb);
 
 	b->sprite_buffer.advance();
@@ -472,6 +468,12 @@ error_t batch_flush(batch_t* b)
 	}
 
 	return error_success();
+}
+
+void batch_update(batch_t* b)
+{
+	spritebatch_tick(&b->sb);
+	spritebatch_defrag(&b->sb);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -799,6 +801,18 @@ void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c0, color_t c
 	v2 q2 = p1 - n;
 	v2 q3 = p0 - n;
 	batch_quad(b, q0, q1, q2, q3, c0, c0, c1, c1);
+}
+
+temporary_image_t batch_fetch(batch_t* b, batch_sprite_t sprite)
+{
+	spritebatch_sprite_t s = spritebatch_fetch(&b->sb, sprite.id, sprite.w, sprite.h);
+	temporary_image_t image;
+	image.texture_id = s.texture_id;
+	image.w = s.w;
+	image.h = s.h;
+	image.u = v2(s.minx, s.miny);
+	image.v = v2(s.maxx, s.maxy);
+	return image;
 }
 
 }
