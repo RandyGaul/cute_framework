@@ -124,6 +124,8 @@
 #	include <emscripten.h>
 #endif
 
+#define IMGUI_INCLUDE_IMCONFIG_H
+
 #include <stdlib.h> // NULL
 
 namespace cute

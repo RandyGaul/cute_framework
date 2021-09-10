@@ -194,6 +194,7 @@ CUTE_INLINE sincos_t mulT(sincos_t a, sincos_t b) { sincos_t c; c.c = a.c * b.c 
 
 // Remaps the result from atan2f to the continuous range of 0, 2*PI.
 CUTE_INLINE float atan2_360(float y, float x) { return atan2f(-y, -x) + CUTE_PI; }
+CUTE_INLINE float atan2_360(v2 v) { return atan2f(-v.y, -v.x) + CUTE_PI; }
 
 // Computes the shortest angle to rotate the vector a to the vector b.
 CUTE_INLINE float shortest_arc(v2 a, v2 b) {

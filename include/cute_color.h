@@ -47,27 +47,27 @@ struct color_t
 	float a;
 };
 
-inline color_t make_color(float r, float g, float b)                  { color_t color; color.r = r; color.g = g; color.b = b; color.a = 1.0f; return color; }
-inline color_t make_color(float r, float g, float b, float a)         { color_t color; color.r = r; color.g = g; color.b = b; color.a = a; return color; }
-inline color_t make_color(uint8_t r, uint8_t g, uint8_t b)            { color_t color; color.r = (float)r / 255.0f; color.g = (float)g / 255.0f; color.b = (float)b / 255.0f; color.a = 1.0f; return color; }
-inline color_t make_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { color_t color; color.r = (float)r / 255.0f; color.g = (float)g / 255.0f; color.b = (float)b / 255.0f; color.a = (float)a / 255.0f; return color; }
-inline color_t make_color(int hex)                                    { return make_color((uint8_t)((hex & 0xFF000000) >> 24), (uint8_t)((hex & 0x00FF0000) >> 16), (uint8_t)((hex & 0x0000FF00) >> 8), (uint8_t)(hex & 0x000000FF)); }
+CUTE_INLINE color_t make_color(float r, float g, float b)                  { color_t color; color.r = r; color.g = g; color.b = b; color.a = 1.0f; return color; }
+CUTE_INLINE color_t make_color(float r, float g, float b, float a)         { color_t color; color.r = r; color.g = g; color.b = b; color.a = a; return color; }
+CUTE_INLINE color_t make_color(uint8_t r, uint8_t g, uint8_t b)            { color_t color; color.r = (float)r / 255.0f; color.g = (float)g / 255.0f; color.b = (float)b / 255.0f; color.a = 1.0f; return color; }
+CUTE_INLINE color_t make_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { color_t color; color.r = (float)r / 255.0f; color.g = (float)g / 255.0f; color.b = (float)b / 255.0f; color.a = (float)a / 255.0f; return color; }
+CUTE_INLINE color_t make_color(int hex)                                    { return make_color((uint8_t)((hex & 0xFF000000) >> 24), (uint8_t)((hex & 0x00FF0000) >> 16), (uint8_t)((hex & 0x0000FF00) >> 8), (uint8_t)(hex & 0x000000FF)); }
 
-inline color_t color_black()             { return make_color(0.0f, 0.0f, 0.0f); }
-inline color_t color_red()               { return make_color(1.0f, 0.0f, 0.0f); }
-inline color_t color_green()               { return make_color(0.0f, 1.0f, 0.0f); }
-inline color_t color_blue()               { return make_color(0.0f, 0.0f, 1.0f); }
-inline color_t color_white()             { return make_color(1.0f, 1.0f, 1.0f); }
-inline color_t color_invisible()         { return make_color(0.0f, 0.0f, 0.0f, 0.0f); }
+CUTE_INLINE color_t color_black()             { return make_color(0.0f, 0.0f, 0.0f); }
+CUTE_INLINE color_t color_red()               { return make_color(1.0f, 0.0f, 0.0f); }
+CUTE_INLINE color_t color_green()               { return make_color(0.0f, 1.0f, 0.0f); }
+CUTE_INLINE color_t color_blue()               { return make_color(0.0f, 0.0f, 1.0f); }
+CUTE_INLINE color_t color_white()             { return make_color(1.0f, 1.0f, 1.0f); }
+CUTE_INLINE color_t color_invisible()         { return make_color(0.0f, 0.0f, 0.0f, 0.0f); }
 
-inline color_t operator*(color_t a, float s) { return make_color(a.r * s, a.g * s, a.b * s, a.a * s); }
-inline color_t operator/(color_t a, float s) { return make_color(a.r / s, a.g / s, a.b / s, a.a / s); }
-inline color_t operator+(color_t a, color_t b) { return make_color(a.r + b.r, a.g + b.g, a.b + b.b, a.a + b.a); }
-inline color_t operator-(color_t a, color_t b) { return make_color(a.r - b.r, a.g - b.g, a.b - b.b, a.a - b.a); }
+CUTE_INLINE color_t operator*(color_t a, float s) { return make_color(a.r * s, a.g * s, a.b * s, a.a * s); }
+CUTE_INLINE color_t operator/(color_t a, float s) { return make_color(a.r / s, a.g / s, a.b / s, a.a / s); }
+CUTE_INLINE color_t operator+(color_t a, color_t b) { return make_color(a.r + b.r, a.g + b.g, a.b + b.b, a.a + b.a); }
+CUTE_INLINE color_t operator-(color_t a, color_t b) { return make_color(a.r - b.r, a.g - b.g, a.b - b.b, a.a - b.a); }
 
-inline color_t lerp(color_t a, color_t b, float s) { return a + (b - a) * s; }
+CUTE_INLINE color_t lerp(color_t a, color_t b, float s) { return a + (b - a) * s; }
 
-inline pixel_t to_pixel(color_t c)
+CUTE_INLINE pixel_t to_pixel(color_t c)
 {
 	pixel_t p;
 	p.colors.r = (int)((uint8_t)(c.r * 255.0f));
@@ -77,9 +77,19 @@ inline pixel_t to_pixel(color_t c)
 	return p;
 }
 
-inline color_t to_color(pixel_t p)
+CUTE_INLINE color_t to_color(pixel_t p)
 {
 	return make_color((int)p.val);
+}
+
+CUTE_INLINE uint32_t to_int(color_t c)
+{
+	return to_pixel(c).val;
+}
+
+CUTE_INLINE uint32_t to_int(pixel_t p)
+{
+	return p.val;
 }
 
 }
