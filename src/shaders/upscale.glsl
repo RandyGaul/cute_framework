@@ -1,6 +1,8 @@
 @module upscale
 @ctype vec2 cute::v2
 
+@include includes/smooth_uv.glsl
+
 @vs vs
 	layout (location = 0) in vec2 in_pos;
 	layout (location = 1) in vec2 in_uv;
@@ -11,15 +13,14 @@
 		vec2 u_scale;
 	};
 
-	void main()
-	{
+	void main() {
 		vec2 pos = in_pos;
 		pos.x *= u_scale.x;
 		pos.y *= u_scale.y;
 		vec4 posH = vec4(round(pos), 0, 1);
 		uv = in_uv;
 		gl_Position = posH;
-}
+	}
 @end
 
 @fs fs
@@ -29,9 +30,14 @@
 
 	layout (binding = 0) uniform sampler2D u_image;
 
-	void main()
-	{
-		vec4 color = texture(u_image, uv);
+	layout (binding = 0) uniform fs_params {
+		vec2 u_texture_size;
+	};
+
+	@include_block smooth_uv
+
+	void main() {
+		vec4 color = texture(u_image, smooth_uv(uv, u_texture_size));
 		result = color;
 	}
 @end

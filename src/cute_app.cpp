@@ -313,6 +313,8 @@ void app_present()
 		sg_apply_bindings(bind);
 		upscale_vs_params_t vs_params = { app->upscale };
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
+		upscale_fs_params_t fs_params = { v2((float)app->offscreen_w, (float)app->offscreen_h) };
+		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE(fs_params));
 		sg_draw(0, 6, 1);
 		if (app->using_imgui) {
 			sg_imgui_draw(&app->sg_imgui);
@@ -435,45 +437,14 @@ static void s_quad(float x, float y, float sx, float sy, float* out)
 	CUTE_MEMCPY(out, quad, sizeof(quad));
 }
 
-static float s_max_scaling_factor()
-{
-	float scale = 1.0f;
-	int i = 0;
-	while (1)
-	{
-		float new_scale = scale + 1;
-		int can_scale_x = new_scale * app->offscreen_w <= app->w;
-		int can_scale_y = new_scale * app->offscreen_h <= app->h;
-		if (can_scale_x && can_scale_y) {
-			++i;
-			scale = new_scale;
-		} else {
-			break;
-		}
-	}
-	return scale;
-}
-
-static float s_enforce_scale(upscale_t upscaling, float scale)
-{
-	switch (upscaling) {
-	case UPSCALE_PIXEL_PERFECT_AT_LEAST_2X: return max(scale, 2.0f);
-	case UPSCALE_PIXEL_PERFECT_AT_LEAST_3X: return max(scale, 3.0f);
-	case UPSCALE_PIXEL_PERFECT_AT_LEAST_4X: return max(scale, 4.0f);
-	case UPSCALE_PIXEL_PERFECT_AT_LEAST_1X: // Fall-thru.
-	case UPSCALE_STRETCH: // Fall-thru.
-	default: return scale;
-	}
-}
-
-error_t app_init_upscaling(upscale_t upscaling, int offscreen_w, int offscreen_h)
+error_t app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 {
 	if (app->offscreen_enabled) {
-		error_failure("Upscaling is already enabled.");
+		CUTE_ASSERT(false); // Need to implement calling this to resize offscreen buffer at runtime.
+		return error_success();
 	}
 
 	app->offscreen_enabled = true;
-	app->upscaling = upscaling;
 	app->offscreen_w = offscreen_w;
 	app->offscreen_h = offscreen_h;
 
@@ -509,9 +480,7 @@ error_t app_init_upscaling(upscale_t upscaling, int offscreen_w, int offscreen_h
 	app->offscreen_shader = sg_make_shader(upscale_shd_shader_desc(sg_query_backend()));
 	if (app->offscreen_shader.id == SG_INVALID_ID) return error_failure("Unable create offscreen shader.");
 
-	float scale = s_max_scaling_factor();
-	scale = s_enforce_scale(app->upscaling, scale);
-	app->upscale = { scale * (float)app->offscreen_w / (float)app->w, scale * (float)app->offscreen_h / (float)app->h };
+	app->upscale = { (float)app->offscreen_w / (float)app->w, (float)app->offscreen_h / (float)app->h };
 
 	// Setup offscreen rendering pipeline, to draw the offscreen buffer onto the screen.
 	sg_pipeline_desc params = { 0 };

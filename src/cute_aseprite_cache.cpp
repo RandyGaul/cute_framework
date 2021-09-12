@@ -147,6 +147,24 @@ error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, 
 	for (int i = 0; i < ase->frame_count; ++i) {
 		uint64_t id = cache->id_gen++;
 		ids.add(id);
+
+		// Premultiply alpha.
+		ase_color_t* pix = ase->frames[i].pixels;
+		for (int i = 0; i < ase->h; ++i) {
+			for (int j = 0; j < ase->w; ++j) {
+				float a = pix[i * ase->w + j].a / 255.0f;
+				float r = pix[i * ase->w + j].r / 255.0f;
+				float g = pix[i * ase->w + j].g / 255.0f;
+				float b = pix[i * ase->w + j].b / 255.0f;
+				r *= a;
+				g *= a;
+				b *= a;
+				pix[i * ase->w + j].r = (uint8_t)(r * 255.0f);
+				pix[i * ase->w + j].g = (uint8_t)(g * 255.0f);
+				pix[i * ase->w + j].b = (uint8_t)(b * 255.0f);
+			}
+		}
+
 		cache->id_to_pixels.insert(id, ase->frames[i].pixels);
 	}
 

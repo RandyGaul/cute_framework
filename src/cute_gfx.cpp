@@ -35,13 +35,15 @@
 namespace cute
 {
 
-texture_t texture_make(pixel_t* pixels, int w, int h, sg_wrap mode)
+texture_t texture_make(pixel_t* pixels, int w, int h, sg_wrap mode, sg_filter filter)
 {
 	sg_image_desc params = { 0 };
 	params.width = w;
 	params.height = h;
 	params.wrap_u = mode;
 	params.wrap_v = mode;
+	params.min_filter = filter;
+	params.mag_filter = filter;
 	params.data.subimage[0][0].ptr = pixels;
 	params.data.subimage[0][0].size = w * h * sizeof(pixel_t);
 	params.num_mipmaps = 0;

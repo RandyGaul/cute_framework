@@ -97,6 +97,8 @@ CUTE_API error_t CUTE_CALL batch_flush(batch_t* b);
  */
 CUTE_API void CUTE_CALL batch_update(batch_t* b);
 
+CUTE_API void CUTE_CALL batch_set_texture_wrap_mode(batch_t* b, sg_wrap wrap_mode);
+CUTE_API void CUTE_CALL batch_set_texture_filter(batch_t* b, sg_filter filter);
 CUTE_API void CUTE_CALL batch_set_projection(batch_t* b, matrix_t projection);
 CUTE_API void CUTE_CALL batch_outlines(batch_t* b, bool use_outlines);
 CUTE_API void CUTE_CALL batch_outlines_use_corners(batch_t* b, bool use_corners);

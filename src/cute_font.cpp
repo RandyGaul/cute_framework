@@ -158,6 +158,7 @@ void font_draw(const font_t* font, matrix_t mvp, color_t color)
 	sg_apply_bindings(bind);
 	app->font_vs_uniforms.u_mvp = mvp;
 	app->font_fs_uniforms.u_text_color = color;
+	// Need to apply more things here.
 	sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(app->font_vs_uniforms));
 	sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE(app->font_fs_uniforms));
 	sg_draw(0, app->font_verts.count(), 1);

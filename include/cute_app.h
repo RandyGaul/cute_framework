@@ -58,17 +58,7 @@ CUTE_API ImGuiContext* CUTE_CALL app_init_imgui(bool no_default_font = false);
 CUTE_API sg_imgui_t* CUTE_CALL app_get_sokol_imgui();
 CUTE_API strpool_t* CUTE_CALL app_get_strpool();
 
-enum upscale_t
-{
-	UPSCALE_PIXEL_PERFECT_AT_LEAST_1X,
-	UPSCALE_PIXEL_PERFECT_AT_LEAST_2X,
-	UPSCALE_PIXEL_PERFECT_AT_LEAST_3X,
-	UPSCALE_PIXEL_PERFECT_AT_LEAST_4X,
-	UPSCALE_STRETCH,
-};
-
-CUTE_API error_t CUTE_CALL app_init_upscaling(upscale_t upscaling, int offscreen_w, int offscreen_h);
-CUTE_API void CUTE_CALL app_offscreen_size(int* offscreen_w, int* offscreen_h);
+CUTE_API error_t CUTE_CALL app_set_offscreen_buffer(int offscreen_w, int offscreen_h);
 
 enum power_state_t
 {

@@ -4,6 +4,7 @@
 @ctype vec2 cute::v2
 
 @include includes/outline.glsl
+@include includes/smooth_uv.glsl
 
 @vs vs
 @glsl_options flip_vert_y
@@ -32,6 +33,7 @@
 	layout (binding = 0) uniform sampler2D u_image;
 
 	layout (binding = 0) uniform fs_params {
+		vec2 u_texture_size;
 		vec4 u_text_color;
 		vec4 u_border_color;
 		vec2 u_texel_size;
@@ -40,10 +42,11 @@
 	};
 
 	@include_block outline
+	@include_block smooth_uv
 
 	void main()
 	{
-		float image_mask = texture(u_image, uv).a;
+		float image_mask = texture(u_image, smooth_uv(uv, u_texture_size)).a;
 		float border = outline(u_image, u_texel_size, image_mask, u_use_border, u_use_corners);
 		result = u_text_color * image_mask + u_border_color * border;
 	}

@@ -5,6 +5,7 @@
 
 @include includes/overlay.glsl
 @include includes/outline.glsl
+@include includes/smooth_uv.glsl
 
 @vs vs
 @glsl_options flip_vert_y
@@ -37,6 +38,7 @@
 	layout (binding = 0) uniform sampler2D u_image;
 
 	layout (binding = 0) uniform fs_params {
+		vec2 u_texture_size;
 		vec4 u_tint;
 		vec4 u_border_color;
 		vec2 u_texel_size;
@@ -46,10 +48,11 @@
 
 	@include_block overlay
 	@include_block outline
+	@include_block smooth_uv
 
 	void main()
 	{
-		vec4 image_color = texture(u_image, uv);
+		vec4 image_color = texture(u_image, smooth_uv(uv, u_texture_size));
 		float image_mask = float(image_color.a != 0.0);
 		float border = outline(u_image, u_texel_size, image_mask, u_use_border, u_use_corners);
 		vec4 color = overlay(image_color, u_tint) * image_mask + u_border_color * border;

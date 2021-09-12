@@ -82,6 +82,9 @@ struct batch_t
 {
 	::spritebatch_t sb;
 
+	float atlas_width = 1024;
+	float atlas_height = 1024;
+
 	sg_pipeline geom_pip;
 	triple_buffer_t geom_buffer;
 	array<vertex_t> geom_verts;
@@ -97,6 +100,8 @@ struct batch_t
 	float outline_use_border = 1.0f;
 	float outline_use_corners = 0;
 	color_t outline_color = color_white();
+	sg_wrap wrap_mode = SG_WRAP_REPEAT;
+	sg_filter filter = SG_FILTER_NEAREST;
 	matrix_t projection;
 
 	array<m3x2> m3x2s;
@@ -270,28 +275,26 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	{
 	case BATCH_SPRITE_SHADER_TYPE_DEFAULT:
 	{
-		sprite_default_vs_params_t vs_params = {
-			b->projection
-		};
-		sprite_default_fs_params_t fs_params = {
-			b->tints.last()
-		};
+		sprite_default_vs_params_t vs_params;
+		vs_params.u_mvp = b->projection;
+		sprite_default_fs_params_t fs_params;
+		fs_params.u_texture_size = v2(b->atlas_width, b->atlas_height);
+		fs_params.u_tint = b->tints.last();
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
 		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE(fs_params));
 	}	break;
 
 	case BATCH_SPRITE_SHADER_TYPE_OUTLINE:
 	{
-		sprite_outline_vs_params_t vs_params = {
-			b->projection,
-		};
-		sprite_outline_fs_params_t fs_params = {
-			b->tints.last(),
-			b->outline_color,
-			v2(1.0f / (float)texture_w, 1.0f / (float)texture_h),
-			b->outline_use_border,
-			b->outline_use_corners
-		};
+		sprite_outline_vs_params_t vs_params;
+		vs_params.u_mvp = b->projection;
+		sprite_outline_fs_params_t fs_params;
+		fs_params.u_texture_size = v2(b->atlas_width, b->atlas_height);
+		fs_params.u_tint = b->tints.last();
+		fs_params.u_border_color = b->outline_color;
+		fs_params.u_texel_size = v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
+		fs_params.u_use_border = b->outline_use_border;
+		fs_params.u_use_corners = b->outline_use_corners;
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
 		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE(fs_params));
 	}	break;
@@ -310,7 +313,7 @@ static void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fi
 static SPRITEBATCH_U64 s_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
 	batch_t* b = (batch_t*)udata;
-	return texture_make((pixel_t*)pixels, w, h);
+	return texture_make((pixel_t*)pixels, w, h, b->wrap_mode, b->filter);
 }
 
 static void s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
@@ -370,11 +373,11 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 	params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
 	params.shader = sg_make_shader(geom_shd_shader_desc(sg_query_backend()));
 	params.colors[0].blend.enabled = true;
-	params.colors[0].blend.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
+	params.colors[0].blend.src_factor_rgb = SG_BLENDFACTOR_ONE;
 	params.colors[0].blend.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
 	params.colors[0].blend.op_rgb = SG_BLENDOP_ADD;
-	params.colors[0].blend.src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
-	params.colors[0].blend.dst_factor_alpha = SG_BLENDFACTOR_ONE;
+	params.colors[0].blend.src_factor_alpha = SG_BLENDFACTOR_ONE;
+	params.colors[0].blend.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
 	params.colors[0].blend.op_alpha = SG_BLENDOP_ADD;
 	b->geom_pip = sg_make_pipeline(params);
 	b->geom_buffer = triple_buffer_make(sizeof(vertex_t) * 1024 * 10, sizeof(vertex_t));
@@ -387,7 +390,7 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 
 	spritebatch_config_t config;
 	spritebatch_set_default_config(&config);
-	config.atlas_use_border_pixels = 0;
+	config.atlas_use_border_pixels = 1;
 	config.ticks_to_decay_texture = 100000;
 	config.batch_callback = s_batch_report;
 	config.get_pixels_callback = s_get_pixels;
@@ -400,6 +403,9 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 		CUTE_FREE(b, app->mem_ctx);
 		if (!b) return NULL;
 	}
+
+	b->atlas_width = (float)config.atlas_width_in_pixels;
+	b->atlas_height = (float)config.atlas_height_in_pixels;
 
 	return b;
 }
@@ -477,6 +483,16 @@ void batch_update(batch_t* b)
 }
 
 //--------------------------------------------------------------------------------------------------
+
+void batch_set_texture_wrap_mode(batch_t* b, sg_wrap wrap_mode)
+{
+	b->wrap_mode = wrap_mode;
+}
+
+void batch_set_texture_filter(batch_t* b, sg_filter filter)
+{
+	b->filter = filter;
+}
 
 void batch_set_projection(batch_t* b, matrix_t projection)
 {
@@ -581,11 +597,11 @@ void batch_push_blend_defaults(batch_t* b)
 	sg_blend_state blend_state;
 	CUTE_MEMSET(&blend_state, 0, sizeof(blend_state));
 	blend_state.enabled = true;
-	blend_state.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
+	blend_state.src_factor_rgb = SG_BLENDFACTOR_ONE;
 	blend_state.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
 	blend_state.op_rgb = SG_BLENDOP_ADD;
-	blend_state.src_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_DST_ALPHA;
-	blend_state.dst_factor_alpha = SG_BLENDFACTOR_ONE;
+	blend_state.src_factor_alpha = SG_BLENDFACTOR_ONE;
+	blend_state.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
 	blend_state.op_alpha = SG_BLENDOP_ADD;
 	batch_push_blend_state(b, blend_state);
 }

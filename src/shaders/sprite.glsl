@@ -4,6 +4,7 @@
 @ctype vec2 cute::v2
 
 @include includes/overlay.glsl
+@include includes/smooth_uv.glsl
 
 @vs vs
 @glsl_options flip_vert_y
@@ -36,14 +37,16 @@
 	layout (binding = 0) uniform sampler2D u_image;
 
 	layout (binding = 0) uniform fs_params {
+		vec2 u_texture_size;
 		vec4 u_tint;
 	};
 
 	@include_block overlay
+	@include_block smooth_uv
 
 	void main()
 	{
-		vec4 color = texture(u_image, uv);
+		vec4 color = texture(u_image, smooth_uv(uv, u_texture_size));
 		color = overlay(color, u_tint);
 		color.a = color.a * alpha;
 		if (color.a == 0) discard;

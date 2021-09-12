@@ -35,9 +35,7 @@ static aseprite_cache_t* s_ase_cache()
 		CUTE_ASSERT(!app->ase_cache);
 		app->ase_cache = aseprite_cache_make(app->mem_ctx);
 		app->ase_batch = batch_make(aseprite_cache_get_pixels_fn(app->ase_cache), app->ase_cache, app->mem_ctx);
-		int w, h;
-		app_offscreen_size(&w, &h);
-		batch_set_projection(app->ase_batch, matrix_ortho_2d((float)w, (float)h, 0, 0));
+		batch_set_projection(app->ase_batch, matrix_ortho_2d((float)app->offscreen_w, (float)app->offscreen_h, 0, 0));
 	}
 	return app->ase_cache;
 }
@@ -53,9 +51,7 @@ static png_cache_t* s_png_cache()
 		CUTE_ASSERT(!app->ase_cache);
 		app->png_cache = png_cache_make(app->mem_ctx);
 		app->png_batch = batch_make(aseprite_cache_get_pixels_fn(app->ase_cache), app->ase_cache, app->mem_ctx);
-		int w, h;
-		app_offscreen_size(&w, &h);
-		batch_set_projection(app->png_batch, matrix_ortho_2d((float)w, (float)h, 0, 0));
+		batch_set_projection(app->png_batch, matrix_ortho_2d((float)app->offscreen_w, (float)app->offscreen_h, 0, 0));
 	}
 	return app->png_cache;
 }
