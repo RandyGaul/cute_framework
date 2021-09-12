@@ -840,4 +840,29 @@ array<const char*> ecs_get_system_list(app_t* app)
 	return names;
 }
 
+array<const char*> ecs_get_component_list_for_entity_type(app_t* app, const char* entity_type)
+{
+	array<const char*> result;
+
+	uint32_t type = ~0;
+	app->entity_type_string_to_id.find(INJECT(entity_type), &type);
+	if (type == ~0) {
+		return result;
+	}
+
+	entity_collection_t* collection = app->entity_collections.find(type);
+	CUTE_ASSERT(collection);
+
+	const array<strpool_id>& component_type_tuple = collection->component_type_tuple;
+	for (int i = 0; i < component_type_tuple.count(); ++i)
+	{
+		strpool_id component_type = component_type_tuple[i];
+		component_config_t* config = app->component_configs.find(component_type);
+		CUTE_ASSERT(config);
+		result.add(config->name);
+	}
+
+	return result;
+}
+
 }

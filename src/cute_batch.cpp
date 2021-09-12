@@ -387,7 +387,7 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 
 	spritebatch_config_t config;
 	spritebatch_set_default_config(&config);
-	config.atlas_use_border_pixels = 1;
+	config.atlas_use_border_pixels = 0;
 	config.ticks_to_decay_texture = 100000;
 	config.batch_callback = s_batch_report;
 	config.get_pixels_callback = s_get_pixels;

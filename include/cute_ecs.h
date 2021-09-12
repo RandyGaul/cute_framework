@@ -101,11 +101,12 @@ CUTE_API void CUTE_CALL ecs_system_set_optional_update_udata(app_t* app, void* u
 CUTE_API void CUTE_CALL ecs_run_systems(app_t* app, float dt);
 
 //--------------------------------------------------------------------------------------------------
-// Miscellaneous
+// Introspection
 
 CUTE_API array<const char*> CUTE_CALL ecs_get_entity_list(app_t* app);
 CUTE_API array<const char*> CUTE_CALL ecs_get_component_list(app_t* app);
 CUTE_API array<const char*> CUTE_CALL ecs_get_system_list(app_t* app);
+CUTE_API array<const char*> CUTE_CALL ecs_get_component_list_for_entity_type(app_t* app, const char* entity_type);
 
 }
 
