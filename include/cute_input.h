@@ -41,7 +41,6 @@ CUTE_API int CUTE_CALL key_mod_bit_flags();
 
 CUTE_API int CUTE_CALL mouse_x();
 CUTE_API int CUTE_CALL mouse_y();
-CUTE_API struct v2 CUTE_CALL mouse_pos_in_world_space();
 
 CUTE_API bool CUTE_CALL mouse_is_down(mouse_button_t button);
 CUTE_API bool CUTE_CALL mouse_is_up(mouse_button_t button);

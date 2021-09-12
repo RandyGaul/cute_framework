@@ -262,22 +262,6 @@ int mouse_y()
 	return app->mouse.y;
 }
 
-v2 mouse_pos_in_world_space()
-{
-	float w = (float)app->w;
-	float h = (float)app->h;
-	float rw = (float)app->offscreen_w;
-	float rh = (float)app->offscreen_h;
-	float ratio_x = w / rw;
-	float ratio_y = h / rh;
-	float x = (app->mouse.x - app->w / 2.0f) / ratio_x;
-	float y = (-(app->mouse.y - app->h / 2.0f)) / ratio_y;
-	x = clamp(x, -rw, rw);
-	y = clamp(y, -rh, rh);
-	v2 p = v2(x, y);
-	return p;
-}
-
 bool mouse_is_down(mouse_button_t button)
 {
 	switch (button)
