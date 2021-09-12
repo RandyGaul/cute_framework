@@ -211,26 +211,6 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_coroutine.h
 )
 
-set(CUTE_IMGUI_HDRS
-	libraries/imgui/imgui.h
-)
-
-set(CUTE_SOKOL_HDRS
-	include/sokol/sokol_gfx.h
-)
-
-set(CUTE_CUTE_HDRS
-	include/cute/cute_aseprite.h
-	include/cute/cute_c2.h
-	include/cute/cute_font.h
-	include/cute/cute_path.h
-	include/cute/cute_png.h
-	include/cute/cute_sound.h
-	include/cute/cute_spritebatch.h
-	include/cute/cute_sync.h
-	include/cute/cute_utf.h
-)
-
 set(CUTE_HDRS
 	${CUTE_PUBLIC_HDRS}
 	${CUTE_IMGUI_HDRS}
@@ -420,5 +400,3 @@ target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_
 
 install(TARGETS cute EXPORT cute DESTINATION "lib")
 install(FILES ${CUTE_PUBLIC_HDRS} DESTINATION "include/cute")
-install(FILES ${CUTE_SOKOL_HDRS} DESTINATION "include/cute/sokol")
-install(FILES ${CUTE_CUTE_HDRS} DESTINATION "include/cute/cute")
