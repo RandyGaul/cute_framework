@@ -226,6 +226,7 @@ set(SOKOL_HDRS
 )
 
 set(CUTE_HDRS
+	${CUTE_PUBLIC_HDRS}
 	${IMGUI_HDRS}
 	${SOKOL_HDRS}
 
@@ -409,6 +410,7 @@ endif()
 
 # Propogate public headers to other cmake scripts including this subdirectory.
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries>)
 
 install(TARGETS cute EXPORT cute DESTINATION "lib")
 install(FILES ${CUTE_PUBLIC_HDRS} DESTINATION "include/cute")
