@@ -50,9 +50,7 @@ struct joypad_t
 	int axes[JOYPAD_AXIS_COUNT] = { 0 };
 };
 
-struct app_t;
-
-void pump_input_msgs(app_t* app);
+void pump_input_msgs();
 
 }
 

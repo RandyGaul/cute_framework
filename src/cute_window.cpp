@@ -27,79 +27,79 @@
 namespace cute
 {
 
-void window_size(app_t* app, int* w, int* h)
+void window_size(int* w, int* h)
 {
 	if (w) *w = app->w;
 	if (h) *h = app->h;
 }
 
-void window_position(app_t* app, int* x, int* y)
+void window_position(int* x, int* y)
 {
 	if (x) *x = app->x;
 	if (y) *y = app->y;
 }
 
-bool window_was_size_changed(app_t* app)
+bool window_was_size_changed()
 {
 	return app->window_state.resized;
 }
 
-bool window_was_moved(app_t* app)
+bool window_was_moved()
 {
 	return app->window_state.moved;
 }
 
-bool window_keyboard_lost_focus(app_t* app)
+bool window_keyboard_lost_focus()
 {
 	return !app->window_state.has_keyboard_focus && app->window_state_prev.has_keyboard_focus;
 }
 
-bool window_keyboard_gained_focus(app_t* app)
+bool window_keyboard_gained_focus()
 {
 	return app->window_state.has_keyboard_focus && !app->window_state_prev.has_keyboard_focus;
 }
 
-bool window_keyboard_has_focus(app_t* app)
+bool window_keyboard_has_focus()
 {
 	return app->window_state.has_keyboard_focus;
 }
 
-bool window_was_minimized(app_t* app)
+bool window_was_minimized()
 {
 	return app->window_state.minimized && !app->window_state_prev.minimized;
 }
 
-bool window_was_maximized(app_t* app)
+bool window_was_maximized()
 {
 	return app->window_state.maximized && !app->window_state_prev.maximized;
 }
 
-bool window_is_minimized(app_t* app)
+bool window_is_minimized()
 {
 	return app->window_state.minimized;
 }
 
-bool window_is_maximized(app_t* app)
+bool window_is_maximized()
 {
 	return app->window_state.maximized;
 }
 
-bool window_was_restored(app_t* app)
+bool window_was_restored()
 {
 	return app->window_state.restored && !app->window_state_prev.restored;
 }
 
-bool window_mouse_entered(app_t* app)
+bool window_mouse_entered()
 {
 	return app->window_state.mouse_inside_window && !app->window_state_prev.mouse_inside_window;
 }
 
-bool window_mouse_exited(app_t* app)
+bool window_mouse_exited()
 {
 	return !app->window_state.mouse_inside_window && app->window_state_prev.mouse_inside_window;
 }
 
-bool window_mouse_inside(app_t* app)
+bool window_mouse_inside()
 {
 	return app->window_state.mouse_inside_window;
 }
@@ -115,7 +115,7 @@ static int s_message_box_flags(window_message_box_type_t type)
 	return SDL_MESSAGEBOX_ERROR;
 }
 
-void window_message_box(app_t* app, window_message_box_type_t type, const char* title, const char* text)
+void window_message_box(window_message_box_type_t type, const char* title, const char* text)
 {
 	SDL_ShowSimpleMessageBox(s_message_box_flags(type), title, text, app->window);
 }

@@ -32,36 +32,36 @@ enum key_button_t : int;
 enum mouse_button_t : int;
 enum mouse_click_t : int;
 
-CUTE_API bool CUTE_CALL key_is_down(app_t* app, key_button_t key);
-CUTE_API bool CUTE_CALL key_is_up(app_t* app, key_button_t key);
-CUTE_API bool CUTE_CALL key_was_pressed(app_t* app, key_button_t key);
-CUTE_API bool CUTE_CALL key_was_released(app_t* app, key_button_t key);
-CUTE_API void CUTE_CALL clear_all_key_state(app_t* app);
-CUTE_API int CUTE_CALL key_mod_bit_flags(app_t* app);
+CUTE_API bool CUTE_CALL key_is_down(key_button_t key);
+CUTE_API bool CUTE_CALL key_is_up(key_button_t key);
+CUTE_API bool CUTE_CALL key_was_pressed(key_button_t key);
+CUTE_API bool CUTE_CALL key_was_released(key_button_t key);
+CUTE_API void CUTE_CALL clear_all_key_state();
+CUTE_API int CUTE_CALL key_mod_bit_flags();
 
-CUTE_API int CUTE_CALL mouse_x(app_t* app);
-CUTE_API int CUTE_CALL mouse_y(app_t* app);
-CUTE_API struct v2 CUTE_CALL mouse_pos_in_world_space(app_t* app);
+CUTE_API int CUTE_CALL mouse_x();
+CUTE_API int CUTE_CALL mouse_y();
+CUTE_API struct v2 CUTE_CALL mouse_pos_in_world_space();
 
-CUTE_API bool CUTE_CALL mouse_is_down(app_t* app, mouse_button_t button);
-CUTE_API bool CUTE_CALL mouse_is_up(app_t* app, mouse_button_t button);
-CUTE_API bool CUTE_CALL mouse_was_pressed(app_t* app, mouse_button_t button);
-CUTE_API bool CUTE_CALL mouse_was_released(app_t* app, mouse_button_t button);
-CUTE_API int CUTE_CALL mouse_wheel_motion(app_t* app);
-CUTE_API bool CUTE_CALL mouse_is_down_double_click(app_t* app, mouse_button_t button);
-CUTE_API bool CUTE_CALL mouse_double_click_was_pressed(app_t* app, mouse_button_t button);
-CUTE_API bool CUTE_CALL mouse_double_click_was_pressed(app_t* app, mouse_button_t button);
+CUTE_API bool CUTE_CALL mouse_is_down(mouse_button_t button);
+CUTE_API bool CUTE_CALL mouse_is_up(mouse_button_t button);
+CUTE_API bool CUTE_CALL mouse_was_pressed(mouse_button_t button);
+CUTE_API bool CUTE_CALL mouse_was_released(mouse_button_t button);
+CUTE_API int CUTE_CALL mouse_wheel_motion();
+CUTE_API bool CUTE_CALL mouse_is_down_double_click(mouse_button_t button);
+CUTE_API bool CUTE_CALL mouse_double_click_was_pressed(mouse_button_t button);
+CUTE_API bool CUTE_CALL mouse_double_click_was_pressed(mouse_button_t button);
 
-CUTE_API void CUTE_CALL input_text_add_utf8(app_t* app, const char* text);
-CUTE_API int CUTE_CALL input_text_pop_utf32(app_t* app);
-CUTE_API bool CUTE_CALL input_text_has_data(app_t* app);
-CUTE_API void CUTE_CALL input_text_clear(app_t* app);
+CUTE_API void CUTE_CALL input_text_add_utf8(const char* text);
+CUTE_API int CUTE_CALL input_text_pop_utf32();
+CUTE_API bool CUTE_CALL input_text_has_data();
+CUTE_API void CUTE_CALL input_text_clear();
 
 CUTE_API void CUTE_CALL input_enable_ime();
 CUTE_API void CUTE_CALL input_disable_ime();
 CUTE_API bool CUTE_CALL input_is_ime_enabled();
 CUTE_API bool CUTE_CALL input_has_ime_keyboard_support();
-CUTE_API bool CUTE_CALL input_is_ime_keyboard_shown(app_t* app);
+CUTE_API bool CUTE_CALL input_is_ime_keyboard_shown();
 CUTE_API void CUTE_CALL input_set_ime_rect(int x, int y, int w, int h);
 
 struct ime_composition_t
@@ -71,7 +71,7 @@ struct ime_composition_t
 	int selection_len;
 };
 
-CUTE_API bool CUTE_CALL input_get_ime_composition(app_t* app, ime_composition_t* composition);
+CUTE_API bool CUTE_CALL input_get_ime_composition(ime_composition_t* composition);
 
 struct touch_t
 {
@@ -81,8 +81,8 @@ struct touch_t
 	float pressure;
 };
 
-CUTE_API array<touch_t> CUTE_CALL touch_get_all(app_t* app);
-CUTE_API bool CUTE_CALL touch_get(app_t* app, uint64_t id, touch_t* touch);
+CUTE_API array<touch_t> CUTE_CALL touch_get_all();
+CUTE_API bool CUTE_CALL touch_get(uint64_t id, touch_t* touch);
 
 enum mouse_button_t : int
 {

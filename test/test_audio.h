@@ -57,15 +57,14 @@ static void s_audio_promise(cute::error_t status, void* param, void* udata)
 CUTE_TEST_CASE(test_audio_load_asynchronous, "Load and free wav/ogg files asynchronously.");
 int test_audio_load_asynchronous()
 {
-	app_t* app = app_make("audio test", 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN);
-	CUTE_TEST_CHECK_POINTER(app);
+	CUTE_TEST_ASSERT(!app_make("audio test", 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN).is_error());
 
 	promise_t promise;
 	promise.callback = s_audio_promise;
 
 	s_audio_error = error_success();
 	s_audio = NULL;
-	audio_stream_ogg(app, "test_data/3-6-19-blue-suit-jam.ogg", promise);
+	audio_stream_ogg("test_data/3-6-19-blue-suit-jam.ogg", promise);
 
 	while (!atomic_ptr_get((void**)&s_audio))
 		;
@@ -74,14 +73,14 @@ int test_audio_load_asynchronous()
 
 	s_audio_error = error_success();
 	s_audio = NULL;
-	audio_stream_wav(app, "test_data/jump.wav", promise);
+	audio_stream_wav("test_data/jump.wav", promise);
 
 	while (!atomic_ptr_get((void**)&s_audio))
 		;
 
 	CUTE_TEST_ASSERT(!audio_destroy(s_audio).is_error());
 
-	app_destroy(app);
+	app_destroy();
 
 	return 0;
 }

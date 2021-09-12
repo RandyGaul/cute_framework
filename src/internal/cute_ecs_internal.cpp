@@ -25,7 +25,7 @@
 namespace cute
 {
 
-error_t kv_val_entity(kv_t* kv, app_t* app, entity_t* entity)
+error_t kv_val_entity(kv_t* kv, entity_t* entity)
 {
 	kv_state_t state = kv_get_state(kv);
 	CUTE_ASSERT(state != KV_STATE_UNITIALIZED);

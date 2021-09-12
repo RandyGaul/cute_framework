@@ -141,7 +141,7 @@ static void s_stream_wav_task_fn(void* param)
 	CUTE_FREE(audio_param, audio_param->mem_ctx);
 }
 
-void audio_stream_ogg(app_t* app, const char* path, promise_t promise, void* user_allocator_context)
+void audio_stream_ogg(const char* path, promise_t promise, void* user_allocator_context)
 {
 	audio_param_t* param = (audio_param_t*)CUTE_ALLOC(sizeof(audio_param_t), user_allocator_context);
 	CUTE_PLACEMENT_NEW(param) audio_param_t;
@@ -153,7 +153,7 @@ void audio_stream_ogg(app_t* app, const char* path, promise_t promise, void* use
 	cute_threadpool_kick(app->threadpool);
 }
 
-void audio_stream_wav(app_t* app, const char* path, promise_t promise, void* user_allocator_context)
+void audio_stream_wav(const char* path, promise_t promise, void* user_allocator_context)
 {
 	audio_param_t* param = (audio_param_t*)CUTE_ALLOC(sizeof(audio_param_t), user_allocator_context);
 	CUTE_PLACEMENT_NEW(param) audio_param_t;
@@ -165,7 +165,7 @@ void audio_stream_wav(app_t* app, const char* path, promise_t promise, void* use
 	cute_threadpool_kick(app->threadpool);
 }
 
-void audio_stream_ogg_from_memory(app_t* app, void* memory, int byte_count, promise_t promise, void* user_allocator_context)
+void audio_stream_ogg_from_memory(void* memory, int byte_count, promise_t promise, void* user_allocator_context)
 {
 	audio_param_t* param = (audio_param_t*)CUTE_ALLOC(sizeof(audio_param_t), user_allocator_context);
 	CUTE_PLACEMENT_NEW(param) audio_param_t;
@@ -178,7 +178,7 @@ void audio_stream_ogg_from_memory(app_t* app, void* memory, int byte_count, prom
 	cute_threadpool_kick(app->threadpool);
 }
 
-void audio_stream_wav_from_memory(app_t* app, void* memory, int byte_count, promise_t promise, void* user_allocator_context)
+void audio_stream_wav_from_memory(void* memory, int byte_count, promise_t promise, void* user_allocator_context)
 {
 	audio_param_t* param = (audio_param_t*)CUTE_ALLOC(sizeof(audio_param_t), user_allocator_context);
 	CUTE_PLACEMENT_NEW(param) audio_param_t;
@@ -251,7 +251,7 @@ struct audio_system_t
 	void* mem_ctx = NULL;
 };
 
-static audio_instance_t* s_inst(app_t* app, audio_t* src, float volume)
+static audio_instance_t* s_inst(audio_t* src, float volume)
 {
 	audio_system_t* as = app->audio_system;
 	audio_instance_t* inst_ptr = CUTE_LIST_HOST(audio_instance_t, node, list_pop_back(&as->free_sounds));
@@ -264,7 +264,7 @@ static audio_instance_t* s_inst(app_t* app, audio_t* src, float volume)
 	return inst_ptr;
 }
 
-static audio_instance_t* s_inst(app_t* app, audio_t* src, sound_params_t params)
+static audio_instance_t* s_inst(audio_t* src, sound_params_t params)
 {
 	audio_system_t* as = app->audio_system;
 	audio_instance_t* inst_ptr = CUTE_LIST_HOST(audio_instance_t, node, list_pop_back(&as->free_sounds));
@@ -286,13 +286,13 @@ static audio_instance_t* s_inst(app_t* app, audio_t* src, sound_params_t params)
 	return inst_ptr;
 }
 
-error_t music_play(app_t* app, audio_t* audio_source, float fade_in_time)
+error_t music_play(audio_t* audio_source, float fade_in_time)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return error_failure("Audio system not initialized.");
 
 	if (as->music_state != MUSIC_STATE_PLAYING) {
-		error_t err = music_stop(app, 0);
+		error_t err = music_stop(0);
 		if (err.is_error()) return err;
 	}
 
@@ -314,7 +314,7 @@ error_t music_play(app_t* app, audio_t* audio_source, float fade_in_time)
 	float initial_volume = fade_in_time == 0 ? as->music_volume : 0;
 	CUTE_ASSERT(as->music_playing == NULL);
 	CUTE_ASSERT(as->music_next == NULL);
-	audio_instance_t* inst = s_inst(app, audio_source, initial_volume);
+	audio_instance_t* inst = s_inst(audio_source, initial_volume);
 	inst->sound.paused = 0;
 	as->music_playing = inst;
 	list_push_back(&as->playing_sounds, &inst->node);
@@ -322,7 +322,7 @@ error_t music_play(app_t* app, audio_t* audio_source, float fade_in_time)
 	return error_success();
 }
 
-error_t music_stop(app_t* app, float fade_out_time)
+error_t music_stop(float fade_out_time)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return error_failure("Audio system not initialized.");
@@ -391,7 +391,7 @@ error_t music_stop(app_t* app, float fade_out_time)
 	}
 }
 
-void music_set_volume(app_t* app, float volume)
+void music_set_volume(float volume)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return;
@@ -403,12 +403,12 @@ void music_set_volume(app_t* app, float volume)
 	if (as->music_next) cs_set_volume(&as->music_next->sound, music_volume, music_volume);
 }
 
-void music_set_pitch(app_t* app, float pitch)
+void music_set_pitch(float pitch)
 {
 	// Todo.
 }
 
-void music_set_loop(app_t* app, bool true_to_loop)
+void music_set_loop(bool true_to_loop)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return;
@@ -416,7 +416,7 @@ void music_set_loop(app_t* app, bool true_to_loop)
 	if (as->music_next) as->music_next->sound.looped = true_to_loop ? 1 : 0;
 }
 
-void music_pause(app_t* app)
+void music_pause()
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return;
@@ -428,7 +428,7 @@ void music_pause(app_t* app)
 	CUTE_DEBUG_PRINTF("MUSIC_STATE_PAUSED\n");
 }
 
-void music_resume(app_t* app)
+void music_resume()
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return;
@@ -439,7 +439,7 @@ void music_resume(app_t* app)
 	CUTE_DEBUG_PRINTF("music_state_to_resume_from_paused\n");
 }
 
-error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, float fade_in_time)
+error_t music_switch_to(audio_t* audio_source, float fade_out_time, float fade_in_time)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return error_failure("Audio system not initialized.");
@@ -449,12 +449,12 @@ error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, 
 
 	switch (as->music_state) {
 	case MUSIC_STATE_NONE:
-		return music_play(app, audio_source, fade_in_time);
+		return music_play(audio_source, fade_in_time);
 
 	case MUSIC_STATE_PLAYING:
 	{
 		CUTE_ASSERT(as->music_next == NULL);
-		audio_instance_t* inst = s_inst(app, audio_source, fade_in_time == 0 ? as->music_volume : 0);
+		audio_instance_t* inst = s_inst(audio_source, fade_in_time == 0 ? as->music_volume : 0);
 		as->music_next = inst;
 		list_push_back(&as->playing_sounds, &inst->node);
 
@@ -468,7 +468,7 @@ error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, 
 	case MUSIC_STATE_FADE_OUT:
 	{
 		CUTE_ASSERT(as->music_next == NULL);
-		audio_instance_t* inst = s_inst(app, audio_source, fade_in_time == 0 ? as->music_volume : 0);
+		audio_instance_t* inst = s_inst(audio_source, fade_in_time == 0 ? as->music_volume : 0);
 		as->music_next = inst;
 		list_push_back(&as->playing_sounds, &inst->node);
 
@@ -480,7 +480,7 @@ error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, 
 	case MUSIC_STATE_FADE_IN:
 	{
 		CUTE_ASSERT(as->music_next == NULL);
-		audio_instance_t* inst = s_inst(app, audio_source, fade_in_time == 0 ? as->music_volume : 0);
+		audio_instance_t* inst = s_inst(audio_source, fade_in_time == 0 ? as->music_volume : 0);
 		as->music_next = inst;
 		list_push_back(&as->playing_sounds, &inst->node);
 
@@ -493,7 +493,7 @@ error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, 
 	case MUSIC_STATE_SWITCH_TO_0:
 	{
 		CUTE_ASSERT(as->music_next != NULL);
-		audio_instance_t* inst = s_inst(app, audio_source, fade_in_time == 0 ? as->music_volume : 0);
+		audio_instance_t* inst = s_inst(audio_source, fade_in_time == 0 ? as->music_volume : 0);
 		as->music_next->sound.active = 0;
 		as->music_next = inst;
 		as->fade_switch_1 = fade_in_time;
@@ -504,7 +504,7 @@ error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, 
 	case MUSIC_STATE_SWITCH_TO_1:
 	{
 		CUTE_ASSERT(as->music_next != NULL);
-		audio_instance_t* inst = s_inst(app, audio_source, fade_in_time == 0 ? as->music_volume : 0);
+		audio_instance_t* inst = s_inst(audio_source, fade_in_time == 0 ? as->music_volume : 0);
 		as->music_playing = as->music_next;
 		as->music_next = inst;
 		list_push_back(&as->playing_sounds, &inst->node);
@@ -523,7 +523,7 @@ error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time, 
 	return error_success();
 }
 
-error_t music_crossfade(app_t* app, audio_t* audio_source, float cross_fade_time)
+error_t music_crossfade(audio_t* audio_source, float cross_fade_time)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return error_failure("Audio system not initialized.");
@@ -532,7 +532,7 @@ error_t music_crossfade(app_t* app, audio_t* audio_source, float cross_fade_time
 
 	switch (as->music_state) {
 	case MUSIC_STATE_NONE:
-		return music_play(app, audio_source, cross_fade_time);
+		return music_play(audio_source, cross_fade_time);
 
 	case MUSIC_STATE_PLAYING:
 	{
@@ -540,7 +540,7 @@ error_t music_crossfade(app_t* app, audio_t* audio_source, float cross_fade_time
 		as->music_state = MUSIC_STATE_CROSSFADE;
 		CUTE_DEBUG_PRINTF("MUSIC_STATE_CROSSFADE\n");
 
-		audio_instance_t* inst = s_inst(app, audio_source, cross_fade_time == 0 ? as->music_volume : 0);
+		audio_instance_t* inst = s_inst(audio_source, cross_fade_time == 0 ? as->music_volume : 0);
 		inst->sound.paused = 0;
 		as->music_next = inst;
 		list_push_back(&as->playing_sounds, &inst->node);
@@ -558,7 +558,7 @@ error_t music_crossfade(app_t* app, audio_t* audio_source, float cross_fade_time
 		as->music_state = MUSIC_STATE_CROSSFADE;
 		CUTE_DEBUG_PRINTF("MUSIC_STATE_CROSSFADE\n");
 
-		audio_instance_t* inst = s_inst(app, audio_source, cross_fade_time == 0 ? as->music_volume : 0);
+		audio_instance_t* inst = s_inst(audio_source, cross_fade_time == 0 ? as->music_volume : 0);
 		inst->sound.paused = 0;
 		as->music_next = inst;
 		list_push_back(&as->playing_sounds, &inst->node);
@@ -572,7 +572,7 @@ error_t music_crossfade(app_t* app, audio_t* audio_source, float cross_fade_time
 		CUTE_DEBUG_PRINTF("MUSIC_STATE_CROSSFADE\n");
 		as->music_next->sound.active = 0;
 
-		audio_instance_t* inst = s_inst(app, audio_source, cross_fade_time == 0 ? as->music_volume : 0);
+		audio_instance_t* inst = s_inst(audio_source, cross_fade_time == 0 ? as->music_volume : 0);
 		inst->sound.paused = 0;
 		as->music_next = inst;
 		list_push_back(&as->playing_sounds, &inst->node);
@@ -590,7 +590,7 @@ error_t music_crossfade(app_t* app, audio_t* audio_source, float cross_fade_time
 		as->music_playing->sound.active = 0;
 		as->music_playing = as->music_next;
 
-		audio_instance_t* inst = s_inst(app, audio_source, cross_fade_time == 0 ? as->music_volume : 0);
+		audio_instance_t* inst = s_inst(audio_source, cross_fade_time == 0 ? as->music_volume : 0);
 		inst->sound.paused = 0;
 		as->music_next = inst;
 		list_push_back(&as->playing_sounds, &inst->node);
@@ -607,7 +607,7 @@ error_t music_crossfade(app_t* app, audio_t* audio_source, float cross_fade_time
 
 // -------------------------------------------------------------------------------------------------
 
-sound_t sound_play(app_t* app, audio_t* audio_source, sound_params_t params, error_t* err)
+sound_t sound_play(audio_t* audio_source, sound_params_t params, error_t* err)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) {
@@ -620,7 +620,7 @@ sound_t sound_play(app_t* app, audio_t* audio_source, sound_params_t params, err
 		return sound_t();
 	}
 
-	audio_instance_t* inst = s_inst(app, audio_source, params);
+	audio_instance_t* inst = s_inst(audio_source, params);
 	list_push_back(&as->playing_sounds, &inst->node);
 
 	if (err) *err = error_success();
@@ -629,7 +629,7 @@ sound_t sound_play(app_t* app, audio_t* audio_source, sound_params_t params, err
 	return sound;
 }
 
-static audio_instance_t* s_get_inst(app_t* app, sound_t sound)
+static audio_instance_t* s_get_inst(sound_t sound)
 {
 	audio_system_t* as = app->audio_system;
 	CUTE_ASSERT(as);
@@ -641,14 +641,14 @@ static audio_instance_t* s_get_inst(app_t* app, sound_t sound)
 	}
 }
 
-bool sound_is_active(app_t* app, sound_t sound)
+bool sound_is_active(sound_t sound)
 {
-	return s_get_inst(app, sound) ? true : false;
+	return s_get_inst(sound) ? true : false;
 }
 
-bool sound_get_is_paused(app_t* app, sound_t sound)
+bool sound_get_is_paused(sound_t sound)
 {
-	audio_instance_t* inst = s_get_inst(app, sound);
+	audio_instance_t* inst = s_get_inst(sound);
 	if (inst) {
 		cs_lock(app->cute_sound);
 		bool paused = inst->sound.paused;
@@ -657,9 +657,9 @@ bool sound_get_is_paused(app_t* app, sound_t sound)
 	} else return 0;
 }
 
-bool sound_get_is_looped(app_t* app, sound_t sound)
+bool sound_get_is_looped(sound_t sound)
 {
-	audio_instance_t* inst = s_get_inst(app, sound);
+	audio_instance_t* inst = s_get_inst(sound);
 	if (inst) {
 		cs_lock(app->cute_sound);
 		bool looped = inst->sound.looped;
@@ -668,9 +668,9 @@ bool sound_get_is_looped(app_t* app, sound_t sound)
 	} else return 0;
 }
 
-float sound_get_volume(app_t* app, sound_t sound)
+float sound_get_volume(sound_t sound)
 {
-	audio_instance_t* inst = s_get_inst(app, sound);
+	audio_instance_t* inst = s_get_inst(sound);
 	if (inst) {
 		cs_lock(app->cute_sound);
 		float volume = inst->sound.volume0;
@@ -679,9 +679,9 @@ float sound_get_volume(app_t* app, sound_t sound)
 	} else return 0;
 }
 
-int sound_get_sample_index(app_t* app, sound_t sound)
+int sound_get_sample_index(sound_t sound)
 {
-	audio_instance_t* inst = s_get_inst(app, sound);
+	audio_instance_t* inst = s_get_inst(sound);
 	if (inst) {
 		cs_lock(app->cute_sound);
 		int index = inst->sound.sample_index;
@@ -690,9 +690,9 @@ int sound_get_sample_index(app_t* app, sound_t sound)
 	} else return 0;
 }
 
-void sound_set_is_paused(app_t* app, sound_t sound, bool true_for_paused)
+void sound_set_is_paused(sound_t sound, bool true_for_paused)
 {
-	audio_instance_t* inst = s_get_inst(app, sound);
+	audio_instance_t* inst = s_get_inst(sound);
 	if (inst) {
 		cs_lock(app->cute_sound);
 		inst->sound.paused = true_for_paused;
@@ -700,9 +700,9 @@ void sound_set_is_paused(app_t* app, sound_t sound, bool true_for_paused)
 	}
 }
 
-void sound_set_is_looped(app_t* app, sound_t sound, bool true_for_looped)
+void sound_set_is_looped(sound_t sound, bool true_for_looped)
 {
-	audio_instance_t* inst = s_get_inst(app, sound);
+	audio_instance_t* inst = s_get_inst(sound);
 	if (inst) {
 		cs_lock(app->cute_sound);
 		inst->sound.looped = true_for_looped;
@@ -710,9 +710,9 @@ void sound_set_is_looped(app_t* app, sound_t sound, bool true_for_looped)
 	}
 }
 
-void sound_set_volume(app_t* app, sound_t sound, float volume)
+void sound_set_volume(sound_t sound, float volume)
 {
-	audio_instance_t* inst = s_get_inst(app, sound);
+	audio_instance_t* inst = s_get_inst(sound);
 	if (inst) {
 		cs_lock(app->cute_sound);
 		inst->sound.volume0 = volume;
@@ -721,9 +721,9 @@ void sound_set_volume(app_t* app, sound_t sound, float volume)
 	}
 }
 
-void sound_set_sample_index(app_t* app, sound_t sound, int sample_index)
+void sound_set_sample_index(sound_t sound, int sample_index)
 {
-	audio_instance_t* inst = s_get_inst(app, sound);
+	audio_instance_t* inst = s_get_inst(sound);
 	if (inst) {
 		cs_lock(app->cute_sound);
 		inst->sound.sample_index = sample_index;
@@ -733,7 +733,7 @@ void sound_set_sample_index(app_t* app, sound_t sound, int sample_index)
 
 // -------------------------------------------------------------------------------------------------
 
-void audio_set_pan(app_t* app, float pan)
+void audio_set_pan(float pan)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return;
@@ -752,7 +752,7 @@ void audio_set_pan(app_t* app, float pan)
 	if (as->music_next) cs_set_pan(&as->music_next->sound, pan);
 }
 
-void audio_set_global_volume(app_t* app, float volume)
+void audio_set_global_volume(float volume)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return;
@@ -779,7 +779,7 @@ void audio_set_global_volume(app_t* app, float volume)
 	if (as->music_next) cs_set_volume(&as->music_next->sound, music_volume, music_volume);
 }
 
-void audio_set_sound_volume(app_t* app, float volume)
+void audio_set_sound_volume(float volume)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return;
@@ -800,7 +800,7 @@ void audio_set_sound_volume(app_t* app, float volume)
 	} while (playing_sound != end);
 }
 
-void audio_set_pause(app_t* app, bool true_for_paused)
+void audio_set_pause(bool true_for_paused)
 {
 	// TODO -- Expose a global paused variable in cute sound context.
 }

@@ -43,20 +43,20 @@ struct strpool_t;
 #define CUTE_APP_OPTIONS_WINDOW_POS_CENTERED            (1 << 7)
 #define CUTE_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT (1 << 8)
 
-CUTE_API app_t* CUTE_CALL app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
-CUTE_API void CUTE_CALL app_destroy(app_t* app);
+CUTE_API error_t CUTE_CALL app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL app_destroy();
 
-CUTE_API bool CUTE_CALL app_is_running(app_t* app);
-CUTE_API void CUTE_CALL app_stop_running(app_t* app);
-CUTE_API void CUTE_CALL app_update(app_t* app, float dt);
-CUTE_API void CUTE_CALL app_present(app_t* app);
+CUTE_API bool CUTE_CALL app_is_running();
+CUTE_API void CUTE_CALL app_stop_running();
+CUTE_API void CUTE_CALL app_update(float dt);
+CUTE_API void CUTE_CALL app_present();
 
-CUTE_API error_t CUTE_CALL app_init_net(app_t* app);
-CUTE_API error_t CUTE_CALL app_init_audio(app_t* app, bool spawn_mix_thread = true, int max_simultaneous_sounds = 5000);
-CUTE_API void CUTE_CALL app_do_mixing(app_t* app);
-CUTE_API ImGuiContext* CUTE_CALL app_init_imgui(app_t* app, bool no_default_font = false);
-CUTE_API sg_imgui_t* CUTE_CALL app_get_sokol_imgui(app_t* app);
-CUTE_API strpool_t* CUTE_CALL app_get_strpool(app_t* app);
+CUTE_API error_t CUTE_CALL app_init_net();
+CUTE_API error_t CUTE_CALL app_init_audio(bool spawn_mix_thread = true, int max_simultaneous_sounds = 5000);
+CUTE_API void CUTE_CALL app_do_mixing();
+CUTE_API ImGuiContext* CUTE_CALL app_init_imgui(bool no_default_font = false);
+CUTE_API sg_imgui_t* CUTE_CALL app_get_sokol_imgui();
+CUTE_API strpool_t* CUTE_CALL app_get_strpool();
 
 enum upscale_t
 {
@@ -67,8 +67,8 @@ enum upscale_t
 	UPSCALE_STRETCH,
 };
 
-CUTE_API error_t CUTE_CALL app_init_upscaling(app_t* app, upscale_t upscaling, int offscreen_w, int offscreen_h);
-CUTE_API void CUTE_CALL app_offscreen_size(app_t* app, int* offscreen_w, int* offscreen_h);
+CUTE_API error_t CUTE_CALL app_init_upscaling(upscale_t upscaling, int offscreen_w, int offscreen_h);
+CUTE_API void CUTE_CALL app_offscreen_size(int* offscreen_w, int* offscreen_h);
 
 enum power_state_t
 {
@@ -86,7 +86,7 @@ struct power_info_t
 	int percentage_left; // The percentage of battery life left from 0 to 100. -1 means not running on the battery, or unable to get a valid value.
 };
 
-CUTE_API power_info_t CUTE_CALL app_power_info(app_t* app);
+CUTE_API power_info_t CUTE_CALL app_power_info();
 
 // TODO - Where to put this?
 CUTE_API void CUTE_CALL sleep(int milliseconds);

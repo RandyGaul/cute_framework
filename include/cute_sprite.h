@@ -179,19 +179,19 @@ struct sprite_t
  * Loads a single-frame sprite from a single png file. This function may be called many times in a row without
  * any significant performance penalties due to internal caching.
  */
-CUTE_API sprite_t CUTE_CALL easy_sprite_make(app_t* app, const char* png_path);
+CUTE_API sprite_t CUTE_CALL easy_sprite_make(const char* png_path);
 
 /**
  * Unloads the sprites image resources from the internal cache. Any live `sprite_t` instances for
  * the given `png_path` will now be "dangling" and invalid.
  */
-CUTE_API void CUTE_CALL easy_sprite_unload(app_t* app, sprite_t sprite);
+CUTE_API void CUTE_CALL easy_sprite_unload(sprite_t sprite);
 
 /**
  * Gets the internal batch used for `easy_sprite_make` and `easy_sprite_unload`. The batch is used to get
  * sprites onto the screen by calling `batch_flush`.
  */
-CUTE_API batch_t* CUTE_CALL easy_sprite_get_batch(app_t* app);
+CUTE_API batch_t* CUTE_CALL easy_sprite_get_batch();
 
 //--------------------------------------------------------------------------------------------------
 // Aseprite sprite API. This is the preferred way to deal with sprites in Cute Framework, by loading
@@ -202,19 +202,19 @@ CUTE_API batch_t* CUTE_CALL easy_sprite_get_batch(app_t* app);
  * Loads a sprite from an aseprite file. This function may be called many times in a row without
  * any significant performance penalties due to internal caching.
  */
-CUTE_API sprite_t CUTE_CALL sprite_make(app_t* app, const char* aseprite_path);
+CUTE_API sprite_t CUTE_CALL sprite_make(const char* aseprite_path);
 
 /**
  * Unloads the sprites image resources from the internal cache. Any live `sprite_t` instances for
  * the given `aseprite_path` will now be "dangling" and invalid.
  */
-CUTE_API void CUTE_CALL sprite_unload(app_t* app, const char* aseprite_path);
+CUTE_API void CUTE_CALL sprite_unload(const char* aseprite_path);
 
 /**
  * Gets the internal batch used for `sprite_make` and `sprite_unload`. The batch is used to get
  * sprites onto the screen by calling `batch_flush`.
  */
-CUTE_API batch_t* CUTE_CALL sprite_get_batch(app_t* app);
+CUTE_API batch_t* CUTE_CALL sprite_get_batch();
 
 //--------------------------------------------------------------------------------------------------
 // In-line implementation of `sprite_t` member functions.

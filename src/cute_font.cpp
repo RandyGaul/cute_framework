@@ -65,7 +65,7 @@ static void s_r_splat(image_t* img)
 	}
 }
 
-font_t* font_load_bmfont(app_t* app, const char* font_path, const char* font_image_path)
+font_t* font_load_bmfont(const char* font_path, const char* font_image_path)
 {
 	void* font_data;
 	size_t font_size;
@@ -98,7 +98,7 @@ void font_free(font_t* font)
 	cute_font_free((cute_font_t*)font);
 }
 
-static void s_load_courier_new(app_t* app)
+static void s_load_courier_new()
 {
 	if (!app->courier_new) {
 		image_t img;
@@ -111,13 +111,13 @@ static void s_load_courier_new(app_t* app)
 	}
 }
 
-const font_t* font_get_default(app_t* app)
+const font_t* font_get_default()
 {
-	s_load_courier_new(app);
+	s_load_courier_new();
 	return (font_t*)app->courier_new;
 }
 
-void font_push_verts(app_t* app, const font_t* font, const char* text, float x, float y, float wrap_w, const aabb_t* clip_box)
+void font_push_verts(const font_t* font, const char* text, float x, float y, float wrap_w, const aabb_t* clip_box)
 {
 	int vert_count = 0;
 	cute_font_t* cute_font = (cute_font_t*)font;
@@ -147,7 +147,7 @@ void font_push_verts(app_t* app, const font_t* font, const char* text, float x, 
 	font_verts.set_count(font_verts.count() + vert_count);
 }
 
-void font_draw(app_t* app, const font_t* font, matrix_t mvp, color_t color)
+void font_draw(const font_t* font, matrix_t mvp, color_t color)
 {
 	error_t err = triple_buffer_append(&app->font_buffer, app->font_verts.count(), app->font_verts.data());
 	CUTE_ASSERT(!err.is_error());
@@ -165,12 +165,12 @@ void font_draw(app_t* app, const font_t* font, matrix_t mvp, color_t color)
 	app->font_verts.clear();
 }
 
-void font_borders(app_t* app, bool use_borders)
+void font_borders(bool use_borders)
 {
 	app->font_fs_uniforms.u_use_border = use_borders ? 1.0f : 0.0f;
 }
 
-void font_toggle_borders(app_t* app)
+void font_toggle_borders()
 {
 	if (app->font_fs_uniforms.u_use_border) {
 		app->font_fs_uniforms.u_use_border = 0;
@@ -179,17 +179,17 @@ void font_toggle_borders(app_t* app)
 	}
 }
 
-bool font_is_borders_on(app_t* app)
+bool font_is_borders_on()
 {
 	return app->font_fs_uniforms.u_use_border ? true : false;
 }
 
-void font_border_color(app_t* app, color_t color)
+void font_border_color(color_t color)
 {
 	app->font_fs_uniforms.u_border_color = color;
 }
 
-void font_border_use_corners(app_t* app, bool use_corners)
+void font_border_use_corners(bool use_corners)
 {
 	app->font_fs_uniforms.u_use_corners = use_corners ? 1.0f : 0.0f;
 }
@@ -217,9 +217,9 @@ int font_text_height(const font_t* font, const char* text)
 // -------------------------------------------------------------------------------------------------
 // Internal.
 
-void font_init(app_t* app)
+void font_init()
 {
-	s_load_courier_new(app);
+	s_load_courier_new();
 
 	app->font_shader = sg_make_shader(font_shd_shader_desc(sg_query_backend()));
 

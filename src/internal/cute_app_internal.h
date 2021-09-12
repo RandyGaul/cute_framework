@@ -50,6 +50,8 @@ struct cs_context_t;
 namespace cute
 {
 
+extern app_t* app;
+
 struct gfx_t;
 struct audio_system_t;
 
@@ -99,9 +101,9 @@ struct system_internal_t
 
 	strpool_id name = { 0 };
 	void* udata = NULL;
-	void (*pre_update_fn)(app_t* app, float dt, void* udata) = NULL;
+	void (*pre_update_fn)(float dt, void* udata) = NULL;
 	void* update_fn = NULL;
-	void (*post_update_fn)(app_t* app, float dt, void* udata) = NULL;
+	void (*post_update_fn)(float dt, void* udata) = NULL;
 	array<strpool_id> component_type_tuple;
 };
 

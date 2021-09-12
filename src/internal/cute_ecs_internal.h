@@ -28,7 +28,7 @@
 namespace cute
 {
 
-CUTE_API error_t CUTE_CALL kv_val_entity(kv_t* kv, app_t* app, entity_t* entity);
+CUTE_API error_t CUTE_CALL kv_val_entity(kv_t* kv, entity_t* entity);
 
 }
 

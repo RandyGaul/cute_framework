@@ -57,7 +57,7 @@ int joypad_count()
 	return SDL_NumJoysticks();
 }
 
-joypad_t* joypad_open(app_t* app, int index)
+joypad_t* joypad_open(int index)
 {
 	if (SDL_IsGameController(index)) {
 		SDL_GameController* controller = SDL_GameControllerOpen(index);

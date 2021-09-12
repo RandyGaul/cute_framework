@@ -59,7 +59,7 @@ CUTE_API int CUTE_CALL joypad_count();
  * `index` is a number from 0 to `joypad_count`. The first joypad connected to the system is 0,
  * the second is 1, and so on.
  */
-CUTE_API joypad_t* CUTE_CALL joypad_open(app_t* app, int index);
+CUTE_API joypad_t* CUTE_CALL joypad_open(int index);
 
 /**
  * Destroys a joypad previously opened by `joypad_open`.

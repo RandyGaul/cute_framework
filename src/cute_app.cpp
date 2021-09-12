@@ -74,9 +74,11 @@
 namespace cute
 {
 
+app_t* app;
+
 // TODO: Refactor to use error_t reporting.
 
-app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t options, const char* argv0, void* user_allocator_context)
+error_t app_make(const char* window_title, int x, int y, int w, int h, uint32_t options, const char* argv0, void* user_allocator_context)
 {
 	SDL_SetMainReady();
 
@@ -90,7 +92,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	}
 #endif
 	if (SDL_Init(sdl_options)) {
-		return NULL;
+		return error_failure("SDL_Init failed");
 	}
 
 	if (options & CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT) {
@@ -145,6 +147,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 	app->y = y;
 	app->offscreen_w = w;
 	app->offscreen_h = h;
+	cute::app = app;
 
 #ifdef CUTE_WINDOWS
 	SDL_SysWMinfo wmInfo;
@@ -160,9 +163,8 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		SDL_GL_SetSwapInterval(0);
 		SDL_GLContext ctx = SDL_GL_CreateContext(window);
 		if (!ctx) {
-			CUTE_DEBUG_PRINTF("Unable to create OpenGL context.");
 			CUTE_FREE(app, user_allocator_context);
-			return NULL;
+			return error_failure("Unable to create OpenGL context.");
 		}
 #ifdef __glad_h_
 #	ifdef CUTE_EMSCRIPTEN
@@ -178,7 +180,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		params.context = app->gfx_ctx_params;
 		sg_setup(params);
 		app->gfx_enabled = true;
-		font_init(app);
+		font_init();
 	}
 
 	if (options & CUTE_APP_OPTIONS_D3D11_CONTEXT) {
@@ -188,7 +190,7 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 		params.context = app->gfx_ctx_params;
 		sg_setup(params);
 		app->gfx_enabled = true;
-		font_init(app);
+		font_init();
 	}
 
 	int num_threads_to_spawn = core_count() - 1;
@@ -206,10 +208,10 @@ app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t o
 
 	app->strpool = make_strpool();
 
-	return app;
+	return error_success();
 }
 
-void app_destroy(app_t* app)
+void app_destroy()
 {
 	destroy_strpool(app->strpool);
 	if (app->using_imgui) {
@@ -246,20 +248,20 @@ void app_destroy(app_t* app)
 	file_system_destroy();
 }
 
-bool app_is_running(app_t* app)
+bool app_is_running()
 {
 	return app->running;
 }
 
-void app_stop_running(app_t* app)
+void app_stop_running()
 {
 	app->running = 0;
 }
 
-void app_update(app_t* app, float dt)
+void app_update(float dt)
 {
 	app->dt = dt;
-	pump_input_msgs(app);
+	pump_input_msgs();
 	if (app->audio_system) {
 		audio_system_update(app->audio_system, dt);
 #ifdef CUTE_EMSCRIPTEN
@@ -286,7 +288,7 @@ void app_update(app_t* app, float dt)
 	}
 }
 
-static void s_imgui_present(app_t* app)
+static void s_imgui_present()
 {
 	if (app->using_imgui) {
 		ImGui::EndFrame();
@@ -295,7 +297,7 @@ static void s_imgui_present(app_t* app)
 	}
 }
 
-void app_present(app_t* app)
+void app_present()
 {
 	if (app->offscreen_enabled) {
 		sg_end_pass();
@@ -314,13 +316,13 @@ void app_present(app_t* app)
 		sg_draw(0, 6, 1);
 		if (app->using_imgui) {
 			sg_imgui_draw(&app->sg_imgui);
-			s_imgui_present(app);
+			s_imgui_present();
 		}
 		sg_end_pass();
 	} else {
 		if (app->using_imgui) {
 			sg_imgui_draw(&app->sg_imgui);
-			s_imgui_present(app);
+			s_imgui_present();
 		}
 		sg_end_pass();
 	}
@@ -337,14 +339,14 @@ void app_present(app_t* app)
 
 // TODO - Move these init functions into audio/net headers.
 
-error_t app_init_net(app_t* app)
+error_t app_init_net()
 {
 	error_t err = crypto_init();
 	if (err.is_error()) return err;
 	return net_init();
 }
 
-error_t app_init_audio(app_t* app, bool spawn_mix_thread, int max_simultaneous_sounds)
+error_t app_init_audio(bool spawn_mix_thread, int max_simultaneous_sounds)
 {
 	int more_on_emscripten = 1;
 #ifdef CUTE_EMSCRIPTEN
@@ -365,7 +367,7 @@ error_t app_init_audio(app_t* app, bool spawn_mix_thread, int max_simultaneous_s
 	}
 }
 
-void app_do_mixing(app_t* app)
+void app_do_mixing()
 {
 #ifdef CUTE_EMSCRIPTEN
 	cs_mix(app->cute_sound);
@@ -376,7 +378,7 @@ void app_do_mixing(app_t* app)
 #endif // CUTE_EMSCRIPTEN
 }
 
-ImGuiContext* app_init_imgui(app_t* app, bool no_default_font)
+ImGuiContext* app_init_imgui(bool no_default_font)
 {
 	if (!app->gfx_enabled) return NULL;
 
@@ -395,13 +397,13 @@ ImGuiContext* app_init_imgui(app_t* app, bool no_default_font)
 	return ::ImGui::GetCurrentContext();
 }
 
-sg_imgui_t* app_get_sokol_imgui(app_t* app)
+sg_imgui_t* app_get_sokol_imgui()
 {
 	if (!app->using_imgui) return NULL;
 	return &app->sg_imgui;
 }
 
-strpool_t* app_get_strpool(app_t* app)
+strpool_t* app_get_strpool()
 {
 	return app->strpool;
 }
@@ -433,7 +435,7 @@ static void s_quad(float x, float y, float sx, float sy, float* out)
 	CUTE_MEMCPY(out, quad, sizeof(quad));
 }
 
-static float s_max_scaling_factor(app_t* app)
+static float s_max_scaling_factor()
 {
 	float scale = 1.0f;
 	int i = 0;
@@ -464,7 +466,7 @@ static float s_enforce_scale(upscale_t upscaling, float scale)
 	}
 }
 
-error_t app_init_upscaling(app_t* app, upscale_t upscaling, int offscreen_w, int offscreen_h)
+error_t app_init_upscaling(upscale_t upscaling, int offscreen_w, int offscreen_h)
 {
 	if (app->offscreen_enabled) {
 		error_failure("Upscaling is already enabled.");
@@ -507,7 +509,7 @@ error_t app_init_upscaling(app_t* app, upscale_t upscaling, int offscreen_w, int
 	app->offscreen_shader = sg_make_shader(upscale_shd_shader_desc(sg_query_backend()));
 	if (app->offscreen_shader.id == SG_INVALID_ID) return error_failure("Unable create offscreen shader.");
 
-	float scale = s_max_scaling_factor(app);
+	float scale = s_max_scaling_factor();
 	scale = s_enforce_scale(app->upscaling, scale);
 	app->upscale = { scale * (float)app->offscreen_w / (float)app->w, scale * (float)app->offscreen_h / (float)app->h };
 
@@ -530,13 +532,13 @@ error_t app_init_upscaling(app_t* app, upscale_t upscaling, int offscreen_w, int
 	return error_success();
 }
 
-void app_offscreen_size(app_t* app, int* offscreen_w, int* offscreen_h)
+void app_offscreen_size(int* offscreen_w, int* offscreen_h)
 {
 	*offscreen_w = app->offscreen_w;
 	*offscreen_h = app->offscreen_h;
 }
 
-power_info_t app_power_info(app_t* app)
+power_info_t app_power_info()
 {
 	power_info_t info;
 	SDL_PowerState state = SDL_GetPowerInfo(&info.seconds_left, &info.percentage_left);

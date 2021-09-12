@@ -206,19 +206,19 @@ static int s_map_SDL_keys(int key)
 	return 0;
 }
 
-bool key_is_down(app_t* app, key_button_t key)
+bool key_is_down(key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 	return app->keys[key];
 }
 
-bool key_is_up(app_t* app, key_button_t key)
+bool key_is_up(key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 	return !app->keys[key];
 }
 
-bool key_was_pressed(app_t* app, key_button_t key)
+bool key_was_pressed(key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 
@@ -235,34 +235,34 @@ bool key_was_pressed(app_t* app, key_button_t key)
 	return (app->keys[key] & !app->keys_prev[key]) | repeat_count;
 }
 
-bool key_was_released(app_t* app, key_button_t key)
+bool key_was_released(key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 	return !app->keys[key] && app->keys_prev[key];
 }
 
-void clear_all_key_state(app_t* app)
+void clear_all_key_state()
 {
 	CUTE_MEMSET(app->keys, 0, sizeof(app->keys));
 	CUTE_MEMSET(app->keys_prev, 0, sizeof(app->keys_prev));
 }
 
-int key_mod_bit_flags(app_t* app)
+int key_mod_bit_flags()
 {
 	return app->key_mod;
 }
 
-int mouse_x(app_t* app)
+int mouse_x()
 {
 	return app->mouse.x;
 }
 
-int mouse_y(app_t* app)
+int mouse_y()
 {
 	return app->mouse.y;
 }
 
-v2 mouse_pos_in_world_space(app_t* app)
+v2 mouse_pos_in_world_space()
 {
 	float w = (float)app->w;
 	float h = (float)app->h;
@@ -278,7 +278,7 @@ v2 mouse_pos_in_world_space(app_t* app)
 	return p;
 }
 
-bool mouse_is_down(app_t* app, mouse_button_t button)
+bool mouse_is_down(mouse_button_t button)
 {
 	switch (button)
 	{
@@ -289,7 +289,7 @@ bool mouse_is_down(app_t* app, mouse_button_t button)
 	return 0;
 }
 
-bool mouse_is_up(app_t* app, mouse_button_t button)
+bool mouse_is_up(mouse_button_t button)
 {
 	switch (button)
 	{
@@ -300,7 +300,7 @@ bool mouse_is_up(app_t* app, mouse_button_t button)
 	return 0;
 }
 
-bool mouse_was_pressed(app_t* app, mouse_button_t button)
+bool mouse_was_pressed(mouse_button_t button)
 {
 	switch (button)
 	{
@@ -311,7 +311,7 @@ bool mouse_was_pressed(app_t* app, mouse_button_t button)
 	return 0;
 }
 
-bool mouse_was_released(app_t* app, mouse_button_t button)
+bool mouse_was_released(mouse_button_t button)
 {
 	switch (button)
 	{
@@ -322,28 +322,28 @@ bool mouse_was_released(app_t* app, mouse_button_t button)
 	return 0;
 }
 
-int mouse_wheel_motion(app_t* app)
+int mouse_wheel_motion()
 {
 	return app->mouse.wheel_motion;
 }
 
-bool mouse_is_down_double_click(app_t* app, mouse_button_t button)
+bool mouse_is_down_double_click(mouse_button_t button)
 {
-	return mouse_is_down(app, button) && app->mouse.click_type == MOUSE_CLICK_DOUBLE;
+	return mouse_is_down(button) && app->mouse.click_type == MOUSE_CLICK_DOUBLE;
 }
 
-bool mouse_double_click_was_pressed(app_t* app, mouse_button_t button)
+bool mouse_double_click_was_pressed(mouse_button_t button)
 {
-	return mouse_was_pressed(app, button) && app->mouse.click_type == MOUSE_CLICK_DOUBLE;
+	return mouse_was_pressed(button) && app->mouse.click_type == MOUSE_CLICK_DOUBLE;
 }
 
-void clear_all_mouse_state(app_t* app)
+void clear_all_mouse_state()
 {
 	CUTE_MEMSET(&app->mouse, 0, sizeof(app->mouse));
 	CUTE_MEMSET(&app->mouse_prev, 0, sizeof(app->mouse_prev));
 }
 
-void input_text_add_utf8(app_t* app, const char* text)
+void input_text_add_utf8(const char* text)
 {
 	while (*text) {
 		int cp;
@@ -352,17 +352,17 @@ void input_text_add_utf8(app_t* app, const char* text)
 	}
 }
 
-int input_text_pop_utf32(app_t* app)
+int input_text_pop_utf32()
 {
 	return app->input_text.pop();
 }
 
-bool input_text_has_data(app_t* app)
+bool input_text_has_data()
 {
 	return app->input_text.count() > 0 ? true : false;
 }
 
-void input_text_clear(app_t* app)
+void input_text_clear()
 {
 	app->input_text.clear();
 }
@@ -386,7 +386,7 @@ bool input_has_ime_keyboard_support()
 	return SDL_HasScreenKeyboardSupport();
 }
 
-bool input_is_ime_keyboard_shown(app_t* app)
+bool input_is_ime_keyboard_shown()
 {
 	return SDL_IsScreenKeyboardShown(app->window);
 }
@@ -397,7 +397,7 @@ void input_set_ime_rect(int x, int y, int w, int h)
 	SDL_SetTextInputRect(&r);
 }
 
-bool input_get_ime_composition(app_t* app, ime_composition_t* composition)
+bool input_get_ime_composition(ime_composition_t* composition)
 {
 	composition->composition = app->ime_composition.data();
 	composition->cursor = app->ime_composition_cursor;
@@ -405,7 +405,7 @@ bool input_get_ime_composition(app_t* app, ime_composition_t* composition)
 	return app->ime_composition.count() ? true : false;
 }
 
-static void s_touch_remove(app_t* app, uint64_t id)
+static void s_touch_remove(uint64_t id)
 {
 	for (int i = 0; i < app->touches.size(); ++i) {
 		if (app->touches[i].id == id) {
@@ -415,12 +415,12 @@ static void s_touch_remove(app_t* app, uint64_t id)
 	}
 }
 
-array<touch_t> touch_get_all(app_t* app)
+array<touch_t> touch_get_all()
 {
 	return app->touches;
 }
 
-bool touch_get(app_t* app, uint64_t id, touch_t* touch)
+bool touch_get(uint64_t id, touch_t* touch)
 {
 	for (int i = 0; i < app->touches.size(); ++i) {
 		if (app->touches[i].id == id) {
@@ -431,7 +431,7 @@ bool touch_get(app_t* app, uint64_t id, touch_t* touch)
 	return false;
 }
 
-static joypad_t* s_joy(app_t* app, SDL_JoystickID id)
+static joypad_t* s_joy(SDL_JoystickID id)
 {
 	for (list_node_t* n = list_begin(&app->joypads); n != list_end(&app->joypads); n = n->next) {
 		joypad_t* joypad = CUTE_LIST_HOST(joypad_t, node, n);
@@ -440,7 +440,7 @@ static joypad_t* s_joy(app_t* app, SDL_JoystickID id)
 	return NULL;
 }
 
-void pump_input_msgs(app_t* app)
+void pump_input_msgs()
 {
 	// Clear any necessary single-frame state and copy to `prev` states.
 	app->mouse.xrel = 0;
@@ -460,7 +460,7 @@ void pump_input_msgs(app_t* app)
 	// Update key durations to simulate "press and hold" style for `key_was_pressed`.
 	for (int i = 0; i < 512; ++i)
 	{
-		if (key_is_down(app, (key_button_t)i)) {
+		if (key_is_down((key_button_t)i)) {
 			if (app->keys_duration[i] < 0) {
 				app->keys_duration[i] = 0;
 			} else {
@@ -551,7 +551,7 @@ void pump_input_msgs(app_t* app)
 
 		case SDL_TEXTINPUT:
 		{
-			input_text_add_utf8(app, event.text.text);
+			input_text_add_utf8(event.text.text);
 			app->ime_composition.clear();
 			app->ime_composition_cursor = 0;
 			app->ime_composition_selection_len = 0;
@@ -611,7 +611,7 @@ void pump_input_msgs(app_t* app)
 		case SDL_CONTROLLERBUTTONUP:
 		{
 			SDL_JoystickID id = event.cbutton.which;
-			joypad_t* joypad = s_joy(app, id);
+			joypad_t* joypad = s_joy(id);
 			if (joypad) {
 				int button = (int)event.cbutton.button;
 				CUTE_ASSERT(button >= 0 && button < JOYPAD_BUTTON_COUNT);
@@ -622,7 +622,7 @@ void pump_input_msgs(app_t* app)
 		case SDL_CONTROLLERBUTTONDOWN:
 		{
 			SDL_JoystickID id = event.cbutton.which;
-			joypad_t* joypad = s_joy(app, id);
+			joypad_t* joypad = s_joy(id);
 			if (joypad) {
 				int button = (int)event.cbutton.button;
 				CUTE_ASSERT(button >= 0 && button < JOYPAD_BUTTON_COUNT);
@@ -633,7 +633,7 @@ void pump_input_msgs(app_t* app)
 		case SDL_CONTROLLERAXISMOTION:
 		{
 			SDL_JoystickID id = event.caxis.which;
-			joypad_t* joypad = s_joy(app, id);
+			joypad_t* joypad = s_joy(id);
 			if (joypad) {
 				int axis = (int)event.caxis.axis;
 				int value = (int)event.caxis.value;
@@ -645,7 +645,7 @@ void pump_input_msgs(app_t* app)
 		case SDL_FINGERDOWN:
 		{
 			uint64_t id = (uint64_t)event.tfinger.fingerId;
-			s_touch_remove(app, id);
+			s_touch_remove(id);
 			touch_t& touch = app->touches.add();
 			touch.id = id;
 			touch.pressure = event.tfinger.pressure;
@@ -657,7 +657,7 @@ void pump_input_msgs(app_t* app)
 		{
 			uint64_t id = (uint64_t)event.tfinger.fingerId;
 			touch_t touch;
-			if (touch_get(app, id, &touch)) {
+			if (touch_get(id, &touch)) {
 				touch.pressure = event.tfinger.pressure;
 				touch.x = event.tfinger.x * app->w; // NOTE: Probably wrong for high-DPI.
 				touch.y = event.tfinger.y * app->h; // NOTE: Probably wrong for high-DPI.
@@ -673,31 +673,31 @@ void pump_input_msgs(app_t* app)
 		case SDL_FINGERUP:
 		{
 			uint64_t id = (uint64_t)event.tfinger.fingerId;
-			s_touch_remove(app, id);
+			s_touch_remove(id);
 		}	break;
 		}
 	}
 
 	// Keep track of key mod states (alt/shift etc).
-	if (key_is_down(app, KEY_NUMLOCKCLEAR)) app->key_mod |= CUTE_KEY_MOD_NUMLOCK;
+	if (key_is_down(KEY_NUMLOCKCLEAR)) app->key_mod |= CUTE_KEY_MOD_NUMLOCK;
 	else app->key_mod &= ~CUTE_KEY_MOD_NUMLOCK;
-	if (key_is_down(app, KEY_CAPSLOCK)) app->key_mod |= CUTE_KEY_MOD_CAPSLOCK;
+	if (key_is_down(KEY_CAPSLOCK)) app->key_mod |= CUTE_KEY_MOD_CAPSLOCK;
 	else app->key_mod &= ~CUTE_KEY_MOD_CAPSLOCK;
-	if (key_is_down(app, KEY_LGUI)) app->key_mod |= CUTE_KEY_MOD_LGUI;
+	if (key_is_down(KEY_LGUI)) app->key_mod |= CUTE_KEY_MOD_LGUI;
 	else app->key_mod &= ~CUTE_KEY_MOD_LGUI;
-	if (key_is_down(app, KEY_RGUI)) app->key_mod |= CUTE_KEY_MOD_RGUI;
+	if (key_is_down(KEY_RGUI)) app->key_mod |= CUTE_KEY_MOD_RGUI;
 	else app->key_mod &= ~CUTE_KEY_MOD_RGUI;
-	if (key_is_down(app, KEY_LCTRL)) app->key_mod |= CUTE_KEY_MOD_LCTRL;
+	if (key_is_down(KEY_LCTRL)) app->key_mod |= CUTE_KEY_MOD_LCTRL;
 	else app->key_mod &= ~CUTE_KEY_MOD_LCTRL;
-	if (key_is_down(app, KEY_RCTRL)) app->key_mod |= CUTE_KEY_MOD_RCTRL;
+	if (key_is_down(KEY_RCTRL)) app->key_mod |= CUTE_KEY_MOD_RCTRL;
 	else app->key_mod &= ~CUTE_KEY_MOD_RCTRL;
-	if (key_is_down(app, KEY_LSHIFT)) app->key_mod |= CUTE_KEY_MOD_LSHIFT;
+	if (key_is_down(KEY_LSHIFT)) app->key_mod |= CUTE_KEY_MOD_LSHIFT;
 	else app->key_mod &= ~CUTE_KEY_MOD_LSHIFT;
-	if (key_is_down(app, KEY_RSHIFT)) app->key_mod |= CUTE_KEY_MOD_RSHIFT;
+	if (key_is_down(KEY_RSHIFT)) app->key_mod |= CUTE_KEY_MOD_RSHIFT;
 	else app->key_mod &= ~CUTE_KEY_MOD_RSHIFT;
-	if (key_is_down(app, KEY_RALT)) app->key_mod |= CUTE_KEY_MOD_RALT;
+	if (key_is_down(KEY_RALT)) app->key_mod |= CUTE_KEY_MOD_RALT;
 	else app->key_mod &= ~CUTE_KEY_MOD_RALT;
-	if (key_is_down(app, KEY_RALT)) app->key_mod |= CUTE_KEY_MOD_RALT;
+	if (key_is_down(KEY_RALT)) app->key_mod |= CUTE_KEY_MOD_RALT;
 	else app->key_mod &= ~CUTE_KEY_MOD_RALT;
 }
 

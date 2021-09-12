@@ -34,7 +34,7 @@ namespace cute
 
 using font_vertex_t = cute_font_vert_t;
 
-void font_init(app_t* app);
+void font_init();
 
 }
 

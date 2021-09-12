@@ -25,16 +25,15 @@ using namespace cute;
 CUTE_TEST_CASE(test_sprite_make, "Load a sprite destroy it.");
 int test_sprite_make()
 {
-	app_t* app = app_make("sprite test", 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN | CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT);
-	CUTE_TEST_CHECK_POINTER(app);
-	app_init_upscaling(app, UPSCALE_PIXEL_PERFECT_AT_LEAST_2X, 160, 120);
+	CUTE_TEST_ASSERT(!app_make("sprite test", 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN | CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT).is_error());
+	app_init_upscaling(UPSCALE_PIXEL_PERFECT_AT_LEAST_2X, 160, 120);
 
-	sprite_t s = sprite_make(app, "test_data/girl.aseprite");
-	batch_t* batch = sprite_get_batch(app);
+	sprite_t s = sprite_make("test_data/girl.aseprite");
+	batch_t* batch = sprite_get_batch();
 	batch_flush(batch);
-	app_present(app);
+	app_present();
 
-	app_destroy(app);
+	app_destroy();
 
 	return 0;
 }
