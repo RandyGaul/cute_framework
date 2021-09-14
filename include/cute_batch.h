@@ -140,8 +140,8 @@ CUTE_API void CUTE_CALL batch_tri(batch_t* b, v2 p0, v2 p1, v2 p2, color_t c0, c
 CUTE_API void CUTE_CALL batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float thickness, color_t c);
 CUTE_API void CUTE_CALL batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float thickness, color_t c0, color_t c1, color_t c2);
 
-CUTE_API void CUTE_CALL batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c);
-CUTE_API void CUTE_CALL batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c0, color_t c1);
+CUTE_API void CUTE_CALL batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c, bool antialias = false);
+CUTE_API void CUTE_CALL batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c0, color_t c1, bool antialias = false);
 
 
 /**

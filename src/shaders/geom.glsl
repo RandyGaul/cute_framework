@@ -16,7 +16,7 @@
 
 	void main()
 	{
-		vec4 posH = u_mvp * vec4(round(in_pos), 0, 1);
+		vec4 posH = u_mvp * vec4(in_pos, 0, 1);
 		col = in_col;
 		gl_Position = posH;
 }

@@ -373,12 +373,13 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 	params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
 	params.shader = sg_make_shader(geom_shd_shader_desc(sg_query_backend()));
 	params.colors[0].blend.enabled = true;
-	params.colors[0].blend.src_factor_rgb = SG_BLENDFACTOR_ONE;
+	params.colors[0].blend.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
 	params.colors[0].blend.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
 	params.colors[0].blend.op_rgb = SG_BLENDOP_ADD;
 	params.colors[0].blend.src_factor_alpha = SG_BLENDFACTOR_ONE;
 	params.colors[0].blend.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
 	params.colors[0].blend.op_alpha = SG_BLENDOP_ADD;
+
 	b->geom_pip = sg_make_pipeline(params);
 	b->geom_buffer = triple_buffer_make(sizeof(vertex_t) * 1024 * 10, sizeof(vertex_t));
 
@@ -406,6 +407,7 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 
 	b->atlas_width = (float)config.atlas_width_in_pixels;
 	b->atlas_height = (float)config.atlas_height_in_pixels;
+	b->m3x2s.add(make_identity());
 
 	return b;
 }
@@ -526,7 +528,7 @@ void batch_push_m3x2(batch_t* b, m3x2 m)
 
 void batch_pop_m3x2(batch_t* b)
 {
-	if (b->m3x2s.count()) {
+	if (b->m3x2s.count() > 1) {
 		b->m3x2s.pop();
 	}
 }
@@ -657,7 +659,7 @@ void batch_quad(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, color_t c)
 void batch_quad(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, color_t c0, color_t c1, color_t c2, color_t c3)
 {
 	PUSH_TRI(p0, p1, p2, c0, c1, c2);
-	PUSH_TRI(p2, p3, p0, c0, c1, c2);
+	PUSH_TRI(p2, p3, p0, c2, c3, c0);
 }
 
 void batch_quad_line(batch_t* b, aabb_t bb, float thickness, color_t c)
@@ -804,19 +806,77 @@ void batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float thickness, color_t c0
 	CUTE_ASSERT(0);
 }
 
-void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c)
+void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c, bool antialias)
 {
-	batch_line(b, p0, p1, thickness, c, c);
+	batch_line(b, p0, p1, thickness, c, c, antialias);
 }
 
-void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c0, color_t c1)
+void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c0, color_t c1, bool antialias)
 {
-	v2 n = skew(norm(p1 - p0)) * thickness * 0.5f;
-	v2 q0 = p0 + n;
-	v2 q1 = p1 + n;
-	v2 q2 = p1 - n;
-	v2 q3 = p0 - n;
-	batch_quad(b, q0, q1, q2, q3, c0, c0, c1, c1);
+	float scale = len(b->m3x2s.last().m.x); // Assume x/y uniform scaling.
+	float alias_scale = 1.0f / scale;
+	bool thick_line = thickness > alias_scale;
+	thickness = max(thickness, 1.0f);
+	if (antialias) {
+		color_t c2 = c0;
+		color_t c3 = c1;
+		c2.a = 0;
+		c3.a = 0;
+		if (thick_line) {
+			// Core center line.
+			float core_half_width = (thickness - alias_scale) * 0.5f;
+			v2 n0 = norm(p1 - p0);
+			v2 n1 = skew(n0) * core_half_width;
+			v2 q0 = p0 + n1;
+			v2 q1 = p1 + n1;
+			v2 q2 = p1 - n1;
+			v2 q3 = p0 - n1;
+			batch_quad(b, q0, q1, q2, q3, c0, c0, c1, c1);
+
+			// Zero opacity feathered quads.
+			v2 n2 = ccw90(n0) * alias_scale;
+			v2 q4 = q3 + n2;
+			v2 q5 = q2 + n2;
+			v2 q6 = q1 - n2;
+			v2 q7 = q0 - n2;
+			batch_quad(b, q3, q2, q5, q4, c0, c1, c3, c2);
+			batch_quad(b, q0, q7, q6, q1, c0, c2, c3, c1);
+
+			// End caps.
+			n0 = n0 * alias_scale;
+			v2 r0 = q5 + n0;
+			v2 r1 = q2 + n0;
+			v2 r2 = q1 + n0;
+			v2 r3 = q6 + n0;
+			batch_quad(b, q2, r1, r0, q5, c1, c3, c3, c3);
+			batch_quad(b, q2, q1, r2, r1, c1, c1, c3, c3);
+			batch_quad(b, q1, q6, r3, r2, c1, c3, c3, c3);
+
+			v2 r4 = q4 - n0;
+			v2 r5 = q3 - n0;
+			v2 r6 = q0 - n0;
+			v2 r7 = q7 - n0;
+			batch_quad(b, q3, r5, r4, q4, c0, c2, c2, c2);
+			batch_quad(b, q3, q0, r6, r5, c0, c0, c2, c2);
+			batch_quad(b, q0, q7, r7, r6, c0, c2, c2, c2);
+		} else {
+			// Zero opacity feathered quads, without any core line.
+			v2 n = skew(norm(p1 - p0)) * alias_scale;
+			v2 q0 = p0 + n;
+			v2 q1 = p1 + n;
+			v2 q2 = p1 - n;
+			v2 q3 = p0 - n;
+			batch_quad(b, p0, p1, q1, q0, c0, c1, c3, c2);
+			batch_quad(b, p1, p0, q3, q2, c1, c0, c3, c2);
+		}
+	} else {
+		v2 n = skew(norm(p1 - p0)) * thickness * 0.5f;
+		v2 q0 = p0 + n;
+		v2 q1 = p1 + n;
+		v2 q2 = p1 - n;
+		v2 q3 = p0 - n;
+		batch_quad(b, q0, q1, q2, q3, c0, c0, c1, c1);
+	}
 }
 
 temporary_image_t batch_fetch(batch_t* b, batch_sprite_t sprite)
