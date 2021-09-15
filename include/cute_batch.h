@@ -142,6 +142,7 @@ CUTE_API void CUTE_CALL batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float th
 
 CUTE_API void CUTE_CALL batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c, bool antialias = false);
 CUTE_API void CUTE_CALL batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c0, color_t c1, bool antialias = false);
+CUTE_API void CUTE_CALL batch_polyline(batch_t* b, v2* points, int count, float thickness, color_t c, bool loop = false, bool antialias = false, int bevel_count = 0);
 
 
 /**

@@ -143,7 +143,7 @@ CUTE_INLINE v2& operator*=(v2& a, v2 b) { return a = a * b; }
 CUTE_INLINE v2 operator/(v2 a, float b) { return v2(a.x / b, a.y / b); }
 CUTE_INLINE v2& operator/=(v2& a, float b) { return a = a / b; }
 CUTE_INLINE v2 skew(v2 a) { return v2(-a.y, a.x); }
-CUTE_INLINE v2 ccw90(v2 a) { return v2(a.y, -a.x); }
+CUTE_INLINE v2 cw90(v2 a) { return v2(a.y, -a.x); }
 CUTE_INLINE float det2(v2 a, v2 b) { return a.x * b.y - a.y * b.x; }
 CUTE_INLINE float cross(v2 a, v2 b) { return det2(a, b); }
 CUTE_INLINE v2 cross(v2 a, float b) { return v2(b * a.y, -b * a.x); }
