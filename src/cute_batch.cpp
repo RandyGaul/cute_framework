@@ -48,6 +48,8 @@ struct quad_udata_t
 #define CUTE_PNG_IMPLEMENTATION
 #include <cute/cute_png.h>
 
+#define DEBUG_VERT(v, c) batch_quad(batch, make_aabb(v, 3, 3), c)
+
 namespace cute
 {
 
@@ -878,19 +880,19 @@ void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c0, color_t c
 	}
 }
 
-static v2 s_rot_b_about_a(sincos_t r, v2 b, v2 a)
+CUTE_INLINE static v2 s_rot_b_about_a(sincos_t r, v2 b, v2 a)
 {
 	v2 result = mul(r, a - b);
 	return result + b;
 }
 
-static void s_bevel_arc_feather(batch_t* batch, v2 b, v2 i3, v2 f3, v2 i4, v2 f4, color_t c0, color_t c1, int bevel_count)
+CUTE_INLINE static void s_bevel_arc_feather(batch_t* batch, v2 b, v2 i3, v2 f3, v2 i4, v2 f4, color_t c0, color_t c1, int bevel_count)
 {
 	float arc = shortest_arc(norm(i3 - b), norm(i4 - b)) / (float)(bevel_count + 1);
 	sincos_t r = sincos(arc);
 	v2 p0 = i3;
 	v2 p1 = f3;
-	for (int i = 0; i < bevel_count; ++i) {
+	for (int i = 1; i < bevel_count; ++i) {
 		v2 p2 = s_rot_b_about_a(r, b, p1);
 		v2 p3 = s_rot_b_about_a(r, b, p0);
 		batch_tri(batch, b, p0, p3, c0);
@@ -902,12 +904,12 @@ static void s_bevel_arc_feather(batch_t* batch, v2 b, v2 i3, v2 f3, v2 i4, v2 f4
 	batch_quad(batch, p0, i4, f4, p1, c0, c0, c1, c1);
 }
 
-static void s_bevel_arc(batch_t* batch, v2 b, v2 i3, v2 i4, color_t c0, color_t c1, int bevel_count)
+CUTE_INLINE static void s_bevel_arc(batch_t* batch, v2 b, v2 i3, v2 i4, color_t c0, color_t c1, int bevel_count)
 {
 	float arc = shortest_arc(norm(i3 - b), norm(i4 - b)) / (float)(bevel_count + 1);
 	sincos_t r = sincos(arc);
 	v2 p0 = i3;
-	for (int i = 0; i < bevel_count; ++i) {
+	for (int i = 1; i < bevel_count; ++i) {
 		v2 p3 = s_rot_b_about_a(r, b, p0);
 		batch_tri(batch, b, p0, p3, c0);
 		p0 = p3;
@@ -931,204 +933,184 @@ static void s_polyline(batch_t* batch, v2* points, int count, float thickness, c
 	v2 f1 = a - fn0;
 	int end = count;
 
+	// Optionally emits geometry about each corner of the polyline, and sets up i0, i1, f0, f1, n0 and fn0.
+	auto do_polyline_corner = [&](v2 c, bool emit) {
+		v2 n1 = skew(norm(c - b)) * inner_half;
+		v2 fn1 = norm(n1) * outer_half;
+		float ab_x_bc = cross(b - a, c - b);
+		float d = dot(cw90(n0), cw90(n1));
+		const float k_tol = 1.e-6f;
+
+		if (ab_x_bc < -k_tol) {
+			if (d >= 0) {
+				v2 i2 = intersect(plane(n0, b - n0), b - n1, c - n1);
+				v2 i3 = intersect(plane(n0, b + n0), b + n1, c + n1);
+				if (feather) {
+					v2 f2 = intersect(plane(fn0, b - fn0), b - fn1, c - fn1);
+					v2 f3 = intersect(plane(fn0, b + fn0), b + fn1, c + fn1);
+					if (emit) {
+						batch_quad(batch, a, b, i3, i0, c0);
+						batch_quad(batch, i1, i2, b, a, c0);
+						batch_quad(batch, i0, i3, f3, f0, c0, c0, c1, c1);
+						batch_quad(batch, f1, f2, i2, i1, c1, c1, c0, c0);
+					}
+					f0 = f3;
+					f1 = f2;
+				} else if (emit) {
+					batch_quad(batch, a, b, i3, i0, c0, c0, c1, c1);
+					batch_quad(batch, i1, i2, b, a, c1, c1, c0, c0);
+				}
+				i0 = i3;
+				i1 = i2;
+			} else {
+				v2 i2 = intersect(plane(-n0, b - n0), b - n1, c - n1);
+				v2 i3 = b + n0;
+				v2 i4 = b + n1;
+				if (feather) {
+					v2 f2 = intersect(plane(-fn0, b - fn0), b - fn1, c - fn1);
+					v2 n = norm(n0 + n1);
+					halfspace_t h = plane(n, i3 + n * alias_scale);
+					v2 f3 = intersect(h, a + fn0, b + fn0);
+					v2 f4 = intersect(h, b + fn1, c + fn1);
+					if (emit) {
+						batch_quad(batch, a, b, i3, i0, c0);
+						batch_quad(batch, i1, i2, b, a, c0);
+						batch_quad(batch, i0, i3, f3, f0, c0, c0, c1, c1);
+						batch_quad(batch, i1, f1, f2, i2, c0, c1, c1, c0);
+						s_bevel_arc_feather(batch, b, i3, f3, i4, f4, c0, c1, bevel_count);
+					}
+					f0 = f4;
+					f1 = f2;
+				} else if (emit) {
+					batch_quad(batch, a, b, i3, i0, c0, c0, c1, c1);
+					batch_quad(batch, i1, i2, b, a, c1, c1, c0, c0);
+					s_bevel_arc(batch, b, i3, i4, c0, c1, bevel_count);
+				}
+				i0 = i4;
+				i1 = i2;
+			}
+		} else if (ab_x_bc > k_tol) {
+			if (d >= 0) {
+				v2 i2 = intersect(plane(n0, b + n0), b + n1, c + n1);
+				v2 i3 = intersect(plane(n0, b - n0), b - n1, c - n1);
+				if (feather) {
+					v2 f2 = intersect(plane(fn0, b + fn0), b + fn1, c + fn1);
+					v2 f3 = intersect(plane(fn0, b - fn0), b - fn1, c - fn1);
+					if (emit) {
+						batch_quad(batch, a, b, i3, i1, c0);
+						batch_quad(batch, i0, i2, b, a, c0);
+						batch_quad(batch, i1, i3, f3, f1, c0, c0, c1, c1);
+						batch_quad(batch, f0, f2, i2, i0, c1, c1, c0, c0);
+					}
+					f1 = f3;
+					f0 = f2;
+				} else if (emit) {
+					batch_quad(batch, a, b, i3, i1, c0, c0, c1, c1);
+					batch_quad(batch, i0, i2, b, a, c1, c1, c0, c0);
+				}
+				i1 = i3;
+				i0 = i2;
+			} else {
+				v2 i2 = intersect(plane(n0, b + n0), b + n1, c + n1);
+				v2 i3 = b - n0;
+				v2 i4 = b - n1;
+				if (feather) {
+					v2 f2 = intersect(plane(fn0, b + fn0), b + fn1, c + fn1);
+					v2 n = norm(n0 + n1);
+					halfspace_t h = plane(-n, i3 - n * alias_scale);
+					v2 f3 = intersect(h, a - fn0, b - fn0);
+					v2 f4 = intersect(h, b - fn1, c - fn1);
+					if (emit) {
+						batch_quad(batch, a, b, i3, i1, c0);
+						batch_quad(batch, i0, i2, b, a, c0);
+						batch_quad(batch, i1, i3, f3, f1, c0, c0, c1, c1);
+						batch_quad(batch, i0, f0, f2, i2, c0, c1, c1, c0);
+						s_bevel_arc_feather(batch, b, i3, f3, i4, f4, c0, c1, bevel_count);
+					}
+					f1 = f4;
+					f0 = f2;
+				} else if (emit) {
+					batch_quad(batch, a, b, i3, i1, c0, c0, c1, c1);
+					batch_quad(batch, i0, i2, b, a, c1, c1, c0, c0);
+					s_bevel_arc(batch, b, i3, i4, c0, c1, bevel_count);
+				}
+				i1 = i4;
+				i0 = i2;
+			}
+		} else {
+			// Parallel, sin(angle_of_corner) within [-k_tol, k_tol].
+			v2 i2 = b + n0;
+			v2 i3 = b - n0;
+			if (feather) {
+				v2 f2 = b + fn0;
+				v2 f3 = b - fn0;
+				if (emit) {
+					batch_quad(batch, a, b, i2, i0, c0);
+					batch_quad(batch, i1, i3, b, a, c0);
+					batch_quad(batch, i0, i2, f2, f0, c0, c0, c1, c1);
+					batch_quad(batch, i1, f1, f3, i3, c0, c1, c1, c0);
+				}
+				f1 = f3;
+				f0 = f2;
+			} else if (emit) {
+				batch_quad(batch, a, b, i2, i0, c0, c0, c1, c1);
+				batch_quad(batch, i1, i3, b, a, c1, c1, c0, c0);
+			}
+			i1 = i3;
+			i0 = i2;
+		}
+		n0 = n1;
+		fn0 = fn1;
+		a = b;
+		b = c;
+	};
+
+	// Special case for the first iteration -- previous endpoints i0, i1, f0, f1 and accompanying
+	// normals n0, fn0 need to be pre-computed, as each loop iteration of do_polyline_corner
+	// expects these values to be setup properly. We backup the indices for points a, b, an c by
+	// -1 then call do_polyline_corner (without rendering any geometry), which calculates correct
+	// initial values for the next call to do_polyline_corner.
 	if (loop) {
 		a = points[count - 1];
 		b = points[0];
 		v2 c = points[1];
-		v2 ab = b - a;
-		v2 bc = c - b;
 		n0 = skew(norm(b - a)) * inner_half;
 		fn0 = norm(n0) * outer_half;
-		v2 n1 = skew(norm(c - b)) * inner_half;
-		v2 fn1 = norm(n1) * outer_half;
-		float ab_x_bc = cross(ab, bc);
-		float d = dot(cw90(n0), cw90(n1));
-		v2 n = norm(n0 + n1) * inner_half;
-		if (ab_x_bc < 0) {
-			if (d >= 0) {
-				v2 i2 = intersect(plane(n0, b - n0), b - n1, c - n1);
-				v2 i3 = intersect(plane(n0, b + n0), b + n1, c + n1);
-				if (feather) {
-					v2 f2 = intersect(plane(fn0, b - fn0), b - fn1, c - fn1);
-					v2 f3 = intersect(plane(fn0, b + fn0), b + fn1, c + fn1);
-					f0 = f3;
-					f1 = f2;
-				}
-				i0 = i3;
-				i1 = i2;
-			} else {
-				v2 i2 = intersect(plane(-n0, b - n0), b - n1, c - n1);
-				v2 i3 = b + n0;
-				v2 i4 = b + n1;
-				if (feather) {
-					v2 f2 = intersect(plane(-fn0, b - fn0), b - fn1, c - fn1);
-					v2 n = norm(n0 + n1);
-					halfspace_t h = plane(n, i3 + n * (outer_half - inner_half));
-					v2 f3 = intersect(h, a + fn0, b + fn0);
-					v2 f4 = intersect(h, b + fn1, c + fn1);
-					f0 = f4;
-					f1 = f2;
-				}
-				i0 = i4;
-				i1 = i2;
-			}
-		} else if (ab_x_bc > 0) {
-			if (d >= 0) {
-				v2 i2 = intersect(plane(n0, b + n0), b + n1, c + n1);
-				v2 i3 = intersect(plane(n0, b - n0), b - n1, c - n1);
-				if (feather) {
-					v2 f2 = intersect(plane(fn0, b + fn0), b + fn1, c + fn1);
-					v2 f3 = intersect(plane(fn0, b - fn0), b - fn1, c - fn1);
-					f1 = f3;
-					f0 = f2;
-				}
-				i1 = i3;
-				i0 = i2;
-			} else {
-				v2 i2 = intersect(plane(n0, b + n0), b + n1, c + n1);
-				v2 i3 = b - n0;
-				v2 i4 = b - n1;
-				if (feather) {
-					v2 f2 = intersect(plane(fn0, b + fn0), b + fn1, c + fn1);
-					v2 n = norm(n0 + n1);
-					halfspace_t h = plane(-n, i3 - n * (outer_half - inner_half));
-					v2 f3 = intersect(h, a - fn0, b - fn0);
-					v2 f4 = intersect(h, b - fn1, c - fn1);
-					f1 = f4;
-					f0 = f2;
-				}
-				i1 = i4;
-				i0 = i2;
-			}
-		} else {
-		}
-		n0 = n1;
-		fn0 = fn1;
-		a = b;
-		b = c;
+		do_polyline_corner(c, false);
 	} else {
 		end -= 2;
 	}
 
+	// Main loop, emit geometry about each corner of the polyline.
 	do {
 		v2 c = points[i];
-		v2 ab = b - a;
-		v2 bc = c - b;
-		v2 n1 = skew(norm(c - b)) * inner_half;
-		v2 fn1 = norm(n1) * outer_half;
-		float ab_x_bc = cross(ab, bc);
-		float d = dot(cw90(n0), cw90(n1));
-
-		#define DEBUG_VERT(v, c) batch_quad(batch, make_aabb(v, 3, 3), c)
-
-		if (ab_x_bc < 0) {
-			if (d >= 0) {
-				v2 i2 = intersect(plane(n0, b - n0), b - n1, c - n1);
-				v2 i3 = intersect(plane(n0, b + n0), b + n1, c + n1);
-				if (feather) {
-					v2 f2 = intersect(plane(fn0, b - fn0), b - fn1, c - fn1);
-					v2 f3 = intersect(plane(fn0, b + fn0), b + fn1, c + fn1);
-					batch_quad(batch, a, b, i3, i0, c0);
-					batch_quad(batch, i1, i2, b, a, c0);
-					batch_quad(batch, i0, i3, f3, f0, c0, c0, c1, c1);
-					batch_quad(batch, f1, f2, i2, i1, c1, c1, c0, c0);
-					f0 = f3;
-					f1 = f2;
-				} else {
-					batch_quad(batch, a, b, i3, i0, c0, c0, c1, c1);
-					batch_quad(batch, i1, i2, b, a, c1, c1, c0, c0);
-				}
-				i0 = i3;
-				i1 = i2;
-			} else {
-				v2 i2 = intersect(plane(-n0, b - n0), b - n1, c - n1);
-				v2 i3 = b + n0;
-				v2 i4 = b + n1;
-				if (feather) {
-					batch_quad(batch, a, b, i3, i0, c0);
-					batch_quad(batch, i1, i2, b, a, c0);
-					v2 f2 = intersect(plane(-fn0, b - fn0), b - fn1, c - fn1);
-					v2 n = norm(n0 + n1);
-					halfspace_t h = plane(n, i3 + n * (outer_half - inner_half));
-					v2 f3 = intersect(h, a + fn0, b + fn0);
-					v2 f4 = intersect(h, b + fn1, c + fn1);
-					batch_quad(batch, i0, i3, f3, f0, c0, c0, c1, c1);
-					batch_quad(batch, i1, f1, f2, i2, c0, c1, c1, c0);
-					s_bevel_arc_feather(batch, b, i3, f3, i4, f4, c0, c1, bevel_count);
-					f0 = f4;
-					f1 = f2;
-				} else {
-					batch_quad(batch, a, b, i3, i0, c0, c0, c1, c1);
-					batch_quad(batch, i1, i2, b, a, c1, c1, c0, c0);
-					s_bevel_arc(batch, b, i3, i4, c0, c1, bevel_count);
-				}
-				i0 = i4;
-				i1 = i2;
-			}
-		} else if (ab_x_bc > 0) {
-			if (d >= 0) {
-				v2 i2 = intersect(plane(n0, b + n0), b + n1, c + n1);
-				v2 i3 = intersect(plane(n0, b - n0), b - n1, c - n1);
-				if (feather) {
-					batch_quad(batch, a, b, i3, i1, c0);
-					batch_quad(batch, i0, i2, b, a, c0);
-					v2 f2 = intersect(plane(fn0, b + fn0), b + fn1, c + fn1);
-					v2 f3 = intersect(plane(fn0, b - fn0), b - fn1, c - fn1);
-					batch_quad(batch, i1, i3, f3, f1, c0, c0, c1, c1);
-					batch_quad(batch, f0, f2, i2, i0, c1, c1, c0, c0);
-					f1 = f3;
-					f0 = f2;
-				} else {
-					batch_quad(batch, a, b, i3, i1, c0, c0, c1, c1);
-					batch_quad(batch, i0, i2, b, a, c1, c1, c0, c0);
-				}
-				i1 = i3;
-				i0 = i2;
-			} else {
-				v2 i2 = intersect(plane(n0, b + n0), b + n1, c + n1);
-				v2 i3 = b - n0;
-				v2 i4 = b - n1;
-				if (feather) {
-					batch_quad(batch, a, b, i3, i1, c0);
-					batch_quad(batch, i0, i2, b, a, c0);
-					v2 f2 = intersect(plane(fn0, b + fn0), b + fn1, c + fn1);
-					v2 n = norm(n0 + n1);
-					halfspace_t h = plane(-n, i3 - n * (outer_half - inner_half));
-					v2 f3 = intersect(h, a - fn0, b - fn0);
-					v2 f4 = intersect(h, b - fn1, c - fn1);
-					batch_quad(batch, i1, i3, f3, f1, c0, c0, c1, c1);
-					batch_quad(batch, i0, f0, f2, i2, c0, c1, c1, c0);
-					s_bevel_arc_feather(batch, b, i3, f3, i4, f4, c0, c1, bevel_count);
-					f1 = f4;
-					f0 = f2;
-				} else {
-					batch_quad(batch, a, b, i3, i1, c0, c0, c1, c1);
-					batch_quad(batch, i0, i2, b, a, c1, c1, c0, c0);
-					s_bevel_arc(batch, b, i3, i4, c0, c1, bevel_count);
-				}
-				i1 = i4;
-				i0 = i2;
-			}
-		} else {
-			// Parallel.
-			batch_quad(batch, a, b, b + n0, i0, c0, c0, c1, c1);
-			batch_quad(batch, i1, b - n0, b, a, c1, c1, c0, c0);
-		}
-
-		n0 = n1;
-		fn0 = fn1;
-		a = b;
-		b = c;
+		do_polyline_corner(c, true);
 		iter++;
 		i = i + 1 == count ? 0 : i + 1;
 	} while (iter < end);
 
+	// End case for non-loops.
 	if (!loop) {
 		if (feather) {
 			batch_quad(batch, a, b, b + n0, i0, c0);
 			batch_quad(batch, a, i1, b - n0, b, c0);
 			batch_quad(batch, f0, i0, b + n0, b + fn0, c1, c0, c0, c1);
 			batch_quad(batch, b - fn0, b - n0, i1, f1, c1, c0, c0, c1);
+
+			// End caps.
+			v2 n = norm(b - a) * alias_scale;
+			batch_quad(batch, b - n0, b + n0, b + n0 + n, b - n0 + n, c0, c0, c1, c1);
+			batch_quad(batch, b - fn0, b - n0, b - n0 + n, b - fn0 + n, c1, c0, c1, c1);
+			batch_quad(batch, b + fn0, b + n0, b + n0 + n, b + fn0 + n, c1, c0, c1, c1);
+
+			a = points[1];
+			b = points[0];
+			n = norm(b - a) * alias_scale;
+			n0 = skew(norm(b - a)) * inner_half;
+			fn0 = norm(n0) * outer_half;
+			batch_quad(batch, b - n0, b + n0, b + n0 + n, b - n0 + n, c0, c0, c1, c1);
+			batch_quad(batch, b - fn0, b - n0, b - n0 + n, b - fn0 + n, c1, c0, c1, c1);
+			batch_quad(batch, b + fn0, b + n0, b + n0 + n, b + fn0 + n, c1, c0, c1, c1);
 		} else {
 			batch_quad(batch, a, b, b + n0, i0, c0, c0, c1, c1);
 			batch_quad(batch, a, i1, b - n0, b, c0, c1, c1, c0);
