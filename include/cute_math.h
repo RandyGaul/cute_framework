@@ -156,7 +156,7 @@ CUTE_INLINE v2 abs(v2 a) { return v2(fabsf(a.x), fabsf(a.y)); }
 CUTE_INLINE float hmin(v2 a ) { return min(a.x, a.y); }
 CUTE_INLINE float hmax(v2 a ) { return max(a.x, a.y); }
 CUTE_INLINE float len(v2 a) { return sqrtf(dot(a, a)); }
-CUTE_INLINE float distance(v2 a, v2 b) { return sqrtf(powf((a.x - b.x), 2) + powf((a.y - b.y), 2)); }
+CUTE_INLINE float distance(v2 a, v2 b) { v2 d = b - a; return sqrtf(dot(d, d)); }
 CUTE_INLINE v2 norm(v2 a) { return a / len(a); }
 CUTE_INLINE v2 safe_norm(v2 a) { float sq = dot(a, a); return sq ? a / sqrtf(sq) : v2(0, 0); }
 CUTE_INLINE float safe_norm(float a) { return a == 0 ? 0 : sign(a); }
