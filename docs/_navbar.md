@@ -1,4 +1,5 @@
 <!-- navbar -->
 
-- Languages
-  - [:uk: English](/)
+* Languages
+
+  * [:uk: English](/)

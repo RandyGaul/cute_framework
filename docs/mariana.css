@@ -57,7 +57,7 @@ body {
 body {
   -moz-osx-font-smoothing: grayscale;
   -webkit-font-smoothing: antialiased;
-  color: #bac5d8;
+  color: #a2acbe;
   font-family: 'Open Sans', 'Helvetica Neue', Arial, sans-serif;
   font-size: 1.2rem;
   letter-spacing: 0;
@@ -198,7 +198,7 @@ main.hidden {
   transition: all 0.3s;
 }
 .anchor span {
-  color: #bac5d8;
+  color: #a2acbe;
 }
 .anchor:hover {
   text-decoration: underline;
@@ -330,7 +330,7 @@ body.sticky .sidebar-toggle {
   min-width: 100%;
 }
 .markdown-section table {
-  border: 1px solid #a6acb9;
+  border: 1px solid #8a92a3;
   border-collapse: collapse;
   border-spacing: 0;
   display: block;
@@ -363,7 +363,7 @@ body.sticky .sidebar-toggle {
   background-color: #3c464f;
 }
 .markdown-section p.tip em {
-  color: #bac5d8;
+  color: #a2acbe;
 }
 .markdown-section p.warn {
   background: rgba(153,199,148,0.1);
@@ -616,6 +616,9 @@ body {
 .sidebar ul li ul {
   padding: 0;
 }
+.sidebar li p.active > a {
+  background: #e0e4e6;
+}
 .sidebar ul li.active > a {
   border-right: 2px solid;
   color: var(--theme-color, #42b983);
@@ -724,7 +727,7 @@ body {
   border-radius: 2px;
   color: #c695c6;
   margin: 0 2px;
-  padding: 2px 5px;
+  padding: 1px 5px 2px 5px;
   white-space: pre-wrap;
 }
 .markdown-section > :not(h1):not(h2):not(h3):not(h4):not(h5):not(h6) code {
@@ -737,7 +740,7 @@ body {
   word-wrap: normal;
 }
 .markdown-section pre > code {
-  color: #bac5d8;
+  color: #a2acbe;
   font-size: 1.2rem;
   padding: 2.2em 5px;
   line-height: inherit;
@@ -748,7 +751,7 @@ body {
 }
 .markdown-section output {
   padding: 1.7rem 1.4rem;
-  border: 1px dotted #bac5d8;
+  border: 1px dotted #a2acbe;
 }
 .markdown-section output > :first-child {
   margin-top: 0;
@@ -764,7 +767,7 @@ body {
 }
 .markdown-section pre::after,
 .markdown-section output::after {
-  color: #bac5d8;
+  color: #a2acbe;
   font-size: 1.2rem;
   font-weight: normal;
   height: 15px;
@@ -784,7 +787,7 @@ body {
 .token.prolog,
 .token.doctype,
 .token.cdata {
-  color: #a6acb9;
+  color: #8a92a3;
 }
 .token.namespace {
   opacity: 0.7;
