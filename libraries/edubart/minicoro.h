@@ -1,6 +1,6 @@
 /*
 Minimal asymmetric stackful cross-platform coroutine library in pure C.
-minicoro - v0.1.2 - 13/Feb/2021
+minicoro - v0.1.2 - 02/Sep/2021
 Eduardo Bart - edub4rt@gmail.com
 https://github.com/edubart/minicoro
 
@@ -33,10 +33,11 @@ Most platforms are supported through different methods:
 | Platform     | Assembly Method  | Fallback Method   |
 |--------------|------------------|-------------------|
 | Android      | ARM/ARM64        | N/A               |
+| iOS          | ARM/ARM64        | N/A               |
 | Windows      | x86_64           | Windows fibers    |
 | Linux        | x86_64/i686      | ucontext          |
 | Mac OS X     | x86_64           | ucontext          |
-| Browser      | N/A              | Emscripten fibers |
+| WebAssembly  | N/A              | Emscripten fibers |
 | Raspberry Pi | ARM              | ucontext          |
 | RISC-V       | rv64/rv32        | ucontext          |
 
@@ -141,7 +142,7 @@ int main() {
 
 _NOTE_: In case you don't want to use the minicoro allocator system you should
 allocate a coroutine object yourself using `mco_desc.coro_size` and call `mco_init`,
-then later to destroy call `mco_deinit` and deallocate it.
+then later to destroy call `mco_uninit` and deallocate it.
 
 ## Yielding from anywhere
 
@@ -232,6 +233,7 @@ typedef enum mco_result {
   MCO_OUT_OF_MEMORY,
   MCO_INVALID_ARGUMENTS,
   MCO_INVALID_OPERATION,
+  MCO_STACK_OVERFLOW,
 } mco_result;
 
 /* Coroutine structure. */
@@ -252,6 +254,7 @@ struct mco_coro {
   void* asan_prev_stack; /* Used by address sanitizer. */
   void* tsan_prev_fiber; /* Used by thread sanitizer. */
   void* tsan_fiber; /* Used by thread sanitizer. */
+  size_t magic_number; /* Used to check stack overflow. */
 };
 
 /* Structure used to initialize a coroutine. */
@@ -314,6 +317,9 @@ extern "C" {
 #define MCO_DEFAULT_STACK_SIZE 57344 /* Don't use multiples of 64K to avoid D-cache aliasing conflicts. */
 #endif
 
+/* Number used only to assist checking for stack overflows. */
+#define MCO_MAGIC_NUMBER 0x7E3CB1A9
+
 /* Detect implementation based on OS, arch and compiler. */
 #if !defined(MCO_USE_UCONTEXT) && !defined(MCO_USE_FIBERS) && !defined(MCO_USE_ASM)
   #if defined(_WIN32)
@@ -322,6 +328,8 @@ extern "C" {
     #else
       #define MCO_USE_FIBERS
     #endif
+  #elif defined(__CYGWIN__) /* MSYS */
+    #define MCO_USE_UCONTEXT
   #elif defined(__EMSCRIPTEN__)
     #define MCO_USE_FIBERS
   #else
@@ -939,11 +947,15 @@ typedef struct _mco_ctxbuf {
 void _mco_switch(_mco_ctxbuf* from, _mco_ctxbuf* to);
 
 __asm__(
+#ifdef __DJGPP__ /* DOS compiler */
+  "__mco_switch:\n"
+#else
   ".text\n"
   ".globl _mco_switch\n"
   ".type _mco_switch @function\n"
   ".hidden _mco_switch\n"
   "_mco_switch:\n"
+#endif
   "  call 1f\n"
   "  1:\n"
   "  popl %ecx\n"
@@ -964,7 +976,9 @@ __asm__(
   "  jmp *(%edx)\n"
   "  2:\n"
   "  ret\n"
+#ifndef __DJGPP__
   ".size _mco_switch, .-_mco_switch\n"
+#endif
 );
 
 static mco_result _mco_makectx(mco_coro* co, _mco_ctxbuf* ctx, void* stack_base, size_t stack_size) {
@@ -993,10 +1007,15 @@ int _mco_switch(_mco_ctxbuf* from, _mco_ctxbuf* to);
 
 __asm__(
   ".text\n"
+#ifdef __APPLE__
+  ".globl __mco_switch\n"
+  "__mco_switch:\n"
+#else
   ".globl _mco_switch\n"
   ".type _mco_switch #function\n"
   ".hidden _mco_switch\n"
   "_mco_switch:\n"
+#endif
 #ifndef __SOFTFP__
   "  vstmia r0!, {d8-d15}\n"
 #endif
@@ -1007,20 +1026,29 @@ __asm__(
 #endif
   "  ldr sp, [r1, #9*4]\n"
   "  ldmia r1, {r4-r11, pc}\n"
+#ifndef __APPLE__
   ".size _mco_switch, .-_mco_switch\n"
+#endif
 );
 
 __asm__(
   ".text\n"
+#ifdef __APPLE__
+  ".globl __mco_wrap_main\n"
+  "__mco_wrap_main:\n"
+#else
   ".globl _mco_wrap_main\n"
   ".type _mco_wrap_main #function\n"
   ".hidden _mco_wrap_main\n"
   "_mco_wrap_main:\n"
+#endif
   "  mov r0, r4\n"
   "  mov ip, r5\n"
   "  mov lr, r6\n"
   "  bx ip\n"
+#ifndef __APPLE__
   ".size _mco_wrap_main, .-_mco_wrap_main\n"
+#endif
 );
 
 static mco_result _mco_makectx(mco_coro* co, _mco_ctxbuf* ctx, void* stack_base, size_t stack_size) {
@@ -1046,10 +1074,16 @@ int _mco_switch(_mco_ctxbuf* from, _mco_ctxbuf* to);
 
 __asm__(
   ".text\n"
+#ifdef __APPLE__
+  ".globl __mco_switch\n"
+  "__mco_switch:\n"
+#else
   ".globl _mco_switch\n"
   ".type _mco_switch #function\n"
   ".hidden _mco_switch\n"
   "_mco_switch:\n"
+#endif
+  
   "  mov x10, sp\n"
   "  mov x11, x30\n"
   "  stp x19, x20, [x0, #(0*16)]\n"
@@ -1076,19 +1110,28 @@ __asm__(
   "  ldp x10, x11, [x1, #(6*16)]\n"
   "  mov sp, x10\n"
   "  br x11\n"
+#ifndef __APPLE__
   ".size _mco_switch, .-_mco_switch\n"
+#endif
 );
 
 __asm__(
   ".text\n"
+#ifdef __APPLE__
+  ".globl __mco_wrap_main\n"
+  "__mco_wrap_main:\n"
+#else
   ".globl _mco_wrap_main\n"
   ".type _mco_wrap_main #function\n"
   ".hidden _mco_wrap_main\n"
   "_mco_wrap_main:\n"
+#endif
   "  mov x0, x19\n"
   "  mov x30, x21\n"
   "  br x20\n"
+#ifndef __APPLE__
   ".size _mco_wrap_main, .-_mco_wrap_main\n"
+#endif
 );
 
 static mco_result _mco_makectx(mco_coro* co, _mco_ctxbuf* ctx, void* stack_base, size_t stack_size) {
@@ -1307,7 +1350,7 @@ static mco_result _mco_create_context(mco_coro* co, mco_desc* desc) {
   }
   context->fib = fib;
   co->context = context;
-  co->stack_base = fib->stack_base;
+  co->stack_base = (void*)((size_t)fib->stack_base - desc->stack_size);
   co->stack_size = desc->stack_size;
   co->storage = storage;
   co->storage_size = desc->storage_size;
@@ -1497,6 +1540,7 @@ mco_result mco_init(mco_coro* co, mco_desc* desc) {
 #ifdef _MCO_USE_TSAN
   co->tsan_fiber = __tsan_create_fiber(0);
 #endif
+  co->magic_number = MCO_MAGIC_NUMBER;
   return MCO_SUCCESS;
 }
 
@@ -1587,6 +1631,15 @@ mco_result mco_yield(mco_coro* co) {
   if(!co) {
     MCO_LOG("attempt to yield an invalid coroutine");
     return MCO_INVALID_COROUTINE;
+  }
+  /* This check happens when the stack overflow already happened, but better later than never. */
+  volatile size_t dummy;
+  size_t stack_addr = (size_t)&dummy;
+  size_t stack_min = (size_t)co->stack_base;
+  size_t stack_max = stack_min + co->stack_size;
+  if(co->magic_number != MCO_MAGIC_NUMBER || stack_addr < stack_min || stack_addr > stack_max) { /* Stack overflow. */
+    MCO_LOG("coroutine stack overflow, try increasing the stack size");
+    return MCO_STACK_OVERFLOW;
   }
   if(co->state != MCO_RUNNING) {  /* Can only yield coroutines that are running. */
     MCO_LOG("attempt to yield a coroutine that is not running");
@@ -1730,6 +1783,8 @@ const char* mco_result_description(mco_result res) {
       return "Invalid arguments";
     case MCO_INVALID_OPERATION:
       return "Invalid operation";
+    case MCO_STACK_OVERFLOW:
+      return "Stack overflow";
   }
   return "Unknown error";
 }
