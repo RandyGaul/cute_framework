@@ -52,10 +52,6 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 
-#if defined(SOKOL_GLCORE33) || defined(SOKOL_GLES3) || defined(SOKOL_GLES2)
-#	include <glad/glad.h>
-#endif
-
 #define SOKOL_IMPL
 #define SOKOL_TRACE_HOOKS
 #ifdef SOKOL_D3D11
@@ -166,13 +162,6 @@ error_t app_make(const char* window_title, int x, int y, int w, int h, uint32_t 
 			CUTE_FREE(app, user_allocator_context);
 			return error_failure("Unable to create OpenGL context.");
 		}
-#ifdef __glad_h_
-#	ifdef CUTE_EMSCRIPTEN
-		gladLoadGLES2Loader(SDL_GL_GetProcAddress);
-#	else
-		gladLoadGLLoader(SDL_GL_GetProcAddress);
-#	endif // CUTE_EMSCRIPTEN
-#endif // __glad_h_
 		CUTE_MEMSET(&app->gfx_ctx_params, 0, sizeof(app->gfx_ctx_params));
 		app->gfx_ctx_params.color_format = SG_PIXELFORMAT_RGBA8;
 		app->gfx_ctx_params.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;

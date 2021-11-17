@@ -129,23 +129,6 @@ set(CUTE_SRCS
 	libraries/imgui/imgui_widgets.cpp
 )
 
-# Glad loader for GL.
-if(EMSCRIPTEN)
-	set(GLAD_SRCS libraries/glad/gles3/glad/glad.c)
-	set(GLAD_HDRS
-		libraries/glad/gles3/glad/glad.h
-		libraries/glad/gles3/KHR/khrplatform.h
-	)
-	set(GLAD_INCLUDE_DIRECTORY libraries/glad/gles3)
-else()
-	set(GLAD_SRCS libraries/glad/gl33/glad/glad.c)
-	set(GLAD_HDRS
-		libraries/glad/gl33/glad/glad.h
-		libraries/glad/gl33/KHR/khrplatform.h
-	)
-	set(GLAD_INCLUDE_DIRECTORY libraries/glad/gl33)
-endif()
-
 # Optional Hydrogen for security.
 if(CUTE_FRAMEWORK_WITH_HYDROGEN)
 	set(HYDROGEN_HDRS
@@ -259,12 +242,12 @@ set(CUTE_HDRS
 )
 
 if(CUTE_FRAMEWORK_STATIC)
-	add_library(cute STATIC ${CUTE_SRCS} ${CUTE_HDRS} ${GLAD_SRCS} ${GLAD_HDRS} ${HYDROGEN_SRCS} ${HYDROGEN_HDRS})
+	add_library(cute STATIC ${CUTE_SRCS} ${CUTE_HDRS} ${HYDROGEN_SRCS} ${HYDROGEN_HDRS})
 	target_compile_definitions(cute PUBLIC CUTE_STATIC)
 else()
-	add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS} ${GLAD_SRCS} ${GLAD_HDRS} ${HYDROGEN_SRCS} ${HYDROGEN_HDRS})
+	add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS} ${HYDROGEN_SRCS} ${HYDROGEN_HDRS})
 endif()
-target_include_directories(cute PRIVATE ${GLAD_INCLUDE_DIRECTORY} "include" "libraries/libhydrogen")
+target_include_directories(cute PRIVATE "include" "libraries/libhydrogen")
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)
 
 # PhysicsFS, always statically linked.
