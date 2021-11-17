@@ -226,7 +226,6 @@ int socket_init(socket_t* socket, const char* address_and_port, int send_buffer_
 
 		if (bind(socket->handle, (sockaddr*)&socket_endpoint, sizeof(socket_endpoint)) < 0)
 		{
-			int e = WSAGetLastError();
 			//error_set("Failed to bind ipv6 socket.");
 			socket_cleanup(socket);
 			return -1;
