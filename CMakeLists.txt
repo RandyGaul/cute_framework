@@ -62,6 +62,7 @@ if(MSVC)
 	add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 endif()
 
+# Disable SSE for ARM Macbooks.
 if(APPLE OR ARCH_64)
 	if(NOT "${CMAKE_OSX_ARCHITECTURES}" MATCHES "arm")
 		add_definitions(-DCUTE_SOUND_SCALAR_MODE)
