@@ -63,10 +63,8 @@ if(MSVC)
 endif()
 
 # Disable SSE for ARM Macbooks.
-if(APPLE OR ARCH_64)
-	if(NOT "${CMAKE_OSX_ARCHITECTURES}" MATCHES "arm")
-		add_definitions(-DCUTE_SOUND_SCALAR_MODE)
-	endif()
+if(APPLE AND "${CMAKE_OSX_ARCHITECTURES}" MATCHES "arm")
+	add_definitions(-DCUTE_SOUND_SCALAR_MODE)
 endif()
 
 # Common directories for compiler/linker path.
