@@ -309,6 +309,8 @@ set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} physfs)
 
 # Optional mbedtls for HTTPS support.
 if(CUTE_FRAMEWORK_WITH_HTTPS)
+	option(ENABLE_PROGRAMS "Build mbed TLS programs." OFF)
+	option(ENABLE_TESTING "Build mbed TLS tests." OFF)
 	fetch_content_with_folder(
 		mbedtls
 		GIT_REPOSITORY https://github.com/ARMmbed/mbedtls
