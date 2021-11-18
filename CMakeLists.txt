@@ -289,7 +289,7 @@ if(MACOSX)
 	find_library(IOKIT IOKit)
 	find_library(FOUNDATION Foundation)
 	find_library(SECURITY Security)
-	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY})
+	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} -framework OpenGL)
 endif()
 
 add_library(physfs STATIC ${PHYSFS_SRCS})
