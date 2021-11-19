@@ -315,22 +315,12 @@ set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)
 if(EMSCRIPTEN)
 	# Emscripten provides its own SDL2.
 else()
-	# Try to find SDL2 (only need this to support dynamic lib building, e.g. via homebrew).
-	#if (DEFINED SDL2_LIBRARIES AND DEFINED SDL2_INCLUDE_DIRS)
-	#	set(SDL2_FOUND true)
-	#else()
-	#	find_package(SDL2 QUIET)
-	#endif()
-
-	# Download CMake if it wasn't found.
-	#if (NOT ${SDL2_FOUND})
-		fetch_content_with_folder(
-			SDL2
-			GIT_REPOSITORY https://github.com/libsdl-org/SDL
-			GIT_TAG release-2.0.14
-			GIT_PROGRESS TRUE
-		)
-	#endif()
+	fetch_content_with_folder(
+		SDL2
+		GIT_REPOSITORY https://github.com/libsdl-org/SDL
+		GIT_TAG release-2.0.14
+		GIT_PROGRESS TRUE
+	)
 endif()
 set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} SDL2-static)
 target_include_directories(cute PUBLIC ${SDL2_INCLUDE_DIRS})
