@@ -5,14 +5,13 @@ Switches the music from one track to another simultaneously with a crossfade eff
 ## Syntax
 
 ```cpp
-error_t music_crossfade(app_t* app, audio_t* audio_source, float cross_fade_time = 0);
+error_t music_crossfade(audio_t* audio_source, float cross_fade_time = 0);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 audio_source | The raw audio samples to switch to.
 cross_fade_time | Time in milliseconds to crossfade the tracks.
 

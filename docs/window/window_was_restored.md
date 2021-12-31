@@ -6,7 +6,7 @@ Returns whether or not the window was restored.
 ## Syntax
 
 ```cpp
-bool window_was_restored(app_t* app);
+bool window_was_restored();
 ```
 
 ## Return Value

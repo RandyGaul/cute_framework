@@ -6,7 +6,7 @@ Returns whether or not the window was minimized.
 ## Syntax
 
 ```cpp
-bool window_was_minimized(app_t* app);
+bool window_was_minimized();
 ```
 
 ## Return Value

@@ -5,14 +5,13 @@ Sets the optional post-update function for the system during registration with C
 ## Syntax
 
 ```cpp
-void ecs_system_set_optional_post_update(app_t* app, void (*post_update_fn)(app_t* app, float dt, void* udata));
+void ecs_system_set_optional_post_update(void (*post_update_fn)(app_t* app, float dt, void* udata));
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 post_update_fn | The function to be called during the post-update phase. Called once after the `update_fn` is called, as set by [ecs_system_set_update](https://github.com/RandyGaul/cute_framework/blob/master/docs/ecs/ecs_system_set_update.md). The `udata` is set by [ecs_system_set_optional_update_udata](https://github.com/RandyGaul/cute_framework/blob/master/docs/ecs/ecs_system_set_optional_update_udata.md).
 
 ## Remarks

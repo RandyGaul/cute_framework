@@ -5,14 +5,13 @@ Sets the pitch for music.
 ## Syntax
 
 ```cpp
-void music_set_pitch(app_t* app, float pitch);
+void music_set_pitch(float pitch);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 pitch | A number from 0 to 1, where 0.5f means no pitch adjustment.
 
 ## Remarks

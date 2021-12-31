@@ -5,14 +5,13 @@ Resumes the music.
 ## Syntax
 
 ```cpp
-void music_resume(app_t* app);
+void music_resume();
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 
 ## Remarks
 

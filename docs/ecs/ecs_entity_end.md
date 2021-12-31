@@ -5,14 +5,13 @@ Ends the registration of an entity within the ECS.
 ## Syntax
 
 ```cpp
-void ecs_entity_end(app_t* app);
+void ecs_entity_end();
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 
 ## Remarks
 

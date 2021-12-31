@@ -5,15 +5,14 @@ Saves entities
 ## Syntax
 
 ```cpp
-error_t ecs_save_entities(app_t* app, const array<entity_t>& entities, kv_t* kv);
-error_t ecs_save_entities(app_t* app, const array<entity_t>& entities);
+error_t ecs_save_entities(const array<entity_t>& entities, kv_t* kv);
+error_t ecs_save_entities(const array<entity_t>& entities);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 entities | The entities to save.
 kv | A read-only kv instance for saving to.
 

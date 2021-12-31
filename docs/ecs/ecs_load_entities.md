@@ -5,14 +5,13 @@ Loads entities from a parsed kv instance.
 ## Syntax
 
 ```cpp
-error_t ecs_load_entities(app_t* app, kv_t* kv, array<entity_t>* entities_out = NULL);
+error_t ecs_load_entities(kv_t* kv, array<entity_t>* entities_out = NULL);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 kv | The parsed kv instance containing the serialized entity data.
 entities_out | Optional parameter, will be filled with the entities.
 

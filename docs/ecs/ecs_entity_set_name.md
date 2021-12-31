@@ -5,14 +5,13 @@ Specifies the unique identifier for a new entity type to be registered within Cu
 ## Syntax
 
 ```cpp
-void ecs_entity_set_name(app_t* app, const char* entity_type);
+void ecs_entity_set_name(const char* entity_type);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 entity_type | The name of the new entity type to register. This can be any unique string, but is recommended to be the [stringized](https://en.wikipedia.org/wiki/C_preprocessor#Token_stringification) version of the associated component struct or class name.
 
 ## Remarks

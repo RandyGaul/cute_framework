@@ -5,14 +5,13 @@ Creates a new entity.
 ## Syntax
 
 ```cpp
-entity_t entity_make(app_t* app, const char* entity_type, error_t* err = NULL);
+entity_t entity_make(const char* entity_type, error_t* err = NULL);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 entity_type | The type of entity to create.
 err | Optional parameter for getting error details (like serialization errors).
 

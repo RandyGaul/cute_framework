@@ -6,7 +6,7 @@ Returns whether or not the window was moved.
 ## Syntax
 
 ```cpp
-bool window_was_moved(app_t* app);
+bool window_was_moved();
 ```
 
 ## Return Value

@@ -6,7 +6,7 @@ Returns whether or not the window was maximized.
 ## Syntax
 
 ```cpp
-bool window_was_maximized(app_t* app);
+bool window_was_maximized();
 ```
 
 ## Return Value

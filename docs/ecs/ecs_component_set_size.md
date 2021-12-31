@@ -5,14 +5,13 @@ Sets the size of a component during registration within Cute's ECS.
 ## Syntax
 
 ```cpp
-void ecs_component_set_size(app_t* app, size_t size);
+void ecs_component_set_size(size_t size);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 size | The size of the component being registered.
 
 ## Remarks

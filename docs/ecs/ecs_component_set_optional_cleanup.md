@@ -5,14 +5,13 @@ Sets the optional cleanup of a component during registration within Cute's ECS.
 ## Syntax
 
 ```cpp
-void ecs_component_set_optional_cleanup(app_t* app, component_cleanup_fn* cleanup_fn, void* udata = NULL);
+void ecs_component_set_optional_cleanup(component_cleanup_fn* cleanup_fn, void* udata = NULL);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 cleanup_fn | The optional cleanup of the component being registered.
 udata | Optional user data pointer to passed to the `cleanup_fn` whenever it is called.
 

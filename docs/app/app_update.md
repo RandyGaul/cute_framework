@@ -5,14 +5,13 @@ Updates the application by gathering inputs and window events.
 ## Syntax
 
 ```cpp
-void app_update(app_t* app);
+void app_update();
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 
 ## Remarks
 

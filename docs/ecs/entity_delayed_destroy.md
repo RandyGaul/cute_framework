@@ -5,14 +5,13 @@ Queues up the destruction of an entity to occur at the end of the next [ecs_run_
 ## Syntax
 
 ```cpp
-void entity_delayed_destroy(app_t* app, entity_t entity);
+void entity_delayed_destroy(entity_t entity);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 entity | The entity to destroy.
 
 ## Related Functions
