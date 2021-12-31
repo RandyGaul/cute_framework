@@ -5,14 +5,13 @@ Stops the currently playing music track.
 ## Syntax
 
 ```cpp
-error_t music_stop(app_t* app, float fade_out_time = 0);
+error_t music_stop(float fade_out_time = 0);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 fade_out_time | Number of milliseconds to slowly ramp down the volume set by [music_set_volume](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/music/music_set_volume.md) (defaults to 1) down to 0.
 
 ## Return Value

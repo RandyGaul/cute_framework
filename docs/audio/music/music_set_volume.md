@@ -5,14 +5,13 @@ Sets the volume for music.
 ## Syntax
 
 ```cpp
-void music_set_volume(app_t* app, float volume);
+void music_set_volume(float volume);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 volume | A number from 0 to 1.
 
 ## Remarks

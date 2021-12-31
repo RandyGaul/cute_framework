@@ -5,14 +5,13 @@ Sets the update function of a system during registration with Cute's ECS.
 ## Syntax
 
 ```cpp
-void ecs_system_set_update(app_t* app, void* update_fn);
+void ecs_system_set_update(void* update_fn);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 update_fn | The function pointer of your update function. The signature should be typecasted to `void*`, but must follow a specific pattern detailed here in the [ECS readme](https://github.com/RandyGaul/cute_framework/blob/master/docs/ecs/README.md).
 
 ## Remarks

@@ -6,7 +6,7 @@ Returns whether or not the mouse entered the window.
 ## Syntax
 
 ```cpp
-bool window_mouse_entered(app_t* app);
+bool window_mouse_entered();
 ```
 
 ## Return Value

@@ -5,14 +5,13 @@ Use this function to shutdown the application.
 ## Syntax
 
 ```cpp
-void app_destroy(app_t* app);
+void app_destroy();
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application to destroy.
 
 ## Related Functions
 

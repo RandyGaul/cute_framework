@@ -5,14 +5,13 @@ Cleans up a component upon destruction.
 ## Syntax
 
 ```cpp
-typedef void (component_cleanup_fn)(app_t* app, entity_t entity, void* component, void* udata);
+typedef void (component_cleanup_fn)(entity_t entity, void* component, void* udata);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 entity | The entity being serialized.
 component | A pointer to the specific component being serialized.
 udata | A user data pointer for your convenience, as set by [ecs_component_set_optional_cleanup](https://github.com/RandyGaul/cute_framework/blob/master/docs/ecs/ecs_component_set_optional_cleanup.md).

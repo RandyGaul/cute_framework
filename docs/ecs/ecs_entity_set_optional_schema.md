@@ -5,14 +5,13 @@ Adds an optional schema string during entity registration.
 ## Syntax
 
 ```cpp
-void ecs_entity_set_optional_schema(app_t* app, const char* schema);
+void ecs_entity_set_optional_schema(const char* schema);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 schema | The kv serialized schema.
 
 ## Remarks

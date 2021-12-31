@@ -5,14 +5,13 @@ Starts the registration of a system within the ECS.
 ## Syntax
 
 ```cpp
-void ecs_system_begin(app_t* app);
+void ecs_system_begin();
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 
 ## Remarks
 

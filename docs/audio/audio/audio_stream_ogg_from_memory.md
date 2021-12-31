@@ -5,14 +5,13 @@ Loads an ogg file from memory.
 ## Syntax
 
 ```cpp
-audio_t* audio_stream_ogg_from_memory(app_t* app, void* memory, int byte_count, promise_t promise, void* user_allocator_context = NULL);
+audio_t* audio_stream_ogg_from_memory(void* memory, int byte_count, promise_t promise, void* user_allocator_context = NULL);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 memory | Pointer to the buffer storing the raw file data.
 byte_count | The size of the `memory` buffer.
 promise | The promise used to notify you when the streaming operation is finished.

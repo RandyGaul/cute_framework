@@ -5,14 +5,13 @@ Retrieves the `strpool_t` instance for the application. This is a low-level func
 ## Syntax
 
 ```cpp
-void app_get_strpool(app_t* app);
+void app_get_strpool();
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 
 ## Return Value
 

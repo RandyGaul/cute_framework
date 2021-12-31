@@ -5,14 +5,13 @@ Sets up the upscaling system. This is used for pixel art games that want to rend
 ## Syntax
 
 ```cpp
-error_t app_init_upscaling(app_t* app, upscale_t upscaling, int offscreen_w, int offscreen_h);
+error_t app_init_upscaling(upscale_t upscaling, int offscreen_w, int offscreen_h);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 upscaling | The upscale settings, remarks below for more details.
 
 ## Return Value

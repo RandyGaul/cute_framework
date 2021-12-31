@@ -5,14 +5,13 @@ Loads an ogg file from memory.
 ## Syntax
 
 ```cpp
-void audio_stream_ogg(app_t* app, const char* path, promise_t promise, void* user_allocator_context = NULL);
+void audio_stream_ogg(const char* path, promise_t promise, void* user_allocator_context = NULL);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 path | The [virtual path](https://github.com/RandyGaul/cute_framework/blob/master/docs/fill_me_in) to the ogg file on disk.
 promise | The promise used to notify you when the streaming operation is finished.
 user_allocator_context | Used for custom allocators, this can be set to `NULL`. See (TODO) for more details.

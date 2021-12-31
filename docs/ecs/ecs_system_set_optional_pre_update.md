@@ -5,14 +5,13 @@ Sets the optional pre-update function for the system during registration with Cu
 ## Syntax
 
 ```cpp
-void ecs_system_set_optional_pre_update(app_t* app, void (*pre_update_fn)(app_t* app, float dt, void* udata));
+void ecs_system_set_optional_pre_update(void (*pre_update_fn)(app_t* app, float dt, void* udata));
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 pre_update_fn | The function to be called during the pre-update phase. Called once before the `update_fn` is called, as set by [ecs_system_set_update](https://github.com/RandyGaul/cute_framework/blob/master/docs/ecs/ecs_system_set_update.md). The `udata` is set by [ecs_system_set_optional_update_udata](https://github.com/RandyGaul/cute_framework/blob/master/docs/ecs/ecs_system_set_optional_update_udata.md).
 
 ## Remarks

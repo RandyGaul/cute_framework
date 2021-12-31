@@ -5,14 +5,13 @@ Checks to see whether or not the `entity_t` references an active entity instance
 ## Syntax
 
 ```cpp
-bool entity_is_valid(app_t* app, entity_t entity);
+bool entity_is_valid(entity_t entity);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 entity | The entity to check.
 
 ## Related Functions

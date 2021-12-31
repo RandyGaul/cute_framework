@@ -5,14 +5,13 @@ Adds a required component to the system. The system will only run on entities co
 ## Syntax
 
 ```cpp
-void ecs_system_require_component(app_t* app, const char* component_type);
+void ecs_system_require_component(const char* component_type);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 component_type | The component type to require.
 
 ## Remarks

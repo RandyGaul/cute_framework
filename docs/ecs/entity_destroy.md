@@ -5,14 +5,13 @@ Destroys an entity.
 ## Syntax
 
 ```cpp
-void entity_destroy(app_t* app, entity_t entity);
+void entity_destroy(entity_t entity);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 entity | The entity to destroy.
 
 ## Related Functions

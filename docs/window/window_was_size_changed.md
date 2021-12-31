@@ -6,7 +6,7 @@ Returns whether or not the window size was changed.
 ## Syntax
 
 ```cpp
-bool window_was_size_changed(app_t* app);
+bool window_was_size_changed();
 ```
 
 ## Return Value

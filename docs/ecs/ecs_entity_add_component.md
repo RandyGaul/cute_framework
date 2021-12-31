@@ -5,14 +5,13 @@ Adds a component type during entity registration.
 ## Syntax
 
 ```cpp
-void ecs_entity_add_component(app_t* app, const char* component_type);
+void ecs_entity_add_component(const char* component_type);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 component_type | The name of the component type as specified by [ecs_component_set_name](https://github.com/RandyGaul/cute_framework/blob/master/docs/ecs/ecs_component_set_name.md).
 
 ## Remarks

@@ -5,14 +5,13 @@ Checks if an entity has a certain type of component.
 ## Syntax
 
 ```cpp
-bool entity_has_component(app_t* app, entity_t entity, const char* name);
+bool entity_has_component(entity_t entity, const char* name);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 entity_t | Identifier for a specific entity instance.
 name | The type of the component.
 

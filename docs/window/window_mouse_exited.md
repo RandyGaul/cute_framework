@@ -6,7 +6,7 @@ Returns whether or not the mouse exited the window.
 ## Syntax
 
 ```cpp
-bool window_mouse_exited(app_t* app);
+bool window_mouse_exited();
 ```
 
 ## Return Value

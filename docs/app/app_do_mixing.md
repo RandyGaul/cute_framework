@@ -5,14 +5,13 @@ Performs mixing operations for all currently playing sounds and mixing in a sing
 ## Syntax
 
 ```cpp
-void app_do_mixing(app_t* app);
+void app_do_mixing();
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 
 ## Remarks
 
