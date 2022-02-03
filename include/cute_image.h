@@ -48,12 +48,12 @@ struct image_indexed_t
 // -------------------------------------------------------------------------------------------------
 // PNG loading.
 
-CUTE_API error_t CUTE_CALL image_load_png(const char* path, image_t* img, void* user_allocator_context = NULL);
+CUTE_API error_t CUTE_CALL image_load_png(const char* virtual_path, image_t* img, void* user_allocator_context = NULL);
 CUTE_API error_t CUTE_CALL image_load_png_mem(const void* data, int size, image_t* img, void* user_allocator_context = NULL);
 CUTE_API error_t CUTE_CALL image_load_png_wh(const void* data, int size, int* w, int* h);
 CUTE_API void CUTE_CALL image_free(image_t* img);
 
-CUTE_API error_t CUTE_CALL image_load_png_indexed(const char* path, image_indexed_t* img, void* user_allocator_context = NULL);
+CUTE_API error_t CUTE_CALL image_load_png_indexed(const char* virtual_path, image_indexed_t* img, void* user_allocator_context = NULL);
 CUTE_API error_t CUTE_CALL image_load_png_mem_indexed(const void* data, int size, image_indexed_t* img);
 CUTE_API void CUTE_CALL image_free(image_indexed_t* img);
 
