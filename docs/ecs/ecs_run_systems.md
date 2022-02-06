@@ -5,14 +5,13 @@ Runs all systems in the ECS in the order they were originally registered.
 ## Syntax
 
 ```cpp
-void ecs_run_systems(app_t* app);
+void ecs_run_systems();
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 udata | The udata passed to update callbacks for the system (update, pre-update and post-update).
 
 ## Remarks

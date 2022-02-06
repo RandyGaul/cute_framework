@@ -19,13 +19,13 @@ An entity is merely a collection of components that represents a "thing" in your
 > Registering a collection of 4 components as a new entity type called `Octorok`.
 
 ```cpp
-ecs_entity_begin(app);
-ecs_entity_set_name(app, "Octorok");
-ecs_entity_add_component(app, "Transform");
-ecs_entity_add_component(app, "GridObject");
-ecs_entity_add_component(app, "Sprite");
-ecs_entity_add_component(app, "OctorokComponent"); // Named with "Component" at the end to avoid confusion with
-ecs_entity_end(app);                               // the entity type string "Octorok".
+ecs_entity_begin();
+ecs_entity_set_name("Octorok");
+ecs_entity_add_component("Transform");
+ecs_entity_add_component("GridObject");
+ecs_entity_add_component("Sprite");
+ecs_entity_add_component("OctorokComponent"); // Named with "Component" at the end to avoid confusion with
+ecs_entity_end();                               // the entity type string "Octorok".
 ```
 
 All components are user defined (see Components section).
@@ -33,26 +33,26 @@ All components are user defined (see Components section).
 Once registered, an entity instance can be made by calling a single function `entity_make`.
 
 ```cpp
-entity_t e = entity_make(app, "Octorok");
+entity_t e = entity_make("Octorok");
 ```
 
 From here you can call a few different functions upon the entity.
 
 ```cpp
-entity_t entity_make(app_t* app, const char* entity_type, error_t* err = NULL);
-bool entity_is_valid(app_t* app, entity_t entity);
-bool entity_is_type(app_t* app, entity_t entity, const char* entity_type);
-const char* entity_get_type_string(app_t* app, entity_t entity);
-bool entity_has_component(app_t* app, entity_t entity, const char* name);
-void* entity_get_component(app_t* app, entity_t entity, const char* name);
-void entity_destroy(app_t* app, entity_t entity);
-void entity_delayed_destroy(app_t* app, entity_t entity);
+entity_t entity_make(const char* entity_type, error_t* err = NULL);
+bool entity_is_valid(entity_t entity);
+bool entity_is_type(entity_t entity, const char* entity_type);
+const char* entity_get_type_string(entity_t entity);
+bool entity_has_component(entity_t entity, const char* name);
+void* entity_get_component(entity_t entity, const char* name);
+void entity_destroy(entity_t entity);
+void entity_delayed_destroy(entity_t entity);
 ```
 
 Here's an example of how to use `entity_get_component`.
 
 ```cpp
-OctorokComponent* octorok = (OctorokComponent*)entity_get_component(app, e, "OctorokComponent");
+OctorokComponent* octorok = (OctorokComponent*)entity_get_component(e, "OctorokComponent");
 ```
 
 ## Component
@@ -80,11 +80,11 @@ struct OctorokComponent
 > Registering the Octorok component.
 
 ```cpp
-ecs_component_begin(app);
-ecs_component_set_name(app, "OctorokComponent");
-ecs_component_set_size(app, sizeof(OctorokComponent));
-ecs_component_set_optional_serializer(app, octorok_component_serialize);
-ecs_component_end(app);
+ecs_component_begin();
+ecs_component_set_name("OctorokComponent");
+ecs_component_set_size(sizeof(OctorokComponent));
+ecs_component_set_optional_serializer(octorok_component_serialize);
+ecs_component_end();
 ```
 
 ### Creating or Destroying Components
@@ -92,13 +92,13 @@ ecs_component_end(app);
 In the above section the `octorok_serialize` was not explained. This is a function pointer to be called whenever a new instance of a component is loaded or saved. The function pointer type looks like this.
 
 ```cpp
-typedef error_t (*serialize_fn)(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata);
+typedef error_t (*serialize_fn)(kv_t* kv, bool reading, entity_t entity, void* component, void* udata);
 ```
 
 For the Octorok example the implemented function might look like this.
 
 ```cpp
-error_t octorok_component_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+error_t octorok_component_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	OctorokComponent* octorok = (OctorokComponent*)component;
 	if (reading) {
@@ -117,25 +117,25 @@ Other ECS's out there have the notion of component depencenies, where a componen
 For example, say there is a `BlueComponent` but it requires a `RedComponent`. Make sure that `BlueComponent` is required *after* `RedComponent`.
 
 ```cpp
-void register_components(app_t* app)
+void register_components()
 {
-	ecs_entity_begin(app);
-	ecs_entity_set_name(app, "MyEntity");
-	ecs_entity_require_component(app, "RedComponent");
-	ecs_entity_require_component(app, "BlueComponent");
-	ecs_entity_end(app);
+	ecs_entity_begin();
+	ecs_entity_set_name("MyEntity");
+	ecs_entity_require_component("RedComponent");
+	ecs_entity_require_component("BlueComponent");
+	ecs_entity_end();
 }
 ```
 
 The order components are required is the order they are constructed and initialized. This means when a `BlueComponent` is created it can lookup on the entity to see if the `RedComponent` is present. If it does not exist an error can be reported about the missing dependency.
 
 ```cpp
-error_t blue_component_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+error_t blue_component_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	BlueComponent* blue = (BlueComponent*)component;
 	if (reading) {
 		CUTE_PLACEMENT_NEW(blue) BlueComponent;
-		if (!entity_has_component(app, entity, "RedComponent")) {
+		if (!entity_has_component(entity, "RedComponent")) {
 			// Report the error.
 			return error_failure("The BlueComponent requires the RedComponent be present.");
 		}
@@ -151,7 +151,7 @@ Other ECS's usually have components share a lot of common functionality. For exa
 If you'd like your components to reference the owning entities simply store the reference in your component when initialized (with the serializer `ecs_set_optional_serializer`).
 
 ```cpp
-error_t blue_component_serialize(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+error_t blue_component_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	MyComponent* my_component = (MyComponent*)component;
 	if (reading) {
@@ -169,17 +169,17 @@ In the ECS systems are just functions. The purpose is to write your gameplay cod
 > Registering a system. This system only intakes a single type of component, the Octorok component. Systems can also intake up to 8 different kinds of components.
 
 ```cpp
-ecs_system_begin(app);
-ecs_system_set_update(app, (void*)update_octorok_system);
-ecs_system_require_component(app, "OctorokComponent");
+ecs_system_begin();
+ecs_system_set_update((void*)update_octorok_system);
+ecs_system_require_component("OctorokComponent");
 // Require more component types here by calling `ecs_system_require_component` up to 7 more times, for a total of 8.
-ecs_system_end(app);
+ecs_system_end();
 ```
 
 > An example of an empty (unimplemented) system for the Octorok component.
 
 ```cpp
-void update_octorok_system(app_t* app, float dt, void* udata, OctorokComponent* octoroks, int entity_count)
+void update_octorok_system(float dt, void* udata, OctorokComponent* octoroks, int entity_count)
 {
 	for (int i = 0; i < entity_count; ++i) {
 		OctorokComponent* octorok = octoroks + i;
@@ -194,13 +194,13 @@ Here's an example of a different system that operates on two different component
 
 
 ```cpp
-ecs_system_begin(app);
-ecs_system_set_update(app, (void*)update_sprite_system);
-ecs_system_require_component(app, "Transform");
-ecs_system_require_component(app, "Sprite");
-ecs_system_end(app);
+ecs_system_begin();
+ecs_system_set_update((void*)update_sprite_system);
+ecs_system_require_component("Transform");
+ecs_system_require_component("Sprite");
+ecs_system_end();
 
-void update_sprite_system(app_t* app, float dt, void* udata, Transform* transforms, Sprite* sprites, int entity_count)
+void update_sprite_system(float dt, void* udata, Transform* transforms, Sprite* sprites, int entity_count)
 {
 	for (int i = 0; i < entity_count; ++i) {
 		Transform* transform = transforms + i;
@@ -217,25 +217,25 @@ If a particular entity contained many kinds of components, but also still contai
 Due to a limitation of the C programming language (and a disinterest in using complicated C++ templates) there is one quirk in Cute's ECS API regarding the system update function. When registering a system the `ecs_system_set_update` function is used. Notice that the `update_fn` parameter is merely a `void*`.
 
 ```cpp
-void ecs_system_set_update(app_t* app, void* update_fn);
+void ecs_system_set_update(void* update_fn);
 ```
 
 `update_fn` is a `void*` to signify that many different kinds of function signatures are acceptable. However, some care is needed to follow a strict pattern. The basic form of a system that has no components looks like this.
 
 ```cpp
-void system_with_no_components(app_t* app, float dt, void* udata);
+void system_with_no_components(float dt, void* udata);
 ```
 
 Here is the form of a system taking one component. Notice that an array of `Transform` components is added, along with the `entity_count`.
 
 ```cpp
-void system_with_one_component(app_t* app, float dt, void* udata, Transform* transforms, int entity_count);
+void system_with_one_component(float dt, void* udata, Transform* transforms, int entity_count);
 ```
 
 Here is an example of the form for two components.
 
 ```cpp
-void system_with_two_components(app_t* app, float dt, void* udata, Transform* transforms, Sprite* sprites, int entity_count);
+void system_with_two_components(float dt, void* udata, Transform* transforms, Sprite* sprites, int entity_count);
 ```
 
 `transforms` and `sprites` are both arrays of the same length (of length `entity_count`), where each index represents a different entity. Requiring more components types, as required by calling `ecs_system_require_component`, will increase the number of components expected for your system to intake as parameters. The order of the component types is the same as the order in which `ecs_system_require_component` was originally called. The maximum number of different components a system can require is 8. If you want to go above 8 different types of components it is suggested to redesign your components to abide by this limitation, or modify the source code of Cute yourself.

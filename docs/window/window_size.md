@@ -6,14 +6,13 @@ Retrieves the size of the window in screen coordinates. If high DPI mode is enab
 ## Syntax
 
 ```cpp
-void window_size(app_t* app, int* w, int* h);
+void window_size(int* w, int* h);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 w | The current width of the window in screen coordinates.
 h | The current height of the window in screen coordinates.
 

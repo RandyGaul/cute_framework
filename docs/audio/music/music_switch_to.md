@@ -5,14 +5,13 @@ Switches the music from one track to another.
 ## Syntax
 
 ```cpp
-error_t music_switch_to(app_t* app, audio_t* audio_source, float fade_out_time = 0, float fade_in_time = 0);
+error_t music_switch_to(audio_t* audio_source, float fade_out_time = 0, float fade_in_time = 0);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 audio_source | The raw audio samples to switch to.
 fade_out_time | Time in milliseconds to fade out the previously playing music.
 fade_in_time | Time in milliseconds to fade in the new music.

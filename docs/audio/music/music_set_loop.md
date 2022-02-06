@@ -5,14 +5,13 @@ Sets the loop setting for music.
 ## Syntax
 
 ```cpp
-void music_set_loop(app_t* app, bool true_to_loop);
+void music_set_loop(bool true_to_loop);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 true_to_loop | True to loop music, false otherwise.
 
 ## Remarks

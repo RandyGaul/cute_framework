@@ -5,14 +5,13 @@ Ends the registration of a component within the ECS.
 ## Syntax
 
 ```cpp
-void ecs_component_end(app_t* app);
+void ecs_component_end();
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 
 ## Remarks
 

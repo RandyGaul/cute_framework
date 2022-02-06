@@ -5,14 +5,13 @@ Starts playing raw audio as a music track.
 ## Syntax
 
 ```cpp
-error_t music_play(app_t* app, audio_t* audio_source, float fade_in_time = 0);
+error_t music_play(audio_t* audio_source, float fade_in_time = 0);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 audio_source | The raw audio samples to reference while playing.
 fade_in_time | Number of milliseconds to slowly ramp up the volume from 0 to the volume set by [music_set_volume](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/music/music_set_volume.md) (defaults to 1).
 

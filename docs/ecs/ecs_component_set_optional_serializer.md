@@ -5,14 +5,13 @@ Sets the optional serializer of a component during registration within Cute's EC
 ## Syntax
 
 ```cpp
-void ecs_component_set_optional_serializer(app_t* app, component_serialize_fn* serializer_fn, void* udata = NULL);
+void ecs_component_set_optional_serializer(component_serialize_fn* serializer_fn, void* udata = NULL);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 serializer_fn | The optional serializer of the component being registered.
 udata | Optional user data pointer to passed to the `serializer_fn` whenever it is called.
 

@@ -5,7 +5,7 @@ Use this function to construct an instance of your application window. This func
 ## Syntax
 
 ```cpp
-app_t* app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
+error_t app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
 ```
 
 ## Function Parameters
@@ -23,7 +23,7 @@ user_allocator_context | Used for custom allocators, this can be set to `NULL`. 
 
 ## Return Value
 
-Returns a pointer to an `app_t` instance. Destroy it with [app_destroy](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/app_destroy.md) when you're done with it. Returns `NULL` on failure.
+Returns a struct `error_t` instance. Destroy it with [app_destroy](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/app_destroy.md) when you're done with it. Returns `NULL` on failure.
 
 ## Code Example
 
@@ -36,17 +36,17 @@ using namespace cute;
 int main(int argc, const char** argv)
 {
 	// Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
-	app_t* app = app_make("Fancy Window Title", 50, 50, 640, 480, CUTE_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+	app_make("Fancy Window Title", 50, 50, 640, 480, CUTE_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
 
-	while (app_is_running(app))
+	while (app_is_running())
 	{
 		float dt = calc_dt();
-		app_update(app, dt);
+		app_update(dt);
 		// All your game logic and updates go here...
-		app_present(app);
+		app_present();
 	}
 	
-	app_destroy(app);
+	app_destroy();
 	
 	return 0;
 }

@@ -5,14 +5,13 @@ Returns the power information for the application. See remarks for details.
 ## Syntax
 
 ```cpp
-power_info_t app_power_info(app_t* app);
+power_info_t app_power_info();
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 
 ## Return Value
 

@@ -5,14 +5,13 @@ Serializes a component. This can be a read or write operation.
 ## Syntax
 
 ```cpp
-typedef error_t (component_serialize_fn)(app_t* app, kv_t* kv, bool reading, entity_t entity, void* component, void* udata);
+typedef error_t (component_serialize_fn)(kv_t* kv, bool reading, entity_t entity, void* component, void* udata);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 kv | A kv instance for access to the registered schema hierarchy. [See the Remarks section here](https://github.com/RandyGaul/cute_framework/blob/master/docs/ecs/ecs_entity_set_optional_schema.md) for details about entity schemas.
 reading | True if this is a reading operation, false otherwise for writing.
 entity | The entity being serialized.

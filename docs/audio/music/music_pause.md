@@ -5,14 +5,13 @@ Pauses the music.
 ## Syntax
 
 ```cpp
-void music_pause(app_t* app);
+void music_pause();
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 
 ## Remarks
 

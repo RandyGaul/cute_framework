@@ -6,7 +6,7 @@ Returns whether or not the window has lost keyboard focus.
 ## Syntax
 
 ```cpp
-bool window_keyboard_lost_focus(app_t* app);
+bool window_keyboard_lost_focus();
 ```
 
 ## Return Value

@@ -7,8 +7,8 @@ Represents an instance of an entity.
 Entities can be used with the equals `==` and not equals `!=` operators. Here is an example.
 
 ```cpp
-entity_t a = entity_make(app, "EntityTypeA");
-entity_t b = entity_make(app, "EntityTypeB");
+entity_t a = entity_make("EntityTypeA");
+entity_t b = entity_make("EntityTypeB");
 entity_t c = a;
 
 printf("a %s b\n", a == b ? "equals" : "does not equal");
@@ -34,7 +34,7 @@ All data fields are for internal use only.
 
 ```cpp
 error_t err;
-entity e = entity_make(app, "YourEntityType", &err);
+entity e = entity_make("YourEntityType", &err);
 if (err.is_error()) {
 	// Unable to make entity...
 }

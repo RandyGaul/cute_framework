@@ -5,14 +5,13 @@ Returns the type string for a given entity.
 ## Syntax
 
 ```cpp
-const char* app_entity_type_string(app_t* app, entity_t entity);
+const char* app_entity_type_string(entity_t entity);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 entity | The entity to fetch the type of.
 
 ## Return Value

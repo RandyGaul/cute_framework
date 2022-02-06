@@ -5,14 +5,13 @@ Sets the optional udata to be passed to all update functions for the system (upd
 ## Syntax
 
 ```cpp
-void ecs_system_set_optional_update_udata(app_t* app, void* udata);
+void ecs_system_set_optional_update_udata(void* udata);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 udata | The udata passed to update callbacks for the system (update, pre-update and post-update).
 
 ## Remarks

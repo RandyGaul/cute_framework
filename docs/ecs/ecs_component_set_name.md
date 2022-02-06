@@ -5,14 +5,13 @@ Sets the name of a component during registration within Cute's ECS.
 ## Syntax
 
 ```cpp
-void ecs_component_set_name(app_t* app, const char* name);
+void ecs_component_set_name(const char* name);
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 name | The name of the component being registered.
 
 ## Remarks

@@ -5,14 +5,13 @@ Signals to Cute to stop running, and will cause [app_is_running](https://github.
 ## Syntax
 
 ```cpp
-void app_stop_running(app_t* app);
+void app_stop_running();
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 
 ## Related Functions
 

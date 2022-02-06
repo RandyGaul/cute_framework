@@ -6,7 +6,7 @@ Returns whether or not the mouse is inside the window.
 ## Syntax
 
 ```cpp
-bool window_mouse_inside(app_t* app);
+bool window_mouse_inside();
 ```
 
 ## Return Value

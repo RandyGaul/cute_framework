@@ -7,14 +7,13 @@ Initializes a valid Dear ImGui context pointer. This should be passed to `ImGui:
 ## Syntax
 
 ```cpp
-ImGuiContext* app_init_imgui(app_t* app);
+ImGuiContext* app_init_imgui();
 ```
 
 ## Function Parameters
 
 Parameter Name | Description
 --- | ---
-app | The application.
 
 ## Return Value
 
@@ -30,6 +29,6 @@ ImGuiContext* imgui_ctx = app_init_imgui(app);
 if (imgui_ctx) {
 	ImGui::SetCurrentContext(imgui_ctx);
 } else {
-	window_message_box(app, WINDOW_MESSAGE_BOX_TYPE_ERROR, "Unable to initialize Dear ImGui.");
+	window_message_box(WINDOW_MESSAGE_BOX_TYPE_ERROR, "Unable to initialize Dear ImGui.");
 }
 ```

@@ -9,7 +9,7 @@ sprite s;
 
 void init(app_t* app)
 {
-    s = sprite_make(app, "data/sprite.ase");
+    s = sprite_make("data/sprite.ase");
 }
 
 void update(app_t* app, float dt)
@@ -19,9 +19,9 @@ void update(app_t* app, float dt)
 
 void draw(app_t* app)
 {
-    batch_t* b = sprite_get_batch(app);
+    batch_t* b = sprite_get_batch();
     s.draw(b);
-    batch_flush(app);
+    batch_flush(b);
 }
 ```
 

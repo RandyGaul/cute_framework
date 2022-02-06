@@ -6,7 +6,7 @@ Pops up an message box with a text description. Usually used for debugging or to
 ## Syntax
 
 ```cpp
-void window_message_box(app_t* app, window_message_box_type_t type, const char* title, const char* text);
+void window_message_box(window_message_box_type_t type, const char* title, const char* text);
 ```
 
 ## Remarks
