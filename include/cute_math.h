@@ -456,6 +456,16 @@ struct gjk_cache_t
 // cute c2 function, and simply render the geometry larger on-screen by scaling it up.
 CUTE_API float CUTE_CALL gjk(const void* A, cute_shape_type_t typeA, const transform_t* ax_ptr, const void* B, cute_shape_type_t typeB, const transform_t* bx_ptr, v2* outA, v2* outB, int use_radius, int* iterations, gjk_cache_t* cache);
 
+// Stores results of a time of impact calculation done by `c2TOI`.
+struct toi_result_t
+{
+	int hit;        // 1 if shapes were touching at the TOI, 0 if they never hit.
+	float toi;      // The time of impact between two shapes.
+	v2 n;           // Surface normal from shape A to B at the time of impact.
+	v2 p;           // Point of contact between shapes A and B at time of impact.
+	int iterations; // Number of iterations the solver underwent.
+};
+
 // This is an advanced function, intended to be used by people who know what they're doing.
 //
 // Computes the time of impact from shape A and shape B. The velocity of each shape is provided
@@ -485,7 +495,7 @@ CUTE_API float CUTE_CALL gjk(const void* A, cute_shape_type_t typeA, const trans
 //    See the function `c2Inflate` for some more details.
 // 4. Compute the collision manifold between the inflated shapes (for example, use poly_ttoPolyManifold).
 // 5. Gently push the shapes apart. This will give the next call to c2TOI some breathing room.
-CUTE_API float CUTE_CALL toi(const void* A, cute_shape_type_t typeA, const transform_t* ax_ptr, v2 vA, const void* B, cute_shape_type_t typeB, const transform_t* bx_ptr, v2 vB, int use_radius, int* iterations);
+CUTE_API toi_result_t CUTE_CALL toi(const void* A, cute_shape_type_t typeA, const transform_t* ax_ptr, v2 vA, const void* B, cute_shape_type_t typeB, const transform_t* bx_ptr, v2 vB, int use_radius, int* iterations);
 
 // Inflating a shape.
 //

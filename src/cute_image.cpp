@@ -59,9 +59,8 @@ error_t image_load_png_mem(const void* data, int size, image_t* img, void* user_
 
 error_t image_load_png_wh(const void* data, int size, int* w, int* h)
 {
-	int ret = cp_load_png_wh(data, size, w, h);
-	if (ret) return error_failure(cp_error_reason);
-	else return error_success();
+	cp_load_png_wh(data, size, w, h);
+	return error_success();
 }
 
 void image_free(image_t* img)

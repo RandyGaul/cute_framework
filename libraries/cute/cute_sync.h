@@ -880,7 +880,8 @@ void cute_cv_destroy(cute_cv_t* cv)
 cute_semaphore_t cute_semaphore_create(int initial_count)
 {
 	cute_semaphore_t semaphore;
-	sem_init((sem_t*)&semaphore.id, 0, (unsigned)initial_count);
+	semaphore.id = CUTE_ALLOC(sizeof(sem_t), NULL);
+	sem_init((sem_t*)semaphore.id, 0, (unsigned)initial_count);
 	semaphore.count.i = initial_count;
 	return semaphore;
 }
@@ -897,7 +898,7 @@ int cute_semaphore_try(cute_semaphore_t* semaphore)
 
 int cute_semaphore_wait(cute_semaphore_t* semaphore)
 {
-	return !sem_try((sem_t*)semaphore->id);
+	return !sem_wait((sem_t*)semaphore->id);
 }
 
 int cute_semaphore_value(cute_semaphore_t* semaphore)
@@ -910,6 +911,7 @@ int cute_semaphore_value(cute_semaphore_t* semaphore)
 void cute_semaphore_destroy(cute_semaphore_t* semaphore)
 {
 	sem_destroy((sem_t*)semaphore->id);
+	CUTE_FREE(semaphore->id);
 }
 
 #elif defined(__APPLE__)

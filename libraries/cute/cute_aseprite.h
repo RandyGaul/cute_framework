@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_aseprite.h - v1.01
+	cute_aseprite.h - v1.02
 
 	To create implementation (the function definitions)
 		#define CUTE_ASEPRITE_IMPLEMENTATION
@@ -43,6 +43,8 @@
 	Revision history:
 		1.00 (08/25/2020) initial release
 		1.01 (08/31/2020) fixed memleaks, tag parsing bug (crash), blend bugs
+		1.02 (02/05/2022) fixed icc profile parse bug, support transparent pal-
+		                  ette index, can parse 1.3 files (no tileset support)
 */
 
 /*
@@ -102,11 +104,12 @@ void cute_aseprite_free(ase_t* aseprite);
 
 #define CUTE_ASEPRITE_MAX_LAYERS (64)
 #define CUTE_ASEPRITE_MAX_SLICES (128)
-#define CUTE_ASEPRITE_MAX_PALETTE_ENTRIES (256)
+#define CUTE_ASEPRITE_MAX_PALETTE_ENTRIES (1024)
 #define CUTE_ASEPRITE_MAX_TAGS (256)
 
 #include <stdint.h>
 
+typedef struct ase_color_t ase_color_t;
 typedef struct ase_frame_t ase_frame_t;
 typedef struct ase_layer_t ase_layer_t;
 typedef struct ase_cel_t ase_cel_t;
@@ -161,7 +164,7 @@ struct ase_layer_t
 	ase_layer_flags_t flags;
 	ase_layer_type_t type;
 	const char* name;
-	int child_level;
+	ase_layer_t* parent;
 	float opacity;
 	ase_udata_t udata;
 };
@@ -211,6 +214,7 @@ struct ase_tag_t
 	ase_animation_direction_t loop_animation_direction;
 	uint8_t r, g, b;
 	const char* name;
+	ase_udata_t udata;
 };
 
 struct ase_slice_t
@@ -343,13 +347,26 @@ struct ase_t
 	#define CUTE_ASEPRITE_ASSERT assert
 #endif
 
-static int s_error_cline;               // The line in cute_aseprite.h where the error was triggered.
+#if !defined(CUTE_ASEPRITE_STDIO)
+	#include <stdio.h> // fopen
+	#define CUTE_ASEPRITE_STDIO
+	#define CUTE_ASEPRITE_SEEK_SET SEEK_SET
+	#define CUTE_ASEPRITE_SEEK_END SEEK_END
+	#define CUTE_ASEPRITE_FILE FILE
+	#define CUTE_ASEPRITE_FOPEN fopen
+	#define CUTE_ASEPRITE_FSEEK fseek
+	#define CUTE_ASEPRITE_FREAD fread
+	#define CUTE_ASEPRITE_FTELL ftell
+	#define CUTE_ASEPRITE_FCLOSE fclose
+#endif
+
 static const char* s_error_file = NULL; // The filepath of the file being parsed. NULL if from memory.
 static const char* s_error_reason;      // Used to capture errors during DEFLATE parsing.
 
 #if !defined(CUTE_ASEPRITE_WARNING)
 	#define CUTE_ASEPRITE_WARNING(msg) cute_aseprite_warning(msg, __LINE__)
 
+    static int s_error_cline;               // The line in cute_aseprite.h where the error was triggered.
 	void cute_aseprite_warning(const char* warning, int line)
 	{
 		s_error_cline = line;
@@ -439,7 +456,7 @@ static uint64_t s_peak_bits(deflate_t* s, int num_bits_to_read)
 static uint32_t s_consume_bits(deflate_t* s, int num_bits_to_read)
 {
 	CUTE_ASEPRITE_ASSERT(s->count >= num_bits_to_read);
-	uint32_t bits = s->bits & (((uint64_t)1 << num_bits_to_read) - 1);
+	uint32_t bits = (uint32_t)(s->bits & (((uint64_t)1 << num_bits_to_read) - 1));
 	s->bits >>= num_bits_to_read;
 	s->count -= num_bits_to_read;
 	s->bits_left -= num_bits_to_read;
@@ -468,9 +485,10 @@ static uint32_t s_rev16(uint32_t a)
 }
 
 // RFC 1951 section 3.2.2
-static int s_build(deflate_t* s, uint32_t* tree, uint8_t* lens, int sym_count)
+static uint32_t s_build(deflate_t* s, uint32_t* tree, uint8_t* lens, int sym_count)
 {
 	int n, codes[16], first[16], counts[16] = { 0 };
+    CUTE_ASEPRITE_UNUSED(s);
 
 	// Frequency count
 	for (n = 0; n < sym_count; n++) counts[lens[n]]++;
@@ -485,19 +503,18 @@ static int s_build(deflate_t* s, uint32_t* tree, uint8_t* lens, int sym_count)
 
 	for (int i = 0; i < sym_count; ++i)
 	{
-		int len = lens[i];
+		uint8_t len = lens[i];
 
 		if (len != 0)
 		{
 			CUTE_ASEPRITE_ASSERT(len < 16);
-			uint32_t code = codes[len]++;
-			uint32_t slot = first[len]++;
-			tree[slot] = (code << (32 - len)) | (i << 4) | len;
+			uint32_t code = (uint32_t)codes[len]++;
+			uint32_t slot = (uint32_t)first[len]++;
+			tree[slot] = (code << (32 - (uint32_t)len)) | (i << 4) | len;
 		}
 	}
 
-	int max_index = first[15];
-	return max_index;
+	return (uint32_t)first[15];
 }
 
 static int s_stored(deflate_t* s)
@@ -547,8 +564,7 @@ static int s_decode(deflate_t* s, uint32_t* tree, int hi)
 	uint32_t len = (32 - (key & 0xF));
 	CUTE_ASEPRITE_ASSERT((search >> len) == (key >> len));
 
-	int code = s_consume_bits(s, key & 0xF);
-	(void)code;
+	s_consume_bits(s, key & 0xF);
 	return (key >> 4) & 0xFFF;
 }
 
@@ -557,31 +573,31 @@ static int s_dynamic(deflate_t* s)
 {
 	uint8_t lenlens[19] = { 0 };
 
-	int nlit = 257 + s_read_bits(s, 5);
-	int ndst = 1 + s_read_bits(s, 5);
-	int nlen = 4 + s_read_bits(s, 4);
+	uint32_t nlit = 257 + s_read_bits(s, 5);
+	uint32_t ndst = 1 + s_read_bits(s, 5);
+	uint32_t nlen = 4 + s_read_bits(s, 4);
 
-	for (int i = 0 ; i < nlen; ++i)
+	for (uint32_t i = 0 ; i < nlen; ++i)
 		lenlens[s_permutation_order[i]] = (uint8_t)s_read_bits(s, 3);
 
 	// Build the tree for decoding code lengths
 	s->nlen = s_build(0, s->len, lenlens, 19);
 	uint8_t lens[288 + 32];
 
-	for (int n = 0; n < nlit + ndst;)
+	for (uint32_t n = 0; n < nlit + ndst;)
 	{
-		int sym = s_decode(s, s->len, s->nlen);
+		int sym = s_decode(s, s->len, (int)s->nlen);
 		switch (sym)
 		{
-		case 16: for (int i =  3 + s_read_bits(s, 2); i; --i, ++n) lens[n] = lens[n - 1]; break;
-		case 17: for (int i =  3 + s_read_bits(s, 3); i; --i, ++n) lens[n] = 0; break;
-		case 18: for (int i = 11 + s_read_bits(s, 7); i; --i, ++n) lens[n] = 0; break;
+		case 16: for (uint32_t i =  3 + s_read_bits(s, 2); i; --i, ++n) lens[n] = lens[n - 1]; break;
+		case 17: for (uint32_t i =  3 + s_read_bits(s, 3); i; --i, ++n) lens[n] = 0; break;
+		case 18: for (uint32_t i = 11 + s_read_bits(s, 7); i; --i, ++n) lens[n] = 0; break;
 		default: lens[n++] = (uint8_t)sym; break;
 		}
 	}
 
-	s->nlit = s_build(s, s->lit, lens, nlit);
-	s->ndst = s_build(0, s->dst, lens + nlit, ndst);
+	s->nlit = s_build(s, s->lit, lens, (int)nlit);
+	s->ndst = s_build(0, s->dst, lens + nlit, (int)ndst);
 	return 1;
 }
 
@@ -590,7 +606,7 @@ static int s_block(deflate_t* s)
 {
 	while (1)
 	{
-		int symbol = s_decode(s, s->lit, s->nlit);
+		int symbol = s_decode(s, s->lit, (int)s->nlit);
 
 		if (symbol < 256)
 		{
@@ -602,9 +618,9 @@ static int s_block(deflate_t* s)
 		else if (symbol > 256)
 		{
 			symbol -= 257;
-			int length = s_read_bits(s, s_len_extra_bits[symbol]) + s_len_base[symbol];
-			int distance_symbol = s_decode(s, s->dst, s->ndst);
-			int backwards_distance = s_read_bits(s, s_dist_extra_bits[distance_symbol]) + s_dist_base[distance_symbol];
+			uint32_t length = s_read_bits(s, (int)(s_len_extra_bits[symbol])) + s_len_base[symbol];
+			int distance_symbol = s_decode(s, s->dst, (int)s->ndst);
+			uint32_t backwards_distance = s_read_bits(s, s_dist_extra_bits[distance_symbol]) + s_dist_base[distance_symbol];
 			CUTE_ASEPRITE_CHECK(s->out - backwards_distance >= s->begin, "Attempted to write before out buffer (invalid backwards distance).");
 			CUTE_ASEPRITE_CHECK(s->out + length <= s->out_end, "Attempted to overwrite out buffer while outputting a string.");
 			char* src = s->out - backwards_distance;
@@ -614,7 +630,7 @@ static int s_block(deflate_t* s)
 			switch (backwards_distance)
 			{
 			case 1: // very common in images
-				CUTE_ASEPRITE_MEMSET(dst, *src, length);
+				CUTE_ASEPRITE_MEMSET(dst, *src, (size_t)length);
 				break;
 			default: while (length--) *dst++ = *src++;
 			}
@@ -632,6 +648,7 @@ ase_err:
 // 3.2.3
 static int s_inflate(const void* in, int in_bytes, void* out, int out_bytes, void* mem_ctx)
 {
+	CUTE_ASEPRITE_UNUSED(mem_ctx);
 	deflate_t* s = (deflate_t*)CUTE_ASEPRITE_ALLOC(sizeof(deflate_t), mem_ctx);
 	s->bits = 0;
 	s->count = 0;
@@ -650,7 +667,7 @@ static int s_inflate(const void* in, int in_bytes, void* out, int out_bytes, voi
 	s->final_word_available = last_bytes ? 1 : 0;
 	s->final_word = 0;
 	for(int i = 0; i < last_bytes; i++)
-		s->final_word |= ((uint8_t*)in)[in_bytes - last_bytes+i] << (i * 8);
+		s->final_word |= ((uint8_t*)in)[in_bytes - last_bytes + i] << (i * 8);
 
 	s->count = first_bytes * 8;
 
@@ -659,11 +676,11 @@ static int s_inflate(const void* in, int in_bytes, void* out, int out_bytes, voi
 	s->begin = (char*)out;
 
 	int count = 0;
-	int bfinal;
+	uint32_t bfinal;
 	do
 	{
 		bfinal = s_read_bits(s, 1);
-		int btype = s_read_bits(s, 2);
+		uint32_t btype = s_read_bits(s, 2);
 
 		switch (btype)
 		{
@@ -733,6 +750,8 @@ static uint32_t s_read_uint32(ase_state_t* s)
 	return value;
 }
 
+#ifdef CUTE_ASPRITE_S_READ_UINT64
+// s_read_uint64() is not currently used.
 static uint64_t s_read_uint64(ase_state_t* s)
 {
 	CUTE_ASEPRITE_ASSERT(s->in <= s->end + sizeof(uint64_t));
@@ -749,23 +768,27 @@ static uint64_t s_read_uint64(ase_state_t* s)
 	*p += 8;
 	return value;
 }
+#endif
 
 static int16_t s_read_int16(ase_state_t* s) { return (int16_t)s_read_uint16(s); }
 static int16_t s_read_int32(ase_state_t* s) { return (int32_t)s_read_uint32(s); }
 
+#ifdef CUTE_ASPRITE_S_READ_BYTES
+// s_read_bytes() is not currently used.
 static void s_read_bytes(ase_state_t* s, uint8_t* bytes, int num_bytes)
 {
 	for (int i = 0; i < num_bytes; ++i) {
 		bytes[i] = s_read_uint8(s);
 	}
 }
+#endif
 
 static const char* s_read_string(ase_state_t* s)
 {
 	int len = (int)s_read_uint16(s);
 	char* bytes = (char*)CUTE_ASEPRITE_ALLOC(len + 1, s->mem_ctx);
 	for (int i = 0; i < len; ++i) {
-		bytes[i] = s_read_uint8(s);
+		bytes[i] = (char)s_read_uint8(s);
 	}
 	bytes[len] = 0;
 	return bytes;
@@ -781,18 +804,18 @@ static char* s_fopen(const char* path, int* size, void* mem_ctx)
 {
 	CUTE_ASEPRITE_UNUSED(mem_ctx);
 	char* data = 0;
-	FILE* fp = fopen(path, "rb");
+	CUTE_ASEPRITE_FILE* fp = CUTE_ASEPRITE_FOPEN(path, "rb");
 	int sz = 0;
 
 	if (fp)
 	{
-		fseek(fp, 0, SEEK_END);
-		sz = ftell(fp);
-		fseek(fp, 0, SEEK_SET);
+		CUTE_ASEPRITE_FSEEK(fp, 0, CUTE_ASEPRITE_SEEK_END);
+		sz = CUTE_ASEPRITE_FTELL(fp);
+		CUTE_ASEPRITE_FSEEK(fp, 0, CUTE_ASEPRITE_SEEK_SET);
 		data = (char*)CUTE_ASEPRITE_ALLOC(sz + 1, mem_ctx);
-		fread(data, sz, 1, fp);
+		CUTE_ASEPRITE_FREAD(data, sz, 1, fp);
 		data[sz] = 0;
-		fclose(fp);
+		CUTE_ASEPRITE_FCLOSE(fp);
 	}
 
 	if (size) *size = sz;
@@ -822,7 +845,7 @@ static int s_mul_un8(int a, int b)
 
 static ase_color_t s_blend(ase_color_t src, ase_color_t dst, uint8_t opacity)
 {
-	src.a = s_mul_un8(src.a, opacity);
+	src.a = (uint8_t)s_mul_un8(src.a, opacity);
 	int a = src.a + dst.a - s_mul_un8(src.a, dst.a);
 	int r, g, b;
 	if (a == 0) {
@@ -832,7 +855,8 @@ static ase_color_t s_blend(ase_color_t src, ase_color_t dst, uint8_t opacity)
 		g = dst.g + (src.g - dst.g) * src.a / a;
 		b = dst.b + (src.b - dst.b) * src.a / a;
 	}
-	return { (uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a };
+	ase_color_t ret = { (uint8_t)r, (uint8_t)g, (uint8_t)b, (uint8_t)a };
+	return ret;
 }
 
 static int s_min(int a, int b)
@@ -858,7 +882,11 @@ static ase_color_t s_color(ase_t* ase, void* src, int index)
 	} else {
 		CUTE_ASEPRITE_ASSERT(ase->mode == ASE_MODE_INDEXED);
 		uint8_t palette_index = ((uint8_t*)src)[index];
-		result = ase->palette.entries[palette_index].color;
+		if (palette_index == ase->transparent_palette_entry_index) {
+			result = { 0, 0, 0, 0 };
+		} else {
+			result = ase->palette.entries[palette_index].color;
+		}
 	}
 	return result;
 }
@@ -888,10 +916,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 		CUTE_ASEPRITE_ASSERT(bpp == 1);
 		ase->mode = ASE_MODE_INDEXED;
 	}
-	if (s_read_uint32(s) & 1) {
-		// Layer opacity has valid value.
-		// Ok... So?
-	}
+	uint32_t valid_layer_opacity = s_read_uint32(s) & 1;
 	int speed = s_read_uint16(s);
 	s_skip(s, sizeof(uint32_t) * 2); // Spec says skip these bytes, as they're zero'd.
 	ase->transparent_palette_entry_index = s_read_uint8(s);
@@ -905,10 +930,14 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 	ase->grid_h = (int)s_read_uint16(s);
 	s_skip(s, 84); // For future use (set to zero).
 
-	ase->frames = (ase_frame_t*)CUTE_ASEPRITE_ALLOC(sizeof(ase_frame_t) * ase->frame_count, mem_ctx);
-	CUTE_ASEPRITE_MEMSET(ase->frames, 0, sizeof(ase_frame_t) * ase->frame_count);
+	ase->frames = (ase_frame_t*)CUTE_ASEPRITE_ALLOC((int)(sizeof(ase_frame_t)) * ase->frame_count, mem_ctx);
+	CUTE_ASEPRITE_MEMSET(ase->frames, 0, sizeof(ase_frame_t) * (size_t)ase->frame_count);
 
 	ase_udata_t* last_udata = NULL;
+	int was_on_tags = 0;
+	int tag_index = 0;
+
+	ase_layer_t* layer_stack[CUTE_ASEPRITE_MAX_LAYERS];
 
 	// Parse all chunks in the .aseprite file.
 	for (int i = 0; i < ase->frame_count; ++i) {
@@ -921,13 +950,13 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 		frame->duration_milliseconds = s_read_uint16(s);
 		if (frame->duration_milliseconds == 0) frame->duration_milliseconds = speed;
 		s_skip(s, 2); // For future use (set to zero).
-		int new_chunk_count = s_read_uint32(s);
-		if (new_chunk_count) chunk_count = new_chunk_count;
+		uint32_t new_chunk_count = s_read_uint32(s);
+		if (new_chunk_count) chunk_count = (int)new_chunk_count;
 
 		for (int j = 0; j < chunk_count; ++j) {
 			uint32_t chunk_size = s_read_uint32(s);
 			uint16_t chunk_type = s_read_uint16(s);
-			chunk_size -= sizeof(uint32_t) + sizeof(uint16_t);
+			chunk_size -= (uint32_t)(sizeof(uint32_t) + sizeof(uint16_t));
 			uint8_t* chunk_start = s->in;
 
 			switch (chunk_type) {
@@ -937,12 +966,18 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 				ase_layer_t* layer = ase->layers + ase->layer_count++;
 				layer->flags = (ase_layer_flags_t)s_read_uint16(s);
 				layer->type = (ase_layer_type_t)s_read_uint16(s);
-				layer->child_level = (int)s_read_uint16(s);
+				layer->parent = NULL;
+				int child_level = (int)s_read_uint16(s);
+				layer_stack[child_level] = layer;
+				if (child_level) {
+					layer->parent = layer_stack[child_level - 1];
+				}
 				s_skip(s, sizeof(uint16_t)); // Default layer width in pixels (ignored).
 				s_skip(s, sizeof(uint16_t)); // Default layer height in pixels (ignored).
 				int blend_mode = (int)s_read_uint16(s);
 				if (blend_mode) CUTE_ASEPRITE_WARNING("Unknown blend mode encountered.");
 				layer->opacity = s_read_uint8(s) / 255.0f;
+				if (!valid_layer_opacity) layer->opacity = 1.0f;
 				s_skip(s, 3); // For future use (set to zero).
 				layer->name = s_read_string(s);
 				last_udata = &layer->udata;
@@ -964,7 +999,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 					cel->w = s_read_uint16(s);
 					cel->h = s_read_uint16(s);
 					cel->pixels = CUTE_ASEPRITE_ALLOC(cel->w * cel->h * bpp, mem_ctx);
-					CUTE_ASEPRITE_MEMCPY(cel->pixels, s->in, cel->w * cel->h * bpp);
+					CUTE_ASEPRITE_MEMCPY(cel->pixels, s->in, (size_t)(cel->w * cel->h * bpp));
 					s_skip(s, cel->w * cel->h * bpp);
 					break;
 
@@ -979,7 +1014,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 					cel->h = s_read_uint16(s);
 					int zlib_byte0 = s_read_uint8(s);
 					int zlib_byte1 = s_read_uint8(s);
-					int deflate_bytes = chunk_size - (int)(s->in - chunk_start);
+					int deflate_bytes = (int)chunk_size - (int)(s->in - chunk_start);
 					void* pixels = s->in;
 					CUTE_ASEPRITE_ASSERT((zlib_byte0 & 0x0F) == 0x08); // Only zlib compression method (RFC 1950) is supported.
 					CUTE_ASEPRITE_ASSERT((zlib_byte0 & 0xF0) <= 0x70); // Innapropriate window size detected.
@@ -1019,6 +1054,7 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 					ase->color_profile.icc_profile_data_length = s_read_uint32(s);
 					ase->color_profile.icc_profile_data = CUTE_ASEPRITE_ALLOC(ase->color_profile.icc_profile_data_length, mem_ctx);
 					CUTE_ASEPRITE_MEMCPY(ase->color_profile.icc_profile_data, s->in, ase->color_profile.icc_profile_data_length);
+					s->in += ase->color_profile.icc_profile_data_length;
 				}
 			}	break;
 
@@ -1040,13 +1076,15 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 					tag.name = s_read_string(s);
 					ase->tags[k] = tag;
 				}
+				was_on_tags = 1;
 			}	break;
 
 			case 0x2019: // Palette chunk.
 			{
 				ase->palette.entry_count = (int)s_read_uint32(s);
-				int first_index = s_read_uint32(s);
-				int last_index = s_read_uint32(s);
+				CUTE_ASEPRITE_ASSERT(ase->palette.entry_count <= CUTE_ASEPRITE_MAX_PALETTE_ENTRIES);
+				int first_index = (int)s_read_uint32(s);
+				int last_index = (int)s_read_uint32(s);
 				s_skip(s, 8); // For future (set to zero).
 				for (int k = first_index; k <= last_index; ++k) {
 					int has_name = s_read_uint16(s);
@@ -1066,14 +1104,17 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 
 			case 0x2020: // Udata chunk.
 			{
-				CUTE_ASEPRITE_ASSERT(last_udata);
+				CUTE_ASEPRITE_ASSERT(last_udata || was_on_tags);
+				if (was_on_tags && !last_udata) {
+					CUTE_ASEPRITE_ASSERT(tag_index < ase->tag_count);
+					last_udata = &ase->tags[tag_index++].udata;
+				}
 				int flags = (int)s_read_uint32(s);
 				if (flags & 1) {
 					last_udata->has_text = 1;
 					last_udata->text = s_read_string(s);
 				}
 				if (flags & 2) {
-					last_udata->has_color = 1;
 					last_udata->color.r = s_read_uint8(s);
 					last_udata->color.g = s_read_uint8(s);
 					last_udata->color.b = s_read_uint8(s);
@@ -1084,8 +1125,8 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 
 			case 0x2022: // Slice chunk.
 			{
-				int slice_count = s_read_uint32(s);
-				int flags = s_read_uint32(s);
+				int slice_count = (int)s_read_uint32(s);
+				int flags = (int)s_read_uint32(s);
 				s_skip(s, sizeof(uint32_t)); // Reserved.
 				const char* name = s_read_string(s);
 				for (int k = 0; k < (int)slice_count; ++k) {
@@ -1116,25 +1157,40 @@ ase_t* cute_aseprite_load_from_memory(const void* memory, int size, void* mem_ct
 			}	break;
 
 			default:
-				s_skip(s, chunk_size);
+				s_skip(s, (int)chunk_size);
 				break;
 			}
+
+			uint32_t size_read = (uint32_t)(s->in - chunk_start);
+			CUTE_ASSERT(size_read == chunk_size);
 		}
 	}
 
 	// Blend all cel pixels into each of their respective frames, for convenience.
 	for (int i = 0; i < ase->frame_count; ++i) {
 		ase_frame_t* frame = ase->frames + i;
-		frame->pixels = (ase_color_t*)CUTE_ASEPRITE_ALLOC(sizeof(ase_color_t) * ase->w * ase->h, mem_ctx);
-		CUTE_ASEPRITE_MEMSET(frame->pixels, 0, sizeof(ase_color_t) * ase->w * ase->h);
+		frame->pixels = (ase_color_t*)CUTE_ASEPRITE_ALLOC((int)(sizeof(ase_color_t)) * ase->w * ase->h, mem_ctx);
+		CUTE_ASEPRITE_MEMSET(frame->pixels, 0, sizeof(ase_color_t) * (size_t)ase->w * (size_t)ase->h);
 		ase_color_t* dst = frame->pixels;
 		for (int j = 0; j < frame->cel_count; ++j) {
 			ase_cel_t* cel = frame->cels + j;
 			if (!(cel->layer->flags & ASE_LAYER_FLAGS_VISIBLE)) {
 				continue;
 			}
+			if (cel->layer->parent && !(cel->layer->parent->flags & ASE_LAYER_FLAGS_VISIBLE)) {
+				continue;
+			}
 			while (cel->is_linked) {
-				cel = ase->frames[cel->linked_frame_index].cels + j;
+				ase_frame_t* frame = ase->frames + cel->linked_frame_index;
+				int found = 0;
+				for (int k = 0; k < frame->cel_count; ++k) {
+					if (frame->cels[k].layer == cel->layer) {
+						cel = frame->cels + k;
+						found = 1;
+						break;
+					}
+				}
+				CUTE_ASEPRITE_ASSERT(found);
 			}
 			void* src = cel->pixels;
 			uint8_t opacity = (uint8_t)(cel->opacity * cel->layer->opacity * 255.0f);
@@ -1195,7 +1251,6 @@ void cute_aseprite_free(ase_t* ase)
 	for (int i = 0; i < ase->palette.entry_count; ++i) {
 		CUTE_ASEPRITE_FREE((void*)ase->palette.entries[i].color_name, ase->mem_ctx);
 	}
-	if (ase->slice_count) CUTE_ASEPRITE_FREE((void*)ase->slices[0].name, ase->mem_ctx);
 	CUTE_ASEPRITE_FREE(ase->color_profile.icc_profile_data, ase->mem_ctx);
 	CUTE_ASEPRITE_FREE(ase->frames, ase->mem_ctx);
 	CUTE_ASEPRITE_FREE(ase, ase->mem_ctx);

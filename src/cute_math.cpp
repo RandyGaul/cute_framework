@@ -168,9 +168,12 @@ float gjk(const void* A, cute_shape_type_t typeA, const transform_t* ax_ptr, con
 	return c2GJK(A, (C2_TYPE)typeA, (c2x*)ax_ptr, B, (C2_TYPE)typeB, (c2x*)bx_ptr, (c2v*)outA, (c2v*)outB, use_radius, iterations, (c2GJKCache*)cache);
 }
 
-float toi(const void* A, cute_shape_type_t typeA, const transform_t* ax_ptr, v2 vA, const void* B, cute_shape_type_t typeB, const transform_t* bx_ptr, v2 vB, int use_radius, int* iterations)
+toi_result_t toi(const void* A, cute_shape_type_t typeA, const transform_t* ax_ptr, v2 vA, const void* B, cute_shape_type_t typeB, const transform_t* bx_ptr, v2 vB, int use_radius)
 {
-	return c2TOI(A, (C2_TYPE)typeA, (c2x*)ax_ptr, *(c2v*)&vA, B, (C2_TYPE)typeB, (c2x*)bx_ptr, *(c2v*)&vB, use_radius, iterations);
+	toi_result_t result;
+	c2TOIResult c2result = c2TOI(A, (C2_TYPE)typeA, (c2x*)ax_ptr, *(c2v*)&vA, B, (C2_TYPE)typeB, (c2x*)bx_ptr, *(c2v*)&vB, use_radius);
+	result = *(toi_result_t*)&result;
+	return result;
 }
 
 void inflate(void* shape, cute_shape_type_t type, float skin_factor)
