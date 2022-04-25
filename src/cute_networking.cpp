@@ -35,6 +35,39 @@ static CUTE_INLINE error_t wrap(cn_error_t cn_err)
 	return err;
 }
 
+CUTE_STATIC_ASSERT(CUTE_CONNECT_TOKEN_SIZE == CN_CONNECT_TOKEN_SIZE, "Must be equal.");
+CUTE_STATIC_ASSERT(CUTE_CONNECT_TOKEN_USER_DATA_SIZE == CN_CONNECT_TOKEN_USER_DATA_SIZE, "Must be equal.");
+
+int endpoint_init(endpoint_t* endpoint, const char* address_and_port_string)
+{
+	return cn_endpoint_init(endpoint, address_and_port_string);
+}
+
+void endpoint_to_string(endpoint_t endpoint, char* buffer, int buffer_size)
+{
+	cn_endpoint_to_string(endpoint, buffer, buffer_size);
+}
+
+int endpoint_equals(endpoint_t a, endpoint_t b)
+{
+	return cn_endpoint_equals(a, b);
+}
+
+crypto_key_t crypto_generate_key()
+{
+	return cn_crypto_generate_key();
+}
+
+void crypto_random_bytes(void* data, int byte_count)
+{
+	cn_crypto_random_bytes(data, byte_count);
+}
+
+void crypto_sign_keygen(crypto_sign_public_t* public_key, crypto_sign_secret_t* secret_key)
+{
+	cn_crypto_sign_keygen(public_key, secret_key);
+}
+
 error_t generate_connect_token(
 	uint64_t application_id,
 	uint64_t creation_timestamp,

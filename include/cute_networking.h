@@ -31,21 +31,44 @@ namespace cute
 
 using client_t = cn_client_t;
 using server_t = cn_server_t;
-using endpoint_t = cn_endpoint_t;
 using crypto_key_t = cn_crypto_key_t;
 using crypto_sign_public_t = cn_crypto_sign_public_t;
 using crypto_sign_secret_t = cn_crypto_sign_secret_t;
 using crypto_signature_t = cn_crypto_signature_t;
 
+//--------------------------------------------------------------------------------------------------
+// ENDPOINT
+
+using endpoint_t = cn_endpoint_t;
 using address_type_t = cn_address_type_t;
 #define CUTE_ADDRESS_TYPE_NONE CN_ADDRESS_TYPE_NONE
 #define CUTE_ADDRESS_TYPE_IPV4 CN_ADDRESS_TYPE_IPV4
 #define CUTE_ADDRESS_TYPE_IPV6 CN_ADDRESS_TYPE_IPV6
 
+CUTE_API int CUTE_CALL endpoint_init(endpoint_t* endpoint, const char* address_and_port_string);
+CUTE_API void CUTE_CALL endpoint_to_string(endpoint_t endpoint, char* buffer, int buffer_size);
+CUTE_API int CUTE_CALL endpoint_equals(endpoint_t a, endpoint_t b);
+
 //--------------------------------------------------------------------------------------------------
 // CONNECT TOKEN
 
 #define CUTE_CONNECT_TOKEN_SIZE 1114
+#define CUTE_CONNECT_TOKEN_USER_DATA_SIZE 256
+
+/**
+ * Generates a cryptography key in a cryptographically secure way.
+ */
+CUTE_API crypto_key_t CUTE_CALL crypto_generate_key();
+
+/**
+ * Fills a buffer in a cryptographically secure way (i.e. a slow way).
+ */
+CUTE_API void CUTE_CALL crypto_random_bytes(void* data, int byte_count);
+
+/**
+ * Generates a cryptographically secure keypair, used for facilitating connect tokens.
+ */
+CUTE_API void CUTE_CALL crypto_sign_keygen(crypto_sign_public_t* public_key, crypto_sign_secret_t* secret_key);
 
 /**
  * Generates a connect token, useable by clients to authenticate and securely connect to
