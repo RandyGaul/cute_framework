@@ -27,7 +27,7 @@
 namespace cute
 {
 
-error_t wrap(cn_error_t cn_err)
+static CUTE_INLINE error_t wrap(cn_error_t cn_err)
 {
 	error_t err;
 	err.code = cn_err.code;

@@ -64,22 +64,22 @@ using address_type_t = cn_address_type_t;
  * new one and distribute it to your webservice and game servers.
  */
 CUTE_API error_t CUTE_CALL generate_connect_token(
-	uint64_t application_id,                          // A unique number to identify your game, can be whatever value you like.
-	                                                  // This must be the same number as in `client_create` and `server_create`.
-	uint64_t creation_timestamp,                      // A unix timestamp of the current time.
-	const crypto_key_t* client_to_server_key,         // A unique key for this connect token for the client to encrypt packets, and server to
-	                                                  // decrypt packets. This can be generated with `crypto_generate_key` on your web service.
-	const crypto_key_t* server_to_client_key,         // A unique key for this connect token for the server to encrypt packets, and the client to
-	                                                  // decrypt packets. This can be generated with `crypto_generate_key` on your web service.
-	uint64_t expiration_timestamp,                    // A unix timestamp for when this connect token expires and becomes invalid.
-	uint32_t handshake_timeout,                       // The number of seconds the connection will stay alive during the handshake process before
-	                                                  // the client and server reject the handshake process as failed.
-	int address_count,                                // Must be from 1 to 32 (inclusive). The number of addresses in `address_list`.
-	const char** address_list,                        // A list of game servers the client can try connecting to, of length `address_count`.
-	uint64_t client_id,                               // The unique client identifier.
-	const uint8_t* user_data,                         // Optional buffer of data of `CUTE_PROTOCOL_CONNECT_TOKEN_USER_DATA_SIZE` (256) bytes. Can be NULL.
-	const crypto_sign_secret_t* shared_secret_key,    // Only your webservice and game servers know this key.
-	uint8_t* token_ptr_out                            // Pointer to your buffer, should be `CUTE_CONNECT_TOKEN_SIZE` bytes large.
+	uint64_t application_id,                       // A unique number to identify your game, can be whatever value you like.
+	                                               // This must be the same number as in `client_create` and `server_create`.
+	uint64_t creation_timestamp,                   // A unix timestamp of the current time.
+	const crypto_key_t* client_to_server_key,      // A unique key for this connect token for the client to encrypt packets, and server to
+	                                               // decrypt packets. This can be generated with `crypto_generate_key` on your web service.
+	const crypto_key_t* server_to_client_key,      // A unique key for this connect token for the server to encrypt packets, and the client to
+	                                               // decrypt packets. This can be generated with `crypto_generate_key` on your web service.
+	uint64_t expiration_timestamp,                 // A unix timestamp for when this connect token expires and becomes invalid.
+	uint32_t handshake_timeout,                    // The number of seconds the connection will stay alive during the handshake process before
+	                                               // the client and server reject the handshake process as failed.
+	int address_count,                             // Must be from 1 to 32 (inclusive). The number of addresses in `address_list`.
+	const char** address_list,                     // A list of game servers the client can try connecting to, of length `address_count`.
+	uint64_t client_id,                            // The unique client identifier.
+	const uint8_t* user_data,                      // Optional buffer of data of `CUTE_PROTOCOL_CONNECT_TOKEN_USER_DATA_SIZE` (256) bytes. Can be NULL.
+	const crypto_sign_secret_t* shared_secret_key, // Only your webservice and game servers know this key.
+	uint8_t* token_ptr_out                         // Pointer to your buffer, should be `CUTE_CONNECT_TOKEN_SIZE` bytes large.
 );
 
 //--------------------------------------------------------------------------------------------------
@@ -160,18 +160,18 @@ CUTE_API void CUTE_CALL client_enable_network_simulator(client_t* client, double
 
 typedef struct server_config_t
 {
-	uint64_t application_id;            // A unique number to identify your game, can be whatever value you like.
-	                                    // This must be the same number as in `client_make`.
+	uint64_t application_id;           // A unique number to identify your game, can be whatever value you like.
+	                                   // This must be the same number as in `client_make`.
 	int max_incoming_bytes_per_second;
 	int max_outgoing_bytes_per_second;
-	int connection_timeout;             // The number of seconds before consider a connection as timed out when not
-	                                    // receiving any packets on the connection.
-	double resend_rate;                 // The number of seconds to wait before resending a packet that has not been
-	                                    // acknowledge as received by a client.
-	crypto_sign_public_t public_key;    // The public part of your public key cryptography used for connect tokens.
-	                                    // This can be safely shared with your players publicly.
-	crypto_sign_secret_t secret_key;    // The secret part of your public key cryptography used for connect tokens.
-	                                    // This must never be shared publicly and remain a complete secret only know to your servers.
+	int connection_timeout;            // The number of seconds before consider a connection as timed out when not
+	                                   // receiving any packets on the connection.
+	double resend_rate;                // The number of seconds to wait before resending a packet that has not been
+	                                   // acknowledge as received by a client.
+	crypto_sign_public_t public_key;   // The public part of your public key cryptography used for connect tokens.
+	                                   // This can be safely shared with your players publicly.
+	crypto_sign_secret_t secret_key;   // The secret part of your public key cryptography used for connect tokens.
+	                                   // This must never be shared publicly and remain a complete secret only know to your servers.
 	void* user_allocator_context;
 } server_config_t;
 
@@ -212,21 +212,21 @@ typedef struct server_event_t
 	{
 		struct
 		{
-			int client_index;       // An index representing this particular client.
-			uint64_t client_id;     // A unique identifier for this particular client, as read from the connect token.
+			int client_index;    // An index representing this particular client.
+			uint64_t client_id;  // A unique identifier for this particular client, as read from the connect token.
 			endpoint_t endpoint; // The address and port of the incoming connection.
 		} new_connection;
 
 		struct
 		{
-			int client_index;       // An index representing this particular client.
+			int client_index;    // An index representing this particular client.
 		} disconnected;
 
 		struct
 		{
-			int client_index;       // An index representing this particular client.
-			void* data;             // Pointer to the packet's payload data. Send this back to `server_free_packet` when done.
-			int size;               // Size of the packet at the data pointer.
+			int client_index;    // An index representing this particular client.
+			void* data;          // Pointer to the packet's payload data. Send this back to `server_free_packet` when done.
+			int size;            // Size of the packet at the data pointer.
 		} payload_packet;
 	} u;
 } server_event_t;
