@@ -51,7 +51,6 @@ CUTE_API void CUTE_CALL app_stop_running();
 CUTE_API void CUTE_CALL app_update(float dt);
 CUTE_API void CUTE_CALL app_present();
 
-CUTE_API error_t CUTE_CALL app_init_net();
 CUTE_API error_t CUTE_CALL app_init_audio(bool spawn_mix_thread = true, int max_simultaneous_sounds = 5000);
 CUTE_API void CUTE_CALL app_do_mixing();
 CUTE_API ImGuiContext* CUTE_CALL app_init_imgui(bool no_default_font = false);

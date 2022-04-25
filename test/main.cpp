@@ -27,24 +27,11 @@
 #include <cute_c_runtime.h>
 #include <cute_file_system.h>
 #include <test_harness.h>
-#include <internal/cute_crypto_internal.h>
 #include <internal/cute_file_system_internal.h>
-#include <internal/cute_net_internal.h>
 
 #include <test_handle.h>
 #include <test_circular_buffer.h>
-#include <test_replay_buffer.h>
-#include <test_crypto.h>
-#include <test_socket.h>
-#include <test_connect_token.h>
-#include <test_packets.h>
-#include <test_hashtable.h>
-#include <test_encryption_map.h>
 #include <test_doubly_list.h>
-#include <test_connect_token_cache.h>
-#include <test_protocol_client_server.h>
-#include <test_sequence_buffer.h>
-#include <test_transport.h>
 #include <test_base64.h>
 #include <test_kv.h>
 #include <test_audio.h>
@@ -55,7 +42,6 @@
 #include <test_png_cache.h>
 #include <test_sprite.h>
 #include <test_coroutine.h>
-#include <test_client_server.h>
 
 int main(int argc, const char** argv)
 {
@@ -74,13 +60,7 @@ int main(int argc, const char** argv)
 	windows_turn_on_console_color();
 #endif
 
-	net_init();
-	crypto_init();
-
 	test_t tests[] = {
-		CUTE_TEST_CASE_ENTRY(test_client_server_sim),
-		CUTE_TEST_CASE_ENTRY(test_client_server),
-		CUTE_TEST_CASE_ENTRY(test_client_server_payload),
 		CUTE_TEST_CASE_ENTRY(test_handle_basic),
 		CUTE_TEST_CASE_ENTRY(test_handle_large_loop),
 		CUTE_TEST_CASE_ENTRY(test_handle_large_loop_and_free),
@@ -90,45 +70,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_circular_buffer_overflow),
 		CUTE_TEST_CASE_ENTRY(test_circular_buffer_underflow),
 		CUTE_TEST_CASE_ENTRY(test_circular_buffer_two_threads),
-		CUTE_TEST_CASE_ENTRY(test_replay_buffer_valid_packets),
-		CUTE_TEST_CASE_ENTRY(test_replay_buffer_old_packet_out_of_range),
-		CUTE_TEST_CASE_ENTRY(test_replay_buffer_duplicate),
-		CUTE_TEST_CASE_ENTRY(test_crypto_encrypt_decrypt),
-		CUTE_TEST_CASE_ENTRY(test_socket_init_send_recieve_shutdown),
-		CUTE_TEST_CASE_ENTRY(test_generate_connect_token),
-		CUTE_TEST_CASE_ENTRY(test_packet_connection_accepted),
-		CUTE_TEST_CASE_ENTRY(test_packet_connection_denied),
-		CUTE_TEST_CASE_ENTRY(test_packet_keepalive),
-		CUTE_TEST_CASE_ENTRY(test_packet_disconnect),
-		CUTE_TEST_CASE_ENTRY(test_packet_challenge),
-		CUTE_TEST_CASE_ENTRY(test_packet_payload),
-		CUTE_TEST_CASE_ENTRY(test_hash_table_basic),
-		CUTE_TEST_CASE_ENTRY(test_hash_table_hammer),
-		CUTE_TEST_CASE_ENTRY(test_hash_table_set),
-		CUTE_TEST_CASE_ENTRY(test_encryption_map_basic),
-		CUTE_TEST_CASE_ENTRY(test_encryption_map_timeout_and_expiration),
 		CUTE_TEST_CASE_ENTRY(test_doubly_list),
-		CUTE_TEST_CASE_ENTRY(test_connect_token_cache),
-		CUTE_TEST_CASE_ENTRY(test_protocol_client_server),
-		CUTE_TEST_CASE_ENTRY(test_protocol_client_no_server_responses),
-		CUTE_TEST_CASE_ENTRY(test_protocol_client_server_list),
-		CUTE_TEST_CASE_ENTRY(test_protocol_server_challenge_response_timeout),
-		CUTE_TEST_CASE_ENTRY(test_protocol_client_expired_token),
-		CUTE_TEST_CASE_ENTRY(test_protocol_client_connect_expired_token),
-		CUTE_TEST_CASE_ENTRY(test_protocol_server_connect_expired_token),
-		CUTE_TEST_CASE_ENTRY(test_protocol_client_bad_keys),
-		CUTE_TEST_CASE_ENTRY(test_protocol_server_not_in_list_but_gets_request),
-		CUTE_TEST_CASE_ENTRY(test_protocol_connect_a_few_clients),
-		CUTE_TEST_CASE_ENTRY(test_protocol_keepalive),
-		CUTE_TEST_CASE_ENTRY(test_protocol_client_initiated_disconnect),
-		CUTE_TEST_CASE_ENTRY(test_protocol_client_server_payloads),
-		CUTE_TEST_CASE_ENTRY(test_protocol_multiple_connections_and_payloads),
-		CUTE_TEST_CASE_ENTRY(test_protocol_client_reconnect),
-		CUTE_TEST_CASE_ENTRY(test_sequence_buffer_basic),
-		CUTE_TEST_CASE_ENTRY(test_ack_system_basic),
-		CUTE_TEST_CASE_ENTRY(test_transport_basic),
-		CUTE_TEST_CASE_ENTRY(test_transport_drop_fragments),
-		CUTE_TEST_CASE_ENTRY(test_transport_drop_fragments_reliable_hammer),
 		CUTE_TEST_CASE_ENTRY(test_base64_encode),
 		CUTE_TEST_CASE_ENTRY(test_kv_basic),
 		CUTE_TEST_CASE_ENTRY(test_kv_std_string_to_disk),
@@ -203,8 +145,6 @@ int main(int argc, const char** argv)
 		fprintf(CUTE_TEST_IO_STREAM, "Invalid number of parameters. Please pass in either no parameters to run all tests, or just the test function name.\nYou may also pass in \"soak\" to run tests in an infinite loop.\n");
 		return -1;
 	}
-
-	net_cleanup();
 
 	return fail_count ? -1 : 0;
 

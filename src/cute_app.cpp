@@ -25,15 +25,12 @@
 #include <cute_concurrency.h>
 #include <cute_file_system.h>
 #include <cute_file_system_utils.h>
-#include <cute_net.h>
 #include <cute_c_runtime.h>
 #include <cute_kv.h>
 #include <cute_font.h>
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_file_system_internal.h>
-#include <internal/cute_net_internal.h>
-#include <internal/cute_crypto_internal.h>
 #include <internal/cute_audio_internal.h>
 #include <internal/cute_input_internal.h>
 #include <internal/cute_dx11.h>
@@ -326,15 +323,6 @@ void app_present()
 
 	// Triple buffering on the font vertices.
 	app->font_buffer.advance();
-}
-
-// TODO - Move these init functions into audio/net headers.
-
-error_t app_init_net()
-{
-	error_t err = crypto_init();
-	if (err.is_error()) return err;
-	return net_init();
 }
 
 error_t app_init_audio(bool spawn_mix_thread, int max_simultaneous_sounds)

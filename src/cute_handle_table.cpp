@@ -152,7 +152,6 @@ int handle_allocator_is_handle_valid(handle_allocator_t* table, handle_t handle)
 	handle_entry_t* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);
 	uint64_t generation = handle & 0xFFFFFFFF;
-	if (m_handles && table_index < (uint32_t)table->m_handles.size()) return 0;
 	return m_handles[table_index].data.generation == generation;
 }
 

@@ -23,7 +23,7 @@
 #define CUTE_SERIALIZE_INTERNAL_H
 
 #include <cute_defines.h>
-#include <cute_net.h>
+#include <cute_networking.h>
 
 namespace cute
 {
@@ -85,12 +85,12 @@ CUTE_INLINE void write_bytes(uint8_t** p, const uint8_t* byte_array, int num_byt
 CUTE_INLINE void write_endpoint(uint8_t** p, endpoint_t endpoint)
 {
 	write_uint8(p, (uint8_t)endpoint.type);
-	if (endpoint.type == ADDRESS_TYPE_IPV4) {
+	if (endpoint.type == CUTE_ADDRESS_TYPE_IPV4) {
 		write_uint8(p, endpoint.u.ipv4[0]);
 		write_uint8(p, endpoint.u.ipv4[1]);
 		write_uint8(p, endpoint.u.ipv4[2]);
 		write_uint8(p, endpoint.u.ipv4[3]);
-	} else if (endpoint.type == ADDRESS_TYPE_IPV6) {
+	} else if (endpoint.type == CUTE_ADDRESS_TYPE_IPV6) {
 		write_uint16(p, endpoint.u.ipv6[0]);
 		write_uint16(p, endpoint.u.ipv6[1]);
 		write_uint16(p, endpoint.u.ipv6[2]);
@@ -183,12 +183,12 @@ CUTE_INLINE endpoint_t read_endpoint(uint8_t** p)
 {
 	endpoint_t endpoint;
 	endpoint.type = (address_type_t)read_uint8(p);
-	if (endpoint.type == ADDRESS_TYPE_IPV4) {
+	if (endpoint.type == CUTE_ADDRESS_TYPE_IPV4) {
 		endpoint.u.ipv4[0] = read_uint8(p);
 		endpoint.u.ipv4[1] = read_uint8(p);
 		endpoint.u.ipv4[2] = read_uint8(p);
 		endpoint.u.ipv4[3] = read_uint8(p);
-	} else if (endpoint.type == ADDRESS_TYPE_IPV6) {
+	} else if (endpoint.type == CUTE_ADDRESS_TYPE_IPV6) {
 		endpoint.u.ipv6[0] = read_uint16(p);
 		endpoint.u.ipv6[1] = read_uint16(p);
 		endpoint.u.ipv6[2] = read_uint16(p);

@@ -30,7 +30,6 @@ endfunction()
 # Todo - Fix how turning some of these off breaks the build.
 option(CUTE_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
 option(CUTE_FRAMEWORK_WITH_HTTPS "Build Cute Framework with mbedtls for HTTPS support (Apache 2.0 license)." ON)
-option(CUTE_FRAMEWORK_WITH_HYDROGEN "Build Cute Framework with cryptography + authentication support from Hydrogen for networking support (ISC license)." ON)
 option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
 
 # Platform detection.
@@ -75,20 +74,15 @@ set(CUTE_SRCS
 	src/cute_app.cpp
 	src/cute_audio.cpp
 	src/cute_circular_buffer.cpp
-	src/cute_client.cpp
 	src/cute_clipboard.cpp
 	src/cute_concurrency.cpp
-	src/cute_crypto.cpp
 	src/cute_error.cpp
 	src/cute_file_system.cpp
 	src/cute_handle_table.cpp
 	src/cute_input.cpp
-	src/cute_net.cpp
-	src/cute_server.cpp
 	src/cute_timer.cpp
 	src/cute_version.cpp
 	src/cute_memory_pool.cpp
-	src/cute_protocol.cpp
 	src/cute_kv.cpp
 	src/cute_kv_utils.cpp
 	src/cute_base64.cpp
@@ -115,8 +109,8 @@ set(CUTE_SRCS
 	src/cute_utf8.cpp
 	src/cute_sprite.cpp
 	src/cute_coroutine.cpp
+	src/cute_networking.cpp
 
-	src/internal/cute_transport_internal.cpp
 	src/internal/cute_ecs_internal.cpp
 	src/internal/cute_dx11.cpp
 
@@ -129,38 +123,23 @@ set(CUTE_SRCS
 	libraries/imgui/imgui_widgets.cpp
 )
 
-# Optional Hydrogen for security.
-if(CUTE_FRAMEWORK_WITH_HYDROGEN)
-	set(HYDROGEN_HDRS
-		libraries/libhydrogen/hydrogen.h
-	)
-	set(HYDROGEN_SRCS
-		libraries/libhydrogen/hydrogen.c
-	)
-endif()
-
 set(CUTE_PUBLIC_HDRS
 	include/cute_alloc.h
 	include/cute_app.h
 	include/cute_audio.h
 	include/cute_c_runtime.h
 	include/cute_circular_buffer.h
-	include/cute_client.h
 	include/cute_clipboard.h
 	include/cute_concurrency.h
-	include/cute_crypto.h
 	include/cute_defines.h
 	include/cute_error.h
 	include/cute_file_system.h
 	include/cute_file_system_utils.h
 	include/cute_handle_table.h
 	include/cute_input.h
-	include/cute_net.h
-	include/cute_server.h
 	include/cute_timer.h
 	include/cute_version.h
 	include/cute_memory_pool.h
-	include/cute_protocol.h
 	include/cute_doubly_list.h
 	include/cute_kv.h
 	include/cute_kv_utils.h
@@ -197,6 +176,7 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_haptics.h
 	include/cute_utf8.h
 	include/cute_coroutine.h
+	include/cute_networking.h
 )
 
 set(IMGUI_HDRS
@@ -220,14 +200,10 @@ set(CUTE_HDRS
 
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
-	src/internal/cute_crypto_internal.h
 	src/internal/cute_file_system_internal.h
 	src/internal/cute_font_internal.h
 	src/internal/cute_input_internal.h
-	src/internal/cute_net_internal.h
 	src/internal/cute_serialize_internal.h
-	src/internal/cute_protocol_internal.h
-	src/internal/cute_transport_internal.h
 	src/internal/cute_object_table_internal.h
 	src/internal/cute_ecs_internal.h
 	src/internal/cute_dx11.h
@@ -242,12 +218,11 @@ set(CUTE_HDRS
 )
 
 if(CUTE_FRAMEWORK_STATIC)
-	add_library(cute STATIC ${CUTE_SRCS} ${CUTE_HDRS} ${HYDROGEN_SRCS} ${HYDROGEN_HDRS})
+	add_library(cute STATIC ${CUTE_SRCS} ${CUTE_HDRS})
 	target_compile_definitions(cute PUBLIC CUTE_STATIC)
 else()
-	add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS} ${HYDROGEN_SRCS} ${HYDROGEN_HDRS})
+	add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS})
 endif()
-target_include_directories(cute PRIVATE "include" "libraries/libhydrogen")
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)
 
 # PhysicsFS, always statically linked.
@@ -343,20 +318,9 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 	set(CUTE_TEST_SRCS test/main.cpp)
 	set(CUTE_TEST_HDRS
 		test/test_circular_buffer.h
-		test/test_crypto.h
 		test/test_handle.h
 		test/test_harness.h
-		test/test_replay_buffer.h
-		test/test_socket.h
-		test/test_connect_token.h
-		test/test_packets.h
-		test/test_hashtable.h
-		test/test_encryption_map.h
 		test/test_doubly_list.h
-		test/test_connect_token_cache.h
-		test/test_protocol_client_server.h
-		test/test_sequence_buffer.h
-		test/test_transport.h
 		test/test_kv.h
 		test/test_base64.h
 		test/test_audio.h
@@ -367,7 +331,6 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_png_cache.h
 		test/test_sprite.h
 		test/test_coroutine.h
-		test/test_client_server.h
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
