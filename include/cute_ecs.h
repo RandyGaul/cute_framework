@@ -103,6 +103,7 @@ CUTE_API void CUTE_CALL ecs_run_systems(float dt);
 //--------------------------------------------------------------------------------------------------
 // Introspection
 
+CUTE_API bool CUTE_CALL ecs_is_entity_type_valid(const char* entity_type);
 CUTE_API array<const char*> CUTE_CALL ecs_get_entity_list();
 CUTE_API array<const char*> CUTE_CALL ecs_get_component_list();
 CUTE_API array<const char*> CUTE_CALL ecs_get_system_list();

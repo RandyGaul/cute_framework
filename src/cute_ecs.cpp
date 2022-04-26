@@ -799,6 +799,15 @@ error_t ecs_save_entities(const array<entity_t>& entities)
 	return error_success();
 }
 
+bool ecs_is_entity_type_valid(const char* entity_type)
+{
+	if (app->entity_type_string_to_id.find(INJECT(entity_type))) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
 array<const char*> ecs_get_entity_list()
 {
 	array<const char*> names;
