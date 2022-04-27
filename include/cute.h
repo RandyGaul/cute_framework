@@ -23,6 +23,7 @@
 #define CUTE_H
 
 #include "cute_app.h"
+#include "cute_aabb_tree.h"
 #include "cute_alloc.h"
 #include "cute_array.h"
 #include "cute_aseprite_cache.h"
