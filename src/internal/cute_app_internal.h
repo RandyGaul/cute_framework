@@ -141,6 +141,9 @@ struct entity_config_t
 	string_t schema;
 };
 
+using entity_type_t = uint16_t;
+#define INVALID_ENTITY_TYPE ((uint16_t)~0)
+
 struct app_t
 {
 	float dt = 0;
@@ -202,18 +205,18 @@ struct app_t
 	system_internal_t system_internal_builder;
 	array<system_internal_t> systems;
 	entity_config_t entity_config_builder;
-	uint32_t entity_type_gen = 0;
-	dictionary<strpool_id, uint32_t> entity_type_string_to_id;
+	entity_type_t entity_type_gen = 0;
+	dictionary<strpool_id, entity_type_t> entity_type_string_to_id;
 	array<strpool_id> entity_type_id_to_string;
-	dictionary<uint32_t, entity_collection_t> entity_collections;
-	uint32_t current_collection_type_being_iterated = ~0;
+	dictionary<entity_type_t, entity_collection_t> entity_collections;
+	entity_type_t current_collection_type_being_iterated = ~0;
 	entity_collection_t* current_collection_being_updated = NULL;
 	array<entity_t> delayed_destroy_entities;
 
 	component_config_t component_config_builder;
 	dictionary<strpool_id, component_config_t> component_configs;
-	dictionary<uint32_t, kv_t*> entity_parsed_schemas;
-	dictionary<uint32_t, uint32_t> entity_schema_inheritence;
+	dictionary<entity_type_t, kv_t*> entity_parsed_schemas;
+	dictionary<entity_type_t, uint16_t> entity_schema_inheritence;
 
 	dictionary<entity_t, int>* save_id_table = NULL;
 	array<entity_t>* load_id_table = NULL;

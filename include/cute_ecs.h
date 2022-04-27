@@ -38,14 +38,12 @@ struct kv_t;
 
 struct entity_t
 {
-	CUTE_INLINE bool operator==(const entity_t& other) { return type == other.type && handle == other.handle; }
-	CUTE_INLINE bool operator!=(const entity_t& other) { return !(*this == other); }
-
-	uint32_t type;   // For internal use -- don't touch.
+	CUTE_INLINE bool operator==(const entity_t& other) { return handle == other.handle; }
+	CUTE_INLINE bool operator!=(const entity_t& other) { return handle != other.handle; }
 	handle_t handle; // For internal use -- don't touch.
 };
 
-static constexpr entity_t INVALID_ENTITY = { (uint32_t)~0, CUTE_INVALID_HANDLE };
+static constexpr entity_t INVALID_ENTITY = { CUTE_INVALID_HANDLE };
 
 CUTE_API void CUTE_CALL ecs_entity_begin();
 CUTE_API void CUTE_CALL ecs_entity_end();

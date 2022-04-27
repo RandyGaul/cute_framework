@@ -35,8 +35,9 @@ typedef uint64_t handle_t;
 CUTE_API handle_allocator_t* CUTE_CALL handle_allocator_make(int initial_capacity, void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL handle_allocator_destroy(handle_allocator_t* table);
 
-CUTE_API handle_t CUTE_CALL handle_allocator_alloc(handle_allocator_t* table, uint32_t index);
+CUTE_API handle_t CUTE_CALL handle_allocator_alloc(handle_allocator_t* table, uint32_t index, uint16_t type = 0);
 CUTE_API uint32_t CUTE_CALL handle_allocator_get_index(handle_allocator_t* table, handle_t handle);
+CUTE_API uint16_t CUTE_CALL handle_allocator_get_type(handle_allocator_t* table, handle_t handle);
 CUTE_API void CUTE_CALL handle_allocator_update_index(handle_allocator_t* table, handle_t handle, uint32_t index);
 CUTE_API void CUTE_CALL handle_allocator_free(handle_allocator_t* table, handle_t handle);
 CUTE_API int CUTE_CALL handle_allocator_is_handle_valid(handle_allocator_t* table, handle_t handle);
@@ -56,19 +57,24 @@ struct handle_table_t
 		m_alloc = NULL;
 	}
 
-	CUTE_INLINE handle_t alloc_handle(uint32_t index)
+	CUTE_INLINE handle_t alloc_handle(uint32_t index, uint16_t type = 0)
 	{
-		return handle_allocator_alloc(m_alloc, index);
+		return handle_allocator_alloc(m_alloc, index, type);
 	}
 
 	CUTE_INLINE handle_t alloc_handle()
 	{
-		return handle_allocator_alloc(m_alloc, ~0);
+		return handle_allocator_alloc(m_alloc, ~0, 0);
 	}
 
 	CUTE_INLINE uint32_t get_index(handle_t handle)
 	{
 		return handle_allocator_get_index(m_alloc, handle);
+	}
+
+	CUTE_INLINE uint16_t get_type(handle_t handle)
+	{
+		return handle_allocator_get_type(m_alloc, handle);
 	}
 
 	CUTE_INLINE void update_index(handle_t handle, uint32_t index)

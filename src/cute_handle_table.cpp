@@ -33,7 +33,8 @@ union handle_entry_t
 	struct
 	{
 		uint64_t user_index : 32;
-		uint64_t generation : 32;
+		uint64_t user_type : 16;
+		uint64_t generation : 16;
 	} data;
 	uint64_t val = 0;
 };
@@ -92,7 +93,7 @@ void handle_allocator_destroy(handle_allocator_t* table)
 	CUTE_FREE(table, mem_ctx);
 }
 
-handle_t handle_allocator_alloc(handle_allocator_t* table, uint32_t index)
+handle_t handle_allocator_alloc(handle_allocator_t* table, uint32_t index, uint16_t type)
 {
 	int freelist_index = table->m_freelist;
 	if (freelist_index == UINT32_MAX) {
@@ -110,7 +111,8 @@ handle_t handle_allocator_alloc(handle_allocator_t* table, uint32_t index)
 
 	// Setup handle indices.
 	m_handles[freelist_index].data.user_index = index;
-	handle_t handle = (((uint64_t)freelist_index) << 32) | m_handles[freelist_index].data.generation;
+	m_handles[freelist_index].data.user_type = type;
+	handle_t handle = (((uint64_t)freelist_index) << 32) | (((uint64_t)type) << 16) | m_handles[freelist_index].data.generation;
 	return handle;
 }
 
@@ -123,16 +125,25 @@ uint32_t handle_allocator_get_index(handle_allocator_t* table, handle_t handle)
 {
 	handle_entry_t* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);
-	uint64_t generation = handle & 0xFFFFFFFF;
+	uint64_t generation = handle & 0xFFFF;
 	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
 	return m_handles[table_index].data.user_index;
+}
+
+uint16_t handle_allocator_get_type(handle_allocator_t* table, handle_t handle)
+{
+	handle_entry_t* m_handles = table->m_handles.data();
+	uint32_t table_index = s_table_index(handle);
+	uint64_t generation = handle & 0xFFFF;
+	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
+	return m_handles[table_index].data.user_type;
 }
 
 void handle_allocator_update_index(handle_allocator_t* table, handle_t handle, uint32_t index)
 {
 	handle_entry_t* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);
-	uint64_t generation = handle & 0xFFFFFFFF;
+	uint64_t generation = handle & 0xFFFF;
 	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
 	m_handles[table_index].data.user_index = index;
 }
@@ -151,8 +162,11 @@ int handle_allocator_is_handle_valid(handle_allocator_t* table, handle_t handle)
 {
 	handle_entry_t* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);
-	uint64_t generation = handle & 0xFFFFFFFF;
-	return m_handles[table_index].data.generation == generation;
+	uint64_t generation = handle & 0xFFFF;
+	uint64_t type = (handle & 0x00000000FFFF0000ULL) >> 16;
+	bool match_generation = m_handles[table_index].data.generation == generation;
+	bool match_type = m_handles[table_index].data.user_type == type;
+	return match_generation && match_type;
 }
 
 }
