@@ -29,7 +29,7 @@ namespace cute
 {
 
 struct aabb_tree_t;
-struct leaf_t { int id; };
+struct leaf_t { int id = -1; };
 typedef bool (aabb_tree_query_fn)(leaf_t leaf, aabb_t aabb, void* leaf_udata, void* fn_udata);
 
 CUTE_API aabb_tree_t* CUTE_CALL create_aabb_tree(int initial_capacity = 0, void* user_allocator_context = NULL);
