@@ -812,10 +812,10 @@ void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c, bool antia
 
 void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c0, color_t c1, bool antialias)
 {
-	float scale = len(b->m3x2s.last().m.x); // Assume x/y uniform scaling.
+	float scale = len(b->m.m.x); // Assume x/y uniform scaling.
 	float alias_scale = 1.0f / scale;
 	bool thick_line = thickness > alias_scale;
-	thickness = max(thickness, 1.0f);
+	thickness = max(thickness, alias_scale);
 	if (antialias) {
 		color_t c2 = c0;
 		color_t c3 = c1;
@@ -860,7 +860,7 @@ void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c0, color_t c
 			batch_quad(b, q0, q7, r7, r6, c0, c2, c2, c2);
 		} else {
 			// Zero opacity aliased quads, without any core line.
-			v2 n = skew(norm(p1 - p0)) * alias_scale;
+			v2 n = skew(norm(p1 - p0)) * alias_scale * 0.5f;
 			v2 q0 = p0 + n;
 			v2 q1 = p1 + n;
 			v2 q2 = p1 - n;
@@ -1119,17 +1119,17 @@ static void s_polyline(batch_t* batch, v2* points, int count, float thickness, c
 void batch_polyline(batch_t* batch, v2* points, int count, float thickness, color_t color, bool loop, bool antialias, int bevel_count)
 {
 	CUTE_ASSERT(count >= 3);
-	float scale = len(batch->m3x2s.last().m.x); // Assume x/y uniform scaling.
+	float scale = len(batch->m.m.x); // Assume x/y uniform scaling.
 	float alias_scale = 1.0f / scale;
 	bool thick_line = thickness > alias_scale;
-	thickness = max(thickness, 1.0f);
+	thickness = max(thickness, alias_scale);
 	if (antialias) {
 		color_t no_alpha = color;
 		no_alpha.a = 0;
 		if (thick_line) {
 			s_polyline(batch, points, count, thickness, color, no_alpha, loop, true, alias_scale, bevel_count);
 		} else {
-			s_polyline(batch, points, count, alias_scale * 2.0f, color, no_alpha, loop, false, 0, bevel_count);
+			s_polyline(batch, points, count, alias_scale, color, no_alpha, loop, false, 0, bevel_count);
 		}
 	} else {
 		s_polyline(batch, points, count, thickness, color, color, loop, false, 0, bevel_count);
