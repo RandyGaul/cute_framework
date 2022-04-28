@@ -661,30 +661,40 @@ void batch_quad(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, color_t c0, color_t c1, 
 	PUSH_TRI(p2, p3, p0, c2, c3, c0);
 }
 
-void batch_quad_line(batch_t* b, aabb_t bb, float thickness, color_t c)
+void batch_quad_line(batch_t* b, aabb_t bb, float thickness, color_t c, bool antialias)
 {
 	v2 verts[4];
 	aabb_verts(verts, bb);
-	batch_quad_line(b, verts[0], verts[1], verts[2], verts[3], thickness, c);
+	batch_quad_line(b, verts[0], verts[1], verts[2], verts[3], thickness, c, antialias);
 }
 
-void batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, float thickness, color_t c)
+void batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, float thickness, color_t c0, color_t c1, color_t c2, color_t c3, bool antialias)
 {
-	batch_quad_line(b, p0, p1, p2, p3, thickness, c, c, c, c);
+	if (antialias) {
+		v2 verts[] = { p0, p1, p2, p3 };
+		batch_polyline(b, verts, 4, thickness, c0, true, true, 0);
+	} else {
+		float sqrt_2 = 1.41421356237f;
+		v2 n = v2(sqrt_2, sqrt_2) * thickness;
+		v2 q0 = p0 + v2(-n.x, -n.y);
+		v2 q1 = p1 + v2( n.x, -n.y);
+		v2 q2 = p2 + v2( n.x,  n.y);
+		v2 q3 = p3 + v2(-n.x,  n.y);
+		batch_quad(b, p0, p1, q1, q0, c0, c1, c2, c3);
+		batch_quad(b, p1, p2, q2, q1, c0, c1, c2, c3);
+		batch_quad(b, p2, p3, q3, q2, c0, c1, c2, c3);
+		batch_quad(b, p3, p0, q0, q3, c0, c1, c2, c3);
+	}
 }
 
 void batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, float thickness, color_t c0, color_t c1, color_t c2, color_t c3)
 {
-	float sqrt_2 = 1.41421356237f;
-	v2 n = v2(sqrt_2, sqrt_2) * thickness;
-	v2 q0 = p0 + v2(-n.x, -n.y);
-	v2 q1 = p1 + v2( n.x, -n.y);
-	v2 q2 = p2 + v2( n.x,  n.y);
-	v2 q3 = p3 + v2(-n.x,  n.y);
-	batch_quad(b, p0, p1, q1, q0, c0, c1, c2, c3);
-	batch_quad(b, p1, p2, q2, q1, c0, c1, c2, c3);
-	batch_quad(b, p2, p3, q3, q2, c0, c1, c2, c3);
-	batch_quad(b, p3, p0, q0, q3, c0, c1, c2, c3);
+	batch_quad_line(b, p0, p1, p2, p3, thickness, c0, c1, c2, c3, false);
+}
+
+void batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, float thickness, color_t c, bool antialias)
+{
+	batch_quad_line(b, p0, p1, p2, p3, thickness, c, c, c, c, antialias);
 }
 
 void batch_circle(batch_t* b, v2 p, float r, int iters, color_t c)
@@ -699,20 +709,36 @@ void batch_circle(batch_t* b, v2 p, float r, int iters, color_t c)
 	}
 }
 
-void batch_circle_line(batch_t* batch, v2 p, float r, int iters, float thickness, color_t color)
+void batch_circle_line(batch_t* batch, v2 p, float r, int iters, float thickness, color_t color, bool antialias)
 {
-	float half_thickness = thickness * 0.5f;
-	v2 p0 = v2(p.x + r - half_thickness, p.y);
-	v2 p1 = v2(p.x + r + half_thickness, p.y);
+	if (antialias) {
+		array<v2> verts(iters, NULL);
+		v2 p0 = v2(p.x + r, p.y);
+		verts.add(p0);
 
-	for (int i = 1; i <= iters; i++) {
-		float a = (i / (float)iters) * (2.0f * CUTE_PI);
-		v2 n = from_angle(a);
-		v2 p2 = p + n * (r + half_thickness);
-		v2 p3 = p + n * (r - half_thickness);
-		batch_quad(batch, p0, p1, p2, p3, color);
-		p1 = p2;
-		p0 = p3;
+		for (int i = 1; i <= iters; i++) {
+			float a = (i / (float)iters) * (2.0f * CUTE_PI);
+			v2 n = from_angle(a);
+			v2 p1 = p + n * r;
+			verts.add(p1);
+			p0 = p1;
+		}
+
+		batch_polyline(batch, verts.data(), verts.size(), thickness, color, true, true, 3);
+	} else {
+		float half_thickness = thickness * 0.5f;
+		v2 p0 = v2(p.x + r - half_thickness, p.y);
+		v2 p1 = v2(p.x + r + half_thickness, p.y);
+
+		for (int i = 1; i <= iters; i++) {
+			float a = (i / (float)iters) * (2.0f * CUTE_PI);
+			v2 n = from_angle(a);
+			v2 p2 = p + n * (r + half_thickness);
+			v2 p3 = p + n * (r - half_thickness);
+			batch_quad(batch, p0, p1, p2, p3, color);
+			p1 = p2;
+			p0 = p3;
+		}
 	}
 }
 
@@ -736,27 +762,54 @@ void batch_circle_arc(batch_t* batch, v2 p, v2 center_of_arc, float range, int i
 	}
 }
 
-void batch_circle_arc_line(batch_t* batch, v2 p, v2 center_of_arc, float range, int iters, float thickness, color_t color)
+static void s_circle_arc_line_aa(array<v2>* verts, v2 p, v2 center_of_arc, float range, int iters, float thickness, color_t color)
 {
 	float r = len(center_of_arc - p);
 	v2 d = norm(center_of_arc - p);
 	sincos_t m = sincos(range * 0.5f);
 
-	float half_thickness = thickness * 0.5f;
 	v2 t = mulT(m, d);
-	v2 p0 = p + t * (r + half_thickness);
-	v2 p1 = p + t * (r - half_thickness);
+	v2 p0 = p + t * r;
 	d = norm(p0 - p);
 	float inc = range / iters;
+	verts->add(p0);
 
 	for (int i = 1; i <= iters; i++) {
 		m = sincos(i * inc);
 		t = mul(m, d);
-		v2 p2 = p + t * (r + half_thickness);
-		v2 p3 = p + t * (r - half_thickness);
-		batch_quad(batch, p0, p1, p2, p3, color);
-		p1 = p2;
-		p0 = p3;
+		v2 p1 = p + t * r;
+		verts->add(p1);
+		p0 = p1;
+	}
+}
+
+void batch_circle_arc_line(batch_t* batch, v2 p, v2 center_of_arc, float range, int iters, float thickness, color_t color, bool antialias)
+{
+	if (antialias) {
+		array<v2> verts(iters, NULL);
+		s_circle_arc_line_aa(&verts, p, center_of_arc, range, iters, thickness, color);
+		batch_polyline(batch, verts.data(), verts.size(), thickness, color, false, true, 3);
+	} else {
+		float r = len(center_of_arc - p);
+		v2 d = norm(center_of_arc - p);
+		sincos_t m = sincos(range * 0.5f);
+
+		float half_thickness = thickness * 0.5f;
+		v2 t = mulT(m, d);
+		v2 p0 = p + t * (r + half_thickness);
+		v2 p1 = p + t * (r - half_thickness);
+		d = norm(p0 - p);
+		float inc = range / iters;
+
+		for (int i = 1; i <= iters; i++) {
+			m = sincos(i * inc);
+			t = mul(m, d);
+			v2 p2 = p + t * (r + half_thickness);
+			v2 p3 = p + t * (r - half_thickness);
+			batch_quad(batch, p0, p1, p2, p3, color);
+			p1 = p2;
+			p0 = p3;
+		}
 	}
 }
 
@@ -772,17 +825,24 @@ void batch_capsule(batch_t* batch, v2 a, v2 b, float r, int iters, color_t c)
 	batch_quad(batch, q0, q1, q2, q3, c);
 }
 
-void batch_capsule_line(batch_t* batch, v2 a, v2 b, float r, int iters, float thickness, color_t c)
+void batch_capsule_line(batch_t* batch, v2 a, v2 b, float r, int iters, float thickness, color_t c, bool antialias)
 {
-	batch_circle_arc_line(batch, a, a + norm(a - b) * r, CUTE_PI, iters, thickness, c);
-	batch_circle_arc_line(batch, b, b + norm(b - a) * r, CUTE_PI, iters, thickness, c);
-	v2 n = skew(norm(b - a)) * r;
-	v2 q0 = a + n;
-	v2 q1 = b + n;
-	v2 q2 = b - n;
-	v2 q3 = a - n;
-	batch_line(batch, q0, q1, thickness, c);
-	batch_line(batch, q2, q3, thickness, c);
+	if (antialias) {
+		array<v2> verts(iters * 2 + 2, NULL);
+		s_circle_arc_line_aa(&verts, a, a + norm(a - b) * r, CUTE_PI, iters, thickness, c);
+		s_circle_arc_line_aa(&verts, b, b + norm(b - a) * r, CUTE_PI, iters, thickness, c);
+		batch_polyline(batch, verts.data(), verts.count(), thickness, c, true, true, 0);
+	} else {
+		batch_circle_arc_line(batch, a, a + norm(a - b) * r, CUTE_PI, iters, thickness, c);
+		batch_circle_arc_line(batch, b, b + norm(b - a) * r, CUTE_PI, iters, thickness, c);
+		v2 n = skew(norm(b - a)) * r;
+		v2 q0 = a + n;
+		v2 q1 = b + n;
+		v2 q2 = b - n;
+		v2 q3 = a - n;
+		batch_line(batch, q0, q1, thickness, c);
+		batch_line(batch, q2, q3, thickness, c);
+	}
 }
 
 void batch_tri(batch_t* b, v2 p0, v2 p1, v2 p2, color_t c)
@@ -795,12 +855,12 @@ void batch_tri(batch_t* b, v2 p0, v2 p1, v2 p2, color_t c0, color_t c1, color_t 
 	PUSH_TRI(p0, p1, p2, c0, c1, c2);
 }
 
-void batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float thickness, color_t c)
+void batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float thickness, color_t c, bool antialias)
 {
 	CUTE_ASSERT(0);
 }
 
-void batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float thickness, color_t c0, color_t c1, color_t c2)
+void batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float thickness, color_t c0, color_t c1, color_t c2, bool antialias)
 {
 	CUTE_ASSERT(0);
 }
