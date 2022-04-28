@@ -106,6 +106,7 @@ struct batch_t
 	sg_filter filter = SG_FILTER_NEAREST;
 	matrix_t projection;
 
+	m3x2 m = make_identity();
 	array<m3x2> m3x2s;
 	array<sg_blend_state> blend_states;
 	array<sg_depth_state> depth_states;
@@ -454,15 +455,6 @@ error_t batch_flush(batch_t* b)
 
 	// Draw geometry.
 	if (b->geom_verts.count()) {
-		// Transform verts.
-		m3x2 m = make_identity();
-		if (b->m3x2s.count()) {
-			m = b->m3x2s.last();
-		}
-		for (int i = 0; i < b->geom_verts.count(); ++i) {
-			b->geom_verts[i].p = mul(m, b->geom_verts[i].p);
-		}
-
 		// Issue draw call.
 		sg_apply_pipeline(b->geom_pip);
 		geom_vs_params_t params;
@@ -524,6 +516,7 @@ void batch_outlines_color(batch_t* b, color_t c)
 
 void batch_push_m3x2(batch_t* b, m3x2 m)
 {
+	b->m = m;
 	b->m3x2s.add(m);
 }
 
@@ -531,6 +524,11 @@ void batch_pop_m3x2(batch_t* b)
 {
 	if (b->m3x2s.count() > 1) {
 		b->m3x2s.pop();
+		if (b->m3x2s.size()) {
+			b->m = b->m3x2s.last();
+		} else {
+			b->m = make_identity();
+		}
 	}
 }
 
@@ -639,7 +637,7 @@ void batch_quad(batch_t* b, aabb_t bb, color_t c)
 #define PUSH_VERT(P, C) \
 	do { \
 		vertex_t v; \
-		v.p = P; \
+		v.p = mul(b->m, P); \
 		v.c = C; \
 		b->geom_verts.add(v); \
 	} while (0)
