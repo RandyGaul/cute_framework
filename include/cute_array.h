@@ -139,7 +139,7 @@ array<T>::array(int capacity, void* user_allocator_context)
 	: m_capacity(capacity)
 	, m_mem_ctx(user_allocator_context)
 {
-	m_items = (T*)CUTE_ALLOC(sizeof(T), m_mem_ctx);
+	m_items = (T*)CUTE_ALLOC(sizeof(T) * capacity, m_mem_ctx);
 	CUTE_ASSERT(m_items);
 }
 
