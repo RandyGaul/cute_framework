@@ -143,7 +143,7 @@
 
 	UNIT TESTS
 
-		You may enable building the unit tests with CUTE_UNIT_TESTS. Simply call
+		You may enable building the unit tests with CUTE_NET_TESTS. Simply call
 
 			cn_run_tests(-1, false);
 
@@ -6855,7 +6855,7 @@ void cn_protocol_client_update(cn_protocol_client_t* client, double dt, uint64_t
 
 cn_error_t cn_protocol_client_send(cn_protocol_client_t* client, const void* data, int size)
 {
-	if (size < 1) return cn_error_failure("`size` can not be negative.");
+	if (size < 0) return cn_error_failure("`size` can not be negative.");
 	if (size > CN_PROTOCOL_PACKET_PAYLOAD_MAX) return cn_error_failure("`size` exceeded `CN_PROTOCOL_PACKET_PAYLOAD_MAX`.");
 	cn_protocol_packet_payload_t packet;
 	packet.packet_type = CN_PROTOCOL_PACKET_TYPE_PAYLOAD;
@@ -7532,7 +7532,7 @@ void cn_protocol_server_disconnect_client(cn_protocol_server_t* server, int clie
 
 cn_error_t cn_protocol_server_send_to_client(cn_protocol_server_t* server, const void* packet, int size, int client_index)
 {
-	if (size < 1) return cn_error_failure("`size` is negative.");
+	if (size < 0) return cn_error_failure("`size` is negative.");
 	if (size > CN_PROTOCOL_PACKET_PAYLOAD_MAX) return cn_error_failure("`size` exceeds `CN_PROTOCOL_PACKET_PAYLOAD_MAX`.");
 	CN_ASSERT(server->client_count >= 1 && client_index >= 0 && client_index < CN_PROTOCOL_SERVER_MAX_CLIENTS);
 
@@ -8098,7 +8098,8 @@ cn_ack_system_t* cn_ack_system_create(cn_ack_system_config_t config)
 
 	ack_system->sequence = 0;
 	ack_system->acks_count = 0;
-	ack_system->acks = (uint16_t*)CN_ALLOC(sizeof(uint16_t) * config.initial_ack_capacity, mem_ctx);
+	ack_system->acks_capacity = config.initial_ack_capacity;
+	ack_system->acks = (uint16_t*)CN_ALLOC(sizeof(uint16_t) * ack_system->acks_capacity, mem_ctx);
 	CN_CHECK(cn_sequence_buffer_init(&ack_system->sent_packets, config.sent_packets_sequence_buffer_size, sizeof(cn_sent_packet_t), NULL, mem_ctx));
 	sent_packets_init = 1;
 	CN_CHECK(cn_sequence_buffer_init(&ack_system->received_packets, config.received_packets_sequence_buffer_size, sizeof(cn_received_packet_t), NULL, mem_ctx));
@@ -8585,7 +8586,7 @@ static cn_error_t s_transport_send_fragments(cn_transport_t* transport)
 
 cn_error_t s_transport_send_reliably(cn_transport_t* transport, const void* data, int size)
 {
-	if (size < 1) return cn_error_failure("Negative `size` not allowed.");
+	if (size < 0) return cn_error_failure("Negative `size` not allowed.");
 	if (size > transport->max_size_single_send) return cn_error_failure("`size` exceeded `max_size_single_send` from `transport->config`.");
 
 	int fragment_size = transport->fragment_size;
