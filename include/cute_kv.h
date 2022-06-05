@@ -50,7 +50,7 @@ CUTE_API kv_state_t CUTE_CALL kv_get_state(kv_t* kv);
 /**
  * Parses the text at `data` in a single-pass. Sets the `kv` to read mode `KV_STATE_READ`.
  */
-CUTE_API error_t CUTE_CALL kv_parse(kv_t* kv, const void* data, size_t size);
+CUTE_API cf_error_t CUTE_CALL kv_parse(kv_t* kv, const void* data, size_t size);
 
 /**
  * Clears the `kv`'s internal state, but retains all previously parsed data. This can be useful
@@ -98,7 +98,7 @@ CUTE_API void CUTE_CALL kv_set_base(kv_t* kv, kv_t* base);
 /**
  * Returns the error state of the kv instance.
  */
-CUTE_API error_t CUTE_CALL kv_error_state(kv_t* kv);
+CUTE_API cf_error_t CUTE_CALL kv_error_state(kv_t* kv);
 
 // -------------------------------------------------------------------------------------------------
 // Key and Value functions.
@@ -118,30 +118,30 @@ enum kv_type_t
 	KV_TYPE_OBJECT = 5,
 };
 
-CUTE_API error_t CUTE_CALL kv_key(kv_t* kv, const char* key, kv_type_t* type = NULL);
+CUTE_API cf_error_t CUTE_CALL kv_key(kv_t* kv, const char* key, kv_type_t* type = NULL);
 
-CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, uint8_t* val);
-CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, uint16_t* val);
-CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, uint32_t* val);
-CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, uint64_t* val);
+CUTE_API cf_error_t CUTE_CALL kv_val(kv_t* kv, uint8_t* val);
+CUTE_API cf_error_t CUTE_CALL kv_val(kv_t* kv, uint16_t* val);
+CUTE_API cf_error_t CUTE_CALL kv_val(kv_t* kv, uint32_t* val);
+CUTE_API cf_error_t CUTE_CALL kv_val(kv_t* kv, uint64_t* val);
 
-CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, int8_t* val);
-CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, int16_t* val);
-CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, int32_t* val);
-CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, int64_t* val);
+CUTE_API cf_error_t CUTE_CALL kv_val(kv_t* kv, int8_t* val);
+CUTE_API cf_error_t CUTE_CALL kv_val(kv_t* kv, int16_t* val);
+CUTE_API cf_error_t CUTE_CALL kv_val(kv_t* kv, int32_t* val);
+CUTE_API cf_error_t CUTE_CALL kv_val(kv_t* kv, int64_t* val);
 
-CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, float* val);
-CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, double* val);
-CUTE_API error_t CUTE_CALL kv_val(kv_t* kv, bool* val);
+CUTE_API cf_error_t CUTE_CALL kv_val(kv_t* kv, float* val);
+CUTE_API cf_error_t CUTE_CALL kv_val(kv_t* kv, double* val);
+CUTE_API cf_error_t CUTE_CALL kv_val(kv_t* kv, bool* val);
 
-CUTE_API error_t CUTE_CALL kv_val_string(kv_t* kv, const char** str, size_t* size);
-CUTE_API error_t CUTE_CALL kv_val_blob(kv_t* kv, void* data, size_t data_capacity, size_t* data_len);
+CUTE_API cf_error_t CUTE_CALL kv_val_string(kv_t* kv, const char** str, size_t* size);
+CUTE_API cf_error_t CUTE_CALL kv_val_blob(kv_t* kv, void* data, size_t data_capacity, size_t* data_len);
 
-CUTE_API error_t CUTE_CALL kv_object_begin(kv_t* kv, const char* key = NULL);
-CUTE_API error_t CUTE_CALL kv_object_end(kv_t* kv);
+CUTE_API cf_error_t CUTE_CALL kv_object_begin(kv_t* kv, const char* key = NULL);
+CUTE_API cf_error_t CUTE_CALL kv_object_end(kv_t* kv);
 
-CUTE_API error_t CUTE_CALL kv_array_begin(kv_t* kv, int* count, const char* key = NULL);
-CUTE_API error_t CUTE_CALL kv_array_end(kv_t* kv);
+CUTE_API cf_error_t CUTE_CALL kv_array_begin(kv_t* kv, int* count, const char* key = NULL);
+CUTE_API cf_error_t CUTE_CALL kv_array_end(kv_t* kv);
 
 CUTE_API void CUTE_CALL kv_print(kv_t* kv);
 

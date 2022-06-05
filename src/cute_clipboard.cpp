@@ -31,7 +31,7 @@ char* clipboard_get()
 	return text;
 }
 
-error_t clipboard_set(const char* string)
+cf_error_t clipboard_set(const char* string)
 {
 	int ret = SDL_SetClipboardText(string);
 	if (ret) return error_failure("Unable to set clipboard data.");

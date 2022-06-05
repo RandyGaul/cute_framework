@@ -69,9 +69,9 @@ namespace cute
 
 app_t* app;
 
-// TODO: Refactor to use error_t reporting.
+// TODO: Refactor to use cf_error_t reporting.
 
-error_t app_make(const char* window_title, int x, int y, int w, int h, uint32_t options, const char* argv0, void* user_allocator_context)
+cf_error_t app_make(const char* window_title, int x, int y, int w, int h, uint32_t options, const char* argv0, void* user_allocator_context)
 {
 	SDL_SetMainReady();
 
@@ -184,7 +184,7 @@ error_t app_make(const char* window_title, int x, int y, int w, int h, uint32_t 
 		app->threadpool = threadpool_create(num_threads_to_spawn, user_allocator_context);
 	}
 
-	error_t err = file_system_init(argv0);
+	cf_error_t err = file_system_init(argv0);
 	if (err.is_error()) {
 		CUTE_ASSERT(0);
 	} else if (!(options & CUTE_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT)) {
@@ -299,7 +299,7 @@ void app_present()
 		sg_apply_bindings(bind);
 		upscale_vs_params_t vs_params = { app->upscale };
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
-		upscale_fs_params_t fs_params = { v2((float)app->offscreen_w, (float)app->offscreen_h) };
+		upscale_fs_params_t fs_params = { cf_v2((float)app->offscreen_w, (float)app->offscreen_h) };
 		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE(fs_params));
 		sg_draw(0, 6, 1);
 		if (app->using_imgui) {
@@ -325,7 +325,7 @@ void app_present()
 	app->font_buffer.advance();
 }
 
-error_t app_init_audio(bool spawn_mix_thread, int max_simultaneous_sounds)
+cf_error_t app_init_audio(bool spawn_mix_thread, int max_simultaneous_sounds)
 {
 	int more_on_emscripten = 1;
 #ifdef CUTE_EMSCRIPTEN
@@ -414,7 +414,7 @@ static void s_quad(float x, float y, float sx, float sy, float* out)
 	CUTE_MEMCPY(out, quad, sizeof(quad));
 }
 
-error_t app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
+cf_error_t app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 {
 	if (app->offscreen_enabled) {
 		CUTE_ASSERT(false); // Need to implement calling this to resize offscreen buffer at runtime.
@@ -461,14 +461,14 @@ error_t app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 
 	// Setup offscreen rendering pipeline, to draw the offscreen buffer onto the screen.
 	sg_pipeline_desc params = { 0 };
-	params.layout.buffers[0].stride = sizeof(v2) * 2;
+	params.layout.buffers[0].stride = sizeof(cf_v2) * 2;
 	params.layout.buffers[0].step_func = SG_VERTEXSTEP_PER_VERTEX;
 	params.layout.buffers[0].step_rate = 1;
 	params.layout.attrs[0].buffer_index = 0;
 	params.layout.attrs[0].offset = 0;
 	params.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
 	params.layout.attrs[1].buffer_index = 0;
-	params.layout.attrs[1].offset = sizeof(v2);
+	params.layout.attrs[1].offset = sizeof(cf_v2);
 	params.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
 	params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
 	params.shader = app->offscreen_shader;

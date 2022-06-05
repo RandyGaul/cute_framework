@@ -23,6 +23,9 @@
 #define CUTE_DICTIONARY_H
 
 #include "cute_defines.h"
+
+#ifdef CUTE_CPP
+
 #include "cute_hashtable.h"
 #include "cute_c_runtime.h"
 #include "cute_error.h"
@@ -50,8 +53,8 @@ struct dictionary
 
 	T* find(const K& key);
 	const T* find(const K& key) const;
-	error_t find(const K& key, T* val_out);
-	error_t find(const K& key, T* val_out) const;
+	cf_error_t find(const K& key, T* val_out);
+	cf_error_t find(const K& key, T* val_out) const;
 
 	T* insert(const K& key);
 	T* insert(const K& key, const T& val);
@@ -113,7 +116,7 @@ const T* dictionary<K, T>::find(const K& key) const
 }
 
 template <typename K, typename T>
-error_t dictionary<K, T>::find(const K& key, T* val_out)
+cf_error_t dictionary<K, T>::find(const K& key, T* val_out)
 {
 	T* ptr = (T*)hashtable_find(&m_table, &key);
 	if (ptr) {
@@ -125,7 +128,7 @@ error_t dictionary<K, T>::find(const K& key, T* val_out)
 }
 
 template <typename K, typename T>
-error_t dictionary<K, T>::find(const K& key, T* val_out) const
+cf_error_t dictionary<K, T>::find(const K& key, T* val_out) const
 {
 	const T* ptr = (const T*)hashtable_find(&m_table, &key);
 	if (ptr) {
@@ -245,10 +248,10 @@ struct dictionary<const char*, T>
 	const T* find(const char* key) const;
 	T* find(const char* key, size_t key_len);
 	const T* find(const char* key, size_t key_len) const;
-	error_t find(const char* key, T* val_out);
-	error_t find(const char* key, T* val_out) const;
-	error_t find(const char* key, size_t key_len, T* val_out);
-	error_t find(const char* key, size_t key_len, T* val_out) const;
+	cf_error_t find(const char* key, T* val_out);
+	cf_error_t find(const char* key, T* val_out) const;
+	cf_error_t find(const char* key, size_t key_len, T* val_out);
+	cf_error_t find(const char* key, size_t key_len, T* val_out) const;
 
 	T* insert(const char* key, const T& val);
 	void remove(const char* key);
@@ -322,7 +325,7 @@ const T* dictionary<const char*, T>::find(const char* key, size_t key_len) const
 }
 
 template <typename T>
-error_t dictionary<const char*, T>::find(const char* key, T* val_out)
+cf_error_t dictionary<const char*, T>::find(const char* key, T* val_out)
 {
 	dictionary_string_block_t block = s_dictionary_make_block(key);
 	T* ptr = (T*)hashtable_find(&m_table, &block);
@@ -335,7 +338,7 @@ error_t dictionary<const char*, T>::find(const char* key, T* val_out)
 }
 
 template <typename T>
-error_t dictionary<const char*, T>::find(const char* key, T* val_out) const
+cf_error_t dictionary<const char*, T>::find(const char* key, T* val_out) const
 {
 	dictionary_string_block_t block = s_dictionary_make_block(key);
 	T* ptr = (T*)hashtable_find(&m_table, &block);
@@ -348,7 +351,7 @@ error_t dictionary<const char*, T>::find(const char* key, T* val_out) const
 }
 
 template <typename T>
-error_t dictionary<const char*, T>::find(const char* key, size_t key_len, T* val_out)
+cf_error_t dictionary<const char*, T>::find(const char* key, size_t key_len, T* val_out)
 {
 	T* ptr = find(key, key_len);
 	if (ptr) {
@@ -360,7 +363,7 @@ error_t dictionary<const char*, T>::find(const char* key, size_t key_len, T* val
 }
 
 template <typename T>
-error_t dictionary<const char*, T>::find(const char* key, size_t key_len, T* val_out) const
+cf_error_t dictionary<const char*, T>::find(const char* key, size_t key_len, T* val_out) const
 {
 	const T* ptr = find(key, key_len);
 	if (ptr) {
@@ -442,5 +445,7 @@ void dictionary<const char*, T>::swap(int index_a, int index_b)
 }
 
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_DICTIONARY_H

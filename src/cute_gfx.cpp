@@ -32,10 +32,7 @@
 #	pragma comment (lib, "dxguid.lib")
 #endif
 
-namespace cute
-{
-
-texture_t texture_make(pixel_t* pixels, int w, int h, sg_wrap mode, sg_filter filter)
+cf_texture_t cf_texture_make(cf_pixel_t* pixels, int w, int h, sg_wrap mode, sg_filter filter)
 {
 	sg_image_desc params = { 0 };
 	params.width = w;
@@ -45,22 +42,22 @@ texture_t texture_make(pixel_t* pixels, int w, int h, sg_wrap mode, sg_filter fi
 	params.min_filter = filter;
 	params.mag_filter = filter;
 	params.data.subimage[0][0].ptr = pixels;
-	params.data.subimage[0][0].size = w * h * sizeof(pixel_t);
+	params.data.subimage[0][0].size = w * h * sizeof(cf_pixel_t);
 	params.num_mipmaps = 0;
 	sg_image img = sg_make_image(params);
-	return (texture_t)img.id;
+	return (cf_texture_t)img.id;
 }
 
-void texture_destroy(texture_t texture)
+void cf_texture_destroy(cf_texture_t texture)
 {
 	sg_image img;
 	img.id = (uint32_t)texture;
 	sg_destroy_image(img);
 }
 
-matrix_t matrix_identity()
+cf_matrix_t cf_matrix_identity()
 {
-	matrix_t m;
+	cf_matrix_t m;
 	CUTE_MEMSET(&m, 0, sizeof(m));
 	m.data[0] = 1.0f;
 	m.data[5] = 1.0f;
@@ -69,14 +66,14 @@ matrix_t matrix_identity()
 	return m;
 }
 
-matrix_t matrix_ortho_2d(float w, float h, float x, float y)
+cf_matrix_t cf_matrix_ortho_2d(float w, float h, float x, float y)
 {
 	float L = -w / 2.0f;
 	float R = w / 2.0f;
 	float T = h / 2.0f;
 	float B = -h / 2.0f;
 
-	matrix_t projection;
+	cf_matrix_t projection;
 	CUTE_MEMSET(&projection, 0, sizeof(projection));
 
 	// ortho
@@ -92,9 +89,9 @@ matrix_t matrix_ortho_2d(float w, float h, float x, float y)
 	return projection;
 }
 
-triple_buffer_t triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count, int index_stride)
+cf_triple_buffer_t cf_triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count, int index_stride)
 {
-	triple_buffer_t buf;
+	cf_triple_buffer_t buf;
 	buf.vbuf.stride = vertex_stride;
 	buf.ibuf.stride = index_stride;
 
@@ -117,7 +114,7 @@ triple_buffer_t triple_buffer_make(int vertex_data_size, int vertex_stride, int 
 	return buf;
 }
 
-error_t triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count, const void* indices)
+cf_error_t cf_triple_buffer_append(cf_triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count, const void* indices)
 {
 	bool overflowed = false;
 
@@ -140,4 +137,35 @@ error_t triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const vo
 	return error_success();
 }
 
+namespace cute
+{
+cf_texture_t texture_make(cf_pixel_t* pixels, int w, int h, sg_wrap mode, sg_filter filter)
+{
+	return cf_texture_make(pixels, w, h, mode, filter);
+}
+
+void texture_destroy(cf_texture_t texture)
+{
+	cf_texture_destroy(texture);
+}
+
+cf_matrix_t matrix_identity()
+{
+	return cf_matrix_identity();
+}
+
+cf_matrix_t matrix_ortho_2d(float w, float h, float x, float y)
+{
+	return cf_matrix_ortho_2d(w, h, x, y);
+}
+
+cf_triple_buffer_t triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count, int index_stride)
+{
+	return cf_triple_buffer_make(vertex_data_size, vertex_stride, index_count, index_stride);
+}
+
+cf_error_t triple_buffer_append(cf_triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count, const void* indices)
+{
+	return cf_triple_buffer_append(buffer, vertex_count, vertices, index_count, indices);
+}
 }

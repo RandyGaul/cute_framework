@@ -40,7 +40,7 @@ namespace cute
  * 
  * Here is a full working example.
  * 
- *    error_t err;
+ *    cf_error_t err;
  *    https_t* https = https_get("raw.githubusercontent.com", "443", "/RandyGaul/cute_framework/main/src/cute_https.h", &err);
  *    if (https) {
  *        while (https_state(https) == HTTPS_STATE_PENDING) {
@@ -73,7 +73,7 @@ struct https_t;
  * underneath, meaning only files from the server this code came from can be loaded, and as such the `uri`
  * should only be a relative path on the server.
  */
-CUTE_API https_t* CUTE_CALL https_get(const char* host, const char* port, const char* uri, error_t* err = NULL, bool verify_cert = true);
+CUTE_API https_t* CUTE_CALL https_get(const char* host, const char* port, const char* uri, cf_error_t* err = NULL, bool verify_cert = true);
 
 /**
  * Initiates a POST request for the specified host (website address) and a given uri. The content of the post
@@ -89,7 +89,7 @@ CUTE_API https_t* CUTE_CALL https_get(const char* host, const char* port, const 
  * underneath, meaning only files from the server this code came from can be loaded, and as such the `uri`
  * should only be a relative path on the server.
  */
-CUTE_API https_t* CUTE_CALL https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, error_t* err = NULL, bool verify_cert = true);
+CUTE_API https_t* CUTE_CALL https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, cf_error_t* err = NULL, bool verify_cert = true);
 
 /**
  * Frees up all memory and closes the underlying HTTPS connection if still open.
@@ -148,7 +148,7 @@ struct https_response_t
 	int code;
 	size_t content_len;
 	const char* content;
-	array<https_header_t> headers;
+	cf_array<https_header_t> headers;
 
 	/**
 	 * Flags from `transfer_encoding_t`. For example, if content is gzip'd, you can tell by using

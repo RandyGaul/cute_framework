@@ -70,7 +70,7 @@ struct png_t
 {
 	const char* path = NULL;
 	uint64_t id = ~0;
-	pixel_t* pix = NULL;
+	cf_pixel_t* pix = NULL;
 	int w = 0;
 	int h = 0;
 };
@@ -79,13 +79,13 @@ struct png_t
  * Returns an image from the cache. If it does not exist in the cache, it is loaded from disk
  * and placed into the cache.
  */
-CUTE_API error_t CUTE_CALL png_cache_load(png_cache_t* cache, const char* png_path, png_t* png = NULL);
+CUTE_API cf_error_t CUTE_CALL png_cache_load(png_cache_t* cache, const char* png_path, png_t* png = NULL);
 
 /**
  * Returns an image from the cache. If it does not exist in the cache, it is loaded from memory
  * and placed into the cache.
  */
-CUTE_API error_t CUTE_CALL png_cache_load_mem(png_cache_t* cache, const char* png_path, const void* memory, size_t size, png_t* png = NULL);
+CUTE_API cf_error_t CUTE_CALL png_cache_load_mem(png_cache_t* cache, const char* png_path, const void* memory, size_t size, png_t* png = NULL);
 
 /**
  * Unloads an image from the cache. This function can be used to control your RAM usage, for example
@@ -116,7 +116,7 @@ CUTE_API strpool_t* CUTE_CALL png_cache_get_strpool_ptr(png_cache_t* cache);
  * Constructs an animation out of an array of frames, along with their delays in milliseconds.
  * The animation is stored within the png cache.
  */
-CUTE_API const animation_t* CUTE_CALL png_cache_make_animation(png_cache_t* cache, const char* name, const array<png_t>& pngs, const array<float>& delays);
+CUTE_API const animation_t* CUTE_CALL png_cache_make_animation(png_cache_t* cache, const char* name, const cf_array<png_t>& pngs, const cf_array<float>& delays);
 
 /**
  * Looks up an animation within the png cache by name.
@@ -126,7 +126,7 @@ CUTE_API const animation_t* CUTE_CALL png_cache_get_animation(png_cache_t* cache
 /**
  * Constructs an animation table given an array of animations. The table is stored within the png cache.
  */
-CUTE_API const animation_table_t* CUTE_CALL png_cache_make_animation_table(png_cache_t* cache, const char* sprite_name, const array<const animation_t*>& animations);
+CUTE_API const animation_table_t* CUTE_CALL png_cache_make_animation_table(png_cache_t* cache, const char* sprite_name, const cf_array<const animation_t*>& animations);
 
 /**
  * Looks up an animation table within the png cache by name.

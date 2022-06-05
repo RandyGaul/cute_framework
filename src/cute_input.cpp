@@ -399,7 +399,7 @@ static void s_touch_remove(uint64_t id)
 	}
 }
 
-array<touch_t> touch_get_all()
+cf_array<touch_t> touch_get_all()
 {
 	return app->touches;
 }

@@ -47,7 +47,7 @@ CUTE_API void CUTE_CALL joypad_system_init();
  * database on GitHub (https://github.com/gabomdq/SDL_GameControllerDB), so you probably don't need
  * to ever call this function.
  */
-CUTE_API error_t CUTE_CALL joypad_add_mapping(const char* mapping);
+CUTE_API cf_error_t CUTE_CALL joypad_add_mapping(const char* mapping);
 
 /**
  * Returns the number of joypads currently connected to the system.

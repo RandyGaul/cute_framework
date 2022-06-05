@@ -29,25 +29,23 @@
 
 #include "sokol/sokol_gfx.h"
 
-namespace cute
-{
+typedef uint64_t cf_texture_t;
 
-using texture_t = uint64_t;
+CUTE_API cf_texture_t CUTE_CALL cf_texture_make(cf_pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_REPEAT, sg_filter filter = SG_FILTER_NEAREST);
+CUTE_API void CUTE_CALL cf_texture_destroy(cf_texture_t texture);
 
-CUTE_API texture_t CUTE_CALL texture_make(pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_REPEAT, sg_filter filter = SG_FILTER_NEAREST);
-CUTE_API void CUTE_CALL texture_destroy(texture_t texture);
-
-struct matrix_t
+struct cf_matrix_t
 {
 	float data[16];
 };
 
-CUTE_API matrix_t CUTE_CALL matrix_identity();
-CUTE_API matrix_t CUTE_CALL matrix_ortho_2d(float w, float h, float x, float y);
+CUTE_API cf_matrix_t CUTE_CALL cf_matrix_identity();
+CUTE_API cf_matrix_t CUTE_CALL cf_matrix_ortho_2d(float w, float h, float x, float y);
 
-struct triple_buffer_t
+
+struct cf_triple_buffer_t
 {
-	struct buffer_t
+	struct cf_buffer_t
 	{
 		int stride = 0;
 		int buffer_number = 0;
@@ -55,29 +53,71 @@ struct triple_buffer_t
 		sg_buffer buffer[3];
 	};
 
-	buffer_t vbuf;
-	buffer_t ibuf;
+	cf_buffer_t vbuf;
+	cf_buffer_t ibuf;
 
-	CUTE_INLINE void advance()
-	{
-		++vbuf.buffer_number; vbuf.buffer_number %= 3;
-		++ibuf.buffer_number; ibuf.buffer_number %= 3;
-	}
+#ifdef CUTE_CPP
+	CUTE_INLINE void advance();
+	CUTE_INLINE sg_bindings bind();
+#endif // CUTE_CPP
 
-	CUTE_INLINE sg_bindings bind()
-	{
-		sg_bindings bind = { 0 };
-		bind.vertex_buffers[0] = vbuf.buffer[vbuf.buffer_number];
-		bind.vertex_buffer_offsets[0] = vbuf.offset;
-		bind.index_buffer = ibuf.buffer[ibuf.buffer_number];
-		bind.index_buffer_offset = ibuf.offset;
-		return bind;
-	}
 };
+
+CUTE_API CUTE_INLINE void CUTE_CALL cf_triple_buffer_advance(cf_triple_buffer_t* buffer)
+{
+	++buffer->vbuf.buffer_number; buffer->vbuf.buffer_number %= 3;
+	++buffer->ibuf.buffer_number; buffer->ibuf.buffer_number %= 3;
+}
+
+CUTE_API CUTE_INLINE sg_bindings CUTE_CALL cf_triple_buffer_bind(cf_triple_buffer_t* buffer)
+{
+	sg_bindings bind = { 0 };
+	bind.vertex_buffers[0] = buffer->vbuf.buffer[buffer->vbuf.buffer_number];
+	bind.vertex_buffer_offsets[0] = buffer->vbuf.offset;
+	bind.index_buffer = buffer->ibuf.buffer[buffer->ibuf.buffer_number];
+	bind.index_buffer_offset = buffer->ibuf.offset;
+	return bind;
+}
+
+
+CUTE_API cf_triple_buffer_t CUTE_CALL cf_triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count = 0, int index_stride = 0);
+CUTE_API cf_error_t CUTE_CALL cf_triple_buffer_append(cf_triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count = 0, const void* indices = NULL);
+
+#ifdef CUTE_CPP
+
+CUTE_INLINE void cf_triple_buffer_t::advance()
+{
+	cf_triple_buffer_advance(this);
+}
+
+CUTE_INLINE sg_bindings cf_triple_buffer_t::bind()
+{
+	return cf_triple_buffer_bind(this);
+}
+
+
+namespace cute
+{
+using texture_t = uint64_t;
+
+
+CUTE_API texture_t CUTE_CALL texture_make(pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_REPEAT, sg_filter filter = SG_FILTER_NEAREST);
+CUTE_API void CUTE_CALL texture_destroy(texture_t texture);
+
+using matrix_t = cf_matrix_t;
+
+CUTE_API matrix_t CUTE_CALL matrix_identity();
+CUTE_API matrix_t CUTE_CALL matrix_ortho_2d(float w, float h, float x, float y);
+
+using triple_buffer_t = cf_triple_buffer_t;
+
 
 CUTE_API triple_buffer_t CUTE_CALL triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count = 0, int index_stride = 0);
 CUTE_API error_t CUTE_CALL triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count = 0, const void* indices = NULL);
 
 }
+
+#endif // CUTE_CPP
+
 
 #endif // CUTE_GFX_H

@@ -35,7 +35,7 @@ static aseprite_cache_t* s_ase_cache()
 		CUTE_ASSERT(!app->ase_cache);
 		app->ase_cache = aseprite_cache_make(app->mem_ctx);
 		app->ase_batch = batch_make(aseprite_cache_get_pixels_fn(app->ase_cache), app->ase_cache, app->mem_ctx);
-		batch_set_projection(app->ase_batch, matrix_ortho_2d((float)app->offscreen_w, (float)app->offscreen_h, 0, 0));
+		batch_set_projection(app->ase_batch, cf_matrix_ortho_2d((float)app->offscreen_w, (float)app->offscreen_h, 0, 0));
 	}
 	return app->ase_cache;
 }
@@ -51,7 +51,7 @@ static png_cache_t* s_png_cache()
 		CUTE_ASSERT(!app->ase_cache);
 		app->png_cache = png_cache_make(app->mem_ctx);
 		app->png_batch = batch_make(aseprite_cache_get_pixels_fn(app->ase_cache), app->ase_cache, app->mem_ctx);
-		batch_set_projection(app->png_batch, matrix_ortho_2d((float)app->offscreen_w, (float)app->offscreen_h, 0, 0));
+		batch_set_projection(app->png_batch, cf_matrix_ortho_2d((float)app->offscreen_w, (float)app->offscreen_h, 0, 0));
 	}
 	return app->png_cache;
 }
@@ -68,7 +68,7 @@ sprite_t easy_sprite_make(const char* png_path)
 	if (!table) {
 		png_t png;
 		char buf[1024];
-		error_t err = png_cache_load(cache, png_path, &png);
+		cf_error_t err = png_cache_load(cache, png_path, &png);
 		if (err.is_error()) {
 			sprintf(buf, "Unable to load sprite at path \"%s\".\n", png_path);
 			window_message_box(WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
@@ -86,7 +86,7 @@ void easy_sprite_unload(sprite_t sprite)
 {
 	png_cache_t* cache = s_png_cache();
 	png_t png;
-	error_t err = cache->pngs.find(sprite.animations->items()[0]->frames[0].id, &png);
+	cf_error_t err = cache->pngs.find(sprite.animations->items()[0]->frames[0].id, &png);
 	png_cache_unload(cache, &png);
 }
 
@@ -101,7 +101,7 @@ sprite_t sprite_make(const char* aseprite_path)
 	aseprite_cache_t* cache = s_ase_cache();
 
 	sprite_t s;
-	cute::error_t err = aseprite_cache_load(cache, aseprite_path, &s);
+	cf_error_t err = aseprite_cache_load(cache, aseprite_path, &s);
 	char buf[1024];
 	if (err.is_error()) {
 		sprintf(buf, "Unable to load sprite at path \"%s\".\n", aseprite_path);

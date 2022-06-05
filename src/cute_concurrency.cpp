@@ -47,12 +47,12 @@ void mutex_destroy(mutex_t* mutex)
 	cute_mutex_destroy(mutex);
 }
 
-error_t mutex_lock(mutex_t* mutex)
+cf_error_t mutex_lock(mutex_t* mutex)
 {
 	return error_make(cute_lock(mutex), NULL);
 }
 
-error_t mutex_unlock(mutex_t* mutex)
+cf_error_t mutex_unlock(mutex_t* mutex)
 {
 	return error_make(cute_unlock(mutex), NULL);
 }
@@ -72,17 +72,17 @@ void cv_destroy(cv_t* cv)
 	cute_cv_destroy(cv);
 }
 
-error_t cv_wake_all(cv_t* cv)
+cf_error_t cv_wake_all(cv_t* cv)
 {
 	return error_make(cute_cv_wake_all(cv), NULL);
 }
 
-error_t cv_wake_one(cv_t* cv)
+cf_error_t cv_wake_one(cv_t* cv)
 {
 	return error_make(cute_cv_wake_one(cv), NULL);
 }
 
-error_t cv_wait(cv_t* cv, mutex_t* mutex)
+cf_error_t cv_wait(cv_t* cv, mutex_t* mutex)
 {
 	return error_make(cute_cv_wait(cv, mutex), NULL);
 }
@@ -97,22 +97,22 @@ void sem_destroy(semaphore_t* semaphore)
 	cute_semaphore_destroy(semaphore);
 }
 
-error_t sem_post(semaphore_t* semaphore)
+cf_error_t sem_post(semaphore_t* semaphore)
 {
 	return error_make(cute_semaphore_post(semaphore), NULL);
 }
 
-error_t sem_try(semaphore_t* semaphore)
+cf_error_t sem_try(semaphore_t* semaphore)
 {
 	return error_make(cute_semaphore_try(semaphore), NULL);
 }
 
-error_t sem_wait(semaphore_t* semaphore)
+cf_error_t sem_wait(semaphore_t* semaphore)
 {
 	return error_make(cute_semaphore_wait(semaphore), NULL);
 }
 
-error_t sem_value(semaphore_t* semaphore)
+cf_error_t sem_value(semaphore_t* semaphore)
 {
 	return error_make(cute_semaphore_value(semaphore), NULL);
 }
@@ -137,7 +137,7 @@ thread_id_t thread_id()
 	return cute_thread_id();
 }
 
-error_t thread_wait(thread_t* thread)
+cf_error_t thread_wait(thread_t* thread)
 {
 	return error_make(cute_thread_wait(thread), NULL);
 }
@@ -174,7 +174,7 @@ int atomic_get(atomic_int_t* atomic)
 	return cute_atomic_get(atomic);
 }
 
-error_t atomic_cas(atomic_int_t* atomic, int expected, int value)
+cf_error_t atomic_cas(atomic_int_t* atomic, int expected, int value)
 {
 	return error_make(cute_atomic_cas(atomic, expected, value), NULL);
 }
@@ -189,7 +189,7 @@ void* atomic_ptr_get(void** atomic)
 	return cute_atomic_ptr_get(atomic);
 }
 
-error_t atomic_ptr_cas(void** atomic, void* expected, void* value)
+cf_error_t atomic_ptr_cas(void** atomic, void* expected, void* value)
 {
 	return error_make(cute_atomic_ptr_cas(atomic, expected, value), NULL);
 }

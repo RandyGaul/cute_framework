@@ -157,10 +157,10 @@ string_t to_string(bool x)
 	else return "false";
 }
 
-string_t to_string(const array<char>& x)
+string_t to_string(const cf_array<char>& x)
 {
 	if (x.last() != 0) {
-		array<char> a = x;
+		cf_array<char> a = x;
 		a.add(0);
 		return a.data();
 	} else {
@@ -170,29 +170,29 @@ string_t to_string(const array<char>& x)
 
 string_t to_string(char x)
 {
-	array<char> a;
+	cf_array<char> a;
 	a.add(x);
 	a.add(0);
 	return a.data();
 }
 
-array<char> to_array(string_t s)
+cf_array<char> to_array(string_t s)
 {
 	return to_array(s.c_str());
 }
 
-array<char> to_array(const char* s)
+cf_array<char> to_array(const char* s)
 {
-	array<char> result;
+	cf_array<char> result;
 	char c;
 	while ((c = *s++)) result.add(c);
 	result.add(0);
 	return result;
 }
 
-array<char> to_array(const char* s, size_t sz)
+cf_array<char> to_array(const char* s, size_t sz)
 {
-	array<char> result;
+	cf_array<char> result;
 	while (sz--) result.add(*s++);
 	result.add(0);
 	return result;

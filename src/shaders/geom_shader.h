@@ -62,7 +62,7 @@
 #define SLOT_geom_vs_params (0)
 #pragma pack(push,1)
 SOKOL_SHDC_ALIGN(16) typedef struct geom_vs_params_t {
-    cute::matrix_t u_mvp;
+    cf_matrix_t u_mvp;
 } geom_vs_params_t;
 #pragma pack(pop)
 /*

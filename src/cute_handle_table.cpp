@@ -48,7 +48,7 @@ struct handle_allocator_t
 	}
 
 	uint32_t m_freelist = ~0;
-	array<handle_entry_t> m_handles;
+	cf_array<handle_entry_t> m_handles;
 	void* m_mem_ctx = NULL;
 };
 

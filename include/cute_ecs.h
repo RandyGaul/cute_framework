@@ -51,7 +51,7 @@ CUTE_API void CUTE_CALL ecs_entity_set_name(const char* entity_type);
 CUTE_API void CUTE_CALL ecs_entity_add_component(const char* component_type);
 CUTE_API void CUTE_CALL ecs_entity_set_optional_schema(const char* schema);
 
-CUTE_API entity_t CUTE_CALL entity_make(const char* entity_type, error_t* err = NULL);
+CUTE_API entity_t CUTE_CALL entity_make(const char* entity_type, cf_error_t* err = NULL);
 CUTE_API bool CUTE_CALL entity_is_valid(entity_t entity);
 CUTE_API bool CUTE_CALL entity_is_type(entity_t entity, const char* entity_type);
 CUTE_API const char* CUTE_CALL entity_get_type_string(entity_t entity);
@@ -63,18 +63,18 @@ CUTE_API void CUTE_CALL entity_delayed_destroy(entity_t entity);
 /**
  * `kv` needs to be in `KV_STATE_READ` mode.
  */
-CUTE_API error_t CUTE_CALL ecs_load_entities(kv_t* kv, array<entity_t>* entities_out = NULL);
+CUTE_API cf_error_t CUTE_CALL ecs_load_entities(kv_t* kv, cf_array<entity_t>* entities_out = NULL);
 
 /**
  * `kv` needs to be in `KV_STATE_WRITE` mode.
  */
-CUTE_API error_t CUTE_CALL ecs_save_entities(const array<entity_t>& entities, kv_t* kv);
-CUTE_API error_t CUTE_CALL ecs_save_entities(const array<entity_t>& entities);
+CUTE_API cf_error_t CUTE_CALL ecs_save_entities(const cf_array<entity_t>& entities, kv_t* kv);
+CUTE_API cf_error_t CUTE_CALL ecs_save_entities(const cf_array<entity_t>& entities);
 
 //--------------------------------------------------------------------------------------------------
 // Component
 
-typedef error_t (component_serialize_fn)(kv_t* kv, bool reading, entity_t entity, void* component, void* udata);
+typedef cf_error_t (component_serialize_fn)(kv_t* kv, bool reading, entity_t entity, void* component, void* udata);
 typedef void (component_cleanup_fn)(entity_t entity, void* component, void* udata);
 
 CUTE_API void CUTE_CALL ecs_component_begin();
@@ -102,10 +102,10 @@ CUTE_API void CUTE_CALL ecs_run_systems(float dt);
 // Introspection
 
 CUTE_API bool CUTE_CALL ecs_is_entity_type_valid(const char* entity_type);
-CUTE_API array<const char*> CUTE_CALL ecs_get_entity_list();
-CUTE_API array<const char*> CUTE_CALL ecs_get_component_list();
-CUTE_API array<const char*> CUTE_CALL ecs_get_system_list();
-CUTE_API array<const char*> CUTE_CALL ecs_get_component_list_for_entity_type(const char* entity_type);
+CUTE_API cf_array<const char*> CUTE_CALL ecs_get_entity_list();
+CUTE_API cf_array<const char*> CUTE_CALL ecs_get_component_list();
+CUTE_API cf_array<const char*> CUTE_CALL ecs_get_system_list();
+CUTE_API cf_array<const char*> CUTE_CALL ecs_get_component_list_for_entity_type(const char* entity_type);
 
 }
 

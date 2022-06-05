@@ -24,22 +24,24 @@
 
 #include "cute_defines.h"
 
+#ifdef CUTE_CPP
+
 namespace cute
 {
 
 /**
  * Implements a dynamically growable array without any type information (no templates).
- * 
+ *
  * This data structure is mostly here to implement cute_ecs.cpp, but is publicly available
  * here just in case someone has a use for it.
  */
 
-struct typeless_array
+struct cf_typeless_array
 {
-	typeless_array();
-	explicit typeless_array(size_t element_size, void* user_allocator_context);
-	explicit typeless_array(size_t element_size, int capacity, void* user_allocator_context);
-	~typeless_array();
+	cf_typeless_array();
+	explicit cf_typeless_array(size_t element_size, void* user_allocator_context);
+	explicit cf_typeless_array(size_t element_size, int capacity, void* user_allocator_context);
+	~cf_typeless_array();
 
 	void* add();
 	void* add(const void* item);
@@ -51,7 +53,7 @@ struct typeless_array
 	void unordered_remove(int index);
 	void clear();
 	void ensure_capacity(int num_elements);
-	void steal_from(typeless_array* steal_from_me);
+	void steal_from(cf_typeless_array* steal_from_me);
 
 	int capacity() const;
 	int count() const;
@@ -76,5 +78,7 @@ struct typeless_array
 };
 
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_TYPELESS_ARRAY_H

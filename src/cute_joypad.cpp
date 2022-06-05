@@ -45,7 +45,7 @@ void joypad_system_init()
 	}
 }
 
-error_t joypad_add_mapping(const char* mapping)
+cf_error_t joypad_add_mapping(const char* mapping)
 {
 	int result = SDL_GameControllerAddMapping(mapping);
 	if (result == -1) return error_failure("Failed to add mapping.");

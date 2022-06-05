@@ -25,14 +25,14 @@
 namespace cute
 {
 
-error_t kv_val_entity(kv_t* kv, entity_t* entity)
+cf_error_t kv_val_entity(kv_t* kv, entity_t* entity)
 {
 	kv_state_t state = kv_get_state(kv);
 	CUTE_ASSERT(state != KV_STATE_UNITIALIZED);
 
 	if (state == KV_STATE_READ) {
 		int index;
-		error_t err = kv_val(kv, &index);
+		cf_error_t err = kv_val(kv, &index);
 		if (err.is_error()) return err;
 		*entity = app->load_id_table->operator[](index);
 		return error_success();

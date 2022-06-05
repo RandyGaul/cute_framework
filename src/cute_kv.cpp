@@ -52,7 +52,7 @@ struct kv_val_t
 {
 	kv_type_t type = KV_TYPE_NULL;
 	kv_union_t u;
-	array<kv_val_t> aval;
+	cf_array<kv_val_t> aval;
 };
 
 struct kv_field_t
@@ -67,7 +67,7 @@ struct kv_object_t
 	int parsing_array = 0;
 
 	kv_string_t key;
-	array<kv_field_t> fields;
+	cf_array<kv_field_t> fields;
 };
 
 #define CUTE_KV_NOT_IN_ARRAY               0
@@ -86,30 +86,30 @@ struct kv_t
 	uint8_t* in = NULL;
 	uint8_t* in_end = NULL;
 	uint8_t* start = NULL;
-	array<uint8_t> write_buffer;
+	cf_array<uint8_t> write_buffer;
 
 	// Reading state.
 	int object_skip_count = 0;
 	kv_val_t* matched_val = NULL;
 	int matched_cache_index = ~0;
 	kv_val_t* matched_cache_val = NULL;
-	array<kv_cache_t> cache;
-	array<kv_object_t> objects;
+	cf_array<kv_cache_t> cache;
+	cf_array<kv_object_t> objects;
 
 	int read_mode_from_array = 0;
-	array<kv_val_t*> read_mode_array_stack;
-	array<int> read_mode_array_index_stack;
+	cf_array<kv_val_t*> read_mode_array_stack;
+	cf_array<int> read_mode_array_index_stack;
 
 	// Writing state.
 	size_t backup_base_key_bytes = 0;
 	kv_t* base = NULL;
 	int in_array = CUTE_KV_NOT_IN_ARRAY;
-	array<int> in_array_stack;
+	cf_array<int> in_array_stack;
 	int tabs = 0;
 	size_t temp_size = 0;
 	uint8_t* temp = NULL;
 
-	error_t err = error_success();
+	cf_error_t err = error_success();
 
 	void* mem_ctx = NULL;
 };
@@ -208,7 +208,7 @@ static CUTE_INLINE int s_try(kv_t* kv, uint8_t expect)
 		if (s_next(kv) != expected_character) { kv->err = error_failure("Found unexpected token."); return kv->err; } \
 	} while (0)
 
-static error_t s_scan_string(kv_t* kv, uint8_t** start_of_string, uint8_t** end_of_string)
+static cf_error_t s_scan_string(kv_t* kv, uint8_t** start_of_string, uint8_t** end_of_string)
 {
 	*start_of_string = NULL;
 	*end_of_string = NULL;
@@ -239,17 +239,17 @@ static error_t s_scan_string(kv_t* kv, uint8_t** start_of_string, uint8_t** end_
 	return error_success();
 }
 
-static error_t s_scan_string(kv_t* kv, kv_string_t* str)
+static cf_error_t s_scan_string(kv_t* kv, kv_string_t* str)
 {
 	uint8_t* string_start;
 	uint8_t* string_end;
-	error_t err = s_scan_string(kv, &string_start, &string_end);
+	cf_error_t err = s_scan_string(kv, &string_start, &string_end);
 	str->str = string_start;
 	str->len = (int)(string_end - string_start);
 	return err;
 }
 
-static CUTE_INLINE error_t s_parse_int(kv_t* kv, int64_t* out)
+static CUTE_INLINE cf_error_t s_parse_int(kv_t* kv, int64_t* out)
 {
 	uint8_t* end;
 	int64_t val = CUTE_STRTOLL((char*)kv->in, (char**)&end, 10);
@@ -262,7 +262,7 @@ static CUTE_INLINE error_t s_parse_int(kv_t* kv, int64_t* out)
 	return error_success();
 }
 
-static CUTE_INLINE error_t s_parse_float(kv_t* kv, double* out)
+static CUTE_INLINE cf_error_t s_parse_float(kv_t* kv, double* out)
 {
 	uint8_t* end;
 	double val = CUTE_STRTOD((char*)kv->in, (char**)&end);
@@ -275,7 +275,7 @@ static CUTE_INLINE error_t s_parse_float(kv_t* kv, double* out)
 	return error_success();
 }
 
-static error_t s_parse_hex(kv_t* kv, uint64_t* hex)
+static cf_error_t s_parse_hex(kv_t* kv, uint64_t* hex)
 {
 	s_expect(kv, '0');
 	uint8_t c = s_next(kv);
@@ -294,9 +294,9 @@ static error_t s_parse_hex(kv_t* kv, uint64_t* hex)
 	return error_success();
 }
 
-static CUTE_INLINE error_t s_parse_number(kv_t* kv, kv_val_t* val)
+static CUTE_INLINE cf_error_t s_parse_number(kv_t* kv, kv_val_t* val)
 {
-	error_t err;
+	cf_error_t err;
 	if (kv->in + 1 < kv->in_end && ((kv->in[1] == 'x') | (kv->in[1] == 'X'))) {
 		uint64_t hex;
 		err = s_parse_hex(kv, &hex);
@@ -333,11 +333,11 @@ static CUTE_INLINE error_t s_parse_number(kv_t* kv, kv_val_t* val)
 	return error_success();
 }
 
-static error_t s_parse_value(kv_t* kv, kv_val_t* val);
+static cf_error_t s_parse_value(kv_t* kv, kv_val_t* val);
 
-static error_t s_parse_array(kv_t* kv, array<kv_val_t>* array_val)
+static cf_error_t s_parse_array(kv_t* kv, cf_array<kv_val_t>* array_val)
 {
-	error_t err;
+	cf_error_t err;
 	int64_t count;
 	s_expect(kv, '[');
 	err = s_parse_int(kv, &count);
@@ -358,11 +358,11 @@ static error_t s_parse_array(kv_t* kv, array<kv_val_t>* array_val)
 	return error_success();
 }
 
-static error_t s_parse_object(kv_t* kv, int* index, bool is_top_level = false);
+static cf_error_t s_parse_object(kv_t* kv, int* index, bool is_top_level = false);
 
-static error_t s_parse_value(kv_t* kv, kv_val_t* val)
+static cf_error_t s_parse_value(kv_t* kv, kv_val_t* val)
 {
-	error_t err;
+	cf_error_t err;
 	uint8_t c = s_peek(kv);
 
 	if (c == '"') {
@@ -394,7 +394,7 @@ static error_t s_parse_value(kv_t* kv, kv_val_t* val)
 	return error_success();
 }
 
-static error_t s_parse_object(kv_t* kv, int* index, bool is_top_level)
+static cf_error_t s_parse_object(kv_t* kv, int* index, bool is_top_level)
 {
 	kv_object_t* object = &kv->objects.add();
 	CUTE_PLACEMENT_NEW(object) kv_object_t;
@@ -421,7 +421,7 @@ static error_t s_parse_object(kv_t* kv, int* index, bool is_top_level)
 		kv_field_t* field = &object->fields.add();
 		CUTE_PLACEMENT_NEW(field) kv_field_t;
 
-		error_t err = s_scan_string(kv, &field->key);
+		cf_error_t err = s_scan_string(kv, &field->key);
 		if (err.is_error()) return err;
 		s_expect(kv, '=');
 		err = s_parse_value(kv, &field->val);
@@ -433,7 +433,7 @@ static error_t s_parse_object(kv_t* kv, int* index, bool is_top_level)
 		} else if (field->val.type == KV_TYPE_ARRAY) {
 			int count = field->val.aval.count();
 			if (count && field->val.aval[0].type == KV_TYPE_OBJECT) {
-				array<kv_val_t>& object_val_array = field->val.aval;
+				cf_array<kv_val_t>& object_val_array = field->val.aval;
 				for (int i = 0; i < count; ++i)
 				{
 					int object_index = object_val_array[i].u.object_index;
@@ -474,13 +474,13 @@ kv_state_t kv_get_state(kv_t* kv)
 	return kv->mode;
 }
 
-error_t kv_parse(kv_t* kv, const void* data, size_t size)
+cf_error_t kv_parse(kv_t* kv, const void* data, size_t size)
 {
 	s_reset(kv, data, size, KV_STATE_READ);
 
 	bool is_top_level = true;
 	int index;
-	error_t err = s_parse_object(kv, &index, is_top_level);
+	cf_error_t err = s_parse_object(kv, &index, is_top_level);
 	if (err.is_error()) return err;
 	CUTE_ASSERT(index == 0);
 
@@ -550,7 +550,7 @@ size_t kv_size_written(kv_t* kv)
 	return kv->write_buffer.size();
 }
 
-error_t kv_error_state(kv_t* kv)
+cf_error_t kv_error_state(kv_t* kv)
 {
 	if (!kv) return error_success();
 	return kv->err;
@@ -655,7 +655,7 @@ static void s_write_key(kv_t* kv, const char* key, kv_type_t* type)
 	s_write_str_no_quotes(kv, " = ", 3);
 }
 
-error_t kv_key(kv_t* kv, const char* key, kv_type_t* type)
+cf_error_t kv_key(kv_t* kv, const char* key, kv_type_t* type)
 {
 	if (kv->mode == KV_STATE_UNITIALIZED) return error_failure("Read or write mode have not been set.");
 	if (kv->err.is_error()) return kv->err;
@@ -881,7 +881,7 @@ static inline bool s_does_matched_base_equal_int64(kv_t* kv, T* val)
 }
 
 template <typename T>
-error_t s_find_match_int64(kv_t* kv, T* val)
+cf_error_t s_find_match_int64(kv_t* kv, T* val)
 {
 	kv_val_t* match = s_pop_val(kv, KV_TYPE_INT64);
 	kv_val_t* match_base = s_pop_base_val(kv, KV_TYPE_INT64);
@@ -898,7 +898,7 @@ error_t s_find_match_int64(kv_t* kv, T* val)
 	return error_success();
 }
 
-error_t kv_val(kv_t* kv, uint8_t* val)
+cf_error_t kv_val(kv_t* kv, uint8_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == KV_STATE_WRITE) {
@@ -914,7 +914,7 @@ error_t kv_val(kv_t* kv, uint8_t* val)
 	return error_success();
 }
 
-error_t kv_val(kv_t* kv, uint16_t* val)
+cf_error_t kv_val(kv_t* kv, uint16_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == KV_STATE_WRITE) {
@@ -930,7 +930,7 @@ error_t kv_val(kv_t* kv, uint16_t* val)
 	return error_success();
 }
 
-error_t kv_val(kv_t* kv, uint32_t* val)
+cf_error_t kv_val(kv_t* kv, uint32_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == KV_STATE_WRITE) {
@@ -946,7 +946,7 @@ error_t kv_val(kv_t* kv, uint32_t* val)
 	return error_success();
 }
 
-error_t kv_val(kv_t* kv, uint64_t* val)
+cf_error_t kv_val(kv_t* kv, uint64_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == KV_STATE_WRITE) {
@@ -962,7 +962,7 @@ error_t kv_val(kv_t* kv, uint64_t* val)
 	return error_success();
 }
 
-error_t kv_val(kv_t* kv, int8_t* val)
+cf_error_t kv_val(kv_t* kv, int8_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == KV_STATE_WRITE) {
@@ -978,7 +978,7 @@ error_t kv_val(kv_t* kv, int8_t* val)
 	return error_success();
 }
 
-error_t kv_val(kv_t* kv, int16_t* val)
+cf_error_t kv_val(kv_t* kv, int16_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == KV_STATE_WRITE) {
@@ -994,7 +994,7 @@ error_t kv_val(kv_t* kv, int16_t* val)
 	return error_success();
 }
 
-error_t kv_val(kv_t* kv, int32_t* val)
+cf_error_t kv_val(kv_t* kv, int32_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == KV_STATE_WRITE) {
@@ -1010,7 +1010,7 @@ error_t kv_val(kv_t* kv, int32_t* val)
 	return error_success();
 }
 
-error_t kv_val(kv_t* kv, int64_t* val)
+cf_error_t kv_val(kv_t* kv, int64_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == KV_STATE_WRITE) {
@@ -1026,7 +1026,7 @@ error_t kv_val(kv_t* kv, int64_t* val)
 	return error_success();
 }
 
-error_t kv_val(kv_t* kv, float* val)
+cf_error_t kv_val(kv_t* kv, float* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	kv_val_t* match = s_pop_val(kv, KV_TYPE_DOUBLE);
@@ -1056,7 +1056,7 @@ error_t kv_val(kv_t* kv, float* val)
 	return error_success();
 }
 
-error_t kv_val(kv_t* kv, double* val)
+cf_error_t kv_val(kv_t* kv, double* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	kv_val_t* match = s_pop_val(kv, KV_TYPE_DOUBLE);
@@ -1086,12 +1086,12 @@ error_t kv_val(kv_t* kv, double* val)
 	return error_success();
 }
 
-error_t kv_val(kv_t* kv, bool* val)
+cf_error_t kv_val(kv_t* kv, bool* val)
 {
 	if (kv->mode == KV_STATE_READ) {
 		const char* string;
 		size_t sz;
-		error_t err = kv_val_string(kv, &string, &sz);
+		cf_error_t err = kv_val_string(kv, &string, &sz);
 		if (!err.is_error()) {
 			if (sz == 4 && !CUTE_STRNCMP("true", string, sz)) *val = true;
 			else *val = false;
@@ -1110,7 +1110,7 @@ error_t kv_val(kv_t* kv, bool* val)
 	}
 }
 
-error_t kv_val_string(kv_t* kv, const char** str, size_t* size)
+cf_error_t kv_val_string(kv_t* kv, const char** str, size_t* size)
 {
 	if (kv->mode == KV_STATE_READ) {
 		*str = NULL;
@@ -1138,7 +1138,7 @@ error_t kv_val_string(kv_t* kv, const char** str, size_t* size)
 	return error_success();
 }
 
-error_t kv_val_blob(kv_t* kv, void* data, size_t data_capacity, size_t* data_len)
+cf_error_t kv_val_blob(kv_t* kv, void* data, size_t data_capacity, size_t* data_len)
 {
 	if (kv->mode == KV_STATE_READ) *data_len = 0;
 	if (kv->err.is_error()) return kv->err;
@@ -1164,17 +1164,17 @@ error_t kv_val_blob(kv_t* kv, void* data, size_t data_capacity, size_t* data_len
 			kv->err = error_failure("Decoded base 64 string is too large to store in `data`.");
 			return kv->err;
 		}
-		error_t err = base64_decode(data, buffer_size, match->u.sval.str, match->u.sval.len);
+		cf_error_t err = base64_decode(data, buffer_size, match->u.sval.str, match->u.sval.len);
 		if (err.is_error()) return err;
 		*data_len = buffer_size;
 	}
 	return error_success();
 }
 
-error_t kv_object_begin(kv_t* kv, const char* key)
+cf_error_t kv_object_begin(kv_t* kv, const char* key)
 {
 	if (key) {
-		error_t err = kv_key(kv, key);
+		cf_error_t err = kv_key(kv, key);
 		if (err.is_error()) return err;
 	}
 	if (kv->err.is_error()) return kv->err;
@@ -1204,7 +1204,7 @@ error_t kv_object_begin(kv_t* kv, const char* key)
 	return error_success();
 }
 
-error_t kv_object_end(kv_t* kv)
+cf_error_t kv_object_end(kv_t* kv)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == KV_STATE_WRITE) {
@@ -1233,10 +1233,10 @@ error_t kv_object_end(kv_t* kv)
 	return error_success();
 }
 
-error_t kv_array_begin(kv_t* kv, int* count, const char* key)
+cf_error_t kv_array_begin(kv_t* kv, int* count, const char* key)
 {
 	if (key) {
-		error_t err = kv_key(kv, key);
+		cf_error_t err = kv_key(kv, key);
 		if (err.is_error()) return err;
 	}
 	if (kv->mode == KV_STATE_READ) *count = 0;
@@ -1260,7 +1260,7 @@ error_t kv_array_begin(kv_t* kv, int* count, const char* key)
 	return error_success();
 }
 
-error_t kv_array_end(kv_t* kv)
+cf_error_t kv_array_end(kv_t* kv)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == KV_STATE_WRITE) {

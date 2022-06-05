@@ -27,7 +27,7 @@
 namespace cute
 {
 
-CUTE_API error_t CUTE_CALL file_system_init(const char* argv0);
+CUTE_API cf_error_t CUTE_CALL file_system_init(const char* argv0);
 CUTE_API void CUTE_CALL file_system_destroy();
 
 }

@@ -78,10 +78,10 @@ void png_cache_destroy(png_cache_t* cache)
 	CUTE_FREE(cache, mem_ctx);
 }
 
-error_t png_cache_load(png_cache_t* cache, const char* png_path, png_t* png)
+cf_error_t png_cache_load(png_cache_t* cache, const char* png_path, png_t* png)
 {
 	image_t img;
-	error_t err = image_load_png(png_path, &img, cache->mem_ctx);
+	cf_error_t err = image_load_png(png_path, &img, cache->mem_ctx);
 	if (err.is_error()) return err;
 	png_t entry;
 	entry.path = strpool_cstr(cache->strpool, INJECT(png_path));
@@ -95,10 +95,10 @@ error_t png_cache_load(png_cache_t* cache, const char* png_path, png_t* png)
 	return error_success();
 }
 
-error_t png_cache_load_mem(png_cache_t* cache, const char* png_path, const void* memory, size_t size, png_t* png)
+cf_error_t png_cache_load_mem(png_cache_t* cache, const char* png_path, const void* memory, size_t size, png_t* png)
 {
 	image_t img;
-	error_t err = image_load_png_mem(memory, (int)size, &img, cache->mem_ctx);
+	cf_error_t err = image_load_png_mem(memory, (int)size, &img, cache->mem_ctx);
 	if (err.is_error()) return err;
 	png_t entry;
 	entry.path = strpool_cstr(cache->strpool, INJECT(png_path));
@@ -134,7 +134,7 @@ strpool_t* png_cache_get_strpool_ptr(png_cache_t* cache)
 	return cache->strpool;
 }
 
-const animation_t* png_cache_make_animation(png_cache_t* cache, const char* name, const array<png_t>& pngs, const array<float>& delays)
+const animation_t* png_cache_make_animation(png_cache_t* cache, const char* name, const cf_array<png_t>& pngs, const cf_array<float>& delays)
 {
 	CUTE_ASSERT(pngs.count() == delays.count());
 	strpool_id name_id = INJECT(name);
@@ -173,7 +173,7 @@ const animation_t* png_cache_make_animation(png_cache_t* cache, const char* name
 	}
 }
 
-const animation_table_t* png_cache_make_animation_table(png_cache_t* cache, const char* sprite_name, const array<const animation_t*>& animations)
+const animation_table_t* png_cache_make_animation_table(png_cache_t* cache, const char* sprite_name, const cf_array<const animation_t*>& animations)
 {
 	strpool_id name_id = INJECT(sprite_name);
 
@@ -210,12 +210,12 @@ sprite_t png_cache_make_sprite(png_cache_t* cache, const char* sprite_name, cons
 {
 	strpool_id name_id = INJECT(sprite_name);
 	if (!table) {
-		error_t err = cache->animation_tables.find(name_id, (animation_table_t**)&table);
+		cf_error_t err = cache->animation_tables.find(name_id, (animation_table_t**)&table);
 		CUTE_ASSERT(!err.is_error());
 	}
 
 	png_t png;
-	error_t err = cache->pngs.find(table->items()[0]->frames[0].id, &png);
+	cf_error_t err = cache->pngs.find(table->items()[0]->frames[0].id, &png);
 	CUTE_ASSERT(!err.is_error());
 
 	sprite_t sprite;

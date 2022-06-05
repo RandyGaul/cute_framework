@@ -42,14 +42,14 @@ namespace cute
 #include <data/fonts/courier_new_fnt.h>
 #include <data/fonts/courier_new_0_png.h>
 
-static CUTE_FONT_U64 s_generate_texture_handle(pixel_t* pixels, int w, int h)
+static CUTE_FONT_U64 s_generate_texture_handle(cf_pixel_t* pixels, int w, int h)
 {
-	return texture_make(pixels, w, h);
+	return cf_texture_make(pixels, w, h);
 }
 
 static void s_destroy_texture_handle(CUTE_FONT_U64 atlas_id)
 {
-	texture_destroy(atlas_id);
+	cf_texture_destroy(atlas_id);
 }
 
 static void s_r_splat(image_t* img)
@@ -57,7 +57,7 @@ static void s_r_splat(image_t* img)
 	// Shader reads only from the alpha channel to see if there's any visible pixel.
 	int pixel_count = img->w * img->h;
 	for (int i = 0; i < pixel_count; ++i) {
-		pixel_t p = img->pix[i];
+		cf_pixel_t p = img->pix[i];
 		p.colors.g = p.colors.r;
 		p.colors.b = p.colors.r;
 		p.colors.a = p.colors.r;
@@ -69,7 +69,7 @@ font_t* font_load_bmfont(const char* font_path, const char* font_image_path)
 {
 	void* font_data;
 	size_t font_size;
-	error_t err = file_system_read_entire_file_to_memory(font_path, &font_data, &font_size, app->mem_ctx);
+	cf_error_t err = file_system_read_entire_file_to_memory(font_path, &font_data, &font_size, app->mem_ctx);
 	if (err.is_error()) return NULL;
 
 	void* image_data;
@@ -102,9 +102,9 @@ static void s_load_courier_new()
 {
 	if (!app->courier_new) {
 		image_t img;
-		error_t err = image_load_png_mem(courier_new_0_png_data, courier_new_0_png_sz, &img);
+		cf_error_t err = image_load_png_mem(courier_new_0_png_data, courier_new_0_png_sz, &img);
 		s_r_splat(&img);
-		texture_t tex = texture_make(img.pix, img.w, img.h);
+		cf_texture_t tex = cf_texture_make(img.pix, img.w, img.h);
 		cute_font_t* font = cute_font_load_bmfont(tex, courier_new_fnt_data, courier_new_fnt_sz, app->mem_ctx);
 		app->courier_new = font;
 		image_free(&img);
@@ -117,11 +117,11 @@ const font_t* font_get_default()
 	return (font_t*)app->courier_new;
 }
 
-void font_push_verts(const font_t* font, const char* text, float x, float y, float wrap_w, const aabb_t* clip_box)
+void font_push_verts(const font_t* font, const char* text, float x, float y, float wrap_w, const cf_aabb_t* clip_box)
 {
 	int vert_count = 0;
 	cute_font_t* cute_font = (cute_font_t*)font;
-	array<font_vertex_t>& font_verts = app->font_verts;
+	cf_array<font_vertex_t>& font_verts = app->font_verts;
 	font_verts.ensure_capacity(256);
 
 	while (1)
@@ -147,9 +147,9 @@ void font_push_verts(const font_t* font, const char* text, float x, float y, flo
 	font_verts.set_count(font_verts.count() + vert_count);
 }
 
-void font_draw(const font_t* font, matrix_t mvp, color_t color)
+void font_draw(const font_t* font, cf_matrix_t mvp, cf_color_t color)
 {
-	error_t err = triple_buffer_append(&app->font_buffer, app->font_verts.count(), app->font_verts.data());
+	cf_error_t err = cf_triple_buffer_append(&app->font_buffer, app->font_verts.count(), app->font_verts.data());
 	CUTE_ASSERT(!err.is_error());
 
 	sg_apply_pipeline(app->font_pip);
@@ -185,7 +185,7 @@ bool font_is_borders_on()
 	return app->font_fs_uniforms.u_use_border ? true : false;
 }
 
-void font_border_color(color_t color)
+void font_border_color(cf_color_t color)
 {
 	app->font_fs_uniforms.u_border_color = color;
 }
@@ -245,11 +245,11 @@ void font_init()
 	pip_params.colors[0].blend.op_alpha = SG_BLENDOP_ADD;
 	app->font_pip = sg_make_pipeline(pip_params);
 
-	app->font_buffer = triple_buffer_make(sizeof(font_vertex_t) * 1024 * 2, sizeof(font_vertex_t));
+	app->font_buffer = cf_triple_buffer_make(sizeof(font_vertex_t) * 1024 * 2, sizeof(font_vertex_t));
 
 	app->font_fs_uniforms.u_border_color = color_white();
 	app->font_fs_uniforms.u_use_border = false;
-	app->font_fs_uniforms.u_texel_size = v2(1.0f / (float)app->courier_new->atlas_w, 1.0f / (float)app->courier_new->atlas_h);
+	app->font_fs_uniforms.u_texel_size = cf_v2(1.0f / (float)app->courier_new->atlas_w, 1.0f / (float)app->courier_new->atlas_h);
 	app->font_fs_uniforms.u_use_corners = false;
 }
 

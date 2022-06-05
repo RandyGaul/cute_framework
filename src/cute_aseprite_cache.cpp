@@ -41,7 +41,7 @@ struct aseprite_cache_entry_t
 	strpool_id path;
 	ase_t* ase;
 	animation_table_t* animations;
-	v2 local_offset;
+	cf_v2 local_offset;
 };
 
 struct aseprite_cache_t
@@ -120,7 +120,7 @@ static void s_sprite(aseprite_cache_t* cache, aseprite_cache_entry_t entry, spri
 	}
 }
 
-error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite)
+cf_error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite)
 {
 	// First see if this ase was already cached.
 	strpool_id path = INJECT(aseprite_path);
@@ -141,7 +141,7 @@ error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, 
 
 	// Allocate internal cache data structure entries.
 	animation_table_t* animations = CUTE_NEW(animation_table_t, cache->mem_ctx);
-	array<uint64_t> ids;
+	cf_array<uint64_t> ids;
 	ids.ensure_capacity(ase->frame_count);
 
 	for (int i = 0; i < ase->frame_count; ++i) {
@@ -204,7 +204,7 @@ error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, 
 
 	// Look for slice information to define the sprite's local offset.
 	// The slice named "origin"'s center is used to define the local offset.
-	entry.local_offset = v2(0, 0);
+	entry.local_offset = cf_v2(0, 0);
 	for (int i = 0; i < ase->slice_count; ++i) {
 		ase_slice_t* slice = ase->slices + i;
 		if (!CUTE_STRCMP(slice->name, "origin")) {
@@ -214,8 +214,8 @@ error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, 
 			float x = (float)slice->origin_x + (float)slice->w * 0.25f;
 
 			// Transform from top-left coordinates to center of sprite.
-			v2 origin = v2(x, y);
-			v2 offset = v2((float)ase->w - 1, (float)ase->h - 1) * 0.5f - origin;
+			cf_v2 origin = cf_v2(x, y);
+			cf_v2 offset = cf_v2((float)ase->w - 1, (float)ase->h - 1) * 0.5f - origin;
 			entry.local_offset = offset;
 			break;
 		}
@@ -254,10 +254,10 @@ void aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path)
 	cache->aseprites.remove(path);
 }
 
-error_t aseprite_cache_load_ase(aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase)
+cf_error_t aseprite_cache_load_ase(aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase)
 {
 	sprite_t s;
-	error_t err = aseprite_cache_load(cache, aseprite_path, &s);
+	cf_error_t err = aseprite_cache_load(cache, aseprite_path, &s);
 	if (err.is_error()) return err;
 
 	strpool_id path = INJECT(aseprite_path);

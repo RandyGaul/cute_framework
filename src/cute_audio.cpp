@@ -191,7 +191,7 @@ void audio_stream_wav_from_memory(void* memory, int byte_count, promise_t promis
 	cute_threadpool_kick(app->threadpool);
 }
 
-error_t audio_destroy(audio_t* audio)
+cf_error_t audio_destroy(audio_t* audio)
 {
 	if (audio_ref_count(audio) == 0) {
 		void* mem_ctx = audio->mem_ctx;
@@ -286,13 +286,13 @@ static audio_instance_t* s_inst(audio_t* src, sound_params_t params)
 	return inst_ptr;
 }
 
-error_t music_play(audio_t* audio_source, float fade_in_time)
+cf_error_t music_play(audio_t* audio_source, float fade_in_time)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return error_failure("Audio system not initialized.");
 
 	if (as->music_state != MUSIC_STATE_PLAYING) {
-		error_t err = music_stop(0);
+		cf_error_t err = music_stop(0);
 		if (err.is_error()) return err;
 	}
 
@@ -322,7 +322,7 @@ error_t music_play(audio_t* audio_source, float fade_in_time)
 	return error_success();
 }
 
-error_t music_stop(float fade_out_time)
+cf_error_t music_stop(float fade_out_time)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return error_failure("Audio system not initialized.");
@@ -357,7 +357,7 @@ error_t music_stop(float fade_out_time)
 		{
 			as->music_state = MUSIC_STATE_FADE_OUT;
 			CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_OUT\n");
-			as->t = smoothstep(((as->fade - as->t) / as->fade));
+			as->t = cf_smoothstep(((as->fade - as->t) / as->fade));
 			as->fade = fade_out_time;
 		}	break;
 
@@ -365,7 +365,7 @@ error_t music_stop(float fade_out_time)
 		{
 			as->music_state = MUSIC_STATE_FADE_OUT;
 			CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_OUT\n");
-			as->t = smoothstep(((as->fade - as->t) / as->fade));
+			as->t = cf_smoothstep(((as->fade - as->t) / as->fade));
 			as->fade = fade_out_time;
 			as->music_next = NULL;
 		}	break;
@@ -377,7 +377,7 @@ error_t music_stop(float fade_out_time)
 		{
 			as->music_state = MUSIC_STATE_FADE_OUT;
 			CUTE_DEBUG_PRINTF("MUSIC_STATE_FADE_OUT\n");
-			as->t = smoothstep(((as->fade - as->t) / as->fade));
+			as->t = cf_smoothstep(((as->fade - as->t) / as->fade));
 			as->fade = fade_out_time;
 			as->music_playing = as->music_next;
 			as->music_next = NULL;
@@ -439,7 +439,7 @@ void music_resume()
 	CUTE_DEBUG_PRINTF("music_state_to_resume_from_paused\n");
 }
 
-error_t music_switch_to(audio_t* audio_source, float fade_out_time, float fade_in_time)
+cf_error_t music_switch_to(audio_t* audio_source, float fade_out_time, float fade_in_time)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return error_failure("Audio system not initialized.");
@@ -485,7 +485,7 @@ error_t music_switch_to(audio_t* audio_source, float fade_out_time, float fade_i
 		list_push_back(&as->playing_sounds, &inst->node);
 
 		as->fade_switch_1 = fade_in_time;
-		as->t = smoothstep(((as->fade - as->t) / as->fade));
+		as->t = cf_smoothstep(((as->fade - as->t) / as->fade));
 		as->music_state = MUSIC_STATE_SWITCH_TO_0;
 		CUTE_DEBUG_PRINTF("MUSIC_STATE_SWITCH_TO_0\n");
 	}	break;
@@ -509,7 +509,7 @@ error_t music_switch_to(audio_t* audio_source, float fade_out_time, float fade_i
 		as->music_next = inst;
 		list_push_back(&as->playing_sounds, &inst->node);
 
-		as->t = smoothstep(((as->fade - as->t) / as->fade));
+		as->t = cf_smoothstep(((as->fade - as->t) / as->fade));
 		as->fade_switch_1 = fade_in_time;
 		as->fade = fade_out_time;
 		as->music_state = MUSIC_STATE_SWITCH_TO_0;
@@ -523,7 +523,7 @@ error_t music_switch_to(audio_t* audio_source, float fade_out_time, float fade_i
 	return error_success();
 }
 
-error_t music_crossfade(audio_t* audio_source, float cross_fade_time)
+cf_error_t music_crossfade(audio_t* audio_source, float cross_fade_time)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) return error_failure("Audio system not initialized.");
@@ -607,7 +607,7 @@ error_t music_crossfade(audio_t* audio_source, float cross_fade_time)
 
 // -------------------------------------------------------------------------------------------------
 
-sound_t sound_play(audio_t* audio_source, sound_params_t params, error_t* err)
+sound_t sound_play(audio_t* audio_source, sound_params_t params, cf_error_t* err)
 {
 	audio_system_t* as = app->audio_system;
 	if (!as) {
@@ -870,7 +870,7 @@ void audio_system_update(audio_system_t* as, float dt)
 			as->music_playing->sound.active = 0;
 			as->music_playing = NULL;
 		} else {
-			float t = smoothstep(((as->fade - as->t) / as->fade));
+			float t = cf_smoothstep(((as->fade - as->t) / as->fade));
 			float volume = as->music_volume * as->global_volume * t;
 			cs_set_volume(&as->music_playing->sound, volume, volume);
 		}
@@ -884,7 +884,7 @@ void audio_system_update(audio_system_t* as, float dt)
 			CUTE_DEBUG_PRINTF("MUSIC_STATE_PLAYING\n");
 			as->t = as->fade;
 		}
-		float t = smoothstep(1.0f - ((as->fade - as->t) / as->fade));
+		float t = cf_smoothstep(1.0f - ((as->fade - as->t) / as->fade));
 		float volume = as->music_volume * as->global_volume * t;
 		cs_set_volume(&as->music_playing->sound, volume, volume);
 	}	break;
@@ -902,7 +902,7 @@ void audio_system_update(audio_system_t* as, float dt)
 			as->fade_switch_1 = 0;
 			as->music_next->sound.paused = 0;
 		} else {
-			float t = smoothstep(((as->fade - as->t) / as->fade));
+			float t = cf_smoothstep(((as->fade - as->t) / as->fade));
 			float volume = as->music_volume * as->global_volume * t;
 			cs_set_volume(&as->music_playing->sound, volume, volume);
 		}
@@ -920,7 +920,7 @@ void audio_system_update(audio_system_t* as, float dt)
 			as->music_playing = as->music_next;
 			as->music_next = NULL;
 		} else {
-			float t = smoothstep(1.0f - ((as->fade - as->t) / as->fade));
+			float t = cf_smoothstep(1.0f - ((as->fade - as->t) / as->fade));
 			float volume = as->music_volume * as->global_volume * t;
 			cs_set_volume(&as->music_next->sound, volume, volume);
 		}
@@ -937,8 +937,8 @@ void audio_system_update(audio_system_t* as, float dt)
 			as->music_playing = as->music_next;
 			as->music_next = NULL;
 		} else {
-			float t0 = smoothstep(((as->fade - as->t) / as->fade));
-			float t1 = smoothstep(1.0f - ((as->fade - as->t) / as->fade));
+			float t0 = cf_smoothstep(((as->fade - as->t) / as->fade));
+			float t1 = cf_smoothstep(1.0f - ((as->fade - as->t) / as->fade));
 			float v0 = as->music_volume * as->global_volume * t0;
 			float v1 = as->music_volume * as->global_volume * t1;
 			cs_set_volume(&as->music_playing->sound, v0, v0);

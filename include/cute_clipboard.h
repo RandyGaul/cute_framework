@@ -29,7 +29,7 @@ namespace cute
 {
 
 CUTE_API char* CUTE_CALL clipboard_get();
-CUTE_API error_t CUTE_CALL clipboard_set(const char* string);
+CUTE_API cf_error_t CUTE_CALL clipboard_set(const char* string);
 
 }
 

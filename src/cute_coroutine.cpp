@@ -69,7 +69,7 @@ void coroutine_destroy(coroutine_t* co)
 	CUTE_FREE(co, NULL);
 }
 
-error_t coroutine_resume(coroutine_t* co, float dt)
+cf_error_t coroutine_resume(coroutine_t* co, float dt)
 {
 	co->dt = dt;
 
@@ -91,7 +91,7 @@ error_t coroutine_resume(coroutine_t* co, float dt)
 	}
 }
 
-float coroutine_yield(coroutine_t* co, error_t* err)
+float coroutine_yield(coroutine_t* co, cf_error_t* err)
 {
 	mco_result res = mco_yield(co->mco);
 	if (err) {
@@ -104,11 +104,11 @@ float coroutine_yield(coroutine_t* co, error_t* err)
 	return co->dt;
 }
 
-error_t coroutine_wait(coroutine_t* co, float seconds)
+cf_error_t coroutine_wait(coroutine_t* co, float seconds)
 {
 	co->waiting = true;
 	co->seconds_left = seconds;
-	error_t err;
+	cf_error_t err;
 	coroutine_yield(co, &err);
 	return err;
 }
@@ -130,7 +130,7 @@ void* coroutine_get_udata(coroutine_t* co)
 	return co->udata;
 }
 
-error_t coroutine_push(coroutine_t* co, const void* data, size_t size)
+cf_error_t coroutine_push(coroutine_t* co, const void* data, size_t size)
 {
 	mco_result res = mco_push(co->mco, data, size);
 	if (res != MCO_SUCCESS) {
@@ -140,7 +140,7 @@ error_t coroutine_push(coroutine_t* co, const void* data, size_t size)
 	}
 }
 
-error_t coroutine_pop(coroutine_t* co, void* data, size_t size)
+cf_error_t coroutine_pop(coroutine_t* co, void* data, size_t size)
 {
 	mco_result res = mco_pop(co->mco, data, size);
 	if (res != MCO_SUCCESS) {

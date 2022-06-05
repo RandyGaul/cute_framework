@@ -22,20 +22,21 @@
 #ifndef CUTE_PRIORITY_QUEUE_H
 #define CUTE_PRIORITY_QUEUE_H
 
-#include "cute_array.h"
+#include "cute_defines.h"
 
-namespace cute
-{
+#ifdef CUTE_CPP
+
+#include "cute_array.h"
 
 /**
  * Implements a heap data structure in order to implement other more advanced algorithms within Cute Framework,
  * such as A* or branch-and-bound for the AABB tree.
- * 
+ *
  * Currently not thoroughly tested.
  */
 
 template <typename T>
-struct priority_queue
+struct cf_priority_queue
 {
 	void push_min(const T& val, float cost);
 	bool pop_min(T* val = NULL, float* cost = NULL);
@@ -48,8 +49,8 @@ struct priority_queue
 	void clear();
 
 private:
-	array<T> m_values;
-	array<float> m_costs;
+	cf_array<T> m_values;
+	cf_array<float> m_costs;
 
 	int predicate_min(int iA, int iB);
 	int predicate_max(int iA, int iB);
@@ -59,21 +60,20 @@ private:
 // -------------------------------------------------------------------------------------------------
 
 template <typename T>
-void priority_queue<T>::push_min(const T& val, float cost)
+void cf_priority_queue<T>::push_min(const T& val, float cost)
 {
 	m_values.add(val);
 	m_costs.add(cost);
 
 	int i = m_values.count();
-	while (i > 1 && predicate_min(i - 1, i / 2 - 1) > 0)
-	{
+	while (i > 1 && predicate_min(i - 1, i / 2 - 1) > 0) {
 		swap(i - 1, i / 2 - 1);
 		i /= 2;
 	}
 }
 
 template <typename T>
-bool priority_queue<T>::pop_min(T* val, float* cost)
+bool cf_priority_queue<T>::pop_min(T* val, float* cost)
 {
 	int count = m_values.count();
 	if (!count) return false;
@@ -85,8 +85,7 @@ bool priority_queue<T>::pop_min(T* val, float* cost)
 	m_costs.unordered_remove(0);
 
 	int u = 0, v = 1;
-	while (u != v)
-	{
+	while (u != v) {
 		u = v;
 		if (2 * u + 1 <= count) {
 			if (predicate_min(u - 1, 2 * u - 1) <= 0) v = 2 * u;
@@ -104,21 +103,20 @@ bool priority_queue<T>::pop_min(T* val, float* cost)
 }
 
 template <typename T>
-void priority_queue<T>::push_max(const T& val, float cost)
+void cf_priority_queue<T>::push_max(const T& val, float cost)
 {
 	m_values.add(val);
 	m_costs.add(cost);
 
 	int i = m_values.count();
-	while (i > 1 && predicate_max(i - 1, i / 2 - 1) > 0)
-	{
+	while (i > 1 && predicate_max(i - 1, i / 2 - 1) > 0) {
 		swap(i - 1, i / 2 - 1);
 		i /= 2;
 	}
 }
 
 template <typename T>
-bool priority_queue<T>::pop_max(T* val, float* cost)
+bool cf_priority_queue<T>::pop_max(T* val, float* cost)
 {
 	int count = m_values.count();
 	if (!count) return false;
@@ -130,8 +128,7 @@ bool priority_queue<T>::pop_max(T* val, float* cost)
 	m_costs.unordered_remove(0);
 
 	int u = 0, v = 1;
-	while (u != v)
-	{
+	while (u != v) {
 		u = v;
 		if (2 * u + 1 <= count) {
 			if (predicate_max(u - 1, 2 * u - 1) <= 0) v = 2 * u;
@@ -149,26 +146,26 @@ bool priority_queue<T>::pop_max(T* val, float* cost)
 }
 
 template <typename T>
-int priority_queue<T>::count()
+int cf_priority_queue<T>::count()
 {
 	return m_values.count();
 }
 
 template <typename T>
-int priority_queue<T>::count() const
+int cf_priority_queue<T>::count() const
 {
 	return m_values.count();
 }
 
 template <typename T>
-void priority_queue<T>::clear()
+void cf_priority_queue<T>::clear()
 {
 	m_values.clear();
 	m_costs.clear();
 }
 
 template <typename T>
-int priority_queue<T>::predicate_min(int iA, int iB)
+int cf_priority_queue<T>::predicate_min(int iA, int iB)
 {
 	float costA = m_costs[iA];
 	float costB = m_costs[iB];
@@ -176,7 +173,7 @@ int priority_queue<T>::predicate_min(int iA, int iB)
 }
 
 template <typename T>
-int priority_queue<T>::predicate_max(int iA, int iB)
+int cf_priority_queue<T>::predicate_max(int iA, int iB)
 {
 	float costA = m_costs[iA];
 	float costB = m_costs[iB];
@@ -184,7 +181,7 @@ int priority_queue<T>::predicate_max(int iA, int iB)
 }
 
 template <typename T>
-void priority_queue<T>::swap(int iA, int iB)
+void cf_priority_queue<T>::swap(int iA, int iB)
 {
 	T tval = m_values[iA];
 	m_values[iA] = m_values[iB];
@@ -194,7 +191,7 @@ void priority_queue<T>::swap(int iA, int iB)
 	m_costs[iA] = m_costs[iB];
 	m_costs[iB] = fval;
 }
+#endif // CUTE_CPP
 
-}
 
 #endif // CUTE_PRIORITY_QUEUE_H

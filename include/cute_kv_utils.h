@@ -32,28 +32,28 @@
 namespace cute
 {
 
-CUTE_INLINE error_t kv_val(kv_t* kv, string_t* string)
+CUTE_INLINE cf_error_t kv_val(kv_t* kv, string_t* string)
 {
 	const char* ptr = string->c_str();
 	size_t len = string->len();
-	error_t err = kv_val_string(kv, &ptr, &len);
+	cf_error_t err = kv_val_string(kv, &ptr, &len);
 	if (err.is_error()) return err;
 	*string = string_t(ptr, ptr + len);
 	return error_success();
 }
 
-CUTE_INLINE error_t kv_val(kv_t* kv, std::string* val)
+CUTE_INLINE cf_error_t kv_val(kv_t* kv, std::string* val)
 {
 	const char* ptr = val->data();
 	size_t len = val->length();
-	error_t err = kv_val_string(kv, &ptr, &len);
+	cf_error_t err = kv_val_string(kv, &ptr, &len);
 	if (err.is_error()) return err;
 	val->assign(ptr, len);
 	return error_success();
 }
 
 template <typename T>
-CUTE_INLINE error_t kv_val(kv_t* kv, std::vector<T>* val, const char* key = NULL)
+CUTE_INLINE cf_error_t kv_val(kv_t* kv, std::vector<T>* val, const char* key = NULL)
 {
 	int count = (int)val->size();
 	kv_array_begin(kv, &count, key);

@@ -62,7 +62,7 @@ CUTE_API void CUTE_CALL aseprite_cache_destroy(aseprite_cache_t* cache);
  * Returns a sprite from the cache. If it does not exist in the cache, it is loaded from disk
  * and placed into the cache.
  */
-CUTE_API error_t CUTE_CALL aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite);
+CUTE_API cf_error_t CUTE_CALL aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite);
 
 /**
  * Removes a sprite from the cache. This will cause the next call to `aseprite_cache_load` to fetch from disk.
@@ -78,7 +78,7 @@ CUTE_API void CUTE_CALL aseprite_cache_unload(aseprite_cache_t* cache, const cha
  * 
  * Only call this function if you know what you're doing.
  */
-CUTE_API error_t CUTE_CALL aseprite_cache_load_ase(aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase);
+CUTE_API cf_error_t CUTE_CALL aseprite_cache_load_ase(aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase);
 
 /**
  * `png_cache_get_pixels_fn` is needed to hook up to `batch_t` in order to draw sprites.

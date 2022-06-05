@@ -43,7 +43,7 @@ struct strpool_t;
 #define CUTE_APP_OPTIONS_WINDOW_POS_CENTERED            (1 << 7)
 #define CUTE_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT (1 << 8)
 
-CUTE_API error_t CUTE_CALL app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
+CUTE_API cf_error_t CUTE_CALL app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
 CUTE_API void CUTE_CALL app_destroy();
 
 CUTE_API bool CUTE_CALL app_is_running();
@@ -51,13 +51,13 @@ CUTE_API void CUTE_CALL app_stop_running();
 CUTE_API void CUTE_CALL app_update(float dt);
 CUTE_API void CUTE_CALL app_present();
 
-CUTE_API error_t CUTE_CALL app_init_audio(bool spawn_mix_thread = true, int max_simultaneous_sounds = 5000);
+CUTE_API cf_error_t CUTE_CALL app_init_audio(bool spawn_mix_thread = true, int max_simultaneous_sounds = 5000);
 CUTE_API void CUTE_CALL app_do_mixing();
 CUTE_API ImGuiContext* CUTE_CALL app_init_imgui(bool no_default_font = false);
 CUTE_API sg_imgui_t* CUTE_CALL app_get_sokol_imgui();
 CUTE_API strpool_t* CUTE_CALL app_get_strpool();
 
-CUTE_API error_t CUTE_CALL app_set_offscreen_buffer(int offscreen_w, int offscreen_h);
+CUTE_API cf_error_t CUTE_CALL app_set_offscreen_buffer(int offscreen_w, int offscreen_h);
 
 enum power_state_t
 {

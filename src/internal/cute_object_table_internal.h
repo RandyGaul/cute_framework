@@ -47,7 +47,7 @@ struct object_table_t
 	int get_object_count() const;
 
 	handle_allocator_t* m_table;
-	array<T> m_objects;
+	cf_array<T> m_objects;
 };
 
 //--------------------------------------------------------------------------------------------------

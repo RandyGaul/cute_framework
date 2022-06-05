@@ -42,28 +42,28 @@ using threadpool_t  = cute_threadpool_t;
 
 CUTE_API mutex_t CUTE_CALL mutex_create();
 CUTE_API void CUTE_CALL mutex_destroy(mutex_t* mutex);
-CUTE_API error_t CUTE_CALL mutex_lock(mutex_t* mutex);
-CUTE_API error_t CUTE_CALL mutex_unlock(mutex_t* mutex);
+CUTE_API cf_error_t CUTE_CALL mutex_lock(mutex_t* mutex);
+CUTE_API cf_error_t CUTE_CALL mutex_unlock(mutex_t* mutex);
 CUTE_API bool CUTE_CALL mutex_trylock(mutex_t* mutex);
 
 CUTE_API cv_t CUTE_CALL cv_create();
 CUTE_API void CUTE_CALL cv_destroy(cv_t* cv);
-CUTE_API error_t CUTE_CALL cv_wake_all(cv_t* cv);
-CUTE_API error_t CUTE_CALL cv_wake_one(cv_t* cv);
-CUTE_API error_t CUTE_CALL cv_wait(cv_t* cv, mutex_t* mutex);
+CUTE_API cf_error_t CUTE_CALL cv_wake_all(cv_t* cv);
+CUTE_API cf_error_t CUTE_CALL cv_wake_one(cv_t* cv);
+CUTE_API cf_error_t CUTE_CALL cv_wait(cv_t* cv, mutex_t* mutex);
 
 CUTE_API semaphore_t CUTE_CALL sem_create(int initial_count);
 CUTE_API void CUTE_CALL sem_destroy(semaphore_t* semaphore);
-CUTE_API error_t CUTE_CALL sem_post(semaphore_t* semaphore);
-CUTE_API error_t CUTE_CALL sem_try(semaphore_t* semaphore);
-CUTE_API error_t CUTE_CALL sem_wait(semaphore_t* semaphore);
-CUTE_API error_t CUTE_CALL sem_value(semaphore_t* semaphore);
+CUTE_API cf_error_t CUTE_CALL sem_post(semaphore_t* semaphore);
+CUTE_API cf_error_t CUTE_CALL sem_try(semaphore_t* semaphore);
+CUTE_API cf_error_t CUTE_CALL sem_wait(semaphore_t* semaphore);
+CUTE_API cf_error_t CUTE_CALL sem_value(semaphore_t* semaphore);
 
 CUTE_API thread_t* CUTE_CALL thread_create(thread_func_t func, const char* name, void* udata);
 CUTE_API void CUTE_CALL thread_detach(thread_t* thread);
 CUTE_API thread_id_t CUTE_CALL thread_get_id(thread_t* thread);
 CUTE_API thread_id_t CUTE_CALL thread_id();
-CUTE_API error_t CUTE_CALL thread_wait(thread_t* thread);
+CUTE_API cf_error_t CUTE_CALL thread_wait(thread_t* thread);
 
 CUTE_API int CUTE_CALL core_count();
 CUTE_API int CUTE_CALL cacheline_size();
@@ -72,10 +72,10 @@ CUTE_API atomic_int_t CUTE_CALL atomic_zero();
 CUTE_API int CUTE_CALL atomic_add(atomic_int_t* atomic, int addend);
 CUTE_API int CUTE_CALL atomic_set(atomic_int_t* atomic, int value);
 CUTE_API int CUTE_CALL atomic_get(atomic_int_t* atomic);
-CUTE_API error_t CUTE_CALL atomic_cas(atomic_int_t* atomic, int expected, int value);
+CUTE_API cf_error_t CUTE_CALL atomic_cas(atomic_int_t* atomic, int expected, int value);
 CUTE_API void* CUTE_CALL atomic_ptr_set(void** atomic, void* value);
 CUTE_API void* CUTE_CALL atomic_ptr_get(void** atomic);
-CUTE_API error_t CUTE_CALL atomic_ptr_cas(void** atomic, void* expected, void* value);
+CUTE_API cf_error_t CUTE_CALL atomic_ptr_cas(void** atomic, void* expected, void* value);
 
 CUTE_API rw_lock_t CUTE_CALL rw_lock_create();
 CUTE_API void CUTE_CALL rw_lock_destroy(rw_lock_t* rw);
@@ -92,13 +92,13 @@ CUTE_API void CUTE_CALL threadpool_add_task(threadpool_t* pool, task_fn* task, v
 CUTE_API void CUTE_CALL threadpool_kick_and_wait(threadpool_t* pool);
 CUTE_API void CUTE_CALL threadpool_kick(threadpool_t* pool);
 
-typedef void (CUTE_CALL promise_fn)(error_t status, void* param, void* promise_udata);
+typedef void (CUTE_CALL promise_fn)(cf_error_t status, void* param, void* promise_udata);
 
 struct promise_t
 {
 	CUTE_INLINE promise_t () { }
 	CUTE_INLINE promise_t (promise_fn* callback, void* promise_udata = NULL) : callback(callback), promise_udata(promise_udata) { }
-	CUTE_INLINE void invoke(error_t status, void* param) { callback(status, param, promise_udata); }
+	CUTE_INLINE void invoke(cf_error_t status, void* param) { callback(status, param, promise_udata); }
 
 	promise_fn* callback = NULL;
 	void* promise_udata = NULL;

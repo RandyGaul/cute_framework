@@ -24,26 +24,29 @@
 
 #include "cute_defines.h"
 
-namespace cute
-{
 
 #define CUTE_ERROR_SUCCESS (0)
 #define CUTE_ERROR_FAILURE (-1)
 
-struct error_t
+struct cf_error_t
 {
 	int code;
-	const char* details;
+	const char *details;
 
 	CUTE_INLINE bool is_error() const { return code == CUTE_ERROR_FAILURE; }
 };
 
-CUTE_INLINE error_t error_make(int code, const char* details) { error_t error; error.code = code; error.details = details; return error; }
-CUTE_INLINE error_t error_failure(const char* details) { error_t error; error.code = CUTE_ERROR_FAILURE; error.details = details; return error; }
-CUTE_INLINE error_t error_success() { error_t error; error.code = CUTE_ERROR_SUCCESS; error.details = NULL; return error; }
+CUTE_INLINE cf_error_t error_make(int code, const char *details) { cf_error_t error; error.code = code; error.details = details; return error; }
+CUTE_INLINE cf_error_t error_failure(const char *details) { cf_error_t error; error.code = CUTE_ERROR_FAILURE; error.details = details; return error; }
+CUTE_INLINE cf_error_t error_success() { cf_error_t error; error.code = CUTE_ERROR_SUCCESS; error.details = NULL; return error; }
 
-#define CUTE_RETURN_IF_ERROR(x) do { cute::error_t err = (x); if (err.is_error()) return err; } while (0)
+#define CUTE_RETURN_IF_ERROR(x) do { cf_error_t err = (x); if (err.is_error()) return err; } while (0)
 
+#ifdef CUTE_CPP
+namespace cute
+{
+using error_t = cf_error_t;
 }
+#endif // CUTE_CPP
 
 #endif // CUTE_ERROR_H

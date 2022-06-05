@@ -30,7 +30,7 @@ namespace cute
 
 struct aabb_tree_t;
 struct leaf_t { int id = -1; };
-typedef bool (aabb_tree_query_fn)(leaf_t leaf, aabb_t aabb, void* leaf_udata, void* fn_udata);
+typedef bool (aabb_tree_query_fn)(leaf_t leaf, cf_aabb_t aabb, void* leaf_udata, void* fn_udata);
 
 CUTE_API aabb_tree_t* CUTE_CALL create_aabb_tree(int initial_capacity = 0, void* user_allocator_context = NULL);
 CUTE_API aabb_tree_t* CUTE_CALL create_aabb_tree_from_memory(const void* buffer, size_t size, void* user_allocator_context = NULL);
@@ -39,7 +39,7 @@ CUTE_API void CUTE_CALL destroy_aabb_tree(aabb_tree_t* tree);
 /**
  * Adds a new leaf to the tree, and rebalances as necessary.
  */
-CUTE_API leaf_t CUTE_CALL aabb_tree_insert(aabb_tree_t* tree, aabb_t aabb, void* udata = NULL);
+CUTE_API leaf_t CUTE_CALL aabb_tree_insert(aabb_tree_t* tree, cf_aabb_t aabb, void* udata = NULL);
 
 /**
  * Removes a leaf from the tree, and rebalances as necessary.
@@ -52,7 +52,7 @@ CUTE_API void CUTE_CALL aabb_tree_remove(aabb_tree_t* tree, leaf_t leaf);
  * adjusted if the aabb is moved enough.
  * Returns true if the leaf was updated, false otherwise.
  */
-CUTE_API bool CUTE_CALL aabb_tree_update_leaf(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb);
+CUTE_API bool CUTE_CALL aabb_tree_update_leaf(aabb_tree_t* tree, leaf_t leaf, cf_aabb_t aabb);
 
 /**
  * Updates a leaf with a new aabb (if needed) with the new `aabb` and an `offset` for how far the new
@@ -61,14 +61,14 @@ CUTE_API bool CUTE_CALL aabb_tree_update_leaf(aabb_tree_t* tree, leaf_t leaf, aa
  * to predict motion and avoid restructering of the tree.
  * Returns true if the leaf was updated, false otherwise.
  */
-CUTE_API bool CUTE_CALL aabb_tree_move(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb, v2 offset);
+CUTE_API bool CUTE_CALL aabb_tree_move(aabb_tree_t* tree, leaf_t leaf, cf_aabb_t aabb, cf_v2 offset);
 
 /**
  * Returns the internal "expanded" aabb. This is useful for when you want to generate all pairs of
  * potential overlaps for a specific leaf. Just simply use `aabb_tree_query` on the the return value
  * of this function.
  */
-CUTE_API aabb_t CUTE_CALL aabb_tree_get_aabb(aabb_tree_t* tree, leaf_t leaf);
+CUTE_API cf_aabb_t CUTE_CALL aabb_tree_get_aabb(aabb_tree_t* tree, leaf_t leaf);
 
 /**
  * Returns the `udata` pointer from `aabb_tree_insert`.
@@ -79,13 +79,13 @@ CUTE_API void* CUTE_CALL aabb_tree_get_udata(aabb_tree_t* tree, leaf_t leaf);
  * Finds all leafs overlapping `aabb`. The `fn` callback is called once per overlap. If you want to stop
  * searching, return false from `fn`, otherwise keep returning true.
  */
-CUTE_API void CUTE_CALL aabb_tree_query(const aabb_tree_t* tree, aabb_tree_query_fn* fn, aabb_t aabb, void* fn_udata = NULL);
+CUTE_API void CUTE_CALL aabb_tree_query(const aabb_tree_t* tree, aabb_tree_query_fn* fn, cf_aabb_t aabb, void* fn_udata = NULL);
 
 /**
  * Finds all leafs hit by `ray`. The `fn` callback is called once per overlap. If you want to stop
  * searching, return false from `fn`, otherwise keep returning true.
  */
-CUTE_API void CUTE_CALL aabb_tree_query(const aabb_tree_t* tree, aabb_tree_query_fn* fn, ray_t ray, void* fn_udata = NULL);
+CUTE_API void CUTE_CALL aabb_tree_query(const aabb_tree_t* tree, aabb_tree_query_fn* fn, cf_ray_t ray, void* fn_udata = NULL);
 
 /**
  * Returns a cost heuristic value to quantify the quality of the tree.

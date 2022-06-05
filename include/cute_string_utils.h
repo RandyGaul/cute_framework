@@ -41,11 +41,11 @@ CUTE_API string_t to_string(int x);
 CUTE_API string_t to_string(uint64_t x);
 CUTE_API string_t to_string(float x);
 CUTE_API string_t to_string(bool x);
-CUTE_API string_t to_string(const array<char>& x);
+CUTE_API string_t to_string(const cf_array<char>& x);
 CUTE_API string_t to_string(char x);
-CUTE_API array<char> to_array(string_t s);
-CUTE_API array<char> to_array(const char* s);
-CUTE_API array<char> to_array(const char* s, size_t sz);
+CUTE_API cf_array<char> to_array(string_t s);
+CUTE_API cf_array<char> to_array(const char* s);
+CUTE_API cf_array<char> to_array(const char* s, size_t sz);
 
 CUTE_API void string_utils_cleanup_static_memory();
 

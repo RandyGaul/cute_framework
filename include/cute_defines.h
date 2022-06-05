@@ -111,6 +111,13 @@
 
 #define CUTE_DEBUG_PRINTF(...)
 
+#ifdef __cplusplus
+#	ifndef CUTE_NO_CPP
+#		define CUTE_CPP
+#	endif // !CUTE_NO_CPP
+#endif // __cplusplus
+
+
 #define SOKOL_API_DECL CUTE_API
 
 #if defined(CUTE_WINDOWS)
@@ -133,6 +140,7 @@ namespace cute
 	struct app_t;
 }
 
+#ifdef CUTE_CPP
 // -------------------------------------------------------------------------------------------------
 // Avoid including <utility> header.
 
@@ -173,48 +181,46 @@ constexpr typename remove_reference<T>::type&& move(T&& arg) noexcept
 
 namespace std
 {
-	template <typename T>
-	class initializer_list {
-	public:
-		using value_type      = T;
-		using reference       = const T&;
-		using const_reference = const T&;
-		using size_type       = size_t;
+template <typename T>
+class initializer_list
+{
+public:
+	using value_type = T;
+	using reference = const T&;
+	using const_reference = const T&;
+	using size_type = size_t;
 
-		using iterator       = const T*;
-		using const_iterator = const T*;
+	using iterator = const T*;
+	using const_iterator = const T*;
 
-		constexpr initializer_list() noexcept
-			: m_first(0)
-			, m_last(0)
-		{
-		}
+	constexpr initializer_list() noexcept
+		: m_first(0)
+		, m_last(0)
+	{}
 
-		constexpr initializer_list(const T* first, const T* last) noexcept
-			: m_first(first)
-			, m_last(last)
-		{
-		}
+	constexpr initializer_list(const T* first, const T* last) noexcept
+		: m_first(first)
+		, m_last(last)
+	{}
 
-		constexpr const T* begin() const noexcept { return m_first; }
-		constexpr const T* end() const noexcept { return m_last; }
-		constexpr size_t size() const noexcept { return (size_t)(m_last - m_first); }
+	constexpr const T* begin() const noexcept { return m_first; }
+	constexpr const T* end() const noexcept { return m_last; }
+	constexpr size_t size() const noexcept { return (size_t)(m_last - m_first); }
 
-	private:
-		const T* m_first;
-		const T* m_last;
-	};
+private:
+	const T* m_first;
+	const T* m_last;
+};
 
-	template <class T> constexpr const T* begin(initializer_list<T> list) noexcept { return list.begin(); }
-	template <class T> constexpr const T* end(initializer_list<T> list) noexcept { return list.end(); }
+template <class T> constexpr const T* begin(initializer_list<T> list) noexcept { return list.begin(); }
+template <class T> constexpr const T* end(initializer_list<T> list) noexcept { return list.end(); }
 }
 
 #endif
 
-namespace cute
-{
-	template <typename T>
-	using initializer_list = std::initializer_list<T>;
-}
+template <typename T>
+using cf_initializer_list = std::initializer_list<T>;
+
+#endif // CUTE_CPP
 
 #endif // CUTE_DEFINES_H

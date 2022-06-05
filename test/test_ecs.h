@@ -49,14 +49,14 @@ struct test_component_octorok_t
 {
 	int ai_state;
 	uint32_t pellet_count;
-	array<entity_t> pellets;
+	cf_array<entity_t> pellets;
 	int buddy_said_hi;
 	entity_t buddy;
 };
 
 // -------------------------------------------------------------------------------------------------
 
-cute::error_t test_component_transform_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+cf_error_t test_component_transform_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	test_component_transform_t* transform = (test_component_transform_t*)component;
 	if (reading) {
@@ -68,7 +68,7 @@ cute::error_t test_component_transform_serialize(kv_t* kv, bool reading, entity_
 	return kv_error_state(kv);
 }
 
-cute::error_t test_component_sprite_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+cf_error_t test_component_sprite_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	test_component_sprite_t* sprite = (test_component_sprite_t*)component;
 	if (reading) {
@@ -78,7 +78,7 @@ cute::error_t test_component_sprite_serialize(kv_t* kv, bool reading, entity_t e
 	return kv_error_state(kv);
 }
 
-cute::error_t test_component_collider_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+cf_error_t test_component_collider_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	test_component_collider_t* collider = (test_component_collider_t*)component;
 	if (reading) {
@@ -90,7 +90,7 @@ cute::error_t test_component_collider_serialize(kv_t* kv, bool reading, entity_t
 	return kv_error_state(kv);
 }
 
-cute::error_t test_component_octorok_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+cf_error_t test_component_octorok_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	test_component_octorok_t* octorok = (test_component_octorok_t*)component;
 	if (reading) {
@@ -236,10 +236,10 @@ int test_ecs_octorok()
 	);
 
 	kv_t* parsed_entities = kv_make();
-	cute::error_t err = kv_parse(parsed_entities, serialized_entities, CUTE_STRLEN(serialized_entities));
+	cf_error_t err = kv_parse(parsed_entities, serialized_entities, CUTE_STRLEN(serialized_entities));
 	if (err.is_error()) return -1;
 
-	array<entity_t> entities;
+	cf_array<entity_t> entities;
 	err = ecs_load_entities(parsed_entities, &entities);
 	if (err.is_error()) return -1;
 	kv_destroy(parsed_entities);
@@ -290,7 +290,7 @@ struct dummy_component_t
 	int iters = 0;
 };
 
-cute::error_t dummy_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+cf_error_t dummy_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
 {
 	dummy_component_t* dummy = (dummy_component_t*)component;
 	if (reading) {

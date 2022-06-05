@@ -57,7 +57,7 @@ struct animation_t
 {
 	const char* name = NULL;
 	play_direction_t play_direction = PLAY_DIRECTION_FORWARDS;
-	array<frame_t> frames;
+	cf_array<frame_t> frames;
 };
 
 /**
@@ -109,7 +109,7 @@ struct sprite_t
 	 * the sprite's drawable quad in a specific way before handing it off to a `batch`, to implement
 	 * custom graphics effects.
 	 */
-	CUTE_INLINE batch_sprite_t batch_sprite(transform_t transform);
+	CUTE_INLINE batch_sprite_t batch_sprite(cf_transform_t transform);
 	CUTE_INLINE batch_sprite_t batch_sprite();
 	
 	CUTE_INLINE void pause();
@@ -152,8 +152,8 @@ struct sprite_t
 	const char* name = NULL;
 	int w = 0;
 	int h = 0;
-	v2 scale = v2(1, 1);
-	v2 local_offset = v2(0, 0);
+	cf_v2 scale = cf_v2(1, 1);
+	cf_v2 local_offset = cf_v2(0, 0);
 	float opacity = 1.0f;
 	int layer = 0;
 
@@ -166,7 +166,7 @@ struct sprite_t
 	float t = 0;
 	const animation_table_t* animations = NULL;
 
-	transform_t transform = make_transform();
+	cf_transform_t transform = cf_make_transform();
 };
 
 //--------------------------------------------------------------------------------------------------
@@ -268,7 +268,7 @@ void sprite_t::draw(batch_t* batch)
 	batch_push(batch, batch_sprite(transform));
 }
 
-batch_sprite_t sprite_t::batch_sprite(transform_t transform)
+batch_sprite_t sprite_t::batch_sprite(cf_transform_t transform)
 {
 	batch_sprite_t q;
 	q.id = animation->frames[frame_index].id;
@@ -354,7 +354,7 @@ float sprite_t::animation_interpolant()
 	// TODO -- Backwards and pingpong.
 	float delay = animation_delay();
 	float t = this->t + animation->frames[frame_index].delay * frame_index;
-	return clamp(t / delay, 0.0f, 1.0f);
+	return cf_clamp(t / delay, 0.0f, 1.0f);
 }
 
 bool sprite_t::will_finish(float dt)

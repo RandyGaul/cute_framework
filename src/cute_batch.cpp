@@ -55,15 +55,15 @@ namespace cute
 
 struct quad_vertex_t
 {
-	v2 pos;
-	v2 uv;
+	cf_v2 pos;
+	cf_v2 uv;
 	float alpha;
 };
 
 struct vertex_t
 {
-	v2 p;
-	color_t c;
+	cf_v2 p;
+	cf_color_t c;
 };
 
 
@@ -78,7 +78,7 @@ struct scissor_t
 	int x, y, w, h;
 };
 
-static const color_t DEFAULT_TINT = make_color(0.5f, 0.5f, 0.5f, 1.0f);
+static const cf_color_t DEFAULT_TINT = make_color(0.5f, 0.5f, 0.5f, 1.0f);
 
 struct batch_t
 {
@@ -88,11 +88,11 @@ struct batch_t
 	float atlas_height = 1024;
 
 	sg_pipeline geom_pip;
-	triple_buffer_t geom_buffer;
-	array<vertex_t> geom_verts;
+	cf_triple_buffer_t geom_buffer;
+	cf_array<vertex_t> geom_verts;
 
-	array<quad_vertex_t> sprite_verts;
-	triple_buffer_t sprite_buffer;
+	cf_array<quad_vertex_t> sprite_verts;
+	cf_triple_buffer_t sprite_buffer;
 	sg_shader default_shd = { 0 };
 	sg_shader outline_shd = { 0 };
 	sg_shader active_shd = { 0 };
@@ -101,18 +101,18 @@ struct batch_t
 	sg_pipeline pip = { 0 };
 	float outline_use_border = 1.0f;
 	float outline_use_corners = 0;
-	color_t outline_color = color_white();
+	cf_color_t outline_color = color_white();
 	sg_wrap wrap_mode = SG_WRAP_REPEAT;
 	sg_filter filter = SG_FILTER_NEAREST;
-	matrix_t projection;
+	cf_matrix_t projection;
 
-	m3x2 m = make_identity();
-	array<m3x2> m3x2s;
-	array<sg_blend_state> blend_states;
-	array<sg_depth_state> depth_states;
-	array<sg_stencil_state> stencil_states;
-	array<scissor_t> scissors;
-	array<color_t> tints = { DEFAULT_TINT };
+	cf_m3x2 m = cf_make_identity();
+	cf_array<cf_m3x2> m3x2s;
+	cf_array<sg_blend_state> blend_states;
+	cf_array<sg_depth_state> depth_states;
+	cf_array<sg_stencil_state> stencil_states;
+	cf_array<scissor_t> scissors;
+	cf_array<cf_color_t> tints = { DEFAULT_TINT };
 
 	get_pixels_fn* get_pixels = NULL;
 	void* get_pixels_udata = NULL;
@@ -179,7 +179,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	b->sprite_verts.ensure_count(vert_count);
 	quad_vertex_t* verts = b->sprite_verts.data();
 
-	m3x2 m = make_identity();
+	cf_m3x2 m = cf_make_identity();
 	if (b->m3x2s.count()) {
 		m = b->m3x2s.last();
 	}
@@ -188,7 +188,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	{
 		spritebatch_sprite_t* s = sprites + i;
 
-		v2 quad[] = {
+		cf_v2 quad[] = {
 			{ -0.5f,  0.5f },
 			{  0.5f,  0.5f },
 			{  0.5f, -0.5f },
@@ -215,8 +215,8 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 			y += s->y;
 
 			// Apply final batch transformation.
-			v2 p = v2(x, y);
-			p = mul(m, p);
+			cf_v2 p = cf_v2(x, y);
+			p = cf_mul(m, p);
 
 			quad[j].x = p.x;
 			quad[j].y = p.y;
@@ -261,7 +261,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	}
 
 	// Map the vertex buffer with sprite vertex data.
-	error_t err = triple_buffer_append(&b->sprite_buffer, vert_count, verts);
+	cf_error_t err = cf_triple_buffer_append(&b->sprite_buffer, vert_count, verts);
 	CUTE_ASSERT(!err.is_error());
 
 	// Setup resource bindings.
@@ -280,7 +280,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 		sprite_default_vs_params_t vs_params;
 		vs_params.u_mvp = b->projection;
 		sprite_default_fs_params_t fs_params;
-		fs_params.u_texture_size = v2(b->atlas_width, b->atlas_height);
+		fs_params.u_texture_size = cf_v2(b->atlas_width, b->atlas_height);
 		fs_params.u_tint = b->tints.last();
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
 		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE(fs_params));
@@ -291,10 +291,10 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 		sprite_outline_vs_params_t vs_params;
 		vs_params.u_mvp = b->projection;
 		sprite_outline_fs_params_t fs_params;
-		fs_params.u_texture_size = v2(b->atlas_width, b->atlas_height);
+		fs_params.u_texture_size = cf_v2(b->atlas_width, b->atlas_height);
 		fs_params.u_tint = b->tints.last();
 		fs_params.u_border_color = b->outline_color;
-		fs_params.u_texel_size = v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
+		fs_params.u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
 		fs_params.u_use_border = b->outline_use_border;
 		fs_params.u_use_corners = b->outline_use_corners;
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
@@ -315,13 +315,13 @@ static void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fi
 static SPRITEBATCH_U64 s_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
 	batch_t* b = (batch_t*)udata;
-	return texture_make((pixel_t*)pixels, w, h, b->wrap_mode, b->filter);
+	return cf_texture_make((cf_pixel_t*)pixels, w, h, b->wrap_mode, b->filter);
 }
 
 static void s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
 {
 	batch_t* b = (batch_t*)udata;
-	texture_destroy(texture_id);
+	cf_texture_destroy(texture_id);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -357,7 +357,7 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 	batch_t* b = CUTE_NEW(batch_t, app->mem_ctx);
 	if (!b) return NULL;
 
-	b->projection = matrix_identity();
+	b->projection = cf_matrix_identity();
 	b->get_pixels = get_pixels;
 	b->get_pixels_udata = get_pixels_udata;
 	b->mem_ctx = mem_ctx;
@@ -383,13 +383,13 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 	params.colors[0].blend.op_alpha = SG_BLENDOP_ADD;
 
 	b->geom_pip = sg_make_pipeline(params);
-	b->geom_buffer = triple_buffer_make(sizeof(vertex_t) * 1024 * 10, sizeof(vertex_t));
+	b->geom_buffer = cf_triple_buffer_make(sizeof(vertex_t) * 1024 * 10, sizeof(vertex_t));
 
 	batch_push_stencil_defaults(b);
 	batch_push_blend_defaults(b);
 	b->default_shd = b->active_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_DEFAULT);
 	b->outline_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_OUTLINE);
-	b->sprite_buffer = triple_buffer_make(sizeof(quad_vertex_t) * 1024 * 10, sizeof(quad_vertex_t));
+	b->sprite_buffer = cf_triple_buffer_make(sizeof(quad_vertex_t) * 1024 * 10, sizeof(quad_vertex_t));
 
 	spritebatch_config_t config;
 	spritebatch_set_default_config(&config);
@@ -409,7 +409,7 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 
 	b->atlas_width = (float)config.atlas_width_in_pixels;
 	b->atlas_height = (float)config.atlas_height_in_pixels;
-	b->m3x2s.add(make_identity());
+	b->m3x2s.add(cf_make_identity());
 
 	return b;
 }
@@ -438,7 +438,7 @@ void batch_push(batch_t* b, batch_sprite_t q)
 	spritebatch_push(&b->sb, s);
 }
 
-error_t batch_flush(batch_t* b)
+cf_error_t batch_flush(batch_t* b)
 {
 	// Draw sprites.
 	s_sync_pip(b);
@@ -460,7 +460,7 @@ error_t batch_flush(batch_t* b)
 		geom_vs_params_t params;
 		params.u_mvp = b->projection;
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(params));
-		error_t err = triple_buffer_append(&b->geom_buffer, b->geom_verts.count(), b->geom_verts.data());
+		cf_error_t err = cf_triple_buffer_append(&b->geom_buffer, b->geom_verts.count(), b->geom_verts.data());
 		CUTE_ASSERT(!err.is_error());
 		sg_apply_bindings(b->geom_buffer.bind());
 		sg_draw(0, b->geom_verts.count(), 1);
@@ -489,7 +489,7 @@ void batch_set_texture_filter(batch_t* b, sg_filter filter)
 	b->filter = filter;
 }
 
-void batch_set_projection(batch_t* b, matrix_t projection)
+void batch_set_projection(batch_t* b, cf_matrix_t projection)
 {
 	b->projection = projection;
 }
@@ -509,12 +509,12 @@ void batch_outlines_use_corners(batch_t* b, bool use_corners)
 	b->outline_use_corners = use_corners ? 1.0f : 0;
 }
 
-void batch_outlines_color(batch_t* b, color_t c)
+void batch_outlines_color(batch_t* b, cf_color_t c)
 {
 	b->outline_color = c;
 }
 
-void batch_push_m3x2(batch_t* b, m3x2 m)
+void batch_push_m3x2(batch_t* b, cf_m3x2 m)
 {
 	b->m = m;
 	b->m3x2s.add(m);
@@ -527,7 +527,7 @@ void batch_pop_m3x2(batch_t* b)
 		if (b->m3x2s.size()) {
 			b->m = b->m3x2s.last();
 		} else {
-			b->m = make_identity();
+			b->m = cf_make_identity();
 		}
 	}
 }
@@ -615,7 +615,7 @@ void batch_pop_blend_state(batch_t* b)
 	}
 }
 
-void batch_push_tint(batch_t* b, color_t c)
+void batch_push_tint(batch_t* b, cf_color_t c)
 {
 	b->tints.add(c);
 }
@@ -627,17 +627,17 @@ void batch_pop_tint(batch_t* b)
 	}
 }
 
-void batch_quad(batch_t* b, aabb_t bb, color_t c)
+void batch_quad(batch_t* b, cf_aabb_t bb, cf_color_t c)
 {
-	v2 verts[4];
-	aabb_verts(verts, bb);
+	cf_v2 verts[4];
+	cf_aabb_verts(verts, bb);
 	batch_quad(b, verts[0], verts[1], verts[2], verts[3], c);
 }
 
 #define PUSH_VERT(P, C) \
 	do { \
 		vertex_t v; \
-		v.p = mul(b->m, P); \
+		v.p = cf_mul(b->m, P); \
 		v.c = C; \
 		b->geom_verts.add(v); \
 	} while (0)
@@ -649,37 +649,37 @@ void batch_quad(batch_t* b, aabb_t bb, color_t c)
 		PUSH_VERT(p2, c2); \
 	} while (0)
 
-void batch_quad(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, color_t c)
+void batch_quad(batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, cf_color_t c)
 {
 	PUSH_TRI(p0, p1, p2, c, c, c);
 	PUSH_TRI(p2, p3, p0, c, c, c);
 }
 
-void batch_quad(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, color_t c0, color_t c1, color_t c2, color_t c3)
+void batch_quad(batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, cf_color_t c0, cf_color_t c1, cf_color_t c2, cf_color_t c3)
 {
 	PUSH_TRI(p0, p1, p2, c0, c1, c2);
 	PUSH_TRI(p2, p3, p0, c2, c3, c0);
 }
 
-void batch_quad_line(batch_t* b, aabb_t bb, float thickness, color_t c, bool antialias)
+void batch_quad_line(batch_t* b, cf_aabb_t bb, float thickness, cf_color_t c, bool antialias)
 {
-	v2 verts[4];
-	aabb_verts(verts, bb);
+	cf_v2 verts[4];
+	cf_aabb_verts(verts, bb);
 	batch_quad_line(b, verts[0], verts[1], verts[2], verts[3], thickness, c, antialias);
 }
 
-void batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, float thickness, color_t c0, color_t c1, color_t c2, color_t c3, bool antialias)
+void batch_quad_line(batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float thickness, cf_color_t c0, cf_color_t c1, cf_color_t c2, cf_color_t c3, bool antialias)
 {
 	if (antialias) {
-		v2 verts[] = { p0, p1, p2, p3 };
+		cf_v2 verts[] = { p0, p1, p2, p3 };
 		batch_polyline(b, verts, 4, thickness, c0, true, true, 0);
 	} else {
 		float sqrt_2 = 1.41421356237f;
-		v2 n = v2(sqrt_2, sqrt_2) * thickness;
-		v2 q0 = p0 + v2(-n.x, -n.y);
-		v2 q1 = p1 + v2( n.x, -n.y);
-		v2 q2 = p2 + v2( n.x,  n.y);
-		v2 q3 = p3 + v2(-n.x,  n.y);
+		cf_v2 n = cf_v2(sqrt_2, sqrt_2) * thickness;
+		cf_v2 q0 = p0 + cf_v2(-n.x, -n.y);
+		cf_v2 q1 = p1 + cf_v2( n.x, -n.y);
+		cf_v2 q2 = p2 + cf_v2( n.x,  n.y);
+		cf_v2 q3 = p3 + cf_v2(-n.x,  n.y);
 		batch_quad(b, p0, p1, q1, q0, c0, c1, c2, c3);
 		batch_quad(b, p1, p2, q2, q1, c0, c1, c2, c3);
 		batch_quad(b, p2, p3, q3, q2, c0, c1, c2, c3);
@@ -687,39 +687,39 @@ void batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, float thickness, co
 	}
 }
 
-void batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, float thickness, color_t c0, color_t c1, color_t c2, color_t c3)
+void batch_quad_line(batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float thickness, cf_color_t c0, cf_color_t c1, cf_color_t c2, cf_color_t c3)
 {
 	batch_quad_line(b, p0, p1, p2, p3, thickness, c0, c1, c2, c3, false);
 }
 
-void batch_quad_line(batch_t* b, v2 p0, v2 p1, v2 p2, v2 p3, float thickness, color_t c, bool antialias)
+void batch_quad_line(batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float thickness, cf_color_t c, bool antialias)
 {
 	batch_quad_line(b, p0, p1, p2, p3, thickness, c, c, c, c, antialias);
 }
 
-void batch_circle(batch_t* b, v2 p, float r, int iters, color_t c)
+void batch_circle(batch_t* b, cf_v2 p, float r, int iters, cf_color_t c)
 {
-	v2 prev = v2(r, 0);
+	cf_v2 prev = cf_v2(r, 0);
 
 	for (int i = 1; i <= iters; ++i) {
 		float a = (i / (float)iters) * (2.0f * CUTE_PI);
-		v2 next = from_angle(a) * r;
+		cf_v2 next = cf_from_angle(a) * r;
 		batch_tri(b, p + prev, p + next, p, c);
 		prev = next;
 	}
 }
 
-void batch_circle_line(batch_t* batch, v2 p, float r, int iters, float thickness, color_t color, bool antialias)
+void batch_circle_line(batch_t* batch, cf_v2 p, float r, int iters, float thickness, cf_color_t color, bool antialias)
 {
 	if (antialias) {
-		array<v2> verts(iters, NULL);
-		v2 p0 = v2(p.x + r, p.y);
+		cf_array<cf_v2> verts(iters, NULL);
+		cf_v2 p0 = cf_v2(p.x + r, p.y);
 		verts.add(p0);
 
 		for (int i = 1; i <= iters; i++) {
 			float a = (i / (float)iters) * (2.0f * CUTE_PI);
-			v2 n = from_angle(a);
-			v2 p1 = p + n * r;
+			cf_v2 n = cf_from_angle(a);
+			cf_v2 p1 = p + n * r;
 			verts.add(p1);
 			p0 = p1;
 		}
@@ -727,14 +727,14 @@ void batch_circle_line(batch_t* batch, v2 p, float r, int iters, float thickness
 		batch_polyline(batch, verts.data(), verts.size(), thickness, color, true, true, 3);
 	} else {
 		float half_thickness = thickness * 0.5f;
-		v2 p0 = v2(p.x + r - half_thickness, p.y);
-		v2 p1 = v2(p.x + r + half_thickness, p.y);
+		cf_v2 p0 = cf_v2(p.x + r - half_thickness, p.y);
+		cf_v2 p1 = cf_v2(p.x + r + half_thickness, p.y);
 
 		for (int i = 1; i <= iters; i++) {
 			float a = (i / (float)iters) * (2.0f * CUTE_PI);
-			v2 n = from_angle(a);
-			v2 p2 = p + n * (r + half_thickness);
-			v2 p3 = p + n * (r - half_thickness);
+			cf_v2 n = cf_from_angle(a);
+			cf_v2 p2 = p + n * (r + half_thickness);
+			cf_v2 p3 = p + n * (r - half_thickness);
 			batch_quad(batch, p0, p1, p2, p3, color);
 			p1 = p2;
 			p0 = p3;
@@ -742,70 +742,70 @@ void batch_circle_line(batch_t* batch, v2 p, float r, int iters, float thickness
 	}
 }
 
-void batch_circle_arc(batch_t* batch, v2 p, v2 center_of_arc, float range, int iters, color_t color)
+void batch_circle_arc(batch_t* batch, cf_v2 p, cf_v2 center_of_arc, float range, int iters, cf_color_t color)
 {
-	float r = len(center_of_arc - p);
-	v2 d = norm(center_of_arc - p);
-	sincos_t m = sincos(range * 0.5f);
+	float r = cf_len(center_of_arc - p);
+	cf_v2 d = cf_norm(center_of_arc - p);
+	cf_sincos_t m = cf_sincos(range * 0.5f);
 
-	v2 t = mulT(m, d);
-	v2 p0 = p + t * r;
-	d = norm(p0 - p);
+	cf_v2 t = cf_mulT(m, d);
+	cf_v2 p0 = p + t * r;
+	d = cf_norm(p0 - p);
 	float inc = range / iters;
 
 	for (int i = 1; i <= iters; i++) {
-		m = sincos(i * inc);
-		t = mul(m, d);
-		v2 p1 = p + t * r;
+		m = cf_sincos(i * inc);
+		t = cf_mul(m, d);
+		cf_v2 p1 = p + t * r;
 		batch_tri(batch, p, p1, p0, color);
 		p0 = p1;
 	}
 }
 
-static void s_circle_arc_line_aa(array<v2>* verts, v2 p, v2 center_of_arc, float range, int iters, float thickness, color_t color)
+static void s_circle_arc_line_aa(cf_array<cf_v2>* verts, cf_v2 p, cf_v2 center_of_arc, float range, int iters, float thickness, cf_color_t color)
 {
-	float r = len(center_of_arc - p);
-	v2 d = norm(center_of_arc - p);
-	sincos_t m = sincos(range * 0.5f);
+	float r = cf_len(center_of_arc - p);
+	cf_v2 d = cf_norm(center_of_arc - p);
+	cf_sincos_t m = cf_sincos(range * 0.5f);
 
-	v2 t = mulT(m, d);
-	v2 p0 = p + t * r;
-	d = norm(p0 - p);
+	cf_v2 t = cf_mulT(m, d);
+	cf_v2 p0 = p + t * r;
+	d = cf_norm(p0 - p);
 	float inc = range / iters;
 	verts->add(p0);
 
 	for (int i = 1; i <= iters; i++) {
-		m = sincos(i * inc);
-		t = mul(m, d);
-		v2 p1 = p + t * r;
+		m = cf_sincos(i * inc);
+		t = cf_mul(m, d);
+		cf_v2 p1 = p + t * r;
 		verts->add(p1);
 		p0 = p1;
 	}
 }
 
-void batch_circle_arc_line(batch_t* batch, v2 p, v2 center_of_arc, float range, int iters, float thickness, color_t color, bool antialias)
+void batch_circle_arc_line(batch_t* batch, cf_v2 p, cf_v2 center_of_arc, float range, int iters, float thickness, cf_color_t color, bool antialias)
 {
 	if (antialias) {
-		array<v2> verts(iters, NULL);
+		cf_array<cf_v2> verts(iters, NULL);
 		s_circle_arc_line_aa(&verts, p, center_of_arc, range, iters, thickness, color);
 		batch_polyline(batch, verts.data(), verts.size(), thickness, color, false, true, 3);
 	} else {
-		float r = len(center_of_arc - p);
-		v2 d = norm(center_of_arc - p);
-		sincos_t m = sincos(range * 0.5f);
+		float r = cf_len(center_of_arc - p);
+		cf_v2 d = cf_norm(center_of_arc - p);
+		cf_sincos_t m = cf_sincos(range * 0.5f);
 
 		float half_thickness = thickness * 0.5f;
-		v2 t = mulT(m, d);
-		v2 p0 = p + t * (r + half_thickness);
-		v2 p1 = p + t * (r - half_thickness);
-		d = norm(p0 - p);
+		cf_v2 t = cf_mulT(m, d);
+		cf_v2 p0 = p + t * (r + half_thickness);
+		cf_v2 p1 = p + t * (r - half_thickness);
+		d = cf_norm(p0 - p);
 		float inc = range / iters;
 
 		for (int i = 1; i <= iters; i++) {
-			m = sincos(i * inc);
-			t = mul(m, d);
-			v2 p2 = p + t * (r + half_thickness);
-			v2 p3 = p + t * (r - half_thickness);
+			m = cf_sincos(i * inc);
+			t = cf_mul(m, d);
+			cf_v2 p2 = p + t * (r + half_thickness);
+			cf_v2 p3 = p + t * (r - half_thickness);
 			batch_quad(batch, p0, p1, p2, p3, color);
 			p1 = p2;
 			p0 = p3;
@@ -813,146 +813,146 @@ void batch_circle_arc_line(batch_t* batch, v2 p, v2 center_of_arc, float range, 
 	}
 }
 
-void batch_capsule(batch_t* batch, v2 a, v2 b, float r, int iters, color_t c)
+void batch_capsule(batch_t* batch, cf_v2 a, cf_v2 b, float r, int iters, cf_color_t c)
 {
-	batch_circle_arc(batch, a, a + norm(a - b) * r, CUTE_PI, iters, c);
-	batch_circle_arc(batch, b, b + norm(b - a) * r, CUTE_PI, iters, c);
-	v2 n = skew(norm(b - a)) * r;
-	v2 q0 = a + n;
-	v2 q1 = b + n;
-	v2 q2 = b - n;
-	v2 q3 = a - n;
+	batch_circle_arc(batch, a, a + cf_norm(a - b) * r, CUTE_PI, iters, c);
+	batch_circle_arc(batch, b, b + cf_norm(b - a) * r, CUTE_PI, iters, c);
+	cf_v2 n = cf_skew(cf_norm(b - a)) * r;
+	cf_v2 q0 = a + n;
+	cf_v2 q1 = b + n;
+	cf_v2 q2 = b - n;
+	cf_v2 q3 = a - n;
 	batch_quad(batch, q0, q1, q2, q3, c);
 }
 
-void batch_capsule_line(batch_t* batch, v2 a, v2 b, float r, int iters, float thickness, color_t c, bool antialias)
+void batch_capsule_line(batch_t* batch, cf_v2 a, cf_v2 b, float r, int iters, float thickness, cf_color_t c, bool antialias)
 {
 	if (antialias) {
-		array<v2> verts(iters * 2 + 2, NULL);
-		s_circle_arc_line_aa(&verts, a, a + norm(a - b) * r, CUTE_PI, iters, thickness, c);
-		s_circle_arc_line_aa(&verts, b, b + norm(b - a) * r, CUTE_PI, iters, thickness, c);
+		cf_array<cf_v2> verts(iters * 2 + 2, NULL);
+		s_circle_arc_line_aa(&verts, a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness, c);
+		s_circle_arc_line_aa(&verts, b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness, c);
 		batch_polyline(batch, verts.data(), verts.count(), thickness, c, true, true, 0);
 	} else {
-		batch_circle_arc_line(batch, a, a + norm(a - b) * r, CUTE_PI, iters, thickness, c);
-		batch_circle_arc_line(batch, b, b + norm(b - a) * r, CUTE_PI, iters, thickness, c);
-		v2 n = skew(norm(b - a)) * r;
-		v2 q0 = a + n;
-		v2 q1 = b + n;
-		v2 q2 = b - n;
-		v2 q3 = a - n;
+		batch_circle_arc_line(batch, a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness, c);
+		batch_circle_arc_line(batch, b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness, c);
+		cf_v2 n = cf_skew(cf_norm(b - a)) * r;
+		cf_v2 q0 = a + n;
+		cf_v2 q1 = b + n;
+		cf_v2 q2 = b - n;
+		cf_v2 q3 = a - n;
 		batch_line(batch, q0, q1, thickness, c);
 		batch_line(batch, q2, q3, thickness, c);
 	}
 }
 
-void batch_tri(batch_t* b, v2 p0, v2 p1, v2 p2, color_t c)
+void batch_tri(batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_color_t c)
 {
 	PUSH_TRI(p0, p1, p2, c, c, c);
 }
 
-void batch_tri(batch_t* b, v2 p0, v2 p1, v2 p2, color_t c0, color_t c1, color_t c2)
+void batch_tri(batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_color_t c0, cf_color_t c1, cf_color_t c2)
 {
 	PUSH_TRI(p0, p1, p2, c0, c1, c2);
 }
 
-void batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float thickness, color_t c, bool antialias)
+void batch_tri_line(batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, float thickness, cf_color_t c, bool antialias)
 {
 	CUTE_ASSERT(0);
 }
 
-void batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float thickness, color_t c0, color_t c1, color_t c2, bool antialias)
+void batch_tri_line(batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, float thickness, cf_color_t c0, cf_color_t c1, cf_color_t c2, bool antialias)
 {
 	CUTE_ASSERT(0);
 }
 
-void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c, bool antialias)
+void batch_line(batch_t* b, cf_v2 p0, cf_v2 p1, float thickness, cf_color_t c, bool antialias)
 {
 	batch_line(b, p0, p1, thickness, c, c, antialias);
 }
 
-void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c0, color_t c1, bool antialias)
+void batch_line(batch_t* b, cf_v2 p0, cf_v2 p1, float thickness, cf_color_t c0, cf_color_t c1, bool antialias)
 {
-	float scale = len(b->m.m.x); // Assume x/y uniform scaling.
+	float scale = cf_len(b->m.m.x); // Assume x/y uniform scaling.
 	float alias_scale = 1.0f / scale;
 	bool thick_line = thickness > alias_scale;
-	thickness = max(thickness, alias_scale);
+	thickness = cf_max(thickness, alias_scale);
 	if (antialias) {
-		color_t c2 = c0;
-		color_t c3 = c1;
+		cf_color_t c2 = c0;
+		cf_color_t c3 = c1;
 		c2.a = 0;
 		c3.a = 0;
 		if (thick_line) {
 			// Core center line.
 			float core_half_width = (thickness - alias_scale) * 0.5f;
-			v2 n0 = norm(p1 - p0);
-			v2 n1 = skew(n0) * core_half_width;
-			v2 q0 = p0 + n1;
-			v2 q1 = p1 + n1;
-			v2 q2 = p1 - n1;
-			v2 q3 = p0 - n1;
+			cf_v2 n0 = cf_norm(p1 - p0);
+			cf_v2 n1 = cf_skew(n0) * core_half_width;
+			cf_v2 q0 = p0 + n1;
+			cf_v2 q1 = p1 + n1;
+			cf_v2 q2 = p1 - n1;
+			cf_v2 q3 = p0 - n1;
 			batch_quad(b, q0, q1, q2, q3, c0, c0, c1, c1);
 
 			// Zero opacity aliased quads.
-			v2 n2 = cw90(n0) * alias_scale;
-			v2 q4 = q3 + n2;
-			v2 q5 = q2 + n2;
-			v2 q6 = q1 - n2;
-			v2 q7 = q0 - n2;
+			cf_v2 n2 = cf_cw90(n0) * alias_scale;
+			cf_v2 q4 = q3 + n2;
+			cf_v2 q5 = q2 + n2;
+			cf_v2 q6 = q1 - n2;
+			cf_v2 q7 = q0 - n2;
 			batch_quad(b, q3, q2, q5, q4, c0, c1, c3, c2);
 			batch_quad(b, q0, q7, q6, q1, c0, c2, c3, c1);
 
 			// End caps.
 			n0 = n0 * alias_scale;
-			v2 r0 = q5 + n0;
-			v2 r1 = q2 + n0;
-			v2 r2 = q1 + n0;
-			v2 r3 = q6 + n0;
+			cf_v2 r0 = q5 + n0;
+			cf_v2 r1 = q2 + n0;
+			cf_v2 r2 = q1 + n0;
+			cf_v2 r3 = q6 + n0;
 			batch_quad(b, q2, r1, r0, q5, c1, c3, c3, c3);
 			batch_quad(b, q2, q1, r2, r1, c1, c1, c3, c3);
 			batch_quad(b, q1, q6, r3, r2, c1, c3, c3, c3);
 
-			v2 r4 = q4 - n0;
-			v2 r5 = q3 - n0;
-			v2 r6 = q0 - n0;
-			v2 r7 = q7 - n0;
+			cf_v2 r4 = q4 - n0;
+			cf_v2 r5 = q3 - n0;
+			cf_v2 r6 = q0 - n0;
+			cf_v2 r7 = q7 - n0;
 			batch_quad(b, q3, r5, r4, q4, c0, c2, c2, c2);
 			batch_quad(b, q3, q0, r6, r5, c0, c0, c2, c2);
 			batch_quad(b, q0, q7, r7, r6, c0, c2, c2, c2);
 		} else {
 			// Zero opacity aliased quads, without any core line.
-			v2 n = skew(norm(p1 - p0)) * alias_scale * 0.5f;
-			v2 q0 = p0 + n;
-			v2 q1 = p1 + n;
-			v2 q2 = p1 - n;
-			v2 q3 = p0 - n;
+			cf_v2 n = cf_skew(cf_norm(p1 - p0)) * alias_scale * 0.5f;
+			cf_v2 q0 = p0 + n;
+			cf_v2 q1 = p1 + n;
+			cf_v2 q2 = p1 - n;
+			cf_v2 q3 = p0 - n;
 			batch_quad(b, p0, p1, q1, q0, c0, c1, c3, c2);
 			batch_quad(b, p1, p0, q3, q2, c1, c0, c3, c2);
 		}
 	} else {
-		v2 n = skew(norm(p1 - p0)) * thickness * 0.5f;
-		v2 q0 = p0 + n;
-		v2 q1 = p1 + n;
-		v2 q2 = p1 - n;
-		v2 q3 = p0 - n;
+		cf_v2 n = cf_skew(cf_norm(p1 - p0)) * thickness * 0.5f;
+		cf_v2 q0 = p0 + n;
+		cf_v2 q1 = p1 + n;
+		cf_v2 q2 = p1 - n;
+		cf_v2 q3 = p0 - n;
 		batch_quad(b, q0, q1, q2, q3, c0, c0, c1, c1);
 	}
 }
 
-CUTE_INLINE static v2 s_rot_b_about_a(sincos_t r, v2 b, v2 a)
+CUTE_INLINE static cf_v2 s_rot_b_about_a(cf_sincos_t r, cf_v2 b, cf_v2 a)
 {
-	v2 result = mul(r, a - b);
+	cf_v2 result = cf_mul(r, a - b);
 	return result + b;
 }
 
-CUTE_INLINE static void s_bevel_arc_feather(batch_t* batch, v2 b, v2 i3, v2 f3, v2 i4, v2 f4, color_t c0, color_t c1, int bevel_count)
+CUTE_INLINE static void s_bevel_arc_feather(batch_t* batch, cf_v2 b, cf_v2 i3, cf_v2 f3, cf_v2 i4, cf_v2 f4, cf_color_t c0, cf_color_t c1, int bevel_count)
 {
-	float arc = shortest_arc(norm(i3 - b), norm(i4 - b)) / (float)(bevel_count + 1);
-	sincos_t r = sincos(arc);
-	v2 p0 = i3;
-	v2 p1 = f3;
+	float arc = cf_shortest_arc(cf_norm(i3 - b), cf_norm(i4 - b)) / (float)(bevel_count + 1);
+	cf_sincos_t r = cf_sincos(arc);
+	cf_v2 p0 = i3;
+	cf_v2 p1 = f3;
 	for (int i = 1; i < bevel_count; ++i) {
-		v2 p2 = s_rot_b_about_a(r, b, p1);
-		v2 p3 = s_rot_b_about_a(r, b, p0);
+		cf_v2 p2 = s_rot_b_about_a(r, b, p1);
+		cf_v2 p3 = s_rot_b_about_a(r, b, p0);
 		batch_tri(batch, b, p0, p3, c0);
 		batch_quad(batch, p3, p2, p1, p0, c0, c1, c1, c0);
 		p0 = p3;
@@ -962,50 +962,50 @@ CUTE_INLINE static void s_bevel_arc_feather(batch_t* batch, v2 b, v2 i3, v2 f3, 
 	batch_quad(batch, p0, i4, f4, p1, c0, c0, c1, c1);
 }
 
-CUTE_INLINE static void s_bevel_arc(batch_t* batch, v2 b, v2 i3, v2 i4, color_t c0, color_t c1, int bevel_count)
+CUTE_INLINE static void s_bevel_arc(batch_t* batch, cf_v2 b, cf_v2 i3, cf_v2 i4, cf_color_t c0, cf_color_t c1, int bevel_count)
 {
-	float arc = shortest_arc(norm(i3 - b), norm(i4 - b)) / (float)(bevel_count + 1);
-	sincos_t r = sincos(arc);
-	v2 p0 = i3;
+	float arc = cf_shortest_arc(cf_norm(i3 - b), cf_norm(i4 - b)) / (float)(bevel_count + 1);
+	cf_sincos_t r = cf_sincos(arc);
+	cf_v2 p0 = i3;
 	for (int i = 1; i < bevel_count; ++i) {
-		v2 p3 = s_rot_b_about_a(r, b, p0);
+		cf_v2 p3 = s_rot_b_about_a(r, b, p0);
 		batch_tri(batch, b, p0, p3, c0);
 		p0 = p3;
 	}
 	batch_tri(batch, b, i4, p0, c0);
 }
 
-static void s_polyline(batch_t* batch, v2* points, int count, float thickness, color_t c0, color_t c1, bool loop, bool feather, float alias_scale, int bevel_count)
+static void s_polyline(batch_t* batch, cf_v2* points, int count, float thickness, cf_color_t c0, cf_color_t c1, bool loop, bool feather, float alias_scale, int bevel_count)
 {
 	float inner_half = (thickness - alias_scale) * 0.5f;
 	float outer_half = inner_half + alias_scale;
 	int iter = 0;
 	int i = 2;
-	v2 a = points[0];
-	v2 b = points[1];
-	v2 n0 = skew(norm(b - a)) * inner_half;
-	v2 i0 = a + n0;
-	v2 i1 = a - n0;
-	v2 fn0 = norm(n0) * outer_half;
-	v2 f0 = a + fn0;
-	v2 f1 = a - fn0;
+	cf_v2 a = points[0];
+	cf_v2 b = points[1];
+	cf_v2 n0 = cf_skew(cf_norm(b - a)) * inner_half;
+	cf_v2 i0 = a + n0;
+	cf_v2 i1 = a - n0;
+	cf_v2 fn0 = cf_norm(n0) * outer_half;
+	cf_v2 f0 = a + fn0;
+	cf_v2 f1 = a - fn0;
 	int end = count;
 
 	// Optionally emits geometry about each corner of the polyline, and sets up i0, i1, f0, f1, n0 and fn0.
-	auto do_polyline_corner = [&](v2 c, bool emit) {
-		v2 n1 = skew(norm(c - b)) * inner_half;
-		v2 fn1 = norm(n1) * outer_half;
-		float ab_x_bc = cross(b - a, c - b);
-		float d = dot(cw90(n0), cw90(n1));
+	auto do_polyline_corner = [&](cf_v2 c, bool emit) {
+		cf_v2 n1 = cf_skew(cf_norm(c - b)) * inner_half;
+		cf_v2 fn1 = cf_norm(n1) * outer_half;
+		float ab_x_bc = cf_cross(b - a, c - b);
+		float d = cf_dot(cf_cw90(n0), cf_cw90(n1));
 		const float k_tol = 1.e-6f;
 
 		if (ab_x_bc < -k_tol) {
 			if (d >= 0) {
-				v2 i2 = intersect(plane(n0, b - n0), b - n1, c - n1);
-				v2 i3 = intersect(plane(n0, b + n0), b + n1, c + n1);
+				cf_v2 i2 = cf_intersect(cf_plane(n0, b - n0), b - n1, c - n1);
+				cf_v2 i3 = cf_intersect(cf_plane(n0, b + n0), b + n1, c + n1);
 				if (feather) {
-					v2 f2 = intersect(plane(fn0, b - fn0), b - fn1, c - fn1);
-					v2 f3 = intersect(plane(fn0, b + fn0), b + fn1, c + fn1);
+					cf_v2 f2 = cf_intersect(cf_plane(fn0, b - fn0), b - fn1, c - fn1);
+					cf_v2 f3 = cf_intersect(cf_plane(fn0, b + fn0), b + fn1, c + fn1);
 					if (emit) {
 						batch_quad(batch, a, b, i3, i0, c0);
 						batch_quad(batch, i1, i2, b, a, c0);
@@ -1021,15 +1021,15 @@ static void s_polyline(batch_t* batch, v2* points, int count, float thickness, c
 				i0 = i3;
 				i1 = i2;
 			} else {
-				v2 i2 = intersect(plane(-n0, b - n0), b - n1, c - n1);
-				v2 i3 = b + n0;
-				v2 i4 = b + n1;
+				cf_v2 i2 = cf_intersect(cf_plane(-n0, b - n0), b - n1, c - n1);
+				cf_v2 i3 = b + n0;
+				cf_v2 i4 = b + n1;
 				if (feather) {
-					v2 f2 = intersect(plane(-fn0, b - fn0), b - fn1, c - fn1);
-					v2 n = norm(n0 + n1);
-					halfspace_t h = plane(n, i3 + n * alias_scale);
-					v2 f3 = intersect(h, a + fn0, b + fn0);
-					v2 f4 = intersect(h, b + fn1, c + fn1);
+					cf_v2 f2 = cf_intersect(cf_plane(-fn0, b - fn0), b - fn1, c - fn1);
+					cf_v2 n = cf_norm(n0 + n1);
+					cf_halfspace_t h = cf_plane(n, i3 + n * alias_scale);
+					cf_v2 f3 = cf_intersect(h, a + fn0, b + fn0);
+					cf_v2 f4 = cf_intersect(h, b + fn1, c + fn1);
 					if (emit) {
 						batch_quad(batch, a, b, i3, i0, c0);
 						batch_quad(batch, i1, i2, b, a, c0);
@@ -1049,11 +1049,11 @@ static void s_polyline(batch_t* batch, v2* points, int count, float thickness, c
 			}
 		} else if (ab_x_bc > k_tol) {
 			if (d >= 0) {
-				v2 i2 = intersect(plane(n0, b + n0), b + n1, c + n1);
-				v2 i3 = intersect(plane(n0, b - n0), b - n1, c - n1);
+				cf_v2 i2 = cf_intersect(cf_plane(n0, b + n0), b + n1, c + n1);
+				cf_v2 i3 = cf_intersect(cf_plane(n0, b - n0), b - n1, c - n1);
 				if (feather) {
-					v2 f2 = intersect(plane(fn0, b + fn0), b + fn1, c + fn1);
-					v2 f3 = intersect(plane(fn0, b - fn0), b - fn1, c - fn1);
+					cf_v2 f2 = cf_intersect(cf_plane(fn0, b + fn0), b + fn1, c + fn1);
+					cf_v2 f3 = cf_intersect(cf_plane(fn0, b - fn0), b - fn1, c - fn1);
 					if (emit) {
 						batch_quad(batch, a, b, i3, i1, c0);
 						batch_quad(batch, i0, i2, b, a, c0);
@@ -1069,15 +1069,15 @@ static void s_polyline(batch_t* batch, v2* points, int count, float thickness, c
 				i1 = i3;
 				i0 = i2;
 			} else {
-				v2 i2 = intersect(plane(n0, b + n0), b + n1, c + n1);
-				v2 i3 = b - n0;
-				v2 i4 = b - n1;
+				cf_v2 i2 = cf_intersect(cf_plane(n0, b + n0), b + n1, c + n1);
+				cf_v2 i3 = b - n0;
+				cf_v2 i4 = b - n1;
 				if (feather) {
-					v2 f2 = intersect(plane(fn0, b + fn0), b + fn1, c + fn1);
-					v2 n = norm(n0 + n1);
-					halfspace_t h = plane(-n, i3 - n * alias_scale);
-					v2 f3 = intersect(h, a - fn0, b - fn0);
-					v2 f4 = intersect(h, b - fn1, c - fn1);
+					cf_v2 f2 = cf_intersect(cf_plane(fn0, b + fn0), b + fn1, c + fn1);
+					cf_v2 n = cf_norm(n0 + n1);
+					cf_halfspace_t h = cf_plane(-n, i3 - n * alias_scale);
+					cf_v2 f3 = cf_intersect(h, a - fn0, b - fn0);
+					cf_v2 f4 = cf_intersect(h, b - fn1, c - fn1);
 					if (emit) {
 						batch_quad(batch, a, b, i3, i1, c0);
 						batch_quad(batch, i0, i2, b, a, c0);
@@ -1097,11 +1097,11 @@ static void s_polyline(batch_t* batch, v2* points, int count, float thickness, c
 			}
 		} else {
 			// Parallel, sin(angle_of_corner) within [-k_tol, k_tol].
-			v2 i2 = b + n0;
-			v2 i3 = b - n0;
+			cf_v2 i2 = b + n0;
+			cf_v2 i3 = b - n0;
 			if (feather) {
-				v2 f2 = b + fn0;
-				v2 f3 = b - fn0;
+				cf_v2 f2 = b + fn0;
+				cf_v2 f3 = b - fn0;
 				if (emit) {
 					batch_quad(batch, a, b, i2, i0, c0);
 					batch_quad(batch, i1, i3, b, a, c0);
@@ -1131,9 +1131,9 @@ static void s_polyline(batch_t* batch, v2* points, int count, float thickness, c
 	if (loop) {
 		a = points[count - 1];
 		b = points[0];
-		v2 c = points[1];
-		n0 = skew(norm(b - a)) * inner_half;
-		fn0 = norm(n0) * outer_half;
+		cf_v2 c = points[1];
+		n0 = cf_skew(cf_norm(b - a)) * inner_half;
+		fn0 = cf_norm(n0) * outer_half;
 		do_polyline_corner(c, false);
 	} else {
 		end -= 2;
@@ -1141,7 +1141,7 @@ static void s_polyline(batch_t* batch, v2* points, int count, float thickness, c
 
 	// Main loop, emit geometry about each corner of the polyline.
 	do {
-		v2 c = points[i];
+		cf_v2 c = points[i];
 		do_polyline_corner(c, true);
 		iter++;
 		i = i + 1 == count ? 0 : i + 1;
@@ -1156,16 +1156,16 @@ static void s_polyline(batch_t* batch, v2* points, int count, float thickness, c
 			batch_quad(batch, b - fn0, b - n0, i1, f1, c1, c0, c0, c1);
 
 			// End caps.
-			v2 n = norm(b - a) * alias_scale;
+			cf_v2 n = cf_norm(b - a) * alias_scale;
 			batch_quad(batch, b - n0, b + n0, b + n0 + n, b - n0 + n, c0, c0, c1, c1);
 			batch_quad(batch, b - fn0, b - n0, b - n0 + n, b - fn0 + n, c1, c0, c1, c1);
 			batch_quad(batch, b + fn0, b + n0, b + n0 + n, b + fn0 + n, c1, c0, c1, c1);
 
 			a = points[1];
 			b = points[0];
-			n = norm(b - a) * alias_scale;
-			n0 = skew(norm(b - a)) * inner_half;
-			fn0 = norm(n0) * outer_half;
+			n = cf_norm(b - a) * alias_scale;
+			n0 = cf_skew(cf_norm(b - a)) * inner_half;
+			fn0 = cf_norm(n0) * outer_half;
 			batch_quad(batch, b - n0, b + n0, b + n0 + n, b - n0 + n, c0, c0, c1, c1);
 			batch_quad(batch, b - fn0, b - n0, b - n0 + n, b - fn0 + n, c1, c0, c1, c1);
 			batch_quad(batch, b + fn0, b + n0, b + n0 + n, b + fn0 + n, c1, c0, c1, c1);
@@ -1176,15 +1176,15 @@ static void s_polyline(batch_t* batch, v2* points, int count, float thickness, c
 	}
 }
 
-void batch_polyline(batch_t* batch, v2* points, int count, float thickness, color_t color, bool loop, bool antialias, int bevel_count)
+void batch_polyline(batch_t* batch, cf_v2* points, int count, float thickness, cf_color_t color, bool loop, bool antialias, int bevel_count)
 {
 	CUTE_ASSERT(count >= 3);
-	float scale = len(batch->m.m.x); // Assume x/y uniform scaling.
+	float scale = cf_len(batch->m.m.x); // Assume x/y uniform scaling.
 	float alias_scale = 1.0f / scale;
 	bool thick_line = thickness > alias_scale;
-	thickness = max(thickness, alias_scale);
+	thickness = cf_max(thickness, alias_scale);
 	if (antialias) {
-		color_t no_alpha = color;
+		cf_color_t no_alpha = color;
 		no_alpha.a = 0;
 		if (thick_line) {
 			s_polyline(batch, points, count, thickness, color, no_alpha, loop, true, alias_scale, bevel_count);
@@ -1203,8 +1203,8 @@ temporary_image_t batch_fetch(batch_t* b, batch_sprite_t sprite)
 	image.texture_id = s.texture_id;
 	image.w = s.w;
 	image.h = s.h;
-	image.u = v2(s.minx, s.miny);
-	image.v = v2(s.maxx, s.maxy);
+	image.u = cf_v2(s.minx, s.miny);
+	image.v = cf_v2(s.maxx, s.maxy);
 	return image;
 }
 

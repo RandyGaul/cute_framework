@@ -22,12 +22,13 @@
 #ifndef CUTE_ARRAY_H
 #define CUTE_ARRAY_H
 
+
 #include "cute_defines.h"
+
+#ifdef CUTE_CPP
+
 #include "cute_c_runtime.h"
 #include "cute_alloc.h"
-
-namespace cute
-{
 
 /**
  * Implements a basic growable array data structure. Constructors and destructors are called, but this
@@ -38,15 +39,16 @@ namespace cute
  */
 
 template <typename T>
-struct array
+struct cf_array
 {
-	array();
-	array(initializer_list<T> list);
-	array(const array<T>& other);
-	array(array<T>&& other);
-	array(void* user_allocator_context);
-	array(int capacity, void* user_allocator_context);
-	~array();
+	cf_array();
+	cf_array(cf_initializer_list<T> list);
+	cf_array(const cf_array<T>& other);
+	cf_array(cf_array<T>&& other);
+	cf_array(void* user_allocator_context);
+	cf_array(int capacity, void* user_allocator_context);
+	cf_array(T* data, int count, int capacity, void* user_allocator_context);
+	~cf_array();
 
 	T& add();
 	T& add(const T& item);
@@ -62,8 +64,8 @@ struct array
 	void ensure_capacity(int num_elements);
 	void ensure_count(int count);
 	void set_count(int count);
-	void steal_from(array<T>* steal_from_me);
-	void steal_from(array<T>& steal_from_me);
+	void steal_from(cf_array<T>* steal_from_me);
+	void steal_from(cf_array<T>& steal_from_me);
 	void reverse();
 
 	int capacity() const;
@@ -81,8 +83,8 @@ struct array
 	T* operator+(int index);
 	const T* operator+(int index) const;
 
-	const array<T>& operator=(const array<T>& rhs);
-	const array<T>& operator=(array<T>&& rhs);
+	const cf_array<T>& operator=(const cf_array<T>& rhs);
+	const cf_array<T>& operator=(cf_array<T>&& rhs);
 
 	T& last();
 	const T& last() const;
@@ -90,7 +92,7 @@ struct array
 	T* data();
 	const T* data() const;
 
-private:
+	//private:
 	int m_capacity = 0;
 	int m_count = 0;
 	T* m_items = NULL;
@@ -100,12 +102,11 @@ private:
 // -------------------------------------------------------------------------------------------------
 
 template <typename T>
-array<T>::array()
-{
-}
+cf_array<T>::cf_array()
+{}
 
 template <typename T>
-array<T>::array(initializer_list<T> list)
+cf_array<T>::cf_array(cf_initializer_list<T> list)
 {
 	ensure_capacity((int)list.size());
 	for (const T* i = list.begin(); i < list.end(); ++i) {
@@ -114,7 +115,7 @@ array<T>::array(initializer_list<T> list)
 }
 
 template <typename T>
-array<T>::array(const array<T>& other)
+cf_array<T>::cf_array(const cf_array<T>& other)
 {
 	ensure_capacity((int)other.count());
 	for (int i = 0; i < other.count(); ++i) {
@@ -123,19 +124,18 @@ array<T>::array(const array<T>& other)
 }
 
 template <typename T>
-array<T>::array(array<T>&& other)
+cf_array<T>::cf_array(cf_array<T>&& other)
 {
 	steal_from(&other);
 }
 
 template <typename T>
-array<T>::array(void* user_allocator_context)
+cf_array<T>::cf_array(void* user_allocator_context)
 	: m_mem_ctx(user_allocator_context)
-{
-}
+{}
 
 template <typename T>
-array<T>::array(int capacity, void* user_allocator_context)
+cf_array<T>::cf_array(int capacity, void* user_allocator_context)
 	: m_capacity(capacity)
 	, m_mem_ctx(user_allocator_context)
 {
@@ -143,8 +143,20 @@ array<T>::array(int capacity, void* user_allocator_context)
 	CUTE_ASSERT(m_items);
 }
 
+
 template <typename T>
-array<T>::~array()
+cf_array<T>::cf_array(T* data, int count, int capacity, void* user_allocator_context)
+	: m_items(data)
+	: m_count(count)
+	: m_capacity(capacity)
+	, m_mem_ctx(user_allocator_context)
+{
+	CUTE_ASSERT(m_items);
+}
+
+
+template <typename T>
+cf_array<T>::~cf_array()
 {
 	for (int i = 0; i < m_count; ++i) {
 		T* slot = m_items + i;
@@ -154,7 +166,7 @@ array<T>::~array()
 }
 
 template <typename T>
-T& array<T>::add()
+T& cf_array<T>::add()
 {
 	ensure_capacity(m_count + 1);
 	T* slot = m_items + m_count++;
@@ -163,7 +175,7 @@ T& array<T>::add()
 }
 
 template <typename T>
-T& array<T>::add(const T& item)
+T& cf_array<T>::add(const T& item)
 {
 	ensure_capacity(m_count + 1);
 	T* slot = m_items + m_count++;
@@ -172,7 +184,7 @@ T& array<T>::add(const T& item)
 }
 
 template <typename T>
-T& array<T>::add(T&& item)
+T& cf_array<T>::add(T&& item)
 {
 	ensure_capacity(m_count + 1);
 	T* slot = m_items + m_count++;
@@ -181,7 +193,7 @@ T& array<T>::add(T&& item)
 }
 
 template <typename T>
-T& array<T>::insert(int index)
+T& cf_array<T>::insert(int index)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	add();
@@ -191,7 +203,7 @@ T& array<T>::insert(int index)
 }
 
 template <typename T>
-T& array<T>::insert(int index, const T& item)
+T& cf_array<T>::insert(int index, const T& item)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	add();
@@ -203,7 +215,7 @@ T& array<T>::insert(int index, const T& item)
 }
 
 template <typename T>
-T& array<T>::insert(int index, T&& item)
+T& cf_array<T>::insert(int index, T&& item)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	add();
@@ -215,7 +227,7 @@ T& array<T>::insert(int index, T&& item)
 }
 
 template <typename T>
-void array<T>::set(int index, const T& item)
+void cf_array<T>::set(int index, const T& item)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	T* slot = m_items + index;
@@ -223,7 +235,7 @@ void array<T>::set(int index, const T& item)
 }
 
 template <typename T>
-void array<T>::remove(int index)
+void cf_array<T>::remove(int index)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	T* slot = m_items + index;
@@ -234,7 +246,7 @@ void array<T>::remove(int index)
 }
 
 template <typename T>
-T array<T>::pop()
+T cf_array<T>::pop()
 {
 	CUTE_ASSERT(m_count > 0);
 	T* slot = m_items + m_count - 1;
@@ -244,7 +256,7 @@ T array<T>::pop()
 }
 
 template <typename T>
-void array<T>::unordered_remove(int index)
+void cf_array<T>::unordered_remove(int index)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	T* slot = m_items + index;
@@ -253,7 +265,7 @@ void array<T>::unordered_remove(int index)
 }
 
 template <typename T>
-void array<T>::clear()
+void cf_array<T>::clear()
 {
 	for (int i = 0; i < m_count; ++i) {
 		T* slot = m_items + i;
@@ -263,7 +275,7 @@ void array<T>::clear()
 }
 
 template <typename T>
-void array<T>::ensure_capacity(int num_elements)
+void cf_array<T>::ensure_capacity(int num_elements)
 {
 	if (num_elements > m_capacity) {
 		int new_capacity = m_capacity ? m_capacity * 2 : 256;
@@ -283,7 +295,7 @@ void array<T>::ensure_capacity(int num_elements)
 }
 
 template <typename T>
-void array<T>::set_count(int count)
+void cf_array<T>::set_count(int count)
 {
 	CUTE_ASSERT(count < m_capacity || !count);
 	if (m_count > count) {
@@ -301,7 +313,7 @@ void array<T>::set_count(int count)
 }
 
 template <typename T>
-void array<T>::ensure_count(int count)
+void cf_array<T>::ensure_count(int count)
 {
 	int old_count = m_count;
 	ensure_capacity(count);
@@ -315,18 +327,18 @@ void array<T>::ensure_count(int count)
 }
 
 template <typename T>
-void array<T>::steal_from(array<T>* steal_from_me)
+void cf_array<T>::steal_from(cf_array<T>* steal_from_me)
 {
-	this->~array<T>();
+	this->~cf_array<T>();
 	m_capacity = steal_from_me->m_capacity;
 	m_count = steal_from_me->m_count;
 	m_items = steal_from_me->m_items;
 	m_mem_ctx = steal_from_me->m_mem_ctx;
-	CUTE_PLACEMENT_NEW(steal_from_me) array<T>();
+	CUTE_PLACEMENT_NEW(steal_from_me) cf_array<T>();
 }
 
 template <typename T>
-void array<T>::reverse()
+void cf_array<T>::reverse()
 {
 	T* a = m_items;
 	T* b = m_items + (m_count - 1);
@@ -341,95 +353,95 @@ void array<T>::reverse()
 }
 
 template <typename T>
-void array<T>::steal_from(array<T>& steal_from_me)
+void cf_array<T>::steal_from(cf_array<T>& steal_from_me)
 {
 	steal_from(&steal_from_me);
 }
 
 template <typename T>
-int array<T>::capacity() const
+int cf_array<T>::capacity() const
 {
 	return m_capacity;
 }
 
 template <typename T>
-int array<T>::count() const
+int cf_array<T>::count() const
 {
 	return m_count;
 }
 
 template <typename T>
-int array<T>::size() const
+int cf_array<T>::size() const
 {
 	return m_count;
 }
 
 template <typename T>
-T* array<T>::begin()
+T* cf_array<T>::begin()
 {
 	return m_items;
 }
 
 template <typename T>
-const T* array<T>::begin() const
+const T* cf_array<T>::begin() const
 {
 	return m_items;
 }
 
 template <typename T>
-T* array<T>::end()
+T* cf_array<T>::end()
 {
 	return m_items + m_count;
 }
 
 template <typename T>
-const T* array<T>::end() const
+const T* cf_array<T>::end() const
 {
 	return m_items + m_count;
 }
 
 template <typename T>
-T& array<T>::operator[](int index)
+T& cf_array<T>::operator[](int index)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	return m_items[index];
 }
 
 template <typename T>
-const T& array<T>::operator[](int index) const
+const T& cf_array<T>::operator[](int index) const
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	return m_items[index];
 }
 
 template <typename T>
-T* array<T>::data()
+T* cf_array<T>::data()
 {
 	return m_items;
 }
 
 template <typename T>
-const T* array<T>::data() const
+const T* cf_array<T>::data() const
 {
 	return m_items;
 }
 
 template <typename T>
-T* array<T>::operator+(int index)
+T* cf_array<T>::operator+(int index)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	return m_items + index;
 }
 
 template <typename T>
-const T* array<T>::operator+(int index) const
+const T* cf_array<T>::operator+(int index) const
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
 	return m_items + index;
 }
 
 template <typename T>
-const array<T>& array<T>::operator=(const array<T>& rhs)
+const cf_array<T>& cf_array<T>::operator=(const cf_array<T>& rhs)
 {
 	set_count(0);
 	ensure_capacity((int)rhs.count());
@@ -440,24 +452,24 @@ const array<T>& array<T>::operator=(const array<T>& rhs)
 }
 
 template <typename T>
-const array<T>& array<T>::operator=(array<T>&& rhs)
+const cf_array<T>& cf_array<T>::operator=(cf_array<T>&& rhs)
 {
 	steal_from(rhs);
 	return *this;
 }
 
 template <typename T>
-T& array<T>::last()
+T& cf_array<T>::last()
 {
 	return (*this)[m_count - 1];
 }
 
 template <typename T>
-const T& array<T>::last() const
+const T& cf_array<T>::last() const
 {
 	return (*this)[m_count - 1];
 }
+#endif // CUTE_CPP
 
-}
 
 #endif // CUTE_ARRAY_H

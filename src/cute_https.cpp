@@ -64,9 +64,9 @@ struct https_decoder_t
 	bool found_last_chunk = false;
 	size_t buffer_offset = 0;
 	int response_code = 0;
-	array<char> buffer;
-	array<https_header_t> headers;
-	error_t err = error_success();
+	cf_array<char> buffer;
+	cf_array<https_header_t> headers;
+	cf_error_t err = error_success();
 
 	void next(https_process_line_fn* process_line)
 	{
@@ -105,8 +105,8 @@ struct https_t
 	const char* host = NULL;
 	const char* port = NULL;
 	https_state_t state = HTTPS_STATE_PENDING; // TODO - Atomic this.
-	array<char> request;
-	array<char> response_buffer;
+	cf_array<char> request;
+	cf_array<char> response_buffer;
 	https_response_t response;
 
 	bool request_sent = false;
@@ -154,7 +154,7 @@ static void s_tls_log(void* param, int debug_level, const char* file_name, int l
 	printf("%s\n", message);
 }
 
-static error_t s_load_platform_certs(https_t* https)
+static cf_error_t s_load_platform_certs(https_t* https)
 {
 #if defined(CUTE_WINDOWS)
 
@@ -221,7 +221,7 @@ static error_t s_load_platform_certs(https_t* https)
 	return error_success();
 }
 
-error_t https_connect(https_t* https, const char* host, const char* port, bool verify_cert)
+cf_error_t https_connect(https_t* https, const char* host, const char* port, bool verify_cert)
 {
 	int result;
 
@@ -281,10 +281,10 @@ void https_disconnect(https_t* https)
 	mbedtls_ssl_close_notify(&https->ssl);
 }
 
-https_t* https_get(const char* host, const char* port, const char* uri, error_t* err_out, bool verify_cert)
+https_t* https_get(const char* host, const char* port, const char* uri, cf_error_t* err_out, bool verify_cert)
 {
 	https_t* https = https_make();
-	error_t err = https_connect(https, host, port, verify_cert);
+	cf_error_t err = https_connect(https, host, port, verify_cert);
 	if (err.is_error()) {
 		https_destroy(https);
 		if (err_out) *err_out = err;
@@ -304,10 +304,10 @@ https_t* https_get(const char* host, const char* port, const char* uri, error_t*
 	return https;
 }
 
-https_t* https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, error_t* err_out, bool verify_cert)
+https_t* https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, cf_error_t* err_out, bool verify_cert)
 {
 	https_t* https = https_make();
-	error_t err = https_connect(https, host, port, verify_cert);
+	cf_error_t err = https_connect(https, host, port, verify_cert);
 	if (err.is_error()) {
 		https_destroy(https);
 		if (err_out) *err_out = err;
@@ -874,7 +874,7 @@ EM_JS(void, s_js_post, (void* https_ptr, const char* c_host, const char* c_uri, 
 	request.send(data_array);
 });
 
-https_t* https_get(const char* host, const char* port, const char* uri, error_t* err, bool verify_cert)
+https_t* https_get(const char* host, const char* port, const char* uri, cf_error_t* err, bool verify_cert)
 {
 	https_t* https = CUTE_NEW(https_t, NULL);
 	https->host = host;
@@ -884,7 +884,7 @@ https_t* https_get(const char* host, const char* port, const char* uri, error_t*
 	return https;
 }
 
-https_t* https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, error_t* err, bool verify_cert)
+https_t* https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, cf_error_t* err, bool verify_cert)
 {
 	https_t* https = CUTE_NEW(https_t, NULL);
 	https->host = host;

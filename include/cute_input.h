@@ -80,7 +80,7 @@ struct touch_t
 	float pressure;
 };
 
-CUTE_API array<touch_t> CUTE_CALL touch_get_all();
+CUTE_API cf_array<touch_t> CUTE_CALL touch_get_all();
 CUTE_API bool CUTE_CALL touch_get(uint64_t id, touch_t* touch);
 
 enum mouse_button_t : int

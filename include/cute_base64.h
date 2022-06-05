@@ -30,7 +30,7 @@ namespace cute
 #define CUTE_BASE64_ENCODED_SIZE(size) ((((size) + 2) / 3) * 4)
 #define CUTE_BASE64_DECODED_SIZE(size) ((((size) + 3) / 4) * 3)
 
-CUTE_API error_t CUTE_CALL base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size);
-CUTE_API error_t CUTE_CALL base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size);
+CUTE_API cf_error_t CUTE_CALL base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size);
+CUTE_API cf_error_t CUTE_CALL base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size);
 
 }

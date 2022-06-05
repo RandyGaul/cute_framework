@@ -41,14 +41,14 @@ namespace cute
 		COROUTINE_STATE_SUSPENDED,
 	};
 
-	CUTE_API error_t CUTE_CALL coroutine_resume(coroutine_t* co, float dt = 0);
-	CUTE_API float CUTE_CALL coroutine_yield(coroutine_t* co, error_t* err = NULL);
-	CUTE_API error_t CUTE_CALL coroutine_wait(coroutine_t* co, float seconds);
+	CUTE_API cf_error_t CUTE_CALL coroutine_resume(coroutine_t* co, float dt = 0);
+	CUTE_API float CUTE_CALL coroutine_yield(coroutine_t* co, cf_error_t* err = NULL);
+	CUTE_API cf_error_t CUTE_CALL coroutine_wait(coroutine_t* co, float seconds);
 	CUTE_API coroutine_state_t CUTE_CALL coroutine_state(coroutine_t* co);
 	CUTE_API void* CUTE_CALL coroutine_get_udata(coroutine_t* co);
 
-	CUTE_API error_t CUTE_CALL coroutine_push(coroutine_t* co, const void* data, size_t size);
-	CUTE_API error_t CUTE_CALL coroutine_pop(coroutine_t* co, void* data, size_t size);
+	CUTE_API cf_error_t CUTE_CALL coroutine_push(coroutine_t* co, const void* data, size_t size);
+	CUTE_API cf_error_t CUTE_CALL coroutine_pop(coroutine_t* co, void* data, size_t size);
 	CUTE_API size_t CUTE_CALL coroutine_bytes_pushed(coroutine_t* co);
 	CUTE_API size_t CUTE_CALL coroutine_space_remaining(coroutine_t* co);
 

@@ -27,9 +27,9 @@
 namespace cute
 {
 
-static CUTE_INLINE error_t wrap(cn_error_t cn_err)
+static CUTE_INLINE cf_error_t wrap(cn_error_t cn_err)
 {
-	error_t err;
+	cf_error_t err;
 	err.code = cn_err.code;
 	err.details = cn_err.details;
 	return err;
@@ -68,7 +68,7 @@ void crypto_sign_keygen(crypto_sign_public_t* public_key, crypto_sign_secret_t* 
 	cn_crypto_sign_keygen(public_key, secret_key);
 }
 
-error_t generate_connect_token(
+cf_error_t generate_connect_token(
 	uint64_t application_id,
 	uint64_t creation_timestamp,
 	const crypto_key_t* client_to_server_key,
@@ -114,7 +114,7 @@ void client_destroy(client_t* client)
 	cn_client_destroy(client);
 }
 
-error_t client_connect(client_t* client, const uint8_t* connect_token)
+cf_error_t client_connect(client_t* client, const uint8_t* connect_token)
 {
 	return wrap(cn_client_connect(client, connect_token));
 }
@@ -139,7 +139,7 @@ void client_free_packet(client_t* client, void* packet)
 	cn_client_free_packet(client, packet);
 }
 
-error_t client_send(client_t* client, const void* packet, int size, bool send_reliably)
+cf_error_t client_send(client_t* client, const void* packet, int size, bool send_reliably)
 {
 	return wrap(cn_client_send(client, packet, size, send_reliably));
 }
@@ -188,7 +188,7 @@ void server_destroy(server_t* server)
 	cn_server_destroy(server);
 }
 
-error_t server_start(server_t* server, const char* address_and_port)
+cf_error_t server_start(server_t* server, const char* address_and_port)
 {
 	return wrap(cn_server_start(server, address_and_port));
 }
