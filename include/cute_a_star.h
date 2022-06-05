@@ -34,14 +34,14 @@ struct cf_a_star_grid_t;
  * To specify a cost for each kind of cell, please see the `cell_to_cost` member of the
  * `cf_a_star_input_t` struct.
  */
-CUTE_API const cf_a_star_grid_t *CUTE_CALL cf_a_star_make_grid(int w, int h, const int *cells);
-CUTE_API void CUTE_CALL cf_a_star_destroy_grid(cf_a_star_grid_t *grid);
+CUTE_API const cf_a_star_grid_t* CUTE_CALL cf_a_star_make_grid(int w, int h, const int* cells);
+CUTE_API void CUTE_CALL cf_a_star_destroy_grid(cf_a_star_grid_t* grid);
 
 struct cf_a_star_input_t
 {
 	bool allow_diagonal_movement;
-	int start_x ;
-	int start_y ;
+	int start_x;
+	int start_y;
 	int end_x;
 	int end_y;
 
@@ -56,22 +56,18 @@ struct cf_a_star_input_t
 	 *
 	 *     float cost = cell_to_cost[cell[y * w + x]];
 	 */
-	const float *cell_to_cost;
+	const float* cell_to_cost;
 };
 
 CUTE_API cf_a_star_input_t CUTE_CALL cf_a_star_input_defaults();
 
 /**
  * Represents the shortest path between two points as an array of 2d vectors.
- * The vectors x and y can be sized before calling `a_star` to avoid dynamic allocations.
  */
 struct cf_a_star_output_t
 {
-	int *x;
-	int *y;
-	
-	int x_size;
-	int y_size;
+	const int* x;
+	const int* y;
 
 	int x_count;
 	int y_count;
@@ -87,8 +83,8 @@ struct cf_a_star_output_t
  * perform many different A* computations in a concurrent way, you need a different `grid`
  * pointer for each multithreaded call.
  */
-CUTE_API bool CUTE_CALL cf_a_star(const cf_a_star_grid_t* grid, const cf_a_star_input_t* input, cf_a_star_output_t* output /* = NULL */, void* user_allocator_context /* = NULL */);
-CUTE_API void CUTE_CALL cf_a_star_free_output(cf_a_star_output_t* output, void* user_allocator_context);
+CUTE_API bool CUTE_CALL cf_a_star(const cf_a_star_grid_t* grid, const cf_a_star_input_t* input, cf_a_star_output_t* output /* = NULL */);
+CUTE_API void CUTE_CALL cf_a_star_free_output(cf_a_star_output_t* output);
 
 
 #ifdef CUTE_CPP
@@ -99,7 +95,6 @@ namespace cute
 {
 
 using a_star_grid_t = cf_a_star_grid_t;
-//using a_star_input_t = cf_a_star_input_t;
 
 struct a_star_input_t
 {
@@ -129,7 +124,10 @@ struct a_star_input_t
 };
 
 
-
+/**
+ * Represents the shortest path between two points as an array of 2d vectors.
+ * The vectors x and y can be sized before calling `a_star` to avoid dynamic allocations.
+ */
 struct a_star_output_t
 {
 	cf_array<int> x;
@@ -137,9 +135,9 @@ struct a_star_output_t
 };
 
 
-CUTE_API const a_star_grid_t *CUTE_CALL a_star_make_grid(int w, int h, const int *cells);
-CUTE_API void CUTE_CALL a_star_destroy_grid(a_star_grid_t *grid);
-CUTE_API bool CUTE_CALL a_star(const a_star_grid_t *grid, const a_star_input_t *input, a_star_output_t *output = NULL);
+CUTE_API const a_star_grid_t* CUTE_CALL a_star_make_grid(int w, int h, const int* cells);
+CUTE_API void CUTE_CALL a_star_destroy_grid(a_star_grid_t* grid);
+CUTE_API bool CUTE_CALL a_star(const a_star_grid_t* grid, const a_star_input_t* input, a_star_output_t* output = NULL);
 
 }
 #endif // CUTE_CPP

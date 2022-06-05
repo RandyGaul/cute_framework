@@ -56,10 +56,10 @@ struct cf_triple_buffer_t
 	cf_buffer_t vbuf;
 	cf_buffer_t ibuf;
 
-#ifdef CUTE_CPP
+	#ifdef CUTE_CPP
 	CUTE_INLINE void advance();
 	CUTE_INLINE sg_bindings bind();
-#endif // CUTE_CPP
+	#endif // CUTE_CPP
 
 };
 

@@ -95,7 +95,7 @@ void cf_a_star_destroy_grid(cf_a_star_grid_t* grid)
 
 CUTE_API cf_a_star_input_t CUTE_CALL cf_a_star_input_defaults()
 {
-	cf_a_star_input_t input = { };
+	cf_a_star_input_t input = {};
 	input.allow_diagonal_movement = true;
 	return input;
 }
@@ -201,54 +201,30 @@ bool a_star(const a_star_grid_t* const_grid, const a_star_input_t* input, a_star
 }
 }
 
-bool cf_a_star(const cf_a_star_grid_t* const_grid, const cf_a_star_input_t* input, cf_a_star_output_t* output, void* user_allocator_context)
+bool cf_a_star(const cf_a_star_grid_t* const_grid, const cf_a_star_input_t* input, cf_a_star_output_t* output)
 {
-	cute::a_star_output_t temp_output = {};
+	bool result;
 
 	if (output) {
+		cute::a_star_output_t temp_output = {};
 
-		if (output->x) {
-			CUTE_ASSERT(output->x_size > 0);
-			CUTE_ASSERT(output->x_count <= output->x_size);
+		result = cute::a_star(const_grid, (cute::a_star_input_t*)input, &temp_output);
 
-			temp_output.x.m_items = output->x;
-			temp_output.x.m_capacity = output->x_size;
-			temp_output.x.m_count = output->x_count;
-		}
+		output->x = temp_output.x.data();
+		output->x_count = temp_output.x.count();
 
-		if (output->y) {
-			CUTE_ASSERT(output->y_size > 0);
-			CUTE_ASSERT(output->y_count <= output->y_size);
-
-			temp_output.y.m_items = output->y;
-			temp_output.y.m_capacity = output->y_size;
-			temp_output.y.m_count = output->y_count;
-		}
+		output->y = temp_output.y.data();
+		output->y_count = temp_output.y.count();
 	}
-
-	if (user_allocator_context) {
-		temp_output.x.m_mem_ctx = user_allocator_context;
-		temp_output.y.m_mem_ctx = user_allocator_context;
-	}
-
-	bool result = cute::a_star(const_grid, (cute::a_star_input_t *)input, &temp_output);
-
-	if (output) {
-		output->x = temp_output.x.m_items;
-		output->x_count = temp_output.x.m_count;
-		output->x_size = temp_output.x.m_capacity;
-
-		output->y = temp_output.y.m_items;
-		output->y_count = temp_output.y.m_count;
-		output->y_size = temp_output.y.m_capacity;
+	else {
+		result = cute::a_star(const_grid, (cute::a_star_input_t*)input, nullptr);
 	}
 
 	return result;
-
 }
 
-CUTE_API void CUTE_CALL cf_a_star_free_output(cf_a_star_output_t* output, void* user_allocator_context)
+CUTE_API void CUTE_CALL cf_a_star_free_output(cf_a_star_output_t* output)
 {
-	CUTE_FREE(output->x, user_allocator_context);
-	CUTE_FREE(output->y, user_allocator_context);
+	CUTE_FREE((void *)output->x, NULL);
+	CUTE_FREE((void *)output->y, NULL);
 }
