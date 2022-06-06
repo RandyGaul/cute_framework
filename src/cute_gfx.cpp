@@ -141,36 +141,3 @@ cf_error_t cf_triple_buffer_append(cf_triple_buffer_t* buffer, int vertex_count,
 	if (overflowed) return cf_error_failure("Overflowed one of the internal buffers -- sokol_gfx will silently drop he associated draw calls.");
 	return cf_error_success();
 }
-
-namespace cute
-{
-cf_texture_t texture_make(cf_pixel_t* pixels, int w, int h, sg_wrap mode, sg_filter filter)
-{
-	return cf_texture_make_ex(pixels, w, h, mode, filter);
-}
-
-void texture_destroy(cf_texture_t texture)
-{
-	cf_texture_destroy(texture);
-}
-
-cf_matrix_t matrix_identity()
-{
-	return cf_matrix_identity();
-}
-
-cf_matrix_t matrix_ortho_2d(float w, float h, float x, float y)
-{
-	return cf_matrix_ortho_2d(w, h, x, y);
-}
-
-cf_triple_buffer_t triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count, int index_stride)
-{
-	return cf_triple_buffer_make(vertex_data_size, vertex_stride, index_count, index_stride);
-}
-
-cf_error_t triple_buffer_append(cf_triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count, const void* indices)
-{
-	return cf_triple_buffer_append(buffer, vertex_count, vertices, index_count, indices);
-}
-}
