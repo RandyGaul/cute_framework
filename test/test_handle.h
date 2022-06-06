@@ -28,8 +28,8 @@ int test_handle_basic()
 	cf_handle_allocator_t* table = cf_handle_allocator_make(1024, NULL);
 	CUTE_TEST_CHECK_POINTER(table);
 
-	cf_handle_t h0 = cf_handle_allocator_alloc(table, 7);
-	cf_handle_t h1 = cf_handle_allocator_alloc(table, 13);
+	cf_handle_t h0 = cf_handle_allocator_alloc(table, 7, 0);
+	cf_handle_t h1 = cf_handle_allocator_alloc(table, 13, 0);
 	CUTE_TEST_ASSERT(h0 != CUTE_INVALID_HANDLE);
 	CUTE_TEST_ASSERT(h1 != CUTE_INVALID_HANDLE);
 	uint32_t index0 = cf_handle_allocator_get_index(table, h0);
@@ -40,8 +40,8 @@ int test_handle_basic()
 	cf_handle_allocator_free(table, h0);
 	cf_handle_allocator_free(table, h1);
 
-	h0 = cf_handle_allocator_alloc(table, 4);
-	h1 = cf_handle_allocator_alloc(table, 267);
+	h0 = cf_handle_allocator_alloc(table, 4, 0);
+	h1 = cf_handle_allocator_alloc(table, 267, 0);
 	CUTE_TEST_ASSERT(h0 != CUTE_INVALID_HANDLE);
 	CUTE_TEST_ASSERT(h1 != CUTE_INVALID_HANDLE);
 	index0 = cf_handle_allocator_get_index(table, h0);
@@ -66,7 +66,7 @@ int test_handle_large_loop()
 
 	for (int i = 0; i < 1024; ++i)
 	{
-		cf_handle_t h = cf_handle_allocator_alloc(table, i);
+		cf_handle_t h = cf_handle_allocator_alloc(table, i, 0);
 		CUTE_TEST_ASSERT(h != CUTE_INVALID_HANDLE);
 		CUTE_ASSERT(cf_handle_allocator_get_index(table, h) == (uint32_t)i);
 	}
@@ -87,7 +87,7 @@ int test_handle_large_loop_and_free()
 	{
 		for (int i = 0; i < 1024; ++i)
 		{
-			cf_handle_t h = cf_handle_allocator_alloc(table, i);
+			cf_handle_t h = cf_handle_allocator_alloc(table, i, 0);
 			CUTE_TEST_ASSERT(h != CUTE_INVALID_HANDLE);
 			CUTE_ASSERT(cf_handle_allocator_get_index(table, h) == (uint32_t)i);
 			handles[i] = h;
@@ -114,12 +114,12 @@ int test_handle_alloc_too_many()
 
 	for (int i = 0; i < 1024; ++i)
 	{
-		cf_handle_t h = cf_handle_allocator_alloc(table, i);
+		cf_handle_t h = cf_handle_allocator_alloc(table, i, 0);
 		CUTE_TEST_ASSERT(h != CUTE_INVALID_HANDLE);
 		CUTE_ASSERT(cf_handle_allocator_get_index(table, h) == (uint32_t)i);
 	}
 
-	cf_handle_t h = cf_handle_allocator_alloc(table, 0);
+	cf_handle_t h = cf_handle_allocator_alloc(table, 0, 0);
 	CUTE_TEST_ASSERT(h != CUTE_INVALID_HANDLE);
 
 	cf_handle_allocator_destroy(table);
