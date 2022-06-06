@@ -28,9 +28,6 @@
 
 #include <SDL.h>
 
-namespace cute
-{
-
 enum cf_mouse_click_t// : int
 {
 	CF_MOUSE_CLICK_SINGLE,
@@ -52,6 +49,13 @@ struct cf_joypad_t
 
 void cf_pump_input_msgs();
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_INPUT_INTERNAL_H

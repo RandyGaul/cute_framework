@@ -28,9 +28,6 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-namespace cute
-{
-
 struct cf_kv_string_t
 {
 	uint8_t* str = NULL;
@@ -1282,6 +1279,4 @@ cf_error_t cf_kv_array_end(cf_kv_t* kv)
 void cf_kv_print(cf_kv_t* kv)
 {
 	printf("\n\n%.*s", (int)(kv->in - kv->start), kv->start);
-}
-
 }

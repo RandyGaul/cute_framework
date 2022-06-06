@@ -30,9 +30,6 @@
 #include <cute_error.h>
 #include <cute_array.h>
 
-namespace cute
-{
-
 template <typename T>
 struct cf_object_table_t
 {
@@ -140,7 +137,11 @@ int cf_object_table_t<T>::get_object_count() const
 	return m_objects.count();
 }
 
+namespace cute
+{
+template<typename T> using object_table_t = cf_object_table_t<T>;
 }
+
 
 #endif // CUTE_CPP
 

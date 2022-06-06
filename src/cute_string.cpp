@@ -25,8 +25,6 @@
 
 #include <internal/cute_app_internal.h>
 
-namespace cute
-{
 
 //--------------------------------------------------------------------------------------------------
 // Global `string` pool instance.
@@ -178,6 +176,4 @@ void cf_string_defrag_static_pool()
 void cf_string_nuke_static_pool()
 {
 	cf_s_pool(1);
-}
-
 }

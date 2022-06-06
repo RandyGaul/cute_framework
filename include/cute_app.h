@@ -28,8 +28,7 @@
 struct ImGuiContext;
 struct sg_imgui_t;
 
-namespace cute
-{
+
 
 struct cf_strpool_t;
 
@@ -80,6 +79,13 @@ CUTE_API cf_power_info_t CUTE_CALL cf_app_power_info();
 // TODO - Where to put this?
 CUTE_API void CUTE_CALL cf_sleep(int milliseconds);
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_APP_H

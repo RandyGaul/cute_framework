@@ -26,9 +26,6 @@
 #include <internal/cute_app_internal.h>
 #include <internal/cute_png_cache_internal.h>
 
-namespace cute
-{
-
 static cf_aseprite_cache_t* cf_s_ase_cache()
 {
 	if (!cf_app->ase_batch) {
@@ -122,4 +119,3 @@ cf_batch_t* cf_sprite_get_batch()
 	return cf_app->ase_batch;
 }
 
-}

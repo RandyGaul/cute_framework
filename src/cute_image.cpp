@@ -28,9 +28,6 @@
 
 // TODO -- Hookup allocator context to cute_png.h
 
-namespace cute
-{
-
 CUTE_STATIC_ASSERT(sizeof(cf_pixel_t) == sizeof(cp_pixel_t), "Must be equal.");
 CUTE_STATIC_ASSERT(sizeof(cf_image_t) == sizeof(cp_image_t), "Must be equal.");
 CUTE_STATIC_ASSERT(sizeof(cf_image_indexed_t) == sizeof(cp_indexed_image_t), "Must be equal.");
@@ -114,4 +111,3 @@ void cf_image_flip_horizontal(cf_image_t* img)
 	cp_flip_image_horizontal((cp_image_t*)img);
 }
 
-}

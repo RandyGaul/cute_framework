@@ -27,8 +27,6 @@
 
 #include "cute/cute_sync.h"
 
-namespace cute
-{
 
 using cf_mutex_t       = cute_mutex_t;
 using cf_cv_t          = cute_cv_t;
@@ -104,6 +102,13 @@ struct cf_promise_t
 	void* promise_udata = NULL;
 };
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_CONCURRENCY_H

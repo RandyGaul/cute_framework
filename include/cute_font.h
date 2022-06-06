@@ -29,9 +29,6 @@
 
 struct cf_matrix_t;
 
-namespace cute
-{
-
 struct cf_font_t;
 
 CUTE_API cf_font_t* CUTE_CALL cf_font_load_bmfont(const char* font_path, const char* font_image_path);
@@ -62,6 +59,13 @@ CUTE_API cf_font_vert_buffer_t* CUTE_CALL cf_font_vert_buffer_make(const cf_font
 CUTE_API cf_error_t CUTE_CALL cf_font_push_verts(cf_font_vert_buffer_t* verts, const cf_font_t* font, const char* text, float x, float y, float wrap_w, const cf_aabb_t* clip_box = NULL);
 CUTE_API void CUTE_CALL cf_font_draw(cf_font_vert_buffer_t* verts, cf_color_t color = cf_color_black());
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_FRAMEWORK_FONT_H

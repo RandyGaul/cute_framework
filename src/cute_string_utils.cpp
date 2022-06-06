@@ -26,9 +26,6 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-namespace cute
-{
-
 static size_t cf_s_temp_str_size;
 static char* cf_s_temp_str;
 
@@ -198,4 +195,3 @@ cf_array<char> cf_to_array(const char* s, size_t sz)
 	return result;
 }
 
-}

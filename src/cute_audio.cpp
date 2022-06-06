@@ -43,9 +43,6 @@
 
 //#include <cute_debug_printf.h>
 
-namespace cute
-{
-
 struct cf_audio_t : public cs_loaded_sound_t
 {
 	cf_audio_t() { }
@@ -954,8 +951,6 @@ void cf_audio_system_update(cf_audio_system_t* as, float dt)
 int cf_sound_instance_size()
 {
 	return sizeof(cs_sound_t);
-}
-
 }
 
 #undef STB_VORBIS_HEADER_ONLY

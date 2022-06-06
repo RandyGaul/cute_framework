@@ -30,11 +30,8 @@
 #include "cute_c_runtime.h"
 #include "cute_error.h"
 
-namespace cute
-{
-
 /**
- * `dictionary` implements a thin type wrapper with templates over a C-style hashtable implementation.
+ * `cf_dictionary` implements a thin type wrapper with templates over a C-style hashtable implementation.
  * Internally no contructors or destructors are ever called, meaning all data stored is considered POD.
  *
  * There is a specialization in the latter portion for const char* keys -- strings are stored in-place
@@ -444,6 +441,9 @@ void cf_dictionary<const char*, T>::swap(int index_a, int index_b)
 	cf_hashtable_swap(&m_table, index_a, index_b);
 }
 
+namespace cute
+{
+template <typename K, typename T> using dictionary = cf_dictionary<K, T>;
 }
 
 #endif // CUTE_CPP

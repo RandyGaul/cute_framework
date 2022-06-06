@@ -31,9 +31,6 @@
 
 #define CUTE_FILE_SYSTEM_BUFFERED_IO_SIZE (2 * CUTE_MB)
 
-namespace cute
-{
-
 const char* cf_file_system_get_base_dir()
 {
 	return PHYSFS_getBaseDir();
@@ -313,4 +310,3 @@ void cf_file_system_destroy()
 	PHYSFS_deinit();
 }
 
-}

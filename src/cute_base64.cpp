@@ -24,9 +24,6 @@
 
 // Implementation referenced from: https://tools.ietf.org/html/rfc4648
 
-namespace cute
-{
-
 // From: https://tools.ietf.org/html/rfc4648#section-3.2
 static const uint8_t cf_s_6bits_to_base64[64] = {
 	'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
@@ -199,6 +196,4 @@ cf_error_t cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t 
 	CUTE_ASSERT((int)(out + pads - (uint8_t*)dst) == CUTE_BASE64_DECODED_SIZE(src_size));
 
 	return cf_error_success();
-}
-
 }

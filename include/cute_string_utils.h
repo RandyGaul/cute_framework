@@ -27,9 +27,6 @@
 
 #include <stdarg.h>
 
-namespace cute
-{
-
 CUTE_API cf_string_t operator+(const cf_string_t& a, const cf_string_t& b);
 
 CUTE_API int cf_to_int(const cf_string_t& x);
@@ -49,6 +46,13 @@ CUTE_API cf_array<char> cf_to_array(const char* s, size_t sz);
 
 CUTE_API void cf_string_utils_cleanup_static_memory();
 
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_STRING_UTIL_H

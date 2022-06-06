@@ -33,9 +33,6 @@
 
 #define INJECT(s) cf_strpool_inject(cache->strpool, s, (int)CUTE_STRLEN(s))
 
-namespace cute
-{
-
 struct aseprite_cache_entry_t
 {
 	cf_strpool_id path;
@@ -278,6 +275,4 @@ cf_get_pixels_fn* cf_aseprite_cache_get_pixels_fn(cf_aseprite_cache_t* cache)
 cf_strpool_t* cf_aseprite_cache_get_strpool_ptr(cf_aseprite_cache_t* cache)
 {
 	return cache->strpool;
-}
-
 }

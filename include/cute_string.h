@@ -34,9 +34,6 @@
 	between threads.
 */
 
-namespace cute
-{
-
 struct cf_string_t
 {
 	CUTE_API cf_string_t();
@@ -66,6 +63,13 @@ struct cf_string_t
 CUTE_API void cf_string_defrag_static_pool();
 CUTE_API void cf_string_nuke_static_pool();
 
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_STRING_H

@@ -30,9 +30,6 @@
 
 #include <SDL.h>
 
-namespace cute
-{
-
 // TODO - Lock on joypad list? Race condition with pumping input messages.
 
 void cf_joypad_system_init()
@@ -132,6 +129,4 @@ bool cf_joypad_button_was_released(cf_joypad_t* joypad, cf_joypad_button_t butto
 int16_t cf_joypad_axis(cf_joypad_t* joypad, cf_joypad_axis_t axis)
 {
 	return joypad->axes[axis];
-}
-
 }

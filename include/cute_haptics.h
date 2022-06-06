@@ -24,8 +24,6 @@
 
 #include "cute_defines.h"
 
-namespace cute
-{
 /**
  * Haptics is for rumbling or vibrating devices or controllers.
  *
@@ -250,7 +248,14 @@ CUTE_INLINE bool cf_haptic_effect_t::is_valid() { return cf_haptic_effect_is_val
 #endif // CUTE_CPP
 
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 
 

@@ -28,9 +28,6 @@
 
 #include "cute/cute_aseprite.h"
 
-namespace cute
-{
-
 /**
  * The aseprite cache is used to load ase files from disk in order to make sprites.
  * 
@@ -92,6 +89,13 @@ CUTE_API cf_get_pixels_fn* CUTE_CALL cf_aseprite_cache_get_pixels_fn(cf_aseprite
  */
 CUTE_API cf_strpool_t* CUTE_CALL cf_aseprite_cache_get_strpool_ptr(cf_aseprite_cache_t* cache);
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_ASEPRITE_CACHE_H

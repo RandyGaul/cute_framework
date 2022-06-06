@@ -25,9 +25,6 @@
 #include <cute_defines.h>
 #include <cute_networking.h>
 
-namespace cute
-{
-
 CUTE_INLINE void cf_write_uint8(uint8_t** p, uint8_t value)
 {
 	**p = value;
@@ -219,6 +216,13 @@ CUTE_INLINE void cf_read_fourcc(uint8_t** p, uint8_t* fourcc)
 	fourcc[3] = cf_read_uint8(p);
 }
 
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_SERIALIZE_INTERNAL_H

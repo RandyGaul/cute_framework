@@ -25,9 +25,6 @@
 #include "cute_defines.h"
 #include "cute_concurrency.h"
 
-namespace cute
-{
-
 struct cf_circular_buffer_t
 {
 	int index0 = 0;
@@ -48,6 +45,14 @@ CUTE_API int CUTE_CALL cf_circular_buffer_pull(cf_circular_buffer_t* buffer, voi
 
 CUTE_API int CUTE_CALL cf_circular_buffer_grow(cf_circular_buffer_t* buffer, int new_size_in_bytes);
 
+
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_CIRCULAR_BUFFER_H

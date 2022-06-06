@@ -27,9 +27,6 @@
 #include "cute_dictionary.h"
 #include "cute_batch.h"
 
-namespace cute
-{
-
 /**
  * Represents one frame of animation within a sprite.
  */
@@ -376,6 +373,13 @@ bool cf_sprite_t::on_loop()
 	}
 }
 
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_SPRITE_H

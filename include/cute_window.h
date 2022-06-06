@@ -24,9 +24,6 @@
 
 #include "cute_defines.h"
 
-namespace cute
-{
-
 CUTE_API void CUTE_CALL cf_window_size(int* w, int* h);
 CUTE_API void CUTE_CALL cf_window_position(int* x, int* y);
 
@@ -56,6 +53,13 @@ enum cf_window_message_box_type_t
 
 CUTE_API void CUTE_CALL cf_window_message_box(cf_window_message_box_type_t type, const char* title, const char* text);
 
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_APP_WINDOW_H

@@ -23,9 +23,6 @@
 #include <cute_alloc.h>
 #include <cute_c_runtime.h>
 
-namespace cute
-{
-
 cf_typeless_array::cf_typeless_array()
 {
 }
@@ -214,6 +211,4 @@ void* cf_typeless_array::data()
 const void* cf_typeless_array::data() const
 {
 	return m_items;
-}
-
 }

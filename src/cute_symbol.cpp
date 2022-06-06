@@ -23,9 +23,6 @@
 
 #include <SDL.h>
 
-namespace cute
-{
-
 cf_shared_library_t* cf_load_shared_library(const char* path)
 {
 	return SDL_LoadObject(path);
@@ -39,6 +36,4 @@ void cf_unload_shared_library(cf_shared_library_t* library)
 void* cf_load_function(cf_shared_library_t* library, const char* function_name)
 {
 	return SDL_LoadFunction(library, function_name);
-}
-
 }

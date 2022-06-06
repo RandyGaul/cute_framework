@@ -30,9 +30,6 @@
 #endif
 #include <mattiasgustavsson/strpool.h>
 
-namespace cute
-{
-
 struct cf_strpool_t
 {
 	strpool_t inst;
@@ -103,6 +100,4 @@ const char* cf_strpool_cstr(const cf_strpool_t* pool, cf_strpool_id id)
 size_t cf_strpool_length(const cf_strpool_t* pool, cf_strpool_id id)
 {
 	return (size_t)strpool_length(&pool->inst, id.val);
-}
-
 }

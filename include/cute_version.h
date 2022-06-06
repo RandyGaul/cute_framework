@@ -26,11 +26,15 @@
 
 #define CUTE_VERSION_STRING_COMPILED "Cute Framework Version 0.0"
 
+CUTE_API const char* CUTE_CALL cf_version_string_linked();
+
+#ifdef  CUTE_CPP
+
 namespace cute
 {
 
-CUTE_API const char* CUTE_CALL cf_version_string_linked();
-
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_VERSION_H

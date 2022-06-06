@@ -23,9 +23,6 @@
 
 #include <SDL.h>
 
-namespace cute
-{
-
 float cf_calc_dt()
 {
 	static int first = 1;
@@ -66,6 +63,4 @@ float cf_timer_elapsed(cf_timer_t* timer)
 	uint64_t now = SDL_GetPerformanceCounter();
 	float elapsed = (float)((double)(now - timer->prev) * timer->inv_freq);
 	return elapsed;
-}
-
 }

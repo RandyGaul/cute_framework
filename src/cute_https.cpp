@@ -43,8 +43,6 @@
 #	include <Security/Security.h>
 #endif
 
-namespace cute
-{
 #ifndef CUTE_EMSCRIPTEN
 
 struct cf_https_decoder_t;
@@ -932,5 +930,3 @@ const cf_https_response_t* cf_https_response(cf_https_t* https)
 }
 
 #endif // CUTE_EMSCRIPTEN
-
-}

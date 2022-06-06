@@ -36,9 +36,6 @@
 
 #include <shaders/font_shader.h>
 
-namespace cute
-{
-
 #include <data/fonts/courier_new_fnt.h>
 #include <data/fonts/courier_new_0_png.h>
 
@@ -253,4 +250,3 @@ void cf_font_init()
 	cf_app->font_fs_uniforms.u_use_corners = false;
 }
 
-}

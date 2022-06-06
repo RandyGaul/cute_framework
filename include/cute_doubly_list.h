@@ -24,9 +24,6 @@
 
 #include "cute_defines.h"
 
-namespace cute
-{
-
 struct cf_list_node_t
 {
 	cf_list_node_t* next = this;
@@ -114,6 +111,13 @@ CUTE_INLINE cf_list_node_t* cf_list_back(cf_list_t* list)
 	return list->nodes.prev;
 }
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_DOUBLY_LINKED_LIST_H

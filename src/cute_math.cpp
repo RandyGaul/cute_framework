@@ -26,9 +26,6 @@
 
 CUTE_STATIC_ASSERT(CUTE_POLY_MAX_VERTS == C2_MAX_POLYGON_VERTS, "Must be equal.");
 
-namespace cute
-{
-
 CUTE_STATIC_ASSERT(sizeof(cf_v2) == sizeof(c2v), "Must be equal.");
 CUTE_STATIC_ASSERT(sizeof(cf_sincos_t) == sizeof(c2r), "Must be equal.");
 CUTE_STATIC_ASSERT(sizeof(cf_transform_t) == sizeof(c2x), "Must be equal.");
@@ -230,6 +227,4 @@ void cf_collide(const void* A, const cf_transform_t* ax, cf_shape_type_t typeA, 
 bool cf_cast_ray(cf_ray_t A, const void* B, const cf_transform_t* bx, cf_shape_type_t typeB, cf_raycast_t* out)
 {
 	return c2CastRay(*(c2Ray*)&A, B, (c2x*)bx, (C2_TYPE)typeB, (c2Raycast*)out);
-}
-
 }

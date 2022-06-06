@@ -23,9 +23,6 @@
 #include <cute_c_runtime.h>
 #include <cute_alloc.h>
 
-namespace cute
-{
-
 static CUTE_INLINE int cf_s_is_prime(int x)
 {
 	if ((x == 2) | (x == 3)) return 1;
@@ -324,4 +321,3 @@ void cf_hashtable_swap(cf_hashtable_t* table, int index_a, int index_b)
 	table->slots[slot_b].item_index = index_a;
 }
 
-}

@@ -25,11 +25,16 @@
 #include <cute_kv.h>
 #include <cute_ecs.h>
 
-namespace cute
-{
 
 CUTE_API cf_error_t CUTE_CALL cf_kv_val_entity(cf_kv_t* kv, cf_entity_t* entity);
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_ECS_INTERNAL_H

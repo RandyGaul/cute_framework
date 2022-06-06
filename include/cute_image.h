@@ -26,9 +26,6 @@
 #include "cute_error.h"
 #include "cute_gfx.h"
 
-namespace cute
-{
-
 struct cf_image_t
 {
 	int w;
@@ -64,6 +61,13 @@ CUTE_API cf_image_t CUTE_CALL cf_image_depallete(cf_image_indexed_t* img);
 CUTE_API void CUTE_CALL cf_image_premultiply(cf_image_t* img);
 CUTE_API void CUTE_CALL cf_image_flip_horizontal(cf_image_t* img);
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_IMAGE_H

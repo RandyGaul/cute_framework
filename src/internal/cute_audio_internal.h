@@ -22,9 +22,6 @@
 #ifndef CUTE_AUDIO_INTERNAL_H
 #define CUTE_AUDIO_INTERNAL_H
 
-namespace cute
-{
-
 struct cf_audio_system_t;
 
 cf_audio_system_t* cf_audio_system_make(int pool_count, void* mem_ctx = NULL);
@@ -33,6 +30,13 @@ void cf_audio_system_update(cf_audio_system_t* audio_system, float dt);
 
 int cf_sound_instance_size();
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_AUDIO_INTERNAL_H

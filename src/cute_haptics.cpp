@@ -26,8 +26,6 @@
 
 #include <SDL.h>
 
-namespace cute
-{
 struct cf_haptic_t
 {
 	SDL_Haptic* ptr = NULL;
@@ -207,6 +205,4 @@ void cf_haptic_rumble_play(cf_haptic_t* haptic, float strength, int duration_mil
 void cf_haptic_rumble_stop(cf_haptic_t* haptic)
 {
 	SDL_HapticRumbleStop(haptic->ptr);
-}
-
 }

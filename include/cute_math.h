@@ -527,4 +527,13 @@ CUTE_API int CUTE_CALL cf_collided(const void* A, const cf_transform_t* ax, cf_s
 CUTE_API void CUTE_CALL cf_collide(const void* A, const cf_transform_t* ax, cf_shape_type_t typeA, const void* B, const cf_transform_t* bx, cf_shape_type_t typeB, cf_manifold_t* m);
 CUTE_API bool CUTE_CALL cf_cast_ray(cf_ray_t A, const void* B, const cf_transform_t* bx, cf_shape_type_t typeB, cf_raycast_t* out);
 
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
+}
+
+#endif //  CUTE_CPP
+
 #endif // CUTE_MATH_H

@@ -24,9 +24,6 @@
 #define CUTE_NET_IMPLEMENTATION
 #include <cute/cute_net.h>
 
-namespace cute
-{
-
 static CUTE_INLINE cf_error_t cf_wrap(cn_error_t cn_err)
 {
 	cf_error_t err;
@@ -243,6 +240,4 @@ bool cf_server_is_client_connected(cf_server_t* server, int client_index)
 void cf_server_enable_network_simulator(cf_server_t* server, double latency, double jitter, double drop_chance, double duplicate_chance)
 {
 	cn_server_enable_network_simulator(server, latency, jitter, drop_chance, duplicate_chance);
-}
-
 }

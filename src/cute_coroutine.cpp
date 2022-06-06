@@ -27,9 +27,6 @@
 #define MINICORO_IMPL
 #include <edubart/minicoro.h>
 
-namespace cute
-{
-
 struct cf_coroutine_t
 {
 	float dt = 0;
@@ -165,6 +162,4 @@ cf_coroutine_t* cf_coroutine_currently_running()
 	mco_coro* mco = mco_running();
 	cf_coroutine_t* co = (cf_coroutine_t*)mco_get_user_data(mco);
 	return co;
-}
-
 }

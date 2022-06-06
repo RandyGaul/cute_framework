@@ -32,9 +32,6 @@
 #define AABB_TREE_NULL_NODE_INDEX -1
 #define AABB_TREE_MOVE_CONSTANT 4.0f
 
-namespace cute
-{
-
 struct cf_aabb_tree_node_t
 {
 	int index_a;
@@ -899,6 +896,4 @@ bool cf_aabb_tree_serialize(const cf_aabb_tree_t* tree, void* buffer, size_t siz
 	}
 
 	return true;
-}
-
 }

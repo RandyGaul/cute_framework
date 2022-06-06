@@ -50,9 +50,6 @@ struct cf_quad_udata_t
 
 #define DEBUG_VERT(v, c) batch_quad(batch, make_aabb(v, 3, 3), c)
 
-namespace cute
-{
-
 struct cf_quad_vertex_t
 {
 	cf_v2 pos;
@@ -1206,6 +1203,4 @@ cf_temporary_image_t cf_batch_fetch(cf_batch_t* b, cf_batch_sprite_t sprite)
 	image.u = cf_v2(s.minx, s.miny);
 	image.v = cf_v2(s.maxx, s.maxy);
 	return image;
-}
-
 }

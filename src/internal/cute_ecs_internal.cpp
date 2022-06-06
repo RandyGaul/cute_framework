@@ -22,9 +22,6 @@
 #include <internal/cute_ecs_internal.h>
 #include <internal/cute_app_internal.h>
 
-namespace cute
-{
-
 cf_error_t cf_kv_val_entity(cf_kv_t* kv, cf_entity_t* entity)
 {
 	cf_kv_state_t state = cf_kv_get_state(kv);
@@ -41,6 +38,4 @@ cf_error_t cf_kv_val_entity(cf_kv_t* kv, cf_entity_t* entity)
 		CUTE_ASSERT(index_ptr);
 		return cf_kv_val(kv, index_ptr);
 	}
-}
-
 }

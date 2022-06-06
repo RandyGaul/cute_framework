@@ -24,9 +24,6 @@
 
 #include "cute_defines.h"
 
-namespace cute
-{
-
 /**
  * Memory pool is useful mainly as an optimization for one of two purposes.
  * 
@@ -69,6 +66,13 @@ CUTE_API void* CUTE_CALL cf_memory_pool_try_alloc(cf_memory_pool_t* pool);
  */
 CUTE_API void CUTE_CALL cf_memory_pool_free(cf_memory_pool_t* pool, void* element);
 
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_MEMORY_POOL_H

@@ -24,7 +24,7 @@
 CUTE_TEST_CASE(test_lru_cache, "Use all methods on lru cache and assert correctness.");
 int test_lru_cache()
 {
-	lru_cache<int, int> cache(3, NULL);
+	cf_lru_cache<int, int> cache(3, NULL);
 
 	*cache.insert(1) = 1;
 	*cache.insert(2) = 2;

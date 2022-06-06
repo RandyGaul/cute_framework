@@ -24,9 +24,6 @@
 #define CUTE_UTF_IMPLEMENTATION
 #include <cute/cute_utf.h>
 
-namespace cute
-{
-
 const char* cf_decode8(const char* text, int* cp)
 {
 	return cu_decode8(text, cp);
@@ -95,6 +92,4 @@ void cf_shorten(const wchar_t* in, char* out, int out_len)
 void cf_shorten(const wchar_t* in, int in_len, char* out, int out_len)
 {
 	cu_shorten(in, in_len, out, out_len);
-}
-
 }

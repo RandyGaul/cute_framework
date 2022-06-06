@@ -24,9 +24,6 @@
 
 #include "cute_defines.h"
 
-namespace cute
-{
-
 /**
  * Calculates the time, in seconds, since the last time this function was called.
  * No special care is taken to handle multi-threading (this function uses static memory).
@@ -58,6 +55,13 @@ CUTE_API float CUTE_CALL cf_timer_dt(cf_timer_t* timer);
  */
 CUTE_API float CUTE_CALL cf_timer_elapsed(cf_timer_t* timer);
 
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_TIMER_H

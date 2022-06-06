@@ -41,4 +41,13 @@ inline void* operator new(size_t, cf_dummy_enum_t, void* ptr) { return ptr; }
 #define CUTE_PLACEMENT_NEW(ptr) new(CF_DUMMY_ENUM, ptr)
 #define CUTE_NEW(T, user_ctx) new(CF_DUMMY_ENUM, CUTE_ALLOC(sizeof(T), user_ctx)) T
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
+}
+
+#endif // CUTE_CPP
+
 #endif // CUTE_ALLOC_H

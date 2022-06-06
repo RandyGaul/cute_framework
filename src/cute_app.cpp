@@ -64,9 +64,6 @@
 
 #include <shaders/upscale_shader.h>
 
-namespace cute
-{
-
 cf_app_t* cf_app;
 
 // TODO: Refactor to use cf_error_t reporting.
@@ -140,7 +137,7 @@ cf_error_t cf_app_make(const char* window_title, int x, int y, int w, int h, uin
 	app->y = y;
 	app->offscreen_w = w;
 	app->offscreen_h = h;
-	cute::cf_app = app;
+	cf_app = app;
 
 #ifdef CUTE_WINDOWS
 	SDL_SysWMinfo wmInfo;
@@ -501,6 +498,4 @@ cf_power_info_t cf_app_power_info()
 void cf_sleep(int milliseconds)
 {
 	SDL_Delay((Uint32)milliseconds);
-}
-
 }

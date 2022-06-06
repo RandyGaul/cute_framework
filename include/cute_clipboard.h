@@ -25,12 +25,17 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
-namespace cute
-{
 
 CUTE_API char* CUTE_CALL cf_clipboard_get();
 CUTE_API cf_error_t CUTE_CALL cf_clipboard_set(const char* string);
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_CLIPBOARD_H

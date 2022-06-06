@@ -24,9 +24,6 @@
 #include <internal/cute_app_internal.h>
 #include <SDL.h>
 
-namespace cute
-{
-
 void cf_window_size(int* w, int* h)
 {
 	if (w) *w = cf_app->w;
@@ -120,4 +117,3 @@ void cf_window_message_box(cf_window_message_box_type_t type, const char* title,
 	SDL_ShowSimpleMessageBox(cf_s_message_box_flags(type), title, text, cf_app->window);
 }
 
-}

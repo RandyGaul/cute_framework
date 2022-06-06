@@ -30,8 +30,6 @@
 
 #include <SDL.h>
 
-namespace cute
-{
 static int cf_s_map_SDL_keys(int key)
 {
 	if (key < 127) return key;
@@ -683,6 +681,4 @@ void cf_pump_input_msgs()
 	else cf_app->key_mod &= ~CUTE_KEY_MOD_RALT;
 	if (cf_key_is_down(CF_KEY_RALT)) cf_app->key_mod |= CUTE_KEY_MOD_RALT;
 	else cf_app->key_mod &= ~CUTE_KEY_MOD_RALT;
-}
-
 }

@@ -29,9 +29,6 @@
 
 // TODO - Customizeability of the shader.
 
-namespace cute
-{
-
 /**
  * Represents a single image rendered as a quad.
  */
@@ -160,6 +157,14 @@ struct cf_temporary_image_t
 
 CUTE_API cf_temporary_image_t CUTE_CALL cf_batch_fetch(cf_batch_t* b, cf_batch_sprite_t sprite);
 
+
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_BATCH_H

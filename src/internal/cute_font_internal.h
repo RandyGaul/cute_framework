@@ -29,13 +29,21 @@
 
 #include <shaders/font_shader.h>
 
-namespace cute
-{
 
-using cf_font_vertex_t = cute_font_vert_t;
+typedef cute_font_vert_t cf_font_vertex_t;
 
 void cf_font_init();
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+using font_vertex_t = cute_font_vert_t;
+
+CUTE_INLINE void font_init() { cf_font_init(); }
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_FONT_INTERNAL_H

@@ -34,9 +34,6 @@
 #define CUTE_THREAD_FREE CUTE_FREE
 #include <cute/cute_sync.h>
 
-namespace cute
-{
-
 cf_mutex_t cf_mutex_create()
 {
 	return cute_mutex_create();
@@ -247,6 +244,4 @@ void cf_threadpool_kick(cf_cf_threadpool_t* pool)
 void cf_threadpool_destroy(cf_cf_threadpool_t* pool)
 {
 	cute_threadpool_destroy(pool);
-}
-
 }

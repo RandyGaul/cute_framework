@@ -19,13 +19,13 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifndef CUTE_HTTPS_H
+#define CUTE_HTTPS_H
+
 #include "cute_defines.h"
 #include "cute_error.h"
 #include "cute_c_runtime.h"
 #include "cute_array.h"
-
-namespace cute
-{
 
 /**
  * Represents a single HTTPS request for clients to talk with web servers. POST and GET requests are
@@ -206,11 +206,17 @@ CUTE_INLINE bool cf_https_response_find_header(const cf_https_response_t* respon
 }
 
 #ifdef CUTE_CPP
+
 CUTE_INLINE bool cf_https_response_t::find_header(const char* header_name, cf_https_header_t* header_out) const
 {
 	return cf_https_response_find_header(this, header_name, header_out);
 }
-#endif // CUTE_CPP
 
+namespace cute
+{
 
 }
+
+#endif // CUTE_CPP
+
+#endif // CUTE_HTTPS_H

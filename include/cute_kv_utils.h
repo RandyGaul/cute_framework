@@ -29,9 +29,6 @@
 #include <string>
 #include <vector>
 
-namespace cute
-{
-
 CUTE_INLINE cf_error_t cf_kv_val(cf_kv_t* kv, cf_string_t* string)
 {
 	const char* ptr = string->c_str();
@@ -67,8 +64,10 @@ CUTE_INLINE cf_error_t cf_kv_val(cf_kv_t* kv, std::vector<T>* val, const char* k
 	return cf_kv_error_state(kv);
 }
 
-#endif // CUTE_CPP
+namespace cute
+{
 
 }
+#endif // CUTE_CPP
 
 #endif // CUTE_KV_UTILS_H

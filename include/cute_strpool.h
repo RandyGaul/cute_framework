@@ -24,9 +24,6 @@
 
 #include "cute_defines.h"
 
-namespace cute
-{
-
 struct cf_strpool_t;
 struct cf_strpool_id { uint64_t val; };
 
@@ -48,6 +45,13 @@ CUTE_API bool CUTE_CALL cf_strpool_isvalid(const cf_strpool_t* pool, cf_strpool_
 CUTE_API const char* CUTE_CALL cf_strpool_cstr(const cf_strpool_t* pool, cf_strpool_id id);
 CUTE_API size_t CUTE_CALL cf_strpool_length(const cf_strpool_t* pool, cf_strpool_id id);
 
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_STRPOOL_H

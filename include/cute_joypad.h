@@ -25,9 +25,6 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
-namespace cute
-{
-
 struct cf_app_t;
 struct cf_joypad_t;
 enum cf_joypad_power_level_t;// : int;
@@ -134,6 +131,13 @@ enum cf_joypad_axis_t// : int
 	CF_JOYPAD_AXIS_COUNT,
 };
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_JOYPAD_H

@@ -24,9 +24,6 @@
 #include <cute_c_runtime.h>
 #include <cute_concurrency.h>
 
-namespace cute
-{
-	
 cf_circular_buffer_t cf_circular_buffer_make(int initial_size_in_bytes, void* user_allocator_context)
 {
 	cf_circular_buffer_t buffer;
@@ -117,4 +114,3 @@ int cf_circular_buffer_grow(cf_circular_buffer_t* buffer, int new_size_in_bytes)
 	return 0;
 }
 
-}

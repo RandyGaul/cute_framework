@@ -30,9 +30,6 @@
 
 #include "cute/cute_png.h"
 
-namespace cute
-{
-
 /**
  * The png cache is used to load png images from disk in order to make sprites. The png cache
  * system is an advanced option for people who want lower level access to creating their own
@@ -140,6 +137,13 @@ CUTE_API const cf_animation_table_t* CUTE_CALL cf_png_cache_get_animation_table(
  */
 CUTE_API cf_sprite_t CUTE_CALL cf_png_cache_make_sprite(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_table_t* table = NULL);
 
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_PNG_CACHE_H

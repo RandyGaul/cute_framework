@@ -135,10 +135,7 @@
 
 #include <stdlib.h> // NULL
 
-namespace cute
-{
-	struct cf_app_t;
-}
+struct cf_app_t;
 
 #ifdef CUTE_CPP
 // -------------------------------------------------------------------------------------------------

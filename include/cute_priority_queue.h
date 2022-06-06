@@ -192,6 +192,11 @@ void cf_priority_queue<T>::swap(int iA, int iB)
 	m_costs[iB] = fval;
 }
 
+namespace cute
+{
+template<typename T> using priority_queue = cf_priority_queue<T>;
+}
+
 #endif // CUTE_CPP
 
 #endif // CUTE_PRIORITY_QUEUE_H

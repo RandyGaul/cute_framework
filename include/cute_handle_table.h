@@ -96,4 +96,13 @@ struct cf_handle_table_t
 	cf_handle_allocator_t* m_alloc;
 };
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
+}
+
+#endif // CUTE_CPP
+
 #endif // CUTE_HANDLE_TABLE_H

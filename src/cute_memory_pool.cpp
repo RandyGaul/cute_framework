@@ -24,9 +24,6 @@
 #include <cute_error.h>
 #include <cute_c_runtime.h>
 
-namespace cute
-{
-
 struct cf_memory_pool_t
 {
 	int element_size;
@@ -108,7 +105,5 @@ void cf_memory_pool_free(cf_memory_pool_t* pool, void* element)
 		//error_set("Pointer was outside of arena bounds, or a double free was detected, in `memory_pool_t`.");
 		assert(0);
 	}
-}
-
 }
 

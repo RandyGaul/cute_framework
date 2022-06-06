@@ -24,9 +24,6 @@
 
 #include "cute_defines.h"
 
-namespace cute
-{
-
 CUTE_API const char* CUTE_CALL cf_decode8(const char* text, int* cp);
 CUTE_API char* CUTE_CALL cf_encode8(char *text, int cp);
 CUTE_API int cf_codepoint8_size(int cp);
@@ -44,6 +41,13 @@ CUTE_API void CUTE_CALL cf_shorten(const wchar_t* in, int in_len, char* out);
 CUTE_API void CUTE_CALL cf_shorten(const wchar_t* in, char* out, int out_len);
 CUTE_API void CUTE_CALL cf_shorten(const wchar_t* in, int in_len, char* out, int out_len);
 
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_UTF8

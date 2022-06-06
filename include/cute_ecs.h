@@ -28,9 +28,6 @@
 #include "cute_typeless_array.h"
 #include "cute_dictionary.h"
 
-namespace cute
-{
-
 struct cf_kv_t;
 
 //--------------------------------------------------------------------------------------------------
@@ -107,6 +104,13 @@ CUTE_API cf_array<const char*> CUTE_CALL cf_ecs_get_component_list();
 CUTE_API cf_array<const char*> CUTE_CALL cf_ecs_get_system_list();
 CUTE_API cf_array<const char*> CUTE_CALL cf_ecs_get_component_list_for_entity_type(const char* entity_type);
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_ECS_H

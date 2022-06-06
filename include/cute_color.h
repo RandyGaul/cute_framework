@@ -91,12 +91,13 @@ CUTE_INLINE uint32_t cf_to_int(cf_pixel_t p)
 }
 
 #ifdef CUTE_CPP
+
 namespace cute
 {
 using pixel_t = cf_pixel_t;
 
 }
-#endif // CUTE_CPP
 
+#endif // CUTE_CPP
 
 #endif // CUTE_COLOR_H

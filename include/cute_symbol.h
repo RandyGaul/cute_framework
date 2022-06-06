@@ -21,9 +21,6 @@
 
 #include "cute_defines.h"
 
-namespace
-{
-
 typedef void cf_shared_library_t;
 
 /**
@@ -45,4 +42,11 @@ CUTE_API void cf_unload_shared_library(cf_shared_library_t* library);
  */
 CUTE_API void* cf_load_function(cf_shared_library_t* library, const char* function_name);
 
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif //  CUTE_CPP

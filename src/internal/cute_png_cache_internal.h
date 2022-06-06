@@ -27,9 +27,6 @@
 #include <cute_dictionary.h>
 #include <cute_strpool.h>
 
-namespace cute
-{
-
 struct cf_strpool_t;
 
 struct cf_png_cache_t
@@ -43,6 +40,13 @@ struct cf_png_cache_t
 	void* mem_ctx = NULL;
 };
 
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_PNG_CACHE_INTERNAL_H

@@ -47,9 +47,6 @@
 struct SDL_Window;
 struct cs_context_t;
 
-namespace cute
-{
-
 extern cf_app_t* cf_app;
 
 struct cf_gfx_t;
@@ -224,6 +221,13 @@ struct cf_app_t
 	void* mem_ctx = NULL;
 };
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_APP_INTERNAL_H

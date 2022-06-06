@@ -25,8 +25,7 @@
 #include "cute_defines.h"
 #include "cute_math.h"
 
-namespace cute
-{
+
 
 struct cf_aabb_tree_t;
 struct cf_leaf_t { int id = -1; };
@@ -108,6 +107,14 @@ CUTE_API size_t CUTE_CALL cf_aabb_tree_serialized_size(const cf_aabb_tree_t* tre
  */
 CUTE_API bool CUTE_CALL cf_aabb_tree_serialize(const cf_aabb_tree_t* tree, void* buffer, size_t size);
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
+
 
 #endif // CUTE_AABB_TREE_H

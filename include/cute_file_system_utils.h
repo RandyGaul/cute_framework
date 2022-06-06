@@ -24,14 +24,18 @@
 
 #include "cute_defines.h"
 
-namespace cute
-{
-
 CUTE_API const char* CUTE_CALL cf_file_system_get_backend_specific_error_message();
 CUTE_API const char* CUTE_CALL cf_file_system_get_user_directory(const char* org, const char* app);
 CUTE_API const char* CUTE_CALL cf_file_system_get_actual_path(const char* virtual_path);
 CUTE_API void CUTE_CALL cf_file_system_enable_symlinks();
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_FILE_SYSTEM_UTILS_H

@@ -26,9 +26,6 @@
 
 #ifdef CUTE_CPP
 
-namespace cute
-{
-
 /**
  * Implements a dynamically growable array without any type information (no templates).
  *
@@ -77,6 +74,9 @@ struct cf_typeless_array
 	void* m_mem_ctx = NULL;
 };
 
+namespace cute 
+{
+using typeless_array = cf_typeless_array;
 }
 
 #endif // CUTE_CPP

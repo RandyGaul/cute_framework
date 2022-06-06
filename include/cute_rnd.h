@@ -24,9 +24,6 @@
 
 #include "cute_defines.h"
 
-namespace cute
-{
-
 /*
  * A random number generator of the type LFSR (linear feedback shift registers). This specific
  * implementation uses the XorShift+ variation, and returns 64-bit random numbers. More information
@@ -152,6 +149,13 @@ static CUTE_INLINE uint64_t cf_rnd_next_range(cf_rnd_t& rnd, uint64_t min, uint6
 static CUTE_INLINE float    cf_rnd_next_range(cf_rnd_t& rnd, float min, float max) { return cf_rnd_next_range(&rnd, min, max); }
 static CUTE_INLINE double   cf_rnd_next_range(cf_rnd_t& rnd, double min, double max) { return cf_rnd_next_range(&rnd, min, max); }
 
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_RND_H

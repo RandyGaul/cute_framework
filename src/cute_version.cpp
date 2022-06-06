@@ -21,12 +21,8 @@
 
 #include <cute_version.h>
 
-namespace cute
-{
 
 const char* cf_version_string_linked()
 {
 	return "Cute Framework Version 0.0";
 }
-
-}	

@@ -28,9 +28,6 @@
 
 #define INJECT(s) cf_strpool_inject(cache->strpool, s, (int)CUTE_STRLEN(s))
 
-namespace cute
-{
-
 static void cf_s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata)
 {
 	cf_png_cache_t* cache = (cf_png_cache_t*)udata;
@@ -226,6 +223,4 @@ cf_sprite_t cf_png_cache_make_sprite(cf_png_cache_t* cache, const char* sprite_n
 	sprite.play((const char*)sprite.animations->keys()[0].data);
 
 	return sprite;
-}
-
 }

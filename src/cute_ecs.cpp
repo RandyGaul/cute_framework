@@ -30,9 +30,6 @@
 
 #define INJECT(s) cf_strpool_inject(cf_app->strpool, s, (int)CUTE_STRLEN(s))
 
-namespace cute
-{
-
 static cf_error_t cf_s_load_from_schema(cf_entity_type_t schema_type, cf_entity_t entity, cf_component_config_t* config, void* component, void* udata)
 {
 	// Look for parent.
@@ -877,6 +874,4 @@ cf_array<const char*> cf_ecs_get_component_list_for_entity_type(const char* enti
 	}
 
 	return result;
-}
-
 }

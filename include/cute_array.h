@@ -469,7 +469,12 @@ const T& cf_array<T>::last() const
 {
 	return (*this)[m_count - 1];
 }
-#endif // CUTE_CPP
 
+namespace cute
+{
+template <typename T> using array = cf_array<T>;
+}
+
+#endif // CUTE_CPP
 
 #endif // CUTE_ARRAY_H

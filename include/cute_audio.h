@@ -26,9 +26,6 @@
 #include "cute_concurrency.h"
 #include "cute_error.h"
 
-namespace cute
-{
-
 struct cf_audio_t;
 
 CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg(const char* path, void* user_allocator_context = NULL);
@@ -87,6 +84,14 @@ CUTE_API void CUTE_CALL cf_audio_set_global_volume(float volume);
 CUTE_API void CUTE_CALL cf_audio_set_sound_volume(float volume);
 CUTE_API void CUTE_CALL cf_audio_set_pause(bool true_for_paused);
 
+
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_AUDIO_H

@@ -24,9 +24,6 @@
 
 #include "cute_defines.h"
 
-namespace cute
-{
-
 struct cf_hashtable_slot_t
 {
 	uint64_t key_hash;
@@ -64,6 +61,13 @@ CUTE_API void* CUTE_CALL cf_hashtable_items(const cf_hashtable_t* table);
 CUTE_API void* CUTE_CALL cf_hashtable_keys(const cf_hashtable_t* table);
 CUTE_API void CUTE_CALL cf_hashtable_swap(cf_hashtable_t* table, int index_a, int index_b);
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_HASHTABLE_H
