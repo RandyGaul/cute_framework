@@ -27,22 +27,22 @@
 namespace cute
 {
 
-CUTE_API const char* CUTE_CALL decode8(const char* text, int* cp);
-CUTE_API char* CUTE_CALL encode8(char *text, int cp);
-CUTE_API int codepoint8_size(int cp);
+CUTE_API const char* CUTE_CALL cf_decode8(const char* text, int* cp);
+CUTE_API char* CUTE_CALL cf_encode8(char *text, int cp);
+CUTE_API int cf_codepoint8_size(int cp);
 
-CUTE_API const wchar_t* CUTE_CALL decode16(const wchar_t* text, int* cp);
-CUTE_API wchar_t* CUTE_CALL encode16(wchar_t* text, int cp);
-CUTE_API int CUTE_CALL codepoint16_size(int cp);
+CUTE_API const wchar_t* CUTE_CALL cf_decode16(const wchar_t* text, int* cp);
+CUTE_API wchar_t* CUTE_CALL cf_encode16(wchar_t* text, int cp);
+CUTE_API int CUTE_CALL cf_codepoint16_size(int cp);
 
-CUTE_API void CUTE_CALL widen(const char* in, wchar_t* out);
-CUTE_API void CUTE_CALL widen(const char* in, int in_len, wchar_t* out);
-CUTE_API void CUTE_CALL widen(const char* in, wchar_t* out, int out_len);
-CUTE_API void CUTE_CALL widen(const char* in, int in_len, wchar_t* out, int out_len);
-CUTE_API void CUTE_CALL shorten(const wchar_t* in, char* out);
-CUTE_API void CUTE_CALL shorten(const wchar_t* in, int in_len, char* out);
-CUTE_API void CUTE_CALL shorten(const wchar_t* in, char* out, int out_len);
-CUTE_API void CUTE_CALL shorten(const wchar_t* in, int in_len, char* out, int out_len);
+CUTE_API void CUTE_CALL cf_widen(const char* in, wchar_t* out);
+CUTE_API void CUTE_CALL cf_widen(const char* in, int in_len, wchar_t* out);
+CUTE_API void CUTE_CALL cf_widen(const char* in, wchar_t* out, int out_len);
+CUTE_API void CUTE_CALL cf_widen(const char* in, int in_len, wchar_t* out, int out_len);
+CUTE_API void CUTE_CALL cf_shorten(const wchar_t* in, char* out);
+CUTE_API void CUTE_CALL cf_shorten(const wchar_t* in, int in_len, char* out);
+CUTE_API void CUTE_CALL cf_shorten(const wchar_t* in, char* out, int out_len);
+CUTE_API void CUTE_CALL cf_shorten(const wchar_t* in, int in_len, char* out, int out_len);
 
 }
 

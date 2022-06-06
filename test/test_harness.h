@@ -66,7 +66,7 @@ int do_test(test_t* test, int i)
 	const char* result_string = result ? "\033[31mFAILED\033[0m\n\n" : "\033[32mPASSED\033[0m\n\n";
 	fprintf(CUTE_TEST_IO_STREAM, "Result:       %s", result_string);
 
-	cute::string_nuke_static_pool();
+	cute::cf_string_nuke_static_pool();
 
 #ifdef _MSC_VER
 	//_CrtDumpMemoryLeaks();

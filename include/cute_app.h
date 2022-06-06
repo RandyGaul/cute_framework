@@ -31,7 +31,7 @@ struct sg_imgui_t;
 namespace cute
 {
 
-struct strpool_t;
+struct cf_strpool_t;
 
 #define CUTE_APP_OPTIONS_OPENGL_CONTEXT                 (1 << 0)
 #define CUTE_APP_OPTIONS_OPENGLES_CONTEXT               (1 << 1)
@@ -43,42 +43,42 @@ struct strpool_t;
 #define CUTE_APP_OPTIONS_WINDOW_POS_CENTERED            (1 << 7)
 #define CUTE_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT (1 << 8)
 
-CUTE_API cf_error_t CUTE_CALL app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
-CUTE_API void CUTE_CALL app_destroy();
+CUTE_API cf_error_t CUTE_CALL cf_app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL cf_app_destroy();
 
-CUTE_API bool CUTE_CALL app_is_running();
-CUTE_API void CUTE_CALL app_stop_running();
-CUTE_API void CUTE_CALL app_update(float dt);
-CUTE_API void CUTE_CALL app_present();
+CUTE_API bool CUTE_CALL cf_app_is_running();
+CUTE_API void CUTE_CALL cf_app_stop_running();
+CUTE_API void CUTE_CALL cf_app_update(float dt);
+CUTE_API void CUTE_CALL cf_app_present();
 
-CUTE_API cf_error_t CUTE_CALL app_init_audio(bool spawn_mix_thread = true, int max_simultaneous_sounds = 5000);
-CUTE_API void CUTE_CALL app_do_mixing();
-CUTE_API ImGuiContext* CUTE_CALL app_init_imgui(bool no_default_font = false);
-CUTE_API sg_imgui_t* CUTE_CALL app_get_sokol_imgui();
-CUTE_API strpool_t* CUTE_CALL app_get_strpool();
+CUTE_API cf_error_t CUTE_CALL cf_app_init_audio(bool spawn_mix_thread = true, int max_simultaneous_sounds = 5000);
+CUTE_API void CUTE_CALL cf_app_do_mixing();
+CUTE_API ImGuiContext* CUTE_CALL cf_app_init_imgui(bool no_default_font = false);
+CUTE_API sg_imgui_t* CUTE_CALL cf_app_get_sokol_imgui();
+CUTE_API cf_strpool_t* CUTE_CALL cf_app_get_strpool();
 
-CUTE_API cf_error_t CUTE_CALL app_set_offscreen_buffer(int offscreen_w, int offscreen_h);
+CUTE_API cf_error_t CUTE_CALL cf_app_set_offscreen_buffer(int offscreen_w, int offscreen_h);
 
-enum power_state_t
+enum cf_power_state_t
 {
-	POWER_STATE_UNKNOWN,    // Cannot determine power status.
-	POWER_STATE_ON_BATTERY, // Not plugged in and running on battery.
-	POWER_STATE_NO_BATTERY, // Plugged in with no battery available.
-	POWER_STATE_CHARGING,   // Plugged in and charging battery.
-	POWER_STATE_CHARGED,    // Plugged in and battery is charged.
+	CF_POWER_STATE_UNKNOWN,    // Cannot determine power status.
+	CF_POWER_STATE_ON_BATTERY, // Not plugged in and running on battery.
+	CF_POWER_STATE_NO_BATTERY, // Plugged in with no battery available.
+	CF_POWER_STATE_CHARGING,   // Plugged in and charging battery.
+	CF_POWER_STATE_CHARGED,    // Plugged in and battery is charged.
 };
 
-struct power_info_t
+struct cf_power_info_t
 {
-	power_state_t state;
+	cf_power_state_t state;
 	int seconds_left;    // The seconds of battery life left. -1 means not running on the battery, or unable to get a valid value.
 	int percentage_left; // The percentage of battery life left from 0 to 100. -1 means not running on the battery, or unable to get a valid value.
 };
 
-CUTE_API power_info_t CUTE_CALL app_power_info();
+CUTE_API cf_power_info_t CUTE_CALL cf_app_power_info();
 
 // TODO - Where to put this?
-CUTE_API void CUTE_CALL sleep(int milliseconds);
+CUTE_API void CUTE_CALL cf_sleep(int milliseconds);
 
 }
 

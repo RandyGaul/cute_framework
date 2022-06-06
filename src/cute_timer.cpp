@@ -26,7 +26,7 @@
 namespace cute
 {
 
-float calc_dt()
+float cf_calc_dt()
 {
 	static int first = 1;
 	static double inv_freq;
@@ -45,15 +45,15 @@ float calc_dt()
 	return dt;
 }
 
-timer_t timer_init()
+cf_timer_t cf_timer_init()
 {
-	timer_t timer;
+	cf_timer_t timer;
 	timer.prev = SDL_GetPerformanceCounter();
 	timer.inv_freq = 1.0 / (double)SDL_GetPerformanceFrequency();
 	return timer;
 }
 
-float timer_dt(timer_t* timer)
+float cf_timer_dt(cf_timer_t* timer)
 {
 	uint64_t now = SDL_GetPerformanceCounter();
 	float dt = (float)((double)(now - timer->prev) * timer->inv_freq);
@@ -61,7 +61,7 @@ float timer_dt(timer_t* timer)
 	return dt;
 }
 
-float timer_elapsed(timer_t* timer)
+float cf_timer_elapsed(cf_timer_t* timer)
 {
 	uint64_t now = SDL_GetPerformanceCounter();
 	float elapsed = (float)((double)(now - timer->prev) * timer->inv_freq);

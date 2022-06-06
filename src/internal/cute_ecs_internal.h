@@ -28,7 +28,7 @@
 namespace cute
 {
 
-CUTE_API cf_error_t CUTE_CALL kv_val_entity(kv_t* kv, entity_t* entity);
+CUTE_API cf_error_t CUTE_CALL cf_kv_val_entity(cf_kv_t* kv, cf_entity_t* entity);
 
 }
 

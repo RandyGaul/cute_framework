@@ -25,13 +25,13 @@
 namespace cute
 {
 
-struct audio_system_t;
+struct cf_audio_system_t;
 
-audio_system_t* audio_system_make(int pool_count, void* mem_ctx = NULL);
-void audio_system_destroy(audio_system_t* audio_system);
-void audio_system_update(audio_system_t* audio_system, float dt);
+cf_audio_system_t* cf_audio_system_make(int pool_count, void* mem_ctx = NULL);
+void cf_audio_system_destroy(cf_audio_system_t* audio_system);
+void cf_audio_system_update(cf_audio_system_t* audio_system, float dt);
 
-int sound_instance_size();
+int cf_sound_instance_size();
 
 }
 

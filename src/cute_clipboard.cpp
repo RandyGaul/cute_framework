@@ -25,17 +25,17 @@
 namespace cute
 {
 
-char* clipboard_get()
+char* cf_clipboard_get()
 {
 	char* text = SDL_GetClipboardText();
 	return text;
 }
 
-cf_error_t clipboard_set(const char* string)
+cf_error_t cf_clipboard_set(const char* string)
 {
 	int ret = SDL_SetClipboardText(string);
-	if (ret) return error_failure("Unable to set clipboard data.");
-	else return error_success();
+	if (ret) return cf_error_failure("Unable to set clipboard data.");
+	else return cf_error_success();
 }
 
 }

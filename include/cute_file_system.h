@@ -28,19 +28,19 @@
 namespace cute
 {
 
-struct file_t;
+struct cf_file_t;
 
-enum file_type_t : int
+enum cf_file_type_t //: int
 {
-	FILE_TYPE_REGULAR,
-	FILE_TYPE_DIRECTORY,
-	FILE_TYPE_SYMLINK,
-	FILE_TYPE_OTHER,
+	CF_FILE_TYPE_REGULAR,
+	CF_FILE_TYPE_DIRECTORY,
+	CF_FILE_TYPE_SYMLINK,
+	CF_FILE_TYPE_OTHER,
 };
 
-struct stat_t
+struct cf_stat_t
 {
-	file_type_t type;
+	cf_file_type_t type;
 	int is_read_only;
 	size_t size;
 	uint64_t last_modified_time;
@@ -48,31 +48,31 @@ struct stat_t
 	uint64_t last_accessed_time;
 };
 
-CUTE_API const char* CUTE_CALL file_system_get_base_dir();
-CUTE_API cf_error_t CUTE_CALL file_system_set_write_dir(const char* platform_dependent_directory);
-CUTE_API cf_error_t CUTE_CALL file_system_mount(const char* archive, const char* mount_point, bool append_to_path = true);
-CUTE_API cf_error_t CUTE_CALL file_system_dismount(const char* archive);
-CUTE_API cf_error_t CUTE_CALL file_system_stat(const char* virtual_path, stat_t* stat);
-CUTE_API file_t* CUTE_CALL file_system_create_file(const char* virtual_path);
-CUTE_API file_t* CUTE_CALL file_system_open_file_for_write(const char* virtual_path);
-CUTE_API file_t* CUTE_CALL file_system_open_file_for_append(const char* virtual_path);
-CUTE_API file_t* CUTE_CALL file_system_open_file_for_read(const char* virtual_path);
-CUTE_API cf_error_t CUTE_CALL file_system_close(file_t* file);
-CUTE_API cf_error_t CUTE_CALL file_system_delete(const char* virtual_path);
-CUTE_API cf_error_t CUTE_CALL file_system_create_dir(const char* virtual_path);
-CUTE_API const char** CUTE_CALL file_system_enumerate_directory(const char* virtual_path);
-CUTE_API void CUTE_CALL file_system_free_enumerated_directory(const char** directory_list);
-CUTE_API bool CUTE_CALL file_system_file_exists(const char* virtual_path);
-CUTE_API size_t CUTE_CALL file_system_read(file_t* file, void* buffer, size_t bytes);
-CUTE_API size_t CUTE_CALL file_system_write(file_t* file, const void* buffer, size_t bytes);
-CUTE_API cf_error_t CUTE_CALL file_system_eof(file_t* file);
-CUTE_API size_t CUTE_CALL file_system_tell(file_t* file);
-CUTE_API cf_error_t CUTE_CALL file_system_seek(file_t* file, size_t position);
-CUTE_API size_t CUTE_CALL file_system_size(file_t* file);
-CUTE_API cf_error_t CUTE_CALL file_system_flush(file_t* file);
-CUTE_API cf_error_t CUTE_CALL file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size = NULL, void* user_allocator_context = NULL);
-CUTE_API cf_error_t CUTE_CALL file_system_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size = NULL, void* user_allocator_context = NULL);
-CUTE_API cf_error_t CUTE_CALL file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
+CUTE_API const char* CUTE_CALL cf_file_system_get_base_dir();
+CUTE_API cf_error_t CUTE_CALL cf_file_system_set_write_dir(const char* platform_dependent_directory);
+CUTE_API cf_error_t CUTE_CALL cf_file_system_mount(const char* archive, const char* mount_point, bool append_to_path = true);
+CUTE_API cf_error_t CUTE_CALL cf_file_system_dismount(const char* archive);
+CUTE_API cf_error_t CUTE_CALL cf_file_system_stat(const char* virtual_path, cf_stat_t* stat);
+CUTE_API cf_file_t* CUTE_CALL cf_file_system_create_file(const char* virtual_path);
+CUTE_API cf_file_t* CUTE_CALL cf_file_system_open_file_for_write(const char* virtual_path);
+CUTE_API cf_file_t* CUTE_CALL cf_file_system_open_file_for_append(const char* virtual_path);
+CUTE_API cf_file_t* CUTE_CALL cf_file_system_open_file_for_read(const char* virtual_path);
+CUTE_API cf_error_t CUTE_CALL cf_file_system_close(cf_file_t* file);
+CUTE_API cf_error_t CUTE_CALL cf_file_system_delete(const char* virtual_path);
+CUTE_API cf_error_t CUTE_CALL cf_file_system_create_dir(const char* virtual_path);
+CUTE_API const char** CUTE_CALL cf_file_system_enumerate_directory(const char* virtual_path);
+CUTE_API void CUTE_CALL cf_file_system_free_enumerated_directory(const char** directory_list);
+CUTE_API bool CUTE_CALL cf_file_system_file_exists(const char* virtual_path);
+CUTE_API size_t CUTE_CALL cf_file_system_read(cf_file_t* file, void* buffer, size_t bytes);
+CUTE_API size_t CUTE_CALL cf_file_system_write(cf_file_t* file, const void* buffer, size_t bytes);
+CUTE_API cf_error_t CUTE_CALL cf_file_system_eof(cf_file_t* file);
+CUTE_API size_t CUTE_CALL cf_file_system_tell(cf_file_t* file);
+CUTE_API cf_error_t CUTE_CALL cf_file_system_seek(cf_file_t* file, size_t position);
+CUTE_API size_t CUTE_CALL cf_file_system_size(cf_file_t* file);
+CUTE_API cf_error_t CUTE_CALL cf_file_system_flush(cf_file_t* file);
+CUTE_API cf_error_t CUTE_CALL cf_file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size = NULL, void* user_allocator_context = NULL);
+CUTE_API cf_error_t CUTE_CALL cf_file_system_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size = NULL, void* user_allocator_context = NULL);
+CUTE_API cf_error_t CUTE_CALL cf_file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
 
 }
 

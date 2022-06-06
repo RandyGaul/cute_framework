@@ -32,39 +32,42 @@
 namespace cute
 {
 
-CUTE_INLINE cf_error_t kv_val(kv_t* kv, string_t* string)
+CUTE_INLINE cf_error_t cf_kv_val(cf_kv_t* kv, cf_string_t* string)
 {
 	const char* ptr = string->c_str();
 	size_t len = string->len();
-	cf_error_t err = kv_val_string(kv, &ptr, &len);
+	cf_error_t err = cf_kv_val_string(kv, &ptr, &len);
 	if (err.is_error()) return err;
-	*string = string_t(ptr, ptr + len);
-	return error_success();
+	*string = cf_string_t(ptr, ptr + len);
+	return cf_error_success();
 }
 
-CUTE_INLINE cf_error_t kv_val(kv_t* kv, std::string* val)
+CUTE_INLINE cf_error_t cf_kv_val(cf_kv_t* kv, std::string* val)
 {
 	const char* ptr = val->data();
 	size_t len = val->length();
-	cf_error_t err = kv_val_string(kv, &ptr, &len);
+	cf_error_t err = cf_kv_val_string(kv, &ptr, &len);
 	if (err.is_error()) return err;
 	val->assign(ptr, len);
-	return error_success();
+	return cf_error_success();
 }
 
+#ifdef CUTE_CPP
+
 template <typename T>
-CUTE_INLINE cf_error_t kv_val(kv_t* kv, std::vector<T>* val, const char* key = NULL)
+CUTE_INLINE cf_error_t cf_kv_val(cf_kv_t* kv, std::vector<T>* val, const char* key = NULL)
 {
 	int count = (int)val->size();
-	kv_array_begin(kv, &count, key);
+	cf_kv_array_begin(kv, &count, key);
 	val->resize(count);
-	for (int i = 0; i < count; ++i)
-	{
-		kv_val(kv, &(*val)[i]);
+	for (int i = 0; i < count; ++i) {
+		cf_kv_val(kv, &(*val)[i]);
 	}
-	kv_array_end(kv);
-	return kv_error_state(kv);
+	cf_kv_array_end(kv);
+	return cf_kv_error_state(kv);
 }
+
+#endif // CUTE_CPP
 
 }
 

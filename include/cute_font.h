@@ -32,35 +32,35 @@ struct cf_matrix_t;
 namespace cute
 {
 
-struct font_t;
+struct cf_font_t;
 
-CUTE_API font_t* CUTE_CALL font_load_bmfont(const char* font_path, const char* font_image_path);
-CUTE_API void CUTE_CALL font_free(font_t* font);
+CUTE_API cf_font_t* CUTE_CALL cf_font_load_bmfont(const char* font_path, const char* font_image_path);
+CUTE_API void CUTE_CALL cf_font_free(cf_font_t* font);
 
-CUTE_API const font_t* CUTE_CALL font_get_default();
-CUTE_API void CUTE_CALL font_push_verts(const font_t* font, const char* text, float x, float y, float wrap_w, const cf_aabb_t* clip_box = NULL);
-CUTE_API void CUTE_CALL font_draw(const font_t* font, cf_matrix_t mvp, cf_color_t color = color_black());
+CUTE_API const cf_font_t* CUTE_CALL cf_font_get_default();
+CUTE_API void CUTE_CALL cf_font_push_verts(const cf_font_t* font, const char* text, float x, float y, float wrap_w, const cf_aabb_t* clip_box = NULL);
+CUTE_API void CUTE_CALL cf_font_draw(const cf_font_t* font, cf_matrix_t mvp, cf_color_t color = cf_color_black());
 
-CUTE_API void CUTE_CALL font_borders(bool use_borders);
-CUTE_API void CUTE_CALL font_toggle_borders();
-CUTE_API bool CUTE_CALL font_is_borders_on();
-CUTE_API void CUTE_CALL font_border_color(cf_color_t color);
-CUTE_API void CUTE_CALL font_border_use_corners(bool use_corners);
+CUTE_API void CUTE_CALL cf_font_borders(bool use_borders);
+CUTE_API void CUTE_CALL cf_font_toggle_borders();
+CUTE_API bool CUTE_CALL cf_font_is_borders_on();
+CUTE_API void CUTE_CALL cf_font_border_color(cf_color_t color);
+CUTE_API void CUTE_CALL cf_font_border_use_corners(bool use_corners);
 
-CUTE_API int CUTE_CALL font_height(const font_t* font);
-CUTE_API int CUTE_CALL font_line_height(const font_t* font);
+CUTE_API int CUTE_CALL cf_font_height(const cf_font_t* font);
+CUTE_API int CUTE_CALL cf_font_line_height(const cf_font_t* font);
 
-CUTE_API int CUTE_CALL font_text_width(const font_t* font, const char* text);
-CUTE_API int CUTE_CALL font_text_height(const font_t* font, const char* text);
+CUTE_API int CUTE_CALL cf_font_text_width(const cf_font_t* font, const char* text);
+CUTE_API int CUTE_CALL cf_font_text_height(const cf_font_t* font, const char* text);
 
 // -------------------------------------------------------------------------------------------------
 // These functions can be used to isolate vert rendering on different threads.
 
-struct font_vert_buffer_t;
+struct cf_font_vert_buffer_t;
 
-CUTE_API font_vert_buffer_t* CUTE_CALL font_vert_buffer_make(const font_t* font);
-CUTE_API cf_error_t CUTE_CALL font_push_verts(font_vert_buffer_t* verts, const font_t* font, const char* text, float x, float y, float wrap_w, const cf_aabb_t* clip_box = NULL);
-CUTE_API void CUTE_CALL font_draw(font_vert_buffer_t* verts, cf_color_t color = color_black());
+CUTE_API cf_font_vert_buffer_t* CUTE_CALL cf_font_vert_buffer_make(const cf_font_t* font);
+CUTE_API cf_error_t CUTE_CALL cf_font_push_verts(cf_font_vert_buffer_t* verts, const cf_font_t* font, const char* text, float x, float y, float wrap_w, const cf_aabb_t* clip_box = NULL);
+CUTE_API void CUTE_CALL cf_font_draw(cf_font_vert_buffer_t* verts, cf_color_t color = cf_color_black());
 
 }
 

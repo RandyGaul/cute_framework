@@ -29,55 +29,55 @@
 namespace cute
 {
 
-static size_t s_temp_str_size;
-static char* s_temp_str;
+static size_t cf_s_temp_str_size;
+static char* cf_s_temp_str;
 
-static char* s_temp(size_t size)
+static char* cf_s_temp(size_t size)
 {
-	if (s_temp_str_size < size + 1) {
-		CUTE_FREE(s_temp_str, NULL);
-		s_temp_str_size = size + 1;
-		s_temp_str = (char*)CUTE_ALLOC(size + 1, );
+	if (cf_s_temp_str_size < size + 1) {
+		CUTE_FREE(cf_s_temp_str, NULL);
+		cf_s_temp_str_size = size + 1;
+		cf_s_temp_str = (char*)CUTE_ALLOC(size + 1, );
 	}
-	return s_temp_str;
+	return cf_s_temp_str;
 }
 
-void string_utils_cleanup_static_memory()
+void cf_string_utils_cleanup_static_memory()
 {
-	CUTE_FREE(s_temp_str, NULL);
-	s_temp_str = NULL;
+	CUTE_FREE(cf_s_temp_str, NULL);
+	cf_s_temp_str = NULL;
 }
 
 //--------------------------------------------------------------------------------------------------
 
-string_t operator+(const string_t& a, const string_t& b)
+cf_string_t operator+(const cf_string_t& a, const cf_string_t& b)
 {
 	size_t len_a = a.len();
 	size_t len_b = b.len();
-	char* temp = s_temp(len_a + len_b);
+	char* temp = cf_s_temp(len_a + len_b);
 	CUTE_MEMCPY(temp, a.c_str(), len_a);
 	CUTE_MEMCPY(temp + len_a, b.c_str(), len_b);
 	temp[len_a + len_b] = 0;
-	return string_t(temp);
+	return cf_string_t(temp);
 }
 
-int to_int(const string_t& x)
+int cf_to_int(const cf_string_t& x)
 {
 	const char* s = x.c_str();
 	return (int)CUTE_STRTOLL(s, NULL, 10);
 }
 
-float to_float(const string_t& x)
+float cf_to_float(const cf_string_t& x)
 {
 	const char* s = x.c_str();
 	return strtof(s, NULL);
 }
 
-string_t format(string_t fmt, int n, ...)
+cf_string_t cf_format(cf_string_t fmt, int n, ...)
 {
 	va_list args;
 	va_start(args, n);
-	char* temp = s_temp(256);
+	char* temp = cf_s_temp(256);
 
 	#ifdef _WIN32
 		int size = _vscprintf(fmt.c_str(), args) + 1;
@@ -85,7 +85,7 @@ string_t format(string_t fmt, int n, ...)
 		int size = vsnprintf(temp, 0, fmt.c_str(), args) + 1;
 	#endif
 
-	temp = s_temp(size);
+	temp = cf_s_temp(size);
 
 	#ifdef _WIN32
 		_vsnprintf(temp, size, fmt.c_str(), args);
@@ -94,13 +94,13 @@ string_t format(string_t fmt, int n, ...)
 	#endif
 
 	va_end(args);
-	return string_t(temp);
+	return cf_string_t(temp);
 }
 
-string_t to_string(int x)
+cf_string_t cf_to_string(int x)
 {
 	const char* fmt = "%d";
-	char* temp = s_temp(256);
+	char* temp = cf_s_temp(256);
 
 	#ifdef _WIN32
 		int size = _scprintf(fmt, x) + 1;
@@ -108,17 +108,17 @@ string_t to_string(int x)
 		int size = snprintf(temp, 0, fmt, x) + 1;
 	#endif
 
-	temp = s_temp(size);
+	temp = cf_s_temp(size);
 
 	snprintf(temp, size, fmt, x);
 
-	return string_t(temp);
+	return cf_string_t(temp);
 }
 
-string_t to_string(uint64_t x)
+cf_string_t cf_to_string(uint64_t x)
 {
 	const char* fmt = "%" PRIu64;
-	char* temp = s_temp(256);
+	char* temp = cf_s_temp(256);
 
 	#ifdef _WIN32
 		int size = _scprintf(fmt, x) + 1;
@@ -126,17 +126,17 @@ string_t to_string(uint64_t x)
 		int size = snprintf(temp, 0, fmt, x) + 1;
 	#endif
 
-	temp = s_temp(size);
+	temp = cf_s_temp(size);
 
 	snprintf(temp, size, fmt, x);
 
-	return string_t(temp);
+	return cf_string_t(temp);
 }
 
-string_t to_string(float x)
+cf_string_t cf_to_string(float x)
 {
 	const char* fmt = "%f";
-	char* temp = s_temp(256);
+	char* temp = cf_s_temp(256);
 
 	#ifdef _WIN32
 		int size = _scprintf(fmt, x) + 1;
@@ -144,20 +144,20 @@ string_t to_string(float x)
 		int size = snprintf(temp, 0, fmt, x) + 1;
 	#endif
 
-	temp = s_temp(size);
+	temp = cf_s_temp(size);
 
 	snprintf(temp, size, fmt, x);
 
-	return string_t(temp);
+	return cf_string_t(temp);
 }
 
-string_t to_string(bool x)
+cf_string_t cf_to_string(bool x)
 {
 	if (x) return "true";
 	else return "false";
 }
 
-string_t to_string(const cf_array<char>& x)
+cf_string_t cf_to_string(const cf_array<char>& x)
 {
 	if (x.last() != 0) {
 		cf_array<char> a = x;
@@ -168,7 +168,7 @@ string_t to_string(const cf_array<char>& x)
 	}
 }
 
-string_t to_string(char x)
+cf_string_t cf_to_string(char x)
 {
 	cf_array<char> a;
 	a.add(x);
@@ -176,12 +176,12 @@ string_t to_string(char x)
 	return a.data();
 }
 
-cf_array<char> to_array(string_t s)
+cf_array<char> cf_to_array(cf_string_t s)
 {
-	return to_array(s.c_str());
+	return cf_to_array(s.c_str());
 }
 
-cf_array<char> to_array(const char* s)
+cf_array<char> cf_to_array(const char* s)
 {
 	cf_array<char> result;
 	char c;
@@ -190,7 +190,7 @@ cf_array<char> to_array(const char* s)
 	return result;
 }
 
-cf_array<char> to_array(const char* s, size_t sz)
+cf_array<char> cf_to_array(const char* s, size_t sz)
 {
 	cf_array<char> result;
 	while (sz--) result.add(*s++);

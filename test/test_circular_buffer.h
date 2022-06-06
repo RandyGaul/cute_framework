@@ -26,19 +26,19 @@ using namespace cute;
 CUTE_TEST_CASE(test_circular_buffer_basic, "Typical use-case example, push and pull some data.");
 int test_circular_buffer_basic()
 {
-	circular_buffer_t buffer = circular_buffer_make(1024);
+	cf_circular_buffer_t buffer = cf_circular_buffer_make(1024);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	const char* the_data = "Here's some data.";
 	int the_data_size = (int)CUTE_STRLEN(the_data) + 1;
 
-	CUTE_TEST_CHECK(circular_buffer_push(&buffer, the_data, the_data_size));
+	CUTE_TEST_CHECK(cf_circular_buffer_push(&buffer, the_data, the_data_size));
 	void* pull_data = malloc(the_data_size);
-	CUTE_TEST_CHECK(circular_buffer_pull(&buffer, pull_data, the_data_size));
+	CUTE_TEST_CHECK(cf_circular_buffer_pull(&buffer, pull_data, the_data_size));
 	CUTE_TEST_ASSERT(memcmp(the_data, pull_data, the_data_size) == 0);
 	free(pull_data);
 
-	circular_buffer_free(&buffer);
+	cf_circular_buffer_free(&buffer);
 
 	return 0;
 }
@@ -47,7 +47,7 @@ CUTE_TEST_CASE(test_circular_buffer_fill_up_and_empty, "Fill up the buffer and e
 int test_circular_buffer_fill_up_and_empty()
 {
 	int bytes = 10;
-	circular_buffer_t buffer = circular_buffer_make(bytes);
+	cf_circular_buffer_t buffer = cf_circular_buffer_make(bytes);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	for (int iters = 0; iters < 5; ++iters)
@@ -55,18 +55,18 @@ int test_circular_buffer_fill_up_and_empty()
 		for (int i = 0; i < bytes; ++i)
 		{
 			uint8_t byte = (uint8_t)i;
-			CUTE_TEST_CHECK(circular_buffer_push(&buffer, &byte, 1));
+			CUTE_TEST_CHECK(cf_circular_buffer_push(&buffer, &byte, 1));
 		}
 
 		for (int i = 0; i < bytes; ++i)
 		{
 			uint8_t byte;
-			CUTE_TEST_CHECK(circular_buffer_pull(&buffer, &byte, 1));
+			CUTE_TEST_CHECK(cf_circular_buffer_pull(&buffer, &byte, 1));
 			CUTE_TEST_ASSERT(byte == i);
 		}
 	}
 
-	circular_buffer_free(&buffer);
+	cf_circular_buffer_free(&buffer);
 
 	return 0;
 }
@@ -75,19 +75,19 @@ CUTE_TEST_CASE(test_circular_buffer_overflow, "Attempt to push too much data to 
 int test_circular_buffer_overflow()
 {
 	int bytes = 10;
-	circular_buffer_t buffer = circular_buffer_make(bytes);
+	cf_circular_buffer_t buffer = cf_circular_buffer_make(bytes);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	for (int i = 0; i < bytes; ++i)
 	{
 		uint8_t byte = (uint8_t)i;
-		CUTE_TEST_CHECK(circular_buffer_push(&buffer, &byte, 1));
+		CUTE_TEST_CHECK(cf_circular_buffer_push(&buffer, &byte, 1));
 	}
 
 	uint8_t byte = 0;
-	CUTE_TEST_CHECK(!circular_buffer_push(&buffer, &byte, 1));
+	CUTE_TEST_CHECK(!cf_circular_buffer_push(&buffer, &byte, 1));
 
-	circular_buffer_free(&buffer);
+	cf_circular_buffer_free(&buffer);
 
 	return 0;
 }
@@ -96,22 +96,22 @@ CUTE_TEST_CASE(test_circular_buffer_underflow, "Attempt to pull too many bytes f
 int test_circular_buffer_underflow()
 {
 	int bytes = 10;
-	circular_buffer_t buffer = circular_buffer_make(bytes);
+	cf_circular_buffer_t buffer = cf_circular_buffer_make(bytes);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	uint8_t byte = 0;
-	CUTE_TEST_CHECK(!circular_buffer_pull(&buffer, &byte, 1));
+	CUTE_TEST_CHECK(!cf_circular_buffer_pull(&buffer, &byte, 1));
 
 	for (int i = 0; i < bytes; ++i)
 	{
 		uint8_t byte = (uint8_t)i;
-		CUTE_TEST_CHECK(circular_buffer_push(&buffer, &byte, 1));
+		CUTE_TEST_CHECK(cf_circular_buffer_push(&buffer, &byte, 1));
 	}
 
 	uint8_t bytes_11[11];
-	CUTE_TEST_CHECK(!circular_buffer_pull(&buffer, bytes_11, 11));
+	CUTE_TEST_CHECK(!cf_circular_buffer_pull(&buffer, bytes_11, 11));
 
-	circular_buffer_free(&buffer);
+	cf_circular_buffer_free(&buffer);
 
 	return 0;
 }
@@ -119,14 +119,14 @@ int test_circular_buffer_underflow()
 int test_circular_buffer_running = 1;
 int test_circular_buffer_two_threads_push(void *data)
 {
-	circular_buffer_t* buffer = (circular_buffer_t*)data;
+	cf_circular_buffer_t* buffer = (cf_circular_buffer_t*)data;
 
 	// Push incrementing integers into the buffer.
 	int iters = 100;
 	int val = 0;
 	while (iters && test_circular_buffer_running)
 	{
-		int result = circular_buffer_push(buffer, &val, sizeof(int));
+		int result = cf_circular_buffer_push(buffer, &val, sizeof(int));
 		if (result) continue;
 		++val;
 		--iters;
@@ -137,7 +137,7 @@ int test_circular_buffer_two_threads_push(void *data)
 
 int test_circular_buffer_two_threads_pull(void *data)
 {
-	circular_buffer_t* buffer = (circular_buffer_t*)data;
+	cf_circular_buffer_t* buffer = (cf_circular_buffer_t*)data;
 
 	// Pull integers out of the buffer, make sure they are incrementing.
 	int iters = 100;
@@ -145,7 +145,7 @@ int test_circular_buffer_two_threads_pull(void *data)
 	int got_val;
 	while (iters)
 	{
-		int result = circular_buffer_pull(buffer, &got_val, sizeof(int));
+		int result = cf_circular_buffer_pull(buffer, &got_val, sizeof(int));
 		if (result) continue;
 		CUTE_TEST_ASSERT(expected_val == got_val);
 		++expected_val;
@@ -160,18 +160,18 @@ int test_circular_buffer_two_threads()
 {
 	for (int iters = 0; iters < 10; ++iters)
 	{
-		circular_buffer_t buffer = circular_buffer_make(sizeof(int) * 32);
+		cf_circular_buffer_t buffer = cf_circular_buffer_make(sizeof(int) * 32);
 		CUTE_TEST_CHECK_POINTER(buffer.data);
 
-		thread_t* push = thread_create(test_circular_buffer_two_threads_push, "thread push", &buffer);
-		thread_t* pull = thread_create(test_circular_buffer_two_threads_pull, "thread pull", &buffer);
+		cf_thread_t* push = cf_thread_create(test_circular_buffer_two_threads_push, "thread push", &buffer);
+		cf_thread_t* pull = cf_thread_create(test_circular_buffer_two_threads_pull, "thread pull", &buffer);
 
-		CUTE_TEST_ASSERT(!thread_wait(pull).is_error());
+		CUTE_TEST_ASSERT(!cf_thread_wait(pull).is_error());
 		test_circular_buffer_running = 0; // Let push thread know the pull thread early-exited, in case it fails.
-		CUTE_TEST_ASSERT(!thread_wait(push).is_error());
+		CUTE_TEST_ASSERT(!cf_thread_wait(push).is_error());
 		test_circular_buffer_running = 1; // Reset state for next time.
 
-		circular_buffer_free(&buffer);
+		cf_circular_buffer_free(&buffer);
 	}
 
 	return 0;

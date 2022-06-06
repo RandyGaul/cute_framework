@@ -27,7 +27,7 @@
 namespace cute
 {
 
-struct memory_pool_t
+struct cf_memory_pool_t
 {
 	int element_size;
 	int arena_size;
@@ -37,14 +37,14 @@ struct memory_pool_t
 	void* mem_ctx;
 };
 
-memory_pool_t* memory_pool_make(int element_size, int element_count, void* user_allocator_context)
+cf_memory_pool_t* cf_memory_pool_make(int element_size, int element_count, void* user_allocator_context)
 {
 	size_t stride = element_size > sizeof(void*) ? element_size : sizeof(void*);
-	size_t arena_size = sizeof(memory_pool_t) + stride * element_count;
-	memory_pool_t* pool = (memory_pool_t*)CUTE_ALLOC(arena_size, user_allocator_context);
+	size_t arena_size = sizeof(cf_memory_pool_t) + stride * element_count;
+	cf_memory_pool_t* pool = (cf_memory_pool_t*)CUTE_ALLOC(arena_size, user_allocator_context);
 
 	pool->element_size = element_size;
-	pool->arena_size = (int)(arena_size - sizeof(memory_pool_t));
+	pool->arena_size = (int)(arena_size - sizeof(cf_memory_pool_t));
 	pool->arena = (uint8_t*)(pool + 1);
 	pool->free_list = pool->arena;
 	pool->overflow_count = 0;
@@ -62,7 +62,7 @@ memory_pool_t* memory_pool_make(int element_size, int element_count, void* user_
 	return pool;
 }
 
-void memory_pool_destroy(memory_pool_t* pool)
+void cf_memory_pool_destroy(cf_memory_pool_t* pool)
 {
 	if (pool->overflow_count) {
 		//error_set("Attempted to destroy pool without freeing all overflow allocations.");
@@ -71,9 +71,9 @@ void memory_pool_destroy(memory_pool_t* pool)
 	CUTE_FREE(pool, pool->mem_ctx);
 }
 
-void* memory_pool_alloc(memory_pool_t* pool)
+void* cf_memory_pool_alloc(cf_memory_pool_t* pool)
 {
-	void *mem = memory_pool_try_alloc(pool);
+	void *mem = cf_memory_pool_try_alloc(pool);
 	if (!mem) {
 		mem = CUTE_ALLOC(pool->element_size, pool->mem_ctx);
 		if (mem) {
@@ -83,7 +83,7 @@ void* memory_pool_alloc(memory_pool_t* pool)
 	return mem;
 }
 
-void* memory_pool_try_alloc(memory_pool_t* pool)
+void* cf_memory_pool_try_alloc(cf_memory_pool_t* pool)
 {
 	if (pool->free_list) {
 		void *mem = pool->free_list;
@@ -94,7 +94,7 @@ void* memory_pool_try_alloc(memory_pool_t* pool)
 	}
 }
 
-void memory_pool_free(memory_pool_t* pool, void* element)
+void cf_memory_pool_free(cf_memory_pool_t* pool, void* element)
 {
 	int difference = (int)((uint8_t*)element - pool->arena);
 	int in_bounds = difference < pool->arena_size;

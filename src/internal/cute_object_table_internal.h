@@ -22,6 +22,10 @@
 #ifndef CUTE_OBJECT_TABLE_INTERNAL_H
 #define CUTE_OBJECT_TABLE_INTERNAL_H
 
+#include "cute_defines.h"
+
+#ifdef CUTE_CPP
+
 #include <cute_handle_table.h>
 #include <cute_error.h>
 #include <cute_array.h>
@@ -30,69 +34,68 @@ namespace cute
 {
 
 template <typename T>
-struct object_table_t
+struct cf_object_table_t
 {
-	object_table_t(int reserve_count = 0, void* user_allocator_context = NULL);
-	~object_table_t();
+	cf_object_table_t(int reserve_count = 0, void* user_allocator_context = NULL);
+	~cf_object_table_t();
 
-	handle_t allocate(const T* object);
-	T* get_object(handle_t id) const;
-	T* remove_object(handle_t id, int* moved_index);
+	cf_handle_t allocate(const T* object);
+	T* get_object(cf_handle_t id) const;
+	T* remove_object(cf_handle_t id, int* moved_index);
 	T* remove_object(int index);
-	bool has_object(handle_t id) const;
-	void update_handle(handle_t moved_handle, int moved_index);
+	bool has_object(cf_handle_t id) const;
+	void update_handle(cf_handle_t moved_handle, int moved_index);
 
 	T* get_objects();
 	const T* get_objects() const;
 	int get_object_count() const;
 
-	handle_allocator_t* m_table;
+	cf_handle_allocator_t* m_table;
 	cf_array<T> m_objects;
 };
 
 //--------------------------------------------------------------------------------------------------
 
 template <typename T>
-object_table_t<T>::object_table_t(int reserve_count, void* user_allocator_context)
-	: m_table(handle_allocator_make(reserve_count, user_allocator_context))
+cf_object_table_t<T>::cf_object_table_t(int reserve_count, void* user_allocator_context)
+	: m_table(cf_handle_allocator_make(reserve_count, user_allocator_context))
 	, m_objects(reserve_count, user_allocator_context)
+{}
+
+template <typename T>
+cf_object_table_t<T>::~cf_object_table_t()
 {
+	cf_handle_allocator_destroy(m_table);
 }
 
 template <typename T>
-object_table_t<T>::~object_table_t()
-{
-	handle_allocator_destroy(m_table);
-}
-
-template <typename T>
-handle_t object_table_t<T>::allocate(const T* object)
+cf_handle_t cf_object_table_t<T>::allocate(const T* object)
 {
 	int index = m_objects.count();
 	T* slot = &m_objects.add();
 	CUTE_MEMCPY(slot, object, sizeof(T));
-	handle_t handle = handle_allocator_alloc(m_table, index);
+	cf_handle_t handle = cf_handle_allocator_alloc(m_table, index);
 	return handle;
 }
 
 template <typename T>
-T* object_table_t<T>::get_object(handle_t id) const
+T* cf_object_table_t<T>::get_object(cf_handle_t id) const
 {
-	if (!handle_allocator_is_handle_valid(m_table, id)) {
+	if (!cf_handle_allocator_is_handle_valid(m_table, id)) {
 		return NULL;
 	} else {
-		int index = (int)handle_allocator_get_index(m_table, id);
+		int index = (int)cf_handle_allocator_get_index(m_table, id);
 		const T* object = &m_objects[index];
 		return object;
 	}
 }
 
 template <typename T>
-T* object_table_t<T>::remove_object(handle_t id, int* moved_index)
+T* cf_object_table_t<T>::remove_object(cf_handle_t id, int* moved_index)
 {
-	if (handle_allocator_is_handle_valid(m_table, id)) {
-		handle_allocator_free(m_table, id);
-		int index = (int)handle_allocator_get_index(m_table, id);
+	if (cf_handle_allocator_is_handle_valid(m_table, id)) {
+		cf_handle_allocator_free(m_table, id);
+		int index = (int)cf_handle_allocator_get_index(m_table, id);
 		if (moved_index) *moved_index = index;
 		m_objects.unordered_remove(index);
 	} else {
@@ -101,42 +104,44 @@ T* object_table_t<T>::remove_object(handle_t id, int* moved_index)
 }
 
 template <typename T>
-T* object_table_t<T>::remove_object(int index)
+T* cf_object_table_t<T>::remove_object(int index)
 {
 	m_objects.unordered_remove(index);
 	return &m_objects[index];
 }
 
 template <typename T>
-bool object_table_t<T>::has_object(handle_t id) const
+bool cf_object_table_t<T>::has_object(cf_handle_t id) const
 {
-	return handle_allocator_is_handle_valid(m_table, id) ? true : false;
+	return cf_handle_allocator_is_handle_valid(m_table, id) ? true : false;
 }
 
 template <typename T>
-void object_table_t<T>::update_handle(handle_t moved_handle, int moved_index)
+void cf_object_table_t<T>::update_handle(cf_handle_t moved_handle, int moved_index)
 {
-	handle_allocator_update_index(m_table, moved_handle, moved_index);
+	cf_handle_allocator_update_index(m_table, moved_handle, moved_index);
 }
 
 template <typename T>
-T* object_table_t<T>::get_objects()
-{
-	return m_objects.data();
-}
-
-template <typename T>
-const T* object_table_t<T>::get_objects() const
+T* cf_object_table_t<T>::get_objects()
 {
 	return m_objects.data();
 }
 
 template <typename T>
-int object_table_t<T>::get_object_count() const
+const T* cf_object_table_t<T>::get_objects() const
+{
+	return m_objects.data();
+}
+
+template <typename T>
+int cf_object_table_t<T>::get_object_count() const
 {
 	return m_objects.count();
 }
 
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_OBJECT_TABLE_INTERNAL_H

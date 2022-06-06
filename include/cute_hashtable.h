@@ -27,18 +27,18 @@
 namespace cute
 {
 
-struct hashtable_slot_t
+struct cf_hashtable_slot_t
 {
 	uint64_t key_hash;
 	int item_index;
 	int base_count;
 };
 
-struct hashtable_t
+struct cf_hashtable_t
 {
 	int count;
 	int slot_capacity;
-	hashtable_slot_t* slots;
+	cf_hashtable_slot_t* slots;
 
 	int key_size;
 	int item_size;
@@ -52,17 +52,17 @@ struct hashtable_t
 	void* mem_ctx;
 };
 
-CUTE_API int CUTE_CALL hashtable_init(hashtable_t* table, int key_size, int item_size, int capacity, void* mem_ctx);
-CUTE_API void CUTE_CALL hashtable_cleanup(hashtable_t* table);
+CUTE_API int CUTE_CALL cf_hashtable_init(cf_hashtable_t* table, int key_size, int item_size, int capacity, void* mem_ctx);
+CUTE_API void CUTE_CALL cf_hashtable_cleanup(cf_hashtable_t* table);
 
-CUTE_API void* CUTE_CALL hashtable_insert(hashtable_t* table, const void* key, const void* item);
-CUTE_API void CUTE_CALL hashtable_remove(hashtable_t* table, const void* key);
-CUTE_API void CUTE_CALL hashtable_clear(hashtable_t* table);
-CUTE_API void* CUTE_CALL hashtable_find(const hashtable_t* table, const void* key);
-CUTE_API int CUTE_CALL hashtable_count(const hashtable_t* table);
-CUTE_API void* CUTE_CALL hashtable_items(const hashtable_t* table);
-CUTE_API void* CUTE_CALL hashtable_keys(const hashtable_t* table);
-CUTE_API void CUTE_CALL hashtable_swap(hashtable_t* table, int index_a, int index_b);
+CUTE_API void* CUTE_CALL cf_hashtable_insert(cf_hashtable_t* table, const void* key, const void* item);
+CUTE_API void CUTE_CALL cf_hashtable_remove(cf_hashtable_t* table, const void* key);
+CUTE_API void CUTE_CALL cf_hashtable_clear(cf_hashtable_t* table);
+CUTE_API void* CUTE_CALL cf_hashtable_find(const cf_hashtable_t* table, const void* key);
+CUTE_API int CUTE_CALL cf_hashtable_count(const cf_hashtable_t* table);
+CUTE_API void* CUTE_CALL cf_hashtable_items(const cf_hashtable_t* table);
+CUTE_API void* CUTE_CALL cf_hashtable_keys(const cf_hashtable_t* table);
+CUTE_API void CUTE_CALL cf_hashtable_swap(cf_hashtable_t* table, int index_a, int index_b);
 
 }
 

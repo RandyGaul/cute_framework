@@ -53,7 +53,7 @@
 		ID3D11DepthStencilView* depth_stencil_view;
 	} state;
 
-	void d3d11_create_default_render_target() {
+	void cf_d3d11_create_default_render_target() {
 		HRESULT hr;
 		hr = IDXGISwapChain_GetBuffer(state.swap_chain, 0, IID_ID3D11Texture2D, (void**)&state.render_target);
 		CUTE_ASSERT(SUCCEEDED(hr) && state.render_target);
@@ -80,22 +80,22 @@
 		CUTE_ASSERT(SUCCEEDED(hr) && state.depth_stencil_view);
 	}
 
-	void d3d11_destroy_default_render_target(void) {
+	void cf_d3d11_destroy_default_render_target(void) {
 		SAFE_RELEASE(ID3D11Texture2D, state.render_target);
 		SAFE_RELEASE(ID3D11RenderTargetView, state.render_target_view);
 		SAFE_RELEASE(ID3D11Texture2D, state.depth_stencil_buffer);
 		SAFE_RELEASE(ID3D11DepthStencilView, state.depth_stencil_view);
 	}
 
-	void d3d11_update_default_render_target(void) {
+	void cf_d3d11_update_default_render_target(void) {
 		if (state.swap_chain) {
-			d3d11_destroy_default_render_target();
+			cf_d3d11_destroy_default_render_target();
 			IDXGISwapChain_ResizeBuffers(state.swap_chain, 2, state.w, state.h, DXGI_FORMAT_B8G8R8A8_UNORM, 0);
-			d3d11_create_default_render_target();
+			cf_d3d11_create_default_render_target();
 		}
 	}
 
-	void dx11_init(void* hwnd, int w, int h, int sample_count)
+	void cf_dx11_init(void* hwnd, int w, int h, int sample_count)
 	{
 		state.hwnd = (HWND)hwnd;
 		state.w = w;
@@ -138,39 +138,39 @@
 		CUTE_ASSERT(SUCCEEDED(hr) && state.swap_chain && state.device && state.device_context);
 
 		/* default render target and depth-stencil-buffer */
-		d3d11_create_default_render_target();
+		cf_d3d11_create_default_render_target();
 	}
 
-	static const void* s_d3d11_device(void) {
+	static const void* cf_s_d3d11_device(void) {
 		return (const void*)state.device;
 	}
 
-	static const void* s_d3d11_device_context(void) {
+	static const void* cf_s_d3d11_device_context(void) {
 		return (const void*)state.device_context;
 	}
 
-	static const void* s_d3d11_render_target_view(void) {
+	static const void* cf_s_d3d11_render_target_view(void) {
 		return (const void*)state.render_target_view;
 	}
 
-	static const void* s_d3d11_depth_stencil_view(void) {
+	static const void* cf_s_d3d11_depth_stencil_view(void) {
 		return (const void*)state.depth_stencil_view;
 	}
 
-	sg_context_desc dx11_get_context()
+	sg_context_desc cf_dx11_get_context()
 	{
 		sg_context_desc desc;
 		desc.color_format = SG_PIXELFORMAT_RGBA8;
 		desc.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;
 		desc.sample_count = state.sample_count;
-		desc.d3d11.device = s_d3d11_device();
-		desc.d3d11.device_context = s_d3d11_device_context();
-		desc.d3d11.render_target_view_cb = s_d3d11_render_target_view;
-		desc.d3d11.depth_stencil_view_cb = s_d3d11_depth_stencil_view;
+		desc.d3d11.device = cf_s_d3d11_device();
+		desc.d3d11.device_context = cf_s_d3d11_device_context();
+		desc.d3d11.render_target_view_cb = cf_s_d3d11_render_target_view;
+		desc.d3d11.depth_stencil_view_cb = cf_s_d3d11_depth_stencil_view;
 		return desc;
 	}
 
-	void dx11_present()
+	void cf_dx11_present()
 	{
 		IDXGISwapChain_Present(state.swap_chain, 1, 0);
 
@@ -185,14 +185,14 @@
 				/* need to reallocate the default render target */
 				state.w = cur_width;
 				state.h = cur_height;
-				d3d11_update_default_render_target();
+				cf_d3d11_update_default_render_target();
 			}
 		}
 	}
 
-	void dx11_shutdown()
+	void cf_dx11_shutdown()
 	{
-		d3d11_destroy_default_render_target();
+		cf_d3d11_destroy_default_render_target();
 		SAFE_RELEASE(IDXGISwapChain, state.swap_chain);
 		SAFE_RELEASE(ID3D11DeviceContext, state.device_context);
 		SAFE_RELEASE(ID3D11Device, state.device);
@@ -204,10 +204,10 @@
 
 	namespace cute
 	{
-		void dx11_init(void* hwnd, int w, int h, int sample_count) { CUTE_UNUSED(hwnd); CUTE_UNUSED(w); CUTE_UNUSED(h); CUTE_UNUSED(sample_count); }
-		sg_context_desc dx11_get_context() { sg_context_desc desc; CUTE_MEMSET(&desc, 0, sizeof(desc)); return desc; }
-		void dx11_present() { }
-		void dx11_shutdown() { }
+		void cf_dx11_init(void* hwnd, int w, int h, int sample_count) { CUTE_UNUSED(hwnd); CUTE_UNUSED(w); CUTE_UNUSED(h); CUTE_UNUSED(sample_count); }
+		sg_context_desc cf_dx11_get_context() { sg_context_desc desc; CUTE_MEMSET(&desc, 0, sizeof(desc)); return desc; }
+		void cf_dx11_present() { }
+		void cf_dx11_shutdown() { }
 	}
 
 #endif // CUTE_WINDOWS

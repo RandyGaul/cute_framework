@@ -27,32 +27,32 @@
 namespace cute
 {
 
-struct list_node_t
+struct cf_list_node_t
 {
-	list_node_t* next = this;
-	list_node_t* prev = this;
+	cf_list_node_t* next = this;
+	cf_list_node_t* prev = this;
 };
 
-struct list_t
+struct cf_list_t
 {
-	list_node_t nodes;
+	cf_list_node_t nodes;
 };
 
-#define CUTE_LIST_NODE(T, member, ptr) ((list_node_t*)((uintptr_t)ptr + CUTE_OFFSET_OF(T, member)))
+#define CUTE_LIST_NODE(T, member, ptr) ((cf_list_node_t*)((uintptr_t)ptr + CUTE_OFFSET_OF(T, member)))
 #define CUTE_LIST_HOST(T, member, ptr) ((T*)((uintptr_t)ptr - CUTE_OFFSET_OF(T, member)))
 
-CUTE_INLINE void list_init_node(list_node_t* node)
+CUTE_INLINE void cf_list_init_node(cf_list_node_t* node)
 {
 	node->next = node;
 	node->prev = node;
 }
 
-CUTE_INLINE void list_init(list_t* list)
+CUTE_INLINE void cf_list_init(cf_list_t* list)
 {
-	list_init_node(&list->nodes);
+	cf_list_init_node(&list->nodes);
 }
 
-CUTE_INLINE void list_push_front(list_t* list, list_node_t* node)
+CUTE_INLINE void cf_list_push_front(cf_list_t* list, cf_list_node_t* node)
 {
 	node->next = list->nodes.next;
 	node->prev = &list->nodes;
@@ -60,7 +60,7 @@ CUTE_INLINE void list_push_front(list_t* list, list_node_t* node)
 	list->nodes.next = node;
 }
 
-CUTE_INLINE void list_push_back(list_t* list, list_node_t* node)
+CUTE_INLINE void cf_list_push_back(cf_list_t* list, cf_list_node_t* node)
 {
 	node->prev = list->nodes.prev;
 	node->next = &list->nodes;
@@ -68,48 +68,48 @@ CUTE_INLINE void list_push_back(list_t* list, list_node_t* node)
 	list->nodes.prev = node;
 }
 
-CUTE_INLINE void list_remove(list_node_t* node)
+CUTE_INLINE void cf_list_remove(cf_list_node_t* node)
 {
 	node->prev->next = node->next;
 	node->next->prev = node->prev;
-	list_init_node(node);
+	cf_list_init_node(node);
 }
 
-CUTE_INLINE list_node_t* list_pop_front(list_t* list)
+CUTE_INLINE cf_list_node_t* cf_list_pop_front(cf_list_t* list)
 {
-	list_node_t* node = list->nodes.next;
-	list_remove(node);
+	cf_list_node_t* node = list->nodes.next;
+	cf_list_remove(node);
 	return node;
 }
 
-CUTE_INLINE list_node_t* list_pop_back(list_t* list)
+CUTE_INLINE cf_list_node_t* cf_list_pop_back(cf_list_t* list)
 {
-	list_node_t* node = list->nodes.prev;
-	list_remove(node);
+	cf_list_node_t* node = list->nodes.prev;
+	cf_list_remove(node);
 	return node;
 }
 
-CUTE_INLINE int list_empty(list_t* list)
+CUTE_INLINE int cf_list_empty(cf_list_t* list)
 {
 	return list->nodes.next == list->nodes.prev && list->nodes.next == &list->nodes;
 }
 
-CUTE_INLINE list_node_t* list_begin(list_t* list)
+CUTE_INLINE cf_list_node_t* cf_list_begin(cf_list_t* list)
 {
 	return list->nodes.next;
 }
 
-CUTE_INLINE list_node_t* list_end(list_t* list)
+CUTE_INLINE cf_list_node_t* cf_list_end(cf_list_t* list)
 {
 	return &list->nodes;
 }
 
-CUTE_INLINE list_node_t* list_front(list_t* list)
+CUTE_INLINE cf_list_node_t* cf_list_front(cf_list_t* list)
 {
 	return list->nodes.next;
 }
 
-CUTE_INLINE list_node_t* list_back(list_t* list)
+CUTE_INLINE cf_list_node_t* cf_list_back(cf_list_t* list)
 {
 	return list->nodes.prev;
 }

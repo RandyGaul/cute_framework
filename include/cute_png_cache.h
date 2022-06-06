@@ -42,31 +42,31 @@ namespace cute
  * 
  * You will mostly just care about these three functions.
  * 
- *     png_cache_load
- *     png_cache_unload
- *     png_cache_make_sprite
+ *     cf_png_cache_load
+ *     cf_png_cache_unload
+ *     cf_png_cache_make_sprite
  * 
  * It's a cache, which means it actually caches images loaded in RAM, so subsequent
- * calls to `png_cache_load` won't have to fetch the image off of disk, as long as
+ * calls to `cf_png_cache_load` won't have to fetch the image off of disk, as long as
  * the image is currently cached in RAM.
  */
-struct png_cache_t;
-struct strpool_t;
+struct cf_png_cache_t;
+struct cf_strpool_t;
 
 /**
- * Constructs a new png cache. Destroy it with `png_cache_destroy` when done with it.
+ * Constructs a new png cache. Destroy it with `cf_png_cache_destroy` when done with it.
  */
-CUTE_API png_cache_t* CUTE_CALL png_cache_make(void* mem_ctx = NULL);
+CUTE_API cf_png_cache_t* CUTE_CALL cf_png_cache_make(void* mem_ctx = NULL);
 
 /**
- * Destroys a png cache previously made with `png_cache_make`.
+ * Destroys a png cache previously made with `cf_png_cache_make`.
  */
-CUTE_API void CUTE_CALL png_cache_destroy(png_cache_t* cache);
+CUTE_API void CUTE_CALL cf_png_cache_destroy(cf_png_cache_t* cache);
 
 /**
  * A single image of raw pixels, loaded from a png cache.
  */
-struct png_t
+struct cf_png_t
 {
 	const char* path = NULL;
 	uint64_t id = ~0;
@@ -79,32 +79,32 @@ struct png_t
  * Returns an image from the cache. If it does not exist in the cache, it is loaded from disk
  * and placed into the cache.
  */
-CUTE_API cf_error_t CUTE_CALL png_cache_load(png_cache_t* cache, const char* png_path, png_t* png = NULL);
+CUTE_API cf_error_t CUTE_CALL cf_png_cache_load(cf_png_cache_t* cache, const char* png_path, cf_png_t* png = NULL);
 
 /**
  * Returns an image from the cache. If it does not exist in the cache, it is loaded from memory
  * and placed into the cache.
  */
-CUTE_API cf_error_t CUTE_CALL png_cache_load_mem(png_cache_t* cache, const char* png_path, const void* memory, size_t size, png_t* png = NULL);
+CUTE_API cf_error_t CUTE_CALL cf_png_cache_load_mem(cf_png_cache_t* cache, const char* png_path, const void* memory, size_t size, cf_png_t* png = NULL);
 
 /**
  * Unloads an image from the cache. This function can be used to control your RAM usage, for example
  * when switching from one level/area to another can be a good time to unload images that will no
  * longer be used.
  */
-CUTE_API void CUTE_CALL png_cache_unload(png_cache_t* cache, png_t* png);
+CUTE_API void CUTE_CALL cf_png_cache_unload(cf_png_cache_t* cache, cf_png_t* png);
 
 /**
- * `png_cache_get_pixels_fn` is needed to hook up to `batch_t` in order to draw sprites.
+ * `cf_png_cache_get_pixels_fn` is needed to hook up to `cf_batch_t` in order to draw sprites.
  * The return value gets passed to `batch_make`.
  */
-CUTE_API get_pixels_fn* CUTE_CALL png_cache_get_pixels_fn(png_cache_t* cache);
+CUTE_API cf_get_pixels_fn* CUTE_CALL cf_png_cache_get_pixels_fn(cf_png_cache_t* cache);
 
 /**
  * This is a low-level function, just in case anyone wants to get access to the internal string pool.
  * Only use this function if you know what you're doing.
  */
-CUTE_API strpool_t* CUTE_CALL png_cache_get_strpool_ptr(png_cache_t* cache);
+CUTE_API cf_strpool_t* CUTE_CALL cf_png_cache_get_strpool_ptr(cf_png_cache_t* cache);
 
 //--------------------------------------------------------------------------------------------------
 // Animation and sprite functions.
@@ -116,29 +116,29 @@ CUTE_API strpool_t* CUTE_CALL png_cache_get_strpool_ptr(png_cache_t* cache);
  * Constructs an animation out of an array of frames, along with their delays in milliseconds.
  * The animation is stored within the png cache.
  */
-CUTE_API const animation_t* CUTE_CALL png_cache_make_animation(png_cache_t* cache, const char* name, const cf_array<png_t>& pngs, const cf_array<float>& delays);
+CUTE_API const cf_animation_t* CUTE_CALL cf_png_cache_make_animation(cf_png_cache_t* cache, const char* name, const cf_array<cf_png_t>& pngs, const cf_array<float>& delays);
 
 /**
  * Looks up an animation within the png cache by name.
  */
-CUTE_API const animation_t* CUTE_CALL png_cache_get_animation(png_cache_t* cache, const char* name);
+CUTE_API const cf_animation_t* CUTE_CALL cf_png_cache_get_animation(cf_png_cache_t* cache, const char* name);
 
 /**
  * Constructs an animation table given an array of animations. The table is stored within the png cache.
  */
-CUTE_API const animation_table_t* CUTE_CALL png_cache_make_animation_table(png_cache_t* cache, const char* sprite_name, const cf_array<const animation_t*>& animations);
+CUTE_API const cf_animation_table_t* CUTE_CALL cf_png_cache_make_animation_table(cf_png_cache_t* cache, const char* sprite_name, const cf_array<const cf_animation_t*>& animations);
 
 /**
  * Looks up an animation table within the png cache by name.
  */
-CUTE_API const animation_table_t* CUTE_CALL png_cache_get_animation_table(png_cache_t* cache, const char* sprite_name);
+CUTE_API const cf_animation_table_t* CUTE_CALL cf_png_cache_get_animation_table(cf_png_cache_t* cache, const char* sprite_name);
 
 /**
- * Makes a sprite. Each sprite must refer to an animation table previously constructed by `png_cache_make_animation_table`.
+ * Makes a sprite. Each sprite must refer to an animation table previously constructed by `cf_png_cache_make_animation_table`.
  * You can supply the pointer to the animation table yourself in `table`, or just leave it NULL.
  * If table is `NULL` then `sprite_name` is used to lookup the table within the png cache.
  */
-CUTE_API sprite_t CUTE_CALL png_cache_make_sprite(png_cache_t* cache, const char* sprite_name, const animation_table_t* table = NULL);
+CUTE_API cf_sprite_t CUTE_CALL cf_png_cache_make_sprite(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_table_t* table = NULL);
 
 }
 

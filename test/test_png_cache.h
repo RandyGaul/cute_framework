@@ -25,23 +25,23 @@ using namespace cute;
 CUTE_TEST_CASE(test_png_cache, "Test all functions of the png caching API.");
 int test_png_cache()
 {
-	file_system_init(NULL);
-	file_system_mount(file_system_get_base_dir(), "");
+	cf_file_system_init(NULL);
+	cf_file_system_mount(cf_file_system_get_base_dir(), "");
 
-	png_cache_t* cache = png_cache_make();
+	cf_png_cache_t* cache = cf_png_cache_make();
 
-	png_t white;
-	png_t black;
-	cf_error_t err = png_cache_load(cache, "test_data/white_pixel.png", &white);
+	cf_png_t white;
+	cf_png_t black;
+	cf_error_t err = cf_png_cache_load(cache, "test_data/white_pixel.png", &white);
 	CUTE_TEST_ASSERT(!err.is_error());
-	err = png_cache_load(cache, "test_data/black_pixel.png", &black);
+	err = cf_png_cache_load(cache, "test_data/black_pixel.png", &black);
 	CUTE_TEST_ASSERT(!err.is_error());
 
-	const animation_t* blink_anim = png_cache_make_animation(cache, "blink", { white, black }, { 0.5f, 0.5f });
-	const animation_t* white_anim = png_cache_make_animation(cache, "white", { white }, { 1.0f });
-	const animation_t* black_anim = png_cache_make_animation(cache, "black", { black }, { 1.0f });
-	png_cache_make_animation_table(cache, "blink", { blink_anim, white_anim, black_anim } );
-	sprite_t sprite = png_cache_make_sprite(cache, "blink");
+	const cf_animation_t* blink_anim = cf_png_cache_make_animation(cache, "blink", { white, black }, { 0.5f, 0.5f });
+	const cf_animation_t* white_anim = cf_png_cache_make_animation(cache, "white", { white }, { 1.0f });
+	const cf_animation_t* black_anim = cf_png_cache_make_animation(cache, "black", { black }, { 1.0f });
+	cf_png_cache_make_animation_table(cache, "blink", { blink_anim, white_anim, black_anim } );
+	cf_sprite_t sprite = cf_png_cache_make_sprite(cache, "blink");
 
 	sprite.play("blink");
 	CUTE_TEST_CHECK_POINTER(sprite.animations);
@@ -50,9 +50,9 @@ int test_png_cache()
 	sprite.update(0.5f);
 	CUTE_TEST_ASSERT(sprite.frame_index == 1);
 
-	png_cache_destroy(cache);
+	cf_png_cache_destroy(cache);
 
-	file_system_destroy();
+	cf_file_system_destroy();
 
 	return 0;
 }

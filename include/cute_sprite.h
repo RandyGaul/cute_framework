@@ -33,7 +33,7 @@ namespace cute
 /**
  * Represents one frame of animation within a sprite.
  */
-struct frame_t
+struct cf_frame_t
 {
 	uint64_t id;
 	float delay;
@@ -42,29 +42,29 @@ struct frame_t
 /**
  * The direction a sprite plays frames.
  */
-enum play_direction_t
+enum cf_play_direction_t
 {
-	PLAY_DIRECTION_FORWARDS,
-	PLAY_DIRECTION_BACKWARDS,
-	PLAY_DIRECTION_PINGPONG,
+	CF_PLAY_DIRECTION_FORWARDS,
+	CF_PLAY_DIRECTION_BACKWARDS,
+	CF_PLAY_DIRECTION_PINGPONG,
 };
 
 /**
  * A single `sprite_t` contains a set of `animation_t`. Each animation
  * can define its own frames, and a playing direction for the frames.
  */
-struct animation_t
+struct cf_animation_t
 {
 	const char* name = NULL;
-	play_direction_t play_direction = PLAY_DIRECTION_FORWARDS;
-	cf_array<frame_t> frames;
+	cf_play_direction_t play_direction = CF_PLAY_DIRECTION_FORWARDS;
+	cf_array<cf_frame_t> frames;
 };
 
 /**
  * An animation table is a set of animations a particular sprite references.
  * Each sprite instance contains a pointer to an animation table in a "read-only" fashion.
  */
-using animation_table_t = dictionary<const char*, const animation_t*>;
+using cf_animation_table_t = cf_dictionary<const char*, const cf_animation_t*>;
 
 /**
  * The `sprite_t` represents a set of drawable animations. Each animation is a collection
@@ -74,7 +74,7 @@ using animation_table_t = dictionary<const char*, const animation_t*>;
  * Switching between animations can be done by calling the `play` and passing the name of the animation
  * to the `play` method.
  */
-struct sprite_t
+struct cf_sprite_t
 {
 	/**
 	 * Updates the sprite's internal timer to flip through different frames.
@@ -102,15 +102,15 @@ struct sprite_t
 	 * 
 	 * `batch` must not be NULL.
 	 */
-	CUTE_INLINE void draw(batch_t* batch);
+	CUTE_INLINE void draw(cf_batch_t* batch);
 
 	/**
 	 * A lower level utility function used within the `draw` method. This is useful to prepare
 	 * the sprite's drawable quad in a specific way before handing it off to a `batch`, to implement
 	 * custom graphics effects.
 	 */
-	CUTE_INLINE batch_sprite_t batch_sprite(cf_transform_t transform);
-	CUTE_INLINE batch_sprite_t batch_sprite();
+	CUTE_INLINE cf_batch_sprite_t batch_sprite(cf_transform_t transform);
+	CUTE_INLINE cf_batch_sprite_t batch_sprite();
 	
 	CUTE_INLINE void pause();
 	CUTE_INLINE void unpause();
@@ -160,11 +160,11 @@ struct sprite_t
 	int frame_index = 0;
 	int loop_count = 0;
 	float play_speed_multiplier = 1.0f;
-	const animation_t* animation = NULL;
+	const cf_animation_t* animation = NULL;
 
 	bool paused = false;
 	float t = 0;
-	const animation_table_t* animations = NULL;
+	const cf_animation_table_t* animations = NULL;
 
 	cf_transform_t transform = cf_make_transform();
 };
@@ -179,19 +179,19 @@ struct sprite_t
  * Loads a single-frame sprite from a single png file. This function may be called many times in a row without
  * any significant performance penalties due to internal caching.
  */
-CUTE_API sprite_t CUTE_CALL easy_sprite_make(const char* png_path);
+CUTE_API cf_sprite_t CUTE_CALL cf_easy_sprite_make(const char* png_path);
 
 /**
  * Unloads the sprites image resources from the internal cache. Any live `sprite_t` instances for
  * the given `png_path` will now be "dangling" and invalid.
  */
-CUTE_API void CUTE_CALL easy_sprite_unload(sprite_t sprite);
+CUTE_API void CUTE_CALL cf_easy_sprite_unload(cf_sprite_t sprite);
 
 /**
  * Gets the internal batch used for `easy_sprite_make` and `easy_sprite_unload`. The batch is used to get
  * sprites onto the screen by calling `batch_flush`.
  */
-CUTE_API batch_t* CUTE_CALL easy_sprite_get_batch();
+CUTE_API cf_batch_t* CUTE_CALL cf_easy_sprite_get_batch();
 
 //--------------------------------------------------------------------------------------------------
 // Aseprite sprite API. This is the preferred way to deal with sprites in Cute Framework, by loading
@@ -202,26 +202,26 @@ CUTE_API batch_t* CUTE_CALL easy_sprite_get_batch();
  * Loads a sprite from an aseprite file. This function may be called many times in a row without
  * any significant performance penalties due to internal caching.
  */
-CUTE_API sprite_t CUTE_CALL sprite_make(const char* aseprite_path);
+CUTE_API cf_sprite_t CUTE_CALL cf_sprite_make(const char* aseprite_path);
 
 /**
  * Unloads the sprites image resources from the internal cache. Any live `sprite_t` instances for
  * the given `aseprite_path` will now be "dangling" and invalid.
  */
-CUTE_API void CUTE_CALL sprite_unload(const char* aseprite_path);
+CUTE_API void CUTE_CALL cf_sprite_unload(const char* aseprite_path);
 
 /**
  * Gets the internal batch used for `sprite_make` and `sprite_unload`. The batch is used to get
  * sprites onto the screen by calling `batch_flush`.
  */
-CUTE_API batch_t* CUTE_CALL sprite_get_batch();
+CUTE_API cf_batch_t* CUTE_CALL cf_sprite_get_batch();
 
 //--------------------------------------------------------------------------------------------------
 // In-line implementation of `sprite_t` member functions.
 
 #include "cute_debug_printf.h"
 
-void sprite_t::update(float dt)
+void cf_sprite_t::update(float dt)
 {
 	if (paused) return;
 
@@ -239,7 +239,7 @@ void sprite_t::update(float dt)
 	}
 }
 
-void sprite_t::play(const char* animation)
+void cf_sprite_t::play(const char* animation)
 {
 	this->animation = NULL;
 	if (animations->find(animation, &this->animation).is_error()) {
@@ -249,12 +249,12 @@ void sprite_t::play(const char* animation)
 	reset();
 }
 
-bool sprite_t::is_playing(const char* animation)
+bool cf_sprite_t::is_playing(const char* animation)
 {
 	return !CUTE_STRCMP(animation, this->animation->name);
 }
 
-void sprite_t::reset()
+void cf_sprite_t::reset()
 {
 	paused = false;
 	frame_index = 0;
@@ -262,15 +262,15 @@ void sprite_t::reset()
 	t = 0;
 }
 
-void sprite_t::draw(batch_t* batch)
+void cf_sprite_t::draw(cf_batch_t* batch)
 {
 	CUTE_ASSERT(batch);
-	batch_push(batch, batch_sprite(transform));
+	cf_batch_push(batch, batch_sprite(transform));
 }
 
-batch_sprite_t sprite_t::batch_sprite(cf_transform_t transform)
+cf_batch_sprite_t cf_sprite_t::batch_sprite(cf_transform_t transform)
 {
-	batch_sprite_t q;
+	cf_batch_sprite_t q;
 	q.id = animation->frames[frame_index].id;
 	q.transform = transform;
 	q.transform.p += local_offset;
@@ -283,9 +283,9 @@ batch_sprite_t sprite_t::batch_sprite(cf_transform_t transform)
 	return q;
 }
 
-batch_sprite_t sprite_t::batch_sprite()
+cf_batch_sprite_t cf_sprite_t::batch_sprite()
 {
-	batch_sprite_t q;
+	cf_batch_sprite_t q;
 	q.id = animation->frames[frame_index].id;
 	q.transform = transform;
 	q.transform.p += local_offset;
@@ -298,48 +298,48 @@ batch_sprite_t sprite_t::batch_sprite()
 	return q;
 }
 
-void sprite_t::pause()
+void cf_sprite_t::pause()
 {
 	paused = true;
 }
 
-void sprite_t::unpause()
+void cf_sprite_t::unpause()
 {
 	paused = false;
 }
 
-void sprite_t::toggle_pause()
+void cf_sprite_t::toggle_pause()
 {
 	paused = !paused;
 }
 
 
-void sprite_t::flip_x()
+void cf_sprite_t::flip_x()
 {
 	scale.x *= -1.0f;
 }
 
-void sprite_t::flip_y()
+void cf_sprite_t::flip_y()
 {
 	scale.y *= -1.0f;
 }
 
-int sprite_t::frame_count() const
+int cf_sprite_t::frame_count() const
 {
 	return animation->frames.count();
 }
 
-int sprite_t::current_frame() const
+int cf_sprite_t::current_frame() const
 {
 	return frame_index;
 }
 
-float sprite_t::frame_delay()
+float cf_sprite_t::frame_delay()
 {
 	return animation->frames[frame_index].delay;
 }
 
-float sprite_t::animation_delay()
+float cf_sprite_t::animation_delay()
 {
 	int count = frame_count();
 	float delay = 0;
@@ -349,7 +349,7 @@ float sprite_t::animation_delay()
 	return delay;
 }
 
-float sprite_t::animation_interpolant()
+float cf_sprite_t::animation_interpolant()
 {
 	// TODO -- Backwards and pingpong.
 	float delay = animation_delay();
@@ -357,7 +357,7 @@ float sprite_t::animation_interpolant()
 	return cf_clamp(t / delay, 0.0f, 1.0f);
 }
 
-bool sprite_t::will_finish(float dt)
+bool cf_sprite_t::will_finish(float dt)
 {
 	// TODO -- Backwards and pingpong.
 	if (frame_index == frame_count() - 1) {
@@ -367,7 +367,7 @@ bool sprite_t::will_finish(float dt)
 	}
 }
 
-bool sprite_t::on_loop()
+bool cf_sprite_t::on_loop()
 {
 	if (frame_index == 0 && t == 0) {
 		return true;

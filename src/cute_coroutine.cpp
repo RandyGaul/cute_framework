@@ -30,26 +30,26 @@
 namespace cute
 {
 
-struct coroutine_t
+struct cf_coroutine_t
 {
 	float dt = 0;
 	bool waiting = false;
 	float seconds_left = 0;
 	mco_coro* mco;
-	coroutine_fn* fn = NULL;
+	cf_coroutine_fn* fn = NULL;
 	void* udata = NULL;
 };
 
-static void s_co_fn(mco_coro* mco)
+static void cf_s_co_fn(mco_coro* mco)
 {
-	coroutine_t* co = (coroutine_t*)mco_get_user_data(mco);
+	cf_coroutine_t* co = (cf_coroutine_t*)mco_get_user_data(mco);
 	co->fn(co);
 }
 
-coroutine_t* coroutine_make(coroutine_fn* fn, int stack_size, void* udata)
+cf_coroutine_t* cf_coroutine_make(cf_coroutine_fn* fn, int stack_size, void* udata)
 {
-	mco_desc desc = mco_desc_init(s_co_fn, (size_t)stack_size);
-	coroutine_t* co = CUTE_NEW(coroutine_t, NULL);
+	mco_desc desc = mco_desc_init(cf_s_co_fn, (size_t)stack_size);
+	cf_coroutine_t* co = CUTE_NEW(cf_coroutine_t, NULL);
 	desc.user_data = (void*)co;
 	mco_coro* mco;
 	mco_result res = mco_create(&mco, &desc);
@@ -60,7 +60,7 @@ coroutine_t* coroutine_make(coroutine_fn* fn, int stack_size, void* udata)
 	return co;
 }
 
-void coroutine_destroy(coroutine_t* co)
+void cf_coroutine_destroy(cf_coroutine_t* co)
 {
 	mco_state state = mco_status(co->mco);
 	CUTE_ASSERT(state == MCO_DEAD || state == MCO_SUSPENDED);
@@ -69,7 +69,7 @@ void coroutine_destroy(coroutine_t* co)
 	CUTE_FREE(co, NULL);
 }
 
-cf_error_t coroutine_resume(coroutine_t* co, float dt)
+cf_error_t cf_coroutine_resume(cf_coroutine_t* co, float dt)
 {
 	co->dt = dt;
 
@@ -79,91 +79,91 @@ cf_error_t coroutine_resume(coroutine_t* co, float dt)
 			co->waiting = false;
 			co->seconds_left = 0;
 		} else {
-			return error_success();
+			return cf_error_success();
 		}
 	}
 
 	mco_result res = mco_resume(co->mco);
 	if (res != MCO_SUCCESS) {
-		return error_failure(mco_result_description(res));
+		return cf_error_failure(mco_result_description(res));
 	} else {
-		return error_success();
+		return cf_error_success();
 	}
 }
 
-float coroutine_yield(coroutine_t* co, cf_error_t* err)
+float cf_coroutine_yield(cf_coroutine_t* co, cf_error_t* err)
 {
 	mco_result res = mco_yield(co->mco);
 	if (err) {
 		if (res != MCO_SUCCESS) {
-			*err = error_failure(mco_result_description(res));
+			*err = cf_error_failure(mco_result_description(res));
 		} else {
-			*err = error_success();
+			*err = cf_error_success();
 		}
 	}
 	return co->dt;
 }
 
-cf_error_t coroutine_wait(coroutine_t* co, float seconds)
+cf_error_t cf_coroutine_wait(cf_coroutine_t* co, float seconds)
 {
 	co->waiting = true;
 	co->seconds_left = seconds;
 	cf_error_t err;
-	coroutine_yield(co, &err);
+	cf_coroutine_yield(co, &err);
 	return err;
 }
 
-coroutine_state_t coroutine_state(coroutine_t* co)
+cf_coroutine_state_t cf_coroutine_state(cf_coroutine_t* co)
 {
 	mco_state s = mco_status(co->mco);
 	switch (s) {
 	default:
-		case MCO_DEAD: return COROUTINE_STATE_DEAD;
-		case MCO_NORMAL: return COROUTINE_STATE_ACTIVE_BUT_RESUMED_ANOTHER;
-		case MCO_RUNNING: return COROUTINE_STATE_ACTIVE_AND_RUNNING;
-		case MCO_SUSPENDED: return COROUTINE_STATE_SUSPENDED;
+		case MCO_DEAD: return CF_COROUTINE_STATE_DEAD;
+		case MCO_NORMAL: return CF_COROUTINE_STATE_ACTIVE_BUT_RESUMED_ANOTHER;
+		case MCO_RUNNING: return CF_COROUTINE_STATE_ACTIVE_AND_RUNNING;
+		case MCO_SUSPENDED: return CF_COROUTINE_STATE_SUSPENDED;
 	}
 }
 
-void* coroutine_get_udata(coroutine_t* co)
+void* cf_coroutine_get_udata(cf_coroutine_t* co)
 {
 	return co->udata;
 }
 
-cf_error_t coroutine_push(coroutine_t* co, const void* data, size_t size)
+cf_error_t cf_coroutine_push(cf_coroutine_t* co, const void* data, size_t size)
 {
 	mco_result res = mco_push(co->mco, data, size);
 	if (res != MCO_SUCCESS) {
-		return error_failure(mco_result_description(res));
+		return cf_error_failure(mco_result_description(res));
 	} else {
-		return error_success();
+		return cf_error_success();
 	}
 }
 
-cf_error_t coroutine_pop(coroutine_t* co, void* data, size_t size)
+cf_error_t cf_coroutine_pop(cf_coroutine_t* co, void* data, size_t size)
 {
 	mco_result res = mco_pop(co->mco, data, size);
 	if (res != MCO_SUCCESS) {
-		return error_failure(mco_result_description(res));
+		return cf_error_failure(mco_result_description(res));
 	} else {
-		return error_success();
+		return cf_error_success();
 	}
 }
 
-size_t coroutine_bytes_pushed(coroutine_t* co)
+size_t cf_coroutine_bytes_pushed(cf_coroutine_t* co)
 {
 	return mco_get_bytes_stored(co->mco);
 }
 
-size_t coroutine_space_remaining(coroutine_t* co)
+size_t cf_coroutine_space_remaining(cf_coroutine_t* co)
 {
 	return mco_get_storage_size(co->mco) - mco_get_bytes_stored(co->mco);
 }
 
-coroutine_t* coroutine_currently_running()
+cf_coroutine_t* cf_coroutine_currently_running()
 {
 	mco_coro* mco = mco_running();
-	coroutine_t* co = (coroutine_t*)mco_get_user_data(mco);
+	cf_coroutine_t* co = (cf_coroutine_t*)mco_get_user_data(mco);
 	return co;
 }
 

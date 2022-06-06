@@ -45,9 +45,9 @@
 
 int main(int argc, const char** argv)
 {
-	file_system_init(argv[0]);
-	printf("Tests are running from \"%s\"\n\n", file_system_get_base_dir());
-	file_system_destroy();
+	cf_file_system_init(argv[0]);
+	printf("Tests are running from \"%s\"\n\n", cf_file_system_get_base_dir());
+	cf_file_system_destroy();
 
 #ifdef _MSC_VER
 	_CrtSetDbgFlag(_CRTDBG_REPORT_FLAG | _CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);

@@ -137,7 +137,7 @@
 
 namespace cute
 {
-	struct app_t;
+	struct cf_app_t;
 }
 
 #ifdef CUTE_CPP

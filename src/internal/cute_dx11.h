@@ -28,10 +28,10 @@
 namespace cute
 {
 
-void dx11_init(void* hwnd, int w, int h, int sample_count);
-sg_context_desc dx11_get_context();
-void dx11_present();
-void dx11_shutdown();
+void cf_dx11_init(void* hwnd, int w, int h, int sample_count);
+sg_context_desc cf_dx11_get_context();
+void cf_dx11_present();
+void cf_dx11_shutdown();
 
 }
 

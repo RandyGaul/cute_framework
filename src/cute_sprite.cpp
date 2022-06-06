@@ -29,97 +29,97 @@
 namespace cute
 {
 
-static aseprite_cache_t* s_ase_cache()
+static cf_aseprite_cache_t* cf_s_ase_cache()
 {
-	if (!app->ase_batch) {
-		CUTE_ASSERT(!app->ase_cache);
-		app->ase_cache = aseprite_cache_make(app->mem_ctx);
-		app->ase_batch = batch_make(aseprite_cache_get_pixels_fn(app->ase_cache), app->ase_cache, app->mem_ctx);
-		batch_set_projection(app->ase_batch, cf_matrix_ortho_2d((float)app->offscreen_w, (float)app->offscreen_h, 0, 0));
+	if (!cf_app->ase_batch) {
+		CUTE_ASSERT(!cf_app->ase_cache);
+		cf_app->ase_cache = cf_aseprite_cache_make(cf_app->mem_ctx);
+		cf_app->ase_batch = cf_batch_make(cf_aseprite_cache_get_pixels_fn(cf_app->ase_cache), cf_app->ase_cache, cf_app->mem_ctx);
+		cf_batch_set_projection(cf_app->ase_batch, cf_matrix_ortho_2d((float)cf_app->offscreen_w, (float)cf_app->offscreen_h, 0, 0));
 	}
-	return app->ase_cache;
+	return cf_app->ase_cache;
 }
 
-static batch_t* s_ase_batch()
+static cf_batch_t* cf_s_ase_batch()
 {
-	return app->ase_batch;
+	return cf_app->ase_batch;
 }
 
-static png_cache_t* s_png_cache()
+static cf_png_cache_t* cf_s_png_cache()
 {
-	if (!app->png_batch) {
-		CUTE_ASSERT(!app->ase_cache);
-		app->png_cache = png_cache_make(app->mem_ctx);
-		app->png_batch = batch_make(aseprite_cache_get_pixels_fn(app->ase_cache), app->ase_cache, app->mem_ctx);
-		batch_set_projection(app->png_batch, cf_matrix_ortho_2d((float)app->offscreen_w, (float)app->offscreen_h, 0, 0));
+	if (!cf_app->png_batch) {
+		CUTE_ASSERT(!cf_app->ase_cache);
+		cf_app->png_cache = cf_png_cache_make(cf_app->mem_ctx);
+		cf_app->png_batch = cf_batch_make(cf_aseprite_cache_get_pixels_fn(cf_app->ase_cache), cf_app->ase_cache, cf_app->mem_ctx);
+		cf_batch_set_projection(cf_app->png_batch, cf_matrix_ortho_2d((float)cf_app->offscreen_w, (float)cf_app->offscreen_h, 0, 0));
 	}
-	return app->png_cache;
+	return cf_app->png_cache;
 }
 
-static batch_t* s_png_batch()
+static cf_batch_t* cf_s_png_batch()
 {
-	return app->png_batch;
+	return cf_app->png_batch;
 }
 
-sprite_t easy_sprite_make(const char* png_path)
+cf_sprite_t cf_easy_sprite_make(const char* png_path)
 {
-	png_cache_t* cache = s_png_cache();
-	const animation_table_t* table = png_cache_get_animation_table(cache, png_path);
+	cf_png_cache_t* cache = cf_s_png_cache();
+	const cf_animation_table_t* table = cf_png_cache_get_animation_table(cache, png_path);
 	if (!table) {
-		png_t png;
+		cf_png_t png;
 		char buf[1024];
-		cf_error_t err = png_cache_load(cache, png_path, &png);
+		cf_error_t err = cf_png_cache_load(cache, png_path, &png);
 		if (err.is_error()) {
 			sprintf(buf, "Unable to load sprite at path \"%s\".\n", png_path);
-			window_message_box(WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
-			return sprite_t();
+			cf_window_message_box(CF_WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
+			return cf_sprite_t();
 		}
-		const animation_t* anim = png_cache_make_animation(cache, png_path, { png }, { 1.0f });
-		table = png_cache_make_animation_table(cache, png_path, { anim });
+		const cf_animation_t* anim = cf_png_cache_make_animation(cache, png_path, { png }, { 1.0f });
+		table = cf_png_cache_make_animation_table(cache, png_path, { anim });
 	}
 
-	sprite_t s = png_cache_make_sprite(cache, png_path, table);
+	cf_sprite_t s = cf_png_cache_make_sprite(cache, png_path, table);
 	return s;
 }
 
-void easy_sprite_unload(sprite_t sprite)
+void cf_easy_sprite_unload(cf_sprite_t sprite)
 {
-	png_cache_t* cache = s_png_cache();
-	png_t png;
+	cf_png_cache_t* cache = cf_s_png_cache();
+	cf_png_t png;
 	cf_error_t err = cache->pngs.find(sprite.animations->items()[0]->frames[0].id, &png);
-	png_cache_unload(cache, &png);
+	cf_png_cache_unload(cache, &png);
 }
 
-batch_t* easy_sprite_get_batch()
+cf_batch_t* cf_easy_sprite_get_batch()
 {
-	s_png_cache();
-	return app->png_batch;
+	cf_s_png_cache();
+	return cf_app->png_batch;
 }
 
-sprite_t sprite_make(const char* aseprite_path)
+cf_sprite_t cf_sprite_make(const char* aseprite_path)
 {
-	aseprite_cache_t* cache = s_ase_cache();
+	cf_aseprite_cache_t* cache = cf_s_ase_cache();
 
-	sprite_t s;
-	cf_error_t err = aseprite_cache_load(cache, aseprite_path, &s);
+	cf_sprite_t s;
+	cf_error_t err = cf_aseprite_cache_load(cache, aseprite_path, &s);
 	char buf[1024];
 	if (err.is_error()) {
 		sprintf(buf, "Unable to load sprite at path \"%s\".\n", aseprite_path);
-		window_message_box(WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
+		cf_window_message_box(CF_WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
 	}
 	return s;
 }
 
-void sprite_unload(const char* aseprite_path)
+void cf_sprite_unload(const char* aseprite_path)
 {
-	aseprite_cache_t* cache = s_ase_cache();
-	aseprite_cache_unload(cache, aseprite_path);
+	cf_aseprite_cache_t* cache = cf_s_ase_cache();
+	cf_aseprite_cache_unload(cache, aseprite_path);
 }
 
-batch_t* sprite_get_batch()
+cf_batch_t* cf_sprite_get_batch()
 {
-	s_ase_cache();
-	return app->ase_batch;
+	cf_s_ase_cache();
+	return cf_app->ase_batch;
 }
 
 }

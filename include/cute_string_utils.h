@@ -30,24 +30,24 @@
 namespace cute
 {
 
-CUTE_API string_t operator+(const string_t& a, const string_t& b);
+CUTE_API cf_string_t operator+(const cf_string_t& a, const cf_string_t& b);
 
-CUTE_API int to_int(const string_t& x);
-CUTE_API float to_float(const string_t& x);
+CUTE_API int cf_to_int(const cf_string_t& x);
+CUTE_API float cf_to_float(const cf_string_t& x);
 
-CUTE_API string_t format(string_t fmt, int n, ...);
+CUTE_API cf_string_t cf_format(cf_string_t fmt, int n, ...);
 
-CUTE_API string_t to_string(int x);
-CUTE_API string_t to_string(uint64_t x);
-CUTE_API string_t to_string(float x);
-CUTE_API string_t to_string(bool x);
-CUTE_API string_t to_string(const cf_array<char>& x);
-CUTE_API string_t to_string(char x);
-CUTE_API cf_array<char> to_array(string_t s);
-CUTE_API cf_array<char> to_array(const char* s);
-CUTE_API cf_array<char> to_array(const char* s, size_t sz);
+CUTE_API cf_string_t cf_to_string(int x);
+CUTE_API cf_string_t cf_to_string(uint64_t x);
+CUTE_API cf_string_t cf_to_string(float x);
+CUTE_API cf_string_t cf_to_string(bool x);
+CUTE_API cf_string_t cf_to_string(const cf_array<char>& x);
+CUTE_API cf_string_t cf_to_string(char x);
+CUTE_API cf_array<char> cf_to_array(cf_string_t s);
+CUTE_API cf_array<char> cf_to_array(const char* s);
+CUTE_API cf_array<char> cf_to_array(const char* s, size_t sz);
 
-CUTE_API void string_utils_cleanup_static_memory();
+CUTE_API void cf_string_utils_cleanup_static_memory();
 
 }
 

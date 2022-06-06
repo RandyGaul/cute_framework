@@ -35,7 +35,7 @@ namespace cute
 
 // TODO - Lock on joypad list? Race condition with pumping input messages.
 
-void joypad_system_init()
+void cf_joypad_system_init()
 {
 	static bool init;
 	if (!init) {
@@ -45,91 +45,91 @@ void joypad_system_init()
 	}
 }
 
-cf_error_t joypad_add_mapping(const char* mapping)
+cf_error_t cf_joypad_add_mapping(const char* mapping)
 {
 	int result = SDL_GameControllerAddMapping(mapping);
-	if (result == -1) return error_failure("Failed to add mapping.");
-	else return error_success();
+	if (result == -1) return cf_error_failure("Failed to add mapping.");
+	else return cf_error_success();
 }
 
-int joypad_count()
+int cf_joypad_count()
 {
 	return SDL_NumJoysticks();
 }
 
-joypad_t* joypad_open(int index)
+cf_joypad_t* cf_joypad_open(int index)
 {
 	if (SDL_IsGameController(index)) {
 		SDL_GameController* controller = SDL_GameControllerOpen(index);
 		if (controller) {
 			SDL_Joystick* joy = SDL_GameControllerGetJoystick(controller);
-			joypad_t* joypad = CUTE_NEW(joypad_t, NULL);
+			cf_joypad_t* joypad = CUTE_NEW(cf_joypad_t, NULL);
 			joypad->controller = controller;
 			joypad->id = SDL_JoystickInstanceID(joy);
-			list_push_front(&app->joypads, &joypad->node);
+			cf_list_push_front(&cf_app->joypads, &joypad->node);
 			return joypad;
 		}
 	}
 	return NULL;
 }
 
-void joypad_close(joypad_t* joypad)
+void cf_joypad_close(cf_joypad_t* joypad)
 {
-	list_remove(&joypad->node);
+	cf_list_remove(&joypad->node);
 	if (joypad->haptic) {
-		haptic_close(joypad->haptic);
+		cf_haptic_close(joypad->haptic);
 	}
 	SDL_GameControllerClose(joypad->controller);
 	CUTE_FREE(joypad, NULL);
 }
 
-bool joypad_is_connected(joypad_t* joypad)
+bool cf_joypad_is_connected(cf_joypad_t* joypad)
 {
 	return SDL_GameControllerGetAttached(joypad->controller);
 }
 
-joypad_power_level_t joypad_power_level(joypad_t* joypad)
+cf_joypad_power_level_t cf_joypad_power_level(cf_joypad_t* joypad)
 {
 	SDL_Joystick* joy = SDL_GameControllerGetJoystick(joypad->controller);
 	SDL_JoystickPowerLevel level = SDL_JoystickCurrentPowerLevel(joy);
 	switch (level) {
-	case SDL_JOYSTICK_POWER_UNKNOWN: return JOYPAD_POWER_LEVEL_UNKNOWN;
-	case SDL_JOYSTICK_POWER_EMPTY: return JOYPAD_POWER_LEVEL_EMPTY;
-	case SDL_JOYSTICK_POWER_LOW: return JOYPAD_POWER_LEVEL_LOW;
-	case SDL_JOYSTICK_POWER_MEDIUM: return JOYPAD_POWER_LEVEL_MEDIUM;
-	case SDL_JOYSTICK_POWER_FULL: return JOYPAD_POWER_LEVEL_FULL;
-	case SDL_JOYSTICK_POWER_WIRED: return JOYPAD_POWER_LEVEL_WIRED;
-	case SDL_JOYSTICK_POWER_MAX: return JOYPAD_POWER_LEVEL_COUNT;
+	case SDL_JOYSTICK_POWER_UNKNOWN: return CF_JOYPAD_POWER_LEVEL_UNKNOWN;
+	case SDL_JOYSTICK_POWER_EMPTY: return CF_JOYPAD_POWER_LEVEL_EMPTY;
+	case SDL_JOYSTICK_POWER_LOW: return CF_JOYPAD_POWER_LEVEL_LOW;
+	case SDL_JOYSTICK_POWER_MEDIUM: return CF_JOYPAD_POWER_LEVEL_MEDIUM;
+	case SDL_JOYSTICK_POWER_FULL: return CF_JOYPAD_POWER_LEVEL_FULL;
+	case SDL_JOYSTICK_POWER_WIRED: return CF_JOYPAD_POWER_LEVEL_WIRED;
+	case SDL_JOYSTICK_POWER_MAX: return CF_JOYPAD_POWER_LEVEL_COUNT;
 	}
-	return JOYPAD_POWER_LEVEL_UNKNOWN;
+	return CF_JOYPAD_POWER_LEVEL_UNKNOWN;
 }
 
-const char* joypad_name(joypad_t* joypad)
+const char* cf_joypad_name(cf_joypad_t* joypad)
 {
 	return SDL_GameControllerName(joypad->controller);
 }
 
-bool joypad_button_is_down(joypad_t* joypad, joypad_button_t button)
+bool cf_joypad_button_is_down(cf_joypad_t* joypad, cf_joypad_button_t button)
 {
 	return joypad->buttons[button];
 }
 
-bool joypad_button_is_up(joypad_t* joypad, joypad_button_t button)
+bool cf_joypad_button_is_up(cf_joypad_t* joypad, cf_joypad_button_t button)
 {
 	return !joypad->buttons[button];
 }
 
-bool joypad_button_was_pressed(joypad_t* joypad, joypad_button_t button)
+bool cf_joypad_button_was_pressed(cf_joypad_t* joypad, cf_joypad_button_t button)
 {
 	return joypad->buttons[button] && !joypad->buttons_prev[button];
 }
 
-bool joypad_button_was_released(joypad_t* joypad, joypad_button_t button)
+bool cf_joypad_button_was_released(cf_joypad_t* joypad, cf_joypad_button_t button)
 {
 	return !joypad->buttons[button] && joypad->buttons_prev[button];
 }
 
-int16_t joypad_axis(joypad_t* joypad, joypad_axis_t axis)
+int16_t cf_joypad_axis(cf_joypad_t* joypad, cf_joypad_axis_t axis)
 {
 	return joypad->axes[axis];
 }

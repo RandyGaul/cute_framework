@@ -27,72 +27,72 @@
 namespace cute
 {
 
-const char* decode8(const char* text, int* cp)
+const char* cf_decode8(const char* text, int* cp)
 {
 	return cu_decode8(text, cp);
 }
 
-char* encode8(char *text, int cp)
+char* cf_encode8(char *text, int cp)
 {
 	return cu_encode8(text, cp);
 }
 
-int codepoint8_size(int cp)
+int cf_codepoint8_size(int cp)
 {
 	return cu_codepoint8_size(cp);
 }
 
-const wchar_t* decode16(const wchar_t* text, int* cp)
+const wchar_t* cf_decode16(const wchar_t* text, int* cp)
 {
 	return cu_decode16(text, cp);
 }
 
-wchar_t* encode16(wchar_t* text, int cp)
+wchar_t* cf_encode16(wchar_t* text, int cp)
 {
 	return cu_encode16(text, cp);
 }
 
-int codepoint16_size(int cp)
+int cf_codepoint16_size(int cp)
 {
 	return cu_codepoint16_size(cp);
 }
 
-void widen(const char* in, wchar_t* out)
+void cf_widen(const char* in, wchar_t* out)
 {
 	cu_widen(in, out);
 }
 
-void widen(const char* in, int in_len, wchar_t* out)
+void cf_widen(const char* in, int in_len, wchar_t* out)
 {
 	cu_widen(in, in_len, out);
 }
 
-void widen(const char* in, wchar_t* out, int out_len)
+void cf_widen(const char* in, wchar_t* out, int out_len)
 {
 	cu_widen(in, out, out_len);
 }
 
-void widen(const char* in, int in_len, wchar_t* out, int out_len)
+void cf_widen(const char* in, int in_len, wchar_t* out, int out_len)
 {
 	cu_widen(in, in_len, out, out_len);
 }
 
-void shorten(const wchar_t* in, char* out)
+void cf_shorten(const wchar_t* in, char* out)
 {
 	cu_shorten(in, out);
 }
 
-void shorten(const wchar_t* in, int in_len, char* out)
+void cf_shorten(const wchar_t* in, int in_len, char* out)
 {
 	cu_shorten(in, in_len, out);
 }
 
-void shorten(const wchar_t* in, char* out, int out_len)
+void cf_shorten(const wchar_t* in, char* out, int out_len)
 {
 	cu_shorten(in, out, out_len);
 }
 
-void shorten(const wchar_t* in, int in_len, char* out, int out_len)
+void cf_shorten(const wchar_t* in, int in_len, char* out, int out_len)
 {
 	cu_shorten(in, in_len, out, out_len);
 }

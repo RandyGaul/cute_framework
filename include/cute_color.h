@@ -45,27 +45,27 @@ struct cf_color_t
 	float a;
 };
 
-CUTE_INLINE cf_color_t make_color(float r, float g, float b)                  { cf_color_t color; color.r = r; color.g = g; color.b = b; color.a = 1.0f; return color; }
-CUTE_INLINE cf_color_t make_color(float r, float g, float b, float a)         { cf_color_t color; color.r = r; color.g = g; color.b = b; color.a = a; return color; }
-CUTE_INLINE cf_color_t make_color(uint8_t r, uint8_t g, uint8_t b)            { cf_color_t color; color.r = (float)r / 255.0f; color.g = (float)g / 255.0f; color.b = (float)b / 255.0f; color.a = 1.0f; return color; }
-CUTE_INLINE cf_color_t make_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { cf_color_t color; color.r = (float)r / 255.0f; color.g = (float)g / 255.0f; color.b = (float)b / 255.0f; color.a = (float)a / 255.0f; return color; }
-CUTE_INLINE cf_color_t make_color(int hex)                                    { return make_color((uint8_t)((hex & 0xFF000000) >> 24), (uint8_t)((hex & 0x00FF0000) >> 16), (uint8_t)((hex & 0x0000FF00) >> 8), (uint8_t)(hex & 0x000000FF)); }
+CUTE_INLINE cf_color_t cf_make_color(float r, float g, float b)                  { cf_color_t color; color.r = r; color.g = g; color.b = b; color.a = 1.0f; return color; }
+CUTE_INLINE cf_color_t cf_make_color(float r, float g, float b, float a)         { cf_color_t color; color.r = r; color.g = g; color.b = b; color.a = a; return color; }
+CUTE_INLINE cf_color_t cf_make_color(uint8_t r, uint8_t g, uint8_t b)            { cf_color_t color; color.r = (float)r / 255.0f; color.g = (float)g / 255.0f; color.b = (float)b / 255.0f; color.a = 1.0f; return color; }
+CUTE_INLINE cf_color_t cf_make_color(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { cf_color_t color; color.r = (float)r / 255.0f; color.g = (float)g / 255.0f; color.b = (float)b / 255.0f; color.a = (float)a / 255.0f; return color; }
+CUTE_INLINE cf_color_t cf_make_color(int hex)                                    { return cf_make_color((uint8_t)((hex & 0xFF000000) >> 24), (uint8_t)((hex & 0x00FF0000) >> 16), (uint8_t)((hex & 0x0000FF00) >> 8), (uint8_t)(hex & 0x000000FF)); }
 
-CUTE_INLINE cf_color_t color_black()             { return make_color(0.0f, 0.0f, 0.0f); }
-CUTE_INLINE cf_color_t color_red()               { return make_color(1.0f, 0.0f, 0.0f); }
-CUTE_INLINE cf_color_t color_green()               { return make_color(0.0f, 1.0f, 0.0f); }
-CUTE_INLINE cf_color_t color_blue()               { return make_color(0.0f, 0.0f, 1.0f); }
-CUTE_INLINE cf_color_t color_white()             { return make_color(1.0f, 1.0f, 1.0f); }
-CUTE_INLINE cf_color_t color_invisible()         { return make_color(0.0f, 0.0f, 0.0f, 0.0f); }
+CUTE_INLINE cf_color_t cf_color_black()             { return cf_make_color(0.0f, 0.0f, 0.0f); }
+CUTE_INLINE cf_color_t cf_color_red()               { return cf_make_color(1.0f, 0.0f, 0.0f); }
+CUTE_INLINE cf_color_t cf_color_green()               { return cf_make_color(0.0f, 1.0f, 0.0f); }
+CUTE_INLINE cf_color_t cf_color_blue()               { return cf_make_color(0.0f, 0.0f, 1.0f); }
+CUTE_INLINE cf_color_t cf_color_white()             { return cf_make_color(1.0f, 1.0f, 1.0f); }
+CUTE_INLINE cf_color_t cf_color_invisible()         { return cf_make_color(0.0f, 0.0f, 0.0f, 0.0f); }
 
-CUTE_INLINE cf_color_t operator*(cf_color_t a, float s) { return make_color(a.r * s, a.g * s, a.b * s, a.a * s); }
-CUTE_INLINE cf_color_t operator/(cf_color_t a, float s) { return make_color(a.r / s, a.g / s, a.b / s, a.a / s); }
-CUTE_INLINE cf_color_t operator+(cf_color_t a, cf_color_t b) { return make_color(a.r + b.r, a.g + b.g, a.b + b.b, a.a + b.a); }
-CUTE_INLINE cf_color_t operator-(cf_color_t a, cf_color_t b) { return make_color(a.r - b.r, a.g - b.g, a.b - b.b, a.a - b.a); }
+CUTE_INLINE cf_color_t operator*(cf_color_t a, float s) { return cf_make_color(a.r * s, a.g * s, a.b * s, a.a * s); }
+CUTE_INLINE cf_color_t operator/(cf_color_t a, float s) { return cf_make_color(a.r / s, a.g / s, a.b / s, a.a / s); }
+CUTE_INLINE cf_color_t operator+(cf_color_t a, cf_color_t b) { return cf_make_color(a.r + b.r, a.g + b.g, a.b + b.b, a.a + b.a); }
+CUTE_INLINE cf_color_t operator-(cf_color_t a, cf_color_t b) { return cf_make_color(a.r - b.r, a.g - b.g, a.b - b.b, a.a - b.a); }
 
 CUTE_INLINE cf_color_t cf_lerp(cf_color_t a, cf_color_t b, float s) { return a + (b - a) * s; }
 
-CUTE_INLINE cf_pixel_t to_pixel(cf_color_t c)
+CUTE_INLINE cf_pixel_t cf_to_pixel(cf_color_t c)
 {
 	cf_pixel_t p;
 	p.colors.r = (int)((uint8_t)(c.r * 255.0f));
@@ -75,17 +75,17 @@ CUTE_INLINE cf_pixel_t to_pixel(cf_color_t c)
 	return p;
 }
 
-CUTE_INLINE cf_color_t to_color(cf_pixel_t p)
+CUTE_INLINE cf_color_t cf_to_color(cf_pixel_t p)
 {
-	return make_color((int)p.val);
+	return cf_make_color((int)p.val);
 }
 
-CUTE_INLINE uint32_t to_int(cf_color_t c)
+CUTE_INLINE uint32_t cf_to_int(cf_color_t c)
 {
-	return to_pixel(c).val;
+	return cf_to_pixel(c).val;
 }
 
-CUTE_INLINE uint32_t to_int(cf_pixel_t p)
+CUTE_INLINE uint32_t cf_to_int(cf_pixel_t p)
 {
 	return p.val;
 }

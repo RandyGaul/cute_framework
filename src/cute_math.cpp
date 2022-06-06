@@ -163,12 +163,12 @@ void cf_poly_to_poly_manifold(const cf_poly_t* A, const cf_transform_t* ax, cons
 	c2PolytoPolyManifold((c2Poly*)A, (c2x*)ax, (c2Poly*)B, (c2x*)bx, (c2Manifold*)m);
 }
 
-float cf_gjk(const void* A, cute_shape_type_t typeA, const cf_transform_t* ax_ptr, const void* B, cute_shape_type_t typeB, const cf_transform_t* bx_ptr, cf_v2* outA, cf_v2* outB, int use_radius, int* iterations, cf_gjk_cache_t* cache)
+float cf_gjk(const void* A, cf_shape_type_t typeA, const cf_transform_t* ax_ptr, const void* B, cf_shape_type_t typeB, const cf_transform_t* bx_ptr, cf_v2* outA, cf_v2* outB, int use_radius, int* iterations, cf_gjk_cache_t* cache)
 {
 	return c2GJK(A, (C2_TYPE)typeA, (c2x*)ax_ptr, B, (C2_TYPE)typeB, (c2x*)bx_ptr, (c2v*)outA, (c2v*)outB, use_radius, iterations, (c2GJKCache*)cache);
 }
 
-cf_toi_result_t toi(const void* A, cute_shape_type_t typeA, const cf_transform_t* ax_ptr, cf_v2 vA, const void* B, cute_shape_type_t typeB, const cf_transform_t* bx_ptr, cf_v2 vB, int use_radius)
+cf_toi_result_t cf_toi(const void* A, cf_shape_type_t typeA, const cf_transform_t* ax_ptr, cf_v2 vA, const void* B, cf_shape_type_t typeB, const cf_transform_t* bx_ptr, cf_v2 vB, int use_radius)
 {
 	cf_toi_result_t result;
 	c2TOIResult c2result = c2TOI(A, (C2_TYPE)typeA, (c2x*)ax_ptr, *(c2v*)&vA, B, (C2_TYPE)typeB, (c2x*)bx_ptr, *(c2v*)&vB, use_radius);
@@ -176,7 +176,7 @@ cf_toi_result_t toi(const void* A, cute_shape_type_t typeA, const cf_transform_t
 	return result;
 }
 
-void cf_inflate(void* shape, cute_shape_type_t type, float skin_factor)
+void cf_inflate(void* shape, cf_shape_type_t type, float skin_factor)
 {
 	c2Inflate(shape, (C2_TYPE)type, skin_factor);
 }
@@ -217,17 +217,17 @@ cf_v2 cf_centroid(const cf_v2* verts, int count)
 	return c * (1.0f / area_sum) + p0;
 }
 
-int cf_collided(const void* A, const cf_transform_t* ax, cute_shape_type_t typeA, const void* B, const cf_transform_t* bx, cute_shape_type_t typeB)
+int cf_collided(const void* A, const cf_transform_t* ax, cf_shape_type_t typeA, const void* B, const cf_transform_t* bx, cf_shape_type_t typeB)
 {
 	return c2Collided(A, (c2x*)ax, (C2_TYPE)typeA, B, (c2x*)bx, (C2_TYPE)typeB);
 }
 
-void cf_collide(const void* A, const cf_transform_t* ax, cute_shape_type_t typeA, const void* B, const cf_transform_t* bx, cute_shape_type_t typeB, cf_manifold_t* m)
+void cf_collide(const void* A, const cf_transform_t* ax, cf_shape_type_t typeA, const void* B, const cf_transform_t* bx, cf_shape_type_t typeB, cf_manifold_t* m)
 {
 	c2Collide(A, (c2x*)ax, (C2_TYPE)typeA, B, (c2x*)bx, (C2_TYPE)typeB, (c2Manifold*)m);
 }
 
-bool cf_cast_ray(cf_ray_t A, const void* B, const cf_transform_t* bx, cute_shape_type_t typeB, cf_raycast_t* out)
+bool cf_cast_ray(cf_ray_t A, const void* B, const cf_transform_t* bx, cf_shape_type_t typeB, cf_raycast_t* out)
 {
 	return c2CastRay(*(c2Ray*)&A, B, (c2x*)bx, (C2_TYPE)typeB, (c2Raycast*)out);
 }

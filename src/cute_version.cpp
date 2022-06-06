@@ -24,7 +24,7 @@
 namespace cute
 {
 
-const char* version_string_linked()
+const char* cf_version_string_linked()
 {
 	return "Cute Framework Version 0.0";
 }

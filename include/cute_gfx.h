@@ -31,7 +31,8 @@
 
 typedef uint64_t cf_texture_t;
 
-CUTE_API cf_texture_t CUTE_CALL cf_texture_make(cf_pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_REPEAT, sg_filter filter = SG_FILTER_NEAREST);
+CUTE_API cf_texture_t CUTE_CALL cf_texture_make(cf_pixel_t* pixels, int w, int h);
+CUTE_API cf_texture_t CUTE_CALL cf_texture_make_ex(cf_pixel_t* pixels, int w, int h, sg_wrap mode /* = SG_WRAP_REPEAT */, sg_filter filter /* = SG_FILTER_NEAREST */);
 CUTE_API void CUTE_CALL cf_texture_destroy(cf_texture_t texture);
 
 struct cf_matrix_t
@@ -42,19 +43,18 @@ struct cf_matrix_t
 CUTE_API cf_matrix_t CUTE_CALL cf_matrix_identity();
 CUTE_API cf_matrix_t CUTE_CALL cf_matrix_ortho_2d(float w, float h, float x, float y);
 
+struct cf_gfx_buffer_t
+{
+	int stride;
+	int buffer_number;
+	int offset;
+	sg_buffer buffer[3];
+};
 
 struct cf_triple_buffer_t
 {
-	struct cf_buffer_t
-	{
-		int stride = 0;
-		int buffer_number = 0;
-		int offset = 0;
-		sg_buffer buffer[3];
-	};
-
-	cf_buffer_t vbuf;
-	cf_buffer_t ibuf;
+	cf_gfx_buffer_t vbuf;
+	cf_gfx_buffer_t ibuf;
 
 	#ifdef CUTE_CPP
 	CUTE_INLINE void advance();
@@ -80,8 +80,8 @@ CUTE_API CUTE_INLINE sg_bindings CUTE_CALL cf_triple_buffer_bind(cf_triple_buffe
 }
 
 
-CUTE_API cf_triple_buffer_t CUTE_CALL cf_triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count = 0, int index_stride = 0);
-CUTE_API cf_error_t CUTE_CALL cf_triple_buffer_append(cf_triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count = 0, const void* indices = NULL);
+CUTE_API cf_triple_buffer_t CUTE_CALL cf_triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count /* = 0 */, int index_stride /* = 0 */);
+CUTE_API cf_error_t CUTE_CALL cf_triple_buffer_append(cf_triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count /* = 0 */, const void* indices /* = NULL */);
 
 #ifdef CUTE_CPP
 
@@ -110,7 +110,6 @@ CUTE_API matrix_t CUTE_CALL matrix_identity();
 CUTE_API matrix_t CUTE_CALL matrix_ortho_2d(float w, float h, float x, float y);
 
 using triple_buffer_t = cf_triple_buffer_t;
-
 
 CUTE_API triple_buffer_t CUTE_CALL triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count = 0, int index_stride = 0);
 CUTE_API error_t CUTE_CALL triple_buffer_append(triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count = 0, const void* indices = NULL);

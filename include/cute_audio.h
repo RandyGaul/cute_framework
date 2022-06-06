@@ -29,34 +29,34 @@
 namespace cute
 {
 
-struct audio_t;
+struct cf_audio_t;
 
-CUTE_API audio_t* CUTE_CALL audio_load_ogg(const char* path, void* user_allocator_context = NULL);
-CUTE_API audio_t* CUTE_CALL audio_load_wav(const char* path, void* user_allocator_context = NULL);
-CUTE_API audio_t* CUTE_CALL audio_load_ogg_from_memory(void* memory, int byte_count, void* user_allocator_context = NULL);
-CUTE_API audio_t* CUTE_CALL audio_load_wav_from_memory(void* memory, int byte_count, void* user_allocator_context = NULL);
-CUTE_API void CUTE_CALL audio_stream_ogg(const char* path, promise_t promise, void* user_allocator_context = NULL);
-CUTE_API void CUTE_CALL audio_stream_wav(const char* path, promise_t promise, void* user_allocator_context = NULL);
-CUTE_API void CUTE_CALL audio_stream_ogg_from_memory(void* memory, int byte_count, promise_t promise, void* user_allocator_context = NULL);
-CUTE_API void CUTE_CALL audio_stream_wav_from_memory(void* memory, int byte_count, promise_t promise, void* user_allocator_context = NULL);
-CUTE_API cf_error_t CUTE_CALL audio_destroy(audio_t* audio);
-CUTE_API int CUTE_CALL audio_ref_count(audio_t* audio);
-
-// -------------------------------------------------------------------------------------------------
-
-CUTE_API cf_error_t CUTE_CALL music_play(audio_t* audio_source, float fade_in_time = 0);
-CUTE_API cf_error_t CUTE_CALL music_stop(float fade_out_time = 0);
-CUTE_API void CUTE_CALL music_set_volume(float volume);
-CUTE_API void CUTE_CALL music_set_pitch(float pitch);
-CUTE_API void CUTE_CALL music_set_loop(bool true_to_loop);
-CUTE_API void CUTE_CALL music_pause(app_t* app);
-CUTE_API void CUTE_CALL music_resume(app_t* app);
-CUTE_API cf_error_t CUTE_CALL music_switch_to(audio_t* audio_source, float fade_out_time = 0, float fade_in_time = 0);
-CUTE_API cf_error_t CUTE_CALL music_crossfade(audio_t* audio_source, float cross_fade_time = 0);
+CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg(const char* path, void* user_allocator_context = NULL);
+CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_wav(const char* path, void* user_allocator_context = NULL);
+CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg_from_memory(void* memory, int byte_count, void* user_allocator_context = NULL);
+CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_wav_from_memory(void* memory, int byte_count, void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL cf_audio_stream_ogg(const char* path, cf_promise_t promise, void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL cf_audio_stream_wav(const char* path, cf_promise_t promise, void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL cf_audio_stream_ogg_from_memory(void* memory, int byte_count, cf_promise_t promise, void* user_allocator_context = NULL);
+CUTE_API void CUTE_CALL cf_audio_stream_wav_from_memory(void* memory, int byte_count, cf_promise_t promise, void* user_allocator_context = NULL);
+CUTE_API cf_error_t CUTE_CALL cf_audio_destroy(cf_audio_t* audio);
+CUTE_API int CUTE_CALL cf_audio_ref_count(cf_audio_t* audio);
 
 // -------------------------------------------------------------------------------------------------
 
-struct sound_params_t
+CUTE_API cf_error_t CUTE_CALL cf_music_play(cf_audio_t* audio_source, float fade_in_time = 0);
+CUTE_API cf_error_t CUTE_CALL cf_music_stop(float fade_out_time = 0);
+CUTE_API void CUTE_CALL cf_music_set_volume(float volume);
+CUTE_API void CUTE_CALL cf_music_set_pitch(float pitch);
+CUTE_API void CUTE_CALL cf_music_set_loop(bool true_to_loop);
+CUTE_API void CUTE_CALL cf_music_pause(cf_app_t* app);
+CUTE_API void CUTE_CALL cf_music_resume(cf_app_t* app);
+CUTE_API cf_error_t CUTE_CALL cf_music_switch_to(cf_audio_t* audio_source, float fade_out_time = 0, float fade_in_time = 0);
+CUTE_API cf_error_t CUTE_CALL cf_music_crossfade(cf_audio_t* audio_source, float cross_fade_time = 0);
+
+// -------------------------------------------------------------------------------------------------
+
+struct cf_sound_params_t
 {
 	bool paused = false;
 	bool looped = false;
@@ -66,26 +66,26 @@ struct sound_params_t
 	float delay = 0;
 };
 
-struct sound_t { uint64_t id = 0; };
+struct cf_sound_t { uint64_t id = 0; };
 
-CUTE_API sound_t CUTE_CALL sound_play(audio_t* audio_source, sound_params_t params = sound_params_t(), cf_error_t* err = NULL);
+CUTE_API cf_sound_t CUTE_CALL cf_sound_play(cf_audio_t* audio_source, cf_sound_params_t params = cf_sound_params_t(), cf_error_t* err = NULL);
 
-CUTE_API bool CUTE_CALL sound_is_active(sound_t sound);
-CUTE_API bool CUTE_CALL sound_get_is_paused(sound_t sound);
-CUTE_API bool CUTE_CALL sound_get_is_looped(sound_t sound);
-CUTE_API float CUTE_CALL sound_get_volume(sound_t sound);
-CUTE_API int CUTE_CALL sound_get_sample_index(sound_t sound);
-CUTE_API void CUTE_CALL sound_set_is_paused(sound_t sound, bool true_for_paused);
-CUTE_API void CUTE_CALL sound_set_is_looped(sound_t sound, bool true_for_looped);
-CUTE_API void CUTE_CALL sound_set_volume(sound_t sound, float volume);
-CUTE_API void CUTE_CALL sound_set_sample_index(sound_t sound, int sample_index);
+CUTE_API bool CUTE_CALL cf_sound_is_active(cf_sound_t sound);
+CUTE_API bool CUTE_CALL cf_sound_get_is_paused(cf_sound_t sound);
+CUTE_API bool CUTE_CALL cf_sound_get_is_looped(cf_sound_t sound);
+CUTE_API float CUTE_CALL cf_sound_get_volume(cf_sound_t sound);
+CUTE_API int CUTE_CALL cf_sound_get_sample_index(cf_sound_t sound);
+CUTE_API void CUTE_CALL cf_sound_set_is_paused(cf_sound_t sound, bool true_for_paused);
+CUTE_API void CUTE_CALL cf_sound_set_is_looped(cf_sound_t sound, bool true_for_looped);
+CUTE_API void CUTE_CALL cf_sound_set_volume(cf_sound_t sound, float volume);
+CUTE_API void CUTE_CALL cf_sound_set_sample_index(cf_sound_t sound, int sample_index);
 
 // -------------------------------------------------------------------------------------------------
 
-CUTE_API void CUTE_CALL audio_set_pan(float pan);
-CUTE_API void CUTE_CALL audio_set_global_volume(float volume);
-CUTE_API void CUTE_CALL audio_set_sound_volume(float volume);
-CUTE_API void CUTE_CALL audio_set_pause(bool true_for_paused);
+CUTE_API void CUTE_CALL cf_audio_set_pan(float pan);
+CUTE_API void CUTE_CALL cf_audio_set_global_volume(float volume);
+CUTE_API void CUTE_CALL cf_audio_set_sound_volume(float volume);
+CUTE_API void CUTE_CALL cf_audio_set_pause(bool true_for_paused);
 
 }
 

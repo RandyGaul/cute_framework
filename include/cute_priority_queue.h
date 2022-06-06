@@ -191,7 +191,7 @@ void cf_priority_queue<T>::swap(int iA, int iB)
 	m_costs[iA] = m_costs[iB];
 	m_costs[iB] = fval;
 }
-#endif // CUTE_CPP
 
+#endif // CUTE_CPP
 
 #endif // CUTE_PRIORITY_QUEUE_H

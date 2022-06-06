@@ -32,9 +32,9 @@
 namespace cute
 {
 
-using font_vertex_t = cute_font_vert_t;
+using cf_font_vertex_t = cute_font_vert_t;
 
-void font_init();
+void cf_font_init();
 
 }
 

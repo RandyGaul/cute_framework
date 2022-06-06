@@ -32,7 +32,12 @@
 #	pragma comment (lib, "dxguid.lib")
 #endif
 
-cf_texture_t cf_texture_make(cf_pixel_t* pixels, int w, int h, sg_wrap mode, sg_filter filter)
+cf_texture_t cf_texture_make(cf_pixel_t* pixels, int w, int h)
+{
+	return cf_texture_make_ex(pixels, w, h, SG_WRAP_REPEAT, SG_FILTER_NEAREST);
+}
+
+cf_texture_t cf_texture_make_ex(cf_pixel_t* pixels, int w, int h, sg_wrap mode, sg_filter filter)
 {
 	sg_image_desc params = { 0 };
 	params.width = w;
@@ -133,15 +138,15 @@ cf_error_t cf_triple_buffer_append(cf_triple_buffer_t* buffer, int vertex_count,
 		overflowed |= sg_query_buffer_overflow(buffer->ibuf.buffer[buffer->ibuf.buffer_number]);
 	}
 
-	if (overflowed) return error_failure("Overflowed one of the internal buffers -- sokol_gfx will silently drop he associated draw calls.");
-	return error_success();
+	if (overflowed) return cf_error_failure("Overflowed one of the internal buffers -- sokol_gfx will silently drop he associated draw calls.");
+	return cf_error_success();
 }
 
 namespace cute
 {
 cf_texture_t texture_make(cf_pixel_t* pixels, int w, int h, sg_wrap mode, sg_filter filter)
 {
-	return cf_texture_make(pixels, w, h, mode, filter);
+	return cf_texture_make_ex(pixels, w, h, mode, filter);
 }
 
 void texture_destroy(cf_texture_t texture)

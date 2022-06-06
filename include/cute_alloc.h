@@ -36,9 +36,9 @@
 #	pragma warning(disable:4291)
 #endif
 
-enum cute_dummy_enum_t { CUTE_DUMMY_ENUM };
-inline void* operator new(size_t, cute_dummy_enum_t, void* ptr) { return ptr; }
-#define CUTE_PLACEMENT_NEW(ptr) new(CUTE_DUMMY_ENUM, ptr)
-#define CUTE_NEW(T, user_ctx) new(CUTE_DUMMY_ENUM, CUTE_ALLOC(sizeof(T), user_ctx)) T
+enum cf_dummy_enum_t { CF_DUMMY_ENUM };
+inline void* operator new(size_t, cf_dummy_enum_t, void* ptr) { return ptr; }
+#define CUTE_PLACEMENT_NEW(ptr) new(CF_DUMMY_ENUM, ptr)
+#define CUTE_NEW(T, user_ctx) new(CF_DUMMY_ENUM, CUTE_ALLOC(sizeof(T), user_ctx)) T
 
 #endif // CUTE_ALLOC_H

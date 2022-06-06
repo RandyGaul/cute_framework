@@ -278,7 +278,7 @@ CUTE_INLINE float cf_surface_area(cf_aabb_t bb) { return 2.0f * cf_width(bb) * c
 CUTE_INLINE float cf_area(cf_aabb_t bb) { return cf_width(bb) * cf_height(bb); }
 CUTE_INLINE cf_v2 cf_clamp(cf_aabb_t bb, cf_v2 p) { return cf_clamp(p, bb.min, bb.max); }
 CUTE_INLINE cf_aabb_t cf_clamp(cf_aabb_t a, cf_aabb_t b) { return cf_make_aabb(cf_clamp(a.min, b.min, b.max), cf_clamp(a.max, b.min, b.max)); }
-CUTE_INLINE cf_aabb_t combine(cf_aabb_t a, cf_aabb_t b) { return cf_make_aabb(cf_min(a.min, b.min), cf_max(a.max, b.max)); }
+CUTE_INLINE cf_aabb_t cf_combine(cf_aabb_t a, cf_aabb_t b) { return cf_make_aabb(cf_min(a.min, b.min), cf_max(a.max, b.max)); }
 
 CUTE_INLINE int cf_overlaps(cf_aabb_t a, cf_aabb_t b)
 {
@@ -417,13 +417,13 @@ CUTE_API void CUTE_CALL cf_aabb_to_poly_manifold(cf_aabb_t A, const cf_poly_t* B
 CUTE_API void CUTE_CALL cf_capsule_to_poly_manifold(cf_capsule_t A, const cf_poly_t* B, const cf_transform_t* bx, cf_manifold_t* m);
 CUTE_API void CUTE_CALL cf_poly_to_poly_manifold(const cf_poly_t* A, const cf_transform_t* ax, const cf_poly_t* B, const cf_transform_t* bx, cf_manifold_t* m);
 
-enum cute_shape_type_t
+enum cf_shape_type_t
 {
-	CUTE_SHAPE_TYPE_NONE,
-	CUTE_SHAPE_TYPE_CIRCLE,
-	CUTE_SHAPE_TYPE_AABB,
-	CUTE_SHAPE_TYPE_CAPSULE,
-	CUTE_SHAPE_TYPE_POLY
+	CF_SHAPE_TYPE_NONE,
+	CF_SHAPE_TYPE_CIRCLE,
+	CF_SHAPE_TYPE_AABB,
+	CF_SHAPE_TYPE_CAPSULE,
+	CF_SHAPE_TYPE_POLY
 };
 
 // This struct is only for advanced usage of the c2GJK function. See comments inside of the
@@ -453,7 +453,7 @@ struct cf_gjk_cache_t
 // collision shapes are not gigantic. For example, try to keep the volume of all your shapes
 // less than 100.0f. If you need large shapes, you should use tiny collision geometry for all
 // cute c2 function, and simply render the geometry larger on-screen by scaling it up.
-CUTE_API float CUTE_CALL cf_gjk(const void* A, cute_shape_type_t typeA, const cf_transform_t* ax_ptr, const void* B, cute_shape_type_t typeB, const cf_transform_t* bx_ptr, cf_v2* outA, cf_v2* outB, int use_radius, int* iterations, cf_gjk_cache_t* cache);
+CUTE_API float CUTE_CALL cf_gjk(const void* A, cf_shape_type_t typeA, const cf_transform_t* ax_ptr, const void* B, cf_shape_type_t typeB, const cf_transform_t* bx_ptr, cf_v2* outA, cf_v2* outB, int use_radius, int* iterations, cf_gjk_cache_t* cache);
 
 // Stores results of a time of impact calculation done by `c2TOI`.
 struct cf_toi_result_t
@@ -494,7 +494,7 @@ struct cf_toi_result_t
 //    See the function `c2Inflate` for some more details.
 // 4. Compute the collision manifold between the inflated shapes (for example, use poly_ttoPolyManifold).
 // 5. Gently push the shapes apart. This will give the next call to c2TOI some breathing room.
-CUTE_API cf_toi_result_t CUTE_CALL toi(const void* A, cute_shape_type_t typeA, const cf_transform_t* ax_ptr, cf_v2 vA, const void* B, cute_shape_type_t typeB, const cf_transform_t* bx_ptr, cf_v2 vB, int use_radius, int* iterations);
+CUTE_API cf_toi_result_t CUTE_CALL cf_toi(const void* A, cf_shape_type_t typeA, const cf_transform_t* ax_ptr, cf_v2 vA, const void* B, cf_shape_type_t typeB, const cf_transform_t* bx_ptr, cf_v2 vB, int use_radius, int* iterations);
 
 // Inflating a shape.
 //
@@ -508,7 +508,7 @@ CUTE_API cf_toi_result_t CUTE_CALL toi(const void* A, cute_shape_type_t typeA, c
 // Deflating a shape can avoid this problem, but deflating a very small shape can invert
 // the planes and result in something that is no longer convex. Make sure to pick an
 // appropriately small skin factor, for example 1.0e-6f.
-CUTE_API void CUTE_CALL cf_inflate(void* shape, cute_shape_type_t type, float skin_factor);
+CUTE_API void CUTE_CALL cf_inflate(void* shape, cf_shape_type_t type, float skin_factor);
 
 // Computes 2D convex hull. Will not do anything if less than two verts supplied. If
 // more than C2_MAX_POLYGON_VERTS are supplied extras are ignored.
@@ -523,8 +523,8 @@ CUTE_API cf_v2 CUTE_CALL cf_centroid(const cf_v2* verts, int count);
 // morphism to write more generic-styled code. Internally calls various above functions.
 // For AABBs/Circles/Capsules ax and bx are ignored. For polys ax and bx can define
 // model to world transformations (for polys only), or be NULL for identity transforms.
-CUTE_API int CUTE_CALL cf_collided(const void* A, const cf_transform_t* ax, cute_shape_type_t typeA, const void* B, const cf_transform_t* bx, cute_shape_type_t typeB);
-CUTE_API void CUTE_CALL cf_collide(const void* A, const cf_transform_t* ax, cute_shape_type_t typeA, const void* B, const cf_transform_t* bx, cute_shape_type_t typeB, cf_manifold_t* m);
-CUTE_API bool CUTE_CALL cf_cast_ray(cf_ray_t A, const void* B, const cf_transform_t* bx, cute_shape_type_t typeB, cf_raycast_t* out);
+CUTE_API int CUTE_CALL cf_collided(const void* A, const cf_transform_t* ax, cf_shape_type_t typeA, const void* B, const cf_transform_t* bx, cf_shape_type_t typeB);
+CUTE_API void CUTE_CALL cf_collide(const void* A, const cf_transform_t* ax, cf_shape_type_t typeA, const void* B, const cf_transform_t* bx, cf_shape_type_t typeB, cf_manifold_t* m);
+CUTE_API bool CUTE_CALL cf_cast_ray(cf_ray_t A, const void* B, const cf_transform_t* bx, cf_shape_type_t typeB, cf_raycast_t* out);
 
 #endif // CUTE_MATH_H
