@@ -39,11 +39,11 @@ CUTE_API void CUTE_CALL cf_a_star_destroy_grid(cf_a_star_grid_t* grid);
 
 struct cf_a_star_input_t
 {
-	bool allow_diagonal_movement;
-	int start_x;
-	int start_y;
-	int end_x;
-	int end_y;
+	bool allow_diagonal_movement /* = true */;
+	int start_x /* = 0 */;
+	int start_y /* = 0 */;
+	int end_x /* = 0 */;
+	int end_y /* = 0 */;
 
 	/**
 	 * Each element of `cells_to_cost` is used to map types of cells in the `cells` parameter
@@ -56,9 +56,16 @@ struct cf_a_star_input_t
 	 *
 	 *     float cost = cell_to_cost[cell[y * w + x]];
 	 */
-	const float* cell_to_cost;
+	const float* cell_to_cost /* = NULL */;
 };
 
+/**
+* allow_diagonal_movement = true
+* start_x = 0 
+* start_y = 0 
+* end_x = 0
+* end_y = 0
+*/
 CUTE_API cf_a_star_input_t CUTE_CALL cf_a_star_input_defaults();
 
 /**
@@ -104,17 +111,6 @@ struct a_star_input_t
 	int end_x = 0;
 	int end_y = 0;
 
-	/**
-	 * Each element of `cells_to_cost` is used to map types of cells in the `cells` parameter
-	 * of `a_star_make_grid` to a cost. The default cost is 1.0f, while <= 0.0f costs are
-	 * treated as *not* traversable.
-	 *
-	 * For example, to lookup the cost of a cell at { x, y }, we could do something like this.
-	 * You don't need to do any lookups like this -- it all happens internally within the
-	 * `a_star` function -- this is just here to explain how to setup `cell_to_cost` properly.
-	 *
-	 *     float cost = cell_to_cost[cell[y * w + x]];
-	 */
 	const float* cell_to_cost = NULL;
 
 	operator cf_a_star_input_t()
@@ -124,10 +120,6 @@ struct a_star_input_t
 };
 
 
-/**
- * Represents the shortest path between two points as an array of 2d vectors.
- * The vectors x and y can be sized before calling `a_star` to avoid dynamic allocations.
- */
 struct a_star_output_t
 {
 	cf_array<int> x;
