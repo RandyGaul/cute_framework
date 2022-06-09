@@ -25,20 +25,18 @@
 #include "cute_defines.h"
 #include "cute_math.h"
 
-
-
-struct cf_aabb_tree_t;
-struct cf_leaf_t { int id = -1; };
+typedef struct cf_aabb_tree_t cf_aabb_tree_t;
+typedef struct cf_leaf_t { int id = -1; } cf_leaf_t;
 typedef bool (cf_aabb_tree_query_fn)(cf_leaf_t leaf, cf_aabb_t aabb, void* leaf_udata, void* fn_udata);
 
-CUTE_API cf_aabb_tree_t* CUTE_CALL cf_create_aabb_tree(int initial_capacity = 0, void* user_allocator_context = NULL);
-CUTE_API cf_aabb_tree_t* CUTE_CALL cf_create_aabb_tree_from_memory(const void* buffer, size_t size, void* user_allocator_context = NULL);
+CUTE_API cf_aabb_tree_t* CUTE_CALL cf_create_aabb_tree(int initial_capacity /*= 0*/, void* user_allocator_context /*= NULL*/);
+CUTE_API cf_aabb_tree_t* CUTE_CALL cf_create_aabb_tree_from_memory(const void* buffer, size_t size, void* user_allocator_context /*= NULL*/);
 CUTE_API void CUTE_CALL cf_destroy_aabb_tree(cf_aabb_tree_t* tree);
 
 /**
  * Adds a new leaf to the tree, and rebalances as necessary.
  */
-CUTE_API cf_leaf_t CUTE_CALL cf_aabb_tree_insert(cf_aabb_tree_t* tree, cf_aabb_t aabb, void* udata = NULL);
+CUTE_API cf_leaf_t CUTE_CALL cf_aabb_tree_insert(cf_aabb_tree_t* tree, cf_aabb_t aabb, void* udata /*= NULL*/);
 
 /**
  * Removes a leaf from the tree, and rebalances as necessary.
@@ -64,7 +62,7 @@ CUTE_API bool CUTE_CALL cf_aabb_tree_move(cf_aabb_tree_t* tree, cf_leaf_t leaf, 
 
 /**
  * Returns the internal "expanded" aabb. This is useful for when you want to generate all pairs of
- * potential overlaps for a specific leaf. Just simply use `aabb_tree_query` on the the return value
+ * potential overlaps for a specific leaf. Just simply use `cf_aabb_tree_query_aabb` on the the return value
  * of this function.
  */
 CUTE_API cf_aabb_t CUTE_CALL cf_aabb_tree_get_aabb(cf_aabb_tree_t* tree, cf_leaf_t leaf);
@@ -78,13 +76,13 @@ CUTE_API void* CUTE_CALL cf_aabb_tree_get_udata(cf_aabb_tree_t* tree, cf_leaf_t 
  * Finds all leafs overlapping `aabb`. The `fn` callback is called once per overlap. If you want to stop
  * searching, return false from `fn`, otherwise keep returning true.
  */
-CUTE_API void CUTE_CALL cf_aabb_tree_query(const cf_aabb_tree_t* tree, cf_aabb_tree_query_fn* fn, cf_aabb_t aabb, void* fn_udata = NULL);
+CUTE_API void CUTE_CALL cf_aabb_tree_query_aabb(const cf_aabb_tree_t* tree, cf_aabb_tree_query_fn* fn, cf_aabb_t aabb, void* fn_udata /*= NULL*/);
 
 /**
  * Finds all leafs hit by `ray`. The `fn` callback is called once per overlap. If you want to stop
  * searching, return false from `fn`, otherwise keep returning true.
  */
-CUTE_API void CUTE_CALL cf_aabb_tree_query(const cf_aabb_tree_t* tree, cf_aabb_tree_query_fn* fn, cf_ray_t ray, void* fn_udata = NULL);
+CUTE_API void CUTE_CALL cf_aabb_tree_query_ray(const cf_aabb_tree_t* tree, cf_aabb_tree_query_fn* fn, cf_ray_t ray, void* fn_udata /*= NULL*/);
 
 /**
  * Returns a cost heuristic value to quantify the quality of the tree.
@@ -102,7 +100,7 @@ CUTE_API void CUTE_CALL cf_aabb_tree_validate(const cf_aabb_tree_t* tree);
 CUTE_API size_t CUTE_CALL cf_aabb_tree_serialized_size(const cf_aabb_tree_t* tree);
 
 /**
- * Writes the tree to `buffer`. The buffer should be at least `aabb_tree_serialized_size` bytes large.
+ * Writes the tree to `buffer`. The buffer should be at least `cf_aabb_tree_serialized_size` bytes large.
  * Returns true on success, false otherwise.
  */
 CUTE_API bool CUTE_CALL cf_aabb_tree_serialize(const cf_aabb_tree_t* tree, void* buffer, size_t size);
@@ -111,6 +109,28 @@ CUTE_API bool CUTE_CALL cf_aabb_tree_serialize(const cf_aabb_tree_t* tree, void*
 
 namespace cute
 {
+using aabb_tree_t = cf_aabb_tree_t;
+using leaf_t = cf_leaf_t;
+using aabb_tree_query_fn = cf_aabb_tree_query_fn;
+using aabb_t = cf_aabb_t;
+using ray_t = cf_ray_t;
+using v2 = cf_v2;
+
+CUTE_INLINE aabb_tree_t* create_aabb_tree(int initial_capacity = 0, void* user_allocator_context = NULL) { return cf_create_aabb_tree(initial_capacity, user_allocator_context); }
+CUTE_INLINE aabb_tree_t* create_aabb_tree_from_memory(const void* buffer, size_t size, void* user_allocator_context = NULL) { return cf_create_aabb_tree_from_memory(buffer, size, user_allocator_context); }
+CUTE_INLINE void destroy_aabb_tree(aabb_tree_t* tree) { cf_destroy_aabb_tree(tree); }
+CUTE_INLINE leaf_t aabb_tree_insert(aabb_tree_t* tree, aabb_t aabb, void* udata = NULL) { return cf_aabb_tree_insert(tree, aabb, udata); }
+CUTE_INLINE void aabb_tree_remove(aabb_tree_t* tree, leaf_t leaf) { cf_aabb_tree_remove(tree, leaf); }
+CUTE_INLINE bool aabb_tree_update_leaf(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb) { return cf_aabb_tree_update_leaf(tree, leaf, aabb); }
+CUTE_INLINE bool aabb_tree_move(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb, v2 offset) { return cf_aabb_tree_move(tree, leaf, aabb, offset); }
+CUTE_INLINE aabb_t aabb_tree_get_aabb(aabb_tree_t* tree, leaf_t leaf) { return cf_aabb_tree_get_aabb(tree, leaf); }
+CUTE_INLINE void* aabb_tree_get_udata(aabb_tree_t* tree, leaf_t leaf) { return cf_aabb_tree_get_udata(tree, leaf); }
+CUTE_INLINE void aabb_tree_query(const aabb_tree_t* tree, aabb_tree_query_fn* fn, aabb_t aabb, void* fn_udata = NULL) { cf_aabb_tree_query_aabb(tree, fn, aabb, fn_udata); }
+CUTE_INLINE void aabb_tree_query(const aabb_tree_t* tree, aabb_tree_query_fn* fn, ray_t ray, void* fn_udata = NULL) { cf_aabb_tree_query_ray(tree, fn, ray, fn_udata); }
+CUTE_INLINE float aabb_tree_cost(const aabb_tree_t* tree) { return cf_aabb_tree_cost(tree); }
+CUTE_INLINE void aabb_tree_validate(const aabb_tree_t* tree) { cf_aabb_tree_validate(tree); }
+CUTE_INLINE size_t aabb_tree_serialized_size(const aabb_tree_t* tree) { return cf_aabb_tree_serialized_size(tree); }
+CUTE_INLINE bool aabb_tree_serialize(const aabb_tree_t* tree, void* buffer, size_t size) { return cf_aabb_tree_serialize(tree, buffer, size); }
 
 }
 

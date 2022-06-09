@@ -85,8 +85,7 @@ static int cf_s_balance(cf_aabb_tree_t* tree, int index_a)
 		a->index_parent = index_c;
 
 		// Hookup a's old parent to c.
-		if (c->index_parent != AABB_TREE_NULL_NODE_INDEX)
-		{
+		if (c->index_parent != AABB_TREE_NULL_NODE_INDEX) {
 			if (nodes[c->index_parent].index_a == index_a) nodes[c->index_parent].index_a = index_c;
 			else {
 				CUTE_ASSERT(nodes[c->index_parent].index_b == index_a);
@@ -577,7 +576,7 @@ cf_aabb_tree_t* cf_create_aabb_tree_from_memory(const void* buffer, size_t size,
 	if (CUTE_MEMCMP(fourcc, "aabb", 4)) return NULL;
 
 	int node_count = (int)cf_read_uint32(&p);
-	cf_aabb_tree_t* tree = cf_create_aabb_tree();
+	cf_aabb_tree_t* tree = cf_create_aabb_tree(0, NULL);
 	tree->nodes.ensure_count(node_count);
 	tree->aabbs.ensure_count(node_count);
 	tree->udatas.ensure_count(node_count);
@@ -678,8 +677,7 @@ void cf_aabb_tree_remove(cf_aabb_tree_t* tree, cf_leaf_t leaf)
 		CUTE_ASSERT(node->index_a == AABB_TREE_NULL_NODE_INDEX);
 		CUTE_ASSERT(node->index_b == AABB_TREE_NULL_NODE_INDEX);
 
-		if (index_parent == tree->root)
-		{
+		if (index_parent == tree->root) {
 			if (parent->index_a == index) tree->root = parent->index_b;
 			else tree->root = parent->index_a;
 			nodes[tree->root].index_parent = AABB_TREE_NULL_NODE_INDEX;
@@ -774,7 +772,7 @@ void* cf_aabb_tree_get_udata(cf_aabb_tree_t* tree, cf_leaf_t leaf)
 	return tree->udatas[leaf.id];
 }
 
-void cf_aabb_tree_query(const cf_aabb_tree_t* tree, cf_aabb_tree_query_fn* fn, cf_aabb_t aabb, void* fn_udata)
+void cf_aabb_tree_query_aabb(const cf_aabb_tree_t* tree, cf_aabb_tree_query_fn* fn, cf_aabb_t aabb, void* fn_udata)
 {
 	if (tree->root == AABB_TREE_NULL_NODE_INDEX) return;
 	int index_stack[AABB_TREE_STACK_QUERY_CAPACITY];
@@ -794,8 +792,7 @@ void cf_aabb_tree_query(const cf_aabb_tree_t* tree, cf_aabb_tree_query_fn* fn, c
 
 			if (node->index_a == AABB_TREE_NULL_NODE_INDEX) {
 				cf_leaf_t leaf = { index };
-				if (!fn(leaf, search_aabb, udatas[index], fn_udata))
-				{
+				if (!fn(leaf, search_aabb, udatas[index], fn_udata)) {
 					return;
 				}
 			} else {
@@ -806,7 +803,7 @@ void cf_aabb_tree_query(const cf_aabb_tree_t* tree, cf_aabb_tree_query_fn* fn, c
 	}
 }
 
-void cf_aabb_tree_query(const cf_aabb_tree_t* tree, cf_aabb_tree_query_fn* fn, cf_ray_t ray, void* fn_udata)
+void cf_aabb_tree_query_ray(const cf_aabb_tree_t* tree, cf_aabb_tree_query_fn* fn, cf_ray_t ray, void* fn_udata)
 {
 	if (tree->root == AABB_TREE_NULL_NODE_INDEX) return;
 	int index_stack[AABB_TREE_STACK_QUERY_CAPACITY];
