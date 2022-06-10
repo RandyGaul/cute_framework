@@ -65,7 +65,7 @@ CUTE_INLINE cf_color_t sub_color(cf_color_t a, cf_color_t b) { return cf_make_co
 
 CUTE_INLINE cf_color_t cf_lerp_color(cf_color_t a, cf_color_t b, float s) { return add_color(a, mul_color(sub_color(b, a), s)); }
 
-CUTE_INLINE cf_pixel_t cf_to_pixel(cf_color_t c)
+CUTE_INLINE cf_pixel_t cf_color_to_pixel(cf_color_t c)
 {
 	cf_pixel_t p;
 	p.colors.r = (int)((uint8_t)(c.r * 255.0f));
@@ -76,7 +76,7 @@ CUTE_INLINE cf_pixel_t cf_to_pixel(cf_color_t c)
 }
 
 CUTE_INLINE cf_color_t cf_pixel_to_color(cf_pixel_t p) { return cf_make_color_hex((int)p.val); }
-CUTE_INLINE uint32_t cf_color_to_int(cf_color_t c) { return cf_to_pixel(c).val; }
+CUTE_INLINE uint32_t cf_color_to_int(cf_color_t c) { return cf_color_to_pixel(c).val; }
 CUTE_INLINE uint32_t cf_pixel_to_int(cf_pixel_t p) { return p.val; }
 
 #ifdef CUTE_CPP
@@ -106,7 +106,7 @@ CUTE_INLINE color_t color_invisible() { return cf_color_invisible(); }
 
 CUTE_INLINE color_t lerp(color_t a, color_t b, float s) { return cf_lerp_color(a, b, s); }
 
-CUTE_INLINE pixel_t to_pixel(color_t c) { return cf_to_pixel(c); }
+CUTE_INLINE pixel_t to_pixel(color_t c) { return cf_color_to_pixel(c); }
 
 CUTE_INLINE color_t to_color(pixel_t p) { return cf_pixel_to_color(p); }
 
