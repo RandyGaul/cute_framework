@@ -604,6 +604,15 @@ cf_error_t cf_music_crossfade(cf_audio_t* audio_source, float cross_fade_time)
 
 // -------------------------------------------------------------------------------------------------
 
+cf_sound_params_t cf_sound_params_defaults()
+{
+	cf_sound_params_t params = {};
+	params.volume = 1.0f;
+	params.pan = 0.5f;
+	params.pitch = 1.0f;
+	return params;
+}
+
 cf_sound_t cf_sound_play(cf_audio_t* audio_source, cf_sound_params_t params, cf_error_t* err)
 {
 	cf_audio_system_t* as = cf_app->audio_system;
