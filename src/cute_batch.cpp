@@ -542,9 +542,9 @@ void cf_batch_pop_scissor_box(cf_batch_t* b)
 	}
 }
 
-void cf_batch_push_depth_state(cf_batch_t* b, const sg_depth_state& depth_state)
+void cf_batch_push_depth_state(cf_batch_t* b, const sg_depth_state* depth_state)
 {
-	b->depth_states.add(depth_state);
+	b->depth_states.add(*depth_state);
 	b->pip_dirty = true;
 }
 
@@ -552,7 +552,7 @@ void cf_batch_push_depth_defaults(cf_batch_t* b)
 {
 	sg_depth_state depth_state;
 	CUTE_MEMSET(&depth_state, 0, sizeof(depth_state));
-	cf_batch_push_depth_state(b, depth_state);
+	cf_batch_push_depth_state(b, &depth_state);
 }
 
 void cf_batch_pop_depth_state(cf_batch_t* b)
@@ -563,9 +563,9 @@ void cf_batch_pop_depth_state(cf_batch_t* b)
 	}
 }
 
-void cf_batch_push_stencil_state(cf_batch_t* b, const sg_stencil_state& stencil_state)
+void cf_batch_push_stencil_state(cf_batch_t* b, const sg_stencil_state* stencil_state)
 {
-	b->stencil_states.add(stencil_state);
+	b->stencil_states.add(*stencil_state);
 	b->pip_dirty = true;
 }
 
@@ -573,7 +573,7 @@ void cf_batch_push_stencil_defaults(cf_batch_t* b)
 {
 	sg_stencil_state stencil_state;
 	CUTE_MEMSET(&stencil_state, 0, sizeof(stencil_state));
-	cf_batch_push_stencil_state(b, stencil_state);
+	cf_batch_push_stencil_state(b, &stencil_state);
 }
 
 void cf_batch_pop_stencil_state(cf_batch_t* b)
@@ -584,9 +584,9 @@ void cf_batch_pop_stencil_state(cf_batch_t* b)
 	}
 }
 
-void cf_batch_push_blend_state(cf_batch_t* b, const sg_blend_state& blend_state)
+void cf_batch_push_blend_state(cf_batch_t* b, const sg_blend_state* blend_state)
 {
-	b->blend_states.add(blend_state);
+	b->blend_states.add(*blend_state);
 	b->pip_dirty = true;
 }
 
@@ -601,7 +601,7 @@ void cf_batch_push_blend_defaults(cf_batch_t* b)
 	blend_state.src_factor_alpha = SG_BLENDFACTOR_ONE;
 	blend_state.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
 	blend_state.op_alpha = SG_BLENDOP_ADD;
-	cf_batch_push_blend_state(b, blend_state);
+	cf_batch_push_blend_state(b, &blend_state);
 }
 
 void cf_batch_pop_blend_state(cf_batch_t* b)

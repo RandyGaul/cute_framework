@@ -105,13 +105,13 @@ CUTE_API void CUTE_CALL cf_batch_push_m3x2(cf_batch_t* b, cf_m3x2 m);
 CUTE_API void CUTE_CALL cf_batch_pop_m3x2(cf_batch_t* b);
 CUTE_API void CUTE_CALL cf_batch_push_scissor_box(cf_batch_t* b, int x, int y, int w, int h);
 CUTE_API void CUTE_CALL cf_batch_pop_scissor_box(cf_batch_t* b);
-CUTE_API void CUTE_CALL cf_batch_push_depth_state(cf_batch_t* b, const sg_depth_state& depth_state);
+CUTE_API void CUTE_CALL cf_batch_push_depth_state(cf_batch_t* b, const sg_depth_state* depth_state);
 CUTE_API void CUTE_CALL cf_batch_push_depth_defaults(cf_batch_t* b);
 CUTE_API void CUTE_CALL cf_batch_pop_depth_state(cf_batch_t* b);
-CUTE_API void CUTE_CALL cf_batch_push_stencil_state(cf_batch_t* b, const sg_stencil_state& depth_stencil_state);
+CUTE_API void CUTE_CALL cf_batch_push_stencil_state(cf_batch_t* b, const sg_stencil_state* depth_stencil_state);
 CUTE_API void CUTE_CALL cf_batch_push_stencil_defaults(cf_batch_t* b);
 CUTE_API void CUTE_CALL cf_batch_pop_stencil_state(cf_batch_t* b);
-CUTE_API void CUTE_CALL cf_batch_push_blend_state(cf_batch_t* b, const sg_blend_state& blend_state);
+CUTE_API void CUTE_CALL cf_batch_push_blend_state(cf_batch_t* b, const sg_blend_state* blend_state);
 CUTE_API void CUTE_CALL cf_batch_push_blend_defaults(cf_batch_t* b);
 CUTE_API void CUTE_CALL cf_batch_pop_blend_state(cf_batch_t* b);
 CUTE_API void CUTE_CALL cf_batch_push_tint(cf_batch_t* b, cf_color_t c);
@@ -219,13 +219,13 @@ CUTE_INLINE void batch_push_m3x2(batch_t* b, m3x2 m) { cf_batch_push_m3x2(b, m);
 CUTE_INLINE void batch_pop_m3x2(batch_t* b) { cf_batch_pop_m3x2(b); }
 CUTE_INLINE void batch_push_scissor_box(batch_t* b, int x, int y, int w, int h) { cf_batch_push_scissor_box(b, x, y, w, h); }
 CUTE_INLINE void batch_pop_scissor_box(batch_t* b) { cf_batch_pop_scissor_box(b); }
-CUTE_INLINE void batch_push_depth_state(batch_t* b, const sg_depth_state& depth_state) { cf_batch_push_depth_state(b, depth_state); }
+CUTE_INLINE void batch_push_depth_state(batch_t* b, const sg_depth_state& depth_state) { cf_batch_push_depth_state(b, &depth_state); }
 CUTE_INLINE void batch_push_depth_defaults(batch_t* b) { cf_batch_push_depth_defaults(b); }
 CUTE_INLINE void batch_pop_depth_state(batch_t* b) { cf_batch_pop_depth_state(b); }
-CUTE_INLINE void batch_push_stencil_state(batch_t* b, const sg_stencil_state& depth_stencil_state) { cf_batch_push_stencil_state(b, depth_stencil_state); }
+CUTE_INLINE void batch_push_stencil_state(batch_t* b, const sg_stencil_state& depth_stencil_state) { cf_batch_push_stencil_state(b, &depth_stencil_state); }
 CUTE_INLINE void batch_push_stencil_defaults(batch_t* b) { cf_batch_push_stencil_defaults(b); }
 CUTE_INLINE void batch_pop_stencil_state(batch_t* b) { cf_batch_pop_stencil_state(b); }
-CUTE_INLINE void batch_push_blend_state(batch_t* b, const sg_blend_state& blend_state) { cf_batch_push_blend_state(b, blend_state); }
+CUTE_INLINE void batch_push_blend_state(batch_t* b, const sg_blend_state& blend_state) { cf_batch_push_blend_state(b, &blend_state); }
 CUTE_INLINE void batch_push_blend_defaults(batch_t* b) { cf_batch_push_blend_defaults(b); }
 CUTE_INLINE void batch_pop_blend_state(batch_t* b) { cf_batch_pop_blend_state(b); }
 CUTE_INLINE void batch_push_tint(batch_t* b, color_t c) { cf_batch_push_tint(b, c); }
