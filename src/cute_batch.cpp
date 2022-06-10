@@ -624,11 +624,11 @@ void cf_batch_pop_tint(cf_batch_t* b)
 	}
 }
 
-void cf_batch_quad(cf_batch_t* b, cf_aabb_t bb, cf_color_t c)
+void cf_batch_quad_aabb(cf_batch_t* b, cf_aabb_t bb, cf_color_t c)
 {
 	cf_v2 verts[4];
 	cf_aabb_verts(verts, bb);
-	cf_batch_quad(b, verts[0], verts[1], verts[2], verts[3], c);
+	cf_batch_quad_verts(b, verts[0], verts[1], verts[2], verts[3], c);
 }
 
 #define PUSH_VERT(P, C) \
@@ -646,13 +646,13 @@ void cf_batch_quad(cf_batch_t* b, cf_aabb_t bb, cf_color_t c)
 		PUSH_VERT(p2, c2); \
 	} while (0)
 
-void cf_batch_quad(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, cf_color_t c)
+void cf_batch_quad_verts(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, cf_color_t c)
 {
 	PUSH_TRI(p0, p1, p2, c, c, c);
 	PUSH_TRI(p2, p3, p0, c, c, c);
 }
 
-void cf_batch_quad(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, cf_color_t c0, cf_color_t c1, cf_color_t c2, cf_color_t c3)
+void cf_batch_quad_verts2(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, cf_color_t c0, cf_color_t c1, cf_color_t c2, cf_color_t c3)
 {
 	PUSH_TRI(p0, p1, p2, c0, c1, c2);
 	PUSH_TRI(p2, p3, p0, c2, c3, c0);
@@ -662,7 +662,7 @@ void cf_batch_quad_line(cf_batch_t* b, cf_aabb_t bb, float thickness, cf_color_t
 {
 	cf_v2 verts[4];
 	cf_aabb_verts(verts, bb);
-	cf_batch_quad_line(b, verts[0], verts[1], verts[2], verts[3], thickness, c, antialias);
+	cf_batch_quad_line2(b, verts[0], verts[1], verts[2], verts[3], thickness, c, antialias);
 }
 
 void cf_internal_batch_quad_line(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float thickness, cf_color_t c0, cf_color_t c1, cf_color_t c2, cf_color_t c3, bool antialias)
@@ -677,19 +677,19 @@ void cf_internal_batch_quad_line(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf
 		cf_v2 q1 = p1 + cf_v2( n.x, -n.y);
 		cf_v2 q2 = p2 + cf_v2( n.x,  n.y);
 		cf_v2 q3 = p3 + cf_v2(-n.x,  n.y);
-		cf_batch_quad(b, p0, p1, q1, q0, c0, c1, c2, c3);
-		cf_batch_quad(b, p1, p2, q2, q1, c0, c1, c2, c3);
-		cf_batch_quad(b, p2, p3, q3, q2, c0, c1, c2, c3);
-		cf_batch_quad(b, p3, p0, q0, q3, c0, c1, c2, c3);
+		cf_batch_quad_verts2(b, p0, p1, q1, q0, c0, c1, c2, c3);
+		cf_batch_quad_verts2(b, p1, p2, q2, q1, c0, c1, c2, c3);
+		cf_batch_quad_verts2(b, p2, p3, q3, q2, c0, c1, c2, c3);
+		cf_batch_quad_verts2(b, p3, p0, q0, q3, c0, c1, c2, c3);
 	}
 }
 
-void cf_batch_quad_line(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float thickness, cf_color_t c0, cf_color_t c1, cf_color_t c2, cf_color_t c3)
+void cf_batch_quad_line3(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float thickness, cf_color_t c0, cf_color_t c1, cf_color_t c2, cf_color_t c3)
 {
 	cf_internal_batch_quad_line(b, p0, p1, p2, p3, thickness, c0, c1, c2, c3, false);
 }
 
-void cf_batch_quad_line(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float thickness, cf_color_t c, bool antialias)
+void cf_batch_quad_line2(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float thickness, cf_color_t c, bool antialias)
 {
 	cf_internal_batch_quad_line(b, p0, p1, p2, p3, thickness, c, c, c, c, antialias);
 }
@@ -732,7 +732,7 @@ void cf_batch_circle_line(cf_batch_t* batch, cf_v2 p, float r, int iters, float 
 			cf_v2 n = cf_from_angle(a);
 			cf_v2 p2 = p + n * (r + half_thickness);
 			cf_v2 p3 = p + n * (r - half_thickness);
-			cf_batch_quad(batch, p0, p1, p2, p3, color);
+			cf_batch_quad_verts(batch, p0, p1, p2, p3, color);
 			p1 = p2;
 			p0 = p3;
 		}
@@ -803,7 +803,7 @@ void cf_batch_circle_arc_line(cf_batch_t* batch, cf_v2 p, cf_v2 center_of_arc, f
 			t = cf_mul(m, d);
 			cf_v2 p2 = p + t * (r + half_thickness);
 			cf_v2 p3 = p + t * (r - half_thickness);
-			cf_batch_quad(batch, p0, p1, p2, p3, color);
+			cf_batch_quad_verts(batch, p0, p1, p2, p3, color);
 			p1 = p2;
 			p0 = p3;
 		}
@@ -819,7 +819,7 @@ void cf_batch_capsule(cf_batch_t* batch, cf_v2 a, cf_v2 b, float r, int iters, c
 	cf_v2 q1 = b + n;
 	cf_v2 q2 = b - n;
 	cf_v2 q3 = a - n;
-	cf_batch_quad(batch, q0, q1, q2, q3, c);
+	cf_batch_quad_verts(batch, q0, q1, q2, q3, c);
 }
 
 void cf_batch_capsule_line(cf_batch_t* batch, cf_v2 a, cf_v2 b, float r, int iters, float thickness, cf_color_t c, bool antialias)
@@ -830,15 +830,15 @@ void cf_batch_capsule_line(cf_batch_t* batch, cf_v2 a, cf_v2 b, float r, int ite
 		cf_s_circle_arc_line_aa(&verts, b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness, c);
 		cf_batch_polyline(batch, verts.data(), verts.count(), thickness, c, true, true, 0);
 	} else {
-		cf_batch_circle_arc_line(batch, a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness, c);
-		cf_batch_circle_arc_line(batch, b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness, c);
+		cf_batch_circle_arc_line(batch, a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness, c, false);
+		cf_batch_circle_arc_line(batch, b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness, c, false);
 		cf_v2 n = cf_skew(cf_norm(b - a)) * r;
 		cf_v2 q0 = a + n;
 		cf_v2 q1 = b + n;
 		cf_v2 q2 = b - n;
 		cf_v2 q3 = a - n;
-		cf_batch_line(batch, q0, q1, thickness, c);
-		cf_batch_line(batch, q2, q3, thickness, c);
+		cf_batch_line(batch, q0, q1, thickness, c, false);
+		cf_batch_line(batch, q2, q3, thickness, c, false);
 	}
 }
 
@@ -847,7 +847,7 @@ void cf_batch_tri(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_color_t c)
 	PUSH_TRI(p0, p1, p2, c, c, c);
 }
 
-void cf_batch_tri(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_color_t c0, cf_color_t c1, cf_color_t c2)
+void cf_batch_tri2(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_color_t c0, cf_color_t c1, cf_color_t c2)
 {
 	PUSH_TRI(p0, p1, p2, c0, c1, c2);
 }
@@ -857,17 +857,17 @@ void cf_batch_tri_line(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, float thickn
 	CUTE_ASSERT(0);
 }
 
-void cf_batch_tri_line(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, float thickness, cf_color_t c0, cf_color_t c1, cf_color_t c2, bool antialias)
+void cf_batch_tri_line2(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, float thickness, cf_color_t c0, cf_color_t c1, cf_color_t c2, bool antialias)
 {
 	CUTE_ASSERT(0);
 }
 
 void cf_batch_line(cf_batch_t* b, cf_v2 p0, cf_v2 p1, float thickness, cf_color_t c, bool antialias)
 {
-	cf_batch_line(b, p0, p1, thickness, c, c, antialias);
+	cf_batch_line2(b, p0, p1, thickness, c, c, antialias);
 }
 
-void cf_batch_line(cf_batch_t* b, cf_v2 p0, cf_v2 p1, float thickness, cf_color_t c0, cf_color_t c1, bool antialias)
+void cf_batch_line2(cf_batch_t* b, cf_v2 p0, cf_v2 p1, float thickness, cf_color_t c0, cf_color_t c1, bool antialias)
 {
 	float scale = cf_len(b->m.m.x); // Assume x/y uniform scaling.
 	float alias_scale = 1.0f / scale;
@@ -887,7 +887,7 @@ void cf_batch_line(cf_batch_t* b, cf_v2 p0, cf_v2 p1, float thickness, cf_color_
 			cf_v2 q1 = p1 + n1;
 			cf_v2 q2 = p1 - n1;
 			cf_v2 q3 = p0 - n1;
-			cf_batch_quad(b, q0, q1, q2, q3, c0, c0, c1, c1);
+			cf_batch_quad_verts2(b, q0, q1, q2, q3, c0, c0, c1, c1);
 
 			// Zero opacity aliased quads.
 			cf_v2 n2 = cf_cw90(n0) * alias_scale;
@@ -895,8 +895,8 @@ void cf_batch_line(cf_batch_t* b, cf_v2 p0, cf_v2 p1, float thickness, cf_color_
 			cf_v2 q5 = q2 + n2;
 			cf_v2 q6 = q1 - n2;
 			cf_v2 q7 = q0 - n2;
-			cf_batch_quad(b, q3, q2, q5, q4, c0, c1, c3, c2);
-			cf_batch_quad(b, q0, q7, q6, q1, c0, c2, c3, c1);
+			cf_batch_quad_verts2(b, q3, q2, q5, q4, c0, c1, c3, c2);
+			cf_batch_quad_verts2(b, q0, q7, q6, q1, c0, c2, c3, c1);
 
 			// End caps.
 			n0 = n0 * alias_scale;
@@ -904,17 +904,17 @@ void cf_batch_line(cf_batch_t* b, cf_v2 p0, cf_v2 p1, float thickness, cf_color_
 			cf_v2 r1 = q2 + n0;
 			cf_v2 r2 = q1 + n0;
 			cf_v2 r3 = q6 + n0;
-			cf_batch_quad(b, q2, r1, r0, q5, c1, c3, c3, c3);
-			cf_batch_quad(b, q2, q1, r2, r1, c1, c1, c3, c3);
-			cf_batch_quad(b, q1, q6, r3, r2, c1, c3, c3, c3);
+			cf_batch_quad_verts2(b, q2, r1, r0, q5, c1, c3, c3, c3);
+			cf_batch_quad_verts2(b, q2, q1, r2, r1, c1, c1, c3, c3);
+			cf_batch_quad_verts2(b, q1, q6, r3, r2, c1, c3, c3, c3);
 
 			cf_v2 r4 = q4 - n0;
 			cf_v2 r5 = q3 - n0;
 			cf_v2 r6 = q0 - n0;
 			cf_v2 r7 = q7 - n0;
-			cf_batch_quad(b, q3, r5, r4, q4, c0, c2, c2, c2);
-			cf_batch_quad(b, q3, q0, r6, r5, c0, c0, c2, c2);
-			cf_batch_quad(b, q0, q7, r7, r6, c0, c2, c2, c2);
+			cf_batch_quad_verts2(b, q3, r5, r4, q4, c0, c2, c2, c2);
+			cf_batch_quad_verts2(b, q3, q0, r6, r5, c0, c0, c2, c2);
+			cf_batch_quad_verts2(b, q0, q7, r7, r6, c0, c2, c2, c2);
 		} else {
 			// Zero opacity aliased quads, without any core line.
 			cf_v2 n = cf_skew(cf_norm(p1 - p0)) * alias_scale * 0.5f;
@@ -922,8 +922,8 @@ void cf_batch_line(cf_batch_t* b, cf_v2 p0, cf_v2 p1, float thickness, cf_color_
 			cf_v2 q1 = p1 + n;
 			cf_v2 q2 = p1 - n;
 			cf_v2 q3 = p0 - n;
-			cf_batch_quad(b, p0, p1, q1, q0, c0, c1, c3, c2);
-			cf_batch_quad(b, p1, p0, q3, q2, c1, c0, c3, c2);
+			cf_batch_quad_verts2(b, p0, p1, q1, q0, c0, c1, c3, c2);
+			cf_batch_quad_verts2(b, p1, p0, q3, q2, c1, c0, c3, c2);
 		}
 	} else {
 		cf_v2 n = cf_skew(cf_norm(p1 - p0)) * thickness * 0.5f;
@@ -931,7 +931,7 @@ void cf_batch_line(cf_batch_t* b, cf_v2 p0, cf_v2 p1, float thickness, cf_color_
 		cf_v2 q1 = p1 + n;
 		cf_v2 q2 = p1 - n;
 		cf_v2 q3 = p0 - n;
-		cf_batch_quad(b, q0, q1, q2, q3, c0, c0, c1, c1);
+		cf_batch_quad_verts2(b, q0, q1, q2, q3, c0, c0, c1, c1);
 	}
 }
 
@@ -951,12 +951,12 @@ CUTE_INLINE static void cf_s_bevel_arc_feather(cf_batch_t* batch, cf_v2 b, cf_v2
 		cf_v2 p2 = cf_s_rot_b_about_a(r, b, p1);
 		cf_v2 p3 = cf_s_rot_b_about_a(r, b, p0);
 		cf_batch_tri(batch, b, p0, p3, c0);
-		cf_batch_quad(batch, p3, p2, p1, p0, c0, c1, c1, c0);
+		cf_batch_quad_verts2(batch, p3, p2, p1, p0, c0, c1, c1, c0);
 		p0 = p3;
 		p1 = p2;
 	}
 	cf_batch_tri(batch, b, i4, p0, c0);
-	cf_batch_quad(batch, p0, i4, f4, p1, c0, c0, c1, c1);
+	cf_batch_quad_verts2(batch, p0, i4, f4, p1, c0, c0, c1, c1);
 }
 
 CUTE_INLINE static void cf_s_bevel_arc(cf_batch_t* batch, cf_v2 b, cf_v2 i3, cf_v2 i4, cf_color_t c0, cf_color_t c1, int bevel_count)
@@ -1004,16 +1004,16 @@ static void cf_s_polyline(cf_batch_t* batch, cf_v2* points, int count, float thi
 					cf_v2 f2 = cf_intersect(cf_plane(fn0, b - fn0), b - fn1, c - fn1);
 					cf_v2 f3 = cf_intersect(cf_plane(fn0, b + fn0), b + fn1, c + fn1);
 					if (emit) {
-						cf_batch_quad(batch, a, b, i3, i0, c0);
-						cf_batch_quad(batch, i1, i2, b, a, c0);
-						cf_batch_quad(batch, i0, i3, f3, f0, c0, c0, c1, c1);
-						cf_batch_quad(batch, f1, f2, i2, i1, c1, c1, c0, c0);
+						cf_batch_quad_verts(batch, a, b, i3, i0, c0);
+						cf_batch_quad_verts(batch, i1, i2, b, a, c0);
+						cf_batch_quad_verts2(batch, i0, i3, f3, f0, c0, c0, c1, c1);
+						cf_batch_quad_verts2(batch, f1, f2, i2, i1, c1, c1, c0, c0);
 					}
 					f0 = f3;
 					f1 = f2;
 				} else if (emit) {
-					cf_batch_quad(batch, a, b, i3, i0, c0, c0, c1, c1);
-					cf_batch_quad(batch, i1, i2, b, a, c1, c1, c0, c0);
+					cf_batch_quad_verts2(batch, a, b, i3, i0, c0, c0, c1, c1);
+					cf_batch_quad_verts2(batch, i1, i2, b, a, c1, c1, c0, c0);
 				}
 				i0 = i3;
 				i1 = i2;
@@ -1028,17 +1028,17 @@ static void cf_s_polyline(cf_batch_t* batch, cf_v2* points, int count, float thi
 					cf_v2 f3 = cf_intersect(h, a + fn0, b + fn0);
 					cf_v2 f4 = cf_intersect(h, b + fn1, c + fn1);
 					if (emit) {
-						cf_batch_quad(batch, a, b, i3, i0, c0);
-						cf_batch_quad(batch, i1, i2, b, a, c0);
-						cf_batch_quad(batch, i0, i3, f3, f0, c0, c0, c1, c1);
-						cf_batch_quad(batch, i1, f1, f2, i2, c0, c1, c1, c0);
+						cf_batch_quad_verts(batch, a, b, i3, i0, c0);
+						cf_batch_quad_verts(batch, i1, i2, b, a, c0);
+						cf_batch_quad_verts2(batch, i0, i3, f3, f0, c0, c0, c1, c1);
+						cf_batch_quad_verts2(batch, i1, f1, f2, i2, c0, c1, c1, c0);
 						cf_s_bevel_arc_feather(batch, b, i3, f3, i4, f4, c0, c1, bevel_count);
 					}
 					f0 = f4;
 					f1 = f2;
 				} else if (emit) {
-					cf_batch_quad(batch, a, b, i3, i0, c0, c0, c1, c1);
-					cf_batch_quad(batch, i1, i2, b, a, c1, c1, c0, c0);
+					cf_batch_quad_verts2(batch, a, b, i3, i0, c0, c0, c1, c1);
+					cf_batch_quad_verts2(batch, i1, i2, b, a, c1, c1, c0, c0);
 					cf_s_bevel_arc(batch, b, i3, i4, c0, c1, bevel_count);
 				}
 				i0 = i4;
@@ -1052,16 +1052,16 @@ static void cf_s_polyline(cf_batch_t* batch, cf_v2* points, int count, float thi
 					cf_v2 f2 = cf_intersect(cf_plane(fn0, b + fn0), b + fn1, c + fn1);
 					cf_v2 f3 = cf_intersect(cf_plane(fn0, b - fn0), b - fn1, c - fn1);
 					if (emit) {
-						cf_batch_quad(batch, a, b, i3, i1, c0);
-						cf_batch_quad(batch, i0, i2, b, a, c0);
-						cf_batch_quad(batch, i1, i3, f3, f1, c0, c0, c1, c1);
-						cf_batch_quad(batch, f0, f2, i2, i0, c1, c1, c0, c0);
+						cf_batch_quad_verts(batch, a, b, i3, i1, c0);
+						cf_batch_quad_verts(batch, i0, i2, b, a, c0);
+						cf_batch_quad_verts2(batch, i1, i3, f3, f1, c0, c0, c1, c1);
+						cf_batch_quad_verts2(batch, f0, f2, i2, i0, c1, c1, c0, c0);
 					}
 					f1 = f3;
 					f0 = f2;
 				} else if (emit) {
-					cf_batch_quad(batch, a, b, i3, i1, c0, c0, c1, c1);
-					cf_batch_quad(batch, i0, i2, b, a, c1, c1, c0, c0);
+					cf_batch_quad_verts2(batch, a, b, i3, i1, c0, c0, c1, c1);
+					cf_batch_quad_verts2(batch, i0, i2, b, a, c1, c1, c0, c0);
 				}
 				i1 = i3;
 				i0 = i2;
@@ -1076,17 +1076,17 @@ static void cf_s_polyline(cf_batch_t* batch, cf_v2* points, int count, float thi
 					cf_v2 f3 = cf_intersect(h, a - fn0, b - fn0);
 					cf_v2 f4 = cf_intersect(h, b - fn1, c - fn1);
 					if (emit) {
-						cf_batch_quad(batch, a, b, i3, i1, c0);
-						cf_batch_quad(batch, i0, i2, b, a, c0);
-						cf_batch_quad(batch, i1, i3, f3, f1, c0, c0, c1, c1);
-						cf_batch_quad(batch, i0, f0, f2, i2, c0, c1, c1, c0);
+						cf_batch_quad_verts(batch, a, b, i3, i1, c0);
+						cf_batch_quad_verts(batch, i0, i2, b, a, c0);
+						cf_batch_quad_verts2(batch, i1, i3, f3, f1, c0, c0, c1, c1);
+						cf_batch_quad_verts2(batch, i0, f0, f2, i2, c0, c1, c1, c0);
 						cf_s_bevel_arc_feather(batch, b, i3, f3, i4, f4, c0, c1, bevel_count);
 					}
 					f1 = f4;
 					f0 = f2;
 				} else if (emit) {
-					cf_batch_quad(batch, a, b, i3, i1, c0, c0, c1, c1);
-					cf_batch_quad(batch, i0, i2, b, a, c1, c1, c0, c0);
+					cf_batch_quad_verts2(batch, a, b, i3, i1, c0, c0, c1, c1);
+					cf_batch_quad_verts2(batch, i0, i2, b, a, c1, c1, c0, c0);
 					cf_s_bevel_arc(batch, b, i3, i4, c0, c1, bevel_count);
 				}
 				i1 = i4;
@@ -1100,16 +1100,16 @@ static void cf_s_polyline(cf_batch_t* batch, cf_v2* points, int count, float thi
 				cf_v2 f2 = b + fn0;
 				cf_v2 f3 = b - fn0;
 				if (emit) {
-					cf_batch_quad(batch, a, b, i2, i0, c0);
-					cf_batch_quad(batch, i1, i3, b, a, c0);
-					cf_batch_quad(batch, i0, i2, f2, f0, c0, c0, c1, c1);
-					cf_batch_quad(batch, i1, f1, f3, i3, c0, c1, c1, c0);
+					cf_batch_quad_verts(batch, a, b, i2, i0, c0);
+					cf_batch_quad_verts(batch, i1, i3, b, a, c0);
+					cf_batch_quad_verts2(batch, i0, i2, f2, f0, c0, c0, c1, c1);
+					cf_batch_quad_verts2(batch, i1, f1, f3, i3, c0, c1, c1, c0);
 				}
 				f1 = f3;
 				f0 = f2;
 			} else if (emit) {
-				cf_batch_quad(batch, a, b, i2, i0, c0, c0, c1, c1);
-				cf_batch_quad(batch, i1, i3, b, a, c1, c1, c0, c0);
+				cf_batch_quad_verts2(batch, a, b, i2, i0, c0, c0, c1, c1);
+				cf_batch_quad_verts2(batch, i1, i3, b, a, c1, c1, c0, c0);
 			}
 			i1 = i3;
 			i0 = i2;
@@ -1147,28 +1147,28 @@ static void cf_s_polyline(cf_batch_t* batch, cf_v2* points, int count, float thi
 	// End case for non-loops.
 	if (!loop) {
 		if (feather) {
-			cf_batch_quad(batch, a, b, b + n0, i0, c0);
-			cf_batch_quad(batch, a, i1, b - n0, b, c0);
-			cf_batch_quad(batch, f0, i0, b + n0, b + fn0, c1, c0, c0, c1);
-			cf_batch_quad(batch, b - fn0, b - n0, i1, f1, c1, c0, c0, c1);
+			cf_batch_quad_verts(batch, a, b, b + n0, i0, c0);
+			cf_batch_quad_verts(batch, a, i1, b - n0, b, c0);
+			cf_batch_quad_verts2(batch, f0, i0, b + n0, b + fn0, c1, c0, c0, c1);
+			cf_batch_quad_verts2(batch, b - fn0, b - n0, i1, f1, c1, c0, c0, c1);
 
 			// End caps.
 			cf_v2 n = cf_norm(b - a) * alias_scale;
-			cf_batch_quad(batch, b - n0, b + n0, b + n0 + n, b - n0 + n, c0, c0, c1, c1);
-			cf_batch_quad(batch, b - fn0, b - n0, b - n0 + n, b - fn0 + n, c1, c0, c1, c1);
-			cf_batch_quad(batch, b + fn0, b + n0, b + n0 + n, b + fn0 + n, c1, c0, c1, c1);
+			cf_batch_quad_verts2(batch, b - n0, b + n0, b + n0 + n, b - n0 + n, c0, c0, c1, c1);
+			cf_batch_quad_verts2(batch, b - fn0, b - n0, b - n0 + n, b - fn0 + n, c1, c0, c1, c1);
+			cf_batch_quad_verts2(batch, b + fn0, b + n0, b + n0 + n, b + fn0 + n, c1, c0, c1, c1);
 
 			a = points[1];
 			b = points[0];
 			n = cf_norm(b - a) * alias_scale;
 			n0 = cf_skew(cf_norm(b - a)) * inner_half;
 			fn0 = cf_norm(n0) * outer_half;
-			cf_batch_quad(batch, b - n0, b + n0, b + n0 + n, b - n0 + n, c0, c0, c1, c1);
-			cf_batch_quad(batch, b - fn0, b - n0, b - n0 + n, b - fn0 + n, c1, c0, c1, c1);
-			cf_batch_quad(batch, b + fn0, b + n0, b + n0 + n, b + fn0 + n, c1, c0, c1, c1);
+			cf_batch_quad_verts2(batch, b - n0, b + n0, b + n0 + n, b - n0 + n, c0, c0, c1, c1);
+			cf_batch_quad_verts2(batch, b - fn0, b - n0, b - n0 + n, b - fn0 + n, c1, c0, c1, c1);
+			cf_batch_quad_verts2(batch, b + fn0, b + n0, b + n0 + n, b + fn0 + n, c1, c0, c1, c1);
 		} else {
-			cf_batch_quad(batch, a, b, b + n0, i0, c0, c0, c1, c1);
-			cf_batch_quad(batch, a, i1, b - n0, b, c0, c1, c1, c0);
+			cf_batch_quad_verts2(batch, a, b, b + n0, i0, c0, c0, c1, c1);
+			cf_batch_quad_verts2(batch, a, i1, b - n0, b, c0, c1, c1, c0);
 		}
 	}
 }
