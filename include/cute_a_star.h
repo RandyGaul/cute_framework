@@ -24,7 +24,7 @@
 
 #include "cute_defines.h"
 
-struct cf_a_star_grid_t;
+typedef struct cf_a_star_grid_t cf_a_star_grid_t;
 
 /**
  * Creates a grid based on an array of cells, usable in calls to `a_star`. The `cells` array
@@ -37,7 +37,7 @@ struct cf_a_star_grid_t;
 CUTE_API const cf_a_star_grid_t* CUTE_CALL cf_a_star_make_grid(int w, int h, const int* cells);
 CUTE_API void CUTE_CALL cf_a_star_destroy_grid(cf_a_star_grid_t* grid);
 
-struct cf_a_star_input_t
+typedef struct cf_a_star_input_t
 {
 	bool allow_diagonal_movement /* = true */;
 	int start_x /* = 0 */;
@@ -57,7 +57,7 @@ struct cf_a_star_input_t
 	 *     float cost = cell_to_cost[cell[y * w + x]];
 	 */
 	const float* cell_to_cost /* = NULL */;
-};
+} cf_a_star_input_t;
 
 /**
 * allow_diagonal_movement = true
@@ -71,14 +71,14 @@ CUTE_API cf_a_star_input_t CUTE_CALL cf_a_star_input_defaults();
 /**
  * Represents the shortest path between two points as an array of 2d vectors.
  */
-struct cf_a_star_output_t
+typedef struct cf_a_star_output_t
 {
 	const int* x;
 	const int* y;
 
 	int x_count;
 	int y_count;
-};
+} cf_a_star_output_t;
 
 /**
  * Calculates the shortest path from start to end from `input` upon `grid`.
