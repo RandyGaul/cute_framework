@@ -32,7 +32,7 @@
 /**
  * Represents a single image rendered as a quad.
  */
-struct cf_batch_sprite_t
+typedef struct cf_batch_sprite_t
 {
 	/**
 	 * Unique identifier for this quad's image, as determined by you.
@@ -47,7 +47,7 @@ struct cf_batch_sprite_t
 	float alpha = 1.0f; // Applies additional alpha to this quad.
 
 	int sort_bits = 0;
-};
+} cf_batch_sprite_t;
 
 /**
  * The batch is used to buffer up many different drawable things and organize them into draw calls suitable for high-
@@ -60,7 +60,7 @@ struct cf_batch_sprite_t
  * If you'd like to read more about the implementation of the batcher and why this is a good idea, go ahead and read
  * the documentation in `cute_spritebatch.h` in the `cute` folder.
  */
-struct cf_batch_t;
+typedef struct cf_batch_t cf_batch_t;
 
 /**
  * `get_pixels_fn` will be called periodically from within `batch_flush` whenever access to pixels in RAM are
@@ -146,14 +146,14 @@ CUTE_API void CUTE_CALL cf_batch_polyline(cf_batch_t* b, cf_v2* points, int coun
  * Temporal texture information for a sprite. Is valid until the next call to `batch_flush`
  * is issued. Useful to render a sprite in an external system, e.g. Dear ImGui.
  */
-struct cf_temporary_image_t
+typedef struct cf_temporary_image_t
 {
 	cf_texture_t texture_id; // A handle representing the texture for this image.
 	int w; // Width in pixels of the image.
 	int h; // Height in pixels of the image.
 	cf_v2 u; // u coordinate of the image in the texture.
 	cf_v2 v; // v coordinate of the image in the texture.
-};
+} cf_temporary_image_t;
 
 CUTE_API cf_temporary_image_t CUTE_CALL cf_batch_fetch(cf_batch_t* b, cf_batch_sprite_t sprite);
 
