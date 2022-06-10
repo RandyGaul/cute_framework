@@ -148,7 +148,7 @@ void update_test_octorok_buddy_counter_system(float dt, void* udata, test_compon
 CUTE_TEST_CASE(test_ecs_octorok, "Run ECS with a mock Octorok entity.");
 int test_ecs_octorok()
 {
-	if (cf_app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN).is_error()) {
+	if (cf_app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN, NULL, NULL).is_error()) {
 		return -1;
 	}
 
@@ -310,7 +310,7 @@ void update_dummy_system(float dt, void* udata, dummy_component_t* dummies, int 
 CUTE_TEST_CASE(test_ecs_no_kv, "Run ECS without kv at all.");
 int test_ecs_no_kv()
 {
-	if (cf_app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN).is_error()) {
+	if (cf_app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN, NULL, NULL).is_error()) {
 		return -1;
 	}
 
