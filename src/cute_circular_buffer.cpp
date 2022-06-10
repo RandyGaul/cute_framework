@@ -26,7 +26,7 @@
 
 cf_circular_buffer_t cf_circular_buffer_make(int initial_size_in_bytes, void* user_allocator_context)
 {
-	cf_circular_buffer_t buffer;
+	cf_circular_buffer_t buffer = { 0 };
 	buffer.size_left.i = initial_size_in_bytes;
 	buffer.capacity = initial_size_in_bytes;
 	buffer.data = (uint8_t*)CUTE_ALLOC(initial_size_in_bytes, user_allocator_context);

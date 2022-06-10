@@ -26,7 +26,7 @@ using namespace cute;
 CUTE_TEST_CASE(test_circular_buffer_basic, "Typical use-case example, push and pull some data.");
 int test_circular_buffer_basic()
 {
-	cf_circular_buffer_t buffer = cf_circular_buffer_make(1024);
+	cf_circular_buffer_t buffer = cf_circular_buffer_make(1024, NULL);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	const char* the_data = "Here's some data.";
@@ -47,19 +47,16 @@ CUTE_TEST_CASE(test_circular_buffer_fill_up_and_empty, "Fill up the buffer and e
 int test_circular_buffer_fill_up_and_empty()
 {
 	int bytes = 10;
-	cf_circular_buffer_t buffer = cf_circular_buffer_make(bytes);
+	cf_circular_buffer_t buffer = cf_circular_buffer_make(bytes, NULL);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
-	for (int iters = 0; iters < 5; ++iters)
-	{
-		for (int i = 0; i < bytes; ++i)
-		{
+	for (int iters = 0; iters < 5; ++iters) {
+		for (int i = 0; i < bytes; ++i) {
 			uint8_t byte = (uint8_t)i;
 			CUTE_TEST_CHECK(cf_circular_buffer_push(&buffer, &byte, 1));
 		}
 
-		for (int i = 0; i < bytes; ++i)
-		{
+		for (int i = 0; i < bytes; ++i) {
 			uint8_t byte;
 			CUTE_TEST_CHECK(cf_circular_buffer_pull(&buffer, &byte, 1));
 			CUTE_TEST_ASSERT(byte == i);
@@ -75,11 +72,10 @@ CUTE_TEST_CASE(test_circular_buffer_overflow, "Attempt to push too much data to 
 int test_circular_buffer_overflow()
 {
 	int bytes = 10;
-	cf_circular_buffer_t buffer = cf_circular_buffer_make(bytes);
+	cf_circular_buffer_t buffer = cf_circular_buffer_make(bytes, NULL);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
-	for (int i = 0; i < bytes; ++i)
-	{
+	for (int i = 0; i < bytes; ++i) {
 		uint8_t byte = (uint8_t)i;
 		CUTE_TEST_CHECK(cf_circular_buffer_push(&buffer, &byte, 1));
 	}
@@ -96,14 +92,13 @@ CUTE_TEST_CASE(test_circular_buffer_underflow, "Attempt to pull too many bytes f
 int test_circular_buffer_underflow()
 {
 	int bytes = 10;
-	cf_circular_buffer_t buffer = cf_circular_buffer_make(bytes);
+	cf_circular_buffer_t buffer = cf_circular_buffer_make(bytes, NULL);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	uint8_t byte = 0;
 	CUTE_TEST_CHECK(!cf_circular_buffer_pull(&buffer, &byte, 1));
 
-	for (int i = 0; i < bytes; ++i)
-	{
+	for (int i = 0; i < bytes; ++i) {
 		uint8_t byte = (uint8_t)i;
 		CUTE_TEST_CHECK(cf_circular_buffer_push(&buffer, &byte, 1));
 	}
@@ -117,15 +112,14 @@ int test_circular_buffer_underflow()
 }
 
 int test_circular_buffer_running = 1;
-int test_circular_buffer_two_threads_push(void *data)
+int test_circular_buffer_two_threads_push(void* data)
 {
 	cf_circular_buffer_t* buffer = (cf_circular_buffer_t*)data;
 
 	// Push incrementing integers into the buffer.
 	int iters = 100;
 	int val = 0;
-	while (iters && test_circular_buffer_running)
-	{
+	while (iters && test_circular_buffer_running) {
 		int result = cf_circular_buffer_push(buffer, &val, sizeof(int));
 		if (result) continue;
 		++val;
@@ -135,7 +129,7 @@ int test_circular_buffer_two_threads_push(void *data)
 	return 0;
 }
 
-int test_circular_buffer_two_threads_pull(void *data)
+int test_circular_buffer_two_threads_pull(void* data)
 {
 	cf_circular_buffer_t* buffer = (cf_circular_buffer_t*)data;
 
@@ -143,8 +137,7 @@ int test_circular_buffer_two_threads_pull(void *data)
 	int iters = 100;
 	int expected_val = 0;
 	int got_val;
-	while (iters)
-	{
+	while (iters) {
 		int result = cf_circular_buffer_pull(buffer, &got_val, sizeof(int));
 		if (result) continue;
 		CUTE_TEST_ASSERT(expected_val == got_val);
@@ -158,9 +151,8 @@ int test_circular_buffer_two_threads_pull(void *data)
 CUTE_TEST_CASE(test_circular_buffer_two_threads, "Run a producer and a consumer thread, and validate input/output of the buffer.");
 int test_circular_buffer_two_threads()
 {
-	for (int iters = 0; iters < 10; ++iters)
-	{
-		cf_circular_buffer_t buffer = cf_circular_buffer_make(sizeof(int) * 32);
+	for (int iters = 0; iters < 10; ++iters) {
+		cf_circular_buffer_t buffer = cf_circular_buffer_make(sizeof(int) * 32, NULL);
 		CUTE_TEST_CHECK_POINTER(buffer.data);
 
 		cf_thread_t* push = cf_thread_create(test_circular_buffer_two_threads_push, "thread push", &buffer);
