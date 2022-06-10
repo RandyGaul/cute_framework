@@ -108,7 +108,7 @@ CUTE_INLINE float cf_clamp01(float a) { return cf_max(0.0f, cf_min(a, 1.0f)); }
 CUTE_INLINE float cf_sign(float a) { return a < 0 ? -1.0f : 1.0f; }
 CUTE_INLINE float cf_intersect(float da, float db) { return da / (da - db); }
 CUTE_INLINE float cf_invert_safe(float a) { return a != 0 ? a / 1.0f : 0; }
-CUTE_INLINE float cf_lerp(float a, float b, float t) { return a + (b - a) * t; }
+CUTE_INLINE float cf_lerp_f(float a, float b, float t) { return a + (b - a) * t; }
 CUTE_INLINE float cf_remap(float t, float lo, float hi) { return (hi - lo) != 0 ? (t - lo) / (hi - lo) : 0; }
 CUTE_INLINE float cf_mod(float x, float m) { return x - (int)(x / m) * m; }
 
@@ -161,9 +161,9 @@ CUTE_INLINE cf_v2 cf_safe_norm(cf_v2 a) { float sq = cf_dot(a, a); return sq ? a
 CUTE_INLINE float cf_safe_norm(float a) { return a == 0 ? 0 : cf_sign(a); }
 CUTE_INLINE int cf_safe_norm(int a) { return a == 0 ? 0 : cf_sign(a); }
 CUTE_INLINE cf_v2 operator-(cf_v2 a) { return cf_v2(-a.x, -a.y); }
-CUTE_INLINE cf_v2 cf_lerp(cf_v2 a, cf_v2 b, float t) { return a + (b - a) * t; }
-CUTE_INLINE cf_v2 cf_bezier(cf_v2 a, cf_v2 c0, cf_v2 b, float t) { return cf_lerp(cf_lerp(a, c0, t), cf_lerp(c0, b, t), t); }
-CUTE_INLINE cf_v2 cf_bezier(cf_v2 a, cf_v2 c0, cf_v2 c1, cf_v2 b, float t) { return cf_bezier(cf_lerp(a, c0, t), cf_lerp(c0, c1, t), cf_lerp(c1, b, t), t); }
+CUTE_INLINE cf_v2 cf_lerp_v2(cf_v2 a, cf_v2 b, float t) { return a + (b - a) * t; }
+CUTE_INLINE cf_v2 cf_bezier(cf_v2 a, cf_v2 c0, cf_v2 b, float t) { return cf_lerp_v2(cf_lerp_v2(a, c0, t), cf_lerp_v2(c0, b, t), t); }
+CUTE_INLINE cf_v2 cf_bezier(cf_v2 a, cf_v2 c0, cf_v2 c1, cf_v2 b, float t) { return cf_bezier(cf_lerp_v2(a, c0, t), cf_lerp_v2(c0, c1, t), cf_lerp_v2(c1, b, t), t); }
 CUTE_INLINE int operator<(cf_v2 a, cf_v2 b) { return a.x < b.x && a.y < b.y; }
 CUTE_INLINE int operator>(cf_v2 a, cf_v2 b) { return a.x > b.x && a.y > b.y; }
 CUTE_INLINE int operator<=(cf_v2 a, cf_v2 b) { return a.x <= b.x && a.y <= b.y; }

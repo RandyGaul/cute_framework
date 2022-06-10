@@ -75,7 +75,7 @@ struct cf_scissor_t
 	int x, y, w, h;
 };
 
-static const cf_color_t DEFAULT_TINT = cf_make_color(0.5f, 0.5f, 0.5f, 1.0f);
+static const cf_color_t DEFAULT_TINT = cf_make_color_rgba_f(0.5f, 0.5f, 0.5f, 1.0f);
 
 struct cf_batch_t
 {
