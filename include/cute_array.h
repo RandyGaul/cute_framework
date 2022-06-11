@@ -147,8 +147,8 @@ cf_array<T>::cf_array(int capacity, void* user_allocator_context)
 template <typename T>
 cf_array<T>::cf_array(T* data, int count, int capacity, void* user_allocator_context)
 	: m_items(data)
-	: m_count(count)
-	: m_capacity(capacity)
+	, m_count(count)
+	, m_capacity(capacity)
 	, m_mem_ctx(user_allocator_context)
 {
 	CUTE_ASSERT(m_items);
