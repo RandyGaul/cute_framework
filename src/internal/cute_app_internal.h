@@ -150,7 +150,7 @@ struct cf_app_t
 	SDL_Window* window = NULL;
 	cs_context_t* cute_sound = NULL;
 	bool spawned_mix_thread = false;
-	cf_cf_threadpool_t* threadpool = NULL;
+	cf_threadpool_t* threadpool = NULL;
 	cf_audio_system_t* audio_system = NULL;
 	cute_font_t* courier_new = NULL;
 	cf_array<cute_font_vert_t> font_verts;

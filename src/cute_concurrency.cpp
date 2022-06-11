@@ -221,27 +221,27 @@ void cf_write_unlock(cf_rw_lock_t* rw)
 	cute_write_unlock(rw);
 }
 
-cf_cf_threadpool_t* cf_threadpool_create(int thread_count, void* user_allocator_context)
+cf_threadpool_t* cf_threadpool_create(int thread_count, void* user_allocator_context)
 {
 	return cute_threadpool_create(thread_count, user_allocator_context);
 }
 
-void cf_threadpool_add_task(cf_cf_threadpool_t* pool, cf_task_fn* task, void* param)
+void cf_threadpool_add_task(cf_threadpool_t* pool, cf_task_fn* task, void* param)
 {
 	cute_threadpool_add_task(pool, task, param);
 }
 
-void cf_threadpool_kick_and_wait(cf_cf_threadpool_t* pool)
+void cf_threadpool_kick_and_wait(cf_threadpool_t* pool)
 {
 	cute_threadpool_kick_and_wait(pool);
 }
 
-void cf_threadpool_kick(cf_cf_threadpool_t* pool)
+void cf_threadpool_kick(cf_threadpool_t* pool)
 {
 	cute_threadpool_kick(pool);
 }
 
-void cf_threadpool_destroy(cf_cf_threadpool_t* pool)
+void cf_threadpool_destroy(cf_threadpool_t* pool)
 {
 	cute_threadpool_destroy(pool);
 }
