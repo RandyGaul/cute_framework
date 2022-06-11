@@ -142,27 +142,27 @@ struct cf_app_t;
 // Avoid including <utility> header.
 
 template <typename T>
-struct remove_reference
+struct cf_remove_reference
 {
 	using type = T;
 };
 
 template <typename T>
-struct remove_reference<T&>
+struct cf_remove_reference<T&>
 {
 	using type = T;
 };
 
 template <typename T>
-struct remove_reference<T&&>
+struct cf_remove_reference<T&&>
 {
 	using type = T;
 };
 
 template <typename T>
-constexpr typename remove_reference<T>::type&& move(T&& arg) noexcept
+constexpr typename cf_remove_reference<T>::type&& move(T&& arg) noexcept
 {
-	return (typename remove_reference<T>::type&&)arg;
+	return (typename cf_remove_reference<T>::type&&)arg;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -217,6 +217,15 @@ template <class T> constexpr const T* end(initializer_list<T> list) noexcept { r
 
 template <typename T>
 using cf_initializer_list = std::initializer_list<T>;
+
+namespace cute
+{
+template <typename T>
+using initializer_list = cf_initializer_list<T>;
+
+template <typename T>
+using remove_reference = cf_remove_reference<T>;
+}
 
 #endif // CUTE_CPP
 
