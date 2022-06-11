@@ -156,25 +156,25 @@ int test_ecs_octorok()
 	cf_ecs_component_begin();
 	cf_ecs_component_set_size(sizeof(test_component_transform_t));
 	cf_ecs_component_set_name(CUTE_STRINGIZE(test_component_transform_t));
-	cf_ecs_component_set_optional_serializer(test_component_transform_serialize);
+	cf_ecs_component_set_optional_serializer(test_component_transform_serialize, NULL);
 	cf_ecs_component_end();
 
 	cf_ecs_component_begin();
 	cf_ecs_component_set_size(sizeof(test_component_sprite_t));
 	cf_ecs_component_set_name(CUTE_STRINGIZE(test_component_sprite_t));
-	cf_ecs_component_set_optional_serializer(test_component_sprite_serialize);
+	cf_ecs_component_set_optional_serializer(test_component_sprite_serialize, NULL);
 	cf_ecs_component_end();
 
 	cf_ecs_component_begin();
 	cf_ecs_component_set_size(sizeof(test_component_collider_t));
 	cf_ecs_component_set_name(CUTE_STRINGIZE(test_component_collider_t));
-	cf_ecs_component_set_optional_serializer(test_component_collider_serialize);
+	cf_ecs_component_set_optional_serializer(test_component_collider_serialize, NULL);
 	cf_ecs_component_end();
 
 	cf_ecs_component_begin();
 	cf_ecs_component_set_size(sizeof(test_component_octorok_t));
 	cf_ecs_component_set_name(CUTE_STRINGIZE(test_component_octorok_t));
-	cf_ecs_component_set_optional_serializer(test_component_octorok_serialize);
+	cf_ecs_component_set_optional_serializer(test_component_octorok_serialize, NULL);
 	cf_ecs_component_end();
 
 	// Register entity types (just one, the octorok).
@@ -240,14 +240,14 @@ int test_ecs_octorok()
 	if (err.is_error()) return -1;
 
 	cf_array<cf_entity_t> entities;
-	err = cf_ecs_load_entities(parsed_entities, &entities);
+	err = cute::ecs_load_entities(parsed_entities, &entities);
 	if (err.is_error()) return -1;
 	cf_kv_destroy(parsed_entities);
 
 	// Assert that saving the entities has matching values to what's in RAM currently.
 	cf_kv_t* saved_entities = cf_kv_make();
 	cf_kv_write_mode(saved_entities);
-	err = cf_ecs_save_entities(entities, saved_entities);
+	err = cute::ecs_save_entities(entities, saved_entities);
 	if (err.is_error()) return -1;
 	cf_kv_nul_terminate(saved_entities);
 	cf_kv_destroy(saved_entities);
@@ -317,7 +317,7 @@ int test_ecs_no_kv()
 	cf_ecs_component_begin();
 	cf_ecs_component_set_name("Dummy");
 	cf_ecs_component_set_size(sizeof(dummy_component_t));
-	cf_ecs_component_set_optional_serializer(dummy_serialize);
+	cf_ecs_component_set_optional_serializer(dummy_serialize, NULL);
 	cf_ecs_component_end();
 
 	cf_ecs_system_begin();
@@ -330,7 +330,7 @@ int test_ecs_no_kv()
 	cf_ecs_entity_add_component("Dummy");
 	cf_ecs_entity_end();
 
-	cf_entity_t e = cf_entity_make("Dummy_Entity");
+	cf_entity_t e = cf_entity_make("Dummy_Entity", NULL);
 	CUTE_TEST_ASSERT(e != CF_INVALID_ENTITY);
 	cf_ecs_run_systems(0);
 
