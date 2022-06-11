@@ -74,4 +74,9 @@ static cf_scope_exit<T> cf_s_create_scope_helper(T func)
  */
 #define CUTE_DEFER(L) const auto& CUTE_TOKEN_PASTE(cf_scope_exit, __LINE__) = cf_s_create_scope_helper([&]() { L; })
 
+namespace cute
+{
+template <typename T> using scope_exit = cf_scope_exit<T>;
+}
+
 #endif // CUTE_CPP
