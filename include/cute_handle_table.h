@@ -24,7 +24,7 @@
 
 #include "cute_defines.h"
 
-struct cf_handle_allocator_t;
+typedef struct cf_handle_allocator_t cf_handle_allocator_t;
 
 typedef uint64_t cf_handle_t;
 #define CUTE_INVALID_HANDLE (~0ULL)
@@ -41,7 +41,7 @@ CUTE_API int CUTE_CALL cf_handle_allocator_is_handle_valid(cf_handle_allocator_t
 
 // -------------------------------------------------------------------------------------------------
 
-struct cf_handle_table_t
+typedef struct cf_handle_table_t
 {
 	#ifdef CUTE_CPP
 
@@ -94,7 +94,7 @@ struct cf_handle_table_t
 
 
 	cf_handle_allocator_t* m_alloc;
-};
+} cf_handle_table_t;
 
 #ifdef CUTE_CPP
 
@@ -106,14 +106,14 @@ using handle_allocator_t = cf_handle_allocator_t;
 typedef uint64_t handle_t;
 
 CUTE_INLINE handle_allocator_t* handle_allocator_make(int initial_capacity, void* user_allocator_context = NULL) { return cf_handle_allocator_make(initial_capacity, user_allocator_context); }
-CUTE_INLINE void  handle_allocator_destroy(handle_allocator_t* table) { handle_allocator_destroy(table); }
+CUTE_INLINE void handle_allocator_destroy(handle_allocator_t* table) { handle_allocator_destroy(table); }
 
-CUTE_INLINE handle_t  handle_allocator_alloc(handle_allocator_t* table, uint32_t index, uint16_t type = 0) { return cf_handle_allocator_alloc(table, index, type = 0); }
-CUTE_INLINE uint32_t  handle_allocator_get_index(handle_allocator_t* table, handle_t handle) { return cf_handle_allocator_get_index(table, handle); }
-CUTE_INLINE uint16_t  handle_allocator_get_type(handle_allocator_t* table, handle_t handle) { return cf_handle_allocator_get_type(table, handle); }
-CUTE_INLINE void  handle_allocator_update_index(handle_allocator_t* table, handle_t handle, uint32_t index) { cf_handle_allocator_update_index(table, handle, index); }
-CUTE_INLINE void  handle_allocator_free(handle_allocator_t* table, handle_t handle) { cf_handle_allocator_free(table, handle); }
-CUTE_INLINE int  handle_allocator_is_handle_valid(handle_allocator_t* table, handle_t handle) { return cf_handle_allocator_is_handle_valid(table, handle); }
+CUTE_INLINE handle_t handle_allocator_alloc(handle_allocator_t* table, uint32_t index, uint16_t type = 0) { return cf_handle_allocator_alloc(table, index, type = 0); }
+CUTE_INLINE uint32_t handle_allocator_get_index(handle_allocator_t* table, handle_t handle) { return cf_handle_allocator_get_index(table, handle); }
+CUTE_INLINE uint16_t handle_allocator_get_type(handle_allocator_t* table, handle_t handle) { return cf_handle_allocator_get_type(table, handle); }
+CUTE_INLINE void handle_allocator_update_index(handle_allocator_t* table, handle_t handle, uint32_t index) { cf_handle_allocator_update_index(table, handle, index); }
+CUTE_INLINE void handle_allocator_free(handle_allocator_t* table, handle_t handle) { cf_handle_allocator_free(table, handle); }
+CUTE_INLINE int handle_allocator_is_handle_valid(handle_allocator_t* table, handle_t handle) { return cf_handle_allocator_is_handle_valid(table, handle); }
 }
 
 #endif // CUTE_CPP
