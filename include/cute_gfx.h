@@ -35,23 +35,23 @@ CUTE_API cf_texture_t CUTE_CALL cf_texture_make(cf_pixel_t* pixels, int w, int h
 CUTE_API cf_texture_t CUTE_CALL cf_texture_make_ex(cf_pixel_t* pixels, int w, int h, sg_wrap mode /* = SG_WRAP_REPEAT */, sg_filter filter /* = SG_FILTER_NEAREST */);
 CUTE_API void CUTE_CALL cf_texture_destroy(cf_texture_t texture);
 
-struct cf_matrix_t
+typedef struct cf_matrix_t
 {
 	float data[16];
-};
+} cf_matrix_t;
 
 CUTE_API cf_matrix_t CUTE_CALL cf_matrix_identity();
 CUTE_API cf_matrix_t CUTE_CALL cf_matrix_ortho_2d(float w, float h, float x, float y);
 
-struct cf_gfx_buffer_t
+typedef struct cf_gfx_buffer_t
 {
 	int stride;
 	int buffer_number;
 	int offset;
 	sg_buffer buffer[3];
-};
+} cf_gfx_buffer_t;
 
-struct cf_triple_buffer_t
+typedef struct cf_triple_buffer_t
 {
 	cf_gfx_buffer_t vbuf;
 	cf_gfx_buffer_t ibuf;
@@ -61,7 +61,7 @@ struct cf_triple_buffer_t
 	CUTE_INLINE sg_bindings bind();
 	#endif // CUTE_CPP
 
-};
+} cf_triple_buffer_t;
 
 CUTE_API CUTE_INLINE void CUTE_CALL cf_triple_buffer_advance(cf_triple_buffer_t* buffer)
 {
