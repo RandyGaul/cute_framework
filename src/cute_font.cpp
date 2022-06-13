@@ -121,8 +121,7 @@ void cf_font_push_verts(const cf_font_t* font, const char* text, float x, float 
 	cf_array<cf_font_vertex_t>& font_verts = cf_app->font_verts;
 	font_verts.ensure_capacity(256);
 
-	while (1)
-	{
+	while (1) {
 		cute_font_rect_t clip_rect;
 		if (clip_box) {
 			clip_rect.left = clip_box->min.x;
@@ -250,3 +249,7 @@ void cf_font_init()
 	cf_app->font_fs_uniforms.u_use_corners = false;
 }
 
+namespace cute
+{
+void font_draw(const cf_font_t* font, matrix_t mvp, color_t color) { cf_font_draw(font, mvp, color); }
+}
