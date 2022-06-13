@@ -32,7 +32,7 @@
 typedef uint64_t cf_texture_t;
 
 CUTE_API cf_texture_t CUTE_CALL cf_texture_make(cf_pixel_t* pixels, int w, int h);
-CUTE_API cf_texture_t CUTE_CALL cf_texture_make_ex(cf_pixel_t* pixels, int w, int h, sg_wrap mode /* = SG_WRAP_REPEAT */, sg_filter filter /* = SG_FILTER_NEAREST */);
+CUTE_API cf_texture_t CUTE_CALL cf_texture_make2(cf_pixel_t* pixels, int w, int h, sg_wrap mode /* = SG_WRAP_REPEAT */, sg_filter filter /* = SG_FILTER_NEAREST */);
 CUTE_API void CUTE_CALL cf_texture_destroy(cf_texture_t texture);
 
 typedef struct cf_matrix_t
@@ -101,7 +101,7 @@ namespace cute
 using texture_t = uint64_t;
 
 
-CUTE_INLINE texture_t  texture_make(pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_REPEAT, sg_filter filter = SG_FILTER_NEAREST) { return cf_texture_make_ex(pixels, w, h, mode, filter); }
+CUTE_INLINE texture_t  texture_make(pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_REPEAT, sg_filter filter = SG_FILTER_NEAREST) { return cf_texture_make2(pixels, w, h, mode, filter); }
 CUTE_INLINE void  texture_destroy(texture_t texture) { cf_texture_destroy(texture); }
 
 using matrix_t = cf_matrix_t;
