@@ -312,7 +312,7 @@ static void cf_s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to
 static SPRITEBATCH_U64 cf_s_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
 	cf_batch_t* b = (cf_batch_t*)udata;
-	return cf_texture_make_ex((cf_pixel_t*)pixels, w, h, b->wrap_mode, b->filter);
+	return cf_texture_make2((cf_pixel_t*)pixels, w, h, b->wrap_mode, b->filter);
 }
 
 static void cf_s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)

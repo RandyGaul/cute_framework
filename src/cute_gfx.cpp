@@ -34,10 +34,10 @@
 
 cf_texture_t cf_texture_make(cf_pixel_t* pixels, int w, int h)
 {
-	return cf_texture_make_ex(pixels, w, h, SG_WRAP_REPEAT, SG_FILTER_NEAREST);
+	return cf_texture_make2(pixels, w, h, SG_WRAP_REPEAT, SG_FILTER_NEAREST);
 }
 
-cf_texture_t cf_texture_make_ex(cf_pixel_t* pixels, int w, int h, sg_wrap mode, sg_filter filter)
+cf_texture_t cf_texture_make2(cf_pixel_t* pixels, int w, int h, sg_wrap mode, sg_filter filter)
 {
 	sg_image_desc params = { 0 };
 	params.width = w;
