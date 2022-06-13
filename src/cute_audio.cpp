@@ -71,7 +71,7 @@ cf_audio_t* cf_audio_load_ogg(const char* path, void* user_allocator_context)
 {
 	void* data;
 	size_t sz;
-	cf_file_system_read_entire_file_to_memory(path, &data, &sz);
+	cf_file_system_read_entire_file_to_memory(path, &data, &sz, NULL);
 	cf_audio_t audio_struct;
 	cs_read_mem_ogg(data, (int)sz, &audio_struct);
 	CUTE_FREE(data, NULL);
@@ -82,7 +82,7 @@ cf_audio_t* cf_audio_load_wav(const char* path, void* user_allocator_context)
 {
 	void* data;
 	size_t sz;
-	cf_file_system_read_entire_file_to_memory(path, &data, &sz);
+	cf_file_system_read_entire_file_to_memory(path, &data, &sz, NULL);
 	cf_audio_t audio_struct;
 	cs_read_mem_wav(data, (int)sz, &audio_struct);
 	CUTE_FREE(data, NULL);

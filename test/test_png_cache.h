@@ -26,7 +26,7 @@ CUTE_TEST_CASE(test_png_cache, "Test all functions of the png caching API.");
 int test_png_cache()
 {
 	cf_file_system_init(NULL);
-	cf_file_system_mount(cf_file_system_get_base_dir(), "");
+	cf_file_system_mount(cf_file_system_get_base_dir(), "", true);
 
 	cf_png_cache_t* cache = cf_png_cache_make();
 

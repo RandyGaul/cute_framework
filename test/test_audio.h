@@ -29,7 +29,7 @@ CUTE_TEST_CASE(test_audio_load_synchronous, "Load and free wav/ogg files synchro
 int test_audio_load_synchronous()
 {
 	cf_file_system_init(NULL);
-	cf_file_system_mount(cf_file_system_get_base_dir(), "");
+	cf_file_system_mount(cf_file_system_get_base_dir(), "", true);
 
 	cf_audio_t* audio = cf_audio_load_ogg("test_data/3-6-19-blue-suit-jam.ogg");
 	CUTE_TEST_CHECK_POINTER(audio);

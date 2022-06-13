@@ -186,7 +186,7 @@ cf_error_t cf_app_make(const char* window_title, int x, int y, int w, int h, uin
 		CUTE_ASSERT(0);
 	} else if (!(options & CUTE_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT)) {
 		// Put the base directory (the path to the exe) onto the file system search path.
-		cf_file_system_mount(cf_file_system_get_base_dir(), "");
+		cf_file_system_mount(cf_file_system_get_base_dir(), "", true);
 	}
 
 	app->strpool = cf_make_strpool();
