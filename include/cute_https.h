@@ -216,7 +216,7 @@ struct https_response_t
 	int code;
 	size_t content_len;
 	const char* content;
-	cf_array<cf_https_header_t> headers;
+	array<https_header_t> headers;
 
 	int transfer_encoding_flags;
 
@@ -224,7 +224,7 @@ struct https_response_t
 	* Convenience function to find a specific header. Returns true if the header was found, and false
 	* otherwise.
 	*/
-	CUTE_INLINE bool find_header(const char* header_name, cf_https_header_t* header_out = NULL) const;
+	CUTE_INLINE bool find_header(const char* header_name, https_header_t* header_out = NULL) const;
 };
 
 
@@ -234,11 +234,11 @@ CUTE_INLINE void https_destroy(https_t* https) { cf_https_destroy(https); }
 CUTE_INLINE https_state_t https_state(https_t* https) { return cf_https_state(https); }
 CUTE_INLINE size_t https_process(https_t* https) { return cf_https_process(https); }
 
-CUTE_API const https_response_t* CUTE_CALL https_response(cf_https_t* https);
+CUTE_API const https_response_t* CUTE_CALL https_response(https_t* https);
 
-CUTE_INLINE bool https_strcmp(const char* lit, cf_https_string_t string) { return cf_https_strcmp(lit, string); }
+CUTE_INLINE bool https_strcmp(const char* lit, https_string_t string) { return cf_https_strcmp(lit, string); }
 
-CUTE_INLINE bool https_response_find_header(const https_response_t* response, const char* header_name, cf_https_header_t* header_out)
+CUTE_INLINE bool https_response_find_header(const https_response_t* response, const char* header_name, https_header_t* header_out)
 {
 	*header_out = { 0 };
 	for (int i = 0; i < response->headers.count(); ++i) {
@@ -251,7 +251,7 @@ CUTE_INLINE bool https_response_find_header(const https_response_t* response, co
 	return false;
 }
 
-CUTE_INLINE bool https_response_t::find_header(const char* header_name, cf_https_header_t* header_out) const
+CUTE_INLINE bool https_response_t::find_header(const char* header_name, https_header_t* header_out) const
 {
 	return https_response_find_header(this, header_name, header_out);
 }
