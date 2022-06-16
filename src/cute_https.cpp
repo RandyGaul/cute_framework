@@ -43,6 +43,28 @@
 #	include <Security/Security.h>
 #endif
 
+/**
+ * Represents the response from a server after a successful process loop via `https_process`, where the
+ * status returned from `https_state` is `HTTPS_STATE_COMPLETED`.
+ */
+typedef struct cf_internal_https_response_t
+{
+	int code;
+	size_t content_len;
+	const char* content;
+	cf_array<cf_https_header_t> headers;
+
+	/**
+	 * Flags from `transfer_encoding_t`. For example, if content is gzip'd, you can tell by using
+	 * something like so: `bool is_gzip = !!(response->transfer_encoding & CF_TRANSFER_ENCODING_GZIP);`
+	 *
+	 * Please note that if the encoding is `TRANSFER_ENCODING_CHUNKED` the `content` buffer will not
+	 * contain any chunked encoding -- all chunked data has been decoded already. For gzip/deflate
+	 * the `content` buffer will need to be decompressed by you.
+	 */
+	int transfer_encoding_flags;
+} cf_internal_https_response_t;
+
 #ifndef CUTE_EMSCRIPTEN
 
 struct cf_https_decoder_t;
@@ -105,7 +127,7 @@ struct cf_https_t
 	cf_https_state_t state = CF_HTTPS_STATE_PENDING; // TODO - Atomic this.
 	cf_array<char> request;
 	cf_array<char> response_buffer;
-	cf_https_response_t response;
+	cf_internal_https_response_t response;
 
 	bool request_sent = false;
 
@@ -184,14 +206,14 @@ static cf_error_t cf_s_load_platform_certs(cf_https_t* https)
 	CFDictionarySetValue(search_settings_ref, kSecClass, kSecClassCertificate);
 	CFDictionarySetValue(search_settings_ref, kSecMatchLimit, kSecMatchLimitAll);
 	CFDictionarySetValue(search_settings_ref, kSecReturnRef, kCFBooleanTrue);
-	CFDictionarySetValue(search_settings_ref, kSecMatchSearchList, CFArrayCreate(NULL, (const void **)&keychain_ref, 1, NULL));
+	CFDictionarySetValue(search_settings_ref, kSecMatchSearchList, CFArrayCreate(NULL, (const void**)&keychain_ref, 1, NULL));
 
 	if (SecItemCopyMatching(search_settings_ref, (CFTypeRef*)&result_ref) != errSecSuccess) {
 		return cf_error_failure("SecItemCopyMatching failed.");
 	}
 
 	for (CFIndex i = 0; i < CFArrayGetCount(result_ref); i++) {
-		SecCertificateRef item_ref = (SecCertificateRef) CFArrayGetValueAtIndex(result_ref, i);
+		SecCertificateRef item_ref = (SecCertificateRef)CFArrayGetValueAtIndex(result_ref, i);
 		CFDataRef data_ref;
 
 		if ((data_ref = SecCertificateCopyData(item_ref))) {
@@ -329,10 +351,28 @@ cf_https_t* cf_https_post(const char* host, const char* port, const char* uri, c
 	return https;
 }
 
-const cf_https_response_t* cf_https_response(cf_https_t* https)
+bool cf_internal_https_response(cf_https_t* https, cf_internal_https_response_t** response_out)
 {
-	if (https->state != CF_HTTPS_STATE_COMPLETED) return NULL;
-	return &https->response;
+	if (https->state != CF_HTTPS_STATE_COMPLETED) return false;
+
+	*response_out = &https->response;
+
+	return true;
+}
+
+bool cf_https_response(cf_https_t* https, cf_https_response_t* response_out)
+{
+	cf_internal_https_response_t* response_internal;
+	if (!cf_internal_https_response(https, &response_internal)) return false;
+
+	response_out->code = response_internal->code;
+	response_out->content_len = response_internal->content_len;
+	response_out->content = response_internal->content;
+	response_out->headers = response_internal->headers.data();
+	response_out->headers_count = response_internal->headers.count();
+	response_out->transfer_encoding_flags = response_internal->transfer_encoding_flags;
+
+	return true;
 }
 
 static bool cf_s_crlf(cf_https_decoder_t* h, const char* data, size_t size, size_t* bytes_read)
@@ -644,7 +684,7 @@ size_t cf_https_process(cf_https_t* https)
 		https->h.decode = cf_s_get_line;
 		https->h.process_line = cf_s_response;
 	}
-;
+	
 	https->response_buffer.ensure_count(https->bytes_read + 1024 * 10);
 
 	int result;
@@ -682,7 +722,7 @@ struct cf_https_t
 	size_t size = 0;
 	const char** unpacked_headers = NULL;
 	int response_code = 0;
-	cf_https_response_t response;
+	cf_internal_https_response_t response;
 	bool request_sent = false;
 	int bytes_read = 0; // TODO - Atomic this.
 };
@@ -923,10 +963,42 @@ size_t cf_https_process(cf_https_t* https)
 	return https->bytes_read;
 }
 
-const cf_https_response_t* cf_https_response(cf_https_t* https)
+bool cf_internal_https_response(cf_https_t* https, cf_internal_https_response_t** response_out)
 {
-	if (https->state != CF_HTTPS_STATE_COMPLETED) return NULL;
-	return &https->response;
+	if (https->state != CF_HTTPS_STATE_COMPLETED) return false;
+
+	*response_out = &https->response;
+
+	return true;
+}
+
+bool cf_https_response(cf_https_t* https, cf_https_response_t* response_out)
+{
+	cf_internal_https_response_t* response_internal;
+	if (!cf_internal_https_response(https, &response_internal)) return false;
+
+	response_out->code = response_internal->code;
+	response_out->content_len = response_internal->content_len;
+	response_out->content = response_internal->content;
+	response_out->headers = response_internal->headers.data();
+	response_out->headers_count = response_internal->headers.count();
+	response_out->transfer_encoding_flags = response_internal->transfer_encoding_flags;
+
+	return true;
 }
 
 #endif // CUTE_EMSCRIPTEN
+
+namespace cute
+{
+const https_response_t* https_response(cf_https_t* https)
+{
+	CUTE_ASSERT(sizeof(cf_internal_https_response_t) == sizeof(https_response_t));
+
+	cf_internal_https_response_t* response_interal;
+	if (!cf_internal_https_response(https, &response_interal)) { return NULL; }
+
+	return (const https_response_t*)response_interal;
+}
+
+}
