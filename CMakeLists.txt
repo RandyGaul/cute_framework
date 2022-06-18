@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.14)
 project(cute_framework)
 
 # Must have at least C++14.
