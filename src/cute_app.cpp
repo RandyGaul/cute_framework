@@ -458,6 +458,7 @@ error_t app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 	if (app->offscreen_shader.id == SG_INVALID_ID) return error_failure("Unable create offscreen shader.");
 
 	app->upscale = { (float)app->offscreen_w / (float)app->w, (float)app->offscreen_h / (float)app->h };
+	app->upscale = v2(1, 1); // Investigate?
 
 	// Setup offscreen rendering pipeline, to draw the offscreen buffer onto the screen.
 	sg_pipeline_desc params = { 0 };
