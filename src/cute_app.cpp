@@ -429,10 +429,30 @@ static void s_quad(float x, float y, float sx, float sy, float* out)
 	CUTE_MEMCPY(out, quad, sizeof(quad));
 }
 
+static error_t s_create_offscreen_buffers(int w, int h)
+{
+	sg_image_desc buffer_params = { 0 };
+	buffer_params.render_target = true;
+	buffer_params.width = w;
+	buffer_params.height = h;
+	buffer_params.pixel_format = app->gfx_ctx_params.color_format;
+	app->offscreen_color_buffer = sg_make_image(buffer_params);
+	if (app->offscreen_color_buffer.id == SG_INVALID_ID) return error_failure("Unable to create offscreen color buffer.");
+	buffer_params.pixel_format = app->gfx_ctx_params.depth_format;
+	app->offscreen_depth_buffer = sg_make_image(buffer_params);
+	if (app->offscreen_depth_buffer.id == SG_INVALID_ID) return error_failure("Unable to create offscreen depth buffer.");
+	return error_success();
+}
+
 error_t app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 {
 	if (app->offscreen_enabled) {
-		CUTE_ASSERT(false); // Need to implement calling this to resize offscreen buffer at runtime.
+		if (offscreen_w != app->offscreen_w && offscreen_h != app->offscreen_h) {
+			sg_destroy_image(app->offscreen_color_buffer);
+			sg_destroy_image(app->offscreen_depth_buffer);
+			error_t err = s_create_offscreen_buffers(offscreen_w, offscreen_h);
+			if (err.is_error()) return err;
+		}
 		return error_success();
 	}
 
@@ -441,16 +461,8 @@ error_t app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 	app->offscreen_h = offscreen_h;
 
 	// Create offscreen buffers.
-	sg_image_desc buffer_params = { 0 };
-	buffer_params.render_target = true;
-	buffer_params.width = offscreen_w;
-	buffer_params.height = offscreen_h;
-	buffer_params.pixel_format = app->gfx_ctx_params.color_format;
-	app->offscreen_color_buffer = sg_make_image(buffer_params);
-	if (app->offscreen_color_buffer.id == SG_INVALID_ID) return error_failure("Unable to create offscreen color buffer.");
-	buffer_params.pixel_format = app->gfx_ctx_params.depth_format;
-	app->offscreen_depth_buffer = sg_make_image(buffer_params);
-	if (app->offscreen_depth_buffer.id == SG_INVALID_ID) return error_failure("Unable to create offscreen depth buffer.");
+	error_t err = s_create_offscreen_buffers(offscreen_w, offscreen_h);
+	if (err.is_error()) return err;
 
 	// Define pass to reference offscreen buffers.
 	sg_pass_desc pass_params = { 0 };
