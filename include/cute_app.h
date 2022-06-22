@@ -27,6 +27,7 @@
 
 struct ImGuiContext;
 struct sg_imgui_t;
+struct sg_image;
 
 namespace cute
 {
@@ -49,7 +50,8 @@ CUTE_API void CUTE_CALL app_destroy();
 CUTE_API bool CUTE_CALL app_is_running();
 CUTE_API void CUTE_CALL app_stop_running();
 CUTE_API void CUTE_CALL app_update(float dt);
-CUTE_API void CUTE_CALL app_present();
+CUTE_API sg_image CUTE_CALL app_get_offscreen_buffer();
+CUTE_API void CUTE_CALL app_present(bool draw_offscreen_buffer = true);
 
 CUTE_API error_t CUTE_CALL app_init_audio(bool spawn_mix_thread = true, int max_simultaneous_sounds = 5000);
 CUTE_API void CUTE_CALL app_do_mixing();

@@ -283,25 +283,40 @@ static void s_imgui_present()
 	}
 }
 
-void app_present()
+sg_image app_get_offscreen_buffer()
+{
+	sg_image result = { 0 };
+	if (app->offscreen_enabled) {
+		if (!app->fetched_offscreen) {
+			sg_end_pass();
+			app->fetched_offscreen = true;
+		}
+
+		result = app->offscreen_color_buffer;
+		app->fetched_offscreen = true;
+	}
+	return result;
+}
+
+void app_present(bool draw_offscreen_buffer)
 {
 	if (app->offscreen_enabled) {
-		sg_end_pass();
-
 		sg_bindings bind = { 0 };
 		bind.vertex_buffers[0] = app->quad;
-		bind.fs_images[0] = app->offscreen_color_buffer;
+		bind.fs_images[0] = app_get_offscreen_buffer();
 
 		sg_pass_action clear_to_black = { 0 };
 		clear_to_black.colors[0] = { SG_ACTION_CLEAR, { 0.0f, 0.0f, 0.0f, 1.0f } };
 		sg_begin_default_pass(&clear_to_black, app->w, app->h);
-		sg_apply_pipeline(app->offscreen_to_screen_pip);
-		sg_apply_bindings(bind);
-		upscale_vs_params_t vs_params = { app->upscale };
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
-		upscale_fs_params_t fs_params = { v2((float)app->offscreen_w, (float)app->offscreen_h) };
-		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE(fs_params));
-		sg_draw(0, 6, 1);
+		if (draw_offscreen_buffer) {
+			sg_apply_pipeline(app->offscreen_to_screen_pip);
+			sg_apply_bindings(bind);
+			upscale_vs_params_t vs_params = { app->upscale };
+			sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
+			upscale_fs_params_t fs_params = { v2((float)app->offscreen_w, (float)app->offscreen_h) };
+			sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE(fs_params));
+			sg_draw(0, 6, 1);
+		}
 		if (app->using_imgui) {
 			sg_imgui_draw(&app->sg_imgui);
 			s_imgui_present();
@@ -321,8 +336,8 @@ void app_present()
 		SDL_GL_SwapWindow(app->window);
 	}
 
-	// Triple buffering on the font vertices.
 	app->font_buffer.advance();
+	app->fetched_offscreen = false;
 }
 
 error_t app_init_audio(bool spawn_mix_thread, int max_simultaneous_sounds)
@@ -457,8 +472,8 @@ error_t app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 	app->offscreen_shader = sg_make_shader(upscale_shd_shader_desc(sg_query_backend()));
 	if (app->offscreen_shader.id == SG_INVALID_ID) return error_failure("Unable create offscreen shader.");
 
-	app->upscale = { (float)app->offscreen_w / (float)app->w, (float)app->offscreen_h / (float)app->h };
-	app->upscale = v2(1, 1); // Investigate?
+	//app->upscale = { (float)app->offscreen_w / (float)app->w, (float)app->offscreen_h / (float)app->h };
+	app->upscale = v2(1, 1);
 
 	// Setup offscreen rendering pipeline, to draw the offscreen buffer onto the screen.
 	sg_pipeline_desc params = { 0 };

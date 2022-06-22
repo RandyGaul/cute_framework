@@ -169,6 +169,7 @@ struct app_t
 	int x;
 	int y;
 	bool offscreen_enabled = false;
+	bool fetched_offscreen = false;
 	sg_image offscreen_color_buffer;
 	sg_image offscreen_depth_buffer;
 	sg_pass offscreen_pass;
