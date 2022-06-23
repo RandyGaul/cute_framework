@@ -107,6 +107,8 @@ struct batch_t
 	matrix_t projection;
 
 	m3x2 m = make_identity();
+	float scale_x = 1.0f;
+	float scale_y = 1.0f;
 	array<m3x2> m3x2s;
 	array<sg_blend_state> blend_states;
 	array<sg_depth_state> depth_states;
@@ -179,11 +181,6 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	b->sprite_verts.ensure_count(vert_count);
 	quad_vertex_t* verts = b->sprite_verts.data();
 
-	m3x2 m = make_identity();
-	if (b->m3x2s.count()) {
-		m = b->m3x2s.last();
-	}
-
 	for (int i = 0; i < count; ++i)
 	{
 		spritebatch_sprite_t* s = sprites + i;
@@ -214,12 +211,8 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 			x += s->x;
 			y += s->y;
 
-			// Apply final batch transformation.
-			v2 p = v2(x, y);
-			p = mul(m, p);
-
-			quad[j].x = p.x;
-			quad[j].y = p.y;
+			quad[j].x = x;
+			quad[j].y = y;
 		}
 
 		// output transformed quad into CPU buffer
@@ -427,10 +420,11 @@ void batch_push(batch_t* b, batch_sprite_t q)
 	s.image_id = q.id;
 	s.w = q.w;
 	s.h = q.h;
+	q.transform.p = mul(b->m, q.transform.p);
 	s.x = q.transform.p.x;
 	s.y = q.transform.p.y;
-	s.sx = q.scale_x;
-	s.sy = q.scale_y;
+	s.sx = q.scale_x * b->scale_x;
+	s.sy = q.scale_y * b->scale_y;
 	s.s = q.transform.r.s;
 	s.c = q.transform.r.c;
 	s.sort_bits = (uint64_t)q.sort_bits << 32;
@@ -517,6 +511,8 @@ void batch_outlines_color(batch_t* b, color_t c)
 void batch_push_m3x2(batch_t* b, m3x2 m)
 {
 	b->m = m;
+	b->scale_x = len(m.m.x);
+	b->scale_y = len(m.m.y);
 	b->m3x2s.add(m);
 }
 
@@ -526,8 +522,12 @@ void batch_pop_m3x2(batch_t* b)
 		b->m3x2s.pop();
 		if (b->m3x2s.size()) {
 			b->m = b->m3x2s.last();
+			b->scale_x = len(b->m.m.x);
+			b->scale_y = len(b->m.m.y);
 		} else {
 			b->m = make_identity();
+			b->scale_x = 1.0f;
+			b->scale_y = 1.0f;
 		}
 	}
 }
