@@ -729,7 +729,7 @@ void batch_circle_line(batch_t* batch, v2 p, float r, int iters, float thickness
 		v2 p0 = v2(p.x + r, p.y);
 		verts.add(p0);
 
-		for (int i = 1; i <= iters; i++) {
+		for (int i = 1; i < iters; i++) {
 			float a = (i / (float)iters) * (2.0f * CUTE_PI);
 			v2 n = from_angle(a);
 			v2 p1 = p + n * r;
@@ -737,7 +737,7 @@ void batch_circle_line(batch_t* batch, v2 p, float r, int iters, float thickness
 			p0 = p1;
 		}
 
-		batch_polyline(batch, verts.data(), verts.size(), thickness, color, true, true, 3);
+		batch_polyline(batch, verts.data(), verts.size(), thickness, color, true, true);
 	} else {
 		float half_thickness = thickness * 0.5f;
 		v2 p0 = v2(p.x + r - half_thickness, p.y);
@@ -990,7 +990,7 @@ CUTE_INLINE static void s_bevel_arc(batch_t* batch, v2 b, v2 i3, v2 i4, color_t 
 
 static void s_polyline(batch_t* batch, v2* points, int count, float thickness, color_t c0, color_t c1, bool loop, bool feather, float alias_scale, int bevel_count)
 {
-	float inner_half = (thickness - alias_scale) * 0.5f;
+	float inner_half = (thickness - alias_scale);
 	float outer_half = inner_half + alias_scale;
 	int iter = 0;
 	int i = 2;
@@ -1011,6 +1011,7 @@ static void s_polyline(batch_t* batch, v2* points, int count, float thickness, c
 		float ab_x_bc = cross(b - a, c - b);
 		float d = dot(cw90(n0), cw90(n1));
 		const float k_tol = 1.e-6f;
+		auto cc = color_white();
 
 		if (ab_x_bc < -k_tol) {
 			if (d >= 0) {
