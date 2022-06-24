@@ -23,10 +23,6 @@
 #define CUTE_ALLOC_H
 
 #if !defined(CUTE_ALLOC) && !defined(CUTE_FREE)
-#	ifdef _MSC_VER
-#		define _CRTDBG_MAP_ALLOC
-#		include <crtdbg.h>
-#	endif
 #	include <stdlib.h>
 #	define CUTE_ALLOC(size, user_ctx) malloc(size)
 #	define CUTE_FREE(ptr, user_ctx) free(ptr)

@@ -80,23 +80,10 @@ CUTE_API batch_t* CUTE_CALL batch_make(get_pixels_fn* get_pixels, void* get_pixe
 CUTE_API void CUTE_CALL batch_destroy(batch_t* b);
 
 /**
- * Attempts to resize internal graphics buffers to a new size or style.
- * The style can be one of three styles:
- * 
- *     BUFFER_STYLE_SINGLE
- *     BUFFER_STYLE_DOUBLE
- *     BUFFER_STYLE_TRIPLE
- * 
- * Double or triple buffer can reduce the changes of GPU stalls when drawing things,
- * but they take up more GPU memory.
- * 
- * Interally there are two types of buffers, one for sprites and one for geometry (from e.g.
- * `batch_circle` or `batch_polyline`). The memory taken on the GPU can be calculated
- * as this formula:
- * 
- *     size_t memory_for_GPU_buffers = size_of_one_buffer * (size_t)style * 2;
+ * Attempts to resize internal graphics buffers. They are double buffered, so the
+ * memory used on the GPU will be at least 2x `size_of_one_buffer`.
  */
-CUTE_API error_t CUTE_CALL batch_set_GPU_buffer_configuration(batch_t* b, buffer_style_t style, size_t size_of_one_buffer);
+CUTE_API error_t CUTE_CALL batch_set_GPU_buffer_configuration(batch_t* b, size_t size_of_one_buffer);
 
 /**
  * Pushes sprite quad onto an internal buffer. Does no other logic.

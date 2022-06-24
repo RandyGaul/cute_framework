@@ -54,6 +54,7 @@
 #ifdef SOKOL_D3D11
 #	define D3D11_NO_HELPERS
 #endif
+
 #include <sokol/sokol_gfx.h>
 
 #define SOKOL_IMGUI_IMPL
@@ -336,7 +337,6 @@ void app_present(bool draw_offscreen_buffer)
 		SDL_GL_SwapWindow(app->window);
 	}
 
-	app->font_buffer.advance();
 	app->fetched_offscreen = false;
 }
 

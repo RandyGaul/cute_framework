@@ -377,13 +377,13 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 	params.colors[0].blend.op_alpha = SG_BLENDOP_ADD;
 
 	b->geom_pip = sg_make_pipeline(params);
-	b->geom_buffer.init(BUFFER_STYLE_TRIPLE, CUTE_MB * 25, sizeof(vertex_t));
+	b->geom_buffer.init(CUTE_MB * 25, sizeof(vertex_t));
 
 	batch_push_stencil_defaults(b);
 	batch_push_blend_defaults(b);
 	b->default_shd = b->active_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_DEFAULT);
 	b->outline_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_OUTLINE);
-	b->sprite_buffer.init(BUFFER_STYLE_TRIPLE, CUTE_MB * 25, sizeof(quad_vertex_t));
+	b->sprite_buffer.init(CUTE_MB * 25, sizeof(quad_vertex_t));
 
 	spritebatch_config_t config;
 	spritebatch_set_default_config(&config);
@@ -415,13 +415,13 @@ void batch_destroy(batch_t* b)
 	CUTE_FREE(b, b->mem_ctx);
 }
 
-error_t batch_set_GPU_buffer_configuration(batch_t* b, buffer_style_t style, size_t size_of_one_buffer)
+error_t batch_set_GPU_buffer_configuration(batch_t* b, size_t size_of_one_buffer)
 {
 	b->geom_buffer.release();
 	b->sprite_buffer.release();
-	error_t err = b->geom_buffer.init(style, size_of_one_buffer, sizeof(vertex_t));
+	error_t err = b->geom_buffer.init(size_of_one_buffer, sizeof(vertex_t));
 	if (err.is_error()) return err;
-	return b->sprite_buffer.init(style, size_of_one_buffer, sizeof(quad_vertex_t));
+	return b->sprite_buffer.init(size_of_one_buffer, sizeof(quad_vertex_t));
 }
 
 void batch_push(batch_t* b, batch_sprite_t q)
@@ -455,8 +455,6 @@ error_t batch_flush(batch_t* b)
 
 	spritebatch_flush(&b->sb);
 
-	b->sprite_buffer.advance();
-
 	// Draw geometry.
 	if (b->geom_verts.count()) {
 		// Issue draw call.
@@ -472,7 +470,6 @@ error_t batch_flush(batch_t* b)
 			sg_draw(0, b->geom_verts.count(), 1);
 		}
 		b->geom_verts.clear();
-		b->geom_buffer.advance();
 	}
 
 	return error_success();
