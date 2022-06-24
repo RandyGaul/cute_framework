@@ -1989,6 +1989,7 @@ typedef struct sg_trace_hooks {
     void (*update_buffer)(sg_buffer buf, const sg_range* data, void* user_data);
     void (*update_image)(sg_image img, const sg_image_data* data, void* user_data);
     void (*append_buffer)(sg_buffer buf, const sg_range* data, int result, void* user_data);
+    void (*append_would_overflow)(sg_buffer buf, size_t size, bool result, void* user_data);
     void (*begin_default_pass)(const sg_pass_action* pass_action, int width, int height, void* user_data);
     void (*begin_pass)(sg_pass pass, const sg_pass_action* pass_action, void* user_data);
     void (*apply_viewport)(int x, int y, int width, int height, bool origin_top_left, void* user_data);
@@ -2288,6 +2289,7 @@ SOKOL_GFX_API_DECL void sg_destroy_pass(sg_pass pass);
 SOKOL_GFX_API_DECL void sg_update_buffer(sg_buffer buf, const sg_range* data);
 SOKOL_GFX_API_DECL void sg_update_image(sg_image img, const sg_image_data* data);
 SOKOL_GFX_API_DECL int sg_append_buffer(sg_buffer buf, const sg_range* data);
+SOKOL_GFX_API_DECL bool sg_append_would_overflow(sg_buffer buf, size_t size);
 SOKOL_GFX_API_DECL bool sg_query_buffer_overflow(sg_buffer buf);
 
 /* rendering functions */
@@ -15479,6 +15481,24 @@ SOKOL_API_IMPL int sg_append_buffer(sg_buffer buf_id, const sg_range* data) {
         result = 0;
     }
     _SG_TRACE_ARGS(append_buffer, buf_id, data, result);
+    return result;
+}
+
+SOKOL_API_IMPL bool sg_append_would_overflow(sg_buffer buf_id, size_t size) {
+    SOKOL_ASSERT(_sg.valid);
+    _sg_buffer_t* buf = _sg_lookup_buffer(&_sg.pools, buf_id.id);
+    bool result = false;
+    if (buf) {
+        int append_pos = buf->cmn.append_pos;
+        /* rewind append cursor in a new frame */
+        if (buf->cmn.append_frame_index != _sg.frame_index) {
+            append_pos = 0;
+        }
+        if ((append_pos + _sg_roundup((int)size, 4)) > buf->cmn.size) {
+            result = true;
+        }
+    }
+    _SG_TRACE_ARGS(append_would_overflow, buf_id, size, result);
     return result;
 }
 

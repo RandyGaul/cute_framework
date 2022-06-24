@@ -133,6 +133,10 @@ namespace cute
 	struct app_t;
 }
 
+#ifndef CUTE_NO_WARNINGS
+#	define CUTE_WARN(...) fprintf(stderr, __VA_ARGS__)
+#endif
+
 // -------------------------------------------------------------------------------------------------
 // Avoid including <utility> header.
 

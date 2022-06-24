@@ -88,11 +88,11 @@ struct batch_t
 	float atlas_height = 1024;
 
 	sg_pipeline geom_pip;
-	triple_buffer_t geom_buffer;
+	buffer_t geom_buffer;
 	array<vertex_t> geom_verts;
 
 	array<quad_vertex_t> sprite_verts;
-	triple_buffer_t sprite_buffer;
+	buffer_t sprite_buffer;
 	sg_shader default_shd = { 0 };
 	sg_shader outline_shd = { 0 };
 	sg_shader active_shd = { 0 };
@@ -181,8 +181,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	b->sprite_verts.ensure_count(vert_count);
 	quad_vertex_t* verts = b->sprite_verts.data();
 
-	for (int i = 0; i < count; ++i)
-	{
+	for (int i = 0; i < count; ++i) {
 		spritebatch_sprite_t* s = sprites + i;
 
 		v2 quad[] = {
@@ -192,8 +191,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 			{ -0.5f, -0.5f },
 		};
 
-		for (int j = 0; j < 4; ++j)
-		{
+		for (int j = 0; j < 4; ++j) {
 			float x = quad[j].x;
 			float y = quad[j].y;
 
@@ -254,8 +252,11 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	}
 
 	// Map the vertex buffer with sprite vertex data.
-	error_t err = triple_buffer_append(&b->sprite_buffer, vert_count, verts);
-	CUTE_ASSERT(!err.is_error());
+	error_t err = b->sprite_buffer.append(vert_count, verts);
+	if (err.is_error()) {
+		CUTE_WARN("Overflow in in sprite batcher, dropping draw call.");
+		return;
+	}
 
 	// Setup resource bindings.
 	sg_bindings bind = b->sprite_buffer.bind();
@@ -376,13 +377,13 @@ batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem
 	params.colors[0].blend.op_alpha = SG_BLENDOP_ADD;
 
 	b->geom_pip = sg_make_pipeline(params);
-	b->geom_buffer = triple_buffer_make(sizeof(vertex_t) * 1024 * 10, sizeof(vertex_t));
+	b->geom_buffer.init(BUFFER_STYLE_TRIPLE, CUTE_MB * 25, sizeof(vertex_t));
 
 	batch_push_stencil_defaults(b);
 	batch_push_blend_defaults(b);
 	b->default_shd = b->active_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_DEFAULT);
 	b->outline_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_OUTLINE);
-	b->sprite_buffer = triple_buffer_make(sizeof(quad_vertex_t) * 1024 * 10, sizeof(quad_vertex_t));
+	b->sprite_buffer.init(BUFFER_STYLE_TRIPLE, CUTE_MB * 25, sizeof(quad_vertex_t));
 
 	spritebatch_config_t config;
 	spritebatch_set_default_config(&config);
@@ -412,6 +413,15 @@ void batch_destroy(batch_t* b)
 	spritebatch_term(&b->sb);
 	b->~batch_t();
 	CUTE_FREE(b, b->mem_ctx);
+}
+
+error_t batch_set_GPU_buffer_configuration(batch_t* b, buffer_style_t style, size_t size_of_one_buffer)
+{
+	b->geom_buffer.release();
+	b->sprite_buffer.release();
+	error_t err = b->geom_buffer.init(style, size_of_one_buffer, sizeof(vertex_t));
+	if (err.is_error()) return err;
+	return b->sprite_buffer.init(style, size_of_one_buffer, sizeof(quad_vertex_t));
 }
 
 void batch_push(batch_t* b, batch_sprite_t q)
@@ -454,10 +464,13 @@ error_t batch_flush(batch_t* b)
 		geom_vs_params_t params;
 		params.u_mvp = b->projection;
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(params));
-		error_t err = triple_buffer_append(&b->geom_buffer, b->geom_verts.count(), b->geom_verts.data());
-		CUTE_ASSERT(!err.is_error());
-		sg_apply_bindings(b->geom_buffer.bind());
-		sg_draw(0, b->geom_verts.count(), 1);
+		error_t err = b->geom_buffer.append(b->geom_verts.count(), b->geom_verts.data());
+		if (err.is_error()) {
+			// Draw call dropped!!!
+		} else {
+			sg_apply_bindings(b->geom_buffer.bind());
+			sg_draw(0, b->geom_verts.count(), 1);
+		}
 		b->geom_verts.clear();
 		b->geom_buffer.advance();
 	}

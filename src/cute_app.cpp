@@ -441,6 +441,13 @@ static error_t s_create_offscreen_buffers(int w, int h)
 	buffer_params.pixel_format = app->gfx_ctx_params.depth_format;
 	app->offscreen_depth_buffer = sg_make_image(buffer_params);
 	if (app->offscreen_depth_buffer.id == SG_INVALID_ID) return error_failure("Unable to create offscreen depth buffer.");
+
+	sg_pass_desc pass_params = { 0 };
+	pass_params.color_attachments[0].image = app->offscreen_color_buffer;
+	pass_params.depth_stencil_attachment.image = app->offscreen_depth_buffer;
+	app->offscreen_pass = sg_make_pass(pass_params);
+	if (app->offscreen_pass.id == SG_INVALID_ID) return error_failure("Unable to create offscreen pass.");
+
 	return error_success();
 }
 
@@ -450,6 +457,7 @@ error_t app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 		if (offscreen_w != app->offscreen_w && offscreen_h != app->offscreen_h) {
 			sg_destroy_image(app->offscreen_color_buffer);
 			sg_destroy_image(app->offscreen_depth_buffer);
+			sg_destroy_pass(app->offscreen_pass);
 			error_t err = s_create_offscreen_buffers(offscreen_w, offscreen_h);
 			if (err.is_error()) return err;
 		}
@@ -460,16 +468,9 @@ error_t app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 	app->offscreen_w = offscreen_w;
 	app->offscreen_h = offscreen_h;
 
-	// Create offscreen buffers.
+	// Create offscreen buffers and pass.
 	error_t err = s_create_offscreen_buffers(offscreen_w, offscreen_h);
 	if (err.is_error()) return err;
-
-	// Define pass to reference offscreen buffers.
-	sg_pass_desc pass_params = { 0 };
-	pass_params.color_attachments[0].image = app->offscreen_color_buffer;
-	pass_params.depth_stencil_attachment.image = app->offscreen_depth_buffer;
-	app->offscreen_pass = sg_make_pass(pass_params);
-	if (app->offscreen_pass.id == SG_INVALID_ID) return error_failure("Unable to create offscreen pass.");
 
 	// Initialize static geometry for the offscreen quad.
 	float quad[4 * 6];

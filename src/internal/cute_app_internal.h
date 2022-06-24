@@ -159,7 +159,7 @@ struct app_t
 	array<cute_font_vert_t> font_verts;
 	sg_shader font_shader;
 	sg_pipeline font_pip;
-	triple_buffer_t font_buffer;
+	buffer_t font_buffer;
 	font_vs_params_t font_vs_uniforms;
 	font_fs_params_t font_fs_uniforms;
 	bool gfx_enabled = false;
