@@ -106,14 +106,20 @@ cute::error_t test_component_octorok_serialize(kv_t* kv, bool reading, entity_t 
 
 // -------------------------------------------------------------------------------------------------
 
+#define FIND_COMPONENTS(T) T* T##s = (T*)ecs_arrays_find_components(arrays, #T); CUTE_ASSERT(!count || T##s)
+
 int s_octorok_system_ran_ok;
-void update_test_octorok_system(float dt, void* udata, test_component_transform_t* transforms, test_component_sprite_t* sprites, test_component_collider_t* colliders, test_component_octorok_t* octoroks, int entity_count)
+void update_test_octorok_system(float dt, ecs_arrays_t* arrays, int count, void* udata)
 {
-	for (int i = 0; i < entity_count; ++i) {
-		test_component_transform_t* transform = transforms + i;
-		test_component_sprite_t* sprite = sprites + i;
-		test_component_collider_t* collider = colliders + i;
-		test_component_octorok_t* octorok = octoroks + i;
+	FIND_COMPONENTS(test_component_transform_t);
+	FIND_COMPONENTS(test_component_sprite_t);
+	FIND_COMPONENTS(test_component_collider_t);
+	FIND_COMPONENTS(test_component_octorok_t);
+	for (int i = 0; i < count; ++i) {
+		test_component_transform_t* transform = test_component_transform_ts + i;
+		test_component_sprite_t* sprite = test_component_sprite_ts + i;
+		test_component_collider_t* collider = test_component_collider_ts + i;
+		test_component_octorok_t* octorok = test_component_octorok_ts + i;
 
 		CUTE_ASSERT(sprite->img_id == 2); // Overridden by schema, originally initialized to 7.
 		CUTE_ASSERT(collider->type == 4); // Overridden by schema, originally initialized to 3.
@@ -133,10 +139,11 @@ void update_test_octorok_system(float dt, void* udata, test_component_transform_
 // -------------------------------------------------------------------------------------------------
 
 int s_octorok_buddy_said_hi_count;
-void update_test_octorok_buddy_counter_system(float dt, void* udata, test_component_octorok_t* octoroks, int entity_count)
+void update_test_octorok_buddy_counter_system(float dt, ecs_arrays_t* arrays, int count, void* udata)
 {
-	for (int i = 0; i < entity_count; ++i) {
-		test_component_octorok_t* octorok = octoroks + i;
+	FIND_COMPONENTS(test_component_octorok_t);
+	for (int i = 0; i < count; ++i) {
+		test_component_octorok_t* octorok = test_component_octorok_ts + i;
 		if (octorok->buddy_said_hi) {
 			++s_octorok_buddy_said_hi_count;
 		}
@@ -197,7 +204,7 @@ int test_ecs_octorok()
 
 	// Register systems.
 	ecs_system_begin();
-	ecs_system_set_update((void*)update_test_octorok_system);
+	ecs_system_set_update(update_test_octorok_system);
 	ecs_system_require_component("test_component_transform_t");
 	ecs_system_require_component("test_component_sprite_t");
 	ecs_system_require_component("test_component_collider_t");
@@ -205,7 +212,7 @@ int test_ecs_octorok()
 	ecs_system_end();
 
 	ecs_system_begin();
-	ecs_system_set_update((void*)update_test_octorok_buddy_counter_system);
+	ecs_system_set_update(update_test_octorok_buddy_counter_system);
 	ecs_system_require_component("test_component_octorok_t");
 	ecs_system_end();
 
@@ -299,10 +306,11 @@ cute::error_t dummy_serialize(kv_t* kv, bool reading, entity_t entity, void* com
 	return error_success();
 }
 
-void update_dummy_system(float dt, void* udata, dummy_component_t* dummies, int entity_count)
+void update_dummy_system(float dt, ecs_arrays_t* arrays, int count, void* udata)
 {
-	for (int i = 0; i < entity_count; ++i) {
-		dummy_component_t* dummy = dummies + i;
+	FIND_COMPONENTS(dummy_component_t);
+	for (int i = 0; i < count; ++i) {
+		dummy_component_t* dummy = dummy_component_ts + i;
 		dummy->iters++;
 	}
 }
@@ -315,26 +323,26 @@ int test_ecs_no_kv()
 	}
 
 	ecs_component_begin();
-	ecs_component_set_name("Dummy");
+	ecs_component_set_name("dummy_component_t");
 	ecs_component_set_size(sizeof(dummy_component_t));
 	ecs_component_set_optional_serializer(dummy_serialize);
 	ecs_component_end();
 
 	ecs_system_begin();
-	ecs_system_set_update((void*)update_dummy_system);
-	ecs_system_require_component("Dummy");
+	ecs_system_set_update(update_dummy_system);
+	ecs_system_require_component("dummy_component_t");
 	ecs_system_end();
 
 	ecs_entity_begin();
 	ecs_entity_set_name("Dummy_Entity");
-	ecs_entity_add_component("Dummy");
+	ecs_entity_add_component("dummy_component_t");
 	ecs_entity_end();
 
 	entity_t e = entity_make("Dummy_Entity");
 	CUTE_TEST_ASSERT(e != INVALID_ENTITY);
 	ecs_run_systems(0);
 
-	dummy_component_t* dummy = (dummy_component_t*)entity_get_component(e, "Dummy");
+	dummy_component_t* dummy = (dummy_component_t*)entity_get_component(e, "dummy_component_t");
 	CUTE_TEST_ASSERT(dummy->iters == 1);
 
 	app_destroy();

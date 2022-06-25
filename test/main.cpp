@@ -94,7 +94,6 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_png_cache),
 		CUTE_TEST_CASE_ENTRY(test_sprite_make),
 		CUTE_TEST_CASE_ENTRY(test_coroutine),
-		CUTE_TEST_CASE_ENTRY(test_array_and_dictionary_and_string),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

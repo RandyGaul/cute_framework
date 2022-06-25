@@ -33,6 +33,27 @@
 namespace cute
 {
 
+struct ecs_arrays_t
+{
+	int count;
+	handle_t* entities;
+	strpool_id* types;
+	array<typeless_array>* ptrs;
+
+	void* find_components(const char* type)
+	{
+		strpool_id id = INJECT(type);
+		for (int i = 0; i < count; ++i) {
+			if (types[i].val == id.val) {
+				return (*ptrs)[i].data();
+			}
+		}
+		return NULL;
+	}
+};
+
+static ecs_arrays_t s_arrays;
+
 static error_t s_load_from_schema(entity_type_t schema_type, entity_t entity, component_config_t* config, void* component, void* udata)
 {
 	// Look for parent.
@@ -63,6 +84,16 @@ static error_t s_load_from_schema(entity_type_t schema_type, entity_t entity, co
 
 //--------------------------------------------------------------------------------------------------
 
+void* ecs_arrays_find_components(ecs_arrays_t* arrays, const char* component_type)
+{
+	return arrays->find_components(component_type);
+}
+
+entity_t* ecs_arrays_get_entities(ecs_arrays_t* arrays)
+{
+	return (entity_t*)arrays->entities;
+}
+
 void ecs_system_begin()
 {
 	app->system_internal_builder.clear();
@@ -78,7 +109,7 @@ void ecs_system_set_name(const char* name)
 	app->system_internal_builder.name = INJECT(name);
 }
 
-void ecs_system_set_update(void* update_fn)
+void ecs_system_set_update(system_update_fn* update_fn)
 {
 	app->system_internal_builder.update_fn = update_fn;
 }
@@ -239,96 +270,26 @@ bool entity_has_component(entity_t entity, const char* component_type)
 
 //--------------------------------------------------------------------------------------------------
 
-static void s_0(float dt, void* fn_uncasted, void* udata)
+static inline int s_match(const array<strpool_id>& a, const array<strpool_id>& b)
 {
-	auto fn = (void (*)(float, void*))fn_uncasted;
-	fn(dt, udata);
-}
-
-static void s_1(float dt, void* fn_uncasted, void* udata, typeless_array& c0)
-{
-	auto fn = (void (*)(float, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), count);
-}
-
-static void s_2(float dt, void* fn_uncasted, void* udata, typeless_array& c0, typeless_array& c1)
-{
-	CUTE_ASSERT(c0.count() == c1.count());
-	auto fn = (void (*)(float, void*, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), c1.data(), count);
-}
-
-static void s_3(float dt, void* fn_uncasted, void* udata, typeless_array& c0, typeless_array& c1, typeless_array& c2)
-{
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), c1.data(), c2.data(), count);
-}
-
-static void s_4(float dt, void* fn_uncasted, void* udata, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3)
-{
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), c1.data(), c2.data(), c3.data(), count);
-}
-
-static void s_5(float dt, void* fn_uncasted, void* udata, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4)
-{
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), count);
-}
-
-static void s_6(float dt, void* fn_uncasted, void* udata, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5)
-{
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, void*, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), c5.data(), count);
-}
-
-static void s_7(float dt, void* fn_uncasted, void* udata, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5, typeless_array& c6)
-{
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count() && c0.count() == c6.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, void*, void*, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), c5.data(), c6.data(), count);
-}
-
-static void s_8(float dt, void* fn_uncasted, void* udata, typeless_array& c0, typeless_array& c1, typeless_array& c2, typeless_array& c3, typeless_array& c4, typeless_array& c5, typeless_array& c6, typeless_array& c7)
-{
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count() && c0.count() == c6.count() && c0.count() == c7.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, void*, void*, void*, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), c5.data(), c6.data(), c7.data(), count);
-}
-
-static inline void s_match(array<int>* matches, const array<strpool_id>& a, const array<strpool_id>& b)
-{
-	for (int i = 0; i < a.count(); ++i)
-	{
-		for (int j = 0; j < b.count(); ++j)
-		{
+	int matches = 0;
+	for (int i = 0; i < a.count(); ++i) {
+		for (int j = 0; j < b.count(); ++j) {
 			if (a[i].val == b[j].val) {
-				matches->add(j);
+				++matches;
 				break;
 			}
 		}
 	}
+	return matches;
 }
 
 void ecs_run_systems(float dt)
 {
 	int system_count = app->systems.count();
-	for (int i = 0; i < system_count; ++i)
-	{
+	for (int i = 0; i < system_count; ++i) {
 		system_internal_t* system = app->systems + i;
-		void* update_fn = system->update_fn;
+		system_update_fn* update_fn = system->update_fn;
 		auto pre_update_fn = system->pre_update_fn;
 		auto post_update_fn = system->post_update_fn;
 		void* udata = system->udata;
@@ -336,8 +297,7 @@ void ecs_run_systems(float dt)
 		if (pre_update_fn) pre_update_fn(dt, udata);
 
 		if (update_fn) {
-			for (int j = 0; j < app->entity_collections.count(); ++j)
-			{
+			for (int j = 0; j < app->entity_collections.count(); ++j) {
 				entity_collection_t* collection = app->entity_collections.items() + j;
 				CUTE_ASSERT(collection->component_tables.count() == collection->component_type_tuple.count());
 				int component_count = collection->component_tables.count();
@@ -346,25 +306,14 @@ void ecs_run_systems(float dt)
 				CUTE_DEFER(app->current_collection_type_being_iterated = INVALID_ENTITY_TYPE);
 				CUTE_DEFER(app->current_collection_being_updated = NULL);
 
-				array<int> matches;
-				s_match(&matches, system->component_type_tuple, collection->component_type_tuple);
+				int matches = s_match(system->component_type_tuple, collection->component_type_tuple);
 
-				array<typeless_array>& tables = collection->component_tables;
-
-				if (matches.count() == system->component_type_tuple.count()) {
-					switch (matches.count())
-					{
-					case 0: s_0(dt, update_fn, udata); break;
-					case 1: s_1(dt, update_fn, udata, tables[matches[0]]); break;
-					case 2: s_2(dt, update_fn, udata, tables[matches[0]], tables[matches[1]]); break;
-					case 3: s_3(dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]]); break;
-					case 4: s_4(dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]]); break;
-					case 5: s_5(dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]]); break;
-					case 6: s_6(dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]]); break;
-					case 7: s_7(dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]]); break;
-					case 8: s_8(dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]], tables[matches[7]]); break;
-					default: CUTE_ASSERT(0);
-					}
+				if (matches == system->component_type_tuple.count()) {
+					s_arrays.count = collection->component_type_tuple.count();
+					s_arrays.ptrs = &collection->component_tables;
+					s_arrays.types = collection->component_type_tuple.data();
+					s_arrays.entities = collection->entity_handles.data();
+					update_fn(dt, &s_arrays, collection->component_tables[0].count(), udata);
 				}
 			}
 		}

@@ -87,10 +87,16 @@ CUTE_API void CUTE_CALL ecs_component_set_optional_cleanup(component_cleanup_fn*
 //--------------------------------------------------------------------------------------------------
 // System
 
+struct ecs_arrays_t;
+
+typedef void (system_update_fn)(float dt, ecs_arrays_t* arrays, int count, void* udata);
+CUTE_API void* CUTE_CALL ecs_arrays_find_components(ecs_arrays_t* arrays, const char* component_type);
+CUTE_API entity_t* CUTE_CALL ecs_arrays_get_entities(ecs_arrays_t* arrays);
+
 CUTE_API void CUTE_CALL ecs_system_begin();
 CUTE_API void CUTE_CALL ecs_system_end();
 CUTE_API void CUTE_CALL ecs_system_set_name(const char* name);
-CUTE_API void CUTE_CALL ecs_system_set_update(void* update_fn);
+CUTE_API void CUTE_CALL ecs_system_set_update(system_update_fn* update_fn);
 CUTE_API void CUTE_CALL ecs_system_require_component(const char* component_type);
 CUTE_API void CUTE_CALL ecs_system_set_optional_pre_update(void (*pre_update_fn)(float dt, void* udata));
 CUTE_API void CUTE_CALL ecs_system_set_optional_post_update(void (*post_update_fn)(float dt, void* udata));
