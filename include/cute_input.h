@@ -25,9 +25,9 @@
 #include "cute_defines.h"
 #include "cute_array.h"
 
-enum cf_key_button_t;// : int;
-enum cf_mouse_button_t;// : int;
-enum cf_mouse_click_t;// : int;
+typedef enum cf_key_button_t cf_key_button_t; //: int;
+typedef enum cf_mouse_button_t cf_mouse_button_t; //: int;
+typedef enum cf_mouse_click_t cf_mouse_click_t; //: int;
 
 CUTE_API bool CUTE_CALL cf_key_is_down(cf_key_button_t key);
 CUTE_API bool CUTE_CALL cf_key_is_up(cf_key_button_t key);
@@ -59,34 +59,34 @@ CUTE_API bool CUTE_CALL cf_input_has_ime_keyboard_support();
 CUTE_API bool CUTE_CALL cf_input_is_ime_keyboard_shown();
 CUTE_API void CUTE_CALL cf_input_set_ime_rect(int x, int y, int w, int h);
 
-struct cf_ime_composition_t
+typedef struct cf_ime_composition_t
 {
 	const char* composition;
 	int cursor;
 	int selection_len;
-};
+} cf_ime_composition_t;
 
 CUTE_API bool CUTE_CALL cf_input_get_ime_composition(cf_ime_composition_t* composition);
 
-struct cf_touch_t
+typedef struct cf_touch_t
 {
 	uint64_t id;
 	float x;
 	float y;
 	float pressure;
-};
+} cf_touch_t;
 
-CUTE_API cf_array<cf_touch_t> CUTE_CALL cf_touch_get_all();
+CUTE_API int CUTE_CALL cf_touch_get_all(cf_touch_t** touch_all);
 CUTE_API bool CUTE_CALL cf_touch_get(uint64_t id, cf_touch_t* touch);
 
-enum cf_mouse_button_t : int
+typedef enum cf_mouse_button_t //: int
 {
 	CF_MOUSE_BUTTON_LEFT,
 	CF_MOUSE_BUTTON_RIGHT,
 	CF_MOUSE_BUTTON_MIDDLE
-};
+} cf_mouse_button_t;
 
-enum cf_key_button_t : int
+typedef enum cf_key_button_t //: int
 {
 	CF_KEY_UNKNOWN = 0,
 
@@ -339,7 +339,7 @@ enum cf_key_button_t : int
 	CF_KEY_ANY,
 
 	CF_KEY_COUNT
-};
+} cf_key_button_t;
 
 #define CUTE_KEY_MOD_NONE     0x0000
 #define CUTE_KEY_MOD_LSHIFT   0x0001
@@ -362,6 +362,47 @@ enum cf_key_button_t : int
 
 namespace cute
 {
+
+using key_button_t = cf_key_button_t;
+using mouse_button_t = cf_mouse_button_t;
+using mouse_click_t = cf_mouse_click_t;
+using ime_composition_t = cf_ime_composition_t;
+using touch_t = cf_touch_t;
+
+CUTE_INLINE bool CUTE_CALL key_is_down(key_button_t key) { return cf_key_is_down(key); }
+CUTE_INLINE bool CUTE_CALL key_is_up(key_button_t key) { return cf_key_is_up(key); }
+CUTE_INLINE bool CUTE_CALL key_was_pressed(key_button_t key) { return cf_key_was_pressed(key); }
+CUTE_INLINE bool CUTE_CALL key_was_released(key_button_t key) { return cf_key_was_released(key); }
+CUTE_INLINE void CUTE_CALL clear_all_key_state() { cf_clear_all_key_state(); }
+CUTE_INLINE int CUTE_CALL key_mod_bit_flags() { return cf_key_mod_bit_flags(); }
+	 
+CUTE_INLINE int CUTE_CALL mouse_x() { return cf_mouse_x(); }
+CUTE_INLINE int CUTE_CALL mouse_y() { return cf_mouse_y(); }
+	 
+CUTE_INLINE bool CUTE_CALL mouse_is_down(mouse_button_t button) { return cf_mouse_is_down(button); }
+CUTE_INLINE bool CUTE_CALL mouse_is_up(mouse_button_t button) { return cf_mouse_is_up(button); }
+CUTE_INLINE bool CUTE_CALL mouse_was_pressed(mouse_button_t button) { return cf_mouse_was_pressed(button); }
+CUTE_INLINE bool CUTE_CALL mouse_was_released(mouse_button_t button) { return cf_mouse_was_released(button); }
+CUTE_INLINE int CUTE_CALL mouse_wheel_motion() { return cf_mouse_wheel_motion(); }
+CUTE_INLINE bool CUTE_CALL mouse_is_down_double_click(mouse_button_t button) { return cf_mouse_is_down_double_click(button); }
+CUTE_INLINE bool CUTE_CALL mouse_double_click_was_pressed(mouse_button_t button) { return cf_mouse_double_click_was_pressed(button); }
+	 
+CUTE_INLINE void CUTE_CALL input_text_add_utf8(const char* text) { cf_input_text_add_utf8(text); }
+CUTE_INLINE int CUTE_CALL input_text_pop_utf32() { return cf_input_text_pop_utf32(); }
+CUTE_INLINE bool CUTE_CALL input_text_has_data() { return cf_input_text_has_data(); }
+CUTE_INLINE void CUTE_CALL input_text_clear() {  cf_input_text_clear(); }
+	 
+CUTE_INLINE void CUTE_CALL input_enable_ime() { cf_input_enable_ime(); }
+CUTE_INLINE void CUTE_CALL input_disable_ime() { cf_input_disable_ime(); }
+CUTE_INLINE bool CUTE_CALL input_is_ime_enabled() { return cf_input_is_ime_enabled(); }
+CUTE_INLINE bool CUTE_CALL input_has_ime_keyboard_support() { return cf_input_has_ime_keyboard_support(); }
+CUTE_INLINE bool CUTE_CALL input_is_ime_keyboard_shown() { return cf_input_is_ime_keyboard_shown(); }
+CUTE_INLINE void CUTE_CALL input_set_ime_rect(int x, int y, int w, int h) { cf_input_set_ime_rect(x,y,w,h); }
+
+CUTE_INLINE bool CUTE_CALL input_get_ime_composition(ime_composition_t* composition) { return cf_input_get_ime_composition(composition); }
+
+CUTE_API cf_array<touch_t> CUTE_CALL touch_get_all();
+CUTE_INLINE bool CUTE_CALL touch_get(uint64_t id, touch_t* touch) { return cf_touch_get(id,touch); }
 
 }
 

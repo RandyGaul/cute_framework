@@ -53,7 +53,8 @@ void cf_pump_input_msgs();
 
 namespace cute
 {
-
+using mouse_click_t = cf_mouse_click_t;
+using joypad_t = cf_joypad_t;
 }
 
 #endif // CUTE_CPP

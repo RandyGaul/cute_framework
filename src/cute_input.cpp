@@ -397,9 +397,12 @@ static void cf_s_touch_remove(uint64_t id)
 	}
 }
 
-cf_array<cf_touch_t> cf_touch_get_all()
+int cf_touch_get_all(cf_touch_t** touches)
 {
-	return cf_app->touches;
+	if (touches) {
+		*touches = cf_app->touches.data();
+	}
+	return cf_app->touches.count();
 }
 
 bool cf_touch_get(uint64_t id, cf_touch_t* touch)
@@ -681,4 +684,9 @@ void cf_pump_input_msgs()
 	else cf_app->key_mod &= ~CUTE_KEY_MOD_RALT;
 	if (cf_key_is_down(CF_KEY_RALT)) cf_app->key_mod |= CUTE_KEY_MOD_RALT;
 	else cf_app->key_mod &= ~CUTE_KEY_MOD_RALT;
+}
+
+namespace cute
+{
+	cf_array<cf_touch_t> CUTE_CALL touch_get_all() { return cf_app->touches; }
 }
