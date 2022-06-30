@@ -895,7 +895,7 @@ cf_error_t cf_s_find_match_int64(cf_kv_t* kv, T* val)
 	return cf_error_success();
 }
 
-cf_error_t cf_kv_val(cf_kv_t* kv, uint8_t* val)
+cf_error_t cf_kv_val_uint8(cf_kv_t* kv, uint8_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -911,7 +911,7 @@ cf_error_t cf_kv_val(cf_kv_t* kv, uint8_t* val)
 	return cf_error_success();
 }
 
-cf_error_t cf_kv_val(cf_kv_t* kv, uint16_t* val)
+cf_error_t cf_kv_val_uint16(cf_kv_t* kv, uint16_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -927,7 +927,7 @@ cf_error_t cf_kv_val(cf_kv_t* kv, uint16_t* val)
 	return cf_error_success();
 }
 
-cf_error_t cf_kv_val(cf_kv_t* kv, uint32_t* val)
+cf_error_t cf_kv_val_uint32(cf_kv_t* kv, uint32_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -943,7 +943,7 @@ cf_error_t cf_kv_val(cf_kv_t* kv, uint32_t* val)
 	return cf_error_success();
 }
 
-cf_error_t cf_kv_val(cf_kv_t* kv, uint64_t* val)
+cf_error_t cf_kv_val_uint64(cf_kv_t* kv, uint64_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -959,7 +959,7 @@ cf_error_t cf_kv_val(cf_kv_t* kv, uint64_t* val)
 	return cf_error_success();
 }
 
-cf_error_t cf_kv_val(cf_kv_t* kv, int8_t* val)
+cf_error_t cf_kv_val_int8(cf_kv_t* kv, int8_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -975,7 +975,7 @@ cf_error_t cf_kv_val(cf_kv_t* kv, int8_t* val)
 	return cf_error_success();
 }
 
-cf_error_t cf_kv_val(cf_kv_t* kv, int16_t* val)
+cf_error_t cf_kv_val_int16(cf_kv_t* kv, int16_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -991,7 +991,7 @@ cf_error_t cf_kv_val(cf_kv_t* kv, int16_t* val)
 	return cf_error_success();
 }
 
-cf_error_t cf_kv_val(cf_kv_t* kv, int32_t* val)
+cf_error_t cf_kv_val_int32(cf_kv_t* kv, int32_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -1007,7 +1007,7 @@ cf_error_t cf_kv_val(cf_kv_t* kv, int32_t* val)
 	return cf_error_success();
 }
 
-cf_error_t cf_kv_val(cf_kv_t* kv, int64_t* val)
+cf_error_t cf_kv_val_int64(cf_kv_t* kv, int64_t* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -1023,7 +1023,7 @@ cf_error_t cf_kv_val(cf_kv_t* kv, int64_t* val)
 	return cf_error_success();
 }
 
-cf_error_t cf_kv_val(cf_kv_t* kv, float* val)
+cf_error_t cf_kv_val_float(cf_kv_t* kv, float* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	cf_kv_val_t* match = cf_s_pop_val(kv, CF_KV_TYPE_DOUBLE);
@@ -1053,7 +1053,7 @@ cf_error_t cf_kv_val(cf_kv_t* kv, float* val)
 	return cf_error_success();
 }
 
-cf_error_t cf_kv_val(cf_kv_t* kv, double* val)
+cf_error_t cf_kv_val_double(cf_kv_t* kv, double* val)
 {
 	if (kv->err.is_error()) return kv->err;
 	cf_kv_val_t* match = cf_s_pop_val(kv, CF_KV_TYPE_DOUBLE);
@@ -1083,7 +1083,7 @@ cf_error_t cf_kv_val(cf_kv_t* kv, double* val)
 	return cf_error_success();
 }
 
-cf_error_t cf_kv_val(cf_kv_t* kv, bool* val)
+cf_error_t cf_kv_val_bool(cf_kv_t* kv, bool* val)
 {
 	if (kv->mode == CF_KV_STATE_READ) {
 		const char* string;
@@ -1171,7 +1171,7 @@ cf_error_t cf_kv_val_blob(cf_kv_t* kv, void* data, size_t data_capacity, size_t*
 cf_error_t cf_kv_object_begin(cf_kv_t* kv, const char* key)
 {
 	if (key) {
-		cf_error_t err = cf_kv_key(kv, key);
+		cf_error_t err = cf_kv_key(kv, key, NULL);
 		if (err.is_error()) return err;
 	}
 	if (kv->err.is_error()) return kv->err;
@@ -1233,7 +1233,7 @@ cf_error_t cf_kv_object_end(cf_kv_t* kv)
 cf_error_t cf_kv_array_begin(cf_kv_t* kv, int* count, const char* key)
 {
 	if (key) {
-		cf_error_t err = cf_kv_key(kv, key);
+		cf_error_t err = cf_kv_key(kv, key, NULL);
 		if (err.is_error()) return err;
 	}
 	if (kv->mode == CF_KV_STATE_READ) *count = 0;

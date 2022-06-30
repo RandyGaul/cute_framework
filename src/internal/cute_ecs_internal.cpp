@@ -29,13 +29,13 @@ cf_error_t cf_kv_val_entity(cf_kv_t* kv, cf_entity_t* entity)
 
 	if (state == CF_KV_STATE_READ) {
 		int index;
-		cf_error_t err = cf_kv_val(kv, &index);
+		cf_error_t err = cf_kv_val_int32(kv, &index);
 		if (err.is_error()) return err;
 		*entity = cf_app->load_id_table->operator[](index);
 		return cf_error_success();
 	} else {
 		int* index_ptr = cf_app->save_id_table->find(*entity);
 		CUTE_ASSERT(index_ptr);
-		return cf_kv_val(kv, index_ptr);
+		return cf_kv_val_int32(kv, index_ptr);
 	}
 }

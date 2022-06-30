@@ -405,7 +405,7 @@ void cf_ecs_component_set_optional_cleanup(cf_component_cleanup_fn* cleanup_fn, 
 
 static cf_strpool_id cf_s_kv_string(cf_kv_t* kv, const char* key)
 {
-	cf_error_t err = cf_kv_key(kv, key);
+	cf_error_t err = cf_kv_key(kv, key, NULL);
 	if (err.is_error()) {
 		if (CUTE_STRCMP(key, "inherits_from")) {
 			CUTE_DEBUG_PRINTF("Unable to find the `%s` key.\n", key);
@@ -427,7 +427,7 @@ static cf_strpool_id cf_s_kv_string(cf_kv_t* kv, const char* key)
 static void cf_s_register_entity_type(const char* schema)
 {
 	// Parse the schema.
-	cf_kv_t* kv = cf_kv_make();
+	cf_kv_t* kv = cf_kv_make(NULL);
 	bool cleanup_kv = true;
 	CUTE_DEFER(if (cleanup_kv) cf_kv_destroy(kv));
 
@@ -453,7 +453,7 @@ static void cf_s_register_entity_type(const char* schema)
 	for (int i = 0; i < component_config_count; ++i) {
 		const cf_component_config_t* config = component_configs + i;
 
-		err = cf_kv_key(kv, config->name);
+		err = cf_kv_key(kv, config->name, NULL);
 		if (!err.is_error()) {
 			component_type_tuple.add(INJECT(config->name));
 		}
@@ -578,7 +578,7 @@ static cf_error_t cf_s_fill_load_id_table(cf_kv_t* kv)
 	}
 
 	while (entity_count--) {
-		cf_kv_object_begin(kv);
+		cf_kv_object_begin(kv, NULL);
 
 		cf_entity_type_t entity_type = cf_s_entity_type(kv);
 		if (entity_type == CF_INVALID_ENTITY_TYPE) {
@@ -628,7 +628,7 @@ cf_error_t cf_internal_ecs_load_entities(cf_kv_t* kv, cf_array<cf_entity_t>* ent
 	int entity_index = 0;
 	while (entity_count--) {
 		cf_entity_t entity = load_id_table[entity_index++];
-		cf_kv_object_begin(kv);
+		cf_kv_object_begin(kv, NULL);
 
 		cf_entity_type_t entity_type = cf_s_entity_type(kv);
 		if (entity_type == CF_INVALID_ENTITY_TYPE) {
@@ -741,9 +741,9 @@ cf_error_t cf_internal_ecs_save_entities_kv(const cf_array<cf_entity_t>& entitie
 		}
 		uint32_t index = collection->entity_handle_table.get_index(entity.handle);
 
-		cf_kv_object_begin(kv);
+		cf_kv_object_begin(kv, NULL);
 
-		cf_kv_key(kv, "entity_type");
+		cf_kv_key(kv, "entity_type", NULL);
 		const char* entity_type_string = cf_strpool_cstr(cf_app->strpool, cf_app->entity_type_id_to_string[entity_type]);
 		size_t entity_type_string_len = CUTE_STRLEN(entity_type_string);
 		cf_kv_val_string(kv, &entity_type_string, &entity_type_string_len);
