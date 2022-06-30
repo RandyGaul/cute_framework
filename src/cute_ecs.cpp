@@ -866,14 +866,18 @@ cf_array<const char*> cf_internal_ecs_get_entity_list()
 	return names;
 }
 
-void cf_ecs_get_entity_list(const char*** entities_out, int* entities_count_out)
+const char** cf_ecs_get_entity_list(int* entities_count_out)
 {
 	cf_array<const char*> arr = cf_internal_ecs_get_entity_list();
 
-	*entities_out = arr.data();
-	*entities_count_out = arr.count();
+	const char** entities_out = arr.data();
+	if (entities_count_out) {
+		*entities_count_out = arr.count();
+	}
 
 	CUTE_MEMSET(&arr, 0, sizeof(arr));
+
+	return entities_out;
 }
 
 cf_array<const char*> cf_internal_ecs_get_component_list()
@@ -891,14 +895,18 @@ cf_array<const char*> cf_internal_ecs_get_component_list()
 	return names;
 }
 
-void cf_ecs_get_component_list(const char*** components_out, int* components_count_out)
+const char** cf_ecs_get_component_list(int* components_count_out)
 {
 	cf_array<const char*> arr = cf_internal_ecs_get_component_list();
 
-	*components_out = arr.data();
-	*components_count_out = arr.count();
+	const char** components_out = arr.data();
+	if (components_count_out) {
+		*components_count_out = arr.count();
+	}
 
 	CUTE_MEMSET(&arr, 0, sizeof(arr));
+
+	return components_out;
 }
 
 cf_array<const char*> cf_internal_ecs_get_system_list()
@@ -914,14 +922,18 @@ cf_array<const char*> cf_internal_ecs_get_system_list()
 	return names;
 }
 
-void cf_ecs_get_system_list(const char*** systems_out, int* systems_count_out)
+const char** cf_ecs_get_system_list(int* systems_count_out)
 {
 	cf_array<const char*> arr = cf_internal_ecs_get_system_list();
 
-	*systems_out = arr.data();
-	*systems_count_out = arr.count();
+	const char** systems_out = arr.data();
+	if (systems_count_out) {
+		*systems_count_out = arr.count();
+	}
 
 	CUTE_MEMSET(&arr, 0, sizeof(arr));
+
+	return systems_out;
 }
 
 cf_array<const char*> cf_internal_ecs_get_component_list_for_entity_type(const char* entity_type)
@@ -948,14 +960,18 @@ cf_array<const char*> cf_internal_ecs_get_component_list_for_entity_type(const c
 	return result;
 }
 
-void cf_ecs_get_component_list_for_entity_type(const char* entity_type, const char*** components_out, int* components_count_out)
+const char** cf_ecs_get_component_list_for_entity_type(const char* entity_type, int* components_count_out)
 {
 	cf_array<const char*> arr = cf_internal_ecs_get_component_list_for_entity_type(entity_type);
 
-	*components_out = arr.data();
-	*components_count_out = arr.count();
+	const char** components_out = arr.data();
+	if (components_count_out) {
+		*components_count_out = arr.count();
+	}
 
 	CUTE_MEMSET(&arr, 0, sizeof(arr));
+
+	return components_out;
 }
 
 void cf_ecs_free_list(const char** list)

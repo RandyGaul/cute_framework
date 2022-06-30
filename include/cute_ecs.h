@@ -38,7 +38,7 @@ typedef struct cf_entity_t
 	#ifdef CUTE_CPP
 	CUTE_INLINE bool operator==(const cf_entity_t& other) { return handle == other.handle; }
 	CUTE_INLINE bool operator!=(const cf_entity_t& other) { return handle != other.handle; }
-	#endif // CUTE_APP
+	#endif // CUTE_CPP
 
 	cf_handle_t handle; // For internal use -- don't touch.
 } cf_entity_t;
@@ -106,10 +106,10 @@ CUTE_API void CUTE_CALL cf_ecs_run_systems(float dt);
 // Introspection
 
 CUTE_API bool CUTE_CALL cf_ecs_is_entity_type_valid(const char* entity_type);
-CUTE_API void CUTE_CALL cf_ecs_get_entity_list(const char*** entities_out, int* entities_count_out);
-CUTE_API void CUTE_CALL cf_ecs_get_component_list(const char*** components_out, int* components_count_out);
-CUTE_API void CUTE_CALL cf_ecs_get_system_list(const char*** systems_out, int* systems_count_out);
-CUTE_API void CUTE_CALL cf_ecs_get_component_list_for_entity_type(const char* entity_type, const char*** components_out, int* components_count_out);
+CUTE_API const char** CUTE_CALL cf_ecs_get_entity_list(int* entities_count_out /*optional*/);
+CUTE_API const char** CUTE_CALL cf_ecs_get_component_list(int* components_count_out /*optional*/);
+CUTE_API const char** CUTE_CALL cf_ecs_get_system_list(int* systems_count_out /*optional*/);
+CUTE_API const char** CUTE_CALL cf_ecs_get_component_list_for_entity_type(const char* entity_type, int* components_count_out /*optional*/);
 CUTE_API void CUTE_CALL cf_ecs_free_list(const char** list);
 
 
