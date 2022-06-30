@@ -115,7 +115,7 @@ void cf_png_cache_unload(cf_png_cache_t* cache, cf_png_t* png)
 	img.pix = png->pix;
 	img.w = png->w;
 	img.h = png->h;
-	cf_cf_image_free(&img);
+	cf_image_free(&img);
 	cache->id_to_pixels.remove(png->id);
 	cache->pngs.remove(png->id);
 	CUTE_MEMSET(png, 0, sizeof(*png));

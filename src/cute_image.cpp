@@ -60,7 +60,7 @@ cf_error_t cf_image_load_png_wh(const void* data, int size, int* w, int* h)
 	return cf_error_success();
 }
 
-void cf_cf_image_free(cf_image_t* img)
+void cf_image_free(cf_image_t* img)
 {
 	CUTE_FREE(img->pix, NULL);
 }
@@ -86,7 +86,7 @@ cf_error_t cf_image_load_png_mem_indexed(const void* data, int size, cf_image_in
 	return cf_error_success();
 }
 
-void cf_cf_image_free(cf_image_indexed_t* img)
+void cf_image_free_indexed(cf_image_indexed_t* img)
 {
 	CUTE_FREE(img->pix, NULL);
 }

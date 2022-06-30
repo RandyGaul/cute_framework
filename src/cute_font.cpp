@@ -75,14 +75,14 @@ cf_font_t* cf_font_load_bmfont(const char* font_path, const char* font_image_pat
 	if (err.is_error()) return NULL;
 
 	cf_image_t img;
-	err = cf_image_load_png_mem(image_data, (int)image_size, &img);
+	err = cf_image_load_png_mem(image_data, (int)image_size, &img, NULL);
 	if (err.is_error()) return NULL;
 	cf_image_flip_horizontal(&img); // TODO: Is this needed?
 	cf_s_r_splat(&img);
 
 	CUTE_FONT_U64 texture_handle = cf_s_generate_texture_handle(img.pix, img.w, img.h);
 	cf_font_t* font = (cf_font_t*)cute_font_load_bmfont(texture_handle, font_data, (int)font_size, cf_app->mem_ctx);
-	cf_cf_image_free(&img);
+	cf_image_free(&img);
 
 	CUTE_FREE(font_data, cf_app->mem_ctx);
 	CUTE_FREE(image_data, cf_app->mem_ctx);
@@ -99,12 +99,12 @@ static void cf_s_load_courier_new()
 {
 	if (!cf_app->courier_new) {
 		cf_image_t img;
-		cf_error_t err = cf_image_load_png_mem(courier_new_0_png_data, courier_new_0_png_sz, &img);
+		cf_error_t err = cf_image_load_png_mem(courier_new_0_png_data, courier_new_0_png_sz, &img, NULL);
 		cf_s_r_splat(&img);
 		cf_texture_t tex = cf_texture_make(img.pix, img.w, img.h);
 		cute_font_t* font = cute_font_load_bmfont(tex, courier_new_fnt_data, courier_new_fnt_sz, cf_app->mem_ctx);
 		cf_app->courier_new = font;
-		cf_cf_image_free(&img);
+		cf_image_free(&img);
 	}
 }
 
