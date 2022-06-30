@@ -169,7 +169,7 @@ typedef struct cf_https_response_t
  * Calling this function otherwise will get you a NULL pointer returned. This will get cleaned up automatically
  * when `cf_https_destroy` is called.
  */
-CUTE_API bool CUTE_CALL cf_https_response(cf_https_t* https, cf_https_response_t* response_out);
+CUTE_API cf_https_response_t CUTE_CALL cf_https_response(cf_https_t* https);
 
 // -------------------------------------------------------------------------------------------------
 // Inline functions.

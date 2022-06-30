@@ -360,19 +360,21 @@ bool cf_internal_https_response(cf_https_t* https, cf_internal_https_response_t*
 	return true;
 }
 
-bool cf_https_response(cf_https_t* https, cf_https_response_t* response_out)
+cf_https_response_t cf_https_response(cf_https_t* https)
 {
+	cf_https_response_t response_out = { 0 };
+
 	cf_internal_https_response_t* response_internal;
-	if (!cf_internal_https_response(https, &response_internal)) return false;
+	if (!cf_internal_https_response(https, &response_internal)) return response_out;
 
-	response_out->code = response_internal->code;
-	response_out->content_len = response_internal->content_len;
-	response_out->content = response_internal->content;
-	response_out->headers = response_internal->headers.data();
-	response_out->headers_count = response_internal->headers.count();
-	response_out->transfer_encoding_flags = response_internal->transfer_encoding_flags;
+	response_out.code = response_internal->code;
+	response_out.content_len = response_internal->content_len;
+	response_out.content = response_internal->content;
+	response_out.headers = response_internal->headers.data();
+	response_out.headers_count = response_internal->headers.count();
+	response_out.transfer_encoding_flags = response_internal->transfer_encoding_flags;
 
-	return true;
+	return response_out;
 }
 
 static bool cf_s_crlf(cf_https_decoder_t* h, const char* data, size_t size, size_t* bytes_read)
@@ -972,17 +974,19 @@ bool cf_internal_https_response(cf_https_t* https, cf_internal_https_response_t*
 	return true;
 }
 
-bool cf_https_response(cf_https_t* https, cf_https_response_t* response_out)
+cf_https_response_t cf_https_response(cf_https_t* https)
 {
-	cf_internal_https_response_t* response_internal;
-	if (!cf_internal_https_response(https, &response_internal)) return false;
+	cf_https_response response_out = { 0 };
 
-	response_out->code = response_internal->code;
-	response_out->content_len = response_internal->content_len;
-	response_out->content = response_internal->content;
-	response_out->headers = response_internal->headers.data();
-	response_out->headers_count = response_internal->headers.count();
-	response_out->transfer_encoding_flags = response_internal->transfer_encoding_flags;
+	cf_internal_https_response_t* response_internal;
+	if (!cf_internal_https_response(https, &response_internal)) return response_out;
+
+	response_out.code = response_internal->code;
+	response_out.content_len = response_internal->content_len;
+	response_out.content = response_internal->content;
+	response_out.headers = response_internal->headers.data();
+	response_out.headers_count = response_internal->headers.count();
+	response_out.transfer_encoding_flags = response_internal->transfer_encoding_flags;
 
 	return true;
 }
