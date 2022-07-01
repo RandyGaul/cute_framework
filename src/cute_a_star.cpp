@@ -67,8 +67,8 @@ struct cf_a_star_grid_t
 
 static float cf_internal_s_heuristic(cf_iv2 a, cf_iv2 b, float allow_diagonals)
 {
-	float dx = (float)cf_abs(a.x - b.x);
-	float dy = (float)cf_abs(a.y - b.y);
+	float dx = (float)cf_abs_int(a.x - b.x);
+	float dy = (float)cf_abs_int(a.y - b.y);
 	float diagonal = cf_min(dx, dy) * allow_diagonals;
 	float manhattan = dx + dy;
 	float chebyshev = 1.4142135f * diagonal + (manhattan - 2.0f * diagonal);

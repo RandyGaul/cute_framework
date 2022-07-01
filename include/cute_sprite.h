@@ -67,7 +67,7 @@ using cf_animation_table_t = cf_dictionary<const char*, const cf_animation_t*>;
  * The `sprite_t` represents a set of drawable animations. Each animation is a collection
  * of frames, where each frame is one image to display on screen. The frames themselves are stored
  * elsewhere, and the sprite simply refers to them by read-only pointer.
- * 
+ *
  * Switching between animations can be done by calling the `play` and passing the name of the animation
  * to the `play` method.
  */
@@ -96,7 +96,7 @@ struct cf_sprite_t
 	/**
 	 * Pushes an instance of this sprite onto the `batch` member, which will be drawn the next time
 	 * `batch_flush` is called on `batch`.
-	 * 
+	 *
 	 * `batch` must not be NULL.
 	 */
 	CUTE_INLINE void draw(cf_batch_t* batch);
@@ -108,7 +108,7 @@ struct cf_sprite_t
 	 */
 	CUTE_INLINE cf_batch_sprite_t batch_sprite(cf_transform_t transform);
 	CUTE_INLINE cf_batch_sprite_t batch_sprite();
-	
+
 	CUTE_INLINE void pause();
 	CUTE_INLINE void unpause();
 	CUTE_INLINE void toggle_pause();
@@ -149,8 +149,8 @@ struct cf_sprite_t
 	const char* name = NULL;
 	int w = 0;
 	int h = 0;
-	cf_v2 scale = cf_v2(1, 1);
-	cf_v2 local_offset = cf_v2(0, 0);
+	cf_v2 scale = cf_V2(1, 1);
+	cf_v2 local_offset = cf_V2(0, 0);
 	float opacity = 1.0f;
 	int layer = 0;
 
@@ -270,7 +270,7 @@ cf_batch_sprite_t cf_sprite_t::batch_sprite(cf_transform_t transform)
 	cf_batch_sprite_t q;
 	q.id = animation->frames[frame_index].id;
 	q.transform = transform;
-	q.transform.p += local_offset;
+	q.transform.p = cf_add_v2(q.transform.p, local_offset);
 	q.w = w;
 	q.h = h;
 	q.scale_x = scale.x * w;
@@ -285,7 +285,7 @@ cf_batch_sprite_t cf_sprite_t::batch_sprite()
 	cf_batch_sprite_t q;
 	q.id = animation->frames[frame_index].id;
 	q.transform = transform;
-	q.transform.p += local_offset;
+	q.transform.p = cf_add_v2(q.transform.p, local_offset);
 	q.w = w;
 	q.h = h;
 	q.scale_x = scale.x * w;

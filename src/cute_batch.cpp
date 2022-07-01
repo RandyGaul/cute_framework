@@ -213,7 +213,7 @@ static void cf_s_batch_report(spritebatch_sprite_t* sprites, int count, int text
 
 			// Apply final batch transformation.
 			cf_v2 p = cf_v2(x, y);
-			p = cf_mul(m, p);
+			p = cf_mul_m32_v2(m, p);
 
 			quad[j].x = p.x;
 			quad[j].y = p.y;
@@ -634,7 +634,7 @@ void cf_batch_quad_aabb(cf_batch_t* b, cf_aabb_t bb, cf_color_t c)
 #define PUSH_VERT(P, C) \
 	do { \
 		cf_vertex_t v; \
-		v.p = cf_mul(b->m, P); \
+		v.p = cf_mul_m32_v2(b->m, P); \
 		v.c = C; \
 		b->geom_verts.add(v); \
 	} while (0)
@@ -743,16 +743,16 @@ void cf_batch_circle_arc(cf_batch_t* batch, cf_v2 p, cf_v2 center_of_arc, float 
 {
 	float r = cf_len(center_of_arc - p);
 	cf_v2 d = cf_norm(center_of_arc - p);
-	cf_sincos_t m = cf_sincos(range * 0.5f);
+	cf_sincos_t m = cf_sincos_f(range * 0.5f);
 
-	cf_v2 t = cf_mulT(m, d);
+	cf_v2 t = cf_mulT_sc_v2(m, d);
 	cf_v2 p0 = p + t * r;
 	d = cf_norm(p0 - p);
 	float inc = range / iters;
 
 	for (int i = 1; i <= iters; i++) {
-		m = cf_sincos(i * inc);
-		t = cf_mul(m, d);
+		m = cf_sincos_f(i * inc);
+		t = cf_mul_sc_v2(m, d);
 		cf_v2 p1 = p + t * r;
 		cf_batch_tri(batch, p, p1, p0, color);
 		p0 = p1;
@@ -763,17 +763,17 @@ static void cf_s_circle_arc_line_aa(cf_array<cf_v2>* verts, cf_v2 p, cf_v2 cente
 {
 	float r = cf_len(center_of_arc - p);
 	cf_v2 d = cf_norm(center_of_arc - p);
-	cf_sincos_t m = cf_sincos(range * 0.5f);
+	cf_sincos_t m = cf_sincos_f(range * 0.5f);
 
-	cf_v2 t = cf_mulT(m, d);
+	cf_v2 t = cf_mulT_sc_v2(m, d);
 	cf_v2 p0 = p + t * r;
 	d = cf_norm(p0 - p);
 	float inc = range / iters;
 	verts->add(p0);
 
 	for (int i = 1; i <= iters; i++) {
-		m = cf_sincos(i * inc);
-		t = cf_mul(m, d);
+		m = cf_sincos_f(i * inc);
+		t = cf_mul_sc_v2(m, d);
 		cf_v2 p1 = p + t * r;
 		verts->add(p1);
 		p0 = p1;
@@ -789,18 +789,18 @@ void cf_batch_circle_arc_line(cf_batch_t* batch, cf_v2 p, cf_v2 center_of_arc, f
 	} else {
 		float r = cf_len(center_of_arc - p);
 		cf_v2 d = cf_norm(center_of_arc - p);
-		cf_sincos_t m = cf_sincos(range * 0.5f);
+		cf_sincos_t m = cf_sincos_f(range * 0.5f);
 
 		float half_thickness = thickness * 0.5f;
-		cf_v2 t = cf_mulT(m, d);
+		cf_v2 t = cf_mulT_sc_v2(m, d);
 		cf_v2 p0 = p + t * (r + half_thickness);
 		cf_v2 p1 = p + t * (r - half_thickness);
 		d = cf_norm(p0 - p);
 		float inc = range / iters;
 
 		for (int i = 1; i <= iters; i++) {
-			m = cf_sincos(i * inc);
-			t = cf_mul(m, d);
+			m = cf_sincos_f(i * inc);
+			t = cf_mul_sc_v2(m, d);
 			cf_v2 p2 = p + t * (r + half_thickness);
 			cf_v2 p3 = p + t * (r - half_thickness);
 			cf_batch_quad_verts(batch, p0, p1, p2, p3, color);
@@ -937,14 +937,14 @@ void cf_batch_line2(cf_batch_t* b, cf_v2 p0, cf_v2 p1, float thickness, cf_color
 
 CUTE_INLINE static cf_v2 cf_s_rot_b_about_a(cf_sincos_t r, cf_v2 b, cf_v2 a)
 {
-	cf_v2 result = cf_mul(r, a - b);
+	cf_v2 result = cf_mul_sc_v2(r, a - b);
 	return result + b;
 }
 
 CUTE_INLINE static void cf_s_bevel_arc_feather(cf_batch_t* batch, cf_v2 b, cf_v2 i3, cf_v2 f3, cf_v2 i4, cf_v2 f4, cf_color_t c0, cf_color_t c1, int bevel_count)
 {
 	float arc = cf_shortest_arc(cf_norm(i3 - b), cf_norm(i4 - b)) / (float)(bevel_count + 1);
-	cf_sincos_t r = cf_sincos(arc);
+	cf_sincos_t r = cf_sincos_f(arc);
 	cf_v2 p0 = i3;
 	cf_v2 p1 = f3;
 	for (int i = 1; i < bevel_count; ++i) {
@@ -962,7 +962,7 @@ CUTE_INLINE static void cf_s_bevel_arc_feather(cf_batch_t* batch, cf_v2 b, cf_v2
 CUTE_INLINE static void cf_s_bevel_arc(cf_batch_t* batch, cf_v2 b, cf_v2 i3, cf_v2 i4, cf_color_t c0, cf_color_t c1, int bevel_count)
 {
 	float arc = cf_shortest_arc(cf_norm(i3 - b), cf_norm(i4 - b)) / (float)(bevel_count + 1);
-	cf_sincos_t r = cf_sincos(arc);
+	cf_sincos_t r = cf_sincos_f(arc);
 	cf_v2 p0 = i3;
 	for (int i = 1; i < bevel_count; ++i) {
 		cf_v2 p3 = cf_s_rot_b_about_a(r, b, p0);
@@ -998,11 +998,11 @@ static void cf_s_polyline(cf_batch_t* batch, cf_v2* points, int count, float thi
 
 		if (ab_x_bc < -k_tol) {
 			if (d >= 0) {
-				cf_v2 i2 = cf_intersect(cf_plane(n0, b - n0), b - n1, c - n1);
-				cf_v2 i3 = cf_intersect(cf_plane(n0, b + n0), b + n1, c + n1);
+				cf_v2 i2 = cf_intersect_halfspace2(cf_plane2(n0, b - n0), b - n1, c - n1);
+				cf_v2 i3 = cf_intersect_halfspace2(cf_plane2(n0, b + n0), b + n1, c + n1);
 				if (feather) {
-					cf_v2 f2 = cf_intersect(cf_plane(fn0, b - fn0), b - fn1, c - fn1);
-					cf_v2 f3 = cf_intersect(cf_plane(fn0, b + fn0), b + fn1, c + fn1);
+					cf_v2 f2 = cf_intersect_halfspace2(cf_plane2(fn0, b - fn0), b - fn1, c - fn1);
+					cf_v2 f3 = cf_intersect_halfspace2(cf_plane2(fn0, b + fn0), b + fn1, c + fn1);
 					if (emit) {
 						cf_batch_quad_verts(batch, a, b, i3, i0, c0);
 						cf_batch_quad_verts(batch, i1, i2, b, a, c0);
@@ -1018,15 +1018,15 @@ static void cf_s_polyline(cf_batch_t* batch, cf_v2* points, int count, float thi
 				i0 = i3;
 				i1 = i2;
 			} else {
-				cf_v2 i2 = cf_intersect(cf_plane(-n0, b - n0), b - n1, c - n1);
+				cf_v2 i2 = cf_intersect_halfspace2(cf_plane2(-n0, b - n0), b - n1, c - n1);
 				cf_v2 i3 = b + n0;
 				cf_v2 i4 = b + n1;
 				if (feather) {
-					cf_v2 f2 = cf_intersect(cf_plane(-fn0, b - fn0), b - fn1, c - fn1);
+					cf_v2 f2 = cf_intersect_halfspace2(cf_plane2(-fn0, b - fn0), b - fn1, c - fn1);
 					cf_v2 n = cf_norm(n0 + n1);
-					cf_halfspace_t h = cf_plane(n, i3 + n * alias_scale);
-					cf_v2 f3 = cf_intersect(h, a + fn0, b + fn0);
-					cf_v2 f4 = cf_intersect(h, b + fn1, c + fn1);
+					cf_halfspace_t h = cf_plane2(n, i3 + n * alias_scale);
+					cf_v2 f3 = cf_intersect_halfspace2(h, a + fn0, b + fn0);
+					cf_v2 f4 = cf_intersect_halfspace2(h, b + fn1, c + fn1);
 					if (emit) {
 						cf_batch_quad_verts(batch, a, b, i3, i0, c0);
 						cf_batch_quad_verts(batch, i1, i2, b, a, c0);
@@ -1046,11 +1046,11 @@ static void cf_s_polyline(cf_batch_t* batch, cf_v2* points, int count, float thi
 			}
 		} else if (ab_x_bc > k_tol) {
 			if (d >= 0) {
-				cf_v2 i2 = cf_intersect(cf_plane(n0, b + n0), b + n1, c + n1);
-				cf_v2 i3 = cf_intersect(cf_plane(n0, b - n0), b - n1, c - n1);
+				cf_v2 i2 = cf_intersect_halfspace2(cf_plane2(n0, b + n0), b + n1, c + n1);
+				cf_v2 i3 = cf_intersect_halfspace2(cf_plane2(n0, b - n0), b - n1, c - n1);
 				if (feather) {
-					cf_v2 f2 = cf_intersect(cf_plane(fn0, b + fn0), b + fn1, c + fn1);
-					cf_v2 f3 = cf_intersect(cf_plane(fn0, b - fn0), b - fn1, c - fn1);
+					cf_v2 f2 = cf_intersect_halfspace2(cf_plane2(fn0, b + fn0), b + fn1, c + fn1);
+					cf_v2 f3 = cf_intersect_halfspace2(cf_plane2(fn0, b - fn0), b - fn1, c - fn1);
 					if (emit) {
 						cf_batch_quad_verts(batch, a, b, i3, i1, c0);
 						cf_batch_quad_verts(batch, i0, i2, b, a, c0);
@@ -1066,15 +1066,15 @@ static void cf_s_polyline(cf_batch_t* batch, cf_v2* points, int count, float thi
 				i1 = i3;
 				i0 = i2;
 			} else {
-				cf_v2 i2 = cf_intersect(cf_plane(n0, b + n0), b + n1, c + n1);
+				cf_v2 i2 = cf_intersect_halfspace2(cf_plane2(n0, b + n0), b + n1, c + n1);
 				cf_v2 i3 = b - n0;
 				cf_v2 i4 = b - n1;
 				if (feather) {
-					cf_v2 f2 = cf_intersect(cf_plane(fn0, b + fn0), b + fn1, c + fn1);
+					cf_v2 f2 = cf_intersect_halfspace2(cf_plane2(fn0, b + fn0), b + fn1, c + fn1);
 					cf_v2 n = cf_norm(n0 + n1);
-					cf_halfspace_t h = cf_plane(-n, i3 - n * alias_scale);
-					cf_v2 f3 = cf_intersect(h, a - fn0, b - fn0);
-					cf_v2 f4 = cf_intersect(h, b - fn1, c - fn1);
+					cf_halfspace_t h = cf_plane2(-n, i3 - n * alias_scale);
+					cf_v2 f3 = cf_intersect_halfspace2(h, a - fn0, b - fn0);
+					cf_v2 f4 = cf_intersect_halfspace2(h, b - fn1, c - fn1);
 					if (emit) {
 						cf_batch_quad_verts(batch, a, b, i3, i1, c0);
 						cf_batch_quad_verts(batch, i0, i2, b, a, c0);
