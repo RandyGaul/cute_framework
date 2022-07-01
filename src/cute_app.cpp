@@ -189,7 +189,7 @@ cf_error_t cf_app_make(const char* window_title, int x, int y, int w, int h, uin
 		cf_file_system_mount(cf_file_system_get_base_dir(), "", true);
 	}
 
-	app->strpool = cf_make_strpool();
+	app->strpool = cf_make_strpool(NULL);
 
 	return cf_error_success();
 }

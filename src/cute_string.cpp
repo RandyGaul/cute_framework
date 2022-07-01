@@ -45,7 +45,7 @@ static cf_strpool_t* cf_s_pool(int nuke = 0)
 		return NULL;
 	} else {
 		if (!cf_s_pool_init) {
-			cf_s_pool_instance = instance = cf_make_strpool();
+			cf_s_pool_instance = instance = cf_make_strpool(NULL);
 			cf_s_pool_init = 1;
 		}
 		return instance;
