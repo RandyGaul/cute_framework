@@ -111,9 +111,9 @@ static void cf_s_sprite(cf_aseprite_cache_t* cache, aseprite_cache_entry_t entry
 	sprite->h = entry.ase->h;
 	sprite->local_offset = entry.local_offset;
 	if (entry.ase->tag_count == 0) {
-		sprite->play("default");
+		cf_sprite_play(sprite, "default");
 	} else {
-		sprite->play((const char*)sprite->animations->keys()[0].data);
+		cf_sprite_play(sprite, (const char*)sprite->animations->keys()[0].data);
 	}
 }
 

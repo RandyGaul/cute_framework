@@ -216,7 +216,7 @@ cf_sprite_t cf_png_cache_make_sprite(cf_png_cache_t* cache, const char* sprite_n
 	cf_error_t err = cache->pngs.find(table->items()[0]->frames[0].id, &png);
 	CUTE_ASSERT(!err.is_error());
 
-	cf_sprite_t sprite;
+	cf_sprite_t sprite = cf_sprite_defaults();
 	sprite.name = cf_strpool_cstr(cache->strpool, name_id);
 	sprite.w = png.w;
 	sprite.h = png.h;

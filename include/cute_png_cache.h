@@ -158,8 +158,6 @@ namespace cute
 using png_cache_t = cf_png_cache_t;
 using strpool_t = cf_strpool_t;
 using animation_t = cf_animation_t;
-using animation_table_t = cf_animation_table_t;
-using sprite_t = cf_sprite_t;
 using pixel_t = cf_pixel_t;
 
 struct png_t

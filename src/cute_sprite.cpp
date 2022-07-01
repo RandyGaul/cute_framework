@@ -69,7 +69,7 @@ cf_sprite_t cf_easy_sprite_make(const char* png_path)
 		if (err.is_error()) {
 			sprintf(buf, "Unable to load sprite at path \"%s\".\n", png_path);
 			cf_window_message_box(CF_WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
-			return cf_sprite_t();
+			return cf_sprite_defaults();
 		}
 
 		cf_png_t pngs[] = { png };

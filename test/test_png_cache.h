@@ -56,11 +56,11 @@ int test_png_cache()
 	cf_png_cache_make_animation_table(cache, "blink", anims, CUTE_ARRAY_SIZE(anims));
 	cf_sprite_t sprite = cf_png_cache_make_sprite(cache, "blink", NULL);
 
-	sprite.play("blink");
+	cf_sprite_play(&sprite, "blink");
 	CUTE_TEST_CHECK_POINTER(sprite.animations);
 	CUTE_TEST_ASSERT(sprite.frame_index == 0);
 
-	sprite.update(0.5f);
+	cf_sprite_update(&sprite, 0.5f);
 	CUTE_TEST_ASSERT(sprite.frame_index == 1);
 
 	cf_png_cache_destroy(cache);
