@@ -71,8 +71,12 @@ cf_sprite_t cf_easy_sprite_make(const char* png_path)
 			cf_window_message_box(CF_WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
 			return cf_sprite_t();
 		}
-		const cf_animation_t* anim = cf_png_cache_make_animation(cache, png_path, { png }, { 1.0f });
-		table = cf_png_cache_make_animation_table(cache, png_path, { anim });
+
+		cf_png_t pngs[] = { png };
+		float delays[] = { 1.0f };
+		const cf_animation_t* anim = cf_png_cache_make_animation(cache, png_path, pngs, CUTE_ARRAY_SIZE(pngs), delays, CUTE_ARRAY_SIZE(delays));
+		const cf_animation_t* anims[] = { anim };
+		table = cf_png_cache_make_animation_table(cache, png_path, anims, CUTE_ARRAY_SIZE(anims));
 	}
 
 	cf_sprite_t s = cf_png_cache_make_sprite(cache, png_path, table);

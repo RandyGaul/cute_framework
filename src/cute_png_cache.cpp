@@ -131,9 +131,9 @@ cf_strpool_t* cf_png_cache_get_strpool_ptr(cf_png_cache_t* cache)
 	return cache->strpool;
 }
 
-const cf_animation_t* cf_png_cache_make_animation(cf_png_cache_t* cache, const char* name, const cf_array<cf_png_t>& pngs, const cf_array<float>& delays)
+const cf_animation_t* cf_png_cache_make_animation(cf_png_cache_t* cache, const char* name, const cf_png_t* pngs, int pngs_count, const float* delays, int delays_count)
 {
-	CUTE_ASSERT(pngs.count() == delays.count());
+	CUTE_ASSERT(pngs_count == delays_count);
 	cf_strpool_id name_id = INJECT(name);
 
 	// If already made, just return the old animation.
@@ -150,7 +150,7 @@ const cf_animation_t* cf_png_cache_make_animation(cf_png_cache_t* cache, const c
 
 	animation->name = cf_strpool_cstr(cache->strpool, name_id);
 
-	for (int i = 0; i < pngs.count(); ++i) {
+	for (int i = 0; i < pngs_count; ++i) {
 		cf_frame_t frame;
 		frame.id = pngs[i].id;
 		frame.delay = delays[i];
@@ -160,7 +160,7 @@ const cf_animation_t* cf_png_cache_make_animation(cf_png_cache_t* cache, const c
 	return animation;
 }
 
- const cf_animation_t* cf_png_cache_get_animation(cf_png_cache_t* cache, const char* name)
+const cf_animation_t* cf_png_cache_get_animation(cf_png_cache_t* cache, const char* name)
 {
 	cf_animation_t* animation;
 	if (!cache->animations.find(INJECT(name), &animation).is_error()) {
@@ -170,7 +170,8 @@ const cf_animation_t* cf_png_cache_make_animation(cf_png_cache_t* cache, const c
 	}
 }
 
-const cf_animation_table_t* cf_png_cache_make_animation_table(cf_png_cache_t* cache, const char* sprite_name, const cf_array<const cf_animation_t*>& animations)
+
+const cf_animation_table_t* cf_png_cache_make_animation_table(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_t* const* animations, int animations_count)
 {
 	cf_strpool_id name_id = INJECT(sprite_name);
 
@@ -186,7 +187,7 @@ const cf_animation_table_t* cf_png_cache_make_animation_table(cf_png_cache_t* ca
 	CUTE_PLACEMENT_NEW(table) cf_animation_table_t;
 	*table_ptr = table;
 
-	for (int i = 0; i < animations.count(); ++i) {
+	for (int i = 0; i < animations_count; ++i) {
 		table->insert(animations[i]->name, animations[i]);
 	}
 
@@ -223,4 +224,17 @@ cf_sprite_t cf_png_cache_make_sprite(cf_png_cache_t* cache, const char* sprite_n
 	sprite.play((const char*)sprite.animations->keys()[0].data);
 
 	return sprite;
+}
+
+namespace cute
+{
+const cf_animation_t* png_cache_make_animation(cf_png_cache_t* cache, const char* name, const cf_array<cf_png_t>& pngs, const cf_array<float>& delays)
+{
+	return cf_png_cache_make_animation(cache, name, pngs.data(), pngs.count(), delays.data(), delays.count());
+}
+const cf_animation_table_t* png_cache_make_animation_table(cf_png_cache_t* cache, const char* sprite_name, const cf_array<const cf_animation_t*>& animations)
+{
+	return cf_png_cache_make_animation_table(cache, sprite_name, animations.data(), animations.count());
+}
+
 }
