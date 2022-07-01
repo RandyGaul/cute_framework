@@ -49,9 +49,9 @@ namespace cute
 
 using shared_library_t = cf_shared_library_t;
 
-CUTE_API shared_library_t* CUTE_CALL load_shared_library(const char* path) { return cf_load_shared_library(path); }
-CUTE_API void unload_shared_library(shared_library_t* library) { cf_unload_shared_library(library); }
-CUTE_API void* load_function(shared_library_t* library, const char* function_name) { return cf_load_function(library,function_name); }
+CUTE_INLINE shared_library_t* load_shared_library(const char* path) { return cf_load_shared_library(path); }
+CUTE_INLINE void unload_shared_library(shared_library_t* library) { cf_unload_shared_library(library); }
+CUTE_INLINE void* load_function(shared_library_t* library, const char* function_name) { return cf_load_function(library,function_name); }
 
 }
 
