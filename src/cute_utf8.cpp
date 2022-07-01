@@ -59,17 +59,17 @@ void cf_widen(const char* in, wchar_t* out)
 	cu_widen(in, out);
 }
 
-void cf_widen(const char* in, int in_len, wchar_t* out)
+void cf_widen2(const char* in, int in_len, wchar_t* out)
 {
 	cu_widen(in, in_len, out);
 }
 
-void cf_widen(const char* in, wchar_t* out, int out_len)
+void cf_widen3(const char* in, wchar_t* out, int out_len)
 {
 	cu_widen(in, out, out_len);
 }
 
-void cf_widen(const char* in, int in_len, wchar_t* out, int out_len)
+void cf_widen4(const char* in, int in_len, wchar_t* out, int out_len)
 {
 	cu_widen(in, in_len, out, out_len);
 }
@@ -79,17 +79,17 @@ void cf_shorten(const wchar_t* in, char* out)
 	cu_shorten(in, out);
 }
 
-void cf_shorten(const wchar_t* in, int in_len, char* out)
+void cf_shorten2(const wchar_t* in, int in_len, char* out)
 {
 	cu_shorten(in, in_len, out);
 }
 
-void cf_shorten(const wchar_t* in, char* out, int out_len)
+void cf_shorten3(const wchar_t* in, char* out, int out_len)
 {
 	cu_shorten(in, out, out_len);
 }
 
-void cf_shorten(const wchar_t* in, int in_len, char* out, int out_len)
+void cf_shorten4(const wchar_t* in, int in_len, char* out, int out_len)
 {
 	cu_shorten(in, in_len, out, out_len);
 }
