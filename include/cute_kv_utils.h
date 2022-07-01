@@ -22,12 +22,17 @@
 #ifndef CUTE_KV_UTILS_H
 #define CUTE_KV_UTILS_H
 
+#include "cute_defines.h"
+
+#ifdef CUTE_CPP
+
 #include "cute_kv.h"
 #include "cute_ecs.h"
 #include "cute_string.h"
 
 #include <string>
 #include <vector>
+
 
 CUTE_INLINE cf_error_t cf_kv_val_string_cf(cf_kv_t* kv, cf_string_t* string)
 {
@@ -38,8 +43,6 @@ CUTE_INLINE cf_error_t cf_kv_val_string_cf(cf_kv_t* kv, cf_string_t* string)
 	*string = cf_string_t(ptr, ptr + len);
 	return cf_error_success();
 }
-
-#ifdef CUTE_CPP
 
 CUTE_INLINE cf_error_t cf_kv_val_string_std(cf_kv_t* kv, std::string* val)
 {

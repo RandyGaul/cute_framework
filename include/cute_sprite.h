@@ -30,32 +30,32 @@
 /**
  * Represents one frame of animation within a sprite.
  */
-struct cf_frame_t
+typedef struct cf_frame_t
 {
 	uint64_t id;
 	float delay;
-};
+} cf_frame_t;
 
 /**
  * The direction a sprite plays frames.
  */
-enum cf_play_direction_t
+typedef enum cf_play_direction_t
 {
 	CF_PLAY_DIRECTION_FORWARDS,
 	CF_PLAY_DIRECTION_BACKWARDS,
 	CF_PLAY_DIRECTION_PINGPONG,
-};
+} cf_play_direction_t;
 
 /**
  * A single `sprite_t` contains a set of `animation_t`. Each animation
  * can define its own frames, and a playing direction for the frames.
  */
-struct cf_animation_t
+typedef struct cf_animation_t
 {
-	const char* name = NULL;
-	cf_play_direction_t play_direction = CF_PLAY_DIRECTION_FORWARDS;
+	const char* name; /*= NULL*/
+	cf_play_direction_t play_direction; /*= CF_PLAY_DIRECTION_FORWARDS*/
 	cf_array<cf_frame_t> frames;
-};
+} cf_animation_t;
 
 /**
  * An animation table is a set of animations a particular sprite references.
@@ -71,7 +71,7 @@ using cf_animation_table_t = cf_dictionary<const char*, const cf_animation_t*>;
  * Switching between animations can be done by calling the `play` and passing the name of the animation
  * to the `play` method.
  */
-struct cf_sprite_t
+typedef struct cf_sprite_t
 {
 	/**
 	 * Updates the sprite's internal timer to flip through different frames.
@@ -164,7 +164,7 @@ struct cf_sprite_t
 	const cf_animation_table_t* animations = NULL;
 
 	cf_transform_t transform = cf_make_transform();
-};
+} cf_sprite_t;
 
 //--------------------------------------------------------------------------------------------------
 // Easy sprite API. These functions are for loading single-frame sprites with no animations in a

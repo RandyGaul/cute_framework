@@ -22,6 +22,10 @@
 #ifndef CUTE_STRING_H
 #define CUTE_STRING_H
 
+#include "cute_defines.h"
+
+#ifdef  CUTE_CPP
+
 #include "cute_strpool.h"
 
 /*
@@ -34,7 +38,7 @@
 	between threads.
 */
 
-struct cf_string_t
+typedef struct cf_string_t
 {
 	CUTE_API cf_string_t();
 	CUTE_API cf_string_t(char* str);
@@ -58,15 +62,18 @@ struct cf_string_t
 	CUTE_API bool is_valid() const;
 
 	cf_strpool_id id;
-};
+} cf_string_t;
 
 CUTE_API void cf_string_defrag_static_pool();
 CUTE_API void cf_string_nuke_static_pool();
 
-#ifdef  CUTE_CPP
 
 namespace cute
 {
+using string_t = cf_string_t;
+
+CUTE_INLINE void string_defrag_static_pool() { cf_string_defrag_static_pool(); }
+CUTE_INLINE void string_nuke_static_pool() { cf_string_nuke_static_pool(); }
 
 }
 
