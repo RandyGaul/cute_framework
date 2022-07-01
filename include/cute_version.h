@@ -33,6 +33,8 @@ CUTE_API const char* CUTE_CALL cf_version_string_linked();
 namespace cute
 {
 
+CUTE_INLINE const char* version_string_linked() { return cf_version_string_linked(); }
+
 }
 
 #endif //  CUTE_CPP
