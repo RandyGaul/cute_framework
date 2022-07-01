@@ -284,17 +284,17 @@ using crypto_signature_t = cf_crypto_signature_t;
 using endpoint_t = cf_endpoint_t;
 using address_type_t = cf_address_type_t;
 
-CUTE_INLINE int CUTE_CALL endpoint_init(cf_endpoint_t* endpoint, const char* address_and_port_string) { return cf_endpoint_init(endpoint,address_and_port_string); }
-CUTE_INLINE void CUTE_CALL endpoint_to_string(cf_endpoint_t endpoint, char* buffer, int buffer_size) { cf_endpoint_to_string(endpoint,buffer,buffer_size); }
-CUTE_INLINE int CUTE_CALL endpoint_equals(cf_endpoint_t a, cf_endpoint_t b) { return cf_endpoint_equals(a,b); }
+CUTE_INLINE int endpoint_init(cf_endpoint_t* endpoint, const char* address_and_port_string) { return cf_endpoint_init(endpoint,address_and_port_string); }
+CUTE_INLINE void endpoint_to_string(cf_endpoint_t endpoint, char* buffer, int buffer_size) { cf_endpoint_to_string(endpoint,buffer,buffer_size); }
+CUTE_INLINE int endpoint_equals(cf_endpoint_t a, cf_endpoint_t b) { return cf_endpoint_equals(a,b); }
 
 //--------------------------------------------------------------------------------------------------
 // CONNECT TOKEN
 
-CUTE_INLINE cf_crypto_key_t CUTE_CALL crypto_generate_key() { return cf_crypto_generate_key(); }
-CUTE_INLINE void CUTE_CALL crypto_random_bytes(void* data, int byte_count) { cf_crypto_random_bytes(data,byte_count); }
-CUTE_INLINE void CUTE_CALL crypto_sign_keygen(cf_crypto_sign_public_t* public_key, cf_crypto_sign_secret_t* secret_key) { cf_crypto_sign_keygen(public_key,secret_key); }
-CUTE_INLINE cf_error_t CUTE_CALL generate_connect_token(
+CUTE_INLINE cf_crypto_key_t crypto_generate_key() { return cf_crypto_generate_key(); }
+CUTE_INLINE void crypto_random_bytes(void* data, int byte_count) { cf_crypto_random_bytes(data,byte_count); }
+CUTE_INLINE void crypto_sign_keygen(cf_crypto_sign_public_t* public_key, cf_crypto_sign_secret_t* secret_key) { cf_crypto_sign_keygen(public_key,secret_key); }
+CUTE_INLINE cf_error_t generate_connect_token(
 	uint64_t application_id,
 	uint64_t creation_timestamp,
 	const cf_crypto_key_t* client_to_server_key,
@@ -328,18 +328,18 @@ CUTE_INLINE cf_error_t CUTE_CALL generate_connect_token(
 
 using client_state_t = cf_client_state_t;
 
-CUTE_INLINE cf_client_t* CUTE_CALL client_create(uint16_t port, uint64_t application_id, bool use_ipv6 = false, void* user_allocator_context = NULL) { return cf_client_create(port,application_id,use_ipv6,user_allocator_context); }
-CUTE_INLINE void CUTE_CALL client_destroy(cf_client_t* client) { cf_client_destroy(client); }
-CUTE_INLINE cf_error_t CUTE_CALL client_connect(cf_client_t* client, const uint8_t* connect_token) { return cf_client_connect(client,connect_token); }
-CUTE_INLINE void CUTE_CALL client_disconnect(cf_client_t* client) { cf_client_disconnect(client); }
-CUTE_INLINE void CUTE_CALL client_update(cf_client_t* client, double dt, uint64_t current_time) { cf_client_update(client,dt,current_time); }
-CUTE_INLINE bool CUTE_CALL client_pop_packet(cf_client_t* client, void** packet, int* size, bool* was_sent_reliably = NULL) { return cf_client_pop_packet(client,packet,size,was_sent_reliably); }
-CUTE_INLINE void CUTE_CALL client_free_packet(cf_client_t* client, void* packet) { cf_client_free_packet(client,packet); }
-CUTE_INLINE cf_error_t CUTE_CALL client_send(cf_client_t* client, const void* packet, int size, bool send_reliably) { return cf_client_send(client,packet,size,send_reliably); }
-CUTE_INLINE cf_client_state_t CUTE_CALL client_state_get(const cf_client_t* client) { return cf_client_state_get(client); }
-CUTE_INLINE const char* CUTE_CALL client_state_string(cf_client_state_t state) { return cf_client_state_string(state); }
-CUTE_INLINE float CUTE_CALL client_time_of_last_packet_recieved(const cf_client_t* client) { return cf_client_time_of_last_packet_recieved(client); }
-CUTE_INLINE void CUTE_CALL client_enable_network_simulator(cf_client_t* client, double latency, double jitter, double drop_chance, double duplicate_chance) { cf_client_enable_network_simulator(client,latency,jitter,drop_chance,duplicate_chance); }
+CUTE_INLINE cf_client_t* client_create(uint16_t port, uint64_t application_id, bool use_ipv6 = false, void* user_allocator_context = NULL) { return cf_client_create(port,application_id,use_ipv6,user_allocator_context); }
+CUTE_INLINE void client_destroy(cf_client_t* client) { cf_client_destroy(client); }
+CUTE_INLINE cf_error_t client_connect(cf_client_t* client, const uint8_t* connect_token) { return cf_client_connect(client,connect_token); }
+CUTE_INLINE void client_disconnect(cf_client_t* client) { cf_client_disconnect(client); }
+CUTE_INLINE void client_update(cf_client_t* client, double dt, uint64_t current_time) { cf_client_update(client,dt,current_time); }
+CUTE_INLINE bool client_pop_packet(cf_client_t* client, void** packet, int* size, bool* was_sent_reliably = NULL) { return cf_client_pop_packet(client,packet,size,was_sent_reliably); }
+CUTE_INLINE void client_free_packet(cf_client_t* client, void* packet) { cf_client_free_packet(client,packet); }
+CUTE_INLINE cf_error_t client_send(cf_client_t* client, const void* packet, int size, bool send_reliably) { return cf_client_send(client,packet,size,send_reliably); }
+CUTE_INLINE cf_client_state_t client_state_get(const cf_client_t* client) { return cf_client_state_get(client); }
+CUTE_INLINE const char* client_state_string(cf_client_state_t state) { return cf_client_state_string(state); }
+CUTE_INLINE float client_time_of_last_packet_recieved(const cf_client_t* client) { return cf_client_time_of_last_packet_recieved(client); }
+CUTE_INLINE void client_enable_network_simulator(cf_client_t* client, double latency, double jitter, double drop_chance, double duplicate_chance) { cf_client_enable_network_simulator(client,latency,jitter,drop_chance,duplicate_chance); }
 
 //--------------------------------------------------------------------------------------------------
 // SERVER
@@ -348,20 +348,20 @@ using server_config_t = cf_server_config_t;
 using server_event_type_t = cf_server_event_type_t;
 using server_event_t = cf_server_event_t;
 
-CUTE_INLINE cf_server_config_t CUTE_CALL server_config_defaults() { return cf_server_config_defaults(); }
-CUTE_INLINE cf_server_t* CUTE_CALL server_create(cf_server_config_t config) { return cf_server_create(config); }
-CUTE_INLINE void CUTE_CALL server_destroy(cf_server_t* server) { cf_server_destroy(server); }
+CUTE_INLINE cf_server_config_t server_config_defaults() { return cf_server_config_defaults(); }
+CUTE_INLINE cf_server_t* server_create(cf_server_config_t config) { return cf_server_create(config); }
+CUTE_INLINE void server_destroy(cf_server_t* server) { cf_server_destroy(server); }
 CUTE_INLINE cf_error_t server_start(cf_server_t* server, const char* address_and_port) { return cf_server_start(server,address_and_port); }
 CUTE_INLINE void server_stop(cf_server_t* server) { cf_server_stop(server); }
-CUTE_INLINE bool CUTE_CALL server_pop_event(cf_server_t* server, cf_server_event_t* event) { return cf_server_pop_event(server,event); }
-CUTE_INLINE void CUTE_CALL server_free_packet(cf_server_t* server, int client_index, void* data) { cf_server_free_packet(server,client_index,data); }
-CUTE_INLINE void CUTE_CALL server_update(cf_server_t* server, double dt, uint64_t current_time) { cf_server_update(server,dt,current_time); }
-CUTE_INLINE void CUTE_CALL cf_server_disconnect_client(cf_server_t* server, int client_index, bool notify_client /* = true */);
-CUTE_INLINE void CUTE_CALL server_send(cf_server_t* server, const void* packet, int size, int client_index, bool send_reliably) { cf_server_send(server,packet,size,client_index,send_reliably); }
-CUTE_INLINE void CUTE_CALL server_send_to_all_clients(cf_server_t* server, const void* packet, int size, bool send_reliably) { cf_server_send_to_all_clients(server,packet,size,send_reliably); }
-CUTE_INLINE void CUTE_CALL server_send_to_all_but_one_client(cf_server_t* server, const void* packet, int size, int client_index, bool send_reliably) { cf_server_send_to_all_but_one_client(server,packet,size,client_index,send_reliably); }
-CUTE_INLINE bool CUTE_CALL server_is_client_connected(cf_server_t* server, int client_index) { cf_server_is_client_connected(server,client_index); }
-CUTE_INLINE void CUTE_CALL server_enable_network_simulator(cf_server_t* server, double latency, double jitter, double drop_chance, double duplicate_chance) { cf_server_enable_network_simulator(server,latency,jitter,drop_chance,duplicate_chance); }
+CUTE_INLINE bool server_pop_event(cf_server_t* server, cf_server_event_t* event) { return cf_server_pop_event(server,event); }
+CUTE_INLINE void server_free_packet(cf_server_t* server, int client_index, void* data) { cf_server_free_packet(server,client_index,data); }
+CUTE_INLINE void server_update(cf_server_t* server, double dt, uint64_t current_time) { cf_server_update(server,dt,current_time); }
+CUTE_INLINE void cf_server_disconnect_client(cf_server_t* server, int client_index, bool notify_client /* = true */);
+CUTE_INLINE void server_send(cf_server_t* server, const void* packet, int size, int client_index, bool send_reliably) { cf_server_send(server,packet,size,client_index,send_reliably); }
+CUTE_INLINE void server_send_to_all_clients(cf_server_t* server, const void* packet, int size, bool send_reliably) { cf_server_send_to_all_clients(server,packet,size,send_reliably); }
+CUTE_INLINE void server_send_to_all_but_one_client(cf_server_t* server, const void* packet, int size, int client_index, bool send_reliably) { cf_server_send_to_all_but_one_client(server,packet,size,client_index,send_reliably); }
+CUTE_INLINE bool server_is_client_connected(cf_server_t* server, int client_index) { cf_server_is_client_connected(server,client_index); }
+CUTE_INLINE void server_enable_network_simulator(cf_server_t* server, double latency, double jitter, double drop_chance, double duplicate_chance) { cf_server_enable_network_simulator(server,latency,jitter,drop_chance,duplicate_chance); }
 
 }
 
