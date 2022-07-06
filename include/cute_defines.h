@@ -170,6 +170,8 @@ constexpr typename remove_reference<T>::type&& move(T&& arg) noexcept
 // avoid defining this class if someone already included <initializer_list> before including
 // cute framework <cute.h>.
 
+#ifdef CUTE_WINDOWS
+
 #if !defined(_INITIALIZER_LIST_) && !defined(_INITIALIZER_LIST) && !defined(_LIBCPP_INITIALIZER_LIST)
 #define _INITIALIZER_LIST_ // MSVC
 #define _INITIALIZER_LIST  // GCC
@@ -220,5 +222,11 @@ namespace cute
 	template <typename T>
 	using initializer_list = std::initializer_list<T>;
 }
+
+#else // CUTE_WINDOWS
+
+#include <initializer_list>
+
+#endif // CUTE_WINDOWS
 
 #endif // CUTE_DEFINES_H
