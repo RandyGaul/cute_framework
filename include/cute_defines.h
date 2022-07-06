@@ -217,16 +217,16 @@ namespace std
 
 #endif
 
-namespace cute
-{
-	template <typename T>
-	using initializer_list = std::initializer_list<T>;
-}
-
 #else // CUTE_WINDOWS
 
 #include <initializer_list>
 
 #endif // CUTE_WINDOWS
+
+namespace cute
+{
+	template <typename T>
+	using initializer_list = std::initializer_list<T>;
+}
 
 #endif // CUTE_DEFINES_H
