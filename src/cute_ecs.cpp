@@ -282,6 +282,7 @@ void entity_activate(entity_t entity)
 
 bool entity_is_active(entity_t entity)
 {
+	return false;
 }
 
 bool entity_is_valid(entity_t entity)
