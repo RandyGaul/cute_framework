@@ -195,11 +195,6 @@ static entity_collection_t* s_collection(entity_t entity)
 	return collection;
 }
 
-void entity_delayed_destroy(entity_t entity)
-{
-	app->delayed_destroy_entities.add(entity);
-}
-
 void entity_destroy(entity_t entity)
 {
 	uint16_t entity_type = s_entity_type(entity);
@@ -236,6 +231,57 @@ void entity_destroy(entity_t entity)
 			collection->entity_handle_table.update_index(h, index);
 		}
 	}
+}
+
+void entity_delayed_destroy(entity_t entity)
+{
+	app->delayed_destroy_entities.add(entity);
+}
+
+void entity_delayed_deactivate(entity_t entity)
+{
+	app->delayed_deactivate_entities.add(entity);
+}
+
+void entity_delayed_activate(entity_t entity)
+{
+	app->delayed_activate_entities.add(entity);
+}
+
+void entity_deactivate(entity_t entity)
+{
+	uint16_t entity_type = s_entity_type(entity);
+	entity_collection_t* collection = app->entity_collections.find(entity_type);
+	CUTE_ASSERT(collection);
+
+	if (collection->entity_handle_table.is_valid(entity.handle)) {
+		if (!collection->entity_handle_table.is_active(entity.handle)) {
+			return;
+		}
+
+		int index = collection->entity_handle_table.get_index(entity.handle);
+
+		int copy_index = -1; // TODO.
+
+		// Swap all components into the deactive section (the end) of their respective arrays.
+		for (int i = 0; i < collection->component_tables.count(); ++i) {
+			collection->component_tables[i].copy(index, copy_index); // WORKING HERE
+		}
+
+		// Update handle of the swapped entity.
+		if (index < collection->entity_handles.size()) {
+			uint64_t h = collection->entity_handles[index];
+			collection->entity_handle_table.update_index(h, index);
+		}
+	}
+}
+
+void entity_activate(entity_t entity)
+{
+}
+
+bool entity_is_active(entity_t entity)
+{
 }
 
 bool entity_is_valid(entity_t entity)

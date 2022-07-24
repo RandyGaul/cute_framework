@@ -110,6 +110,7 @@ void* typeless_array::pop()
 	void* slot = (void*)(((uintptr_t)m_items) + --m_count);
 	return slot;
 }
+
 void typeless_array::unordered_remove(int index)
 {
 	CUTE_ASSERT(index >= 0 && index < m_count);
@@ -117,6 +118,15 @@ void typeless_array::unordered_remove(int index)
 	void* slot_last = (void*)(((uintptr_t)m_items) + (m_count - 1) * m_element_size);
 	CUTE_MEMCPY(slot, slot_last, m_element_size);
 	--m_count;
+}
+
+void typeless_array::copy(int src, int dst, int count)
+{
+	CUTE_ASSERT(src >= 0 && src + count - 1 < m_count);
+	CUTE_ASSERT(dst >= 0 && dst + count - 1 < m_count);
+	void* dst_slot = (void*)(((uintptr_t)m_items) + dst * m_element_size);
+	void* src_last = (void*)(((uintptr_t)m_items) + src * m_element_size);
+	CUTE_MEMCPY(dst_slot, src_last, m_element_size * count);
 }
 
 void typeless_array::clear()

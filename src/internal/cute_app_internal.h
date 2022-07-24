@@ -82,9 +82,10 @@ struct window_state_t
 struct entity_collection_t
 {
 	handle_table_t entity_handle_table;
-	array<handle_t> entity_handles; // TODO - Replace with a counter? Or delete?
+	array<handle_t> entity_handles;
 	array<strpool_id> component_type_tuple;
 	array<typeless_array> component_tables;
+	int inactive_count = 0;
 };
 
 struct system_internal_t
@@ -213,6 +214,8 @@ struct app_t
 	entity_type_t current_collection_type_being_iterated = ~0;
 	entity_collection_t* current_collection_being_updated = NULL;
 	array<entity_t> delayed_destroy_entities;
+	array<entity_t> delayed_deactivate_entities;
+	array<entity_t> delayed_activate_entities;
 
 	component_config_t component_config_builder;
 	dictionary<strpool_id, component_config_t> component_configs;

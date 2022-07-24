@@ -38,6 +38,9 @@ CUTE_API void CUTE_CALL handle_allocator_destroy(handle_allocator_t* table);
 CUTE_API handle_t CUTE_CALL handle_allocator_alloc(handle_allocator_t* table, uint32_t index, uint16_t type = 0);
 CUTE_API uint32_t CUTE_CALL handle_allocator_get_index(handle_allocator_t* table, handle_t handle);
 CUTE_API uint16_t CUTE_CALL handle_allocator_get_type(handle_allocator_t* table, handle_t handle);
+CUTE_API bool CUTE_CALL handle_allocator_is_active(handle_allocator_t* table, handle_t handle);
+CUTE_API void CUTE_CALL handle_allocator_activate(handle_allocator_t* table, handle_t handle);
+CUTE_API void CUTE_CALL handle_allocator_deactivate(handle_allocator_t* table, handle_t handle);
 CUTE_API void CUTE_CALL handle_allocator_update_index(handle_allocator_t* table, handle_t handle, uint32_t index);
 CUTE_API void CUTE_CALL handle_allocator_free(handle_allocator_t* table, handle_t handle);
 CUTE_API int CUTE_CALL handle_allocator_is_handle_valid(handle_allocator_t* table, handle_t handle);
@@ -90,6 +93,21 @@ struct handle_table_t
 	CUTE_INLINE bool is_valid(handle_t handle)
 	{
 		return !!handle_allocator_is_handle_valid(m_alloc, handle);
+	}
+
+	CUTE_INLINE bool is_active(handle_t handle)
+	{
+		return handle_allocator_is_active(m_alloc, handle);
+	}
+
+	CUTE_INLINE void activate(handle_t handle)
+	{
+		handle_allocator_activate(m_alloc, handle);
+	}
+
+	CUTE_INLINE void deactivate(handle_t handle)
+	{
+		handle_allocator_deactivate(m_alloc, handle);
 	}
 
 	handle_allocator_t* m_alloc;

@@ -33,7 +33,8 @@ union handle_entry_t
 	struct
 	{
 		uint64_t user_index : 32;
-		uint64_t user_type : 16;
+		uint64_t user_type : 15;
+		uint64_t active : 1;
 		uint64_t generation : 16;
 	} data;
 	uint64_t val = 0;
@@ -112,6 +113,7 @@ handle_t handle_allocator_alloc(handle_allocator_t* table, uint32_t index, uint1
 	// Setup handle indices.
 	m_handles[freelist_index].data.user_index = index;
 	m_handles[freelist_index].data.user_type = type;
+	m_handles[freelist_index].data.active = true;
 	handle_t handle = (((uint64_t)freelist_index) << 32) | (((uint64_t)type) << 16) | m_handles[freelist_index].data.generation;
 	return handle;
 }
@@ -137,6 +139,33 @@ uint16_t handle_allocator_get_type(handle_allocator_t* table, handle_t handle)
 	uint64_t generation = handle & 0xFFFF;
 	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
 	return m_handles[table_index].data.user_type;
+}
+
+bool handle_allocator_is_active(handle_allocator_t* table, handle_t handle)
+{
+	handle_entry_t* m_handles = table->m_handles.data();
+	uint32_t table_index = s_table_index(handle);
+	uint64_t generation = handle & 0xFFFF;
+	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
+	return m_handles[table_index].data.active;
+}
+
+void handle_allocator_activate(handle_allocator_t* table, handle_t handle)
+{
+	handle_entry_t* m_handles = table->m_handles.data();
+	uint32_t table_index = s_table_index(handle);
+	uint64_t generation = handle & 0xFFFF;
+	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
+	m_handles[table_index].data.active = true;
+}
+
+void handle_allocator_deactivate(handle_allocator_t* table, handle_t handle)
+{
+	handle_entry_t* m_handles = table->m_handles.data();
+	uint32_t table_index = s_table_index(handle);
+	uint64_t generation = handle & 0xFFFF;
+	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
+	m_handles[table_index].data.active = false;
 }
 
 void handle_allocator_update_index(handle_allocator_t* table, handle_t handle, uint32_t index)

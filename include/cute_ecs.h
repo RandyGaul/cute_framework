@@ -60,6 +60,12 @@ CUTE_API void* CUTE_CALL entity_get_component(entity_t entity, const char* compo
 CUTE_API void CUTE_CALL entity_destroy(entity_t entity);
 CUTE_API void CUTE_CALL entity_delayed_destroy(entity_t entity);
 
+CUTE_API void CUTE_CALL entity_delayed_deactivate(entity_t entity);
+CUTE_API void CUTE_CALL entity_delayed_activate(entity_t entity);
+CUTE_API void CUTE_CALL entity_deactivate(entity_t entity);
+CUTE_API void CUTE_CALL entity_activate(entity_t entity);
+CUTE_API bool CUTE_CALL entity_is_active(entity_t entity);
+
 /**
  * `kv` needs to be in `KV_STATE_READ` mode.
  */
