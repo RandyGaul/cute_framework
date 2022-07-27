@@ -78,13 +78,13 @@ void cf_aseprite_cache_destroy(cf_aseprite_cache_t* cache)
 	for (int i = 0; i < count; ++i) 
 	{
 		aseprite_cache_entry_t* entry = entries + i;
-		int animation_count = entry->animations->count();
-		cf_animation_t** animations = (cf_animation_t**)entry->animations->items();
+		int animation_count = cf_hashtable_count(entry->animations);
+		cf_animation_t** animations = (cf_animation_t**)cf_hashtable_items(entry->animations);
 		for (int j = 0; j < animation_count; ++j) {
 			animations[j]->~cf_animation_t();
 			CUTE_FREE(animations[j], cache->mem_ctx);
 		}
-		entry->animations->~cf_dictionary();
+		cf_hashtable_cleanup(entry->animations);
 		CUTE_FREE(entry->animations, cache->mem_ctx);
 		cute_aseprite_free(entry->ase);
 	}
@@ -113,7 +113,7 @@ static void cf_s_sprite(cf_aseprite_cache_t* cache, aseprite_cache_entry_t entry
 	if (entry.ase->tag_count == 0) {
 		cf_sprite_play(sprite, "default");
 	} else {
-		cf_sprite_play(sprite, (const char*)sprite->animations->keys()[0].data);
+		cf_sprite_play(sprite, ((const char**)cf_hashtable_keys(sprite->animations))[0]);
 	}
 }
 
@@ -182,7 +182,7 @@ cf_error_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepri
 				frame.id = id;
 				animation->frames.add(frame);
 			}
-			animations->insert(animation->name, animation);
+			cf_hashtable_insert(animations, animation->name, animation);
 		}
 	} else {
 		// Treat the entire frame set as a single animation if there are no tags.
@@ -196,7 +196,7 @@ cf_error_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepri
 			frame.id = id;
 			animation->frames.add(frame);
 		}
-		animations->insert(animation->name, animation);
+		cf_hashtable_insert(animations, animation->name, animation);
 	}
 
 	// Look for slice information to define the sprite's local offset.
@@ -234,8 +234,8 @@ void cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, const char* aseprite_p
 	aseprite_cache_entry_t entry;
 	if (cache->aseprites.find(path, &entry).is_error()) return;
 	
-	int animation_count = entry.animations->count();
-	const cf_animation_t** animations = entry.animations->items();
+	int animation_count = cf_hashtable_count(entry.animations);
+	const cf_animation_t** animations = (const cf_animation_t**)cf_hashtable_items(entry.animations);
 
 	for (int i = 0; i < animation_count; ++i) {
 		cf_animation_t* animation = (cf_animation_t*)animations[i];
@@ -246,7 +246,7 @@ void cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, const char* aseprite_p
 		CUTE_FREE(animation, cache->mem_ctx);
 	}
 
-	entry.animations->~cf_animation_table_t();
+	cf_hashtable_cleanup(entry.animations);
 	CUTE_FREE(entry.animations, cache->mem_ctx);
 	cache->aseprites.remove(path);
 }

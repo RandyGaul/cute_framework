@@ -60,7 +60,12 @@ void cf_png_cache_destroy(cf_png_cache_t* cache)
 	int table_count = cache->animation_tables.count();
 	cf_animation_table_t** tables = cache->animation_tables.items();
 	for (int i = 0; i < table_count; ++i) {
-		tables[i]->~cf_animation_table_t();
+		cf_animation_t* anims = ((cf_animation_t**)cf_hashtable_items(tables[i]))[0];
+		int anim_count = cf_hashtable_count(tables[i]);
+		for (int i = 0; i < anim_count; ++i) {
+			(anims + i)->~cf_animation_t();
+		}
+		cf_hashtable_cleanup(tables[i]);
 		CUTE_FREE(tables[i], cache->mem_ctx);
 	}
 
@@ -184,11 +189,12 @@ const cf_animation_table_t* cf_png_cache_make_animation_table(cf_png_cache_t* ca
 	// Otherwise allocate a new table.
 	cf_animation_table_t** table_ptr = cache->animation_tables.insert(name_id);
 	table = (cf_animation_table_t*)CUTE_ALLOC(sizeof(cf_animation_table_t), cache->mem_ctx);
-	CUTE_PLACEMENT_NEW(table) cf_animation_table_t;
+	cf_hashtable_init(table, sizeof(const char*), sizeof(cf_animation_t*), 256, NULL);
+
 	*table_ptr = table;
 
 	for (int i = 0; i < animations_count; ++i) {
-		table->insert(animations[i]->name, animations[i]);
+		cf_hashtable_insert(table, animations[i]->name, animations[i]);
 	}
 
 	return table;
@@ -212,8 +218,9 @@ cf_sprite_t cf_png_cache_make_sprite(cf_png_cache_t* cache, const char* sprite_n
 		CUTE_ASSERT(!err.is_error());
 	}
 
-	cf_png_t png;
-	cf_error_t err = cache->pngs.find(table->items()[0]->frames[0].id, &png);
+	cf_png_t png;	
+	cf_error_t err = cache->pngs.find(((cf_animation_t**)cf_hashtable_items(table))[0]->frames[0].id, &png);
+
 	CUTE_ASSERT(!err.is_error());
 
 	cf_sprite_t sprite = cf_sprite_defaults();
@@ -221,8 +228,8 @@ cf_sprite_t cf_png_cache_make_sprite(cf_png_cache_t* cache, const char* sprite_n
 	sprite.w = png.w;
 	sprite.h = png.h;
 	sprite.animations = table;
-	sprite.play((const char*)sprite.animations->keys()[0].data);
-
+	sprite.play(((const char**)cf_hashtable_keys(sprite.animations))[0]);
+	
 	return sprite;
 }
 

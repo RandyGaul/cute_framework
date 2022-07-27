@@ -61,7 +61,7 @@ typedef struct cf_animation_t
  * An animation table is a set of animations a particular sprite references.
  * Each sprite instance contains a pointer to an animation table in a "read-only" fashion.
  */
-using cf_animation_table_t = cf_dictionary<const char*, const cf_animation_t*>;
+typedef cf_hashtable_t cf_animation_table_t;
 
 /**
  * The `sprite_t` represents a set of drawable animations. Each animation is a collection
@@ -170,7 +170,7 @@ typedef struct cf_sprite_t
 } cf_sprite_t;
 
 
-/*	
+/*
 *	name = NULL;
 *	w = 0;
 *	h = 0;
@@ -249,7 +249,7 @@ CUTE_API cf_batch_t* CUTE_CALL cf_sprite_get_batch();
 
 #include "cute_debug_printf.h"
 
-CUTE_INLINE void cf_sprite_update(cf_sprite_t* sprite,float dt)
+CUTE_INLINE void cf_sprite_update(cf_sprite_t* sprite, float dt)
 {
 	if (sprite->paused) return;
 
@@ -278,7 +278,11 @@ CUTE_INLINE void cf_sprite_reset(cf_sprite_t* sprite)
 CUTE_INLINE void cf_sprite_play(cf_sprite_t* sprite, const char* animation)
 {
 	sprite->animation = NULL;
-	if (sprite->animations->find(animation, &sprite->animation).is_error()) {
+
+	sprite->animation = (const cf_animation_t*)cf_hashtable_find(sprite->animations, animation);
+
+	if (sprite->animation == NULL) {
+
 		CUTE_DEBUG_PRINTF("Unable to find animation %s within sprite %s.\n", animation, sprite->name);
 		CUTE_ASSERT(false);
 	}
@@ -291,7 +295,7 @@ CUTE_INLINE bool cf_sprite_is_playing(cf_sprite_t* sprite, const char* animation
 	return !CUTE_STRCMP(animation, sprite->animation->name);
 }
 
-CUTE_INLINE cf_batch_sprite_t cf_sprite_batch_sprite(cf_sprite_t* sprite,cf_transform_t transform)
+CUTE_INLINE cf_batch_sprite_t cf_sprite_batch_sprite(cf_sprite_t* sprite, cf_transform_t transform)
 {
 	cf_batch_sprite_t q;
 	q.id = sprite->animation->frames[sprite->frame_index].id;
@@ -386,7 +390,7 @@ CUTE_INLINE float cf_sprite_animation_interpolant(cf_sprite_t* sprite)
 	return cf_clamp(t / delay, 0.0f, 1.0f);
 }
 
-CUTE_INLINE bool cf_sprite_will_finish(cf_sprite_t* sprite,float dt)
+CUTE_INLINE bool cf_sprite_will_finish(cf_sprite_t* sprite, float dt)
 {
 	// TODO -- Backwards and pingpong.
 	if (sprite->frame_index == cf_sprite_frame_count(sprite) - 1) {
@@ -420,7 +424,7 @@ void cf_sprite_t::unpause() { return cf_sprite_unpause(this); }
 void cf_sprite_t::toggle_pause() { return cf_sprite_toggle_pause(this); }
 void cf_sprite_t::flip_x() { return cf_sprite_flip_x(this); }
 void cf_sprite_t::flip_y() { return cf_sprite_flip_y(this); }
-int cf_sprite_t::frame_count() const { return cf_sprite_frame_count(this); } 
+int cf_sprite_t::frame_count() const { return cf_sprite_frame_count(this); }
 int cf_sprite_t::current_frame() const { return cf_sprite_current_frame(this); }
 float cf_sprite_t::frame_delay() { return cf_sprite_frame_delay(this); }
 float cf_sprite_t::animation_delay() { return cf_sprite_animation_delay(this); }
@@ -434,7 +438,7 @@ namespace cute
 
 using frame_t = cf_frame_t;
 using play_direction_t = cf_play_direction_t;
-using animation_t= cf_animation_t;
+using animation_t = cf_animation_t;
 using animation_table_t = cf_animation_table_t;
 using sprite_t = cf_sprite_t;
 
