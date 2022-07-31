@@ -82,6 +82,7 @@ struct cf_entity_collection_t
 	cf_array<cf_handle_t> entity_handles; // TODO - Replace with a counter? Or delete?
 	cf_array<cf_strpool_id> component_type_tuple;
 	cf_array<cf_typeless_array> component_tables;
+	int inactive_count = 0;
 };
 
 struct cf_system_internal_t
@@ -99,7 +100,7 @@ struct cf_system_internal_t
 	cf_strpool_id name = { 0 };
 	void* udata = NULL;
 	void (*pre_update_fn)(float dt, void* udata) = NULL;
-	void* update_fn = NULL;
+	system_update_fn* update_fn = NULL;
 	void (*post_update_fn)(float dt, void* udata) = NULL;
 	cf_array<cf_strpool_id> component_type_tuple;
 };
@@ -156,7 +157,7 @@ struct cf_app_t
 	cf_array<cute_font_vert_t> font_verts;
 	sg_shader font_shader;
 	sg_pipeline font_pip;
-	cf_triple_buffer_t font_buffer;
+	cf_buffer_t font_buffer;
 	font_vs_params_t font_vs_uniforms;
 	font_fs_params_t font_fs_uniforms;
 	bool gfx_enabled = false;
@@ -166,6 +167,7 @@ struct cf_app_t
 	int x;
 	int y;
 	bool offscreen_enabled = false;
+	bool fetched_offscreen = false;
 	sg_image offscreen_color_buffer;
 	sg_image offscreen_depth_buffer;
 	sg_pass offscreen_pass;
@@ -209,6 +211,8 @@ struct cf_app_t
 	cf_entity_type_t current_collection_type_being_iterated = ~0;
 	cf_entity_collection_t* current_collection_being_updated = NULL;
 	cf_array<cf_entity_t> delayed_destroy_entities;
+	cf_array<entity_t> delayed_deactivate_entities;
+	cf_array<entity_t> delayed_activate_entities;
 
 	cf_component_config_t component_config_builder;
 	cf_dictionary<cf_strpool_id, cf_component_config_t> component_configs;

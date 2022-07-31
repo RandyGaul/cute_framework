@@ -116,6 +116,15 @@ void cf_typeless_array::unordered_remove(int index)
 	--m_count;
 }
 
+void cf_typeless_array::copy(int src, int dst, int count)
+{
+	CUTE_ASSERT(src >= 0 && src + count - 1 < m_count);
+	CUTE_ASSERT(dst >= 0 && dst + count - 1 < m_count);
+	void* dst_slot = (void*)(((uintptr_t)m_items) + dst * m_element_size);
+	void* src_last = (void*)(((uintptr_t)m_items) + src * m_element_size);
+	CUTE_MEMCPY(dst_slot, src_last, m_element_size * count);
+}
+
 void cf_typeless_array::clear()
 {
 	m_count = 0;

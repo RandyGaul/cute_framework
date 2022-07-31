@@ -31,6 +31,7 @@ extern "C" {
 
 typedef struct ImGuiContext ImGuiContext;
 typedef struct sg_imgui_t sg_imgui_t;
+typedef struct sg_image sg_image;
 typedef struct cf_strpool_t cf_strpool_t;
 
 #define CUTE_APP_OPTIONS_OPENGL_CONTEXT                 (1 << 0)
@@ -49,7 +50,8 @@ CUTE_API void CUTE_CALL cf_app_destroy();
 CUTE_API bool CUTE_CALL cf_app_is_running();
 CUTE_API void CUTE_CALL cf_app_stop_running();
 CUTE_API void CUTE_CALL cf_app_update(float dt);
-CUTE_API void CUTE_CALL cf_app_present();
+CUTE_API sg_image CUTE_CALL cf_app_get_offscreen_buffer();
+CUTE_API void CUTE_CALL cf_app_present(bool draw_offscreen_buffer /*= true*/);
 
 
 /**

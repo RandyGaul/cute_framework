@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.14)
 project(cute_framework)
 
 # Must have at least C++14.
@@ -268,6 +268,11 @@ if(MACOSX)
 	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${OPENGL_LIBRARIES})
 endif()
 
+if(LINUX)
+	find_package(OpenGL REQUIRED)
+	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${OPENGL_LIBRARIES})
+endif()
+
 add_library(physfs STATIC ${PHYSFS_SRCS})
 set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} physfs)
 
@@ -277,8 +282,8 @@ if(CUTE_FRAMEWORK_WITH_HTTPS)
 	option(ENABLE_TESTING "Build mbed TLS tests." OFF)
 	fetch_content_with_folder(
 		mbedtls
-		GIT_REPOSITORY https://github.com/ARMmbed/mbedtls
-		GIT_TAG v3.0.0
+		GIT_REPOSITORY https://github.com/Mbed-TLS/mbedtls
+		GIT_TAG v3.1.0
 		GIT_PROGRESS TRUE
 	)
 	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} mbedx509 mbedtls mbedcrypto)

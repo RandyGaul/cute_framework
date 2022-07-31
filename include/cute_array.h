@@ -86,6 +86,7 @@ struct cf_array
 	void remove(int index);
 	T pop();
 	void unordered_remove(int index);
+	void copy(int src, int dst, int count = 1);
 	void clear();
 	void ensure_capacity(int num_elements);
 	void ensure_count(int count);
@@ -288,6 +289,18 @@ void cf_array<T>::unordered_remove(int index)
 	T* slot = m_items + index;
 	slot->~T();
 	m_items[index] = m_items[--m_count];
+}
+
+template <typename T>
+void array<T>::copy(int src, int dst, int count)
+{
+	CUTE_ASSERT(src >= 0 && src + count - 1 < m_count);
+	CUTE_ASSERT(dst >= 0 && dst + count - 1 < m_count);
+	for (int i = 0; i < count; ++i) {
+		T* slot = m_items + dst + i;
+		slot->~T();
+		*slot = m_items[src + i];
+	}
 }
 
 template <typename T>

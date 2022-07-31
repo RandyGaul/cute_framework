@@ -67,6 +67,12 @@ CUTE_API void CUTE_CALL cf_entity_delayed_destroy(cf_entity_t entity);
 
 CUTE_INLINE bool cf_entity_equals(cf_entity_t* a, cf_entity_t* b) { return a->handle == b->handle; }
 
+CUTE_API void CUTE_CALL cf_entity_delayed_deactivate(cf_entity_t entity);
+CUTE_API void CUTE_CALL cf_entity_delayed_activate(cf_entity_t entity);
+CUTE_API void CUTE_CALL cf_entity_deactivate(cf_entity_t entity);
+CUTE_API void CUTE_CALL cf_entity_activate(cf_entity_t entity);
+CUTE_API bool CUTE_CALL cf_entity_is_active(cf_entity_t entity);
+
 /**
  * `kv` needs to be in `KV_STATE_READ` mode.
  */
@@ -95,10 +101,16 @@ CUTE_API void CUTE_CALL cf_ecs_component_set_optional_cleanup(cf_component_clean
 //--------------------------------------------------------------------------------------------------
 // System
 
+typedef struct cf_ecs_arrays_t cf_ecs_arrays_t;
+
+typedef void (system_update_fn)(float dt, cf_ecs_arrays_t* arrays, int count, void* udata);
+CUTE_API void* CUTE_CALL cf_ecs_arrays_find_components(cf_ecs_arrays_t* arrays, const char* component_type);
+CUTE_API entity_t* CUTE_CALL cf_ecs_arrays_get_entities(cf_ecs_arrays_t* arrays);
+
 CUTE_API void CUTE_CALL cf_ecs_system_begin();
 CUTE_API void CUTE_CALL cf_ecs_system_end();
 CUTE_API void CUTE_CALL cf_ecs_system_set_name(const char* name);
-CUTE_API void CUTE_CALL cf_ecs_system_set_update(void* update_fn);
+CUTE_API void CUTE_CALL cf_ecs_system_set_update(system_update_fn* update_fn);
 CUTE_API void CUTE_CALL cf_ecs_system_require_component(const char* component_type);
 CUTE_API void CUTE_CALL cf_ecs_system_set_optional_pre_update(void (*pre_update_fn)(float dt, void* udata));
 CUTE_API void CUTE_CALL cf_ecs_system_set_optional_post_update(void (*post_update_fn)(float dt, void* udata));
@@ -170,7 +182,7 @@ CUTE_INLINE void ecs_component_set_optional_cleanup(component_cleanup_fn* cleanu
 CUTE_INLINE void ecs_system_begin() { cf_ecs_system_begin(); }
 CUTE_INLINE void ecs_system_end() { cf_ecs_system_end(); }
 CUTE_INLINE void ecs_system_set_name(const char* name) { cf_ecs_system_set_name(name); }
-CUTE_INLINE void ecs_system_set_update(void* update_fn) { cf_ecs_system_set_update(update_fn); }
+CUTE_INLINE void ecs_system_set_update(system_update_fn* update_fn) { cf_ecs_system_set_update(update_fn); }
 CUTE_INLINE void ecs_system_require_component(const char* component_type) { cf_ecs_system_require_component(component_type); }
 CUTE_INLINE void ecs_system_set_optional_pre_update(void (*pre_update_fn)(float dt, void* udata)) { cf_ecs_system_set_optional_pre_update(pre_update_fn); }
 CUTE_INLINE void ecs_system_set_optional_post_update(void (*post_update_fn)(float dt, void* udata)) { cf_ecs_system_set_optional_post_update(post_update_fn); }

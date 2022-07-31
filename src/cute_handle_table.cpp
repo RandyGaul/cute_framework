@@ -30,7 +30,8 @@ union cf_handle_entry_t
 	struct
 	{
 		uint64_t user_index : 32;
-		uint64_t user_type : 16;
+		uint64_t user_type : 15;
+		uint64_t active : 1;
 		uint64_t generation : 16;
 	} data;
 	uint64_t val = 0;
@@ -109,6 +110,7 @@ cf_handle_t cf_handle_allocator_alloc(cf_handle_allocator_t* table, uint32_t ind
 	// Setup handle indices.
 	m_handles[freelist_index].data.user_index = index;
 	m_handles[freelist_index].data.user_type = type;
+	m_handles[freelist_index].data.active = true;
 	cf_handle_t handle = (((uint64_t)freelist_index) << 32) | (((uint64_t)type) << 16) | m_handles[freelist_index].data.generation;
 	return handle;
 }
@@ -134,6 +136,33 @@ uint16_t cf_handle_allocator_get_type(cf_handle_allocator_t* table, cf_handle_t 
 	uint64_t generation = handle & 0xFFFF;
 	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
 	return m_handles[table_index].data.user_type;
+}
+
+bool cf_handle_allocator_is_active(cf_handle_allocator_t* table, handle_t handle)
+{
+	cf_handle_entry_t* m_handles = table->m_handles.data();
+	uint32_t table_index = s_table_index(handle);
+	uint64_t generation = handle & 0xFFFF;
+	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
+	return m_handles[table_index].data.active;
+}
+
+void cf_handle_allocator_activate(cf_handle_allocator_t* table, handle_t handle)
+{
+	cf_handle_entry_t* m_handles = table->m_handles.data();
+	uint32_t table_index = s_table_index(handle);
+	uint64_t generation = handle & 0xFFFF;
+	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
+	m_handles[table_index].data.active = true;
+}
+
+void cf_handle_allocator_deactivate(cf_handle_allocator_t* table, handle_t handle)
+{
+	cf_handle_entry_t* m_handles = table->m_handles.data();
+	uint32_t table_index = s_table_index(handle);
+	uint64_t generation = handle & 0xFFFF;
+	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
+	m_handles[table_index].data.active = false;
 }
 
 void cf_handle_allocator_update_index(cf_handle_allocator_t* table, cf_handle_t handle, uint32_t index)

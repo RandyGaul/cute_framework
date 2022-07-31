@@ -100,6 +100,12 @@ CUTE_API cf_batch_t* CUTE_CALL cf_batch_make(cf_get_pixels_fn* get_pixels, void*
 CUTE_API void CUTE_CALL cf_batch_destroy(cf_batch_t* b);
 
 /**
+ * Attempts to resize internal graphics buffers. They are double buffered, so the
+ * memory used on the GPU will be at least 2x `size_of_one_buffer`.
+ */
+CUTE_API error_t CUTE_CALL batch_set_GPU_buffer_configuration(batch_t* b, size_t size_of_one_buffer);
+
+/**
  * Pushes sprite quad onto an internal buffer. Does no other logic.
  *
  * To get your quad rendered, see `batch_flush`.

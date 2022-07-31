@@ -137,6 +137,10 @@
 
 struct cf_app_t;
 
+#ifndef CUTE_NO_WARNINGS
+#	define CUTE_WARN(...) fprintf(stderr, __VA_ARGS__)
+#endif
+
 #ifdef CUTE_CPP
 // -------------------------------------------------------------------------------------------------
 // Avoid including <utility> header.
@@ -170,6 +174,8 @@ constexpr typename cf_remove_reference<T>::type&& move(T&& arg) noexcept
 // Unfortunately this class *must* be in the std:: namespace or things won't compile. So we try to
 // avoid defining this class if someone already included <initializer_list> before including
 // cute framework <cute.h>.
+
+#ifdef CUTE_WINDOWS
 
 #if !defined(_INITIALIZER_LIST_) && !defined(_INITIALIZER_LIST) && !defined(_LIBCPP_INITIALIZER_LIST)
 #define _INITIALIZER_LIST_ // MSVC
@@ -214,6 +220,12 @@ template <class T> constexpr const T* end(initializer_list<T> list) noexcept { r
 }
 
 #endif
+
+#else // CUTE_WINDOWS
+
+#include <initializer_list>
+
+#endif // CUTE_WINDOWS
 
 template <typename T>
 using cf_initializer_list = std::initializer_list<T>;

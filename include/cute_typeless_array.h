@@ -48,6 +48,7 @@ struct cf_typeless_array
 	void remove(int index);
 	void* pop();
 	void unordered_remove(int index);
+	void copy(int src, int dst, int count = 1);
 	void clear();
 	void ensure_capacity(int num_elements);
 	void steal_from(cf_typeless_array* steal_from_me);

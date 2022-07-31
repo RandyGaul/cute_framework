@@ -145,8 +145,11 @@ void cf_font_push_verts(const cf_font_t* font, const char* text, float x, float 
 
 void cf_font_draw(const cf_font_t* font, cf_matrix_t mvp, cf_color_t color)
 {
-	cf_error_t err = cf_triple_buffer_append(&cf_app->font_buffer, cf_app->font_verts.count(), cf_app->font_verts.data(), 0, 0);
-	CUTE_ASSERT(!cf_is_error(&err));
+	cf_error_t err = app->font_buffer.append(app->font_verts.count(), app->font_verts.data());
+	if (cf_is_error(&err)) {
+		CUTE_WARN("Overflow in `font_draw`, dropping draw call.");
+		return;
+	}
 
 	sg_apply_pipeline(cf_app->font_pip);
 	sg_bindings bind = cf_app->font_buffer.bind();
@@ -241,7 +244,7 @@ void cf_font_init()
 	pip_params.colors[0].blend.op_alpha = SG_BLENDOP_ADD;
 	cf_app->font_pip = sg_make_pipeline(pip_params);
 
-	cf_app->font_buffer = cf_triple_buffer_make(sizeof(cf_font_vertex_t) * 1024 * 2, sizeof(cf_font_vertex_t), 0, 0);
+	cf_app->font_buffer.init(CUTE_MB * 25, sizeof(font_vertex_t));
 
 	cf_app->font_fs_uniforms.u_border_color = cf_color_white();
 	cf_app->font_fs_uniforms.u_use_border = false;

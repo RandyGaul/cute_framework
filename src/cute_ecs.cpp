@@ -30,6 +30,27 @@
 
 #define INJECT(s) cf_strpool_inject_len(cf_app->strpool, s, (int)CUTE_STRLEN(s))
 
+struct cf_ecs_arrays_t
+{
+	int count;
+	cf_handle_t* entities;
+	cf_strpool_id* types;
+	cf_array<cf_typeless_array>* ptrs;
+
+	void* find_components(const char* type)
+	{
+		cf_strpool_id id = INJECT(type);
+		for (int i = 0; i < count; ++i) {
+			if (types[i].val == id.val) {
+				return (*ptrs)[i].data();
+			}
+		}
+		return NULL;
+	}
+};
+
+static ecs_arrays_t s_arrays;
+
 static cf_error_t cf_s_load_from_schema(cf_entity_type_t schema_type, cf_entity_t entity, cf_component_config_t* config, void* component, void* udata)
 {
 	// Look for parent.
@@ -60,6 +81,16 @@ static cf_error_t cf_s_load_from_schema(cf_entity_type_t schema_type, cf_entity_
 
 //--------------------------------------------------------------------------------------------------
 
+void* cf_ecs_arrays_find_components(cf_ecs_arrays_t* arrays, const char* component_type)
+{
+	return arrays->find_components(component_type);
+}
+
+cf_entity_t* cf_ecs_arrays_get_entities(cf_ecs_arrays_t* arrays)
+{
+	return (entity_t*)arrays->entities;
+}
+
 void cf_ecs_system_begin()
 {
 	cf_app->system_internal_builder.clear();
@@ -75,7 +106,7 @@ void cf_ecs_system_set_name(const char* name)
 	cf_app->system_internal_builder.name = INJECT(name);
 }
 
-void cf_ecs_system_set_update(void* update_fn)
+void cf_ecs_system_set_update(cf_system_update_fn* update_fn)
 {
 	cf_app->system_internal_builder.update_fn = update_fn;
 }
@@ -160,12 +191,7 @@ static cf_entity_collection_t* cf_s_collection(cf_entity_t entity)
 	return collection;
 }
 
-void cf_entity_delayed_destroy(cf_entity_t entity)
-{
-	cf_app->delayed_destroy_entities.add(entity);
-}
-
-void cf_entity_destroy(cf_entity_t entity)
+void entity_destroy(entity_t entity)
 {
 	uint16_t entity_type = cf_s_entity_type(entity);
 	cf_entity_collection_t* collection = cf_app->entity_collections.find(entity_type);
@@ -203,7 +229,59 @@ void cf_entity_destroy(cf_entity_t entity)
 	}
 }
 
-bool cf_entity_is_valid(cf_entity_t entity)
+void cf_entity_delayed_destroy(cf_entity_t entity)
+{
+	app->delayed_destroy_entities.add(entity);
+}
+
+void cf_entity_delayed_deactivate(cf_entity_t entity)
+{
+	app->delayed_deactivate_entities.add(entity);
+}
+
+void cf_entity_delayed_activate(cf_entity_t entity)
+{
+	app->delayed_activate_entities.add(entity);
+}
+
+void cf_entity_deactivate(cf_entity_t entity)
+{
+	uint16_t entity_type = s_entity_type(entity);
+	cf_entity_collection_t* collection = app->entity_collections.find(entity_type);
+	CUTE_ASSERT(collection);
+
+	if (collection->entity_handle_table.is_valid(entity.handle)) {
+		if (!collection->entity_handle_table.is_active(entity.handle)) {
+			return;
+		}
+
+		int index = collection->entity_handle_table.get_index(entity.handle);
+
+		int copy_index = -1; // TODO.
+
+		// Swap all components into the deactive section (the end) of their respective arrays.
+		for (int i = 0; i < collection->component_tables.count(); ++i) {
+			collection->component_tables[i].copy(index, copy_index); // WORKING HERE
+		}
+
+		// Update handle of the swapped entity.
+		if (index < collection->entity_handles.size()) {
+			uint64_t h = collection->entity_handles[index];
+			collection->entity_handle_table.update_index(h, index);
+		}
+	}
+}
+
+void cf_entity_activate(entity_t entity)
+{
+}
+
+bool cf_entity_is_active(entity_t entity)
+{
+	return false;
+}
+
+bool cf_entity_is_valid(entity_t entity)
 {
 	cf_entity_collection_t* collection = cf_s_collection(entity);
 	if (collection) return collection->entity_handle_table.is_valid(entity.handle);
@@ -234,93 +312,26 @@ bool cf_entity_has_component(cf_entity_t entity, const char* component_type)
 
 //--------------------------------------------------------------------------------------------------
 
-static void cf_s_0(float dt, void* fn_uncasted, void* udata)
+static inline int s_match(const array<strpool_id>& a, const array<strpool_id>& b)
 {
-	auto fn = (void (*)(float, void*))fn_uncasted;
-	fn(dt, udata);
-}
-
-static void cf_s_1(float dt, void* fn_uncasted, void* udata, cf_typeless_array& c0)
-{
-	auto fn = (void (*)(float, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), count);
-}
-
-static void cf_s_2(float dt, void* fn_uncasted, void* udata, cf_typeless_array& c0, cf_typeless_array& c1)
-{
-	CUTE_ASSERT(c0.count() == c1.count());
-	auto fn = (void (*)(float, void*, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), c1.data(), count);
-}
-
-static void cf_s_3(float dt, void* fn_uncasted, void* udata, cf_typeless_array& c0, cf_typeless_array& c1, cf_typeless_array& c2)
-{
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), c1.data(), c2.data(), count);
-}
-
-static void cf_s_4(float dt, void* fn_uncasted, void* udata, cf_typeless_array& c0, cf_typeless_array& c1, cf_typeless_array& c2, cf_typeless_array& c3)
-{
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), c1.data(), c2.data(), c3.data(), count);
-}
-
-static void cf_s_5(float dt, void* fn_uncasted, void* udata, cf_typeless_array& c0, cf_typeless_array& c1, cf_typeless_array& c2, cf_typeless_array& c3, cf_typeless_array& c4)
-{
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), count);
-}
-
-static void cf_s_6(float dt, void* fn_uncasted, void* udata, cf_typeless_array& c0, cf_typeless_array& c1, cf_typeless_array& c2, cf_typeless_array& c3, cf_typeless_array& c4, cf_typeless_array& c5)
-{
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, void*, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), c5.data(), count);
-}
-
-static void cf_s_7(float dt, void* fn_uncasted, void* udata, cf_typeless_array& c0, cf_typeless_array& c1, cf_typeless_array& c2, cf_typeless_array& c3, cf_typeless_array& c4, cf_typeless_array& c5, cf_typeless_array& c6)
-{
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count() && c0.count() == c6.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, void*, void*, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), c5.data(), c6.data(), count);
-}
-
-static void cf_s_8(float dt, void* fn_uncasted, void* udata, cf_typeless_array& c0, cf_typeless_array& c1, cf_typeless_array& c2, cf_typeless_array& c3, cf_typeless_array& c4, cf_typeless_array& c5, cf_typeless_array& c6, cf_typeless_array& c7)
-{
-	CUTE_ASSERT(c0.count() == c1.count() && c0.count() == c2.count() && c0.count() == c3.count() && c0.count() == c4.count() && c0.count() == c5.count() && c0.count() == c6.count() && c0.count() == c7.count());
-	auto fn = (void (*)(float, void*, void*, void*, void*, void*, void*, void*, void*, void*, int))fn_uncasted;
-	int count = c0.count();
-	fn(dt, udata, c0.data(), c1.data(), c2.data(), c3.data(), c4.data(), c5.data(), c6.data(), c7.data(), count);
-}
-
-static inline void cf_s_match(cf_array<int>* matches, const cf_array<cf_strpool_id>& a, const cf_array<cf_strpool_id>& b)
-{
+	int matches = 0;
 	for (int i = 0; i < a.count(); ++i) {
 		for (int j = 0; j < b.count(); ++j) {
 			if (a[i].val == b[j].val) {
-				matches->add(j);
+				++matches;
 				break;
 			}
 		}
 	}
+	return matches;
 }
 
 void cf_ecs_run_systems(float dt)
 {
-	int system_count = cf_app->systems.count();
+	int system_count = app->systems.count();
 	for (int i = 0; i < system_count; ++i) {
-		cf_system_internal_t* system = cf_app->systems + i;
-		void* update_fn = system->update_fn;
+		system_internal_t* system = app->systems + i;
+		system_update_fn* update_fn = system->update_fn;
 		auto pre_update_fn = system->pre_update_fn;
 		auto post_update_fn = system->post_update_fn;
 		void* udata = system->udata;
@@ -328,8 +339,8 @@ void cf_ecs_run_systems(float dt)
 		if (pre_update_fn) pre_update_fn(dt, udata);
 
 		if (update_fn) {
-			for (int j = 0; j < cf_app->entity_collections.count(); ++j) {
-				cf_entity_collection_t* collection = cf_app->entity_collections.items() + j;
+			for (int j = 0; j < app->entity_collections.count(); ++j) {
+				entity_collection_t* collection = app->entity_collections.items() + j;
 				CUTE_ASSERT(collection->component_tables.count() == collection->component_type_tuple.count());
 				int component_count = collection->component_tables.count();
 				cf_app->current_collection_type_being_iterated = cf_app->entity_collections.keys()[j];
@@ -337,24 +348,14 @@ void cf_ecs_run_systems(float dt)
 				CUTE_DEFER(cf_app->current_collection_type_being_iterated = CF_INVALID_ENTITY_TYPE);
 				CUTE_DEFER(cf_app->current_collection_being_updated = NULL);
 
-				cf_array<int> matches;
-				cf_s_match(&matches, system->component_type_tuple, collection->component_type_tuple);
+				int matches = s_match(system->component_type_tuple, collection->component_type_tuple);
 
-				cf_array<cf_typeless_array>& tables = collection->component_tables;
-
-				if (matches.count() == system->component_type_tuple.count()) {
-					switch (matches.count()) {
-						case 0: cf_s_0(dt, update_fn, udata); break;
-						case 1: cf_s_1(dt, update_fn, udata, tables[matches[0]]); break;
-						case 2: cf_s_2(dt, update_fn, udata, tables[matches[0]], tables[matches[1]]); break;
-						case 3: cf_s_3(dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]]); break;
-						case 4: cf_s_4(dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]]); break;
-						case 5: cf_s_5(dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]]); break;
-						case 6: cf_s_6(dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]]); break;
-						case 7: cf_s_7(dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]]); break;
-						case 8: cf_s_8(dt, update_fn, udata, tables[matches[0]], tables[matches[1]], tables[matches[2]], tables[matches[3]], tables[matches[4]], tables[matches[5]], tables[matches[6]], tables[matches[7]]); break;
-						default: CUTE_ASSERT(0);
-					}
+				if (matches == system->component_type_tuple.count()) {
+					s_arrays.count = collection->component_type_tuple.count();
+					s_arrays.ptrs = &collection->component_tables;
+					s_arrays.types = collection->component_type_tuple.data();
+					s_arrays.entities = collection->entity_handles.data();
+					update_fn(dt, &s_arrays, collection->component_tables[0].count(), udata);
 				}
 			}
 		}

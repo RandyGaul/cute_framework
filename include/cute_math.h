@@ -200,6 +200,7 @@ CUTE_INLINE cf_sincos_t cf_mulT_sc(cf_sincos_t a, cf_sincos_t b) { cf_sincos_t c
 
 // Remaps the result from atan2f to the continuous range of 0, 2*PI.
 CUTE_INLINE float cf_atan2_360(float y, float x) { return atan2f(-y, -x) + CUTE_PI; }
+CUTE_INLINE float cf_atan2_360_sc(sincos_t r) { return cf_atan2_360(r.s, r.c); }
 CUTE_INLINE float cf_atan2_360_v2(cf_v2 v) { return atan2f(-v.y, -v.x) + CUTE_PI; }
 
 // Computes the shortest angle to rotate the vector a to the vector b.
@@ -556,7 +557,9 @@ CUTE_INLINE cf_v2 operator*(cf_v2 a, cf_v2 b) { return cf_V2(a.x * b.x, a.y * b.
 CUTE_INLINE cf_v2& operator*=(cf_v2& a, float b) { return a = a * b; }
 CUTE_INLINE cf_v2& operator*=(cf_v2& a, cf_v2 b) { return a = a * b; }
 CUTE_INLINE cf_v2 operator/(cf_v2 a, float b) { return cf_V2(a.x / b, a.y / b); }
+CUTE_INLINE cf_v2 operator/(cf_v2 a, cf_v2 b) { return cf_V2(a.x / b.x, a.y / b.y); }
 CUTE_INLINE cf_v2& operator/=(cf_v2& a, float b) { return a = a / b; }
+CUTE_INLINE cf_v2& operator/=(cf_v2& a, cf_v2 b) { return a = a / b; }
 
 CUTE_INLINE cf_v2 operator-(cf_v2 a) { return cf_V2(-a.x, -a.y); }
 

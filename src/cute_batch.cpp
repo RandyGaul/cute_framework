@@ -85,11 +85,11 @@ struct cf_batch_t
 	float atlas_height = 1024;
 
 	sg_pipeline geom_pip;
-	cf_triple_buffer_t geom_buffer;
+	cf_buffer_t geom_buffer;
 	cf_array<cf_vertex_t> geom_verts;
 
 	cf_array<cf_quad_vertex_t> sprite_verts;
-	cf_triple_buffer_t sprite_buffer;
+	cf_buffer_t sprite_buffer;
 	sg_shader default_shd = { 0 };
 	sg_shader outline_shd = { 0 };
 	sg_shader active_shd = { 0 };
@@ -104,6 +104,8 @@ struct cf_batch_t
 	cf_matrix_t projection;
 
 	cf_m3x2 m = cf_make_identity();
+	float scale_x = 1.0f;
+	float scale_y = 1.0f;
 	cf_array<cf_m3x2> m3x2s;
 	cf_array<sg_blend_state> blend_states;
 	cf_array<sg_depth_state> depth_states;
@@ -176,13 +178,7 @@ static void cf_s_batch_report(spritebatch_sprite_t* sprites, int count, int text
 	b->sprite_verts.ensure_count(vert_count);
 	cf_quad_vertex_t* verts = b->sprite_verts.data();
 
-	cf_m3x2 m = cf_make_identity();
-	if (b->m3x2s.count()) {
-		m = b->m3x2s.last();
-	}
-
-	for (int i = 0; i < count; ++i)
-	{
+	for (int i = 0; i < count; ++i) {
 		spritebatch_sprite_t* s = sprites + i;
 
 		cf_v2 quad[] = {
@@ -192,8 +188,7 @@ static void cf_s_batch_report(spritebatch_sprite_t* sprites, int count, int text
 			{ -0.5f, -0.5f },
 		};
 
-		for (int j = 0; j < 4; ++j)
-		{
+		for (int j = 0; j < 4; ++j) {
 			float x = quad[j].x;
 			float y = quad[j].y;
 
@@ -211,12 +206,8 @@ static void cf_s_batch_report(spritebatch_sprite_t* sprites, int count, int text
 			x += s->x;
 			y += s->y;
 
-			// Apply final batch transformation.
-			cf_v2 p = cf_V2(x, y);
-			p = cf_mul_m32_v2(m, p);
-
-			quad[j].x = p.x;
-			quad[j].y = p.y;
+			quad[j].x = x;
+			quad[j].y = y;
 		}
 
 		// output transformed quad into CPU buffer
@@ -258,8 +249,11 @@ static void cf_s_batch_report(spritebatch_sprite_t* sprites, int count, int text
 	}
 
 	// Map the vertex buffer with sprite vertex data.
-	cf_error_t err = cf_triple_buffer_append(&b->sprite_buffer, vert_count, verts, 0, nullptr);
-	CUTE_ASSERT(!cf_is_error(&err));
+	cf_error_t err = b->sprite_buffer.append(vert_count, verts);
+	if (cf_is_error(&err)) {
+		CUTE_WARN("Overflow in in sprite batcher, dropping draw call.");
+		return;
+	}
 
 	// Setup resource bindings.
 	sg_bindings bind = b->sprite_buffer.bind();
@@ -380,13 +374,13 @@ cf_batch_t* cf_batch_make(cf_get_pixels_fn* get_pixels, void* get_pixels_udata, 
 	params.colors[0].blend.op_alpha = SG_BLENDOP_ADD;
 
 	b->geom_pip = sg_make_pipeline(params);
-	b->geom_buffer = cf_triple_buffer_make(sizeof(cf_vertex_t) * 1024 * 10, sizeof(cf_vertex_t), 0, 0);
+	b->geom_buffer.init(CUTE_MB * 25, sizeof(vertex_t));
 
-	cf_batch_push_stencil_defaults(b);
-	cf_batch_push_blend_defaults(b);
-	b->default_shd = b->active_shd = cf_s_load_shader(b, CF_BATCH_SPRITE_SHADER_TYPE_DEFAULT);
-	b->outline_shd = cf_s_load_shader(b, CF_BATCH_SPRITE_SHADER_TYPE_OUTLINE);
-	b->sprite_buffer = cf_triple_buffer_make(sizeof(cf_quad_vertex_t) * 1024 * 10, sizeof(cf_quad_vertex_t), 0, 0);
+	batch_push_stencil_defaults(b);
+	batch_push_blend_defaults(b);
+	b->default_shd = b->active_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_DEFAULT);
+	b->outline_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_OUTLINE);
+	b->sprite_buffer.init(CUTE_MB * 25, sizeof(quad_vertex_t));
 
 	spritebatch_config_t config;
 	spritebatch_set_default_config(&config);
@@ -418,16 +412,26 @@ void cf_batch_destroy(cf_batch_t* b)
 	CUTE_FREE(b, b->mem_ctx);
 }
 
-void cf_batch_push(cf_batch_t* b, cf_batch_sprite_t q)
+cf_error_t cf_batch_set_GPU_buffer_configuration(cf_batch_t* b, size_t size_of_one_buffer)
+{
+	b->geom_buffer.release();
+	b->sprite_buffer.release();
+	error_t err = b->geom_buffer.init(size_of_one_buffer, sizeof(vertex_t));
+	if (err.is_error()) return err;
+	return b->sprite_buffer.init(size_of_one_buffer, sizeof(quad_vertex_t));
+}
+
+void cf_batch_push(batch_t* b, batch_sprite_t q)
 {
 	spritebatch_sprite_t s;
 	s.image_id = q.id;
 	s.w = q.w;
 	s.h = q.h;
+	q.transform.p = mul(b->m, q.transform.p);
 	s.x = q.transform.p.x;
 	s.y = q.transform.p.y;
-	s.sx = q.scale_x;
-	s.sy = q.scale_y;
+	s.sx = q.scale_x * b->scale_x;
+	s.sy = q.scale_y * b->scale_y;
 	s.s = q.transform.r.s;
 	s.c = q.transform.r.c;
 	s.sort_bits = (uint64_t)q.sort_bits << 32;
@@ -448,8 +452,6 @@ cf_error_t cf_batch_flush(cf_batch_t* b)
 
 	spritebatch_flush(&b->sb);
 
-	b->sprite_buffer.advance();
-
 	// Draw geometry.
 	if (b->geom_verts.count()) {
 		// Issue draw call.
@@ -457,12 +459,14 @@ cf_error_t cf_batch_flush(cf_batch_t* b)
 		geom_vs_params_t params;
 		params.u_mvp = b->projection;
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(params));
-		cf_error_t err = cf_triple_buffer_append(&b->geom_buffer, b->geom_verts.count(), b->geom_verts.data(), 0, nullptr);
-		CUTE_ASSERT(!cf_is_error(&err));
-		sg_apply_bindings(b->geom_buffer.bind());
-		sg_draw(0, b->geom_verts.count(), 1);
+		cf_error_t err = b->geom_buffer.append(b->geom_verts.count(), b->geom_verts.data());
+		if (cf_is_error(&err)) {
+			// Draw call dropped!!!
+		} else {
+			sg_apply_bindings(b->geom_buffer.bind());
+			sg_draw(0, b->geom_verts.count(), 1);
+		}
 		b->geom_verts.clear();
-		b->geom_buffer.advance();
 	}
 
 	return cf_error_success();
@@ -514,6 +518,8 @@ void cf_batch_outlines_color(cf_batch_t* b, cf_color_t c)
 void cf_batch_push_m3x2(cf_batch_t* b, cf_m3x2 m)
 {
 	b->m = m;
+	b->scale_x = len(m.m.x);
+	b->scale_y = len(m.m.y);
 	b->m3x2s.add(m);
 }
 
@@ -523,8 +529,12 @@ void cf_batch_pop_m3x2(cf_batch_t* b)
 		b->m3x2s.pop();
 		if (b->m3x2s.size()) {
 			b->m = b->m3x2s.last();
+			b->scale_x = len(b->m.m.x);
+			b->scale_y = len(b->m.m.y);
 		} else {
-			b->m = cf_make_identity();
+			b->m = make_identity();
+			b->scale_x = 1.0f;
+			b->scale_y = 1.0f;
 		}
 	}
 }
@@ -713,7 +723,7 @@ void cf_batch_circle_line(cf_batch_t* batch, cf_v2 p, float r, int iters, float 
 		cf_v2 p0 = cf_V2(p.x + r, p.y);
 		verts.add(p0);
 
-		for (int i = 1; i <= iters; i++) {
+		for (int i = 1; i < iters; i++) {
 			float a = (i / (float)iters) * (2.0f * CUTE_PI);
 			cf_v2 n = cf_from_angle(a);
 			cf_v2 p1 = p + n * r;
@@ -721,7 +731,7 @@ void cf_batch_circle_line(cf_batch_t* batch, cf_v2 p, float r, int iters, float 
 			p0 = p1;
 		}
 
-		cf_batch_polyline(batch, verts.data(), verts.size(), thickness, color, true, true, 3);
+		cf_batch_polyline(batch, verts.data(), verts.size(), thickness, color, true, true);
 	} else {
 		float half_thickness = thickness * 0.5f;
 		cf_v2 p0 = cf_V2(p.x + r - half_thickness, p.y);
@@ -974,7 +984,7 @@ CUTE_INLINE static void cf_s_bevel_arc(cf_batch_t* batch, cf_v2 b, cf_v2 i3, cf_
 
 static void cf_s_polyline(cf_batch_t* batch, cf_v2* points, int count, float thickness, cf_color_t c0, cf_color_t c1, bool loop, bool feather, float alias_scale, int bevel_count)
 {
-	float inner_half = (thickness - alias_scale) * 0.5f;
+	float inner_half = (thickness - alias_scale);
 	float outer_half = inner_half + alias_scale;
 	int iter = 0;
 	int i = 2;
@@ -995,6 +1005,7 @@ static void cf_s_polyline(cf_batch_t* batch, cf_v2* points, int count, float thi
 		float ab_x_bc = cf_cross(b - a, c - b);
 		float d = cf_dot(cf_cw90(n0), cf_cw90(n1));
 		const float k_tol = 1.e-6f;
+		auto cc = color_white();
 
 		if (ab_x_bc < -k_tol) {
 			if (d >= 0) {
