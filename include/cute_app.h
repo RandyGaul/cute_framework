@@ -24,7 +24,6 @@
 
 #include "cute_defines.h"
 #include "cute_error.h"
-//#include "sokol/sokol_gfx.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,7 +50,7 @@ CUTE_API void CUTE_CALL cf_app_destroy();
 CUTE_API bool CUTE_CALL cf_app_is_running();
 CUTE_API void CUTE_CALL cf_app_stop_running();
 CUTE_API void CUTE_CALL cf_app_update(float dt);
-CUTE_API sg_image CUTE_CALL cf_app_get_offscreen_buffer();
+CUTE_API void CUTE_CALL cf_app_get_offscreen_buffer(sg_image* out_buffer);
 CUTE_API void CUTE_CALL cf_app_present(bool draw_offscreen_buffer /*= true*/);
 
 
@@ -107,7 +106,8 @@ CUTE_INLINE void app_destroy() { cf_app_destroy(); }
 CUTE_INLINE bool app_is_running() { return cf_app_is_running(); }
 CUTE_INLINE void app_stop_running() { cf_app_stop_running(); }
 CUTE_INLINE void app_update(float dt) { cf_app_update(dt); }
-CUTE_INLINE void app_present() { cf_app_present(true); }
+CUTE_INLINE void app_get_offscreen_buffer(sg_image* out_buffer) { cf_app_get_offscreen_buffer(out_buffer); }
+CUTE_INLINE void app_present(bool draw_offscreen_buffer = true) { cf_app_present(draw_offscreen_buffer); }
 CUTE_INLINE error_t app_init_audio(bool spawn_mix_thread = true, int max_simultaneous_sounds = 5000) { return cf_app_init_audio(spawn_mix_thread, max_simultaneous_sounds); }
 CUTE_INLINE void app_do_mixing() { cf_app_do_mixing(); }
 CUTE_INLINE ImGuiContext* app_init_imgui(bool no_default_font = false) { return cf_app_init_imgui(no_default_font); }

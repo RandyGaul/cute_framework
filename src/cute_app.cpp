@@ -281,19 +281,19 @@ static void cf_s_imgui_present()
 	}
 }
 
-sg_image cf_app_get_offscreen_buffer()
+void cf_app_get_offscreen_buffer(sg_image* out_buffer)
 {
-	sg_image result = { 0 };
+	*out_buffer = { 0 };
+
 	if (cf_app->offscreen_enabled) {
 		if (!cf_app->fetched_offscreen) {
 			sg_end_pass();
 			cf_app->fetched_offscreen = true;
 		}
 
-		result = cf_app->offscreen_color_buffer;
+		*out_buffer = cf_app->offscreen_color_buffer;
 		cf_app->fetched_offscreen = true;
 	}
-	return result;
 }
 
 void cf_app_present(bool draw_offscreen_buffer)
@@ -301,7 +301,7 @@ void cf_app_present(bool draw_offscreen_buffer)
 	if (cf_app->offscreen_enabled) {
 		sg_bindings bind = { 0 };
 		bind.vertex_buffers[0] = cf_app->quad;
-		bind.fs_images[0] = cf_app_get_offscreen_buffer();
+		cf_app_get_offscreen_buffer(&bind.fs_images[0]);
 
 		sg_pass_action clear_to_black = { 0 };
 		clear_to_black.colors[0] = { SG_ACTION_CLEAR, { 0.0f, 0.0f, 0.0f, 1.0f } };
