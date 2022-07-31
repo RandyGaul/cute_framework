@@ -28,7 +28,7 @@
 #include <internal/cute_app_internal.h>
 #include <internal/cute_object_table_internal.h>
 
-#define INJECT(s) cf_strpool_inject(cf_app->strpool, s, (int)CUTE_STRLEN(s))
+#define INJECT(s) cf_strpool_inject_len(cf_app->strpool, s, (int)CUTE_STRLEN(s))
 
 static cf_error_t cf_s_load_from_schema(cf_entity_type_t schema_type, cf_entity_t entity, cf_component_config_t* config, void* component, void* udata)
 {
@@ -421,7 +421,7 @@ static cf_strpool_id cf_s_kv_string(cf_kv_t* kv, const char* key)
 		return { 0 };
 	}
 
-	return cf_strpool_inject(cf_app->strpool, string_raw, (int)string_sz);
+	return cf_strpool_inject_len(cf_app->strpool, string_raw, (int)string_sz);
 }
 
 static void cf_s_register_entity_type(const char* schema)

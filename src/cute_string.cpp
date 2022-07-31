@@ -80,7 +80,7 @@ cf_string_t::cf_string_t(char* str)
 {
 	int len = (int)CUTE_STRLEN(str);
 	if (len) {
-		id = cf_strpool_inject(cf_s_pool(), str, len);
+		id = cf_strpool_inject_len(cf_s_pool(), str, len);
 		cf_s_incref(id);
 	} else id.val = 0;
 }
@@ -89,7 +89,7 @@ cf_string_t::cf_string_t(const char* str)
 {
 	int len = str ? (int)CUTE_STRLEN(str) : 0;
 	if (len) {
-		id = cf_strpool_inject(cf_s_pool(), str, len);
+		id = cf_strpool_inject_len(cf_s_pool(), str, len);
 		cf_s_incref(id);
 	} else id.val = 0;
 }
@@ -98,7 +98,7 @@ cf_string_t::cf_string_t(const char* begin, const char* end)
 {
 	int len = begin ? (end ? (int)(end - begin) : (int)CUTE_STRLEN(begin)) : 0;
 	if (len) {
-		id = cf_strpool_inject(cf_s_pool(), begin, len);
+		id = cf_strpool_inject_len(cf_s_pool(), begin, len);
 		cf_s_incref(id);
 	} else id.val = 0;
 }

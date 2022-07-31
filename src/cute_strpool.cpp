@@ -52,7 +52,7 @@ void cf_destroy_strpool(cf_strpool_t* pool)
 	CUTE_FREE(pool, pool->mem_ctx);
 }
 
-cf_strpool_id cf_strpool_inject(cf_strpool_t* pool, const char* string, int length)
+cf_strpool_id cf_strpool_inject_len(cf_strpool_t* pool, const char* string, int length)
 {
 	return { strpool_inject(&pool->inst, string, length) };
 }

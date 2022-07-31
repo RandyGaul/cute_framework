@@ -31,7 +31,7 @@
 #define CUTE_ASEPRITE_IMPLEMENTATION
 #include <cute/cute_aseprite.h>
 
-#define INJECT(s) cf_strpool_inject(cache->strpool, s, (int)CUTE_STRLEN(s))
+#define INJECT(s) cf_strpool_inject_len(cache->strpool, s, (int)CUTE_STRLEN(s))
 
 struct aseprite_cache_entry_t
 {
@@ -195,7 +195,7 @@ cf_error_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepri
 
 	// Look for slice information to define the sprite's local offset.
 	// The slice named "origin"'s center is used to define the local offset.
-	entry.local_offset = cf_v2(0, 0);
+	entry.local_offset = cf_V2(0, 0);
 	for (int i = 0; i < ase->slice_count; ++i) {
 		ase_slice_t* slice = ase->slices + i;
 		if (!CUTE_STRCMP(slice->name, "origin")) {
@@ -205,8 +205,8 @@ cf_error_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepri
 			float x = (float)slice->origin_x + (float)slice->w * 0.25f;
 
 			// Transform from top-left coordinates to center of sprite.
-			cf_v2 origin = cf_v2(x, y);
-			cf_v2 offset = cf_v2((float)ase->w - 1, (float)ase->h - 1) * 0.5f - origin;
+			cf_v2 origin = cf_V2(x, y);
+			cf_v2 offset = cf_V2((float)ase->w - 1, (float)ase->h - 1) * 0.5f - origin;
 			entry.local_offset = offset;
 			break;
 		}
