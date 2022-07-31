@@ -43,15 +43,34 @@ typedef struct cf_batch_sprite_t
 	 */
 	uint64_t id;
 
-	cf_transform_t transform = cf_make_transform(); // Position and location rotation of the quad.
+	cf_transform_t transform; // Position and location rotation of the quad. Default: cf_make_transform() 
 	int w; // Width in pixels of the source image.
 	int h; // Height in pixels of the source image.
 	float scale_x; // Scaling along the quad's local x-axis in pixels.
 	float scale_y; // Scaling along the quad's local y-axis in pixels.
-	float alpha = 1.0f; // Applies additional alpha to this quad.
+	float alpha; // Applies additional alpha to this quad. Default: 1.0f
 
-	int sort_bits = 0;
+	int sort_bits; /*= 0;*/
 } cf_batch_sprite_t;
+
+/**
+* Defaults
+*	uint64_t id;
+*	transform_t transform = cf_make_transform();
+*	int w;
+*	int h;
+*	float scale_x;
+*	float scale_y;
+*	float alpha = 1.0f;
+*	int sort_bits = 0;
+*/
+CUTE_INLINE cf_batch_sprite_t cf_batch_sprite_defaults()
+{
+	cf_batch_sprite_t result = { 0 };
+	result.transform = cf_make_transform();
+	result.alpha = 1.0f;
+	return result;
+}
 
 /**
  * The batch is used to buffer up many different drawable things and organize them into draw calls suitable for high-
@@ -182,17 +201,15 @@ using transform_t = cf_transform_t;
 
 struct batch_sprite_t
 {
-	/**
-	 * Unique identifier for this quad's image, as determined by you.
-	 */
+
 	uint64_t id;
 
-	transform_t transform = cf_make_transform(); // Position and location rotation of the quad.
-	int w; // Width in pixels of the source image.
-	int h; // Height in pixels of the source image.
-	float scale_x; // Scaling along the quad's local x-axis in pixels.
-	float scale_y; // Scaling along the quad's local y-axis in pixels.
-	float alpha = 1.0f; // Applies additional alpha to this quad.
+	transform_t transform = cf_make_transform();
+	int w; 
+	int h; 
+	float scale_x;
+	float scale_y; 
+	float alpha = 1.0f; 
 
 	int sort_bits = 0;
 
