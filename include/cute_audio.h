@@ -31,6 +31,7 @@ extern "C" {
 #endif // __cplusplus
 
 typedef struct cf_audio_t cf_audio_t;
+typedef struct cf_app_t cf_app_t;
 
 CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg(const char* path, void* user_allocator_context /*= NULL*/);
 CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_wav(const char* path, void* user_allocator_context /*= NULL*/);
@@ -45,15 +46,15 @@ CUTE_API int CUTE_CALL cf_audio_ref_count(cf_audio_t* audio);
 
 // -------------------------------------------------------------------------------------------------
 
-CUTE_API cf_error_t CUTE_CALL cf_music_play(cf_audio_t* audio_source, float fade_in_time = 0);
-CUTE_API cf_error_t CUTE_CALL cf_music_stop(float fade_out_time = 0);
+CUTE_API cf_error_t CUTE_CALL cf_music_play(cf_audio_t* audio_source, float fade_in_time /*= 0*/);
+CUTE_API cf_error_t CUTE_CALL cf_music_stop(float fade_out_time /*= 0*/);
 CUTE_API void CUTE_CALL cf_music_set_volume(float volume);
 CUTE_API void CUTE_CALL cf_music_set_pitch(float pitch);
 CUTE_API void CUTE_CALL cf_music_set_loop(bool true_to_loop);
 CUTE_API void CUTE_CALL cf_music_pause(cf_app_t* app);
 CUTE_API void CUTE_CALL cf_music_resume(cf_app_t* app);
-CUTE_API cf_error_t CUTE_CALL cf_music_switch_to(cf_audio_t* audio_source, float fade_out_time = 0, float fade_in_time = 0);
-CUTE_API cf_error_t CUTE_CALL cf_music_crossfade(cf_audio_t* audio_source, float cross_fade_time = 0);
+CUTE_API cf_error_t CUTE_CALL cf_music_switch_to(cf_audio_t* audio_source, float fade_out_time /*= 0*/, float fade_in_time /*= 0*/);
+CUTE_API cf_error_t CUTE_CALL cf_music_crossfade(cf_audio_t* audio_source, float cross_fade_time /*= 0*/);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -67,7 +68,7 @@ typedef struct cf_sound_params_t
 	float delay; /*= 0;*/
 } cf_sound_params_t;
 
-typedef struct cf_sound_t { uint64_t id = 0; } cf_sound_t;
+typedef struct cf_sound_t { uint64_t id; /*= 0;*/ } cf_sound_t;
 
 /**
 * 	paused = false;
@@ -106,7 +107,6 @@ CUTE_API void CUTE_CALL cf_audio_set_pause(bool true_for_paused);
 namespace cute
 {
 using audio_t = cf_audio_t;
-using sound_t = cf_sound_t;
 using app_t = cf_app_t;
 using promise_t = cf_promise_t;
 
@@ -127,6 +127,21 @@ struct sound_params_t
 	operator cf_sound_params_t* ()
 	{
 		return (cf_sound_params_t*)this;
+	}
+};
+
+struct sound_t
+{
+	uint64_t id = 0;
+
+	operator cf_sound_t()
+	{
+		return *((cf_sound_t*)this);
+	}
+
+	operator cf_sound_t* ()
+	{
+		return (cf_sound_t*)this;
 	}
 };
 
@@ -156,7 +171,7 @@ CUTE_INLINE error_t music_crossfade(audio_t* audio_source, float cross_fade_time
 
 // -------------------------------------------------------------------------------------------------
 
-CUTE_INLINE sound_t sound_play(audio_t* audio_source, sound_params_t params = sound_params_t(), error_t* err = NULL) { return cf_sound_play(audio_source, params, err); }
+CUTE_INLINE sound_t sound_play(audio_t* audio_source, sound_params_t params = sound_params_t(), error_t* err = NULL) { return *(sound_t*)&cf_sound_play(audio_source, params, err); }
 
 CUTE_INLINE bool sound_is_active(sound_t sound) { return cf_sound_is_active(sound); }
 CUTE_INLINE bool sound_get_is_paused(sound_t sound) { return cf_sound_get_is_paused(sound); }
