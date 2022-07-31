@@ -107,7 +107,7 @@ static void cf_s_sprite(cf_aseprite_cache_t* cache, aseprite_cache_entry_t entry
 	if (entry.ase->tag_count == 0) {
 		cf_sprite_play(sprite, "default");
 	} else {
-		cf_sprite_play(sprite, ((const char**)cf_animation_table_keys(sprite->animations))[0]);
+		cf_sprite_play(sprite, (const char*)cf_animation_table_keys(sprite->animations)[0].data);
 	}
 }
 
@@ -131,7 +131,9 @@ cf_error_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepri
 	if (!ase) return cf_error_failure("Unable to open ase file at `aseprite_path`.");
 
 	// Allocate internal cache data structure entries.
-	cf_animation_table_t* animations = CUTE_NEW(cf_animation_table_t, cache->mem_ctx);
+	cf_animation_table_t* animations = (cf_animation_table_t*)CUTE_ALLOC(sizeof(cf_animation_table_t), cache->mem_ctx);
+	cf_animation_table_init(animations, cache->mem_ctx);
+
 	cf_array<uint64_t> ids;
 	ids.ensure_capacity(ase->frame_count);
 
@@ -166,7 +168,9 @@ cf_error_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepri
 			ase_tag_t* tag = ase->tags + i;
 			int from = tag->from_frame;
 			int to = tag->to_frame;
-			cf_animation_t* animation = CUTE_NEW(cf_animation_t, cache->mem_ctx);
+			cf_animation_t* animation = (cf_animation_t*)CUTE_ALLOC(sizeof(cf_animation_t), cache->mem_ctx);
+			CUTE_MEMSET(animation, 0, sizeof(cf_animation_t));
+
 			animation->name = tag->name;
 			animation->play_direction = cf_s_play_direction(tag->loop_animation_direction);
 			for (int i = from; i <= to; ++i) {
@@ -180,7 +184,9 @@ cf_error_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepri
 		}
 	} else {
 		// Treat the entire frame set as a single animation if there are no tags.
-		cf_animation_t* animation = CUTE_NEW(cf_animation_t, cache->mem_ctx);
+		cf_animation_t* animation = (cf_animation_t*)CUTE_ALLOC(sizeof(cf_animation_t), cache->mem_ctx);
+		CUTE_MEMSET(animation, 0, sizeof(cf_animation_t));
+
 		animation->name = "default";
 		animation->play_direction = CF_PLAY_DIRECTION_FORWARDS;
 		for (int i = 0; i < ase->frame_count; ++i) {
