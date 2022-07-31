@@ -32,8 +32,8 @@ extern "C" {
 
 struct cf_dictionary_string_block_t
 {
-	size_t len = 0;
-	uint8_t data[DICTIONARY_STRING_BLOCK_MAX] = { 0 };
+	size_t len; /*= 0*/;
+	uint8_t data[DICTIONARY_STRING_BLOCK_MAX]; /*= { 0 }*/;
 };
 
 CUTE_INLINE cf_dictionary_string_block_t cf_s_dictionary_make_block(const char* key)
