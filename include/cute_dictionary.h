@@ -24,6 +24,32 @@
 
 #include "cute_defines.h"
 
+#define DICTIONARY_STRING_BLOCK_MAX 128
+
+struct cf_dictionary_string_block_t
+{
+	size_t len = 0;
+	uint8_t data[DICTIONARY_STRING_BLOCK_MAX] = { 0 };
+};
+
+CUTE_INLINE cf_dictionary_string_block_t cf_s_dictionary_make_block(const char* key)
+{
+	cf_dictionary_string_block_t block;
+	block.len = CUTE_STRLEN(key);
+	CUTE_ASSERT(block.len < DICTIONARY_STRING_BLOCK_MAX - 1);
+	CUTE_STRCPY((char*)block.data, key);
+	return block;
+}
+
+CUTE_INLINE cf_dictionary_string_block_t cf_s_dictionary_make_block(const char* key, size_t key_len)
+{
+	cf_dictionary_string_block_t block;
+	block.len = key_len;
+	CUTE_ASSERT(block.len < DICTIONARY_STRING_BLOCK_MAX - 1);
+	CUTE_STRNCPY((char*)block.data, key, key_len);
+	return block;
+}
+
 #ifdef CUTE_CPP
 
 #include "cute_hashtable.h"
@@ -206,32 +232,6 @@ void cf_dictionary<K, T>::swap(int index_a, int index_b)
 // const char* specialization
 // Forces all strings to be less than `DICTIONARY_STRING_BLOCK_MAX` characters, asserts otherwise.
 // The limitation is for simplicity of implementation.
-
-#define DICTIONARY_STRING_BLOCK_MAX 128
-
-struct cf_dictionary_string_block_t
-{
-	size_t len = 0;
-	uint8_t data[DICTIONARY_STRING_BLOCK_MAX] = { 0 };
-};
-
-CUTE_INLINE cf_dictionary_string_block_t cf_s_dictionary_make_block(const char* key)
-{
-	cf_dictionary_string_block_t block;
-	block.len = CUTE_STRLEN(key);
-	CUTE_ASSERT(block.len < DICTIONARY_STRING_BLOCK_MAX - 1);
-	CUTE_STRCPY((char*)block.data, key);
-	return block;
-}
-
-CUTE_INLINE cf_dictionary_string_block_t cf_s_dictionary_make_block(const char* key, size_t key_len)
-{
-	cf_dictionary_string_block_t block;
-	block.len = key_len;
-	CUTE_ASSERT(block.len < DICTIONARY_STRING_BLOCK_MAX - 1);
-	CUTE_STRNCPY((char*)block.data, key, key_len);
-	return block;
-}
 
 template <typename T>
 struct cf_dictionary<const char*, T>

@@ -87,7 +87,7 @@ void cf_easy_sprite_unload(cf_sprite_t sprite)
 {
 	cf_png_cache_t* cache = cf_s_png_cache();
 	cf_png_t png;
-	cf_error_t err = cache->pngs.find(((cf_animation_t**)cf_hashtable_items(sprite.animations))[0]->frames[0].id, &png);
+	cf_error_t err = cache->pngs.find((cf_animation_table_items(sprite.animations))[0]->frames[0].id, &png);
 	cf_png_cache_unload(cache, &png);
 }
 

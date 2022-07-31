@@ -24,11 +24,29 @@
 
 
 #include "cute_defines.h"
-
-#ifdef CUTE_CPP
-
 #include "cute_c_runtime.h"
 #include "cute_alloc.h"
+
+CUTE_INLINE void cf_array_ensure_capacity(void** items, int items_count, int *items_capacity, int items_element_size, int required_capacity, void* user_allocator_context)
+{
+	if (required_capacity > *items_capacity) {
+		int new_capacity = *items_capacity ? *items_capacity * 2 : 256;
+		while (new_capacity < required_capacity) {
+			new_capacity <<= 1;
+			CUTE_ASSERT(new_capacity); // Detect overflow.
+		}
+
+		size_t new_size = items_element_size * new_capacity;
+		void* new_items = CUTE_ALLOC(new_size, user_allocator_context);
+		CUTE_ASSERT(new_items);
+		CUTE_MEMCPY(new_items, *items, items_element_size * items_count);
+		CUTE_FREE(*items, user_allocator_context);
+		*items = new_items;
+		*items_capacity = new_capacity;
+	}
+}
+
+#ifdef CUTE_CPP
 
 /**
  * Implements a basic growable array data structure. Constructors and destructors are called, but this
