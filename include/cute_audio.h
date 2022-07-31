@@ -32,14 +32,14 @@ extern "C" {
 
 typedef struct cf_audio_t cf_audio_t;
 
-CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg(const char* path, void* user_allocator_context = NULL);
-CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_wav(const char* path, void* user_allocator_context = NULL);
-CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg_from_memory(void* memory, int byte_count, void* user_allocator_context = NULL);
-CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_wav_from_memory(void* memory, int byte_count, void* user_allocator_context = NULL);
-CUTE_API void CUTE_CALL cf_audio_stream_ogg(const char* path, cf_promise_t promise, void* user_allocator_context = NULL);
-CUTE_API void CUTE_CALL cf_audio_stream_wav(const char* path, cf_promise_t promise, void* user_allocator_context = NULL);
-CUTE_API void CUTE_CALL cf_audio_stream_ogg_from_memory(void* memory, int byte_count, cf_promise_t promise, void* user_allocator_context = NULL);
-CUTE_API void CUTE_CALL cf_audio_stream_wav_from_memory(void* memory, int byte_count, cf_promise_t promise, void* user_allocator_context = NULL);
+CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg(const char* path, void* user_allocator_context /*= NULL*/);
+CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_wav(const char* path, void* user_allocator_context /*= NULL*/);
+CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg_from_memory(void* memory, int byte_count, void* user_allocator_context /*= NULL*/);
+CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_wav_from_memory(void* memory, int byte_count, void* user_allocator_context /*= NULL*/);
+CUTE_API void CUTE_CALL cf_audio_stream_ogg(const char* path, cf_promise_t promise, void* user_allocator_context /*= NULL*/);
+CUTE_API void CUTE_CALL cf_audio_stream_wav(const char* path, cf_promise_t promise, void* user_allocator_context /*= NULL*/);
+CUTE_API void CUTE_CALL cf_audio_stream_ogg_from_memory(void* memory, int byte_count, cf_promise_t promise, void* user_allocator_context /*= NULL*/);
+CUTE_API void CUTE_CALL cf_audio_stream_wav_from_memory(void* memory, int byte_count, cf_promise_t promise, void* user_allocator_context /*= NULL*/);
 CUTE_API cf_error_t CUTE_CALL cf_audio_destroy(cf_audio_t* audio);
 CUTE_API int CUTE_CALL cf_audio_ref_count(cf_audio_t* audio);
 
