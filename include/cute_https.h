@@ -192,7 +192,8 @@ CUTE_INLINE bool cf_https_strcmp(const char* lit, cf_https_string_t string)
 
 CUTE_INLINE bool cf_https_response_find_header(const cf_https_response_t* response, const char* header_name, cf_https_header_t* header_out)
 {
-	*header_out = { 0 };
+	CUTE_MEMSET(header_out, 0, sizeof(cf_https_header_t));
+
 	for (int i = 0; i < response->headers_count; ++i) {
 		cf_https_header_t header = response->headers[i];
 		if (!cf_https_strcmp(header_name, header.name)) {
@@ -247,6 +248,7 @@ CUTE_INLINE bool https_strcmp(const char* lit, https_string_t string) { return c
 CUTE_INLINE bool https_response_find_header(const https_response_t* response, const char* header_name, https_header_t* header_out)
 {
 	*header_out = { 0 };
+
 	for (int i = 0; i < response->headers.count(); ++i) {
 		cf_https_header_t header = response->headers[i];
 		if (!cf_https_strcmp(header_name, header.name)) {
