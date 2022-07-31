@@ -27,6 +27,10 @@
 
 #include "cute/cute_sync.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef cute_mutex_t cf_mutex_t;
 typedef cute_cv_t cf_cv_t;
 typedef cute_atomic_int_t cf_atomic_int_t;
@@ -104,6 +108,10 @@ typedef struct cf_promise_t
 } cf_promise_t;
 
 CUTE_INLINE void cf_promise_invoke(cf_promise_t* promise, cf_error_t status, void* param) { promise->callback(status, param, promise->promise_udata); }
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

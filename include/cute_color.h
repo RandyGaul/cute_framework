@@ -24,6 +24,9 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 typedef union cf_pixel_t
 {
@@ -78,6 +81,10 @@ CUTE_INLINE cf_pixel_t cf_color_to_pixel(cf_color_t c)
 CUTE_INLINE cf_color_t cf_pixel_to_color(cf_pixel_t p) { return cf_make_color_hex((int)p.val); }
 CUTE_INLINE uint32_t cf_color_to_int(cf_color_t c) { return cf_color_to_pixel(c).val; }
 CUTE_INLINE uint32_t cf_pixel_to_int(cf_pixel_t p) { return p.val; }
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

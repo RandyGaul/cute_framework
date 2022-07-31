@@ -24,6 +24,10 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 /**
  * Calculates the time, in seconds, since the last time this function was called.
  * No special care is taken to handle multi-threading (this function uses static memory).
@@ -54,6 +58,10 @@ CUTE_API float CUTE_CALL cf_timer_dt(cf_timer_t* timer);
  * to repeatedly measure the time since the last `timer_dt` call.
  */
 CUTE_API float CUTE_CALL cf_timer_elapsed(cf_timer_t* timer);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef  CUTE_CPP
 

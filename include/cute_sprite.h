@@ -27,6 +27,10 @@
 #include "cute_dictionary.h"
 #include "cute_batch.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 /**
  * Represents one frame of animation within a sprite.
  */
@@ -335,7 +339,7 @@ CUTE_INLINE bool cf_sprite_is_playing(cf_sprite_t* sprite, const char* animation
 	return !CUTE_STRCMP(animation, sprite->animation->name);
 }
 
-CUTE_INLINE cf_batch_sprite_t cf_sprite_batch_sprite(cf_sprite_t* sprite, cf_transform_t transform)
+CUTE_INLINE cf_batch_sprite_t cf_sprite_batch_sprite_tf(cf_sprite_t* sprite, cf_transform_t transform)
 {
 	cf_batch_sprite_t q;
 	q.id = sprite->animation->frames[sprite->frame_index].id;
@@ -368,7 +372,7 @@ CUTE_INLINE cf_batch_sprite_t cf_sprite_batch_sprite(cf_sprite_t* sprite)
 CUTE_INLINE void cf_sprite_draw(cf_sprite_t* sprite, cf_batch_t* batch)
 {
 	CUTE_ASSERT(batch);
-	cf_batch_push(batch, cf_sprite_batch_sprite(sprite, sprite->transform));
+	cf_batch_push(batch, cf_sprite_batch_sprite_tf(sprite, sprite->transform));
 }
 
 CUTE_INLINE void cf_sprite_pause(cf_sprite_t* sprite)
@@ -449,6 +453,9 @@ CUTE_INLINE bool cf_sprite_on_loop(cf_sprite_t* sprite)
 	}
 }
 
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef  CUTE_CPP
 
@@ -457,7 +464,7 @@ void cf_sprite_t::play(const char* animation) { return cf_sprite_play(this, anim
 bool cf_sprite_t::is_playing(const char* animation) { return cf_sprite_is_playing(this, animation); }
 void cf_sprite_t::reset() { return cf_sprite_reset(this); }
 void cf_sprite_t::draw(cf_batch_t* batch) { return cf_sprite_draw(this, batch); }
-cf_batch_sprite_t cf_sprite_t::batch_sprite(cf_transform_t transform) { return cf_sprite_batch_sprite(this, transform); }
+cf_batch_sprite_t cf_sprite_t::batch_sprite(cf_transform_t transform) { return cf_sprite_batch_sprite_tf(this, transform); }
 cf_batch_sprite_t cf_sprite_t::batch_sprite() { return cf_sprite_batch_sprite(this); }
 void cf_sprite_t::pause() { return cf_sprite_pause(this); }
 void cf_sprite_t::unpause() { return cf_sprite_unpause(this); }

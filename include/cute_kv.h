@@ -25,6 +25,10 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 /**
  * "Key-value", or kv. Used for serialization either to/from an in-memory buffer. The design of the
  * kv api is supposed to allow for *mostly* (but not completely) the same code to be used for both
@@ -141,6 +145,10 @@ CUTE_API cf_error_t CUTE_CALL cf_kv_array_begin(cf_kv_t* kv, int* count, const c
 CUTE_API cf_error_t CUTE_CALL cf_kv_array_end(cf_kv_t* kv);
 
 CUTE_API void CUTE_CALL cf_kv_print(cf_kv_t* kv);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

@@ -24,6 +24,10 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 /*
  * A random number generator of the type LFSR (linear feedback shift registers). This specific
  * implementation uses the XorShift+ variation, and returns 64-bit random numbers. More information
@@ -129,6 +133,10 @@ static CUTE_INLINE double cf_rnd_next_range_double(cf_rnd_t* rnd, double min, do
 	double value = cf_rnd_next_float(rnd) * range;
 	return min + value;
 }
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef  CUTE_CPP
 

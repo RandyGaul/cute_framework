@@ -24,6 +24,10 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 /**
  * Memory pool is useful mainly as an optimization for one of two purposes.
  * 
@@ -65,6 +69,10 @@ CUTE_API void* CUTE_CALL cf_memory_pool_try_alloc(cf_memory_pool_t* pool);
  * Frees an allocation previously acquired by `cf_memory_pool_alloc` or `cf_memory_pool_try_alloc`.
  */
 CUTE_API void CUTE_CALL cf_memory_pool_free(cf_memory_pool_t* pool, void* element);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef  CUTE_CPP
 

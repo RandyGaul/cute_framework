@@ -25,6 +25,10 @@
 #include "cute_defines.h"
 #include "cute_concurrency.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef struct cf_circular_buffer_t
 {
 	int index0; /*= 0*/
@@ -45,6 +49,9 @@ CUTE_API int CUTE_CALL cf_circular_buffer_pull(cf_circular_buffer_t* buffer, voi
 
 CUTE_API int CUTE_CALL cf_circular_buffer_grow(cf_circular_buffer_t* buffer, int new_size_in_bytes);
 
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

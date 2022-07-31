@@ -26,6 +26,10 @@
 #include "cute_concurrency.h"
 #include "cute_error.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef struct cf_audio_t cf_audio_t;
 
 CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg(const char* path, void* user_allocator_context = NULL);
@@ -93,6 +97,9 @@ CUTE_API void CUTE_CALL cf_audio_set_global_volume(float volume);
 CUTE_API void CUTE_CALL cf_audio_set_sound_volume(float volume);
 CUTE_API void CUTE_CALL cf_audio_set_pause(bool true_for_paused);
 
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

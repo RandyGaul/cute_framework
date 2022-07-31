@@ -24,6 +24,11 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+
 typedef struct cf_a_star_grid_t cf_a_star_grid_t;
 
 /**
@@ -93,6 +98,9 @@ typedef struct cf_a_star_output_t
 CUTE_API bool CUTE_CALL cf_a_star(const cf_a_star_grid_t* grid, const cf_a_star_input_t* input, cf_a_star_output_t* output /* = NULL */);
 CUTE_API void CUTE_CALL cf_a_star_free_output(cf_a_star_output_t* output);
 
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

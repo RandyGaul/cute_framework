@@ -27,6 +27,10 @@
 #include "cute_error.h"
 #include "cute_color.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef struct cf_matrix_t cf_matrix_t;
 typedef struct cf_font_t cf_font_t;
 
@@ -57,6 +61,10 @@ typedef struct cf_font_vert_buffer_t cf_font_vert_buffer_t;
 CUTE_API cf_font_vert_buffer_t* CUTE_CALL cf_font_vert_buffer_make(const cf_font_t* font);
 CUTE_API cf_error_t CUTE_CALL cf_font_push_verts2(cf_font_vert_buffer_t* verts, const cf_font_t* font, const char* text, float x, float y, float wrap_w, const cf_aabb_t* clip_box /*= NULL*/);
 CUTE_API void CUTE_CALL cf_font_draw2(cf_font_vert_buffer_t* verts, cf_color_t color /*= cf_color_black()*/);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

@@ -24,6 +24,11 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+
 typedef struct cf_hashtable_slot_t
 {
 	uint64_t key_hash;
@@ -60,6 +65,10 @@ CUTE_API int CUTE_CALL cf_hashtable_count(const cf_hashtable_t* table);
 CUTE_API void* CUTE_CALL cf_hashtable_items(const cf_hashtable_t* table);
 CUTE_API void* CUTE_CALL cf_hashtable_keys(const cf_hashtable_t* table);
 CUTE_API void CUTE_CALL cf_hashtable_swap(cf_hashtable_t* table, int index_a, int index_b);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

@@ -25,6 +25,10 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 // Info about base 64 encoding: https://tools.ietf.org/html/rfc4648
 
 #define CUTE_BASE64_ENCODED_SIZE(size) ((((size) + 2) / 3) * 4)
@@ -32,6 +36,10 @@
 
 CUTE_API cf_error_t CUTE_CALL cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size);
 CUTE_API cf_error_t CUTE_CALL cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

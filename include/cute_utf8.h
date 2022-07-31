@@ -24,6 +24,10 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 CUTE_API const char* CUTE_CALL cf_decode8(const char* text, int* cp);
 CUTE_API char* CUTE_CALL cf_encode8(char *text, int cp);
 CUTE_API int cf_codepoint8_size(int cp);
@@ -40,6 +44,10 @@ CUTE_API void CUTE_CALL cf_shorten(const wchar_t* in, char* out);
 CUTE_API void CUTE_CALL cf_shorten2(const wchar_t* in, int in_len, char* out);
 CUTE_API void CUTE_CALL cf_shorten3(const wchar_t* in, char* out, int out_len);
 CUTE_API void CUTE_CALL cf_shorten4(const wchar_t* in, int in_len, char* out, int out_len);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef  CUTE_CPP
 

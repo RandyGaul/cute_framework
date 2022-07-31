@@ -24,10 +24,18 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 CUTE_API const char* CUTE_CALL cf_file_system_get_backend_specific_error_message();
 CUTE_API const char* CUTE_CALL cf_file_system_get_user_directory(const char* org, const char* app);
 CUTE_API const char* CUTE_CALL cf_file_system_get_actual_path(const char* virtual_path);
 CUTE_API void CUTE_CALL cf_file_system_enable_symlinks();
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

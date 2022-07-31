@@ -27,6 +27,10 @@
 #include "cute_c_runtime.h"
 #include "cute_alloc.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 CUTE_INLINE void cf_array_ensure_capacity(void** items, int items_count, int *items_capacity, int items_element_size, int required_capacity, void* user_allocator_context)
 {
 	if (required_capacity > *items_capacity) {
@@ -45,6 +49,10 @@ CUTE_INLINE void cf_array_ensure_capacity(void** items, int items_count, int *it
 		*items_capacity = new_capacity;
 	}
 }
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

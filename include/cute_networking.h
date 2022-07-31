@@ -26,6 +26,10 @@
 
 #include <cute/cute_net.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef struct cn_client_t cf_client_t;
 typedef struct cn_server_t cf_server_t;
 typedef struct cn_crypto_key_t cf_crypto_key_t;
@@ -266,6 +270,10 @@ CUTE_API void CUTE_CALL cf_server_send_to_all_but_one_client(cf_server_t* server
 
 CUTE_API bool CUTE_CALL cf_server_is_client_connected(cf_server_t* server, int client_index);
 CUTE_API void CUTE_CALL cf_server_enable_network_simulator(cf_server_t* server, double latency, double jitter, double drop_chance, double duplicate_chance);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

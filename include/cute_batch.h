@@ -27,6 +27,10 @@
 #include "cute_error.h"
 #include "cute_gfx.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 // TODO - Customizeability of the shader.
 
 /**
@@ -157,6 +161,9 @@ typedef struct cf_temporary_image_t
 
 CUTE_API cf_temporary_image_t CUTE_CALL cf_batch_fetch(cf_batch_t* b, cf_batch_sprite_t sprite);
 
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

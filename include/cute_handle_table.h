@@ -24,6 +24,10 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef struct cf_handle_allocator_t cf_handle_allocator_t;
 
 typedef uint64_t cf_handle_t;
@@ -95,6 +99,10 @@ typedef struct cf_handle_table_t
 
 	cf_handle_allocator_t* m_alloc;
 } cf_handle_table_t;
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

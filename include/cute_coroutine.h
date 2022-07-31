@@ -25,6 +25,10 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef struct cf_coroutine_t cf_coroutine_t;
 typedef void (cf_coroutine_fn)(cf_coroutine_t* co);
 
@@ -51,6 +55,10 @@ CUTE_API size_t CUTE_CALL cf_coroutine_bytes_pushed(cf_coroutine_t* co);
 CUTE_API size_t CUTE_CALL cf_coroutine_space_remaining(cf_coroutine_t* co);
 
 CUTE_API cf_coroutine_t* CUTE_CALL cf_coroutine_currently_running();
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

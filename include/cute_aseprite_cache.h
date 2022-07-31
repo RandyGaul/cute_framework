@@ -28,6 +28,10 @@
 
 #include "cute/cute_aseprite.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 /**
  * The aseprite cache is used to load ase files from disk in order to make sprites.
  *
@@ -88,6 +92,10 @@ CUTE_API cf_get_pixels_fn* CUTE_CALL cf_aseprite_cache_get_pixels_fn(cf_aseprite
  * Only use this function if you know what you're doing.
  */
 CUTE_API cf_strpool_t* CUTE_CALL cf_aseprite_cache_get_strpool_ptr(cf_aseprite_cache_t* cache);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

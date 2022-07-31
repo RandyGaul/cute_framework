@@ -26,6 +26,10 @@
 #include "cute_error.h"
 #include "cute_gfx.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef struct cf_image_t
 {
 	int w;
@@ -60,6 +64,10 @@ CUTE_API void CUTE_CALL cf_image_free_indexed(cf_image_indexed_t* img);
 CUTE_API cf_image_t CUTE_CALL cf_image_depallete(cf_image_indexed_t* img);
 CUTE_API void CUTE_CALL cf_image_premultiply(cf_image_t* img);
 CUTE_API void CUTE_CALL cf_image_flip_horizontal(cf_image_t* img);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

@@ -21,6 +21,10 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef void cf_shared_library_t;
 
 /**
@@ -41,6 +45,10 @@ CUTE_API void cf_unload_shared_library(cf_shared_library_t* library);
  * Returns `NULL` in the case of errors.
  */
 CUTE_API void* cf_load_function(cf_shared_library_t* library, const char* function_name);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef  CUTE_CPP
 

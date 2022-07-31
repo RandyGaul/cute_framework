@@ -25,6 +25,10 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef struct ImGuiContext ImGuiContext;
 typedef struct sg_imgui_t sg_imgui_t;
 typedef struct cf_strpool_t cf_strpool_t;
@@ -81,6 +85,10 @@ CUTE_API cf_power_info_t CUTE_CALL cf_app_power_info();
 
 // TODO - Where to put this?
 CUTE_API void CUTE_CALL cf_sleep(int milliseconds);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

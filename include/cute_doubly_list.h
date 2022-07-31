@@ -24,6 +24,10 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef struct cf_list_node_t
 {
 	cf_list_node_t* next = this;
@@ -110,6 +114,10 @@ CUTE_INLINE cf_list_node_t* cf_list_back(cf_list_t* list)
 {
 	return list->nodes.prev;
 }
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

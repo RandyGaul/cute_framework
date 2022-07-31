@@ -25,8 +25,16 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 CUTE_API char* CUTE_CALL cf_clipboard_get();
 CUTE_API cf_error_t CUTE_CALL cf_clipboard_set(const char* string);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

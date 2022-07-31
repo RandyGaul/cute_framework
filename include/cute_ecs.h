@@ -28,6 +28,10 @@
 #include "cute_typeless_array.h"
 #include "cute_dictionary.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef struct cf_kv_t cf_kv_t;
 
 //--------------------------------------------------------------------------------------------------
@@ -112,6 +116,9 @@ CUTE_API const char** CUTE_CALL cf_ecs_get_system_list(int* systems_count_out /*
 CUTE_API const char** CUTE_CALL cf_ecs_get_component_list_for_entity_type(const char* entity_type, int* components_count_out /*optional*/);
 CUTE_API void CUTE_CALL cf_ecs_free_list(const char** list);
 
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

@@ -26,7 +26,15 @@
 
 #define CUTE_VERSION_STRING_COMPILED "Cute Framework Version 0.0"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 CUTE_API const char* CUTE_CALL cf_version_string_linked();
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef  CUTE_CPP
 

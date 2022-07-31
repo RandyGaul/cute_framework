@@ -27,6 +27,10 @@
 #include "cute_c_runtime.h"
 #include "cute_array.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 /**
  * Represents a single HTTPS request for clients to talk with web servers. POST and GET requests are
  * supported for when you just need a basic way to communicate over HTTPS. Insecure HTTP is not supported,
@@ -199,9 +203,11 @@ CUTE_INLINE bool cf_https_response_find_header(const cf_https_response_t* respon
 	return false;
 }
 
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
 #ifdef CUTE_CPP
-
-
 
 namespace cute
 {

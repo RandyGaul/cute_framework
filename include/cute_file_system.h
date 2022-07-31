@@ -25,6 +25,10 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef struct cf_file_t cf_file_t;
 
 typedef enum cf_file_type_t //: int
@@ -70,6 +74,10 @@ CUTE_API cf_error_t CUTE_CALL cf_file_system_flush(cf_file_t* file);
 CUTE_API cf_error_t CUTE_CALL cf_file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size /*= NULL*/, void* user_allocator_context /*= NULL*/);
 CUTE_API cf_error_t CUTE_CALL cf_file_system_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size /*= NULL*/, void* user_allocator_context /*= NULL*/);
 CUTE_API cf_error_t CUTE_CALL cf_file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

@@ -24,6 +24,10 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 /**
  * Haptics is for rumbling or vibrating devices or controllers.
  *
@@ -241,6 +245,9 @@ CUTE_API void CUTE_CALL cf_haptic_rumble_play(cf_haptic_t* haptic, float strengt
  */
 CUTE_API void CUTE_CALL cf_haptic_rumble_stop(cf_haptic_t* haptic);
 
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

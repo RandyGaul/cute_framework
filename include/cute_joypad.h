@@ -25,6 +25,10 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef struct cf_app_t cf_app_t;
 typedef struct cf_joypad_t cf_joypad_t;
 typedef enum cf_joypad_power_level_t cf_joypad_power_level_t; //: int;
@@ -130,6 +134,10 @@ typedef enum cf_joypad_axis_t //: int
 
 	CF_JOYPAD_AXIS_COUNT,
 } cf_joypad_axis_t;
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

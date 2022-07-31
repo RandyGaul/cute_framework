@@ -24,6 +24,9 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 #define CUTE_ERROR_SUCCESS (0)
 #define CUTE_ERROR_FAILURE (-1)
@@ -46,6 +49,10 @@ CUTE_INLINE cf_error_t cf_error_failure(const char* details) { cf_error_t error;
 CUTE_INLINE cf_error_t cf_error_success() { cf_error_t error; error.code = CUTE_ERROR_SUCCESS; error.details = NULL; return error; }
 
 #define CUTE_RETURN_IF_ERROR(x) do { cf_error_t err = (x); if (cf_is_error(&err)) return err; } while (0)
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

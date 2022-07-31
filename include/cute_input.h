@@ -25,6 +25,10 @@
 #include "cute_defines.h"
 #include "cute_array.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef enum cf_key_button_t cf_key_button_t; //: int;
 typedef enum cf_mouse_button_t cf_mouse_button_t; //: int;
 typedef enum cf_mouse_click_t cf_mouse_click_t; //: int;
@@ -357,6 +361,10 @@ typedef enum cf_key_button_t //: int
 #define CUTE_KEY_MOD_SHIFT (CUTE_KEY_MOD_LSHIFT | CUTE_KEY_MOD_RSHIFT)
 #define CUTE_KEY_MOD_ALT   (CUTE_KEY_MOD_LALT | CUTE_KEY_MOD_RALT)
 #define CUTE_KEY_MOD_GUI   (CUTE_KEY_MOD_LGUI | CUTE_KEY_MOD_RGUI)
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 

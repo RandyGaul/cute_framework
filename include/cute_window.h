@@ -24,6 +24,10 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 CUTE_API void CUTE_CALL cf_window_size(int* w, int* h);
 CUTE_API void CUTE_CALL cf_window_position(int* x, int* y);
 
@@ -52,6 +56,10 @@ typedef enum cf_window_message_box_type_t
 } cf_window_message_box_type_t;
 
 CUTE_API void CUTE_CALL cf_window_message_box(cf_window_message_box_type_t type, const char* title, const char* text);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef  CUTE_CPP
 

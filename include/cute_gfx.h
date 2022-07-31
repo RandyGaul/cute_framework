@@ -29,6 +29,10 @@
 
 #include "sokol/sokol_gfx.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 typedef uint64_t cf_texture_t;
 
 CUTE_API cf_texture_t CUTE_CALL cf_texture_make(cf_pixel_t* pixels, int w, int h);
@@ -82,6 +86,10 @@ CUTE_API CUTE_INLINE sg_bindings CUTE_CALL cf_triple_buffer_bind(cf_triple_buffe
 
 CUTE_API cf_triple_buffer_t CUTE_CALL cf_triple_buffer_make(int vertex_data_size, int vertex_stride, int index_count /* = 0 */, int index_stride /* = 0 */);
 CUTE_API cf_error_t CUTE_CALL cf_triple_buffer_append(cf_triple_buffer_t* buffer, int vertex_count, const void* vertices, int index_count /* = 0 */, const void* indices /* = NULL */);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 
