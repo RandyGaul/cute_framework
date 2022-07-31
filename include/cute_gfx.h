@@ -48,14 +48,14 @@ typedef struct cf_matrix_t
 CUTE_API cf_matrix_t CUTE_CALL cf_matrix_identity();
 CUTE_API cf_matrix_t CUTE_CALL cf_matrix_ortho_2d(float w, float h, float x, float y);
 
-struct cf_buf_inner_t
+typedef struct cf_buf_inner_t
 {
-	int stride = 0;
-	int offset = 0;
+	int stride; /*= 0;*/
+	int offset; /*= 0;*/
 	sg_buffer buffer;
-};
+} cf_buf_inner_t;
 
-struct cf_buffer_t
+typedef struct cf_buffer_t
 {
 	cf_buf_inner_t vbuf;
 	cf_buf_inner_t ibuf;
@@ -66,7 +66,7 @@ struct cf_buffer_t
 	CUTE_INLINE void release();
 	CUTE_INLINE cf_error_t append(int vertex_count, const void* vertices, int index_count = 0, const void* indices = NULL);
 	#endif //  CUTE_CPP
-};
+} cf_buffer_t;
 
 CUTE_INLINE sg_bindings cf_buffer_bind(cf_buffer_t* b)
 {
@@ -83,6 +83,9 @@ CUTE_INLINE cf_error_t cf_buffer_init(cf_buffer_t* b, size_t vertex_data_size, s
 	b->vbuf.stride = (int)vertex_stride;
 	b->ibuf.stride = (int)index_stride;
 
+	b->vbuf.offset = 0;
+	b->ibuf.offset = 0;
+
 	sg_buffer_desc vparams = { 0 };
 	vparams.type = SG_BUFFERTYPE_VERTEXBUFFER;
 	vparams.usage = SG_USAGE_STREAM;
@@ -94,8 +97,8 @@ CUTE_INLINE cf_error_t cf_buffer_init(cf_buffer_t* b, size_t vertex_data_size, s
 	iparams.size = index_count * b->ibuf.stride;
 
 	sg_buffer invalid = { SG_INVALID_ID };
-	b->vbuf.buffer = sg_make_buffer(vparams);
-	b->ibuf.buffer = index_count ? sg_make_buffer(iparams) : invalid;
+	b->vbuf.buffer = sg_make_buffer(&vparams);
+	b->ibuf.buffer = index_count ? sg_make_buffer(&iparams) : invalid;
 	if (b->vbuf.buffer.id == SG_INVALID_ID) {
 		return cf_error_failure("Failed to create buffer.");
 	}
@@ -115,6 +118,9 @@ CUTE_INLINE void cf_buffer_release(cf_buffer_t *b)
 	}
 }
 
+// forward declare for C api
+bool sg_query_will_buffer_overflow(sg_buffer buf_id, size_t size);
+
 CUTE_INLINE cf_error_t cf_buffer_append(cf_buffer_t* b, int vertex_count, const void* vertices, int index_count /*= 0*/, const void* indices /*= NULL*/)
 {
 	CUTE_ASSERT(vertex_count);
@@ -126,10 +132,10 @@ CUTE_INLINE cf_error_t cf_buffer_append(cf_buffer_t* b, int vertex_count, const 
 	} else if (sg_query_will_buffer_overflow(b->ibuf.buffer, index_range.size)) {
 		return cf_error_failure("Overflowed index buffer.");
 	} else {
-		int voffset = sg_append_buffer(b->vbuf.buffer, vertex_range);
+		int voffset = sg_append_buffer(b->vbuf.buffer, &vertex_range);
 		b->vbuf.offset = voffset;
 		if (index_count) {
-			int ioffset = sg_append_buffer(b->ibuf.buffer, index_range);
+			int ioffset = sg_append_buffer(b->ibuf.buffer, &index_range);
 			b->ibuf.offset = ioffset;
 		}
 		return cf_error_success();
@@ -164,9 +170,9 @@ CUTE_INLINE matrix_t  matrix_ortho_2d(float w, float h, float x, float y) { retu
 using buffer_t = cf_buffer_t;
 
 CUTE_INLINE sg_bindings buffer_bind(buffer_t* buffer) { return cf_buffer_bind(buffer); }
-CUTE_INLINE cf_error_t buffer_init(buffer_t* buffer, size_t vertex_data_size, size_t vertex_stride, int index_count = 0, int index_stride = 0) { return cf_buffer_init(buffer, vertex_data_size, vertex_stride, index_count, index_stride); }
+CUTE_INLINE error_t buffer_init(buffer_t* buffer, size_t vertex_data_size, size_t vertex_stride, int index_count = 0, int index_stride = 0) { return cf_buffer_init(buffer, vertex_data_size, vertex_stride, index_count, index_stride); }
 CUTE_INLINE void buffer_release(buffer_t* buffer) { cf_buffer_release(buffer); }
-CUTE_INLINE cf_error_t buffer_append(buffer_t* buffer, int vertex_count, const void* vertices, int index_count = 0, const void* indices = NULL) { return cf_buffer_append(buffer, vertex_count, vertices, index_count, indices); }
+CUTE_INLINE error_t buffer_append(buffer_t* buffer, int vertex_count, const void* vertices, int index_count = 0, const void* indices = NULL) { return cf_buffer_append(buffer, vertex_count, vertices, index_count, indices); }
 
 }
 
