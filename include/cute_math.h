@@ -26,16 +26,13 @@
 
 #include <math.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 // 2d vector
 typedef struct cf_v2
 {
-	#ifdef CUTE_CPP
-	cf_v2() {}
-	cf_v2(float x, float y) : x(x), y(y) {}
-	cf_v2(cf_initializer_list<float> list) : x(list.begin()[0]), y(list.begin()[1]) {};
-	#endif // CUTE_CPP
-
 	float x;
 	float y;
 } cf_v2;
@@ -299,7 +296,7 @@ CUTE_INLINE int cf_overlaps(cf_aabb_t a, cf_aabb_t b)
 	int d3 = a.max.y < b.min.y;
 	return !(d0 | d1 | d2 | d3);
 }
-CUTE_INLINE int cf_collide(cf_aabb_t a, cf_aabb_t b) { return cf_overlaps(a, b); }
+CUTE_INLINE int cf_collide_aabb(cf_aabb_t a, cf_aabb_t b) { return cf_overlaps(a, b); }
 
 CUTE_INLINE cf_aabb_t cf_make_aabb_verts(cf_v2* verts, int count)
 {
@@ -537,21 +534,31 @@ CUTE_API int CUTE_CALL cf_collided(const void* A, const cf_transform_t* ax, cf_s
 CUTE_API void CUTE_CALL cf_collide(const void* A, const cf_transform_t* ax, cf_shape_type_t typeA, const void* B, const cf_transform_t* bx, cf_shape_type_t typeB, cf_manifold_t* m);
 CUTE_API bool CUTE_CALL cf_cast_ray(cf_ray_t A, const void* B, const cf_transform_t* bx, cf_shape_type_t typeB, cf_raycast_t* out);
 
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
 #ifdef  CUTE_CPP
 
-CUTE_INLINE cf_v2 operator+(cf_v2 a, cf_v2 b) { return cf_v2(a.x + b.x, a.y + b.y); }
-CUTE_INLINE cf_v2 operator-(cf_v2 a, cf_v2 b) { return cf_v2(a.x - b.x, a.y - b.y); }
+CUTE_INLINE cf_v2 cf_V2(cf_initializer_list<float> list) 
+{
+	cf_v2 result = { list.begin()[0], list.begin()[1] };
+	return result;
+}
+
+CUTE_INLINE cf_v2 operator+(cf_v2 a, cf_v2 b) { return cf_V2(a.x + b.x, a.y + b.y); }
+CUTE_INLINE cf_v2 operator-(cf_v2 a, cf_v2 b) { return cf_V2(a.x - b.x, a.y - b.y); }
 CUTE_INLINE cf_v2& operator+=(cf_v2& a, cf_v2 b) { return a = a + b; }
 CUTE_INLINE cf_v2& operator-=(cf_v2& a, cf_v2 b) { return a = a - b; }
 
-CUTE_INLINE cf_v2 operator*(cf_v2 a, float b) { return cf_v2(a.x * b, a.y * b); }
-CUTE_INLINE cf_v2 operator*(cf_v2 a, cf_v2 b) { return cf_v2(a.x * b.x, a.y * b.y); }
+CUTE_INLINE cf_v2 operator*(cf_v2 a, float b) { return cf_V2(a.x * b, a.y * b); }
+CUTE_INLINE cf_v2 operator*(cf_v2 a, cf_v2 b) { return cf_V2(a.x * b.x, a.y * b.y); }
 CUTE_INLINE cf_v2& operator*=(cf_v2& a, float b) { return a = a * b; }
 CUTE_INLINE cf_v2& operator*=(cf_v2& a, cf_v2 b) { return a = a * b; }
-CUTE_INLINE cf_v2 operator/(cf_v2 a, float b) { return cf_v2(a.x / b, a.y / b); }
+CUTE_INLINE cf_v2 operator/(cf_v2 a, float b) { return cf_V2(a.x / b, a.y / b); }
 CUTE_INLINE cf_v2& operator/=(cf_v2& a, float b) { return a = a / b; }
 
-CUTE_INLINE cf_v2 operator-(cf_v2 a) { return cf_v2(-a.x, -a.y); }
+CUTE_INLINE cf_v2 operator-(cf_v2 a) { return cf_V2(-a.x, -a.y); }
 
 CUTE_INLINE int operator<(cf_v2 a, cf_v2 b) { return a.x < b.x&& a.y < b.y; }
 CUTE_INLINE int operator>(cf_v2 a, cf_v2 b) { return a.x > b.x && a.y > b.y; }
@@ -720,7 +727,7 @@ CUTE_INLINE aabb_t clamp(aabb_t a, aabb_t b) { return cf_clamp_aabb(a, b); }
 CUTE_INLINE aabb_t combine(aabb_t a, aabb_t b) { return cf_combine(a, b); }
 
 CUTE_INLINE int overlaps(aabb_t a, aabb_t b) { return cf_overlaps(a, b); }
-CUTE_INLINE int collide(aabb_t a, aabb_t b) { return cf_collide(a, b); }
+CUTE_INLINE int collide(aabb_t a, aabb_t b) { return cf_collide_aabb(a, b); }
 
 CUTE_INLINE aabb_t make_aabb(v2* verts, int count) { return cf_make_aabb_verts(verts, count); }
 CUTE_INLINE void aabb_verts(v2* out, aabb_t bb) { return cf_aabb_verts(out, bb); }

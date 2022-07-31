@@ -26,7 +26,7 @@
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_app_internal.h>
 
-#define INJECT(s) cf_strpool_inject(cache->strpool, s, (int)CUTE_STRLEN(s))
+#define INJECT(s) cf_strpool_inject_len(cache->strpool, s, (int)CUTE_STRLEN(s))
 
 static void cf_s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata)
 {

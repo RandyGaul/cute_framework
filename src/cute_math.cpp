@@ -195,10 +195,10 @@ void cf_make_poly(cf_poly_t* p)
 
 cf_v2 cf_centroid(const cf_v2* verts, int count)
 {
-	if (count == 0) return cf_v2(0, 0);
+	if (count == 0) return cf_V2(0, 0);
 	else if (count == 1) return verts[0];
 	else if (count == 2) return (verts[0] + verts[1]) * 0.5f;
-	cf_v2 c = cf_v2(0, 0);
+	cf_v2 c = cf_V2(0, 0);
 	float area_sum = 0;
 	cf_v2 p0 = verts[0];
 	for (int i = 0; i < count; ++i) {

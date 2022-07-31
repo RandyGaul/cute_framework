@@ -212,7 +212,7 @@ static void cf_s_batch_report(spritebatch_sprite_t* sprites, int count, int text
 			y += s->y;
 
 			// Apply final batch transformation.
-			cf_v2 p = cf_v2(x, y);
+			cf_v2 p = cf_V2(x, y);
 			p = cf_mul_m32_v2(m, p);
 
 			quad[j].x = p.x;
@@ -277,7 +277,7 @@ static void cf_s_batch_report(spritebatch_sprite_t* sprites, int count, int text
 		sprite_default_vs_params_t vs_params;
 		vs_params.u_mvp = b->projection;
 		sprite_default_fs_params_t fs_params;
-		fs_params.u_texture_size = cf_v2(b->atlas_width, b->atlas_height);
+		fs_params.u_texture_size = cf_V2(b->atlas_width, b->atlas_height);
 		fs_params.u_tint = b->tints.last();
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
 		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE(fs_params));
@@ -288,10 +288,10 @@ static void cf_s_batch_report(spritebatch_sprite_t* sprites, int count, int text
 		sprite_outline_vs_params_t vs_params;
 		vs_params.u_mvp = b->projection;
 		sprite_outline_fs_params_t fs_params;
-		fs_params.u_texture_size = cf_v2(b->atlas_width, b->atlas_height);
+		fs_params.u_texture_size = cf_V2(b->atlas_width, b->atlas_height);
 		fs_params.u_tint = b->tints.last();
 		fs_params.u_border_color = b->outline_color;
-		fs_params.u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
+		fs_params.u_texel_size = cf_V2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
 		fs_params.u_use_border = b->outline_use_border;
 		fs_params.u_use_corners = b->outline_use_corners;
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
@@ -672,11 +672,11 @@ void cf_internal_batch_quad_line(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf
 		cf_batch_polyline(b, verts, 4, thickness, c0, true, true, 0);
 	} else {
 		float sqrt_2 = 1.41421356237f;
-		cf_v2 n = cf_v2(sqrt_2, sqrt_2) * thickness;
-		cf_v2 q0 = p0 + cf_v2(-n.x, -n.y);
-		cf_v2 q1 = p1 + cf_v2( n.x, -n.y);
-		cf_v2 q2 = p2 + cf_v2( n.x,  n.y);
-		cf_v2 q3 = p3 + cf_v2(-n.x,  n.y);
+		cf_v2 n = cf_V2(sqrt_2, sqrt_2) * thickness;
+		cf_v2 q0 = p0 + cf_V2(-n.x, -n.y);
+		cf_v2 q1 = p1 + cf_V2( n.x, -n.y);
+		cf_v2 q2 = p2 + cf_V2( n.x,  n.y);
+		cf_v2 q3 = p3 + cf_V2(-n.x,  n.y);
 		cf_batch_quad_verts2(b, p0, p1, q1, q0, c0, c1, c2, c3);
 		cf_batch_quad_verts2(b, p1, p2, q2, q1, c0, c1, c2, c3);
 		cf_batch_quad_verts2(b, p2, p3, q3, q2, c0, c1, c2, c3);
@@ -696,7 +696,7 @@ void cf_batch_quad_line2(cf_batch_t* b, cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, 
 
 void cf_batch_circle(cf_batch_t* b, cf_v2 p, float r, int iters, cf_color_t c)
 {
-	cf_v2 prev = cf_v2(r, 0);
+	cf_v2 prev = cf_V2(r, 0);
 
 	for (int i = 1; i <= iters; ++i) {
 		float a = (i / (float)iters) * (2.0f * CUTE_PI);
@@ -710,7 +710,7 @@ void cf_batch_circle_line(cf_batch_t* batch, cf_v2 p, float r, int iters, float 
 {
 	if (antialias) {
 		cf_array<cf_v2> verts(iters, NULL);
-		cf_v2 p0 = cf_v2(p.x + r, p.y);
+		cf_v2 p0 = cf_V2(p.x + r, p.y);
 		verts.add(p0);
 
 		for (int i = 1; i <= iters; i++) {
@@ -724,8 +724,8 @@ void cf_batch_circle_line(cf_batch_t* batch, cf_v2 p, float r, int iters, float 
 		cf_batch_polyline(batch, verts.data(), verts.size(), thickness, color, true, true, 3);
 	} else {
 		float half_thickness = thickness * 0.5f;
-		cf_v2 p0 = cf_v2(p.x + r - half_thickness, p.y);
-		cf_v2 p1 = cf_v2(p.x + r + half_thickness, p.y);
+		cf_v2 p0 = cf_V2(p.x + r - half_thickness, p.y);
+		cf_v2 p1 = cf_V2(p.x + r + half_thickness, p.y);
 
 		for (int i = 1; i <= iters; i++) {
 			float a = (i / (float)iters) * (2.0f * CUTE_PI);
@@ -1200,7 +1200,7 @@ cf_temporary_image_t cf_batch_fetch(cf_batch_t* b, cf_batch_sprite_t sprite)
 	image.texture_id = s.texture_id;
 	image.w = s.w;
 	image.h = s.h;
-	image.u = cf_v2(s.minx, s.miny);
-	image.v = cf_v2(s.maxx, s.maxy);
+	image.u = cf_V2(s.minx, s.miny);
+	image.v = cf_V2(s.maxx, s.maxy);
 	return image;
 }

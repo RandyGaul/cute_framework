@@ -296,7 +296,7 @@ void cf_app_present()
 		sg_apply_bindings(bind);
 		upscale_vs_params_t vs_params = { cf_app->upscale };
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
-		upscale_fs_params_t fs_params = { cf_v2((float)cf_app->offscreen_w, (float)cf_app->offscreen_h) };
+		upscale_fs_params_t fs_params = { cf_V2((float)cf_app->offscreen_w, (float)cf_app->offscreen_h) };
 		sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE(fs_params));
 		sg_draw(0, 6, 1);
 		if (cf_app->using_imgui) {

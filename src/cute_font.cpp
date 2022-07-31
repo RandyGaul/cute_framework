@@ -245,7 +245,7 @@ void cf_font_init()
 
 	cf_app->font_fs_uniforms.u_border_color = cf_color_white();
 	cf_app->font_fs_uniforms.u_use_border = false;
-	cf_app->font_fs_uniforms.u_texel_size = cf_v2(1.0f / (float)cf_app->courier_new->atlas_w, 1.0f / (float)cf_app->courier_new->atlas_h);
+	cf_app->font_fs_uniforms.u_texel_size = cf_V2(1.0f / (float)cf_app->courier_new->atlas_w, 1.0f / (float)cf_app->courier_new->atlas_h);
 	cf_app->font_fs_uniforms.u_use_corners = false;
 }
 

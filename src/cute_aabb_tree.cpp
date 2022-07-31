@@ -787,7 +787,7 @@ void cf_aabb_tree_query_aabb(const cf_aabb_tree_t* tree, cf_aabb_tree_query_fn* 
 		int index = index_stack[--sp];
 		cf_aabb_t search_aabb = aabbs[index];
 
-		if (cf_collide(aabb, search_aabb)) {
+		if (cf_collide_aabb(aabb, search_aabb)) {
 			const cf_aabb_tree_node_t* node = nodes + index;
 
 			if (node->index_a == AABB_TREE_NULL_NODE_INDEX) {
@@ -825,7 +825,7 @@ void cf_aabb_tree_query_ray(const cf_aabb_tree_t* tree, cf_aabb_tree_query_fn* f
 		int index = index_stack[--sp];
 		cf_aabb_t search_aabb = aabbs[index];
 
-		if (!cf_collide(ray_aabb, search_aabb)) {
+		if (!cf_collide_aabb(ray_aabb, search_aabb)) {
 			continue;
 		}
 
