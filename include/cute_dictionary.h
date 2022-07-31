@@ -24,6 +24,10 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 #define DICTIONARY_STRING_BLOCK_MAX 128
 
 struct cf_dictionary_string_block_t
@@ -41,7 +45,7 @@ CUTE_INLINE cf_dictionary_string_block_t cf_s_dictionary_make_block(const char* 
 	return block;
 }
 
-CUTE_INLINE cf_dictionary_string_block_t cf_s_dictionary_make_block(const char* key, size_t key_len)
+CUTE_INLINE cf_dictionary_string_block_t cf_s_dictionary_make_block_len(const char* key, size_t key_len)
 {
 	cf_dictionary_string_block_t block;
 	block.len = key_len;
@@ -49,6 +53,10 @@ CUTE_INLINE cf_dictionary_string_block_t cf_s_dictionary_make_block(const char* 
 	CUTE_STRNCPY((char*)block.data, key, key_len);
 	return block;
 }
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 #ifdef CUTE_CPP
 
