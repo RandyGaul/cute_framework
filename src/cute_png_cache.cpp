@@ -32,7 +32,7 @@ static void cf_s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, 
 {
 	cf_png_cache_t* cache = (cf_png_cache_t*)udata;
 	void* pixels = NULL;
-	if (cache->id_to_pixels.find(image_id, &pixels).is_error()) {
+	if (cf_is_error(&cache->id_to_pixels.find(image_id, &pixels))) {
 		CUTE_DEBUG_PRINTF("png cache -- unable to find id %lld.", (long long int)image_id);
 		CUTE_MEMSET(buffer, 0, bytes_to_fill);
 	} else {
@@ -79,7 +79,7 @@ cf_error_t cf_png_cache_load(cf_png_cache_t* cache, const char* png_path, cf_png
 {
 	cf_image_t img;
 	cf_error_t err = cf_image_load_png(png_path, &img, cache->mem_ctx);
-	if (err.is_error()) return err;
+	if (cf_is_error(&err)) return err;
 	cf_png_t entry;
 	entry.path = cf_strpool_cstr(cache->strpool, INJECT(png_path));
 	entry.id = cache->id_gen++;
@@ -96,7 +96,7 @@ cf_error_t cf_png_cache_load_mem(cf_png_cache_t* cache, const char* png_path, co
 {
 	cf_image_t img;
 	cf_error_t err = cf_image_load_png_mem(memory, (int)size, &img, cache->mem_ctx);
-	if (err.is_error()) return err;
+	if (cf_is_error(&err)) return err;
 	cf_png_t entry;
 	entry.path = cf_strpool_cstr(cache->strpool, INJECT(png_path));
 	entry.id = cache->id_gen++;
@@ -138,7 +138,7 @@ const cf_animation_t* cf_png_cache_make_animation(cf_png_cache_t* cache, const c
 
 	// If already made, just return the old animation.
 	cf_animation_t* animation;
-	if (!cache->animations.find(name_id, &animation).is_error()) {
+	if (!cf_is_error(&cache->animations.find(name_id, &animation))) {
 		return animation;
 	}
 
@@ -164,7 +164,7 @@ const cf_animation_t* cf_png_cache_make_animation(cf_png_cache_t* cache, const c
 const cf_animation_t* cf_png_cache_get_animation(cf_png_cache_t* cache, const char* name)
 {
 	cf_animation_t* animation;
-	if (!cache->animations.find(INJECT(name), &animation).is_error()) {
+	if (!cf_is_error(&cache->animations.find(INJECT(name), &animation))) {
 		return animation;
 	} else {
 		return NULL;
@@ -178,7 +178,7 @@ const cf_animation_table_t* cf_png_cache_make_animation_table(cf_png_cache_t* ca
 
 	// If already made, just return the old table.
 	cf_animation_table_t* table;
-	if (!cache->animation_tables.find(name_id, &table).is_error()) {
+	if (!cf_is_error(&cache->animation_tables.find(name_id, &table))) {
 		return table;
 	}
 
@@ -199,7 +199,7 @@ const cf_animation_table_t* cf_png_cache_make_animation_table(cf_png_cache_t* ca
 const cf_animation_table_t* cf_png_cache_get_animation_table(cf_png_cache_t* cache, const char* sprite_name)
 {
 	cf_animation_table_t* table;
-	if (!cache->animation_tables.find(INJECT(sprite_name), &table).is_error()) {
+	if (!cf_is_error(&cache->animation_tables.find(INJECT(sprite_name), &table))) {
 		return table;
 	} else {
 		return NULL;
@@ -211,13 +211,13 @@ cf_sprite_t cf_png_cache_make_sprite(cf_png_cache_t* cache, const char* sprite_n
 	cf_strpool_id name_id = INJECT(sprite_name);
 	if (!table) {
 		cf_error_t err = cache->animation_tables.find(name_id, (cf_animation_table_t**)&table);
-		CUTE_ASSERT(!err.is_error());
+		CUTE_ASSERT(!cf_is_error(&err));
 	}
 
 	cf_png_t png;	
 	cf_error_t err = cache->pngs.find(cf_animation_table_items(table)[0]->frames[0].id, &png);
 
-	CUTE_ASSERT(!err.is_error());
+	CUTE_ASSERT(!cf_is_error(&err));
 
 	cf_sprite_t sprite = cf_sprite_defaults();
 	sprite.name = cf_strpool_cstr(cache->strpool, name_id);

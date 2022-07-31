@@ -66,7 +66,7 @@ cf_sprite_t cf_easy_sprite_make(const char* png_path)
 		cf_png_t png;
 		char buf[1024];
 		cf_error_t err = cf_png_cache_load(cache, png_path, &png);
-		if (err.is_error()) {
+		if (cf_is_error(&err)) {
 			sprintf(buf, "Unable to load sprite at path \"%s\".\n", png_path);
 			cf_window_message_box(CF_WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
 			return cf_sprite_defaults();
@@ -104,7 +104,7 @@ cf_sprite_t cf_sprite_make(const char* aseprite_path)
 	cf_sprite_t s;
 	cf_error_t err = cf_aseprite_cache_load(cache, aseprite_path, &s);
 	char buf[1024];
-	if (err.is_error()) {
+	if (cf_is_error(&err)) {
 		sprintf(buf, "Unable to load sprite at path \"%s\".\n", aseprite_path);
 		cf_window_message_box(CF_WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
 	}

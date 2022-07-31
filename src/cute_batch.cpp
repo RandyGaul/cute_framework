@@ -259,7 +259,7 @@ static void cf_s_batch_report(spritebatch_sprite_t* sprites, int count, int text
 
 	// Map the vertex buffer with sprite vertex data.
 	cf_error_t err = cf_triple_buffer_append(&b->sprite_buffer, vert_count, verts, 0, nullptr);
-	CUTE_ASSERT(!err.is_error());
+	CUTE_ASSERT(!cf_is_error(&err));
 
 	// Setup resource bindings.
 	sg_bindings bind = b->sprite_buffer.bind();
@@ -458,7 +458,7 @@ cf_error_t cf_batch_flush(cf_batch_t* b)
 		params.u_mvp = b->projection;
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(params));
 		cf_error_t err = cf_triple_buffer_append(&b->geom_buffer, b->geom_verts.count(), b->geom_verts.data(), 0, nullptr);
-		CUTE_ASSERT(!err.is_error());
+		CUTE_ASSERT(!cf_is_error(&err));
 		sg_apply_bindings(b->geom_buffer.bind());
 		sg_draw(0, b->geom_verts.count(), 1);
 		b->geom_verts.clear();

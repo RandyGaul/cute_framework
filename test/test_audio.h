@@ -33,11 +33,11 @@ int test_audio_load_synchronous()
 
 	cf_audio_t* audio = cf_audio_load_ogg("test_data/3-6-19-blue-suit-jam.ogg");
 	CUTE_TEST_CHECK_POINTER(audio);
-	CUTE_TEST_ASSERT(!cf_audio_destroy(audio).is_error());
+	CUTE_TEST_ASSERT(!cf_is_error(&cf_audio_destroy(audio)));
 
 	audio = cf_audio_load_wav("test_data/jump.wav");
 	CUTE_TEST_CHECK_POINTER(audio);
-	CUTE_TEST_ASSERT(!cf_audio_destroy(audio).is_error());
+	CUTE_TEST_ASSERT(!cf_is_error(&cf_audio_destroy(audio)));
 
 	cf_file_system_destroy();
 
@@ -57,7 +57,7 @@ static void cf_s_audio_promise(cf_error_t status, void* param, void* udata)
 CUTE_TEST_CASE(test_audio_load_asynchronous, "Load and free wav/ogg files asynchronously.");
 int test_audio_load_asynchronous()
 {
-	CUTE_TEST_ASSERT(!cf_app_make("audio test", 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN, NULL, NULL).is_error());
+	CUTE_TEST_ASSERT(!cf_is_error(&cf_app_make("audio test", 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN, NULL, NULL)));
 
 	cf_promise_t promise;
 	promise.callback = cf_s_audio_promise;
@@ -69,7 +69,7 @@ int test_audio_load_asynchronous()
 	while (!cf_atomic_ptr_get((void**)&s_audio))
 		;
 
-	CUTE_TEST_ASSERT(!cf_audio_destroy(s_audio).is_error());
+	CUTE_TEST_ASSERT(!cf_is_error(&cf_audio_destroy(s_audio)));
 
 	s_audio_error = cf_error_success();
 	s_audio = NULL;
@@ -78,7 +78,7 @@ int test_audio_load_asynchronous()
 	while (!cf_atomic_ptr_get((void**)&s_audio))
 		;
 
-	CUTE_TEST_ASSERT(!cf_audio_destroy(s_audio).is_error());
+	CUTE_TEST_ASSERT(!cf_is_error(&cf_audio_destroy(s_audio)));
 
 	cf_app_destroy();
 

@@ -97,7 +97,6 @@ namespace cute
 
 using power_info_t = cf_power_info_t;
 using power_state_t = cf_power_state_t;
-using error_t = cf_error_t;
 using strpool_t = cf_strpool_t;
 
 CUTE_INLINE error_t app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL) { return cf_app_make(window_title, x, y, w, h, options, argv0, user_allocator_context); }

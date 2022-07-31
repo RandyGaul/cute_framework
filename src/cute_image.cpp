@@ -37,7 +37,7 @@ cf_error_t cf_image_load_png(const char* path, cf_image_t* img, void* user_alloc
 	void* data;
 	size_t sz;
 	cf_error_t err = cf_file_system_read_entire_file_to_memory(path, &data, &sz, user_allocator_context);
-	if (err.is_error()) return err;
+	if (cf_is_error(&err)) return err;
 	err = cf_image_load_png_mem(data, (int)sz, img, user_allocator_context);
 	CUTE_FREE(data, user_allocator_context);
 	return err;
@@ -70,7 +70,7 @@ cf_error_t cf_image_load_png_indexed(const char* path, cf_image_indexed_t* img, 
 	void* data;
 	size_t sz;
 	cf_error_t err = cf_file_system_read_entire_file_to_memory(path, &data, &sz, user_allocator_context);
-	if (err.is_error()) return err;
+	if (cf_is_error(&err)) return err;
 	return cf_image_load_png_mem_indexed(data, (int)sz, img);
 }
 

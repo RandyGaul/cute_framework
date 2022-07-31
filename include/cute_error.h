@@ -35,11 +35,6 @@ typedef struct cf_error_t
 {
 	int code;
 	const char* details;
-
-	#ifdef CUTE_CPP
-	CUTE_INLINE bool is_error() const;
-	#endif // CUTE_CPP
-
 } cf_error_t;
 
 CUTE_INLINE bool cf_is_error(const cf_error_t* error) { return error->code == CUTE_ERROR_FAILURE; }
@@ -56,13 +51,12 @@ CUTE_INLINE cf_error_t cf_error_success() { cf_error_t error; error.code = CUTE_
 
 #ifdef CUTE_CPP
 
-CUTE_INLINE bool cf_error_t::is_error() const { return cf_is_error(this); }
 
 namespace cute
 {
 using error_t = cf_error_t;
 
-CUTE_INLINE bool is_error(const cf_error_t* error) { return  cf_is_error(error); }
+CUTE_INLINE bool is_error(const error_t* error) { return cf_is_error(error); }
 
 CUTE_INLINE error_t error_make(int code, const char* details) { return cf_error_make(code, details); }
 CUTE_INLINE error_t error_failure(const char* details) { return cf_error_failure(details); }

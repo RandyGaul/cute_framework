@@ -36,21 +36,21 @@ static cf_error_t cf_s_load_from_schema(cf_entity_type_t schema_type, cf_entity_
 	// If parent exists, load values from it first.
 	cf_entity_type_t inherits_from = CF_INVALID_ENTITY_TYPE;
 	cf_error_t err = cf_app->entity_schema_inheritence.find(schema_type, &inherits_from);
-	if (!err.is_error()) {
+	if (!cf_is_error(&err)) {
 		err = cf_s_load_from_schema(inherits_from, entity, config, component, udata);
-		if (err.is_error()) return err;
+		if (cf_is_error(&err)) return err;
 	}
 
 	cf_kv_t* schema = NULL;
 	err = cf_app->entity_parsed_schemas.find(schema_type, &schema);
-	if (err.is_error()) {
+	if (cf_is_error(&err)) {
 		err = cf_error_success();
 		if (config->serializer_fn) err = config->serializer_fn(schema, true, entity, component, udata);
 	} else {
 		err = cf_kv_object_begin(schema, config->name);
-		if (!err.is_error()) {
+		if (!cf_is_error(&err)) {
 			if (config->serializer_fn) err = config->serializer_fn(schema, true, entity, component, udata);
-			if (err.is_error()) return err;
+			if (cf_is_error(&err)) return err;
 			err = cf_kv_object_end(schema);
 		}
 	}
@@ -134,7 +134,7 @@ cf_entity_t cf_entity_make(const char* entity_type, cf_error_t* err_out)
 
 		void* component = collection->component_tables[i].add();
 		cf_error_t err = cf_s_load_from_schema(type, entity, config, component, config->serializer_udata);
-		if (err.is_error()) {
+		if (cf_is_error(&err)) {
 			// TODO - Unload the components that were added with `.add()` a couple lines above here.
 			return CF_INVALID_ENTITY;
 		}
@@ -406,7 +406,7 @@ void cf_ecs_component_set_optional_cleanup(cf_component_cleanup_fn* cleanup_fn, 
 static cf_strpool_id cf_s_kv_string(cf_kv_t* kv, const char* key)
 {
 	cf_error_t err = cf_kv_key(kv, key, NULL);
-	if (err.is_error()) {
+	if (cf_is_error(&err)) {
 		if (CUTE_STRCMP(key, "inherits_from")) {
 			CUTE_DEBUG_PRINTF("Unable to find the `%s` key.\n", key);
 		}
@@ -416,7 +416,7 @@ static cf_strpool_id cf_s_kv_string(cf_kv_t* kv, const char* key)
 	const char* string_raw;
 	size_t string_sz;
 	err = cf_kv_val_string(kv, &string_raw, &string_sz);
-	if (err.is_error()) {
+	if (cf_is_error(&err)) {
 		CUTE_DEBUG_PRINTF("`%s` key found, but is not a string.\n", key);
 		return { 0 };
 	}
@@ -432,7 +432,7 @@ static void cf_s_register_entity_type(const char* schema)
 	CUTE_DEFER(if (cleanup_kv) cf_kv_destroy(kv));
 
 	cf_error_t err = cf_kv_parse(kv, schema, CUTE_STRLEN(schema));
-	if (err.is_error()) {
+	if (cf_is_error(&err)) {
 		CUTE_DEBUG_PRINTF("Unable to parse the schema when registering entity type.");
 		return;
 	}
@@ -454,7 +454,7 @@ static void cf_s_register_entity_type(const char* schema)
 		const cf_component_config_t* config = component_configs + i;
 
 		err = cf_kv_key(kv, config->name, NULL);
-		if (!err.is_error()) {
+		if (!cf_is_error(&err)) {
 			component_type_tuple.add(INJECT(config->name));
 		}
 	}
@@ -573,7 +573,7 @@ static cf_error_t cf_s_fill_load_id_table(cf_kv_t* kv)
 {
 	int entity_count;
 	cf_error_t err = cf_kv_array_begin(kv, &entity_count, "entities");
-	if (err.is_error()) {
+	if (cf_is_error(&err)) {
 		return cf_error_failure("Unable to find `entities` array in kv file.");
 	}
 
@@ -617,11 +617,11 @@ cf_error_t cf_internal_ecs_load_entities(cf_kv_t* kv, cf_array<cf_entity_t>* ent
 	CUTE_DEFER(cf_app->load_id_table = NULL);
 
 	cf_error_t err = cf_s_fill_load_id_table(kv);
-	if (err.is_error()) return err;
+	if (cf_is_error(&err)) return err;
 
 	int entity_count;
 	err = cf_kv_array_begin(kv, &entity_count, "entities");
-	if (err.is_error()) {
+	if (cf_is_error(&err)) {
 		return cf_error_failure("Unable to find `entities` array in kv file.");
 	}
 
@@ -650,16 +650,16 @@ cf_error_t cf_internal_ecs_load_entities(cf_kv_t* kv, cf_array<cf_entity_t>* ent
 			// First load values from the schema.
 			void* component = collection->component_tables[i].add();
 			err = cf_s_load_from_schema(entity_type, entity, config, component, config->serializer_udata);
-			if (err.is_error()) {
+			if (cf_is_error(&err)) {
 				return cf_error_failure("Unable to parse component from schema.");
 			}
 
 			// Then load values from the instance.
 			cf_error_t err = cf_kv_object_begin(kv, config->name);
-			if (!err.is_error()) {
+			if (!cf_is_error(&err)) {
 				err = config->serializer_fn(kv, true, entity, component, config->serializer_udata);
 				cf_kv_object_end(kv);
-				if (err.is_error()) {
+				if (cf_is_error(&err)) {
 					return cf_error_failure("Unable to parse component.");
 				}
 			}
@@ -688,7 +688,7 @@ cf_error_t cf_ecs_load_entities(cf_kv_t* kv, cf_entity_t** entities_out, int* en
 
 		err = cf_internal_ecs_load_entities(kv, &arr);
 
-		if (err.is_error()) {
+		if (cf_is_error(&err)) {
 			*entities_out = NULL;
 			*entities_count_out = 0;
 		} else {
@@ -725,7 +725,7 @@ cf_error_t cf_internal_ecs_save_entities_kv(const cf_array<cf_entity_t>& entitie
 
 	int entity_count = entities.count();
 	cf_error_t err = cf_kv_array_begin(kv, &entity_count, "entities");
-	if (err.is_error()) return err;
+	if (cf_is_error(&err)) return err;
 
 	for (int i = 0; i < entities.count(); ++i) {
 		cf_entity_t entity = entities[i];
@@ -757,10 +757,10 @@ cf_error_t cf_internal_ecs_save_entities_kv(const cf_array<cf_entity_t>& entitie
 			const void* component = component_table[index];
 
 			cf_error_t err = cf_kv_object_begin(kv, config->name);
-			if (!err.is_error()) {
+			if (!cf_is_error(&err)) {
 				err = config->serializer_fn(kv, false, entity, (void*)component, config->serializer_udata);
 				cf_kv_object_end(kv);
-				if (err.is_error()) {
+				if (cf_is_error(&err)) {
 					return cf_error_failure("Unable to save component.");
 				}
 			}
@@ -822,7 +822,7 @@ cf_error_t cf_internal_ecs_save_entities(const cf_array<cf_entity_t>& entities)
 			const void* component = component_table[index];
 
 			cf_error_t err = config->serializer_fn(NULL, false, entity, (void*)component, config->serializer_udata);
-			if (err.is_error()) {
+			if (cf_is_error(&err)) {
 				return cf_error_failure("Unable to save component.");
 			}
 		}

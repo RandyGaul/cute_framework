@@ -33,9 +33,9 @@ int test_png_cache()
 	cf_png_t white;
 	cf_png_t black;
 	cf_error_t err = cf_png_cache_load(cache, "test_data/white_pixel.png", &white);
-	CUTE_TEST_ASSERT(!err.is_error());
+	CUTE_TEST_ASSERT(!cf_is_error(&err));
 	err = cf_png_cache_load(cache, "test_data/black_pixel.png", &black);
-	CUTE_TEST_ASSERT(!err.is_error());
+	CUTE_TEST_ASSERT(!cf_is_error(&err));
 
 	cf_png_t blink_png[] = { white, black };
 	float blink_delay[] = { 0.5f, 0.5f };
