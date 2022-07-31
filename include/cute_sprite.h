@@ -24,6 +24,7 @@
 
 #include "cute_defines.h"
 #include "cute_array.h"
+#include "cute_hashtable.h"
 #include "cute_dictionary.h"
 #include "cute_batch.h"
 
@@ -82,18 +83,18 @@ CUTE_INLINE void cf_animation_cleanup(cf_animation_t* animation, void* user_allo
  * An animation table is a set of animations a particular sprite references.
  * Each sprite instance contains a pointer to an animation table in a "read-only" fashion.
  */
-typedef cf_hashtable_t cf_animation_table_t;
+typedef struct cf_hashtable_t cf_animation_table_t;
 
-CUTE_INLINE void cf_animation_table_init(cf_animation_table_t* table, void* user_allocator_context)
+CUTE_INLINE int cf_animation_table_init(cf_animation_table_t* table, void* user_allocator_context)
 {
-	cf_hashtable_init(table, sizeof(cf_dictionary_string_block_t), sizeof(const cf_animation_t*), 256, user_allocator_context);
+	return cf_hashtable_init(table, sizeof(cf_dictionary_string_block_t), sizeof(const cf_animation_t*), 256, user_allocator_context);
 }
 
 CUTE_INLINE void cf_animation_table_cleanup(cf_animation_table_t* table, void* user_allocator_context){cf_hashtable_cleanup(table);}
-CUTE_INLINE int cf_animation_table_count(const cf_hashtable_t* table) { return cf_hashtable_count(table); }
-CUTE_INLINE const cf_dictionary_string_block_t* cf_animation_table_keys(const cf_hashtable_t* table) { return (const cf_dictionary_string_block_t*)cf_hashtable_keys(table); }
-CUTE_INLINE const cf_animation_t** cf_animation_table_items(const cf_hashtable_t* table) { return (const cf_animation_t**)cf_hashtable_items(table); }
-CUTE_INLINE const cf_animation_t** cf_animation_table_find(const cf_hashtable_t* table, const char* key)
+CUTE_INLINE int cf_animation_table_count(const cf_animation_table_t* table) { return cf_hashtable_count(table); }
+CUTE_INLINE const cf_dictionary_string_block_t* cf_animation_table_keys(const cf_animation_table_t* table) { return (const cf_dictionary_string_block_t*)cf_hashtable_keys(table); }
+CUTE_INLINE const cf_animation_t** cf_animation_table_items(const cf_animation_table_t* table) { return (const cf_animation_t**)cf_hashtable_items(table); }
+CUTE_INLINE const cf_animation_t** cf_animation_table_find(const cf_animation_table_t* table, const char* key)
 {
 	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key);
 	return (const cf_animation_t**)cf_hashtable_find(table, &block);
