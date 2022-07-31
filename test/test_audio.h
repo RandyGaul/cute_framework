@@ -31,11 +31,11 @@ int test_audio_load_synchronous()
 	cf_file_system_init(NULL);
 	cf_file_system_mount(cf_file_system_get_base_dir(), "", true);
 
-	cf_audio_t* audio = cf_audio_load_ogg("test_data/3-6-19-blue-suit-jam.ogg");
+	cf_audio_t* audio = cf_audio_load_ogg("test_data/3-6-19-blue-suit-jam.ogg", NULL);
 	CUTE_TEST_CHECK_POINTER(audio);
 	CUTE_TEST_ASSERT(!cf_is_error(&cf_audio_destroy(audio)));
 
-	audio = cf_audio_load_wav("test_data/jump.wav");
+	audio = cf_audio_load_wav("test_data/jump.wav", NULL);
 	CUTE_TEST_CHECK_POINTER(audio);
 	CUTE_TEST_ASSERT(!cf_is_error(&cf_audio_destroy(audio)));
 
@@ -64,7 +64,7 @@ int test_audio_load_asynchronous()
 
 	s_audio_error = cf_error_success();
 	s_audio = NULL;
-	cf_audio_stream_ogg("test_data/3-6-19-blue-suit-jam.ogg", promise);
+	cf_audio_stream_ogg("test_data/3-6-19-blue-suit-jam.ogg", promise, NULL);
 
 	while (!cf_atomic_ptr_get((void**)&s_audio))
 		;
@@ -73,7 +73,7 @@ int test_audio_load_asynchronous()
 
 	s_audio_error = cf_error_success();
 	s_audio = NULL;
-	cf_audio_stream_wav("test_data/jump.wav", promise);
+	cf_audio_stream_wav("test_data/jump.wav", promise, NULL);
 
 	while (!cf_atomic_ptr_get((void**)&s_audio))
 		;
