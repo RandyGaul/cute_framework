@@ -106,10 +106,10 @@ cf_error_t test_component_octorok_serialize(cf_kv_t* kv, bool reading, cf_entity
 
 // -------------------------------------------------------------------------------------------------
 
-#define FIND_COMPONENTS(T) T* T##s = (T*)ecs_arrays_find_components(arrays, #T); CUTE_ASSERT(!count || T##s)
+#define FIND_COMPONENTS(T) T* T##s = (T*)cf_ecs_arrays_find_components(arrays, #T); CUTE_ASSERT(!count || T##s)
 
 int s_octorok_system_ran_ok;
-void update_test_octorok_system(float dt, ecs_arrays_t* arrays, int count, void* udata)
+void update_test_octorok_system(float dt, cf_ecs_arrays_t* arrays, int count, void* udata)
 {
 	FIND_COMPONENTS(test_component_transform_t);
 	FIND_COMPONENTS(test_component_sprite_t);
@@ -139,7 +139,7 @@ void update_test_octorok_system(float dt, ecs_arrays_t* arrays, int count, void*
 // -------------------------------------------------------------------------------------------------
 
 int s_octorok_buddy_said_hi_count;
-void update_test_octorok_buddy_counter_system(float dt, ecs_arrays_t* arrays, int count, void* udata)
+void update_test_octorok_buddy_counter_system(float dt, cf_ecs_arrays_t* arrays, int count, void* udata)
 {
 	FIND_COMPONENTS(test_component_octorok_t);
 	for (int i = 0; i < count; ++i) {
@@ -325,7 +325,7 @@ int test_ecs_no_kv()
 	cf_ecs_component_begin();
 	cf_ecs_component_set_name("dummy_component_t");
 	cf_ecs_component_set_size(sizeof(dummy_component_t));
-	cf_ecs_component_set_optional_serializer(dummy_serialize);
+	cf_ecs_component_set_optional_serializer(dummy_serialize, NULL);
 	cf_ecs_component_end();
 
 	cf_ecs_system_begin();

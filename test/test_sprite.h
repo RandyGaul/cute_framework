@@ -30,7 +30,7 @@ int test_sprite_make()
 	cf_sprite_t s = cf_sprite_make("test_data/girl.aseprite");
 	cf_batch_t* batch = cf_sprite_get_batch();
 	cf_batch_flush(batch);
-	cf_app_present();
+	cf_app_present(true);
 
 	cf_app_destroy();
 

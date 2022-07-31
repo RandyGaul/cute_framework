@@ -292,7 +292,7 @@ void cf_array<T>::unordered_remove(int index)
 }
 
 template <typename T>
-void array<T>::copy(int src, int dst, int count)
+void cf_array<T>::copy(int src, int dst, int count)
 {
 	CUTE_ASSERT(src >= 0 && src + count - 1 < m_count);
 	CUTE_ASSERT(dst >= 0 && dst + count - 1 < m_count);

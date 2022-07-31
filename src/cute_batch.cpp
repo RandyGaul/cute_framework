@@ -374,13 +374,13 @@ cf_batch_t* cf_batch_make(cf_get_pixels_fn* get_pixels, void* get_pixels_udata, 
 	params.colors[0].blend.op_alpha = SG_BLENDOP_ADD;
 
 	b->geom_pip = sg_make_pipeline(params);
-	b->geom_buffer.init(CUTE_MB * 25, sizeof(vertex_t));
+	b->geom_buffer.init(CUTE_MB * 25, sizeof(cf_vertex_t));
 
-	batch_push_stencil_defaults(b);
-	batch_push_blend_defaults(b);
-	b->default_shd = b->active_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_DEFAULT);
-	b->outline_shd = s_load_shader(b, BATCH_SPRITE_SHADER_TYPE_OUTLINE);
-	b->sprite_buffer.init(CUTE_MB * 25, sizeof(quad_vertex_t));
+	cf_batch_push_stencil_defaults(b);
+	cf_batch_push_blend_defaults(b);
+	b->default_shd = b->active_shd = cf_s_load_shader(b, CF_BATCH_SPRITE_SHADER_TYPE_DEFAULT);
+	b->outline_shd = cf_s_load_shader(b, CF_BATCH_SPRITE_SHADER_TYPE_OUTLINE);
+	b->sprite_buffer.init(CUTE_MB * 25, sizeof(cf_quad_vertex_t));
 
 	spritebatch_config_t config;
 	spritebatch_set_default_config(&config);
@@ -416,18 +416,18 @@ cf_error_t cf_batch_set_GPU_buffer_configuration(cf_batch_t* b, size_t size_of_o
 {
 	b->geom_buffer.release();
 	b->sprite_buffer.release();
-	error_t err = b->geom_buffer.init(size_of_one_buffer, sizeof(vertex_t));
-	if (err.is_error()) return err;
-	return b->sprite_buffer.init(size_of_one_buffer, sizeof(quad_vertex_t));
+	cf_error_t err = b->geom_buffer.init(size_of_one_buffer, sizeof(cf_vertex_t));
+	if (cf_is_error(&err)) return err;
+	return b->sprite_buffer.init(size_of_one_buffer, sizeof(cf_quad_vertex_t));
 }
 
-void cf_batch_push(batch_t* b, batch_sprite_t q)
+void cf_batch_push(cf_batch_t* b, cf_batch_sprite_t q)
 {
 	spritebatch_sprite_t s;
 	s.image_id = q.id;
 	s.w = q.w;
 	s.h = q.h;
-	q.transform.p = mul(b->m, q.transform.p);
+	q.transform.p = cf_mul_m32_v2(b->m, q.transform.p);
 	s.x = q.transform.p.x;
 	s.y = q.transform.p.y;
 	s.sx = q.scale_x * b->scale_x;
@@ -518,8 +518,8 @@ void cf_batch_outlines_color(cf_batch_t* b, cf_color_t c)
 void cf_batch_push_m3x2(cf_batch_t* b, cf_m3x2 m)
 {
 	b->m = m;
-	b->scale_x = len(m.m.x);
-	b->scale_y = len(m.m.y);
+	b->scale_x = cf_len(m.m.x);
+	b->scale_y = cf_len(m.m.y);
 	b->m3x2s.add(m);
 }
 
@@ -529,10 +529,10 @@ void cf_batch_pop_m3x2(cf_batch_t* b)
 		b->m3x2s.pop();
 		if (b->m3x2s.size()) {
 			b->m = b->m3x2s.last();
-			b->scale_x = len(b->m.m.x);
-			b->scale_y = len(b->m.m.y);
+			b->scale_x = cf_len(b->m.m.x);
+			b->scale_y = cf_len(b->m.m.y);
 		} else {
-			b->m = make_identity();
+			b->m = cf_make_identity();
 			b->scale_x = 1.0f;
 			b->scale_y = 1.0f;
 		}
@@ -731,7 +731,7 @@ void cf_batch_circle_line(cf_batch_t* batch, cf_v2 p, float r, int iters, float 
 			p0 = p1;
 		}
 
-		cf_batch_polyline(batch, verts.data(), verts.size(), thickness, color, true, true);
+		cf_batch_polyline(batch, verts.data(), verts.size(), thickness, color, true, true, 0);
 	} else {
 		float half_thickness = thickness * 0.5f;
 		cf_v2 p0 = cf_V2(p.x + r - half_thickness, p.y);
@@ -1005,7 +1005,7 @@ static void cf_s_polyline(cf_batch_t* batch, cf_v2* points, int count, float thi
 		float ab_x_bc = cf_cross(b - a, c - b);
 		float d = cf_dot(cf_cw90(n0), cf_cw90(n1));
 		const float k_tol = 1.e-6f;
-		auto cc = color_white();
+		auto cc = cf_color_white();
 
 		if (ab_x_bc < -k_tol) {
 			if (d >= 0) {

@@ -97,19 +97,19 @@ typedef struct cf_handle_table_t
 		return !!cf_handle_allocator_is_handle_valid(m_alloc, handle);
 	}
 
-	CUTE_INLINE bool is_active(handle_t handle)
+	CUTE_INLINE bool is_active(cf_handle_t handle)
 	{
-		return handle_allocator_is_active(m_alloc, handle);
+		return cf_handle_allocator_is_active(m_alloc, handle);
 	}
 
-	CUTE_INLINE void activate(handle_t handle)
+	CUTE_INLINE void activate(cf_handle_t handle)
 	{
-		handle_allocator_activate(m_alloc, handle);
+		cf_handle_allocator_activate(m_alloc, handle);
 	}
 
-	CUTE_INLINE void deactivate(handle_t handle)
+	CUTE_INLINE void deactivate(cf_handle_t handle)
 	{
-		handle_allocator_deactivate(m_alloc, handle);
+		cf_handle_allocator_deactivate(m_alloc, handle);
 	}
 	
 	#endif // CUTE_CPP

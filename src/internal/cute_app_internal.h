@@ -100,7 +100,7 @@ struct cf_system_internal_t
 	cf_strpool_id name = { 0 };
 	void* udata = NULL;
 	void (*pre_update_fn)(float dt, void* udata) = NULL;
-	system_update_fn* update_fn = NULL;
+	cf_system_update_fn* update_fn = NULL;
 	void (*post_update_fn)(float dt, void* udata) = NULL;
 	cf_array<cf_strpool_id> component_type_tuple;
 };
@@ -211,8 +211,8 @@ struct cf_app_t
 	cf_entity_type_t current_collection_type_being_iterated = ~0;
 	cf_entity_collection_t* current_collection_being_updated = NULL;
 	cf_array<cf_entity_t> delayed_destroy_entities;
-	cf_array<entity_t> delayed_deactivate_entities;
-	cf_array<entity_t> delayed_activate_entities;
+	cf_array<cf_entity_t> delayed_deactivate_entities;
+	cf_array<cf_entity_t> delayed_activate_entities;
 
 	cf_component_config_t component_config_builder;
 	cf_dictionary<cf_strpool_id, cf_component_config_t> component_configs;

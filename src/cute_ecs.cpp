@@ -49,7 +49,7 @@ struct cf_ecs_arrays_t
 	}
 };
 
-static ecs_arrays_t s_arrays;
+static cf_ecs_arrays_t s_arrays;
 
 static cf_error_t cf_s_load_from_schema(cf_entity_type_t schema_type, cf_entity_t entity, cf_component_config_t* config, void* component, void* udata)
 {
@@ -88,7 +88,7 @@ void* cf_ecs_arrays_find_components(cf_ecs_arrays_t* arrays, const char* compone
 
 cf_entity_t* cf_ecs_arrays_get_entities(cf_ecs_arrays_t* arrays)
 {
-	return (entity_t*)arrays->entities;
+	return (cf_entity_t*)arrays->entities;
 }
 
 void cf_ecs_system_begin()
@@ -191,7 +191,7 @@ static cf_entity_collection_t* cf_s_collection(cf_entity_t entity)
 	return collection;
 }
 
-void entity_destroy(entity_t entity)
+void cf_entity_destroy(cf_entity_t entity)
 {
 	uint16_t entity_type = cf_s_entity_type(entity);
 	cf_entity_collection_t* collection = cf_app->entity_collections.find(entity_type);
@@ -231,23 +231,23 @@ void entity_destroy(entity_t entity)
 
 void cf_entity_delayed_destroy(cf_entity_t entity)
 {
-	app->delayed_destroy_entities.add(entity);
+	cf_app->delayed_destroy_entities.add(entity);
 }
 
 void cf_entity_delayed_deactivate(cf_entity_t entity)
 {
-	app->delayed_deactivate_entities.add(entity);
+	cf_app->delayed_deactivate_entities.add(entity);
 }
 
 void cf_entity_delayed_activate(cf_entity_t entity)
 {
-	app->delayed_activate_entities.add(entity);
+	cf_app->delayed_activate_entities.add(entity);
 }
 
 void cf_entity_deactivate(cf_entity_t entity)
 {
-	uint16_t entity_type = s_entity_type(entity);
-	cf_entity_collection_t* collection = app->entity_collections.find(entity_type);
+	uint16_t entity_type = cf_s_entity_type(entity);
+	cf_entity_collection_t* collection = cf_app->entity_collections.find(entity_type);
 	CUTE_ASSERT(collection);
 
 	if (collection->entity_handle_table.is_valid(entity.handle)) {
@@ -272,16 +272,16 @@ void cf_entity_deactivate(cf_entity_t entity)
 	}
 }
 
-void cf_entity_activate(entity_t entity)
+void cf_entity_activate(cf_entity_t entity)
 {
 }
 
-bool cf_entity_is_active(entity_t entity)
+bool cf_entity_is_active(cf_entity_t entity)
 {
 	return false;
 }
 
-bool cf_entity_is_valid(entity_t entity)
+bool cf_entity_is_valid(cf_entity_t entity)
 {
 	cf_entity_collection_t* collection = cf_s_collection(entity);
 	if (collection) return collection->entity_handle_table.is_valid(entity.handle);
@@ -312,7 +312,7 @@ bool cf_entity_has_component(cf_entity_t entity, const char* component_type)
 
 //--------------------------------------------------------------------------------------------------
 
-static inline int s_match(const array<strpool_id>& a, const array<strpool_id>& b)
+static inline int s_match(const cf_array<cf_strpool_id>& a, const cf_array<cf_strpool_id>& b)
 {
 	int matches = 0;
 	for (int i = 0; i < a.count(); ++i) {
@@ -328,10 +328,10 @@ static inline int s_match(const array<strpool_id>& a, const array<strpool_id>& b
 
 void cf_ecs_run_systems(float dt)
 {
-	int system_count = app->systems.count();
+	int system_count = cf_app->systems.count();
 	for (int i = 0; i < system_count; ++i) {
-		system_internal_t* system = app->systems + i;
-		system_update_fn* update_fn = system->update_fn;
+		cf_system_internal_t* system = cf_app->systems + i;
+		cf_system_update_fn* update_fn = system->update_fn;
 		auto pre_update_fn = system->pre_update_fn;
 		auto post_update_fn = system->post_update_fn;
 		void* udata = system->udata;
@@ -339,8 +339,8 @@ void cf_ecs_run_systems(float dt)
 		if (pre_update_fn) pre_update_fn(dt, udata);
 
 		if (update_fn) {
-			for (int j = 0; j < app->entity_collections.count(); ++j) {
-				entity_collection_t* collection = app->entity_collections.items() + j;
+			for (int j = 0; j < cf_app->entity_collections.count(); ++j) {
+				cf_entity_collection_t* collection = cf_app->entity_collections.items() + j;
 				CUTE_ASSERT(collection->component_tables.count() == collection->component_type_tuple.count());
 				int component_count = collection->component_tables.count();
 				cf_app->current_collection_type_being_iterated = cf_app->entity_collections.keys()[j];
