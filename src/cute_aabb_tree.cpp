@@ -658,7 +658,7 @@ static cf_leaf_t cf_s_insert(cf_aabb_tree_t* tree, cf_aabb_t aabb, void* udata)
 
 cf_leaf_t cf_aabb_tree_insert(cf_aabb_tree_t* tree, cf_aabb_t aabb, void* udata)
 {
-	aabb = cf_expand_uniform(aabb, AABB_TREE_EXPAND_CONSTANT);
+	aabb = cf_expand_aabb_f(aabb, AABB_TREE_EXPAND_CONSTANT);
 	return cf_s_insert(tree, aabb, udata);
 }
 
@@ -731,7 +731,7 @@ bool cf_aabb_tree_move(cf_aabb_tree_t* tree, cf_leaf_t leaf, cf_aabb_t aabb, cf_
 	CUTE_ASSERT(tree->nodes[leaf.id].index_a == AABB_TREE_NULL_NODE_INDEX);
 	CUTE_ASSERT(tree->nodes[leaf.id].index_b == AABB_TREE_NULL_NODE_INDEX);
 
-	aabb = cf_expand_uniform(aabb, AABB_TREE_EXPAND_CONSTANT);
+	aabb = cf_expand_aabb_f(aabb, AABB_TREE_EXPAND_CONSTANT);
 	cf_v2 delta = offset * AABB_TREE_MOVE_CONSTANT;
 
 	if (delta.x < 0) {
@@ -748,7 +748,7 @@ bool cf_aabb_tree_move(cf_aabb_tree_t* tree, cf_leaf_t leaf, cf_aabb_t aabb, cf_
 
 	cf_aabb_t old_aabb = tree->aabbs[leaf.id];
 	if (cf_contains_aabb(old_aabb, aabb)) {
-		cf_aabb_t big_aabb = cf_expand_uniform(aabb, AABB_TREE_MOVE_CONSTANT);
+		cf_aabb_t big_aabb = cf_expand_aabb_f(aabb, AABB_TREE_MOVE_CONSTANT);
 		bool old_aabb_is_not_way_too_huge = cf_contains_aabb(big_aabb, old_aabb);
 		if (old_aabb_is_not_way_too_huge) {
 			return false;

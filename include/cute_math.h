@@ -273,8 +273,8 @@ CUTE_INLINE float cf_half_width(cf_aabb_t bb) { return cf_width(bb) * 0.5f; }
 CUTE_INLINE float cf_half_height(cf_aabb_t bb) { return cf_height(bb) * 0.5f; }
 CUTE_INLINE cf_v2 cf_half_extents(cf_aabb_t bb) { return (cf_mul_v2_f(cf_sub_v2(bb.max, bb.min), 0.5f)); }
 CUTE_INLINE cf_v2 cf_extents(cf_aabb_t aabb) { return cf_sub_v2(aabb.max, aabb.min); }
-CUTE_INLINE cf_aabb_t cf_expand(cf_aabb_t aabb, cf_v2 v) { return cf_make_aabb(cf_sub_v2(aabb.min, v), cf_add_v2(aabb.max, v)); }
-CUTE_INLINE cf_aabb_t cf_expand_uniform(cf_aabb_t aabb, float v) { cf_v2 factor = cf_V2(v, v); return cf_make_aabb(cf_sub_v2(aabb.min, factor), cf_add_v2(aabb.max, factor)); }
+CUTE_INLINE cf_aabb_t cf_expand_aabb(cf_aabb_t aabb, cf_v2 v) { return cf_make_aabb(cf_sub_v2(aabb.min, v), cf_add_v2(aabb.max, v)); }
+CUTE_INLINE cf_aabb_t cf_expand_aabb_f(cf_aabb_t aabb, float v) { cf_v2 factor = cf_V2(v, v); return cf_make_aabb(cf_sub_v2(aabb.min, factor), cf_add_v2(aabb.max, factor)); }
 CUTE_INLINE cf_v2 cf_min_aabb(cf_aabb_t bb) { return bb.min; }
 CUTE_INLINE cf_v2 cf_max_aabb(cf_aabb_t bb) { return bb.max; }
 CUTE_INLINE cf_v2 cf_midpoint(cf_aabb_t bb) { return cf_mul_v2_f(cf_add_v2(bb.min, bb.max), 0.5f); }
@@ -701,8 +701,8 @@ CUTE_INLINE float half_width(aabb_t bb) { return cf_half_width(bb); }
 CUTE_INLINE float half_height(aabb_t bb) { return cf_half_height(bb); }
 CUTE_INLINE v2 half_extents(aabb_t bb) { return cf_half_extents(bb); }
 CUTE_INLINE v2 extents(aabb_t aabb) { return cf_extents(aabb); }
-CUTE_INLINE aabb_t expand(aabb_t aabb, v2 v) { return cf_expand(aabb, v); }
-CUTE_INLINE aabb_t expand(aabb_t aabb, float v) { return cf_expand_uniform(aabb, v); }
+CUTE_INLINE aabb_t expand(aabb_t aabb, v2 v) { return cf_expand_aabb(aabb, v); }
+CUTE_INLINE aabb_t expand(aabb_t aabb, float v) { return cf_expand_aabb_f(aabb, v); }
 CUTE_INLINE v2 min(aabb_t bb) { return cf_min_aabb(bb); }
 CUTE_INLINE v2 max(aabb_t bb) { return cf_max_aabb(bb); }
 CUTE_INLINE v2 midpoint(aabb_t bb) { return cf_midpoint(bb); }
