@@ -30,9 +30,10 @@ extern "C" {
 
 typedef struct cf_list_node_t
 {
-	cf_list_node_t* next = this;
-	cf_list_node_t* prev = this;
+	struct cf_list_node_t* next; /*= this;*/
+	struct cf_list_node_t* prev; /*= this;*/
 } cf_list_node_t;
+
 
 typedef struct cf_list_t
 {
@@ -123,21 +124,36 @@ CUTE_INLINE cf_list_node_t* cf_list_back(cf_list_t* list)
 
 namespace cute
 {
-using list_node_t = cf_list_node_t;
 using list_t = cf_list_t;
 
-CUTE_INLINE void list_init_node(list_node_t* node) { cf_list_init_node(node); };
+struct list_node_t
+{
+	list_node_t* next = this;
+	list_node_t* prev = this;
+
+	operator cf_list_node_t()
+	{
+		return *((cf_list_node_t*)this);
+	}
+
+	operator cf_list_node_t* ()
+	{
+		return (cf_list_node_t*)this;
+	}
+};
+
+CUTE_INLINE void list_init_node(list_node_t* node) { cf_list_init_node((cf_list_node_t*)node); };
 CUTE_INLINE void list_init(list_t* list) { cf_list_init(list); };
-CUTE_INLINE void list_push_front(list_t* list, list_node_t* node) { cf_list_push_front(list, node); };
-CUTE_INLINE void list_push_back(list_t* list, list_node_t* node) { cf_list_push_back(list, node); };
-CUTE_INLINE void list_remove(list_node_t* node) { cf_list_remove(node); };
-CUTE_INLINE list_node_t* list_pop_front(list_t* list) { return cf_list_pop_front(list); };
-CUTE_INLINE list_node_t* list_pop_back(list_t* list) { return cf_list_pop_back(list); };
+CUTE_INLINE void list_push_front(list_t* list, list_node_t* node) { cf_list_push_front(list, (cf_list_node_t*)node); };
+CUTE_INLINE void list_push_back(list_t* list, list_node_t* node) { cf_list_push_back(list, (cf_list_node_t*)node); };
+CUTE_INLINE void list_remove(list_node_t* node) { cf_list_remove((cf_list_node_t*)node); };
+CUTE_INLINE list_node_t* list_pop_front(list_t* list) { return (list_node_t*)cf_list_pop_front(list); };
+CUTE_INLINE list_node_t* list_pop_back(list_t* list) { return (list_node_t*)cf_list_pop_back(list); };
 CUTE_INLINE int list_empty(list_t* list) { return cf_list_empty(list); };
-CUTE_INLINE list_node_t* list_begin(list_t* list) { return cf_list_begin(list); };
-CUTE_INLINE list_node_t* list_end(list_t* list) { return cf_list_end(list); };
-CUTE_INLINE list_node_t* list_front(list_t* list) { cf_list_front(list); };
-CUTE_INLINE list_node_t* list_back(list_t* list) { cf_list_back(list); };
+CUTE_INLINE list_node_t* list_begin(list_t* list) { return (list_node_t*)cf_list_begin(list); };
+CUTE_INLINE list_node_t* list_end(list_t* list) { return (list_node_t*)cf_list_end(list); };
+CUTE_INLINE list_node_t* list_front(list_t* list) { return (list_node_t*)cf_list_front(list); };
+CUTE_INLINE list_node_t* list_back(list_t* list) { return (list_node_t*)cf_list_back(list); };
 
 }
 
