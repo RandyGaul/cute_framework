@@ -78,6 +78,14 @@ void cf_aseprite_cache_destroy(cf_aseprite_cache_t* cache)
 	for (int i = 0; i < count; ++i) 
 	{
 		aseprite_cache_entry_t* entry = entries + i;
+		int animation_count = cf_hashtable_count(entry->animations);
+		cf_animation_t** animations = (cf_animation_t**)cf_hashtable_items(entry->animations);
+		for (int j = 0; j < animation_count; ++j)
+		{
+			cf_animation_cleanup(animations[j], cache->mem_ctx);
+			CUTE_FREE(animations[j], cache->mem_ctx);
+		}
+
 		cf_animation_table_cleanup(entry->animations, cache->mem_ctx);
 		CUTE_FREE(entry->animations, cache->mem_ctx);
 		cute_aseprite_free(entry->ase);
@@ -242,6 +250,9 @@ void cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, const char* aseprite_p
 		for (int j = 0; j < animation->frames_count; ++j) {
 			cache->id_to_pixels.remove(animation->frames[j].id);
 		}
+
+		cf_animation_cleanup(animation, cache->mem_ctx);
+		CUTE_FREE(animation, cache->mem_ctx);
 	}
 
 	cf_animation_table_cleanup(entry.animations, cache->mem_ctx);
