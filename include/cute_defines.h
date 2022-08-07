@@ -135,6 +135,10 @@
 
 #include <stdlib.h> // NULL
 
+#ifndef __cplusplus
+#include <stdbool.h> // bool
+#endif // !__cplusplus
+
 struct cf_app_t;
 
 #ifndef CUTE_NO_WARNINGS
