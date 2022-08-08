@@ -24,8 +24,9 @@
 
 #include "cute_defines.h"
 
-namespace cute
-{
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 /**
  * Memory pool is useful mainly as an optimization for one of two purposes.
@@ -36,39 +37,56 @@ namespace cute
  * The idea is to allocate a block of memory once, and then manually allocate from that block
  * different chunks of a fixed size.
  */
-struct memory_pool_t;
+typedef struct cf_memory_pool_t cf_memory_pool_t;
 
 /**
  * Constructs a new memory pool.
  * `element_size` is the fixed size each internal allocation will be.
  * `element_count` determins how big the internal pool will be.
  */
-CUTE_API memory_pool_t* CUTE_CALL memory_pool_make(int element_size, int element_count, void* user_allocator_context = NULL);
+CUTE_API cf_memory_pool_t* CUTE_CALL cf_memory_pool_make(int element_size, int element_count, void* user_allocator_context /*= NULL*/);
 
 /**
  * Destroys a memory pool previously created with `memory_pool_make`. Does not clean up any leftover
- * allocations from `memory_pool_alloc` that overflowed to the `malloc` backup. See `memory_pool_alloc`
+ * allocations from `cf_memory_pool_alloc` that overflowed to the `malloc` backup. See `cf_memory_pool_alloc`
  * for more details.
  */
-CUTE_API void CUTE_CALL memory_pool_destroy(memory_pool_t* pool);
+CUTE_API void CUTE_CALL cf_memory_pool_destroy(cf_memory_pool_t* pool);
 
 /**
  * Returns a block of memory of `element_size` bytes. If the number of allocations in the pool exceeds
  * `element_count` then `malloc` is used as a fallback.
  */
-CUTE_API void* CUTE_CALL memory_pool_alloc(memory_pool_t* pool);
+CUTE_API void* CUTE_CALL cf_memory_pool_alloc(cf_memory_pool_t* pool);
 
 /**
- * The same as `memory_pool_alloc` without the `malloc` fallback -- returns `NULL` if the memory pool
+ * The same as `cf_memory_pool_alloc` without the `malloc` fallback -- returns `NULL` if the memory pool
  * is all used up.
  */
-CUTE_API void* CUTE_CALL memory_pool_try_alloc(memory_pool_t* pool);
+CUTE_API void* CUTE_CALL cf_memory_pool_try_alloc(cf_memory_pool_t* pool);
 
 /**
- * Frees an allocation previously acquired by `memory_pool_alloc` or `memory_pool_try_alloc`.
+ * Frees an allocation previously acquired by `cf_memory_pool_alloc` or `cf_memory_pool_try_alloc`.
  */
-CUTE_API void CUTE_CALL memory_pool_free(memory_pool_t* pool, void* element);
+CUTE_API void CUTE_CALL cf_memory_pool_free(cf_memory_pool_t* pool, void* element);
 
+#ifdef __cplusplus
 }
+#endif // __cplusplus
+
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+using memory_pool_t = cf_memory_pool_t;
+
+CUTE_INLINE memory_pool_t* memory_pool_make(int element_size, int element_count, void* user_allocator_context = NULL) { return cf_memory_pool_make(element_size,element_count,user_allocator_context); }
+CUTE_INLINE void memory_pool_destroy(memory_pool_t* pool) { cf_memory_pool_destroy(pool); }
+CUTE_INLINE void* memory_pool_alloc(memory_pool_t* pool) { return cf_memory_pool_alloc(pool); }
+CUTE_INLINE void* memory_pool_try_alloc(memory_pool_t* pool) { return cf_memory_pool_try_alloc(pool); }
+CUTE_INLINE void memory_pool_free(memory_pool_t* pool, void* element) { return cf_memory_pool_free(pool,element); }
+}
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_MEMORY_POOL_H

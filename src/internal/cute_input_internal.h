@@ -28,30 +28,35 @@
 
 #include <SDL.h>
 
+enum cf_mouse_click_t// : int
+{
+	CF_MOUSE_CLICK_SINGLE,
+	CF_MOUSE_CLICK_DOUBLE,
+};
+
+struct cf_haptic_t;
+
+struct cf_joypad_t
+{
+	cf_list_node_t node;
+	SDL_GameController* controller = NULL;
+	cf_haptic_t* haptic = NULL;
+	SDL_JoystickID id = -1;
+	int buttons[CF_JOYPAD_BUTTON_COUNT] = { 0 };
+	int buttons_prev[CF_JOYPAD_BUTTON_COUNT] = { 0 };
+	int axes[CF_JOYPAD_AXIS_COUNT] = { 0 };
+};
+
+void cf_pump_input_msgs();
+
+#ifdef CUTE_CPP
+
 namespace cute
 {
-
-enum mouse_click_t : int
-{
-	MOUSE_CLICK_SINGLE,
-	MOUSE_CLICK_DOUBLE,
-};
-
-struct haptic_t;
-
-struct joypad_t
-{
-	list_node_t node;
-	SDL_GameController* controller = NULL;
-	haptic_t* haptic = NULL;
-	SDL_JoystickID id = -1;
-	int buttons[JOYPAD_BUTTON_COUNT] = { 0 };
-	int buttons_prev[JOYPAD_BUTTON_COUNT] = { 0 };
-	int axes[JOYPAD_AXIS_COUNT] = { 0 };
-};
-
-void pump_input_msgs();
-
+using mouse_click_t = cf_mouse_click_t;
+using joypad_t = cf_joypad_t;
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_INPUT_INTERNAL_H

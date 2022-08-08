@@ -28,59 +28,59 @@ using namespace cute;
 CUTE_TEST_CASE(test_audio_load_synchronous, "Load and free wav/ogg files synchronously.");
 int test_audio_load_synchronous()
 {
-	file_system_init(NULL);
-	file_system_mount(file_system_get_base_dir(), "");
+	cf_file_system_init(NULL);
+	cf_file_system_mount(cf_file_system_get_base_dir(), "", true);
 
-	audio_t* audio = audio_load_ogg("test_data/3-6-19-blue-suit-jam.ogg");
+	cf_audio_t* audio = cf_audio_load_ogg("test_data/3-6-19-blue-suit-jam.ogg", NULL);
 	CUTE_TEST_CHECK_POINTER(audio);
-	CUTE_TEST_ASSERT(!audio_destroy(audio).is_error());
+	CUTE_TEST_ASSERT(!cf_is_error(&cf_audio_destroy(audio)));
 
-	audio = audio_load_wav("test_data/jump.wav");
+	audio = cf_audio_load_wav("test_data/jump.wav", NULL);
 	CUTE_TEST_CHECK_POINTER(audio);
-	CUTE_TEST_ASSERT(!audio_destroy(audio).is_error());
+	CUTE_TEST_ASSERT(!cf_is_error(&cf_audio_destroy(audio)));
 
-	file_system_destroy();
+	cf_file_system_destroy();
 
 	return 0;
 }
 
-static cute::error_t s_audio_error;
-static audio_t* s_audio;
+static cf_error_t s_audio_error;
+static cf_audio_t* s_audio;
 
-static void s_audio_promise(cute::error_t status, void* param, void* udata)
+static void cf_s_audio_promise(cf_error_t status, void* param, void* udata)
 {
 	s_audio_error = status;
-	atomic_ptr_set((void**)&s_audio, param);
+	cf_atomic_ptr_set((void**)&s_audio, param);
 	CUTE_ASSERT(udata == NULL);
 }
 
 CUTE_TEST_CASE(test_audio_load_asynchronous, "Load and free wav/ogg files asynchronously.");
 int test_audio_load_asynchronous()
 {
-	CUTE_TEST_ASSERT(!app_make("audio test", 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN).is_error());
+	CUTE_TEST_ASSERT(!cf_is_error(&cf_app_make("audio test", 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN, NULL, NULL)));
 
-	promise_t promise;
-	promise.callback = s_audio_promise;
+	cf_promise_t promise;
+	promise.callback = cf_s_audio_promise;
 
-	s_audio_error = error_success();
+	s_audio_error = cf_error_success();
 	s_audio = NULL;
-	audio_stream_ogg("test_data/3-6-19-blue-suit-jam.ogg", promise);
+	cf_audio_stream_ogg("test_data/3-6-19-blue-suit-jam.ogg", promise, NULL);
 
-	while (!atomic_ptr_get((void**)&s_audio))
+	while (!cf_atomic_ptr_get((void**)&s_audio))
 		;
 
-	CUTE_TEST_ASSERT(!audio_destroy(s_audio).is_error());
+	CUTE_TEST_ASSERT(!cf_is_error(&cf_audio_destroy(s_audio)));
 
-	s_audio_error = error_success();
+	s_audio_error = cf_error_success();
 	s_audio = NULL;
-	audio_stream_wav("test_data/jump.wav", promise);
+	cf_audio_stream_wav("test_data/jump.wav", promise, NULL);
 
-	while (!atomic_ptr_get((void**)&s_audio))
+	while (!cf_atomic_ptr_get((void**)&s_audio))
 		;
 
-	CUTE_TEST_ASSERT(!audio_destroy(s_audio).is_error());
+	CUTE_TEST_ASSERT(!cf_is_error(&cf_audio_destroy(s_audio)));
 
-	app_destroy();
+	cf_app_destroy();
 
 	return 0;
 }

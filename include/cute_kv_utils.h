@@ -22,6 +22,10 @@
 #ifndef CUTE_KV_UTILS_H
 #define CUTE_KV_UTILS_H
 
+#include "cute_defines.h"
+
+#ifdef CUTE_CPP
+
 #include "cute_kv.h"
 #include "cute_ecs.h"
 #include "cute_string.h"
@@ -29,43 +33,50 @@
 #include <string>
 #include <vector>
 
-namespace cute
-{
 
-CUTE_INLINE error_t kv_val(kv_t* kv, string_t* string)
+CUTE_INLINE cf_error_t cf_kv_val_string_cf(cf_kv_t* kv, cf_string_t* string)
 {
 	const char* ptr = string->c_str();
 	size_t len = string->len();
-	error_t err = kv_val_string(kv, &ptr, &len);
-	if (err.is_error()) return err;
-	*string = string_t(ptr, ptr + len);
-	return error_success();
+	cf_error_t err = cf_kv_val_string(kv, &ptr, &len);
+	if (cf_is_error(&err)) return err;
+	*string = cf_string_t(ptr, ptr + len);
+	return cf_error_success();
 }
 
-CUTE_INLINE error_t kv_val(kv_t* kv, std::string* val)
+CUTE_INLINE cf_error_t cf_kv_val_string_std(cf_kv_t* kv, std::string* val)
 {
 	const char* ptr = val->data();
 	size_t len = val->length();
-	error_t err = kv_val_string(kv, &ptr, &len);
-	if (err.is_error()) return err;
+	cf_error_t err = cf_kv_val_string(kv, &ptr, &len);
+	if (cf_is_error(&err)) return err;
 	val->assign(ptr, len);
-	return error_success();
+	return cf_error_success();
 }
 
 template <typename T>
-CUTE_INLINE error_t kv_val(kv_t* kv, std::vector<T>* val, const char* key = NULL)
+CUTE_INLINE cf_error_t cf_kv_val_vec(cf_kv_t* kv, std::vector<T>* val, const char* key = NULL)
 {
 	int count = (int)val->size();
-	kv_array_begin(kv, &count, key);
+	cf_kv_array_begin(kv, &count, key);
 	val->resize(count);
-	for (int i = 0; i < count; ++i)
-	{
-		kv_val(kv, &(*val)[i]);
+	for (int i = 0; i < count; ++i) {
+		cf_kv_val_int32(kv, &(*val)[i]);
 	}
-	kv_array_end(kv);
-	return kv_error_state(kv);
+	cf_kv_array_end(kv);
+	return cf_kv_error_state(kv);
 }
 
+namespace cute
+{
+using string_t = cf_string_t;
+
+CUTE_INLINE error_t kv_val_cf_string(kv_t* kv, string_t* string) { return cf_kv_val_string_cf(kv, string); }
+CUTE_INLINE error_t kv_val(kv_t* kv, std::string* val) { return cf_kv_val_string_std(kv, val); }
+
+template <typename T>
+CUTE_INLINE error_t kv_val(kv_t* kv, std::vector<T>* val, const char* key = NULL) { return cf_kv_val_int32<T>(kv, val, key); }
 }
+#endif // CUTE_CPP
 
 #endif // CUTE_KV_UTILS_H

@@ -47,15 +47,12 @@
 struct SDL_Window;
 struct cs_context_t;
 
-namespace cute
-{
+extern cf_app_t* cf_app;
 
-extern app_t* app;
+struct cf_gfx_t;
+struct cf_audio_system_t;
 
-struct gfx_t;
-struct audio_system_t;
-
-struct mouse_state_t
+struct cf_mouse_state_t
 {
 	int left_button = 0;
 	int right_button = 0;
@@ -68,7 +65,7 @@ struct mouse_state_t
 	int click_type = 0;
 };
 
-struct window_state_t
+struct cf_window_state_t
 {
 	bool mouse_inside_window = false;
 	bool has_keyboard_focus = false;
@@ -79,16 +76,16 @@ struct window_state_t
 	bool moved = false;
 };
 
-struct entity_collection_t
+struct cf_entity_collection_t
 {
-	handle_table_t entity_handle_table;
-	array<handle_t> entity_handles;
-	array<strpool_id> component_type_tuple;
-	array<typeless_array> component_tables;
+	cf_handle_table_t entity_handle_table;
+	cf_array<cf_handle_t> entity_handles; // TODO - Replace with a counter? Or delete?
+	cf_array<cf_strpool_id> component_type_tuple;
+	cf_array<cf_typeless_array> component_tables;
 	int inactive_count = 0;
 };
 
-struct system_internal_t
+struct cf_system_internal_t
 {
 	void clear()
 	{
@@ -100,15 +97,15 @@ struct system_internal_t
 		component_type_tuple.clear();
 	}
 
-	strpool_id name = { 0 };
+	cf_strpool_id name = { 0 };
 	void* udata = NULL;
 	void (*pre_update_fn)(float dt, void* udata) = NULL;
-	system_update_fn* update_fn = NULL;
+	cf_system_update_fn* update_fn = NULL;
 	void (*post_update_fn)(float dt, void* udata) = NULL;
-	array<strpool_id> component_type_tuple;
+	cf_array<cf_strpool_id> component_type_tuple;
 };
 
-struct component_config_t
+struct cf_component_config_t
 {
 	void clear()
 	{
@@ -122,13 +119,13 @@ struct component_config_t
 
 	const char* name = NULL;
 	size_t size_of_component = 0;
-	component_serialize_fn* serializer_fn = NULL;
-	component_cleanup_fn* cleanup_fn = NULL;
+	cf_component_serialize_fn* serializer_fn = NULL;
+	cf_component_cleanup_fn* cleanup_fn = NULL;
 	void* serializer_udata = NULL;
 	void* cleanup_udata = NULL;
 };
 
-struct entity_config_t
+struct cf_entity_config_t
 {
 	void clear()
 	{
@@ -138,14 +135,14 @@ struct entity_config_t
 	}
 
 	const char* entity_type = NULL;
-	array<const char*> component_types;
-	string_t schema;
+	cf_array<const char*> component_types;
+	cf_string_t schema;
 };
 
-using entity_type_t = uint16_t;
-#define INVALID_ENTITY_TYPE ((uint16_t)~0)
+using cf_entity_type_t = uint16_t;
+#define CF_INVALID_ENTITY_TYPE ((uint16_t)~0)
 
-struct app_t
+struct cf_app_t
 {
 	float dt = 0;
 	bool running = true;
@@ -154,13 +151,13 @@ struct app_t
 	SDL_Window* window = NULL;
 	cs_context_t* cute_sound = NULL;
 	bool spawned_mix_thread = false;
-	threadpool_t* threadpool = NULL;
-	audio_system_t* audio_system = NULL;
+	cf_threadpool_t* threadpool = NULL;
+	cf_audio_system_t* audio_system = NULL;
 	cute_font_t* courier_new = NULL;
-	array<cute_font_vert_t> font_verts;
+	cf_array<cute_font_vert_t> font_verts;
 	sg_shader font_shader;
 	sg_pipeline font_pip;
-	buffer_t font_buffer;
+	cf_buffer_t font_buffer;
 	font_vs_params_t font_vs_uniforms;
 	font_fs_params_t font_fs_uniforms;
 	bool gfx_enabled = false;
@@ -177,57 +174,64 @@ struct app_t
 	sg_buffer quad;
 	sg_shader offscreen_shader;
 	sg_pipeline offscreen_to_screen_pip;
-	v2 upscale;
+	cf_v2 upscale;
 	int offscreen_w;
 	int offscreen_h;
-	window_state_t window_state;
-	window_state_t window_state_prev;
+	cf_window_state_t window_state;
+	cf_window_state_t window_state_prev;
 	bool using_imgui = false;
 	sg_imgui_t sg_imgui;
-	strpool_t* strpool = NULL;
+	cf_strpool_t* strpool = NULL;
 
-	array<char> ime_composition;
+	cf_array<char> ime_composition;
 	int ime_composition_cursor = 0;
 	int ime_composition_selection_len = 0;
-	array<int> input_text;
+	cf_array<int> input_text;
 	int keys[512] = { 0 };
 	int keys_prev[512] = { 0 };
 	float keys_duration[512] = { 0 };
 	int key_mod = 0;
-	mouse_state_t mouse, mouse_prev;
-	list_t joypads;
-	array<touch_t> touches;
+	cf_mouse_state_t mouse, mouse_prev;
+	cf_list_t joypads;
+	cf_array<cf_touch_t> touches;
 
-	batch_t* ase_batch = NULL;
-	aseprite_cache_t* ase_cache = NULL;
-	batch_t* png_batch = NULL;
-	png_cache_t* png_cache = NULL;
+	cf_batch_t* ase_batch = NULL;
+	cf_aseprite_cache_t* ase_cache = NULL;
+	cf_batch_t* png_batch = NULL;
+	cf_png_cache_t* png_cache = NULL;
 
 	// TODO: Set allocator context for these data structures.
-	system_internal_t system_internal_builder;
-	array<system_internal_t> systems;
-	entity_config_t entity_config_builder;
-	entity_type_t entity_type_gen = 0;
-	dictionary<strpool_id, entity_type_t> entity_type_string_to_id;
-	array<strpool_id> entity_type_id_to_string;
-	dictionary<entity_type_t, entity_collection_t> entity_collections;
-	entity_type_t current_collection_type_being_iterated = ~0;
-	entity_collection_t* current_collection_being_updated = NULL;
-	array<entity_t> delayed_destroy_entities;
-	array<entity_t> delayed_deactivate_entities;
-	array<entity_t> delayed_activate_entities;
+	cf_system_internal_t system_internal_builder;
+	cf_array<cf_system_internal_t> systems;
+	cf_entity_config_t entity_config_builder;
+	cf_entity_type_t entity_type_gen = 0;
+	cf_dictionary<cf_strpool_id, cf_entity_type_t> entity_type_string_to_id;
+	cf_array<cf_strpool_id> entity_type_id_to_string;
+	cf_dictionary<cf_entity_type_t, cf_entity_collection_t> entity_collections;
+	cf_entity_type_t current_collection_type_being_iterated = ~0;
+	cf_entity_collection_t* current_collection_being_updated = NULL;
+	cf_array<cf_entity_t> delayed_destroy_entities;
+	cf_array<cf_entity_t> delayed_deactivate_entities;
+	cf_array<cf_entity_t> delayed_activate_entities;
 
-	component_config_t component_config_builder;
-	dictionary<strpool_id, component_config_t> component_configs;
-	dictionary<entity_type_t, kv_t*> entity_parsed_schemas;
-	dictionary<entity_type_t, uint16_t> entity_schema_inheritence;
+	cf_component_config_t component_config_builder;
+	cf_dictionary<cf_strpool_id, cf_component_config_t> component_configs;
+	cf_dictionary<cf_entity_type_t, cf_kv_t*> entity_parsed_schemas;
+	cf_dictionary<cf_entity_type_t, uint16_t> entity_schema_inheritence;
 
-	dictionary<entity_t, int>* save_id_table = NULL;
-	array<entity_t>* load_id_table = NULL;
+	cf_dictionary<cf_entity_t, int>* save_id_table = NULL;
+	cf_array<cf_entity_t>* load_id_table = NULL;
 
 	void* mem_ctx = NULL;
 };
 
+#ifdef CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_APP_INTERNAL_H

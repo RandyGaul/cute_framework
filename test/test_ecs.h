@@ -49,48 +49,48 @@ struct test_component_octorok_t
 {
 	int ai_state;
 	uint32_t pellet_count;
-	array<entity_t> pellets;
+	cf_array<cf_entity_t> pellets;
 	int buddy_said_hi;
-	entity_t buddy;
+	cf_entity_t buddy;
 };
 
 // -------------------------------------------------------------------------------------------------
 
-cute::error_t test_component_transform_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+cf_error_t test_component_transform_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
 {
 	test_component_transform_t* transform = (test_component_transform_t*)component;
 	if (reading) {
 		transform->x = 0;
 		transform->y = 0;
 	}
-	kv_key(kv, "x"); kv_val(kv, &transform->x);
-	kv_key(kv, "y"); kv_val(kv, &transform->y);
-	return kv_error_state(kv);
+	cf_kv_key(kv, "x", NULL); cf_kv_val_float(kv, &transform->x);
+	cf_kv_key(kv, "y", NULL); cf_kv_val_float(kv, &transform->y);
+	return cf_kv_error_state(kv);
 }
 
-cute::error_t test_component_sprite_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+cf_error_t test_component_sprite_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
 {
 	test_component_sprite_t* sprite = (test_component_sprite_t*)component;
 	if (reading) {
 		sprite->img_id = 7;
 	}
-	kv_key(kv, "img_id"); kv_val(kv, &sprite->img_id);
-	return kv_error_state(kv);
+	cf_kv_key(kv, "img_id", NULL); cf_kv_val_uint64(kv, &sprite->img_id);
+	return cf_kv_error_state(kv);
 }
 
-cute::error_t test_component_collider_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+cf_error_t test_component_collider_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
 {
 	test_component_collider_t* collider = (test_component_collider_t*)component;
 	if (reading) {
 		collider->type = 3;
 		collider->radius = 14.0f;
 	}
-	kv_key(kv, "type"); kv_val(kv, &collider->type);
-	kv_key(kv, "radius"); kv_val(kv, &collider->radius);
-	return kv_error_state(kv);
+	cf_kv_key(kv, "type", NULL); cf_kv_val_uint64(kv, &collider->type);
+	cf_kv_key(kv, "radius", NULL); cf_kv_val_float(kv, &collider->radius);
+	return cf_kv_error_state(kv);
 }
 
-cute::error_t test_component_octorok_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+cf_error_t test_component_octorok_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
 {
 	test_component_octorok_t* octorok = (test_component_octorok_t*)component;
 	if (reading) {
@@ -98,18 +98,18 @@ cute::error_t test_component_octorok_serialize(kv_t* kv, bool reading, entity_t 
 		octorok->pellet_count = 3;
 		octorok->buddy_said_hi = 0;
 	}
-	kv_key(kv, "ai_state"); kv_val(kv, &octorok->ai_state);
-	kv_key(kv, "pellet_count"); kv_val(kv, &octorok->pellet_count);
-	kv_key(kv, "buddy"); kv_val_entity(kv, &octorok->buddy);
-	return kv_error_state(kv);
+	cf_kv_key(kv, "ai_state", NULL); cf_kv_val_int32(kv, &octorok->ai_state);
+	cf_kv_key(kv, "pellet_count", NULL); cf_kv_val_uint32(kv, &octorok->pellet_count);
+	cf_kv_key(kv, "buddy", NULL); cf_kv_val_entity(kv, &octorok->buddy);
+	return cf_kv_error_state(kv);
 }
 
 // -------------------------------------------------------------------------------------------------
 
-#define FIND_COMPONENTS(T) T* T##s = (T*)ecs_arrays_find_components(arrays, #T); CUTE_ASSERT(!count || T##s)
+#define FIND_COMPONENTS(T) T* T##s = (T*)cf_ecs_arrays_find_components(arrays, #T); CUTE_ASSERT(!count || T##s)
 
 int s_octorok_system_ran_ok;
-void update_test_octorok_system(float dt, ecs_arrays_t* arrays, int count, void* udata)
+void update_test_octorok_system(float dt, cf_ecs_arrays_t* arrays, int count, void* udata)
 {
 	FIND_COMPONENTS(test_component_transform_t);
 	FIND_COMPONENTS(test_component_sprite_t);
@@ -131,7 +131,7 @@ void update_test_octorok_system(float dt, ecs_arrays_t* arrays, int count, void*
 		transform->y = 20.0f;
 		if (transform->x == 20.0f) s_octorok_system_ran_ok++;
 
-		test_component_octorok_t* buddy = (test_component_octorok_t*)entity_get_component(octorok->buddy, "test_component_octorok_t");
+		test_component_octorok_t* buddy = (test_component_octorok_t*)cf_entity_get_component(octorok->buddy, "test_component_octorok_t");
 		buddy->buddy_said_hi = 1;
 	}
 }
@@ -139,7 +139,7 @@ void update_test_octorok_system(float dt, ecs_arrays_t* arrays, int count, void*
 // -------------------------------------------------------------------------------------------------
 
 int s_octorok_buddy_said_hi_count;
-void update_test_octorok_buddy_counter_system(float dt, ecs_arrays_t* arrays, int count, void* udata)
+void update_test_octorok_buddy_counter_system(float dt, cf_ecs_arrays_t* arrays, int count, void* udata)
 {
 	FIND_COMPONENTS(test_component_octorok_t);
 	for (int i = 0; i < count; ++i) {
@@ -155,34 +155,34 @@ void update_test_octorok_buddy_counter_system(float dt, ecs_arrays_t* arrays, in
 CUTE_TEST_CASE(test_ecs_octorok, "Run ECS with a mock Octorok entity.");
 int test_ecs_octorok()
 {
-	if (app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN).is_error()) {
+	if (cf_is_error(&cf_app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN, NULL, NULL))) {
 		return -1;
 	}
 
 	// Register component types.
-	ecs_component_begin();
-	ecs_component_set_size(sizeof(test_component_transform_t));
-	ecs_component_set_name(CUTE_STRINGIZE(test_component_transform_t));
-	ecs_component_set_optional_serializer(test_component_transform_serialize);
-	ecs_component_end();
+	cf_ecs_component_begin();
+	cf_ecs_component_set_size(sizeof(test_component_transform_t));
+	cf_ecs_component_set_name(CUTE_STRINGIZE(test_component_transform_t));
+	cf_ecs_component_set_optional_serializer(test_component_transform_serialize, NULL);
+	cf_ecs_component_end();
 
-	ecs_component_begin();
-	ecs_component_set_size(sizeof(test_component_sprite_t));
-	ecs_component_set_name(CUTE_STRINGIZE(test_component_sprite_t));
-	ecs_component_set_optional_serializer(test_component_sprite_serialize);
-	ecs_component_end();
+	cf_ecs_component_begin();
+	cf_ecs_component_set_size(sizeof(test_component_sprite_t));
+	cf_ecs_component_set_name(CUTE_STRINGIZE(test_component_sprite_t));
+	cf_ecs_component_set_optional_serializer(test_component_sprite_serialize, NULL);
+	cf_ecs_component_end();
 
-	ecs_component_begin();
-	ecs_component_set_size(sizeof(test_component_collider_t));
-	ecs_component_set_name(CUTE_STRINGIZE(test_component_collider_t));
-	ecs_component_set_optional_serializer(test_component_collider_serialize);
-	ecs_component_end();
+	cf_ecs_component_begin();
+	cf_ecs_component_set_size(sizeof(test_component_collider_t));
+	cf_ecs_component_set_name(CUTE_STRINGIZE(test_component_collider_t));
+	cf_ecs_component_set_optional_serializer(test_component_collider_serialize, NULL);
+	cf_ecs_component_end();
 
-	ecs_component_begin();
-	ecs_component_set_size(sizeof(test_component_octorok_t));
-	ecs_component_set_name(CUTE_STRINGIZE(test_component_octorok_t));
-	ecs_component_set_optional_serializer(test_component_octorok_serialize);
-	ecs_component_end();
+	cf_ecs_component_begin();
+	cf_ecs_component_set_size(sizeof(test_component_octorok_t));
+	cf_ecs_component_set_name(CUTE_STRINGIZE(test_component_octorok_t));
+	cf_ecs_component_set_optional_serializer(test_component_octorok_serialize, NULL);
+	cf_ecs_component_end();
 
 	// Register entity types (just one, the octorok).
 	const char* octorok_schema_string = CUTE_STRINGIZE(
@@ -198,23 +198,23 @@ int test_ecs_octorok()
 		},
 	);
 
-	ecs_entity_begin();
-	ecs_entity_set_optional_schema(octorok_schema_string);
-	ecs_entity_end();
+	cf_ecs_entity_begin();
+	cf_ecs_entity_set_optional_schema(octorok_schema_string);
+	cf_ecs_entity_end();
 
 	// Register systems.
-	ecs_system_begin();
-	ecs_system_set_update(update_test_octorok_system);
-	ecs_system_require_component("test_component_transform_t");
-	ecs_system_require_component("test_component_sprite_t");
-	ecs_system_require_component("test_component_collider_t");
-	ecs_system_require_component("test_component_octorok_t");
-	ecs_system_end();
+	cf_ecs_system_begin();
+	cf_ecs_system_set_update(update_test_octorok_system);
+	cf_ecs_system_require_component("test_component_transform_t");
+	cf_ecs_system_require_component("test_component_sprite_t");
+	cf_ecs_system_require_component("test_component_collider_t");
+	cf_ecs_system_require_component("test_component_octorok_t");
+	cf_ecs_system_end();
 
-	ecs_system_begin();
-	ecs_system_set_update(update_test_octorok_buddy_counter_system);
-	ecs_system_require_component("test_component_octorok_t");
-	ecs_system_end();
+	cf_ecs_system_begin();
+	cf_ecs_system_set_update(update_test_octorok_buddy_counter_system);
+	cf_ecs_system_require_component("test_component_octorok_t");
+	cf_ecs_system_end();
 
 	// Load up serialized entities.
 	const char* serialized_entities = CUTE_STRINGIZE(
@@ -242,50 +242,50 @@ int test_ecs_octorok()
 		}
 	);
 
-	kv_t* parsed_entities = kv_make();
-	cute::error_t err = kv_parse(parsed_entities, serialized_entities, CUTE_STRLEN(serialized_entities));
-	if (err.is_error()) return -1;
+	cf_kv_t* parsed_entities = cf_kv_make(NULL);
+	cf_error_t err = cf_kv_parse(parsed_entities, serialized_entities, CUTE_STRLEN(serialized_entities));
+	if (cf_is_error(&err)) return -1;
 
-	array<entity_t> entities;
-	err = ecs_load_entities(parsed_entities, &entities);
-	if (err.is_error()) return -1;
-	kv_destroy(parsed_entities);
+	cf_array<cf_entity_t> entities;
+	err = cute::ecs_load_entities(parsed_entities, &entities);
+	if (cf_is_error(&err)) return -1;
+	cf_kv_destroy(parsed_entities);
 
 	// Assert that saving the entities has matching values to what's in RAM currently.
-	kv_t* saved_entities = kv_make();
-	kv_write_mode(saved_entities);
-	err = ecs_save_entities(entities, saved_entities);
-	if (err.is_error()) return -1;
-	kv_nul_terminate(saved_entities);
-	kv_destroy(saved_entities);
+	cf_kv_t* saved_entities = cf_kv_make(NULL);
+	cf_kv_write_mode(saved_entities);
+	err = cute::ecs_save_entities(entities, saved_entities);
+	if (cf_is_error(&err)) return -1;
+	cf_kv_nul_terminate(saved_entities);
+	cf_kv_destroy(saved_entities);
 
-	saved_entities = kv_make();
-	kv_parse(saved_entities, kv_get_buffer(saved_entities), kv_size_written(saved_entities));
+	saved_entities = cf_kv_make(NULL);
+	cf_kv_parse(saved_entities, cf_kv_get_buffer(saved_entities), cf_kv_size_written(saved_entities));
 
-	kv_key(saved_entities, "entities");
+	cf_kv_key(saved_entities, "entities", NULL);
 	int c;
-	kv_array_begin(saved_entities, &c);
-		kv_object_begin(saved_entities);
+	cf_kv_array_begin(saved_entities, &c, NULL);
+		cf_kv_object_begin(saved_entities, NULL);
 			const char* serialized_entity_type;
 			size_t len;
-			kv_key(saved_entities, "entity_type");
-			kv_val_string(saved_entities, &serialized_entity_type, &len);
+			cf_kv_key(saved_entities, "entity_type", NULL);
+			cf_kv_val_string(saved_entities, &serialized_entity_type, &len);
 			CUTE_TEST_ASSERT(!CUTE_STRNCMP("Octorok", serialized_entity_type, len));
-		kv_object_end(saved_entities);
-	kv_array_end(saved_entities);
+		cf_kv_object_end(saved_entities);
+	cf_kv_array_end(saved_entities);
 
-	kv_destroy(saved_entities);
+	cf_kv_destroy(saved_entities);
 
 	// Update the systems.
 	s_octorok_system_ran_ok = 0;
 	s_octorok_buddy_said_hi_count = 0;
-	ecs_run_systems(0);
+	cf_ecs_run_systems(0);
 
 	// Assert outcomes (make sure the systems actually ran).
 	CUTE_TEST_ASSERT(s_octorok_system_ran_ok == 2);
 	CUTE_TEST_ASSERT(s_octorok_buddy_said_hi_count == 2);
 
-	app_destroy();
+	cf_app_destroy();
 
 	return 0;
 }
@@ -297,16 +297,16 @@ struct dummy_component_t
 	int iters = 0;
 };
 
-cute::error_t dummy_serialize(kv_t* kv, bool reading, entity_t entity, void* component, void* udata)
+cf_error_t dummy_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
 {
 	dummy_component_t* dummy = (dummy_component_t*)component;
 	if (reading) {
 		CUTE_PLACEMENT_NEW(dummy) dummy_component_t;
 	}
-	return error_success();
+	return cf_error_success();
 }
 
-void update_dummy_system(float dt, ecs_arrays_t* arrays, int count, void* udata)
+void update_dummy_system(float dt, cf_ecs_arrays_t* arrays, int count, void* udata)
 {
 	FIND_COMPONENTS(dummy_component_t);
 	for (int i = 0; i < count; ++i) {
@@ -318,34 +318,34 @@ void update_dummy_system(float dt, ecs_arrays_t* arrays, int count, void* udata)
 CUTE_TEST_CASE(test_ecs_no_kv, "Run ECS without kv at all.");
 int test_ecs_no_kv()
 {
-	if (app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN).is_error()) {
+	if (cf_is_error(&cf_app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN, NULL, NULL))) {
 		return -1;
 	}
 
-	ecs_component_begin();
-	ecs_component_set_name("dummy_component_t");
-	ecs_component_set_size(sizeof(dummy_component_t));
-	ecs_component_set_optional_serializer(dummy_serialize);
-	ecs_component_end();
+	cf_ecs_component_begin();
+	cf_ecs_component_set_name("dummy_component_t");
+	cf_ecs_component_set_size(sizeof(dummy_component_t));
+	cf_ecs_component_set_optional_serializer(dummy_serialize, NULL);
+	cf_ecs_component_end();
 
-	ecs_system_begin();
-	ecs_system_set_update(update_dummy_system);
-	ecs_system_require_component("dummy_component_t");
-	ecs_system_end();
+	cf_ecs_system_begin();
+	cf_ecs_system_set_update(update_dummy_system);
+	cf_ecs_system_require_component("dummy_component_t");
+	cf_ecs_system_end();
 
-	ecs_entity_begin();
-	ecs_entity_set_name("Dummy_Entity");
-	ecs_entity_add_component("dummy_component_t");
-	ecs_entity_end();
+	cf_ecs_entity_begin();
+	cf_ecs_entity_set_name("Dummy_Entity");
+	cf_ecs_entity_add_component("dummy_component_t");
+	cf_ecs_entity_end();
 
-	entity_t e = entity_make("Dummy_Entity");
-	CUTE_TEST_ASSERT(e != INVALID_ENTITY);
-	ecs_run_systems(0);
+	cf_entity_t e = cf_entity_make("Dummy_Entity", NULL);
+	CUTE_TEST_ASSERT(e != CF_INVALID_ENTITY);
+	cf_ecs_run_systems(0);
 
-	dummy_component_t* dummy = (dummy_component_t*)entity_get_component(e, "dummy_component_t");
+	dummy_component_t* dummy = (dummy_component_t*)cf_entity_get_component(e, "dummy_component_t");
 	CUTE_TEST_ASSERT(dummy->iters == 1);
 
-	app_destroy();
+	cf_app_destroy();
 
 	return 0;
 }

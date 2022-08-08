@@ -25,12 +25,27 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+CUTE_API char* CUTE_CALL cf_clipboard_get();
+CUTE_API cf_error_t CUTE_CALL cf_clipboard_set(const char* string);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
+#ifdef CUTE_CPP
+
 namespace cute
 {
 
-CUTE_API char* CUTE_CALL clipboard_get();
-CUTE_API error_t CUTE_CALL clipboard_set(const char* string);
+CUTE_INLINE char* clipboard_get() { return cf_clipboard_get(); }
+CUTE_INLINE cf_error_t clipboard_set(const char* string) { return cf_clipboard_set(string); }
 
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_CLIPBOARD_H

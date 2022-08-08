@@ -24,8 +24,9 @@
 
 #include "cute_defines.h"
 
-namespace cute
-{
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 /**
  * Calculates the time, in seconds, since the last time this function was called.
@@ -34,30 +35,48 @@ namespace cute
  * 
  * For more fine-grained measuring of time, try using `timer_t`.
  */
-CUTE_API float CUTE_CALL calc_dt();
+CUTE_API float CUTE_CALL cf_calc_dt();
 
-struct timer_t
+typedef struct cf_timer_t
 {
 	double inv_freq;
 	uint64_t prev;
-};
+} cf_timer_t;
 
 /**
  * Initializes a new `timer_t` on the stack.
  */
-CUTE_API timer_t CUTE_CALL timer_init();
+CUTE_API cf_timer_t CUTE_CALL cf_timer_init();
 
 /**
  * Returns the time elapsed since the last call to `timer_dt` was made.
  */
-CUTE_API float CUTE_CALL timer_dt(timer_t* timer);
+CUTE_API float CUTE_CALL cf_timer_dt(cf_timer_t* timer);
 
 /**
  * Returns the time elapsed since the last call to `timer_dt` was made. Use this function
  * to repeatedly measure the time since the last `timer_dt` call.
  */
-CUTE_API float CUTE_CALL timer_elapsed(timer_t* timer);
+CUTE_API float CUTE_CALL cf_timer_elapsed(cf_timer_t* timer);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
+using timer_t = cf_timer_t;
+
+CUTE_INLINE float calc_dt() { return cf_calc_dt(); }
+CUTE_INLINE timer_t timer_init() { return cf_timer_init(); }
+CUTE_INLINE float timer_dt(timer_t* timer) { return cf_timer_dt(timer); }
+CUTE_INLINE float timer_elapsed(timer_t* timer) { return cf_timer_elapsed(timer); }
 
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_TIMER_H

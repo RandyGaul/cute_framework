@@ -25,29 +25,53 @@
 #include "cute_defines.h"
 #include "cute_concurrency.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+typedef struct cf_circular_buffer_t
+{
+	int index0; /*= 0*/
+	int index1; /*= 0*/
+	cf_atomic_int_t size_left; /*= cf_atomic_zero()*/
+	int capacity; /*= 0*/
+	uint8_t* data; /*= NULL*/
+	void* user_allocator_context; /*= NULL*/
+} cf_circular_buffer_t;
+
+CUTE_API cf_circular_buffer_t CUTE_CALL cf_circular_buffer_make(int initial_size_in_bytes, void* user_allocator_context /*= NULL*/);
+CUTE_API void CUTE_CALL cf_circular_buffer_free(cf_circular_buffer_t* buffer);
+
+CUTE_API void CUTE_CALL cf_circular_buffer_reset(cf_circular_buffer_t* buffer);
+
+CUTE_API int CUTE_CALL cf_circular_buffer_push(cf_circular_buffer_t* buffer, const void* data, int size);
+CUTE_API int CUTE_CALL cf_circular_buffer_pull(cf_circular_buffer_t* buffer, void* data, int size);
+
+CUTE_API int CUTE_CALL cf_circular_buffer_grow(cf_circular_buffer_t* buffer, int new_size_in_bytes);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
+#ifdef CUTE_CPP
+
 namespace cute
 {
 
-struct circular_buffer_t
-{
-	int index0 = 0;
-	int index1 = 0;
-	atomic_int_t size_left = atomic_zero();
-	int capacity = 0;
-	uint8_t* data = NULL;
-	void* user_allocator_context = NULL;
-};
+using circular_buffer_t = cf_circular_buffer_t;
 
-CUTE_API circular_buffer_t CUTE_CALL circular_buffer_make(int initial_size_in_bytes, void* user_allocator_context = NULL);
-CUTE_API void CUTE_CALL circular_buffer_free(circular_buffer_t* buffer);
+CUTE_INLINE circular_buffer_t circular_buffer_make(int initial_size_in_bytes, void* user_allocator_context = NULL) { return cf_circular_buffer_make(initial_size_in_bytes, user_allocator_context); }
+CUTE_INLINE void circular_buffer_free(circular_buffer_t* buffer) { cf_circular_buffer_free(buffer); }
 
-CUTE_API void CUTE_CALL circular_buffer_reset(circular_buffer_t* buffer);
+CUTE_INLINE void circular_buffer_reset(circular_buffer_t* buffer) { cf_circular_buffer_reset(buffer); }
 
-CUTE_API int CUTE_CALL circular_buffer_push(circular_buffer_t* buffer, const void* data, int size);
-CUTE_API int CUTE_CALL circular_buffer_pull(circular_buffer_t* buffer, void* data, int size);
+CUTE_INLINE int circular_buffer_push(circular_buffer_t* buffer, const void* data, int size) { return cf_circular_buffer_push(buffer, data, size); }
+CUTE_INLINE int circular_buffer_pull(circular_buffer_t* buffer, void* data, int size) { return cf_circular_buffer_pull(buffer, data, size); }
 
-CUTE_API int CUTE_CALL circular_buffer_grow(circular_buffer_t* buffer, int new_size_in_bytes);
+CUTE_INLINE int circular_buffer_grow(circular_buffer_t* buffer, int new_size_in_bytes) { return cf_circular_buffer_grow(buffer, new_size_in_bytes); }
 
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_CIRCULAR_BUFFER_H

@@ -34,219 +34,214 @@
 #define CUTE_THREAD_FREE CUTE_FREE
 #include <cute/cute_sync.h>
 
-namespace cute
-{
-
-mutex_t mutex_create()
+cf_mutex_t cf_mutex_create()
 {
 	return cute_mutex_create();
 }
 
-void mutex_destroy(mutex_t* mutex)
+void cf_mutex_destroy(cf_mutex_t* mutex)
 {
 	cute_mutex_destroy(mutex);
 }
 
-error_t mutex_lock(mutex_t* mutex)
+cf_error_t cf_mutex_lock(cf_mutex_t* mutex)
 {
-	return error_make(cute_lock(mutex), NULL);
+	return cf_error_make(cute_lock(mutex), NULL);
 }
 
-error_t mutex_unlock(mutex_t* mutex)
+cf_error_t cf_mutex_unlock(cf_mutex_t* mutex)
 {
-	return error_make(cute_unlock(mutex), NULL);
+	return cf_error_make(cute_unlock(mutex), NULL);
 }
 
-bool mutex_trylock(mutex_t* mutex)
+bool cf_mutex_trylock(cf_mutex_t* mutex)
 {
 	return !!cute_trylock(mutex);
 }
 
-cv_t cv_create()
+cf_cv_t cf_cv_create()
 {
 	return cute_cv_create();
 }
 
-void cv_destroy(cv_t* cv)
+void cf_cv_destroy(cf_cv_t* cv)
 {
 	cute_cv_destroy(cv);
 }
 
-error_t cv_wake_all(cv_t* cv)
+cf_error_t cf_cv_wake_all(cf_cv_t* cv)
 {
-	return error_make(cute_cv_wake_all(cv), NULL);
+	return cf_error_make(cute_cv_wake_all(cv), NULL);
 }
 
-error_t cv_wake_one(cv_t* cv)
+cf_error_t cf_cv_wake_one(cf_cv_t* cv)
 {
-	return error_make(cute_cv_wake_one(cv), NULL);
+	return cf_error_make(cute_cv_wake_one(cv), NULL);
 }
 
-error_t cv_wait(cv_t* cv, mutex_t* mutex)
+cf_error_t cf_cv_wait(cf_cv_t* cv, cf_mutex_t* mutex)
 {
-	return error_make(cute_cv_wait(cv, mutex), NULL);
+	return cf_error_make(cute_cv_wait(cv, mutex), NULL);
 }
 
-semaphore_t sem_create(int initial_count)
+cf_semaphore_t cf_sem_create(int initial_count)
 {
 	return cute_semaphore_create(initial_count);
 }
 
-void sem_destroy(semaphore_t* semaphore)
+void cf_sem_destroy(cf_semaphore_t* semaphore)
 {
 	cute_semaphore_destroy(semaphore);
 }
 
-error_t sem_post(semaphore_t* semaphore)
+cf_error_t cf_sem_post(cf_semaphore_t* semaphore)
 {
-	return error_make(cute_semaphore_post(semaphore), NULL);
+	return cf_error_make(cute_semaphore_post(semaphore), NULL);
 }
 
-error_t sem_try(semaphore_t* semaphore)
+cf_error_t cf_sem_try(cf_semaphore_t* semaphore)
 {
-	return error_make(cute_semaphore_try(semaphore), NULL);
+	return cf_error_make(cute_semaphore_try(semaphore), NULL);
 }
 
-error_t sem_wait(semaphore_t* semaphore)
+cf_error_t cf_sem_wait(cf_semaphore_t* semaphore)
 {
-	return error_make(cute_semaphore_wait(semaphore), NULL);
+	return cf_error_make(cute_semaphore_wait(semaphore), NULL);
 }
 
-error_t sem_value(semaphore_t* semaphore)
+cf_error_t cf_sem_value(cf_semaphore_t* semaphore)
 {
-	return error_make(cute_semaphore_value(semaphore), NULL);
+	return cf_error_make(cute_semaphore_value(semaphore), NULL);
 }
 
-thread_t* thread_create(thread_func_t func, const char* name, void* udata)
+cf_thread_t* cf_thread_create(cf_thread_func_t func, const char* name, void* udata)
 {
 	return cute_thread_create(func, name, udata);
 }
 
-void thread_detach(thread_t* thread)
+void cf_thread_detach(cf_thread_t* thread)
 {
 	cute_thread_detach(thread);
 }
 
-thread_id_t thread_get_id(thread_t* thread)
+cf_thread_id_t cf_thread_get_id(cf_thread_t* thread)
 {
 	return cute_thread_get_id(thread);
 }
 
-thread_id_t thread_id()
+cf_thread_id_t cf_thread_id()
 {
 	return cute_thread_id();
 }
 
-error_t thread_wait(thread_t* thread)
+cf_error_t cf_thread_wait(cf_thread_t* thread)
 {
-	return error_make(cute_thread_wait(thread), NULL);
+	return cf_error_make(cute_thread_wait(thread), NULL);
 }
 
-int core_count()
+int cf_core_count()
 {
 	return cute_core_count();
 }
 
-int cacheline_size()
+int cf_cacheline_size()
 {
 	return cute_cacheline_size();
 }
 
-atomic_int_t atomic_zero()
+cf_atomic_int_t cf_atomic_zero()
 {
-	atomic_int_t result;
+	cf_atomic_int_t result;
 	result.i = 0;
 	return result;
 }
 
-int atomic_add(atomic_int_t* atomic, int addend)
+int cf_atomic_add(cf_atomic_int_t* atomic, int addend)
 {
 	return cute_atomic_add(atomic, addend);
 }
 
-int atomic_set(atomic_int_t* atomic, int value)
+int cf_atomic_set(cf_atomic_int_t* atomic, int value)
 {
 	return cute_atomic_set(atomic, value);
 }
 
-int atomic_get(atomic_int_t* atomic)
+int cf_atomic_get(cf_atomic_int_t* atomic)
 {
 	return cute_atomic_get(atomic);
 }
 
-error_t atomic_cas(atomic_int_t* atomic, int expected, int value)
+cf_error_t cf_atomic_cas(cf_atomic_int_t* atomic, int expected, int value)
 {
-	return error_make(cute_atomic_cas(atomic, expected, value), NULL);
+	return cf_error_make(cute_atomic_cas(atomic, expected, value), NULL);
 }
 
-void* atomic_ptr_set(void** atomic, void* value)
+void* cf_atomic_ptr_set(void** atomic, void* value)
 {
 	return cute_atomic_ptr_set(atomic, value);
 }
 
-void* atomic_ptr_get(void** atomic)
+void* cf_atomic_ptr_get(void** atomic)
 {
 	return cute_atomic_ptr_get(atomic);
 }
 
-error_t atomic_ptr_cas(void** atomic, void* expected, void* value)
+cf_error_t cf_atomic_ptr_cas(void** atomic, void* expected, void* value)
 {
-	return error_make(cute_atomic_ptr_cas(atomic, expected, value), NULL);
+	return cf_error_make(cute_atomic_ptr_cas(atomic, expected, value), NULL);
 }
 
-rw_lock_t rw_lock_create()
+cf_rw_lock_t cf_rw_lock_create()
 {
 	return cute_rw_lock_create();
 }
 
-void rw_lock_destroy(rw_lock_t* rw)
+void cf_rw_lock_destroy(cf_rw_lock_t* rw)
 {
 	if (rw) cute_rw_lock_destroy(rw);
 }
 
-void read_lock(rw_lock_t* rw)
+void cf_read_lock(cf_rw_lock_t* rw)
 {
 	cute_read_lock(rw);
 }
 
-void read_unlock(rw_lock_t* rw)
+void cf_read_unlock(cf_rw_lock_t* rw)
 {
 	cute_read_unlock(rw);
 }
 
-void write_lock(rw_lock_t* rw)
+void cf_write_lock(cf_rw_lock_t* rw)
 {
 	cute_write_lock(rw);
 }
 
-void write_unlock(rw_lock_t* rw)
+void cf_write_unlock(cf_rw_lock_t* rw)
 {
 	cute_write_unlock(rw);
 }
 
-threadpool_t* threadpool_create(int thread_count, void* user_allocator_context)
+cf_threadpool_t* cf_threadpool_create(int thread_count, void* user_allocator_context)
 {
 	return cute_threadpool_create(thread_count, user_allocator_context);
 }
 
-void threadpool_add_task(threadpool_t* pool, task_fn* task, void* param)
+void cf_threadpool_add_task(cf_threadpool_t* pool, cf_task_fn* task, void* param)
 {
 	cute_threadpool_add_task(pool, task, param);
 }
 
-void threadpool_kick_and_wait(threadpool_t* pool)
+void cf_threadpool_kick_and_wait(cf_threadpool_t* pool)
 {
 	cute_threadpool_kick_and_wait(pool);
 }
 
-void threadpool_kick(threadpool_t* pool)
+void cf_threadpool_kick(cf_threadpool_t* pool)
 {
 	cute_threadpool_kick(pool);
 }
 
-void threadpool_destroy(threadpool_t* pool)
+void cf_threadpool_destroy(cf_threadpool_t* pool)
 {
 	cute_threadpool_destroy(pool);
-}
-
 }

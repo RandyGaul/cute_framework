@@ -24,12 +24,16 @@
 
 #include <cute_error.h>
 
+CUTE_API cf_error_t CUTE_CALL cf_file_system_init(const char* argv0);
+CUTE_API void CUTE_CALL cf_file_system_destroy();
+
+#ifdef CUTE_CPP
+
 namespace cute
 {
 
-CUTE_API error_t CUTE_CALL file_system_init(const char* argv0);
-CUTE_API void CUTE_CALL file_system_destroy();
-
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_FILE_SYSTEM_INTERNAL_H

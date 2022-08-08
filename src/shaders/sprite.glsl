@@ -1,7 +1,7 @@
 @module sprite_default
-@ctype mat4 cute::matrix_t
-@ctype vec4 cute::color_t
-@ctype vec2 cute::v2
+@ctype mat4 cf_matrix_t
+@ctype vec4 cf_color_t
+@ctype vec2 cf_v2
 
 @include includes/overlay.glsl
 @include includes/smooth_uv.glsl

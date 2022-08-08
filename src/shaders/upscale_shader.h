@@ -78,14 +78,14 @@
 #define SLOT_upscale_vs_params (0)
 #pragma pack(push,1)
 SOKOL_SHDC_ALIGN(16) typedef struct upscale_vs_params_t {
-    cute::v2 u_scale;
+    cf_v2 u_scale;
     uint8_t _pad_8[8];
 } upscale_vs_params_t;
 #pragma pack(pop)
 #define SLOT_upscale_fs_params (0)
 #pragma pack(push,1)
 SOKOL_SHDC_ALIGN(16) typedef struct upscale_fs_params_t {
-    cute::v2 u_texture_size;
+    cf_v2 u_texture_size;
     uint8_t _pad_8[8];
 } upscale_fs_params_t;
 #pragma pack(pop)

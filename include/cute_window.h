@@ -24,38 +24,69 @@
 
 #include "cute_defines.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+CUTE_API void CUTE_CALL cf_window_size(int* w, int* h);
+CUTE_API void CUTE_CALL cf_window_position(int* x, int* y);
+
+CUTE_API bool CUTE_CALL cf_window_was_size_changed();
+CUTE_API bool CUTE_CALL cf_window_was_moved();
+
+CUTE_API bool CUTE_CALL cf_window_keyboard_lost_focus();
+CUTE_API bool CUTE_CALL cf_window_keyboard_gained_focus();
+CUTE_API bool CUTE_CALL cf_window_keyboard_has_focus();
+
+CUTE_API bool CUTE_CALL cf_window_was_minimized();
+CUTE_API bool CUTE_CALL cf_window_was_maximized();
+CUTE_API bool CUTE_CALL cf_window_is_minimized();
+CUTE_API bool CUTE_CALL cf_window_is_maximized();
+CUTE_API bool CUTE_CALL cf_window_was_restored();
+
+CUTE_API bool CUTE_CALL cf_window_mouse_entered();
+CUTE_API bool CUTE_CALL cf_window_mouse_exited();
+CUTE_API bool CUTE_CALL cf_window_mouse_inside();
+
+typedef enum cf_window_message_box_type_t
+{
+	CF_WINDOW_MESSAGE_BOX_TYPE_ERROR,
+	CF_WINDOW_MESSAGE_BOX_TYPE_WARNING,
+	CF_WINDOW_MESSAGE_BOX_TYPE_INFORMATION,
+} cf_window_message_box_type_t;
+
+CUTE_API void CUTE_CALL cf_window_message_box(cf_window_message_box_type_t type, const char* title, const char* text);
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
+#ifdef  CUTE_CPP
+
 namespace cute
 {
 
-CUTE_API void CUTE_CALL window_size(int* w, int* h);
-CUTE_API void CUTE_CALL window_position(int* x, int* y);
+using window_message_box_type_t = cf_window_message_box_type_t;
 
-CUTE_API bool CUTE_CALL window_was_size_changed();
-CUTE_API bool CUTE_CALL window_was_moved();
-
-CUTE_API bool CUTE_CALL window_keyboard_lost_focus();
-CUTE_API bool CUTE_CALL window_keyboard_gained_focus();
-CUTE_API bool CUTE_CALL window_keyboard_has_focus();
-
-CUTE_API bool CUTE_CALL window_was_minimized();
-CUTE_API bool CUTE_CALL window_was_maximized();
-CUTE_API bool CUTE_CALL window_is_minimized();
-CUTE_API bool CUTE_CALL window_is_maximized();
-CUTE_API bool CUTE_CALL window_was_restored();
-
-CUTE_API bool CUTE_CALL window_mouse_entered();
-CUTE_API bool CUTE_CALL window_mouse_exited();
-CUTE_API bool CUTE_CALL window_mouse_inside();
-
-enum window_message_box_type_t
-{
-	WINDOW_MESSAGE_BOX_TYPE_ERROR,
-	WINDOW_MESSAGE_BOX_TYPE_WARNING,
-	WINDOW_MESSAGE_BOX_TYPE_INFORMATION,
-};
-
-CUTE_API void CUTE_CALL window_message_box(window_message_box_type_t type, const char* title, const char* text);
+CUTE_INLINE void window_size(int* w, int* h) { return cf_window_size(w,h); }
+CUTE_INLINE void window_position(int* x, int* y) { return cf_window_position(x,y); }
+CUTE_INLINE bool window_was_size_changed() { return cf_window_was_size_changed(); }
+CUTE_INLINE bool window_was_moved() { return cf_window_was_moved(); }
+CUTE_INLINE bool window_keyboard_lost_focus() { return cf_window_keyboard_lost_focus(); }
+CUTE_INLINE bool window_keyboard_gained_focus() { return cf_window_keyboard_gained_focus(); }
+CUTE_INLINE bool window_keyboard_has_focus() { return cf_window_keyboard_has_focus(); }
+CUTE_INLINE bool window_was_minimized() { return cf_window_was_minimized(); }
+CUTE_INLINE bool window_was_maximized() { return cf_window_was_maximized(); }
+CUTE_INLINE bool window_is_minimized() { return cf_window_is_minimized(); }
+CUTE_INLINE bool window_is_maximized() { return cf_window_is_maximized(); }
+CUTE_INLINE bool window_was_restored() { return cf_window_was_restored(); }
+CUTE_INLINE bool window_mouse_entered() { return cf_window_mouse_entered(); }
+CUTE_INLINE bool window_mouse_exited() { return cf_window_mouse_exited(); }
+CUTE_INLINE bool window_mouse_inside() { return cf_window_mouse_inside(); }
+CUTE_INLINE void window_message_box(window_message_box_type_t type, const char* title, const char* text) { return cf_window_message_box(type,title,text); }
 
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_APP_WINDOW_H

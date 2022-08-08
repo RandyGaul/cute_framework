@@ -22,25 +22,20 @@
 #include <internal/cute_ecs_internal.h>
 #include <internal/cute_app_internal.h>
 
-namespace cute
+cf_error_t cf_kv_val_entity(cf_kv_t* kv, cf_entity_t* entity)
 {
+	cf_kv_state_t state = cf_kv_get_state(kv);
+	CUTE_ASSERT(state != CF_KV_STATE_UNITIALIZED);
 
-error_t kv_val_entity(kv_t* kv, entity_t* entity)
-{
-	kv_state_t state = kv_get_state(kv);
-	CUTE_ASSERT(state != KV_STATE_UNITIALIZED);
-
-	if (state == KV_STATE_READ) {
+	if (state == CF_KV_STATE_READ) {
 		int index;
-		error_t err = kv_val(kv, &index);
-		if (err.is_error()) return err;
-		*entity = app->load_id_table->operator[](index);
-		return error_success();
+		cf_error_t err = cf_kv_val_int32(kv, &index);
+		if (cf_is_error(&err)) return err;
+		*entity = cf_app->load_id_table->operator[](index);
+		return cf_error_success();
 	} else {
-		int* index_ptr = app->save_id_table->find(*entity);
+		int* index_ptr = cf_app->save_id_table->find(*entity);
 		CUTE_ASSERT(index_ptr);
-		return kv_val(kv, index_ptr);
+		return cf_kv_val_int32(kv, index_ptr);
 	}
-}
-
 }

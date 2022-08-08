@@ -25,19 +25,20 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
-namespace cute
-{
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
-struct app_t;
-struct joypad_t;
-enum joypad_power_level_t : int;
-enum joypad_button_t : int;
-enum joypad_axis_t : int;
+typedef struct cf_app_t cf_app_t;
+typedef struct cf_joypad_t cf_joypad_t;
+typedef enum cf_joypad_power_level_t cf_joypad_power_level_t; //: int;
+typedef enum cf_joypad_button_t cf_joypad_button_t; //: int;
+typedef enum cf_joypad_axis_t cf_joypad_axis_t; //: int;
 
 /**
  * Call this once before calling `joypad_open`.
  */
-CUTE_API void CUTE_CALL joypad_system_init();
+CUTE_API void CUTE_CALL cf_joypad_system_init();
 
 /**
  * Adds an SDL2 mapping to the joypad system. This means for each valid mapping string added, another
@@ -47,93 +48,124 @@ CUTE_API void CUTE_CALL joypad_system_init();
  * database on GitHub (https://github.com/gabomdq/SDL_GameControllerDB), so you probably don't need
  * to ever call this function.
  */
-CUTE_API error_t CUTE_CALL joypad_add_mapping(const char* mapping);
+CUTE_API cf_error_t CUTE_CALL cf_joypad_add_mapping(const char* mapping);
 
 /**
  * Returns the number of joypads currently connected to the system.
  */
-CUTE_API int CUTE_CALL joypad_count();
+CUTE_API int CUTE_CALL cf_joypad_count();
 
 /**
  * Opens a joypad on the system.
  * `index` is a number from 0 to `joypad_count`. The first joypad connected to the system is 0,
  * the second is 1, and so on.
  */
-CUTE_API joypad_t* CUTE_CALL joypad_open(int index);
+CUTE_API cf_joypad_t* CUTE_CALL cf_joypad_open(int index);
 
 /**
  * Destroys a joypad previously opened by `joypad_open`.
  */
-CUTE_API void CUTE_CALL joypad_close(joypad_t* joypad);
+CUTE_API void CUTE_CALL cf_joypad_close(cf_joypad_t* joypad);
 
 /**
  * Tests to see if the joypad is still connected to the system (returns true if it is).
  */
-CUTE_API bool CUTE_CALL joypad_is_connected(joypad_t* joypad);
+CUTE_API bool CUTE_CALL cf_joypad_is_connected(cf_joypad_t* joypad);
 
 /**
  * Returns the power level of the joypad.
  */
-CUTE_API joypad_power_level_t CUTE_CALL joypad_power_level(joypad_t* joypad);
+CUTE_API cf_joypad_power_level_t CUTE_CALL cf_joypad_power_level(cf_joypad_t* joypad);
 
 /**
  * Returns the name of the joypad.
  */
-CUTE_API const char* CUTE_CALL joypad_name(joypad_t* joypad);
+CUTE_API const char* CUTE_CALL cf_joypad_name(cf_joypad_t* joypad);
 
-CUTE_API bool CUTE_CALL joypad_button_is_down(joypad_t* joypad, joypad_button_t button);
-CUTE_API bool CUTE_CALL joypad_button_is_up(joypad_t* joypad, joypad_button_t button);
-CUTE_API bool CUTE_CALL joypad_button_was_pressed(joypad_t* joypad, joypad_button_t button);
-CUTE_API bool CUTE_CALL joypad_button_was_released(joypad_t* joypad, joypad_button_t button);
-CUTE_API int16_t CUTE_CALL joypad_axis(joypad_t* joypad, joypad_axis_t axis);
+CUTE_API bool CUTE_CALL cf_joypad_button_is_down(cf_joypad_t* joypad, cf_joypad_button_t button);
+CUTE_API bool CUTE_CALL cf_joypad_button_is_up(cf_joypad_t* joypad, cf_joypad_button_t button);
+CUTE_API bool CUTE_CALL cf_joypad_button_was_pressed(cf_joypad_t* joypad, cf_joypad_button_t button);
+CUTE_API bool CUTE_CALL cf_joypad_button_was_released(cf_joypad_t* joypad, cf_joypad_button_t button);
+CUTE_API int16_t CUTE_CALL cf_joypad_axis(cf_joypad_t* joypad, cf_joypad_axis_t axis);
 
-enum joypad_power_level_t : int
+typedef enum cf_joypad_power_level_t //: int
 {
-	JOYPAD_POWER_LEVEL_UNKNOWN,
-	JOYPAD_POWER_LEVEL_EMPTY,
-	JOYPAD_POWER_LEVEL_LOW,
-	JOYPAD_POWER_LEVEL_MEDIUM,
-	JOYPAD_POWER_LEVEL_FULL,
-	JOYPAD_POWER_LEVEL_WIRED,
+	CF_JOYPAD_POWER_LEVEL_UNKNOWN,
+	CF_JOYPAD_POWER_LEVEL_EMPTY,
+	CF_JOYPAD_POWER_LEVEL_LOW,
+	CF_JOYPAD_POWER_LEVEL_MEDIUM,
+	CF_JOYPAD_POWER_LEVEL_FULL,
+	CF_JOYPAD_POWER_LEVEL_WIRED,
 
-	JOYPAD_POWER_LEVEL_COUNT,
-};
+	CF_JOYPAD_POWER_LEVEL_COUNT,
+} cf_joypad_power_level_t;
 
-enum joypad_button_t : int
+typedef enum cf_joypad_button_t //: int
 {
-	JOYPAD_BUTTON_INVALID = -1,
-	JOYPAD_BUTTON_A,
-	JOYPAD_BUTTON_B,
-	JOYPAD_BUTTON_X,
-	JOYPAD_BUTTON_Y,
-	JOYPAD_BUTTON_BACK,
-	JOYPAD_BUTTON_GUIDE,
-	JOYPAD_BUTTON_START,
-	JOYPAD_BUTTON_LEFTSTICK,
-	JOYPAD_BUTTON_RIGHTSTICK,
-	JOYPAD_BUTTON_LEFTSHOULDER,
-	JOYPAD_BUTTON_RIGHTSHOULDER,
-	JOYPAD_BUTTON_DPAD_UP,
-	JOYPAD_BUTTON_DPAD_DOWN,
-	JOYPAD_BUTTON_DPAD_LEFT,
-	JOYPAD_BUTTON_DPAD_RIGHT,
+	CF_JOYPAD_BUTTON_INVALID = -1,
+	CF_JOYPAD_BUTTON_A,
+	CF_JOYPAD_BUTTON_B,
+	CF_JOYPAD_BUTTON_X,
+	CF_JOYPAD_BUTTON_Y,
+	CF_JOYPAD_BUTTON_BACK,
+	CF_JOYPAD_BUTTON_GUIDE,
+	CF_JOYPAD_BUTTON_START,
+	CF_JOYPAD_BUTTON_LEFTSTICK,
+	CF_JOYPAD_BUTTON_RIGHTSTICK,
+	CF_JOYPAD_BUTTON_LEFTSHOULDER,
+	CF_JOYPAD_BUTTON_RIGHTSHOULDER,
+	CF_JOYPAD_BUTTON_DPAD_UP,
+	CF_JOYPAD_BUTTON_DPAD_DOWN,
+	CF_JOYPAD_BUTTON_DPAD_LEFT,
+	CF_JOYPAD_BUTTON_DPAD_RIGHT,
 
-	JOYPAD_BUTTON_COUNT,
-};
+	CF_JOYPAD_BUTTON_COUNT,
+} cf_joypad_button_t;
 
-enum joypad_axis_t : int
+typedef enum cf_joypad_axis_t //: int
 {
-	JOYPAD_AXIS_INVALID = -1,
-	JOYPAD_AXIS_LEFTX,
-	JOYPAD_AXIS_LEFTY,
-	JOYPAD_AXIS_RIGHTX,
-	JOYPAD_AXIS_RIGHTY,
-	JOYPAD_AXIS_TRIGGERLEFT,
-	JOYPAD_AXIS_TRIGGERRIGHT,
+	CF_JOYPAD_AXIS_INVALID = -1,
+	CF_JOYPAD_AXIS_LEFTX,
+	CF_JOYPAD_AXIS_LEFTY,
+	CF_JOYPAD_AXIS_RIGHTX,
+	CF_JOYPAD_AXIS_RIGHTY,
+	CF_JOYPAD_AXIS_TRIGGERLEFT,
+	CF_JOYPAD_AXIS_TRIGGERRIGHT,
 
-	JOYPAD_AXIS_COUNT,
-};
+	CF_JOYPAD_AXIS_COUNT,
+} cf_joypad_axis_t;
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
+#ifdef CUTE_CPP
+
+namespace cute
+{
+using app_t = cf_app_t;
+using joypad_t = cf_joypad_t;
+
+using joypad_power_level_t = cf_joypad_power_level_t;
+using joypad_button_t = cf_joypad_button_t;
+using joypad_axis_t = cf_joypad_axis_t;
+
+CUTE_INLINE void joypad_system_init() { cf_joypad_system_init(); }
+CUTE_INLINE cf_error_t joypad_add_mapping(const char* mapping) { return cf_joypad_add_mapping(mapping); }
+CUTE_INLINE int joypad_count() { return cf_joypad_count(); }
+CUTE_INLINE cf_joypad_t* joypad_open(int index) { return cf_joypad_open(index); }
+CUTE_INLINE void joypad_close(joypad_t* joypad) { cf_joypad_close(joypad); }
+CUTE_INLINE bool joypad_is_connected(joypad_t* joypad) { return cf_joypad_is_connected(joypad); }
+CUTE_INLINE joypad_power_level_t joypad_power_level(joypad_t* joypad) { return cf_joypad_power_level(joypad); }
+CUTE_INLINE const char* joypad_name(joypad_t* joypad) { return cf_joypad_name(joypad); }
+CUTE_INLINE bool joypad_button_is_down(joypad_t* joypad, joypad_button_t button) { return cf_joypad_button_is_down(joypad,button); }
+CUTE_INLINE bool joypad_button_is_up(joypad_t* joypad, joypad_button_t button) { return cf_joypad_button_is_up(joypad,button); }
+CUTE_INLINE bool joypad_button_was_pressed(joypad_t* joypad, joypad_button_t button) { return cf_joypad_button_was_pressed(joypad,button); }
+CUTE_INLINE bool joypad_button_was_released(joypad_t* joypad, joypad_button_t button) { return cf_joypad_button_was_released(joypad,button); }
+CUTE_INLINE int16_t joypad_axis(joypad_t* joypad, joypad_axis_t axis) { return cf_joypad_axis(joypad,axis); }
 
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_JOYPAD_H

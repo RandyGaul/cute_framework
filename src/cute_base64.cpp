@@ -24,11 +24,8 @@
 
 // Implementation referenced from: https://tools.ietf.org/html/rfc4648
 
-namespace cute
-{
-
 // From: https://tools.ietf.org/html/rfc4648#section-3.2
-static const uint8_t s_6bits_to_base64[64] = {
+static const uint8_t cf_s_6bits_to_base64[64] = {
 	'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
 	'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 	'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '+', '/'
@@ -41,23 +38,23 @@ static const uint8_t s_6bits_to_base64[64] = {
 		for (int i = 0; i < 80; ++i) out_array[i] = -1;
 		for (int i = 0; i < 64; ++i)
 		{
-			int val = s_6bits_to_base64[i];
+			int val = cf_s_6bits_to_base64[i];
 			int index = val - 43;
 			out_array[index] = i;
 		}
 		for (int i = 0; i < 80; ++i) printf("%d, ", out_array[i]);
 */
-static const int s_base64_to_6bits[80] = {
+static const int cf_s_base64_to_6bits[80] = {
 
 	62, -1, -1, -1, 63, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, -1, -1, -1, -1, -1, -1, -1, 0, 1, 2, 3, 4,
 	5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, -1, -1, -1, -1, -1, -1,
 	26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,
 };
 
-error_t base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size)
+cf_error_t cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size)
 {
 	size_t out_size = CUTE_BASE64_ENCODED_SIZE(src_size);
-	if (dst_size < out_size) return error_failure("`dst` buffer too small to place encoded output.");
+	if (dst_size < out_size) return cf_error_failure("`dst` buffer too small to place encoded output.");
 
 	size_t triplets = (src_size) / 3;
 	int pads = (src_size) % 3 ? 3 - (src_size) % 3 : 0;
@@ -77,10 +74,10 @@ error_t base64_encode(void* dst, size_t dst_size, const void* src, size_t src_si
 		CUTE_ASSERT(b < 64);
 		CUTE_ASSERT(c < 64);
 		CUTE_ASSERT(d < 64);
-		*out++ = s_6bits_to_base64[a];
-		*out++ = s_6bits_to_base64[b];
-		*out++ = s_6bits_to_base64[c];
-		*out++ = s_6bits_to_base64[d];
+		*out++ = cf_s_6bits_to_base64[a];
+		*out++ = cf_s_6bits_to_base64[b];
+		*out++ = cf_s_6bits_to_base64[c];
+		*out++ = cf_s_6bits_to_base64[d];
 	}
 
 	switch (pads)
@@ -94,9 +91,9 @@ error_t base64_encode(void* dst, size_t dst_size, const void* src, size_t src_si
 		CUTE_ASSERT(a < 64);
 		CUTE_ASSERT(b < 64);
 		CUTE_ASSERT(c < 64);
-		*out++ = s_6bits_to_base64[a];
-		*out++ = s_6bits_to_base64[b];
-		*out++ = s_6bits_to_base64[c];
+		*out++ = cf_s_6bits_to_base64[a];
+		*out++ = cf_s_6bits_to_base64[b];
+		*out++ = cf_s_6bits_to_base64[c];
 		in += 2;
 	}	break;
 
@@ -106,8 +103,8 @@ error_t base64_encode(void* dst, size_t dst_size, const void* src, size_t src_si
 		uint32_t b = (bits & 0x3) << 4;
 		CUTE_ASSERT(a < 64);
 		CUTE_ASSERT(b < 64);
-		*out++ = s_6bits_to_base64[a];
-		*out++ = s_6bits_to_base64[b];
+		*out++ = cf_s_6bits_to_base64[a];
+		*out++ = cf_s_6bits_to_base64[b];
 		in += 1;
 		break;
 	}
@@ -119,13 +116,13 @@ error_t base64_encode(void* dst, size_t dst_size, const void* src, size_t src_si
 
 	CUTE_ASSERT((int)(out - (uint8_t*)dst) == out_size);
 
-	return error_success();
+	return cf_error_success();
 }
 
-error_t base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size)
+cf_error_t cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size)
 {
-	if (!src_size) return error_success();
-	if (src_size % 4) return error_failure("`src_size` is not a multiple of 4 (all base64 streams must be padded to a multiple of four with `=` characters).");
+	if (!src_size) return cf_error_success();
+	if (src_size % 4) return cf_error_failure("`src_size` is not a multiple of 4 (all base64 streams must be padded to a multiple of four with `=` characters).");
 	size_t quadruplets = src_size / 4;
 	
 	const uint8_t* in = (const uint8_t*)src;
@@ -143,7 +140,7 @@ error_t base64_decode(void* dst, size_t dst_size, const void* src, size_t src_si
 	case 1: dst_size -= 2; break;
 	case 2: dst_size -= 1; break;
 	}
-	if (CUTE_BASE64_DECODED_SIZE(src_size) < exact_out_size) return error_failure("'dst_size' is too small to decode.");
+	if (CUTE_BASE64_DECODED_SIZE(src_size) < exact_out_size) return cf_error_failure("'dst_size' is too small to decode.");
 
 	// RFC describes the best way to handle bad input is to reject the entire input.
 	// https://tools.ietf.org/html/rfc4648#page-14
@@ -154,12 +151,12 @@ error_t base64_decode(void* dst, size_t dst_size, const void* src, size_t src_si
 		uint32_t b = *in++ - 43;
 		uint32_t c = *in++ - 43;
 		uint32_t d = *in++ - 43;
-		if ((a > 79) | (b > 79) | (c > 79) | (d > 79)) return error_failure("Found illegal character in input stream.");
-		a = s_base64_to_6bits[a];
-		b = s_base64_to_6bits[b];
-		c = s_base64_to_6bits[c];
-		d = s_base64_to_6bits[d];
-		if ((a == ~0) | (b == ~0) | (c == ~0) | (d == ~0)) return error_failure("Found illegal character in input stream.");
+		if ((a > 79) | (b > 79) | (c > 79) | (d > 79)) return cf_error_failure("Found illegal character in input stream.");
+		a = cf_s_base64_to_6bits[a];
+		b = cf_s_base64_to_6bits[b];
+		c = cf_s_base64_to_6bits[c];
+		d = cf_s_base64_to_6bits[d];
+		if ((a == ~0) | (b == ~0) | (c == ~0) | (d == ~0)) return cf_error_failure("Found illegal character in input stream.");
 		uint32_t bits = (a << 26) | (b << 20) | (c << 14) | (d << 8);
 		*out++ = (bits & 0xFF000000) >> 24;
 		*out++ = (bits & 0x00FF0000) >> 16;
@@ -173,11 +170,11 @@ error_t base64_decode(void* dst, size_t dst_size, const void* src, size_t src_si
 		uint32_t a = *in++ - 43;
 		uint32_t b = *in++ - 43;
 		uint32_t c = *in++ - 43;
-		if ((a > 79) | (b > 79) | (c > 79)) return error_failure("Found illegal character in input stream.");
-		a = s_base64_to_6bits[a];
-		b = s_base64_to_6bits[b];
-		c = s_base64_to_6bits[c];
-		if ((a == ~0) | (b == ~0) | (c == ~0)) return error_failure("Found illegal character in input stream.");
+		if ((a > 79) | (b > 79) | (c > 79)) return cf_error_failure("Found illegal character in input stream.");
+		a = cf_s_base64_to_6bits[a];
+		b = cf_s_base64_to_6bits[b];
+		c = cf_s_base64_to_6bits[c];
+		if ((a == ~0) | (b == ~0) | (c == ~0)) return cf_error_failure("Found illegal character in input stream.");
 		uint32_t bits = (a << 26) | (b << 20) | (c << 14);
 		*out++ = (bits & 0xFF000000) >> 24;
 		*out++ = (bits & 0x00FF0000) >> 16;
@@ -187,10 +184,10 @@ error_t base64_decode(void* dst, size_t dst_size, const void* src, size_t src_si
 	{
 		uint32_t a = *in++ - 43;
 		uint32_t b = *in++ - 43;
-		if ((a > 79) | (b > 79)) return error_failure("Found illegal character in input stream.");
-		a = s_base64_to_6bits[a];
-		b = s_base64_to_6bits[b];
-		if ((a == ~0) | (b == ~0)) return error_failure("Found illegal character in input stream.");
+		if ((a > 79) | (b > 79)) return cf_error_failure("Found illegal character in input stream.");
+		a = cf_s_base64_to_6bits[a];
+		b = cf_s_base64_to_6bits[b];
+		if ((a == ~0) | (b == ~0)) return cf_error_failure("Found illegal character in input stream.");
 		uint32_t bits = (a << 26) | (b << 20);
 		*out++ = (bits & 0xFF000000) >> 24;
 	}	break;
@@ -198,7 +195,5 @@ error_t base64_decode(void* dst, size_t dst_size, const void* src, size_t src_si
 
 	CUTE_ASSERT((int)(out + pads - (uint8_t*)dst) == CUTE_BASE64_DECODED_SIZE(src_size));
 
-	return error_success();
-}
-
+	return cf_error_success();
 }

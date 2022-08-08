@@ -24,26 +24,46 @@
 
 #include "cute_defines.h"
 
-namespace cute
-{
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 #define CUTE_ERROR_SUCCESS (0)
 #define CUTE_ERROR_FAILURE (-1)
 
-struct error_t
+typedef struct cf_error_t
 {
 	int code;
 	const char* details;
+} cf_error_t;
 
-	CUTE_INLINE bool is_error() const { return code == CUTE_ERROR_FAILURE; }
-};
+CUTE_INLINE bool cf_is_error(const cf_error_t* error) { return error->code == CUTE_ERROR_FAILURE; }
 
-CUTE_INLINE error_t error_make(int code, const char* details) { error_t error; error.code = code; error.details = details; return error; }
-CUTE_INLINE error_t error_failure(const char* details) { error_t error; error.code = CUTE_ERROR_FAILURE; error.details = details; return error; }
-CUTE_INLINE error_t error_success() { error_t error; error.code = CUTE_ERROR_SUCCESS; error.details = NULL; return error; }
+CUTE_INLINE cf_error_t cf_error_make(int code, const char* details) { cf_error_t error; error.code = code; error.details = details; return error; }
+CUTE_INLINE cf_error_t cf_error_failure(const char* details) { cf_error_t error; error.code = CUTE_ERROR_FAILURE; error.details = details; return error; }
+CUTE_INLINE cf_error_t cf_error_success() { cf_error_t error; error.code = CUTE_ERROR_SUCCESS; error.details = NULL; return error; }
 
-#define CUTE_RETURN_IF_ERROR(x) do { cute::error_t err = (x); if (err.is_error()) return err; } while (0)
+#define CUTE_RETURN_IF_ERROR(x) do { cf_error_t err = (x); if (cf_is_error(&err)) return err; } while (0)
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
+#ifdef CUTE_CPP
+
+
+namespace cute
+{
+using error_t = cf_error_t;
+
+CUTE_INLINE bool is_error(const error_t* error) { return cf_is_error(error); }
+
+CUTE_INLINE error_t error_make(int code, const char* details) { return cf_error_make(code, details); }
+CUTE_INLINE error_t error_failure(const char* details) { return cf_error_failure(details); }
+CUTE_INLINE error_t error_success() { return cf_error_success(); }
 
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_ERROR_H

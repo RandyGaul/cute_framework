@@ -1,5 +1,5 @@
 @module upscale
-@ctype vec2 cute::v2
+@ctype vec2 cf_v2
 
 @include includes/smooth_uv.glsl
 

@@ -23,15 +23,49 @@
 #define CUTE_DICTIONARY_H
 
 #include "cute_defines.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+#define DICTIONARY_STRING_BLOCK_MAX 128
+
+typedef struct cf_dictionary_string_block_t
+{
+	size_t len; /*= 0;*/
+	uint8_t data[DICTIONARY_STRING_BLOCK_MAX]; /*= { 0 };*/
+} cf_dictionary_string_block_t;
+
+CUTE_INLINE cf_dictionary_string_block_t cf_s_dictionary_make_block(const char* key)
+{
+	cf_dictionary_string_block_t block;
+	block.len = CUTE_STRLEN(key);
+	CUTE_ASSERT(block.len < DICTIONARY_STRING_BLOCK_MAX - 1);
+	CUTE_STRCPY((char*)block.data, key);
+	return block;
+}
+
+CUTE_INLINE cf_dictionary_string_block_t cf_s_dictionary_make_block_len(const char* key, size_t key_len)
+{
+	cf_dictionary_string_block_t block;
+	block.len = key_len;
+	CUTE_ASSERT(block.len < DICTIONARY_STRING_BLOCK_MAX - 1);
+	CUTE_STRNCPY((char*)block.data, key, key_len);
+	return block;
+}
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
+#ifdef CUTE_CPP
+
 #include "cute_hashtable.h"
 #include "cute_c_runtime.h"
 #include "cute_error.h"
 
-namespace cute
-{
-
 /**
- * `dictionary` implements a thin type wrapper with templates over a C-style hashtable implementation.
+ * `cf_dictionary` implements a thin type wrapper with templates over a C-style hashtable implementation.
  * Internally no contructors or destructors are ever called, meaning all data stored is considered POD.
  *
  * There is a specialization in the latter portion for const char* keys -- strings are stored in-place
@@ -41,17 +75,17 @@ namespace cute
  */
 
 template <typename K, typename T>
-struct dictionary
+struct cf_dictionary
 {
-	dictionary();
-	dictionary(void* user_allocator_context);
-	dictionary(int capacity, void* user_allocator_context);
-	~dictionary();
+	cf_dictionary();
+	cf_dictionary(void* user_allocator_context);
+	cf_dictionary(int capacity, void* user_allocator_context);
+	~cf_dictionary();
 
 	T* find(const K& key);
 	const T* find(const K& key) const;
-	error_t find(const K& key, T* val_out);
-	error_t find(const K& key, T* val_out) const;
+	cf_error_t find(const K& key, T* val_out);
+	cf_error_t find(const K& key, T* val_out) const;
 
 	T* insert(const K& key);
 	T* insert(const K& key, const T& val);
@@ -68,138 +102,138 @@ struct dictionary
 	void swap(int index_a, int index_b);
 
 private:
-	hashtable_t m_table;
+	cf_hashtable_t m_table;
 };
 
 // -------------------------------------------------------------------------------------------------
 
 template <typename K, typename T>
-dictionary<K, T>::dictionary()
+cf_dictionary<K, T>::cf_dictionary()
 {
-	hashtable_init(&m_table, sizeof(K), sizeof(T), 256, NULL);
+	cf_hashtable_init(&m_table, sizeof(K), sizeof(T), 256, NULL);
 }
 
 template <typename K, typename T>
-dictionary<K, T>::dictionary(void* user_allocator_context)
+cf_dictionary<K, T>::cf_dictionary(void* user_allocator_context)
 {
-	hashtable_init(&m_table, sizeof(K), sizeof(T), 256, user_allocator_context);
+	cf_hashtable_init(&m_table, sizeof(K), sizeof(T), 256, user_allocator_context);
 }
 
 template <typename K, typename T>
-dictionary<K, T>::dictionary(int capacity, void* user_allocator_context)
+cf_dictionary<K, T>::cf_dictionary(int capacity, void* user_allocator_context)
 {
-	hashtable_init(&m_table, sizeof(K), sizeof(T), capacity, user_allocator_context);
+	cf_hashtable_init(&m_table, sizeof(K), sizeof(T), capacity, user_allocator_context);
 }
 
 template <typename K, typename T>
-dictionary<K, T>::~dictionary()
+cf_dictionary<K, T>::~cf_dictionary()
 {
 	T* items_ptr = items();
 	int items_count = count();
 	for (int i = 0; i < items_count; ++i) (items_ptr + i)->~T();
-	hashtable_cleanup(&m_table);
+	cf_hashtable_cleanup(&m_table);
 }
 
 template <typename K, typename T>
-T* dictionary<K, T>::find(const K& key)
+T* cf_dictionary<K, T>::find(const K& key)
 {
-	return (T*)hashtable_find(&m_table, &key);
+	return (T*)cf_hashtable_find(&m_table, &key);
 }
 
 template <typename K, typename T>
-const T* dictionary<K, T>::find(const K& key) const
+const T* cf_dictionary<K, T>::find(const K& key) const
 {
-	return (const T*)hashtable_find(&m_table, &key);
+	return (const T*)cf_hashtable_find(&m_table, &key);
 }
 
 template <typename K, typename T>
-error_t dictionary<K, T>::find(const K& key, T* val_out)
+cf_error_t cf_dictionary<K, T>::find(const K& key, T* val_out)
 {
-	T* ptr = (T*)hashtable_find(&m_table, &key);
+	T* ptr = (T*)cf_hashtable_find(&m_table, &key);
 	if (ptr) {
 		*val_out = *ptr;
-		return error_success();
+		return cf_error_success();
 	} else {
-		return error_failure("Unable to find dictionary entry.");
+		return cf_error_failure("Unable to find dictionary entry.");
 	}
 }
 
 template <typename K, typename T>
-error_t dictionary<K, T>::find(const K& key, T* val_out) const
+cf_error_t cf_dictionary<K, T>::find(const K& key, T* val_out) const
 {
-	const T* ptr = (const T*)hashtable_find(&m_table, &key);
+	const T* ptr = (const T*)cf_hashtable_find(&m_table, &key);
 	if (ptr) {
 		*val_out = *ptr;
-		return error_success();
+		return cf_error_success();
 	} else {
-		return error_failure("Unable to find dictionary entry.");
+		return cf_error_failure("Unable to find dictionary entry.");
 	}
 }
 
 template <typename K, typename T>
-T* dictionary<K, T>::insert(const K& key)
+T* cf_dictionary<K, T>::insert(const K& key)
 {
-	T* slot = (T*)hashtable_insert(&m_table, &key, NULL);
+	T* slot = (T*)cf_hashtable_insert(&m_table, &key, NULL);
 	CUTE_PLACEMENT_NEW(slot) T();
 	return slot;
 }
 
 template <typename K, typename T>
-T* dictionary<K, T>::insert(const K& key, const T& val)
+T* cf_dictionary<K, T>::insert(const K& key, const T& val)
 {
-	T* slot = (T*)hashtable_insert(&m_table, &key, &val);
+	T* slot = (T*)cf_hashtable_insert(&m_table, &key, &val);
 	CUTE_PLACEMENT_NEW(slot) T(val);
 	return slot;
 }
 
 template <typename K, typename T>
-void dictionary<K, T>::remove(const K& key)
+void cf_dictionary<K, T>::remove(const K& key)
 {
 	T* slot = find(key);
 	slot->~T();
-	hashtable_remove(&m_table, &key);
+	cf_hashtable_remove(&m_table, &key);
 }
 
 template <typename K, typename T>
-void dictionary<K, T>::clear()
+void cf_dictionary<K, T>::clear()
 {
-	hashtable_clear(&m_table);
+	cf_hashtable_clear(&m_table);
 }
 
 template <typename K, typename T>
-int dictionary<K, T>::count() const
+int cf_dictionary<K, T>::count() const
 {
-	return hashtable_count(&m_table);
+	return cf_hashtable_count(&m_table);
 }
 
 template <typename K, typename T>
-T* dictionary<K, T>::items()
+T* cf_dictionary<K, T>::items()
 {
-	return (T*)hashtable_items(&m_table);
+	return (T*)cf_hashtable_items(&m_table);
 }
 
 template <typename K, typename T>
-const T* dictionary<K, T>::items() const
+const T* cf_dictionary<K, T>::items() const
 {
-	return (const T*)hashtable_items(&m_table);
+	return (const T*)cf_hashtable_items(&m_table);
 }
 
 template <typename K, typename T>
-K* dictionary<K, T>::keys()
+K* cf_dictionary<K, T>::keys()
 {
-	return (K*)hashtable_keys(&m_table);
+	return (K*)cf_hashtable_keys(&m_table);
 }
 
 template <typename K, typename T>
-const K* dictionary<K, T>::keys() const
+const K* cf_dictionary<K, T>::keys() const
 {
-	return (const K*)hashtable_keys(&m_table);
+	return (const K*)cf_hashtable_keys(&m_table);
 }
 
 template <typename K, typename T>
-void dictionary<K, T>::swap(int index_a, int index_b)
+void cf_dictionary<K, T>::swap(int index_a, int index_b)
 {
-	hashtable_swap(&m_table, index_a, index_b);
+	cf_hashtable_swap(&m_table, index_a, index_b);
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -207,48 +241,22 @@ void dictionary<K, T>::swap(int index_a, int index_b)
 // Forces all strings to be less than `DICTIONARY_STRING_BLOCK_MAX` characters, asserts otherwise.
 // The limitation is for simplicity of implementation.
 
-#define DICTIONARY_STRING_BLOCK_MAX 128
-
-struct dictionary_string_block_t
-{
-	size_t len = 0;
-	uint8_t data[DICTIONARY_STRING_BLOCK_MAX] = { 0 };
-};
-
-CUTE_INLINE dictionary_string_block_t s_dictionary_make_block(const char* key)
-{
-	dictionary_string_block_t block;
-	block.len = CUTE_STRLEN(key);
-	CUTE_ASSERT(block.len < DICTIONARY_STRING_BLOCK_MAX - 1);
-	CUTE_STRCPY((char*)block.data, key);
-	return block;
-}
-
-CUTE_INLINE dictionary_string_block_t s_dictionary_make_block(const char* key, size_t key_len)
-{
-	dictionary_string_block_t block;
-	block.len = key_len;
-	CUTE_ASSERT(block.len < DICTIONARY_STRING_BLOCK_MAX - 1);
-	CUTE_STRNCPY((char*)block.data, key, key_len);
-	return block;
-}
-
 template <typename T>
-struct dictionary<const char*, T>
+struct cf_dictionary<const char*, T>
 {
-	dictionary();
-	dictionary(void* user_allocator_context);
-	dictionary(int capacity, void* user_allocator_context);
-	~dictionary();
+	cf_dictionary();
+	cf_dictionary(void* user_allocator_context);
+	cf_dictionary(int capacity, void* user_allocator_context);
+	~cf_dictionary();
 
 	T* find(const char* key);
 	const T* find(const char* key) const;
 	T* find(const char* key, size_t key_len);
 	const T* find(const char* key, size_t key_len) const;
-	error_t find(const char* key, T* val_out);
-	error_t find(const char* key, T* val_out) const;
-	error_t find(const char* key, size_t key_len, T* val_out);
-	error_t find(const char* key, size_t key_len, T* val_out) const;
+	cf_error_t find(const char* key, T* val_out);
+	cf_error_t find(const char* key, T* val_out) const;
+	cf_error_t find(const char* key, size_t key_len, T* val_out);
+	cf_error_t find(const char* key, size_t key_len, T* val_out) const;
 
 	T* insert(const char* key, const T& val);
 	void remove(const char* key);
@@ -260,187 +268,192 @@ struct dictionary<const char*, T>
 	int count() const;
 	T* items();
 	const T* items() const;
-	dictionary_string_block_t* keys();
-	const dictionary_string_block_t* keys() const;
+	cf_dictionary_string_block_t* keys();
+	const cf_dictionary_string_block_t* keys() const;
 
 	void swap(int index_a, int index_b);
 
 private:
-	hashtable_t m_table;
+	cf_hashtable_t m_table;
 };
 
 template <typename T>
-dictionary<const char*, T>::dictionary()
+cf_dictionary<const char*, T>::cf_dictionary()
 {
-	hashtable_init(&m_table, sizeof(dictionary_string_block_t), sizeof(T), 256, NULL);
+	cf_hashtable_init(&m_table, sizeof(cf_dictionary_string_block_t), sizeof(T), 256, NULL);
 }
 
 template <typename T>
-dictionary<const char*, T>::dictionary(void* user_allocator_context)
+cf_dictionary<const char*, T>::cf_dictionary(void* user_allocator_context)
 {
-	hashtable_init(&m_table, sizeof(dictionary_string_block_t), sizeof(T), 256, user_allocator_context);
+	cf_hashtable_init(&m_table, sizeof(cf_dictionary_string_block_t), sizeof(T), 256, user_allocator_context);
 }
 
 template <typename T>
-dictionary<const char*, T>::dictionary(int capacity, void* user_allocator_context)
+cf_dictionary<const char*, T>::cf_dictionary(int capacity, void* user_allocator_context)
 {
-	hashtable_init(&m_table, sizeof(dictionary_string_block_t), sizeof(T), capacity, user_allocator_context);
+	cf_hashtable_init(&m_table, sizeof(cf_dictionary_string_block_t), sizeof(T), capacity, user_allocator_context);
 }
 
 template <typename T>
-dictionary<const char*, T>::~dictionary()
+cf_dictionary<const char*, T>::~cf_dictionary()
 {
-	hashtable_cleanup(&m_table);
+	cf_hashtable_cleanup(&m_table);
 }
 
 template <typename T>
-T* dictionary<const char*, T>::find(const char* key)
+T* cf_dictionary<const char*, T>::find(const char* key)
 {
-	dictionary_string_block_t block = s_dictionary_make_block(key);
-	return (T*)hashtable_find(&m_table, &block);
+	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key);
+	return (T*)cf_hashtable_find(&m_table, &block);
 }
 
 template <typename T>
-const T* dictionary<const char*, T>::find(const char* key) const
+const T* cf_dictionary<const char*, T>::find(const char* key) const
 {
-	dictionary_string_block_t block = s_dictionary_make_block(key);
-	return (T*)hashtable_find(&m_table, &block);
+	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key);
+	return (T*)cf_hashtable_find(&m_table, &block);
 }
 
 template <typename T>
-T* dictionary<const char*, T>::find(const char* key, size_t key_len)
+T* cf_dictionary<const char*, T>::find(const char* key, size_t key_len)
 {
-	dictionary_string_block_t block = s_dictionary_make_block(key, key_len);
-	return (T*)hashtable_find(&m_table, &block);
+	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key, key_len);
+	return (T*)cf_hashtable_find(&m_table, &block);
 }
 
 template <typename T>
-const T* dictionary<const char*, T>::find(const char* key, size_t key_len) const
+const T* cf_dictionary<const char*, T>::find(const char* key, size_t key_len) const
 {
-	dictionary_string_block_t block = s_dictionary_make_block(key, key_len);
-	return (T*)hashtable_find(&m_table, &block);
+	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key, key_len);
+	return (T*)cf_hashtable_find(&m_table, &block);
 }
 
 template <typename T>
-error_t dictionary<const char*, T>::find(const char* key, T* val_out)
+cf_error_t cf_dictionary<const char*, T>::find(const char* key, T* val_out)
 {
-	dictionary_string_block_t block = s_dictionary_make_block(key);
-	T* ptr = (T*)hashtable_find(&m_table, &block);
+	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key);
+	T* ptr = (T*)cf_hashtable_find(&m_table, &block);
 	if (ptr) {
 		*val_out = *ptr;
-		return error_success();
+		return cf_error_success();
 	} else {
-		return error_failure("Unable to find dictionary entry.");
+		return cf_error_failure("Unable to find dictionary entry.");
 	}
 }
 
 template <typename T>
-error_t dictionary<const char*, T>::find(const char* key, T* val_out) const
+cf_error_t cf_dictionary<const char*, T>::find(const char* key, T* val_out) const
 {
-	dictionary_string_block_t block = s_dictionary_make_block(key);
-	T* ptr = (T*)hashtable_find(&m_table, &block);
+	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key);
+	T* ptr = (T*)cf_hashtable_find(&m_table, &block);
 	if (ptr) {
 		*val_out = *ptr;
-		return error_success();
+		return cf_error_success();
 	} else {
-		return error_failure("Unable to find dictionary entry.");
+		return cf_error_failure("Unable to find dictionary entry.");
 	}
 }
 
 template <typename T>
-error_t dictionary<const char*, T>::find(const char* key, size_t key_len, T* val_out)
+cf_error_t cf_dictionary<const char*, T>::find(const char* key, size_t key_len, T* val_out)
 {
 	T* ptr = find(key, key_len);
 	if (ptr) {
 		*val_out = *ptr;
-		return error_success();
+		return cf_error_success();
 	} else {
-		return error_failure("Unable to find dictionary entry.");
+		return cf_error_failure("Unable to find dictionary entry.");
 	}
 }
 
 template <typename T>
-error_t dictionary<const char*, T>::find(const char* key, size_t key_len, T* val_out) const
+cf_error_t cf_dictionary<const char*, T>::find(const char* key, size_t key_len, T* val_out) const
 {
 	const T* ptr = find(key, key_len);
 	if (ptr) {
 		*val_out = *ptr;
-		return error_success();
+		return cf_error_success();
 	} else {
-		return error_failure("Unable to find dictionary entry.");
+		return cf_error_failure("Unable to find dictionary entry.");
 	}
 }
 
 template <typename T>
-T* dictionary<const char*, T>::insert(const char* key, const T& val)
+T* cf_dictionary<const char*, T>::insert(const char* key, const T& val)
 {
-	dictionary_string_block_t block = s_dictionary_make_block(key);
-	return (T*)hashtable_insert(&m_table, &block, &val);
+	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key);
+	return (T*)cf_hashtable_insert(&m_table, &block, &val);
 }
 
 template <typename T>
-void dictionary<const char*, T>::remove(const char* key, size_t key_len)
+void cf_dictionary<const char*, T>::remove(const char* key, size_t key_len)
 {
-	dictionary_string_block_t block = s_dictionary_make_block(key, key_len);
-	hashtable_remove(&m_table, &block);
+	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key, key_len);
+	cf_hashtable_remove(&m_table, &block);
 }
 
 template <typename T>
-T* dictionary<const char*, T>::insert(const char* key, size_t key_len, const T& val)
+T* cf_dictionary<const char*, T>::insert(const char* key, size_t key_len, const T& val)
 {
-	dictionary_string_block_t block = s_dictionary_make_block(key, key_len);
-	return (T*)hashtable_insert(&m_table, &block, &val);
+	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key, key_len);
+	return (T*)cf_hashtable_insert(&m_table, &block, &val);
 }
 
 template <typename T>
-void dictionary<const char*, T>::remove(const char* key)
+void cf_dictionary<const char*, T>::remove(const char* key)
 {
-	dictionary_string_block_t block = s_dictionary_make_block(key);
-	hashtable_remove(&m_table, &block);
+	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key);
+	cf_hashtable_remove(&m_table, &block);
 }
 
 template <typename T>
-void dictionary<const char*, T>::clear()
+void cf_dictionary<const char*, T>::clear()
 {
-	hashtable_clear(&m_table);
+	cf_hashtable_clear(&m_table);
 }
 
 template <typename T>
-int dictionary<const char*, T>::count() const
+int cf_dictionary<const char*, T>::count() const
 {
-	return hashtable_count(&m_table);
+	return cf_hashtable_count(&m_table);
 }
 
 template <typename T>
-T* dictionary<const char*, T>::items()
+T* cf_dictionary<const char*, T>::items()
 {
-	return (T*)hashtable_items(&m_table);
+	return (T*)cf_hashtable_items(&m_table);
 }
 
 template <typename T>
-const T* dictionary<const char*, T>::items() const
+const T* cf_dictionary<const char*, T>::items() const
 {
-	return (const T*)hashtable_items(&m_table);
+	return (const T*)cf_hashtable_items(&m_table);
 }
 
 template <typename T>
-dictionary_string_block_t* dictionary<const char*, T>::keys()
+cf_dictionary_string_block_t* cf_dictionary<const char*, T>::keys()
 {
-	return (dictionary_string_block_t*)hashtable_keys(&m_table);
+	return (cf_dictionary_string_block_t*)cf_hashtable_keys(&m_table);
 }
 
 template <typename T>
-const dictionary_string_block_t* dictionary<const char*, T>::keys() const
+const cf_dictionary_string_block_t* cf_dictionary<const char*, T>::keys() const
 {
-	return (const dictionary_string_block_t*)hashtable_keys(&m_table);
+	return (const cf_dictionary_string_block_t*)cf_hashtable_keys(&m_table);
 }
 
 template <typename T>
-void dictionary<const char*, T>::swap(int index_a, int index_b)
+void cf_dictionary<const char*, T>::swap(int index_a, int index_b)
 {
-	hashtable_swap(&m_table, index_a, index_b);
+	cf_hashtable_swap(&m_table, index_a, index_b);
 }
 
+namespace cute
+{
+template <typename K, typename T> using dictionary = cf_dictionary<K, T>;
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_DICTIONARY_H

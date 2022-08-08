@@ -24,7 +24,7 @@
 CUTE_TEST_CASE(test_lru_cache, "Use all methods on lru cache and assert correctness.");
 int test_lru_cache()
 {
-	lru_cache<int, int> cache(3, NULL);
+	cf_lru_cache<int, int> cache(3, NULL);
 
 	*cache.insert(1) = 1;
 	*cache.insert(2) = 2;
@@ -34,7 +34,7 @@ int test_lru_cache()
 	CUTE_TEST_ASSERT(*cache.mru() == 3);
 
 	int val;
-	CUTE_TEST_ASSERT(!cache.find(2, &val).is_error());
+	CUTE_TEST_ASSERT(!cf_is_error(&cache.find(2, &val)));
 	CUTE_TEST_ASSERT(*cache.lru() == 1);
 	CUTE_TEST_ASSERT(*cache.mru() == 2);
 

@@ -23,22 +23,17 @@
 
 #include <SDL.h>
 
-namespace cute
-{
-
-shared_library_t* load_shared_library(const char* path)
+cf_shared_library_t* cf_load_shared_library(const char* path)
 {
 	return SDL_LoadObject(path);
 }
 
-void unload_shared_library(shared_library_t* library)
+void cf_unload_shared_library(cf_shared_library_t* library)
 {
 	SDL_UnloadObject(library);
 }
 
-void* load_function(shared_library_t* library, const char* function_name)
+void* cf_load_function(cf_shared_library_t* library, const char* function_name)
 {
 	return SDL_LoadFunction(library, function_name);
-}
-
 }

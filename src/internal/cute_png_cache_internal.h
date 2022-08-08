@@ -27,22 +27,26 @@
 #include <cute_dictionary.h>
 #include <cute_strpool.h>
 
-namespace cute
-{
+struct cf_strpool_t;
 
-struct strpool_t;
-
-struct png_cache_t
+struct cf_png_cache_t
 {
-	dictionary<uint64_t, png_t> pngs;
-	dictionary<uint64_t, void*> id_to_pixels;
-	dictionary<strpool_id, animation_t*> animations;
-	dictionary<strpool_id, animation_table_t*> animation_tables;
+	cf_dictionary<uint64_t, cf_png_t> pngs;
+	cf_dictionary<uint64_t, void*> id_to_pixels;
+	cf_dictionary<cf_strpool_id, cf_animation_t*> animations;
+	cf_dictionary<cf_strpool_id, cf_animation_table_t*> animation_tables;
 	uint64_t id_gen = 0;
-	strpool_t* strpool = NULL;
+	cf_strpool_t* strpool = NULL;
 	void* mem_ctx = NULL;
 };
 
+#ifdef  CUTE_CPP
+
+namespace cute
+{
+
 }
+
+#endif //  CUTE_CPP
 
 #endif // CUTE_PNG_CACHE_INTERNAL_H

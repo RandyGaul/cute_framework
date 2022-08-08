@@ -30,428 +30,429 @@
 
 #include <SDL.h>
 
-namespace cute
-{
-static int s_map_SDL_keys(int key)
+static int cf_s_map_SDL_keys(int key)
 {
 	if (key < 127) return key;
 	switch (key)
 	{
-		case SDLK_CAPSLOCK: return KEY_CAPSLOCK;
-		case SDLK_F1: return KEY_F1;
-		case SDLK_F2: return KEY_F2;
-		case SDLK_F3: return KEY_F3;
-		case SDLK_F4: return KEY_F4;
-		case SDLK_F5: return KEY_F5;
-		case SDLK_F6: return KEY_F6;
-		case SDLK_F7: return KEY_F7;
-		case SDLK_F8: return KEY_F8;
-		case SDLK_F9: return KEY_F9;
-		case SDLK_F10: return KEY_F10;
-		case SDLK_F11: return KEY_F11;
-		case SDLK_F12: return KEY_F12;
-		case SDLK_PRINTSCREEN: return KEY_PRINTSCREEN;
-		case SDLK_SCROLLLOCK: return KEY_SCROLLLOCK;
-		case SDLK_PAUSE: return KEY_PAUSE;
-		case SDLK_INSERT: return KEY_INSERT;
-		case SDLK_HOME: return KEY_HOME;
-		case SDLK_PAGEUP: return KEY_PAGEUP;
-		case SDLK_DELETE: return KEY_DELETE;
-		case SDLK_END: return KEY_END;
-		case SDLK_PAGEDOWN: return KEY_PAGEDOWN;
-		case SDLK_RIGHT: return KEY_RIGHT;
-		case SDLK_LEFT: return KEY_LEFT;
-		case SDLK_DOWN: return KEY_DOWN;
-		case SDLK_UP: return KEY_UP;
-		case SDLK_NUMLOCKCLEAR: return KEY_NUMLOCKCLEAR;
-		case SDLK_KP_DIVIDE: return KEY_KP_DIVIDE;
-		case SDLK_KP_MULTIPLY: return KEY_KP_MULTIPLY;
-		case SDLK_KP_MINUS: return KEY_KP_MINUS;
-		case SDLK_KP_PLUS: return KEY_KP_PLUS;
-		case SDLK_KP_ENTER: return KEY_KP_ENTER;
-		case SDLK_KP_1: return KEY_KP_1;
-		case SDLK_KP_2: return KEY_KP_2;
-		case SDLK_KP_3: return KEY_KP_3;
-		case SDLK_KP_4: return KEY_KP_4;
-		case SDLK_KP_5: return KEY_KP_5;
-		case SDLK_KP_6: return KEY_KP_6;
-		case SDLK_KP_7: return KEY_KP_7;
-		case SDLK_KP_8: return KEY_KP_8;
-		case SDLK_KP_9: return KEY_KP_9;
-		case SDLK_KP_0: return KEY_KP_0;
-		case SDLK_KP_PERIOD: return KEY_KP_PERIOD;
-		case SDLK_APPLICATION: return KEY_APPLICATION;
-		case SDLK_POWER: return KEY_POWER;
-		case SDLK_KP_EQUALS: return KEY_KP_EQUALS;
-		case SDLK_F13: return KEY_F13;
-		case SDLK_F14: return KEY_F14;
-		case SDLK_F15: return KEY_F15;
-		case SDLK_F16: return KEY_F16;
-		case SDLK_F17: return KEY_F17;
-		case SDLK_F18: return KEY_F18;
-		case SDLK_F19: return KEY_F19;
-		case SDLK_F20: return KEY_F20;
-		case SDLK_F21: return KEY_F21;
-		case SDLK_F22: return KEY_F22;
-		case SDLK_F23: return KEY_F23;
-		case SDLK_F24: return KEY_F24;
-		case SDLK_HELP: return KEY_HELP;
-		case SDLK_MENU: return KEY_MENU;
-		case SDLK_SELECT: return KEY_SELECT;
-		case SDLK_STOP: return KEY_STOP;
-		case SDLK_AGAIN: return KEY_AGAIN;
-		case SDLK_UNDO: return KEY_UNDO;
-		case SDLK_CUT: return KEY_CUT;
-		case SDLK_COPY: return KEY_COPY;
-		case SDLK_PASTE: return KEY_PASTE;
-		case SDLK_FIND: return KEY_FIND;
-		case SDLK_MUTE: return KEY_MUTE;
-		case SDLK_VOLUMEUP: return KEY_VOLUMEUP;
-		case SDLK_VOLUMEDOWN: return KEY_VOLUMEDOWN;
-		case SDLK_KP_COMMA: return KEY_KP_COMMA;
-		case SDLK_KP_EQUALSAS400: return KEY_KP_EQUALSAS400;
-		case SDLK_ALTERASE: return KEY_ALTERASE;
-		case SDLK_SYSREQ: return KEY_SYSREQ;
-		case SDLK_CANCEL: return KEY_CANCEL;
-		case SDLK_CLEAR: return KEY_CLEAR;
-		case SDLK_PRIOR: return KEY_PRIOR;
-		case SDLK_RETURN2: return KEY_RETURN2;
-		case SDLK_SEPARATOR: return KEY_SEPARATOR;
-		case SDLK_OUT: return KEY_OUT;
-		case SDLK_OPER: return KEY_OPER;
-		case SDLK_CLEARAGAIN: return KEY_CLEARAGAIN;
-		case SDLK_CRSEL: return KEY_CRSEL;
-		case SDLK_EXSEL: return KEY_EXSEL;
-		case SDLK_KP_00: return KEY_KP_00;
-		case SDLK_KP_000: return KEY_KP_000;
-		case SDLK_THOUSANDSSEPARATOR: return KEY_THOUSANDSSEPARATOR;
-		case SDLK_DECIMALSEPARATOR: return KEY_DECIMALSEPARATOR;
-		case SDLK_CURRENCYUNIT: return KEY_CURRENCYUNIT;
-		case SDLK_CURRENCYSUBUNIT: return KEY_CURRENCYSUBUNIT;
-		case SDLK_KP_LEFTPAREN: return KEY_KP_LEFTPAREN;
-		case SDLK_KP_RIGHTPAREN: return KEY_KP_RIGHTPAREN;
-		case SDLK_KP_LEFTBRACE: return KEY_KP_LEFTBRACE;
-		case SDLK_KP_RIGHTBRACE: return KEY_KP_RIGHTBRACE;
-		case SDLK_KP_TAB: return KEY_KP_TAB;
-		case SDLK_KP_BACKSPACE: return KEY_KP_BACKSPACE;
-		case SDLK_KP_A: return KEY_KP_A;
-		case SDLK_KP_B: return KEY_KP_B;
-		case SDLK_KP_C: return KEY_KP_C;
-		case SDLK_KP_D: return KEY_KP_D;
-		case SDLK_KP_E: return KEY_KP_E;
-		case SDLK_KP_F: return KEY_KP_F;
-		case SDLK_KP_XOR: return KEY_KP_XOR;
-		case SDLK_KP_POWER: return KEY_KP_POWER;
-		case SDLK_KP_PERCENT: return KEY_KP_PERCENT;
-		case SDLK_KP_LESS: return KEY_KP_LESS;
-		case SDLK_KP_GREATER: return KEY_KP_GREATER;
-		case SDLK_KP_AMPERSAND: return KEY_KP_AMPERSAND;
-		case SDLK_KP_DBLAMPERSAND: return KEY_KP_DBLAMPERSAND;
-		case SDLK_KP_VERTICALBAR: return KEY_KP_VERTICALBAR;
-		case SDLK_KP_DBLVERTICALBAR: return KEY_KP_DBLVERTICALBAR;
-		case SDLK_KP_COLON: return KEY_KP_COLON;
-		case SDLK_KP_HASH: return KEY_KP_HASH;
-		case SDLK_KP_SPACE: return KEY_KP_SPACE;
-		case SDLK_KP_AT: return KEY_KP_AT;
-		case SDLK_KP_EXCLAM: return KEY_KP_EXCLAM;
-		case SDLK_KP_MEMSTORE: return KEY_KP_MEMSTORE;
-		case SDLK_KP_MEMRECALL: return KEY_KP_MEMRECALL;
-		case SDLK_KP_MEMCLEAR: return KEY_KP_MEMCLEAR;
-		case SDLK_KP_MEMADD: return KEY_KP_MEMADD;
-		case SDLK_KP_MEMSUBTRACT: return KEY_KP_MEMSUBTRACT;
-		case SDLK_KP_MEMMULTIPLY: return KEY_KP_MEMMULTIPLY;
-		case SDLK_KP_MEMDIVIDE: return KEY_KP_MEMDIVIDE;
-		case SDLK_KP_PLUSMINUS: return KEY_KP_PLUSMINUS;
-		case SDLK_KP_CLEAR: return KEY_KP_CLEAR;
-		case SDLK_KP_CLEARENTRY: return KEY_KP_CLEARENTRY;
-		case SDLK_KP_BINARY: return KEY_KP_BINARY;
-		case SDLK_KP_OCTAL: return KEY_KP_OCTAL;
-		case SDLK_KP_DECIMAL: return KEY_KP_DECIMAL;
-		case SDLK_KP_HEXADECIMAL: return KEY_KP_HEXADECIMAL;
-		case SDLK_LCTRL: return KEY_LCTRL;
-		case SDLK_LSHIFT: return KEY_LSHIFT;
-		case SDLK_LALT: return KEY_LALT;
-		case SDLK_LGUI: return KEY_LGUI;
-		case SDLK_RCTRL: return KEY_RCTRL;
-		case SDLK_RSHIFT: return KEY_RSHIFT;
-		case SDLK_RALT: return KEY_RALT;
-		case SDLK_RGUI: return KEY_RGUI;
-		case SDLK_MODE: return KEY_MODE;
-		case SDLK_AUDIONEXT: return KEY_AUDIONEXT;
-		case SDLK_AUDIOPREV: return KEY_AUDIOPREV;
-		case SDLK_AUDIOSTOP: return KEY_AUDIOSTOP;
-		case SDLK_AUDIOPLAY: return KEY_AUDIOPLAY;
-		case SDLK_AUDIOMUTE: return KEY_AUDIOMUTE;
-		case SDLK_MEDIASELECT: return KEY_MEDIASELECT;
-		case SDLK_WWW: return KEY_WWW;
-		case SDLK_MAIL: return KEY_MAIL;
-		case SDLK_CALCULATOR: return KEY_CALCULATOR;
-		case SDLK_COMPUTER: return KEY_COMPUTER;
-		case SDLK_AC_SEARCH: return KEY_AC_SEARCH;
-		case SDLK_AC_HOME: return KEY_AC_HOME;
-		case SDLK_AC_BACK: return KEY_AC_BACK;
-		case SDLK_AC_FORWARD: return KEY_AC_FORWARD;
-		case SDLK_AC_STOP: return KEY_AC_STOP;
-		case SDLK_AC_REFRESH: return KEY_AC_REFRESH;
-		case SDLK_AC_BOOKMARKS: return KEY_AC_BOOKMARKS;
-		case SDLK_BRIGHTNESSDOWN: return KEY_BRIGHTNESSDOWN;
-		case SDLK_BRIGHTNESSUP: return KEY_BRIGHTNESSUP;
-		case SDLK_DISPLAYSWITCH: return KEY_DISPLAYSWITCH;
-		case SDLK_KBDILLUMTOGGLE: return KEY_KBDILLUMTOGGLE;
-		case SDLK_KBDILLUMDOWN: return KEY_KBDILLUMDOWN;
-		case SDLK_KBDILLUMUP: return KEY_KBDILLUMUP;
-		case SDLK_EJECT: return KEY_EJECT;
-		case SDLK_SLEEP: return KEY_SLEEP;
+		case SDLK_CAPSLOCK: return CF_KEY_CAPSLOCK;
+		case SDLK_F1: return CF_KEY_F1;
+		case SDLK_F2: return CF_KEY_F2;
+		case SDLK_F3: return CF_KEY_F3;
+		case SDLK_F4: return CF_KEY_F4;
+		case SDLK_F5: return CF_KEY_F5;
+		case SDLK_F6: return CF_KEY_F6;
+		case SDLK_F7: return CF_KEY_F7;
+		case SDLK_F8: return CF_KEY_F8;
+		case SDLK_F9: return CF_KEY_F9;
+		case SDLK_F10: return CF_KEY_F10;
+		case SDLK_F11: return CF_KEY_F11;
+		case SDLK_F12: return CF_KEY_F12;
+		case SDLK_PRINTSCREEN: return CF_KEY_PRINTSCREEN;
+		case SDLK_SCROLLLOCK: return CF_KEY_SCROLLLOCK;
+		case SDLK_PAUSE: return CF_KEY_PAUSE;
+		case SDLK_INSERT: return CF_KEY_INSERT;
+		case SDLK_HOME: return CF_KEY_HOME;
+		case SDLK_PAGEUP: return CF_KEY_PAGEUP;
+		case SDLK_DELETE: return CF_KEY_DELETE;
+		case SDLK_END: return CF_KEY_END;
+		case SDLK_PAGEDOWN: return CF_KEY_PAGEDOWN;
+		case SDLK_RIGHT: return CF_KEY_RIGHT;
+		case SDLK_LEFT: return CF_KEY_LEFT;
+		case SDLK_DOWN: return CF_KEY_DOWN;
+		case SDLK_UP: return CF_KEY_UP;
+		case SDLK_NUMLOCKCLEAR: return CF_KEY_NUMLOCKCLEAR;
+		case SDLK_KP_DIVIDE: return CF_KEY_KP_DIVIDE;
+		case SDLK_KP_MULTIPLY: return CF_KEY_KP_MULTIPLY;
+		case SDLK_KP_MINUS: return CF_KEY_KP_MINUS;
+		case SDLK_KP_PLUS: return CF_KEY_KP_PLUS;
+		case SDLK_KP_ENTER: return CF_KEY_KP_ENTER;
+		case SDLK_KP_1: return CF_KEY_KP_1;
+		case SDLK_KP_2: return CF_KEY_KP_2;
+		case SDLK_KP_3: return CF_KEY_KP_3;
+		case SDLK_KP_4: return CF_KEY_KP_4;
+		case SDLK_KP_5: return CF_KEY_KP_5;
+		case SDLK_KP_6: return CF_KEY_KP_6;
+		case SDLK_KP_7: return CF_KEY_KP_7;
+		case SDLK_KP_8: return CF_KEY_KP_8;
+		case SDLK_KP_9: return CF_KEY_KP_9;
+		case SDLK_KP_0: return CF_KEY_KP_0;
+		case SDLK_KP_PERIOD: return CF_KEY_KP_PERIOD;
+		case SDLK_APPLICATION: return CF_KEY_APPLICATION;
+		case SDLK_POWER: return CF_KEY_POWER;
+		case SDLK_KP_EQUALS: return CF_KEY_KP_EQUALS;
+		case SDLK_F13: return CF_KEY_F13;
+		case SDLK_F14: return CF_KEY_F14;
+		case SDLK_F15: return CF_KEY_F15;
+		case SDLK_F16: return CF_KEY_F16;
+		case SDLK_F17: return CF_KEY_F17;
+		case SDLK_F18: return CF_KEY_F18;
+		case SDLK_F19: return CF_KEY_F19;
+		case SDLK_F20: return CF_KEY_F20;
+		case SDLK_F21: return CF_KEY_F21;
+		case SDLK_F22: return CF_KEY_F22;
+		case SDLK_F23: return CF_KEY_F23;
+		case SDLK_F24: return CF_KEY_F24;
+		case SDLK_HELP: return CF_KEY_HELP;
+		case SDLK_MENU: return CF_KEY_MENU;
+		case SDLK_SELECT: return CF_KEY_SELECT;
+		case SDLK_STOP: return CF_KEY_STOP;
+		case SDLK_AGAIN: return CF_KEY_AGAIN;
+		case SDLK_UNDO: return CF_KEY_UNDO;
+		case SDLK_CUT: return CF_KEY_CUT;
+		case SDLK_COPY: return CF_KEY_COPY;
+		case SDLK_PASTE: return CF_KEY_PASTE;
+		case SDLK_FIND: return CF_KEY_FIND;
+		case SDLK_MUTE: return CF_KEY_MUTE;
+		case SDLK_VOLUMEUP: return CF_KEY_VOLUMEUP;
+		case SDLK_VOLUMEDOWN: return CF_KEY_VOLUMEDOWN;
+		case SDLK_KP_COMMA: return CF_KEY_KP_COMMA;
+		case SDLK_KP_EQUALSAS400: return CF_KEY_KP_EQUALSAS400;
+		case SDLK_ALTERASE: return CF_KEY_ALTERASE;
+		case SDLK_SYSREQ: return CF_KEY_SYSREQ;
+		case SDLK_CANCEL: return CF_KEY_CANCEL;
+		case SDLK_CLEAR: return CF_KEY_CLEAR;
+		case SDLK_PRIOR: return CF_KEY_PRIOR;
+		case SDLK_RETURN2: return CF_KEY_RETURN2;
+		case SDLK_SEPARATOR: return CF_KEY_SEPARATOR;
+		case SDLK_OUT: return CF_KEY_OUT;
+		case SDLK_OPER: return CF_KEY_OPER;
+		case SDLK_CLEARAGAIN: return CF_KEY_CLEARAGAIN;
+		case SDLK_CRSEL: return CF_KEY_CRSEL;
+		case SDLK_EXSEL: return CF_KEY_EXSEL;
+		case SDLK_KP_00: return CF_KEY_KP_00;
+		case SDLK_KP_000: return CF_KEY_KP_000;
+		case SDLK_THOUSANDSSEPARATOR: return CF_KEY_THOUSANDSSEPARATOR;
+		case SDLK_DECIMALSEPARATOR: return CF_KEY_DECIMALSEPARATOR;
+		case SDLK_CURRENCYUNIT: return CF_KEY_CURRENCYUNIT;
+		case SDLK_CURRENCYSUBUNIT: return CF_KEY_CURRENCYSUBUNIT;
+		case SDLK_KP_LEFTPAREN: return CF_KEY_KP_LEFTPAREN;
+		case SDLK_KP_RIGHTPAREN: return CF_KEY_KP_RIGHTPAREN;
+		case SDLK_KP_LEFTBRACE: return CF_KEY_KP_LEFTBRACE;
+		case SDLK_KP_RIGHTBRACE: return CF_KEY_KP_RIGHTBRACE;
+		case SDLK_KP_TAB: return CF_KEY_KP_TAB;
+		case SDLK_KP_BACKSPACE: return CF_KEY_KP_BACKSPACE;
+		case SDLK_KP_A: return CF_KEY_KP_A;
+		case SDLK_KP_B: return CF_KEY_KP_B;
+		case SDLK_KP_C: return CF_KEY_KP_C;
+		case SDLK_KP_D: return CF_KEY_KP_D;
+		case SDLK_KP_E: return CF_KEY_KP_E;
+		case SDLK_KP_F: return CF_KEY_KP_F;
+		case SDLK_KP_XOR: return CF_KEY_KP_XOR;
+		case SDLK_KP_POWER: return CF_KEY_KP_POWER;
+		case SDLK_KP_PERCENT: return CF_KEY_KP_PERCENT;
+		case SDLK_KP_LESS: return CF_KEY_KP_LESS;
+		case SDLK_KP_GREATER: return CF_KEY_KP_GREATER;
+		case SDLK_KP_AMPERSAND: return CF_KEY_KP_AMPERSAND;
+		case SDLK_KP_DBLAMPERSAND: return CF_KEY_KP_DBLAMPERSAND;
+		case SDLK_KP_VERTICALBAR: return CF_KEY_KP_VERTICALBAR;
+		case SDLK_KP_DBLVERTICALBAR: return CF_KEY_KP_DBLVERTICALBAR;
+		case SDLK_KP_COLON: return CF_KEY_KP_COLON;
+		case SDLK_KP_HASH: return CF_KEY_KP_HASH;
+		case SDLK_KP_SPACE: return CF_KEY_KP_SPACE;
+		case SDLK_KP_AT: return CF_KEY_KP_AT;
+		case SDLK_KP_EXCLAM: return CF_KEY_KP_EXCLAM;
+		case SDLK_KP_MEMSTORE: return CF_KEY_KP_MEMSTORE;
+		case SDLK_KP_MEMRECALL: return CF_KEY_KP_MEMRECALL;
+		case SDLK_KP_MEMCLEAR: return CF_KEY_KP_MEMCLEAR;
+		case SDLK_KP_MEMADD: return CF_KEY_KP_MEMADD;
+		case SDLK_KP_MEMSUBTRACT: return CF_KEY_KP_MEMSUBTRACT;
+		case SDLK_KP_MEMMULTIPLY: return CF_KEY_KP_MEMMULTIPLY;
+		case SDLK_KP_MEMDIVIDE: return CF_KEY_KP_MEMDIVIDE;
+		case SDLK_KP_PLUSMINUS: return CF_KEY_KP_PLUSMINUS;
+		case SDLK_KP_CLEAR: return CF_KEY_KP_CLEAR;
+		case SDLK_KP_CLEARENTRY: return CF_KEY_KP_CLEARENTRY;
+		case SDLK_KP_BINARY: return CF_KEY_KP_BINARY;
+		case SDLK_KP_OCTAL: return CF_KEY_KP_OCTAL;
+		case SDLK_KP_DECIMAL: return CF_KEY_KP_DECIMAL;
+		case SDLK_KP_HEXADECIMAL: return CF_KEY_KP_HEXADECIMAL;
+		case SDLK_LCTRL: return CF_KEY_LCTRL;
+		case SDLK_LSHIFT: return CF_KEY_LSHIFT;
+		case SDLK_LALT: return CF_KEY_LALT;
+		case SDLK_LGUI: return CF_KEY_LGUI;
+		case SDLK_RCTRL: return CF_KEY_RCTRL;
+		case SDLK_RSHIFT: return CF_KEY_RSHIFT;
+		case SDLK_RALT: return CF_KEY_RALT;
+		case SDLK_RGUI: return CF_KEY_RGUI;
+		case SDLK_MODE: return CF_KEY_MODE;
+		case SDLK_AUDIONEXT: return CF_KEY_AUDIONEXT;
+		case SDLK_AUDIOPREV: return CF_KEY_AUDIOPREV;
+		case SDLK_AUDIOSTOP: return CF_KEY_AUDIOSTOP;
+		case SDLK_AUDIOPLAY: return CF_KEY_AUDIOPLAY;
+		case SDLK_AUDIOMUTE: return CF_KEY_AUDIOMUTE;
+		case SDLK_MEDIASELECT: return CF_KEY_MEDIASELECT;
+		case SDLK_WWW: return CF_KEY_WWW;
+		case SDLK_MAIL: return CF_KEY_MAIL;
+		case SDLK_CALCULATOR: return CF_KEY_CALCULATOR;
+		case SDLK_COMPUTER: return CF_KEY_COMPUTER;
+		case SDLK_AC_SEARCH: return CF_KEY_AC_SEARCH;
+		case SDLK_AC_HOME: return CF_KEY_AC_HOME;
+		case SDLK_AC_BACK: return CF_KEY_AC_BACK;
+		case SDLK_AC_FORWARD: return CF_KEY_AC_FORWARD;
+		case SDLK_AC_STOP: return CF_KEY_AC_STOP;
+		case SDLK_AC_REFRESH: return CF_KEY_AC_REFRESH;
+		case SDLK_AC_BOOKMARKS: return CF_KEY_AC_BOOKMARKS;
+		case SDLK_BRIGHTNESSDOWN: return CF_KEY_BRIGHTNESSDOWN;
+		case SDLK_BRIGHTNESSUP: return CF_KEY_BRIGHTNESSUP;
+		case SDLK_DISPLAYSWITCH: return CF_KEY_DISPLAYSWITCH;
+		case SDLK_KBDILLUMTOGGLE: return CF_KEY_KBDILLUMTOGGLE;
+		case SDLK_KBDILLUMDOWN: return CF_KEY_KBDILLUMDOWN;
+		case SDLK_KBDILLUMUP: return CF_KEY_KBDILLUMUP;
+		case SDLK_EJECT: return CF_KEY_EJECT;
+		case SDLK_SLEEP: return CF_KEY_SLEEP;
 	}
 	return 0;
 }
 
-bool key_is_down(key_button_t key)
+bool cf_key_is_down(cf_key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
-	return app->keys[key];
+	return cf_app->keys[key];
 }
 
-bool key_is_up(key_button_t key)
+bool cf_key_is_up(cf_key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
-	return !app->keys[key];
+	return !cf_app->keys[key];
 }
 
-bool key_was_pressed(key_button_t key)
+bool cf_key_was_pressed(cf_key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 
 	float repeat_delay = 0.5f;
 	float repeat_rate = 0.035f;
-	float t = app->keys_duration[key];
+	float t = cf_app->keys_duration[key];
 	int repeat_count = 0;
 
 	if (t > repeat_delay) {
 		repeat_count = (int)((t - repeat_delay) / repeat_rate);
-		app->keys_duration[key] -= repeat_count * repeat_rate;
+		cf_app->keys_duration[key] -= repeat_count * repeat_rate;
 	}
 
-	return (app->keys[key] & !app->keys_prev[key]) | repeat_count;
+	return (cf_app->keys[key] & !cf_app->keys_prev[key]) | repeat_count;
 }
 
-bool key_was_released(key_button_t key)
+bool cf_key_was_released(cf_key_button_t key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
-	return !app->keys[key] && app->keys_prev[key];
+	return !cf_app->keys[key] && cf_app->keys_prev[key];
 }
 
-void clear_all_key_state()
+void cf_clear_all_key_state()
 {
-	CUTE_MEMSET(app->keys, 0, sizeof(app->keys));
-	CUTE_MEMSET(app->keys_prev, 0, sizeof(app->keys_prev));
+	CUTE_MEMSET(cf_app->keys, 0, sizeof(cf_app->keys));
+	CUTE_MEMSET(cf_app->keys_prev, 0, sizeof(cf_app->keys_prev));
 }
 
-int key_mod_bit_flags()
+int cf_key_mod_bit_flags()
 {
-	return app->key_mod;
+	return cf_app->key_mod;
 }
 
-int mouse_x()
+int cf_mouse_x()
 {
-	return app->mouse.x;
+	return cf_app->mouse.x;
 }
 
-int mouse_y()
+int cf_mouse_y()
 {
-	return app->mouse.y;
+	return cf_app->mouse.y;
 }
 
-bool mouse_is_down(mouse_button_t button)
+bool cf_mouse_is_down(cf_mouse_button_t button)
 {
 	switch (button)
 	{
-	case MOUSE_BUTTON_LEFT:   return app->mouse.left_button;
-	case MOUSE_BUTTON_RIGHT:  return app->mouse.right_button;
-	case MOUSE_BUTTON_MIDDLE: return app->mouse.middle_button;
+	case CF_MOUSE_BUTTON_LEFT:   return cf_app->mouse.left_button;
+	case CF_MOUSE_BUTTON_RIGHT:  return cf_app->mouse.right_button;
+	case CF_MOUSE_BUTTON_MIDDLE: return cf_app->mouse.middle_button;
 	}
 	return 0;
 }
 
-bool mouse_is_up(mouse_button_t button)
+bool cf_mouse_is_up(cf_mouse_button_t button)
 {
 	switch (button)
 	{
-	case MOUSE_BUTTON_LEFT:   return !app->mouse.left_button;
-	case MOUSE_BUTTON_RIGHT:  return !app->mouse.right_button;
-	case MOUSE_BUTTON_MIDDLE: return !app->mouse.middle_button;
+	case CF_MOUSE_BUTTON_LEFT:   return !cf_app->mouse.left_button;
+	case CF_MOUSE_BUTTON_RIGHT:  return !cf_app->mouse.right_button;
+	case CF_MOUSE_BUTTON_MIDDLE: return !cf_app->mouse.middle_button;
 	}
 	return 0;
 }
 
-bool mouse_was_pressed(mouse_button_t button)
+bool cf_mouse_was_pressed(cf_mouse_button_t button)
 {
 	switch (button)
 	{
-	case MOUSE_BUTTON_LEFT:   return app->mouse.left_button   && !app->mouse_prev.left_button;
-	case MOUSE_BUTTON_RIGHT:  return app->mouse.right_button  && !app->mouse_prev.right_button;
-	case MOUSE_BUTTON_MIDDLE: return app->mouse.middle_button && !app->mouse_prev.middle_button;
+	case CF_MOUSE_BUTTON_LEFT:   return cf_app->mouse.left_button   && !cf_app->mouse_prev.left_button;
+	case CF_MOUSE_BUTTON_RIGHT:  return cf_app->mouse.right_button  && !cf_app->mouse_prev.right_button;
+	case CF_MOUSE_BUTTON_MIDDLE: return cf_app->mouse.middle_button && !cf_app->mouse_prev.middle_button;
 	}
 	return 0;
 }
 
-bool mouse_was_released(mouse_button_t button)
+bool cf_mouse_was_released(cf_mouse_button_t button)
 {
 	switch (button)
 	{
-	case MOUSE_BUTTON_LEFT:   return !app->mouse.left_button   && app->mouse_prev.left_button;
-	case MOUSE_BUTTON_RIGHT:  return !app->mouse.right_button  && app->mouse_prev.right_button;
-	case MOUSE_BUTTON_MIDDLE: return !app->mouse.middle_button && app->mouse_prev.middle_button;
+	case CF_MOUSE_BUTTON_LEFT:   return !cf_app->mouse.left_button   && cf_app->mouse_prev.left_button;
+	case CF_MOUSE_BUTTON_RIGHT:  return !cf_app->mouse.right_button  && cf_app->mouse_prev.right_button;
+	case CF_MOUSE_BUTTON_MIDDLE: return !cf_app->mouse.middle_button && cf_app->mouse_prev.middle_button;
 	}
 	return 0;
 }
 
-int mouse_wheel_motion()
+int cf_mouse_wheel_motion()
 {
-	return app->mouse.wheel_motion;
+	return cf_app->mouse.wheel_motion;
 }
 
-bool mouse_is_down_double_click(mouse_button_t button)
+bool cf_mouse_is_down_double_click(cf_mouse_button_t button)
 {
-	return mouse_is_down(button) && app->mouse.click_type == MOUSE_CLICK_DOUBLE;
+	return cf_mouse_is_down(button) && cf_app->mouse.click_type == CF_MOUSE_CLICK_DOUBLE;
 }
 
-bool mouse_double_click_was_pressed(mouse_button_t button)
+bool cf_mouse_double_click_was_pressed(cf_mouse_button_t button)
 {
-	return mouse_was_pressed(button) && app->mouse.click_type == MOUSE_CLICK_DOUBLE;
+	return cf_mouse_was_pressed(button) && cf_app->mouse.click_type == CF_MOUSE_CLICK_DOUBLE;
 }
 
-void clear_all_mouse_state()
+void cf_clear_all_mouse_state()
 {
-	CUTE_MEMSET(&app->mouse, 0, sizeof(app->mouse));
-	CUTE_MEMSET(&app->mouse_prev, 0, sizeof(app->mouse_prev));
+	CUTE_MEMSET(&cf_app->mouse, 0, sizeof(cf_app->mouse));
+	CUTE_MEMSET(&cf_app->mouse_prev, 0, sizeof(cf_app->mouse_prev));
 }
 
-void input_text_add_utf8(const char* text)
+void cf_input_text_add_utf8(const char* text)
 {
 	while (*text) {
 		int cp;
-		text = decode8(text, &cp);
-		app->input_text.add(cp);
+		text = cf_decode8(text, &cp);
+		cf_app->input_text.add(cp);
 	}
 }
 
-int input_text_pop_utf32()
+int cf_input_text_pop_utf32()
 {
-	return app->input_text.pop();
+	return cf_app->input_text.pop();
 }
 
-bool input_text_has_data()
+bool cf_input_text_has_data()
 {
-	return app->input_text.count() > 0 ? true : false;
+	return cf_app->input_text.count() > 0 ? true : false;
 }
 
-void input_text_clear()
+void cf_input_text_clear()
 {
-	app->input_text.clear();
+	cf_app->input_text.clear();
 }
-void input_enable_ime()
+void cf_input_enable_ime()
 {
 	SDL_StartTextInput();
 }
 
-void input_disable_ime()
+void cf_input_disable_ime()
 {
 	SDL_StopTextInput();
 }
 
-bool input_is_ime_enabled()
+bool cf_input_is_ime_enabled()
 {
 	return SDL_IsTextInputActive();
 }
 
-bool input_has_ime_keyboard_support()
+bool cf_input_has_ime_keyboard_support()
 {
 	return SDL_HasScreenKeyboardSupport();
 }
 
-bool input_is_ime_keyboard_shown()
+bool cf_input_is_ime_keyboard_shown()
 {
-	return SDL_IsScreenKeyboardShown(app->window);
+	return SDL_IsScreenKeyboardShown(cf_app->window);
 }
 
-void input_set_ime_rect(int x, int y, int w, int h)
+void cf_input_set_ime_rect(int x, int y, int w, int h)
 {
 	SDL_Rect r = { x, y, w, h };
 	SDL_SetTextInputRect(&r);
 }
 
-bool input_get_ime_composition(ime_composition_t* composition)
+bool cf_input_get_ime_composition(cf_ime_composition_t* composition)
 {
-	composition->composition = app->ime_composition.data();
-	composition->cursor = app->ime_composition_cursor;
-	composition->selection_len = app->ime_composition_selection_len;
-	return app->ime_composition.count() ? true : false;
+	composition->composition = cf_app->ime_composition.data();
+	composition->cursor = cf_app->ime_composition_cursor;
+	composition->selection_len = cf_app->ime_composition_selection_len;
+	return cf_app->ime_composition.count() ? true : false;
 }
 
-static void s_touch_remove(uint64_t id)
+static void cf_s_touch_remove(uint64_t id)
 {
-	for (int i = 0; i < app->touches.size(); ++i) {
-		if (app->touches[i].id == id) {
-			app->touches.unordered_remove(i);
+	for (int i = 0; i < cf_app->touches.size(); ++i) {
+		if (cf_app->touches[i].id == id) {
+			cf_app->touches.unordered_remove(i);
 			break;
 		}
 	}
 }
 
-array<touch_t> touch_get_all()
+int cf_touch_get_all(cf_touch_t** touches)
 {
-	return app->touches;
+	if (touches) {
+		*touches = cf_app->touches.data();
+	}
+	return cf_app->touches.count();
 }
 
-bool touch_get(uint64_t id, touch_t* touch)
+bool cf_touch_get(uint64_t id, cf_touch_t* touch)
 {
-	for (int i = 0; i < app->touches.size(); ++i) {
-		if (app->touches[i].id == id) {
-			*touch = app->touches[i];
+	for (int i = 0; i < cf_app->touches.size(); ++i) {
+		if (cf_app->touches[i].id == id) {
+			*touch = cf_app->touches[i];
 			return true;
 		}
 	}
 	return false;
 }
 
-static joypad_t* s_joy(SDL_JoystickID id)
+static cf_joypad_t* cf_s_joy(SDL_JoystickID id)
 {
-	for (list_node_t* n = list_begin(&app->joypads); n != list_end(&app->joypads); n = n->next) {
-		joypad_t* joypad = CUTE_LIST_HOST(joypad_t, node, n);
+	for (cf_list_node_t* n = cf_list_begin(&cf_app->joypads); n != cf_list_end(&cf_app->joypads); n = n->next) {
+		cf_joypad_t* joypad = CUTE_LIST_HOST(cf_joypad_t, node, n);
 		if (joypad->id == id) return joypad;
 	}
 	return NULL;
 }
 
-void pump_input_msgs()
+void cf_pump_input_msgs()
 {
 	// Clear any necessary single-frame state and copy to `prev` states.
-	app->mouse.xrel = 0;
-	app->mouse.yrel = 0;
-	CUTE_MEMCPY(app->keys_prev, app->keys, sizeof(app->keys));
-	CUTE_MEMCPY(&app->mouse_prev, &app->mouse, sizeof(app->mouse));
-	CUTE_MEMCPY(&app->window_state_prev, &app->window_state, sizeof(app->window_state));
-	for (list_node_t* n = list_begin(&app->joypads); n != list_end(&app->joypads); n = n->next) {
-		joypad_t* joypad = CUTE_LIST_HOST(joypad_t, node, n);
+	cf_app->mouse.xrel = 0;
+	cf_app->mouse.yrel = 0;
+	CUTE_MEMCPY(cf_app->keys_prev, cf_app->keys, sizeof(cf_app->keys));
+	CUTE_MEMCPY(&cf_app->mouse_prev, &cf_app->mouse, sizeof(cf_app->mouse));
+	CUTE_MEMCPY(&cf_app->window_state_prev, &cf_app->window_state, sizeof(cf_app->window_state));
+	for (cf_list_node_t* n = cf_list_begin(&cf_app->joypads); n != cf_list_end(&cf_app->joypads); n = n->next) {
+		cf_joypad_t* joypad = CUTE_LIST_HOST(cf_joypad_t, node, n);
 		CUTE_MEMCPY(joypad->buttons_prev, joypad->buttons, sizeof(joypad->buttons));
 	}
-	app->mouse.wheel_motion = 0;
-	app->window_state.moved = false;
-	app->window_state.restored = false;
-	app->window_state.resized = false;
+	cf_app->mouse.wheel_motion = 0;
+	cf_app->window_state.moved = false;
+	cf_app->window_state.restored = false;
+	cf_app->window_state.resized = false;
 
 	// Update key durations to simulate "press and hold" style for `key_was_pressed`.
 	for (int i = 0; i < 512; ++i)
 	{
-		if (key_is_down((key_button_t)i)) {
-			if (app->keys_duration[i] < 0) {
-				app->keys_duration[i] = 0;
+		if (cf_key_is_down((cf_key_button_t)i)) {
+			if (cf_app->keys_duration[i] < 0) {
+				cf_app->keys_duration[i] = 0;
 			} else {
-				app->keys_duration[i] += app->dt;
+				cf_app->keys_duration[i] += cf_app->dt;
 			}
 		} else {
-			app->keys_duration[i] = -1.0f;
+			cf_app->keys_duration[i] = -1.0f;
 		}
 	}
 
@@ -459,57 +460,57 @@ void pump_input_msgs()
 	SDL_Event event;
 	while (SDL_PollEvent(&event))
 	{
-		if (app->using_imgui) {
+		if (cf_app->using_imgui) {
 			ImGui_ImplSDL2_ProcessEvent(&event);
 		}
 
 		switch (event.type)
 		{
 		case SDL_QUIT:
-			app->running = false;
+			cf_app->running = false;
 			break;
 
 		case SDL_WINDOWEVENT:
 			switch (event.window.event)
 			{
 			case SDL_WINDOWEVENT_RESIZED:
-				app->window_state.resized = true;
-				app->w = event.window.data1;
-				app->h = event.window.data2;
+				cf_app->window_state.resized = true;
+				cf_app->w = event.window.data1;
+				cf_app->h = event.window.data2;
 				break;
 
 			case SDL_WINDOWEVENT_MOVED:
-				app->window_state.moved = true;
-				app->x = event.window.data1;
-				app->y = event.window.data2;
+				cf_app->window_state.moved = true;
+				cf_app->x = event.window.data1;
+				cf_app->y = event.window.data2;
 				break;
 
 			case SDL_WINDOWEVENT_MINIMIZED:
-				app->window_state.minimized = true;
+				cf_app->window_state.minimized = true;
 				break;
 
 			case SDL_WINDOWEVENT_MAXIMIZED:
-				app->window_state.maximized = true;
+				cf_app->window_state.maximized = true;
 				break;
 
 			case SDL_WINDOWEVENT_RESTORED:
-				app->window_state.restored = true;
+				cf_app->window_state.restored = true;
 				break;
 
 			case SDL_WINDOWEVENT_ENTER:
-				app->window_state.mouse_inside_window = true;
+				cf_app->window_state.mouse_inside_window = true;
 				break;
 
 			case SDL_WINDOWEVENT_LEAVE:
-				app->window_state.mouse_inside_window = false;
+				cf_app->window_state.mouse_inside_window = false;
 				break;
 
 			case SDL_WINDOWEVENT_FOCUS_GAINED:
-				app->window_state.has_keyboard_focus = true;
+				cf_app->window_state.has_keyboard_focus = true;
 				break;
 
 			case SDL_WINDOWEVENT_FOCUS_LOST:
-				app->window_state.has_keyboard_focus = false;
+				cf_app->window_state.has_keyboard_focus = false;
 				break;
 			}
 			break;
@@ -518,87 +519,87 @@ void pump_input_msgs()
 		{
 			if (event.key.repeat) continue;
 			int key = SDL_GetKeyFromScancode(event.key.keysym.scancode);
-			key = s_map_SDL_keys(key);
+			key = cf_s_map_SDL_keys(key);
 			CUTE_ASSERT(key >= 0 && key < 512);
-			app->keys[key] = 1;
-			app->keys[KEY_ANY] = 1;
+			cf_app->keys[key] = 1;
+			cf_app->keys[CF_KEY_ANY] = 1;
 		}	break;
 
 		case SDL_KEYUP:
 		{
 			if (event.key.repeat) continue;
 			int key = SDL_GetKeyFromScancode(event.key.keysym.scancode);
-			key = s_map_SDL_keys(key);
+			key = cf_s_map_SDL_keys(key);
 			CUTE_ASSERT(key >= 0 && key < 512);
-			app->keys[key] = 0;
+			cf_app->keys[key] = 0;
 		}	break;
 
 		case SDL_TEXTINPUT:
 		{
-			input_text_add_utf8(event.text.text);
-			app->ime_composition.clear();
-			app->ime_composition_cursor = 0;
-			app->ime_composition_selection_len = 0;
+			cf_input_text_add_utf8(event.text.text);
+			cf_app->ime_composition.clear();
+			cf_app->ime_composition_cursor = 0;
+			cf_app->ime_composition_selection_len = 0;
 		}	break;
 
 		case SDL_TEXTEDITING:
 		{
 			const char* text = event.edit.text;
-			while (*text) app->ime_composition.add(*text++);
-			app->ime_composition_cursor = event.edit.start;
-			app->ime_composition_selection_len = event.edit.length;
+			while (*text) cf_app->ime_composition.add(*text++);
+			cf_app->ime_composition_cursor = event.edit.start;
+			cf_app->ime_composition_selection_len = event.edit.length;
 		}	break;
 
 		case SDL_MOUSEMOTION:
-			app->mouse.x = event.motion.x;
-			app->mouse.y = event.motion.y;
-			app->mouse.xrel = event.motion.xrel;
-			app->mouse.yrel = -event.motion.yrel;
+			cf_app->mouse.x = event.motion.x;
+			cf_app->mouse.y = event.motion.y;
+			cf_app->mouse.xrel = event.motion.xrel;
+			cf_app->mouse.yrel = -event.motion.yrel;
 			break;
 
 		case SDL_MOUSEBUTTONDOWN:
 			switch (event.button.button)
 			{
-			case SDL_BUTTON_LEFT: app->mouse.left_button = 1; break;
-			case SDL_BUTTON_RIGHT: app->mouse.right_button = 1; break;
-			case SDL_BUTTON_MIDDLE: app->mouse.middle_button = 1; break;
+			case SDL_BUTTON_LEFT: cf_app->mouse.left_button = 1; break;
+			case SDL_BUTTON_RIGHT: cf_app->mouse.right_button = 1; break;
+			case SDL_BUTTON_MIDDLE: cf_app->mouse.middle_button = 1; break;
 			}
-			app->mouse.x = event.button.x;
-			app->mouse.y = event.button.y;
+			cf_app->mouse.x = event.button.x;
+			cf_app->mouse.y = event.button.y;
 			if (event.button.clicks == 1) {
-				app->mouse.click_type = MOUSE_CLICK_SINGLE;
+				cf_app->mouse.click_type = CF_MOUSE_CLICK_SINGLE;
 			} else if (event.button.clicks == 2) {
-				app->mouse.click_type = MOUSE_CLICK_DOUBLE;
+				cf_app->mouse.click_type = CF_MOUSE_CLICK_DOUBLE;
 			}
 			break;
 
 		case SDL_MOUSEBUTTONUP:
 			switch (event.button.button)
 			{
-			case SDL_BUTTON_LEFT: app->mouse.left_button = 0; break;
-			case SDL_BUTTON_RIGHT: app->mouse.right_button = 0; break;
-			case SDL_BUTTON_MIDDLE: app->mouse.middle_button = 0; break;
+			case SDL_BUTTON_LEFT: cf_app->mouse.left_button = 0; break;
+			case SDL_BUTTON_RIGHT: cf_app->mouse.right_button = 0; break;
+			case SDL_BUTTON_MIDDLE: cf_app->mouse.middle_button = 0; break;
 			}
-			app->mouse.x = event.button.x;
-			app->mouse.y = event.button.y;
+			cf_app->mouse.x = event.button.x;
+			cf_app->mouse.y = event.button.y;
 			if (event.button.clicks == 1) {
-				app->mouse.click_type = MOUSE_CLICK_SINGLE;
+				cf_app->mouse.click_type = CF_MOUSE_CLICK_SINGLE;
 			} else if (event.button.clicks == 2) {
-				app->mouse.click_type = MOUSE_CLICK_DOUBLE;
+				cf_app->mouse.click_type = CF_MOUSE_CLICK_DOUBLE;
 			}
 			break;
 
 		case SDL_MOUSEWHEEL:
-			app->mouse.wheel_motion = event.wheel.y;
+			cf_app->mouse.wheel_motion = event.wheel.y;
 			break;
 
 		case SDL_CONTROLLERBUTTONUP:
 		{
 			SDL_JoystickID id = event.cbutton.which;
-			joypad_t* joypad = s_joy(id);
+			cf_joypad_t* joypad = cf_s_joy(id);
 			if (joypad) {
 				int button = (int)event.cbutton.button;
-				CUTE_ASSERT(button >= 0 && button < JOYPAD_BUTTON_COUNT);
+				CUTE_ASSERT(button >= 0 && button < CF_JOYPAD_BUTTON_COUNT);
 				joypad->buttons[button] = 0;
 			}
 		}	break;
@@ -606,10 +607,10 @@ void pump_input_msgs()
 		case SDL_CONTROLLERBUTTONDOWN:
 		{
 			SDL_JoystickID id = event.cbutton.which;
-			joypad_t* joypad = s_joy(id);
+			cf_joypad_t* joypad = cf_s_joy(id);
 			if (joypad) {
 				int button = (int)event.cbutton.button;
-				CUTE_ASSERT(button >= 0 && button < JOYPAD_BUTTON_COUNT);
+				CUTE_ASSERT(button >= 0 && button < CF_JOYPAD_BUTTON_COUNT);
 				joypad->buttons[button] = 1;
 			}
 		}	break;
@@ -617,11 +618,11 @@ void pump_input_msgs()
 		case SDL_CONTROLLERAXISMOTION:
 		{
 			SDL_JoystickID id = event.caxis.which;
-			joypad_t* joypad = s_joy(id);
+			cf_joypad_t* joypad = cf_s_joy(id);
 			if (joypad) {
 				int axis = (int)event.caxis.axis;
 				int value = (int)event.caxis.value;
-				CUTE_ASSERT(axis >= 0 && axis < JOYPAD_AXIS_COUNT);
+				CUTE_ASSERT(axis >= 0 && axis < CF_JOYPAD_AXIS_COUNT);
 				joypad->axes[axis] = value;
 			}
 		}	break;
@@ -629,60 +630,63 @@ void pump_input_msgs()
 		case SDL_FINGERDOWN:
 		{
 			uint64_t id = (uint64_t)event.tfinger.fingerId;
-			s_touch_remove(id);
-			touch_t& touch = app->touches.add();
+			cf_s_touch_remove(id);
+			cf_touch_t& touch = cf_app->touches.add();
 			touch.id = id;
 			touch.pressure = event.tfinger.pressure;
-			touch.x = event.tfinger.x * app->w; // NOTE: Probably wrong for high-DPI.
-			touch.y = event.tfinger.y * app->h; // NOTE: Probably wrong for high-DPI.
+			touch.x = event.tfinger.x * cf_app->w; // NOTE: Probably wrong for high-DPI.
+			touch.y = event.tfinger.y * cf_app->h; // NOTE: Probably wrong for high-DPI.
 		}	break;
 
 		case SDL_FINGERMOTION:
 		{
 			uint64_t id = (uint64_t)event.tfinger.fingerId;
-			touch_t touch;
-			if (touch_get(id, &touch)) {
+			cf_touch_t touch;
+			if (cf_touch_get(id, &touch)) {
 				touch.pressure = event.tfinger.pressure;
-				touch.x = event.tfinger.x * app->w; // NOTE: Probably wrong for high-DPI.
-				touch.y = event.tfinger.y * app->h; // NOTE: Probably wrong for high-DPI.
+				touch.x = event.tfinger.x * cf_app->w; // NOTE: Probably wrong for high-DPI.
+				touch.y = event.tfinger.y * cf_app->h; // NOTE: Probably wrong for high-DPI.
 			} else {
-				touch_t& touch = app->touches.add();
+				cf_touch_t& touch = cf_app->touches.add();
 				touch.id = id;
 				touch.pressure = event.tfinger.pressure;
-				touch.x = event.tfinger.x * app->w; // NOTE: Probably wrong for high-DPI.
-				touch.y = event.tfinger.y * app->h; // NOTE: Probably wrong for high-DPI.
+				touch.x = event.tfinger.x * cf_app->w; // NOTE: Probably wrong for high-DPI.
+				touch.y = event.tfinger.y * cf_app->h; // NOTE: Probably wrong for high-DPI.
 			}
 		}	break;
 
 		case SDL_FINGERUP:
 		{
 			uint64_t id = (uint64_t)event.tfinger.fingerId;
-			s_touch_remove(id);
+			cf_s_touch_remove(id);
 		}	break;
 		}
 	}
 
 	// Keep track of key mod states (alt/shift etc).
-	if (key_is_down(KEY_NUMLOCKCLEAR)) app->key_mod |= CUTE_KEY_MOD_NUMLOCK;
-	else app->key_mod &= ~CUTE_KEY_MOD_NUMLOCK;
-	if (key_is_down(KEY_CAPSLOCK)) app->key_mod |= CUTE_KEY_MOD_CAPSLOCK;
-	else app->key_mod &= ~CUTE_KEY_MOD_CAPSLOCK;
-	if (key_is_down(KEY_LGUI)) app->key_mod |= CUTE_KEY_MOD_LGUI;
-	else app->key_mod &= ~CUTE_KEY_MOD_LGUI;
-	if (key_is_down(KEY_RGUI)) app->key_mod |= CUTE_KEY_MOD_RGUI;
-	else app->key_mod &= ~CUTE_KEY_MOD_RGUI;
-	if (key_is_down(KEY_LCTRL)) app->key_mod |= CUTE_KEY_MOD_LCTRL;
-	else app->key_mod &= ~CUTE_KEY_MOD_LCTRL;
-	if (key_is_down(KEY_RCTRL)) app->key_mod |= CUTE_KEY_MOD_RCTRL;
-	else app->key_mod &= ~CUTE_KEY_MOD_RCTRL;
-	if (key_is_down(KEY_LSHIFT)) app->key_mod |= CUTE_KEY_MOD_LSHIFT;
-	else app->key_mod &= ~CUTE_KEY_MOD_LSHIFT;
-	if (key_is_down(KEY_RSHIFT)) app->key_mod |= CUTE_KEY_MOD_RSHIFT;
-	else app->key_mod &= ~CUTE_KEY_MOD_RSHIFT;
-	if (key_is_down(KEY_RALT)) app->key_mod |= CUTE_KEY_MOD_RALT;
-	else app->key_mod &= ~CUTE_KEY_MOD_RALT;
-	if (key_is_down(KEY_RALT)) app->key_mod |= CUTE_KEY_MOD_RALT;
-	else app->key_mod &= ~CUTE_KEY_MOD_RALT;
+	if (cf_key_is_down(CF_KEY_NUMLOCKCLEAR)) cf_app->key_mod |= CUTE_KEY_MOD_NUMLOCK;
+	else cf_app->key_mod &= ~CUTE_KEY_MOD_NUMLOCK;
+	if (cf_key_is_down(CF_KEY_CAPSLOCK)) cf_app->key_mod |= CUTE_KEY_MOD_CAPSLOCK;
+	else cf_app->key_mod &= ~CUTE_KEY_MOD_CAPSLOCK;
+	if (cf_key_is_down(CF_KEY_LGUI)) cf_app->key_mod |= CUTE_KEY_MOD_LGUI;
+	else cf_app->key_mod &= ~CUTE_KEY_MOD_LGUI;
+	if (cf_key_is_down(CF_KEY_RGUI)) cf_app->key_mod |= CUTE_KEY_MOD_RGUI;
+	else cf_app->key_mod &= ~CUTE_KEY_MOD_RGUI;
+	if (cf_key_is_down(CF_KEY_LCTRL)) cf_app->key_mod |= CUTE_KEY_MOD_LCTRL;
+	else cf_app->key_mod &= ~CUTE_KEY_MOD_LCTRL;
+	if (cf_key_is_down(CF_KEY_RCTRL)) cf_app->key_mod |= CUTE_KEY_MOD_RCTRL;
+	else cf_app->key_mod &= ~CUTE_KEY_MOD_RCTRL;
+	if (cf_key_is_down(CF_KEY_LSHIFT)) cf_app->key_mod |= CUTE_KEY_MOD_LSHIFT;
+	else cf_app->key_mod &= ~CUTE_KEY_MOD_LSHIFT;
+	if (cf_key_is_down(CF_KEY_RSHIFT)) cf_app->key_mod |= CUTE_KEY_MOD_RSHIFT;
+	else cf_app->key_mod &= ~CUTE_KEY_MOD_RSHIFT;
+	if (cf_key_is_down(CF_KEY_RALT)) cf_app->key_mod |= CUTE_KEY_MOD_RALT;
+	else cf_app->key_mod &= ~CUTE_KEY_MOD_RALT;
+	if (cf_key_is_down(CF_KEY_RALT)) cf_app->key_mod |= CUTE_KEY_MOD_RALT;
+	else cf_app->key_mod &= ~CUTE_KEY_MOD_RALT;
 }
 
+namespace cute
+{
+	cf_array<cf_touch_t> CUTE_CALL touch_get_all() { return cf_app->touches; }
 }

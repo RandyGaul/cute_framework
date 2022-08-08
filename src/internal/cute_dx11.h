@@ -25,14 +25,19 @@
 #include "cute_defines.h"
 #include "sokol/sokol_gfx.h"
 
+
+void cf_dx11_init(void* hwnd, int w, int h, int sample_count);
+sg_context_desc cf_dx11_get_context();
+void cf_dx11_present();
+void cf_dx11_shutdown();
+
+#ifdef CUTE_CPP
+
 namespace cute
 {
 
-void dx11_init(void* hwnd, int w, int h, int sample_count);
-sg_context_desc dx11_get_context();
-void dx11_present();
-void dx11_shutdown();
-
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_DX11_H

@@ -111,6 +111,13 @@
 
 #define CUTE_DEBUG_PRINTF(...)
 
+#ifdef __cplusplus
+#	ifndef CUTE_NO_CPP
+#		define CUTE_CPP
+#	endif // !CUTE_NO_CPP
+#endif // __cplusplus
+
+
 #define SOKOL_API_DECL CUTE_API
 
 #if defined(CUTE_WINDOWS)
@@ -128,40 +135,42 @@
 
 #include <stdlib.h> // NULL
 
-namespace cute
-{
-	struct app_t;
-}
+#ifndef __cplusplus
+#include <stdbool.h> // bool
+#endif // !__cplusplus
+
+struct cf_app_t;
 
 #ifndef CUTE_NO_WARNINGS
 #	define CUTE_WARN(...) fprintf(stderr, __VA_ARGS__)
 #endif
 
+#ifdef CUTE_CPP
 // -------------------------------------------------------------------------------------------------
 // Avoid including <utility> header.
 
 template <typename T>
-struct remove_reference
+struct cf_remove_reference
 {
 	using type = T;
 };
 
 template <typename T>
-struct remove_reference<T&>
+struct cf_remove_reference<T&>
 {
 	using type = T;
 };
 
 template <typename T>
-struct remove_reference<T&&>
+struct cf_remove_reference<T&&>
 {
 	using type = T;
 };
 
 template <typename T>
-constexpr typename remove_reference<T>::type&& move(T&& arg) noexcept
+constexpr typename cf_remove_reference<T>::type&& move(T&& arg) noexcept
 {
-	return (typename remove_reference<T>::type&&)arg;
+	return (typename cf_remove_reference<T>::type&&)arg;
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -179,40 +188,39 @@ constexpr typename remove_reference<T>::type&& move(T&& arg) noexcept
 
 namespace std
 {
-	template <typename T>
-	class initializer_list {
-	public:
-		using value_type      = T;
-		using reference       = const T&;
-		using const_reference = const T&;
-		using size_type       = size_t;
+template <typename T>
+class initializer_list
+{
+public:
+	using value_type = T;
+	using reference = const T&;
+	using const_reference = const T&;
+	using size_type = size_t;
 
-		using iterator       = const T*;
-		using const_iterator = const T*;
+	using iterator = const T*;
+	using const_iterator = const T*;
 
-		constexpr initializer_list() noexcept
-			: m_first(0)
-			, m_last(0)
-		{
-		}
+	constexpr initializer_list() noexcept
+		: m_first(0)
+		, m_last(0)
+	{}
 
-		constexpr initializer_list(const T* first, const T* last) noexcept
-			: m_first(first)
-			, m_last(last)
-		{
-		}
+	constexpr initializer_list(const T* first, const T* last) noexcept
+		: m_first(first)
+		, m_last(last)
+	{}
 
-		constexpr const T* begin() const noexcept { return m_first; }
-		constexpr const T* end() const noexcept { return m_last; }
-		constexpr size_t size() const noexcept { return (size_t)(m_last - m_first); }
+	constexpr const T* begin() const noexcept { return m_first; }
+	constexpr const T* end() const noexcept { return m_last; }
+	constexpr size_t size() const noexcept { return (size_t)(m_last - m_first); }
 
-	private:
-		const T* m_first;
-		const T* m_last;
-	};
+private:
+	const T* m_first;
+	const T* m_last;
+};
 
-	template <class T> constexpr const T* begin(initializer_list<T> list) noexcept { return list.begin(); }
-	template <class T> constexpr const T* end(initializer_list<T> list) noexcept { return list.end(); }
+template <class T> constexpr const T* begin(initializer_list<T> list) noexcept { return list.begin(); }
+template <class T> constexpr const T* end(initializer_list<T> list) noexcept { return list.end(); }
 }
 
 #endif
@@ -223,10 +231,18 @@ namespace std
 
 #endif // CUTE_WINDOWS
 
+template <typename T>
+using cf_initializer_list = std::initializer_list<T>;
+
 namespace cute
 {
-	template <typename T>
-	using initializer_list = std::initializer_list<T>;
+template <typename T>
+using initializer_list = cf_initializer_list<T>;
+
+template <typename T>
+using remove_reference = cf_remove_reference<T>;
 }
+
+#endif // CUTE_CPP
 
 #endif // CUTE_DEFINES_H

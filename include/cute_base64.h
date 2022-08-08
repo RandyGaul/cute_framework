@@ -19,18 +19,36 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifndef CUTE_BASE64_H
+#define CUTE_BASE64_H
+
 #include "cute_defines.h"
 #include "cute_error.h"
 
-namespace cute
-{
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 // Info about base 64 encoding: https://tools.ietf.org/html/rfc4648
 
 #define CUTE_BASE64_ENCODED_SIZE(size) ((((size) + 2) / 3) * 4)
 #define CUTE_BASE64_DECODED_SIZE(size) ((((size) + 3) / 4) * 3)
 
-CUTE_API error_t CUTE_CALL base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size);
-CUTE_API error_t CUTE_CALL base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size);
+CUTE_API cf_error_t CUTE_CALL cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size);
+CUTE_API cf_error_t CUTE_CALL cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size);
 
+#ifdef __cplusplus
 }
+#endif // __cplusplus
+
+#ifdef CUTE_CPP
+
+namespace cute
+{
+CUTE_INLINE error_t base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_encode(dst, dst_size, src, src_size); }
+CUTE_INLINE error_t base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_decode(dst, dst_size, src, src_size); }
+}
+
+#endif // CUTE_CPP
+
+#endif // !CUTE_BASE64_H

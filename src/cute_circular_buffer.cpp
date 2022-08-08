@@ -24,12 +24,9 @@
 #include <cute_c_runtime.h>
 #include <cute_concurrency.h>
 
-namespace cute
+cf_circular_buffer_t cf_circular_buffer_make(int initial_size_in_bytes, void* user_allocator_context)
 {
-	
-circular_buffer_t circular_buffer_make(int initial_size_in_bytes, void* user_allocator_context)
-{
-	circular_buffer_t buffer;
+	cf_circular_buffer_t buffer = { 0 };
 	buffer.size_left.i = initial_size_in_bytes;
 	buffer.capacity = initial_size_in_bytes;
 	buffer.data = (uint8_t*)CUTE_ALLOC(initial_size_in_bytes, user_allocator_context);
@@ -37,22 +34,22 @@ circular_buffer_t circular_buffer_make(int initial_size_in_bytes, void* user_all
 	return buffer;
 }
 
-void circular_buffer_free(circular_buffer_t* buffer)
+void cf_circular_buffer_free(cf_circular_buffer_t* buffer)
 {
 	CUTE_FREE(buffer->data, buffer->user_allocator_context);
 	CUTE_MEMSET(buffer, 0, sizeof(*buffer));
 }
 
-void circular_buffer_reset(circular_buffer_t* buffer)
+void cf_circular_buffer_reset(cf_circular_buffer_t* buffer)
 {
 	buffer->index0 = 0;
 	buffer->index1 = 0;
 	buffer->size_left.i = buffer->capacity;
 }
 
-int circular_buffer_push(circular_buffer_t* buffer, const void* data, int size)
+int cf_circular_buffer_push(cf_circular_buffer_t* buffer, const void* data, int size)
 {
-	if (atomic_get(&buffer->size_left) < size) {
+	if (cf_atomic_get(&buffer->size_left) < size) {
 		return -1;
 	}
 
@@ -66,14 +63,14 @@ int circular_buffer_push(circular_buffer_t* buffer, const void* data, int size)
 		buffer->index1 = (buffer->index1 + size) % buffer->capacity;
 	}
 
-	atomic_add(&buffer->size_left, -size);
+	cf_atomic_add(&buffer->size_left, -size);
 
 	return 0;
 }
 
-int circular_buffer_pull(circular_buffer_t* buffer, void* data, int size)
+int cf_circular_buffer_pull(cf_circular_buffer_t* buffer, void* data, int size)
 {
-	if (buffer->capacity - atomic_get(&buffer->size_left) < size) {
+	if (buffer->capacity - cf_atomic_get(&buffer->size_left) < size) {
 		return -1;
 	}
 
@@ -87,12 +84,12 @@ int circular_buffer_pull(circular_buffer_t* buffer, void* data, int size)
 		buffer->index0 = (buffer->index0 + size) % buffer->capacity;
 	}
 
-	atomic_add(&buffer->size_left, size);
+	cf_atomic_add(&buffer->size_left, size);
 
 	return 0;
 }
 
-int circular_buffer_grow(circular_buffer_t* buffer, int new_size_in_bytes)
+int cf_circular_buffer_grow(cf_circular_buffer_t* buffer, int new_size_in_bytes)
 {
 	uint8_t* old_data = buffer->data;
 	uint8_t* new_data = (uint8_t*)CUTE_ALLOC(new_size_in_bytes, buffer->user_allocator_context);
@@ -111,10 +108,9 @@ int circular_buffer_grow(circular_buffer_t* buffer, int new_size_in_bytes)
 
 	CUTE_FREE(old_data, buffer->user_allocator_context);
 	buffer->data = new_data;
-	atomic_add(&buffer->size_left, new_size_in_bytes - buffer->capacity);
+	cf_atomic_add(&buffer->size_left, new_size_in_bytes - buffer->capacity);
 	buffer->capacity = new_size_in_bytes;
 
 	return 0;
 }
 
-}

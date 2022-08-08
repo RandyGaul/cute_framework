@@ -25,34 +25,47 @@ using namespace cute;
 CUTE_TEST_CASE(test_png_cache, "Test all functions of the png caching API.");
 int test_png_cache()
 {
-	file_system_init(NULL);
-	file_system_mount(file_system_get_base_dir(), "");
+	cf_file_system_init(NULL);
+	cf_file_system_mount(cf_file_system_get_base_dir(), "", true);
 
-	png_cache_t* cache = png_cache_make();
+	cf_png_cache_t* cache = cf_png_cache_make(NULL);
 
-	png_t white;
-	png_t black;
-	cute::error_t err = png_cache_load(cache, "test_data/white_pixel.png", &white);
-	CUTE_TEST_ASSERT(!err.is_error());
-	err = png_cache_load(cache, "test_data/black_pixel.png", &black);
-	CUTE_TEST_ASSERT(!err.is_error());
+	cf_png_t white;
+	cf_png_t black;
+	cf_error_t err = cf_png_cache_load(cache, "test_data/white_pixel.png", &white);
+	CUTE_TEST_ASSERT(!cf_is_error(&err));
+	err = cf_png_cache_load(cache, "test_data/black_pixel.png", &black);
+	CUTE_TEST_ASSERT(!cf_is_error(&err));
 
-	const animation_t* blink_anim = png_cache_make_animation(cache, "blink", { white, black }, { 0.5f, 0.5f });
-	const animation_t* white_anim = png_cache_make_animation(cache, "white", { white }, { 1.0f });
-	const animation_t* black_anim = png_cache_make_animation(cache, "black", { black }, { 1.0f });
-	png_cache_make_animation_table(cache, "blink", { blink_anim, white_anim, black_anim } );
-	sprite_t sprite = png_cache_make_sprite(cache, "blink");
+	cf_png_t blink_png[] = { white, black };
+	float blink_delay[] = { 0.5f, 0.5f };
+	
+	cf_png_t white_png[] = { white };
+	float white_delay[] = { 1.0f };
 
-	sprite.play("blink");
+	cf_png_t black_png[] = { black };
+	float black_delay[] = { 1.0f };
+
+
+	const cf_animation_t* blink_anim = cf_png_cache_make_animation(cache, "blink", blink_png, CUTE_ARRAY_SIZE(blink_png), blink_delay, CUTE_ARRAY_SIZE(blink_delay));
+	const cf_animation_t* white_anim = cf_png_cache_make_animation(cache, "white", white_png, CUTE_ARRAY_SIZE(white_png), white_delay, CUTE_ARRAY_SIZE(white_delay));
+	const cf_animation_t* black_anim = cf_png_cache_make_animation(cache, "black", black_png, CUTE_ARRAY_SIZE(black_png), black_delay, CUTE_ARRAY_SIZE(black_delay));
+
+	const cf_animation_t* anims[] = { blink_anim, white_anim, black_anim };
+
+	cf_png_cache_make_animation_table(cache, "blink", anims, CUTE_ARRAY_SIZE(anims));
+	cf_sprite_t sprite = cf_png_cache_make_sprite(cache, "blink", NULL);
+
+	cf_sprite_play(&sprite, "blink");
 	CUTE_TEST_CHECK_POINTER(sprite.animations);
 	CUTE_TEST_ASSERT(sprite.frame_index == 0);
 
-	sprite.update(0.5f);
+	cf_sprite_update(&sprite, 0.5f);
 	CUTE_TEST_ASSERT(sprite.frame_index == 1);
 
-	png_cache_destroy(cache);
+	cf_png_cache_destroy(cache);
 
-	file_system_destroy();
+	cf_file_system_destroy();
 
 	return 0;
 }

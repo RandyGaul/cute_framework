@@ -83,17 +83,17 @@
 #define SLOT_font_vs_params (0)
 #pragma pack(push,1)
 SOKOL_SHDC_ALIGN(16) typedef struct font_vs_params_t {
-    cute::matrix_t u_mvp;
+    cf_matrix_t u_mvp;
 } font_vs_params_t;
 #pragma pack(pop)
 #define SLOT_font_fs_params (0)
 #pragma pack(push,1)
 SOKOL_SHDC_ALIGN(16) typedef struct font_fs_params_t {
-    cute::v2 u_texture_size;
+    cf_v2 u_texture_size;
     uint8_t _pad_8[8];
-    cute::color_t u_text_color;
-    cute::color_t u_border_color;
-    cute::v2 u_texel_size;
+    cf_color_t u_text_color;
+    cf_color_t u_border_color;
+    cf_v2 u_texel_size;
     float u_use_border;
     float u_use_corners;
 } font_fs_params_t;

@@ -26,52 +26,52 @@ using namespace cute;
 CUTE_TEST_CASE(test_doubly_list, "Make list of three elements, perform all operations on it, assert correctness.");
 int test_doubly_list()
 {
-	list_t list;
+	cf_list_t list;
 
-	list_node_t a;
-	list_node_t b;
-	list_node_t c;
+	cf_list_node_t a;
+	cf_list_node_t b;
+	cf_list_node_t c;
 
-	list_init(&list);
-	list_init_node(&a);
-	list_init_node(&b);
-	list_init_node(&c);
+	cf_list_init(&list);
+	cf_list_init_node(&a);
+	cf_list_init_node(&b);
+	cf_list_init_node(&c);
 
 	CUTE_TEST_ASSERT(list.nodes.next == &list.nodes);
 	CUTE_TEST_ASSERT(list.nodes.prev == &list.nodes);
 	CUTE_TEST_ASSERT(a.next == &a);
 	CUTE_TEST_ASSERT(a.prev == &a);
-	CUTE_TEST_ASSERT(list_empty(&list));
+	CUTE_TEST_ASSERT(cf_list_empty(&list));
 
-	list_push_front(&list, &a);
-	CUTE_TEST_ASSERT(!list_empty(&list));
+	cf_list_push_front(&list, &a);
+	CUTE_TEST_ASSERT(!cf_list_empty(&list));
 	CUTE_TEST_ASSERT(list.nodes.next == &a);
 	CUTE_TEST_ASSERT(list.nodes.prev == &a);
 	CUTE_TEST_ASSERT(list.nodes.next->next == &list.nodes);
 	CUTE_TEST_ASSERT(list.nodes.prev->prev == &list.nodes);
-	CUTE_TEST_ASSERT(list_front(&list) == &a);
-	CUTE_TEST_ASSERT(list_back(&list) == &a);
+	CUTE_TEST_ASSERT(cf_list_front(&list) == &a);
+	CUTE_TEST_ASSERT(cf_list_back(&list) == &a);
 
-	list_push_front(&list, &b);
-	CUTE_TEST_ASSERT(list_front(&list) == &b);
-	CUTE_TEST_ASSERT(list_back(&list) == &a);
+	cf_list_push_front(&list, &b);
+	CUTE_TEST_ASSERT(cf_list_front(&list) == &b);
+	CUTE_TEST_ASSERT(cf_list_back(&list) == &a);
 
-	list_push_back(&list, &c);
-	CUTE_TEST_ASSERT(list_front(&list) == &b);
-	CUTE_TEST_ASSERT(list_back(&list) == &c);
+	cf_list_push_back(&list, &c);
+	CUTE_TEST_ASSERT(cf_list_front(&list) == &b);
+	CUTE_TEST_ASSERT(cf_list_back(&list) == &c);
 
-	list_node_t* nodes[3] = { &b, &a, &c };
+	cf_list_node_t* nodes[3] = { &b, &a, &c };
 	int index = 0;
-	for (list_node_t* n = list_begin(&list); n != list_end(&list); n = n->next)
+	for (cf_list_node_t* n = cf_list_begin(&list); n != cf_list_end(&list); n = n->next)
 	{
 		CUTE_TEST_ASSERT(n == nodes[index++]);
 	}
 
-	CUTE_TEST_ASSERT(list_pop_front(&list) == &b);
-	CUTE_TEST_ASSERT(list_pop_back(&list) == &c);
-	CUTE_TEST_ASSERT(list_pop_back(&list) == &a);
+	CUTE_TEST_ASSERT(cf_list_pop_front(&list) == &b);
+	CUTE_TEST_ASSERT(cf_list_pop_back(&list) == &c);
+	CUTE_TEST_ASSERT(cf_list_pop_back(&list) == &a);
 
-	CUTE_TEST_ASSERT(list_empty(&list));
+	CUTE_TEST_ASSERT(cf_list_empty(&list));
 
 	return 0;
 }
