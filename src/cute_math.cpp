@@ -169,7 +169,7 @@ cf_toi_result_t cf_toi(const void* A, cf_shape_type_t typeA, const cf_transform_
 {
 	cf_toi_result_t result;
 	c2TOIResult c2result = c2TOI(A, (C2_TYPE)typeA, (c2x*)ax_ptr, *(c2v*)&vA, B, (C2_TYPE)typeB, (c2x*)bx_ptr, *(c2v*)&vB, use_radius);
-	result = *(cf_toi_result_t*)&result;
+	result = *(cf_toi_result_t*)&c2result;
 	return result;
 }
 
