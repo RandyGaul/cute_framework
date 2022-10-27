@@ -24,6 +24,9 @@
 
 #include "cute_defines.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -86,6 +89,9 @@ CUTE_INLINE uint32_t cf_pixel_to_int(cf_pixel_t p) { return p.val; }
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 CUTE_INLINE cf_color_t operator*(cf_color_t a, float s) { return mul_color(a, s); }
@@ -112,13 +118,9 @@ CUTE_INLINE color_t color_white() { return cf_color_white(); }
 CUTE_INLINE color_t color_invisible() { return cf_color_invisible(); }
 
 CUTE_INLINE color_t lerp(color_t a, color_t b, float s) { return cf_lerp_color(a, b, s); }
-
 CUTE_INLINE pixel_t to_pixel(color_t c) { return cf_color_to_pixel(c); }
-
 CUTE_INLINE color_t to_color(pixel_t p) { return cf_pixel_to_color(p); }
-
 CUTE_INLINE uint32_t to_int(color_t c) { return cf_color_to_int(c); }
-
 CUTE_INLINE uint32_t to_int(pixel_t p) { return cf_pixel_to_int(p); }
 
 }

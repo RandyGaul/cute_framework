@@ -25,6 +25,9 @@
 #include "cute_defines.h"
 #include "cute_math.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -119,6 +122,9 @@ CUTE_API bool CUTE_CALL cf_aabb_tree_serialize(const cf_aabb_tree_t* tree, void*
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
@@ -129,19 +135,9 @@ using aabb_tree_query_fn = cf_aabb_tree_query_fn;
 using aabb_t = cf_aabb_t;
 using ray_t = cf_ray_t;
 
-struct leaf_t
+struct leaf_t : public cf_leaf_t
 {
-	int id = -1;
-
-	operator cf_leaf_t()
-	{
-		return *(cf_leaf_t*)this;
-	}
-
-	operator cf_leaf_t*()
-	{
-		return (cf_leaf_t*)this;
-	}
+	leaf_t() { *(cf_leaf_t*)this = cf_leaf_defaults(); }
 };
 
 CUTE_INLINE aabb_tree_t* create_aabb_tree(int initial_capacity = 0, void* user_allocator_context = NULL) { return cf_create_aabb_tree(initial_capacity, user_allocator_context); }
@@ -163,6 +159,5 @@ CUTE_INLINE bool aabb_tree_serialize(const aabb_tree_t* tree, void* buffer, size
 }
 
 #endif // CUTE_CPP
-
 
 #endif // CUTE_AABB_TREE_H

@@ -26,6 +26,9 @@
 
 #include <math.h>
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -539,7 +542,10 @@ CUTE_API bool CUTE_CALL cf_cast_ray(cf_ray_t A, const void* B, const cf_transfor
 }
 #endif // __cplusplus
 
-#ifdef  CUTE_CPP
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
+#ifdef CUTE_CPP
 
 namespace cute
 {
@@ -800,6 +806,6 @@ CUTE_INLINE bool cast_ray(ray_t A, const void* B, const transform_t* bx, shape_t
 
 }
 
-#endif //  CUTE_CPP
+#endif // CUTE_CPP
 
 #endif // CUTE_MATH_H

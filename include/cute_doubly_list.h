@@ -24,6 +24,9 @@
 
 #include "cute_defines.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -125,27 +128,15 @@ CUTE_INLINE cf_list_node_t* cf_list_back(cf_list_t* list)
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
 {
 using list_t = cf_list_t;
-
-struct list_node_t
-{
-	list_node_t* next = this;
-	list_node_t* prev = this;
-
-	operator cf_list_node_t()
-	{
-		return *((cf_list_node_t*)this);
-	}
-
-	operator cf_list_node_t* ()
-	{
-		return (cf_list_node_t*)this;
-	}
-};
+using list_node_t = cf_list_node_t;
 
 CUTE_INLINE void list_init_node(list_node_t* node) { cf_list_init_node((cf_list_node_t*)node); };
 CUTE_INLINE void list_init(list_t* list) { cf_list_init(list); };

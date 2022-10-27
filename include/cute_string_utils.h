@@ -24,7 +24,7 @@
 
 #include "cute_defines.h"
 
-#ifdef  CUTE_CPP
+#ifdef CUTE_CPP
 
 #include "cute_string.h"
 #include "cute_array.h"
@@ -73,6 +73,6 @@ CUTE_INLINE void string_utils_cleanup_static_memory() { return cf_string_utils_c
 
 }
 
-#endif //  CUTE_CPP
+#endif // CUTE_CPP
 
 #endif // CUTE_STRING_UTIL_H

@@ -24,6 +24,9 @@
 
 #include "cute_defines.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -61,7 +64,10 @@ CUTE_API void CUTE_CALL cf_window_message_box(cf_window_message_box_type_t type,
 }
 #endif // __cplusplus
 
-#ifdef  CUTE_CPP
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
+#ifdef CUTE_CPP
 
 namespace cute
 {
@@ -87,6 +93,6 @@ CUTE_INLINE void window_message_box(window_message_box_type_t type, const char* 
 
 }
 
-#endif //  CUTE_CPP
+#endif // CUTE_CPP
 
 #endif // CUTE_APP_WINDOW_H

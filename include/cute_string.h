@@ -24,7 +24,7 @@
 
 #include "cute_defines.h"
 
-#ifdef  CUTE_CPP
+#ifdef CUTE_CPP
 
 #include "cute_strpool.h"
 
@@ -77,6 +77,6 @@ CUTE_INLINE void string_nuke_static_pool() { cf_string_nuke_static_pool(); }
 
 }
 
-#endif //  CUTE_CPP
+#endif // CUTE_CPP
 
 #endif // CUTE_STRING_H

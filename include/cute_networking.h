@@ -23,8 +23,10 @@
 #define CUTE_NETWORKING_H
 
 #include <cute_error.h>
-
 #include <cute/cute_net.h>
+
+//--------------------------------------------------------------------------------------------------
+// C API
 
 #ifdef __cplusplus
 extern "C" {
@@ -275,6 +277,9 @@ CUTE_API void CUTE_CALL cf_server_enable_network_simulator(cf_server_t* server, 
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
@@ -364,15 +369,15 @@ CUTE_INLINE void server_stop(server_t* server) { cf_server_stop(server); }
 CUTE_INLINE bool server_pop_event(server_t* server, server_event_t* event) { return cf_server_pop_event(server,event); }
 CUTE_INLINE void server_free_packet(server_t* server, int client_index, void* data) { cf_server_free_packet(server,client_index,data); }
 CUTE_INLINE void server_update(server_t* server, double dt, uint64_t current_time) { cf_server_update(server,dt,current_time); }
-CUTE_INLINE void cf_server_disconnect_client(server_t* server, int client_index, bool notify_client /* = true */);
+CUTE_INLINE void server_disconnect_client(server_t* server, int client_index, bool notify_client = true) { cf_server_disconnect_client(server, client_index, notify_client); }
 CUTE_INLINE void server_send(server_t* server, const void* packet, int size, int client_index, bool send_reliably) { cf_server_send(server,packet,size,client_index,send_reliably); }
 CUTE_INLINE void server_send_to_all_clients(server_t* server, const void* packet, int size, bool send_reliably) { cf_server_send_to_all_clients(server,packet,size,send_reliably); }
 CUTE_INLINE void server_send_to_all_but_one_client(server_t* server, const void* packet, int size, int client_index, bool send_reliably) { cf_server_send_to_all_but_one_client(server,packet,size,client_index,send_reliably); }
-CUTE_INLINE bool server_is_client_connected(server_t* server, int client_index) { cf_server_is_client_connected(server,client_index); }
+CUTE_INLINE bool server_is_client_connected(server_t* server, int client_index) { return cf_server_is_client_connected(server,client_index); }
 CUTE_INLINE void server_enable_network_simulator(server_t* server, double latency, double jitter, double drop_chance, double duplicate_chance) { cf_server_enable_network_simulator(server,latency,jitter,drop_chance,duplicate_chance); }
 
 }
 
-#endif //  CUTE_CPP
+#endif // CUTE_CPP
 
 #endif // CUTE_NETWORKING_H

@@ -26,6 +26,9 @@
 #include "cute_concurrency.h"
 #include "cute_error.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -70,14 +73,6 @@ typedef struct cf_sound_params_t
 
 typedef struct cf_sound_t { uint64_t id; /*= 0;*/ } cf_sound_t;
 
-/**
-* 	paused = false;
-*	looped = false;
-*	volume = 1.0f;
-*	pan = 0.5f;
-*	pitch = 1.0f;
-*	delay = 0;
-*/
 CUTE_API cf_sound_params_t CUTE_CALL cf_sound_params_defaults();
 CUTE_API cf_sound_t CUTE_CALL cf_sound_play(cf_audio_t* audio_source, cf_sound_params_t params /*= cf_sound_params_defaults()*/, cf_error_t* err /*= NULL*/);
 
@@ -102,49 +97,29 @@ CUTE_API void CUTE_CALL cf_audio_set_pause(bool true_for_paused);
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
 {
+
 using audio_t = cf_audio_t;
 using app_t = cf_app_t;
 using promise_t = cf_promise_t;
 
-struct sound_params_t
+struct sound_params_t : public cf_sound_params_t
 {
-	bool paused = false;
-	bool looped = false;
-	float volume = 1.0f;
-	float pan = 0.5f;
-	float pitch = 1.0f;
-	float delay = 0;
-
-	operator cf_sound_params_t()
-	{
-		return *((cf_sound_params_t*)this);
-	}
-
-	operator cf_sound_params_t* ()
-	{
-		return (cf_sound_params_t*)this;
-	}
+	sound_params_t() { *(cf_sound_params_t*)this = cf_sound_params_defaults(); }
+	sound_params_t(cf_sound_params_t sp) { *(cf_sound_params_t*)this = sp; }
 };
 
-struct sound_t
+struct sound_t : public cf_sound_t
 {
-	uint64_t id = 0;
-
-	operator cf_sound_t()
-	{
-		return *((cf_sound_t*)this);
-	}
-
-	operator cf_sound_t* ()
-	{
-		return (cf_sound_t*)this;
-	}
+	sound_t() { id = -1; }
+	sound_t(cf_sound_t s) { *(cf_sound_t*)this = s; }
 };
-
 
 CUTE_INLINE audio_t* audio_load_ogg(const char* path, void* user_allocator_context = NULL) { return cf_audio_load_ogg(path, user_allocator_context); }
 CUTE_INLINE audio_t* audio_load_wav(const char* path, void* user_allocator_context = NULL) { return cf_audio_load_wav(path, user_allocator_context); }
@@ -171,7 +146,7 @@ CUTE_INLINE error_t music_crossfade(audio_t* audio_source, float cross_fade_time
 
 // -------------------------------------------------------------------------------------------------
 
-CUTE_INLINE sound_t sound_play(audio_t* audio_source, sound_params_t params = sound_params_t(), error_t* err = NULL) { return *(sound_t*)&cf_sound_play(audio_source, params, err); }
+CUTE_INLINE sound_t sound_play(audio_t* audio_source, sound_params_t params = sound_params_t(), error_t* err = NULL) { return cf_sound_play(audio_source, params, err); }
 
 CUTE_INLINE bool sound_is_active(sound_t sound) { return cf_sound_is_active(sound); }
 CUTE_INLINE bool sound_get_is_paused(sound_t sound) { return cf_sound_get_is_paused(sound); }
@@ -189,6 +164,7 @@ CUTE_INLINE void audio_set_pan(float pan) { cf_audio_set_pan(pan); }
 CUTE_INLINE void audio_set_global_volume(float volume) { cf_audio_set_global_volume(volume); }
 CUTE_INLINE void audio_set_sound_volume(float volume) { cf_audio_set_sound_volume(volume); }
 CUTE_INLINE void audio_set_pause(bool true_for_paused) { cf_audio_set_pause(true_for_paused); }
+
 }
 
 #endif // CUTE_CPP

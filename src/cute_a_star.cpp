@@ -199,6 +199,7 @@ bool a_star(const a_star_grid_t* const_grid, const a_star_input_t* input, a_star
 
 	return false;
 }
+
 }
 
 bool cf_a_star(const cf_a_star_grid_t* const_grid, const cf_a_star_input_t* input, cf_a_star_output_t* output)

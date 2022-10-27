@@ -33,7 +33,6 @@
 #include <string>
 #include <vector>
 
-
 CUTE_INLINE cf_error_t cf_kv_val_string_cf(cf_kv_t* kv, cf_string_t* string)
 {
 	const char* ptr = string->c_str();

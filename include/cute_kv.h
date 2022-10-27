@@ -25,6 +25,9 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -150,10 +153,14 @@ CUTE_API void CUTE_CALL cf_kv_print(cf_kv_t* kv);
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
 {
+
 using kv_t = cf_kv_t;
 using kv_state_t = cf_kv_state_t;
 using kv_type_t = cf_kv_type_t;

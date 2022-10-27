@@ -25,6 +25,9 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -139,10 +142,14 @@ typedef enum cf_joypad_axis_t //: int
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
 {
+
 using app_t = cf_app_t;
 using joypad_t = cf_joypad_t;
 

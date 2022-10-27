@@ -27,6 +27,9 @@
 #include "cute_c_runtime.h"
 #include "cute_array.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -208,10 +211,14 @@ CUTE_INLINE bool cf_https_response_find_header(const cf_https_response_t* respon
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
 {
+
 using https_t = cf_https_t;
 using https_state_t = cf_https_state_t;
 using https_string_t = cf_https_string_t;
@@ -263,6 +270,7 @@ CUTE_INLINE bool https_response_t::find_header(const char* header_name, https_he
 {
 	return https_response_find_header(this, header_name, header_out);
 }
+
 }
 
 #endif // CUTE_CPP

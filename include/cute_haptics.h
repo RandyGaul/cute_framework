@@ -24,6 +24,9 @@
 
 #include "cute_defines.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -249,6 +252,9 @@ CUTE_API void CUTE_CALL cf_haptic_rumble_stop(cf_haptic_t* haptic);
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 CUTE_INLINE bool cf_haptic_effect_t::is_valid() { return cf_haptic_effect_is_valid(this); }
@@ -287,7 +293,5 @@ CUTE_INLINE void haptic_rumble_stop(haptic_t* haptic) { cf_haptic_rumble_stop(ha
 }
 
 #endif // CUTE_CPP
-
-
 
 #endif // CUTE_HAPTICS_H

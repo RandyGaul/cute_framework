@@ -231,11 +231,12 @@ cf_sprite_t cf_png_cache_make_sprite(cf_png_cache_t* cache, const char* sprite_n
 
 namespace cute
 {
-const cf_animation_t* png_cache_make_animation(cf_png_cache_t* cache, const char* name, const cf_array<cf_png_t>& pngs, const cf_array<float>& delays)
+
+const animation_t* png_cache_make_animation(png_cache_t* cache, const char* name, const array<png_t>& pngs, const array<float>& delays)
 {
 	return cf_png_cache_make_animation(cache, name, pngs.data(), pngs.count(), delays.data(), delays.count());
 }
-const cf_animation_table_t* png_cache_make_animation_table(cf_png_cache_t* cache, const char* sprite_name, const cf_array<const cf_animation_t*>& animations)
+const animation_table_t* png_cache_make_animation_table(png_cache_t* cache, const char* sprite_name, const array<const animation_t*>& animations)
 {
 	return cf_png_cache_make_animation_table(cache, sprite_name, animations.data(), animations.count());
 }

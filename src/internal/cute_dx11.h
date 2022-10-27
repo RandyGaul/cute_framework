@@ -25,7 +25,6 @@
 #include "cute_defines.h"
 #include "sokol/sokol_gfx.h"
 
-
 void cf_dx11_init(void* hwnd, int w, int h, int sample_count);
 sg_context_desc cf_dx11_get_context();
 void cf_dx11_present();

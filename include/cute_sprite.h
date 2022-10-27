@@ -28,6 +28,9 @@
 #include "cute_dictionary.h"
 #include "cute_batch.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -194,7 +197,7 @@ CUTE_API void CUTE_CALL cf_sprite_unload(const char* aseprite_path);
 CUTE_API cf_batch_t* CUTE_CALL cf_sprite_get_batch();
 
 //--------------------------------------------------------------------------------------------------
-// In-line implementation of `sprite_t` member functions.
+// In-line implementation of `sprite_t` functions.
 
 #include "cute_debug_printf.h"
 
@@ -362,7 +365,10 @@ CUTE_INLINE bool cf_sprite_on_loop(cf_sprite_t* sprite)
 }
 #endif // __cplusplus
 
-#ifdef  CUTE_CPP
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
+#ifdef CUTE_CPP
 
 namespace cute
 {
@@ -487,6 +493,6 @@ CUTE_INLINE batch_t* sprite_get_batch() { return cf_sprite_get_batch(); }
 
 }
 
-#endif //  CUTE_CPP
+#endif // CUTE_CPP
 
 #endif // CUTE_SPRITE_H

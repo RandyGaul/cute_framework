@@ -25,6 +25,9 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -41,12 +44,17 @@ CUTE_API cf_error_t CUTE_CALL cf_base64_decode(void* dst, size_t dst_size, const
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
 {
+
 CUTE_INLINE error_t base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_encode(dst, dst_size, src, src_size); }
 CUTE_INLINE error_t base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_decode(dst, dst_size, src, src_size); }
+
 }
 
 #endif // CUTE_CPP

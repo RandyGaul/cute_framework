@@ -77,7 +77,9 @@ struct cf_typeless_array
 
 namespace cute 
 {
+
 using typeless_array = cf_typeless_array;
+
 }
 
 #endif // CUTE_CPP

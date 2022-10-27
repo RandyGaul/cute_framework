@@ -24,6 +24,9 @@
 
 #include "cute_defines.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -49,11 +52,14 @@ CUTE_INLINE cf_error_t cf_error_success() { cf_error_t error; error.code = CUTE_
 }
 #endif // __cplusplus
 
-#ifdef CUTE_CPP
+//--------------------------------------------------------------------------------------------------
+// C++ API
 
+#ifdef CUTE_CPP
 
 namespace cute
 {
+
 using error_t = cf_error_t;
 
 CUTE_INLINE bool is_error(error_t error) { return cf_is_error(error); }

@@ -24,6 +24,9 @@
 
 #include "cute_defines.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #define CUTE_VERSION_STRING_COMPILED "Cute Framework Version 0.0"
 
 #ifdef __cplusplus
@@ -36,7 +39,10 @@ CUTE_API const char* CUTE_CALL cf_version_string_linked();
 }
 #endif // __cplusplus
 
-#ifdef  CUTE_CPP
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
+#ifdef CUTE_CPP
 
 namespace cute
 {
@@ -45,6 +51,6 @@ CUTE_INLINE const char* version_string_linked() { return cf_version_string_linke
 
 }
 
-#endif //  CUTE_CPP
+#endif // CUTE_CPP
 
 #endif // CUTE_VERSION_H

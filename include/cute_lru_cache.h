@@ -29,7 +29,6 @@
 #include "cute_dictionary.h"
 #include "cute_doubly_list.h"
 
-
 /**
  * Implements a least-recently-used cache. Not particularly well tested. This is here to
  * potentially implement an upper limit in RAM consumption for png/aseprite caches, but is
@@ -236,7 +235,9 @@ void cf_lru_cache<K, T>::update(cf_list_node_t* node)
 
 namespace cute
 {
+
 template <typename K, typename T> using lru_cache = cf_lru_cache<K, T>;
+
 }
 
 #endif // CUTE_CPP

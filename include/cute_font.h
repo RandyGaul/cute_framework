@@ -27,6 +27,9 @@
 #include "cute_error.h"
 #include "cute_color.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -65,6 +68,9 @@ CUTE_API void CUTE_CALL cf_font_draw2(cf_font_vert_buffer_t* verts, cf_color_t c
 #ifdef __cplusplus
 }
 #endif // __cplusplus
+
+//--------------------------------------------------------------------------------------------------
+// C++ API
 
 #ifdef CUTE_CPP
 

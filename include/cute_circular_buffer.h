@@ -25,6 +25,9 @@
 #include "cute_defines.h"
 #include "cute_concurrency.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -52,6 +55,9 @@ CUTE_API int CUTE_CALL cf_circular_buffer_grow(cf_circular_buffer_t* buffer, int
 #ifdef __cplusplus
 }
 #endif // __cplusplus
+
+//--------------------------------------------------------------------------------------------------
+// C++ API
 
 #ifdef CUTE_CPP
 

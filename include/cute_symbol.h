@@ -21,6 +21,9 @@
 
 #include "cute_defines.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -50,7 +53,10 @@ CUTE_API void* cf_load_function(cf_shared_library_t* library, const char* functi
 }
 #endif // __cplusplus
 
-#ifdef  CUTE_CPP
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
+#ifdef CUTE_CPP
 
 namespace cute
 {
@@ -63,4 +69,4 @@ CUTE_INLINE void* load_function(shared_library_t* library, const char* function_
 
 }
 
-#endif //  CUTE_CPP
+#endif // CUTE_CPP

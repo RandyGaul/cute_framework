@@ -24,10 +24,12 @@
 
 #include "cute_defines.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-
 
 typedef struct cf_a_star_grid_t cf_a_star_grid_t;
 
@@ -64,13 +66,6 @@ typedef struct cf_a_star_input_t
 	const float* cell_to_cost /* = NULL */;
 } cf_a_star_input_t;
 
-/**
-* allow_diagonal_movement = true
-* start_x = 0 
-* start_y = 0 
-* end_x = 0
-* end_y = 0
-*/
 CUTE_API cf_a_star_input_t CUTE_CALL cf_a_star_input_defaults();
 
 /**
@@ -102,6 +97,9 @@ CUTE_API void CUTE_CALL cf_a_star_free_output(cf_a_star_output_t* output);
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 #include "cute_array.h"
@@ -111,22 +109,10 @@ namespace cute
 
 using a_star_grid_t = cf_a_star_grid_t;
 
-struct a_star_input_t
+struct a_star_input_t : public cf_a_star_input_t
 {
-	bool allow_diagonal_movement = true;
-	int start_x = 0;
-	int start_y = 0;
-	int end_x = 0;
-	int end_y = 0;
-
-	const float* cell_to_cost = NULL;
-
-	operator cf_a_star_input_t()
-	{
-		return (cf_a_star_input_t)*this;
-	}
+	a_star_input_t() { *(cf_a_star_input_t*)this = cf_a_star_input_defaults(); }
 };
-
 
 struct a_star_output_t
 {
@@ -134,12 +120,12 @@ struct a_star_output_t
 	cf_array<int> y;
 };
 
-
-CUTE_API const a_star_grid_t* CUTE_CALL a_star_make_grid(int w, int h, const int* cells);
-CUTE_API void CUTE_CALL a_star_destroy_grid(a_star_grid_t* grid);
+CUTE_INLINE const a_star_grid_t* a_star_make_grid(int w, int h, const int* cells) { return cf_a_star_make_grid(w, h, cells); }
+CUTE_INLINE void a_star_destroy_grid(a_star_grid_t* grid) { cf_a_star_destroy_grid(grid); }
 CUTE_API bool CUTE_CALL a_star(const a_star_grid_t* grid, const a_star_input_t* input, a_star_output_t* output = NULL);
 
 }
+
 #endif // CUTE_CPP
 
 #endif // CUTE_A_STAR_H

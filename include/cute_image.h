@@ -26,6 +26,9 @@
 #include "cute_error.h"
 #include "cute_gfx.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -69,10 +72,14 @@ CUTE_API void CUTE_CALL cf_image_flip_horizontal(cf_image_t* img);
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
 {
+
 using image_t = cf_image_t;
 using image_indexed_t = cf_image_indexed_t;
 
@@ -94,6 +101,7 @@ CUTE_INLINE void image_free(image_indexed_t* img) { cf_image_free_indexed(img); 
 CUTE_INLINE image_t image_depallete(image_indexed_t* img) { return cf_image_depallete(img); }
 CUTE_INLINE void image_premultiply(image_t* img) { cf_image_premultiply(img); }
 CUTE_INLINE void image_flip_horizontal(image_t* img) { cf_image_flip_horizontal(img); }
+
 }
 
 #endif // CUTE_CPP

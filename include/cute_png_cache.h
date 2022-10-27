@@ -30,6 +30,9 @@
 
 #include "cute/cute_png.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -159,32 +162,25 @@ CUTE_API cf_sprite_t CUTE_CALL cf_png_cache_make_sprite(cf_png_cache_t* cache, c
 }
 #endif // __cplusplus
 
-#ifdef  CUTE_CPP
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
+#ifdef CUTE_CPP
+
+#include "cute_array.h"
 
 namespace cute
 {
+
 using png_cache_t = cf_png_cache_t;
 using strpool_t = cf_strpool_t;
 using animation_t = cf_animation_t;
 using pixel_t = cf_pixel_t;
 
-struct png_t
+struct png_t : public cf_png_t
 {
-	const char* path = NULL;
-	uint64_t id = ~0;
-	pixel_t* pix = NULL;
-	int w = 0;
-	int h = 0;
-
-	operator cf_png_t()
-	{
-		return *((cf_png_t*)this);
-	}
-
-	operator cf_png_t* ()
-	{
-		return (cf_png_t*)this;
-	}
+	png_t() { *(cf_png_t*)this = cf_png_defaults(); }
+	png_t(cf_png_t png) { *(cf_png_t*)this = png; }
 };
 
 CUTE_INLINE png_cache_t* png_cache_make(void* mem_ctx = NULL) { return cf_png_cache_make(mem_ctx); }
@@ -202,6 +198,6 @@ CUTE_INLINE sprite_t png_cache_make_sprite(png_cache_t* cache, const char* sprit
 
 }
 
-#endif //  CUTE_CPP
+#endif // CUTE_CPP
 
 #endif // CUTE_PNG_CACHE_H

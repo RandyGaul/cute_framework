@@ -25,6 +25,9 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -60,10 +63,14 @@ CUTE_API cf_coroutine_t* CUTE_CALL cf_coroutine_currently_running();
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
 {
+
 using coroutine_t = cf_coroutine_t;
 using coroutine_fn = cf_coroutine_fn;
 using coroutine_state_t = cf_coroutine_state_t;
@@ -83,6 +90,7 @@ CUTE_INLINE size_t coroutine_bytes_pushed(coroutine_t* co) { return cf_coroutine
 CUTE_INLINE size_t coroutine_space_remaining(coroutine_t* co) { return cf_coroutine_space_remaining(co); }
 	 
 CUTE_INLINE coroutine_t* coroutine_currently_running() { return cf_coroutine_currently_running(); }
+
 }
 
 #endif // CUTE_CPP

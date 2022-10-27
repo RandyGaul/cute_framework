@@ -30,6 +30,9 @@
 
 #include "sokol/sokol_gfx.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -60,12 +63,12 @@ typedef struct cf_buffer_t
 	cf_buf_inner_t vbuf;
 	cf_buf_inner_t ibuf;
 
-	#ifdef  CUTE_CPP
+	#ifdef CUTE_CPP
 	CUTE_INLINE sg_bindings bind();
 	CUTE_INLINE cf_error_t init(size_t vertex_data_size, size_t vertex_stride, int index_count = 0, int index_stride = 0);
 	CUTE_INLINE void release();
 	CUTE_INLINE cf_error_t append(int vertex_count, const void* vertices, int index_count = 0, const void* indices = NULL);
-	#endif //  CUTE_CPP
+	#endif // CUTE_CPP
 } cf_buffer_t;
 
 CUTE_INLINE sg_bindings cf_buffer_bind(cf_buffer_t* b)
@@ -144,6 +147,9 @@ CUTE_INLINE cf_error_t cf_buffer_append(cf_buffer_t* b, int vertex_count, const 
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 CUTE_INLINE sg_bindings cf_buffer_t::bind() { return cf_buffer_bind(this); }
@@ -153,6 +159,7 @@ CUTE_INLINE cf_error_t cf_buffer_t::append(int vertex_count, const void* vertice
 
 namespace cute
 {
+
 using texture_t = uint64_t;
 
 CUTE_INLINE texture_t texture_make(pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_REPEAT, sg_filter filter = SG_FILTER_NEAREST) { return cf_texture_make2(pixels, w, h, mode, filter); }

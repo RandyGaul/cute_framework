@@ -24,6 +24,9 @@
 
 #include "cute_defines.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -74,7 +77,10 @@ CUTE_API void CUTE_CALL cf_memory_pool_free(cf_memory_pool_t* pool, void* elemen
 }
 #endif // __cplusplus
 
-#ifdef  CUTE_CPP
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
+#ifdef CUTE_CPP
 
 namespace cute
 {
@@ -87,6 +93,6 @@ CUTE_INLINE void* memory_pool_try_alloc(memory_pool_t* pool) { return cf_memory_
 CUTE_INLINE void memory_pool_free(memory_pool_t* pool, void* element) { return cf_memory_pool_free(pool,element); }
 }
 
-#endif //  CUTE_CPP
+#endif // CUTE_CPP
 
 #endif // CUTE_MEMORY_POOL_H

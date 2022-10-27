@@ -225,13 +225,4 @@ struct cf_app_t
 	void* mem_ctx = NULL;
 };
 
-#ifdef CUTE_CPP
-
-namespace cute
-{
-
-}
-
-#endif // CUTE_CPP
-
 #endif // CUTE_APP_INTERNAL_H

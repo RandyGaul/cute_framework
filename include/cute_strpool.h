@@ -24,6 +24,9 @@
 
 #include "cute_defines.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -53,10 +56,14 @@ CUTE_API size_t CUTE_CALL cf_strpool_length(const cf_strpool_t* pool, cf_strpool
 }
 #endif // __cplusplus
 
-#ifdef  CUTE_CPP
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
+#ifdef CUTE_CPP
 
 namespace cute
 {
+
 using strpool_t = cf_strpool_t;
 using strpool_id = cf_strpool_id;
 
@@ -75,6 +82,6 @@ CUTE_INLINE size_t strpool_length(const strpool_t* pool, strpool_id id) { return
 
 }
 
-#endif //  CUTE_CPP
+#endif // CUTE_CPP
 
 #endif // CUTE_STRPOOL_H

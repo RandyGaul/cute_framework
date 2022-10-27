@@ -24,6 +24,9 @@
 
 #include "cute_defines.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -63,7 +66,10 @@ CUTE_API float CUTE_CALL cf_timer_elapsed(cf_timer_t* timer);
 }
 #endif // __cplusplus
 
-#ifdef  CUTE_CPP
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
+#ifdef CUTE_CPP
 
 namespace cute
 {
@@ -77,6 +83,6 @@ CUTE_INLINE float timer_elapsed(timer_t* timer) { return cf_timer_elapsed(timer)
 
 }
 
-#endif //  CUTE_CPP
+#endif // CUTE_CPP
 
 #endif // CUTE_TIMER_H

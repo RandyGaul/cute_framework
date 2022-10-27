@@ -25,6 +25,9 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -79,10 +82,14 @@ CUTE_API cf_error_t CUTE_CALL cf_file_system_write_entire_buffer_to_file(const c
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
 {
+
 using file_type_t = cf_file_type_t;
 using stat_t = cf_stat_t;
 using file_t = cf_file_t;

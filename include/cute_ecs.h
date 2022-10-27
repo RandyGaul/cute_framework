@@ -28,6 +28,9 @@
 #include "cute_typeless_array.h"
 #include "cute_dictionary.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -132,10 +135,14 @@ CUTE_API void CUTE_CALL cf_ecs_free_list(const char** list);
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
 {
+
 using kv_t = cf_kv_t;
 using entity_t = cf_entity_t;
 using component_serialize_fn = cf_component_serialize_fn;

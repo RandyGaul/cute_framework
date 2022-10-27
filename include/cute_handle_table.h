@@ -24,6 +24,9 @@
 
 #include "cute_defines.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -114,7 +117,6 @@ typedef struct cf_handle_table_t
 	
 	#endif // CUTE_CPP
 
-
 	cf_handle_allocator_t* m_alloc;
 } cf_handle_table_t;
 
@@ -122,10 +124,14 @@ typedef struct cf_handle_table_t
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
 {
+
 using handle_table_t = cf_handle_table_t;
 using handle_allocator_t = cf_handle_allocator_t;
 
@@ -140,6 +146,7 @@ CUTE_INLINE uint16_t handle_allocator_get_type(handle_allocator_t* table, handle
 CUTE_INLINE void handle_allocator_update_index(handle_allocator_t* table, handle_t handle, uint32_t index) { cf_handle_allocator_update_index(table, handle, index); }
 CUTE_INLINE void handle_allocator_free(handle_allocator_t* table, handle_t handle) { cf_handle_allocator_free(table, handle); }
 CUTE_INLINE int handle_allocator_is_handle_valid(handle_allocator_t* table, handle_t handle) { return cf_handle_allocator_is_handle_valid(table, handle); }
+
 }
 
 #endif // CUTE_CPP

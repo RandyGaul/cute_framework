@@ -142,7 +142,6 @@ namespace cute
 template<typename T> using object_table_t = cf_object_table_t<T>;
 }
 
-
 #endif // CUTE_CPP
 
 #endif // CUTE_OBJECT_TABLE_INTERNAL_H

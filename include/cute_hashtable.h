@@ -24,6 +24,9 @@
 
 #include "cute_defines.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -70,6 +73,9 @@ CUTE_API void CUTE_CALL cf_hashtable_swap(cf_hashtable_t* table, int index_a, in
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
@@ -89,6 +95,7 @@ CUTE_INLINE int hashtable_count(const hashtable_t* table) { return cf_hashtable_
 CUTE_INLINE void* hashtable_items(const hashtable_t* table) { return cf_hashtable_items(table); }
 CUTE_INLINE void* hashtable_keys(const hashtable_t* table) { return cf_hashtable_keys(table); }
 CUTE_INLINE void hashtable_swap(hashtable_t* table, int index_a, int index_b) { cf_hashtable_swap(table,index_a,index_b); }
+
 }
 
 #endif // CUTE_CPP

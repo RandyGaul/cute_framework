@@ -24,6 +24,9 @@
 
 #include "cute_defines.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -49,10 +52,14 @@ CUTE_API void CUTE_CALL cf_shorten4(const wchar_t* in, int in_len, char* out, in
 }
 #endif // __cplusplus
 
-#ifdef  CUTE_CPP
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
+#ifdef CUTE_CPP
 
 namespace cute
 {
+
 CUTE_INLINE const char* decode8(const char* text, int* cp) { return cf_decode8(text,cp); }
 CUTE_INLINE char* encode8(char* text, int cp) { return cf_encode8(text,cp); }
 CUTE_INLINE int codepoint8_size(int cp) { return cf_codepoint8_size(cp); }
@@ -67,8 +74,9 @@ CUTE_INLINE void shorten(const wchar_t* in, char* out) { cf_shorten(in,out); }
 CUTE_INLINE void shorten(const wchar_t* in, int in_len, char* out) { cf_shorten2(in,in_len,out); }
 CUTE_INLINE void shorten(const wchar_t* in, char* out, int out_len) { cf_shorten3(in,out,out_len); }
 CUTE_INLINE void shorten(const wchar_t* in, int in_len, char* out, int out_len) { cf_shorten4(in,in_len,out,out_len); }
+
 }
 
-#endif //  CUTE_CPP
+#endif // CUTE_CPP
 
 #endif // CUTE_UTF8

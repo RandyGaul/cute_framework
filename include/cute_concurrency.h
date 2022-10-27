@@ -27,6 +27,9 @@
 
 #include "cute/cute_sync.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -113,10 +116,14 @@ CUTE_INLINE void cf_promise_invoke(cf_promise_t* promise, cf_error_t status, voi
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
 {
+
 using mutex_t = cf_mutex_t;
 using cv_t = cf_cv_t;
 using atomic_int_t = cf_atomic_int_t;

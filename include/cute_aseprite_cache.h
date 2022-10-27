@@ -28,6 +28,9 @@
 
 #include "cute/cute_aseprite.h"
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -96,6 +99,9 @@ CUTE_API cf_strpool_t* CUTE_CALL cf_aseprite_cache_get_strpool_ptr(cf_aseprite_c
 #ifdef __cplusplus
 }
 #endif // __cplusplus
+
+//--------------------------------------------------------------------------------------------------
+// C API
 
 #ifdef CUTE_CPP
 

@@ -194,7 +194,9 @@ void cf_priority_queue<T>::swap(int iA, int iB)
 
 namespace cute
 {
+
 template<typename T> using priority_queue = cf_priority_queue<T>;
+
 }
 
 #endif // CUTE_CPP

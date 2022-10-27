@@ -25,6 +25,9 @@
 #include "cute_defines.h"
 #include "cute_error.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -53,12 +56,6 @@ CUTE_API void CUTE_CALL cf_app_update(float dt);
 CUTE_API void CUTE_CALL cf_app_get_offscreen_buffer(sg_image* out_buffer);
 CUTE_API void CUTE_CALL cf_app_present(bool draw_offscreen_buffer /*= true*/);
 
-
-/**
-* defaults:
-* spawn_mix_thread = true
-* max_simultaneous_sounds = 5000;
-*/
 CUTE_API cf_error_t CUTE_CALL cf_app_init_audio(bool spawn_mix_thread /*= true*/, int max_simultaneous_sounds /*= 5000*/);
 CUTE_API void CUTE_CALL cf_app_do_mixing();
 CUTE_API ImGuiContext* CUTE_CALL cf_app_init_imgui(bool no_default_font /*= false*/);
@@ -91,6 +88,9 @@ CUTE_API void CUTE_CALL cf_sleep(int milliseconds);
 #ifdef __cplusplus
 }
 #endif // __cplusplus
+
+//--------------------------------------------------------------------------------------------------
+// C++ API
 
 #ifdef CUTE_CPP
 

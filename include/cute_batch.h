@@ -27,6 +27,9 @@
 #include "cute_error.h"
 #include "cute_gfx.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -190,6 +193,9 @@ CUTE_API cf_temporary_image_t CUTE_CALL cf_batch_fetch(cf_batch_t* b, cf_batch_s
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
@@ -205,19 +211,9 @@ using transform_t = cf_transform_t;
 
 struct batch_sprite_t : public cf_batch_sprite_t
 {
-	batch_sprite_t()
-	{
-		transform = cf_make_transform();
-		alpha = 1.0f;
-		sort_bits = 0;
-	}
-
-	batch_sprite_t(cf_batch_sprite_t bs)
-	{
-		*this = bs;
-	}
+	batch_sprite_t() { *(cf_batch_sprite_t*)this = cf_batch_sprite_defaults(); }
+	batch_sprite_t(cf_batch_sprite_t bs) { *(cf_batch_sprite_t*)this = bs; }
 };
-
 
 CUTE_INLINE batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem_ctx = NULL) { cf_batch_make(get_pixels, get_pixels_udata, mem_ctx); }
 
@@ -275,6 +271,7 @@ CUTE_INLINE void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c
 CUTE_INLINE void batch_polyline(batch_t* b, v2* points, int count, float thickness, color_t c, bool loop = false, bool antialias = false, int bevel_count = 0) { cf_batch_polyline(b, (cf_v2*)points, count, thickness, c, loop, antialias, bevel_count); }
 
 CUTE_INLINE temporary_image_t batch_fetch(batch_t* b, batch_sprite_t sprite) { cf_batch_fetch(b, sprite); }
+
 }
 
 #endif // CUTE_CPP

@@ -25,6 +25,9 @@
 #include "cute_defines.h"
 #include "cute_array.h"
 
+//--------------------------------------------------------------------------------------------------
+// C API
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -366,6 +369,9 @@ typedef enum cf_key_button_t //: int
 }
 #endif // __cplusplus
 
+//--------------------------------------------------------------------------------------------------
+// C++ API
+
 #ifdef CUTE_CPP
 
 namespace cute
@@ -405,7 +411,7 @@ CUTE_INLINE void CUTE_CALL input_disable_ime() { cf_input_disable_ime(); }
 CUTE_INLINE bool CUTE_CALL input_is_ime_enabled() { return cf_input_is_ime_enabled(); }
 CUTE_INLINE bool CUTE_CALL input_has_ime_keyboard_support() { return cf_input_has_ime_keyboard_support(); }
 CUTE_INLINE bool CUTE_CALL input_is_ime_keyboard_shown() { return cf_input_is_ime_keyboard_shown(); }
-CUTE_INLINE void CUTE_CALL input_set_ime_rect(int x, int y, int w, int h) { cf_input_set_ime_rect(x,y,w,h); }
+CUTE_INLINE void CUTE_CALL input_set_ime_rect(int x, int y, int w, int h) { cf_input_set_ime_rect(x, y, w, h); }
 
 CUTE_INLINE bool CUTE_CALL input_get_ime_composition(ime_composition_t* composition) { return cf_input_get_ime_composition(composition); }
 

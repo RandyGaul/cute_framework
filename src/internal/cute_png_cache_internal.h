@@ -40,13 +40,13 @@ struct cf_png_cache_t
 	void* mem_ctx = NULL;
 };
 
-#ifdef  CUTE_CPP
+#ifdef CUTE_CPP
 
 namespace cute
 {
 
 }
 
-#endif //  CUTE_CPP
+#endif // CUTE_CPP
 
 #endif // CUTE_PNG_CACHE_INTERNAL_H
