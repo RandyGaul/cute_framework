@@ -96,6 +96,8 @@ Once built go ahead and use cmake to install the headers and shared library for 
 cmake --install your_build_folder_name
 ```
 
+Here is a more [in-depth tutorial](https://github.com/RandyGaul/cute_framework/issues/57) on how to use cmake to easily build your game with CF.
+
 ## Prebuilt Releases
 
 Prebuilt releases are planned for Windows and MacOS, but not actively setup right now since CF has yet to hit first release. Building from source is recommended for now.
