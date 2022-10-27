@@ -25,7 +25,7 @@ using namespace cute;
 CUTE_TEST_CASE(test_sprite_make, "Load a sprite destroy it.");
 int test_sprite_make()
 {
-	CUTE_TEST_ASSERT(!cf_is_error(&cf_app_make("sprite test", 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN | CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT, NULL, NULL)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_app_make("sprite test", 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN | CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT, NULL, NULL)));
 
 	cf_sprite_t s = cf_sprite_make("test_data/girl.aseprite");
 	cf_batch_t* batch = cf_sprite_get_batch();

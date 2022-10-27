@@ -33,6 +33,8 @@
 
 #define INJECT(s) cf_strpool_inject_len(cache->strpool, s, (int)CUTE_STRLEN(s))
 
+using namespace cute;
+
 struct aseprite_cache_entry_t
 {
 	cf_strpool_id path;
@@ -54,7 +56,7 @@ static void cf_s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, 
 {
 	cf_aseprite_cache_t* cache = (cf_aseprite_cache_t*)udata;
 	void* pixels = NULL;
-	if (cf_is_error(&cache->id_to_pixels.find(image_id, &pixels))) {
+	if (cf_is_error(cache->id_to_pixels.find(image_id, &pixels))) {
 		CUTE_DEBUG_PRINTF("Aseprite cache -- unable to find id %lld.", (long long int)image_id);
 		CUTE_MEMSET(buffer, 0, bytes_to_fill);
 	} else {
@@ -124,7 +126,7 @@ cf_error_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepri
 	// First see if this ase was already cached.
 	cf_strpool_id path = INJECT(aseprite_path);
 	aseprite_cache_entry_t entry;
-	if (!cf_is_error(&cache->aseprites.find(path, &entry))) {
+	if (!cf_is_error(cache->aseprites.find(path, &entry))) {
 		cf_s_sprite(cache, entry, sprite);
 		return cf_error_success();
 	}
@@ -240,7 +242,7 @@ void cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, const char* aseprite_p
 {
 	cf_strpool_id path = INJECT(aseprite_path);
 	aseprite_cache_entry_t entry;
-	if (cf_is_error(&cache->aseprites.find(path, &entry))) return;
+	if (cf_is_error(cache->aseprites.find(path, &entry))) return;
 	
 	int animation_count = cf_animation_table_count(entry.animations);
 	const cf_animation_t** animations = cf_animation_table_items(entry.animations);
@@ -264,11 +266,11 @@ cf_error_t cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* as
 {
 	cf_sprite_t s;
 	cf_error_t err = cf_aseprite_cache_load(cache, aseprite_path, &s);
-	if (cf_is_error(&err)) return err;
+	if (cf_is_error(err)) return err;
 
 	cf_strpool_id path = INJECT(aseprite_path);
 	aseprite_cache_entry_t entry;
-	if (!cf_is_error(&cache->aseprites.find(path, &entry))) {
+	if (!cf_is_error(cache->aseprites.find(path, &entry))) {
 		*ase = entry.ase;
 		return cf_error_success();
 	} else {

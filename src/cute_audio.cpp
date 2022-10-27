@@ -290,7 +290,7 @@ cf_error_t cf_music_play(cf_audio_t* audio_source, float fade_in_time)
 
 	if (as->music_state != CF_MUSIC_STATE_PLAYING) {
 		cf_error_t err = cf_music_stop(0);
-		if (cf_is_error(&err)) return err;
+		if (cf_is_error(err)) return err;
 	}
 
 	if (fade_in_time < 0) fade_in_time = 0;
@@ -640,7 +640,7 @@ static cf_audio_instance_t* cf_s_get_inst(cf_sound_t sound)
 	cf_audio_system_t* as = cf_app->audio_system;
 	CUTE_ASSERT(as);
 	cf_audio_instance_t* inst;
-	if (cf_is_error(&as->instance_map.find(sound.id, &inst))) {
+	if (cf_is_error(as->instance_map.find(sound.id, &inst))) {
 		return inst;
 	} else {
 		return NULL;

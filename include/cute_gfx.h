@@ -123,8 +123,6 @@ bool sg_query_will_buffer_overflow(sg_buffer buf_id, size_t size);
 
 CUTE_INLINE cf_error_t cf_buffer_append(cf_buffer_t* b, int vertex_count, const void* vertices, int index_count /*= 0*/, const void* indices /*= NULL*/)
 {
-	CUTE_ASSERT(vertex_count);
-	CUTE_ASSERT(vertices);
 	sg_range vertex_range = { vertices, (size_t)vertex_count * (size_t)b->vbuf.stride };
 	sg_range index_range = { indices, (size_t)index_count * (size_t)b->ibuf.stride };
 	if (sg_query_will_buffer_overflow(b->vbuf.buffer, vertex_range.size)) {
@@ -153,21 +151,27 @@ CUTE_INLINE cf_error_t cf_buffer_t::init(size_t vertex_data_size, size_t vertex_
 CUTE_INLINE void cf_buffer_t::release() { cf_buffer_release(this); }
 CUTE_INLINE cf_error_t cf_buffer_t::append(int vertex_count, const void* vertices, int index_count, const void* indices) { return cf_buffer_append(this, vertex_count, vertices, index_count, indices); }
 
-
 namespace cute
 {
 using texture_t = uint64_t;
 
-
-CUTE_INLINE texture_t  texture_make(pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_REPEAT, sg_filter filter = SG_FILTER_NEAREST) { return cf_texture_make2(pixels, w, h, mode, filter); }
-CUTE_INLINE void  texture_destroy(texture_t texture) { cf_texture_destroy(texture); }
+CUTE_INLINE texture_t texture_make(pixel_t* pixels, int w, int h, sg_wrap mode = SG_WRAP_REPEAT, sg_filter filter = SG_FILTER_NEAREST) { return cf_texture_make2(pixels, w, h, mode, filter); }
+CUTE_INLINE void texture_destroy(texture_t texture) { cf_texture_destroy(texture); }
 
 using matrix_t = cf_matrix_t;
 
-CUTE_INLINE matrix_t  matrix_identity() { return cf_matrix_identity(); }
-CUTE_INLINE matrix_t  matrix_ortho_2d(float w, float h, float x, float y) { return cf_matrix_ortho_2d(w, h, x, y); }
+CUTE_INLINE matrix_t matrix_identity() { return cf_matrix_identity(); }
+CUTE_INLINE matrix_t matrix_ortho_2d(float w, float h, float x, float y) { return cf_matrix_ortho_2d(w, h, x, y); }
 
 using buffer_t = cf_buffer_t;
+
+CUTE_INLINE buffer_t buffer_make(size_t vertex_data_size, size_t vertex_stride, int index_count = 0, int index_stride = 0, error_t* err = NULL)
+{ 
+	buffer_t buffer = { 0 };
+	if (err) *err = cf_buffer_init(&buffer, vertex_data_size, vertex_stride, index_count, index_stride);
+	else cf_buffer_init(&buffer, vertex_data_size, vertex_stride, index_count, index_stride);
+	return buffer;
+}
 
 CUTE_INLINE sg_bindings buffer_bind(buffer_t* buffer) { return cf_buffer_bind(buffer); }
 CUTE_INLINE error_t buffer_init(buffer_t* buffer, size_t vertex_data_size, size_t vertex_stride, int index_count = 0, int index_stride = 0) { return cf_buffer_init(buffer, vertex_data_size, vertex_stride, index_count, index_stride); }
@@ -177,6 +181,5 @@ CUTE_INLINE error_t buffer_append(buffer_t* buffer, int vertex_count, const void
 }
 
 #endif // CUTE_CPP
-
 
 #endif // CUTE_GFX_H

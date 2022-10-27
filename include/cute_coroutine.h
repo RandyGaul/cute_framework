@@ -71,7 +71,7 @@ using coroutine_state_t = cf_coroutine_state_t;
 CUTE_INLINE coroutine_t* coroutine_make(coroutine_fn* fn, int stack_size = 0, void* udata = NULL) { return cf_coroutine_make(fn, stack_size, udata); }
 CUTE_INLINE void coroutine_destroy(coroutine_t* co) { cf_coroutine_destroy(co); }
 	 
-CUTE_INLINE error_t coroutine_resume(coroutine_t* co, float dt = 0) { return cf_coroutine_resume(co, dt = 0); }
+CUTE_INLINE error_t coroutine_resume(coroutine_t* co, float dt = 0) { return cf_coroutine_resume(co, dt); }
 CUTE_INLINE float coroutine_yield(coroutine_t* co, cf_error_t* err = NULL) { return cf_coroutine_yield(co, err); }
 CUTE_INLINE error_t coroutine_wait(coroutine_t* co, float seconds) { return cf_coroutine_wait(co, seconds); }
 CUTE_INLINE coroutine_state_t coroutine_state(coroutine_t* co) { return cf_coroutine_state(co); }

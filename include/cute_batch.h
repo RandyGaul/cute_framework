@@ -195,38 +195,26 @@ CUTE_API cf_temporary_image_t CUTE_CALL cf_batch_fetch(cf_batch_t* b, cf_batch_s
 namespace cute
 {
 
-
 using batch_t = cf_batch_t;
 using get_pixels_fn = cf_get_pixels_fn;
 using temporary_image_t = cf_temporary_image_t;
 using color_t = cf_color_t;
 using m3x2 = cf_m3x2;
 using aabb_t = cf_aabb_t;
-using v2 = cf_v2;
 using transform_t = cf_transform_t;
 
-struct batch_sprite_t
+struct batch_sprite_t : public cf_batch_sprite_t
 {
-
-	uint64_t id;
-
-	transform_t transform = cf_make_transform();
-	int w; 
-	int h; 
-	float scale_x;
-	float scale_y; 
-	float alpha = 1.0f; 
-
-	int sort_bits = 0;
-
-	operator cf_batch_sprite_t()
+	batch_sprite_t()
 	{
-		return *((cf_batch_sprite_t*)this);
+		transform = cf_make_transform();
+		alpha = 1.0f;
+		sort_bits = 0;
 	}
 
-	operator cf_batch_sprite_t* ()
+	batch_sprite_t(cf_batch_sprite_t bs)
 	{
-		return (cf_batch_sprite_t*)this;
+		*this = bs;
 	}
 };
 
@@ -235,7 +223,7 @@ CUTE_INLINE batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udat
 
 CUTE_INLINE void batch_destroy(batch_t* b) { cf_batch_destroy(b); }
 CUTE_INLINE void batch_push(batch_t* b, batch_sprite_t sprite) { cf_batch_push(b, sprite); }
-CUTE_INLINE error_t batch_flush(batch_t* b) { cf_batch_flush(b); }
+CUTE_INLINE error_t batch_flush(batch_t* b) { return cf_batch_flush(b); }
 CUTE_INLINE void batch_update(batch_t* b) { cf_batch_update(b); }
 
 CUTE_INLINE void batch_set_texture_wrap_mode(batch_t* b, sg_wrap wrap_mode) { cf_batch_set_texture_wrap_mode(b, wrap_mode); }
@@ -284,7 +272,7 @@ CUTE_INLINE void batch_tri_line(batch_t* b, v2 p0, v2 p1, v2 p2, float thickness
 CUTE_INLINE void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c, bool antialias = false) { cf_batch_line(b, p0, p1, thickness, c, antialias); }
 CUTE_INLINE void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c0, color_t c1, bool antialias = false) { cf_batch_line2(b, p0, p1, thickness, c0, c1, antialias); }
 
-CUTE_INLINE void batch_polyline(batch_t* b, v2* points, int count, float thickness, color_t c, bool loop = false, bool antialias = false, int bevel_count = 0) { cf_batch_polyline(b, points, count, thickness, c, loop, antialias, bevel_count); }
+CUTE_INLINE void batch_polyline(batch_t* b, v2* points, int count, float thickness, color_t c, bool loop = false, bool antialias = false, int bevel_count = 0) { cf_batch_polyline(b, (cf_v2*)points, count, thickness, c, loop, antialias, bevel_count); }
 
 CUTE_INLINE temporary_image_t batch_fetch(batch_t* b, batch_sprite_t sprite) { cf_batch_fetch(b, sprite); }
 }

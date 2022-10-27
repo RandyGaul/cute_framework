@@ -155,7 +155,7 @@ void update_test_octorok_buddy_counter_system(float dt, cf_ecs_arrays_t* arrays,
 CUTE_TEST_CASE(test_ecs_octorok, "Run ECS with a mock Octorok entity.");
 int test_ecs_octorok()
 {
-	if (cf_is_error(&cf_app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN, NULL, NULL))) {
+	if (cf_is_error(cf_app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN, NULL, NULL))) {
 		return -1;
 	}
 
@@ -244,18 +244,18 @@ int test_ecs_octorok()
 
 	cf_kv_t* parsed_entities = cf_kv_make(NULL);
 	cf_error_t err = cf_kv_parse(parsed_entities, serialized_entities, CUTE_STRLEN(serialized_entities));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 
 	cf_array<cf_entity_t> entities;
 	err = cute::ecs_load_entities(parsed_entities, &entities);
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 	cf_kv_destroy(parsed_entities);
 
 	// Assert that saving the entities has matching values to what's in RAM currently.
 	cf_kv_t* saved_entities = cf_kv_make(NULL);
 	cf_kv_write_mode(saved_entities);
 	err = cute::ecs_save_entities(entities, saved_entities);
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 	cf_kv_nul_terminate(saved_entities);
 	cf_kv_destroy(saved_entities);
 
@@ -318,7 +318,7 @@ void update_dummy_system(float dt, cf_ecs_arrays_t* arrays, int count, void* uda
 CUTE_TEST_CASE(test_ecs_no_kv, "Run ECS without kv at all.");
 int test_ecs_no_kv()
 {
-	if (cf_is_error(&cf_app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN, NULL, NULL))) {
+	if (cf_is_error(cf_app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN, NULL, NULL))) {
 		return -1;
 	}
 

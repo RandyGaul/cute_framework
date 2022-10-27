@@ -67,16 +67,16 @@ cf_font_t* cf_font_load_bmfont(const char* font_path, const char* font_image_pat
 	void* font_data;
 	size_t font_size;
 	cf_error_t err = cf_file_system_read_entire_file_to_memory(font_path, &font_data, &font_size, cf_app->mem_ctx);
-	if (cf_is_error(&err)) return NULL;
+	if (cf_is_error(err)) return NULL;
 
 	void* image_data;
 	size_t image_size;
 	err = cf_file_system_read_entire_file_to_memory(font_image_path, &image_data, &image_size, cf_app->mem_ctx);
-	if (cf_is_error(&err)) return NULL;
+	if (cf_is_error(err)) return NULL;
 
 	cf_image_t img;
 	err = cf_image_load_png_mem(image_data, (int)image_size, &img, NULL);
-	if (cf_is_error(&err)) return NULL;
+	if (cf_is_error(err)) return NULL;
 	cf_image_flip_horizontal(&img); // TODO: Is this needed?
 	cf_s_r_splat(&img);
 
@@ -146,7 +146,7 @@ void cf_font_push_verts(const cf_font_t* font, const char* text, float x, float 
 void cf_font_draw(const cf_font_t* font, cf_matrix_t mvp, cf_color_t color)
 {
 	cf_error_t err = cf_app->font_buffer.append(cf_app->font_verts.count(), cf_app->font_verts.data());
-	if (cf_is_error(&err)) {
+	if (cf_is_error(err)) {
 		CUTE_WARN("Overflow in `font_draw`, dropping draw call.");
 		return;
 	}

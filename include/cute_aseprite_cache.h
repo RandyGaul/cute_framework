@@ -102,14 +102,14 @@ CUTE_API cf_strpool_t* CUTE_CALL cf_aseprite_cache_get_strpool_ptr(cf_aseprite_c
 namespace cute
 {
 
+struct sprite_t;
 using aseprite_cache_t = cf_aseprite_cache_t;
-using sprite_t = cf_sprite_t;
 using strpool_t = cf_strpool_t;
 using get_pixels_fn = cf_get_pixels_fn;
 
 CUTE_INLINE aseprite_cache_t* caseprite_cache_make(void* mem_ctx = NULL) { return cf_aseprite_cache_make(mem_ctx); }
 CUTE_INLINE void aseprite_cache_destroy(aseprite_cache_t* cache) { cf_aseprite_cache_destroy(cache); }
-CUTE_INLINE error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite) { return cf_aseprite_cache_load(cache, aseprite_path, sprite); }
+CUTE_INLINE error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite) { return cf_aseprite_cache_load(cache, aseprite_path, (cf_sprite_t*)sprite); }
 CUTE_INLINE void aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path) { cf_aseprite_cache_unload(cache, aseprite_path); }
 CUTE_INLINE error_t aseprite_cache_load_ase(aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase) { return  cf_aseprite_cache_load_ase(cache, aseprite_path, ase); }
 CUTE_INLINE get_pixels_fn* aseprite_cache_get_pixels_fn(aseprite_cache_t* cache) { return  cf_aseprite_cache_get_pixels_fn(cache); }

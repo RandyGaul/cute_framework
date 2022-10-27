@@ -39,7 +39,7 @@ CUTE_INLINE cf_error_t cf_kv_val_string_cf(cf_kv_t* kv, cf_string_t* string)
 	const char* ptr = string->c_str();
 	size_t len = string->len();
 	cf_error_t err = cf_kv_val_string(kv, &ptr, &len);
-	if (cf_is_error(&err)) return err;
+	if (cf_is_error(err)) return err;
 	*string = cf_string_t(ptr, ptr + len);
 	return cf_error_success();
 }
@@ -49,7 +49,7 @@ CUTE_INLINE cf_error_t cf_kv_val_string_std(cf_kv_t* kv, std::string* val)
 	const char* ptr = val->data();
 	size_t len = val->length();
 	cf_error_t err = cf_kv_val_string(kv, &ptr, &len);
-	if (cf_is_error(&err)) return err;
+	if (cf_is_error(err)) return err;
 	val->assign(ptr, len);
 	return cf_error_success();
 }

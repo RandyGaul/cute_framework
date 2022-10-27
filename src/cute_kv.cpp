@@ -297,7 +297,7 @@ static CUTE_INLINE cf_error_t cf_s_parse_number(cf_kv_t* kv, cf_kv_val_t* val)
 	if (kv->in + 1 < kv->in_end && ((kv->in[1] == 'x') | (kv->in[1] == 'X'))) {
 		uint64_t hex;
 		err = cf_s_parse_hex(kv, &hex);
-		if (cf_is_error(&err)) return err;
+		if (cf_is_error(err)) return err;
 		val->type = CF_KV_TYPE_INT64;
 		val->u.ival = (int64_t)hex;
 	} else {
@@ -316,13 +316,13 @@ static CUTE_INLINE cf_error_t cf_s_parse_number(cf_kv_t* kv, cf_kv_val_t* val)
 		if (is_float) {
 			double dval;
 			err = cf_s_parse_float(kv, &dval);
-			if (cf_is_error(&err)) return err;
+			if (cf_is_error(err)) return err;
 			val->type = CF_KV_TYPE_DOUBLE;
 			val->u.dval = dval;
 		} else {
 			int64_t ival;
 			err = cf_s_parse_int(kv, &ival);
-			if (cf_is_error(&err)) return err;
+			if (cf_is_error(err)) return err;
 			val->type = CF_KV_TYPE_INT64;
 			val->u.ival = ival;
 		}
@@ -338,7 +338,7 @@ static cf_error_t cf_s_parse_array(cf_kv_t* kv, cf_array<cf_kv_val_t>* array_val
 	int64_t count;
 	cf_s_expect(kv, '[');
 	err = cf_s_parse_int(kv, &count);
-	if (cf_is_error(&err)) return err;
+	if (cf_is_error(err)) return err;
 	cf_s_expect(kv, ']');
 	cf_s_expect(kv, '{');
 	array_val->ensure_capacity((int)count);
@@ -347,7 +347,7 @@ static cf_error_t cf_s_parse_array(cf_kv_t* kv, cf_array<cf_kv_val_t>* array_val
 		cf_kv_val_t* val = &array_val->add();
 		CUTE_PLACEMENT_NEW(val) cf_kv_val_t;
 		err = cf_s_parse_value(kv, val);
-		if (cf_is_error(&err)) {
+		if (cf_is_error(err)) {
 			return cf_error_failure("Unexecpted value when parsing an array. Make sure the elements are well-formed, and the length is correct.");
 		}
 	}
@@ -365,20 +365,20 @@ static cf_error_t cf_s_parse_value(cf_kv_t* kv, cf_kv_val_t* val)
 	if (c == '"') {
 		cf_kv_string_t string;
 		err = cf_s_scan_string(kv, &string);
-		if (cf_is_error(&err)) return err;
+		if (cf_is_error(err)) return err;
 		val->type = CF_KV_TYPE_STRING;
 		val->u.sval = string;
 	} else if ((c >= '0' && c <= '9') | (c == '-')) {
 		err = cf_s_parse_number(kv, val);
-		if (cf_is_error(&err)) return err;
+		if (cf_is_error(err)) return err;
 	} else if (c == '[') {
 		err = cf_s_parse_array(kv, &val->aval);
-		if (cf_is_error(&err)) return err;
+		if (cf_is_error(err)) return err;
 		val->type = CF_KV_TYPE_ARRAY;
 	} else if (c == '{') {
 		int index;
 		err = cf_s_parse_object(kv, &index);
-		if (cf_is_error(&err)) return err;
+		if (cf_is_error(err)) return err;
 		val->type = CF_KV_TYPE_OBJECT;
 		val->u.object_index = index;
 	} else {
@@ -419,10 +419,10 @@ static cf_error_t cf_s_parse_object(cf_kv_t* kv, int* index, bool is_top_level)
 		CUTE_PLACEMENT_NEW(field) cf_kv_field_t;
 
 		cf_error_t err = cf_s_scan_string(kv, &field->key);
-		if (cf_is_error(&err)) return err;
+		if (cf_is_error(err)) return err;
 		cf_s_expect(kv, '=');
 		err = cf_s_parse_value(kv, &field->val);
-		if (cf_is_error(&err)) return err;
+		if (cf_is_error(err)) return err;
 
 		// If objects were parsed, assign proper parent indices.
 		if (field->val.type == CF_KV_TYPE_OBJECT) {
@@ -478,7 +478,7 @@ cf_error_t cf_kv_parse(cf_kv_t* kv, const void* data, size_t size)
 	bool is_top_level = true;
 	int index;
 	cf_error_t err = cf_s_parse_object(kv, &index, is_top_level);
-	if (cf_is_error(&err)) return err;
+	if (cf_is_error(err)) return err;
 	CUTE_ASSERT(index == 0);
 
 	uint8_t c;
@@ -655,7 +655,7 @@ static void cf_s_write_key(cf_kv_t* kv, const char* key, cf_kv_type_t* type)
 cf_error_t cf_kv_key(cf_kv_t* kv, const char* key, cf_kv_type_t* type)
 {
 	if (kv->mode == CF_KV_STATE_UNITIALIZED) return cf_error_failure("Read or write mode have not been set.");
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	cf_s_match_key(kv, key);
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		size_t bytes_written = cf_kv_size_written(kv);
@@ -897,7 +897,7 @@ cf_error_t cf_s_find_match_int64(cf_kv_t* kv, T* val)
 
 cf_error_t cf_kv_val_uint8(cf_kv_t* kv, uint8_t* val)
 {
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
 			return cf_error_success();
@@ -913,7 +913,7 @@ cf_error_t cf_kv_val_uint8(cf_kv_t* kv, uint8_t* val)
 
 cf_error_t cf_kv_val_uint16(cf_kv_t* kv, uint16_t* val)
 {
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
 			return cf_error_success();
@@ -929,7 +929,7 @@ cf_error_t cf_kv_val_uint16(cf_kv_t* kv, uint16_t* val)
 
 cf_error_t cf_kv_val_uint32(cf_kv_t* kv, uint32_t* val)
 {
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
 			return cf_error_success();
@@ -945,7 +945,7 @@ cf_error_t cf_kv_val_uint32(cf_kv_t* kv, uint32_t* val)
 
 cf_error_t cf_kv_val_uint64(cf_kv_t* kv, uint64_t* val)
 {
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
 			return cf_error_success();
@@ -961,7 +961,7 @@ cf_error_t cf_kv_val_uint64(cf_kv_t* kv, uint64_t* val)
 
 cf_error_t cf_kv_val_int8(cf_kv_t* kv, int8_t* val)
 {
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
 			return cf_error_success();
@@ -977,7 +977,7 @@ cf_error_t cf_kv_val_int8(cf_kv_t* kv, int8_t* val)
 
 cf_error_t cf_kv_val_int16(cf_kv_t* kv, int16_t* val)
 {
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
 			return cf_error_success();
@@ -993,7 +993,7 @@ cf_error_t cf_kv_val_int16(cf_kv_t* kv, int16_t* val)
 
 cf_error_t cf_kv_val_int32(cf_kv_t* kv, int32_t* val)
 {
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
 			return cf_error_success();
@@ -1009,7 +1009,7 @@ cf_error_t cf_kv_val_int32(cf_kv_t* kv, int32_t* val)
 
 cf_error_t cf_kv_val_int64(cf_kv_t* kv, int64_t* val)
 {
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
 			return cf_error_success();
@@ -1025,7 +1025,7 @@ cf_error_t cf_kv_val_int64(cf_kv_t* kv, int64_t* val)
 
 cf_error_t cf_kv_val_float(cf_kv_t* kv, float* val)
 {
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	cf_kv_val_t* match = cf_s_pop_val(kv, CF_KV_TYPE_DOUBLE);
 	cf_kv_val_t* match_base = cf_s_pop_base_val(kv, CF_KV_TYPE_DOUBLE);
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -1055,7 +1055,7 @@ cf_error_t cf_kv_val_float(cf_kv_t* kv, float* val)
 
 cf_error_t cf_kv_val_double(cf_kv_t* kv, double* val)
 {
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	cf_kv_val_t* match = cf_s_pop_val(kv, CF_KV_TYPE_DOUBLE);
 	cf_kv_val_t* match_base = cf_s_pop_base_val(kv, CF_KV_TYPE_DOUBLE);
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -1089,7 +1089,7 @@ cf_error_t cf_kv_val_bool(cf_kv_t* kv, bool* val)
 		const char* string;
 		size_t sz;
 		cf_error_t err = cf_kv_val_string(kv, &string, &sz);
-		if (!cf_is_error(&err)) {
+		if (!cf_is_error(err)) {
 			if (sz == 4 && !CUTE_STRNCMP("true", string, sz)) *val = true;
 			else *val = false;
 		}
@@ -1113,7 +1113,7 @@ cf_error_t cf_kv_val_string(cf_kv_t* kv, const char** str, size_t* size)
 		*str = NULL;
 		*size = 0;
 	}
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	cf_kv_val_t* match = cf_s_pop_val(kv, CF_KV_TYPE_STRING);
 	cf_kv_val_t* match_base = cf_s_pop_base_val(kv, CF_KV_TYPE_STRING);
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -1138,7 +1138,7 @@ cf_error_t cf_kv_val_string(cf_kv_t* kv, const char** str, size_t* size)
 cf_error_t cf_kv_val_blob(cf_kv_t* kv, void* data, size_t data_capacity, size_t* data_len)
 {
 	if (kv->mode == CF_KV_STATE_READ) *data_len = 0;
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	cf_kv_val_t* match = cf_s_pop_val(kv, CF_KV_TYPE_STRING);
 	cf_kv_val_t* match_base = cf_s_pop_base_val(kv, CF_KV_TYPE_STRING);
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -1162,7 +1162,7 @@ cf_error_t cf_kv_val_blob(cf_kv_t* kv, void* data, size_t data_capacity, size_t*
 			return kv->err;
 		}
 		cf_error_t err = cf_base64_decode(data, buffer_size, match->u.sval.str, match->u.sval.len);
-		if (cf_is_error(&err)) return err;
+		if (cf_is_error(err)) return err;
 		*data_len = buffer_size;
 	}
 	return cf_error_success();
@@ -1172,9 +1172,9 @@ cf_error_t cf_kv_object_begin(cf_kv_t* kv, const char* key)
 {
 	if (key) {
 		cf_error_t err = cf_kv_key(kv, key, NULL);
-		if (cf_is_error(&err)) return err;
+		if (cf_is_error(err)) return err;
 	}
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (!key && kv->in_array == CUTE_KV_NOT_IN_ARRAY) return cf_error_failure("`key` must be supplied if not in an array.");
 		cf_s_write_str_no_quotes(kv, "{\n", 2);
@@ -1203,7 +1203,7 @@ cf_error_t cf_kv_object_begin(cf_kv_t* kv, const char* key)
 
 cf_error_t cf_kv_object_end(cf_kv_t* kv)
 {
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		cf_s_tabs_delta(kv, -1);
 		cf_s_try_consume_one_tab(kv);
@@ -1234,10 +1234,10 @@ cf_error_t cf_kv_array_begin(cf_kv_t* kv, int* count, const char* key)
 {
 	if (key) {
 		cf_error_t err = cf_kv_key(kv, key, NULL);
-		if (cf_is_error(&err)) return err;
+		if (cf_is_error(err)) return err;
 	}
 	if (kv->mode == CF_KV_STATE_READ) *count = 0;
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (!key && kv->in_array == CUTE_KV_NOT_IN_ARRAY) return cf_error_failure("`key` must be supplied if not in an array.");
 		cf_s_tabs_delta(kv, 1);
@@ -1259,7 +1259,7 @@ cf_error_t cf_kv_array_begin(cf_kv_t* kv, int* count, const char* key)
 
 cf_error_t cf_kv_array_end(cf_kv_t* kv)
 {
-	if (cf_is_error(&kv->err)) return kv->err;
+	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		cf_s_tabs_delta(kv, -1);
 		cf_s_try_consume_whitespace(kv);

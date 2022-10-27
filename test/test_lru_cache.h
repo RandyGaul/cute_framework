@@ -34,7 +34,7 @@ int test_lru_cache()
 	CUTE_TEST_ASSERT(*cache.mru() == 3);
 
 	int val;
-	CUTE_TEST_ASSERT(!cf_is_error(&cache.find(2, &val)));
+	CUTE_TEST_ASSERT(!cf_is_error(cache.find(2, &val)));
 	CUTE_TEST_ASSERT(*cache.lru() == 1);
 	CUTE_TEST_ASSERT(*cache.mru() == 2);
 

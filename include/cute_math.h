@@ -541,37 +541,40 @@ CUTE_API bool CUTE_CALL cf_cast_ray(cf_ray_t A, const void* B, const cf_transfor
 
 #ifdef  CUTE_CPP
 
-CUTE_INLINE cf_v2 cf_V2(cf_initializer_list<float> list) 
-{
-	cf_v2 result = { list.begin()[0], list.begin()[1] };
-	return result;
-}
-
-CUTE_INLINE cf_v2 operator+(cf_v2 a, cf_v2 b) { return cf_V2(a.x + b.x, a.y + b.y); }
-CUTE_INLINE cf_v2 operator-(cf_v2 a, cf_v2 b) { return cf_V2(a.x - b.x, a.y - b.y); }
-CUTE_INLINE cf_v2& operator+=(cf_v2& a, cf_v2 b) { return a = a + b; }
-CUTE_INLINE cf_v2& operator-=(cf_v2& a, cf_v2 b) { return a = a - b; }
-
-CUTE_INLINE cf_v2 operator*(cf_v2 a, float b) { return cf_V2(a.x * b, a.y * b); }
-CUTE_INLINE cf_v2 operator*(cf_v2 a, cf_v2 b) { return cf_V2(a.x * b.x, a.y * b.y); }
-CUTE_INLINE cf_v2& operator*=(cf_v2& a, float b) { return a = a * b; }
-CUTE_INLINE cf_v2& operator*=(cf_v2& a, cf_v2 b) { return a = a * b; }
-CUTE_INLINE cf_v2 operator/(cf_v2 a, float b) { return cf_V2(a.x / b, a.y / b); }
-CUTE_INLINE cf_v2 operator/(cf_v2 a, cf_v2 b) { return cf_V2(a.x / b.x, a.y / b.y); }
-CUTE_INLINE cf_v2& operator/=(cf_v2& a, float b) { return a = a / b; }
-CUTE_INLINE cf_v2& operator/=(cf_v2& a, cf_v2 b) { return a = a / b; }
-
-CUTE_INLINE cf_v2 operator-(cf_v2 a) { return cf_V2(-a.x, -a.y); }
-
-CUTE_INLINE int operator<(cf_v2 a, cf_v2 b) { return a.x < b.x&& a.y < b.y; }
-CUTE_INLINE int operator>(cf_v2 a, cf_v2 b) { return a.x > b.x && a.y > b.y; }
-CUTE_INLINE int operator<=(cf_v2 a, cf_v2 b) { return a.x <= b.x && a.y <= b.y; }
-CUTE_INLINE int operator>=(cf_v2 a, cf_v2 b) { return a.x >= b.x && a.y >= b.y; }
-
 namespace cute
 {
 
-using v2 = cf_v2;
+struct v2
+{
+	v2() { }
+	v2(float x, float y) { this->x = x; this->y = y; }
+	v2(cf_v2 v) { x = v.x; y = v.y; }
+	CUTE_INLINE operator cf_v2() const { cf_v2 v; v.x = x; v.y = y; return v; }
+	float x;
+	float y;
+};
+
+CUTE_INLINE v2 operator+(v2 a, v2 b) { return v2(a.x + b.x, a.y + b.y); }
+CUTE_INLINE v2 operator-(v2 a, v2 b) { return v2(a.x - b.x, a.y - b.y); }
+CUTE_INLINE v2& operator+=(v2& a, v2 b) { return a = a + b; }
+CUTE_INLINE v2& operator-=(v2& a, v2 b) { return a = a - b; }
+
+CUTE_INLINE v2 operator*(v2 a, float b) { return v2(a.x * b, a.y * b); }
+CUTE_INLINE v2 operator*(v2 a, v2 b) { return v2(a.x * b.x, a.y * b.y); }
+CUTE_INLINE v2& operator*=(v2& a, float b) { return a = a * b; }
+CUTE_INLINE v2& operator*=(v2& a, v2 b) { return a = a * b; }
+CUTE_INLINE v2 operator/(v2 a, float b) { return v2(a.x / b, a.y / b); }
+CUTE_INLINE v2 operator/(v2 a, v2 b) { return v2(a.x / b.x, a.y / b.y); }
+CUTE_INLINE v2& operator/=(v2& a, float b) { return a = a / b; }
+CUTE_INLINE v2& operator/=(v2& a, v2 b) { return a = a / b; }
+
+CUTE_INLINE v2 operator-(v2 a) { return v2(-a.x, -a.y); }
+
+CUTE_INLINE int operator<(v2 a, v2 b) { return a.x < b.x&& a.y < b.y; }
+CUTE_INLINE int operator>(v2 a, v2 b) { return a.x > b.x && a.y > b.y; }
+CUTE_INLINE int operator<=(v2 a, v2 b) { return a.x <= b.x && a.y <= b.y; }
+CUTE_INLINE int operator>=(v2 a, v2 b) { return a.x >= b.x && a.y >= b.y; }
+
 using sincos_t = cf_sincos_t;
 using m2 = cf_m2;
 using m3x2 = cf_m3x2;
@@ -732,8 +735,8 @@ CUTE_INLINE aabb_t combine(aabb_t a, aabb_t b) { return cf_combine(a, b); }
 CUTE_INLINE int overlaps(aabb_t a, aabb_t b) { return cf_overlaps(a, b); }
 CUTE_INLINE int collide(aabb_t a, aabb_t b) { return cf_collide_aabb(a, b); }
 
-CUTE_INLINE aabb_t make_aabb(v2* verts, int count) { return cf_make_aabb_verts(verts, count); }
-CUTE_INLINE void aabb_verts(v2* out, aabb_t bb) { return cf_aabb_verts(out, bb); }
+CUTE_INLINE aabb_t make_aabb(v2* verts, int count) { return cf_make_aabb_verts((cf_v2*)verts, count); }
+CUTE_INLINE void aabb_verts(v2* out, aabb_t bb) { return cf_aabb_verts((cf_v2*)out, bb); }
 
 CUTE_INLINE float area(circle_t c) { return cf_area_circle(c); }
 CUTE_INLINE float surface_area(circle_t c) { return cf_surface_area_circle(c); }
@@ -775,7 +778,7 @@ CUTE_INLINE void poly_to_poly_manifold(const poly_t* A, const transform_t* ax, c
 
 CUTE_INLINE float gjk(const void* A, shape_type_t typeA, const transform_t* ax_ptr, const void* B, shape_type_t typeB, const transform_t* bx_ptr, v2* outA, v2* outB, int use_radius, int* iterations, gjk_cache_t* cache)
 {
-	return cf_gjk(A, typeA, ax_ptr, B, typeB, bx_ptr, outA, outB, use_radius, iterations, cache);
+	return cf_gjk(A, typeA, ax_ptr, B, typeB, bx_ptr, (cf_v2*)outA, (cf_v2*)outB, use_radius, iterations, cache);
 }
 
 CUTE_INLINE toi_result_t toi(const void* A, shape_type_t typeA, const transform_t* ax_ptr, v2 vA, const void* B, shape_type_t typeB, const transform_t* bx_ptr, v2 vB, int use_radius, int* iterations)
@@ -785,11 +788,11 @@ CUTE_INLINE toi_result_t toi(const void* A, shape_type_t typeA, const transform_
 
 CUTE_INLINE void inflate(void* shape, shape_type_t type, float skin_factor) { return cf_inflate(shape, type, skin_factor); }
 
-CUTE_INLINE int hull(v2* verts, int count) { return cf_hull(verts, count); }
-CUTE_INLINE void norms(v2* verts, v2* norms, int count) { return cf_norms(verts, norms, count); }
+CUTE_INLINE int hull(v2* verts, int count) { return cf_hull((cf_v2*)verts, count); }
+CUTE_INLINE void norms(v2* verts, v2* norms, int count) { return cf_norms((cf_v2*)verts, (cf_v2*)norms, count); }
 
 CUTE_INLINE void make_poly(poly_t* p) { return cf_make_poly(p); }
-CUTE_INLINE v2 centroid(const v2* verts, int count) { return cf_centroid(verts, count); }
+CUTE_INLINE v2 centroid(const v2* verts, int count) { return cf_centroid((cf_v2*)verts, count); }
 
 CUTE_INLINE int collided(const void* A, const transform_t* ax, shape_type_t typeA, const void* B, const transform_t* bx, shape_type_t typeB) { return cf_collided(A, ax, typeA, B, bx, typeB); }
 CUTE_INLINE void collide(const void* A, const transform_t* ax, shape_type_t typeA, const void* B, const transform_t* bx, shape_type_t typeB, manifold_t* m) { return cf_collide(A, ax, typeA, B, bx, typeB, m); }

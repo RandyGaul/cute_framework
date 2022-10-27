@@ -120,7 +120,7 @@ int test_kv_basic()
 	thing.a = 5;
 	thing.b = 10.3f;
 
-	CUTE_TEST_ASSERT(!cf_is_error(&do_serialize(kv, &thing)));
+	CUTE_TEST_ASSERT(!cf_is_error(do_serialize(kv, &thing)));
 
 	const char* expected =
 	"a = 5,\n"
@@ -169,12 +169,12 @@ int test_kv_basic()
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(buffer, expected, size));
 
 	cf_error_t err = cf_kv_parse(kv, buffer, size);
-	CUTE_TEST_ASSERT(!cf_is_error(&err));
+	CUTE_TEST_ASSERT(!cf_is_error(err));
 
 	CUTE_MEMSET(&thing, 0, sizeof(thing_t));
 
 	thing_t expected_thing;
-	CUTE_TEST_ASSERT(!cf_is_error(&do_serialize(kv, &thing)));
+	CUTE_TEST_ASSERT(!cf_is_error(do_serialize(kv, &thing)));
 
 	cf_kv_destroy(kv);
 
@@ -196,14 +196,14 @@ int test_kv_std_string_to_disk()
 	cf_kv_key(kv, "book_title", NULL);
 	cf_kv_val_string(kv, &s1, &s1_len);
 
-	CUTE_TEST_ASSERT(!cf_is_error(&cf_kv_error_state(kv)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_error_state(kv)));
 	size_t size = cf_kv_size_written(kv);
-	CUTE_TEST_ASSERT(!cf_is_error(&cf_kv_parse(kv, cf_kv_get_buffer(kv), size)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_parse(kv, cf_kv_get_buffer(kv), size)));
 
 	cf_kv_key(kv, "book_title", NULL);
 	cf_kv_val_string_std(kv, &s0);
 
-	CUTE_TEST_ASSERT(!cf_is_error(&cf_kv_error_state(kv)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_error_state(kv)));
 	CUTE_TEST_ASSERT(s0.length() == s1_len);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(s0.data(), s1, s1_len));
 
@@ -227,14 +227,14 @@ int test_kv_std_string_from_disk()
 	cf_kv_key(kv, "book_title", NULL);
 	cf_kv_val_string_std(kv, &s1);
 
-	CUTE_TEST_ASSERT(!cf_is_error(&cf_kv_error_state(kv)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_error_state(kv)));
 	size_t size = cf_kv_size_written(kv);
-	CUTE_TEST_ASSERT(!cf_is_error(&cf_kv_parse(kv, cf_kv_get_buffer(kv), size)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_parse(kv, cf_kv_get_buffer(kv), size)));
 
 	cf_kv_key(kv, "book_title", NULL);
 	cf_kv_val_string(kv, &s0, &s0_len);
 
-	CUTE_TEST_ASSERT(!cf_is_error(&cf_kv_error_state(kv)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_error_state(kv)));
 	CUTE_TEST_ASSERT((int)s1.length() == s0_len);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(s1.data(), s0, s0_len));
 
@@ -261,9 +261,9 @@ int test_kv_std_vector()
 
 	cf_kv_val_vec(kv, &v, "vector_of_ints");
 
-	CUTE_TEST_ASSERT(!cf_is_error(&cf_kv_error_state(kv)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_error_state(kv)));
 	size_t size = cf_kv_size_written(kv);
-	CUTE_TEST_ASSERT(!cf_is_error(&cf_kv_parse(kv, cf_kv_get_buffer(kv), size)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_parse(kv, cf_kv_get_buffer(kv), size)));
 
 	v.clear();
 	cf_kv_val_vec(kv, &v, "vector_of_ints");
@@ -295,7 +295,7 @@ int test_kv_write_delta_basic()
 	);
 
 	cf_error_t err = cf_kv_parse(base, text_base, CUTE_STRLEN(text_base));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 
 	cf_kv_write_mode(kv);
 	cf_kv_set_base(kv, base);
@@ -338,7 +338,7 @@ int test_kv_read_delta_basic()
 	);
 
 	cf_error_t err = cf_kv_parse(base, text_base, CUTE_STRLEN(text_base));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 	
 	const char* delta =
 	"b = 3,\n"
@@ -346,7 +346,7 @@ int test_kv_read_delta_basic()
 	;
 
 	err = cf_kv_parse(kv, delta, CUTE_STRLEN(delta));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 
 	cf_kv_set_base(kv, base);
 
@@ -394,11 +394,11 @@ int test_kv_write_delta_deep()
 	);
 
 	cf_error_t err = cf_kv_parse(base0, text_base0, CUTE_STRLEN(text_base0));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(base1, text_base1, CUTE_STRLEN(text_base1));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(base2, text_base2, CUTE_STRLEN(text_base2));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 
 	cf_kv_write_mode(kv);
 	cf_kv_set_base(base1, base0);
@@ -485,11 +485,11 @@ int test_kv_read_delta_deep()
 	);
 
 	cf_error_t err = cf_kv_parse(base0, text_base0, CUTE_STRLEN(text_base0));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(base1, text_base1, CUTE_STRLEN(text_base1));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(base2, text_base2, CUTE_STRLEN(text_base2));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 
 	const char* delta =
 	"b = 3,\n"
@@ -498,7 +498,7 @@ int test_kv_read_delta_deep()
 	;
 
 	err = cf_kv_parse(kv, delta, CUTE_STRLEN(delta));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 
 	cf_kv_set_base(base1, base0);
 	cf_kv_set_base(base2, base1);
@@ -555,9 +555,9 @@ int test_kv_read_delta_array()
 	);
 
 	cf_error_t err = cf_kv_parse(base, base_text, CUTE_STRLEN(base_text));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(kv, text, CUTE_STRLEN(text));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 
 	cf_kv_set_base(kv, base);
 
@@ -611,9 +611,9 @@ int test_kv_read_and_write_delta_blob()
 	const char* base_text = (const char*)cf_kv_get_buffer(writer0);
 	const char* text = (const char*)cf_kv_get_buffer(writer1);
 	cf_error_t err = cf_kv_parse(base, base_text, CUTE_STRLEN(base_text));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(kv, text, CUTE_STRLEN(text));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 
 	cf_kv_set_base(kv, base);
 
@@ -652,9 +652,9 @@ int test_kv_read_delta_string()
 	);
 
 	cf_error_t err = cf_kv_parse(base, base_text, CUTE_STRLEN(base_text));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(kv, text, CUTE_STRLEN(text));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 
 	cf_kv_set_base(kv, base);
 
@@ -729,9 +729,9 @@ int test_kv_read_delta_object()
 	cf_kv_t* kv = cf_kv_make(NULL);
 	cf_kv_t* base = cf_kv_make(NULL);
 	cf_error_t err = cf_kv_parse(base, base_text, CUTE_STRLEN(base_text));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(kv, text, CUTE_STRLEN(text));
-	if (cf_is_error(&err)) return -1;
+	if (cf_is_error(err)) return -1;
 	cf_kv_set_base(kv, base);
 
 	int val;
@@ -800,7 +800,7 @@ int test_kv_read_delta_object()
 		cf_kv_object_end(kv);
 	cf_kv_object_end(kv);
 
-	CUTE_TEST_ASSERT(!cf_is_error(&cf_kv_error_state(kv)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_error_state(kv)));
 
 	cf_kv_destroy(kv);
 	cf_kv_destroy(base);

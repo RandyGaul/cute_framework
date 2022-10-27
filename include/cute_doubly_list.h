@@ -30,8 +30,13 @@ extern "C" {
 
 typedef struct cf_list_node_t
 {
+	#ifdef CUTE_CPP
+	struct cf_list_node_t* next = this;
+	struct cf_list_node_t* prev = this;
+	#else
 	struct cf_list_node_t* next; /*= this;*/
 	struct cf_list_node_t* prev; /*= this;*/
+	#endif // CUTE_CPP
 } cf_list_node_t;
 
 

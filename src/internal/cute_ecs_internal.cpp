@@ -30,7 +30,7 @@ cf_error_t cf_kv_val_entity(cf_kv_t* kv, cf_entity_t* entity)
 	if (state == CF_KV_STATE_READ) {
 		int index;
 		cf_error_t err = cf_kv_val_int32(kv, &index);
-		if (cf_is_error(&err)) return err;
+		if (cf_is_error(err)) return err;
 		*entity = cf_app->load_id_table->operator[](index);
 		return cf_error_success();
 	} else {

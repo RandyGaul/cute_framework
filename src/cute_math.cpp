@@ -169,7 +169,7 @@ cf_toi_result_t cf_toi(const void* A, cf_shape_type_t typeA, const cf_transform_
 {
 	cf_toi_result_t result;
 	c2TOIResult c2result = c2TOI(A, (C2_TYPE)typeA, (c2x*)ax_ptr, *(c2v*)&vA, B, (C2_TYPE)typeB, (c2x*)bx_ptr, *(c2v*)&vB, use_radius);
-	result = *(cf_toi_result_t*)&result;
+	result = *(cf_toi_result_t*)&c2result;
 	return result;
 }
 
@@ -193,8 +193,10 @@ void cf_make_poly(cf_poly_t* p)
 	c2MakePoly((c2Poly*)p);
 }
 
-cf_v2 cf_centroid(const cf_v2* verts, int count)
+cf_v2 cf_centroid(const cf_v2* cf_verts, int count)
 {
+	using namespace cute;
+	const v2* verts = (const v2*)cf_verts;
 	if (count == 0) return cf_V2(0, 0);
 	else if (count == 1) return verts[0];
 	else if (count == 2) return (verts[0] + verts[1]) * 0.5f;
@@ -209,7 +211,7 @@ cf_v2 cf_centroid(const cf_v2* verts, int count)
 		cf_v2 e2 = p3 - p1;
 		float area = 0.5f * cf_cross(e1, e2);
 		area_sum += area;
-		c += (p1 + p2 + p3) * area * (1.0f/3.0f);
+		c = c + (p1 + p2 + p3) * area * (1.0f/3.0f);
 	}
 	return c * (1.0f / area_sum) + p0;
 }

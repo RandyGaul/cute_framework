@@ -32,6 +32,8 @@
 #define AABB_TREE_NULL_NODE_INDEX -1
 #define AABB_TREE_MOVE_CONSTANT 4.0f
 
+using namespace cute;
+
 struct cf_aabb_tree_node_t
 {
 	int index_a;

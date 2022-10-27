@@ -50,6 +50,8 @@ struct cf_quad_udata_t
 
 #define DEBUG_VERT(v, c) batch_quad(batch, make_aabb(v, 3, 3), c)
 
+using namespace cute;
+
 struct cf_quad_vertex_t
 {
 	cf_v2 pos;
@@ -250,7 +252,7 @@ static void cf_s_batch_report(spritebatch_sprite_t* sprites, int count, int text
 
 	// Map the vertex buffer with sprite vertex data.
 	cf_error_t err = b->sprite_buffer.append(vert_count, verts);
-	if (cf_is_error(&err)) {
+	if (cf_is_error(err)) {
 		CUTE_WARN("Overflow in in sprite batcher, dropping draw call.");
 		return;
 	}
@@ -417,7 +419,7 @@ cf_error_t cf_batch_set_GPU_buffer_configuration(cf_batch_t* b, size_t size_of_o
 	b->geom_buffer.release();
 	b->sprite_buffer.release();
 	cf_error_t err = b->geom_buffer.init(size_of_one_buffer, sizeof(cf_vertex_t));
-	if (cf_is_error(&err)) return err;
+	if (cf_is_error(err)) return err;
 	return b->sprite_buffer.init(size_of_one_buffer, sizeof(cf_quad_vertex_t));
 }
 
@@ -460,7 +462,7 @@ cf_error_t cf_batch_flush(cf_batch_t* b)
 		params.u_mvp = b->projection;
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(params));
 		cf_error_t err = b->geom_buffer.append(b->geom_verts.count(), b->geom_verts.data());
-		if (cf_is_error(&err)) {
+		if (cf_is_error(err)) {
 			// Draw call dropped!!!
 		} else {
 			sg_apply_bindings(b->geom_buffer.bind());

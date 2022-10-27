@@ -305,7 +305,7 @@ cf_https_t* cf_https_get(const char* host, const char* port, const char* uri, cf
 {
 	cf_https_t* https = cf_https_make();
 	cf_error_t err = cf_https_connect(https, host, port, verify_cert);
-	if (cf_is_error(&err)) {
+	if (cf_is_error(err)) {
 		cf_https_destroy(https);
 		if (err_out) *err_out = err;
 		return NULL;
@@ -328,7 +328,7 @@ cf_https_t* cf_https_post(const char* host, const char* port, const char* uri, c
 {
 	cf_https_t* https = cf_https_make();
 	cf_error_t err = cf_https_connect(https, host, port, verify_cert);
-	if (cf_is_error(&err)) {
+	if (cf_is_error(err)) {
 		cf_https_destroy(https);
 		if (err_out) *err_out = err;
 		return NULL;

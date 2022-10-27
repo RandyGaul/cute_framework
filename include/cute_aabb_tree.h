@@ -128,7 +128,6 @@ using aabb_tree_t = cf_aabb_tree_t;
 using aabb_tree_query_fn = cf_aabb_tree_query_fn;
 using aabb_t = cf_aabb_t;
 using ray_t = cf_ray_t;
-using v2 = cf_v2;
 
 struct leaf_t
 {

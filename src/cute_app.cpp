@@ -183,7 +183,7 @@ cf_error_t cf_app_make(const char* window_title, int x, int y, int w, int h, uin
 	}
 
 	cf_error_t err = cf_file_system_init(argv0);
-	if (cf_is_error(&err)) {
+	if (cf_is_error(err)) {
 		CUTE_ASSERT(0);
 	} else if (!(options & CUTE_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT)) {
 		// Put the base directory (the path to the exe) onto the file system search path.
@@ -456,7 +456,7 @@ cf_error_t cf_app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 			sg_destroy_image(cf_app->offscreen_depth_buffer);
 			sg_destroy_pass(cf_app->offscreen_pass);
 			cf_error_t err = s_create_offscreen_buffers(offscreen_w, offscreen_h);
-			if (cf_is_error(&err)) return err;
+			if (cf_is_error(err)) return err;
 		}
 		return cf_error_success();
 	}
@@ -467,7 +467,7 @@ cf_error_t cf_app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 
 	// Create offscreen buffers and pass.
 	cf_error_t err = s_create_offscreen_buffers(offscreen_w, offscreen_h);
-	if (cf_is_error(&err)) return err;
+	if (cf_is_error(err)) return err;
 
 	// Initialize static geometry for the offscreen quad.
 	float quad[4 * 6];
