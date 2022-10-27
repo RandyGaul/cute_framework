@@ -19,17 +19,18 @@ using namespace cute;
 int main(int argc, const char** argv)
 {
 	// Create a window with a resolution of 640 x 480.
-	app_t* app = app_make("Fancy Window Title", 50, 50, 640, 480, CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT, argv[0]);
+	error_t err = app_make("Fancy Window Title", 50, 50, 640, 480, CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT, argv[0]);
+	if (is_error(err)) return -1;
 
-	while (app_is_running(app))
+	while (app_is_running())
 	{
 		float dt = calc_dt();
-		app_update(app, dt);
+		app_update(dt);
 		// All your game logic and updates go here...
-		app_present(app);
+		app_present();
 	}
 
-	app_destroy(app);
+	app_destroy();
 
 	return 0;
 }
