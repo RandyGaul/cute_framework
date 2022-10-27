@@ -380,15 +380,10 @@ using animation_t = cf_animation_t;
 
 struct sprite_t : public cf_sprite_t
 {
-	sprite_t()
-	{
-		*(cf_sprite_t*)this = cf_sprite_defaults();
-	}
+	sprite_t() { *(cf_sprite_t*)this = cf_sprite_defaults(); }
+	sprite_t(cf_sprite_t s) { *(cf_sprite_t*)this = s; }
 
-	sprite_t(cf_sprite_t s)
-	{
-		*(cf_sprite_t*)this = s;
-	}
+	// TODO - Move these docs to the C APIs, rather than here.
 
 	/**
 	 * Updates the sprite's internal timer to flip through different frames.
