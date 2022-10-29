@@ -45,9 +45,9 @@ static cf_batch_t* cf_s_ase_batch()
 static cf_png_cache_t* cf_s_png_cache()
 {
 	if (!cf_app->png_batch) {
-		CUTE_ASSERT(!cf_app->ase_cache);
+		CUTE_ASSERT(!cf_app->png_cache);
 		cf_app->png_cache = cf_png_cache_make(cf_app->mem_ctx);
-		cf_app->png_batch = cf_batch_make(cf_aseprite_cache_get_pixels_fn(cf_app->ase_cache), cf_app->ase_cache, cf_app->mem_ctx);
+		cf_app->png_batch = cf_batch_make(cf_png_cache_get_pixels_fn(cf_app->png_cache), cf_app->png_cache, cf_app->mem_ctx);
 		cf_batch_set_projection(cf_app->png_batch, cf_matrix_ortho_2d((float)cf_app->offscreen_w, (float)cf_app->offscreen_h, 0, 0));
 	}
 	return cf_app->png_cache;
@@ -122,4 +122,3 @@ cf_batch_t* cf_sprite_get_batch()
 	cf_s_ase_cache();
 	return cf_app->ase_batch;
 }
-
