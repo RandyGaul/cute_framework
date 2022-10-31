@@ -36,8 +36,8 @@ struct cf_memory_pool_t
 
 cf_memory_pool_t* cf_memory_pool_make(int element_size, int element_count, void* user_allocator_context)
 {
-	size_t stride = element_size > sizeof(void*) ? element_size : sizeof(void*);
-	size_t arena_size = sizeof(cf_memory_pool_t) + stride * element_count;
+	element_size = element_size > sizeof(void*) ? element_size : sizeof(void*);
+	size_t arena_size = sizeof(cf_memory_pool_t) + element_size * element_count;
 	cf_memory_pool_t* pool = (cf_memory_pool_t*)CUTE_ALLOC(arena_size, user_allocator_context);
 
 	pool->element_size = element_size;
@@ -48,12 +48,12 @@ cf_memory_pool_t* cf_memory_pool_make(int element_size, int element_count, void*
 
 	for (int i = 0; i < element_count - 1; ++i)
 	{
-		void** element = (void**)(pool->arena + stride * i);
-		void* next = (void*)(pool->arena + stride * (i + 1));
+		void** element = (void**)(pool->arena + element_size * i);
+		void* next = (void*)(pool->arena + element_size * (i + 1));
 		*element = next;
 	};
 
-	void** last_element = (void**)(pool->arena + stride * (element_count - 1));
+	void** last_element = (void**)(pool->arena + element_size * (element_count - 1));
 	*last_element = NULL;
 
 	return pool;
