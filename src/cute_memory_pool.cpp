@@ -94,7 +94,7 @@ void* cf_memory_pool_try_alloc(cf_memory_pool_t* pool)
 void cf_memory_pool_free(cf_memory_pool_t* pool, void* element)
 {
 	int difference = (int)((uint8_t*)element - pool->arena);
-	int in_bounds = difference < pool->arena_size;
+	int in_bounds = (void*)element >= pool->arena && difference <= (pool->arena_size - pool->element_size);
 	if (pool->overflow_count && !in_bounds) {
 		CUTE_FREE(element, pool->mem_ctx);
 		pool->overflow_count--;
