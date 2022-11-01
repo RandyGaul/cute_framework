@@ -87,21 +87,21 @@ typedef struct cf_transform_t
 // 2d plane, aka line
 typedef struct cf_halfspace_t
 {
-	cf_v2 n;    // normal
+	cf_v2 n; // normal
 	float d; // distance to origin; d = ax + by = dot(n, p)
 } cf_halfspace_t;
 
 typedef struct cf_ray_t
 {
-	cf_v2 p;    // position
-	cf_v2 d;    // direction (normalized)
+	cf_v2 p; // position
+	cf_v2 d; // direction (normalized)
 	float t; // distance along d from position p to find endpoint of ray
 } cf_ray_t;
 
 typedef struct cf_raycast_t
 {
 	float t; // time of impact
-	cf_v2 n;    // normal of surface at impact (unit length)
+	cf_v2 n; // normal of surface at impact (unit length)
 } cf_raycast_t;
 
 typedef struct cf_circle_t
@@ -517,7 +517,7 @@ typedef struct cf_toi_result_t
 //    See the function `c2Inflate` for some more details.
 // 4. Compute the collision manifold between the inflated shapes (for example, use poly_ttoPolyManifold).
 // 5. Gently push the shapes apart. This will give the next call to c2TOI some breathing room.
-CUTE_API cf_toi_result_t CUTE_CALL cf_toi(const void* A, cf_shape_type_t typeA, const cf_transform_t* ax_ptr, cf_v2 vA, const void* B, cf_shape_type_t typeB, const cf_transform_t* bx_ptr, cf_v2 vB, int use_radius, int* iterations);
+CUTE_API cf_toi_result_t CUTE_CALL cf_toi(const void* A, cf_shape_type_t typeA, const cf_transform_t* ax_ptr, cf_v2 vA, const void* B, cf_shape_type_t typeB, const cf_transform_t* bx_ptr, cf_v2 vB, int use_radius);
 
 // Inflating a shape.
 //
