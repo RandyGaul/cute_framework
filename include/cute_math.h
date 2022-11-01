@@ -803,7 +803,7 @@ CUTE_INLINE float gjk(const void* A, shape_type_t typeA, const transform_t* ax_p
 
 CUTE_INLINE toi_result_t toi(const void* A, shape_type_t typeA, const transform_t* ax_ptr, v2 vA, const void* B, shape_type_t typeB, const transform_t* bx_ptr, v2 vB, int use_radius, int* iterations)
 {
-	return cf_toi(A, (cf_shape_type_t)typeA, ax_ptr, vA, B, (cf_shape_type_t)typeB, bx_ptr, vB, use_radius, iterations);
+	return cf_toi(A, (cf_shape_type_t)typeA, ax_ptr, vA, B, (cf_shape_type_t)typeB, bx_ptr, vB, use_radius);
 }
 
 CUTE_INLINE void inflate(void* shape, shape_type_t type, float skin_factor) { return cf_inflate(shape, (cf_shape_type_t)type, skin_factor); }
