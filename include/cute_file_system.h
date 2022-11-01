@@ -34,12 +34,17 @@ extern "C" {
 
 typedef struct cf_file_t cf_file_t;
 
-typedef enum cf_file_type_t //: int
+#define CF_FILE_TYPE_DEFS \
+	CF_ENUM(FILE_TYPE_REGULAR, 0) \
+	CF_ENUM(FILE_TYPE_DIRECTORY, 1) \
+	CF_ENUM(FILE_TYPE_SYMLINK, 2) \
+	CF_ENUM(FILE_TYPE_OTHER, 3) \
+
+typedef enum cf_file_type_t
 {
-	CF_FILE_TYPE_REGULAR,
-	CF_FILE_TYPE_DIRECTORY,
-	CF_FILE_TYPE_SYMLINK,
-	CF_FILE_TYPE_OTHER,
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_FILE_TYPE_DEFS
+	#undef CF_ENUM
 } cf_file_type_t;
 
 typedef struct cf_stat_t
@@ -90,9 +95,15 @@ CUTE_API cf_result_t CUTE_CALL cf_file_system_write_entire_buffer_to_file(const 
 namespace cute
 {
 
-using file_type_t = cf_file_type_t;
 using stat_t = cf_stat_t;
 using file_t = cf_file_t;
+
+enum file_type_t : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_FILE_TYPE_DEFS
+	#undef CF_ENUM
+};
 
 CUTE_INLINE const char* file_system_get_base_dir() { return cf_file_system_get_base_dir(); }
 CUTE_INLINE result_t file_system_set_write_dir(const char* platform_dependent_directory) { return cf_file_system_set_write_dir(platform_dependent_directory); }

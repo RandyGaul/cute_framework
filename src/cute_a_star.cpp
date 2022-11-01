@@ -76,7 +76,7 @@ static float cf_internal_s_heuristic(cf_iv2 a, cf_iv2 b, float allow_diagonals)
 }
 
 
-const cf_a_star_grid_t* cf_a_star_make_grid(int w, int h, const int* cells)
+const cf_a_star_grid_t* cf_make_a_star_grid(int w, int h, const int* cells)
 {
 	cf_a_star_grid_t* grid = CUTE_NEW(cf_a_star_grid_t, NULL);
 	grid->w = w;
@@ -86,7 +86,7 @@ const cf_a_star_grid_t* cf_a_star_make_grid(int w, int h, const int* cells)
 	return grid;
 }
 
-void cf_a_star_destroy_grid(cf_a_star_grid_t* grid)
+void cf_destroy_a_star_grid(cf_a_star_grid_t* grid)
 {
 	grid->~cf_a_star_grid_t();
 	CUTE_FREE(grid, NULL);
@@ -219,7 +219,7 @@ bool cf_a_star(const cf_a_star_grid_t* const_grid, const cf_a_star_input_t* inpu
 
 		// Steal the memory from `temp_output` to support the C interface.
 		// This prevents the memory from getting cleaned up here, and will
-		// be cleaned up later in `cf_a_star_free_output`.
+		// be cleaned up later in `cf_free_a_star_output`.
 		CUTE_MEMSET(&temp_output, 0, sizeof(temp_output));
 	} else {
 		result = cute::a_star(const_grid, (cute::a_star_input_t*)input, nullptr);
@@ -228,7 +228,7 @@ bool cf_a_star(const cf_a_star_grid_t* const_grid, const cf_a_star_input_t* inpu
 	return result;
 }
 
-CUTE_API void CUTE_CALL cf_a_star_free_output(cf_a_star_output_t* output)
+CUTE_API void CUTE_CALL cf_free_a_star_output(cf_a_star_output_t* output)
 {
 	CUTE_FREE((void*)output->x, NULL);
 	CUTE_FREE((void*)output->y, NULL);

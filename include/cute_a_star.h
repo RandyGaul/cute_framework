@@ -41,8 +41,8 @@ typedef struct cf_a_star_grid_t cf_a_star_grid_t;
  * To specify a cost for each kind of cell, please see the `cell_to_cost` member of the
  * `cf_a_star_input_t` struct.
  */
-CUTE_API const cf_a_star_grid_t* CUTE_CALL cf_a_star_make_grid(int w, int h, const int* cells);
-CUTE_API void CUTE_CALL cf_a_star_destroy_grid(cf_a_star_grid_t* grid);
+CUTE_API const cf_a_star_grid_t* CUTE_CALL cf_make_a_star_grid(int w, int h, const int* cells);
+CUTE_API void CUTE_CALL cf_destroy_a_star_grid(cf_a_star_grid_t* grid);
 
 typedef struct cf_a_star_input_t
 {
@@ -54,7 +54,7 @@ typedef struct cf_a_star_input_t
 
 	/**
 	 * Each element of `cells_to_cost` is used to map types of cells in the `cells` parameter
-	 * of `a_star_make_grid` to a cost. The default cost is 1.0f, while <= 0.0f costs are
+	 * of `make_a_star_grid` to a cost. The default cost is 1.0f, while <= 0.0f costs are
 	 * treated as *not* traversable.
 	 *
 	 * For example, to lookup the cost of a cell at { x, y }, we could do something like this.
@@ -91,7 +91,7 @@ typedef struct cf_a_star_output_t
  * pointer for each multithreaded call.
  */
 CUTE_API bool CUTE_CALL cf_a_star(const cf_a_star_grid_t* grid, const cf_a_star_input_t* input, cf_a_star_output_t* output /* = NULL */);
-CUTE_API void CUTE_CALL cf_a_star_free_output(cf_a_star_output_t* output);
+CUTE_API void CUTE_CALL cf_free_a_star_output(cf_a_star_output_t* output);
 
 #ifdef __cplusplus
 }
@@ -120,8 +120,8 @@ struct a_star_output_t
 	cf_array<int> y;
 };
 
-CUTE_INLINE const a_star_grid_t* a_star_make_grid(int w, int h, const int* cells) { return cf_a_star_make_grid(w, h, cells); }
-CUTE_INLINE void a_star_destroy_grid(a_star_grid_t* grid) { cf_a_star_destroy_grid(grid); }
+CUTE_INLINE const a_star_grid_t* make_a_star_grid(int w, int h, const int* cells) { return cf_make_a_star_grid(w, h, cells); }
+CUTE_INLINE void destroy_a_star_grid(a_star_grid_t* grid) { cf_destroy_a_star_grid(grid); }
 CUTE_API bool CUTE_CALL a_star(const a_star_grid_t* grid, const a_star_input_t* input, a_star_output_t* output = NULL);
 
 }

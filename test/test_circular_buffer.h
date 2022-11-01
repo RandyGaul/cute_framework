@@ -26,7 +26,7 @@ using namespace cute;
 CUTE_TEST_CASE(test_circular_buffer_basic, "Typical use-case example, push and pull some data.");
 int test_circular_buffer_basic()
 {
-	cf_circular_buffer_t buffer = cf_circular_buffer_make(1024, NULL);
+	cf_circular_buffer_t buffer = cf_make_circular_buffer(1024, NULL);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	const char* the_data = "Here's some data.";
@@ -38,7 +38,7 @@ int test_circular_buffer_basic()
 	CUTE_TEST_ASSERT(memcmp(the_data, pull_data, the_data_size) == 0);
 	free(pull_data);
 
-	cf_circular_buffer_free(&buffer);
+	cf_destroy_circular_buffer(&buffer);
 
 	return 0;
 }
@@ -47,7 +47,7 @@ CUTE_TEST_CASE(test_circular_buffer_fill_up_and_empty, "Fill up the buffer and e
 int test_circular_buffer_fill_up_and_empty()
 {
 	int bytes = 10;
-	cf_circular_buffer_t buffer = cf_circular_buffer_make(bytes, NULL);
+	cf_circular_buffer_t buffer = cf_make_circular_buffer(bytes, NULL);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	for (int iters = 0; iters < 5; ++iters) {
@@ -63,7 +63,7 @@ int test_circular_buffer_fill_up_and_empty()
 		}
 	}
 
-	cf_circular_buffer_free(&buffer);
+	cf_destroy_circular_buffer(&buffer);
 
 	return 0;
 }
@@ -72,7 +72,7 @@ CUTE_TEST_CASE(test_circular_buffer_overflow, "Attempt to push too much data to 
 int test_circular_buffer_overflow()
 {
 	int bytes = 10;
-	cf_circular_buffer_t buffer = cf_circular_buffer_make(bytes, NULL);
+	cf_circular_buffer_t buffer = cf_make_circular_buffer(bytes, NULL);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	for (int i = 0; i < bytes; ++i) {
@@ -83,7 +83,7 @@ int test_circular_buffer_overflow()
 	uint8_t byte = 0;
 	CUTE_TEST_CHECK(!cf_circular_buffer_push(&buffer, &byte, 1));
 
-	cf_circular_buffer_free(&buffer);
+	cf_destroy_circular_buffer(&buffer);
 
 	return 0;
 }
@@ -92,7 +92,7 @@ CUTE_TEST_CASE(test_circular_buffer_underflow, "Attempt to pull too many bytes f
 int test_circular_buffer_underflow()
 {
 	int bytes = 10;
-	cf_circular_buffer_t buffer = cf_circular_buffer_make(bytes, NULL);
+	cf_circular_buffer_t buffer = cf_make_circular_buffer(bytes, NULL);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	uint8_t byte = 0;
@@ -106,7 +106,7 @@ int test_circular_buffer_underflow()
 	uint8_t bytes_11[11];
 	CUTE_TEST_CHECK(!cf_circular_buffer_pull(&buffer, bytes_11, 11));
 
-	cf_circular_buffer_free(&buffer);
+	cf_destroy_circular_buffer(&buffer);
 
 	return 0;
 }
@@ -152,7 +152,7 @@ CUTE_TEST_CASE(test_circular_buffer_two_threads, "Run a producer and a consumer 
 int test_circular_buffer_two_threads()
 {
 	for (int iters = 0; iters < 10; ++iters) {
-		cf_circular_buffer_t buffer = cf_circular_buffer_make(sizeof(int) * 32, NULL);
+		cf_circular_buffer_t buffer = cf_make_circular_buffer(sizeof(int) * 32, NULL);
 		CUTE_TEST_CHECK_POINTER(buffer.data);
 
 		cf_thread_t* push = cf_thread_create(test_circular_buffer_two_threads_push, "thread push", &buffer);
@@ -163,7 +163,7 @@ int test_circular_buffer_two_threads()
 		CUTE_TEST_ASSERT(!cf_is_error(cf_thread_wait(push)));
 		test_circular_buffer_running = 1; // Reset state for next time.
 
-		cf_circular_buffer_free(&buffer);
+		cf_destroy_circular_buffer(&buffer);
 	}
 
 	return 0;

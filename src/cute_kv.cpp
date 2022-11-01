@@ -111,7 +111,7 @@ struct cf_kv_t
 	void* mem_ctx = NULL;
 };
 
-cf_kv_t* cf_kv_make(void* user_allocator_context)
+cf_kv_t* cf_make_kv(void* user_allocator_context)
 {
 	cf_kv_t* kv = (cf_kv_t*)CUTE_ALLOC(sizeof(cf_kv_t), user_allocator_context);
 	CUTE_PLACEMENT_NEW(kv) cf_kv_t;
@@ -124,7 +124,7 @@ cf_kv_t* cf_kv_make(void* user_allocator_context)
 	return kv;
 }
 
-void cf_kv_destroy(cf_kv_t* kv)
+void cf_destroy_kv(cf_kv_t* kv)
 {
 	kv->~cf_kv_t();
 	CUTE_FREE(kv->temp, kv->mem_ctx);

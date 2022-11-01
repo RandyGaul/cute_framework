@@ -22,17 +22,17 @@
 #include <cute.h>
 using namespace cute;
 
-CUTE_TEST_CASE(test_sprite_make, "Load a sprite destroy it.");
-int test_sprite_make()
+CUTE_TEST_CASE(test_make_sprite, "Load a sprite destroy it.");
+int test_make_sprite()
 {
-	CUTE_TEST_ASSERT(!cf_is_error(cf_app_make("sprite test", 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_DEFAULT_GFX_CONTEXT, NULL, NULL)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_make_app("sprite test", 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_DEFAULT_GFX_CONTEXT, NULL, NULL)));
 
-	cf_sprite_t s = cf_sprite_make("test_data/girl.aseprite");
+	cf_sprite_t s = cf_make_sprite("test_data/girl.aseprite");
 	cf_batch_t* batch = cf_sprite_get_batch();
 	cf_batch_flush(batch);
 	cf_app_present(true);
 
-	cf_app_destroy();
+	cf_destroy_app();
 
 	return 0;
 }

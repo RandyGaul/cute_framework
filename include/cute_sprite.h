@@ -164,7 +164,7 @@ CUTE_INLINE cf_sprite_t cf_sprite_defaults()
  * Loads a single-frame sprite from a single png file. This function may be called many times in a row without
  * any significant performance penalties due to internal caching.
  */
-CUTE_API cf_sprite_t CUTE_CALL cf_easy_sprite_make(const char* png_path);
+CUTE_API cf_sprite_t CUTE_CALL cf_easy_make_sprite(const char* png_path);
 
 /**
  * Unloads the sprites image resources from the internal cache. Any live `sprite_t` instances for
@@ -173,7 +173,7 @@ CUTE_API cf_sprite_t CUTE_CALL cf_easy_sprite_make(const char* png_path);
 CUTE_API void CUTE_CALL cf_easy_sprite_unload(cf_sprite_t sprite);
 
 /**
- * Gets the internal batch used for `easy_sprite_make` and `easy_sprite_unload`. The batch is used to get
+ * Gets the internal batch used for `easy_make_sprite` and `easy_sprite_unload`. The batch is used to get
  * sprites onto the screen by calling `batch_flush`.
  */
 CUTE_API cf_batch_t* CUTE_CALL cf_easy_sprite_get_batch();
@@ -187,7 +187,7 @@ CUTE_API cf_batch_t* CUTE_CALL cf_easy_sprite_get_batch();
  * Loads a sprite from an aseprite file. This function may be called many times in a row without
  * any significant performance penalties due to internal caching.
  */
-CUTE_API cf_sprite_t CUTE_CALL cf_sprite_make(const char* aseprite_path);
+CUTE_API cf_sprite_t CUTE_CALL cf_make_sprite(const char* aseprite_path);
 
 /**
  * Unloads the sprites image resources from the internal cache. Any live `sprite_t` instances for
@@ -196,7 +196,7 @@ CUTE_API cf_sprite_t CUTE_CALL cf_sprite_make(const char* aseprite_path);
 CUTE_API void CUTE_CALL cf_sprite_unload(const char* aseprite_path);
 
 /**
- * Gets the internal batch used for `sprite_make` and `sprite_unload`. The batch is used to get
+ * Gets the internal batch used for `make_sprite` and `sprite_unload`. The batch is used to get
  * sprites onto the screen by calling `batch_flush`.
  */
 CUTE_API cf_batch_t* CUTE_CALL cf_sprite_get_batch();
@@ -490,10 +490,10 @@ float sprite_t::animation_interpolant() { return cf_sprite_animation_interpolant
 bool sprite_t::will_finish(float dt) { return cf_sprite_will_finish(this, dt); }
 bool sprite_t::on_loop() { return cf_sprite_on_loop(this); }
 
-CUTE_INLINE sprite_t easy_sprite_make(const char* png_path) { return cf_easy_sprite_make(png_path); }
+CUTE_INLINE sprite_t easy_make_sprite(const char* png_path) { return cf_easy_make_sprite(png_path); }
 CUTE_INLINE void easy_sprite_unload(cf_sprite_t sprite) { cf_easy_sprite_unload(sprite); }
 CUTE_INLINE batch_t* easy_sprite_get_batch() { return cf_easy_sprite_get_batch(); }
-CUTE_INLINE sprite_t sprite_make(const char* aseprite_path) { return cf_sprite_make(aseprite_path); }
+CUTE_INLINE sprite_t make_sprite(const char* aseprite_path) { return cf_make_sprite(aseprite_path); }
 CUTE_INLINE void sprite_unload(const char* aseprite_path) { cf_sprite_unload(aseprite_path); }
 CUTE_INLINE batch_t* sprite_get_batch() { return cf_sprite_get_batch(); }
 

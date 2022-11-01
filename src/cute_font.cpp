@@ -41,12 +41,12 @@
 
 static CUTE_FONT_U64 cf_s_generate_texture_handle(cf_pixel_t* pixels, int w, int h)
 {
-	return cf_texture_make(pixels, w, h);
+	return cf_make_texture(pixels, w, h);
 }
 
 static void cf_s_destroy_texture_handle(CUTE_FONT_U64 atlas_id)
 {
-	cf_texture_destroy(atlas_id);
+	cf_destroy_texture(atlas_id);
 }
 
 static void cf_s_r_splat(cf_image_t* img)
@@ -101,7 +101,7 @@ static void cf_s_load_courier_new()
 		cf_image_t img;
 		cf_result_t err = cf_image_load_png_mem(courier_new_0_png_data, courier_new_0_png_sz, &img, NULL);
 		cf_s_r_splat(&img);
-		cf_texture_t tex = cf_texture_make(img.pix, img.w, img.h);
+		cf_texture_t tex = cf_make_texture(img.pix, img.w, img.h);
 		cute_font_t* font = cute_font_load_bmfont(tex, courier_new_fnt_data, courier_new_fnt_sz, cf_app->mem_ctx);
 		cf_app->courier_new = font;
 		cf_image_free(&img);

@@ -57,7 +57,7 @@ static void cf_s_audio_promise(cf_result_t status, void* param, void* udata)
 CUTE_TEST_CASE(test_audio_load_asynchronous, "Load and free wav/ogg files asynchronously.");
 int test_audio_load_asynchronous()
 {
-	CUTE_TEST_ASSERT(!cf_is_error(cf_app_make("audio test", 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL, NULL)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_make_app("audio test", 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL, NULL)));
 
 	cf_promise_t promise;
 	promise.callback = cf_s_audio_promise;
@@ -80,7 +80,7 @@ int test_audio_load_asynchronous()
 
 	CUTE_TEST_ASSERT(!cf_is_error(cf_audio_destroy(s_audio)));
 
-	cf_app_destroy();
+	cf_destroy_app();
 
 	return 0;
 }

@@ -95,12 +95,12 @@ typedef struct cf_batch_t cf_batch_t;
  * `image_id`      - Uniquely maps to a single image, as determined by you.
  * `buffer`        - Pointer to the memory where you need to fill in pixel data.
  * `bytes_to_fill` - Number of bytes to write to `buffer`.
- * `udata`         - The `udata` pointer that was originally passed to `cf_batch_make` as `cf_get_pixels_udata`.
+ * `udata`         - The `udata` pointer that was originally passed to `cf_make_batch` as `cf_get_pixels_udata`.
  */
 typedef void (cf_get_pixels_fn)(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata);
 
-CUTE_API cf_batch_t* CUTE_CALL cf_batch_make(cf_get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem_ctx /*= NULL*/);
-CUTE_API void CUTE_CALL cf_batch_destroy(cf_batch_t* b);
+CUTE_API cf_batch_t* CUTE_CALL cf_make_batch(cf_get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem_ctx /*= NULL*/);
+CUTE_API void CUTE_CALL cf_destroy_batch(cf_batch_t* b);
 
 /**
  * Attempts to resize internal graphics buffers. They are double buffered, so the
@@ -215,9 +215,9 @@ struct batch_sprite_t : public cf_batch_sprite_t
 	batch_sprite_t(cf_batch_sprite_t bs) { *(cf_batch_sprite_t*)this = bs; }
 };
 
-CUTE_INLINE batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem_ctx = NULL) { cf_batch_make(get_pixels, get_pixels_udata, mem_ctx); }
+CUTE_INLINE batch_t* make_batch(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem_ctx = NULL) { cf_make_batch(get_pixels, get_pixels_udata, mem_ctx); }
 
-CUTE_INLINE void batch_destroy(batch_t* b) { cf_batch_destroy(b); }
+CUTE_INLINE void destroy_batch(batch_t* b) { cf_destroy_batch(b); }
 CUTE_INLINE void batch_push(batch_t* b, batch_sprite_t sprite) { cf_batch_push(b, sprite); }
 CUTE_INLINE result_t batch_flush(batch_t* b) { return cf_batch_flush(b); }
 CUTE_INLINE void batch_update(batch_t* b) { cf_batch_update(b); }

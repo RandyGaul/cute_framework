@@ -28,7 +28,7 @@ int test_png_cache()
 	cf_file_system_init(NULL);
 	cf_file_system_mount(cf_file_system_get_base_dir(), "", true);
 
-	cf_png_cache_t* cache = cf_png_cache_make(NULL);
+	cf_png_cache_t* cache = cf_make_png_cache(NULL);
 
 	cf_png_t white;
 	cf_png_t black;
@@ -47,14 +47,14 @@ int test_png_cache()
 	float black_delay[] = { 1.0f };
 
 
-	const cf_animation_t* blink_anim = cf_png_cache_make_animation(cache, "blink", blink_png, CUTE_ARRAY_SIZE(blink_png), blink_delay, CUTE_ARRAY_SIZE(blink_delay));
-	const cf_animation_t* white_anim = cf_png_cache_make_animation(cache, "white", white_png, CUTE_ARRAY_SIZE(white_png), white_delay, CUTE_ARRAY_SIZE(white_delay));
-	const cf_animation_t* black_anim = cf_png_cache_make_animation(cache, "black", black_png, CUTE_ARRAY_SIZE(black_png), black_delay, CUTE_ARRAY_SIZE(black_delay));
+	const cf_animation_t* blink_anim = cf_make_png_cache_animation(cache, "blink", blink_png, CUTE_ARRAY_SIZE(blink_png), blink_delay, CUTE_ARRAY_SIZE(blink_delay));
+	const cf_animation_t* white_anim = cf_make_png_cache_animation(cache, "white", white_png, CUTE_ARRAY_SIZE(white_png), white_delay, CUTE_ARRAY_SIZE(white_delay));
+	const cf_animation_t* black_anim = cf_make_png_cache_animation(cache, "black", black_png, CUTE_ARRAY_SIZE(black_png), black_delay, CUTE_ARRAY_SIZE(black_delay));
 
 	const cf_animation_t* anims[] = { blink_anim, white_anim, black_anim };
 
-	cf_png_cache_make_animation_table(cache, "blink", anims, CUTE_ARRAY_SIZE(anims));
-	cf_sprite_t sprite = cf_png_cache_make_sprite(cache, "blink", NULL);
+	cf_make_png_cache_animation_table(cache, "blink", anims, CUTE_ARRAY_SIZE(anims));
+	cf_sprite_t sprite = cf_make_png_cache_sprite(cache, "blink", NULL);
 
 	cf_sprite_play(&sprite, "blink");
 	CUTE_TEST_CHECK_POINTER(sprite.animations);
@@ -63,7 +63,7 @@ int test_png_cache()
 	cf_sprite_update(&sprite, 0.5f);
 	CUTE_TEST_ASSERT(sprite.frame_index == 1);
 
-	cf_png_cache_destroy(cache);
+	cf_destroy_png_cache(cache);
 
 	cf_file_system_destroy();
 

@@ -136,7 +136,7 @@ static CUTE_INLINE uint16_t cf_s_entity_type(cf_entity_t entity)
 	return (uint16_t)((entity.handle & 0x00000000FFFF0000ULL) >> 16);
 }
 
-cf_entity_t cf_entity_make(const char* entity_type, cf_result_t* err_out)
+cf_entity_t cf_make_entity(const char* entity_type, cf_result_t* err_out)
 {
 	cf_entity_type_t type = CF_INVALID_ENTITY_TYPE;
 	cf_app->entity_type_string_to_id.find(INJECT(entity_type), &type);
@@ -191,7 +191,7 @@ static cf_entity_collection_t* cf_s_collection(cf_entity_t entity)
 	return collection;
 }
 
-void cf_entity_destroy(cf_entity_t entity)
+void cf_destroy_entity(cf_entity_t entity)
 {
 	uint16_t entity_type = cf_s_entity_type(entity);
 	cf_entity_collection_t* collection = cf_app->entity_collections.find(entity_type);
@@ -229,7 +229,7 @@ void cf_entity_destroy(cf_entity_t entity)
 	}
 }
 
-void cf_entity_delayed_destroy(cf_entity_t entity)
+void cf_destroy_entity_delayed(cf_entity_t entity)
 {
 	cf_app->delayed_destroy_entities.add(entity);
 }
@@ -365,7 +365,7 @@ void cf_ecs_run_systems(float dt)
 
 	for (int i = 0; i < cf_app->delayed_destroy_entities.count(); ++i) {
 		cf_entity_t e = cf_app->delayed_destroy_entities[i];
-		cf_entity_destroy(e);
+		cf_destroy_entity(e);
 	}
 	cf_app->delayed_destroy_entities.clear();
 }
@@ -428,9 +428,9 @@ static cf_strpool_id cf_s_kv_string(cf_kv_t* kv, const char* key)
 static void cf_s_register_entity_type(const char* schema)
 {
 	// Parse the schema.
-	cf_kv_t* kv = cf_kv_make(NULL);
+	cf_kv_t* kv = cf_make_kv(NULL);
 	bool cleanup_kv = true;
-	CUTE_DEFER(if (cleanup_kv) cf_kv_destroy(kv));
+	CUTE_DEFER(if (cleanup_kv) cf_destroy_kv(kv));
 
 	cf_result_t err = cf_kv_parse(kv, schema, CUTE_STRLEN(schema));
 	if (cf_is_error(err)) {

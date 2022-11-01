@@ -24,7 +24,7 @@
 #include <cute_c_runtime.h>
 #include <cute_concurrency.h>
 
-cf_circular_buffer_t cf_circular_buffer_make(int initial_size_in_bytes, void* user_allocator_context)
+cf_circular_buffer_t cf_make_circular_buffer(int initial_size_in_bytes, void* user_allocator_context)
 {
 	cf_circular_buffer_t buffer = { 0 };
 	buffer.size_left.i = initial_size_in_bytes;
@@ -34,7 +34,7 @@ cf_circular_buffer_t cf_circular_buffer_make(int initial_size_in_bytes, void* us
 	return buffer;
 }
 
-void cf_circular_buffer_free(cf_circular_buffer_t* buffer)
+void cf_destroy_circular_buffer(cf_circular_buffer_t* buffer)
 {
 	CUTE_FREE(buffer->data, buffer->user_allocator_context);
 	CUTE_MEMSET(buffer, 0, sizeof(*buffer));

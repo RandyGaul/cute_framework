@@ -34,7 +34,7 @@ struct cf_memory_pool_t
 	void* mem_ctx;
 };
 
-cf_memory_pool_t* cf_memory_pool_make(int element_size, int element_count, void* user_allocator_context)
+cf_memory_pool_t* cf_make_memory_pool(int element_size, int element_count, void* user_allocator_context)
 {
 	element_size = element_size > sizeof(void*) ? element_size : sizeof(void*);
 	size_t arena_size = sizeof(cf_memory_pool_t) + element_size * element_count;
@@ -59,7 +59,7 @@ cf_memory_pool_t* cf_memory_pool_make(int element_size, int element_count, void*
 	return pool;
 }
 
-void cf_memory_pool_destroy(cf_memory_pool_t* pool)
+void cf_destroy_memory_pool(cf_memory_pool_t* pool)
 {
 	if (pool->overflow_count) {
 		//error_set("Attempted to destroy pool without freeing all overflow allocations.");

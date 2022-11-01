@@ -43,7 +43,7 @@ static void cf_s_co_fn(mco_coro* mco)
 	co->fn(co);
 }
 
-cf_coroutine_t* cf_coroutine_make(cf_coroutine_fn* fn, int stack_size, void* udata)
+cf_coroutine_t* cf_make_coroutine(cf_coroutine_fn* fn, int stack_size, void* udata)
 {
 	mco_desc desc = mco_desc_init(cf_s_co_fn, (size_t)stack_size);
 	cf_coroutine_t* co = CUTE_NEW(cf_coroutine_t, NULL);
@@ -57,7 +57,7 @@ cf_coroutine_t* cf_coroutine_make(cf_coroutine_fn* fn, int stack_size, void* uda
 	return co;
 }
 
-void cf_coroutine_destroy(cf_coroutine_t* co)
+void cf_destroy_coroutine(cf_coroutine_t* co)
 {
 	mco_state state = mco_status(co->mco);
 	CUTE_ASSERT(state == MCO_DEAD || state == MCO_SUSPENDED);

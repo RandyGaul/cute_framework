@@ -69,7 +69,7 @@ static void cf_s_add_elements_to_freelist(cf_handle_allocator_t* table, int firs
 	table->m_freelist = first_index;
 }
 
-cf_handle_allocator_t* cf_handle_allocator_make(int initial_capacity, void* user_allocator_context)
+cf_handle_allocator_t* cf_make_handle_allocator(int initial_capacity, void* user_allocator_context)
 {
 	cf_handle_allocator_t* table = (cf_handle_allocator_t*)CUTE_ALLOC(sizeof(cf_handle_allocator_t), user_allocator_context);
 	CUTE_PLACEMENT_NEW(table) cf_handle_allocator_t(user_allocator_context);
@@ -83,7 +83,7 @@ cf_handle_allocator_t* cf_handle_allocator_make(int initial_capacity, void* user
 	return table;
 }
 
-void cf_handle_allocator_destroy(cf_handle_allocator_t* table)
+void cf_destroy_handle_allocator(cf_handle_allocator_t* table)
 {
 	if (!table) return;
 	void* mem_ctx = table->m_mem_ctx;

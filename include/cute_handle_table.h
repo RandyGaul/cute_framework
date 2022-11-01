@@ -36,8 +36,8 @@ typedef struct cf_handle_allocator_t cf_handle_allocator_t;
 typedef uint64_t cf_handle_t;
 #define CUTE_INVALID_HANDLE (~0ULL)
 
-CUTE_API cf_handle_allocator_t* CUTE_CALL cf_handle_allocator_make(int initial_capacity, void* user_allocator_context /*= NULL*/);
-CUTE_API void CUTE_CALL cf_handle_allocator_destroy(cf_handle_allocator_t* table);
+CUTE_API cf_handle_allocator_t* CUTE_CALL cf_make_handle_allocator(int initial_capacity, void* user_allocator_context /*= NULL*/);
+CUTE_API void CUTE_CALL cf_destroy_handle_allocator(cf_handle_allocator_t* table);
 
 CUTE_API cf_handle_t CUTE_CALL cf_handle_allocator_alloc(cf_handle_allocator_t* table, uint32_t index, uint16_t type /*= 0*/);
 CUTE_API uint32_t CUTE_CALL cf_handle_allocator_get_index(cf_handle_allocator_t* table, cf_handle_t handle);
@@ -56,12 +56,12 @@ typedef struct cf_handle_table_t
 	#ifdef CUTE_CPP
 
 	CUTE_INLINE cf_handle_table_t(int initial_capacity = 0, void* user_allocator_context = NULL)
-		: m_alloc(cf_handle_allocator_make(initial_capacity, user_allocator_context))
+		: m_alloc(cf_make_handle_allocator(initial_capacity, user_allocator_context))
 	{}
 
 	CUTE_INLINE ~cf_handle_table_t()
 	{
-		cf_handle_allocator_destroy(m_alloc);
+		cf_destroy_handle_allocator(m_alloc);
 		m_alloc = NULL;
 	}
 
@@ -137,8 +137,8 @@ using handle_allocator_t = cf_handle_allocator_t;
 
 typedef uint64_t handle_t;
 
-CUTE_INLINE handle_allocator_t* handle_allocator_make(int initial_capacity, void* user_allocator_context = NULL) { return cf_handle_allocator_make(initial_capacity, user_allocator_context); }
-CUTE_INLINE void handle_allocator_destroy(handle_allocator_t* table) { handle_allocator_destroy(table); }
+CUTE_INLINE handle_allocator_t* make_handle_allocator(int initial_capacity, void* user_allocator_context = NULL) { return cf_make_handle_allocator(initial_capacity, user_allocator_context); }
+CUTE_INLINE void destroy_handle_allocator(handle_allocator_t* table) { destroy_handle_allocator(table); }
 
 CUTE_INLINE handle_t handle_allocator_alloc(handle_allocator_t* table, uint32_t index, uint16_t type = 0) { return cf_handle_allocator_alloc(table, index, type = 0); }
 CUTE_INLINE uint32_t handle_allocator_get_index(handle_allocator_t* table, handle_t handle) { return cf_handle_allocator_get_index(table, handle); }

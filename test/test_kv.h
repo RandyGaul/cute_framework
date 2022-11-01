@@ -113,7 +113,7 @@ cf_result_t do_serialize(cf_kv_t* kv, thing_t* thing)
 CUTE_TEST_CASE(test_kv_basic, "Fairly comprehensive test for basic kv to and from buffer.");
 int test_kv_basic()
 {
-	cf_kv_t* kv = cf_kv_make(NULL);
+	cf_kv_t* kv = cf_make_kv(NULL);
 	cf_kv_write_mode(kv);
 
 	thing_t thing;
@@ -176,7 +176,7 @@ int test_kv_basic()
 	thing_t expected_thing;
 	CUTE_TEST_ASSERT(!cf_is_error(do_serialize(kv, &thing)));
 
-	cf_kv_destroy(kv);
+	cf_destroy_kv(kv);
 
 	return 0;
 }
@@ -190,7 +190,7 @@ int test_kv_std_string_to_disk()
 	const char* s1 = "Alice in Wonderland.";
 	size_t s1_len = CUTE_STRLEN(s1);
 
-	cf_kv_t* kv = cf_kv_make(NULL);
+	cf_kv_t* kv = cf_make_kv(NULL);
 	cf_kv_write_mode(kv);
 
 	cf_kv_key(kv, "book_title", NULL);
@@ -207,7 +207,7 @@ int test_kv_std_string_to_disk()
 	CUTE_TEST_ASSERT(s0.length() == s1_len);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(s0.data(), s1, s1_len));
 
-	cf_kv_destroy(kv);
+	cf_destroy_kv(kv);
 
 	return 0;
 }
@@ -221,7 +221,7 @@ int test_kv_std_string_from_disk()
 	std::string s1 = "Alice in Wonderland.";
 	size_t s1_len = s1.length();
 
-	cf_kv_t* kv = cf_kv_make(NULL);
+	cf_kv_t* kv = cf_make_kv(NULL);
 	cf_kv_write_mode(kv);
 
 	cf_kv_key(kv, "book_title", NULL);
@@ -238,7 +238,7 @@ int test_kv_std_string_from_disk()
 	CUTE_TEST_ASSERT((int)s1.length() == s0_len);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(s1.data(), s0, s0_len));
 
-	cf_kv_destroy(kv);
+	cf_destroy_kv(kv);
 
 	return 0;
 }
@@ -246,7 +246,7 @@ int test_kv_std_string_from_disk()
 CUTE_TEST_CASE(test_kv_std_vector, "Testing kv utility for std::vector support.");
 int test_kv_std_vector()
 {
-	cf_kv_t* kv = cf_kv_make(NULL);
+	cf_kv_t* kv = cf_make_kv(NULL);
 	cf_kv_write_mode(kv);
 
 	std::vector<int> v;
@@ -278,7 +278,7 @@ int test_kv_std_vector()
 	CUTE_TEST_ASSERT(v[6] == 6);
 	CUTE_TEST_ASSERT(v[7] == -2);
 
-	cf_kv_destroy(kv);
+	cf_destroy_kv(kv);
 
 	return 0;
 }
@@ -286,8 +286,8 @@ int test_kv_std_vector()
 CUTE_TEST_CASE(test_kv_write_delta_basic, "Writing keys and values with base delta.");
 int test_kv_write_delta_basic()
 {
-	cf_kv_t* kv = cf_kv_make(NULL);
-	cf_kv_t* base = cf_kv_make(NULL);
+	cf_kv_t* kv = cf_make_kv(NULL);
+	cf_kv_t* base = cf_make_kv(NULL);
 
 	const char* text_base = CUTE_STRINGIZE(
 		a = 1,
@@ -320,8 +320,8 @@ int test_kv_write_delta_basic()
 	const char* buffer = (const char*)cf_kv_get_buffer(kv);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(buffer, expected, size));
 
-	cf_kv_destroy(base);
-	cf_kv_destroy(kv);
+	cf_destroy_kv(base);
+	cf_destroy_kv(kv);
 
 	return 0;
 }
@@ -329,8 +329,8 @@ int test_kv_write_delta_basic()
 CUTE_TEST_CASE(test_kv_read_delta_basic, "Reading keys and values with base delta.");
 int test_kv_read_delta_basic()
 {
-	cf_kv_t* kv = cf_kv_make(NULL);
-	cf_kv_t* base = cf_kv_make(NULL);
+	cf_kv_t* kv = cf_make_kv(NULL);
+	cf_kv_t* base = cf_make_kv(NULL);
 	
 	const char* text_base = CUTE_STRINGIZE(
 		a = 1,
@@ -363,8 +363,8 @@ int test_kv_read_delta_basic()
 	cf_kv_val_int32(kv, &val);
 	CUTE_TEST_ASSERT(val == 17);
 
-	cf_kv_destroy(base);
-	cf_kv_destroy(kv);
+	cf_destroy_kv(base);
+	cf_destroy_kv(kv);
 
 	return 0;
 }
@@ -372,10 +372,10 @@ int test_kv_read_delta_basic()
 CUTE_TEST_CASE(test_kv_write_delta_deep, "Writing keys and values with base hierarchy.");
 int test_kv_write_delta_deep()
 {
-	cf_kv_t* kv = cf_kv_make(NULL);
-	cf_kv_t* base0 = cf_kv_make(NULL);
-	cf_kv_t* base1 = cf_kv_make(NULL);
-	cf_kv_t* base2 = cf_kv_make(NULL);
+	cf_kv_t* kv = cf_make_kv(NULL);
+	cf_kv_t* base0 = cf_make_kv(NULL);
+	cf_kv_t* base1 = cf_make_kv(NULL);
+	cf_kv_t* base2 = cf_make_kv(NULL);
 
 	const char* text_base0 = CUTE_STRINGIZE(
 		a = 1.0,
@@ -452,10 +452,10 @@ int test_kv_write_delta_deep()
 	size_t size = cf_kv_size_written(kv);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP((char*)cf_kv_get_buffer(kv), expected, size));
 
-	cf_kv_destroy(base0);
-	cf_kv_destroy(base1);
-	cf_kv_destroy(base2);
-	cf_kv_destroy(kv);
+	cf_destroy_kv(base0);
+	cf_destroy_kv(base1);
+	cf_destroy_kv(base2);
+	cf_destroy_kv(kv);
 
 	return 0;
 }
@@ -463,10 +463,10 @@ int test_kv_write_delta_deep()
 CUTE_TEST_CASE(test_kv_read_delta_deep, "Reading keys and values with base hierarchy.");
 int test_kv_read_delta_deep()
 {
-	cf_kv_t* kv = cf_kv_make(NULL);
-	cf_kv_t* base0 = cf_kv_make(NULL);
-	cf_kv_t* base1 = cf_kv_make(NULL);
-	cf_kv_t* base2 = cf_kv_make(NULL);
+	cf_kv_t* kv = cf_make_kv(NULL);
+	cf_kv_t* base0 = cf_make_kv(NULL);
+	cf_kv_t* base1 = cf_make_kv(NULL);
+	cf_kv_t* base2 = cf_make_kv(NULL);
 
 	const char* text_base0 = CUTE_STRINGIZE(
 		a = 1.0,
@@ -525,10 +525,10 @@ int test_kv_read_delta_deep()
 	cf_kv_val_int32(kv, &val);
 	CUTE_TEST_ASSERT(val == 1);
 
-	cf_kv_destroy(base0);
-	cf_kv_destroy(base1);
-	cf_kv_destroy(base2);
-	cf_kv_destroy(kv);
+	cf_destroy_kv(base0);
+	cf_destroy_kv(base1);
+	cf_destroy_kv(base2);
+	cf_destroy_kv(kv);
 
 	return 0;
 }
@@ -536,8 +536,8 @@ int test_kv_read_delta_deep()
 CUTE_TEST_CASE(test_kv_read_delta_array, "Reading an array with a delta.");
 int test_kv_read_delta_array()
 {
-	cf_kv_t* kv = cf_kv_make(NULL);
-	cf_kv_t* base = cf_kv_make(NULL);
+	cf_kv_t* kv = cf_make_kv(NULL);
+	cf_kv_t* base = cf_make_kv(NULL);
 
 	const char* base_text = CUTE_STRINGIZE(
 		a = [3] {
@@ -577,8 +577,8 @@ int test_kv_read_delta_array()
 	}
 	cf_kv_array_end(kv);
 
-	cf_kv_destroy(kv);
-	cf_kv_destroy(base);
+	cf_destroy_kv(kv);
+	cf_destroy_kv(base);
 
 	return 0;
 }
@@ -591,7 +591,7 @@ int test_kv_read_and_write_delta_blob()
 	size_t blob0_size = CUTE_STRLEN(blob0) + 1;
 	size_t blob1_size = CUTE_STRLEN(blob0) + 1;
 
-	cf_kv_t* writer0 = cf_kv_make(NULL);
+	cf_kv_t* writer0 = cf_make_kv(NULL);
 	cf_kv_write_mode(writer0);
 	cf_kv_key(writer0, "a", NULL);
 	cf_kv_val_blob(writer0, (void*)blob0, 0, &blob0_size);
@@ -599,14 +599,14 @@ int test_kv_read_and_write_delta_blob()
 	cf_kv_val_blob(writer0, (void*)blob0, 0, &blob0_size);
 	cf_kv_nul_terminate(writer0);
 	
-	cf_kv_t* writer1 = cf_kv_make(NULL);
+	cf_kv_t* writer1 = cf_make_kv(NULL);
 	cf_kv_write_mode(writer1);
 	cf_kv_key(writer1, "b", NULL);
 	cf_kv_val_blob(writer1, (void*)blob1, 0, &blob1_size);
 	cf_kv_nul_terminate(writer1);
 
-	cf_kv_t* kv = cf_kv_make(NULL);
-	cf_kv_t* base = cf_kv_make(NULL);
+	cf_kv_t* kv = cf_make_kv(NULL);
+	cf_kv_t* base = cf_make_kv(NULL);
 
 	const char* base_text = (const char*)cf_kv_get_buffer(writer0);
 	const char* text = (const char*)cf_kv_get_buffer(writer1);
@@ -628,10 +628,10 @@ int test_kv_read_and_write_delta_blob()
 	cf_kv_val_blob(kv, &buffer, 256, &size_decoded);
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(buffer, blob1));
 	
-	cf_kv_destroy(writer0);
-	cf_kv_destroy(writer1);
-	cf_kv_destroy(kv);
-	cf_kv_destroy(base);
+	cf_destroy_kv(writer0);
+	cf_destroy_kv(writer1);
+	cf_destroy_kv(kv);
+	cf_destroy_kv(base);
 
 	return 0;
 }
@@ -639,8 +639,8 @@ int test_kv_read_and_write_delta_blob()
 CUTE_TEST_CASE(test_kv_read_delta_string, "Reading a string with a delta.");
 int test_kv_read_delta_string()
 {
-	cf_kv_t* kv = cf_kv_make(NULL);
-	cf_kv_t* base = cf_kv_make(NULL);
+	cf_kv_t* kv = cf_make_kv(NULL);
+	cf_kv_t* base = cf_make_kv(NULL);
 
 	const char* base_text = CUTE_STRINGIZE(
 		a = "a",
@@ -669,8 +669,8 @@ int test_kv_read_delta_string()
 	cf_kv_val_string(kv, &str, &sz);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(str, "c", sz));
 
-	cf_kv_destroy(kv);
-	cf_kv_destroy(base);
+	cf_destroy_kv(kv);
+	cf_destroy_kv(base);
 
 	return 0;
 }
@@ -726,8 +726,8 @@ int test_kv_read_delta_object()
 		}
 	);
 
-	cf_kv_t* kv = cf_kv_make(NULL);
-	cf_kv_t* base = cf_kv_make(NULL);
+	cf_kv_t* kv = cf_make_kv(NULL);
+	cf_kv_t* base = cf_make_kv(NULL);
 	cf_result_t err = cf_kv_parse(base, base_text, CUTE_STRLEN(base_text));
 	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(kv, text, CUTE_STRLEN(text));
@@ -802,8 +802,8 @@ int test_kv_read_delta_object()
 
 	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_error_state(kv)));
 
-	cf_kv_destroy(kv);
-	cf_kv_destroy(base);
+	cf_destroy_kv(kv);
+	cf_destroy_kv(base);
 
 	return 0;
 }

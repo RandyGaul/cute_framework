@@ -55,14 +55,14 @@ struct cf_object_table_t
 
 template <typename T>
 cf_object_table_t<T>::cf_object_table_t(int reserve_count, void* user_allocator_context)
-	: m_table(cf_handle_allocator_make(reserve_count, user_allocator_context))
+	: m_table(cf_make_handle_allocator(reserve_count, user_allocator_context))
 	, m_objects(reserve_count, user_allocator_context)
 {}
 
 template <typename T>
 cf_object_table_t<T>::~cf_object_table_t()
 {
-	cf_handle_allocator_destroy(m_table);
+	cf_destroy_handle_allocator(m_table);
 }
 
 template <typename T>

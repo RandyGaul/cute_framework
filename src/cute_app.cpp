@@ -69,7 +69,7 @@ cf_app_t* cf_app;
 
 using namespace cute;
 
-cf_result_t cf_app_make(const char* window_title, int x, int y, int w, int h, int options, const char* argv0, void* user_allocator_context)
+cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, int options, const char* argv0, void* user_allocator_context)
 {
 	SDL_SetMainReady();
 
@@ -179,7 +179,7 @@ cf_result_t cf_app_make(const char* window_title, int x, int y, int w, int h, in
 
 	int num_threads_to_spawn = cf_core_count() - 1;
 	if (num_threads_to_spawn) {
-		app->threadpool = cf_threadpool_create(num_threads_to_spawn, user_allocator_context);
+		app->threadpool = cf_make_threadpool(num_threads_to_spawn, user_allocator_context);
 	}
 
 	cf_result_t err = cf_file_system_init(argv0);
@@ -195,7 +195,7 @@ cf_result_t cf_app_make(const char* window_title, int x, int y, int w, int h, in
 	return cf_result_success();
 }
 
-void cf_app_destroy()
+void cf_destroy_app()
 {
 	cf_destroy_strpool(cf_app->strpool);
 	if (cf_app->using_imgui) {
@@ -211,18 +211,18 @@ void cf_app_destroy()
 	if (cf_app->cute_sound) cs_shutdown_context(cf_app->cute_sound);
 	SDL_DestroyWindow(cf_app->window);
 	SDL_Quit();
-	cute_threadpool_destroy(cf_app->threadpool);
+	destroy_threadpool(cf_app->threadpool);
 	cf_audio_system_destroy(cf_app->audio_system);
 	int schema_count = cf_app->entity_parsed_schemas.count();
 	cf_kv_t** schemas = cf_app->entity_parsed_schemas.items();
-	for (int i = 0; i < schema_count; ++i) cf_kv_destroy(schemas[i]);
+	for (int i = 0; i < schema_count; ++i) cf_destroy_kv(schemas[i]);
 	if (cf_app->ase_cache) {
-		cf_aseprite_cache_destroy(cf_app->ase_cache);
-		cf_batch_destroy(cf_app->ase_batch);
+		cf_destroy_aseprite_cache(cf_app->ase_cache);
+		cf_destroy_batch(cf_app->ase_batch);
 	}
 	if (cf_app->png_cache) {
-		cf_png_cache_destroy(cf_app->png_cache);
-		cf_batch_destroy(cf_app->png_batch);
+		cf_destroy_png_cache(cf_app->png_cache);
+		cf_destroy_batch(cf_app->png_batch);
 	}
 	if (cf_app->courier_new) {
 		cf_font_free((cf_font_t*)cf_app->courier_new);

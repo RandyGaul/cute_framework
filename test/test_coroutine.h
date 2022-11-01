@@ -45,7 +45,7 @@ void coroutine_wait_func(cf_coroutine_t* co)
 CUTE_TEST_CASE(test_coroutine, "Call some coroutine functions or whatever.");
 int test_coroutine()
 {
-	cf_coroutine_t* co = cf_coroutine_make(coroutine_func, 0, NULL);
+	cf_coroutine_t* co = cf_make_coroutine(coroutine_func, 0, NULL);
 	int a = 5;
 	int b = 10;
 	int c = 0;
@@ -56,9 +56,9 @@ int test_coroutine()
 	cf_coroutine_resume(co, 0);
 	cf_coroutine_pop(co, &c, sizeof(c));
 	CUTE_TEST_ASSERT(c == 50);
-	cf_coroutine_destroy(co);
+	cf_destroy_coroutine(co);
 
-	co = cf_coroutine_make(coroutine_func, 0, NULL);
+	co = cf_make_coroutine(coroutine_func, 0, NULL);
 	a = 5;
 	b = 10;
 	c = 0;
@@ -69,9 +69,9 @@ int test_coroutine()
 	cf_coroutine_resume(co, 0);
 	cf_coroutine_pop(co, &c, sizeof(c));
 	CUTE_TEST_ASSERT(c == 50);
-	cf_coroutine_destroy(co);
+	cf_destroy_coroutine(co);
 
-	co = cf_coroutine_make(coroutine_wait_func, 0, NULL);
+	co = cf_make_coroutine(coroutine_wait_func, 0, NULL);
 	cf_coroutine_resume(co, 0);
 	size_t bytes = cf_coroutine_bytes_pushed(co);
 	CUTE_TEST_ASSERT(bytes == 0);
@@ -89,7 +89,7 @@ int test_coroutine()
 	cf_coroutine_pop(co, &a, sizeof(a));
 	CUTE_TEST_ASSERT(a == 3);
 	CUTE_TEST_ASSERT(cf_coroutine_state(co) == CF_COROUTINE_STATE_DEAD);
-	cf_coroutine_destroy(co);
+	cf_destroy_coroutine(co);
 
 	return 0;
 }

@@ -59,14 +59,14 @@ CUTE_API void CUTE_CALL cf_ecs_entity_set_name(const char* entity_type);
 CUTE_API void CUTE_CALL cf_ecs_entity_add_component(const char* component_type);
 CUTE_API void CUTE_CALL cf_ecs_entity_set_optional_schema(const char* schema);
 
-CUTE_API cf_entity_t CUTE_CALL cf_entity_make(const char* entity_type, cf_result_t* err /*= NULL*/);
+CUTE_API cf_entity_t CUTE_CALL cf_make_entity(const char* entity_type, cf_result_t* err /*= NULL*/);
 CUTE_API bool CUTE_CALL cf_entity_is_valid(cf_entity_t entity);
 CUTE_API bool CUTE_CALL cf_entity_is_type(cf_entity_t entity, const char* entity_type);
 CUTE_API const char* CUTE_CALL cf_entity_get_type_string(cf_entity_t entity);
 CUTE_API bool CUTE_CALL cf_entity_has_component(cf_entity_t entity, const char* component_type);
 CUTE_API void* CUTE_CALL cf_entity_get_component(cf_entity_t entity, const char* component_type);
-CUTE_API void CUTE_CALL cf_entity_destroy(cf_entity_t entity);
-CUTE_API void CUTE_CALL cf_entity_delayed_destroy(cf_entity_t entity);
+CUTE_API void CUTE_CALL cf_destroy_entity(cf_entity_t entity);
+CUTE_API void CUTE_CALL cf_destroy_entity_delayed(cf_entity_t entity);
 
 CUTE_INLINE bool cf_entity_equals(cf_entity_t* a, cf_entity_t* b) { return a->handle == b->handle; }
 
@@ -161,14 +161,14 @@ CUTE_INLINE void ecs_entity_set_name(const char* entity_type) { cf_ecs_entity_se
 CUTE_INLINE void ecs_entity_add_component(const char* component_type) { cf_ecs_entity_add_component(component_type); }
 CUTE_INLINE void ecs_entity_set_optional_schema(const char* schema) { cf_ecs_entity_set_optional_schema(schema); }
 
-CUTE_INLINE entity_t entity_make(const char* entity_type, result_t* err = NULL) { return cf_entity_make(entity_type, err); }
+CUTE_INLINE entity_t make_entity(const char* entity_type, result_t* err = NULL) { return cf_make_entity(entity_type, err); }
 CUTE_INLINE bool entity_is_valid(entity_t entity) { return cf_entity_is_valid(entity); }
 CUTE_INLINE bool entity_is_type(entity_t entity, const char* entity_type) { return cf_entity_is_type(entity, entity_type); }
 CUTE_INLINE const char* entity_get_type_string(entity_t entity) { return cf_entity_get_type_string(entity); }
 CUTE_INLINE bool entity_has_component(entity_t entity, const char* component_type) { return cf_entity_has_component(entity, component_type); }
 CUTE_INLINE void* entity_get_component(entity_t entity, const char* component_type) { return cf_entity_get_component(entity, component_type); }
-CUTE_INLINE void entity_destroy(entity_t entity) { cf_entity_destroy(entity); }
-CUTE_INLINE void entity_delayed_destroy(entity_t entity) { cf_entity_delayed_destroy(entity); }
+CUTE_INLINE void destroy_entity(entity_t entity) { cf_destroy_entity(entity); }
+CUTE_INLINE void destroy_entity_delayed(entity_t entity) { cf_destroy_entity_delayed(entity); }
 
 CUTE_API result_t CUTE_CALL ecs_load_entities(kv_t* kv, array<entity_t>* entities_out = NULL);
 

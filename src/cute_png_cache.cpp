@@ -40,7 +40,7 @@ static void cf_s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, 
 	}
 }
 
-cf_png_cache_t* cf_png_cache_make(void* mem_ctx)
+cf_png_cache_t* cf_make_png_cache(void* mem_ctx)
 {
 	cf_png_cache_t* cache = CUTE_NEW(cf_png_cache_t, cf_app->mem_ctx);
 	cache->strpool = cf_make_strpool(mem_ctx);
@@ -48,7 +48,7 @@ cf_png_cache_t* cf_png_cache_make(void* mem_ctx)
 	return cache;
 }
 
-void cf_png_cache_destroy(cf_png_cache_t* cache)
+void cf_destroy_png_cache(cf_png_cache_t* cache)
 {
 	int animation_count = cache->animations.count();
 	cf_animation_t** animations = cache->animations.items();
@@ -131,7 +131,7 @@ cf_strpool_t* cf_png_cache_get_strpool_ptr(cf_png_cache_t* cache)
 	return cache->strpool;
 }
 
-const cf_animation_t* cf_png_cache_make_animation(cf_png_cache_t* cache, const char* name, const cf_png_t* pngs, int pngs_count, const float* delays, int delays_count)
+const cf_animation_t* cf_make_png_cache_animation(cf_png_cache_t* cache, const char* name, const cf_png_t* pngs, int pngs_count, const float* delays, int delays_count)
 {
 	CUTE_ASSERT(pngs_count == delays_count);
 	cf_strpool_id name_id = INJECT(name);
@@ -172,7 +172,7 @@ const cf_animation_t* cf_png_cache_get_animation(cf_png_cache_t* cache, const ch
 }
 
 
-const cf_animation_table_t* cf_png_cache_make_animation_table(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_t* const* animations, int animations_count)
+const cf_animation_table_t* cf_make_png_cache_animation_table(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_t* const* animations, int animations_count)
 {
 	cf_strpool_id name_id = INJECT(sprite_name);
 
@@ -206,7 +206,7 @@ const cf_animation_table_t* cf_png_cache_get_animation_table(cf_png_cache_t* cac
 	}
 }
 
-cf_sprite_t cf_png_cache_make_sprite(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_table_t* table)
+cf_sprite_t cf_make_png_cache_sprite(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_table_t* table)
 {
 	cf_strpool_id name_id = INJECT(sprite_name);
 	if (!table) {
@@ -232,13 +232,13 @@ cf_sprite_t cf_png_cache_make_sprite(cf_png_cache_t* cache, const char* sprite_n
 namespace cute
 {
 
-const animation_t* png_cache_make_animation(png_cache_t* cache, const char* name, const array<png_t>& pngs, const array<float>& delays)
+const animation_t* make_png_cache_animation(png_cache_t* cache, const char* name, const array<png_t>& pngs, const array<float>& delays)
 {
-	return cf_png_cache_make_animation(cache, name, pngs.data(), pngs.count(), delays.data(), delays.count());
+	return cf_make_png_cache_animation(cache, name, pngs.data(), pngs.count(), delays.data(), delays.count());
 }
-const animation_table_t* png_cache_make_animation_table(png_cache_t* cache, const char* sprite_name, const array<const animation_t*>& animations)
+const animation_table_t* make_png_cache_animation_table(png_cache_t* cache, const char* sprite_name, const array<const animation_t*>& animations)
 {
-	return cf_png_cache_make_animation_table(cache, sprite_name, animations.data(), animations.count());
+	return cf_make_png_cache_animation_table(cache, sprite_name, animations.data(), animations.count());
 }
 
 }

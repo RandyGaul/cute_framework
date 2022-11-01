@@ -57,8 +57,8 @@ enum
 	#undef CF_ENUM
 };
 
-CUTE_API cf_result_t CUTE_CALL cf_app_make(const char* window_title, int x, int y, int w, int h, int options /*= 0*/, const char* argv0 /*= NULL*/, void* user_allocator_context /*= NULL*/);
-CUTE_API void CUTE_CALL cf_app_destroy();
+CUTE_API cf_result_t CUTE_CALL cf_make_app(const char* window_title, int x, int y, int w, int h, int options /*= 0*/, const char* argv0 /*= NULL*/, void* user_allocator_context /*= NULL*/);
+CUTE_API void CUTE_CALL cf_destroy_app();
 
 CUTE_API bool CUTE_CALL cf_app_is_running();
 CUTE_API void CUTE_CALL cf_app_stop_running();
@@ -130,8 +130,8 @@ enum : int
 	#undef CF_ENUM
 };
 
-CUTE_INLINE result_t app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL) { return cf_app_make(window_title, x, y, w, h, options, argv0, user_allocator_context); }
-CUTE_INLINE void app_destroy() { cf_app_destroy(); }
+CUTE_INLINE result_t make_app(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL) { return cf_make_app(window_title, x, y, w, h, options, argv0, user_allocator_context); }
+CUTE_INLINE void destroy_app() { cf_destroy_app(); }
 CUTE_INLINE bool app_is_running() { return cf_app_is_running(); }
 CUTE_INLINE void app_stop_running() { cf_app_stop_running(); }
 CUTE_INLINE void app_update(float dt) { cf_app_update(dt); }

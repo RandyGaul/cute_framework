@@ -462,7 +462,7 @@ cf_aabb_tree_t* cf_s_remap(const cf_aabb_tree_t* tree)
 	CUTE_ASSERT(i == tree->node_count);
 
 	// Create a copy of the input tree.
-	cf_aabb_tree_t* result = cf_create_aabb_tree(tree->node_count, tree->mem_ctx);
+	cf_aabb_tree_t* result = cf_make_aabb_tree(tree->node_count, tree->mem_ctx);
 	result->root = tree->root;
 	result->nodes = tree->nodes;
 	result->aabbs = tree->aabbs;
@@ -556,7 +556,7 @@ static void cf_s_validate(const cf_aabb_tree_t* tree, int index)
 
 //--------------------------------------------------------------------------------------------------
 
-cf_aabb_tree_t* cf_create_aabb_tree(int initial_capacity, void* user_allocator_context)
+cf_aabb_tree_t* cf_make_aabb_tree(int initial_capacity, void* user_allocator_context)
 {
 	cf_aabb_tree_t* tree = CUTE_NEW(cf_aabb_tree_t, user_allocator_context);
 	if (!initial_capacity) initial_capacity = 64;
@@ -570,7 +570,7 @@ cf_aabb_tree_t* cf_create_aabb_tree(int initial_capacity, void* user_allocator_c
 	return tree;
 }
 
-cf_aabb_tree_t* cf_create_aabb_tree_from_memory(const void* buffer, size_t size, void* user_allocator_context)
+cf_aabb_tree_t* cf_make_aabb_tree_from_memory(const void* buffer, size_t size, void* user_allocator_context)
 {
 	uint8_t* p = (uint8_t*)buffer;
 	uint8_t fourcc[4];
@@ -578,7 +578,7 @@ cf_aabb_tree_t* cf_create_aabb_tree_from_memory(const void* buffer, size_t size,
 	if (CUTE_MEMCMP(fourcc, "aabb", 4)) return NULL;
 
 	int node_count = (int)cf_read_uint32(&p);
-	cf_aabb_tree_t* tree = cf_create_aabb_tree(0, NULL);
+	cf_aabb_tree_t* tree = cf_make_aabb_tree(0, NULL);
 	tree->nodes.ensure_count(node_count);
 	tree->aabbs.ensure_count(node_count);
 	tree->udatas.ensure_count(node_count);

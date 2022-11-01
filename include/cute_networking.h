@@ -100,7 +100,7 @@ CUTE_API void CUTE_CALL cf_crypto_sign_keygen(cf_crypto_sign_public_t* public_ke
  */
 CUTE_API cf_result_t CUTE_CALL cf_generate_connect_token(
 	uint64_t application_id,							// A unique number to identify your game, can be whatever value you like.
-														// This must be the same number as in `client_create` and `server_create`.
+														// This must be the same number as in `make_client` and `make_server`.
 	uint64_t creation_timestamp,						// A unix timestamp of the current time.
 	const cf_crypto_key_t* client_to_server_key,		// A unique key for this connect token for the client to encrypt packets, and server to
 														// decrypt packets. This can be generated with `crypto_generate_key` on your web service.
@@ -120,7 +120,7 @@ CUTE_API cf_result_t CUTE_CALL cf_generate_connect_token(
 //--------------------------------------------------------------------------------------------------
 // CLIENT
 
-CUTE_API cf_client_t* CUTE_CALL cf_client_create(
+CUTE_API cf_client_t* CUTE_CALL cf_make_client(
 	uint16_t port,							// Port for opening a UDP socket.
 	uint64_t application_id,				// A unique number to identify your game, can be whatever value you like.
 											// This must be the same number as in `server_create`.
@@ -128,7 +128,7 @@ CUTE_API cf_client_t* CUTE_CALL cf_client_create(
 											// ipv6 enabled, so this defaults to false.
 	void* user_allocator_context /*= NULL*/ // Used for custom allocators, this can be set to NULL.
 );
-CUTE_API void CUTE_CALL cf_client_destroy(cf_client_t* client);
+CUTE_API void CUTE_CALL cf_destroy_client(cf_client_t* client);
 
 /**
  * The client will make an attempt to connect to all servers listed in the connect token, one after
@@ -221,8 +221,8 @@ CUTE_INLINE cf_server_config_t CUTE_CALL cf_server_config_defaults()
 	return config;
 }
 
-CUTE_API cf_server_t* CUTE_CALL cf_server_create(cf_server_config_t config);
-CUTE_API void CUTE_CALL cf_server_destroy(cf_server_t* server);
+CUTE_API cf_server_t* CUTE_CALL cf_make_server(cf_server_config_t config);
+CUTE_API void CUTE_CALL cf_destroy_server(cf_server_t* server);
 
 /**
  * Starts up the server, ready to receive new client connections.
@@ -358,8 +358,8 @@ CUTE_INLINE result_t generate_connect_token(
 
 using client_state_t = cf_client_state_t;
 
-CUTE_INLINE client_t* client_create(uint16_t port, uint64_t application_id, bool use_ipv6 = false, void* user_allocator_context = NULL) { return cf_client_create(port,application_id,use_ipv6,user_allocator_context); }
-CUTE_INLINE void client_destroy(client_t* client) { cf_client_destroy(client); }
+CUTE_INLINE client_t* make_client(uint16_t port, uint64_t application_id, bool use_ipv6 = false, void* user_allocator_context = NULL) { return cf_make_client(port,application_id,use_ipv6,user_allocator_context); }
+CUTE_INLINE void destroy_client(client_t* client) { cf_destroy_client(client); }
 CUTE_INLINE result_t client_connect(client_t* client, const uint8_t* connect_token) { return cf_client_connect(client,connect_token); }
 CUTE_INLINE void client_disconnect(client_t* client) { cf_client_disconnect(client); }
 CUTE_INLINE void client_update(client_t* client, double dt, uint64_t current_time) { cf_client_update(client,dt,current_time); }
@@ -379,8 +379,8 @@ using server_event_type_t = cf_server_event_type_t;
 using server_event_t = cf_server_event_t;
 
 CUTE_INLINE server_config_t server_config_defaults() { return cf_server_config_defaults(); }
-CUTE_INLINE server_t* server_create(server_config_t config) { return cf_server_create(config); }
-CUTE_INLINE void server_destroy(server_t* server) { cf_server_destroy(server); }
+CUTE_INLINE server_t* make_server(server_config_t config) { return cf_make_server(config); }
+CUTE_INLINE void destroy_server(server_t* server) { cf_destroy_server(server); }
 CUTE_INLINE result_t server_start(server_t* server, const char* address_and_port) { return cf_server_start(server,address_and_port); }
 CUTE_INLINE void server_stop(server_t* server) { cf_server_stop(server); }
 CUTE_INLINE bool server_pop_event(server_t* server, server_event_t* event) { return cf_server_pop_event(server,event); }

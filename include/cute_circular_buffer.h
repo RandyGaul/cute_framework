@@ -42,8 +42,8 @@ typedef struct cf_circular_buffer_t
 	void* user_allocator_context; /*= NULL*/
 } cf_circular_buffer_t;
 
-CUTE_API cf_circular_buffer_t CUTE_CALL cf_circular_buffer_make(int initial_size_in_bytes, void* user_allocator_context /*= NULL*/);
-CUTE_API void CUTE_CALL cf_circular_buffer_free(cf_circular_buffer_t* buffer);
+CUTE_API cf_circular_buffer_t CUTE_CALL cf_make_circular_buffer(int initial_size_in_bytes, void* user_allocator_context /*= NULL*/);
+CUTE_API void CUTE_CALL cf_destroy_circular_buffer(cf_circular_buffer_t* buffer);
 
 CUTE_API void CUTE_CALL cf_circular_buffer_reset(cf_circular_buffer_t* buffer);
 
@@ -66,8 +66,8 @@ namespace cute
 
 using circular_buffer_t = cf_circular_buffer_t;
 
-CUTE_INLINE circular_buffer_t circular_buffer_make(int initial_size_in_bytes, void* user_allocator_context = NULL) { return cf_circular_buffer_make(initial_size_in_bytes, user_allocator_context); }
-CUTE_INLINE void circular_buffer_free(circular_buffer_t* buffer) { cf_circular_buffer_free(buffer); }
+CUTE_INLINE circular_buffer_t make_circular_buffer(int initial_size_in_bytes, void* user_allocator_context = NULL) { return cf_make_circular_buffer(initial_size_in_bytes, user_allocator_context); }
+CUTE_INLINE void destroy_circular_buffer(circular_buffer_t* buffer) { cf_destroy_circular_buffer(buffer); }
 
 CUTE_INLINE void circular_buffer_reset(circular_buffer_t* buffer) { cf_circular_buffer_reset(buffer); }
 

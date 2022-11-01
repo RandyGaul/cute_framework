@@ -35,8 +35,8 @@ extern "C" {
 typedef struct cf_coroutine_t cf_coroutine_t;
 typedef void (cf_coroutine_fn)(cf_coroutine_t* co);
 
-CUTE_API cf_coroutine_t* CUTE_CALL cf_coroutine_make(cf_coroutine_fn* fn, int stack_size /*= 0*/, void* udata /*= NULL*/);
-CUTE_API void CUTE_CALL cf_coroutine_destroy(cf_coroutine_t* co);
+CUTE_API cf_coroutine_t* CUTE_CALL cf_make_coroutine(cf_coroutine_fn* fn, int stack_size /*= 0*/, void* udata /*= NULL*/);
+CUTE_API void CUTE_CALL cf_destroy_coroutine(cf_coroutine_t* co);
 
 #define CF_COROUTINE_STATE_DEFS \
 	CF_ENUM(COROUTINE_STATE_DEAD, 0) \
@@ -86,8 +86,8 @@ enum coroutine_state_t : int
 	#undef CF_ENUM
 };
 
-CUTE_INLINE coroutine_t* coroutine_make(coroutine_fn* fn, int stack_size = 0, void* udata = NULL) { return cf_coroutine_make(fn, stack_size, udata); }
-CUTE_INLINE void coroutine_destroy(coroutine_t* co) { cf_coroutine_destroy(co); }
+CUTE_INLINE coroutine_t* make_coroutine(coroutine_fn* fn, int stack_size = 0, void* udata = NULL) { return cf_make_coroutine(fn, stack_size, udata); }
+CUTE_INLINE void destroy_coroutine(coroutine_t* co) { cf_destroy_coroutine(co); }
 	 
 CUTE_INLINE result_t coroutine_resume(coroutine_t* co, float dt = 0) { return cf_coroutine_resume(co, dt); }
 CUTE_INLINE float coroutine_yield(coroutine_t* co, cf_result_t* err = NULL) { return cf_coroutine_yield(co, err); }

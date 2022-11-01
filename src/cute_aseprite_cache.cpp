@@ -64,7 +64,7 @@ static void cf_s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, 
 	}
 }
 
-cf_aseprite_cache_t* cf_aseprite_cache_make(void* mem_ctx)
+cf_aseprite_cache_t* cf_make_aseprite_cache(void* mem_ctx)
 {
 	cf_aseprite_cache_t* cache = CUTE_NEW(cf_aseprite_cache_t, mem_ctx);
 	cache->strpool = cf_make_strpool(NULL);
@@ -72,7 +72,7 @@ cf_aseprite_cache_t* cf_aseprite_cache_make(void* mem_ctx)
 	return cache;
 }
 
-void cf_aseprite_cache_destroy(cf_aseprite_cache_t* cache)
+void cf_destroy_aseprite_cache(cf_aseprite_cache_t* cache)
 {
 	cf_destroy_strpool(cache->strpool);
 	int count = cache->aseprites.count();

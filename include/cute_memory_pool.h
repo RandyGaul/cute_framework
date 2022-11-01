@@ -47,14 +47,14 @@ typedef struct cf_memory_pool_t cf_memory_pool_t;
  * `element_size` is the fixed size each internal allocation will be.
  * `element_count` determins how big the internal pool will be.
  */
-CUTE_API cf_memory_pool_t* CUTE_CALL cf_memory_pool_make(int element_size, int element_count, void* user_allocator_context /*= NULL*/);
+CUTE_API cf_memory_pool_t* CUTE_CALL cf_make_memory_pool(int element_size, int element_count, void* user_allocator_context /*= NULL*/);
 
 /**
- * Destroys a memory pool previously created with `memory_pool_make`. Does not clean up any leftover
+ * Destroys a memory pool previously created with `make_memory_pool`. Does not clean up any leftover
  * allocations from `cf_memory_pool_alloc` that overflowed to the `malloc` backup. See `cf_memory_pool_alloc`
  * for more details.
  */
-CUTE_API void CUTE_CALL cf_memory_pool_destroy(cf_memory_pool_t* pool);
+CUTE_API void CUTE_CALL cf_destroy_memory_pool(cf_memory_pool_t* pool);
 
 /**
  * Returns a block of memory of `element_size` bytes. If the number of allocations in the pool exceeds
@@ -86,8 +86,8 @@ namespace cute
 {
 using memory_pool_t = cf_memory_pool_t;
 
-CUTE_INLINE memory_pool_t* memory_pool_make(int element_size, int element_count, void* user_allocator_context = NULL) { return cf_memory_pool_make(element_size,element_count,user_allocator_context); }
-CUTE_INLINE void memory_pool_destroy(memory_pool_t* pool) { cf_memory_pool_destroy(pool); }
+CUTE_INLINE memory_pool_t* make_memory_pool(int element_size, int element_count, void* user_allocator_context = NULL) { return cf_make_memory_pool(element_size,element_count,user_allocator_context); }
+CUTE_INLINE void destroy_memory_pool(memory_pool_t* pool) { cf_destroy_memory_pool(pool); }
 CUTE_INLINE void* memory_pool_alloc(memory_pool_t* pool) { return cf_memory_pool_alloc(pool); }
 CUTE_INLINE void* memory_pool_try_alloc(memory_pool_t* pool) { return cf_memory_pool_try_alloc(pool); }
 CUTE_INLINE void memory_pool_free(memory_pool_t* pool, void* element) { return cf_memory_pool_free(pool,element); }

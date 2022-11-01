@@ -308,13 +308,13 @@ static void cf_s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to
 static SPRITEBATCH_U64 cf_s_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
 	cf_batch_t* b = (cf_batch_t*)udata;
-	return cf_texture_make2((cf_pixel_t*)pixels, w, h, b->wrap_mode, b->filter);
+	return cf_make_texture2((cf_pixel_t*)pixels, w, h, b->wrap_mode, b->filter);
 }
 
 static void cf_s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
 {
 	cf_batch_t* b = (cf_batch_t*)udata;
-	cf_texture_destroy(texture_id);
+	cf_destroy_texture(texture_id);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -345,7 +345,7 @@ static void cf_s_sync_pip(cf_batch_t* b)
 	}
 }
 
-cf_batch_t* cf_batch_make(cf_get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem_ctx)
+cf_batch_t* cf_make_batch(cf_get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem_ctx)
 {
 	cf_batch_t* b = CUTE_NEW(cf_batch_t, cf_app->mem_ctx);
 	if (!b) return NULL;
@@ -407,7 +407,7 @@ cf_batch_t* cf_batch_make(cf_get_pixels_fn* get_pixels, void* get_pixels_udata, 
 	return b;
 }
 
-void cf_batch_destroy(cf_batch_t* b)
+void cf_destroy_batch(cf_batch_t* b)
 {
 	spritebatch_term(&b->sb);
 	b->~cf_batch_t();

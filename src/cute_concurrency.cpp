@@ -34,12 +34,12 @@
 #define CUTE_THREAD_FREE CUTE_FREE
 #include <cute/cute_sync.h>
 
-cf_mutex_t cf_mutex_create()
+cf_mutex_t cf_make_mutex()
 {
 	return cute_mutex_create();
 }
 
-void cf_mutex_destroy(cf_mutex_t* mutex)
+void cf_destroy_mutex(cf_mutex_t* mutex)
 {
 	cute_mutex_destroy(mutex);
 }
@@ -59,12 +59,12 @@ bool cf_mutex_trylock(cf_mutex_t* mutex)
 	return !!cute_trylock(mutex);
 }
 
-cf_cv_t cf_cv_create()
+cf_cv_t cf_make_cv()
 {
 	return cute_cv_create();
 }
 
-void cf_cv_destroy(cf_cv_t* cv)
+void cf_destroy_cv(cf_cv_t* cv)
 {
 	cute_cv_destroy(cv);
 }
@@ -84,12 +84,12 @@ cf_result_t cf_cv_wait(cf_cv_t* cv, cf_mutex_t* mutex)
 	return cf_result_make(cute_cv_wait(cv, mutex), NULL);
 }
 
-cf_semaphore_t cf_sem_create(int initial_count)
+cf_semaphore_t cf_make_sem(int initial_count)
 {
 	return cute_semaphore_create(initial_count);
 }
 
-void cf_sem_destroy(cf_semaphore_t* semaphore)
+void cf_destroy_sem(cf_semaphore_t* semaphore)
 {
 	cute_semaphore_destroy(semaphore);
 }
@@ -191,12 +191,12 @@ cf_result_t cf_atomic_ptr_cas(void** atomic, void* expected, void* value)
 	return cf_result_make(cute_atomic_ptr_cas(atomic, expected, value), NULL);
 }
 
-cf_rw_lock_t cf_rw_lock_create()
+cf_rw_lock_t cf_make_rw_lock()
 {
 	return cute_rw_lock_create();
 }
 
-void cf_rw_lock_destroy(cf_rw_lock_t* rw)
+void cf_destroy_rw_lock(cf_rw_lock_t* rw)
 {
 	if (rw) cute_rw_lock_destroy(rw);
 }
@@ -221,7 +221,7 @@ void cf_write_unlock(cf_rw_lock_t* rw)
 	cute_write_unlock(rw);
 }
 
-cf_threadpool_t* cf_threadpool_create(int thread_count, void* user_allocator_context)
+cf_threadpool_t* cf_make_threadpool(int thread_count, void* user_allocator_context)
 {
 	return cute_threadpool_create(thread_count, user_allocator_context);
 }
@@ -241,7 +241,7 @@ void cf_threadpool_kick(cf_threadpool_t* pool)
 	cute_threadpool_kick(pool);
 }
 
-void cf_threadpool_destroy(cf_threadpool_t* pool)
+void cf_destroy_threadpool(cf_threadpool_t* pool)
 {
 	cute_threadpool_destroy(pool);
 }

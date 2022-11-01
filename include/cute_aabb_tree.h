@@ -50,8 +50,8 @@ CUTE_INLINE cf_leaf_t cf_leaf_defaults()
 	result.id = -1;
 	return result;
 }
-CUTE_API cf_aabb_tree_t* CUTE_CALL cf_create_aabb_tree(int initial_capacity /*= 0*/, void* user_allocator_context /*= NULL*/);
-CUTE_API cf_aabb_tree_t* CUTE_CALL cf_create_aabb_tree_from_memory(const void* buffer, size_t size, void* user_allocator_context /*= NULL*/);
+CUTE_API cf_aabb_tree_t* CUTE_CALL cf_make_aabb_tree(int initial_capacity /*= 0*/, void* user_allocator_context /*= NULL*/);
+CUTE_API cf_aabb_tree_t* CUTE_CALL cf_make_aabb_tree_from_memory(const void* buffer, size_t size, void* user_allocator_context /*= NULL*/);
 CUTE_API void CUTE_CALL cf_destroy_aabb_tree(cf_aabb_tree_t* tree);
 
 /**
@@ -144,8 +144,8 @@ using aabb_tree_query_fn = cf_aabb_tree_query_fn;
 using aabb_t = cf_aabb_t;
 using ray_t = cf_ray_t;
 
-CUTE_INLINE aabb_tree_t* create_aabb_tree(int initial_capacity = 0, void* user_allocator_context = NULL) { return cf_create_aabb_tree(initial_capacity, user_allocator_context); }
-CUTE_INLINE aabb_tree_t* create_aabb_tree_from_memory(const void* buffer, size_t size, void* user_allocator_context = NULL) { return cf_create_aabb_tree_from_memory(buffer, size, user_allocator_context); }
+CUTE_INLINE aabb_tree_t* make_aabb_tree(int initial_capacity = 0, void* user_allocator_context = NULL) { return cf_make_aabb_tree(initial_capacity, user_allocator_context); }
+CUTE_INLINE aabb_tree_t* make_aabb_tree_from_memory(const void* buffer, size_t size, void* user_allocator_context = NULL) { return cf_make_aabb_tree_from_memory(buffer, size, user_allocator_context); }
 CUTE_INLINE void destroy_aabb_tree(aabb_tree_t* tree) { cf_destroy_aabb_tree(tree); }
 CUTE_INLINE leaf_t aabb_tree_insert(aabb_tree_t* tree, aabb_t aabb, void* udata = NULL) { return *(leaf_t*)&cf_aabb_tree_insert(tree, aabb, udata); }
 CUTE_INLINE void aabb_tree_remove(aabb_tree_t* tree, leaf_t leaf) { cf_aabb_tree_remove(tree, leaf); }
