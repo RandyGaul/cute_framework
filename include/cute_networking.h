@@ -44,9 +44,18 @@ typedef struct cn_crypto_signature_t cf_crypto_signature_t;
 
 typedef struct cn_endpoint_t cf_endpoint_t;
 typedef enum cn_address_type_t cf_address_type_t;
-#define CUTE_ADDRESS_TYPE_NONE CN_ADDRESS_TYPE_NONE
-#define CUTE_ADDRESS_TYPE_IPV4 CN_ADDRESS_TYPE_IPV4
-#define CUTE_ADDRESS_TYPE_IPV6 CN_ADDRESS_TYPE_IPV6
+
+#define CF_ADDRESS_TYPE_DEFS \
+	CF_ENUM(ADDRESS_TYPE_NONE, 0) \
+	CF_ENUM(ADDRESS_TYPE_IPV4, 1) \
+	CF_ENUM(ADDRESS_TYPE_IPV6, 2) \
+
+enum
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_ADDRESS_TYPE_DEFS
+	#undef CF_ENUM
+};
 
 CUTE_API int CUTE_CALL cf_endpoint_init(cf_endpoint_t* endpoint, const char* address_and_port_string);
 CUTE_API void CUTE_CALL cf_endpoint_to_string(cf_endpoint_t endpoint, char* buffer, int buffer_size);
@@ -284,6 +293,7 @@ CUTE_API void CUTE_CALL cf_server_enable_network_simulator(cf_server_t* server, 
 
 namespace cute
 {
+
 using client_t = cf_client_t;
 using server_t = cf_server_t;
 using crypto_key_t = cf_crypto_key_t;
@@ -296,6 +306,13 @@ using crypto_signature_t = cf_crypto_signature_t;
 
 using endpoint_t = cf_endpoint_t;
 using address_type_t = cf_address_type_t;
+
+enum : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_ADDRESS_TYPE_DEFS
+	#undef CF_ENUM
+};
 
 CUTE_INLINE int endpoint_init(endpoint_t* endpoint, const char* address_and_port_string) { return cf_endpoint_init(endpoint,address_and_port_string); }
 CUTE_INLINE void endpoint_to_string(endpoint_t endpoint, char* buffer, int buffer_size) { cf_endpoint_to_string(endpoint,buffer,buffer_size); }

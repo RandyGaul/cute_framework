@@ -51,11 +51,16 @@ CUTE_API bool CUTE_CALL cf_window_mouse_entered();
 CUTE_API bool CUTE_CALL cf_window_mouse_exited();
 CUTE_API bool CUTE_CALL cf_window_mouse_inside();
 
+#define CF_WINDOW_MESSAGE_BOX_TYPE_DEFS \
+	CF_ENUM(WINDOW_MESSAGE_BOX_TYPE_ERROR, 0) \
+	CF_ENUM(WINDOW_MESSAGE_BOX_TYPE_WARNING, 1) \
+	CF_ENUM(WINDOW_MESSAGE_BOX_TYPE_INFORMATION, 2) \
+
 typedef enum cf_window_message_box_type_t
 {
-	CF_WINDOW_MESSAGE_BOX_TYPE_ERROR,
-	CF_WINDOW_MESSAGE_BOX_TYPE_WARNING,
-	CF_WINDOW_MESSAGE_BOX_TYPE_INFORMATION,
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_WINDOW_MESSAGE_BOX_TYPE_DEFS
+	#undef CF_ENUM
 } cf_window_message_box_type_t;
 
 CUTE_API void CUTE_CALL cf_window_message_box(cf_window_message_box_type_t type, const char* title, const char* text);
@@ -72,10 +77,15 @@ CUTE_API void CUTE_CALL cf_window_message_box(cf_window_message_box_type_t type,
 namespace cute
 {
 
-using window_message_box_type_t = cf_window_message_box_type_t;
+enum window_message_box_type_t : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_WINDOW_MESSAGE_BOX_TYPE_DEFS
+	#undef CF_ENUM
+};
 
-CUTE_INLINE void window_size(int* w, int* h) { return cf_window_size(w,h); }
-CUTE_INLINE void window_position(int* x, int* y) { return cf_window_position(x,y); }
+CUTE_INLINE void window_size(int* w, int* h) { return cf_window_size(w, h); }
+CUTE_INLINE void window_position(int* x, int* y) { return cf_window_position(x, y); }
 CUTE_INLINE bool window_was_size_changed() { return cf_window_was_size_changed(); }
 CUTE_INLINE bool window_was_moved() { return cf_window_was_moved(); }
 CUTE_INLINE bool window_keyboard_lost_focus() { return cf_window_keyboard_lost_focus(); }
@@ -89,7 +99,7 @@ CUTE_INLINE bool window_was_restored() { return cf_window_was_restored(); }
 CUTE_INLINE bool window_mouse_entered() { return cf_window_mouse_entered(); }
 CUTE_INLINE bool window_mouse_exited() { return cf_window_mouse_exited(); }
 CUTE_INLINE bool window_mouse_inside() { return cf_window_mouse_inside(); }
-CUTE_INLINE void window_message_box(window_message_box_type_t type, const char* title, const char* text) { return cf_window_message_box(type,title,text); }
+CUTE_INLINE void window_message_box(window_message_box_type_t type, const char* title, const char* text) { return cf_window_message_box((cf_window_message_box_type_t)type, title, text); }
 
 }
 

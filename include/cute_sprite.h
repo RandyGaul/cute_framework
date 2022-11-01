@@ -44,14 +44,19 @@ typedef struct cf_frame_t
 	float delay;
 } cf_frame_t;
 
+#define CF_PLAY_DIRECTION_DEFS \
+	CF_ENUM(PLAY_DIRECTION_FORWARDS, 0) \
+	CF_ENUM(PLAY_DIRECTION_BACKWARDS, 1) \
+	CF_ENUM(PLAY_DIRECTION_PINGPONG, 2) \
+
 /**
  * The direction a sprite plays frames.
  */
 typedef enum cf_play_direction_t
 {
-	CF_PLAY_DIRECTION_FORWARDS,
-	CF_PLAY_DIRECTION_BACKWARDS,
-	CF_PLAY_DIRECTION_PINGPONG,
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_PLAY_DIRECTION_DEFS
+	#undef CF_ENUM
 } cf_play_direction_t;
 
 /**
@@ -374,9 +379,15 @@ namespace cute
 {
 
 using frame_t = cf_frame_t;
-using play_direction_t = cf_play_direction_t;
 using animation_table_t = cf_animation_table_t;
 using animation_t = cf_animation_t;
+
+enum play_direction_t : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_PLAY_DIRECTION_DEFS
+	#undef CF_ENUM
+};
 
 struct sprite_t : public cf_sprite_t
 {

@@ -42,11 +42,16 @@ typedef struct cf_kv_t cf_kv_t;
 CUTE_API cf_kv_t* CUTE_CALL cf_kv_make(void* user_allocator_context /*= NULL*/);
 CUTE_API void CUTE_CALL cf_kv_destroy(cf_kv_t* kv);
 
+#define CF_KV_STATE_DEFS \
+	CF_ENUM(KV_STATE_UNITIALIZED, 0) \
+	CF_ENUM(KV_STATE_WRITE, 1) \
+	CF_ENUM(KV_STATE_READ, 2) \
+
 typedef enum cf_kv_state_t
 {
-	CF_KV_STATE_UNITIALIZED,
-	CF_KV_STATE_WRITE,
-	CF_KV_STATE_READ,
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_KV_STATE_DEFS
+	#undef CF_ENUM
 } cf_kv_state_t;
 
 CUTE_API cf_kv_state_t CUTE_CALL cf_kv_get_state(cf_kv_t* kv);
@@ -112,14 +117,19 @@ CUTE_API cf_result_t CUTE_CALL cf_kv_error_state(cf_kv_t* kv);
 // loaded into the supplied `val` pointer.
 // For write mode keys and values are written to the buffer set with `kv_set_write_bffer`.
 
+#define CF_KV_TYPE_DEFS \
+	CF_ENUM(KV_TYPE_NULL,   0) \
+	CF_ENUM(KV_TYPE_INT64,  1) \
+	CF_ENUM(KV_TYPE_DOUBLE, 2) \
+	CF_ENUM(KV_TYPE_STRING, 3) \
+	CF_ENUM(KV_TYPE_ARRAY,  4) \
+	CF_ENUM(KV_TYPE_OBJECT, 5) \
+
 typedef enum cf_kv_type_t
 {
-	CF_KV_TYPE_NULL   = 0,
-	CF_KV_TYPE_INT64  = 1,
-	CF_KV_TYPE_DOUBLE = 2,
-	CF_KV_TYPE_STRING = 3,
-	CF_KV_TYPE_ARRAY  = 4,
-	CF_KV_TYPE_OBJECT = 5,
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_KV_TYPE_DEFS
+	#undef CF_ENUM
 } cf_kv_type_t;
 
 CUTE_API cf_result_t CUTE_CALL cf_kv_key(cf_kv_t* kv, const char* key, cf_kv_type_t* type /*= NULL*/);
@@ -162,37 +172,49 @@ namespace cute
 {
 
 using kv_t = cf_kv_t;
-using kv_state_t = cf_kv_state_t;
-using kv_type_t = cf_kv_type_t;
+
+enum kv_state_t : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_KV_STATE_DEFS
+	#undef CF_ENUM
+};
+
+enum kv_type_t : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_KV_TYPE_DEFS
+	#undef CF_ENUM
+};
 
 CUTE_INLINE kv_t* kv_make(void* user_allocator_context = NULL) { return cf_kv_make(user_allocator_context); }
 CUTE_INLINE void kv_destroy(kv_t* kv) { cf_kv_destroy(kv); }
-CUTE_INLINE kv_state_t kv_get_state(kv_t* kv) { return cf_kv_get_state(kv); }
-CUTE_INLINE result_t kv_parse(kv_t* kv, const void* data, size_t size) { return cf_kv_parse(kv,data,size); }
+CUTE_INLINE kv_state_t kv_get_state(kv_t* kv) { return (kv_state_t)cf_kv_get_state(kv); }
+CUTE_INLINE result_t kv_parse(kv_t* kv, const void* data, size_t size) { return cf_kv_parse(kv, data, size); }
 CUTE_INLINE void kv_reset_read_state(kv_t* kv) { cf_kv_reset_read_state(kv); }
 CUTE_INLINE void kv_write_mode(kv_t* kv) { cf_kv_write_mode(kv); }
 CUTE_INLINE void* kv_get_buffer(kv_t* kv) { return cf_kv_get_buffer(kv); }
 CUTE_INLINE size_t kv_size_written(kv_t* kv) { return cf_kv_size_written(kv); }
 CUTE_INLINE void kv_nul_terminate(kv_t* kv) { cf_kv_nul_terminate(kv); }
-CUTE_INLINE void kv_set_base(kv_t* kv, kv_t* base) { cf_kv_set_base(kv,base); }
+CUTE_INLINE void kv_set_base(kv_t* kv, kv_t* base) { cf_kv_set_base(kv, base); }
 CUTE_INLINE result_t kv_error_state(kv_t* kv) { return cf_kv_error_state(kv); }
-CUTE_INLINE result_t kv_key(kv_t* kv, const char* key, kv_type_t* type = NULL) { return cf_kv_key(kv,key,type); }
-CUTE_INLINE result_t kv_val(kv_t* kv, uint8_t* val) { return cf_kv_val_uint8(kv,val); }
-CUTE_INLINE result_t kv_val(kv_t* kv, uint16_t* val) { return cf_kv_val_uint16(kv,val); }
-CUTE_INLINE result_t kv_val(kv_t* kv, uint32_t* val) { return cf_kv_val_uint32(kv,val); }
-CUTE_INLINE result_t kv_val(kv_t* kv, uint64_t* val) { return cf_kv_val_uint64(kv,val); }
-CUTE_INLINE result_t kv_val(kv_t* kv, int8_t* val) { return cf_kv_val_int8(kv,val); }
-CUTE_INLINE result_t kv_val(kv_t* kv, int16_t* val) { return cf_kv_val_int16(kv,val); }
-CUTE_INLINE result_t kv_val(kv_t* kv, int32_t* val) { return cf_kv_val_int32(kv,val); }
-CUTE_INLINE result_t kv_val(kv_t* kv, int64_t* val) { return cf_kv_val_int64(kv,val); }
-CUTE_INLINE result_t kv_val(kv_t* kv, float* val) { return cf_kv_val_float(kv,val); }
-CUTE_INLINE result_t kv_val(kv_t* kv, double* val) { return cf_kv_val_double(kv,val); }
-CUTE_INLINE result_t kv_val(kv_t* kv, bool* val) { return cf_kv_val_bool(kv,val); }
-CUTE_INLINE result_t kv_val_string(kv_t* kv, const char** str, size_t* size) { return cf_kv_val_string(kv,str,size); }
-CUTE_INLINE result_t kv_val_blob(kv_t* kv, void* data, size_t data_capacity, size_t* data_len) { return cf_kv_val_blob(kv,data,data_capacity,data_len); }
-CUTE_INLINE result_t kv_object_begin(kv_t* kv, const char* key = NULL) { return cf_kv_object_begin(kv,key); }
+CUTE_INLINE result_t kv_key(kv_t* kv, const char* key, kv_type_t* type = NULL) { return cf_kv_key(kv, key, (cf_kv_type_t*)type); }
+CUTE_INLINE result_t kv_val(kv_t* kv, uint8_t* val) { return cf_kv_val_uint8(kv, val); }
+CUTE_INLINE result_t kv_val(kv_t* kv, uint16_t* val) { return cf_kv_val_uint16(kv, val); }
+CUTE_INLINE result_t kv_val(kv_t* kv, uint32_t* val) { return cf_kv_val_uint32(kv, val); }
+CUTE_INLINE result_t kv_val(kv_t* kv, uint64_t* val) { return cf_kv_val_uint64(kv, val); }
+CUTE_INLINE result_t kv_val(kv_t* kv, int8_t* val) { return cf_kv_val_int8(kv, val); }
+CUTE_INLINE result_t kv_val(kv_t* kv, int16_t* val) { return cf_kv_val_int16(kv, val); }
+CUTE_INLINE result_t kv_val(kv_t* kv, int32_t* val) { return cf_kv_val_int32(kv, val); }
+CUTE_INLINE result_t kv_val(kv_t* kv, int64_t* val) { return cf_kv_val_int64(kv, val); }
+CUTE_INLINE result_t kv_val(kv_t* kv, float* val) { return cf_kv_val_float(kv, val); }
+CUTE_INLINE result_t kv_val(kv_t* kv, double* val) { return cf_kv_val_double(kv, val); }
+CUTE_INLINE result_t kv_val(kv_t* kv, bool* val) { return cf_kv_val_bool(kv, val); }
+CUTE_INLINE result_t kv_val_string(kv_t* kv, const char** str, size_t* size) { return cf_kv_val_string(kv, str, size); }
+CUTE_INLINE result_t kv_val_blob(kv_t* kv, void* data, size_t data_capacity, size_t* data_len) { return cf_kv_val_blob(kv, data, data_capacity, data_len); }
+CUTE_INLINE result_t kv_object_begin(kv_t* kv, const char* key = NULL) { return cf_kv_object_begin(kv, key); }
 CUTE_INLINE result_t kv_object_end(kv_t* kv) { return cf_kv_object_end(kv); }
-CUTE_INLINE result_t kv_array_begin(kv_t* kv, int* count, const char* key = NULL) { return cf_kv_array_begin(kv,count,key); }
+CUTE_INLINE result_t kv_array_begin(kv_t* kv, int* count, const char* key = NULL) { return cf_kv_array_begin(kv, count, key); }
 CUTE_INLINE result_t kv_array_end(kv_t* kv) { return cf_kv_array_end(kv); }
 CUTE_INLINE void kv_print(kv_t* kv) { cf_kv_print(kv); }
 

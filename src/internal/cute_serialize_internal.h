@@ -82,12 +82,12 @@ CUTE_INLINE void cf_write_bytes(uint8_t** p, const uint8_t* byte_array, int num_
 CUTE_INLINE void cf_write_endpoint(uint8_t** p, cf_endpoint_t endpoint)
 {
 	cf_write_uint8(p, (uint8_t)endpoint.type);
-	if (endpoint.type == CUTE_ADDRESS_TYPE_IPV4) {
+	if (endpoint.type == CF_ADDRESS_TYPE_IPV4) {
 		cf_write_uint8(p, endpoint.u.ipv4[0]);
 		cf_write_uint8(p, endpoint.u.ipv4[1]);
 		cf_write_uint8(p, endpoint.u.ipv4[2]);
 		cf_write_uint8(p, endpoint.u.ipv4[3]);
-	} else if (endpoint.type == CUTE_ADDRESS_TYPE_IPV6) {
+	} else if (endpoint.type == CF_ADDRESS_TYPE_IPV6) {
 		cf_write_uint16(p, endpoint.u.ipv6[0]);
 		cf_write_uint16(p, endpoint.u.ipv6[1]);
 		cf_write_uint16(p, endpoint.u.ipv6[2]);
@@ -180,12 +180,12 @@ CUTE_INLINE cf_endpoint_t cf_read_endpoint(uint8_t** p)
 {
 	cf_endpoint_t endpoint;
 	endpoint.type = (cf_address_type_t)cf_read_uint8(p);
-	if (endpoint.type == CUTE_ADDRESS_TYPE_IPV4) {
+	if (endpoint.type == CF_ADDRESS_TYPE_IPV4) {
 		endpoint.u.ipv4[0] = cf_read_uint8(p);
 		endpoint.u.ipv4[1] = cf_read_uint8(p);
 		endpoint.u.ipv4[2] = cf_read_uint8(p);
 		endpoint.u.ipv4[3] = cf_read_uint8(p);
-	} else if (endpoint.type == CUTE_ADDRESS_TYPE_IPV6) {
+	} else if (endpoint.type == CF_ADDRESS_TYPE_IPV6) {
 		endpoint.u.ipv6[0] = cf_read_uint16(p);
 		endpoint.u.ipv6[1] = cf_read_uint16(p);
 		endpoint.u.ipv6[2] = cf_read_uint16(p);
