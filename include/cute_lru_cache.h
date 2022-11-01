@@ -47,7 +47,7 @@ struct cf_lru_cache
 	T* lru();
 
 	T* find(const K& key);
-	cf_error_t find(const K& key, T* val_out);
+	cf_result_t find(const K& key, T* val_out);
 
 	T* insert(const K& key);
 	T* insert(const K& key, const T& val);
@@ -124,13 +124,13 @@ T* cf_lru_cache<K, T>::find(const K& key)
 }
 
 template <typename K, typename T>
-cf_error_t cf_lru_cache<K, T>::find(const K& key, T* val_out)
+cf_result_t cf_lru_cache<K, T>::find(const K& key, T* val_out)
 {
 	entry_t* entry = m_entries.find(key);
-	if (!entry) cf_error_failure("Unable to find dictionary entry.");
+	if (!entry) cf_result_error("Unable to find dictionary entry.");
 	update(&entry->node);
 	*val_out = entry->item;
-	return cf_error_success();
+	return cf_result_success();
 }
 
 template <typename K, typename T>

@@ -21,7 +21,7 @@
 
 #include <cute_handle_table.h>
 #include <cute_alloc.h>
-#include <cute_error.h>
+#include <cute_result.h>
 #include <cute_c_runtime.h>
 #include <cute_array.h>
 

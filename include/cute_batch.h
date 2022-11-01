@@ -24,7 +24,7 @@
 
 #include "cute_defines.h"
 #include "cute_math.h"
-#include "cute_error.h"
+#include "cute_result.h"
 #include "cute_gfx.h"
 
 //--------------------------------------------------------------------------------------------------
@@ -106,7 +106,7 @@ CUTE_API void CUTE_CALL cf_batch_destroy(cf_batch_t* b);
  * Attempts to resize internal graphics buffers. They are double buffered, so the
  * memory used on the GPU will be at least 2x `size_of_one_buffer`.
  */
-CUTE_API cf_error_t CUTE_CALL cf_batch_set_GPU_buffer_configuration(cf_batch_t* b, size_t size_of_one_buffer);
+CUTE_API cf_result_t CUTE_CALL cf_batch_set_GPU_buffer_configuration(cf_batch_t* b, size_t size_of_one_buffer);
 
 /**
  * Pushes sprite quad onto an internal buffer. Does no other logic.
@@ -119,7 +119,7 @@ CUTE_API void CUTE_CALL cf_batch_push(cf_batch_t* b, cf_batch_sprite_t sprite);
 /**
  * All quads currently pushed onto the batch (see `cf_batch_push`) will be converted to an internal draw call.
  */
-CUTE_API cf_error_t CUTE_CALL cf_batch_flush(cf_batch_t* b);
+CUTE_API cf_result_t CUTE_CALL cf_batch_flush(cf_batch_t* b);
 
 /**
  * Call this once at the beginning of each game loop.
@@ -219,7 +219,7 @@ CUTE_INLINE batch_t* batch_make(get_pixels_fn* get_pixels, void* get_pixels_udat
 
 CUTE_INLINE void batch_destroy(batch_t* b) { cf_batch_destroy(b); }
 CUTE_INLINE void batch_push(batch_t* b, batch_sprite_t sprite) { cf_batch_push(b, sprite); }
-CUTE_INLINE error_t batch_flush(batch_t* b) { return cf_batch_flush(b); }
+CUTE_INLINE result_t batch_flush(batch_t* b) { return cf_batch_flush(b); }
 CUTE_INLINE void batch_update(batch_t* b) { cf_batch_update(b); }
 
 CUTE_INLINE void batch_set_texture_wrap_mode(batch_t* b, sg_wrap wrap_mode) { cf_batch_set_texture_wrap_mode(b, wrap_mode); }
@@ -270,7 +270,7 @@ CUTE_INLINE void batch_line(batch_t* b, v2 p0, v2 p1, float thickness, color_t c
 
 CUTE_INLINE void batch_polyline(batch_t* b, v2* points, int count, float thickness, color_t c, bool loop = false, bool antialias = false, int bevel_count = 0) { cf_batch_polyline(b, (cf_v2*)points, count, thickness, c, loop, antialias, bevel_count); }
 
-CUTE_INLINE temporary_image_t batch_fetch(batch_t* b, batch_sprite_t sprite) { cf_batch_fetch(b, sprite); }
+CUTE_INLINE temporary_image_t batch_fetch(batch_t* b, batch_sprite_t sprite) { return cf_batch_fetch(b, sprite); }
 
 }
 

@@ -23,7 +23,9 @@
 #define CUTE_APP_H
 
 #include "cute_defines.h"
-#include "cute_error.h"
+#include "cute_result.h"
+
+#include "sokol/sokol_gfx.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -37,40 +39,53 @@ typedef struct sg_imgui_t sg_imgui_t;
 typedef struct sg_image sg_image;
 typedef struct cf_strpool_t cf_strpool_t;
 
-#define CUTE_APP_OPTIONS_OPENGL_CONTEXT                 (1 << 0)
-#define CUTE_APP_OPTIONS_OPENGLES_CONTEXT               (1 << 1)
-#define CUTE_APP_OPTIONS_D3D11_CONTEXT                  (1 << 2)
-#define CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT            (1 << 3)
-#define CUTE_APP_OPTIONS_FULLSCREEN                     (1 << 4)
-#define CUTE_APP_OPTIONS_RESIZABLE                      (1 << 5)
-#define CUTE_APP_OPTIONS_HIDDEN                         (1 << 6)
-#define CUTE_APP_OPTIONS_WINDOW_POS_CENTERED            (1 << 7)
-#define CUTE_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT (1 << 8)
+#define CF_APP_OPTION_DEFS \
+	CF_ENUM(APP_OPTIONS_OPENGL_CONTEXT,                 1 << 0) \
+	CF_ENUM(APP_OPTIONS_OPENGLES_CONTEXT,               1 << 1) \
+	CF_ENUM(APP_OPTIONS_D3D11_CONTEXT,                  1 << 2) \
+	CF_ENUM(APP_OPTIONS_DEFAULT_GFX_CONTEXT,            1 << 3) \
+	CF_ENUM(APP_OPTIONS_FULLSCREEN,                     1 << 4) \
+	CF_ENUM(APP_OPTIONS_RESIZABLE,                      1 << 5) \
+	CF_ENUM(APP_OPTIONS_HIDDEN,                         1 << 6) \
+	CF_ENUM(APP_OPTIONS_WINDOW_POS_CENTERED,            1 << 7) \
+	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT, 1 << 8) \
 
-CUTE_API cf_error_t CUTE_CALL cf_app_make(const char* window_title, int x, int y, int w, int h, uint32_t options /*= 0*/, const char* argv0 /*= NULL*/, void* user_allocator_context /*= NULL*/);
+enum
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_APP_OPTION_DEFS
+	#undef CF_ENUM
+};
+
+CUTE_API cf_result_t CUTE_CALL cf_app_make(const char* window_title, int x, int y, int w, int h, int options /*= 0*/, const char* argv0 /*= NULL*/, void* user_allocator_context /*= NULL*/);
 CUTE_API void CUTE_CALL cf_app_destroy();
 
 CUTE_API bool CUTE_CALL cf_app_is_running();
 CUTE_API void CUTE_CALL cf_app_stop_running();
 CUTE_API void CUTE_CALL cf_app_update(float dt);
-CUTE_API void CUTE_CALL cf_app_get_offscreen_buffer(sg_image* out_buffer);
+CUTE_API sg_image CUTE_CALL cf_app_get_offscreen_buffer();
 CUTE_API void CUTE_CALL cf_app_present(bool draw_offscreen_buffer /*= true*/);
 
-CUTE_API cf_error_t CUTE_CALL cf_app_init_audio(bool spawn_mix_thread /*= true*/, int max_simultaneous_sounds /*= 5000*/);
+CUTE_API cf_result_t CUTE_CALL cf_app_init_audio(bool spawn_mix_thread /*= true*/, int max_simultaneous_sounds /*= 5000*/);
 CUTE_API void CUTE_CALL cf_app_do_mixing();
 CUTE_API ImGuiContext* CUTE_CALL cf_app_init_imgui(bool no_default_font /*= false*/);
 CUTE_API sg_imgui_t* CUTE_CALL cf_app_get_sokol_imgui();
 CUTE_API cf_strpool_t* CUTE_CALL cf_app_get_strpool();
 
-CUTE_API cf_error_t CUTE_CALL cf_app_set_offscreen_buffer(int offscreen_w, int offscreen_h);
+CUTE_API cf_result_t CUTE_CALL cf_app_set_offscreen_buffer(int offscreen_w, int offscreen_h);
+
+#define CF_POWER_STATE_DEFS \
+	CF_ENUM(POWER_STATE_UNKNOWN, 0)    /* Cannot determine power status. */ \
+	CF_ENUM(POWER_STATE_ON_BATTERY, 1) /* Not plugged in and running on battery. */ \
+	CF_ENUM(POWER_STATE_NO_BATTERY, 2) /* Plugged in with no battery available. */ \
+	CF_ENUM(POWER_STATE_CHARGING, 3)   /* Plugged in and charging battery. */ \
+	CF_ENUM(POWER_STATE_CHARGED, 4)    /* Plugged in and battery is charged. */ \
 
 typedef enum cf_power_state_t
 {
-	CF_POWER_STATE_UNKNOWN,    // Cannot determine power status.
-	CF_POWER_STATE_ON_BATTERY, // Not plugged in and running on battery.
-	CF_POWER_STATE_NO_BATTERY, // Plugged in with no battery available.
-	CF_POWER_STATE_CHARGING,   // Plugged in and charging battery.
-	CF_POWER_STATE_CHARGED,    // Plugged in and battery is charged.
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_POWER_STATE_DEFS
+	#undef CF_ENUM
 } cf_power_state_t;
 
 typedef struct cf_power_info_t
@@ -98,22 +113,36 @@ namespace cute
 {
 
 using power_info_t = cf_power_info_t;
-using power_state_t = cf_power_state_t;
+
+enum power_state_t : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_POWER_STATE_DEFS
+	#undef CF_ENUM
+};
+
 using strpool_t = cf_strpool_t;
 
-CUTE_INLINE error_t app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL) { return cf_app_make(window_title, x, y, w, h, options, argv0, user_allocator_context); }
+enum : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_APP_OPTION_DEFS
+	#undef CF_ENUM
+};
+
+CUTE_INLINE result_t app_make(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL) { return cf_app_make(window_title, x, y, w, h, options, argv0, user_allocator_context); }
 CUTE_INLINE void app_destroy() { cf_app_destroy(); }
 CUTE_INLINE bool app_is_running() { return cf_app_is_running(); }
 CUTE_INLINE void app_stop_running() { cf_app_stop_running(); }
 CUTE_INLINE void app_update(float dt) { cf_app_update(dt); }
-CUTE_INLINE void app_get_offscreen_buffer(sg_image* out_buffer) { cf_app_get_offscreen_buffer(out_buffer); }
+CUTE_INLINE sg_image app_get_offscreen_buffer() { return cf_app_get_offscreen_buffer(); }
 CUTE_INLINE void app_present(bool draw_offscreen_buffer = true) { cf_app_present(draw_offscreen_buffer); }
-CUTE_INLINE error_t app_init_audio(bool spawn_mix_thread = true, int max_simultaneous_sounds = 5000) { return cf_app_init_audio(spawn_mix_thread, max_simultaneous_sounds); }
+CUTE_INLINE result_t app_init_audio(bool spawn_mix_thread = true, int max_simultaneous_sounds = 5000) { return cf_app_init_audio(spawn_mix_thread, max_simultaneous_sounds); }
 CUTE_INLINE void app_do_mixing() { cf_app_do_mixing(); }
 CUTE_INLINE ImGuiContext* app_init_imgui(bool no_default_font = false) { return cf_app_init_imgui(no_default_font); }
 CUTE_INLINE sg_imgui_t* app_get_sokol_imgui() { return cf_app_get_sokol_imgui(); }
 CUTE_INLINE strpool_t* app_get_strpool() { return cf_app_get_strpool(); }
-CUTE_INLINE error_t app_set_offscreen_buffer(int offscreen_w, int offscreen_h) { return cf_app_set_offscreen_buffer(offscreen_w, offscreen_h); }
+CUTE_INLINE result_t app_set_offscreen_buffer(int offscreen_w, int offscreen_h) { return cf_app_set_offscreen_buffer(offscreen_w, offscreen_h); }
 CUTE_INLINE power_info_t app_power_info() { return cf_app_power_info(); }
 CUTE_INLINE void sleep(int milliseconds) { cf_sleep(milliseconds); }
 

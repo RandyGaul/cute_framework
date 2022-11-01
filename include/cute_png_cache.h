@@ -23,7 +23,7 @@
 #define CUTE_PNG_CACHE_H
 
 #include "cute_defines.h"
-#include "cute_error.h"
+#include "cute_result.h"
 #include "cute_color.h"
 #include "cute_batch.h"
 #include "cute_sprite.h"
@@ -97,13 +97,13 @@ CUTE_INLINE cf_png_t cf_png_defaults()
  * Returns an image from the cache. If it does not exist in the cache, it is loaded from disk
  * and placed into the cache.
  */
-CUTE_API cf_error_t CUTE_CALL cf_png_cache_load(cf_png_cache_t* cache, const char* png_path, cf_png_t* png /*= NULL*/);
+CUTE_API cf_result_t CUTE_CALL cf_png_cache_load(cf_png_cache_t* cache, const char* png_path, cf_png_t* png /*= NULL*/);
 
 /**
  * Returns an image from the cache. If it does not exist in the cache, it is loaded from memory
  * and placed into the cache.
  */
-CUTE_API cf_error_t CUTE_CALL cf_png_cache_load_mem(cf_png_cache_t* cache, const char* png_path, const void* memory, size_t size, cf_png_t* png /*= NULL*/);
+CUTE_API cf_result_t CUTE_CALL cf_png_cache_load_mem(cf_png_cache_t* cache, const char* png_path, const void* memory, size_t size, cf_png_t* png /*= NULL*/);
 
 /**
  * Unloads an image from the cache. This function can be used to control your RAM usage, for example
@@ -185,8 +185,8 @@ struct png_t : public cf_png_t
 
 CUTE_INLINE png_cache_t* png_cache_make(void* mem_ctx = NULL) { return cf_png_cache_make(mem_ctx); }
 CUTE_INLINE void png_cache_destroy(png_cache_t* cache) { return cf_png_cache_destroy(cache); }
-CUTE_INLINE error_t png_cache_load(png_cache_t* cache, const char* png_path, png_t* png = NULL) { return cf_png_cache_load(cache, png_path, (cf_png_t*)png); }
-CUTE_INLINE error_t png_cache_load_mem(png_cache_t* cache, const char* png_path, const void* memory, size_t size, cf_png_t* png = NULL) { return cf_png_cache_load_mem(cache, png_path, memory, size, png); }
+CUTE_INLINE result_t png_cache_load(png_cache_t* cache, const char* png_path, png_t* png = NULL) { return cf_png_cache_load(cache, png_path, (cf_png_t*)png); }
+CUTE_INLINE result_t png_cache_load_mem(png_cache_t* cache, const char* png_path, const void* memory, size_t size, cf_png_t* png = NULL) { return cf_png_cache_load_mem(cache, png_path, memory, size, png); }
 CUTE_INLINE void png_cache_unload(png_cache_t* cache, png_t* png) { cf_png_cache_unload(cache, (cf_png_t*)png); }
 CUTE_INLINE get_pixels_fn* png_cache_get_pixels_fn(png_cache_t* cache) { return cf_png_cache_get_pixels_fn(cache); }
 CUTE_INLINE strpool_t* png_cache_get_strpool_ptr(png_cache_t* cache) { return cf_png_cache_get_strpool_ptr(cache); }

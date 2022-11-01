@@ -66,7 +66,7 @@ void cf_coroutine_destroy(cf_coroutine_t* co)
 	CUTE_FREE(co, NULL);
 }
 
-cf_error_t cf_coroutine_resume(cf_coroutine_t* co, float dt)
+cf_result_t cf_coroutine_resume(cf_coroutine_t* co, float dt)
 {
 	co->dt = dt;
 
@@ -76,36 +76,36 @@ cf_error_t cf_coroutine_resume(cf_coroutine_t* co, float dt)
 			co->waiting = false;
 			co->seconds_left = 0;
 		} else {
-			return cf_error_success();
+			return cf_result_success();
 		}
 	}
 
 	mco_result res = mco_resume(co->mco);
 	if (res != MCO_SUCCESS) {
-		return cf_error_failure(mco_result_description(res));
+		return cf_result_error(mco_result_description(res));
 	} else {
-		return cf_error_success();
+		return cf_result_success();
 	}
 }
 
-float cf_coroutine_yield(cf_coroutine_t* co, cf_error_t* err)
+float cf_coroutine_yield(cf_coroutine_t* co, cf_result_t* err)
 {
 	mco_result res = mco_yield(co->mco);
 	if (err) {
 		if (res != MCO_SUCCESS) {
-			*err = cf_error_failure(mco_result_description(res));
+			*err = cf_result_error(mco_result_description(res));
 		} else {
-			*err = cf_error_success();
+			*err = cf_result_success();
 		}
 	}
 	return co->dt;
 }
 
-cf_error_t cf_coroutine_wait(cf_coroutine_t* co, float seconds)
+cf_result_t cf_coroutine_wait(cf_coroutine_t* co, float seconds)
 {
 	co->waiting = true;
 	co->seconds_left = seconds;
-	cf_error_t err;
+	cf_result_t err;
 	cf_coroutine_yield(co, &err);
 	return err;
 }
@@ -127,23 +127,23 @@ void* cf_coroutine_get_udata(cf_coroutine_t* co)
 	return co->udata;
 }
 
-cf_error_t cf_coroutine_push(cf_coroutine_t* co, const void* data, size_t size)
+cf_result_t cf_coroutine_push(cf_coroutine_t* co, const void* data, size_t size)
 {
 	mco_result res = mco_push(co->mco, data, size);
 	if (res != MCO_SUCCESS) {
-		return cf_error_failure(mco_result_description(res));
+		return cf_result_error(mco_result_description(res));
 	} else {
-		return cf_error_success();
+		return cf_result_success();
 	}
 }
 
-cf_error_t cf_coroutine_pop(cf_coroutine_t* co, void* data, size_t size)
+cf_result_t cf_coroutine_pop(cf_coroutine_t* co, void* data, size_t size)
 {
 	mco_result res = mco_pop(co->mco, data, size);
 	if (res != MCO_SUCCESS) {
-		return cf_error_failure(mco_result_description(res));
+		return cf_result_error(mco_result_description(res));
 	} else {
-		return cf_error_success();
+		return cf_result_success();
 	}
 }
 

@@ -67,9 +67,9 @@
 
 cf_app_t* cf_app;
 
-// TODO: Refactor to use cf_error_t reporting.
+using namespace cute;
 
-cf_error_t cf_app_make(const char* window_title, int x, int y, int w, int h, uint32_t options, const char* argv0, void* user_allocator_context)
+cf_result_t cf_app_make(const char* window_title, int x, int y, int w, int h, int options, const char* argv0, void* user_allocator_context)
 {
 	SDL_SetMainReady();
 
@@ -77,52 +77,52 @@ cf_error_t cf_app_make(const char* window_title, int x, int y, int w, int h, uin
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER;
 #else
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC;
-	bool needs_video = options & (CUTE_APP_OPTIONS_OPENGL_CONTEXT | CUTE_APP_OPTIONS_OPENGLES_CONTEXT | CUTE_APP_OPTIONS_D3D11_CONTEXT | CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT);
+	bool needs_video = options & (APP_OPTIONS_OPENGL_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_DEFAULT_GFX_CONTEXT);
 	if (!needs_video) {
 		sdl_options &= ~SDL_INIT_VIDEO;
 	}
 #endif
 	if (SDL_Init(sdl_options)) {
-		return cf_error_failure("SDL_Init failed");
+		return cf_result_error("SDL_Init failed");
 	}
 
-	if (options & CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT) {
+	if (options & APP_OPTIONS_DEFAULT_GFX_CONTEXT) {
 #ifdef CUTE_WINDOWS
-		options |= CUTE_APP_OPTIONS_D3D11_CONTEXT;
+		options |= APP_OPTIONS_D3D11_CONTEXT;
 #elif CUTE_EMSCRIPTEN
-		options |= CUTE_APP_OPTIONS_OPENGLES_CONTEXT;
+		options |= APP_OPTIONS_OPENGLES_CONTEXT;
 #else
-		options |= CUTE_APP_OPTIONS_OPENGL_CONTEXT;
+		options |= APP_OPTIONS_OPENGL_CONTEXT;
 #endif
 	}
 
-	if (options & (CUTE_APP_OPTIONS_D3D11_CONTEXT | CUTE_APP_OPTIONS_OPENGLES_CONTEXT | CUTE_APP_OPTIONS_OPENGL_CONTEXT)) {
+	if (options & (APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_OPENGL_CONTEXT)) {
 		// D3D11 crashes if w/h are not positive.
 		w = w <= 0 ? 1 : w;
 		h = h <= 0 ? 1 : h;
 	}
 
 	Uint32 flags = 0;
-	if (options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) flags |= SDL_WINDOW_OPENGL;
-	if (options & CUTE_APP_OPTIONS_OPENGLES_CONTEXT) flags |= SDL_WINDOW_OPENGL;
-	if (options & CUTE_APP_OPTIONS_FULLSCREEN) flags |= SDL_WINDOW_FULLSCREEN;
-	if (options & CUTE_APP_OPTIONS_RESIZABLE) flags |= SDL_WINDOW_RESIZABLE;
-	if (options & CUTE_APP_OPTIONS_HIDDEN) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
+	if (options & APP_OPTIONS_OPENGL_CONTEXT) flags |= SDL_WINDOW_OPENGL;
+	if (options & APP_OPTIONS_OPENGLES_CONTEXT) flags |= SDL_WINDOW_OPENGL;
+	if (options & APP_OPTIONS_FULLSCREEN) flags |= SDL_WINDOW_FULLSCREEN;
+	if (options & APP_OPTIONS_RESIZABLE) flags |= SDL_WINDOW_RESIZABLE;
+	if (options & APP_OPTIONS_HIDDEN) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
 
-	if (options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) {
+	if (options & APP_OPTIONS_OPENGL_CONTEXT) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 	}
 
-	if (options & CUTE_APP_OPTIONS_OPENGLES_CONTEXT) {
+	if (options & APP_OPTIONS_OPENGLES_CONTEXT) {
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 	}
 
 	SDL_Window* window;
-	if (options & CUTE_APP_OPTIONS_WINDOW_POS_CENTERED) {
+	if (options & APP_OPTIONS_WINDOW_POS_CENTERED) {
 		window = SDL_CreateWindow(window_title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, w, h, flags);
 	} else {
 		window = SDL_CreateWindow(window_title, x, y, w, h, flags);
@@ -150,12 +150,12 @@ cf_error_t cf_app_make(const char* window_title, int x, int y, int w, int h, uin
 	void* hwnd = NULL;
 #endif
 
-	if ((options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) | (options & CUTE_APP_OPTIONS_OPENGLES_CONTEXT)) {
+	if ((options & APP_OPTIONS_OPENGL_CONTEXT) | (options & APP_OPTIONS_OPENGLES_CONTEXT)) {
 		SDL_GL_SetSwapInterval(0);
 		SDL_GLContext ctx = SDL_GL_CreateContext(window);
 		if (!ctx) {
 			CUTE_FREE(app, user_allocator_context);
-			return cf_error_failure("Unable to create OpenGL context.");
+			return cf_result_error("Unable to create OpenGL context.");
 		}
 		CUTE_MEMSET(&app->gfx_ctx_params, 0, sizeof(app->gfx_ctx_params));
 		app->gfx_ctx_params.color_format = SG_PIXELFORMAT_RGBA8;
@@ -167,7 +167,7 @@ cf_error_t cf_app_make(const char* window_title, int x, int y, int w, int h, uin
 		cf_font_init();
 	}
 
-	if (options & CUTE_APP_OPTIONS_D3D11_CONTEXT) {
+	if (options & APP_OPTIONS_D3D11_CONTEXT) {
 		cf_dx11_init(hwnd, w, h, 1);
 		app->gfx_ctx_params = cf_dx11_get_context();
 		sg_desc params = { 0 };
@@ -182,17 +182,17 @@ cf_error_t cf_app_make(const char* window_title, int x, int y, int w, int h, uin
 		app->threadpool = cf_threadpool_create(num_threads_to_spawn, user_allocator_context);
 	}
 
-	cf_error_t err = cf_file_system_init(argv0);
+	cf_result_t err = cf_file_system_init(argv0);
 	if (cf_is_error(err)) {
 		CUTE_ASSERT(0);
-	} else if (!(options & CUTE_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT)) {
+	} else if (!(options & APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT)) {
 		// Put the base directory (the path to the exe) onto the file system search path.
 		cf_file_system_mount(cf_file_system_get_base_dir(), "", true);
 	}
 
 	app->strpool = cf_make_strpool(NULL);
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
 void cf_app_destroy()
@@ -281,19 +281,19 @@ static void cf_s_imgui_present()
 	}
 }
 
-void cf_app_get_offscreen_buffer(sg_image* out_buffer)
+sg_image cf_app_get_offscreen_buffer()
 {
-	*out_buffer = { 0 };
-
+	sg_image result = { 0 };
 	if (cf_app->offscreen_enabled) {
 		if (!cf_app->fetched_offscreen) {
 			sg_end_pass();
 			cf_app->fetched_offscreen = true;
 		}
 
-		*out_buffer = cf_app->offscreen_color_buffer;
+		result = cf_app->offscreen_color_buffer;
 		cf_app->fetched_offscreen = true;
 	}
+	return result;
 }
 
 void cf_app_present(bool draw_offscreen_buffer)
@@ -301,7 +301,7 @@ void cf_app_present(bool draw_offscreen_buffer)
 	if (cf_app->offscreen_enabled) {
 		sg_bindings bind = { 0 };
 		bind.vertex_buffers[0] = cf_app->quad;
-		cf_app_get_offscreen_buffer(&bind.fs_images[0]);
+		bind.fs_images[0] = cf_app_get_offscreen_buffer();
 
 		sg_pass_action clear_to_black = { 0 };
 		clear_to_black.colors[0] = { SG_ACTION_CLEAR, { 0.0f, 0.0f, 0.0f, 1.0f } };
@@ -330,14 +330,14 @@ void cf_app_present(bool draw_offscreen_buffer)
 
 	sg_commit();
 	cf_dx11_present();
-	if (cf_app->options & CUTE_APP_OPTIONS_OPENGL_CONTEXT) {
+	if (cf_app->options & APP_OPTIONS_OPENGL_CONTEXT) {
 		SDL_GL_SwapWindow(cf_app->window);
 	}
 
 	cf_app->fetched_offscreen = false;
 }
 
-cf_error_t cf_app_init_audio(bool spawn_mix_thread, int max_simultaneous_sounds)
+cf_result_t cf_app_init_audio(bool spawn_mix_thread, int max_simultaneous_sounds)
 {
 	int more_on_emscripten = 1;
 #ifdef CUTE_EMSCRIPTEN
@@ -352,9 +352,9 @@ cf_error_t cf_app_init_audio(bool spawn_mix_thread, int max_simultaneous_sounds)
 		}
 #endif // CUTE_EMSCRIPTEN
 		cf_app->audio_system = cf_audio_system_make(max_simultaneous_sounds, cf_app->mem_ctx);
-		return cf_error_success();
+		return cf_result_success();
 	} else {
-		return cf_error_failure(cs_error_reason);
+		return cf_result_error(cs_error_reason);
 	}
 }
 
@@ -426,7 +426,7 @@ static void cf_s_quad(float x, float y, float sx, float sy, float* out)
 	CUTE_MEMCPY(out, quad, sizeof(quad));
 }
 
-static cf_error_t s_create_offscreen_buffers(int w, int h)
+static cf_result_t s_create_offscreen_buffers(int w, int h)
 {
 	sg_image_desc buffer_params = { 0 };
 	buffer_params.render_target = true;
@@ -434,31 +434,31 @@ static cf_error_t s_create_offscreen_buffers(int w, int h)
 	buffer_params.height = h;
 	buffer_params.pixel_format = cf_app->gfx_ctx_params.color_format;
 	cf_app->offscreen_color_buffer = sg_make_image(buffer_params);
-	if (cf_app->offscreen_color_buffer.id == SG_INVALID_ID) return cf_error_failure("Unable to create offscreen color buffer.");
+	if (cf_app->offscreen_color_buffer.id == SG_INVALID_ID) return cf_result_error("Unable to create offscreen color buffer.");
 	buffer_params.pixel_format = cf_app->gfx_ctx_params.depth_format;
 	cf_app->offscreen_depth_buffer = sg_make_image(buffer_params);
-	if (cf_app->offscreen_depth_buffer.id == SG_INVALID_ID) return cf_error_failure("Unable to create offscreen depth buffer.");
+	if (cf_app->offscreen_depth_buffer.id == SG_INVALID_ID) return cf_result_error("Unable to create offscreen depth buffer.");
 
 	sg_pass_desc pass_params = { 0 };
 	pass_params.color_attachments[0].image = cf_app->offscreen_color_buffer;
 	pass_params.depth_stencil_attachment.image = cf_app->offscreen_depth_buffer;
 	cf_app->offscreen_pass = sg_make_pass(pass_params);
-	if (cf_app->offscreen_pass.id == SG_INVALID_ID) return cf_error_failure("Unable to create offscreen pass.");
+	if (cf_app->offscreen_pass.id == SG_INVALID_ID) return cf_result_error("Unable to create offscreen pass.");
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
+cf_result_t cf_app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 {
 	if (cf_app->offscreen_enabled) {
 		if (offscreen_w != cf_app->offscreen_w && offscreen_h != cf_app->offscreen_h) {
 			sg_destroy_image(cf_app->offscreen_color_buffer);
 			sg_destroy_image(cf_app->offscreen_depth_buffer);
 			sg_destroy_pass(cf_app->offscreen_pass);
-			cf_error_t err = s_create_offscreen_buffers(offscreen_w, offscreen_h);
+			cf_result_t err = s_create_offscreen_buffers(offscreen_w, offscreen_h);
 			if (cf_is_error(err)) return err;
 		}
-		return cf_error_success();
+		return cf_result_success();
 	}
 
 	cf_app->offscreen_enabled = true;
@@ -466,7 +466,7 @@ cf_error_t cf_app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 	cf_app->offscreen_h = offscreen_h;
 
 	// Create offscreen buffers and pass.
-	cf_error_t err = s_create_offscreen_buffers(offscreen_w, offscreen_h);
+	cf_result_t err = s_create_offscreen_buffers(offscreen_w, offscreen_h);
 	if (cf_is_error(err)) return err;
 
 	// Initialize static geometry for the offscreen quad.
@@ -476,11 +476,11 @@ cf_error_t cf_app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 	quad_params.size = sizeof(quad);
 	quad_params.data = SG_RANGE(quad);
 	cf_app->quad = sg_make_buffer(quad_params);
-	if (cf_app->quad.id == SG_INVALID_ID) return cf_error_failure("Unable create static quad buffer.");
+	if (cf_app->quad.id == SG_INVALID_ID) return cf_result_error("Unable create static quad buffer.");
 
 	// Setup upscaling shader, to draw the offscreen buffer onto the screen as a textured quad.
 	cf_app->offscreen_shader = sg_make_shader(upscale_shd_shader_desc(sg_query_backend()));
-	if (cf_app->offscreen_shader.id == SG_INVALID_ID) return cf_error_failure("Unable create offscreen shader.");
+	if (cf_app->offscreen_shader.id == SG_INVALID_ID) return cf_result_error("Unable create offscreen shader.");
 
 	//app->upscale = { (float)app->offscreen_w / (float)app->w, (float)app->offscreen_h / (float)app->h };
 	cf_app->upscale = cf_V2(1, 1);
@@ -499,9 +499,9 @@ cf_error_t cf_app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 	params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
 	params.shader = cf_app->offscreen_shader;
 	cf_app->offscreen_to_screen_pip = sg_make_pipeline(params);
-	if (cf_app->offscreen_to_screen_pip.id == SG_INVALID_ID) return cf_error_failure("Unable create offscreen pipeline.");
+	if (cf_app->offscreen_to_screen_pip.id == SG_INVALID_ID) return cf_result_error("Unable create offscreen pipeline.");
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
 void cf_app_offscreen_size(int* offscreen_w, int* offscreen_h)

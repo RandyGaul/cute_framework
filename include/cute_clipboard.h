@@ -23,7 +23,7 @@
 #define CUTE_CLIPBOARD_H
 
 #include "cute_defines.h"
-#include "cute_error.h"
+#include "cute_result.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -33,7 +33,7 @@ extern "C" {
 #endif // __cplusplus
 
 CUTE_API char* CUTE_CALL cf_clipboard_get();
-CUTE_API cf_error_t CUTE_CALL cf_clipboard_set(const char* string);
+CUTE_API cf_result_t CUTE_CALL cf_clipboard_set(const char* string);
 
 #ifdef __cplusplus
 }
@@ -48,7 +48,7 @@ namespace cute
 {
 
 CUTE_INLINE char* clipboard_get() { return cf_clipboard_get(); }
-CUTE_INLINE cf_error_t clipboard_set(const char* string) { return cf_clipboard_set(string); }
+CUTE_INLINE cf_result_t clipboard_set(const char* string) { return cf_clipboard_set(string); }
 
 }
 

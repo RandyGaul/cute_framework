@@ -32,11 +32,11 @@ CUTE_STATIC_ASSERT(sizeof(cf_pixel_t) == sizeof(cp_pixel_t), "Must be equal.");
 CUTE_STATIC_ASSERT(sizeof(cf_image_t) == sizeof(cp_image_t), "Must be equal.");
 CUTE_STATIC_ASSERT(sizeof(cf_image_indexed_t) == sizeof(cp_indexed_image_t), "Must be equal.");
 
-cf_error_t cf_image_load_png(const char* path, cf_image_t* img, void* user_allocator_context)
+cf_result_t cf_image_load_png(const char* path, cf_image_t* img, void* user_allocator_context)
 {
 	void* data;
 	size_t sz;
-	cf_error_t err = cf_file_system_read_entire_file_to_memory(path, &data, &sz, user_allocator_context);
+	cf_result_t err = cf_file_system_read_entire_file_to_memory(path, &data, &sz, user_allocator_context);
 	if (cf_is_error(err)) return err;
 	err = cf_image_load_png_mem(data, (int)sz, img, user_allocator_context);
 	CUTE_FREE(data, user_allocator_context);
@@ -44,20 +44,20 @@ cf_error_t cf_image_load_png(const char* path, cf_image_t* img, void* user_alloc
 }
 
 // TODO - Use `user_allocator_context`.
-cf_error_t cf_image_load_png_mem(const void* data, int size, cf_image_t* img, void* user_allocator_context)
+cf_result_t cf_image_load_png_mem(const void* data, int size, cf_image_t* img, void* user_allocator_context)
 {
 	cp_image_t cp_img = cp_load_png_mem(data, size);
-	if (!cp_img.pix) return cf_error_failure(cp_error_reason);
+	if (!cp_img.pix) return cf_result_error(cp_error_reason);
 	img->w = cp_img.w;
 	img->h = cp_img.h;
 	img->pix = (cf_pixel_t*)cp_img.pix;
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_image_load_png_wh(const void* data, int size, int* w, int* h)
+cf_result_t cf_image_load_png_wh(const void* data, int size, int* w, int* h)
 {
 	cp_load_png_wh(data, size, w, h);
-	return cf_error_success();
+	return cf_result_success();
 }
 
 void cf_image_free(cf_image_t* img)
@@ -65,25 +65,25 @@ void cf_image_free(cf_image_t* img)
 	CUTE_FREE(img->pix, NULL);
 }
 
-cf_error_t cf_image_load_png_indexed(const char* path, cf_image_indexed_t* img, void* user_allocator_context)
+cf_result_t cf_image_load_png_indexed(const char* path, cf_image_indexed_t* img, void* user_allocator_context)
 {
 	void* data;
 	size_t sz;
-	cf_error_t err = cf_file_system_read_entire_file_to_memory(path, &data, &sz, user_allocator_context);
+	cf_result_t err = cf_file_system_read_entire_file_to_memory(path, &data, &sz, user_allocator_context);
 	if (cf_is_error(err)) return err;
 	return cf_image_load_png_mem_indexed(data, (int)sz, img);
 }
 
-cf_error_t cf_image_load_png_mem_indexed(const void* data, int size, cf_image_indexed_t* img)
+cf_result_t cf_image_load_png_mem_indexed(const void* data, int size, cf_image_indexed_t* img)
 {
 	cp_indexed_image_t cp_img = cp_load_indexed_png_mem(data, size);
-	if (!cp_img.pix) return cf_error_failure(cp_error_reason);
+	if (!cp_img.pix) return cf_result_error(cp_error_reason);
 	img->w = cp_img.w;
 	img->h = cp_img.h;
 	img->pix = cp_img.pix;
 	img->palette_len = cp_img.palette_len;
 	CUTE_MEMCPY(img->palette, cp_img.palette, sizeof(img->palette[0]) * 256);
-	return cf_error_success();
+	return cf_result_success();
 }
 
 void cf_image_free_indexed(cf_image_indexed_t* img)

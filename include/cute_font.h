@@ -24,7 +24,7 @@
 
 #include "cute_defines.h"
 #include "cute_math.h"
-#include "cute_error.h"
+#include "cute_result.h"
 #include "cute_color.h"
 
 //--------------------------------------------------------------------------------------------------
@@ -62,7 +62,7 @@ CUTE_API int CUTE_CALL cf_font_text_height(const cf_font_t* font, const char* te
 typedef struct cf_font_vert_buffer_t cf_font_vert_buffer_t;
 
 CUTE_API cf_font_vert_buffer_t* CUTE_CALL cf_font_vert_buffer_make(const cf_font_t* font);
-CUTE_API cf_error_t CUTE_CALL cf_font_push_verts2(cf_font_vert_buffer_t* verts, const cf_font_t* font, const char* text, float x, float y, float wrap_w, const cf_aabb_t* clip_box /*= NULL*/);
+CUTE_API cf_result_t CUTE_CALL cf_font_push_verts2(cf_font_vert_buffer_t* verts, const cf_font_t* font, const char* text, float x, float y, float wrap_w, const cf_aabb_t* clip_box /*= NULL*/);
 CUTE_API void CUTE_CALL cf_font_draw2(cf_font_vert_buffer_t* verts, cf_color_t color /*= cf_color_black()*/);
 
 #ifdef __cplusplus
@@ -105,7 +105,7 @@ CUTE_INLINE int font_text_height(const font_t* font, const char* text) { return 
 
 
 CUTE_INLINE font_vert_buffer_t* font_vert_buffer_make(const font_t* font) { return cf_font_vert_buffer_make(font); }
-CUTE_INLINE error_t font_push_verts(font_vert_buffer_t* verts, const font_t* font, const char* text, float x, float y, float wrap_w, const aabb_t* clip_box = NULL) { return cf_font_push_verts2(verts, font, text, x, y, wrap_w, clip_box); }
+CUTE_INLINE result_t font_push_verts(font_vert_buffer_t* verts, const font_t* font, const char* text, float x, float y, float wrap_w, const aabb_t* clip_box = NULL) { return cf_font_push_verts2(verts, font, text, x, y, wrap_w, clip_box); }
 CUTE_INLINE void font_draw(font_vert_buffer_t* verts, color_t color = color_black()) { cf_font_draw2(verts, color); }
 }
 

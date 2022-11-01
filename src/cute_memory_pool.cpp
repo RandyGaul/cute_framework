@@ -21,7 +21,7 @@
 
 #include <cute_memory_pool.h>
 #include <cute_alloc.h>
-#include <cute_error.h>
+#include <cute_result.h>
 #include <cute_c_runtime.h>
 
 struct cf_memory_pool_t

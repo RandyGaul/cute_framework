@@ -23,7 +23,7 @@
 #include <cute_c_runtime.h>
 #include <cute_base64.h>
 #include <cute_array.h>
-#include <cute_error.h>
+#include <cute_result.h>
 
 #include <stdio.h>
 #include <inttypes.h>
@@ -106,7 +106,7 @@ struct cf_kv_t
 	size_t temp_size = 0;
 	uint8_t* temp = NULL;
 
-	cf_error_t err = cf_error_success();
+	cf_result_t err = cf_result_success();
 
 	void* mem_ctx = NULL;
 };
@@ -202,10 +202,10 @@ static CUTE_INLINE int cf_s_try(cf_kv_t* kv, uint8_t expect)
 
 #define cf_s_expect(kv, expected_character) \
 	do { \
-		if (cf_s_next(kv) != expected_character) { kv->err = cf_error_failure("Found unexpected token."); return kv->err; } \
+		if (cf_s_next(kv) != expected_character) { kv->err = cf_result_error("Found unexpected token."); return kv->err; } \
 	} while (0)
 
-static cf_error_t cf_s_scan_string(cf_kv_t* kv, uint8_t** start_of_string, uint8_t** end_of_string)
+static cf_result_t cf_s_scan_string(cf_kv_t* kv, uint8_t** start_of_string, uint8_t** end_of_string)
 {
 	*start_of_string = NULL;
 	*end_of_string = NULL;
@@ -230,70 +230,70 @@ static cf_error_t cf_s_scan_string(cf_kv_t* kv, uint8_t** start_of_string, uint8
 		kv->in = end + 1;
 	}
 	if (!terminated && kv->in == kv->in_end) {
-		kv->err = cf_error_failure("Unterminated string at end of file.");
+		kv->err = cf_result_error("Unterminated string at end of file.");
 		return kv->err;
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-static cf_error_t cf_s_scan_string(cf_kv_t* kv, cf_kv_string_t* str)
+static cf_result_t cf_s_scan_string(cf_kv_t* kv, cf_kv_string_t* str)
 {
 	uint8_t* string_start;
 	uint8_t* string_end;
-	cf_error_t err = cf_s_scan_string(kv, &string_start, &string_end);
+	cf_result_t err = cf_s_scan_string(kv, &string_start, &string_end);
 	str->str = string_start;
 	str->len = (int)(string_end - string_start);
 	return err;
 }
 
-static CUTE_INLINE cf_error_t cf_s_parse_int(cf_kv_t* kv, int64_t* out)
+static CUTE_INLINE cf_result_t cf_s_parse_int(cf_kv_t* kv, int64_t* out)
 {
 	uint8_t* end;
 	int64_t val = CUTE_STRTOLL((char*)kv->in, (char**)&end, 10);
 	if (kv->in == end) {
-		kv->err = cf_error_failure("Invalid integer found during parse.");
+		kv->err = cf_result_error("Invalid integer found during parse.");
 		return kv->err;
 	}
 	kv->in = end;
 	*out = val;
-	return cf_error_success();
+	return cf_result_success();
 }
 
-static CUTE_INLINE cf_error_t cf_s_parse_float(cf_kv_t* kv, double* out)
+static CUTE_INLINE cf_result_t cf_s_parse_float(cf_kv_t* kv, double* out)
 {
 	uint8_t* end;
 	double val = CUTE_STRTOD((char*)kv->in, (char**)&end);
 	if (kv->in == end) {
-		kv->err = cf_error_failure("Invalid float found during parse.");
+		kv->err = cf_result_error("Invalid float found during parse.");
 		return kv->err;
 	}
 	kv->in = end;
 	*out = val;
-	return cf_error_success();
+	return cf_result_success();
 }
 
-static cf_error_t cf_s_parse_hex(cf_kv_t* kv, uint64_t* hex)
+static cf_result_t cf_s_parse_hex(cf_kv_t* kv, uint64_t* hex)
 {
 	cf_s_expect(kv, '0');
 	uint8_t c = cf_s_next(kv);
 	if (!(c != 'x' && c != 'X')) {
-		kv->err = cf_error_failure("Expected 'x' or 'X' when parsing a hex number.");
+		kv->err = cf_result_error("Expected 'x' or 'X' when parsing a hex number.");
 		return kv->err;
 	}
 	uint8_t* end;
 	uint64_t val = (uint64_t)CUTE_STRTOLL((char*)kv->in, (char**)&end, 16);
 	if (kv->in == end) {
-		kv->err = cf_error_failure("Invalid hex integer found during parse.");
+		kv->err = cf_result_error("Invalid hex integer found during parse.");
 		return kv->err;
 	}
 	kv->in = end;
 	*hex = val;
-	return cf_error_success();
+	return cf_result_success();
 }
 
-static CUTE_INLINE cf_error_t cf_s_parse_number(cf_kv_t* kv, cf_kv_val_t* val)
+static CUTE_INLINE cf_result_t cf_s_parse_number(cf_kv_t* kv, cf_kv_val_t* val)
 {
-	cf_error_t err;
+	cf_result_t err;
 	if (kv->in + 1 < kv->in_end && ((kv->in[1] == 'x') | (kv->in[1] == 'X'))) {
 		uint64_t hex;
 		err = cf_s_parse_hex(kv, &hex);
@@ -327,14 +327,14 @@ static CUTE_INLINE cf_error_t cf_s_parse_number(cf_kv_t* kv, cf_kv_val_t* val)
 			val->u.ival = ival;
 		}
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-static cf_error_t cf_s_parse_value(cf_kv_t* kv, cf_kv_val_t* val);
+static cf_result_t cf_s_parse_value(cf_kv_t* kv, cf_kv_val_t* val);
 
-static cf_error_t cf_s_parse_array(cf_kv_t* kv, cf_array<cf_kv_val_t>* array_val)
+static cf_result_t cf_s_parse_array(cf_kv_t* kv, cf_array<cf_kv_val_t>* array_val)
 {
-	cf_error_t err;
+	cf_result_t err;
 	int64_t count;
 	cf_s_expect(kv, '[');
 	err = cf_s_parse_int(kv, &count);
@@ -348,18 +348,18 @@ static cf_error_t cf_s_parse_array(cf_kv_t* kv, cf_array<cf_kv_val_t>* array_val
 		CUTE_PLACEMENT_NEW(val) cf_kv_val_t;
 		err = cf_s_parse_value(kv, val);
 		if (cf_is_error(err)) {
-			return cf_error_failure("Unexecpted value when parsing an array. Make sure the elements are well-formed, and the length is correct.");
+			return cf_result_error("Unexecpted value when parsing an array. Make sure the elements are well-formed, and the length is correct.");
 		}
 	}
 	cf_s_expect(kv, '}');
-	return cf_error_success();
+	return cf_result_success();
 }
 
-static cf_error_t cf_s_parse_object(cf_kv_t* kv, int* index, bool is_top_level = false);
+static cf_result_t cf_s_parse_object(cf_kv_t* kv, int* index, bool is_top_level = false);
 
-static cf_error_t cf_s_parse_value(cf_kv_t* kv, cf_kv_val_t* val)
+static cf_result_t cf_s_parse_value(cf_kv_t* kv, cf_kv_val_t* val)
 {
-	cf_error_t err;
+	cf_result_t err;
 	uint8_t c = cf_s_peek(kv);
 
 	if (c == '"') {
@@ -382,16 +382,16 @@ static cf_error_t cf_s_parse_value(cf_kv_t* kv, cf_kv_val_t* val)
 		val->type = CF_KV_TYPE_OBJECT;
 		val->u.object_index = index;
 	} else {
-		kv->err = cf_error_failure("Unexpected character when parsing a value.");
+		kv->err = cf_result_error("Unexpected character when parsing a value.");
 		return kv->err;
 	}
 
 	cf_s_try(kv, ',');
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
-static cf_error_t cf_s_parse_object(cf_kv_t* kv, int* index, bool is_top_level)
+static cf_result_t cf_s_parse_object(cf_kv_t* kv, int* index, bool is_top_level)
 {
 	cf_kv_object_t* object = &kv->objects.add();
 	CUTE_PLACEMENT_NEW(object) cf_kv_object_t;
@@ -418,7 +418,7 @@ static cf_error_t cf_s_parse_object(cf_kv_t* kv, int* index, bool is_top_level)
 		cf_kv_field_t* field = &object->fields.add();
 		CUTE_PLACEMENT_NEW(field) cf_kv_field_t;
 
-		cf_error_t err = cf_s_scan_string(kv, &field->key);
+		cf_result_t err = cf_s_scan_string(kv, &field->key);
 		if (cf_is_error(err)) return err;
 		cf_s_expect(kv, '=');
 		err = cf_s_parse_value(kv, &field->val);
@@ -444,7 +444,7 @@ static cf_error_t cf_s_parse_object(cf_kv_t* kv, int* index, bool is_top_level)
 
 	cf_s_try(kv, ',');
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
 static void cf_s_reset(cf_kv_t* kv, const void* ptr, size_t size, cf_kv_state_t mode)
@@ -463,7 +463,7 @@ static void cf_s_reset(cf_kv_t* kv, const void* ptr, size_t size, cf_kv_state_t 
 	kv->read_mode_array_index_stack.clear();
 	kv->in_array_stack.clear();
 
-	kv->err = cf_error_success();
+	kv->err = cf_result_success();
 }
 
 cf_kv_state_t cf_kv_get_state(cf_kv_t* kv)
@@ -471,13 +471,13 @@ cf_kv_state_t cf_kv_get_state(cf_kv_t* kv)
 	return kv->mode;
 }
 
-cf_error_t cf_kv_parse(cf_kv_t* kv, const void* data, size_t size)
+cf_result_t cf_kv_parse(cf_kv_t* kv, const void* data, size_t size)
 {
 	cf_s_reset(kv, data, size, CF_KV_STATE_READ);
 
 	bool is_top_level = true;
 	int index;
-	cf_error_t err = cf_s_parse_object(kv, &index, is_top_level);
+	cf_result_t err = cf_s_parse_object(kv, &index, is_top_level);
 	if (cf_is_error(err)) return err;
 	CUTE_ASSERT(index == 0);
 
@@ -485,7 +485,7 @@ cf_error_t cf_kv_parse(cf_kv_t* kv, const void* data, size_t size)
 	while (kv->in != kv->in_end && cf_s_isspace(c = *kv->in)) kv->in++;
 
 	if (kv->in != kv->in_end && kv->in[0] != 0) {
-		kv->err = cf_error_failure("Unable to parse entire input `data`.");
+		kv->err = cf_result_error("Unable to parse entire input `data`.");
 		return kv->err;
 	}
 
@@ -493,7 +493,7 @@ cf_error_t cf_kv_parse(cf_kv_t* kv, const void* data, size_t size)
 	kv->in = NULL;
 	kv->in_end = NULL;
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
 void CUTE_CALL cf_kv_write_mode(cf_kv_t* kv)
@@ -547,9 +547,9 @@ size_t cf_kv_size_written(cf_kv_t* kv)
 	return kv->write_buffer.size();
 }
 
-cf_error_t cf_kv_error_state(cf_kv_t* kv)
+cf_result_t cf_kv_error_state(cf_kv_t* kv)
 {
-	if (!kv) return cf_error_success();
+	if (!kv) return cf_result_success();
 	return kv->err;
 }
 
@@ -652,19 +652,19 @@ static void cf_s_write_key(cf_kv_t* kv, const char* key, cf_kv_type_t* type)
 	cf_s_write_str_no_quotes(kv, " = ", 3);
 }
 
-cf_error_t cf_kv_key(cf_kv_t* kv, const char* key, cf_kv_type_t* type)
+cf_result_t cf_kv_key(cf_kv_t* kv, const char* key, cf_kv_type_t* type)
 {
-	if (kv->mode == CF_KV_STATE_UNITIALIZED) return cf_error_failure("Read or write mode have not been set.");
+	if (kv->mode == CF_KV_STATE_UNITIALIZED) return cf_result_error("Read or write mode have not been set.");
 	if (cf_is_error(kv->err)) return kv->err;
 	cf_s_match_key(kv, key);
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		size_t bytes_written = cf_kv_size_written(kv);
 		cf_s_write_key(kv, key, type);
 		kv->backup_base_key_bytes = cf_kv_size_written(kv) - bytes_written;
-		return cf_error_success();
+		return cf_result_success();
 	} else {
 		if (kv->read_mode_from_array) {
-			return cf_error_failure("Can not lookup key while reading from array.");
+			return cf_result_error("Can not lookup key while reading from array.");
 		}
 
 		cf_kv_val_t* match = NULL;
@@ -673,13 +673,13 @@ cf_error_t cf_kv_key(cf_kv_t* kv, const char* key, cf_kv_type_t* type)
 		} else if (kv->matched_cache_val) {
 			match = kv->matched_cache_val;
 		} else {
-			return cf_error_failure("Unable to find field to match `key`.");
+			return cf_result_error("Unable to find field to match `key`.");
 		}
 
 		CUTE_ASSERT(match->type != CF_KV_TYPE_NULL);
 		if (type) *type = match->type;
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
 static uint8_t* cf_s_temp(cf_kv_t* kv, size_t size)
@@ -878,7 +878,7 @@ static inline bool cf_s_does_matched_base_equal_int64(cf_kv_t* kv, T* val)
 }
 
 template <typename T>
-cf_error_t cf_s_find_match_int64(cf_kv_t* kv, T* val)
+cf_result_t cf_s_find_match_int64(cf_kv_t* kv, T* val)
 {
 	cf_kv_val_t* match = cf_s_pop_val(kv, CF_KV_TYPE_INT64);
 	cf_kv_val_t* match_base = cf_s_pop_base_val(kv, CF_KV_TYPE_INT64);
@@ -887,20 +887,20 @@ cf_error_t cf_s_find_match_int64(cf_kv_t* kv, T* val)
 		match = cf_s_pop_val(kv, CF_KV_TYPE_DOUBLE);
 		match_base = cf_s_pop_base_val(kv, CF_KV_TYPE_DOUBLE);
 		if (!match) match = match_base;
-		if (!match) return cf_error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!match) return cf_result_error("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		*val = (T)match->u.dval;
 	} else {
 		*val = (T)match->u.ival;
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_val_uint8(cf_kv_t* kv, uint8_t* val)
+cf_result_t cf_kv_val_uint8(cf_kv_t* kv, uint8_t* val)
 {
 	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
-			return cf_error_success();
+			return cf_result_success();
 		}
 		cf_s_begin_val(kv);
 		cf_s_write_u8(kv, *val);
@@ -908,15 +908,15 @@ cf_error_t cf_kv_val_uint8(cf_kv_t* kv, uint8_t* val)
 	} else {
 		return cf_s_find_match_int64(kv, val);
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_val_uint16(cf_kv_t* kv, uint16_t* val)
+cf_result_t cf_kv_val_uint16(cf_kv_t* kv, uint16_t* val)
 {
 	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
-			return cf_error_success();
+			return cf_result_success();
 		}
 		cf_s_begin_val(kv);
 		cf_s_write(kv, (uint64_t)*(uint16_t*)val);
@@ -924,15 +924,15 @@ cf_error_t cf_kv_val_uint16(cf_kv_t* kv, uint16_t* val)
 	} else {
 		return cf_s_find_match_int64(kv, val);
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_val_uint32(cf_kv_t* kv, uint32_t* val)
+cf_result_t cf_kv_val_uint32(cf_kv_t* kv, uint32_t* val)
 {
 	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
-			return cf_error_success();
+			return cf_result_success();
 		}
 		cf_s_begin_val(kv);
 		cf_s_write(kv, (uint64_t)*(uint32_t*)val);
@@ -940,15 +940,15 @@ cf_error_t cf_kv_val_uint32(cf_kv_t* kv, uint32_t* val)
 	} else {
 		return cf_s_find_match_int64(kv, val);
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_val_uint64(cf_kv_t* kv, uint64_t* val)
+cf_result_t cf_kv_val_uint64(cf_kv_t* kv, uint64_t* val)
 {
 	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
-			return cf_error_success();
+			return cf_result_success();
 		}
 		cf_s_begin_val(kv);
 		cf_s_write(kv, *(uint64_t*)val);
@@ -956,15 +956,15 @@ cf_error_t cf_kv_val_uint64(cf_kv_t* kv, uint64_t* val)
 	} else {
 		return cf_s_find_match_int64(kv, val);
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_val_int8(cf_kv_t* kv, int8_t* val)
+cf_result_t cf_kv_val_int8(cf_kv_t* kv, int8_t* val)
 {
 	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
-			return cf_error_success();
+			return cf_result_success();
 		}
 		cf_s_begin_val(kv);
 		cf_s_write(kv, (int64_t)*(int8_t*)val);
@@ -972,15 +972,15 @@ cf_error_t cf_kv_val_int8(cf_kv_t* kv, int8_t* val)
 	} else {
 		return cf_s_find_match_int64(kv, val);
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_val_int16(cf_kv_t* kv, int16_t* val)
+cf_result_t cf_kv_val_int16(cf_kv_t* kv, int16_t* val)
 {
 	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
-			return cf_error_success();
+			return cf_result_success();
 		}
 		cf_s_begin_val(kv);
 		cf_s_write(kv, (int64_t)*(int16_t*)val);
@@ -988,15 +988,15 @@ cf_error_t cf_kv_val_int16(cf_kv_t* kv, int16_t* val)
 	} else {
 		return cf_s_find_match_int64(kv, val);
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_val_int32(cf_kv_t* kv, int32_t* val)
+cf_result_t cf_kv_val_int32(cf_kv_t* kv, int32_t* val)
 {
 	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
-			return cf_error_success();
+			return cf_result_success();
 		}
 		cf_s_begin_val(kv);
 		cf_s_write(kv, (int64_t)*(int32_t*)val);
@@ -1004,15 +1004,15 @@ cf_error_t cf_kv_val_int32(cf_kv_t* kv, int32_t* val)
 	} else {
 		return cf_s_find_match_int64(kv, val);
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_val_int64(cf_kv_t* kv, int64_t* val)
+cf_result_t cf_kv_val_int64(cf_kv_t* kv, int64_t* val)
 {
 	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (cf_s_does_matched_base_equal_int64(kv, val)) {
-			return cf_error_success();
+			return cf_result_success();
 		}
 		cf_s_begin_val(kv);
 		cf_s_write(kv, *(int64_t*)val);
@@ -1020,10 +1020,10 @@ cf_error_t cf_kv_val_int64(cf_kv_t* kv, int64_t* val)
 	} else {
 		return cf_s_find_match_int64(kv, val);
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_val_float(cf_kv_t* kv, float* val)
+cf_result_t cf_kv_val_float(cf_kv_t* kv, float* val)
 {
 	if (cf_is_error(kv->err)) return kv->err;
 	cf_kv_val_t* match = cf_s_pop_val(kv, CF_KV_TYPE_DOUBLE);
@@ -1032,7 +1032,7 @@ cf_error_t cf_kv_val_float(cf_kv_t* kv, float* val)
 		if (match_base) {
 			if ((float)match_base->u.dval == *val) {
 				cf_s_backup_base_key(kv);
-				return cf_error_success();
+				return cf_result_success();
 			}
 		}
 		cf_s_begin_val(kv);
@@ -1044,16 +1044,16 @@ cf_error_t cf_kv_val_float(cf_kv_t* kv, float* val)
 			match = cf_s_pop_val(kv, CF_KV_TYPE_INT64);
 			match_base = cf_s_pop_base_val(kv, CF_KV_TYPE_INT64);
 			if (!match) match = match_base;
-			if (!match) return cf_error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+			if (!match) return cf_result_error("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 			else *val = (float)match->u.ival;
 		} else {
 			*val = (float)match->u.dval;
 		}
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_val_double(cf_kv_t* kv, double* val)
+cf_result_t cf_kv_val_double(cf_kv_t* kv, double* val)
 {
 	if (cf_is_error(kv->err)) return kv->err;
 	cf_kv_val_t* match = cf_s_pop_val(kv, CF_KV_TYPE_DOUBLE);
@@ -1062,7 +1062,7 @@ cf_error_t cf_kv_val_double(cf_kv_t* kv, double* val)
 		if (match_base) {
 			if (match_base->u.dval == *val) {
 				cf_s_backup_base_key(kv);
-				return cf_error_success();
+				return cf_result_success();
 			}
 		}
 		cf_s_begin_val(kv);
@@ -1074,21 +1074,21 @@ cf_error_t cf_kv_val_double(cf_kv_t* kv, double* val)
 			match = cf_s_pop_val(kv, CF_KV_TYPE_INT64);
 			match_base = cf_s_pop_base_val(kv, CF_KV_TYPE_INT64);
 			if (!match) match = match_base;
-			if (!match) return cf_error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+			if (!match) return cf_result_error("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 			else *val = (double)match->u.ival;
 		} else {
 			*val = match->u.dval;
 		}
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_val_bool(cf_kv_t* kv, bool* val)
+cf_result_t cf_kv_val_bool(cf_kv_t* kv, bool* val)
 {
 	if (kv->mode == CF_KV_STATE_READ) {
 		const char* string;
 		size_t sz;
-		cf_error_t err = cf_kv_val_string(kv, &string, &sz);
+		cf_result_t err = cf_kv_val_string(kv, &string, &sz);
 		if (!cf_is_error(err)) {
 			if (sz == 4 && !CUTE_STRNCMP("true", string, sz)) *val = true;
 			else *val = false;
@@ -1107,7 +1107,7 @@ cf_error_t cf_kv_val_bool(cf_kv_t* kv, bool* val)
 	}
 }
 
-cf_error_t cf_kv_val_string(cf_kv_t* kv, const char** str, size_t* size)
+cf_result_t cf_kv_val_string(cf_kv_t* kv, const char** str, size_t* size)
 {
 	if (kv->mode == CF_KV_STATE_READ) {
 		*str = NULL;
@@ -1120,7 +1120,7 @@ cf_error_t cf_kv_val_string(cf_kv_t* kv, const char** str, size_t* size)
 		if (match_base) {
 			if (!CUTE_STRNCMP((const char*)match_base->u.sval.str, *str, match_base->u.sval.len)) {
 				cf_s_backup_base_key(kv);
-				return cf_error_success();
+				return cf_result_success();
 			}
 		}
 		cf_s_begin_val(kv);
@@ -1128,14 +1128,14 @@ cf_error_t cf_kv_val_string(cf_kv_t* kv, const char** str, size_t* size)
 		cf_s_end_val(kv);
 	} else {
 		if (!match) match = match_base;
-		if (!match) return cf_error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!match) return cf_result_error("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		*str = (const char*)match->u.sval.str;
 		*size = (int)match->u.sval.len;
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_val_blob(cf_kv_t* kv, void* data, size_t data_capacity, size_t* data_len)
+cf_result_t cf_kv_val_blob(cf_kv_t* kv, void* data, size_t data_capacity, size_t* data_len)
 {
 	if (kv->mode == CF_KV_STATE_READ) *data_len = 0;
 	if (cf_is_error(kv->err)) return kv->err;
@@ -1145,7 +1145,7 @@ cf_error_t cf_kv_val_blob(cf_kv_t* kv, void* data, size_t data_capacity, size_t*
 		if (match_base) {
 			if (!CUTE_MEMCMP(match_base->u.sval.str, data, match_base->u.sval.len)) {
 				cf_s_backup_base_key(kv);
-				return cf_error_success();
+				return cf_result_success();
 			}
 		}
 		size_t buffer_size = CUTE_BASE64_ENCODED_SIZE(*data_len);
@@ -1155,28 +1155,28 @@ cf_error_t cf_kv_val_blob(cf_kv_t* kv, void* data, size_t data_capacity, size_t*
 		cf_s_end_val(kv);
 	} else {
 		if (!match) match = match_base;
-		if (!match) return cf_error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!match) return cf_result_error("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		size_t buffer_size = CUTE_BASE64_DECODED_SIZE(match->u.sval.len);
 		if (!(buffer_size <= data_capacity)) {
-			kv->err = cf_error_failure("Decoded base 64 string is too large to store in `data`.");
+			kv->err = cf_result_error("Decoded base 64 string is too large to store in `data`.");
 			return kv->err;
 		}
-		cf_error_t err = cf_base64_decode(data, buffer_size, match->u.sval.str, match->u.sval.len);
+		cf_result_t err = cf_base64_decode(data, buffer_size, match->u.sval.str, match->u.sval.len);
 		if (cf_is_error(err)) return err;
 		*data_len = buffer_size;
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_object_begin(cf_kv_t* kv, const char* key)
+cf_result_t cf_kv_object_begin(cf_kv_t* kv, const char* key)
 {
 	if (key) {
-		cf_error_t err = cf_kv_key(kv, key, NULL);
+		cf_result_t err = cf_kv_key(kv, key, NULL);
 		if (cf_is_error(err)) return err;
 	}
 	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
-		if (!key && kv->in_array == CUTE_KV_NOT_IN_ARRAY) return cf_error_failure("`key` must be supplied if not in an array.");
+		if (!key && kv->in_array == CUTE_KV_NOT_IN_ARRAY) return cf_result_error("`key` must be supplied if not in an array.");
 		cf_s_write_str_no_quotes(kv, "{\n", 2);
 		cf_s_tabs_delta(kv, 1);
 		cf_s_tabs(kv);
@@ -1194,14 +1194,14 @@ cf_error_t cf_kv_object_begin(cf_kv_t* kv, const char* key)
 		} else if (match_base) {
 			kv->object_skip_count++;
 		} else {
-			kv->err = cf_error_failure("Unable to get object, no matching `kv_key` call.");
+			kv->err = cf_result_error("Unable to get object, no matching `kv_key` call.");
 			return kv->err;
 		}
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_object_end(cf_kv_t* kv)
+cf_result_t cf_kv_object_end(cf_kv_t* kv)
 {
 	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -1215,7 +1215,7 @@ cf_error_t cf_kv_object_end(cf_kv_t* kv)
 			cf_kv_cache_t cache = kv->cache[i];
 			cache.object_index = cache.kv->objects[cache.object_index].parent_index;
 			if (cache.object_index == ~0) {
-				kv->err = cf_error_failure("Tried to end kv object, but none was currently set.");
+				kv->err = cf_result_error("Tried to end kv object, but none was currently set.");
 				return kv->err;
 			}
 			kv->cache[i] = cache;
@@ -1227,19 +1227,19 @@ cf_error_t cf_kv_object_end(cf_kv_t* kv)
 			kv->cache[0].object_index = kv->objects[kv->cache[0].object_index].parent_index;
 		}
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_array_begin(cf_kv_t* kv, int* count, const char* key)
+cf_result_t cf_kv_array_begin(cf_kv_t* kv, int* count, const char* key)
 {
 	if (key) {
-		cf_error_t err = cf_kv_key(kv, key, NULL);
+		cf_result_t err = cf_kv_key(kv, key, NULL);
 		if (cf_is_error(err)) return err;
 	}
 	if (kv->mode == CF_KV_STATE_READ) *count = 0;
 	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
-		if (!key && kv->in_array == CUTE_KV_NOT_IN_ARRAY) return cf_error_failure("`key` must be supplied if not in an array.");
+		if (!key && kv->in_array == CUTE_KV_NOT_IN_ARRAY) return cf_result_error("`key` must be supplied if not in an array.");
 		cf_s_tabs_delta(kv, 1);
 		cf_s_write_u8(kv, '[');
 		cf_s_write(kv, (int64_t)*count);
@@ -1250,14 +1250,14 @@ cf_error_t cf_kv_array_begin(cf_kv_t* kv, int* count, const char* key)
 		cf_kv_val_t* match = cf_s_pop_val(kv, CF_KV_TYPE_ARRAY);
 		cf_kv_val_t* match_base = cf_s_pop_base_val(kv, CF_KV_TYPE_ARRAY);
 		if (!match) match = match_base;
-		if (!match) return cf_error_failure("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
+		if (!match) return cf_result_error("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 		cf_s_push_read_mode_array(kv, match);
 		*count = match->aval.count();
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_kv_array_end(cf_kv_t* kv)
+cf_result_t cf_kv_array_end(cf_kv_t* kv)
 {
 	if (cf_is_error(kv->err)) return kv->err;
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -1273,7 +1273,7 @@ cf_error_t cf_kv_array_end(cf_kv_t* kv)
 	} else {
 		cf_s_pop_read_mode_array(kv);
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
 void cf_kv_print(cf_kv_t* kv)

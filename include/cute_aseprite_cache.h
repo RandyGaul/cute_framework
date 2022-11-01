@@ -23,7 +23,7 @@
 #define CUTE_ASEPRITE_CACHE_H
 
 #include "cute_defines.h"
-#include "cute_error.h"
+#include "cute_result.h"
 #include "cute_batch.h"
 
 #include "cute/cute_aseprite.h"
@@ -66,7 +66,7 @@ CUTE_API void CUTE_CALL cf_aseprite_cache_destroy(cf_aseprite_cache_t* cache);
  * Returns a sprite from the cache. If it does not exist in the cache, it is loaded from disk
  * and placed into the cache.
  */
-CUTE_API cf_error_t CUTE_CALL cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* aseprite_path, cf_sprite_t* sprite);
+CUTE_API cf_result_t CUTE_CALL cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* aseprite_path, cf_sprite_t* sprite);
 
 /**
  * Removes a sprite from the cache. This will cause the next call to `cf_aseprite_cache_load` to fetch from disk.
@@ -82,7 +82,7 @@ CUTE_API void CUTE_CALL cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, con
  *
  * Only call this function if you know what you're doing.
  */
-CUTE_API cf_error_t CUTE_CALL cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase);
+CUTE_API cf_result_t CUTE_CALL cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase);
 
 /**
  * `cf_png_cache_get_pixels_fn` is needed to hook up to `cf_batch_t` in order to draw sprites.
@@ -115,9 +115,9 @@ using get_pixels_fn = cf_get_pixels_fn;
 
 CUTE_INLINE aseprite_cache_t* caseprite_cache_make(void* mem_ctx = NULL) { return cf_aseprite_cache_make(mem_ctx); }
 CUTE_INLINE void aseprite_cache_destroy(aseprite_cache_t* cache) { cf_aseprite_cache_destroy(cache); }
-CUTE_INLINE error_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite) { return cf_aseprite_cache_load(cache, aseprite_path, (cf_sprite_t*)sprite); }
+CUTE_INLINE result_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite) { return cf_aseprite_cache_load(cache, aseprite_path, (cf_sprite_t*)sprite); }
 CUTE_INLINE void aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path) { cf_aseprite_cache_unload(cache, aseprite_path); }
-CUTE_INLINE error_t aseprite_cache_load_ase(aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase) { return  cf_aseprite_cache_load_ase(cache, aseprite_path, ase); }
+CUTE_INLINE result_t aseprite_cache_load_ase(aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase) { return  cf_aseprite_cache_load_ase(cache, aseprite_path, ase); }
 CUTE_INLINE get_pixels_fn* aseprite_cache_get_pixels_fn(aseprite_cache_t* cache) { return  cf_aseprite_cache_get_pixels_fn(cache); }
 CUTE_INLINE strpool_t* aseprite_cache_get_strpool_ptr(aseprite_cache_t* cache) { return  cf_aseprite_cache_get_strpool_ptr(cache); }
 

@@ -51,10 +51,10 @@ static const int cf_s_base64_to_6bits[80] = {
 	26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,
 };
 
-cf_error_t cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size)
+cf_result_t cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size)
 {
 	size_t out_size = CUTE_BASE64_ENCODED_SIZE(src_size);
-	if (dst_size < out_size) return cf_error_failure("`dst` buffer too small to place encoded output.");
+	if (dst_size < out_size) return cf_result_error("`dst` buffer too small to place encoded output.");
 
 	size_t triplets = (src_size) / 3;
 	int pads = (src_size) % 3 ? 3 - (src_size) % 3 : 0;
@@ -116,13 +116,13 @@ cf_error_t cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t 
 
 	CUTE_ASSERT((int)(out - (uint8_t*)dst) == out_size);
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size)
+cf_result_t cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size)
 {
-	if (!src_size) return cf_error_success();
-	if (src_size % 4) return cf_error_failure("`src_size` is not a multiple of 4 (all base64 streams must be padded to a multiple of four with `=` characters).");
+	if (!src_size) return cf_result_success();
+	if (src_size % 4) return cf_result_error("`src_size` is not a multiple of 4 (all base64 streams must be padded to a multiple of four with `=` characters).");
 	size_t quadruplets = src_size / 4;
 	
 	const uint8_t* in = (const uint8_t*)src;
@@ -140,7 +140,7 @@ cf_error_t cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t 
 	case 1: dst_size -= 2; break;
 	case 2: dst_size -= 1; break;
 	}
-	if (CUTE_BASE64_DECODED_SIZE(src_size) < exact_out_size) return cf_error_failure("'dst_size' is too small to decode.");
+	if (CUTE_BASE64_DECODED_SIZE(src_size) < exact_out_size) return cf_result_error("'dst_size' is too small to decode.");
 
 	// RFC describes the best way to handle bad input is to reject the entire input.
 	// https://tools.ietf.org/html/rfc4648#page-14
@@ -151,12 +151,12 @@ cf_error_t cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t 
 		uint32_t b = *in++ - 43;
 		uint32_t c = *in++ - 43;
 		uint32_t d = *in++ - 43;
-		if ((a > 79) | (b > 79) | (c > 79) | (d > 79)) return cf_error_failure("Found illegal character in input stream.");
+		if ((a > 79) | (b > 79) | (c > 79) | (d > 79)) return cf_result_error("Found illegal character in input stream.");
 		a = cf_s_base64_to_6bits[a];
 		b = cf_s_base64_to_6bits[b];
 		c = cf_s_base64_to_6bits[c];
 		d = cf_s_base64_to_6bits[d];
-		if ((a == ~0) | (b == ~0) | (c == ~0) | (d == ~0)) return cf_error_failure("Found illegal character in input stream.");
+		if ((a == ~0) | (b == ~0) | (c == ~0) | (d == ~0)) return cf_result_error("Found illegal character in input stream.");
 		uint32_t bits = (a << 26) | (b << 20) | (c << 14) | (d << 8);
 		*out++ = (bits & 0xFF000000) >> 24;
 		*out++ = (bits & 0x00FF0000) >> 16;
@@ -170,11 +170,11 @@ cf_error_t cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t 
 		uint32_t a = *in++ - 43;
 		uint32_t b = *in++ - 43;
 		uint32_t c = *in++ - 43;
-		if ((a > 79) | (b > 79) | (c > 79)) return cf_error_failure("Found illegal character in input stream.");
+		if ((a > 79) | (b > 79) | (c > 79)) return cf_result_error("Found illegal character in input stream.");
 		a = cf_s_base64_to_6bits[a];
 		b = cf_s_base64_to_6bits[b];
 		c = cf_s_base64_to_6bits[c];
-		if ((a == ~0) | (b == ~0) | (c == ~0)) return cf_error_failure("Found illegal character in input stream.");
+		if ((a == ~0) | (b == ~0) | (c == ~0)) return cf_result_error("Found illegal character in input stream.");
 		uint32_t bits = (a << 26) | (b << 20) | (c << 14);
 		*out++ = (bits & 0xFF000000) >> 24;
 		*out++ = (bits & 0x00FF0000) >> 16;
@@ -184,10 +184,10 @@ cf_error_t cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t 
 	{
 		uint32_t a = *in++ - 43;
 		uint32_t b = *in++ - 43;
-		if ((a > 79) | (b > 79)) return cf_error_failure("Found illegal character in input stream.");
+		if ((a > 79) | (b > 79)) return cf_result_error("Found illegal character in input stream.");
 		a = cf_s_base64_to_6bits[a];
 		b = cf_s_base64_to_6bits[b];
-		if ((a == ~0) | (b == ~0)) return cf_error_failure("Found illegal character in input stream.");
+		if ((a == ~0) | (b == ~0)) return cf_result_error("Found illegal character in input stream.");
 		uint32_t bits = (a << 26) | (b << 20);
 		*out++ = (bits & 0xFF000000) >> 24;
 	}	break;
@@ -195,5 +195,5 @@ cf_error_t cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t 
 
 	CUTE_ASSERT((int)(out + pads - (uint8_t*)dst) == CUTE_BASE64_DECODED_SIZE(src_size));
 
-	return cf_error_success();
+	return cf_result_success();
 }

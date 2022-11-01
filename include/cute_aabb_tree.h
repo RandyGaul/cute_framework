@@ -32,8 +32,16 @@
 extern "C" {
 #endif // __cplusplus
 
+typedef struct cf_leaf_t
+{
+	#ifdef CUTE_CPP
+	int id = -1;
+	#else
+	int id; /*= -1;*/
+	#endif
+} cf_leaf_t;
+
 typedef struct cf_aabb_tree_t cf_aabb_tree_t;
-typedef struct cf_leaf_t { int id; /*= -1;*/ } cf_leaf_t;
 typedef bool (cf_aabb_tree_query_fn)(cf_leaf_t leaf, cf_aabb_t aabb, void* leaf_udata, void* fn_udata);
 
 CUTE_INLINE cf_leaf_t cf_leaf_defaults()
@@ -131,14 +139,10 @@ namespace cute
 {
 using aabb_tree_t = cf_aabb_tree_t;
 
+using leaf_t = cf_leaf_t;
 using aabb_tree_query_fn = cf_aabb_tree_query_fn;
 using aabb_t = cf_aabb_t;
 using ray_t = cf_ray_t;
-
-struct leaf_t : public cf_leaf_t
-{
-	leaf_t() { *(cf_leaf_t*)this = cf_leaf_defaults(); }
-};
 
 CUTE_INLINE aabb_tree_t* create_aabb_tree(int initial_capacity = 0, void* user_allocator_context = NULL) { return cf_create_aabb_tree(initial_capacity, user_allocator_context); }
 CUTE_INLINE aabb_tree_t* create_aabb_tree_from_memory(const void* buffer, size_t size, void* user_allocator_context = NULL) { return cf_create_aabb_tree_from_memory(buffer, size, user_allocator_context); }

@@ -86,7 +86,7 @@ struct cf_https_decoder_t
 	int response_code = 0;
 	cf_array<char> buffer;
 	cf_array<cf_https_header_t> headers;
-	cf_error_t err = cf_error_success();
+	cf_result_t err = cf_result_success();
 
 	void next(cf_https_process_line_fn* process_line)
 	{
@@ -174,7 +174,7 @@ static void cf_s_tls_log(void* param, int debug_level, const char* file_name, in
 	printf("%s\n", message);
 }
 
-static cf_error_t cf_s_load_platform_certs(cf_https_t* https)
+static cf_result_t cf_s_load_platform_certs(cf_https_t* https)
 {
 #if defined(CUTE_WINDOWS)
 
@@ -182,7 +182,7 @@ static cf_error_t cf_s_load_platform_certs(cf_https_t* https)
 	PCCERT_CONTEXT pCertContext = NULL;
 
 	if (!(hCertStore = CertOpenSystemStoreA((HCRYPTPROV)NULL, "ROOT"))) {
-		return cf_error_failure("CertOpenSystemStoreA failed.");
+		return cf_result_error("CertOpenSystemStoreA failed.");
 	}
 
 	while (pCertContext = CertEnumCertificatesInStore(hCertStore, pCertContext)) {
@@ -199,7 +199,7 @@ static cf_error_t cf_s_load_platform_certs(cf_https_t* https)
 	CFArrayRef result_ref;
 
 	if (SecKeychainOpen("/System/Library/Keychains/SystemRootCertificates.keychain", &keychain_ref) != errSecSuccess) {
-		return cf_error_failure("SecKeychainOpen failed.");
+		return cf_result_error("SecKeychainOpen failed.");
 	}
 
 	search_settings_ref = CFDictionaryCreateMutable(NULL, 0, NULL, NULL);
@@ -209,7 +209,7 @@ static cf_error_t cf_s_load_platform_certs(cf_https_t* https)
 	CFDictionarySetValue(search_settings_ref, kSecMatchSearchList, CFArrayCreate(NULL, (const void**)&keychain_ref, 1, NULL));
 
 	if (SecItemCopyMatching(search_settings_ref, (CFTypeRef*)&result_ref) != errSecSuccess) {
-		return cf_error_failure("SecItemCopyMatching failed.");
+		return cf_result_error("SecItemCopyMatching failed.");
 	}
 
 	for (CFIndex i = 0; i < CFArrayGetCount(result_ref); i++) {
@@ -227,7 +227,7 @@ static cf_error_t cf_s_load_platform_certs(cf_https_t* https)
 #elif defined(CUTE_LINUX)
 
 	if (mbedtls_x509_crt_parse_path(&https->cacert, "/etc/ssl/certs/") < 0) {
-		return cf_error_failure("mbedtls_x509_crt_parse_path failed.");
+		return cf_result_error("mbedtls_x509_crt_parse_path failed.");
 	}
 
 #else
@@ -238,24 +238,24 @@ static cf_error_t cf_s_load_platform_certs(cf_https_t* https)
 
 #endif
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_https_connect(cf_https_t* https, const char* host, const char* port, bool verify_cert)
+cf_result_t cf_https_connect(cf_https_t* https, const char* host, const char* port, bool verify_cert)
 {
 	int result;
 
 	result = MBEDTLS_ERR_NET_UNKNOWN_HOST;
 	if ((result = mbedtls_net_connect(&https->server_fd, host, port, MBEDTLS_NET_PROTO_TCP))) {
-		return cf_error_failure("Failed to connect TCP socket to host with mbedtls_net_connect.");
+		return cf_result_error("Failed to connect TCP socket to host with mbedtls_net_connect.");
 	}
 
 	if ((result = mbedtls_net_set_nonblock(&https->server_fd))) {
-		return cf_error_failure("Failed to set socket to non-blocking.");
+		return cf_result_error("Failed to set socket to non-blocking.");
 	}
 
 	if ((result = mbedtls_ssl_config_defaults(&https->conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT))) {
-		return cf_error_failure("Failed to set ssl defaults with mbedtls_ssl_config_defaults.");
+		return cf_result_error("Failed to set ssl defaults with mbedtls_ssl_config_defaults.");
 	}
 
 	mbedtls_ssl_conf_authmode(&https->conf, verify_cert ? MBEDTLS_SSL_VERIFY_REQUIRED : MBEDTLS_SSL_VERIFY_OPTIONAL);
@@ -264,11 +264,11 @@ cf_error_t cf_https_connect(cf_https_t* https, const char* host, const char* por
 	mbedtls_ssl_conf_rng(&https->conf, mbedtls_ctr_drbg_random, &https->ctr_drbg);
 
 	if ((result = mbedtls_ssl_setup(&https->ssl, &https->conf))) {
-		return cf_error_failure("Failed to setup ssl context with mbedtls_ssl_setup.");
+		return cf_result_error("Failed to setup ssl context with mbedtls_ssl_setup.");
 	}
 
 	if ((result = mbedtls_ssl_set_hostname(&https->ssl, host))) {
-		return cf_error_failure("mbedtls_ssl_set_hostname failed.");
+		return cf_result_error("mbedtls_ssl_set_hostname failed.");
 	}
 
 	mbedtls_ssl_set_bio(&https->ssl, &https->server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
@@ -279,21 +279,21 @@ cf_error_t cf_https_connect(cf_https_t* https, const char* host, const char* por
 			mbedtls_strerror(result, buf, 1024);
 			//const char* high = mbedtls_high_level_strerr(result);
 			//const char* low = mbedtls_low_level_strerr(result);
-			return cf_error_failure("TLS handshake failed with mbedtls_ssl_handshake.");
+			return cf_result_error("TLS handshake failed with mbedtls_ssl_handshake.");
 		}
 	}
 
 	if (verify_cert) {
 		uint32_t flags;
 		if ((flags = mbedtls_ssl_get_verify_result(&https->ssl))) {
-			return cf_error_failure("Failed to verify certs via mbedtls_ssl_get_verify_result -- unsafe to connect.");
+			return cf_result_error("Failed to verify certs via mbedtls_ssl_get_verify_result -- unsafe to connect.");
 		}
 	}
 
 	https->host = host;
 	https->port = port;
 	https->state = CF_HTTPS_STATE_PENDING;
-	return cf_error_success();
+	return cf_result_success();
 }
 
 void cf_https_disconnect(cf_https_t* https)
@@ -301,10 +301,10 @@ void cf_https_disconnect(cf_https_t* https)
 	mbedtls_ssl_close_notify(&https->ssl);
 }
 
-cf_https_t* cf_https_get(const char* host, const char* port, const char* uri, cf_error_t* err_out, bool verify_cert)
+cf_https_t* cf_https_get(const char* host, const char* port, const char* uri, cf_result_t* err_out, bool verify_cert)
 {
 	cf_https_t* https = cf_https_make();
-	cf_error_t err = cf_https_connect(https, host, port, verify_cert);
+	cf_result_t err = cf_https_connect(https, host, port, verify_cert);
 	if (cf_is_error(err)) {
 		cf_https_destroy(https);
 		if (err_out) *err_out = err;
@@ -319,15 +319,15 @@ cf_https_t* cf_https_get(const char* host, const char* port, const char* uri, cf
 	https->request.ensure_count((int)len);
 	sprintf(https->request.data(), fmt, uri, https->host);
 	https->request_sent = false;
-	if (err_out) *err_out = cf_error_success();
+	if (err_out) *err_out = cf_result_success();
 
 	return https;
 }
 
-cf_https_t* cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, cf_error_t* err_out, bool verify_cert)
+cf_https_t* cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, cf_result_t* err_out, bool verify_cert)
 {
 	cf_https_t* https = cf_https_make();
-	cf_error_t err = cf_https_connect(https, host, port, verify_cert);
+	cf_result_t err = cf_https_connect(https, host, port, verify_cert);
 	if (cf_is_error(err)) {
 		cf_https_destroy(https);
 		if (err_out) *err_out = err;
@@ -346,7 +346,7 @@ cf_https_t* cf_https_post(const char* host, const char* port, const char* uri, c
 	len = CUTE_STRLEN(https->request.data());
 	https->request.ensure_count((int)(len + size));
 	CUTE_MEMCPY(https->request.data() + len, data, size);
-	if (err_out) *err_out = cf_error_success();
+	if (err_out) *err_out = cf_result_success();
 
 	return https;
 }
@@ -465,7 +465,7 @@ static bool cf_s_read_int(cf_https_decoder_t* h, int radix, uint64_t* out)
 	uint64_t number = CUTE_STRTOLL(h->data(), &ptr, radix);
 	*out = number;
 	if (ptr == h->data()) {
-		h->err = cf_error_failure("Failed to parse number.");
+		h->err = cf_result_error("Failed to parse number.");
 		return true;
 	} else {
 		h->advance(ptr - h->data());
@@ -509,7 +509,7 @@ static cf_https_string_t cf_s_scan(cf_https_decoder_t* h, char delimiter, bool m
 	} else if (len) {
 		h->advance(string.len);
 	} else if (must_find) {
-		h->err = cf_error_failure("Malformed header found while searching for colon separator ':'");
+		h->err = cf_result_error("Malformed header found while searching for colon separator ':'");
 		string.ptr = NULL;
 		string.len = 0;
 	}
@@ -553,17 +553,17 @@ static bool cf_s_header(cf_https_decoder_t* h)
 
 	if (!cf_https_strcmp("Content-Length", name)) {
 		if (h->transfer_encoding) {
-			h->err = cf_error_failure("Found illegal combo of headers for both content-length and transfer-encoding.");
+			h->err = cf_result_error("Found illegal combo of headers for both content-length and transfer-encoding.");
 			return true;
 		}
 
 		if (cf_s_int(content, 10, (uint64_t*)&h->content_length)) {
-			h->err = cf_error_failure("Failed to read content length.");
+			h->err = cf_result_error("Failed to read content length.");
 			return true;
 		}
 	} else if (!cf_https_strcmp("Transfer-Encoding", name)) {
 		if (h->content_length) {
-			h->err = cf_error_failure("Found illegal combo of headers for both content-length and transfer-encoding.");
+			h->err = cf_result_error("Found illegal combo of headers for both content-length and transfer-encoding.");
 			return true;
 		}
 
@@ -582,13 +582,13 @@ static bool cf_s_header(cf_https_decoder_t* h)
 			} else if (!cf_https_strcmp("gzip", string) || !cf_https_strcmp("x_gzip", string)) {
 				h->transfer_encoding |= CF_TRANSFER_ENCODING_GZIP;
 			} else if (string.len > 0) {
-				h->err = cf_error_failure("Unrecognized transfer encoding encountered.");
+				h->err = cf_result_error("Unrecognized transfer encoding encountered.");
 				return true;
 			}
 
 			// RFC-7230 3.3.1
 			if ((prev_flags & CF_TRANSFER_ENCODING_CHUNKED) && (h->transfer_encoding != prev_flags)) {
-				h->err = cf_error_failure("Invalid transfer encoding order found (chunked must be last).");
+				h->err = cf_result_error("Invalid transfer encoding order found (chunked must be last).");
 				return true;
 			}
 
@@ -616,7 +616,7 @@ static bool cf_s_request(cf_https_decoder_t* h)
 	if (!version.ptr) return true;
 
 	if (!cf_https_strcmp("HTTP/1.1", version)) {
-		h->err = cf_error_failure("Expected HTTP/1.1");
+		h->err = cf_result_error("Expected HTTP/1.1");
 		return true;
 	}
 
@@ -633,14 +633,14 @@ static bool cf_s_response(cf_https_decoder_t* h) {
 	if (!phrase.ptr) return true;
 
 	if (cf_https_strcmp("HTTP/1.1", version)) {
-		h->err = cf_error_failure("Expected HTTP/1.1");
+		h->err = cf_result_error("Expected HTTP/1.1");
 		return true;
 	}
 
 	// RFC7230 section 3.1.2
 	uint64_t code_number;
 	if (cf_s_int(code, 10, &code_number) || code.len != 3 || code_number > 999) {
-		h->err = cf_error_failure("Bad response code.");
+		h->err = cf_result_error("Bad response code.");
 		return true;
 	}
 	h->response_code = (int)code_number;
@@ -914,17 +914,17 @@ EM_JS(void, s_js_post, (void* https_ptr, const char* c_host, const char* c_uri, 
 	request.send(data_array);
 });
 
-cf_https_t* cf_https_get(const char* host, const char* port, const char* uri, cf_error_t* err, bool verify_cert)
+cf_https_t* cf_https_get(const char* host, const char* port, const char* uri, cf_result_t* err, bool verify_cert)
 {
 	cf_https_t* https = CUTE_NEW(cf_https_t, NULL);
 	https->host = host;
 	https->uri = uri;
 	// `port` and `verify_cert` are not used with emscripten.
-	if (err) *err = cf_error_success();
+	if (err) *err = cf_result_success();
 	return https;
 }
 
-cf_https_t* cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, cf_error_t* err, bool verify_cert)
+cf_https_t* cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, cf_result_t* err, bool verify_cert)
 {
 	cf_https_t* https = CUTE_NEW(cf_https_t, NULL);
 	https->host = host;
@@ -932,7 +932,7 @@ cf_https_t* cf_https_post(const char* host, const char* port, const char* uri, c
 	https->data = data;
 	https->size = size;
 	// `port` and `verify_cert` are not used with emscripten.
-	if (err) *err = cf_error_success();
+	if (err) *err = cf_result_success();
 	return https;
 }
 

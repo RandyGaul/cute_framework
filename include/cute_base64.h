@@ -23,7 +23,7 @@
 #define CUTE_BASE64_H
 
 #include "cute_defines.h"
-#include "cute_error.h"
+#include "cute_result.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -37,8 +37,8 @@ extern "C" {
 #define CUTE_BASE64_ENCODED_SIZE(size) ((((size) + 2) / 3) * 4)
 #define CUTE_BASE64_DECODED_SIZE(size) ((((size) + 3) / 4) * 3)
 
-CUTE_API cf_error_t CUTE_CALL cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size);
-CUTE_API cf_error_t CUTE_CALL cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size);
+CUTE_API cf_result_t CUTE_CALL cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size);
+CUTE_API cf_result_t CUTE_CALL cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size);
 
 #ifdef __cplusplus
 }
@@ -52,8 +52,8 @@ CUTE_API cf_error_t CUTE_CALL cf_base64_decode(void* dst, size_t dst_size, const
 namespace cute
 {
 
-CUTE_INLINE error_t base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_encode(dst, dst_size, src, src_size); }
-CUTE_INLINE error_t base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_decode(dst, dst_size, src, src_size); }
+CUTE_INLINE result_t base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_encode(dst, dst_size, src, src_size); }
+CUTE_INLINE result_t base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_decode(dst, dst_size, src, src_size); }
 
 }
 

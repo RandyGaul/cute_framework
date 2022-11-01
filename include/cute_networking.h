@@ -22,7 +22,7 @@
 #ifndef CUTE_NETWORKING_H
 #define CUTE_NETWORKING_H
 
-#include <cute_error.h>
+#include <cute_result.h>
 #include <cute/cute_net.h>
 
 //--------------------------------------------------------------------------------------------------
@@ -89,7 +89,7 @@ CUTE_API void CUTE_CALL cf_crypto_sign_keygen(cf_crypto_sign_public_t* public_ke
  * not leaked. In the event your secret key is accidentally leaked, you can always roll a
  * new one and distribute it to your webservice and game servers.
  */
-CUTE_API cf_error_t CUTE_CALL cf_generate_connect_token(
+CUTE_API cf_result_t CUTE_CALL cf_generate_connect_token(
 	uint64_t application_id,							// A unique number to identify your game, can be whatever value you like.
 														// This must be the same number as in `client_create` and `server_create`.
 	uint64_t creation_timestamp,						// A unix timestamp of the current time.
@@ -128,7 +128,7 @@ CUTE_API void CUTE_CALL cf_client_destroy(cf_client_t* client);
  * `client_update` is expected, where `client_update` will perform the connection handshake and make
  * connection attempts to your servers.
  */
-CUTE_API cf_error_t CUTE_CALL cf_client_connect(cf_client_t* client, const uint8_t* connect_token);
+CUTE_API cf_result_t CUTE_CALL cf_client_connect(cf_client_t* client, const uint8_t* connect_token);
 CUTE_API void CUTE_CALL cf_client_disconnect(cf_client_t* client);
 
 /**
@@ -157,7 +157,7 @@ CUTE_API void CUTE_CALL cf_client_free_packet(cf_client_t* client, void* packet)
  * to be sent, and so reliable is appropriate. As an optimization some kinds of data, such as frequent
  * transform updates, can be sent unreliably.
  */
-CUTE_API cf_error_t CUTE_CALL cf_client_send(cf_client_t* client, const void* packet, int size, bool send_reliably);
+CUTE_API cf_result_t CUTE_CALL cf_client_send(cf_client_t* client, const void* packet, int size, bool send_reliably);
 
 typedef enum cf_client_state_t
 {
@@ -221,7 +221,7 @@ CUTE_API void CUTE_CALL cf_server_destroy(cf_server_t* server);
  * Please note that not all users will be able to access an ipv6 server address, so it might
  * be good to also provide a way to connect through ipv4.
  */
-CUTE_API cf_error_t cf_server_start(cf_server_t* server, const char* address_and_port);
+CUTE_API cf_result_t cf_server_start(cf_server_t* server, const char* address_and_port);
 CUTE_API void cf_server_stop(cf_server_t* server);
 
 typedef enum cf_server_event_type_t
@@ -307,7 +307,7 @@ CUTE_INLINE int endpoint_equals(endpoint_t a, endpoint_t b) { return cf_endpoint
 CUTE_INLINE crypto_key_t crypto_generate_key() { return cf_crypto_generate_key(); }
 CUTE_INLINE void crypto_random_bytes(void* data, int byte_count) { cf_crypto_random_bytes(data,byte_count); }
 CUTE_INLINE void crypto_sign_keygen(crypto_sign_public_t* public_key, crypto_sign_secret_t* secret_key) { cf_crypto_sign_keygen(public_key,secret_key); }
-CUTE_INLINE error_t generate_connect_token(
+CUTE_INLINE result_t generate_connect_token(
 	uint64_t application_id,
 	uint64_t creation_timestamp,
 	const crypto_key_t* client_to_server_key,
@@ -343,12 +343,12 @@ using client_state_t = cf_client_state_t;
 
 CUTE_INLINE client_t* client_create(uint16_t port, uint64_t application_id, bool use_ipv6 = false, void* user_allocator_context = NULL) { return cf_client_create(port,application_id,use_ipv6,user_allocator_context); }
 CUTE_INLINE void client_destroy(client_t* client) { cf_client_destroy(client); }
-CUTE_INLINE error_t client_connect(client_t* client, const uint8_t* connect_token) { return cf_client_connect(client,connect_token); }
+CUTE_INLINE result_t client_connect(client_t* client, const uint8_t* connect_token) { return cf_client_connect(client,connect_token); }
 CUTE_INLINE void client_disconnect(client_t* client) { cf_client_disconnect(client); }
 CUTE_INLINE void client_update(client_t* client, double dt, uint64_t current_time) { cf_client_update(client,dt,current_time); }
 CUTE_INLINE bool client_pop_packet(client_t* client, void** packet, int* size, bool* was_sent_reliably = NULL) { return cf_client_pop_packet(client,packet,size,was_sent_reliably); }
 CUTE_INLINE void client_free_packet(client_t* client, void* packet) { cf_client_free_packet(client,packet); }
-CUTE_INLINE error_t client_send(client_t* client, const void* packet, int size, bool send_reliably) { return cf_client_send(client,packet,size,send_reliably); }
+CUTE_INLINE result_t client_send(client_t* client, const void* packet, int size, bool send_reliably) { return cf_client_send(client,packet,size,send_reliably); }
 CUTE_INLINE client_state_t client_state_get(const client_t* client) { return cf_client_state_get(client); }
 CUTE_INLINE const char* client_state_string(client_state_t state) { return cf_client_state_string(state); }
 CUTE_INLINE float client_time_of_last_packet_recieved(const client_t* client) { return cf_client_time_of_last_packet_recieved(client); }
@@ -364,7 +364,7 @@ using server_event_t = cf_server_event_t;
 CUTE_INLINE server_config_t server_config_defaults() { return cf_server_config_defaults(); }
 CUTE_INLINE server_t* server_create(server_config_t config) { return cf_server_create(config); }
 CUTE_INLINE void server_destroy(server_t* server) { cf_server_destroy(server); }
-CUTE_INLINE error_t server_start(server_t* server, const char* address_and_port) { return cf_server_start(server,address_and_port); }
+CUTE_INLINE result_t server_start(server_t* server, const char* address_and_port) { return cf_server_start(server,address_and_port); }
 CUTE_INLINE void server_stop(server_t* server) { cf_server_stop(server); }
 CUTE_INLINE bool server_pop_event(server_t* server, server_event_t* event) { return cf_server_pop_event(server,event); }
 CUTE_INLINE void server_free_packet(server_t* server, int client_index, void* data) { cf_server_free_packet(server,client_index,data); }

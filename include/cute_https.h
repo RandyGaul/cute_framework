@@ -23,7 +23,7 @@
 #define CUTE_HTTPS_H
 
 #include "cute_defines.h"
-#include "cute_error.h"
+#include "cute_result.h"
 #include "cute_c_runtime.h"
 #include "cute_array.h"
 
@@ -47,7 +47,7 @@ extern "C" {
  *
  * Here is a full working example.
  *
- *    cf_error_t err;
+ *    cf_result_t err;
  *    cf_https_t* https = cf_https_get("raw.githubusercontent.com", "443", "/RandyGaul/cute_framework/main/src/cute_https.h", &err);
  *    if (https) {
  *        while (cf_https_state(https) == CF_HTTPS_STATE_PENDING) {
@@ -81,7 +81,7 @@ typedef struct cf_https_t cf_https_t;
  * underneath, meaning only files from the server this code came from can be loaded, and as such the `uri`
  * should only be a relative path on the server.
  */
-CUTE_API cf_https_t* CUTE_CALL cf_https_get(const char* host, const char* port, const char* uri, cf_error_t* err /*= NULL*/, bool verify_cert /*= true*/);
+CUTE_API cf_https_t* CUTE_CALL cf_https_get(const char* host, const char* port, const char* uri, cf_result_t* err /*= NULL*/, bool verify_cert /*= true*/);
 
 /**
  * Initiates a POST request for the specified host (website address) and a given uri. The content of the post
@@ -97,7 +97,7 @@ CUTE_API cf_https_t* CUTE_CALL cf_https_get(const char* host, const char* port, 
  * underneath, meaning only files from the server this code came from can be loaded, and as such the `uri`
  * should only be a relative path on the server.
  */
-CUTE_API cf_https_t* CUTE_CALL cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, cf_error_t* err /*= NULL*/, bool verify_cert /*= true*/);
+CUTE_API cf_https_t* CUTE_CALL cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, cf_result_t* err /*= NULL*/, bool verify_cert /*= true*/);
 
 /**
  * Frees up all memory and closes the underlying HTTPS connection if still open.
@@ -242,8 +242,8 @@ struct https_response_t
 };
 
 
-CUTE_INLINE https_t* https_get(const char* host, const char* port, const char* uri, cf_error_t* err = NULL, bool verify_cert = true) { return cf_https_get(host, port, uri, err, verify_cert); }
-CUTE_INLINE https_t* https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, cf_error_t* err = NULL, bool verify_cert = true) { return cf_https_post(host, port, uri, data, size, err, verify_cert); }
+CUTE_INLINE https_t* https_get(const char* host, const char* port, const char* uri, cf_result_t* err = NULL, bool verify_cert = true) { return cf_https_get(host, port, uri, err, verify_cert); }
+CUTE_INLINE https_t* https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, cf_result_t* err = NULL, bool verify_cert = true) { return cf_https_post(host, port, uri, data, size, err, verify_cert); }
 CUTE_INLINE void https_destroy(https_t* https) { cf_https_destroy(https); }
 CUTE_INLINE https_state_t https_state(https_t* https) { return cf_https_state(https); }
 CUTE_INLINE size_t https_process(https_t* https) { return cf_https_process(https); }

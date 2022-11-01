@@ -32,16 +32,19 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef enum cf_key_button_t cf_key_button_t; //: int;
-typedef enum cf_mouse_button_t cf_mouse_button_t; //: int;
-typedef enum cf_mouse_click_t cf_mouse_click_t; //: int;
+typedef enum cf_key_button_t cf_key_button_t;
+typedef enum cf_mouse_button_t : int cf_mouse_button_t;
+typedef enum cf_mouse_click_t cf_mouse_click_t;
 
 CUTE_API bool CUTE_CALL cf_key_is_down(cf_key_button_t key);
 CUTE_API bool CUTE_CALL cf_key_is_up(cf_key_button_t key);
 CUTE_API bool CUTE_CALL cf_key_was_pressed(cf_key_button_t key);
 CUTE_API bool CUTE_CALL cf_key_was_released(cf_key_button_t key);
+CUTE_API bool CUTE_CALL cf_key_ctrl();
+CUTE_API bool CUTE_CALL cf_key_shift();
+CUTE_API bool CUTE_CALL cf_key_alt();
+CUTE_API bool CUTE_CALL cf_key_gui(); // Windows key in Windows, Command key in OSX.
 CUTE_API void CUTE_CALL cf_clear_all_key_state();
-CUTE_API int CUTE_CALL cf_key_mod_bit_flags();
 
 CUTE_API int CUTE_CALL cf_mouse_x();
 CUTE_API int CUTE_CALL cf_mouse_y();
@@ -86,284 +89,263 @@ typedef struct cf_touch_t
 CUTE_API int CUTE_CALL cf_touch_get_all(cf_touch_t** touch_all);
 CUTE_API bool CUTE_CALL cf_touch_get(uint64_t id, cf_touch_t* touch);
 
-typedef enum cf_mouse_button_t //: int
+#define CF_MOUSE_BUTTON_DEFS \
+	CF_ENUM(MOUSE_BUTTON_LEFT, 0) \
+	CF_ENUM(MOUSE_BUTTON_RIGHT, 1) \
+	CF_ENUM(MOUSE_BUTTON_MIDDLE, 2) \
+
+typedef enum cf_mouse_button_t
 {
-	CF_MOUSE_BUTTON_LEFT,
-	CF_MOUSE_BUTTON_RIGHT,
-	CF_MOUSE_BUTTON_MIDDLE
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_MOUSE_BUTTON_DEFS
+	#undef CF_ENUM
 } cf_mouse_button_t;
 
-typedef enum cf_key_button_t //: int
+#define CF_KEY_BUTTON_DEFS \
+	CF_ENUM(KEY_UNKNOWN, 0) \
+	CF_ENUM(KEY_RETURN, 4) \
+	CF_ENUM(KEY_ESCAPE, '\033') \
+	CF_ENUM(KEY_BACKSPACE, '\b') \
+	CF_ENUM(KEY_TAB, '\t') \
+	CF_ENUM(KEY_SPACE, ' ') \
+	CF_ENUM(KEY_EXCLAIM, '!') \
+	CF_ENUM(KEY_QUOTEDBL, '"') \
+	CF_ENUM(KEY_HASH, '#') \
+	CF_ENUM(KEY_PERCENT, '%') \
+	CF_ENUM(KEY_DOLLAR, '$') \
+	CF_ENUM(KEY_AMPERSAND, '&') \
+	CF_ENUM(KEY_QUOTE, '\'') \
+	CF_ENUM(KEY_LEFTPAREN, '(') \
+	CF_ENUM(KEY_RIGHTPAREN, ')') \
+	CF_ENUM(KEY_ASTERISK, '*') \
+	CF_ENUM(KEY_PLUS, '+') \
+	CF_ENUM(KEY_COMMA, ',') \
+	CF_ENUM(KEY_MINUS, '-') \
+	CF_ENUM(KEY_PERIOD, '.') \
+	CF_ENUM(KEY_SLASH, '/') \
+	CF_ENUM(KEY_0, '0') \
+	CF_ENUM(KEY_1, '1') \
+	CF_ENUM(KEY_2, '2') \
+	CF_ENUM(KEY_3, '3') \
+	CF_ENUM(KEY_4, '4') \
+	CF_ENUM(KEY_5, '5') \
+	CF_ENUM(KEY_6, '6') \
+	CF_ENUM(KEY_7, '7') \
+	CF_ENUM(KEY_8, '8') \
+	CF_ENUM(KEY_9, '9') \
+	CF_ENUM(KEY_COLON, ':') \
+	CF_ENUM(KEY_SEMICOLON, ';') \
+	CF_ENUM(KEY_LESS, '<') \
+	CF_ENUM(KEY_EQUALS, '=') \
+	CF_ENUM(KEY_GREATER, '>') \
+	CF_ENUM(KEY_QUESTION, '?') \
+	CF_ENUM(KEY_AT, '@') \
+	CF_ENUM(KEY_LEFTBRACKET, '[') \
+	CF_ENUM(KEY_BACKSLASH, '\\') \
+	CF_ENUM(KEY_RIGHTBRACKET, ']') \
+	CF_ENUM(KEY_CARET, '^') \
+	CF_ENUM(KEY_UNDERSCORE, '_') \
+	CF_ENUM(KEY_BACKQUOTE, '`') \
+	CF_ENUM(KEY_A, 'a') \
+	CF_ENUM(KEY_B, 'b') \
+	CF_ENUM(KEY_C, 'c') \
+	CF_ENUM(KEY_D, 'd') \
+	CF_ENUM(KEY_E, 'e') \
+	CF_ENUM(KEY_F, 'f') \
+	CF_ENUM(KEY_G, 'g') \
+	CF_ENUM(KEY_H, 'h') \
+	CF_ENUM(KEY_I, 'i') \
+	CF_ENUM(KEY_J, 'j') \
+	CF_ENUM(KEY_K, 'k') \
+	CF_ENUM(KEY_L, 'l') \
+	CF_ENUM(KEY_M, 'm') \
+	CF_ENUM(KEY_N, 'n') \
+	CF_ENUM(KEY_O, 'o') \
+	CF_ENUM(KEY_P, 'p') \
+	CF_ENUM(KEY_Q, 'q') \
+	CF_ENUM(KEY_R, 'r') \
+	CF_ENUM(KEY_S, 's') \
+	CF_ENUM(KEY_T, 't') \
+	CF_ENUM(KEY_U, 'u') \
+	CF_ENUM(KEY_V, 'v') \
+	CF_ENUM(KEY_W, 'w') \
+	CF_ENUM(KEY_X, 'x') \
+	CF_ENUM(KEY_Y, 'y') \
+	CF_ENUM(KEY_Z, 'z') \
+	CF_ENUM(KEY_CAPSLOCK, 123) \
+	CF_ENUM(KEY_F1, 124) \
+	CF_ENUM(KEY_F2, 125) \
+	CF_ENUM(KEY_F3, 126) \
+	CF_ENUM(KEY_F4, 127) \
+	CF_ENUM(KEY_F5, 128) \
+	CF_ENUM(KEY_F6, 129) \
+	CF_ENUM(KEY_F7, 130) \
+	CF_ENUM(KEY_F8, 131) \
+	CF_ENUM(KEY_F9, 132) \
+	CF_ENUM(KEY_F10, 133) \
+	CF_ENUM(KEY_F11, 134) \
+	CF_ENUM(KEY_F12, 135) \
+	CF_ENUM(KEY_PRINTSCREEN, 136) \
+	CF_ENUM(KEY_SCROLLLOCK, 137) \
+	CF_ENUM(KEY_PAUSE, 138) \
+	CF_ENUM(KEY_INSERT, 139) \
+	CF_ENUM(KEY_HOME, 140) \
+	CF_ENUM(KEY_PAGEUP, 141) \
+	CF_ENUM(KEY_DELETE, 142) \
+	CF_ENUM(KEY_END, 143) \
+	CF_ENUM(KEY_PAGEDOWN, 144) \
+	CF_ENUM(KEY_RIGHT, 145) \
+	CF_ENUM(KEY_LEFT, 146) \
+	CF_ENUM(KEY_DOWN, 147) \
+	CF_ENUM(KEY_UP, 148) \
+	CF_ENUM(KEY_NUMLOCKCLEAR, 149) \
+	CF_ENUM(KEY_KP_DIVIDE, 150) \
+	CF_ENUM(KEY_KP_MULTIPLY, 151) \
+	CF_ENUM(KEY_KP_MINUS, 152) \
+	CF_ENUM(KEY_KP_PLUS, 153) \
+	CF_ENUM(KEY_KP_ENTER, 154) \
+	CF_ENUM(KEY_KP_1, 155) \
+	CF_ENUM(KEY_KP_2, 156) \
+	CF_ENUM(KEY_KP_3, 157) \
+	CF_ENUM(KEY_KP_4, 158) \
+	CF_ENUM(KEY_KP_5, 159) \
+	CF_ENUM(KEY_KP_6, 160) \
+	CF_ENUM(KEY_KP_7, 161) \
+	CF_ENUM(KEY_KP_8, 162) \
+	CF_ENUM(KEY_KP_9, 163) \
+	CF_ENUM(KEY_KP_0, 164) \
+	CF_ENUM(KEY_KP_PERIOD, 165) \
+	CF_ENUM(KEY_APPLICATION, 166) \
+	CF_ENUM(KEY_POWER, 167) \
+	CF_ENUM(KEY_KP_EQUALS, 168) \
+	CF_ENUM(KEY_F13, 169) \
+	CF_ENUM(KEY_F14, 170) \
+	CF_ENUM(KEY_F15, 171) \
+	CF_ENUM(KEY_F16, 172) \
+	CF_ENUM(KEY_F17, 173) \
+	CF_ENUM(KEY_F18, 174) \
+	CF_ENUM(KEY_F19, 175) \
+	CF_ENUM(KEY_F20, 176) \
+	CF_ENUM(KEY_F21, 177) \
+	CF_ENUM(KEY_F22, 178) \
+	CF_ENUM(KEY_F23, 179) \
+	CF_ENUM(KEY_F24, 180) \
+	CF_ENUM(KEY_HELP, 181) \
+	CF_ENUM(KEY_MENU, 182) \
+	CF_ENUM(KEY_SELECT, 183) \
+	CF_ENUM(KEY_STOP, 184) \
+	CF_ENUM(KEY_AGAIN, 185) \
+	CF_ENUM(KEY_UNDO, 186) \
+	CF_ENUM(KEY_CUT, 187) \
+	CF_ENUM(KEY_COPY, 188) \
+	CF_ENUM(KEY_PASTE, 189) \
+	CF_ENUM(KEY_FIND, 190) \
+	CF_ENUM(KEY_MUTE, 191) \
+	CF_ENUM(KEY_VOLUMEUP, 192) \
+	CF_ENUM(KEY_VOLUMEDOWN, 193) \
+	CF_ENUM(KEY_KP_COMMA, 194) \
+	CF_ENUM(KEY_KP_EQUALSAS400, 195) \
+	CF_ENUM(KEY_ALTERASE, 196) \
+	CF_ENUM(KEY_SYSREQ, 197) \
+	CF_ENUM(KEY_CANCEL, 198) \
+	CF_ENUM(KEY_CLEAR, 199) \
+	CF_ENUM(KEY_PRIOR, 200) \
+	CF_ENUM(KEY_RETURN2, 201) \
+	CF_ENUM(KEY_SEPARATOR, 202) \
+	CF_ENUM(KEY_OUT, 203) \
+	CF_ENUM(KEY_OPER, 204) \
+	CF_ENUM(KEY_CLEARAGAIN, 205) \
+	CF_ENUM(KEY_CRSEL, 206) \
+	CF_ENUM(KEY_EXSEL, 207) \
+	CF_ENUM(KEY_KP_00, 208) \
+	CF_ENUM(KEY_KP_000, 209) \
+	CF_ENUM(KEY_THOUSANDSSEPARATOR, 210) \
+	CF_ENUM(KEY_DECIMALSEPARATOR, 211) \
+	CF_ENUM(KEY_CURRENCYUNIT, 212) \
+	CF_ENUM(KEY_CURRENCYSUBUNIT, 213) \
+	CF_ENUM(KEY_KP_LEFTPAREN, 214) \
+	CF_ENUM(KEY_KP_RIGHTPAREN, 215) \
+	CF_ENUM(KEY_KP_LEFTBRACE, 216) \
+	CF_ENUM(KEY_KP_RIGHTBRACE, 217) \
+	CF_ENUM(KEY_KP_TAB, 218) \
+	CF_ENUM(KEY_KP_BACKSPACE, 219) \
+	CF_ENUM(KEY_KP_A, 220) \
+	CF_ENUM(KEY_KP_B, 221) \
+	CF_ENUM(KEY_KP_C, 222) \
+	CF_ENUM(KEY_KP_D, 223) \
+	CF_ENUM(KEY_KP_E, 224) \
+	CF_ENUM(KEY_KP_F, 225) \
+	CF_ENUM(KEY_KP_XOR, 226) \
+	CF_ENUM(KEY_KP_POWER, 227) \
+	CF_ENUM(KEY_KP_PERCENT, 228) \
+	CF_ENUM(KEY_KP_LESS, 229) \
+	CF_ENUM(KEY_KP_GREATER, 230) \
+	CF_ENUM(KEY_KP_AMPERSAND, 231) \
+	CF_ENUM(KEY_KP_DBLAMPERSAND, 232) \
+	CF_ENUM(KEY_KP_VERTICALBAR, 233) \
+	CF_ENUM(KEY_KP_DBLVERTICALBAR, 234) \
+	CF_ENUM(KEY_KP_COLON, 235) \
+	CF_ENUM(KEY_KP_HASH, 236) \
+	CF_ENUM(KEY_KP_SPACE, 237) \
+	CF_ENUM(KEY_KP_AT, 238) \
+	CF_ENUM(KEY_KP_EXCLAM, 239) \
+	CF_ENUM(KEY_KP_MEMSTORE, 240) \
+	CF_ENUM(KEY_KP_MEMRECALL, 241) \
+	CF_ENUM(KEY_KP_MEMCLEAR, 242) \
+	CF_ENUM(KEY_KP_MEMADD, 243) \
+	CF_ENUM(KEY_KP_MEMSUBTRACT, 244) \
+	CF_ENUM(KEY_KP_MEMMULTIPLY, 245) \
+	CF_ENUM(KEY_KP_MEMDIVIDE, 246) \
+	CF_ENUM(KEY_KP_PLUSMINUS, 247) \
+	CF_ENUM(KEY_KP_CLEAR, 248) \
+	CF_ENUM(KEY_KP_CLEARENTRY, 249) \
+	CF_ENUM(KEY_KP_BINARY, 250) \
+	CF_ENUM(KEY_KP_OCTAL, 251) \
+	CF_ENUM(KEY_KP_DECIMAL, 252) \
+	CF_ENUM(KEY_KP_HEXADECIMAL, 253) \
+	CF_ENUM(KEY_LCTRL, 254) \
+	CF_ENUM(KEY_LSHIFT, 255) \
+	CF_ENUM(KEY_LALT, 256) \
+	CF_ENUM(KEY_LGUI, 257) \
+	CF_ENUM(KEY_RCTRL, 258) \
+	CF_ENUM(KEY_RSHIFT, 259) \
+	CF_ENUM(KEY_RALT, 260) \
+	CF_ENUM(KEY_RGUI, 261) \
+	CF_ENUM(KEY_MODE, 262) \
+	CF_ENUM(KEY_AUDIONEXT, 263) \
+	CF_ENUM(KEY_AUDIOPREV, 264) \
+	CF_ENUM(KEY_AUDIOSTOP, 265) \
+	CF_ENUM(KEY_AUDIOPLAY, 266) \
+	CF_ENUM(KEY_AUDIOMUTE, 267) \
+	CF_ENUM(KEY_MEDIASELECT, 268) \
+	CF_ENUM(KEY_WWW, 269) \
+	CF_ENUM(KEY_MAIL, 270) \
+	CF_ENUM(KEY_CALCULATOR, 271) \
+	CF_ENUM(KEY_COMPUTER, 272) \
+	CF_ENUM(KEY_AC_SEARCH, 273) \
+	CF_ENUM(KEY_AC_HOME, 274) \
+	CF_ENUM(KEY_AC_BACK, 275) \
+	CF_ENUM(KEY_AC_FORWARD, 276) \
+	CF_ENUM(KEY_AC_STOP, 277) \
+	CF_ENUM(KEY_AC_REFRESH, 278) \
+	CF_ENUM(KEY_AC_BOOKMARKS, 279) \
+	CF_ENUM(KEY_BRIGHTNESSDOWN, 280) \
+	CF_ENUM(KEY_BRIGHTNESSUP, 281) \
+	CF_ENUM(KEY_DISPLAYSWITCH, 282) \
+	CF_ENUM(KEY_KBDILLUMTOGGLE, 283) \
+	CF_ENUM(KEY_KBDILLUMDOWN, 284) \
+	CF_ENUM(KEY_KBDILLUMUP, 285) \
+	CF_ENUM(KEY_EJECT, 286) \
+	CF_ENUM(KEY_SLEEP, 287) \
+	CF_ENUM(KEY_ANY, 288) \
+	CF_ENUM(KEY_COUNT, 512) \
+
+typedef enum cf_key_button_t
 {
-	CF_KEY_UNKNOWN = 0,
-
-	CF_KEY_RETURN = '\r',
-	CF_KEY_ESCAPE = '\033',
-	CF_KEY_BACKSPACE = '\b',
-	CF_KEY_TAB = '\t',
-	CF_KEY_SPACE = ' ',
-	CF_KEY_EXCLAIM = '!',
-	CF_KEY_QUOTEDBL = '"',
-	CF_KEY_HASH = '#',
-	CF_KEY_PERCENT = '%',
-	CF_KEY_DOLLAR = '$',
-	CF_KEY_AMPERSAND = '&',
-	CF_KEY_QUOTE = '\'',
-	CF_KEY_LEFTPAREN = '(',
-	CF_KEY_RIGHTPAREN = ')',
-	CF_KEY_ASTERISK = '*',
-	CF_KEY_PLUS = '+',
-	CF_KEY_COMMA = ',',
-	CF_KEY_MINUS = '-',
-	CF_KEY_PERIOD = '.',
-	CF_KEY_SLASH = '/',
-	CF_KEY_0 = '0',
-	CF_KEY_1 = '1',
-	CF_KEY_2 = '2',
-	CF_KEY_3 = '3',
-	CF_KEY_4 = '4',
-	CF_KEY_5 = '5',
-	CF_KEY_6 = '6',
-	CF_KEY_7 = '7',
-	CF_KEY_8 = '8',
-	CF_KEY_9 = '9',
-	CF_KEY_COLON = ':',
-	CF_KEY_SEMICOLON = ';',
-	CF_KEY_LESS = '<',
-	CF_KEY_EQUALS = '=',
-	CF_KEY_GREATER = '>',
-	CF_KEY_QUESTION = '?',
-	CF_KEY_AT = '@',
-	// Skip uppercase letters
-	CF_KEY_LEFTBRACKET = '[',
-	CF_KEY_BACKSLASH = '\\',
-	CF_KEY_RIGHTBRACKET = ']',
-	CF_KEY_CARET = '^',
-	CF_KEY_UNDERSCORE = '_',
-	CF_KEY_BACKQUOTE = '`',
-	CF_KEY_A = 'a',
-	CF_KEY_B = 'b',
-	CF_KEY_C = 'c',
-	CF_KEY_D = 'd',
-	CF_KEY_E = 'e',
-	CF_KEY_F = 'f',
-	CF_KEY_G = 'g',
-	CF_KEY_H = 'h',
-	CF_KEY_I = 'i',
-	CF_KEY_J = 'j',
-	CF_KEY_K = 'k',
-	CF_KEY_L = 'l',
-	CF_KEY_M = 'm',
-	CF_KEY_N = 'n',
-	CF_KEY_O = 'o',
-	CF_KEY_P = 'p',
-	CF_KEY_Q = 'q',
-	CF_KEY_R = 'r',
-	CF_KEY_S = 's',
-	CF_KEY_T = 't',
-	CF_KEY_U = 'u',
-	CF_KEY_V = 'v',
-	CF_KEY_W = 'w',
-	CF_KEY_X = 'x',
-	CF_KEY_Y = 'y',
-	CF_KEY_Z = 'z',
-
-	CF_KEY_CAPSLOCK,
-
-	CF_KEY_F1,
-	CF_KEY_F2,
-	CF_KEY_F3,
-	CF_KEY_F4,
-	CF_KEY_F5,
-	CF_KEY_F6,
-	CF_KEY_F7,
-	CF_KEY_F8,
-	CF_KEY_F9,
-	CF_KEY_F10,
-	CF_KEY_F11,
-	CF_KEY_F12,
-
-	CF_KEY_PRINTSCREEN,
-	CF_KEY_SCROLLLOCK,
-	CF_KEY_PAUSE,
-	CF_KEY_INSERT,
-	CF_KEY_HOME,
-	CF_KEY_PAGEUP,
-	CF_KEY_DELETE,
-	CF_KEY_END,
-	CF_KEY_PAGEDOWN,
-	CF_KEY_RIGHT,
-	CF_KEY_LEFT,
-	CF_KEY_DOWN,
-	CF_KEY_UP,
-
-	CF_KEY_NUMLOCKCLEAR,
-	CF_KEY_KP_DIVIDE,
-	CF_KEY_KP_MULTIPLY,
-	CF_KEY_KP_MINUS,
-	CF_KEY_KP_PLUS,
-	CF_KEY_KP_ENTER,
-	CF_KEY_KP_1,
-	CF_KEY_KP_2,
-	CF_KEY_KP_3,
-	CF_KEY_KP_4,
-	CF_KEY_KP_5,
-	CF_KEY_KP_6,
-	CF_KEY_KP_7,
-	CF_KEY_KP_8,
-	CF_KEY_KP_9,
-	CF_KEY_KP_0,
-	CF_KEY_KP_PERIOD,
-	CF_KEY_APPLICATION,
-	CF_KEY_POWER,
-	CF_KEY_KP_EQUALS,
-
-	CF_KEY_F13,
-	CF_KEY_F14,
-	CF_KEY_F15,
-	CF_KEY_F16,
-	CF_KEY_F17,
-	CF_KEY_F18,
-	CF_KEY_F19,
-	CF_KEY_F20,
-	CF_KEY_F21,
-	CF_KEY_F22,
-	CF_KEY_F23,
-	CF_KEY_F24,
-	CF_KEY_HELP,
-	CF_KEY_MENU,
-	CF_KEY_SELECT,
-	CF_KEY_STOP,
-	CF_KEY_AGAIN,
-	CF_KEY_UNDO,
-	CF_KEY_CUT,
-	CF_KEY_COPY,
-	CF_KEY_PASTE,
-	CF_KEY_FIND,
-	CF_KEY_MUTE,
-	CF_KEY_VOLUMEUP,
-	CF_KEY_VOLUMEDOWN,
-
-	CF_KEY_KP_COMMA,
-	CF_KEY_KP_EQUALSAS400,
-	CF_KEY_ALTERASE,
-	CF_KEY_SYSREQ,
-	CF_KEY_CANCEL,
-	CF_KEY_CLEAR,
-	CF_KEY_PRIOR,
-	CF_KEY_RETURN2,
-	CF_KEY_SEPARATOR,
-	CF_KEY_OUT,
-	CF_KEY_OPER,
-	CF_KEY_CLEARAGAIN,
-
-	CF_KEY_CRSEL,
-	CF_KEY_EXSEL,
-	CF_KEY_KP_00,
-	CF_KEY_KP_000,
-	CF_KEY_THOUSANDSSEPARATOR,
-	CF_KEY_DECIMALSEPARATOR,
-	CF_KEY_CURRENCYUNIT,
-	CF_KEY_CURRENCYSUBUNIT,
-	CF_KEY_KP_LEFTPAREN,
-	CF_KEY_KP_RIGHTPAREN,
-	CF_KEY_KP_LEFTBRACE,
-	CF_KEY_KP_RIGHTBRACE,
-	CF_KEY_KP_TAB,
-	CF_KEY_KP_BACKSPACE,
-	CF_KEY_KP_A,
-	CF_KEY_KP_B,
-	CF_KEY_KP_C,
-	CF_KEY_KP_D,
-	CF_KEY_KP_E,
-	CF_KEY_KP_F,
-	CF_KEY_KP_XOR,
-	CF_KEY_KP_POWER,
-	CF_KEY_KP_PERCENT,
-	CF_KEY_KP_LESS,
-	CF_KEY_KP_GREATER,
-	CF_KEY_KP_AMPERSAND,
-	CF_KEY_KP_DBLAMPERSAND,
-	CF_KEY_KP_VERTICALBAR,
-	CF_KEY_KP_DBLVERTICALBAR,
-	CF_KEY_KP_COLON,
-	CF_KEY_KP_HASH,
-	CF_KEY_KP_SPACE,
-	CF_KEY_KP_AT,
-	CF_KEY_KP_EXCLAM,
-	CF_KEY_KP_MEMSTORE,
-	CF_KEY_KP_MEMRECALL,
-	CF_KEY_KP_MEMCLEAR,
-	CF_KEY_KP_MEMADD,
-	CF_KEY_KP_MEMSUBTRACT,
-	CF_KEY_KP_MEMMULTIPLY,
-	CF_KEY_KP_MEMDIVIDE,
-	CF_KEY_KP_PLUSMINUS,
-	CF_KEY_KP_CLEAR,
-	CF_KEY_KP_CLEARENTRY,
-	CF_KEY_KP_BINARY,
-	CF_KEY_KP_OCTAL,
-	CF_KEY_KP_DECIMAL,
-	CF_KEY_KP_HEXADECIMAL,
-
-	CF_KEY_LCTRL,
-	CF_KEY_LSHIFT,
-	CF_KEY_LALT,
-	CF_KEY_LGUI,
-	CF_KEY_RCTRL,
-	CF_KEY_RSHIFT,
-	CF_KEY_RALT,
-	CF_KEY_RGUI,
-
-	CF_KEY_MODE,
-
-	CF_KEY_AUDIONEXT,
-	CF_KEY_AUDIOPREV,
-	CF_KEY_AUDIOSTOP,
-	CF_KEY_AUDIOPLAY,
-	CF_KEY_AUDIOMUTE,
-	CF_KEY_MEDIASELECT,
-	CF_KEY_WWW,
-	CF_KEY_MAIL,
-	CF_KEY_CALCULATOR,
-	CF_KEY_COMPUTER,
-	CF_KEY_AC_SEARCH,
-	CF_KEY_AC_HOME,
-	CF_KEY_AC_BACK,
-	CF_KEY_AC_FORWARD,
-	CF_KEY_AC_STOP,
-	CF_KEY_AC_REFRESH,
-	CF_KEY_AC_BOOKMARKS,
-	CF_KEY_BRIGHTNESSDOWN,
-	CF_KEY_BRIGHTNESSUP,
-	CF_KEY_DISPLAYSWITCH,
-	CF_KEY_KBDILLUMTOGGLE,
-	CF_KEY_KBDILLUMDOWN,
-	CF_KEY_KBDILLUMUP,
-	CF_KEY_EJECT,
-	CF_KEY_SLEEP,
-
-	CF_KEY_ANY,
-
-	CF_KEY_COUNT
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_KEY_BUTTON_DEFS
+	#undef CF_ENUM
 } cf_key_button_t;
-
-#define CUTE_KEY_MOD_NONE     0x0000
-#define CUTE_KEY_MOD_LSHIFT   0x0001
-#define CUTE_KEY_MOD_RSHIFT   0x0002
-#define CUTE_KEY_MOD_LCTRL    0x0040
-#define CUTE_KEY_MOD_RCTRL    0x0080
-#define CUTE_KEY_MOD_LALT     0x0100
-#define CUTE_KEY_MOD_RALT     0x0200
-#define CUTE_KEY_MOD_LGUI     0x0400
-#define CUTE_KEY_MOD_RGUI     0x0800
-#define CUTE_KEY_MOD_NUMLOCK  0x1000
-#define CUTE_KEY_MOD_CAPSLOCK 0x2000
-
-#define CUTE_KEY_MOD_CTRL  (CUTE_KEY_MOD_LCTRL | CUTE_KEY_MOD_RCTRL)
-#define CUTE_KEY_MOD_SHIFT (CUTE_KEY_MOD_LSHIFT | CUTE_KEY_MOD_RSHIFT)
-#define CUTE_KEY_MOD_ALT   (CUTE_KEY_MOD_LALT | CUTE_KEY_MOD_RALT)
-#define CUTE_KEY_MOD_GUI   (CUTE_KEY_MOD_LGUI | CUTE_KEY_MOD_RGUI)
 
 #ifdef __cplusplus
 }
@@ -377,29 +359,43 @@ typedef enum cf_key_button_t //: int
 namespace cute
 {
 
-using key_button_t = cf_key_button_t;
-using mouse_button_t = cf_mouse_button_t;
-using mouse_click_t = cf_mouse_click_t;
+enum key_button_t : int
+{
+#define CF_ENUM(K, V) K = V,
+CF_KEY_BUTTON_DEFS
+#undef CF_ENUM
+};
+
+enum mouse_button_t : int
+{
+#define CF_ENUM(K, V) K = V,
+CF_MOUSE_BUTTON_DEFS
+#undef CF_ENUM
+};
+
 using ime_composition_t = cf_ime_composition_t;
 using touch_t = cf_touch_t;
 
-CUTE_INLINE bool CUTE_CALL key_is_down(key_button_t key) { return cf_key_is_down(key); }
-CUTE_INLINE bool CUTE_CALL key_is_up(key_button_t key) { return cf_key_is_up(key); }
-CUTE_INLINE bool CUTE_CALL key_was_pressed(key_button_t key) { return cf_key_was_pressed(key); }
-CUTE_INLINE bool CUTE_CALL key_was_released(key_button_t key) { return cf_key_was_released(key); }
+CUTE_INLINE bool CUTE_CALL key_is_down(key_button_t key) { return cf_key_is_down((cf_key_button_t)key); }
+CUTE_INLINE bool CUTE_CALL key_is_up(key_button_t key) { return cf_key_is_up((cf_key_button_t)key); }
+CUTE_INLINE bool CUTE_CALL key_was_pressed(key_button_t key) { return cf_key_was_pressed((cf_key_button_t)key); }
+CUTE_INLINE bool CUTE_CALL key_was_released(key_button_t key) { return cf_key_was_released((cf_key_button_t)key); }
+CUTE_INLINE bool CUTE_CALL key_ctrl() { return cf_key_ctrl(); }
+CUTE_INLINE bool CUTE_CALL key_shift() { return cf_key_shift(); }
+CUTE_INLINE bool CUTE_CALL key_alt() { return cf_key_alt(); }
+CUTE_INLINE bool CUTE_CALL key_gui() { return cf_key_gui(); }
 CUTE_INLINE void CUTE_CALL clear_all_key_state() { cf_clear_all_key_state(); }
-CUTE_INLINE int CUTE_CALL key_mod_bit_flags() { return cf_key_mod_bit_flags(); }
 	 
 CUTE_INLINE int CUTE_CALL mouse_x() { return cf_mouse_x(); }
 CUTE_INLINE int CUTE_CALL mouse_y() { return cf_mouse_y(); }
 	 
-CUTE_INLINE bool CUTE_CALL mouse_is_down(mouse_button_t button) { return cf_mouse_is_down(button); }
-CUTE_INLINE bool CUTE_CALL mouse_is_up(mouse_button_t button) { return cf_mouse_is_up(button); }
-CUTE_INLINE bool CUTE_CALL mouse_was_pressed(mouse_button_t button) { return cf_mouse_was_pressed(button); }
-CUTE_INLINE bool CUTE_CALL mouse_was_released(mouse_button_t button) { return cf_mouse_was_released(button); }
+CUTE_INLINE bool CUTE_CALL mouse_is_down(mouse_button_t button) { return cf_mouse_is_down((cf_mouse_button_t)button); }
+CUTE_INLINE bool CUTE_CALL mouse_is_up(mouse_button_t button) { return cf_mouse_is_up((cf_mouse_button_t)button); }
+CUTE_INLINE bool CUTE_CALL mouse_was_pressed(mouse_button_t button) { return cf_mouse_was_pressed((cf_mouse_button_t)button); }
+CUTE_INLINE bool CUTE_CALL mouse_was_released(mouse_button_t button) { return cf_mouse_was_released((cf_mouse_button_t)button); }
 CUTE_INLINE int CUTE_CALL mouse_wheel_motion() { return cf_mouse_wheel_motion(); }
-CUTE_INLINE bool CUTE_CALL mouse_is_down_double_click(mouse_button_t button) { return cf_mouse_is_down_double_click(button); }
-CUTE_INLINE bool CUTE_CALL mouse_double_click_was_pressed(mouse_button_t button) { return cf_mouse_double_click_was_pressed(button); }
+CUTE_INLINE bool CUTE_CALL mouse_is_down_double_click(mouse_button_t button) { return cf_mouse_is_down_double_click((cf_mouse_button_t)button); }
+CUTE_INLINE bool CUTE_CALL mouse_double_click_was_pressed(mouse_button_t button) { return cf_mouse_double_click_was_pressed((cf_mouse_button_t)button); }
 	 
 CUTE_INLINE void CUTE_CALL input_text_add_utf8(const char* text) { cf_input_text_add_utf8(text); }
 CUTE_INLINE int CUTE_CALL input_text_pop_utf32() { return cf_input_text_pop_utf32(); }

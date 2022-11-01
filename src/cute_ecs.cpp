@@ -51,12 +51,12 @@ struct cf_ecs_arrays_t
 
 static cf_ecs_arrays_t s_arrays;
 
-static cf_error_t cf_s_load_from_schema(cf_entity_type_t schema_type, cf_entity_t entity, cf_component_config_t* config, void* component, void* udata)
+static cf_result_t cf_s_load_from_schema(cf_entity_type_t schema_type, cf_entity_t entity, cf_component_config_t* config, void* component, void* udata)
 {
 	// Look for parent.
 	// If parent exists, load values from it first.
 	cf_entity_type_t inherits_from = CF_INVALID_ENTITY_TYPE;
-	cf_error_t err = cf_app->entity_schema_inheritence.find(schema_type, &inherits_from);
+	cf_result_t err = cf_app->entity_schema_inheritence.find(schema_type, &inherits_from);
 	if (!cf_is_error(err)) {
 		err = cf_s_load_from_schema(inherits_from, entity, config, component, udata);
 		if (cf_is_error(err)) return err;
@@ -65,7 +65,7 @@ static cf_error_t cf_s_load_from_schema(cf_entity_type_t schema_type, cf_entity_
 	cf_kv_t* schema = NULL;
 	err = cf_app->entity_parsed_schemas.find(schema_type, &schema);
 	if (cf_is_error(err)) {
-		err = cf_error_success();
+		err = cf_result_success();
 		if (config->serializer_fn) err = config->serializer_fn(schema, true, entity, component, udata);
 	} else {
 		err = cf_kv_object_begin(schema, config->name);
@@ -136,12 +136,12 @@ static CUTE_INLINE uint16_t cf_s_entity_type(cf_entity_t entity)
 	return (uint16_t)((entity.handle & 0x00000000FFFF0000ULL) >> 16);
 }
 
-cf_entity_t cf_entity_make(const char* entity_type, cf_error_t* err_out)
+cf_entity_t cf_entity_make(const char* entity_type, cf_result_t* err_out)
 {
 	cf_entity_type_t type = CF_INVALID_ENTITY_TYPE;
 	cf_app->entity_type_string_to_id.find(INJECT(entity_type), &type);
 	if (type == CF_INVALID_ENTITY_TYPE) {
-		if (err_out) *err_out = cf_error_failure("`entity_type` is not valid.");
+		if (err_out) *err_out = cf_result_error("`entity_type` is not valid.");
 		return CF_INVALID_ENTITY;
 	}
 
@@ -159,19 +159,19 @@ cf_entity_t cf_entity_make(const char* entity_type, cf_error_t* err_out)
 		cf_component_config_t* config = cf_app->component_configs.find(component_type);
 
 		if (!config) {
-			if (err_out) *err_out = cf_error_failure("Unable to find component config.");
+			if (err_out) *err_out = cf_result_error("Unable to find component config.");
 			return CF_INVALID_ENTITY;
 		}
 
 		void* component = collection->component_tables[i].add();
-		cf_error_t err = cf_s_load_from_schema(type, entity, config, component, config->serializer_udata);
+		cf_result_t err = cf_s_load_from_schema(type, entity, config, component, config->serializer_udata);
 		if (cf_is_error(err)) {
 			// TODO - Unload the components that were added with `.add()` a couple lines above here.
 			return CF_INVALID_ENTITY;
 		}
 	}
 
-	if (err_out) *err_out = cf_error_success();
+	if (err_out) *err_out = cf_result_success();
 	return entity;
 }
 
@@ -406,7 +406,7 @@ void cf_ecs_component_set_optional_cleanup(cf_component_cleanup_fn* cleanup_fn, 
 
 static cf_strpool_id cf_s_kv_string(cf_kv_t* kv, const char* key)
 {
-	cf_error_t err = cf_kv_key(kv, key, NULL);
+	cf_result_t err = cf_kv_key(kv, key, NULL);
 	if (cf_is_error(err)) {
 		if (CUTE_STRCMP(key, "inherits_from")) {
 			CUTE_DEBUG_PRINTF("Unable to find the `%s` key.\n", key);
@@ -432,7 +432,7 @@ static void cf_s_register_entity_type(const char* schema)
 	bool cleanup_kv = true;
 	CUTE_DEFER(if (cleanup_kv) cf_kv_destroy(kv));
 
-	cf_error_t err = cf_kv_parse(kv, schema, CUTE_STRLEN(schema));
+	cf_result_t err = cf_kv_parse(kv, schema, CUTE_STRLEN(schema));
 	if (cf_is_error(err)) {
 		CUTE_DEBUG_PRINTF("Unable to parse the schema when registering entity type.");
 		return;
@@ -570,12 +570,12 @@ cf_entity_type_t cf_s_entity_type(cf_kv_t* kv)
 	return entity_type;
 }
 
-static cf_error_t cf_s_fill_load_id_table(cf_kv_t* kv)
+static cf_result_t cf_s_fill_load_id_table(cf_kv_t* kv)
 {
 	int entity_count;
-	cf_error_t err = cf_kv_array_begin(kv, &entity_count, "entities");
+	cf_result_t err = cf_kv_array_begin(kv, &entity_count, "entities");
 	if (cf_is_error(err)) {
-		return cf_error_failure("Unable to find `entities` array in kv file.");
+		return cf_result_error("Unable to find `entities` array in kv file.");
 	}
 
 	while (entity_count--) {
@@ -583,7 +583,7 @@ static cf_error_t cf_s_fill_load_id_table(cf_kv_t* kv)
 
 		cf_entity_type_t entity_type = cf_s_entity_type(kv);
 		if (entity_type == CF_INVALID_ENTITY_TYPE) {
-			return cf_error_failure("Unable to find entity type.");
+			return cf_result_error("Unable to find entity type.");
 		}
 
 		cf_entity_collection_t* collection = cf_app->entity_collections.find(entity_type);
@@ -602,28 +602,28 @@ static cf_error_t cf_s_fill_load_id_table(cf_kv_t* kv)
 
 	cf_kv_array_end(kv);
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
 
 
-cf_error_t cf_internal_ecs_load_entities(cf_kv_t* kv, cf_array<cf_entity_t>* entities_out)
+cf_result_t cf_internal_ecs_load_entities(cf_kv_t* kv, cf_array<cf_entity_t>* entities_out)
 {
 	if (cf_kv_get_state(kv) != CF_KV_STATE_READ) {
-		return cf_error_failure("`kv` must be in `KV_STATE_READ` mode.");
+		return cf_result_error("`kv` must be in `KV_STATE_READ` mode.");
 	}
 
 	cf_array<cf_entity_t> load_id_table;
 	cf_app->load_id_table = &load_id_table;
 	CUTE_DEFER(cf_app->load_id_table = NULL);
 
-	cf_error_t err = cf_s_fill_load_id_table(kv);
+	cf_result_t err = cf_s_fill_load_id_table(kv);
 	if (cf_is_error(err)) return err;
 
 	int entity_count;
 	err = cf_kv_array_begin(kv, &entity_count, "entities");
 	if (cf_is_error(err)) {
-		return cf_error_failure("Unable to find `entities` array in kv file.");
+		return cf_result_error("Unable to find `entities` array in kv file.");
 	}
 
 	int entity_index = 0;
@@ -633,7 +633,7 @@ cf_error_t cf_internal_ecs_load_entities(cf_kv_t* kv, cf_array<cf_entity_t>* ent
 
 		cf_entity_type_t entity_type = cf_s_entity_type(kv);
 		if (entity_type == CF_INVALID_ENTITY_TYPE) {
-			return cf_error_failure("Unable to find entity type.");
+			return cf_result_error("Unable to find entity type.");
 		}
 
 		cf_entity_collection_t* collection = cf_app->entity_collections.find(entity_type);
@@ -645,23 +645,23 @@ cf_error_t cf_internal_ecs_load_entities(cf_kv_t* kv, cf_array<cf_entity_t>* ent
 			cf_component_config_t* config = cf_app->component_configs.find(component_type);
 
 			if (!config) {
-				return cf_error_failure("Unable to find component config.");
+				return cf_result_error("Unable to find component config.");
 			}
 
 			// First load values from the schema.
 			void* component = collection->component_tables[i].add();
 			err = cf_s_load_from_schema(entity_type, entity, config, component, config->serializer_udata);
 			if (cf_is_error(err)) {
-				return cf_error_failure("Unable to parse component from schema.");
+				return cf_result_error("Unable to parse component from schema.");
 			}
 
 			// Then load values from the instance.
-			cf_error_t err = cf_kv_object_begin(kv, config->name);
+			cf_result_t err = cf_kv_object_begin(kv, config->name);
 			if (!cf_is_error(err)) {
 				err = config->serializer_fn(kv, true, entity, component, config->serializer_udata);
 				cf_kv_object_end(kv);
 				if (cf_is_error(err)) {
-					return cf_error_failure("Unable to parse component.");
+					return cf_result_error("Unable to parse component.");
 				}
 			}
 		}
@@ -675,12 +675,12 @@ cf_error_t cf_internal_ecs_load_entities(cf_kv_t* kv, cf_array<cf_entity_t>* ent
 		entities_out->steal_from(&load_id_table);
 	}
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_ecs_load_entities(cf_kv_t* kv, cf_entity_t** entities_out, int* entities_count_out)
+cf_result_t cf_ecs_load_entities(cf_kv_t* kv, cf_entity_t** entities_out, int* entities_count_out)
 {
-	cf_error_t err;
+	cf_result_t err;
 
 	if (entities_out) {
 		CUTE_ASSERT(entities_count_out);
@@ -711,10 +711,10 @@ void cf_ecs_free_entities(cf_entity_t* entities)
 	CUTE_FREE(entities, NULL);
 }
 
-cf_error_t cf_internal_ecs_save_entities_kv(const cf_array<cf_entity_t>& entities, cf_kv_t* kv)
+cf_result_t cf_internal_ecs_save_entities_kv(const cf_array<cf_entity_t>& entities, cf_kv_t* kv)
 {
 	if (cf_kv_get_state(kv) != CF_KV_STATE_WRITE) {
-		return cf_error_failure("`kv` must be in `KV_STATE_WRITE` mode.");
+		return cf_result_error("`kv` must be in `KV_STATE_WRITE` mode.");
 	}
 
 	cf_dictionary<cf_entity_t, int> id_table;
@@ -725,7 +725,7 @@ cf_error_t cf_internal_ecs_save_entities_kv(const cf_array<cf_entity_t>& entitie
 	CUTE_DEFER(cf_app->save_id_table = NULL);
 
 	int entity_count = entities.count();
-	cf_error_t err = cf_kv_array_begin(kv, &entity_count, "entities");
+	cf_result_t err = cf_kv_array_begin(kv, &entity_count, "entities");
 	if (cf_is_error(err)) return err;
 
 	for (int i = 0; i < entities.count(); ++i) {
@@ -733,12 +733,12 @@ cf_error_t cf_internal_ecs_save_entities_kv(const cf_array<cf_entity_t>& entitie
 		cf_entity_type_t entity_type = cf_s_entity_type(entity);
 		cf_entity_collection_t* collection = cf_app->entity_collections.find(entity_type);
 		if (!collection) {
-			return cf_error_failure("Unable to find entity type.");
+			return cf_result_error("Unable to find entity type.");
 		}
 
 		bool is_valid = collection->entity_handle_table.is_valid(entity.handle);
 		if (!is_valid) {
-			return cf_error_failure("Attempted to save an invalid entity.");
+			return cf_result_error("Attempted to save an invalid entity.");
 		}
 		uint32_t index = collection->entity_handle_table.get_index(entity.handle);
 
@@ -757,12 +757,12 @@ cf_error_t cf_internal_ecs_save_entities_kv(const cf_array<cf_entity_t>& entitie
 			cf_component_config_t* config = cf_app->component_configs.find(component_type);
 			const void* component = component_table[index];
 
-			cf_error_t err = cf_kv_object_begin(kv, config->name);
+			cf_result_t err = cf_kv_object_begin(kv, config->name);
 			if (!cf_is_error(err)) {
 				err = config->serializer_fn(kv, false, entity, (void*)component, config->serializer_udata);
 				cf_kv_object_end(kv);
 				if (cf_is_error(err)) {
-					return cf_error_failure("Unable to save component.");
+					return cf_result_error("Unable to save component.");
 				}
 			}
 		}
@@ -772,15 +772,15 @@ cf_error_t cf_internal_ecs_save_entities_kv(const cf_array<cf_entity_t>& entitie
 
 	cf_kv_array_end(kv);
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_ecs_save_entities_kv(const cf_entity_t* entities, int entities_count, cf_kv_t* kv)
+cf_result_t cf_ecs_save_entities_kv(const cf_entity_t* entities, int entities_count, cf_kv_t* kv)
 {
 	// this function won't modify the array, so we can safely cast away the const
 	cf_array<cf_entity_t> arr((cf_entity_t*)entities, entities_count, entities_count, NULL);
 
-	cf_error_t err = cf_internal_ecs_save_entities_kv(arr, kv);
+	cf_result_t err = cf_internal_ecs_save_entities_kv(arr, kv);
 
 	// we don't want the array's deconstructor to free the memory we gave it
 	CUTE_MEMSET(&arr, 0, sizeof(arr));
@@ -788,7 +788,7 @@ cf_error_t cf_ecs_save_entities_kv(const cf_entity_t* entities, int entities_cou
 	return err;
 }
 
-cf_error_t cf_internal_ecs_save_entities(const cf_array<cf_entity_t>& entities)
+cf_result_t cf_internal_ecs_save_entities(const cf_array<cf_entity_t>& entities)
 {
 	cf_dictionary<cf_entity_t, int> id_table;
 	for (int i = 0; i < entities.count(); ++i)
@@ -803,12 +803,12 @@ cf_error_t cf_internal_ecs_save_entities(const cf_array<cf_entity_t>& entities)
 		cf_entity_type_t entity_type = cf_s_entity_type(entity);
 		cf_entity_collection_t* collection = cf_app->entity_collections.find(entity_type);
 		if (!collection) {
-			return cf_error_failure("Unable to find entity type.");
+			return cf_result_error("Unable to find entity type.");
 		}
 
 		bool is_valid = collection->entity_handle_table.is_valid(entity.handle);
 		if (!is_valid) {
-			return cf_error_failure("Attempted to save an invalid entity.");
+			return cf_result_error("Attempted to save an invalid entity.");
 		}
 		uint32_t index = collection->entity_handle_table.get_index(entity.handle);
 
@@ -822,22 +822,22 @@ cf_error_t cf_internal_ecs_save_entities(const cf_array<cf_entity_t>& entities)
 			cf_component_config_t* config = cf_app->component_configs.find(component_type);
 			const void* component = component_table[index];
 
-			cf_error_t err = config->serializer_fn(NULL, false, entity, (void*)component, config->serializer_udata);
+			cf_result_t err = config->serializer_fn(NULL, false, entity, (void*)component, config->serializer_udata);
 			if (cf_is_error(err)) {
-				return cf_error_failure("Unable to save component.");
+				return cf_result_error("Unable to save component.");
 			}
 		}
 	}
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_ecs_save_entities(const cf_entity_t* entities, int entities_count)
+cf_result_t cf_ecs_save_entities(const cf_entity_t* entities, int entities_count)
 {
 	// this function won't modify the array, so we can safely cast away the const
 	cf_array<cf_entity_t> arr((cf_entity_t*)entities, entities_count, entities_count, NULL);
 
-	cf_error_t err = cf_internal_ecs_save_entities(arr);
+	cf_result_t err = cf_internal_ecs_save_entities(arr);
 
 	// we don't want the array's deconstructor to free the memory we gave it
 	CUTE_MEMSET(&arr, 0, sizeof(arr));
@@ -982,10 +982,10 @@ void cf_ecs_free_list(const char** list)
 
 namespace cute
 {
-error_t ecs_load_entities(kv_t* kv, array<entity_t>* entities_out) { return cf_internal_ecs_load_entities(kv, entities_out); }
+result_t ecs_load_entities(kv_t* kv, array<entity_t>* entities_out) { return cf_internal_ecs_load_entities(kv, entities_out); }
 
-error_t ecs_save_entities(const array<entity_t>& entities, kv_t* kv) { return cf_internal_ecs_save_entities_kv(entities, kv); }
-error_t ecs_save_entities(const array<entity_t>& entities) { return cf_internal_ecs_save_entities(entities); }
+result_t ecs_save_entities(const array<entity_t>& entities, kv_t* kv) { return cf_internal_ecs_save_entities_kv(entities, kv); }
+result_t ecs_save_entities(const array<entity_t>& entities) { return cf_internal_ecs_save_entities(entities); }
 
 array<const char*> ecs_get_entity_list() { return cf_internal_ecs_get_entity_list(); }
 array<const char*> ecs_get_component_list() { return cf_internal_ecs_get_component_list(); }

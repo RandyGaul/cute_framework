@@ -121,7 +121,7 @@ static void cf_s_stream_ogg_task_fn(void* param)
 	} else {
 		audio = cf_audio_load_ogg_from_memory(audio_param->memory, audio_param->byte_count, audio_param->mem_ctx);
 	}
-	audio_param->user_promise.invoke(audio ? cf_error_success() : cf_error_failure("Failed to load ogg file."), audio);
+	audio_param->user_promise.invoke(audio ? cf_result_success() : cf_result_error("Failed to load ogg file."), audio);
 	CUTE_FREE(audio_param, audio_param->mem_ctx);
 }
 
@@ -134,7 +134,7 @@ static void cf_s_stream_wav_task_fn(void* param)
 	} else {
 		audio = cf_audio_load_wav_from_memory(audio_param->memory, audio_param->byte_count, audio_param->mem_ctx);
 	}
-	audio_param->user_promise.invoke(audio ? cf_error_success() : cf_error_failure("Failed to load wav file."), audio);
+	audio_param->user_promise.invoke(audio ? cf_result_success() : cf_result_error("Failed to load wav file."), audio);
 	CUTE_FREE(audio_param, audio_param->mem_ctx);
 }
 
@@ -188,15 +188,15 @@ void cf_audio_stream_wav_from_memory(void* memory, int byte_count, cf_promise_t 
 	cute_threadpool_kick(cf_app->threadpool);
 }
 
-cf_error_t cf_audio_destroy(cf_audio_t* audio)
+cf_result_t cf_audio_destroy(cf_audio_t* audio)
 {
 	if (cf_audio_ref_count(audio) == 0) {
 		void* mem_ctx = audio->mem_ctx;
 		cs_free_sound(audio);
 		CUTE_FREE(audio, mem_ctx);
-		return cf_error_success();
+		return cf_result_success();
 	} else {
-		return cf_error_failure("Reference count for audio was not zero.");
+		return cf_result_error("Reference count for audio was not zero.");
 	}
 }
 
@@ -283,13 +283,13 @@ static cf_audio_instance_t* cf_s_inst(cf_audio_t* src, cf_sound_params_t params)
 	return inst_ptr;
 }
 
-cf_error_t cf_music_play(cf_audio_t* audio_source, float fade_in_time)
+cf_result_t cf_music_play(cf_audio_t* audio_source, float fade_in_time)
 {
 	cf_audio_system_t* as = cf_app->audio_system;
-	if (!as) return cf_error_failure("Audio system not initialized.");
+	if (!as) return cf_result_error("Audio system not initialized.");
 
 	if (as->music_state != CF_MUSIC_STATE_PLAYING) {
-		cf_error_t err = cf_music_stop(0);
+		cf_result_t err = cf_music_stop(0);
 		if (cf_is_error(err)) return err;
 	}
 
@@ -305,7 +305,7 @@ cf_error_t cf_music_play(cf_audio_t* audio_source, float fade_in_time)
 	as->t = 0;
 
 	if (cf_list_empty(&as->free_sounds)) {
-		return cf_error_failure("Unable to play music. Audio instance buffer full.");
+		return cf_result_error("Unable to play music. Audio instance buffer full.");
 	}
 
 	float initial_volume = fade_in_time == 0 ? as->music_volume : 0;
@@ -316,13 +316,13 @@ cf_error_t cf_music_play(cf_audio_t* audio_source, float fade_in_time)
 	as->music_playing = inst;
 	cf_list_push_back(&as->playing_sounds, &inst->node);
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_music_stop(float fade_out_time)
+cf_result_t cf_music_stop(float fade_out_time)
 {
 	cf_audio_system_t* as = cf_app->audio_system;
-	if (!as) return cf_error_failure("Audio system not initialized.");
+	if (!as) return cf_result_error("Audio system not initialized.");
 
 	if (fade_out_time < 0) fade_out_time = 0;
 
@@ -334,7 +334,7 @@ cf_error_t cf_music_stop(float fade_out_time)
 		as->music_next = NULL;
 		as->music_state = CF_MUSIC_STATE_NONE;
 		CUTE_DEBUG_PRINTF("CF_MUSIC_STATE_NONE\n");
-		return cf_error_success();
+		return cf_result_success();
 	} else {
 		switch (as->music_state) {
 		case CF_MUSIC_STATE_NONE:
@@ -348,7 +348,7 @@ cf_error_t cf_music_stop(float fade_out_time)
 			break;
 
 		case CF_MUSIC_STATE_FADE_OUT:
-			return cf_error_success();
+			return cf_result_success();
 
 		case CF_MUSIC_STATE_FADE_IN:
 		{
@@ -381,10 +381,10 @@ cf_error_t cf_music_stop(float fade_out_time)
 		}	break;
 
 		case CF_MUSIC_STATE_PAUSED:
-			return cf_error_failure("Can not start a fade out while the music is paused.");
+			return cf_result_error("Can not start a fade out while the music is paused.");
 		}
 
-		return cf_error_success();
+		return cf_result_success();
 	}
 }
 
@@ -436,10 +436,10 @@ void cf_music_resume()
 	CUTE_DEBUG_PRINTF("music_state_to_resume_from_paused\n");
 }
 
-cf_error_t cf_music_switch_to(cf_audio_t* audio_source, float fade_out_time, float fade_in_time)
+cf_result_t cf_music_switch_to(cf_audio_t* audio_source, float fade_out_time, float fade_in_time)
 {
 	cf_audio_system_t* as = cf_app->audio_system;
-	if (!as) return cf_error_failure("Audio system not initialized.");
+	if (!as) return cf_result_error("Audio system not initialized.");
 
 	if (fade_in_time < 0) fade_in_time = 0;
 	if (fade_out_time < 0) fade_out_time = 0;
@@ -514,16 +514,16 @@ cf_error_t cf_music_switch_to(cf_audio_t* audio_source, float fade_out_time, flo
 	}	break;
 
 	case CF_MUSIC_STATE_PAUSED:
-		return cf_error_failure("Can not switch music while paused.");
+		return cf_result_error("Can not switch music while paused.");
 	}
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_music_crossfade(cf_audio_t* audio_source, float cross_fade_time)
+cf_result_t cf_music_crossfade(cf_audio_t* audio_source, float cross_fade_time)
 {
 	cf_audio_system_t* as = cf_app->audio_system;
-	if (!as) return cf_error_failure("Audio system not initialized.");
+	if (!as) return cf_result_error("Audio system not initialized.");
 
 	if (cross_fade_time < 0) cross_fade_time = 0;
 
@@ -596,10 +596,10 @@ cf_error_t cf_music_crossfade(cf_audio_t* audio_source, float cross_fade_time)
 	}	break;
 
 	case CF_MUSIC_STATE_PAUSED:
-		return cf_error_failure("Can not start a crossfade while music is paused.");
+		return cf_result_error("Can not start a crossfade while music is paused.");
 	}
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
 // -------------------------------------------------------------------------------------------------
@@ -613,23 +613,23 @@ cf_sound_params_t cf_sound_params_defaults()
 	return params;
 }
 
-cf_sound_t cf_sound_play(cf_audio_t* audio_source, cf_sound_params_t params, cf_error_t* err)
+cf_sound_t cf_sound_play(cf_audio_t* audio_source, cf_sound_params_t params, cf_result_t* err)
 {
 	cf_audio_system_t* as = cf_app->audio_system;
 	if (!as) {
-		if (err) *err = cf_error_failure("Audio system not initialized.");
+		if (err) *err = cf_result_error("Audio system not initialized.");
 		return cf_sound_t();
 	}
 
 	if (cf_list_empty(&as->free_sounds)) {
-		if (err) *err = cf_error_failure("Unable to play music. Audio instance buffer full.");
+		if (err) *err = cf_result_error("Unable to play music. Audio instance buffer full.");
 		return cf_sound_t();
 	}
 
 	cf_audio_instance_t* inst = cf_s_inst(audio_source, params);
 	cf_list_push_back(&as->playing_sounds, &inst->node);
 
-	if (err) *err = cf_error_success();
+	if (err) *err = cf_result_success();
 	cf_sound_t sound;
 	sound.id = inst->id;
 	return sound;

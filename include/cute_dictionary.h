@@ -62,7 +62,7 @@ CUTE_INLINE cf_dictionary_string_block_t cf_s_dictionary_make_block_len(const ch
 
 #include "cute_hashtable.h"
 #include "cute_c_runtime.h"
-#include "cute_error.h"
+#include "cute_result.h"
 
 /**
  * `cf_dictionary` implements a thin type wrapper with templates over a C-style hashtable implementation.
@@ -84,8 +84,8 @@ struct cf_dictionary
 
 	T* find(const K& key);
 	const T* find(const K& key) const;
-	cf_error_t find(const K& key, T* val_out);
-	cf_error_t find(const K& key, T* val_out) const;
+	cf_result_t find(const K& key, T* val_out);
+	cf_result_t find(const K& key, T* val_out) const;
 
 	T* insert(const K& key);
 	T* insert(const K& key, const T& val);
@@ -147,26 +147,26 @@ const T* cf_dictionary<K, T>::find(const K& key) const
 }
 
 template <typename K, typename T>
-cf_error_t cf_dictionary<K, T>::find(const K& key, T* val_out)
+cf_result_t cf_dictionary<K, T>::find(const K& key, T* val_out)
 {
 	T* ptr = (T*)cf_hashtable_find(&m_table, &key);
 	if (ptr) {
 		*val_out = *ptr;
-		return cf_error_success();
+		return cf_result_success();
 	} else {
-		return cf_error_failure("Unable to find dictionary entry.");
+		return cf_result_error("Unable to find dictionary entry.");
 	}
 }
 
 template <typename K, typename T>
-cf_error_t cf_dictionary<K, T>::find(const K& key, T* val_out) const
+cf_result_t cf_dictionary<K, T>::find(const K& key, T* val_out) const
 {
 	const T* ptr = (const T*)cf_hashtable_find(&m_table, &key);
 	if (ptr) {
 		*val_out = *ptr;
-		return cf_error_success();
+		return cf_result_success();
 	} else {
-		return cf_error_failure("Unable to find dictionary entry.");
+		return cf_result_error("Unable to find dictionary entry.");
 	}
 }
 
@@ -253,10 +253,10 @@ struct cf_dictionary<const char*, T>
 	const T* find(const char* key) const;
 	T* find(const char* key, size_t key_len);
 	const T* find(const char* key, size_t key_len) const;
-	cf_error_t find(const char* key, T* val_out);
-	cf_error_t find(const char* key, T* val_out) const;
-	cf_error_t find(const char* key, size_t key_len, T* val_out);
-	cf_error_t find(const char* key, size_t key_len, T* val_out) const;
+	cf_result_t find(const char* key, T* val_out);
+	cf_result_t find(const char* key, T* val_out) const;
+	cf_result_t find(const char* key, size_t key_len, T* val_out);
+	cf_result_t find(const char* key, size_t key_len, T* val_out) const;
 
 	T* insert(const char* key, const T& val);
 	void remove(const char* key);
@@ -330,52 +330,52 @@ const T* cf_dictionary<const char*, T>::find(const char* key, size_t key_len) co
 }
 
 template <typename T>
-cf_error_t cf_dictionary<const char*, T>::find(const char* key, T* val_out)
+cf_result_t cf_dictionary<const char*, T>::find(const char* key, T* val_out)
 {
 	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key);
 	T* ptr = (T*)cf_hashtable_find(&m_table, &block);
 	if (ptr) {
 		*val_out = *ptr;
-		return cf_error_success();
+		return cf_result_success();
 	} else {
-		return cf_error_failure("Unable to find dictionary entry.");
+		return cf_result_error("Unable to find dictionary entry.");
 	}
 }
 
 template <typename T>
-cf_error_t cf_dictionary<const char*, T>::find(const char* key, T* val_out) const
+cf_result_t cf_dictionary<const char*, T>::find(const char* key, T* val_out) const
 {
 	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key);
 	T* ptr = (T*)cf_hashtable_find(&m_table, &block);
 	if (ptr) {
 		*val_out = *ptr;
-		return cf_error_success();
+		return cf_result_success();
 	} else {
-		return cf_error_failure("Unable to find dictionary entry.");
+		return cf_result_error("Unable to find dictionary entry.");
 	}
 }
 
 template <typename T>
-cf_error_t cf_dictionary<const char*, T>::find(const char* key, size_t key_len, T* val_out)
+cf_result_t cf_dictionary<const char*, T>::find(const char* key, size_t key_len, T* val_out)
 {
 	T* ptr = find(key, key_len);
 	if (ptr) {
 		*val_out = *ptr;
-		return cf_error_success();
+		return cf_result_success();
 	} else {
-		return cf_error_failure("Unable to find dictionary entry.");
+		return cf_result_error("Unable to find dictionary entry.");
 	}
 }
 
 template <typename T>
-cf_error_t cf_dictionary<const char*, T>::find(const char* key, size_t key_len, T* val_out) const
+cf_result_t cf_dictionary<const char*, T>::find(const char* key, size_t key_len, T* val_out) const
 {
 	const T* ptr = find(key, key_len);
 	if (ptr) {
 		*val_out = *ptr;
-		return cf_error_success();
+		return cf_result_success();
 	} else {
-		return cf_error_failure("Unable to find dictionary entry.");
+		return cf_result_error("Unable to find dictionary entry.");
 	}
 }
 

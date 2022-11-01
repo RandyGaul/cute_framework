@@ -28,7 +28,7 @@
 
 #include <SDL.h>
 
-enum cf_mouse_click_t// : int
+enum cf_mouse_click_t
 {
 	CF_MOUSE_CLICK_SINGLE,
 	CF_MOUSE_CLICK_DOUBLE,

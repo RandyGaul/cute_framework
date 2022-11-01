@@ -33,28 +33,28 @@
 #include <string>
 #include <vector>
 
-CUTE_INLINE cf_error_t cf_kv_val_string_cf(cf_kv_t* kv, cf_string_t* string)
+CUTE_INLINE cf_result_t cf_kv_val_string_cf(cf_kv_t* kv, cf_string_t* string)
 {
 	const char* ptr = string->c_str();
 	size_t len = string->len();
-	cf_error_t err = cf_kv_val_string(kv, &ptr, &len);
+	cf_result_t err = cf_kv_val_string(kv, &ptr, &len);
 	if (cf_is_error(err)) return err;
 	*string = cf_string_t(ptr, ptr + len);
-	return cf_error_success();
+	return cf_result_success();
 }
 
-CUTE_INLINE cf_error_t cf_kv_val_string_std(cf_kv_t* kv, std::string* val)
+CUTE_INLINE cf_result_t cf_kv_val_string_std(cf_kv_t* kv, std::string* val)
 {
 	const char* ptr = val->data();
 	size_t len = val->length();
-	cf_error_t err = cf_kv_val_string(kv, &ptr, &len);
+	cf_result_t err = cf_kv_val_string(kv, &ptr, &len);
 	if (cf_is_error(err)) return err;
 	val->assign(ptr, len);
-	return cf_error_success();
+	return cf_result_success();
 }
 
 template <typename T>
-CUTE_INLINE cf_error_t cf_kv_val_vec(cf_kv_t* kv, std::vector<T>* val, const char* key = NULL)
+CUTE_INLINE cf_result_t cf_kv_val_vec(cf_kv_t* kv, std::vector<T>* val, const char* key = NULL)
 {
 	int count = (int)val->size();
 	cf_kv_array_begin(kv, &count, key);
@@ -70,11 +70,11 @@ namespace cute
 {
 using string_t = cf_string_t;
 
-CUTE_INLINE error_t kv_val_cf_string(kv_t* kv, string_t* string) { return cf_kv_val_string_cf(kv, string); }
-CUTE_INLINE error_t kv_val(kv_t* kv, std::string* val) { return cf_kv_val_string_std(kv, val); }
+CUTE_INLINE result_t kv_val_cf_string(kv_t* kv, string_t* string) { return cf_kv_val_string_cf(kv, string); }
+CUTE_INLINE result_t kv_val(kv_t* kv, std::string* val) { return cf_kv_val_string_std(kv, val); }
 
 template <typename T>
-CUTE_INLINE error_t kv_val(kv_t* kv, std::vector<T>* val, const char* key = NULL) { return cf_kv_val_int32<T>(kv, val, key); }
+CUTE_INLINE result_t kv_val(kv_t* kv, std::vector<T>* val, const char* key = NULL) { return cf_kv_val_int32<T>(kv, val, key); }
 }
 #endif // CUTE_CPP
 

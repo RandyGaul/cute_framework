@@ -44,6 +44,8 @@
 
 #include <sokol/sokol_gfx_imgui.h>
 
+#define CUTE_RETURN_IF_ERROR(x) do { cf_result_t err = (x); if (cf_is_error(err)) return err; } while (0)
+
 struct SDL_Window;
 struct cs_context_t;
 
@@ -190,7 +192,6 @@ struct cf_app_t
 	int keys[512] = { 0 };
 	int keys_prev[512] = { 0 };
 	float keys_duration[512] = { 0 };
-	int key_mod = 0;
 	cf_mouse_state_t mouse, mouse_prev;
 	cf_list_t joypads;
 	cf_array<cf_touch_t> touches;

@@ -31,11 +31,18 @@
 
 #ifdef __cplusplus
 extern "C" {
+#ifdef _MSC_VER
+#pragma warning(disable : 4190) // MSVC warns about returning "C++ type" with C-linkage.
+#endif
 #endif // __cplusplus
 
 // 2d vector
 typedef struct cf_v2
 {
+	#ifdef CUTE_CPP
+	cf_v2() { }
+	cf_v2(float a, float b) : x(a), y(b) { }
+	#endif // CUTE_CPP
 	float x;
 	float y;
 } cf_v2;
@@ -428,13 +435,18 @@ CUTE_API void CUTE_CALL cf_aabb_to_poly_manifold(cf_aabb_t A, const cf_poly_t* B
 CUTE_API void CUTE_CALL cf_capsule_to_poly_manifold(cf_capsule_t A, const cf_poly_t* B, const cf_transform_t* bx, cf_manifold_t* m);
 CUTE_API void CUTE_CALL cf_poly_to_poly_manifold(const cf_poly_t* A, const cf_transform_t* ax, const cf_poly_t* B, const cf_transform_t* bx, cf_manifold_t* m);
 
+#define CF_SHAPE_TYPE_DEFS \
+	CF_ENUM(SHAPE_TYPE_NONE, 0) \
+	CF_ENUM(SHAPE_TYPE_CIRCLE, 1) \
+	CF_ENUM(SHAPE_TYPE_AABB, 2) \
+	CF_ENUM(SHAPE_TYPE_CAPSULE, 3) \
+	CF_ENUM(SHAPE_TYPE_POLY, 4) \
+
 typedef enum cf_shape_type_t
 {
-	CF_SHAPE_TYPE_NONE,
-	CF_SHAPE_TYPE_CIRCLE,
-	CF_SHAPE_TYPE_AABB,
-	CF_SHAPE_TYPE_CAPSULE,
-	CF_SHAPE_TYPE_POLY
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_SHAPE_TYPE_DEFS
+	#undef CF_ENUM
 } cf_shape_type_t;
 
 // This typedef struct is only for advanced usage of the c2GJK function. See comments inside of the
@@ -540,6 +552,9 @@ CUTE_API bool CUTE_CALL cf_cast_ray(cf_ray_t A, const void* B, const cf_transfor
 
 #ifdef __cplusplus
 }
+#ifdef _MSC_VER
+#pragma warning(default : 4190) // MSVC warns about returning "C++ type" with C-linkage.
+#endif
 #endif // __cplusplus
 
 //--------------------------------------------------------------------------------------------------
@@ -550,15 +565,7 @@ CUTE_API bool CUTE_CALL cf_cast_ray(cf_ray_t A, const void* B, const cf_transfor
 namespace cute
 {
 
-struct v2
-{
-	v2() { }
-	v2(float x, float y) { this->x = x; this->y = y; }
-	v2(cf_v2 v) { x = v.x; y = v.y; }
-	CUTE_INLINE operator cf_v2() const { cf_v2 v; v.x = x; v.y = y; return v; }
-	float x;
-	float y;
-};
+using v2 = cf_v2;
 
 CUTE_INLINE v2 operator+(v2 a, v2 b) { return v2(a.x + b.x, a.y + b.y); }
 CUTE_INLINE v2 operator-(v2 a, v2 b) { return v2(a.x - b.x, a.y - b.y); }
@@ -593,9 +600,15 @@ using aabb_t = cf_aabb_t;
 using poly_t = cf_poly_t;
 using capsule_t = cf_capsule_t;
 using manifold_t = cf_manifold_t;
-using shape_type_t = cf_shape_type_t;
 using gjk_cache_t = cf_gjk_cache_t;
 using toi_result_t = cf_toi_result_t;
+
+enum shape_type_t : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_SHAPE_TYPE_DEFS
+	#undef CF_ENUM
+};
 
 CUTE_INLINE float min(float a, float b) { return cf_min(a, b); }
 CUTE_INLINE float max(float a, float b) { return cf_max(a, b); }
@@ -667,6 +680,7 @@ CUTE_INLINE sincos_t mulT(sincos_t a, sincos_t b) { return cf_mulT_sc(a, b); }
 
 CUTE_INLINE float atan2_360(float y, float x) { return cf_atan2_360(y, x); }
 CUTE_INLINE float atan2_360(v2 v) { return cf_atan2_360_v2(v); }
+CUTE_INLINE float atan2_360(sincos_t r) { return cf_atan2_360_sc(r); }
 
 CUTE_INLINE float shortest_arc(v2 a, v2 b) { return cf_shortest_arc(a, b); }
 
@@ -784,15 +798,15 @@ CUTE_INLINE void poly_to_poly_manifold(const poly_t* A, const transform_t* ax, c
 
 CUTE_INLINE float gjk(const void* A, shape_type_t typeA, const transform_t* ax_ptr, const void* B, shape_type_t typeB, const transform_t* bx_ptr, v2* outA, v2* outB, int use_radius, int* iterations, gjk_cache_t* cache)
 {
-	return cf_gjk(A, typeA, ax_ptr, B, typeB, bx_ptr, (cf_v2*)outA, (cf_v2*)outB, use_radius, iterations, cache);
+	return cf_gjk(A, (cf_shape_type_t)typeA, ax_ptr, B, (cf_shape_type_t)typeB, bx_ptr, (cf_v2*)outA, (cf_v2*)outB, use_radius, iterations, cache);
 }
 
 CUTE_INLINE toi_result_t toi(const void* A, shape_type_t typeA, const transform_t* ax_ptr, v2 vA, const void* B, shape_type_t typeB, const transform_t* bx_ptr, v2 vB, int use_radius, int* iterations)
 {
-	return cf_toi(A, typeA, ax_ptr, vA, B, typeB, bx_ptr, vB, use_radius, iterations);
+	return cf_toi(A, (cf_shape_type_t)typeA, ax_ptr, vA, B, (cf_shape_type_t)typeB, bx_ptr, vB, use_radius, iterations);
 }
 
-CUTE_INLINE void inflate(void* shape, shape_type_t type, float skin_factor) { return cf_inflate(shape, type, skin_factor); }
+CUTE_INLINE void inflate(void* shape, shape_type_t type, float skin_factor) { return cf_inflate(shape, (cf_shape_type_t)type, skin_factor); }
 
 CUTE_INLINE int hull(v2* verts, int count) { return cf_hull((cf_v2*)verts, count); }
 CUTE_INLINE void norms(v2* verts, v2* norms, int count) { return cf_norms((cf_v2*)verts, (cf_v2*)norms, count); }
@@ -800,9 +814,9 @@ CUTE_INLINE void norms(v2* verts, v2* norms, int count) { return cf_norms((cf_v2
 CUTE_INLINE void make_poly(poly_t* p) { return cf_make_poly(p); }
 CUTE_INLINE v2 centroid(const v2* verts, int count) { return cf_centroid((cf_v2*)verts, count); }
 
-CUTE_INLINE int collided(const void* A, const transform_t* ax, shape_type_t typeA, const void* B, const transform_t* bx, shape_type_t typeB) { return cf_collided(A, ax, typeA, B, bx, typeB); }
-CUTE_INLINE void collide(const void* A, const transform_t* ax, shape_type_t typeA, const void* B, const transform_t* bx, shape_type_t typeB, manifold_t* m) { return cf_collide(A, ax, typeA, B, bx, typeB, m); }
-CUTE_INLINE bool cast_ray(ray_t A, const void* B, const transform_t* bx, shape_type_t typeB, raycast_t* out) { return cf_cast_ray(A, B, bx, typeB, out); }
+CUTE_INLINE int collided(const void* A, const transform_t* ax, shape_type_t typeA, const void* B, const transform_t* bx, shape_type_t typeB) { return cf_collided(A, ax, (cf_shape_type_t)typeA, B, bx, (cf_shape_type_t)typeB); }
+CUTE_INLINE void collide(const void* A, const transform_t* ax, shape_type_t typeA, const void* B, const transform_t* bx, shape_type_t typeB, manifold_t* m) { return cf_collide(A, ax, (cf_shape_type_t)typeA, B, bx, (cf_shape_type_t)typeB, m); }
+CUTE_INLINE bool cast_ray(ray_t A, const void* B, const transform_t* bx, shape_type_t typeB, raycast_t* out) { return cf_cast_ray(A, B, bx, (cf_shape_type_t)typeB, out); }
 
 }
 

@@ -121,24 +121,24 @@ static void cf_s_sprite(cf_aseprite_cache_t* cache, aseprite_cache_entry_t entry
 	}
 }
 
-cf_error_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* aseprite_path, cf_sprite_t* sprite)
+cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* aseprite_path, cf_sprite_t* sprite)
 {
 	// First see if this ase was already cached.
 	cf_strpool_id path = INJECT(aseprite_path);
 	aseprite_cache_entry_t entry;
 	if (!cf_is_error(cache->aseprites.find(path, &entry))) {
 		cf_s_sprite(cache, entry, sprite);
-		return cf_error_success();
+		return cf_result_success();
 	}
 
 	// Load the aseprite file.
 	void* data = NULL;
 	size_t sz = 0;
 	cf_file_system_read_entire_file_to_memory(aseprite_path, &data, &sz, NULL);
-	if (!data) return cf_error_failure("Unable to open ase file at `aseprite_path`.");
+	if (!data) return cf_result_error("Unable to open ase file at `aseprite_path`.");
 	CUTE_DEFER(CUTE_FREE(data, cache->mem_ctx));
 	ase_t* ase = cute_aseprite_load_from_memory(data, (int)sz, cache->mem_ctx);
-	if (!ase) return cf_error_failure("Unable to open ase file at `aseprite_path`.");
+	if (!ase) return cf_result_error("Unable to open ase file at `aseprite_path`.");
 
 	// Allocate internal cache data structure entries.
 	cf_animation_table_t* animations = (cf_animation_table_t*)CUTE_ALLOC(sizeof(cf_animation_table_t), cache->mem_ctx);
@@ -235,7 +235,7 @@ cf_error_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepri
 	cache->aseprites.insert(path, entry);
 
 	cf_s_sprite(cache, entry, sprite);
-	return cf_error_success();
+	return cf_result_success();
 }
 
 void cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, const char* aseprite_path)
@@ -262,19 +262,19 @@ void cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, const char* aseprite_p
 	cache->aseprites.remove(path);
 }
 
-cf_error_t cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase)
+cf_result_t cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase)
 {
 	cf_sprite_t s;
-	cf_error_t err = cf_aseprite_cache_load(cache, aseprite_path, &s);
+	cf_result_t err = cf_aseprite_cache_load(cache, aseprite_path, &s);
 	if (cf_is_error(err)) return err;
 
 	cf_strpool_id path = INJECT(aseprite_path);
 	aseprite_cache_entry_t entry;
 	if (!cf_is_error(cache->aseprites.find(path, &entry))) {
 		*ase = entry.ase;
-		return cf_error_success();
+		return cf_result_success();
 	} else {
-		return cf_error_failure("Unable to load aseprite.");
+		return cf_result_error("Unable to load aseprite.");
 	}
 }
 

@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_ERROR_H
-#define CUTE_ERROR_H
+#ifndef CUTE_RESULT_H
+#define CUTE_RESULT_H
 
 #include "cute_defines.h"
 
@@ -31,22 +31,28 @@
 extern "C" {
 #endif // __cplusplus
 
-#define CUTE_ERROR_SUCCESS (0)
-#define CUTE_ERROR_FAILURE (-1)
+#define CF_RESULT_DEFS \
+	CF_ENUM(RESULT_SUCCESS, 0) \
+	CF_ENUM(RESULT_ERROR, -1) \
 
-typedef struct cf_error_t
+enum
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_RESULT_DEFS
+	#undef CF_ENUM
+};
+
+typedef struct cf_result_t
 {
 	int code;
 	const char* details;
-} cf_error_t;
+} cf_result_t;
 
-CUTE_INLINE bool cf_is_error(cf_error_t error) { return error.code == CUTE_ERROR_FAILURE; }
+CUTE_INLINE bool cf_is_error(cf_result_t result) { return result.code == CF_RESULT_ERROR; }
 
-CUTE_INLINE cf_error_t cf_error_make(int code, const char* details) { cf_error_t error; error.code = code; error.details = details; return error; }
-CUTE_INLINE cf_error_t cf_error_failure(const char* details) { cf_error_t error; error.code = CUTE_ERROR_FAILURE; error.details = details; return error; }
-CUTE_INLINE cf_error_t cf_error_success() { cf_error_t error; error.code = CUTE_ERROR_SUCCESS; error.details = NULL; return error; }
-
-#define CUTE_RETURN_IF_ERROR(x) do { cf_error_t err = (x); if (cf_is_error(err)) return err; } while (0)
+CUTE_INLINE cf_result_t cf_result_make(int code, const char* details) { cf_result_t result; result.code = code; result.details = details; return result; }
+CUTE_INLINE cf_result_t cf_result_error(const char* details) { cf_result_t result; result.code = CF_RESULT_ERROR; result.details = details; return result; }
+CUTE_INLINE cf_result_t cf_result_success() { cf_result_t result; result.code = CF_RESULT_SUCCESS; result.details = NULL; return result; }
 
 #ifdef __cplusplus
 }
@@ -60,16 +66,23 @@ CUTE_INLINE cf_error_t cf_error_success() { cf_error_t error; error.code = CUTE_
 namespace cute
 {
 
-using error_t = cf_error_t;
+using result_t = cf_result_t;
 
-CUTE_INLINE bool is_error(error_t error) { return cf_is_error(error); }
+enum : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_RESULT_DEFS
+	#undef CF_ENUM
+};
 
-CUTE_INLINE error_t error_make(int code, const char* details) { return cf_error_make(code, details); }
-CUTE_INLINE error_t error_failure(const char* details) { return cf_error_failure(details); }
-CUTE_INLINE error_t error_success() { return cf_error_success(); }
+CUTE_INLINE bool is_error(result_t error) { return cf_is_error(error); }
+
+CUTE_INLINE result_t result_make(int code, const char* details) { return cf_result_make(code, details); }
+CUTE_INLINE result_t result_failure(const char* details) { return cf_result_error(details); }
+CUTE_INLINE result_t result_success() { return cf_result_success(); }
 
 }
 
 #endif // CUTE_CPP
 
-#endif // CUTE_ERROR_H
+#endif // CUTE_RESULT_H

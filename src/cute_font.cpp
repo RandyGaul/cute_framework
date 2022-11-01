@@ -66,7 +66,7 @@ cf_font_t* cf_font_load_bmfont(const char* font_path, const char* font_image_pat
 {
 	void* font_data;
 	size_t font_size;
-	cf_error_t err = cf_file_system_read_entire_file_to_memory(font_path, &font_data, &font_size, cf_app->mem_ctx);
+	cf_result_t err = cf_file_system_read_entire_file_to_memory(font_path, &font_data, &font_size, cf_app->mem_ctx);
 	if (cf_is_error(err)) return NULL;
 
 	void* image_data;
@@ -99,7 +99,7 @@ static void cf_s_load_courier_new()
 {
 	if (!cf_app->courier_new) {
 		cf_image_t img;
-		cf_error_t err = cf_image_load_png_mem(courier_new_0_png_data, courier_new_0_png_sz, &img, NULL);
+		cf_result_t err = cf_image_load_png_mem(courier_new_0_png_data, courier_new_0_png_sz, &img, NULL);
 		cf_s_r_splat(&img);
 		cf_texture_t tex = cf_texture_make(img.pix, img.w, img.h);
 		cute_font_t* font = cute_font_load_bmfont(tex, courier_new_fnt_data, courier_new_fnt_sz, cf_app->mem_ctx);
@@ -145,7 +145,7 @@ void cf_font_push_verts(const cf_font_t* font, const char* text, float x, float 
 
 void cf_font_draw(const cf_font_t* font, cf_matrix_t mvp, cf_color_t color)
 {
-	cf_error_t err = cf_app->font_buffer.append(cf_app->font_verts.count(), cf_app->font_verts.data());
+	cf_result_t err = cf_app->font_buffer.append(cf_app->font_verts.count(), cf_app->font_verts.data());
 	if (cf_is_error(err)) {
 		CUTE_WARN("Overflow in `font_draw`, dropping draw call.");
 		return;

@@ -251,7 +251,7 @@ static void cf_s_batch_report(spritebatch_sprite_t* sprites, int count, int text
 	}
 
 	// Map the vertex buffer with sprite vertex data.
-	cf_error_t err = b->sprite_buffer.append(vert_count, verts);
+	cf_result_t err = b->sprite_buffer.append(vert_count, verts);
 	if (cf_is_error(err)) {
 		CUTE_WARN("Overflow in in sprite batcher, dropping draw call.");
 		return;
@@ -414,11 +414,11 @@ void cf_batch_destroy(cf_batch_t* b)
 	CUTE_FREE(b, b->mem_ctx);
 }
 
-cf_error_t cf_batch_set_GPU_buffer_configuration(cf_batch_t* b, size_t size_of_one_buffer)
+cf_result_t cf_batch_set_GPU_buffer_configuration(cf_batch_t* b, size_t size_of_one_buffer)
 {
 	b->geom_buffer.release();
 	b->sprite_buffer.release();
-	cf_error_t err = b->geom_buffer.init(size_of_one_buffer, sizeof(cf_vertex_t));
+	cf_result_t err = b->geom_buffer.init(size_of_one_buffer, sizeof(cf_vertex_t));
 	if (cf_is_error(err)) return err;
 	return b->sprite_buffer.init(size_of_one_buffer, sizeof(cf_quad_vertex_t));
 }
@@ -441,7 +441,7 @@ void cf_batch_push(cf_batch_t* b, cf_batch_sprite_t q)
 	spritebatch_push(&b->sb, s);
 }
 
-cf_error_t cf_batch_flush(cf_batch_t* b)
+cf_result_t cf_batch_flush(cf_batch_t* b)
 {
 	// Draw sprites.
 	cf_s_sync_pip(b);
@@ -461,7 +461,7 @@ cf_error_t cf_batch_flush(cf_batch_t* b)
 		geom_vs_params_t params;
 		params.u_mvp = b->projection;
 		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(params));
-		cf_error_t err = b->geom_buffer.append(b->geom_verts.count(), b->geom_verts.data());
+		cf_result_t err = b->geom_buffer.append(b->geom_verts.count(), b->geom_verts.data());
 		if (cf_is_error(err)) {
 			// Draw call dropped!!!
 		} else {
@@ -471,7 +471,7 @@ cf_error_t cf_batch_flush(cf_batch_t* b)
 		b->geom_verts.clear();
 	}
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
 void cf_batch_update(cf_batch_t* b)

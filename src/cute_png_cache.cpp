@@ -75,10 +75,10 @@ void cf_png_cache_destroy(cf_png_cache_t* cache)
 	CUTE_FREE(cache, mem_ctx);
 }
 
-cf_error_t cf_png_cache_load(cf_png_cache_t* cache, const char* png_path, cf_png_t* png)
+cf_result_t cf_png_cache_load(cf_png_cache_t* cache, const char* png_path, cf_png_t* png)
 {
 	cf_image_t img;
-	cf_error_t err = cf_image_load_png(png_path, &img, cache->mem_ctx);
+	cf_result_t err = cf_image_load_png(png_path, &img, cache->mem_ctx);
 	if (cf_is_error(err)) return err;
 	cf_png_t entry;
 	entry.path = cf_strpool_cstr(cache->strpool, INJECT(png_path));
@@ -89,13 +89,13 @@ cf_error_t cf_png_cache_load(cf_png_cache_t* cache, const char* png_path, cf_png
 	cache->id_to_pixels.insert(entry.id, img.pix);
 	cache->pngs.insert(entry.id, entry);
 	if (png) *png = entry;
-	return cf_error_success();
+	return cf_result_success();
 }
 
-cf_error_t cf_png_cache_load_mem(cf_png_cache_t* cache, const char* png_path, const void* memory, size_t size, cf_png_t* png)
+cf_result_t cf_png_cache_load_mem(cf_png_cache_t* cache, const char* png_path, const void* memory, size_t size, cf_png_t* png)
 {
 	cf_image_t img;
-	cf_error_t err = cf_image_load_png_mem(memory, (int)size, &img, cache->mem_ctx);
+	cf_result_t err = cf_image_load_png_mem(memory, (int)size, &img, cache->mem_ctx);
 	if (cf_is_error(err)) return err;
 	cf_png_t entry;
 	entry.path = cf_strpool_cstr(cache->strpool, INJECT(png_path));
@@ -106,7 +106,7 @@ cf_error_t cf_png_cache_load_mem(cf_png_cache_t* cache, const char* png_path, co
 	cache->id_to_pixels.insert(entry.id, img.pix);
 	cache->pngs.insert(entry.id, entry);
 	if (png) *png = entry;
-	return cf_error_success();
+	return cf_result_success();
 }
 
 void cf_png_cache_unload(cf_png_cache_t* cache, cf_png_t* png)
@@ -210,12 +210,12 @@ cf_sprite_t cf_png_cache_make_sprite(cf_png_cache_t* cache, const char* sprite_n
 {
 	cf_strpool_id name_id = INJECT(sprite_name);
 	if (!table) {
-		cf_error_t err = cache->animation_tables.find(name_id, (cf_animation_table_t**)&table);
+		cf_result_t err = cache->animation_tables.find(name_id, (cf_animation_table_t**)&table);
 		CUTE_ASSERT(!cf_is_error(err));
 	}
 
 	cf_png_t png;	
-	cf_error_t err = cache->pngs.find(cf_animation_table_items(table)[0]->frames[0].id, &png);
+	cf_result_t err = cache->pngs.find(cf_animation_table_items(table)[0]->frames[0].id, &png);
 
 	CUTE_ASSERT(!cf_is_error(err));
 

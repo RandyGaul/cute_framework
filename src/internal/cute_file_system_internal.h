@@ -22,9 +22,9 @@
 #ifndef CUTE_FILE_SYSTEM_INTERNAL_H
 #define CUTE_FILE_SYSTEM_INTERNAL_H
 
-#include <cute_error.h>
+#include <cute_result.h>
 
-CUTE_API cf_error_t CUTE_CALL cf_file_system_init(const char* argv0);
+CUTE_API cf_result_t CUTE_CALL cf_file_system_init(const char* argv0);
 CUTE_API void CUTE_CALL cf_file_system_destroy();
 
 #ifdef CUTE_CPP

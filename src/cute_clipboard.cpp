@@ -28,9 +28,9 @@ char* cf_clipboard_get()
 	return text;
 }
 
-cf_error_t cf_clipboard_set(const char* string)
+cf_result_t cf_clipboard_set(const char* string)
 {
 	int ret = SDL_SetClipboardText(string);
-	if (ret) return cf_error_failure("Unable to set clipboard data.");
-	else return cf_error_success();
+	if (ret) return cf_result_error("Unable to set clipboard data.");
+	else return cf_result_success();
 }

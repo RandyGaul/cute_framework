@@ -23,7 +23,7 @@
 #define CUTE_GFX_H
 
 #include "cute_defines.h"
-#include "cute_error.h"
+#include "cute_result.h"
 #include "cute_app.h"
 #include "cute_color.h"
 #include "cute_c_runtime.h"
@@ -65,9 +65,9 @@ typedef struct cf_buffer_t
 
 	#ifdef CUTE_CPP
 	CUTE_INLINE sg_bindings bind();
-	CUTE_INLINE cf_error_t init(size_t vertex_data_size, size_t vertex_stride, int index_count = 0, int index_stride = 0);
+	CUTE_INLINE cf_result_t init(size_t vertex_data_size, size_t vertex_stride, int index_count = 0, int index_stride = 0);
 	CUTE_INLINE void release();
-	CUTE_INLINE cf_error_t append(int vertex_count, const void* vertices, int index_count = 0, const void* indices = NULL);
+	CUTE_INLINE cf_result_t append(int vertex_count, const void* vertices, int index_count = 0, const void* indices = NULL);
 	#endif // CUTE_CPP
 } cf_buffer_t;
 
@@ -81,7 +81,7 @@ CUTE_INLINE sg_bindings cf_buffer_bind(cf_buffer_t* b)
 	return bind;
 }
 
-CUTE_INLINE cf_error_t cf_buffer_init(cf_buffer_t* b, size_t vertex_data_size, size_t vertex_stride, int index_count /*= 0*/, int index_stride /*= 0*/)
+CUTE_INLINE cf_result_t cf_buffer_init(cf_buffer_t* b, size_t vertex_data_size, size_t vertex_stride, int index_count /*= 0*/, int index_stride /*= 0*/)
 {
 	b->vbuf.stride = (int)vertex_stride;
 	b->ibuf.stride = (int)index_stride;
@@ -103,10 +103,10 @@ CUTE_INLINE cf_error_t cf_buffer_init(cf_buffer_t* b, size_t vertex_data_size, s
 	b->vbuf.buffer = sg_make_buffer(&vparams);
 	b->ibuf.buffer = index_count ? sg_make_buffer(&iparams) : invalid;
 	if (b->vbuf.buffer.id == SG_INVALID_ID) {
-		return cf_error_failure("Failed to create buffer.");
+		return cf_result_error("Failed to create buffer.");
 	}
 
-	return cf_error_success();
+	return cf_result_success();
 }
 
 CUTE_INLINE void cf_buffer_release(cf_buffer_t *b)
@@ -124,14 +124,14 @@ CUTE_INLINE void cf_buffer_release(cf_buffer_t *b)
 // forward declare for C api
 bool sg_query_will_buffer_overflow(sg_buffer buf_id, size_t size);
 
-CUTE_INLINE cf_error_t cf_buffer_append(cf_buffer_t* b, int vertex_count, const void* vertices, int index_count /*= 0*/, const void* indices /*= NULL*/)
+CUTE_INLINE cf_result_t cf_buffer_append(cf_buffer_t* b, int vertex_count, const void* vertices, int index_count /*= 0*/, const void* indices /*= NULL*/)
 {
 	sg_range vertex_range = { vertices, (size_t)vertex_count * (size_t)b->vbuf.stride };
 	sg_range index_range = { indices, (size_t)index_count * (size_t)b->ibuf.stride };
 	if (sg_query_will_buffer_overflow(b->vbuf.buffer, vertex_range.size)) {
-		return cf_error_failure("Overflowed vertex buffer.");
+		return cf_result_error("Overflowed vertex buffer.");
 	} else if (sg_query_will_buffer_overflow(b->ibuf.buffer, index_range.size)) {
-		return cf_error_failure("Overflowed index buffer.");
+		return cf_result_error("Overflowed index buffer.");
 	} else {
 		int voffset = sg_append_buffer(b->vbuf.buffer, &vertex_range);
 		b->vbuf.offset = voffset;
@@ -139,7 +139,7 @@ CUTE_INLINE cf_error_t cf_buffer_append(cf_buffer_t* b, int vertex_count, const 
 			int ioffset = sg_append_buffer(b->ibuf.buffer, &index_range);
 			b->ibuf.offset = ioffset;
 		}
-		return cf_error_success();
+		return cf_result_success();
 	}
 }
 
@@ -153,9 +153,9 @@ CUTE_INLINE cf_error_t cf_buffer_append(cf_buffer_t* b, int vertex_count, const 
 #ifdef CUTE_CPP
 
 CUTE_INLINE sg_bindings cf_buffer_t::bind() { return cf_buffer_bind(this); }
-CUTE_INLINE cf_error_t cf_buffer_t::init(size_t vertex_data_size, size_t vertex_stride, int index_count, int index_stride) { return cf_buffer_init(this, vertex_data_size, vertex_stride, index_count, index_stride); }
+CUTE_INLINE cf_result_t cf_buffer_t::init(size_t vertex_data_size, size_t vertex_stride, int index_count, int index_stride) { return cf_buffer_init(this, vertex_data_size, vertex_stride, index_count, index_stride); }
 CUTE_INLINE void cf_buffer_t::release() { cf_buffer_release(this); }
-CUTE_INLINE cf_error_t cf_buffer_t::append(int vertex_count, const void* vertices, int index_count, const void* indices) { return cf_buffer_append(this, vertex_count, vertices, index_count, indices); }
+CUTE_INLINE cf_result_t cf_buffer_t::append(int vertex_count, const void* vertices, int index_count, const void* indices) { return cf_buffer_append(this, vertex_count, vertices, index_count, indices); }
 
 namespace cute
 {
@@ -172,7 +172,7 @@ CUTE_INLINE matrix_t matrix_ortho_2d(float w, float h, float x, float y) { retur
 
 using buffer_t = cf_buffer_t;
 
-CUTE_INLINE buffer_t buffer_make(size_t vertex_data_size, size_t vertex_stride, int index_count = 0, int index_stride = 0, error_t* err = NULL)
+CUTE_INLINE buffer_t buffer_make(size_t vertex_data_size, size_t vertex_stride, int index_count = 0, int index_stride = 0, result_t* err = NULL)
 { 
 	buffer_t buffer = { 0 };
 	if (err) *err = cf_buffer_init(&buffer, vertex_data_size, vertex_stride, index_count, index_stride);
@@ -181,9 +181,9 @@ CUTE_INLINE buffer_t buffer_make(size_t vertex_data_size, size_t vertex_stride, 
 }
 
 CUTE_INLINE sg_bindings buffer_bind(buffer_t* buffer) { return cf_buffer_bind(buffer); }
-CUTE_INLINE error_t buffer_init(buffer_t* buffer, size_t vertex_data_size, size_t vertex_stride, int index_count = 0, int index_stride = 0) { return cf_buffer_init(buffer, vertex_data_size, vertex_stride, index_count, index_stride); }
+CUTE_INLINE result_t buffer_init(buffer_t* buffer, size_t vertex_data_size, size_t vertex_stride, int index_count = 0, int index_stride = 0) { return cf_buffer_init(buffer, vertex_data_size, vertex_stride, index_count, index_stride); }
 CUTE_INLINE void buffer_release(buffer_t* buffer) { cf_buffer_release(buffer); }
-CUTE_INLINE error_t buffer_append(buffer_t* buffer, int vertex_count, const void* vertices, int index_count = 0, const void* indices = NULL) { return cf_buffer_append(buffer, vertex_count, vertices, index_count, indices); }
+CUTE_INLINE result_t buffer_append(buffer_t* buffer, int vertex_count, const void* vertices, int index_count = 0, const void* indices = NULL) { return cf_buffer_append(buffer, vertex_count, vertices, index_count, indices); }
 
 }
 
