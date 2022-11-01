@@ -57,7 +57,7 @@ struct thing_t
 	};
 };
 
-cf_error_t do_serialize(cf_kv_t* kv, thing_t* thing)
+cf_result_t do_serialize(cf_kv_t* kv, thing_t* thing)
 {
 	size_t len;
 	CUTE_RETURN_IF_ERROR(cf_kv_key(kv, "a", NULL)); CUTE_RETURN_IF_ERROR(cf_kv_val_int32(kv, &thing->a));
@@ -107,7 +107,7 @@ cf_error_t do_serialize(cf_kv_t* kv, thing_t* thing)
 		CUTE_RETURN_IF_ERROR(cf_kv_object_end(kv));
 	}
 	CUTE_RETURN_IF_ERROR(cf_kv_array_end(kv));
-	return cf_error_success();
+	return cf_result_success();
 }
 
 CUTE_TEST_CASE(test_kv_basic, "Fairly comprehensive test for basic kv to and from buffer.");
@@ -168,7 +168,7 @@ int test_kv_basic()
 	char* buffer = (char*)cf_kv_get_buffer(kv);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(buffer, expected, size));
 
-	cf_error_t err = cf_kv_parse(kv, buffer, size);
+	cf_result_t err = cf_kv_parse(kv, buffer, size);
 	CUTE_TEST_ASSERT(!cf_is_error(err));
 
 	CUTE_MEMSET(&thing, 0, sizeof(thing_t));
@@ -294,7 +294,7 @@ int test_kv_write_delta_basic()
 		b = 2
 	);
 
-	cf_error_t err = cf_kv_parse(base, text_base, CUTE_STRLEN(text_base));
+	cf_result_t err = cf_kv_parse(base, text_base, CUTE_STRLEN(text_base));
 	if (cf_is_error(err)) return -1;
 
 	cf_kv_write_mode(kv);
@@ -337,7 +337,7 @@ int test_kv_read_delta_basic()
 		b = 2
 	);
 
-	cf_error_t err = cf_kv_parse(base, text_base, CUTE_STRLEN(text_base));
+	cf_result_t err = cf_kv_parse(base, text_base, CUTE_STRLEN(text_base));
 	if (cf_is_error(err)) return -1;
 	
 	const char* delta =
@@ -393,7 +393,7 @@ int test_kv_write_delta_deep()
 		d = 8
 	);
 
-	cf_error_t err = cf_kv_parse(base0, text_base0, CUTE_STRLEN(text_base0));
+	cf_result_t err = cf_kv_parse(base0, text_base0, CUTE_STRLEN(text_base0));
 	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(base1, text_base1, CUTE_STRLEN(text_base1));
 	if (cf_is_error(err)) return -1;
@@ -484,7 +484,7 @@ int test_kv_read_delta_deep()
 		d = 8
 	);
 
-	cf_error_t err = cf_kv_parse(base0, text_base0, CUTE_STRLEN(text_base0));
+	cf_result_t err = cf_kv_parse(base0, text_base0, CUTE_STRLEN(text_base0));
 	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(base1, text_base1, CUTE_STRLEN(text_base1));
 	if (cf_is_error(err)) return -1;
@@ -554,7 +554,7 @@ int test_kv_read_delta_array()
 		},
 	);
 
-	cf_error_t err = cf_kv_parse(base, base_text, CUTE_STRLEN(base_text));
+	cf_result_t err = cf_kv_parse(base, base_text, CUTE_STRLEN(base_text));
 	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(kv, text, CUTE_STRLEN(text));
 	if (cf_is_error(err)) return -1;
@@ -610,7 +610,7 @@ int test_kv_read_and_write_delta_blob()
 
 	const char* base_text = (const char*)cf_kv_get_buffer(writer0);
 	const char* text = (const char*)cf_kv_get_buffer(writer1);
-	cf_error_t err = cf_kv_parse(base, base_text, CUTE_STRLEN(base_text));
+	cf_result_t err = cf_kv_parse(base, base_text, CUTE_STRLEN(base_text));
 	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(kv, text, CUTE_STRLEN(text));
 	if (cf_is_error(err)) return -1;
@@ -651,7 +651,7 @@ int test_kv_read_delta_string()
 		b = "c"
 	);
 
-	cf_error_t err = cf_kv_parse(base, base_text, CUTE_STRLEN(base_text));
+	cf_result_t err = cf_kv_parse(base, base_text, CUTE_STRLEN(base_text));
 	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(kv, text, CUTE_STRLEN(text));
 	if (cf_is_error(err)) return -1;
@@ -728,7 +728,7 @@ int test_kv_read_delta_object()
 
 	cf_kv_t* kv = cf_kv_make(NULL);
 	cf_kv_t* base = cf_kv_make(NULL);
-	cf_error_t err = cf_kv_parse(base, base_text, CUTE_STRLEN(base_text));
+	cf_result_t err = cf_kv_parse(base, base_text, CUTE_STRLEN(base_text));
 	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(kv, text, CUTE_STRLEN(text));
 	if (cf_is_error(err)) return -1;

@@ -29,6 +29,8 @@
 #include <test_harness.h>
 #include <internal/cute_file_system_internal.h>
 
+#define CUTE_RETURN_IF_ERROR(x) do { cf_result_t err = (x); if (cf_is_error(err)) return err; } while (0)
+
 #include <test_handle.h>
 #include <test_circular_buffer.h>
 #include <test_doubly_list.h>

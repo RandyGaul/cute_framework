@@ -56,7 +56,7 @@ struct test_component_octorok_t
 
 // -------------------------------------------------------------------------------------------------
 
-cf_error_t test_component_transform_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
+cf_result_t test_component_transform_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
 {
 	test_component_transform_t* transform = (test_component_transform_t*)component;
 	if (reading) {
@@ -68,7 +68,7 @@ cf_error_t test_component_transform_serialize(cf_kv_t* kv, bool reading, cf_enti
 	return cf_kv_error_state(kv);
 }
 
-cf_error_t test_component_sprite_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
+cf_result_t test_component_sprite_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
 {
 	test_component_sprite_t* sprite = (test_component_sprite_t*)component;
 	if (reading) {
@@ -78,7 +78,7 @@ cf_error_t test_component_sprite_serialize(cf_kv_t* kv, bool reading, cf_entity_
 	return cf_kv_error_state(kv);
 }
 
-cf_error_t test_component_collider_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
+cf_result_t test_component_collider_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
 {
 	test_component_collider_t* collider = (test_component_collider_t*)component;
 	if (reading) {
@@ -90,7 +90,7 @@ cf_error_t test_component_collider_serialize(cf_kv_t* kv, bool reading, cf_entit
 	return cf_kv_error_state(kv);
 }
 
-cf_error_t test_component_octorok_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
+cf_result_t test_component_octorok_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
 {
 	test_component_octorok_t* octorok = (test_component_octorok_t*)component;
 	if (reading) {
@@ -155,7 +155,7 @@ void update_test_octorok_buddy_counter_system(float dt, cf_ecs_arrays_t* arrays,
 CUTE_TEST_CASE(test_ecs_octorok, "Run ECS with a mock Octorok entity.");
 int test_ecs_octorok()
 {
-	if (cf_is_error(cf_app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN, NULL, NULL))) {
+	if (cf_is_error(cf_app_make(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL, NULL))) {
 		return -1;
 	}
 
@@ -243,7 +243,7 @@ int test_ecs_octorok()
 	);
 
 	cf_kv_t* parsed_entities = cf_kv_make(NULL);
-	cf_error_t err = cf_kv_parse(parsed_entities, serialized_entities, CUTE_STRLEN(serialized_entities));
+	cf_result_t err = cf_kv_parse(parsed_entities, serialized_entities, CUTE_STRLEN(serialized_entities));
 	if (cf_is_error(err)) return -1;
 
 	cf_array<cf_entity_t> entities;
@@ -297,13 +297,13 @@ struct dummy_component_t
 	int iters = 0;
 };
 
-cf_error_t dummy_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
+cf_result_t dummy_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
 {
 	dummy_component_t* dummy = (dummy_component_t*)component;
 	if (reading) {
 		CUTE_PLACEMENT_NEW(dummy) dummy_component_t;
 	}
-	return cf_error_success();
+	return cf_result_success();
 }
 
 void update_dummy_system(float dt, cf_ecs_arrays_t* arrays, int count, void* udata)
@@ -318,7 +318,7 @@ void update_dummy_system(float dt, cf_ecs_arrays_t* arrays, int count, void* uda
 CUTE_TEST_CASE(test_ecs_no_kv, "Run ECS without kv at all.");
 int test_ecs_no_kv()
 {
-	if (cf_is_error(cf_app_make(NULL, 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN, NULL, NULL))) {
+	if (cf_is_error(cf_app_make(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL, NULL))) {
 		return -1;
 	}
 

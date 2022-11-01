@@ -19,7 +19,7 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <cute_error.h>
+#include <cute_result.h>
 #include <cute_string.h>
 
 typedef int (test_fn)();

@@ -44,10 +44,10 @@ int test_audio_load_synchronous()
 	return 0;
 }
 
-static cf_error_t s_audio_error;
+static cf_result_t s_audio_error;
 static cf_audio_t* s_audio;
 
-static void cf_s_audio_promise(cf_error_t status, void* param, void* udata)
+static void cf_s_audio_promise(cf_result_t status, void* param, void* udata)
 {
 	s_audio_error = status;
 	cf_atomic_ptr_set((void**)&s_audio, param);
@@ -57,12 +57,12 @@ static void cf_s_audio_promise(cf_error_t status, void* param, void* udata)
 CUTE_TEST_CASE(test_audio_load_asynchronous, "Load and free wav/ogg files asynchronously.");
 int test_audio_load_asynchronous()
 {
-	CUTE_TEST_ASSERT(!cf_is_error(cf_app_make("audio test", 0, 0, 0, 0, CUTE_APP_OPTIONS_HIDDEN, NULL, NULL)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_app_make("audio test", 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL, NULL)));
 
 	cf_promise_t promise;
 	promise.callback = cf_s_audio_promise;
 
-	s_audio_error = cf_error_success();
+	s_audio_error = cf_result_success();
 	s_audio = NULL;
 	cf_audio_stream_ogg("test_data/3-6-19-blue-suit-jam.ogg", promise, NULL);
 
@@ -71,7 +71,7 @@ int test_audio_load_asynchronous()
 
 	CUTE_TEST_ASSERT(!cf_is_error(cf_audio_destroy(s_audio)));
 
-	s_audio_error = cf_error_success();
+	s_audio_error = cf_result_success();
 	s_audio = NULL;
 	cf_audio_stream_wav("test_data/jump.wav", promise, NULL);
 
