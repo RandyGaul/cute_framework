@@ -19,7 +19,7 @@ using namespace cute;
 int main(int argc, const char** argv)
 {
 	// Create a window with a resolution of 640 x 480.
-	error_t err = app_make("Fancy Window Title", 50, 50, 640, 480, CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT, argv[0]);
+	error_t err = make_app("Fancy Window Title", 50, 50, 640, 480, APP_OPTIONS_DEFAULT_GFX_CONTEXT, argv[0]);
 	if (is_error(err)) return -1;
 
 	while (app_is_running())
@@ -30,7 +30,7 @@ int main(int argc, const char** argv)
 		app_present();
 	}
 
-	app_destroy();
+	destroy_app();
 
 	return 0;
 }
