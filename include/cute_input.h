@@ -33,7 +33,7 @@ extern "C" {
 #endif // __cplusplus
 
 typedef enum cf_key_button_t cf_key_button_t;
-typedef enum cf_mouse_button_t : int cf_mouse_button_t;
+typedef enum cf_mouse_button_t cf_mouse_button_t;
 typedef enum cf_mouse_click_t cf_mouse_click_t;
 
 CUTE_API bool CUTE_CALL cf_key_is_down(cf_key_button_t key);
