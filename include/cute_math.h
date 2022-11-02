@@ -39,10 +39,6 @@ extern "C" {
 // 2d vector
 typedef struct cf_v2
 {
-	#ifdef CUTE_CPP
-	cf_v2() { }
-	cf_v2(float a, float b) : x(a), y(b) { }
-	#endif // CUTE_CPP
 	float x;
 	float y;
 } cf_v2;
@@ -567,21 +563,29 @@ namespace cute
 
 using v2 = cf_v2;
 
-CUTE_INLINE v2 operator+(v2 a, v2 b) { return v2(a.x + b.x, a.y + b.y); }
-CUTE_INLINE v2 operator-(v2 a, v2 b) { return v2(a.x - b.x, a.y - b.y); }
+CUTE_INLINE v2 V2(float x, float y)
+{
+	v2 result;
+	result.x = x;
+	result.y = y;
+	return result;
+}
+
+CUTE_INLINE v2 operator+(v2 a, v2 b) { return V2(a.x + b.x, a.y + b.y); }
+CUTE_INLINE v2 operator-(v2 a, v2 b) { return V2(a.x - b.x, a.y - b.y); }
 CUTE_INLINE v2& operator+=(v2& a, v2 b) { return a = a + b; }
 CUTE_INLINE v2& operator-=(v2& a, v2 b) { return a = a - b; }
 
-CUTE_INLINE v2 operator*(v2 a, float b) { return v2(a.x * b, a.y * b); }
-CUTE_INLINE v2 operator*(v2 a, v2 b) { return v2(a.x * b.x, a.y * b.y); }
+CUTE_INLINE v2 operator*(v2 a, float b) { return V2(a.x * b, a.y * b); }
+CUTE_INLINE v2 operator*(v2 a, v2 b) { return V2(a.x * b.x, a.y * b.y); }
 CUTE_INLINE v2& operator*=(v2& a, float b) { return a = a * b; }
 CUTE_INLINE v2& operator*=(v2& a, v2 b) { return a = a * b; }
-CUTE_INLINE v2 operator/(v2 a, float b) { return v2(a.x / b, a.y / b); }
-CUTE_INLINE v2 operator/(v2 a, v2 b) { return v2(a.x / b.x, a.y / b.y); }
+CUTE_INLINE v2 operator/(v2 a, float b) { return V2(a.x / b, a.y / b); }
+CUTE_INLINE v2 operator/(v2 a, v2 b) { return V2(a.x / b.x, a.y / b.y); }
 CUTE_INLINE v2& operator/=(v2& a, float b) { return a = a / b; }
 CUTE_INLINE v2& operator/=(v2& a, v2 b) { return a = a / b; }
 
-CUTE_INLINE v2 operator-(v2 a) { return v2(-a.x, -a.y); }
+CUTE_INLINE v2 operator-(v2 a) { return V2(-a.x, -a.y); }
 
 CUTE_INLINE int operator<(v2 a, v2 b) { return a.x < b.x&& a.y < b.y; }
 CUTE_INLINE int operator>(v2 a, v2 b) { return a.x > b.x && a.y > b.y; }
