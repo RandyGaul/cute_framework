@@ -96,7 +96,7 @@ cf_result_t cf_generate_connect_token(
 	return cf_wrap(err);
 }
 
-cf_client_t* cf_client_create(
+cf_client_t* cf_make_client(
 	uint16_t port,
 	uint64_t application_id,
 	bool use_ipv6 /* = false */,
@@ -106,7 +106,7 @@ cf_client_t* cf_client_create(
 	return cn_client_create(port, application_id, use_ipv6, user_allocator_context);
 }
 
-void cf_client_destroy(cf_client_t* client)
+void cf_destroy_client(cf_client_t* client)
 {
 	cn_client_destroy(client);
 }
@@ -166,7 +166,7 @@ void cf_client_enable_network_simulator(cf_client_t* client, double latency, dou
 
 CUTE_STATIC_ASSERT(CUTE_SERVER_MAX_CLIENTS == CN_SERVER_MAX_CLIENTS, "Must be equal.");
 
-cf_server_t* cf_server_create(cf_server_config_t config)
+cf_server_t* cf_make_server(cf_server_config_t config)
 {
 	cn_server_config_t cn_config;
 	cn_config.application_id = config.application_id;
@@ -180,7 +180,7 @@ cf_server_t* cf_server_create(cf_server_config_t config)
 	return cn_server_create(cn_config);
 }
 
-void cf_server_destroy(cf_server_t* server)
+void cf_destroy_server(cf_server_t* server)
 {
 	cn_server_destroy(server);
 }
