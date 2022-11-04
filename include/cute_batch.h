@@ -215,7 +215,7 @@ struct batch_sprite_t : public cf_batch_sprite_t
 	batch_sprite_t(cf_batch_sprite_t bs) { *(cf_batch_sprite_t*)this = bs; }
 };
 
-CUTE_INLINE batch_t* make_batch(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem_ctx = NULL) { cf_make_batch(get_pixels, get_pixels_udata, mem_ctx); }
+CUTE_INLINE batch_t* make_batch(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem_ctx = NULL) { return cf_make_batch(get_pixels, get_pixels_udata, mem_ctx); }
 
 CUTE_INLINE void destroy_batch(batch_t* b) { cf_destroy_batch(b); }
 CUTE_INLINE void batch_push(batch_t* b, batch_sprite_t sprite) { cf_batch_push(b, sprite); }

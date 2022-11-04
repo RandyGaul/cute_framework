@@ -34,62 +34,6 @@ extern "C" {
 
 typedef struct cf_app_t cf_app_t;
 typedef struct cf_joypad_t cf_joypad_t;
-typedef enum cf_joypad_power_level_t cf_joypad_power_level_t;
-typedef enum cf_joypad_button_t cf_joypad_button_t;
-typedef enum cf_joypad_axis_t cf_joypad_axis_t;
-
-/**
- * Call this once before calling `joypad_open`.
- */
-CUTE_API void CUTE_CALL cf_joypad_system_init();
-
-/**
- * Adds an SDL2 mapping to the joypad system. This means for each valid mapping string added, another
- * kind of joypad is supported.
- * 
- * The function `joypad_system_init` initializes many mappings from the community organized mapping
- * database on GitHub (https://github.com/gabomdq/SDL_GameControllerDB), so you probably don't need
- * to ever call this function.
- */
-CUTE_API cf_result_t CUTE_CALL cf_joypad_add_mapping(const char* mapping);
-
-/**
- * Returns the number of joypads currently connected to the system.
- */
-CUTE_API int CUTE_CALL cf_joypad_count();
-
-/**
- * Opens a joypad on the system.
- * `index` is a number from 0 to `joypad_count`. The first joypad connected to the system is 0,
- * the second is 1, and so on.
- */
-CUTE_API cf_joypad_t* CUTE_CALL cf_joypad_open(int index);
-
-/**
- * Destroys a joypad previously opened by `joypad_open`.
- */
-CUTE_API void CUTE_CALL cf_joypad_close(cf_joypad_t* joypad);
-
-/**
- * Tests to see if the joypad is still connected to the system (returns true if it is).
- */
-CUTE_API bool CUTE_CALL cf_joypad_is_connected(cf_joypad_t* joypad);
-
-/**
- * Returns the power level of the joypad.
- */
-CUTE_API cf_joypad_power_level_t CUTE_CALL cf_joypad_power_level(cf_joypad_t* joypad);
-
-/**
- * Returns the name of the joypad.
- */
-CUTE_API const char* CUTE_CALL cf_joypad_name(cf_joypad_t* joypad);
-
-CUTE_API bool CUTE_CALL cf_joypad_button_is_down(cf_joypad_t* joypad, cf_joypad_button_t button);
-CUTE_API bool CUTE_CALL cf_joypad_button_is_up(cf_joypad_t* joypad, cf_joypad_button_t button);
-CUTE_API bool CUTE_CALL cf_joypad_button_was_pressed(cf_joypad_t* joypad, cf_joypad_button_t button);
-CUTE_API bool CUTE_CALL cf_joypad_button_was_released(cf_joypad_t* joypad, cf_joypad_button_t button);
-CUTE_API int16_t CUTE_CALL cf_joypad_axis(cf_joypad_t* joypad, cf_joypad_axis_t axis);
 
 #define CF_JOYPAD_POWER_LEVEL_DEFS \
 	CF_ENUM(JOYPAD_POWER_LEVEL_UNKNOWN, 0) \
@@ -149,6 +93,59 @@ typedef enum cf_joypad_axis_t
 	CF_JOYPAD_AXIS_DEFS
 	#undef CF_ENUM
 } cf_joypad_axis_t;
+
+/**
+ * Call this once before calling `joypad_open`.
+ */
+CUTE_API void CUTE_CALL cf_joypad_system_init();
+
+/**
+ * Adds an SDL2 mapping to the joypad system. This means for each valid mapping string added, another
+ * kind of joypad is supported.
+ * 
+ * The function `joypad_system_init` initializes many mappings from the community organized mapping
+ * database on GitHub (https://github.com/gabomdq/SDL_GameControllerDB), so you probably don't need
+ * to ever call this function.
+ */
+CUTE_API cf_result_t CUTE_CALL cf_joypad_add_mapping(const char* mapping);
+
+/**
+ * Returns the number of joypads currently connected to the system.
+ */
+CUTE_API int CUTE_CALL cf_joypad_count();
+
+/**
+ * Opens a joypad on the system.
+ * `index` is a number from 0 to `joypad_count`. The first joypad connected to the system is 0,
+ * the second is 1, and so on.
+ */
+CUTE_API cf_joypad_t* CUTE_CALL cf_joypad_open(int index);
+
+/**
+ * Destroys a joypad previously opened by `joypad_open`.
+ */
+CUTE_API void CUTE_CALL cf_joypad_close(cf_joypad_t* joypad);
+
+/**
+ * Tests to see if the joypad is still connected to the system (returns true if it is).
+ */
+CUTE_API bool CUTE_CALL cf_joypad_is_connected(cf_joypad_t* joypad);
+
+/**
+ * Returns the power level of the joypad.
+ */
+CUTE_API cf_joypad_power_level_t CUTE_CALL cf_joypad_power_level(cf_joypad_t* joypad);
+
+/**
+ * Returns the name of the joypad.
+ */
+CUTE_API const char* CUTE_CALL cf_joypad_name(cf_joypad_t* joypad);
+
+CUTE_API bool CUTE_CALL cf_joypad_button_is_down(cf_joypad_t* joypad, cf_joypad_button_t button);
+CUTE_API bool CUTE_CALL cf_joypad_button_is_up(cf_joypad_t* joypad, cf_joypad_button_t button);
+CUTE_API bool CUTE_CALL cf_joypad_button_was_pressed(cf_joypad_t* joypad, cf_joypad_button_t button);
+CUTE_API bool CUTE_CALL cf_joypad_button_was_released(cf_joypad_t* joypad, cf_joypad_button_t button);
+CUTE_API int16_t CUTE_CALL cf_joypad_axis(cf_joypad_t* joypad, cf_joypad_axis_t axis);
 
 #ifdef __cplusplus
 }

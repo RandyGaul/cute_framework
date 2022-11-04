@@ -32,63 +32,6 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef enum cf_key_button_t cf_key_button_t;
-typedef enum cf_mouse_button_t cf_mouse_button_t;
-typedef enum cf_mouse_click_t cf_mouse_click_t;
-
-CUTE_API bool CUTE_CALL cf_key_is_down(cf_key_button_t key);
-CUTE_API bool CUTE_CALL cf_key_is_up(cf_key_button_t key);
-CUTE_API bool CUTE_CALL cf_key_was_pressed(cf_key_button_t key);
-CUTE_API bool CUTE_CALL cf_key_was_released(cf_key_button_t key);
-CUTE_API bool CUTE_CALL cf_key_ctrl();
-CUTE_API bool CUTE_CALL cf_key_shift();
-CUTE_API bool CUTE_CALL cf_key_alt();
-CUTE_API bool CUTE_CALL cf_key_gui(); // Windows key in Windows, Command key in OSX.
-CUTE_API void CUTE_CALL cf_clear_all_key_state();
-
-CUTE_API int CUTE_CALL cf_mouse_x();
-CUTE_API int CUTE_CALL cf_mouse_y();
-
-CUTE_API bool CUTE_CALL cf_mouse_is_down(cf_mouse_button_t button);
-CUTE_API bool CUTE_CALL cf_mouse_is_up(cf_mouse_button_t button);
-CUTE_API bool CUTE_CALL cf_mouse_was_pressed(cf_mouse_button_t button);
-CUTE_API bool CUTE_CALL cf_mouse_was_released(cf_mouse_button_t button);
-CUTE_API int CUTE_CALL cf_mouse_wheel_motion();
-CUTE_API bool CUTE_CALL cf_mouse_is_down_double_click(cf_mouse_button_t button);
-CUTE_API bool CUTE_CALL cf_mouse_double_click_was_pressed(cf_mouse_button_t button);
-
-CUTE_API void CUTE_CALL cf_input_text_add_utf8(const char* text);
-CUTE_API int CUTE_CALL cf_input_text_pop_utf32();
-CUTE_API bool CUTE_CALL cf_input_text_has_data();
-CUTE_API void CUTE_CALL cf_input_text_clear();
-
-CUTE_API void CUTE_CALL cf_input_enable_ime();
-CUTE_API void CUTE_CALL cf_input_disable_ime();
-CUTE_API bool CUTE_CALL cf_input_is_ime_enabled();
-CUTE_API bool CUTE_CALL cf_input_has_ime_keyboard_support();
-CUTE_API bool CUTE_CALL cf_input_is_ime_keyboard_shown();
-CUTE_API void CUTE_CALL cf_input_set_ime_rect(int x, int y, int w, int h);
-
-typedef struct cf_ime_composition_t
-{
-	const char* composition;
-	int cursor;
-	int selection_len;
-} cf_ime_composition_t;
-
-CUTE_API bool CUTE_CALL cf_input_get_ime_composition(cf_ime_composition_t* composition);
-
-typedef struct cf_touch_t
-{
-	uint64_t id;
-	float x;
-	float y;
-	float pressure;
-} cf_touch_t;
-
-CUTE_API int CUTE_CALL cf_touch_get_all(cf_touch_t** touch_all);
-CUTE_API bool CUTE_CALL cf_touch_get(uint64_t id, cf_touch_t* touch);
-
 #define CF_MOUSE_BUTTON_DEFS \
 	CF_ENUM(MOUSE_BUTTON_LEFT, 0) \
 	CF_ENUM(MOUSE_BUTTON_RIGHT, 1) \
@@ -346,6 +289,59 @@ typedef enum cf_key_button_t
 	CF_KEY_BUTTON_DEFS
 	#undef CF_ENUM
 } cf_key_button_t;
+
+CUTE_API bool CUTE_CALL cf_key_is_down(cf_key_button_t key);
+CUTE_API bool CUTE_CALL cf_key_is_up(cf_key_button_t key);
+CUTE_API bool CUTE_CALL cf_key_was_pressed(cf_key_button_t key);
+CUTE_API bool CUTE_CALL cf_key_was_released(cf_key_button_t key);
+CUTE_API bool CUTE_CALL cf_key_ctrl();
+CUTE_API bool CUTE_CALL cf_key_shift();
+CUTE_API bool CUTE_CALL cf_key_alt();
+CUTE_API bool CUTE_CALL cf_key_gui(); // Windows key in Windows, Command key in OSX.
+CUTE_API void CUTE_CALL cf_clear_all_key_state();
+
+CUTE_API int CUTE_CALL cf_mouse_x();
+CUTE_API int CUTE_CALL cf_mouse_y();
+
+CUTE_API bool CUTE_CALL cf_mouse_is_down(cf_mouse_button_t button);
+CUTE_API bool CUTE_CALL cf_mouse_is_up(cf_mouse_button_t button);
+CUTE_API bool CUTE_CALL cf_mouse_was_pressed(cf_mouse_button_t button);
+CUTE_API bool CUTE_CALL cf_mouse_was_released(cf_mouse_button_t button);
+CUTE_API int CUTE_CALL cf_mouse_wheel_motion();
+CUTE_API bool CUTE_CALL cf_mouse_is_down_double_click(cf_mouse_button_t button);
+CUTE_API bool CUTE_CALL cf_mouse_double_click_was_pressed(cf_mouse_button_t button);
+
+CUTE_API void CUTE_CALL cf_input_text_add_utf8(const char* text);
+CUTE_API int CUTE_CALL cf_input_text_pop_utf32();
+CUTE_API bool CUTE_CALL cf_input_text_has_data();
+CUTE_API void CUTE_CALL cf_input_text_clear();
+
+CUTE_API void CUTE_CALL cf_input_enable_ime();
+CUTE_API void CUTE_CALL cf_input_disable_ime();
+CUTE_API bool CUTE_CALL cf_input_is_ime_enabled();
+CUTE_API bool CUTE_CALL cf_input_has_ime_keyboard_support();
+CUTE_API bool CUTE_CALL cf_input_is_ime_keyboard_shown();
+CUTE_API void CUTE_CALL cf_input_set_ime_rect(int x, int y, int w, int h);
+
+typedef struct cf_ime_composition_t
+{
+	const char* composition;
+	int cursor;
+	int selection_len;
+} cf_ime_composition_t;
+
+CUTE_API bool CUTE_CALL cf_input_get_ime_composition(cf_ime_composition_t* composition);
+
+typedef struct cf_touch_t
+{
+	uint64_t id;
+	float x;
+	float y;
+	float pressure;
+} cf_touch_t;
+
+CUTE_API int CUTE_CALL cf_touch_get_all(cf_touch_t** touch_all);
+CUTE_API bool CUTE_CALL cf_touch_get(uint64_t id, cf_touch_t* touch);
 
 #ifdef __cplusplus
 }

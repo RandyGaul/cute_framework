@@ -389,14 +389,14 @@ T* cf_dictionary<const char*, T>::insert(const char* key, const T& val)
 template <typename T>
 void cf_dictionary<const char*, T>::remove(const char* key, size_t key_len)
 {
-	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key, key_len);
+	cf_dictionary_string_block_t block = cf_s_dictionary_make_block_len(key, key_len);
 	cf_hashtable_remove(&m_table, &block);
 }
 
 template <typename T>
 T* cf_dictionary<const char*, T>::insert(const char* key, size_t key_len, const T& val)
 {
-	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key, key_len);
+	cf_dictionary_string_block_t block = cf_s_dictionary_make_block_len(key, key_len);
 	return (T*)cf_hashtable_insert(&m_table, &block, &val);
 }
 
