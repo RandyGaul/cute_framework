@@ -68,13 +68,12 @@ CUTE_INLINE cf_result_t cf_kv_val_vec(cf_kv_t* kv, std::vector<T>* val, const ch
 
 namespace cute
 {
+
 using string_t = cf_string_t;
 
 CUTE_INLINE result_t kv_val_cf_string(kv_t* kv, string_t* string) { return cf_kv_val_string_cf(kv, string); }
 CUTE_INLINE result_t kv_val(kv_t* kv, std::string* val) { return cf_kv_val_string_std(kv, val); }
 
-template <typename T>
-CUTE_INLINE result_t kv_val(kv_t* kv, std::vector<T>* val, const char* key = NULL) { return cf_kv_val_int32<T>(kv, val, key); }
 }
 #endif // CUTE_CPP
 
