@@ -318,14 +318,14 @@ const T* cf_dictionary<const char*, T>::find(const char* key) const
 template <typename T>
 T* cf_dictionary<const char*, T>::find(const char* key, size_t key_len)
 {
-	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key, key_len);
+	cf_dictionary_string_block_t block = cf_s_dictionary_make_block_len(key, key_len);
 	return (T*)cf_hashtable_find(&m_table, &block);
 }
 
 template <typename T>
 const T* cf_dictionary<const char*, T>::find(const char* key, size_t key_len) const
 {
-	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key, key_len);
+	cf_dictionary_string_block_t block = cf_s_dictionary_make_block_len(key, key_len);
 	return (T*)cf_hashtable_find(&m_table, &block);
 }
 

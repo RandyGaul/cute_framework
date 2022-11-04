@@ -71,7 +71,7 @@ cf_handle_t cf_object_table_t<T>::allocate(const T* object)
 	int index = m_objects.count();
 	T* slot = &m_objects.add();
 	CUTE_MEMCPY(slot, object, sizeof(T));
-	cf_handle_t handle = cf_handle_allocator_alloc(m_table, index);
+	cf_handle_t handle = cf_handle_allocator_alloc(m_table, index, 0);
 	return handle;
 }
 
