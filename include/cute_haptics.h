@@ -286,7 +286,7 @@ CUTE_INLINE void haptic_destroy_effect(haptic_t* haptic, haptic_effect_t effect)
 CUTE_INLINE void haptic_pause(haptic_t* haptic) { cf_haptic_pause(haptic); }
 CUTE_INLINE void haptic_unpause(haptic_t* haptic) { cf_haptic_unpause(haptic); }
 CUTE_INLINE void haptic_stop_all(haptic_t* haptic) { cf_haptic_stop_all(haptic); }
-CUTE_INLINE bool haptic_rumble_supported(haptic_t* haptic) { cf_haptic_rumble_supported(haptic); }
+CUTE_INLINE bool haptic_rumble_supported(haptic_t* haptic) { return cf_haptic_rumble_supported(haptic); }
 CUTE_INLINE void haptic_rumble_play(haptic_t* haptic, float strength, int duration_milliseconds) { cf_haptic_rumble_play(haptic,strength,duration_milliseconds); }
 CUTE_INLINE void haptic_rumble_stop(haptic_t* haptic) { cf_haptic_rumble_stop(haptic); }
 

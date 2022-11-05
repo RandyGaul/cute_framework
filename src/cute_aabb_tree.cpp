@@ -41,10 +41,9 @@ struct cf_aabb_tree_node_t
 	int index_parent;
 	int height;
 };
+
 struct cf_aabb_tree_t
 {
-
-
 	int root = AABB_TREE_NULL_NODE_INDEX;
 	int freelist = 0;
 	int node_capacity = 0;

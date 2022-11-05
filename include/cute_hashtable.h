@@ -31,7 +31,6 @@
 extern "C" {
 #endif // __cplusplus
 
-
 typedef struct cf_hashtable_slot_t
 {
 	uint64_t key_hash;

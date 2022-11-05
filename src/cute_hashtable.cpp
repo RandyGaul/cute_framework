@@ -22,30 +22,21 @@
 #include <cute_hashtable.h>
 #include <cute_c_runtime.h>
 #include <cute_alloc.h>
+#include <cute_string.h>
 
-static CUTE_INLINE int cf_s_is_prime(int x)
-{
-	if ((x == 2) | (x == 3)) return 1;
-	if ((x % 2 == 0) | (x % 3 == 0)) return 0;
+using namespace cute;
 
-	int divisor = 6;
-	while (divisor * divisor - 2 * divisor + 1 <= x)
-	{
-		if (x % (divisor - 1) == 0) return 0;
-		if (x % (divisor + 1) == 0) return 0;
-		divisor += 6;
-	}
-
-	return 1;
-}
+static int s_primes[] = {
+	31, 67, 127, 257, 509, 1021, 2053, 4099, 8191, 16381, 32771, 65537, 131071,
+	262147, 524287, 1048573, 2097143, 4194301, 8388617, 16777213, 33554467,
+	67108859, 134217757, 268435459, 536870909, 1073741827, 2147483647
+};
 
 static CUTE_INLINE int cf_s_next_prime(int a)
 {
-	while (1)
-	{
-		if (cf_s_is_prime(a)) return a;
-		else ++a;
-	}
+	int i = 0;
+	while (s_primes[i] < a) ++i;
+	return s_primes[i];
 }
 
 int cf_hashtable_init(cf_hashtable_t* table, int key_size, int item_size, int capacity, void* mem_ctx)
@@ -95,35 +86,18 @@ static CUTE_INLINE void* cf_s_get_item(const cf_hashtable_t* table, int index)
 	return items + index * table->item_size;
 }
 
-static CUTE_INLINE uint64_t cf_s_calc_hash(const void* key, int key_size)
-{
-	uint64_t h = (uint64_t)14695981039346656037ULL;
-	const char* str = (const char*)key;
-
-	while (key_size--)
-	{
-		char c = *str++;
-		h = h ^ (uint64_t)c;
-		h = h * (uint64_t)1099511628211ULL;
-	}
-
-	return h;
-}
-
 static int cf_s_find_slot(const cf_hashtable_t *table, const void* key)
 {
-	uint64_t hash = cf_s_calc_hash(key, table->key_size);
+	uint64_t hash = fnv1a(key, table->key_size);
 	int base_slot = (int)(hash % (uint64_t)table->slot_capacity);
 	int base_count = table->slots[base_slot].base_count;
 	int slot = base_slot;
 
-	while (base_count > 0)
-	{
+	while (base_count > 0) {
 		uint64_t slot_hash = table->slots[slot].key_hash;
 		if (slot_hash) {
 			int slot_base = (int)(slot_hash % (uint64_t)table->slot_capacity);
-			if (slot_base == base_slot) 
-			{
+			if (slot_base == base_slot) {
 				CUTE_ASSERT(base_count > 0);
 				--base_count;
 				const void* found_key = cf_s_get_key(table, table->slots[slot].item_index);
@@ -150,8 +124,7 @@ static void cf_s_expand_slots(cf_hashtable_t* table)
 	CUTE_ASSERT(table->slots);
 	CUTE_MEMSET(table->slots, 0, size);
 
-	for (int i = 0; i < old_capacity; ++i)
-	{
+	for (int i = 0; i < old_capacity; ++i) {
 		uint64_t hash = old_slots[i].key_hash;
 		if (hash) {
 			int const base_slot = (int)(hash & (uint64_t)slot_mask);
@@ -196,7 +169,7 @@ static void cf_s_expand_items(cf_hashtable_t* table)
 void* cf_hashtable_insert(cf_hashtable_t* table, const void* key, const void* item)
 {
 	CUTE_ASSERT(cf_s_find_slot(table, key) < 0);
-	uint64_t hash = cf_s_calc_hash(key, table->key_size);
+	uint64_t hash = fnv1a(key, table->key_size);
 
 	if (table->count >= table->slot_capacity) {
 		cf_s_expand_items(table);
@@ -206,8 +179,7 @@ void* cf_hashtable_insert(cf_hashtable_t* table, const void* key, const void* it
 	int base_count = table->slots[base_slot].base_count;
 	int slot = base_slot;
 	int first_free = slot;
-	while (base_count)
-	{
+	while (base_count) {
 		uint64_t slot_hash = table->slots[slot].key_hash;
 		if (slot_hash == 0 && table->slots[first_free].key_hash != 0) first_free = slot;
 		int slot_base = (int)(slot_hash % (uint64_t)table->slot_capacity);
@@ -251,8 +223,7 @@ void cf_hashtable_remove(cf_hashtable_t* table, const void* key)
 
 	int index = table->slots[slot].item_index;
 	int last_index = table->count - 1;
-	if (index != last_index)
-	{
+	if (index != last_index) {
 		void* dst_key = cf_s_get_key(table, index);
 		void* src_key = cf_s_get_key(table, last_index);
 		CUTE_MEMCPY(dst_key, src_key, (size_t)table->key_size);
@@ -275,7 +246,6 @@ void* cf_hashtable_find(const cf_hashtable_t* table, const void* key)
 {
 	int slot = cf_s_find_slot(table, key);
 	if (slot < 0) return 0;
-
 	int index = table->slots[slot].item_index;
 	return cf_s_get_item(table, index);
 }
@@ -320,4 +290,3 @@ void cf_hashtable_swap(cf_hashtable_t* table, int index_a, int index_b)
 	table->slots[slot_a].item_index = index_b;
 	table->slots[slot_b].item_index = index_a;
 }
-

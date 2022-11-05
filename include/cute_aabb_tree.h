@@ -137,6 +137,7 @@ CUTE_API bool CUTE_CALL cf_aabb_tree_serialize(const cf_aabb_tree_t* tree, void*
 
 namespace cute
 {
+
 using aabb_tree_t = cf_aabb_tree_t;
 
 using leaf_t = cf_leaf_t;
@@ -147,7 +148,7 @@ using ray_t = cf_ray_t;
 CUTE_INLINE aabb_tree_t* make_aabb_tree(int initial_capacity = 0, void* user_allocator_context = NULL) { return cf_make_aabb_tree(initial_capacity, user_allocator_context); }
 CUTE_INLINE aabb_tree_t* make_aabb_tree_from_memory(const void* buffer, size_t size, void* user_allocator_context = NULL) { return cf_make_aabb_tree_from_memory(buffer, size, user_allocator_context); }
 CUTE_INLINE void destroy_aabb_tree(aabb_tree_t* tree) { cf_destroy_aabb_tree(tree); }
-CUTE_INLINE leaf_t aabb_tree_insert(aabb_tree_t* tree, aabb_t aabb, void* udata = NULL) { return *(leaf_t*)&cf_aabb_tree_insert(tree, aabb, udata); }
+CUTE_INLINE leaf_t aabb_tree_insert(aabb_tree_t* tree, aabb_t aabb, void* udata = NULL) { return cf_aabb_tree_insert(tree, aabb, udata); }
 CUTE_INLINE void aabb_tree_remove(aabb_tree_t* tree, leaf_t leaf) { cf_aabb_tree_remove(tree, leaf); }
 CUTE_INLINE bool aabb_tree_update_leaf(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb) { return cf_aabb_tree_update_leaf(tree, leaf, aabb); }
 CUTE_INLINE bool aabb_tree_move(aabb_tree_t* tree, leaf_t leaf, aabb_t aabb, v2 offset) { return cf_aabb_tree_move(tree, leaf, aabb, offset); }

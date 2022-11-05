@@ -65,8 +65,8 @@ typedef struct cf_ahdr_t
 #define slast(s) (s + slen(s))
 #define sclear(s) aclear(s)
 #define sfit(s, n) afit(s, n)
-#define sfmt(s, fmt, ...) ((char*)(*(void**)&(s) = (void*)cf_sfmt(s, fmt, __VA_ARGS__)))
-#define sfmt_append(s, fmt, ...) ((char*)(*(void**)&(s) = (void*)cf_sfmt_append(s, fmt, __VA_ARGS__)))
+#define sfmt(s, fmt, ...) (s = cf_sfmt(s, fmt, __VA_ARGS__))
+#define sfmt_append(s, fmt, ...) (s = cf_sfmt_append(s, fmt, __VA_ARGS__))
 #define sset(a, b) (a = cf_sset(a, b))
 #define sdup(s) cf_sset(NULL, s)
 #define smake(s) cf_sset(NULL, s)
@@ -95,7 +95,7 @@ typedef struct cf_ahdr_t
 #define sfloat(f) cf_sfloat(f)
 #define sdouble(f) cf_sdouble(f)
 #define shex(s) cf_shex(s)
-#define sbool(s) cf_bool(s);
+#define sbool(s) cf_sbool(s)
 #define stoint(s) cf_stoint(s)
 #define stouint(s) cf_stouint(s)
 #define stofloat(s) cf_stofloat(s)
@@ -103,6 +103,14 @@ typedef struct cf_ahdr_t
 #define stohex(i) cf_stohex(i)
 #define stobool(b) (!CUTE_STRCMP(s, "true"))
 #define sintern(s) cf_sintern(s)
+// TODO - sintern, sreplace, serase
+
+#define hmake(n)
+#define hfree(h)
+#define hadd(h, k, v)
+#define hget(h, k)
+#define hgetu(h, k)
+#define hgeti(h, k)
 
 CUTE_API void* CUTE_CALL cf_agrow(const void* a, int new_size, size_t element_size);
 CUTE_API void* CUTE_CALL cf_aset(const void* a, const void* b, size_t element_size);
@@ -131,7 +139,6 @@ CUTE_API uint64_t CUTE_CALL cf_stouint(const char* s);
 CUTE_API float CUTE_CALL cf_stofloat(const char* s);
 CUTE_API double CUTE_CALL cf_stodouble(const char* s);
 CUTE_API uint64_t CUTE_CALL cf_stohex(const char* s);
-CUTE_API bool CUTE_CALL cf_sbool(const char* s);
 
 CUTE_API const char* CUTE_CALL cf_sintern(const char* s);
 CUTE_API void CUTE_CALL cf_snuke_intern_table();
@@ -204,7 +211,7 @@ typedef struct cf_string_t
 namespace cute
 {
 
-CUTE_INLINE uint64_t constexpr fnv1a(void* data, int size)
+CUTE_INLINE uint64_t constexpr fnv1a(const void* data, int size)
 {
 	const char* s = (const char*)data;
 	uint64_t h = 14695981039346656037ULL;
