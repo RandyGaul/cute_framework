@@ -79,7 +79,11 @@
 
 #ifndef CUTE_STRICMP
 #	include <string.h>
-#	define CUTE_STRICMP stricmp
+#	ifdef _WIN32
+#		define CUTE_STRNICMP stricmp
+#	else
+#		define CUTE_STRNICMP strcasecmp
+#	endif
 #endif
 
 #ifndef CUTE_STRDUP

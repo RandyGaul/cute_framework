@@ -104,17 +104,19 @@ typedef struct cf_ahdr_t
 #define stodouble(s) cf_stodouble(s)
 #define stohex(i) cf_stohex(i)
 #define stobool(b) (!CUTE_STRCMP(s, "true"))
+#define sreplace(s, replace_me, with_me) (s = cf_sreplace(s, replace_me, with_me))
+#define serase(s, index, count) (s = cf_serase(s, index, count))
 #define sintern(s) cf_sintern(s)
-// TODO - sintern, sreplace, serase
 
 CUTE_INLINE cf_hashtable_t cf_hmake(int n) { cf_hashtable_t table; cf_hashtable_init(&table, sizeof(void*), sizeof(void*), n, NULL); return table; }
+CUTE_INLINE void* cf_hget(cf_hashtable_t* h, void* k) { void** result = (void**)cf_hashtable_find(h, k); return result ? *result : NULL; }
 
 #define hmake(n) cf_hmake(n)
 #define hfree(h) cf_hashtable_cleanup(h)
-#define hadd(h, k, v) cf_hashtable_insert(h, (void*)k, (void*)v)
-#define hget(h, k)
-#define hgetu(h, k)
-#define hgeti(h, k)
+#define hadd(h, k, v) cf_hashtable_insert(h, (void*)&k, (void*)&v)
+#define hget(h, k) cf_hget(h, k)
+#define hgetu(h, k) (uint64_t)cf_hget(h, k)
+#define hgeti(h, k) (int64_t)cf_hget(h, k)
 
 CUTE_API void* CUTE_CALL cf_agrow(const void* a, int new_size, size_t element_size);
 CUTE_API void* CUTE_CALL cf_aset(const void* a, const void* b, size_t element_size);
@@ -143,6 +145,8 @@ CUTE_API uint64_t CUTE_CALL cf_stouint(const char* s);
 CUTE_API float CUTE_CALL cf_stofloat(const char* s);
 CUTE_API double CUTE_CALL cf_stodouble(const char* s);
 CUTE_API uint64_t CUTE_CALL cf_stohex(const char* s);
+CUTE_API char* CUTE_CALL cf_sreplace(char* s, const char* replace_me, const char* with_me);
+CUTE_API char* CUTE_CALL cf_serase(char* s, int index, int count);
 
 CUTE_API const char* CUTE_CALL cf_sintern(const char* s);
 CUTE_API void CUTE_CALL cf_snuke_intern_table();

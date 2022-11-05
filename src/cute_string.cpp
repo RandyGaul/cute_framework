@@ -347,6 +347,16 @@ uint64_t cf_stohex(const char* s)
 	return result;
 }
 
+char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
+{
+	return NULL;
+}
+
+char* cf_serase(char* s, int index, int count)
+{
+	return NULL;
+}
+
 const char* cf_sintern(const char* s)
 {
 	ACANARY(s);
