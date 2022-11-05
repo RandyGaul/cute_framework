@@ -349,7 +349,21 @@ uint64_t cf_stohex(const char* s)
 
 char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
 {
-	return NULL;
+	size_t replace_len = CUTE_STRLEN(replace_me);
+	size_t with_len = CUTE_STRLEN(with_me);
+	char* start = s;
+	char* find;
+	while ((find = sfind(s, replace_me))) {
+		if (replace_len <= with_len) {
+			int remaining = ssize(s) - (int)(s - start);
+			CUTE_MEMCPY(find, with_me, with_len);
+			CUTE_MEMMOVE(find + replace_len, find + with_len, remaining);
+			ssize(s) -= (int)(with_len - replace_len);
+		} else {
+			CUTE_MEMMOVE(find + with_len, find + replace_len, 0);
+		}
+	}
+	return s;
 }
 
 char* cf_serase(char* s, int index, int count)

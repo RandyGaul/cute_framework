@@ -80,9 +80,9 @@
 #ifndef CUTE_STRICMP
 #	include <string.h>
 #	ifdef _WIN32
-#		define CUTE_STRNICMP stricmp
+#		define CUTE_STRICMP stricmp
 #	else
-#		define CUTE_STRNICMP strcasecmp
+#		define CUTE_STRICMP strcasecmp
 #	endif
 #endif
 
