@@ -19,6 +19,14 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifndef _CRT_SECURE_NO_WARNINGS
+#	define _CRT_SECURE_NO_WARNINGS
+#endif
+
+#ifndef _CRT_NONSTDC_NO_DEPRECATE
+#	define _CRT_NONSTDC_NO_DEPRECATE
+#endif
+
 #ifdef _MSC_VER
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>

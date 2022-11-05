@@ -353,7 +353,7 @@ const char* cf_sintern(const char* s)
 	return NULL;
 }
 
-const char* cf_snuke_intern_table()
+void cf_snuke_intern_table()
 {
 }
 

@@ -134,7 +134,7 @@ CUTE_API uint64_t CUTE_CALL cf_stohex(const char* s);
 CUTE_API bool CUTE_CALL cf_sbool(const char* s);
 
 CUTE_API const char* CUTE_CALL cf_sintern(const char* s);
-CUTE_API const char* CUTE_CALL cf_snuke_intern_table();
+CUTE_API void CUTE_CALL cf_snuke_intern_table();
 
 CUTE_API int CUTE_CALL cf_utf8_size(int codepoint);
 CUTE_API const char* CUTE_CALL cf_utf8_next(const char* s, int* codepoint);
