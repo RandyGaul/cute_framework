@@ -180,6 +180,28 @@ int test_string_macros_advanced()
 	CUTE_TEST_ASSERT(stohex(a) == 0xbadf00d);
 	sset(b, shex(0xbadf00d));
 	CUTE_TEST_ASSERT(sequ(a, b));
+	sset(a, "hi hi hi");
+	sreplace(a, "hi", "oof");
+	CUTE_TEST_ASSERT(sequ(a, "oof oof oof"));
+	CUTE_TEST_ASSERT(slen(a) == CUTE_STRLEN("oof oof oof"));
+	sreplace(a, "oof", "hi");
+	CUTE_TEST_ASSERT(sequ(a, "hi hi hi"));
+	CUTE_TEST_ASSERT(slen(a) == CUTE_STRLEN("hi hi hi"));
+	sset(a, "erase me");
+	serase(a, 0, 2);
+	CUTE_TEST_ASSERT(sequ(a, "ase me"));
+	CUTE_TEST_ASSERT(slen(a) == CUTE_STRLEN("ase me"));
+	sset(a, "erase.me.please");
+	serase(a, 10, 10);
+	CUTE_TEST_ASSERT(sequ(a, "erase.me."));
+	CUTE_TEST_ASSERT(slen(a) == CUTE_STRLEN("erase.me."));
+	sset(a, "erase.me.please");
+	serase(a, 30, 10);
+	CUTE_TEST_ASSERT(sequ(a, "erase.me.please"));
+	CUTE_TEST_ASSERT(slen(a) == CUTE_STRLEN("erase.me.please"));
+	serase(a, -5, 10);
+	CUTE_TEST_ASSERT(sequ(a, ".me.please"));
+	CUTE_TEST_ASSERT(slen(a) == CUTE_STRLEN(".me.please"));
 	sfree(a);
 	sfree(b);
 

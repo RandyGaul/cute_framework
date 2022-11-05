@@ -349,18 +349,24 @@ uint64_t cf_stohex(const char* s)
 
 char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
 {
+	ACANARY(s);
 	size_t replace_len = CUTE_STRLEN(replace_me);
 	size_t with_len = CUTE_STRLEN(with_me);
 	char* start = s;
 	char* find;
 	while ((find = sfind(s, replace_me))) {
-		if (replace_len <= with_len) {
-			int remaining = ssize(s) - (int)(s - start);
+		if (replace_len > with_len) {
+			int remaining = ssize(s) - (int)(s - start) - (int)with_len;
 			CUTE_MEMCPY(find, with_me, with_len);
-			CUTE_MEMMOVE(find + replace_len, find + with_len, remaining);
-			ssize(s) -= (int)(with_len - replace_len);
+			CUTE_MEMMOVE(find + with_len, find + replace_len, remaining);
+			ssize(s) -= (int)(replace_len - with_len);
 		} else {
-			CUTE_MEMMOVE(find + with_len, find + replace_len, 0);
+			int remaining = ssize(s) - (int)(s - start) - (int)replace_len;
+			int diff = (int)(with_len - replace_len);
+			sfit(s, ssize(s) + diff);
+			CUTE_MEMMOVE(find + with_len, find + replace_len, remaining);
+			CUTE_MEMCPY(find, with_me, with_len);
+			ssize(s) += diff;
 		}
 	}
 	return s;
@@ -368,7 +374,23 @@ char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
 
 char* cf_serase(char* s, int index, int count)
 {
-	return NULL;
+	ACANARY(s);
+	if (index < 0) {
+		count += index;
+		index = 0;
+		if (count <= 0) return s;
+	}
+	if (index >= slen(s)) return s;
+	if (index + count > slen(s)) {
+		ssize(s) = index;
+		s[slen(s)] = 0;
+		return s;
+	} else {
+		int remaining = ssize(s) - count;
+		CUTE_MEMMOVE(s + index, s + index + count, remaining);
+		ssize(s) -= count;
+	}
+	return s;
 }
 
 const char* cf_sintern(const char* s)
