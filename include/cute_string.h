@@ -25,6 +25,8 @@
 #include "cute_defines.h"
 #include "cute_c_runtime.h"
 #include "cute_alloc.h"
+#include "cute_hashtable.h"
+
 #include <stdarg.h>
 
 //--------------------------------------------------------------------------------------------------
@@ -105,9 +107,11 @@ typedef struct cf_ahdr_t
 #define sintern(s) cf_sintern(s)
 // TODO - sintern, sreplace, serase
 
-#define hmake(n)
-#define hfree(h)
-#define hadd(h, k, v)
+CUTE_INLINE cf_hashtable_t cf_hmake(int n) { cf_hashtable_t table; cf_hashtable_init(&table, sizeof(void*), sizeof(void*), n, NULL); return table; }
+
+#define hmake(n) cf_hmake(n)
+#define hfree(h) cf_hashtable_cleanup(h)
+#define hadd(h, k, v) cf_hashtable_insert(h, (void*)k, (void*)v)
 #define hget(h, k)
 #define hgetu(h, k)
 #define hgeti(h, k)

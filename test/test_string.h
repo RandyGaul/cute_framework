@@ -84,7 +84,7 @@ int test_string_macros_simple()
 	CUTE_TEST_ASSERT(sequ(s, "abc"));
 	sfmt(s, "WELP %d", 1500);
 	CUTE_TEST_ASSERT(sequ(s, "WELP 1500"));
-	sfmt_append(s, ", append_me");
+	sfmt_append(s, "%s", ", append_me");
 	CUTE_TEST_ASSERT(sequ(s, "WELP 1500, append_me"));
 	CUTE_TEST_ASSERT(CUTE_STRLEN(s) == slen(s));
 	CUTE_TEST_ASSERT(CUTE_STRLEN(s) + 1 == ssize(s));
