@@ -40,7 +40,7 @@ typedef struct cf_ahdr_t
 	uint32_t cookie;
 } cf_ahdr_t;
 
-#define ahdr(a) ((cf_ahdr_t*)((uintptr_t)a - sizeof(cf_ahdr_t)))
+#define ahdr(a) ((cf_ahdr_t*)a - 1)
 #define ACOOKIE 0xE6F7E359
 #define ACANARY(a) do { if (a) CUTE_ASSERT(ahdr(a)->cookie == ACOOKIE); } while (0) // Detects buffer underruns.
 
@@ -108,15 +108,40 @@ typedef struct cf_ahdr_t
 #define serase(s, index, count) (s = cf_serase(s, index, count))
 #define sintern(s) cf_sintern(s)
 
-CUTE_INLINE cf_hashtable_t cf_hmake(int n) { cf_hashtable_t table; cf_hashtable_init(&table, sizeof(void*), sizeof(void*), n, NULL); return table; }
-CUTE_INLINE void* cf_hget(cf_hashtable_t* h, void* k) { void** result = (void**)cf_hashtable_find(h, k); return result ? *result : NULL; }
+typedef struct cf_hhdr_t
+{
+	size_t item_size;
+	cf_hashtable_t table;
+	uint32_t cookie;
+} cf_hhdr_t;
 
-#define hmake(n) cf_hmake(n)
-#define hfree(h) cf_hashtable_cleanup(h)
-#define hadd(h, k, v) cf_hashtable_insert(h, (void*)&k, (void*)&v)
-#define hget(h, k) cf_hget(h, k)
-#define hgetu(h, k) (uint64_t)cf_hget(h, k)
-#define hgeti(h, k) (int64_t)cf_hget(h, k)
+#define hhdr(h) ((cf_hhdr_t*)h - 1)
+#define HCOOKIE 0xE6F7E359
+#define HCANARY(h) (h ? CUTE_ASSERT(hhdr(h)->cookie == HCOOKIE) : 0)
+
+#define hadd(h, k, ...) do { h ? h : (*(void**)&h = cf_hmake(sizeof(*h))); HCANARY(h); h[0] = (__VA_ARGS__); uint64_t key = k; cf_hashtable_insert(&(hhdr(h)->table), &key, h); } while (0)
+#define hget(h, k) (HCANARY(h), cf_hget(h, (uint64_t)k), h[0])
+#define hclear(h) (HCANARY(h), cf_hashtable_clear(h))
+#define hkeys(h) (HCANARY(h), (uint64_t*)cf_hashtable_keys(h))
+#define hitems(h) (HCANARY(h), cf_hashtable_items(h))
+#define hswap(h, index_a, index_b) (HCANARY(h), cf_hashtable_swap(h, index_a, index_b))
+#define hfree(h) do { HCANARY(h); cf_hhdr_t* hdr = hhdr(h); cf_hashtable_cleanup(&hdr->table); CUTE_FREE(hdr, NULL); h = NULL; } while (0)
+
+CUTE_INLINE void cf_hget(void* h, uint64_t k)
+{
+	cf_hhdr_t* hdr = hhdr(h);
+	void* item = cf_hashtable_find(&hdr->table, (void*)&k);
+	CUTE_MEMCPY(h, item, hdr->item_size);
+}
+
+CUTE_INLINE void* cf_hmake(int item_size)
+{
+	cf_hhdr_t* hdr = (cf_hhdr_t*)CUTE_ALLOC(sizeof(cf_hhdr_t) + item_size, NULL);
+	hdr->item_size = item_size;
+	cf_hashtable_init(&hdr->table, sizeof(uint64_t), item_size, 32, NULL);
+	hdr->cookie = HCOOKIE;
+	return hdr + 1;
+}
 
 CUTE_API void* CUTE_CALL cf_agrow(const void* a, int new_size, size_t element_size);
 CUTE_API void* CUTE_CALL cf_aset(const void* a, const void* b, size_t element_size);

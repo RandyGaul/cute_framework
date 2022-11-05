@@ -108,6 +108,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_array_macros_simple),
 		CUTE_TEST_CASE_ENTRY(test_string_macros_simple),
 		CUTE_TEST_CASE_ENTRY(test_string_macros_advanced),
+		CUTE_TEST_CASE_ENTRY(test_hashtable_macros),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

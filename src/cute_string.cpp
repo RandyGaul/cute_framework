@@ -393,6 +393,8 @@ char* cf_serase(char* s, int index, int count)
 	return s;
 }
 
+
+
 const char* cf_sintern(const char* s)
 {
 	ACANARY(s);

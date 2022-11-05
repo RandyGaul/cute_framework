@@ -80,8 +80,6 @@ CUTE_API void CUTE_CALL cf_hashtable_swap(cf_hashtable_t* table, int index_a, in
 namespace cute
 {
 
-using hashtable_slot_t = cf_hashtable_slot_t;
-
 using hashtable_t = cf_hashtable_t;
 
 CUTE_INLINE int hashtable_init(hashtable_t* table, int key_size, int item_size, int capacity, void* mem_ctx) { return cf_hashtable_init(table,key_size,item_size,capacity,mem_ctx); }

@@ -26,13 +26,16 @@
 
 using namespace cute;
 
+// Original implementation by Mattias Gustavsson
+// https://github.com/mattiasgustavsson/libs/blob/main/hashtable.h
+
 static int s_primes[] = {
 	31, 67, 127, 257, 509, 1021, 2053, 4099, 8191, 16381, 32771, 65537, 131071,
 	262147, 524287, 1048573, 2097143, 4194301, 8388617, 16777213, 33554467,
 	67108859, 134217757, 268435459, 536870909, 1073741827, 2147483647
 };
 
-static CUTE_INLINE int cf_s_next_prime(int a)
+static CUTE_INLINE int s_next_prime(int a)
 {
 	int i = 0;
 	while (s_primes[i] < a) ++i;
@@ -45,14 +48,14 @@ int cf_hashtable_init(cf_hashtable_t* table, int key_size, int item_size, int ca
 	CUTE_MEMSET(table, 0, sizeof(cf_hashtable_t));
 
 	table->count = 0;
-	table->slot_capacity = cf_s_next_prime(capacity);
+	table->slot_capacity = s_next_prime(capacity);
 	table->key_size = key_size;
 	table->item_size = item_size;
 	int slots_size = (int)(table->slot_capacity * sizeof(*table->slots));
 	table->slots = (cf_hashtable_slot_t*)CUTE_ALLOC((size_t)slots_size, mem_ctx);
 	CUTE_MEMSET(table->slots, 0, (size_t) slots_size);
 
-	table->item_capacity = cf_s_next_prime(capacity + capacity / 2);
+	table->item_capacity = s_next_prime(capacity + capacity / 2);
 	table->items_key = CUTE_ALLOC(table->item_capacity * (table->key_size + sizeof(*table->items_slot_index) + table->item_size) + table->item_size + table->key_size, mem_ctx);
 	table->items_slot_index = (int*)((uint8_t*)table->items_key + table->item_capacity * table->key_size);
 	table->items_data = (void*)(table->items_slot_index + table->item_capacity);
@@ -116,13 +119,16 @@ static void cf_s_expand_slots(cf_hashtable_t* table)
 	int const old_capacity = table->slot_capacity;
 	cf_hashtable_slot_t* old_slots = table->slots;
 
-	table->slot_capacity *= 2;
+	table->slot_capacity = s_next_prime(table->slot_capacity);
 	int slot_mask = table->slot_capacity - 1;
 
 	int size = (int)(table->slot_capacity * sizeof(*table->slots));
 	table->slots = (cf_hashtable_slot_t*)CUTE_ALLOC(size, table->mem_ctx);
 	CUTE_ASSERT(table->slots);
-	CUTE_MEMSET(table->slots, 0, size);
+	for (int i = 0; i < size; ++i) {
+		table->slots[i].base_count = 0;
+		table->slots[i].item_index = -1;
+	}
 
 	for (int i = 0; i < old_capacity; ++i) {
 		uint64_t hash = old_slots[i].key_hash;
@@ -171,8 +177,8 @@ void* cf_hashtable_insert(cf_hashtable_t* table, const void* key, const void* it
 	CUTE_ASSERT(cf_s_find_slot(table, key) < 0);
 	uint64_t hash = fnv1a(key, table->key_size);
 
-	if (table->count >= table->slot_capacity) {
-		cf_s_expand_items(table);
+	if (table->count >= (table->slot_capacity - table->slot_capacity / 3)) {
+		cf_s_expand_slots(table);
 	}
 
 	int base_slot = (int)(hash % (uint64_t)table->slot_capacity);
@@ -189,11 +195,15 @@ void* cf_hashtable_insert(cf_hashtable_t* table, const void* key, const void* it
 	}
 
 	slot = first_free;
-	while (table->slots[slot].key_hash)
+	while (table->slots[slot].key_hash) {
 		slot = (slot + 1) % table->slot_capacity;
+	}
+
+	if (table->count >= table->item_capacity) {
+		cf_s_expand_items(table);
+	}
 
 	CUTE_ASSERT(table->count < table->item_capacity);
-
 	CUTE_ASSERT(!table->slots[slot].key_hash && (hash % (uint64_t)table->slot_capacity) == (uint64_t)base_slot);
 	CUTE_ASSERT(hash);
 	table->slots[slot].key_hash = hash;
@@ -239,7 +249,10 @@ void cf_hashtable_remove(cf_hashtable_t* table, const void* key)
 void cf_hashtable_clear(cf_hashtable_t* table)
 {
 	table->count = 0;
-	CUTE_MEMSET(table->slots, 0, sizeof(*table->slots) * table->slot_capacity);
+	for (int i = 0; i < table->slot_capacity; ++i) {
+		table->slots[i].base_count = 0;
+		table->slots[i].item_index = -1;
+	}
 }
 
 void* cf_hashtable_find(const cf_hashtable_t* table, const void* key)
