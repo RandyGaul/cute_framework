@@ -94,7 +94,11 @@
 
 #ifndef CUTE_STRNICMP
 #	include <string.h>
-#	define CUTE_STRNICMP strnicmp
+#	ifdef _WIN32
+#		define CUTE_STRNICMP strnicmp
+#	else
+#		define CUTE_STRNICMP strncasecmp
+#	endif
 #endif
 
 #ifndef CUTE_SNPRINTF
