@@ -19,27 +19,48 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_ALLOC_H
-#define CUTE_ALLOC_H
+#ifndef CUTE_GUID_H
+#define CUTE_GUID_H
 
-#if !defined(CUTE_ALLOC) && !defined(CUTE_FREE)
-#	include <stdlib.h>
-#	define CUTE_ALLOC(size, user_ctx) malloc(size)
-#	define CUTE_FREE(ptr, user_ctx) free(ptr)
-#	define CUTE_REALLOC(ptr, size, user_ctx) realloc(ptr, size)
-#endif
+#include "cute_defines.h"
+#include "cute_c_runtime.h"
 
-#include "cute_defines.h" // for #define CUTE_CPP
+//--------------------------------------------------------------------------------------------------
+// C API
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+typedef struct cf_guid_t
+{
+	uint8_t data[16];
+} cf_guid_t;
+
+
+CUTE_API cf_guid_t CUTE_CALL cf_make_guid();
+CUTE_INLINE bool cf_guid_equal(cf_guid_t a, cf_guid_t b) { return !CUTE_MEMCMP(&a, &b, sizeof(a)); }
+
+#ifdef __cplusplus
+}
+#endif // __cplusplus
+
+//--------------------------------------------------------------------------------------------------
+// C++ API
 
 #ifdef CUTE_CPP
-	#ifdef _MSC_VER
-	#	pragma warning(disable:4291)
-	#endif
 
-	enum cf_dummy_enum_t { CF_DUMMY_ENUM };
-	inline void* operator new(size_t, cf_dummy_enum_t, void* ptr) { return ptr; }
-	#define CUTE_PLACEMENT_NEW(ptr) new(CF_DUMMY_ENUM, ptr)
-	#define CUTE_NEW(T, user_ctx) new(CF_DUMMY_ENUM, CUTE_ALLOC(sizeof(T), user_ctx)) T
+namespace cute
+{
+
+using guid_t = cf_guid_t;
+CUTE_INLINE bool operator==(guid_t a, guid_t b) { return cf_guid_equal(a, b); }
+CUTE_INLINE bool operator!=(guid_t a, guid_t b) { return !cf_guid_equal(a, b); }
+
+CUTE_INLINE guid_t make_guid() { return cf_make_guid(); }
+
+}
+
 #endif // CUTE_CPP
 
-#endif // CUTE_ALLOC_H
+#endif // CUTE_GUID_H

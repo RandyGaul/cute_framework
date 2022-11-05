@@ -67,7 +67,7 @@ CUTE_INLINE void cf_array_ensure_capacity(void** items, int items_count, int *it
 template <typename T>
 struct cf_array
 {
-	cf_array();
+	cf_array() { }
 	cf_array(cf_initializer_list<T> list);
 	cf_array(const cf_array<T>& other);
 	cf_array(cf_array<T>&& other);
@@ -119,7 +119,7 @@ struct cf_array
 	T* data();
 	const T* data() const;
 
-	//private:
+private:
 	int m_capacity = 0;
 	int m_count = 0;
 	T* m_items = NULL;
@@ -127,10 +127,6 @@ struct cf_array
 };
 
 // -------------------------------------------------------------------------------------------------
-
-template <typename T>
-cf_array<T>::cf_array()
-{}
 
 template <typename T>
 cf_array<T>::cf_array(cf_initializer_list<T> list)

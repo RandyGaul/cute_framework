@@ -109,6 +109,7 @@ set(CUTE_SRCS
 	src/cute_sprite.cpp
 	src/cute_coroutine.cpp
 	src/cute_networking.cpp
+	src/cute_guid.cpp
 
 	src/internal/cute_ecs_internal.cpp
 	src/internal/cute_dx11.cpp
@@ -176,6 +177,7 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_utf8.h
 	include/cute_coroutine.h
 	include/cute_networking.h
+	include/cute_guid.h
 )
 
 set(IMGUI_HDRS
@@ -334,6 +336,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_png_cache.h
 		test/test_sprite.h
 		test/test_coroutine.h
+		test/test_string.h
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})

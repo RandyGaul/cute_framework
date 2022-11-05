@@ -62,6 +62,11 @@
 #	define CUTE_MEMCHR memchr
 #endif
 
+#ifndef CUTE_STRSTR
+#	include <string.h>
+#	define CUTE_STRSTR strstr
+#endif
+
 #ifndef CUTE_MEMCMP
 #	include <string.h>
 #	define CUTE_MEMCMP memcmp
@@ -72,6 +77,11 @@
 #	define CUTE_STRCMP strcmp
 #endif
 
+#ifndef CUTE_STRICMP
+#	include <string.h>
+#	define CUTE_STRICMP stricmp
+#endif
+
 #ifndef CUTE_STRDUP
 #	include <string.h>
 #	define CUTE_STRDUP strdup
@@ -80,6 +90,11 @@
 #ifndef CUTE_STRNCMP
 #	include <string.h>
 #	define CUTE_STRNCMP strncmp
+#endif
+
+#ifndef CUTE_STRNICMP
+#	include <string.h>
+#	define CUTE_STRNICMP strnicmp
 #endif
 
 #ifndef CUTE_SNPRINTF
@@ -110,6 +125,11 @@
 #ifndef CUTE_STRCHR
 #	include <string.h>
 #	define CUTE_STRCHR strchr
+#endif
+
+#ifndef CUTE_STRRCHR
+#	include <string.h>
+#	define CUTE_STRRCHR strrchr
 #endif
 
 #endif // CUTE_C_RUNTIME_H

@@ -44,6 +44,7 @@
 #include <test_png_cache.h>
 #include <test_sprite.h>
 #include <test_coroutine.h>
+#include <test_string.h>
 
 int main(int argc, const char** argv)
 {
@@ -96,6 +97,9 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_png_cache),
 		CUTE_TEST_CASE_ENTRY(test_make_sprite),
 		CUTE_TEST_CASE_ENTRY(test_coroutine),
+		CUTE_TEST_CASE_ENTRY(test_array_macros_simple),
+		CUTE_TEST_CASE_ENTRY(test_string_macros_simple),
+		CUTE_TEST_CASE_ENTRY(test_string_macros_advanced),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

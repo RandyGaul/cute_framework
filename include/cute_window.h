@@ -65,6 +65,9 @@ typedef enum cf_window_message_box_type_t
 
 CUTE_API void CUTE_CALL cf_window_message_box(cf_window_message_box_type_t type, const char* title, const char* text);
 
+#ifdef CUTE_DEBUG
+#endif
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus

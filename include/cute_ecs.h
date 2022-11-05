@@ -26,7 +26,6 @@
 #include "cute_handle_table.h"
 #include "cute_array.h"
 #include "cute_typeless_array.h"
-#include "cute_dictionary.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API

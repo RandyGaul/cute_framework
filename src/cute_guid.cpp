@@ -19,27 +19,12 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_ALLOC_H
-#define CUTE_ALLOC_H
+#include "cute_guid.h"
+#include "cute_networking.h"
 
-#if !defined(CUTE_ALLOC) && !defined(CUTE_FREE)
-#	include <stdlib.h>
-#	define CUTE_ALLOC(size, user_ctx) malloc(size)
-#	define CUTE_FREE(ptr, user_ctx) free(ptr)
-#	define CUTE_REALLOC(ptr, size, user_ctx) realloc(ptr, size)
-#endif
-
-#include "cute_defines.h" // for #define CUTE_CPP
-
-#ifdef CUTE_CPP
-	#ifdef _MSC_VER
-	#	pragma warning(disable:4291)
-	#endif
-
-	enum cf_dummy_enum_t { CF_DUMMY_ENUM };
-	inline void* operator new(size_t, cf_dummy_enum_t, void* ptr) { return ptr; }
-	#define CUTE_PLACEMENT_NEW(ptr) new(CF_DUMMY_ENUM, ptr)
-	#define CUTE_NEW(T, user_ctx) new(CF_DUMMY_ENUM, CUTE_ALLOC(sizeof(T), user_ctx)) T
-#endif // CUTE_CPP
-
-#endif // CUTE_ALLOC_H
+cf_guid_t cf_make_guid()
+{
+	cf_guid_t guid;
+	cf_crypto_random_bytes(guid.data, sizeof(guid.data));
+	return guid;
+}

@@ -982,6 +982,7 @@ void cf_ecs_free_list(const char** list)
 
 namespace cute
 {
+
 result_t ecs_load_entities(kv_t* kv, array<entity_t>* entities_out) { return cf_internal_ecs_load_entities(kv, entities_out); }
 
 result_t ecs_save_entities(const array<entity_t>& entities, kv_t* kv) { return cf_internal_ecs_save_entities_kv(entities, kv); }
@@ -991,4 +992,5 @@ array<const char*> ecs_get_entity_list() { return cf_internal_ecs_get_entity_lis
 array<const char*> ecs_get_component_list() { return cf_internal_ecs_get_component_list(); }
 array<const char*> ecs_get_system_list() { return cf_internal_ecs_get_system_list(); }
 array<const char*> ecs_get_component_list_for_entity_type(const char* entity_type) { return cf_internal_ecs_get_component_list_for_entity_type(entity_type); }
+
 }
