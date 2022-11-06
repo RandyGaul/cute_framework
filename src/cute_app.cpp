@@ -204,8 +204,8 @@ void cf_destroy_app()
 {
 	cf_destroy_strpool(cf_app->strpool);
 	if (cf_app->using_imgui) {
-		simgui_shutdown();
 		ImGui_ImplSDL2_Shutdown();
+		simgui_shutdown();
 		sg_imgui_discard(&cf_app->sg_imgui);
 		cf_app->using_imgui = false;
 	}
