@@ -49,6 +49,11 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 
+#ifdef CUTE_USE_CIMGUI
+#include <cimgui.h>
+#endif // CUTE_FRAMEWORK_CIMGUI
+
+
 #define SOKOL_IMPL
 #define SOKOL_TRACE_HOOKS
 #ifdef SOKOL_D3D11
@@ -60,7 +65,7 @@
 #define SOKOL_IMGUI_IMPL
 #define SOKOL_IMGUI_NO_SOKOL_APP
 #include <internal/imgui/sokol_imgui.h>
-#include <internal/imgui/imgui_impl_sdl.h>
+#include <imgui/backends/imgui_impl_sdl.h>
 #include <sokol/sokol_gfx_imgui.h>
 
 #include <shaders/upscale_shader.h>
@@ -378,7 +383,19 @@ ImGuiContext* cf_app_init_imgui(bool no_default_font)
 	cf_app->using_imgui = true;
 
 	ImGui::StyleColorsDark();
-	ImGui_SDL2_Init(cf_app->window);
+	
+	sg_backend backend = sg_query_backend();
+	switch (backend) {
+		case SG_BACKEND_GLCORE33: ImGui_ImplSDL2_InitForOpenGL(cf_app->window, NULL); break;
+		case SG_BACKEND_GLES2: ImGui_ImplSDL2_InitForOpenGL(cf_app->window, NULL); break;
+		case SG_BACKEND_GLES3: ImGui_ImplSDL2_InitForOpenGL(cf_app->window, NULL); break;
+		case SG_BACKEND_D3D11: ImGui_ImplSDL2_InitForD3D(cf_app->window); break;
+		case SG_BACKEND_METAL_IOS: ImGui_ImplSDL2_InitForMetal(cf_app->window); break;
+		case SG_BACKEND_METAL_MACOS: ImGui_ImplSDL2_InitForMetal(cf_app->window); break;
+		case SG_BACKEND_METAL_SIMULATOR: ImGui_ImplSDL2_InitForMetal(cf_app->window); break;
+		case SG_BACKEND_WGPU: ImGui_ImplSDL2_InitForOpenGL(cf_app->window, NULL); break;
+	}
+	
 	simgui_desc_t imgui_params = { 0 };
 	imgui_params.no_default_font = no_default_font;
 	imgui_params.ini_filename = "imgui.ini";
