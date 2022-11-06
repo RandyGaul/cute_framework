@@ -212,16 +212,16 @@ int test_hashtable_macros()
 {
 	{
 		const char** h = NULL;
-		hadd(h, 5, "yo");
+		hset(h, 5, "yo");
 		const char* val = hget(h, 5);
 		CUTE_TEST_ASSERT(!CUTE_STRCMP(val, "yo"));
 		hfree(h);
 	}
 	{
 		v2* h = NULL;
-		hadd(h, 0, V2(1, 2));
-		hadd(h, 1, V2(4, 10));
-		hadd(h, 2, V2(-12, 13));
+		hset(h, 0, V2(1, 2));
+		hset(h, 1, V2(4, 10));
+		hset(h, 2, V2(-12, 13));
 		v2 a = hget(h, 0);
 		v2 b = hget(h, 1);
 		v2 c = hget(h, 2);
@@ -230,5 +230,39 @@ int test_hashtable_macros()
 		CUTE_ASSERT(c.x == -12 && c.y == 13);
 		hfree(h);
 	}
+	return 0;
+}
+
+CUTE_TEST_CASE(test_string_interning, "Run the string interning API.");
+int test_string_interning()
+{
+	char* a = NULL;
+	char* b = NULL;
+	sset(a, "string 1");
+	sset(b, "string 1");
+	const char* c = "string 2";
+	const char* ia = sintern(a);
+	const char* ib = sintern(b);
+	const char* ic = sintern(c);
+	const char* ic2 = sintern(c);
+	CUTE_TEST_ASSERT(!CUTE_STRCMP(a, ia));
+	CUTE_TEST_ASSERT(!CUTE_STRCMP(b, ib));
+	CUTE_TEST_ASSERT(!CUTE_STRCMP(ic, ic2));
+	CUTE_TEST_ASSERT(ia == ib);
+	CUTE_TEST_ASSERT(ia != ic);
+	CUTE_TEST_ASSERT(ic == ic2);
+	CUTE_TEST_ASSERT(silen(ia) == (int)CUTE_STRLEN(ia));
+	CUTE_TEST_ASSERT(silen(ib) == (int)CUTE_STRLEN(ib));
+	CUTE_TEST_ASSERT(silen(ic) == (int)CUTE_STRLEN(ic));
+	CUTE_TEST_ASSERT(silen(ic2) == (int)CUTE_STRLEN(ic2));
+	CUTE_TEST_ASSERT(sivalid(ia));
+	CUTE_TEST_ASSERT(sivalid(ib));
+	CUTE_TEST_ASSERT(sivalid(ic));
+	CUTE_TEST_ASSERT(sivalid(ic2));
+	CUTE_TEST_ASSERT(!sivalid(a));
+	CUTE_TEST_ASSERT(!sivalid(b));
+	CUTE_TEST_ASSERT(!sivalid(c));
+	sfree(a);
+	sfree(b);
 	return 0;
 }

@@ -93,30 +93,26 @@
 
 #define CUTE_UNUSED(x) (void)x
 #define CUTE_ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-
 #define CUTE_INLINE inline
-
 #define CUTE_KB 1024
 #define CUTE_MB (CUTE_KB * CUTE_KB)
 #define CUTE_GB (CUTE_MB * CUTE_MB)
-
 #define CUTE_SERIALIZE_CHECK(x) do { if ((x) != SERIALIZE_SUCCESS) goto cute_error; } while (0)
-
 #define CUTE_STATIC_ASSERT(condition, error_message_string) static_assert(condition, error_message_string)
-
 #define CUTE_STRINGIZE_INTERNAL(...) #__VA_ARGS__
 #define CUTE_STRINGIZE(...) CUTE_STRINGIZE_INTERNAL(__VA_ARGS__)
-
 #define CUTE_OFFSET_OF(T, member) ((size_t)((uintptr_t)(&(((T*)0)->member))))
-
 #define CUTE_DEBUG_PRINTF(...)
+#define CUTE_ALIGN_UP(v, n) ((v) & ~((n) - 1))
+#define CUTE_ALIGN_DOWN(v, n) CUTE_ALIGN_UP((v) + (n) - 1, (n))
+#define CUTE_ALIGN_UP_PTR(p, n) ((void*)CUTE_ALIGN_UP((uintptr_t)(p), n))
+#define CUTE_ALIGN_DOWN_PTR(p, n) ((void*)CUTE_ALIGN_DOWN((uintptr_t)(p), n))
 
 #ifdef __cplusplus
 #	ifndef CUTE_NO_CPP
 #		define CUTE_CPP
 #	endif // !CUTE_NO_CPP
 #endif // __cplusplus
-
 
 #define SOKOL_API_DECL CUTE_API
 

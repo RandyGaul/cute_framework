@@ -66,6 +66,8 @@ int do_test(test_t* test, int i)
 	const char* result_string = result ? "\033[31mFAILED\033[0m\n\n" : "\033[32mPASSED\033[0m\n\n";
 	fprintf(CUTE_TEST_IO_STREAM, "Result:       %s", result_string);
 
+	cf_snuke_intern_table();
+
 #ifdef _MSC_VER
 	//_CrtDumpMemoryLeaks();
 #endif

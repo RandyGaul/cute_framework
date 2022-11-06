@@ -106,7 +106,20 @@ typedef struct cf_ahdr_t
 #define stobool(b) (!CUTE_STRCMP(s, "true"))
 #define sreplace(s, replace_me, with_me) (s = cf_sreplace(s, replace_me, with_me))
 #define serase(s, index, count) (s = cf_serase(s, index, count))
+
+#define INTERN_COOKIE 0x75AFC82E
+
+typedef struct cf_intern_t
+{
+	uint32_t cookie;
+	int len;
+	struct cf_intern_t* next;
+	const char* string; // For debugging convenience but allocated after this struct.
+} cf_intern_t;
+
 #define sintern(s) cf_sintern(s)
+#define sivalid(s) (((cf_intern_t*)s - 1)->cookie == INTERN_COOKIE)
+#define silen(s) (((cf_intern_t*)s - 1)->len)
 
 typedef struct cf_hhdr_t
 {
@@ -119,19 +132,20 @@ typedef struct cf_hhdr_t
 #define HCOOKIE 0xE6F7E359
 #define HCANARY(h) (h ? CUTE_ASSERT(hhdr(h)->cookie == HCOOKIE) : 0)
 
-#define hadd(h, k, ...) do { h ? h : (*(void**)&h = cf_hmake(sizeof(*h))); HCANARY(h); h[0] = (__VA_ARGS__); uint64_t key = k; cf_hashtable_insert(&(hhdr(h)->table), &key, h); } while (0)
+#define hset(h, k, ...) do { (h) ? (h) : (*(void**)&(h) = cf_hmake(sizeof(*(h)))); HCANARY(h); h[0] = (__VA_ARGS__); uint64_t key = (uint64_t)k; cf_hashtable_insert(&(hhdr(h)->table), &key, (h)); } while (0)
 #define hget(h, k) (HCANARY(h), cf_hget(h, (uint64_t)k), h[0])
 #define hclear(h) (HCANARY(h), cf_hashtable_clear(h))
 #define hkeys(h) (HCANARY(h), (uint64_t*)cf_hashtable_keys(h))
 #define hitems(h) (HCANARY(h), cf_hashtable_items(h))
 #define hswap(h, index_a, index_b) (HCANARY(h), cf_hashtable_swap(h, index_a, index_b))
-#define hfree(h) do { HCANARY(h); cf_hhdr_t* hdr = hhdr(h); cf_hashtable_cleanup(&hdr->table); CUTE_FREE(hdr, NULL); h = NULL; } while (0)
+#define hfree(h) do { HCANARY(h); if (h) { cf_hhdr_t* hdr = hhdr(h); cf_hashtable_cleanup(&hdr->table); CUTE_FREE(hdr, NULL); } h = NULL; } while (0)
 
 CUTE_INLINE void cf_hget(void* h, uint64_t k)
 {
 	cf_hhdr_t* hdr = hhdr(h);
 	void* item = cf_hashtable_find(&hdr->table, (void*)&k);
-	CUTE_MEMCPY(h, item, hdr->item_size);
+	if (item) CUTE_MEMCPY(h, item, hdr->item_size);
+	else CUTE_MEMSET(h, 0, hdr->item_size);
 }
 
 CUTE_INLINE void* cf_hmake(int item_size)
