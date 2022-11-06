@@ -31,6 +31,7 @@ endfunction()
 option(CUTE_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
 option(CUTE_FRAMEWORK_WITH_HTTPS "Build Cute Framework with mbedtls for HTTPS support (Apache 2.0 license)." ON)
 option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
+option(CUTE_FRAMEWORK_CIMGUI "Build cute framework with cimgui implementation." OFF)
 
 # Platform detection.
 if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
@@ -114,13 +115,15 @@ set(CUTE_SRCS
 	src/internal/cute_ecs_internal.cpp
 	src/internal/cute_dx11.cpp
 
-	src/internal/imgui/imgui_impl_sdl.cpp
-
-	libraries/imgui/imgui.cpp
-	libraries/imgui/imgui_demo.cpp
-	libraries/imgui/imgui_draw.cpp
-	libraries/imgui/imgui_tables.cpp
-	libraries/imgui/imgui_widgets.cpp
+	libraries/cimgui/imgui/backends/imgui_impl_sdl.cpp
+	
+	libraries/cimgui/imgui/imgui.cpp
+	libraries/cimgui/imgui/imgui_demo.cpp
+	libraries/cimgui/imgui/imgui_draw.cpp
+	libraries/cimgui/imgui/imgui_tables.cpp
+	libraries/cimgui/imgui/imgui_widgets.cpp
+	
+	libraries/cimgui/cimgui.cpp
 )
 
 set(CUTE_PUBLIC_HDRS
@@ -181,12 +184,16 @@ set(CUTE_PUBLIC_HDRS
 )
 
 set(IMGUI_HDRS
-	libraries/imgui/imgui.h
-	libraries/imgui/imconfig.h
-	libraries/imgui/imgui_internal.h
-	libraries/imgui/imstb_rectpack.h
-	libraries/imgui/imstb_textedit.h
-	libraries/imgui/imstb_truetype.h
+	libraries/cimgui/imgui/imgui.h
+	libraries/cimgui/imgui/imconfig.h
+	libraries/cimgui/imgui/imgui_internal.h
+	libraries/cimgui/imgui/imstb_rectpack.h
+	libraries/cimgui/imgui/imstb_textedit.h
+	libraries/cimgui/imgui/imstb_truetype.h
+)
+
+set(CIMGUI_HDRS
+	libraries/cimgui/cimgui.h
 )
 
 set(SOKOL_HDRS
@@ -197,6 +204,7 @@ set(SOKOL_HDRS
 set(CUTE_HDRS
 	${CUTE_PUBLIC_HDRS}
 	${IMGUI_HDRS}
+	${CIMGUI_HDRS}
 	${SOKOL_HDRS}
 
 	src/internal/cute_app_internal.h
@@ -210,7 +218,7 @@ set(CUTE_HDRS
 	src/internal/cute_png_cache_internal.h
 
 	src/internal/imgui/sokol_imgui.h
-	src/internal/imgui/imgui_impl_sdl.h
+	libraries/cimgui/imgui/backends/imgui_impl_sdl.h
 
 	src/shaders/sprite_shader.h
 	src/shaders/font_shader.h
@@ -224,6 +232,13 @@ else()
 	add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS})
 endif()
 target_compile_definitions(cute PRIVATE CUTE_EXPORT)
+
+if(CUTE_FRAMEWORK_CIMGUI)
+	if(CUTE_FRAMEWORK_STATIC)
+		target_compile_definitions(cute PUBLIC CIMGUI_NO_EXPORT)
+	endif()
+	target_compile_definitions(cute PUBLIC CUTE_USE_CIMGUI)
+endif()
 
 # PhysicsFS, always statically linked.
 set(PHYSFS_SRCS
@@ -362,8 +377,11 @@ endif()
 # Propogate public headers to other cmake scripts including this subdirectory.
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries>)
+target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui>)
+target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui/imgui>)
 
 install(TARGETS cute EXPORT cute DESTINATION "lib")
 install(FILES ${CUTE_PUBLIC_HDRS} DESTINATION "include/cute")
 install(FILES ${IMGUI_HDRS} DESTINATION "include/cute/imgui")
+install(FILES ${CIMGUI_HDRS} DESTINATION "include/cute/cimgui")
 install(FILES ${SOKOL_HDRS} DESTINATION "include/cute/sokol")

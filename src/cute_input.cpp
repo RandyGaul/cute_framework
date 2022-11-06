@@ -26,7 +26,7 @@
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_input_internal.h>
-#include <internal/imgui/imgui_impl_sdl.h>
+#include <imgui/backends/imgui_impl_sdl.h>
 
 #include <SDL.h>
 
