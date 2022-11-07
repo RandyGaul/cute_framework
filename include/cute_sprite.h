@@ -25,8 +25,8 @@
 #include "cute_defines.h"
 #include "cute_array.h"
 #include "cute_hashtable.h"
-#include "cute_dictionary.h"
 #include "cute_batch.h"
+#include "cute_string.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -67,51 +67,13 @@ typedef struct cf_animation_t
 {
 	const char* name; /*= NULL*/
 	cf_play_direction_t play_direction; /*= CF_PLAY_DIRECTION_FORWARDS*/
-	int frames_count;
-	int frames_capacity;
 	cf_frame_t* frames;
 } cf_animation_t;
 
 CUTE_INLINE void cf_animation_add_frame(cf_animation_t* animation, cf_frame_t frame)
 {
-	CUTE_ASSERT(animation->frames_count >= 0); // Didn't zero initialize cf_animation_t
-	CUTE_ASSERT(animation->frames_capacity >= 0); // Didn't zero initialize cf_animation_t
-
-	cf_array_ensure_capacity((void**)&animation->frames, animation->frames_count, &animation->frames_capacity, sizeof(cf_frame_t), animation->frames_count + 1, NULL);
-
-	animation->frames[animation->frames_count++] = frame;
-}
-
-CUTE_INLINE void cf_animation_cleanup(cf_animation_t* animation, void* user_allocator_context)
-{
-	CUTE_FREE(animation->frames, user_allocator_context);
-}
-
-/**
- * An animation table is a set of animations a particular sprite references.
- * Each sprite instance contains a pointer to an animation table in a "read-only" fashion.
- */
-typedef struct cf_hashtable_t cf_animation_table_t;
-
-CUTE_INLINE int cf_animation_table_init(cf_animation_table_t* table, void* user_allocator_context)
-{
-	return cf_hashtable_init(table, sizeof(cf_dictionary_string_block_t), sizeof(const cf_animation_t*), 256, user_allocator_context);
-}
-
-CUTE_INLINE void cf_animation_table_cleanup(cf_animation_table_t* table, void* user_allocator_context){cf_hashtable_cleanup(table);}
-CUTE_INLINE int cf_animation_table_count(const cf_animation_table_t* table) { return cf_hashtable_count(table); }
-CUTE_INLINE const cf_dictionary_string_block_t* cf_animation_table_keys(const cf_animation_table_t* table) { return (const cf_dictionary_string_block_t*)cf_hashtable_keys(table); }
-CUTE_INLINE const cf_animation_t** cf_animation_table_items(const cf_animation_table_t* table) { return (const cf_animation_t**)cf_hashtable_items(table); }
-CUTE_INLINE const cf_animation_t** cf_animation_table_find(const cf_animation_table_t* table, const char* key)
-{
-	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key);
-	return (const cf_animation_t**)cf_hashtable_find(table, &block);
-}
-
-CUTE_INLINE cf_animation_t** cf_animation_table_insert(cf_animation_table_t* table, const char* key, const cf_animation_t* val)
-{
-	cf_dictionary_string_block_t block = cf_s_dictionary_make_block(key);
-	return (cf_animation_t**)cf_hashtable_insert(table, &block, &val);
+	afit(animation->frames, asize(animation->frames) + 1);
+	apush(animation->frames, frame);
 }
 
 /**
@@ -139,7 +101,7 @@ typedef struct cf_sprite_t
 
 	bool paused; /*= false*/
 	float t; /*= 0*/
-	const cf_animation_table_t* animations; /*= NULL*/
+	const cf_animation_t** animations; /*= NULL*/
 
 	cf_transform_t transform; /*= cf_make_transform()*/
 } cf_sprite_t;
@@ -213,7 +175,7 @@ CUTE_INLINE void cf_sprite_update(cf_sprite_t* sprite, float dt)
 	sprite->t += dt * sprite->play_speed_multiplier;
 	if (sprite->t >= sprite->animation->frames[sprite->frame_index].delay) {
 		sprite->frame_index++;
-		if (sprite->frame_index == sprite->animation->frames_count) {
+		if (sprite->frame_index == alen(sprite->animation)) {
 			sprite->loop_count++;
 			sprite->frame_index = 0;
 		}
@@ -234,16 +196,8 @@ CUTE_INLINE void cf_sprite_reset(cf_sprite_t* sprite)
 
 CUTE_INLINE void cf_sprite_play(cf_sprite_t* sprite, const char* animation)
 {
-	sprite->animation = NULL;
-
-	sprite->animation = *cf_animation_table_find(sprite->animations, animation);
-
-	if (sprite->animation == NULL) {
-
-		CUTE_DEBUG_PRINTF("Unable to find animation %s within sprite %s.\n", animation, sprite->name);
-		CUTE_ASSERT(false);
-	}
-
+	sprite->animation = hfind(sprite->animations, animation);
+	CUTE_ASSERT(sprite->animation);
 	cf_sprite_reset(sprite);
 }
 
@@ -316,7 +270,7 @@ CUTE_INLINE void cf_sprite_flip_y(cf_sprite_t* sprite)
 
 CUTE_INLINE int cf_sprite_frame_count(const cf_sprite_t* sprite)
 {
-	return sprite->animation->frames_count;
+	return alen(sprite->animation);
 }
 
 CUTE_INLINE int cf_sprite_current_frame(const cf_sprite_t* sprite)
@@ -379,7 +333,6 @@ namespace cute
 {
 
 using frame_t = cf_frame_t;
-using animation_table_t = cf_animation_table_t;
 using animation_t = cf_animation_t;
 
 enum play_direction_t : int

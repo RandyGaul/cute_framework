@@ -23,21 +23,14 @@
 #define CUTE_PNG_CACHE_INTERNAL_H
 
 #include <cute_defines.h>
-#include <cute_array.h>
-#include <cute_dictionary.h>
-#include <cute_strpool.h>
-
-struct cf_strpool_t;
 
 struct cf_png_cache_t
 {
-	cf_dictionary<uint64_t, cf_png_t> pngs;
-	cf_dictionary<uint64_t, void*> id_to_pixels;
-	cf_dictionary<cf_strpool_id, cf_animation_t*> animations;
-	cf_dictionary<cf_strpool_id, cf_animation_table_t*> animation_tables;
+	void** id_to_pixels = NULL;
+	cf_animation_t** animations = NULL;
+	cf_animation_t*** animation_tables = NULL;
+	cf_png_t* pngs = NULL;
 	uint64_t id_gen = 0;
-	cf_strpool_t* strpool = NULL;
-	void* mem_ctx = NULL;
 };
 
 #ifdef CUTE_CPP

@@ -103,7 +103,7 @@ cf_client_t* cf_make_client(
 	void* user_allocator_context /* = NULL */
 )
 {
-	return cn_client_create(port, application_id, use_ipv6, user_allocator_context);
+	return cn_client_create(port, application_id, use_ipv6);
 }
 
 void cf_destroy_client(cf_client_t* client)

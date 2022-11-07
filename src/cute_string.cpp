@@ -31,8 +31,6 @@
 
 #include <internal/cute_app_internal.h>
 
-#include <inttypes.h>
-
 using namespace cute;
 
 void* cf_agrow(const void* a, int new_size, size_t element_size)
@@ -45,14 +43,37 @@ void* cf_agrow(const void* a, int new_size, size_t element_size)
 	size_t total_size = sizeof(cf_ahdr_t) + new_capacity * element_size;
 	cf_ahdr_t* hdr;
 	if (a) {
-		hdr = (cf_ahdr_t*)CUTE_REALLOC(ahdr(a), total_size, NULL);
+		if (!AHDR(a)->is_static) {
+			hdr = (cf_ahdr_t*)CUTE_REALLOC(AHDR(a), total_size, NULL);
+		} else {
+			hdr = (cf_ahdr_t*)CUTE_ALLOC(total_size, NULL);
+			hdr->size = asize(a);
+			hdr->cookie = ACOOKIE;
+		}
 	} else {
 		hdr = (cf_ahdr_t*)CUTE_ALLOC(total_size, NULL);
 		hdr->size = 0;
 		hdr->cookie = ACOOKIE;
 	}
 	hdr->capacity = new_capacity;
+	hdr->is_static = false;
 	hdr->data = (char*)(hdr + 1); // For debugging convenience.
+	return (void*)(hdr + 1);
+}
+
+void* cf_astatic(const void* a, int buffer_size, size_t element_size)
+{
+	cf_ahdr_t* hdr = (cf_ahdr_t*)a;
+	hdr->size = 0;
+	hdr->cookie = ACOOKIE;
+	if (sizeof(cf_ahdr_t) <= element_size) {
+		hdr->capacity = buffer_size / (int)element_size - 1;
+	} else {
+		int elements_taken = sizeof(cf_ahdr_t) / (int)element_size + (sizeof(cf_ahdr_t) % (int)element_size > 0);
+		hdr->capacity = buffer_size / (int)element_size - elements_taken;
+	}
+	hdr->data = (char*)(hdr + 1); // For debugging convenience.
+	hdr->is_static = true;
 	return (void*)(hdr + 1);
 }
 
@@ -67,6 +88,21 @@ void* cf_aset(const void* a, const void* b, size_t element_size)
 	CUTE_MEMCPY((void*)a, b, asize(b) * element_size);
 	asize(a) = asize(b);
 	return (void*)a;
+}
+
+void* cf_areverse(const void* a)
+{
+	ACANARY(a);
+	T* a = m_ptr;
+	T* b = m_ptr + (asize(m_ptr) - 1);
+
+	while (a < b) {
+		T t = *a;
+		*a = *b;
+		*b = t;
+		++a;
+		--b;
+	}
 }
 
 char* cf_sset(char* a, const char* b)
@@ -121,6 +157,40 @@ char* cf_sfmt_append(char* s, const char* fmt, ...)
 	return s;
 }
 
+char* cf_svfmt(char* s, const char* fmt, va_list args)
+{
+	ACANARY(s);
+	va_list copy_args;
+	va_copy(copy_args, args);
+	int n = 1 + vsnprintf(s, scap(s), fmt, args);
+	if (n > scap(s)) {
+		sfit(s, n);
+		n = 1 + vsnprintf(s, scap(s), fmt, copy_args);
+		va_end(copy_args);
+	}
+	scount(s) = n;
+	return s;
+}
+
+char* cf_svfmt_append(char* s, const char* fmt, va_list args)
+{
+	ACANARY(s);
+	va_list copy_args;
+	va_copy(copy_args, args);
+	int capacity = scap(s) - ssize(s);
+	int n = 1 + vsnprintf(slast(s), capacity, fmt, args);
+	if (n > capacity) {
+		afit(s, n + slen(s));
+		va_start(copy_args, fmt);
+		int new_capacity = scap(s) - ssize(s);
+		n = 1 + vsnprintf(slast(s), new_capacity, fmt, copy_args);
+		CUTE_ASSERT(n <= new_capacity);
+		va_end(copy_args);
+	}
+	asize(s) += n - 1;
+	return s;
+}
+
 bool cf_sprefix(char* s, const char* prefix)
 {
 	ACANARY(s);
@@ -139,7 +209,7 @@ bool cf_ssuffix(char* s, const char* suffix)
 	return a && b;
 }
 
-void cf_supper(char* s)
+void cf_stoupper(char* s)
 {
 	ACANARY(s);
 	if (!s) return;
@@ -148,13 +218,37 @@ void cf_supper(char* s)
 	}
 }
 
-void cf_slower(char* s)
+void cf_stolower(char* s)
 {
 	ACANARY(s);
 	if (!s) return;
 	for (int i = 0; i < slen(s); ++i) {
 		s[i] = tolower(s[i]);
 	}
+}
+
+char* cf_sappend(char* a, const char* b)
+{
+	ACANARY(a);
+	int blen = (int)CUTE_STRLEN(b);
+	if (blen <= 0) return a;
+	sfit(a, slen(a) + blen + 1);
+	CUTE_MEMCPY(a + slen(a), b, blen);
+	ssize(a) += blen;
+	a[slen(a)] = 0;
+	return a;
+}
+
+char* cf_sappend_range(char* a, const char* b, const char* b_end)
+{
+	ACANARY(a);
+	int blen = (int)(b_end - b);
+	if (blen <= 0) return a;
+	sfit(a, slen(a) + blen + 1);
+	CUTE_MEMCPY(a + slen(a), b, blen);
+	ssize(a) += blen;
+	a[slen(a)] = 0;
+	return a;
 }
 
 char* cf_strim(char* s)
@@ -217,7 +311,7 @@ char* cf_srpad(char* s, char pad, int count)
 	return s;
 }
 
-char* cf_ssplit(char* s, char split_c)
+char* cf_ssplit_once(char* s, char split_c)
 {
 	ACANARY(s);
 	char* start = s;
@@ -242,6 +336,18 @@ char* cf_ssplit(char* s, char split_c)
 	return split;
 }
 
+char** cf_ssplit(char* s, char split_c)
+{
+	ACANARY(s);
+	char** result;
+	char* split = NULL;
+	while ((split = ssplit_once(s, split_c))) {
+		apush(result, split);
+	}
+	apush(result, s);
+	return result;
+}
+
 int cf_sfirst_index_of(const char* s, char c)
 {
 	ACANARY(s);
@@ -258,48 +364,6 @@ int cf_slast_index_of(const char* s, char c)
 	const char* p = CUTE_STRRCHR(s, c);
 	if (!p) return -1;
 	return ((int)(uintptr_t)(p - s));
-}
-
-char* cf_sint(int i)
-{
-	char* result = NULL;
-	sfmt(result, "%d", i);
-	return result;
-}
-
-char* cf_suint(uint64_t i)
-{
-	char* result = NULL;
-	sfmt(result, "%" PRIu64, i);
-	return result;
-}
-
-char* cf_sfloat(float f)
-{
-	char* result = NULL;
-	sfmt(result, "%f", f);
-	return result;
-}
-
-char* cf_sdouble(double d)
-{
-	char* result = NULL;
-	sfmt(result, "%f", d);
-	return result;
-}
-
-char* cf_shex(uint64_t i)
-{
-	char* result = NULL;
-	sfmt(result, "0x%x", i);
-	return result;
-}
-
-char* cf_sbool(bool b)
-{
-	char* result = NULL;
-	sfmt(result, "%s", b ? "true" : "false");
-	return result;
 }
 
 static uint64_t s_stoint(const char* s)
@@ -463,14 +527,19 @@ static intern_table_t* g_intern_table;
 
 static intern_table_t* s_inst()
 {
+	// Locklessly get/instantiate a global instance.
 	intern_table_t* inst = (intern_table_t*)cf_atomic_ptr_get((void**)&g_intern_table);
 	if (!inst) {
+		// Create a new instance of the table.
 		inst = (intern_table_t*)CUTE_ALLOC(sizeof(intern_table_t), NULL);
 		CUTE_MEMSET(inst, 0, sizeof(*inst));
 		inst->interns = NULL;
 		inst->arena.alignment = 8;
 		inst->arena.block_size = CUTE_MB;
 		inst->lock = cf_make_rw_lock();
+
+		// Try and set the global pointer. If this fails it means another thread
+		// has raced us and completed first, so then just destroy ours and use theirs.
 		result_t result = cf_atomic_ptr_cas((void**)&g_intern_table, NULL, inst);
 		if (is_error(result)) {
 			cf_destroy_rw_lock(&inst->lock);
@@ -489,7 +558,9 @@ const char* cf_sintern(const char* s)
 	int len = (int)CUTE_STRLEN(s);
 	uint64_t hash = fnv1a(s, len);
 
-	// Fast-path, fetch already intern'd string and return it.
+	// Fast-path, fetch already intern'd strings and return them as-is.
+	// Uses a mere read-lock, which is just a couple atomic read operations
+	// and supports *many* simultaneous lockless readers.
 	if (table->interns) {
 		table->read_lock();
 		intern = hget(table->interns, hash);
@@ -507,6 +578,7 @@ const char* cf_sintern(const char* s)
 	}
 
 	// String is not yet interned, create a new allocation for it.
+	// We write-lock the data structure, this will wait for all readers to flush.
 	intern_t* list = intern;
 	table->write_lock();
 	intern = (intern_t*)arena_alloc(&table->arena, sizeof(intern_t) + len + 1);
@@ -578,156 +650,3 @@ const char* cf_path_name_of_folder_im_in(const char* path)
 {
 	return NULL;
 }
-
-//--------------------------------------------------------------------------------------------------
-// Global `string` pool instance.
-
-static void* cf_s_mem_ctx;
-static bool cf_s_pool_init;
-static cf_strpool_t* cf_s_pool_instance;
-
-static cf_strpool_t* cf_s_pool(int nuke = 0)
-{
-	cf_strpool_t* instance = cf_s_pool_instance;
-	if (nuke) {
-		if (cf_s_pool_init) {
-			cf_destroy_strpool(instance);
-			cf_s_pool_instance = NULL;
-		}
-		cf_s_pool_init = 0;
-		return NULL;
-	} else {
-		if (!cf_s_pool_init) {
-			cf_s_pool_instance = instance = cf_make_strpool(NULL);
-			cf_s_pool_init = 1;
-		}
-		return instance;
-	}
-}
-
-static void cf_s_incref(cf_strpool_id id)
-{
-	if (id.val) {
-		cf_strpool_incref(cf_s_pool(), id);
-	}
-}
-
-static void cf_s_decref(cf_strpool_id id)
-{
-	if (id.val) {
-		cf_strpool_t* pool = cf_s_pool();
-		if (cf_strpool_decref(pool, id) <= 0) {
-			cf_strpool_discard(pool, id);
-		}
-	}
-}
-
-//--------------------------------------------------------------------------------------------------
-
-cf_string_t::cf_string_t()
-	: id({ 0 })
-{
-}
-
-cf_string_t::cf_string_t(char* str)
-{
-	int len = (int)CUTE_STRLEN(str);
-	if (len) {
-		id = cf_strpool_inject_len(cf_s_pool(), str, len);
-		cf_s_incref(id);
-	} else id.val = 0;
-}
-
-cf_string_t::cf_string_t(const char* str)
-{
-	int len = str ? (int)CUTE_STRLEN(str) : 0;
-	if (len) {
-		id = cf_strpool_inject_len(cf_s_pool(), str, len);
-		cf_s_incref(id);
-	} else id.val = 0;
-}
-
-cf_string_t::cf_string_t(const char* begin, const char* end)
-{
-	int len = begin ? (end ? (int)(end - begin) : (int)CUTE_STRLEN(begin)) : 0;
-	if (len) {
-		id = cf_strpool_inject_len(cf_s_pool(), begin, len);
-		cf_s_incref(id);
-	} else id.val = 0;
-}
-
-cf_string_t::cf_string_t(const cf_string_t& other)
-	: id(other.id)
-{
-	cf_s_incref(id);
-}
-
-cf_string_t::cf_string_t(cf_strpool_id id)
-	: id(id)
-{
-}
-
-cf_string_t::~cf_string_t()
-{
-	cf_s_decref(id);
-}
-
-size_t cf_string_t::len() const
-{
-	return cf_strpool_length(cf_s_pool(), id);
-}
-
-const char* cf_string_t::c_str() const
-{
-	return cf_strpool_cstr(cf_s_pool(), id);
-}
-
-cf_string_t& cf_string_t::operator=(const cf_string_t& rhs)
-{
-	cf_s_incref(rhs.id);
-	cf_s_decref(id);
-	id = rhs.id;
-	return *this;
-}
-
-bool cf_string_t::operator==(const cf_string_t& rhs) const
-{
-	return id.val == rhs.id.val;
-}
-
-bool cf_string_t::operator!=(const cf_string_t& rhs) const
-{
-	return id.val != rhs.id.val;
-}
-
-char cf_string_t::operator[](const int i) const
-{
-	CUTE_ASSERT(i >= 0 && i < len());
-	return c_str()[i];
-}
-
-void cf_string_t::incref()
-{
-	cf_s_incref(id);
-}
-
-void cf_string_t::decref()
-{
-	cf_s_decref(id);
-}
-
-bool cf_string_t::is_valid() const
-{
-	return cf_strpool_isvalid(cf_s_pool(), id);
-}
-
-void cf_string_defrag_static_pool()
-{
-	cf_strpool_defrag(cf_s_pool());
-}
-
-void cf_string_nuke_static_pool()
-{
-	cf_s_pool(1);
-}
-

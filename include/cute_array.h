@@ -22,7 +22,6 @@
 #ifndef CUTE_ARRAY_H
 #define CUTE_ARRAY_H
 
-
 #include "cute_defines.h"
 #include "cute_c_runtime.h"
 #include "cute_alloc.h"
@@ -31,24 +30,37 @@
 extern "C" {
 #endif // __cplusplus
 
-CUTE_INLINE void cf_array_ensure_capacity(void** items, int items_count, int *items_capacity, int items_element_size, int required_capacity, void* user_allocator_context)
+typedef struct cf_ahdr_t
 {
-	if (required_capacity > *items_capacity) {
-		int new_capacity = *items_capacity ? *items_capacity * 2 : 256;
-		while (new_capacity < required_capacity) {
-			new_capacity <<= 1;
-			CUTE_ASSERT(new_capacity); // Detect overflow.
-		}
+	int size;
+	int capacity;
+	bool is_static;
+	char* data;
+	uint32_t cookie;
+} cf_ahdr_t;
 
-		size_t new_size = items_element_size * new_capacity;
-		void* new_items = CUTE_ALLOC(new_size, user_allocator_context);
-		CUTE_ASSERT(new_items);
-		CUTE_MEMCPY(new_items, *items, items_element_size * items_count);
-		CUTE_FREE(*items, user_allocator_context);
-		*items = new_items;
-		*items_capacity = new_capacity;
-	}
-}
+#define AHDR(a) ((cf_ahdr_t*)a - 1)
+#define ACOOKIE 0xE6F7E359
+#define ACANARY(a) do { if (a) CUTE_ASSERT(AHDR(a)->cookie == ACOOKIE); } while (0) // Detects buffer underruns.
+
+#define alen(a) (AHDR(a)->size)
+#define acount(a) alen(a)
+#define asize(a) (a ? alen(a) : 0)
+#define acap(a) ((a) ? AHDR(a)->capacity : 0)
+#define afit(a, n) ((n) <= acap(a) ? 0 : (*(void**)&(a) = cf_agrow((a), (n), sizeof(*a))))
+#define apush(a, ...) do { ACANARY(a); afit((a), 1 + ((a) ? alen(a) : 0)); (a)[alen(a)++] = (__VA_ARGS__); } while (0)
+#define apop(a) (a[--alen(a)])
+#define afree(a) do { ACANARY(a); if (!AHDR(a)->is_static) CUTE_FREE(AHDR(a)); a = NULL; } while (0)
+#define aend(a) (a + asize(a))
+#define aclear(a) do { ACANARY(a); if (a) alen(a) = 0; } while (0)
+#define aset(a, b) (*(void**)&(a) = cf_aset((void*)(a), (void*)(b), sizeof(*a)))
+#define areverse(a) 
+#define ahash(a) cf_fnv1a(a, asize(a))
+#define astatic(a, buffer, buffer_size) (*(void**)&(a) = cf_astatic(buffer, buffer_size, sizeof(*a)))
+
+CUTE_API void* CUTE_CALL cf_agrow(const void* a, int new_size, size_t element_size);
+CUTE_API void* CUTE_CALL cf_astatic(const void* a, int capacity, size_t element_size);
+CUTE_API void* CUTE_CALL cf_aset(const void* a, const void* b, size_t element_size);
 
 #ifdef __cplusplus
 }
@@ -58,46 +70,45 @@ CUTE_INLINE void cf_array_ensure_capacity(void** items, int items_count, int *it
 
 /**
  * Implements a basic growable array data structure. Constructors and destructors are called, but this
- * class does *not* act as a drop-in replacement for std::vector, as there are no iterators.
+ * class does *not* act as a drop-in replacement for std::vector, as there are no iterators. Your elements
+ * CAN NOT store a pointer or reference to themselves or other elements.
  *
  * The main purpose of this class is to reduce the lines of code included compared to std::vector,
  * and also more importantly to have fast debug performance.
  */
 
-template <typename T>
-struct cf_array
+namespace cute
 {
-	cf_array() { }
-	cf_array(cf_initializer_list<T> list);
-	cf_array(const cf_array<T>& other);
-	cf_array(cf_array<T>&& other);
-	cf_array(void* user_allocator_context);
-	cf_array(int capacity, void* user_allocator_context);
-	cf_array(T* data, int count, int capacity, void* user_allocator_context);
-	~cf_array();
+
+template <typename T>
+struct array
+{
+	array() { }
+	array(cf_initializer_list<T> list);
+	array(const array<T>& other);
+	array(array<T>&& other);
+	array(int capacity);
+	~array();
+
+	static array<T> steal_from(array<T>* steal_from_me);
+	static array<T> steal_from(array<T>& steal_from_me);
+	static array<T> steal_from(T* c_api_array);
 
 	T& add();
 	T& add(const T& item);
 	T& add(T&& item);
-	T& insert(int index);
-	T& insert(int index, const T& item);
-	T& insert(int index, T&& item);
-	void set(int index, const T& item);
-	void remove(int index);
 	T pop();
 	void unordered_remove(int index);
-	void copy(int src, int dst, int count = 1);
 	void clear();
 	void ensure_capacity(int num_elements);
 	void ensure_count(int count);
 	void set_count(int count);
-	void steal_from(cf_array<T>* steal_from_me);
-	void steal_from(cf_array<T>& steal_from_me);
 	void reverse();
 
 	int capacity() const;
 	int count() const;
 	int size() const;
+	bool empty() const { return size() > 0; }
 
 	T* begin();
 	const T* begin() const;
@@ -110,8 +121,8 @@ struct cf_array
 	T* operator+(int index);
 	const T* operator+(int index) const;
 
-	const cf_array<T>& operator=(const cf_array<T>& rhs);
-	const cf_array<T>& operator=(cf_array<T>&& rhs);
+	const array<T>& operator=(const array<T>& rhs);
+	const array<T>& operator=(array<T>&& rhs);
 
 	T& last();
 	const T& last() const;
@@ -120,263 +131,174 @@ struct cf_array
 	const T* data() const;
 
 private:
-	int m_capacity = 0;
-	int m_count = 0;
-	T* m_items = NULL;
-	void* m_mem_ctx = NULL;
+	T* m_ptr = NULL;
 };
 
 // -------------------------------------------------------------------------------------------------
 
 template <typename T>
-cf_array<T>::cf_array(cf_initializer_list<T> list)
+array<T>::array(cf_initializer_list<T> list)
 {
-	ensure_capacity((int)list.size());
+	afit(m_ptr, (int)list.size());
 	for (const T* i = list.begin(); i < list.end(); ++i) {
 		add(*i);
 	}
 }
 
 template <typename T>
-cf_array<T>::cf_array(const cf_array<T>& other)
+array<T>::array(const array<T>& other)
 {
-	ensure_capacity((int)other.count());
+	afit(m_ptr, (int)other.count());
 	for (int i = 0; i < other.count(); ++i) {
 		add(other[i]);
 	}
 }
 
 template <typename T>
-cf_array<T>::cf_array(cf_array<T>&& other)
+array<T>::array(array<T>&& other)
 {
 	steal_from(&other);
 }
 
 template <typename T>
-cf_array<T>::cf_array(void* user_allocator_context)
-	: m_mem_ctx(user_allocator_context)
-{}
-
-template <typename T>
-cf_array<T>::cf_array(int capacity, void* user_allocator_context)
-	: m_capacity(capacity)
-	, m_mem_ctx(user_allocator_context)
+array<T>::array(int capacity)
 {
-	m_items = (T*)CUTE_ALLOC(sizeof(T) * capacity, m_mem_ctx);
-	CUTE_ASSERT(m_items);
+	afit(m_ptr, capacity);
 }
 
-
 template <typename T>
-cf_array<T>::cf_array(T* data, int count, int capacity, void* user_allocator_context)
-	: m_items(data)
-	, m_count(count)
-	, m_capacity(capacity)
-	, m_mem_ctx(user_allocator_context)
+array<T>::~array()
 {
-	CUTE_ASSERT(m_items);
-}
-
-
-template <typename T>
-cf_array<T>::~cf_array()
-{
-	for (int i = 0; i < m_count; ++i) {
-		T* slot = m_items + i;
+	for (int i = 0; i < asize(m_ptr); ++i) {
+		T* slot = m_ptr + i;
 		slot->~T();
 	}
-	CUTE_FREE(m_items, m_mem_ctx);
+	afree(m_ptr);
 }
 
 template <typename T>
-T& cf_array<T>::add()
+array<T> array<T>::steal_from(array<T>* steal_from_me)
 {
-	ensure_capacity(m_count + 1);
-	T* slot = m_items + m_count++;
+	array<T> result;
+	result.m_ptr = steal_from_me->m_ptr;
+	steal_from_me->m_ptr = NULL;
+	return result;
+}
+
+template <typename T>
+array<T> array<T>::steal_from(array<T>& steal_from_me)
+{
+	array<T> result;
+	result.m_ptr = steal_from_me.m_ptr;
+	steal_from_me.m_ptr = NULL;
+	return result;
+}
+
+template <typename T>
+array<T> array<T>::steal_from(T* c_api_array)
+{
+	array<T> result;
+	result.m_ptr = c_api_array;
+	return result;
+}
+
+template <typename T>
+T& array<T>::add()
+{
+	afit(m_ptr, asize(m_ptr) + 1);
+	T* slot = m_ptr + alen(m_ptr)++;
 	CUTE_PLACEMENT_NEW(slot) T;
 	return *slot;
 }
 
 template <typename T>
-T& cf_array<T>::add(const T& item)
+T& array<T>::add(const T& item)
 {
-	ensure_capacity(m_count + 1);
-	T* slot = m_items + m_count++;
+	afit(m_ptr, asize(m_ptr) + 1);
+	T* slot = m_ptr + alen(m_ptr)++;
 	CUTE_PLACEMENT_NEW(slot) T(item);
 	return *slot;
 }
 
 template <typename T>
-T& cf_array<T>::add(T&& item)
+T& array<T>::add(T&& item)
 {
-	ensure_capacity(m_count + 1);
-	T* slot = m_items + m_count++;
+	afit(m_ptr, asize(m_ptr) + 1);
+	T* slot = m_ptr + alen(m_ptr)++;
 	CUTE_PLACEMENT_NEW(slot) T(move(item));
 	return *slot;
 }
 
 template <typename T>
-T& cf_array<T>::insert(int index)
+T array<T>::pop()
 {
-	CUTE_ASSERT(index >= 0 && index < m_count);
-	add();
-	int count_to_move = m_count - 1 - index;
-	CUTE_MEMMOVE(m_items + index + 1, m_items + index, sizeof(T) * count_to_move);
-	return m_items[index];
-}
-
-template <typename T>
-T& cf_array<T>::insert(int index, const T& item)
-{
-	CUTE_ASSERT(index >= 0 && index < m_count);
-	add();
-	int count_to_move = m_count - 1 - index;
-	CUTE_MEMMOVE(m_items + index + 1, m_items + index, sizeof(T) * count_to_move);
-	T* slot = m_items + index;
-	CUTE_PLACEMENT_NEW(slot) T(item);
-	return *slot;
-}
-
-template <typename T>
-T& cf_array<T>::insert(int index, T&& item)
-{
-	CUTE_ASSERT(index >= 0 && index < m_count);
-	add();
-	int count_to_move = m_count - 1 - index;
-	CUTE_MEMMOVE(m_items + index + 1, m_items + index, sizeof(T) * count_to_move);
-	T* slot = m_items + index;
-	CUTE_PLACEMENT_NEW(slot) T(move(item));
-	return *slot;
-}
-
-template <typename T>
-void cf_array<T>::set(int index, const T& item)
-{
-	CUTE_ASSERT(index >= 0 && index < m_count);
-	T* slot = m_items + index;
-	*slot = item;
-}
-
-template <typename T>
-void cf_array<T>::remove(int index)
-{
-	CUTE_ASSERT(index >= 0 && index < m_count);
-	T* slot = m_items + index;
-	slot->~T();
-	int count_to_move = m_count - 1 - index;
-	CUTE_MEMMOVE(m_items + index, m_items + index + 1, sizeof(T) * count_to_move);
-	--m_count;
-}
-
-template <typename T>
-T cf_array<T>::pop()
-{
-	CUTE_ASSERT(m_count > 0);
-	T* slot = m_items + m_count - 1;
-	T val = move(m_items[--m_count]);
+	CUTE_ASSERT(!empty());
+	T* slot = m_ptr + alen(m_ptr) - 1;
+	T val = move(apop(m_ptr));
 	slot->~T();
 	return val;
 }
 
 template <typename T>
-void cf_array<T>::unordered_remove(int index)
+void array<T>::unordered_remove(int index)
 {
-	CUTE_ASSERT(index >= 0 && index < m_count);
-	T* slot = m_items + index;
+	CUTE_ASSERT(index >= 0 && index < asize(m_ptr));
+	T* slot = m_ptr + index;
 	slot->~T();
-	m_items[index] = m_items[--m_count];
+	m_ptr[index] = m_ptr[--alen(m_ptr)];
 }
 
 template <typename T>
-void cf_array<T>::copy(int src, int dst, int count)
+void array<T>::clear()
 {
-	CUTE_ASSERT(src >= 0 && src + count - 1 < m_count);
-	CUTE_ASSERT(dst >= 0 && dst + count - 1 < m_count);
-	for (int i = 0; i < count; ++i) {
-		T* slot = m_items + dst + i;
-		slot->~T();
-		*slot = m_items[src + i];
-	}
+	aclear(m_ptr);
 }
 
 template <typename T>
-void cf_array<T>::clear()
+void array<T>::ensure_capacity(int num_elements)
 {
-	for (int i = 0; i < m_count; ++i) {
-		T* slot = m_items + i;
-		slot->~T();
-	}
-	m_count = 0;
+	afit(m_ptr, num_elements);
 }
 
 template <typename T>
-void cf_array<T>::ensure_capacity(int num_elements)
+void array<T>::set_count(int count)
 {
-	if (num_elements > m_capacity) {
-		int new_capacity = m_capacity ? m_capacity * 2 : 256;
-		while (new_capacity < num_elements) {
-			new_capacity <<= 1;
-			CUTE_ASSERT(new_capacity); // Detect overflow.
-		}
-
-		size_t new_size = sizeof(T) * new_capacity;
-		T* new_items = (T*)CUTE_ALLOC(new_size, m_mem_ctx);
-		CUTE_ASSERT(new_items);
-		CUTE_MEMCPY(new_items, m_items, sizeof(T) * m_count);
-		CUTE_FREE(m_items, m_mem_ctx);
-		m_items = new_items;
-		m_capacity = new_capacity;
-	}
-}
-
-template <typename T>
-void cf_array<T>::set_count(int count)
-{
-	CUTE_ASSERT(count < m_capacity || !count);
-	if (m_count > count) {
-		for (int i = count; i < m_count; ++i) {
-			T* slot = m_items + i;
+	CUTE_ASSERT(count < acap(m_ptr) || !count);
+	afit(m_ptr, count);
+	if (asize(m_ptr) > count) {
+		for (int i = count; i < asize(m_ptr); ++i) {
+			T* slot = m_ptr + i;
 			slot->~T();
 		}
-	} else if (m_count < count) {
-		for (int i = m_count; i < count; ++i) {
-			T* slot = m_items + i;
+	} else if (asize(m_ptr) < count) {
+		for (int i = asize(m_ptr); i < count; ++i) {
+			T* slot = m_ptr + i;
 			CUTE_PLACEMENT_NEW(slot) T;
 		}
 	}
-	m_count = count;
+	if (m_ptr) alen(m_ptr) = count;
 }
 
 template <typename T>
-void cf_array<T>::ensure_count(int count)
+void array<T>::ensure_count(int count)
 {
-	int old_count = m_count;
-	ensure_capacity(count);
-	if (m_count < count) {
-		m_count = count;
+	if (!count) return;
+	int old_count = alen(m_ptr);
+	afit(m_ptr, count);
+	if (alen(m_ptr) < count) {
+		alen(m_ptr) = count;
 		for (int i = old_count; i < count; ++i) {
-			T* slot = m_items + i;
+			T* slot = m_ptr + i;
 			CUTE_PLACEMENT_NEW(slot) T;
 		}
 	}
 }
 
 template <typename T>
-void cf_array<T>::steal_from(cf_array<T>* steal_from_me)
+void array<T>::reverse()
 {
-	this->~cf_array<T>();
-	m_capacity = steal_from_me->m_capacity;
-	m_count = steal_from_me->m_count;
-	m_items = steal_from_me->m_items;
-	m_mem_ctx = steal_from_me->m_mem_ctx;
-	CUTE_PLACEMENT_NEW(steal_from_me) cf_array<T>();
-}
-
-template <typename T>
-void cf_array<T>::reverse()
-{
-	T* a = m_items;
-	T* b = m_items + (m_count - 1);
+	T* a = m_ptr;
+	T* b = m_ptr + (asize(m_ptr) - 1);
 
 	while (a < b) {
 		T t = *a;
@@ -388,98 +310,92 @@ void cf_array<T>::reverse()
 }
 
 template <typename T>
-void cf_array<T>::steal_from(cf_array<T>& steal_from_me)
+int array<T>::capacity() const
 {
-	steal_from(&steal_from_me);
+	return acap(m_ptr);
 }
 
 template <typename T>
-int cf_array<T>::capacity() const
+int array<T>::count() const
 {
-	return m_capacity;
+	return asize(m_ptr);
 }
 
 template <typename T>
-int cf_array<T>::count() const
+int array<T>::size() const
 {
-	return m_count;
+	return asize(m_ptr);
 }
 
 template <typename T>
-int cf_array<T>::size() const
+T* array<T>::begin()
 {
-	return m_count;
+	return m_ptr;
 }
 
 template <typename T>
-T* cf_array<T>::begin()
+const T* array<T>::begin() const
 {
-	return m_items;
+	return m_ptr;
 }
 
 template <typename T>
-const T* cf_array<T>::begin() const
+T* array<T>::end()
 {
-	return m_items;
+	return m_ptr + count();
 }
 
 template <typename T>
-T* cf_array<T>::end()
+const T* array<T>::end() const
 {
-	return m_items + m_count;
+	return m_ptr + count();
 }
 
 template <typename T>
-const T* cf_array<T>::end() const
+T& array<T>::operator[](int index)
 {
-	return m_items + m_count;
+	CUTE_ASSERT(index >= 0 && index < count());
+	return m_ptr[index];
 }
 
 template <typename T>
-T& cf_array<T>::operator[](int index)
+const T& array<T>::operator[](int index) const
 {
-	CUTE_ASSERT(index >= 0 && index < m_count);
-	return m_items[index];
+	CUTE_ASSERT(index >= 0 && index < count());
+	return m_ptr[index];
 }
 
 template <typename T>
-const T& cf_array<T>::operator[](int index) const
+T* array<T>::data()
 {
-	CUTE_ASSERT(index >= 0 && index < m_count);
-	return m_items[index];
+	return m_ptr;
 }
 
 template <typename T>
-T* cf_array<T>::data()
+const T* array<T>::data() const
 {
-	return m_items;
+	return m_ptr;
 }
 
 template <typename T>
-const T* cf_array<T>::data() const
+T* array<T>::operator+(int index)
 {
-	return m_items;
+	CUTE_ASSERT(index >= 0 && index < count());
+	return m_ptr + index;
 }
 
 template <typename T>
-T* cf_array<T>::operator+(int index)
+const T* array<T>::operator+(int index) const
 {
-	CUTE_ASSERT(index >= 0 && index < m_count);
-	return m_items + index;
+	CUTE_ASSERT(index >= 0 && index < count());
+	return m_ptr + index;
 }
 
 template <typename T>
-const T* cf_array<T>::operator+(int index) const
-{
-	CUTE_ASSERT(index >= 0 && index < m_count);
-	return m_items + index;
-}
-
-template <typename T>
-const cf_array<T>& cf_array<T>::operator=(const cf_array<T>& rhs)
+const array<T>& array<T>::operator=(const array<T>& rhs)
 {
 	set_count(0);
-	ensure_capacity((int)rhs.count());
+	afit(m_ptr, (int)rhs.count());
 	for (int i = 0; i < rhs.count(); ++i) {
 		add(rhs[i]);
 	}
@@ -487,27 +403,23 @@ const cf_array<T>& cf_array<T>::operator=(const cf_array<T>& rhs)
 }
 
 template <typename T>
-const cf_array<T>& cf_array<T>::operator=(cf_array<T>&& rhs)
+const array<T>& array<T>::operator=(array<T>&& rhs)
 {
-	steal_from(rhs);
-	return *this;
+	return (*this = steal_from(rhs));
 }
 
 template <typename T>
-T& cf_array<T>::last()
+T& array<T>::last()
 {
-	return (*this)[m_count - 1];
+	return *(aend(m_ptr) - 1);
 }
 
 template <typename T>
-const T& cf_array<T>::last() const
+const T& array<T>::last() const
 {
-	return (*this)[m_count - 1];
+	return *(aend(m_ptr) - 1);
 }
 
-namespace cute
-{
-template <typename T> using array = cf_array<T>;
 }
 
 #endif // CUTE_CPP

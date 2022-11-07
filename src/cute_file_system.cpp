@@ -251,14 +251,14 @@ cf_result_t cf_file_system_flush(cf_file_t* file)
 	}
 }
 
-cf_result_t cf_file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size, void* user_allocator_context)
+cf_result_t cf_file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size)
 {
 	CUTE_ASSERT(data_ptr);
 	cf_file_t* file = cf_file_system_open_file_for_read(virtual_path);
 	void* data = NULL;
 	if (!file) return cf_result_error(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	size_t sz = cf_file_system_size(file);
-	data = CUTE_ALLOC(sz, user_allocator_context);
+	data = CUTE_ALLOC(sz);
 	size_t sz_read = cf_file_system_read(file, data, sz);
 	CUTE_ASSERT(sz == sz_read);
 	*data_ptr = data;
@@ -267,14 +267,14 @@ cf_result_t cf_file_system_read_entire_file_to_memory(const char* virtual_path, 
 	return cf_result_success();
 }
 
-cf_result_t cf_file_system_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size, void* user_allocator_context)
+cf_result_t cf_file_system_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size)
 {
 	CUTE_ASSERT(data_ptr);
 	cf_file_t* file = cf_file_system_open_file_for_read(virtual_path);
 	void* data = NULL;
 	if (!file) return cf_result_error(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	size_t sz = cf_file_system_size(file) + 1;
-	data = CUTE_ALLOC(sz, user_allocator_context);
+	data = CUTE_ALLOC(sz);
 	size_t sz_read = cf_file_system_read(file, data, sz);
 	CUTE_ASSERT(sz == sz_read + 1);
 	*data_ptr = data;

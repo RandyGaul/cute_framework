@@ -24,9 +24,10 @@
 
 #if !defined(CUTE_ALLOC) && !defined(CUTE_FREE)
 #	include <stdlib.h>
-#	define CUTE_ALLOC(size, user_ctx) malloc(size)
-#	define CUTE_FREE(ptr, user_ctx) free(ptr)
-#	define CUTE_REALLOC(ptr, size, user_ctx) realloc(ptr, size)
+#	define CUTE_CALLOC(size) calloc(size, 1)
+#	define CUTE_ALLOC(size) malloc(size)
+#	define CUTE_FREE(ptr) free(ptr)
+#	define CUTE_REALLOC(ptr, size) realloc(ptr, size)
 #endif
 
 #include "cute_defines.h" // for #define CUTE_CPP
@@ -39,7 +40,7 @@
 	enum cf_dummy_enum_t { CF_DUMMY_ENUM };
 	inline void* operator new(size_t, cf_dummy_enum_t, void* ptr) { return ptr; }
 	#define CUTE_PLACEMENT_NEW(ptr) new(CF_DUMMY_ENUM, ptr)
-	#define CUTE_NEW(T, user_ctx) new(CF_DUMMY_ENUM, CUTE_ALLOC(sizeof(T), user_ctx)) T
+	#define CUTE_NEW(T) new(CF_DUMMY_ENUM, CUTE_ALLOC(sizeof(T))) T
 #endif // CUTE_CPP
 
 #endif // CUTE_ALLOC_H

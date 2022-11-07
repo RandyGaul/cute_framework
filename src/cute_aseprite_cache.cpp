@@ -66,7 +66,7 @@ static void cf_s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, 
 
 cf_aseprite_cache_t* cf_make_aseprite_cache(void* mem_ctx)
 {
-	cf_aseprite_cache_t* cache = CUTE_NEW(cf_aseprite_cache_t, mem_ctx);
+	cf_aseprite_cache_t* cache = CUTE_NEW(cf_aseprite_cache_t);
 	cache->strpool = cf_make_strpool(NULL);
 	cache->mem_ctx = mem_ctx;
 	return cache;
@@ -94,7 +94,7 @@ void cf_destroy_aseprite_cache(cf_aseprite_cache_t* cache)
 	}
 	void* mem_ctx = cache->mem_ctx;
 	cache->~cf_aseprite_cache_t();
-	CUTE_FREE(cache, mem_ctx);
+	CUTE_FREE(cache);
 }
 
 static cf_play_direction_t cf_s_play_direction(ase_animation_direction_t direction)
@@ -144,7 +144,7 @@ cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepr
 	cf_animation_table_t* animations = (cf_animation_table_t*)CUTE_ALLOC(sizeof(cf_animation_table_t), cache->mem_ctx);
 	cf_animation_table_init(animations, cache->mem_ctx);
 
-	cf_array<uint64_t> ids;
+	array<uint64_t> ids;
 	ids.ensure_capacity(ase->frame_count);
 
 	for (int i = 0; i < ase->frame_count; ++i) {

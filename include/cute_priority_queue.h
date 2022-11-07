@@ -49,8 +49,8 @@ struct cf_priority_queue
 	void clear();
 
 private:
-	cf_array<T> m_values;
-	cf_array<float> m_costs;
+	array<T> m_values;
+	array<float> m_costs;
 
 	int predicate_min(int iA, int iB);
 	int predicate_max(int iA, int iB);

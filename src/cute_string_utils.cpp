@@ -154,10 +154,10 @@ cf_string_t cf_to_string(bool x)
 	else return "false";
 }
 
-cf_string_t cf_to_string(const cf_array<char>& x)
+cf_string_t cf_to_string(const array<char>& x)
 {
 	if (x.last() != 0) {
-		cf_array<char> a = x;
+		array<char> a = x;
 		a.add(0);
 		return a.data();
 	} else {
@@ -167,29 +167,29 @@ cf_string_t cf_to_string(const cf_array<char>& x)
 
 cf_string_t cf_to_string(char x)
 {
-	cf_array<char> a;
+	array<char> a;
 	a.add(x);
 	a.add(0);
 	return a.data();
 }
 
-cf_array<char> cf_to_array(cf_string_t s)
+array<char> cf_to_array(cf_string_t s)
 {
 	return cf_to_array(s.c_str());
 }
 
-cf_array<char> cf_to_array(const char* s)
+array<char> cf_to_array(const char* s)
 {
-	cf_array<char> result;
+	array<char> result;
 	char c;
 	while ((c = *s++)) result.add(c);
 	result.add(0);
 	return result;
 }
 
-cf_array<char> cf_to_array(const char* s, size_t sz)
+array<char> cf_to_array(const char* s, size_t sz)
 {
-	cf_array<char> result;
+	array<char> result;
 	while (sz--) result.add(*s++);
 	result.add(0);
 	return result;

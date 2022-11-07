@@ -35,14 +35,14 @@ extern "C" {
 
 typedef struct cf_audio_t cf_audio_t;
 
-CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg(const char* path, void* user_allocator_context /*= NULL*/);
-CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_wav(const char* path, void* user_allocator_context /*= NULL*/);
-CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg_from_memory(void* memory, int byte_count, void* user_allocator_context /*= NULL*/);
-CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_wav_from_memory(void* memory, int byte_count, void* user_allocator_context /*= NULL*/);
-CUTE_API void CUTE_CALL cf_audio_stream_ogg(const char* path, cf_promise_t promise, void* user_allocator_context /*= NULL*/);
-CUTE_API void CUTE_CALL cf_audio_stream_wav(const char* path, cf_promise_t promise, void* user_allocator_context /*= NULL*/);
-CUTE_API void CUTE_CALL cf_audio_stream_ogg_from_memory(void* memory, int byte_count, cf_promise_t promise, void* user_allocator_context /*= NULL*/);
-CUTE_API void CUTE_CALL cf_audio_stream_wav_from_memory(void* memory, int byte_count, cf_promise_t promise, void* user_allocator_context /*= NULL*/);
+CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg(const char* path /*= NULL*/);
+CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_wav(const char* path /*= NULL*/);
+CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg_from_memory(void* memory, int byte_count /*= NULL*/);
+CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_wav_from_memory(void* memory, int byte_count /*= NULL*/);
+CUTE_API void CUTE_CALL cf_audio_stream_ogg(const char* path, cf_promise_t promise /*= NULL*/);
+CUTE_API void CUTE_CALL cf_audio_stream_wav(const char* path, cf_promise_t promise /*= NULL*/);
+CUTE_API void CUTE_CALL cf_audio_stream_ogg_from_memory(void* memory, int byte_count, cf_promise_t promise /*= NULL*/);
+CUTE_API void CUTE_CALL cf_audio_stream_wav_from_memory(void* memory, int byte_count, cf_promise_t promise /*= NULL*/);
 CUTE_API cf_result_t CUTE_CALL cf_audio_destroy(cf_audio_t* audio);
 CUTE_API int CUTE_CALL cf_audio_ref_count(cf_audio_t* audio);
 
@@ -119,14 +119,14 @@ struct sound_t : public cf_sound_t
 	sound_t(cf_sound_t s) { *(cf_sound_t*)this = s; }
 };
 
-CUTE_INLINE audio_t* audio_load_ogg(const char* path, void* user_allocator_context = NULL) { return cf_audio_load_ogg(path, user_allocator_context); }
-CUTE_INLINE audio_t* audio_load_wav(const char* path, void* user_allocator_context = NULL) { return cf_audio_load_wav(path, user_allocator_context); }
-CUTE_INLINE audio_t* audio_load_ogg_from_memory(void* memory, int byte_count, void* user_allocator_context = NULL) { return cf_audio_load_ogg_from_memory(memory, byte_count, user_allocator_context); }
-CUTE_INLINE audio_t* audio_load_wav_from_memory(void* memory, int byte_count, void* user_allocator_context = NULL) { return cf_audio_load_wav_from_memory(memory, byte_count, user_allocator_context); }
-CUTE_INLINE void audio_stream_ogg(const char* path, promise_t promise, void* user_allocator_context = NULL) { cf_audio_stream_ogg(path, promise, user_allocator_context); }
-CUTE_INLINE void audio_stream_wav(const char* path, promise_t promise, void* user_allocator_context = NULL) { cf_audio_stream_wav(path, promise, user_allocator_context); }
-CUTE_INLINE void audio_stream_ogg_from_memory(void* memory, int byte_count, promise_t promise, void* user_allocator_context = NULL) { cf_audio_stream_ogg_from_memory(memory, byte_count, promise, user_allocator_context); }
-CUTE_INLINE void audio_stream_wav_from_memory(void* memory, int byte_count, promise_t promise, void* user_allocator_context = NULL) { cf_audio_stream_wav_from_memory(memory, byte_count, promise, user_allocator_context); }
+CUTE_INLINE audio_t* audio_load_ogg(const char* path = NULL) { return cf_audio_load_ogg(path); }
+CUTE_INLINE audio_t* audio_load_wav(const char* path = NULL) { return cf_audio_load_wav(path); }
+CUTE_INLINE audio_t* audio_load_ogg_from_memory(void* memory, int byte_count = NULL) { return cf_audio_load_ogg_from_memory(memory, byte_count); }
+CUTE_INLINE audio_t* audio_load_wav_from_memory(void* memory, int byte_count = NULL) { return cf_audio_load_wav_from_memory(memory, byte_count); }
+CUTE_INLINE void audio_stream_ogg(const char* path, promise_t promise = NULL) { cf_audio_stream_ogg(path, promise); }
+CUTE_INLINE void audio_stream_wav(const char* path, promise_t promise = NULL) { cf_audio_stream_wav(path, promise); }
+CUTE_INLINE void audio_stream_ogg_from_memory(void* memory, int byte_count, promise_t promise = NULL) { cf_audio_stream_ogg_from_memory(memory, byte_count, promise); }
+CUTE_INLINE void audio_stream_wav_from_memory(void* memory, int byte_count, promise_t promise = NULL) { cf_audio_stream_wav_from_memory(memory, byte_count, promise); }
 CUTE_INLINE result_t audio_destroy(audio_t* audio) { return cf_audio_destroy(audio); }
 CUTE_INLINE int audio_ref_count(audio_t* audio) { return cf_audio_ref_count(audio); }
 

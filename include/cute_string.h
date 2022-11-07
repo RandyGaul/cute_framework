@@ -26,36 +26,13 @@
 #include "cute_c_runtime.h"
 #include "cute_alloc.h"
 #include "cute_hashtable.h"
+#include "cute_array.h"
 
+#include <inttypes.h>
 #include <stdarg.h>
 
 //--------------------------------------------------------------------------------------------------
 // C API
-
-typedef struct cf_ahdr_t
-{
-	int size;
-	int capacity;
-	char* data;
-	uint32_t cookie;
-} cf_ahdr_t;
-
-#define ahdr(a) ((cf_ahdr_t*)a - 1)
-#define ACOOKIE 0xE6F7E359
-#define ACANARY(a) do { if (a) CUTE_ASSERT(ahdr(a)->cookie == ACOOKIE); } while (0) // Detects buffer underruns.
-
-#define alen(a) (ahdr(a)->size)
-#define acount(a) alen(a)
-#define asize(a) alen(a)
-#define acap(a) ((a) ? ahdr(a)->capacity : 0)
-#define afit(a, n) ((n) <= acap(a) ? 0 : (*(void**)&(a) = cf_agrow((a), (n), sizeof(*a))))
-#define apush(a, ...) do { ACANARY(a); afit((a), 1 + ((a) ? alen(a) : 0)); (a)[alen(a)++] = (__VA_ARGS__); } while (0)
-#define apop(a) (a[--alen(a)])
-#define afree(a) do { ACANARY(a); CUTE_FREE(ahdr(a), NULL); a = NULL; } while (0)
-#define aend(a) (a + alen(a))
-#define aclear(a) do { ACANARY(a); if (a) alen(a) = 0; } while (0)
-#define aset(a, b) (*(void**)&(a) = cf_aset((void*)(a), (void*)(b), sizeof(*a)))
-#define ahash(a) cf_fnv1a(a, alen(a))
 
 #define slen(s) ((int)((size_t)acount(s) - 1))
 #define sempty(s) (s ? slen(s) < 1 : 1)
@@ -69,6 +46,8 @@ typedef struct cf_ahdr_t
 #define sfit(s, n) afit(s, n)
 #define sfmt(s, fmt, ...) (s = cf_sfmt(s, fmt, __VA_ARGS__))
 #define sfmt_append(s, fmt, ...) (s = cf_sfmt_append(s, fmt, __VA_ARGS__))
+#define svfmt(s, fmt, args) (s = cf_svfmt(s, fmt, args))
+#define svfmt_append(s, fmt, args) (s = cf_svfmt_append(s, fmt, args))
 #define sset(a, b) (a = cf_sset(a, b))
 #define sdup(s) cf_sset(NULL, s)
 #define smake(s) cf_sset(NULL, s)
@@ -79,39 +58,42 @@ typedef struct cf_ahdr_t
 #define sprefix(s, prefix) cf_sprefix(s, prefix)
 #define ssuffix(s, suffix) cf_ssuffix(s, suffix)
 #define scontains(s, contains_me) (slen(s) >= CUTE_STRLEN(contains_me) && !!CUTE_STRSTR(s, contains_me))
-#define supper(s) cf_supper(s)
-#define slower(s) cf_slower(s)
+#define stoupper(s) cf_stoupper(s)
+#define stolower(s) cf_stolower(s)
 #define shash(s) ahash(s)
-#define sappend(a, b) (a = sfmt_append(a, "%s", b))
+#define sappend(a, b) (a = cf_sappend(a, b))
+#define sappend_range(a, b, b_end) (a = cf_sappend_range(a, b, b_end))
 #define strim(s) (s = cf_strim(s))
 #define sltrim(s) (s = cf_sltrim(s))
 #define srtrim(s) (s = cf_srtrim(s))
 #define slpad(s, ch, n) (s = cf_slpad(s, ch, n))
 #define srpad(s, ch, n) (s = cf_srpad(s, ch, n))
+#define ssplit_once(s, ch) cf_ssplit_once(s, ch)
 #define ssplit(s, ch) cf_ssplit(s, ch)
 #define sfirst_index_of(s, ch) cf_sfirst_index_of(s, ch)
 #define slast_index_of(s, ch) cf_slast_index_of(s, ch)
 #define sfind(s, find) CUTE_STRSTR(s, find)
-#define sint(i) cf_sint(i)
-#define suint(i) cf_suint(i)
-#define sfloat(f) cf_sfloat(f)
-#define sdouble(f) cf_sdouble(f)
-#define shex(s) cf_shex(s)
-#define sbool(s) cf_sbool(s)
+#define sint(s, i) sfmt(s, "%d", i)
+#define suint(s, i) sfmt(s, "%" PRIu64, i)
+#define sfloat(s, f) sfmt(s, "%f", f)
+#define sdouble(s, f) sfmt(s, "%f", d)
+#define shex(s, uint) sfmt(s, "0x%x", uint)
+#define sbool(s, b) sfmt(s, "%s", b ? "true" : "false")
 #define stoint(s) cf_stoint(s)
 #define stouint(s) cf_stouint(s)
 #define stofloat(s) cf_stofloat(s)
 #define stodouble(s) cf_stodouble(s)
-#define stohex(i) cf_stohex(i)
-#define stobool(b) (!CUTE_STRCMP(s, "true"))
+#define stohex(s) cf_stohex(s)
+#define stobool(s) (!CUTE_STRCMP(s, "true"))
 #define sreplace(s, replace_me, with_me) (s = cf_sreplace(s, replace_me, with_me))
 #define serase(s, index, count) (s = cf_serase(s, index, count))
+#define sstatic(s, buffer, buffer_size) astatic(s, buffer, buffer_size())
 
 #define INTERN_COOKIE 0x75AFC82E
 
 typedef struct cf_intern_t
 {
-	uint32_t cookie;
+	uint32_t cookie; // Type check.
 	int len;
 	struct cf_intern_t* next;
 	const char* string; // For debugging convenience but allocated after this struct.
@@ -121,64 +103,26 @@ typedef struct cf_intern_t
 #define sivalid(s) (((cf_intern_t*)s - 1)->cookie == INTERN_COOKIE)
 #define silen(s) (((cf_intern_t*)s - 1)->len)
 
-typedef struct cf_hhdr_t
-{
-	size_t item_size;
-	cf_hashtable_t table;
-	uint32_t cookie;
-} cf_hhdr_t;
-
-#define hhdr(h) ((cf_hhdr_t*)h - 1)
-#define HCOOKIE 0xE6F7E359
-#define HCANARY(h) (h ? CUTE_ASSERT(hhdr(h)->cookie == HCOOKIE) : 0)
-
-#define hset(h, k, ...) do { (h) ? (h) : (*(void**)&(h) = cf_hmake(sizeof(*(h)))); HCANARY(h); h[0] = (__VA_ARGS__); uint64_t key = (uint64_t)k; cf_hashtable_insert(&(hhdr(h)->table), &key, (h)); } while (0)
-#define hget(h, k) (HCANARY(h), cf_hget(h, (uint64_t)k), h[0])
-#define hclear(h) (HCANARY(h), cf_hashtable_clear(h))
-#define hkeys(h) (HCANARY(h), (uint64_t*)cf_hashtable_keys(h))
-#define hitems(h) (HCANARY(h), cf_hashtable_items(h))
-#define hswap(h, index_a, index_b) (HCANARY(h), cf_hashtable_swap(h, index_a, index_b))
-#define hfree(h) do { HCANARY(h); if (h) { cf_hhdr_t* hdr = hhdr(h); cf_hashtable_cleanup(&hdr->table); CUTE_FREE(hdr, NULL); } h = NULL; } while (0)
-
-CUTE_INLINE void cf_hget(void* h, uint64_t k)
-{
-	cf_hhdr_t* hdr = hhdr(h);
-	void* item = cf_hashtable_find(&hdr->table, (void*)&k);
-	if (item) CUTE_MEMCPY(h, item, hdr->item_size);
-	else CUTE_MEMSET(h, 0, hdr->item_size);
-}
-
-CUTE_INLINE void* cf_hmake(int item_size)
-{
-	cf_hhdr_t* hdr = (cf_hhdr_t*)CUTE_ALLOC(sizeof(cf_hhdr_t) + item_size, NULL);
-	hdr->item_size = item_size;
-	cf_hashtable_init(&hdr->table, sizeof(uint64_t), item_size, 32, NULL);
-	hdr->cookie = HCOOKIE;
-	return hdr + 1;
-}
-
-CUTE_API void* CUTE_CALL cf_agrow(const void* a, int new_size, size_t element_size);
-CUTE_API void* CUTE_CALL cf_aset(const void* a, const void* b, size_t element_size);
 CUTE_API char* CUTE_CALL cf_sset(char* a, const char* b);
 CUTE_API char* CUTE_CALL cf_sfmt(char* s, const char* fmt, ...);
 CUTE_API char* CUTE_CALL cf_sfmt_append(char* s, const char* fmt, ...);
+CUTE_API char* CUTE_CALL cf_svfmt(char* s, const char* fmt, va_list args);
+CUTE_API char* CUTE_CALL cf_svfmt_append(char* s, const char* fmt, va_list args);
 CUTE_API bool CUTE_CALL cf_sprefix(char* s, const char* prefix);
 CUTE_API bool CUTE_CALL cf_ssuffix(char* s, const char* suffix);
-CUTE_API void CUTE_CALL cf_supper(char* s);
-CUTE_API void CUTE_CALL cf_slower(char* s);
+CUTE_API void CUTE_CALL cf_stoupper(char* s);
+CUTE_API void CUTE_CALL cf_stolower(char* s);
+CUTE_API char* CUTE_CALL cf_sappend(char* a, const char* b);
+CUTE_API char* CUTE_CALL cf_sappend_range(char* a, const char* b, const char* b_end);
 CUTE_API char* CUTE_CALL cf_strim(char* s);
 CUTE_API char* CUTE_CALL cf_sltrim(char* s);
 CUTE_API char* CUTE_CALL cf_srtrim(char* s);
 CUTE_API char* CUTE_CALL cf_slpad(char* s, char pad, int count);
 CUTE_API char* CUTE_CALL cf_srpad(char* s, char pad, int count);
-CUTE_API char* CUTE_CALL cf_ssplit(char* s, char split_c);
+CUTE_API char* CUTE_CALL cf_ssplit_once(char* s, char split_c);
+CUTE_API char** CUTE_CALL cf_ssplit(char* s, char split_c);
 CUTE_API int CUTE_CALL cf_sfirst_index_of(const char* s, char c);
 CUTE_API int CUTE_CALL cf_slast_index_of(const char* s, char c);
-CUTE_API char* CUTE_CALL cf_sint(int i);
-CUTE_API char* CUTE_CALL cf_suint(uint64_t i);
-CUTE_API char* CUTE_CALL cf_sfloat(float f);
-CUTE_API char* CUTE_CALL cf_sdouble(double d);
-CUTE_API char* CUTE_CALL cf_shex(uint64_t i);
 CUTE_API int CUTE_CALL cf_stoint(const char* s);
 CUTE_API uint64_t CUTE_CALL cf_stouint(const char* s);
 CUTE_API float CUTE_CALL cf_stofloat(const char* s);
@@ -201,59 +145,10 @@ CUTE_API const char* CUTE_CALL cf_path_pop(const char* path);
 CUTE_API const char* CUTE_CALL cf_path_compact(const char* path);
 CUTE_API const char* CUTE_CALL cf_path_name_of_folder_im_in(const char* path);
 
-CUTE_INLINE uint64_t cf_fnv1a(const void* data, int size)
-{
-	const char* s = (const char*)data;
-	uint64_t h = 14695981039346656037ULL;
-	char c = 0;
-	while (size--) {
-		h = h ^ (uint64_t)(*s++);
-		h = h * 1099511628211ULL;
-	}
-	return h;
-}
-
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
 #ifdef CUTE_CPP
-
-#include "cute_strpool.h"
-
-/*
-	Implements a *single-threaded* string-interning system where each string on the stack
-	is represented by a `uint64_t`, and internally ref-counts inside of a global string-
-	interning system stored statically.
-	There is no special support for string operations in a multi-threaded scenario. Simply
-	make sure there is only one pool in a specific thread, if you really want to use cf_string_t
-	between threads.
-*/
-
-typedef struct cf_string_t
-{
-	CUTE_API cf_string_t();
-	CUTE_API cf_string_t(char* str);
-	CUTE_API cf_string_t(const char* str);
-	CUTE_API cf_string_t(const char* begin, const char* end);
-	CUTE_API cf_string_t(const cf_string_t& other);
-	CUTE_API cf_string_t(cf_strpool_id id);
-	CUTE_API ~cf_string_t();
-
-	CUTE_API size_t len() const;
-	CUTE_API const char* c_str() const;
-
-	CUTE_API cf_string_t& operator=(const cf_string_t& rhs);
-	CUTE_API bool operator==(const cf_string_t& rhs) const;
-	CUTE_API bool operator!=(const cf_string_t& rhs) const;
-	CUTE_API char operator[](const int i) const;
-
-	CUTE_API void incref();
-	CUTE_API void decref();
-
-	CUTE_API bool is_valid() const;
-
-	cf_strpool_id id;
-} cf_string_t;
 
 namespace cute
 {
@@ -270,7 +165,91 @@ CUTE_INLINE uint64_t constexpr fnv1a(const void* data, int size)
 	return h;
 }
 
-using string_t = cf_string_t;
+struct string_t
+{
+	CUTE_INLINE string_t() { astatic(m_str, u.m_buffer, sizeof(u.m_buffer)); }
+	CUTE_INLINE string_t(const char* s) { astatic(m_str, u.m_buffer, sizeof(u.m_buffer)); sset(m_str, s); }
+	CUTE_INLINE string_t(const char* start, const char* end) { astatic(m_str, u.m_buffer, sizeof(u.m_buffer)); int length = (int)(end - start); sfit(m_str, length); CUTE_STRNCPY(m_str, start, length); ssize(m_str) = length + 1; }
+	CUTE_INLINE ~string_t() { sfree(m_str); }
+
+	CUTE_INLINE static string_t steal_from(char* c_api_string) { ACANARY(c_api_string); string_t r; r.m_str = c_api_string; return r; }
+	CUTE_INLINE static string_t from(int i) { string_t r; sint(r.m_str, i); return r; }
+	CUTE_INLINE static string_t from(uint64_t uint) { string_t r; suint(r.m_str, uint); return r; }
+	CUTE_INLINE static string_t from(float f) { string_t r; sfloat(r.m_str, f); return r; }
+	CUTE_INLINE static string_t from(double f) { string_t r; sfloat(r.m_str, f); return r; }
+	CUTE_INLINE static string_t from_hex(uint64_t uint) { string_t r; shex(r.m_str, uint); return r; }
+	CUTE_INLINE static string_t from(bool b) { string_t r; sbool(r.m_str, b); return r; }
+
+	CUTE_INLINE int to_int() const { return stoint(m_str); }
+	CUTE_INLINE uint64_t to_uint() const { return stouint(m_str); }
+	CUTE_INLINE float to_float() const { return stofloat(m_str); }
+	CUTE_INLINE double to_double() const { return stodouble(m_str); }
+	CUTE_INLINE uint64_t to_hex() const { return stohex(m_str); }
+	CUTE_INLINE bool to_bool() const { return stobool(m_str); }
+
+	CUTE_INLINE const char* c_str() const { return m_str; }
+	CUTE_INLINE char* c_str() { return m_str; }
+	CUTE_INLINE const char* begin() const { return m_str; }
+	CUTE_INLINE char* begin() { return m_str; }
+	CUTE_INLINE const char* end() const { return slast(m_str) + 1; }
+	CUTE_INLINE char* end() { return slast(m_str) + 1; }
+	CUTE_INLINE const char* last() const { return slast(m_str); }
+	CUTE_INLINE char* last() { return slast(m_str); }
+	CUTE_INLINE operator const char*() const { return m_str; }
+	CUTE_INLINE operator char*() const { return m_str; }
+
+	CUTE_INLINE char& operator[](int index) { s_chki(index); return m_str[index]; }
+	CUTE_INLINE const char& operator[](int index) const { s_chki(index); return m_str[index]; }
+
+	CUTE_INLINE int len() const { return slen(m_str); }
+	CUTE_INLINE int capacity() const { return scap(m_str); }
+	CUTE_INLINE int size() const { return ssize(m_str); }
+	CUTE_INLINE int count() const { return ssize(m_str); }
+	CUTE_INLINE void ensure_capacity(int capacity) { sfit(m_str, capacity); }
+	CUTE_INLINE void fit(int capacity) { sfit(m_str, capacity); }
+	CUTE_INLINE bool empty() const { return sempty(m_str); }
+
+	CUTE_INLINE string_t& add(char ch) { spush(m_str, ch); return *this; }
+	CUTE_INLINE string_t& append(const char* s) { sappend(m_str, s); return *this; }
+	CUTE_INLINE string_t& append(const char* start, const char* end) { sappend_range(m_str, start, end); return *this; }
+	CUTE_INLINE string_t& fmt(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt(m_str, fmt, args); va_end(args); return *this; }
+	CUTE_INLINE string_t& fmt_append(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt_append(m_str, fmt, args); va_end(args); return *this; }
+	CUTE_INLINE string_t& trim() { strim(m_str); return *this; }
+	CUTE_INLINE string_t& ltrim() { sltrim(m_str); return *this; }
+	CUTE_INLINE string_t& rtrim() { srtrim(m_str); return *this; }
+	CUTE_INLINE string_t& lpad(char pad, int count) { slpad(m_str, pad, count); return *this; }
+	CUTE_INLINE string_t& rpad(char pad, int count) { srpad(m_str, pad, count); return *this; }
+	CUTE_INLINE string_t& set(const char* s) { sset(m_str, s); return *this; }
+	CUTE_INLINE string_t& operator=(const char* s) { set(s); return *this; }
+	//CUTE_INLINE array<string_t> split(char split_c) { array<string_t> r; char** s = ssplit(str, split_c); for (int i=0;i<alen(s);++i) r.add(move(steal_from(s[i]))); return r; }
+	// pop
+	CUTE_INLINE int first_index_of(char ch) const { sfirst_index_of(m_str, ch); }
+	CUTE_INLINE int last_index_of(char ch) const { slast_index_of(m_str, ch); }
+	CUTE_INLINE string_t find(const char* find_me) const { return string_t(sfind(m_str, find_me)); }
+	CUTE_INLINE string_t& replace(const char* replace_me, const char* with_me) { sreplace(m_str, replace_me, with_me); return *this; }
+	CUTE_INLINE string_t& erase(int index, int count) { serase(m_str, index, count); return *this; }
+	CUTE_INLINE string_t dup() const { return string_t(sdup(m_str)); }
+	CUTE_INLINE void clear() { sclear(m_str); }
+
+	CUTE_INLINE bool starts_with(const char* s) const { return sprefix(m_str, s); }
+	CUTE_INLINE bool ends_with(const char* s) const { return ssuffix(m_str, s); }
+	CUTE_INLINE bool prefix(const char* s) const { return sprefix(m_str, s); }
+	CUTE_INLINE bool suffix(const char* s) const { return ssuffix(m_str, s); }
+	CUTE_INLINE bool operator==(const char* s) { return !CUTE_STRCMP(m_str, s); }
+	CUTE_INLINE bool operator!=(const char* s) { return CUTE_STRCMP(m_str, s); }
+	CUTE_INLINE bool compare(const char* s, bool no_case = false) { return no_case ? sequ(m_str, s) : siequ(m_str, s); }
+	CUTE_INLINE bool cmp(const char* s, bool no_case = false) { compare(s, no_case); }
+	CUTE_INLINE bool contains(const char* contains_me) { return scontains(m_str, contains_me); }
+	CUTE_INLINE void to_upper() { stoupper(m_str); }
+	CUTE_INLINE void to_lower() { stolower(m_str); }
+	CUTE_INLINE uint64_t hash() const { return shash(m_str); }
+
+private:
+	char* m_str = u.m_buffer;
+	union { char m_buffer[64]; void* align; } u;
+
+	CUTE_INLINE void s_chki(int i) const { CUTE_ASSERT(i >= 0 && i < ssize(m_str)); }
+};
 
 }
 

@@ -55,10 +55,10 @@ struct cf_audio_t : public cs_loaded_sound_t
 
 using cs_sound_t = cs_playing_sound_t;
 
-static CUTE_INLINE cf_audio_t* cf_s_audio_make(cf_audio_t audio_struct, void* user_allocator_context)
+static CUTE_INLINE cf_audio_t* cf_s_audio_make(cf_audio_t audio_struct)
 {
 	if (audio_struct.channel_count) {
-		cf_audio_t* audio = (cf_audio_t*)CUTE_ALLOC(sizeof(cf_audio_t), user_allocator_context);
+		cf_audio_t* audio = (cf_audio_t*)CUTE_ALLOC(sizeof(cf_audio_t));
 		CUTE_PLACEMENT_NEW(audio) cf_audio_t;
 		*audio = audio_struct;
 		return audio;
@@ -67,40 +67,40 @@ static CUTE_INLINE cf_audio_t* cf_s_audio_make(cf_audio_t audio_struct, void* us
 	}
 }
 
-cf_audio_t* cf_audio_load_ogg(const char* path, void* user_allocator_context)
+cf_audio_t* cf_audio_load_ogg(const char* path)
 {
 	void* data;
 	size_t sz;
-	cf_file_system_read_entire_file_to_memory(path, &data, &sz, NULL);
+	cf_file_system_read_entire_file_to_memory(path, &data, &sz);
 	cf_audio_t audio_struct;
 	cs_read_mem_ogg(data, (int)sz, &audio_struct);
-	CUTE_FREE(data, NULL);
-	return cf_s_audio_make(audio_struct, user_allocator_context);
+	CUTE_FREE(data);
+	return cf_s_audio_make(audio_struct);
 }
 
-cf_audio_t* cf_audio_load_wav(const char* path, void* user_allocator_context)
+cf_audio_t* cf_audio_load_wav(const char* path)
 {
 	void* data;
 	size_t sz;
-	cf_file_system_read_entire_file_to_memory(path, &data, &sz, NULL);
+	cf_file_system_read_entire_file_to_memory(path, &data, &sz);
 	cf_audio_t audio_struct;
 	cs_read_mem_wav(data, (int)sz, &audio_struct);
-	CUTE_FREE(data, NULL);
-	return cf_s_audio_make(audio_struct, user_allocator_context);
+	CUTE_FREE(data);
+	return cf_s_audio_make(audio_struct);
 }
 
-cf_audio_t* cf_audio_load_ogg_from_memory(void* memory, int byte_count, void* user_allocator_context)
+cf_audio_t* cf_audio_load_ogg_from_memory(void* memory, int byte_count)
 {
 	cf_audio_t audio_struct;
 	cs_read_mem_ogg(memory, byte_count, &audio_struct);
-	return cf_s_audio_make(audio_struct, user_allocator_context);
+	return cf_s_audio_make(audio_struct);
 }
 
-cf_audio_t* cf_audio_load_wav_from_memory(void* memory, int byte_count, void* user_allocator_context)
+cf_audio_t* cf_audio_load_wav_from_memory(void* memory, int byte_count)
 {
 	cf_audio_t audio_struct;
 	cs_read_mem_wav(memory, byte_count, &audio_struct);
-	return cf_s_audio_make(audio_struct, user_allocator_context);
+	return cf_s_audio_make(audio_struct);
 }
 
 struct cf_audio_param_t
@@ -109,7 +109,6 @@ struct cf_audio_param_t
 	void* memory = NULL;
 	int byte_count = 0;
 	cf_promise_t user_promise;
-	void* mem_ctx = NULL;
 };
 
 static void cf_s_stream_ogg_task_fn(void* param)
@@ -117,12 +116,12 @@ static void cf_s_stream_ogg_task_fn(void* param)
 	cf_audio_param_t* audio_param = (cf_audio_param_t*)param;
 	cf_audio_t* audio = NULL;
 	if (audio_param->path) {
-		audio = cf_audio_load_ogg(audio_param->path, audio_param->mem_ctx);
+		audio = cf_audio_load_ogg(audio_param->path);
 	} else {
-		audio = cf_audio_load_ogg_from_memory(audio_param->memory, audio_param->byte_count, audio_param->mem_ctx);
+		audio = cf_audio_load_ogg_from_memory(audio_param->memory, audio_param->byte_count);
 	}
 	audio_param->user_promise.invoke(audio ? cf_result_success() : cf_result_error("Failed to load ogg file."), audio);
-	CUTE_FREE(audio_param, audio_param->mem_ctx);
+	CUTE_FREE(audio_param);
 }
 
 static void cf_s_stream_wav_task_fn(void* param)
@@ -130,59 +129,55 @@ static void cf_s_stream_wav_task_fn(void* param)
 	cf_audio_param_t* audio_param = (cf_audio_param_t*)param;
 	cf_audio_t* audio = NULL;
 	if (audio_param->path) {
-		audio = cf_audio_load_wav(audio_param->path, audio_param->mem_ctx);
+		audio = cf_audio_load_wav(audio_param->path);
 	} else {
-		audio = cf_audio_load_wav_from_memory(audio_param->memory, audio_param->byte_count, audio_param->mem_ctx);
+		audio = cf_audio_load_wav_from_memory(audio_param->memory, audio_param->byte_count);
 	}
 	audio_param->user_promise.invoke(audio ? cf_result_success() : cf_result_error("Failed to load wav file."), audio);
-	CUTE_FREE(audio_param, audio_param->mem_ctx);
+	CUTE_FREE(audio_param);
 }
 
-void cf_audio_stream_ogg(const char* path, cf_promise_t promise, void* user_allocator_context)
+void cf_audio_stream_ogg(const char* path, cf_promise_t promise)
 {
-	cf_audio_param_t* param = (cf_audio_param_t*)CUTE_ALLOC(sizeof(cf_audio_param_t), user_allocator_context);
+	cf_audio_param_t* param = (cf_audio_param_t*)CUTE_ALLOC(sizeof(cf_audio_param_t));
 	CUTE_PLACEMENT_NEW(param) cf_audio_param_t;
 	param->path = path;
 	param->user_promise = promise;
-	param->mem_ctx = user_allocator_context;
 
 	cf_threadpool_add_task(cf_app->threadpool, cf_s_stream_ogg_task_fn, param);
 	cute_threadpool_kick(cf_app->threadpool);
 }
 
-void cf_audio_stream_wav(const char* path, cf_promise_t promise, void* user_allocator_context)
+void cf_audio_stream_wav(const char* path, cf_promise_t promise)
 {
-	cf_audio_param_t* param = (cf_audio_param_t*)CUTE_ALLOC(sizeof(cf_audio_param_t), user_allocator_context);
+	cf_audio_param_t* param = (cf_audio_param_t*)CUTE_ALLOC(sizeof(cf_audio_param_t));
 	CUTE_PLACEMENT_NEW(param) cf_audio_param_t;
 	param->path = path;
 	param->user_promise = promise;
-	param->mem_ctx = user_allocator_context;
 
 	cf_threadpool_add_task(cf_app->threadpool, cf_s_stream_wav_task_fn, param);
 	cute_threadpool_kick(cf_app->threadpool);
 }
 
-void cf_audio_stream_ogg_from_memory(void* memory, int byte_count, cf_promise_t promise, void* user_allocator_context)
+void cf_audio_stream_ogg_from_memory(void* memory, int byte_count, cf_promise_t promise)
 {
-	cf_audio_param_t* param = (cf_audio_param_t*)CUTE_ALLOC(sizeof(cf_audio_param_t), user_allocator_context);
+	cf_audio_param_t* param = (cf_audio_param_t*)CUTE_ALLOC(sizeof(cf_audio_param_t));
 	CUTE_PLACEMENT_NEW(param) cf_audio_param_t;
 	param->memory = memory;
 	param->byte_count = byte_count;
 	param->user_promise = promise;
-	param->mem_ctx = user_allocator_context;
 
 	cf_threadpool_add_task(cf_app->threadpool, cf_s_stream_ogg_task_fn, param);
 	cute_threadpool_kick(cf_app->threadpool);
 }
 
-void cf_audio_stream_wav_from_memory(void* memory, int byte_count, cf_promise_t promise, void* user_allocator_context)
+void cf_audio_stream_wav_from_memory(void* memory, int byte_count, cf_promise_t promise)
 {
-	cf_audio_param_t* param = (cf_audio_param_t*)CUTE_ALLOC(sizeof(cf_audio_param_t), user_allocator_context);
+	cf_audio_param_t* param = (cf_audio_param_t*)CUTE_ALLOC(sizeof(cf_audio_param_t));
 	CUTE_PLACEMENT_NEW(param) cf_audio_param_t;
 	param->memory = memory;
 	param->byte_count = byte_count;
 	param->user_promise = promise;
-	param->mem_ctx = user_allocator_context;
 
 	cf_threadpool_add_task(cf_app->threadpool, cf_s_stream_wav_task_fn, param);
 	cute_threadpool_kick(cf_app->threadpool);
@@ -193,7 +188,7 @@ cf_result_t cf_audio_destroy(cf_audio_t* audio)
 	if (cf_audio_ref_count(audio) == 0) {
 		void* mem_ctx = audio->mem_ctx;
 		cs_free_sound(audio);
-		CUTE_FREE(audio, mem_ctx);
+		CUTE_FREE(audio);
 		return cf_result_success();
 	} else {
 		return cf_result_error("Reference count for audio was not zero.");
@@ -241,11 +236,10 @@ struct cf_audio_system_t
 	cf_audio_instance_t* music_next = NULL;
 
 	uint64_t instance_id_gen = 1;
-	cf_dictionary<uint64_t, cf_audio_instance_t*> instance_map;
+	cute::dictionary<uint64_t, cf_audio_instance_t*> instance_map;
 	cf_audio_instance_t* playing_sounds_buffer;
 	cf_list_t playing_sounds;
 	cf_list_t free_sounds;
-	void* mem_ctx = NULL;
 };
 
 static cf_audio_instance_t* cf_s_inst(cf_audio_t* src, float volume)
@@ -639,12 +633,9 @@ static cf_audio_instance_t* cf_s_get_inst(cf_sound_t sound)
 {
 	cf_audio_system_t* as = cf_app->audio_system;
 	CUTE_ASSERT(as);
-	cf_audio_instance_t* inst;
-	if (cf_is_error(as->instance_map.find(sound.id, &inst))) {
-		return inst;
-	} else {
-		return NULL;
-	}
+	auto ptr = as->instance_map.find(sound.id);
+	cf_audio_instance_t* inst = ptr ? *ptr : NULL;
+	return inst;
 }
 
 bool cf_sound_is_active(cf_sound_t sound)
@@ -814,12 +805,12 @@ void cf_audio_set_pause(bool true_for_paused)
 // -------------------------------------------------------------------------------------------------
 // Internal.
 
-cf_audio_system_t* cf_audio_system_make(int pool_count, void* mem_ctx)
+cf_audio_system_t* cf_audio_system_make(int pool_count)
 {
-	cf_audio_system_t* as = (cf_audio_system_t*)CUTE_ALLOC(sizeof(cf_audio_system_t), mem_ctx);
+	cf_audio_system_t* as = (cf_audio_system_t*)CUTE_ALLOC(sizeof(cf_audio_system_t));
 	CUTE_ASSERT(as);
 	CUTE_PLACEMENT_NEW(as) cf_audio_system_t;
-	as->playing_sounds_buffer = (cf_audio_instance_t*)CUTE_ALLOC(sizeof(cf_audio_instance_t) * pool_count, mem_ctx);
+	as->playing_sounds_buffer = (cf_audio_instance_t*)CUTE_ALLOC(sizeof(cf_audio_instance_t) * pool_count);
 
 	cf_list_init(&as->playing_sounds);
 	cf_list_init(&as->free_sounds);
@@ -829,8 +820,6 @@ cf_audio_system_t* cf_audio_system_make(int pool_count, void* mem_ctx)
 		cf_list_push_back(&as->free_sounds, &inst->node);
 	}
 
-	as->mem_ctx = mem_ctx;
-
 	CUTE_DEBUG_PRINTF("CF_MUSIC_STATE_NONE\n");
 
 	return as;
@@ -839,9 +828,9 @@ cf_audio_system_t* cf_audio_system_make(int pool_count, void* mem_ctx)
 void cf_audio_system_destroy(cf_audio_system_t* audio_system)
 {
 	if (audio_system) {
-		CUTE_FREE(audio_system->playing_sounds_buffer, audio_system->mem_ctx);
+		CUTE_FREE(audio_system->playing_sounds_buffer);
 		audio_system->~cf_audio_system_t();
-		CUTE_FREE(audio_system, audio_system->mem_ctx);
+		CUTE_FREE(audio_system);
 	}
 }
 

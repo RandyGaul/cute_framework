@@ -116,8 +116,8 @@ struct a_star_input_t : public cf_a_star_input_t
 
 struct a_star_output_t
 {
-	cf_array<int> x;
-	cf_array<int> y;
+	array<int> x;
+	array<int> y;
 };
 
 CUTE_INLINE const a_star_grid_t* make_a_star_grid(int w, int h, const int* cells) { return cf_make_a_star_grid(w, h, cells); }

@@ -22,17 +22,16 @@
 #include <cute_png_cache.h>
 #include <cute_image.h>
 #include <cute_sprite.h>
+#include <cute_hashtable.h>
 
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_app_internal.h>
 
-#define INJECT(s) cf_strpool_inject_len(cache->strpool, s, (int)CUTE_STRLEN(s))
-
 static void cf_s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata)
 {
 	cf_png_cache_t* cache = (cf_png_cache_t*)udata;
-	void* pixels = NULL;
-	if (cf_is_error(cache->id_to_pixels.find(image_id, &pixels))) {
+	void* pixels = hget(cache->id_to_pixels, image_id);
+	if (!pixels) {
 		CUTE_DEBUG_PRINTF("png cache -- unable to find id %lld.", (long long int)image_id);
 		CUTE_MEMSET(buffer, 0, bytes_to_fill);
 	} else {
@@ -43,51 +42,45 @@ static void cf_s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, 
 cf_png_cache_t* cf_make_png_cache(void* mem_ctx)
 {
 	cf_png_cache_t* cache = CUTE_NEW(cf_png_cache_t, cf_app->mem_ctx);
-	cache->strpool = cf_make_strpool(mem_ctx);
-	cache->mem_ctx = mem_ctx;
 	return cache;
 }
 
 void cf_destroy_png_cache(cf_png_cache_t* cache)
 {
-	int animation_count = cache->animations.count();
-	cf_animation_t** animations = cache->animations.items();
-	for (int i = 0; i < animation_count; ++i) {
-		cf_animation_cleanup(animations[i], cache->mem_ctx);
-		CUTE_FREE(animations[i], cache->mem_ctx);
+	cf_animation_t** animations = cache->animations;
+	for (int i = 0; i < hsize(cache->animations); ++i) {
+		afree(animations[i]->frames);
 	}
+	hfree(cache->animations);
 
-	int table_count = cache->animation_tables.count();
-	cf_animation_table_t** tables = cache->animation_tables.items();
-	for (int i = 0; i < table_count; ++i) {
-		cf_animation_table_cleanup(tables[i], cache->mem_ctx);
-		CUTE_FREE(tables[i], cache->mem_ctx);
+	cf_animation_t*** tables = cache->animation_tables;
+	for (int i = 0; i < hsize(tables); ++i) {
+		hfree(tables[i]);
 	}
+	hfree(tables);
 
-	while (cache->pngs.count()) {
-		cf_png_t png = cache->pngs.items()[0];
-		cf_png_cache_unload(cache, &png);
+	for (int i = 0; i < alen(cache->pngs); ++i) {
+		cf_png_t png = cache->pngs[i];
+		cf_png_cache_unload(cache, png);
 	}
+	afree(cache->pngs);
 
-	cf_destroy_strpool(cache->strpool);
-	void* mem_ctx = cache->mem_ctx;
-	cache->~cf_png_cache_t();
-	CUTE_FREE(cache, mem_ctx);
+	CUTE_FREE(cache, NULL);
 }
 
 cf_result_t cf_png_cache_load(cf_png_cache_t* cache, const char* png_path, cf_png_t* png)
 {
 	cf_image_t img;
-	cf_result_t err = cf_image_load_png(png_path, &img, cache->mem_ctx);
+	cf_result_t err = cf_image_load_png(png_path, &img);
 	if (cf_is_error(err)) return err;
 	cf_png_t entry;
-	entry.path = cf_strpool_cstr(cache->strpool, INJECT(png_path));
+	entry.path = sintern(png_path);
 	entry.id = cache->id_gen++;
 	entry.pix = img.pix;
 	entry.w = img.w;
 	entry.h = img.h;
-	cache->id_to_pixels.insert(entry.id, img.pix);
-	cache->pngs.insert(entry.id, entry);
+	hadd(cache->id_to_pixels, entry.id, img.pix);
+	hadd(cache->pngs, entry.id, entry);
 	if (png) *png = entry;
 	return cf_result_success();
 }
@@ -95,30 +88,29 @@ cf_result_t cf_png_cache_load(cf_png_cache_t* cache, const char* png_path, cf_pn
 cf_result_t cf_png_cache_load_mem(cf_png_cache_t* cache, const char* png_path, const void* memory, size_t size, cf_png_t* png)
 {
 	cf_image_t img;
-	cf_result_t err = cf_image_load_png_mem(memory, (int)size, &img, cache->mem_ctx);
+	cf_result_t err = cf_image_load_png_mem(memory, (int)size, &img);
 	if (cf_is_error(err)) return err;
 	cf_png_t entry;
-	entry.path = cf_strpool_cstr(cache->strpool, INJECT(png_path));
+	entry.path = sintern(png_path);
 	entry.id = cache->id_gen++;
 	entry.pix = img.pix;
 	entry.w = img.w;
 	entry.h = img.h;
-	cache->id_to_pixels.insert(entry.id, img.pix);
-	cache->pngs.insert(entry.id, entry);
+	hadd(cache->id_to_pixels, entry.id, img.pix);
+	hadd(cache->pngs, entry.id, entry);
 	if (png) *png = entry;
 	return cf_result_success();
 }
 
-void cf_png_cache_unload(cf_png_cache_t* cache, cf_png_t* png)
+void cf_png_cache_unload(cf_png_cache_t* cache, cf_png_t png)
 {
 	cf_image_t img;
-	img.pix = png->pix;
-	img.w = png->w;
-	img.h = png->h;
+	img.pix = png.pix;
+	img.w = png.w;
+	img.h = png.h;
 	cf_image_free(&img);
-	cache->id_to_pixels.remove(png->id);
-	cache->pngs.remove(png->id);
-	CUTE_MEMSET(png, 0, sizeof(*png));
+	hdel(cache->id_to_pixels, png.id);
+	hdel(cache->pngs, png.id);
 }
 
 cf_get_pixels_fn* cf_png_cache_get_pixels_fn(cf_png_cache_t* cache)
@@ -126,30 +118,19 @@ cf_get_pixels_fn* cf_png_cache_get_pixels_fn(cf_png_cache_t* cache)
 	return cf_s_get_pixels;
 }
 
-cf_strpool_t* cf_png_cache_get_strpool_ptr(cf_png_cache_t* cache)
-{
-	return cache->strpool;
-}
-
 const cf_animation_t* cf_make_png_cache_animation(cf_png_cache_t* cache, const char* name, const cf_png_t* pngs, int pngs_count, const float* delays, int delays_count)
 {
 	CUTE_ASSERT(pngs_count == delays_count);
-	cf_strpool_id name_id = INJECT(name);
+	name = sintern(name);
 
 	// If already made, just return the old animation.
-	cf_animation_t* animation;
-	if (!cf_is_error(cache->animations.find(name_id, &animation))) {
-		return animation;
-	}
+	cf_animation_t* animation = hget(cache->animations, name);
+	if (animation) return animation;
 
 	// Otherwise allocate a new animation.
-	cf_animation_t** animation_ptr = cache->animations.insert(name_id);
 	animation = (cf_animation_t*)CUTE_ALLOC(sizeof(cf_animation_t), cache->mem_ctx);
 	CUTE_MEMSET(animation, 0, sizeof(cf_animation_t));
-
-	*animation_ptr = animation;
-
-	animation->name = cf_strpool_cstr(cache->strpool, name_id);
+	hadd(cache->animations, name, animation);
 
 	for (int i = 0; i < pngs_count; ++i) {
 		cf_frame_t frame;
@@ -163,68 +144,46 @@ const cf_animation_t* cf_make_png_cache_animation(cf_png_cache_t* cache, const c
 
 const cf_animation_t* cf_png_cache_get_animation(cf_png_cache_t* cache, const char* name)
 {
-	cf_animation_t* animation;
-	if (!cf_is_error(cache->animations.find(INJECT(name), &animation))) {
-		return animation;
-	} else {
-		return NULL;
-	}
+	return hget(cache->animations, sintern(name));
 }
 
-
-const cf_animation_table_t* cf_make_png_cache_animation_table(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_t* const* animations, int animations_count)
+const cf_animation_t** cf_make_png_cache_animation_table(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_t* const* animations, int animations_count)
 {
-	cf_strpool_id name_id = INJECT(sprite_name);
+	sprite_name = sintern(sprite_name);
 
 	// If already made, just return the old table.
-	cf_animation_table_t* table;
-	if (!cf_is_error(cache->animation_tables.find(name_id, &table))) {
-		return table;
-	}
+	cf_animation_t** table = hget(cache->animation_tables, sprite_name);
+	if (table) return table;
 
-	// Otherwise allocate a new table.
-	cf_animation_table_t** table_ptr = cache->animation_tables.insert(name_id);
-	table = (cf_animation_table_t*)CUTE_ALLOC(sizeof(cf_animation_table_t), cache->mem_ctx);
-	cf_animation_table_init(table, NULL);
-
-	*table_ptr = table;
-
+	// Otherwise allocate a new table entry.
 	for (int i = 0; i < animations_count; ++i) {
-		cf_animation_table_insert(table, animations[i]->name, animations[i]);
+		hadd(table, animations[i]->name, (cf_animation_t*)animations[i]);
 	}
+	hset(cache->animation_tables, sprite_name, table);
 
 	return table;
 }
 
-const cf_animation_table_t* cf_png_cache_get_animation_table(cf_png_cache_t* cache, const char* sprite_name)
+const cf_animation_t** cf_png_cache_get_animation_table(cf_png_cache_t* cache, const char* sprite_name)
 {
-	cf_animation_table_t* table;
-	if (!cf_is_error(cache->animation_tables.find(INJECT(sprite_name), &table))) {
-		return table;
-	} else {
-		return NULL;
-	}
+	 return hget(cache->animation_tables, sintern(sprite_name));
 }
 
-cf_sprite_t cf_make_png_cache_sprite(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_table_t* table)
+cf_sprite_t cf_make_png_cache_sprite(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_t** table)
 {
-	cf_strpool_id name_id = INJECT(sprite_name);
-	if (!table) {
-		cf_result_t err = cache->animation_tables.find(name_id, (cf_animation_table_t**)&table);
-		CUTE_ASSERT(!cf_is_error(err));
-	}
+	sprite_name = sintern(sprite_name);
+	cf_animation_t** table = hget(cache->animation_tables, sprite_name);
+	CUTE_ASSERT(table);
 
-	cf_png_t png;	
-	cf_result_t err = cache->pngs.find(cf_animation_table_items(table)[0]->frames[0].id, &png);
-
-	CUTE_ASSERT(!cf_is_error(err));
+	cf_png_t png = hget(cache->pngs, table[0]->frames[0].id);
+	CUTE_ASSERT(png.path);
 
 	cf_sprite_t sprite = cf_sprite_defaults();
-	sprite.name = cf_strpool_cstr(cache->strpool, name_id);
+	sprite.name = sprite_name;
 	sprite.w = png.w;
 	sprite.h = png.h;
 	sprite.animations = table;
-	cf_sprite_play(&sprite, (const char*)cf_animation_table_keys(sprite.animations)[0].data);
+	cf_sprite_play(&sprite, sprite.animations[0]->name);
 
 	return sprite;
 }
@@ -236,7 +195,7 @@ const animation_t* make_png_cache_animation(png_cache_t* cache, const char* name
 {
 	return cf_make_png_cache_animation(cache, name, pngs.data(), pngs.count(), delays.data(), delays.count());
 }
-const animation_table_t* make_png_cache_animation_table(png_cache_t* cache, const char* sprite_name, const array<const animation_t*>& animations)
+const animation_t** make_png_cache_animation_table(png_cache_t* cache, const char* sprite_name, const array<const animation_t*>& animations)
 {
 	return cf_make_png_cache_animation_table(cache, sprite_name, animations.data(), animations.count());
 }

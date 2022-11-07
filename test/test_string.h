@@ -123,9 +123,9 @@ int test_string_macros_advanced()
 	CUTE_TEST_ASSERT(sprefix(a, "hello"));
 	CUTE_TEST_ASSERT(ssuffix(a, "world"));
 	CUTE_TEST_ASSERT(scontains(a, "llo wo"));
-	supper(a);
+	stoupper(a);
 	CUTE_TEST_ASSERT(sequ(a, "HELLO WORLD"));
-	slower(a);
+	stolower(a);
 	CUTE_TEST_ASSERT(sequ(a, "hello world"));
 	sappend(a, " :)");
 	CUTE_TEST_ASSERT(sequ(a, "hello world :)"));
@@ -149,7 +149,7 @@ int test_string_macros_advanced()
 	CUTE_TEST_ASSERT(sequ(a, "xxpad mexxx"));
 	CUTE_TEST_ASSERT(slen(a) == CUTE_STRLEN("xxpad mexxx"));
 	sset(a, "split.here");
-	b = ssplit(a, '.');
+	b = ssplit_once(a, '.');
 	CUTE_TEST_ASSERT(sequ(a, "here"));
 	CUTE_TEST_ASSERT(slen(a) == CUTE_STRLEN("here"));
 	CUTE_TEST_ASSERT(sequ(b, "split"));
@@ -162,12 +162,12 @@ int test_string_macros_advanced()
 		"a",
 		"loop",
 	};
-	char* c = NULL;
-	int i = 0;
-	while ((c = ssplit(a, '.'))) {
-		CUTE_TEST_ASSERT(sequ(c, splits[i++]));
-		sfree(c);
+	char** c = ssplit(a, '.');
+	for (int i = 0; i < alen(c); ++i) {
+		CUTE_TEST_ASSERT(sequ(c[i], splits[i]));
+		sfree(c[i]);
 	}
+	afree(c);
 	CUTE_TEST_ASSERT(sequ(a, "loop"));
 	sset(a, "012330");
 	CUTE_TEST_ASSERT(sfirst_index_of(a, '0') == 0);
@@ -178,7 +178,7 @@ int test_string_macros_advanced()
 	CUTE_TEST_ASSERT(slast_index_of(a, '0') == 5);
 	sset(a, "0xbadf00d");
 	CUTE_TEST_ASSERT(stohex(a) == 0xbadf00d);
-	sset(b, shex(0xbadf00d));
+	shex(b, 0xbadf00d);
 	CUTE_TEST_ASSERT(sequ(a, b));
 	sset(a, "hi hi hi");
 	sreplace(a, "hi", "oof");

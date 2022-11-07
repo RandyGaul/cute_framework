@@ -24,19 +24,18 @@
 #include <cute_c_runtime.h>
 #include <cute_concurrency.h>
 
-cf_circular_buffer_t cf_make_circular_buffer(int initial_size_in_bytes, void* user_allocator_context)
+cf_circular_buffer_t cf_make_circular_buffer(int initial_size_in_bytes)
 {
 	cf_circular_buffer_t buffer = { 0 };
 	buffer.size_left.i = initial_size_in_bytes;
 	buffer.capacity = initial_size_in_bytes;
-	buffer.data = (uint8_t*)CUTE_ALLOC(initial_size_in_bytes, user_allocator_context);
-	buffer.user_allocator_context = user_allocator_context;
+	buffer.data = (uint8_t*)CUTE_ALLOC(initial_size_in_bytes);
 	return buffer;
 }
 
 void cf_destroy_circular_buffer(cf_circular_buffer_t* buffer)
 {
-	CUTE_FREE(buffer->data, buffer->user_allocator_context);
+	CUTE_FREE(buffer->data);
 	CUTE_MEMSET(buffer, 0, sizeof(*buffer));
 }
 
@@ -92,7 +91,7 @@ int cf_circular_buffer_pull(cf_circular_buffer_t* buffer, void* data, int size)
 int cf_circular_buffer_grow(cf_circular_buffer_t* buffer, int new_size_in_bytes)
 {
 	uint8_t* old_data = buffer->data;
-	uint8_t* new_data = (uint8_t*)CUTE_ALLOC(new_size_in_bytes, buffer->user_allocator_context);
+	uint8_t* new_data = (uint8_t*)CUTE_ALLOC(new_size_in_bytes);
 	if (!new_data) return -1;
 
 	int index0 = buffer->index0;
@@ -106,7 +105,7 @@ int cf_circular_buffer_grow(cf_circular_buffer_t* buffer, int new_size_in_bytes)
 		CUTE_MEMCPY(new_data + new_size_in_bytes - offset_from_end, old_data + index0, offset_from_end);
 	}
 
-	CUTE_FREE(old_data, buffer->user_allocator_context);
+	CUTE_FREE(old_data);
 	buffer->data = new_data;
 	cf_atomic_add(&buffer->size_left, new_size_in_bytes - buffer->capacity);
 	buffer->capacity = new_size_in_bytes;

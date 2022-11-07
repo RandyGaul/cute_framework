@@ -45,7 +45,7 @@ struct cf_a_star_grid_t
 	int w = 0;
 	int h = 0;
 	const int* cells = NULL;
-	cf_array<cf_node_t> nodes;
+	array<cf_node_t> nodes;
 	cf_priority_queue<cf_node_t*> open_list;
 
 	void reset()

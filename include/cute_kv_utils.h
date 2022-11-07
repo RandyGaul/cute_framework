@@ -33,13 +33,13 @@
 #include <string>
 #include <vector>
 
-CUTE_INLINE cf_result_t cf_kv_val_string_cf(cf_kv_t* kv, cf_string_t* string)
+CUTE_INLINE cf_result_t cf_kv_val_string_cf(cf_kv_t* kv, cute::string_t* string)
 {
 	const char* ptr = string->c_str();
 	size_t len = string->len();
 	cf_result_t err = cf_kv_val_string(kv, &ptr, &len);
 	if (cf_is_error(err)) return err;
-	*string = cf_string_t(ptr, ptr + len);
+	*string = cute::string_t(ptr, ptr + len);
 	return cf_result_success();
 }
 
@@ -68,8 +68,6 @@ CUTE_INLINE cf_result_t cf_kv_val_vec(cf_kv_t* kv, std::vector<T>* val, const ch
 
 namespace cute
 {
-
-using string_t = cf_string_t;
 
 CUTE_INLINE result_t kv_val_cf_string(kv_t* kv, string_t* string) { return cf_kv_val_string_cf(kv, string); }
 CUTE_INLINE result_t kv_val(kv_t* kv, std::string* val) { return cf_kv_val_string_std(kv, val); }

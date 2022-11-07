@@ -118,7 +118,7 @@ void cf_font_push_verts(const cf_font_t* font, const char* text, float x, float 
 {
 	int vert_count = 0;
 	cute_font_t* cute_font = (cute_font_t*)font;
-	cf_array<cf_font_vertex_t>& font_verts = cf_app->font_verts;
+	array<cf_font_vertex_t>& font_verts = cf_app->font_verts;
 	font_verts.ensure_capacity(256);
 
 	while (1) {

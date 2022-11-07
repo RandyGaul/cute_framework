@@ -209,6 +209,7 @@ CUTE_API array<const char*> CUTE_CALL ecs_get_entity_list();
 CUTE_API array<const char*> CUTE_CALL ecs_get_component_list();
 CUTE_API array<const char*> CUTE_CALL ecs_get_system_list();
 CUTE_API array<const char*> CUTE_CALL ecs_get_component_list_for_entity_type(const char* entity_type);
+
 }
 
 #endif // CUTE_CPP

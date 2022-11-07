@@ -99,7 +99,7 @@ typedef struct cf_batch_t cf_batch_t;
  */
 typedef void (cf_get_pixels_fn)(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata);
 
-CUTE_API cf_batch_t* CUTE_CALL cf_make_batch(cf_get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem_ctx /*= NULL*/);
+CUTE_API cf_batch_t* CUTE_CALL cf_make_batch(cf_get_pixels_fn* get_pixels, void* get_pixels_udata);
 CUTE_API void CUTE_CALL cf_destroy_batch(cf_batch_t* b);
 
 /**
@@ -215,7 +215,7 @@ struct batch_sprite_t : public cf_batch_sprite_t
 	batch_sprite_t(cf_batch_sprite_t bs) { *(cf_batch_sprite_t*)this = bs; }
 };
 
-CUTE_INLINE batch_t* make_batch(get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem_ctx = NULL) { return cf_make_batch(get_pixels, get_pixels_udata, mem_ctx); }
+CUTE_INLINE batch_t* make_batch(get_pixels_fn* get_pixels, void* get_pixels_udata) { return cf_make_batch(get_pixels, get_pixels_udata); }
 
 CUTE_INLINE void destroy_batch(batch_t* b) { cf_destroy_batch(b); }
 CUTE_INLINE void batch_push(batch_t* b, batch_sprite_t sprite) { cf_batch_push(b, sprite); }

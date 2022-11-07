@@ -23,9 +23,9 @@
 
 using namespace cute;
 
-static cf_array<cf_string_t> cf_s_get_array_of_strings()
+static array<cf_string_t> cf_s_get_array_of_strings()
 {
-	cf_array<cf_string_t> b = {
+	array<cf_string_t> b = {
 		"1",
 		"2",
 		"3",
@@ -37,11 +37,11 @@ static cf_array<cf_string_t> cf_s_get_array_of_strings()
 CUTE_TEST_CASE(test_array_list_init, "Array list initializers and strings.");
 int test_array_list_init()
 {
-	cf_array<cf_string_t> a = {
+	array<cf_string_t> a = {
 		"Hello",
 	};
 
-	cf_array<cf_string_t> b = {
+	array<cf_string_t> b = {
 		"1",
 		"2",
 	};
@@ -50,7 +50,7 @@ int test_array_list_init()
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(b[0].c_str(), "1"));
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(b[1].c_str(), "2"));
 
-	cf_array<cf_array<cf_string_t>> c = {
+	array<array<cf_string_t>> c = {
 		b,
 		b
 	};
@@ -60,7 +60,7 @@ int test_array_list_init()
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(c[1][0].c_str(), "1"));
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(c[1][1].c_str(), "2"));
 
-	cf_array<cf_string_t> d = cf_s_get_array_of_strings();
+	array<cf_string_t> d = cf_s_get_array_of_strings();
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(d[0].c_str(), "1"));
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(d[1].c_str(), "2"));
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(d[2].c_str(), "3"));

@@ -90,7 +90,7 @@ CUTE_API void CUTE_CALL cf_write_unlock(cf_rw_lock_t* rw);
 
 typedef void (CUTE_CALL cf_task_fn)(void* param);
 
-CUTE_API cf_threadpool_t* CUTE_CALL cf_make_threadpool(int thread_count, void* user_allocator_context /*= NULL*/);
+CUTE_API cf_threadpool_t* CUTE_CALL cf_make_threadpool(int thread_count);
 CUTE_API void CUTE_CALL cf_destroy_threadpool(cf_threadpool_t* pool);
 CUTE_API void CUTE_CALL cf_threadpool_add_task(cf_threadpool_t* pool, cf_task_fn* task, void* param);
 CUTE_API void CUTE_CALL cf_threadpool_kick_and_wait(cf_threadpool_t* pool);
@@ -182,7 +182,7 @@ CUTE_INLINE void read_unlock(rw_lock_t* rw) { cf_read_unlock(rw); }
 CUTE_INLINE void write_lock(rw_lock_t* rw) { cf_write_lock(rw); }
 CUTE_INLINE void write_unlock(rw_lock_t* rw) { cf_write_unlock(rw); }
 
-CUTE_INLINE threadpool_t* make_threadpool(int thread_count, void* user_allocator_context = NULL) { return cf_make_threadpool(thread_count, user_allocator_context); }
+CUTE_INLINE threadpool_t* make_threadpool(int thread_count) { return cf_make_threadpool(thread_count); }
 CUTE_INLINE void destroy_threadpool(threadpool_t* pool) { return cf_destroy_threadpool(pool); }
 CUTE_INLINE void threadpool_add_task(threadpool_t* pool, task_fn* task, void* param) { return cf_threadpool_add_task(pool, task, param); }
 CUTE_INLINE void threadpool_kick_and_wait(threadpool_t* pool) { return cf_threadpool_kick_and_wait(pool); }

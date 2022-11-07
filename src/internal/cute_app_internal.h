@@ -26,10 +26,8 @@
 #include <cute_audio.h>
 #include <cute_array.h>
 #include <cute_ecs.h>
-#include <cute_dictionary.h>
 #include <cute_math.h>
 #include <cute_doubly_list.h>
-#include <cute_strpool.h>
 #include <cute_aseprite_cache.h>
 #include <cute_png_cache.h>
 #include <cute_batch.h>
@@ -81,9 +79,9 @@ struct cf_window_state_t
 struct cf_entity_collection_t
 {
 	cf_handle_table_t entity_handle_table;
-	cf_array<cf_handle_t> entity_handles; // TODO - Replace with a counter? Or delete?
-	cf_array<cf_strpool_id> component_type_tuple;
-	cf_array<cf_typeless_array> component_tables;
+	cute::array<cf_handle_t> entity_handles; // TODO - Replace with a counter? Or delete?
+	cute::array<const char*> component_type_tuple;
+	cute::array<cf_typeless_array> component_tables;
 	int inactive_count = 0;
 };
 
@@ -99,12 +97,12 @@ struct cf_system_internal_t
 		component_type_tuple.clear();
 	}
 
-	cf_strpool_id name = { 0 };
+	const char* name = { 0 };
 	void* udata = NULL;
 	void (*pre_update_fn)(float dt, void* udata) = NULL;
 	cf_system_update_fn* update_fn = NULL;
 	void (*post_update_fn)(float dt, void* udata) = NULL;
-	cf_array<cf_strpool_id> component_type_tuple;
+	cute::array<const char*> component_type_tuple;
 };
 
 struct cf_component_config_t
@@ -133,12 +131,12 @@ struct cf_entity_config_t
 	{
 		entity_type = NULL;
 		component_types.clear();
-		schema.id.val = 0;
+		sclear(schema);
 	}
 
 	const char* entity_type = NULL;
-	cf_array<const char*> component_types;
-	cf_string_t schema;
+	cute::array<const char*> component_types;
+	char* schema = NULL;
 };
 
 using cf_entity_type_t = uint16_t;
@@ -156,7 +154,7 @@ struct cf_app_t
 	cf_threadpool_t* threadpool = NULL;
 	cf_audio_system_t* audio_system = NULL;
 	cute_font_t* courier_new = NULL;
-	cf_array<cute_font_vert_t> font_verts;
+	cute::array<cute_font_vert_t> font_verts;
 	sg_shader font_shader;
 	sg_pipeline font_pip;
 	cf_buffer_t font_buffer;
@@ -183,18 +181,17 @@ struct cf_app_t
 	cf_window_state_t window_state_prev;
 	bool using_imgui = false;
 	sg_imgui_t sg_imgui;
-	cf_strpool_t* strpool = NULL;
 
-	cf_array<char> ime_composition;
+	cute::array<char> ime_composition;
 	int ime_composition_cursor = 0;
 	int ime_composition_selection_len = 0;
-	cf_array<int> input_text;
+	cute::array<int> input_text;
 	int keys[512] = { 0 };
 	int keys_prev[512] = { 0 };
 	float keys_duration[512] = { 0 };
 	cf_mouse_state_t mouse, mouse_prev;
 	cf_list_t joypads;
-	cf_array<cf_touch_t> touches;
+	cute::array<cf_touch_t> touches;
 
 	cf_batch_t* ase_batch = NULL;
 	cf_aseprite_cache_t* ase_cache = NULL;
@@ -203,27 +200,25 @@ struct cf_app_t
 
 	// TODO: Set allocator context for these data structures.
 	cf_system_internal_t system_internal_builder;
-	cf_array<cf_system_internal_t> systems;
+	cute::array<cf_system_internal_t> systems;
 	cf_entity_config_t entity_config_builder;
 	cf_entity_type_t entity_type_gen = 0;
-	cf_dictionary<cf_strpool_id, cf_entity_type_t> entity_type_string_to_id;
-	cf_array<cf_strpool_id> entity_type_id_to_string;
-	cf_dictionary<cf_entity_type_t, cf_entity_collection_t> entity_collections;
+	cute::dictionary<const char*, cf_entity_type_t> entity_type_string_to_id;
+	cute::array<const char*> entity_type_id_to_string;
+	cute::dictionary<cf_entity_type_t, cf_entity_collection_t> entity_collections;
 	cf_entity_type_t current_collection_type_being_iterated = ~0;
 	cf_entity_collection_t* current_collection_being_updated = NULL;
-	cf_array<cf_entity_t> delayed_destroy_entities;
-	cf_array<cf_entity_t> delayed_deactivate_entities;
-	cf_array<cf_entity_t> delayed_activate_entities;
+	cute::array<cf_entity_t> delayed_destroy_entities;
+	cute::array<cf_entity_t> delayed_deactivate_entities;
+	cute::array<cf_entity_t> delayed_activate_entities;
 
 	cf_component_config_t component_config_builder;
-	cf_dictionary<cf_strpool_id, cf_component_config_t> component_configs;
-	cf_dictionary<cf_entity_type_t, cf_kv_t*> entity_parsed_schemas;
-	cf_dictionary<cf_entity_type_t, uint16_t> entity_schema_inheritence;
+	cute::dictionary<const char*, cf_component_config_t> component_configs;
+	cute::dictionary<cf_entity_type_t, cf_kv_t*> entity_parsed_schemas;
+	cute::dictionary<cf_entity_type_t, uint16_t> entity_schema_inheritence;
 
-	cf_dictionary<cf_entity_t, int>* save_id_table = NULL;
-	cf_array<cf_entity_t>* load_id_table = NULL;
-
-	void* mem_ctx = NULL;
+	cute::dictionary<cf_entity_t, int>* save_id_table = NULL;
+	cute::array<cf_entity_t>* load_id_table = NULL;
 };
 
 #endif // CUTE_APP_INTERNAL_H

@@ -39,15 +39,13 @@ union cf_handle_entry_t
 
 struct cf_handle_allocator_t
 {
-	cf_handle_allocator_t(void* user_allocator_context)
-		: m_handles(user_allocator_context)
-		, m_mem_ctx(user_allocator_context)
+	cf_handle_allocator_t()
+		: m_handles()
 	{
 	}
 
 	uint32_t m_freelist = ~0;
-	cf_array<cf_handle_entry_t> m_handles;
-	void* m_mem_ctx = NULL;
+	cute::array<cf_handle_entry_t> m_handles;
 };
 
 static void cf_s_add_elements_to_freelist(cf_handle_allocator_t* table, int first_index, int last_index)
@@ -69,10 +67,10 @@ static void cf_s_add_elements_to_freelist(cf_handle_allocator_t* table, int firs
 	table->m_freelist = first_index;
 }
 
-cf_handle_allocator_t* cf_make_handle_allocator(int initial_capacity, void* user_allocator_context)
+cf_handle_allocator_t* cf_make_handle_allocator(int initial_capacity)
 {
-	cf_handle_allocator_t* table = (cf_handle_allocator_t*)CUTE_ALLOC(sizeof(cf_handle_allocator_t), user_allocator_context);
-	CUTE_PLACEMENT_NEW(table) cf_handle_allocator_t(user_allocator_context);
+	cf_handle_allocator_t* table = (cf_handle_allocator_t*)CUTE_ALLOC(sizeof(cf_handle_allocator_t));
+	CUTE_PLACEMENT_NEW(table) cf_handle_allocator_t();
 
 	if (initial_capacity) {
 		table->m_handles.ensure_capacity(initial_capacity);
@@ -86,9 +84,8 @@ cf_handle_allocator_t* cf_make_handle_allocator(int initial_capacity, void* user
 void cf_destroy_handle_allocator(cf_handle_allocator_t* table)
 {
 	if (!table) return;
-	void* mem_ctx = table->m_mem_ctx;
 	table->~cf_handle_allocator_t();
-	CUTE_FREE(table, mem_ctx);
+	CUTE_FREE(table);
 }
 
 cf_handle_t cf_handle_allocator_alloc(cf_handle_allocator_t* table, uint32_t index, uint16_t type)

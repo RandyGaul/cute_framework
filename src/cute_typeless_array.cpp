@@ -27,13 +27,13 @@ cf_typeless_array::cf_typeless_array()
 {
 }
 
-cf_typeless_array::cf_typeless_array(size_t element_size, void* user_allocator_context)
+cf_typeless_array::cf_typeless_array(size_t element_size)
 	: m_element_size(element_size)
 	, m_mem_ctx(user_allocator_context)
 {
 }
 
-cf_typeless_array::cf_typeless_array(size_t element_size, int capacity, void* user_allocator_context)
+cf_typeless_array::cf_typeless_array(size_t element_size, int capacity)
 	: m_element_size(element_size)
 	, m_capacity(capacity)
 	, m_mem_ctx(user_allocator_context)

@@ -683,5 +683,5 @@ void cf_pump_input_msgs()
 
 namespace cute
 {
-	cf_array<cf_touch_t> CUTE_CALL touch_get_all() { return cf_app->touches; }
+	array<cf_touch_t> CUTE_CALL touch_get_all() { return cf_app->touches; }
 }

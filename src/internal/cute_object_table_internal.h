@@ -48,7 +48,7 @@ struct cf_object_table_t
 	int get_object_count() const;
 
 	cf_handle_allocator_t* m_table;
-	cf_array<T> m_objects;
+	cute::array<T> m_objects;
 };
 
 //--------------------------------------------------------------------------------------------------

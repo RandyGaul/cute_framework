@@ -52,7 +52,7 @@ typedef struct cf_internal_https_response_t
 	int code;
 	size_t content_len;
 	const char* content;
-	cf_array<cf_https_header_t> headers;
+	array<cf_https_header_t> headers;
 
 	/**
 	 * Flags from `transfer_encoding_t`. For example, if content is gzip'd, you can tell by using
@@ -84,8 +84,8 @@ struct cf_https_decoder_t
 	bool found_last_chunk = false;
 	size_t buffer_offset = 0;
 	int response_code = 0;
-	cf_array<char> buffer;
-	cf_array<cf_https_header_t> headers;
+	array<char> buffer;
+	array<cf_https_header_t> headers;
 	cf_result_t err = cf_result_success();
 
 	void next(cf_https_process_line_fn* process_line)
@@ -125,8 +125,8 @@ struct cf_https_t
 	const char* host = NULL;
 	const char* port = NULL;
 	cf_https_state_t state = CF_HTTPS_STATE_PENDING; // TODO - Atomic this.
-	cf_array<char> request;
-	cf_array<char> response_buffer;
+	array<char> request;
+	array<char> response_buffer;
 	cf_internal_https_response_t response;
 
 	bool request_sent = false;

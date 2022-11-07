@@ -48,9 +48,9 @@ struct cf_aabb_tree_t
 	int freelist = 0;
 	int node_capacity = 0;
 	int node_count = 0;
-	cf_array<cf_aabb_tree_node_t> nodes;
-	cf_array<cf_aabb_t> aabbs;
-	cf_array<void*> udatas;
+	array<cf_aabb_tree_node_t> nodes;
+	array<cf_aabb_t> aabbs;
+	array<void*> udatas;
 	void* mem_ctx = NULL;
 };
 
@@ -431,7 +431,7 @@ static float cf_s_tree_cost(const cf_aabb_tree_t* tree, int index)
 	return cost_a + cost_b + my_cost;
 }
 
-static void cf_s_build_index_map(const cf_aabb_tree_t* tree, cf_array<int>* map, int* i, int index)
+static void cf_s_build_index_map(const cf_aabb_tree_t* tree, array<int>* map, int* i, int index)
 {
 	if (map->operator[](index) == AABB_TREE_NULL_NODE_INDEX) {
 		CUTE_ASSERT(*i < (int)tree->nodes.size());
@@ -453,7 +453,7 @@ cf_aabb_tree_t* cf_s_remap(const cf_aabb_tree_t* tree)
 	}
 
 	// Build a map of old to new indices.
-	cf_array<int> map;
+	array<int> map;
 	map.ensure_count(tree->node_count);
 	CUTE_MEMSET(map.data(), AABB_TREE_NULL_NODE_INDEX, sizeof(int) * tree->node_count);
 	int i = 0;
@@ -469,9 +469,9 @@ cf_aabb_tree_t* cf_s_remap(const cf_aabb_tree_t* tree)
 	result->freelist = tree->freelist;
 	result->node_capacity = tree->node_capacity;
 	result->node_count = tree->node_count;
-	cf_array<cf_aabb_tree_node_t>& nodes = result->nodes;
-	cf_array<cf_aabb_t>& aabbs = result->aabbs;
-	cf_array<void*>& udatas = result->udatas;
+	array<cf_aabb_tree_node_t>& nodes = result->nodes;
+	array<cf_aabb_t>& aabbs = result->aabbs;
+	array<void*>& udatas = result->udatas;
 
 	// Swap all values to a contiguous form within the copy.
 	for (int i = 0; i < (int)map.size(); ++i) {
@@ -555,9 +555,9 @@ static void cf_s_validate(const cf_aabb_tree_t* tree, int index)
 
 //--------------------------------------------------------------------------------------------------
 
-cf_aabb_tree_t* cf_make_aabb_tree(int initial_capacity, void* user_allocator_context)
+cf_aabb_tree_t* cf_make_aabb_tree(int initial_capacity)
 {
-	cf_aabb_tree_t* tree = CUTE_NEW(cf_aabb_tree_t, user_allocator_context);
+	cf_aabb_tree_t* tree = CUTE_NEW(cf_aabb_tree_t);
 	if (!initial_capacity) initial_capacity = 64;
 	tree->node_capacity = initial_capacity;
 	tree->nodes.ensure_count(initial_capacity);
@@ -569,7 +569,7 @@ cf_aabb_tree_t* cf_make_aabb_tree(int initial_capacity, void* user_allocator_con
 	return tree;
 }
 
-cf_aabb_tree_t* cf_make_aabb_tree_from_memory(const void* buffer, size_t size, void* user_allocator_context)
+cf_aabb_tree_t* cf_make_aabb_tree_from_memory(const void* buffer, size_t size)
 {
 	uint8_t* p = (uint8_t*)buffer;
 	uint8_t fourcc[4];
@@ -594,7 +594,7 @@ void cf_destroy_aabb_tree(cf_aabb_tree_t* tree)
 {
 	void* mem_ctx = tree->mem_ctx;
 	tree->~cf_aabb_tree_t();
-	CUTE_FREE(tree, mem_ctx);
+	CUTE_FREE(tree);
 }
 
 static cf_leaf_t cf_s_insert(cf_aabb_tree_t* tree, cf_aabb_t aabb, void* udata)

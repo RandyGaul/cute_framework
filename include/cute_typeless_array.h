@@ -36,8 +36,8 @@
 struct cf_typeless_array
 {
 	cf_typeless_array();
-	explicit cf_typeless_array(size_t element_size, void* user_allocator_context);
-	explicit cf_typeless_array(size_t element_size, int capacity, void* user_allocator_context);
+	explicit cf_typeless_array(size_t element_size);
+	explicit cf_typeless_array(size_t element_size, int capacity);
 	~cf_typeless_array();
 
 	void* add();

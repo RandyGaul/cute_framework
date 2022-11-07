@@ -221,9 +221,9 @@ void cf_write_unlock(cf_rw_lock_t* rw)
 	cute_write_unlock(rw);
 }
 
-cf_threadpool_t* cf_make_threadpool(int thread_count, void* user_allocator_context)
+cf_threadpool_t* cf_make_threadpool(int thread_count)
 {
-	return cute_threadpool_create(thread_count, user_allocator_context);
+	return cute_threadpool_create(thread_count, NULL);
 }
 
 void cf_threadpool_add_task(cf_threadpool_t* pool, cf_task_fn* task, void* param)

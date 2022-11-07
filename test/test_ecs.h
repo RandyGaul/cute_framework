@@ -49,7 +49,7 @@ struct test_component_octorok_t
 {
 	int ai_state;
 	uint32_t pellet_count;
-	cf_array<cf_entity_t> pellets;
+	array<cf_entity_t> pellets;
 	int buddy_said_hi;
 	cf_entity_t buddy;
 };
@@ -246,7 +246,7 @@ int test_ecs_octorok()
 	cf_result_t err = cf_kv_parse(parsed_entities, serialized_entities, CUTE_STRLEN(serialized_entities));
 	if (cf_is_error(err)) return -1;
 
-	cf_array<cf_entity_t> entities;
+	array<cf_entity_t> entities;
 	err = cute::ecs_load_entities(parsed_entities, &entities);
 	if (cf_is_error(err)) return -1;
 	cf_destroy_kv(parsed_entities);

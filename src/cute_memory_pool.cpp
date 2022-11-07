@@ -31,14 +31,13 @@ struct cf_memory_pool_t
 	uint8_t* arena;
 	void* free_list;
 	int overflow_count;
-	void* mem_ctx;
 };
 
-cf_memory_pool_t* cf_make_memory_pool(int element_size, int element_count, void* user_allocator_context)
+cf_memory_pool_t* cf_make_memory_pool(int element_size, int element_count)
 {
 	element_size = element_size > sizeof(void*) ? element_size : sizeof(void*);
 	size_t arena_size = sizeof(cf_memory_pool_t) + element_size * element_count;
-	cf_memory_pool_t* pool = (cf_memory_pool_t*)CUTE_ALLOC(arena_size, user_allocator_context);
+	cf_memory_pool_t* pool = (cf_memory_pool_t*)CUTE_ALLOC(arena_size);
 
 	pool->element_size = element_size;
 	pool->arena_size = (int)(arena_size - sizeof(cf_memory_pool_t));
@@ -65,14 +64,14 @@ void cf_destroy_memory_pool(cf_memory_pool_t* pool)
 		//error_set("Attempted to destroy pool without freeing all overflow allocations.");
 		CUTE_ASSERT(pool->overflow_count == 0);
 	}
-	CUTE_FREE(pool, pool->mem_ctx);
+	CUTE_FREE(pool);
 }
 
 void* cf_memory_pool_alloc(cf_memory_pool_t* pool)
 {
 	void *mem = cf_memory_pool_try_alloc(pool);
 	if (!mem) {
-		mem = CUTE_ALLOC(pool->element_size, pool->mem_ctx);
+		mem = CUTE_ALLOC(pool->element_size);
 		if (mem) {
 			pool->overflow_count++;
 		}
@@ -96,13 +95,12 @@ void cf_memory_pool_free(cf_memory_pool_t* pool, void* element)
 	int difference = (int)((uint8_t*)element - pool->arena);
 	int in_bounds = (void*)element >= pool->arena && difference <= (pool->arena_size - pool->element_size);
 	if (pool->overflow_count && !in_bounds) {
-		CUTE_FREE(element, pool->mem_ctx);
+		CUTE_FREE(element);
 		pool->overflow_count--;
 	} else if (in_bounds) {
 		*(void**)element = pool->free_list;
 		pool->free_list = element;
 	} else {
-		//error_set("Pointer was outside of arena bounds, or a double free was detected, in `memory_pool_t`.");
 		assert(0);
 	}
 }

@@ -24,7 +24,7 @@
 
 struct cf_audio_system_t;
 
-cf_audio_system_t* cf_audio_system_make(int pool_count, void* mem_ctx = NULL);
+cf_audio_system_t* cf_audio_system_make(int pool_count);
 void cf_audio_system_destroy(cf_audio_system_t* audio_system);
 void cf_audio_system_update(cf_audio_system_t* audio_system, float dt);
 

@@ -40,7 +40,7 @@
 template <typename K, typename T>
 struct cf_lru_cache
 {
-	cf_lru_cache(int capacity, void* user_allocator_context);
+	cf_lru_cache(int capacity);
 	~cf_lru_cache();
 
 	T* mru();
@@ -80,10 +80,10 @@ private:
 // -------------------------------------------------------------------------------------------------
 
 template <typename K, typename T>
-cf_lru_cache<K, T>::cf_lru_cache(int capacity, void* user_allocator_context)
+cf_lru_cache<K, T>::cf_lru_cache(int capacity)
 	: m_capacity(capacity)
 	, m_count(0)
-	, m_entries(capacity, user_allocator_context)
+	, m_entries(capacity)
 {
 	cf_list_init(&m_list);
 }

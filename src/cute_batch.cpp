@@ -88,9 +88,9 @@ struct cf_batch_t
 
 	sg_pipeline geom_pip;
 	cf_buffer_t geom_buffer;
-	cf_array<cf_vertex_t> geom_verts;
+	array<cf_vertex_t> geom_verts;
 
-	cf_array<cf_quad_vertex_t> sprite_verts;
+	array<cf_quad_vertex_t> sprite_verts;
 	cf_buffer_t sprite_buffer;
 	sg_shader default_shd = { 0 };
 	sg_shader outline_shd = { 0 };
@@ -108,12 +108,12 @@ struct cf_batch_t
 	cf_m3x2 m = cf_make_identity();
 	float scale_x = 1.0f;
 	float scale_y = 1.0f;
-	cf_array<cf_m3x2> m3x2s;
-	cf_array<sg_blend_state> blend_states;
-	cf_array<sg_depth_state> depth_states;
-	cf_array<sg_stencil_state> stencil_states;
-	cf_array<cf_scissor_t> scissors;
-	cf_array<cf_color_t> tints = { DEFAULT_TINT };
+	array<cf_m3x2> m3x2s;
+	array<sg_blend_state> blend_states;
+	array<sg_depth_state> depth_states;
+	array<sg_stencil_state> stencil_states;
+	array<cf_scissor_t> scissors;
+	array<cf_color_t> tints = { DEFAULT_TINT };
 
 	cf_get_pixels_fn* get_pixels = NULL;
 	void* get_pixels_udata = NULL;
@@ -345,7 +345,7 @@ static void cf_s_sync_pip(cf_batch_t* b)
 	}
 }
 
-cf_batch_t* cf_make_batch(cf_get_pixels_fn* get_pixels, void* get_pixels_udata, void* mem_ctx)
+cf_batch_t* cf_make_batch(cf_get_pixels_fn* get_pixels, void* get_pixels_udata)
 {
 	cf_batch_t* b = CUTE_NEW(cf_batch_t, cf_app->mem_ctx);
 	if (!b) return NULL;
@@ -353,7 +353,6 @@ cf_batch_t* cf_make_batch(cf_get_pixels_fn* get_pixels, void* get_pixels_udata, 
 	b->projection = cf_matrix_identity();
 	b->get_pixels = get_pixels;
 	b->get_pixels_udata = get_pixels_udata;
-	b->mem_ctx = mem_ctx;
 
 	sg_pipeline_desc params = { 0 };
 	params.layout.buffers[0].stride = sizeof(cf_vertex_t);
@@ -721,7 +720,7 @@ void cf_batch_circle(cf_batch_t* b, cf_v2 p, float r, int iters, cf_color_t c)
 void cf_batch_circle_line(cf_batch_t* batch, cf_v2 p, float r, int iters, float thickness, cf_color_t color, bool antialias)
 {
 	if (antialias) {
-		cf_array<cf_v2> verts(iters, NULL);
+		array<cf_v2> verts(iters);
 		cf_v2 p0 = cf_V2(p.x + r, p.y);
 		verts.add(p0);
 
@@ -771,7 +770,7 @@ void cf_batch_circle_arc(cf_batch_t* batch, cf_v2 p, cf_v2 center_of_arc, float 
 	}
 }
 
-static void cf_s_circle_arc_line_aa(cf_array<cf_v2>* verts, cf_v2 p, cf_v2 center_of_arc, float range, int iters, float thickness, cf_color_t color)
+static void cf_s_circle_arc_line_aa(array<cf_v2>* verts, cf_v2 p, cf_v2 center_of_arc, float range, int iters, float thickness, cf_color_t color)
 {
 	float r = cf_len(center_of_arc - p);
 	cf_v2 d = cf_norm(center_of_arc - p);
@@ -795,7 +794,7 @@ static void cf_s_circle_arc_line_aa(cf_array<cf_v2>* verts, cf_v2 p, cf_v2 cente
 void cf_batch_circle_arc_line(cf_batch_t* batch, cf_v2 p, cf_v2 center_of_arc, float range, int iters, float thickness, cf_color_t color, bool antialias)
 {
 	if (antialias) {
-		cf_array<cf_v2> verts(iters, NULL);
+		array<cf_v2> verts(iters);
 		cf_s_circle_arc_line_aa(&verts, p, center_of_arc, range, iters, thickness, color);
 		cf_batch_polyline(batch, verts.data(), verts.size(), thickness, color, false, true, 3);
 	} else {
@@ -837,7 +836,7 @@ void cf_batch_capsule(cf_batch_t* batch, cf_v2 a, cf_v2 b, float r, int iters, c
 void cf_batch_capsule_line(cf_batch_t* batch, cf_v2 a, cf_v2 b, float r, int iters, float thickness, cf_color_t c, bool antialias)
 {
 	if (antialias) {
-		cf_array<cf_v2> verts(iters * 2 + 2, NULL);
+		array<cf_v2> verts(iters * 2 + 2);
 		cf_s_circle_arc_line_aa(&verts, a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness, c);
 		cf_s_circle_arc_line_aa(&verts, b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness, c);
 		cf_batch_polyline(batch, verts.data(), verts.count(), thickness, c, true, true, 0);

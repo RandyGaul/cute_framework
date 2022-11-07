@@ -61,7 +61,7 @@ static cf_batch_t* cf_s_png_batch()
 cf_sprite_t cf_easy_make_sprite(const char* png_path)
 {
 	cf_png_cache_t* cache = cf_s_png_cache();
-	const cf_animation_table_t* table = cf_png_cache_get_animation_table(cache, png_path);
+	const cf_animation_t** table = cf_png_cache_get_animation_table(cache, png_path);
 	if (!table) {
 		cf_png_t png;
 		char buf[1024];
@@ -86,9 +86,8 @@ cf_sprite_t cf_easy_make_sprite(const char* png_path)
 void cf_easy_sprite_unload(cf_sprite_t sprite)
 {
 	cf_png_cache_t* cache = cf_s_png_cache();
-	cf_png_t png;
-	cf_result_t err = cache->pngs.find((cf_animation_table_items(sprite.animations))[0]->frames[0].id, &png);
-	cf_png_cache_unload(cache, &png);
+	cf_png_t png = hget(cache->pngs, sprite.animations[0]->frames[0].id);
+	cf_png_cache_unload(cache, png);
 }
 
 cf_batch_t* cf_easy_sprite_get_batch()

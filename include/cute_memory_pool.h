@@ -47,7 +47,7 @@ typedef struct cf_memory_pool_t cf_memory_pool_t;
  * `element_size` is the fixed size each internal allocation will be.
  * `element_count` determins how big the internal pool will be.
  */
-CUTE_API cf_memory_pool_t* CUTE_CALL cf_make_memory_pool(int element_size, int element_count, void* user_allocator_context /*= NULL*/);
+CUTE_API cf_memory_pool_t* CUTE_CALL cf_make_memory_pool(int element_size, int element_count /*= NULL*/);
 
 /**
  * Destroys a memory pool previously created with `make_memory_pool`. Does not clean up any leftover
@@ -86,7 +86,7 @@ namespace cute
 {
 using memory_pool_t = cf_memory_pool_t;
 
-CUTE_INLINE memory_pool_t* make_memory_pool(int element_size, int element_count, void* user_allocator_context = NULL) { return cf_make_memory_pool(element_size,element_count,user_allocator_context); }
+CUTE_INLINE memory_pool_t* make_memory_pool(int element_size, int element_count = NULL) { return cf_make_memory_pool(element_size,element_count); }
 CUTE_INLINE void destroy_memory_pool(memory_pool_t* pool) { cf_destroy_memory_pool(pool); }
 CUTE_INLINE void* memory_pool_alloc(memory_pool_t* pool) { return cf_memory_pool_alloc(pool); }
 CUTE_INLINE void* memory_pool_try_alloc(memory_pool_t* pool) { return cf_memory_pool_try_alloc(pool); }

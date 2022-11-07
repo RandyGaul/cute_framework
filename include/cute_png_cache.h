@@ -55,7 +55,6 @@ extern "C" {
  * the image is currently cached in RAM.
  */
 typedef struct cf_png_cache_t cf_png_cache_t;
-typedef struct cf_strpool_t cf_strpool_t;
 
 /**
  * Constructs a new png cache. Destroy it with `cf_destroy_png_cache` when done with it.
@@ -110,19 +109,13 @@ CUTE_API cf_result_t CUTE_CALL cf_png_cache_load_mem(cf_png_cache_t* cache, cons
  * when switching from one level/area to another can be a good time to unload images that will no
  * longer be used.
  */
-CUTE_API void CUTE_CALL cf_png_cache_unload(cf_png_cache_t* cache, cf_png_t* png);
+CUTE_API void CUTE_CALL cf_png_cache_unload(cf_png_cache_t* cache, cf_png_t png);
 
 /**
  * `cf_png_cache_get_pixels_fn` is needed to hook up to `cf_batch_t` in order to draw sprites.
  * The return value gets passed to `make_batch`.
  */
 CUTE_API cf_get_pixels_fn* CUTE_CALL cf_png_cache_get_pixels_fn(cf_png_cache_t* cache);
-
-/**
- * This is a low-level function, just in case anyone wants to get access to the internal string pool.
- * Only use this function if you know what you're doing.
- */
-CUTE_API cf_strpool_t* CUTE_CALL cf_png_cache_get_strpool_ptr(cf_png_cache_t* cache);
 
 //--------------------------------------------------------------------------------------------------
 // Animation and sprite functions.
@@ -144,19 +137,19 @@ CUTE_API const cf_animation_t* CUTE_CALL cf_png_cache_get_animation(cf_png_cache
 /**
  * Constructs an animation table given an array of animations. The table is stored within the png cache.
  */
-CUTE_API const cf_animation_table_t* CUTE_CALL cf_make_png_cache_animation_table(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_t* const* animations, int animations_count);
+CUTE_API const cf_animation_t** CUTE_CALL cf_make_png_cache_animation_table(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_t* const* animations, int animations_count);
 
 /**
  * Looks up an animation table within the png cache by name.
  */
-CUTE_API const cf_animation_table_t* CUTE_CALL cf_png_cache_get_animation_table(cf_png_cache_t* cache, const char* sprite_name);
+CUTE_API const cf_animation_t** CUTE_CALL cf_png_cache_get_animation_table(cf_png_cache_t* cache, const char* sprite_name);
 
 /**
  * Makes a sprite. Each sprite must refer to an animation table previously constructed by `cf_make_png_cache_animation_table`.
  * You can supply the pointer to the animation table yourself in `table`, or just leave it NULL.
  * If table is `NULL` then `sprite_name` is used to lookup the table within the png cache.
  */
-CUTE_API cf_sprite_t CUTE_CALL cf_make_png_cache_sprite(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_table_t* table /*= NULL*/);
+CUTE_API cf_sprite_t CUTE_CALL cf_make_png_cache_sprite(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_t** table /*= NULL*/);
 
 #ifdef __cplusplus
 }
@@ -173,7 +166,6 @@ namespace cute
 {
 
 using png_cache_t = cf_png_cache_t;
-using strpool_t = cf_strpool_t;
 using animation_t = cf_animation_t;
 using pixel_t = cf_pixel_t;
 
@@ -187,14 +179,13 @@ CUTE_INLINE png_cache_t* make_png_cache(void* mem_ctx = NULL) { return cf_make_p
 CUTE_INLINE void destroy_png_cache(png_cache_t* cache) { return cf_destroy_png_cache(cache); }
 CUTE_INLINE result_t png_cache_load(png_cache_t* cache, const char* png_path, png_t* png = NULL) { return cf_png_cache_load(cache, png_path, (cf_png_t*)png); }
 CUTE_INLINE result_t png_cache_load_mem(png_cache_t* cache, const char* png_path, const void* memory, size_t size, cf_png_t* png = NULL) { return cf_png_cache_load_mem(cache, png_path, memory, size, png); }
-CUTE_INLINE void png_cache_unload(png_cache_t* cache, png_t* png) { cf_png_cache_unload(cache, (cf_png_t*)png); }
+CUTE_INLINE void png_cache_unload(png_cache_t* cache, png_t png) { cf_png_cache_unload(cache, png); }
 CUTE_INLINE get_pixels_fn* png_cache_get_pixels_fn(png_cache_t* cache) { return cf_png_cache_get_pixels_fn(cache); }
-CUTE_INLINE strpool_t* png_cache_get_strpool_ptr(png_cache_t* cache) { return cf_png_cache_get_strpool_ptr(cache); }
 CUTE_API const animation_t* CUTE_CALL make_png_cache_animation(png_cache_t* cache, const char* name, const array<cf_png_t>& pngs, const array<float>& delays);
 CUTE_INLINE const animation_t* png_cache_get_animation(png_cache_t* cache, const char* name) { return cf_png_cache_get_animation(cache, name); }
-CUTE_API const animation_table_t* CUTE_CALL make_png_cache_animation_table(png_cache_t* cache, const char* sprite_name, const array<const animation_t*>& animations);
-CUTE_INLINE const animation_table_t* png_cache_get_animation_table(png_cache_t* cache, const char* sprite_name) { return cf_png_cache_get_animation_table(cache, sprite_name); }
-CUTE_INLINE sprite_t make_png_cache_sprite(png_cache_t* cache, const char* sprite_name, const animation_table_t* table = NULL) { return cf_make_png_cache_sprite(cache, sprite_name, table); }
+CUTE_API const cf_animation_t** CUTE_CALL make_png_cache_animation_table(png_cache_t* cache, const char* sprite_name, const array<const animation_t*>& animations);
+CUTE_INLINE const cf_animation_t** png_cache_get_animation_table(png_cache_t* cache, const char* sprite_name) { return cf_png_cache_get_animation_table(cache, sprite_name); }
+CUTE_INLINE sprite_t make_png_cache_sprite(png_cache_t* cache, const char* sprite_name, const cf_animation_t** table = NULL) { return cf_make_png_cache_sprite(cache, sprite_name, table); }
 
 }
 

@@ -73,6 +73,7 @@ include_directories(src libraries test)
 # Cute Framework shared library.
 set(CUTE_SRCS
 	src/cute_app.cpp
+	src/cute_array.cpp
 	src/cute_audio.cpp
 	src/cute_circular_buffer.cpp
 	src/cute_clipboard.cpp
@@ -103,7 +104,6 @@ set(CUTE_SRCS
 	src/cute_joypad.cpp
 	src/cute_a_star.cpp
 	src/cute_aabb_tree.cpp
-	src/cute_strpool.cpp
 	src/cute_symbol.cpp
 	src/cute_haptics.cpp
 	src/cute_utf8.cpp
@@ -149,7 +149,6 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_base64.h
 	include/cute_array.h
 	include/cute_hashtable.h
-	include/cute_dictionary.h
 	include/cute_ecs.h
 	include/cute_string.h
 	include/cute_string_utils.h
@@ -174,7 +173,6 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_priority_queue.h
 	include/cute_a_star.h
 	include/cute_aabb_tree.h
-	include/cute_strpool.h
 	include/cute_symbol.h
 	include/cute_haptics.h
 	include/cute_utf8.h

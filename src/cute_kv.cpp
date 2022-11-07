@@ -28,6 +28,8 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+using namespace cute;
+
 struct cf_kv_string_t
 {
 	uint8_t* str = NULL;
@@ -49,7 +51,7 @@ struct cf_kv_val_t
 {
 	cf_kv_type_t type = CF_KV_TYPE_NULL;
 	cf_kv_union_t u;
-	cf_array<cf_kv_val_t> aval;
+	array<cf_kv_val_t> aval;
 };
 
 struct cf_kv_field_t
@@ -64,7 +66,7 @@ struct cf_kv_object_t
 	int parsing_array = 0;
 
 	cf_kv_string_t key;
-	cf_array<cf_kv_field_t> fields;
+	array<cf_kv_field_t> fields;
 };
 
 #define CUTE_KV_NOT_IN_ARRAY               0
@@ -83,39 +85,36 @@ struct cf_kv_t
 	uint8_t* in = NULL;
 	uint8_t* in_end = NULL;
 	uint8_t* start = NULL;
-	cf_array<uint8_t> write_buffer;
+	array<uint8_t> write_buffer;
 
 	// Reading state.
 	int object_skip_count = 0;
 	cf_kv_val_t* matched_val = NULL;
 	int matched_cache_index = ~0;
 	cf_kv_val_t* matched_cache_val = NULL;
-	cf_array<cf_kv_cache_t> cache;
-	cf_array<cf_kv_object_t> objects;
+	array<cf_kv_cache_t> cache;
+	array<cf_kv_object_t> objects;
 
 	int read_mode_from_array = 0;
-	cf_array<cf_kv_val_t*> read_mode_array_stack;
-	cf_array<int> read_mode_array_index_stack;
+	array<cf_kv_val_t*> read_mode_array_stack;
+	array<int> read_mode_array_index_stack;
 
 	// Writing state.
 	size_t backup_base_key_bytes = 0;
 	cf_kv_t* base = NULL;
 	int in_array = CUTE_KV_NOT_IN_ARRAY;
-	cf_array<int> in_array_stack;
+	array<int> in_array_stack;
 	int tabs = 0;
 	size_t temp_size = 0;
 	uint8_t* temp = NULL;
 
 	cf_result_t err = cf_result_success();
-
-	void* mem_ctx = NULL;
 };
 
-cf_kv_t* cf_make_kv(void* user_allocator_context)
+cf_kv_t* cf_make_kv()
 {
-	cf_kv_t* kv = (cf_kv_t*)CUTE_ALLOC(sizeof(cf_kv_t), user_allocator_context);
+	cf_kv_t* kv = (cf_kv_t*)CUTE_ALLOC(sizeof(cf_kv_t));
 	CUTE_PLACEMENT_NEW(kv) cf_kv_t;
-	kv->mem_ctx = user_allocator_context;
 
 	cf_kv_cache_t cache;
 	cache.kv = kv;
@@ -127,8 +126,8 @@ cf_kv_t* cf_make_kv(void* user_allocator_context)
 void cf_destroy_kv(cf_kv_t* kv)
 {
 	kv->~cf_kv_t();
-	CUTE_FREE(kv->temp, kv->mem_ctx);
-	CUTE_FREE(kv, kv->mem_ctx);
+	CUTE_FREE(kv->temp);
+	CUTE_FREE(kv);
 }
 
 static CUTE_INLINE void cf_s_push_array(cf_kv_t* kv, int in_array)
@@ -332,7 +331,7 @@ static CUTE_INLINE cf_result_t cf_s_parse_number(cf_kv_t* kv, cf_kv_val_t* val)
 
 static cf_result_t cf_s_parse_value(cf_kv_t* kv, cf_kv_val_t* val);
 
-static cf_result_t cf_s_parse_array(cf_kv_t* kv, cf_array<cf_kv_val_t>* array_val)
+static cf_result_t cf_s_parse_array(cf_kv_t* kv, array<cf_kv_val_t>* array_val)
 {
 	cf_result_t err;
 	int64_t count;
@@ -430,7 +429,7 @@ static cf_result_t cf_s_parse_object(cf_kv_t* kv, int* index, bool is_top_level)
 		} else if (field->val.type == CF_KV_TYPE_ARRAY) {
 			int count = field->val.aval.count();
 			if (count && field->val.aval[0].type == CF_KV_TYPE_OBJECT) {
-				cf_array<cf_kv_val_t>& object_val_array = field->val.aval;
+				array<cf_kv_val_t>& object_val_array = field->val.aval;
 				for (int i = 0; i < count; ++i)
 				{
 					int object_index = object_val_array[i].u.object_index;
@@ -685,9 +684,9 @@ cf_result_t cf_kv_key(cf_kv_t* kv, const char* key, cf_kv_type_t* type)
 static uint8_t* cf_s_temp(cf_kv_t* kv, size_t size)
 {
 	if (kv->temp_size < size + 1) {
-		CUTE_FREE(kv->temp, kv->mem_ctx);
+		CUTE_FREE(kv->temp);
 		kv->temp_size = size + 1;
-		kv->temp = (uint8_t*)CUTE_ALLOC(size + 1, kv->mem_ctx);
+		kv->temp = (uint8_t*)CUTE_ALLOC(size + 1);
 		if (size) CUTE_ASSERT(kv->temp);
 	}
 	return kv->temp;

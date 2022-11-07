@@ -52,12 +52,12 @@ typedef struct cf_image_indexed_t
 // -------------------------------------------------------------------------------------------------
 // PNG loading.
 
-CUTE_API cf_result_t CUTE_CALL cf_image_load_png(const char* virtual_path, cf_image_t* img, void* user_allocator_context /*= NULL*/);
-CUTE_API cf_result_t CUTE_CALL cf_image_load_png_mem(const void* data, int size, cf_image_t* img, void* user_allocator_context /*= NULL*/);
+CUTE_API cf_result_t CUTE_CALL cf_image_load_png(const char* virtual_path, cf_image_t* img);
+CUTE_API cf_result_t CUTE_CALL cf_image_load_png_mem(const void* data, int size, cf_image_t* img);
 CUTE_API cf_result_t CUTE_CALL cf_image_load_png_wh(const void* data, int size, int* w, int* h);
 CUTE_API void CUTE_CALL cf_image_free(cf_image_t* img);
 
-CUTE_API cf_result_t CUTE_CALL cf_image_load_png_indexed(const char* virtual_path, cf_image_indexed_t* img, void* user_allocator_context /*= NULL*/);
+CUTE_API cf_result_t CUTE_CALL cf_image_load_png_indexed(const char* virtual_path, cf_image_indexed_t* img);
 CUTE_API cf_result_t CUTE_CALL cf_image_load_png_mem_indexed(const void* data, int size, cf_image_indexed_t* img);
 CUTE_API void CUTE_CALL cf_image_free_indexed(cf_image_indexed_t* img);
 
@@ -86,12 +86,12 @@ using image_indexed_t = cf_image_indexed_t;
 // -------------------------------------------------------------------------------------------------
 // PNG loading.
 
-CUTE_INLINE result_t image_load_png(const char* virtual_path, image_t* img, void* user_allocator_context = NULL) { return cf_image_load_png(virtual_path, img, user_allocator_context); }
-CUTE_INLINE result_t image_load_png_mem(const void* data, int size, image_t* img, void* user_allocator_context = NULL) { return cf_image_load_png_mem(data, size, img, user_allocator_context); }
+CUTE_INLINE result_t image_load_png(const char* virtual_path, image_t* img) { return cf_image_load_png(virtual_path, img); }
+CUTE_INLINE result_t image_load_png_mem(const void* data, int size, image_t* img) { return cf_image_load_png_mem(data, size, img); }
 CUTE_INLINE result_t image_load_png_wh(const void* data, int size, int* w, int* h) { return cf_image_load_png_wh(data, size, w, h); }
 CUTE_INLINE void image_free(image_t* img) { cf_image_free(img); }
 
-CUTE_INLINE result_t image_load_png_indexed(const char* virtual_path, image_indexed_t* img, void* user_allocator_context = NULL) { return cf_image_load_png_indexed(virtual_path, img, user_allocator_context); }
+CUTE_INLINE result_t image_load_png_indexed(const char* virtual_path, image_indexed_t* img) { return cf_image_load_png_indexed(virtual_path, img); }
 CUTE_INLINE result_t image_load_png_mem_indexed(const void* data, int size, image_indexed_t* img) { return cf_image_load_png_mem_indexed(data, size, img); }
 CUTE_INLINE void image_free(image_indexed_t* img) { cf_image_free_indexed(img); }
 

@@ -37,7 +37,6 @@ extern "C" {
 typedef struct ImGuiContext ImGuiContext;
 typedef struct sg_imgui_t sg_imgui_t;
 typedef struct sg_image sg_image;
-typedef struct cf_strpool_t cf_strpool_t;
 
 #define CF_APP_OPTION_DEFS \
 	CF_ENUM(APP_OPTIONS_OPENGL_CONTEXT,                 1 << 0) \
@@ -57,7 +56,7 @@ enum
 	#undef CF_ENUM
 };
 
-CUTE_API cf_result_t CUTE_CALL cf_make_app(const char* window_title, int x, int y, int w, int h, int options /*= 0*/, const char* argv0 /*= NULL*/, void* user_allocator_context /*= NULL*/);
+CUTE_API cf_result_t CUTE_CALL cf_make_app(const char* window_title, int x, int y, int w, int h, int options /*= 0*/, const char* argv0 /*= NULL*/);
 CUTE_API void CUTE_CALL cf_destroy_app();
 
 CUTE_API bool CUTE_CALL cf_app_is_running();
@@ -70,7 +69,6 @@ CUTE_API cf_result_t CUTE_CALL cf_app_init_audio(bool spawn_mix_thread /*= true*
 CUTE_API void CUTE_CALL cf_app_do_mixing();
 CUTE_API ImGuiContext* CUTE_CALL cf_app_init_imgui(bool no_default_font /*= false*/);
 CUTE_API sg_imgui_t* CUTE_CALL cf_app_get_sokol_imgui();
-CUTE_API cf_strpool_t* CUTE_CALL cf_app_get_strpool();
 
 CUTE_API cf_result_t CUTE_CALL cf_app_set_offscreen_buffer(int offscreen_w, int offscreen_h);
 
@@ -121,8 +119,6 @@ enum power_state_t : int
 	#undef CF_ENUM
 };
 
-using strpool_t = cf_strpool_t;
-
 enum : int
 {
 	#define CF_ENUM(K, V) K = V,
@@ -130,7 +126,7 @@ enum : int
 	#undef CF_ENUM
 };
 
-CUTE_INLINE result_t make_app(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL, void* user_allocator_context = NULL) { return cf_make_app(window_title, x, y, w, h, options, argv0, user_allocator_context); }
+CUTE_INLINE result_t make_app(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL) { return cf_make_app(window_title, x, y, w, h, options, argv0); }
 CUTE_INLINE void destroy_app() { cf_destroy_app(); }
 CUTE_INLINE bool app_is_running() { return cf_app_is_running(); }
 CUTE_INLINE void app_stop_running() { cf_app_stop_running(); }
@@ -141,7 +137,6 @@ CUTE_INLINE result_t app_init_audio(bool spawn_mix_thread = true, int max_simult
 CUTE_INLINE void app_do_mixing() { cf_app_do_mixing(); }
 CUTE_INLINE ImGuiContext* app_init_imgui(bool no_default_font = false) { return cf_app_init_imgui(no_default_font); }
 CUTE_INLINE sg_imgui_t* app_get_sokol_imgui() { return cf_app_get_sokol_imgui(); }
-CUTE_INLINE strpool_t* app_get_strpool() { return cf_app_get_strpool(); }
 CUTE_INLINE result_t app_set_offscreen_buffer(int offscreen_w, int offscreen_h) { return cf_app_set_offscreen_buffer(offscreen_w, offscreen_h); }
 CUTE_INLINE power_info_t app_power_info() { return cf_app_power_info(); }
 CUTE_INLINE void sleep(int milliseconds) { cf_sleep(milliseconds); }

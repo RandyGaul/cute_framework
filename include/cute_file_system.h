@@ -79,8 +79,8 @@ CUTE_API size_t CUTE_CALL cf_file_system_tell(cf_file_t* file);
 CUTE_API cf_result_t CUTE_CALL cf_file_system_seek(cf_file_t* file, size_t position);
 CUTE_API size_t CUTE_CALL cf_file_system_size(cf_file_t* file);
 CUTE_API cf_result_t CUTE_CALL cf_file_system_flush(cf_file_t* file);
-CUTE_API cf_result_t CUTE_CALL cf_file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size /*= NULL*/, void* user_allocator_context /*= NULL*/);
-CUTE_API cf_result_t CUTE_CALL cf_file_system_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size /*= NULL*/, void* user_allocator_context /*= NULL*/);
+CUTE_API cf_result_t CUTE_CALL cf_file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size /*= NULL*/ /*= NULL*/);
+CUTE_API cf_result_t CUTE_CALL cf_file_system_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size /*= NULL*/ /*= NULL*/);
 CUTE_API cf_result_t CUTE_CALL cf_file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
 
 #ifdef __cplusplus
@@ -127,8 +127,8 @@ CUTE_INLINE size_t file_system_tell(file_t* file) { return cf_file_system_tell(f
 CUTE_INLINE result_t file_system_seek(file_t* file, size_t position) { return cf_file_system_seek(file, position); }
 CUTE_INLINE size_t file_system_size(file_t* file) { return cf_file_system_size(file); }
 CUTE_INLINE result_t file_system_flush(file_t* file) { return cf_file_system_flush(file); }
-CUTE_INLINE result_t file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size = NULL, void* user_allocator_context = NULL) { return cf_file_system_read_entire_file_to_memory(virtual_path, data_ptr, size, user_allocator_context); }
-CUTE_INLINE result_t file_system_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size = NULL, void* user_allocator_context = NULL) { return cf_file_system_read_entire_file_to_memory_and_nul_terminate(virtual_path, data_ptr, size, user_allocator_context); }
+CUTE_INLINE result_t file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size = NULL) { return cf_file_system_read_entire_file_to_memory(virtual_path, data_ptr, size); }
+CUTE_INLINE result_t file_system_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size = NULL) { return cf_file_system_read_entire_file_to_memory_and_nul_terminate(virtual_path, data_ptr, size); }
 CUTE_INLINE result_t file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size) { return cf_file_system_write_entire_buffer_to_file(virtual_path, data, size); }
 
 }

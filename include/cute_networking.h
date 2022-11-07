@@ -358,7 +358,7 @@ CUTE_INLINE result_t generate_connect_token(
 
 using client_state_t = cf_client_state_t;
 
-CUTE_INLINE client_t* make_client(uint16_t port, uint64_t application_id, bool use_ipv6 = false, void* user_allocator_context = NULL) { return cf_make_client(port,application_id,use_ipv6,user_allocator_context); }
+CUTE_INLINE client_t* make_client(uint16_t port, uint64_t application_id, bool use_ipv6 = false = NULL) { return cf_make_client(port,application_id,use_ipv6); }
 CUTE_INLINE void destroy_client(client_t* client) { cf_destroy_client(client); }
 CUTE_INLINE result_t client_connect(client_t* client, const uint8_t* connect_token) { return cf_client_connect(client,connect_token); }
 CUTE_INLINE void client_disconnect(client_t* client) { cf_client_disconnect(client); }

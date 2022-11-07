@@ -50,7 +50,6 @@ extern "C" {
  */
 typedef struct cf_aseprite_cache_t cf_aseprite_cache_t;
 typedef struct cf_sprite_t cf_sprite_t;
-typedef struct cf_strpool_t cf_strpool_t;
 
 /**
  * Constructs a new aseprite cache. Destroy it with `cf_destroy_aseprite_cache` when done with it.
@@ -90,12 +89,6 @@ CUTE_API cf_result_t CUTE_CALL cf_aseprite_cache_load_ase(cf_aseprite_cache_t* c
  */
 CUTE_API cf_get_pixels_fn* CUTE_CALL cf_aseprite_cache_get_pixels_fn(cf_aseprite_cache_t* cache);
 
-/**
- * This is a low-level function, just in case anyone wants to get access to the internal string pool.
- * Only use this function if you know what you're doing.
- */
-CUTE_API cf_strpool_t* CUTE_CALL cf_aseprite_cache_get_strpool_ptr(cf_aseprite_cache_t* cache);
-
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -110,7 +103,6 @@ namespace cute
 
 struct sprite_t;
 using aseprite_cache_t = cf_aseprite_cache_t;
-using strpool_t = cf_strpool_t;
 using get_pixels_fn = cf_get_pixels_fn;
 
 CUTE_INLINE aseprite_cache_t* cmake_aseprite_cache(void* mem_ctx = NULL) { return cf_make_aseprite_cache(mem_ctx); }
@@ -119,7 +111,6 @@ CUTE_INLINE result_t aseprite_cache_load(aseprite_cache_t* cache, const char* as
 CUTE_INLINE void aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path) { cf_aseprite_cache_unload(cache, aseprite_path); }
 CUTE_INLINE result_t aseprite_cache_load_ase(aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase) { return  cf_aseprite_cache_load_ase(cache, aseprite_path, ase); }
 CUTE_INLINE get_pixels_fn* aseprite_cache_get_pixels_fn(aseprite_cache_t* cache) { return  cf_aseprite_cache_get_pixels_fn(cache); }
-CUTE_INLINE strpool_t* aseprite_cache_get_strpool_ptr(aseprite_cache_t* cache) { return  cf_aseprite_cache_get_strpool_ptr(cache); }
 
 }
 

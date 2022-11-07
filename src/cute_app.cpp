@@ -74,7 +74,7 @@ cf_app_t* cf_app;
 
 using namespace cute;
 
-cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, int options, const char* argv0, void* user_allocator_context)
+cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, int options, const char* argv0)
 {
 	SDL_SetMainReady();
 
@@ -132,11 +132,10 @@ cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, in
 	} else {
 		window = SDL_CreateWindow(window_title, x, y, w, h, flags);
 	}
-	cf_app_t* app = (cf_app_t*)CUTE_ALLOC(sizeof(cf_app_t), user_allocator_context);
+	cf_app_t* app = (cf_app_t*)CUTE_ALLOC(sizeof(cf_app_t));
 	CUTE_PLACEMENT_NEW(app) cf_app_t;
 	app->options = options;
 	app->window = window;
-	app->mem_ctx = user_allocator_context;
 	app->w = w;
 	app->h = h;
 	app->x = x;
@@ -159,7 +158,7 @@ cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, in
 		SDL_GL_SetSwapInterval(0);
 		SDL_GLContext ctx = SDL_GL_CreateContext(window);
 		if (!ctx) {
-			CUTE_FREE(app, user_allocator_context);
+			CUTE_FREE(app);
 			return cf_result_error("Unable to create OpenGL context.");
 		}
 		CUTE_MEMSET(&app->gfx_ctx_params, 0, sizeof(app->gfx_ctx_params));
@@ -184,7 +183,7 @@ cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, in
 
 	int num_threads_to_spawn = cf_core_count() - 1;
 	if (num_threads_to_spawn) {
-		app->threadpool = cf_make_threadpool(num_threads_to_spawn, user_allocator_context);
+		app->threadpool = cf_make_threadpool(num_threads_to_spawn);
 	}
 
 	cf_result_t err = cf_file_system_init(argv0);
@@ -195,14 +194,11 @@ cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, in
 		cf_file_system_mount(cf_file_system_get_base_dir(), "", true);
 	}
 
-	app->strpool = cf_make_strpool(NULL);
-
 	return cf_result_success();
 }
 
 void cf_destroy_app()
 {
-	cf_destroy_strpool(cf_app->strpool);
 	if (cf_app->using_imgui) {
 		ImGui_ImplSDL2_Shutdown();
 		simgui_shutdown();
@@ -233,7 +229,7 @@ void cf_destroy_app()
 		cf_font_free((cf_font_t*)cf_app->courier_new);
 	}
 	cf_app->~cf_app_t();
-	CUTE_FREE(cf_app, cf_app->mem_ctx);
+	CUTE_FREE(cf_app);
 	cf_file_system_destroy();
 }
 
@@ -348,7 +344,7 @@ cf_result_t cf_app_init_audio(bool spawn_mix_thread, int max_simultaneous_sounds
 #ifdef CUTE_EMSCRIPTEN
 	more_on_emscripten = 4;
 #endif
-	cf_app->cute_sound = cs_make_context(NULL, 44100, 1024 * more_on_emscripten, 0, cf_app->mem_ctx);
+	cf_app->cute_sound = cs_make_context(NULL, 44100, 1024 * more_on_emscripten, 0, NULL);
 	if (cf_app->cute_sound) {
 #ifndef CUTE_EMSCRIPTEN
 		if (spawn_mix_thread) {
@@ -356,7 +352,7 @@ cf_result_t cf_app_init_audio(bool spawn_mix_thread, int max_simultaneous_sounds
 			cf_app->spawned_mix_thread = true;
 		}
 #endif // CUTE_EMSCRIPTEN
-		cf_app->audio_system = cf_audio_system_make(max_simultaneous_sounds, cf_app->mem_ctx);
+		cf_app->audio_system = cf_audio_system_make(max_simultaneous_sounds);
 		return cf_result_success();
 	} else {
 		return cf_result_error(cs_error_reason);
@@ -409,11 +405,6 @@ sg_imgui_t* cf_app_get_sokol_imgui()
 {
 	if (!cf_app->using_imgui) return NULL;
 	return &cf_app->sg_imgui;
-}
-
-cf_strpool_t* cf_app_get_strpool()
-{
-	return cf_app->strpool;
 }
 
 static void cf_s_quad(float x, float y, float sx, float sy, float* out)
