@@ -174,7 +174,7 @@ CUTE_INLINE void cf_sprite_update(cf_sprite_t* sprite, float dt)
 	sprite->t += dt * sprite->play_speed_multiplier;
 	if (sprite->t >= sprite->animation->frames[sprite->frame_index].delay) {
 		sprite->frame_index++;
-		if (sprite->frame_index == alen(sprite->animation)) {
+		if (sprite->frame_index == alen(sprite->animation->frames)) {
 			sprite->loop_count++;
 			sprite->frame_index = 0;
 		}

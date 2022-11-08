@@ -41,9 +41,9 @@ typedef struct cf_ahdr_t
 
 #define AHDR(a) ((cf_ahdr_t*)a - 1)
 #define ACOOKIE 0xE6F7E359
-#define ACANARY(a) do { if (a) CUTE_ASSERT(AHDR(a)->cookie == ACOOKIE); } while (0) // Detects buffer underruns.
+#define ACANARY(a) ((a) ? CUTE_ASSERT(AHDR(a)->cookie == ACOOKIE) : 0) // Detects buffer underruns.
 
-#define alen(a) (AHDR(a)->size)
+#define alen(a) (ACANARY(a), AHDR(a)->size)
 #define acount(a) alen(a)
 #define asize(a) (a ? alen(a) : 0)
 #define acap(a) ((a) ? AHDR(a)->capacity : 0)

@@ -153,7 +153,6 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_defer.h
 	include/cute_math.h
 	include/cute_batch.h
-	include/cute_lru_cache.h
 	include/cute_window.h
 	include/cute_debug_printf.h
 	include/cute_image.h
@@ -338,7 +337,6 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_base64.h
 		test/test_audio.h
 		test/test_ecs.h
-		test/test_lru_cache.h
 		test/test_array.h
 		test/test_aseprite.h
 		test/test_png_cache.h

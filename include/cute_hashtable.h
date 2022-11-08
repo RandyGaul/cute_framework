@@ -37,7 +37,7 @@ extern "C" {
 #define HCOOKIE 0xE6F7E359
 #define HCANARY(h) (h ? CUTE_ASSERT(HHDR(h)->cookie == HCOOKIE) : 0) // Sanity/type check.
 
-#define hset(h, k, ...) ((h) ? (h) : (*(void**)&(h) = cf_hmake(sizeof(uint64_t), sizeof(*(h)), 16)), HCANARY(h), h[-1] = (__VA_ARGS__), h + cf_hinsert(HHDR(h), (uint64_t)k))
+#define hset(h, k, ...) ((h) ? (h) : (*(void**)&(h) = cf_hmake(sizeof(uint64_t), sizeof(*(h)), 16)), HCANARY(h), h[-1] = (__VA_ARGS__), *(void**)&(h) = cf_hinsert(HHDR(h), (uint64_t)k), h + HHDR(h)->return_index)
 #define hadd(h, k, ...) hset(h, k, (__VA_ARGS__))
 #define hget(h, k) ((h)[cf_hfind(HHDR(h), (uint64_t)k)])
 #define hfind(h, k) hget(h, k)
@@ -55,7 +55,7 @@ extern "C" {
 
 typedef struct cf_hslot_t
 {
-	uint64_t key_hash;
+	uint32_t key_hash;
 	int item_index;
 	int base_count;
 } cf_hslot_t;
@@ -70,6 +70,7 @@ typedef struct cf_hhdr_t
 	cf_hslot_t* slots;
 	void* items_key;
 	int* items_slot_index;
+	int return_index;
 	void* hidden_item;
 	void* items_data;
 	void* temp_key;
@@ -79,9 +80,9 @@ typedef struct cf_hhdr_t
 
 CUTE_API void* CUTE_CALL cf_hmake(int key_size, int item_size, int capacity);
 CUTE_API void CUTE_CALL cf_hfree(cf_hhdr_t* table);
-CUTE_API int CUTE_CALL cf_hinsert(cf_hhdr_t* table, uint64_t key);
-CUTE_API int CUTE_CALL cf_hinsert2(cf_hhdr_t* table, const void* key, const void* item);
-CUTE_API int CUTE_CALL cf_hinsert3(cf_hhdr_t* table, const void* key);
+CUTE_API void* CUTE_CALL cf_hinsert(cf_hhdr_t* table, uint64_t key);
+CUTE_API void* CUTE_CALL cf_hinsert2(cf_hhdr_t* table, const void* key, const void* item);
+CUTE_API void* CUTE_CALL cf_hinsert3(cf_hhdr_t* table, const void* key);
 CUTE_API void CUTE_CALL cf_hdel(cf_hhdr_t* table, uint64_t key);
 CUTE_API void CUTE_CALL cf_hdel2(cf_hhdr_t* table, const void* key);
 CUTE_API bool CUTE_CALL cf_hhas(cf_hhdr_t* table, uint64_t key);
@@ -180,7 +181,8 @@ const T* dictionary<K, T>::find(const K& key) const
 template <typename K, typename T>
 T* dictionary<K, T>::insert(const K& key)
 {
-	int index = cf_hinsert3(m_table, &key);
+	m_table = HHDR((T*)cf_hinsert3(m_table, &key));
+	int index = m_table->return_index;
 	if (index < 0) return NULL;
 	T* result = items() + index;
 	CUTE_PLACEMENT_NEW(result) T();
@@ -190,7 +192,8 @@ T* dictionary<K, T>::insert(const K& key)
 template <typename K, typename T>
 T* dictionary<K, T>::insert(const K& key, const T& val)
 {
-	int index = cf_hinsert2(m_table, &key, &val);
+	m_table = HHDR((T*)cf_hinsert2(m_table, &key, &val));
+	int index = m_table->return_index;
 	if (index < 0) return NULL;
 	T* result = items() + index;
 	CUTE_PLACEMENT_NEW(result) T(val);
@@ -200,7 +203,8 @@ T* dictionary<K, T>::insert(const K& key, const T& val)
 template <typename K, typename T>
 T* dictionary<K, T>::insert(const K& key, T&& val)
 {
-	int index = cf_hinsert2(m_table, &key, &val);
+	m_table = HHDR((T*)cf_hinsert2(m_table, &key, &val));
+	int index = m_table->return_index;
 	if (index < 0) return NULL;
 	T* result = items() + index;
 	CUTE_PLACEMENT_NEW(result) T(move(val));

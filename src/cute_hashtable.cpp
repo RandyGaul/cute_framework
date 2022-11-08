@@ -43,7 +43,7 @@ static int s_primes[] = {
 static CUTE_INLINE int s_next_prime(int a)
 {
 	int i = 0;
-	while (s_primes[i] < a) ++i;
+	while (s_primes[i] <= a) ++i;
 	return s_primes[i];
 }
 
@@ -69,6 +69,9 @@ void* cf_hmake(int key_size, int item_size, int capacity)
 	table->items_data = (void*)((uintptr_t)(table + 1) + item_size);
 	table->slot_capacity = s_next_prime(capacity);
 	table->slots = (cf_hslot_t*)CUTE_CALLOC(table->slot_capacity * sizeof(cf_hslot_t));
+	for (int i = 0; i < table->slot_capacity; ++i) {
+		table->slots[i].item_index = -1;
+	}
 	table->item_capacity = capacity;
 	table->items_key = CUTE_ALLOC(capacity * item_size);
 	table->items_slot_index = (int*)CUTE_ALLOC(capacity * sizeof(*table->items_slot_index));
@@ -100,27 +103,27 @@ static CUTE_INLINE void* s_get_key(const cf_hhdr_t* table, int index)
 	return keys + index * table->key_size;
 }
 
-static int s_find_slot(const cf_hhdr_t *table, const void* key)
+static int s_find_slot(const cf_hhdr_t *table, uint32_t hash, const void* key)
 {
-	uint64_t hash = fnv1a(key, table->key_size);
-	int base_slot = (int)(hash % (uint64_t)table->slot_capacity);
+	uint32_t slot_capacity = (uint32_t)table->slot_capacity;
+	int base_slot = (int)(hash % slot_capacity);
 	int base_count = table->slots[base_slot].base_count;
 	int slot = base_slot;
 
 	while (base_count > 0) {
-		uint64_t slot_hash = table->slots[slot].key_hash;
-		if (slot_hash) {
-			int slot_base = (int)(slot_hash % (uint64_t)table->slot_capacity);
+		if (table->slots[slot].item_index >= 0) {
+			uint32_t slot_hash = table->slots[slot].key_hash;
+			int slot_base = (int)(slot_hash % slot_capacity);
 			if (slot_base == base_slot) {
 				CUTE_ASSERT(base_count > 0);
 				--base_count;
-				const void* found_key = s_get_key(table, table->slots[slot].item_index);
-				if (slot_hash == hash && s_keys_equal(table, found_key, key)) {
+				const void* slot_key = s_get_key(table, table->slots[slot].item_index);
+				if (slot_hash == hash && s_keys_equal(table, slot_key, key)) {
 					return slot;
 				}
 			}
 		}
-		slot = (slot + 1) % table->slot_capacity;
+		slot = (int)((slot + 1) % table->slot_capacity);
 	}
 
 	return -1;
@@ -132,23 +135,21 @@ static void s_expand_slots(cf_hhdr_t* table)
 	cf_hslot_t* old_slots = table->slots;
 
 	table->slot_capacity = s_next_prime(table->slot_capacity);
-	int slot_mask = table->slot_capacity - 1;
+	uint32_t slot_capacity = (uint32_t)table->slot_capacity;
 
-	int size = (int)(table->slot_capacity * sizeof(*table->slots));
-	table->slots = (cf_hslot_t*)CUTE_ALLOC(size);
+	table->slots = (cf_hslot_t*)CUTE_CALLOC(table->slot_capacity * sizeof(cf_hslot_t));
 	CUTE_ASSERT(table->slots);
-	for (int i = 0; i < size; ++i) {
-		table->slots[i].base_count = 0;
+	for (int i = 0; i < table->slot_capacity; ++i) {
 		table->slots[i].item_index = -1;
 	}
 
 	for (int i = 0; i < old_capacity; ++i) {
-		uint64_t hash = old_slots[i].key_hash;
-		if (hash) {
-			int base_slot = (int)(hash & (uint64_t)slot_mask);
+		if (old_slots[i].item_index >= 0) {
+			uint32_t hash = old_slots[i].key_hash;
+			int base_slot = (int)(hash % slot_capacity);
 			int slot = base_slot;
-			while (table->slots[slot].key_hash) {
-				slot = (slot + 1) & slot_mask;
+			while (table->slots[slot].item_index >= 0) {
+				slot = (slot + 1) % slot_capacity;
 			}
 			table->slots[slot].key_hash = hash;
 			int item_index = old_slots[i].item_index;
@@ -161,7 +162,7 @@ static void s_expand_slots(cf_hhdr_t* table)
 	CUTE_FREE(old_slots);
 }
 
-static void s_expand_items(cf_hhdr_t* table)
+static cf_hhdr_t* s_expand_items(cf_hhdr_t* table)
 {
 	int capacity = table->item_capacity * 2;
 	table = (cf_hhdr_t*)CUTE_REALLOC(table, sizeof(cf_hhdr_t) + (capacity + 1) * table->item_size);
@@ -170,42 +171,44 @@ static void s_expand_items(cf_hhdr_t* table)
 	table->items_data = (void*)((uintptr_t)(table + 1) + table->item_size);
 	table->items_key = CUTE_REALLOC(table->items_key, capacity * table->key_size);
 	table->items_slot_index = (int*)CUTE_REALLOC(table->items_slot_index, capacity * sizeof(*table->items_slot_index));
+	return table;
 }
 
-int cf_hinsert2(cf_hhdr_t* table, const void* key, const void* item)
+void* cf_hinsert2(cf_hhdr_t* table, const void* key, const void* item)
 {
-	CUTE_ASSERT(s_find_slot(table, key) < 0);
-	uint64_t hash = fnv1a(key, table->key_size);
+	uint32_t hash = (uint32_t)fnv1a(key, table->key_size);
+	CUTE_ASSERT(s_find_slot(table, hash, key) < 0);
 
 	if (table->count >= (table->slot_capacity - table->slot_capacity / 3)) {
 		s_expand_slots(table);
 	}
 
-	int base_slot = (int)(hash % (uint64_t)table->slot_capacity);
+	uint32_t slot_capacity = (uint32_t)table->slot_capacity;
+	int base_slot = (int)(hash % slot_capacity);
 	int base_count = table->slots[base_slot].base_count;
 	int slot = base_slot;
 	int first_free = slot;
 	while (base_count) {
-		uint64_t slot_hash = table->slots[slot].key_hash;
-		if (slot_hash == 0 && table->slots[first_free].key_hash != 0) first_free = slot;
-		int slot_base = (int)(slot_hash % (uint64_t)table->slot_capacity);
-		if (slot_base == base_slot) 
+		if (table->slots[slot].item_index < 0 && table->slots[first_free].item_index >= 0) first_free = slot;
+		uint32_t slot_hash = table->slots[slot].key_hash;
+		int slot_base = (int)(slot_hash % slot_capacity);
+		if (slot_base == base_slot) {
 			--base_count;
+		}
 		slot = (slot + 1) % table->slot_capacity;
 	}
 
 	slot = first_free;
-	while (table->slots[slot].key_hash) {
-		slot = (slot + 1) % table->slot_capacity;
+	while (table->slots[slot].item_index >= 0) {
+		slot = (slot + 1) % slot_capacity;
 	}
 
 	if (table->count >= table->item_capacity) {
-		s_expand_items(table);
+		table = s_expand_items(table);
 	}
 
 	CUTE_ASSERT(table->count < table->item_capacity);
-	CUTE_ASSERT(!table->slots[slot].key_hash && (hash % (uint64_t)table->slot_capacity) == (uint64_t)base_slot);
-	CUTE_ASSERT(hash);
+	CUTE_ASSERT(table->slots[slot].item_index < 0 && (hash % slot_capacity) == (uint32_t)base_slot);
 	table->slots[slot].key_hash = hash;
 	table->slots[slot].item_index = table->count;
 	++table->slots[base_slot].base_count;
@@ -215,32 +218,33 @@ int cf_hinsert2(cf_hhdr_t* table, const void* key, const void* item)
 	if (item) CUTE_MEMCPY(item_dst, item, table->item_size);
 	CUTE_MEMCPY(key_dst, key, table->key_size);
 	table->items_slot_index[table->count] = slot;
-	return table->count++;
+	table->return_index = table->count++;
+
+	return s_get_item(table, 0);
 }
 
-int cf_hinsert3(cf_hhdr_t* table, const void* key)
+void* cf_hinsert3(cf_hhdr_t* table, const void* key)
 {
 	return cf_hinsert2(table, key, table->hidden_item);
 }
 
-int cf_hinsert(cf_hhdr_t* table, uint64_t key)
+void* cf_hinsert(cf_hhdr_t* table, uint64_t key)
 {
 	return cf_hinsert2(table, &key, table->hidden_item);
 }
 
 void cf_hdel2(cf_hhdr_t* table, const void* key)
 {
-	int slot = s_find_slot(table, key);
+	uint32_t hash = (uint32_t)fnv1a(key, table->key_size);
+	int slot = s_find_slot(table, hash, key);
 	CUTE_ASSERT(slot >= 0);
 
-	uint64_t hash = table->slots[slot].key_hash;
-	int base_slot = (int)(hash % (uint64_t)table->slot_capacity);
-	CUTE_ASSERT(hash);
-	--table->slots[base_slot].base_count;
-	table->slots[slot].key_hash = 0;
-
+	int base_slot = (int)(hash % (uint32_t)table->slot_capacity);
 	int index = table->slots[slot].item_index;
 	int last_index = table->count - 1;
+	--table->slots[base_slot].base_count;
+	table->slots[slot].item_index = -1;
+
 	if (index != last_index) {
 		void* dst_key = s_get_key(table, index);
 		void* src_key = s_get_key(table, last_index);
@@ -270,7 +274,7 @@ void cf_hclear(cf_hhdr_t* table)
 
 int cf_hfind2(const cf_hhdr_t* table, const void* key)
 {
-	int slot = s_find_slot(table, key);
+	int slot = s_find_slot(table, (uint32_t)fnv1a(key, table->key_size), key);
 	if (slot < 0) {
 		// We will be "returning" a zero'd out item through `hget` with this
 		// hidden item.

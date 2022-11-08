@@ -229,6 +229,15 @@ int test_hashtable_macros()
 		CUTE_ASSERT(a.x == 1 && a.y == 2);
 		CUTE_ASSERT(b.x == 4 && b.y == 10);
 		CUTE_ASSERT(c.x == -12 && c.y == 13);
+		hdel(h, 0);
+		hdel(h, 1);
+		hdel(h, 2);
+		a = hget(h, 0);
+		b = hget(h, 1);
+		c = hget(h, 2);
+		CUTE_ASSERT(a.x == 0 && a.y == 0);
+		CUTE_ASSERT(b.x == 0 && b.y == 0);
+		CUTE_ASSERT(c.x == 0 && c.y == 0);
 		hfree(h);
 	}
 	return 0;

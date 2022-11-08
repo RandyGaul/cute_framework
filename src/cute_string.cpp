@@ -32,63 +32,6 @@
 
 using namespace cute;
 
-void* cf_agrow(const void* a, int new_size, size_t element_size)
-{
-	ACANARY(a);
-	CUTE_ASSERT(acap(a) <= (SIZE_MAX - 1)/2);
-	int new_capacity = max(2 * acap(a), max(new_size, 16));
-	CUTE_ASSERT(new_size <= new_capacity);
-	CUTE_ASSERT(new_capacity <= (SIZE_MAX - sizeof(cf_ahdr_t)) / element_size);
-	size_t total_size = sizeof(cf_ahdr_t) + new_capacity * element_size;
-	cf_ahdr_t* hdr;
-	if (a) {
-		if (!AHDR(a)->is_static) {
-			hdr = (cf_ahdr_t*)CUTE_REALLOC(AHDR(a), total_size);
-		} else {
-			hdr = (cf_ahdr_t*)CUTE_ALLOC(total_size);
-			hdr->size = asize(a);
-			hdr->cookie = ACOOKIE;
-		}
-	} else {
-		hdr = (cf_ahdr_t*)CUTE_ALLOC(total_size);
-		hdr->size = 0;
-		hdr->cookie = ACOOKIE;
-	}
-	hdr->capacity = new_capacity;
-	hdr->is_static = false;
-	hdr->data = (char*)(hdr + 1); // For debugging convenience.
-	return (void*)(hdr + 1);
-}
-
-void* cf_astatic(const void* a, int buffer_size, size_t element_size)
-{
-	cf_ahdr_t* hdr = (cf_ahdr_t*)a;
-	hdr->size = 0;
-	hdr->cookie = ACOOKIE;
-	if (sizeof(cf_ahdr_t) <= element_size) {
-		hdr->capacity = buffer_size / (int)element_size - 1;
-	} else {
-		int elements_taken = sizeof(cf_ahdr_t) / (int)element_size + (sizeof(cf_ahdr_t) % (int)element_size > 0);
-		hdr->capacity = buffer_size / (int)element_size - elements_taken;
-	}
-	hdr->data = (char*)(hdr + 1); // For debugging convenience.
-	hdr->is_static = true;
-	return (void*)(hdr + 1);
-}
-
-void* cf_aset(const void* a, const void* b, size_t element_size)
-{
-	ACANARY(a);
-	ACANARY(b);
-	if (acap(a) < asize(b)) {
-		int len = asize(b);
-		a = cf_agrow(a, asize(b), element_size);
-	}
-	CUTE_MEMCPY((void*)a, b, asize(b) * element_size);
-	alen(a) = asize(b);
-	return (void*)a;
-}
-
 char* cf_sset(char* a, const char* b)
 {
 	ACANARY(a);

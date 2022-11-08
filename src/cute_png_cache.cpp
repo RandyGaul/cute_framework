@@ -47,23 +47,24 @@ cf_png_cache_t* cf_make_png_cache()
 
 void cf_destroy_png_cache(cf_png_cache_t* cache)
 {
-	cf_animation_t** animations = cache->animations;
 	for (int i = 0; i < hsize(cache->animations); ++i) {
-		afree(animations[i]->frames);
+		afree(cache->animations[i]->frames);
+		CUTE_FREE(cache->animations[i]);
 	}
 	hfree(cache->animations);
 
-	cf_animation_t*** tables = cache->animation_tables;
-	for (int i = 0; i < hsize(tables); ++i) {
-		hfree(tables[i]);
+	for (int i = 0; i < hsize(cache->animation_tables); ++i) {
+		hfree(cache->animation_tables[i]);
 	}
-	hfree(tables);
+	hfree(cache->animation_tables);
 
-	for (int i = 0; i < alen(cache->pngs); ++i) {
-		cf_png_t png = cache->pngs[i];
+	int i = 0;
+	while (hsize(cache->pngs)) {
+		cf_png_t png = cache->pngs[i++];
 		cf_png_cache_unload(cache, png);
 	}
-	afree(cache->pngs);
+	hfree(cache->pngs);
+	hfree(cache->id_to_pixels);
 
 	CUTE_FREE(cache);
 }
@@ -173,7 +174,7 @@ const cf_animation_t** cf_make_png_cache_animation_table(cf_png_cache_t* cache, 
 
 const cf_animation_t** cf_png_cache_get_animation_table(cf_png_cache_t* cache, const char* sprite_name)
 {
-	 return (const cf_animation_t**)hget(cache->animation_tables, sintern(sprite_name));
+	return (const cf_animation_t**)hget(cache->animation_tables, sintern(sprite_name));
 }
 
 cf_sprite_t cf_make_png_cache_sprite(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_t** table)

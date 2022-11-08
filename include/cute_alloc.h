@@ -23,6 +23,9 @@
 #define CUTE_ALLOC_H
 
 #if !defined(CUTE_ALLOC) && !defined(CUTE_FREE)
+#	define _CRTDBG_MAPALLOC
+#	define _CRTDBG_MAP_ALLOC
+#	include <crtdbg.h>
 #	include <stdlib.h>
 #	define CUTE_CALLOC(size) calloc(size, 1)
 #	define CUTE_ALLOC(size) malloc(size)

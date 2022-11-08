@@ -563,13 +563,7 @@ namespace cute
 
 using v2 = cf_v2;
 
-CUTE_INLINE v2 V2(float x, float y)
-{
-	v2 result;
-	result.x = x;
-	result.y = y;
-	return result;
-}
+CUTE_INLINE v2 V2(float x, float y) { v2 result; result.x = x; result.y = y; return result; }
 
 CUTE_INLINE v2 operator+(v2 a, v2 b) { return V2(a.x + b.x, a.y + b.y); }
 CUTE_INLINE v2 operator-(v2 a, v2 b) { return V2(a.x - b.x, a.y - b.y); }

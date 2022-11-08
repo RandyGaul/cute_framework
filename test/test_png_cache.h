@@ -46,7 +46,6 @@ int test_png_cache()
 	cf_png_t black_png[] = { black };
 	float black_delay[] = { 1.0f };
 
-
 	const cf_animation_t* blink_anim = cf_make_png_cache_animation(cache, "blink", blink_png, CUTE_ARRAY_SIZE(blink_png), blink_delay, CUTE_ARRAY_SIZE(blink_delay));
 	const cf_animation_t* white_anim = cf_make_png_cache_animation(cache, "white", white_png, CUTE_ARRAY_SIZE(white_png), white_delay, CUTE_ARRAY_SIZE(white_delay));
 	const cf_animation_t* black_anim = cf_make_png_cache_animation(cache, "black", black_png, CUTE_ARRAY_SIZE(black_png), black_delay, CUTE_ARRAY_SIZE(black_delay));
@@ -69,4 +68,3 @@ int test_png_cache()
 
 	return 0;
 }
-
