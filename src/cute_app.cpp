@@ -27,14 +27,12 @@
 #include <cute_file_system_utils.h>
 #include <cute_c_runtime.h>
 #include <cute_kv.h>
-#include <cute_font.h>
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_file_system_internal.h>
 #include <internal/cute_audio_internal.h>
 #include <internal/cute_input_internal.h>
 #include <internal/cute_dx11.h>
-#include <internal/cute_font_internal.h>
 
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
@@ -168,7 +166,6 @@ cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, in
 		params.context = cf_app->gfx_ctx_params;
 		sg_setup(params);
 		app->gfx_enabled = true;
-		cf_font_init();
 	}
 
 	if (options & APP_OPTIONS_D3D11_CONTEXT) {
@@ -178,7 +175,6 @@ cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, in
 		params.context = cf_app->gfx_ctx_params;
 		sg_setup(params);
 		app->gfx_enabled = true;
-		cf_font_init();
 	}
 
 	int num_threads_to_spawn = cf_core_count() - 1;
@@ -224,9 +220,6 @@ void cf_destroy_app()
 	if (cf_app->png_cache) {
 		cf_destroy_png_cache(cf_app->png_cache);
 		cf_destroy_batch(cf_app->png_batch);
-	}
-	if (cf_app->courier_new) {
-		cf_font_free((cf_font_t*)cf_app->courier_new);
 	}
 	cf_app->~cf_app_t();
 	CUTE_FREE(cf_app);

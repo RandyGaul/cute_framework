@@ -87,7 +87,7 @@
 #define stobool(s) (!CUTE_STRCMP(s, "true"))
 #define sreplace(s, replace_me, with_me) (s = cf_sreplace(s, replace_me, with_me))
 #define serase(s, index, count) (s = cf_serase(s, index, count))
-#define sstatic(s, buffer, buffer_size) astatic(s, buffer, buffer_size())
+#define sstatic(s, buffer, buffer_size) astatic(s, buffer, buffer_size)
 
 #define INTERN_COOKIE 0x75AFC82E
 
@@ -100,6 +100,7 @@ typedef struct cf_intern_t
 } cf_intern_t;
 
 #define sintern(s) cf_sintern(s)
+#define sintern_range(start, end) cf_sintern_range(start, end)
 #define sivalid(s) (((cf_intern_t*)s - 1)->cookie == INTERN_COOKIE)
 #define silen(s) (((cf_intern_t*)s - 1)->len)
 
@@ -120,7 +121,7 @@ CUTE_API char* CUTE_CALL cf_srtrim(char* s);
 CUTE_API char* CUTE_CALL cf_slpad(char* s, char pad, int count);
 CUTE_API char* CUTE_CALL cf_srpad(char* s, char pad, int count);
 CUTE_API char* CUTE_CALL cf_ssplit_once(char* s, char split_c);
-CUTE_API char** CUTE_CALL cf_ssplit(char* s, char split_c);
+CUTE_API char** CUTE_CALL cf_ssplit(const char* s, char split_c);
 CUTE_API int CUTE_CALL cf_sfirst_index_of(const char* s, char c);
 CUTE_API int CUTE_CALL cf_slast_index_of(const char* s, char c);
 CUTE_API int CUTE_CALL cf_stoint(const char* s);
@@ -132,6 +133,7 @@ CUTE_API char* CUTE_CALL cf_sreplace(char* s, const char* replace_me, const char
 CUTE_API char* CUTE_CALL cf_serase(char* s, int index, int count);
 
 CUTE_API const char* CUTE_CALL cf_sintern(const char* s);
+CUTE_API const char* CUTE_CALL cf_sintern_range(const char* start, const char* end);
 CUTE_API void CUTE_CALL cf_snuke_intern_table();
 
 CUTE_API int CUTE_CALL cf_utf8_size(int codepoint);
@@ -167,9 +169,11 @@ CUTE_INLINE uint64_t constexpr fnv1a(const void* data, int size)
 
 struct string_t
 {
-	CUTE_INLINE string_t() { astatic(m_str, u.m_buffer, sizeof(u.m_buffer)); }
-	CUTE_INLINE string_t(const char* s) { astatic(m_str, u.m_buffer, sizeof(u.m_buffer)); sset(m_str, s); }
-	CUTE_INLINE string_t(const char* start, const char* end) { astatic(m_str, u.m_buffer, sizeof(u.m_buffer)); int length = (int)(end - start); sfit(m_str, length); CUTE_STRNCPY(m_str, start, length); ssize(m_str) = length + 1; }
+	CUTE_INLINE string_t() { s_static(); }
+	CUTE_INLINE string_t(const char* s) { s_static(); sset(m_str, s); }
+	CUTE_INLINE string_t(const char* start, const char* end) { s_static(); int length = (int)(end - start); sfit(m_str, length); CUTE_STRNCPY(m_str, start, length); ssize(m_str) = length + 1; }
+	CUTE_INLINE string_t(const string_t& s) { s_static(); sset(m_str, s); }
+	CUTE_INLINE string_t(string_t&& s) { if (AHDR(s.m_str)->is_static) { s_static(); sset(m_str, s); } else { m_str = s.m_str; } s.m_str = NULL; }
 	CUTE_INLINE ~string_t() { sfree(m_str); }
 
 	CUTE_INLINE static string_t steal_from(char* c_api_string) { ACANARY(c_api_string); string_t r; r.m_str = c_api_string; return r; }
@@ -220,7 +224,9 @@ struct string_t
 	CUTE_INLINE string_t& lpad(char pad, int count) { slpad(m_str, pad, count); return *this; }
 	CUTE_INLINE string_t& rpad(char pad, int count) { srpad(m_str, pad, count); return *this; }
 	CUTE_INLINE string_t& set(const char* s) { sset(m_str, s); return *this; }
-	CUTE_INLINE string_t& operator=(const char* s) { set(s); return *this; }
+	CUTE_INLINE string_t& operator=(const char* s) { sset(m_str, s); return *this; }
+	CUTE_INLINE string_t& operator=(const string_t& s) { sset(m_str, s); return *this; }
+	CUTE_INLINE string_t& operator=(string_t&& s) { sset(m_str, s); return *this; }
 	//CUTE_INLINE array<string_t> split(char split_c) { array<string_t> r; char** s = ssplit(str, split_c); for (int i=0;i<alen(s);++i) r.add(move(steal_from(s[i]))); return r; }
 	// pop
 	CUTE_INLINE int first_index_of(char ch) const { sfirst_index_of(m_str, ch); }
@@ -248,6 +254,7 @@ private:
 	char* m_str = u.m_buffer;
 	union { char m_buffer[64]; void* align; } u;
 
+	CUTE_INLINE void s_static() { sstatic(m_str, u.m_buffer, sizeof(u.m_buffer)); }
 	CUTE_INLINE void s_chki(int i) const { CUTE_ASSERT(i >= 0 && i < ssize(m_str)); }
 };
 

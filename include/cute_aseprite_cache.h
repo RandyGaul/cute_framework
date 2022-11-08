@@ -54,7 +54,7 @@ typedef struct cf_sprite_t cf_sprite_t;
 /**
  * Constructs a new aseprite cache. Destroy it with `cf_destroy_aseprite_cache` when done with it.
  */
-CUTE_API cf_aseprite_cache_t* CUTE_CALL cf_make_aseprite_cache(void* mem_ctx /*= NULL*/);
+CUTE_API cf_aseprite_cache_t* CUTE_CALL cf_make_aseprite_cache();
 
 /**
  * Destroys a aseprite cache previously made with `cf_make_aseprite_cache`.
@@ -105,7 +105,7 @@ struct sprite_t;
 using aseprite_cache_t = cf_aseprite_cache_t;
 using get_pixels_fn = cf_get_pixels_fn;
 
-CUTE_INLINE aseprite_cache_t* cmake_aseprite_cache(void* mem_ctx = NULL) { return cf_make_aseprite_cache(mem_ctx); }
+CUTE_INLINE aseprite_cache_t* cmake_aseprite_cache() { return cf_make_aseprite_cache(); }
 CUTE_INLINE void destroy_aseprite_cache(aseprite_cache_t* cache) { cf_destroy_aseprite_cache(cache); }
 CUTE_INLINE result_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite) { return cf_aseprite_cache_load(cache, aseprite_path, (cf_sprite_t*)sprite); }
 CUTE_INLINE void aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path) { cf_aseprite_cache_unload(cache, aseprite_path); }

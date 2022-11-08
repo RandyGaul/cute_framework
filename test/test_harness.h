@@ -69,7 +69,7 @@ int do_test(test_t* test, int i)
 	cf_snuke_intern_table();
 
 #ifdef _MSC_VER
-	//_CrtDumpMemoryLeaks();
+	_CrtDumpMemoryLeaks();
 #endif
 
 	return result;

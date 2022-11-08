@@ -145,7 +145,7 @@ using aabb_tree_query_fn = cf_aabb_tree_query_fn;
 using aabb_t = cf_aabb_t;
 using ray_t = cf_ray_t;
 
-CUTE_INLINE aabb_tree_t* make_aabb_tree(int initial_capacity = 0 = NULL) { return cf_make_aabb_tree(initial_capacity); }
+CUTE_INLINE aabb_tree_t* make_aabb_tree(int initial_capacity = 0) { return cf_make_aabb_tree(initial_capacity); }
 CUTE_INLINE aabb_tree_t* make_aabb_tree_from_memory(const void* buffer, size_t size = NULL) { return cf_make_aabb_tree_from_memory(buffer, size); }
 CUTE_INLINE void destroy_aabb_tree(aabb_tree_t* tree) { cf_destroy_aabb_tree(tree); }
 CUTE_INLINE leaf_t aabb_tree_insert(aabb_tree_t* tree, aabb_t aabb, void* udata = NULL) { return cf_aabb_tree_insert(tree, aabb, udata); }

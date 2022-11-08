@@ -28,7 +28,7 @@ int test_png_cache()
 	cf_file_system_init(NULL);
 	cf_file_system_mount(cf_file_system_get_base_dir(), "", true);
 
-	cf_png_cache_t* cache = cf_make_png_cache(NULL);
+	cf_png_cache_t* cache = cf_make_png_cache();
 
 	cf_png_t white;
 	cf_png_t black;
@@ -53,8 +53,8 @@ int test_png_cache()
 
 	const cf_animation_t* anims[] = { blink_anim, white_anim, black_anim };
 
-	cf_make_png_cache_animation_table(cache, "blink", anims, CUTE_ARRAY_SIZE(anims));
-	cf_sprite_t sprite = cf_make_png_cache_sprite(cache, "blink", NULL);
+	const animation_t** table = cf_make_png_cache_animation_table(cache, "blink", anims, CUTE_ARRAY_SIZE(anims));
+	cf_sprite_t sprite = cf_make_png_cache_sprite(cache, "blink", table);
 
 	cf_sprite_play(&sprite, "blink");
 	CUTE_TEST_CHECK_POINTER(sprite.animations);

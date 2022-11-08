@@ -114,8 +114,9 @@ int test_string_macros_advanced()
 	sclear(a);
 	sclear(b);
 	sset(a, "dup me ok?");
-	b = sdup(a);
-	CUTE_TEST_ASSERT(sequ(a, b));
+	const char* dup_a = sdup(a);
+	CUTE_TEST_ASSERT(sequ(a, dup_a) && a != b);
+	sfree(dup_a);
 	sset(a, "TeStInG cAsE");
 	sset(b, "tEsTiNg CaSe");
 	CUTE_TEST_ASSERT(siequ(a, b));
@@ -149,6 +150,7 @@ int test_string_macros_advanced()
 	CUTE_TEST_ASSERT(sequ(a, "xxpad mexxx"));
 	CUTE_TEST_ASSERT(slen(a) == CUTE_STRLEN("xxpad mexxx"));
 	sset(a, "split.here");
+	sfree(b);
 	b = ssplit_once(a, '.');
 	CUTE_TEST_ASSERT(sequ(a, "here"));
 	CUTE_TEST_ASSERT(slen(a) == CUTE_STRLEN("here"));
@@ -168,7 +170,6 @@ int test_string_macros_advanced()
 		sfree(c[i]);
 	}
 	afree(c);
-	CUTE_TEST_ASSERT(sequ(a, "loop"));
 	sset(a, "012330");
 	CUTE_TEST_ASSERT(sfirst_index_of(a, '0') == 0);
 	CUTE_TEST_ASSERT(sfirst_index_of(a, '1') == 1);
@@ -264,5 +265,22 @@ int test_string_interning()
 	CUTE_TEST_ASSERT(!sivalid(c));
 	sfree(a);
 	sfree(b);
+	return 0;
+}
+
+CUTE_TEST_CASE(test_dictionary_and_interning, "Run dictionary<T> API and sintern API");
+int test_dictionary_and_interning()
+{
+	dictionary<const char*, int> h;
+	const char* a = "test 1";
+	const char* b = "test 2";
+	const char* ia = sintern(a);
+	const char* ib = sintern(b);
+	h.insert(ia, 2);
+	h.insert(ib, 3);
+	auto find_ptr = h.find(ia);
+	CUTE_TEST_ASSERT(find_ptr && *find_ptr == 2);
+	find_ptr = h.find(ib);
+	CUTE_TEST_ASSERT(find_ptr && *find_ptr == 3);
 	return 0;
 }

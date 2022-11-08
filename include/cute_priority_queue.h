@@ -28,6 +28,9 @@
 
 #include "cute_array.h"
 
+namespace cute
+{
+
 /**
  * Implements a heap data structure in order to implement other more advanced algorithms within Cute Framework,
  * such as A* or branch-and-bound for the AABB tree.
@@ -36,7 +39,7 @@
  */
 
 template <typename T>
-struct cf_priority_queue
+struct priority_queue
 {
 	void push_min(const T& val, float cost);
 	bool pop_min(T* val = NULL, float* cost = NULL);
@@ -60,7 +63,7 @@ private:
 // -------------------------------------------------------------------------------------------------
 
 template <typename T>
-void cf_priority_queue<T>::push_min(const T& val, float cost)
+void priority_queue<T>::push_min(const T& val, float cost)
 {
 	m_values.add(val);
 	m_costs.add(cost);
@@ -73,7 +76,7 @@ void cf_priority_queue<T>::push_min(const T& val, float cost)
 }
 
 template <typename T>
-bool cf_priority_queue<T>::pop_min(T* val, float* cost)
+bool priority_queue<T>::pop_min(T* val, float* cost)
 {
 	int count = m_values.count();
 	if (!count) return false;
@@ -103,7 +106,7 @@ bool cf_priority_queue<T>::pop_min(T* val, float* cost)
 }
 
 template <typename T>
-void cf_priority_queue<T>::push_max(const T& val, float cost)
+void priority_queue<T>::push_max(const T& val, float cost)
 {
 	m_values.add(val);
 	m_costs.add(cost);
@@ -116,7 +119,7 @@ void cf_priority_queue<T>::push_max(const T& val, float cost)
 }
 
 template <typename T>
-bool cf_priority_queue<T>::pop_max(T* val, float* cost)
+bool priority_queue<T>::pop_max(T* val, float* cost)
 {
 	int count = m_values.count();
 	if (!count) return false;
@@ -146,26 +149,26 @@ bool cf_priority_queue<T>::pop_max(T* val, float* cost)
 }
 
 template <typename T>
-int cf_priority_queue<T>::count()
+int priority_queue<T>::count()
 {
 	return m_values.count();
 }
 
 template <typename T>
-int cf_priority_queue<T>::count() const
+int priority_queue<T>::count() const
 {
 	return m_values.count();
 }
 
 template <typename T>
-void cf_priority_queue<T>::clear()
+void priority_queue<T>::clear()
 {
 	m_values.clear();
 	m_costs.clear();
 }
 
 template <typename T>
-int cf_priority_queue<T>::predicate_min(int iA, int iB)
+int priority_queue<T>::predicate_min(int iA, int iB)
 {
 	float costA = m_costs[iA];
 	float costB = m_costs[iB];
@@ -173,7 +176,7 @@ int cf_priority_queue<T>::predicate_min(int iA, int iB)
 }
 
 template <typename T>
-int cf_priority_queue<T>::predicate_max(int iA, int iB)
+int priority_queue<T>::predicate_max(int iA, int iB)
 {
 	float costA = m_costs[iA];
 	float costB = m_costs[iB];
@@ -181,7 +184,7 @@ int cf_priority_queue<T>::predicate_max(int iA, int iB)
 }
 
 template <typename T>
-void cf_priority_queue<T>::swap(int iA, int iB)
+void priority_queue<T>::swap(int iA, int iB)
 {
 	T tval = m_values[iA];
 	m_values[iA] = m_values[iB];
@@ -191,11 +194,6 @@ void cf_priority_queue<T>::swap(int iA, int iB)
 	m_costs[iA] = m_costs[iB];
 	m_costs[iB] = fval;
 }
-
-namespace cute
-{
-
-template<typename T> using priority_queue = cf_priority_queue<T>;
 
 }
 

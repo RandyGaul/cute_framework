@@ -72,7 +72,6 @@ struct cf_typeless_array
 	int m_capacity = 0;
 	int m_count = 0;
 	void* m_items = NULL;
-	void* m_mem_ctx = NULL;
 };
 
 namespace cute 

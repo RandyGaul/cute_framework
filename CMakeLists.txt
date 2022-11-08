@@ -90,13 +90,11 @@ set(CUTE_SRCS
 	src/cute_hashtable.cpp
 	src/cute_ecs.cpp
 	src/cute_string.cpp
-	src/cute_string_utils.cpp
 	src/cute_typeless_array.cpp
 	src/cute_math.cpp
 	src/cute_batch.cpp
 	src/cute_window.cpp
 	src/cute_image.cpp
-	src/cute_font.cpp
 	src/cute_gfx.cpp
 	src/cute_aseprite_cache.cpp
 	src/cute_png_cache.cpp
@@ -151,7 +149,6 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_hashtable.h
 	include/cute_ecs.h
 	include/cute_string.h
-	include/cute_string_utils.h
 	include/cute_typeless_array.h
 	include/cute_defer.h
 	include/cute_math.h
@@ -161,7 +158,6 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_debug_printf.h
 	include/cute_image.h
 	include/cute_color.h
-	include/cute_font.h
 	include/cute.h
 	include/cute_gfx.h
 	include/cute_rnd.h
@@ -208,7 +204,6 @@ set(CUTE_HDRS
 	src/internal/cute_app_internal.h
 	src/internal/cute_audio_internal.h
 	src/internal/cute_file_system_internal.h
-	src/internal/cute_font_internal.h
 	src/internal/cute_input_internal.h
 	src/internal/cute_serialize_internal.h
 	src/internal/cute_ecs_internal.h

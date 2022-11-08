@@ -241,4 +241,17 @@ using remove_reference = cf_remove_reference<T>;
 
 #endif // CUTE_CPP
 
+// Not sure where to put this... Here is good I guess.
+CUTE_INLINE uint64_t cf_fnv1a(const void* data, int size)
+{
+	const char* s = (const char*)data;
+	uint64_t h = 14695981039346656037ULL;
+	char c = 0;
+	while (size--) {
+		h = h ^ (uint64_t)(*s++);
+		h = h * 1099511628211ULL;
+	}
+	return h;
+}
+
 #endif // CUTE_DEFINES_H

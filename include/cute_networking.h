@@ -99,34 +99,33 @@ CUTE_API void CUTE_CALL cf_crypto_sign_keygen(cf_crypto_sign_public_t* public_ke
  * new one and distribute it to your webservice and game servers.
  */
 CUTE_API cf_result_t CUTE_CALL cf_generate_connect_token(
-	uint64_t application_id,							// A unique number to identify your game, can be whatever value you like.
-														// This must be the same number as in `make_client` and `make_server`.
-	uint64_t creation_timestamp,						// A unix timestamp of the current time.
-	const cf_crypto_key_t* client_to_server_key,		// A unique key for this connect token for the client to encrypt packets, and server to
-														// decrypt packets. This can be generated with `crypto_generate_key` on your web service.
-	const cf_crypto_key_t* server_to_client_key,		// A unique key for this connect token for the server to encrypt packets, and the client to
-														// decrypt packets. This can be generated with `crypto_generate_key` on your web service.
-	uint64_t expiration_timestamp,						// A unix timestamp for when this connect token expires and becomes invalid.
-	uint32_t handshake_timeout,							// The number of seconds the connection will stay alive during the handshake process before
-														// the client and server reject the handshake process as failed.
-	int address_count,									// Must be from 1 to 32 (inclusive). The number of addresses in `address_list`.
-	const char** address_list,							// A list of game servers the client can try connecting to, of length `address_count`.
-	uint64_t client_id,									// The unique client identifier.
-	const uint8_t* user_data,							// Optional buffer of data of `CUTE_PROTOCOL_CONNECT_TOKEN_USER_DATA_SIZE` (256) bytes. Can be NULL.
-	const cf_crypto_sign_secret_t* shared_secret_key,	// Only your webservice and game servers know this key.
-	uint8_t* token_ptr_out								// Pointer to your buffer, should be `CUTE_CONNECT_TOKEN_SIZE` bytes large.
+	uint64_t application_id,                           // A unique number to identify your game, can be whatever value you like.
+	                                                   // This must be the same number as in `make_client` and `make_server`.
+	uint64_t creation_timestamp,                       // A unix timestamp of the current time.
+	const cf_crypto_key_t* client_to_server_key,       // A unique key for this connect token for the client to encrypt packets, and server to
+	                                                   // decrypt packets. This can be generated with `crypto_generate_key` on your web service.
+	const cf_crypto_key_t* server_to_client_key,       // A unique key for this connect token for the server to encrypt packets, and the client to
+	                                                   // decrypt packets. This can be generated with `crypto_generate_key` on your web service.
+	uint64_t expiration_timestamp,                     // A unix timestamp for when this connect token expires and becomes invalid.
+	uint32_t handshake_timeout,                        // The number of seconds the connection will stay alive during the handshake process before
+	                                                   // the client and server reject the handshake process as failed.
+	int address_count,                                 // Must be from 1 to 32 (inclusive). The number of addresses in `address_list`.
+	const char** address_list,                         // A list of game servers the client can try connecting to, of length `address_count`.
+	uint64_t client_id,                                // The unique client identifier.
+	const uint8_t* user_data,                          // Optional buffer of data of `CUTE_PROTOCOL_CONNECT_TOKEN_USER_DATA_SIZE` (256) bytes. Can be NULL.
+	const cf_crypto_sign_secret_t* shared_secret_key,  // Only your webservice and game servers know this key.
+	uint8_t* token_ptr_out                             // Pointer to your buffer, should be `CUTE_CONNECT_TOKEN_SIZE` bytes large.
 );
 
 //--------------------------------------------------------------------------------------------------
 // CLIENT
 
 CUTE_API cf_client_t* CUTE_CALL cf_make_client(
-	uint16_t port,							// Port for opening a UDP socket.
-	uint64_t application_id,				// A unique number to identify your game, can be whatever value you like.
-											// This must be the same number as in `server_create`.
-	bool use_ipv6 /*= false*/,				// Whether or not the socket should turn on ipv6. Some users will not have
-											// ipv6 enabled, so this defaults to false.
-	void* user_allocator_context /*= NULL*/ // Used for custom allocators, this can be set to NULL.
+	uint16_t port,             // Port for opening a UDP socket.
+	uint64_t application_id,   // A unique number to identify your game, can be whatever value you like.
+	                           // This must be the same number as in `server_create`.
+	bool use_ipv6 /*= false*/  // Whether or not the socket should turn on ipv6. Some users will not have
+	                           // ipv6 enabled, so this defaults to false.
 );
 CUTE_API void CUTE_CALL cf_destroy_client(cf_client_t* client);
 
@@ -195,18 +194,18 @@ CUTE_API void CUTE_CALL cf_client_enable_network_simulator(cf_client_t* client, 
 
 typedef struct cf_server_config_t
 {
-	uint64_t application_id;           // A unique number to identify your game, can be whatever value you like.
-									   // This must be the same number as in `client_make`.
+	uint64_t application_id;            // A unique number to identify your game, can be whatever value you like.
+	                                    // This must be the same number as in `client_make`.
 	int max_incoming_bytes_per_second;
 	int max_outgoing_bytes_per_second;
-	int connection_timeout;            // The number of seconds before consider a connection as timed out when not
-									   // receiving any packets on the connection.
-	double resend_rate;                // The number of seconds to wait before resending a packet that has not been
-									   // acknowledge as received by a client.
-	cf_crypto_sign_public_t public_key;   // The public part of your public key cryptography used for connect tokens.
-									   // This can be safely shared with your players publicly.
-	cf_crypto_sign_secret_t secret_key;   // The secret part of your public key cryptography used for connect tokens.
-									   // This must never be shared publicly and remain a complete secret only know to your servers.
+	int connection_timeout;             // The number of seconds before consider a connection as timed out when not
+	                                    // receiving any packets on the connection.
+	double resend_rate;                 // The number of seconds to wait before resending a packet that has not been
+	                                    // acknowledge as received by a client.
+	cf_crypto_sign_public_t public_key; // The public part of your public key cryptography used for connect tokens.
+	                                    // This can be safely shared with your players publicly.
+	cf_crypto_sign_secret_t secret_key; // The secret part of your public key cryptography used for connect tokens.
+	                                    // This must never be shared publicly and remain a complete secret only know to your servers.
 	void* user_allocator_context;
 } cf_server_config_t;
 
@@ -358,7 +357,7 @@ CUTE_INLINE result_t generate_connect_token(
 
 using client_state_t = cf_client_state_t;
 
-CUTE_INLINE client_t* make_client(uint16_t port, uint64_t application_id, bool use_ipv6 = false = NULL) { return cf_make_client(port,application_id,use_ipv6); }
+CUTE_INLINE client_t* make_client(uint16_t port, uint64_t application_id, bool use_ipv6 = false) { return cf_make_client(port,application_id,use_ipv6); }
 CUTE_INLINE void destroy_client(client_t* client) { cf_destroy_client(client); }
 CUTE_INLINE result_t client_connect(client_t* client, const uint8_t* connect_token) { return cf_client_connect(client,connect_token); }
 CUTE_INLINE void client_disconnect(client_t* client) { cf_client_disconnect(client); }

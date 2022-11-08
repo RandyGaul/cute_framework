@@ -26,7 +26,7 @@ using namespace cute;
 CUTE_TEST_CASE(test_circular_buffer_basic, "Typical use-case example, push and pull some data.");
 int test_circular_buffer_basic()
 {
-	cf_circular_buffer_t buffer = cf_make_circular_buffer(1024, NULL);
+	cf_circular_buffer_t buffer = cf_make_circular_buffer(1024);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	const char* the_data = "Here's some data.";
@@ -47,7 +47,7 @@ CUTE_TEST_CASE(test_circular_buffer_fill_up_and_empty, "Fill up the buffer and e
 int test_circular_buffer_fill_up_and_empty()
 {
 	int bytes = 10;
-	cf_circular_buffer_t buffer = cf_make_circular_buffer(bytes, NULL);
+	cf_circular_buffer_t buffer = cf_make_circular_buffer(bytes);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	for (int iters = 0; iters < 5; ++iters) {
@@ -72,7 +72,7 @@ CUTE_TEST_CASE(test_circular_buffer_overflow, "Attempt to push too much data to 
 int test_circular_buffer_overflow()
 {
 	int bytes = 10;
-	cf_circular_buffer_t buffer = cf_make_circular_buffer(bytes, NULL);
+	cf_circular_buffer_t buffer = cf_make_circular_buffer(bytes);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	for (int i = 0; i < bytes; ++i) {
@@ -92,7 +92,7 @@ CUTE_TEST_CASE(test_circular_buffer_underflow, "Attempt to pull too many bytes f
 int test_circular_buffer_underflow()
 {
 	int bytes = 10;
-	cf_circular_buffer_t buffer = cf_make_circular_buffer(bytes, NULL);
+	cf_circular_buffer_t buffer = cf_make_circular_buffer(bytes);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	uint8_t byte = 0;
@@ -152,7 +152,7 @@ CUTE_TEST_CASE(test_circular_buffer_two_threads, "Run a producer and a consumer 
 int test_circular_buffer_two_threads()
 {
 	for (int iters = 0; iters < 10; ++iters) {
-		cf_circular_buffer_t buffer = cf_make_circular_buffer(sizeof(int) * 32, NULL);
+		cf_circular_buffer_t buffer = cf_make_circular_buffer(sizeof(int) * 32);
 		CUTE_TEST_CHECK_POINTER(buffer.data);
 
 		cf_thread_t* push = cf_thread_create(test_circular_buffer_two_threads_push, "thread push", &buffer);

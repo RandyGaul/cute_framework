@@ -72,7 +72,6 @@ typedef struct cf_animation_t
 
 CUTE_INLINE void cf_animation_add_frame(cf_animation_t* animation, cf_frame_t frame)
 {
-	afit(animation->frames, asize(animation->frames) + 1);
 	apush(animation->frames, frame);
 }
 
@@ -196,7 +195,7 @@ CUTE_INLINE void cf_sprite_reset(cf_sprite_t* sprite)
 
 CUTE_INLINE void cf_sprite_play(cf_sprite_t* sprite, const char* animation)
 {
-	sprite->animation = hfind(sprite->animations, animation);
+	sprite->animation = hfind(sprite->animations, sintern(animation));
 	CUTE_ASSERT(sprite->animation);
 	cf_sprite_reset(sprite);
 }

@@ -347,7 +347,7 @@ static void cf_s_sync_pip(cf_batch_t* b)
 
 cf_batch_t* cf_make_batch(cf_get_pixels_fn* get_pixels, void* get_pixels_udata)
 {
-	cf_batch_t* b = CUTE_NEW(cf_batch_t, cf_app->mem_ctx);
+	cf_batch_t* b = CUTE_NEW(cf_batch_t);
 	if (!b) return NULL;
 
 	b->projection = cf_matrix_identity();
@@ -395,7 +395,7 @@ cf_batch_t* cf_make_batch(cf_get_pixels_fn* get_pixels, void* get_pixels_udata)
 	config.lonely_buffer_count_till_flush = 0;
 
 	if (spritebatch_init(&b->sb, &config, b)) {
-		CUTE_FREE(b, cf_app->mem_ctx);
+		CUTE_FREE(b);
 		if (!b) return NULL;
 	}
 
@@ -410,7 +410,7 @@ void cf_destroy_batch(cf_batch_t* b)
 {
 	spritebatch_term(&b->sb);
 	b->~cf_batch_t();
-	CUTE_FREE(b, b->mem_ctx);
+	CUTE_FREE(b);
 }
 
 cf_result_t cf_batch_set_GPU_buffer_configuration(cf_batch_t* b, size_t size_of_one_buffer)

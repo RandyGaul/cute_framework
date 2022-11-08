@@ -113,7 +113,7 @@ cf_result_t do_serialize(cf_kv_t* kv, thing_t* thing)
 CUTE_TEST_CASE(test_kv_basic, "Fairly comprehensive test for basic kv to and from buffer.");
 int test_kv_basic()
 {
-	cf_kv_t* kv = cf_make_kv(NULL);
+	cf_kv_t* kv = cf_make_kv();
 	cf_kv_write_mode(kv);
 
 	thing_t thing;
@@ -190,7 +190,7 @@ int test_kv_std_string_to_disk()
 	const char* s1 = "Alice in Wonderland.";
 	size_t s1_len = CUTE_STRLEN(s1);
 
-	cf_kv_t* kv = cf_make_kv(NULL);
+	cf_kv_t* kv = cf_make_kv();
 	cf_kv_write_mode(kv);
 
 	cf_kv_key(kv, "book_title", NULL);
@@ -221,7 +221,7 @@ int test_kv_std_string_from_disk()
 	std::string s1 = "Alice in Wonderland.";
 	size_t s1_len = s1.length();
 
-	cf_kv_t* kv = cf_make_kv(NULL);
+	cf_kv_t* kv = cf_make_kv();
 	cf_kv_write_mode(kv);
 
 	cf_kv_key(kv, "book_title", NULL);
@@ -246,7 +246,7 @@ int test_kv_std_string_from_disk()
 CUTE_TEST_CASE(test_kv_std_vector, "Testing kv utility for std::vector support.");
 int test_kv_std_vector()
 {
-	cf_kv_t* kv = cf_make_kv(NULL);
+	cf_kv_t* kv = cf_make_kv();
 	cf_kv_write_mode(kv);
 
 	std::vector<int> v;
@@ -286,8 +286,8 @@ int test_kv_std_vector()
 CUTE_TEST_CASE(test_kv_write_delta_basic, "Writing keys and values with base delta.");
 int test_kv_write_delta_basic()
 {
-	cf_kv_t* kv = cf_make_kv(NULL);
-	cf_kv_t* base = cf_make_kv(NULL);
+	cf_kv_t* kv = cf_make_kv();
+	cf_kv_t* base = cf_make_kv();
 
 	const char* text_base = CUTE_STRINGIZE(
 		a = 1,
@@ -329,8 +329,8 @@ int test_kv_write_delta_basic()
 CUTE_TEST_CASE(test_kv_read_delta_basic, "Reading keys and values with base delta.");
 int test_kv_read_delta_basic()
 {
-	cf_kv_t* kv = cf_make_kv(NULL);
-	cf_kv_t* base = cf_make_kv(NULL);
+	cf_kv_t* kv = cf_make_kv();
+	cf_kv_t* base = cf_make_kv();
 	
 	const char* text_base = CUTE_STRINGIZE(
 		a = 1,
@@ -372,10 +372,10 @@ int test_kv_read_delta_basic()
 CUTE_TEST_CASE(test_kv_write_delta_deep, "Writing keys and values with base hierarchy.");
 int test_kv_write_delta_deep()
 {
-	cf_kv_t* kv = cf_make_kv(NULL);
-	cf_kv_t* base0 = cf_make_kv(NULL);
-	cf_kv_t* base1 = cf_make_kv(NULL);
-	cf_kv_t* base2 = cf_make_kv(NULL);
+	cf_kv_t* kv = cf_make_kv();
+	cf_kv_t* base0 = cf_make_kv();
+	cf_kv_t* base1 = cf_make_kv();
+	cf_kv_t* base2 = cf_make_kv();
 
 	const char* text_base0 = CUTE_STRINGIZE(
 		a = 1.0,
@@ -463,10 +463,10 @@ int test_kv_write_delta_deep()
 CUTE_TEST_CASE(test_kv_read_delta_deep, "Reading keys and values with base hierarchy.");
 int test_kv_read_delta_deep()
 {
-	cf_kv_t* kv = cf_make_kv(NULL);
-	cf_kv_t* base0 = cf_make_kv(NULL);
-	cf_kv_t* base1 = cf_make_kv(NULL);
-	cf_kv_t* base2 = cf_make_kv(NULL);
+	cf_kv_t* kv = cf_make_kv();
+	cf_kv_t* base0 = cf_make_kv();
+	cf_kv_t* base1 = cf_make_kv();
+	cf_kv_t* base2 = cf_make_kv();
 
 	const char* text_base0 = CUTE_STRINGIZE(
 		a = 1.0,
@@ -536,8 +536,8 @@ int test_kv_read_delta_deep()
 CUTE_TEST_CASE(test_kv_read_delta_array, "Reading an array with a delta.");
 int test_kv_read_delta_array()
 {
-	cf_kv_t* kv = cf_make_kv(NULL);
-	cf_kv_t* base = cf_make_kv(NULL);
+	cf_kv_t* kv = cf_make_kv();
+	cf_kv_t* base = cf_make_kv();
 
 	const char* base_text = CUTE_STRINGIZE(
 		a = [3] {
@@ -591,7 +591,7 @@ int test_kv_read_and_write_delta_blob()
 	size_t blob0_size = CUTE_STRLEN(blob0) + 1;
 	size_t blob1_size = CUTE_STRLEN(blob0) + 1;
 
-	cf_kv_t* writer0 = cf_make_kv(NULL);
+	cf_kv_t* writer0 = cf_make_kv();
 	cf_kv_write_mode(writer0);
 	cf_kv_key(writer0, "a", NULL);
 	cf_kv_val_blob(writer0, (void*)blob0, 0, &blob0_size);
@@ -599,14 +599,14 @@ int test_kv_read_and_write_delta_blob()
 	cf_kv_val_blob(writer0, (void*)blob0, 0, &blob0_size);
 	cf_kv_nul_terminate(writer0);
 	
-	cf_kv_t* writer1 = cf_make_kv(NULL);
+	cf_kv_t* writer1 = cf_make_kv();
 	cf_kv_write_mode(writer1);
 	cf_kv_key(writer1, "b", NULL);
 	cf_kv_val_blob(writer1, (void*)blob1, 0, &blob1_size);
 	cf_kv_nul_terminate(writer1);
 
-	cf_kv_t* kv = cf_make_kv(NULL);
-	cf_kv_t* base = cf_make_kv(NULL);
+	cf_kv_t* kv = cf_make_kv();
+	cf_kv_t* base = cf_make_kv();
 
 	const char* base_text = (const char*)cf_kv_get_buffer(writer0);
 	const char* text = (const char*)cf_kv_get_buffer(writer1);
@@ -639,8 +639,8 @@ int test_kv_read_and_write_delta_blob()
 CUTE_TEST_CASE(test_kv_read_delta_string, "Reading a string with a delta.");
 int test_kv_read_delta_string()
 {
-	cf_kv_t* kv = cf_make_kv(NULL);
-	cf_kv_t* base = cf_make_kv(NULL);
+	cf_kv_t* kv = cf_make_kv();
+	cf_kv_t* base = cf_make_kv();
 
 	const char* base_text = CUTE_STRINGIZE(
 		a = "a",
@@ -726,8 +726,8 @@ int test_kv_read_delta_object()
 		}
 	);
 
-	cf_kv_t* kv = cf_make_kv(NULL);
-	cf_kv_t* base = cf_make_kv(NULL);
+	cf_kv_t* kv = cf_make_kv();
+	cf_kv_t* base = cf_make_kv();
 	cf_result_t err = cf_kv_parse(base, base_text, CUTE_STRLEN(base_text));
 	if (cf_is_error(err)) return -1;
 	err = cf_kv_parse(kv, text, CUTE_STRLEN(text));

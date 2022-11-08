@@ -36,10 +36,10 @@ cf_result_t cf_image_load_png(const char* path, cf_image_t* img)
 {
 	void* data;
 	size_t sz;
-	cf_result_t err = cf_file_system_read_entire_file_to_memory(path, &data, &sz, NULL);
+	cf_result_t err = cf_file_system_read_entire_file_to_memory(path, &data, &sz);
 	if (cf_is_error(err)) return err;
 	err = cf_image_load_png_mem(data, (int)sz, img);
-	CUTE_FREE(data, NULL);
+	CUTE_FREE(data);
 	return err;
 }
 
@@ -61,14 +61,14 @@ cf_result_t cf_image_load_png_wh(const void* data, int size, int* w, int* h)
 
 void cf_image_free(cf_image_t* img)
 {
-	CUTE_FREE(img->pix, NULL);
+	CUTE_FREE(img->pix);
 }
 
 cf_result_t cf_image_load_png_indexed(const char* path, cf_image_indexed_t* img)
 {
 	void* data;
 	size_t sz;
-	cf_result_t err = cf_file_system_read_entire_file_to_memory(path, &data, &sz, NULL);
+	cf_result_t err = cf_file_system_read_entire_file_to_memory(path, &data, &sz);
 	if (cf_is_error(err)) return err;
 	return cf_image_load_png_mem_indexed(data, (int)sz, img);
 }
@@ -87,7 +87,7 @@ cf_result_t cf_image_load_png_mem_indexed(const void* data, int size, cf_image_i
 
 void cf_image_free_indexed(cf_image_indexed_t* img)
 {
-	CUTE_FREE(img->pix, NULL);
+	CUTE_FREE(img->pix);
 }
 
 cf_image_t cf_image_depallete(cf_image_indexed_t* indexed_img)

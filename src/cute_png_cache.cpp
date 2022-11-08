@@ -39,9 +39,9 @@ static void cf_s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, 
 	}
 }
 
-cf_png_cache_t* cf_make_png_cache(void* mem_ctx)
+cf_png_cache_t* cf_make_png_cache()
 {
-	cf_png_cache_t* cache = CUTE_NEW(cf_png_cache_t, cf_app->mem_ctx);
+	cf_png_cache_t* cache = CUTE_NEW(cf_png_cache_t);
 	return cache;
 }
 
@@ -65,7 +65,7 @@ void cf_destroy_png_cache(cf_png_cache_t* cache)
 	}
 	afree(cache->pngs);
 
-	CUTE_FREE(cache, NULL);
+	CUTE_FREE(cache);
 }
 
 cf_result_t cf_png_cache_load(cf_png_cache_t* cache, const char* png_path, cf_png_t* png)
@@ -124,12 +124,16 @@ const cf_animation_t* cf_make_png_cache_animation(cf_png_cache_t* cache, const c
 	name = sintern(name);
 
 	// If already made, just return the old animation.
-	cf_animation_t* animation = hget(cache->animations, name);
-	if (animation) return animation;
+	cf_animation_t* animation = NULL;
+	if (cache->animations) {
+		animation = hget(cache->animations, name);
+		if (animation) return animation;
+	}
 
 	// Otherwise allocate a new animation.
-	animation = (cf_animation_t*)CUTE_ALLOC(sizeof(cf_animation_t), cache->mem_ctx);
+	animation = (cf_animation_t*)CUTE_ALLOC(sizeof(cf_animation_t));
 	CUTE_MEMSET(animation, 0, sizeof(cf_animation_t));
+	animation->name = name;
 	hadd(cache->animations, name, animation);
 
 	for (int i = 0; i < pngs_count; ++i) {
@@ -152,8 +156,11 @@ const cf_animation_t** cf_make_png_cache_animation_table(cf_png_cache_t* cache, 
 	sprite_name = sintern(sprite_name);
 
 	// If already made, just return the old table.
-	cf_animation_t** table = hget(cache->animation_tables, sprite_name);
-	if (table) return table;
+	cf_animation_t** table = NULL;
+	if (cache->animation_tables) {
+		table = hget(cache->animation_tables, sprite_name);
+		if (table) return (const cf_animation_t**)table;
+	}
 
 	// Otherwise allocate a new table entry.
 	for (int i = 0; i < animations_count; ++i) {
@@ -161,18 +168,17 @@ const cf_animation_t** cf_make_png_cache_animation_table(cf_png_cache_t* cache, 
 	}
 	hset(cache->animation_tables, sprite_name, table);
 
-	return table;
+	return (const cf_animation_t**)table;
 }
 
 const cf_animation_t** cf_png_cache_get_animation_table(cf_png_cache_t* cache, const char* sprite_name)
 {
-	 return hget(cache->animation_tables, sintern(sprite_name));
+	 return (const cf_animation_t**)hget(cache->animation_tables, sintern(sprite_name));
 }
 
 cf_sprite_t cf_make_png_cache_sprite(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_t** table)
 {
 	sprite_name = sintern(sprite_name);
-	cf_animation_t** table = hget(cache->animation_tables, sprite_name);
 	CUTE_ASSERT(table);
 
 	cf_png_t png = hget(cache->pngs, table[0]->frames[0].id);

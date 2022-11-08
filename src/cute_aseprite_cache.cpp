@@ -24,75 +24,65 @@
 #include <cute_debug_printf.h>
 #include <cute_file_system.h>
 #include <cute_defer.h>
-#include <cute_strpool.h>
 
 #include <internal/cute_app_internal.h>
 
 #define CUTE_ASEPRITE_IMPLEMENTATION
 #include <cute/cute_aseprite.h>
 
-#define INJECT(s) cf_strpool_inject_len(cache->strpool, s, (int)CUTE_STRLEN(s))
-
 using namespace cute;
 
 struct aseprite_cache_entry_t
 {
-	cf_strpool_id path;
-	ase_t* ase;
-	cf_animation_table_t* animations;
-	cf_v2 local_offset;
+	const char* path = NULL;
+	ase_t* ase = NULL;
+	animation_t** animations = NULL;
+	cf_v2 local_offset = V2(0, 0);
 };
 
 struct cf_aseprite_cache_t
 {
-	cf_dictionary<cf_strpool_id, aseprite_cache_entry_t> aseprites;
-	cf_dictionary<uint64_t, void*> id_to_pixels;
+	dictionary<const char*, aseprite_cache_entry_t> aseprites;
+	dictionary<uint64_t, void*> id_to_pixels;
 	uint64_t id_gen = 0;
-	cf_strpool_t* strpool = NULL;
-	void* mem_ctx = NULL;
 };
 
 static void cf_s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata)
 {
 	cf_aseprite_cache_t* cache = (cf_aseprite_cache_t*)udata;
-	void* pixels = NULL;
-	if (cf_is_error(cache->id_to_pixels.find(image_id, &pixels))) {
+	auto pixels_ptr = cache->id_to_pixels.find(image_id);
+	if (!pixels_ptr) {
 		CUTE_DEBUG_PRINTF("Aseprite cache -- unable to find id %lld.", (long long int)image_id);
 		CUTE_MEMSET(buffer, 0, bytes_to_fill);
 	} else {
+		void* pixels = *pixels_ptr;
 		CUTE_MEMCPY(buffer, pixels, bytes_to_fill);
 	}
 }
 
-cf_aseprite_cache_t* cf_make_aseprite_cache(void* mem_ctx)
+cf_aseprite_cache_t* cf_make_aseprite_cache()
 {
 	cf_aseprite_cache_t* cache = CUTE_NEW(cf_aseprite_cache_t);
-	cache->strpool = cf_make_strpool(NULL);
-	cache->mem_ctx = mem_ctx;
 	return cache;
 }
 
 void cf_destroy_aseprite_cache(cf_aseprite_cache_t* cache)
 {
-	cf_destroy_strpool(cache->strpool);
 	int count = cache->aseprites.count();
 	aseprite_cache_entry_t* entries = cache->aseprites.items();
 	for (int i = 0; i < count; ++i) 
 	{
 		aseprite_cache_entry_t* entry = entries + i;
-		int animation_count = cf_hashtable_count(entry->animations);
-		cf_animation_t** animations = (cf_animation_t**)cf_hashtable_items(entry->animations);
+		int animation_count = hcount(entry->animations);
 		for (int j = 0; j < animation_count; ++j)
 		{
-			cf_animation_cleanup(animations[j], cache->mem_ctx);
-			CUTE_FREE(animations[j], cache->mem_ctx);
+			afree(entry->animations[j]->frames);
+			CUTE_FREE(entry->animations[j]);
 		}
 
-		cf_animation_table_cleanup(entry->animations, cache->mem_ctx);
-		CUTE_FREE(entry->animations, cache->mem_ctx);
+		hfree(entry->animations);
 		cute_aseprite_free(entry->ase);
 	}
-	void* mem_ctx = cache->mem_ctx;
 	cache->~cf_aseprite_cache_t();
 	CUTE_FREE(cache);
 }
@@ -109,41 +99,39 @@ static cf_play_direction_t cf_s_play_direction(ase_animation_direction_t directi
 
 static void cf_s_sprite(cf_aseprite_cache_t* cache, aseprite_cache_entry_t entry, cf_sprite_t* sprite)
 {
-	sprite->name = cf_strpool_cstr(cache->strpool, entry.path);
-	sprite->animations = entry.animations;
+	sprite->name = entry.path;
+	sprite->animations = (const animation_t**)entry.animations;
 	sprite->w = entry.ase->w;
 	sprite->h = entry.ase->h;
 	sprite->local_offset = entry.local_offset;
 	if (entry.ase->tag_count == 0) {
 		cf_sprite_play(sprite, "default");
 	} else {
-		cf_sprite_play(sprite, (const char*)cf_animation_table_keys(sprite->animations)[0].data);
+		cf_sprite_play(sprite, sprite->animations[0]->name);
 	}
 }
 
 cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* aseprite_path, cf_sprite_t* sprite)
 {
 	// First see if this ase was already cached.
-	cf_strpool_id path = INJECT(aseprite_path);
-	aseprite_cache_entry_t entry;
-	if (!cf_is_error(cache->aseprites.find(path, &entry))) {
-		cf_s_sprite(cache, entry, sprite);
+	aseprite_path = sintern(aseprite_path);
+	auto entry_ptr = cache->aseprites.find(aseprite_path);
+	if (entry_ptr) {
+		cf_s_sprite(cache, *entry_ptr, sprite);
 		return cf_result_success();
 	}
 
 	// Load the aseprite file.
 	void* data = NULL;
 	size_t sz = 0;
-	cf_file_system_read_entire_file_to_memory(aseprite_path, &data, &sz, NULL);
+	cf_file_system_read_entire_file_to_memory(aseprite_path, &data, &sz);
 	if (!data) return cf_result_error("Unable to open ase file at `aseprite_path`.");
-	CUTE_DEFER(CUTE_FREE(data, cache->mem_ctx));
-	ase_t* ase = cute_aseprite_load_from_memory(data, (int)sz, cache->mem_ctx);
+	CUTE_DEFER(CUTE_FREE(data));
+	ase_t* ase = cute_aseprite_load_from_memory(data, (int)sz, NULL);
 	if (!ase) return cf_result_error("Unable to open ase file at `aseprite_path`.");
 
 	// Allocate internal cache data structure entries.
-	cf_animation_table_t* animations = (cf_animation_table_t*)CUTE_ALLOC(sizeof(cf_animation_table_t), cache->mem_ctx);
-	cf_animation_table_init(animations, cache->mem_ctx);
-
+	animation_t** animations = NULL;
 	array<uint64_t> ids;
 	ids.ensure_capacity(ase->frame_count);
 
@@ -178,10 +166,10 @@ cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepr
 			ase_tag_t* tag = ase->tags + i;
 			int from = tag->from_frame;
 			int to = tag->to_frame;
-			cf_animation_t* animation = (cf_animation_t*)CUTE_ALLOC(sizeof(cf_animation_t), cache->mem_ctx);
+			cf_animation_t* animation = (cf_animation_t*)CUTE_ALLOC(sizeof(cf_animation_t));
 			CUTE_MEMSET(animation, 0, sizeof(cf_animation_t));
 
-			animation->name = tag->name;
+			animation->name = sintern(tag->name);
 			animation->play_direction = cf_s_play_direction(tag->loop_animation_direction);
 			for (int i = from; i <= to; ++i) {
 				uint64_t id = ids[i];
@@ -190,14 +178,14 @@ cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepr
 				frame.id = id;
 				cf_animation_add_frame(animation, frame);
 			}
-			cf_animation_table_insert(animations, animation->name, animation);
+			hadd(animations, animation->name, animation);
 		}
 	} else {
 		// Treat the entire frame set as a single animation if there are no tags.
-		cf_animation_t* animation = (cf_animation_t*)CUTE_ALLOC(sizeof(cf_animation_t), cache->mem_ctx);
+		cf_animation_t* animation = (cf_animation_t*)CUTE_ALLOC(sizeof(cf_animation_t));
 		CUTE_MEMSET(animation, 0, sizeof(cf_animation_t));
 
-		animation->name = "default";
+		animation->name = sintern("default");
 		animation->play_direction = CF_PLAY_DIRECTION_FORWARDS;
 		for (int i = 0; i < ase->frame_count; ++i) {
 			uint64_t id = ids[i];
@@ -206,12 +194,12 @@ cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepr
 			frame.id = id;
 			cf_animation_add_frame(animation, frame);
 		}
-		cf_animation_table_insert(animations, animation->name, animation);
+		hadd(animations, animation->name, animation);
 	}
 
 	// Look for slice information to define the sprite's local offset.
 	// The slice named "origin"'s center is used to define the local offset.
-	entry.local_offset = cf_V2(0, 0);
+	aseprite_cache_entry_t entry;
 	for (int i = 0; i < ase->slice_count; ++i) {
 		ase_slice_t* slice = ase->slices + i;
 		if (!CUTE_STRCMP(slice->name, "origin")) {
@@ -229,10 +217,10 @@ cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepr
 	}
 
 	// Cache the ase and animation.
-	entry.path = path;
+	entry.path = aseprite_path;
 	entry.ase = ase;
 	entry.animations = animations;
-	cache->aseprites.insert(path, entry);
+	cache->aseprites.insert(aseprite_path, entry);
 
 	cf_s_sprite(cache, entry, sprite);
 	return cf_result_success();
@@ -240,50 +228,41 @@ cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepr
 
 void cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, const char* aseprite_path)
 {
-	cf_strpool_id path = INJECT(aseprite_path);
-	aseprite_cache_entry_t entry;
-	if (cf_is_error(cache->aseprites.find(path, &entry))) return;
+	aseprite_path = sintern(aseprite_path);
+	auto entry_ptr = cache->aseprites.find(aseprite_path);
+	if (!entry_ptr) return;
 	
-	int animation_count = cf_animation_table_count(entry.animations);
-	const cf_animation_t** animations = cf_animation_table_items(entry.animations);
-
-	for (int i = 0; i < animation_count; ++i) {
-		cf_animation_t* animation = (cf_animation_t*)animations[i];
-		for (int j = 0; j < animation->frames_count; ++j) {
+	aseprite_cache_entry_t entry = *entry_ptr;
+	for (int i = 0; i < hcount(entry.animations); ++i) {
+		cf_animation_t* animation = entry.animations[i];
+		for (int j = 0; j < alen(animation->frames); ++j) {
 			cache->id_to_pixels.remove(animation->frames[j].id);
 		}
 
-		cf_animation_cleanup(animation, cache->mem_ctx);
-		CUTE_FREE(animation, cache->mem_ctx);
+		afree(animation->frames);
+		CUTE_FREE(animation);
 	}
 
-	cf_animation_table_cleanup(entry.animations, cache->mem_ctx);
-	CUTE_FREE(entry.animations, cache->mem_ctx);
-	cache->aseprites.remove(path);
+	hfree(entry.animations);
+	cache->aseprites.remove(aseprite_path);
 }
 
 cf_result_t cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase)
 {
+	aseprite_path = sintern(aseprite_path);
 	cf_sprite_t s;
 	cf_result_t err = cf_aseprite_cache_load(cache, aseprite_path, &s);
 	if (cf_is_error(err)) return err;
 
-	cf_strpool_id path = INJECT(aseprite_path);
-	aseprite_cache_entry_t entry;
-	if (!cf_is_error(cache->aseprites.find(path, &entry))) {
-		*ase = entry.ase;
+	auto entry_ptr = cache->aseprites.find(aseprite_path);
+	if (!entry_ptr) return cf_result_error("Unable to load aseprite.");
+	else {
+		*ase = entry_ptr->ase;
 		return cf_result_success();
-	} else {
-		return cf_result_error("Unable to load aseprite.");
 	}
 }
 
 cf_get_pixels_fn* cf_aseprite_cache_get_pixels_fn(cf_aseprite_cache_t* cache)
 {
 	return cf_s_get_pixels;
-}
-
-cf_strpool_t* cf_aseprite_cache_get_strpool_ptr(cf_aseprite_cache_t* cache)
-{
-	return cache->strpool;
 }

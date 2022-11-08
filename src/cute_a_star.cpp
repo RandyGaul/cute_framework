@@ -25,6 +25,8 @@
 #include <cute_priority_queue.h>
 #include <float.h>
 
+using namespace cute;
+
 struct cf_iv2
 {
 	int x, y;
@@ -46,7 +48,7 @@ struct cf_a_star_grid_t
 	int h = 0;
 	const int* cells = NULL;
 	array<cf_node_t> nodes;
-	cf_priority_queue<cf_node_t*> open_list;
+	priority_queue<cf_node_t*> open_list;
 
 	void reset()
 	{
@@ -78,7 +80,7 @@ static float cf_internal_s_heuristic(cf_iv2 a, cf_iv2 b, float allow_diagonals)
 
 const cf_a_star_grid_t* cf_make_a_star_grid(int w, int h, const int* cells)
 {
-	cf_a_star_grid_t* grid = CUTE_NEW(cf_a_star_grid_t, NULL);
+	cf_a_star_grid_t* grid = CUTE_NEW(cf_a_star_grid_t);
 	grid->w = w;
 	grid->h = h;
 	grid->cells = cells;
@@ -89,7 +91,7 @@ const cf_a_star_grid_t* cf_make_a_star_grid(int w, int h, const int* cells)
 void cf_destroy_a_star_grid(cf_a_star_grid_t* grid)
 {
 	grid->~cf_a_star_grid_t();
-	CUTE_FREE(grid, NULL);
+	CUTE_FREE(grid);
 }
 
 
@@ -107,7 +109,7 @@ bool a_star(const a_star_grid_t* const_grid, const a_star_input_t* input, a_star
 {
 	cf_a_star_grid_t* grid = (cf_a_star_grid_t*)const_grid;
 	grid->reset();
-	cf_priority_queue<cf_node_t*>& open_list = grid->open_list;
+	priority_queue<cf_node_t*>& open_list = grid->open_list;
 	cf_iv2 s = { input->start_x, input->start_y };
 	cf_iv2 e = { input->end_x, input->end_y };
 	bool allow_diagonal_movement = input->allow_diagonal_movement;
@@ -230,6 +232,6 @@ bool cf_a_star(const cf_a_star_grid_t* const_grid, const cf_a_star_input_t* inpu
 
 CUTE_API void CUTE_CALL cf_free_a_star_output(cf_a_star_output_t* output)
 {
-	CUTE_FREE((void*)output->x, NULL);
-	CUTE_FREE((void*)output->y, NULL);
+	CUTE_FREE((void*)output->x);
+	CUTE_FREE((void*)output->y);
 }

@@ -30,8 +30,8 @@ static cf_aseprite_cache_t* cf_s_ase_cache()
 {
 	if (!cf_app->ase_batch) {
 		CUTE_ASSERT(!cf_app->ase_cache);
-		cf_app->ase_cache = cf_make_aseprite_cache(cf_app->mem_ctx);
-		cf_app->ase_batch = cf_make_batch(cf_aseprite_cache_get_pixels_fn(cf_app->ase_cache), cf_app->ase_cache, cf_app->mem_ctx);
+		cf_app->ase_cache = cf_make_aseprite_cache();
+		cf_app->ase_batch = cf_make_batch(cf_aseprite_cache_get_pixels_fn(cf_app->ase_cache), cf_app->ase_cache);
 		cf_batch_set_projection(cf_app->ase_batch, cf_matrix_ortho_2d((float)cf_app->offscreen_w, (float)cf_app->offscreen_h, 0, 0));
 	}
 	return cf_app->ase_cache;
@@ -46,8 +46,8 @@ static cf_png_cache_t* cf_s_png_cache()
 {
 	if (!cf_app->png_batch) {
 		CUTE_ASSERT(!cf_app->png_cache);
-		cf_app->png_cache = cf_make_png_cache(cf_app->mem_ctx);
-		cf_app->png_batch = cf_make_batch(cf_png_cache_get_pixels_fn(cf_app->png_cache), cf_app->png_cache, cf_app->mem_ctx);
+		cf_app->png_cache = cf_make_png_cache();
+		cf_app->png_batch = cf_make_batch(cf_png_cache_get_pixels_fn(cf_app->png_cache), cf_app->png_cache);
 		cf_batch_set_projection(cf_app->png_batch, cf_matrix_ortho_2d((float)cf_app->offscreen_w, (float)cf_app->offscreen_h, 0, 0));
 	}
 	return cf_app->png_cache;

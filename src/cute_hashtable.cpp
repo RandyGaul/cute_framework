@@ -47,6 +47,12 @@ static CUTE_INLINE int s_next_prime(int a)
 	return s_primes[i];
 }
 
+static CUTE_INLINE void* s_get_item(const cf_hhdr_t* table, int index)
+{
+	uint8_t* items = (uint8_t*)table->items_data;
+	return items + index * table->item_size;
+}
+
 void* cf_hmake(int key_size, int item_size, int capacity)
 {
 	CUTE_ASSERT(capacity);
@@ -59,9 +65,8 @@ void* cf_hmake(int key_size, int item_size, int capacity)
 	// Space is made for a zero'd out "hidden item" to represent failed lookups.
 	// This is critical to support return-by-value polymorphism in the C macro API for `hget` and `hfind`.
 	// We also "pass" in values to `hadd` through this space.
+	table->hidden_item = (void*)((uintptr_t)(table + 1));
 	table->items_data = (void*)((uintptr_t)(table + 1) + item_size);
-	CUTE_MEMSET(table + 1, 0, item_size);
-
 	table->slot_capacity = s_next_prime(capacity);
 	table->slots = (cf_hslot_t*)CUTE_CALLOC(table->slot_capacity * sizeof(cf_hslot_t));
 	table->item_capacity = capacity;
@@ -70,7 +75,7 @@ void* cf_hmake(int key_size, int item_size, int capacity)
 	table->temp_key = CUTE_ALLOC(key_size);
 	table->temp_item = CUTE_ALLOC(item_size);
 
-	return table + 1;
+	return s_get_item(table, 0);
 }
 
 void cf_hfree(cf_hhdr_t* table)
@@ -93,12 +98,6 @@ static CUTE_INLINE void* s_get_key(const cf_hhdr_t* table, int index)
 {
 	uint8_t* keys = (uint8_t*)table->items_key;
 	return keys + index * table->key_size;
-}
-
-static CUTE_INLINE void* s_get_item(const cf_hhdr_t* table, int index)
-{
-	uint8_t* items = (uint8_t*)table->items_data;
-	return items + index * table->item_size;
 }
 
 static int s_find_slot(const cf_hhdr_t *table, const void* key)
@@ -167,6 +166,7 @@ static void s_expand_items(cf_hhdr_t* table)
 	int capacity = table->item_capacity * 2;
 	table = (cf_hhdr_t*)CUTE_REALLOC(table, sizeof(cf_hhdr_t) + (capacity + 1) * table->item_size);
 	table->item_capacity = capacity;
+	table->hidden_item = (void*)((uintptr_t)(table + 1));
 	table->items_data = (void*)((uintptr_t)(table + 1) + table->item_size);
 	table->items_key = CUTE_REALLOC(table->items_key, capacity * table->key_size);
 	table->items_slot_index = (int*)CUTE_REALLOC(table->items_slot_index, capacity * sizeof(*table->items_slot_index));
@@ -215,13 +215,17 @@ int cf_hinsert2(cf_hhdr_t* table, const void* key, const void* item)
 	if (item) CUTE_MEMCPY(item_dst, item, table->item_size);
 	CUTE_MEMCPY(key_dst, key, table->key_size);
 	table->items_slot_index[table->count] = slot;
-	return ++table->count;
+	return table->count++;
+}
+
+int cf_hinsert3(cf_hhdr_t* table, const void* key)
+{
+	return cf_hinsert2(table, key, table->hidden_item);
 }
 
 int cf_hinsert(cf_hhdr_t* table, uint64_t key)
 {
-	const void* item = (const void*)(table + 1);
-	return cf_hinsert2(table, &key, item);
+	return cf_hinsert2(table, &key, table->hidden_item);
 }
 
 void cf_hdel2(cf_hhdr_t* table, const void* key)
@@ -267,7 +271,12 @@ void cf_hclear(cf_hhdr_t* table)
 int cf_hfind2(const cf_hhdr_t* table, const void* key)
 {
 	int slot = s_find_slot(table, key);
-	if (slot < 0) return -1;
+	if (slot < 0) {
+		// We will be "returning" a zero'd out item through `hget` with this
+		// hidden item.
+		CUTE_MEMSET(table->hidden_item, 0, table->item_size);
+		return -1;
+	}
 	int index = table->slots[slot].item_index;
 	return index;
 }

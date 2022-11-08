@@ -36,9 +36,6 @@
 #include <cute_string.h>
 
 #include <internal/cute_object_table_internal.h>
-#include <internal/cute_font_internal.h>
-
-#include <cute/cute_font.h>
 
 #include <sokol/sokol_gfx_imgui.h>
 
@@ -131,16 +128,35 @@ struct cf_entity_config_t
 	{
 		entity_type = NULL;
 		component_types.clear();
-		sclear(schema);
+		schema.clear();
 	}
 
 	const char* entity_type = NULL;
 	cute::array<const char*> component_types;
-	char* schema = NULL;
+	cute::string_t schema;
 };
 
 using cf_entity_type_t = uint16_t;
 #define CF_INVALID_ENTITY_TYPE ((uint16_t)~0)
+
+struct cf_ecs_arrays_t
+{
+	int count = 0;
+	cf_handle_t* entities = NULL;
+	cute::array<const char*> types = NULL;
+	cute::array<cf_typeless_array>* ptrs;
+
+	void* find_components(const char* type)
+	{
+		type = sintern(type);
+		for (int i = 0; i < count; ++i) {
+			if (types[i] == type) {
+				return (*ptrs)[i].data();
+			}
+		}
+		return NULL;
+	}
+};
 
 struct cf_app_t
 {
@@ -153,13 +169,6 @@ struct cf_app_t
 	bool spawned_mix_thread = false;
 	cf_threadpool_t* threadpool = NULL;
 	cf_audio_system_t* audio_system = NULL;
-	cute_font_t* courier_new = NULL;
-	cute::array<cute_font_vert_t> font_verts;
-	sg_shader font_shader;
-	sg_pipeline font_pip;
-	cf_buffer_t font_buffer;
-	font_vs_params_t font_vs_uniforms;
-	font_fs_params_t font_fs_uniforms;
 	bool gfx_enabled = false;
 	sg_context_desc gfx_ctx_params;
 	int w;
@@ -211,6 +220,7 @@ struct cf_app_t
 	cute::array<cf_entity_t> delayed_destroy_entities;
 	cute::array<cf_entity_t> delayed_deactivate_entities;
 	cute::array<cf_entity_t> delayed_activate_entities;
+	cf_ecs_arrays_t ecs_arrays;
 
 	cf_component_config_t component_config_builder;
 	cute::dictionary<const char*, cf_component_config_t> component_configs;

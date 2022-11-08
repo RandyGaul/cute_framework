@@ -59,7 +59,7 @@ typedef struct cf_png_cache_t cf_png_cache_t;
 /**
  * Constructs a new png cache. Destroy it with `cf_destroy_png_cache` when done with it.
  */
-CUTE_API cf_png_cache_t* CUTE_CALL cf_make_png_cache(void* mem_ctx /*= NULL*/);
+CUTE_API cf_png_cache_t* CUTE_CALL cf_make_png_cache();
 
 /**
  * Destroys a png cache previously made with `cf_make_png_cache`.
@@ -175,7 +175,7 @@ struct png_t : public cf_png_t
 	png_t(cf_png_t png) { *(cf_png_t*)this = png; }
 };
 
-CUTE_INLINE png_cache_t* make_png_cache(void* mem_ctx = NULL) { return cf_make_png_cache(mem_ctx); }
+CUTE_INLINE png_cache_t* make_png_cache() { return cf_make_png_cache(); }
 CUTE_INLINE void destroy_png_cache(png_cache_t* cache) { return cf_destroy_png_cache(cache); }
 CUTE_INLINE result_t png_cache_load(png_cache_t* cache, const char* png_path, png_t* png = NULL) { return cf_png_cache_load(cache, png_path, (cf_png_t*)png); }
 CUTE_INLINE result_t png_cache_load_mem(png_cache_t* cache, const char* png_path, const void* memory, size_t size, cf_png_t* png = NULL) { return cf_png_cache_load_mem(cache, png_path, memory, size, png); }

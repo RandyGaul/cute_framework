@@ -27,7 +27,6 @@
 
 #include <cute_string.h>
 #include <cute_alloc.h>
-#include <cute_strpool.h>
 
 #include <internal/cute_app_internal.h>
 
@@ -44,14 +43,14 @@ void* cf_agrow(const void* a, int new_size, size_t element_size)
 	cf_ahdr_t* hdr;
 	if (a) {
 		if (!AHDR(a)->is_static) {
-			hdr = (cf_ahdr_t*)CUTE_REALLOC(AHDR(a), total_size, NULL);
+			hdr = (cf_ahdr_t*)CUTE_REALLOC(AHDR(a), total_size);
 		} else {
-			hdr = (cf_ahdr_t*)CUTE_ALLOC(total_size, NULL);
+			hdr = (cf_ahdr_t*)CUTE_ALLOC(total_size);
 			hdr->size = asize(a);
 			hdr->cookie = ACOOKIE;
 		}
 	} else {
-		hdr = (cf_ahdr_t*)CUTE_ALLOC(total_size, NULL);
+		hdr = (cf_ahdr_t*)CUTE_ALLOC(total_size);
 		hdr->size = 0;
 		hdr->cookie = ACOOKIE;
 	}
@@ -86,23 +85,8 @@ void* cf_aset(const void* a, const void* b, size_t element_size)
 		a = cf_agrow(a, asize(b), element_size);
 	}
 	CUTE_MEMCPY((void*)a, b, asize(b) * element_size);
-	asize(a) = asize(b);
+	alen(a) = asize(b);
 	return (void*)a;
-}
-
-void* cf_areverse(const void* a)
-{
-	ACANARY(a);
-	T* a = m_ptr;
-	T* b = m_ptr + (asize(m_ptr) - 1);
-
-	while (a < b) {
-		T t = *a;
-		*a = *b;
-		*b = t;
-		++a;
-		--b;
-	}
 }
 
 char* cf_sset(char* a, const char* b)
@@ -153,7 +137,7 @@ char* cf_sfmt_append(char* s, const char* fmt, ...)
 		CUTE_ASSERT(n <= new_capacity);
 		va_end(args);
 	}
-	asize(s) += n - 1;
+	alen(s) += n - 1;
 	return s;
 }
 
@@ -178,16 +162,15 @@ char* cf_svfmt_append(char* s, const char* fmt, va_list args)
 	va_list copy_args;
 	va_copy(copy_args, args);
 	int capacity = scap(s) - ssize(s);
-	int n = 1 + vsnprintf(slast(s), capacity, fmt, args);
+	int n = 1 + vsnprintf(slast(s), capacity, fmt, copy_args);
+	va_end(copy_args);
 	if (n > capacity) {
 		afit(s, n + slen(s));
-		va_start(copy_args, fmt);
 		int new_capacity = scap(s) - ssize(s);
-		n = 1 + vsnprintf(slast(s), new_capacity, fmt, copy_args);
+		n = 1 + vsnprintf(slast(s), new_capacity, fmt, args);
 		CUTE_ASSERT(n <= new_capacity);
-		va_end(copy_args);
 	}
-	asize(s) += n - 1;
+	alen(s) += n - 1;
 	return s;
 }
 
@@ -336,15 +319,17 @@ char* cf_ssplit_once(char* s, char split_c)
 	return split;
 }
 
-char** cf_ssplit(char* s, char split_c)
+char** cf_ssplit(const char* s, char split_c)
 {
 	ACANARY(s);
-	char** result;
+	char* copy = NULL;
+	char** result = NULL;
 	char* split = NULL;
-	while ((split = ssplit_once(s, split_c))) {
+	sset(copy, s);
+	while ((split = ssplit_once(copy, split_c))) {
 		apush(result, split);
 	}
-	apush(result, s);
+	apush(result, copy);
 	return result;
 }
 
@@ -469,7 +454,7 @@ struct arena_t
 void* aligned_alloc(size_t size, size_t alignment)
 {
 	CUTE_ASSERT(alignment <= 256);
-	void* p = CUTE_ALLOC(size + alignment, NULL);
+	void* p = CUTE_ALLOC(size + alignment);
 	if (!p) return NULL;
 	size_t offset = (size_t)p & (alignment - 1);
 	p = CUTE_ALIGN_DOWN_PTR((char*)p + 1, alignment);
@@ -482,7 +467,7 @@ void aligned_free(void* p)
 {
 	if (!p) return;
 	size_t offset = (size_t)*((uint8_t*)p - 1);
-	CUTE_FREE((char*)p - (offset & 0xFF), NULL);
+	CUTE_FREE((char*)p - (offset & 0xFF));
 }
 
 void* arena_alloc(arena_t* arena, size_t size)
@@ -531,7 +516,7 @@ static intern_table_t* s_inst()
 	intern_table_t* inst = (intern_table_t*)cf_atomic_ptr_get((void**)&g_intern_table);
 	if (!inst) {
 		// Create a new instance of the table.
-		inst = (intern_table_t*)CUTE_ALLOC(sizeof(intern_table_t), NULL);
+		inst = (intern_table_t*)CUTE_ALLOC(sizeof(intern_table_t));
 		CUTE_MEMSET(inst, 0, sizeof(*inst));
 		inst->interns = NULL;
 		inst->arena.alignment = 8;
@@ -543,7 +528,7 @@ static intern_table_t* s_inst()
 		result_t result = cf_atomic_ptr_cas((void**)&g_intern_table, NULL, inst);
 		if (is_error(result)) {
 			cf_destroy_rw_lock(&inst->lock);
-			CUTE_FREE(inst, NULL);
+			CUTE_FREE(inst);
 			inst = (intern_table_t*)cf_atomic_ptr_get((void**)&g_intern_table);
 			CUTE_ASSERT(inst);
 		}
@@ -553,10 +538,15 @@ static intern_table_t* s_inst()
 
 const char* cf_sintern(const char* s)
 {
+	return cf_sintern_range(s, s + CUTE_STRLEN(s));
+}
+
+const char* cf_sintern_range(const char* start, const char* end)
+{
 	intern_table_t* table = s_inst();
 	intern_t* intern = NULL;
-	int len = (int)CUTE_STRLEN(s);
-	uint64_t hash = fnv1a(s, len);
+	int len = (int)(end - start);
+	uint64_t hash = fnv1a(start, len);
 
 	// Fast-path, fetch already intern'd strings and return them as-is.
 	// Uses a mere read-lock, which is just a couple atomic read operations
@@ -569,7 +559,7 @@ const char* cf_sintern(const char* s)
 			// This loop is highly unlikely to ever actually run more than one iteration.
 			intern_t* i = intern;
 			while (i) {
-				if (len == i->len && !CUTE_STRCMP(i->string, s)) {
+				if (len == i->len && !CUTE_STRNCMP(i->string, start, len)) {
 					return i->string;
 				}
 				i = i->next;
@@ -579,6 +569,7 @@ const char* cf_sintern(const char* s)
 
 	// String is not yet interned, create a new allocation for it.
 	// We write-lock the data structure, this will wait for all readers to flush.
+	CUTE_ASSERT(!intern || intern->cookie == INTERN_COOKIE);
 	intern_t* list = intern;
 	table->write_lock();
 	intern = (intern_t*)arena_alloc(&table->arena, sizeof(intern_t) + len + 1);
@@ -586,7 +577,8 @@ const char* cf_sintern(const char* s)
 	intern->cookie = INTERN_COOKIE;
 	intern->len = len;
 	intern->string = (char*)(intern + 1);
-	CUTE_STRCPY((char*)intern->string, s);
+	CUTE_MEMCPY((char*)intern->string, start, len);
+	((char*)intern->string)[len] = 0;
 	intern->next = list;
 	table->write_unlock();
 
@@ -603,7 +595,7 @@ void cf_snuke_intern_table()
 	arena_destroy(&table->arena);
 	hfree(table->interns);
 	cf_destroy_rw_lock(&table->lock);
-	CUTE_FREE(table, NULL);
+	CUTE_FREE(table);
 }
 
 int cf_utf8_size(int codepoint)

@@ -99,11 +99,10 @@ cf_result_t cf_generate_connect_token(
 cf_client_t* cf_make_client(
 	uint16_t port,
 	uint64_t application_id,
-	bool use_ipv6 /* = false */,
-	void* user_allocator_context /* = NULL */
+	bool use_ipv6 /* = false */
 )
 {
-	return cn_client_create(port, application_id, use_ipv6);
+	return cn_client_create(port, application_id, use_ipv6, NULL);
 }
 
 void cf_destroy_client(cf_client_t* client)

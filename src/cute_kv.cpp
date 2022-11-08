@@ -125,9 +125,11 @@ cf_kv_t* cf_make_kv()
 
 void cf_destroy_kv(cf_kv_t* kv)
 {
-	kv->~cf_kv_t();
-	CUTE_FREE(kv->temp);
-	CUTE_FREE(kv);
+	if (kv) {
+		CUTE_FREE(kv->temp);
+		kv->~cf_kv_t();
+		CUTE_FREE(kv);
+	}
 }
 
 static CUTE_INLINE void cf_s_push_array(cf_kv_t* kv, int in_array)

@@ -43,6 +43,8 @@
 #	include <Security/Security.h>
 #endif
 
+using namespace cute;
+
 /**
  * Represents the response from a server after a successful process loop via `https_process`, where the
  * status returned from `https_state` is `HTTPS_STATE_COMPLETED`.
@@ -137,7 +139,7 @@ struct cf_https_t
 
 cf_https_t* cf_https_make()
 {
-	cf_https_t* https = CUTE_NEW(cf_https_t, NULL);
+	cf_https_t* https = CUTE_NEW(cf_https_t);
 
 	mbedtls_net_init(&https->server_fd);
 	mbedtls_ssl_init(&https->ssl);
@@ -150,7 +152,7 @@ cf_https_t* cf_https_make()
 
 	if (mbedtls_ctr_drbg_seed(&https->ctr_drbg, mbedtls_entropy_func, &https->entropy, (const unsigned char*)seed, CUTE_STRLEN(seed))) {
 		https->~cf_https_t();
-		CUTE_FREE(https, NULL);
+		CUTE_FREE(https);
 		return NULL;
 	}
 
@@ -166,7 +168,7 @@ void cf_https_destroy(cf_https_t* https)
 	mbedtls_ctr_drbg_free(&https->ctr_drbg);
 	mbedtls_entropy_free(&https->entropy);
 	https->~cf_https_t();
-	CUTE_FREE(https, NULL);
+	CUTE_FREE(https);
 }
 
 static void cf_s_tls_log(void* param, int debug_level, const char* file_name, int line_number, const char*  message)

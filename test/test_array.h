@@ -23,12 +23,12 @@
 
 using namespace cute;
 
-static array<cf_string_t> cf_s_get_array_of_strings()
+static array<string_t> cf_s_get_array_of_strings()
 {
-	array<cf_string_t> b = {
-		"1",
-		"2",
-		"3",
+	array<string_t> b = {
+		"a",
+		"b",
+		"c",
 	};
 
 	return b;
@@ -37,11 +37,12 @@ static array<cf_string_t> cf_s_get_array_of_strings()
 CUTE_TEST_CASE(test_array_list_init, "Array list initializers and strings.");
 int test_array_list_init()
 {
-	array<cf_string_t> a = {
+	array<string_t> a = {
 		"Hello",
+		"Goodbye",
 	};
 
-	array<cf_string_t> b = {
+	array<string_t> b = {
 		"1",
 		"2",
 	};
@@ -50,20 +51,20 @@ int test_array_list_init()
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(b[0].c_str(), "1"));
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(b[1].c_str(), "2"));
 
-	array<array<cf_string_t>> c = {
-		b,
+	array<array<string_t>> c = {
+		a,
 		b
 	};
 
-	CUTE_TEST_ASSERT(!CUTE_STRCMP(c[0][0].c_str(), "1"));
-	CUTE_TEST_ASSERT(!CUTE_STRCMP(c[0][1].c_str(), "2"));
+	CUTE_TEST_ASSERT(!CUTE_STRCMP(c[0][0].c_str(), "Hello"));
+	CUTE_TEST_ASSERT(!CUTE_STRCMP(c[0][1].c_str(), "Goodbye"));
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(c[1][0].c_str(), "1"));
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(c[1][1].c_str(), "2"));
 
-	array<cf_string_t> d = cf_s_get_array_of_strings();
-	CUTE_TEST_ASSERT(!CUTE_STRCMP(d[0].c_str(), "1"));
-	CUTE_TEST_ASSERT(!CUTE_STRCMP(d[1].c_str(), "2"));
-	CUTE_TEST_ASSERT(!CUTE_STRCMP(d[2].c_str(), "3"));
+	array<string_t> d = cf_s_get_array_of_strings();
+	CUTE_TEST_ASSERT(!CUTE_STRCMP(d[0].c_str(), "a"));
+	CUTE_TEST_ASSERT(!CUTE_STRCMP(d[1].c_str(), "b"));
+	CUTE_TEST_ASSERT(!CUTE_STRCMP(d[2].c_str(), "c"));
 
 	return 0;
 }

@@ -2448,7 +2448,7 @@ typedef struct sg_context_desc {
 */
 typedef struct sg_allocator {
     void* (*alloc)(size_t size, void* user_data);
-    void (*free)(void* ptr, void* user_data);
+    void (*sgfree)(void* ptr, void* user_data);
     void* user_data;
 } sg_allocator;
 
@@ -4311,8 +4311,8 @@ _SOKOL_PRIVATE void* _sg_malloc_clear(size_t size) {
 }
 
 _SOKOL_PRIVATE void _sg_free(void* ptr) {
-    if (_sg.desc.allocator.free) {
-        _sg.desc.allocator.free(ptr, _sg.desc.allocator.user_data);
+    if (_sg.desc.allocator.sgfree) {
+        _sg.desc.allocator.sgfree(ptr, _sg.desc.allocator.user_data);
     }
     else {
         free(ptr);
@@ -15208,7 +15208,7 @@ _SOKOL_PRIVATE sg_desc _sg_desc_defaults(const sg_desc* desc) {
 SOKOL_API_IMPL void sg_setup(const sg_desc* desc) {
     SOKOL_ASSERT(desc);
     SOKOL_ASSERT((desc->_start_canary == 0) && (desc->_end_canary == 0));
-    SOKOL_ASSERT((desc->allocator.alloc && desc->allocator.free) || (!desc->allocator.alloc && !desc->allocator.free));
+    SOKOL_ASSERT((desc->allocator.alloc && desc->allocator.sgfree) || (!desc->allocator.alloc && !desc->allocator.sgfree));
     _SG_CLEAR_ARC_STRUCT(_sg_state_t, _sg);
     _sg.desc = _sg_desc_defaults(desc);
     _sg_setup_pools(&_sg.pools, &_sg.desc);

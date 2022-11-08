@@ -29,22 +29,20 @@ cf_typeless_array::cf_typeless_array()
 
 cf_typeless_array::cf_typeless_array(size_t element_size)
 	: m_element_size(element_size)
-	, m_mem_ctx(user_allocator_context)
 {
 }
 
 cf_typeless_array::cf_typeless_array(size_t element_size, int capacity)
 	: m_element_size(element_size)
 	, m_capacity(capacity)
-	, m_mem_ctx(user_allocator_context)
 {
-	m_items = CUTE_ALLOC(m_element_size, m_mem_ctx);
+	m_items = CUTE_ALLOC(m_element_size);
 	CUTE_ASSERT(m_items);
 }
 
 cf_typeless_array::~cf_typeless_array()
 {
-	CUTE_FREE(m_items, m_mem_ctx);
+	CUTE_FREE(m_items);
 }
 
 void* cf_typeless_array::add()
@@ -141,10 +139,10 @@ void cf_typeless_array::ensure_capacity(int num_elements)
 		}
 
 		size_t new_size = m_element_size * new_capacity;
-		void* new_items = CUTE_ALLOC(new_size, m_mem_ctx);
+		void* new_items = CUTE_ALLOC(new_size);
 		CUTE_ASSERT(new_items);
 		CUTE_MEMCPY(new_items, m_items, m_element_size * m_count);
-		CUTE_FREE(m_items, m_mem_ctx);
+		CUTE_FREE(m_items);
 		m_items = new_items;
 		m_capacity = new_capacity;
 	}
@@ -156,7 +154,6 @@ void cf_typeless_array::steal_from(cf_typeless_array* steal_from_me)
 	m_capacity = steal_from_me->m_capacity;
 	m_count = steal_from_me->m_count;
 	m_items = steal_from_me->m_items;
-	m_mem_ctx = steal_from_me->m_mem_ctx;
 	CUTE_PLACEMENT_NEW(steal_from_me) cf_typeless_array();
 }
 

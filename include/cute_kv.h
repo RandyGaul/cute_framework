@@ -39,7 +39,7 @@ extern "C" {
  */
 typedef struct cf_kv_t cf_kv_t;
 
-CUTE_API cf_kv_t* CUTE_CALL cf_make_kv(void* user_allocator_context /*= NULL*/);
+CUTE_API cf_kv_t* CUTE_CALL cf_make_kv();
 CUTE_API void CUTE_CALL cf_destroy_kv(cf_kv_t* kv);
 
 #define CF_KV_STATE_DEFS \
@@ -187,7 +187,7 @@ enum kv_type_t : int
 	#undef CF_ENUM
 };
 
-CUTE_INLINE kv_t* make_kv(void* user_allocator_context = NULL) { return cf_make_kv(user_allocator_context); }
+CUTE_INLINE kv_t* make_kv() { return cf_make_kv(); }
 CUTE_INLINE void destroy_kv(kv_t* kv) { cf_destroy_kv(kv); }
 CUTE_INLINE kv_state_t kv_get_state(kv_t* kv) { return (kv_state_t)cf_kv_get_state(kv); }
 CUTE_INLINE result_t kv_parse(kv_t* kv, const void* data, size_t size) { return cf_kv_parse(kv, data, size); }

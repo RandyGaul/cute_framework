@@ -57,7 +57,8 @@ typedef struct cf_handle_table_t
 
 	CUTE_INLINE cf_handle_table_t(int initial_capacity = 0)
 		: m_alloc(cf_make_handle_allocator(initial_capacity))
-	{}
+	{
+	}
 
 	CUTE_INLINE ~cf_handle_table_t()
 	{

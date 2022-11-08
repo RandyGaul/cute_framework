@@ -26,8 +26,11 @@
 
 #ifdef CUTE_CPP
 
-#include "cute_dictionary.h"
+#include "cute_hashtable.h"
 #include "cute_doubly_list.h"
+
+namespace cute
+{
 
 /**
  * Implements a least-recently-used cache. Not particularly well tested. This is here to
@@ -38,10 +41,10 @@
  */
 
 template <typename K, typename T>
-struct cf_lru_cache
+struct lru_cache
 {
-	cf_lru_cache(int capacity);
-	~cf_lru_cache();
+	lru_cache(int capacity);
+	~lru_cache();
 
 	T* mru();
 	T* lru();
@@ -72,7 +75,7 @@ private:
 	int m_capacity;
 	int m_count;
 	cf_list_t m_list;
-	cf_dictionary<K, entry_t> m_entries;
+	dictionary<K, entry_t> m_entries;
 
 	void update(cf_list_node_t* node);
 };
@@ -80,7 +83,7 @@ private:
 // -------------------------------------------------------------------------------------------------
 
 template <typename K, typename T>
-cf_lru_cache<K, T>::cf_lru_cache(int capacity)
+lru_cache<K, T>::lru_cache(int capacity)
 	: m_capacity(capacity)
 	, m_count(0)
 	, m_entries(capacity)
@@ -89,11 +92,11 @@ cf_lru_cache<K, T>::cf_lru_cache(int capacity)
 }
 
 template <typename K, typename T>
-cf_lru_cache<K, T>::~cf_lru_cache()
+lru_cache<K, T>::~lru_cache()
 {}
 
 template <typename K, typename T>
-T* cf_lru_cache<K, T>::mru()
+T* lru_cache<K, T>::mru()
 {
 	if (m_count) {
 		cf_list_node_t* mru = cf_list_front(&m_list);
@@ -104,7 +107,7 @@ T* cf_lru_cache<K, T>::mru()
 }
 
 template <typename K, typename T>
-T* cf_lru_cache<K, T>::lru()
+T* lru_cache<K, T>::lru()
 {
 	if (m_count) {
 		cf_list_node_t* lru = cf_list_back(&m_list);
@@ -115,7 +118,7 @@ T* cf_lru_cache<K, T>::lru()
 }
 
 template <typename K, typename T>
-T* cf_lru_cache<K, T>::find(const K& key)
+T* lru_cache<K, T>::find(const K& key)
 {
 	entry_t* entry = m_entries.find(key);
 	if (!entry) return NULL;
@@ -124,7 +127,7 @@ T* cf_lru_cache<K, T>::find(const K& key)
 }
 
 template <typename K, typename T>
-cf_result_t cf_lru_cache<K, T>::find(const K& key, T* val_out)
+cf_result_t lru_cache<K, T>::find(const K& key, T* val_out)
 {
 	entry_t* entry = m_entries.find(key);
 	if (!entry) cf_result_error("Unable to find dictionary entry.");
@@ -134,7 +137,7 @@ cf_result_t cf_lru_cache<K, T>::find(const K& key, T* val_out)
 }
 
 template <typename K, typename T>
-T* cf_lru_cache<K, T>::insert(const K& key)
+T* lru_cache<K, T>::insert(const K& key)
 {
 	if (m_count < m_capacity) {
 		m_count++;
@@ -153,7 +156,7 @@ T* cf_lru_cache<K, T>::insert(const K& key)
 }
 
 template <typename K, typename T>
-T* cf_lru_cache<K, T>::insert(const K& key, const T& val)
+T* lru_cache<K, T>::insert(const K& key, const T& val)
 {
 	if (m_count < m_capacity) {
 		m_count++;
@@ -173,7 +176,7 @@ T* cf_lru_cache<K, T>::insert(const K& key, const T& val)
 }
 
 template <typename K, typename T>
-void cf_lru_cache<K, T>::remove(const K& key)
+void lru_cache<K, T>::remove(const K& key)
 {
 	entry_t* entry = m_entries.find(key);
 	if (entry) {
@@ -185,7 +188,7 @@ void cf_lru_cache<K, T>::remove(const K& key)
 }
 
 template <typename K, typename T>
-void cf_lru_cache<K, T>::clear()
+void lru_cache<K, T>::clear()
 {
 	m_count = 0;
 	cf_list_init(&m_list);
@@ -193,32 +196,32 @@ void cf_lru_cache<K, T>::clear()
 }
 
 template <typename K, typename T>
-int cf_lru_cache<K, T>::count() const
+int lru_cache<K, T>::count() const
 {
 	return m_count;
 }
 
 template <typename K, typename T>
-cf_list_t* cf_lru_cache<K, T>::list()
+cf_list_t* lru_cache<K, T>::list()
 {
 	return &m_list;
 }
 
 template <typename K, typename T>
-const cf_list_t* cf_lru_cache<K, T>::list() const
+const cf_list_t* lru_cache<K, T>::list() const
 {
 	return &m_list;
 }
 
 template <typename K, typename T>
-T* cf_lru_cache<K, T>::node_to_item(cf_list_node_t* node)
+T* lru_cache<K, T>::node_to_item(cf_list_node_t* node)
 {
 	entry_t* entry = CUTE_LIST_HOST(entry_t, node, node);
 	return &entry->item;
 }
 
 template <typename K, typename T>
-const T* cf_lru_cache<K, T>::node_to_item(const cf_list_node_t* node)
+const T* lru_cache<K, T>::node_to_item(const cf_list_node_t* node)
 {
 	entry_t* entry = CUTE_LIST_HOST(entry_t, node, node);
 	return &entry->item;
@@ -227,16 +230,11 @@ const T* cf_lru_cache<K, T>::node_to_item(const cf_list_node_t* node)
 // -------------------------------------------------------------------------------------------------
 
 template <typename K, typename T>
-void cf_lru_cache<K, T>::update(cf_list_node_t* node)
+void lru_cache<K, T>::update(cf_list_node_t* node)
 {
 	cf_list_remove(node);
 	cf_list_push_front(&m_list, node);
 }
-
-namespace cute
-{
-
-template <typename K, typename T> using lru_cache = cf_lru_cache<K, T>;
 
 }
 
