@@ -58,7 +58,7 @@ void* cf_hashtable_make_impl(int key_size, int item_size, int capacity)
 	CUTE_ASSERT(capacity);
 
 	cf_hhdr_t* table = (cf_hhdr_t*)CUTE_CALLOC(sizeof(cf_hhdr_t) + (capacity + 1) * item_size);
-	table->cookie = HCOOKIE;
+	table->cookie = CF_HCOOKIE;
 	table->key_size = key_size;
 	table->item_size = item_size;
 

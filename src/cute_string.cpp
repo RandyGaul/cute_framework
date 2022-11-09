@@ -34,7 +34,7 @@ using namespace cute;
 
 char* cf_sset(char* a, const char* b)
 {
-	ACANARY(a);
+	CF_ACANARY(a);
 	int bsize = (int)(b ? CUTE_STRLEN(b) : 0) + 1;
 	if (!bsize) {
 		sclear(a);
@@ -43,13 +43,13 @@ char* cf_sset(char* a, const char* b)
 		a = (char*)cf_agrow(a, bsize, 1);
 	}
 	CUTE_MEMCPY((void*)a, b, bsize);
-	ssize(a) = bsize;
+	scount(a) = bsize;
 	return a;
 }
 
 char* cf_sfmt(char* s, const char* fmt, ...)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	va_list args;
 	va_start(args, fmt);
 	int n = 1 + vsnprintf(s, scap(s), fmt, args);
@@ -66,16 +66,16 @@ char* cf_sfmt(char* s, const char* fmt, ...)
 
 char* cf_sfmt_append(char* s, const char* fmt, ...)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	va_list args;
 	va_start(args, fmt);
-	int capacity = scap(s) - ssize(s);
+	int capacity = scap(s) - scount(s);
 	int n = 1 + vsnprintf(slast(s), capacity, fmt, args);
 	va_end(args);
 	if (n > capacity) {
 		afit(s, n + slen(s));
 		va_start(args, fmt);
-		int new_capacity = scap(s) - ssize(s);
+		int new_capacity = scap(s) - scount(s);
 		n = 1 + vsnprintf(slast(s), new_capacity, fmt, args);
 		CUTE_ASSERT(n <= new_capacity);
 		va_end(args);
@@ -86,7 +86,7 @@ char* cf_sfmt_append(char* s, const char* fmt, ...)
 
 char* cf_svfmt(char* s, const char* fmt, va_list args)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	va_list copy_args;
 	va_copy(copy_args, args);
 	int n = 1 + vsnprintf(s, scap(s), fmt, args);
@@ -101,15 +101,15 @@ char* cf_svfmt(char* s, const char* fmt, va_list args)
 
 char* cf_svfmt_append(char* s, const char* fmt, va_list args)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	va_list copy_args;
 	va_copy(copy_args, args);
-	int capacity = scap(s) - ssize(s);
+	int capacity = scap(s) - scount(s);
 	int n = 1 + vsnprintf(slast(s), capacity, fmt, copy_args);
 	va_end(copy_args);
 	if (n > capacity) {
 		afit(s, n + slen(s));
-		int new_capacity = scap(s) - ssize(s);
+		int new_capacity = scap(s) - scount(s);
 		n = 1 + vsnprintf(slast(s), new_capacity, fmt, args);
 		CUTE_ASSERT(n <= new_capacity);
 	}
@@ -119,7 +119,7 @@ char* cf_svfmt_append(char* s, const char* fmt, va_list args)
 
 bool cf_sprefix(char* s, const char* prefix)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	int prefix_len = (int)(prefix ? CUTE_STRLEN(prefix) : 0);
 	bool a = slen(s) >= prefix_len;
 	bool b = !CUTE_MEMCMP(s, prefix, prefix_len);
@@ -128,7 +128,7 @@ bool cf_sprefix(char* s, const char* prefix)
 
 bool cf_ssuffix(char* s, const char* suffix)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	int suffix_len = (int)(suffix ? CUTE_STRLEN(suffix) : 0);
 	bool a = slen(s) >= suffix_len;
 	bool b = !CUTE_MEMCMP(slast(s) - suffix_len, suffix, suffix_len);
@@ -137,7 +137,7 @@ bool cf_ssuffix(char* s, const char* suffix)
 
 void cf_stoupper(char* s)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	if (!s) return;
 	for (int i = 0; i < slen(s); ++i) {
 		s[i] = toupper(s[i]);
@@ -146,7 +146,7 @@ void cf_stoupper(char* s)
 
 void cf_stolower(char* s)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	if (!s) return;
 	for (int i = 0; i < slen(s); ++i) {
 		s[i] = tolower(s[i]);
@@ -155,31 +155,31 @@ void cf_stolower(char* s)
 
 char* cf_sappend(char* a, const char* b)
 {
-	ACANARY(a);
+	CF_ACANARY(a);
 	int blen = (int)CUTE_STRLEN(b);
 	if (blen <= 0) return a;
 	sfit(a, slen(a) + blen + 1);
 	CUTE_MEMCPY(a + slen(a), b, blen);
-	ssize(a) += blen;
+	scount(a) += blen;
 	a[slen(a)] = 0;
 	return a;
 }
 
 char* cf_sappend_range(char* a, const char* b, const char* b_end)
 {
-	ACANARY(a);
+	CF_ACANARY(a);
 	int blen = (int)(b_end - b);
 	if (blen <= 0) return a;
 	sfit(a, slen(a) + blen + 1);
 	CUTE_MEMCPY(a + slen(a), b, blen);
-	ssize(a) += blen;
+	scount(a) += blen;
 	a[slen(a)] = 0;
 	return a;
 }
 
 char* cf_strim(char* s)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	char* start = s;
 	char* end = slast(s) - 1;
 	while (isspace(*start)) start++;
@@ -187,25 +187,25 @@ char* cf_strim(char* s)
 	size_t len = end - start + 1;
 	CUTE_MEMMOVE(s, start, len);
 	s[len] = 0;
-	ssize(s) = (int)(len + 1);
+	scount(s) = (int)(len + 1);
 	return s;
 }
 
 char* cf_sltrim(char* s)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	char* start = s;
 	while (isspace(*start)) start++;
 	size_t len = slen(s) - (start - s);
 	CUTE_MEMMOVE(s, start, len);
 	s[len] = 0;
-	ssize(s) = (int)(len + 1);
+	scount(s) = (int)(len + 1);
 	return s;
 }
 
 char* cf_srtrim(char* s)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	while (isspace(*(slast(s) - 1))) scount(s)--;
 	s[slen(s)] = 0;
 	return s;
@@ -213,33 +213,33 @@ char* cf_srtrim(char* s)
 
 char* cf_slpad(char* s, char pad, int count)
 {
-	ACANARY(s);
-	int cap = scap(s) - ssize(s);
+	CF_ACANARY(s);
+	int cap = scap(s) - scount(s);
 	if (cap < count) {
-		sfit(s, ssize(s) + cap);
+		sfit(s, scount(s) + cap);
 	}
-	CUTE_MEMMOVE(s + count, s, ssize(s));
+	CUTE_MEMMOVE(s + count, s, scount(s));
 	CUTE_MEMSET(s, pad, count);
-	ssize(s) += count;
+	scount(s) += count;
 	return s;
 }
 
 char* cf_srpad(char* s, char pad, int count)
 {
-	ACANARY(s);
-	int cap = scap(s) - ssize(s);
+	CF_ACANARY(s);
+	int cap = scap(s) - scount(s);
 	if (cap < count) {
-		sfit(s, ssize(s) + cap);
+		sfit(s, scount(s) + cap);
 	}
 	CUTE_MEMSET(s + slen(s), pad, count);
-	ssize(s) += count;
+	scount(s) += count;
 	s[slen(s)] = 0;
 	return s;
 }
 
 char* cf_ssplit_once(char* s, char split_c)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	char* start = s;
 	char* end = slast(s) - 1;
 	while (start < end) {
@@ -252,19 +252,19 @@ char* cf_ssplit_once(char* s, char split_c)
 	if (len + 1 == slen(s)) return NULL;
 	char* split = NULL;
 	sfit(split, len + 1);
-	ssize(split) = len + 1;
+	scount(split) = len + 1;
 	CUTE_MEMCPY(split, s, len);
 	split[len] = 0;
 	int new_len = slen(s) - len - 1;
 	CUTE_MEMMOVE(s, s + len + 1, new_len);
-	ssize(s) = new_len + 1;
+	scount(s) = new_len + 1;
 	s[new_len] = 0;
 	return split;
 }
 
 char** cf_ssplit(const char* s, char split_c)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	char* copy = NULL;
 	char** result = NULL;
 	char* split = NULL;
@@ -278,7 +278,7 @@ char** cf_ssplit(const char* s, char split_c)
 
 int cf_sfirst_index_of(const char* s, char c)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	if (!s) return -1;
 	const char* p = CUTE_STRCHR(s, c);
 	if (!p) return -1;
@@ -287,7 +287,7 @@ int cf_sfirst_index_of(const char* s, char c)
 
 int cf_slast_index_of(const char* s, char c)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	if (!s) return -1;
 	const char* p = CUTE_STRRCHR(s, c);
 	if (!p) return -1;
@@ -341,24 +341,24 @@ uint64_t cf_stohex(const char* s)
 
 char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	size_t replace_len = CUTE_STRLEN(replace_me);
 	size_t with_len = CUTE_STRLEN(with_me);
 	char* start = s;
 	char* find;
 	while ((find = sfind(s, replace_me))) {
 		if (replace_len > with_len) {
-			int remaining = ssize(s) - (int)(s - start) - (int)with_len;
+			int remaining = scount(s) - (int)(s - start) - (int)with_len;
 			CUTE_MEMCPY(find, with_me, with_len);
 			CUTE_MEMMOVE(find + with_len, find + replace_len, remaining);
-			ssize(s) -= (int)(replace_len - with_len);
+			scount(s) -= (int)(replace_len - with_len);
 		} else {
-			int remaining = ssize(s) - (int)(s - start) - (int)replace_len;
+			int remaining = scount(s) - (int)(s - start) - (int)replace_len;
 			int diff = (int)(with_len - replace_len);
-			sfit(s, ssize(s) + diff);
+			sfit(s, scount(s) + diff);
 			CUTE_MEMMOVE(find + with_len, find + replace_len, remaining);
 			CUTE_MEMCPY(find, with_me, with_len);
-			ssize(s) += diff;
+			scount(s) += diff;
 		}
 	}
 	return s;
@@ -366,7 +366,7 @@ char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
 
 char* cf_serase(char* s, int index, int count)
 {
-	ACANARY(s);
+	CF_ACANARY(s);
 	if (index < 0) {
 		count += index;
 		index = 0;
@@ -374,13 +374,13 @@ char* cf_serase(char* s, int index, int count)
 	}
 	if (index >= slen(s)) return s;
 	if (index + count > slen(s)) {
-		ssize(s) = index;
+		scount(s) = index;
 		s[slen(s)] = 0;
 		return s;
 	} else {
-		int remaining = ssize(s) - count;
+		int remaining = scount(s) - count;
 		CUTE_MEMMOVE(s + index, s + index + count, remaining);
-		ssize(s) -= count;
+		scount(s) -= count;
 	}
 	return s;
 }

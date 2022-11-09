@@ -39,7 +39,7 @@
 #define spush(s, ch) do { if (!s) apush(s, ch); else s[slen(s)] = ch; apush(s, 0); } while (0)
 #define sfree(s) afree(s)
 #define ssize(s) acount(s)
-#define scount(s) acount(s)
+#define scount(s) alen(s)
 #define scap(s) acap(s)
 #define slast(s) (s + slen(s))
 #define sclear(s) aclear(s)
@@ -177,12 +177,12 @@ struct string_t
 {
 	CUTE_INLINE string_t() { s_static(); }
 	CUTE_INLINE string_t(const char* s) { s_static(); sset(m_str, s); }
-	CUTE_INLINE string_t(const char* start, const char* end) { s_static(); int length = (int)(end - start); sfit(m_str, length); CUTE_STRNCPY(m_str, start, length); ssize(m_str) = length + 1; }
+	CUTE_INLINE string_t(const char* start, const char* end) { s_static(); int length = (int)(end - start); sfit(m_str, length); CUTE_STRNCPY(m_str, start, length); CF_AHDR(m_str)->size = length + 1; }
 	CUTE_INLINE string_t(const string_t& s) { s_static(); sset(m_str, s); }
-	CUTE_INLINE string_t(string_t&& s) { if (AHDR(s.m_str)->is_static) { s_static(); sset(m_str, s); } else { m_str = s.m_str; } s.m_str = NULL; }
+	CUTE_INLINE string_t(string_t&& s) { if (CF_AHDR(s.m_str)->is_static) { s_static(); sset(m_str, s); } else { m_str = s.m_str; } s.m_str = NULL; }
 	CUTE_INLINE ~string_t() { sfree(m_str); }
 
-	CUTE_INLINE static string_t steal_from(char* c_api_string) { ACANARY(c_api_string); string_t r; r.m_str = c_api_string; return r; }
+	CUTE_INLINE static string_t steal_from(char* c_api_string) { CF_ACANARY(c_api_string); string_t r; r.m_str = c_api_string; return r; }
 	CUTE_INLINE static string_t from(int i) { string_t r; sint(r.m_str, i); return r; }
 	CUTE_INLINE static string_t from(uint64_t uint) { string_t r; suint(r.m_str, uint); return r; }
 	CUTE_INLINE static string_t from(float f) { string_t r; sfloat(r.m_str, f); return r; }

@@ -33,25 +33,25 @@
 extern "C" {
 #endif // __cplusplus
 
-#define HHDR(h) (((cf_hhdr_t*)(h - 1) - 1)) // Converts pointer from the user-array to table header.
-#define HCOOKIE 0xE6F7E359 // Magic number used for sanity/type checks.
-#define HCANARY(h) (h ? CUTE_ASSERT(HHDR(h)->cookie == HCOOKIE) : 0) // Sanity/type check.
+#define CF_HHDR(h) (((cf_hhdr_t*)(h - 1) - 1)) // Converts pointer from the user-array to table header.
+#define CF_HCOOKIE 0xE6F7E359 // Magic number used for sanity/type checks.
+#define CF_HCANARY(h) (h ? CUTE_ASSERT(CF_HHDR(h)->cookie == CF_HCOOKIE) : 0) // Sanity/type check.
 
-#define cf_hashtable_set(h, k, ...) ((h) ? (h) : (*(void**)&(h) = cf_hashtable_make_impl(sizeof(uint64_t), sizeof(*(h)), 16)), HCANARY(h), h[-1] = (__VA_ARGS__), *(void**)&(h) = cf_hashtable_insert_impl(HHDR(h), (uint64_t)k), h + HHDR(h)->return_index)
-#define cf_hashtable_add(h, k, ...) hset(h, k, (__VA_ARGS__))
-#define cf_hashtable_get(h, k) ((h)[cf_hashtable_find_impl(HHDR(h), (uint64_t)k)])
-#define cf_hashtable_find(h, k) hget(h, k)
-#define cf_hashtable_get_ptr(h, k) (cf_hashtable_find_impl(HHDR(h), (uint64_t)k), HHDR(h)->return_index < 0 ? NULL : (h) + HHDR(h)->return_index)
-#define cf_hashtable_find_ptr(h, k) hget_ptr(h, k)
-#define cf_hashtable_has(h, k) (h ? cf_hashtable_remove_impl(HHDR(h), (uint64_t)k) : NULL)
-#define cf_hashtable_del(h, k) (h ? cf_hashtable_remove_impl(HHDR(h), (uint64_t)k) : 0)
-#define cf_hashtable_clear(h) (HCANARY(h), cf_hashtable_clear_impl(HHDR(h)))
-#define cf_hashtable_keys(h) (HCANARY(h), h ? (const uint64_t*)cf_hashtable_keys_impl(HHDR(h))) : (const uint64_t*)NULL)
-#define cf_hashtable_items(h) (HCANARY(h), h)
-#define cf_hashtable_swap(h, index_a, index_b) (HCANARY(h), cf_hashtable_swap_impl(HHDR(h), index_a, index_b))
-#define cf_hashtable_size(h) (h ? cf_hashtable_count_impl(HHDR(h)) : 0)
-#define cf_hashtable_count(h) hsize(h)
-#define cf_hashtable_free(h) do { HCANARY(h); if (h) cf_hashtable_free_impl(HHDR(h)); h = NULL; } while (0)
+#define cf_hashtable_set(h, k, ...) ((h) ? (h) : (*(void**)&(h) = cf_hashtable_make_impl(sizeof(uint64_t), sizeof(*(h)), 16)), CF_HCANARY(h), h[-1] = (__VA_ARGS__), *(void**)&(h) = cf_hashtable_insert_impl(CF_HHDR(h), (uint64_t)k), h + CF_HHDR(h)->return_index)
+#define cf_hashtable_add(h, k, ...) cf_hashtable_set(h, k, (__VA_ARGS__))
+#define cf_hashtable_get(h, k) ((h)[cf_hashtable_find_impl(CF_HHDR(h), (uint64_t)k)])
+#define cf_hashtable_find(h, k) cf_hashtable_get(h, k)
+#define cf_hashtable_get_ptr(h, k) (cf_hashtable_find_impl(CF_HHDR(h), (uint64_t)k), CF_HHDR(h)->return_index < 0 ? NULL : (h) + CF_HHDR(h)->return_index)
+#define cf_hashtable_find_ptr(h, k) cf_hashtable_get_ptr(h, k)
+#define cf_hashtable_has(h, k) (h ? cf_hashtable_remove_impl(CF_HHDR(h), (uint64_t)k) : NULL)
+#define cf_hashtable_del(h, k) (h ? cf_hashtable_remove_impl(CF_HHDR(h), (uint64_t)k) : 0)
+#define cf_hashtable_clear(h) (CF_HCANARY(h), cf_hashtable_clear_impl(CF_HHDR(h)))
+#define cf_hashtable_keys(h) (CF_HCANARY(h), h ? (const uint64_t*)cf_hashtable_keys_impl(CF_HHDR(h))) : (const uint64_t*)NULL)
+#define cf_hashtable_items(h) (CF_HCANARY(h), h)
+#define cf_hashtable_swap(h, index_a, index_b) (CF_HCANARY(h), cf_hashtable_swap_impl(CF_HHDR(h), index_a, index_b))
+#define cf_hashtable_size(h) (h ? cf_hashtable_count_impl(CF_HHDR(h)) : 0)
+#define cf_hashtable_count(h) cf_hashtable_size(h)
+#define cf_hashtable_free(h) do { CF_HCANARY(h); if (h) cf_hashtable_free_impl(CF_HHDR(h)); h = NULL; } while (0)
 
 #ifndef CUTE_NO_SHORTHAND_API
 /**
@@ -350,6 +350,9 @@ CUTE_API void CUTE_CALL cf_hashtable_swap_impl(cf_hhdr_t* table, int index_a, in
 namespace cute
 {
 
+// General purpose {key, item} pair mapping via internal hash table.
+// Keys are treated as mere byte buffers (Plain Old Data).
+// Items have contructors/destructors called, but are *not* allowed to store references/pointers to themselves.
 template <typename K, typename T>
 struct dictionary
 {
@@ -386,13 +389,13 @@ private:
 template <typename K, typename T>
 dictionary<K, T>::dictionary()
 {
-	m_table = HHDR((T*)cf_hashtable_make_impl(sizeof(K), sizeof(T), 32));
+	m_table = CF_HHDR((T*)cf_hashtable_make_impl(sizeof(K), sizeof(T), 32));
 }
 
 template <typename K, typename T>
 dictionary<K, T>::dictionary(int capacity)
 {
-	m_table = HHDR((T*)cf_hashtable_make_impl(sizeof(K), sizeof(T), capacity));
+	m_table = CF_HHDR((T*)cf_hashtable_make_impl(sizeof(K), sizeof(T), capacity));
 }
 
 template <typename K, typename T>
@@ -425,7 +428,7 @@ const T* dictionary<K, T>::find(const K& key) const
 template <typename K, typename T>
 T* dictionary<K, T>::insert(const K& key)
 {
-	m_table = HHDR((T*)cf_hashtable_insert_impl3(m_table, &key));
+	m_table = CF_HHDR((T*)cf_hashtable_insert_impl3(m_table, &key));
 	int index = m_table->return_index;
 	if (index < 0) return NULL;
 	T* result = items() + index;
@@ -436,7 +439,7 @@ T* dictionary<K, T>::insert(const K& key)
 template <typename K, typename T>
 T* dictionary<K, T>::insert(const K& key, const T& val)
 {
-	m_table = HHDR((T*)cf_hashtable_insert_impl2(m_table, &key, &val));
+	m_table = CF_HHDR((T*)cf_hashtable_insert_impl2(m_table, &key, &val));
 	int index = m_table->return_index;
 	if (index < 0) return NULL;
 	T* result = items() + index;
@@ -447,7 +450,7 @@ T* dictionary<K, T>::insert(const K& key, const T& val)
 template <typename K, typename T>
 T* dictionary<K, T>::insert(const K& key, T&& val)
 {
-	m_table = HHDR((T*)cf_hashtable_insert_impl2(m_table, &key, &val));
+	m_table = CF_HHDR((T*)cf_hashtable_insert_impl2(m_table, &key, &val));
 	int index = m_table->return_index;
 	if (index < 0) return NULL;
 	T* result = items() + index;

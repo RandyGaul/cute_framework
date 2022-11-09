@@ -30,6 +30,7 @@
 extern "C" {
 #endif // __cplusplus
 
+// *Hidden* array header.
 typedef struct cf_ahdr_t
 {
 	int size;
@@ -39,24 +40,143 @@ typedef struct cf_ahdr_t
 	uint32_t cookie;
 } cf_ahdr_t;
 
-#define AHDR(a) ((cf_ahdr_t*)a - 1)
-#define ACOOKIE 0xE6F7E359
-#define ACANARY(a) ((a) ? CUTE_ASSERT(AHDR(a)->cookie == ACOOKIE) : 0) // Detects buffer underruns.
+#define CF_AHDR(a) ((cf_ahdr_t*)a - 1)
+#define CF_ACOOKIE 0xE6F7E359
+#define CF_ACANARY(a) ((a) ? CUTE_ASSERT(CF_AHDR(a)->cookie == CF_ACOOKIE) : 0) // Detects buffer underruns.
 
-#define alen(a) (ACANARY(a), AHDR(a)->size)
-#define acount(a) alen(a)
-#define asize(a) (a ? alen(a) : 0)
-#define acap(a) ((a) ? AHDR(a)->capacity : 0)
-#define afit(a, n) ((n) <= acap(a) ? 0 : (*(void**)&(a) = cf_agrow((a), (n), sizeof(*a))))
-#define apush(a, ...) do { ACANARY(a); afit((a), 1 + ((a) ? alen(a) : 0)); (a)[alen(a)++] = (__VA_ARGS__); } while (0)
-#define apop(a) (a[--alen(a)])
-#define afree(a) do { ACANARY(a); if (a && !AHDR(a)->is_static) CUTE_FREE(AHDR(a)); a = NULL; } while (0)
-#define aend(a) (a + asize(a))
-#define aclear(a) do { ACANARY(a); if (a) alen(a) = 0; } while (0)
-#define aset(a, b) (*(void**)&(a) = cf_aset((void*)(a), (void*)(b), sizeof(*a)))
-#define areverse(a) 
-#define ahash(a) cf_fnv1a(a, asize(a))
-#define astatic(a, buffer, buffer_size) (*(void**)&(a) = cf_astatic(buffer, buffer_size, sizeof(*a)))
+#define cf_array_len(a) (CF_ACANARY(a), CF_AHDR(a)->size)
+#define cf_array_size(a) (a ? cf_array_len(a) : 0)
+#define cf_array_count(a) cf_array_size(a)
+#define cf_array_capacity(a) ((a) ? CF_AHDR(a)->capacity : 0)
+#define cf_array_fit(a, n) ((n) <= cf_array_capacity(a) ? 0 : (*(void**)&(a) = cf_agrow((a), (n), sizeof(*a))))
+#define cf_array_push(a, ...) do { CF_ACANARY(a); cf_array_fit((a), 1 + ((a) ? cf_array_len(a) : 0)); (a)[cf_array_len(a)++] = (__VA_ARGS__); } while (0)
+#define cf_array_pop(a) (a[--cf_array_len(a)])
+#define cf_array_end(a) (a + cf_array_size(a))
+#define cf_array_last(a) (a[cf_array_len(a) - 1])
+#define cf_array_clear(a) do { CF_ACANARY(a); if (a) cf_array_len(a) = 0; } while (0)
+#define cf_array_set(a, b) (*(void**)&(a) = cf_aset((void*)(a), (void*)(b), sizeof(*a)))
+#define cf_array_hash(a) cf_fnv1a(a, cf_array_size(a))
+#define cf_array_static(a, buffer, buffer_size) (*(void**)&(a) = cf_astatic(buffer, buffer_size, sizeof(*a)))
+#define cf_array_free(a) do { CF_ACANARY(a); if (a && !CF_AHDR(a)->is_static) CUTE_FREE(CF_AHDR(a)); a = NULL; } while (0)
+
+#ifndef CUTE_NO_SHORTHAND_API
+/**
+ * Gets the number of elements in the array. Must not be NULL.
+ * It's a proper l-value so you can assign to it or use ++/-- operators.
+ * 
+ * Example:
+ * 
+ *     int* a = NULL;
+ *     apush(a, 5);
+ *     CUTE_ASSERT(alen(a) == 1);
+ *     alen(a)--;
+ *     CUTE_ASSERT(alen(a) == 0);
+ *     afree(a);
+ */
+#define alen(a) cf_array_len(a)
+
+/**
+ * Gets the number of elements in the array. Can be NULL.
+ * 
+ * Example:
+ * 
+ *     int* a = NULL;
+ *     apush(a, 5);
+ *     CUTE_ASSERT(asize(a) == 1);
+ *     afree(a);
+ */
+#define asize(a) cf_array_size(a)
+
+/**
+ * Gets the number of elements in the array. Can be NULL.
+ * 
+ * Example:
+ * 
+ *     int* a = NULL;
+ *     apush(a, 5);
+ *     CUTE_ASSERT(acount(a) == 1);
+ *     afree(a);
+ */
+#define acount(a) cf_array_count(a)
+
+/**
+ * Gets the capacity of the array. The capacity automatically grows if the size
+ * of the array grows over the capacity.
+ */
+#define acap(a) cf_array_capacity(a)
+
+/**
+ * Ensures the capacity of the array is at least n elements.
+ * Does not change the size/count of the array.
+ */
+#define afit(a, n) cf_array_fit(a, n)
+
+/**
+ * Pushes an element onto the back of the array.
+ * 
+ * a    - The array. If NULL a new array will get allocated and returned.
+ * ...  - The value to push onto the back of the array.
+ * 
+ * Example:
+ * 
+ *     int* a = NULL;
+ *     apush(a, 5);
+ *     apush(a, 13);
+ *     CUTE_ASSERT(a[0] == 5);
+ *     CUTE_ASSERT(a[1] == 13);
+ *     CUTE_ASSERT(asize(a) == 2);
+ *     afree(a);
+ */
+#define apush(a, ...) cf_array_push(a, (__VA_ARGS__))
+
+/**
+ * Pops and returns an element off the back of the array. Cannot be NULL.
+ */
+#define apop(a) cf_array_pop(a)
+
+/**
+ * Returns a pointer one element beyond the end of the array.
+ */
+#define aend(a) cf_array_end(a)
+
+/**
+ * Returns the last element in the array.
+ */
+#define alast(a) cf_array_last(a)
+
+/**
+ * Sets the array's count to zero. Does not free any resources.
+ */
+#define aclear(a) cf_array_clear(a)
+
+/**
+ * Copies the array b into array a. Will automatically fit a if needed.
+ */
+#define aset(a, b) cf_array_set(a, b)
+
+/**
+ * Returns the hash of all the bytes in the array.
+ */
+#define ahash(a) cf_array_hash(a)
+
+/**
+ * Creates an array with an initial static storage backing. Will grow onto the heap
+ * if the size becomes too large.
+ * 
+ * a           - A typed pointer, can be NULL. Will be assigned + returnde back to you.
+ * buffer      - Pointer to a static memory buffer.
+ * buffer_size - The size of `buffer` in bytes.
+ */
+#define astatic(a, buffer, buffer_size) cf_array_static(a, buffer, buffer_size)
+
+/**
+ * Frees up all resources used by the array. Sets a to NULL.
+ */
+#define afree(a) cf_array_free(a)
+#endif // CUTE_NO_SHORTHAND_API
+
+//--------------------------------------------------------------------------------------------------
+// Hidden API - Not intended for direct use.
 
 CUTE_API void* CUTE_CALL cf_agrow(const void* a, int new_size, size_t element_size);
 CUTE_API void* CUTE_CALL cf_astatic(const void* a, int capacity, size_t element_size);
