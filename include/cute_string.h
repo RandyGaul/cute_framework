@@ -362,6 +362,7 @@
 
 /**
  * Converts a hex-string to a uint64_t and returns it.
+ * Supports srings that start with "0x", "#", or no prefix.
  */
 #define stohex(s) cf_string_tohex(s)
 
