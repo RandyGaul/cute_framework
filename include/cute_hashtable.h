@@ -33,22 +33,266 @@
 extern "C" {
 #endif // __cplusplus
 
-#define HHDR(h) (((cf_hhdr_t*)(h - 1) - 1))
-#define HCOOKIE 0xE6F7E359
+#define HHDR(h) (((cf_hhdr_t*)(h - 1) - 1)) // Converts pointer from the user-array to table header.
+#define HCOOKIE 0xE6F7E359 // Magic number used for sanity/type checks.
 #define HCANARY(h) (h ? CUTE_ASSERT(HHDR(h)->cookie == HCOOKIE) : 0) // Sanity/type check.
 
-#define hset(h, k, ...) ((h) ? (h) : (*(void**)&(h) = cf_hmake(sizeof(uint64_t), sizeof(*(h)), 16)), HCANARY(h), h[-1] = (__VA_ARGS__), *(void**)&(h) = cf_hinsert(HHDR(h), (uint64_t)k), h + HHDR(h)->return_index)
-#define hadd(h, k, ...) hset(h, k, (__VA_ARGS__))
-#define hget(h, k) ((h)[cf_hfind(HHDR(h), (uint64_t)k)])
-#define hfind(h, k) hget(h, k)
-#define hhas(h, k) (h ? cf_hhas(HHDR(h), (uint64_t)k) : NULL)
-#define hdel(h, k) (h ? cf_hdel(HHDR(h), (uint64_t)k) : 0)
-#define hclear(h) (HCANARY(h), cf_hclear(HHDR(h)))
-#define hkeys(h) (HCANARY(h), (uint64_t*)cf_hkeys(HHDR(h))))
-#define hswap(h, index_a, index_b) (HCANARY(h), cf_hswap(HHDR(h), index_a, index_b))
-#define hsize(h) (h ? cf_hcount(HHDR(h)) : 0)
-#define hcount(h) hsize(h)
-#define hfree(h) do { HCANARY(h); if (h) cf_hfree(HHDR(h)); h = NULL; } while (0)
+#define cf_hashtable_set(h, k, ...) ((h) ? (h) : (*(void**)&(h) = cf_hashtable_make_impl(sizeof(uint64_t), sizeof(*(h)), 16)), HCANARY(h), h[-1] = (__VA_ARGS__), *(void**)&(h) = cf_hashtable_insert_impl(HHDR(h), (uint64_t)k), h + HHDR(h)->return_index)
+#define cf_hashtable_add(h, k, ...) hset(h, k, (__VA_ARGS__))
+#define cf_hashtable_get(h, k) ((h)[cf_hashtable_find_impl(HHDR(h), (uint64_t)k)])
+#define cf_hashtable_find(h, k) hget(h, k)
+#define cf_hashtable_get_ptr(h, k) (cf_hashtable_find_impl(HHDR(h), (uint64_t)k), HHDR(h)->return_index < 0 ? NULL : (h) + HHDR(h)->return_index)
+#define cf_hashtable_find_ptr(h, k) hget_ptr(h, k)
+#define cf_hashtable_has(h, k) (h ? cf_hashtable_remove_impl(HHDR(h), (uint64_t)k) : NULL)
+#define cf_hashtable_del(h, k) (h ? cf_hashtable_remove_impl(HHDR(h), (uint64_t)k) : 0)
+#define cf_hashtable_clear(h) (HCANARY(h), cf_hashtable_clear_impl(HHDR(h)))
+#define cf_hashtable_keys(h) (HCANARY(h), h ? (const uint64_t*)cf_hashtable_keys_impl(HHDR(h))) : (const uint64_t*)NULL)
+#define cf_hashtable_items(h) (HCANARY(h), h)
+#define cf_hashtable_swap(h, index_a, index_b) (HCANARY(h), cf_hashtable_swap_impl(HHDR(h), index_a, index_b))
+#define cf_hashtable_size(h) (h ? cf_hashtable_count_impl(HHDR(h)) : 0)
+#define cf_hashtable_count(h) hsize(h)
+#define cf_hashtable_free(h) do { HCANARY(h); if (h) cf_hashtable_free_impl(HHDR(h)); h = NULL; } while (0)
+
+#ifndef CUTE_NO_SHORTHAND_API
+/**
+ * Add's a {key, item} pair. Creates a new table if `h` is NULL. Call `hfree` when done.
+ * Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
+ * 
+ * h   - The hashtable. Will create a new table if h is NULL.
+ *       h needs to be a pointer to the type of items in the table.
+ * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
+ * ... - An item to place into the table, by value.
+ * 
+ * Example:
+ * 
+ *     int* table = NULL;
+ *     hset(table, 0, 5);
+ *     hset(table, 1, 12);
+ *     CUTE_ASSERT(hget(table, 0) == 5);
+ *     CUTE_ASSERT(hget(table, 1) == 12);
+ *     hfree(table);
+ */
+#define hset(h, k, ...) cf_hashtable_set(h, k, (__VA_ARGS__))
+
+/**
+ * Add's a {key, item} pair. Creates a new table if `h` is NULL. Call `hfree` when done.
+ * Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
+ * 
+ * h   - The hashtable. Will create a new table if h is NULL.
+ *       h needs to be a pointer for the type of your items in the table.
+ * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
+ * ... - An item to place into the table, by value.
+ * 
+ * Example:
+ * 
+ *     int* table = NULL;
+ *     hadd(table, 0, 5);
+ *     hadd(table, 1, 12);
+ *     CUTE_ASSERT(hget(table, 0) == 5);
+ *     CUTE_ASSERT(hget(table, 1) == 12);
+ *     hfree(table);
+ */
+#define hadd(h, k, ...) cf_hashtable_add(h, k, (__VA_ARGS__))
+
+/**
+ * Fetches the item that `k` maps to.
+ * 
+ * h   - The hashtable. Will assert h is NULL.
+ *       h needs to be a pointer to the type of items in the table.
+ * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
+ * 
+ * Items are returned by value, not pointer. If the item doesn't exist a zero'd out item
+ * is instead returned. If you want to get a pointer (so you can see if it's `NULL` in
+ * case the item didn't exist, then use `hget_ptr`). You can also call `hhas` for a bool.
+ * 
+ * Example:
+ * 
+ *     v2* table = NULL;
+ *     hadd(table, 10, V2(-1, 1));
+ *     v2 v = hget(table, 10);
+ *     CUTE_ASSERT(v.x == -1);
+ *     CUTE_ASSERT(v.y == 1);
+ *     hfree(table);
+ */
+#define hget(h, k) cf_hashtable_get(h, k)
+
+/**
+ * Fetches the item that `k` maps to.
+ * 
+ * h   - The hashtable. Will assert if h is NULL.
+ *       h needs to be a pointer to the type of items in the table.
+ * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
+ * 
+ * Items are returned by value, not pointer. If the item doesn't exist a zero'd out item
+ * is instead returned. If you want to get a pointer (so you can see if it's `NULL` in
+ * case the item didn't exist, then use `hget_ptr`). You can also call `hhas` for a bool.
+ * 
+ * Example:
+ * 
+ *     v2* table = NULL;
+ *     hadd(table, 10, V2(-1, 1));
+ *     v2 v = hfind(table, 10);
+ *     CUTE_ASSERT(v.x == -1);
+ *     CUTE_ASSERT(v.y == 1);
+ *     hfree(table);
+ */
+#define hfind(h, k) cf_hashtable_find(h, k)
+
+/**
+ * Fetches a pointer to the item that `k` maps to. Returns NULL if not found.
+ * 
+ * h   - The hashtable. Can be NULL.
+ *       h needs to be a pointer to the type of items in the table.
+ * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
+ * 
+ * Example:
+ * 
+ *     v2* table = NULL;
+ *     hadd(table, 10, V2(-1, 1));
+ *     v2* v = hget_ptr(table, 10);
+ *     CUTE_ASSERT(v);
+ *     CUTE_ASSERT(v->x == -1);
+ *     CUTE_ASSERT(v->y == 1);
+ *     hfree(table);
+ */
+#define hget_ptr(h, k) cf_hashtable_get_ptr(h, k)
+
+/**
+ * Fetches a pointer to the item that `k` maps to. Returns NULL if not found.
+ * 
+ * h   - The hashtable. Can be NULL.
+ *       h needs to be a pointer to the type of items in the table.
+ * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
+ * 
+ * Example:
+ * 
+ *     v2* table = NULL;
+ *     hadd(table, 10, V2(-1, 1));
+ *     v2* v = hfind_ptr(table, 10);
+ *     CUTE_ASSERT(v);
+ *     CUTE_ASSERT(v->x == -1);
+ *     CUTE_ASSERT(v->y == 1);
+ *     hfree(table);
+ */
+#define hfind_ptr(h, k) cf_hashtable_find_ptr(h, k)
+
+/**
+ * Check to see if an item exists in the table.
+ * 
+ * h   - The hashtable. Can be NULL.
+ *       h needs to be a pointer to the type of items in the table.
+ * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
+ * 
+ * Example:
+ * 
+ *     v2* table = NULL;
+ *     hadd(table, 10, V2(-1, 1));
+ *     CUTE_ASSERT(hhas(table, 10));
+ *     hfree(table);
+ */
+#define hhas(h, k) cf_hashtable_has(h, k)
+
+/**
+ * Removes an item from the table. Asserts if the item does not exist.
+ * 
+ * h   - The hashtable. Can be NULL.
+ *       h needs to be a pointer to the type of items in the table.
+ * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
+ * 
+ * Example:
+ * 
+ *     v2* table = NULL;
+ *     hadd(table, 10, V2(-1, 1));
+ *     hdel(table, 10);
+ *     hfree(table);
+ */
+#define hdel(h, k) cf_hashtable_del(h, k)
+
+/**
+ * Clears the hashtable. The count of items will now be zero.
+ * Does not free any memory. Call `hfree` when you are done.
+ * 
+ * h   - The hashtable. Can be NULL.
+ *       h needs to be a pointer to the type of items in the table.
+ */
+#define hclear(h) cf_hashtable_clear(h)
+
+/**
+ * Get a const pointer to the array of keys. The keys are type uint64_t.
+ * 
+ * h   - The hashtable. Can be NULL.
+ *       h needs to be a pointer to the type of items in the table.
+ * 
+ * Example:
+ * 
+ *     v2* table = my_table();
+ *     const uint64_t* keys = hkeys(table);
+ *     for (int i = 0; i < hcount(table); ++i) {
+ *         uint64_t key = keys[i];
+ *         v2 item = table[i];
+ *         // ...
+ *     }
+ */
+#define hkeys(h) cf_hashtable_keys(h)
+
+/**
+ * Get a pointer to the array of items.
+ * This macro doesn't do much as `h` is already a valid pointer to the items.
+ * 
+ * h   - The hashtable. Can be NULL.
+ *       h needs to be a pointer to the type of items in the table.
+ * 
+ * Example:
+ * 
+ *     v2* table = my_table();
+ *     const uint64_t* keys = hkeys(table);
+ *     for (int i = 0; i < hcount(table); ++i) {
+ *         uint64_t key = keys[i];
+ *         v2 item = table[i];
+ *         // ...
+ *     }
+ */
+#define hitems(h) cf_hashtable_items(h)
+
+/**
+ * Swaps internal ordering of two {key, item} pairs without ruining the hashing.
+ * Use this for e.g. implementing a priority queue on top of the hash table.
+ * 
+ * h   - The hashtable. Can be NULL.
+ *       h needs to be a pointer to the type of items in the table.
+ * 
+ * Example:
+ * 
+ *     v2* table = my_table();
+ *     const uint64_t* keys = hkeys(table);
+ *     for (int i = 0; i < hcount(table); ++i) {
+ *         for (int j = 0; j < hcount(table); ++j) {
+ *             if (my_need_swap(table, i, j)) {
+ *                 hswap(h, i, j);
+ *             }
+ *         }
+ *     }
+ */
+#define hswap(h, index_a, index_b) cf_hashtable_swap(h, index_a, index_b)
+
+/**
+ * The number of {key, item} pairs in the table.
+ * h can be NULL.
+ */
+#define hsize(h) cf_hashtable_size(h)
+
+/**
+ * The number of {key, item} pairs in the table.
+ * h can be NULL.
+ */
+#define hcount(h) cf_hashtable_count(h)
+
+/**
+ * Frees up all resources used and sets h to NULL.
+ * h can be NULL.
+ */
+#define hfree(h) cf_hashtable_free(h)
+#endif // CUTE_NO_SHORTHAND_API
 
 //--------------------------------------------------------------------------------------------------
 // Hidden API - Not intended for direct use.
@@ -78,21 +322,21 @@ typedef struct cf_hhdr_t
 	uint32_t cookie;
 } cf_hhdr_t;
 
-CUTE_API void* CUTE_CALL cf_hmake(int key_size, int item_size, int capacity);
-CUTE_API void CUTE_CALL cf_hfree(cf_hhdr_t* table);
-CUTE_API void* CUTE_CALL cf_hinsert(cf_hhdr_t* table, uint64_t key);
-CUTE_API void* CUTE_CALL cf_hinsert2(cf_hhdr_t* table, const void* key, const void* item);
-CUTE_API void* CUTE_CALL cf_hinsert3(cf_hhdr_t* table, const void* key);
-CUTE_API void CUTE_CALL cf_hdel(cf_hhdr_t* table, uint64_t key);
-CUTE_API void CUTE_CALL cf_hdel2(cf_hhdr_t* table, const void* key);
-CUTE_API bool CUTE_CALL cf_hhas(cf_hhdr_t* table, uint64_t key);
-CUTE_API int CUTE_CALL cf_hfind(const cf_hhdr_t* table, uint64_t key);
-CUTE_API int CUTE_CALL cf_hfind2(const cf_hhdr_t* table, const void* key);
-CUTE_API int CUTE_CALL cf_hcount(const cf_hhdr_t* table);
-CUTE_API void* CUTE_CALL cf_hitems(const cf_hhdr_t* table);
-CUTE_API void* CUTE_CALL cf_hkeys(const cf_hhdr_t* table);
-CUTE_API void CUTE_CALL cf_hclear(cf_hhdr_t* table);
-CUTE_API void CUTE_CALL cf_hswap(cf_hhdr_t* table, int index_a, int index_b);
+CUTE_API void* CUTE_CALL cf_hashtable_make_impl(int key_size, int item_size, int capacity);
+CUTE_API void CUTE_CALL cf_hashtable_free_impl(cf_hhdr_t* table);
+CUTE_API void* CUTE_CALL cf_hashtable_insert_impl(cf_hhdr_t* table, uint64_t key);
+CUTE_API void* CUTE_CALL cf_hashtable_insert_impl2(cf_hhdr_t* table, const void* key, const void* item);
+CUTE_API void* CUTE_CALL cf_hashtable_insert_impl3(cf_hhdr_t* table, const void* key);
+CUTE_API void CUTE_CALL cf_hashtable_remove_impl(cf_hhdr_t* table, uint64_t key);
+CUTE_API void CUTE_CALL cf_hashtable_remove_impl2(cf_hhdr_t* table, const void* key);
+CUTE_API bool CUTE_CALL cf_hashtable_has_impl(cf_hhdr_t* table, uint64_t key);
+CUTE_API int CUTE_CALL cf_hashtable_find_impl(const cf_hhdr_t* table, uint64_t key);
+CUTE_API int CUTE_CALL cf_hashtable_find_impl2(const cf_hhdr_t* table, const void* key);
+CUTE_API int CUTE_CALL cf_hashtable_count_impl(const cf_hhdr_t* table);
+CUTE_API void* CUTE_CALL cf_hashtable_items_impl(const cf_hhdr_t* table);
+CUTE_API void* CUTE_CALL cf_hashtable_keys_impl(const cf_hhdr_t* table);
+CUTE_API void CUTE_CALL cf_hashtable_clear_impl(cf_hhdr_t* table);
+CUTE_API void CUTE_CALL cf_hashtable_swap_impl(cf_hhdr_t* table, int index_a, int index_b);
 
 #ifdef __cplusplus
 }
@@ -142,13 +386,13 @@ private:
 template <typename K, typename T>
 dictionary<K, T>::dictionary()
 {
-	m_table = HHDR((T*)cf_hmake(sizeof(K), sizeof(T), 32));
+	m_table = HHDR((T*)cf_hashtable_make_impl(sizeof(K), sizeof(T), 32));
 }
 
 template <typename K, typename T>
 dictionary<K, T>::dictionary(int capacity)
 {
-	m_table = HHDR((T*)cf_hmake(sizeof(K), sizeof(T), capacity));
+	m_table = HHDR((T*)cf_hashtable_make_impl(sizeof(K), sizeof(T), capacity));
 }
 
 template <typename K, typename T>
@@ -158,14 +402,14 @@ dictionary<K, T>::~dictionary()
 	for (int i = 0; i < count(); ++i) {
 		(elements + i)->~T();
 	}
-	cf_hfree(m_table);
+	cf_hashtable_free_impl(m_table);
 	m_table = NULL;
 }
 
 template <typename K, typename T>
 T* dictionary<K, T>::find(const K& key)
 {
-	int index = cf_hfind2(m_table, &key);
+	int index = cf_hashtable_find_impl2(m_table, &key);
 	if (index >= 0) return items() + index;
 	else return NULL;
 }
@@ -173,7 +417,7 @@ T* dictionary<K, T>::find(const K& key)
 template <typename K, typename T>
 const T* dictionary<K, T>::find(const K& key) const
 {
-	int index = cf_hfind2(m_table, &key);
+	int index = cf_hashtable_find_impl2(m_table, &key);
 	if (index > 0) return items() + index;
 	else return NULL;
 }
@@ -181,7 +425,7 @@ const T* dictionary<K, T>::find(const K& key) const
 template <typename K, typename T>
 T* dictionary<K, T>::insert(const K& key)
 {
-	m_table = HHDR((T*)cf_hinsert3(m_table, &key));
+	m_table = HHDR((T*)cf_hashtable_insert_impl3(m_table, &key));
 	int index = m_table->return_index;
 	if (index < 0) return NULL;
 	T* result = items() + index;
@@ -192,7 +436,7 @@ T* dictionary<K, T>::insert(const K& key)
 template <typename K, typename T>
 T* dictionary<K, T>::insert(const K& key, const T& val)
 {
-	m_table = HHDR((T*)cf_hinsert2(m_table, &key, &val));
+	m_table = HHDR((T*)cf_hashtable_insert_impl2(m_table, &key, &val));
 	int index = m_table->return_index;
 	if (index < 0) return NULL;
 	T* result = items() + index;
@@ -203,7 +447,7 @@ T* dictionary<K, T>::insert(const K& key, const T& val)
 template <typename K, typename T>
 T* dictionary<K, T>::insert(const K& key, T&& val)
 {
-	m_table = HHDR((T*)cf_hinsert2(m_table, &key, &val));
+	m_table = HHDR((T*)cf_hashtable_insert_impl2(m_table, &key, &val));
 	int index = m_table->return_index;
 	if (index < 0) return NULL;
 	T* result = items() + index;
@@ -217,20 +461,20 @@ void dictionary<K, T>::remove(const K& key)
 	T* slot = find(key);
 	if (slot) {
 		slot->~T();
-		cf_hdel2(m_table, &key);
+		cf_hashtable_remove_impl2(m_table, &key);
 	}
 }
 
 template <typename K, typename T>
 void dictionary<K, T>::clear()
 {
-	cf_hclear(m_table);
+	cf_hashtable_clear_impl(m_table);
 }
 
 template <typename K, typename T>
 int dictionary<K, T>::count() const
 {
-	return cf_hcount(m_table);
+	return cf_hashtable_count_impl(m_table);
 }
 
 template <typename K, typename T>
@@ -248,19 +492,19 @@ const T* dictionary<K, T>::items() const
 template <typename K, typename T>
 K* dictionary<K, T>::keys()
 {
-	return (K*)cf_hkeys(m_table);
+	return (K*)cf_hashtable_keys_impl(m_table);
 }
 
 template <typename K, typename T>
 const K* dictionary<K, T>::keys() const
 {
-	return (const K*)cf_hkeys(m_table);
+	return (const K*)cf_hashtable_keys_impl(m_table);
 }
 
 template <typename K, typename T>
 void dictionary<K, T>::swap(int index_a, int index_b)
 {
-	cf_hswap(m_table, index_a, index_b);
+	cf_hashtable_swap_impl(m_table, index_a, index_b);
 }
 
 }

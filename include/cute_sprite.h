@@ -70,10 +70,7 @@ typedef struct cf_animation_t
 	cf_frame_t* frames;
 } cf_animation_t;
 
-CUTE_INLINE void cf_animation_add_frame(cf_animation_t* animation, cf_frame_t frame)
-{
-	apush(animation->frames, frame);
-}
+CUTE_INLINE void cf_animation_add_frame(cf_animation_t* animation, cf_frame_t frame) { apush(animation->frames, frame); }
 
 /**
  * The `sprite_t` represents a set of drawable animations. Each animation is a collection

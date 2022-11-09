@@ -52,6 +52,7 @@
 #include <test_sprite.h>
 #include <test_coroutine.h>
 #include <test_string.h>
+#include <test_hashtable.h>
 
 int main(int argc, const char** argv)
 {
