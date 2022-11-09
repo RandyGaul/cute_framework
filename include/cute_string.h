@@ -116,7 +116,7 @@
 /**
  * Printf's into the string using the format string `fmt`.
  * The string will be overwritten from the beginning.
- * Will automatically adjust it's capacity as needed.
+ * Will automatically adjust capacity as needed.
  */
 #define sfmt(s, fmt, ...) cf_string_fmt(s, fmt, (__VA_ARGS__))
 
@@ -147,7 +147,7 @@
 
 /**
  * Copies the string b into string a.
- * Automatically resizes itself as necessary.
+ * Automatically resizes as necessary.
  */
 #define sset(a, b) cf_string_set(a, b)
 
@@ -213,7 +213,7 @@
 #define stolower(s) cf_string_tolower(s)
 
 /**
- * Returns a hash of the string.
+ * Returns a hash of the string as uint64_t.
  */
 #define shash(s) cf_string_hash(s)
 
