@@ -29,29 +29,37 @@
 //--------------------------------------------------------------------------------------------------
 // C API
 
+// A hashtable for storing and looking up {key, item} pairs.
+// Implemented in C with macros to support fancy polymorphism.
+// The API works on typed pointers, just create one as NULL and start going.
+// Free it with `hfree` when done.
+// 
+// Example:
+// 
+//     v2* pts = NULL;
+//     hset(pts, 0, V2(3, 5)); // Contructs a new table on-the-spot.
+//                             // The table is *hidden* behind `pts`.
+//     hset(pts, 10, v2(-1, -1);
+//     hset(pts, -2, v2(0, 0));
+//     
+//     // Use `hget` to fetch values.
+//     v2 a = hget(pts, 0);
+//     v2 b = hget(pts, 10);
+//     v2 c = hget(pts, -2);
+//     
+//     // Loop over {key, item} pairs like so:
+//     const uint64_t* keys = hkeys(pts);
+//     for (int i = 0; i < hcount(pts); ++i) {
+//         uint64_t key = keys[i];
+//         v2 v = pts[i];
+//         // ...
+//     }
+//     
+//     hfree(pts);
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-
-#define CF_HHDR(h) (((cf_hhdr_t*)(h - 1) - 1)) // Converts pointer from the user-array to table header.
-#define CF_HCOOKIE 0xE6F7E359 // Magic number used for sanity/type checks.
-#define CF_HCANARY(h) (h ? CUTE_ASSERT(CF_HHDR(h)->cookie == CF_HCOOKIE) : 0) // Sanity/type check.
-
-#define cf_hashtable_set(h, k, ...) ((h) ? (h) : (*(void**)&(h) = cf_hashtable_make_impl(sizeof(uint64_t), sizeof(*(h)), 16)), CF_HCANARY(h), h[-1] = (__VA_ARGS__), *(void**)&(h) = cf_hashtable_insert_impl(CF_HHDR(h), (uint64_t)k), h + CF_HHDR(h)->return_index)
-#define cf_hashtable_add(h, k, ...) cf_hashtable_set(h, k, (__VA_ARGS__))
-#define cf_hashtable_get(h, k) ((h)[cf_hashtable_find_impl(CF_HHDR(h), (uint64_t)k)])
-#define cf_hashtable_find(h, k) cf_hashtable_get(h, k)
-#define cf_hashtable_get_ptr(h, k) (cf_hashtable_find_impl(CF_HHDR(h), (uint64_t)k), CF_HHDR(h)->return_index < 0 ? NULL : (h) + CF_HHDR(h)->return_index)
-#define cf_hashtable_find_ptr(h, k) cf_hashtable_get_ptr(h, k)
-#define cf_hashtable_has(h, k) (h ? cf_hashtable_remove_impl(CF_HHDR(h), (uint64_t)k) : NULL)
-#define cf_hashtable_del(h, k) (h ? cf_hashtable_remove_impl(CF_HHDR(h), (uint64_t)k) : 0)
-#define cf_hashtable_clear(h) (CF_HCANARY(h), cf_hashtable_clear_impl(CF_HHDR(h)))
-#define cf_hashtable_keys(h) (CF_HCANARY(h), h ? (const uint64_t*)cf_hashtable_keys_impl(CF_HHDR(h))) : (const uint64_t*)NULL)
-#define cf_hashtable_items(h) (CF_HCANARY(h), h)
-#define cf_hashtable_swap(h, index_a, index_b) (CF_HCANARY(h), cf_hashtable_swap_impl(CF_HHDR(h), index_a, index_b))
-#define cf_hashtable_size(h) (h ? cf_hashtable_count_impl(CF_HHDR(h)) : 0)
-#define cf_hashtable_count(h) cf_hashtable_size(h)
-#define cf_hashtable_free(h) do { CF_HCANARY(h); if (h) cf_hashtable_free_impl(CF_HHDR(h)); h = NULL; } while (0)
 
 #ifndef CUTE_NO_SHORTHAND_API
 /**
@@ -295,7 +303,30 @@ extern "C" {
 #endif // CUTE_NO_SHORTHAND_API
 
 //--------------------------------------------------------------------------------------------------
+// Longform C API.
+
+#define cf_hashtable_set(h, k, ...) ((h) ? (h) : (*(void**)&(h) = cf_hashtable_make_impl(sizeof(uint64_t), sizeof(*(h)), 16)), CF_HCANARY(h), h[-1] = (__VA_ARGS__), *(void**)&(h) = cf_hashtable_insert_impl(CF_HHDR(h), (uint64_t)k), h + CF_HHDR(h)->return_index)
+#define cf_hashtable_add(h, k, ...) cf_hashtable_set(h, k, (__VA_ARGS__))
+#define cf_hashtable_get(h, k) ((h)[cf_hashtable_find_impl(CF_HHDR(h), (uint64_t)k)])
+#define cf_hashtable_find(h, k) cf_hashtable_get(h, k)
+#define cf_hashtable_get_ptr(h, k) (cf_hashtable_find_impl(CF_HHDR(h), (uint64_t)k), CF_HHDR(h)->return_index < 0 ? NULL : (h) + CF_HHDR(h)->return_index)
+#define cf_hashtable_find_ptr(h, k) cf_hashtable_get_ptr(h, k)
+#define cf_hashtable_has(h, k) (h ? cf_hashtable_remove_impl(CF_HHDR(h), (uint64_t)k) : NULL)
+#define cf_hashtable_del(h, k) (h ? cf_hashtable_remove_impl(CF_HHDR(h), (uint64_t)k) : 0)
+#define cf_hashtable_clear(h) (CF_HCANARY(h), cf_hashtable_clear_impl(CF_HHDR(h)))
+#define cf_hashtable_keys(h) (CF_HCANARY(h), h ? (const uint64_t*)cf_hashtable_keys_impl(CF_HHDR(h))) : (const uint64_t*)NULL)
+#define cf_hashtable_items(h) (CF_HCANARY(h), h)
+#define cf_hashtable_swap(h, index_a, index_b) (CF_HCANARY(h), cf_hashtable_swap_impl(CF_HHDR(h), index_a, index_b))
+#define cf_hashtable_size(h) (h ? cf_hashtable_count_impl(CF_HHDR(h)) : 0)
+#define cf_hashtable_count(h) cf_hashtable_size(h)
+#define cf_hashtable_free(h) do { CF_HCANARY(h); if (h) cf_hashtable_free_impl(CF_HHDR(h)); h = NULL; } while (0)
+
+//--------------------------------------------------------------------------------------------------
 // Hidden API - Not intended for direct use.
+
+#define CF_HHDR(h) (((cf_hhdr_t*)(h - 1) - 1)) // Converts pointer from the user-array to table header.
+#define CF_HCOOKIE 0xE6F7E359 // Magic number used for sanity/type checks.
+#define CF_HCANARY(h) (h ? CUTE_ASSERT(CF_HHDR(h)->cookie == CF_HCOOKIE) : 0) // Sanity/type check.
 
 typedef struct cf_hslot_t
 {

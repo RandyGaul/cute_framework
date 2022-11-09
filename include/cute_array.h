@@ -30,39 +30,13 @@
 extern "C" {
 #endif // __cplusplus
 
-// *Hidden* array header.
-typedef struct cf_ahdr_t
-{
-	int size;
-	int capacity;
-	bool is_static;
-	char* data;
-	uint32_t cookie;
-} cf_ahdr_t;
-
-#define CF_AHDR(a) ((cf_ahdr_t*)a - 1)
-#define CF_ACOOKIE 0xE6F7E359
-#define CF_ACANARY(a) ((a) ? CUTE_ASSERT(CF_AHDR(a)->cookie == CF_ACOOKIE) : 0) // Detects buffer underruns.
-
-#define cf_array_len(a) (CF_ACANARY(a), CF_AHDR(a)->size)
-#define cf_array_size(a) (a ? cf_array_len(a) : 0)
-#define cf_array_count(a) cf_array_size(a)
-#define cf_array_capacity(a) ((a) ? CF_AHDR(a)->capacity : 0)
-#define cf_array_fit(a, n) ((n) <= cf_array_capacity(a) ? 0 : (*(void**)&(a) = cf_agrow((a), (n), sizeof(*a))))
-#define cf_array_push(a, ...) do { CF_ACANARY(a); cf_array_fit((a), 1 + ((a) ? cf_array_len(a) : 0)); (a)[cf_array_len(a)++] = (__VA_ARGS__); } while (0)
-#define cf_array_pop(a) (a[--cf_array_len(a)])
-#define cf_array_end(a) (a + cf_array_size(a))
-#define cf_array_last(a) (a[cf_array_len(a) - 1])
-#define cf_array_clear(a) do { CF_ACANARY(a); if (a) cf_array_len(a) = 0; } while (0)
-#define cf_array_set(a, b) (*(void**)&(a) = cf_aset((void*)(a), (void*)(b), sizeof(*a)))
-#define cf_array_hash(a) cf_fnv1a(a, cf_array_size(a))
-#define cf_array_static(a, buffer, buffer_size) (*(void**)&(a) = cf_astatic(buffer, buffer_size, sizeof(*a)))
-#define cf_array_free(a) do { CF_ACANARY(a); if (a && !CF_AHDR(a)->is_static) CUTE_FREE(CF_AHDR(a)); a = NULL; } while (0)
+//--------------------------------------------------------------------------------------------------
+// C API
 
 #ifndef CUTE_NO_SHORTHAND_API
 /**
  * Gets the number of elements in the array. Must not be NULL.
- * It's a proper l-value so you can assign to it or use ++/-- operators.
+ * It's a proper l-value so you can assign or increment it.
  * 
  * Example:
  * 
@@ -101,7 +75,8 @@ typedef struct cf_ahdr_t
 
 /**
  * Gets the capacity of the array. The capacity automatically grows if the size
- * of the array grows over the capacity.
+ * of the array grows over the capacity. You can use `afit` to ensure a minimum
+ * capacity as an optimization.
  */
 #define acap(a) cf_array_capacity(a)
 
@@ -176,7 +151,39 @@ typedef struct cf_ahdr_t
 #endif // CUTE_NO_SHORTHAND_API
 
 //--------------------------------------------------------------------------------------------------
+// Longform C API.
+
+#define cf_array_len(a) (CF_ACANARY(a), CF_AHDR(a)->size)
+#define cf_array_size(a) (a ? cf_array_len(a) : 0)
+#define cf_array_count(a) cf_array_size(a)
+#define cf_array_capacity(a) ((a) ? CF_AHDR(a)->capacity : 0)
+#define cf_array_fit(a, n) ((n) <= cf_array_capacity(a) ? 0 : (*(void**)&(a) = cf_agrow((a), (n), sizeof(*a))))
+#define cf_array_push(a, ...) do { CF_ACANARY(a); cf_array_fit((a), 1 + ((a) ? cf_array_len(a) : 0)); (a)[cf_array_len(a)++] = (__VA_ARGS__); } while (0)
+#define cf_array_pop(a) (a[--cf_array_len(a)])
+#define cf_array_end(a) (a + cf_array_size(a))
+#define cf_array_last(a) (a[cf_array_len(a) - 1])
+#define cf_array_clear(a) do { CF_ACANARY(a); if (a) cf_array_len(a) = 0; } while (0)
+#define cf_array_set(a, b) (*(void**)&(a) = cf_aset((void*)(a), (void*)(b), sizeof(*a)))
+#define cf_array_hash(a) cf_fnv1a(a, cf_array_size(a))
+#define cf_array_static(a, buffer, buffer_size) (*(void**)&(a) = cf_astatic(buffer, buffer_size, sizeof(*a)))
+#define cf_array_free(a) do { CF_ACANARY(a); if (a && !CF_AHDR(a)->is_static) CUTE_FREE(CF_AHDR(a)); a = NULL; } while (0)
+
+//--------------------------------------------------------------------------------------------------
 // Hidden API - Not intended for direct use.
+
+#define CF_AHDR(a) ((cf_ahdr_t*)a - 1)
+#define CF_ACOOKIE 0xE6F7E359
+#define CF_ACANARY(a) ((a) ? CUTE_ASSERT(CF_AHDR(a)->cookie == CF_ACOOKIE) : 0) // Detects buffer underruns.
+
+// *Hidden* array header.
+typedef struct cf_ahdr_t
+{
+	int size;
+	int capacity;
+	bool is_static;
+	char* data;
+	uint32_t cookie;
+} cf_ahdr_t;
 
 CUTE_API void* CUTE_CALL cf_agrow(const void* a, int new_size, size_t element_size);
 CUTE_API void* CUTE_CALL cf_astatic(const void* a, int capacity, size_t element_size);
@@ -185,6 +192,9 @@ CUTE_API void* CUTE_CALL cf_aset(const void* a, const void* b, size_t element_si
 #ifdef __cplusplus
 }
 #endif // __cplusplus
+
+//--------------------------------------------------------------------------------------------------
+// C++ API
 
 #ifdef CUTE_CPP
 

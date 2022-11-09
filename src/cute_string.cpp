@@ -512,12 +512,12 @@ const char* cf_sintern_range(const char* start, const char* end)
 
 	// String is not yet interned, create a new allocation for it.
 	// We write-lock the data structure, this will wait for all readers to flush.
-	CUTE_ASSERT(!intern || intern->cookie == INTERN_COOKIE);
+	CUTE_ASSERT(!intern || intern->cookie == CF_INTERN_COOKIE);
 	intern_t* list = intern;
 	table->write_lock();
 	intern = (intern_t*)arena_alloc(&table->arena, sizeof(intern_t) + len + 1);
 	hset(table->interns, hash, intern);
-	intern->cookie = INTERN_COOKIE;
+	intern->cookie = CF_INTERN_COOKIE;
 	intern->len = len;
 	intern->string = (char*)(intern + 1);
 	CUTE_MEMCPY((char*)intern->string, start, len);
@@ -529,7 +529,7 @@ const char* cf_sintern_range(const char* start, const char* end)
 	return intern->string;
 }
 
-void cf_snuke_intern_table()
+void cf_sinuke_intern_table()
 {
 	intern_table_t* table = s_inst();
 	table->write_lock();
