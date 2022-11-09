@@ -332,6 +332,7 @@ double cf_stodouble(const char* s)
 
 uint64_t cf_stohex(const char* s)
 {
+	if (!CUTE_STRNCMP(s, "#", 1)) s += 1;
 	if (!CUTE_STRNCMP(s, "0x", 2)) s += 2;
 	char* end;
 	uint64_t result = CUTE_STRTOLL(s, &end, 16);
