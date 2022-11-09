@@ -256,7 +256,7 @@ extern "C" {
  *     const uint64_t* keys = hkeys(table);
  *     for (int i = 0; i < hcount(table); ++i) {
  *         uint64_t key = keys[i];
- *         v2 item = table[i];
+ *         v2 item = table[i]; // Could also do `hitems(table)` here.
  *         // ...
  *     }
  */
@@ -266,8 +266,10 @@ extern "C" {
  * Swaps internal ordering of two {key, item} pairs without ruining the hashing.
  * Use this for e.g. implementing a priority queue on top of the hash table.
  * 
- * h   - The hashtable. Can be NULL.
- *       h needs to be a pointer to the type of items in the table.
+ * h       - The hashtable. Can be NULL.
+ *           h needs to be a pointer to the type of items in the table.
+ * index_a - Index to the first item to swap.
+ * index_b - Index to the second item to swap.
  * 
  * Example:
  * 
