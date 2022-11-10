@@ -140,6 +140,7 @@ cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, in
 	app->y = y;
 	app->offscreen_w = w;
 	app->offscreen_h = h;
+	list_init(&app->joypads);
 	cf_app = app;
 
 #ifdef CUTE_WINDOWS
