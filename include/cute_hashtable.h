@@ -307,7 +307,7 @@ extern "C" {
 //--------------------------------------------------------------------------------------------------
 // Longform C API.
 
-#define cf_hashtable_set(h, k, ...) ((h) ? (h) : (*(void**)&(h) = cf_hashtable_make_impl(sizeof(uint64_t), sizeof(*(h)), 16)), CF_HCANARY(h), h[-1] = (__VA_ARGS__), *(void**)&(h) = cf_hashtable_insert_impl(CF_HHDR(h), (uint64_t)k), h + CF_HHDR(h)->return_index)
+#define cf_hashtable_set(h, k, ...) ((h) ? (h) : (*(void**)&(h) = cf_hashtable_make_impl(sizeof(uint64_t), sizeof(*(h)), 1)), CF_HCANARY(h), h[-1] = (__VA_ARGS__), *(void**)&(h) = cf_hashtable_insert_impl(CF_HHDR(h), (uint64_t)k), h + CF_HHDR(h)->return_index)
 #define cf_hashtable_add(h, k, ...) cf_hashtable_set(h, k, (__VA_ARGS__))
 #define cf_hashtable_get(h, k) ((h)[cf_hashtable_find_impl(CF_HHDR(h), (uint64_t)k)])
 #define cf_hashtable_find(h, k) cf_hashtable_get(h, k)

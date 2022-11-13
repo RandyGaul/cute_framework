@@ -73,7 +73,7 @@ void* cf_hashtable_make_impl(int key_size, int item_size, int capacity)
 		table->slots[i].item_index = -1;
 	}
 	table->item_capacity = capacity;
-	table->items_key = CUTE_ALLOC(capacity * item_size);
+	table->items_key = CUTE_ALLOC(capacity * key_size);
 	table->items_slot_index = (int*)CUTE_ALLOC(capacity * sizeof(*table->items_slot_index));
 	table->temp_key = CUTE_ALLOC(key_size);
 	table->temp_item = CUTE_ALLOC(item_size);
@@ -205,6 +205,10 @@ void* cf_hashtable_insert_impl2(cf_hhdr_t* table, const void* key, const void* i
 
 	if (table->count >= table->item_capacity) {
 		table = s_expand_items(table);
+
+		// Update the "hidden item" pointer, as it was invalidated by the item array expansion
+		// since the hidden item is at index -1.
+		item = (void*)((uintptr_t)(table + 1));
 	}
 
 	CUTE_ASSERT(table->count < table->item_capacity);

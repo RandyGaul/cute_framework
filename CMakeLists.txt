@@ -201,7 +201,6 @@ set(CUTE_HDRS
 	${SOKOL_HDRS}
 
 	src/internal/cute_app_internal.h
-	src/internal/cute_audio_internal.h
 	src/internal/cute_file_system_internal.h
 	src/internal/cute_input_internal.h
 	src/internal/cute_serialize_internal.h

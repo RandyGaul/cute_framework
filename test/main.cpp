@@ -102,7 +102,6 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_kv_read_delta_string),
 		CUTE_TEST_CASE_ENTRY(test_kv_read_delta_object),
 		CUTE_TEST_CASE_ENTRY(test_audio_load_synchronous),
-		CUTE_TEST_CASE_ENTRY(test_audio_load_asynchronous),
 		CUTE_TEST_CASE_ENTRY(test_ecs_octorok),
 		CUTE_TEST_CASE_ENTRY(test_ecs_no_kv),
 		CUTE_TEST_CASE_ENTRY(test_array_list_init),

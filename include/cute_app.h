@@ -48,6 +48,7 @@ typedef struct sg_image sg_image;
 	CF_ENUM(APP_OPTIONS_HIDDEN,                         1 << 6) \
 	CF_ENUM(APP_OPTIONS_WINDOW_POS_CENTERED,            1 << 7) \
 	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT, 1 << 8) \
+	CF_ENUM(APP_OPTIONS_NO_AUDIO,                       1 << 9) \
 
 enum
 {
@@ -65,8 +66,6 @@ CUTE_API void CUTE_CALL cf_app_update(float dt);
 CUTE_API sg_image CUTE_CALL cf_app_get_offscreen_buffer();
 CUTE_API void CUTE_CALL cf_app_present(bool draw_offscreen_buffer /*= true*/);
 
-CUTE_API cf_result_t CUTE_CALL cf_app_init_audio(bool spawn_mix_thread /*= true*/, int max_simultaneous_sounds /*= 5000*/);
-CUTE_API void CUTE_CALL cf_app_do_mixing();
 CUTE_API ImGuiContext* CUTE_CALL cf_app_init_imgui(bool no_default_font /*= false*/);
 CUTE_API sg_imgui_t* CUTE_CALL cf_app_get_sokol_imgui();
 
@@ -133,8 +132,6 @@ CUTE_INLINE void app_stop_running() { cf_app_stop_running(); }
 CUTE_INLINE void app_update(float dt) { cf_app_update(dt); }
 CUTE_INLINE sg_image app_get_offscreen_buffer() { return cf_app_get_offscreen_buffer(); }
 CUTE_INLINE void app_present(bool draw_offscreen_buffer = true) { cf_app_present(draw_offscreen_buffer); }
-CUTE_INLINE result_t app_init_audio(bool spawn_mix_thread = true, int max_simultaneous_sounds = 5000) { return cf_app_init_audio(spawn_mix_thread, max_simultaneous_sounds); }
-CUTE_INLINE void app_do_mixing() { cf_app_do_mixing(); }
 CUTE_INLINE ImGuiContext* app_init_imgui(bool no_default_font = false) { return cf_app_init_imgui(no_default_font); }
 CUTE_INLINE sg_imgui_t* app_get_sokol_imgui() { return cf_app_get_sokol_imgui(); }
 CUTE_INLINE result_t app_set_offscreen_buffer(int offscreen_w, int offscreen_h) { return cf_app_set_offscreen_buffer(offscreen_w, offscreen_h); }

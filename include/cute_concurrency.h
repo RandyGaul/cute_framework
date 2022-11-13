@@ -96,22 +96,6 @@ CUTE_API void CUTE_CALL cf_threadpool_add_task(cf_threadpool_t* pool, cf_task_fn
 CUTE_API void CUTE_CALL cf_threadpool_kick_and_wait(cf_threadpool_t* pool);
 CUTE_API void CUTE_CALL cf_threadpool_kick(cf_threadpool_t* pool);
 
-typedef void (CUTE_CALL cf_promise_fn)(cf_result_t status, void* param, void* promise_udata);
-
-typedef struct cf_promise_t
-{
-	#ifdef CUTE_CPP
-	CUTE_INLINE cf_promise_t() : callback(NULL), promise_udata(NULL) {}
-	CUTE_INLINE cf_promise_t(cf_promise_fn* callback, void* promise_udata = NULL) : callback(callback), promise_udata(promise_udata) {}
-	CUTE_INLINE void invoke(cf_result_t status, void* param) { callback(status, param, promise_udata); }
-	#endif // CUTE_CPP
-
-	cf_promise_fn* callback; /*= NULL;*/
-	void* promise_udata; /*= NULL;*/
-} cf_promise_t;
-
-CUTE_INLINE void cf_promise_invoke(cf_promise_t* promise, cf_result_t status, void* param) { promise->callback(status, param, promise->promise_udata); }
-
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -133,10 +117,8 @@ using thread_id_t = cf_thread_id_t;
 using thread_func_t = cf_thread_func_t;
 using rw_lock_t = cf_rw_lock_t;
 using threadpool_t = cf_threadpool_t;
-using promise_t = cf_promise_t;
 
 using task_fn = cf_task_fn;
-using promise_fn = cf_promise_fn;
 
 CUTE_INLINE mutex_t make_mutex() { return cf_make_mutex(); }
 CUTE_INLINE void destroy_mutex(mutex_t* mutex) { cf_destroy_mutex(mutex); }

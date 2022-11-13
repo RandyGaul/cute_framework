@@ -24,12 +24,12 @@
 #define CUTE_NET_IMPLEMENTATION
 #include <cute/cute_net.h>
 
-static CUTE_INLINE cf_result_t cf_wrap(cn_error_t cn_err)
+static CUTE_INLINE cf_result_t cf_wrap(cn_result_t cn_result)
 {
-	cf_result_t err;
-	err.code = cn_err.code;
-	err.details = cn_err.details;
-	return err;
+	cf_result_t result;
+	result.code = cn_result.code;
+	result.details = cn_result.details;
+	return result;
 }
 
 CUTE_STATIC_ASSERT(CUTE_CONNECT_TOKEN_SIZE == CN_CONNECT_TOKEN_SIZE, "Must be equal.");
@@ -80,7 +80,7 @@ cf_result_t cf_generate_connect_token(
 	uint8_t* token_ptr_out
 )
 {
-	cn_error_t err = cn_generate_connect_token(
+	cn_result_t result = cn_generate_connect_token(
 		application_id,
 		creation_timestamp,
 		client_to_server_key,
@@ -93,7 +93,7 @@ cf_result_t cf_generate_connect_token(
 		user_data,
 		shared_secret_key,
 		token_ptr_out);
-	return cf_wrap(err);
+	return cf_wrap(result);
 }
 
 cf_client_t* cf_make_client(
@@ -148,11 +148,6 @@ cf_client_state_t cf_client_state_get(const cf_client_t* client)
 const char* cf_client_state_string(cf_client_state_t state)
 {
 	return cn_client_state_string((cn_client_state_t)state);
-}
-
-float cf_client_time_of_last_packet_recieved(const cf_client_t* client)
-{
-	return cn_client_time_of_last_packet_recieved(client);
 }
 
 void cf_client_enable_network_simulator(cf_client_t* client, double latency, double jitter, double drop_chance, double duplicate_chance)
@@ -220,17 +215,6 @@ void cf_server_send(cf_server_t* server, const void* packet, int size, int clien
 {
 	cn_server_send(server, packet, size, client_index, send_reliably);
 }
-
-void cf_server_send_to_all_clients(cf_server_t* server, const void* packet, int size, bool send_reliably)
-{
-	cn_server_send_to_all_clients(server, packet, size, send_reliably);
-}
-
-void cf_server_send_to_all_but_one_client(cf_server_t* server, const void* packet, int size, int client_index, bool send_reliably)
-{
-	cn_server_send_to_all_but_one_client(server, packet, size, client_index, send_reliably);
-}
-
 bool cf_server_is_client_connected(cf_server_t* server, int client_index)
 {
 	return cn_server_is_client_connected(server, client_index);

@@ -63,7 +63,7 @@ int test_hashtable_macros()
 		}
 		for (int i = 0; i < iters; ++i) {
 			v2 v = hget(h, i);
-			assert(v.x == (float)i && v.y == (float)i);
+			CUTE_ASSERT(v.x == (float)i && v.y == (float)i);
 		}
 		for (int i = 0; i < iters; ++i) {
 			hdel(h, i);

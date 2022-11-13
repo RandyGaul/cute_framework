@@ -24,7 +24,11 @@
 
 #ifndef CUTE_ASSERT
 #	include <assert.h>
-#	define CUTE_ASSERT assert
+#	ifdef _MSC_VER
+#		define CUTE_ASSERT(...) (!(__VA_ARGS__) ? __debugbreak(), assert(__VA_ARGS__) : assert(__VA_ARGS__))
+#	else
+#		define CUTE_ASSERT assert
+#	endif
 #endif
 
 #ifndef CUTE_MEMCPY

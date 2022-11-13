@@ -30,7 +30,6 @@
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_file_system_internal.h>
-#include <internal/cute_audio_internal.h>
 #include <internal/cute_input_internal.h>
 #include <internal/cute_dx11.h>
 
@@ -178,6 +177,22 @@ cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, in
 		app->gfx_enabled = true;
 	}
 
+	if (!(options & APP_OPTIONS_NO_AUDIO)) {
+		int more_on_emscripten = 1;
+	#ifdef CUTE_EMSCRIPTEN
+		more_on_emscripten = 4;
+	#endif
+		cs_error_t err = cs_init(NULL, 44100, 1024 * more_on_emscripten, NULL);
+		if (err == CUTE_SOUND_ERROR_NONE) {
+	#ifndef CUTE_EMSCRIPTEN
+			cs_spawn_mix_thread();
+			cf_app->spawned_mix_thread = true;
+	#endif // CUTE_EMSCRIPTEN
+		} else {
+			CUTE_ASSERT(false);
+		}
+	}
+
 	int num_threads_to_spawn = cf_core_count() - 1;
 	if (num_threads_to_spawn) {
 		app->threadpool = cf_make_threadpool(num_threads_to_spawn);
@@ -206,11 +221,11 @@ void cf_destroy_app()
 		sg_shutdown();
 		cf_dx11_shutdown();
 	}
-	if (cf_app->cute_sound) cs_shutdown_context(cf_app->cute_sound);
+	cs_shutdown();
 	SDL_DestroyWindow(cf_app->window);
 	SDL_Quit();
 	destroy_threadpool(cf_app->threadpool);
-	cf_audio_system_destroy(cf_app->audio_system);
+	cs_shutdown();
 	int schema_count = cf_app->entity_parsed_schemas.count();
 	cf_kv_t** schemas = cf_app->entity_parsed_schemas.items();
 	for (int i = 0; i < schema_count; ++i) cf_destroy_kv(schemas[i]);
@@ -242,7 +257,7 @@ void cf_app_update(float dt)
 	cf_app->dt = dt;
 	cf_pump_input_msgs();
 	if (cf_app->audio_system) {
-		cf_audio_system_update(cf_app->audio_system, dt);
+		cs_update(dt);
 #ifdef CUTE_EMSCRIPTEN
 		cf_app_do_mixing(cf_app);
 #endif // CUTE_EMSCRIPTEN
@@ -330,38 +345,6 @@ void cf_app_present(bool draw_offscreen_buffer)
 	}
 
 	cf_app->fetched_offscreen = false;
-}
-
-cf_result_t cf_app_init_audio(bool spawn_mix_thread, int max_simultaneous_sounds)
-{
-	int more_on_emscripten = 1;
-#ifdef CUTE_EMSCRIPTEN
-	more_on_emscripten = 4;
-#endif
-	cf_app->cute_sound = cs_make_context(NULL, 44100, 1024 * more_on_emscripten, 0, NULL);
-	if (cf_app->cute_sound) {
-#ifndef CUTE_EMSCRIPTEN
-		if (spawn_mix_thread) {
-			cs_spawn_mix_thread(cf_app->cute_sound);
-			cf_app->spawned_mix_thread = true;
-		}
-#endif // CUTE_EMSCRIPTEN
-		cf_app->audio_system = cf_audio_system_make(max_simultaneous_sounds);
-		return cf_result_success();
-	} else {
-		return cf_result_error(cs_error_reason);
-	}
-}
-
-void cf_app_do_mixing()
-{
-#ifdef CUTE_EMSCRIPTEN
-	cs_mix(cf_app->cute_sound);
-#else
-	if (cf_app->spawned_mix_thread) {
-		cs_mix(cf_app->cute_sound);
-	}
-#endif // CUTE_EMSCRIPTEN
 }
 
 ImGuiContext* cf_app_init_imgui(bool no_default_font)

@@ -28,58 +28,13 @@ using namespace cute;
 CUTE_TEST_CASE(test_audio_load_synchronous, "Load and free wav/ogg files synchronously.");
 int test_audio_load_synchronous()
 {
-	cf_file_system_init(NULL);
-	cf_file_system_mount(cf_file_system_get_base_dir(), "", true);
-
+	CUTE_TEST_ASSERT(!cf_is_error(cf_make_app("UNIT TEST", 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_DEFAULT_GFX_CONTEXT, NULL)));
 	cf_audio_t* audio = cf_audio_load_ogg("test_data/3-6-19-blue-suit-jam.ogg");
 	CUTE_TEST_CHECK_POINTER(audio);
-	CUTE_TEST_ASSERT(!cf_is_error(cf_audio_destroy(audio)));
-
+	cf_audio_destroy(audio);
 	audio = cf_audio_load_wav("test_data/jump.wav");
 	CUTE_TEST_CHECK_POINTER(audio);
-	CUTE_TEST_ASSERT(!cf_is_error(cf_audio_destroy(audio)));
-
-	cf_file_system_destroy();
-
-	return 0;
-}
-
-static cf_result_t s_audio_error;
-static cf_audio_t* s_audio;
-
-static void cf_s_audio_promise(cf_result_t status, void* param, void* udata)
-{
-	s_audio_error = status;
-	cf_atomic_ptr_set((void**)&s_audio, param);
-	CUTE_ASSERT(udata == NULL);
-}
-
-CUTE_TEST_CASE(test_audio_load_asynchronous, "Load and free wav/ogg files asynchronously.");
-int test_audio_load_asynchronous()
-{
-	CUTE_TEST_ASSERT(!cf_is_error(cf_make_app("audio test", 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL)));
-
-	cf_promise_t promise;
-	promise.callback = cf_s_audio_promise;
-
-	s_audio_error = cf_result_success();
-	s_audio = NULL;
-	cf_audio_stream_ogg("test_data/3-6-19-blue-suit-jam.ogg", promise);
-
-	while (!cf_atomic_ptr_get((void**)&s_audio))
-		;
-
-	CUTE_TEST_ASSERT(!cf_is_error(cf_audio_destroy(s_audio)));
-
-	s_audio_error = cf_result_success();
-	s_audio = NULL;
-	cf_audio_stream_wav("test_data/jump.wav", promise);
-
-	while (!cf_atomic_ptr_get((void**)&s_audio))
-		;
-
-	CUTE_TEST_ASSERT(!cf_is_error(cf_audio_destroy(s_audio)));
-
+	cf_audio_destroy(audio);
 	cf_destroy_app();
 
 	return 0;
