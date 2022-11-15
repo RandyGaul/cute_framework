@@ -31,6 +31,103 @@
 
 #define CUTE_FILE_SYSTEM_BUFFERED_IO_SIZE (2 * CUTE_MB)
 
+char* cf_path_get_filename(const char* path)
+{
+	int at = slast_index_of(path, '/');
+	if (at == -1) return NULL;
+	return smake(path + at + 1);
+}
+
+char* cf_path_get_filename_no_ext(const char* path)
+{
+	int at = slast_index_of(path, '.');
+	if (at == -1) return NULL;
+	char* s = (char*)cf_path_get_filename(path);
+	at = slast_index_of(s, '.');
+	if (at == -1 || at == 0) {
+		sfree(s);
+		return NULL;
+	}
+	serase(s, at, slen(s) - at);
+	return s;
+}
+
+char* cf_path_get_ext(const char* path)
+{
+	int at = slast_index_of(path, '.');
+	if (at == -1 || path[at + 1] == 0 || path[at + 1] == '/') return NULL;
+	return smake(path + at);
+}
+
+char* cf_path_pop(const char* path)
+{
+	int len = (int)CUTE_STRLEN(path);
+	int at = slast_index_of(path, '/');
+	if (at == -1 || at == 0) return smake("/");
+	char* s = sdup(path);
+	serase(s, at, slen(s) - at);
+	return s;
+}
+
+char* cf_path_compact(const char* path, int n)
+{
+	int len = (int)CUTE_STRLEN(path);
+	if (n <= 6) return NULL;
+	if (len < n) return sdup(path);
+	int at = slast_index_of(path, '/');
+	if (at == -1 || at == 0) {
+		char* s = sdup(path);
+		serase(s, n, slen(s) - n);
+		serase(s, n - 3, 3);
+		return sappend(s, "...");
+	}
+	int remaining = len - at;
+	if (remaining > n - 3) {
+		char* s = smake("...");
+		sappend_range(s, path, path + at - 6);
+		return sappend(s, "...");
+	} else {
+		char* s = sdup(path);
+		serase(s, remaining - 3, slen(s) - (remaining - 3));
+		sappend(s, "...");
+		return sappend(s, path + at);
+	}
+}
+
+char* cf_path_directory_of(const char* path)
+{
+	if (!*path || *path == '.' && CUTE_STRLEN(path) < 3) return NULL;
+	if (sequ(path, "../")) return NULL;
+	if (sequ(path, "/")) return NULL;
+	int at = slast_index_of(path, '/');
+	if (at == -1) return NULL;
+	if (at == 0) return smake("/");
+	char* s = smake(path);
+	serase(s, at, slen(s) - at);
+	at = slast_index_of(s, '/');
+	if (at == -1) {
+		if (slen(s) == 2) {
+			return s;
+		} else {
+			s[0] = '/';
+			return s;
+		}
+	}
+	return serase(s, 0, at);
+}
+
+char* cf_path_top_directory(const char* path)
+{
+	int at = sfirst_index_of(path, '/');
+	if (at == -1) return NULL;
+	int next = sfirst_index_of(path + at + 1, '/');
+	if (next == -1) return smake("/");
+	char* s = sdup(path);
+	return serase(s, next + 1, slen(s) - (next + 1));
+}
+
+//--------------------------------------------------------------------------------------------------
+
 const char* cf_file_system_get_base_dir()
 {
 	return PHYSFS_getBaseDir();

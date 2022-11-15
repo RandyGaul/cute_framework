@@ -57,10 +57,6 @@
 //     
 //     hfree(pts);
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
-
 #ifndef CUTE_NO_SHORTHAND_API
 /**
  * Add's a {key, item} pair. Creates a new table if `h` is NULL. Call `hfree` when done.
@@ -329,6 +325,10 @@ extern "C" {
 #define CF_HHDR(h) (((cf_hhdr_t*)(h - 1) - 1)) // Converts pointer from the user-array to table header.
 #define CF_HCOOKIE 0xE6F7E359 // Magic number used for sanity/type checks.
 #define CF_HCANARY(h) (h ? CUTE_ASSERT(CF_HHDR(h)->cookie == CF_HCOOKIE) : 0) // Sanity/type check.
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 typedef struct cf_hslot_t
 {

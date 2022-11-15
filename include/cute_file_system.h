@@ -31,6 +31,29 @@
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
+	
+//--------------------------------------------------------------------------------------------------
+// Path helper functions.
+// These are implemented with the C-string API in "cute_string.h"; each function returns a fully
+// mutable string you must free up with `sfree` or `cf_string_free` when done.
+
+#ifndef CUTE_NO_SHORTHAND_API
+#define spfname(s) cf_path_get_filename(s)
+#define spfname_no_ext(s) cf_path_get_filename_no_ext(s)
+#define spext(s) cf_path_get_ext(s)
+#define sppop(s) cf_path_pop(s)
+#define spcompact(s, n) cf_path_compact(s, n)
+#define spdir_of(s) cf_path_directory_of(s)
+#define sptop_of(s) cf_path_top_directory(s)
+#endif // CUTE_NO_SHORTHAND_API
+
+CUTE_API char* CUTE_CALL cf_path_get_filename(const char* path);
+CUTE_API char* CUTE_CALL cf_path_get_filename_no_ext(const char* path);
+CUTE_API char* CUTE_CALL cf_path_get_ext(const char* path);
+CUTE_API char* CUTE_CALL cf_path_pop(const char* path);
+CUTE_API char* CUTE_CALL cf_path_compact(const char* path, int n);
+CUTE_API char* CUTE_CALL cf_path_directory_of(const char* path);
+CUTE_API char* CUTE_CALL cf_path_top_directory(const char* path);
 
 typedef struct cf_file_t cf_file_t;
 
@@ -82,6 +105,10 @@ CUTE_API cf_result_t CUTE_CALL cf_file_system_flush(cf_file_t* file);
 CUTE_API cf_result_t CUTE_CALL cf_file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size /*= NULL*/ /*= NULL*/);
 CUTE_API cf_result_t CUTE_CALL cf_file_system_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size /*= NULL*/ /*= NULL*/);
 CUTE_API cf_result_t CUTE_CALL cf_file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
+CUTE_API const char* CUTE_CALL cf_file_system_get_backend_specific_error_message();
+CUTE_API const char* CUTE_CALL cf_file_system_get_user_directory(const char* org, const char* app);
+CUTE_API const char* CUTE_CALL cf_file_system_get_actual_path(const char* virtual_path);
+CUTE_API void CUTE_CALL cf_file_system_enable_symlinks();
 
 #ifdef __cplusplus
 }
@@ -130,11 +157,13 @@ CUTE_INLINE result_t file_system_flush(file_t* file) { return cf_file_system_flu
 CUTE_INLINE result_t file_system_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size = NULL) { return cf_file_system_read_entire_file_to_memory(virtual_path, data_ptr, size); }
 CUTE_INLINE result_t file_system_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size = NULL) { return cf_file_system_read_entire_file_to_memory_and_nul_terminate(virtual_path, data_ptr, size); }
 CUTE_INLINE result_t file_system_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size) { return cf_file_system_write_entire_buffer_to_file(virtual_path, data, size); }
+CUTE_INLINE const char* file_system_get_backend_specific_error_message() { return cf_file_system_get_backend_specific_error_message(); }
+CUTE_INLINE const char* file_system_get_user_directory(const char* org, const char* app) { return cf_file_system_get_user_directory(org, app); }
+CUTE_INLINE const char* file_system_get_actual_path(const char* virtual_path) { return cf_file_system_get_actual_path(virtual_path); }
+CUTE_INLINE void file_system_enable_symlinks() { cf_file_system_enable_symlinks(); }
 
 }
 
 #endif // CUTE_CPP
-
-#include "cute_file_system_utils.h"
 
 #endif // CUTE_FILE_SYSTEM_H

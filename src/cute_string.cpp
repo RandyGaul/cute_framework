@@ -278,7 +278,6 @@ char** cf_ssplit(const char* s, char split_c)
 
 int cf_sfirst_index_of(const char* s, char c)
 {
-	CF_ACANARY(s);
 	if (!s) return -1;
 	const char* p = CUTE_STRCHR(s, c);
 	if (!p) return -1;
@@ -287,7 +286,6 @@ int cf_sfirst_index_of(const char* s, char c)
 
 int cf_slast_index_of(const char* s, char c)
 {
-	CF_ACANARY(s);
 	if (!s) return -1;
 	const char* p = CUTE_STRRCHR(s, c);
 	if (!p) return -1;
@@ -384,58 +382,6 @@ char* cf_serase(char* s, int index, int count)
 		scount(s) -= count;
 	}
 	return s;
-}
-
-struct arena_t
-{
-	int alignment;
-	int block_size;
-	char* ptr;
-	char* end;
-	char** blocks;
-};
-
-void* aligned_alloc(size_t size, size_t alignment)
-{
-	CUTE_ASSERT(alignment <= 256);
-	void* p = CUTE_ALLOC(size + alignment);
-	if (!p) return NULL;
-	size_t offset = (size_t)p & (alignment - 1);
-	p = CUTE_ALIGN_DOWN_PTR((char*)p + 1, alignment);
-	CUTE_ASSERT(!(((size_t)p) & (alignment - 1)));
-	*((char*)p - 1) = (char)(alignment - offset);
-	return p;
-}
-
-void aligned_free(void* p)
-{
-	if (!p) return;
-	size_t offset = (size_t)*((uint8_t*)p - 1);
-	CUTE_FREE((char*)p - (offset & 0xFF));
-}
-
-void* arena_alloc(arena_t* arena, size_t size)
-{
-	if (size > (size_t)(arena->end - arena->ptr)) {
-		arena->ptr = (char*)aligned_alloc(arena->block_size, arena->alignment);
-		arena->end = arena->ptr + arena->block_size;
-		apush(arena->blocks, arena->ptr);
-	}
-	void* result = arena->ptr;
-	arena->ptr = (char*)CUTE_ALIGN_DOWN_PTR(arena->ptr + size, arena->alignment);
-	CUTE_ASSERT(!(((size_t)(arena->ptr)) & (arena->alignment - 1)));
-	CUTE_ASSERT(arena->ptr <= arena->end);
-	return result;
-}
-
-void arena_destroy(arena_t* arena)
-{
-	if (arena->blocks) {
-		for (int i = 0; i < alen(arena->blocks); ++i) {
-			aligned_free(arena->blocks[i]);
-		}
-		afree(arena->blocks);
-	}
 }
 
 using intern_t = cf_intern_t;
@@ -536,7 +482,7 @@ void cf_sinuke_intern_table()
 	table->write_lock();
 	cf_atomic_ptr_set((void**)&g_intern_table, NULL);
 	table->write_unlock();
-	arena_destroy(&table->arena);
+	arena_reset(&table->arena);
 	hfree(table->interns);
 	cf_destroy_rw_lock(&table->lock);
 	CUTE_FREE(table);
@@ -553,36 +499,6 @@ const char* cf_utf8_next(const char* s, int* codepoint)
 }
 
 char* cf_utf8_write(char* buffer, int codepoint)
-{
-	return NULL;
-}
-
-const char* cf_path_get_filename(const char* path)
-{
-	return NULL;
-}
-
-const char* cf_path_get_ext(const char* path)
-{
-	return NULL;
-}
-
-const char* cf_path_append(const char* a, const char* b)
-{
-	return NULL;
-}
-
-const char* cf_path_pop(const char* path)
-{
-	return NULL;
-}
-
-const char* cf_path_compact(const char* path)
-{
-	return NULL;
-}
-
-const char* cf_path_name_of_folder_im_in(const char* path)
 {
 	return NULL;
 }

@@ -47,7 +47,6 @@
 #include "cute_joypad.h"
 #include "cute_kv.h"
 #include "cute_math.h"
-#include "cute_memory_pool.h"
 #include "cute_networking.h"
 #include "cute_png_cache.h"
 #include "cute_sprite.h"

@@ -94,14 +94,14 @@ static inline cf_result_t s_result(cs_error_t err)
 	}
 }
 
-cf_result_t cf_music_play(cf_audio_t* audio_source, float fade_in_time)
+void cf_music_play(cf_audio_t* audio_source, float fade_in_time)
 {
-	return s_result(cs_music_play((cs_audio_source_t*)audio_source, fade_in_time));
+	cs_music_play((cs_audio_source_t*)audio_source, fade_in_time);
 }
 
-cf_result_t cf_music_stop(float fade_out_time)
+void cf_music_stop(float fade_out_time)
 {
-	return s_result(cs_music_stop(fade_out_time));
+	cs_music_stop(fade_out_time);
 }
 
 void cf_music_set_volume(float volume)
@@ -124,14 +124,14 @@ void cf_music_resume()
 	cs_music_resume();
 }
 
-cf_result_t cf_music_switch_to(cf_audio_t* audio_source, float fade_out_time, float fade_in_time)
+void cf_music_switch_to(cf_audio_t* audio_source, float fade_out_time, float fade_in_time)
 {
-	return s_result(cs_music_switch_to((cs_audio_source_t*)audio_source, fade_out_time, fade_in_time));
+	return cs_music_switch_to((cs_audio_source_t*)audio_source, fade_out_time, fade_in_time);
 }
 
-cf_result_t cf_music_crossfade(cf_audio_t* audio_source, float cross_fade_time)
+void cf_music_crossfade(cf_audio_t* audio_source, float cross_fade_time)
 {
-	return s_result(cs_music_crossfade((cs_audio_source_t*)audio_source, cross_fade_time));
+	return cs_music_crossfade((cs_audio_source_t*)audio_source, cross_fade_time);
 }
 
 uint64_t cf_music_get_sample_index()

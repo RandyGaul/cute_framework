@@ -83,7 +83,6 @@ set(CUTE_SRCS
 	src/cute_input.cpp
 	src/cute_timer.cpp
 	src/cute_version.cpp
-	src/cute_memory_pool.cpp
 	src/cute_kv.cpp
 	src/cute_kv_utils.cpp
 	src/cute_base64.cpp
@@ -109,6 +108,7 @@ set(CUTE_SRCS
 	src/cute_coroutine.cpp
 	src/cute_networking.cpp
 	src/cute_guid.cpp
+	src/cute_alloc.cpp
 
 	src/internal/cute_ecs_internal.cpp
 	src/internal/cute_dx11.cpp
@@ -135,12 +135,10 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_defines.h
 	include/cute_result.h
 	include/cute_file_system.h
-	include/cute_file_system_utils.h
 	include/cute_handle_table.h
 	include/cute_input.h
 	include/cute_timer.h
 	include/cute_version.h
-	include/cute_memory_pool.h
 	include/cute_doubly_list.h
 	include/cute_kv.h
 	include/cute_kv_utils.h
@@ -343,6 +341,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_coroutine.h
 		test/test_string.h
 		test/test_hashtable.h
+		test/test_path.h
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})

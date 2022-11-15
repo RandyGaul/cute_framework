@@ -103,10 +103,10 @@
 #define CUTE_STRINGIZE(...) CUTE_STRINGIZE_INTERNAL(__VA_ARGS__)
 #define CUTE_OFFSET_OF(T, member) ((size_t)((uintptr_t)(&(((T*)0)->member))))
 #define CUTE_DEBUG_PRINTF(...)
-#define CUTE_ALIGN_UP(v, n) ((v) & ~((n) - 1))
-#define CUTE_ALIGN_DOWN(v, n) CUTE_ALIGN_UP((v) + (n) - 1, (n))
-#define CUTE_ALIGN_UP_PTR(p, n) ((void*)CUTE_ALIGN_UP((uintptr_t)(p), n))
-#define CUTE_ALIGN_DOWN_PTR(p, n) ((void*)CUTE_ALIGN_DOWN((uintptr_t)(p), n))
+#define CUTE_ALIGN_TRUNCATE(v, n) ((v) & ~((n) - 1))
+#define CUTE_ALIGN_FORWARD(v, n) CUTE_ALIGN_TRUNCATE((v) + (n) - 1, (n))
+#define CUTE_ALIGN_TRUNCATE_PTR(p, n) ((void*)CUTE_ALIGN_TRUNCATE((uintptr_t)(p), n))
+#define CUTE_ALIGN_FORWARD_PTR(p, n) ((void*)CUTE_ALIGN_FORWARD((uintptr_t)(p), n))
 
 #ifdef __cplusplus
 #	ifndef CUTE_NO_CPP

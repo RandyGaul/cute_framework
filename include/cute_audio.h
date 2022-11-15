@@ -50,14 +50,14 @@ CUTE_API void CUTE_CALL cf_audio_set_pause(bool true_for_paused);
 
 // -------------------------------------------------------------------------------------------------
 
-CUTE_API cf_result_t CUTE_CALL cf_music_play(cf_audio_t* audio_source, float fade_in_time /*= 0*/);
-CUTE_API cf_result_t CUTE_CALL cf_music_stop(float fade_out_time /*= 0*/);
+CUTE_API void CUTE_CALL cf_music_play(cf_audio_t* audio_source, float fade_in_time /*= 0*/);
+CUTE_API void CUTE_CALL cf_music_stop(float fade_out_time /*= 0*/);
 CUTE_API void CUTE_CALL cf_music_set_volume(float volume);
 CUTE_API void CUTE_CALL cf_music_set_loop(bool true_to_loop);
 CUTE_API void CUTE_CALL cf_music_pause();
 CUTE_API void CUTE_CALL cf_music_resume();
-CUTE_API cf_result_t CUTE_CALL cf_music_switch_to(cf_audio_t* audio_source, float fade_out_time /*= 0*/, float fade_in_time /*= 0*/);
-CUTE_API cf_result_t CUTE_CALL cf_music_crossfade(cf_audio_t* audio_source, float cross_fade_time /*= 0*/);
+CUTE_API void CUTE_CALL cf_music_switch_to(cf_audio_t* audio_source, float fade_out_time /*= 0*/, float fade_in_time /*= 0*/);
+CUTE_API void CUTE_CALL cf_music_crossfade(cf_audio_t* audio_source, float cross_fade_time /*= 0*/);
 CUTE_API uint64_t CUTE_CALL cf_music_get_sample_index();
 CUTE_API cf_result_t CUTE_CALL cf_music_set_sample_index(uint64_t sample_index);
 
@@ -138,14 +138,14 @@ CUTE_INLINE void audio_set_pause(bool true_for_paused) { cf_audio_set_pause(true
 
 // -------------------------------------------------------------------------------------------------
 
-CUTE_INLINE result_t music_play(audio_t* audio_source, float fade_in_time = 0) { return cf_music_play(audio_source, fade_in_time); }
-CUTE_INLINE result_t music_stop(float fade_out_time = 0) { return cf_music_stop(fade_out_time = 0); }
+CUTE_INLINE void music_play(audio_t* audio_source, float fade_in_time = 0) { cf_music_play(audio_source, fade_in_time); }
+CUTE_INLINE void music_stop(float fade_out_time = 0) { cf_music_stop(fade_out_time = 0); }
 CUTE_INLINE void music_set_volume(float volume) { cf_music_set_volume(volume); }
 CUTE_INLINE void music_set_loop(bool true_to_loop) { cf_music_set_loop(true_to_loop); }
 CUTE_INLINE void music_pause() { cf_music_pause(); }
 CUTE_INLINE void music_resume() { cf_music_resume(); }
-CUTE_INLINE result_t music_switch_to(audio_t* audio_source, float fade_out_time = 0, float fade_in_time = 0) { return cf_music_switch_to(audio_source, fade_out_time, fade_in_time); }
-CUTE_INLINE result_t music_crossfade(audio_t* audio_source, float cross_fade_time = 0) { return cf_music_crossfade(audio_source, cross_fade_time); }
+CUTE_INLINE void music_switch_to(audio_t* audio_source, float fade_out_time = 0, float fade_in_time = 0) { cf_music_switch_to(audio_source, fade_out_time, fade_in_time); }
+CUTE_INLINE void music_crossfade(audio_t* audio_source, float cross_fade_time = 0) { cf_music_crossfade(audio_source, cross_fade_time); }
 CUTE_INLINE void music_set_sample_index(uint64_t sample_index) { cf_music_set_sample_index(sample_index); }
 CUTE_INLINE uint64_t music_get_sample_index() { return cf_music_get_sample_index(); }
 

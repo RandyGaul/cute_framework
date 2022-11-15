@@ -458,8 +458,8 @@
 #define cf_string_make(s) cf_sset(NULL, s)
 #define cf_string_cmp(a, b) CUTE_STRCMP(a, b)
 #define cf_string_icmp(a, b) CUTE_STRICMP(a, b)
-#define cf_string_equ(a, b) !CUTE_STRCMP(a, b)
-#define cf_string_iequ(a, b) !CUTE_STRICMP(a, b)
+#define cf_string_equ(a, b) ((!(a) && !(b)) || !CUTE_STRCMP(a, b))
+#define cf_string_iequ(a, b) ((!(a) && !(b)) || !CUTE_STRICMP(a, b))
 #define cf_string_prefix(s, prefix) cf_sprefix(s, prefix)
 #define cf_string_suffix(s, suffix) cf_ssuffix(s, suffix)
 #define cf_string_contains(s, contains_me) (cf_string_len(s) >= CUTE_STRLEN(contains_me) && !!CUTE_STRSTR(s, contains_me))
@@ -499,6 +499,10 @@
 // Hidden API - Not intended for direct use.
 
 #define CF_INTERN_COOKIE 0x75AFC82E // Used for sanity/type checking.
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 typedef struct cf_intern_t
 {
@@ -544,12 +548,9 @@ CUTE_API int CUTE_CALL cf_utf8_size(int codepoint);
 CUTE_API const char* CUTE_CALL cf_utf8_next(const char* s, int* codepoint);
 CUTE_API char* CUTE_CALL cf_utf8_write(char* buffer, int codepoint);
 
-CUTE_API const char* CUTE_CALL cf_path_get_filename(const char* path);
-CUTE_API const char* CUTE_CALL cf_path_get_ext(const char* path);
-CUTE_API const char* CUTE_CALL cf_path_append(const char* a, const char* b);
-CUTE_API const char* CUTE_CALL cf_path_pop(const char* path);
-CUTE_API const char* CUTE_CALL cf_path_compact(const char* path);
-CUTE_API const char* CUTE_CALL cf_path_name_of_folder_im_in(const char* path);
+#ifdef __cplusplus
+}
+#endif // __cplusplus
 
 //--------------------------------------------------------------------------------------------------
 // C++ API
@@ -586,7 +587,7 @@ struct string_t
 	CUTE_INLINE string_t(string_t&& s) { if (CF_AHDR(s.m_str)->is_static) { s_static(); sset(m_str, s); } else { m_str = s.m_str; } s.m_str = NULL; }
 	CUTE_INLINE ~string_t() { sfree(m_str); }
 
-	CUTE_INLINE static string_t steal_from(char* c_api_string) { CF_ACANARY(c_api_string); string_t r; r.m_str = c_api_string; return r; }
+	CUTE_INLINE static string_t steal_from(char* cute_c_api_string) { CF_ACANARY(cute_c_api_string); string_t r; r.m_str = cute_c_api_string; return r; }
 	CUTE_INLINE static string_t from(int i) { string_t r; sint(r.m_str, i); return r; }
 	CUTE_INLINE static string_t from(uint64_t uint) { string_t r; suint(r.m_str, uint); return r; }
 	CUTE_INLINE static string_t from(float f) { string_t r; sfloat(r.m_str, f); return r; }

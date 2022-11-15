@@ -31,11 +31,6 @@
 extern "C" {
 #endif // __cplusplus
 
-CUTE_API const char* CUTE_CALL cf_file_system_get_backend_specific_error_message();
-CUTE_API const char* CUTE_CALL cf_file_system_get_user_directory(const char* org, const char* app);
-CUTE_API const char* CUTE_CALL cf_file_system_get_actual_path(const char* virtual_path);
-CUTE_API void CUTE_CALL cf_file_system_enable_symlinks();
-
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -48,10 +43,6 @@ CUTE_API void CUTE_CALL cf_file_system_enable_symlinks();
 namespace cute
 {
 
-CUTE_INLINE const char* file_system_get_backend_specific_error_message() { return cf_file_system_get_backend_specific_error_message(); }
-CUTE_INLINE const char* file_system_get_user_directory(const char* org, const char* app) { return cf_file_system_get_user_directory(org, app); }
-CUTE_INLINE const char* file_system_get_actual_path(const char* virtual_path) { return cf_file_system_get_actual_path(virtual_path); }
-CUTE_INLINE void file_system_enable_symlinks() { cf_file_system_enable_symlinks(); }
 
 }
 

@@ -26,10 +26,6 @@
 #include "cute_c_runtime.h"
 #include "cute_alloc.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
-
 //--------------------------------------------------------------------------------------------------
 // C API
 
@@ -184,6 +180,10 @@ typedef struct cf_ahdr_t
 	char* data;
 	uint32_t cookie;
 } cf_ahdr_t;
+
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
 
 CUTE_API void* CUTE_CALL cf_agrow(const void* a, int new_size, size_t element_size);
 CUTE_API void* CUTE_CALL cf_astatic(const void* a, int capacity, size_t element_size);

@@ -53,6 +53,7 @@
 #include <test_coroutine.h>
 #include <test_string.h>
 #include <test_hashtable.h>
+#include <test_path.h>
 
 int main(int argc, const char** argv)
 {
@@ -72,6 +73,7 @@ int main(int argc, const char** argv)
 #endif
 
 	test_t tests[] = {
+		CUTE_TEST_CASE_ENTRY(test_path),
 		CUTE_TEST_CASE_ENTRY(test_array_macros_simple),
 		CUTE_TEST_CASE_ENTRY(test_string_macros_simple),
 		CUTE_TEST_CASE_ENTRY(test_string_macros_advanced),
