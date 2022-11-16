@@ -393,8 +393,14 @@ struct dictionary
 	dictionary(int capacity);
 	~dictionary();
 
-	T* find(const K& key);
-	const T* find(const K& key) const;
+	T& get(const K& key);
+	T& find(const K& key) { return get(key); }
+	const T& get(const K& key) const;
+	const T& find(const K& key) const { return get(key); }
+	T* try_get(const K& key);
+	T* try_find(const K& key) { return try_get(key); }
+	const T* try_get(const K& key) const;
+	const T* try_find(const K& key) const { return try_get(key); }
 
 	T* insert(const K& key);
 	T* insert(const K& key, const T& val);
@@ -443,7 +449,21 @@ dictionary<K, T>::~dictionary()
 }
 
 template <typename K, typename T>
-T* dictionary<K, T>::find(const K& key)
+T& dictionary<K, T>::get(const K& key)
+{
+	int index = cf_hashtable_find_impl2(m_table, &key);
+	return items()[index];
+}
+
+template <typename K, typename T>
+const T& dictionary<K, T>::get(const K& key) const
+{
+	int index = cf_hashtable_find_impl2(m_table, &key);
+	return items()[index];
+}
+
+template <typename K, typename T>
+T* dictionary<K, T>::try_get(const K& key)
 {
 	int index = cf_hashtable_find_impl2(m_table, &key);
 	if (index >= 0) return items() + index;
@@ -451,7 +471,7 @@ T* dictionary<K, T>::find(const K& key)
 }
 
 template <typename K, typename T>
-const T* dictionary<K, T>::find(const K& key) const
+const T* dictionary<K, T>::try_get(const K& key) const
 {
 	int index = cf_hashtable_find_impl2(m_table, &key);
 	if (index > 0) return items() + index;
@@ -494,7 +514,7 @@ T* dictionary<K, T>::insert(const K& key, T&& val)
 template <typename K, typename T>
 void dictionary<K, T>::remove(const K& key)
 {
-	T* slot = find(key);
+	T* slot = try_find(key);
 	if (slot) {
 		slot->~T();
 		cf_hashtable_remove_impl2(m_table, &key);

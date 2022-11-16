@@ -63,7 +63,7 @@
 #include <stdint.h>
 
 #ifndef NOMINMAX
-#	define NOMINMAX
+#	define NOMINMAX WINDOWS_IS_ANNOYING_AINT_IT
 #endif
 
 #ifndef CUTE_STATIC
@@ -111,8 +111,8 @@
 #ifdef __cplusplus
 #	ifndef CUTE_NO_CPP
 #		define CUTE_CPP
-#	endif // !CUTE_NO_CPP
-#endif // __cplusplus
+#	endif
+#endif
 
 #define SOKOL_API_DECL CUTE_API
 
@@ -129,11 +129,11 @@
 
 #define IMGUI_INCLUDE_IMCONFIG_H
 
-#include <stdlib.h> // NULL
+#include <stdlib.h>
 
 #ifndef __cplusplus
-#include <stdbool.h> // bool
-#endif // !__cplusplus
+#include <stdbool.h>
+#endif
 
 struct cf_app_t;
 
@@ -143,7 +143,7 @@ struct cf_app_t;
 
 #ifdef CUTE_CPP
 // -------------------------------------------------------------------------------------------------
-// Avoid including <utility> header.
+// Avoid including <utility> header to reduce compile times.
 
 template <typename T>
 struct cf_remove_reference
@@ -170,7 +170,7 @@ constexpr typename cf_remove_reference<T>::type&& move(T&& arg) noexcept
 }
 
 // -------------------------------------------------------------------------------------------------
-// Avoid including <initializer_list> header.
+// Avoid including <initializer_list> header to reduce compile times.
 // Unfortunately this class *must* be in the std:: namespace or things won't compile. So we try to
 // avoid defining this class if someone already included <initializer_list> before including
 // cute framework <cute.h>.
@@ -181,6 +181,7 @@ constexpr typename cf_remove_reference<T>::type&& move(T&& arg) noexcept
 #define _INITIALIZER_LIST_ // MSVC
 #define _INITIALIZER_LIST  // GCC
 #define _LIBCPP_INITIALIZER_LIST // Clang
+// Will probably need to add more here for more compilers later.
 
 namespace std
 {

@@ -31,18 +31,17 @@
 
 #ifdef __cplusplus
 extern "C" {
-#ifdef _MSC_VER
-#pragma warning(disable : 4190) // MSVC warns about returning "C++ type" with C-linkage.
-#endif
 #endif // __cplusplus
 
-// 2d vector
+// 2d vector.
 typedef struct cf_v2
 {
 	float x;
 	float y;
 } cf_v2;
 
+// Use this to create a v2 struct.
+// The C++ API uses V2(x, y).
 CUTE_INLINE cf_v2 cf_V2(float x, float y)
 {
 	cf_v2 result;
@@ -51,21 +50,21 @@ CUTE_INLINE cf_v2 cf_V2(float x, float y)
 	return result;
 }
 
-// Rotation about an axis composed of cos/sin pair
+// Rotation about an axis composed of cos/sin pair.
 typedef struct cf_sincos_t
 {
 	float s;
 	float c;
 } cf_sincos_t;
 
-// 2x2 matrix
+// 2x2 matrix.
 typedef struct cf_m2
 {
 	cf_v2 x;
 	cf_v2 y;
 } cf_m2;
 
-// 2d transformation, mostly useful for graphics and not physics colliders, since it supports scale
+// 2d transformation, mostly useful for graphics and not physics colliders, since it supports scale.
 typedef struct cf_m3x2
 {
 	cf_m2 m;
@@ -73,20 +72,22 @@ typedef struct cf_m3x2
 } cf_m3x2;
 
 
-// 2d transformation, mostly useful for physics colliders since there's no scale
+// 2d transformation, mostly useful for physics colliders since there's no scale.
 typedef struct cf_transform_t
 {
 	cf_sincos_t r;
 	cf_v2 p;
 } cf_transform_t;
 
-// 2d plane, aka line
+// 2d plane, aka line.
 typedef struct cf_halfspace_t
 {
 	cf_v2 n; // normal
 	float d; // distance to origin; d = ax + by = dot(n, p)
 } cf_halfspace_t;
 
+// A ray is a directional line segment. It starts at an endpoint and extends into another direction
+// for a specified distance (defined by t).
 typedef struct cf_ray_t
 {
 	cf_v2 p; // position
@@ -94,6 +95,7 @@ typedef struct cf_ray_t
 	float t; // distance along d from position p to find endpoint of ray
 } cf_ray_t;
 
+// The results for a raycast query.
 typedef struct cf_raycast_t
 {
 	float t; // time of impact
@@ -106,6 +108,7 @@ typedef struct cf_circle_t
 	float r;
 } cf_circle_t;
 
+// Axis-aligned bounding box. A box that cannot rotate.
 typedef struct cf_aabb_t
 {
 	cf_v2 min;
@@ -114,7 +117,9 @@ typedef struct cf_aabb_t
 
 #define CUTE_PI 3.14159265f
 
-// scalar ops
+//--------------------------------------------------------------------------------------------------
+// Scalar float ops.
+
 CUTE_INLINE float cf_min(float a, float b) { return a < b ? a : b; }
 CUTE_INLINE float cf_max(float a, float b) { return b < a ? a : b; }
 CUTE_INLINE float cf_clamp(float a, float lo, float hi) { return cf_max(lo, cf_min(a, hi)); }
@@ -136,14 +141,35 @@ CUTE_INLINE int cf_clamp01_int(int a) { return cf_max_int(0, cf_min_int(a, 1)); 
 CUTE_INLINE bool cf_is_even(int x) { return (x % 2) == 0; }
 CUTE_INLINE bool cf_is_odd(int x) { return !cf_is_even(x); }
 
-// easing functions
-CUTE_INLINE float cf_smoothstep(float x) { return x * x * (3.0f - 2.0f * x); }
-CUTE_INLINE float cf_ease_out_sin(float x) { return sinf((x * CUTE_PI) * 0.5f); }
-CUTE_INLINE float cf_ease_in_sin(float x) { return 1.0f - cosf((x * CUTE_PI) * 0.5f); }
-CUTE_INLINE float cf_ease_in_quart(float x) { return x * x * x * x; }
-CUTE_INLINE float cf_ease_out_quart(float x) { return 1.0f - cf_ease_in_quart(1.0f - x); }
+//--------------------------------------------------------------------------------------------------
+// Easing functions.
+// Adapted from Noel Berry: https://github.com/NoelFB/blah/blob/master/include/blah_ease.h
 
-// vector ops
+CUTE_INLINE float cf_smoothstep(float x) { return x * x * (3.0f - 2.0f * x); }
+CUTE_INLINE float cf_quad_in(float x) { return x * x; }
+CUTE_INLINE float cf_quad_out(float x) { return -(x * (x - 2.0f)); }
+CUTE_INLINE float cf_quad_in_out(float x) { if (x < 0.5f) return 2.0f * x * x; else return (-2.0f * x * x) + (4.0f * x) - 1.0f; }
+CUTE_INLINE float cf_cube_in(float x) { return x * x * x; }
+CUTE_INLINE float cf_cube_out(float x) { float f = (x - 1); return f * f * f + 1.0f; }
+CUTE_INLINE float cf_cube_in_out(float x) { if (x < 0.5f) return 4.0f * x * x * x; else { float f = ((2.0f * x) - 2.0f); return 0.5f * x * x * x + 1.0f; } }
+CUTE_INLINE float cf_quart_in(float x) { return x * x * x * x; }
+CUTE_INLINE float cf_quart_out(float x) { float f = (x - 1.0f); return f * f * f * (1.0f - x) + 1.0f; }
+CUTE_INLINE float cf_quart_in_out(float x) { if (x < 0.5f) return 8.0f * x * x * x * x; else { float f = (x - 1); return -8.0f * f * f * f * f + 1.0f; } }
+CUTE_INLINE float cf_quint_in(float x) { return x * x * x * x * x; }
+CUTE_INLINE float cf_quint_out(float x) { float f = (x - 1); return f * f * f * f * f + 1.0f; }
+CUTE_INLINE float cf_quint_in_out(float x) { if (x < 0.5f) return 16.0f * x * x * x * x * x; else { float f = ((2.0f * x) - 2.0f); return  0.5f * f * f * f * f * f + 1.0f; } }
+CUTE_INLINE float cf_sin_in(float x) { return sinf((x - 1.0f) * CUTE_PI * 0.5f) + 1.0f; }
+CUTE_INLINE float cf_sin_out(float x) { return sinf(x * (CUTE_PI * 0.5f)); }
+CUTE_INLINE float cf_sin_in_out(float x) { return 0.5f * (1.0f - cosf(x * CUTE_PI)); }
+CUTE_INLINE float cf_circle_in(float x) { return 1.0f - sqrtf(1.0f - (x * x)); }
+CUTE_INLINE float cf_circle_out(float x) { return sqrtf((2.0f - x) * x); }
+CUTE_INLINE float cf_circle_in_out(float x) { if (x < 0.5f) return 0.5f * (1.0f - sqrtf(1.0f - 4.0f * (x * x))); else return 0.5f * (sqrtf(-((2.0f * x) - 3.0f) * ((2.0f * x) - 1.0f)) + 1.0f); }
+CUTE_INLINE float cf_back_in(float x) { return x * x * x - x * sinf(x * CUTE_PI); }
+CUTE_INLINE float cf_back_out(float x) { float f = (1.0f - x); return 1.0f - (x * x * x - x * sinf(f * CUTE_PI)); }
+CUTE_INLINE float cf_back_in_out(float x) { if (x < 0.5f) { float f = 2.0f * x; return 0.5f * (f * f * f - f * sinf(f * CUTE_PI)); } else { float f = (1.0f - (2.0f * x - 1.0f)); return 0.5f * (1.0f - (f * f * f - f * sinf(f * CUTE_PI))) + 0.5f; } }
+
+//--------------------------------------------------------------------------------------------------
+// 2D vector ops.
 
 CUTE_INLINE cf_v2 cf_add_v2(cf_v2 a, cf_v2 b) { return cf_V2(a.x + b.x, a.y + b.y); }
 CUTE_INLINE cf_v2 cf_sub_v2(cf_v2 a, cf_v2 b) { return cf_V2(a.x - b.x, a.y - b.y); }
@@ -194,7 +220,9 @@ CUTE_INLINE int cf_parallel(cf_v2 a, cf_v2 b, float tol)
 	return 0;
 }
 
-// rotation ops
+//--------------------------------------------------------------------------------------------------
+// cf_sincos_t rotation ops.
+
 CUTE_INLINE cf_sincos_t cf_sincos_f(float radians) { cf_sincos_t r; r.s = sinf(radians); r.c = cosf(radians); return r; }
 CUTE_INLINE cf_sincos_t cf_sincos() { cf_sincos_t r; r.c = 1.0f; r.s = 0; return r; }
 CUTE_INLINE cf_v2 cf_x_axis(cf_sincos_t r) { return cf_V2(r.c, r.s); }
@@ -225,13 +253,19 @@ CUTE_INLINE float cf_shortest_arc(cf_v2 a, cf_v2 b)
 CUTE_INLINE float cf_angle_diff(float radians_a, float radians_b) { return cf_mod((radians_b - radians_a) + CUTE_PI, 2.0f * CUTE_PI) - CUTE_PI; }
 CUTE_INLINE cf_v2 cf_from_angle(float radians) { return cf_V2(cosf(radians), sinf(radians)); }
 
-// cf_m2 ops
+//--------------------------------------------------------------------------------------------------
+// m2 ops.
+// 2D graphics matrix for only scale + rotate.
+
 CUTE_INLINE cf_v2 cf_mul_m2_v2(cf_m2 a, cf_v2 b) { cf_v2 c; c.x = a.x.x * b.x + a.y.x * b.y; c.y = a.x.y * b.x + a.y.y * b.y; return c; }
 CUTE_INLINE cf_v2 cf_mulT_m2_v2(cf_m2 a, cf_v2 b) { cf_v2 c; c.x = a.x.x * b.x + a.x.y * b.y; c.y = a.y.x * b.x + a.y.y * b.y; return c; }
 CUTE_INLINE cf_m2 cf_mul_m2(cf_m2 a, cf_m2 b) { cf_m2 c; c.x = cf_mul_m2_v2(a, b.x); c.y = cf_mul_m2_v2(a, b.y); return c; }
 CUTE_INLINE cf_m2 cf_mulT_m2(cf_m2 a, cf_m2 b) { cf_m2 c; c.x = cf_mulT_m2_v2(a, b.x); c.y = cf_mulT_m2_v2(a, b.y); return c; }
 
-// cf_m3x2 ops
+//--------------------------------------------------------------------------------------------------
+// m3x2 ops.
+// General purpose 2D graphics matrix; scale + rotate + translate.
+
 CUTE_INLINE cf_v2 cf_mul_m32_v2(cf_m3x2 a, cf_v2 b) { return cf_add_v2(cf_mul_m2_v2(a.m, b), a.p); }
 CUTE_INLINE cf_v2 cf_mulT_m32_v2(cf_m3x2 a, cf_v2 b) { return cf_mulT_m2_v2(a.m, cf_sub_v2(b, a.p)); }
 CUTE_INLINE cf_m3x2 cf_mul_m32(cf_m3x2 a, cf_m3x2 b) { cf_m3x2 c; c.m = cf_mul_m2(a.m, b.m); c.p = cf_add_v2(cf_mul_m2_v2(a.m, b.p), a.p); return c; }
@@ -247,7 +281,10 @@ CUTE_INLINE cf_m3x2 cf_make_scale_translation_f_f(float sx, float sy, cf_v2 p) {
 CUTE_INLINE cf_m3x2 cf_make_rotation(float radians) { cf_sincos_t sc = cf_sincos_f(radians); cf_m3x2 m; m.m.x = cf_V2(sc.c, -sc.s); m.m.y = cf_V2(sc.s, sc.c); m.p = cf_V2(0, 0); return m; }
 CUTE_INLINE cf_m3x2 cf_make_transform_TSR(cf_v2 p, cf_v2 s, float radians) { cf_sincos_t sc = cf_sincos_f(radians); cf_m3x2 m; m.m.x = cf_mul_v2_f(cf_V2(sc.c, -sc.s), s.x); m.m.y = cf_mul_v2_f(cf_V2(sc.s, sc.c), s.y); m.p = p; return m; }
 
-// transform ops
+//--------------------------------------------------------------------------------------------------
+// Transform ops.
+// No scale factor allowed here, good for physics + colliders.
+
 CUTE_INLINE cf_transform_t cf_make_transform() { cf_transform_t x; x.p = cf_V2(0, 0); x.r = cf_sincos(); return x; }
 CUTE_INLINE cf_transform_t cf_make_transform_TR(cf_v2 p, float radians) { cf_transform_t x; x.r = cf_sincos_f(radians); x.p = p; return x; }
 CUTE_INLINE cf_v2 cf_mul_tf_v2(cf_transform_t a, cf_v2 b) { return cf_add_v2(cf_mul_sc_v2(a.r, b), a.p); }
@@ -255,7 +292,10 @@ CUTE_INLINE cf_v2 cf_mulT_tf_v2(cf_transform_t a, cf_v2 b) { return cf_mulT_sc_v
 CUTE_INLINE cf_transform_t cf_mul_tf(cf_transform_t a, cf_transform_t b) { cf_transform_t c; c.r = cf_mul_sc(a.r, b.r); c.p = cf_add_v2(cf_mul_sc_v2(a.r, b.p), a.p); return c; }
 CUTE_INLINE cf_transform_t cf_mulT_tf(cf_transform_t a, cf_transform_t b) { cf_transform_t c; c.r = cf_mulT_sc(a.r, b.r); c.p = cf_mulT_sc_v2(a.r, cf_sub_v2(b.p, a.p)); return c; }
 
-// halfspace ops
+//--------------------------------------------------------------------------------------------------
+// Halfspace (plane/line) ops.
+// Functions for infinite lines.
+
 CUTE_INLINE cf_halfspace_t cf_plane(cf_v2 n, float d) { cf_halfspace_t h; h.n = n; h.d = d; return h; }
 CUTE_INLINE cf_halfspace_t cf_plane2(cf_v2 n, cf_v2 p) { cf_halfspace_t h; h.n = n; h.d = cf_dot(n, p); return h; }
 CUTE_INLINE cf_v2 cf_origin(cf_halfspace_t h) { return cf_mul_v2_f(h.n, h.d); }
@@ -266,7 +306,9 @@ CUTE_INLINE cf_halfspace_t cf_mulT_tf_hs(cf_transform_t a, cf_halfspace_t b) { c
 CUTE_INLINE cf_v2 cf_intersect_halfspace(cf_v2 a, cf_v2 b, float da, float db) { return cf_add_v2(a, cf_mul_v2_f(cf_sub_v2(b, a), (da / (da - db)))); }
 CUTE_INLINE cf_v2 cf_intersect_halfspace2(cf_halfspace_t h, cf_v2 a, cf_v2 b) { return cf_intersect_halfspace(a, b, cf_distance_hs(h, a), cf_distance_hs(h, b)); }
 
-// aabb helpers
+//--------------------------------------------------------------------------------------------------
+// AABB helpers.
+
 CUTE_INLINE cf_aabb_t cf_make_aabb(cf_v2 min, cf_v2 max) { cf_aabb_t bb; bb.min = min; bb.max = max; return bb; }
 CUTE_INLINE cf_aabb_t cf_make_aabb_pos_w_h(cf_v2 pos, float w, float h) { cf_aabb_t bb; cf_v2 he = cf_mul_v2_f(cf_V2(w, h), 0.5f); bb.min = cf_sub_v2(pos, he); bb.max = cf_add_v2(pos, he); return bb; }
 CUTE_INLINE cf_aabb_t cf_make_aabb_center_half_extents(cf_v2 center, cf_v2 half_extents) { cf_aabb_t bb; bb.min = cf_sub_v2(center, half_extents); bb.max = cf_add_v2(center, half_extents); return bb; }
@@ -324,12 +366,17 @@ CUTE_INLINE void cf_aabb_verts(cf_v2* out, cf_aabb_t bb)
 	out[3] = cf_V2(bb.min.x, bb.max.y);
 }
 
-// circle helpers
+//--------------------------------------------------------------------------------------------------
+// Circle helpers
+
 CUTE_INLINE float cf_area_circle(cf_circle_t c) { return 3.14159265f * c.r * c.r; }
 CUTE_INLINE float cf_surface_area_circle(cf_circle_t c) { return 2.0f * 3.14159265f * c.r; }
 CUTE_INLINE cf_circle_t cf_mul_tf_circle(cf_transform_t tx, cf_circle_t a) { cf_circle_t b; b.p = cf_mul_tf_v2(tx, a.p); b.r = a.r; return b; }
 
-// ray ops
+//--------------------------------------------------------------------------------------------------
+// Ray ops.
+// Full raycasting suite is farther down below in this file.
+
 CUTE_INLINE cf_v2 cf_impact(cf_ray_t r, float t) { return cf_add_v2(r.p, cf_mul_v2_f(r.d, t)); }
 CUTE_INLINE cf_v2 cf_endpoint(cf_ray_t r) { return cf_add_v2(r.p, cf_mul_v2_f(r.d, r.t)); }
 
@@ -343,7 +390,6 @@ CUTE_INLINE int cf_ray_to_halfpsace(cf_ray_t A, cf_halfspace_t B, cf_raycast_t* 
 	return 1;
 }
 
-// Nice line segment funcs.
 // http://www.randygaul.net/2014/07/23/distance-point-to-line-segment/
 CUTE_INLINE float cf_distance_sq(cf_v2 a, cf_v2 b, cf_v2 p)
 {
@@ -363,15 +409,24 @@ CUTE_INLINE float cf_distance_sq(cf_v2 a, cf_v2 b, cf_v2 p)
 	return cf_dot(e, e);
 }
 
+//--------------------------------------------------------------------------------------------------
+// Collision detection.
+
+// It's quite common to limit the number of verts on polygons to a low number. Feel free to adjust
+// this number if needed, but be warned: higher than 8 and shapes generally start to look more like
+// circles/ovals; it becomes pointless beyond a certain point.
 #define CUTE_POLY_MAX_VERTS 8
 
+// 2D polygon. Verts are ordered in counter-clockwise order (CCW).
 typedef struct cf_poly_t
 {
 	int count;
 	cf_v2 verts[CUTE_POLY_MAX_VERTS];
-	cf_v2 norms[CUTE_POLY_MAX_VERTS];
+	cf_v2 norms[CUTE_POLY_MAX_VERTS]; // Pointing perpendicular along the poly's surface.
+	                                  // Rotated vert[i] to vert[i + 1] 90 degrees CCW + normalized.
 } cf_poly_t;
 
+// 2D capsule shape. It's like a shrink-wrap of 2 circles connected by a rod.
 typedef struct cf_capsule_t
 {
 	cf_v2 a;
@@ -379,22 +434,21 @@ typedef struct cf_capsule_t
 	float r;
 } cf_capsule_t;
 
-// contains all information necessary to resolve a collision, or in other words
+// Contains all information necessary to resolve a collision, or in other words
 // this is the information needed to separate shapes that are colliding. Doing
-// the resolution step is *not* included in cute_c2.
+// the resolution step is *not* included.
 typedef struct cf_manifold_t
 {
 	int count;
 	float depths[2];
 	cf_v2 contact_points[2];
 
-	// always points from shape A to shape B (first and second shapes passed into
-	// any of the c2***to***Manifold functions)
+	// Always points from shape A to shape B.
 	cf_v2 n;
 } cf_manifold_t;
 
-// boolean collision detection
-// these versions are faster than the manifold versions, but only give a YES/NO result
+// Boolean collision detection functions.
+// These versions are slightly faster/simpler than the manifold versions, but only give a YES/NO result.
 CUTE_API bool CUTE_CALL cf_circle_to_circle(cf_circle_t A, cf_circle_t B);
 CUTE_API bool CUTE_CALL cf_circle_to_aabb(cf_circle_t A, cf_aabb_t B);
 CUTE_API bool CUTE_CALL cf_circle_to_capsule(cf_circle_t A, cf_capsule_t B);
@@ -406,20 +460,20 @@ CUTE_API bool CUTE_CALL cf_aabb_to_poly(cf_aabb_t A, const cf_poly_t* B, const c
 CUTE_API bool CUTE_CALL cf_capsule_to_poly(cf_capsule_t A, const cf_poly_t* B, const cf_transform_t* bx);
 CUTE_API bool CUTE_CALL cf_poly_to_poly(const cf_poly_t* A, const cf_transform_t* ax, const cf_poly_t* B, const cf_transform_t* bx);
 
-// ray operations
-// output is placed into the cf_raycast_t typedef struct, which represents the hit location
-// of the ray. the out param contains no meaningful information if these funcs
-// return 0
+// Ray casting.
+// Output is placed into the `cf_raycast_t` struct, which represents the hit location
+// of the ray. The out param contains no meaningful information if these funcs
+// return false.
 CUTE_API bool CUTE_CALL cf_ray_to_circle(cf_ray_t A, cf_circle_t B, cf_raycast_t* out);
 CUTE_API bool CUTE_CALL cf_ray_to_aabb(cf_ray_t A, cf_aabb_t B, cf_raycast_t* out);
 CUTE_API bool CUTE_CALL cf_ray_to_capsule(cf_ray_t A, cf_capsule_t B, cf_raycast_t* out);
 CUTE_API bool CUTE_CALL cf_ray_to_poly(cf_ray_t A, const cf_poly_t* B, const cf_transform_t* bx_ptr, cf_raycast_t* out);
 
-// manifold generation
-// these functions are (generally) slower than the boolean versions, but will compute one
+// Manifold generation.
+// These functions are (generally) slower + more complex than bool versions, but compute one
 // or two points that represent the plane of contact. This information is
-// is usually needed to resolve and prevent shapes from colliding. If no coll
-// ision occured the count member of the manifold typedef struct is set to 0.
+// is usually needed to resolve and prevent shapes from colliding. If no coll-
+// ision occured the `count` member of the manifold typedef struct is set to 0.
 CUTE_API void CUTE_CALL cf_circle_to_circle_manifold(cf_circle_t A, cf_circle_t B, cf_manifold_t* m);
 CUTE_API void CUTE_CALL cf_circle_to_aabb_manifold(cf_circle_t A, cf_aabb_t B, cf_manifold_t* m);
 CUTE_API void CUTE_CALL cf_circle_to_capsule_manifold(cf_circle_t A, cf_capsule_t B, cf_manifold_t* m);
@@ -445,8 +499,8 @@ typedef enum cf_shape_type_t
 	#undef CF_ENUM
 } cf_shape_type_t;
 
-// This typedef struct is only for advanced usage of the c2GJK function. See comments inside of the
-// c2GJK function for more details.
+// This typedef struct is only for advanced usage of the `cf_gjk` function. See comments inside of the
+// `cf_gjk` function for more details.
 typedef struct cf_gjk_cache_t
 {
 	float metric;
@@ -466,21 +520,24 @@ typedef struct cf_gjk_cache_t
 // should be NULL, as it is only for advanced usage (unless you know what you're doing, then
 // go ahead and use it). iterations is an optional parameter.
 //
-// IMPORTANT NOTE:
-// The GJK function is sensitive to large shapes, since it internally will compute signed area
-// values. `c2GJK` is called throughout cute c2 in many ways, so try to make sure all of your
-// collision shapes are not gigantic. For example, try to keep the volume of all your shapes
-// less than 100.0f. If you need large shapes, you should use tiny collision geometry for all
-// cute c2 function, and simply render the geometry larger on-screen by scaling it up.
+// 
+// IMPORTANT NOTE
+// 
+//     The GJK function is sensitive to large shapes, since it internally will compute signed area
+//     values. `cf_gjk` is called throughout this file in many ways, so try to make sure all of your
+//     collision shapes are not gigantic. For example, try to keep the volume of all your shapes
+//     less than 100.0f. If you need large shapes, you should use tiny collision geometry for all
+//     function here, and simply render the geometry larger on-screen by scaling it up.
+//
 CUTE_API float CUTE_CALL cf_gjk(const void* A, cf_shape_type_t typeA, const cf_transform_t* ax_ptr, const void* B, cf_shape_type_t typeB, const cf_transform_t* bx_ptr, cf_v2* outA, cf_v2* outB, int use_radius, int* iterations, cf_gjk_cache_t* cache);
 
-// Stores results of a time of impact calculation done by `c2TOI`.
+// Stores results of a time of impact calculation done by `cf_toi`.
 typedef struct cf_toi_result_t
 {
 	int hit;        // 1 if shapes were touching at the TOI, 0 if they never hit.
 	float toi;      // The time of impact between two shapes.
-	cf_v2 n;           // Surface normal from shape A to B at the time of impact.
-	cf_v2 p;           // Point of contact between shapes A and B at time of impact.
+	cf_v2 n;        // Surface normal from shape A to B at the time of impact.
+	cf_v2 p;        // Point of contact between shapes A and B at time of impact.
 	int iterations; // Number of iterations the solver underwent.
 } cf_toi_result_t;
 
@@ -497,22 +554,22 @@ typedef struct cf_toi_result_t
 // capsules are treated as line segments i.e. rays).
 //
 // IMPORTANT NOTE:
-// The c2TOI function can be used to implement a "swept character controller", but it can be
-// difficult to do so. Say we compute a time of impact with `c2TOI` and move the shapes to the
+// The cf_toi function can be used to implement a "swept character controller", but it can be
+// difficult to do so. Say we compute a time of impact with `cf_toi` and move the shapes to the
 // time of impact, and adjust the velocity by zeroing out the velocity along the surface normal.
-// If we then call `c2TOI` again, it will fail since the shapes will be considered to start in
+// If we then call `cf_toi` again, it will fail since the shapes will be considered to start in
 // a colliding configuration. There are many styles of tricks to get around this problem, and
-// all of them involve giving the next call to `c2TOI` some breathing room. It is recommended
+// all of them involve giving the next call to `cf_toi` some breathing room. It is recommended
 // to use some variation of the following algorithm:
 //
-// 1. Call c2TOI.
+// 1. Call cf_toi.
 // 2. Move the shapes to the TOI.
 // 3. Slightly inflate the size of one, or both, of the shapes so they will be intersecting.
 //    The purpose is to make the shapes numerically intersecting, but not visually intersecting.
-//    Another option is to call c2TOI with slightly deflated shapes.
-//    See the function `c2Inflate` for some more details.
+//    Another option is to call cf_toi with slightly deflated shapes.
+//    See the function `cf_inflate` for some more details.
 // 4. Compute the collision manifold between the inflated shapes (for example, use poly_ttoPolyManifold).
-// 5. Gently push the shapes apart. This will give the next call to c2TOI some breathing room.
+// 5. Gently push the shapes apart. This will give the next call to cf_toi some breathing room.
 CUTE_API cf_toi_result_t CUTE_CALL cf_toi(const void* A, cf_shape_type_t typeA, const cf_transform_t* ax_ptr, cf_v2 vA, const void* B, cf_shape_type_t typeB, const cf_transform_t* bx_ptr, cf_v2 vB, int use_radius);
 
 // Inflating a shape.
@@ -530,11 +587,11 @@ CUTE_API cf_toi_result_t CUTE_CALL cf_toi(const void* A, cf_shape_type_t typeA, 
 CUTE_API void CUTE_CALL cf_inflate(void* shape, cf_shape_type_t type, float skin_factor);
 
 // Computes 2D convex hull. Will not do anything if less than two verts supplied. If
-// more than C2_MAX_POLYGON_VERTS are supplied extras are ignored.
+// more than CUTE_POLY_MAX_VERTS are supplied extras are ignored.
 CUTE_API int CUTE_CALL cf_hull(cf_v2* verts, int count);
 CUTE_API void CUTE_CALL cf_norms(cf_v2* verts, cf_v2* norms, int count);
 
-// runs c2Hull and c2Norms, assumes p->verts and p->count are both set to valid values
+// runs cf_hull and cf_norms, assumes p->verts and p->count are both set to valid values
 CUTE_API void CUTE_CALL cf_make_poly(cf_poly_t* p);
 CUTE_API cf_v2 CUTE_CALL cf_centroid(const cf_v2* verts, int count);
 
@@ -548,9 +605,6 @@ CUTE_API bool CUTE_CALL cf_cast_ray(cf_ray_t A, const void* B, const cf_transfor
 
 #ifdef __cplusplus
 }
-#ifdef _MSC_VER
-#pragma warning(default : 4190) // MSVC warns about returning "C++ type" with C-linkage.
-#endif
 #endif // __cplusplus
 
 //--------------------------------------------------------------------------------------------------
@@ -630,10 +684,27 @@ CUTE_INLINE bool is_even(int x) { return cf_is_even(x); }
 CUTE_INLINE bool is_odd(int x) { return cf_is_odd(x); }
 
 CUTE_INLINE float smoothstep(float x) { return cf_smoothstep(x); }
-CUTE_INLINE float ease_out_sin(float x) { return cf_ease_out_sin(x); }
-CUTE_INLINE float ease_in_sin(float x) { return cf_ease_in_sin(x); }
-CUTE_INLINE float ease_in_quart(float x) { return cf_ease_in_quart(x); }
-CUTE_INLINE float ease_out_quart(float x) { return cf_ease_out_quart(x); }
+CUTE_INLINE float quad_in(float x) { return cf_quad_in(x); }
+CUTE_INLINE float quad_out(float x) { return cf_quad_out(x); }
+CUTE_INLINE float quad_in_out(float x) { return cf_quad_in_out(x); }
+CUTE_INLINE float cube_in(float x) { return cf_cube_in(x); }
+CUTE_INLINE float cube_out(float x) { return cf_cube_out(x); }
+CUTE_INLINE float cube_in_out(float x) { return cf_cube_in_out(x); }
+CUTE_INLINE float quart_in(float x) { return cf_quart_in(x); }
+CUTE_INLINE float quart_out(float x) { return cf_quart_out(x); }
+CUTE_INLINE float quart_in_out(float x) { return cf_quart_in_out(x); }
+CUTE_INLINE float quint_in(float x) { return cf_quint_in(x); }
+CUTE_INLINE float quint_out(float x) { return cf_quint_out(x); }
+CUTE_INLINE float quint_in_out(float x) { return cf_quint_in_out(x); }
+CUTE_INLINE float sin_in(float x) { return cf_sin_in(x); }
+CUTE_INLINE float sin_out(float x) { return cf_sin_out(x); }
+CUTE_INLINE float sin_in_out(float x) { return cf_sin_in_out(x); }
+CUTE_INLINE float circle_in(float x) { return cf_circle_in(x); }
+CUTE_INLINE float circle_out(float x) { return cf_circle_out(x); }
+CUTE_INLINE float circle_in_out(float x) { return cf_circle_in_out(x); }
+CUTE_INLINE float back_in(float x) { return cf_back_in(x); }
+CUTE_INLINE float back_out(float x) { return cf_back_out(x); }
+CUTE_INLINE float back_in_out(float x) { return cf_back_in_out(x); }
 
 CUTE_INLINE float dot(v2 a, v2 b) { return cf_dot(a, b); }
 

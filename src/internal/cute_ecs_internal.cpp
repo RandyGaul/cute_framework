@@ -34,7 +34,7 @@ cf_result_t cf_kv_val_entity(cf_kv_t* kv, cf_entity_t* entity)
 		*entity = cf_app->load_id_table->operator[](index);
 		return cf_result_success();
 	} else {
-		int* index_ptr = cf_app->save_id_table->find(*entity);
+		int* index_ptr = cf_app->save_id_table->try_find(*entity);
 		CUTE_ASSERT(index_ptr);
 		return cf_kv_val_int32(kv, index_ptr);
 	}

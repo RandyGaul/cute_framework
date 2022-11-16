@@ -61,8 +61,8 @@ CUTE_INLINE cf_color_t cf_make_color_rgba(uint8_t r, uint8_t g, uint8_t b, uint8
 CUTE_INLINE cf_color_t cf_make_color_hex(int hex) { return cf_make_color_rgba((uint8_t)((hex & 0xFF000000) >> 24), (uint8_t)((hex & 0x00FF0000) >> 16), (uint8_t)((hex & 0x0000FF00) >> 8), (uint8_t)(hex & 0x000000FF)); }
 CUTE_INLINE cf_color_t cf_make_color_hex_string(const char* hex) { cf_make_color_hex((int)stohex(hex)); }
 
-CUTE_INLINE cf_pixel_t cf_make_pixel_rgb_f(float r, float g, float b) { cf_pixel_t p; p.colors.r = r * 255.0f; p.colors.g = g * 255.0f; p.colors.b = b * 255.0f; p.colors.a = 255; return p; }
-CUTE_INLINE cf_pixel_t cf_make_pixel_rgba_f(float r, float g, float b, float a) { cf_pixel_t p; p.colors.r = r * 255.0f; p.colors.g = g * 255.0f; p.colors.b = b * 255.0f; p.colors.a = a * 255.0f; return p; }
+CUTE_INLINE cf_pixel_t cf_make_pixel_rgb_f(float r, float g, float b) { cf_pixel_t p; p.colors.r = (uint8_t)(r * 255.0f); p.colors.g = (uint8_t)(g * 255.0f); p.colors.b = (uint8_t)(b * 255.0f); p.colors.a = 255; return p; }
+CUTE_INLINE cf_pixel_t cf_make_pixel_rgba_f(float r, float g, float b, float a) { cf_pixel_t p; p.colors.r = (uint8_t)(r * 255.0f); p.colors.g = (uint8_t)(g * 255.0f); p.colors.b = (uint8_t)(b * 255.0f); p.colors.a = (uint8_t)(a * 255.0f); return p; }
 CUTE_INLINE cf_pixel_t cf_make_pixel_rgb(uint8_t r, uint8_t g, uint8_t b) { cf_pixel_t p; p.colors.r = r; p.colors.g = g; p.colors.b = b; p.colors.a = 255; return p; }
 CUTE_INLINE cf_pixel_t cf_make_pixel_rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { cf_pixel_t p; p.colors.r = r; p.colors.g = g; p.colors.b = b; p.colors.a = a; return p; }
 CUTE_INLINE cf_pixel_t cf_make_pixel_hex(int hex) { return cf_make_pixel_rgba((uint8_t)((hex & 0xFF000000) >> 24), (uint8_t)((hex & 0x00FF0000) >> 16), (uint8_t)((hex & 0x0000FF00) >> 8), (uint8_t)(hex & 0x000000FF)); }
@@ -77,8 +77,8 @@ CUTE_INLINE cf_color_t cf_color_premultiply(cf_color_t c) { c.r *= c.a; c.g *= c
 
 CUTE_INLINE cf_pixel_t cf_mul_pixel(cf_pixel_t a, float s) { return cf_make_pixel_rgba_f(a.colors.r * s, a.colors.g * s, a.colors.b * s, a.colors.a * s); }
 CUTE_INLINE cf_pixel_t cf_div_pixel(cf_pixel_t a, float s) { return cf_make_pixel_rgba_f(a.colors.r / s, a.colors.g / s, a.colors.b / s, a.colors.a / s); }
-CUTE_INLINE cf_pixel_t cf_add_pixel(cf_pixel_t a, cf_pixel_t b) { return cf_make_pixel_rgba_f(a.colors.r + b.colors.r, a.colors.g + b.colors.g, a.colors.b + b.colors.b, a.colors.a + b.colors.a); }
-CUTE_INLINE cf_pixel_t cf_sub_pixel(cf_pixel_t a, cf_pixel_t b) { return cf_make_pixel_rgba_f(a.colors.r - b.colors.r, a.colors.g - b.colors.g, a.colors.b - b.colors.b, a.colors.a - b.colors.a); }
+CUTE_INLINE cf_pixel_t cf_add_pixel(cf_pixel_t a, cf_pixel_t b) { return cf_make_pixel_rgba(a.colors.r + b.colors.r, a.colors.g + b.colors.g, a.colors.b + b.colors.b, a.colors.a + b.colors.a); }
+CUTE_INLINE cf_pixel_t cf_sub_pixel(cf_pixel_t a, cf_pixel_t b) { return cf_make_pixel_rgba(a.colors.r - b.colors.r, a.colors.g - b.colors.g, a.colors.b - b.colors.b, a.colors.a - b.colors.a); }
 CUTE_INLINE cf_pixel_t cf_pixel_lerp(cf_pixel_t a, cf_pixel_t b, float s) { return cf_add_pixel(a, cf_mul_pixel(cf_sub_pixel(b, a), s)); }
 CUTE_INLINE cf_pixel_t cf_pixel_premultiply(cf_pixel_t c) { c.colors.r *= c.colors.a; c.colors.g *= c.colors.a; c.colors.b *= c.colors.a; return c; }
 

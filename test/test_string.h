@@ -252,9 +252,9 @@ int test_dictionary_and_interning()
 	const char* ib = sintern(b);
 	h.insert(ia, 2);
 	h.insert(ib, 3);
-	auto find_ptr = h.find(ia);
+	auto find_ptr = h.try_find(ia);
 	CUTE_TEST_ASSERT(find_ptr && *find_ptr == 2);
-	find_ptr = h.find(ib);
+	find_ptr = h.try_find(ib);
 	CUTE_TEST_ASSERT(find_ptr && *find_ptr == 3);
 	return 0;
 }

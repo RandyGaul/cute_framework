@@ -50,7 +50,7 @@ struct cf_aseprite_cache_t
 static void cf_s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata)
 {
 	cf_aseprite_cache_t* cache = (cf_aseprite_cache_t*)udata;
-	auto pixels_ptr = cache->id_to_pixels.find(image_id);
+	auto pixels_ptr = cache->id_to_pixels.try_find(image_id);
 	if (!pixels_ptr) {
 		CUTE_DEBUG_PRINTF("Aseprite cache -- unable to find id %lld.", (long long int)image_id);
 		CUTE_MEMSET(buffer, 0, bytes_to_fill);
@@ -115,7 +115,7 @@ cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepr
 {
 	// First see if this ase was already cached.
 	aseprite_path = sintern(aseprite_path);
-	auto entry_ptr = cache->aseprites.find(aseprite_path);
+	auto entry_ptr = cache->aseprites.try_find(aseprite_path);
 	if (entry_ptr) {
 		cf_s_sprite(cache, *entry_ptr, sprite);
 		return cf_result_success();
@@ -229,7 +229,7 @@ cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepr
 void cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, const char* aseprite_path)
 {
 	aseprite_path = sintern(aseprite_path);
-	auto entry_ptr = cache->aseprites.find(aseprite_path);
+	auto entry_ptr = cache->aseprites.try_find(aseprite_path);
 	if (!entry_ptr) return;
 	
 	aseprite_cache_entry_t entry = *entry_ptr;
@@ -254,7 +254,7 @@ cf_result_t cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* a
 	cf_result_t err = cf_aseprite_cache_load(cache, aseprite_path, &s);
 	if (cf_is_error(err)) return err;
 
-	auto entry_ptr = cache->aseprites.find(aseprite_path);
+	auto entry_ptr = cache->aseprites.try_find(aseprite_path);
 	if (!entry_ptr) return cf_result_error("Unable to load aseprite.");
 	else {
 		*ase = entry_ptr->ase;

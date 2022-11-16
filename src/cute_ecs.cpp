@@ -34,14 +34,14 @@ static cf_result_t s_load_from_schema(cf_entity_type_t schema_type, cf_entity_t 
 {
 	// Look for parent.
 	// If parent exists, load values from it first.
-	auto inherit_ptr = cf_app->entity_schema_inheritence.find(schema_type);
+	auto inherit_ptr = cf_app->entity_schema_inheritence.try_find(schema_type);
 	if (inherit_ptr) {
 		cf_entity_type_t inherits_from = *inherit_ptr;
 		cf_result_t result = s_load_from_schema(inherits_from, entity, config, component, udata);
 		if (cf_is_error(result)) return result;
 	}
 
-	auto schema_ptr = cf_app->entity_parsed_schemas.find(schema_type);
+	auto schema_ptr = cf_app->entity_parsed_schemas.try_find(schema_type);
 	result_t result = cf_result_success();
 	if (!schema_ptr) {
 		if (config->serializer_fn) result = config->serializer_fn(NULL, true, entity, component, udata);
@@ -117,14 +117,14 @@ static CUTE_INLINE uint16_t s_entity_type(cf_entity_t entity)
 
 cf_entity_t cf_make_entity(const char* entity_type, cf_result_t* err_out)
 {
-	auto type_ptr = cf_app->entity_type_string_to_id.find(sintern(entity_type));
+	auto type_ptr = cf_app->entity_type_string_to_id.try_find(sintern(entity_type));
 	if (!type_ptr) {
 		if (err_out) *err_out = cf_result_error("`entity_type` is not valid.");
 		return CF_INVALID_ENTITY;
 	}
 	cf_entity_type_t type = *type_ptr;
 
-	cf_entity_collection_t* collection = cf_app->entity_collections.find(type);
+	cf_entity_collection_t* collection = cf_app->entity_collections.try_find(type);
 	CUTE_ASSERT(collection);
 
 	int index = collection->entity_handles.count();
@@ -135,7 +135,7 @@ cf_entity_t cf_make_entity(const char* entity_type, cf_result_t* err_out)
 	const array<const char*>& component_type_tuple = collection->component_type_tuple;
 	for (int i = 0; i < component_type_tuple.count(); ++i) {
 		const char* component_type = component_type_tuple[i];
-		cf_component_config_t* config = cf_app->component_configs.find(component_type);
+		cf_component_config_t* config = cf_app->component_configs.try_find(component_type);
 
 		if (!config) {
 			if (err_out) *err_out = cf_result_error("Unable to find component config.");
@@ -164,7 +164,7 @@ static cf_entity_collection_t* s_collection(cf_entity_t entity)
 		CUTE_ASSERT(collection);
 	} else {
 		// Slightly slower path -- lookup collection first.
-		collection = cf_app->entity_collections.find(entity_type);
+		collection = cf_app->entity_collections.try_find(entity_type);
 		if (!collection) return NULL;
 	}
 	return collection;
@@ -173,7 +173,7 @@ static cf_entity_collection_t* s_collection(cf_entity_t entity)
 void cf_destroy_entity(cf_entity_t entity)
 {
 	uint16_t entity_type = s_entity_type(entity);
-	cf_entity_collection_t* collection = cf_app->entity_collections.find(entity_type);
+	cf_entity_collection_t* collection = cf_app->entity_collections.try_find(entity_type);
 	CUTE_ASSERT(collection);
 
 	if (collection->entity_handle_table.is_valid(entity.handle)) {
@@ -181,7 +181,7 @@ void cf_destroy_entity(cf_entity_t entity)
 
 		// Call cleanup function on each component.
 		for (int i = 0; i < collection->component_tables.count(); ++i) {
-			cf_component_config_t* config = cf_app->component_configs.find(collection->component_type_tuple[i]);
+			cf_component_config_t* config = cf_app->component_configs.try_find(collection->component_type_tuple[i]);
 			if (config && config->cleanup_fn) {
 				config->cleanup_fn(entity, collection->component_tables[i][index], config->cleanup_udata);
 			}
@@ -225,7 +225,7 @@ void cf_entity_delayed_activate(cf_entity_t entity)
 void cf_entity_deactivate(cf_entity_t entity)
 {
 	uint16_t entity_type = s_entity_type(entity);
-	cf_entity_collection_t* collection = cf_app->entity_collections.find(entity_type);
+	cf_entity_collection_t* collection = cf_app->entity_collections.try_find(entity_type);
 	CUTE_ASSERT(collection);
 
 	if (collection->entity_handle_table.is_valid(entity.handle)) {
@@ -419,7 +419,7 @@ static void s_register_entity_type(const char* schema)
 	const char* entity_type_string = s_kv_string(kv, "entity_type");
 	const char* inherits_from_string = s_kv_string(kv, "inherits_from");
 	cf_entity_type_t inherits_from = CF_INVALID_ENTITY_TYPE;
-	auto inherits_ptr = cf_app->entity_type_string_to_id.find(inherits_from_string);
+	auto inherits_ptr = cf_app->entity_type_string_to_id.try_find(inherits_from_string);
 	if (inherits_ptr) inherits_from = *inherits_ptr;
 
 	// Search for all component types present in the schema.
@@ -444,7 +444,7 @@ static void s_register_entity_type(const char* schema)
 	for (int i = 0; i < component_type_tuple.count(); ++i) {
 		collection->component_type_tuple.add(component_type_tuple[i]);
 		cf_typeless_array& table = collection->component_tables.add();
-		cf_component_config_t* config = cf_app->component_configs.find(component_type_tuple[i]);
+		cf_component_config_t* config = cf_app->component_configs.try_find(component_type_tuple[i]);
 		table.m_element_size = config->size_of_component;
 	}
 
@@ -488,7 +488,7 @@ static void s_register_entity_type(array<const char*> component_type_tuple, cons
 	for (int i = 0; i < component_type_ids.count(); ++i) {
 		collection->component_type_tuple.add(component_type_ids[i]);
 		cf_typeless_array& table = collection->component_tables.add();
-		cf_component_config_t* config = cf_app->component_configs.find(component_type_ids[i]);
+		cf_component_config_t* config = cf_app->component_configs.try_find(component_type_ids[i]);
 		table.m_element_size = config->size_of_component;
 	}
 }
@@ -540,7 +540,7 @@ cf_entity_type_t s_entity_type(cf_kv_t* kv)
 {
 	const char* entity_type_string = s_kv_string(kv, "entity_type");
 	cf_entity_type_t entity_type = CF_INVALID_ENTITY_TYPE;
-	auto type_ptr = cf_app->entity_type_string_to_id.find(entity_type_string);
+	auto type_ptr = cf_app->entity_type_string_to_id.try_find(entity_type_string);
 	if (type_ptr) entity_type = *type_ptr;
 	return entity_type;
 }
@@ -561,7 +561,7 @@ static cf_result_t s_fill_load_id_table(cf_kv_t* kv)
 			return cf_result_error("Unable to find entity type.");
 		}
 
-		cf_entity_collection_t* collection = cf_app->entity_collections.find(entity_type);
+		cf_entity_collection_t* collection = cf_app->entity_collections.try_find(entity_type);
 		CUTE_ASSERT(collection);
 
 		int index = collection->entity_handles.count();
@@ -611,13 +611,13 @@ cf_result_t cf_internal_ecs_load_entities(cf_kv_t* kv, array<cf_entity_t>* entit
 			return cf_result_error("Unable to find entity type.");
 		}
 
-		cf_entity_collection_t* collection = cf_app->entity_collections.find(entity_type);
+		cf_entity_collection_t* collection = cf_app->entity_collections.try_find(entity_type);
 		CUTE_ASSERT(collection);
 
 		const array<const char*>& component_type_tuple = collection->component_type_tuple;
 		for (int i = 0; i < component_type_tuple.count(); ++i) {
 			const char* component_type = component_type_tuple[i];
-			cf_component_config_t* config = cf_app->component_configs.find(component_type);
+			cf_component_config_t* config = cf_app->component_configs.try_find(component_type);
 
 			if (!config) {
 				return cf_result_error("Unable to find component config.");
@@ -706,7 +706,7 @@ cf_result_t cf_internal_ecs_save_entities_kv(const cf_entity_t* entities, int en
 	for (int i = 0; i < entities_count; ++i) {
 		cf_entity_t entity = entities[i];
 		cf_entity_type_t entity_type = s_entity_type(entity);
-		cf_entity_collection_t* collection = cf_app->entity_collections.find(entity_type);
+		cf_entity_collection_t* collection = cf_app->entity_collections.try_find(entity_type);
 		if (!collection) {
 			return cf_result_error("Unable to find entity type.");
 		}
@@ -729,7 +729,7 @@ cf_result_t cf_internal_ecs_save_entities_kv(const cf_entity_t* entities, int en
 		for (int j = 0; j < component_type_tuple.count(); ++j) {
 			const char* component_type = component_type_tuple[j];
 			const cf_typeless_array& component_table = component_tables[j];
-			cf_component_config_t* config = cf_app->component_configs.find(component_type);
+			cf_component_config_t* config = cf_app->component_configs.try_find(component_type);
 			const void* component = component_table[index];
 
 			cf_result_t err = cf_kv_object_begin(kv, config->name);
@@ -770,7 +770,7 @@ cf_result_t cf_internal_ecs_save_entities(const cf_entity_t* entities, int entit
 	for (int i = 0; i < entities_count; ++i) {
 		cf_entity_t entity = entities[i];
 		cf_entity_type_t entity_type = s_entity_type(entity);
-		cf_entity_collection_t* collection = cf_app->entity_collections.find(entity_type);
+		cf_entity_collection_t* collection = cf_app->entity_collections.try_find(entity_type);
 		if (!collection) {
 			return cf_result_error("Unable to find entity type.");
 		}
@@ -787,7 +787,7 @@ cf_result_t cf_internal_ecs_save_entities(const cf_entity_t* entities, int entit
 		for (int j = 0; j < component_type_tuple.count(); ++j) {
 			const char* component_type = component_type_tuple[j];
 			const cf_typeless_array& component_table = component_tables[j];
-			cf_component_config_t* config = cf_app->component_configs.find(component_type);
+			cf_component_config_t* config = cf_app->component_configs.try_find(component_type);
 			const void* component = component_table[index];
 
 			cf_result_t err = config->serializer_fn(NULL, false, entity, (void*)component, config->serializer_udata);
@@ -808,7 +808,7 @@ cf_result_t cf_ecs_save_entities(const cf_entity_t* entities, int entities_count
 
 bool cf_ecs_is_entity_type_valid(const char* entity_type)
 {
-	if (cf_app->entity_type_string_to_id.find(sintern(entity_type))) {
+	if (cf_app->entity_type_string_to_id.try_find(sintern(entity_type))) {
 		return true;
 	} else {
 		return false;
@@ -899,17 +899,17 @@ array<const char*> cf_internal_ecs_get_component_list_for_entity_type(const char
 {
 	array<const char*> result;
 
-	auto type_ptr = cf_app->entity_type_string_to_id.find(sintern(entity_type));
+	auto type_ptr = cf_app->entity_type_string_to_id.try_find(sintern(entity_type));
 	if (!type_ptr) return result;
 
 	cf_entity_type_t type = *type_ptr;
-	cf_entity_collection_t* collection = cf_app->entity_collections.find(type);
+	cf_entity_collection_t* collection = cf_app->entity_collections.try_find(type);
 	CUTE_ASSERT(collection);
 
 	const array<const char*>& component_type_tuple = collection->component_type_tuple;
 	for (int i = 0; i < component_type_tuple.count(); ++i) {
 		const char* component_type = component_type_tuple[i];
-		cf_component_config_t* config = cf_app->component_configs.find(component_type);
+		cf_component_config_t* config = cf_app->component_configs.try_find(component_type);
 		CUTE_ASSERT(config);
 		result.add(config->name);
 	}
