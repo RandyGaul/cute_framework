@@ -25,8 +25,8 @@ using namespace cute;
 CUTE_TEST_CASE(test_png_cache, "Test all functions of the png caching API.");
 int test_png_cache()
 {
-	cf_file_system_init(NULL);
-	cf_file_system_mount(cf_file_system_get_base_dir(), "", true);
+	cf_fs_init(NULL);
+	cf_fs_mount(cf_fs_get_base_directory(), "", true);
 
 	cf_png_cache_t* cache = cf_make_png_cache();
 
@@ -64,7 +64,7 @@ int test_png_cache()
 
 	cf_destroy_png_cache(cache);
 
-	cf_file_system_destroy();
+	cf_fs_destroy();
 
 	return 0;
 }

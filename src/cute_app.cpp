@@ -198,12 +198,12 @@ cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, in
 		app->threadpool = cf_make_threadpool(num_threads_to_spawn);
 	}
 
-	cf_result_t err = cf_file_system_init(argv0);
+	cf_result_t err = cf_fs_init(argv0);
 	if (cf_is_error(err)) {
 		CUTE_ASSERT(0);
 	} else if (!(options & APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT)) {
 		// Put the base directory (the path to the exe) onto the file system search path.
-		cf_file_system_mount(cf_file_system_get_base_dir(), "", true);
+		cf_fs_mount(cf_fs_get_base_directory(), "", true);
 	}
 
 	return cf_result_success();
@@ -239,7 +239,7 @@ void cf_destroy_app()
 	}
 	cf_app->~cf_app_t();
 	CUTE_FREE(cf_app);
-	cf_file_system_destroy();
+	cf_fs_destroy();
 }
 
 bool cf_app_is_running()

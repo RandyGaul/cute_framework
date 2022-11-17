@@ -36,7 +36,7 @@ cf_result_t cf_image_load_png(const char* path, cf_image_t* img)
 {
 	void* data;
 	size_t sz;
-	cf_result_t err = cf_file_system_read_entire_file_to_memory(path, &data, &sz);
+	cf_result_t err = cf_fs_read_entire_file_to_memory(path, &data, &sz);
 	if (cf_is_error(err)) return err;
 	err = cf_image_load_png_mem(data, (int)sz, img);
 	CUTE_FREE(data);
@@ -68,7 +68,7 @@ cf_result_t cf_image_load_png_indexed(const char* path, cf_image_indexed_t* img)
 {
 	void* data;
 	size_t sz;
-	cf_result_t err = cf_file_system_read_entire_file_to_memory(path, &data, &sz);
+	cf_result_t err = cf_fs_read_entire_file_to_memory(path, &data, &sz);
 	if (cf_is_error(err)) return err;
 	return cf_image_load_png_mem_indexed(data, (int)sz, img);
 }

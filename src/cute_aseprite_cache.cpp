@@ -124,7 +124,7 @@ cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepr
 	// Load the aseprite file.
 	void* data = NULL;
 	size_t sz = 0;
-	cf_file_system_read_entire_file_to_memory(aseprite_path, &data, &sz);
+	cf_fs_read_entire_file_to_memory(aseprite_path, &data, &sz);
 	if (!data) return cf_result_error("Unable to open ase file at `aseprite_path`.");
 	CUTE_DEFER(CUTE_FREE(data));
 	ase_t* ase = cute_aseprite_load_from_memory(data, (int)sz, NULL);
