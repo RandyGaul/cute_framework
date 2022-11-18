@@ -24,7 +24,6 @@
 #include <cute_audio.h>
 #include <cute_concurrency.h>
 #include <cute_file_system.h>
-#include <cute_file_system_utils.h>
 #include <cute_c_runtime.h>
 #include <cute_kv.h>
 

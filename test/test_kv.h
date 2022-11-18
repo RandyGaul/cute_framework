@@ -20,7 +20,6 @@
 */
 
 #include <cute_kv.h>
-#include <cute_kv_utils.h>
 using namespace cute;
 
 struct thing_t
@@ -181,6 +180,15 @@ int test_kv_basic()
 
 #include <string>
 
+CUTE_INLINE bool cf_kv_val(cf_kv_t* kv, std::string* val)
+{
+	const char* ptr = val->data();
+	size_t len = val->length();
+	if (!cf_kv_val_string(kv, &ptr, &len)) return false;
+	val->assign(ptr, len);
+	return true;
+}
+
 CUTE_TEST_CASE(test_kv_std_string_to_disk, "Testing kv utility for c-string to disk, std::string from disk.");
 int test_kv_std_string_to_disk()
 {
@@ -198,7 +206,7 @@ int test_kv_std_string_to_disk()
 	CUTE_TEST_ASSERT(kv1);
 
 	cf_kv_key(kv1, "book_title", NULL);
-	cf_kv_val_string_std(kv1, &s0);
+	cf_kv_val(kv1, &s0);
 
 	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_last_error(kv1)));
 	CUTE_TEST_ASSERT(s0.length() == s1_len);
@@ -221,7 +229,7 @@ int test_kv_std_string_from_disk()
 
 	cf_kv_t* kv0 = cf_kv_write();
 	cf_kv_key(kv0, "book_title", NULL);
-	cf_kv_val_string_std(kv0, &s1);
+	cf_kv_val(kv0, &s1);
 
 	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_last_error(kv0)));
 	size_t size = cf_kv_buffer_size(kv0);
@@ -241,6 +249,24 @@ int test_kv_std_string_from_disk()
 	return 0;
 }
 
+#include <vector>
+
+template <typename T>
+CUTE_INLINE bool cf_kv_val(cf_kv_t* kv, std::vector<T>* val, const char* key = NULL)
+{
+	int count = (int)val->size();
+	if (cf_kv_array_begin(kv, &count, key))
+	{
+		val->resize(count);
+		for (int i = 0; i < count; ++i) {
+			cf_kv_val_int32(kv, &(*val)[i]);
+		}
+		cf_kv_array_end(kv);
+		return !cf_is_error(cf_kv_last_error(kv));
+	}
+	return false;
+}
+
 CUTE_TEST_CASE(test_kv_std_vector, "Testing kv utility for std::vector support.");
 int test_kv_std_vector()
 {
@@ -256,7 +282,7 @@ int test_kv_std_vector()
 	v.push_back(6);
 	v.push_back(-2);
 
-	cf_kv_val_vec(kv0, &v, "vector_of_ints");
+	cf_kv_val(kv0, &v, "vector_of_ints");
 
 	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_last_error(kv0)));
 	size_t size = cf_kv_buffer_size(kv0);
@@ -264,7 +290,7 @@ int test_kv_std_vector()
 	CUTE_TEST_ASSERT(kv1);
 
 	v.clear();
-	cf_kv_val_vec(kv1, &v, "vector_of_ints");
+	cf_kv_val(kv1, &v, "vector_of_ints");
 
 	CUTE_TEST_ASSERT(v.size() == 8);
 	CUTE_TEST_ASSERT(v[0] == 10);

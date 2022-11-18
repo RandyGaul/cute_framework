@@ -20,7 +20,6 @@
 */
 
 #include <cute_ecs.h>
-#include <cute_kv_utils.h>
 
 #include <internal/cute_ecs_internal.h>
 

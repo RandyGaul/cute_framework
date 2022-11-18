@@ -84,7 +84,6 @@ set(CUTE_SRCS
 	src/cute_timer.cpp
 	src/cute_version.cpp
 	src/cute_kv.cpp
-	src/cute_kv_utils.cpp
 	src/cute_base64.cpp
 	src/cute_hashtable.cpp
 	src/cute_ecs.cpp
@@ -141,7 +140,6 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_version.h
 	include/cute_doubly_list.h
 	include/cute_kv.h
-	include/cute_kv_utils.h
 	include/cute_base64.h
 	include/cute_array.h
 	include/cute_hashtable.h
@@ -172,6 +170,7 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_coroutine.h
 	include/cute_networking.h
 	include/cute_guid.h
+	include/cute_routine.h
 )
 
 set(IMGUI_HDRS
