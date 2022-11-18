@@ -62,7 +62,7 @@ CUTE_INLINE bool cf_kv_val_vec(cf_kv_t* kv, std::vector<T>* val, const char* key
 			cf_kv_val_int32(kv, &(*val)[i]);
 		}
 		cf_kv_array_end(kv);
-		return !cf_is_error(cf_kv_error_state(kv));
+		return !cf_is_error(cf_kv_last_error(kv));
 	}
 	return false;
 }

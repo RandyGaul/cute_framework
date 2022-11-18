@@ -91,7 +91,7 @@ extern "C" {
  *             cf_kv_object_end(kv);
  *         }
  *         
- *         return !cf_is_error(cf_kv_error_state(kv));
+ *         return !cf_is_error(cf_kv_last_error(kv));
  *     }
  * 
  *     bool save(ImportantStuff* stuff, const char* path)
@@ -261,9 +261,11 @@ CUTE_API void CUTE_CALL cf_kv_set_base(cf_kv_t* kv, cf_kv_t* base);
 
 /**
  * Returns the error state of the kv instance. You can use this try and get a more useful description
- * of what may have went wrong, especially when parsing data in read mode.
+ * of what may have went wrong. These errors are not fatal. For example if you search for a key with
+ * `cf_kv_key` and it's non-existent a potentially useful error message may be generated, but you can
+ * still keep going and look for other keys freely.
  */
-CUTE_API cf_result_t CUTE_CALL cf_kv_error_state(cf_kv_t* kv);
+CUTE_API cf_result_t CUTE_CALL cf_kv_last_error(cf_kv_t* kv);
 
 // -------------------------------------------------------------------------------------------------
 // Key and Value functions.
@@ -343,7 +345,7 @@ CUTE_INLINE kv_state_t kv_state(kv_t* kv) { return (kv_state_t)cf_kv_state(kv); 
 CUTE_INLINE const char* kv_buffer(kv_t* kv) { return cf_kv_buffer(kv); }
 CUTE_INLINE size_t kv_buffer_size(kv_t* kv) { return cf_kv_buffer_size(kv); }
 CUTE_INLINE void kv_set_base(kv_t* kv, kv_t* base) { cf_kv_set_base(kv, base); }
-CUTE_INLINE result_t kv_error_state(kv_t* kv) { return cf_kv_error_state(kv); }
+CUTE_INLINE result_t kv_error_state(kv_t* kv) { return cf_kv_last_error(kv); }
 CUTE_INLINE bool kv_key(kv_t* kv, const char* key, kv_type_t* type = NULL) { return cf_kv_key(kv, key, (cf_kv_type_t*)type); }
 CUTE_INLINE bool kv_val(kv_t* kv, uint8_t* val) { return cf_kv_val_uint8(kv, val); }
 CUTE_INLINE bool kv_val(kv_t* kv, uint16_t* val) { return cf_kv_val_uint16(kv, val); }

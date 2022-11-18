@@ -65,7 +65,7 @@ bool test_component_transform_serialize(cf_kv_t* kv, bool reading, cf_entity_t e
 	}
 	cf_kv_key(kv, "x", NULL); cf_kv_val_float(kv, &transform->x);
 	cf_kv_key(kv, "y", NULL); cf_kv_val_float(kv, &transform->y);
-	return !cf_is_error(cf_kv_error_state(kv));
+	return true;
 }
 
 bool test_component_sprite_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
@@ -75,7 +75,7 @@ bool test_component_sprite_serialize(cf_kv_t* kv, bool reading, cf_entity_t enti
 		sprite->img_id = 7;
 	}
 	cf_kv_key(kv, "img_id", NULL); cf_kv_val_uint64(kv, &sprite->img_id);
-	return !cf_is_error(cf_kv_error_state(kv));
+	return true;
 }
 
 bool test_component_collider_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
@@ -87,7 +87,7 @@ bool test_component_collider_serialize(cf_kv_t* kv, bool reading, cf_entity_t en
 	}
 	cf_kv_key(kv, "type", NULL); cf_kv_val_uint64(kv, &collider->type);
 	cf_kv_key(kv, "radius", NULL); cf_kv_val_float(kv, &collider->radius);
-	return !cf_is_error(cf_kv_error_state(kv));
+	return true;
 }
 
 bool test_component_octorok_serialize(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata)
@@ -101,7 +101,7 @@ bool test_component_octorok_serialize(cf_kv_t* kv, bool reading, cf_entity_t ent
 	cf_kv_key(kv, "ai_state", NULL); cf_kv_val_int32(kv, &octorok->ai_state);
 	cf_kv_key(kv, "pellet_count", NULL); cf_kv_val_uint32(kv, &octorok->pellet_count);
 	cf_kv_key(kv, "buddy", NULL); cf_kv_val_entity(kv, &octorok->buddy);
-	return !cf_is_error(cf_kv_error_state(kv));
+	return true;
 }
 
 // -------------------------------------------------------------------------------------------------

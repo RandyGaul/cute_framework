@@ -192,7 +192,7 @@ int test_kv_std_string_to_disk()
 	cf_kv_key(kv0, "book_title", NULL);
 	cf_kv_val_string(kv0, &s1, &s1_len);
 
-	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_error_state(kv0)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_last_error(kv0)));
 	size_t size = cf_kv_buffer_size(kv0);
 	cf_kv_t* kv1 = cf_kv_read(cf_kv_buffer(kv0), size, NULL);
 	CUTE_TEST_ASSERT(kv1);
@@ -200,7 +200,7 @@ int test_kv_std_string_to_disk()
 	cf_kv_key(kv1, "book_title", NULL);
 	cf_kv_val_string_std(kv1, &s0);
 
-	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_error_state(kv1)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_last_error(kv1)));
 	CUTE_TEST_ASSERT(s0.length() == s1_len);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(s0.data(), s1, s1_len));
 
@@ -223,7 +223,7 @@ int test_kv_std_string_from_disk()
 	cf_kv_key(kv0, "book_title", NULL);
 	cf_kv_val_string_std(kv0, &s1);
 
-	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_error_state(kv0)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_last_error(kv0)));
 	size_t size = cf_kv_buffer_size(kv0);
 	cf_kv_t* kv1 = cf_kv_read(cf_kv_buffer(kv0), size, NULL);
 	CUTE_TEST_ASSERT(kv1);
@@ -231,7 +231,7 @@ int test_kv_std_string_from_disk()
 	cf_kv_key(kv1, "book_title", NULL);
 	cf_kv_val_string(kv1, &s0, &s0_len);
 
-	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_error_state(kv1)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_last_error(kv1)));
 	CUTE_TEST_ASSERT((int)s1.length() == s0_len);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(s1.data(), s0, s0_len));
 
@@ -258,7 +258,7 @@ int test_kv_std_vector()
 
 	cf_kv_val_vec(kv0, &v, "vector_of_ints");
 
-	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_error_state(kv0)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_last_error(kv0)));
 	size_t size = cf_kv_buffer_size(kv0);
 	cf_kv_t* kv1 = cf_kv_read(cf_kv_buffer(kv0), size, NULL);
 	CUTE_TEST_ASSERT(kv1);
@@ -753,7 +753,7 @@ int test_kv_read_delta_object()
 		cf_kv_object_end(kv);
 	cf_kv_object_end(kv);
 
-	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_error_state(kv)));
+	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_last_error(kv)));
 
 	cf_kv_destroy(kv);
 	cf_kv_destroy(base);
