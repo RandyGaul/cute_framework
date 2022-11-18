@@ -197,6 +197,9 @@ CUTE_API char* CUTE_CALL cf_path_top_directory(const char* path);
  * new archive files and appending them to an earlier place in the search path. This also works
  * to add mod support to your game, and provides a simple way of storing multiple versions of
  * a single file without overwriting each other on the actual disk.
+ * 
+ * By default CF mounts the base directory when you call `make_app`. This can be disabled by
+ * passing the `APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT` flag to `make_app`.
  */
 
 typedef struct cf_file_t cf_file_t;
@@ -274,6 +277,9 @@ CUTE_API const char* CUTE_CALL cf_fs_get_user_directory(const char* company_name
  * You can mount an actual directory or an archive file. If it's an archive the vitrual file
  * system will treat it like a normal directory for you. There are a variety of archive file
  * formats supported (see top of file).
+ * 
+ * By default CF mounts the base directory when you call `make_app`. This can be disabled by
+ * passing the `APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT` flag to `make_app`.
  */
 CUTE_API cf_result_t CUTE_CALL cf_fs_mount(const char* archive, const char* mount_point, bool append_to_path /*= true*/);
 
