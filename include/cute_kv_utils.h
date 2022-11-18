@@ -33,44 +33,45 @@
 #include <string>
 #include <vector>
 
-CUTE_INLINE cf_result_t cf_kv_val_string_cf(cf_kv_t* kv, cute::string_t* string)
+CUTE_INLINE bool cf_kv_val_string_cf(cf_kv_t* kv, cute::string_t* string)
 {
 	const char* ptr = string->c_str();
 	size_t len = string->len();
-	cf_result_t err = cf_kv_val_string(kv, &ptr, &len);
-	if (cf_is_error(err)) return err;
+	if (!cf_kv_val_string(kv, &ptr, &len)) return false;
 	*string = cute::string_t(ptr, ptr + len);
-	return cf_result_success();
+	return true;
 }
 
-CUTE_INLINE cf_result_t cf_kv_val_string_std(cf_kv_t* kv, std::string* val)
+CUTE_INLINE bool cf_kv_val_string_std(cf_kv_t* kv, std::string* val)
 {
 	const char* ptr = val->data();
 	size_t len = val->length();
-	cf_result_t err = cf_kv_val_string(kv, &ptr, &len);
-	if (cf_is_error(err)) return err;
+	if (!cf_kv_val_string(kv, &ptr, &len)) return false;
 	val->assign(ptr, len);
-	return cf_result_success();
+	return true;
 }
 
 template <typename T>
-CUTE_INLINE cf_result_t cf_kv_val_vec(cf_kv_t* kv, std::vector<T>* val, const char* key = NULL)
+CUTE_INLINE bool cf_kv_val_vec(cf_kv_t* kv, std::vector<T>* val, const char* key = NULL)
 {
 	int count = (int)val->size();
-	cf_kv_array_begin(kv, &count, key);
-	val->resize(count);
-	for (int i = 0; i < count; ++i) {
-		cf_kv_val_int32(kv, &(*val)[i]);
+	if (cf_kv_array_begin(kv, &count, key))
+	{
+		val->resize(count);
+		for (int i = 0; i < count; ++i) {
+			cf_kv_val_int32(kv, &(*val)[i]);
+		}
+		cf_kv_array_end(kv);
+		return !cf_is_error(cf_kv_error_state(kv));
 	}
-	cf_kv_array_end(kv);
-	return cf_kv_error_state(kv);
+	return false;
 }
 
 namespace cute
 {
 
-CUTE_INLINE result_t kv_val_cf_string(kv_t* kv, string_t* string) { return cf_kv_val_string_cf(kv, string); }
-CUTE_INLINE result_t kv_val(kv_t* kv, std::string* val) { return cf_kv_val_string_std(kv, val); }
+CUTE_INLINE bool kv_val_cf_string(kv_t* kv, string_t* string) { return cf_kv_val_string_cf(kv, string); }
+CUTE_INLINE bool kv_val(kv_t* kv, std::string* val) { return cf_kv_val_string_std(kv, val); }
 
 }
 #endif // CUTE_CPP

@@ -31,6 +31,17 @@
 
 #ifndef CUTE_NO_SHORTHAND_API
 /**
+ * This is *optional* and _completely_ empty macro. It's only purpose is to provide a bit of visual
+ * indication a type is a dynamic array. One downside of the C-macro API is the opaque nature of the pointer
+ * type. Since the macros use polymorphism on typed pointers, there's no actual array struct type.
+ * 
+ * It can get really annoying to sometimes forget if a pointer is an array, a hashtable, or just a
+ * pointer. This macro can be used to markup the type to make it much more clear for function parameters
+ * or struct member definitions. It's saying "Hey, I'm a dynamic array!" to mitigate this downside.
+ */
+#define dyna
+
+/**
  * Gets the number of elements in the array. Must not be NULL.
  * It's a proper l-value so you can assign or increment it.
  * 
@@ -154,11 +165,11 @@
 #define cf_array_count(a) cf_array_size(a)
 #define cf_array_capacity(a) ((a) ? CF_AHDR(a)->capacity : 0)
 #define cf_array_fit(a, n) ((n) <= cf_array_capacity(a) ? 0 : (*(void**)&(a) = cf_agrow((a), (n), sizeof(*a))))
-#define cf_array_push(a, ...) do { CF_ACANARY(a); cf_array_fit((a), 1 + ((a) ? cf_array_len(a) : 0)); (a)[cf_array_len(a)++] = (__VA_ARGS__); } while (0)
+#define cf_array_push(a, ...) (CF_ACANARY(a), cf_array_fit((a), 1 + ((a) ? cf_array_len(a) : 0)), (a)[cf_array_len(a)++] = (__VA_ARGS__))
 #define cf_array_pop(a) (a[--cf_array_len(a)])
 #define cf_array_end(a) (a + cf_array_size(a))
 #define cf_array_last(a) (a[cf_array_len(a) - 1])
-#define cf_array_clear(a) do { CF_ACANARY(a); if (a) cf_array_len(a) = 0; } while (0)
+#define cf_array_clear(a) (CF_ACANARY(a), (a) ? cf_array_len(a) = 0 : 0)
 #define cf_array_set(a, b) (*(void**)&(a) = cf_aset((void*)(a), (void*)(b), sizeof(*a)))
 #define cf_array_hash(a) cf_fnv1a(a, cf_array_size(a))
 #define cf_array_static(a, buffer, buffer_size) (*(void**)&(a) = cf_astatic(buffer, buffer_size, sizeof(*a)))

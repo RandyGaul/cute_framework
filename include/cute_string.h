@@ -84,7 +84,7 @@
 #define ssize(s) cf_string_size(s)
 
 /**
- * Gets the number of characters in the string. Can be NULL.
+ * Gets the number of characters in the string. Cannot be NULL.
  */
 #define scount(s) cf_string_count(s)
 
@@ -443,11 +443,11 @@
 #define cf_string_empty(s) (s ? cf_string_len(s) < 1 : 1)
 #define cf_string_push(s, ch) do { if (!s) cf_array_push(s, ch); else s[cf_string_len(s)] = ch; cf_array_push(s, 0); } while (0)
 #define cf_string_free(s) cf_array_free(s)
-#define cf_string_size(s) cf_array_count(s)
-#define cf_string_count(s) cf_array_len(s)
+#define cf_string_size(s) cf_array_len(s)
+#define cf_string_count(s) cf_array_count(s)
 #define cf_string_cap(s) cf_array_capacity(s)
-#define cf_string_last(s) (s + cf_string_len(s))
-#define cf_string_clear(s) cf_array_clear(s)
+#define cf_string_last(s) (s[cf_string_len(s) - 1])
+#define cf_string_clear(s) (cf_array_clear(s), cf_array_push(s, 0))
 #define cf_string_fit(s, n) cf_array_fit(s, n)
 #define cf_string_fmt(s, fmt, ...) (s = cf_sfmt(s, fmt, __VA_ARGS__))
 #define cf_string_fmt_append(s, fmt, ...) (s = cf_sfmt_append(s, fmt, __VA_ARGS__))
@@ -492,7 +492,7 @@
 #define cf_string_tobool(s) (!CUTE_STRCMP(s, "true"))
 #define cf_string_replace(s, replace_me, with_me) (s = cf_sreplace(s, replace_me, with_me))
 #define cf_string_erase(s, index, count) (s = cf_serase(s, index, count))
-#define cf_string_static(s, buffer, buffer_size) cf_array_static(s, buffer, buffer_size)
+#define cf_string_static(s, buffer, buffer_size) (cf_array_static(s, buffer, buffer_size), cf_array_push(s, 0))
 #define cf_sinuke() cf_sinuke_intern_table()
 
 //--------------------------------------------------------------------------------------------------
@@ -606,10 +606,9 @@ struct string_t
 	CUTE_INLINE char* c_str() { return m_str; }
 	CUTE_INLINE const char* begin() const { return m_str; }
 	CUTE_INLINE char* begin() { return m_str; }
-	CUTE_INLINE const char* end() const { return slast(m_str) + 1; }
-	CUTE_INLINE char* end() { return slast(m_str) + 1; }
-	CUTE_INLINE const char* last() const { return slast(m_str); }
-	CUTE_INLINE char* last() { return slast(m_str); }
+	CUTE_INLINE const char* end() const { return m_str + ssize(m_str); }
+	CUTE_INLINE char* end() { return m_str + ssize(m_str); }
+	CUTE_INLINE char last() const { return slast(m_str); }
 	CUTE_INLINE operator const char*() const { return m_str; }
 	CUTE_INLINE operator char*() const { return m_str; }
 
@@ -622,6 +621,7 @@ struct string_t
 	CUTE_INLINE int count() const { return ssize(m_str); }
 	CUTE_INLINE void ensure_capacity(int capacity) { sfit(m_str, capacity); }
 	CUTE_INLINE void fit(int capacity) { sfit(m_str, capacity); }
+	CUTE_INLINE void set_len(int len) { sfit(m_str, len + 1); ssize(m_str) = len + 1; }
 	CUTE_INLINE bool empty() const { return sempty(m_str); }
 
 	CUTE_INLINE string_t& add(char ch) { spush(m_str, ch); return *this; }
@@ -665,7 +665,7 @@ private:
 	char* m_str = u.m_buffer;
 	union { char m_buffer[64]; void* align; } u;
 
-	CUTE_INLINE void s_static() { sstatic(m_str, u.m_buffer, sizeof(u.m_buffer)); }
+	CUTE_INLINE void s_static() { sstatic(m_str, u.m_buffer, sizeof(u.m_buffer)); CUTE_ASSERT(slen(m_str) == 0); }
 	CUTE_INLINE void s_chki(int i) const { CUTE_ASSERT(i >= 0 && i < ssize(m_str)); }
 };
 

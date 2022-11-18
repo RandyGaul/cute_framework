@@ -38,6 +38,7 @@ void* cf_agrow(const void* a, int new_size, size_t element_size)
 			hdr = (cf_ahdr_t*)CUTE_REALLOC(CF_AHDR(a), total_size);
 		} else {
 			hdr = (cf_ahdr_t*)CUTE_ALLOC(total_size);
+			CUTE_MEMCPY(hdr + 1, a, alen(a) * element_size);
 			hdr->size = asize(a);
 			hdr->cookie = CF_ACOOKIE;
 		}

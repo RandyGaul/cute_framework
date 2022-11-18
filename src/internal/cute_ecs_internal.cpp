@@ -22,17 +22,13 @@
 #include <internal/cute_ecs_internal.h>
 #include <internal/cute_app_internal.h>
 
-cf_result_t cf_kv_val_entity(cf_kv_t* kv, cf_entity_t* entity)
+bool cf_kv_val_entity(cf_kv_t* kv, cf_entity_t* entity)
 {
-	cf_kv_state_t state = cf_kv_get_state(kv);
-	CUTE_ASSERT(state != CF_KV_STATE_UNITIALIZED);
-
-	if (state == CF_KV_STATE_READ) {
+	if (cf_kv_state(kv) == CF_KV_STATE_READ) {
 		int index;
-		cf_result_t err = cf_kv_val_int32(kv, &index);
-		if (cf_is_error(err)) return err;
+		if (!cf_kv_val_int32(kv, &index)) return false;
 		*entity = cf_app->load_id_table->operator[](index);
-		return cf_result_success();
+		return true;
 	} else {
 		int* index_ptr = cf_app->save_id_table->try_find(*entity);
 		CUTE_ASSERT(index_ptr);

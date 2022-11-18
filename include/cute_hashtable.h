@@ -36,7 +36,7 @@
 // 
 // Example:
 // 
-//     v2* pts = NULL;
+//     htbl v2* pts = NULL;
 //     hset(pts, 0, V2(3, 5)); // Contructs a new table on-the-spot.
 //                             // The table is *hidden* behind `pts`.
 //     hset(pts, 10, v2(-1, -1);
@@ -57,7 +57,19 @@
 //     
 //     hfree(pts);
 
+
 #ifndef CUTE_NO_SHORTHAND_API
+/**
+ * This is *optional* and _completely_ empty macro. It's only purpose is to provide a bit of visual
+ * indication a type is a table. One downside of the C-macro API is the opaque nature of the table
+ * type. Since the macros use polymorphism on typed pointers, there's no actual `cf_hashtable_t` type.
+ * 
+ * It can get really annoying to sometimes forget if a pointer is an array, a hashtable, or just a
+ * pointer. This macro can be used to markup the type to make it much more clear for function parameters
+ * or struct member definitions. It's saying "Hey, I'm a hashtable!" to mitigate this downside.
+ */
+#define htbl
+
 /**
  * Add's a {key, item} pair. Creates a new table if `h` is NULL. Call `hfree` when done.
  * Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
@@ -69,7 +81,7 @@
  * 
  * Example:
  * 
- *     int* table = NULL;
+ *     htbl int* table = NULL;
  *     hset(table, 0, 5);
  *     hset(table, 1, 12);
  *     CUTE_ASSERT(hget(table, 0) == 5);
@@ -89,7 +101,7 @@
  * 
  * Example:
  * 
- *     int* table = NULL;
+ *     htbl int* table = NULL;
  *     hadd(table, 0, 5);
  *     hadd(table, 1, 12);
  *     CUTE_ASSERT(hget(table, 0) == 5);
@@ -111,7 +123,7 @@
  * 
  * Example:
  * 
- *     v2* table = NULL;
+ *     htbl v2* table = NULL;
  *     hadd(table, 10, V2(-1, 1));
  *     v2 v = hget(table, 10);
  *     CUTE_ASSERT(v.x == -1);
@@ -133,7 +145,7 @@
  * 
  * Example:
  * 
- *     v2* table = NULL;
+ *     htbl v2* table = NULL;
  *     hadd(table, 10, V2(-1, 1));
  *     v2 v = hfind(table, 10);
  *     CUTE_ASSERT(v.x == -1);
@@ -151,7 +163,7 @@
  * 
  * Example:
  * 
- *     v2* table = NULL;
+ *     htbl v2* table = NULL;
  *     hadd(table, 10, V2(-1, 1));
  *     v2* v = hget_ptr(table, 10);
  *     CUTE_ASSERT(v);
@@ -170,7 +182,7 @@
  * 
  * Example:
  * 
- *     v2* table = NULL;
+ *     htbl v2* table = NULL;
  *     hadd(table, 10, V2(-1, 1));
  *     v2* v = hfind_ptr(table, 10);
  *     CUTE_ASSERT(v);
@@ -189,7 +201,7 @@
  * 
  * Example:
  * 
- *     v2* table = NULL;
+ *     htbl v2* table = NULL;
  *     hadd(table, 10, V2(-1, 1));
  *     CUTE_ASSERT(hhas(table, 10));
  *     hfree(table);
@@ -205,7 +217,7 @@
  * 
  * Example:
  * 
- *     v2* table = NULL;
+ *     htbl v2* table = NULL;
  *     hadd(table, 10, V2(-1, 1));
  *     hdel(table, 10);
  *     hfree(table);
@@ -229,7 +241,7 @@
  * 
  * Example:
  * 
- *     v2* table = my_table();
+ *     htbl v2* table = my_table();
  *     const uint64_t* keys = hkeys(table);
  *     for (int i = 0; i < hcount(table); ++i) {
  *         uint64_t key = keys[i];
@@ -248,7 +260,7 @@
  * 
  * Example:
  * 
- *     v2* table = my_table();
+ *     htbl v2* table = my_table();
  *     const uint64_t* keys = hkeys(table);
  *     for (int i = 0; i < hcount(table); ++i) {
  *         uint64_t key = keys[i];
@@ -269,7 +281,7 @@
  * 
  * Example:
  * 
- *     v2* table = my_table();
+ *     htbl v2* table = my_table();
  *     const uint64_t* keys = hkeys(table);
  *     for (int i = 0; i < hcount(table); ++i) {
  *         for (int j = 0; j < hcount(table); ++j) {
@@ -303,6 +315,7 @@
 //--------------------------------------------------------------------------------------------------
 // Longform C API.
 
+#define cf_htbl
 #define cf_hashtable_set(h, k, ...) ((h) ? (h) : (*(void**)&(h) = cf_hashtable_make_impl(sizeof(uint64_t), sizeof(*(h)), 1)), CF_HCANARY(h), h[-1] = (__VA_ARGS__), *(void**)&(h) = cf_hashtable_insert_impl(CF_HHDR(h), (uint64_t)k), h + CF_HHDR(h)->return_index)
 #define cf_hashtable_add(h, k, ...) cf_hashtable_set(h, k, (__VA_ARGS__))
 #define cf_hashtable_get(h, k) ((h)[cf_hashtable_find_impl(CF_HHDR(h), (uint64_t)k)])

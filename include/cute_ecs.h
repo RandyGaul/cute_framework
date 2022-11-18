@@ -90,7 +90,7 @@ CUTE_API cf_result_t CUTE_CALL cf_ecs_save_entities(const cf_entity_t* entities,
 //--------------------------------------------------------------------------------------------------
 // Component
 
-typedef cf_result_t(cf_component_serialize_fn)(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata);
+typedef bool (cf_component_serialize_fn)(cf_kv_t* kv, bool reading, cf_entity_t entity, void* component, void* udata);
 typedef void (cf_component_cleanup_fn)(cf_entity_t entity, void* component, void* udata);
 
 CUTE_API void CUTE_CALL cf_ecs_component_begin();

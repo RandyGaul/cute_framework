@@ -228,7 +228,7 @@ void cf_destroy_app()
 	cs_shutdown();
 	int schema_count = cf_app->entity_parsed_schemas.count();
 	cf_kv_t** schemas = cf_app->entity_parsed_schemas.items();
-	for (int i = 0; i < schema_count; ++i) cf_destroy_kv(schemas[i]);
+	for (int i = 0; i < schema_count; ++i) cf_kv_destroy(schemas[i]);
 	if (cf_app->ase_cache) {
 		cf_destroy_aseprite_cache(cf_app->ase_cache);
 		cf_destroy_batch(cf_app->ase_batch);
