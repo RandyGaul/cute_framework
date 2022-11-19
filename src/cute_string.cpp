@@ -388,7 +388,7 @@ using intern_t = cf_intern_t;
 
 struct intern_table_t
 {
-	intern_t** interns;
+	htbl intern_t** interns;
 	arena_t arena;
 	rw_lock_t lock;
 
@@ -488,17 +488,50 @@ void cf_sinuke_intern_table()
 	CUTE_FREE(table);
 }
 
-int cf_utf8_size(int codepoint)
+// All invalid characters are encoded as the "replacement character" 0xFFFD for both
+// UTF8 and UTF16 functions.
+
+char* cf_string_append_UTF8_impl(char *s, uint32_t codepoint)
 {
-	return 0;
+	CF_ACANARY(s);
+	if (codepoint > 0x10FFFF) codepoint = 0xFFFD;
+#define CUTE_EMIT(X, Y, Z) spush(s, X | ((codepoint >> Y) & Z))
+	     if (codepoint <    0x80) { CUTE_EMIT(0x00,0,0x7F); }
+	else if (codepoint <   0x800) { CUTE_EMIT(0xC0,6,0x1F); CUTE_EMIT(0x80, 0,  0x3F); }
+	else if (codepoint < 0x10000) { CUTE_EMIT(0xE0,12,0xF); CUTE_EMIT(0x80, 6,  0x3F); CUTE_EMIT(0x80, 0, 0x3F); }
+	else                          { CUTE_EMIT(0xF0,18,0x7); CUTE_EMIT(0x80, 12, 0x3F); CUTE_EMIT(0x80, 6, 0x3F); CUTE_EMIT(0x80, 0, 0x3F); }
+	return s;
 }
 
-const char* cf_utf8_next(const char* s, int* codepoint)
+const char* cf_decode_UTF8(const char* s, uint32_t* codepoint)
 {
-	return NULL;
+	unsigned char c = *s++;
+	int extra = 0;
+	uint32_t min = 0;
+	*codepoint = 0;
+	     if (c >= 0xF0) { *codepoint = c & 0x07; extra = 3; min = 0x10000; }
+	else if (c >= 0xE0) { *codepoint = c & 0x0F; extra = 2; min = 0x800; }
+	else if (c >= 0xC0) { *codepoint = c & 0x1F; extra = 1; min = 0x80; }
+	else if (c >= 0x80) { *codepoint = 0xFFFD; }
+	else *codepoint = c;
+	while (extra--) {
+		c = *s++;
+		if ((c & 0xC0) != 0x80) *codepoint = 0xFFFD; break;
+		(*codepoint) = ((*codepoint) << 6) | (c & 0x3F);
+	}
+	if (*codepoint < min) *codepoint = 0xFFFD;
+	return s;
 }
 
-char* cf_utf8_write(char* buffer, int codepoint)
+const uint16_t* cf_decode_UTF16(const uint16_t* s, uint32_t* codepoint)
 {
-	return NULL;
+	uint32_t W1 = *s++;
+	if (W1 < 0xD800 || W1 > 0xDFFF) {
+		*codepoint = W1;
+	} else if (W1 > 0xD800 && W1 < 0xDBFF) {
+		uint32_t W2 = *s++;
+		if (W2 > 0xDC00 && W2 < 0xDFFF) *codepoint = 0x10000 + (((W1 & 0x03FF) << 10) | W2 & 0x03FF);
+		else *codepoint = 0xFFFD;
+	} else *codepoint = 0xFFFD;
+	return s;
 }

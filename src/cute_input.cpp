@@ -22,7 +22,6 @@
 #include <cute_input.h>
 #include <cute_c_runtime.h>
 #include <cute_math.h>
-#include <cute_utf8.h>
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_input_internal.h>
@@ -345,9 +344,9 @@ void cf_clear_all_mouse_state()
 void cf_input_text_add_utf8(const char* text)
 {
 	while (*text) {
-		int cp;
-		text = cf_decode8(text, &cp);
-		cf_app->input_text.add(cp);
+		uint32_t cp;
+		text = cf_decode_UTF8(text, &cp);
+		cf_app->input_text.add((int)cp);
 	}
 }
 

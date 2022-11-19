@@ -392,6 +392,67 @@
 #define sstatic(s, buffer, buffer_size) cf_string_static(s, buffer, buffer_size)
 
 //--------------------------------------------------------------------------------------------------
+// UTF8 and UTF16.
+
+/**
+ * Encodes a UTF32 codepoint (as `uint32_t`) as UTF8. The UTF8 bytes are appended onto the string.
+ * 
+ * Each UTF32 codepoint represents a single character. Each character can be encoded from 1 to 4
+ * bytes. Therefor, this function will push 1 to 4 bytes onto the string.
+ * 
+ * If an invalid codepoint is found the "replacement character" 0xFFFD will be appended instead, which
+ * looks like question mark inside of a dark diamond.
+ */
+#define sappend_UTF8(s, codepoint) cf_string_append_UTF8(s, codepoint)
+
+/**
+ * Decodes a single UTF8 character from the string as a UTF32 codepoint.
+ * 
+ * The return value is not a new string, but just s + bytes, where bytes is anywhere from 1 to 4.
+ * You can use this function in a loop to decode one codepoint at a time, where each codepoint
+ * represents a single UTF8 character.
+ * 
+ *     int cp;
+ *     const char* tmp = my_string;
+ *     while (*tmp) {
+ *         tmp = cf_decode_UTF8(tmp, &cp);
+ *         DoSomethingWithCodepoint(cp);
+ *     }
+ */
+CUTE_API const char* CUTE_CALL cf_decode_UTF8(const char* s, uint32_t* codepoint);
+
+/**
+ * Decodes a single UTF16 character from the string as a UTF32 codepoint.
+ * 
+ * The return value is not a new string, but just s + count, where count is anywhere from 1 to 2.
+ * You can use this function in a loop to decode one codepoint at a time, where each codepoint
+ * represents a single UTF8 character.
+ * 
+ *     int cp;
+ *     const uint16_t* tmp = my_string;
+ *     while (tmp) {
+ *         tmp = cf_decode_UTF16(tmp, &cp);
+ *         DoSomethingWithCodepoint(cp);
+ *     }
+ * 
+ * You can convert a UTF16 string to UTF8 by calling `sappend_UTF8` on another string
+ * instance inside the above example loop. Here's an example function to return a new string
+ * instance in UTF8 form given a UTF16 string.
+ * 
+ * char* utf8(uint16_t* text)
+ * {
+ *     int cp;
+ *     char* s = NULL;
+ *     while (*text) {
+ *         text = cf_decode_UTF16(text, &cp);
+ *         s = sappend_UTF8(s, cp);
+ *     }
+ *     return s;
+ * }
+ */
+CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, uint32_t* codepoint);
+
+//--------------------------------------------------------------------------------------------------
 // String Intering C API (global string table).
 
 /**
@@ -494,6 +555,7 @@
 #define cf_string_erase(s, index, count) (s = cf_serase(s, index, count))
 #define cf_string_static(s, buffer, buffer_size) (cf_array_static(s, buffer, buffer_size), cf_array_push(s, 0))
 #define cf_sinuke() cf_sinuke_intern_table()
+#define cf_string_append_UTF8(s, codepoint) (s = cf_string_append_UTF8_impl(s, codepoint))
 
 //--------------------------------------------------------------------------------------------------
 // Hidden API - Not intended for direct use.
@@ -539,14 +601,11 @@ CUTE_API double CUTE_CALL cf_stodouble(const char* s);
 CUTE_API uint64_t CUTE_CALL cf_stohex(const char* s);
 CUTE_API char* CUTE_CALL cf_sreplace(char* s, const char* replace_me, const char* with_me);
 CUTE_API char* CUTE_CALL cf_serase(char* s, int index, int count);
+CUTE_API char* CUTE_CALL cf_string_append_UTF8_impl(char *s, uint32_t codepoint);
 
 CUTE_API const char* CUTE_CALL cf_sintern(const char* s);
 CUTE_API const char* CUTE_CALL cf_sintern_range(const char* start, const char* end);
 CUTE_API void CUTE_CALL cf_sinuke_intern_table();
-
-CUTE_API int CUTE_CALL cf_utf8_size(int codepoint);
-CUTE_API const char* CUTE_CALL cf_utf8_next(const char* s, int* codepoint);
-CUTE_API char* CUTE_CALL cf_utf8_write(char* buffer, int codepoint);
 
 #ifdef __cplusplus
 }
@@ -627,6 +686,7 @@ struct string_t
 	CUTE_INLINE string_t& add(char ch) { spush(m_str, ch); return *this; }
 	CUTE_INLINE string_t& append(const char* s) { sappend(m_str, s); return *this; }
 	CUTE_INLINE string_t& append(const char* start, const char* end) { sappend_range(m_str, start, end); return *this; }
+	CUTE_INLINE string_t& append(uint32_t codepoint) { sappend_UTF8(m_str, codepoint); return *this; }
 	CUTE_INLINE string_t& fmt(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt(m_str, fmt, args); va_end(args); return *this; }
 	CUTE_INLINE string_t& fmt_append(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt_append(m_str, fmt, args); va_end(args); return *this; }
 	CUTE_INLINE string_t& trim() { strim(m_str); return *this; }
@@ -667,6 +727,50 @@ private:
 
 	CUTE_INLINE void s_static() { sstatic(m_str, u.m_buffer, sizeof(u.m_buffer)); CUTE_ASSERT(slen(m_str) == 0); }
 	CUTE_INLINE void s_chki(int i) const { CUTE_ASSERT(i >= 0 && i < ssize(m_str)); }
+};
+
+/**
+ * UTF8 decoder. Load it up with a string and read `.codepoint`. Call `next` to fetch the
+ * next codepoint.
+ * 
+ * Example:
+ * 
+ *     UTF8 utf8 = UTF8(my_string_in_utf8_format);
+ *     while (utf8.next()) {
+ *         DoSomethingWithCodepoint(utf8.codepoint);
+ *     }
+ */
+struct UTF8
+{
+	CUTE_INLINE UTF8() { }
+	CUTE_INLINE UTF8(const char* text) { this->text = text; }
+
+	CUTE_INLINE bool next() { if (*text) { text = cf_decode_UTF8(text, &codepoint); return true; } else return false; }
+
+	uint32_t codepoint;
+	const char* text = NULL;
+};
+
+/**
+ * UTF16 decoder. Load it up with a string and read `.codepoint`. Call `next` to fetch the
+ * next codepoint.
+ * 
+ * Example:
+ * 
+ *     UTF16 utf16 = UTF16(my_string_in_utf16_format);
+ *     while (utf16.next()) {
+ *         DoSomethingWithCodepoint(utf16.codepoint);
+ *     }
+ */
+struct UTF16
+{
+	CUTE_INLINE UTF16() { }
+	CUTE_INLINE UTF16(const uint16_t* text) { this->text = text; }
+
+	CUTE_INLINE bool next() { if (*text) { text = cf_decode_UTF16(text, &codepoint); return true; } else return false; }
+
+	uint32_t codepoint;
+	const uint16_t* text = NULL;
 };
 
 }

@@ -102,7 +102,6 @@ set(CUTE_SRCS
 	src/cute_aabb_tree.cpp
 	src/cute_symbol.cpp
 	src/cute_haptics.cpp
-	src/cute_utf8.cpp
 	src/cute_sprite.cpp
 	src/cute_coroutine.cpp
 	src/cute_networking.cpp
@@ -166,7 +165,6 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_aabb_tree.h
 	include/cute_symbol.h
 	include/cute_haptics.h
-	include/cute_utf8.h
 	include/cute_coroutine.h
 	include/cute_networking.h
 	include/cute_guid.h

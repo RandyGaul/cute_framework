@@ -67,7 +67,7 @@ typedef struct cf_animation_t
 {
 	const char* name; /*= NULL*/
 	cf_play_direction_t play_direction; /*= CF_PLAY_DIRECTION_FORWARDS*/
-	cf_frame_t* frames;
+	dyna cf_frame_t* frames;
 } cf_animation_t;
 
 CUTE_INLINE void cf_animation_add_frame(cf_animation_t* animation, cf_frame_t frame) { apush(animation->frames, frame); }
@@ -97,7 +97,7 @@ typedef struct cf_sprite_t
 
 	bool paused; /*= false*/
 	float t; /*= 0*/
-	const cf_animation_t** animations; /*= NULL*/
+	htbl const cf_animation_t** animations; /*= NULL*/
 
 	cf_transform_t transform; /*= cf_make_transform()*/
 } cf_sprite_t;
