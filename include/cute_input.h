@@ -46,7 +46,7 @@ typedef enum cf_mouse_button_t
 
 #define CF_KEY_BUTTON_DEFS \
 	CF_ENUM(KEY_UNKNOWN, 0) \
-	CF_ENUM(KEY_RETURN, 4) \
+	CF_ENUM(KEY_RETURN, 13) \
 	CF_ENUM(KEY_ESCAPE, '\033') \
 	CF_ENUM(KEY_BACKSPACE, '\b') \
 	CF_ENUM(KEY_TAB, '\t') \
