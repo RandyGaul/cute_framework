@@ -107,6 +107,7 @@ set(CUTE_SRCS
 	src/cute_networking.cpp
 	src/cute_guid.cpp
 	src/cute_alloc.cpp
+	src/cute_font.cpp
 
 	src/internal/cute_ecs_internal.cpp
 	src/internal/cute_dx11.cpp
@@ -169,6 +170,7 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_networking.h
 	include/cute_guid.h
 	include/cute_routine.h
+	include/cute_font.h
 )
 
 set(IMGUI_HDRS

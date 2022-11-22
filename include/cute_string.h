@@ -34,6 +34,10 @@
 //--------------------------------------------------------------------------------------------------
 // C API
 
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
 // General purpose C-string API. 100% compatible with normal C-strings.
 // Automatically grows on the heap as needed.
 // Free it up with `sfree` when done.
@@ -561,10 +565,6 @@ CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, uint32_t* 
 // Hidden API - Not intended for direct use.
 
 #define CF_INTERN_COOKIE 0x75AFC82E // Used for sanity/type checking.
-
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
 
 typedef struct cf_intern_t
 {

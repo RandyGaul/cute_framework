@@ -357,16 +357,16 @@ namespace cute
 
 enum key_button_t : int
 {
-#define CF_ENUM(K, V) K = V,
-CF_KEY_BUTTON_DEFS
-#undef CF_ENUM
+	#define CF_ENUM(K, V) K = V,
+	CF_KEY_BUTTON_DEFS
+	#undef CF_ENUM
 };
 
 enum mouse_button_t : int
 {
-#define CF_ENUM(K, V) K = V,
-CF_MOUSE_BUTTON_DEFS
-#undef CF_ENUM
+	#define CF_ENUM(K, V) K = V,
+	CF_MOUSE_BUTTON_DEFS
+	#undef CF_ENUM
 };
 
 using ime_composition_t = cf_ime_composition_t;

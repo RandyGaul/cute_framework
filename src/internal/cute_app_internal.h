@@ -158,8 +158,11 @@ struct cf_ecs_arrays_t
 	}
 };
 
+struct font_internal_t;
+
 struct cf_app_t
 {
+	// App stuff.
 	float dt = 0;
 	bool running = true;
 	int options = 0;
@@ -191,6 +194,7 @@ struct cf_app_t
 	bool using_imgui = false;
 	sg_imgui_t sg_imgui;
 
+	// Input stuff.
 	cute::array<char> ime_composition;
 	int ime_composition_cursor = 0;
 	int ime_composition_selection_len = 0;
@@ -202,11 +206,13 @@ struct cf_app_t
 	cf_list_t joypads;
 	cute::array<cf_touch_t> touches;
 
+	// Batch stuff.
 	cf_batch_t* ase_batch = NULL;
 	cf_aseprite_cache_t* ase_cache = NULL;
 	cf_batch_t* png_batch = NULL;
 	cf_png_cache_t* png_cache = NULL;
 
+	// ECS stuff.
 	// TODO: Set allocator context for these data structures.
 	cf_system_internal_t system_internal_builder;
 	cute::array<cf_system_internal_t> systems;
@@ -229,6 +235,10 @@ struct cf_app_t
 
 	cute::dictionary<cf_entity_t, int>* save_id_table = NULL;
 	cute::array<cf_entity_t>* load_id_table = NULL;
+
+	// Font stuff.
+	uint64_t font_id_gen = 0;
+	cute::dictionary<uint64_t, font_internal_t*> fonts;
 };
 
 #endif // CUTE_APP_INTERNAL_H
