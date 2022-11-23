@@ -59,9 +59,7 @@ CUTE_API cf_font_t CUTE_CALL cf_make_font(const char* path, cf_result_t* result_
 CUTE_API cf_font_t CUTE_CALL cf_make_font_mem(void* data, int size, cf_result_t* result_out);
 CUTE_API void CUTE_CALL cf_destroy_font(cf_font_t font);
 CUTE_API cf_result_t CUTE_CALL cf_font_add_codepoints(cf_font_t font, cf_codepoint_set_t set);
-CUTE_API cf_result_t CUTE_CALL cf_font_build(cf_font_t font);
-CUTE_API void CUTE_CALL cf_font_draw(cf_font_t, const char* text, cf_v2 position, cf_color_t color);
-CUTE_API void CUTE_CALL cf_font_draw_ex(cf_font_t, const char* text, cf_v2 position, cf_color_t color, float size, float wrap_width, int justify, cf_aabb_t clip_box);
+CUTE_API cf_result_t CUTE_CALL cf_font_build(cf_font_t font, float size);
 
 #ifdef __cplusplus
 }
@@ -78,6 +76,22 @@ namespace cute
 using codepoint_range_t = cf_codepoint_range_t;
 using codepoint_set_t = cf_codepoint_set_t;
 using font_t = cf_font_t;
+
+CUTE_INLINE codepoint_set_t ascii_latin() { return cf_ascii_latin(); }
+CUTE_INLINE codepoint_set_t greek() { return cf_greek(); }
+CUTE_INLINE codepoint_set_t korean() { return cf_korean(); }
+CUTE_INLINE codepoint_set_t chinese_full() { return cf_chinese_full(); }
+CUTE_INLINE codepoint_set_t chinese_simplified_common() { return cf_chinese_simplified_common(); }
+CUTE_INLINE codepoint_set_t japanese() { return cf_japanese(); }
+CUTE_INLINE codepoint_set_t thai() { return cf_thai(); }
+CUTE_INLINE codepoint_set_t vietnamese() { return cf_vietnamese(); }
+CUTE_INLINE codepoint_set_t cyrillic() { return cf_cyrillic(); }
+
+CUTE_INLINE font_t CUTE_CALL make_font(const char* path, result_t* result_out = NULL) { return cf_make_font(path, result_out); }
+CUTE_INLINE font_t CUTE_CALL make_font_mem(void* data, int size, result_t* result_out = NULL) { return cf_make_font_mem(data, size, result_out); }
+CUTE_INLINE void CUTE_CALL destroy_font(font_t font) { cf_destroy_font(font); }
+CUTE_INLINE result_t CUTE_CALL font_add_codepoints(font_t font, codepoint_set_t set) { return cf_font_add_codepoints(font, set); }
+CUTE_INLINE result_t CUTE_CALL font_build(font_t font, float size) { return cf_font_build(font, size); }
 
 }
 

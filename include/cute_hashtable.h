@@ -414,6 +414,7 @@ struct dictionary
 	T* try_find(const K& key) { return try_get(key); }
 	const T* try_get(const K& key) const;
 	const T* try_find(const K& key) const { return try_get(key); }
+	bool has(const K& key) const { return try_get(key) ? true : false; }
 
 	T* insert(const K& key);
 	T* insert(const K& key, const T& val);

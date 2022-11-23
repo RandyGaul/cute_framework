@@ -142,6 +142,13 @@ CUTE_INLINE bool cf_is_even(int x) { return (x % 2) == 0; }
 CUTE_INLINE bool cf_is_odd(int x) { return !cf_is_even(x); }
 
 //--------------------------------------------------------------------------------------------------
+// Bit manipulation.
+
+CUTE_INLINE bool cf_is_power_of_two(int a) { return a != 0 && (a & (a - 1)) == 0; }
+CUTE_INLINE bool cf_is_power_of_two_uint(uint64_t a) { return a != 0 && (a & (a - 1)) == 0; }
+CUTE_INLINE int cf_fit_power_of_two(int a) { a--; a |= a >> 1; a |= a >> 2; a |= a >> 4; a |= a >> 8; a |= a >> 16; a++; return a; }
+
+//--------------------------------------------------------------------------------------------------
 // Easing functions.
 // Adapted from Noel Berry: https://github.com/NoelFB/blah/blob/master/include/blah_ease.h
 
@@ -683,6 +690,10 @@ CUTE_INLINE int clamp01(int a) { return cf_clamp01_int(a); }
 CUTE_INLINE bool is_even(int x) { return cf_is_even(x); }
 CUTE_INLINE bool is_odd(int x) { return cf_is_odd(x); }
 
+CUTE_INLINE bool is_power_of_two(int a) { return cf_is_power_of_two(a); }
+CUTE_INLINE bool is_power_of_two(uint64_t a) { return cf_is_power_of_two_uint(a); }
+CUTE_INLINE int fit_power_of_two(int a) { return cf_fit_power_of_two(a); }
+
 CUTE_INLINE float smoothstep(float x) { return cf_smoothstep(x); }
 CUTE_INLINE float quad_in(float x) { return cf_quad_in(x); }
 CUTE_INLINE float quad_out(float x) { return cf_quad_out(x); }
@@ -836,7 +847,6 @@ CUTE_INLINE v2 endpoint(ray_t r) { return cf_endpoint(r); }
 
 CUTE_INLINE int ray_to_halfpsace(ray_t A, halfspace_t B, raycast_t* out) { return cf_ray_to_halfpsace(A, B, out); }
 CUTE_INLINE float distance_sq(v2 a, v2 b, v2 p) { return cf_distance_sq(a, b, p); }
-
 
 CUTE_INLINE bool circle_to_circle(circle_t A, circle_t B) { return cf_circle_to_circle(A, B); }
 CUTE_INLINE bool circle_to_aabb(circle_t A, aabb_t B) { return cf_circle_to_aabb(A, B); }

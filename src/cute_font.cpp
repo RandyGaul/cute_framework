@@ -19,6 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#include <cute_defines.h>
+
 #include <cute_font.h>
 #include <cute_c_runtime.h>
 #include <cute_file_system.h>
@@ -32,12 +34,14 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb/stb_truetype.h>
 
+#include <cute/cute_png.h>
+
 using namespace cute;
 
 struct glyph_t
 {
 	v2 u, v;
-	float w, h;
+	int w, h;
 	v2 offset;
 	float xadvance;
 	bool visible;
@@ -45,16 +49,18 @@ struct glyph_t
 
 struct font_internal_t
 {
+	uint8_t* file_data = NULL;
 	stbtt_fontinfo info;
 	array<codepoint_range_t> ranges;
 	dictionary<int, glyph_t> glyphs;
-	int ascent;
-	int descent;
-	int line_gap;
-	int line_height;
-	int height;
-	float scale;
+	uint8_t* pixels = NULL;
 	float size;
+	float scale;
+	float ascent;
+	float descent;
+	float line_gap;
+	float line_height;
+	float height;
 };
 
 // These character range functions are from Dear ImGui v1.89.
@@ -86,26 +92,40 @@ static int s_unpack_ranges(int base, const short* deltas, int deltas_count, code
 	return out_count;
 }
 
-codepoint_set_t ascii_latin()
+codepoint_set_t cf_ascii_latin()
 {
 	static codepoint_range_t ranges[] = {
 		{ 0x0020, 0x00FF, }, // Basic Latin + Latin Supplement
+		{ 0xFFFD, 0xFFFD }  // Replacement character
 	};
 	codepoint_set_t set = { CUTE_ARRAY_SIZE(ranges), ranges };
 	return set;
 }
 
-codepoint_set_t greek()
+codepoint_set_t cf_greek()
 {
 	static codepoint_range_t ranges[] = {
 		{ 0x0020, 0x00FF, }, // Basic Latin + Latin Supplement
 		{ 0x0370, 0x03FF, }, // Greek and Coptic
+		{ 0xFFFD, 0xFFFD }  // Replacement character
 	};
 	codepoint_set_t set = { CUTE_ARRAY_SIZE(ranges), ranges };
 	return set;
 }
 
-codepoint_set_t korean()
+codepoint_set_t cf_korean()
+{
+	static codepoint_range_t ranges[] = {
+		{ 0x0020, 0x00FF }, // Basic Latin + Latin Supplement
+		{ 0x3131, 0x3163 }, // Korean alphabets
+		{ 0xAC00, 0xD7A3 }, // Korean characters
+		{ 0xFFFD, 0xFFFD }, // Replacement character
+	};
+	codepoint_set_t set = { CUTE_ARRAY_SIZE(ranges), ranges };
+	return set;
+}
+
+codepoint_set_t cf_chinese_full()
 {
 	static codepoint_range_t ranges[] = {
 		{ 0x0020, 0x00FF }, // Basic Latin + Latin Supplement
@@ -120,19 +140,7 @@ codepoint_set_t korean()
 	return set;
 }
 
-codepoint_set_t chinese_full()
-{
-	static codepoint_range_t ranges[] = {
-		{ 0x0020, 0x00FF }, // Basic Latin + Latin Supplement
-		{ 0x3131, 0x3163 }, // Korean alphabets
-		{ 0xAC00, 0xD7A3 }, // Korean characters
-		{ 0xFFFD, 0xFFFD }, // Replacement character
-	};
-	codepoint_set_t set = { CUTE_ARRAY_SIZE(ranges), ranges };
-	return set;
-}
-
-codepoint_set_t chinese_simplified_common()
+codepoint_set_t cf_chinese_simplified_common()
 {
 	// Store 2500 regularly used characters for Simplified Chinese.
 	// Sourced from https://zh.wiktionary.org/wiki/%E9%99%84%E5%BD%95:%E7%8E%B0%E4%BB%A3%E6%B1%89%E8%AF%AD%E5%B8%B8%E7%94%A8%E5%AD%97%E8%A1%A8
@@ -199,7 +207,7 @@ codepoint_set_t chinese_simplified_common()
 	return set;
 }
 
-codepoint_set_t japanese()
+codepoint_set_t cf_japanese()
 {
 	// 2999 ideograms code points for Japanese
 	// - 2136 Joyo (meaning "for regular use" or "for common use") Kanji code points
@@ -288,18 +296,19 @@ codepoint_set_t japanese()
 	return set;
 }
 
-codepoint_set_t thai()
+codepoint_set_t cf_thai()
 {
 	static codepoint_range_t ranges[] = {
 		{ 0x0020, 0x00FF }, // Basic Latin
 		{ 0x2010, 0x205E }, // Punctuations
 		{ 0x0E00, 0x0E7F }, // Thai
+		{ 0xFFFD, 0xFFFD }  // Replacement character
 	};
 	codepoint_set_t set = { CUTE_ARRAY_SIZE(ranges), ranges };
 	return set;
 }
 
-codepoint_set_t vietnamese()
+codepoint_set_t cf_vietnamese()
 {
 	static codepoint_range_t ranges[] = {
 		{ 0x0020, 0x00FF }, // Basic Latin
@@ -310,32 +319,35 @@ codepoint_set_t vietnamese()
 		{ 0x01A0, 0x01A1 },
 		{ 0x01AF, 0x01B0 },
 		{ 0x1EA0, 0x1EF9 },
+		{ 0xFFFD, 0xFFFD }  // Replacement character
 	};
 	codepoint_set_t set = { CUTE_ARRAY_SIZE(ranges), ranges };
 	return set;
 }
 
-codepoint_set_t cyrillic()
+codepoint_set_t cf_cyrillic()
 {
 	static codepoint_range_t ranges[] = {
 		{ 0x0020, 0x00FF }, // Basic Latin + Latin Supplement
 		{ 0x0400, 0x052F }, // Cyrillic + Cyrillic Supplement
 		{ 0x2DE0, 0x2DFF }, // Cyrillic Extended-A
 		{ 0xA640, 0xA69F }, // Cyrillic Extended-B
+		{ 0xFFFD, 0xFFFD }  // Replacement character
 	};
 	codepoint_set_t set = { CUTE_ARRAY_SIZE(ranges), ranges };
 	return set;
 }
 
-font_t make_font_mem(void* data, int size, result_t* result_out)
+font_t cf_make_font_mem(void* data, int size, result_t* result_out)
 {
-	font_internal_t* font = (font_internal_t*)CUTE_CALLOC(sizeof(font_internal_t));
-	if (!stbtt_InitFont(&font->info, (const unsigned char*)data, 0)) {
+	font_internal_t* font = (font_internal_t*)CUTE_NEW(font_internal_t);
+	font->file_data = (uint8_t*)data;
+	if (!stbtt_InitFont(&font->info, font->file_data, stbtt_GetFontOffsetForIndex(font->file_data, 0))) {
+		CUTE_FREE(data);
 		CUTE_FREE(font);
 		if (result_out) *result_out = result_failure("Failed to parse ttf file with stb_truetype.h.");
 		return { ~0ULL };
 	}
-	stbtt_GetFontVMetrics(&font->info, &font->ascent, &font->descent, &font->line_gap);
 	font_t result = { cf_app->font_id_gen++ };
 	font_internal_t** font_ptr = cf_app->fonts.insert(result.id);
 	CUTE_ASSERT(font_ptr);
@@ -344,44 +356,72 @@ font_t make_font_mem(void* data, int size, result_t* result_out)
 	return result;
 }
 
-font_t make_font(const char* path, result_t* result_out)
+font_t cf_make_font(const char* path, result_t* result_out)
 {
 	void* data;
 	size_t size;
 	result_t err = fs_read_entire_file_to_memory(path, &data, &size);
-	CUTE_DEFER(CUTE_FREE(data));
 	if (is_error(err)) {
+		CUTE_FREE(data);
 		if (result_out) *result_out = err;
 		return { ~0ULL };
 	}
-	font_t font = make_font_mem(data, (int)size, result_out);
+	font_t font = cf_make_font_mem(data, (int)size, result_out);
 	return font;
 }
 
-void destroy_font(font_t font_handle)
+void cf_destroy_font(font_t font_handle)
 {
 	font_internal_t* font = cf_app->fonts.get(font_handle.id);
+	// TODO.
 }
 
-result_t font_add_codepoints(font_t font_handle, codepoint_set_t set)
+result_t cf_font_add_codepoints(font_t font_handle, codepoint_set_t set)
 {
 	font_internal_t* font = cf_app->fonts.get(font_handle.id);
-	if (font) return result_failure("Invalid font, did you forget to call `cf_make_font`?");
+	if (!font) return result_failure("Invalid font, did you forget to call `cf_make_font`?");
 	for (int i = 0; i < set.count; ++i) {
 		font->ranges.add(set.ranges[i]);
 	}
 	return result_success();
 }
 
-result_t font_rebuild(font_t font_handle, float size)
+// Useful debugging tool for viewing the atlas.
+static void s_save(const char* path, uint8_t* pixels, int w, int h)
+{
+	cp_image_t img;
+	img.w = w;
+	img.h = h;
+	img.pix = (cp_pixel_t*)CUTE_ALLOC(sizeof(cp_pixel_t) * w * h);
+	for (int i = 0; i < w * h; ++i) {
+		cp_pixel_t pix;
+		pix.r = pix.g = pix.b = pixels[i];
+		pix.a = 255;
+		img.pix[i] = pix;
+	}
+	cp_save_png(path, &img);
+	CUTE_FREE(img.pix);
+}
+
+result_t cf_font_build(font_t font_handle, float size)
 {
 	font_internal_t* font = cf_app->fonts.get(font_handle.id);
-	if (font) return result_failure("Invalid font, did you forget to call `cf_make_font`?");
+	if (!font) return result_failure("Invalid font, did you forget to call `cf_make_font`?");
 	// TODO - Delete old font data.
+	// TODO - Oversampling.
+	font->size = size;
 	font->scale = stbtt_ScaleForPixelHeight(&font->info, size);
+	int ascent, descent, line_gap;
+	stbtt_GetFontVMetrics(&font->info, &ascent, &descent, &line_gap);
+	font->ascent = ascent * font->scale;
+	font->descent = descent * font->scale;
+	font->line_gap = line_gap * font->scale;
+	font->line_height = font->ascent - font->descent + font->line_gap;
+	font->height = font->ascent - font->descent;
 	font->size = size;
 
-	// Load each glyph's font data and rasterize its image.
+	// Load each glyph's data from the font.
+	array<int> glyph_indices;
 	for (int i = 0; i < font->ranges.size(); ++i) {
 		int lo = font->ranges[i].lo;
 		int hi = font->ranges[i].hi;
@@ -392,37 +432,76 @@ result_t font_rebuild(font_t font_handle, float size)
 				// This glyph wasn't found in the font at all.
 				continue;
 			}
+			if (font->glyphs.has(codepoint)) {
+				// This glyph is already accounted for.
+				continue;
+			}
 			int xadvance, lsb, x0, y0, x1, y1;
 			stbtt_GetGlyphHMetrics(&font->info, glyph_index, &xadvance, &lsb);
-			stbtt_GetGlyphBitmapBox(&font->info, glyph_index, size, size, &x0, &y0, &x1, &y1);
+			stbtt_GetGlyphBitmapBox(&font->info, glyph_index, font->scale, font->scale, &x0, &y0, &x1, &y1);
 			int w = x1 - x0;
 			int h = y1 - y0;
 			glyph_t glyph;
 			glyph.u = glyph.v = V2(0,0);
-			glyph.w = (float)w;
-			glyph.h = (float)h;
-			glyph.offset = V2(lsb * size, (float)y0);
+			glyph.w = w;
+			glyph.h = h;
+			glyph.offset = V2(lsb * font->scale, (float)y0);
 			glyph.xadvance = xadvance * font->scale;
 			glyph.visible = w > 0 && h > 0 && stbtt_IsGlyphEmpty(&font->info, glyph_index) == 0;
+			glyph_indices.add(glyph_index);
 			font->glyphs.insert(codepoint, glyph);
 		}
 	}
 
 	// Gather up all rectangles for each glyph.
+	int pad = 1;
+	int rect_count = font->glyphs.count();
+	array<stbrp_rect> rects;
+	rects.ensure_count(rect_count);
+	CUTE_MEMSET(rects.data(), 0, sizeof(stbrp_rect) * rect_count);
+	glyph_t* glyphs = font->glyphs.items();
+	for (int i = 0; i < rect_count; ++i) {
+		rects[i].w = glyphs[i].w + pad;
+		rects[i].h = glyphs[i].h + pad;
+		rects[i].id = i;
+	}
 
 	// Pack all rectangles tightly together.
 	int atlas_width = 1024;
 	int atlas_height_max = 1024 * 32;
-	stbtt_pack_context spc = { 0 };
-	stbtt_PackBegin(&spc, NULL, atlas_width, atlas_height_max, 0, 1, NULL);
+	stbrp_context stbrp;
+	array<stbrp_node> nodes;
+	nodes.ensure_count(atlas_height_max - pad);
+	stbrp_init_target(&stbrp, atlas_width - pad, atlas_height_max - pad, nodes.data(), nodes.count());
+	stbrp_pack_rects(&stbrp, rects.data(), rect_count);
 
-	//stbtt_PackFontRangesPackRects(&spc, rects, num_rects);
+	// Find the texture atlas's packed height.
+	int packed_height = 0;
+	for (int i = 0; i < rect_count; ++i) {
+		packed_height = max(packed_height, rects[i].y + rects[i].h);
+	}
+	int atlas_height = fit_power_of_two(packed_height);
 
 	// Calculate glyph UV's.
-
 	// Render all glyphs acoording to their rectangle into a single texture atlas.
-	//stbtt_PackFontRangesRenderIntoRects(&spc, &font->info, ranges, num_ranges, rects);
-	stbtt_PackEnd(&spc);
+	uint8_t* pixels = (uint8_t*)CUTE_CALLOC(atlas_width * atlas_height);
+	float iw = 1.0f / (float)atlas_width;
+	float ih = 1.0f / (float)atlas_height;
+	for (int i = 0; i < rect_count; ++i) {
+		int x = rects[i].x + pad;
+		int y = rects[i].y + pad;
+		int w = rects[i].w - pad;
+		int h = rects[i].h - pad;
+		glyphs[i].u.x = x * iw;
+		glyphs[i].v.x = y * ih;
+		glyphs[i].u.y = (x + w) * iw;
+		glyphs[i].v.y = (y + h) * ih;
+		stbtt_MakeGlyphBitmap(&font->info, pixels + y * atlas_width + x, w, h, atlas_width, font->scale, font->scale, glyph_indices[i]);
+	}
+	font->pixels = pixels;
+	//s_save("out.png", pixels, atlas_width, atlas_height);
+
+	// TODO - Hook up to batch API automagically.
 
 	return result_failure("Not finished implementing this.");
 }

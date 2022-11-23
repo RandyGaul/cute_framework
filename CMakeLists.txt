@@ -341,6 +341,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_string.h
 		test/test_hashtable.h
 		test/test_path.h
+		test/test_font.h
 	)
 
 	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
