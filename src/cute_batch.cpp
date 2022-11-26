@@ -64,6 +64,27 @@ struct cf_vertex_t
 	cf_color_t c;
 };
 
+typedef struct cf_batch_sprite_t
+{
+	uint64_t id;
+
+	cf_transform_t transform; // Position and location rotation of the quad. Default: cf_make_transform() 
+	int w; // Width in pixels of the source image.
+	int h; // Height in pixels of the source image.
+	float scale_x; // Scaling along the quad's local x-axis in pixels.
+	float scale_y; // Scaling along the quad's local y-axis in pixels.
+	float alpha; // Applies additional alpha to this quad. Default: 1.0f
+
+	int sort_bits; /*= 0;*/
+} cf_batch_sprite_t;
+
+CUTE_INLINE cf_batch_sprite_t cf_batch_sprite_defaults()
+{
+	cf_batch_sprite_t result = { 0 };
+	result.transform = cf_make_transform();
+	result.alpha = 1.0f;
+	return result;
+}
 
 enum cf_batch_sprite_shader_type_t
 {

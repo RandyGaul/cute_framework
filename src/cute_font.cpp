@@ -52,6 +52,7 @@ struct font_internal_t
 	uint8_t* file_data = NULL;
 	stbtt_fontinfo info;
 	array<codepoint_range_t> ranges;
+	dictionary<int, int> missing_codepoints;
 	dictionary<int, glyph_t> glyphs;
 	uint8_t* pixels = NULL;
 	float size;
@@ -430,6 +431,9 @@ result_t cf_font_build(font_t font_handle, float size)
 			int glyph_index = stbtt_FindGlyphIndex(&font->info, codepoint);
 			if (!glyph_index) {
 				// This glyph wasn't found in the font at all.
+				if (!font->missing_codepoints.has(codepoint)) {
+					*font->missing_codepoints.insert(codepoint) = codepoint;
+				}
 				continue;
 			}
 			if (font->glyphs.has(codepoint)) {
@@ -492,6 +496,7 @@ result_t cf_font_build(font_t font_handle, float size)
 		int y = rects[i].y + pad;
 		int w = rects[i].w - pad;
 		int h = rects[i].h - pad;
+		CUTE_ASSERT(rects[i].was_packed);
 		glyphs[i].u.x = x * iw;
 		glyphs[i].v.x = y * ih;
 		glyphs[i].u.y = (x + w) * iw;
@@ -504,4 +509,16 @@ result_t cf_font_build(font_t font_handle, float size)
 	// TODO - Hook up to batch API automagically.
 
 	return result_failure("Not finished implementing this.");
+}
+
+void cf_font_missing_codepoints(cf_font_t font_handle, int** missing_codepoints, int* count)
+{
+	font_internal_t* font = cf_app->fonts.get(font_handle.id);
+	if (!font) {
+		*missing_codepoints = NULL;
+		*count = 0;
+	} else {
+		*missing_codepoints = font->missing_codepoints.keys();
+		*count = font->missing_codepoints.count();
+	}
 }

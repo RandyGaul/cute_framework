@@ -93,7 +93,7 @@ set(CUTE_SRCS
 	src/cute_batch.cpp
 	src/cute_window.cpp
 	src/cute_image.cpp
-	src/cute_gfx.cpp
+	src/cute_graphics.cpp
 	src/cute_aseprite_cache.cpp
 	src/cute_png_cache.cpp
 	src/cute_https.cpp
@@ -154,7 +154,7 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_image.h
 	include/cute_color.h
 	include/cute.h
-	include/cute_gfx.h
+	include/cute_graphics.h
 	include/cute_rnd.h
 	include/cute_sprite.h
 	include/cute_aseprite_cache.h

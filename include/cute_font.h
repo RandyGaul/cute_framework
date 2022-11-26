@@ -60,6 +60,7 @@ CUTE_API cf_font_t CUTE_CALL cf_make_font_mem(void* data, int size, cf_result_t*
 CUTE_API void CUTE_CALL cf_destroy_font(cf_font_t font);
 CUTE_API cf_result_t CUTE_CALL cf_font_add_codepoints(cf_font_t font, cf_codepoint_set_t set);
 CUTE_API cf_result_t CUTE_CALL cf_font_build(cf_font_t font, float size);
+CUTE_API void CUTE_CALL cf_font_missing_codepoints(cf_font_t, int** missing_codepoints, int* count);
 
 #ifdef __cplusplus
 }
@@ -92,6 +93,7 @@ CUTE_INLINE font_t CUTE_CALL make_font_mem(void* data, int size, result_t* resul
 CUTE_INLINE void CUTE_CALL destroy_font(font_t font) { cf_destroy_font(font); }
 CUTE_INLINE result_t CUTE_CALL font_add_codepoints(font_t font, codepoint_set_t set) { return cf_font_add_codepoints(font, set); }
 CUTE_INLINE result_t CUTE_CALL font_build(font_t font, float size) { return cf_font_build(font, size); }
+CUTE_INLINE void font_missing_codepoints(cf_font_t font, int** missing_codepoints, int* count) { return cf_font_missing_codepoints(font, missing_codepoints, count); }
 
 }
 

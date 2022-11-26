@@ -39,6 +39,12 @@
 #	include <SDL_syswm.h>
 #endif
 
+#ifdef CUTE_WINDOWS
+#	pragma comment (lib, "dxgi.lib")
+#	pragma comment (lib, "d3d11.lib")
+#	pragma comment (lib, "dxguid.lib")
+#endif
+
 #define CUTE_SOUND_FORCE_SDL
 #include <cute/cute_sound.h>
 
@@ -48,7 +54,6 @@
 #ifdef CUTE_USE_CIMGUI
 #include <cimgui.h>
 #endif // CUTE_FRAMEWORK_CIMGUI
-
 
 #define SOKOL_IMPL
 #define SOKOL_TRACE_HOOKS
