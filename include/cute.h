@@ -38,7 +38,7 @@
 #include "cute_doubly_list.h"
 #include "cute_ecs.h"
 #include "cute_file_system.h"
-#include "cute_gfx.h"
+#include "cute_graphics.h"
 #include "cute_haptics.h"
 #include "cute_hashtable.h"
 #include "cute_https.h"

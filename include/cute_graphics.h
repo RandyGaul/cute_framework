@@ -44,14 +44,72 @@ extern "C" {
  * 
  * If you want to draw sprites, see: cute_sprite.h
  * If you want to draw lines or shapes, see: cute_batch.h
- * If you want to draw text, see: cute_font.h and cute_batch.h
+ * If you want to draw text, see: cute_font.h + cute_batch.h
+ * 
+ * Quick list of unsupported features to keep the initial API really tiny and simple. These can be
+ * potentially added later, but are not slated for v1.00 of CF's initial release. Most of these
+ * features make more sense for the 3D use-case as opposed to 2D.
+ * 
+ *     - Mipmaps
+ *     - MSAA
+ *     - Blend color constant
+ *     - Multiple render targets (aka color/texture attachments)
+ *     - Depth bias tunables
+ *     - uint16_t indices (only uint32_t supported)
+ *     - Cube map
+ *     - 3D textures
+ *     - Texture arrays
+ *     - Sampler types signed/unsigned int (only float supported)
+ *     - Other primitive types besides triangles
+ *     - UV wrap border colors
+ *     - Face winding order (defaults to CCW only)
+ *     - Anisotropy tunable
+ *     - Min/max LOD tunable
+ * 
+ * The basic flow of rendering a frame looks something like this:
+ * 
+ *     for each pass {
+ *         cf_begin_pass(pass);
+ *         for each mesh {
+ *             cf_mesh_update_vertex_data(mesh, ...);
+ *             cf_apply_mesh(mesh);
+ *             for each material {
+ *                 cf_material_set_uniform_vs(material, ...);
+ *                 cf_material_set_uniform_fs(material, ...);
+ *                 for each shader {
+ *                     cf_apply_shader(shader, material);
+ *                     cf_draw_elements(...);
+ *                 }
+ *             }
+ *         }
+ *         cf_end_pass();
+ *     }
+ *     cf_commit();
+ * 
+ * Where each pass writes to a render target texture. Passes are designed to easily load
+ * up texture contents from the previous pass, or start out with a cleared color. This makes
+ * chaining passes together quite simple. For example the first pass could be to draw a bunch of
+ * sprites, while the second pass could be some full-screen post-processing FX, such as a
+ * CRT TV shader, or a blurring effect, etc.
  */
 
+#define CF_GRAPHICS_IS_VALID(X) (X.id != 0)
+
 typedef struct CF_Texture { uint64_t id; } CF_Texture;
-typedef struct CF_Shader { uint64_t id; } CF_Shader;
 typedef struct CF_Pass { uint64_t id; } CF_Pass;
-typedef struct CF_Material { uint64_t id; } CF_Material;
 typedef struct CF_Mesh { uint64_t id; } CF_Mesh;
+typedef struct CF_Material { uint64_t id; } CF_Material;
+typedef struct CF_Shader { uint64_t id; } CF_Shader;
+
+//--------------------------------------------------------------------------------------------------
+
+typedef struct CF_Matrix4x4
+{
+	float elements[16];
+} CF_Matrix4x4;
+
+CUTE_API CF_Matrix4x4 CUTE_CALL cf_matrix_identity();
+CUTE_API CF_Matrix4x4 CUTE_CALL cf_matrix_ortho_2d(float w, float h, float x, float y);
 
 //--------------------------------------------------------------------------------------------------
 // Device queries.
@@ -73,7 +131,7 @@ typedef enum CF_BackendType
 	#undef CF_ENUM
 } CF_BackendType;
 
-CUTE_API CF_BackendType CUTE_CALL CF_QueryBackend();
+CUTE_API CF_BackendType CUTE_CALL cf_query_backend();
 
 #define CF_PIXELFORMAT_DEFS \
 	CF_ENUM(PIXELFORMAT_DEFAULT,         0 ) \
@@ -161,7 +219,7 @@ typedef enum CF_PixelFormatOp
 	#undef CF_ENUM
 } CF_PixelFormatOp;
 
-CUTE_API bool CUTE_CALL CF_QueryPixelFormat(CF_PixelFormat format, CF_PixelFormatOp op);
+CUTE_API bool CUTE_CALL cf_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op);
 
 #define CF_DEVICE_FEATURE_DEFS \
 	CF_ENUM(DEVICE_FEATURE_INSTANCING,       0) \
@@ -175,7 +233,7 @@ typedef enum CF_DeviceFeature
 	#undef CF_ENUM
 } CF_DeviceFeature;
 
-CUTE_API bool CUTE_CALL CF_QueryDeviceFeature(CF_DeviceFeature feature);
+CUTE_API bool CUTE_CALL cf_query_device_feature(CF_DeviceFeature feature);
 
 #define CF_RESOURCE_LIMIT_DEFS \
 	CF_ENUM(RESOURCE_LIMIT_TEXTURE_DIMENSION,       0) \
@@ -188,7 +246,7 @@ typedef enum CF_ResourceLimit
 	#undef CF_ENUM
 } CF_ResourceLimit;
 
-CUTE_API int CUTE_CALL CF_QueryResourceLimit(CF_ResourceLimit resource_limit);
+CUTE_API int CUTE_CALL cf_query_resource_limit(CF_ResourceLimit resource_limit);
 
 //--------------------------------------------------------------------------------------------------
 // Texture.
@@ -204,6 +262,17 @@ typedef enum CF_UsageType
 	CF_USAGE_TYPE_DEFS
 	#undef CF_ENUM
 } CF_UsageType;
+
+#define CF_FILTER_DEFS \
+	CF_ENUM(FILTER_NEAREST, 0) \
+	CF_ENUM(FILTER_LINEAR,  1) \
+
+typedef enum CF_Filter
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_FILTER_DEFS
+	#undef CF_ENUM
+} CF_Filter;
 
 #define CF_WRAP_MODE_DEFS \
 	CF_ENUM(WRAP_MODE_DEFAULT,         0) \
@@ -223,6 +292,7 @@ typedef struct CF_TextureParams
 {
 	CF_PixelFormat pixel_format;
 	CF_UsageType usage;
+	CF_Filter filter;
 	CF_WrapMode wrap_u;
 	CF_WrapMode wrap_v;
 	int width;
@@ -232,10 +302,10 @@ typedef struct CF_TextureParams
 	void* initial_data;
 } CF_TextureParams;
 
-CUTE_API CF_TextureParams CUTE_CALL CF_TextureDefaults();
-CUTE_API CF_Texture CUTE_CALL CF_MakeTexture(CF_TextureParams texture_params);
-CUTE_API void CUTE_CALL CF_DestroyTexture(CF_Texture texture);
-CUTE_API void CUTE_CALL CF_UpdateTexture(CF_Texture texture, void* data, int size);
+CUTE_API CF_TextureParams CUTE_CALL cf_texture_defaults();
+CUTE_API CF_Texture CUTE_CALL cf_make_texture(CF_TextureParams texture_params);
+CUTE_API void CUTE_CALL cf_destroy_texture(CF_Texture texture);
+CUTE_API void CUTE_CALL cf_update_texture(CF_Texture texture, void* data, int size);
 
 //--------------------------------------------------------------------------------------------------
 // Shader.
@@ -253,7 +323,7 @@ CUTE_API void CUTE_CALL CF_UpdateTexture(CF_Texture texture, void* data, int siz
 
 typedef struct CF_SokolShader
 {
-	const sg_shader_desc* (*get_desc_fn)(int backend);
+	const sg_shader_desc* (*get_desc_fn)(sg_backend backend);
 	int (*get_attr_slot)(const char* attr_name);
 	int (*get_image_slot)(sg_shader_stage stage, const char* img_name);
 	int (*get_uniformblock_slot)(sg_shader_stage stage, const char* ub_name);
@@ -262,8 +332,8 @@ typedef struct CF_SokolShader
 	sg_shader_uniform_desc (*get_uniform_desc)(sg_shader_stage stage, const char* ub_name, const char* u_name);
 } CF_SokolShader;
 
-CUTE_API CF_Shader CUTE_CALL CF_MakeShader(CF_SokolShader sokol_shader);
-CUTE_API void CUTE_CALL CF_DestroyShader(CF_Shader shader);
+CUTE_API CF_Shader CUTE_CALL cf_make_shader(CF_SokolShader sokol_shader);
+CUTE_API void CUTE_CALL cf_destroy_shader(CF_Shader shader);
 
 //--------------------------------------------------------------------------------------------------
 // Render Passes.
@@ -293,9 +363,9 @@ typedef struct CF_PassParams
 	CF_Texture depth_stencil;
 } CF_PassParams;
 
-CUTE_API CF_PassParams CUTE_CALL CF_PassDefaults();
-CUTE_API CF_Pass CUTE_CALL CF_MakePass(CF_PassParams pass_params);
-CUTE_API void CUTE_CALL CF_DestroyPass(CF_Pass pass);
+CUTE_API CF_PassParams CUTE_CALL cf_pass_defaults();
+CUTE_API CF_Pass CUTE_CALL cf_make_pass(CF_PassParams pass_params);
+CUTE_API void CUTE_CALL cf_destroy_pass(CF_Pass pass);
 
 //--------------------------------------------------------------------------------------------------
 // Mesh.
@@ -324,25 +394,38 @@ typedef enum CF_VertexFormat
 	#undef CF_ENUM
 } CF_VertexFormat;
 
+#define CF_ATTRIBUTE_STEP_DEFS  \
+	CF_ENUM(ATTRIBUTE_STEP_PER_VERTEX,   0 ) \
+	CF_ENUM(ATTRIBUTE_STEP_PER_INSTANCE, 1 ) \
+
+typedef enum CF_AttributeStep
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_ATTRIBUTE_STEP_DEFS
+	#undef CF_ENUM
+} CF_AttributeStep;
+
 typedef struct CF_VertexAttribute
 {
+	const char* name;
 	CF_VertexFormat format;
 	int offset;
+	bool per_vertex;
+	CF_AttributeStep step_type;
 } CF_VertexAttribute;
 
-CUTE_API CF_Mesh CUTE_CALL CF_MakeMesh(CF_UsageType usage_type);
-CUTE_API void CUTE_CALL CF_DestroyMesh(CF_Mesh mesh);
-CUTE_API cf_result_t CUTE_CALL CF_MeshSetVertexAttributes(CF_Mesh mesh, const char* name, CF_VertexAttribute* attributes, int attribute_count, int stride);
-CUTE_API cf_result_t CUTE_CALL CF_MeshSetInstanceAttributes(CF_Mesh mesh, const char* name, CF_VertexAttribute* attributes, int attribute_count, int stride);
-CUTE_API void CUTE_CALL CF_MeshUpdateVertexData(CF_Mesh mesh, void* data, int count);
-CUTE_API int CUTE_CALL CF_MeshAppendVertexData(CF_Mesh mesh, void* data, int count);
-CUTE_API bool CUTE_CALL CF_MeshWillOverflowVertexData(CF_Mesh mesh, int count);
-CUTE_API void CUTE_CALL CF_MeshUpdateInstanceData(CF_Mesh mesh, void* data, int count);
-CUTE_API int CUTE_CALL CF_MeshAppendInstanceData(CF_Mesh mesh, void* data, int count);
-CUTE_API bool CUTE_CALL CF_MeshWillOverflowInstanceData(CF_Mesh mesh, int count);
-CUTE_API void CUTE_CALL CF_MeshUpdateIndexData(CF_Mesh mesh, uint32_t* indices, int count);
-CUTE_API int CUTE_CALL CF_MeshAppendIndexData(CF_Mesh mesh, uint32_t* indices, int count);
-CUTE_API bool CUTE_CALL CF_MeshWillOverflowIndexData(CF_Mesh mesh, int count);
+CUTE_API CF_Mesh CUTE_CALL cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size);
+CUTE_API void CUTE_CALL cf_destroy_mesh(CF_Mesh mesh);
+CUTE_API void CUTE_CALL cf_mesh_set_attributes(CF_Mesh mesh, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride);
+CUTE_API void CUTE_CALL cf_mesh_update_vertex_data(CF_Mesh mesh, void* data, int count);
+CUTE_API int CUTE_CALL cf_mesh_append_vertex_data(CF_Mesh mesh, void* data, int count);
+CUTE_API bool CUTE_CALL cf_mesh_will_overflow_vertex_data(CF_Mesh mesh, int append_count);
+CUTE_API void CUTE_CALL cf_mesh_update_instance_data(CF_Mesh mesh, void* data, int count);
+CUTE_API int CUTE_CALL cf_mesh_append_instance_data(CF_Mesh mesh, void* data, int count);
+CUTE_API bool CUTE_CALL cf_mesh_will_overflow_instance_data(CF_Mesh mesh, int append_count);
+CUTE_API void CUTE_CALL cf_mesh_update_index_data(CF_Mesh mesh, uint32_t* indices, int count);
+CUTE_API int CUTE_CALL cf_mesh_append_index_data(CF_Mesh mesh, uint32_t* indices, int count);
+CUTE_API bool CUTE_CALL cf_mesh_will_overflow_index_data(CF_Mesh mesh, int append_count);
 
 //--------------------------------------------------------------------------------------------------
 // Render state.
@@ -440,21 +523,21 @@ typedef struct CF_StencilFunction
 typedef struct CF_StencilParams
 {
 	bool enabled;
-	uint32_t read_mask;
-	uint32_t write_mask;
-	uint32_t reference;
+	uint8_t read_mask;
+	uint8_t write_mask;
+	uint8_t reference;
 	CF_StencilFunction front;
 	CF_StencilFunction back;
 };
 
 typedef struct CF_BlendState
 {
+	bool enabled;
 	CF_PixelFormat pixel_format;
 	bool write_R_enabled;
 	bool write_G_enabled;
 	bool write_B_enabled;
 	bool write_A_enabled;
-	bool blending_enabled;
 	CF_BlendOp rgb_op;
 	CF_BlendFactor rgb_src_blend_factor;
 	CF_BlendFactor rgb_dst_blend_factor;
@@ -466,36 +549,52 @@ typedef struct CF_BlendState
 typedef struct CF_RenderState
 {
 	CF_CullMode cull_mode;
-	CF_Color blend_color;
-	CF_BlendState blend_state;
-	CF_PixelFormat depth_format;
+	CF_BlendState blend;
 	CF_CompareFunction depth_compare;
 	bool depth_write_enabled;
 	CF_StencilParams stencil;
-};
+} CF_RenderState;
+
+CUTE_API CF_RenderState CUTE_CALL cf_render_state_defaults();
 
 //--------------------------------------------------------------------------------------------------
 // Material.
 
-CUTE_API CF_Material CUTE_CALL CF_MakeMaterial(CF_RenderState render_state);
-CUTE_API void CUTE_CALL CF_DestroyMaterial(CF_Material material);
-CUTE_API void CUTE_CALL CF_MaterialSetTextureVS(CF_Material material, const char* name, CF_Texture texture);
-CUTE_API void CUTE_CALL CF_MaterialSetTextureFS(CF_Material material, const char* name, CF_Texture texture);
-CUTE_API void CUTE_CALL CF_MaterialSetUniformVS(CF_Material material, const char* name, void* data, int size);
-CUTE_API void CUTE_CALL CF_MaterialSetUniformFS(CF_Material material, const char* name, void* data, int size);
+#define CF_UNIFORM_TYPE_DEFS \
+	CF_ENUM(UNIFORM_TYPE_FLOAT,  0) \
+	CF_ENUM(UNIFORM_TYPE_FLOAT2, 1) \
+	CF_ENUM(UNIFORM_TYPE_FLOAT4, 2) \
+	CF_ENUM(UNIFORM_TYPE_INT,    3) \
+	CF_ENUM(UNIFORM_TYPE_INT2,   4) \
+	CF_ENUM(UNIFORM_TYPE_INT4,   5) \
+	CF_ENUM(UNIFORM_TYPE_MAT4,   6) \
+
+typedef enum CF_UniformType
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_UNIFORM_TYPE_DEFS
+	#undef CF_ENUM
+} CF_UniformType;
+
+CUTE_API CF_Material CUTE_CALL cf_make_material();
+CUTE_API void CUTE_CALL cf_destroy_material(CF_Material material);
+CUTE_API void CUTE_CALL cf_material_set_render_state(CF_Material material, CF_RenderState render_state);
+CUTE_API void CUTE_CALL cf_material_set_texture_vs(CF_Material material, const char* name, CF_Texture texture);
+CUTE_API void CUTE_CALL cf_material_set_texture_fs(CF_Material material, const char* name, CF_Texture texture);
+CUTE_API void CUTE_CALL cf_material_set_uniform_vs(CF_Material material, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
+CUTE_API void CUTE_CALL cf_material_set_uniform_fs(CF_Material material, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
 
 //--------------------------------------------------------------------------------------------------
 // Rendering Functions.
 
-CUTE_API void CUTE_CALL CF_BeginPass(CF_Pass pass);
-CUTE_API void CUTE_CALL CF_ApplyViewport(float x, float y, float width, float height);
-CUTE_API void CUTE_CALL CF_ApplyScissor(float x, float y, float width, float height);
-CUTE_API void CUTE_CALL CF_ApplyMesh(CF_Mesh mesh);
-CUTE_API void CUTE_CALL CF_ApplyMaterial(CF_Material material);
-CUTE_API void CUTE_CALL CF_ApplyShader(CF_Shader shader);
-CUTE_API void CUTE_CALL CF_DrawElements(int base_element, int element_count, int instance_count);
-CUTE_API void CUTE_CALL CF_EndPass();
-CUTE_API void CUTE_CALL CF_Commit();
+CUTE_API void CUTE_CALL cf_begin_pass(CF_Pass pass);
+CUTE_API void CUTE_CALL cf_apply_viewport(float x, float y, float width, float height);
+CUTE_API void CUTE_CALL cf_apply_scissor(float x, float y, float width, float height);
+CUTE_API void CUTE_CALL cf_apply_mesh(CF_Mesh mesh);
+CUTE_API void CUTE_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
+CUTE_API void CUTE_CALL cf_draw_elements();
+CUTE_API void CUTE_CALL cf_end_pass();
+CUTE_API void CUTE_CALL cf_commit();
 
 #ifdef __cplusplus
 }

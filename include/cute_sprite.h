@@ -134,7 +134,7 @@ CUTE_API void CUTE_CALL cf_easy_sprite_unload(cf_sprite_t sprite);
  * Gets the internal batch used for `easy_make_sprite` and `easy_sprite_unload`. The batch is used to get
  * sprites onto the screen by calling `batch_flush`.
  */
-CUTE_API cf_batch_t* CUTE_CALL cf_easy_sprite_get_batch();
+CUTE_API CF_Batch* CUTE_CALL cf_easy_sprite_get_batch();
 
 //--------------------------------------------------------------------------------------------------
 // Aseprite sprite API. This is the preferred way to deal with sprites in Cute Framework, by loading
@@ -157,7 +157,7 @@ CUTE_API void CUTE_CALL cf_sprite_unload(const char* aseprite_path);
  * Gets the internal batch used for `make_sprite` and `sprite_unload`. The batch is used to get
  * sprites onto the screen by calling `batch_flush`.
  */
-CUTE_API cf_batch_t* CUTE_CALL cf_sprite_get_batch();
+CUTE_API CF_Batch* CUTE_CALL cf_sprite_get_batch();
 
 //--------------------------------------------------------------------------------------------------
 // In-line implementation of `sprite_t` functions.
@@ -232,7 +232,7 @@ CUTE_INLINE cf_batch_sprite_t cf_sprite_batch_sprite(cf_sprite_t* sprite)
 	return q;
 }
 
-CUTE_INLINE void cf_sprite_draw(cf_sprite_t* sprite, cf_batch_t* batch)
+CUTE_INLINE void cf_sprite_draw(cf_sprite_t* sprite, CF_Batch* batch)
 {
 	CUTE_ASSERT(batch);
 	cf_batch_push(batch, cf_sprite_batch_sprite_tf(sprite, sprite->transform));
@@ -371,7 +371,7 @@ struct sprite_t : public cf_sprite_t
 	 *
 	 * `batch` must not be NULL.
 	 */
-	CUTE_INLINE void draw(cf_batch_t* batch);
+	CUTE_INLINE void draw(CF_Batch* batch);
 
 	/**
 	 * A lower level utility function used within the `draw` method. This is useful to prepare
@@ -423,7 +423,7 @@ void sprite_t::update(float dt) { return cf_sprite_update(this, dt); }
 void sprite_t::play(const char* animation) { return cf_sprite_play(this, animation); }
 bool sprite_t::is_playing(const char* animation) { return cf_sprite_is_playing(this, animation); }
 void sprite_t::reset() { return cf_sprite_reset(this); }
-void sprite_t::draw(cf_batch_t* batch) { return cf_sprite_draw(this, batch); }
+void sprite_t::draw(CF_Batch* batch) { return cf_sprite_draw(this, batch); }
 batch_sprite_t sprite_t::batch_sprite(transform_t transform) { return cf_sprite_batch_sprite_tf(this, transform); }
 batch_sprite_t sprite_t::batch_sprite() { return cf_sprite_batch_sprite(this); }
 void sprite_t::pause() { return cf_sprite_pause(this); }

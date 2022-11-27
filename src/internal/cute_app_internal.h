@@ -31,7 +31,7 @@
 #include <cute_aseprite_cache.h>
 #include <cute_png_cache.h>
 #include <cute_batch.h>
-#include <cute_gfx.h>
+#include <cute_graphics.h>
 #include <cute_input.h>
 #include <cute_string.h>
 
@@ -207,9 +207,9 @@ struct cf_app_t
 	cute::array<cf_touch_t> touches;
 
 	// Batch stuff.
-	cf_batch_t* ase_batch = NULL;
+	CF_Batch* ase_batch = NULL;
 	cf_aseprite_cache_t* ase_cache = NULL;
-	cf_batch_t* png_batch = NULL;
+	CF_Batch* png_batch = NULL;
 	cf_png_cache_t* png_cache = NULL;
 
 	// ECS stuff.

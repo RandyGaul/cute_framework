@@ -44,15 +44,16 @@ void cf_aligned_free(void* p)
 
 //--------------------------------------------------------------------------------------------------
 
-void cf_arena_init(cf_arena_t* arena, int alignment, int block_size)
+void cf_arena_init(CF_Arena* arena, int alignment, int block_size)
 {
 	CUTE_MEMSET(arena, 0, sizeof(*arena));
 	arena->alignment = alignment;
 	arena->block_size = block_size;
 }
 
-void* cf_arena_alloc(cf_arena_t* arena, size_t size)
+void* cf_arena_alloc(CF_Arena* arena, size_t size)
 {
+	CUTE_ASSERT((int)size < arena->block_size);
 	if (size > (size_t)(arena->end - arena->ptr)) {
 		arena->ptr = (char*)cf_aligned_alloc(arena->block_size, arena->alignment);
 		arena->end = arena->ptr + arena->block_size;
@@ -65,7 +66,7 @@ void* cf_arena_alloc(cf_arena_t* arena, size_t size)
 	return result;
 }
 
-void cf_arena_reset(cf_arena_t* arena)
+void cf_arena_reset(CF_Arena* arena)
 {
 	if (arena->blocks) {
 		for (int i = 0; i < alen(arena->blocks); ++i) {

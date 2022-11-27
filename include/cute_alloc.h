@@ -69,18 +69,18 @@ CUTE_API void CUTE_CALL cf_aligned_free(void* p);
 // Fetches memory with reduced calls to `malloc`.
 // Free all memory allocated with `cf_arena_reset`. You can not free inidividual allocations.
 
-typedef struct cf_arena_t
+typedef struct CF_Arena
 {
 	int alignment;
 	int block_size;
 	char* ptr;
 	char* end;
 	char** blocks;
-} cf_arena_t;
+} CF_Arena;
 
-CUTE_API void CUTE_CALL cf_arena_init(cf_arena_t* arena, int alignment, int block_size);
-CUTE_API void* CUTE_CALL cf_arena_alloc(cf_arena_t* arena, size_t size);
-CUTE_API void CUTE_CALL cf_arena_reset(cf_arena_t* arena);
+CUTE_API void CUTE_CALL cf_arena_init(CF_Arena* arena, int alignment, int block_size);
+CUTE_API void* CUTE_CALL cf_arena_alloc(CF_Arena* arena, size_t size);
+CUTE_API void CUTE_CALL cf_arena_reset(CF_Arena* arena);
 
 //--------------------------------------------------------------------------------------------------
 // Memory pool allocator.
@@ -133,11 +133,11 @@ namespace cute
 CUTE_INLINE void* aligned_alloc(size_t size, int alignment) { return cf_aligned_alloc(size, alignment); }
 CUTE_INLINE void aligned_free(void* ptr) { return cf_aligned_free(ptr); }
 
-using arena_t = cf_arena_t;
+using arena_t = CF_Arena;
 
-CUTE_INLINE void arena_init(cf_arena_t* arena, int alignment, int block_size) { cf_arena_init(arena, alignment, block_size); }
-CUTE_INLINE void* arena_alloc(cf_arena_t* arena, size_t size) { return cf_arena_alloc(arena, size); }
-CUTE_INLINE void arena_reset(cf_arena_t* arena) { return cf_arena_reset(arena); }
+CUTE_INLINE void arena_init(CF_Arena* arena, int alignment, int block_size) { cf_arena_init(arena, alignment, block_size); }
+CUTE_INLINE void* arena_alloc(CF_Arena* arena, size_t size) { return cf_arena_alloc(arena, size); }
+CUTE_INLINE void arena_reset(CF_Arena* arena) { return cf_arena_reset(arena); }
 
 using memory_pool_t = cf_memory_pool_t;
 

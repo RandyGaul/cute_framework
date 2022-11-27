@@ -25,7 +25,7 @@
 #include "cute_defines.h"
 #include "cute_math.h"
 #include "cute_result.h"
-#include "cute_gfx.h"
+#include "cute_graphics.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -34,54 +34,49 @@
 extern "C" {
 #endif // __cplusplus
 
-CUTE_API cf_result_t CUTE_CALL cf_batch_set_GPU_buffer_configuration(size_t size_of_one_buffer);
-
-CUTE_API void CUTE_CALL cf_batch_set_texture_wrap_mode(sg_wrap wrap_mode);
-CUTE_API void CUTE_CALL cf_batch_set_texture_filter(sg_filter filter);
-CUTE_API void CUTE_CALL cf_batch_set_projection(cf_matrix_t projection);
+CUTE_API void CUTE_CALL cf_batch_set_texture_wrap_mode(CF_WrapMode wrap_mode);
+CUTE_API void CUTE_CALL cf_batch_set_texture_filter(CF_Filter filter);
+CUTE_API void CUTE_CALL cf_batch_set_projection(CF_Matrix4x4 projection);
 CUTE_API void CUTE_CALL cf_batch_outlines(bool use_outlines);
 CUTE_API void CUTE_CALL cf_batch_outlines_use_corners(bool use_corners);
-CUTE_API void CUTE_CALL cf_batch_outlines_color(cf_color_t c);
+CUTE_API void CUTE_CALL cf_batch_outlines_color(CF_Color c);
 
 CUTE_API void CUTE_CALL cf_batch_push_m3x2(cf_m3x2 m);
 CUTE_API void CUTE_CALL cf_batch_pop_m3x2();
+CUTE_API cf_m3x2 CUTE_CALL cf_batch_peek_m3x2();
 CUTE_API void CUTE_CALL cf_batch_push_scissor_box(int x, int y, int w, int h);
 CUTE_API void CUTE_CALL cf_batch_pop_scissor_box();
-CUTE_API void CUTE_CALL cf_batch_push_depth_state(sg_depth_state depth_state);
-CUTE_API void CUTE_CALL cf_batch_push_depth_defaults();
-CUTE_API void CUTE_CALL cf_batch_pop_depth_state();
-CUTE_API void CUTE_CALL cf_batch_push_stencil_state(sg_stencil_state depth_stencil_state);
-CUTE_API void CUTE_CALL cf_batch_push_stencil_defaults();
-CUTE_API void CUTE_CALL cf_batch_pop_stencil_state();
-CUTE_API void CUTE_CALL cf_batch_push_blend_state(sg_blend_state blend_state);
-CUTE_API void CUTE_CALL cf_batch_push_blend_defaults();
-CUTE_API void CUTE_CALL cf_batch_pop_blend_state();
-CUTE_API void CUTE_CALL cf_batch_push_tint(cf_color_t c);
+CUTE_API void CUTE_CALL cf_batch_peek_scissor_box(int* x, int* y, int* w, int* h);
+CUTE_API void CUTE_CALL cf_batch_push_render_state(CF_RenderState render_state);
+CUTE_API void CUTE_CALL cf_batch_pop_render_state();
+CUTE_API CF_RenderState CUTE_CALL cf_batch_peek_render_state();
+CUTE_API void CUTE_CALL cf_batch_push_tint(CF_Color c);
 CUTE_API void CUTE_CALL cf_batch_pop_tint();
+CUTE_API CF_Color CUTE_CALL cf_batch_peek_tint();
 
-CUTE_API void CUTE_CALL cf_batch_quad_aabb(cf_aabb_t bb, cf_color_t c);
-CUTE_API void CUTE_CALL cf_batch_quad_verts(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, cf_color_t c);
-CUTE_API void CUTE_CALL cf_batch_quad_verts2(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, cf_color_t c0, cf_color_t c1, cf_color_t c2, cf_color_t c3);
-CUTE_API void CUTE_CALL cf_batch_quad_line(cf_aabb_t bb, float thickness, cf_color_t c, bool antialias /*= false*/);
-CUTE_API void CUTE_CALL cf_batch_quad_line2(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float thickness, cf_color_t c, bool antialias /*= false*/);
-CUTE_API void CUTE_CALL cf_batch_quad_line3(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float thickness, cf_color_t c0, cf_color_t c1, cf_color_t c2, cf_color_t c3);
+CUTE_API void CUTE_CALL cf_batch_quad_aabb(cf_aabb_t bb, CF_Color c);
+CUTE_API void CUTE_CALL cf_batch_quad_verts(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, CF_Color c);
+CUTE_API void CUTE_CALL cf_batch_quad_verts2(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3);
+CUTE_API void CUTE_CALL cf_batch_quad_line(cf_aabb_t bb, float thickness, CF_Color c, bool antialias /*= false*/);
+CUTE_API void CUTE_CALL cf_batch_quad_line2(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float thickness, CF_Color c, bool antialias /*= false*/);
+CUTE_API void CUTE_CALL cf_batch_quad_line3(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3);
 
-CUTE_API void CUTE_CALL cf_batch_circle(cf_v2 p, float r, int iters, cf_color_t c);
-CUTE_API void CUTE_CALL cf_batch_circle_line(cf_v2 p, float r, int iters, float thickness, cf_color_t c, bool antialias /*= false*/);
-CUTE_API void CUTE_CALL cf_batch_circle_arc(cf_v2 p, cf_v2 center_of_arc, float range, int iters, cf_color_t color);
-CUTE_API void CUTE_CALL cf_batch_circle_arc_line(cf_v2 p, cf_v2 center_of_arc, float range, int iters, float thickness, cf_color_t color, bool antialias /*= false*/);
+CUTE_API void CUTE_CALL cf_batch_circle(cf_v2 p, float r, int iters, CF_Color c);
+CUTE_API void CUTE_CALL cf_batch_circle_line(cf_v2 p, float r, int iters, float thickness, CF_Color c, bool antialias /*= false*/);
+CUTE_API void CUTE_CALL cf_batch_circle_arc(cf_v2 p, cf_v2 center_of_arc, float range, int iters, CF_Color color);
+CUTE_API void CUTE_CALL cf_batch_circle_arc_line(cf_v2 p, cf_v2 center_of_arc, float range, int iters, float thickness, CF_Color color, bool antialias /*= false*/);
 
-CUTE_API void CUTE_CALL cf_batch_capsule(cf_v2 p0, cf_v2 p1, float r, int iters, cf_color_t c);
-CUTE_API void CUTE_CALL cf_batch_capsule_line(cf_v2 p0, cf_v2 p1, float r, int iters, float thickness, cf_color_t c, bool antialias /*= false*/);
+CUTE_API void CUTE_CALL cf_batch_capsule(cf_v2 p0, cf_v2 p1, float r, int iters, CF_Color c);
+CUTE_API void CUTE_CALL cf_batch_capsule_line(cf_v2 p0, cf_v2 p1, float r, int iters, float thickness, CF_Color c, bool antialias /*= false*/);
 
-CUTE_API void CUTE_CALL cf_batch_tri(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_color_t c);
-CUTE_API void CUTE_CALL cf_batch_tri2(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_color_t c0, cf_color_t c1, cf_color_t c2);
-CUTE_API void CUTE_CALL cf_batch_tri_line(cf_v2 p0, cf_v2 p1, cf_v2 p2, float thickness, cf_color_t c, bool antialias /*= false*/);
-CUTE_API void CUTE_CALL cf_batch_tri_line2(cf_v2 p0, cf_v2 p1, cf_v2 p2, float thickness, cf_color_t c0, cf_color_t c1, cf_color_t c2, bool antialias /*= false*/);
+CUTE_API void CUTE_CALL CF_Batchri(cf_v2 p0, cf_v2 p1, cf_v2 p2, CF_Color c);
+CUTE_API void CUTE_CALL CF_Batchri2(cf_v2 p0, cf_v2 p1, cf_v2 p2, CF_Color c0, CF_Color c1, CF_Color c2);
+CUTE_API void CUTE_CALL CF_Batchri_line(cf_v2 p0, cf_v2 p1, cf_v2 p2, float thickness, CF_Color c, bool antialias /*= false*/);
+CUTE_API void CUTE_CALL CF_Batchri_line2(cf_v2 p0, cf_v2 p1, cf_v2 p2, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, bool antialias /*= false*/);
 
-CUTE_API void CUTE_CALL cf_batch_line(cf_v2 p0, cf_v2 p1, float thickness, cf_color_t c, bool antialias /*= false*/);
-CUTE_API void CUTE_CALL cf_batch_line2(cf_v2 p0, cf_v2 p1, float thickness, cf_color_t c0, cf_color_t c1, bool antialias /*= false*/);
-CUTE_API void CUTE_CALL cf_batch_polyline(cf_v2* points, int count, float thickness, cf_color_t c, bool loop /*= false*/, bool antialias /*= false*/, int bevel_count /*= 0*/);
+CUTE_API void CUTE_CALL cf_batch_line(cf_v2 p0, cf_v2 p1, float thickness, CF_Color c, bool antialias /*= false*/);
+CUTE_API void CUTE_CALL cf_batch_line2(cf_v2 p0, cf_v2 p1, float thickness, CF_Color c0, CF_Color c1, bool antialias /*= false*/);
+CUTE_API void CUTE_CALL cf_batch_polyline(cf_v2* points, int count, float thickness, CF_Color c, bool loop /*= false*/, bool antialias /*= false*/, int bevel_count /*= 0*/);
 
 /**
  * Temporal texture information for a sprite. Is valid until the next call to `batch_flush`
@@ -89,7 +84,7 @@ CUTE_API void CUTE_CALL cf_batch_polyline(cf_v2* points, int count, float thickn
  */
 typedef struct cf_temporary_image_t
 {
-	cf_texture_t texture_id; // A handle representing the texture for this image.
+	CF_Texture tex; // A handle representing the texture for this image.
 	int w; // Width in pixels of the image.
 	int h; // Height in pixels of the image.
 	cf_v2 u; // u coordinate of the image in the texture.
@@ -111,14 +106,14 @@ namespace cute
 {
 
 using temporary_image_t = cf_temporary_image_t;
-using color_t = cf_color_t;
+using color_t = CF_Color;
 using m3x2 = cf_m3x2;
 using aabb_t = cf_aabb_t;
 using transform_t = cf_transform_t;
 
-CUTE_INLINE void batch_set_texture_wrap_mode(sg_wrap wrap_mode) { cf_batch_set_texture_wrap_mode(wrap_mode); }
-CUTE_INLINE void batch_set_texture_filter(sg_filter filter) { cf_batch_set_texture_filter(filter); }
-CUTE_INLINE void batch_set_projection(matrix_t projection) { cf_batch_set_projection(projection); }
+CUTE_INLINE void batch_set_texture_wrap_mode(CF_WrapMode wrap_mode) { cf_batch_set_texture_wrap_mode(wrap_mode); }
+CUTE_INLINE void batch_set_texture_filter(CF_Filter filter) { cf_batch_set_texture_filter(filter); }
+CUTE_INLINE void batch_set_projection(CF_Matrix4x4 projection) { cf_batch_set_projection(projection); }
 CUTE_INLINE void batch_outlines(bool use_outlines) { cf_batch_outlines(use_outlines); }
 CUTE_INLINE void batch_outlines_use_corners(bool use_corners) { cf_batch_outlines_use_corners(use_corners); }
 CUTE_INLINE void batch_outlines_color(color_t c) { cf_batch_outlines_color(c); }
@@ -127,15 +122,8 @@ CUTE_INLINE void batch_push_m3x2(m3x2 m) { cf_batch_push_m3x2(m); }
 CUTE_INLINE void batch_pop_m3x2() { cf_batch_pop_m3x2(); }
 CUTE_INLINE void batch_push_scissor_box(int x, int y, int w, int h) { cf_batch_push_scissor_box(x, y, w, h); }
 CUTE_INLINE void batch_pop_scissor_box() { cf_batch_pop_scissor_box(); }
-CUTE_INLINE void batch_push_depth_state(sg_depth_state depth_state) { cf_batch_push_depth_state(depth_state); }
-CUTE_INLINE void batch_push_depth_defaults() { cf_batch_push_depth_defaults(); }
-CUTE_INLINE void batch_pop_depth_state() { cf_batch_pop_depth_state(); }
-CUTE_INLINE void batch_push_stencil_state(sg_stencil_state depth_stencil_state) { cf_batch_push_stencil_state(depth_stencil_state); }
-CUTE_INLINE void batch_push_stencil_defaults() { cf_batch_push_stencil_defaults(); }
-CUTE_INLINE void batch_pop_stencil_state() { cf_batch_pop_stencil_state(); }
-CUTE_INLINE void batch_push_blend_state(sg_blend_state blend_state) { cf_batch_push_blend_state(blend_state); }
-CUTE_INLINE void batch_push_blend_defaults() { cf_batch_push_blend_defaults(); }
-CUTE_INLINE void batch_pop_blend_state() { cf_batch_pop_blend_state(); }
+CUTE_INLINE void batch_push_render_state(CF_RenderState render_state) { cf_batch_push_render_state(render_state); }
+CUTE_INLINE void batch_pop_render_state() { cf_batch_pop_render_state(); }
 CUTE_INLINE void batch_push_tint(color_t c) { cf_batch_push_tint(c); }
 CUTE_INLINE void batch_pop_tint() { cf_batch_pop_tint(); }
 
@@ -154,10 +142,10 @@ CUTE_INLINE void batch_circle_arc_line(v2 p, v2 center_of_arc, float range, int 
 CUTE_INLINE void batch_capsule(v2 p0, v2 p1, float r, int iters, color_t c) { cf_batch_capsule(p0, p1, r, iters, c); }
 CUTE_INLINE void batch_capsule_line(v2 p0, v2 p1, float r, int iters, float thickness, color_t c, bool antialias = false) { cf_batch_capsule_line(p0, p1, r, iters, thickness, c, antialias); }
 
-CUTE_INLINE void batch_tri(v2 p0, v2 p1, v2 p2, color_t c) { cf_batch_tri(p0, p1, p2, c); }
-CUTE_INLINE void batch_tri(v2 p0, v2 p1, v2 p2, color_t c0, color_t c1, color_t c2) { cf_batch_tri2(p0, p1, p2, c0, c1, c2); }
-CUTE_INLINE void batch_tri_line(v2 p0, v2 p1, v2 p2, float thickness, color_t c, bool antialias = false) { cf_batch_tri_line(p0, p1, p2, thickness, c, antialias); }
-CUTE_INLINE void batch_tri_line(v2 p0, v2 p1, v2 p2, float thickness, color_t c0, color_t c1, color_t c2, bool antialias = false) { cf_batch_tri_line2(p0, p1, p2, thickness, c0, c1, c2, antialias); }
+CUTE_INLINE void batch_tri(v2 p0, v2 p1, v2 p2, color_t c) { CF_Batchri(p0, p1, p2, c); }
+CUTE_INLINE void batch_tri(v2 p0, v2 p1, v2 p2, color_t c0, color_t c1, color_t c2) { CF_Batchri2(p0, p1, p2, c0, c1, c2); }
+CUTE_INLINE void batch_tri_line(v2 p0, v2 p1, v2 p2, float thickness, color_t c, bool antialias = false) { CF_Batchri_line(p0, p1, p2, thickness, c, antialias); }
+CUTE_INLINE void batch_tri_line(v2 p0, v2 p1, v2 p2, float thickness, color_t c0, color_t c1, color_t c2, bool antialias = false) { CF_Batchri_line2(p0, p1, p2, thickness, c0, c1, c2, antialias); }
 
 CUTE_INLINE void batch_line(v2 p0, v2 p1, float thickness, color_t c, bool antialias = false) { cf_batch_line(p0, p1, thickness, c, antialias); }
 CUTE_INLINE void batch_line(v2 p0, v2 p1, float thickness, color_t c0, color_t c1, bool antialias = false) { cf_batch_line2(p0, p1, thickness, c0, c1, antialias); }

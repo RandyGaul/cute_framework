@@ -83,12 +83,6 @@ CUTE_API void CUTE_CALL cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, con
  */
 CUTE_API cf_result_t CUTE_CALL cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase);
 
-/**
- * `cf_png_cache_get_pixels_fn` is needed to hook up to `cf_batch_t` in order to draw sprites.
- * The return value gets passed to `cf_make_batch`.
- */
-CUTE_API cf_get_pixels_fn* CUTE_CALL cf_aseprite_cache_get_pixels_fn(cf_aseprite_cache_t* cache);
-
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -103,14 +97,12 @@ namespace cute
 
 struct sprite_t;
 using aseprite_cache_t = cf_aseprite_cache_t;
-using get_pixels_fn = cf_get_pixels_fn;
 
 CUTE_INLINE aseprite_cache_t* cmake_aseprite_cache() { return cf_make_aseprite_cache(); }
 CUTE_INLINE void destroy_aseprite_cache(aseprite_cache_t* cache) { cf_destroy_aseprite_cache(cache); }
 CUTE_INLINE result_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite) { return cf_aseprite_cache_load(cache, aseprite_path, (cf_sprite_t*)sprite); }
 CUTE_INLINE void aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path) { cf_aseprite_cache_unload(cache, aseprite_path); }
 CUTE_INLINE result_t aseprite_cache_load_ase(aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase) { return  cf_aseprite_cache_load_ase(cache, aseprite_path, ase); }
-CUTE_INLINE get_pixels_fn* aseprite_cache_get_pixels_fn(aseprite_cache_t* cache) { return  cf_aseprite_cache_get_pixels_fn(cache); }
 
 }
 

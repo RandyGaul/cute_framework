@@ -92,27 +92,27 @@ CUTE_INLINE uint32_t CF_Coloro_int_rgb(CF_Color c) { return CF_Coloro_pixel(c).v
 CUTE_INLINE uint32_t CF_Coloro_int_rgba(CF_Color c) { return CF_Coloro_pixel(c).val; }
 CUTE_INLINE char* CF_Coloro_string(CF_Color c) { char* s = NULL; return shex(s, CF_Coloro_pixel(c).val); } // Call `sfree` when done.
 
-CUTE_INLINE CF_Color CF_ColorInvisible() { return cf_make_color_rgba_f(0.0f, 0.0f, 0.0f, 0.0f); }
-CUTE_INLINE CF_Color CF_ColorBlack() { return cf_make_color_rgb_f(0.0f, 0.0f, 0.0f); }
-CUTE_INLINE CF_Color CF_ColorWhite() { return cf_make_color_rgb_f(1.0f, 1.0f, 1.0f); }
-CUTE_INLINE CF_Color CF_ColorRed() { return cf_make_color_rgb_f(1.0f, 0.0f, 0.0f); }
-CUTE_INLINE CF_Color CF_ColorGreen() { return cf_make_color_rgb_f(0.0f, 1.0f, 0.0f); }
-CUTE_INLINE CF_Color CF_ColorBlue() { return cf_make_color_rgb_f(0.0f, 0.0f, 1.0f); }
-CUTE_INLINE CF_Color CF_ColorYellow() { return cf_make_color_rgb_f(1.0f, 1.0f, 0.0f); }
-CUTE_INLINE CF_Color CF_ColorOrange() { return cf_make_color_rgb_f(1.0f, 0.65f, 0.0f); }
-CUTE_INLINE CF_Color CF_ColorPurple() { return cf_make_color_rgb_f(1.0f, 0.0f, 1.0f); }
-CUTE_INLINE CF_Color CF_ColorGrey() { return cf_make_color_rgb_f(0.5f, 0.5f, 0.5f); }
+CUTE_INLINE CF_Color cf_color_invisible() { return cf_make_color_rgba_f(0.0f, 0.0f, 0.0f, 0.0f); }
+CUTE_INLINE CF_Color cf_color_black() { return cf_make_color_rgb_f(0.0f, 0.0f, 0.0f); }
+CUTE_INLINE CF_Color cf_color_white() { return cf_make_color_rgb_f(1.0f, 1.0f, 1.0f); }
+CUTE_INLINE CF_Color cf_color_red() { return cf_make_color_rgb_f(1.0f, 0.0f, 0.0f); }
+CUTE_INLINE CF_Color cf_color_green() { return cf_make_color_rgb_f(0.0f, 1.0f, 0.0f); }
+CUTE_INLINE CF_Color cf_color_blue() { return cf_make_color_rgb_f(0.0f, 0.0f, 1.0f); }
+CUTE_INLINE CF_Color cf_color_yellow() { return cf_make_color_rgb_f(1.0f, 1.0f, 0.0f); }
+CUTE_INLINE CF_Color cf_color_orange() { return cf_make_color_rgb_f(1.0f, 0.65f, 0.0f); }
+CUTE_INLINE CF_Color cf_color_purple() { return cf_make_color_rgb_f(1.0f, 0.0f, 1.0f); }
+CUTE_INLINE CF_Color cf_color_grey() { return cf_make_color_rgb_f(0.5f, 0.5f, 0.5f); }
 
-CUTE_INLINE CF_Pixel CF_PixelInvisible() { return cf_make_pixel_hex(0); }
-CUTE_INLINE CF_Pixel CF_PixelBlack() { return cf_make_pixel_rgb(0, 0, 0); }
-CUTE_INLINE CF_Pixel CF_PixelWhite() { return cf_make_pixel_rgb(255, 255, 255); }
-CUTE_INLINE CF_Pixel CF_PixelRed() { return cf_make_pixel_rgb(255, 0, 0); }
-CUTE_INLINE CF_Pixel CF_PixelGreen() { return cf_make_pixel_rgb(0, 255, 0); }
-CUTE_INLINE CF_Pixel CF_PixelBlue() { return cf_make_pixel_rgb(0, 0, 255); }
-CUTE_INLINE CF_Pixel CF_PixelYellow() { return cf_make_pixel_rgb(255, 255, 0); }
-CUTE_INLINE CF_Pixel CF_PixelOrange() { return cf_make_pixel_rgb(255, 165, 0); }
-CUTE_INLINE CF_Pixel CF_PixelPurple() { return cf_make_pixel_rgb(255, 0, 255); }
-CUTE_INLINE CF_Pixel CF_PixelGrey() { return cf_make_pixel_rgb(127, 127, 127); }
+CUTE_INLINE CF_Pixel cf_pixel_invisible() { return cf_make_pixel_hex(0); }
+CUTE_INLINE CF_Pixel cf_pixel_black() { return cf_make_pixel_rgb(0, 0, 0); }
+CUTE_INLINE CF_Pixel cf_pixel_white() { return cf_make_pixel_rgb(255, 255, 255); }
+CUTE_INLINE CF_Pixel cf_pixel_red() { return cf_make_pixel_rgb(255, 0, 0); }
+CUTE_INLINE CF_Pixel cf_pixel_green() { return cf_make_pixel_rgb(0, 255, 0); }
+CUTE_INLINE CF_Pixel cf_pixel_blue() { return cf_make_pixel_rgb(0, 0, 255); }
+CUTE_INLINE CF_Pixel cf_pixel_yellow() { return cf_make_pixel_rgb(255, 255, 0); }
+CUTE_INLINE CF_Pixel cf_pixel_orange() { return cf_make_pixel_rgb(255, 165, 0); }
+CUTE_INLINE CF_Pixel cf_pixel_purple() { return cf_make_pixel_rgb(255, 0, 255); }
+CUTE_INLINE CF_Pixel cf_pixel_grey() { return cf_make_pixel_rgb(127, 127, 127); }
 
 #ifdef __cplusplus
 }
@@ -167,27 +167,27 @@ CUTE_INLINE uint32_t to_int_rgb(Color c) { return CF_Coloro_pixel(c).val | 0x000
 CUTE_INLINE uint32_t to_int_rgba(Color c) { return CF_Coloro_pixel(c).val; }
 CUTE_INLINE string_t to_string(Color c) { char* s = NULL; return shex(s, CF_Coloro_pixel(c).val); }
 
-CUTE_INLINE Color ColorInvisible() { return CF_ColorInvisible(); }
-CUTE_INLINE Color ColorBlack() { return CF_ColorBlack(); }
-CUTE_INLINE Color ColorWhite() { return CF_ColorWhite(); }
-CUTE_INLINE Color ColorRed() { return CF_ColorRed(); }
-CUTE_INLINE Color ColorGreen() { return CF_ColorGreen(); }
-CUTE_INLINE Color ColorBlue() { return CF_ColorBlue(); }
-CUTE_INLINE Color ColorYellow() { return CF_ColorYellow(); }
-CUTE_INLINE Color ColorOrange() { return CF_ColorOrange(); }
-CUTE_INLINE Color ColorPurple() { return CF_ColorPurple(); }
-CUTE_INLINE Color ColorGrey() { return CF_ColorGrey(); }
+CUTE_INLINE Color color_invisible() { return cf_color_invisible(); }
+CUTE_INLINE Color color_black() { return cf_color_black(); }
+CUTE_INLINE Color color_white() { return cf_color_white(); }
+CUTE_INLINE Color color_red() { return cf_color_red(); }
+CUTE_INLINE Color color_green() { return cf_color_green(); }
+CUTE_INLINE Color color_blue() { return cf_color_blue(); }
+CUTE_INLINE Color color_yellow() { return cf_color_yellow(); }
+CUTE_INLINE Color color_orange() { return cf_color_orange(); }
+CUTE_INLINE Color color_purple() { return cf_color_purple(); }
+CUTE_INLINE Color color_grey() { return cf_color_grey(); }
 
-CUTE_INLINE Pixel PixelInvisible() { return CF_PixelInvisible(); }
-CUTE_INLINE Pixel PixelBlack() { return CF_PixelBlack(); }
-CUTE_INLINE Pixel PixelWhite() { return CF_PixelWhite(); }
-CUTE_INLINE Pixel PixelRed() { return CF_PixelRed(); }
-CUTE_INLINE Pixel PixelGreen() { return CF_PixelGreen(); }
-CUTE_INLINE Pixel PixelBlue() { return CF_PixelBlue(); }
-CUTE_INLINE Pixel PixelYellow() { return CF_PixelYellow(); }
-CUTE_INLINE Pixel PixelOrange() { return CF_PixelOrange(); }
-CUTE_INLINE Pixel PixelPurple() { return CF_PixelPurple(); }
-CUTE_INLINE Pixel PixelGrey() { return CF_PixelGrey(); }
+CUTE_INLINE Pixel pixel_invisible() { return cf_pixel_invisible(); }
+CUTE_INLINE Pixel pixel_black() { return cf_pixel_black(); }
+CUTE_INLINE Pixel pixel_white() { return cf_pixel_white(); }
+CUTE_INLINE Pixel pixel_red() { return cf_pixel_red(); }
+CUTE_INLINE Pixel pixel_green() { return cf_pixel_green(); }
+CUTE_INLINE Pixel pixel_blue() { return cf_pixel_blue(); }
+CUTE_INLINE Pixel pixel_yellow() { return cf_pixel_yellow(); }
+CUTE_INLINE Pixel pixel_orange() { return cf_pixel_orange(); }
+CUTE_INLINE Pixel pixel_purple() { return cf_pixel_purple(); }
+CUTE_INLINE Pixel pixel_grey() { return cf_pixel_grey(); }
 
 }
 

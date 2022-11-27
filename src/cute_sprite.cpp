@@ -37,7 +37,7 @@ static cf_aseprite_cache_t* cf_s_ase_cache()
 	return cf_app->ase_cache;
 }
 
-static cf_batch_t* cf_s_ase_batch()
+static CF_Batch* cf_s_ase_batch()
 {
 	return cf_app->ase_batch;
 }
@@ -53,7 +53,7 @@ static cf_png_cache_t* cf_s_png_cache()
 	return cf_app->png_cache;
 }
 
-static cf_batch_t* cf_s_png_batch()
+static CF_Batch* cf_s_png_batch()
 {
 	return cf_app->png_batch;
 }
@@ -90,7 +90,7 @@ void cf_easy_sprite_unload(cf_sprite_t sprite)
 	cf_png_cache_unload(cache, png);
 }
 
-cf_batch_t* cf_easy_sprite_get_batch()
+CF_Batch* cf_easy_sprite_get_batch()
 {
 	cf_s_png_cache();
 	return cf_app->png_batch;
@@ -116,7 +116,7 @@ void cf_sprite_unload(const char* aseprite_path)
 	cf_aseprite_cache_unload(cache, aseprite_path);
 }
 
-cf_batch_t* cf_sprite_get_batch()
+CF_Batch* cf_sprite_get_batch()
 {
 	cf_s_ase_cache();
 	return cf_app->ase_batch;

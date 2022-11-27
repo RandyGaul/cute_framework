@@ -73,7 +73,7 @@ typedef struct cf_png_t
 {
 	const char* path; /*= NULL*/
 	uint64_t id; /*= ~0*/
-	cf_pixel_t* pix; /*= NULL*/
+	CF_Pixel* pix; /*= NULL*/
 	int w; /*= 0*/
 	int h; /*= 0*/
 } cf_png_t;
@@ -110,12 +110,6 @@ CUTE_API cf_result_t CUTE_CALL cf_png_cache_load_mem(cf_png_cache_t* cache, cons
  * longer be used.
  */
 CUTE_API void CUTE_CALL cf_png_cache_unload(cf_png_cache_t* cache, cf_png_t png);
-
-/**
- * `cf_png_cache_get_pixels_fn` is needed to hook up to `cf_batch_t` in order to draw sprites.
- * The return value gets passed to `make_batch`.
- */
-CUTE_API cf_get_pixels_fn* CUTE_CALL cf_png_cache_get_pixels_fn(cf_png_cache_t* cache);
 
 //--------------------------------------------------------------------------------------------------
 // Animation and sprite functions.
@@ -167,7 +161,6 @@ namespace cute
 
 using png_cache_t = cf_png_cache_t;
 using animation_t = cf_animation_t;
-using pixel_t = cf_pixel_t;
 
 struct png_t : public cf_png_t
 {
@@ -180,7 +173,6 @@ CUTE_INLINE void destroy_png_cache(png_cache_t* cache) { return cf_destroy_png_c
 CUTE_INLINE result_t png_cache_load(png_cache_t* cache, const char* png_path, png_t* png = NULL) { return cf_png_cache_load(cache, png_path, (cf_png_t*)png); }
 CUTE_INLINE result_t png_cache_load_mem(png_cache_t* cache, const char* png_path, const void* memory, size_t size, cf_png_t* png = NULL) { return cf_png_cache_load_mem(cache, png_path, memory, size, png); }
 CUTE_INLINE void png_cache_unload(png_cache_t* cache, png_t png) { cf_png_cache_unload(cache, png); }
-CUTE_INLINE get_pixels_fn* png_cache_get_pixels_fn(png_cache_t* cache) { return cf_png_cache_get_pixels_fn(cache); }
 CUTE_API const animation_t* CUTE_CALL make_png_cache_animation(png_cache_t* cache, const char* name, const array<cf_png_t>& pngs, const array<float>& delays);
 CUTE_INLINE const animation_t* png_cache_get_animation(png_cache_t* cache, const char* name) { return cf_png_cache_get_animation(cache, name); }
 CUTE_API const cf_animation_t** CUTE_CALL make_png_cache_animation_table(png_cache_t* cache, const char* sprite_name, const array<const animation_t*>& animations);

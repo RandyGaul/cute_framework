@@ -24,7 +24,7 @@
 
 #include "cute_defines.h"
 #include "cute_result.h"
-#include "cute_gfx.h"
+#include "cute_graphics.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
