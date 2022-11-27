@@ -323,7 +323,7 @@
 #define cf_hashtable_get_ptr(h, k) (cf_hashtable_find_impl(CF_HHDR(h), (uint64_t)k), CF_HHDR(h)->return_index < 0 ? NULL : (h) + CF_HHDR(h)->return_index)
 #define cf_hashtable_find_ptr(h, k) cf_hashtable_get_ptr(h, k)
 #define cf_hashtable_has(h, k) (h ? cf_hashtable_remove_impl(CF_HHDR(h), (uint64_t)k) : NULL)
-#define cf_hashtable_del(h, k) (h ? cf_hashtable_remove_impl(CF_HHDR(h), (uint64_t)k) : 0)
+#define cf_hashtable_del(h, k) (h ? cf_hashtable_remove_impl(CF_HHDR(h), (uint64_t)k) : (void)0)
 #define cf_hashtable_clear(h) (CF_HCANARY(h), cf_hashtable_clear_impl(CF_HHDR(h)))
 #define cf_hashtable_keys(h) (CF_HCANARY(h), h ? (const uint64_t*)cf_hashtable_keys_impl(CF_HHDR(h))) : (const uint64_t*)NULL)
 #define cf_hashtable_items(h) (CF_HCANARY(h), h)
@@ -337,7 +337,7 @@
 
 #define CF_HHDR(h) (((cf_hhdr_t*)(h - 1) - 1)) // Converts pointer from the user-array to table header.
 #define CF_HCOOKIE 0xE6F7E359 // Magic number used for sanity/type checks.
-#define CF_HCANARY(h) (h ? CUTE_ASSERT(CF_HHDR(h)->cookie == CF_HCOOKIE) : 0) // Sanity/type check.
+#define CF_HCANARY(h) (h ? CUTE_ASSERT(CF_HHDR(h)->cookie == CF_HCOOKIE) : (void)0) // Sanity/type check.
 
 #ifdef __cplusplus
 extern "C" {
