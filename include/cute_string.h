@@ -700,8 +700,8 @@ struct string_t
 	CUTE_INLINE string_t& operator=(string_t&& s) { sset(m_str, s); return *this; }
 	CUTE_INLINE array<string_t> split(char split_c) { array<string_t> r; char** s = ssplit(m_str, split_c); for (int i=0;i<alen(s);++i) r.add(move(steal_from(s[i]))); return r; }
 	CUTE_INLINE char pop() { return apop(m_str); }
-	CUTE_INLINE int first_index_of(char ch) const { sfirst_index_of(m_str, ch); }
-	CUTE_INLINE int last_index_of(char ch) const { slast_index_of(m_str, ch); }
+	CUTE_INLINE int first_index_of(char ch) const { return sfirst_index_of(m_str, ch); }
+	CUTE_INLINE int last_index_of(char ch) const { return slast_index_of(m_str, ch); }
 	CUTE_INLINE string_t find(const char* find_me) const { return string_t(sfind(m_str, find_me)); }
 	CUTE_INLINE string_t& replace(const char* replace_me, const char* with_me) { sreplace(m_str, replace_me, with_me); return *this; }
 	CUTE_INLINE string_t& erase(int index, int count) { serase(m_str, index, count); return *this; }
