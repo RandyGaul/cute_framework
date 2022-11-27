@@ -262,7 +262,6 @@ struct array
 	array<T>& operator=(array<T>&& rhs);
 	array<T>& steal_from(array<T>* steal_from_me);
 	array<T>& steal_from(array<T>& steal_from_me);
-	array<T>& steal_from(T* c_api_array);
 
 	T& last();
 	const T& last() const;
@@ -328,15 +327,6 @@ array<T>& array<T>::steal_from(array<T>* steal_from_me)
 
 template <typename T>
 array<T>& array<T>::steal_from(array<T>& steal_from_me)
-{
-	afree(m_ptr);
-	m_ptr = steal_from_me.m_ptr;
-	steal_from_me.m_ptr = NULL;
-	return *this;
-}
-
-template <typename T>
-array<T>& array<T>::steal_from(T* c_api_array)
 {
 	afree(m_ptr);
 	m_ptr = steal_from_me.m_ptr;
