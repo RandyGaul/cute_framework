@@ -588,9 +588,7 @@ CN_INLINE cn_result_t cn_error_success(void) { cn_result_t result; result.code =
 #endif
 
 #if !defined(CN_ALLOC)
-	#define _CRTDBG_MAP_ALLOC
 	#include <stdlib.h>
-	#include <crtdbg.h>
 	#define CN_ALLOC(size, ctx) malloc(size)
 	#define CN_FREE(mem, ctx) free(mem)
 #endif
