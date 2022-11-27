@@ -8030,7 +8030,6 @@ typedef struct cn_packet_assembly_t
 static void s_fragment_reassembly_entry_cleanup(void* data, uint16_t sequence, void* udata, void* mem_ctx)
 {
 	cn_fragment_reassembly_entry_t* reassembly = (cn_fragment_reassembly_entry_t*)data;
-	if (reassembly->packet && *reassembly->packet == 0xDD) __debugbreak();
 	CN_FREE(reassembly->packet, mem_ctx);
 	CN_FREE(reassembly->fragment_received, mem_ctx);
 }
