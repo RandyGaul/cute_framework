@@ -180,7 +180,7 @@
 
 #define CF_AHDR(a) ((cf_ahdr_t*)a - 1)
 #define CF_ACOOKIE 0xE6F7E359
-#define CF_ACANARY(a) ((a) ? CUTE_ASSERT(CF_AHDR(a)->cookie == CF_ACOOKIE) : 0) // Detects buffer underruns.
+#define CF_ACANARY(a) ((a) ? CUTE_ASSERT(CF_AHDR(a)->cookie == CF_ACOOKIE) : (void)0) // Detects buffer underruns.
 
 // *Hidden* array header.
 typedef struct cf_ahdr_t
