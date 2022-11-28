@@ -179,6 +179,8 @@ struct cf_app_t
 	int x;
 	int y;
 	CF_Texture backbuffer;
+	CF_Texture backbuffer_depth_stencil;
+	CF_Pass backbuffer_pass;
 	CF_Mesh backbuffer_quad;
 	CF_Shader backbuffer_shader;
 	CF_Material backbuffer_material;
@@ -198,10 +200,6 @@ struct cf_app_t
 	cf_mouse_state_t mouse, mouse_prev;
 	cf_list_t joypads;
 	cute::array<cf_touch_t> touches;
-
-	// Batch stuff.
-	cf_aseprite_cache_t* ase_cache = NULL;
-	cf_png_cache_t* png_cache = NULL;
 
 	// ECS stuff.
 	// TODO: Set allocator context for these data structures.

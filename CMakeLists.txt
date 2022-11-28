@@ -206,12 +206,13 @@ set(CUTE_HDRS
 	src/internal/cute_png_cache_internal.h
 	src/internal/cute_batch_internal.h
 	src/internal/cute_graphics_internal.h
+	src/internal/cute_aseprite_cache_internal.h
 
 	src/internal/imgui/sokol_imgui.h
 	libraries/cimgui/imgui/backends/imgui_impl_sdl.h
 
 	src/shaders/sprite_shader.h
-	src/shaders/upscale_shader.h
+	src/shaders/backbuffer_shader.h
 )
 
 if(CUTE_FRAMEWORK_STATIC)

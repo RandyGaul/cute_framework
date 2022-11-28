@@ -27,10 +27,12 @@
 //#include <cute_debug_printf.h>
 
 #include <internal/cute_app_internal.h>
+#include <internal/cute_png_cache_internal.h>
+#include <internal/cute_aseprite_cache_internal.h>
 
 #include <shaders/sprite_shader.h>
 
-static struct CF_Batch* b = NULL;
+static struct CF_Batch* b;
 
 struct QuadUdata
 {
@@ -53,6 +55,20 @@ struct QuadUdata
 // https://github.com/NoelFB/blah/blob/master/include/blah_batch.h
 
 using namespace cute;
+
+void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
+{
+	CUTE_UNUSED(udata);
+	if (image_id >= CUTE_ASEPRITE_ID_RANGE_LO && image_id <= CUTE_ASEPRITE_ID_RANGE_HI) {
+		cf_aseprite_cache_get_pixels(image_id, buffer, bytes_to_fill);
+	} else if (image_id >= CUTE_PNG_ID_RANGE_LO && image_id <= CUTE_PNG_ID_RANGE_HI) {
+		cf_png_cache_get_pixels(image_id, buffer, bytes_to_fill);
+	} else if (image_id >= CUTE_FONT_ID_RANGE_LO && image_id <= CUTE_FONT_ID_RANGE_HI) {
+	} else {
+		CUTE_ASSERT(false);
+		CUTE_MEMSET(buffer, 0, sizeof(bytes_to_fill));
+	}
+}
 
 struct Scissor
 {
@@ -94,6 +110,7 @@ struct CF_Batch
 	float atlas_height = 1024;
 
 	array<BatchVertex> verts;
+	CF_Pass pass;
 	CF_Shader shader;
 	CF_Mesh mesh;
 	CF_Material material;
@@ -110,11 +127,6 @@ struct CF_Batch
 	array<cf_m3x2> m3x2s;
 	array<Scissor> scissors;
 	array<CF_Color> tints = { DEFAULT_TINT };
-
-	get_pixels_fn* get_pixels = NULL;
-	void* get_pixels_udata = NULL;
-
-	void* mem_ctx = NULL;
 };
 
 static void s_push(BatchSprite q)
@@ -135,33 +147,33 @@ static void s_push(BatchSprite q)
 	spritebatch_push(&b->sb, s);
 }
 
-void cf_sprite_batch_sprite(CF_Sprite sprite)
+void cf_batch_sprite(const CF_Sprite* sprite)
 {
 	BatchSprite q;
-	q.id = sprite.animation->frames[sprite.frame_index].id;
-	q.transform = sprite.transform;
-	q.transform.p = cf_add_v2(q.transform.p, sprite.local_offset);
-	q.w = sprite.w;
-	q.h = sprite.h;
-	q.scale_x = sprite.scale.x * sprite.w;
-	q.scale_y = sprite.scale.y * sprite.h;
-	q.sort_bits = sprite.layer;
-	q.alpha = sprite.opacity;
+	q.id = sprite->animation->frames[sprite->frame_index].id;
+	q.transform = sprite->transform;
+	q.transform.p = cf_add_v2(q.transform.p, sprite->local_offset);
+	q.w = sprite->w;
+	q.h = sprite->h;
+	q.scale_x = sprite->scale.x * sprite->w;
+	q.scale_y = sprite->scale.y * sprite->h;
+	q.sort_bits = sprite->layer;
+	q.alpha = sprite->opacity;
 	s_push(q);
 }
 
-void cf_sprite_batch_sprite_tf(CF_Sprite sprite, cf_transform_t transform)
+void cf_batch_sprite_tf(const CF_Sprite* sprite, cf_transform_t transform)
 {
 	BatchSprite q;
-	q.id = sprite.animation->frames[sprite.frame_index].id;
-	q.transform = transform;
-	q.transform.p = cf_add_v2(q.transform.p, sprite.local_offset);
-	q.w = sprite.w;
-	q.h = sprite.h;
-	q.scale_x = sprite.scale.x * sprite.w;
-	q.scale_y = sprite.scale.y * sprite.h;
-	q.sort_bits = sprite.layer;
-	q.alpha = sprite.opacity;
+	q.id = sprite->animation->frames[sprite->frame_index].id;
+	q.transform = mul(transform, sprite->transform);
+	q.transform.p = cf_add_v2(q.transform.p, sprite->local_offset);
+	q.w = sprite->w;
+	q.h = sprite->h;
+	q.scale_x = sprite->scale.x * sprite->w;
+	q.scale_y = sprite->scale.y * sprite->h;
+	q.sort_bits = sprite->layer;
+	q.alpha = sprite->opacity;
 	s_push(q);
 }
 
@@ -175,6 +187,7 @@ CUTE_INLINE BatchSprite cf_batch_sprite_defaults()
 
 static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture_w, int texture_h, void* udata)
 {
+	CUTE_UNUSED(udata);
 	// Build vertex buffer of all quads for each sprite.
 	int vert_count = count * 6;
 	b->verts.ensure_count(vert_count);
@@ -254,6 +267,10 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	cf_mesh_append_vertex_data(b->mesh, verts, vert_count / 2);
 	cf_apply_mesh(b->mesh);
 
+	// Apply the atlas texture.
+	CF_Texture atlas = { sprites->texture_id };
+	cf_material_set_texture_fs(b->material, "u_image", atlas);
+
 	// Apply uniforms.
 	cf_material_set_uniform_vs(b->material, "vs_params", "u_mvp", &b->projection, CF_UNIFORM_TYPE_MAT4, 1);
 	v2 u_texture_size = cf_V2(b->atlas_width, b->atlas_height);
@@ -276,24 +293,23 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	cf_draw_elements();
 }
 
-static void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
-{
-	b->get_pixels(image_id, buffer, bytes_to_fill, b->get_pixels_udata);
-}
-
 static SPRITEBATCH_U64 s_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
+	CUTE_UNUSED(udata);
 	CF_TextureParams params = cf_texture_defaults();
 	params.width = w;
 	params.height = h;
 	params.wrap_u = params.wrap_v = b->wrap_mode;
 	params.filter = b->filter;
+	params.initial_data = pixels;
+	params.initial_data_size = w * h * sizeof(CF_Pixel);
 	CF_Texture texture = cf_make_texture(params);
 	return texture.id;
 }
 
 static void s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
 {
+	CUTE_UNUSED(udata);
 	CF_Texture tex;
 	tex.id = texture_id;
 	cf_destroy_texture(tex);
@@ -301,28 +317,39 @@ static void s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
 
 //--------------------------------------------------------------------------------------------------
 
-static void s_make_batch(get_pixels_fn* get_pixels, void* get_pixels_udata)
+CF_Result cf_batch_flush()
+{
+	// Draw sprites.
+	spritebatch_flush(&b->sb);
+	return cf_result_success();
+}
+
+void cf_make_batch()
 {
 	b = CUTE_NEW(CF_Batch);
-
 	b->projection = cf_matrix_identity();
-	b->get_pixels = get_pixels;
-	b->get_pixels_udata = get_pixels_udata;
+
+	// Pass.
+	CF_PassParams params = cf_pass_defaults();
+	params.name = "Batch";
+	params.target = cf_app_get_backbuffer();
+	params.depth_stencil = cf_app_get_backbuffer_depth_stencil();
+	b->pass = cf_make_pass(params);
 
 	// Mesh + vertex attributes.
 	b->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CUTE_MB * 25, 0, 0);
 	CF_VertexAttribute attrs[4] = { };
-	attrs[0].name = "in_position";
+	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[0].offset = CUTE_OFFSET_OF(BatchVertex, position);
 	attrs[1].name = "in_uv";
 	attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[1].offset = CUTE_OFFSET_OF(BatchVertex, uv);
 	attrs[2].name = "in_col";
-	attrs[2].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[2].format = CF_VERTEX_FORMAT_UBYTE4N;
 	attrs[2].offset = CUTE_OFFSET_OF(BatchVertex, color);
 	attrs[3].name = "in_params";
-	attrs[3].format = CF_VERTEX_FORMAT_BYTE4;
+	attrs[3].format = CF_VERTEX_FORMAT_UBYTE4N;
 	attrs[3].offset = CUTE_OFFSET_OF(BatchVertex, solid);
 	cf_mesh_set_attributes(b->mesh, attrs, CUTE_ARRAY_SIZE(attrs), sizeof(BatchVertex), 0);
 
@@ -350,7 +377,7 @@ static void s_make_batch(get_pixels_fn* get_pixels, void* get_pixels_udata)
 	config.get_pixels_callback = s_get_pixels;
 	config.generate_texture_callback = s_generate_texture_handle;
 	config.delete_texture_callback = s_destroy_texture_handle;
-	config.allocator_context = b->mem_ctx;
+	config.allocator_context = NULL;
 	config.lonely_buffer_count_till_flush = 0;
 
 	if (spritebatch_init(&b->sb, &config, b)) {
@@ -364,18 +391,6 @@ static void s_make_batch(get_pixels_fn* get_pixels, void* get_pixels_udata)
 	b->m3x2s.add(cf_make_identity());
 }
 
-CF_Result cf_batch_flush()
-{
-	// Draw sprites.
-	spritebatch_flush(&b->sb);
-	return cf_result_success();
-}
-
-void cf_make_batch()
-{
-	// TODO
-}
-
 void cf_destroy_batch()
 {
 	spritebatch_term(&b->sb);
@@ -383,10 +398,13 @@ void cf_destroy_batch()
 	CUTE_FREE(b);
 }
 
-void cf_batch_update()
+void cf_batch_render()
 {
+	cf_begin_pass(b->pass);
 	spritebatch_tick(&b->sb);
 	spritebatch_defrag(&b->sb);
+	spritebatch_flush(&b->sb);
+	cf_end_pass();
 }
 
 //--------------------------------------------------------------------------------------------------

@@ -29,6 +29,7 @@
 #include "cute_aseprite_cache.h"
 #include "cute_audio.h"
 #include "cute_base64.h"
+#include "cute_batch.h"
 #include "cute_circular_buffer.h"
 #include "cute_clipboard.h"
 #include "cute_color.h"

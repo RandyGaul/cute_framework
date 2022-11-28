@@ -33,6 +33,8 @@
 #include <internal/cute_graphics_internal.h>
 #include <internal/cute_batch_internal.h>
 #include <internal/cute_dx11.h>
+#include <internal/cute_png_cache_internal.h>
+#include <internal/cute_aseprite_cache_internal.h>
 
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
@@ -77,16 +79,14 @@ cf_app_t* app;
 
 using namespace cute;
 
-static void s_quad(float x, float y, float sx, float sy, float* out)
+struct Vertex
 {
-	struct Vertex
-	{
-		float x, y;
-		float u, v;
-	};
+	float x, y;
+	float u, v;
+};
 
-	Vertex quad[6];
-
+static void s_quad(float x, float y, float sx, float sy, Vertex quad[6])
+{
 	quad[0].x = -0.5f; quad[0].y =  0.5f; quad[0].u = 0; quad[0].v = 0;
 	quad[1].x =  0.5f; quad[1].y = -0.5f; quad[1].u = 1; quad[1].v = 1;
 	quad[2].x =  0.5f; quad[2].y =  0.5f; quad[2].u = 1; quad[2].v = 0;
@@ -99,8 +99,6 @@ static void s_quad(float x, float y, float sx, float sy, float* out)
 		quad[i].x = quad[i].x * sx + x;
 		quad[i].y = quad[i].y * sy + y;
 	}
-
-	CUTE_MEMCPY(out, quad, sizeof(quad));
 }
 
 CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int options, const char* argv0)
@@ -170,7 +168,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	app->x = x;
 	app->y = y;
 	list_init(&app->joypads);
-	app = app;
+	::app = app;
 
 #ifdef CUTE_WINDOWS
 	SDL_SysWMinfo wmInfo;
@@ -205,6 +203,52 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		params.context = app->gfx_ctx_params;
 		sg_setup(params);
 		app->gfx_enabled = true;
+	}
+
+	if (app->gfx_enabled) {
+		{
+			CF_TextureParams params = cf_texture_defaults();
+			params.width = app->w;
+			params.height = app->h;
+			params.render_target = true;
+			app->backbuffer = cf_make_texture(params);
+		}
+		{
+			CF_TextureParams params = cf_texture_defaults();
+			params.width = app->w;
+			params.height = app->h;
+			params.render_target = true;
+			params.pixel_format = CF_PIXELFORMAT_DEPTH_STENCIL;
+			app->backbuffer_depth_stencil = cf_make_texture(params);
+		}
+		{
+			CF_PassParams params = cf_pass_defaults();
+			params.color_value = cf_color_red();
+			params.color_op = CF_PASS_INIT_OP_CLEAR;
+			app->backbuffer_pass = cf_make_pass(params);
+		}
+		{
+			app->backbuffer_quad = cf_make_mesh(CF_USAGE_TYPE_IMMUTABLE, sizeof(Vertex) * 6, 0, 0);
+			CF_VertexAttribute attrs[2] = { };
+			attrs[0].name = "in_pos";
+			attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
+			attrs[0].offset = CUTE_OFFSET_OF(Vertex, x);
+			attrs[1].name = "in_uv";
+			attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
+			attrs[1].offset = CUTE_OFFSET_OF(Vertex, u);
+			cf_mesh_set_attributes(app->backbuffer_quad, attrs, CUTE_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
+			Vertex quad[6];
+			s_quad(0, 0, 2, 2, quad);
+			cf_mesh_update_vertex_data(app->backbuffer_quad, quad, 6);
+		}
+		{
+			app->backbuffer_material = cf_make_material();
+			cf_material_set_texture_fs(app->backbuffer_material, "u_image", app->backbuffer);
+			app->backbuffer_shader = CF_MAKE_SOKOL_SHADER(backbuffer_shd);
+		}
+		cf_make_batch();
+		cf_make_aseprite_cache();
+		cf_make_png_cache();
 	}
 
 	if (!(options & APP_OPTIONS_NO_AUDIO)) {
@@ -248,6 +292,13 @@ void cf_destroy_app()
 		app->using_imgui = false;
 	}
 	if (app->gfx_enabled) {
+		cf_destroy_aseprite_cache();
+		cf_destroy_png_cache();
+		cf_destroy_texture(app->backbuffer);
+		cf_destroy_mesh(app->backbuffer_quad);
+		cf_destroy_shader(app->backbuffer_shader);
+		cf_destroy_material(app->backbuffer_material);
+		cf_destroy_graphics();
 		sg_shutdown();
 		cf_dx11_shutdown();
 	}
@@ -259,13 +310,6 @@ void cf_destroy_app()
 	int schema_count = app->entity_parsed_schemas.count();
 	cf_kv_t** schemas = app->entity_parsed_schemas.items();
 	for (int i = 0; i < schema_count; ++i) cf_kv_destroy(schemas[i]);
-	if (app->ase_cache) {
-		cf_destroy_aseprite_cache(app->ase_cache);
-	}
-	if (app->png_cache) {
-		cf_destroy_png_cache(app->png_cache);
-	}
-	cf_destroy_graphics();
 	app->~cf_app_t();
 	CUTE_FREE(app);
 	cf_fs_destroy();
@@ -297,7 +341,6 @@ void cf_app_update(float dt)
 			simgui_new_frame(app->w, app->h, dt);
 			ImGui_ImplSDL2_NewFrame(app->window);
 		}
-		cf_batch_update();
 	}
 }
 
@@ -315,18 +358,28 @@ CF_Texture cf_app_get_backbuffer()
 	return app->backbuffer;
 }
 
+CF_Texture cf_app_get_backbuffer_depth_stencil()
+{
+	return app->backbuffer_depth_stencil;
+}
+
 void cf_app_get_backbuffer_size(int* x, int* y)
 {
 }
 
-void cf_app_present(bool draw_offscreen_buffer)
+void cf_app_present()
 {
-	cf_begin_default_pass();
+	cf_batch_render();
+	cf_begin_pass(app->backbuffer_pass);
+	cf_apply_mesh(app->backbuffer_quad);
+	cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);
+	cf_draw_elements();
 	if (app->using_imgui) {
 		sg_imgui_draw(&app->sg_imgui);
 		s_imgui_present();
 	}
 	cf_end_pass();
+
 	cf_commit();
 	cf_dx11_present();
 	if (app->options & APP_OPTIONS_OPENGL_CONTEXT) {

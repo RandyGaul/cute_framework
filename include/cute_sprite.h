@@ -148,6 +148,13 @@ CUTE_API void CUTE_CALL cf_sprite_unload(const char* aseprite_path);
 //--------------------------------------------------------------------------------------------------
 // In-line implementation of `sprite_t` functions.
 
+CUTE_API void CUTE_CALL cf_batch_sprite_tf(const CF_Sprite* sprite, cf_transform_t transform);
+
+CUTE_INLINE void cf_sprite_draw(CF_Sprite* sprite)
+{
+	cf_batch_sprite_tf(sprite, sprite->transform);
+}
+
 /**
  * Updates the sprite's internal timer to flip through different frames.
  */
@@ -323,6 +330,7 @@ struct Sprite : public CF_Sprite
 	Sprite() { *(CF_Sprite*)this = cf_sprite_defaults(); }
 	Sprite(CF_Sprite s) { *(CF_Sprite*)this = s; }
 
+	CUTE_INLINE void draw() { cf_sprite_draw(this); }
 	CUTE_INLINE void update(float dt) { return cf_sprite_update(this, dt); }
 	CUTE_INLINE void play(const char* animation) { return cf_sprite_play(this, animation); }
 	CUTE_INLINE bool is_playing(const char* animation) { return cf_sprite_is_playing(this, animation); }

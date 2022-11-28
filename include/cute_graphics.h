@@ -375,16 +375,12 @@ CUTE_API void CUTE_CALL cf_destroy_pass(CF_Pass pass);
 	CF_ENUM(VERTEX_FORMAT_FLOAT2,   2 ) \
 	CF_ENUM(VERTEX_FORMAT_FLOAT3,   3 ) \
 	CF_ENUM(VERTEX_FORMAT_FLOAT4,   4 ) \
-	CF_ENUM(VERTEX_FORMAT_BYTE4,    5 ) \
-	CF_ENUM(VERTEX_FORMAT_BYTE4N,   6 ) \
-	CF_ENUM(VERTEX_FORMAT_UBYTE4,   7 ) \
-	CF_ENUM(VERTEX_FORMAT_UBYTE4N,  8 ) \
-	CF_ENUM(VERTEX_FORMAT_SHORT2,   9 ) \
-	CF_ENUM(VERTEX_FORMAT_SHORT2N,  10) \
-	CF_ENUM(VERTEX_FORMAT_USHORT2N, 11) \
-	CF_ENUM(VERTEX_FORMAT_SHORT4,   12) \
-	CF_ENUM(VERTEX_FORMAT_SHORT4N,  13) \
-	CF_ENUM(VERTEX_FORMAT_USHORT4N, 14) \
+	CF_ENUM(VERTEX_FORMAT_BYTE4N,   5 ) \
+	CF_ENUM(VERTEX_FORMAT_UBYTE4N,  6 ) \
+	CF_ENUM(VERTEX_FORMAT_SHORT2N,  7 ) \
+	CF_ENUM(VERTEX_FORMAT_USHORT2N, 8 ) \
+	CF_ENUM(VERTEX_FORMAT_SHORT4N,  9 ) \
+	CF_ENUM(VERTEX_FORMAT_USHORT4N, 10) \
 
 typedef enum CF_VertexFormat
 {
@@ -585,7 +581,6 @@ CUTE_API void CUTE_CALL cf_material_set_uniform_fs(CF_Material material, const c
 //--------------------------------------------------------------------------------------------------
 // Rendering Functions.
 
-CUTE_API void CUTE_CALL cf_begin_default_pass();
 CUTE_API void CUTE_CALL cf_begin_pass(CF_Pass pass);
 CUTE_API void CUTE_CALL cf_apply_viewport(float x, float y, float width, float height);
 CUTE_API void CUTE_CALL cf_apply_scissor(float x, float y, float width, float height);

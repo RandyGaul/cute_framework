@@ -30,28 +30,27 @@
 #define CUTE_ASEPRITE_IMPLEMENTATION
 #include <cute/cute_aseprite.h>
 
-#include <cute/cute_spritebatch.h>
-
 using namespace cute;
 
-struct aseprite_cache_entry_t
+struct CF_AsepriteCacheEntry
 {
 	const char* path = NULL;
 	ase_t* ase = NULL;
-	animation_t** animations = NULL;
+	htbl animation_t** animations = NULL;
 	cf_v2 local_offset = V2(0, 0);
 };
 
-struct cf_aseprite_cache_t
+struct CF_AsepriteCache
 {
-	dictionary<const char*, aseprite_cache_entry_t> aseprites;
+	dictionary<const char*, CF_AsepriteCacheEntry> aseprites;
 	dictionary<uint64_t, void*> id_to_pixels;
-	uint64_t id_gen = 0;
+	uint64_t id_gen = CUTE_ASEPRITE_ID_RANGE_LO;
 };
 
-static void s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata)
+CF_AsepriteCache* cache;
+
+void cf_aseprite_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill)
 {
-	cf_aseprite_cache_t* cache = (cf_aseprite_cache_t*)udata;
 	auto pixels_ptr = cache->id_to_pixels.try_find(image_id);
 	if (!pixels_ptr) {
 		CUTE_DEBUG_PRINTF("Aseprite cache -- unable to find id %lld.", (long long int)image_id);
@@ -62,22 +61,19 @@ static void s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, voi
 	}
 }
 
-cf_aseprite_cache_t* cf_make_aseprite_cache()
+void cf_make_aseprite_cache()
 {
-	cf_aseprite_cache_t* cache = CUTE_NEW(cf_aseprite_cache_t);
-	return cache;
+	cache = CUTE_NEW(CF_AsepriteCache);
 }
 
-void cf_destroy_aseprite_cache(cf_aseprite_cache_t* cache)
+void cf_destroy_aseprite_cache()
 {
 	int count = cache->aseprites.count();
-	aseprite_cache_entry_t* entries = cache->aseprites.items();
-	for (int i = 0; i < count; ++i) 
-	{
-		aseprite_cache_entry_t* entry = entries + i;
+	CF_AsepriteCacheEntry* entries = cache->aseprites.items();
+	for (int i = 0; i < count; ++i) {
+		CF_AsepriteCacheEntry* entry = entries + i;
 		int animation_count = hcount(entry->animations);
-		for (int j = 0; j < animation_count; ++j)
-		{
+		for (int j = 0; j < animation_count; ++j) {
 			afree(entry->animations[j]->frames);
 			CUTE_FREE(entry->animations[j]);
 		}
@@ -85,7 +81,7 @@ void cf_destroy_aseprite_cache(cf_aseprite_cache_t* cache)
 		hfree(entry->animations);
 		cute_aseprite_free(entry->ase);
 	}
-	cache->~cf_aseprite_cache_t();
+	cache->~CF_AsepriteCache();
 	CUTE_FREE(cache);
 }
 
@@ -99,7 +95,7 @@ static CF_PlayDirection s_play_direction(ase_animation_direction_t direction)
 	return CF_PLAY_DIRECTION_FORWARDS;
 }
 
-static void s_sprite(cf_aseprite_cache_t* cache, aseprite_cache_entry_t entry, CF_Sprite* sprite)
+static void s_sprite(CF_AsepriteCacheEntry entry, CF_Sprite* sprite)
 {
 	sprite->name = entry.path;
 	sprite->animations = (const animation_t**)entry.animations;
@@ -113,13 +109,13 @@ static void s_sprite(cf_aseprite_cache_t* cache, aseprite_cache_entry_t entry, C
 	}
 }
 
-CF_Result cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* aseprite_path, CF_Sprite* sprite)
+CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite)
 {
 	// First see if this ase was already cached.
 	aseprite_path = sintern(aseprite_path);
 	auto entry_ptr = cache->aseprites.try_find(aseprite_path);
 	if (entry_ptr) {
-		s_sprite(cache, *entry_ptr, sprite);
+		s_sprite(*entry_ptr, sprite);
 		return cf_result_success();
 	}
 
@@ -201,7 +197,7 @@ CF_Result cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* aseprit
 
 	// Look for slice information to define the sprite's local offset.
 	// The slice named "origin"'s center is used to define the local offset.
-	aseprite_cache_entry_t entry;
+	CF_AsepriteCacheEntry entry;
 	for (int i = 0; i < ase->slice_count; ++i) {
 		ase_slice_t* slice = ase->slices + i;
 		if (!CUTE_STRCMP(slice->name, "origin")) {
@@ -224,17 +220,17 @@ CF_Result cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* aseprit
 	entry.animations = animations;
 	cache->aseprites.insert(aseprite_path, entry);
 
-	s_sprite(cache, entry, sprite);
+	s_sprite(entry, sprite);
 	return cf_result_success();
 }
 
-void cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, const char* aseprite_path)
+void cf_aseprite_cache_unload(const char* aseprite_path)
 {
 	aseprite_path = sintern(aseprite_path);
 	auto entry_ptr = cache->aseprites.try_find(aseprite_path);
 	if (!entry_ptr) return;
 	
-	aseprite_cache_entry_t entry = *entry_ptr;
+	CF_AsepriteCacheEntry entry = *entry_ptr;
 	for (int i = 0; i < hcount(entry.animations); ++i) {
 		CF_Animation* animation = entry.animations[i];
 		for (int j = 0; j < alen(animation->frames); ++j) {
@@ -249,11 +245,11 @@ void cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, const char* aseprite_p
 	cache->aseprites.remove(aseprite_path);
 }
 
-CF_Result cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase)
+CF_Result cf_aseprite_cache_load_ase(const char* aseprite_path, ase_t** ase)
 {
 	aseprite_path = sintern(aseprite_path);
 	CF_Sprite s;
-	CF_Result err = cf_aseprite_cache_load(cache, aseprite_path, &s);
+	CF_Result err = cf_aseprite_cache_load(aseprite_path, &s);
 	if (cf_is_error(err)) return err;
 
 	auto entry_ptr = cache->aseprites.try_find(aseprite_path);
@@ -262,9 +258,4 @@ CF_Result cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* ase
 		*ase = entry_ptr->ase;
 		return cf_result_success();
 	}
-}
-
-get_pixels_fn* cf_aseprite_cache_get_pixels_fn(cf_aseprite_cache_t* cache)
-{
-	return s_get_pixels;
 }

@@ -10,7 +10,8 @@
 @glsl_options flip_vert_y
 	layout (location = 0) in vec2 in_pos;
 	layout (location = 1) in vec2 in_uv;
-	layout (location = 2) in float in_alpha;
+	layout (location = 2) in vec4 in_col;
+	layout (location = 3) in vec4 in_params;
 
 	layout (location = 0) out vec2 uv;
 	layout (location = 1) out float alpha;
@@ -23,7 +24,7 @@
 	{
 		vec4 posH = u_mvp * vec4(round(in_pos), 0, 1);
 		uv = in_uv;
-		alpha = in_alpha;
+		alpha = in_params.b;
 		gl_Position = posH;
 }
 @end

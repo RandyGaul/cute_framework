@@ -55,8 +55,8 @@ CUTE_API void CUTE_CALL cf_batch_push_tint(CF_Color c);
 CUTE_API void CUTE_CALL cf_batch_pop_tint();
 CUTE_API CF_Color CUTE_CALL cf_batch_peek_tint();
 
-CUTE_API void CUTE_CALL cf_batch_sprite(CF_Sprite sprite);
-CUTE_API void CUTE_CALL cf_batch_sprite_tf(CF_Sprite sprite, cf_transform_t transform);
+CUTE_API void CUTE_CALL cf_batch_sprite(const CF_Sprite* sprite);
+CUTE_API void CUTE_CALL cf_batch_sprite_tf(const CF_Sprite* sprite, cf_transform_t transform);
 
 CUTE_API void CUTE_CALL cf_batch_quad_aabb(cf_aabb_t bb, CF_Color c);
 CUTE_API void CUTE_CALL cf_batch_quad_verts(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, CF_Color c);

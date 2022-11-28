@@ -24,7 +24,7 @@
 
 #include "cute_defines.h"
 #include "cute_result.h"
-#include "cute_batch.h"
+#include "cute_sprite.h"
 
 #include "cute/cute_aseprite.h"
 
@@ -48,29 +48,17 @@ extern "C" {
  * calls to `aseprite_cache_load` won't have to fetch the image off of disk, as long as
  * the image is currently cached in RAM.
  */
-typedef struct cf_aseprite_cache_t cf_aseprite_cache_t;
-typedef struct CF_Sprite CF_Sprite;
-
-/**
- * Constructs a new aseprite cache. Destroy it with `cf_destroy_aseprite_cache` when done with it.
- */
-CUTE_API cf_aseprite_cache_t* CUTE_CALL cf_make_aseprite_cache();
-
-/**
- * Destroys a aseprite cache previously made with `cf_make_aseprite_cache`.
- */
-CUTE_API void CUTE_CALL cf_destroy_aseprite_cache(cf_aseprite_cache_t* cache);
 
 /**
  * Returns a sprite from the cache. If it does not exist in the cache, it is loaded from disk
  * and placed into the cache.
  */
-CUTE_API CF_Result CUTE_CALL cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* aseprite_path, CF_Sprite* sprite);
+CUTE_API CF_Result CUTE_CALL cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite_out);
 
 /**
  * Removes a sprite from the cache. This will cause the next call to `cf_aseprite_cache_load` to fetch from disk.
  */
-CUTE_API void CUTE_CALL cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, const char* aseprite_path);
+CUTE_API void CUTE_CALL cf_aseprite_cache_unload(const char* aseprite_path);
 
 /**
  * A low-level function used to return an `ase_t` from the cache. If it does not exist within the cache
@@ -81,7 +69,7 @@ CUTE_API void CUTE_CALL cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, con
  *
  * Only call this function if you know what you're doing.
  */
-CUTE_API CF_Result CUTE_CALL cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase);
+CUTE_API CF_Result CUTE_CALL cf_aseprite_cache_load_ase(const char* aseprite_path, ase_t** ase);
 
 #ifdef __cplusplus
 }
@@ -95,14 +83,9 @@ CUTE_API CF_Result CUTE_CALL cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cac
 namespace cute
 {
 
-struct sprite_t;
-using aseprite_cache_t = cf_aseprite_cache_t;
-
-CUTE_INLINE aseprite_cache_t* cmake_aseprite_cache() { return cf_make_aseprite_cache(); }
-CUTE_INLINE void destroy_aseprite_cache(aseprite_cache_t* cache) { cf_destroy_aseprite_cache(cache); }
-CUTE_INLINE result_t aseprite_cache_load(aseprite_cache_t* cache, const char* aseprite_path, sprite_t* sprite) { return cf_aseprite_cache_load(cache, aseprite_path, (CF_Sprite*)sprite); }
-CUTE_INLINE void aseprite_cache_unload(aseprite_cache_t* cache, const char* aseprite_path) { cf_aseprite_cache_unload(cache, aseprite_path); }
-CUTE_INLINE result_t aseprite_cache_load_ase(aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase) { return  cf_aseprite_cache_load_ase(cache, aseprite_path, ase); }
+CUTE_INLINE result_t aseprite_cache_load(const char* aseprite_path, Sprite* sprite_out) { return cf_aseprite_cache_load(aseprite_path, sprite_out); }
+CUTE_INLINE void aseprite_cache_unload(const char* aseprite_path) { cf_aseprite_cache_unload(aseprite_path); }
+CUTE_INLINE result_t aseprite_cache_load_ase(const char* aseprite_path, ase_t** ase) { return  cf_aseprite_cache_load_ase(aseprite_path, ase); }
 
 }
 

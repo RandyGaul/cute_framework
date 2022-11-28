@@ -73,6 +73,7 @@ struct CF_MeshInternal
 struct CF_PassInternal
 {
 	sg_pass_action action;
+	bool pass_is_default;
 	sg_pass pass;
 	sg_pipeline pip;
 	CF_MeshInternal* mesh;
@@ -127,7 +128,7 @@ static CUTE_INLINE sg_pixel_format s_wrap(CF_PixelFormat fmt)
 	CUTE_STATIC_ASSERT(CF_PIXELFORMAT_COUNT == _SG_PIXELFORMAT_NUM - 1, "Must be equal.");
 	switch (fmt) {
 	case CF_PIXELFORMAT_DEFAULT: return _SG_PIXELFORMAT_DEFAULT;
-	default:                     return (sg_pixel_format)(fmt - 1);
+	default:                     return (sg_pixel_format)(fmt + 1);
 	}
 }
 
@@ -145,7 +146,7 @@ static CUTE_INLINE CF_PixelFormat s_wrap(sg_pixel_format fmt)
 	CUTE_STATIC_ASSERT(CF_PIXELFORMAT_COUNT == _SG_PIXELFORMAT_NUM - 1, "Must be equal.");
 	switch (fmt) {
 	case _SG_PIXELFORMAT_DEFAULT: return CF_PIXELFORMAT_DEFAULT;
-	default:                     return (CF_PixelFormat)(fmt + 1);
+	default:                     return (CF_PixelFormat)(fmt - 1);
 	}
 }
 
@@ -179,14 +180,10 @@ static CUTE_INLINE sg_vertex_format s_wrap(CF_VertexFormat fmt)
 	case CF_VERTEX_FORMAT_FLOAT2:   return SG_VERTEXFORMAT_FLOAT2;
 	case CF_VERTEX_FORMAT_FLOAT3:   return SG_VERTEXFORMAT_FLOAT3;
 	case CF_VERTEX_FORMAT_FLOAT4:   return SG_VERTEXFORMAT_FLOAT4;
-	case CF_VERTEX_FORMAT_BYTE4:    return SG_VERTEXFORMAT_BYTE4;
 	case CF_VERTEX_FORMAT_BYTE4N:   return SG_VERTEXFORMAT_BYTE4N;
-	case CF_VERTEX_FORMAT_UBYTE4:   return SG_VERTEXFORMAT_UBYTE4;
 	case CF_VERTEX_FORMAT_UBYTE4N:  return SG_VERTEXFORMAT_UBYTE4N;
-	case CF_VERTEX_FORMAT_SHORT2:   return SG_VERTEXFORMAT_SHORT2;
 	case CF_VERTEX_FORMAT_SHORT2N:  return SG_VERTEXFORMAT_SHORT2N;
 	case CF_VERTEX_FORMAT_USHORT2N: return SG_VERTEXFORMAT_USHORT2N;
-	case CF_VERTEX_FORMAT_SHORT4:   return SG_VERTEXFORMAT_SHORT4;
 	case CF_VERTEX_FORMAT_SHORT4N:  return SG_VERTEXFORMAT_SHORT4N;
 	case CF_VERTEX_FORMAT_USHORT4N: return SG_VERTEXFORMAT_USHORT4N;
 	default:                        return SG_VERTEXFORMAT_INVALID;
@@ -337,6 +334,9 @@ CF_TextureParams cf_texture_defaults()
 	params.wrap_v = CF_WRAP_MODE_DEFAULT;
 	params.width = 0;
 	params.height = 0;
+	params.render_target = false;
+	params.initial_data = NULL;
+	params.initial_data_size = 0;
 	return params;
 }
 
@@ -426,12 +426,16 @@ CF_Pass cf_make_pass(CF_PassParams pass_params)
 	pass->action.depth.value = pass_params.depth_value;
 	pass->action.stencil.action = s_wrap(pass_params.stencil_op);
 	pass->action.stencil.value = pass_params.stencil_value;
-	sg_pass_desc desc;
-	CUTE_MEMSET(&desc, 0, sizeof(desc));
-	desc.color_attachments[0].image = { (uint32_t)pass_params.target.id };
-	desc.depth_stencil_attachment.image = { (uint32_t)pass_params.depth_stencil.id };
-	desc.label = pass_params.name;
-	pass->pass = sg_make_pass(desc);
+	if (pass_params.target.id) {
+		sg_pass_desc desc;
+		CUTE_MEMSET(&desc, 0, sizeof(desc));
+		desc.color_attachments[0].image = { (uint32_t)pass_params.target.id };
+		desc.depth_stencil_attachment.image = { (uint32_t)pass_params.depth_stencil.id };
+		desc.label = pass_params.name;
+		pass->pass = sg_make_pass(desc);
+	} else {
+		pass->pass_is_default = true;
+	}
 	CF_Pass result;
 	result.id = (uint64_t)pass;
 	return result;
@@ -440,18 +444,23 @@ CF_Pass cf_make_pass(CF_PassParams pass_params)
 void cf_destroy_pass(CF_Pass pass)
 {
 	CF_PassInternal* pass_internal = (CF_PassInternal*)pass.id;
-	sg_destroy_pass(pass_internal->pass);
+	if (!pass_internal->pass_is_default) {
+		sg_destroy_pass(pass_internal->pass);
+	}
 	CUTE_FREE(pass_internal);
 }
 
 CF_Mesh cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)CUTE_CALLOC(sizeof(CF_MeshInternal));
+	mesh->need_vertex_sync = true;
 	mesh->need_index_sync = true;
+	mesh->need_instance_sync = true;
 	mesh->vertices.size = vertex_buffer_size;
 	mesh->indices.size = index_buffer_size;
 	mesh->instances.size = instance_buffer_size;
 	mesh->indices.stride = sizeof(uint32_t);
+	mesh->usage = s_wrap(usage_type);
 	CF_Mesh result = { (uint64_t)mesh };
 	return result;
 }
@@ -658,7 +667,7 @@ CF_RenderState cf_render_state_defaults()
 {
 	CF_RenderState state;
 	state.blend.enabled = false;
-	state.cull_mode = CF_CULL_MODE_FRONT;
+	state.cull_mode = CF_CULL_MODE_NONE;
 	state.blend.pixel_format = CF_PIXELFORMAT_DEFAULT;
 	state.blend.write_R_enabled = true;
 	state.blend.write_G_enabled = true;
@@ -831,23 +840,16 @@ void cf_material_set_uniform_fs(CF_Material material_handle, const char* block_n
 static CF_PassInternal* s_pass = NULL;
 static CF_PassInternal* s_default_pass = NULL;
 
-void cf_begin_default_pass()
-{
-	if (!s_default_pass) {
-		CF_Pass pass_handle = cf_make_pass(cf_pass_defaults());
-		CF_PassInternal* pass = (CF_PassInternal*)pass_handle.id;
-		s_default_pass = pass;
-	}
-	CF_Pass pass_handle = { (uint64_t)s_default_pass };
-	cf_begin_pass(pass_handle);
-}
-
 void cf_begin_pass(CF_Pass pass_handle)
 {
 	CF_PassInternal* pass = (CF_PassInternal*)pass_handle.id;
 	CUTE_ASSERT(!s_pass);
 	s_pass = pass;
-	sg_begin_pass(pass->pass, &pass->action);
+	if (pass->pass_is_default) {
+		sg_begin_default_pass(&pass->action, app->w, app->h);
+	} else {
+		sg_begin_pass(pass->pass, &pass->action);
+	}
 }
 
 void cf_apply_viewport(float x, float y, float width, float height)
@@ -886,10 +888,12 @@ static void s_copy_uniforms(CF_Arena* arena, CF_SokolShader table, CF_MaterialSt
 				ub_sizes[slot] = size;
 			}
 			// Copy a single matched uniform into the block.
-			void* block = ub_ptrs[slot];
 			int offset = table.get_uniform_offset(stage, uniform.block_name, uniform.name);
-			void* dst = (void*)(((uintptr_t)block) + offset);
-			CUTE_MEMCPY(dst, uniform.data, uniform.size);
+			if (offset >= 0) {
+				void* block = ub_ptrs[slot];
+				void* dst = (void*)(((uintptr_t)block) + offset);
+				CUTE_MEMCPY(dst, uniform.data, uniform.size);
+			}
 		}
 	}
 	// Send each fully constructed uniform block to the GPU.
@@ -900,7 +904,7 @@ static void s_copy_uniforms(CF_Arena* arena, CF_SokolShader table, CF_MaterialSt
 			sg_apply_uniforms(stage, i, range);
 		}
 	}
-	cf_arena_reset(arena);
+	cf_arena_reset(arena); // TODO - Should not actually need to free anything here.
 }
 
 void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
@@ -913,29 +917,6 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	CF_ShaderInternal* shader = (CF_ShaderInternal*)shader_handle.id;
 	CF_SokolShader table = shader->table;
 
-	// Align all buffers, and setup any matched texture names from the material to
-	// the shader's expected textures.
-	sg_bindings bind = { };
-	bind.vertex_buffers[CF_VERTEX_BUFFER_SLOT] = mesh->vertices.handle;
-	bind.vertex_buffer_offsets[CF_VERTEX_BUFFER_SLOT] = mesh->vertices.offset;
-	bind.vertex_buffers[CF_INSTANCE_BUFFER_SLOT] = mesh->instances.handle;
-	bind.vertex_buffer_offsets[CF_INSTANCE_BUFFER_SLOT] = mesh->instances.offset;
-	bind.index_buffer = mesh->indices.handle;
-	bind.index_buffer_offset = mesh->indices.offset;
-	for (int i = 0; i < material->vs.textures.count(); ++i) {
-		int slot = table.get_image_slot(SG_SHADERSTAGE_VS, material->vs.textures[i].name);
-		if (slot >= 0) {
-			bind.vs_images[slot].id = (uint32_t)material->vs.textures[i].handle.id;
-		}
-	}
-	for (int i = 0; i < material->fs.textures.count(); ++i) {
-		int slot = table.get_image_slot(SG_SHADERSTAGE_FS, material->fs.textures[i].name);
-		if (slot >= 0) {
-			bind.fs_images[slot].id = (uint32_t)material->fs.textures[i].handle.id;
-		}
-	}
-	sg_apply_bindings(bind);
-
 	// Apply the render state and vertex attributes.
 	// Match any attributes the shader needs to the attributes in the material.
 	CUTE_ASSERT(mesh->attribute_count < SG_MAX_VERTEX_ATTRIBUTES);
@@ -944,7 +925,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 		CF_VertexAttribute attr = mesh->attributes[i];
 		int slot = table.get_attr_slot(attr.name);
 		if (slot >= 0) {
-			layout.attrs[slot].buffer_index = attr.step_type == SG_VERTEXSTEP_PER_VERTEX ? CF_VERTEX_BUFFER_SLOT : CF_INSTANCE_BUFFER_SLOT;
+			layout.attrs[slot].buffer_index = attr.step_type == CF_ATTRIBUTE_STEP_PER_VERTEX ? CF_VERTEX_BUFFER_SLOT : CF_INSTANCE_BUFFER_SLOT;
 			layout.attrs[slot].format = s_wrap(attr.format);
 			layout.attrs[slot].offset = attr.offset;
 		}
@@ -963,6 +944,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	desc.layout = layout;
 	desc.depth.compare = s_wrap(state->depth_compare);
 	desc.depth.write_enabled = state->depth_write_enabled;
+	desc.depth.pixel_format = app->gfx_ctx_params.depth_format;
 	desc.stencil.enabled = state->stencil.enabled;
 	desc.stencil.read_mask = state->stencil.read_mask;
 	desc.stencil.write_mask = state->stencil.write_mask;
@@ -996,16 +978,38 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	sg_apply_pipeline(pip);
 	s_pass->pip = pip;
 
+	// Align all buffers, and setup any matched texture names from the material to
+	// the shader's expected textures.
+	sg_bindings bind = { };
+	bind.vertex_buffers[CF_VERTEX_BUFFER_SLOT] = mesh->vertices.handle;
+	bind.vertex_buffer_offsets[CF_VERTEX_BUFFER_SLOT] = mesh->vertices.offset;
+	bind.vertex_buffers[CF_INSTANCE_BUFFER_SLOT] = mesh->instances.handle;
+	bind.vertex_buffer_offsets[CF_INSTANCE_BUFFER_SLOT] = mesh->instances.offset;
+	bind.index_buffer = mesh->indices.handle;
+	bind.index_buffer_offset = mesh->indices.offset;
+	for (int i = 0; i < material->vs.textures.count(); ++i) {
+		int slot = table.get_image_slot(SG_SHADERSTAGE_VS, material->vs.textures[i].name);
+		if (slot >= 0) {
+			bind.vs_images[slot].id = (uint32_t)material->vs.textures[i].handle.id;
+		}
+	}
+	for (int i = 0; i < material->fs.textures.count(); ++i) {
+		int slot = table.get_image_slot(SG_SHADERSTAGE_FS, material->fs.textures[i].name);
+		if (slot >= 0) {
+			bind.fs_images[slot].id = (uint32_t)material->fs.textures[i].handle.id;
+		}
+	}
+	sg_apply_bindings(bind);
+
 	// Copy over uniform data.
 	s_copy_uniforms(&material->block_arena, table, &material->vs, SG_SHADERSTAGE_VS);
 	s_copy_uniforms(&material->block_arena, table, &material->fs, SG_SHADERSTAGE_FS);
-	cf_arena_reset(&material->block_arena);
 }
 
 void cf_draw_elements()
 {
 	CF_MeshInternal* mesh = s_pass->mesh;
-	sg_draw(0, mesh->vertices.element_count, mesh->instances.element_count);
+	sg_draw(0, mesh->vertices.element_count, mesh->instances.element_count + 1); // TODO - +1??
 }
 
 void cf_end_pass()
@@ -1014,17 +1018,19 @@ void cf_end_pass()
 	sg_end_pass();
 	sg_destroy_pipeline(s_pass->pip);
 	CF_MeshInternal* mesh = s_pass->mesh;
-	if (mesh->vertices.was_appended) {
-		mesh->vertices.was_appended = false;
-		mesh->vertices.element_count = 0;
-	}
-	if (mesh->indices.was_appended) {
-		mesh->indices.was_appended = false;
-		mesh->indices.element_count = 0;
-	}
-	if (mesh->instances.was_appended) {
-		mesh->instances.was_appended = false;
-		mesh->instances.element_count = 0;
+	if (mesh) {
+		if (mesh->vertices.was_appended) {
+			mesh->vertices.was_appended = false;
+			mesh->vertices.element_count = 0;
+		}
+		if (mesh->indices.was_appended) {
+			mesh->indices.was_appended = false;
+			mesh->indices.element_count = 0;
+		}
+		if (mesh->instances.was_appended) {
+			mesh->instances.was_appended = false;
+			mesh->instances.element_count = 0;
+		}
 	}
 	s_pass = NULL;
 }

@@ -19,14 +19,14 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_PNG_CACHE_INTERNAL_H
-#define CUTE_PNG_CACHE_INTERNAL_H
+#ifndef CUTE_ASEPRITE_CACHE_INTERNAL_H
+#define CUTE_ASEPRITE_CACHE_INTERNAL_H
 
 #include <cute_defines.h>
 
-void cf_make_png_cache();
-void cf_destroy_png_cache();
-void cf_png_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill);
-struct cf_png_t cf_png_cache_get_png(uint64_t image_id);
+void cf_make_aseprite_cache();
+void cf_destroy_aseprite_cache();
+void cf_aseprite_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill);
 
-#endif // CUTE_PNG_CACHE_INTERNAL_H
+
+#endif // CUTE_ASEPRITE_CACHE_INTERNAL_H
