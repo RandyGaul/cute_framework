@@ -6,7 +6,7 @@
 	warranty.  In no event will the authors be held liable for any damages
 	arising from the use of this software.
 
-	Permission is granted to anyone to use this software for any purpose,
+	Permission is granted to anyone to use this software for any purpositione,
 	including commercial applications, and to alter it and redistribute it
 	freely, subject to the following restrictions:
 
@@ -29,8 +29,6 @@
 #include <internal/cute_app_internal.h>
 
 #include <shaders/sprite_shader.h>
-#include <shaders/sprite_outline_shader.h>
-#include <shaders/geom_shader.h>
 
 struct cf_quad_udata_t
 {
@@ -49,22 +47,23 @@ struct cf_quad_udata_t
 
 #define DEBUG_VERT(v, c) batch_quad(make_aabb(v, 3, 3), c)
 
+// Initial design of this batcher comes from Noel Berry's Blah framework here:
+// https://github.com/NoelFB/blah/blob/master/include/blah_batch.h
+
 using namespace cute;
 
-struct cf_quad_vertex_t
+struct BatchVertex
 {
-	cf_v2 pos;
-	cf_v2 uv;
-	float alpha;
+	v2 position;
+	v2 uv;
+	CF_Pixel color;
+	uint8_t solid;
+	uint8_t outline;
+	uint8_t alpha;
+	uint8_t unused1;
 };
 
-struct cf_vertex_t
-{
-	cf_v2 p;
-	CF_Color c;
-};
-
-typedef struct cf_batch_sprite_t
+typedef struct BatchSprite
 {
 	uint64_t id;
 
@@ -76,21 +75,63 @@ typedef struct cf_batch_sprite_t
 	float alpha; // Applies additional alpha to this quad. Default: 1.0f
 
 	int sort_bits; /*= 0;*/
-} cf_batch_sprite_t;
+} BatchSprite;
 
-CUTE_INLINE cf_batch_sprite_t cf_batch_sprite_defaults()
+static void s_push(BatchSprite q)
 {
-	cf_batch_sprite_t result = { 0 };
+	spritebatch_sprite_t s;
+	s.image_id = q.id;
+	s.w = q.w;
+	s.h = q.h;
+	q.transform.p = cf_mul_m32_v2(b->m, q.transform.p);
+	s.x = q.transform.p.x;
+	s.y = q.transform.p.y;
+	s.sx = q.scale_x * b->scale_x;
+	s.sy = q.scale_y * b->scale_y;
+	s.s = q.transform.r.s;
+	s.c = q.transform.r.c;
+	s.sort_bits = (uint64_t)q.sort_bits << 32;
+	s.udata.alpha = q.alpha;
+	spritebatch_push(&b->sb, s);
+}
+
+void cf_sprite_batch_sprite(CF_Sprite sprite)
+{
+	BatchSprite q;
+	q.id = sprite.animation->frames[sprite.frame_index].id;
+	q.transform = sprite.transform;
+	q.transform.p = cf_add_v2(q.transform.p, sprite.local_offset);
+	q.w = sprite.w;
+	q.h = sprite.h;
+	q.scale_x = sprite.scale.x * sprite.w;
+	q.scale_y = sprite.scale.y * sprite.h;
+	q.sort_bits = sprite.layer;
+	q.alpha = sprite.opacity;
+	s_push(q);
+}
+
+void cf_sprite_batch_sprite_tf(CF_Sprite sprite, cf_transform_t transform)
+{
+	BatchSprite q;
+	q.id = sprite.animation->frames[sprite.frame_index].id;
+	q.transform = transform;
+	q.transform.p = cf_add_v2(q.transform.p, sprite.local_offset);
+	q.w = sprite.w;
+	q.h = sprite.h;
+	q.scale_x = sprite.scale.x * sprite.w;
+	q.scale_y = sprite.scale.y * sprite.h;
+	q.sort_bits = sprite.layer;
+	q.alpha = sprite.opacity;
+	s_push(q);
+}
+
+CUTE_INLINE BatchSprite cf_batch_sprite_defaults()
+{
+	BatchSprite result = { 0 };
 	result.transform = cf_make_transform();
 	result.alpha = 1.0f;
 	return result;
 }
-
-enum BatchShaderType
-{
-	BATCH_SHADER_TYPE_DEFAULT,
-	BATCH_SHADER_TYPE_OUTLINE,
-};
 
 struct Scissor
 {
@@ -106,18 +147,10 @@ struct CF_Batch
 	float atlas_width = 1024;
 	float atlas_height = 1024;
 
-	CF_Shader geom_shader;
-	CF_Mesh geom_mesh;
-	CF_Material geom_material;
-	array<cf_vertex_t> geom_verts;
-
-	array<cf_quad_vertex_t> sprite_verts;
-	CF_Shader default_shader;
-	CF_Shader outline_shader;
-	CF_Shader active_shader;
-	CF_Mesh sprite_mesh;
-	CF_Material sprite_material;
-	BatchShaderType batch_shader_type = BATCH_SHADER_TYPE_DEFAULT;
+	array<BatchVertex> verts;
+	CF_Shader shader;
+	CF_Mesh mesh;
+	CF_Material material;
 	float outline_use_border = 1.0f;
 	float outline_use_corners = 0;
 	CF_Color outline_color = cf_color_white();
@@ -129,9 +162,6 @@ struct CF_Batch
 	float scale_x = 1.0f;
 	float scale_y = 1.0f;
 	array<cf_m3x2> m3x2s;
-	array<sg_blend_state> blend_states;
-	array<sg_depth_state> depth_states;
-	array<sg_stencil_state> stencil_states;
 	array<Scissor> scissors;
 	array<CF_Color> tints = { DEFAULT_TINT };
 
@@ -146,58 +176,15 @@ static CF_Batch* b = NULL;
 //--------------------------------------------------------------------------------------------------
 // Internal functions.
 
-static CF_Shader s_load_shader(BatchShaderType type)
-{
-	CF_Shader result;
-
-	switch (type) {
-	case BATCH_SHADER_TYPE_DEFAULT:
-	{
-		result = cf_make_shader(CF_MAKE_SOKOL_SHADER(sprite_default_shd));
-	}	break;
-
-	default:
-		result = cf_make_shader(CF_MAKE_SOKOL_SHADER(sprite_outline_shd));
-		break;
-	}
-
-	return result;
-}
-
-static void s_set_shd_type(BatchShaderType type)
-{
-	b->batch_shader_type = type;
-
-	// Load the shader, if needed, and set the active sprite system shader.
-	switch (type)
-	{
-	case BATCH_SHADER_TYPE_DEFAULT:
-		if (!CF_GRAPHICS_IS_VALID(b->default_shader)) {
-			b->default_shader = s_load_shader(type);
-		}
-		b->active_shader = b->default_shader;
-		break;
-
-	case BATCH_SHADER_TYPE_OUTLINE:
-		if (!CF_GRAPHICS_IS_VALID(b->outline_shader)) {
-			b->outline_shader = s_load_shader(type);
-		}
-		b->active_shader = b->outline_shader;
-		break;
-	}
-}
-
 //--------------------------------------------------------------------------------------------------
 // spritebatch_t callbacks.
 
 static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture_w, int texture_h, void* udata)
 {
-	CF_Batch* b = (CF_Batch*)udata;
-
 	// Build vertex buffer of all quads for each sprite.
 	int vert_count = count * 6;
-	b->sprite_verts.ensure_count(vert_count);
-	cf_quad_vertex_t* verts = b->sprite_verts.data();
+	b->verts.ensure_count(vert_count);
+	BatchVertex* verts = b->verts.data();
 
 	for (int i = 0; i < count; ++i) {
 		spritebatch_sprite_t* s = sprites + i;
@@ -232,79 +219,76 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 		}
 
 		// output transformed quad into CPU buffer
-		cf_quad_vertex_t* out_verts = verts + i * 6;
+		BatchVertex* out_verts = verts + i * 6;
 
 		for (int i = 0; i < 6; ++i) {
 			out_verts[i].alpha = s->udata.alpha;
 		}
 
-		out_verts[0].pos.x = quad[0].x;
-		out_verts[0].pos.y = quad[0].y;
+		out_verts[0].position.x = quad[0].x;
+		out_verts[0].position.y = quad[0].y;
 		out_verts[0].uv.x = s->minx;
 		out_verts[0].uv.y = s->maxy;
 
-		out_verts[1].pos.x = quad[3].x;
-		out_verts[1].pos.y = quad[3].y;
+		out_verts[1].position.x = quad[3].x;
+		out_verts[1].position.y = quad[3].y;
 		out_verts[1].uv.x = s->minx;
 		out_verts[1].uv.y = s->miny;
 
-		out_verts[2].pos.x = quad[1].x;
-		out_verts[2].pos.y = quad[1].y;
+		out_verts[2].position.x = quad[1].x;
+		out_verts[2].position.y = quad[1].y;
 		out_verts[2].uv.x = s->maxx;
 		out_verts[2].uv.y = s->maxy;
 
-		out_verts[3].pos.x = quad[1].x;
-		out_verts[3].pos.y = quad[1].y;
+		out_verts[3].position.x = quad[1].x;
+		out_verts[3].position.y = quad[1].y;
 		out_verts[3].uv.x = s->maxx;
 		out_verts[3].uv.y = s->maxy;
 
-		out_verts[4].pos.x = quad[3].x;
-		out_verts[4].pos.y = quad[3].y;
+		out_verts[4].position.x = quad[3].x;
+		out_verts[4].position.y = quad[3].y;
 		out_verts[4].uv.x = s->minx;
 		out_verts[4].uv.y = s->miny;
 
-		out_verts[5].pos.x = quad[2].x;
-		out_verts[5].pos.y = quad[2].y;
+		out_verts[5].position.x = quad[2].x;
+		out_verts[5].position.y = quad[2].y;
 		out_verts[5].uv.x = s->maxx;
 		out_verts[5].uv.y = s->miny;
 	}
 
 	// Map the vertex buffer with sprite vertex data.
-	cf_mesh_append_vertex_data(b->sprite_mesh, verts, vert_count / 2);
-	cf_apply_mesh(b->sprite_mesh);
+	cf_mesh_append_vertex_data(b->mesh, verts, vert_count / 2);
+	cf_apply_mesh(b->mesh);
 
 	// Apply uniforms.
-	cf_material_set_uniform_vs(b->sprite_material, "vs_params", "u_mvp", &b->projection, CF_UNIFORM_TYPE_MAT4, 1);
+	cf_material_set_uniform_vs(b->material, "vs_params", "u_mvp", &b->projection, CF_UNIFORM_TYPE_MAT4, 1);
 	v2 u_texture_size = cf_V2(b->atlas_width, b->atlas_height);
 	CF_Color u_tint = b->tints.last();
-	cf_material_set_uniform_fs(b->sprite_material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
-	cf_material_set_uniform_fs(b->sprite_material, "fs_params", "u_tint", &u_tint, CF_UNIFORM_TYPE_FLOAT4, 1);
+	cf_material_set_uniform_fs(b->material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
+	cf_material_set_uniform_fs(b->material, "fs_params", "u_tint", &u_tint, CF_UNIFORM_TYPE_FLOAT4, 1);
 
 	// Outline shader uniforms.
-	sprite_outline_fs_params_t fs_params;
 	CF_Color u_border_color = b->outline_color;
 	v2 u_texel_size = cf_V2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
 	float u_use_border = b->outline_use_border;
 	float u_use_corners = b->outline_use_corners;
-	cf_material_set_uniform_fs(b->sprite_material, "fs_params", "u_border_color", &u_border_color, CF_UNIFORM_TYPE_FLOAT4, 1);
-	cf_material_set_uniform_fs(b->sprite_material, "fs_params", "u_texel_size", &u_texel_size, CF_UNIFORM_TYPE_FLOAT2, 1);
-	cf_material_set_uniform_fs(b->sprite_material, "fs_params", "u_use_border", &u_use_border, CF_UNIFORM_TYPE_FLOAT, 1);
-	cf_material_set_uniform_fs(b->sprite_material, "fs_params", "u_use_corners", &u_use_corners, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_fs(b->material, "fs_params", "u_border_color", &u_border_color, CF_UNIFORM_TYPE_FLOAT4, 1);
+	cf_material_set_uniform_fs(b->material, "fs_params", "u_texel_size", &u_texel_size, CF_UNIFORM_TYPE_FLOAT2, 1);
+	cf_material_set_uniform_fs(b->material, "fs_params", "u_use_border", &u_use_border, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_fs(b->material, "fs_params", "u_use_corners", &u_use_corners, CF_UNIFORM_TYPE_FLOAT, 1);
 
 	// Kick off a draw call.
-	cf_apply_shader(b->active_shader, b->sprite_material);
+	cf_apply_shader(b->shader, b->material);
 	cf_draw_elements();
 }
 
 static void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
 {
-	CF_Batch* b = (CF_Batch*)udata;
 	b->get_pixels(image_id, buffer, bytes_to_fill, b->get_pixels_udata);
 }
 
 static SPRITEBATCH_U64 s_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
-	CF_Batch* b = (CF_Batch*)udata;
 	CF_TextureParams params = cf_texture_defaults();
 	params.width = w;
 	params.height = h;
@@ -316,7 +300,6 @@ static SPRITEBATCH_U64 s_generate_texture_handle(void* pixels, int w, int h, voi
 
 static void s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
 {
-	CF_Batch* b = (CF_Batch*)udata;
 	CF_Texture tex;
 	tex.id = texture_id;
 	cf_destroy_texture(tex);
@@ -324,44 +307,47 @@ static void s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
 
 //--------------------------------------------------------------------------------------------------
 
-CF_Batch* cf_make_batch(get_pixels_fn* get_pixels, void* get_pixels_udata)
+static void s_make_batch(get_pixels_fn* get_pixels, void* get_pixels_udata)
 {
-	CF_Batch* b = CUTE_NEW(CF_Batch);
-	if (!b) return NULL;
+	b = CUTE_NEW(CF_Batch);
 
 	b->projection = cf_matrix_identity();
 	b->get_pixels = get_pixels;
 	b->get_pixels_udata = get_pixels_udata;
 
-	sg_pipeline_desc params = { 0 };
-	params.layout.buffers[0].stride = sizeof(cf_vertex_t);
-	params.layout.buffers[0].step_func = SG_VERTEXSTEP_PER_VERTEX;
-	params.layout.buffers[0].step_rate = 1;
-	params.layout.attrs[0].buffer_index = 0;
-	params.layout.attrs[0].offset = CUTE_OFFSET_OF(cf_vertex_t, p);
-	params.layout.attrs[0].format = SG_VERTEXFORMAT_FLOAT2;
-	params.layout.attrs[1].buffer_index = 0;
-	params.layout.attrs[1].offset = CUTE_OFFSET_OF(cf_vertex_t, c);
-	params.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT4;
-	params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
-	params.shader = sg_make_shader(geom_shd_shader_desc(sg_query_backend()));
-	params.colors[0].blend.enabled = true;
-	params.colors[0].blend.src_factor_rgb = SG_BLENDFACTOR_SRC_ALPHA;
-	params.colors[0].blend.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	params.colors[0].blend.op_rgb = SG_BLENDOP_ADD;
-	params.colors[0].blend.src_factor_alpha = SG_BLENDFACTOR_ONE;
-	params.colors[0].blend.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	params.colors[0].blend.op_alpha = SG_BLENDOP_ADD;
+	// Mesh + vertex attributes.
+	b->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CUTE_MB * 25, 0, 0);
+	CF_VertexAttribute attrs[4] = { };
+	attrs[0].name = "in_position";
+	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[0].offset = CUTE_OFFSET_OF(BatchVertex, position);
+	attrs[1].name = "in_uv";
+	attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[1].offset = CUTE_OFFSET_OF(BatchVertex, uv);
+	attrs[2].name = "in_col";
+	attrs[2].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[2].offset = CUTE_OFFSET_OF(BatchVertex, color);
+	attrs[3].name = "in_params";
+	attrs[3].format = CF_VERTEX_FORMAT_BYTE4;
+	attrs[3].offset = CUTE_OFFSET_OF(BatchVertex, solid);
+	cf_mesh_set_attributes(b->mesh, attrs, CUTE_ARRAY_SIZE(attrs), sizeof(BatchVertex), 0);
 
-	b->geom_pip = sg_make_pipeline(params);
-	b->geom_buffer.init(CUTE_MB * 25, sizeof(cf_vertex_t));
+	// Shaders.
+	b->shader = CF_MAKE_SOKOL_SHADER(sprite_shd);
 
-	cf_batch_push_stencil_defaults(b);
-	cf_batch_push_blend_defaults(b);
-	b->default_shd = b->active_shd = s_load_shader(BATCH_SHADER_TYPE_DEFAULT);
-	b->outline_shader = s_load_shader(BATCH_SHADER_TYPE_OUTLINE);
-	b->sprite_buffer.init(CUTE_MB * 25, sizeof(cf_quad_vertex_t));
+	// Material.
+	b->material = cf_make_material();
+	CF_RenderState state = cf_render_state_defaults();
+	state.blend.enabled = true;
+	state.blend.rgb_src_blend_factor = CF_BLENDFACTOR_ONE;
+	state.blend.rgb_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	state.blend.rgb_op = CF_BLEND_OP_ADD;
+	state.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
+	state.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
+	state.blend.alpha_op = CF_BLEND_OP_ADD;
+	cf_material_set_render_state(b->material, state);
 
+	// Spritebatcher.
 	spritebatch_config_t config;
 	spritebatch_set_default_config(&config);
 	config.atlas_use_border_pixels = 1;
@@ -375,84 +361,35 @@ CF_Batch* cf_make_batch(get_pixels_fn* get_pixels, void* get_pixels_udata)
 
 	if (spritebatch_init(&b->sb, &config, b)) {
 		CUTE_FREE(b);
-		if (!b) return NULL;
+		b = NULL;
+		CUTE_ASSERT(false);
 	}
 
 	b->atlas_width = (float)config.atlas_width_in_pixels;
 	b->atlas_height = (float)config.atlas_height_in_pixels;
 	b->m3x2s.add(cf_make_identity());
-
-	return b;
 }
 
-void cf_destroy_batch(CF_Batch* b)
+cf_result_t cf_batch_flush()
+{
+	// Draw sprites.
+	spritebatch_flush(&b->sb);
+	return cf_result_success();
+}
+
+void cf_make_batch()
+{
+	// TODO
+}
+
+void cf_destroy_batch()
 {
 	spritebatch_term(&b->sb);
 	b->~CF_Batch();
 	CUTE_FREE(b);
 }
 
-cf_result_t cf_batch_set_GPU_buffer_configuration(size_t size_of_one_buffer)
-{
-	b->geom_buffer.release();
-	b->sprite_buffer.release();
-	cf_result_t err = b->geom_buffer.init(size_of_one_buffer, sizeof(cf_vertex_t));
-	if (cf_is_error(err)) return err;
-	return b->sprite_buffer.init(size_of_one_buffer, sizeof(cf_quad_vertex_t));
-}
-
-void cf_batch_push(cf_batch_sprite_t q)
-{
-	spritebatch_sprite_t s;
-	s.image_id = q.id;
-	s.w = q.w;
-	s.h = q.h;
-	q.transform.p = cf_mul_m32_v2(b->m, q.transform.p);
-	s.x = q.transform.p.x;
-	s.y = q.transform.p.y;
-	s.sx = q.scale_x * b->scale_x;
-	s.sy = q.scale_y * b->scale_y;
-	s.s = q.transform.r.s;
-	s.c = q.transform.r.c;
-	s.sort_bits = (uint64_t)q.sort_bits << 32;
-	s.udata.alpha = q.alpha;
-	spritebatch_push(&b->sb, s);
-}
-
-cf_result_t cf_batch_flush(CF_Batch* b)
-{
-	// Draw sprites.
-	s_sync_pip(b);
-	sg_apply_pipeline(b->pip);
-
-	if (b->scissors.count()) {
-		Scissor scissor = b->scissors.last();
-		sg_apply_scissor_rect(scissor.x, scissor.y, scissor.w, scissor.h, false);
-	}
-
-	spritebatch_flush(&b->sb);
-
-	// Draw geometry.
-	if (b->geom_verts.count()) {
-		// Issue draw call.
-		sg_apply_pipeline(b->geom_pip);
-		geom_vs_params_t params;
-		params.u_mvp = b->projection;
-		sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(params));
-		cf_result_t err = b->geom_buffer.append(b->geom_verts.count(), b->geom_verts.data());
-		if (cf_is_error(err)) {
-			// Draw call dropped!!!
-		} else {
-			sg_apply_bindings(b->geom_buffer.bind());
-			sg_draw(0, b->geom_verts.count(), 1);
-		}
-		b->geom_verts.clear();
-	}
-
-	return cf_result_success();
-}
-
-void cf_batch_update(CF_Batch* b)
+void cf_batch_update()
 {
 	spritebatch_tick(&b->sb);
 	spritebatch_defrag(&b->sb);
@@ -460,12 +397,12 @@ void cf_batch_update(CF_Batch* b)
 
 //--------------------------------------------------------------------------------------------------
 
-void cf_batch_set_texture_wrap_mode(sg_wrap wrap_mode)
+void cf_batch_set_texture_wrap_mode(CF_WrapMode wrap_mode)
 {
 	b->wrap_mode = wrap_mode;
 }
 
-void cf_batch_set_texture_filter(sg_filter filter)
+void cf_batch_set_texture_filter(CF_Filter filter)
 {
 	b->filter = filter;
 }
@@ -478,11 +415,6 @@ void cf_batch_set_projection(CF_Matrix4x4 projection)
 void cf_batch_outlines(bool use_outlines)
 {
 	b->outline_use_border = use_outlines ? 1.0f : 0;
-	if (use_outlines) {
-		s_set_shd_type(BATCH_SHADER_TYPE_OUTLINE);
-	} else {
-		s_set_shd_type(BATCH_SHADER_TYPE_DEFAULT);
-	}
 }
 
 void cf_batch_outlines_use_corners(bool use_corners)
@@ -503,7 +435,7 @@ void cf_batch_push_m3x2(cf_m3x2 m)
 	b->m3x2s.add(m);
 }
 
-void cf_batch_pop_m3x2(CF_Batch* b)
+void cf_batch_pop_m3x2()
 {
 	if (b->m3x2s.count() > 1) {
 		b->m3x2s.pop();
@@ -525,80 +457,10 @@ void cf_batch_push_scissor_box(int x, int y, int w, int h)
 	b->scissors.add(scissor);
 }
 
-void cf_batch_pop_scissor_box(CF_Batch* b)
+void cf_batch_pop_scissor_box()
 {
 	if (b->scissors.count()) {
 		b->scissors.pop();
-	}
-}
-
-void cf_batch_push_depth_state(const sg_depth_state* depth_state)
-{
-	b->depth_states.add(*depth_state);
-	b->pip_dirty = true;
-}
-
-void cf_batch_push_depth_defaults(CF_Batch* b)
-{
-	sg_depth_state depth_state;
-	CUTE_MEMSET(&depth_state, 0, sizeof(depth_state));
-	cf_batch_push_depth_state(&depth_state);
-}
-
-void cf_batch_pop_depth_state(CF_Batch* b)
-{
-	if (b->depth_states.count() > 1) {
-		b->depth_states.pop();
-		b->pip_dirty = true;
-	}
-}
-
-void cf_batch_push_stencil_state(const sg_stencil_state* stencil_state)
-{
-	b->stencil_states.add(*stencil_state);
-	b->pip_dirty = true;
-}
-
-void cf_batch_push_stencil_defaults(CF_Batch* b)
-{
-	sg_stencil_state stencil_state;
-	CUTE_MEMSET(&stencil_state, 0, sizeof(stencil_state));
-	cf_batch_push_stencil_state(&stencil_state);
-}
-
-void cf_batch_pop_stencil_state(CF_Batch* b)
-{
-	if (b->stencil_states.count() > 1) {
-		b->stencil_states.pop();
-		b->pip_dirty = true;
-	}
-}
-
-void cf_batch_push_blend_state(const sg_blend_state* blend_state)
-{
-	b->blend_states.add(*blend_state);
-	b->pip_dirty = true;
-}
-
-void cf_batch_push_blend_defaults(CF_Batch* b)
-{
-	sg_blend_state blend_state;
-	CUTE_MEMSET(&blend_state, 0, sizeof(blend_state));
-	blend_state.enabled = true;
-	blend_state.src_factor_rgb = SG_BLENDFACTOR_ONE;
-	blend_state.dst_factor_rgb = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	blend_state.op_rgb = SG_BLENDOP_ADD;
-	blend_state.src_factor_alpha = SG_BLENDFACTOR_ONE;
-	blend_state.dst_factor_alpha = SG_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
-	blend_state.op_alpha = SG_BLENDOP_ADD;
-	cf_batch_push_blend_state(&blend_state);
-}
-
-void cf_batch_pop_blend_state(CF_Batch* b)
-{
-	if (b->blend_states.count() > 1) {
-		b->blend_states.pop();
-		b->pip_dirty = true;
 	}
 }
 
@@ -607,7 +469,7 @@ void cf_batch_push_tint(CF_Color c)
 	b->tints.add(c);
 }
 
-void cf_batch_pop_tint(CF_Batch* b)
+void cf_batch_pop_tint()
 {
 	if (b->tints.count() > 1) {
 		b->tints.pop();
@@ -623,10 +485,15 @@ void cf_batch_quad_aabb(cf_aabb_t bb, CF_Color c)
 
 #define PUSH_VERT(P, C) \
 	do { \
-		cf_vertex_t v; \
-		v.p = cf_mul_m32_v2(b->m, P); \
-		v.c = C; \
-		b->geom_verts.add(v); \
+		BatchVertex v; \
+		v.position = mul(b->m, P); \
+		v.uv = V2(0,0); \
+		v.color = to_pixel(C); \
+		v.solid = 255; \
+		v.outline = 0; \
+		v.alpha = 0; \
+		v.unused1 = 0; \
+		b->verts.add(v); \
 	} while (0)
 
 #define PUSH_TRI(p0, p1, p2, c0, c1, c2) \
@@ -854,7 +721,7 @@ void CF_Batchri_line2(cf_v2 p0, cf_v2 p1, cf_v2 p2, float thickness, CF_Color c0
 
 void cf_batch_line(cf_v2 p0, cf_v2 p1, float thickness, CF_Color c, bool antialias)
 {
-	cf_batch_line2(b, p0, p1, thickness, c, c, antialias);
+	cf_batch_line2(p0, p1, thickness, c, c, antialias);
 }
 
 void cf_batch_line2(cf_v2 p0, cf_v2 p1, float thickness, CF_Color c0, CF_Color c1, bool antialias)
@@ -877,7 +744,7 @@ void cf_batch_line2(cf_v2 p0, cf_v2 p1, float thickness, CF_Color c0, CF_Color c
 			cf_v2 q1 = p1 + n1;
 			cf_v2 q2 = p1 - n1;
 			cf_v2 q3 = p0 - n1;
-			cf_batch_quad_verts2(b, q0, q1, q2, q3, c0, c0, c1, c1);
+			cf_batch_quad_verts2(q0, q1, q2, q3, c0, c0, c1, c1);
 
 			// Zero opacity aliased quads.
 			cf_v2 n2 = cf_cw90(n0) * alias_scale;
@@ -885,8 +752,8 @@ void cf_batch_line2(cf_v2 p0, cf_v2 p1, float thickness, CF_Color c0, CF_Color c
 			cf_v2 q5 = q2 + n2;
 			cf_v2 q6 = q1 - n2;
 			cf_v2 q7 = q0 - n2;
-			cf_batch_quad_verts2(b, q3, q2, q5, q4, c0, c1, c3, c2);
-			cf_batch_quad_verts2(b, q0, q7, q6, q1, c0, c2, c3, c1);
+			cf_batch_quad_verts2(q3, q2, q5, q4, c0, c1, c3, c2);
+			cf_batch_quad_verts2(q0, q7, q6, q1, c0, c2, c3, c1);
 
 			// End caps.
 			n0 = n0 * alias_scale;
@@ -894,17 +761,17 @@ void cf_batch_line2(cf_v2 p0, cf_v2 p1, float thickness, CF_Color c0, CF_Color c
 			cf_v2 r1 = q2 + n0;
 			cf_v2 r2 = q1 + n0;
 			cf_v2 r3 = q6 + n0;
-			cf_batch_quad_verts2(b, q2, r1, r0, q5, c1, c3, c3, c3);
-			cf_batch_quad_verts2(b, q2, q1, r2, r1, c1, c1, c3, c3);
-			cf_batch_quad_verts2(b, q1, q6, r3, r2, c1, c3, c3, c3);
+			cf_batch_quad_verts2(q2, r1, r0, q5, c1, c3, c3, c3);
+			cf_batch_quad_verts2(q2, q1, r2, r1, c1, c1, c3, c3);
+			cf_batch_quad_verts2(q1, q6, r3, r2, c1, c3, c3, c3);
 
 			cf_v2 r4 = q4 - n0;
 			cf_v2 r5 = q3 - n0;
 			cf_v2 r6 = q0 - n0;
 			cf_v2 r7 = q7 - n0;
-			cf_batch_quad_verts2(b, q3, r5, r4, q4, c0, c2, c2, c2);
-			cf_batch_quad_verts2(b, q3, q0, r6, r5, c0, c0, c2, c2);
-			cf_batch_quad_verts2(b, q0, q7, r7, r6, c0, c2, c2, c2);
+			cf_batch_quad_verts2(q3, r5, r4, q4, c0, c2, c2, c2);
+			cf_batch_quad_verts2(q3, q0, r6, r5, c0, c0, c2, c2);
+			cf_batch_quad_verts2(q0, q7, r7, r6, c0, c2, c2, c2);
 		} else {
 			// Zero opacity aliased quads, without any core line.
 			cf_v2 n = cf_skew(cf_norm(p1 - p0)) * alias_scale * 0.5f;
@@ -912,8 +779,8 @@ void cf_batch_line2(cf_v2 p0, cf_v2 p1, float thickness, CF_Color c0, CF_Color c
 			cf_v2 q1 = p1 + n;
 			cf_v2 q2 = p1 - n;
 			cf_v2 q3 = p0 - n;
-			cf_batch_quad_verts2(b, p0, p1, q1, q0, c0, c1, c3, c2);
-			cf_batch_quad_verts2(b, p1, p0, q3, q2, c1, c0, c3, c2);
+			cf_batch_quad_verts2(p0, p1, q1, q0, c0, c1, c3, c2);
+			cf_batch_quad_verts2(p1, p0, q3, q2, c1, c0, c3, c2);
 		}
 	} else {
 		cf_v2 n = cf_skew(cf_norm(p1 - p0)) * thickness * 0.5f;
@@ -921,7 +788,7 @@ void cf_batch_line2(cf_v2 p0, cf_v2 p1, float thickness, CF_Color c0, CF_Color c
 		cf_v2 q1 = p1 + n;
 		cf_v2 q2 = p1 - n;
 		cf_v2 q3 = p0 - n;
-		cf_batch_quad_verts2(b, q0, q1, q2, q3, c0, c0, c1, c1);
+		cf_batch_quad_verts2(q0, q1, q2, q3, c0, c0, c1, c1);
 	}
 }
 
@@ -1167,7 +1034,7 @@ static void s_polyline(cf_v2* points, int count, float thickness, CF_Color c0, C
 void cf_batch_polyline(cf_v2* points, int count, float thickness, CF_Color color, bool loop, bool antialias, int bevel_count)
 {
 	CUTE_ASSERT(count >= 3);
-	float scale = cf_len(batch->m.m.x); // Assume x/y uniform scaling.
+	float scale = cf_len(b->m.m.x); // Assume x/y uniform scaling.
 	float alias_scale = 1.0f / scale;
 	bool thick_line = thickness > alias_scale;
 	thickness = cf_max(thickness, alias_scale);
@@ -1184,11 +1051,11 @@ void cf_batch_polyline(cf_v2* points, int count, float thickness, CF_Color color
 	}
 }
 
-cf_temporary_image_t cf_batch_fetch(cf_batch_sprite_t sprite)
+CF_TemporaryImage cf_batch_fetch(BatchSprite sprite)
 {
 	spritebatch_sprite_t s = spritebatch_fetch(&b->sb, sprite.id, sprite.w, sprite.h);
-	cf_temporary_image_t image;
-	image.texture_id = s.texture_id;
+	CF_TemporaryImage image;
+	image.tex = { s.texture_id };
 	image.w = s.w;
 	image.h = s.h;
 	image.u = cf_V2(s.minx, s.miny);

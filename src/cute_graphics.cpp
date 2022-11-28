@@ -846,6 +846,8 @@ void cf_apply_mesh(CF_Mesh mesh_handle)
 
 static void s_copy_uniforms(CF_Arena* arena, CF_SokolShader table, CF_MaterialState* mstate, sg_shader_stage stage)
 {
+	// Create any required uniform blocks for all uniforms matching between which uniforms
+	// the material has and the shader needs.
 	void* ub_ptrs[SG_MAX_SHADERSTAGE_UBS] = { };
 	int ub_sizes[SG_MAX_SHADERSTAGE_UBS] = { };
 	for (int i = 0; i < mstate->uniforms.count(); ++i) {
@@ -853,15 +855,22 @@ static void s_copy_uniforms(CF_Arena* arena, CF_SokolShader table, CF_MaterialSt
 		int slot = table.get_uniformblock_slot(stage, uniform.block_name);
 		if (slot >= 0) {
 			if (!ub_ptrs[slot]) {
+				// Create temporary space for a uniform block.
 				int size = table.get_uniformblock_size(stage, uniform.block_name);
-				ub_ptrs[slot] = cf_arena_alloc(arena, size);
+				void* block = cf_arena_alloc(arena, size);
+				CUTE_MEMSET(block, 0, size);
+				ub_ptrs[slot] = block;
 				ub_sizes[slot] = size;
 			}
+			// Copy a single matched uniform into the block.
 			void* block = ub_ptrs[slot];
-			void* dst = (void*)(((uintptr_t)block) + table.get_uniform_offset(stage, uniform.block_name, uniform.name));
+			int offset = table.get_uniform_offset(stage, uniform.block_name, uniform.name);
+			void* dst = (void*)(((uintptr_t)block) + offset);
 			CUTE_MEMCPY(dst, uniform.data, uniform.size);
 		}
 	}
+	// Send each fully constructed uniform block to the GPU.
+	// Any missing uniforms have been MEMSET to 0.
 	for (int i = 0; i < SG_MAX_SHADERSTAGE_UBS; ++i) {
 		if (ub_ptrs[i]) {
 			sg_range range = { ub_ptrs[i], ub_sizes[i] };
@@ -967,6 +976,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	// Copy over uniform data.
 	s_copy_uniforms(&material->block_arena, table, &material->vs, SG_SHADERSTAGE_VS);
 	s_copy_uniforms(&material->block_arena, table, &material->fs, SG_SHADERSTAGE_FS);
+	cf_arena_reset(&material->block_arena);
 }
 
 void cf_draw_elements()

@@ -349,8 +349,8 @@ font_t cf_make_font_mem(void* data, int size, result_t* result_out)
 		if (result_out) *result_out = result_failure("Failed to parse ttf file with stb_truetype.h.");
 		return { ~0ULL };
 	}
-	font_t result = { cf_app->font_id_gen++ };
-	font_internal_t** font_ptr = cf_app->fonts.insert(result.id);
+	font_t result = { app->font_id_gen++ };
+	font_internal_t** font_ptr = app->fonts.insert(result.id);
 	CUTE_ASSERT(font_ptr);
 	*font_ptr = font;
 	if (result_out) *result_out = result_success();
@@ -373,13 +373,13 @@ font_t cf_make_font(const char* path, result_t* result_out)
 
 void cf_destroy_font(font_t font_handle)
 {
-	font_internal_t* font = cf_app->fonts.get(font_handle.id);
+	font_internal_t* font = app->fonts.get(font_handle.id);
 	// TODO.
 }
 
 result_t cf_font_add_codepoints(font_t font_handle, codepoint_set_t set)
 {
-	font_internal_t* font = cf_app->fonts.get(font_handle.id);
+	font_internal_t* font = app->fonts.get(font_handle.id);
 	if (!font) return result_failure("Invalid font, did you forget to call `cf_make_font`?");
 	for (int i = 0; i < set.count; ++i) {
 		font->ranges.add(set.ranges[i]);
@@ -406,7 +406,7 @@ static void s_save(const char* path, uint8_t* pixels, int w, int h)
 
 result_t cf_font_build(font_t font_handle, float size)
 {
-	font_internal_t* font = cf_app->fonts.get(font_handle.id);
+	font_internal_t* font = app->fonts.get(font_handle.id);
 	if (!font) return result_failure("Invalid font, did you forget to call `cf_make_font`?");
 	// TODO - Delete old font data.
 	// TODO - Oversampling.
@@ -513,7 +513,7 @@ result_t cf_font_build(font_t font_handle, float size)
 
 void cf_font_missing_codepoints(cf_font_t font_handle, int** missing_codepoints, int* count)
 {
-	font_internal_t* font = cf_app->fonts.get(font_handle.id);
+	font_internal_t* font = app->fonts.get(font_handle.id);
 	if (!font) {
 		*missing_codepoints = NULL;
 		*count = 0;

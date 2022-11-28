@@ -25,7 +25,6 @@
 #include "cute_defines.h"
 #include "cute_result.h"
 #include "cute_color.h"
-#include "cute_batch.h"
 #include "cute_sprite.h"
 
 #include "cute/cute_png.h"
@@ -121,29 +120,29 @@ CUTE_API void CUTE_CALL cf_png_cache_unload(cf_png_cache_t* cache, cf_png_t png)
  * Constructs an animation out of an array of frames, along with their delays in milliseconds.
  * The animation is stored within the png cache.
  */
-CUTE_API const cf_animation_t* CUTE_CALL cf_make_png_cache_animation(cf_png_cache_t* cache, const char* name, const cf_png_t* pngs, int pngs_count, const float* delays, int delays_count);
+CUTE_API const CF_Animation* CUTE_CALL cf_make_png_cache_animation(cf_png_cache_t* cache, const char* name, const cf_png_t* pngs, int pngs_count, const float* delays, int delays_count);
 
 /**
  * Looks up an animation within the png cache by name.
  */
-CUTE_API const cf_animation_t* CUTE_CALL cf_png_cache_get_animation(cf_png_cache_t* cache, const char* name);
+CUTE_API const CF_Animation* CUTE_CALL cf_png_cache_get_animation(cf_png_cache_t* cache, const char* name);
 
 /**
  * Constructs an animation table given an array of animations. The table is stored within the png cache.
  */
-CUTE_API const cf_animation_t** CUTE_CALL cf_make_png_cache_animation_table(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_t* const* animations, int animations_count);
+CUTE_API const CF_Animation** CUTE_CALL cf_make_png_cache_animation_table(cf_png_cache_t* cache, const char* sprite_name, const CF_Animation* const* animations, int animations_count);
 
 /**
  * Looks up an animation table within the png cache by name.
  */
-CUTE_API const cf_animation_t** CUTE_CALL cf_png_cache_get_animation_table(cf_png_cache_t* cache, const char* sprite_name);
+CUTE_API const CF_Animation** CUTE_CALL cf_png_cache_get_animation_table(cf_png_cache_t* cache, const char* sprite_name);
 
 /**
  * Makes a sprite. Each sprite must refer to an animation table previously constructed by `cf_make_png_cache_animation_table`.
  * You can supply the pointer to the animation table yourself in `table`, or just leave it NULL.
  * If table is `NULL` then `sprite_name` is used to lookup the table within the png cache.
  */
-CUTE_API cf_sprite_t CUTE_CALL cf_make_png_cache_sprite(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_t** table /*= NULL*/);
+CUTE_API CF_Sprite CUTE_CALL cf_make_png_cache_sprite(cf_png_cache_t* cache, const char* sprite_name, const CF_Animation** table /*= NULL*/);
 
 #ifdef __cplusplus
 }
@@ -160,7 +159,7 @@ namespace cute
 {
 
 using png_cache_t = cf_png_cache_t;
-using animation_t = cf_animation_t;
+using animation_t = CF_Animation;
 
 struct png_t : public cf_png_t
 {
@@ -175,9 +174,8 @@ CUTE_INLINE result_t png_cache_load_mem(png_cache_t* cache, const char* png_path
 CUTE_INLINE void png_cache_unload(png_cache_t* cache, png_t png) { cf_png_cache_unload(cache, png); }
 CUTE_API const animation_t* CUTE_CALL make_png_cache_animation(png_cache_t* cache, const char* name, const array<cf_png_t>& pngs, const array<float>& delays);
 CUTE_INLINE const animation_t* png_cache_get_animation(png_cache_t* cache, const char* name) { return cf_png_cache_get_animation(cache, name); }
-CUTE_API const cf_animation_t** CUTE_CALL make_png_cache_animation_table(png_cache_t* cache, const char* sprite_name, const array<const animation_t*>& animations);
-CUTE_INLINE const cf_animation_t** png_cache_get_animation_table(png_cache_t* cache, const char* sprite_name) { return cf_png_cache_get_animation_table(cache, sprite_name); }
-CUTE_INLINE sprite_t make_png_cache_sprite(png_cache_t* cache, const char* sprite_name, const cf_animation_t** table = NULL) { return cf_make_png_cache_sprite(cache, sprite_name, table); }
+CUTE_API const CF_Animation** CUTE_CALL make_png_cache_animation_table(png_cache_t* cache, const char* sprite_name, const array<const animation_t*>& animations);
+CUTE_INLINE const CF_Animation** png_cache_get_animation_table(png_cache_t* cache, const char* sprite_name) { return cf_png_cache_get_animation_table(cache, sprite_name); }
 
 }
 

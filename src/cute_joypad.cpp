@@ -63,7 +63,7 @@ cf_joypad_t* cf_joypad_open(int index)
 			cf_joypad_t* joypad = CUTE_NEW(cf_joypad_t);
 			joypad->controller = controller;
 			joypad->id = SDL_JoystickInstanceID(joy);
-			cf_list_push_front(&cf_app->joypads, &joypad->node);
+			cf_list_push_front(&app->joypads, &joypad->node);
 			return joypad;
 		}
 	}

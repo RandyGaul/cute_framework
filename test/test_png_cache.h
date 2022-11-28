@@ -46,14 +46,14 @@ int test_png_cache()
 	cf_png_t black_png[] = { black };
 	float black_delay[] = { 1.0f };
 
-	const cf_animation_t* blink_anim = cf_make_png_cache_animation(cache, "blink", blink_png, CUTE_ARRAY_SIZE(blink_png), blink_delay, CUTE_ARRAY_SIZE(blink_delay));
-	const cf_animation_t* white_anim = cf_make_png_cache_animation(cache, "white", white_png, CUTE_ARRAY_SIZE(white_png), white_delay, CUTE_ARRAY_SIZE(white_delay));
-	const cf_animation_t* black_anim = cf_make_png_cache_animation(cache, "black", black_png, CUTE_ARRAY_SIZE(black_png), black_delay, CUTE_ARRAY_SIZE(black_delay));
+	const CF_Animation* blink_anim = cf_make_png_cache_animation(cache, "blink", blink_png, CUTE_ARRAY_SIZE(blink_png), blink_delay, CUTE_ARRAY_SIZE(blink_delay));
+	const CF_Animation* white_anim = cf_make_png_cache_animation(cache, "white", white_png, CUTE_ARRAY_SIZE(white_png), white_delay, CUTE_ARRAY_SIZE(white_delay));
+	const CF_Animation* black_anim = cf_make_png_cache_animation(cache, "black", black_png, CUTE_ARRAY_SIZE(black_png), black_delay, CUTE_ARRAY_SIZE(black_delay));
 
-	const cf_animation_t* anims[] = { blink_anim, white_anim, black_anim };
+	const CF_Animation* anims[] = { blink_anim, white_anim, black_anim };
 
 	const animation_t** table = cf_make_png_cache_animation_table(cache, "blink", anims, CUTE_ARRAY_SIZE(anims));
-	cf_sprite_t sprite = cf_make_png_cache_sprite(cache, "blink", table);
+	CF_Sprite sprite = cf_make_png_cache_sprite(cache, "blink", table);
 
 	cf_sprite_play(&sprite, "blink");
 	CUTE_TEST_CHECK_POINTER(sprite.animations);

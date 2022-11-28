@@ -27,7 +27,7 @@
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_app_internal.h>
 
-static void cf_s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata)
+static void s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata)
 {
 	cf_png_cache_t* cache = (cf_png_cache_t*)udata;
 	void* pixels = hget(cache->id_to_pixels, image_id);
@@ -116,29 +116,29 @@ void cf_png_cache_unload(cf_png_cache_t* cache, cf_png_t png)
 
 cf_get_pixels_fn* cf_png_cache_get_pixels_fn(cf_png_cache_t* cache)
 {
-	return cf_s_get_pixels;
+	return s_get_pixels;
 }
 
-const cf_animation_t* cf_make_png_cache_animation(cf_png_cache_t* cache, const char* name, const cf_png_t* pngs, int pngs_count, const float* delays, int delays_count)
+const CF_Animation* cf_make_png_cache_animation(cf_png_cache_t* cache, const char* name, const cf_png_t* pngs, int pngs_count, const float* delays, int delays_count)
 {
 	CUTE_ASSERT(pngs_count == delays_count);
 	name = sintern(name);
 
 	// If already made, just return the old animation.
-	cf_animation_t* animation = NULL;
+	CF_Animation* animation = NULL;
 	if (cache->animations) {
 		animation = hget(cache->animations, name);
 		if (animation) return animation;
 	}
 
 	// Otherwise allocate a new animation.
-	animation = (cf_animation_t*)CUTE_ALLOC(sizeof(cf_animation_t));
-	CUTE_MEMSET(animation, 0, sizeof(cf_animation_t));
+	animation = (CF_Animation*)CUTE_ALLOC(sizeof(CF_Animation));
+	CUTE_MEMSET(animation, 0, sizeof(CF_Animation));
 	animation->name = name;
 	hadd(cache->animations, name, animation);
 
 	for (int i = 0; i < pngs_count; ++i) {
-		cf_frame_t frame;
+		CF_Frame frame;
 		frame.id = pngs[i].id;
 		frame.delay = delays[i];
 		cf_animation_add_frame(animation, frame);
@@ -147,37 +147,37 @@ const cf_animation_t* cf_make_png_cache_animation(cf_png_cache_t* cache, const c
 	return animation;
 }
 
-const cf_animation_t* cf_png_cache_get_animation(cf_png_cache_t* cache, const char* name)
+const CF_Animation* cf_png_cache_get_animation(cf_png_cache_t* cache, const char* name)
 {
 	return hget(cache->animations, sintern(name));
 }
 
-const cf_animation_t** cf_make_png_cache_animation_table(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_t* const* animations, int animations_count)
+const CF_Animation** cf_make_png_cache_animation_table(cf_png_cache_t* cache, const char* sprite_name, const CF_Animation* const* animations, int animations_count)
 {
 	sprite_name = sintern(sprite_name);
 
 	// If already made, just return the old table.
-	cf_animation_t** table = NULL;
+	CF_Animation** table = NULL;
 	if (cache->animation_tables) {
 		table = hget(cache->animation_tables, sprite_name);
-		if (table) return (const cf_animation_t**)table;
+		if (table) return (const CF_Animation**)table;
 	}
 
 	// Otherwise allocate a new table entry.
 	for (int i = 0; i < animations_count; ++i) {
-		hadd(table, animations[i]->name, (cf_animation_t*)animations[i]);
+		hadd(table, animations[i]->name, (CF_Animation*)animations[i]);
 	}
 	hset(cache->animation_tables, sprite_name, table);
 
-	return (const cf_animation_t**)table;
+	return (const CF_Animation**)table;
 }
 
-const cf_animation_t** cf_png_cache_get_animation_table(cf_png_cache_t* cache, const char* sprite_name)
+const CF_Animation** cf_png_cache_get_animation_table(cf_png_cache_t* cache, const char* sprite_name)
 {
-	return (const cf_animation_t**)hget(cache->animation_tables, sintern(sprite_name));
+	return (const CF_Animation**)hget(cache->animation_tables, sintern(sprite_name));
 }
 
-cf_sprite_t cf_make_png_cache_sprite(cf_png_cache_t* cache, const char* sprite_name, const cf_animation_t** table)
+CF_Sprite cf_make_png_cache_sprite(cf_png_cache_t* cache, const char* sprite_name, const CF_Animation** table)
 {
 	sprite_name = sintern(sprite_name);
 	CUTE_ASSERT(table);
@@ -185,7 +185,7 @@ cf_sprite_t cf_make_png_cache_sprite(cf_png_cache_t* cache, const char* sprite_n
 	cf_png_t png = hget(cache->pngs, table[0]->frames[0].id);
 	CUTE_ASSERT(png.path);
 
-	cf_sprite_t sprite = cf_sprite_defaults();
+	CF_Sprite sprite = cf_sprite_defaults();
 	sprite.name = sprite_name;
 	sprite.w = png.w;
 	sprite.h = png.h;

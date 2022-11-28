@@ -27,8 +27,8 @@
 struct cf_png_cache_t
 {
 	void** id_to_pixels = NULL;
-	cf_animation_t** animations = NULL;
-	cf_animation_t*** animation_tables = NULL;
+	CF_Animation** animations = NULL;
+	CF_Animation*** animation_tables = NULL;
 	cf_png_t* pngs = NULL;
 	uint64_t id_gen = 0;
 };

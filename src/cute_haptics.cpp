@@ -81,40 +81,40 @@ void cf_haptic_set_gain(cf_haptic_t* haptic, float gain)
 	SDL_HapticSetGain(haptic->ptr, (int)(gain * 100.0f + 0.5f));
 }
 
-static Sint16 cf_s_f32_to_s16(float a)
+static Sint16 s_f32_to_s16(float a)
 {
 	if (a > 1.0f) a = 1.0f;
 	else if (a < 0) a = 0;
 	return (Sint16)(int)(a * 32767.0f + 0.5f);
 }
 
-static Uint16 cf_s_f32_to_u16(float a)
+static Uint16 s_f32_to_u16(float a)
 {
 	if (a > 1.0f) a = 1.0f;
 	else if (a < 0) a = 0;
 	return (Uint16)(int)(a * 32767.0f + 0.5f);
 }
 
-static Uint32 cf_s_saturate32(int a)
+static Uint32 s_saturate32(int a)
 {
 	if ((unsigned)a >= 0xFFFFFFFF) return 0xFFFFFFFF;
 	else return (Uint32)a;
 }
 
-static Uint16 cf_s_saturate16(int a)
+static Uint16 s_saturate16(int a)
 {
 	if (a > 0xFFFF) return 0xFFFF;
 	else return (Uint16)a;
 }
 
-static SDL_HapticEffect cf_s_cute_to_sdl(cf_haptic_data_t data)
+static SDL_HapticEffect s_cute_to_sdl(cf_haptic_data_t data)
 {
 	SDL_HapticEffect effect = { 0 };
 	if (data.type == CF_HAPTIC_TYPE_LEFTRIGHT) {
 		effect.type = SDL_HAPTIC_LEFTRIGHT;
-		effect.leftright.length = cf_s_saturate32(data.u.leftright.duration_milliseconds);
-		effect.leftright.small_magnitude = cf_s_f32_to_u16(data.u.leftright.lo_motor_strength);
-		effect.leftright.large_magnitude = cf_s_f32_to_u16(data.u.leftright.hi_motor_strength);
+		effect.leftright.length = s_saturate32(data.u.leftright.duration_milliseconds);
+		effect.leftright.small_magnitude = s_f32_to_u16(data.u.leftright.lo_motor_strength);
+		effect.leftright.large_magnitude = s_f32_to_u16(data.u.leftright.hi_motor_strength);
 	} else if (data.type == CF_HAPTIC_TYPE_PERIODIC) {
 		if (data.u.periodic.wave_type == CF_HAPTIC_WAVE_TYPE_SINE) {
 			effect.type = SDL_HAPTIC_SINE;
@@ -123,29 +123,29 @@ static SDL_HapticEffect cf_s_cute_to_sdl(cf_haptic_data_t data)
 		} else if (data.u.periodic.wave_type == CF_HAPTIC_WAVE_TYPE_SAW) {
 			effect.type = SDL_HAPTIC_SAWTOOTHUP;
 		}
-		effect.periodic.length = cf_s_saturate32(data.u.periodic.duration_milliseconds);
-		effect.periodic.period = cf_s_saturate16(data.u.periodic.period_milliseconds);
-		effect.periodic.magnitude = cf_s_f32_to_s16(data.u.periodic.magnitude);
-		effect.periodic.attack_level = cf_s_f32_to_u16(data.u.periodic.envelope.attack);
-		effect.periodic.attack_length = cf_s_saturate16(data.u.periodic.envelope.attack_milliseconds);
-		effect.periodic.fade_level = cf_s_f32_to_u16(data.u.periodic.envelope.fade);
-		effect.periodic.fade_length = cf_s_saturate16(data.u.periodic.envelope.fade_milliseconds);
+		effect.periodic.length = s_saturate32(data.u.periodic.duration_milliseconds);
+		effect.periodic.period = s_saturate16(data.u.periodic.period_milliseconds);
+		effect.periodic.magnitude = s_f32_to_s16(data.u.periodic.magnitude);
+		effect.periodic.attack_level = s_f32_to_u16(data.u.periodic.envelope.attack);
+		effect.periodic.attack_length = s_saturate16(data.u.periodic.envelope.attack_milliseconds);
+		effect.periodic.fade_level = s_f32_to_u16(data.u.periodic.envelope.fade);
+		effect.periodic.fade_length = s_saturate16(data.u.periodic.envelope.fade_milliseconds);
 	} else if (data.type == CF_HAPTIC_TYPE_RAMP) {
 		effect.type = SDL_HAPTIC_RAMP;
-		effect.ramp.length = cf_s_saturate32(data.u.ramp.duration_milliseconds);
-		effect.ramp.start = cf_s_f32_to_s16(data.u.ramp.start);
-		effect.ramp.end = cf_s_f32_to_s16(data.u.ramp.end);
-		effect.ramp.attack_level = cf_s_f32_to_u16(data.u.ramp.envelope.attack);
-		effect.ramp.attack_length = cf_s_saturate16(data.u.ramp.envelope.attack_milliseconds);
-		effect.ramp.fade_level = cf_s_f32_to_u16(data.u.ramp.envelope.fade);
-		effect.ramp.fade_length = cf_s_saturate16(data.u.ramp.envelope.fade_milliseconds);
+		effect.ramp.length = s_saturate32(data.u.ramp.duration_milliseconds);
+		effect.ramp.start = s_f32_to_s16(data.u.ramp.start);
+		effect.ramp.end = s_f32_to_s16(data.u.ramp.end);
+		effect.ramp.attack_level = s_f32_to_u16(data.u.ramp.envelope.attack);
+		effect.ramp.attack_length = s_saturate16(data.u.ramp.envelope.attack_milliseconds);
+		effect.ramp.fade_level = s_f32_to_u16(data.u.ramp.envelope.fade);
+		effect.ramp.fade_length = s_saturate16(data.u.ramp.envelope.fade_milliseconds);
 	}
 	return effect;
 }
 
 cf_haptic_effect_t cf_haptic_create_effect(cf_haptic_t* haptic, cf_haptic_data_t data)
 {
-	SDL_HapticEffect effect = cf_s_cute_to_sdl(data);
+	SDL_HapticEffect effect = s_cute_to_sdl(data);
 	int id = SDL_HapticNewEffect(haptic->ptr, &effect);
 	cf_haptic_effect_t result = { id };
 	return result;
@@ -153,12 +153,12 @@ cf_haptic_effect_t cf_haptic_create_effect(cf_haptic_t* haptic, cf_haptic_data_t
 
 void cf_haptic_run_effect(cf_haptic_t* haptic, cf_haptic_effect_t effect, int iterations)
 {
-	SDL_HapticRunEffect(haptic->ptr, effect.id, cf_s_saturate32(iterations));
+	SDL_HapticRunEffect(haptic->ptr, effect.id, s_saturate32(iterations));
 }
 
 void cf_haptic_update_effect(cf_haptic_t* haptic, cf_haptic_effect_t effect, cf_haptic_data_t data)
 {
-	SDL_HapticEffect update = cf_s_cute_to_sdl(data);
+	SDL_HapticEffect update = s_cute_to_sdl(data);
 	SDL_HapticUpdateEffect(haptic->ptr, effect.id, &update);
 }
 
@@ -199,7 +199,7 @@ void cf_haptic_rumble_play(cf_haptic_t* haptic, float strength, int duration_mil
 		SDL_HapticRumbleInit(haptic->ptr);
 		haptic->rumble_initialized = true;
 	}
-	SDL_HapticRumblePlay(haptic->ptr, strength, cf_s_saturate32(duration_milliseconds));
+	SDL_HapticRumblePlay(haptic->ptr, strength, s_saturate32(duration_milliseconds));
 }
 
 void cf_haptic_rumble_stop(cf_haptic_t* haptic)

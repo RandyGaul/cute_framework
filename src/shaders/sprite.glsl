@@ -1,4 +1,4 @@
-@module sprite_default
+@module sprite
 @ctype mat4 cf_matrix_t
 @ctype vec4 cf_color_t
 @ctype vec2 cf_v2

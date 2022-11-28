@@ -9,59 +9,59 @@
     Overview:
 
         Shader program 'shd':
-            Get shader desc: sprite_default_shd_shader_desc(sg_query_backend());
+            Get shader desc: sprite_shd_shader_desc(sg_query_backend());
             Vertex shader: vs
                 Attribute slots:
-                    ATTR_sprite_default_vs_in_pos = 0
-                    ATTR_sprite_default_vs_in_uv = 1
-                    ATTR_sprite_default_vs_in_alpha = 2
+                    ATTR_sprite_vs_in_pos = 0
+                    ATTR_sprite_vs_in_uv = 1
+                    ATTR_sprite_vs_in_alpha = 2
                 Uniform block 'vs_params':
-                    C struct: sprite_default_vs_params_t
-                    Bind slot: SLOT_sprite_default_vs_params = 0
+                    C struct: sprite_vs_params_t
+                    Bind slot: SLOT_sprite_vs_params = 0
             Fragment shader: fs
                 Uniform block 'fs_params':
-                    C struct: sprite_default_fs_params_t
-                    Bind slot: SLOT_sprite_default_fs_params = 0
+                    C struct: sprite_fs_params_t
+                    Bind slot: SLOT_sprite_fs_params = 0
                 Image 'u_image':
                     Type: SG_IMAGETYPE_2D
                     Component Type: SG_SAMPLERTYPE_FLOAT
-                    Bind slot: SLOT_sprite_default_u_image = 0
+                    Bind slot: SLOT_sprite_u_image = 0
 
 
     Shader descriptor structs:
 
-        sg_shader shd = sg_make_shader(sprite_default_shd_shader_desc(sg_query_backend()));
+        sg_shader shd = sg_make_shader(sprite_shd_shader_desc(sg_query_backend()));
 
     Vertex attribute locations for vertex shader 'vs':
 
         sg_pipeline pip = sg_make_pipeline(&(sg_pipeline_desc){
             .layout = {
                 .attrs = {
-                    [ATTR_sprite_default_vs_in_pos] = { ... },
-                    [ATTR_sprite_default_vs_in_uv] = { ... },
-                    [ATTR_sprite_default_vs_in_alpha] = { ... },
+                    [ATTR_sprite_vs_in_pos] = { ... },
+                    [ATTR_sprite_vs_in_uv] = { ... },
+                    [ATTR_sprite_vs_in_alpha] = { ... },
                 },
             },
             ...});
 
     Image bind slots, use as index in sg_bindings.vs_images[] or .fs_images[]
 
-        SLOT_sprite_default_u_image = 0;
+        SLOT_sprite_u_image = 0;
 
     Bind slot and C-struct for uniform block 'vs_params':
 
-        sprite_default_vs_params_t vs_params = {
+        sprite_vs_params_t vs_params = {
             .u_mvp = ...;
         };
-        sg_apply_uniforms(SG_SHADERSTAGE_[VS|FS], SLOT_sprite_default_vs_params, &SG_RANGE(vs_params));
+        sg_apply_uniforms(SG_SHADERSTAGE_[VS|FS], SLOT_sprite_vs_params, &SG_RANGE(vs_params));
 
     Bind slot and C-struct for uniform block 'fs_params':
 
-        sprite_default_fs_params_t fs_params = {
+        sprite_fs_params_t fs_params = {
             .u_texture_size = ...;
             .u_tint = ...;
         };
-        sg_apply_uniforms(SG_SHADERSTAGE_[VS|FS], SLOT_sprite_default_fs_params, &SG_RANGE(fs_params));
+        sg_apply_uniforms(SG_SHADERSTAGE_[VS|FS], SLOT_sprite_fs_params, &SG_RANGE(fs_params));
 
 */
 #include <stdint.h>
@@ -75,23 +75,23 @@
     #define SOKOL_SHDC_ALIGN(a) __attribute__((aligned(a)))
   #endif
 #endif
-#define ATTR_sprite_default_vs_in_pos (0)
-#define ATTR_sprite_default_vs_in_uv (1)
-#define ATTR_sprite_default_vs_in_alpha (2)
-#define SLOT_sprite_default_u_image (0)
-#define SLOT_sprite_default_vs_params (0)
+#define ATTR_sprite_vs_in_pos (0)
+#define ATTR_sprite_vs_in_uv (1)
+#define ATTR_sprite_vs_in_alpha (2)
+#define SLOT_sprite_u_image (0)
+#define SLOT_sprite_vs_params (0)
 #pragma pack(push,1)
-SOKOL_SHDC_ALIGN(16) typedef struct sprite_default_vs_params_t {
+SOKOL_SHDC_ALIGN(16) typedef struct sprite_vs_params_t {
     cf_matrix_t u_mvp;
-} sprite_default_vs_params_t;
+} sprite_vs_params_t;
 #pragma pack(pop)
-#define SLOT_sprite_default_fs_params (0)
+#define SLOT_sprite_fs_params (0)
 #pragma pack(push,1)
-SOKOL_SHDC_ALIGN(16) typedef struct sprite_default_fs_params_t {
+SOKOL_SHDC_ALIGN(16) typedef struct sprite_fs_params_t {
     cf_v2 u_texture_size;
     uint8_t _pad_8[8];
     cf_color_t u_tint;
-} sprite_default_fs_params_t;
+} sprite_fs_params_t;
 #pragma pack(pop)
 /*
     #version 330
@@ -112,7 +112,7 @@ SOKOL_SHDC_ALIGN(16) typedef struct sprite_default_fs_params_t {
     }
     
 */
-static const char sprite_default_vs_source_glsl330[389] = {
+static const char sprite_vs_source_glsl330[389] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x33,0x30,0x0a,0x0a,0x75,0x6e,
     0x69,0x66,0x6f,0x72,0x6d,0x20,0x76,0x65,0x63,0x34,0x20,0x76,0x73,0x5f,0x70,0x61,
     0x72,0x61,0x6d,0x73,0x5b,0x34,0x5d,0x3b,0x0a,0x6c,0x61,0x79,0x6f,0x75,0x74,0x28,
@@ -182,7 +182,7 @@ static const char sprite_default_vs_source_glsl330[389] = {
     }
     
 */
-static const char sprite_default_fs_source_glsl330[915] = {
+static const char sprite_fs_source_glsl330[915] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x33,0x30,0x0a,0x0a,0x75,0x6e,
     0x69,0x66,0x6f,0x72,0x6d,0x20,0x76,0x65,0x63,0x34,0x20,0x66,0x73,0x5f,0x70,0x61,
     0x72,0x61,0x6d,0x73,0x5b,0x32,0x5d,0x3b,0x0a,0x75,0x6e,0x69,0x66,0x6f,0x72,0x6d,
@@ -261,7 +261,7 @@ static const char sprite_default_fs_source_glsl330[915] = {
     }
     
 */
-static const char sprite_default_vs_source_glsl100[367] = {
+static const char sprite_vs_source_glsl100[367] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x31,0x30,0x30,0x0a,0x0a,0x75,0x6e,
     0x69,0x66,0x6f,0x72,0x6d,0x20,0x76,0x65,0x63,0x34,0x20,0x76,0x73,0x5f,0x70,0x61,
     0x72,0x61,0x6d,0x73,0x5b,0x34,0x5d,0x3b,0x0a,0x61,0x74,0x74,0x72,0x69,0x62,0x75,
@@ -331,7 +331,7 @@ static const char sprite_default_vs_source_glsl100[367] = {
     }
     
 */
-static const char sprite_default_fs_source_glsl100[1118] = {
+static const char sprite_fs_source_glsl100[1118] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x31,0x30,0x30,0x0a,0x23,0x65,0x78,
     0x74,0x65,0x6e,0x73,0x69,0x6f,0x6e,0x20,0x47,0x4c,0x5f,0x4f,0x45,0x53,0x5f,0x73,
     0x74,0x61,0x6e,0x64,0x61,0x72,0x64,0x5f,0x64,0x65,0x72,0x69,0x76,0x61,0x74,0x69,
@@ -422,7 +422,7 @@ static const char sprite_default_fs_source_glsl100[1118] = {
     }
     
 */
-static const char sprite_default_vs_source_glsl300es[392] = {
+static const char sprite_vs_source_glsl300es[392] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x30,0x30,0x20,0x65,0x73,0x0a,
     0x0a,0x75,0x6e,0x69,0x66,0x6f,0x72,0x6d,0x20,0x76,0x65,0x63,0x34,0x20,0x76,0x73,
     0x5f,0x70,0x61,0x72,0x61,0x6d,0x73,0x5b,0x34,0x5d,0x3b,0x0a,0x6c,0x61,0x79,0x6f,
@@ -494,7 +494,7 @@ static const char sprite_default_vs_source_glsl300es[392] = {
     }
     
 */
-static const char sprite_default_fs_source_glsl300es[1096] = {
+static const char sprite_fs_source_glsl300es[1096] = {
     0x23,0x76,0x65,0x72,0x73,0x69,0x6f,0x6e,0x20,0x33,0x30,0x30,0x20,0x65,0x73,0x0a,
     0x70,0x72,0x65,0x63,0x69,0x73,0x69,0x6f,0x6e,0x20,0x6d,0x65,0x64,0x69,0x75,0x6d,
     0x70,0x20,0x66,0x6c,0x6f,0x61,0x74,0x3b,0x0a,0x70,0x72,0x65,0x63,0x69,0x73,0x69,
@@ -618,7 +618,7 @@ static const char sprite_default_fs_source_glsl300es[1096] = {
         return stage_output;
     }
 */
-static const char sprite_default_vs_source_hlsl5[1059] = {
+static const char sprite_vs_source_hlsl5[1059] = {
     0x63,0x62,0x75,0x66,0x66,0x65,0x72,0x20,0x76,0x73,0x5f,0x70,0x61,0x72,0x61,0x6d,
     0x73,0x20,0x3a,0x20,0x72,0x65,0x67,0x69,0x73,0x74,0x65,0x72,0x28,0x62,0x30,0x29,
     0x0a,0x7b,0x0a,0x20,0x20,0x20,0x20,0x72,0x6f,0x77,0x5f,0x6d,0x61,0x6a,0x6f,0x72,
@@ -769,7 +769,7 @@ static const char sprite_default_vs_source_hlsl5[1059] = {
         return stage_output;
     }
 */
-static const char sprite_default_fs_source_hlsl5[1835] = {
+static const char sprite_fs_source_hlsl5[1835] = {
     0x63,0x62,0x75,0x66,0x66,0x65,0x72,0x20,0x66,0x73,0x5f,0x70,0x61,0x72,0x61,0x6d,
     0x73,0x20,0x3a,0x20,0x72,0x65,0x67,0x69,0x73,0x74,0x65,0x72,0x28,0x62,0x30,0x29,
     0x0a,0x7b,0x0a,0x20,0x20,0x20,0x20,0x66,0x6c,0x6f,0x61,0x74,0x32,0x20,0x5f,0x39,
@@ -926,7 +926,7 @@ static const char sprite_default_fs_source_hlsl5[1835] = {
     }
     
 */
-static const char sprite_default_vs_source_metal_macos[740] = {
+static const char sprite_vs_source_metal_macos[740] = {
     0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,0x20,0x3c,0x6d,0x65,0x74,0x61,0x6c,0x5f,
     0x73,0x74,0x64,0x6c,0x69,0x62,0x3e,0x0a,0x23,0x69,0x6e,0x63,0x6c,0x75,0x64,0x65,
     0x20,0x3c,0x73,0x69,0x6d,0x64,0x2f,0x73,0x69,0x6d,0x64,0x2e,0x68,0x3e,0x0a,0x0a,
@@ -1052,7 +1052,7 @@ static const char sprite_default_vs_source_metal_macos[740] = {
     }
     
 */
-static const char sprite_default_fs_source_metal_macos[1881] = {
+static const char sprite_fs_source_metal_macos[1881] = {
     0x23,0x70,0x72,0x61,0x67,0x6d,0x61,0x20,0x63,0x6c,0x61,0x6e,0x67,0x20,0x64,0x69,
     0x61,0x67,0x6e,0x6f,0x73,0x74,0x69,0x63,0x20,0x69,0x67,0x6e,0x6f,0x72,0x65,0x64,
     0x20,0x22,0x2d,0x57,0x6d,0x69,0x73,0x73,0x69,0x6e,0x67,0x2d,0x70,0x72,0x6f,0x74,
@@ -1175,7 +1175,7 @@ static const char sprite_default_fs_source_metal_macos[1881] = {
 #if !defined(SOKOL_GFX_INCLUDED)
   #error "Please include sokol_gfx.h before sprite_shader.h"
 #endif
-static inline const sg_shader_desc* sprite_default_shd_shader_desc(sg_backend backend) {
+static inline const sg_shader_desc* sprite_shd_shader_desc(sg_backend backend) {
   if (backend == SG_BACKEND_GLCORE33) {
     static sg_shader_desc desc;
     static bool valid;
@@ -1184,14 +1184,14 @@ static inline const sg_shader_desc* sprite_default_shd_shader_desc(sg_backend ba
       desc.attrs[0].name = "in_pos";
       desc.attrs[1].name = "in_uv";
       desc.attrs[2].name = "in_alpha";
-      desc.vs.source = sprite_default_vs_source_glsl330;
+      desc.vs.source = sprite_vs_source_glsl330;
       desc.vs.entry = "main";
       desc.vs.uniform_blocks[0].size = 64;
       desc.vs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
       desc.vs.uniform_blocks[0].uniforms[0].name = "vs_params";
       desc.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
       desc.vs.uniform_blocks[0].uniforms[0].array_count = 4;
-      desc.fs.source = sprite_default_fs_source_glsl330;
+      desc.fs.source = sprite_fs_source_glsl330;
       desc.fs.entry = "main";
       desc.fs.uniform_blocks[0].size = 32;
       desc.fs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
@@ -1201,7 +1201,7 @@ static inline const sg_shader_desc* sprite_default_shd_shader_desc(sg_backend ba
       desc.fs.images[0].name = "u_image";
       desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
-      desc.label = "sprite_default_shd_shader";
+      desc.label = "sprite_shd_shader";
     }
     return &desc;
   }
@@ -1213,14 +1213,14 @@ static inline const sg_shader_desc* sprite_default_shd_shader_desc(sg_backend ba
       desc.attrs[0].name = "in_pos";
       desc.attrs[1].name = "in_uv";
       desc.attrs[2].name = "in_alpha";
-      desc.vs.source = sprite_default_vs_source_glsl100;
+      desc.vs.source = sprite_vs_source_glsl100;
       desc.vs.entry = "main";
       desc.vs.uniform_blocks[0].size = 64;
       desc.vs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
       desc.vs.uniform_blocks[0].uniforms[0].name = "vs_params";
       desc.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
       desc.vs.uniform_blocks[0].uniforms[0].array_count = 4;
-      desc.fs.source = sprite_default_fs_source_glsl100;
+      desc.fs.source = sprite_fs_source_glsl100;
       desc.fs.entry = "main";
       desc.fs.uniform_blocks[0].size = 32;
       desc.fs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
@@ -1230,7 +1230,7 @@ static inline const sg_shader_desc* sprite_default_shd_shader_desc(sg_backend ba
       desc.fs.images[0].name = "u_image";
       desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
-      desc.label = "sprite_default_shd_shader";
+      desc.label = "sprite_shd_shader";
     }
     return &desc;
   }
@@ -1242,14 +1242,14 @@ static inline const sg_shader_desc* sprite_default_shd_shader_desc(sg_backend ba
       desc.attrs[0].name = "in_pos";
       desc.attrs[1].name = "in_uv";
       desc.attrs[2].name = "in_alpha";
-      desc.vs.source = sprite_default_vs_source_glsl300es;
+      desc.vs.source = sprite_vs_source_glsl300es;
       desc.vs.entry = "main";
       desc.vs.uniform_blocks[0].size = 64;
       desc.vs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
       desc.vs.uniform_blocks[0].uniforms[0].name = "vs_params";
       desc.vs.uniform_blocks[0].uniforms[0].type = SG_UNIFORMTYPE_FLOAT4;
       desc.vs.uniform_blocks[0].uniforms[0].array_count = 4;
-      desc.fs.source = sprite_default_fs_source_glsl300es;
+      desc.fs.source = sprite_fs_source_glsl300es;
       desc.fs.entry = "main";
       desc.fs.uniform_blocks[0].size = 32;
       desc.fs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
@@ -1259,7 +1259,7 @@ static inline const sg_shader_desc* sprite_default_shd_shader_desc(sg_backend ba
       desc.fs.images[0].name = "u_image";
       desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
-      desc.label = "sprite_default_shd_shader";
+      desc.label = "sprite_shd_shader";
     }
     return &desc;
   }
@@ -1274,12 +1274,12 @@ static inline const sg_shader_desc* sprite_default_shd_shader_desc(sg_backend ba
       desc.attrs[1].sem_index = 1;
       desc.attrs[2].sem_name = "TEXCOORD";
       desc.attrs[2].sem_index = 2;
-      desc.vs.source = sprite_default_vs_source_hlsl5;
+      desc.vs.source = sprite_vs_source_hlsl5;
       desc.vs.d3d11_target = "vs_5_0";
       desc.vs.entry = "main";
       desc.vs.uniform_blocks[0].size = 64;
       desc.vs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
-      desc.fs.source = sprite_default_fs_source_hlsl5;
+      desc.fs.source = sprite_fs_source_hlsl5;
       desc.fs.d3d11_target = "ps_5_0";
       desc.fs.entry = "main";
       desc.fs.uniform_blocks[0].size = 32;
@@ -1287,7 +1287,7 @@ static inline const sg_shader_desc* sprite_default_shd_shader_desc(sg_backend ba
       desc.fs.images[0].name = "u_image";
       desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
-      desc.label = "sprite_default_shd_shader";
+      desc.label = "sprite_shd_shader";
     }
     return &desc;
   }
@@ -1296,24 +1296,24 @@ static inline const sg_shader_desc* sprite_default_shd_shader_desc(sg_backend ba
     static bool valid;
     if (!valid) {
       valid = true;
-      desc.vs.source = sprite_default_vs_source_metal_macos;
+      desc.vs.source = sprite_vs_source_metal_macos;
       desc.vs.entry = "main0";
       desc.vs.uniform_blocks[0].size = 64;
       desc.vs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
-      desc.fs.source = sprite_default_fs_source_metal_macos;
+      desc.fs.source = sprite_fs_source_metal_macos;
       desc.fs.entry = "main0";
       desc.fs.uniform_blocks[0].size = 32;
       desc.fs.uniform_blocks[0].layout = SG_UNIFORMLAYOUT_STD140;
       desc.fs.images[0].name = "u_image";
       desc.fs.images[0].image_type = SG_IMAGETYPE_2D;
       desc.fs.images[0].sampler_type = SG_SAMPLERTYPE_FLOAT;
-      desc.label = "sprite_default_shd_shader";
+      desc.label = "sprite_shd_shader";
     }
     return &desc;
   }
   return 0;
 }
-static inline int sprite_default_shd_attr_slot(const char* attr_name) {
+static inline int sprite_shd_attr_slot(const char* attr_name) {
   (void)attr_name;
   if (0 == strcmp(attr_name, "in_pos")) {
     return 0;
@@ -1326,7 +1326,7 @@ static inline int sprite_default_shd_attr_slot(const char* attr_name) {
   }
   return -1;
 }
-static inline int sprite_default_shd_image_slot(sg_shader_stage stage, const char* img_name) {
+static inline int sprite_shd_image_slot(sg_shader_stage stage, const char* img_name) {
   (void)stage; (void)img_name;
   if (SG_SHADERSTAGE_FS == stage) {
     if (0 == strcmp(img_name, "u_image")) {
@@ -1335,7 +1335,7 @@ static inline int sprite_default_shd_image_slot(sg_shader_stage stage, const cha
   }
   return -1;
 }
-static inline int sprite_default_shd_uniformblock_slot(sg_shader_stage stage, const char* ub_name) {
+static inline int sprite_shd_uniformblock_slot(sg_shader_stage stage, const char* ub_name) {
   (void)stage; (void)ub_name;
   if (SG_SHADERSTAGE_VS == stage) {
     if (0 == strcmp(ub_name, "vs_params")) {
@@ -1349,21 +1349,21 @@ static inline int sprite_default_shd_uniformblock_slot(sg_shader_stage stage, co
   }
   return -1;
 }
-static inline size_t sprite_default_shd_uniformblock_size(sg_shader_stage stage, const char* ub_name) {
+static inline size_t sprite_shd_uniformblock_size(sg_shader_stage stage, const char* ub_name) {
   (void)stage; (void)ub_name;
   if (SG_SHADERSTAGE_VS == stage) {
     if (0 == strcmp(ub_name, "vs_params")) {
-      return sizeof(sprite_default_vs_params_t);
+      return sizeof(sprite_vs_params_t);
     }
   }
   if (SG_SHADERSTAGE_FS == stage) {
     if (0 == strcmp(ub_name, "fs_params")) {
-      return sizeof(sprite_default_fs_params_t);
+      return sizeof(sprite_fs_params_t);
     }
   }
   return 0;
 }
-static inline int sprite_default_shd_uniform_offset(sg_shader_stage stage, const char* ub_name, const char* u_name) {
+static inline int sprite_shd_uniform_offset(sg_shader_stage stage, const char* ub_name, const char* u_name) {
   (void)stage; (void)ub_name; (void)u_name;
   if (SG_SHADERSTAGE_VS == stage) {
     if (0 == strcmp(ub_name, "vs_params")) {
@@ -1384,7 +1384,7 @@ static inline int sprite_default_shd_uniform_offset(sg_shader_stage stage, const
   }
   return -1;
 }
-static inline sg_shader_uniform_desc sprite_default_shd_uniform_desc(sg_shader_stage stage, const char* ub_name, const char* u_name) {
+static inline sg_shader_uniform_desc sprite_shd_uniform_desc(sg_shader_stage stage, const char* ub_name, const char* u_name) {
   (void)stage; (void)ub_name; (void)u_name;
   #if defined(__cplusplus)
   sg_shader_uniform_desc desc = {};

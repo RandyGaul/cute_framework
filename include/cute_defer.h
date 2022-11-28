@@ -35,7 +35,7 @@ private:
 };
 
 template <typename T>
-static cf_scope_exit<T> cf_s_create_scope_helper(T func)
+static cf_scope_exit<T> s_create_scope_helper(T func)
 {
 	return cf_scope_exit<T>(func);
 }
@@ -72,7 +72,7 @@ static cf_scope_exit<T> cf_s_create_scope_helper(T func)
  *     // And finally, the defer line can run here too.
  * }
  */
-#define CUTE_DEFER(L) const auto& CUTE_TOKEN_PASTE(cf_scope_exit, __LINE__) = cf_s_create_scope_helper([&]() { L; })
+#define CUTE_DEFER(L) const auto& CUTE_TOKEN_PASTE(cf_scope_exit, __LINE__) = s_create_scope_helper([&]() { L; })
 
 namespace cute
 {

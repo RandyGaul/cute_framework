@@ -167,7 +167,7 @@ cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, in
 		app->gfx_ctx_params.color_format = SG_PIXELFORMAT_RGBA8;
 		app->gfx_ctx_params.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;
 		sg_desc params = { 0 };
-		params.context = cf_app->gfx_ctx_params;
+		params.context = app->gfx_ctx_params;
 		sg_setup(params);
 		app->gfx_enabled = true;
 	}
@@ -176,7 +176,7 @@ cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, in
 		cf_dx11_init(hwnd, w, h, 1);
 		app->gfx_ctx_params = cf_dx11_get_context();
 		sg_desc params = { 0 };
-		params.context = cf_app->gfx_ctx_params;
+		params.context = app->gfx_ctx_params;
 		sg_setup(params);
 		app->gfx_enabled = true;
 	}
@@ -190,7 +190,7 @@ cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, in
 		if (err == CUTE_SOUND_ERROR_NONE) {
 	#ifndef CUTE_EMSCRIPTEN
 			cs_spawn_mix_thread();
-			cf_app->spawned_mix_thread = true;
+			app->spawned_mix_thread = true;
 	#endif // CUTE_EMSCRIPTEN
 		} else {
 			CUTE_ASSERT(false);
@@ -215,80 +215,78 @@ cf_result_t cf_make_app(const char* window_title, int x, int y, int w, int h, in
 
 void cf_destroy_app()
 {
-	if (cf_app->using_imgui) {
+	if (app->using_imgui) {
 		ImGui_ImplSDL2_Shutdown();
 		simgui_shutdown();
-		sg_imgui_discard(&cf_app->sg_imgui);
-		cf_app->using_imgui = false;
+		sg_imgui_discard(&app->sg_imgui);
+		app->using_imgui = false;
 	}
-	if (cf_app->gfx_enabled) {
+	if (app->gfx_enabled) {
 		sg_shutdown();
 		cf_dx11_shutdown();
 	}
 	cs_shutdown();
-	SDL_DestroyWindow(cf_app->window);
+	SDL_DestroyWindow(app->window);
 	SDL_Quit();
-	destroy_threadpool(cf_app->threadpool);
+	destroy_threadpool(app->threadpool);
 	cs_shutdown();
-	int schema_count = cf_app->entity_parsed_schemas.count();
-	cf_kv_t** schemas = cf_app->entity_parsed_schemas.items();
+	int schema_count = app->entity_parsed_schemas.count();
+	cf_kv_t** schemas = app->entity_parsed_schemas.items();
 	for (int i = 0; i < schema_count; ++i) cf_kv_destroy(schemas[i]);
-	if (cf_app->ase_cache) {
-		cf_destroy_aseprite_cache(cf_app->ase_cache);
-		cf_destroy_batch(cf_app->ase_batch);
+	if (app->ase_cache) {
+		cf_destroy_aseprite_cache(app->ase_cache);
 	}
-	if (cf_app->png_cache) {
-		cf_destroy_png_cache(cf_app->png_cache);
-		cf_destroy_batch(cf_app->png_batch);
+	if (app->png_cache) {
+		cf_destroy_png_cache(app->png_cache);
 	}
-	cf_app->~cf_app_t();
+	app->~cf_app_t();
 	CUTE_FREE(cf_app);
 	cf_fs_destroy();
 }
 
 bool cf_app_is_running()
 {
-	return cf_app->running;
+	return app->running;
 }
 
 void cf_app_stop_running()
 {
-	cf_app->running = 0;
+	app->running = 0;
 }
 
 void cf_app_update(float dt)
 {
-	cf_app->dt = dt;
+	app->dt = dt;
 	cf_pump_input_msgs();
-	if (cf_app->audio_system) {
+	if (app->audio_system) {
 		cs_update(dt);
 #ifdef CUTE_EMSCRIPTEN
 		cf_app_do_mixing(cf_app);
 #endif // CUTE_EMSCRIPTEN
 	}
-	if (cf_app->using_imgui) {
-		simgui_new_frame(cf_app->w, cf_app->h, dt);
-		ImGui_ImplSDL2_NewFrame(cf_app->window);
+	if (app->using_imgui) {
+		simgui_new_frame(app->w, app->h, dt);
+		ImGui_ImplSDL2_NewFrame(app->window);
 	}
 
-	if (cf_app->gfx_enabled) {
+	if (app->gfx_enabled) {
 		sg_pass_action pass_action = { 0 };
 		pass_action.colors[0] = { SG_ACTION_CLEAR, { 0.4f, 0.65f, 0.7f, 1.0f } };
-		if (cf_app->offscreen_enabled) {
-			sg_begin_pass(cf_app->offscreen_pass, pass_action);
+		if (app->offscreen_enabled) {
+			sg_begin_pass(app->offscreen_pass, pass_action);
 		} else {
-			sg_begin_default_pass(pass_action, cf_app->w, cf_app->h);
+			sg_begin_default_pass(pass_action, app->w, app->h);
 		}
 	}
 
-	if (cf_app->ase_batch) {
-		cf_batch_update(cf_app->ase_batch);
+	if (app->ase_batch) {
+		cf_batch_update(app->ase_batch);
 	}
 }
 
-static void cf_s_imgui_present()
+static void s_imgui_present()
 {
-	if (cf_app->using_imgui) {
+	if (app->using_imgui) {
 		ImGui::EndFrame();
 		ImGui::Render();
 		simgui_render();
@@ -298,97 +296,97 @@ static void cf_s_imgui_present()
 sg_image cf_app_get_offscreen_buffer()
 {
 	sg_image result = { 0 };
-	if (cf_app->offscreen_enabled) {
-		if (!cf_app->fetched_offscreen) {
+	if (app->offscreen_enabled) {
+		if (!app->fetched_offscreen) {
 			sg_end_pass();
-			cf_app->fetched_offscreen = true;
+			app->fetched_offscreen = true;
 		}
 
-		result = cf_app->offscreen_color_buffer;
-		cf_app->fetched_offscreen = true;
+		result = app->offscreen_color_buffer;
+		app->fetched_offscreen = true;
 	}
 	return result;
 }
 
 void cf_app_present(bool draw_offscreen_buffer)
 {
-	if (cf_app->offscreen_enabled) {
+	if (app->offscreen_enabled) {
 		sg_bindings bind = { 0 };
-		bind.vertex_buffers[0] = cf_app->quad;
+		bind.vertex_buffers[0] = app->quad;
 		bind.fs_images[0] = cf_app_get_offscreen_buffer();
 
 		sg_pass_action clear_to_black = { 0 };
 		clear_to_black.colors[0] = { SG_ACTION_CLEAR, { 0.0f, 0.0f, 0.0f, 1.0f } };
-		sg_begin_default_pass(&clear_to_black, cf_app->w, cf_app->h);
+		sg_begin_default_pass(&clear_to_black, app->w, app->h);
 		if (draw_offscreen_buffer) {
-			sg_apply_pipeline(cf_app->offscreen_to_screen_pip);
+			sg_apply_pipeline(app->offscreen_to_screen_pip);
 			sg_apply_bindings(bind);
-			upscale_vs_params_t vs_params = { cf_app->upscale };
+			upscale_vs_params_t vs_params = { app->upscale };
 			sg_apply_uniforms(SG_SHADERSTAGE_VS, 0, SG_RANGE(vs_params));
-			upscale_fs_params_t fs_params = { cf_V2((float)cf_app->offscreen_w, (float)cf_app->offscreen_h) };
+			upscale_fs_params_t fs_params = { cf_V2((float)app->offscreen_w, (float)app->offscreen_h) };
 			sg_apply_uniforms(SG_SHADERSTAGE_FS, 0, SG_RANGE(fs_params));
 			sg_draw(0, 6, 1);
 		}
-		if (cf_app->using_imgui) {
-			sg_imgui_draw(&cf_app->sg_imgui);
-			cf_s_imgui_present();
+		if (app->using_imgui) {
+			sg_imgui_draw(&app->sg_imgui);
+			s_imgui_present();
 		}
 		sg_end_pass();
 	} else {
-		if (cf_app->using_imgui) {
-			sg_imgui_draw(&cf_app->sg_imgui);
-			cf_s_imgui_present();
+		if (app->using_imgui) {
+			sg_imgui_draw(&app->sg_imgui);
+			s_imgui_present();
 		}
 		sg_end_pass();
 	}
 
 	sg_commit();
 	cf_dx11_present();
-	if (cf_app->options & APP_OPTIONS_OPENGL_CONTEXT) {
-		SDL_GL_SwapWindow(cf_app->window);
+	if (app->options & APP_OPTIONS_OPENGL_CONTEXT) {
+		SDL_GL_SwapWindow(app->window);
 	}
 
-	cf_app->fetched_offscreen = false;
+	app->fetched_offscreen = false;
 }
 
 ImGuiContext* cf_app_init_imgui(bool no_default_font)
 {
-	if (!cf_app->gfx_enabled) return NULL;
+	if (!app->gfx_enabled) return NULL;
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	cf_app->using_imgui = true;
+	app->using_imgui = true;
 
 	ImGui::StyleColorsDark();
 	
 	sg_backend backend = sg_query_backend();
 	switch (backend) {
-		case SG_BACKEND_GLCORE33: ImGui_ImplSDL2_InitForOpenGL(cf_app->window, NULL); break;
-		case SG_BACKEND_GLES2: ImGui_ImplSDL2_InitForOpenGL(cf_app->window, NULL); break;
-		case SG_BACKEND_GLES3: ImGui_ImplSDL2_InitForOpenGL(cf_app->window, NULL); break;
-		case SG_BACKEND_D3D11: ImGui_ImplSDL2_InitForD3D(cf_app->window); break;
-		case SG_BACKEND_METAL_IOS: ImGui_ImplSDL2_InitForMetal(cf_app->window); break;
-		case SG_BACKEND_METAL_MACOS: ImGui_ImplSDL2_InitForMetal(cf_app->window); break;
-		case SG_BACKEND_METAL_SIMULATOR: ImGui_ImplSDL2_InitForMetal(cf_app->window); break;
-		case SG_BACKEND_WGPU: ImGui_ImplSDL2_InitForOpenGL(cf_app->window, NULL); break;
+		case SG_BACKEND_GLCORE33: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
+		case SG_BACKEND_GLES2: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
+		case SG_BACKEND_GLES3: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
+		case SG_BACKEND_D3D11: ImGui_ImplSDL2_InitForD3D(app->window); break;
+		case SG_BACKEND_METAL_IOS: ImGui_ImplSDL2_InitForMetal(app->window); break;
+		case SG_BACKEND_METAL_MACOS: ImGui_ImplSDL2_InitForMetal(app->window); break;
+		case SG_BACKEND_METAL_SIMULATOR: ImGui_ImplSDL2_InitForMetal(app->window); break;
+		case SG_BACKEND_WGPU: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
 	}
 	
 	simgui_desc_t imgui_params = { 0 };
 	imgui_params.no_default_font = no_default_font;
 	imgui_params.ini_filename = "imgui.ini";
 	simgui_setup(imgui_params);
-	sg_imgui_init(&cf_app->sg_imgui);
+	sg_imgui_init(&app->sg_imgui);
 
 	return ::ImGui::GetCurrentContext();
 }
 
 sg_imgui_t* cf_app_get_sokol_imgui()
 {
-	if (!cf_app->using_imgui) return NULL;
-	return &cf_app->sg_imgui;
+	if (!app->using_imgui) return NULL;
+	return &app->sg_imgui;
 }
 
-static void cf_s_quad(float x, float y, float sx, float sy, float* out)
+static void s_quad(float x, float y, float sx, float sy, float* out)
 {
 	struct vertex_t
 	{
@@ -421,38 +419,38 @@ static cf_result_t s_create_offscreen_buffers(int w, int h)
 	buffer_params.render_target = true;
 	buffer_params.width = w;
 	buffer_params.height = h;
-	buffer_params.pixel_format = cf_app->gfx_ctx_params.color_format;
-	cf_app->offscreen_color_buffer = sg_make_image(buffer_params);
-	if (cf_app->offscreen_color_buffer.id == SG_INVALID_ID) return cf_result_error("Unable to create offscreen color buffer.");
-	buffer_params.pixel_format = cf_app->gfx_ctx_params.depth_format;
-	cf_app->offscreen_depth_buffer = sg_make_image(buffer_params);
-	if (cf_app->offscreen_depth_buffer.id == SG_INVALID_ID) return cf_result_error("Unable to create offscreen depth buffer.");
+	buffer_params.pixel_format = app->gfx_ctx_params.color_format;
+	app->offscreen_color_buffer = sg_make_image(buffer_params);
+	if (app->offscreen_color_buffer.id == SG_INVALID_ID) return cf_result_error("Unable to create offscreen color buffer.");
+	buffer_params.pixel_format = app->gfx_ctx_params.depth_format;
+	app->offscreen_depth_buffer = sg_make_image(buffer_params);
+	if (app->offscreen_depth_buffer.id == SG_INVALID_ID) return cf_result_error("Unable to create offscreen depth buffer.");
 
 	sg_pass_desc pass_params = { 0 };
-	pass_params.color_attachments[0].image = cf_app->offscreen_color_buffer;
-	pass_params.depth_stencil_attachment.image = cf_app->offscreen_depth_buffer;
-	cf_app->offscreen_pass = sg_make_pass(pass_params);
-	if (cf_app->offscreen_pass.id == SG_INVALID_ID) return cf_result_error("Unable to create offscreen pass.");
+	pass_params.color_attachments[0].image = app->offscreen_color_buffer;
+	pass_params.depth_stencil_attachment.image = app->offscreen_depth_buffer;
+	app->offscreen_pass = sg_make_pass(pass_params);
+	if (app->offscreen_pass.id == SG_INVALID_ID) return cf_result_error("Unable to create offscreen pass.");
 
 	return cf_result_success();
 }
 
 cf_result_t cf_app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 {
-	if (cf_app->offscreen_enabled) {
-		if (offscreen_w != cf_app->offscreen_w && offscreen_h != cf_app->offscreen_h) {
-			sg_destroy_image(cf_app->offscreen_color_buffer);
-			sg_destroy_image(cf_app->offscreen_depth_buffer);
-			sg_destroy_pass(cf_app->offscreen_pass);
+	if (app->offscreen_enabled) {
+		if (offscreen_w != app->offscreen_w && offscreen_h != app->offscreen_h) {
+			sg_destroy_image(app->offscreen_color_buffer);
+			sg_destroy_image(app->offscreen_depth_buffer);
+			sg_destroy_pass(app->offscreen_pass);
 			cf_result_t err = s_create_offscreen_buffers(offscreen_w, offscreen_h);
 			if (cf_is_error(err)) return err;
 		}
 		return cf_result_success();
 	}
 
-	cf_app->offscreen_enabled = true;
-	cf_app->offscreen_w = offscreen_w;
-	cf_app->offscreen_h = offscreen_h;
+	app->offscreen_enabled = true;
+	app->offscreen_w = offscreen_w;
+	app->offscreen_h = offscreen_h;
 
 	// Create offscreen buffers and pass.
 	cf_result_t err = s_create_offscreen_buffers(offscreen_w, offscreen_h);
@@ -460,19 +458,19 @@ cf_result_t cf_app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 
 	// Initialize static geometry for the offscreen quad.
 	float quad[4 * 6];
-	cf_s_quad(0, 0, 2, 2, quad);
+	s_quad(0, 0, 2, 2, quad);
 	sg_buffer_desc quad_params = { 0 };
 	quad_params.size = sizeof(quad);
 	quad_params.data = SG_RANGE(quad);
-	cf_app->quad = sg_make_buffer(quad_params);
-	if (cf_app->quad.id == SG_INVALID_ID) return cf_result_error("Unable create static quad buffer.");
+	app->quad = sg_make_buffer(quad_params);
+	if (app->quad.id == SG_INVALID_ID) return cf_result_error("Unable create static quad buffer.");
 
 	// Setup upscaling shader, to draw the offscreen buffer onto the screen as a textured quad.
-	cf_app->offscreen_shader = sg_make_shader(upscale_shd_shader_desc(sg_query_backend()));
-	if (cf_app->offscreen_shader.id == SG_INVALID_ID) return cf_result_error("Unable create offscreen shader.");
+	app->offscreen_shader = sg_make_shader(upscale_shd_shader_desc(sg_query_backend()));
+	if (app->offscreen_shader.id == SG_INVALID_ID) return cf_result_error("Unable create offscreen shader.");
 
 	//app->upscale = { (float)app->offscreen_w / (float)app->w, (float)app->offscreen_h / (float)app->h };
-	cf_app->upscale = cf_V2(1, 1);
+	app->upscale = cf_V2(1, 1);
 
 	// Setup offscreen rendering pipeline, to draw the offscreen buffer onto the screen.
 	sg_pipeline_desc params = { 0 };
@@ -486,17 +484,17 @@ cf_result_t cf_app_set_offscreen_buffer(int offscreen_w, int offscreen_h)
 	params.layout.attrs[1].offset = sizeof(cf_v2);
 	params.layout.attrs[1].format = SG_VERTEXFORMAT_FLOAT2;
 	params.primitive_type = SG_PRIMITIVETYPE_TRIANGLES;
-	params.shader = cf_app->offscreen_shader;
-	cf_app->offscreen_to_screen_pip = sg_make_pipeline(params);
-	if (cf_app->offscreen_to_screen_pip.id == SG_INVALID_ID) return cf_result_error("Unable create offscreen pipeline.");
+	params.shader = app->offscreen_shader;
+	app->offscreen_to_screen_pip = sg_make_pipeline(params);
+	if (app->offscreen_to_screen_pip.id == SG_INVALID_ID) return cf_result_error("Unable create offscreen pipeline.");
 
 	return cf_result_success();
 }
 
 void cf_app_offscreen_size(int* offscreen_w, int* offscreen_h)
 {
-	*offscreen_w = cf_app->offscreen_w;
-	*offscreen_h = cf_app->offscreen_h;
+	*offscreen_w = app->offscreen_w;
+	*offscreen_h = app->offscreen_h;
 }
 
 cf_power_info_t cf_app_power_info()

@@ -27,10 +27,10 @@ bool cf_kv_val_entity(cf_kv_t* kv, cf_entity_t* entity)
 	if (cf_kv_state(kv) == CF_KV_STATE_READ) {
 		int index;
 		if (!cf_kv_val_int32(kv, &index)) return false;
-		*entity = cf_app->load_id_table->operator[](index);
+		*entity = app->load_id_table->operator[](index);
 		return true;
 	} else {
-		int* index_ptr = cf_app->save_id_table->try_find(*entity);
+		int* index_ptr = app->save_id_table->try_find(*entity);
 		CUTE_ASSERT(index_ptr);
 		return cf_kv_val_int32(kv, index_ptr);
 	}

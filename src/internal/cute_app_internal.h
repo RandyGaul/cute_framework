@@ -30,7 +30,6 @@
 #include <cute_doubly_list.h>
 #include <cute_aseprite_cache.h>
 #include <cute_png_cache.h>
-#include <cute_batch.h>
 #include <cute_graphics.h>
 #include <cute_input.h>
 #include <cute_string.h>
@@ -44,7 +43,7 @@
 struct SDL_Window;
 struct cs_context_t;
 
-extern cf_app_t* cf_app;
+extern cf_app_t* app;
 
 struct cf_gfx_t;
 struct cf_audio_system_t;
@@ -180,12 +179,12 @@ struct cf_app_t
 	int y;
 	bool offscreen_enabled = false;
 	bool fetched_offscreen = false;
-	sg_image offscreen_color_buffer;
-	sg_image offscreen_depth_buffer;
-	sg_pass offscreen_pass;
-	sg_buffer quad;
-	sg_shader offscreen_shader;
-	sg_pipeline offscreen_to_screen_pip;
+	CF_Texture offscreen_color_buffer;
+	CF_Texture offscreen_depth_buffer;
+	CF_Pass offscreen_pass;
+	CF_Mesh quad;
+	CF_Shader offscreen_shader;
+	CF_Material offscreen_material;
 	cf_v2 upscale;
 	int offscreen_w;
 	int offscreen_h;
@@ -207,9 +206,7 @@ struct cf_app_t
 	cute::array<cf_touch_t> touches;
 
 	// Batch stuff.
-	CF_Batch* ase_batch = NULL;
 	cf_aseprite_cache_t* ase_cache = NULL;
-	CF_Batch* png_batch = NULL;
 	cf_png_cache_t* png_cache = NULL;
 
 	// ECS stuff.

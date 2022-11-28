@@ -311,7 +311,7 @@ CUTE_API void CUTE_CALL cf_update_texture(CF_Texture texture, void* data, int si
 // Shader.
 
 #define CF_MAKE_SOKOL_SHADER(prefix) \
-	{ \
+	cf_make_shader({ \
 		prefix##_shader_desc, \
 		prefix##_attr_slot, \
 		prefix##_image_slot, \
@@ -319,7 +319,7 @@ CUTE_API void CUTE_CALL cf_update_texture(CF_Texture texture, void* data, int si
 		prefix##_uniformblock_size, \
 		prefix##_uniform_offset, \
 		prefix##_uniform_desc, \
-	}
+	})
 
 typedef struct CF_SokolShader
 {
@@ -410,7 +410,6 @@ typedef struct CF_VertexAttribute
 	const char* name;
 	CF_VertexFormat format;
 	int offset;
-	bool per_vertex;
 	CF_AttributeStep step_type;
 } CF_VertexAttribute;
 
@@ -518,7 +517,7 @@ typedef struct CF_StencilFunction
 	CF_StencilOp fail_op;
 	CF_StencilOp depth_fail_op;
 	CF_StencilOp pass_op;
-};
+} CF_StencilFunction;
 
 typedef struct CF_StencilParams
 {
@@ -528,7 +527,7 @@ typedef struct CF_StencilParams
 	uint8_t reference;
 	CF_StencilFunction front;
 	CF_StencilFunction back;
-};
+} CF_StencilParams;
 
 typedef struct CF_BlendState
 {

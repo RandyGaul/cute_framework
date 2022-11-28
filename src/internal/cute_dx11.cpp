@@ -143,22 +143,22 @@ void cf_dx11_init(void* hwnd, int w, int h, int sample_count)
 	cf_d3d11_create_default_render_target();
 }
 
-static const void* cf_s_d3d11_device(void)
+static const void* s_d3d11_device(void)
 {
 	return (const void*)state.device;
 }
 
-static const void* cf_s_d3d11_device_context(void)
+static const void* s_d3d11_device_context(void)
 {
 	return (const void*)state.device_context;
 }
 
-static const void* cf_s_d3d11_render_target_view(void)
+static const void* s_d3d11_render_target_view(void)
 {
 	return (const void*)state.render_target_view;
 }
 
-static const void* cf_s_d3d11_depth_stencil_view(void)
+static const void* s_d3d11_depth_stencil_view(void)
 {
 	return (const void*)state.depth_stencil_view;
 }
@@ -169,10 +169,10 @@ sg_context_desc cf_dx11_get_context()
 	desc.color_format = SG_PIXELFORMAT_RGBA8;
 	desc.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;
 	desc.sample_count = state.sample_count;
-	desc.d3d11.device = cf_s_d3d11_device();
-	desc.d3d11.device_context = cf_s_d3d11_device_context();
-	desc.d3d11.render_target_view_cb = cf_s_d3d11_render_target_view;
-	desc.d3d11.depth_stencil_view_cb = cf_s_d3d11_depth_stencil_view;
+	desc.d3d11.device = s_d3d11_device();
+	desc.d3d11.device_context = s_d3d11_device_context();
+	desc.d3d11.render_target_view_cb = s_d3d11_render_target_view;
+	desc.d3d11.depth_stencil_view_cb = s_d3d11_depth_stencil_view;
 	return desc;
 }
 

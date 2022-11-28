@@ -171,12 +171,12 @@ void cf_https_destroy(cf_https_t* https)
 	CUTE_FREE(https);
 }
 
-static void cf_s_tls_log(void* param, int debug_level, const char* file_name, int line_number, const char*  message)
+static void s_tls_log(void* param, int debug_level, const char* file_name, int line_number, const char*  message)
 {
 	printf("%s\n", message);
 }
 
-static cf_result_t cf_s_load_platform_certs(cf_https_t* https)
+static cf_result_t s_load_platform_certs(cf_https_t* https)
 {
 #if defined(CUTE_WINDOWS)
 
@@ -261,7 +261,7 @@ cf_result_t cf_https_connect(cf_https_t* https, const char* host, const char* po
 	}
 
 	mbedtls_ssl_conf_authmode(&https->conf, verify_cert ? MBEDTLS_SSL_VERIFY_REQUIRED : MBEDTLS_SSL_VERIFY_OPTIONAL);
-	cf_s_load_platform_certs(https);
+	s_load_platform_certs(https);
 	mbedtls_ssl_conf_ca_chain(&https->conf, &https->cacert, NULL);
 	mbedtls_ssl_conf_rng(&https->conf, mbedtls_ctr_drbg_random, &https->ctr_drbg);
 
@@ -379,7 +379,7 @@ cf_https_response_t cf_https_response(cf_https_t* https)
 	return response_out;
 }
 
-static bool cf_s_crlf(cf_https_decoder_t* h, const char* data, size_t size, size_t* bytes_read)
+static bool s_crlf(cf_https_decoder_t* h, const char* data, size_t size, size_t* bytes_read)
 {
 	const char* in = data;
 	const char* end = data + size;
@@ -411,27 +411,27 @@ static bool cf_s_crlf(cf_https_decoder_t* h, const char* data, size_t size, size
 	return false;
 }
 
-static bool cf_s_chunk_size(cf_https_decoder_t* h);
-static bool cf_s_header(cf_https_decoder_t* h);
-static bool cf_s_no_chunks(cf_https_decoder_t* h);
+static bool s_chunk_size(cf_https_decoder_t* h);
+static bool s_header(cf_https_decoder_t* h);
+static bool s_no_chunks(cf_https_decoder_t* h);
 
-static bool cf_s_get_line(cf_https_decoder_t* h, const char* data, size_t size, size_t* bytes_read)
+static bool s_get_line(cf_https_decoder_t* h, const char* data, size_t size, size_t* bytes_read)
 {
-	bool found_crlf = cf_s_crlf(h, data, size, bytes_read);
+	bool found_crlf = s_crlf(h, data, size, bytes_read);
 
 	int old_count = h->buffer.count();
 	h->buffer.ensure_count((int)(h->buffer.count() + *bytes_read));
 	void* buffer_data = h->buffer.data() + old_count;
 	CUTE_MEMCPY(buffer_data, data, *bytes_read);
 
-	if (found_crlf || h->process_line == cf_s_no_chunks) {
+	if (found_crlf || h->process_line == s_no_chunks) {
 		return h->process_line(h);
 	}
 
 	return false;
 }
 
-static bool cf_s_no_chunks(cf_https_decoder_t* h)
+static bool s_no_chunks(cf_https_decoder_t* h)
 {
 	size_t bytes_read = 0;
 	CUTE_ASSERT(h->content_processed < h->content_length);
@@ -440,7 +440,7 @@ static bool cf_s_no_chunks(cf_https_decoder_t* h)
 	return finished;
 }
 
-static bool cf_s_state_chunk(cf_https_decoder_t* h) {
+static bool s_state_chunk(cf_https_decoder_t* h) {
 	// RFC-7230 section 4.1 Chunked Transfer Encoding
 	size_t bytes_read = 0;
 	CUTE_ASSERT(h->chunk_processed < h->chunk_size);
@@ -448,12 +448,12 @@ static bool cf_s_state_chunk(cf_https_decoder_t* h) {
 	bool finished = h->chunk_processed == h->chunk_size;
 	if (finished) {
 		h->chunk_processed = 0;
-		h->next(cf_s_chunk_size);
+		h->next(s_chunk_size);
 	}
 	return false;
 }
 
-static bool cf_s_int(cf_https_string_t str, int radix, uint64_t* out)
+static bool s_int(cf_https_string_t str, int radix, uint64_t* out)
 {
 	char* ptr;
 	uint64_t number = CUTE_STRTOLL(str.ptr, &ptr, radix);
@@ -461,7 +461,7 @@ static bool cf_s_int(cf_https_string_t str, int radix, uint64_t* out)
 	return str.ptr == ptr;
 }
 
-static bool cf_s_read_int(cf_https_decoder_t* h, int radix, uint64_t* out)
+static bool s_read_int(cf_https_decoder_t* h, int radix, uint64_t* out)
 {
 	char* ptr;
 	uint64_t number = CUTE_STRTOLL(h->data(), &ptr, radix);
@@ -475,25 +475,25 @@ static bool cf_s_read_int(cf_https_decoder_t* h, int radix, uint64_t* out)
 	return false;
 }
 
-static bool cf_s_chunk_size(cf_https_decoder_t* h) {
-	if (cf_s_read_int(h, 16, (uint64_t*)&h->chunk_size)) {
+static bool s_chunk_size(cf_https_decoder_t* h) {
+	if (s_read_int(h, 16, (uint64_t*)&h->chunk_size)) {
 		return true;
 	}
 
 	bool was_last_chunk = h->chunk_size == 0;
 	if (was_last_chunk) {
 		h->found_last_chunk = true;
-		h->next(cf_s_header);
+		h->next(s_header);
 		return false;
 	}
 
 	// RFC-7230 section 4.1.1 Chunk Extensions -- Skip (optional).
 
-	h->next(cf_s_state_chunk);
+	h->next(s_state_chunk);
 	return false;
 }
 
-static cf_https_string_t cf_s_scan(cf_https_decoder_t* h, char delimiter, bool must_find = true)
+static cf_https_string_t s_scan(cf_https_decoder_t* h, char delimiter, bool must_find = true)
 {
 	const char* data = h->data();
 	size_t len = h->data_left();
@@ -528,7 +528,7 @@ static cf_https_string_t cf_s_scan(cf_https_decoder_t* h, char delimiter, bool m
 	return string;
 }
 
-static bool cf_s_header(cf_https_decoder_t* h)
+static bool s_header(cf_https_decoder_t* h)
 {
 	// RFC-7230 section 3 Message Format
 	if (h->data_left() == 2) {
@@ -537,9 +537,9 @@ static bool cf_s_header(cf_https_decoder_t* h)
 				// TODO - Possible to start logic for trailers here.
 				return true;
 			}
-			h->next(cf_s_chunk_size);
+			h->next(s_chunk_size);
 		} else if (h->content_length > 0) {
-			h->next(cf_s_no_chunks);
+			h->next(s_no_chunks);
 		} else {
 			return true;
 		}
@@ -548,9 +548,9 @@ static bool cf_s_header(cf_https_decoder_t* h)
 	}
 
 	// RFC-7230 3.2
-	cf_https_string_t name = cf_s_scan(h, ':');
+	cf_https_string_t name = s_scan(h, ':');
 	if (!name.ptr) return true;
-	cf_https_string_t content = cf_s_scan(h, '\r');
+	cf_https_string_t content = s_scan(h, '\r');
 	if (!content.ptr) return true;
 
 	if (!cf_https_strcmp("Content-Length", name)) {
@@ -559,7 +559,7 @@ static bool cf_s_header(cf_https_decoder_t* h)
 			return true;
 		}
 
-		if (cf_s_int(content, 10, (uint64_t*)&h->content_length)) {
+		if (s_int(content, 10, (uint64_t*)&h->content_length)) {
 			h->err = cf_result_error("Failed to read content length.");
 			return true;
 		}
@@ -594,7 +594,7 @@ static bool cf_s_header(cf_https_decoder_t* h)
 				return true;
 			}
 
-			string = cf_s_scan(h, ',');
+			string = s_scan(h, ',');
 			if (!string.ptr) break;
 		}
 	}
@@ -604,17 +604,17 @@ static bool cf_s_header(cf_https_decoder_t* h)
 	header.content = content;
 	h->headers.add(header);
 
-	h->next(cf_s_header);
+	h->next(s_header);
 	return false;
 }
 
-static bool cf_s_request(cf_https_decoder_t* h)
+static bool s_request(cf_https_decoder_t* h)
 {
-	cf_https_string_t method = cf_s_scan(h, ' ');
+	cf_https_string_t method = s_scan(h, ' ');
 	if (!method.ptr) return true;
-	cf_https_string_t uri = cf_s_scan(h, ' ');
+	cf_https_string_t uri = s_scan(h, ' ');
 	if (!uri.ptr) return true;
-	cf_https_string_t version = cf_s_scan(h, ' ', false);
+	cf_https_string_t version = s_scan(h, ' ', false);
 	if (!version.ptr) return true;
 
 	if (!cf_https_strcmp("HTTP/1.1", version)) {
@@ -622,16 +622,16 @@ static bool cf_s_request(cf_https_decoder_t* h)
 		return true;
 	}
 
-	h->next(cf_s_header);
+	h->next(s_header);
 	return false;
 }
 
-static bool cf_s_response(cf_https_decoder_t* h) {
-	cf_https_string_t version = cf_s_scan(h, ' ');
+static bool s_response(cf_https_decoder_t* h) {
+	cf_https_string_t version = s_scan(h, ' ');
 	if (!version.ptr) return true;
-	cf_https_string_t code = cf_s_scan(h, ' ');
+	cf_https_string_t code = s_scan(h, ' ');
 	if (!code.ptr) return true;
-	cf_https_string_t phrase = cf_s_scan(h, ' ', false);
+	cf_https_string_t phrase = s_scan(h, ' ', false);
 	if (!phrase.ptr) return true;
 
 	if (cf_https_strcmp("HTTP/1.1", version)) {
@@ -641,17 +641,17 @@ static bool cf_s_response(cf_https_decoder_t* h) {
 
 	// RFC7230 section 3.1.2
 	uint64_t code_number;
-	if (cf_s_int(code, 10, &code_number) || code.len != 3 || code_number > 999) {
+	if (s_int(code, 10, &code_number) || code.len != 3 || code_number > 999) {
 		h->err = cf_result_error("Bad response code.");
 		return true;
 	}
 	h->response_code = (int)code_number;
 
-	h->next(cf_s_header);
+	h->next(s_header);
 	return false;
 }
 
-static bool cf_s_decode(cf_https_decoder_t* h, const char* data, size_t size)
+static bool s_decode(cf_https_decoder_t* h, const char* data, size_t size)
 {
 	bool done = false;
 
@@ -685,8 +685,8 @@ size_t cf_https_process(cf_https_t* https)
 			}
 		}
 		https->request_sent = true;
-		https->h.decode = cf_s_get_line;
-		https->h.process_line = cf_s_response;
+		https->h.decode = s_get_line;
+		https->h.process_line = s_response;
 	}
 	
 	https->response_buffer.ensure_count(https->bytes_read + 1024 * 10);
@@ -702,7 +702,7 @@ size_t cf_https_process(cf_https_t* https)
 	else if (result <= 0) return https->bytes_read;
 
 	https->bytes_read += result;
-	bool done = cf_s_decode(&https->h, data, result);
+	bool done = s_decode(&https->h, data, result);
 	if (!done) return https->bytes_read;
 
 	https->h.buffer.add(0);
@@ -733,19 +733,19 @@ struct cf_https_t
 
 extern "C" {
 
-EMSCRIPTEN_KEEPALIVE void cf_s_bytes_downloaded(void* https_ptr, size_t size)
+EMSCRIPTEN_KEEPALIVE void s_bytes_downloaded(void* https_ptr, size_t size)
 {
 	cf_https_t* https = (cf_https_t*)https_ptr;
 	https->bytes_read = size;
 }
 
-EMSCRIPTEN_KEEPALIVE void cf_s_response_code(void* https_ptr, int code)
+EMSCRIPTEN_KEEPALIVE void s_response_code(void* https_ptr, int code)
 {
 	cf_https_t* https = (cf_https_t*)https_ptr;
 	https->response.code = code;
 }
 
-static char* cf_s_trim(char* s)
+static char* s_trim(char* s)
 {
 	size_t i = CUTE_STRLEN(s);
 	while (i && *s == ' ') {
@@ -759,7 +759,7 @@ static char* cf_s_trim(char* s)
 	return s;
 }
 
-static const char** cf_s_unpack_headers(const char* headers)
+static const char** s_unpack_headers(const char* headers)
 {
 	size_t count = 0;
 	for (const char* pos = CUTE_STRCHR(headers, '\n'); pos; pos = CUTE_STRCHR(pos + 1, '\n')) {
@@ -783,8 +783,8 @@ static const char** cf_s_unpack_headers(const char* headers)
 		CUTE_STRNCPY(value, split + 1, content_size);
 		value[content_size] = '\0';
 
-		unpacked_headers[i] = CUTE_STRDUP(cf_s_trim(key));
-		unpacked_headers[i + 1] = CUTE_STRDUP(cf_s_trim(value));
+		unpacked_headers[i] = CUTE_STRDUP(s_trim(key));
+		unpacked_headers[i + 1] = CUTE_STRDUP(s_trim(value));
 		CUTE_FREE(key, NULL);
 		CUTE_FREE(value, NULL);
 
@@ -795,18 +795,18 @@ static const char** cf_s_unpack_headers(const char* headers)
 	return (const char**)unpacked_headers;
 }
 
-static void cf_s_free_unpacked_headers(const char** unpacked_headers)
+static void s_free_unpacked_headers(const char** unpacked_headers)
 {
 	for (int i = 0; unpacked_headers[i]; ++i)
 		CUTE_FREE((void*)unpacked_headers[i], NULL);
 	CUTE_FREE((void*)unpacked_headers, NULL);
 }
 
-EMSCRIPTEN_KEEPALIVE void cf_s_response_headers(void* https_ptr, const char* headers)
+EMSCRIPTEN_KEEPALIVE void s_response_headers(void* https_ptr, const char* headers)
 {
 	cf_https_t* https = (cf_https_t*)https_ptr;
 
-	const char** unpacked_headers = cf_s_unpack_headers(headers);
+	const char** unpacked_headers = s_unpack_headers(headers);
 	https->unpacked_headers = unpacked_headers;
 
 	for (int i = 0; unpacked_headers[i]; i += 2) {
@@ -821,7 +821,7 @@ EMSCRIPTEN_KEEPALIVE void cf_s_response_headers(void* https_ptr, const char* hea
 	}
 }
 
-EMSCRIPTEN_KEEPALIVE void cf_s_content(void* https_ptr, void* data, size_t size)
+EMSCRIPTEN_KEEPALIVE void s_content(void* https_ptr, void* data, size_t size)
 {
 	cf_https_t* https = (cf_https_t*)https_ptr;
 	((char*)data)[size - 1] = 0;
@@ -829,13 +829,13 @@ EMSCRIPTEN_KEEPALIVE void cf_s_content(void* https_ptr, void* data, size_t size)
 	https->response.content_len = size - 1;
 }
 
-EMSCRIPTEN_KEEPALIVE void cf_s_loaded(void* https_ptr)
+EMSCRIPTEN_KEEPALIVE void s_loaded(void* https_ptr)
 {
 	cf_https_t* https = (cf_https_t*)https_ptr;
 	https->state = CF_HTTPS_STATE_COMPLETED;
 }
 
-EMSCRIPTEN_KEEPALIVE void cf_s_error(void* https_ptr)
+EMSCRIPTEN_KEEPALIVE void s_error(void* https_ptr)
 {
 	cf_https_t* https = (cf_https_t*)https_ptr;
 	https->state = CF_HTTPS_STATE_FAILED;
@@ -940,7 +940,7 @@ cf_https_t* cf_https_post(const char* host, const char* port, const char* uri, c
 
 void cf_https_destroy(cf_https_t* https)
 {
-	cf_s_free_unpacked_headers(https->unpacked_headers);
+	s_free_unpacked_headers(https->unpacked_headers);
 	free((void*)https->response.content);
 	https->~cf_https_t();
 	CUTE_FREE(https, NULL);
@@ -957,9 +957,9 @@ size_t cf_https_process(cf_https_t* https)
 
 	if (!https->request_sent) {
 		if (https->data) {
-			cf_s_js_post(https, https->host, https->uri, https->data, https->size);
+			s_js_post(https, https->host, https->uri, https->data, https->size);
 		} else {
-			cf_s_js_get(https, https->host, https->uri);
+			s_js_get(https, https->host, https->uri);
 		}
 		https->request_sent = true;
 	}

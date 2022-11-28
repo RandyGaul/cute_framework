@@ -37,7 +37,7 @@ struct cf_coroutine_t
 	void* udata = NULL;
 };
 
-static void cf_s_co_fn(mco_coro* mco)
+static void s_co_fn(mco_coro* mco)
 {
 	cf_coroutine_t* co = (cf_coroutine_t*)mco_get_user_data(mco);
 	co->fn(co);
@@ -45,7 +45,7 @@ static void cf_s_co_fn(mco_coro* mco)
 
 cf_coroutine_t* cf_make_coroutine(cf_coroutine_fn* fn, int stack_size, void* udata)
 {
-	mco_desc desc = mco_desc_init(cf_s_co_fn, (size_t)stack_size);
+	mco_desc desc = mco_desc_init(s_co_fn, (size_t)stack_size);
 	cf_coroutine_t* co = CUTE_NEW(cf_coroutine_t);
 	desc.user_data = (void*)co;
 	mco_coro* mco;

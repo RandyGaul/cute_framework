@@ -47,7 +47,7 @@ struct cf_aseprite_cache_t
 	uint64_t id_gen = 0;
 };
 
-static void cf_s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata)
+static void s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata)
 {
 	cf_aseprite_cache_t* cache = (cf_aseprite_cache_t*)udata;
 	auto pixels_ptr = cache->id_to_pixels.try_find(image_id);
@@ -87,7 +87,7 @@ void cf_destroy_aseprite_cache(cf_aseprite_cache_t* cache)
 	CUTE_FREE(cache);
 }
 
-static cf_play_direction_t cf_s_play_direction(ase_animation_direction_t direction)
+static CF_PlayDirection s_play_direction(ase_animation_direction_t direction)
 {
 	switch (direction) {
 	case ASE_ANIMATION_DIRECTION_FORWARDS: return CF_PLAY_DIRECTION_FORWARDS;
@@ -97,7 +97,7 @@ static cf_play_direction_t cf_s_play_direction(ase_animation_direction_t directi
 	return CF_PLAY_DIRECTION_FORWARDS;
 }
 
-static void cf_s_sprite(cf_aseprite_cache_t* cache, aseprite_cache_entry_t entry, cf_sprite_t* sprite)
+static void s_sprite(cf_aseprite_cache_t* cache, aseprite_cache_entry_t entry, CF_Sprite* sprite)
 {
 	sprite->name = entry.path;
 	sprite->animations = (const animation_t**)entry.animations;
@@ -111,13 +111,13 @@ static void cf_s_sprite(cf_aseprite_cache_t* cache, aseprite_cache_entry_t entry
 	}
 }
 
-cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* aseprite_path, cf_sprite_t* sprite)
+cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* aseprite_path, CF_Sprite* sprite)
 {
 	// First see if this ase was already cached.
 	aseprite_path = sintern(aseprite_path);
 	auto entry_ptr = cache->aseprites.try_find(aseprite_path);
 	if (entry_ptr) {
-		cf_s_sprite(cache, *entry_ptr, sprite);
+		s_sprite(cache, *entry_ptr, sprite);
 		return cf_result_success();
 	}
 
@@ -166,14 +166,14 @@ cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepr
 			ase_tag_t* tag = ase->tags + i;
 			int from = tag->from_frame;
 			int to = tag->to_frame;
-			cf_animation_t* animation = (cf_animation_t*)CUTE_ALLOC(sizeof(cf_animation_t));
-			CUTE_MEMSET(animation, 0, sizeof(cf_animation_t));
+			CF_Animation* animation = (CF_Animation*)CUTE_ALLOC(sizeof(CF_Animation));
+			CUTE_MEMSET(animation, 0, sizeof(CF_Animation));
 
 			animation->name = sintern(tag->name);
-			animation->play_direction = cf_s_play_direction(tag->loop_animation_direction);
+			animation->play_direction = s_play_direction(tag->loop_animation_direction);
 			for (int i = from; i <= to; ++i) {
 				uint64_t id = ids[i];
-				cf_frame_t frame;
+				CF_Frame frame;
 				frame.delay = ase->frames[i].duration_milliseconds / 1000.0f;
 				frame.id = id;
 				cf_animation_add_frame(animation, frame);
@@ -182,14 +182,14 @@ cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepr
 		}
 	} else {
 		// Treat the entire frame set as a single animation if there are no tags.
-		cf_animation_t* animation = (cf_animation_t*)CUTE_ALLOC(sizeof(cf_animation_t));
-		CUTE_MEMSET(animation, 0, sizeof(cf_animation_t));
+		CF_Animation* animation = (CF_Animation*)CUTE_ALLOC(sizeof(CF_Animation));
+		CUTE_MEMSET(animation, 0, sizeof(CF_Animation));
 
 		animation->name = sintern("default");
 		animation->play_direction = CF_PLAY_DIRECTION_FORWARDS;
 		for (int i = 0; i < ase->frame_count; ++i) {
 			uint64_t id = ids[i];
-			cf_frame_t frame;
+			CF_Frame frame;
 			frame.delay = ase->frames[i].duration_milliseconds / 1000.0f;
 			frame.id = id;
 			cf_animation_add_frame(animation, frame);
@@ -222,7 +222,7 @@ cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* asepr
 	entry.animations = animations;
 	cache->aseprites.insert(aseprite_path, entry);
 
-	cf_s_sprite(cache, entry, sprite);
+	s_sprite(cache, entry, sprite);
 	return cf_result_success();
 }
 
@@ -234,7 +234,7 @@ void cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, const char* aseprite_p
 	
 	aseprite_cache_entry_t entry = *entry_ptr;
 	for (int i = 0; i < hcount(entry.animations); ++i) {
-		cf_animation_t* animation = entry.animations[i];
+		CF_Animation* animation = entry.animations[i];
 		for (int j = 0; j < alen(animation->frames); ++j) {
 			cache->id_to_pixels.remove(animation->frames[j].id);
 		}
@@ -250,7 +250,7 @@ void cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, const char* aseprite_p
 cf_result_t cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase)
 {
 	aseprite_path = sintern(aseprite_path);
-	cf_sprite_t s;
+	CF_Sprite s;
 	cf_result_t err = cf_aseprite_cache_load(cache, aseprite_path, &s);
 	if (cf_is_error(err)) return err;
 
@@ -264,5 +264,5 @@ cf_result_t cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* a
 
 cf_get_pixels_fn* cf_aseprite_cache_get_pixels_fn(cf_aseprite_cache_t* cache)
 {
-	return cf_s_get_pixels;
+	return s_get_pixels;
 }

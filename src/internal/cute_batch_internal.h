@@ -19,20 +19,11 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <cute.h>
-using namespace cute;
+#ifndef CUTE_BATCH_INTERNAL_H
+#define CUTE_BATCH_INTERNAL_H
 
-CUTE_TEST_CASE(test_make_sprite, "Load a sprite destroy it.");
-int test_make_sprite()
-{
-	CUTE_TEST_ASSERT(!cf_is_error(cf_make_app("sprite test", 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_DEFAULT_GFX_CONTEXT, NULL)));
+void cf_make_batch();
+void cf_destroy_batch();
+void cf_batch_update();
 
-	CF_Sprite s = cf_make_sprite("test_data/girl.aseprite");
-	CF_Batch* batch = cf_sprite_get_batch();
-	cf_batch_flush(batch);
-	cf_app_present(true);
-
-	cf_destroy_app();
-
-	return 0;
-}
+#endif // CUTE_BATCH_INTERNAL_H

@@ -204,12 +204,12 @@ set(CUTE_HDRS
 	src/internal/cute_ecs_internal.h
 	src/internal/cute_dx11.h
 	src/internal/cute_png_cache_internal.h
+	src/internal/cute_batch_internal.h
 
 	src/internal/imgui/sokol_imgui.h
 	libraries/cimgui/imgui/backends/imgui_impl_sdl.h
 
 	src/shaders/sprite_shader.h
-	src/shaders/font_shader.h
 	src/shaders/upscale_shader.h
 )
 

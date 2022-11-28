@@ -26,6 +26,7 @@
 #include "cute_math.h"
 #include "cute_result.h"
 #include "cute_graphics.h"
+#include "cute_sprite.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -53,6 +54,9 @@ CUTE_API CF_RenderState CUTE_CALL cf_batch_peek_render_state();
 CUTE_API void CUTE_CALL cf_batch_push_tint(CF_Color c);
 CUTE_API void CUTE_CALL cf_batch_pop_tint();
 CUTE_API CF_Color CUTE_CALL cf_batch_peek_tint();
+
+CUTE_API void CUTE_CALL cf_batch_sprite(CF_Sprite sprite);
+CUTE_API void CUTE_CALL cf_batch_sprite_tf(CF_Sprite sprite, cf_transform_t transform);
 
 CUTE_API void CUTE_CALL cf_batch_quad_aabb(cf_aabb_t bb, CF_Color c);
 CUTE_API void CUTE_CALL cf_batch_quad_verts(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, CF_Color c);
@@ -82,16 +86,16 @@ CUTE_API void CUTE_CALL cf_batch_polyline(cf_v2* points, int count, float thickn
  * Temporal texture information for a sprite. Is valid until the next call to `batch_flush`
  * is issued. Useful to render a sprite in an external system, e.g. Dear ImGui.
  */
-typedef struct cf_temporary_image_t
+typedef struct CF_TemporaryImage
 {
 	CF_Texture tex; // A handle representing the texture for this image.
 	int w; // Width in pixels of the image.
 	int h; // Height in pixels of the image.
 	cf_v2 u; // u coordinate of the image in the texture.
 	cf_v2 v; // v coordinate of the image in the texture.
-} cf_temporary_image_t;
+} CF_TemporaryImage;
 
-CUTE_API cf_temporary_image_t CUTE_CALL cf_batch_fetch(cf_sprite_t sprite);
+CUTE_API CF_TemporaryImage CUTE_CALL cf_batch_fetch(CF_Sprite sprite);
 
 #ifdef __cplusplus
 }
@@ -105,7 +109,7 @@ CUTE_API cf_temporary_image_t CUTE_CALL cf_batch_fetch(cf_sprite_t sprite);
 namespace cute
 {
 
-using temporary_image_t = cf_temporary_image_t;
+using temporary_image_t = CF_TemporaryImage;
 using color_t = CF_Color;
 using m3x2 = cf_m3x2;
 using aabb_t = cf_aabb_t;
@@ -152,7 +156,7 @@ CUTE_INLINE void batch_line(v2 p0, v2 p1, float thickness, color_t c0, color_t c
 
 CUTE_INLINE void batch_polyline(v2* points, int count, float thickness, color_t c, bool loop = false, bool antialias = false, int bevel_count = 0) { cf_batch_polyline((cf_v2*)points, count, thickness, c, loop, antialias, bevel_count); }
 
-CUTE_INLINE temporary_image_t batch_fetch(sprite_t sprite) { return cf_batch_fetch(sprite); }
+CUTE_INLINE temporary_image_t batch_fetch(Sprite sprite) { return cf_batch_fetch(sprite); }
 
 }
 
