@@ -19,13 +19,10 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_BATCH_INTERNAL_H
-#define CUTE_BATCH_INTERNAL_H
+#ifndef CUTE_GRAPHICS_INTERNAL_H
+#define CUTE_GRAPHICS_INTERNAL_H
 
-extern struct CF_Batch* b;
+void cf_destroy_graphics();
+void cf_commit();
 
-void cf_make_batch();
-void cf_destroy_batch();
-void cf_batch_update();
-
-#endif // CUTE_BATCH_INTERNAL_H
+#endif // CUTE_GRAPHICS_INTERNAL_H

@@ -181,7 +181,7 @@ typedef enum cf_kv_state_t
  *     a was 10
  *     b was 13
  */
-CUTE_API cf_kv_t* CUTE_CALL cf_kv_read(const void* data, size_t size, cf_result_t* result_out /* = NULL */);
+CUTE_API cf_kv_t* CUTE_CALL cf_kv_read(const void* data, size_t size, CF_Result* result_out /* = NULL */);
 
 /**
  * Creates a new kv ready for writing. You can write values as-needed by using `cf_kv_key` and
@@ -265,7 +265,7 @@ CUTE_API void CUTE_CALL cf_kv_set_base(cf_kv_t* kv, cf_kv_t* base);
  * `cf_kv_key` and it's non-existent a potentially useful error message may be generated, but you can
  * still keep going and look for other keys freely.
  */
-CUTE_API cf_result_t CUTE_CALL cf_kv_last_error(cf_kv_t* kv);
+CUTE_API CF_Result CUTE_CALL cf_kv_last_error(cf_kv_t* kv);
 
 // -------------------------------------------------------------------------------------------------
 // Key and Value functions.

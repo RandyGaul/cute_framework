@@ -95,13 +95,13 @@ CUTE_INLINE cf_png_t cf_png_defaults()
  * Returns an image from the cache. If it does not exist in the cache, it is loaded from disk
  * and placed into the cache.
  */
-CUTE_API cf_result_t CUTE_CALL cf_png_cache_load(cf_png_cache_t* cache, const char* png_path, cf_png_t* png /*= NULL*/);
+CUTE_API CF_Result CUTE_CALL cf_png_cache_load(cf_png_cache_t* cache, const char* png_path, cf_png_t* png /*= NULL*/);
 
 /**
  * Returns an image from the cache. If it does not exist in the cache, it is loaded from memory
  * and placed into the cache.
  */
-CUTE_API cf_result_t CUTE_CALL cf_png_cache_load_mem(cf_png_cache_t* cache, const char* png_path, const void* memory, size_t size, cf_png_t* png /*= NULL*/);
+CUTE_API CF_Result CUTE_CALL cf_png_cache_load_mem(cf_png_cache_t* cache, const char* png_path, const void* memory, size_t size, cf_png_t* png /*= NULL*/);
 
 /**
  * Unloads an image from the cache. This function can be used to control your RAM usage, for example

@@ -88,7 +88,7 @@ struct cf_https_decoder_t
 	int response_code = 0;
 	array<char> buffer;
 	array<cf_https_header_t> headers;
-	cf_result_t err = cf_result_success();
+	CF_Result err = cf_result_success();
 
 	void next(cf_https_process_line_fn* process_line)
 	{
@@ -176,7 +176,7 @@ static void s_tls_log(void* param, int debug_level, const char* file_name, int l
 	printf("%s\n", message);
 }
 
-static cf_result_t s_load_platform_certs(cf_https_t* https)
+static CF_Result s_load_platform_certs(cf_https_t* https)
 {
 #if defined(CUTE_WINDOWS)
 
@@ -243,7 +243,7 @@ static cf_result_t s_load_platform_certs(cf_https_t* https)
 	return cf_result_success();
 }
 
-cf_result_t cf_https_connect(cf_https_t* https, const char* host, const char* port, bool verify_cert)
+CF_Result cf_https_connect(cf_https_t* https, const char* host, const char* port, bool verify_cert)
 {
 	int result;
 
@@ -303,10 +303,10 @@ void cf_https_disconnect(cf_https_t* https)
 	mbedtls_ssl_close_notify(&https->ssl);
 }
 
-cf_https_t* cf_https_get(const char* host, const char* port, const char* uri, cf_result_t* err_out, bool verify_cert)
+cf_https_t* cf_https_get(const char* host, const char* port, const char* uri, CF_Result* err_out, bool verify_cert)
 {
 	cf_https_t* https = cf_https_make();
-	cf_result_t err = cf_https_connect(https, host, port, verify_cert);
+	CF_Result err = cf_https_connect(https, host, port, verify_cert);
 	if (cf_is_error(err)) {
 		cf_https_destroy(https);
 		if (err_out) *err_out = err;
@@ -326,10 +326,10 @@ cf_https_t* cf_https_get(const char* host, const char* port, const char* uri, cf
 	return https;
 }
 
-cf_https_t* cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, cf_result_t* err_out, bool verify_cert)
+cf_https_t* cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, CF_Result* err_out, bool verify_cert)
 {
 	cf_https_t* https = cf_https_make();
-	cf_result_t err = cf_https_connect(https, host, port, verify_cert);
+	CF_Result err = cf_https_connect(https, host, port, verify_cert);
 	if (cf_is_error(err)) {
 		cf_https_destroy(https);
 		if (err_out) *err_out = err;
@@ -916,7 +916,7 @@ EM_JS(void, s_js_post, (void* https_ptr, const char* c_host, const char* c_uri, 
 	request.send(data_array);
 });
 
-cf_https_t* cf_https_get(const char* host, const char* port, const char* uri, cf_result_t* err, bool verify_cert)
+cf_https_t* cf_https_get(const char* host, const char* port, const char* uri, CF_Result* err, bool verify_cert)
 {
 	cf_https_t* https = CUTE_NEW(cf_https_t, NULL);
 	https->host = host;
@@ -926,7 +926,7 @@ cf_https_t* cf_https_get(const char* host, const char* port, const char* uri, cf
 	return https;
 }
 
-cf_https_t* cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, cf_result_t* err, bool verify_cert)
+cf_https_t* cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, CF_Result* err, bool verify_cert)
 {
 	cf_https_t* https = CUTE_NEW(cf_https_t, NULL);
 	https->host = host;

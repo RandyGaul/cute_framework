@@ -107,7 +107,7 @@ struct cf_kv_t
 	array<int> in_array_stack;
 	int tabs = 0;
 
-	cf_result_t last_err = cf_result_success();
+	CF_Result last_err = cf_result_success();
 };
 
 static cf_kv_t* s_kv()
@@ -203,7 +203,7 @@ static CUTE_INLINE int s_try(cf_kv_t* kv, uint8_t expect)
 		if (s_next(kv) != expected_character) { kv->last_err = cf_result_error("Found unexpected token."); return kv->last_err; } \
 	} while (0)
 
-static cf_result_t s_scan_string(cf_kv_t* kv, uint8_t** start_of_string, uint8_t** end_of_string)
+static CF_Result s_scan_string(cf_kv_t* kv, uint8_t** start_of_string, uint8_t** end_of_string)
 {
 	*start_of_string = NULL;
 	*end_of_string = NULL;
@@ -233,17 +233,17 @@ static cf_result_t s_scan_string(cf_kv_t* kv, uint8_t** start_of_string, uint8_t
 	return cf_result_success();
 }
 
-static cf_result_t s_scan_string(cf_kv_t* kv, cf_kv_string_t* str)
+static CF_Result s_scan_string(cf_kv_t* kv, cf_kv_string_t* str)
 {
 	uint8_t* string_start;
 	uint8_t* string_end;
-	cf_result_t err = s_scan_string(kv, &string_start, &string_end);
+	CF_Result err = s_scan_string(kv, &string_start, &string_end);
 	str->str = string_start;
 	str->len = (int)(string_end - string_start);
 	return err;
 }
 
-static CUTE_INLINE cf_result_t s_parse_int(cf_kv_t* kv, int64_t* out)
+static CUTE_INLINE CF_Result s_parse_int(cf_kv_t* kv, int64_t* out)
 {
 	uint8_t* end;
 	int64_t val = CUTE_STRTOLL((char*)kv->in, (char**)&end, 10);
@@ -256,7 +256,7 @@ static CUTE_INLINE cf_result_t s_parse_int(cf_kv_t* kv, int64_t* out)
 	return cf_result_success();
 }
 
-static CUTE_INLINE cf_result_t s_parse_float(cf_kv_t* kv, double* out)
+static CUTE_INLINE CF_Result s_parse_float(cf_kv_t* kv, double* out)
 {
 	uint8_t* end;
 	double val = CUTE_STRTOD((char*)kv->in, (char**)&end);
@@ -269,7 +269,7 @@ static CUTE_INLINE cf_result_t s_parse_float(cf_kv_t* kv, double* out)
 	return cf_result_success();
 }
 
-static cf_result_t s_parse_hex(cf_kv_t* kv, uint64_t* hex)
+static CF_Result s_parse_hex(cf_kv_t* kv, uint64_t* hex)
 {
 	s_expect(kv, '0');
 	uint8_t c = s_next(kv);
@@ -288,9 +288,9 @@ static cf_result_t s_parse_hex(cf_kv_t* kv, uint64_t* hex)
 	return cf_result_success();
 }
 
-static CUTE_INLINE cf_result_t s_parse_number(cf_kv_t* kv, cf_kv_val_t* val)
+static CUTE_INLINE CF_Result s_parse_number(cf_kv_t* kv, cf_kv_val_t* val)
 {
-	cf_result_t err;
+	CF_Result err;
 	if (kv->in + 1 < kv->in_end && ((kv->in[1] == 'x') | (kv->in[1] == 'X'))) {
 		uint64_t hex;
 		err = s_parse_hex(kv, &hex);
@@ -325,11 +325,11 @@ static CUTE_INLINE cf_result_t s_parse_number(cf_kv_t* kv, cf_kv_val_t* val)
 	return cf_result_success();
 }
 
-static cf_result_t s_parse_value(cf_kv_t* kv, cf_kv_val_t* val);
+static CF_Result s_parse_value(cf_kv_t* kv, cf_kv_val_t* val);
 
-static cf_result_t s_parse_array(cf_kv_t* kv, array<cf_kv_val_t>* array_val)
+static CF_Result s_parse_array(cf_kv_t* kv, array<cf_kv_val_t>* array_val)
 {
-	cf_result_t err;
+	CF_Result err;
 	int64_t count;
 	s_expect(kv, '[');
 	err = s_parse_int(kv, &count);
@@ -349,11 +349,11 @@ static cf_result_t s_parse_array(cf_kv_t* kv, array<cf_kv_val_t>* array_val)
 	return cf_result_success();
 }
 
-static cf_result_t s_parse_object(cf_kv_t* kv, int* index, bool is_top_level = false);
+static CF_Result s_parse_object(cf_kv_t* kv, int* index, bool is_top_level = false);
 
-static cf_result_t s_parse_value(cf_kv_t* kv, cf_kv_val_t* val)
+static CF_Result s_parse_value(cf_kv_t* kv, cf_kv_val_t* val)
 {
-	cf_result_t err;
+	CF_Result err;
 	uint8_t c = s_peek(kv);
 
 	if (c == '"') {
@@ -385,7 +385,7 @@ static cf_result_t s_parse_value(cf_kv_t* kv, cf_kv_val_t* val)
 	return cf_result_success();
 }
 
-static cf_result_t s_parse_object(cf_kv_t* kv, int* index, bool is_top_level)
+static CF_Result s_parse_object(cf_kv_t* kv, int* index, bool is_top_level)
 {
 	cf_kv_object_t* object = &kv->objects.add();
 	CUTE_PLACEMENT_NEW(object) cf_kv_object_t;
@@ -411,7 +411,7 @@ static cf_result_t s_parse_object(cf_kv_t* kv, int* index, bool is_top_level)
 		cf_kv_field_t* field = &object->fields.add();
 		CUTE_PLACEMENT_NEW(field) cf_kv_field_t;
 
-		cf_result_t err = s_scan_string(kv, &field->key);
+		CF_Result err = s_scan_string(kv, &field->key);
 		if (cf_is_error(err)) return err;
 		s_expect(kv, '=');
 		err = s_parse_value(kv, &field->val);
@@ -482,7 +482,7 @@ cf_kv_t* cf_kv_read(const void* data, size_t size, result_t* result_out)
 
 	bool is_top_level = true;
 	int index;
-	cf_result_t err = s_parse_object(kv, &index, is_top_level);
+	CF_Result err = s_parse_object(kv, &index, is_top_level);
 	if (cf_is_error(err)) {
 		if (result_out) *result_out = err;
 		cf_kv_destroy(kv);
@@ -543,7 +543,7 @@ void cf_kv_set_base(cf_kv_t* kv, cf_kv_t* base)
 	s_build_cache(kv);
 }
 
-cf_result_t cf_kv_last_error(cf_kv_t* kv)
+CF_Result cf_kv_last_error(cf_kv_t* kv)
 {
 	if (!kv) return cf_result_success();
 	return kv->last_err;
@@ -1084,7 +1084,7 @@ bool cf_kv_val_blob(cf_kv_t* kv, void* data, size_t data_capacity, size_t* data_
 			kv->last_err = cf_result_error("Decoded base 64 string is too large to store in `data`.");
 			return false;
 		}
-		cf_result_t err = cf_base64_decode(data, buffer_size, match->u.sval.str, match->u.sval.len);
+		CF_Result err = cf_base64_decode(data, buffer_size, match->u.sval.str, match->u.sval.len);
 		if (cf_is_error(err)) {
 			kv->last_err = err;
 			return false;

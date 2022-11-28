@@ -55,11 +55,11 @@ CUTE_API cf_codepoint_set_t CUTE_CALL cf_cyrillic();
 
 typedef struct cf_font_t { uint64_t id; } cf_font_t;
 
-CUTE_API cf_font_t CUTE_CALL cf_make_font(const char* path, cf_result_t* result_out);
-CUTE_API cf_font_t CUTE_CALL cf_make_font_mem(void* data, int size, cf_result_t* result_out);
+CUTE_API cf_font_t CUTE_CALL cf_make_font(const char* path, CF_Result* result_out);
+CUTE_API cf_font_t CUTE_CALL cf_make_font_mem(void* data, int size, CF_Result* result_out);
 CUTE_API void CUTE_CALL cf_destroy_font(cf_font_t font);
-CUTE_API cf_result_t CUTE_CALL cf_font_add_codepoints(cf_font_t font, cf_codepoint_set_t set);
-CUTE_API cf_result_t CUTE_CALL cf_font_build(cf_font_t font, float size);
+CUTE_API CF_Result CUTE_CALL cf_font_add_codepoints(cf_font_t font, cf_codepoint_set_t set);
+CUTE_API CF_Result CUTE_CALL cf_font_build(cf_font_t font, float size);
 CUTE_API void CUTE_CALL cf_font_missing_codepoints(cf_font_t, int** missing_codepoints, int* count);
 
 #ifdef __cplusplus

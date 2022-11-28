@@ -42,17 +42,17 @@ enum
 	#undef CF_ENUM
 };
 
-typedef struct cf_result_t
+typedef struct CF_Result
 {
 	int code;
 	const char* details;
-} cf_result_t;
+} CF_Result;
 
-CUTE_INLINE bool cf_is_error(cf_result_t result) { return result.code == CF_RESULT_ERROR; }
+CUTE_INLINE bool cf_is_error(CF_Result result) { return result.code == CF_RESULT_ERROR; }
 
-CUTE_INLINE cf_result_t cf_result_make(int code, const char* details) { cf_result_t result; result.code = code; result.details = details; return result; }
-CUTE_INLINE cf_result_t cf_result_error(const char* details) { cf_result_t result; result.code = CF_RESULT_ERROR; result.details = details; return result; }
-CUTE_INLINE cf_result_t cf_result_success() { cf_result_t result; result.code = CF_RESULT_SUCCESS; result.details = NULL; return result; }
+CUTE_INLINE CF_Result cf_result_make(int code, const char* details) { CF_Result result; result.code = code; result.details = details; return result; }
+CUTE_INLINE CF_Result cf_result_error(const char* details) { CF_Result result; result.code = CF_RESULT_ERROR; result.details = details; return result; }
+CUTE_INLINE CF_Result cf_result_success() { CF_Result result; result.code = CF_RESULT_SUCCESS; result.details = NULL; return result; }
 
 #ifdef __cplusplus
 }
@@ -66,7 +66,7 @@ CUTE_INLINE cf_result_t cf_result_success() { cf_result_t result; result.code = 
 namespace cute
 {
 
-using result_t = cf_result_t;
+using result_t = CF_Result;
 
 enum : int
 {

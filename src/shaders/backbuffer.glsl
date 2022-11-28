@@ -1,4 +1,4 @@
-@module upscale
+@module backbuffer
 @ctype vec2 cf_v2
 
 @include includes/smooth_uv.glsl
@@ -9,15 +9,8 @@
 
 	layout (location = 0) out vec2 uv;
 
-	layout(binding = 0) uniform vs_params {
-		vec2 u_scale;
-	};
-
 	void main() {
-		vec2 pos = in_pos;
-		pos.x *= u_scale.x;
-		pos.y *= u_scale.y;
-		vec4 posH = vec4(round(pos), 0, 1);
+		vec4 posH = vec4(in_pos, 0, 1);
 		uv = in_uv;
 		gl_Position = posH;
 	}

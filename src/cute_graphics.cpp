@@ -38,6 +38,46 @@
 
 using namespace cute;
 
+struct CF_ShaderInternal
+{
+	CF_SokolShader table;
+	const sg_shader_desc* desc;
+	sg_shader shd;
+	int uniform_block_size;
+	void* uniform_block;
+};
+
+struct CF_Buffer
+{
+	bool was_appended;
+	int element_count;
+	int size;
+	int offset;
+	int stride;
+	sg_buffer handle;
+};
+
+struct CF_MeshInternal
+{
+	sg_usage usage;
+	bool need_vertex_sync;
+	bool need_index_sync;
+	bool need_instance_sync;
+	CF_Buffer vertices;
+	CF_Buffer indices;
+	CF_Buffer instances;
+	int attribute_count;
+	CF_VertexAttribute attributes[SG_MAX_VERTEX_ATTRIBUTES];
+};
+
+struct CF_PassInternal
+{
+	sg_pass_action action;
+	sg_pass pass;
+	sg_pipeline pip;
+	CF_MeshInternal* mesh;
+};
+
 CF_Matrix4x4 cf_matrix_identity()
 {
 	CF_Matrix4x4 m;
@@ -78,6 +118,7 @@ static CUTE_INLINE sg_usage s_wrap(CF_UsageType type)
 	case CF_USAGE_TYPE_IMMUTABLE: return SG_USAGE_IMMUTABLE;
 	case CF_USAGE_TYPE_DYNAMIC:   return SG_USAGE_DYNAMIC;
 	case CF_USAGE_TYPE_STREAM:    return SG_USAGE_STREAM;
+	default:                      return SG_USAGE_IMMUTABLE;
 	}
 }
 
@@ -95,6 +136,7 @@ static CUTE_INLINE sg_filter s_wrap(CF_Filter filter)
 	switch (filter) {
 	case CF_FILTER_NEAREST: return SG_FILTER_NEAREST;
 	case CF_FILTER_LINEAR:  return SG_FILTER_LINEAR;
+	default:                return SG_FILTER_NEAREST;
 	}
 }
 
@@ -115,6 +157,7 @@ static CUTE_INLINE sg_wrap s_wrap(CF_WrapMode mode)
 	case CF_WRAP_MODE_CLAMP_TO_EDGE:   return SG_WRAP_CLAMP_TO_EDGE;
 	case CF_WRAP_MODE_CLAMP_TO_BORDER: return SG_WRAP_CLAMP_TO_BORDER;
 	case CF_WRAP_MODE_MIRRORED_REPEAT: return SG_WRAP_MIRRORED_REPEAT;
+	default:                           return _SG_WRAP_DEFAULT;
 	}
 }
 
@@ -124,6 +167,7 @@ static CUTE_INLINE sg_action s_wrap(CF_PassInitOp op)
 	case CF_PASS_INIT_OP_CLEAR:    return SG_ACTION_CLEAR;
 	case CF_PASS_INIT_OP_LOAD:     return SG_ACTION_LOAD;
 	case CF_PASS_INIT_OP_DONTCARE: return SG_ACTION_DONTCARE;
+	default:                       return SG_ACTION_CLEAR;
 	}
 }
 
@@ -145,6 +189,7 @@ static CUTE_INLINE sg_vertex_format s_wrap(CF_VertexFormat fmt)
 	case CF_VERTEX_FORMAT_SHORT4:   return SG_VERTEXFORMAT_SHORT4;
 	case CF_VERTEX_FORMAT_SHORT4N:  return SG_VERTEXFORMAT_SHORT4N;
 	case CF_VERTEX_FORMAT_USHORT4N: return SG_VERTEXFORMAT_USHORT4N;
+	default:                        return SG_VERTEXFORMAT_INVALID;
 	}
 }
 
@@ -159,6 +204,7 @@ static CUTE_INLINE sg_compare_func s_wrap(CF_CompareFunction fn)
 	case CF_COMPARE_FUNCTION_LESS_THAN_OR_EQUAL:    return SG_COMPAREFUNC_LESS_EQUAL;
 	case CF_COMPARE_FUNCTION_GREATER_THAN:          return SG_COMPAREFUNC_GREATER;
 	case CF_COMPARE_FUNCTION_GREATER_THAN_OR_EQUAL: return SG_COMPAREFUNC_GREATER_EQUAL;
+	default:                                        return SG_COMPAREFUNC_ALWAYS;
 	}
 }
 
@@ -173,6 +219,7 @@ static CUTE_INLINE sg_stencil_op s_wrap(CF_StencilOp op)
 	case CF_STENCIL_OP_INVERT:          return SG_STENCILOP_INVERT;
 	case CF_STENCIL_OP_INCREMENT_WRAP:  return SG_STENCILOP_INCR_WRAP;
 	case CF_STENCIL_OP_DECREMENT_WRAP:  return SG_STENCILOP_DECR_WRAP;
+	default:                            return SG_STENCILOP_KEEP;
 	}
 }
 
@@ -194,6 +241,7 @@ static CUTE_INLINE sg_blend_factor s_wrap(CF_BlendFactor factor)
 	case CF_BLENDFACTOR_ONE_MINUS_BLEND_COLOR: return SG_BLENDFACTOR_ONE_MINUS_BLEND_COLOR;
 	case CF_BLENDFACTOR_BLEND_ALPHA:           return SG_BLENDFACTOR_BLEND_ALPHA;
 	case CF_BLENDFACTOR_ONE_MINUS_BLEND_ALPHA: return SG_BLENDFACTOR_ONE_MINUS_BLEND_ALPHA;
+	default:                                   return SG_BLENDFACTOR_ONE;
 	}
 }
 
@@ -203,15 +251,17 @@ static CUTE_INLINE sg_blend_op s_wrap(CF_BlendOp op)
 	case CF_BLEND_OP_ADD:              return SG_BLENDOP_ADD;
 	case CF_BLEND_OP_SUBTRACT:         return SG_BLENDOP_SUBTRACT;
 	case CF_BLEND_OP_REVERSE_SUBTRACT: return SG_BLENDOP_REVERSE_SUBTRACT;
+	default:                           return SG_BLENDOP_ADD;
 	}
 }
 
 static CUTE_INLINE sg_cull_mode s_wrap(CF_CullMode mode)
 {
 	switch (mode) {
-	case CF_CULL_MODE_NONE:  SG_CULLMODE_NONE;
-	case CF_CULL_MODE_FRONT: SG_CULLMODE_FRONT;
-	case CF_CULL_MODE_BACK:  SG_CULLMODE_BACK;
+	case CF_CULL_MODE_NONE:  return SG_CULLMODE_NONE;
+	case CF_CULL_MODE_FRONT: return SG_CULLMODE_FRONT;
+	case CF_CULL_MODE_BACK:  return SG_CULLMODE_BACK;
+	default:                 return SG_CULLMODE_NONE;
 	}
 }
 
@@ -333,15 +383,6 @@ void cf_update_texture(CF_Texture texture, void* data, int size)
 	sg_update_image(sgi, sgid);
 }
 
-struct CF_ShaderInternal
-{
-	CF_SokolShader table;
-	const sg_shader_desc* desc;
-	sg_shader shd;
-	int uniform_block_size;
-	void* uniform_block;
-};
-
 CF_Shader cf_make_shader(CF_SokolShader sokol_shader)
 {
 	CF_ShaderInternal* shader = (CF_ShaderInternal*)CUTE_ALLOC(sizeof(CF_ShaderInternal));
@@ -376,14 +417,6 @@ CF_PassParams cf_pass_defaults()
 	return params;
 }
 
-struct CF_PassInternal
-{
-	sg_pass_action action;
-	sg_pass pass;
-	sg_pipeline pip;
-	CF_MeshInternal* mesh;
-};
-
 CF_Pass cf_make_pass(CF_PassParams pass_params)
 {
 	CF_PassInternal* pass = (CF_PassInternal*)CUTE_CALLOC(sizeof(CF_PassInternal));
@@ -410,29 +443,6 @@ void cf_destroy_pass(CF_Pass pass)
 	sg_destroy_pass(pass_internal->pass);
 	CUTE_FREE(pass_internal);
 }
-
-struct CF_Buffer
-{
-	bool was_appended;
-	int element_count;
-	int size;
-	int offset;
-	int stride;
-	sg_buffer handle;
-};
-
-struct CF_MeshInternal
-{
-	sg_usage usage;
-	bool need_vertex_sync;
-	bool need_index_sync;
-	bool need_instance_sync;
-	CF_Buffer vertices;
-	CF_Buffer indices;
-	CF_Buffer instances;
-	int attribute_count;
-	CF_VertexAttribute attributes[SG_MAX_VERTEX_ATTRIBUTES];
-};
 
 CF_Mesh cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size)
 {
@@ -494,7 +504,7 @@ void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 	if (mesh->need_vertex_sync) {
 		s_sync_vertex_buffer(mesh, data, size);
 	} else {
-		sg_range range = { data, size };
+		sg_range range = { data, (size_t)size };
 		sg_update_buffer(mesh->vertices.handle, range);
 	}
 	mesh->vertices.element_count = count;
@@ -509,7 +519,7 @@ int cf_mesh_append_vertex_data(CF_Mesh mesh_handle, void* data, int append_count
 	if (mesh->need_vertex_sync) {
 		s_sync_vertex_buffer(mesh, NULL, mesh->vertices.size);
 	}
-	sg_range range = { data, size };
+	sg_range range = { data, (size_t)size };
 	if (!sg_query_will_buffer_overflow(mesh->vertices.handle, size)) {
 		int offset = sg_append_buffer(mesh->vertices.handle, range);
 		mesh->vertices.offset = offset;
@@ -553,7 +563,7 @@ void cf_mesh_update_instance_data(CF_Mesh mesh_handle, void* data, int count)
 	if (mesh->need_instance_sync) {
 		s_sync_isntance_buffer(mesh, data, size);
 	} else {
-		sg_range range = { data, size };
+		sg_range range = { data, (size_t)size };
 		sg_update_buffer(mesh->instances.handle, range);
 	}
 	mesh->instances.element_count = count;
@@ -568,7 +578,7 @@ int cf_mesh_append_instance_data(CF_Mesh mesh_handle, void* data, int append_cou
 	if (mesh->need_instance_sync) {
 		s_sync_isntance_buffer(mesh, NULL, mesh->instances.size);
 	}
-	sg_range range = { data, size };
+	sg_range range = { data, (size_t)size };
 	if (!sg_query_will_buffer_overflow(mesh->instances.handle, size)) {
 		int offset = sg_append_buffer(mesh->instances.handle, range);
 		mesh->instances.offset = offset;
@@ -612,7 +622,7 @@ void cf_mesh_update_index_data(CF_Mesh mesh_handle, uint32_t* indices, int count
 	if (mesh->need_index_sync) {
 		s_sync_index_buffer(mesh, indices, size);
 	} else {
-		sg_range range = { indices, size };
+		sg_range range = { indices, (size_t)size };
 		sg_update_buffer(mesh->indices.handle, range);
 	}
 	mesh->indices.element_count = count;
@@ -626,7 +636,7 @@ int cf_mesh_append_index_data(CF_Mesh mesh_handle, uint32_t* indices, int append
 	if (mesh->need_index_sync) {
 		s_sync_index_buffer(mesh, NULL, mesh->indices.size);
 	}
-	sg_range range = { indices, size };
+	sg_range range = { indices, (size_t)size };
 	if (!sg_query_will_buffer_overflow(mesh->indices.handle, size)) {
 		int offset = sg_append_buffer(mesh->indices.handle, range);
 		mesh->indices.offset = offset;
@@ -773,6 +783,7 @@ static int s_uniform_size(CF_UniformType type)
 	case CF_UNIFORM_TYPE_INT2:   return 8;
 	case CF_UNIFORM_TYPE_INT4:   return 16;
 	case CF_UNIFORM_TYPE_MAT4:   return 64;
+	default:                     return 0;
 	}
 }
 
@@ -818,6 +829,18 @@ void cf_material_set_uniform_fs(CF_Material material_handle, const char* block_n
 }
 
 static CF_PassInternal* s_pass = NULL;
+static CF_PassInternal* s_default_pass = NULL;
+
+void cf_begin_default_pass()
+{
+	if (!s_default_pass) {
+		CF_Pass pass_handle = cf_make_pass(cf_pass_defaults());
+		CF_PassInternal* pass = (CF_PassInternal*)pass_handle.id;
+		s_default_pass = pass;
+	}
+	CF_Pass pass_handle = { (uint64_t)s_default_pass };
+	cf_begin_pass(pass_handle);
+}
 
 void cf_begin_pass(CF_Pass pass_handle)
 {
@@ -856,7 +879,7 @@ static void s_copy_uniforms(CF_Arena* arena, CF_SokolShader table, CF_MaterialSt
 		if (slot >= 0) {
 			if (!ub_ptrs[slot]) {
 				// Create temporary space for a uniform block.
-				int size = table.get_uniformblock_size(stage, uniform.block_name);
+				int size = (int)table.get_uniformblock_size(stage, uniform.block_name);
 				void* block = cf_arena_alloc(arena, size);
 				CUTE_MEMSET(block, 0, size);
 				ub_ptrs[slot] = block;
@@ -873,7 +896,7 @@ static void s_copy_uniforms(CF_Arena* arena, CF_SokolShader table, CF_MaterialSt
 	// Any missing uniforms have been MEMSET to 0.
 	for (int i = 0; i < SG_MAX_SHADERSTAGE_UBS; ++i) {
 		if (ub_ptrs[i]) {
-			sg_range range = { ub_ptrs[i], ub_sizes[i] };
+			sg_range range = { ub_ptrs[i], (size_t)ub_sizes[i] };
 			sg_apply_uniforms(stage, i, range);
 		}
 	}
@@ -1009,4 +1032,12 @@ void cf_end_pass()
 void cf_commit()
 {
 	sg_commit();
+}
+
+void cf_destroy_graphics()
+{
+	if (s_default_pass) {
+		cf_destroy_pass({ (uint64_t)s_default_pass });
+		s_default_pass = NULL;
+	}
 }

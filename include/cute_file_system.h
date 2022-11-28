@@ -240,7 +240,7 @@ CUTE_API const char* CUTE_CALL cf_fs_get_base_directory();
  * it into this function when shipping your game. This function will fail if any files are from
  * the write directory are currently open.
  */
-CUTE_API cf_result_t CUTE_CALL cf_fs_set_write_directory(const char* platform_dependent_directory);
+CUTE_API CF_Result CUTE_CALL cf_fs_set_write_directory(const char* platform_dependent_directory);
 
 /**
  * Returns a path safe to store game-specific files, such as save data or profiles. The path is
@@ -281,19 +281,19 @@ CUTE_API const char* CUTE_CALL cf_fs_get_user_directory(const char* company_name
  * By default CF mounts the base directory when you call `make_app`. This can be disabled by
  * passing the `APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT` flag to `make_app`.
  */
-CUTE_API cf_result_t CUTE_CALL cf_fs_mount(const char* archive, const char* mount_point, bool append_to_path /*= true*/);
+CUTE_API CF_Result CUTE_CALL cf_fs_mount(const char* archive, const char* mount_point, bool append_to_path /*= true*/);
 
 /**
  * Removes an archive from the path, specified in platform-dependent notation. This function
  * does not remove a `mount_point` from the virtual file system, but only the actual archive
  * that was previously mounted.
  */
-CUTE_API cf_result_t CUTE_CALL cf_fs_dismount(const char* archive);
+CUTE_API CF_Result CUTE_CALL cf_fs_dismount(const char* archive);
 
 /**
  * Fetches file information at the given virtual path, such as file size or creation time.
  */
-CUTE_API cf_result_t CUTE_CALL cf_fs_stat(const char* virtual_path, cf_stat_t* stat);
+CUTE_API CF_Result CUTE_CALL cf_fs_stat(const char* virtual_path, cf_stat_t* stat);
 
 /**
  * Opens a file for writing relative to the write directory.
@@ -322,18 +322,18 @@ CUTE_API cf_file_t* CUTE_CALL cf_fs_open_file_for_read(const char* virtual_path)
 /**
  * Close a file.
  */
-CUTE_API cf_result_t CUTE_CALL cf_fs_close(cf_file_t* file);
+CUTE_API CF_Result CUTE_CALL cf_fs_close(cf_file_t* file);
 
 /**
  * Deletes a file or directory. The directory must be empty, otherwise this function
  * will fail.
  */
-CUTE_API cf_result_t CUTE_CALL cf_fs_delete(const char* virtual_path);
+CUTE_API CF_Result CUTE_CALL cf_fs_delete(const char* virtual_path);
 
 /**
  * Creates a directory at the path. All missing directories are also created.
  */
-CUTE_API cf_result_t CUTE_CALL cf_fs_create_directory(const char* virtual_path);
+CUTE_API CF_Result CUTE_CALL cf_fs_create_directory(const char* virtual_path);
 
 /**
  * Returns a list of files and directories in the given directory. The list is sorted.
@@ -377,7 +377,7 @@ CUTE_API size_t CUTE_CALL cf_fs_write(cf_file_t* file, const void* buffer, size_
 /**
  * Check to see if the eof has been found after reading a file opened in read mode.
  */
-CUTE_API cf_result_t CUTE_CALL cf_fs_eof(cf_file_t* file);
+CUTE_API CF_Result CUTE_CALL cf_fs_eof(cf_file_t* file);
 
 /**
  * Returns the current position within the file. This is an offset from the beginning of
@@ -389,7 +389,7 @@ CUTE_API size_t CUTE_CALL cf_fs_tell(cf_file_t* file);
  * Sets the current position within a file. This is an offset from the beginning of the file.
  * The next read or write will happen at this position.
  */
-CUTE_API cf_result_t CUTE_CALL cf_fs_seek(cf_file_t* file, size_t position);
+CUTE_API CF_Result CUTE_CALL cf_fs_seek(cf_file_t* file, size_t position);
 
 /**
  * Returns the size of a file in bytes. You might want to use `cf_fs_stat` instead.
@@ -400,23 +400,23 @@ CUTE_API size_t CUTE_CALL cf_fs_size(cf_file_t* file);
  * Reads an entire file into a buffer of memory, and returns the buffer to you. Call `CUTE_FREE`
  * on it when done.
  */
-CUTE_API cf_result_t CUTE_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size /*= NULL*/ /*= NULL*/);
+CUTE_API CF_Result CUTE_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size /*= NULL*/ /*= NULL*/);
 
 /**
  * Reads an entire file into a buffer of memory, and returns the buffer to you as a nul-term-
  * inated C string. Call `CUTE_FREE` on it when done.
  */
-CUTE_API cf_result_t CUTE_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size /*= NULL*/ /*= NULL*/);
+CUTE_API CF_Result CUTE_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size /*= NULL*/ /*= NULL*/);
 
 /**
  * Writes an entire buffer of data to a file as binary data.
  */
-CUTE_API cf_result_t CUTE_CALL cf_fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
+CUTE_API CF_Result CUTE_CALL cf_fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
 
 /**
  * Feel free to call this whenever an error occurs in any of the file system functions
  * to try and get a detailed description on what might have happened. Often times this
- * string is already returned to you inside a `cf_result_t`.
+ * string is already returned to you inside a `CF_Result`.
  */
 CUTE_API const char* CUTE_CALL cf_fs_get_backend_specific_error_message();
 

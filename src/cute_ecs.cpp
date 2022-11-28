@@ -116,7 +116,7 @@ static CUTE_INLINE uint16_t s_entity_type(cf_entity_t entity)
 	return (uint16_t)((entity.handle & 0x00000000FFFF0000ULL) >> 16);
 }
 
-cf_entity_t cf_make_entity(const char* entity_type, cf_result_t* err_out)
+cf_entity_t cf_make_entity(const char* entity_type, CF_Result* err_out)
 {
 	auto type_ptr = app->entity_type_string_to_id.try_find(sintern(entity_type));
 	if (!type_ptr) {
@@ -541,7 +541,7 @@ cf_entity_type_t s_entity_type(cf_kv_t* kv)
 	return entity_type;
 }
 
-static cf_result_t s_fill_load_id_table(cf_kv_t* kv)
+static CF_Result s_fill_load_id_table(cf_kv_t* kv)
 {
 	int entity_count;
 	if (!cf_kv_array_begin(kv, &entity_count, "entities")) {
@@ -577,7 +577,7 @@ static cf_result_t s_fill_load_id_table(cf_kv_t* kv)
 
 
 
-cf_result_t cf_internal_ecs_load_entities(cf_kv_t* kv, array<cf_entity_t>* entities_out)
+CF_Result cf_internal_ecs_load_entities(cf_kv_t* kv, array<cf_entity_t>* entities_out)
 {
 	if (cf_kv_state(kv) != CF_KV_STATE_READ) {
 		return cf_result_error("`kv` must be in `KV_STATE_READ` mode.");
@@ -587,7 +587,7 @@ cf_result_t cf_internal_ecs_load_entities(cf_kv_t* kv, array<cf_entity_t>* entit
 	app->load_id_table = &load_id_table;
 	CUTE_DEFER(app->load_id_table = NULL);
 
-	cf_result_t err = s_fill_load_id_table(kv);
+	CF_Result err = s_fill_load_id_table(kv);
 	if (cf_is_error(err)) return err;
 
 	int entity_count;
@@ -644,9 +644,9 @@ cf_result_t cf_internal_ecs_load_entities(cf_kv_t* kv, array<cf_entity_t>* entit
 	return cf_result_success();
 }
 
-cf_result_t cf_ecs_load_entities(cf_kv_t* kv, cf_entity_t** entities_out, int* entities_count_out)
+CF_Result cf_ecs_load_entities(cf_kv_t* kv, cf_entity_t** entities_out, int* entities_count_out)
 {
-	cf_result_t err;
+	CF_Result err;
 
 	if (entities_out) {
 		CUTE_ASSERT(entities_count_out);
@@ -677,7 +677,7 @@ void cf_ecs_free_entities(cf_entity_t* entities)
 	CUTE_FREE(entities);
 }
 
-cf_result_t cf_internal_ecs_save_entities_kv(const cf_entity_t* entities, int entities_count, cf_kv_t* kv)
+CF_Result cf_internal_ecs_save_entities_kv(const cf_entity_t* entities, int entities_count, cf_kv_t* kv)
 {
 	if (cf_kv_state(kv) != CF_KV_STATE_WRITE) {
 		return cf_result_error("`kv` must be in `KV_STATE_WRITE` mode.");
@@ -740,13 +740,13 @@ cf_result_t cf_internal_ecs_save_entities_kv(const cf_entity_t* entities, int en
 	return cf_result_success();
 }
 
-cf_result_t cf_ecs_save_entities_kv(const cf_entity_t* entities, int entities_count, cf_kv_t* kv)
+CF_Result cf_ecs_save_entities_kv(const cf_entity_t* entities, int entities_count, cf_kv_t* kv)
 {
-	cf_result_t err = cf_internal_ecs_save_entities_kv(entities, entities_count, kv);
+	CF_Result err = cf_internal_ecs_save_entities_kv(entities, entities_count, kv);
 	return err;
 }
 
-cf_result_t cf_internal_ecs_save_entities(const cf_entity_t* entities, int entities_count)
+CF_Result cf_internal_ecs_save_entities(const cf_entity_t* entities, int entities_count)
 {
 	cute::dictionary<cf_entity_t, int> id_table;
 	for (int i = 0; i < entities_count; ++i) {
@@ -789,9 +789,9 @@ cf_result_t cf_internal_ecs_save_entities(const cf_entity_t* entities, int entit
 	return cf_result_success();
 }
 
-cf_result_t cf_ecs_save_entities(const cf_entity_t* entities, int entities_count)
+CF_Result cf_ecs_save_entities(const cf_entity_t* entities, int entities_count)
 {
-	cf_result_t err = cf_internal_ecs_save_entities(entities, entities_count);
+	CF_Result err = cf_internal_ecs_save_entities(entities, entities_count);
 	return err;
 }
 

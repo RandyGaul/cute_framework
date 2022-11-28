@@ -1,6 +1,6 @@
 @module sprite
-@ctype mat4 cf_matrix_t
-@ctype vec4 cf_color_t
+@ctype mat4 CF_Matrix4x4
+@ctype vec4 CF_Color
 @ctype vec2 cf_v2
 
 @include includes/overlay.glsl

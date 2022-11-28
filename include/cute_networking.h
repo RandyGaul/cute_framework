@@ -98,7 +98,7 @@ CUTE_API void CUTE_CALL cf_crypto_sign_keygen(cf_crypto_sign_public_t* public_ke
  * not leaked. In the event your secret key is accidentally leaked, you can always roll a
  * new one and distribute it to your webservice and game servers.
  */
-CUTE_API cf_result_t CUTE_CALL cf_generate_connect_token(
+CUTE_API CF_Result CUTE_CALL cf_generate_connect_token(
 	uint64_t application_id,                           // A unique number to identify your game, can be whatever value you like.
 	                                                   // This must be the same number as in `make_client` and `make_server`.
 	uint64_t creation_timestamp,                       // A unix timestamp of the current time.
@@ -136,7 +136,7 @@ CUTE_API void CUTE_CALL cf_destroy_client(cf_client_t* client);
  * `client_update` is expected, where `client_update` will perform the connection handshake and make
  * connection attempts to your servers.
  */
-CUTE_API cf_result_t CUTE_CALL cf_client_connect(cf_client_t* client, const uint8_t* connect_token);
+CUTE_API CF_Result CUTE_CALL cf_client_connect(cf_client_t* client, const uint8_t* connect_token);
 CUTE_API void CUTE_CALL cf_client_disconnect(cf_client_t* client);
 
 /**
@@ -165,7 +165,7 @@ CUTE_API void CUTE_CALL cf_client_free_packet(cf_client_t* client, void* packet)
  * to be sent, and so reliable is appropriate. As an optimization some kinds of data, such as frequent
  * transform updates, can be sent unreliably.
  */
-CUTE_API cf_result_t CUTE_CALL cf_client_send(cf_client_t* client, const void* packet, int size, bool send_reliably);
+CUTE_API CF_Result CUTE_CALL cf_client_send(cf_client_t* client, const void* packet, int size, bool send_reliably);
 
 typedef enum cf_client_state_t
 {
@@ -228,7 +228,7 @@ CUTE_API void CUTE_CALL cf_destroy_server(cf_server_t* server);
  * Please note that not all users will be able to access an ipv6 server address, so it might
  * be good to also provide a way to connect through ipv4.
  */
-CUTE_API cf_result_t cf_server_start(cf_server_t* server, const char* address_and_port);
+CUTE_API CF_Result cf_server_start(cf_server_t* server, const char* address_and_port);
 CUTE_API void cf_server_stop(cf_server_t* server);
 
 typedef enum cf_server_event_type_t

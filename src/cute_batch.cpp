@@ -30,14 +30,16 @@
 
 #include <shaders/sprite_shader.h>
 
-struct cf_quad_udata_t
+static struct CF_Batch* b = NULL;
+
+struct QuadUdata
 {
 	float alpha;
 };
 
 #include <cute/cute_png.h>
 
-#define SPRITEBATCH_SPRITE_USERDATA cf_quad_udata_t
+#define SPRITEBATCH_SPRITE_USERDATA QuadUdata
 #define SPRITEBATCH_IMPLEMENTATION
 //#define SPRITEBATCH_LOG CUTE_DEBUG_PRINTF
 #include <cute/cute_spritebatch.h>
@@ -51,6 +53,13 @@ struct cf_quad_udata_t
 // https://github.com/NoelFB/blah/blob/master/include/blah_batch.h
 
 using namespace cute;
+
+struct Scissor
+{
+	int x, y, w, h;
+};
+
+static const CF_Color DEFAULT_TINT = cf_make_color_rgba_f(0.5f, 0.5f, 0.5f, 1.0f);
 
 struct BatchVertex
 {
@@ -76,6 +85,37 @@ typedef struct BatchSprite
 
 	int sort_bits; /*= 0;*/
 } BatchSprite;
+
+struct CF_Batch
+{
+	::spritebatch_t sb;
+
+	float atlas_width = 1024;
+	float atlas_height = 1024;
+
+	array<BatchVertex> verts;
+	CF_Shader shader;
+	CF_Mesh mesh;
+	CF_Material material;
+	float outline_use_border = 1.0f;
+	float outline_use_corners = 0;
+	CF_Color outline_color = cf_color_white();
+	CF_WrapMode wrap_mode = CF_WRAP_MODE_REPEAT;
+	CF_Filter filter = CF_FILTER_NEAREST;
+	CF_Matrix4x4 projection;
+
+	cf_m3x2 m = cf_make_identity();
+	float scale_x = 1.0f;
+	float scale_y = 1.0f;
+	array<cf_m3x2> m3x2s;
+	array<Scissor> scissors;
+	array<CF_Color> tints = { DEFAULT_TINT };
+
+	get_pixels_fn* get_pixels = NULL;
+	void* get_pixels_udata = NULL;
+
+	void* mem_ctx = NULL;
+};
 
 static void s_push(BatchSprite q)
 {
@@ -133,52 +173,6 @@ CUTE_INLINE BatchSprite cf_batch_sprite_defaults()
 	return result;
 }
 
-struct Scissor
-{
-	int x, y, w, h;
-};
-
-static const CF_Color DEFAULT_TINT = cf_make_color_rgba_f(0.5f, 0.5f, 0.5f, 1.0f);
-
-struct CF_Batch
-{
-	::spritebatch_t sb;
-
-	float atlas_width = 1024;
-	float atlas_height = 1024;
-
-	array<BatchVertex> verts;
-	CF_Shader shader;
-	CF_Mesh mesh;
-	CF_Material material;
-	float outline_use_border = 1.0f;
-	float outline_use_corners = 0;
-	CF_Color outline_color = cf_color_white();
-	CF_WrapMode wrap_mode = CF_WRAP_MODE_REPEAT;
-	CF_Filter filter = CF_FILTER_NEAREST;
-	CF_Matrix4x4 projection;
-
-	cf_m3x2 m = cf_make_identity();
-	float scale_x = 1.0f;
-	float scale_y = 1.0f;
-	array<cf_m3x2> m3x2s;
-	array<Scissor> scissors;
-	array<CF_Color> tints = { DEFAULT_TINT };
-
-	get_pixels_fn* get_pixels = NULL;
-	void* get_pixels_udata = NULL;
-
-	void* mem_ctx = NULL;
-};
-
-static CF_Batch* b = NULL;
-
-//--------------------------------------------------------------------------------------------------
-// Internal functions.
-
-//--------------------------------------------------------------------------------------------------
-// spritebatch_t callbacks.
-
 static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture_w, int texture_h, void* udata)
 {
 	// Build vertex buffer of all quads for each sprite.
@@ -222,7 +216,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 		BatchVertex* out_verts = verts + i * 6;
 
 		for (int i = 0; i < 6; ++i) {
-			out_verts[i].alpha = s->udata.alpha;
+			out_verts[i].alpha = (uint8_t)(s->udata.alpha * 255.0f);
 		}
 
 		out_verts[0].position.x = quad[0].x;
@@ -370,7 +364,7 @@ static void s_make_batch(get_pixels_fn* get_pixels, void* get_pixels_udata)
 	b->m3x2s.add(cf_make_identity());
 }
 
-cf_result_t cf_batch_flush()
+CF_Result cf_batch_flush()
 {
 	// Draw sprites.
 	spritebatch_flush(&b->sb);

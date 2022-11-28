@@ -66,7 +66,7 @@ void cf_destroy_coroutine(cf_coroutine_t* co)
 	CUTE_FREE(co);
 }
 
-cf_result_t cf_coroutine_resume(cf_coroutine_t* co, float dt)
+CF_Result cf_coroutine_resume(cf_coroutine_t* co, float dt)
 {
 	co->dt = dt;
 
@@ -88,7 +88,7 @@ cf_result_t cf_coroutine_resume(cf_coroutine_t* co, float dt)
 	}
 }
 
-float cf_coroutine_yield(cf_coroutine_t* co, cf_result_t* err)
+float cf_coroutine_yield(cf_coroutine_t* co, CF_Result* err)
 {
 	mco_result res = mco_yield(co->mco);
 	if (err) {
@@ -101,11 +101,11 @@ float cf_coroutine_yield(cf_coroutine_t* co, cf_result_t* err)
 	return co->dt;
 }
 
-cf_result_t cf_coroutine_wait(cf_coroutine_t* co, float seconds)
+CF_Result cf_coroutine_wait(cf_coroutine_t* co, float seconds)
 {
 	co->waiting = true;
 	co->seconds_left = seconds;
-	cf_result_t err;
+	CF_Result err;
 	cf_coroutine_yield(co, &err);
 	return err;
 }
@@ -127,7 +127,7 @@ void* cf_coroutine_get_udata(cf_coroutine_t* co)
 	return co->udata;
 }
 
-cf_result_t cf_coroutine_push(cf_coroutine_t* co, const void* data, size_t size)
+CF_Result cf_coroutine_push(cf_coroutine_t* co, const void* data, size_t size)
 {
 	mco_result res = mco_push(co->mco, data, size);
 	if (res != MCO_SUCCESS) {
@@ -137,7 +137,7 @@ cf_result_t cf_coroutine_push(cf_coroutine_t* co, const void* data, size_t size)
 	}
 }
 
-cf_result_t cf_coroutine_pop(cf_coroutine_t* co, void* data, size_t size)
+CF_Result cf_coroutine_pop(cf_coroutine_t* co, void* data, size_t size)
 {
 	mco_result res = mco_pop(co->mco, data, size);
 	if (res != MCO_SUCCESS) {

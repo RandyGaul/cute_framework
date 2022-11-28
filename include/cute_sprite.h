@@ -26,6 +26,7 @@
 #include "cute_array.h"
 #include "cute_hashtable.h"
 #include "cute_string.h"
+#include "cute_math.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API

@@ -24,6 +24,7 @@
 
 #include "cute_defines.h"
 #include "cute_result.h"
+#include "cute_graphics.h"
 
 #include "sokol/sokol_gfx.h"
 
@@ -57,19 +58,19 @@ enum
 	#undef CF_ENUM
 };
 
-CUTE_API cf_result_t CUTE_CALL cf_make_app(const char* window_title, int x, int y, int w, int h, int options /*= 0*/, const char* argv0 /*= NULL*/);
+CUTE_API CF_Result CUTE_CALL cf_make_app(const char* window_title, int x, int y, int w, int h, int options /*= 0*/, const char* argv0 /*= NULL*/);
 CUTE_API void CUTE_CALL cf_destroy_app();
 
 CUTE_API bool CUTE_CALL cf_app_is_running();
 CUTE_API void CUTE_CALL cf_app_stop_running();
 CUTE_API void CUTE_CALL cf_app_update(float dt);
-CUTE_API sg_image CUTE_CALL cf_app_get_offscreen_buffer();
 CUTE_API void CUTE_CALL cf_app_present(bool draw_offscreen_buffer /*= true*/);
 
 CUTE_API ImGuiContext* CUTE_CALL cf_app_init_imgui(bool no_default_font /*= false*/);
 CUTE_API sg_imgui_t* CUTE_CALL cf_app_get_sokol_imgui();
 
-CUTE_API cf_result_t CUTE_CALL cf_app_set_offscreen_buffer(int offscreen_w, int offscreen_h);
+CUTE_API CF_Texture CUTE_CALL cf_app_get_backbuffer();
+CUTE_API void CUTE_CALL cf_app_get_backbuffer_size(int* x, int* y);
 
 #define CF_POWER_STATE_DEFS \
 	CF_ENUM(POWER_STATE_UNKNOWN, 0)    /* Cannot determine power status. */ \
@@ -130,11 +131,10 @@ CUTE_INLINE void destroy_app() { cf_destroy_app(); }
 CUTE_INLINE bool app_is_running() { return cf_app_is_running(); }
 CUTE_INLINE void app_stop_running() { cf_app_stop_running(); }
 CUTE_INLINE void app_update(float dt) { cf_app_update(dt); }
-CUTE_INLINE sg_image app_get_offscreen_buffer() { return cf_app_get_offscreen_buffer(); }
+CUTE_INLINE CF_Texture app_get_backbuffer() { return cf_app_get_backbuffer(); }
 CUTE_INLINE void app_present(bool draw_offscreen_buffer = true) { cf_app_present(draw_offscreen_buffer); }
 CUTE_INLINE ImGuiContext* app_init_imgui(bool no_default_font = false) { return cf_app_init_imgui(no_default_font); }
 CUTE_INLINE sg_imgui_t* app_get_sokol_imgui() { return cf_app_get_sokol_imgui(); }
-CUTE_INLINE result_t app_set_offscreen_buffer(int offscreen_w, int offscreen_h) { return cf_app_set_offscreen_buffer(offscreen_w, offscreen_h); }
 CUTE_INLINE power_info_t app_power_info() { return cf_app_power_info(); }
 CUTE_INLINE void sleep(int milliseconds) { cf_sleep(milliseconds); }
 

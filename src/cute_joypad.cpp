@@ -42,7 +42,7 @@ void cf_joypad_system_init()
 	}
 }
 
-cf_result_t cf_joypad_add_mapping(const char* mapping)
+CF_Result cf_joypad_add_mapping(const char* mapping)
 {
 	int result = SDL_GameControllerAddMapping(mapping);
 	if (result == -1) return cf_result_error("Failed to add mapping.");

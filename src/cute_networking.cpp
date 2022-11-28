@@ -24,9 +24,9 @@
 #define CUTE_NET_IMPLEMENTATION
 #include <cute/cute_net.h>
 
-static CUTE_INLINE cf_result_t cf_wrap(cn_result_t cn_result)
+static CUTE_INLINE CF_Result cf_wrap(cn_result_t cn_result)
 {
-	cf_result_t result;
+	CF_Result result;
 	result.code = cn_result.code;
 	result.details = cn_result.details;
 	return result;
@@ -65,7 +65,7 @@ void cf_crypto_sign_keygen(cf_crypto_sign_public_t* public_key, cf_crypto_sign_s
 	cn_crypto_sign_keygen(public_key, secret_key);
 }
 
-cf_result_t cf_generate_connect_token(
+CF_Result cf_generate_connect_token(
 	uint64_t application_id,
 	uint64_t creation_timestamp,
 	const cf_crypto_key_t* client_to_server_key,
@@ -110,7 +110,7 @@ void cf_destroy_client(cf_client_t* client)
 	cn_client_destroy(client);
 }
 
-cf_result_t cf_client_connect(cf_client_t* client, const uint8_t* connect_token)
+CF_Result cf_client_connect(cf_client_t* client, const uint8_t* connect_token)
 {
 	return cf_wrap(cn_client_connect(client, connect_token));
 }
@@ -135,7 +135,7 @@ void cf_client_free_packet(cf_client_t* client, void* packet)
 	cn_client_free_packet(client, packet);
 }
 
-cf_result_t cf_client_send(cf_client_t* client, const void* packet, int size, bool send_reliably)
+CF_Result cf_client_send(cf_client_t* client, const void* packet, int size, bool send_reliably)
 {
 	return cf_wrap(cn_client_send(client, packet, size, send_reliably));
 }
@@ -179,7 +179,7 @@ void cf_destroy_server(cf_server_t* server)
 	cn_server_destroy(server);
 }
 
-cf_result_t cf_server_start(cf_server_t* server, const char* address_and_port)
+CF_Result cf_server_start(cf_server_t* server, const char* address_and_port)
 {
 	return cf_wrap(cn_server_start(server, address_and_port));
 }

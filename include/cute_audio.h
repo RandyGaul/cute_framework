@@ -59,7 +59,7 @@ CUTE_API void CUTE_CALL cf_music_resume();
 CUTE_API void CUTE_CALL cf_music_switch_to(cf_audio_t* audio_source, float fade_out_time /*= 0*/, float fade_in_time /*= 0*/);
 CUTE_API void CUTE_CALL cf_music_crossfade(cf_audio_t* audio_source, float cross_fade_time /*= 0*/);
 CUTE_API uint64_t CUTE_CALL cf_music_get_sample_index();
-CUTE_API cf_result_t CUTE_CALL cf_music_set_sample_index(uint64_t sample_index);
+CUTE_API CF_Result CUTE_CALL cf_music_set_sample_index(uint64_t sample_index);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -85,7 +85,7 @@ CUTE_INLINE cf_sound_params_t CUTE_CALL cf_sound_params_defaults()
 	return params;
 }
 
-CUTE_API cf_sound_t CUTE_CALL cf_play_sound(cf_audio_t* audio_source, cf_sound_params_t params /*= cf_sound_params_defaults()*/, cf_result_t* err /*= NULL*/);
+CUTE_API cf_sound_t CUTE_CALL cf_play_sound(cf_audio_t* audio_source, cf_sound_params_t params /*= cf_sound_params_defaults()*/, CF_Result* err /*= NULL*/);
 
 CUTE_API bool CUTE_CALL cf_sound_is_active(cf_sound_t sound);
 CUTE_API bool CUTE_CALL cf_sound_get_is_paused(cf_sound_t sound);

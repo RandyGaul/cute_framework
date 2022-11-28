@@ -30,6 +30,8 @@
 #define CUTE_ASEPRITE_IMPLEMENTATION
 #include <cute/cute_aseprite.h>
 
+#include <cute/cute_spritebatch.h>
+
 using namespace cute;
 
 struct aseprite_cache_entry_t
@@ -111,7 +113,7 @@ static void s_sprite(cf_aseprite_cache_t* cache, aseprite_cache_entry_t entry, C
 	}
 }
 
-cf_result_t cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* aseprite_path, CF_Sprite* sprite)
+CF_Result cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* aseprite_path, CF_Sprite* sprite)
 {
 	// First see if this ase was already cached.
 	aseprite_path = sintern(aseprite_path);
@@ -247,11 +249,11 @@ void cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, const char* aseprite_p
 	cache->aseprites.remove(aseprite_path);
 }
 
-cf_result_t cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase)
+CF_Result cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase)
 {
 	aseprite_path = sintern(aseprite_path);
 	CF_Sprite s;
-	cf_result_t err = cf_aseprite_cache_load(cache, aseprite_path, &s);
+	CF_Result err = cf_aseprite_cache_load(cache, aseprite_path, &s);
 	if (cf_is_error(err)) return err;
 
 	auto entry_ptr = cache->aseprites.try_find(aseprite_path);
@@ -262,7 +264,7 @@ cf_result_t cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* a
 	}
 }
 
-cf_get_pixels_fn* cf_aseprite_cache_get_pixels_fn(cf_aseprite_cache_t* cache)
+get_pixels_fn* cf_aseprite_cache_get_pixels_fn(cf_aseprite_cache_t* cache)
 {
 	return s_get_pixels;
 }

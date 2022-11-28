@@ -107,7 +107,7 @@ CUTE_API void CUTE_CALL cf_joypad_system_init();
  * database on GitHub (https://github.com/gabomdq/SDL_GameControllerDB), so you probably don't need
  * to ever call this function.
  */
-CUTE_API cf_result_t CUTE_CALL cf_joypad_add_mapping(const char* mapping);
+CUTE_API CF_Result CUTE_CALL cf_joypad_add_mapping(const char* mapping);
 
 /**
  * Returns the number of joypads currently connected to the system.
@@ -184,7 +184,7 @@ enum joypad_axis_t : int
 };
 
 CUTE_INLINE void joypad_system_init() { cf_joypad_system_init(); }
-CUTE_INLINE cf_result_t joypad_add_mapping(const char* mapping) { return cf_joypad_add_mapping(mapping); }
+CUTE_INLINE CF_Result joypad_add_mapping(const char* mapping) { return cf_joypad_add_mapping(mapping); }
 CUTE_INLINE int joypad_count() { return cf_joypad_count(); }
 CUTE_INLINE cf_joypad_t* joypad_open(int index) { return cf_joypad_open(index); }
 CUTE_INLINE void joypad_close(joypad_t* joypad) { cf_joypad_close(joypad); }

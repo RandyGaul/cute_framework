@@ -28,32 +28,32 @@
 
 // TODO -- Hookup allocator context to cute_png.h
 
-CUTE_STATIC_ASSERT(sizeof(cf_pixel_t) == sizeof(cp_pixel_t), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(CF_Pixel) == sizeof(cp_pixel_t), "Must be equal.");
 CUTE_STATIC_ASSERT(sizeof(cf_image_t) == sizeof(cp_image_t), "Must be equal.");
 CUTE_STATIC_ASSERT(sizeof(cf_image_indexed_t) == sizeof(cp_indexed_image_t), "Must be equal.");
 
-cf_result_t cf_image_load_png(const char* path, cf_image_t* img)
+CF_Result cf_image_load_png(const char* path, cf_image_t* img)
 {
 	void* data;
 	size_t sz;
-	cf_result_t err = cf_fs_read_entire_file_to_memory(path, &data, &sz);
+	CF_Result err = cf_fs_read_entire_file_to_memory(path, &data, &sz);
 	if (cf_is_error(err)) return err;
 	err = cf_image_load_png_mem(data, (int)sz, img);
 	CUTE_FREE(data);
 	return err;
 }
 
-cf_result_t cf_image_load_png_mem(const void* data, int size, cf_image_t* img)
+CF_Result cf_image_load_png_mem(const void* data, int size, cf_image_t* img)
 {
 	cp_image_t cp_img = cp_load_png_mem(data, size);
 	if (!cp_img.pix) return cf_result_error(cp_error_reason);
 	img->w = cp_img.w;
 	img->h = cp_img.h;
-	img->pix = (cf_pixel_t*)cp_img.pix;
+	img->pix = (CF_Pixel*)cp_img.pix;
 	return cf_result_success();
 }
 
-cf_result_t cf_image_load_png_wh(const void* data, int size, int* w, int* h)
+CF_Result cf_image_load_png_wh(const void* data, int size, int* w, int* h)
 {
 	cp_load_png_wh(data, size, w, h);
 	return cf_result_success();
@@ -64,16 +64,16 @@ void cf_image_free(cf_image_t* img)
 	CUTE_FREE(img->pix);
 }
 
-cf_result_t cf_image_load_png_indexed(const char* path, cf_image_indexed_t* img)
+CF_Result cf_image_load_png_indexed(const char* path, cf_image_indexed_t* img)
 {
 	void* data;
 	size_t sz;
-	cf_result_t err = cf_fs_read_entire_file_to_memory(path, &data, &sz);
+	CF_Result err = cf_fs_read_entire_file_to_memory(path, &data, &sz);
 	if (cf_is_error(err)) return err;
 	return cf_image_load_png_mem_indexed(data, (int)sz, img);
 }
 
-cf_result_t cf_image_load_png_mem_indexed(const void* data, int size, cf_image_indexed_t* img)
+CF_Result cf_image_load_png_mem_indexed(const void* data, int size, cf_image_indexed_t* img)
 {
 	cp_indexed_image_t cp_img = cp_load_indexed_png_mem(data, size);
 	if (!cp_img.pix) return cf_result_error(cp_error_reason);
@@ -96,7 +96,7 @@ cf_image_t cf_image_depallete(cf_image_indexed_t* indexed_img)
 	cf_image_t img;
 	img.w = cp_img.w;
 	img.h = cp_img.h;
-	img.pix = (cf_pixel_t*)cp_img.pix;
+	img.pix = (CF_Pixel*)cp_img.pix;
 	return img;
 }
 

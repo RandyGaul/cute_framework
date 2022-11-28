@@ -51,7 +51,7 @@ static const int s_base64_to_6bits[80] = {
 	26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51,
 };
 
-cf_result_t cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size)
+CF_Result cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size)
 {
 	size_t out_size = CUTE_BASE64_ENCODED_SIZE(src_size);
 	if (dst_size < out_size) return cf_result_error("`dst` buffer too small to place encoded output.");
@@ -119,7 +119,7 @@ cf_result_t cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t
 	return cf_result_success();
 }
 
-cf_result_t cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size)
+CF_Result cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size)
 {
 	if (!src_size) return cf_result_success();
 	if (src_size % 4) return cf_result_error("`src_size` is not a multiple of 4 (all base64 streams must be padded to a multiple of four with `=` characters).");

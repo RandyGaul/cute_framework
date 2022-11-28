@@ -83,7 +83,7 @@ void cf_audio_set_pause(bool true_for_paused)
 
 // -------------------------------------------------------------------------------------------------
 
-static inline cf_result_t s_result(cs_error_t err)
+static inline CF_Result s_result(cs_error_t err)
 {
 	if (err == CUTE_SOUND_ERROR_NONE) return result_success();
 	else {
@@ -139,14 +139,14 @@ uint64_t cf_music_get_sample_index()
 	return cs_music_get_sample_index();
 }
 
-cf_result_t cf_music_set_sample_index(uint64_t sample_index)
+CF_Result cf_music_set_sample_index(uint64_t sample_index)
 {
 	return s_result(cs_music_set_sample_index(sample_index));
 }
 
 // -------------------------------------------------------------------------------------------------
 
-cf_sound_t cf_play_sound(cf_audio_t* audio_source, cf_sound_params_t params /*= cf_sound_params_defaults()*/, cf_result_t* err)
+cf_sound_t cf_play_sound(cf_audio_t* audio_source, cf_sound_params_t params /*= cf_sound_params_defaults()*/, CF_Result* err)
 {
 	cs_sound_params_t csparams;
 	csparams.paused = params.paused;

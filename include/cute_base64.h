@@ -37,8 +37,8 @@ extern "C" {
 #define CUTE_BASE64_ENCODED_SIZE(size) ((((size) + 2) / 3) * 4)
 #define CUTE_BASE64_DECODED_SIZE(size) ((((size) + 3) / 4) * 3)
 
-CUTE_API cf_result_t CUTE_CALL cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size);
-CUTE_API cf_result_t CUTE_CALL cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size);
+CUTE_API CF_Result CUTE_CALL cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size);
+CUTE_API CF_Result CUTE_CALL cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size);
 
 #ifdef __cplusplus
 }

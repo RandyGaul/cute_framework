@@ -28,8 +28,6 @@ int test_make_sprite()
 	CUTE_TEST_ASSERT(!cf_is_error(cf_make_app("sprite test", 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_DEFAULT_GFX_CONTEXT, NULL)));
 
 	CF_Sprite s = cf_make_sprite("test_data/girl.aseprite");
-	CF_Batch* batch = cf_sprite_get_batch();
-	cf_batch_flush(batch);
 	cf_app_present(true);
 
 	cf_destroy_app();

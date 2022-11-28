@@ -26,37 +26,24 @@
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_png_cache_internal.h>
+#include <internal/cute_batch_internal.h>
 
 static cf_aseprite_cache_t* s_ase_cache()
 {
-	if (!app->ase_batch) {
+	if (!app->ase_cache) {
 		CUTE_ASSERT(!app->ase_cache);
 		app->ase_cache = cf_make_aseprite_cache();
-		app->ase_batch = cf_make_batch(cf_aseprite_cache_get_pixels_fn(app->ase_cache), app->ase_cache);
-		cf_batch_set_projection(app->ase_batch, cf_matrix_ortho_2d((float)app->offscreen_w, (float)app->offscreen_h, 0, 0));
 	}
 	return app->ase_cache;
 }
 
-static CF_Batch* s_ase_batch()
-{
-	return app->ase_batch;
-}
-
 static cf_png_cache_t* s_png_cache()
 {
-	if (!app->png_batch) {
+	if (!app->png_cache) {
 		CUTE_ASSERT(!app->png_cache);
 		app->png_cache = cf_make_png_cache();
-		app->png_batch = cf_make_batch(cf_png_cache_get_pixels_fn(app->png_cache), app->png_cache);
-		cf_batch_set_projection(app->png_batch, cf_matrix_ortho_2d((float)app->offscreen_w, (float)app->offscreen_h, 0, 0));
 	}
 	return app->png_cache;
-}
-
-static CF_Batch* s_png_batch()
-{
-	return app->png_batch;
 }
 
 CF_Sprite cf_easy_make_sprite(const char* png_path)
@@ -66,7 +53,7 @@ CF_Sprite cf_easy_make_sprite(const char* png_path)
 	if (!table) {
 		cf_png_t png;
 		char buf[1024];
-		cf_result_t err = cf_png_cache_load(cache, png_path, &png);
+		CF_Result err = cf_png_cache_load(cache, png_path, &png);
 		if (cf_is_error(err)) {
 			sprintf(buf, "Unable to load sprite at path \"%s\".\n", png_path);
 			cf_window_message_box(CF_WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
@@ -91,18 +78,12 @@ void cf_easy_sprite_unload(CF_Sprite sprite)
 	cf_png_cache_unload(cache, png);
 }
 
-CF_Batch* cf_easy_sprite_get_batch()
-{
-	s_png_cache();
-	return app->png_batch;
-}
-
 CF_Sprite cf_make_sprite(const char* aseprite_path)
 {
 	cf_aseprite_cache_t* cache = s_ase_cache();
 
 	CF_Sprite s = cf_sprite_defaults();
-	cf_result_t err = cf_aseprite_cache_load(cache, aseprite_path, &s);
+	CF_Result err = cf_aseprite_cache_load(cache, aseprite_path, &s);
 	char buf[1024];
 	if (cf_is_error(err)) {
 		sprintf(buf, "Unable to load sprite at path \"%s\".\n", aseprite_path);
@@ -115,10 +96,4 @@ void cf_sprite_unload(const char* aseprite_path)
 {
 	cf_aseprite_cache_t* cache = s_ase_cache();
 	cf_aseprite_cache_unload(cache, aseprite_path);
-}
-
-CF_Batch* cf_sprite_get_batch()
-{
-	s_ase_cache();
-	return app->ase_batch;
 }

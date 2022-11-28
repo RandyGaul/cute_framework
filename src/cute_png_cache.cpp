@@ -27,6 +27,8 @@
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_app_internal.h>
 
+#include <cute/cute_spritebatch.h>
+
 static void s_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata)
 {
 	cf_png_cache_t* cache = (cf_png_cache_t*)udata;
@@ -69,10 +71,10 @@ void cf_destroy_png_cache(cf_png_cache_t* cache)
 	CUTE_FREE(cache);
 }
 
-cf_result_t cf_png_cache_load(cf_png_cache_t* cache, const char* png_path, cf_png_t* png)
+CF_Result cf_png_cache_load(cf_png_cache_t* cache, const char* png_path, cf_png_t* png)
 {
 	cf_image_t img;
-	cf_result_t err = cf_image_load_png(png_path, &img);
+	CF_Result err = cf_image_load_png(png_path, &img);
 	if (cf_is_error(err)) return err;
 	cf_png_t entry;
 	entry.path = sintern(png_path);
@@ -86,10 +88,10 @@ cf_result_t cf_png_cache_load(cf_png_cache_t* cache, const char* png_path, cf_pn
 	return cf_result_success();
 }
 
-cf_result_t cf_png_cache_load_mem(cf_png_cache_t* cache, const char* png_path, const void* memory, size_t size, cf_png_t* png)
+CF_Result cf_png_cache_load_mem(cf_png_cache_t* cache, const char* png_path, const void* memory, size_t size, cf_png_t* png)
 {
 	cf_image_t img;
-	cf_result_t err = cf_image_load_png_mem(memory, (int)size, &img);
+	CF_Result err = cf_image_load_png_mem(memory, (int)size, &img);
 	if (cf_is_error(err)) return err;
 	cf_png_t entry;
 	entry.path = sintern(png_path);
@@ -114,7 +116,7 @@ void cf_png_cache_unload(cf_png_cache_t* cache, cf_png_t png)
 	hdel(cache->pngs, png.id);
 }
 
-cf_get_pixels_fn* cf_png_cache_get_pixels_fn(cf_png_cache_t* cache)
+get_pixels_fn* cf_png_cache_get_pixels_fn(cf_png_cache_t* cache)
 {
 	return s_get_pixels;
 }

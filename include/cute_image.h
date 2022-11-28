@@ -37,7 +37,7 @@ typedef struct cf_image_t
 {
 	int w;
 	int h;
-	cf_pixel_t* pix;
+	CF_Pixel* pix;
 } cf_image_t;
 
 typedef struct cf_image_indexed_t
@@ -46,19 +46,19 @@ typedef struct cf_image_indexed_t
 	int h;
 	uint8_t* pix;
 	uint8_t palette_len;
-	cf_pixel_t palette[256];
+	CF_Pixel palette[256];
 } cf_image_indexed_t;
 
 // -------------------------------------------------------------------------------------------------
 // PNG loading.
 
-CUTE_API cf_result_t CUTE_CALL cf_image_load_png(const char* virtual_path, cf_image_t* img);
-CUTE_API cf_result_t CUTE_CALL cf_image_load_png_mem(const void* data, int size, cf_image_t* img);
-CUTE_API cf_result_t CUTE_CALL cf_image_load_png_wh(const void* data, int size, int* w, int* h);
+CUTE_API CF_Result CUTE_CALL cf_image_load_png(const char* virtual_path, cf_image_t* img);
+CUTE_API CF_Result CUTE_CALL cf_image_load_png_mem(const void* data, int size, cf_image_t* img);
+CUTE_API CF_Result CUTE_CALL cf_image_load_png_wh(const void* data, int size, int* w, int* h);
 CUTE_API void CUTE_CALL cf_image_free(cf_image_t* img);
 
-CUTE_API cf_result_t CUTE_CALL cf_image_load_png_indexed(const char* virtual_path, cf_image_indexed_t* img);
-CUTE_API cf_result_t CUTE_CALL cf_image_load_png_mem_indexed(const void* data, int size, cf_image_indexed_t* img);
+CUTE_API CF_Result CUTE_CALL cf_image_load_png_indexed(const char* virtual_path, cf_image_indexed_t* img);
+CUTE_API CF_Result CUTE_CALL cf_image_load_png_mem_indexed(const void* data, int size, cf_image_indexed_t* img);
 CUTE_API void CUTE_CALL cf_image_free_indexed(cf_image_indexed_t* img);
 
 // -------------------------------------------------------------------------------------------------

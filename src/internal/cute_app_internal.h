@@ -35,10 +35,11 @@
 #include <cute_string.h>
 
 #include <internal/cute_object_table_internal.h>
+#include <internal/cute_batch_internal.h>
 
 #include <sokol/sokol_gfx_imgui.h>
 
-#define CUTE_RETURN_IF_ERROR(x) do { cf_result_t err = (x); if (cf_is_error(err)) return err; } while (0)
+#define CUTE_RETURN_IF_ERROR(x) do { CF_Result err = (x); if (cf_is_error(err)) return err; } while (0)
 
 struct SDL_Window;
 struct cs_context_t;
@@ -177,17 +178,10 @@ struct cf_app_t
 	int h;
 	int x;
 	int y;
-	bool offscreen_enabled = false;
-	bool fetched_offscreen = false;
-	CF_Texture offscreen_color_buffer;
-	CF_Texture offscreen_depth_buffer;
-	CF_Pass offscreen_pass;
-	CF_Mesh quad;
-	CF_Shader offscreen_shader;
-	CF_Material offscreen_material;
-	cf_v2 upscale;
-	int offscreen_w;
-	int offscreen_h;
+	CF_Texture backbuffer;
+	CF_Mesh backbuffer_quad;
+	CF_Shader backbuffer_shader;
+	CF_Material backbuffer_material;
 	cf_window_state_t window_state;
 	cf_window_state_t window_state_prev;
 	bool using_imgui = false;

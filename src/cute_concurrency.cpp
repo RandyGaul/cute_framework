@@ -44,12 +44,12 @@ void cf_destroy_mutex(cf_mutex_t* mutex)
 	cute_mutex_destroy(mutex);
 }
 
-cf_result_t cf_mutex_lock(cf_mutex_t* mutex)
+CF_Result cf_mutex_lock(cf_mutex_t* mutex)
 {
 	return cf_result_make(cute_lock(mutex), NULL);
 }
 
-cf_result_t cf_mutex_unlock(cf_mutex_t* mutex)
+CF_Result cf_mutex_unlock(cf_mutex_t* mutex)
 {
 	return cf_result_make(cute_unlock(mutex), NULL);
 }
@@ -69,17 +69,17 @@ void cf_destroy_cv(cf_cv_t* cv)
 	cute_cv_destroy(cv);
 }
 
-cf_result_t cf_cv_wake_all(cf_cv_t* cv)
+CF_Result cf_cv_wake_all(cf_cv_t* cv)
 {
 	return cf_result_make(cute_cv_wake_all(cv), NULL);
 }
 
-cf_result_t cf_cv_wake_one(cf_cv_t* cv)
+CF_Result cf_cv_wake_one(cf_cv_t* cv)
 {
 	return cf_result_make(cute_cv_wake_one(cv), NULL);
 }
 
-cf_result_t cf_cv_wait(cf_cv_t* cv, cf_mutex_t* mutex)
+CF_Result cf_cv_wait(cf_cv_t* cv, cf_mutex_t* mutex)
 {
 	return cf_result_make(cute_cv_wait(cv, mutex), NULL);
 }
@@ -94,22 +94,22 @@ void cf_destroy_sem(cf_semaphore_t* semaphore)
 	cute_semaphore_destroy(semaphore);
 }
 
-cf_result_t cf_sem_post(cf_semaphore_t* semaphore)
+CF_Result cf_sem_post(cf_semaphore_t* semaphore)
 {
 	return cf_result_make(cute_semaphore_post(semaphore), NULL);
 }
 
-cf_result_t cf_sem_try(cf_semaphore_t* semaphore)
+CF_Result cf_sem_try(cf_semaphore_t* semaphore)
 {
 	return cf_result_make(cute_semaphore_try(semaphore), NULL);
 }
 
-cf_result_t cf_sem_wait(cf_semaphore_t* semaphore)
+CF_Result cf_sem_wait(cf_semaphore_t* semaphore)
 {
 	return cf_result_make(cute_semaphore_wait(semaphore), NULL);
 }
 
-cf_result_t cf_sem_value(cf_semaphore_t* semaphore)
+CF_Result cf_sem_value(cf_semaphore_t* semaphore)
 {
 	return cf_result_make(cute_semaphore_value(semaphore), NULL);
 }
@@ -134,7 +134,7 @@ cf_thread_id_t cf_thread_id()
 	return cute_thread_id();
 }
 
-cf_result_t cf_thread_wait(cf_thread_t* thread)
+CF_Result cf_thread_wait(cf_thread_t* thread)
 {
 	return cf_result_make(cute_thread_wait(thread), NULL);
 }
@@ -171,7 +171,7 @@ int cf_atomic_get(cf_atomic_int_t* atomic)
 	return cute_atomic_get(atomic);
 }
 
-cf_result_t cf_atomic_cas(cf_atomic_int_t* atomic, int expected, int value)
+CF_Result cf_atomic_cas(cf_atomic_int_t* atomic, int expected, int value)
 {
 	return cf_result_make(cute_atomic_cas(atomic, expected, value), NULL);
 }
@@ -186,7 +186,7 @@ void* cf_atomic_ptr_get(void** atomic)
 	return cute_atomic_ptr_get(atomic);
 }
 
-cf_result_t cf_atomic_ptr_cas(void** atomic, void* expected, void* value)
+CF_Result cf_atomic_ptr_cas(void** atomic, void* expected, void* value)
 {
 	return cf_result_make(cute_atomic_ptr_cas(atomic, expected, value), NULL);
 }

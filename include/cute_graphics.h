@@ -19,12 +19,11 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_GFX_H
-#define CUTE_GFX_H
+#ifndef CUTE_GRAPHICS_H
+#define CUTE_GRAPHICS_H
 
 #include "cute_defines.h"
 #include "cute_result.h"
-#include "cute_app.h"
 #include "cute_color.h"
 #include "cute_c_runtime.h"
 
@@ -586,6 +585,7 @@ CUTE_API void CUTE_CALL cf_material_set_uniform_fs(CF_Material material, const c
 //--------------------------------------------------------------------------------------------------
 // Rendering Functions.
 
+CUTE_API void CUTE_CALL cf_begin_default_pass();
 CUTE_API void CUTE_CALL cf_begin_pass(CF_Pass pass);
 CUTE_API void CUTE_CALL cf_apply_viewport(float x, float y, float width, float height);
 CUTE_API void CUTE_CALL cf_apply_scissor(float x, float y, float width, float height);
@@ -593,7 +593,6 @@ CUTE_API void CUTE_CALL cf_apply_mesh(CF_Mesh mesh);
 CUTE_API void CUTE_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
 CUTE_API void CUTE_CALL cf_draw_elements();
 CUTE_API void CUTE_CALL cf_end_pass();
-CUTE_API void CUTE_CALL cf_commit();
 
 #ifdef __cplusplus
 }
@@ -611,4 +610,4 @@ namespace cute
 
 #endif // CUTE_CPP
 
-#endif // CUTE_GFX_H
+#endif // CUTE_GRAPHICS_H

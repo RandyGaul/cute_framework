@@ -65,7 +65,7 @@ CUTE_API void CUTE_CALL cf_destroy_aseprite_cache(cf_aseprite_cache_t* cache);
  * Returns a sprite from the cache. If it does not exist in the cache, it is loaded from disk
  * and placed into the cache.
  */
-CUTE_API cf_result_t CUTE_CALL cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* aseprite_path, CF_Sprite* sprite);
+CUTE_API CF_Result CUTE_CALL cf_aseprite_cache_load(cf_aseprite_cache_t* cache, const char* aseprite_path, CF_Sprite* sprite);
 
 /**
  * Removes a sprite from the cache. This will cause the next call to `cf_aseprite_cache_load` to fetch from disk.
@@ -81,7 +81,7 @@ CUTE_API void CUTE_CALL cf_aseprite_cache_unload(cf_aseprite_cache_t* cache, con
  *
  * Only call this function if you know what you're doing.
  */
-CUTE_API cf_result_t CUTE_CALL cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase);
+CUTE_API CF_Result CUTE_CALL cf_aseprite_cache_load_ase(cf_aseprite_cache_t* cache, const char* aseprite_path, ase_t** ase);
 
 #ifdef __cplusplus
 }

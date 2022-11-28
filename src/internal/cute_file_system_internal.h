@@ -24,7 +24,7 @@
 
 #include <cute_result.h>
 
-CUTE_API cf_result_t CUTE_CALL cf_fs_init(const char* argv0);
+CUTE_API CF_Result CUTE_CALL cf_fs_init(const char* argv0);
 CUTE_API void CUTE_CALL cf_fs_destroy();
 
 #ifdef CUTE_CPP
