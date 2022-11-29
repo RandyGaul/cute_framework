@@ -37,8 +37,8 @@ typedef struct cf_audio_t cf_audio_t;
 
 CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg(const char* path /*= NULL*/);
 CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_wav(const char* path /*= NULL*/);
-CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg_from_memory(void* memory, int byte_count /*= NULL*/);
-CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_wav_from_memory(void* memory, int byte_count /*= NULL*/);
+CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_ogg_from_memory(void* memory, int byte_count);
+CUTE_API cf_audio_t* CUTE_CALL cf_audio_load_wav_from_memory(void* memory, int byte_count);
 CUTE_API void CUTE_CALL cf_audio_destroy(cf_audio_t* audio);
 
 // -------------------------------------------------------------------------------------------------
@@ -125,8 +125,8 @@ struct sound_t : public cf_sound_t
 
 CUTE_INLINE audio_t* audio_load_ogg(const char* path = NULL) { return cf_audio_load_ogg(path); }
 CUTE_INLINE audio_t* audio_load_wav(const char* path = NULL) { return cf_audio_load_wav(path); }
-CUTE_INLINE audio_t* audio_load_ogg_from_memory(void* memory, int byte_count = NULL) { return cf_audio_load_ogg_from_memory(memory, byte_count); }
-CUTE_INLINE audio_t* audio_load_wav_from_memory(void* memory, int byte_count = NULL) { return cf_audio_load_wav_from_memory(memory, byte_count); }
+CUTE_INLINE audio_t* audio_load_ogg_from_memory(void* memory, int byte_count) { return cf_audio_load_ogg_from_memory(memory, byte_count); }
+CUTE_INLINE audio_t* audio_load_wav_from_memory(void* memory, int byte_count) { return cf_audio_load_wav_from_memory(memory, byte_count); }
 CUTE_INLINE void audio_destroy(audio_t* audio) { cf_audio_destroy(audio); }
 
 // -------------------------------------------------------------------------------------------------

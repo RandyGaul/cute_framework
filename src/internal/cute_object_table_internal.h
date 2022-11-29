@@ -55,7 +55,7 @@ struct cf_object_table_t
 
 template <typename T>
 cf_object_table_t<T>::cf_object_table_t(int reserve_count, void* user_allocator_context)
-	: m_table(cf_make_handle_allocator(reserve_count, user_allocator_context))
+	: m_table(cf_make_handle_allocator(reserve_count))
 	, m_objects(reserve_count, user_allocator_context)
 {}
 

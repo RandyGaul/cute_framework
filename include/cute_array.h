@@ -180,7 +180,7 @@
 
 #define CF_AHDR(a) ((cf_ahdr_t*)a - 1)
 #define CF_ACOOKIE 0xE6F7E359
-#define CF_ACANARY(a) ((a) ? CUTE_ASSERT(CF_AHDR(a)->cookie == CF_ACOOKIE) : 0) // Detects buffer underruns.
+#define CF_ACANARY(a) ((a) ? CUTE_ASSERT(CF_AHDR(a)->cookie == CF_ACOOKIE) : (void)0) // Detects buffer underruns.
 
 // *Hidden* array header.
 typedef struct cf_ahdr_t
@@ -262,7 +262,6 @@ struct array
 	array<T>& operator=(array<T>&& rhs);
 	array<T>& steal_from(array<T>* steal_from_me);
 	array<T>& steal_from(array<T>& steal_from_me);
-	array<T>& steal_from(T* c_api_array);
 
 	T& last();
 	const T& last() const;
@@ -328,15 +327,6 @@ array<T>& array<T>::steal_from(array<T>* steal_from_me)
 
 template <typename T>
 array<T>& array<T>::steal_from(array<T>& steal_from_me)
-{
-	afree(m_ptr);
-	m_ptr = steal_from_me.m_ptr;
-	steal_from_me.m_ptr = NULL;
-	return *this;
-}
-
-template <typename T>
-array<T>& array<T>::steal_from(T* c_api_array)
 {
 	afree(m_ptr);
 	m_ptr = steal_from_me.m_ptr;
