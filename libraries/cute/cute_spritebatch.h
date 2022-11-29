@@ -152,6 +152,31 @@ typedef struct spritebatch_t spritebatch_t;
 typedef struct spritebatch_config_t spritebatch_config_t;
 typedef struct spritebatch_sprite_t spritebatch_sprite_t;
 
+// This define is *completely optional*. It lets you override the default layout of
+// data passed through the sprite batcher. By default it contains the minimal info
+// needed for a quad (position, scale, rotation, etc.). You can override this macro
+// to define your own geometry for batching. For example, you could have a union to
+// support both quads and individual triangles, as opposed to just quads by default.
+// 
+// IMPROTANT NOTE (ignore unless you override this macro):
+// Just note you'll have to calculate your own uv coordinates after each batch is
+// reported. You should also be careful about the scale of your geometry if you opt
+// to use `atlas_use_border_pixels`, as you'll have to account for border pixels
+// included in the reported uvs. Search `SPRITEBATCH_SPRITE_GEOMETRY_DEFAULT` for
+// more an example on how to do this yourself.
+#ifndef SPRITEBATCH_SPRITE_GEOMETRY
+	typedef struct spritebatch_primitive_t
+	{
+		float x, y;   // x and y position
+		float sx, sy; // scale on x and y axis
+		float c, s;   // cosine and sine (represents cos(angle) and sin(angle))
+	} spritebatch_primitive_t;
+#	define SPRITEBATCH_SPRITE_GEOMETRY spritebatch_primitive_t
+
+	// Used to automatically scale reported sprites according to border pixels.
+#	define SPRITEBATCH_SPRITE_GEOMETRY_DEFAULT
+#endif
+
 // Sprites will be pushed into the spritebatch with this struct. All the fields
 // should be set before calling `spritebatch_push`, though `texture_id` and
 // `sort_bits` can simply be set to zero.
@@ -165,14 +190,17 @@ struct spritebatch_sprite_t
 	// You must set this value!
 	SPRITEBATCH_U64 image_id;
 
-	// The `texture_id` can set to zero `spritebatch_push`. This value will be overwritten
-	// with a valid texture id of a generated atlas before batches are reported back to you.
+	// `texture_id` can be set to zero. This value will be overwritten with a valid
+	// texture id before batches are reported back to you. This id will map to an
+	// atlas created internally.
 	SPRITEBATCH_U64 texture_id;
 
-	int w, h;         // width and height of this sprite in pixels
-	float x, y;       // x and y position
-	float sx, sy;     // scale on x and y axis
-	float c, s;       // cosine and sine (represents cos(angle) and sin(angle))
+	// Contains all of the sprite's geometry. By default this is just a scale +
+	// translation + rotation. However, you can overload this macro to use your own
+	// geometry definition. See comments at this macro definition above for more info.
+	SPRITEBATCH_SPRITE_GEOMETRY geom;
+
+	int w, h;         // width and height of this sprite's image in pixels
 	float minx, miny; // u coordinate -- Required only for premade atlas sprites, otherwise don't use because they will be overwritten
 	float maxx, maxy; // v coordinate -- Required only for premade atlas sprites, otherwise don't use because they will be overwritten
 
@@ -180,14 +208,12 @@ struct spritebatch_sprite_t
 	// User-defined sorting key, see: http://realtimecollisiondetection.net/blog/?p=86
 	int sort_bits;
 
-	// This is a *completely optional* field. The idea is that the `SPRITEBATCH_SPRITE_USERDATA`
-	// macro can be defined to insert arbitrary data into sprites. For example, if you want to
-	// allow individual sprites to have different alpha values, or a tint color, you can add
-	// in some floats here within a single struct. Internally this field is *never* accessed, and
-	// is simply handed back to you in each sprite via the `submit_batch_fn` callback.
+	// This is a *completely optional* feature. You can insert your own user data
+	// struct into each sprite. It is *never* touched internally, and simply handed
+	// back to you later.
 #ifdef SPRITEBATCH_SPRITE_USERDATA
 	SPRITEBATCH_SPRITE_USERDATA udata;
-#endif
+#endif SPRITEBATCH_SPRITE_USERDATA
 };
 
 // Pushes a sprite onto an internal buffer. Does no other logic.
@@ -202,7 +228,7 @@ void spritebatch_prefetch(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, in
 
 // If a match for `image_id` is found, the texture id and uv coordinates are looked up and returned
 // as a sprite instance. This is sometimes useful to render sprites through an external mechanism,
-// such as Dear ImGui.
+// such as Dear ImGui. The return result will be valid until the next call to `spritebatch_defrag`.
 spritebatch_sprite_t spritebatch_fetch(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h);
 
 // Increments internal timestamps on all textures, for use in `spritebatch_defrag`.
@@ -394,25 +420,20 @@ struct hashtable_t
 
 // end hashtable.h (more later)
 
-typedef struct
+typedef struct spritebatch_internal_sprite_t
 {
 	SPRITEBATCH_U64 image_id;
 	int sort_bits;
-	int w;
-	int h;
-	float x, y;
-	float sx, sy;
-	float c, s;
-
+	SPRITEBATCH_SPRITE_GEOMETRY geom;
+	int w, h;                         // w/h of image in pixels
 	float premade_minx, premade_miny; // u coordinate for premade 
 	float premade_maxx, premade_maxy; // v coordinate for premade
-
 #ifdef SPRITEBATCH_SPRITE_USERDATA
 	SPRITEBATCH_SPRITE_USERDATA udata;
-#endif
+#endif SPRITEBATCH_SPRITE_USERDATA
 } spritebatch_internal_sprite_t;
 
-typedef struct
+typedef struct spritebatch_internal_texture_t
 {
 	int timestamp;
 	int w, h;
@@ -430,7 +451,7 @@ typedef struct spritebatch_internal_atlas_t
 	struct spritebatch_internal_atlas_t* prev;
 } spritebatch_internal_atlas_t;
 
-typedef struct
+typedef struct spritebatch_internal_lonely_texture_t
 {
 	int timestamp;
 	int w, h;
@@ -438,7 +459,7 @@ typedef struct
 	SPRITEBATCH_U64 texture_id;
 } spritebatch_internal_lonely_texture_t;
 
-typedef struct
+typedef struct spritebatch_internal_premade_atlas
 {
 	int w, h;
 	int mark_for_cleanup;
@@ -1115,14 +1136,13 @@ int spritebatch_internal_fill_internal_sprite(spritebatch_t* sb, spritebatch_spr
 
 	out->image_id = sprite.image_id;
 	out->sort_bits = sprite.sort_bits;
+	out->geom = sprite.geom;
 	out->w = sprite.w;
 	out->h = sprite.h;
-	out->x = sprite.x;
-	out->y = sprite.y;
-	out->sx = sprite.sx + (sb->atlas_use_border_pixels ? (sprite.sx / (float)sprite.w) * 2.0f : 0);
-	out->sy = sprite.sy + (sb->atlas_use_border_pixels ? (sprite.sy / (float)sprite.h) * 2.0f : 0);
-	out->c = sprite.c;
-	out->s = sprite.s;
+#ifdef SPRITEBATCH_SPRITE_GEOMETRY_DEFAULT
+	out->geom.sx = sprite.geom.sx + (sb->atlas_use_border_pixels ? (sprite.geom.sx / (float)sprite.w) * 2.0f : 0);
+	out->geom.sy = sprite.geom.sy + (sb->atlas_use_border_pixels ? (sprite.geom.sy / (float)sprite.h) * 2.0f : 0);
+#endif
 
 	out->premade_minx = sprite.minx;
 	out->premade_miny = sprite.miny;
@@ -1187,11 +1207,6 @@ spritebatch_sprite_t spritebatch_fetch(spritebatch_t* sb, SPRITEBATCH_U64 image_
 	spritebatch_sprite_t s;
 	SPRITEBATCH_MEMSET(&s, 0, sizeof(s));
 
-	s.w = w;
-	s.h = h;
-	s.c = 1;
-	s.s = 0;
-
 	spritebatch_internal_premade_atlas* tex = (spritebatch_internal_premade_atlas*)hashtable_find(&sb->sprites_to_premade_textures, image_id);
 	if(!tex)
 	{
@@ -1210,7 +1225,7 @@ spritebatch_sprite_t spritebatch_fetch(spritebatch_t* sb, SPRITEBATCH_U64 image_
 		}
 		else {
 			spritebatch_internal_lonely_sprite(sb, image_id, w, h, &s, 0);
-		}		
+		}
 	}
 	else
 	{
@@ -1397,19 +1412,15 @@ int spritebatch_internal_push_sprite(spritebatch_t* sb, spritebatch_internal_spr
 	spritebatch_sprite_t sprite;
 	sprite.image_id = s->image_id;
 	sprite.sort_bits = s->sort_bits;
-	sprite.x = s->x;
-	sprite.y = s->y;
+	sprite.geom = s->geom;
 	sprite.w = s->w;
 	sprite.h = s->h;
-	sprite.sx = s->sx;
-	sprite.sy = s->sy;
-	sprite.c = s->c;
-	sprite.s = s->s;
 
 	sprite.minx = s->premade_minx;
-	sprite.miny = s->premade_miny; 
+	sprite.miny = s->premade_miny;
 	sprite.maxx = s->premade_maxx;
-	sprite.maxy = s->premade_maxy; 
+	sprite.maxy = s->premade_maxy;
+
 #ifdef SPRITEBATCH_SPRITE_USERDATA
 	sprite.udata = s->udata;
 #endif
@@ -1569,8 +1580,8 @@ int spritebatch_flush(spritebatch_t* sb)
 			} 
 			else
 			{
-				w = premade_atlas->w;				
-				h = premade_atlas->h;				
+				w = premade_atlas->w;
+				h = premade_atlas->h;
 			}
 
 			sb->batch_callback(sb->sprites + min, batch_count, w, h, sb->udata);
@@ -1694,7 +1705,7 @@ void spritebatch_internal_image_merge_sort(spritebatch_internal_integer_image_t*
 	spritebatch_internal_image_merge_sort_recurse(b, 0, n, a);
 }
 
-typedef struct
+typedef struct spritebatch_internal_atlas_image_t
 {
 	int img_index;    // index into the `imgs` array
 	int w, h;         // pixel w/h of original image
@@ -1707,7 +1718,7 @@ typedef struct
 
 void spritebatch_make_atlas(spritebatch_t* sb, spritebatch_internal_atlas_t* atlas_out, const spritebatch_internal_lonely_texture_t* imgs, int img_count)
 {
-	float w0, h0, div, wTol, hTol;
+	float iw, ih;
 	int atlas_image_size, atlas_stride, sp;
 	void* atlas_pixels = 0;
 	int atlas_node_capacity = img_count * 2;
@@ -1847,13 +1858,8 @@ void spritebatch_make_atlas(spritebatch_t* sb, spritebatch_internal_atlas_t* atl
 	hashtable_init(&atlas_out->sprites_to_textures, sizeof(spritebatch_internal_texture_t), img_count, sb->mem_ctx);
 	atlas_out->texture_id = sb->generate_texture_callback(atlas_pixels, atlas_width, atlas_height, sb->udata);
 
-	// squeeze UVs inward by 128th of a pixel
-	// this prevents atlas bleeding. tune as necessary for good results.
-	w0 = 1.0f / (float)(atlas_width);
-	h0 = 1.0f / (float)(atlas_height);
-	div = 1.0f / 128.0f;
-	wTol = w0 * div;
-	hTol = h0 * div;
+	iw = 1.0f / (float)(atlas_width);
+	ih = 1.0f / (float)(atlas_height);
 
 	for (int i = 0; i < img_count; ++i)
 	{
@@ -1865,10 +1871,10 @@ void spritebatch_make_atlas(spritebatch_t* sb, spritebatch_internal_atlas_t* atl
 			spritebatch_v2_t max = img->max;
 			volume_used += img->size.x * img->size.y;
 
-			float min_x = (float)min.x * w0 + wTol;
-			float min_y = (float)min.y * h0 + hTol;
-			float max_x = (float)max.x * w0 - wTol;
-			float max_y = (float)max.y * h0 - hTol;
+			float min_x = (float)min.x * iw;
+			float min_y = (float)min.y * ih;
+			float max_x = (float)max.x * iw;
+			float max_y = (float)max.y * ih;
 
 			// flip image on y axis
 			if (SPRITEBATCH_ATLAS_FLIP_Y_AXIS_FOR_UV)

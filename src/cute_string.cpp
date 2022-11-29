@@ -372,13 +372,13 @@ char* cf_serase(char* s, int index, int count)
 		if (count <= 0) return s;
 	}
 	if (index >= slen(s)) return s;
-	if (index + count > slen(s)) {
-		ssize(s) = index;
-		s[slen(s)] = 0;
+	if (index + count >= slen(s)) {
+		ssize(s) = index + 1;
+		s[index] = 0;
 		return s;
 	} else {
-		int remaining = scount(s) - count;
-		CUTE_MEMMOVE(s + index, s + index + count, remaining);
+		int remaining = scount(s) - (count + index) + 1;
+		CUTE_MEMMOVE(s + index, s + count + index, remaining);
 		ssize(s) -= count;
 	}
 	return s;

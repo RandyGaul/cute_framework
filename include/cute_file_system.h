@@ -88,7 +88,8 @@ extern "C" {
 /**
  * Squishes the path to be less than or equal to n characters in length. This will
  * insert ellipses "..." into the path as necessary. This function is useful for
- * displaying paths and visualizing them in small boxes or windows.
+ * displaying paths and visualizing them in small boxes or windows. n includes the
+ * nul-byte.
  */
 #define spcompact(s, n) cf_path_compact(s, n)
 

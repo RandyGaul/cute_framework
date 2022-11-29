@@ -106,7 +106,7 @@ int test_path()
 	sfree(s);
 
 	s = spcompact("/folder/to/file.txt", 17);
-	CUTE_TEST_ASSERT(sequ(s, "/folde.../file.txt"));
+	CUTE_TEST_ASSERT(sequ(s, "/fold.../file.txt"));
 	sfree(s);
 
 	s = spdir_of("/example/a/b/c/file.txt");

@@ -85,11 +85,7 @@ extern "C" {
  *     }
  *     cf_commit();
  * 
- * Where each pass writes to a render target texture. Passes are designed to easily load
- * up texture contents from the previous pass, or start out with a cleared color. This makes
- * chaining passes together quite simple. For example the first pass could be to draw a bunch of
- * sprites, while the second pass could be some full-screen post-processing FX, such as a
- * CRT TV shader, or a blurring effect, etc.
+ * Where each pass writes to a render target texture.
  */
 
 #define CF_GRAPHICS_IS_VALID(X) (X.id != 0)
@@ -218,6 +214,9 @@ typedef enum CF_PixelFormatOp
 	#undef CF_ENUM
 } CF_PixelFormatOp;
 
+// Call this function to see if a particular pixel format can be used for a particular
+// blending operation. Not all platforms support all combos, and some platforms don't support
+// particular pixel formats at all.
 CUTE_API bool CUTE_CALL cf_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op);
 
 #define CF_DEVICE_FEATURE_DEFS \
@@ -232,6 +231,7 @@ typedef enum CF_DeviceFeature
 	#undef CF_ENUM
 } CF_DeviceFeature;
 
+// Query to see if the device can support a particular feature.
 CUTE_API bool CUTE_CALL cf_query_device_feature(CF_DeviceFeature feature);
 
 #define CF_RESOURCE_LIMIT_DEFS \
@@ -245,15 +245,17 @@ typedef enum CF_ResourceLimit
 	#undef CF_ENUM
 } CF_ResourceLimit;
 
+// One notable limit is on GLES2 the maximum number of vertex attributes has
+// been reportedly lower than other device types.
 CUTE_API int CUTE_CALL cf_query_resource_limit(CF_ResourceLimit resource_limit);
 
 //--------------------------------------------------------------------------------------------------
 // Texture.
 
 #define CF_USAGE_TYPE_DEFS \
-	CF_ENUM(USAGE_TYPE_IMMUTABLE, 0) \
-	CF_ENUM(USAGE_TYPE_DYNAMIC,   1) \
-	CF_ENUM(USAGE_TYPE_STREAM,    2) \
+	CF_ENUM(USAGE_TYPE_IMMUTABLE, 0) /* Can not be changed once created. */ \
+	CF_ENUM(USAGE_TYPE_DYNAMIC,   1) /* Can be changed occasionally, but not once per frame. */ \
+	CF_ENUM(USAGE_TYPE_STREAM,    2) /* Intended to be altered each frame, e.g. streaming data. */ \
 
 typedef enum CF_UsageType
 {
@@ -296,9 +298,9 @@ typedef struct CF_TextureParams
 	CF_WrapMode wrap_v;
 	int width;
 	int height;
-	bool render_target;
-	int initial_data_size;
-	void* initial_data;
+	bool render_target;    // If true you can render to this texture via `CF_Pass`.
+	int initial_data_size; // Must be non-zero for immutable textures.
+	void* initial_data;    // Must be non-NULL for immutable textures.
 } CF_TextureParams;
 
 CUTE_API CF_TextureParams CUTE_CALL cf_texture_defaults();
@@ -308,6 +310,42 @@ CUTE_API void CUTE_CALL cf_update_texture(CF_Texture texture, void* data, int si
 
 //--------------------------------------------------------------------------------------------------
 // Shader.
+
+/**
+ * Here's the rundown you need to know in order to use custom shaders in Cute Framework (CF). This
+ * is only necessary if you want custom rendering.
+ * 
+ * For now shaders are difficult to use. This is an industry-wide problem. We have many different
+ * shading languages and many different devices to deal with, but very little work has gone into
+ * making high-quality and easy to use shader solutions. Most shader cross-compilers are way too
+ * complex and riddled with giant dependencies, making them a poor for for CF.
+ * 
+ * The best option (besides writing our own cross-compiler) is to use sokol_gfx.h, a very well written
+ * thin wrapper around low-level 3D APIs. It supports a variety of backends:
+ * 
+ *  - Metal
+ *  - OpenGL Core 3.3
+ *  - OpenGL ES2
+ *  - OpenGL ES3
+ *  - D3D11
+ *  - WebGPU
+ * 
+ * This lets CF run basically anywhere, including phones and web browsers. In the future SDL (Simple
+ * Direct Media Library) will implement a GPU API that exposes a shader compiler. But until then we're
+ * stuck using an offline compiler solution. It's still a pretty good solution though! It just means
+ * a little extra work to generate shaders.
+ * 
+ * Cute Framework comes with compatible binaries Windows, Linux and MacOS to compile shaders onto
+ * all supported platforms using the tool sokol-shdc. They are found in the `tools` folder.
+ * https://github.com/floooh/sokol-tools/blob/master/docs/sokol-shdc.md
+ * 
+ * Just make sure to compile with the `--reflection` parameter. Once done `your_shader.h` will be
+ * generated. Include it you can build a `CF_SokolShader`. It becomes a one-liner to create the shader
+ * at runtime.
+ * 
+ *     #include "my_shader.h"
+ *     CF_Shader my_shd = CF_MAKE_SOKOL_SHADER(my_shader);
+ */
 
 #define CF_MAKE_SOKOL_SHADER(prefix) \
 	cf_make_shader({ \
@@ -337,10 +375,15 @@ CUTE_API void CUTE_CALL cf_destroy_shader(CF_Shader shader);
 //--------------------------------------------------------------------------------------------------
 // Render Passes.
 
+/**
+ * A rendering pass contains a target (and optional depth/stencil buffer) along with some operations
+ * on what to do with the target. A render target means a texture the GPU can write to.
+ */
+
 #define CF_PASS_INIT_OP_DEFS \
-	CF_ENUM(PASS_INIT_OP_CLEAR,    0) \
-	CF_ENUM(PASS_INIT_OP_LOAD,     1) \
-	CF_ENUM(PASS_INIT_OP_DONTCARE, 2) \
+	CF_ENUM(PASS_INIT_OP_CLEAR,    /* Clear to contents of the target. */ 0) \
+	CF_ENUM(PASS_INIT_OP_LOAD,     /* Load the previous contents of the target. */ 1) \
+	CF_ENUM(PASS_INIT_OP_DONTCARE, /* Don't specify either. */ 2) \
 
 typedef enum CF_PassInitOp
 {
@@ -368,6 +411,20 @@ CUTE_API void CUTE_CALL cf_destroy_pass(CF_Pass pass);
 
 //--------------------------------------------------------------------------------------------------
 // Mesh.
+
+/**
+ * A mesh is a container of triangles, along with optional indices and instance data. After a mesh
+ * is created the layout of the vertices in memory must be described. We use an array of
+ * `CF_VertexAttribute` to define how the GPU will interpret the vertices we send it.
+ * 
+ * `CF_VertexAttribute` are also used to specify instance data by setting `step_type` to
+ * `CF_ATTRIBUTE_STEP_PER_INSTANCE` instead of the default `ATTRIBUTE_STEP_PER_VERTEX`.
+ * 
+ * Data for meshes can be immutable, dynamic, or streamed, just like textures. Immutable meshes are
+ * perfect for terrain or building rendering, anything static in the world. Dynamic meshes can be
+ * occasionally updated, but are still more like an immutable mesh in terms of performance. Streamed
+ * meshes can be updated each frame, perfect for streaming data to the GPU.
+ */
 
 #define CF_VERTEX_FORMAT_DEFS  \
 	CF_ENUM(VERTEX_FORMAT_INVALID,  0 ) \
@@ -410,19 +467,99 @@ typedef struct CF_VertexAttribute
 
 CUTE_API CF_Mesh CUTE_CALL cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size);
 CUTE_API void CUTE_CALL cf_destroy_mesh(CF_Mesh mesh);
+
+/**
+ * Informs CF and the GPU what the memory layout of your vertices and instance data looks like.
+ * You must call this before uploading any data to the GPU. The max number of attributes is 16.
+ * Any more attributes beyond 16 will be ignored.
+ * 
+ * The limit of 16 vertex attributes is less on GLES2, see `cf_query_resource_limit`.
+ */
 CUTE_API void CUTE_CALL cf_mesh_set_attributes(CF_Mesh mesh, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride);
+
+/**
+ * The mesh must have been created with `CF_USAGE_TYPE_DYNAMIC` or `CF_USAGE_TYPE_STREAM` in order
+ * to call this function more than once. For `CF_USAGE_TYPE_IMMUTABLE` this function can only be
+ * called once. For dynamic/stream cases you can only call this function once per frame.
+ */
 CUTE_API void CUTE_CALL cf_mesh_update_vertex_data(CF_Mesh mesh, void* data, int count);
+
+/**
+ * The mesh must have been created with `CF_USAGE_TYPE_DYNAMIC` or `CF_USAGE_TYPE_STREAM` in order
+ * to call this function more than once. This function can be called multiple times per frame. The
+ * intended use-case is to stream bits of data to the GPU and issue a `cf_draw_elements` call. The
+ * only elements that will be drawn are the elements from the last call to `cf_mesh_append_index_data`,
+ * all previously appended data will remain untouched.
+ */
 CUTE_API int CUTE_CALL cf_mesh_append_vertex_data(CF_Mesh mesh, void* data, int count);
+
+/**
+ * Use this when streaming data to the GPU to make sure the internal streaming buffers are not overrun.
+ * You specified this size when creating the mesh. Use this function to understand if you're sending
+ * too much to the GPU all at once. You might need to send less data or increase the size of your mesh's
+ * internal buffers.
+ */
 CUTE_API bool CUTE_CALL cf_mesh_will_overflow_vertex_data(CF_Mesh mesh, int append_count);
+
+/**
+ * Use this when streaming data to the GPU to make sure the internal streaming buffers are not overrun.
+ * You specified this size when creating the mesh. Use this function to understand if you're sending
+ * too much to the GPU all at once. You might need to send less data or increase the size of your mesh's
+ * internal buffers.
+ */
 CUTE_API void CUTE_CALL cf_mesh_update_instance_data(CF_Mesh mesh, void* data, int count);
+
+/**
+ * The mesh must have been created with `CF_USAGE_TYPE_DYNAMIC` or `CF_USAGE_TYPE_STREAM` in order
+ * to call this function more than once. This function can be called multiple times per frame. The
+ * intended use-case is to stream bits of data to the GPU and issue a `cf_draw_elements` call. The
+ * only elements that will be drawn are the elements from the last call to `cf_mesh_append_index_data`,
+ * all previously appended data will remain untouched.
+ */
 CUTE_API int CUTE_CALL cf_mesh_append_instance_data(CF_Mesh mesh, void* data, int count);
+
+/**
+ * Use this when streaming data to the GPU to make sure the internal streaming buffers are not overrun.
+ * You specified this size when creating the mesh. Use this function to understand if you're sending
+ * too much to the GPU all at once. You might need to send less data or increase the size of your mesh's
+ * internal buffers.
+ */
 CUTE_API bool CUTE_CALL cf_mesh_will_overflow_instance_data(CF_Mesh mesh, int append_count);
+
+/**
+ * Use this when streaming data to the GPU to make sure the internal streaming buffers are not overrun.
+ * You specified this size when creating the mesh. Use this function to understand if you're sending
+ * too much to the GPU all at once. You might need to send less data or increase the size of your mesh's
+ * internal buffers.
+ */
 CUTE_API void CUTE_CALL cf_mesh_update_index_data(CF_Mesh mesh, uint32_t* indices, int count);
+
+/**
+ * The mesh must have been created with `CF_USAGE_TYPE_DYNAMIC` or `CF_USAGE_TYPE_STREAM` in order
+ * to call this function more than once. This function can be called multiple times per frame. The
+ * intended use-case is to stream bits of data to the GPU and issue a `cf_draw_elements` call. The
+ * only elements that will be drawn are the elements from the last call to `cf_mesh_append_index_data`,
+ * all previously appended data will remain untouched.
+ */
 CUTE_API int CUTE_CALL cf_mesh_append_index_data(CF_Mesh mesh, uint32_t* indices, int count);
+
+/**
+ * Use this when streaming data to the GPU to make sure the internal streaming buffers are not overrun.
+ * You specified this size when creating the mesh. Use this function to understand if you're sending
+ * too much to the GPU all at once. You might need to send less data or increase the size of your mesh's
+ * internal buffers.
+ */
 CUTE_API bool CUTE_CALL cf_mesh_will_overflow_index_data(CF_Mesh mesh, int append_count);
 
 //--------------------------------------------------------------------------------------------------
 // Render state.
+
+/**
+ * The `CF_RenderState` is a big collection of various rendering settings, such as culling mode,
+ * blending operations, depth and stencil settings, etc. Altering these on a material always means
+ * increasing your draw call count. It's best to try and set these once and leave them alone, though
+ * this is not always possible.
+ */
 
 #define CF_CULL_MODE_DEFS \
 	CF_ENUM(CULL_MODE_NONE,  0) \
@@ -554,6 +691,24 @@ CUTE_API CF_RenderState CUTE_CALL cf_render_state_defaults();
 //--------------------------------------------------------------------------------------------------
 // Material.
 
+/**
+ * Materials store inputs to shaders. They hold uniforms and textures. Uniforms are like global
+ * variables inside of a shader stage (either the vertex or fragment shaders). For efficiency, all
+ * uniforms are packed into a "uniform buffer", a contiguous chunk of memory on the GPU. We must
+ * specify which uniform buffer each uniform belongs to.
+ * 
+ * A material can hold a large number of inputs, though there are hard-limits on how many inputs
+ * an individual shader can accept, especially to keep shaders as cross-platform compatible as
+ * possible.
+ * 
+ * When using sokol-shdc it will naturally enforce these limits for you, such as:
+ * 
+ * - Max number of uniform buffers for each shader stage (4)
+ * - Max number of uniforms in a uniform buffer (16)
+ * - Max number of vertex attributes (16) (less on GLES2, see `cf_query_resource_limit`)
+ * - Max number of textures for each shader stag (12)
+ */
+
 #define CF_UNIFORM_TYPE_DEFS \
 	CF_ENUM(UNIFORM_TYPE_FLOAT,  0) \
 	CF_ENUM(UNIFORM_TYPE_FLOAT2, 1) \
@@ -585,6 +740,11 @@ CUTE_API void CUTE_CALL cf_begin_pass(CF_Pass pass);
 CUTE_API void CUTE_CALL cf_apply_viewport(float x, float y, float width, float height);
 CUTE_API void CUTE_CALL cf_apply_scissor(float x, float y, float width, float height);
 CUTE_API void CUTE_CALL cf_apply_mesh(CF_Mesh mesh);
+
+/**
+ * All textures and uniforms available in the material will be automatically matched up and sent
+ * to the shader, for whichever inputs the shader accepts. Any missing inputs will be cleared to 0.
+ */
 CUTE_API void CUTE_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
 CUTE_API void CUTE_CALL cf_draw_elements();
 CUTE_API void CUTE_CALL cf_end_pass();

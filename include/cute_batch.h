@@ -43,17 +43,20 @@ CUTE_API void CUTE_CALL cf_batch_outlines_use_corners(bool use_corners);
 CUTE_API void CUTE_CALL cf_batch_outlines_color(CF_Color c);
 
 CUTE_API void CUTE_CALL cf_batch_push_m3x2(cf_m3x2 m);
-CUTE_API void CUTE_CALL cf_batch_pop_m3x2();
+CUTE_API cf_m3x2 CUTE_CALL cf_batch_pop_m3x2();
 CUTE_API cf_m3x2 CUTE_CALL cf_batch_peek_m3x2();
 CUTE_API void CUTE_CALL cf_batch_push_scissor_box(int x, int y, int w, int h);
 CUTE_API void CUTE_CALL cf_batch_pop_scissor_box();
 CUTE_API void CUTE_CALL cf_batch_peek_scissor_box(int* x, int* y, int* w, int* h);
 CUTE_API void CUTE_CALL cf_batch_push_render_state(CF_RenderState render_state);
-CUTE_API void CUTE_CALL cf_batch_pop_render_state();
+CUTE_API CF_RenderState CUTE_CALL cf_batch_pop_render_state();
 CUTE_API CF_RenderState CUTE_CALL cf_batch_peek_render_state();
 CUTE_API void CUTE_CALL cf_batch_push_tint(CF_Color c);
-CUTE_API void CUTE_CALL cf_batch_pop_tint();
+CUTE_API CF_Color CUTE_CALL cf_batch_pop_tint();
 CUTE_API CF_Color CUTE_CALL cf_batch_peek_tint();
+CUTE_API void CUTE_CALL cf_batch_push_layer(int layer);
+CUTE_API int CUTE_CALL cf_batch_pop_layer();
+CUTE_API int CUTE_CALL cf_batch_peek_layer();
 
 CUTE_API void CUTE_CALL cf_batch_sprite(const CF_Sprite* sprite);
 CUTE_API void CUTE_CALL cf_batch_sprite_tf(const CF_Sprite* sprite, cf_transform_t transform);
@@ -84,7 +87,8 @@ CUTE_API void CUTE_CALL cf_batch_polyline(cf_v2* points, int count, float thickn
 
 /**
  * Temporal texture information for a sprite. Is valid until the next call to `batch_flush`
- * is issued. Useful to render a sprite in an external system, e.g. Dear ImGui.
+ * is issued. Useful to render a sprite in an external system, e.g. Dear ImGui. This struct
+ * is only valid until the next time `cf_app_present` is called.
  */
 typedef struct CF_TemporaryImage
 {
@@ -95,7 +99,7 @@ typedef struct CF_TemporaryImage
 	cf_v2 v; // v coordinate of the image in the texture.
 } CF_TemporaryImage;
 
-CUTE_API CF_TemporaryImage CUTE_CALL cf_batch_fetch(CF_Sprite sprite);
+CUTE_API CF_TemporaryImage CUTE_CALL cf_batch_fetch(const CF_Sprite* sprite);
 
 #ifdef __cplusplus
 }
@@ -156,7 +160,7 @@ CUTE_INLINE void batch_line(v2 p0, v2 p1, float thickness, color_t c0, color_t c
 
 CUTE_INLINE void batch_polyline(v2* points, int count, float thickness, color_t c, bool loop = false, bool antialias = false, int bevel_count = 0) { cf_batch_polyline((cf_v2*)points, count, thickness, c, loop, antialias, bevel_count); }
 
-CUTE_INLINE temporary_image_t batch_fetch(Sprite sprite) { return cf_batch_fetch(sprite); }
+CUTE_INLINE temporary_image_t batch_fetch(const Sprite* sprite) { return cf_batch_fetch(sprite); }
 
 }
 

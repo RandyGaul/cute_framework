@@ -374,7 +374,11 @@ font_t cf_make_font(const char* path, result_t* result_out)
 void cf_destroy_font(font_t font_handle)
 {
 	font_internal_t* font = app->fonts.get(font_handle.id);
-	// TODO.
+	app->fonts.remove(font_handle.id);
+	CUTE_FREE(font->file_data);
+	CUTE_FREE(font->pixels);
+	font->~font_internal_t();
+	CUTE_FREE(font);
 }
 
 result_t cf_font_add_codepoints(font_t font_handle, codepoint_set_t set)

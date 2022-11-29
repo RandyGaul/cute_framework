@@ -29,6 +29,7 @@ int test_font_wip()
 	font_t font = make_font("test_data/ProggyClean.ttf");
 	font_add_codepoints(font, ascii_latin());
 	font_build(font, 64.0f);
+	cf_destroy_font(font);
 	destroy_app();
 
 	return 0;

@@ -740,6 +740,8 @@ CF_Material cf_make_material()
 void cf_destroy_material(CF_Material material_handle)
 {
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
+	cf_arena_reset(&material->uniform_arena);
+	cf_arena_reset(&material->block_arena);
 	material->~CF_MaterialInternal();
 	CUTE_FREE(material);
 }

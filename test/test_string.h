@@ -194,8 +194,8 @@ int test_string_macros_advanced()
 	CUTE_TEST_ASSERT(slen(a) == CUTE_STRLEN("ase me"));
 	sset(a, "erase.me.please");
 	serase(a, 10, 10);
-	CUTE_TEST_ASSERT(sequ(a, "erase.me."));
-	CUTE_TEST_ASSERT(slen(a) == CUTE_STRLEN("erase.me."));
+	CUTE_TEST_ASSERT(sequ(a, "erase.me.p"));
+	CUTE_TEST_ASSERT(slen(a) == CUTE_STRLEN("erase.me.p"));
 	sset(a, "erase.me.please");
 	serase(a, 30, 10);
 	CUTE_TEST_ASSERT(sequ(a, "erase.me.please"));

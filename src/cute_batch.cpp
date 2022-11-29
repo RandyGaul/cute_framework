@@ -34,14 +34,19 @@
 
 static struct CF_Batch* b;
 
-struct QuadUdata
+struct BatchGeometry
 {
+	cf_v2 position;
+	cf_v2 scale;
+	cf_sincos_t rotation;
+	cf_v2 a, b, c;
 	float alpha;
+	bool tri;
 };
 
 #include <cute/cute_png.h>
 
-#define SPRITEBATCH_SPRITE_USERDATA QuadUdata
+#define SPRITEBATCH_SPRITE_GEOMETRY BatchGeometry
 #define SPRITEBATCH_IMPLEMENTATION
 //#define SPRITEBATCH_LOG CUTE_DEBUG_PRINTF
 #include <cute/cute_spritebatch.h>
@@ -88,27 +93,13 @@ struct BatchVertex
 	uint8_t unused1;
 };
 
-typedef struct BatchSprite
-{
-	uint64_t id;
-
-	cf_transform_t transform; // Position and location rotation of the quad. Default: cf_make_transform() 
-	int w; // Width in pixels of the source image.
-	int h; // Height in pixels of the source image.
-	float scale_x; // Scaling along the quad's local x-axis in pixels.
-	float scale_y; // Scaling along the quad's local y-axis in pixels.
-	float alpha; // Applies additional alpha to this quad. Default: 1.0f
-
-	int sort_bits; /*= 0;*/
-} BatchSprite;
-
 struct CF_Batch
 {
 	::spritebatch_t sb;
 
 	float atlas_width = 1024;
 	float atlas_height = 1024;
-
+	
 	array<BatchVertex> verts;
 	CF_Pass pass;
 	CF_Shader shader;
@@ -127,68 +118,43 @@ struct CF_Batch
 	array<cf_m3x2> m3x2s;
 	array<Scissor> scissors;
 	array<CF_Color> tints = { DEFAULT_TINT };
+	array<int> layers = { 0 };
 };
 
-static void s_push(BatchSprite q)
+void cf_batch_sprite_tf(const CF_Sprite* sprite)
 {
+	v2 p = cf_mul_m32_v2(b->m, cf_add_v2(sprite->transform.p, sprite->local_offset));
 	spritebatch_sprite_t s;
-	s.image_id = q.id;
-	s.w = q.w;
-	s.h = q.h;
-	q.transform.p = cf_mul_m32_v2(b->m, q.transform.p);
-	s.x = q.transform.p.x;
-	s.y = q.transform.p.y;
-	s.sx = q.scale_x * b->scale_x;
-	s.sy = q.scale_y * b->scale_y;
-	s.s = q.transform.r.s;
-	s.c = q.transform.r.c;
-	s.sort_bits = (uint64_t)q.sort_bits << 32;
-	s.udata.alpha = q.alpha;
+	s.image_id = sprite->animation->frames[sprite->frame_index].id;
+	s.w = sprite->w;
+	s.h = sprite->h;
+	s.geom.position = p;
+	s.geom.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
+	s.geom.rotation = sprite->transform.r;
+	s.geom.alpha = sprite->opacity;
+	s.sort_bits = sprite->layer;
 	spritebatch_push(&b->sb, s);
-}
-
-void cf_batch_sprite(const CF_Sprite* sprite)
-{
-	BatchSprite q;
-	q.id = sprite->animation->frames[sprite->frame_index].id;
-	q.transform = sprite->transform;
-	q.transform.p = cf_add_v2(q.transform.p, sprite->local_offset);
-	q.w = sprite->w;
-	q.h = sprite->h;
-	q.scale_x = sprite->scale.x * sprite->w;
-	q.scale_y = sprite->scale.y * sprite->h;
-	q.sort_bits = sprite->layer;
-	q.alpha = sprite->opacity;
-	s_push(q);
 }
 
 void cf_batch_sprite_tf(const CF_Sprite* sprite, cf_transform_t transform)
 {
-	BatchSprite q;
-	q.id = sprite->animation->frames[sprite->frame_index].id;
-	q.transform = mul(transform, sprite->transform);
-	q.transform.p = cf_add_v2(q.transform.p, sprite->local_offset);
-	q.w = sprite->w;
-	q.h = sprite->h;
-	q.scale_x = sprite->scale.x * sprite->w;
-	q.scale_y = sprite->scale.y * sprite->h;
-	q.sort_bits = sprite->layer;
-	q.alpha = sprite->opacity;
-	s_push(q);
-}
-
-CUTE_INLINE BatchSprite cf_batch_sprite_defaults()
-{
-	BatchSprite result = { 0 };
-	result.transform = cf_make_transform();
-	result.alpha = 1.0f;
-	return result;
+	transform = mul(transform, sprite->transform);
+	v2 p = cf_mul_m32_v2(b->m, cf_add_v2(transform.p, sprite->local_offset));
+	spritebatch_sprite_t s;
+	s.image_id = sprite->animation->frames[sprite->frame_index].id;
+	s.w = sprite->w;
+	s.h = sprite->h;
+	s.geom.position = p;
+	s.geom.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
+	s.geom.rotation = sprite->transform.r;
+	s.geom.alpha = sprite->opacity;
+	s.sort_bits = sprite->layer;
+	spritebatch_push(&b->sb, s);
 }
 
 static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture_w, int texture_h, void* udata)
 {
 	CUTE_UNUSED(udata);
-	// Build vertex buffer of all quads for each sprite.
 	int vert_count = count * 6;
 	b->verts.ensure_count(vert_count);
 	BatchVertex* verts = b->verts.data();
@@ -196,75 +162,83 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 	for (int i = 0; i < count; ++i) {
 		spritebatch_sprite_t* s = sprites + i;
 
-		cf_v2 quad[] = {
-			{ -0.5f,  0.5f },
-			{  0.5f,  0.5f },
-			{  0.5f, -0.5f },
-			{ -0.5f, -0.5f },
-		};
+		// Expand sprite's scale to account for border pixels in the atlas.
+		s->geom.scale.x = s->geom.scale.x + (s->geom.scale.x / (float)s->w) * 2.0f;
+		s->geom.scale.y = s->geom.scale.y + (s->geom.scale.y / (float)s->h) * 2.0f;
 
-		for (int j = 0; j < 4; ++j) {
-			float x = quad[j].x;
-			float y = quad[j].y;
+		if (s->geom.tri) {
+			// TODO.
+		} else {
+			cf_v2 quad[] = {
+				{ -0.5f,  0.5f },
+				{  0.5f,  0.5f },
+				{  0.5f, -0.5f },
+				{ -0.5f, -0.5f },
+			};
 
-			// Rotate sprite about origin.
-			float x0 = s->c * x - s->s * y;
-			float y0 = s->s * x + s->c * y;
-			x = x0;
-			y = y0;
+			for (int j = 0; j < 4; ++j) {
+				float x = quad[j].x;
+				float y = quad[j].y;
 
-			// Scale sprite about origin.
-			x *= s->sx;
-			y *= s->sy;
+				// Rotate sprite about origin.
+				float x0 = s->geom.rotation.c * x - s->geom.rotation.s * y;
+				float y0 = s->geom.rotation.s * x + s->geom.rotation.c * y;
+				x = x0;
+				y = y0;
 
-			// Translate sprite into the world.
-			x += s->x;
-			y += s->y;
+				// Scale sprite about origin.
+				x *= s->geom.scale.x;
+				y *= s->geom.scale.y;
 
-			quad[j].x = x;
-			quad[j].y = y;
+				// Translate sprite into the world.
+				x += s->geom.position.x;
+				y += s->geom.position.y;
+
+				quad[j].x = x;
+				quad[j].y = y;
+			}
+
+			// output transformed quad into CPU buffer
+			BatchVertex* out_verts = verts + i * 6;
+
+			for (int i = 0; i < 6; ++i) {
+				out_verts[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+			}
+
+			out_verts[0].position.x = quad[0].x;
+			out_verts[0].position.y = quad[0].y;
+			out_verts[0].uv.x = s->minx;
+			out_verts[0].uv.y = s->maxy;
+
+			out_verts[1].position.x = quad[3].x;
+			out_verts[1].position.y = quad[3].y;
+			out_verts[1].uv.x = s->minx;
+			out_verts[1].uv.y = s->miny;
+
+			out_verts[2].position.x = quad[1].x;
+			out_verts[2].position.y = quad[1].y;
+			out_verts[2].uv.x = s->maxx;
+			out_verts[2].uv.y = s->maxy;
+
+			out_verts[3].position.x = quad[1].x;
+			out_verts[3].position.y = quad[1].y;
+			out_verts[3].uv.x = s->maxx;
+			out_verts[3].uv.y = s->maxy;
+
+			out_verts[4].position.x = quad[3].x;
+			out_verts[4].position.y = quad[3].y;
+			out_verts[4].uv.x = s->minx;
+			out_verts[4].uv.y = s->miny;
+
+			out_verts[5].position.x = quad[2].x;
+			out_verts[5].position.y = quad[2].y;
+			out_verts[5].uv.x = s->maxx;
+			out_verts[5].uv.y = s->miny;
 		}
-
-		// output transformed quad into CPU buffer
-		BatchVertex* out_verts = verts + i * 6;
-
-		for (int i = 0; i < 6; ++i) {
-			out_verts[i].alpha = (uint8_t)(s->udata.alpha * 255.0f);
-		}
-
-		out_verts[0].position.x = quad[0].x;
-		out_verts[0].position.y = quad[0].y;
-		out_verts[0].uv.x = s->minx;
-		out_verts[0].uv.y = s->maxy;
-
-		out_verts[1].position.x = quad[3].x;
-		out_verts[1].position.y = quad[3].y;
-		out_verts[1].uv.x = s->minx;
-		out_verts[1].uv.y = s->miny;
-
-		out_verts[2].position.x = quad[1].x;
-		out_verts[2].position.y = quad[1].y;
-		out_verts[2].uv.x = s->maxx;
-		out_verts[2].uv.y = s->maxy;
-
-		out_verts[3].position.x = quad[1].x;
-		out_verts[3].position.y = quad[1].y;
-		out_verts[3].uv.x = s->maxx;
-		out_verts[3].uv.y = s->maxy;
-
-		out_verts[4].position.x = quad[3].x;
-		out_verts[4].position.y = quad[3].y;
-		out_verts[4].uv.x = s->minx;
-		out_verts[4].uv.y = s->miny;
-
-		out_verts[5].position.x = quad[2].x;
-		out_verts[5].position.y = quad[2].y;
-		out_verts[5].uv.x = s->maxx;
-		out_verts[5].uv.y = s->miny;
 	}
 
 	// Map the vertex buffer with sprite vertex data.
-	cf_mesh_append_vertex_data(b->mesh, verts, vert_count / 2);
+	cf_mesh_append_vertex_data(b->mesh, verts, vert_count);
 	cf_apply_mesh(b->mesh);
 
 	// Apply the atlas texture.
@@ -394,12 +368,17 @@ void cf_make_batch()
 void cf_destroy_batch()
 {
 	spritebatch_term(&b->sb);
+	cf_destroy_pass(b->pass);
+	cf_destroy_mesh(b->mesh);
+	cf_destroy_material(b->material);
+	cf_destroy_shader(b->shader);
 	b->~CF_Batch();
 	CUTE_FREE(b);
 }
 
 void cf_batch_render()
 {
+	b->verts.clear();
 	cf_begin_pass(b->pass);
 	spritebatch_tick(&b->sb);
 	spritebatch_defrag(&b->sb);
@@ -447,10 +426,11 @@ void cf_batch_push_m3x2(cf_m3x2 m)
 	b->m3x2s.add(m);
 }
 
-void cf_batch_pop_m3x2()
+cf_m3x2 cf_batch_pop_m3x2()
 {
+	cf_m3x2 result = cf_make_identity();
 	if (b->m3x2s.count() > 1) {
-		b->m3x2s.pop();
+		result = b->m3x2s.pop();
 		if (b->m3x2s.size()) {
 			b->m = b->m3x2s.last();
 			b->scale_x = cf_len(b->m.m.x);
@@ -461,6 +441,12 @@ void cf_batch_pop_m3x2()
 			b->scale_y = 1.0f;
 		}
 	}
+	return result;
+}
+
+cf_m3x2 cf_batch_peek_m3x2()
+{
+	return b->m3x2s.last();
 }
 
 void cf_batch_push_scissor_box(int x, int y, int w, int h)
@@ -476,16 +462,49 @@ void cf_batch_pop_scissor_box()
 	}
 }
 
+void cf_batch_peek_scissor_box(int* x, int* y, int* w, int* h)
+{
+	Scissor scissor = b->scissors.last();
+	*x = scissor.x;
+	*y = scissor.y;
+	*w = scissor.w;
+	*h = scissor.h;
+}
+
 void cf_batch_push_tint(CF_Color c)
 {
 	b->tints.add(c);
 }
 
-void cf_batch_pop_tint()
+CF_Color cf_batch_pop_tint()
 {
 	if (b->tints.count() > 1) {
-		b->tints.pop();
+		return b->tints.pop();
 	}
+	return b->tints.last();
+}
+
+CF_Color cf_batch_peek_tint()
+{
+	return b->tints.last();
+}
+
+void cf_batch_push_layer(int layer)
+{
+	b->layers.add(layer);
+}
+
+int cf_batch_pop_layer()
+{
+	if (b->layers.count() > 1) {
+		return b->layers.pop();
+	}
+	return b->layers.last();
+}
+
+int cf_batch_peek_layer()
+{
+	return b->layers.last();
 }
 
 void cf_batch_quad_aabb(cf_aabb_t bb, CF_Color c)
@@ -495,36 +514,12 @@ void cf_batch_quad_aabb(cf_aabb_t bb, CF_Color c)
 	cf_batch_quad_verts(verts[0], verts[1], verts[2], verts[3], c);
 }
 
-#define PUSH_VERT(P, C) \
-	do { \
-		BatchVertex v; \
-		v.position = mul(b->m, P); \
-		v.uv = V2(0,0); \
-		v.color = to_pixel(C); \
-		v.solid = 255; \
-		v.outline = 0; \
-		v.alpha = 0; \
-		v.unused1 = 0; \
-		b->verts.add(v); \
-	} while (0)
-
-#define PUSH_TRI(p0, p1, p2, c0, c1, c2) \
-	do { \
-		PUSH_VERT(p0, c0); \
-		PUSH_VERT(p1, c1); \
-		PUSH_VERT(p2, c2); \
-	} while (0)
-
 void cf_batch_quad_verts(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, CF_Color c)
 {
-	PUSH_TRI(p0, p1, p2, c, c, c);
-	PUSH_TRI(p2, p3, p0, c, c, c);
 }
 
 void cf_batch_quad_verts2(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3)
 {
-	PUSH_TRI(p0, p1, p2, c0, c1, c2);
-	PUSH_TRI(p2, p3, p0, c2, c3, c0);
 }
 
 void cf_batch_quad_line(cf_aabb_t bb, float thickness, CF_Color c, bool antialias)
@@ -713,12 +708,10 @@ void cf_batch_capsule_line(cf_v2 a, cf_v2 b, float r, int iters, float thickness
 
 void CF_Batchri(cf_v2 p0, cf_v2 p1, cf_v2 p2, CF_Color c)
 {
-	PUSH_TRI(p0, p1, p2, c, c, c);
 }
 
 void CF_Batchri2(cf_v2 p0, cf_v2 p1, cf_v2 p2, CF_Color c0, CF_Color c1, CF_Color c2)
 {
-	PUSH_TRI(p0, p1, p2, c0, c1, c2);
 }
 
 void CF_Batchri_line(cf_v2 p0, cf_v2 p1, cf_v2 p2, float thickness, CF_Color c, bool antialias)
@@ -1063,9 +1056,9 @@ void cf_batch_polyline(cf_v2* points, int count, float thickness, CF_Color color
 	}
 }
 
-CF_TemporaryImage cf_batch_fetch(BatchSprite sprite)
+CF_TemporaryImage cf_batch_fetch(const CF_Sprite* sprite)
 {
-	spritebatch_sprite_t s = spritebatch_fetch(&b->sb, sprite.id, sprite.w, sprite.h);
+	spritebatch_sprite_t s = spritebatch_fetch(&b->sb, sprite->animation->frames[sprite->frame_index].id, sprite->w, sprite->h);
 	CF_TemporaryImage image;
 	image.tex = { s.texture_id };
 	image.w = s.w;

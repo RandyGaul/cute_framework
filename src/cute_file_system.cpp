@@ -81,14 +81,16 @@ char* cf_path_compact(const char* path, int n)
 		serase(s, n - 3, 3);
 		return sappend(s, "...");
 	}
-	int remaining = len - at;
-	if (remaining > n - 3) {
+	int remaining = len - at - 1;
+	if (remaining >= n - 3) {
 		char* s = smake("...");
 		sappend_range(s, path, path + at - 6);
 		return sappend(s, "...");
 	} else {
 		char* s = sdup(path);
-		serase(s, remaining - 3, slen(s) - (remaining - 3));
+		int len_s = slen(s);
+		int to_erase = len_s - (remaining - 3);
+		serase(s, remaining - 3, to_erase);
 		sappend(s, "...");
 		return sappend(s, path + at);
 	}
@@ -106,6 +108,7 @@ char* cf_path_directory_of(const char* path)
 	serase(s, at, slen(s) - at);
 	at = slast_index_of(s, '/');
 	if (at == -1) {
+		int l = slen(s);
 		if (slen(s) == 2) {
 			return s;
 		} else {

@@ -62,12 +62,13 @@
 
 int main(int argc, const char** argv)
 {
-#if 1
+#if 0
 	result_t result = make_app("Fancy Window Title", 0, 0, 640, 480, APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
 	if (is_error(result)) return -1;
 
 	Sprite s = cf_make_sprite("test_data/girl.aseprite");
-	cf_batch_set_projection(cf_matrix_ortho_2d(640, 480, 0, 0));
+	cf_batch_set_projection(cf_matrix_ortho_2d(640/2, 480/2, 0, 0));
+	s.play("spin");
 
 	auto imgui = cf_app_init_imgui(false);
 	sg_imgui_t* sg_imgui = app_get_sokol_imgui();
@@ -75,7 +76,9 @@ int main(int argc, const char** argv)
 	while (app_is_running()) {
 		float dt = calc_dt();
 		app_update(dt);
+		s.update(dt);
 		s.draw();
+		batch_line(V2(0,0), V2(10,0), 1, color_red());
 		if (ImGui::BeginMainMenuBar()) {
 			if (ImGui::BeginMenu("sokol-gfx")) {
 				ImGui::MenuItem("Buffers", 0, &sg_imgui->buffers.open);

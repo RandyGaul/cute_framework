@@ -244,6 +244,8 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		{
 			app->backbuffer_material = cf_make_material();
 			cf_material_set_texture_fs(app->backbuffer_material, "u_image", app->backbuffer);
+			v2 u_texture_size = V2((float)app->w, (float)app->h);
+			cf_material_set_uniform_fs(app->backbuffer_material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 			app->backbuffer_shader = CF_MAKE_SOKOL_SHADER(backbuffer_shd);
 		}
 		cf_make_batch();
@@ -292,9 +294,11 @@ void cf_destroy_app()
 		app->using_imgui = false;
 	}
 	if (app->gfx_enabled) {
+		cf_destroy_batch();
 		cf_destroy_aseprite_cache();
 		cf_destroy_png_cache();
 		cf_destroy_texture(app->backbuffer);
+		cf_destroy_pass(app->backbuffer_pass);
 		cf_destroy_mesh(app->backbuffer_quad);
 		cf_destroy_shader(app->backbuffer_shader);
 		cf_destroy_material(app->backbuffer_material);
