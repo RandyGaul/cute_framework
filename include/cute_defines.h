@@ -135,8 +135,6 @@
 #include <stdbool.h>
 #endif
 
-struct cf_app_t;
-
 #ifndef CUTE_NO_WARNINGS
 #	define CUTE_WARN(...) fprintf(stderr, __VA_ARGS__)
 #endif
@@ -229,12 +227,12 @@ template <class T> constexpr const T* end(initializer_list<T> list) noexcept { r
 #endif // CUTE_WINDOWS
 
 template <typename T>
-using cf_initializer_list = std::initializer_list<T>;
+using CF_InitializerList = std::initializer_list<T>;
 
 namespace cute
 {
 template <typename T>
-using initializer_list = cf_initializer_list<T>;
+using initializer_list = CF_InitializerList<T>;
 
 template <typename T>
 using remove_reference = cf_remove_reference<T>;

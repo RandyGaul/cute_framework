@@ -75,7 +75,7 @@
 
 #include <shaders/backbuffer_shader.h>
 
-cf_app_t* app;
+CF_App* app;
 
 using namespace cute;
 
@@ -159,8 +159,8 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	} else {
 		window = SDL_CreateWindow(window_title, x, y, w, h, flags);
 	}
-	cf_app_t* app = (cf_app_t*)CUTE_ALLOC(sizeof(cf_app_t));
-	CUTE_PLACEMENT_NEW(app) cf_app_t;
+	CF_App* app = (CF_App*)CUTE_ALLOC(sizeof(CF_App));
+	CUTE_PLACEMENT_NEW(app) CF_App;
 	app->options = options;
 	app->window = window;
 	app->w = w;
@@ -312,9 +312,9 @@ void cf_destroy_app()
 	destroy_threadpool(app->threadpool);
 	cs_shutdown();
 	int schema_count = app->entity_parsed_schemas.count();
-	cf_kv_t** schemas = app->entity_parsed_schemas.items();
+	CF_KeyValue** schemas = app->entity_parsed_schemas.items();
 	for (int i = 0; i < schema_count; ++i) cf_kv_destroy(schemas[i]);
-	app->~cf_app_t();
+	app->~CF_App();
 	CUTE_FREE(app);
 	cf_fs_destroy();
 }
@@ -428,9 +428,9 @@ sg_imgui_t* cf_app_get_sokol_imgui()
 	return &app->sg_imgui;
 }
 
-cf_power_info_t cf_app_power_info()
+CF_PowerInfo cf_app_power_info()
 {
-	cf_power_info_t info;
+	CF_PowerInfo info;
 	SDL_PowerState state = SDL_GetPowerInfo(&info.seconds_left, &info.percentage_left);
 	switch (state) {
 	case SDL_POWERSTATE_UNKNOWN: info.state = CF_POWER_STATE_UNKNOWN;

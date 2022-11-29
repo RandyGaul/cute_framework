@@ -31,36 +31,36 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef struct cf_codepoint_range_t
+typedef struct CF_CodepointRange
 {
 	int lo;
 	int hi;
-} cf_codepoint_range_t;
+} CF_CodepointRange;
 
-typedef struct cf_codepoint_set_t
+typedef struct CF_CodepointSet
 {
 	int count;
-	const cf_codepoint_range_t* ranges;
-} cf_codepoint_set_t;
+	const CF_CodepointRange* ranges;
+} CF_CodepointSet;
 
-CUTE_API cf_codepoint_set_t CUTE_CALL cf_ascii_latin();
-CUTE_API cf_codepoint_set_t CUTE_CALL cf_greek();
-CUTE_API cf_codepoint_set_t CUTE_CALL cf_korean();
-CUTE_API cf_codepoint_set_t CUTE_CALL cf_chinese_full();
-CUTE_API cf_codepoint_set_t CUTE_CALL cf_chinese_simplified_common();
-CUTE_API cf_codepoint_set_t CUTE_CALL cf_japanese();
-CUTE_API cf_codepoint_set_t CUTE_CALL cf_thai();
-CUTE_API cf_codepoint_set_t CUTE_CALL cf_vietnamese();
-CUTE_API cf_codepoint_set_t CUTE_CALL cf_cyrillic();
+CUTE_API CF_CodepointSet CUTE_CALL cf_ascii_latin();
+CUTE_API CF_CodepointSet CUTE_CALL cf_greek();
+CUTE_API CF_CodepointSet CUTE_CALL cf_korean();
+CUTE_API CF_CodepointSet CUTE_CALL cf_chinese_full();
+CUTE_API CF_CodepointSet CUTE_CALL cf_chinese_simplified_common();
+CUTE_API CF_CodepointSet CUTE_CALL cf_japanese();
+CUTE_API CF_CodepointSet CUTE_CALL cf_thai();
+CUTE_API CF_CodepointSet CUTE_CALL cf_vietnamese();
+CUTE_API CF_CodepointSet CUTE_CALL cf_cyrillic();
 
-typedef struct cf_font_t { uint64_t id; } cf_font_t;
+typedef struct CF_Font { uint64_t id; } CF_Font;
 
-CUTE_API cf_font_t CUTE_CALL cf_make_font(const char* path, CF_Result* result_out);
-CUTE_API cf_font_t CUTE_CALL cf_make_font_mem(void* data, int size, CF_Result* result_out);
-CUTE_API void CUTE_CALL cf_destroy_font(cf_font_t font);
-CUTE_API CF_Result CUTE_CALL cf_font_add_codepoints(cf_font_t font, cf_codepoint_set_t set);
-CUTE_API CF_Result CUTE_CALL cf_font_build(cf_font_t font, float size);
-CUTE_API void CUTE_CALL cf_font_missing_codepoints(cf_font_t, int** missing_codepoints, int* count);
+CUTE_API CF_Font CUTE_CALL cf_make_font(const char* path, CF_Result* result_out);
+CUTE_API CF_Font CUTE_CALL cf_make_font_mem(void* data, int size, CF_Result* result_out);
+CUTE_API void CUTE_CALL cf_destroy_font(CF_Font font);
+CUTE_API CF_Result CUTE_CALL cf_font_add_codepoints(CF_Font font, CF_CodepointSet set);
+CUTE_API CF_Result CUTE_CALL cf_font_build(CF_Font font, float size);
+CUTE_API void CUTE_CALL cf_font_missing_codepoints(CF_Font, int** missing_codepoints, int* count);
 
 #ifdef __cplusplus
 }
@@ -74,26 +74,26 @@ CUTE_API void CUTE_CALL cf_font_missing_codepoints(cf_font_t, int** missing_code
 namespace cute
 {
 
-using codepoint_range_t = cf_codepoint_range_t;
-using codepoint_set_t = cf_codepoint_set_t;
-using font_t = cf_font_t;
+using CodepointRange = CF_CodepointRange;
+using CodepointSet = CF_CodepointSet;
+using Font = CF_Font;
 
-CUTE_INLINE codepoint_set_t ascii_latin() { return cf_ascii_latin(); }
-CUTE_INLINE codepoint_set_t greek() { return cf_greek(); }
-CUTE_INLINE codepoint_set_t korean() { return cf_korean(); }
-CUTE_INLINE codepoint_set_t chinese_full() { return cf_chinese_full(); }
-CUTE_INLINE codepoint_set_t chinese_simplified_common() { return cf_chinese_simplified_common(); }
-CUTE_INLINE codepoint_set_t japanese() { return cf_japanese(); }
-CUTE_INLINE codepoint_set_t thai() { return cf_thai(); }
-CUTE_INLINE codepoint_set_t vietnamese() { return cf_vietnamese(); }
-CUTE_INLINE codepoint_set_t cyrillic() { return cf_cyrillic(); }
+CUTE_INLINE CodepointSet ascii_latin() { return cf_ascii_latin(); }
+CUTE_INLINE CodepointSet greek() { return cf_greek(); }
+CUTE_INLINE CodepointSet korean() { return cf_korean(); }
+CUTE_INLINE CodepointSet chinese_full() { return cf_chinese_full(); }
+CUTE_INLINE CodepointSet chinese_simplified_common() { return cf_chinese_simplified_common(); }
+CUTE_INLINE CodepointSet japanese() { return cf_japanese(); }
+CUTE_INLINE CodepointSet thai() { return cf_thai(); }
+CUTE_INLINE CodepointSet vietnamese() { return cf_vietnamese(); }
+CUTE_INLINE CodepointSet cyrillic() { return cf_cyrillic(); }
 
-CUTE_INLINE font_t CUTE_CALL make_font(const char* path, result_t* result_out = NULL) { return cf_make_font(path, result_out); }
-CUTE_INLINE font_t CUTE_CALL make_font_mem(void* data, int size, result_t* result_out = NULL) { return cf_make_font_mem(data, size, result_out); }
-CUTE_INLINE void CUTE_CALL destroy_font(font_t font) { cf_destroy_font(font); }
-CUTE_INLINE result_t CUTE_CALL font_add_codepoints(font_t font, codepoint_set_t set) { return cf_font_add_codepoints(font, set); }
-CUTE_INLINE result_t CUTE_CALL font_build(font_t font, float size) { return cf_font_build(font, size); }
-CUTE_INLINE void font_missing_codepoints(cf_font_t font, int** missing_codepoints, int* count) { return cf_font_missing_codepoints(font, missing_codepoints, count); }
+CUTE_INLINE Font CUTE_CALL make_font(const char* path, Result* result_out = NULL) { return cf_make_font(path, result_out); }
+CUTE_INLINE Font CUTE_CALL make_font_mem(void* data, int size, Result* result_out = NULL) { return cf_make_font_mem(data, size, result_out); }
+CUTE_INLINE void CUTE_CALL destroy_font(Font font) { cf_destroy_font(font); }
+CUTE_INLINE Result CUTE_CALL font_add_codepoints(Font font, CodepointSet set) { return cf_font_add_codepoints(font, set); }
+CUTE_INLINE Result CUTE_CALL font_build(Font font, float size) { return cf_font_build(font, size); }
+CUTE_INLINE void font_missing_codepoints(CF_Font font, int** missing_codepoints, int* count) { return cf_font_missing_codepoints(font, missing_codepoints, count); }
 
 }
 

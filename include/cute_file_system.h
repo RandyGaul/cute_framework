@@ -203,7 +203,7 @@ CUTE_API char* CUTE_CALL cf_path_top_directory(const char* path);
  * passing the `APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT` flag to `make_app`.
  */
 
-typedef struct cf_file_t cf_file_t;
+typedef struct CF_File CF_File;
 
 #define CF_FILE_TYPE_DEFS \
 	CF_ENUM(FILE_TYPE_REGULAR, 0) \
@@ -211,22 +211,22 @@ typedef struct cf_file_t cf_file_t;
 	CF_ENUM(FILE_TYPE_SYMLINK, 2) \
 	CF_ENUM(FILE_TYPE_OTHER, 3) \
 
-typedef enum cf_file_type_t
+typedef enum CF_FileType
 {
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_FILE_TYPE_DEFS
 	#undef CF_ENUM
-} cf_file_type_t;
+} CF_FileType;
 
-typedef struct cf_stat_t
+typedef struct CF_Stat
 {
-	cf_file_type_t type;
+	CF_FileType type;
 	int is_read_only;
 	size_t size;
 	uint64_t last_modified_time;
 	uint64_t created_time;
 	uint64_t last_accessed_time;
-} cf_stat_t;
+} CF_Stat;
 
 /**
  * Returns the path of the base directory. This is not a virtual path, but the actual OS-path
@@ -294,36 +294,36 @@ CUTE_API CF_Result CUTE_CALL cf_fs_dismount(const char* archive);
 /**
  * Fetches file information at the given virtual path, such as file size or creation time.
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_stat(const char* virtual_path, cf_stat_t* stat);
+CUTE_API CF_Result CUTE_CALL cf_fs_stat(const char* virtual_path, CF_Stat* stat);
 
 /**
  * Opens a file for writing relative to the write directory.
  * The write directory is specified by you when calling `cf_fs_set_write_directory`.
  */
-CUTE_API cf_file_t* CUTE_CALL cf_fs_create_file(const char* virtual_path);
+CUTE_API CF_File* CUTE_CALL cf_fs_create_file(const char* virtual_path);
 
 /**
  * Opens a file for writing relative to the write directory.
  * The write directory is specified by you when calling `cf_fs_set_write_directory`.
  */
-CUTE_API cf_file_t* CUTE_CALL cf_fs_open_file_for_write(const char* virtual_path);
+CUTE_API CF_File* CUTE_CALL cf_fs_open_file_for_write(const char* virtual_path);
 
 /**
  * Opens a file for appending relative to the write directory.
  * The write directory is specified by you when calling `cf_fs_set_write_directory`.
  */
-CUTE_API cf_file_t* CUTE_CALL cf_fs_open_file_for_append(const char* virtual_path);
+CUTE_API CF_File* CUTE_CALL cf_fs_open_file_for_append(const char* virtual_path);
 
 /**
  * Opens a file for reading. If you just want some basic information about the file (such as
  * it's size or when it was created), you can use `cf_fs_stat` instead.
  */
-CUTE_API cf_file_t* CUTE_CALL cf_fs_open_file_for_read(const char* virtual_path);
+CUTE_API CF_File* CUTE_CALL cf_fs_open_file_for_read(const char* virtual_path);
 
 /**
  * Close a file.
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_close(cf_file_t* file);
+CUTE_API CF_Result CUTE_CALL cf_fs_close(CF_File* file);
 
 /**
  * Deletes a file or directory. The directory must be empty, otherwise this function
@@ -367,35 +367,35 @@ CUTE_API bool CUTE_CALL cf_fs_file_exists(const char* virtual_path);
  * Reads bytes from a file opened in read mode. The file must be opened in read mode
  * with `cf_fs_open_file_for_read`. Returns the number of bytes read. Returns -1 on failure.
  */
-CUTE_API size_t CUTE_CALL cf_fs_read(cf_file_t* file, void* buffer, size_t bytes);
+CUTE_API size_t CUTE_CALL cf_fs_read(CF_File* file, void* buffer, size_t bytes);
 
 /**
  * Writes bytes from a file opened in write mode. The file must be opened in write mode
  * with `cf_fs_open_file_for_write`. Returns the number of bytes written. Returns -1 on failure.
  */
-CUTE_API size_t CUTE_CALL cf_fs_write(cf_file_t* file, const void* buffer, size_t bytes);
+CUTE_API size_t CUTE_CALL cf_fs_write(CF_File* file, const void* buffer, size_t bytes);
 
 /**
  * Check to see if the eof has been found after reading a file opened in read mode.
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_eof(cf_file_t* file);
+CUTE_API CF_Result CUTE_CALL cf_fs_eof(CF_File* file);
 
 /**
  * Returns the current position within the file. This is an offset from the beginning of
  * the file. Returns -1 on failure.
  */
-CUTE_API size_t CUTE_CALL cf_fs_tell(cf_file_t* file);
+CUTE_API size_t CUTE_CALL cf_fs_tell(CF_File* file);
 
 /**
  * Sets the current position within a file. This is an offset from the beginning of the file.
  * The next read or write will happen at this position.
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_seek(cf_file_t* file, size_t position);
+CUTE_API CF_Result CUTE_CALL cf_fs_seek(CF_File* file, size_t position);
 
 /**
  * Returns the size of a file in bytes. You might want to use `cf_fs_stat` instead.
  */
-CUTE_API size_t CUTE_CALL cf_fs_size(cf_file_t* file);
+CUTE_API size_t CUTE_CALL cf_fs_size(CF_File* file);
 
 /**
  * Reads an entire file into a buffer of memory, and returns the buffer to you. Call `CUTE_FREE`
@@ -447,10 +447,10 @@ CUTE_API const char* CUTE_CALL cf_fs_get_actual_path(const char* virtual_path);
 namespace cute
 {
 
-using stat_t = cf_stat_t;
-using file_t = cf_file_t;
+using Stat = CF_Stat;
+using File = CF_File;
 
-enum file_type_t : int
+enum FileType : int
 {
 	#define CF_ENUM(K, V) K = V,
 	CF_FILE_TYPE_DEFS
@@ -458,29 +458,29 @@ enum file_type_t : int
 };
 
 CUTE_INLINE const char* fs_get_base_dir() { return cf_fs_get_base_directory(); }
-CUTE_INLINE result_t fs_set_write_dir(const char* platform_dependent_directory) { return cf_fs_set_write_directory(platform_dependent_directory); }
-CUTE_INLINE result_t fs_mount(const char* archive, const char* mount_point, bool append_to_path = true) { return cf_fs_mount(archive, mount_point, append_to_path); }
-CUTE_INLINE result_t fs_dismount(const char* archive) { return cf_fs_dismount(archive); }
-CUTE_INLINE result_t fs_stat(const char* virtual_path, stat_t* stat) { return cf_fs_stat(virtual_path, stat); }
-CUTE_INLINE file_t* fs_create_file(const char* virtual_path) { return cf_fs_create_file(virtual_path); }
-CUTE_INLINE file_t* fs_open_file_for_write(const char* virtual_path) { return cf_fs_open_file_for_write(virtual_path); }
-CUTE_INLINE file_t* fs_open_file_for_append(const char* virtual_path) { return cf_fs_open_file_for_append(virtual_path); }
-CUTE_INLINE file_t* fs_open_file_for_read(const char* virtual_path) { return cf_fs_open_file_for_read(virtual_path); }
-CUTE_INLINE result_t fs_close(file_t* file) { return cf_fs_close(file); }
-CUTE_INLINE result_t fs_delete(const char* virtual_path) { return cf_fs_delete(virtual_path); }
-CUTE_INLINE result_t fs_create_dir(const char* virtual_path) { return cf_fs_create_directory(virtual_path); }
+CUTE_INLINE Result fs_set_write_dir(const char* platform_dependent_directory) { return cf_fs_set_write_directory(platform_dependent_directory); }
+CUTE_INLINE Result fs_mount(const char* archive, const char* mount_point, bool append_to_path = true) { return cf_fs_mount(archive, mount_point, append_to_path); }
+CUTE_INLINE Result fs_dismount(const char* archive) { return cf_fs_dismount(archive); }
+CUTE_INLINE Result fs_stat(const char* virtual_path, Stat* stat) { return cf_fs_stat(virtual_path, stat); }
+CUTE_INLINE File* fs_create_file(const char* virtual_path) { return cf_fs_create_file(virtual_path); }
+CUTE_INLINE File* fs_open_file_for_write(const char* virtual_path) { return cf_fs_open_file_for_write(virtual_path); }
+CUTE_INLINE File* fs_open_file_for_append(const char* virtual_path) { return cf_fs_open_file_for_append(virtual_path); }
+CUTE_INLINE File* fs_open_file_for_read(const char* virtual_path) { return cf_fs_open_file_for_read(virtual_path); }
+CUTE_INLINE Result fs_close(File* file) { return cf_fs_close(file); }
+CUTE_INLINE Result fs_delete(const char* virtual_path) { return cf_fs_delete(virtual_path); }
+CUTE_INLINE Result fs_create_dir(const char* virtual_path) { return cf_fs_create_directory(virtual_path); }
 CUTE_INLINE const char** fs_enumerate_directory(const char* virtual_path) { return cf_fs_enumerate_directory(virtual_path); }
 CUTE_INLINE void fs_free_enumerated_directory(const char** directory_list) { cf_fs_free_enumerated_directory(directory_list); }
 CUTE_INLINE bool fs_file_exists(const char* virtual_path) { return cf_fs_file_exists(virtual_path); }
-CUTE_INLINE size_t fs_read(file_t* file, void* buffer, size_t bytes) { return cf_fs_read(file, buffer, bytes); }
-CUTE_INLINE size_t fs_write(file_t* file, const void* buffer, size_t bytes) { return cf_fs_write(file, buffer, bytes); }
-CUTE_INLINE result_t fs_eof(file_t* file) { return cf_fs_eof(file); }
-CUTE_INLINE size_t fs_tell(file_t* file) { return cf_fs_tell(file); }
-CUTE_INLINE result_t fs_seek(file_t* file, size_t position) { return cf_fs_seek(file, position); }
-CUTE_INLINE size_t fs_size(file_t* file) { return cf_fs_size(file); }
-CUTE_INLINE result_t fs_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size = NULL) { return cf_fs_read_entire_file_to_memory(virtual_path, data_ptr, size); }
-CUTE_INLINE result_t fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size = NULL) { return cf_fs_read_entire_file_to_memory_and_nul_terminate(virtual_path, data_ptr, size); }
-CUTE_INLINE result_t fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size) { return cf_fs_write_entire_buffer_to_file(virtual_path, data, size); }
+CUTE_INLINE size_t fs_read(File* file, void* buffer, size_t bytes) { return cf_fs_read(file, buffer, bytes); }
+CUTE_INLINE size_t fs_write(File* file, const void* buffer, size_t bytes) { return cf_fs_write(file, buffer, bytes); }
+CUTE_INLINE Result fs_eof(File* file) { return cf_fs_eof(file); }
+CUTE_INLINE size_t fs_tell(File* file) { return cf_fs_tell(file); }
+CUTE_INLINE Result fs_seek(File* file, size_t position) { return cf_fs_seek(file, position); }
+CUTE_INLINE size_t fs_size(File* file) { return cf_fs_size(file); }
+CUTE_INLINE Result fs_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size = NULL) { return cf_fs_read_entire_file_to_memory(virtual_path, data_ptr, size); }
+CUTE_INLINE Result fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size = NULL) { return cf_fs_read_entire_file_to_memory_and_nul_terminate(virtual_path, data_ptr, size); }
+CUTE_INLINE Result fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size) { return cf_fs_write_entire_buffer_to_file(virtual_path, data, size); }
 CUTE_INLINE const char* fs_get_backend_specific_error_message() { return cf_fs_get_backend_specific_error_message(); }
 CUTE_INLINE const char* fs_get_user_directory(const char* org, const char* app) { return cf_fs_get_user_directory(org, app); }
 CUTE_INLINE const char* fs_get_actual_path(const char* virtual_path) { return cf_fs_get_actual_path(virtual_path); }

@@ -83,9 +83,9 @@ CUTE_API CF_Result CUTE_CALL cf_aseprite_cache_load_ase(const char* aseprite_pat
 namespace cute
 {
 
-CUTE_INLINE result_t aseprite_cache_load(const char* aseprite_path, Sprite* sprite_out) { return cf_aseprite_cache_load(aseprite_path, sprite_out); }
+CUTE_INLINE Result aseprite_cache_load(const char* aseprite_path, Sprite* sprite_out) { return cf_aseprite_cache_load(aseprite_path, sprite_out); }
 CUTE_INLINE void aseprite_cache_unload(const char* aseprite_path) { cf_aseprite_cache_unload(aseprite_path); }
-CUTE_INLINE result_t aseprite_cache_load_ase(const char* aseprite_path, ase_t** ase) { return  cf_aseprite_cache_load_ase(aseprite_path, ase); }
+CUTE_INLINE Result aseprite_cache_load_ase(const char* aseprite_path, ase_t** ase) { return  cf_aseprite_cache_load_ase(aseprite_path, ase); }
 
 }
 

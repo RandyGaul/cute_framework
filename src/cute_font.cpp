@@ -38,7 +38,7 @@
 
 using namespace cute;
 
-struct glyph_t
+struct Glyph
 {
 	v2 u, v;
 	int w, h;
@@ -47,13 +47,13 @@ struct glyph_t
 	bool visible;
 };
 
-struct font_internal_t
+struct FontInternal
 {
 	uint8_t* file_data = NULL;
 	stbtt_fontinfo info;
-	array<codepoint_range_t> ranges;
-	dictionary<int, int> missing_codepoints;
-	dictionary<int, glyph_t> glyphs;
+	Array<CodepointRange> ranges;
+	Dictionary<int, int> missing_codepoints;
+	Dictionary<int, Glyph> glyphs;
 	uint8_t* pixels = NULL;
 	float size;
 	float scale;
@@ -73,7 +73,7 @@ struct font_internal_t
 // `chinese_simplified_common` would normally reported ~2800 codepoint ranges, but with this
 // tweaked function reports ~1920 codepoint ranges. The ranges are functionally equivalent; this
 // does not change the number of glyphs that get used.
-static int s_unpack_ranges(int base, const short* deltas, int deltas_count, codepoint_range_t* out_ranges)
+static int s_unpack_ranges(int base, const short* deltas, int deltas_count, CodepointRange* out_ranges)
 {
 	int i = 1;
 	int lo = base + *deltas;
@@ -93,42 +93,42 @@ static int s_unpack_ranges(int base, const short* deltas, int deltas_count, code
 	return out_count;
 }
 
-codepoint_set_t cf_ascii_latin()
+CodepointSet cf_ascii_latin()
 {
-	static codepoint_range_t ranges[] = {
+	static CodepointRange ranges[] = {
 		{ 0x0020, 0x00FF, }, // Basic Latin + Latin Supplement
 		{ 0xFFFD, 0xFFFD }  // Replacement character
 	};
-	codepoint_set_t set = { CUTE_ARRAY_SIZE(ranges), ranges };
+	CodepointSet set = { CUTE_ARRAY_SIZE(ranges), ranges };
 	return set;
 }
 
-codepoint_set_t cf_greek()
+CodepointSet cf_greek()
 {
-	static codepoint_range_t ranges[] = {
+	static CodepointRange ranges[] = {
 		{ 0x0020, 0x00FF, }, // Basic Latin + Latin Supplement
 		{ 0x0370, 0x03FF, }, // Greek and Coptic
 		{ 0xFFFD, 0xFFFD }  // Replacement character
 	};
-	codepoint_set_t set = { CUTE_ARRAY_SIZE(ranges), ranges };
+	CodepointSet set = { CUTE_ARRAY_SIZE(ranges), ranges };
 	return set;
 }
 
-codepoint_set_t cf_korean()
+CodepointSet cf_korean()
 {
-	static codepoint_range_t ranges[] = {
+	static CodepointRange ranges[] = {
 		{ 0x0020, 0x00FF }, // Basic Latin + Latin Supplement
 		{ 0x3131, 0x3163 }, // Korean alphabets
 		{ 0xAC00, 0xD7A3 }, // Korean characters
 		{ 0xFFFD, 0xFFFD }, // Replacement character
 	};
-	codepoint_set_t set = { CUTE_ARRAY_SIZE(ranges), ranges };
+	CodepointSet set = { CUTE_ARRAY_SIZE(ranges), ranges };
 	return set;
 }
 
-codepoint_set_t cf_chinese_full()
+CodepointSet cf_chinese_full()
 {
-	static codepoint_range_t ranges[] = {
+	static CodepointRange ranges[] = {
 		{ 0x0020, 0x00FF }, // Basic Latin + Latin Supplement
 		{ 0x2000, 0x206F }, // General Punctuation
 		{ 0x3000, 0x30FF }, // CJK Symbols and Punctuations, Hiragana, Katakana
@@ -137,11 +137,11 @@ codepoint_set_t cf_chinese_full()
 		{ 0xFFFD, 0xFFFD }, // Replacement character
 		{ 0x4e00, 0x9FAF }, // CJK Ideograms
 	};
-	codepoint_set_t set = { CUTE_ARRAY_SIZE(ranges), ranges };
+	CodepointSet set = { CUTE_ARRAY_SIZE(ranges), ranges };
 	return set;
 }
 
-codepoint_set_t cf_chinese_simplified_common()
+CodepointSet cf_chinese_simplified_common()
 {
 	// Store 2500 regularly used characters for Simplified Chinese.
 	// Sourced from https://zh.wiktionary.org/wiki/%E9%99%84%E5%BD%95:%E7%8E%B0%E4%BB%A3%E6%B1%89%E8%AF%AD%E5%B8%B8%E7%94%A8%E5%AD%97%E8%A1%A8
@@ -190,7 +190,7 @@ codepoint_set_t cf_chinese_simplified_common()
 		2,2,7,34,21,13,70,2,128,1,1,2,1,1,2,1,1,3,2,2,2,15,1,4,1,3,4,42,10,6,1,49,85,8,1,2,1,1,4,4,2,3,6,1,5,7,4,3,211,4,1,2,1,2,5,1,2,4,2,2,6,5,6,
 		10,3,4,48,100,6,2,16,296,5,27,387,2,2,3,7,16,8,5,38,15,39,21,9,10,3,7,59,13,27,21,47,5,21,6
 	};
-	static codepoint_range_t base_ranges[] = {
+	static CodepointRange base_ranges[] = {
 		{ 0x0020, 0x00FF }, // Basic Latin + Latin Supplement
 		{ 0x2000, 0x206F }, // General Punctuation
 		{ 0x3000, 0x30FF }, // CJK Symbols and Punctuations, Hiragana, Katakana
@@ -198,17 +198,17 @@ codepoint_set_t cf_chinese_simplified_common()
 		{ 0xFF00, 0xFFEF }, // Half-width characters
 		{ 0xFFFD, 0xFFFD }  // Replacement character
 	};
-	static codepoint_range_t ranges[CUTE_ARRAY_SIZE(base_ranges) + CUTE_ARRAY_SIZE(differences_from_0x4E00) * 2] = { 0 };
+	static CodepointRange ranges[CUTE_ARRAY_SIZE(base_ranges) + CUTE_ARRAY_SIZE(differences_from_0x4E00) * 2] = { 0 };
 	static int count = 0;
 	if (!count) {
 		CUTE_MEMCPY(ranges, base_ranges, sizeof(base_ranges));
 		count = s_unpack_ranges(0x4E00, differences_from_0x4E00, CUTE_ARRAY_SIZE(differences_from_0x4E00), ranges + CUTE_ARRAY_SIZE(base_ranges));
 	}
-	codepoint_set_t set = { count, ranges };
+	CodepointSet set = { count, ranges };
 	return set;
 }
 
-codepoint_set_t cf_japanese()
+CodepointSet cf_japanese()
 {
 	// 2999 ideograms code points for Japanese
 	// - 2136 Joyo (meaning "for regular use" or "for common use") Kanji code points
@@ -279,7 +279,7 @@ codepoint_set_t cf_japanese()
 		4,1,10,3,1,6,1,2,51,5,40,15,24,43,22928,11,1,13,154,70,3,1,1,7,4,10,1,2,1,1,2,1,2,1,2,2,1,1,2,1,1,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,1,2,1,1,1,
 		3,2,1,1,1,1,2,1,1,
 	};
-	static codepoint_range_t base_ranges[] =
+	static CodepointRange base_ranges[] =
 	{
 		{ 0x0020, 0x00FF }, // Basic Latin + Latin Supplement
 		{ 0x3000, 0x30FF }, // CJK Symbols and Punctuations, Hiragana, Katakana
@@ -287,31 +287,31 @@ codepoint_set_t cf_japanese()
 		{ 0xFF00, 0xFFEF }, // Half-width characters
 		{ 0xFFFD, 0xFFFD }  // Replacement character
 	};
-	static codepoint_range_t ranges[CUTE_ARRAY_SIZE(base_ranges) + CUTE_ARRAY_SIZE(differences_from_0x4E00) * 2] = { 0 };
+	static CodepointRange ranges[CUTE_ARRAY_SIZE(base_ranges) + CUTE_ARRAY_SIZE(differences_from_0x4E00) * 2] = { 0 };
 	static int count = 0;
 	if (!count) {
 		CUTE_MEMCPY(ranges, base_ranges, sizeof(base_ranges));
 		count = s_unpack_ranges(0x4E00, differences_from_0x4E00, CUTE_ARRAY_SIZE(differences_from_0x4E00), ranges + CUTE_ARRAY_SIZE(base_ranges));
 	}
-	codepoint_set_t set = { count, ranges };
+	CodepointSet set = { count, ranges };
 	return set;
 }
 
-codepoint_set_t cf_thai()
+CodepointSet cf_thai()
 {
-	static codepoint_range_t ranges[] = {
+	static CodepointRange ranges[] = {
 		{ 0x0020, 0x00FF }, // Basic Latin
 		{ 0x2010, 0x205E }, // Punctuations
 		{ 0x0E00, 0x0E7F }, // Thai
 		{ 0xFFFD, 0xFFFD }  // Replacement character
 	};
-	codepoint_set_t set = { CUTE_ARRAY_SIZE(ranges), ranges };
+	CodepointSet set = { CUTE_ARRAY_SIZE(ranges), ranges };
 	return set;
 }
 
-codepoint_set_t cf_vietnamese()
+CodepointSet cf_vietnamese()
 {
-	static codepoint_range_t ranges[] = {
+	static CodepointRange ranges[] = {
 		{ 0x0020, 0x00FF }, // Basic Latin
 		{ 0x0102, 0x0103 },
 		{ 0x0110, 0x0111 },
@@ -322,26 +322,26 @@ codepoint_set_t cf_vietnamese()
 		{ 0x1EA0, 0x1EF9 },
 		{ 0xFFFD, 0xFFFD }  // Replacement character
 	};
-	codepoint_set_t set = { CUTE_ARRAY_SIZE(ranges), ranges };
+	CodepointSet set = { CUTE_ARRAY_SIZE(ranges), ranges };
 	return set;
 }
 
-codepoint_set_t cf_cyrillic()
+CodepointSet cf_cyrillic()
 {
-	static codepoint_range_t ranges[] = {
+	static CodepointRange ranges[] = {
 		{ 0x0020, 0x00FF }, // Basic Latin + Latin Supplement
 		{ 0x0400, 0x052F }, // Cyrillic + Cyrillic Supplement
 		{ 0x2DE0, 0x2DFF }, // Cyrillic Extended-A
 		{ 0xA640, 0xA69F }, // Cyrillic Extended-B
 		{ 0xFFFD, 0xFFFD }  // Replacement character
 	};
-	codepoint_set_t set = { CUTE_ARRAY_SIZE(ranges), ranges };
+	CodepointSet set = { CUTE_ARRAY_SIZE(ranges), ranges };
 	return set;
 }
 
-font_t cf_make_font_mem(void* data, int size, result_t* result_out)
+Font cf_make_font_mem(void* data, int size, Result* result_out)
 {
-	font_internal_t* font = (font_internal_t*)CUTE_NEW(font_internal_t);
+	FontInternal* font = (FontInternal*)CUTE_NEW(FontInternal);
 	font->file_data = (uint8_t*)data;
 	if (!stbtt_InitFont(&font->info, font->file_data, stbtt_GetFontOffsetForIndex(font->file_data, 0))) {
 		CUTE_FREE(data);
@@ -349,41 +349,41 @@ font_t cf_make_font_mem(void* data, int size, result_t* result_out)
 		if (result_out) *result_out = result_failure("Failed to parse ttf file with stb_truetype.h.");
 		return { ~0ULL };
 	}
-	font_t result = { app->font_id_gen++ };
-	font_internal_t** font_ptr = app->fonts.insert(result.id);
+	Font result = { app->font_id_gen++ };
+	FontInternal** font_ptr = app->fonts.insert(result.id);
 	CUTE_ASSERT(font_ptr);
 	*font_ptr = font;
 	if (result_out) *result_out = result_success();
 	return result;
 }
 
-font_t cf_make_font(const char* path, result_t* result_out)
+Font cf_make_font(const char* path, Result* result_out)
 {
 	void* data;
 	size_t size;
-	result_t err = fs_read_entire_file_to_memory(path, &data, &size);
+	Result err = fs_read_entire_file_to_memory(path, &data, &size);
 	if (is_error(err)) {
 		CUTE_FREE(data);
 		if (result_out) *result_out = err;
 		return { ~0ULL };
 	}
-	font_t font = cf_make_font_mem(data, (int)size, result_out);
+	Font font = cf_make_font_mem(data, (int)size, result_out);
 	return font;
 }
 
-void cf_destroy_font(font_t font_handle)
+void cf_destroy_font(Font font_handle)
 {
-	font_internal_t* font = app->fonts.get(font_handle.id);
+	FontInternal* font = app->fonts.get(font_handle.id);
 	app->fonts.remove(font_handle.id);
 	CUTE_FREE(font->file_data);
 	CUTE_FREE(font->pixels);
-	font->~font_internal_t();
+	font->~FontInternal();
 	CUTE_FREE(font);
 }
 
-result_t cf_font_add_codepoints(font_t font_handle, codepoint_set_t set)
+Result cf_font_add_codepoints(Font font_handle, CodepointSet set)
 {
-	font_internal_t* font = app->fonts.get(font_handle.id);
+	FontInternal* font = app->fonts.get(font_handle.id);
 	if (!font) return result_failure("Invalid font, did you forget to call `cf_make_font`?");
 	for (int i = 0; i < set.count; ++i) {
 		font->ranges.add(set.ranges[i]);
@@ -408,9 +408,9 @@ static void s_save(const char* path, uint8_t* pixels, int w, int h)
 	CUTE_FREE(img.pix);
 }
 
-result_t cf_font_build(font_t font_handle, float size)
+Result cf_font_build(Font font_handle, float size)
 {
-	font_internal_t* font = app->fonts.get(font_handle.id);
+	FontInternal* font = app->fonts.get(font_handle.id);
 	if (!font) return result_failure("Invalid font, did you forget to call `cf_make_font`?");
 	// TODO - Delete old font data.
 	// TODO - Oversampling.
@@ -426,7 +426,7 @@ result_t cf_font_build(font_t font_handle, float size)
 	font->size = size;
 
 	// Load each glyph's data from the font.
-	array<int> glyph_indices;
+	Array<int> glyph_indices;
 	for (int i = 0; i < font->ranges.size(); ++i) {
 		int lo = font->ranges[i].lo;
 		int hi = font->ranges[i].hi;
@@ -449,7 +449,7 @@ result_t cf_font_build(font_t font_handle, float size)
 			stbtt_GetGlyphBitmapBox(&font->info, glyph_index, font->scale, font->scale, &x0, &y0, &x1, &y1);
 			int w = x1 - x0;
 			int h = y1 - y0;
-			glyph_t glyph;
+			Glyph glyph;
 			glyph.u = glyph.v = V2(0,0);
 			glyph.w = w;
 			glyph.h = h;
@@ -464,10 +464,10 @@ result_t cf_font_build(font_t font_handle, float size)
 	// Gather up all rectangles for each glyph.
 	int pad = 1;
 	int rect_count = font->glyphs.count();
-	array<stbrp_rect> rects;
+	Array<stbrp_rect> rects;
 	rects.ensure_count(rect_count);
 	CUTE_MEMSET(rects.data(), 0, sizeof(stbrp_rect) * rect_count);
-	glyph_t* glyphs = font->glyphs.items();
+	Glyph* glyphs = font->glyphs.items();
 	for (int i = 0; i < rect_count; ++i) {
 		rects[i].w = glyphs[i].w + pad;
 		rects[i].h = glyphs[i].h + pad;
@@ -478,7 +478,7 @@ result_t cf_font_build(font_t font_handle, float size)
 	int atlas_width = 1024;
 	int atlas_height_max = 1024 * 32;
 	stbrp_context stbrp;
-	array<stbrp_node> nodes;
+	Array<stbrp_node> nodes;
 	nodes.ensure_count(atlas_height_max - pad);
 	stbrp_init_target(&stbrp, atlas_width - pad, atlas_height_max - pad, nodes.data(), nodes.count());
 	stbrp_pack_rects(&stbrp, rects.data(), rect_count);
@@ -515,9 +515,9 @@ result_t cf_font_build(font_t font_handle, float size)
 	return result_failure("Not finished implementing this.");
 }
 
-void cf_font_missing_codepoints(cf_font_t font_handle, int** missing_codepoints, int* count)
+void cf_font_missing_codepoints(CF_Font font_handle, int** missing_codepoints, int* count)
 {
-	font_internal_t* font = app->fonts.get(font_handle.id);
+	FontInternal* font = app->fonts.get(font_handle.id);
 	if (!font) {
 		*missing_codepoints = NULL;
 		*count = 0;

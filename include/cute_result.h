@@ -66,7 +66,7 @@ CUTE_INLINE CF_Result cf_result_success() { CF_Result result; result.code = CF_R
 namespace cute
 {
 
-using result_t = CF_Result;
+using Result = CF_Result;
 
 enum : int
 {
@@ -75,11 +75,11 @@ enum : int
 	#undef CF_ENUM
 };
 
-CUTE_INLINE bool is_error(result_t error) { return cf_is_error(error); }
+CUTE_INLINE bool is_error(Result error) { return cf_is_error(error); }
 
-CUTE_INLINE result_t result_make(int code, const char* details) { return cf_result_make(code, details); }
-CUTE_INLINE result_t result_failure(const char* details) { return cf_result_error(details); }
-CUTE_INLINE result_t result_success() { return cf_result_success(); }
+CUTE_INLINE Result result_make(int code, const char* details) { return cf_result_make(code, details); }
+CUTE_INLINE Result result_failure(const char* details) { return cf_result_error(details); }
+CUTE_INLINE Result result_success() { return cf_result_success(); }
 
 }
 

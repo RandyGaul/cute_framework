@@ -40,20 +40,20 @@ extern "C" {
  * This implementation comes from Mattias Gustavsson's single-file header collection.
  * https://github.com/mattiasgustavsson/libs/blob/main/rnd.h
  */
-typedef struct cf_rnd_t
+typedef struct CF_Rnd
 {
 	uint64_t state[2];
-} cf_rnd_t;
+} CF_Rnd;
 
-static CUTE_INLINE cf_rnd_t CUTE_CALL cf_rnd_seed(uint64_t seed);
+static CUTE_INLINE CF_Rnd CUTE_CALL cf_rnd_seed(uint64_t seed);
 
-static CUTE_INLINE uint64_t CUTE_CALL cf_rnd_next(cf_rnd_t* rnd);
-static CUTE_INLINE float    CUTE_CALL cf_rnd_next_float(cf_rnd_t* rnd);
-static CUTE_INLINE double   CUTE_CALL cf_rnd_next_double(cf_rnd_t* rnd);
-static CUTE_INLINE int      CUTE_CALL cf_rnd_next_range_int(cf_rnd_t* rnd, int min, int max);
-static CUTE_INLINE uint64_t CUTE_CALL cf_rnd_next_range_uint64(cf_rnd_t* rnd, uint64_t min, uint64_t max);
-static CUTE_INLINE float    CUTE_CALL cf_rnd_next_range_float(cf_rnd_t* rnd, float min, float max);
-static CUTE_INLINE double   CUTE_CALL cf_rnd_next_range_double(cf_rnd_t* rnd, double min, double max);
+static CUTE_INLINE uint64_t CUTE_CALL cf_rnd_next(CF_Rnd* rnd);
+static CUTE_INLINE float    CUTE_CALL cf_rnd_next_float(CF_Rnd* rnd);
+static CUTE_INLINE double   CUTE_CALL cf_rnd_next_double(CF_Rnd* rnd);
+static CUTE_INLINE int      CUTE_CALL cf_rnd_next_range_int(CF_Rnd* rnd, int min, int max);
+static CUTE_INLINE uint64_t CUTE_CALL cf_rnd_next_range_uint64(CF_Rnd* rnd, uint64_t min, uint64_t max);
+static CUTE_INLINE float    CUTE_CALL cf_rnd_next_range_float(CF_Rnd* rnd, float min, float max);
+static CUTE_INLINE double   CUTE_CALL cf_rnd_next_range_double(CF_Rnd* rnd, double min, double max);
 
 // -------------------------------------------------------------------------------------------------
 
@@ -67,16 +67,16 @@ static CUTE_INLINE uint64_t cf_internal_rnd_murmur3_avalanche64(uint64_t h)
 	return h;
 }
 
-static CUTE_INLINE cf_rnd_t cf_rnd_seed(uint64_t seed)
+static CUTE_INLINE CF_Rnd cf_rnd_seed(uint64_t seed)
 {
-	cf_rnd_t rnd;
+	CF_Rnd rnd;
 	uint64_t value = cf_internal_rnd_murmur3_avalanche64((seed << 1ULL) | 1ULL);
 	rnd.state[0] = value;
 	rnd.state[1] = cf_internal_rnd_murmur3_avalanche64(value);
 	return rnd;
 }
 
-static CUTE_INLINE uint64_t cf_rnd_next(cf_rnd_t* rnd)
+static CUTE_INLINE uint64_t cf_rnd_next(CF_Rnd* rnd)
 {
 	uint64_t x = rnd->state[0];
 	uint64_t y = rnd->state[1];
@@ -88,7 +88,7 @@ static CUTE_INLINE uint64_t cf_rnd_next(cf_rnd_t* rnd)
 	return x + y;
 }
 
-static CUTE_INLINE float cf_rnd_next_float(cf_rnd_t* rnd)
+static CUTE_INLINE float cf_rnd_next_float(CF_Rnd* rnd)
 {
 	uint32_t value = (uint32_t)(cf_rnd_next(rnd) >> 32);
 
@@ -100,7 +100,7 @@ static CUTE_INLINE float cf_rnd_next_float(cf_rnd_t* rnd)
 	return *(float*)&result - 1.0f;
 }
 
-static CUTE_INLINE double cf_rnd_next_double(cf_rnd_t* rnd)
+static CUTE_INLINE double cf_rnd_next_double(CF_Rnd* rnd)
 {
 	uint64_t value = cf_rnd_next(rnd);
 	uint64_t exponent = 1023;
@@ -109,28 +109,28 @@ static CUTE_INLINE double cf_rnd_next_double(cf_rnd_t* rnd)
 	return *(double*)&result - 1.0;
 }
 
-static CUTE_INLINE int cf_rnd_next_range_int(cf_rnd_t* rnd, int min, int max)
+static CUTE_INLINE int cf_rnd_next_range_int(CF_Rnd* rnd, int min, int max)
 {
 	int range = (max - min) + 1;
 	int value = (int)(cf_rnd_next(rnd) % range);
 	return min + value;
 }
 
-static CUTE_INLINE uint64_t cf_rnd_next_range_uint64(cf_rnd_t* rnd, uint64_t min, uint64_t max)
+static CUTE_INLINE uint64_t cf_rnd_next_range_uint64(CF_Rnd* rnd, uint64_t min, uint64_t max)
 {
 	uint64_t range = (max - min) + 1;
 	uint64_t value = cf_rnd_next(rnd) % range;
 	return min + value;
 }
 
-static CUTE_INLINE float cf_rnd_next_range_float(cf_rnd_t* rnd, float min, float max)
+static CUTE_INLINE float cf_rnd_next_range_float(CF_Rnd* rnd, float min, float max)
 {
 	float range = max - min;
 	float value = cf_rnd_next_float(rnd) * range;
 	return min + value;
 }
 
-static CUTE_INLINE double cf_rnd_next_range_double(cf_rnd_t* rnd, double min, double max)
+static CUTE_INLINE double cf_rnd_next_range_double(CF_Rnd* rnd, double min, double max)
 {
 	double range = max - min;
 	double value = cf_rnd_next_float(rnd) * range;
@@ -149,7 +149,7 @@ static CUTE_INLINE double cf_rnd_next_range_double(cf_rnd_t* rnd, double min, do
 namespace cute
 {
 
-using rnd_t = cf_rnd_t;
+using Rnd = CF_Rnd;
 
 namespace internal
 {
@@ -158,22 +158,22 @@ static CUTE_INLINE uint64_t rnd_murmur3_avalanche64(uint64_t h) { return cf_inte
 
 }
 
-static CUTE_INLINE cf_rnd_t rnd_seed(uint64_t seed) { return cf_rnd_seed(seed); }
-static CUTE_INLINE uint64_t rnd_next(cf_rnd_t* rnd) { return cf_rnd_next(rnd); }
-static CUTE_INLINE float    rnd_next_float(cf_rnd_t* rnd) { return cf_rnd_next_float(rnd); }
-static CUTE_INLINE double   rnd_next_double(cf_rnd_t* rnd) { return cf_rnd_next_double(rnd); }
-static CUTE_INLINE int      rnd_next_range(cf_rnd_t* rnd, int min, int max) { return cf_rnd_next_range_int(rnd, min, max); }
-static CUTE_INLINE uint64_t rnd_next_range(cf_rnd_t* rnd, uint64_t min, uint64_t max) { return cf_rnd_next_range_uint64(rnd, min, max); }
-static CUTE_INLINE float    rnd_next_range(cf_rnd_t* rnd, float min, float max) { return cf_rnd_next_range_float(rnd, min, max); }
-static CUTE_INLINE double   rnd_next_range(cf_rnd_t* rnd, double min, double max) { return cf_rnd_next_range_double(rnd, min, max); }
+static CUTE_INLINE Rnd rnd_seed(uint64_t seed) { return cf_rnd_seed(seed); }
+static CUTE_INLINE uint64_t rnd_next(Rnd* rnd) { return cf_rnd_next(rnd); }
+static CUTE_INLINE float    rnd_next_float(Rnd* rnd) { return cf_rnd_next_float(rnd); }
+static CUTE_INLINE double   rnd_next_double(Rnd* rnd) { return cf_rnd_next_double(rnd); }
+static CUTE_INLINE int      rnd_next_range(Rnd* rnd, int min, int max) { return cf_rnd_next_range_int(rnd, min, max); }
+static CUTE_INLINE uint64_t rnd_next_range(Rnd* rnd, uint64_t min, uint64_t max) { return cf_rnd_next_range_uint64(rnd, min, max); }
+static CUTE_INLINE float    rnd_next_range(Rnd* rnd, float min, float max) { return cf_rnd_next_range_float(rnd, min, max); }
+static CUTE_INLINE double   rnd_next_range(Rnd* rnd, double min, double max) { return cf_rnd_next_range_double(rnd, min, max); }
 
-static CUTE_INLINE uint64_t rnd_next(cf_rnd_t& rnd) { return cf_rnd_next(&rnd); }
-static CUTE_INLINE float    rnd_next_float(cf_rnd_t& rnd) { return cf_rnd_next_float(&rnd); }
-static CUTE_INLINE double   rnd_next_double(cf_rnd_t& rnd) { return cf_rnd_next_double(&rnd); }
-static CUTE_INLINE int      rnd_next_range(cf_rnd_t& rnd, int min, int max) { return cf_rnd_next_range_int(&rnd, min, max); }
-static CUTE_INLINE uint64_t rnd_next_range(cf_rnd_t& rnd, uint64_t min, uint64_t max) { return cf_rnd_next_range_uint64(&rnd, min, max); }
-static CUTE_INLINE float    rnd_next_range(cf_rnd_t& rnd, float min, float max) { return cf_rnd_next_range_float(&rnd, min, max); }
-static CUTE_INLINE double   rnd_next_range(cf_rnd_t& rnd, double min, double max) { return cf_rnd_next_range_double(&rnd, min, max); }
+static CUTE_INLINE uint64_t rnd_next(Rnd& rnd) { return cf_rnd_next(&rnd); }
+static CUTE_INLINE float    rnd_next_float(Rnd& rnd) { return cf_rnd_next_float(&rnd); }
+static CUTE_INLINE double   rnd_next_double(Rnd& rnd) { return cf_rnd_next_double(&rnd); }
+static CUTE_INLINE int      rnd_next_range(Rnd& rnd, int min, int max) { return cf_rnd_next_range_int(&rnd, min, max); }
+static CUTE_INLINE uint64_t rnd_next_range(Rnd& rnd, uint64_t min, uint64_t max) { return cf_rnd_next_range_uint64(&rnd, min, max); }
+static CUTE_INLINE float    rnd_next_range(Rnd& rnd, float min, float max) { return cf_rnd_next_range_float(&rnd, min, max); }
+static CUTE_INLINE double   rnd_next_range(Rnd& rnd, double min, double max) { return cf_rnd_next_range_double(&rnd, min, max); }
 
 }
 

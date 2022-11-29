@@ -23,17 +23,17 @@
 
 #include <SDL.h>
 
-cf_shared_library_t* cf_load_shared_library(const char* path)
+CF_SharedLibrary* cf_load_shared_library(const char* path)
 {
 	return SDL_LoadObject(path);
 }
 
-void cf_unload_shared_library(cf_shared_library_t* library)
+void cf_unload_shared_library(CF_SharedLibrary* library)
 {
 	SDL_UnloadObject(library);
 }
 
-void* cf_load_function(cf_shared_library_t* library, const char* function_name)
+void* cf_load_function(CF_SharedLibrary* library, const char* function_name)
 {
 	return SDL_LoadFunction(library, function_name);
 }

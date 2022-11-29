@@ -78,21 +78,21 @@ CUTE_API void CUTE_CALL cf_app_get_backbuffer_size(int* x, int* y);
 	CF_ENUM(POWER_STATE_CHARGING, 3)   /* Plugged in and charging battery. */ \
 	CF_ENUM(POWER_STATE_CHARGED, 4)    /* Plugged in and battery is charged. */ \
 
-typedef enum cf_power_state_t
+typedef enum CF_PowerState
 {
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_POWER_STATE_DEFS
 	#undef CF_ENUM
-} cf_power_state_t;
+} CF_PowerState;
 
-typedef struct cf_power_info_t
+typedef struct CF_PowerInfo
 {
-	cf_power_state_t state;
+	CF_PowerState state;
 	int seconds_left;    // The seconds of battery life left. -1 means not running on the battery, or unable to get a valid value.
 	int percentage_left; // The percentage of battery life left from 0 to 100. -1 means not running on the battery, or unable to get a valid value.
-} cf_power_info_t;
+} CF_PowerInfo;
 
-CUTE_API cf_power_info_t CUTE_CALL cf_app_power_info();
+CUTE_API CF_PowerInfo CUTE_CALL cf_app_power_info();
 
 // TODO - Where to put this?
 CUTE_API void CUTE_CALL cf_sleep(int milliseconds);
@@ -109,9 +109,9 @@ CUTE_API void CUTE_CALL cf_sleep(int milliseconds);
 namespace cute
 {
 
-using power_info_t = cf_power_info_t;
+using PowerInfo = CF_PowerInfo;
 
-enum power_state_t : int
+enum PowerState : int
 {
 	#define CF_ENUM(K, V) K = V,
 	CF_POWER_STATE_DEFS
@@ -125,7 +125,7 @@ enum : int
 	#undef CF_ENUM
 };
 
-CUTE_INLINE result_t make_app(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL) { return cf_make_app(window_title, x, y, w, h, options, argv0); }
+CUTE_INLINE Result make_app(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL) { return cf_make_app(window_title, x, y, w, h, options, argv0); }
 CUTE_INLINE void destroy_app() { cf_destroy_app(); }
 CUTE_INLINE bool app_is_running() { return cf_app_is_running(); }
 CUTE_INLINE void app_stop_running() { cf_app_stop_running(); }
@@ -134,7 +134,7 @@ CUTE_INLINE CF_Texture app_get_backbuffer() { return cf_app_get_backbuffer(); }
 CUTE_INLINE void app_present() { cf_app_present(); }
 CUTE_INLINE ImGuiContext* app_init_imgui(bool no_default_font = false) { return cf_app_init_imgui(no_default_font); }
 CUTE_INLINE sg_imgui_t* app_get_sokol_imgui() { return cf_app_get_sokol_imgui(); }
-CUTE_INLINE power_info_t app_power_info() { return cf_app_power_info(); }
+CUTE_INLINE PowerInfo app_power_info() { return cf_app_power_info(); }
 CUTE_INLINE void sleep(int milliseconds) { cf_sleep(milliseconds); }
 
 }

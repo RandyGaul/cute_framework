@@ -24,20 +24,20 @@
 #ifdef CUTE_CPP
 
 template<typename T>
-class cf_scope_exit
+class CF_ScopeExit
 {
 public:
-	explicit cf_scope_exit(const T& func) : F(func) {}
-	~cf_scope_exit() { F(); }
+	explicit CF_ScopeExit(const T& func) : F(func) {}
+	~CF_ScopeExit() { F(); }
 
 private:
 	T F;
 };
 
 template <typename T>
-static cf_scope_exit<T> s_create_scope_helper(T func)
+static CF_ScopeExit<T> s_create_scope_helper(T func)
 {
-	return cf_scope_exit<T>(func);
+	return CF_ScopeExit<T>(func);
 }
 
 #define CUTE_TOKEN_PASTE_HELPER(X, Y) X ## Y
@@ -72,11 +72,6 @@ static cf_scope_exit<T> s_create_scope_helper(T func)
  *     // And finally, the defer line can run here too.
  * }
  */
-#define CUTE_DEFER(L) const auto& CUTE_TOKEN_PASTE(cf_scope_exit, __LINE__) = s_create_scope_helper([&]() { L; })
-
-namespace cute
-{
-template <typename T> using scope_exit = cf_scope_exit<T>;
-}
+#define CUTE_DEFER(L) const auto& CUTE_TOKEN_PASTE(CF_ScopeExit, __LINE__) = s_create_scope_helper([&]() { L; })
 
 #endif // CUTE_CPP

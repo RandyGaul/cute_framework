@@ -78,7 +78,7 @@ extern "C" {
  * 
  * We could save the `ImportantStuff` to a KV text file with some code like this:
  * 
- *     bool serialize(cf_kv_t* kv, ImportantStuff* stuff)
+ *     bool serialize(CF_KeyValue* kv, ImportantStuff* stuff)
  *     {
  *         if (cf_kv_key("state"))       cf_kv_val_int32(kv, &stuff->state);
  *         if (cf_kv_key("factor"))      cf_kv_val_float(kv, &stuff->factor);
@@ -96,7 +96,7 @@ extern "C" {
  * 
  *     bool save(ImportantStuff* stuff, const char* path)
  *     {
- *          cf_kv_t* kv = kv_write();
+ *          CF_KeyValue* kv = kv_write();
  *          if (!serialize(kv, stuff)) {
  *              cf_kv_destroy(kv);
  *              return NULL;
@@ -124,7 +124,7 @@ extern "C" {
  *          void* data;
  *          size_t size;
  *          if (cf_is_error(cf_fs_read_entire_file_to_memory(path, &data, &size))) return false;
- *          cf_kv_t* kv = kv_read(data, size);
+ *          CF_KeyValue* kv = kv_read(data, size);
  *          if (!kv) return false;
  *          bool result = serialize(kv, stuff);
  *          cf_kv_destroy(kv);
@@ -137,18 +137,18 @@ extern "C" {
  * run different code accordingly.
  */
 
-typedef struct cf_kv_t cf_kv_t;
+typedef struct CF_KeyValue CF_KeyValue;
 
 #define CF_KV_STATE_DEFS \
 	CF_ENUM(KV_STATE_WRITE, 0) \
 	CF_ENUM(KV_STATE_READ, 1) \
 
-typedef enum cf_kv_state_t
+typedef enum CF_KeyValueState
 {
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_KV_STATE_DEFS
 	#undef CF_ENUM
-} cf_kv_state_t;
+} CF_KeyValueState;
 
 /**
  * Parses a buffer of kv data. All data is loaded up into memory at once. You can fetch out values
@@ -162,7 +162,7 @@ typedef enum cf_kv_state_t
  *     ;
  *     size_t len = CUTE_STRLEN(string);
  *     
- *     cf_kv_t* kv = cf_kv_parse((void*)string, len, NULL);
+ *     CF_KeyValue* kv = cf_kv_parse((void*)string, len, NULL);
  *     
  *     int val;
  *     if (cf_kv_key(kv, "a")) {
@@ -181,7 +181,7 @@ typedef enum cf_kv_state_t
  *     a was 10
  *     b was 13
  */
-CUTE_API cf_kv_t* CUTE_CALL cf_kv_read(const void* data, size_t size, CF_Result* result_out /* = NULL */);
+CUTE_API CF_KeyValue* CUTE_CALL cf_kv_read(const void* data, size_t size, CF_Result* result_out /* = NULL */);
 
 /**
  * Creates a new kv ready for writing. You can write values as-needed by using `cf_kv_key` and
@@ -192,7 +192,7 @@ CUTE_API cf_kv_t* CUTE_CALL cf_kv_read(const void* data, size_t size, CF_Result*
  *     int a = 10;
  *     int b = 12;
  *     
- *     cf_kv_t* kv = kv_write();
+ *     CF_KeyValue* kv = kv_write();
  *     cf_kv_key(kv, "a");
  *     cf_kv_val(kv, &a);
  *     
@@ -207,30 +207,30 @@ CUTE_API cf_kv_t* CUTE_CALL cf_kv_read(const void* data, size_t size, CF_Result*
  *     a = 10,
  *     b = 12,
  */
-CUTE_API cf_kv_t* CUTE_CALL cf_kv_write();
+CUTE_API CF_KeyValue* CUTE_CALL cf_kv_write();
 
 /**
  * Frees up all resources using by the kv instance.
  */
-CUTE_API void CUTE_CALL cf_kv_destroy(cf_kv_t* kv);
+CUTE_API void CUTE_CALL cf_kv_destroy(CF_KeyValue* kv);
 
 /**
  * Returns the mode this KV was opened in. Either KV_STATE_READ or KV_STATE_WRITE. You can use this
  * function in your serialization routines to do specific things for reading vs writing, whereas for
  * most cases you can use the same code for both reading and writing.
  */
-CUTE_API cf_kv_state_t CUTE_CALL cf_kv_state(cf_kv_t* kv);
+CUTE_API CF_KeyValueState CUTE_CALL cf_kv_state(CF_KeyValue* kv);
 
 /**
  * Fetches the write buffer pointer containing any data serialized so far. This function will return
  * NULL if the kv is not opened for write mode.
  */
-CUTE_API const char* CUTE_CALL cf_kv_buffer(cf_kv_t* kv);
+CUTE_API const char* CUTE_CALL cf_kv_buffer(CF_KeyValue* kv);
 
 /**
  * Returns the size written to the write buffer so far. This size does not include the nul-terminator.
  */
-CUTE_API size_t CUTE_CALL cf_kv_buffer_size(cf_kv_t* kv);
+CUTE_API size_t CUTE_CALL cf_kv_buffer_size(CF_KeyValue* kv);
 
 /**
  * Resets the read position of `kv`. `kv` must be in read mode to use this function. After calling
@@ -238,7 +238,7 @@ CUTE_API size_t CUTE_CALL cf_kv_buffer_size(cf_kv_t* kv);
  * to stop reading and reset back to the top-level object in your serialized file. This function does
  * not do any re-parsing, and merely clears/resets a few internal variables.
  */
-CUTE_API void CUTE_CALL cf_read_reset(cf_kv_t* kv);
+CUTE_API void CUTE_CALL cf_read_reset(CF_KeyValue* kv);
 
 /**
  * The base must be in read mode. This function is used to support data inheritence and delta encoding.
@@ -257,7 +257,7 @@ CUTE_API void CUTE_CALL cf_read_reset(cf_kv_t* kv);
  * For a more in-depth description on how to use this function see the tutotorial page from the Cute
  * Framework docs here: https://randygaul.github.io/cute_framework/#/serialization/
  */
-CUTE_API void CUTE_CALL cf_kv_set_base(cf_kv_t* kv, cf_kv_t* base);
+CUTE_API void CUTE_CALL cf_kv_set_base(CF_KeyValue* kv, CF_KeyValue* base);
 
 /**
  * Returns the error state of the kv instance. You can use this try and get a more useful description
@@ -265,7 +265,7 @@ CUTE_API void CUTE_CALL cf_kv_set_base(cf_kv_t* kv, cf_kv_t* base);
  * `cf_kv_key` and it's non-existent a potentially useful error message may be generated, but you can
  * still keep going and look for other keys freely.
  */
-CUTE_API CF_Result CUTE_CALL cf_kv_last_error(cf_kv_t* kv);
+CUTE_API CF_Result CUTE_CALL cf_kv_last_error(CF_KeyValue* kv);
 
 // -------------------------------------------------------------------------------------------------
 // Key and Value functions.
@@ -278,37 +278,37 @@ CUTE_API CF_Result CUTE_CALL cf_kv_last_error(cf_kv_t* kv);
 	CF_ENUM(KV_TYPE_ARRAY,  4) \
 	CF_ENUM(KV_TYPE_OBJECT, 5) \
 
-typedef enum cf_kv_type_t
+typedef enum CF_KeyValueype_t
 {
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_KV_TYPE_DEFS
 	#undef CF_ENUM
-} cf_kv_type_t;
+} CF_KeyValueype_t;
 
-CUTE_API bool CUTE_CALL cf_kv_key(cf_kv_t* kv, const char* key, cf_kv_type_t* type /*= NULL*/);
+CUTE_API bool CUTE_CALL cf_kv_key(CF_KeyValue* kv, const char* key, CF_KeyValueype_t* type /*= NULL*/);
 
-CUTE_API bool CUTE_CALL cf_kv_val_uint8(cf_kv_t* kv, uint8_t* val);
-CUTE_API bool CUTE_CALL cf_kv_val_uint16(cf_kv_t* kv, uint16_t* val);
-CUTE_API bool CUTE_CALL cf_kv_val_uint32(cf_kv_t* kv, uint32_t* val);
-CUTE_API bool CUTE_CALL cf_kv_val_uint64(cf_kv_t* kv, uint64_t* val);
+CUTE_API bool CUTE_CALL cf_kv_val_uint8(CF_KeyValue* kv, uint8_t* val);
+CUTE_API bool CUTE_CALL cf_kv_val_uint16(CF_KeyValue* kv, uint16_t* val);
+CUTE_API bool CUTE_CALL cf_kv_val_uint32(CF_KeyValue* kv, uint32_t* val);
+CUTE_API bool CUTE_CALL cf_kv_val_uint64(CF_KeyValue* kv, uint64_t* val);
 
-CUTE_API bool CUTE_CALL cf_kv_val_int8(cf_kv_t* kv, int8_t* val);
-CUTE_API bool CUTE_CALL cf_kv_val_int16(cf_kv_t* kv, int16_t* val);
-CUTE_API bool CUTE_CALL cf_kv_val_int32(cf_kv_t* kv, int32_t* val);
-CUTE_API bool CUTE_CALL cf_kv_val_int64(cf_kv_t* kv, int64_t* val);
+CUTE_API bool CUTE_CALL cf_kv_val_int8(CF_KeyValue* kv, int8_t* val);
+CUTE_API bool CUTE_CALL cf_kv_val_int16(CF_KeyValue* kv, int16_t* val);
+CUTE_API bool CUTE_CALL cf_kv_val_int32(CF_KeyValue* kv, int32_t* val);
+CUTE_API bool CUTE_CALL cf_kv_val_int64(CF_KeyValue* kv, int64_t* val);
 
-CUTE_API bool CUTE_CALL cf_kv_val_float(cf_kv_t* kv, float* val);
-CUTE_API bool CUTE_CALL cf_kv_val_double(cf_kv_t* kv, double* val);
-CUTE_API bool CUTE_CALL cf_kv_val_bool(cf_kv_t* kv, bool* val);
+CUTE_API bool CUTE_CALL cf_kv_val_float(CF_KeyValue* kv, float* val);
+CUTE_API bool CUTE_CALL cf_kv_val_double(CF_KeyValue* kv, double* val);
+CUTE_API bool CUTE_CALL cf_kv_val_bool(CF_KeyValue* kv, bool* val);
 
-CUTE_API bool CUTE_CALL cf_kv_val_string(cf_kv_t* kv, const char** str, size_t* size);
-CUTE_API bool CUTE_CALL cf_kv_val_blob(cf_kv_t* kv, void* data, size_t data_capacity, size_t* data_len);
+CUTE_API bool CUTE_CALL cf_kv_val_string(CF_KeyValue* kv, const char** str, size_t* size);
+CUTE_API bool CUTE_CALL cf_kv_val_blob(CF_KeyValue* kv, void* data, size_t data_capacity, size_t* data_len);
 
-CUTE_API bool CUTE_CALL cf_kv_object_begin(cf_kv_t* kv, const char* key /*= NULL*/);
-CUTE_API bool CUTE_CALL cf_kv_object_end(cf_kv_t* kv);
+CUTE_API bool CUTE_CALL cf_kv_object_begin(CF_KeyValue* kv, const char* key /*= NULL*/);
+CUTE_API bool CUTE_CALL cf_kv_object_end(CF_KeyValue* kv);
 
-CUTE_API bool CUTE_CALL cf_kv_array_begin(cf_kv_t* kv, int* count, const char* key /*= NULL*/);
-CUTE_API bool CUTE_CALL cf_kv_array_end(cf_kv_t* kv);
+CUTE_API bool CUTE_CALL cf_kv_array_begin(CF_KeyValue* kv, int* count, const char* key /*= NULL*/);
+CUTE_API bool CUTE_CALL cf_kv_array_end(CF_KeyValue* kv);
 
 #ifdef __cplusplus
 }
@@ -322,48 +322,48 @@ CUTE_API bool CUTE_CALL cf_kv_array_end(cf_kv_t* kv);
 namespace cute
 {
 
-using kv_t = cf_kv_t;
+using KeyValue = CF_KeyValue;
 
-enum kv_state_t : int
+enum KeyValueState : int
 {
 	#define CF_ENUM(K, V) K = V,
 	CF_KV_STATE_DEFS
 	#undef CF_ENUM
 };
 
-enum kv_type_t : int
+enum KeyValueype_t : int
 {
 	#define CF_ENUM(K, V) K = V,
 	CF_KV_TYPE_DEFS
 	#undef CF_ENUM
 };
 
-CUTE_INLINE kv_t* kv_read(const void* data, size_t size, result_t* result_out = NULL) { return cf_kv_read(data, size, result_out); }
-CUTE_INLINE kv_t* kv_write(kv_t* kv) { return cf_kv_write(); }
-CUTE_INLINE void kv_destroy(kv_t* kv) { cf_kv_destroy(kv); }
-CUTE_INLINE kv_state_t kv_state(kv_t* kv) { return (kv_state_t)cf_kv_state(kv); }
-CUTE_INLINE const char* kv_buffer(kv_t* kv) { return cf_kv_buffer(kv); }
-CUTE_INLINE size_t kv_buffer_size(kv_t* kv) { return cf_kv_buffer_size(kv); }
-CUTE_INLINE void kv_set_base(kv_t* kv, kv_t* base) { cf_kv_set_base(kv, base); }
-CUTE_INLINE result_t kv_error_state(kv_t* kv) { return cf_kv_last_error(kv); }
-CUTE_INLINE bool kv_key(kv_t* kv, const char* key, kv_type_t* type = NULL) { return cf_kv_key(kv, key, (cf_kv_type_t*)type); }
-CUTE_INLINE bool kv_val(kv_t* kv, uint8_t* val) { return cf_kv_val_uint8(kv, val); }
-CUTE_INLINE bool kv_val(kv_t* kv, uint16_t* val) { return cf_kv_val_uint16(kv, val); }
-CUTE_INLINE bool kv_val(kv_t* kv, uint32_t* val) { return cf_kv_val_uint32(kv, val); }
-CUTE_INLINE bool kv_val(kv_t* kv, uint64_t* val) { return cf_kv_val_uint64(kv, val); }
-CUTE_INLINE bool kv_val(kv_t* kv, int8_t* val) { return cf_kv_val_int8(kv, val); }
-CUTE_INLINE bool kv_val(kv_t* kv, int16_t* val) { return cf_kv_val_int16(kv, val); }
-CUTE_INLINE bool kv_val(kv_t* kv, int32_t* val) { return cf_kv_val_int32(kv, val); }
-CUTE_INLINE bool kv_val(kv_t* kv, int64_t* val) { return cf_kv_val_int64(kv, val); }
-CUTE_INLINE bool kv_val(kv_t* kv, float* val) { return cf_kv_val_float(kv, val); }
-CUTE_INLINE bool kv_val(kv_t* kv, double* val) { return cf_kv_val_double(kv, val); }
-CUTE_INLINE bool kv_val(kv_t* kv, bool* val) { return cf_kv_val_bool(kv, val); }
-CUTE_INLINE bool kv_val_string(kv_t* kv, const char** str, size_t* size) { return cf_kv_val_string(kv, str, size); }
-CUTE_INLINE bool kv_val_blob(kv_t* kv, void* data, size_t data_capacity, size_t* data_len) { return cf_kv_val_blob(kv, data, data_capacity, data_len); }
-CUTE_INLINE bool kv_object_begin(kv_t* kv, const char* key = NULL) { return cf_kv_object_begin(kv, key); }
-CUTE_INLINE bool kv_object_end(kv_t* kv) { return cf_kv_object_end(kv); }
-CUTE_INLINE bool kv_array_begin(kv_t* kv, int* count, const char* key = NULL) { return cf_kv_array_begin(kv, count, key); }
-CUTE_INLINE bool kv_array_end(kv_t* kv) { return cf_kv_array_end(kv); }
+CUTE_INLINE KeyValue* kv_read(const void* data, size_t size, Result* result_out = NULL) { return cf_kv_read(data, size, result_out); }
+CUTE_INLINE KeyValue* kv_write(KeyValue* kv) { return cf_kv_write(); }
+CUTE_INLINE void kv_destroy(KeyValue* kv) { cf_kv_destroy(kv); }
+CUTE_INLINE KeyValueState kv_state(KeyValue* kv) { return (KeyValueState)cf_kv_state(kv); }
+CUTE_INLINE const char* kv_buffer(KeyValue* kv) { return cf_kv_buffer(kv); }
+CUTE_INLINE size_t kv_buffer_size(KeyValue* kv) { return cf_kv_buffer_size(kv); }
+CUTE_INLINE void kv_set_base(KeyValue* kv, KeyValue* base) { cf_kv_set_base(kv, base); }
+CUTE_INLINE Result kv_error_state(KeyValue* kv) { return cf_kv_last_error(kv); }
+CUTE_INLINE bool kv_key(KeyValue* kv, const char* key, KeyValueype_t* type = NULL) { return cf_kv_key(kv, key, (CF_KeyValueype_t*)type); }
+CUTE_INLINE bool kv_val(KeyValue* kv, uint8_t* val) { return cf_kv_val_uint8(kv, val); }
+CUTE_INLINE bool kv_val(KeyValue* kv, uint16_t* val) { return cf_kv_val_uint16(kv, val); }
+CUTE_INLINE bool kv_val(KeyValue* kv, uint32_t* val) { return cf_kv_val_uint32(kv, val); }
+CUTE_INLINE bool kv_val(KeyValue* kv, uint64_t* val) { return cf_kv_val_uint64(kv, val); }
+CUTE_INLINE bool kv_val(KeyValue* kv, int8_t* val) { return cf_kv_val_int8(kv, val); }
+CUTE_INLINE bool kv_val(KeyValue* kv, int16_t* val) { return cf_kv_val_int16(kv, val); }
+CUTE_INLINE bool kv_val(KeyValue* kv, int32_t* val) { return cf_kv_val_int32(kv, val); }
+CUTE_INLINE bool kv_val(KeyValue* kv, int64_t* val) { return cf_kv_val_int64(kv, val); }
+CUTE_INLINE bool kv_val(KeyValue* kv, float* val) { return cf_kv_val_float(kv, val); }
+CUTE_INLINE bool kv_val(KeyValue* kv, double* val) { return cf_kv_val_double(kv, val); }
+CUTE_INLINE bool kv_val(KeyValue* kv, bool* val) { return cf_kv_val_bool(kv, val); }
+CUTE_INLINE bool kv_val_string(KeyValue* kv, const char** str, size_t* size) { return cf_kv_val_string(kv, str, size); }
+CUTE_INLINE bool kv_val_blob(KeyValue* kv, void* data, size_t data_capacity, size_t* data_len) { return cf_kv_val_blob(kv, data, data_capacity, data_len); }
+CUTE_INLINE bool kv_object_begin(KeyValue* kv, const char* key = NULL) { return cf_kv_object_begin(kv, key); }
+CUTE_INLINE bool kv_object_end(KeyValue* kv) { return cf_kv_object_end(kv); }
+CUTE_INLINE bool kv_array_begin(KeyValue* kv, int* count, const char* key = NULL) { return cf_kv_array_begin(kv, count, key); }
+CUTE_INLINE bool kv_array_end(KeyValue* kv) { return cf_kv_array_end(kv); }
 
 }
 

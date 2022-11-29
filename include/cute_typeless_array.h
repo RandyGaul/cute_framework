@@ -33,12 +33,12 @@
  * here just in case someone has a use for it.
  */
 
-struct cf_typeless_array
+struct CF_TypelessArray
 {
-	cf_typeless_array();
-	explicit cf_typeless_array(size_t element_size);
-	explicit cf_typeless_array(size_t element_size, int capacity);
-	~cf_typeless_array();
+	CF_TypelessArray();
+	explicit CF_TypelessArray(size_t element_size);
+	explicit CF_TypelessArray(size_t element_size, int capacity);
+	~CF_TypelessArray();
 
 	void* add();
 	void* add(const void* item);
@@ -51,7 +51,7 @@ struct cf_typeless_array
 	void copy(int src, int dst, int count = 1);
 	void clear();
 	void ensure_capacity(int num_elements);
-	void steal_from(cf_typeless_array* steal_from_me);
+	void steal_from(CF_TypelessArray* steal_from_me);
 
 	int capacity() const;
 	int count() const;
@@ -77,7 +77,7 @@ struct cf_typeless_array
 namespace cute 
 {
 
-using typeless_array = cf_typeless_array;
+using typeless_array = CF_TypelessArray;
 
 }
 

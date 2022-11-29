@@ -42,13 +42,13 @@ struct cf_node_t
 	cf_node_t* parent;
 };
 
-struct cf_a_star_grid_t
+struct CF_AStarGrid
 {
 	int w = 0;
 	int h = 0;
 	const int* cells = NULL;
-	array<cf_node_t> nodes;
-	priority_queue<cf_node_t*> open_list;
+	Array<cf_node_t> nodes;
+	PriorityQueue<cf_node_t*> open_list;
 
 	void reset()
 	{
@@ -78,9 +78,9 @@ static float cf_internal_s_heuristic(cf_iv2 a, cf_iv2 b, float allow_diagonals)
 }
 
 
-const cf_a_star_grid_t* cf_make_a_star_grid(int w, int h, const int* cells)
+const CF_AStarGrid* cf_make_a_star_grid(int w, int h, const int* cells)
 {
-	cf_a_star_grid_t* grid = CUTE_NEW(cf_a_star_grid_t);
+	CF_AStarGrid* grid = CUTE_NEW(CF_AStarGrid);
 	grid->w = w;
 	grid->h = h;
 	grid->cells = cells;
@@ -88,16 +88,16 @@ const cf_a_star_grid_t* cf_make_a_star_grid(int w, int h, const int* cells)
 	return grid;
 }
 
-void cf_destroy_a_star_grid(cf_a_star_grid_t* grid)
+void cf_destroy_a_star_grid(CF_AStarGrid* grid)
 {
-	grid->~cf_a_star_grid_t();
+	grid->~CF_AStarGrid();
 	CUTE_FREE(grid);
 }
 
 
-CUTE_API cf_a_star_input_t CUTE_CALL cf_a_star_input_defaults()
+CUTE_API CF_AStarInput CUTE_CALL cf_a_star_input_defaults()
 {
-	cf_a_star_input_t input = {};
+	CF_AStarInput input = {};
 	input.allow_diagonal_movement = true;
 	return input;
 }
@@ -105,11 +105,11 @@ CUTE_API cf_a_star_input_t CUTE_CALL cf_a_star_input_defaults()
 namespace cute
 {
 
-bool a_star(const a_star_grid_t* const_grid, const a_star_input_t* input, a_star_output_t* output)
+bool a_star(const AStarGrid* const_grid, const AStarInput* input, AStarOutput* output)
 {
-	cf_a_star_grid_t* grid = (cf_a_star_grid_t*)const_grid;
+	CF_AStarGrid* grid = (CF_AStarGrid*)const_grid;
 	grid->reset();
-	priority_queue<cf_node_t*>& open_list = grid->open_list;
+	PriorityQueue<cf_node_t*>& open_list = grid->open_list;
 	cf_iv2 s = { input->start_x, input->start_y };
 	cf_iv2 e = { input->end_x, input->end_y };
 	bool allow_diagonal_movement = input->allow_diagonal_movement;
@@ -204,14 +204,14 @@ bool a_star(const a_star_grid_t* const_grid, const a_star_input_t* input, a_star
 
 }
 
-bool cf_a_star(const cf_a_star_grid_t* const_grid, const cf_a_star_input_t* input, cf_a_star_output_t* output)
+bool cf_a_star(const CF_AStarGrid* const_grid, const CF_AStarInput* input, CF_AStarOutput* output)
 {
 	bool result;
 
 	if (output) {
-		cute::a_star_output_t temp_output = {};
+		cute::AStarOutput temp_output = {};
 
-		result = cute::a_star(const_grid, (cute::a_star_input_t*)input, &temp_output);
+		result = cute::a_star(const_grid, (cute::AStarInput*)input, &temp_output);
 
 		output->x = temp_output.x.data();
 		output->x_count = temp_output.x.count();
@@ -224,13 +224,13 @@ bool cf_a_star(const cf_a_star_grid_t* const_grid, const cf_a_star_input_t* inpu
 		// be cleaned up later in `cf_free_a_star_output`.
 		CUTE_MEMSET(&temp_output, 0, sizeof(temp_output));
 	} else {
-		result = cute::a_star(const_grid, (cute::a_star_input_t*)input, nullptr);
+		result = cute::a_star(const_grid, (cute::AStarInput*)input, nullptr);
 	}
 
 	return result;
 }
 
-CUTE_API void CUTE_CALL cf_free_a_star_output(cf_a_star_output_t* output)
+CUTE_API void CUTE_CALL cf_free_a_star_output(CF_AStarOutput* output)
 {
 	CUTE_FREE((void*)output->x);
 	CUTE_FREE((void*)output->y);

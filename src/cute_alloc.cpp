@@ -81,7 +81,7 @@ void cf_arena_reset(CF_Arena* arena)
 
 //--------------------------------------------------------------------------------------------------
 
-struct cf_memory_pool_t
+struct CF_MemoryPool
 {
 	int unaligned_element_size;
 	int element_size;
@@ -92,13 +92,13 @@ struct cf_memory_pool_t
 	int overflow_count;
 };
 
-cf_memory_pool_t* cf_make_memory_pool(int element_size, int element_count, int alignment)
+CF_MemoryPool* cf_make_memory_pool(int element_size, int element_count, int alignment)
 {
 	element_size = element_size > sizeof(void*) ? element_size : sizeof(void*);
 	int unaligned_element_size = element_size;
 	element_size = CUTE_ALIGN_FORWARD(element_size, alignment);
-	size_t header_size = CUTE_ALIGN_FORWARD(sizeof(cf_memory_pool_t), alignment);
-	cf_memory_pool_t* pool = (cf_memory_pool_t*)cf_aligned_alloc(header_size + element_size * element_count, alignment);
+	size_t header_size = CUTE_ALIGN_FORWARD(sizeof(CF_MemoryPool), alignment);
+	CF_MemoryPool* pool = (CF_MemoryPool*)cf_aligned_alloc(header_size + element_size * element_count, alignment);
 
 	pool->unaligned_element_size = unaligned_element_size;
 	pool->element_size = element_size;
@@ -119,7 +119,7 @@ cf_memory_pool_t* cf_make_memory_pool(int element_size, int element_count, int a
 	return pool;
 }
 
-void cf_destroy_memory_pool(cf_memory_pool_t* pool)
+void cf_destroy_memory_pool(CF_MemoryPool* pool)
 {
 	if (pool->overflow_count) {
 		// Attempted to destroy pool without freeing all overflow allocations.
@@ -128,9 +128,9 @@ void cf_destroy_memory_pool(cf_memory_pool_t* pool)
 	CUTE_FREE(pool);
 }
 
-void* cf_memory_pool_alloc(cf_memory_pool_t* pool)
+void* cf_memory_pool_alloc(CF_MemoryPool* pool)
 {
-	void *mem = cf_memory_pool_try_alloc(pool);
+	void *mem = CF_MemoryPoolry_alloc(pool);
 	if (!mem) {
 		mem = cf_aligned_alloc(pool->unaligned_element_size, pool->alignment);
 		if (mem) {
@@ -140,7 +140,7 @@ void* cf_memory_pool_alloc(cf_memory_pool_t* pool)
 	return mem;
 }
 
-void* cf_memory_pool_try_alloc(cf_memory_pool_t* pool)
+void* CF_MemoryPoolry_alloc(CF_MemoryPool* pool)
 {
 	if (pool->free_list) {
 		void *mem = pool->free_list;
@@ -151,7 +151,7 @@ void* cf_memory_pool_try_alloc(cf_memory_pool_t* pool)
 	}
 }
 
-void cf_memory_pool_free(cf_memory_pool_t* pool, void* element)
+void cf_memory_pool_free(CF_MemoryPool* pool, void* element)
 {
 	int difference = (int)((uint8_t*)element - pool->arena);
 	bool in_bounds = (void*)element >= pool->arena && difference <= (pool->arena_size - pool->element_size);

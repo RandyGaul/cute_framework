@@ -30,31 +30,31 @@
 
 using namespace cute;
 
-cf_audio_t* cf_audio_load_ogg(const char* path)
+CF_Audio* cf_audio_load_ogg(const char* path)
 {
 	auto src = cs_load_ogg(path, NULL);
-	return (cf_audio_t*) src;
+	return (CF_Audio*) src;
 }
 
-cf_audio_t* cf_audio_load_wav(const char* path)
+CF_Audio* cf_audio_load_wav(const char* path)
 {
 	auto src = cs_load_wav(path, NULL);
-	return (cf_audio_t*) src;
+	return (CF_Audio*) src;
 }
 
-cf_audio_t* cf_audio_load_ogg_from_memory(void* memory, int byte_count)
+CF_Audio* cf_audio_load_ogg_from_memory(void* memory, int byte_count)
 {
 	auto src = cs_read_mem_ogg(memory, (size_t)byte_count, NULL);
-	return (cf_audio_t*)src;
+	return (CF_Audio*)src;
 }
 
-cf_audio_t* cf_audio_load_wav_from_memory(void* memory, int byte_count)
+CF_Audio* cf_audio_load_wav_from_memory(void* memory, int byte_count)
 {
 	auto src = cs_read_mem_wav(memory, (size_t)byte_count, NULL);
-	return (cf_audio_t*)src;
+	return (CF_Audio*)src;
 }
 
-void cf_audio_destroy(cf_audio_t* audio)
+void cf_audio_destroy(CF_Audio* audio)
 {
 	cs_free_audio_source((cs_audio_source_t*)audio);
 }
@@ -87,14 +87,14 @@ static inline CF_Result s_result(cs_error_t err)
 {
 	if (err == CUTE_SOUND_ERROR_NONE) return result_success();
 	else {
-		result_t result;
+		Result result;
 		result.code = RESULT_ERROR;
 		result.details = cs_error_as_string(err);
 		return result;
 	}
 }
 
-void cf_music_play(cf_audio_t* audio_source, float fade_in_time)
+void cf_music_play(CF_Audio* audio_source, float fade_in_time)
 {
 	cs_music_play((cs_audio_source_t*)audio_source, fade_in_time);
 }
@@ -124,12 +124,12 @@ void cf_music_resume()
 	cs_music_resume();
 }
 
-void cf_music_switch_to(cf_audio_t* audio_source, float fade_out_time, float fade_in_time)
+void cf_music_switch_to(CF_Audio* audio_source, float fade_out_time, float fade_in_time)
 {
 	return cs_music_switch_to((cs_audio_source_t*)audio_source, fade_out_time, fade_in_time);
 }
 
-void cf_music_crossfade(cf_audio_t* audio_source, float cross_fade_time)
+void cf_music_crossfade(CF_Audio* audio_source, float cross_fade_time)
 {
 	return cs_music_crossfade((cs_audio_source_t*)audio_source, cross_fade_time);
 }
@@ -146,7 +146,7 @@ CF_Result cf_music_set_sample_index(uint64_t sample_index)
 
 // -------------------------------------------------------------------------------------------------
 
-cf_sound_t cf_play_sound(cf_audio_t* audio_source, cf_sound_params_t params /*= cf_sound_params_defaults()*/, CF_Result* err)
+CF_Sound cf_play_sound(CF_Audio* audio_source, CF_SoundParams params /*= cf_sound_params_defaults()*/, CF_Result* err)
 {
 	cs_sound_params_t csparams;
 	csparams.paused = params.paused;
@@ -154,61 +154,61 @@ cf_sound_t cf_play_sound(cf_audio_t* audio_source, cf_sound_params_t params /*= 
 	csparams.volume = params.volume;
 	csparams.pan = params.pan;
 	csparams.delay = params.delay;
-	cf_sound_t result;
+	CF_Sound result;
 	cs_playing_sound_t csresult = cs_play_sound((cs_audio_source_t*)audio_source, csparams);
 	result.id = csresult.id;
 	return result;
 }
 
-bool cf_sound_is_active(cf_sound_t sound)
+bool cf_sound_is_active(CF_Sound sound)
 {
 	cs_playing_sound_t cssound = { sound.id };
 	return cs_sound_is_active(cssound);
 }
 
-bool cf_sound_get_is_paused(cf_sound_t sound)
+bool cf_sound_get_is_paused(CF_Sound sound)
 {
 	cs_playing_sound_t cssound = { sound.id };
 	return cs_sound_get_is_paused(cssound);
 }
 
-bool cf_sound_get_is_looped(cf_sound_t sound)
+bool cf_sound_get_is_looped(CF_Sound sound)
 {
 	cs_playing_sound_t cssound = { sound.id };
 	return cs_sound_get_is_looped(cssound);
 }
 
-float cf_sound_get_volume(cf_sound_t sound)
+float cf_sound_get_volume(CF_Sound sound)
 {
 	cs_playing_sound_t cssound = { sound.id };
 	return cs_sound_get_volume(cssound);
 }
 
-uint64_t cf_sound_get_sample_index(cf_sound_t sound)
+uint64_t cf_sound_get_sample_index(CF_Sound sound)
 {
 	cs_playing_sound_t cssound = { sound.id };
 	return cs_sound_get_sample_index(cssound);
 }
 
-void cf_sound_set_is_paused(cf_sound_t sound, bool true_for_paused)
+void cf_sound_set_is_paused(CF_Sound sound, bool true_for_paused)
 {
 	cs_playing_sound_t cssound = { sound.id };
 	cs_sound_set_is_paused(cssound, true_for_paused);
 }
 
-void cf_sound_set_is_looped(cf_sound_t sound, bool true_for_looped)
+void cf_sound_set_is_looped(CF_Sound sound, bool true_for_looped)
 {
 	cs_playing_sound_t cssound = { sound.id };
 	cs_sound_set_is_looped(cssound, true_for_looped);
 }
 
-void cf_sound_set_volume(cf_sound_t sound, float volume)
+void cf_sound_set_volume(CF_Sound sound, float volume)
 {
 	cs_playing_sound_t cssound = { sound.id };
 	cs_sound_set_volume(cssound, volume);
 }
 
-void cf_sound_set_sample_index(cf_sound_t sound, uint64_t sample_index)
+void cf_sound_set_sample_index(CF_Sound sound, uint64_t sample_index)
 {
 	cs_playing_sound_t cssound = { sound.id };
 	cs_sound_set_sample_index(cssound, sample_index);

@@ -34,107 +34,107 @@
 #define CUTE_THREAD_FREE CUTE_FREE
 #include <cute/cute_sync.h>
 
-cf_mutex_t cf_make_mutex()
+CF_Mutex cf_make_mutex()
 {
 	return cute_mutex_create();
 }
 
-void cf_destroy_mutex(cf_mutex_t* mutex)
+void cf_destroy_mutex(CF_Mutex* mutex)
 {
 	cute_mutex_destroy(mutex);
 }
 
-CF_Result cf_mutex_lock(cf_mutex_t* mutex)
+CF_Result cf_mutex_lock(CF_Mutex* mutex)
 {
 	return cf_result_make(cute_lock(mutex), NULL);
 }
 
-CF_Result cf_mutex_unlock(cf_mutex_t* mutex)
+CF_Result cf_mutex_unlock(CF_Mutex* mutex)
 {
 	return cf_result_make(cute_unlock(mutex), NULL);
 }
 
-bool cf_mutex_trylock(cf_mutex_t* mutex)
+bool CF_Mutexrylock(CF_Mutex* mutex)
 {
 	return !!cute_trylock(mutex);
 }
 
-cf_cv_t cf_make_cv()
+CF_ConditionVariable cf_make_cv()
 {
 	return cute_cv_create();
 }
 
-void cf_destroy_cv(cf_cv_t* cv)
+void cf_destroy_cv(CF_ConditionVariable* cv)
 {
 	cute_cv_destroy(cv);
 }
 
-CF_Result cf_cv_wake_all(cf_cv_t* cv)
+CF_Result cf_cv_wake_all(CF_ConditionVariable* cv)
 {
 	return cf_result_make(cute_cv_wake_all(cv), NULL);
 }
 
-CF_Result cf_cv_wake_one(cf_cv_t* cv)
+CF_Result cf_cv_wake_one(CF_ConditionVariable* cv)
 {
 	return cf_result_make(cute_cv_wake_one(cv), NULL);
 }
 
-CF_Result cf_cv_wait(cf_cv_t* cv, cf_mutex_t* mutex)
+CF_Result cf_cv_wait(CF_ConditionVariable* cv, CF_Mutex* mutex)
 {
 	return cf_result_make(cute_cv_wait(cv, mutex), NULL);
 }
 
-cf_semaphore_t cf_make_sem(int initial_count)
+CF_Semaphore cf_make_sem(int initial_count)
 {
 	return cute_semaphore_create(initial_count);
 }
 
-void cf_destroy_sem(cf_semaphore_t* semaphore)
+void cf_destroy_sem(CF_Semaphore* semaphore)
 {
 	cute_semaphore_destroy(semaphore);
 }
 
-CF_Result cf_sem_post(cf_semaphore_t* semaphore)
+CF_Result cf_sem_post(CF_Semaphore* semaphore)
 {
 	return cf_result_make(cute_semaphore_post(semaphore), NULL);
 }
 
-CF_Result cf_sem_try(cf_semaphore_t* semaphore)
+CF_Result cf_sem_try(CF_Semaphore* semaphore)
 {
 	return cf_result_make(cute_semaphore_try(semaphore), NULL);
 }
 
-CF_Result cf_sem_wait(cf_semaphore_t* semaphore)
+CF_Result cf_sem_wait(CF_Semaphore* semaphore)
 {
 	return cf_result_make(cute_semaphore_wait(semaphore), NULL);
 }
 
-CF_Result cf_sem_value(cf_semaphore_t* semaphore)
+CF_Result cf_sem_value(CF_Semaphore* semaphore)
 {
 	return cf_result_make(cute_semaphore_value(semaphore), NULL);
 }
 
-cf_thread_t* cf_thread_create(cf_thread_func_t func, const char* name, void* udata)
+CF_Thread* cf_thread_create(CF_ThreadFn func, const char* name, void* udata)
 {
 	return cute_thread_create(func, name, udata);
 }
 
-void cf_thread_detach(cf_thread_t* thread)
+void cf_thread_detach(CF_Thread* thread)
 {
 	cute_thread_detach(thread);
 }
 
-cf_thread_id_t cf_thread_get_id(cf_thread_t* thread)
+CF_ThreadId cf_thread_get_id(CF_Thread* thread)
 {
 	return cute_thread_get_id(thread);
 }
 
-cf_thread_id_t cf_thread_id()
+CF_ThreadId cf_thread_id()
 {
 	return cute_thread_id();
 }
 
-CF_Result cf_thread_wait(cf_thread_t* thread)
+CF_Result cf_thread_wait(CF_Thread* thread)
 {
 	return cf_result_make(cute_thread_wait(thread), NULL);
 }
@@ -149,29 +149,29 @@ int cf_cacheline_size()
 	return cute_cacheline_size();
 }
 
-cf_atomic_int_t cf_atomic_zero()
+CF_AtomicInt cf_atomic_zero()
 {
-	cf_atomic_int_t result;
+	CF_AtomicInt result;
 	result.i = 0;
 	return result;
 }
 
-int cf_atomic_add(cf_atomic_int_t* atomic, int addend)
+int cf_atomic_add(CF_AtomicInt* atomic, int addend)
 {
 	return cute_atomic_add(atomic, addend);
 }
 
-int cf_atomic_set(cf_atomic_int_t* atomic, int value)
+int cf_atomic_set(CF_AtomicInt* atomic, int value)
 {
 	return cute_atomic_set(atomic, value);
 }
 
-int cf_atomic_get(cf_atomic_int_t* atomic)
+int cf_atomic_get(CF_AtomicInt* atomic)
 {
 	return cute_atomic_get(atomic);
 }
 
-CF_Result cf_atomic_cas(cf_atomic_int_t* atomic, int expected, int value)
+CF_Result cf_atomic_cas(CF_AtomicInt* atomic, int expected, int value)
 {
 	return cf_result_make(cute_atomic_cas(atomic, expected, value), NULL);
 }
@@ -191,57 +191,57 @@ CF_Result cf_atomic_ptr_cas(void** atomic, void* expected, void* value)
 	return cf_result_make(cute_atomic_ptr_cas(atomic, expected, value), NULL);
 }
 
-cf_rw_lock_t cf_make_rw_lock()
+CF_ReadWriteLock cf_make_rw_lock()
 {
 	return cute_rw_lock_create();
 }
 
-void cf_destroy_rw_lock(cf_rw_lock_t* rw)
+void cf_destroy_rw_lock(CF_ReadWriteLock* rw)
 {
 	if (rw) cute_rw_lock_destroy(rw);
 }
 
-void cf_read_lock(cf_rw_lock_t* rw)
+void cf_read_lock(CF_ReadWriteLock* rw)
 {
 	cute_read_lock(rw);
 }
 
-void cf_read_unlock(cf_rw_lock_t* rw)
+void cf_read_unlock(CF_ReadWriteLock* rw)
 {
 	cute_read_unlock(rw);
 }
 
-void cf_write_lock(cf_rw_lock_t* rw)
+void cf_write_lock(CF_ReadWriteLock* rw)
 {
 	cute_write_lock(rw);
 }
 
-void cf_write_unlock(cf_rw_lock_t* rw)
+void cf_write_unlock(CF_ReadWriteLock* rw)
 {
 	cute_write_unlock(rw);
 }
 
-cf_threadpool_t* cf_make_threadpool(int thread_count)
+CF_Threadpool* cf_make_threadpool(int thread_count)
 {
 	return cute_threadpool_create(thread_count, NULL);
 }
 
-void cf_threadpool_add_task(cf_threadpool_t* pool, cf_task_fn* task, void* param)
+void cf_threadpool_add_task(CF_Threadpool* pool, CF_TaskFn* task, void* param)
 {
 	cute_threadpool_add_task(pool, task, param);
 }
 
-void cf_threadpool_kick_and_wait(cf_threadpool_t* pool)
+void cf_threadpool_kick_and_wait(CF_Threadpool* pool)
 {
 	cute_threadpool_kick_and_wait(pool);
 }
 
-void cf_threadpool_kick(cf_threadpool_t* pool)
+void cf_threadpool_kick(CF_Threadpool* pool)
 {
 	cute_threadpool_kick(pool);
 }
 
-void cf_destroy_threadpool(cf_threadpool_t* pool)
+void cf_destroy_threadpool(CF_Threadpool* pool)
 {
 	cute_threadpool_destroy(pool);
 }

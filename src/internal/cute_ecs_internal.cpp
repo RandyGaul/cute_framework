@@ -22,7 +22,7 @@
 #include <internal/cute_ecs_internal.h>
 #include <internal/cute_app_internal.h>
 
-bool cf_kv_val_entity(cf_kv_t* kv, cf_entity_t* entity)
+bool cf_kv_val_entity(CF_KeyValue* kv, CF_Entity* entity)
 {
 	if (cf_kv_state(kv) == CF_KV_STATE_READ) {
 		int index;

@@ -714,8 +714,8 @@ struct CF_MaterialTex
 
 struct CF_MaterialState
 {
-	array<CF_UniformInfo> uniforms;
-	array<CF_MaterialTex> textures;
+	Array<CF_UniformInfo> uniforms;
+	Array<CF_MaterialTex> textures;
 };
 
 struct CF_MaterialInternal

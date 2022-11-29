@@ -205,19 +205,19 @@ static int s_map_SDL_keys(int key)
 	return 0;
 }
 
-bool cf_key_is_down(cf_key_button_t key)
+bool cf_key_is_down(CF_KeyButton key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 	return app->keys[key];
 }
 
-bool cf_key_is_up(cf_key_button_t key)
+bool cf_key_is_up(CF_KeyButton key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 	return !app->keys[key];
 }
 
-bool cf_key_was_pressed(cf_key_button_t key)
+bool cf_key_was_pressed(CF_KeyButton key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 
@@ -234,7 +234,7 @@ bool cf_key_was_pressed(cf_key_button_t key)
 	return (app->keys[key] & !app->keys_prev[key]) | repeat_count;
 }
 
-bool cf_key_was_released(cf_key_button_t key)
+bool cf_key_was_released(CF_KeyButton key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 	return !app->keys[key] && app->keys_prev[key];
@@ -276,7 +276,7 @@ int cf_mouse_y()
 	return app->mouse.y;
 }
 
-bool cf_mouse_is_down(cf_mouse_button_t button)
+bool cf_mouse_is_down(CF_MouseButton button)
 {
 	switch (button)
 	{
@@ -287,7 +287,7 @@ bool cf_mouse_is_down(cf_mouse_button_t button)
 	return 0;
 }
 
-bool cf_mouse_is_up(cf_mouse_button_t button)
+bool cf_mouse_is_up(CF_MouseButton button)
 {
 	switch (button)
 	{
@@ -298,7 +298,7 @@ bool cf_mouse_is_up(cf_mouse_button_t button)
 	return 0;
 }
 
-bool cf_mouse_was_pressed(cf_mouse_button_t button)
+bool cf_mouse_was_pressed(CF_MouseButton button)
 {
 	switch (button)
 	{
@@ -309,7 +309,7 @@ bool cf_mouse_was_pressed(cf_mouse_button_t button)
 	return 0;
 }
 
-bool cf_mouse_was_released(cf_mouse_button_t button)
+bool cf_mouse_was_released(CF_MouseButton button)
 {
 	switch (button)
 	{
@@ -325,12 +325,12 @@ int cf_mouse_wheel_motion()
 	return app->mouse.wheel_motion;
 }
 
-bool cf_mouse_is_down_double_click(cf_mouse_button_t button)
+bool cf_mouse_is_down_double_click(CF_MouseButton button)
 {
 	return cf_mouse_is_down(button) && app->mouse.click_type == CF_MOUSE_CLICK_DOUBLE;
 }
 
-bool cf_mouse_double_click_was_pressed(cf_mouse_button_t button)
+bool cf_mouse_double_click_was_pressed(CF_MouseButton button)
 {
 	return cf_mouse_was_pressed(button) && app->mouse.click_type == CF_MOUSE_CLICK_DOUBLE;
 }
@@ -395,7 +395,7 @@ void cf_input_set_ime_rect(int x, int y, int w, int h)
 	SDL_SetTextInputRect(&r);
 }
 
-bool cf_input_get_ime_composition(cf_ime_composition_t* composition)
+bool cf_input_get_ime_composition(CF_ImeComposition* composition)
 {
 	composition->composition = app->ime_composition.data();
 	composition->cursor = app->ime_composition_cursor;
@@ -413,7 +413,7 @@ static void s_touch_remove(uint64_t id)
 	}
 }
 
-int cf_touch_get_all(cf_touch_t** touches)
+int cf_touch_get_all(CF_Touch** touches)
 {
 	if (touches) {
 		*touches = app->touches.data();
@@ -421,7 +421,7 @@ int cf_touch_get_all(cf_touch_t** touches)
 	return app->touches.count();
 }
 
-bool cf_touch_get(uint64_t id, cf_touch_t* touch)
+bool cf_touch_get(uint64_t id, CF_Touch* touch)
 {
 	for (int i = 0; i < app->touches.size(); ++i) {
 		if (app->touches[i].id == id) {
@@ -432,10 +432,10 @@ bool cf_touch_get(uint64_t id, cf_touch_t* touch)
 	return false;
 }
 
-static cf_joypad_t* s_joy(SDL_JoystickID id)
+static CF_Joypad* s_joy(SDL_JoystickID id)
 {
-	for (cf_list_node_t* n = cf_list_begin(&app->joypads); n != cf_list_end(&app->joypads); n = n->next) {
-		cf_joypad_t* joypad = CUTE_LIST_HOST(cf_joypad_t, node, n);
+	for (CF_ListNode* n = cf_list_begin(&app->joypads); n != cf_list_end(&app->joypads); n = n->next) {
+		CF_Joypad* joypad = CUTE_LIST_HOST(CF_Joypad, node, n);
 		if (joypad->id == id) return joypad;
 	}
 	return NULL;
@@ -449,8 +449,8 @@ void cf_pump_input_msgs()
 	CUTE_MEMCPY(app->keys_prev, app->keys, sizeof(app->keys));
 	CUTE_MEMCPY(&app->mouse_prev, &app->mouse, sizeof(app->mouse));
 	CUTE_MEMCPY(&app->window_state_prev, &app->window_state, sizeof(app->window_state));
-	for (cf_list_node_t* n = cf_list_begin(&app->joypads); n != cf_list_end(&app->joypads); n = n->next) {
-		cf_joypad_t* joypad = CUTE_LIST_HOST(cf_joypad_t, node, n);
+	for (CF_ListNode* n = cf_list_begin(&app->joypads); n != cf_list_end(&app->joypads); n = n->next) {
+		CF_Joypad* joypad = CUTE_LIST_HOST(CF_Joypad, node, n);
 		CUTE_MEMCPY(joypad->buttons_prev, joypad->buttons, sizeof(joypad->buttons));
 	}
 	app->mouse.wheel_motion = 0;
@@ -461,7 +461,7 @@ void cf_pump_input_msgs()
 	// Update key durations to simulate "press and hold" style for `key_was_pressed`.
 	for (int i = 0; i < 512; ++i)
 	{
-		if (cf_key_is_down((cf_key_button_t)i)) {
+		if (cf_key_is_down((CF_KeyButton)i)) {
 			if (app->keys_duration[i] < 0) {
 				app->keys_duration[i] = 0;
 			} else {
@@ -612,7 +612,7 @@ void cf_pump_input_msgs()
 		case SDL_CONTROLLERBUTTONUP:
 		{
 			SDL_JoystickID id = event.cbutton.which;
-			cf_joypad_t* joypad = s_joy(id);
+			CF_Joypad* joypad = s_joy(id);
 			if (joypad) {
 				int button = (int)event.cbutton.button;
 				CUTE_ASSERT(button >= 0 && button < CF_JOYPAD_BUTTON_COUNT);
@@ -623,7 +623,7 @@ void cf_pump_input_msgs()
 		case SDL_CONTROLLERBUTTONDOWN:
 		{
 			SDL_JoystickID id = event.cbutton.which;
-			cf_joypad_t* joypad = s_joy(id);
+			CF_Joypad* joypad = s_joy(id);
 			if (joypad) {
 				int button = (int)event.cbutton.button;
 				CUTE_ASSERT(button >= 0 && button < CF_JOYPAD_BUTTON_COUNT);
@@ -634,7 +634,7 @@ void cf_pump_input_msgs()
 		case SDL_CONTROLLERAXISMOTION:
 		{
 			SDL_JoystickID id = event.caxis.which;
-			cf_joypad_t* joypad = s_joy(id);
+			CF_Joypad* joypad = s_joy(id);
 			if (joypad) {
 				int axis = (int)event.caxis.axis;
 				int value = (int)event.caxis.value;
@@ -647,7 +647,7 @@ void cf_pump_input_msgs()
 		{
 			uint64_t id = (uint64_t)event.tfinger.fingerId;
 			s_touch_remove(id);
-			cf_touch_t& touch = app->touches.add();
+			CF_Touch& touch = app->touches.add();
 			touch.id = id;
 			touch.pressure = event.tfinger.pressure;
 			touch.x = event.tfinger.x * app->w; // NOTE: Probably wrong for high-DPI.
@@ -657,13 +657,13 @@ void cf_pump_input_msgs()
 		case SDL_FINGERMOTION:
 		{
 			uint64_t id = (uint64_t)event.tfinger.fingerId;
-			cf_touch_t touch;
+			CF_Touch touch;
 			if (cf_touch_get(id, &touch)) {
 				touch.pressure = event.tfinger.pressure;
 				touch.x = event.tfinger.x * app->w; // NOTE: Probably wrong for high-DPI.
 				touch.y = event.tfinger.y * app->h; // NOTE: Probably wrong for high-DPI.
 			} else {
-				cf_touch_t& touch = app->touches.add();
+				CF_Touch& touch = app->touches.add();
 				touch.id = id;
 				touch.pressure = event.tfinger.pressure;
 				touch.x = event.tfinger.x * app->w; // NOTE: Probably wrong for high-DPI.
@@ -682,5 +682,5 @@ void cf_pump_input_msgs()
 
 namespace cute
 {
-	array<cf_touch_t> CUTE_CALL touch_get_all() { return app->touches; }
+	Array<CF_Touch> CUTE_CALL touch_get_all() { return app->touches; }
 }

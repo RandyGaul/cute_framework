@@ -637,22 +637,22 @@ CUTE_INLINE uint64_t constexpr fnv1a(const void* data, int size)
  * Each string is stored in its own buffer internally.
  * The buffer starts out statically allocated, and grows onto the heap as necessary.
  */
-struct string_t
+struct String
 {
-	CUTE_INLINE string_t() { s_static(); }
-	CUTE_INLINE string_t(const char* s) { s_static(); sset(m_str, s); }
-	CUTE_INLINE string_t(const char* start, const char* end) { s_static(); int length = (int)(end - start); sfit(m_str, length); CUTE_STRNCPY(m_str, start, length); CF_AHDR(m_str)->size = length + 1; }
-	CUTE_INLINE string_t(const string_t& s) { s_static(); sset(m_str, s); }
-	CUTE_INLINE string_t(string_t&& s) { if (CF_AHDR(s.m_str)->is_static) { s_static(); sset(m_str, s); } else { m_str = s.m_str; } s.m_str = NULL; }
-	CUTE_INLINE ~string_t() { sfree(m_str); }
+	CUTE_INLINE String() { s_static(); }
+	CUTE_INLINE String(const char* s) { s_static(); sset(m_str, s); }
+	CUTE_INLINE String(const char* start, const char* end) { s_static(); int length = (int)(end - start); sfit(m_str, length); CUTE_STRNCPY(m_str, start, length); CF_AHDR(m_str)->size = length + 1; }
+	CUTE_INLINE String(const String& s) { s_static(); sset(m_str, s); }
+	CUTE_INLINE String(String&& s) { if (CF_AHDR(s.m_str)->is_static) { s_static(); sset(m_str, s); } else { m_str = s.m_str; } s.m_str = NULL; }
+	CUTE_INLINE ~String() { sfree(m_str); }
 
-	CUTE_INLINE static string_t steal_from(char* cute_c_api_string) { CF_ACANARY(cute_c_api_string); string_t r; r.m_str = cute_c_api_string; return r; }
-	CUTE_INLINE static string_t from(int i) { string_t r; sint(r.m_str, i); return r; }
-	CUTE_INLINE static string_t from(uint64_t uint) { string_t r; suint(r.m_str, uint); return r; }
-	CUTE_INLINE static string_t from(float f) { string_t r; sfloat(r.m_str, f); return r; }
-	CUTE_INLINE static string_t from(double f) { string_t r; sfloat(r.m_str, f); return r; }
-	CUTE_INLINE static string_t from_hex(uint64_t uint) { string_t r; shex(r.m_str, uint); return r; }
-	CUTE_INLINE static string_t from(bool b) { string_t r; sbool(r.m_str, b); return r; }
+	CUTE_INLINE static String steal_from(char* cute_c_api_string) { CF_ACANARY(cute_c_api_string); String r; r.m_str = cute_c_api_string; return r; }
+	CUTE_INLINE static String from(int i) { String r; sint(r.m_str, i); return r; }
+	CUTE_INLINE static String from(uint64_t uint) { String r; suint(r.m_str, uint); return r; }
+	CUTE_INLINE static String from(float f) { String r; sfloat(r.m_str, f); return r; }
+	CUTE_INLINE static String from(double f) { String r; sfloat(r.m_str, f); return r; }
+	CUTE_INLINE static String from_hex(uint64_t uint) { String r; shex(r.m_str, uint); return r; }
+	CUTE_INLINE static String from(bool b) { String r; sbool(r.m_str, b); return r; }
 
 	CUTE_INLINE int to_int() const { return stoint(m_str); }
 	CUTE_INLINE uint64_t to_uint() const { return stouint(m_str); }
@@ -683,29 +683,29 @@ struct string_t
 	CUTE_INLINE void set_len(int len) { sfit(m_str, len + 1); ssize(m_str) = len + 1; }
 	CUTE_INLINE bool empty() const { return sempty(m_str); }
 
-	CUTE_INLINE string_t& add(char ch) { spush(m_str, ch); return *this; }
-	CUTE_INLINE string_t& append(const char* s) { sappend(m_str, s); return *this; }
-	CUTE_INLINE string_t& append(const char* start, const char* end) { sappend_range(m_str, start, end); return *this; }
-	CUTE_INLINE string_t& append(uint32_t codepoint) { sappend_UTF8(m_str, codepoint); return *this; }
-	CUTE_INLINE string_t& fmt(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt(m_str, fmt, args); va_end(args); return *this; }
-	CUTE_INLINE string_t& fmt_append(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt_append(m_str, fmt, args); va_end(args); return *this; }
-	CUTE_INLINE string_t& trim() { strim(m_str); return *this; }
-	CUTE_INLINE string_t& ltrim() { sltrim(m_str); return *this; }
-	CUTE_INLINE string_t& rtrim() { srtrim(m_str); return *this; }
-	CUTE_INLINE string_t& lpad(char pad, int count) { slpad(m_str, pad, count); return *this; }
-	CUTE_INLINE string_t& rpad(char pad, int count) { srpad(m_str, pad, count); return *this; }
-	CUTE_INLINE string_t& set(const char* s) { sset(m_str, s); return *this; }
-	CUTE_INLINE string_t& operator=(const char* s) { sset(m_str, s); return *this; }
-	CUTE_INLINE string_t& operator=(const string_t& s) { sset(m_str, s); return *this; }
-	CUTE_INLINE string_t& operator=(string_t&& s) { sset(m_str, s); return *this; }
-	CUTE_INLINE array<string_t> split(char split_c) { array<string_t> r; char** s = ssplit(m_str, split_c); for (int i=0;i<alen(s);++i) r.add(move(steal_from(s[i]))); return r; }
+	CUTE_INLINE String& add(char ch) { spush(m_str, ch); return *this; }
+	CUTE_INLINE String& append(const char* s) { sappend(m_str, s); return *this; }
+	CUTE_INLINE String& append(const char* start, const char* end) { sappend_range(m_str, start, end); return *this; }
+	CUTE_INLINE String& append(uint32_t codepoint) { sappend_UTF8(m_str, codepoint); return *this; }
+	CUTE_INLINE String& fmt(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt(m_str, fmt, args); va_end(args); return *this; }
+	CUTE_INLINE String& fmt_append(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt_append(m_str, fmt, args); va_end(args); return *this; }
+	CUTE_INLINE String& trim() { strim(m_str); return *this; }
+	CUTE_INLINE String& ltrim() { sltrim(m_str); return *this; }
+	CUTE_INLINE String& rtrim() { srtrim(m_str); return *this; }
+	CUTE_INLINE String& lpad(char pad, int count) { slpad(m_str, pad, count); return *this; }
+	CUTE_INLINE String& rpad(char pad, int count) { srpad(m_str, pad, count); return *this; }
+	CUTE_INLINE String& set(const char* s) { sset(m_str, s); return *this; }
+	CUTE_INLINE String& operator=(const char* s) { sset(m_str, s); return *this; }
+	CUTE_INLINE String& operator=(const String& s) { sset(m_str, s); return *this; }
+	CUTE_INLINE String& operator=(String&& s) { sset(m_str, s); return *this; }
+	CUTE_INLINE Array<String> split(char split_c) { Array<String> r; char** s = ssplit(m_str, split_c); for (int i=0;i<alen(s);++i) r.add(move(steal_from(s[i]))); return r; }
 	CUTE_INLINE char pop() { return apop(m_str); }
 	CUTE_INLINE int first_index_of(char ch) const { return sfirst_index_of(m_str, ch); }
 	CUTE_INLINE int last_index_of(char ch) const { return slast_index_of(m_str, ch); }
-	CUTE_INLINE string_t find(const char* find_me) const { return string_t(sfind(m_str, find_me)); }
-	CUTE_INLINE string_t& replace(const char* replace_me, const char* with_me) { sreplace(m_str, replace_me, with_me); return *this; }
-	CUTE_INLINE string_t& erase(int index, int count) { serase(m_str, index, count); return *this; }
-	CUTE_INLINE string_t dup() const { return steal_from(sdup(m_str)); }
+	CUTE_INLINE String find(const char* find_me) const { return String(sfind(m_str, find_me)); }
+	CUTE_INLINE String& replace(const char* replace_me, const char* with_me) { sreplace(m_str, replace_me, with_me); return *this; }
+	CUTE_INLINE String& erase(int index, int count) { serase(m_str, index, count); return *this; }
+	CUTE_INLINE String dup() const { return steal_from(sdup(m_str)); }
 	CUTE_INLINE void clear() { sclear(m_str); }
 
 	CUTE_INLINE bool starts_with(const char* s) const { return sprefix(m_str, s); }

@@ -27,26 +27,26 @@
 #define MINICORO_IMPL
 #include <edubart/minicoro.h>
 
-struct cf_coroutine_t
+struct CF_Coroutine
 {
 	float dt = 0;
 	bool waiting = false;
 	float seconds_left = 0;
 	mco_coro* mco;
-	cf_coroutine_fn* fn = NULL;
+	CF_CoroutineFn* fn = NULL;
 	void* udata = NULL;
 };
 
 static void s_co_fn(mco_coro* mco)
 {
-	cf_coroutine_t* co = (cf_coroutine_t*)mco_get_user_data(mco);
+	CF_Coroutine* co = (CF_Coroutine*)mco_get_user_data(mco);
 	co->fn(co);
 }
 
-cf_coroutine_t* cf_make_coroutine(cf_coroutine_fn* fn, int stack_size, void* udata)
+CF_Coroutine* cf_make_coroutine(CF_CoroutineFn* fn, int stack_size, void* udata)
 {
 	mco_desc desc = mco_desc_init(s_co_fn, (size_t)stack_size);
-	cf_coroutine_t* co = CUTE_NEW(cf_coroutine_t);
+	CF_Coroutine* co = CUTE_NEW(CF_Coroutine);
 	desc.user_data = (void*)co;
 	mco_coro* mco;
 	mco_result res = mco_create(&mco, &desc);
@@ -57,7 +57,7 @@ cf_coroutine_t* cf_make_coroutine(cf_coroutine_fn* fn, int stack_size, void* uda
 	return co;
 }
 
-void cf_destroy_coroutine(cf_coroutine_t* co)
+void cf_destroy_coroutine(CF_Coroutine* co)
 {
 	mco_state state = mco_status(co->mco);
 	CUTE_ASSERT(state == MCO_DEAD || state == MCO_SUSPENDED);
@@ -66,7 +66,7 @@ void cf_destroy_coroutine(cf_coroutine_t* co)
 	CUTE_FREE(co);
 }
 
-CF_Result cf_coroutine_resume(cf_coroutine_t* co, float dt)
+CF_Result cf_coroutine_resume(CF_Coroutine* co, float dt)
 {
 	co->dt = dt;
 
@@ -88,7 +88,7 @@ CF_Result cf_coroutine_resume(cf_coroutine_t* co, float dt)
 	}
 }
 
-float cf_coroutine_yield(cf_coroutine_t* co, CF_Result* err)
+float cf_coroutine_yield(CF_Coroutine* co, CF_Result* err)
 {
 	mco_result res = mco_yield(co->mco);
 	if (err) {
@@ -101,7 +101,7 @@ float cf_coroutine_yield(cf_coroutine_t* co, CF_Result* err)
 	return co->dt;
 }
 
-CF_Result cf_coroutine_wait(cf_coroutine_t* co, float seconds)
+CF_Result cf_coroutine_wait(CF_Coroutine* co, float seconds)
 {
 	co->waiting = true;
 	co->seconds_left = seconds;
@@ -110,7 +110,7 @@ CF_Result cf_coroutine_wait(cf_coroutine_t* co, float seconds)
 	return err;
 }
 
-cf_coroutine_state_t cf_coroutine_state(cf_coroutine_t* co)
+CF_CoroutineState cf_coroutine_state(CF_Coroutine* co)
 {
 	mco_state s = mco_status(co->mco);
 	switch (s) {
@@ -122,12 +122,12 @@ cf_coroutine_state_t cf_coroutine_state(cf_coroutine_t* co)
 	}
 }
 
-void* cf_coroutine_get_udata(cf_coroutine_t* co)
+void* cf_coroutine_get_udata(CF_Coroutine* co)
 {
 	return co->udata;
 }
 
-CF_Result cf_coroutine_push(cf_coroutine_t* co, const void* data, size_t size)
+CF_Result cf_coroutine_push(CF_Coroutine* co, const void* data, size_t size)
 {
 	mco_result res = mco_push(co->mco, data, size);
 	if (res != MCO_SUCCESS) {
@@ -137,7 +137,7 @@ CF_Result cf_coroutine_push(cf_coroutine_t* co, const void* data, size_t size)
 	}
 }
 
-CF_Result cf_coroutine_pop(cf_coroutine_t* co, void* data, size_t size)
+CF_Result cf_coroutine_pop(CF_Coroutine* co, void* data, size_t size)
 {
 	mco_result res = mco_pop(co->mco, data, size);
 	if (res != MCO_SUCCESS) {
@@ -147,19 +147,19 @@ CF_Result cf_coroutine_pop(cf_coroutine_t* co, void* data, size_t size)
 	}
 }
 
-size_t cf_coroutine_bytes_pushed(cf_coroutine_t* co)
+size_t cf_coroutine_bytes_pushed(CF_Coroutine* co)
 {
 	return mco_get_bytes_stored(co->mco);
 }
 
-size_t cf_coroutine_space_remaining(cf_coroutine_t* co)
+size_t cf_coroutine_space_remaining(CF_Coroutine* co)
 {
 	return mco_get_storage_size(co->mco) - mco_get_bytes_stored(co->mco);
 }
 
-cf_coroutine_t* cf_coroutine_currently_running()
+CF_Coroutine* cf_coroutine_currently_running()
 {
 	mco_coro* mco = mco_running();
-	cf_coroutine_t* co = (cf_coroutine_t*)mco_get_user_data(mco);
+	CF_Coroutine* co = (CF_Coroutine*)mco_get_user_data(mco);
 	return co;
 }

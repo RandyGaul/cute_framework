@@ -32,11 +32,11 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef struct cf_coroutine_t cf_coroutine_t;
-typedef void (cf_coroutine_fn)(cf_coroutine_t* co);
+typedef struct CF_Coroutine CF_Coroutine;
+typedef void (CF_CoroutineFn)(CF_Coroutine* co);
 
-CUTE_API cf_coroutine_t* CUTE_CALL cf_make_coroutine(cf_coroutine_fn* fn, int stack_size /*= 0*/, void* udata /*= NULL*/);
-CUTE_API void CUTE_CALL cf_destroy_coroutine(cf_coroutine_t* co);
+CUTE_API CF_Coroutine* CUTE_CALL cf_make_coroutine(CF_CoroutineFn* fn, int stack_size /*= 0*/, void* udata /*= NULL*/);
+CUTE_API void CUTE_CALL cf_destroy_coroutine(CF_Coroutine* co);
 
 #define CF_COROUTINE_STATE_DEFS \
 	CF_ENUM(COROUTINE_STATE_DEAD, 0) \
@@ -44,25 +44,25 @@ CUTE_API void CUTE_CALL cf_destroy_coroutine(cf_coroutine_t* co);
 	CF_ENUM(COROUTINE_STATE_ACTIVE_BUT_RESUMED_ANOTHER, 2) \
 	CF_ENUM(COROUTINE_STATE_SUSPENDED, 3) \
 
-typedef enum cf_coroutine_state_t
+typedef enum CF_CoroutineState
 {
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_COROUTINE_STATE_DEFS
 	#undef CF_ENUM
-} cf_coroutine_state_t;
+} CF_CoroutineState;
 
-CUTE_API CF_Result CUTE_CALL cf_coroutine_resume(cf_coroutine_t* co, float dt /*= 0*/);
-CUTE_API float CUTE_CALL cf_coroutine_yield(cf_coroutine_t* co, CF_Result* err /*= NULL*/);
-CUTE_API CF_Result CUTE_CALL cf_coroutine_wait(cf_coroutine_t* co, float seconds);
-CUTE_API cf_coroutine_state_t CUTE_CALL cf_coroutine_state(cf_coroutine_t* co);
-CUTE_API void* CUTE_CALL cf_coroutine_get_udata(cf_coroutine_t* co);
+CUTE_API CF_Result CUTE_CALL cf_coroutine_resume(CF_Coroutine* co, float dt /*= 0*/);
+CUTE_API float CUTE_CALL cf_coroutine_yield(CF_Coroutine* co, CF_Result* err /*= NULL*/);
+CUTE_API CF_Result CUTE_CALL cf_coroutine_wait(CF_Coroutine* co, float seconds);
+CUTE_API CF_CoroutineState CUTE_CALL cf_coroutine_state(CF_Coroutine* co);
+CUTE_API void* CUTE_CALL cf_coroutine_get_udata(CF_Coroutine* co);
 
-CUTE_API CF_Result CUTE_CALL cf_coroutine_push(cf_coroutine_t* co, const void* data, size_t size);
-CUTE_API CF_Result CUTE_CALL cf_coroutine_pop(cf_coroutine_t* co, void* data, size_t size);
-CUTE_API size_t CUTE_CALL cf_coroutine_bytes_pushed(cf_coroutine_t* co);
-CUTE_API size_t CUTE_CALL cf_coroutine_space_remaining(cf_coroutine_t* co);
+CUTE_API CF_Result CUTE_CALL cf_coroutine_push(CF_Coroutine* co, const void* data, size_t size);
+CUTE_API CF_Result CUTE_CALL cf_coroutine_pop(CF_Coroutine* co, void* data, size_t size);
+CUTE_API size_t CUTE_CALL cf_coroutine_bytes_pushed(CF_Coroutine* co);
+CUTE_API size_t CUTE_CALL cf_coroutine_space_remaining(CF_Coroutine* co);
 
-CUTE_API cf_coroutine_t* CUTE_CALL cf_coroutine_currently_running();
+CUTE_API CF_Coroutine* CUTE_CALL cf_coroutine_currently_running();
 
 #ifdef __cplusplus
 }
@@ -76,31 +76,31 @@ CUTE_API cf_coroutine_t* CUTE_CALL cf_coroutine_currently_running();
 namespace cute
 {
 
-using coroutine_t = cf_coroutine_t;
-using coroutine_fn = cf_coroutine_fn;
+using Coroutine = CF_Coroutine;
+using CoroutineFn = CF_CoroutineFn;
 
-enum coroutine_state_t : int
+enum CoroutineState : int
 {
 	#define CF_ENUM(K, V) K = V,
 	CF_COROUTINE_STATE_DEFS
 	#undef CF_ENUM
 };
 
-CUTE_INLINE coroutine_t* make_coroutine(coroutine_fn* fn, int stack_size = 0, void* udata = NULL) { return cf_make_coroutine(fn, stack_size, udata); }
-CUTE_INLINE void destroy_coroutine(coroutine_t* co) { cf_destroy_coroutine(co); }
+CUTE_INLINE Coroutine* make_coroutine(CoroutineFn* fn, int stack_size = 0, void* udata = NULL) { return cf_make_coroutine(fn, stack_size, udata); }
+CUTE_INLINE void destroy_coroutine(Coroutine* co) { cf_destroy_coroutine(co); }
 	 
-CUTE_INLINE result_t coroutine_resume(coroutine_t* co, float dt = 0) { return cf_coroutine_resume(co, dt); }
-CUTE_INLINE float coroutine_yield(coroutine_t* co, CF_Result* err = NULL) { return cf_coroutine_yield(co, err); }
-CUTE_INLINE result_t coroutine_wait(coroutine_t* co, float seconds) { return cf_coroutine_wait(co, seconds); }
-CUTE_INLINE coroutine_state_t coroutine_state(coroutine_t* co) { return (coroutine_state_t)cf_coroutine_state(co); }
-CUTE_INLINE void* coroutine_get_udata(coroutine_t* co) { return cf_coroutine_get_udata(co); }
+CUTE_INLINE Result coroutine_resume(Coroutine* co, float dt = 0) { return cf_coroutine_resume(co, dt); }
+CUTE_INLINE float coroutine_yield(Coroutine* co, CF_Result* err = NULL) { return cf_coroutine_yield(co, err); }
+CUTE_INLINE Result coroutine_wait(Coroutine* co, float seconds) { return cf_coroutine_wait(co, seconds); }
+CUTE_INLINE CoroutineState coroutine_state(Coroutine* co) { return (CoroutineState)cf_coroutine_state(co); }
+CUTE_INLINE void* coroutine_get_udata(Coroutine* co) { return cf_coroutine_get_udata(co); }
 	 
-CUTE_INLINE result_t coroutine_push(coroutine_t* co, const void* data, size_t size) { return cf_coroutine_push(co, data, size); }
-CUTE_INLINE result_t coroutine_pop(coroutine_t* co, void* data, size_t size) { return cf_coroutine_pop(co, data, size); }
-CUTE_INLINE size_t coroutine_bytes_pushed(coroutine_t* co) { return cf_coroutine_bytes_pushed(co); }
-CUTE_INLINE size_t coroutine_space_remaining(coroutine_t* co) { return cf_coroutine_space_remaining(co); }
+CUTE_INLINE Result coroutine_push(Coroutine* co, const void* data, size_t size) { return cf_coroutine_push(co, data, size); }
+CUTE_INLINE Result coroutine_pop(Coroutine* co, void* data, size_t size) { return cf_coroutine_pop(co, data, size); }
+CUTE_INLINE size_t coroutine_bytes_pushed(Coroutine* co) { return cf_coroutine_bytes_pushed(co); }
+CUTE_INLINE size_t coroutine_space_remaining(Coroutine* co) { return cf_coroutine_space_remaining(co); }
 	 
-CUTE_INLINE coroutine_t* coroutine_currently_running() { return cf_coroutine_currently_running(); }
+CUTE_INLINE Coroutine* coroutine_currently_running() { return cf_coroutine_currently_running(); }
 
 }
 

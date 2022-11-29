@@ -101,7 +101,7 @@ bool cf_window_mouse_inside()
 	return app->window_state.mouse_inside_window;
 }
 
-static int s_message_box_flags(cf_window_message_box_type_t type)
+static int s_message_box_flags(CF_WindowMessageBoxType type)
 {
 	switch (type)
 	{
@@ -112,7 +112,7 @@ static int s_message_box_flags(cf_window_message_box_type_t type)
 	return SDL_MESSAGEBOX_ERROR;
 }
 
-void cf_window_message_box(cf_window_message_box_type_t type, const char* title, const char* text)
+void cf_window_message_box(CF_WindowMessageBoxType type, const char* title, const char* text)
 {
 	SDL_ShowSimpleMessageBox(s_message_box_flags(type), title, text, app->window);
 }

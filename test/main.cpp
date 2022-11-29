@@ -63,7 +63,7 @@
 int main(int argc, const char** argv)
 {
 #if 0
-	result_t result = make_app("Fancy Window Title", 0, 0, 640, 480, APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+	Result result = make_app("Fancy Window Title", 0, 0, 640, 480, APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
 	if (is_error(result)) return -1;
 
 	Sprite s = cf_make_sprite("test_data/girl.aseprite");
@@ -131,7 +131,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_circular_buffer_fill_up_and_empty),
 		CUTE_TEST_CASE_ENTRY(test_circular_buffer_overflow),
 		CUTE_TEST_CASE_ENTRY(test_circular_buffer_underflow),
-		CUTE_TEST_CASE_ENTRY(test_circular_buffer_two_threads),
+		CUTE_TEST_CASE_ENTRY(test_CircularBufferwo_threads),
 		CUTE_TEST_CASE_ENTRY(test_doubly_list),
 		CUTE_TEST_CASE_ENTRY(test_base64_encode),
 		CUTE_TEST_CASE_ENTRY(test_kv_basic),

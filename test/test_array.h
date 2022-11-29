@@ -23,9 +23,9 @@
 
 using namespace cute;
 
-static array<string_t> s_get_array_of_strings()
+static Array<String> s_get_array_of_strings()
 {
-	array<string_t> b = {
+	Array<String> b = {
 		"a",
 		"b",
 		"c",
@@ -37,12 +37,12 @@ static array<string_t> s_get_array_of_strings()
 CUTE_TEST_CASE(test_array_list_init, "Array list initializers and strings.");
 int test_array_list_init()
 {
-	array<string_t> a = {
+	Array<String> a = {
 		"Hello",
 		"Goodbye",
 	};
 
-	array<string_t> b = {
+	Array<String> b = {
 		"1",
 		"2",
 	};
@@ -51,7 +51,7 @@ int test_array_list_init()
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(b[0].c_str(), "1"));
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(b[1].c_str(), "2"));
 
-	array<array<string_t>> c = {
+	Array<Array<String>> c = {
 		a,
 		b
 	};
@@ -61,7 +61,7 @@ int test_array_list_init()
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(c[1][0].c_str(), "1"));
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(c[1][1].c_str(), "2"));
 
-	array<string_t> d = s_get_array_of_strings();
+	Array<String> d = s_get_array_of_strings();
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(d[0].c_str(), "a"));
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(d[1].c_str(), "b"));
 	CUTE_TEST_ASSERT(!CUTE_STRCMP(d[2].c_str(), "c"));

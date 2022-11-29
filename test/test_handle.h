@@ -25,11 +25,11 @@ using namespace cute;
 CUTE_TEST_CASE(test_handle_basic, "Typical use-case example, alloc and free some handles.");
 int test_handle_basic()
 {
-	cf_handle_allocator_t* table = cf_make_handle_allocator(1024);
+	CF_HandleTable* table = cf_make_handle_allocator(1024);
 	CUTE_TEST_CHECK_POINTER(table);
 
-	cf_handle_t h0 = cf_handle_allocator_alloc(table, 7, 0);
-	cf_handle_t h1 = cf_handle_allocator_alloc(table, 13, 0);
+	CF_Handle h0 = cf_handle_allocator_alloc(table, 7, 0);
+	CF_Handle h1 = cf_handle_allocator_alloc(table, 13, 0);
 	CUTE_TEST_ASSERT(h0 != CUTE_INVALID_HANDLE);
 	CUTE_TEST_ASSERT(h1 != CUTE_INVALID_HANDLE);
 	uint32_t index0 = cf_handle_allocator_get_index(table, h0);
@@ -61,12 +61,12 @@ int test_handle_basic()
 CUTE_TEST_CASE(test_handle_large_loop, "Allocate right up the maximum size possible for the table.");
 int test_handle_large_loop()
 {
-	cf_handle_allocator_t* table = cf_make_handle_allocator(1024);
+	CF_HandleTable* table = cf_make_handle_allocator(1024);
 	CUTE_TEST_CHECK_POINTER(table);
 
 	for (int i = 0; i < 1024; ++i)
 	{
-		cf_handle_t h = cf_handle_allocator_alloc(table, i, 0);
+		CF_Handle h = cf_handle_allocator_alloc(table, i, 0);
 		CUTE_TEST_ASSERT(h != CUTE_INVALID_HANDLE);
 		CUTE_ASSERT(cf_handle_allocator_get_index(table, h) == (uint32_t)i);
 	}
@@ -79,15 +79,15 @@ int test_handle_large_loop()
 CUTE_TEST_CASE(test_handle_large_loop_and_free, "\"Soak test\" to fill up the handle buffer and empty it a few times.");
 int test_handle_large_loop_and_free()
 {
-	cf_handle_allocator_t* table = cf_make_handle_allocator(1024);
+	CF_HandleTable* table = cf_make_handle_allocator(1024);
 	CUTE_TEST_CHECK_POINTER(table);
-	cf_handle_t* handles = (cf_handle_t*)malloc(sizeof(cf_handle_t) * 2014);
+	CF_Handle* handles = (CF_Handle*)malloc(sizeof(CF_Handle) * 2014);
 
 	for (int iters = 0; iters < 5; ++iters)
 	{
 		for (int i = 0; i < 1024; ++i)
 		{
-			cf_handle_t h = cf_handle_allocator_alloc(table, i, 0);
+			CF_Handle h = cf_handle_allocator_alloc(table, i, 0);
 			CUTE_TEST_ASSERT(h != CUTE_INVALID_HANDLE);
 			CUTE_ASSERT(cf_handle_allocator_get_index(table, h) == (uint32_t)i);
 			handles[i] = h;
@@ -95,7 +95,7 @@ int test_handle_large_loop_and_free()
 
 		for (int i = 0; i < 1024; ++i)
 		{
-			cf_handle_t h = handles[i];
+			CF_Handle h = handles[i];
 			cf_handle_allocator_free(table, h);
 		}
 	}
@@ -109,17 +109,17 @@ int test_handle_large_loop_and_free()
 CUTE_TEST_CASE(test_handle_alloc_too_many, "Allocating over 1024 entries should not result in failure.");
 int test_handle_alloc_too_many()
 {
-	cf_handle_allocator_t* table = cf_make_handle_allocator(1024);
+	CF_HandleTable* table = cf_make_handle_allocator(1024);
 	CUTE_TEST_CHECK_POINTER(table);
 
 	for (int i = 0; i < 1024; ++i)
 	{
-		cf_handle_t h = cf_handle_allocator_alloc(table, i, 0);
+		CF_Handle h = cf_handle_allocator_alloc(table, i, 0);
 		CUTE_TEST_ASSERT(h != CUTE_INVALID_HANDLE);
 		CUTE_ASSERT(cf_handle_allocator_get_index(table, h) == (uint32_t)i);
 	}
 
-	cf_handle_t h = cf_handle_allocator_alloc(table, 0, 0);
+	CF_Handle h = cf_handle_allocator_alloc(table, 0, 0);
 	CUTE_TEST_ASSERT(h != CUTE_INVALID_HANDLE);
 
 	cf_destroy_handle_allocator(table);

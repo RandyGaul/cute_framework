@@ -83,8 +83,8 @@ typedef struct CF_Sprite
 	const char* name;
 	int w;
 	int h;
-	cf_v2 scale;
-	cf_v2 local_offset;
+	CF_V2 scale;
+	CF_V2 local_offset;
 	float opacity;
 	int layer;
 
@@ -97,7 +97,7 @@ typedef struct CF_Sprite
 	float t;
 	htbl const CF_Animation** animations;
 
-	cf_transform_t transform;
+	CF_Transform transform;
 } CF_Sprite;
 
 CUTE_INLINE CF_Sprite cf_sprite_defaults()
@@ -148,7 +148,7 @@ CUTE_API void CUTE_CALL cf_sprite_unload(const char* aseprite_path);
 //--------------------------------------------------------------------------------------------------
 // In-line implementation of `sprite_t` functions.
 
-CUTE_API void CUTE_CALL cf_batch_sprite_tf(const CF_Sprite* sprite, cf_transform_t transform);
+CUTE_API void CUTE_CALL cf_batch_sprite_tf(const CF_Sprite* sprite, CF_Transform transform);
 
 CUTE_INLINE void cf_sprite_draw(CF_Sprite* sprite)
 {

@@ -178,19 +178,19 @@
 //--------------------------------------------------------------------------------------------------
 // Hidden API - Not intended for direct use.
 
-#define CF_AHDR(a) ((cf_ahdr_t*)a - 1)
+#define CF_AHDR(a) ((CF_Ahdr*)a - 1)
 #define CF_ACOOKIE 0xE6F7E359
 #define CF_ACANARY(a) ((a) ? CUTE_ASSERT(CF_AHDR(a)->cookie == CF_ACOOKIE) : (void)0) // Detects buffer underruns.
 
 // *Hidden* array header.
-typedef struct cf_ahdr_t
+typedef struct CF_Ahdr
 {
 	int size;
 	int capacity;
 	bool is_static;
 	char* data;
 	uint32_t cookie;
-} cf_ahdr_t;
+} CF_Ahdr;
 
 #ifdef __cplusplus
 extern "C" {
@@ -222,14 +222,14 @@ namespace cute
 {
 
 template <typename T>
-struct array
+struct Array
 {
-	array() { }
-	array(cf_initializer_list<T> list);
-	array(const array<T>& other);
-	array(array<T>&& other);
-	array(int capacity);
-	~array();
+	Array() { }
+	Array(CF_InitializerList<T> list);
+	Array(const Array<T>& other);
+	Array(Array<T>&& other);
+	Array(int capacity);
+	~Array();
 
 	T& add();
 	T& add(const T& item);
@@ -258,10 +258,10 @@ struct array
 	T* operator+(int index);
 	const T* operator+(int index) const;
 
-	array<T>& operator=(const array<T>& rhs);
-	array<T>& operator=(array<T>&& rhs);
-	array<T>& steal_from(array<T>* steal_from_me);
-	array<T>& steal_from(array<T>& steal_from_me);
+	Array<T>& operator=(const Array<T>& rhs);
+	Array<T>& operator=(Array<T>&& rhs);
+	Array<T>& steal_from(Array<T>* steal_from_me);
+	Array<T>& steal_from(Array<T>& steal_from_me);
 
 	T& last();
 	const T& last() const;
@@ -276,7 +276,7 @@ private:
 // -------------------------------------------------------------------------------------------------
 
 template <typename T>
-array<T>::array(cf_initializer_list<T> list)
+Array<T>::Array(CF_InitializerList<T> list)
 {
 	afit(m_ptr, (int)list.size());
 	for (const T* i = list.begin(); i < list.end(); ++i) {
@@ -285,7 +285,7 @@ array<T>::array(cf_initializer_list<T> list)
 }
 
 template <typename T>
-array<T>::array(const array<T>& other)
+Array<T>::Array(const Array<T>& other)
 {
 	afit(m_ptr, (int)other.count());
 	for (int i = 0; i < other.count(); ++i) {
@@ -294,19 +294,19 @@ array<T>::array(const array<T>& other)
 }
 
 template <typename T>
-array<T>::array(array<T>&& other)
+Array<T>::Array(Array<T>&& other)
 {
 	steal_from(&other);
 }
 
 template <typename T>
-array<T>::array(int capacity)
+Array<T>::Array(int capacity)
 {
 	afit(m_ptr, capacity);
 }
 
 template <typename T>
-array<T>::~array()
+Array<T>::~Array()
 {
 	int len = asize(m_ptr);
 	for (int i = 0; i < len; ++i) {
@@ -317,7 +317,7 @@ array<T>::~array()
 }
 
 template <typename T>
-array<T>& array<T>::steal_from(array<T>* steal_from_me)
+Array<T>& Array<T>::steal_from(Array<T>* steal_from_me)
 {
 	afree(m_ptr);
 	m_ptr = steal_from_me->m_ptr;
@@ -326,7 +326,7 @@ array<T>& array<T>::steal_from(array<T>* steal_from_me)
 }
 
 template <typename T>
-array<T>& array<T>::steal_from(array<T>& steal_from_me)
+Array<T>& Array<T>::steal_from(Array<T>& steal_from_me)
 {
 	afree(m_ptr);
 	m_ptr = steal_from_me.m_ptr;
@@ -335,7 +335,7 @@ array<T>& array<T>::steal_from(array<T>& steal_from_me)
 }
 
 template <typename T>
-T& array<T>::add()
+T& Array<T>::add()
 {
 	afit(m_ptr, asize(m_ptr) + 1);
 	T* slot = m_ptr + alen(m_ptr)++;
@@ -344,7 +344,7 @@ T& array<T>::add()
 }
 
 template <typename T>
-T& array<T>::add(const T& item)
+T& Array<T>::add(const T& item)
 {
 	afit(m_ptr, asize(m_ptr) + 1);
 	T* slot = m_ptr + alen(m_ptr)++;
@@ -353,7 +353,7 @@ T& array<T>::add(const T& item)
 }
 
 template <typename T>
-T& array<T>::add(T&& item)
+T& Array<T>::add(T&& item)
 {
 	afit(m_ptr, asize(m_ptr) + 1);
 	T* slot = m_ptr + alen(m_ptr)++;
@@ -362,7 +362,7 @@ T& array<T>::add(T&& item)
 }
 
 template <typename T>
-T array<T>::pop()
+T Array<T>::pop()
 {
 	CUTE_ASSERT(!empty());
 	T* slot = m_ptr + alen(m_ptr) - 1;
@@ -372,7 +372,7 @@ T array<T>::pop()
 }
 
 template <typename T>
-void array<T>::unordered_remove(int index)
+void Array<T>::unordered_remove(int index)
 {
 	CUTE_ASSERT(index >= 0 && index < asize(m_ptr));
 	T* slot = m_ptr + index;
@@ -381,19 +381,19 @@ void array<T>::unordered_remove(int index)
 }
 
 template <typename T>
-void array<T>::clear()
+void Array<T>::clear()
 {
 	aclear(m_ptr);
 }
 
 template <typename T>
-void array<T>::ensure_capacity(int num_elements)
+void Array<T>::ensure_capacity(int num_elements)
 {
 	afit(m_ptr, num_elements);
 }
 
 template <typename T>
-void array<T>::set_count(int count)
+void Array<T>::set_count(int count)
 {
 	CUTE_ASSERT(count < acap(m_ptr) || !count);
 	afit(m_ptr, count);
@@ -412,7 +412,7 @@ void array<T>::set_count(int count)
 }
 
 template <typename T>
-void array<T>::ensure_count(int count)
+void Array<T>::ensure_count(int count)
 {
 	if (!count) return;
 	int old_count = asize(m_ptr);
@@ -427,7 +427,7 @@ void array<T>::ensure_count(int count)
 }
 
 template <typename T>
-void array<T>::reverse()
+void Array<T>::reverse()
 {
 	T* a = m_ptr;
 	T* b = m_ptr + (asize(m_ptr) - 1);
@@ -442,96 +442,96 @@ void array<T>::reverse()
 }
 
 template <typename T>
-int array<T>::capacity() const
+int Array<T>::capacity() const
 {
 	return acap(m_ptr);
 }
 
 template <typename T>
-int array<T>::count() const
+int Array<T>::count() const
 {
 	return asize(m_ptr);
 }
 
 template <typename T>
-int array<T>::size() const
+int Array<T>::size() const
 {
 	return asize(m_ptr);
 }
 
 template <typename T>
-bool array<T>::empty() const
+bool Array<T>::empty() const
 {
 	int size = asize(m_ptr);
 	return size <= 0;
 }
 
 template <typename T>
-T* array<T>::begin()
+T* Array<T>::begin()
 {
 	return m_ptr;
 }
 
 template <typename T>
-const T* array<T>::begin() const
+const T* Array<T>::begin() const
 {
 	return m_ptr;
 }
 
 template <typename T>
-T* array<T>::end()
+T* Array<T>::end()
 {
 	return m_ptr + count();
 }
 
 template <typename T>
-const T* array<T>::end() const
+const T* Array<T>::end() const
 {
 	return m_ptr + count();
 }
 
 template <typename T>
-T& array<T>::operator[](int index)
+T& Array<T>::operator[](int index)
 {
 	CUTE_ASSERT(index >= 0 && index < count());
 	return m_ptr[index];
 }
 
 template <typename T>
-const T& array<T>::operator[](int index) const
+const T& Array<T>::operator[](int index) const
 {
 	CUTE_ASSERT(index >= 0 && index < count());
 	return m_ptr[index];
 }
 
 template <typename T>
-T* array<T>::data()
+T* Array<T>::data()
 {
 	return m_ptr;
 }
 
 template <typename T>
-const T* array<T>::data() const
+const T* Array<T>::data() const
 {
 	return m_ptr;
 }
 
 template <typename T>
-T* array<T>::operator+(int index)
+T* Array<T>::operator+(int index)
 {
 	CUTE_ASSERT(index >= 0 && index < count());
 	return m_ptr + index;
 }
 
 template <typename T>
-const T* array<T>::operator+(int index) const
+const T* Array<T>::operator+(int index) const
 {
 	CUTE_ASSERT(index >= 0 && index < count());
 	return m_ptr + index;
 }
 
 template <typename T>
-array<T>& array<T>::operator=(const array<T>& rhs)
+Array<T>& Array<T>::operator=(const Array<T>& rhs)
 {
 	set_count(0);
 	afit(m_ptr, (int)rhs.count());
@@ -542,7 +542,7 @@ array<T>& array<T>::operator=(const array<T>& rhs)
 }
 
 template <typename T>
-array<T>& array<T>::operator=(array<T>&& rhs)
+Array<T>& Array<T>::operator=(Array<T>&& rhs)
 {
 	afree(m_ptr);
 	m_ptr = rhs->m_ptr;
@@ -550,13 +550,13 @@ array<T>& array<T>::operator=(array<T>&& rhs)
 }
 
 template <typename T>
-T& array<T>::last()
+T& Array<T>::last()
 {
 	return *(aend(m_ptr) - 1);
 }
 
 template <typename T>
-const T& array<T>::last() const
+const T& Array<T>::last() const
 {
 	return *(aend(m_ptr) - 1);
 }

@@ -22,9 +22,9 @@
 #include "cute_guid.h"
 #include "cute_networking.h"
 
-cf_guid_t cf_make_guid()
+CF_Guid cf_make_guid()
 {
-	cf_guid_t guid;
+	CF_Guid guid;
 	cf_crypto_random_bytes(guid.data, sizeof(guid.data));
 	return guid;
 }

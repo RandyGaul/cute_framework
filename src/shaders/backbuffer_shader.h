@@ -68,7 +68,7 @@
 #define SLOT_backbuffer_fs_params (0)
 #pragma pack(push,1)
 SOKOL_SHDC_ALIGN(16) typedef struct backbuffer_fs_params_t {
-    cf_v2 u_texture_size;
+    CF_V2 u_texture_size;
     uint8_t _pad_8[8];
 } backbuffer_fs_params_t;
 #pragma pack(pop)

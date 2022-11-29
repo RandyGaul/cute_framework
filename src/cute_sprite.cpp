@@ -32,7 +32,7 @@ CF_Sprite cf_easy_make_sprite(const char* png_path)
 {
 	const CF_Animation** table = cf_png_cache_get_animation_table(png_path);
 	if (!table) {
-		cf_png_t png;
+		CF_Png png;
 		char buf[1024];
 		CF_Result err = cf_png_cache_load(png_path, &png);
 		if (cf_is_error(err)) {
@@ -41,7 +41,7 @@ CF_Sprite cf_easy_make_sprite(const char* png_path)
 			return cf_sprite_defaults();
 		}
 
-		cf_png_t pngs[] = { png };
+		CF_Png pngs[] = { png };
 		float delays[] = { 1.0f };
 		const CF_Animation* anim = cf_make_png_cache_animation(png_path, pngs, CUTE_ARRAY_SIZE(pngs), delays, CUTE_ARRAY_SIZE(delays));
 		const CF_Animation* anims[] = { anim };
@@ -54,7 +54,7 @@ CF_Sprite cf_easy_make_sprite(const char* png_path)
 
 void cf_easy_sprite_unload(CF_Sprite sprite)
 {
-	cf_png_t png = cf_png_cache_get_png(sprite.animations[0]->frames[0].id);
+	CF_Png png = cf_png_cache_get_png(sprite.animations[0]->frames[0].id);
 	cf_png_cache_unload(png);
 }
 

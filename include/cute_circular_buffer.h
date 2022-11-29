@@ -32,24 +32,24 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef struct cf_circular_buffer_t
+typedef struct CF_CircularBuffer
 {
-	int index0; /*= 0*/
-	int index1; /*= 0*/
-	cf_atomic_int_t size_left; /*= cf_atomic_zero()*/
-	int capacity; /*= 0*/
-	uint8_t* data; /*= NULL*/
-} cf_circular_buffer_t;
+	int index0;
+	int index1;
+	CF_AtomicInt size_left;
+	int capacity;
+	uint8_t* data;
+} CF_CircularBuffer;
 
-CUTE_API cf_circular_buffer_t CUTE_CALL cf_make_circular_buffer(int initial_size_in_bytes /*= NULL*/);
-CUTE_API void CUTE_CALL cf_destroy_circular_buffer(cf_circular_buffer_t* buffer);
+CUTE_API CF_CircularBuffer CUTE_CALL cf_make_circular_buffer(int initial_size_in_bytes /*= NULL*/);
+CUTE_API void CUTE_CALL cf_destroy_circular_buffer(CF_CircularBuffer* buffer);
 
-CUTE_API void CUTE_CALL cf_circular_buffer_reset(cf_circular_buffer_t* buffer);
+CUTE_API void CUTE_CALL cf_circular_buffer_reset(CF_CircularBuffer* buffer);
 
-CUTE_API int CUTE_CALL cf_circular_buffer_push(cf_circular_buffer_t* buffer, const void* data, int size);
-CUTE_API int CUTE_CALL cf_circular_buffer_pull(cf_circular_buffer_t* buffer, void* data, int size);
+CUTE_API int CUTE_CALL cf_circular_buffer_push(CF_CircularBuffer* buffer, const void* data, int size);
+CUTE_API int CUTE_CALL cf_circular_buffer_pull(CF_CircularBuffer* buffer, void* data, int size);
 
-CUTE_API int CUTE_CALL cf_circular_buffer_grow(cf_circular_buffer_t* buffer, int new_size_in_bytes);
+CUTE_API int CUTE_CALL cf_circular_buffer_grow(CF_CircularBuffer* buffer, int new_size_in_bytes);
 
 #ifdef __cplusplus
 }
@@ -63,17 +63,17 @@ CUTE_API int CUTE_CALL cf_circular_buffer_grow(cf_circular_buffer_t* buffer, int
 namespace cute
 {
 
-using circular_buffer_t = cf_circular_buffer_t;
+using CircularBuffer = CF_CircularBuffer;
 
-CUTE_INLINE circular_buffer_t make_circular_buffer(int initial_size_in_bytes = NULL) { return cf_make_circular_buffer(initial_size_in_bytes); }
-CUTE_INLINE void destroy_circular_buffer(circular_buffer_t* buffer) { cf_destroy_circular_buffer(buffer); }
+CUTE_INLINE CircularBuffer make_circular_buffer(int initial_size_in_bytes = NULL) { return cf_make_circular_buffer(initial_size_in_bytes); }
+CUTE_INLINE void destroy_circular_buffer(CircularBuffer* buffer) { cf_destroy_circular_buffer(buffer); }
 
-CUTE_INLINE void circular_buffer_reset(circular_buffer_t* buffer) { cf_circular_buffer_reset(buffer); }
+CUTE_INLINE void circular_buffer_reset(CircularBuffer* buffer) { cf_circular_buffer_reset(buffer); }
 
-CUTE_INLINE int circular_buffer_push(circular_buffer_t* buffer, const void* data, int size) { return cf_circular_buffer_push(buffer, data, size); }
-CUTE_INLINE int circular_buffer_pull(circular_buffer_t* buffer, void* data, int size) { return cf_circular_buffer_pull(buffer, data, size); }
+CUTE_INLINE int circular_buffer_push(CircularBuffer* buffer, const void* data, int size) { return cf_circular_buffer_push(buffer, data, size); }
+CUTE_INLINE int circular_buffer_pull(CircularBuffer* buffer, void* data, int size) { return cf_circular_buffer_pull(buffer, data, size); }
 
-CUTE_INLINE int circular_buffer_grow(circular_buffer_t* buffer, int new_size_in_bytes) { return cf_circular_buffer_grow(buffer, new_size_in_bytes); }
+CUTE_INLINE int circular_buffer_grow(CircularBuffer* buffer, int new_size_in_bytes) { return cf_circular_buffer_grow(buffer, new_size_in_bytes); }
 
 }
 

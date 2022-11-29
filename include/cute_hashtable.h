@@ -335,7 +335,7 @@
 //--------------------------------------------------------------------------------------------------
 // Hidden API - Not intended for direct use.
 
-#define CF_HHDR(h) (((cf_hhdr_t*)(h - 1) - 1)) // Converts pointer from the user-array to table header.
+#define CF_HHDR(h) (((CF_Hhdr*)(h - 1) - 1)) // Converts pointer from the user-array to table header.
 #define CF_HCOOKIE 0xE6F7E359 // Magic number used for sanity/type checks.
 #define CF_HCANARY(h) (h ? CUTE_ASSERT(CF_HHDR(h)->cookie == CF_HCOOKIE) : (void)0) // Sanity/type check.
 
@@ -343,21 +343,21 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef struct cf_hslot_t
+typedef struct CF_Hslot
 {
 	uint32_t key_hash;
 	int item_index;
 	int base_count;
-} cf_hslot_t;
+} CF_Hslot;
 
-typedef struct cf_hhdr_t
+typedef struct CF_Hhdr
 {
 	int key_size;
 	int item_size;
 	int item_capacity;
 	int count;
 	int slot_capacity;
-	cf_hslot_t* slots;
+	CF_Hslot* slots;
 	void* items_key;
 	int* items_slot_index;
 	int return_index;
@@ -366,23 +366,23 @@ typedef struct cf_hhdr_t
 	void* temp_key;
 	void* temp_item;
 	uint32_t cookie;
-} cf_hhdr_t;
+} CF_Hhdr;
 
 CUTE_API void* CUTE_CALL cf_hashtable_make_impl(int key_size, int item_size, int capacity);
-CUTE_API void CUTE_CALL cf_hashtable_free_impl(cf_hhdr_t* table);
-CUTE_API void* CUTE_CALL cf_hashtable_insert_impl(cf_hhdr_t* table, uint64_t key);
-CUTE_API void* CUTE_CALL cf_hashtable_insert_impl2(cf_hhdr_t* table, const void* key, const void* item);
-CUTE_API void* CUTE_CALL cf_hashtable_insert_impl3(cf_hhdr_t* table, const void* key);
-CUTE_API void CUTE_CALL cf_hashtable_remove_impl(cf_hhdr_t* table, uint64_t key);
-CUTE_API void CUTE_CALL cf_hashtable_remove_impl2(cf_hhdr_t* table, const void* key);
-CUTE_API bool CUTE_CALL cf_hashtable_has_impl(cf_hhdr_t* table, uint64_t key);
-CUTE_API int CUTE_CALL cf_hashtable_find_impl(const cf_hhdr_t* table, uint64_t key);
-CUTE_API int CUTE_CALL cf_hashtable_find_impl2(const cf_hhdr_t* table, const void* key);
-CUTE_API int CUTE_CALL cf_hashtable_count_impl(const cf_hhdr_t* table);
-CUTE_API void* CUTE_CALL cf_hashtable_items_impl(const cf_hhdr_t* table);
-CUTE_API void* CUTE_CALL cf_hashtable_keys_impl(const cf_hhdr_t* table);
-CUTE_API void CUTE_CALL cf_hashtable_clear_impl(cf_hhdr_t* table);
-CUTE_API void CUTE_CALL cf_hashtable_swap_impl(cf_hhdr_t* table, int index_a, int index_b);
+CUTE_API void CUTE_CALL cf_hashtable_free_impl(CF_Hhdr* table);
+CUTE_API void* CUTE_CALL cf_hashtable_insert_impl(CF_Hhdr* table, uint64_t key);
+CUTE_API void* CUTE_CALL cf_hashtable_insert_impl2(CF_Hhdr* table, const void* key, const void* item);
+CUTE_API void* CUTE_CALL cf_hashtable_insert_impl3(CF_Hhdr* table, const void* key);
+CUTE_API void CUTE_CALL cf_hashtable_remove_impl(CF_Hhdr* table, uint64_t key);
+CUTE_API void CUTE_CALL cf_hashtable_remove_impl2(CF_Hhdr* table, const void* key);
+CUTE_API bool CUTE_CALL cf_hashtable_has_impl(CF_Hhdr* table, uint64_t key);
+CUTE_API int CUTE_CALL cf_hashtable_find_impl(const CF_Hhdr* table, uint64_t key);
+CUTE_API int CUTE_CALL cf_hashtable_find_impl2(const CF_Hhdr* table, const void* key);
+CUTE_API int CUTE_CALL cf_hashtable_count_impl(const CF_Hhdr* table);
+CUTE_API void* CUTE_CALL cf_hashtable_items_impl(const CF_Hhdr* table);
+CUTE_API void* CUTE_CALL cf_hashtable_keys_impl(const CF_Hhdr* table);
+CUTE_API void CUTE_CALL cf_hashtable_clear_impl(CF_Hhdr* table);
+CUTE_API void CUTE_CALL cf_hashtable_swap_impl(CF_Hhdr* table, int index_a, int index_b);
 
 #ifdef __cplusplus
 }
@@ -400,11 +400,11 @@ namespace cute
 // Keys are treated as mere byte buffers (Plain Old Data).
 // Items have contructors/destructors called, but are *not* allowed to store references/pointers to themselves.
 template <typename K, typename T>
-struct dictionary
+struct Dictionary
 {
-	dictionary();
-	dictionary(int capacity);
-	~dictionary();
+	Dictionary();
+	Dictionary(int capacity);
+	~Dictionary();
 
 	T& get(const K& key);
 	T& find(const K& key) { return get(key); }
@@ -434,25 +434,25 @@ struct dictionary
 	void swap(int index_a, int index_b);
 
 private:
-	cf_hhdr_t* m_table;
+	CF_Hhdr* m_table;
 };
 
 // -------------------------------------------------------------------------------------------------
 
 template <typename K, typename T>
-dictionary<K, T>::dictionary()
+Dictionary<K, T>::Dictionary()
 {
 	m_table = CF_HHDR((T*)cf_hashtable_make_impl(sizeof(K), sizeof(T), 32));
 }
 
 template <typename K, typename T>
-dictionary<K, T>::dictionary(int capacity)
+Dictionary<K, T>::Dictionary(int capacity)
 {
 	m_table = CF_HHDR((T*)cf_hashtable_make_impl(sizeof(K), sizeof(T), capacity));
 }
 
 template <typename K, typename T>
-dictionary<K, T>::~dictionary()
+Dictionary<K, T>::~Dictionary()
 {
 	T* elements = items();
 	for (int i = 0; i < count(); ++i) {
@@ -463,21 +463,21 @@ dictionary<K, T>::~dictionary()
 }
 
 template <typename K, typename T>
-T& dictionary<K, T>::get(const K& key)
+T& Dictionary<K, T>::get(const K& key)
 {
 	int index = cf_hashtable_find_impl2(m_table, &key);
 	return items()[index];
 }
 
 template <typename K, typename T>
-const T& dictionary<K, T>::get(const K& key) const
+const T& Dictionary<K, T>::get(const K& key) const
 {
 	int index = cf_hashtable_find_impl2(m_table, &key);
 	return items()[index];
 }
 
 template <typename K, typename T>
-T* dictionary<K, T>::try_get(const K& key)
+T* Dictionary<K, T>::try_get(const K& key)
 {
 	int index = cf_hashtable_find_impl2(m_table, &key);
 	if (index >= 0) return items() + index;
@@ -485,7 +485,7 @@ T* dictionary<K, T>::try_get(const K& key)
 }
 
 template <typename K, typename T>
-const T* dictionary<K, T>::try_get(const K& key) const
+const T* Dictionary<K, T>::try_get(const K& key) const
 {
 	int index = cf_hashtable_find_impl2(m_table, &key);
 	if (index > 0) return items() + index;
@@ -493,7 +493,7 @@ const T* dictionary<K, T>::try_get(const K& key) const
 }
 
 template <typename K, typename T>
-T* dictionary<K, T>::insert(const K& key)
+T* Dictionary<K, T>::insert(const K& key)
 {
 	m_table = CF_HHDR((T*)cf_hashtable_insert_impl3(m_table, &key));
 	int index = m_table->return_index;
@@ -504,7 +504,7 @@ T* dictionary<K, T>::insert(const K& key)
 }
 
 template <typename K, typename T>
-T* dictionary<K, T>::insert(const K& key, const T& val)
+T* Dictionary<K, T>::insert(const K& key, const T& val)
 {
 	m_table = CF_HHDR((T*)cf_hashtable_insert_impl2(m_table, &key, &val));
 	int index = m_table->return_index;
@@ -515,7 +515,7 @@ T* dictionary<K, T>::insert(const K& key, const T& val)
 }
 
 template <typename K, typename T>
-T* dictionary<K, T>::insert(const K& key, T&& val)
+T* Dictionary<K, T>::insert(const K& key, T&& val)
 {
 	m_table = CF_HHDR((T*)cf_hashtable_insert_impl2(m_table, &key, &val));
 	int index = m_table->return_index;
@@ -526,7 +526,7 @@ T* dictionary<K, T>::insert(const K& key, T&& val)
 }
 
 template <typename K, typename T>
-void dictionary<K, T>::remove(const K& key)
+void Dictionary<K, T>::remove(const K& key)
 {
 	T* slot = try_find(key);
 	if (slot) {
@@ -536,43 +536,43 @@ void dictionary<K, T>::remove(const K& key)
 }
 
 template <typename K, typename T>
-void dictionary<K, T>::clear()
+void Dictionary<K, T>::clear()
 {
 	cf_hashtable_clear_impl(m_table);
 }
 
 template <typename K, typename T>
-int dictionary<K, T>::count() const
+int Dictionary<K, T>::count() const
 {
 	return cf_hashtable_count_impl(m_table);
 }
 
 template <typename K, typename T>
-T* dictionary<K, T>::items()
+T* Dictionary<K, T>::items()
 {
 	return (T*)(m_table + 1) + 1;
 }
 
 template <typename K, typename T>
-const T* dictionary<K, T>::items() const
+const T* Dictionary<K, T>::items() const
 {
 	return (const T*)(m_table + 1) + 1;
 }
 
 template <typename K, typename T>
-K* dictionary<K, T>::keys()
+K* Dictionary<K, T>::keys()
 {
 	return (K*)cf_hashtable_keys_impl(m_table);
 }
 
 template <typename K, typename T>
-const K* dictionary<K, T>::keys() const
+const K* Dictionary<K, T>::keys() const
 {
 	return (const K*)cf_hashtable_keys_impl(m_table);
 }
 
 template <typename K, typename T>
-void dictionary<K, T>::swap(int index_a, int index_b)
+void Dictionary<K, T>::swap(int index_a, int index_b)
 {
 	cf_hashtable_swap_impl(m_table, index_a, index_b);
 }

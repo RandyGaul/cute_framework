@@ -32,7 +32,7 @@ struct CF_PngCache
 	htbl void** id_to_pixels = NULL;
 	dyna CF_Animation** animations = NULL;
 	htbl CF_Animation*** animation_tables = NULL;
-	htbl cf_png_t* pngs = NULL;
+	htbl CF_Png* pngs = NULL;
 	uint64_t id_gen = CUTE_PNG_ID_RANGE_LO;
 };
 
@@ -49,9 +49,9 @@ void cf_png_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill)
 	}
 }
 
-cf_png_t cf_png_cache_get_png(uint64_t image_id)
+CF_Png cf_png_cache_get_png(uint64_t image_id)
 {
-	cf_png_t png = hget(cache->pngs, image_id);
+	CF_Png png = hget(cache->pngs, image_id);
 	return png;
 }
 
@@ -75,7 +75,7 @@ void cf_destroy_png_cache()
 
 	int i = 0;
 	while (hsize(cache->pngs)) {
-		cf_png_t png = cache->pngs[i++];
+		CF_Png png = cache->pngs[i++];
 		cf_png_cache_unload(png);
 	}
 	hfree(cache->pngs);
@@ -85,12 +85,12 @@ void cf_destroy_png_cache()
 	cache = NULL;
 }
 
-CF_Result cf_png_cache_load(const char* png_path, cf_png_t* png)
+CF_Result cf_png_cache_load(const char* png_path, CF_Png* png)
 {
-	cf_image_t img;
+	CF_Image img;
 	CF_Result err = cf_image_load_png(png_path, &img);
 	if (cf_is_error(err)) return err;
-	cf_png_t entry;
+	CF_Png entry;
 	entry.path = sintern(png_path);
 	entry.id = cache->id_gen++;
 	entry.pix = img.pix;
@@ -102,12 +102,12 @@ CF_Result cf_png_cache_load(const char* png_path, cf_png_t* png)
 	return cf_result_success();
 }
 
-CF_Result cf_png_cache_load_mem(const char* png_path, const void* memory, size_t size, cf_png_t* png)
+CF_Result cf_png_cache_load_mem(const char* png_path, const void* memory, size_t size, CF_Png* png)
 {
-	cf_image_t img;
+	CF_Image img;
 	CF_Result err = cf_image_load_png_mem(memory, (int)size, &img);
 	if (cf_is_error(err)) return err;
-	cf_png_t entry;
+	CF_Png entry;
 	entry.path = sintern(png_path);
 	entry.id = cache->id_gen++;
 	entry.pix = img.pix;
@@ -119,9 +119,9 @@ CF_Result cf_png_cache_load_mem(const char* png_path, const void* memory, size_t
 	return cf_result_success();
 }
 
-void cf_png_cache_unload(cf_png_t png)
+void cf_png_cache_unload(CF_Png png)
 {
-	cf_image_t img;
+	CF_Image img;
 	img.pix = png.pix;
 	img.w = png.w;
 	img.h = png.h;
@@ -130,7 +130,7 @@ void cf_png_cache_unload(cf_png_t png)
 	hdel(cache->pngs, png.id);
 }
 
-const CF_Animation* cf_make_png_cache_animation(const char* name, const cf_png_t* pngs, int pngs_count, const float* delays, int delays_count)
+const CF_Animation* cf_make_png_cache_animation(const char* name, const CF_Png* pngs, int pngs_count, const float* delays, int delays_count)
 {
 	CUTE_ASSERT(pngs_count == delays_count);
 	name = sintern(name);
@@ -193,7 +193,7 @@ CF_Sprite cf_make_png_cache_sprite(const char* sprite_name, const CF_Animation**
 	sprite_name = sintern(sprite_name);
 	CUTE_ASSERT(table);
 
-	cf_png_t png = hget(cache->pngs, table[0]->frames[0].id);
+	CF_Png png = hget(cache->pngs, table[0]->frames[0].id);
 	CUTE_ASSERT(png.path);
 
 	CF_Sprite sprite = cf_sprite_defaults();
@@ -209,11 +209,11 @@ CF_Sprite cf_make_png_cache_sprite(const char* sprite_name, const CF_Animation**
 namespace cute
 {
 
-const animation_t* make_png_cache_animation(const char* name, const array<png_t>& pngs, const array<float>& delays)
+const animation_t* make_png_cache_animation(const char* name, const Array<Png>& pngs, const Array<float>& delays)
 {
 	return cf_make_png_cache_animation(name, pngs.data(), pngs.count(), delays.data(), delays.count());
 }
-const animation_t** make_png_cache_animation_table(const char* sprite_name, const array<const animation_t*>& animations)
+const animation_t** make_png_cache_animation_table(const char* sprite_name, const Array<const animation_t*>& animations)
 {
 	return cf_make_png_cache_animation_table(sprite_name, animations.data(), animations.count());
 }

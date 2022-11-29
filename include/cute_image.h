@@ -33,40 +33,40 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef struct cf_image_t
+typedef struct CF_Image
 {
 	int w;
 	int h;
 	CF_Pixel* pix;
-} cf_image_t;
+} CF_Image;
 
-typedef struct cf_image_indexed_t
+typedef struct CF_ImageIndexed
 {
 	int w;
 	int h;
 	uint8_t* pix;
 	uint8_t palette_len;
 	CF_Pixel palette[256];
-} cf_image_indexed_t;
+} CF_ImageIndexed;
 
 // -------------------------------------------------------------------------------------------------
 // PNG loading.
 
-CUTE_API CF_Result CUTE_CALL cf_image_load_png(const char* virtual_path, cf_image_t* img);
-CUTE_API CF_Result CUTE_CALL cf_image_load_png_mem(const void* data, int size, cf_image_t* img);
+CUTE_API CF_Result CUTE_CALL cf_image_load_png(const char* virtual_path, CF_Image* img);
+CUTE_API CF_Result CUTE_CALL cf_image_load_png_mem(const void* data, int size, CF_Image* img);
 CUTE_API CF_Result CUTE_CALL cf_image_load_png_wh(const void* data, int size, int* w, int* h);
-CUTE_API void CUTE_CALL cf_image_free(cf_image_t* img);
+CUTE_API void CUTE_CALL cf_image_free(CF_Image* img);
 
-CUTE_API CF_Result CUTE_CALL cf_image_load_png_indexed(const char* virtual_path, cf_image_indexed_t* img);
-CUTE_API CF_Result CUTE_CALL cf_image_load_png_mem_indexed(const void* data, int size, cf_image_indexed_t* img);
-CUTE_API void CUTE_CALL cf_image_free_indexed(cf_image_indexed_t* img);
+CUTE_API CF_Result CUTE_CALL cf_image_load_png_indexed(const char* virtual_path, CF_ImageIndexed* img);
+CUTE_API CF_Result CUTE_CALL cf_image_load_png_mem_indexed(const void* data, int size, CF_ImageIndexed* img);
+CUTE_API void CUTE_CALL cf_image_free_indexed(CF_ImageIndexed* img);
 
 // -------------------------------------------------------------------------------------------------
 // Image operations.
 
-CUTE_API cf_image_t CUTE_CALL cf_image_depallete(cf_image_indexed_t* img);
-CUTE_API void CUTE_CALL cf_image_premultiply(cf_image_t* img);
-CUTE_API void CUTE_CALL cf_image_flip_horizontal(cf_image_t* img);
+CUTE_API CF_Image CUTE_CALL cf_image_depallete(CF_ImageIndexed* img);
+CUTE_API void CUTE_CALL cf_image_premultiply(CF_Image* img);
+CUTE_API void CUTE_CALL cf_image_flip_horizontal(CF_Image* img);
 
 #ifdef __cplusplus
 }
@@ -80,27 +80,27 @@ CUTE_API void CUTE_CALL cf_image_flip_horizontal(cf_image_t* img);
 namespace cute
 {
 
-using image_t = cf_image_t;
-using image_indexed_t = cf_image_indexed_t;
+using Image = CF_Image;
+using ImageIndexed = CF_ImageIndexed;
 
 // -------------------------------------------------------------------------------------------------
 // PNG loading.
 
-CUTE_INLINE result_t image_load_png(const char* virtual_path, image_t* img) { return cf_image_load_png(virtual_path, img); }
-CUTE_INLINE result_t image_load_png_mem(const void* data, int size, image_t* img) { return cf_image_load_png_mem(data, size, img); }
-CUTE_INLINE result_t image_load_png_wh(const void* data, int size, int* w, int* h) { return cf_image_load_png_wh(data, size, w, h); }
-CUTE_INLINE void image_free(image_t* img) { cf_image_free(img); }
+CUTE_INLINE Result image_load_png(const char* virtual_path, Image* img) { return cf_image_load_png(virtual_path, img); }
+CUTE_INLINE Result image_load_png_mem(const void* data, int size, Image* img) { return cf_image_load_png_mem(data, size, img); }
+CUTE_INLINE Result image_load_png_wh(const void* data, int size, int* w, int* h) { return cf_image_load_png_wh(data, size, w, h); }
+CUTE_INLINE void image_free(Image* img) { cf_image_free(img); }
 
-CUTE_INLINE result_t image_load_png_indexed(const char* virtual_path, image_indexed_t* img) { return cf_image_load_png_indexed(virtual_path, img); }
-CUTE_INLINE result_t image_load_png_mem_indexed(const void* data, int size, image_indexed_t* img) { return cf_image_load_png_mem_indexed(data, size, img); }
-CUTE_INLINE void image_free(image_indexed_t* img) { cf_image_free_indexed(img); }
+CUTE_INLINE Result image_load_png_indexed(const char* virtual_path, ImageIndexed* img) { return cf_image_load_png_indexed(virtual_path, img); }
+CUTE_INLINE Result image_load_png_mem_indexed(const void* data, int size, ImageIndexed* img) { return cf_image_load_png_mem_indexed(data, size, img); }
+CUTE_INLINE void image_free(ImageIndexed* img) { cf_image_free_indexed(img); }
 
 // -------------------------------------------------------------------------------------------------
 // Image operations.
 
-CUTE_INLINE image_t image_depallete(image_indexed_t* img) { return cf_image_depallete(img); }
-CUTE_INLINE void image_premultiply(image_t* img) { cf_image_premultiply(img); }
-CUTE_INLINE void image_flip_horizontal(image_t* img) { cf_image_flip_horizontal(img); }
+CUTE_INLINE Image image_depallete(ImageIndexed* img) { return cf_image_depallete(img); }
+CUTE_INLINE void image_premultiply(Image* img) { cf_image_premultiply(img); }
+CUTE_INLINE void image_flip_horizontal(Image* img) { cf_image_flip_horizontal(img); }
 
 }
 

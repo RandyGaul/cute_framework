@@ -32,14 +32,14 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef struct cf_guid_t
+typedef struct CF_Guid
 {
 	uint8_t data[16];
-} cf_guid_t;
+} CF_Guid;
 
 
-CUTE_API cf_guid_t CUTE_CALL cf_make_guid();
-CUTE_INLINE bool cf_guid_equal(cf_guid_t a, cf_guid_t b) { return !CUTE_MEMCMP(&a, &b, sizeof(a)); }
+CUTE_API CF_Guid CUTE_CALL cf_make_guid();
+CUTE_INLINE bool cf_guid_equal(CF_Guid a, CF_Guid b) { return !CUTE_MEMCMP(&a, &b, sizeof(a)); }
 
 #ifdef __cplusplus
 }
@@ -53,7 +53,7 @@ CUTE_INLINE bool cf_guid_equal(cf_guid_t a, cf_guid_t b) { return !CUTE_MEMCMP(&
 namespace cute
 {
 
-using guid_t = cf_guid_t;
+using guid_t = CF_Guid;
 CUTE_INLINE bool operator==(guid_t a, guid_t b) { return cf_guid_equal(a, b); }
 CUTE_INLINE bool operator!=(guid_t a, guid_t b) { return !cf_guid_equal(a, b); }
 

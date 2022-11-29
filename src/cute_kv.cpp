@@ -50,9 +50,9 @@ union cf_kv_union_t
 
 struct cf_kv_val_t
 {
-	cf_kv_type_t type = CF_KV_TYPE_NULL;
+	CF_KeyValueype_t type = CF_KV_TYPE_NULL;
 	cf_kv_union_t u;
-	array<cf_kv_val_t> aval;
+	Array<cf_kv_val_t> aval;
 };
 
 struct cf_kv_field_t
@@ -67,7 +67,7 @@ struct cf_kv_object_t
 	int parsing_array = 0;
 
 	cf_kv_string_t key;
-	array<cf_kv_field_t> fields;
+	Array<cf_kv_field_t> fields;
 };
 
 #define CUTE_KV_NOT_IN_ARRAY               0
@@ -76,44 +76,44 @@ struct cf_kv_object_t
 
 struct cf_kv_cache_t
 {
-	cf_kv_t* kv = NULL;
+	CF_KeyValue* kv = NULL;
 	int object_index = 0;
 };
 
-struct cf_kv_t
+struct CF_KeyValue
 {
-	cf_kv_state_t mode;
+	CF_KeyValueState mode;
 	uint8_t* in = NULL;
 	uint8_t* in_end = NULL;
 	uint8_t* start = NULL;
-	string_t write_buffer;
+	String write_buffer;
 
 	// Reading state.
 	int object_skip_count = 0;
 	cf_kv_val_t* matched_val = NULL;
 	int matched_cache_index = ~0;
 	cf_kv_val_t* matched_cache_val = NULL;
-	array<cf_kv_cache_t> cache;
-	array<cf_kv_object_t> objects;
+	Array<cf_kv_cache_t> cache;
+	Array<cf_kv_object_t> objects;
 
 	int read_mode_from_array = 0;
-	array<cf_kv_val_t*> read_mode_array_stack;
-	array<int> read_mode_array_index_stack;
+	Array<cf_kv_val_t*> read_mode_array_stack;
+	Array<int> read_mode_array_index_stack;
 
 	// Writing state.
 	size_t backup_base_key_bytes = 0;
-	cf_kv_t* base = NULL;
+	CF_KeyValue* base = NULL;
 	int in_array = CUTE_KV_NOT_IN_ARRAY;
-	array<int> in_array_stack;
+	Array<int> in_array_stack;
 	int tabs = 0;
 
 	CF_Result last_err = cf_result_success();
 };
 
-static cf_kv_t* s_kv()
+static CF_KeyValue* s_kv()
 {
-	cf_kv_t* kv = (cf_kv_t*)CUTE_ALLOC(sizeof(cf_kv_t));
-	CUTE_PLACEMENT_NEW(kv) cf_kv_t;
+	CF_KeyValue* kv = (CF_KeyValue*)CUTE_ALLOC(sizeof(CF_KeyValue));
+	CUTE_PLACEMENT_NEW(kv) CF_KeyValue;
 
 	cf_kv_cache_t cache;
 	cache.kv = kv;
@@ -122,33 +122,33 @@ static cf_kv_t* s_kv()
 	return kv;
 }
 
-void cf_kv_destroy(cf_kv_t* kv)
+void cf_kv_destroy(CF_KeyValue* kv)
 {
 	if (kv) {
-		kv->~cf_kv_t();
+		kv->~CF_KeyValue();
 		CUTE_FREE(kv);
 	}
 }
 
-static CUTE_INLINE void s_push_array(cf_kv_t* kv, int in_array)
+static CUTE_INLINE void s_push_array(CF_KeyValue* kv, int in_array)
 {
 	kv->in_array_stack.add(kv->in_array);
 	kv->in_array = in_array;
 }
 
-static CUTE_INLINE void s_pop_array(cf_kv_t* kv)
+static CUTE_INLINE void s_pop_array(CF_KeyValue* kv)
 {
 	kv->in_array = kv->in_array_stack.pop();
 }
 
-static CUTE_INLINE void s_push_read_mode_array(cf_kv_t* kv, cf_kv_val_t* val)
+static CUTE_INLINE void s_push_read_mode_array(CF_KeyValue* kv, cf_kv_val_t* val)
 {
 	kv->read_mode_array_stack.add(val);
 	kv->read_mode_array_index_stack.add(0);
 	kv->read_mode_from_array = val ? 1 : 0;
 }
 
-static CUTE_INLINE void s_pop_read_mode_array(cf_kv_t* kv)
+static CUTE_INLINE void s_pop_read_mode_array(CF_KeyValue* kv)
 {
 	kv->read_mode_array_stack.pop();
 	kv->read_mode_array_index_stack.pop();
@@ -169,18 +169,18 @@ static CUTE_INLINE int s_isspace(uint8_t c)
 		(c == '\r');
 }
 
-static CUTE_INLINE void s_skip_white(cf_kv_t* kv)
+static CUTE_INLINE void s_skip_white(CF_KeyValue* kv)
 {
 	while (kv->in < kv->in_end && s_isspace(*kv->in)) kv->in++;
 }
 
-static CUTE_INLINE uint8_t s_peek(cf_kv_t* kv)
+static CUTE_INLINE uint8_t s_peek(CF_KeyValue* kv)
 {
 	while (kv->in < kv->in_end && s_isspace(*kv->in)) kv->in++;
 	return kv->in < kv->in_end ? *kv->in : 0;
 }
 
-static CUTE_INLINE uint8_t s_next(cf_kv_t* kv)
+static CUTE_INLINE uint8_t s_next(CF_KeyValue* kv)
 {
 	uint8_t c;
 	if (kv->in == kv->in_end) return 0;
@@ -188,7 +188,7 @@ static CUTE_INLINE uint8_t s_next(cf_kv_t* kv)
 	return c;
 }
 
-static CUTE_INLINE int s_try(cf_kv_t* kv, uint8_t expect)
+static CUTE_INLINE int s_try(CF_KeyValue* kv, uint8_t expect)
 {
 	if (kv->in == kv->in_end) return 0;
 	if (s_peek(kv) == expect) {
@@ -203,7 +203,7 @@ static CUTE_INLINE int s_try(cf_kv_t* kv, uint8_t expect)
 		if (s_next(kv) != expected_character) { kv->last_err = cf_result_error("Found unexpected token."); return kv->last_err; } \
 	} while (0)
 
-static CF_Result s_scan_string(cf_kv_t* kv, uint8_t** start_of_string, uint8_t** end_of_string)
+static CF_Result s_scan_string(CF_KeyValue* kv, uint8_t** start_of_string, uint8_t** end_of_string)
 {
 	*start_of_string = NULL;
 	*end_of_string = NULL;
@@ -233,7 +233,7 @@ static CF_Result s_scan_string(cf_kv_t* kv, uint8_t** start_of_string, uint8_t**
 	return cf_result_success();
 }
 
-static CF_Result s_scan_string(cf_kv_t* kv, cf_kv_string_t* str)
+static CF_Result s_scan_string(CF_KeyValue* kv, cf_kv_string_t* str)
 {
 	uint8_t* string_start;
 	uint8_t* string_end;
@@ -243,7 +243,7 @@ static CF_Result s_scan_string(cf_kv_t* kv, cf_kv_string_t* str)
 	return err;
 }
 
-static CUTE_INLINE CF_Result s_parse_int(cf_kv_t* kv, int64_t* out)
+static CUTE_INLINE CF_Result s_parse_int(CF_KeyValue* kv, int64_t* out)
 {
 	uint8_t* end;
 	int64_t val = CUTE_STRTOLL((char*)kv->in, (char**)&end, 10);
@@ -256,7 +256,7 @@ static CUTE_INLINE CF_Result s_parse_int(cf_kv_t* kv, int64_t* out)
 	return cf_result_success();
 }
 
-static CUTE_INLINE CF_Result s_parse_float(cf_kv_t* kv, double* out)
+static CUTE_INLINE CF_Result s_parse_float(CF_KeyValue* kv, double* out)
 {
 	uint8_t* end;
 	double val = CUTE_STRTOD((char*)kv->in, (char**)&end);
@@ -269,7 +269,7 @@ static CUTE_INLINE CF_Result s_parse_float(cf_kv_t* kv, double* out)
 	return cf_result_success();
 }
 
-static CF_Result s_parse_hex(cf_kv_t* kv, uint64_t* hex)
+static CF_Result s_parse_hex(CF_KeyValue* kv, uint64_t* hex)
 {
 	s_expect(kv, '0');
 	uint8_t c = s_next(kv);
@@ -288,7 +288,7 @@ static CF_Result s_parse_hex(cf_kv_t* kv, uint64_t* hex)
 	return cf_result_success();
 }
 
-static CUTE_INLINE CF_Result s_parse_number(cf_kv_t* kv, cf_kv_val_t* val)
+static CUTE_INLINE CF_Result s_parse_number(CF_KeyValue* kv, cf_kv_val_t* val)
 {
 	CF_Result err;
 	if (kv->in + 1 < kv->in_end && ((kv->in[1] == 'x') | (kv->in[1] == 'X'))) {
@@ -325,9 +325,9 @@ static CUTE_INLINE CF_Result s_parse_number(cf_kv_t* kv, cf_kv_val_t* val)
 	return cf_result_success();
 }
 
-static CF_Result s_parse_value(cf_kv_t* kv, cf_kv_val_t* val);
+static CF_Result s_parse_value(CF_KeyValue* kv, cf_kv_val_t* val);
 
-static CF_Result s_parse_array(cf_kv_t* kv, array<cf_kv_val_t>* array_val)
+static CF_Result s_parse_array(CF_KeyValue* kv, Array<cf_kv_val_t>* array_val)
 {
 	CF_Result err;
 	int64_t count;
@@ -349,9 +349,9 @@ static CF_Result s_parse_array(cf_kv_t* kv, array<cf_kv_val_t>* array_val)
 	return cf_result_success();
 }
 
-static CF_Result s_parse_object(cf_kv_t* kv, int* index, bool is_top_level = false);
+static CF_Result s_parse_object(CF_KeyValue* kv, int* index, bool is_top_level = false);
 
-static CF_Result s_parse_value(cf_kv_t* kv, cf_kv_val_t* val)
+static CF_Result s_parse_value(CF_KeyValue* kv, cf_kv_val_t* val)
 {
 	CF_Result err;
 	uint8_t c = s_peek(kv);
@@ -385,7 +385,7 @@ static CF_Result s_parse_value(cf_kv_t* kv, cf_kv_val_t* val)
 	return cf_result_success();
 }
 
-static CF_Result s_parse_object(cf_kv_t* kv, int* index, bool is_top_level)
+static CF_Result s_parse_object(CF_KeyValue* kv, int* index, bool is_top_level)
 {
 	cf_kv_object_t* object = &kv->objects.add();
 	CUTE_PLACEMENT_NEW(object) cf_kv_object_t;
@@ -423,7 +423,7 @@ static CF_Result s_parse_object(cf_kv_t* kv, int* index, bool is_top_level)
 		} else if (field->val.type == CF_KV_TYPE_ARRAY) {
 			int count = field->val.aval.count();
 			if (count && field->val.aval[0].type == CF_KV_TYPE_OBJECT) {
-				array<cf_kv_val_t>& object_val_array = field->val.aval;
+				Array<cf_kv_val_t>& object_val_array = field->val.aval;
 				for (int i = 0; i < count; ++i) {
 					int object_index = object_val_array[i].u.object_index;
 					kv->objects[object_index].parent_index = parent_index;
@@ -439,7 +439,7 @@ static CF_Result s_parse_object(cf_kv_t* kv, int* index, bool is_top_level)
 	return cf_result_success();
 }
 
-static void s_set_mode(cf_kv_t* kv, const void* ptr, size_t size, cf_kv_state_t mode)
+static void s_set_mode(CF_KeyValue* kv, const void* ptr, size_t size, CF_KeyValueState mode)
 {
 	kv->start = (uint8_t*)ptr;
 	kv->in = (uint8_t*)ptr;
@@ -458,7 +458,7 @@ static void s_set_mode(cf_kv_t* kv, const void* ptr, size_t size, cf_kv_state_t 
 	kv->last_err = cf_result_success();
 }
 
-void cf_read_reset(cf_kv_t* kv)
+void cf_read_reset(CF_KeyValue* kv)
 {
 	CUTE_ASSERT(kv->mode == CF_KV_STATE_READ);
 	kv->read_mode_from_array = 0;
@@ -470,14 +470,14 @@ void cf_read_reset(cf_kv_t* kv)
 	kv->matched_cache_val = NULL;
 }
 
-cf_kv_state_t cf_kv_state(cf_kv_t* kv)
+CF_KeyValueState cf_kv_state(CF_KeyValue* kv)
 {
 	return kv->mode;
 }
 
-cf_kv_t* cf_kv_read(const void* data, size_t size, result_t* result_out)
+CF_KeyValue* cf_kv_read(const void* data, size_t size, Result* result_out)
 {
-	cf_kv_t* kv = s_kv();
+	CF_KeyValue* kv = s_kv();
 	s_set_mode(kv, data, size, CF_KV_STATE_READ);
 
 	bool is_top_level = true;
@@ -507,26 +507,26 @@ cf_kv_t* cf_kv_read(const void* data, size_t size, result_t* result_out)
 	return kv;
 }
 
-cf_kv_t* CUTE_CALL cf_kv_write()
+CF_KeyValue* CUTE_CALL cf_kv_write()
 {
-	cf_kv_t* kv = s_kv();
+	CF_KeyValue* kv = s_kv();
 	s_set_mode(kv, NULL, 0, CF_KV_STATE_WRITE);
 	return kv;
 }
 
-const char* cf_kv_buffer(cf_kv_t* kv)
+const char* cf_kv_buffer(CF_KeyValue* kv)
 {
 	return kv->write_buffer;
 }
 
-size_t cf_kv_buffer_size(cf_kv_t* kv)
+size_t cf_kv_buffer_size(CF_KeyValue* kv)
 {
 	return kv->write_buffer.len();
 }
 
-static void s_build_cache(cf_kv_t* kv)
+static void s_build_cache(CF_KeyValue* kv)
 {
-	cf_kv_t* base = kv->base;
+	CF_KeyValue* base = kv->base;
 	while (base) {
 		CUTE_ASSERT(base->mode == CF_KV_STATE_READ);
 		cf_kv_cache_t cache;
@@ -536,25 +536,25 @@ static void s_build_cache(cf_kv_t* kv)
 	}
 }
 
-void cf_kv_set_base(cf_kv_t* kv, cf_kv_t* base)
+void cf_kv_set_base(CF_KeyValue* kv, CF_KeyValue* base)
 {
 	CUTE_ASSERT(base->mode == CF_KV_STATE_READ);
 	kv->base = base;
 	s_build_cache(kv);
 }
 
-CF_Result cf_kv_last_error(cf_kv_t* kv)
+CF_Result cf_kv_last_error(CF_KeyValue* kv)
 {
 	if (!kv) return cf_result_success();
 	return kv->last_err;
 }
 
-static CUTE_INLINE void s_write_u8(cf_kv_t* kv, uint8_t val)
+static CUTE_INLINE void s_write_u8(CF_KeyValue* kv, uint8_t val)
 {
 	kv->write_buffer.add(val);
 }
 
-static CUTE_INLINE void s_try_consume_one_tab(cf_kv_t* kv)
+static CUTE_INLINE void s_try_consume_one_tab(CF_KeyValue* kv)
 {
 	CUTE_ASSERT(kv->mode == CF_KV_STATE_WRITE);
 	char last = kv->write_buffer.last();
@@ -563,7 +563,7 @@ static CUTE_INLINE void s_try_consume_one_tab(cf_kv_t* kv)
 	}
 }
 
-static CUTE_INLINE void s_try_consume_whitespace(cf_kv_t* kv)
+static CUTE_INLINE void s_try_consume_whitespace(CF_KeyValue* kv)
 {
 	CUTE_ASSERT(kv->mode == CF_KV_STATE_WRITE);
 	while (kv->write_buffer.size() && s_isspace(kv->write_buffer.last())) {
@@ -571,12 +571,12 @@ static CUTE_INLINE void s_try_consume_whitespace(cf_kv_t* kv)
 	}
 }
 
-static CUTE_INLINE void s_tabs_delta(cf_kv_t* kv, int delta)
+static CUTE_INLINE void s_tabs_delta(CF_KeyValue* kv, int delta)
 {
 	kv->tabs += delta;
 }
 
-static CUTE_INLINE void s_tabs(cf_kv_t* kv)
+static CUTE_INLINE void s_tabs(CF_KeyValue* kv)
 {
 	int tabs = kv->tabs;
 	for (int i = 0; i < tabs; ++i) {
@@ -584,20 +584,20 @@ static CUTE_INLINE void s_tabs(cf_kv_t* kv)
 	}
 }
 
-static CUTE_INLINE void s_write_str_no_quotes(cf_kv_t* kv, const char* str, size_t len)
+static CUTE_INLINE void s_write_str_no_quotes(CF_KeyValue* kv, const char* str, size_t len)
 {
 	kv->write_buffer.fit((int)(kv->write_buffer.count() + len));
 	kv->write_buffer.append(str, str + len);
 }
 
-static CUTE_INLINE void s_write_str(cf_kv_t* kv, const char* str, size_t len)
+static CUTE_INLINE void s_write_str(CF_KeyValue* kv, const char* str, size_t len)
 {
 	s_write_u8(kv, '"');
 	s_write_str_no_quotes(kv, str, len);
 	s_write_u8(kv, '"');
 }
 
-static CUTE_INLINE void s_write_str(cf_kv_t* kv, const char* str)
+static CUTE_INLINE void s_write_str(CF_KeyValue* kv, const char* str)
 {
 	s_write_str(kv, str, (int)CUTE_STRLEN(str));
 }
@@ -616,7 +616,7 @@ static CUTE_INLINE cf_kv_field_t* s_find_field(cf_kv_object_t* object, const cha
 	return NULL;
 }
 
-static void s_match_key(cf_kv_t* kv, const char* key)
+static void s_match_key(CF_KeyValue* kv, const char* key)
 {
 	kv->matched_val = NULL;
 	kv->matched_cache_val = NULL;
@@ -624,7 +624,7 @@ static void s_match_key(cf_kv_t* kv, const char* key)
 
 	for (int i = 0; i < kv->cache.count(); ++i) {
 		cf_kv_cache_t cache = kv->cache[i];
-		cf_kv_t* base = cache.kv;
+		CF_KeyValue* base = cache.kv;
 		if (!base->objects.count()) continue;
 		cf_kv_object_t* object = base->objects + cache.object_index;
 		cf_kv_field_t* field = s_find_field(object, key);
@@ -642,14 +642,14 @@ static void s_match_key(cf_kv_t* kv, const char* key)
 	}
 }
 
-static void s_write_key(cf_kv_t* kv, const char* key, cf_kv_type_t* type)
+static void s_write_key(CF_KeyValue* kv, const char* key, CF_KeyValueype_t* type)
 {
 	CUTE_UNUSED(type);
 	s_write_str_no_quotes(kv, key, (int)CUTE_STRLEN(key));
 	s_write_str_no_quotes(kv, " = ", 3);
 }
 
-bool cf_kv_key(cf_kv_t* kv, const char* key, cf_kv_type_t* type)
+bool cf_kv_key(CF_KeyValue* kv, const char* key, CF_KeyValueype_t* type)
 {
 	s_match_key(kv, key);
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -679,27 +679,27 @@ bool cf_kv_key(cf_kv_t* kv, const char* key, cf_kv_type_t* type)
 	return true;
 }
 
-static void s_write(cf_kv_t* kv, uint64_t val)
+static void s_write(CF_KeyValue* kv, uint64_t val)
 {
 	kv->write_buffer.fmt_append("%" PRIu64, val);
 }
 
-static void s_write(cf_kv_t* kv, int64_t val)
+static void s_write(CF_KeyValue* kv, int64_t val)
 {
 	kv->write_buffer.fmt_append("%" PRIi64, val);
 }
 
-static void s_write(cf_kv_t* kv, float val)
+static void s_write(CF_KeyValue* kv, float val)
 {
 	kv->write_buffer.fmt_append("%f", val);
 }
 
-static void s_write(cf_kv_t* kv, double val)
+static void s_write(CF_KeyValue* kv, double val)
 {
 	kv->write_buffer.fmt_append("%f", val);
 }
 
-static CUTE_INLINE void s_begin_val(cf_kv_t* kv)
+static CUTE_INLINE void s_begin_val(CF_KeyValue* kv)
 {
 	if (kv->in_array) {
 		if (kv->in_array == CUTE_KV_IN_ARRAY_AND_FIRST_ELEMENT) {
@@ -710,7 +710,7 @@ static CUTE_INLINE void s_begin_val(cf_kv_t* kv)
 	}
 }
 
-static CUTE_INLINE void s_end_val(cf_kv_t* kv)
+static CUTE_INLINE void s_end_val(CF_KeyValue* kv)
 {
 	s_write_u8(kv, ',');
 	if (!kv->in_array) {
@@ -719,7 +719,7 @@ static CUTE_INLINE void s_end_val(cf_kv_t* kv)
 	}
 }
 
-static CUTE_INLINE cf_kv_val_t* s_pop_val(cf_kv_t* kv, cf_kv_type_t type, bool pop_val = true)
+static CUTE_INLINE cf_kv_val_t* s_pop_val(CF_KeyValue* kv, CF_KeyValueype_t type, bool pop_val = true)
 {
 	if (kv->read_mode_from_array) {
 		cf_kv_val_t* array_val = kv->read_mode_array_stack.last();
@@ -748,7 +748,7 @@ static CUTE_INLINE cf_kv_val_t* s_pop_val(cf_kv_t* kv, cf_kv_type_t type, bool p
 	}
 }
 
-static cf_kv_val_t* s_pop_base_val(cf_kv_t* kv, cf_kv_type_t type, bool pop_val = true)
+static cf_kv_val_t* s_pop_base_val(CF_KeyValue* kv, CF_KeyValueype_t type, bool pop_val = true)
 {
 	cf_kv_val_t* match = NULL;
 	if (kv->matched_cache_val) {
@@ -767,7 +767,7 @@ static cf_kv_val_t* s_pop_base_val(cf_kv_t* kv, cf_kv_type_t type, bool pop_val 
 	return val;
 }
 
-static void s_backup_base_key(cf_kv_t* kv)
+static void s_backup_base_key(CF_KeyValue* kv)
 {
 	if (kv->backup_base_key_bytes) {
 		while (kv->backup_base_key_bytes--) {
@@ -777,7 +777,7 @@ static void s_backup_base_key(cf_kv_t* kv)
 }
 
 template <typename T>
-static inline bool s_does_matched_base_equal_int64(cf_kv_t* kv, T* val)
+static inline bool s_does_matched_base_equal_int64(CF_KeyValue* kv, T* val)
 {
 	cf_kv_val_t* match_base = s_pop_base_val(kv, CF_KV_TYPE_INT64);
 	if (match_base) {
@@ -796,7 +796,7 @@ static inline bool s_does_matched_base_equal_int64(cf_kv_t* kv, T* val)
 }
 
 template <typename T>
-bool s_find_match_int64(cf_kv_t* kv, T* val)
+bool s_find_match_int64(CF_KeyValue* kv, T* val)
 {
 	cf_kv_val_t* match = s_pop_val(kv, CF_KV_TYPE_INT64);
 	cf_kv_val_t* match_base = s_pop_base_val(kv, CF_KV_TYPE_INT64);
@@ -816,7 +816,7 @@ bool s_find_match_int64(cf_kv_t* kv, T* val)
 	return true;
 }
 
-bool cf_kv_val_uint8(cf_kv_t* kv, uint8_t* val)
+bool cf_kv_val_uint8(CF_KeyValue* kv, uint8_t* val)
 {
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (s_does_matched_base_equal_int64(kv, val)) {
@@ -831,7 +831,7 @@ bool cf_kv_val_uint8(cf_kv_t* kv, uint8_t* val)
 	return true;
 }
 
-bool cf_kv_val_uint16(cf_kv_t* kv, uint16_t* val)
+bool cf_kv_val_uint16(CF_KeyValue* kv, uint16_t* val)
 {
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (s_does_matched_base_equal_int64(kv, val)) {
@@ -846,7 +846,7 @@ bool cf_kv_val_uint16(cf_kv_t* kv, uint16_t* val)
 	return true;
 }
 
-bool cf_kv_val_uint32(cf_kv_t* kv, uint32_t* val)
+bool cf_kv_val_uint32(CF_KeyValue* kv, uint32_t* val)
 {
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (s_does_matched_base_equal_int64(kv, val)) {
@@ -861,7 +861,7 @@ bool cf_kv_val_uint32(cf_kv_t* kv, uint32_t* val)
 	return true;
 }
 
-bool cf_kv_val_uint64(cf_kv_t* kv, uint64_t* val)
+bool cf_kv_val_uint64(CF_KeyValue* kv, uint64_t* val)
 {
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (s_does_matched_base_equal_int64(kv, val)) {
@@ -876,7 +876,7 @@ bool cf_kv_val_uint64(cf_kv_t* kv, uint64_t* val)
 	return true;
 }
 
-bool cf_kv_val_int8(cf_kv_t* kv, int8_t* val)
+bool cf_kv_val_int8(CF_KeyValue* kv, int8_t* val)
 {
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (s_does_matched_base_equal_int64(kv, val)) {
@@ -891,7 +891,7 @@ bool cf_kv_val_int8(cf_kv_t* kv, int8_t* val)
 	return true;
 }
 
-bool cf_kv_val_int16(cf_kv_t* kv, int16_t* val)
+bool cf_kv_val_int16(CF_KeyValue* kv, int16_t* val)
 {
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (s_does_matched_base_equal_int64(kv, val)) {
@@ -906,7 +906,7 @@ bool cf_kv_val_int16(cf_kv_t* kv, int16_t* val)
 	return true;
 }
 
-bool cf_kv_val_int32(cf_kv_t* kv, int32_t* val)
+bool cf_kv_val_int32(CF_KeyValue* kv, int32_t* val)
 {
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (s_does_matched_base_equal_int64(kv, val)) {
@@ -921,7 +921,7 @@ bool cf_kv_val_int32(cf_kv_t* kv, int32_t* val)
 	return true;
 }
 
-bool cf_kv_val_int64(cf_kv_t* kv, int64_t* val)
+bool cf_kv_val_int64(CF_KeyValue* kv, int64_t* val)
 {
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		if (s_does_matched_base_equal_int64(kv, val)) {
@@ -936,7 +936,7 @@ bool cf_kv_val_int64(cf_kv_t* kv, int64_t* val)
 	return true;
 }
 
-bool cf_kv_val_float(cf_kv_t* kv, float* val)
+bool cf_kv_val_float(CF_KeyValue* kv, float* val)
 {
 	cf_kv_val_t* match = s_pop_val(kv, CF_KV_TYPE_DOUBLE);
 	cf_kv_val_t* match_base = s_pop_base_val(kv, CF_KV_TYPE_DOUBLE);
@@ -968,7 +968,7 @@ bool cf_kv_val_float(cf_kv_t* kv, float* val)
 	return true;
 }
 
-bool cf_kv_val_double(cf_kv_t* kv, double* val)
+bool cf_kv_val_double(CF_KeyValue* kv, double* val)
 {
 	cf_kv_val_t* match = s_pop_val(kv, CF_KV_TYPE_DOUBLE);
 	cf_kv_val_t* match_base = s_pop_base_val(kv, CF_KV_TYPE_DOUBLE);
@@ -1000,7 +1000,7 @@ bool cf_kv_val_double(cf_kv_t* kv, double* val)
 	return true;
 }
 
-bool cf_kv_val_bool(cf_kv_t* kv, bool* val)
+bool cf_kv_val_bool(CF_KeyValue* kv, bool* val)
 {
 	if (kv->mode == CF_KV_STATE_READ) {
 		const char* string;
@@ -1023,7 +1023,7 @@ bool cf_kv_val_bool(cf_kv_t* kv, bool* val)
 	}
 }
 
-bool cf_kv_val_string(cf_kv_t* kv, const char** str, size_t* size)
+bool cf_kv_val_string(CF_KeyValue* kv, const char** str, size_t* size)
 {
 	if (kv->mode == CF_KV_STATE_READ) {
 		*str = NULL;
@@ -1053,7 +1053,7 @@ bool cf_kv_val_string(cf_kv_t* kv, const char** str, size_t* size)
 	return true;
 }
 
-bool cf_kv_val_blob(cf_kv_t* kv, void* data, size_t data_capacity, size_t* data_len)
+bool cf_kv_val_blob(CF_KeyValue* kv, void* data, size_t data_capacity, size_t* data_len)
 {
 	if (kv->mode == CF_KV_STATE_READ) *data_len = 0;
 	cf_kv_val_t* match = s_pop_val(kv, CF_KV_TYPE_STRING);
@@ -1094,7 +1094,7 @@ bool cf_kv_val_blob(cf_kv_t* kv, void* data, size_t data_capacity, size_t* data_
 	return true;
 }
 
-bool cf_kv_object_begin(cf_kv_t* kv, const char* key)
+bool cf_kv_object_begin(CF_KeyValue* kv, const char* key)
 {
 	if (key) {
 		if (!cf_kv_key(kv, key, NULL)) {
@@ -1130,7 +1130,7 @@ bool cf_kv_object_begin(cf_kv_t* kv, const char* key)
 	return true;
 }
 
-bool cf_kv_object_end(cf_kv_t* kv)
+bool cf_kv_object_end(CF_KeyValue* kv)
 {
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		s_tabs_delta(kv, -1);
@@ -1158,7 +1158,7 @@ bool cf_kv_object_end(cf_kv_t* kv)
 	return true;
 }
 
-bool cf_kv_array_begin(cf_kv_t* kv, int* count, const char* key)
+bool cf_kv_array_begin(CF_KeyValue* kv, int* count, const char* key)
 {
 	if (key) {
 		if (!cf_kv_key(kv, key, NULL)) {
@@ -1191,7 +1191,7 @@ bool cf_kv_array_begin(cf_kv_t* kv, int* count, const char* key)
 	return true;
 }
 
-bool cf_kv_array_end(cf_kv_t* kv)
+bool cf_kv_array_end(CF_KeyValue* kv)
 {
 	if (kv->mode == CF_KV_STATE_WRITE) {
 		s_tabs_delta(kv, -1);

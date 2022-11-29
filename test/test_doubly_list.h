@@ -26,11 +26,11 @@ using namespace cute;
 CUTE_TEST_CASE(test_doubly_list, "Make list of three elements, perform all operations on it, assert correctness.");
 int test_doubly_list()
 {
-	cf_list_t list;
+	CF_List list;
 
-	cf_list_node_t a;
-	cf_list_node_t b;
-	cf_list_node_t c;
+	CF_ListNode a;
+	CF_ListNode b;
+	CF_ListNode c;
 
 	cf_list_init(&list);
 	cf_list_init_node(&a);
@@ -60,9 +60,9 @@ int test_doubly_list()
 	CUTE_TEST_ASSERT(cf_list_front(&list) == &b);
 	CUTE_TEST_ASSERT(cf_list_back(&list) == &c);
 
-	cf_list_node_t* nodes[3] = { &b, &a, &c };
+	CF_ListNode* nodes[3] = { &b, &a, &c };
 	int index = 0;
-	for (cf_list_node_t* n = cf_list_begin(&list); n != cf_list_end(&list); n = n->next)
+	for (CF_ListNode* n = cf_list_begin(&list); n != cf_list_end(&list); n = n->next)
 	{
 		CUTE_TEST_ASSERT(n == nodes[index++]);
 	}

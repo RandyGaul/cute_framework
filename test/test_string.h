@@ -242,10 +242,10 @@ int test_string_interning()
 	return 0;
 }
 
-CUTE_TEST_CASE(test_dictionary_and_interning, "Run dictionary<T> API and sintern API");
+CUTE_TEST_CASE(test_dictionary_and_interning, "Run Dictionary<T> API and sintern API");
 int test_dictionary_and_interning()
 {
-	dictionary<const char*, int> h;
+	Dictionary<const char*, int> h;
 	const char* a = "test 1";
 	const char* b = "test 2";
 	const char* ia = sintern(a);

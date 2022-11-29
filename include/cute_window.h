@@ -56,14 +56,14 @@ CUTE_API bool CUTE_CALL cf_window_mouse_inside();
 	CF_ENUM(WINDOW_MESSAGE_BOX_TYPE_WARNING, 1) \
 	CF_ENUM(WINDOW_MESSAGE_BOX_TYPE_INFORMATION, 2) \
 
-typedef enum cf_window_message_box_type_t
+typedef enum CF_WindowMessageBoxType
 {
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_WINDOW_MESSAGE_BOX_TYPE_DEFS
 	#undef CF_ENUM
-} cf_window_message_box_type_t;
+} CF_WindowMessageBoxType;
 
-CUTE_API void CUTE_CALL cf_window_message_box(cf_window_message_box_type_t type, const char* title, const char* text);
+CUTE_API void CUTE_CALL cf_window_message_box(CF_WindowMessageBoxType type, const char* title, const char* text);
 
 #ifdef CUTE_DEBUG
 #endif
@@ -102,7 +102,7 @@ CUTE_INLINE bool window_was_restored() { return cf_window_was_restored(); }
 CUTE_INLINE bool window_mouse_entered() { return cf_window_mouse_entered(); }
 CUTE_INLINE bool window_mouse_exited() { return cf_window_mouse_exited(); }
 CUTE_INLINE bool window_mouse_inside() { return cf_window_mouse_inside(); }
-CUTE_INLINE void window_message_box(window_message_box_type_t type, const char* title, const char* text) { return cf_window_message_box((cf_window_message_box_type_t)type, title, text); }
+CUTE_INLINE void window_message_box(window_message_box_type_t type, const char* title, const char* text) { return cf_window_message_box((CF_WindowMessageBoxType)type, title, text); }
 
 }
 

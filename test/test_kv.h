@@ -56,7 +56,7 @@ struct thing_t
 	};
 };
 
-bool do_serialize(cf_kv_t* kv, thing_t* thing)
+bool do_serialize(CF_KeyValue* kv, thing_t* thing)
 {
 	size_t len;
 	CUTE_RETURN_IF_FALSE(cf_kv_key(kv, "a", NULL)); CUTE_RETURN_IF_FALSE(cf_kv_val_int32(kv, &thing->a));
@@ -112,7 +112,7 @@ bool do_serialize(cf_kv_t* kv, thing_t* thing)
 CUTE_TEST_CASE(test_kv_basic, "Fairly comprehensive test for basic kv to and from buffer.");
 int test_kv_basic()
 {
-	cf_kv_t* kv0 = cf_kv_write();
+	CF_KeyValue* kv0 = cf_kv_write();
 
 	thing_t thing;
 	thing.a = 5;
@@ -166,7 +166,7 @@ int test_kv_basic()
 	const char* buffer = cf_kv_buffer(kv0);
 	CUTE_TEST_ASSERT(!CUTE_STRNCMP(buffer, expected, size));
 
-	cf_kv_t* kv1 = cf_kv_read(buffer, size, NULL);
+	CF_KeyValue* kv1 = cf_kv_read(buffer, size, NULL);
 	CUTE_TEST_ASSERT(kv1);
 
 	CUTE_MEMSET(&thing, 0, sizeof(thing_t));
@@ -180,7 +180,7 @@ int test_kv_basic()
 
 #include <string>
 
-CUTE_INLINE bool cf_kv_val(cf_kv_t* kv, std::string* val)
+CUTE_INLINE bool cf_kv_val(CF_KeyValue* kv, std::string* val)
 {
 	const char* ptr = val->data();
 	size_t len = val->length();
@@ -196,13 +196,13 @@ int test_kv_std_string_to_disk()
 	const char* s1 = "Alice in Wonderland.";
 	size_t s1_len = CUTE_STRLEN(s1);
 
-	cf_kv_t* kv0 = cf_kv_write();
+	CF_KeyValue* kv0 = cf_kv_write();
 	cf_kv_key(kv0, "book_title", NULL);
 	cf_kv_val_string(kv0, &s1, &s1_len);
 
 	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_last_error(kv0)));
 	size_t size = cf_kv_buffer_size(kv0);
-	cf_kv_t* kv1 = cf_kv_read(cf_kv_buffer(kv0), size, NULL);
+	CF_KeyValue* kv1 = cf_kv_read(cf_kv_buffer(kv0), size, NULL);
 	CUTE_TEST_ASSERT(kv1);
 
 	cf_kv_key(kv1, "book_title", NULL);
@@ -227,13 +227,13 @@ int test_kv_std_string_from_disk()
 	std::string s1 = "Alice in Wonderland.";
 	size_t s1_len = s1.length();
 
-	cf_kv_t* kv0 = cf_kv_write();
+	CF_KeyValue* kv0 = cf_kv_write();
 	cf_kv_key(kv0, "book_title", NULL);
 	cf_kv_val(kv0, &s1);
 
 	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_last_error(kv0)));
 	size_t size = cf_kv_buffer_size(kv0);
-	cf_kv_t* kv1 = cf_kv_read(cf_kv_buffer(kv0), size, NULL);
+	CF_KeyValue* kv1 = cf_kv_read(cf_kv_buffer(kv0), size, NULL);
 	CUTE_TEST_ASSERT(kv1);
 
 	cf_kv_key(kv1, "book_title", NULL);
@@ -252,7 +252,7 @@ int test_kv_std_string_from_disk()
 #include <vector>
 
 template <typename T>
-CUTE_INLINE bool cf_kv_val(cf_kv_t* kv, std::vector<T>* val, const char* key = NULL)
+CUTE_INLINE bool cf_kv_val(CF_KeyValue* kv, std::vector<T>* val, const char* key = NULL)
 {
 	int count = (int)val->size();
 	if (cf_kv_array_begin(kv, &count, key))
@@ -270,7 +270,7 @@ CUTE_INLINE bool cf_kv_val(cf_kv_t* kv, std::vector<T>* val, const char* key = N
 CUTE_TEST_CASE(test_kv_std_vector, "Testing kv utility for std::vector support.");
 int test_kv_std_vector()
 {
-	cf_kv_t* kv0 = cf_kv_write();
+	CF_KeyValue* kv0 = cf_kv_write();
 
 	std::vector<int> v;
 	v.push_back(10);
@@ -286,7 +286,7 @@ int test_kv_std_vector()
 
 	CUTE_TEST_ASSERT(!cf_is_error(cf_kv_last_error(kv0)));
 	size_t size = cf_kv_buffer_size(kv0);
-	cf_kv_t* kv1 = cf_kv_read(cf_kv_buffer(kv0), size, NULL);
+	CF_KeyValue* kv1 = cf_kv_read(cf_kv_buffer(kv0), size, NULL);
 	CUTE_TEST_ASSERT(kv1);
 
 	v.clear();
@@ -316,10 +316,10 @@ int test_kv_write_delta_basic()
 		b = 2
 	);
 
-	cf_kv_t* base = cf_kv_read(text_base, CUTE_STRLEN(text_base), NULL);
+	CF_KeyValue* base = cf_kv_read(text_base, CUTE_STRLEN(text_base), NULL);
 	if (!base) return -1;
 
-	cf_kv_t* kv = cf_kv_write();
+	CF_KeyValue* kv = cf_kv_write();
 	cf_kv_set_base(kv, base);
 
 	int val = 1;
@@ -356,7 +356,7 @@ int test_kv_read_delta_basic()
 		b = 2
 	);
 
-	cf_kv_t* base = cf_kv_read(text_base, CUTE_STRLEN(text_base), NULL);
+	CF_KeyValue* base = cf_kv_read(text_base, CUTE_STRLEN(text_base), NULL);
 	if (!base) return -1;
 	
 	const char* delta =
@@ -364,7 +364,7 @@ int test_kv_read_delta_basic()
 	"c = 17,\n"
 	;
 
-	kv_t* kv = cf_kv_read(delta, CUTE_STRLEN(delta), NULL);
+	KeyValue* kv = cf_kv_read(delta, CUTE_STRLEN(delta), NULL);
 	if (!kv) return -1;
 
 	cf_kv_set_base(kv, base);
@@ -407,10 +407,10 @@ int test_kv_write_delta_deep()
 		d = 8
 	);
 
-	cf_kv_t* kv = cf_kv_write();
-	cf_kv_t* base0 = cf_kv_read(text_base0, CUTE_STRLEN(text_base0), NULL);
-	cf_kv_t* base1 = cf_kv_read(text_base1, CUTE_STRLEN(text_base1), NULL);
-	cf_kv_t* base2 = cf_kv_read(text_base2, CUTE_STRLEN(text_base2), NULL);
+	CF_KeyValue* kv = cf_kv_write();
+	CF_KeyValue* base0 = cf_kv_read(text_base0, CUTE_STRLEN(text_base0), NULL);
+	CF_KeyValue* base1 = cf_kv_read(text_base1, CUTE_STRLEN(text_base1), NULL);
+	CF_KeyValue* base2 = cf_kv_read(text_base2, CUTE_STRLEN(text_base2), NULL);
 
 	cf_kv_set_base(base1, base0);
 	cf_kv_set_base(base2, base1);
@@ -496,10 +496,10 @@ int test_kv_read_delta_deep()
 		e = 1,
 	);
 
-	cf_kv_t* kv = cf_kv_read(delta, CUTE_STRLEN(delta), NULL);
-	cf_kv_t* base0 = cf_kv_read(text_base0, CUTE_STRLEN(text_base0), NULL);
-	cf_kv_t* base1 = cf_kv_read(text_base1, CUTE_STRLEN(text_base1), NULL);
-	cf_kv_t* base2 = cf_kv_read(text_base2, CUTE_STRLEN(text_base2), NULL);
+	CF_KeyValue* kv = cf_kv_read(delta, CUTE_STRLEN(delta), NULL);
+	CF_KeyValue* base0 = cf_kv_read(text_base0, CUTE_STRLEN(text_base0), NULL);
+	CF_KeyValue* base1 = cf_kv_read(text_base1, CUTE_STRLEN(text_base1), NULL);
+	CF_KeyValue* base2 = cf_kv_read(text_base2, CUTE_STRLEN(text_base2), NULL);
 
 	cf_kv_set_base(base1, base0);
 	cf_kv_set_base(base2, base1);
@@ -552,8 +552,8 @@ int test_kv_read_delta_array()
 		},
 	);
 
-	cf_kv_t* base = cf_kv_read(base_text, CUTE_STRLEN(base_text), NULL);
-	cf_kv_t* kv = cf_kv_read(text, CUTE_STRLEN(text), NULL);
+	CF_KeyValue* base = cf_kv_read(base_text, CUTE_STRLEN(base_text), NULL);
+	CF_KeyValue* kv = cf_kv_read(text, CUTE_STRLEN(text), NULL);
 
 	cf_kv_set_base(kv, base);
 
@@ -587,21 +587,21 @@ int test_kv_read_and_write_delta_blob()
 	size_t blob0_size = CUTE_STRLEN(blob0) + 1;
 	size_t blob1_size = CUTE_STRLEN(blob0) + 1;
 
-	cf_kv_t* writer0 = cf_kv_write();
+	CF_KeyValue* writer0 = cf_kv_write();
 	cf_kv_key(writer0, "a", NULL);
 	cf_kv_val_blob(writer0, (void*)blob0, 0, &blob0_size);
 	cf_kv_key(writer0, "b", NULL);
 	cf_kv_val_blob(writer0, (void*)blob0, 0, &blob0_size);
 	
-	cf_kv_t* writer1 = cf_kv_write();
+	CF_KeyValue* writer1 = cf_kv_write();
 	cf_kv_key(writer1, "b", NULL);
 	cf_kv_val_blob(writer1, (void*)blob1, 0, &blob1_size);
 
 	const char* base_text = (const char*)cf_kv_buffer(writer0);
 	const char* text = (const char*)cf_kv_buffer(writer1);
 
-	cf_kv_t* kv = cf_kv_read(text, CUTE_STRLEN(text), NULL);
-	cf_kv_t* base = cf_kv_read(base_text, CUTE_STRLEN(base_text), NULL);
+	CF_KeyValue* kv = cf_kv_read(text, CUTE_STRLEN(text), NULL);
+	CF_KeyValue* base = cf_kv_read(base_text, CUTE_STRLEN(base_text), NULL);
 
 	cf_kv_set_base(kv, base);
 
@@ -636,8 +636,8 @@ int test_kv_read_delta_string()
 		b = "c"
 	);
 
-	cf_kv_t* base = cf_kv_read(base_text, CUTE_STRLEN(base_text), NULL);
-	cf_kv_t* kv = cf_kv_read(text, CUTE_STRLEN(text), NULL);
+	CF_KeyValue* base = cf_kv_read(base_text, CUTE_STRLEN(base_text), NULL);
+	CF_KeyValue* kv = cf_kv_read(text, CUTE_STRLEN(text), NULL);
 
 	cf_kv_set_base(kv, base);
 
@@ -709,8 +709,8 @@ int test_kv_read_delta_object()
 		}
 	);
 
-	cf_kv_t* base = cf_kv_read(base_text, CUTE_STRLEN(base_text), NULL);
-	cf_kv_t* kv = cf_kv_read(text, CUTE_STRLEN(text), NULL);
+	CF_KeyValue* base = cf_kv_read(base_text, CUTE_STRLEN(base_text), NULL);
+	CF_KeyValue* kv = cf_kv_read(text, CUTE_STRLEN(text), NULL);
 	cf_kv_set_base(kv, base);
 
 	int val;

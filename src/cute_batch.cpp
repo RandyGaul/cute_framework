@@ -36,10 +36,10 @@ static struct CF_Batch* b;
 
 struct BatchGeometry
 {
-	cf_v2 position;
-	cf_v2 scale;
-	cf_sincos_t rotation;
-	cf_v2 a, b, c;
+	CF_V2 position;
+	CF_V2 scale;
+	CF_SinCos rotation;
+	CF_V2 a, b, c;
 	float alpha;
 	bool tri;
 };
@@ -100,7 +100,7 @@ struct CF_Batch
 	float atlas_width = 1024;
 	float atlas_height = 1024;
 	
-	array<BatchVertex> verts;
+	Array<BatchVertex> verts;
 	CF_Pass pass;
 	CF_Shader shader;
 	CF_Mesh mesh;
@@ -115,10 +115,10 @@ struct CF_Batch
 	cf_m3x2 m = cf_make_identity();
 	float scale_x = 1.0f;
 	float scale_y = 1.0f;
-	array<cf_m3x2> m3x2s;
-	array<Scissor> scissors;
-	array<CF_Color> tints = { DEFAULT_TINT };
-	array<int> layers = { 0 };
+	Array<cf_m3x2> m3x2s;
+	Array<Scissor> scissors;
+	Array<CF_Color> tints = { DEFAULT_TINT };
+	Array<int> layers = { 0 };
 };
 
 void cf_batch_sprite_tf(const CF_Sprite* sprite)
@@ -136,7 +136,7 @@ void cf_batch_sprite_tf(const CF_Sprite* sprite)
 	spritebatch_push(&b->sb, s);
 }
 
-void cf_batch_sprite_tf(const CF_Sprite* sprite, cf_transform_t transform)
+void cf_batch_sprite_tf(const CF_Sprite* sprite, CF_Transform transform)
 {
 	transform = mul(transform, sprite->transform);
 	v2 p = cf_mul_m32_v2(b->m, cf_add_v2(transform.p, sprite->local_offset));
@@ -169,7 +169,7 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 		if (s->geom.tri) {
 			// TODO.
 		} else {
-			cf_v2 quad[] = {
+			CF_V2 quad[] = {
 				{ -0.5f,  0.5f },
 				{  0.5f,  0.5f },
 				{  0.5f, -0.5f },
@@ -507,40 +507,40 @@ int cf_batch_peek_layer()
 	return b->layers.last();
 }
 
-void cf_batch_quad_aabb(cf_aabb_t bb, CF_Color c)
+void cf_batch_quad_aabb(CF_Aabb bb, CF_Color c)
 {
-	cf_v2 verts[4];
+	CF_V2 verts[4];
 	cf_aabb_verts(verts, bb);
 	cf_batch_quad_verts(verts[0], verts[1], verts[2], verts[3], c);
 }
 
-void cf_batch_quad_verts(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, CF_Color c)
+void cf_batch_quad_verts(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c)
 {
 }
 
-void cf_batch_quad_verts2(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3)
+void cf_batch_quad_verts2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3)
 {
 }
 
-void cf_batch_quad_line(cf_aabb_t bb, float thickness, CF_Color c, bool antialias)
+void cf_batch_quad_line(CF_Aabb bb, float thickness, CF_Color c, bool antialias)
 {
-	cf_v2 verts[4];
+	CF_V2 verts[4];
 	cf_aabb_verts(verts, bb);
 	cf_batch_quad_line2(verts[0], verts[1], verts[2], verts[3], thickness, c, antialias);
 }
 
-void cf_internal_batch_quad_line(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3, bool antialias)
+void cf_internal_batch_quad_line(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3, bool antialias)
 {
 	if (antialias) {
-		cf_v2 verts[] = { p0, p1, p2, p3 };
+		CF_V2 verts[] = { p0, p1, p2, p3 };
 		cf_batch_polyline(verts, 4, thickness, c0, true, true, 0);
 	} else {
 		float sqrt_2 = 1.41421356237f;
-		cf_v2 n = cf_V2(sqrt_2, sqrt_2) * thickness;
-		cf_v2 q0 = p0 + cf_V2(-n.x, -n.y);
-		cf_v2 q1 = p1 + cf_V2( n.x, -n.y);
-		cf_v2 q2 = p2 + cf_V2( n.x,  n.y);
-		cf_v2 q3 = p3 + cf_V2(-n.x,  n.y);
+		CF_V2 n = cf_V2(sqrt_2, sqrt_2) * thickness;
+		CF_V2 q0 = p0 + cf_V2(-n.x, -n.y);
+		CF_V2 q1 = p1 + cf_V2( n.x, -n.y);
+		CF_V2 q2 = p2 + cf_V2( n.x,  n.y);
+		CF_V2 q3 = p3 + cf_V2(-n.x,  n.y);
 		cf_batch_quad_verts2(p0, p1, q1, q0, c0, c1, c2, c3);
 		cf_batch_quad_verts2(p1, p2, q2, q1, c0, c1, c2, c3);
 		cf_batch_quad_verts2(p2, p3, q3, q2, c0, c1, c2, c3);
@@ -548,39 +548,39 @@ void cf_internal_batch_quad_line(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float t
 	}
 }
 
-void cf_batch_quad_line3(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3)
+void cf_batch_quad_line3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3)
 {
 	cf_internal_batch_quad_line(p0, p1, p2, p3, thickness, c0, c1, c2, c3, false);
 }
 
-void cf_batch_quad_line2(cf_v2 p0, cf_v2 p1, cf_v2 p2, cf_v2 p3, float thickness, CF_Color c, bool antialias)
+void cf_batch_quad_line2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c, bool antialias)
 {
 	cf_internal_batch_quad_line(p0, p1, p2, p3, thickness, c, c, c, c, antialias);
 }
 
-void cf_batch_circle(cf_v2 p, float r, int iters, CF_Color c)
+void cf_batch_circle(CF_V2 p, float r, int iters, CF_Color c)
 {
-	cf_v2 prev = cf_V2(r, 0);
+	CF_V2 prev = cf_V2(r, 0);
 
 	for (int i = 1; i <= iters; ++i) {
 		float a = (i / (float)iters) * (2.0f * CUTE_PI);
-		cf_v2 next = cf_from_angle(a) * r;
+		CF_V2 next = cf_from_angle(a) * r;
 		CF_Batchri(p + prev, p + next, p, c);
 		prev = next;
 	}
 }
 
-void cf_batch_circle_line(cf_v2 p, float r, int iters, float thickness, CF_Color color, bool antialias)
+void cf_batch_circle_line(CF_V2 p, float r, int iters, float thickness, CF_Color color, bool antialias)
 {
 	if (antialias) {
-		array<cf_v2> verts(iters);
-		cf_v2 p0 = cf_V2(p.x + r, p.y);
+		Array<CF_V2> verts(iters);
+		CF_V2 p0 = cf_V2(p.x + r, p.y);
 		verts.add(p0);
 
 		for (int i = 1; i < iters; i++) {
 			float a = (i / (float)iters) * (2.0f * CUTE_PI);
-			cf_v2 n = cf_from_angle(a);
-			cf_v2 p1 = p + n * r;
+			CF_V2 n = cf_from_angle(a);
+			CF_V2 p1 = p + n * r;
 			verts.add(p1);
 			p0 = p1;
 		}
@@ -588,14 +588,14 @@ void cf_batch_circle_line(cf_v2 p, float r, int iters, float thickness, CF_Color
 		cf_batch_polyline(verts.data(), verts.size(), thickness, color, true, true, 0);
 	} else {
 		float half_thickness = thickness * 0.5f;
-		cf_v2 p0 = cf_V2(p.x + r - half_thickness, p.y);
-		cf_v2 p1 = cf_V2(p.x + r + half_thickness, p.y);
+		CF_V2 p0 = cf_V2(p.x + r - half_thickness, p.y);
+		CF_V2 p1 = cf_V2(p.x + r + half_thickness, p.y);
 
 		for (int i = 1; i <= iters; i++) {
 			float a = (i / (float)iters) * (2.0f * CUTE_PI);
-			cf_v2 n = cf_from_angle(a);
-			cf_v2 p2 = p + n * (r + half_thickness);
-			cf_v2 p3 = p + n * (r - half_thickness);
+			CF_V2 n = cf_from_angle(a);
+			CF_V2 p2 = p + n * (r + half_thickness);
+			CF_V2 p3 = p + n * (r - half_thickness);
 			cf_batch_quad_verts(p0, p1, p2, p3, color);
 			p1 = p2;
 			p0 = p3;
@@ -603,34 +603,34 @@ void cf_batch_circle_line(cf_v2 p, float r, int iters, float thickness, CF_Color
 	}
 }
 
-void cf_batch_circle_arc(cf_v2 p, cf_v2 center_of_arc, float range, int iters, CF_Color color)
+void cf_batch_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, CF_Color color)
 {
 	float r = cf_len(center_of_arc - p);
-	cf_v2 d = cf_norm(center_of_arc - p);
-	cf_sincos_t m = cf_sincos_f(range * 0.5f);
+	CF_V2 d = cf_norm(center_of_arc - p);
+	CF_SinCos m = cf_sincos_f(range * 0.5f);
 
-	cf_v2 t = cf_mulT_sc_v2(m, d);
-	cf_v2 p0 = p + t * r;
+	CF_V2 t = cf_mulT_sc_v2(m, d);
+	CF_V2 p0 = p + t * r;
 	d = cf_norm(p0 - p);
 	float inc = range / iters;
 
 	for (int i = 1; i <= iters; i++) {
 		m = cf_sincos_f(i * inc);
 		t = cf_mul_sc_v2(m, d);
-		cf_v2 p1 = p + t * r;
+		CF_V2 p1 = p + t * r;
 		CF_Batchri(p, p1, p0, color);
 		p0 = p1;
 	}
 }
 
-static void s_circle_arc_line_aa(array<cf_v2>* verts, cf_v2 p, cf_v2 center_of_arc, float range, int iters, float thickness, CF_Color color)
+static void s_circle_arc_line_aa(Array<CF_V2>* verts, CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness, CF_Color color)
 {
 	float r = cf_len(center_of_arc - p);
-	cf_v2 d = cf_norm(center_of_arc - p);
-	cf_sincos_t m = cf_sincos_f(range * 0.5f);
+	CF_V2 d = cf_norm(center_of_arc - p);
+	CF_SinCos m = cf_sincos_f(range * 0.5f);
 
-	cf_v2 t = cf_mulT_sc_v2(m, d);
-	cf_v2 p0 = p + t * r;
+	CF_V2 t = cf_mulT_sc_v2(m, d);
+	CF_V2 p0 = p + t * r;
 	d = cf_norm(p0 - p);
 	float inc = range / iters;
 	verts->add(p0);
@@ -638,35 +638,35 @@ static void s_circle_arc_line_aa(array<cf_v2>* verts, cf_v2 p, cf_v2 center_of_a
 	for (int i = 1; i <= iters; i++) {
 		m = cf_sincos_f(i * inc);
 		t = cf_mul_sc_v2(m, d);
-		cf_v2 p1 = p + t * r;
+		CF_V2 p1 = p + t * r;
 		verts->add(p1);
 		p0 = p1;
 	}
 }
 
-void cf_batch_circle_arc_line(cf_v2 p, cf_v2 center_of_arc, float range, int iters, float thickness, CF_Color color, bool antialias)
+void cf_batch_circle_arc_line(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness, CF_Color color, bool antialias)
 {
 	if (antialias) {
-		array<cf_v2> verts(iters);
+		Array<CF_V2> verts(iters);
 		s_circle_arc_line_aa(&verts, p, center_of_arc, range, iters, thickness, color);
 		cf_batch_polyline(verts.data(), verts.size(), thickness, color, false, true, 3);
 	} else {
 		float r = cf_len(center_of_arc - p);
-		cf_v2 d = cf_norm(center_of_arc - p);
-		cf_sincos_t m = cf_sincos_f(range * 0.5f);
+		CF_V2 d = cf_norm(center_of_arc - p);
+		CF_SinCos m = cf_sincos_f(range * 0.5f);
 
 		float half_thickness = thickness * 0.5f;
-		cf_v2 t = cf_mulT_sc_v2(m, d);
-		cf_v2 p0 = p + t * (r + half_thickness);
-		cf_v2 p1 = p + t * (r - half_thickness);
+		CF_V2 t = cf_mulT_sc_v2(m, d);
+		CF_V2 p0 = p + t * (r + half_thickness);
+		CF_V2 p1 = p + t * (r - half_thickness);
 		d = cf_norm(p0 - p);
 		float inc = range / iters;
 
 		for (int i = 1; i <= iters; i++) {
 			m = cf_sincos_f(i * inc);
 			t = cf_mul_sc_v2(m, d);
-			cf_v2 p2 = p + t * (r + half_thickness);
-			cf_v2 p3 = p + t * (r - half_thickness);
+			CF_V2 p2 = p + t * (r + half_thickness);
+			CF_V2 p3 = p + t * (r - half_thickness);
 			cf_batch_quad_verts(p0, p1, p2, p3, color);
 			p1 = p2;
 			p0 = p3;
@@ -674,62 +674,62 @@ void cf_batch_circle_arc_line(cf_v2 p, cf_v2 center_of_arc, float range, int ite
 	}
 }
 
-void cf_batch_capsule(cf_v2 a, cf_v2 b, float r, int iters, CF_Color c)
+void cf_batch_capsule(CF_V2 a, CF_V2 b, float r, int iters, CF_Color c)
 {
 	cf_batch_circle_arc(a, a + cf_norm(a - b) * r, CUTE_PI, iters, c);
 	cf_batch_circle_arc(b, b + cf_norm(b - a) * r, CUTE_PI, iters, c);
-	cf_v2 n = cf_skew(cf_norm(b - a)) * r;
-	cf_v2 q0 = a + n;
-	cf_v2 q1 = b + n;
-	cf_v2 q2 = b - n;
-	cf_v2 q3 = a - n;
+	CF_V2 n = cf_skew(cf_norm(b - a)) * r;
+	CF_V2 q0 = a + n;
+	CF_V2 q1 = b + n;
+	CF_V2 q2 = b - n;
+	CF_V2 q3 = a - n;
 	cf_batch_quad_verts(q0, q1, q2, q3, c);
 }
 
-void cf_batch_capsule_line(cf_v2 a, cf_v2 b, float r, int iters, float thickness, CF_Color c, bool antialias)
+void cf_batch_capsule_line(CF_V2 a, CF_V2 b, float r, int iters, float thickness, CF_Color c, bool antialias)
 {
 	if (antialias) {
-		array<cf_v2> verts(iters * 2 + 2);
+		Array<CF_V2> verts(iters * 2 + 2);
 		s_circle_arc_line_aa(&verts, a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness, c);
 		s_circle_arc_line_aa(&verts, b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness, c);
 		cf_batch_polyline(verts.data(), verts.count(), thickness, c, true, true, 0);
 	} else {
 		cf_batch_circle_arc_line(a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness, c, false);
 		cf_batch_circle_arc_line(b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness, c, false);
-		cf_v2 n = cf_skew(cf_norm(b - a)) * r;
-		cf_v2 q0 = a + n;
-		cf_v2 q1 = b + n;
-		cf_v2 q2 = b - n;
-		cf_v2 q3 = a - n;
+		CF_V2 n = cf_skew(cf_norm(b - a)) * r;
+		CF_V2 q0 = a + n;
+		CF_V2 q1 = b + n;
+		CF_V2 q2 = b - n;
+		CF_V2 q3 = a - n;
 		cf_batch_line(q0, q1, thickness, c, false);
 		cf_batch_line(q2, q3, thickness, c, false);
 	}
 }
 
-void CF_Batchri(cf_v2 p0, cf_v2 p1, cf_v2 p2, CF_Color c)
+void CF_Batchri(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c)
 {
 }
 
-void CF_Batchri2(cf_v2 p0, cf_v2 p1, cf_v2 p2, CF_Color c0, CF_Color c1, CF_Color c2)
+void CF_Batchri2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, CF_Color c2)
 {
 }
 
-void CF_Batchri_line(cf_v2 p0, cf_v2 p1, cf_v2 p2, float thickness, CF_Color c, bool antialias)
-{
-	CUTE_ASSERT(0);
-}
-
-void CF_Batchri_line2(cf_v2 p0, cf_v2 p1, cf_v2 p2, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, bool antialias)
+void CF_Batchri_line(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c, bool antialias)
 {
 	CUTE_ASSERT(0);
 }
 
-void cf_batch_line(cf_v2 p0, cf_v2 p1, float thickness, CF_Color c, bool antialias)
+void CF_Batchri_line2(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, bool antialias)
+{
+	CUTE_ASSERT(0);
+}
+
+void cf_batch_line(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c, bool antialias)
 {
 	cf_batch_line2(p0, p1, thickness, c, c, antialias);
 }
 
-void cf_batch_line2(cf_v2 p0, cf_v2 p1, float thickness, CF_Color c0, CF_Color c1, bool antialias)
+void cf_batch_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1, bool antialias)
 {
 	float scale = cf_len(b->m.m.x); // Assume x/y uniform scaling.
 	float alias_scale = 1.0f / scale;
@@ -743,75 +743,75 @@ void cf_batch_line2(cf_v2 p0, cf_v2 p1, float thickness, CF_Color c0, CF_Color c
 		if (thick_line) {
 			// Core center line.
 			float core_half_width = (thickness - alias_scale) * 0.5f;
-			cf_v2 n0 = cf_norm(p1 - p0);
-			cf_v2 n1 = cf_skew(n0) * core_half_width;
-			cf_v2 q0 = p0 + n1;
-			cf_v2 q1 = p1 + n1;
-			cf_v2 q2 = p1 - n1;
-			cf_v2 q3 = p0 - n1;
+			CF_V2 n0 = cf_norm(p1 - p0);
+			CF_V2 n1 = cf_skew(n0) * core_half_width;
+			CF_V2 q0 = p0 + n1;
+			CF_V2 q1 = p1 + n1;
+			CF_V2 q2 = p1 - n1;
+			CF_V2 q3 = p0 - n1;
 			cf_batch_quad_verts2(q0, q1, q2, q3, c0, c0, c1, c1);
 
 			// Zero opacity aliased quads.
-			cf_v2 n2 = cf_cw90(n0) * alias_scale;
-			cf_v2 q4 = q3 + n2;
-			cf_v2 q5 = q2 + n2;
-			cf_v2 q6 = q1 - n2;
-			cf_v2 q7 = q0 - n2;
+			CF_V2 n2 = cf_cw90(n0) * alias_scale;
+			CF_V2 q4 = q3 + n2;
+			CF_V2 q5 = q2 + n2;
+			CF_V2 q6 = q1 - n2;
+			CF_V2 q7 = q0 - n2;
 			cf_batch_quad_verts2(q3, q2, q5, q4, c0, c1, c3, c2);
 			cf_batch_quad_verts2(q0, q7, q6, q1, c0, c2, c3, c1);
 
 			// End caps.
 			n0 = n0 * alias_scale;
-			cf_v2 r0 = q5 + n0;
-			cf_v2 r1 = q2 + n0;
-			cf_v2 r2 = q1 + n0;
-			cf_v2 r3 = q6 + n0;
+			CF_V2 r0 = q5 + n0;
+			CF_V2 r1 = q2 + n0;
+			CF_V2 r2 = q1 + n0;
+			CF_V2 r3 = q6 + n0;
 			cf_batch_quad_verts2(q2, r1, r0, q5, c1, c3, c3, c3);
 			cf_batch_quad_verts2(q2, q1, r2, r1, c1, c1, c3, c3);
 			cf_batch_quad_verts2(q1, q6, r3, r2, c1, c3, c3, c3);
 
-			cf_v2 r4 = q4 - n0;
-			cf_v2 r5 = q3 - n0;
-			cf_v2 r6 = q0 - n0;
-			cf_v2 r7 = q7 - n0;
+			CF_V2 r4 = q4 - n0;
+			CF_V2 r5 = q3 - n0;
+			CF_V2 r6 = q0 - n0;
+			CF_V2 r7 = q7 - n0;
 			cf_batch_quad_verts2(q3, r5, r4, q4, c0, c2, c2, c2);
 			cf_batch_quad_verts2(q3, q0, r6, r5, c0, c0, c2, c2);
 			cf_batch_quad_verts2(q0, q7, r7, r6, c0, c2, c2, c2);
 		} else {
 			// Zero opacity aliased quads, without any core line.
-			cf_v2 n = cf_skew(cf_norm(p1 - p0)) * alias_scale * 0.5f;
-			cf_v2 q0 = p0 + n;
-			cf_v2 q1 = p1 + n;
-			cf_v2 q2 = p1 - n;
-			cf_v2 q3 = p0 - n;
+			CF_V2 n = cf_skew(cf_norm(p1 - p0)) * alias_scale * 0.5f;
+			CF_V2 q0 = p0 + n;
+			CF_V2 q1 = p1 + n;
+			CF_V2 q2 = p1 - n;
+			CF_V2 q3 = p0 - n;
 			cf_batch_quad_verts2(p0, p1, q1, q0, c0, c1, c3, c2);
 			cf_batch_quad_verts2(p1, p0, q3, q2, c1, c0, c3, c2);
 		}
 	} else {
-		cf_v2 n = cf_skew(cf_norm(p1 - p0)) * thickness * 0.5f;
-		cf_v2 q0 = p0 + n;
-		cf_v2 q1 = p1 + n;
-		cf_v2 q2 = p1 - n;
-		cf_v2 q3 = p0 - n;
+		CF_V2 n = cf_skew(cf_norm(p1 - p0)) * thickness * 0.5f;
+		CF_V2 q0 = p0 + n;
+		CF_V2 q1 = p1 + n;
+		CF_V2 q2 = p1 - n;
+		CF_V2 q3 = p0 - n;
 		cf_batch_quad_verts2(q0, q1, q2, q3, c0, c0, c1, c1);
 	}
 }
 
-CUTE_INLINE static cf_v2 s_rot_b_about_a(cf_sincos_t r, cf_v2 b, cf_v2 a)
+CUTE_INLINE static CF_V2 s_rot_b_about_a(CF_SinCos r, CF_V2 b, CF_V2 a)
 {
-	cf_v2 result = cf_mul_sc_v2(r, a - b);
+	CF_V2 result = cf_mul_sc_v2(r, a - b);
 	return result + b;
 }
 
-CUTE_INLINE static void s_bevel_arc_feather(cf_v2 b, cf_v2 i3, cf_v2 f3, cf_v2 i4, cf_v2 f4, CF_Color c0, CF_Color c1, int bevel_count)
+CUTE_INLINE static void s_bevel_arc_feather(CF_V2 b, CF_V2 i3, CF_V2 f3, CF_V2 i4, CF_V2 f4, CF_Color c0, CF_Color c1, int bevel_count)
 {
 	float arc = cf_shortest_arc(cf_norm(i3 - b), cf_norm(i4 - b)) / (float)(bevel_count + 1);
-	cf_sincos_t r = cf_sincos_f(arc);
-	cf_v2 p0 = i3;
-	cf_v2 p1 = f3;
+	CF_SinCos r = cf_sincos_f(arc);
+	CF_V2 p0 = i3;
+	CF_V2 p1 = f3;
 	for (int i = 1; i < bevel_count; ++i) {
-		cf_v2 p2 = s_rot_b_about_a(r, b, p1);
-		cf_v2 p3 = s_rot_b_about_a(r, b, p0);
+		CF_V2 p2 = s_rot_b_about_a(r, b, p1);
+		CF_V2 p3 = s_rot_b_about_a(r, b, p0);
 		CF_Batchri(b, p0, p3, c0);
 		cf_batch_quad_verts2(p3, p2, p1, p0, c0, c1, c1, c0);
 		p0 = p3;
@@ -821,39 +821,39 @@ CUTE_INLINE static void s_bevel_arc_feather(cf_v2 b, cf_v2 i3, cf_v2 f3, cf_v2 i
 	cf_batch_quad_verts2(p0, i4, f4, p1, c0, c0, c1, c1);
 }
 
-CUTE_INLINE static void s_bevel_arc(cf_v2 b, cf_v2 i3, cf_v2 i4, CF_Color c0, CF_Color c1, int bevel_count)
+CUTE_INLINE static void s_bevel_arc(CF_V2 b, CF_V2 i3, CF_V2 i4, CF_Color c0, CF_Color c1, int bevel_count)
 {
 	float arc = cf_shortest_arc(cf_norm(i3 - b), cf_norm(i4 - b)) / (float)(bevel_count + 1);
-	cf_sincos_t r = cf_sincos_f(arc);
-	cf_v2 p0 = i3;
+	CF_SinCos r = cf_sincos_f(arc);
+	CF_V2 p0 = i3;
 	for (int i = 1; i < bevel_count; ++i) {
-		cf_v2 p3 = s_rot_b_about_a(r, b, p0);
+		CF_V2 p3 = s_rot_b_about_a(r, b, p0);
 		CF_Batchri(b, p0, p3, c0);
 		p0 = p3;
 	}
 	CF_Batchri(b, i4, p0, c0);
 }
 
-static void s_polyline(cf_v2* points, int count, float thickness, CF_Color c0, CF_Color c1, bool loop, bool feather, float alias_scale, int bevel_count)
+static void s_polyline(CF_V2* points, int count, float thickness, CF_Color c0, CF_Color c1, bool loop, bool feather, float alias_scale, int bevel_count)
 {
 	float inner_half = (thickness - alias_scale);
 	float outer_half = inner_half + alias_scale;
 	int iter = 0;
 	int i = 2;
-	cf_v2 a = points[0];
-	cf_v2 b = points[1];
-	cf_v2 n0 = cf_skew(cf_norm(b - a)) * inner_half;
-	cf_v2 i0 = a + n0;
-	cf_v2 i1 = a - n0;
-	cf_v2 fn0 = cf_norm(n0) * outer_half;
-	cf_v2 f0 = a + fn0;
-	cf_v2 f1 = a - fn0;
+	CF_V2 a = points[0];
+	CF_V2 b = points[1];
+	CF_V2 n0 = cf_skew(cf_norm(b - a)) * inner_half;
+	CF_V2 i0 = a + n0;
+	CF_V2 i1 = a - n0;
+	CF_V2 fn0 = cf_norm(n0) * outer_half;
+	CF_V2 f0 = a + fn0;
+	CF_V2 f1 = a - fn0;
 	int end = count;
 
 	// Optionally emits geometry about each corner of the polyline, and sets up i0, i1, f0, f1, n0 and fn0.
-	auto do_polyline_corner = [&](cf_v2 c, bool emit) {
-		cf_v2 n1 = cf_skew(cf_norm(c - b)) * inner_half;
-		cf_v2 fn1 = cf_norm(n1) * outer_half;
+	auto do_polyline_corner = [&](CF_V2 c, bool emit) {
+		CF_V2 n1 = cf_skew(cf_norm(c - b)) * inner_half;
+		CF_V2 fn1 = cf_norm(n1) * outer_half;
 		float ab_x_bc = cf_cross(b - a, c - b);
 		float d = cf_dot(cf_cw90(n0), cf_cw90(n1));
 		const float k_tol = 1.e-6f;
@@ -861,11 +861,11 @@ static void s_polyline(cf_v2* points, int count, float thickness, CF_Color c0, C
 
 		if (ab_x_bc < -k_tol) {
 			if (d >= 0) {
-				cf_v2 i2 = cf_intersect_halfspace2(cf_plane2(n0, b - n0), b - n1, c - n1);
-				cf_v2 i3 = cf_intersect_halfspace2(cf_plane2(n0, b + n0), b + n1, c + n1);
+				CF_V2 i2 = cf_intersect_halfspace2(cf_plane2(n0, b - n0), b - n1, c - n1);
+				CF_V2 i3 = cf_intersect_halfspace2(cf_plane2(n0, b + n0), b + n1, c + n1);
 				if (feather) {
-					cf_v2 f2 = cf_intersect_halfspace2(cf_plane2(fn0, b - fn0), b - fn1, c - fn1);
-					cf_v2 f3 = cf_intersect_halfspace2(cf_plane2(fn0, b + fn0), b + fn1, c + fn1);
+					CF_V2 f2 = cf_intersect_halfspace2(cf_plane2(fn0, b - fn0), b - fn1, c - fn1);
+					CF_V2 f3 = cf_intersect_halfspace2(cf_plane2(fn0, b + fn0), b + fn1, c + fn1);
 					if (emit) {
 						cf_batch_quad_verts(a, b, i3, i0, c0);
 						cf_batch_quad_verts(i1, i2, b, a, c0);
@@ -881,15 +881,15 @@ static void s_polyline(cf_v2* points, int count, float thickness, CF_Color c0, C
 				i0 = i3;
 				i1 = i2;
 			} else {
-				cf_v2 i2 = cf_intersect_halfspace2(cf_plane2(-n0, b - n0), b - n1, c - n1);
-				cf_v2 i3 = b + n0;
-				cf_v2 i4 = b + n1;
+				CF_V2 i2 = cf_intersect_halfspace2(cf_plane2(-n0, b - n0), b - n1, c - n1);
+				CF_V2 i3 = b + n0;
+				CF_V2 i4 = b + n1;
 				if (feather) {
-					cf_v2 f2 = cf_intersect_halfspace2(cf_plane2(-fn0, b - fn0), b - fn1, c - fn1);
-					cf_v2 n = cf_norm(n0 + n1);
-					cf_halfspace_t h = cf_plane2(n, i3 + n * alias_scale);
-					cf_v2 f3 = cf_intersect_halfspace2(h, a + fn0, b + fn0);
-					cf_v2 f4 = cf_intersect_halfspace2(h, b + fn1, c + fn1);
+					CF_V2 f2 = cf_intersect_halfspace2(cf_plane2(-fn0, b - fn0), b - fn1, c - fn1);
+					CF_V2 n = cf_norm(n0 + n1);
+					CF_Halfspace h = cf_plane2(n, i3 + n * alias_scale);
+					CF_V2 f3 = cf_intersect_halfspace2(h, a + fn0, b + fn0);
+					CF_V2 f4 = cf_intersect_halfspace2(h, b + fn1, c + fn1);
 					if (emit) {
 						cf_batch_quad_verts(a, b, i3, i0, c0);
 						cf_batch_quad_verts(i1, i2, b, a, c0);
@@ -909,11 +909,11 @@ static void s_polyline(cf_v2* points, int count, float thickness, CF_Color c0, C
 			}
 		} else if (ab_x_bc > k_tol) {
 			if (d >= 0) {
-				cf_v2 i2 = cf_intersect_halfspace2(cf_plane2(n0, b + n0), b + n1, c + n1);
-				cf_v2 i3 = cf_intersect_halfspace2(cf_plane2(n0, b - n0), b - n1, c - n1);
+				CF_V2 i2 = cf_intersect_halfspace2(cf_plane2(n0, b + n0), b + n1, c + n1);
+				CF_V2 i3 = cf_intersect_halfspace2(cf_plane2(n0, b - n0), b - n1, c - n1);
 				if (feather) {
-					cf_v2 f2 = cf_intersect_halfspace2(cf_plane2(fn0, b + fn0), b + fn1, c + fn1);
-					cf_v2 f3 = cf_intersect_halfspace2(cf_plane2(fn0, b - fn0), b - fn1, c - fn1);
+					CF_V2 f2 = cf_intersect_halfspace2(cf_plane2(fn0, b + fn0), b + fn1, c + fn1);
+					CF_V2 f3 = cf_intersect_halfspace2(cf_plane2(fn0, b - fn0), b - fn1, c - fn1);
 					if (emit) {
 						cf_batch_quad_verts(a, b, i3, i1, c0);
 						cf_batch_quad_verts(i0, i2, b, a, c0);
@@ -929,15 +929,15 @@ static void s_polyline(cf_v2* points, int count, float thickness, CF_Color c0, C
 				i1 = i3;
 				i0 = i2;
 			} else {
-				cf_v2 i2 = cf_intersect_halfspace2(cf_plane2(n0, b + n0), b + n1, c + n1);
-				cf_v2 i3 = b - n0;
-				cf_v2 i4 = b - n1;
+				CF_V2 i2 = cf_intersect_halfspace2(cf_plane2(n0, b + n0), b + n1, c + n1);
+				CF_V2 i3 = b - n0;
+				CF_V2 i4 = b - n1;
 				if (feather) {
-					cf_v2 f2 = cf_intersect_halfspace2(cf_plane2(fn0, b + fn0), b + fn1, c + fn1);
-					cf_v2 n = cf_norm(n0 + n1);
-					cf_halfspace_t h = cf_plane2(-n, i3 - n * alias_scale);
-					cf_v2 f3 = cf_intersect_halfspace2(h, a - fn0, b - fn0);
-					cf_v2 f4 = cf_intersect_halfspace2(h, b - fn1, c - fn1);
+					CF_V2 f2 = cf_intersect_halfspace2(cf_plane2(fn0, b + fn0), b + fn1, c + fn1);
+					CF_V2 n = cf_norm(n0 + n1);
+					CF_Halfspace h = cf_plane2(-n, i3 - n * alias_scale);
+					CF_V2 f3 = cf_intersect_halfspace2(h, a - fn0, b - fn0);
+					CF_V2 f4 = cf_intersect_halfspace2(h, b - fn1, c - fn1);
 					if (emit) {
 						cf_batch_quad_verts(a, b, i3, i1, c0);
 						cf_batch_quad_verts(i0, i2, b, a, c0);
@@ -957,11 +957,11 @@ static void s_polyline(cf_v2* points, int count, float thickness, CF_Color c0, C
 			}
 		} else {
 			// Parallel, sin(angle_of_corner) within [-k_tol, k_tol].
-			cf_v2 i2 = b + n0;
-			cf_v2 i3 = b - n0;
+			CF_V2 i2 = b + n0;
+			CF_V2 i3 = b - n0;
 			if (feather) {
-				cf_v2 f2 = b + fn0;
-				cf_v2 f3 = b - fn0;
+				CF_V2 f2 = b + fn0;
+				CF_V2 f3 = b - fn0;
 				if (emit) {
 					cf_batch_quad_verts(a, b, i2, i0, c0);
 					cf_batch_quad_verts(i1, i3, b, a, c0);
@@ -991,7 +991,7 @@ static void s_polyline(cf_v2* points, int count, float thickness, CF_Color c0, C
 	if (loop) {
 		a = points[count - 1];
 		b = points[0];
-		cf_v2 c = points[1];
+		CF_V2 c = points[1];
 		n0 = cf_skew(cf_norm(b - a)) * inner_half;
 		fn0 = cf_norm(n0) * outer_half;
 		do_polyline_corner(c, false);
@@ -1001,7 +1001,7 @@ static void s_polyline(cf_v2* points, int count, float thickness, CF_Color c0, C
 
 	// Main loop, emit geometry about each corner of the polyline.
 	do {
-		cf_v2 c = points[i];
+		CF_V2 c = points[i];
 		do_polyline_corner(c, true);
 		iter++;
 		i = i + 1 == count ? 0 : i + 1;
@@ -1016,7 +1016,7 @@ static void s_polyline(cf_v2* points, int count, float thickness, CF_Color c0, C
 			cf_batch_quad_verts2(b - fn0, b - n0, i1, f1, c1, c0, c0, c1);
 
 			// End caps.
-			cf_v2 n = cf_norm(b - a) * alias_scale;
+			CF_V2 n = cf_norm(b - a) * alias_scale;
 			cf_batch_quad_verts2(b - n0, b + n0, b + n0 + n, b - n0 + n, c0, c0, c1, c1);
 			cf_batch_quad_verts2(b - fn0, b - n0, b - n0 + n, b - fn0 + n, c1, c0, c1, c1);
 			cf_batch_quad_verts2(b + fn0, b + n0, b + n0 + n, b + fn0 + n, c1, c0, c1, c1);
@@ -1036,7 +1036,7 @@ static void s_polyline(cf_v2* points, int count, float thickness, CF_Color c0, C
 	}
 }
 
-void cf_batch_polyline(cf_v2* points, int count, float thickness, CF_Color color, bool loop, bool antialias, int bevel_count)
+void cf_batch_polyline(CF_V2* points, int count, float thickness, CF_Color color, bool loop, bool antialias, int bevel_count)
 {
 	CUTE_ASSERT(count >= 3);
 	float scale = cf_len(b->m.m.x); // Assume x/y uniform scaling.

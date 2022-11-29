@@ -24,29 +24,29 @@
 #include <cute_c_runtime.h>
 #include <cute_concurrency.h>
 
-cf_circular_buffer_t cf_make_circular_buffer(int initial_size_in_bytes)
+CF_CircularBuffer cf_make_circular_buffer(int initial_size_in_bytes)
 {
-	cf_circular_buffer_t buffer = { 0 };
+	CF_CircularBuffer buffer = { 0 };
 	buffer.size_left.i = initial_size_in_bytes;
 	buffer.capacity = initial_size_in_bytes;
 	buffer.data = (uint8_t*)CUTE_ALLOC(initial_size_in_bytes);
 	return buffer;
 }
 
-void cf_destroy_circular_buffer(cf_circular_buffer_t* buffer)
+void cf_destroy_circular_buffer(CF_CircularBuffer* buffer)
 {
 	CUTE_FREE(buffer->data);
 	CUTE_MEMSET(buffer, 0, sizeof(*buffer));
 }
 
-void cf_circular_buffer_reset(cf_circular_buffer_t* buffer)
+void cf_circular_buffer_reset(CF_CircularBuffer* buffer)
 {
 	buffer->index0 = 0;
 	buffer->index1 = 0;
 	buffer->size_left.i = buffer->capacity;
 }
 
-int cf_circular_buffer_push(cf_circular_buffer_t* buffer, const void* data, int size)
+int cf_circular_buffer_push(CF_CircularBuffer* buffer, const void* data, int size)
 {
 	if (cf_atomic_get(&buffer->size_left) < size) {
 		return -1;
@@ -67,7 +67,7 @@ int cf_circular_buffer_push(cf_circular_buffer_t* buffer, const void* data, int 
 	return 0;
 }
 
-int cf_circular_buffer_pull(cf_circular_buffer_t* buffer, void* data, int size)
+int cf_circular_buffer_pull(CF_CircularBuffer* buffer, void* data, int size)
 {
 	if (buffer->capacity - cf_atomic_get(&buffer->size_left) < size) {
 		return -1;
@@ -88,7 +88,7 @@ int cf_circular_buffer_pull(cf_circular_buffer_t* buffer, void* data, int size)
 	return 0;
 }
 
-int cf_circular_buffer_grow(cf_circular_buffer_t* buffer, int new_size_in_bytes)
+int cf_circular_buffer_grow(CF_CircularBuffer* buffer, int new_size_in_bytes)
 {
 	uint8_t* old_data = buffer->data;
 	uint8_t* new_data = (uint8_t*)CUTE_ALLOC(new_size_in_bytes);

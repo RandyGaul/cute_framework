@@ -30,20 +30,20 @@ void* cf_agrow(const void* a, int new_size, size_t element_size)
 	CUTE_ASSERT(acap(a) <= (SIZE_MAX - 1)/2);
 	int new_capacity = max(2 * acap(a), max(new_size, 16));
 	CUTE_ASSERT(new_size <= new_capacity);
-	CUTE_ASSERT(new_capacity <= (SIZE_MAX - sizeof(cf_ahdr_t)) / element_size);
-	size_t total_size = sizeof(cf_ahdr_t) + new_capacity * element_size;
-	cf_ahdr_t* hdr;
+	CUTE_ASSERT(new_capacity <= (SIZE_MAX - sizeof(CF_Ahdr)) / element_size);
+	size_t total_size = sizeof(CF_Ahdr) + new_capacity * element_size;
+	CF_Ahdr* hdr;
 	if (a) {
 		if (!CF_AHDR(a)->is_static) {
-			hdr = (cf_ahdr_t*)CUTE_REALLOC(CF_AHDR(a), total_size);
+			hdr = (CF_Ahdr*)CUTE_REALLOC(CF_AHDR(a), total_size);
 		} else {
-			hdr = (cf_ahdr_t*)CUTE_ALLOC(total_size);
+			hdr = (CF_Ahdr*)CUTE_ALLOC(total_size);
 			CUTE_MEMCPY(hdr + 1, a, alen(a) * element_size);
 			hdr->size = asize(a);
 			hdr->cookie = CF_ACOOKIE;
 		}
 	} else {
-		hdr = (cf_ahdr_t*)CUTE_ALLOC(total_size);
+		hdr = (CF_Ahdr*)CUTE_ALLOC(total_size);
 		hdr->size = 0;
 		hdr->cookie = CF_ACOOKIE;
 	}
@@ -55,13 +55,13 @@ void* cf_agrow(const void* a, int new_size, size_t element_size)
 
 void* cf_astatic(const void* a, int buffer_size, size_t element_size)
 {
-	cf_ahdr_t* hdr = (cf_ahdr_t*)a;
+	CF_Ahdr* hdr = (CF_Ahdr*)a;
 	hdr->size = 0;
 	hdr->cookie = CF_ACOOKIE;
-	if (sizeof(cf_ahdr_t) <= element_size) {
+	if (sizeof(CF_Ahdr) <= element_size) {
 		hdr->capacity = buffer_size / (int)element_size - 1;
 	} else {
-		int elements_taken = sizeof(cf_ahdr_t) / (int)element_size + (sizeof(cf_ahdr_t) % (int)element_size > 0);
+		int elements_taken = sizeof(CF_Ahdr) / (int)element_size + (sizeof(CF_Ahdr) % (int)element_size > 0);
 		hdr->capacity = buffer_size / (int)element_size - elements_taken;
 	}
 	hdr->data = (char*)(hdr + 1); // For debugging convenience.

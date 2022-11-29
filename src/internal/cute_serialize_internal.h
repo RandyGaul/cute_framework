@@ -79,7 +79,7 @@ CUTE_INLINE void cf_write_bytes(uint8_t** p, const uint8_t* byte_array, int num_
 	}
 }
 
-CUTE_INLINE void cf_write_endpoint(uint8_t** p, cf_endpoint_t endpoint)
+CUTE_INLINE void cf_write_endpoint(uint8_t** p, CF_Endpoint endpoint)
 {
 	cf_write_uint8(p, (uint8_t)endpoint.type);
 	if (endpoint.type == CF_ADDRESS_TYPE_IPV4) {
@@ -102,7 +102,7 @@ CUTE_INLINE void cf_write_endpoint(uint8_t** p, cf_endpoint_t endpoint)
 	cf_write_uint16(p, endpoint.port);
 }
 
-CUTE_INLINE void cf_write_key(uint8_t** p, const cf_crypto_key_t* key)
+CUTE_INLINE void cf_write_key(uint8_t** p, const CF_CryptoKey* key)
 {
 	cf_write_bytes(p, (const uint8_t*)key, sizeof(*key));
 }
@@ -176,10 +176,10 @@ CUTE_INLINE void cf_read_bytes(uint8_t** p, uint8_t* byte_array, int num_bytes)
 	}
 }
 
-CUTE_INLINE cf_endpoint_t cf_read_endpoint(uint8_t** p)
+CUTE_INLINE CF_Endpoint cf_read_endpoint(uint8_t** p)
 {
-	cf_endpoint_t endpoint;
-	endpoint.type = (cf_address_type_t)cf_read_uint8(p);
+	CF_Endpoint endpoint;
+	endpoint.type = (CF_AddressType)cf_read_uint8(p);
 	if (endpoint.type == CF_ADDRESS_TYPE_IPV4) {
 		endpoint.u.ipv4[0] = cf_read_uint8(p);
 		endpoint.u.ipv4[1] = cf_read_uint8(p);
@@ -201,9 +201,9 @@ CUTE_INLINE cf_endpoint_t cf_read_endpoint(uint8_t** p)
 	return endpoint;
 }
 
-CUTE_INLINE cf_crypto_key_t cf_read_key(uint8_t** p)
+CUTE_INLINE CF_CryptoKey cf_read_key(uint8_t** p)
 {
-	cf_crypto_key_t key;
+	CF_CryptoKey key;
 	cf_read_bytes(p, (uint8_t*)&key, sizeof(key));
 	return key;
 }

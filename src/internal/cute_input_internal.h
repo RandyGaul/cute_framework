@@ -28,19 +28,19 @@
 
 #include <SDL.h>
 
-enum cf_mouse_click_t
+enum CF_MouseClick
 {
 	CF_MOUSE_CLICK_SINGLE,
 	CF_MOUSE_CLICK_DOUBLE,
 };
 
-struct cf_haptic_t;
+struct CF_Haptic;
 
-struct cf_joypad_t
+struct CF_Joypad
 {
-	cf_list_node_t node;
+	CF_ListNode node;
 	SDL_GameController* controller = NULL;
-	cf_haptic_t* haptic = NULL;
+	CF_Haptic* haptic = NULL;
 	SDL_JoystickID id = -1;
 	int buttons[CF_JOYPAD_BUTTON_COUNT] = { 0 };
 	int buttons_prev[CF_JOYPAD_BUTTON_COUNT] = { 0 };
@@ -54,8 +54,8 @@ void cf_pump_input_msgs();
 namespace cute
 {
 
-using mouse_click_t = cf_mouse_click_t;
-using joypad_t = cf_joypad_t;
+using MouseClick = CF_MouseClick;
+using Joypad = CF_Joypad;
 
 }
 

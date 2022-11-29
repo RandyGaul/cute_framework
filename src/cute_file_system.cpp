@@ -163,7 +163,7 @@ CF_Result cf_fs_dismount(const char* archive)
 	}
 }
 
-static CUTE_INLINE cf_file_type_t s_file_type(PHYSFS_FileType type)
+static CUTE_INLINE CF_FileType s_file_type(PHYSFS_FileType type)
 {
 	switch (type)
 	{
@@ -174,7 +174,7 @@ static CUTE_INLINE cf_file_type_t s_file_type(PHYSFS_FileType type)
 	}
 }
 
-CF_Result cf_fs_stat(const char* virtual_path, cf_stat_t* stat)
+CF_Result cf_fs_stat(const char* virtual_path, CF_Stat* stat)
 {
 	PHYSFS_Stat physfs_stat;
 	if (!PHYSFS_stat(virtual_path, &physfs_stat)) {
@@ -190,7 +190,7 @@ CF_Result cf_fs_stat(const char* virtual_path, cf_stat_t* stat)
 	}
 }
 
-cf_file_t* cf_fs_create_file(const char* virtual_path)
+CF_File* cf_fs_create_file(const char* virtual_path)
 {
 	PHYSFS_file* file = PHYSFS_openWrite(virtual_path);
 	if (!file) {
@@ -199,10 +199,10 @@ cf_file_t* cf_fs_create_file(const char* virtual_path)
 		PHYSFS_close(file);
 		return NULL;
 	}
-	return (cf_file_t*)file;
+	return (CF_File*)file;
 }
 
-cf_file_t* cf_fs_open_file_for_write(const char* virtual_path)
+CF_File* cf_fs_open_file_for_write(const char* virtual_path)
 {
 	PHYSFS_file* file = PHYSFS_openWrite(virtual_path);
 	if (!file) {
@@ -211,10 +211,10 @@ cf_file_t* cf_fs_open_file_for_write(const char* virtual_path)
 		PHYSFS_close(file);
 		return NULL;
 	}
-	return (cf_file_t*)file;
+	return (CF_File*)file;
 }
 
-cf_file_t* cf_fs_open_file_for_append(const char* virtual_path)
+CF_File* cf_fs_open_file_for_append(const char* virtual_path)
 {
 	PHYSFS_file* file = PHYSFS_openAppend(virtual_path);
 	if (!file) {
@@ -223,10 +223,10 @@ cf_file_t* cf_fs_open_file_for_append(const char* virtual_path)
 		PHYSFS_close(file);
 		return NULL;
 	}
-	return (cf_file_t*)file;
+	return (CF_File*)file;
 }
 
-cf_file_t* cf_fs_open_file_for_read(const char* virtual_path)
+CF_File* cf_fs_open_file_for_read(const char* virtual_path)
 {
 	PHYSFS_file* file = PHYSFS_openRead(virtual_path);
 	if (!file) {
@@ -235,10 +235,10 @@ cf_file_t* cf_fs_open_file_for_read(const char* virtual_path)
 		PHYSFS_close(file);
 		return NULL;
 	}
-	return (cf_file_t*)file;
+	return (CF_File*)file;
 }
 
-CF_Result cf_fs_close(cf_file_t* file)
+CF_Result cf_fs_close(CF_File* file)
 {
 	if (!PHYSFS_close((PHYSFS_file*)file)) {
 		return cf_result_error(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
@@ -299,17 +299,17 @@ bool cf_fs_file_exists(const char* virtual_path)
 	return PHYSFS_exists(virtual_path) ? true : false;
 }
 
-size_t cf_fs_read(cf_file_t* file, void* buffer, size_t bytes)
+size_t cf_fs_read(CF_File* file, void* buffer, size_t bytes)
 {
 	return (size_t)PHYSFS_readBytes((PHYSFS_file*)file, buffer, (PHYSFS_uint64)bytes);
 }
 
-size_t cf_fs_write(cf_file_t* file, const void* buffer, size_t bytes)
+size_t cf_fs_write(CF_File* file, const void* buffer, size_t bytes)
 {
 	return (size_t)PHYSFS_writeBytes((PHYSFS_file*)file, buffer, (PHYSFS_uint64)bytes);
 }
 
-CF_Result cf_fs_eof(cf_file_t* file)
+CF_Result cf_fs_eof(CF_File* file)
 {
 	if (!PHYSFS_eof((PHYSFS_file*)file)) {
 		return cf_result_error(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
@@ -318,12 +318,12 @@ CF_Result cf_fs_eof(cf_file_t* file)
 	}
 }
 
-size_t cf_fs_tell(cf_file_t* file)
+size_t cf_fs_tell(CF_File* file)
 {
 	return (size_t)PHYSFS_tell((PHYSFS_file*)file);
 }
 
-CF_Result cf_fs_seek(cf_file_t* file, size_t position)
+CF_Result cf_fs_seek(CF_File* file, size_t position)
 {
 	if (!PHYSFS_seek((PHYSFS_file*)file, (PHYSFS_uint64)position)) {
 		return cf_result_error(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
@@ -332,7 +332,7 @@ CF_Result cf_fs_seek(cf_file_t* file, size_t position)
 	}
 }
 
-size_t cf_fs_size(cf_file_t* file)
+size_t cf_fs_size(CF_File* file)
 {
 	return (size_t)PHYSFS_fileLength((PHYSFS_file*)file);
 }
@@ -340,7 +340,7 @@ size_t cf_fs_size(cf_file_t* file)
 CF_Result cf_fs_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size)
 {
 	CUTE_ASSERT(data_ptr);
-	cf_file_t* file = cf_fs_open_file_for_read(virtual_path);
+	CF_File* file = cf_fs_open_file_for_read(virtual_path);
 	void* data = NULL;
 	if (!file) return cf_result_error(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	size_t sz = cf_fs_size(file);
@@ -356,7 +356,7 @@ CF_Result cf_fs_read_entire_file_to_memory(const char* virtual_path, void** data
 CF_Result cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size)
 {
 	CUTE_ASSERT(data_ptr);
-	cf_file_t* file = cf_fs_open_file_for_read(virtual_path);
+	CF_File* file = cf_fs_open_file_for_read(virtual_path);
 	void* data = NULL;
 	if (!file) return cf_result_error(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	size_t sz = cf_fs_size(file) + 1;
@@ -372,7 +372,7 @@ CF_Result cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual
 
 CF_Result cf_fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size)
 {
-	cf_file_t* file = cf_fs_open_file_for_write(virtual_path);
+	CF_File* file = cf_fs_open_file_for_write(virtual_path);
 	if (!file) return cf_result_error(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
 	uint64_t sz = cf_fs_write(file, data, (PHYSFS_uint64)size);
 	if (sz != size) {

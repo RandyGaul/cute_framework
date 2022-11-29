@@ -37,13 +37,13 @@ struct CF_AsepriteCacheEntry
 	const char* path = NULL;
 	ase_t* ase = NULL;
 	htbl animation_t** animations = NULL;
-	cf_v2 local_offset = V2(0, 0);
+	CF_V2 local_offset = V2(0, 0);
 };
 
 struct CF_AsepriteCache
 {
-	dictionary<const char*, CF_AsepriteCacheEntry> aseprites;
-	dictionary<uint64_t, void*> id_to_pixels;
+	Dictionary<const char*, CF_AsepriteCacheEntry> aseprites;
+	Dictionary<uint64_t, void*> id_to_pixels;
 	uint64_t id_gen = CUTE_ASEPRITE_ID_RANGE_LO;
 };
 
@@ -130,7 +130,7 @@ CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite)
 
 	// Allocate internal cache data structure entries.
 	animation_t** animations = NULL;
-	array<uint64_t> ids;
+	Array<uint64_t> ids;
 	ids.ensure_capacity(ase->frame_count);
 
 	for (int i = 0; i < ase->frame_count; ++i) {
@@ -207,8 +207,8 @@ CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite)
 			float x = (float)slice->origin_x + (float)slice->w * 0.25f;
 
 			// Transform from top-left coordinates to center of sprite.
-			cf_v2 origin = cf_V2(x, y);
-			cf_v2 offset = cf_V2((float)ase->w - 1, (float)ase->h - 1) * 0.5f - origin;
+			CF_V2 origin = cf_V2(x, y);
+			CF_V2 offset = cf_V2((float)ase->w - 1, (float)ase->h - 1) * 0.5f - origin;
 			entry.local_offset = offset;
 			break;
 		}

@@ -26,7 +26,7 @@
 #include <cute_ecs.h>
 
 
-CUTE_API bool CUTE_CALL cf_kv_val_entity(cf_kv_t* kv, cf_entity_t* entity);
+CUTE_API bool CUTE_CALL cf_kv_val_entity(CF_KeyValue* kv, CF_Entity* entity);
 
 #ifdef CUTE_CPP
 

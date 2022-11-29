@@ -91,7 +91,7 @@ SOKOL_SHDC_ALIGN(16) typedef struct sprite_vs_params_t {
 #define SLOT_sprite_fs_params (0)
 #pragma pack(push,1)
 SOKOL_SHDC_ALIGN(16) typedef struct sprite_fs_params_t {
-    cf_v2 u_texture_size;
+    CF_V2 u_texture_size;
     uint8_t _pad_8[8];
     CF_Color u_tint;
 } sprite_fs_params_t;

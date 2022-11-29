@@ -26,7 +26,7 @@ using namespace cute;
 CUTE_TEST_CASE(test_circular_buffer_basic, "Typical use-case example, push and pull some data.");
 int test_circular_buffer_basic()
 {
-	cf_circular_buffer_t buffer = cf_make_circular_buffer(1024);
+	CF_CircularBuffer buffer = cf_make_circular_buffer(1024);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	const char* the_data = "Here's some data.";
@@ -47,7 +47,7 @@ CUTE_TEST_CASE(test_circular_buffer_fill_up_and_empty, "Fill up the buffer and e
 int test_circular_buffer_fill_up_and_empty()
 {
 	int bytes = 10;
-	cf_circular_buffer_t buffer = cf_make_circular_buffer(bytes);
+	CF_CircularBuffer buffer = cf_make_circular_buffer(bytes);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	for (int iters = 0; iters < 5; ++iters) {
@@ -72,7 +72,7 @@ CUTE_TEST_CASE(test_circular_buffer_overflow, "Attempt to push too much data to 
 int test_circular_buffer_overflow()
 {
 	int bytes = 10;
-	cf_circular_buffer_t buffer = cf_make_circular_buffer(bytes);
+	CF_CircularBuffer buffer = cf_make_circular_buffer(bytes);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	for (int i = 0; i < bytes; ++i) {
@@ -92,7 +92,7 @@ CUTE_TEST_CASE(test_circular_buffer_underflow, "Attempt to pull too many bytes f
 int test_circular_buffer_underflow()
 {
 	int bytes = 10;
-	cf_circular_buffer_t buffer = cf_make_circular_buffer(bytes);
+	CF_CircularBuffer buffer = cf_make_circular_buffer(bytes);
 	CUTE_TEST_CHECK_POINTER(buffer.data);
 
 	uint8_t byte = 0;
@@ -112,9 +112,9 @@ int test_circular_buffer_underflow()
 }
 
 int test_circular_buffer_running = 1;
-int test_circular_buffer_two_threads_push(void* data)
+int test_CircularBufferwo_threads_push(void* data)
 {
-	cf_circular_buffer_t* buffer = (cf_circular_buffer_t*)data;
+	CF_CircularBuffer* buffer = (CF_CircularBuffer*)data;
 
 	// Push incrementing integers into the buffer.
 	int iters = 100;
@@ -129,9 +129,9 @@ int test_circular_buffer_two_threads_push(void* data)
 	return 0;
 }
 
-int test_circular_buffer_two_threads_pull(void* data)
+int test_CircularBufferwo_threads_pull(void* data)
 {
-	cf_circular_buffer_t* buffer = (cf_circular_buffer_t*)data;
+	CF_CircularBuffer* buffer = (CF_CircularBuffer*)data;
 
 	// Pull integers out of the buffer, make sure they are incrementing.
 	int iters = 100;
@@ -148,15 +148,15 @@ int test_circular_buffer_two_threads_pull(void* data)
 	return 0;
 }
 
-CUTE_TEST_CASE(test_circular_buffer_two_threads, "Run a producer and a consumer thread, and validate input/output of the buffer.");
-int test_circular_buffer_two_threads()
+CUTE_TEST_CASE(test_CircularBufferwo_threads, "Run a producer and a consumer thread, and validate input/output of the buffer.");
+int test_CircularBufferwo_threads()
 {
 	for (int iters = 0; iters < 10; ++iters) {
-		cf_circular_buffer_t buffer = cf_make_circular_buffer(sizeof(int) * 32);
+		CF_CircularBuffer buffer = cf_make_circular_buffer(sizeof(int) * 32);
 		CUTE_TEST_CHECK_POINTER(buffer.data);
 
-		cf_thread_t* push = cf_thread_create(test_circular_buffer_two_threads_push, "thread push", &buffer);
-		cf_thread_t* pull = cf_thread_create(test_circular_buffer_two_threads_pull, "thread pull", &buffer);
+		CF_Thread* push = cf_thread_create(test_CircularBufferwo_threads_push, "thread push", &buffer);
+		CF_Thread* pull = cf_thread_create(test_CircularBufferwo_threads_pull, "thread pull", &buffer);
 
 		CUTE_TEST_ASSERT(!cf_is_error(cf_thread_wait(pull)));
 		test_circular_buffer_running = 0; // Let push thread know the pull thread early-exited, in case it fails.

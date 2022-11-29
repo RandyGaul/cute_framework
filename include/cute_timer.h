@@ -40,27 +40,27 @@ extern "C" {
  */
 CUTE_API float CUTE_CALL cf_calc_dt();
 
-typedef struct cf_timer_t
+typedef struct CF_Timer
 {
 	double inv_freq;
 	uint64_t prev;
-} cf_timer_t;
+} CF_Timer;
 
 /**
  * Initializes a new `timer_t` on the stack.
  */
-CUTE_API cf_timer_t CUTE_CALL cf_timer_init();
+CUTE_API CF_Timer CUTE_CALL cf_timer_init();
 
 /**
  * Returns the time elapsed since the last call to `timer_dt` was made.
  */
-CUTE_API float CUTE_CALL cf_timer_dt(cf_timer_t* timer);
+CUTE_API float CUTE_CALL cf_timer_dt(CF_Timer* timer);
 
 /**
  * Returns the time elapsed since the last call to `timer_dt` was made. Use this function
  * to repeatedly measure the time since the last `timer_dt` call.
  */
-CUTE_API float CUTE_CALL cf_timer_elapsed(cf_timer_t* timer);
+CUTE_API float CUTE_CALL cf_timer_elapsed(CF_Timer* timer);
 
 #ifdef __cplusplus
 }
@@ -74,7 +74,7 @@ CUTE_API float CUTE_CALL cf_timer_elapsed(cf_timer_t* timer);
 namespace cute
 {
 
-using timer_t = cf_timer_t;
+using timer_t = CF_Timer;
 
 CUTE_INLINE float calc_dt() { return cf_calc_dt(); }
 CUTE_INLINE timer_t timer_init() { return cf_timer_init(); }

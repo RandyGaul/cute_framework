@@ -48,7 +48,7 @@ namespace cute
 // local variables but they don't persist, so be careful with them. A block will
 // run for one frame.
 
-struct cf_routine_t
+struct CF_Routine
 {
 	// A "hidden feature" - Goes from 0 to 1 over X seconds during `rt_seconds`.
 	// Useful for animating things.

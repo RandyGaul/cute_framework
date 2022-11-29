@@ -31,7 +31,7 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef struct cf_a_star_grid_t cf_a_star_grid_t;
+typedef struct CF_AStarGrid CF_AStarGrid;
 
 /**
  * Creates a grid based on an array of cells, usable in calls to `a_star`. The `cells` array
@@ -39,12 +39,12 @@ typedef struct cf_a_star_grid_t cf_a_star_grid_t;
  * could use 0 for land, and 1 for water for each element in `cells`.
  *
  * To specify a cost for each kind of cell, please see the `cell_to_cost` member of the
- * `cf_a_star_input_t` struct.
+ * `CF_AStarInput` struct.
  */
-CUTE_API const cf_a_star_grid_t* CUTE_CALL cf_make_a_star_grid(int w, int h, const int* cells);
-CUTE_API void CUTE_CALL cf_destroy_a_star_grid(cf_a_star_grid_t* grid);
+CUTE_API const CF_AStarGrid* CUTE_CALL cf_make_a_star_grid(int w, int h, const int* cells);
+CUTE_API void CUTE_CALL cf_destroy_a_star_grid(CF_AStarGrid* grid);
 
-typedef struct cf_a_star_input_t
+typedef struct CF_AStarInput
 {
 	bool allow_diagonal_movement /* = true */;
 	int start_x /* = 0 */;
@@ -64,21 +64,21 @@ typedef struct cf_a_star_input_t
 	 *     float cost = cell_to_cost[cell[y * w + x]];
 	 */
 	const float* cell_to_cost /* = NULL */;
-} cf_a_star_input_t;
+} CF_AStarInput;
 
-CUTE_API cf_a_star_input_t CUTE_CALL cf_a_star_input_defaults();
+CUTE_API CF_AStarInput CUTE_CALL cf_a_star_input_defaults();
 
 /**
  * Represents the shortest path between two points as an array of 2d vectors.
  */
-typedef struct cf_a_star_output_t
+typedef struct CF_AStarOutput
 {
 	const int* x;
 	const int* y;
 
 	int x_count;
 	int y_count;
-} cf_a_star_output_t;
+} CF_AStarOutput;
 
 /**
  * Calculates the shortest path from start to end from `input` upon `grid`.
@@ -90,8 +90,8 @@ typedef struct cf_a_star_output_t
  * perform many different A* computations in a concurrent way, you need a different `grid`
  * pointer for each multithreaded call.
  */
-CUTE_API bool CUTE_CALL cf_a_star(const cf_a_star_grid_t* grid, const cf_a_star_input_t* input, cf_a_star_output_t* output /* = NULL */);
-CUTE_API void CUTE_CALL cf_free_a_star_output(cf_a_star_output_t* output);
+CUTE_API bool CUTE_CALL cf_a_star(const CF_AStarGrid* grid, const CF_AStarInput* input, CF_AStarOutput* output /* = NULL */);
+CUTE_API void CUTE_CALL cf_free_a_star_output(CF_AStarOutput* output);
 
 #ifdef __cplusplus
 }
@@ -107,22 +107,22 @@ CUTE_API void CUTE_CALL cf_free_a_star_output(cf_a_star_output_t* output);
 namespace cute
 {
 
-using a_star_grid_t = cf_a_star_grid_t;
+using AStarGrid = CF_AStarGrid;
 
-struct a_star_input_t : public cf_a_star_input_t
+struct AStarInput : public CF_AStarInput
 {
-	a_star_input_t() { *(cf_a_star_input_t*)this = cf_a_star_input_defaults(); }
+	AStarInput() { *(CF_AStarInput*)this = cf_a_star_input_defaults(); }
 };
 
-struct a_star_output_t
+struct AStarOutput
 {
-	array<int> x;
-	array<int> y;
+	Array<int> x;
+	Array<int> y;
 };
 
-CUTE_INLINE const a_star_grid_t* make_a_star_grid(int w, int h, const int* cells) { return cf_make_a_star_grid(w, h, cells); }
-CUTE_INLINE void destroy_a_star_grid(a_star_grid_t* grid) { cf_destroy_a_star_grid(grid); }
-CUTE_API bool CUTE_CALL a_star(const a_star_grid_t* grid, const a_star_input_t* input, a_star_output_t* output = NULL);
+CUTE_INLINE const AStarGrid* make_a_star_grid(int w, int h, const int* cells) { return cf_make_a_star_grid(w, h, cells); }
+CUTE_INLINE void destroy_a_star_grid(AStarGrid* grid) { cf_destroy_a_star_grid(grid); }
+CUTE_API bool CUTE_CALL a_star(const AStarGrid* grid, const AStarInput* input, AStarOutput* output = NULL);
 
 }
 

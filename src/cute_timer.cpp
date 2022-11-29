@@ -42,15 +42,15 @@ float cf_calc_dt()
 	return dt;
 }
 
-cf_timer_t cf_timer_init()
+CF_Timer cf_timer_init()
 {
-	cf_timer_t timer;
+	CF_Timer timer;
 	timer.prev = SDL_GetPerformanceCounter();
 	timer.inv_freq = 1.0 / (double)SDL_GetPerformanceFrequency();
 	return timer;
 }
 
-float cf_timer_dt(cf_timer_t* timer)
+float cf_timer_dt(CF_Timer* timer)
 {
 	uint64_t now = SDL_GetPerformanceCounter();
 	float dt = (float)((double)(now - timer->prev) * timer->inv_freq);
@@ -58,7 +58,7 @@ float cf_timer_dt(cf_timer_t* timer)
 	return dt;
 }
 
-float cf_timer_elapsed(cf_timer_t* timer)
+float cf_timer_elapsed(CF_Timer* timer)
 {
 	uint64_t now = SDL_GetPerformanceCounter();
 	float elapsed = (float)((double)(now - timer->prev) * timer->inv_freq);

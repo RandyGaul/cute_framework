@@ -39,7 +39,7 @@ namespace cute
  */
 
 template <typename T>
-struct priority_queue
+struct PriorityQueue
 {
 	void push_min(const T& val, float cost);
 	bool pop_min(T* val = NULL, float* cost = NULL);
@@ -52,8 +52,8 @@ struct priority_queue
 	void clear();
 
 private:
-	array<T> m_values;
-	array<float> m_costs;
+	Array<T> m_values;
+	Array<float> m_costs;
 
 	int predicate_min(int iA, int iB);
 	int predicate_max(int iA, int iB);
@@ -63,7 +63,7 @@ private:
 // -------------------------------------------------------------------------------------------------
 
 template <typename T>
-void priority_queue<T>::push_min(const T& val, float cost)
+void PriorityQueue<T>::push_min(const T& val, float cost)
 {
 	m_values.add(val);
 	m_costs.add(cost);
@@ -76,7 +76,7 @@ void priority_queue<T>::push_min(const T& val, float cost)
 }
 
 template <typename T>
-bool priority_queue<T>::pop_min(T* val, float* cost)
+bool PriorityQueue<T>::pop_min(T* val, float* cost)
 {
 	int count = m_values.count();
 	if (!count) return false;
@@ -106,7 +106,7 @@ bool priority_queue<T>::pop_min(T* val, float* cost)
 }
 
 template <typename T>
-void priority_queue<T>::push_max(const T& val, float cost)
+void PriorityQueue<T>::push_max(const T& val, float cost)
 {
 	m_values.add(val);
 	m_costs.add(cost);
@@ -119,7 +119,7 @@ void priority_queue<T>::push_max(const T& val, float cost)
 }
 
 template <typename T>
-bool priority_queue<T>::pop_max(T* val, float* cost)
+bool PriorityQueue<T>::pop_max(T* val, float* cost)
 {
 	int count = m_values.count();
 	if (!count) return false;
@@ -149,26 +149,26 @@ bool priority_queue<T>::pop_max(T* val, float* cost)
 }
 
 template <typename T>
-int priority_queue<T>::count()
+int PriorityQueue<T>::count()
 {
 	return m_values.count();
 }
 
 template <typename T>
-int priority_queue<T>::count() const
+int PriorityQueue<T>::count() const
 {
 	return m_values.count();
 }
 
 template <typename T>
-void priority_queue<T>::clear()
+void PriorityQueue<T>::clear()
 {
 	m_values.clear();
 	m_costs.clear();
 }
 
 template <typename T>
-int priority_queue<T>::predicate_min(int iA, int iB)
+int PriorityQueue<T>::predicate_min(int iA, int iB)
 {
 	float costA = m_costs[iA];
 	float costB = m_costs[iB];
@@ -176,7 +176,7 @@ int priority_queue<T>::predicate_min(int iA, int iB)
 }
 
 template <typename T>
-int priority_queue<T>::predicate_max(int iA, int iB)
+int PriorityQueue<T>::predicate_max(int iA, int iB)
 {
 	float costA = m_costs[iA];
 	float costB = m_costs[iB];
@@ -184,7 +184,7 @@ int priority_queue<T>::predicate_max(int iA, int iB)
 }
 
 template <typename T>
-void priority_queue<T>::swap(int iA, int iB)
+void PriorityQueue<T>::swap(int iA, int iB)
 {
 	T tval = m_values[iA];
 	m_values[iA] = m_values[iB];

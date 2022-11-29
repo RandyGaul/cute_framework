@@ -32,20 +32,20 @@ int test_png_cache()
 
 	cf_make_png_cache();
 
-	cf_png_t white;
-	cf_png_t black;
+	CF_Png white;
+	CF_Png black;
 	CF_Result err = cf_png_cache_load("test_data/white_pixel.png", &white);
 	CUTE_TEST_ASSERT(!cf_is_error(err));
 	err = cf_png_cache_load("test_data/black_pixel.png", &black);
 	CUTE_TEST_ASSERT(!cf_is_error(err));
 
-	cf_png_t blink_png[] = { white, black };
+	CF_Png blink_png[] = { white, black };
 	float blink_delay[] = { 0.5f, 0.5f };
 	
-	cf_png_t white_png[] = { white };
+	CF_Png white_png[] = { white };
 	float white_delay[] = { 1.0f };
 
-	cf_png_t black_png[] = { black };
+	CF_Png black_png[] = { black };
 	float black_delay[] = { 1.0f };
 
 	const CF_Animation* blink_anim = cf_make_png_cache_animation("blink", blink_png, CUTE_ARRAY_SIZE(blink_png), blink_delay, CUTE_ARRAY_SIZE(blink_delay));

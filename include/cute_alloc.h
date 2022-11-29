@@ -47,8 +47,8 @@
 	#	pragma warning(disable:4291)
 	#endif
 
-	enum cf_dummy_enum_t { CF_DUMMY_ENUM };
-	inline void* operator new(size_t, cf_dummy_enum_t, void* ptr) { return ptr; }
+	enum CF_DummyEnum { CF_DUMMY_ENUM };
+	inline void* operator new(size_t, CF_DummyEnum, void* ptr) { return ptr; }
 	#define CUTE_PLACEMENT_NEW(ptr) new(CF_DUMMY_ENUM, ptr)
 	#define CUTE_NEW(T) new(CF_DUMMY_ENUM, CUTE_ALLOC(sizeof(T))) T
 #endif // CUTE_CPP
@@ -85,38 +85,38 @@ CUTE_API void CUTE_CALL cf_arena_reset(CF_Arena* arena);
 //--------------------------------------------------------------------------------------------------
 // Memory pool allocator.
 
-typedef struct cf_memory_pool_t cf_memory_pool_t;
+typedef struct CF_MemoryPool CF_MemoryPool;
 
 /**
  * Constructs a new memory pool.
  * `element_size` is the fixed size each internal allocation will be.
  * `element_count` determins how big the internal pool will be.
  */
-CUTE_API cf_memory_pool_t* CUTE_CALL cf_make_memory_pool(int element_size, int element_count, int alignment);
+CUTE_API CF_MemoryPool* CUTE_CALL cf_make_memory_pool(int element_size, int element_count, int alignment);
 
 /**
  * Destroys a memory pool previously created with `make_memory_pool`. Does not clean up any leftover
  * allocations from `cf_memory_pool_alloc` that overflowed to the `malloc` backup. See `cf_memory_pool_alloc`
  * for more details.
  */
-CUTE_API void CUTE_CALL cf_destroy_memory_pool(cf_memory_pool_t* pool);
+CUTE_API void CUTE_CALL cf_destroy_memory_pool(CF_MemoryPool* pool);
 
 /**
  * Returns a block of memory of `element_size` bytes. If the number of allocations in the pool exceeds
  * `element_count` then `malloc` is used as a fallback.
  */
-CUTE_API void* CUTE_CALL cf_memory_pool_alloc(cf_memory_pool_t* pool);
+CUTE_API void* CUTE_CALL cf_memory_pool_alloc(CF_MemoryPool* pool);
 
 /**
  * The same as `cf_memory_pool_alloc` without the `malloc` fallback -- returns `NULL` if the memory pool
  * is all used up.
  */
-CUTE_API void* CUTE_CALL cf_memory_pool_try_alloc(cf_memory_pool_t* pool);
+CUTE_API void* CUTE_CALL CF_MemoryPoolry_alloc(CF_MemoryPool* pool);
 
 /**
- * Frees an allocation previously acquired by `cf_memory_pool_alloc` or `cf_memory_pool_try_alloc`.
+ * Frees an allocation previously acquired by `cf_memory_pool_alloc` or `CF_MemoryPoolry_alloc`.
  */
-CUTE_API void CUTE_CALL cf_memory_pool_free(cf_memory_pool_t* pool, void* element);
+CUTE_API void CUTE_CALL cf_memory_pool_free(CF_MemoryPool* pool, void* element);
 
 #ifdef __cplusplus
 }
@@ -133,19 +133,19 @@ namespace cute
 CUTE_INLINE void* aligned_alloc(size_t size, int alignment) { return cf_aligned_alloc(size, alignment); }
 CUTE_INLINE void aligned_free(void* ptr) { return cf_aligned_free(ptr); }
 
-using arena_t = CF_Arena;
+using Arena = CF_Arena;
 
 CUTE_INLINE void arena_init(CF_Arena* arena, int alignment, int block_size) { cf_arena_init(arena, alignment, block_size); }
 CUTE_INLINE void* arena_alloc(CF_Arena* arena, size_t size) { return cf_arena_alloc(arena, size); }
 CUTE_INLINE void arena_reset(CF_Arena* arena) { return cf_arena_reset(arena); }
 
-using memory_pool_t = cf_memory_pool_t;
+using MemoryPool = CF_MemoryPool;
 
-CUTE_INLINE memory_pool_t* make_memory_pool(int element_size, int element_count, int alignment) { return cf_make_memory_pool(element_size, element_count, alignment); }
-CUTE_INLINE void destroy_memory_pool(memory_pool_t* pool) { cf_destroy_memory_pool(pool); }
-CUTE_INLINE void* memory_pool_alloc(memory_pool_t* pool) { return cf_memory_pool_alloc(pool); }
-CUTE_INLINE void* memory_pool_try_alloc(memory_pool_t* pool) { return cf_memory_pool_try_alloc(pool); }
-CUTE_INLINE void memory_pool_free(memory_pool_t* pool, void* element) { return cf_memory_pool_free(pool, element); }
+CUTE_INLINE MemoryPool* make_memory_pool(int element_size, int element_count, int alignment) { return cf_make_memory_pool(element_size, element_count, alignment); }
+CUTE_INLINE void destroy_memory_pool(MemoryPool* pool) { cf_destroy_memory_pool(pool); }
+CUTE_INLINE void* memory_pool_alloc(MemoryPool* pool) { return cf_memory_pool_alloc(pool); }
+CUTE_INLINE void* MemoryPoolry_alloc(MemoryPool* pool) { return CF_MemoryPoolry_alloc(pool); }
+CUTE_INLINE void memory_pool_free(MemoryPool* pool, void* element) { return cf_memory_pool_free(pool, element); }
 
 }
 

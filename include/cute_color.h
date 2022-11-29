@@ -87,10 +87,10 @@ CUTE_INLINE uint32_t CF_Pixelo_int_rgba(CF_Pixel p) { return p.val; }
 CUTE_INLINE uint32_t CF_Pixelo_int_rgb(CF_Pixel p) { return p.val | 0x000000FF; }
 CUTE_INLINE char* CF_Pixelo_string(CF_Pixel p) { char* s = NULL; return shex(s, p.val); } // Call `sfree` when done.
 
-CUTE_INLINE CF_Pixel CF_Coloro_pixel(CF_Color c) { CF_Pixel p; p.colors.r = (int)((uint8_t)(c.r * 255.0f)); p.colors.g = (int)((uint8_t)(c.g * 255.0f)); p.colors.b = (int)((uint8_t)(c.b * 255.0f)); p.colors.a = (int)((uint8_t)(c.a * 255.0f)); return p; }
-CUTE_INLINE uint32_t CF_Coloro_int_rgb(CF_Color c) { return CF_Coloro_pixel(c).val | 0x000000FF; }
-CUTE_INLINE uint32_t CF_Coloro_int_rgba(CF_Color c) { return CF_Coloro_pixel(c).val; }
-CUTE_INLINE char* CF_Coloro_string(CF_Color c) { char* s = NULL; return shex(s, CF_Coloro_pixel(c).val); } // Call `sfree` when done.
+CUTE_INLINE CF_Pixel cf_color_to_pixel(CF_Color c) { CF_Pixel p; p.colors.r = (int)((uint8_t)(c.r * 255.0f)); p.colors.g = (int)((uint8_t)(c.g * 255.0f)); p.colors.b = (int)((uint8_t)(c.b * 255.0f)); p.colors.a = (int)((uint8_t)(c.a * 255.0f)); return p; }
+CUTE_INLINE uint32_t cf_color_to_int_rgb(CF_Color c) { return cf_color_to_pixel(c).val | 0x000000FF; }
+CUTE_INLINE uint32_t cf_color_to_int_rgba(CF_Color c) { return cf_color_to_pixel(c).val; }
+CUTE_INLINE char* cf_color_to_string(CF_Color c) { char* s = NULL; return shex(s, cf_color_to_pixel(c).val); } // Call `sfree` when done.
 
 CUTE_INLINE CF_Color cf_color_invisible() { return cf_make_color_rgba_f(0.0f, 0.0f, 0.0f, 0.0f); }
 CUTE_INLINE CF_Color cf_color_black() { return cf_make_color_rgb_f(0.0f, 0.0f, 0.0f); }
@@ -160,12 +160,12 @@ CUTE_INLINE Pixel premultiply(Pixel p) { return cf_pixel_premultiply(p); }
 CUTE_INLINE Color to_color(Pixel p) { return cf_make_color_hex((int)p.val); }
 CUTE_INLINE uint32_t to_int_rgba(Pixel p) { return p.val; }
 CUTE_INLINE uint32_t to_int_rgb(Pixel p) { return p.val | 0x000000FF; }
-CUTE_INLINE string_t to_string(Pixel p) { char* s = NULL; return shex(s, p.val); }
+CUTE_INLINE String to_string(Pixel p) { char* s = NULL; return shex(s, p.val); }
 
-CUTE_INLINE Pixel to_pixel(Color c) { return CF_Coloro_pixel(c); }
-CUTE_INLINE uint32_t to_int_rgb(Color c) { return CF_Coloro_pixel(c).val | 0x000000FF; }
-CUTE_INLINE uint32_t to_int_rgba(Color c) { return CF_Coloro_pixel(c).val; }
-CUTE_INLINE string_t to_string(Color c) { char* s = NULL; return shex(s, CF_Coloro_pixel(c).val); }
+CUTE_INLINE Pixel to_pixel(Color c) { return cf_color_to_pixel(c); }
+CUTE_INLINE uint32_t to_int_rgb(Color c) { return cf_color_to_pixel(c).val | 0x000000FF; }
+CUTE_INLINE uint32_t to_int_rgba(Color c) { return cf_color_to_pixel(c).val; }
+CUTE_INLINE String to_string(Color c) { char* s = NULL; return shex(s, cf_color_to_pixel(c).val); }
 
 CUTE_INLINE Color color_invisible() { return cf_color_invisible(); }
 CUTE_INLINE Color color_black() { return cf_color_black(); }

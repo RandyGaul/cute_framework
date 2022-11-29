@@ -35,22 +35,22 @@ static CUTE_INLINE CF_Result cf_wrap(cn_result_t cn_result)
 CUTE_STATIC_ASSERT(CUTE_CONNECT_TOKEN_SIZE == CN_CONNECT_TOKEN_SIZE, "Must be equal.");
 CUTE_STATIC_ASSERT(CUTE_CONNECT_TOKEN_USER_DATA_SIZE == CN_CONNECT_TOKEN_USER_DATA_SIZE, "Must be equal.");
 
-int cf_endpoint_init(cf_endpoint_t* endpoint, const char* address_and_port_string)
+int cf_endpoint_init(CF_Endpoint* endpoint, const char* address_and_port_string)
 {
 	return cn_endpoint_init(endpoint, address_and_port_string);
 }
 
-void cf_endpoint_to_string(cf_endpoint_t endpoint, char* buffer, int buffer_size)
+void CF_Endpointo_string(CF_Endpoint endpoint, char* buffer, int buffer_size)
 {
 	cn_endpoint_to_string(endpoint, buffer, buffer_size);
 }
 
-int cf_endpoint_equals(cf_endpoint_t a, cf_endpoint_t b)
+int cf_endpoint_equals(CF_Endpoint a, CF_Endpoint b)
 {
 	return cn_endpoint_equals(a, b);
 }
 
-cf_crypto_key_t cf_crypto_generate_key()
+CF_CryptoKey cf_crypto_generate_key()
 {
 	return cn_crypto_generate_key();
 }
@@ -60,7 +60,7 @@ void cf_crypto_random_bytes(void* data, int byte_count)
 	cn_crypto_random_bytes(data, byte_count);
 }
 
-void cf_crypto_sign_keygen(cf_crypto_sign_public_t* public_key, cf_crypto_sign_secret_t* secret_key)
+void cf_crypto_sign_keygen(CF_CryptoSignPublic* public_key, CF_CryptoSignSecret* secret_key)
 {
 	cn_crypto_sign_keygen(public_key, secret_key);
 }
@@ -68,15 +68,15 @@ void cf_crypto_sign_keygen(cf_crypto_sign_public_t* public_key, cf_crypto_sign_s
 CF_Result cf_generate_connect_token(
 	uint64_t application_id,
 	uint64_t creation_timestamp,
-	const cf_crypto_key_t* client_to_server_key,
-	const cf_crypto_key_t* server_to_client_key,
+	const CF_CryptoKey* client_to_server_key,
+	const CF_CryptoKey* server_to_client_key,
 	uint64_t expiration_timestamp,
 	uint32_t handshake_timeout,
 	int address_count,
 	const char** address_list,
 	uint64_t client_id,
 	const uint8_t* user_data,
-	const cf_crypto_sign_secret_t* shared_secret_key,
+	const CF_CryptoSignSecret* shared_secret_key,
 	uint8_t* token_ptr_out
 )
 {
@@ -96,7 +96,7 @@ CF_Result cf_generate_connect_token(
 	return cf_wrap(result);
 }
 
-cf_client_t* cf_make_client(
+CF_Client* cf_make_client(
 	uint16_t port,
 	uint64_t application_id,
 	bool use_ipv6 /* = false */
@@ -105,52 +105,52 @@ cf_client_t* cf_make_client(
 	return cn_client_create(port, application_id, use_ipv6, NULL);
 }
 
-void cf_destroy_client(cf_client_t* client)
+void cf_destroy_client(CF_Client* client)
 {
 	cn_client_destroy(client);
 }
 
-CF_Result cf_client_connect(cf_client_t* client, const uint8_t* connect_token)
+CF_Result cf_client_connect(CF_Client* client, const uint8_t* connect_token)
 {
 	return cf_wrap(cn_client_connect(client, connect_token));
 }
 
-void cf_client_disconnect(cf_client_t* client)
+void cf_client_disconnect(CF_Client* client)
 {
 	cn_client_disconnect(client);
 }
 
-void cf_client_update(cf_client_t* client, double dt, uint64_t current_time)
+void cf_client_update(CF_Client* client, double dt, uint64_t current_time)
 {
 	cn_client_update(client, dt, current_time);
 }
 
-bool cf_client_pop_packet(cf_client_t* client, void** packet, int* size, bool* was_sent_reliably /* = NULL */)
+bool cf_client_pop_packet(CF_Client* client, void** packet, int* size, bool* was_sent_reliably /* = NULL */)
 {
 	return cn_client_pop_packet(client, packet, size, was_sent_reliably);
 }
 
-void cf_client_free_packet(cf_client_t* client, void* packet)
+void cf_client_free_packet(CF_Client* client, void* packet)
 {
 	cn_client_free_packet(client, packet);
 }
 
-CF_Result cf_client_send(cf_client_t* client, const void* packet, int size, bool send_reliably)
+CF_Result cf_client_send(CF_Client* client, const void* packet, int size, bool send_reliably)
 {
 	return cf_wrap(cn_client_send(client, packet, size, send_reliably));
 }
 
-cf_client_state_t cf_client_state_get(const cf_client_t* client)
+CF_ClientState cf_client_state_get(const CF_Client* client)
 {
-	return (cf_client_state_t)cn_client_state_get(client);
+	return (CF_ClientState)cn_client_state_get(client);
 }
 
-const char* cf_client_state_string(cf_client_state_t state)
+const char* cf_client_state_string(CF_ClientState state)
 {
 	return cn_client_state_string((cn_client_state_t)state);
 }
 
-void cf_client_enable_network_simulator(cf_client_t* client, double latency, double jitter, double drop_chance, double duplicate_chance)
+void cf_client_enable_network_simulator(CF_Client* client, double latency, double jitter, double drop_chance, double duplicate_chance)
 {
 	cn_client_enable_network_simulator(client, latency, jitter, drop_chance, duplicate_chance);
 }
@@ -160,7 +160,7 @@ void cf_client_enable_network_simulator(cf_client_t* client, double latency, dou
 
 CUTE_STATIC_ASSERT(CUTE_SERVER_MAX_CLIENTS == CN_SERVER_MAX_CLIENTS, "Must be equal.");
 
-cf_server_t* cf_make_server(cf_server_config_t config)
+CF_Server* cf_make_server(CF_ServerConfig config)
 {
 	cn_server_config_t cn_config;
 	cn_config.application_id = config.application_id;
@@ -174,53 +174,53 @@ cf_server_t* cf_make_server(cf_server_config_t config)
 	return cn_server_create(cn_config);
 }
 
-void cf_destroy_server(cf_server_t* server)
+void cf_destroy_server(CF_Server* server)
 {
 	cn_server_destroy(server);
 }
 
-CF_Result cf_server_start(cf_server_t* server, const char* address_and_port)
+CF_Result cf_server_start(CF_Server* server, const char* address_and_port)
 {
 	return cf_wrap(cn_server_start(server, address_and_port));
 }
 
-void cf_server_stop(cf_server_t* server)
+void cf_server_stop(CF_Server* server)
 {
 	return cn_server_stop(server);
 }
 
-CUTE_STATIC_ASSERT(sizeof(cf_server_event_t) == sizeof(cn_server_event_t), "Must be equal.");
+CUTE_STATIC_ASSERT(sizeof(CF_ServerEvent) == sizeof(cn_server_event_t), "Must be equal.");
 
-bool cf_server_pop_event(cf_server_t* server, cf_server_event_t* event)
+bool cf_server_pop_event(CF_Server* server, CF_ServerEvent* event)
 {
 	return cn_server_pop_event(server, (cn_server_event_t*)event);
 }
 
-void cf_server_free_packet(cf_server_t* server, int client_index, void* data)
+void cf_server_free_packet(CF_Server* server, int client_index, void* data)
 {
 	cn_server_free_packet(server, client_index, data);
 }
 
-void cf_server_update(cf_server_t* server, double dt, uint64_t current_time)
+void cf_server_update(CF_Server* server, double dt, uint64_t current_time)
 {
 	cn_server_update(server, dt, current_time);
 }
 
-void cf_server_disconnect_client(cf_server_t* server, int client_index, bool notify_client /* = true */)
+void cf_server_disconnect_client(CF_Server* server, int client_index, bool notify_client /* = true */)
 {
 	cn_server_disconnect_client(server, client_index, notify_client);
 }
 
-void cf_server_send(cf_server_t* server, const void* packet, int size, int client_index, bool send_reliably)
+void cf_server_send(CF_Server* server, const void* packet, int size, int client_index, bool send_reliably)
 {
 	cn_server_send(server, packet, size, client_index, send_reliably);
 }
-bool cf_server_is_client_connected(cf_server_t* server, int client_index)
+bool cf_server_is_client_connected(CF_Server* server, int client_index)
 {
 	return cn_server_is_client_connected(server, client_index);
 }
 
-void cf_server_enable_network_simulator(cf_server_t* server, double latency, double jitter, double drop_chance, double duplicate_chance)
+void cf_server_enable_network_simulator(CF_Server* server, double latency, double jitter, double drop_chance, double duplicate_chance)
 {
 	cn_server_enable_network_simulator(server, latency, jitter, drop_chance, duplicate_chance);
 }
