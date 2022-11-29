@@ -761,6 +761,181 @@ CUTE_API void CUTE_CALL cf_end_pass();
 namespace cute
 {
 
+using Texture  = CF_Texture;
+using Pass = CF_Pass;
+using Mesh = CF_Mesh;
+using Material = CF_Material;
+using Shader = CF_Shader;
+using Matrix4x4 = CF_Matrix4x4;
+using TextureParams = CF_TextureParams;
+using SokolShader = CF_SokolShader;
+using PassParams = CF_PassParams;
+using VertexAttribute = CF_VertexAttribute;
+using StencilFunction = CF_StencilFunction;
+using StencilParams = CF_StencilParams;
+using BlendState = CF_BlendState;
+using RenderState = CF_RenderState;
+
+enum BackendType : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_BACKEND_TYPE_DEFS
+	#undef CF_ENUM
+};
+
+enum DeviceFeature : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_DEVICE_FEATURE_DEFS
+	#undef CF_ENUM
+};
+
+enum PixelFormat : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_PIXELFORMAT_DEFS
+	#undef CF_ENUM
+};
+
+enum PixelFormatOp : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_PIXELFORMAT_OP_DEFS
+	#undef CF_ENUM
+};
+
+enum ResourceLimit : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_RESOURCE_LIMIT_DEFS
+	#undef CF_ENUM
+};
+
+enum UsageType : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_USAGE_TYPE_DEFS
+	#undef CF_ENUM
+};
+
+enum Filter : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_FILTER_DEFS
+	#undef CF_ENUM
+};
+
+enum WrapMode : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_WRAP_MODE_DEFS
+	#undef CF_ENUM
+};
+
+enum PassInitOp : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_PASS_INIT_OP_DEFS
+	#undef CF_ENUM
+};
+
+enum VertexFormat : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_VERTEX_FORMAT_DEFS
+	#undef CF_ENUM
+};
+
+enum AttributeStep : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_ATTRIBUTE_STEP_DEFS
+	#undef CF_ENUM
+};
+
+enum CullMode : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_CULL_MODE_DEFS
+	#undef CF_ENUM
+};
+
+enum CompareFunction : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_COMPARE_FUNCTION_DEFS
+	#undef CF_ENUM
+};
+
+enum StencilOp : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_STENCIL_OP_DEFS
+	#undef CF_ENUM
+};
+
+enum BlendOp : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_BLEND_OP_DEFS
+	#undef CF_ENUM
+};
+
+enum BlendFactor : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_BLEND_FACTOR_DEFS
+	#undef CF_ENUM
+};
+
+enum UniformType : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_UNIFORM_TYPE_DEFS
+	#undef CF_ENUM
+};
+
+CUTE_INLINE BackendType CUTE_CALL query_backend() { return (BackendType)cf_query_backend(); }
+CUTE_INLINE bool query_pixel_format(PixelFormat format, PixelFormatOp op) { cf_query_pixel_format((CF_PixelFormat)format, (CF_PixelFormatOp)op); }
+CUTE_INLINE bool query_device_feature(DeviceFeature feature) { cf_query_device_feature((CF_DeviceFeature)feature); }
+CUTE_INLINE int query_resource_limit(ResourceLimit resource_limit) { cf_query_resource_limit((CF_ResourceLimit)resource_limit); }
+CUTE_INLINE TextureParams texture_defaults() { return cf_texture_defaults(); }
+CUTE_INLINE Texture make_texture(TextureParams texture_params) { return cf_make_texture(texture_params); }
+CUTE_INLINE void destroy_texture(Texture texture) { cf_destroy_texture(texture); }
+CUTE_INLINE void update_texture(Texture texture, void* data, int size) { cf_update_texture(texture, data, size); }
+CUTE_INLINE Shader make_shader(SokolShader sokol_shader) { return cf_make_shader(sokol_shader); }
+CUTE_INLINE void destroy_shader(Shader shader) { cf_destroy_shader(shader); }
+CUTE_INLINE PassParams pass_defaults() { return cf_pass_defaults(); }
+CUTE_INLINE Pass make_pass(PassParams pass_params) { return cf_make_pass(pass_params); }
+CUTE_INLINE void destroy_pass(Pass pass) { cf_destroy_pass(pass); }
+CUTE_INLINE Mesh make_mesh(UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size) { cf_make_mesh((CF_UsageType)usage_type, vertex_buffer_size, index_buffer_size, instance_buffer_size); }
+CUTE_INLINE void destroy_mesh(Mesh mesh) { cf_destroy_mesh(mesh); }
+CUTE_INLINE void mesh_set_attributes(Mesh mesh, const VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride) { cf_mesh_set_attributes(mesh, attributes, attribute_count, vertex_stride, instance_stride); }
+CUTE_INLINE void mesh_update_vertex_data(Mesh mesh, void* data, int count) { cf_mesh_update_vertex_data(mesh, data, count); }
+CUTE_INLINE int mesh_append_vertex_data(Mesh mesh, void* data, int append_count) { return cf_mesh_append_vertex_data(mesh, data, append_count); }
+CUTE_INLINE bool mesh_will_overflow_vertex_data(Mesh mesh, int append_count) { return cf_mesh_will_overflow_vertex_data(mesh, append_count); }
+CUTE_INLINE void mesh_update_instance_data(Mesh mesh, void* data, int count) { cf_mesh_update_instance_data(mesh, data, count); }
+CUTE_INLINE int mesh_append_instance_data(Mesh mesh, void* data, int append_count) { return cf_mesh_append_instance_data(mesh, data, append_count); }
+CUTE_INLINE bool mesh_will_overflow_instance_data(Mesh mesh, int append_count) { return cf_mesh_will_overflow_instance_data(mesh, append_count); }
+CUTE_INLINE void mesh_update_index_data(Mesh mesh, uint32_t* indices, int count) { cf_mesh_update_index_data(mesh, indices, count); }
+CUTE_INLINE int mesh_append_index_data(Mesh mesh, uint32_t* indices, int append_count) { return cf_mesh_append_index_data(mesh, indices, append_count); }
+CUTE_INLINE bool mesh_will_overflow_index_data(Mesh mesh, int append_count) { return cf_mesh_will_overflow_index_data(mesh, append_count); }
+CUTE_INLINE RenderState render_state_defaults() { return cf_render_state_defaults(); }
+CUTE_INLINE Material make_material() { return cf_make_material(); }
+CUTE_INLINE void destroy_material(Material material) { cf_destroy_material(material); }
+CUTE_INLINE void material_set_render_state(Material material, RenderState render_state) { cf_material_set_render_state(material, render_state); }
+CUTE_INLINE void material_set_texture_vs(Material material, const char* name, Texture texture) { cf_material_set_texture_vs(material, name, texture); }
+CUTE_INLINE void material_set_texture_fs(Material material, const char* name, Texture texture) { cf_material_set_texture_fs(material, name, texture); }
+CUTE_INLINE void material_set_uniform_vs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_vs(material, block_name, name, data, (CF_UniformType)type, array_length); }
+CUTE_INLINE void material_set_uniform_fs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_fs(material, block_name, name, data, (CF_UniformType)type, array_length); }
+CUTE_INLINE void begin_pass(Pass pass) { cf_begin_pass(pass); }
+CUTE_INLINE void apply_viewport(float x, float y, float w, float h) { cf_apply_viewport(x, y, w, h); }
+CUTE_INLINE void apply_scissor(float x, float y, float w, float h) { cf_apply_scissor(x, y, w, h); }
+CUTE_INLINE void apply_mesh(Mesh mesh) { cf_apply_mesh(mesh); }
+CUTE_INLINE void apply_shader(Shader shader, Material material) { cf_apply_shader(shader, material); }
+CUTE_INLINE void draw_elements() { cf_draw_elements(); }
+CUTE_INLINE void end_pass() { cf_end_pass(); }
+
 }
 
 #endif // CUTE_CPP
