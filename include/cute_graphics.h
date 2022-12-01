@@ -935,7 +935,7 @@ using BackendType = CF_BackendType;
 CF_BACKEND_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* backend_type_to_string(CF_BackendType type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(CF_BackendType type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_BACKEND_TYPE_DEFS
 	#undef CF_ENUM
@@ -948,7 +948,7 @@ using DeviceFeature = CF_DeviceFeature;
 CF_DEVICE_FEATURE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* device_feature_to_string(DeviceFeature type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(DeviceFeature type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_DEVICE_FEATURE_DEFS
 	#undef CF_ENUM
@@ -961,7 +961,7 @@ using PixelFormat = CF_PixelFormat;
 CF_PIXELFORMAT_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* pixel_format_to_string(PixelFormat type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(PixelFormat type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_PIXELFORMAT_DEFS
 	#undef CF_ENUM
@@ -974,7 +974,7 @@ using PixelFormatOp = CF_PixelFormatOp;
 CF_PIXELFORMAT_OP_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* pixel_formatop_to_string(PixelFormatOp type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(PixelFormatOp type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_PIXELFORMAT_OP_DEFS
 	#undef CF_ENUM
@@ -987,7 +987,7 @@ using ResourceLimit = CF_ResourceLimit;
 CF_RESOURCE_LIMIT_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* resource_limit_to_string(ResourceLimit type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(ResourceLimit type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_RESOURCE_LIMIT_DEFS
 	#undef CF_ENUM
@@ -1000,7 +1000,7 @@ using UsageType = CF_UsageType;
 CF_USAGE_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* usage_type_to_string(UsageType type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(UsageType type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_USAGE_TYPE_DEFS
 	#undef CF_ENUM
@@ -1013,7 +1013,7 @@ using Filter = CF_Filter;
 CF_FILTER_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* filter_to_string(Filter type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(Filter type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_FILTER_DEFS
 	#undef CF_ENUM
@@ -1026,7 +1026,7 @@ using WrapMode = CF_WrapMode;
 CF_WRAP_MODE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* wrap_mode_to_string(WrapMode type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(WrapMode type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_WRAP_MODE_DEFS
 	#undef CF_ENUM
@@ -1039,7 +1039,7 @@ using PassInitOp = CF_PassInitOp;
 CF_PASS_INIT_OP_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* pass_init_op_to_string(PassInitOp type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(PassInitOp type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_PASS_INIT_OP_DEFS
 	#undef CF_ENUM
@@ -1052,7 +1052,7 @@ using VertexFormat = CF_VertexFormat;
 CF_VERTEX_FORMAT_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* vertex_format_to_string(VertexFormat type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(VertexFormat type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_VERTEX_FORMAT_DEFS
 	#undef CF_ENUM
@@ -1065,7 +1065,7 @@ using AttributeStep = CF_AttributeStep;
 CF_ATTRIBUTE_STEP_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* attribute_step_to_string(AttributeStep type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(AttributeStep type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_ATTRIBUTE_STEP_DEFS
 	#undef CF_ENUM
@@ -1078,7 +1078,7 @@ using CullMode = CF_CullMode;
 CF_CULL_MODE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* cull_mode_to_string(CullMode type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(CullMode type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_CULL_MODE_DEFS
 	#undef CF_ENUM
@@ -1091,7 +1091,7 @@ using CompareFunction = CF_CompareFunction;
 CF_COMPARE_FUNCTION_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* compare_function_to_string(CompareFunction type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(CompareFunction type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_COMPARE_FUNCTION_DEFS
 	#undef CF_ENUM
@@ -1104,7 +1104,7 @@ using StencilOp = CF_StencilOp;
 CF_STENCIL_OP_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* stencil_op_to_string(StencilOp type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(StencilOp type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_STENCIL_OP_DEFS
 	#undef CF_ENUM
@@ -1117,7 +1117,7 @@ using BlendOp = CF_BlendOp;
 CF_BLEND_OP_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* blendop_to_string(BlendOp type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(BlendOp type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_BLEND_OP_DEFS
 	#undef CF_ENUM
@@ -1130,7 +1130,7 @@ using BlendFactor = CF_BlendFactor;
 CF_BLEND_FACTOR_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* blend_factor_to_string(BlendFactor type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(BlendFactor type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_BLEND_FACTOR_DEFS
 	#undef CF_ENUM
@@ -1143,7 +1143,7 @@ using UniformType = CF_UniformType;
 CF_UNIFORM_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* uniform_type_to_string(UniformType type) { switch(type) {
+CUTE_INLINE constexpr const char* to_string(UniformType type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_UNIFORM_TYPE_DEFS
 	#undef CF_ENUM

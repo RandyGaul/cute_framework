@@ -333,7 +333,7 @@ using PlayDirection = CF_PlayDirection;
 CF_PLAY_DIRECTION_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* play_direction_to_string(PlayDirection dir)
+CUTE_INLINE const char* to_string(PlayDirection dir)
 {
 	switch (dir) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;

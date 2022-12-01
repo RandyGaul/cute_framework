@@ -472,7 +472,7 @@ using FileType = CF_FileType;
 CF_FILE_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* file_type_to_string(FileType type)
+CUTE_INLINE const char* to_string(FileType type)
 {
 	switch (type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;

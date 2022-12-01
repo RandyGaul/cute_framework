@@ -95,7 +95,7 @@ using WindowMessageBoxType = CF_WindowMessageBoxType;
 CF_WINDOW_MESSAGE_BOX_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* window_message_box_type_to_string(WindowMessageBoxType type)
+CUTE_INLINE const char* to_string(WindowMessageBoxType type)
 {
 	switch (type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;

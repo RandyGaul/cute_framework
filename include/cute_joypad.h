@@ -197,7 +197,7 @@ using JoypadPowerLevel = CF_JoypadPowerLevel;
 CF_JOYPAD_POWER_LEVEL_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* joypad_power_level_to_string(JoypadPowerLevel level)
+CUTE_INLINE const char* to_string(JoypadPowerLevel level)
 {
 	switch (level) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -212,7 +212,7 @@ using JoypadButton = CF_JoypadButton;
 CF_JOYPAD_BUTTON_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* joypad_button_to_string(JoypadButton button)
+CUTE_INLINE const char* to_string(JoypadButton button)
 {
 	switch (button) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -227,7 +227,7 @@ using JoypadAxis = CF_JoypadAxis;
 CF_JOYPAD_AXIS_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* joypad_axis_to_string(JoypadAxis axis)
+CUTE_INLINE const char* to_string(JoypadAxis axis)
 {
 	switch (axis) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;

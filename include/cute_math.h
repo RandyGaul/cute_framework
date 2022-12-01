@@ -677,7 +677,7 @@ using ShapeType = CF_ShapeType;
 CF_SHAPE_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* shape_type_to_string(ShapeType type)
+CUTE_INLINE const char* to_string(ShapeType type)
 {
 	switch (type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;

@@ -94,7 +94,7 @@ using CoroutineState = CF_CoroutineState;
 CF_COROUTINE_STATE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* coroutine_state_to_string(CoroutineState type)
+CUTE_INLINE const char* to_string(CoroutineState type)
 {
 	switch (type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;

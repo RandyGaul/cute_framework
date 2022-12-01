@@ -387,7 +387,7 @@ using ClientState = CF_ClientState;
 CF_CLIENT_STATE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* client_state_to_string(ClientState state)
+CUTE_INLINE const char* to_string(ClientState state)
 {
 	switch (state) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -420,7 +420,7 @@ using ServerEventType = CF_ServerEventType;
 CF_SERVER_EVENT_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* server_event_type_to_string(ServerEventType type)
+CUTE_INLINE const char* to_string(ServerEventType type)
 {
 	switch (type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;

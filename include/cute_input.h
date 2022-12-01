@@ -380,7 +380,7 @@ using KeyButton = CF_KeyButton;
 CF_KEY_BUTTON_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* key_button_to_string(KeyButton button)
+CUTE_INLINE const char* to_string(KeyButton button)
 {
 	switch (button) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -395,7 +395,7 @@ using MouseButton = CF_MouseButton;
 CF_MOUSE_BUTTON_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* mouse_button_to_string(MouseButton button)
+CUTE_INLINE const char* to_string(MouseButton button)
 {
 	switch (button) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;

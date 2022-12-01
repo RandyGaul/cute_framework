@@ -306,7 +306,7 @@ using HapticType = CF_HapticType;
 CF_HAPTIC_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* haptic_type_to_string(HapticType type)
+CUTE_INLINE const char* to_string(HapticType type)
 {
 	switch (type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -321,7 +321,7 @@ using HapticWaveType = CF_HapticWaveType;
 CF_HAPTIC_WAVE_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* haptic_wave_type_to_string(HapticWaveType type)
+CUTE_INLINE const char* to_string(HapticWaveType type)
 {
 	switch (type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;

@@ -346,7 +346,7 @@ using KeyValueState = CF_KeyValueState;
 CF_KV_STATE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* key_value_state_to_string(KeyValueState state)
+CUTE_INLINE const char* to_string(KeyValueState state)
 {
 	switch (state) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -361,7 +361,7 @@ using KeyValueType = CF_KeyValueType;
 CF_KV_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* key_value_type_to_string(KeyValueType type)
+CUTE_INLINE const char* to_string(KeyValueType type)
 {
 	switch (type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;

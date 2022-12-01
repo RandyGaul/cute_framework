@@ -248,7 +248,7 @@ using HttpsState = CF_HttpsState;
 CF_HTTPS_STATE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* https_state_to_string(HttpsState state)
+CUTE_INLINE const char* to_string(HttpsState state)
 {
 	switch (state) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
