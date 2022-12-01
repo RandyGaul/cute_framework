@@ -104,12 +104,27 @@ CUTE_API CF_Https* CUTE_CALL cf_https_post(const char* host, const char* port, c
  */
 CUTE_API void CUTE_CALL cf_https_destroy(CF_Https* https);
 
+#define CF_HTTPS_STATE_DEFS \
+	CF_ENUM(HTTPS_STATE_PENDING,   0) /* Keep calling `https_process`. */ \
+	CF_ENUM(HTTPS_STATE_COMPLETED, 1) /* The response has been acquired, retrieve it with `https_response`. */ \
+	CF_ENUM(HTTPS_STATE_FAILED,    2) /* The request has failed, the only valid operation left is `https_destroy`. */ \
+
 typedef enum CF_HttpsState
 {
-	CF_HTTPS_STATE_PENDING,   // Keep calling `https_process`.
-	CF_HTTPS_STATE_COMPLETED, // The response has been acquired, retrieve it with `https_response`.
-	CF_HTTPS_STATE_FAILED,    // The request has failed, the only valid operation left is `https_destroy`.
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_HTTPS_STATE_DEFS
+	#undef CF_ENUM
 } CF_HttpsState;
+
+CUTE_INLINE const char* cf_https_state_type_to_string(CF_HttpsState state)
+{
+	switch (state) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_HTTPS_STATE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 /**
  * Returns the current state of the `https` object. This is used mainly for calling `https_process`.
@@ -138,14 +153,19 @@ typedef struct CF_HttpsHeader
 	CF_HttpsString content;
 } CF_HttpsHeader;
 
-typedef enum CF_TransferEncoding
+#define CF_TRANSFER_ENCODING_FLAG_DEFS \
+	CF_ENUM(TRANSFER_ENCODING_FLAG_NONE,                0x00) \
+	CF_ENUM(TRANSFER_ENCODING_FLAG_CHUNKED,             0x01) \
+	CF_ENUM(TRANSFER_ENCODING_FLAG_GZIP,                0x02) \
+	CF_ENUM(TRANSFER_ENCODING_FLAG_DEFLATE,             0x04) \
+	CF_ENUM(TRANSFER_ENCODING_FLAG_DEPRECATED_COMPRESS, 0x08) \
+
+enum
 {
-	CF_TRANSFER_ENCODING_NONE = 0x00,
-	CF_TRANSFER_ENCODING_CHUNKED = 0x01,
-	CF_TRANSFER_ENCODING_GZIP = 0x02,
-	CF_TRANSFER_ENCODING_DEFLATE = 0x04,
-	CF_TRANSFER_ENCODING_DEPRECATED_COMPRESS = 0x08,
-} CF_TransferEncoding;
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_TRANSFER_ENCODING_FLAG_DEFS
+	#undef CF_ENUM
+};
 
 /**
  * Represents the response from a server after a successful process loop via `https_process`, where the
@@ -220,10 +240,30 @@ namespace cute
 {
 
 using Https = CF_Https;
-using HttpsState = CF_HttpsState;
 using HttpsString = CF_HttpsString;
 using HttpsHeader = CF_HttpsHeader;
-using TransferEncoding = CF_TransferEncoding;
+
+using HttpsState = CF_HttpsState;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr HttpsState K = CF_##K;
+CF_HTTPS_STATE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE const char* https_state_to_string(HttpsState state)
+{
+	switch (state) {
+	#define CF_ENUM(K, V) case CF_##K: return #K;
+	CF_HTTPS_STATE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+enum : int
+{
+	#define CF_ENUM(K, V) K = V,
+	CF_TRANSFER_ENCODING_FLAG_DEFS
+	#undef CF_ENUM
+};
 
 struct https_response_t
 {

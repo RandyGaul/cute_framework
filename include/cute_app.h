@@ -85,6 +85,15 @@ typedef enum CF_PowerState
 	#undef CF_ENUM
 } CF_PowerState;
 
+CUTE_INLINE const char* cf_power_state_to_string(CF_PowerState state) {
+	switch (state) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_POWER_STATE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 typedef struct CF_PowerInfo
 {
 	CF_PowerState state;
@@ -109,21 +118,26 @@ CUTE_API void CUTE_CALL cf_sleep(int milliseconds);
 namespace cute
 {
 
-using PowerInfo = CF_PowerInfo;
-
-enum PowerState : int
-{
-	#define CF_ENUM(K, V) K = V,
-	CF_POWER_STATE_DEFS
-	#undef CF_ENUM
-};
-
 enum : int
 {
 	#define CF_ENUM(K, V) K = V,
 	CF_APP_OPTION_DEFS
 	#undef CF_ENUM
 };
+
+using PowerInfo = CF_PowerInfo;
+
+using PowerState = CF_PowerState;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr PowerState K = CF_##K;
+CF_POWER_STATE_DEFS
+#undef CF_ENUM
+CUTE_INLINE const char* power_state_to_string(PowerState state) { switch (state) {
+	#define CF_ENUM(K, V) case K: return #K;
+	CF_POWER_STATE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 CUTE_INLINE Result make_app(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL) { return cf_make_app(window_title, x, y, w, h, options, argv0); }
 CUTE_INLINE void destroy_app() { cf_destroy_app(); }

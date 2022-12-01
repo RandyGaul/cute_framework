@@ -59,6 +59,16 @@ typedef enum CF_PlayDirection
 	#undef CF_ENUM
 } CF_PlayDirection;
 
+CUTE_INLINE const char* cf_play_direction_to_string(CF_PlayDirection dir)
+{
+	switch (dir) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_PLAY_DIRECTION_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 /**
  * A single `sprite_t` contains a set of `animation_t`. Each animation
  * can define its own frames, and a playing direction for the frames.
@@ -318,12 +328,20 @@ namespace cute
 using frame_t = CF_Frame;
 using animation_t = CF_Animation;
 
-enum play_direction_t : int
+using PlayDirection = CF_PlayDirection;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr PlayDirection K = CF_##K;
+CF_PLAY_DIRECTION_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE const char* play_direction_to_string(PlayDirection dir)
 {
-	#define CF_ENUM(K, V) K = V,
+	switch (dir) {
+	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_PLAY_DIRECTION_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
 struct Sprite : public CF_Sprite
 {

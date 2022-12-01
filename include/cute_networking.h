@@ -167,19 +167,34 @@ CUTE_API void CUTE_CALL cf_client_free_packet(CF_Client* client, void* packet);
  */
 CUTE_API CF_Result CUTE_CALL cf_client_send(CF_Client* client, const void* packet, int size, bool send_reliably);
 
+#define CF_CLIENT_STATE_DEFS \
+	CF_ENUM(CLIENT_STATE_CONNECT_TOKEN_EXPIRED,        -6) \
+	CF_ENUM(CLIENT_STATE_INVALID_CONNECT_TOKEN,        -5) \
+	CF_ENUM(CLIENT_STATE_CONNECTION_TIMED_OUT,         -4) \
+	CF_ENUM(CLIENT_STATE_CHALLENGE_RESPONSE_TIMED_OUT, -3) \
+	CF_ENUM(CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT, -2) \
+	CF_ENUM(CLIENT_STATE_CONNECTION_DENIED,            -1) \
+	CF_ENUM(CLIENT_STATE_DISCONNECTED,                  0) \
+	CF_ENUM(CLIENT_STATE_SENDING_CONNECTION_REQUEST,    1) \
+	CF_ENUM(CLIENT_STATE_SENDING_CHALLENGE_RESPONSE,    2) \
+	CF_ENUM(CLIENT_STATE_CONNECTED,                     3) \
+
 typedef enum CF_ClientState
 {
-	CF_CLIENT_STATE_CONNECT_TOKEN_EXPIRED         = -6,
-	CF_CLIENT_STATE_INVALID_CONNECT_TOKEN         = -5,
-	CF_CLIENT_STATE_CONNECTION_TIMED_OUT          = -4,
-	CF_CLIENT_STATE_CHALLENGE_RESPONSE_TIMED_OUT  = -3,
-	CF_CLIENT_STATE_CONNECTION_REQUEST_TIMED_OUT  = -2,
-	CF_CLIENT_STATE_CONNECTION_DENIED             = -1,
-	CF_CLIENT_STATE_DISCONNECTED                  = 0,
-	CF_CLIENT_STATE_SENDING_CONNECTION_REQUEST    = 1,
-	CF_CLIENT_STATE_SENDING_CHALLENGE_RESPONSE    = 2,
-	CF_CLIENT_STATE_CONNECTED                     = 3,
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_CLIENT_STATE_DEFS
+	#undef CF_ENUM
 } CF_ClientState;
+
+CUTE_INLINE const char* cf_client_state_to_string(CF_ClientState state)
+{
+	switch (state) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_CLIENT_STATE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 CUTE_API CF_ClientState CUTE_CALL cf_client_state_get(const CF_Client* client);
 CUTE_API const char* CUTE_CALL cf_client_state_string(CF_ClientState state);
@@ -231,12 +246,27 @@ CUTE_API void CUTE_CALL cf_destroy_server(CF_Server* server);
 CUTE_API CF_Result cf_server_start(CF_Server* server, const char* address_and_port);
 CUTE_API void cf_server_stop(CF_Server* server);
 
+#define CF_SERVER_EVENT_TYPE_DEFS \
+	CF_ENUM(CF_SERVER_EVENT_TYPE_NEW_CONNECTION, 0) /* A new incoming connection. */ \
+	CF_ENUM(CF_SERVER_EVENT_TYPE_DISCONNECTED,   1) /* A disconnecting client. */ \
+	CF_ENUM(CF_SERVER_EVENT_TYPE_PAYLOAD_PACKET, 2) /* An incoming packet from a client. */ \
+
 typedef enum CF_ServerEventType
 {
-	CF_SERVER_EVENT_TYPE_NEW_CONNECTION, // A new incoming connection.
-	CF_SERVER_EVENT_TYPE_DISCONNECTED,   // A disconnecting client.
-	CF_SERVER_EVENT_TYPE_PAYLOAD_PACKET, // An incoming packet from a client.
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_SERVER_EVENT_TYPE_DEFS
+	#undef CF_ENUM
 } CF_ServerEventType;
+
+CUTE_INLINE const char* cf_server_event_type_to_string(CF_ServerEventType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_SERVER_EVENT_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 typedef struct CF_ServerEvent
 {
@@ -352,7 +382,20 @@ CUTE_INLINE Result generate_connect_token(
 //--------------------------------------------------------------------------------------------------
 // CLIENT
 
-using client_state_t = CF_ClientState;
+using ClientState = CF_ClientState;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr ClientState K = CF_##K;
+CF_CLIENT_STATE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE const char* client_state_to_string(ClientState state)
+{
+	switch (state) {
+	#define CF_ENUM(K, V) case CF_##K: return #K;
+	CF_CLIENT_STATE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 CUTE_INLINE Client* make_client(uint16_t port, uint64_t application_id, bool use_ipv6 = false) { return cf_make_client(port,application_id,use_ipv6); }
 CUTE_INLINE void destroy_client(Client* client) { cf_destroy_client(client); }
@@ -362,23 +405,37 @@ CUTE_INLINE void client_update(Client* client, double dt, uint64_t current_time)
 CUTE_INLINE bool client_pop_packet(Client* client, void** packet, int* size, bool* was_sent_reliably = NULL) { return cf_client_pop_packet(client,packet,size,was_sent_reliably); }
 CUTE_INLINE void client_free_packet(Client* client, void* packet) { cf_client_free_packet(client,packet); }
 CUTE_INLINE Result client_send(Client* client, const void* packet, int size, bool send_reliably) { return cf_client_send(client,packet,size,send_reliably); }
-CUTE_INLINE client_state_t client_state_get(const Client* client) { return cf_client_state_get(client); }
-CUTE_INLINE const char* client_state_string(client_state_t state) { return cf_client_state_string(state); }
+CUTE_INLINE ClientState client_state_get(const Client* client) { return cf_client_state_get(client); }
+CUTE_INLINE const char* client_state_string(ClientState state) { return cf_client_state_string(state); }
 CUTE_INLINE void client_enable_network_simulator(Client* client, double latency, double jitter, double drop_chance, double duplicate_chance) { cf_client_enable_network_simulator(client,latency,jitter,drop_chance,duplicate_chance); }
 
 //--------------------------------------------------------------------------------------------------
 // SERVER
 
 using ServerConfig = CF_ServerConfig;
-using server_event_type_t = CF_ServerEventType;
-using server_event_t = CF_ServerEvent;
+using ServerEvent = CF_ServerEvent;
+
+using ServerEventType = CF_ServerEventType;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr ServerEventType K = CF_##K;
+CF_SERVER_EVENT_TYPE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE const char* server_event_type_to_string(ServerEventType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return #K;
+	CF_SERVER_EVENT_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 CUTE_INLINE ServerConfig server_config_defaults() { return cf_server_config_defaults(); }
 CUTE_INLINE Server* make_server(ServerConfig config) { return cf_make_server(config); }
 CUTE_INLINE void destroy_server(Server* server) { cf_destroy_server(server); }
 CUTE_INLINE Result server_start(Server* server, const char* address_and_port) { return cf_server_start(server,address_and_port); }
 CUTE_INLINE void server_stop(Server* server) { cf_server_stop(server); }
-CUTE_INLINE bool server_pop_event(Server* server, server_event_t* event) { return cf_server_pop_event(server,event); }
+CUTE_INLINE bool server_pop_event(Server* server, ServerEvent* event) { return cf_server_pop_event(server,event); }
 CUTE_INLINE void server_free_packet(Server* server, int client_index, void* data) { cf_server_free_packet(server,client_index,data); }
 CUTE_INLINE void server_update(Server* server, double dt, uint64_t current_time) { cf_server_update(server,dt,current_time); }
 CUTE_INLINE void server_disconnect_client(Server* server, int client_index, bool notify_client = true) { cf_server_disconnect_client(server, client_index, notify_client); }

@@ -50,7 +50,7 @@ union cf_kv_union_t
 
 struct cf_kv_val_t
 {
-	CF_KeyValueype_t type = CF_KV_TYPE_NULL;
+	CF_KeyValueType type = CF_KV_TYPE_NULL;
 	cf_kv_union_t u;
 	Array<cf_kv_val_t> aval;
 };
@@ -642,14 +642,14 @@ static void s_match_key(CF_KeyValue* kv, const char* key)
 	}
 }
 
-static void s_write_key(CF_KeyValue* kv, const char* key, CF_KeyValueype_t* type)
+static void s_write_key(CF_KeyValue* kv, const char* key, CF_KeyValueType* type)
 {
 	CUTE_UNUSED(type);
 	s_write_str_no_quotes(kv, key, (int)CUTE_STRLEN(key));
 	s_write_str_no_quotes(kv, " = ", 3);
 }
 
-bool cf_kv_key(CF_KeyValue* kv, const char* key, CF_KeyValueype_t* type)
+bool cf_kv_key(CF_KeyValue* kv, const char* key, CF_KeyValueType* type)
 {
 	s_match_key(kv, key);
 	if (kv->mode == CF_KV_STATE_WRITE) {
@@ -719,7 +719,7 @@ static CUTE_INLINE void s_end_val(CF_KeyValue* kv)
 	}
 }
 
-static CUTE_INLINE cf_kv_val_t* s_pop_val(CF_KeyValue* kv, CF_KeyValueype_t type, bool pop_val = true)
+static CUTE_INLINE cf_kv_val_t* s_pop_val(CF_KeyValue* kv, CF_KeyValueType type, bool pop_val = true)
 {
 	if (kv->read_mode_from_array) {
 		cf_kv_val_t* array_val = kv->read_mode_array_stack.last();
@@ -748,7 +748,7 @@ static CUTE_INLINE cf_kv_val_t* s_pop_val(CF_KeyValue* kv, CF_KeyValueype_t type
 	}
 }
 
-static cf_kv_val_t* s_pop_base_val(CF_KeyValue* kv, CF_KeyValueype_t type, bool pop_val = true)
+static cf_kv_val_t* s_pop_base_val(CF_KeyValue* kv, CF_KeyValueType type, bool pop_val = true)
 {
 	cf_kv_val_t* match = NULL;
 	if (kv->matched_cache_val) {

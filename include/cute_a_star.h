@@ -46,11 +46,11 @@ CUTE_API void CUTE_CALL cf_destroy_a_star_grid(CF_AStarGrid* grid);
 
 typedef struct CF_AStarInput
 {
-	bool allow_diagonal_movement /* = true */;
-	int start_x /* = 0 */;
-	int start_y /* = 0 */;
-	int end_x /* = 0 */;
-	int end_y /* = 0 */;
+	bool allow_diagonal_movement;
+	int start_x;
+	int start_y;
+	int end_x;
+	int end_y;
 
 	/**
 	 * Each element of `cells_to_cost` is used to map types of cells in the `cells` parameter
@@ -63,7 +63,7 @@ typedef struct CF_AStarInput
 	 *
 	 *     float cost = cell_to_cost[cell[y * w + x]];
 	 */
-	const float* cell_to_cost /* = NULL */;
+	const float* cell_to_cost;
 } CF_AStarInput;
 
 CUTE_API CF_AStarInput CUTE_CALL cf_a_star_input_defaults();

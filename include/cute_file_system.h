@@ -39,7 +39,7 @@ extern "C" {
 
 #ifndef CUTE_NO_SHORTHAND_API
 /**
- * Returns the filename portion of a path.
+ * Returns the filename portion of a path. Returns a new string.
  * 
  * Example:
  * 
@@ -54,6 +54,7 @@ extern "C" {
 
 /**
  * Returns the filename portion of a path without the file extension.
+ * Returns a new string.
  * 
  * Example:
  * 
@@ -67,7 +68,7 @@ extern "C" {
 #define spfname_no_ext(s) cf_path_get_filename_no_ext(s)
 
 /**
- * Returns the extension of the file for the given path.
+ * Returns the extension of the file for the given path. Returns a new string.
  * 
  * Example:
  * 
@@ -81,20 +82,25 @@ extern "C" {
 #define spext(s) cf_path_get_ext(s)
 
 /**
- * Removes the rightmost file or directory from the path.
+ * Removes the rightmost file or directory from the path. Returns a new string.
  */
 #define sppop(s) cf_path_pop(s)
+
+/**
+ * Removes the rightmost n files or directories from the path. Returns a new string.
+ */
+#define sppopn(s, n) cf_path_pop_n(s, n)
 
 /**
  * Squishes the path to be less than or equal to n characters in length. This will
  * insert ellipses "..." into the path as necessary. This function is useful for
  * displaying paths and visualizing them in small boxes or windows. n includes the
- * nul-byte.
+ * nul-byte. Returns a new string.
  */
 #define spcompact(s, n) cf_path_compact(s, n)
 
 /**
- * Returns the directory of a given file or directory.
+ * Returns the directory of a given file or directory. Returns a new string.
  * 
  * Example:
  * 
@@ -108,7 +114,7 @@ extern "C" {
 #define spdir_of(s) cf_path_directory_of(s)
 
 /**
- * Returns the directory of a given file or directory.
+ * Returns the directory of a given file or directory. Returns a new string.
  * 
  * Example:
  * 
@@ -126,6 +132,7 @@ CUTE_API char* CUTE_CALL cf_path_get_filename(const char* path);
 CUTE_API char* CUTE_CALL cf_path_get_filename_no_ext(const char* path);
 CUTE_API char* CUTE_CALL cf_path_get_ext(const char* path);
 CUTE_API char* CUTE_CALL cf_path_pop(const char* path);
+CUTE_API char* CUTE_CALL cf_path_pop_n(const char* path, int n);
 CUTE_API char* CUTE_CALL cf_path_compact(const char* path, int n);
 CUTE_API char* CUTE_CALL cf_path_directory_of(const char* path);
 CUTE_API char* CUTE_CALL cf_path_top_directory(const char* path);
@@ -217,6 +224,16 @@ typedef enum CF_FileType
 	CF_FILE_TYPE_DEFS
 	#undef CF_ENUM
 } CF_FileType;
+
+CUTE_INLINE const char* cf_file_type_to_string(CF_FileType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_FILE_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 typedef struct CF_Stat
 {
@@ -450,12 +467,20 @@ namespace cute
 using Stat = CF_Stat;
 using File = CF_File;
 
-enum FileType : int
+using FileType = CF_FileType;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr FileType K = CF_##K;
+CF_FILE_TYPE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE const char* file_type_to_string(FileType type)
 {
-	#define CF_ENUM(K, V) K = V,
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_FILE_TYPE_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
 CUTE_INLINE const char* fs_get_base_dir() { return cf_fs_get_base_directory(); }
 CUTE_INLINE Result fs_set_write_dir(const char* platform_dependent_directory) { return cf_fs_set_write_directory(platform_dependent_directory); }

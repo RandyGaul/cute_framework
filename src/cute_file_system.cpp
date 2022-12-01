@@ -69,6 +69,17 @@ char* cf_path_pop(const char* path)
 	return s;
 }
 
+char* cf_path_pop_n(const char* path, int n)
+{
+	char* s = sdup(path);
+	while (n--) {
+		char* prev = s;
+		s = sppop(s);
+		sfree(prev);
+	}
+	return s;
+}
+
 char* cf_path_compact(const char* path, int n)
 {
 	int len = (int)CUTE_STRLEN(path);
@@ -395,4 +406,3 @@ void cf_fs_destroy()
 {
 	PHYSFS_deinit();
 }
-

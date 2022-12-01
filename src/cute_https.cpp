@@ -58,7 +58,7 @@ typedef struct cf_internal_https_response_t
 
 	/**
 	 * Flags from `transfer_encoding_t`. For example, if content is gzip'd, you can tell by using
-	 * something like so: `bool is_gzip = !!(response->transfer_encoding & CF_TRANSFER_ENCODING_GZIP);`
+	 * something like so: `bool is_gzip = !!(response->transfer_encoding & CF_TRANSFER_ENCODING_FLAG_GZIP);`
 	 *
 	 * Please note that if the encoding is `TRANSFER_ENCODING_CHUNKED` the `content` buffer will not
 	 * contain any chunked encoding -- all chunked data has been decoded already. For gzip/deflate
@@ -532,7 +532,7 @@ static bool s_header(cf_https_decoder_t* h)
 {
 	// RFC-7230 section 3 Message Format
 	if (h->data_left() == 2) {
-		if (h->transfer_encoding & CF_TRANSFER_ENCODING_CHUNKED) {
+		if (h->transfer_encoding & CF_TRANSFER_ENCODING_FLAG_CHUNKED) {
 			if (h->found_last_chunk) {
 				// TODO - Possible to start logic for trailers here.
 				return true;
@@ -576,20 +576,20 @@ static bool s_header(cf_https_decoder_t* h)
 			int prev_flags = h->transfer_encoding;
 
 			if (!cf_https_strcmp("chunked", string)) {
-				h->transfer_encoding |= CF_TRANSFER_ENCODING_CHUNKED;
+				h->transfer_encoding |= CF_TRANSFER_ENCODING_FLAG_CHUNKED;
 			} else if (!cf_https_strcmp("compress", string) || !cf_https_strcmp("x_compress", string)) {
-				h->transfer_encoding |= CF_TRANSFER_ENCODING_DEPRECATED_COMPRESS;
+				h->transfer_encoding |= CF_TRANSFER_ENCODING_FLAG_DEPRECATED_COMPRESS;
 			} else if (!cf_https_strcmp("deflate", string)) {
-				h->transfer_encoding |= CF_TRANSFER_ENCODING_DEFLATE;
+				h->transfer_encoding |= CF_TRANSFER_ENCODING_FLAG_DEFLATE;
 			} else if (!cf_https_strcmp("gzip", string) || !cf_https_strcmp("x_gzip", string)) {
-				h->transfer_encoding |= CF_TRANSFER_ENCODING_GZIP;
+				h->transfer_encoding |= CF_TRANSFER_ENCODING_FLAG_GZIP;
 			} else if (string.len > 0) {
 				h->err = cf_result_error("Unrecognized transfer encoding encountered.");
 				return true;
 			}
 
 			// RFC-7230 3.3.1
-			if ((prev_flags & CF_TRANSFER_ENCODING_CHUNKED) && (h->transfer_encoding != prev_flags)) {
+			if ((prev_flags & CF_TRANSFER_ENCODING_FLAG_CHUNKED) && (h->transfer_encoding != prev_flags)) {
 				h->err = cf_result_error("Invalid transfer encoding order found (chunked must be last).");
 				return true;
 			}

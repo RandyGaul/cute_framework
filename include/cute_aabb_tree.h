@@ -34,11 +34,7 @@ extern "C" {
 
 typedef struct CF_Leaf
 {
-	#ifdef CUTE_CPP
-	int id = -1;
-	#else
-	int id; /*= -1;*/
-	#endif
+	int id;
 } CF_Leaf;
 
 typedef struct CF_AabbTree CF_AabbTree;

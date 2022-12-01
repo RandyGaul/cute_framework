@@ -65,14 +65,14 @@ CUTE_API CF_Result CUTE_CALL cf_music_set_sample_index(uint64_t sample_index);
 
 typedef struct CF_SoundParams
 {
-	bool paused; /*= false;*/
-	bool looped; /*= false;*/
-	float volume; /*= 1.0f;*/
-	float pan; /*= 0.5f;*/
-	float delay; /*= 0;*/
+	bool paused;
+	bool looped;
+	float volume;
+	float pan;
+	float delay;
 } CF_SoundParams;
 
-typedef struct CF_Sound { uint64_t id; /*= 0;*/ } CF_Sound;
+typedef struct CF_Sound { uint64_t id; } CF_Sound;
 
 CUTE_INLINE CF_SoundParams CUTE_CALL cf_sound_params_defaults()
 {

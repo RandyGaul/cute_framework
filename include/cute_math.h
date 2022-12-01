@@ -493,18 +493,28 @@ CUTE_API void CUTE_CALL cf_capsule_to_poly_manifold(CF_Capsule A, const CF_Poly*
 CUTE_API void CUTE_CALL cf_poly_to_poly_manifold(const CF_Poly* A, const CF_Transform* ax, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m);
 
 #define CF_SHAPE_TYPE_DEFS \
-	CF_ENUM(SHAPE_TYPE_NONE, 0) \
-	CF_ENUM(SHAPE_TYPE_CIRCLE, 1) \
-	CF_ENUM(SHAPE_TYPE_AABB, 2) \
+	CF_ENUM(SHAPE_TYPE_NONE,    0) \
+	CF_ENUM(SHAPE_TYPE_CIRCLE,  1) \
+	CF_ENUM(SHAPE_TYPE_AABB,    2) \
 	CF_ENUM(SHAPE_TYPE_CAPSULE, 3) \
-	CF_ENUM(SHAPE_TYPE_POLY, 4) \
+	CF_ENUM(SHAPE_TYPE_POLY,    4) \
 
-typedef enum cf_ShapeType
+typedef enum CF_ShapeType
 {
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_SHAPE_TYPE_DEFS
 	#undef CF_ENUM
-} cf_ShapeType;
+} CF_ShapeType;
+
+CUTE_INLINE const char* cf_shape_type_to_string(CF_ShapeType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_SHAPE_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 // This typedef struct is only for advanced usage of the `cf_gjk` function. See comments inside of the
 // `cf_gjk` function for more details.
@@ -536,7 +546,7 @@ typedef struct CF_GjkCache
 //     less than 100.0f. If you need large shapes, you should use tiny collision geometry for all
 //     function here, and simply render the geometry larger on-screen by scaling it up.
 //
-CUTE_API float CUTE_CALL cf_gjk(const void* A, cf_ShapeType typeA, const CF_Transform* ax_ptr, const void* B, cf_ShapeType typeB, const CF_Transform* bx_ptr, CF_V2* outA, CF_V2* outB, int use_radius, int* iterations, CF_GjkCache* cache);
+CUTE_API float CUTE_CALL cf_gjk(const void* A, CF_ShapeType typeA, const CF_Transform* ax_ptr, const void* B, CF_ShapeType typeB, const CF_Transform* bx_ptr, CF_V2* outA, CF_V2* outB, int use_radius, int* iterations, CF_GjkCache* cache);
 
 // Stores results of a time of impact calculation done by `cf_toi`.
 typedef struct CF_ToiResult
@@ -577,7 +587,7 @@ typedef struct CF_ToiResult
 //    See the function `cf_inflate` for some more details.
 // 4. Compute the collision manifold between the inflated shapes (for example, use poly_ttoPolyManifold).
 // 5. Gently push the shapes apart. This will give the next call to cf_toi some breathing room.
-CUTE_API CF_ToiResult CUTE_CALL cf_toi(const void* A, cf_ShapeType typeA, const CF_Transform* ax_ptr, CF_V2 vA, const void* B, cf_ShapeType typeB, const CF_Transform* bx_ptr, CF_V2 vB, int use_radius);
+CUTE_API CF_ToiResult CUTE_CALL cf_toi(const void* A, CF_ShapeType typeA, const CF_Transform* ax_ptr, CF_V2 vA, const void* B, CF_ShapeType typeB, const CF_Transform* bx_ptr, CF_V2 vB, int use_radius);
 
 // Inflating a shape.
 //
@@ -591,7 +601,7 @@ CUTE_API CF_ToiResult CUTE_CALL cf_toi(const void* A, cf_ShapeType typeA, const 
 // Deflating a shape can avoid this problem, but deflating a very small shape can invert
 // the planes and result in something that is no longer convex. Make sure to pick an
 // appropriately small skin factor, for example 1.0e-6f.
-CUTE_API void CUTE_CALL cf_inflate(void* shape, cf_ShapeType type, float skin_factor);
+CUTE_API void CUTE_CALL cf_inflate(void* shape, CF_ShapeType type, float skin_factor);
 
 // Computes 2D convex hull. Will not do anything if less than two verts supplied. If
 // more than CUTE_POLY_MAX_VERTS are supplied extras are ignored.
@@ -606,9 +616,9 @@ CUTE_API CF_V2 CUTE_CALL cf_centroid(const CF_V2* verts, int count);
 // morphism to write more generic-styled code. Internally calls various above functions.
 // For AABBs/Circles/Capsules ax and bx are ignored. For polys ax and bx can define
 // model to world transformations (for polys only), or be NULL for identity transforms.
-CUTE_API int CUTE_CALL cf_collided(const void* A, const CF_Transform* ax, cf_ShapeType typeA, const void* B, const CF_Transform* bx, cf_ShapeType typeB);
-CUTE_API void CUTE_CALL cf_collide(const void* A, const CF_Transform* ax, cf_ShapeType typeA, const void* B, const CF_Transform* bx, cf_ShapeType typeB, CF_Manifold* m);
-CUTE_API bool CUTE_CALL cf_cast_ray(CF_Ray A, const void* B, const CF_Transform* bx, cf_ShapeType typeB, CF_Raycast* out);
+CUTE_API int CUTE_CALL cf_collided(const void* A, const CF_Transform* ax, CF_ShapeType typeA, const void* B, const CF_Transform* bx, CF_ShapeType typeB);
+CUTE_API void CUTE_CALL cf_collide(const void* A, const CF_Transform* ax, CF_ShapeType typeA, const void* B, const CF_Transform* bx, CF_ShapeType typeB, CF_Manifold* m);
+CUTE_API bool CUTE_CALL cf_cast_ray(CF_Ray A, const void* B, const CF_Transform* bx, CF_ShapeType typeB, CF_Raycast* out);
 
 #ifdef __cplusplus
 }
@@ -662,12 +672,20 @@ using Manifold = CF_Manifold;
 using GjkCache = CF_GjkCache;
 using ToiResult = CF_ToiResult;
 
-enum ShapeType : int
+using ShapeType = CF_ShapeType;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr ShapeType K = CF_##K;
+CF_SHAPE_TYPE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE const char* shape_type_to_string(ShapeType type)
 {
-	#define CF_ENUM(K, V) K = V,
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_SHAPE_TYPE_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
 CUTE_INLINE float min(float a, float b) { return cf_min(a, b); }
 CUTE_INLINE float max(float a, float b) { return cf_max(a, b); }
@@ -877,15 +895,15 @@ CUTE_INLINE void poly_to_poly_manifold(const Poly* A, const Transform* ax, const
 
 CUTE_INLINE float gjk(const void* A, ShapeType typeA, const Transform* ax_ptr, const void* B, ShapeType typeB, const Transform* bx_ptr, v2* outA, v2* outB, int use_radius, int* iterations, GjkCache* cache)
 {
-	return cf_gjk(A, (cf_ShapeType)typeA, ax_ptr, B, (cf_ShapeType)typeB, bx_ptr, (CF_V2*)outA, (CF_V2*)outB, use_radius, iterations, cache);
+	return cf_gjk(A, typeA, ax_ptr, B, typeB, bx_ptr, (CF_V2*)outA, (CF_V2*)outB, use_radius, iterations, cache);
 }
 
 CUTE_INLINE ToiResult toi(const void* A, ShapeType typeA, const Transform* ax_ptr, v2 vA, const void* B, ShapeType typeB, const Transform* bx_ptr, v2 vB, int use_radius, int* iterations)
 {
-	return cf_toi(A, (cf_ShapeType)typeA, ax_ptr, vA, B, (cf_ShapeType)typeB, bx_ptr, vB, use_radius);
+	return cf_toi(A, typeA, ax_ptr, vA, B, typeB, bx_ptr, vB, use_radius);
 }
 
-CUTE_INLINE void inflate(void* shape, ShapeType type, float skin_factor) { return cf_inflate(shape, (cf_ShapeType)type, skin_factor); }
+CUTE_INLINE void inflate(void* shape, ShapeType type, float skin_factor) { return cf_inflate(shape, type, skin_factor); }
 
 CUTE_INLINE int hull(v2* verts, int count) { return cf_hull((CF_V2*)verts, count); }
 CUTE_INLINE void norms(v2* verts, v2* norms, int count) { return cf_norms((CF_V2*)verts, (CF_V2*)norms, count); }
@@ -893,9 +911,9 @@ CUTE_INLINE void norms(v2* verts, v2* norms, int count) { return cf_norms((CF_V2
 CUTE_INLINE void make_poly(Poly* p) { return cf_make_poly(p); }
 CUTE_INLINE v2 centroid(const v2* verts, int count) { return cf_centroid((CF_V2*)verts, count); }
 
-CUTE_INLINE int collided(const void* A, const Transform* ax, ShapeType typeA, const void* B, const Transform* bx, ShapeType typeB) { return cf_collided(A, ax, (cf_ShapeType)typeA, B, bx, (cf_ShapeType)typeB); }
-CUTE_INLINE void collide(const void* A, const Transform* ax, ShapeType typeA, const void* B, const Transform* bx, ShapeType typeB, Manifold* m) { return cf_collide(A, ax, (cf_ShapeType)typeA, B, bx, (cf_ShapeType)typeB, m); }
-CUTE_INLINE bool cast_ray(Ray A, const void* B, const Transform* bx, ShapeType typeB, Raycast* out) { return cf_cast_ray(A, B, bx, (cf_ShapeType)typeB, out); }
+CUTE_INLINE int collided(const void* A, const Transform* ax, ShapeType typeA, const void* B, const Transform* bx, ShapeType typeB) { return cf_collided(A, ax, typeA, B, bx, typeB); }
+CUTE_INLINE void collide(const void* A, const Transform* ax, ShapeType typeA, const void* B, const Transform* bx, ShapeType typeB, Manifold* m) { return cf_collide(A, ax, typeA, B, bx, typeB, m); }
+CUTE_INLINE bool cast_ray(Ray A, const void* B, const Transform* bx, ShapeType typeB, Raycast* out) { return cf_cast_ray(A, B, bx, typeB, out); }
 
 }
 

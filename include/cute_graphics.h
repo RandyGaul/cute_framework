@@ -126,6 +126,15 @@ typedef enum CF_BackendType
 	#undef CF_ENUM
 } CF_BackendType;
 
+CUTE_INLINE const char* cf_backend_type_to_string(CF_BackendType type) {
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_BACKEND_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 CUTE_API CF_BackendType CUTE_CALL cf_query_backend();
 
 #define CF_PIXELFORMAT_DEFS \
@@ -199,6 +208,15 @@ typedef enum CF_PixelFormat
 	#undef CF_ENUM
 } CF_PixelFormat;
 
+CUTE_INLINE const char* cf_pixel_format_to_string(CF_PixelFormat format) {
+	switch (format) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_PIXELFORMAT_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 #define CF_PIXELFORMAT_OP_DEFS \
 	CF_ENUM(PIXELFORMAT_OP_NEAREST_FILTER,  0) \
 	CF_ENUM(PIXELFORMAT_OP_BILINEAR_FILTER, 1) \
@@ -213,6 +231,15 @@ typedef enum CF_PixelFormatOp
 	CF_PIXELFORMAT_OP_DEFS
 	#undef CF_ENUM
 } CF_PixelFormatOp;
+
+CUTE_INLINE const char* cf_pixel_format_op_to_string(CF_PixelFormatOp op) {
+	switch (op) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_PIXELFORMAT_OP_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 // Call this function to see if a particular pixel format can be used for a particular
 // blending operation. Not all platforms support all combos, and some platforms don't support
@@ -231,6 +258,15 @@ typedef enum CF_DeviceFeature
 	#undef CF_ENUM
 } CF_DeviceFeature;
 
+CUTE_INLINE const char* cf_device_feature_to_string(CF_DeviceFeature feature) {
+	switch (feature) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_DEVICE_FEATURE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 // Query to see if the device can support a particular feature.
 CUTE_API bool CUTE_CALL cf_query_device_feature(CF_DeviceFeature feature);
 
@@ -245,9 +281,18 @@ typedef enum CF_ResourceLimit
 	#undef CF_ENUM
 } CF_ResourceLimit;
 
+CUTE_INLINE const char* cf_resource_limit_to_string(CF_ResourceLimit limit) {
+	switch (limit) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_RESOURCE_LIMIT_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 // One notable limit is on GLES2 the maximum number of vertex attributes has
 // been reportedly lower than other device types.
-CUTE_API int CUTE_CALL cf_query_resource_limit(CF_ResourceLimit resource_limit);
+CUTE_API int CUTE_CALL cf_query_resource_limit(CF_ResourceLimit limit);
 
 //--------------------------------------------------------------------------------------------------
 // Texture.
@@ -264,6 +309,15 @@ typedef enum CF_UsageType
 	#undef CF_ENUM
 } CF_UsageType;
 
+CUTE_INLINE const char* cf_usage_type_to_string(CF_UsageType type) {
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_USAGE_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 #define CF_FILTER_DEFS \
 	CF_ENUM(FILTER_NEAREST, 0) \
 	CF_ENUM(FILTER_LINEAR,  1) \
@@ -274,6 +328,15 @@ typedef enum CF_Filter
 	CF_FILTER_DEFS
 	#undef CF_ENUM
 } CF_Filter;
+
+CUTE_INLINE const char* cf_filter_to_string(CF_Filter filter) {
+	switch (filter) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_FILTER_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 #define CF_WRAP_MODE_DEFS \
 	CF_ENUM(WRAP_MODE_DEFAULT,         0) \
@@ -288,6 +351,15 @@ typedef enum CF_WrapMode
 	CF_WRAP_MODE_DEFS
 	#undef CF_ENUM
 } CF_WrapMode;
+
+CUTE_INLINE const char* cf_wrap_mode_string(CF_WrapMode mode) {
+	switch (mode) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_WRAP_MODE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 typedef struct CF_TextureParams
 {
@@ -392,6 +464,15 @@ typedef enum CF_PassInitOp
 	#undef CF_ENUM
 } CF_PassInitOp;
 
+CUTE_INLINE const char* cf_pass_init_op_string(CF_PassInitOp op) {
+	switch (op) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_PASS_INIT_OP_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 typedef struct CF_PassParams
 {
 	const char* name;
@@ -446,6 +527,15 @@ typedef enum CF_VertexFormat
 	#undef CF_ENUM
 } CF_VertexFormat;
 
+CUTE_INLINE const char* cf_vertex_format_string(CF_VertexFormat format) {
+	switch (format) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_VERTEX_FORMAT_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 #define CF_ATTRIBUTE_STEP_DEFS  \
 	CF_ENUM(ATTRIBUTE_STEP_PER_VERTEX,   0 ) \
 	CF_ENUM(ATTRIBUTE_STEP_PER_INSTANCE, 1 ) \
@@ -456,6 +546,15 @@ typedef enum CF_AttributeStep
 	CF_ATTRIBUTE_STEP_DEFS
 	#undef CF_ENUM
 } CF_AttributeStep;
+
+CUTE_INLINE const char* cf_attribute_step_string(CF_AttributeStep step) {
+	switch (step) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_ATTRIBUTE_STEP_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 typedef struct CF_VertexAttribute
 {
@@ -573,6 +672,15 @@ typedef enum CF_CullMode
 	#undef CF_ENUM
 } CF_CullMode;
 
+CUTE_INLINE const char* cf_cull_mode_string(CF_CullMode mode) {
+	switch (mode) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_CULL_MODE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 #define CF_COMPARE_FUNCTION_DEFS \
 	CF_ENUM(COMPARE_FUNCTION_ALWAYS,                0) \
 	CF_ENUM(COMPARE_FUNCTION_NEVER,                 1) \
@@ -589,6 +697,15 @@ typedef enum CF_CompareFunction
 	CF_COMPARE_FUNCTION_DEFS
 	#undef CF_ENUM
 } CF_CompareFunction;
+
+CUTE_INLINE const char* cf_compare_function_string(CF_CompareFunction compare) {
+	switch (compare) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_COMPARE_FUNCTION_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 #define CF_STENCIL_OP_DEFS \
 	CF_ENUM(STENCIL_OP_KEEP,            0) \
@@ -607,6 +724,15 @@ typedef enum CF_StencilOp
 	#undef CF_ENUM
 } CF_StencilOp;
 
+CUTE_INLINE const char* cf_stencil_op_string(CF_StencilOp op) {
+	switch (op) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_STENCIL_OP_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 #define CF_BLEND_OP_DEFS \
 	CF_ENUM(BLEND_OP_ADD,              0) \
 	CF_ENUM(BLEND_OP_SUBTRACT,         1) \
@@ -618,6 +744,15 @@ typedef enum CF_BlendOp
 	CF_BLEND_OP_DEFS
 	#undef CF_ENUM
 } CF_BlendOp;
+
+CUTE_INLINE const char* cf_blend_op_string(CF_BlendOp op) {
+	switch (op) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_BLEND_OP_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 #define CF_BLEND_FACTOR_DEFS \
 	CF_ENUM(BLENDFACTOR_ZERO,                  0 ) \
@@ -642,6 +777,15 @@ typedef enum CF_BlendFactor
 	CF_BLEND_FACTOR_DEFS
 	#undef CF_ENUM
 } CF_BlendFactor;
+
+CUTE_INLINE const char* cf_blend_factor_string(CF_BlendFactor factor) {
+	switch (factor) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_BLEND_FACTOR_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 typedef struct CF_StencilFunction
 {
@@ -725,6 +869,15 @@ typedef enum CF_UniformType
 	#undef CF_ENUM
 } CF_UniformType;
 
+CUTE_INLINE const char* cf_uniform_type_string(CF_UniformType type) {
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_UNIFORM_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 CUTE_API CF_Material CUTE_CALL cf_make_material();
 CUTE_API void CUTE_CALL cf_destroy_material(CF_Material material);
 CUTE_API void CUTE_CALL cf_material_set_render_state(CF_Material material, CF_RenderState render_state);
@@ -775,130 +928,235 @@ using StencilFunction = CF_StencilFunction;
 using StencilParams = CF_StencilParams;
 using BlendState = CF_BlendState;
 using RenderState = CF_RenderState;
+using BackendType = CF_BackendType;
 
-enum BackendType : int
-{
-	#define CF_ENUM(K, V) K = V,
+using BackendType = CF_BackendType;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr CF_BackendType K = CF_##K;
+CF_BACKEND_TYPE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* backend_type_to_string(CF_BackendType type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_BACKEND_TYPE_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum DeviceFeature : int
-{
-	#define CF_ENUM(K, V) K = V,
+using DeviceFeature = CF_DeviceFeature;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr DeviceFeature K = CF_##K;
+CF_DEVICE_FEATURE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* device_feature_to_string(DeviceFeature type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_DEVICE_FEATURE_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum PixelFormat : int
-{
-	#define CF_ENUM(K, V) K = V,
+using PixelFormat = CF_PixelFormat;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr PixelFormat K = CF_##K;
+CF_PIXELFORMAT_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* pixel_format_to_string(PixelFormat type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_PIXELFORMAT_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum PixelFormatOp : int
-{
-	#define CF_ENUM(K, V) K = V,
+using PixelFormatOp = CF_PixelFormatOp;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr PixelFormatOp K = CF_##K;
+CF_PIXELFORMAT_OP_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* pixel_formatop_to_string(PixelFormatOp type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_PIXELFORMAT_OP_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum ResourceLimit : int
-{
-	#define CF_ENUM(K, V) K = V,
+using ResourceLimit = CF_ResourceLimit;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr ResourceLimit K = CF_##K;
+CF_RESOURCE_LIMIT_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* resource_limit_to_string(ResourceLimit type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_RESOURCE_LIMIT_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum UsageType : int
-{
-	#define CF_ENUM(K, V) K = V,
+using UsageType = CF_UsageType;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr UsageType K = CF_##K;
+CF_USAGE_TYPE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* usage_type_to_string(UsageType type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_USAGE_TYPE_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum Filter : int
-{
-	#define CF_ENUM(K, V) K = V,
+using Filter = CF_Filter;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr Filter K = CF_##K;
+CF_FILTER_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* filter_to_string(Filter type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_FILTER_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum WrapMode : int
-{
-	#define CF_ENUM(K, V) K = V,
+using WrapMode = CF_WrapMode;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr WrapMode K = CF_##K;
+CF_WRAP_MODE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* wrap_mode_to_string(WrapMode type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_WRAP_MODE_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum PassInitOp : int
-{
-	#define CF_ENUM(K, V) K = V,
+using PassInitOp = CF_PassInitOp;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr PassInitOp K = CF_##K;
+CF_PASS_INIT_OP_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* pass_init_op_to_string(PassInitOp type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_PASS_INIT_OP_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum VertexFormat : int
-{
-	#define CF_ENUM(K, V) K = V,
+using VertexFormat = CF_VertexFormat;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr VertexFormat K = CF_##K;
+CF_VERTEX_FORMAT_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* vertex_format_to_string(VertexFormat type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_VERTEX_FORMAT_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum AttributeStep : int
-{
-	#define CF_ENUM(K, V) K = V,
+using AttributeStep = CF_AttributeStep;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr AttributeStep K = CF_##K;
+CF_ATTRIBUTE_STEP_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* attribute_step_to_string(AttributeStep type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_ATTRIBUTE_STEP_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum CullMode : int
-{
-	#define CF_ENUM(K, V) K = V,
+using CullMode = CF_CullMode;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr CullMode K = CF_##K;
+CF_CULL_MODE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* cull_mode_to_string(CullMode type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_CULL_MODE_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum CompareFunction : int
-{
-	#define CF_ENUM(K, V) K = V,
+using CompareFunction = CF_CompareFunction;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr CompareFunction K = CF_##K;
+CF_COMPARE_FUNCTION_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* compare_function_to_string(CompareFunction type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_COMPARE_FUNCTION_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum StencilOp : int
-{
-	#define CF_ENUM(K, V) K = V,
+using StencilOp = CF_StencilOp;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr StencilOp K = CF_##K;
+CF_STENCIL_OP_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* stencil_op_to_string(StencilOp type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_STENCIL_OP_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum BlendOp : int
-{
-	#define CF_ENUM(K, V) K = V,
+using BlendOp = CF_BlendOp;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr BlendOp K = CF_##K;
+CF_BLEND_OP_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* blendop_to_string(BlendOp type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_BLEND_OP_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum BlendFactor : int
-{
-	#define CF_ENUM(K, V) K = V,
+using BlendFactor = CF_BlendFactor;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr BlendFactor K = CF_##K;
+CF_BLEND_FACTOR_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* blend_factor_to_string(BlendFactor type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_BLEND_FACTOR_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum UniformType : int
-{
-	#define CF_ENUM(K, V) K = V,
+using UniformType = CF_UniformType;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr UniformType K = CF_##K;
+CF_UNIFORM_TYPE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE constexpr const char* uniform_type_to_string(UniformType type) { switch(type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
 	CF_UNIFORM_TYPE_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-CUTE_INLINE BackendType CUTE_CALL query_backend() { return (BackendType)cf_query_backend(); }
-CUTE_INLINE bool query_pixel_format(PixelFormat format, PixelFormatOp op) { cf_query_pixel_format((CF_PixelFormat)format, (CF_PixelFormatOp)op); }
-CUTE_INLINE bool query_device_feature(DeviceFeature feature) { cf_query_device_feature((CF_DeviceFeature)feature); }
-CUTE_INLINE int query_resource_limit(ResourceLimit resource_limit) { cf_query_resource_limit((CF_ResourceLimit)resource_limit); }
+CUTE_INLINE CF_Matrix4x4 matrix_identity() { return cf_matrix_identity(); }
+CUTE_INLINE CF_Matrix4x4 matrix_ortho_2d(float w, float h, float x, float y) { return cf_matrix_ortho_2d(w, h, x, y); }
+CUTE_INLINE BackendType query_backend() { return cf_query_backend(); }
+CUTE_INLINE bool query_pixel_format(PixelFormat format, PixelFormatOp op) { cf_query_pixel_format(format, op); }
+CUTE_INLINE bool query_device_feature(DeviceFeature feature) { cf_query_device_feature(feature); }
+CUTE_INLINE int query_resource_limit(ResourceLimit resource_limit) { cf_query_resource_limit(resource_limit); }
 CUTE_INLINE TextureParams texture_defaults() { return cf_texture_defaults(); }
 CUTE_INLINE Texture make_texture(TextureParams texture_params) { return cf_make_texture(texture_params); }
 CUTE_INLINE void destroy_texture(Texture texture) { cf_destroy_texture(texture); }
@@ -908,7 +1166,7 @@ CUTE_INLINE void destroy_shader(Shader shader) { cf_destroy_shader(shader); }
 CUTE_INLINE PassParams pass_defaults() { return cf_pass_defaults(); }
 CUTE_INLINE Pass make_pass(PassParams pass_params) { return cf_make_pass(pass_params); }
 CUTE_INLINE void destroy_pass(Pass pass) { cf_destroy_pass(pass); }
-CUTE_INLINE Mesh make_mesh(UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size) { cf_make_mesh((CF_UsageType)usage_type, vertex_buffer_size, index_buffer_size, instance_buffer_size); }
+CUTE_INLINE Mesh make_mesh(UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size) { cf_make_mesh(usage_type, vertex_buffer_size, index_buffer_size, instance_buffer_size); }
 CUTE_INLINE void destroy_mesh(Mesh mesh) { cf_destroy_mesh(mesh); }
 CUTE_INLINE void mesh_set_attributes(Mesh mesh, const VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride) { cf_mesh_set_attributes(mesh, attributes, attribute_count, vertex_stride, instance_stride); }
 CUTE_INLINE void mesh_update_vertex_data(Mesh mesh, void* data, int count) { cf_mesh_update_vertex_data(mesh, data, count); }
@@ -926,8 +1184,8 @@ CUTE_INLINE void destroy_material(Material material) { cf_destroy_material(mater
 CUTE_INLINE void material_set_render_state(Material material, RenderState render_state) { cf_material_set_render_state(material, render_state); }
 CUTE_INLINE void material_set_texture_vs(Material material, const char* name, Texture texture) { cf_material_set_texture_vs(material, name, texture); }
 CUTE_INLINE void material_set_texture_fs(Material material, const char* name, Texture texture) { cf_material_set_texture_fs(material, name, texture); }
-CUTE_INLINE void material_set_uniform_vs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_vs(material, block_name, name, data, (CF_UniformType)type, array_length); }
-CUTE_INLINE void material_set_uniform_fs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_fs(material, block_name, name, data, (CF_UniformType)type, array_length); }
+CUTE_INLINE void material_set_uniform_vs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_vs(material, block_name, name, data, type, array_length); }
+CUTE_INLINE void material_set_uniform_fs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_fs(material, block_name, name, data, type, array_length); }
 CUTE_INLINE void begin_pass(Pass pass) { cf_begin_pass(pass); }
 CUTE_INLINE void apply_viewport(float x, float y, float w, float h) { cf_apply_viewport(x, y, w, h); }
 CUTE_INLINE void apply_scissor(float x, float y, float w, float h) { cf_apply_scissor(x, y, w, h); }

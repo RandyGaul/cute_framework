@@ -63,6 +63,16 @@ typedef enum CF_WindowMessageBoxType
 	#undef CF_ENUM
 } CF_WindowMessageBoxType;
 
+CUTE_INLINE const char* cf_window_message_box_type_to_string(CF_WindowMessageBoxType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_WINDOW_MESSAGE_BOX_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 CUTE_API void CUTE_CALL cf_window_message_box(CF_WindowMessageBoxType type, const char* title, const char* text);
 
 #ifdef CUTE_DEBUG
@@ -80,12 +90,20 @@ CUTE_API void CUTE_CALL cf_window_message_box(CF_WindowMessageBoxType type, cons
 namespace cute
 {
 
-enum window_message_box_type_t : int
+using WindowMessageBoxType = CF_WindowMessageBoxType;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr WindowMessageBoxType K = CF_##K;
+CF_WINDOW_MESSAGE_BOX_TYPE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE const char* window_message_box_type_to_string(WindowMessageBoxType type)
 {
-	#define CF_ENUM(K, V) K = V,
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_WINDOW_MESSAGE_BOX_TYPE_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
 CUTE_INLINE void window_size(int* w, int* h) { return cf_window_size(w, h); }
 CUTE_INLINE void window_position(int* x, int* y) { return cf_window_position(x, y); }
@@ -102,7 +120,7 @@ CUTE_INLINE bool window_was_restored() { return cf_window_was_restored(); }
 CUTE_INLINE bool window_mouse_entered() { return cf_window_mouse_entered(); }
 CUTE_INLINE bool window_mouse_exited() { return cf_window_mouse_exited(); }
 CUTE_INLINE bool window_mouse_inside() { return cf_window_mouse_inside(); }
-CUTE_INLINE void window_message_box(window_message_box_type_t type, const char* title, const char* text) { return cf_window_message_box((CF_WindowMessageBoxType)type, title, text); }
+CUTE_INLINE void window_message_box(WindowMessageBoxType type, const char* title, const char* text) { return cf_window_message_box(type, title, text); }
 
 }
 

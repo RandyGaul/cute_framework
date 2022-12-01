@@ -228,10 +228,22 @@ extern "C" {
 #define sappend(a, b) cf_string_append(a, b)
 
 /**
+ * Appends the string b onto the end of a.
+ * You can technically do this with `sfmt`, but this function is optimized much faster.
+ */
+#define scat(a, b) cf_string_append(a, b)
+
+/**
  * Appends a range of characters from string b onto the end of a.
  * You can technically do this with `sfmt`, but this function is optimized much faster.
  */
 #define sappend_range(a, b, b_end) cf_string_append_range(a, b, b_end)
+
+/**
+ * Appends a range of characters from string b onto the end of a.
+ * You can technically do this with `sfmt`, but this function is optimized much faster.
+ */
+#define scat_range(a, b, b_end) cf_string_append_range(a, b, b_end)
 
 /**
  * Removes all whitespace from the beginning and end of the string.

@@ -150,6 +150,16 @@ typedef enum CF_KeyValueState
 	#undef CF_ENUM
 } CF_KeyValueState;
 
+CUTE_INLINE const char* cf_key_value_state_to_string(CF_KeyValueState state)
+{
+	switch (state) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_KV_STATE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 /**
  * Parses a buffer of kv data. All data is loaded up into memory at once. You can fetch out values
  * as-needed by using `cf_kv_key` and `cf_kv_val_***` functions.
@@ -267,9 +277,6 @@ CUTE_API void CUTE_CALL cf_kv_set_base(CF_KeyValue* kv, CF_KeyValue* base);
  */
 CUTE_API CF_Result CUTE_CALL cf_kv_last_error(CF_KeyValue* kv);
 
-// -------------------------------------------------------------------------------------------------
-// Key and Value functions.
-
 #define CF_KV_TYPE_DEFS \
 	CF_ENUM(KV_TYPE_NULL,   0) \
 	CF_ENUM(KV_TYPE_INT64,  1) \
@@ -278,14 +285,24 @@ CUTE_API CF_Result CUTE_CALL cf_kv_last_error(CF_KeyValue* kv);
 	CF_ENUM(KV_TYPE_ARRAY,  4) \
 	CF_ENUM(KV_TYPE_OBJECT, 5) \
 
-typedef enum CF_KeyValueype_t
+typedef enum CF_KeyValueType
 {
 	#define CF_ENUM(K, V) CF_##K = V,
 	CF_KV_TYPE_DEFS
 	#undef CF_ENUM
-} CF_KeyValueype_t;
+} CF_KeyValueType;
 
-CUTE_API bool CUTE_CALL cf_kv_key(CF_KeyValue* kv, const char* key, CF_KeyValueype_t* type /*= NULL*/);
+CUTE_INLINE const char* cf_key_value_type_to_string(CF_KeyValueType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_KV_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+CUTE_API bool CUTE_CALL cf_kv_key(CF_KeyValue* kv, const char* key, CF_KeyValueType* type /*= NULL*/);
 
 CUTE_API bool CUTE_CALL cf_kv_val_uint8(CF_KeyValue* kv, uint8_t* val);
 CUTE_API bool CUTE_CALL cf_kv_val_uint16(CF_KeyValue* kv, uint16_t* val);
@@ -324,19 +341,35 @@ namespace cute
 
 using KeyValue = CF_KeyValue;
 
-enum KeyValueState : int
+using KeyValueState = CF_KeyValueState;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr KeyValueState K = CF_##K;
+CF_KV_STATE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE const char* key_value_state_to_string(KeyValueState state)
 {
-	#define CF_ENUM(K, V) K = V,
+	switch (state) {
+	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_KV_STATE_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
-enum KeyValueype_t : int
+using KeyValueType = CF_KeyValueType;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr KeyValueType K = CF_##K;
+CF_KV_TYPE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE const char* key_value_type_to_string(KeyValueType type)
 {
-	#define CF_ENUM(K, V) K = V,
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_KV_TYPE_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
 CUTE_INLINE KeyValue* kv_read(const void* data, size_t size, Result* result_out = NULL) { return cf_kv_read(data, size, result_out); }
 CUTE_INLINE KeyValue* kv_write(KeyValue* kv) { return cf_kv_write(); }
@@ -346,7 +379,7 @@ CUTE_INLINE const char* kv_buffer(KeyValue* kv) { return cf_kv_buffer(kv); }
 CUTE_INLINE size_t kv_buffer_size(KeyValue* kv) { return cf_kv_buffer_size(kv); }
 CUTE_INLINE void kv_set_base(KeyValue* kv, KeyValue* base) { cf_kv_set_base(kv, base); }
 CUTE_INLINE Result kv_error_state(KeyValue* kv) { return cf_kv_last_error(kv); }
-CUTE_INLINE bool kv_key(KeyValue* kv, const char* key, KeyValueype_t* type = NULL) { return cf_kv_key(kv, key, (CF_KeyValueype_t*)type); }
+CUTE_INLINE bool kv_key(KeyValue* kv, const char* key, KeyValueType* type = NULL) { return cf_kv_key(kv, key, type); }
 CUTE_INLINE bool kv_val(KeyValue* kv, uint8_t* val) { return cf_kv_val_uint8(kv, val); }
 CUTE_INLINE bool kv_val(KeyValue* kv, uint16_t* val) { return cf_kv_val_uint16(kv, val); }
 CUTE_INLINE bool kv_val(KeyValue* kv, uint32_t* val) { return cf_kv_val_uint32(kv, val); }

@@ -79,13 +79,28 @@ typedef struct CF_HapticEnvelope
 	int fade_milliseconds;
 } CF_HapticEnvelope;
 
+#define CF_HAPTIC_TYPE_DEFS \
+	CF_ENUM(HAPTIC_TYPE_INVALID,   0) \
+	CF_ENUM(HAPTIC_TYPE_LEFTRIGHT, 1) \
+	CF_ENUM(HAPTIC_TYPE_PERIODIC,  2) \
+	CF_ENUM(HAPTIC_TYPE_RAMP,      3) \
+
 typedef enum CF_HapticType
 {
-	CF_HAPTIC_TYPE_INVALID,
-	CF_HAPTIC_TYPE_LEFTRIGHT,
-	CF_HAPTIC_TYPE_PERIODIC,
-	CF_HAPTIC_TYPE_RAMP,
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_HAPTIC_TYPE_DEFS
+	#undef CF_ENUM
 } CF_HapticType;
+
+CUTE_INLINE const char* cf_haptic_type_to_string(CF_HapticType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_HAPTIC_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 /**
  * The leftright haptic allows direct control of one larger and one smaller freqeuncy motors,
@@ -101,12 +116,27 @@ typedef struct CF_HapticLeftRight
 	float hi_motor_strength;
 } CF_HapticLeftRight;
 
+#define CF_HAPTIC_WAVE_TYPE_DEFS \
+	CF_ENUM(HAPTIC_WAVE_TYPE_SINE,     0) \
+	CF_ENUM(HAPTIC_WAVE_TYPE_TRIANGLE, 1) \
+	CF_ENUM(HAPTIC_WAVE_TYPE_SAW,      2) \
+
 typedef enum CF_HapticWaveType
 {
-	CF_HAPTIC_WAVE_TYPE_SINE,
-	CF_HAPTIC_WAVE_TYPE_TRIANGLE,
-	CF_HAPTIC_WAVE_TYPE_SAW,
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_HAPTIC_WAVE_TYPE_DEFS
+	#undef CF_ENUM
 } CF_HapticWaveType;
+
+CUTE_INLINE const char* cf_haptic_wave_type_to_string(CF_HapticWaveType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_HAPTIC_WAVE_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 /**
  * A basic haptic for sine-based waveforms (https://en.wikipedia.org/wiki/Sine_wave).
@@ -264,14 +294,42 @@ namespace cute
 
 using Haptic = CF_Haptic;
 using HapticEnvelope = CF_HapticEnvelope;
-using HapticType = CF_HapticType;
 using HapticLeftRight = CF_HapticLeftRight;
-using HapticWaveType = CF_HapticWaveType;
 using HapticPeriodic = CF_HapticPeriodic;
 using HapticRamp = CF_HapticRamp;
 using HapticData = CF_HapticData;
 using Joypad = CF_Joypad;
 using HapticEffect = CF_HapticEffect;
+
+using HapticType = CF_HapticType;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr HapticType K = CF_##K;
+CF_HAPTIC_TYPE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE const char* haptic_type_to_string(HapticType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return #K;
+	CF_HAPTIC_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+using HapticWaveType = CF_HapticWaveType;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr HapticWaveType K = CF_##K;
+CF_HAPTIC_WAVE_TYPE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE const char* haptic_wave_type_to_string(HapticWaveType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return #K;
+	CF_HAPTIC_WAVE_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
 
 CUTE_INLINE Haptic* haptic_open(Joypad* joypad) { return cf_haptic_open(joypad); }
 CUTE_INLINE void haptic_close(Haptic* haptic) { cf_haptic_close(haptic); }

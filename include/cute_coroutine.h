@@ -51,6 +51,16 @@ typedef enum CF_CoroutineState
 	#undef CF_ENUM
 } CF_CoroutineState;
 
+CUTE_INLINE const char* cf_coroutine_state_to_string(CF_CoroutineState type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_COROUTINE_STATE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 CUTE_API CF_Result CUTE_CALL cf_coroutine_resume(CF_Coroutine* co, float dt /*= 0*/);
 CUTE_API float CUTE_CALL cf_coroutine_yield(CF_Coroutine* co, CF_Result* err /*= NULL*/);
 CUTE_API CF_Result CUTE_CALL cf_coroutine_wait(CF_Coroutine* co, float seconds);
@@ -79,12 +89,20 @@ namespace cute
 using Coroutine = CF_Coroutine;
 using CoroutineFn = CF_CoroutineFn;
 
-enum CoroutineState : int
+using CoroutineState = CF_CoroutineState;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr CoroutineState K = CF_##K;
+CF_COROUTINE_STATE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE const char* coroutine_state_to_string(CoroutineState type)
 {
-	#define CF_ENUM(K, V) K = V,
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_COROUTINE_STATE_DEFS
 	#undef CF_ENUM
-};
+	default: return NULL;
+	}
+}
 
 CUTE_INLINE Coroutine* make_coroutine(CoroutineFn* fn, int stack_size = 0, void* udata = NULL) { return cf_make_coroutine(fn, stack_size, udata); }
 CUTE_INLINE void destroy_coroutine(Coroutine* co) { cf_destroy_coroutine(co); }
@@ -92,7 +110,7 @@ CUTE_INLINE void destroy_coroutine(Coroutine* co) { cf_destroy_coroutine(co); }
 CUTE_INLINE Result coroutine_resume(Coroutine* co, float dt = 0) { return cf_coroutine_resume(co, dt); }
 CUTE_INLINE float coroutine_yield(Coroutine* co, CF_Result* err = NULL) { return cf_coroutine_yield(co, err); }
 CUTE_INLINE Result coroutine_wait(Coroutine* co, float seconds) { return cf_coroutine_wait(co, seconds); }
-CUTE_INLINE CoroutineState coroutine_state(Coroutine* co) { return (CoroutineState)cf_coroutine_state(co); }
+CUTE_INLINE CoroutineState coroutine_state(Coroutine* co) { return cf_coroutine_state(co); }
 CUTE_INLINE void* coroutine_get_udata(Coroutine* co) { return cf_coroutine_get_udata(co); }
 	 
 CUTE_INLINE Result coroutine_push(Coroutine* co, const void* data, size_t size) { return cf_coroutine_push(co, data, size); }
