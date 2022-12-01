@@ -1030,13 +1030,13 @@ void cf_draw_elements()
 {
 	CF_MeshInternal* mesh = s_pass->mesh;
 	sg_draw(0, mesh->vertices.element_count, mesh->instances.element_count + 1); // TODO - +1??
+	sg_destroy_pipeline(s_pass->pip);
 }
 
 void cf_end_pass()
 {
 	CUTE_ASSERT(s_pass);
 	sg_end_pass();
-	sg_destroy_pipeline(s_pass->pip);
 	CF_MeshInternal* mesh = s_pass->mesh;
 	if (mesh) {
 		if (mesh->vertices.was_appended) {
