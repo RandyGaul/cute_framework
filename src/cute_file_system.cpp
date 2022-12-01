@@ -61,21 +61,28 @@ char* cf_path_get_ext(const char* path)
 
 char* cf_path_pop(const char* path)
 {
-	int len = (int)CUTE_STRLEN(path);
-	int at = slast_index_of(path, '/');
-	if (at == -1 || at == 0) return smake("/");
-	char* s = sdup(path);
-	serase(s, at, slen(s) - at);
-	return s;
+	char* in = (char*)path;
+	if (sisdyna(in)) {
+		if (slast(in) == '/') spop(in);
+		int at = slast_index_of(path, '/');
+		if (at == -1 || at == 0) return sset(in, "/");
+		serase(in, at, slen(in) - at);
+		return in;
+	} else {
+		char* s = sdup(path);
+		if (slast(s) == '/') spop(s);
+		int at = slast_index_of(path, '/');
+		if (at == -1 || at == 0) return sset(s, "/");
+		serase(s, at, slen(s) - at);
+		return s;
+	}
 }
 
 char* cf_path_pop_n(const char* path, int n)
 {
-	char* s = sdup(path);
+	char* s = (char*)path;
 	while (n--) {
-		char* prev = s;
 		s = sppop(s);
-		sfree(prev);
 	}
 	return s;
 }
@@ -138,6 +145,46 @@ char* cf_path_top_directory(const char* path)
 	if (next == -1) return smake("/");
 	char* s = sdup(path);
 	return serase(s, next + 1, slen(s) - (next + 1));
+}
+
+char* cf_path_normalize(const char* path)
+{
+	char* result = NULL;
+	int len = (int)CUTE_STRLEN(path);
+	if (*path != '\\' && *path != '/') {
+		bool windows_drive = len >= 2 && path[1] == ':';
+		if (!windows_drive) {
+			spush(result, '/');
+		}
+	}
+	bool prev_was_dot = false;
+	bool prev_was_dotdot = false;
+	for (int i = 0; i < len; ++i) {
+		char c = path[i];
+		int l = slen(result);
+		if (c == '\\' || c == '/') {
+			if (!prev_was_dot) {
+				spush(result, '/');
+			} else if (prev_was_dotdot) {
+				sppop(result);
+				spush(result, '/');
+			}
+			prev_was_dot = false;
+			prev_was_dotdot = false;
+		} else if (c == '.') {
+			if (prev_was_dot) {
+				prev_was_dotdot = true;
+			}
+			prev_was_dot = true;
+		} else {
+			spush(result, c);
+			prev_was_dot = false;
+			prev_was_dotdot = false;
+		}
+	}
+	sreplace(result, "//", "/");
+	if (slen(result) > 1 && slast(result) == '/') spop(result);
+	return result;
 }
 
 //--------------------------------------------------------------------------------------------------

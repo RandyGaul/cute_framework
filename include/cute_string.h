@@ -398,6 +398,16 @@ extern "C" {
 #define serase(s, index, count) cf_string_erase(s, index, count)
 
 /**
+ * Removes a character from the end of the string.
+ */
+#define spop(s) (s = cf_string_pop(s))
+
+/**
+ * Removes n characters from the back of a string.
+ */
+#define spopn(s, n) (s = cf_string_pop_n(s, n))
+
+/**
  * Creates a string with an initial static storage backing. Will grow onto the heap
  * if the size becomes too large.
  * 
@@ -406,6 +416,12 @@ extern "C" {
  * buffer_size - The size of `buffer` in bytes.
  */
 #define sstatic(s, buffer, buffer_size) cf_string_static(s, buffer, buffer_size)
+
+/**
+ * Returns true if `s` is a dynamically alloced string from this C string API.
+ * This can be evaluated at compile time for string literals.
+ */
+#define sisdyna(s) cf_string_is_dynamic(s)
 
 //--------------------------------------------------------------------------------------------------
 // UTF8 and UTF16.
@@ -569,7 +585,10 @@ CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, uint32_t* 
 #define cf_string_tobool(s) (!CUTE_STRCMP(s, "true"))
 #define cf_string_replace(s, replace_me, with_me) (s = cf_sreplace(s, replace_me, with_me))
 #define cf_string_erase(s, index, count) (s = cf_serase(s, index, count))
+#define cf_string_pop(s) (s = cf_spop(s))
+#define cf_string_pop_n(s, n) (s = cf_spopn(s, n))
 #define cf_string_static(s, buffer, buffer_size) (cf_array_static(s, buffer, buffer_size), cf_array_push(s, 0))
+#define cf_string_is_dynamic(s) (s && !((#s)[0] == '"') && CF_AHDR(s)->cookie == CF_ACOOKIE)
 #define cf_sinuke() cf_sinuke_intern_table()
 #define cf_string_append_UTF8(s, codepoint) (s = cf_string_append_UTF8_impl(s, codepoint))
 
@@ -613,6 +632,8 @@ CUTE_API double CUTE_CALL cf_stodouble(const char* s);
 CUTE_API uint64_t CUTE_CALL cf_stohex(const char* s);
 CUTE_API char* CUTE_CALL cf_sreplace(char* s, const char* replace_me, const char* with_me);
 CUTE_API char* CUTE_CALL cf_serase(char* s, int index, int count);
+CUTE_API char* CUTE_CALL cf_spop(char* s);
+CUTE_API char* CUTE_CALL cf_spopn(char* s, int n);
 CUTE_API char* CUTE_CALL cf_string_append_UTF8_impl(char *s, uint32_t codepoint);
 
 CUTE_API const char* CUTE_CALL cf_sintern(const char* s);

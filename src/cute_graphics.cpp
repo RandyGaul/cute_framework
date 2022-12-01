@@ -441,13 +441,31 @@ CF_Pass cf_make_pass(CF_PassParams pass_params)
 	return result;
 }
 
-void cf_destroy_pass(CF_Pass pass)
+void cf_destroy_pass(CF_Pass pass_handle)
 {
-	CF_PassInternal* pass_internal = (CF_PassInternal*)pass.id;
-	if (!pass_internal->pass_is_default) {
-		sg_destroy_pass(pass_internal->pass);
+	CF_PassInternal* pass = (CF_PassInternal*)pass_handle.id;
+	if (!pass->pass_is_default) {
+		sg_destroy_pass(pass->pass);
 	}
-	CUTE_FREE(pass_internal);
+	CUTE_FREE(pass);
+}
+
+void cf_pass_set_color_init_op(CF_Pass pass_handle, CF_PassInitOp op)
+{
+	CF_PassInternal* pass = (CF_PassInternal*)pass_handle.id;
+	pass->action.colors->action = s_wrap(op);
+}
+
+void cf_pass_set_depth_init_op(CF_Pass pass_handle, CF_PassInitOp op)
+{
+	CF_PassInternal* pass = (CF_PassInternal*)pass_handle.id;
+	pass->action.depth.action = s_wrap(op);
+}
+
+void cf_pass_set_stencil_init_op(CF_Pass pass_handle, CF_PassInitOp op)
+{
+	CF_PassInternal* pass = (CF_PassInternal*)pass_handle.id;
+	pass->action.stencil.action = s_wrap(op);
 }
 
 CF_Mesh cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size)

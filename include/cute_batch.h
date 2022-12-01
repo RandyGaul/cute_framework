@@ -35,9 +35,9 @@
 extern "C" {
 #endif // __cplusplus
 
+CUTE_API void CUTE_CALL cf_batch_render(CF_Pass pass, CF_Matrix4x4 projection);
 CUTE_API void CUTE_CALL cf_batch_set_texture_wrap_mode(CF_WrapMode wrap_mode);
 CUTE_API void CUTE_CALL cf_batch_set_texture_filter(CF_Filter filter);
-CUTE_API void CUTE_CALL cf_batch_set_projection(CF_Matrix4x4 projection);
 CUTE_API void CUTE_CALL cf_batch_outlines(bool use_outlines);
 CUTE_API void CUTE_CALL cf_batch_outlines_use_corners(bool use_corners);
 CUTE_API void CUTE_CALL cf_batch_outlines_color(CF_Color c);
@@ -48,9 +48,9 @@ CUTE_API cf_m3x2 CUTE_CALL cf_batch_peek_m3x2();
 CUTE_API void CUTE_CALL cf_batch_push_scissor_box(int x, int y, int w, int h);
 CUTE_API void CUTE_CALL cf_batch_pop_scissor_box();
 CUTE_API void CUTE_CALL cf_batch_peek_scissor_box(int* x, int* y, int* w, int* h);
-CUTE_API void CUTE_CALL cf_batch_push_render_state(CF_RenderState render_state);
-CUTE_API CF_RenderState CUTE_CALL cf_batch_pop_render_state();
-CUTE_API CF_RenderState CUTE_CALL cf_batch_peek_render_state();
+CUTE_API void CUTE_CALL cf_batch_push_render_state(CF_RenderState render_state); // Todo.
+CUTE_API CF_RenderState CUTE_CALL cf_batch_pop_render_state(); // Todo.
+CUTE_API CF_RenderState CUTE_CALL cf_batch_peek_render_state(); // Todo.
 CUTE_API void CUTE_CALL cf_batch_push_tint(CF_Color c);
 CUTE_API CF_Color CUTE_CALL cf_batch_pop_tint();
 CUTE_API CF_Color CUTE_CALL cf_batch_peek_tint();
@@ -119,9 +119,9 @@ using m3x2 = cf_m3x2;
 using aabb_t = CF_Aabb;
 using Transform = CF_Transform;
 
+CUTE_INLINE void batch_render(CF_Pass pass, Matrix4x4 projection) { cf_batch_render(pass, projection); }
 CUTE_INLINE void batch_set_texture_wrap_mode(CF_WrapMode wrap_mode) { cf_batch_set_texture_wrap_mode(wrap_mode); }
 CUTE_INLINE void batch_set_texture_filter(CF_Filter filter) { cf_batch_set_texture_filter(filter); }
-CUTE_INLINE void batch_set_projection(CF_Matrix4x4 projection) { cf_batch_set_projection(projection); }
 CUTE_INLINE void batch_outlines(bool use_outlines) { cf_batch_outlines(use_outlines); }
 CUTE_INLINE void batch_outlines_use_corners(bool use_corners) { cf_batch_outlines_use_corners(use_corners); }
 CUTE_INLINE void batch_outlines_color(color_t c) { cf_batch_outlines_color(c); }

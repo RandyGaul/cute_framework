@@ -384,6 +384,24 @@ char* cf_serase(char* s, int index, int count)
 	return s;
 }
 
+char* cf_spop(char* s)
+{
+	CF_ACANARY(s);
+	if (s && slen(s)) s[--ssize(s) - 1] = 0;
+	return s;
+}
+
+char* cf_spopn(char* s, int n)
+{
+	CF_ACANARY(s);
+	if (!s || n < 0) return s;
+	while (ssize(s) > 1 && n--) {
+		ssize(s)--;
+	}
+	s[slen(s)] = 0;
+	return s;
+}
+
 using intern_t = cf_intern_t;
 
 struct intern_table_t

@@ -20,6 +20,8 @@
 */
 
 #include <cute_audio.h>
+#include <cute_file_system.h>
+#include <cute_alloc.h>
 
 #define STB_VORBIS_HEADER_ONLY
 #include <stb/stb_vorbis.c>
@@ -32,14 +34,30 @@ using namespace cute;
 
 CF_Audio* cf_audio_load_ogg(const char* path)
 {
-	auto src = cs_load_ogg(path, NULL);
-	return (CF_Audio*) src;
+	void* data;
+	size_t size;
+	fs_read_entire_file_to_memory(path, &data, &size);
+	if (data) {
+		auto src = cf_audio_load_ogg_from_memory(data, (int)size);
+		CUTE_FREE(data);
+		return (CF_Audio*) src;
+	} else {
+		return NULL;
+	}
 }
 
 CF_Audio* cf_audio_load_wav(const char* path)
 {
-	auto src = cs_load_wav(path, NULL);
-	return (CF_Audio*) src;
+	void* data;
+	size_t size;
+	fs_read_entire_file_to_memory(path, &data, &size);
+	if (data) {
+		auto src = cf_audio_load_wav_from_memory(data, (int)size);
+		CUTE_FREE(data);
+		return (CF_Audio*) src;
+	} else {
+		return NULL;
+	}
 }
 
 CF_Audio* cf_audio_load_ogg_from_memory(void* memory, int byte_count)

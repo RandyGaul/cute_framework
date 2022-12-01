@@ -82,12 +82,16 @@ extern "C" {
 #define spext(s) cf_path_get_ext(s)
 
 /**
- * Removes the rightmost file or directory from the path. Returns a new string.
+ * Removes the rightmost file or directory from the path. If the string is not a
+ * dynamic string from CF's string API, a new string is returned. Otherwise the
+ * string is modified in-place.
  */
 #define sppop(s) cf_path_pop(s)
 
 /**
- * Removes the rightmost n files or directories from the path. Returns a new string.
+ * Removes the rightmost n files or directories from the path. If the string is
+ * not a dynamic string from CF's string API, a new string is returned. Otherwise
+ * the string is modified in-place.
  */
 #define sppopn(s, n) cf_path_pop_n(s, n)
 
@@ -126,6 +130,23 @@ extern "C" {
  *     /data
  */
 #define sptop_of(s) cf_path_top_directory(s)
+
+/**
+ * Normalizes a path. This means a few specific things:
+ * 
+ * - All '\\' are replaced with '/'.
+ * - Any duplicate '////' are replaced with a single '/'.
+ * - Trailing '/' are removed.
+ * - Dot folders are resolved, e.g.
+ * 
+ *    spnorm("/a/b/./c") -> "/a/b/c"
+ *    spnorm("/a/b/../c") -> "/a/c"
+ * 
+ * - The first character is always '/', unless it's a windows drive, e.g.
+ * 
+ *    spnorm("C:\\Users\\Randy\\Documents") -> "C:/Users/Randy/Documents"
+ */
+#define spnorm(s) cf_path_normalize(s)
 #endif // CUTE_NO_SHORTHAND_API
 
 CUTE_API char* CUTE_CALL cf_path_get_filename(const char* path);
@@ -136,6 +157,7 @@ CUTE_API char* CUTE_CALL cf_path_pop_n(const char* path, int n);
 CUTE_API char* CUTE_CALL cf_path_compact(const char* path, int n);
 CUTE_API char* CUTE_CALL cf_path_directory_of(const char* path);
 CUTE_API char* CUTE_CALL cf_path_top_directory(const char* path);
+CUTE_API char* CUTE_CALL cf_path_normalize(const char* path);
 
 //--------------------------------------------------------------------------------------------------
 // Virtual file system.

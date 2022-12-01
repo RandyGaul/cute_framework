@@ -61,7 +61,7 @@ struct BatchGeometry
 
 using namespace cute;
 
-void s_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
+void cf_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
 {
 	CUTE_UNUSED(udata);
 	if (image_id >= CUTE_ASEPRITE_ID_RANGE_LO && image_id <= CUTE_ASEPRITE_ID_RANGE_HI) {
@@ -101,7 +101,7 @@ struct CF_Batch
 	float atlas_height = 1024;
 	
 	Array<BatchVertex> verts;
-	CF_Pass pass;
+	CF_Pass default_pass;
 	CF_Shader shader;
 	CF_Mesh mesh;
 	CF_Material material;
@@ -121,7 +121,7 @@ struct CF_Batch
 	Array<int> layers = { 0 };
 };
 
-void cf_batch_sprite_tf(const CF_Sprite* sprite)
+void cf_batch_sprite(const CF_Sprite* sprite)
 {
 	v2 p = cf_mul_m32_v2(b->m, cf_add_v2(sprite->transform.p, sprite->local_offset));
 	spritebatch_sprite_t s;
@@ -290,25 +290,18 @@ static void s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
 }
 
 //--------------------------------------------------------------------------------------------------
-
-CF_Result cf_batch_flush()
-{
-	// Draw sprites.
-	spritebatch_flush(&b->sb);
-	return cf_result_success();
-}
+// Hidden API called by CF_App.
 
 void cf_make_batch()
 {
 	b = CUTE_NEW(CF_Batch);
-	b->projection = cf_matrix_identity();
 
 	// Pass.
 	CF_PassParams params = cf_pass_defaults();
-	params.name = "Batch";
+	params.name = "Default Batch";
 	params.target = cf_app_get_backbuffer();
 	params.depth_stencil = cf_app_get_backbuffer_depth_stencil();
-	b->pass = cf_make_pass(params);
+	b->default_pass = cf_make_pass(params);
 
 	// Mesh + vertex attributes.
 	b->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CUTE_MB * 25, 0, 0);
@@ -348,7 +341,7 @@ void cf_make_batch()
 	config.atlas_use_border_pixels = 1;
 	config.ticks_to_decay_texture = 100000;
 	config.batch_callback = s_batch_report;
-	config.get_pixels_callback = s_get_pixels;
+	config.get_pixels_callback = cf_get_pixels;
 	config.generate_texture_callback = s_generate_texture_handle;
 	config.delete_texture_callback = s_destroy_texture_handle;
 	config.allocator_context = NULL;
@@ -368,7 +361,7 @@ void cf_make_batch()
 void cf_destroy_batch()
 {
 	spritebatch_term(&b->sb);
-	cf_destroy_pass(b->pass);
+	cf_destroy_pass(b->default_pass);
 	cf_destroy_mesh(b->mesh);
 	cf_destroy_material(b->material);
 	cf_destroy_shader(b->shader);
@@ -376,17 +369,23 @@ void cf_destroy_batch()
 	CUTE_FREE(b);
 }
 
-void cf_batch_render()
+void cf_batch_default_render(CF_Matrix4x4 projection)
+{
+	cf_batch_render(b->default_pass, projection);
+}
+
+//--------------------------------------------------------------------------------------------------
+
+void cf_batch_render(CF_Pass pass, CF_Matrix4x4 projection)
 {
 	b->verts.clear();
-	cf_begin_pass(b->pass);
+	b->projection = projection;
+	cf_begin_pass(pass);
 	spritebatch_tick(&b->sb);
 	spritebatch_defrag(&b->sb);
 	spritebatch_flush(&b->sb);
 	cf_end_pass();
 }
-
-//--------------------------------------------------------------------------------------------------
 
 void cf_batch_set_texture_wrap_mode(CF_WrapMode wrap_mode)
 {
@@ -396,11 +395,6 @@ void cf_batch_set_texture_wrap_mode(CF_WrapMode wrap_mode)
 void cf_batch_set_texture_filter(CF_Filter filter)
 {
 	b->filter = filter;
-}
-
-void cf_batch_set_projection(CF_Matrix4x4 projection)
-{
-	b->projection = projection;
 }
 
 void cf_batch_outlines(bool use_outlines)

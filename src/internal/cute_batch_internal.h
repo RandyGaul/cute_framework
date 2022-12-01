@@ -26,7 +26,7 @@ extern struct CF_Batch* b;
 
 void cf_make_batch();
 void cf_destroy_batch();
-void cf_batch_render();
+void cf_batch_default_render(CF_Matrix4x4 projection);
 
 // We slice up a 64-bit int into lo + hi ranges to map where we can fetch pixels
 // from. This slices up the 64-bit range into 16 unique ranges, though we're only
@@ -38,7 +38,5 @@ void cf_batch_render();
 #define CUTE_PNG_ID_RANGE_HI      (CUTE_PNG_ID_RANGE_LO      + CUTE_IMAGE_ID_RANGE_SIZE)
 #define CUTE_FONT_ID_RANGE_LO     (CUTE_PNG_ID_RANGE_HI      + 1)
 #define CUTE_FONT_ID_RANGE_HI     (CUTE_FONT_ID_RANGE_LO     + CUTE_IMAGE_ID_RANGE_SIZE)
-
-void cf_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill, void* udata);
 
 #endif // CUTE_BATCH_INTERNAL_H

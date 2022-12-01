@@ -371,9 +371,10 @@ void cf_app_get_backbuffer_size(int* x, int* y)
 {
 }
 
-void cf_app_present()
+void cf_app_present(CF_Matrix4x4 projection, bool clear_backbuffer)
 {
-	cf_batch_render();
+	cf_batch_default_render(projection);
+	cf_pass_set_color_init_op(app->backbuffer_pass, clear_backbuffer ? PASS_INIT_OP_CLEAR : PASS_INIT_OP_LOAD);
 	cf_begin_pass(app->backbuffer_pass);
 	cf_apply_mesh(app->backbuffer_quad);
 	cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);

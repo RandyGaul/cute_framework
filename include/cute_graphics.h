@@ -489,6 +489,9 @@ typedef struct CF_PassParams
 CUTE_API CF_PassParams CUTE_CALL cf_pass_defaults();
 CUTE_API CF_Pass CUTE_CALL cf_make_pass(CF_PassParams pass_params);
 CUTE_API void CUTE_CALL cf_destroy_pass(CF_Pass pass);
+CUTE_API void CUTE_CALL cf_pass_set_color_init_op(CF_Pass pass, CF_PassInitOp op);
+CUTE_API void CUTE_CALL cf_pass_set_depth_init_op(CF_Pass pass, CF_PassInitOp op);
+CUTE_API void CUTE_CALL cf_pass_set_stencil_init_op(CF_Pass pass, CF_PassInitOp op);
 
 //--------------------------------------------------------------------------------------------------
 // Mesh.
@@ -1166,7 +1169,7 @@ CUTE_INLINE void destroy_shader(Shader shader) { cf_destroy_shader(shader); }
 CUTE_INLINE PassParams pass_defaults() { return cf_pass_defaults(); }
 CUTE_INLINE Pass make_pass(PassParams pass_params) { return cf_make_pass(pass_params); }
 CUTE_INLINE void destroy_pass(Pass pass) { cf_destroy_pass(pass); }
-CUTE_INLINE Mesh make_mesh(UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size) { cf_make_mesh(usage_type, vertex_buffer_size, index_buffer_size, instance_buffer_size); }
+CUTE_INLINE Mesh make_mesh(UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size) { return cf_make_mesh(usage_type, vertex_buffer_size, index_buffer_size, instance_buffer_size); }
 CUTE_INLINE void destroy_mesh(Mesh mesh) { cf_destroy_mesh(mesh); }
 CUTE_INLINE void mesh_set_attributes(Mesh mesh, const VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride) { cf_mesh_set_attributes(mesh, attributes, attribute_count, vertex_stride, instance_stride); }
 CUTE_INLINE void mesh_update_vertex_data(Mesh mesh, void* data, int count) { cf_mesh_update_vertex_data(mesh, data, count); }
