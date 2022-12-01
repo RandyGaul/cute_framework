@@ -35,7 +35,7 @@
 extern "C" {
 #endif // __cplusplus
 
-CUTE_API void CUTE_CALL cf_batch_render(CF_Pass pass, CF_Matrix4x4 projection);
+CUTE_API void CUTE_CALL cf_batch_render(CF_Matrix4x4 projection);
 CUTE_API void CUTE_CALL cf_batch_set_texture_wrap_mode(CF_WrapMode wrap_mode);
 CUTE_API void CUTE_CALL cf_batch_set_texture_filter(CF_Filter filter);
 CUTE_API void CUTE_CALL cf_batch_outlines(bool use_outlines);
@@ -119,7 +119,7 @@ using m3x2 = cf_m3x2;
 using aabb_t = CF_Aabb;
 using Transform = CF_Transform;
 
-CUTE_INLINE void batch_render(CF_Pass pass, Matrix4x4 projection) { cf_batch_render(pass, projection); }
+CUTE_INLINE void batch_render(Matrix4x4 projection) { cf_batch_render(projection); }
 CUTE_INLINE void batch_set_texture_wrap_mode(CF_WrapMode wrap_mode) { cf_batch_set_texture_wrap_mode(wrap_mode); }
 CUTE_INLINE void batch_set_texture_filter(CF_Filter filter) { cf_batch_set_texture_filter(filter); }
 CUTE_INLINE void batch_outlines(bool use_outlines) { cf_batch_outlines(use_outlines); }

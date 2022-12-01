@@ -26,6 +26,7 @@
 #include <cute_file_system.h>
 #include <cute_c_runtime.h>
 #include <cute_kv.h>
+#include <cute_batch.h>
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_file_system_internal.h>
@@ -225,6 +226,14 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 			CF_PassParams params = cf_pass_defaults();
 			params.color_value = cf_color_red();
 			params.color_op = CF_PASS_INIT_OP_CLEAR;
+			params.target = app->backbuffer;
+			params.depth_stencil = app->backbuffer_depth_stencil;
+			app->offscreen_pass = cf_make_pass(params);
+		}
+		{
+			CF_PassParams params = cf_pass_defaults();
+			params.color_value = cf_color_red();
+			params.color_op = CF_PASS_INIT_OP_CLEAR;
 			app->backbuffer_pass = cf_make_pass(params);
 		}
 		{
@@ -357,24 +366,17 @@ static void s_imgui_present()
 	}
 }
 
-CF_Texture cf_app_get_backbuffer()
+CF_Pass cf_app_get_backbuffer_pass()
 {
-	return app->backbuffer;
-}
-
-CF_Texture cf_app_get_backbuffer_depth_stencil()
-{
-	return app->backbuffer_depth_stencil;
+	return app->offscreen_pass;
 }
 
 void cf_app_get_backbuffer_size(int* x, int* y)
 {
 }
 
-void cf_app_present(CF_Matrix4x4 projection, bool clear_backbuffer)
+void cf_app_present()
 {
-	cf_batch_default_render(projection);
-	cf_pass_set_color_init_op(app->backbuffer_pass, clear_backbuffer ? PASS_INIT_OP_CLEAR : PASS_INIT_OP_LOAD);
 	cf_begin_pass(app->backbuffer_pass);
 	cf_apply_mesh(app->backbuffer_quad);
 	cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);

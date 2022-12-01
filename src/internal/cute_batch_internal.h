@@ -26,7 +26,6 @@ extern struct CF_Batch* b;
 
 void cf_make_batch();
 void cf_destroy_batch();
-void cf_batch_default_render(CF_Matrix4x4 projection);
 
 // We slice up a 64-bit int into lo + hi ranges to map where we can fetch pixels
 // from. This slices up the 64-bit range into 16 unique ranges, though we're only

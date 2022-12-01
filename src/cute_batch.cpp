@@ -101,7 +101,6 @@ struct CF_Batch
 	float atlas_height = 1024;
 	
 	Array<BatchVertex> verts;
-	CF_Pass default_pass;
 	CF_Shader shader;
 	CF_Mesh mesh;
 	CF_Material material;
@@ -168,6 +167,9 @@ static void s_batch_report(spritebatch_sprite_t* sprites, int count, int texture
 
 		if (s->geom.tri) {
 			// TODO.
+			vert_count -= 6;
+			count--;
+			i--;
 		} else {
 			CF_V2 quad[] = {
 				{ -0.5f,  0.5f },
@@ -296,13 +298,6 @@ void cf_make_batch()
 {
 	b = CUTE_NEW(CF_Batch);
 
-	// Pass.
-	CF_PassParams params = cf_pass_defaults();
-	params.name = "Default Batch";
-	params.target = cf_app_get_backbuffer();
-	params.depth_stencil = cf_app_get_backbuffer_depth_stencil();
-	b->default_pass = cf_make_pass(params);
-
 	// Mesh + vertex attributes.
 	b->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CUTE_MB * 25, 0, 0);
 	CF_VertexAttribute attrs[4] = { };
@@ -361,7 +356,6 @@ void cf_make_batch()
 void cf_destroy_batch()
 {
 	spritebatch_term(&b->sb);
-	cf_destroy_pass(b->default_pass);
 	cf_destroy_mesh(b->mesh);
 	cf_destroy_material(b->material);
 	cf_destroy_shader(b->shader);
@@ -369,22 +363,15 @@ void cf_destroy_batch()
 	CUTE_FREE(b);
 }
 
-void cf_batch_default_render(CF_Matrix4x4 projection)
-{
-	cf_batch_render(b->default_pass, projection);
-}
-
 //--------------------------------------------------------------------------------------------------
 
-void cf_batch_render(CF_Pass pass, CF_Matrix4x4 projection)
+void cf_batch_render(CF_Matrix4x4 projection)
 {
 	b->verts.clear();
 	b->projection = projection;
-	cf_begin_pass(pass);
 	spritebatch_tick(&b->sb);
 	spritebatch_defrag(&b->sb);
 	spritebatch_flush(&b->sb);
-	cf_end_pass();
 }
 
 void cf_batch_set_texture_wrap_mode(CF_WrapMode wrap_mode)

@@ -179,6 +179,7 @@ struct CF_App
 	int y;
 	CF_Texture backbuffer;
 	CF_Texture backbuffer_depth_stencil;
+	CF_Pass offscreen_pass;
 	CF_Pass backbuffer_pass;
 	CF_Mesh backbuffer_quad;
 	CF_Shader backbuffer_shader;
