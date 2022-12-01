@@ -1,7 +1,7 @@
 @module sprite
 @ctype mat4 CF_Matrix4x4
 @ctype vec4 CF_Color
-@ctype vec2 cf_v2
+@ctype vec2 CF_V2
 
 @include includes/overlay.glsl
 @include includes/smooth_uv.glsl

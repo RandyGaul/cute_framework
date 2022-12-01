@@ -124,7 +124,7 @@ struct CF_Batch
 void cf_batch_sprite(const CF_Sprite* sprite)
 {
 	v2 p = cf_mul_m32_v2(b->m, cf_add_v2(sprite->transform.p, sprite->local_offset));
-	spritebatch_sprite_t s;
+	spritebatch_sprite_t s = { };
 	s.image_id = sprite->animation->frames[sprite->frame_index].id;
 	s.w = sprite->w;
 	s.h = sprite->h;
@@ -140,7 +140,7 @@ void cf_batch_sprite_tf(const CF_Sprite* sprite, CF_Transform transform)
 {
 	transform = mul(transform, sprite->transform);
 	v2 p = cf_mul_m32_v2(b->m, cf_add_v2(transform.p, sprite->local_offset));
-	spritebatch_sprite_t s;
+	spritebatch_sprite_t s = { };
 	s.image_id = sprite->animation->frames[sprite->frame_index].id;
 	s.w = sprite->w;
 	s.h = sprite->h;

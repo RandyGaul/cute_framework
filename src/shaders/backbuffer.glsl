@@ -1,5 +1,5 @@
 @module backbuffer
-@ctype vec2 cf_v2
+@ctype vec2 CF_V2
 
 @include includes/smooth_uv.glsl
 

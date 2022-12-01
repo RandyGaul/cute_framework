@@ -67,7 +67,7 @@ int main(int argc, const char** argv)
 	if (is_error(result)) return -1;
 
 	Sprite s = cf_make_sprite("test_data/girl.aseprite");
-	cf_batch_set_projection(cf_matrix_ortho_2d(640/2, 480/2, 0, 0));
+	Matrix4x4 projection = cf_matrix_ortho_2d(640/2, 480/2, 0, 0);
 	s.play("spin");
 
 	auto imgui = cf_app_init_imgui(false);
@@ -91,7 +91,7 @@ int main(int argc, const char** argv)
 			}
 			ImGui::EndMainMenuBar();
 		}
-		app_present();
+		app_present(projection);
 	}
 
 	destroy_app();
