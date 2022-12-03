@@ -157,11 +157,11 @@ CUTE_API void CUTE_CALL cf_sprite_unload(const char* aseprite_path);
 //--------------------------------------------------------------------------------------------------
 // In-line implementation of `sprite_t` functions.
 
-CUTE_API void CUTE_CALL cf_draw_sprite_tf(const CF_Sprite* sprite, CF_Transform transform);
+CUTE_API void CUTE_CALL cf_draw_sprite2(const CF_Sprite* sprite, CF_Transform transform);
 
 CUTE_INLINE void cf_sprite_draw(CF_Sprite* sprite)
 {
-	cf_draw_sprite_tf(sprite, sprite->transform);
+	cf_draw_sprite2(sprite, sprite->transform);
 }
 
 /**
