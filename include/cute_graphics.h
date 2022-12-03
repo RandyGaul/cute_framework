@@ -47,28 +47,30 @@ extern "C" {
  * 
  * Quick list of unsupported features to keep the initial API really tiny and simple. These can be
  * potentially added later, but are not slated for v1.00 of CF's initial release. Most of these
- * features make more sense for the 3D use-case as opposed to 2D.
+ * features make more sense for the 3D use-case as opposed to 2D. The ones marked with stars are
+ * currently considered higher priority for adding in the future.
  * 
- *     - Mipmaps
+ *     - Mipmaps *
  *     - MSAA
  *     - Blend color constant
- *     - Multiple render targets (aka color/texture attachments)
+ *     - Multiple render targets (aka color/texture attachments) *
  *     - Depth bias tunables
- *     - uint16_t indices (only uint32_t supported)
+ *     - uint16_t indices (only uint32_t supported) *
  *     - Cube map
  *     - 3D textures
- *     - Texture arrays
+ *     - Texture arrays *
  *     - Sampler types signed/unsigned int (only float supported)
  *     - Other primitive types besides triangles
  *     - UV wrap border colors
  *     - Face winding order (defaults to CCW only)
  *     - Anisotropy tunable
  *     - Min/max LOD tunable
+ *     - No direct access to the underlying device *
  * 
  * The basic flow of rendering a frame looks something like this:
  * 
- *     for each pass {
- *         cf_begin_pass(pass);
+ *     for each canvas {
+ *         cf_apply_canvas(canvas);
  *         for each mesh {
  *             cf_mesh_update_vertex_data(mesh, ...);
  *             cf_apply_mesh(mesh);
@@ -81,17 +83,14 @@ extern "C" {
  *                 }
  *             }
  *         }
- *         cf_end_pass();
  *     }
  *     cf_commit();
- * 
- * Where each pass writes to a render target texture.
  */
 
 #define CF_GRAPHICS_IS_VALID(X) (X.id != 0)
 
 typedef struct CF_Texture { uint64_t id; } CF_Texture;
-typedef struct CF_Pass { uint64_t id; } CF_Pass;
+typedef struct CF_Canvas { uint64_t id; } CF_Canvas;
 typedef struct CF_Mesh { uint64_t id; } CF_Mesh;
 typedef struct CF_Material { uint64_t id; } CF_Material;
 typedef struct CF_Shader { uint64_t id; } CF_Shader;
@@ -370,7 +369,7 @@ typedef struct CF_TextureParams
 	CF_WrapMode wrap_v;
 	int width;
 	int height;
-	bool render_target;    // If true you can render to this texture via `CF_Pass`.
+	bool render_target;    // If true you can render to this texture via `CF_Canvas`.
 	int initial_data_size; // Must be non-zero for immutable textures.
 	void* initial_data;    // Must be non-NULL for immutable textures.
 } CF_TextureParams;
@@ -445,53 +444,33 @@ CUTE_API CF_Shader CUTE_CALL cf_make_shader(CF_SokolShader sokol_shader);
 CUTE_API void CUTE_CALL cf_destroy_shader(CF_Shader shader);
 
 //--------------------------------------------------------------------------------------------------
-// Render Passes.
+// Render Canvases.
 
 /**
- * A rendering pass contains a target (and optional depth/stencil buffer) along with some operations
- * on what to do with the target. A render target means a texture the GPU can write to.
+ * A rendering canvas is a texture the GPU can draw upon (with an optional depth/stencil texture).
+ * The clear settings are used when `cf_apply_canvas` is called.
  */
 
-#define CF_PASS_INIT_OP_DEFS \
-	CF_ENUM(PASS_INIT_OP_CLEAR,    /* Clear to contents of the target. */ 0) \
-	CF_ENUM(PASS_INIT_OP_LOAD,     /* Load the previous contents of the target. */ 1) \
-	CF_ENUM(PASS_INIT_OP_DONTCARE, /* Don't specify either. */ 2) \
-
-typedef enum CF_PassInitOp
+typedef struct CF_CanvasClearSettings
 {
-	#define CF_ENUM(K, V) CF_##K = V,
-	CF_PASS_INIT_OP_DEFS
-	#undef CF_ENUM
-} CF_PassInitOp;
+	bool do_clear;
+	CF_Color color;
+	float depth;
+	uint8_t stencil;
+} CF_CanvasClearSettings;
 
-CUTE_INLINE const char* cf_pass_init_op_string(CF_PassInitOp op) {
-	switch (op) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
-	CF_PASS_INIT_OP_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-typedef struct CF_PassParams
+typedef struct CF_CanvasParams
 {
 	const char* name;
-	CF_PassInitOp color_op;
-	CF_Color color_value;
-	CF_PassInitOp depth_op;
-	float depth_value;
-	CF_PassInitOp stencil_op;
-	uint8_t stencil_value;
+	CF_CanvasClearSettings clear_settings;
 	CF_Texture target;
-	CF_Texture depth_stencil;
-} CF_PassParams;
+	CF_Texture depth_stencil_target;
+} CF_CanvasParams;
 
-CUTE_API CF_PassParams CUTE_CALL cf_pass_defaults();
-CUTE_API CF_Pass CUTE_CALL cf_make_pass(CF_PassParams pass_params);
-CUTE_API void CUTE_CALL cf_destroy_pass(CF_Pass pass);
-CUTE_API void CUTE_CALL cf_pass_set_color_init_op(CF_Pass pass, CF_PassInitOp op);
-CUTE_API void CUTE_CALL cf_pass_set_depth_init_op(CF_Pass pass, CF_PassInitOp op);
-CUTE_API void CUTE_CALL cf_pass_set_stencil_init_op(CF_Pass pass, CF_PassInitOp op);
+CUTE_API CF_CanvasParams CUTE_CALL cf_canvas_defaults();
+CUTE_API CF_Canvas CUTE_CALL cf_make_canvas(CF_CanvasParams canvas_params);
+CUTE_API void CUTE_CALL cf_destroy_canvas(CF_Canvas canvas);
+CUTE_API void CUTE_CALL cf_pass_set_action(CF_Canvas pass, CF_CanvasClearSettings clear_settings);
 
 //--------------------------------------------------------------------------------------------------
 // Mesh.
@@ -892,7 +871,7 @@ CUTE_API void CUTE_CALL cf_material_set_uniform_fs(CF_Material material, const c
 //--------------------------------------------------------------------------------------------------
 // Rendering Functions.
 
-CUTE_API void CUTE_CALL cf_begin_pass(CF_Pass pass);
+CUTE_API void CUTE_CALL cf_apply_canvas(CF_Canvas canvas);
 CUTE_API void CUTE_CALL cf_apply_viewport(float x, float y, float width, float height);
 CUTE_API void CUTE_CALL cf_apply_scissor(float x, float y, float width, float height);
 CUTE_API void CUTE_CALL cf_apply_mesh(CF_Mesh mesh);
@@ -903,7 +882,6 @@ CUTE_API void CUTE_CALL cf_apply_mesh(CF_Mesh mesh);
  */
 CUTE_API void CUTE_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
 CUTE_API void CUTE_CALL cf_draw_elements();
-CUTE_API void CUTE_CALL cf_end_pass();
 
 #ifdef __cplusplus
 }
@@ -914,18 +892,18 @@ CUTE_API void CUTE_CALL cf_end_pass();
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using Texture  = CF_Texture;
-using Pass = CF_Pass;
+using Canvas = CF_Canvas;
 using Mesh = CF_Mesh;
 using Material = CF_Material;
 using Shader = CF_Shader;
 using Matrix4x4 = CF_Matrix4x4;
 using TextureParams = CF_TextureParams;
 using SokolShader = CF_SokolShader;
-using PassParams = CF_PassParams;
+using CanvasParams = CF_CanvasParams;
 using VertexAttribute = CF_VertexAttribute;
 using StencilFunction = CF_StencilFunction;
 using StencilParams = CF_StencilParams;
@@ -1032,19 +1010,6 @@ CF_WRAP_MODE_DEFS
 CUTE_INLINE constexpr const char* to_string(WrapMode type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_WRAP_MODE_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-using PassInitOp = CF_PassInitOp;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr PassInitOp K = CF_##K;
-CF_PASS_INIT_OP_DEFS
-#undef CF_ENUM
-
-CUTE_INLINE constexpr const char* to_string(PassInitOp type) { switch(type) {
-	#define CF_ENUM(K, V) case CF_##K: return #K;
-	CF_PASS_INIT_OP_DEFS
 	#undef CF_ENUM
 	default: return NULL;
 	}
@@ -1166,9 +1131,9 @@ CUTE_INLINE void destroy_texture(Texture texture) { cf_destroy_texture(texture);
 CUTE_INLINE void update_texture(Texture texture, void* data, int size) { cf_update_texture(texture, data, size); }
 CUTE_INLINE Shader make_shader(SokolShader sokol_shader) { return cf_make_shader(sokol_shader); }
 CUTE_INLINE void destroy_shader(Shader shader) { cf_destroy_shader(shader); }
-CUTE_INLINE PassParams pass_defaults() { return cf_pass_defaults(); }
-CUTE_INLINE Pass make_pass(PassParams pass_params) { return cf_make_pass(pass_params); }
-CUTE_INLINE void destroy_pass(Pass pass) { cf_destroy_pass(pass); }
+CUTE_INLINE CanvasParams pass_defaults() { return cf_canvas_defaults(); }
+CUTE_INLINE Canvas make_canvas(CanvasParams pass_params) { return cf_make_canvas(pass_params); }
+CUTE_INLINE void destroy_canvas(Canvas canvas) { cf_destroy_canvas(canvas); }
 CUTE_INLINE Mesh make_mesh(UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size) { return cf_make_mesh(usage_type, vertex_buffer_size, index_buffer_size, instance_buffer_size); }
 CUTE_INLINE void destroy_mesh(Mesh mesh) { cf_destroy_mesh(mesh); }
 CUTE_INLINE void mesh_set_attributes(Mesh mesh, const VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride) { cf_mesh_set_attributes(mesh, attributes, attribute_count, vertex_stride, instance_stride); }
@@ -1189,13 +1154,12 @@ CUTE_INLINE void material_set_texture_vs(Material material, const char* name, Te
 CUTE_INLINE void material_set_texture_fs(Material material, const char* name, Texture texture) { cf_material_set_texture_fs(material, name, texture); }
 CUTE_INLINE void material_set_uniform_vs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_vs(material, block_name, name, data, type, array_length); }
 CUTE_INLINE void material_set_uniform_fs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_fs(material, block_name, name, data, type, array_length); }
-CUTE_INLINE void begin_pass(Pass pass) { cf_begin_pass(pass); }
+CUTE_INLINE void apply_canvas(Canvas canvas) { cf_apply_canvas(canvas); }
 CUTE_INLINE void apply_viewport(float x, float y, float w, float h) { cf_apply_viewport(x, y, w, h); }
 CUTE_INLINE void apply_scissor(float x, float y, float w, float h) { cf_apply_scissor(x, y, w, h); }
 CUTE_INLINE void apply_mesh(Mesh mesh) { cf_apply_mesh(mesh); }
 CUTE_INLINE void apply_shader(Shader shader, Material material) { cf_apply_shader(shader, material); }
 CUTE_INLINE void draw_elements() { cf_draw_elements(); }
-CUTE_INLINE void end_pass() { cf_end_pass(); }
 
 }
 

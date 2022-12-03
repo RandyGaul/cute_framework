@@ -146,7 +146,7 @@ static CUTE_INLINE double cf_rnd_next_range_double(CF_Rnd* rnd, double min, doub
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using Rnd = CF_Rnd;

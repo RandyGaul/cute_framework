@@ -23,7 +23,7 @@
 
 #include <internal/cute_ecs_internal.h>
 
-using namespace cute;
+using namespace Cute;
 
 // -------------------------------------------------------------------------------------------------
 
@@ -245,13 +245,13 @@ int test_ecs_octorok()
 	if (!parsed_entities) return -1;
 
 	Array<CF_Entity> entities;
-	Result err = cute::ecs_load_entities(parsed_entities, &entities);
+	Result err = Cute::ecs_load_entities(parsed_entities, &entities);
 	if (cf_is_error(err)) return -1;
 	cf_kv_destroy(parsed_entities);
 
 	// Assert that saving the entities has matching values to what's in RAM currently.
 	CF_KeyValue* saved_entities = cf_kv_write();
-	err = cute::ecs_save_entities(entities, saved_entities);
+	err = Cute::ecs_save_entities(entities, saved_entities);
 	if (cf_is_error(err)) return -1;
 
 	parsed_entities = cf_kv_read(cf_kv_buffer(saved_entities), cf_kv_buffer_size(saved_entities), NULL);

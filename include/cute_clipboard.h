@@ -44,7 +44,7 @@ CUTE_API CF_Result CUTE_CALL cf_clipboard_set(const char* string);
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 CUTE_INLINE char* clipboard_get() { return cf_clipboard_get(); }

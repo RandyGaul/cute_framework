@@ -20,7 +20,7 @@
 */
 
 #include <cute.h>
-using namespace cute;
+using namespace Cute;
 
 #ifndef CUTE_STATIC
 #	define CUTE_ASEPRITE_IMPLEMENTATION

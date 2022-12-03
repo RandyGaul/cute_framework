@@ -29,7 +29,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-using namespace cute;
+using namespace Cute;
 
 struct cf_kv_string_t
 {

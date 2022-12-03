@@ -30,7 +30,7 @@
 #define CUTE_ASEPRITE_IMPLEMENTATION
 #include <cute/cute_aseprite.h>
 
-using namespace cute;
+using namespace Cute;
 
 struct CF_AsepriteCacheEntry
 {
@@ -207,8 +207,8 @@ CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite)
 			float x = (float)slice->origin_x + (float)slice->w * 0.25f;
 
 			// Transform from top-left coordinates to center of sprite.
-			CF_V2 origin = cf_V2(x, y);
-			CF_V2 offset = cf_V2((float)ase->w - 1, (float)ase->h - 1) * 0.5f - origin;
+			CF_V2 origin = cf_v2(x, y);
+			CF_V2 offset = cf_v2((float)ase->w - 1, (float)ase->h - 1) * 0.5f - origin;
 			entry.local_offset = offset;
 			break;
 		}

@@ -218,7 +218,7 @@ CUTE_INLINE void cf_read_fourcc(uint8_t** p, uint8_t* fourcc)
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 }

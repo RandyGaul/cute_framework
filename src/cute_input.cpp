@@ -29,7 +29,7 @@
 
 #include <SDL.h>
 
-using namespace cute;
+using namespace Cute;
 
 static int s_map_SDL_keys(int key)
 {
@@ -680,7 +680,7 @@ void cf_pump_input_msgs()
 	}
 }
 
-namespace cute
+namespace Cute
 {
 	Array<CF_Touch> CUTE_CALL touch_get_all() { return app->touches; }
 }

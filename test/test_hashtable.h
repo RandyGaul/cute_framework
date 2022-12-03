@@ -20,7 +20,7 @@
 */
 
 #include <cute.h>
-using namespace cute;
+using namespace Cute;
 
 CUTE_TEST_CASE(test_hashtable_macros, "Call the hashtable APIs through the h*** macros.");
 int test_hashtable_macros()

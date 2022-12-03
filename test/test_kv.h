@@ -20,7 +20,7 @@
 */
 
 #include <cute_kv.h>
-using namespace cute;
+using namespace Cute;
 
 struct thing_t
 {

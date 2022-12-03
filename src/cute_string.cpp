@@ -30,7 +30,7 @@
 
 #include <internal/cute_app_internal.h>
 
-using namespace cute;
+using namespace Cute;
 
 char* cf_sset(char* a, const char* b)
 {

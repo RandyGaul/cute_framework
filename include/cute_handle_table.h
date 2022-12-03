@@ -58,7 +58,7 @@ CUTE_API int CUTE_CALL cf_handle_allocator_is_handle_valid(CF_HandleTable* table
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using Handle = uint64_t;

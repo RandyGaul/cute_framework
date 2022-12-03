@@ -21,7 +21,7 @@
 
 #include <cute.h>
 
-using namespace cute;
+using namespace Cute;
 
 static Array<String> s_get_array_of_strings()
 {

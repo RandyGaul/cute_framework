@@ -36,7 +36,7 @@
 #define CF_VERTEX_BUFFER_SLOT (0)
 #define CF_INSTANCE_BUFFER_SLOT (1)
 
-using namespace cute;
+using namespace Cute;
 
 struct CF_ShaderInternal
 {
@@ -70,7 +70,7 @@ struct CF_MeshInternal
 	CF_VertexAttribute attributes[SG_MAX_VERTEX_ATTRIBUTES];
 };
 
-struct CF_PassInternal
+struct CF_CanvasInternal
 {
 	sg_pass_action action;
 	bool pass_is_default;
@@ -159,16 +159,6 @@ static CUTE_INLINE sg_wrap s_wrap(CF_WrapMode mode)
 	case CF_WRAP_MODE_CLAMP_TO_BORDER: return SG_WRAP_CLAMP_TO_BORDER;
 	case CF_WRAP_MODE_MIRRORED_REPEAT: return SG_WRAP_MIRRORED_REPEAT;
 	default:                           return _SG_WRAP_DEFAULT;
-	}
-}
-
-static CUTE_INLINE sg_action s_wrap(CF_PassInitOp op)
-{
-	switch (op) {
-	case CF_PASS_INIT_OP_CLEAR:    return SG_ACTION_CLEAR;
-	case CF_PASS_INIT_OP_LOAD:     return SG_ACTION_LOAD;
-	case CF_PASS_INIT_OP_DONTCARE: return SG_ACTION_DONTCARE;
-	default:                       return SG_ACTION_CLEAR;
 	}
 }
 
@@ -402,70 +392,61 @@ void cf_destroy_shader(CF_Shader shader)
 	CUTE_FREE(shader_internal);
 }
 
-CF_PassParams cf_pass_defaults()
+CF_CanvasParams cf_canvas_defaults()
 {
-	CF_PassParams params;
+	CF_CanvasParams params;
 	params.name = NULL;
-	params.color_op = CF_PASS_INIT_OP_CLEAR;
-	params.color_value = cf_color_grey();
-	params.depth_op = CF_PASS_INIT_OP_CLEAR;
-	params.depth_value = 1.0f;
-	params.stencil_op = CF_PASS_INIT_OP_CLEAR;
-	params.stencil_value = 0;
-	params.target = { 0 };
-	params.depth_stencil = { 0 };
+	params.clear_settings.do_clear = true;
+	params.clear_settings.color = cf_color_grey();
+	params.clear_settings.depth = 1.0f;
+	params.clear_settings.stencil = 0;
+	params.target = { };
+	params.depth_stencil_target = { };
 	return params;
 }
 
-CF_Pass cf_make_pass(CF_PassParams pass_params)
+static void s_canvas_clear_settings(CF_CanvasInternal* pass, CF_CanvasClearSettings clear_settings)
 {
-	CF_PassInternal* pass = (CF_PassInternal*)CUTE_CALLOC(sizeof(CF_PassInternal));
-	pass->action.colors[0].action = s_wrap(pass_params.color_op);
-	pass->action.colors[0].value = s_wrap(pass_params.color_value);
-	pass->action.depth.action = s_wrap(pass_params.depth_op);
-	pass->action.depth.value = pass_params.depth_value;
-	pass->action.stencil.action = s_wrap(pass_params.stencil_op);
-	pass->action.stencil.value = pass_params.stencil_value;
+	pass->action.colors[0].action = clear_settings.do_clear ? SG_ACTION_CLEAR : SG_ACTION_LOAD;
+	pass->action.colors[0].value = s_wrap(clear_settings.color);
+	pass->action.depth.action = pass->action.colors[0].action;
+	pass->action.depth.value = clear_settings.depth;
+	pass->action.stencil.action = pass->action.colors[0].action;
+	pass->action.stencil.value = clear_settings.stencil;
+}
+
+CF_Canvas cf_make_canvas(CF_CanvasParams pass_params)
+{
+	CF_CanvasInternal* pass = (CF_CanvasInternal*)CUTE_CALLOC(sizeof(CF_CanvasInternal));
 	if (pass_params.target.id) {
 		sg_pass_desc desc;
 		CUTE_MEMSET(&desc, 0, sizeof(desc));
+		s_canvas_clear_settings(pass, pass_params.clear_settings);
 		desc.color_attachments[0].image = { (uint32_t)pass_params.target.id };
-		desc.depth_stencil_attachment.image = { (uint32_t)pass_params.depth_stencil.id };
+		desc.depth_stencil_attachment.image = { (uint32_t)pass_params.depth_stencil_target.id };
 		desc.label = pass_params.name;
 		pass->pass = sg_make_pass(desc);
 	} else {
 		pass->pass_is_default = true;
 	}
-	CF_Pass result;
+	CF_Canvas result;
 	result.id = (uint64_t)pass;
 	return result;
 }
 
-void cf_destroy_pass(CF_Pass pass_handle)
+void cf_destroy_canvas(CF_Canvas canvas_handle)
 {
-	CF_PassInternal* pass = (CF_PassInternal*)pass_handle.id;
-	if (!pass->pass_is_default) {
-		sg_destroy_pass(pass->pass);
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	if (!canvas->pass_is_default) {
+		sg_destroy_pass(canvas->pass);
 	}
-	CUTE_FREE(pass);
+	CUTE_FREE(canvas);
 }
 
-void cf_pass_set_color_init_op(CF_Pass pass_handle, CF_PassInitOp op)
+void cf_pass_set_action(CF_Canvas pass_handle, CF_CanvasClearSettings clear_settings)
 {
-	CF_PassInternal* pass = (CF_PassInternal*)pass_handle.id;
-	pass->action.colors->action = s_wrap(op);
-}
-
-void cf_pass_set_depth_init_op(CF_Pass pass_handle, CF_PassInitOp op)
-{
-	CF_PassInternal* pass = (CF_PassInternal*)pass_handle.id;
-	pass->action.depth.action = s_wrap(op);
-}
-
-void cf_pass_set_stencil_init_op(CF_Pass pass_handle, CF_PassInitOp op)
-{
-	CF_PassInternal* pass = (CF_PassInternal*)pass_handle.id;
-	pass->action.stencil.action = s_wrap(op);
+	CF_CanvasInternal* pass = (CF_CanvasInternal*)pass_handle.id;
+	s_canvas_clear_settings(pass, clear_settings);
 }
 
 CF_Mesh cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size)
@@ -857,18 +838,40 @@ void cf_material_set_uniform_fs(CF_Material material_handle, const char* block_n
 	s_material_set_uniform(&material->uniform_arena, &material->fs, block_name, name, data, type, array_length);
 }
 
-static CF_PassInternal* s_pass = NULL;
-static CF_PassInternal* s_default_pass = NULL;
+static CF_CanvasInternal* s_canvas = NULL;
+static CF_CanvasInternal* s_default_canvas = NULL;
 
-void cf_begin_pass(CF_Pass pass_handle)
+static void s_end_pass()
 {
-	CF_PassInternal* pass = (CF_PassInternal*)pass_handle.id;
-	CUTE_ASSERT(!s_pass);
-	s_pass = pass;
-	if (pass->pass_is_default) {
-		sg_begin_default_pass(&pass->action, app->w, app->h);
+	if (s_canvas) {
+		sg_end_pass();
+		CF_MeshInternal* mesh = s_canvas->mesh;
+		if (mesh) {
+			if (mesh->vertices.was_appended) {
+				mesh->vertices.was_appended = false;
+				mesh->vertices.element_count = 0;
+			}
+			if (mesh->indices.was_appended) {
+				mesh->indices.was_appended = false;
+				mesh->indices.element_count = 0;
+			}
+			if (mesh->instances.was_appended) {
+				mesh->instances.was_appended = false;
+				mesh->instances.element_count = 0;
+			}
+		}
+	}
+}
+
+void cf_apply_canvas(CF_Canvas pass_handle)
+{
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)pass_handle.id;
+	s_end_pass();
+	s_canvas = canvas;
+	if (canvas->pass_is_default) {
+		sg_begin_default_pass(&canvas->action, app->w, app->h);
 	} else {
-		sg_begin_pass(pass->pass, &pass->action);
+		sg_begin_pass(canvas->pass, &canvas->action);
 	}
 }
 
@@ -884,9 +887,9 @@ void cf_apply_scissor(float x, float y, float width, float height)
 
 void cf_apply_mesh(CF_Mesh mesh_handle)
 {
-	CUTE_ASSERT(s_pass);
+	CUTE_ASSERT(s_canvas);
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	s_pass->mesh = mesh;
+	s_canvas->mesh = mesh;
 }
 
 static void s_copy_uniforms(CF_Arena* arena, CF_SokolShader table, CF_MaterialState* mstate, sg_shader_stage stage)
@@ -931,8 +934,8 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 {
 	// TODO - Somehow cache results from all the get_*** callbacks.
 
-	CUTE_ASSERT(s_pass);
-	CF_MeshInternal* mesh = s_pass->mesh;
+	CUTE_ASSERT(s_canvas);
+	CF_MeshInternal* mesh = s_canvas->mesh;
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	CF_ShaderInternal* shader = (CF_ShaderInternal*)shader_handle.id;
 	CF_SokolShader table = shader->table;
@@ -996,7 +999,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 	// Apply the pipeline.
 	sg_pipeline pip = sg_make_pipeline(desc);
 	sg_apply_pipeline(pip);
-	s_pass->pip = pip;
+	s_canvas->pip = pip;
 
 	// Align all buffers, and setup any matched texture names from the material to
 	// the shader's expected textures.
@@ -1028,42 +1031,22 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 
 void cf_draw_elements()
 {
-	CF_MeshInternal* mesh = s_pass->mesh;
+	CF_MeshInternal* mesh = s_canvas->mesh;
 	sg_draw(0, mesh->vertices.element_count, mesh->instances.element_count + 1); // TODO - +1??
-	sg_destroy_pipeline(s_pass->pip);
-}
-
-void cf_end_pass()
-{
-	CUTE_ASSERT(s_pass);
-	sg_end_pass();
-	CF_MeshInternal* mesh = s_pass->mesh;
-	if (mesh) {
-		if (mesh->vertices.was_appended) {
-			mesh->vertices.was_appended = false;
-			mesh->vertices.element_count = 0;
-		}
-		if (mesh->indices.was_appended) {
-			mesh->indices.was_appended = false;
-			mesh->indices.element_count = 0;
-		}
-		if (mesh->instances.was_appended) {
-			mesh->instances.was_appended = false;
-			mesh->instances.element_count = 0;
-		}
-	}
-	s_pass = NULL;
+	sg_destroy_pipeline(s_canvas->pip);
+	app->draw_call_count++;
 }
 
 void cf_commit()
 {
+	s_end_pass();
 	sg_commit();
 }
 
 void cf_destroy_graphics()
 {
-	if (s_default_pass) {
-		cf_destroy_pass({ (uint64_t)s_default_pass });
-		s_default_pass = NULL;
+	if (s_default_canvas) {
+		cf_destroy_canvas({ (uint64_t)s_default_canvas });
+		s_default_canvas = NULL;
 	}
 }

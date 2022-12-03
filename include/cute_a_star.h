@@ -104,7 +104,7 @@ CUTE_API void CUTE_CALL cf_free_a_star_output(CF_AStarOutput* output);
 
 #include "cute_array.h"
 
-namespace cute
+namespace Cute
 {
 
 using AStarGrid = CF_AStarGrid;

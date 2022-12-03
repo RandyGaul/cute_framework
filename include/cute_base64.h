@@ -49,7 +49,7 @@ CUTE_API CF_Result CUTE_CALL cf_base64_decode(void* dst, size_t dst_size, const 
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 CUTE_INLINE Result base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_encode(dst, dst_size, src, src_size); }

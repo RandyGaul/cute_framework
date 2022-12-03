@@ -127,7 +127,7 @@ CUTE_API void CUTE_CALL cf_memory_pool_free(CF_MemoryPool* pool, void* element);
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 CUTE_INLINE void* aligned_alloc(size_t size, int alignment) { return cf_aligned_alloc(size, alignment); }

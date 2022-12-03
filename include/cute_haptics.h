@@ -289,7 +289,7 @@ CUTE_API void CUTE_CALL cf_haptic_rumble_stop(CF_Haptic* haptic);
 
 CUTE_INLINE bool CF_HapticEffect::is_valid() { return cf_haptic_effect_is_valid(this); }
 
-namespace cute
+namespace Cute
 {
 
 using Haptic = CF_Haptic;

@@ -25,7 +25,7 @@
 #include <cute_string.h>
 #include <cute_array.h>
 
-using namespace cute;
+using namespace Cute;
 
 // Original implementation by Mattias Gustavsson
 // https://github.com/mattiasgustavsson/libs/blob/main/hashtable.h

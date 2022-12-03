@@ -29,7 +29,7 @@ CUTE_API void CUTE_CALL cf_fs_destroy();
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 }

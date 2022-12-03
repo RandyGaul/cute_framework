@@ -30,7 +30,7 @@
 #define CUTE_SOUND_FORCE_SDL
 #include <cute/cute_sound.h>
 
-using namespace cute;
+using namespace Cute;
 
 CF_Audio* cf_audio_load_ogg(const char* path)
 {

@@ -20,7 +20,7 @@
 */
 
 #include <cute.h>
-using namespace cute;
+using namespace Cute;
 
 CUTE_TEST_CASE(test_array_macros_simple, "Basic test of apush/afree etc.");
 int test_array_macros_simple()

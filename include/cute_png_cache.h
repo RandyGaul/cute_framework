@@ -137,7 +137,7 @@ CUTE_API CF_Sprite CUTE_CALL cf_make_png_cache_sprite(const char* sprite_name, c
 
 #include "cute_array.h"
 
-namespace cute
+namespace Cute
 {
 
 using Animation = CF_Animation;

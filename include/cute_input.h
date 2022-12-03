@@ -372,7 +372,7 @@ CUTE_API bool CUTE_CALL cf_touch_get(uint64_t id, CF_Touch* touch);
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using KeyButton = CF_KeyButton;

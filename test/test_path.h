@@ -20,7 +20,7 @@
 */
 
 #include <cute.h>
-using namespace cute;
+using namespace Cute;
 
 CUTE_TEST_CASE(test_path, "Run all the path related C string APIs.");
 int test_path()

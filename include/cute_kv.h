@@ -336,7 +336,7 @@ CUTE_API bool CUTE_CALL cf_kv_array_end(CF_KeyValue* kv);
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using KeyValue = CF_KeyValue;

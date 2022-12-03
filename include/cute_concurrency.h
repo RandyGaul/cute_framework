@@ -105,7 +105,7 @@ CUTE_API void CUTE_CALL cf_threadpool_kick(CF_Threadpool* pool);
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using Mutex = CF_Mutex;

@@ -58,17 +58,31 @@ enum
 
 CUTE_API CF_Result CUTE_CALL cf_make_app(const char* window_title, int x, int y, int w, int h, int options /*= 0*/, const char* argv0 /*= NULL*/);
 CUTE_API void CUTE_CALL cf_destroy_app();
-
 CUTE_API bool CUTE_CALL cf_app_is_running();
 CUTE_API void CUTE_CALL cf_app_stop_running();
 CUTE_API void CUTE_CALL cf_app_update(float dt);
-CUTE_API void CUTE_CALL cf_app_present();
+CUTE_API int CUTE_CALL cf_app_present();
+CUTE_API void CUTE_CALL cf_app_size(int* w, int* h);
+CUTE_API void CUTE_CALL cf_app_position(int* x, int* y);
+CUTE_API bool CUTE_CALL cf_app_was_size_changed();
+CUTE_API bool CUTE_CALL cf_app_was_moved();
+CUTE_API bool CUTE_CALL cf_app_keyboard_lost_focus();
+CUTE_API bool CUTE_CALL cf_app_keyboard_gained_focus();
+CUTE_API bool CUTE_CALL cf_app_keyboard_has_focus();
+CUTE_API bool CUTE_CALL cf_app_was_minimized();
+CUTE_API bool CUTE_CALL cf_app_was_maximized();
+CUTE_API bool CUTE_CALL cf_app_is_minimized();
+CUTE_API bool CUTE_CALL cf_app_is_maximized();
+CUTE_API bool CUTE_CALL cf_app_was_restored();
+CUTE_API bool CUTE_CALL cf_app_mouse_entered();
+CUTE_API bool CUTE_CALL cf_app_mouse_exited();
+CUTE_API bool CUTE_CALL cf_app_mouse_inside();
 
 CUTE_API ImGuiContext* CUTE_CALL cf_app_init_imgui(bool no_default_font /*= false*/);
 CUTE_API sg_imgui_t* CUTE_CALL cf_app_get_sokol_imgui();
-
-CUTE_API CF_Pass CUTE_CALL cf_app_get_backbuffer_pass();
-CUTE_API void CUTE_CALL cf_app_get_backbuffer_size(int* x, int* y);
+CUTE_API CF_Canvas CUTE_CALL cf_app_get_canvas();
+CUTE_API int CUTE_CALL cf_app_get_canvas_width();
+CUTE_API int CUTE_CALL cf_app_get_canvas_height();
 
 #define CF_POWER_STATE_DEFS \
 	CF_ENUM(POWER_STATE_UNKNOWN, 0)    /* Cannot determine power status. */ \
@@ -114,7 +128,7 @@ CUTE_API void CUTE_CALL cf_sleep(int milliseconds);
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 enum : int
@@ -130,6 +144,7 @@ using PowerState = CF_PowerState;
 #define CF_ENUM(K, V) CUTE_INLINE constexpr PowerState K = CF_##K;
 CF_POWER_STATE_DEFS
 #undef CF_ENUM
+
 CUTE_INLINE const char* power_state_to_string(PowerState state) { switch (state) {
 	#define CF_ENUM(K, V) case K: return #K;
 	CF_POWER_STATE_DEFS
@@ -143,7 +158,24 @@ CUTE_INLINE void destroy_app() { cf_destroy_app(); }
 CUTE_INLINE bool app_is_running() { return cf_app_is_running(); }
 CUTE_INLINE void app_stop_running() { cf_app_stop_running(); }
 CUTE_INLINE void app_update(float dt) { cf_app_update(dt); }
-CUTE_INLINE CF_Pass app_get_backbuffer_pass() { return cf_app_get_backbuffer_pass(); }
+CUTE_INLINE void app_size(int* w, int* h) { return cf_app_size(w, h); }
+CUTE_INLINE void app_position(int* x, int* y) { return cf_app_position(x, y); }
+CUTE_INLINE bool app_was_size_changed() { return cf_app_was_size_changed(); }
+CUTE_INLINE bool app_was_moved() { return cf_app_was_moved(); }
+CUTE_INLINE bool app_keyboard_lost_focus() { return cf_app_keyboard_lost_focus(); }
+CUTE_INLINE bool app_keyboard_gained_focus() { return cf_app_keyboard_gained_focus(); }
+CUTE_INLINE bool app_keyboard_has_focus() { return cf_app_keyboard_has_focus(); }
+CUTE_INLINE bool app_was_minimized() { return cf_app_was_minimized(); }
+CUTE_INLINE bool app_was_maximized() { return cf_app_was_maximized(); }
+CUTE_INLINE bool app_is_minimized() { return cf_app_is_minimized(); }
+CUTE_INLINE bool app_is_maximized() { return cf_app_is_maximized(); }
+CUTE_INLINE bool app_was_restored() { return cf_app_was_restored(); }
+CUTE_INLINE bool app_mouse_entered() { return cf_app_mouse_entered(); }
+CUTE_INLINE bool app_mouse_exited() { return cf_app_mouse_exited(); }
+CUTE_INLINE bool app_mouse_inside() { return cf_app_mouse_inside(); }
+CUTE_INLINE int app_get_canvas_width() { return cf_app_get_canvas_width(); }
+CUTE_INLINE int app_get_canvas_height() { return cf_app_get_canvas_height(); }
+CUTE_INLINE CF_Canvas app_get_canvas() { return cf_app_get_canvas(); }
 CUTE_INLINE void app_present() { cf_app_present(); }
 CUTE_INLINE ImGuiContext* app_init_imgui(bool no_default_font = false) { return cf_app_init_imgui(no_default_font); }
 CUTE_INLINE sg_imgui_t* app_get_sokol_imgui() { return cf_app_get_sokol_imgui(); }

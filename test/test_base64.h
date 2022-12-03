@@ -20,7 +20,7 @@
 */
 
 #include <cute_base64.h>
-using namespace cute;
+using namespace Cute;
 
 CUTE_TEST_CASE(test_base64_encode, "Test vectors from RFC 4648.");
 int test_base64_encode()

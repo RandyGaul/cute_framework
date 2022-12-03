@@ -43,7 +43,7 @@
 #	include <Security/Security.h>
 #endif
 
-using namespace cute;
+using namespace Cute;
 
 /**
  * Represents the response from a server after a successful process loop via `https_process`, where the
@@ -995,7 +995,7 @@ CF_HttpsResponse cf_https_response(CF_Https* https)
 
 #endif // CUTE_EMSCRIPTEN
 
-namespace cute
+namespace Cute
 {
 const https_response_t* https_response(CF_Https* https)
 {

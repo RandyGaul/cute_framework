@@ -90,8 +90,7 @@ set(CUTE_SRCS
 	src/cute_string.cpp
 	src/cute_typeless_array.cpp
 	src/cute_math.cpp
-	src/cute_batch.cpp
-	src/cute_window.cpp
+	src/cute_draw.cpp
 	src/cute_image.cpp
 	src/cute_graphics.cpp
 	src/cute_aseprite_cache.cpp
@@ -108,6 +107,7 @@ set(CUTE_SRCS
 	src/cute_guid.cpp
 	src/cute_alloc.cpp
 	src/cute_font.cpp
+	src/cute_result.cpp
 
 	src/internal/cute_ecs_internal.cpp
 	src/internal/cute_dx11.cpp
@@ -148,8 +148,7 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_typeless_array.h
 	include/cute_defer.h
 	include/cute_math.h
-	include/cute_batch.h
-	include/cute_window.h
+	include/cute_draw.h
 	include/cute_debug_printf.h
 	include/cute_image.h
 	include/cute_color.h
@@ -204,7 +203,7 @@ set(CUTE_HDRS
 	src/internal/cute_ecs_internal.h
 	src/internal/cute_dx11.h
 	src/internal/cute_png_cache_internal.h
-	src/internal/cute_batch_internal.h
+	src/internal/cute_draw_internal.h
 	src/internal/cute_graphics_internal.h
 	src/internal/cute_aseprite_cache_internal.h
 

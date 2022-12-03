@@ -26,13 +26,13 @@
 #include <cute_file_system.h>
 #include <cute_c_runtime.h>
 #include <cute_kv.h>
-#include <cute_batch.h>
+#include <cute_draw.h>
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_file_system_internal.h>
 #include <internal/cute_input_internal.h>
 #include <internal/cute_graphics_internal.h>
-#include <internal/cute_batch_internal.h>
+#include <internal/cute_draw_internal.h>
 #include <internal/cute_dx11.h>
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
@@ -78,7 +78,7 @@
 
 CF_App* app;
 
-using namespace cute;
+using namespace Cute;
 
 struct Vertex
 {
@@ -223,18 +223,15 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 			app->backbuffer_depth_stencil = cf_make_texture(params);
 		}
 		{
-			CF_PassParams params = cf_pass_defaults();
-			params.color_value = cf_color_red();
-			params.color_op = CF_PASS_INIT_OP_CLEAR;
+			CF_CanvasParams params = cf_canvas_defaults();
 			params.target = app->backbuffer;
-			params.depth_stencil = app->backbuffer_depth_stencil;
-			app->offscreen_pass = cf_make_pass(params);
+			params.depth_stencil_target = app->backbuffer_depth_stencil;
+			app->offscreen_canvas = cf_make_canvas(params);
 		}
 		{
-			CF_PassParams params = cf_pass_defaults();
-			params.color_value = cf_color_red();
-			params.color_op = CF_PASS_INIT_OP_CLEAR;
-			app->backbuffer_pass = cf_make_pass(params);
+			CF_CanvasParams params = cf_canvas_defaults();
+			params.clear_settings.color = cf_color_black();
+			app->backbuffer_canvas = cf_make_canvas(params);
 		}
 		{
 			app->backbuffer_quad = cf_make_mesh(CF_USAGE_TYPE_IMMUTABLE, sizeof(Vertex) * 6, 0, 0);
@@ -257,7 +254,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 			cf_material_set_uniform_fs(app->backbuffer_material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 			app->backbuffer_shader = CF_MAKE_SOKOL_SHADER(backbuffer_shd);
 		}
-		cf_make_batch();
+		cf_make_draw();
 		cf_make_aseprite_cache();
 		cf_make_png_cache();
 	}
@@ -303,11 +300,11 @@ void cf_destroy_app()
 		app->using_imgui = false;
 	}
 	if (app->gfx_enabled) {
-		cf_destroy_batch();
+		cf_destroy_draw();
 		cf_destroy_aseprite_cache();
 		cf_destroy_png_cache();
 		cf_destroy_texture(app->backbuffer);
-		cf_destroy_pass(app->backbuffer_pass);
+		cf_destroy_canvas(app->backbuffer_canvas);
 		cf_destroy_mesh(app->backbuffer_quad);
 		cf_destroy_shader(app->backbuffer_shader);
 		cf_destroy_material(app->backbuffer_material);
@@ -357,6 +354,83 @@ void cf_app_update(float dt)
 	}
 }
 
+void cf_app_size(int* w, int* h)
+{
+	if (w) *w = app->w;
+	if (h) *h = app->h;
+}
+
+void cf_app_position(int* x, int* y)
+{
+	if (x) *x = app->x;
+	if (y) *y = app->y;
+}
+
+bool cf_app_was_size_changed()
+{
+	return app->window_state.resized;
+}
+
+bool cf_app_was_moved()
+{
+	return app->window_state.moved;
+}
+
+bool cf_app_keyboard_lost_focus()
+{
+	return !app->window_state.has_keyboard_focus && app->window_state_prev.has_keyboard_focus;
+}
+
+bool cf_app_keyboard_gained_focus()
+{
+	return app->window_state.has_keyboard_focus && !app->window_state_prev.has_keyboard_focus;
+}
+
+bool cf_app_keyboard_has_focus()
+{
+	return app->window_state.has_keyboard_focus;
+}
+
+bool cf_app_was_minimized()
+{
+	return app->window_state.minimized && !app->window_state_prev.minimized;
+}
+
+bool cf_app_was_maximized()
+{
+	return app->window_state.maximized && !app->window_state_prev.maximized;
+}
+
+bool cf_app_is_minimized()
+{
+	return app->window_state.minimized;
+}
+
+bool cf_app_is_maximized()
+{
+	return app->window_state.maximized;
+}
+
+bool cf_app_was_restored()
+{
+	return app->window_state.restored && !app->window_state_prev.restored;
+}
+
+bool cf_app_mouse_entered()
+{
+	return app->window_state.mouse_inside_window && !app->window_state_prev.mouse_inside_window;
+}
+
+bool cf_app_mouse_exited()
+{
+	return !app->window_state.mouse_inside_window && app->window_state_prev.mouse_inside_window;
+}
+
+bool cf_app_mouse_inside()
+{
+	return app->window_state.mouse_inside_window;
+}
+
 static void s_imgui_present()
 {
 	if (app->using_imgui) {
@@ -366,18 +440,25 @@ static void s_imgui_present()
 	}
 }
 
-CF_Pass cf_app_get_backbuffer_pass()
+CF_Canvas cf_app_get_canvas()
 {
-	return app->offscreen_pass;
+	return app->offscreen_canvas;
 }
 
-void cf_app_get_backbuffer_size(int* x, int* y)
+int cf_app_get_canvas_width()
 {
+	return app->w;
 }
 
-void cf_app_present()
+int cf_app_get_canvas_height()
 {
-	cf_begin_pass(app->backbuffer_pass);
+	return app->h;
+}
+
+int cf_app_present()
+{
+	cf_render_to(app->offscreen_canvas);
+	cf_apply_canvas(app->backbuffer_canvas);
 	cf_apply_mesh(app->backbuffer_quad);
 	cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);
 	cf_draw_elements();
@@ -385,13 +466,16 @@ void cf_app_present()
 		sg_imgui_draw(&app->sg_imgui);
 		s_imgui_present();
 	}
-	cf_end_pass();
 
 	cf_commit();
 	cf_dx11_present();
 	if (app->options & APP_OPTIONS_OPENGL_CONTEXT) {
 		SDL_GL_SwapWindow(app->window);
 	}
+
+	int draw_call_count = app->draw_call_count;
+	app->draw_call_count = 0;
+	return draw_call_count;
 }
 
 ImGuiContext* cf_app_init_imgui(bool no_default_font)

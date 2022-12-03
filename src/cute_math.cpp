@@ -195,12 +195,12 @@ void cf_make_poly(CF_Poly* p)
 
 CF_V2 cf_centroid(const CF_V2* cf_verts, int count)
 {
-	using namespace cute;
+	using namespace Cute;
 	const v2* verts = (const v2*)cf_verts;
-	if (count == 0) return cf_V2(0, 0);
+	if (count == 0) return cf_v2(0, 0);
 	else if (count == 1) return verts[0];
 	else if (count == 2) return (verts[0] + verts[1]) * 0.5f;
-	CF_V2 c = cf_V2(0, 0);
+	CF_V2 c = cf_v2(0, 0);
 	float area_sum = 0;
 	CF_V2 p0 = verts[0];
 	for (int i = 0; i < count; ++i) {

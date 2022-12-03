@@ -27,7 +27,7 @@
 
 #include <internal/cute_app_internal.h>
 
-using namespace cute;
+using namespace Cute;
 
 static bool s_load_from_schema(CF_Entityype_t schema_type, CF_Entity entity, cf_component_config_t* config, void* component, void* udata)
 {
@@ -650,7 +650,7 @@ CF_Result cf_ecs_load_entities(CF_KeyValue* kv, CF_Entity** entities_out, int* e
 	if (entities_out) {
 		CUTE_ASSERT(entities_count_out);
 
-		Array<cute::Entity> arr = {};
+		Array<Cute::Entity> arr = {};
 
 		err = cf_internal_ecs_load_entities(kv, &arr);
 
@@ -682,7 +682,7 @@ CF_Result cf_internal_ecs_save_entities_kv(const CF_Entity* entities, int entiti
 		return cf_result_error("`kv` must be in `KV_STATE_WRITE` mode.");
 	}
 
-	cute::Dictionary<CF_Entity, int> id_table;
+	Cute::Dictionary<CF_Entity, int> id_table;
 	for (int i = 0; i < entities_count; ++i)
 		id_table.insert(entities[i], i);
 
@@ -747,7 +747,7 @@ CF_Result cf_ecs_save_entities_kv(const CF_Entity* entities, int entities_count,
 
 CF_Result cf_internal_ecs_save_entities(const CF_Entity* entities, int entities_count)
 {
-	cute::Dictionary<CF_Entity, int> id_table;
+	Cute::Dictionary<CF_Entity, int> id_table;
 	for (int i = 0; i < entities_count; ++i) {
 		id_table.insert(entities[i], i);
 	}
@@ -924,7 +924,7 @@ void cf_ecs_free_list(const char** list)
 	CUTE_FREE(list);
 }
 
-namespace cute
+namespace Cute
 {
 
 Result ecs_load_entities(KeyValue* kv, Array<Entity>* entities_out) { return cf_internal_ecs_load_entities(kv, entities_out); }

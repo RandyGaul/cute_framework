@@ -21,7 +21,7 @@
 
 #include <cute_circular_buffer.h>
 #include <cute_concurrency.h>
-using namespace cute;
+using namespace Cute;
 
 CUTE_TEST_CASE(test_circular_buffer_basic, "Typical use-case example, push and pull some data.");
 int test_circular_buffer_basic()

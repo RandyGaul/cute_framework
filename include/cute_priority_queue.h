@@ -28,7 +28,7 @@
 
 #include "cute_array.h"
 
-namespace cute
+namespace Cute
 {
 
 /**

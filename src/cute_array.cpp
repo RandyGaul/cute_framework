@@ -22,7 +22,7 @@
 #include "cute_array.h"
 #include "cute_math.h"
 
-using namespace cute;
+using namespace Cute;
 
 void* cf_agrow(const void* a, int new_size, size_t element_size)
 {

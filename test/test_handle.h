@@ -20,7 +20,7 @@
 */
 
 #include <cute_handle_table.h>
-using namespace cute;
+using namespace Cute;
 
 CUTE_TEST_CASE(test_handle_basic, "Typical use-case example, alloc and free some handles.");
 int test_handle_basic()

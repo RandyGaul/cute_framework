@@ -32,7 +32,7 @@ void cf_dx11_shutdown();
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 }

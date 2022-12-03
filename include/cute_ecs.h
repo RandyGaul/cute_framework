@@ -139,7 +139,7 @@ CUTE_API void CUTE_CALL cf_ecs_free_list(const char** list);
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using KeyValue = CF_KeyValue;

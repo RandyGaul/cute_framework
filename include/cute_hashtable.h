@@ -393,7 +393,7 @@ CUTE_API void CUTE_CALL cf_hashtable_swap_impl(CF_Hhdr* table, int index_a, int 
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 // General purpose {key, item} pair mapping via internal hash table.

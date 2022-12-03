@@ -21,7 +21,7 @@
 
 #include <cute_doubly_list.h>
 
-using namespace cute;
+using namespace Cute;
 
 CUTE_TEST_CASE(test_doubly_list, "Make list of three elements, perform all operations on it, assert correctness.");
 int test_doubly_list()

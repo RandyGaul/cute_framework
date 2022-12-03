@@ -71,7 +71,7 @@ CUTE_API void CUTE_CALL cf_font_missing_codepoints(CF_Font, int** missing_codepo
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using CodepointRange = CF_CodepointRange;

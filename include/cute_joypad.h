@@ -186,7 +186,7 @@ CUTE_API int16_t CUTE_CALL cf_joypad_axis(CF_Joypad* joypad, CF_JoypadAxis axis)
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using App = CF_App;

@@ -74,7 +74,7 @@ struct CF_TypelessArray
 	void* m_items = NULL;
 };
 
-namespace cute 
+namespace Cute 
 {
 
 using typeless_array = CF_TypelessArray;

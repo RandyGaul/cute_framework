@@ -36,7 +36,7 @@
 
 #include <cute/cute_png.h>
 
-using namespace cute;
+using namespace Cute;
 
 struct Glyph
 {

@@ -25,7 +25,7 @@
 #include <cute_priority_queue.h>
 #include <float.h>
 
-using namespace cute;
+using namespace Cute;
 
 struct cf_iv2
 {
@@ -102,7 +102,7 @@ CUTE_API CF_AStarInput CUTE_CALL cf_a_star_input_defaults()
 	return input;
 }
 
-namespace cute
+namespace Cute
 {
 
 bool a_star(const AStarGrid* const_grid, const AStarInput* input, AStarOutput* output)
@@ -209,9 +209,9 @@ bool cf_a_star(const CF_AStarGrid* const_grid, const CF_AStarInput* input, CF_AS
 	bool result;
 
 	if (output) {
-		cute::AStarOutput temp_output = {};
+		Cute::AStarOutput temp_output = {};
 
-		result = cute::a_star(const_grid, (cute::AStarInput*)input, &temp_output);
+		result = Cute::a_star(const_grid, (Cute::AStarInput*)input, &temp_output);
 
 		output->x = temp_output.x.data();
 		output->x_count = temp_output.x.count();
@@ -224,7 +224,7 @@ bool cf_a_star(const CF_AStarGrid* const_grid, const CF_AStarInput* input, CF_AS
 		// be cleaned up later in `cf_free_a_star_output`.
 		CUTE_MEMSET(&temp_output, 0, sizeof(temp_output));
 	} else {
-		result = cute::a_star(const_grid, (cute::AStarInput*)input, nullptr);
+		result = Cute::a_star(const_grid, (Cute::AStarInput*)input, nullptr);
 	}
 
 	return result;

@@ -20,7 +20,7 @@
 */
 
 #include <cute_font.h>
-using namespace cute;
+using namespace Cute;
 
 CUTE_TEST_CASE(test_font_wip, "This test is not yet fully implemented.");
 int test_font_wip()

@@ -649,7 +649,7 @@ CUTE_API void CUTE_CALL cf_sinuke_intern_table();
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 CUTE_INLINE uint64_t constexpr fnv1a(const void* data, int size)

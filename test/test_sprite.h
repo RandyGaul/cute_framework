@@ -20,7 +20,7 @@
 */
 
 #include <cute.h>
-using namespace cute;
+using namespace Cute;
 
 CUTE_TEST_CASE(test_make_sprite, "Load a sprite destroy it.");
 int test_make_sprite()

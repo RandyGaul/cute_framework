@@ -218,7 +218,7 @@ CUTE_API void* CUTE_CALL cf_aset(const void* a, const void* b, size_t element_si
  * and also more importantly to have fast debug performance.
  */
 
-namespace cute
+namespace Cute
 {
 
 template <typename T>

@@ -54,6 +54,30 @@ CUTE_INLINE CF_Result cf_result_make(int code, const char* details) { CF_Result 
 CUTE_INLINE CF_Result cf_result_error(const char* details) { CF_Result result; result.code = CF_RESULT_ERROR; result.details = details; return result; }
 CUTE_INLINE CF_Result cf_result_success() { CF_Result result; result.code = CF_RESULT_SUCCESS; result.details = NULL; return result; }
 
+#define CF_MESSAGE_BOX_TYPE_DEFS \
+	CF_ENUM(MESSAGE_BOX_TYPE_ERROR, 0) \
+	CF_ENUM(MESSAGE_BOX_TYPE_WARNING, 1) \
+	CF_ENUM(MESSAGE_BOX_TYPE_INFORMATION, 2) \
+
+typedef enum CF_MessageBoxType
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_MESSAGE_BOX_TYPE_DEFS
+	#undef CF_ENUM
+} CF_MessageBoxType;
+
+CUTE_INLINE const char* cf_message_box_type_to_string(CF_MessageBoxType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	CF_MESSAGE_BOX_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+CUTE_API void CUTE_CALL cf_message_box(CF_MessageBoxType type, const char* title, const char* text);
+
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -63,7 +87,7 @@ CUTE_INLINE CF_Result cf_result_success() { CF_Result result; result.code = CF_R
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using Result = CF_Result;
@@ -75,11 +99,27 @@ enum : int
 	#undef CF_ENUM
 };
 
+using MessageBoxType = CF_MessageBoxType;
+#define CF_ENUM(K, V) CUTE_INLINE constexpr MessageBoxType K = CF_##K;
+CF_MESSAGE_BOX_TYPE_DEFS
+#undef CF_ENUM
+
+CUTE_INLINE const char* to_string(MessageBoxType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return #K;
+	CF_MESSAGE_BOX_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
 CUTE_INLINE bool is_error(Result error) { return cf_is_error(error); }
 
 CUTE_INLINE Result result_make(int code, const char* details) { return cf_result_make(code, details); }
 CUTE_INLINE Result result_failure(const char* details) { return cf_result_error(details); }
 CUTE_INLINE Result result_success() { return cf_result_success(); }
+CUTE_INLINE void message_box(MessageBoxType type, const char* title, const char* text) { return cf_message_box(type, title, text); }
 
 }
 

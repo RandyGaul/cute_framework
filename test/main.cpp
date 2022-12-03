@@ -78,7 +78,7 @@ int main(int argc, const char** argv)
 		app_update(dt);
 		s.update(dt);
 		s.draw();
-		batch_line(V2(0,0), V2(10,0), 1, color_red());
+		draw_line(V2(0,0), V2(10,0), 1, color_red(), false);
 		if (ImGui::BeginMainMenuBar()) {
 			if (ImGui::BeginMenu("sokol-gfx")) {
 				ImGui::MenuItem("Buffers", 0, &sg_imgui->buffers.open);
@@ -91,7 +91,7 @@ int main(int argc, const char** argv)
 			}
 			ImGui::EndMainMenuBar();
 		}
-		app_present(projection);
+		app_present();
 	}
 
 	destroy_app();

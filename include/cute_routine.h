@@ -27,7 +27,7 @@
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-namespace cute
+namespace Cute
 {
 
 // A portable "coroutine"-like thing for implementing FSM and behavior-cycles.

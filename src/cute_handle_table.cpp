@@ -45,7 +45,7 @@ struct CF_HandleTable
 	}
 
 	uint32_t m_freelist = ~0;
-	cute::Array<CF_HandleEntry> m_handles;
+	Cute::Array<CF_HandleEntry> m_handles;
 };
 
 static void s_add_elements_to_freelist(CF_HandleTable* table, int first_index, int last_index)

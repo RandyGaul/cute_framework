@@ -71,7 +71,7 @@ CUTE_API float CUTE_CALL cf_timer_elapsed(CF_Timer* timer);
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using timer_t = CF_Timer;

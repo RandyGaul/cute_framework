@@ -22,11 +22,10 @@
 #include <cute_sprite.h>
 #include <cute_aseprite_cache.h>
 #include <cute_window.h>
-#include <cute_batch.h>
+#include <cute_draw.h>
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_png_cache_internal.h>
-#include <internal/cute_batch_internal.h>
 
 CF_Sprite cf_easy_make_sprite(const char* png_path)
 {
@@ -37,7 +36,7 @@ CF_Sprite cf_easy_make_sprite(const char* png_path)
 		CF_Result err = cf_png_cache_load(png_path, &png);
 		if (cf_is_error(err)) {
 			sprintf(buf, "Unable to load sprite at path \"%s\".\n", png_path);
-			cf_window_message_box(CF_WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
+			cf_message_box(CF_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
 			return cf_sprite_defaults();
 		}
 
@@ -65,7 +64,7 @@ CF_Sprite cf_make_sprite(const char* aseprite_path)
 	char buf[1024];
 	if (cf_is_error(err)) {
 		sprintf(buf, "Unable to load sprite at path \"%s\".\n", aseprite_path);
-		cf_window_message_box(CF_WINDOW_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
+		cf_message_box(CF_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
 	}
 	return s;
 }

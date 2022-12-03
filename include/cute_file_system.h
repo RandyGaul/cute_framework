@@ -483,7 +483,7 @@ CUTE_API const char* CUTE_CALL cf_fs_get_actual_path(const char* virtual_path);
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using Stat = CF_Stat;

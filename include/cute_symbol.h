@@ -58,7 +58,7 @@ CUTE_API void* cf_load_function(CF_SharedLibrary* library, const char* function_
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using shared_library_t = CF_SharedLibrary;

@@ -51,7 +51,7 @@ void cf_pump_input_msgs();
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using MouseClick = CF_MouseClick;

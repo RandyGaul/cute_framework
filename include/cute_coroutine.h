@@ -83,7 +83,7 @@ CUTE_API CF_Coroutine* CUTE_CALL cf_coroutine_currently_running();
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using Coroutine = CF_Coroutine;

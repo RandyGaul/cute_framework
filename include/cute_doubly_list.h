@@ -127,7 +127,7 @@ CUTE_INLINE CF_ListNode* cf_list_back(CF_List* list)
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using list_t = CF_List;

@@ -106,7 +106,7 @@ CUTE_API void CUTE_CALL cf_sound_set_sample_index(CF_Sound sound, uint64_t sampl
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using Audio = CF_Audio;

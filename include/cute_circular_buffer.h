@@ -60,7 +60,7 @@ CUTE_API int CUTE_CALL cf_circular_buffer_grow(CF_CircularBuffer* buffer, int ne
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using CircularBuffer = CF_CircularBuffer;

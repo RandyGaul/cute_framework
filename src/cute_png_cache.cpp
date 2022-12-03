@@ -206,7 +206,7 @@ CF_Sprite cf_make_png_cache_sprite(const char* sprite_name, const CF_Animation**
 	return sprite;
 }
 
-namespace cute
+namespace Cute
 {
 
 const animation_t* make_png_cache_animation(const char* name, const Array<Png>& pngs, const Array<float>& delays)

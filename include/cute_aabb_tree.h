@@ -131,7 +131,7 @@ CUTE_API bool CUTE_CALL CF_Aabbree_serialize(const CF_AabbTree* tree, void* buff
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using AabbTree = CF_AabbTree;

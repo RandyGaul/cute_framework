@@ -85,7 +85,7 @@
 
 #define IM_VEC2_CLASS_EXTRA                                                     \
         constexpr ImVec2(const CF_V2& f) : x(f.x), y(f.y) {}                    \
-        operator CF_V2() const { return cf_V2(x,y); }
+        operator CF_V2() const { return cf_v2(x,y); }
 
 /*
 #define IM_VEC4_CLASS_EXTRA                                                     \

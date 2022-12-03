@@ -19,23 +19,23 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_BATCH_INTERNAL_H
-#define CUTE_BATCH_INTERNAL_H
+#include <cute_result.h>
 
-extern struct CF_Batch* b;
+#include <internal/cute_app_internal.h>
+#include <SDL.h>
 
-void cf_make_batch();
-void cf_destroy_batch();
+static int s_message_box_flags(CF_MessageBoxType type)
+{
+	switch (type)
+	{
+	case CF_MESSAGE_BOX_TYPE_ERROR: return SDL_MESSAGEBOX_ERROR;
+	case CF_MESSAGE_BOX_TYPE_WARNING: return SDL_MESSAGEBOX_WARNING;
+	case CF_MESSAGE_BOX_TYPE_INFORMATION: return SDL_MESSAGEBOX_INFORMATION;
+	}
+	return SDL_MESSAGEBOX_ERROR;
+}
 
-// We slice up a 64-bit int into lo + hi ranges to map where we can fetch pixels
-// from. This slices up the 64-bit range into 16 unique ranges, though we're only
-// using three of those ranges for now. The ranges are inclusive.
-#define CUTE_IMAGE_ID_RANGE_SIZE  ((1ULL << 60) - 1)
-#define CUTE_ASEPRITE_ID_RANGE_LO (0ULL)
-#define CUTE_ASEPRITE_ID_RANGE_HI (CUTE_ASEPRITE_ID_RANGE_LO + CUTE_IMAGE_ID_RANGE_SIZE)
-#define CUTE_PNG_ID_RANGE_LO      (CUTE_ASEPRITE_ID_RANGE_HI + 1)
-#define CUTE_PNG_ID_RANGE_HI      (CUTE_PNG_ID_RANGE_LO      + CUTE_IMAGE_ID_RANGE_SIZE)
-#define CUTE_FONT_ID_RANGE_LO     (CUTE_PNG_ID_RANGE_HI      + 1)
-#define CUTE_FONT_ID_RANGE_HI     (CUTE_FONT_ID_RANGE_LO     + CUTE_IMAGE_ID_RANGE_SIZE)
-
-#endif // CUTE_BATCH_INTERNAL_H
+void cf_message_box(CF_MessageBoxType type, const char* title, const char* text)
+{
+	SDL_ShowSimpleMessageBox(s_message_box_flags(type), title, text, app->window);
+}

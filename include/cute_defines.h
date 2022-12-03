@@ -229,7 +229,7 @@ template <class T> constexpr const T* end(initializer_list<T> list) noexcept { r
 template <typename T>
 using CF_InitializerList = std::initializer_list<T>;
 
-namespace cute
+namespace Cute
 {
 template <typename T>
 using initializer_list = CF_InitializerList<T>;

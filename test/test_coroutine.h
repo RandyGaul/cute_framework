@@ -21,7 +21,7 @@
 
 #include <cute.h>
 
-using namespace cute;
+using namespace Cute;
 
 void coroutine_func(CF_Coroutine* co)
 {

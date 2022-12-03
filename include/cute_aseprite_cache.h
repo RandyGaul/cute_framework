@@ -80,7 +80,7 @@ CUTE_API CF_Result CUTE_CALL cf_aseprite_cache_load_ase(const char* aseprite_pat
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 CUTE_INLINE Result aseprite_cache_load(const char* aseprite_path, Sprite* sprite_out) { return cf_aseprite_cache_load(aseprite_path, sprite_out); }

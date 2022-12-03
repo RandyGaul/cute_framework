@@ -30,7 +30,7 @@ CUTE_API bool CUTE_CALL cf_kv_val_entity(CF_KeyValue* kv, CF_Entity* entity);
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 }

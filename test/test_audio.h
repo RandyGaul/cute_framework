@@ -23,7 +23,7 @@
 #include <cute_app.h>
 #include <cute_concurrency.h>
 
-using namespace cute;
+using namespace Cute;
 
 CUTE_TEST_CASE(test_audio_load_synchronous, "Load and free wav/ogg files synchronously.");
 int test_audio_load_synchronous()

@@ -123,7 +123,7 @@ CUTE_INLINE CF_Pixel cf_pixel_grey() { return cf_make_pixel_rgb(127, 127, 127); 
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using Pixel = CF_Pixel;

@@ -32,7 +32,7 @@
 #define AABB_TREE_NULL_NODE_INDEX -1
 #define AABB_TREE_MOVE_CONSTANT 4.0f
 
-using namespace cute;
+using namespace Cute;
 
 struct CF_Aabbree_node_t
 {

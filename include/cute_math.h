@@ -42,7 +42,7 @@ typedef struct CF_V2
 
 // Use this to create a v2 struct.
 // The C++ API uses V2(x, y).
-CUTE_INLINE CF_V2 cf_V2(float x, float y)
+CUTE_INLINE CF_V2 cf_v2(float x, float y)
 {
 	CF_V2 result;
 	result.x = x;
@@ -65,11 +65,11 @@ typedef struct CF_M2x2
 } CF_M2x2;
 
 // 2d transformation, mostly useful for graphics and not physics colliders, since it supports scale.
-typedef struct cf_m3x2
+typedef struct CF_M3x2
 {
 	CF_M2x2 m;
 	CF_V2 p;
-} cf_m3x2;
+} CF_M3x2;
 
 
 // 2d transformation, mostly useful for physics colliders since there's no scale.
@@ -114,6 +114,13 @@ typedef struct CF_Aabb
 	CF_V2 min;
 	CF_V2 max;
 } CF_Aabb;
+
+// Box that cannot rotate defined with integers instead of floats. Not used for collision detection,
+// but still sometimes useful.
+typedef struct CF_Rect
+{
+	int w, h, x, y;
+} CF_Rect;
 
 #define CUTE_PI 3.14159265f
 
@@ -178,35 +185,35 @@ CUTE_INLINE float cf_back_in_out(float x) { if (x < 0.5f) { float f = 2.0f * x; 
 //--------------------------------------------------------------------------------------------------
 // 2D vector ops.
 
-CUTE_INLINE CF_V2 cf_add_v2(CF_V2 a, CF_V2 b) { return cf_V2(a.x + b.x, a.y + b.y); }
-CUTE_INLINE CF_V2 cf_sub_v2(CF_V2 a, CF_V2 b) { return cf_V2(a.x - b.x, a.y - b.y); }
+CUTE_INLINE CF_V2 cf_add_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x + b.x, a.y + b.y); }
+CUTE_INLINE CF_V2 cf_sub_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x - b.x, a.y - b.y); }
 
 CUTE_INLINE float cf_dot(CF_V2 a, CF_V2 b) { return a.x * b.x + a.y * b.y; }
 
-CUTE_INLINE CF_V2 cf_mul_v2_f(CF_V2 a, float b) { return cf_V2(a.x * b, a.y * b); }
-CUTE_INLINE CF_V2 cf_mul_v2(CF_V2 a, CF_V2 b) { return cf_V2(a.x * b.x, a.y * b.y); }
-CUTE_INLINE CF_V2 cf_div_v2_f(CF_V2 a, float b) { return cf_V2(a.x / b, a.y / b); }
+CUTE_INLINE CF_V2 cf_mul_v2_f(CF_V2 a, float b) { return cf_v2(a.x * b, a.y * b); }
+CUTE_INLINE CF_V2 cf_mul_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x * b.x, a.y * b.y); }
+CUTE_INLINE CF_V2 cf_div_v2_f(CF_V2 a, float b) { return cf_v2(a.x / b, a.y / b); }
 
-CUTE_INLINE CF_V2 cf_skew(CF_V2 a) { return cf_V2(-a.y, a.x); }
-CUTE_INLINE CF_V2 cf_cw90(CF_V2 a) { return cf_V2(a.y, -a.x); }
+CUTE_INLINE CF_V2 cf_skew(CF_V2 a) { return cf_v2(-a.y, a.x); }
+CUTE_INLINE CF_V2 cf_cw90(CF_V2 a) { return cf_v2(a.y, -a.x); }
 CUTE_INLINE float cf_det2(CF_V2 a, CF_V2 b) { return a.x * b.y - a.y * b.x; }
 CUTE_INLINE float cf_cross(CF_V2 a, CF_V2 b) { return cf_det2(a, b); }
-CUTE_INLINE CF_V2 cf_cross_v2_f(CF_V2 a, float b) { return cf_V2(b * a.y, -b * a.x); }
-CUTE_INLINE CF_V2 cf_cross_f_v2(float a, CF_V2 b) { return cf_V2(-a * b.y, a * b.x); }
-CUTE_INLINE CF_V2 cf_min_v2(CF_V2 a, CF_V2 b) { return cf_V2(cf_min(a.x, b.x), cf_min(a.y, b.y)); }
-CUTE_INLINE CF_V2 cf_max_v2(CF_V2 a, CF_V2 b) { return cf_V2(cf_max(a.x, b.x), cf_max(a.y, b.y)); }
+CUTE_INLINE CF_V2 cf_cross_v2_f(CF_V2 a, float b) { return cf_v2(b * a.y, -b * a.x); }
+CUTE_INLINE CF_V2 cf_cross_f_v2(float a, CF_V2 b) { return cf_v2(-a * b.y, a * b.x); }
+CUTE_INLINE CF_V2 cf_min_v2(CF_V2 a, CF_V2 b) { return cf_v2(cf_min(a.x, b.x), cf_min(a.y, b.y)); }
+CUTE_INLINE CF_V2 cf_max_v2(CF_V2 a, CF_V2 b) { return cf_v2(cf_max(a.x, b.x), cf_max(a.y, b.y)); }
 CUTE_INLINE CF_V2 cf_clamp_v2(CF_V2 a, CF_V2 lo, CF_V2 hi) { return cf_max_v2(lo, cf_min_v2(a, hi)); }
-CUTE_INLINE CF_V2 cf_clamp01_v2(CF_V2 a) { return cf_max_v2(cf_V2(0, 0), cf_min_v2(a, cf_V2(1, 1))); }
-CUTE_INLINE CF_V2 cf_abs_v2(CF_V2 a) { return cf_V2(fabsf(a.x), fabsf(a.y)); }
+CUTE_INLINE CF_V2 cf_clamp01_v2(CF_V2 a) { return cf_max_v2(cf_v2(0, 0), cf_min_v2(a, cf_v2(1, 1))); }
+CUTE_INLINE CF_V2 cf_abs_v2(CF_V2 a) { return cf_v2(fabsf(a.x), fabsf(a.y)); }
 CUTE_INLINE float cf_hmin(CF_V2 a) { return cf_min(a.x, a.y); }
 CUTE_INLINE float cf_hmax(CF_V2 a) { return cf_max(a.x, a.y); }
 CUTE_INLINE float cf_len(CF_V2 a) { return sqrtf(cf_dot(a, a)); }
 CUTE_INLINE float cf_distance(CF_V2 a, CF_V2 b) { CF_V2 d = cf_sub_v2(b, a); return sqrtf(cf_dot(d, d)); }
 CUTE_INLINE CF_V2 cf_norm(CF_V2 a) { return cf_div_v2_f(a, cf_len(a)); }
-CUTE_INLINE CF_V2 cf_safe_norm(CF_V2 a) { float sq = cf_dot(a, a); return sq ? cf_div_v2_f(a, sqrtf(sq)) : cf_V2(0, 0); }
+CUTE_INLINE CF_V2 cf_safe_norm(CF_V2 a) { float sq = cf_dot(a, a); return sq ? cf_div_v2_f(a, sqrtf(sq)) : cf_v2(0, 0); }
 CUTE_INLINE float cf_safe_norm_f(float a) { return a == 0 ? 0 : cf_sign(a); }
 CUTE_INLINE int cf_safe_norm_int(int a) { return a == 0 ? 0 : cf_sign_int(a); }
-CUTE_INLINE CF_V2 cf_neg_v2(CF_V2 a) { return cf_V2(-a.x, -a.y); }
+CUTE_INLINE CF_V2 cf_neg_v2(CF_V2 a) { return cf_v2(-a.x, -a.y); }
 CUTE_INLINE CF_V2 cf_lerp_v2(CF_V2 a, CF_V2 b, float t) { return cf_add_v2(a, cf_mul_v2_f(cf_sub_v2(b, a), t)); }
 CUTE_INLINE CF_V2 cf_bezier(CF_V2 a, CF_V2 c0, CF_V2 b, float t) { return cf_lerp_v2(cf_lerp_v2(a, c0, t), cf_lerp_v2(c0, b, t), t); }
 CUTE_INLINE CF_V2 cf_bezier2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, float t) { return cf_bezier(cf_lerp_v2(a, c0, t), cf_lerp_v2(c0, c1, t), cf_lerp_v2(c1, b, t), t); }
@@ -214,10 +221,10 @@ CUTE_INLINE int cf_lesser_v2(CF_V2 a, CF_V2 b) { return a.x < b.x&& a.y < b.y; }
 CUTE_INLINE int cf_greater_v2(CF_V2 a, CF_V2 b) { return a.x > b.x && a.y > b.y; }
 CUTE_INLINE int cf_lesser_equal_v2(CF_V2 a, CF_V2 b) { return a.x <= b.x && a.y <= b.y; }
 CUTE_INLINE int cf_greater_equal_v2(CF_V2 a, CF_V2 b) { return a.x >= b.x && a.y >= b.y; }
-CUTE_INLINE CF_V2 cf_floor(CF_V2 a) { return cf_V2(floorf(a.x), floorf(a.y)); }
-CUTE_INLINE CF_V2 cf_round(CF_V2 a) { return cf_V2(roundf(a.x), roundf(a.y)); }
-CUTE_INLINE CF_V2 cf_invert_safe_v2(CF_V2 a) { return cf_V2(cf_invert_safe(a.x), cf_invert_safe(a.y)); }
-CUTE_INLINE CF_V2 cf_sign_v2(CF_V2 a) { return cf_V2(cf_sign(a.x), cf_sign(a.y)); }
+CUTE_INLINE CF_V2 cf_floor(CF_V2 a) { return cf_v2(floorf(a.x), floorf(a.y)); }
+CUTE_INLINE CF_V2 cf_round(CF_V2 a) { return cf_v2(roundf(a.x), roundf(a.y)); }
+CUTE_INLINE CF_V2 cf_invert_safe_v2(CF_V2 a) { return cf_v2(cf_invert_safe(a.x), cf_invert_safe(a.y)); }
+CUTE_INLINE CF_V2 cf_sign_v2(CF_V2 a) { return cf_v2(cf_sign(a.x), cf_sign(a.y)); }
 
 CUTE_INLINE int cf_parallel(CF_V2 a, CF_V2 b, float tol)
 {
@@ -232,10 +239,10 @@ CUTE_INLINE int cf_parallel(CF_V2 a, CF_V2 b, float tol)
 
 CUTE_INLINE CF_SinCos cf_sincos_f(float radians) { CF_SinCos r; r.s = sinf(radians); r.c = cosf(radians); return r; }
 CUTE_INLINE CF_SinCos cf_sincos() { CF_SinCos r; r.c = 1.0f; r.s = 0; return r; }
-CUTE_INLINE CF_V2 cf_x_axis(CF_SinCos r) { return cf_V2(r.c, r.s); }
-CUTE_INLINE CF_V2 cf_y_axis(CF_SinCos r) { return cf_V2(-r.s, r.c); }
-CUTE_INLINE CF_V2 cf_mul_sc_v2(CF_SinCos a, CF_V2 b) { return cf_V2(a.c * b.x - a.s * b.y, a.s * b.x + a.c * b.y); }
-CUTE_INLINE CF_V2 cf_mulT_sc_v2(CF_SinCos a, CF_V2 b) { return cf_V2(a.c * b.x + a.s * b.y, -a.s * b.x + a.c * b.y); }
+CUTE_INLINE CF_V2 cf_x_axis(CF_SinCos r) { return cf_v2(r.c, r.s); }
+CUTE_INLINE CF_V2 cf_y_axis(CF_SinCos r) { return cf_v2(-r.s, r.c); }
+CUTE_INLINE CF_V2 cf_mul_sc_v2(CF_SinCos a, CF_V2 b) { return cf_v2(a.c * b.x - a.s * b.y, a.s * b.x + a.c * b.y); }
+CUTE_INLINE CF_V2 cf_mulT_sc_v2(CF_SinCos a, CF_V2 b) { return cf_v2(a.c * b.x + a.s * b.y, -a.s * b.x + a.c * b.y); }
 CUTE_INLINE CF_SinCos cf_mul_sc(CF_SinCos a, CF_SinCos b) { CF_SinCos c; c.c = a.c * b.c - a.s * b.s; c.s = a.s * b.c + a.c * b.s; return c; }
 CUTE_INLINE CF_SinCos cf_mulT_sc(CF_SinCos a, CF_SinCos b) { CF_SinCos c; c.c = a.c * b.c + a.s * b.s; c.s = a.c * b.s - a.s * b.c; return c; }
 
@@ -258,7 +265,7 @@ CUTE_INLINE float cf_shortest_arc(CF_V2 a, CF_V2 b)
 }
 
 CUTE_INLINE float cf_angle_diff(float radians_a, float radians_b) { return cf_mod((radians_b - radians_a) + CUTE_PI, 2.0f * CUTE_PI) - CUTE_PI; }
-CUTE_INLINE CF_V2 cf_from_angle(float radians) { return cf_V2(cosf(radians), sinf(radians)); }
+CUTE_INLINE CF_V2 cf_from_angle(float radians) { return cf_v2(cosf(radians), sinf(radians)); }
 
 //--------------------------------------------------------------------------------------------------
 // m2 ops.
@@ -273,26 +280,26 @@ CUTE_INLINE CF_M2x2 cf_mulT_m2(CF_M2x2 a, CF_M2x2 b) { CF_M2x2 c; c.x = cf_mulT_
 // m3x2 ops.
 // General purpose 2D graphics matrix; scale + rotate + translate.
 
-CUTE_INLINE CF_V2 cf_mul_m32_v2(cf_m3x2 a, CF_V2 b) { return cf_add_v2(cf_mul_m2_v2(a.m, b), a.p); }
-CUTE_INLINE CF_V2 cf_mulT_m32_v2(cf_m3x2 a, CF_V2 b) { return cf_mulT_m2_v2(a.m, cf_sub_v2(b, a.p)); }
-CUTE_INLINE cf_m3x2 cf_mul_m32(cf_m3x2 a, cf_m3x2 b) { cf_m3x2 c; c.m = cf_mul_m2(a.m, b.m); c.p = cf_add_v2(cf_mul_m2_v2(a.m, b.p), a.p); return c; }
-CUTE_INLINE cf_m3x2 cf_mulT_m32(cf_m3x2 a, cf_m3x2 b) { cf_m3x2 c; c.m = cf_mulT_m2(a.m, b.m); c.p = cf_mulT_m2_v2(a.m, cf_sub_v2(b.p, a.p)); return c; }
-CUTE_INLINE cf_m3x2 cf_make_identity() { cf_m3x2 m; m.m.x = cf_V2(1, 0); m.m.y = cf_V2(0, 1); m.p = cf_V2(0, 0); return m; }
-CUTE_INLINE cf_m3x2 cf_make_translation_f(float x, float y) { cf_m3x2 m; m.m.x = cf_V2(1, 0); m.m.y = cf_V2(0, 1); m.p = cf_V2(x, y); return m; }
-CUTE_INLINE cf_m3x2 cf_make_translation(CF_V2 p) { return cf_make_translation_f(p.x, p.y); }
-CUTE_INLINE cf_m3x2 cf_make_scale(CF_V2 s) { cf_m3x2 m; m.m.x = cf_V2(s.x, 0); m.m.y = cf_V2(0, s.y); m.p = cf_V2(0, 0); return m; }
-CUTE_INLINE cf_m3x2 cf_make_scale_f(float s) { return cf_make_scale(cf_V2(s, s)); }
-CUTE_INLINE cf_m3x2 cf_make_scale_translation(CF_V2 s, CF_V2 p) { cf_m3x2 m; m.m.x = cf_V2(s.x, 0); m.m.y = cf_V2(0, s.y); m.p = p; return m; }
-CUTE_INLINE cf_m3x2 cf_make_scale_translation_f(float s, CF_V2 p) { return cf_make_scale_translation(cf_V2(s, s), p); }
-CUTE_INLINE cf_m3x2 cf_make_scale_translation_f_f(float sx, float sy, CF_V2 p) { return cf_make_scale_translation(cf_V2(sx, sy), p); }
-CUTE_INLINE cf_m3x2 cf_make_rotation(float radians) { CF_SinCos sc = cf_sincos_f(radians); cf_m3x2 m; m.m.x = cf_V2(sc.c, -sc.s); m.m.y = cf_V2(sc.s, sc.c); m.p = cf_V2(0, 0); return m; }
-CUTE_INLINE cf_m3x2 cf_make_transform_TSR(CF_V2 p, CF_V2 s, float radians) { CF_SinCos sc = cf_sincos_f(radians); cf_m3x2 m; m.m.x = cf_mul_v2_f(cf_V2(sc.c, -sc.s), s.x); m.m.y = cf_mul_v2_f(cf_V2(sc.s, sc.c), s.y); m.p = p; return m; }
+CUTE_INLINE CF_V2 cf_mul_m32_v2(CF_M3x2 a, CF_V2 b) { return cf_add_v2(cf_mul_m2_v2(a.m, b), a.p); }
+CUTE_INLINE CF_V2 cf_mulT_m32_v2(CF_M3x2 a, CF_V2 b) { return cf_mulT_m2_v2(a.m, cf_sub_v2(b, a.p)); }
+CUTE_INLINE CF_M3x2 cf_mul_m32(CF_M3x2 a, CF_M3x2 b) { CF_M3x2 c; c.m = cf_mul_m2(a.m, b.m); c.p = cf_add_v2(cf_mul_m2_v2(a.m, b.p), a.p); return c; }
+CUTE_INLINE CF_M3x2 cf_mulT_m32(CF_M3x2 a, CF_M3x2 b) { CF_M3x2 c; c.m = cf_mulT_m2(a.m, b.m); c.p = cf_mulT_m2_v2(a.m, cf_sub_v2(b.p, a.p)); return c; }
+CUTE_INLINE CF_M3x2 cf_make_identity() { CF_M3x2 m; m.m.x = cf_v2(1, 0); m.m.y = cf_v2(0, 1); m.p = cf_v2(0, 0); return m; }
+CUTE_INLINE CF_M3x2 cf_make_translation_f(float x, float y) { CF_M3x2 m; m.m.x = cf_v2(1, 0); m.m.y = cf_v2(0, 1); m.p = cf_v2(x, y); return m; }
+CUTE_INLINE CF_M3x2 cf_make_translation(CF_V2 p) { return cf_make_translation_f(p.x, p.y); }
+CUTE_INLINE CF_M3x2 cf_make_scale(CF_V2 s) { CF_M3x2 m; m.m.x = cf_v2(s.x, 0); m.m.y = cf_v2(0, s.y); m.p = cf_v2(0, 0); return m; }
+CUTE_INLINE CF_M3x2 cf_make_scale_f(float s) { return cf_make_scale(cf_v2(s, s)); }
+CUTE_INLINE CF_M3x2 cf_make_scale_translation(CF_V2 s, CF_V2 p) { CF_M3x2 m; m.m.x = cf_v2(s.x, 0); m.m.y = cf_v2(0, s.y); m.p = p; return m; }
+CUTE_INLINE CF_M3x2 cf_make_scale_translation_f(float s, CF_V2 p) { return cf_make_scale_translation(cf_v2(s, s), p); }
+CUTE_INLINE CF_M3x2 cf_make_scale_translation_f_f(float sx, float sy, CF_V2 p) { return cf_make_scale_translation(cf_v2(sx, sy), p); }
+CUTE_INLINE CF_M3x2 cf_make_rotation(float radians) { CF_SinCos sc = cf_sincos_f(radians); CF_M3x2 m; m.m.x = cf_v2(sc.c, -sc.s); m.m.y = cf_v2(sc.s, sc.c); m.p = cf_v2(0, 0); return m; }
+CUTE_INLINE CF_M3x2 cf_make_transform_TSR(CF_V2 p, CF_V2 s, float radians) { CF_SinCos sc = cf_sincos_f(radians); CF_M3x2 m; m.m.x = cf_mul_v2_f(cf_v2(sc.c, -sc.s), s.x); m.m.y = cf_mul_v2_f(cf_v2(sc.s, sc.c), s.y); m.p = p; return m; }
 
 //--------------------------------------------------------------------------------------------------
 // Transform ops.
 // No scale factor allowed here, good for physics + colliders.
 
-CUTE_INLINE CF_Transform cf_make_transform() { CF_Transform x; x.p = cf_V2(0, 0); x.r = cf_sincos(); return x; }
+CUTE_INLINE CF_Transform cf_make_transform() { CF_Transform x; x.p = cf_v2(0, 0); x.r = cf_sincos(); return x; }
 CUTE_INLINE CF_Transform cf_make_transform_TR(CF_V2 p, float radians) { CF_Transform x; x.r = cf_sincos_f(radians); x.p = p; return x; }
 CUTE_INLINE CF_V2 cf_mul_tf_v2(CF_Transform a, CF_V2 b) { return cf_add_v2(cf_mul_sc_v2(a.r, b), a.p); }
 CUTE_INLINE CF_V2 cf_mulT_tf_v2(CF_Transform a, CF_V2 b) { return cf_mulT_sc_v2(a.r, cf_sub_v2(b, a.p)); }
@@ -317,9 +324,9 @@ CUTE_INLINE CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b) { re
 // AABB helpers.
 
 CUTE_INLINE CF_Aabb cf_make_aabb(CF_V2 min, CF_V2 max) { CF_Aabb bb; bb.min = min; bb.max = max; return bb; }
-CUTE_INLINE CF_Aabb cf_make_aabb_pos_w_h(CF_V2 pos, float w, float h) { CF_Aabb bb; CF_V2 he = cf_mul_v2_f(cf_V2(w, h), 0.5f); bb.min = cf_sub_v2(pos, he); bb.max = cf_add_v2(pos, he); return bb; }
+CUTE_INLINE CF_Aabb cf_make_aabb_pos_w_h(CF_V2 pos, float w, float h) { CF_Aabb bb; CF_V2 he = cf_mul_v2_f(cf_v2(w, h), 0.5f); bb.min = cf_sub_v2(pos, he); bb.max = cf_add_v2(pos, he); return bb; }
 CUTE_INLINE CF_Aabb cf_make_aabb_center_half_extents(CF_V2 center, CF_V2 half_extents) { CF_Aabb bb; bb.min = cf_sub_v2(center, half_extents); bb.max = cf_add_v2(center, half_extents); return bb; }
-CUTE_INLINE CF_Aabb cf_make_aabb_from_top_left(CF_V2 top_left, float w, float h) { return cf_make_aabb(cf_add_v2(top_left, cf_V2(0, -h)), cf_add_v2(top_left, cf_V2(w, 0))); }
+CUTE_INLINE CF_Aabb cf_make_aabb_from_top_left(CF_V2 top_left, float w, float h) { return cf_make_aabb(cf_add_v2(top_left, cf_v2(0, -h)), cf_add_v2(top_left, cf_v2(w, 0))); }
 CUTE_INLINE float cf_width(CF_Aabb bb) { return bb.max.x - bb.min.x; }
 CUTE_INLINE float cf_height(CF_Aabb bb) { return bb.max.y - bb.min.y; }
 CUTE_INLINE float cf_half_width(CF_Aabb bb) { return cf_width(bb) * 0.5f; }
@@ -327,15 +334,15 @@ CUTE_INLINE float cf_half_height(CF_Aabb bb) { return cf_height(bb) * 0.5f; }
 CUTE_INLINE CF_V2 cf_half_extents(CF_Aabb bb) { return (cf_mul_v2_f(cf_sub_v2(bb.max, bb.min), 0.5f)); }
 CUTE_INLINE CF_V2 cf_extents(CF_Aabb aabb) { return cf_sub_v2(aabb.max, aabb.min); }
 CUTE_INLINE CF_Aabb cf_expand_aabb(CF_Aabb aabb, CF_V2 v) { return cf_make_aabb(cf_sub_v2(aabb.min, v), cf_add_v2(aabb.max, v)); }
-CUTE_INLINE CF_Aabb cf_expand_aabb_f(CF_Aabb aabb, float v) { CF_V2 factor = cf_V2(v, v); return cf_make_aabb(cf_sub_v2(aabb.min, factor), cf_add_v2(aabb.max, factor)); }
+CUTE_INLINE CF_Aabb cf_expand_aabb_f(CF_Aabb aabb, float v) { CF_V2 factor = cf_v2(v, v); return cf_make_aabb(cf_sub_v2(aabb.min, factor), cf_add_v2(aabb.max, factor)); }
 CUTE_INLINE CF_V2 cf_min_aabb(CF_Aabb bb) { return bb.min; }
 CUTE_INLINE CF_V2 cf_max_aabb(CF_Aabb bb) { return bb.max; }
 CUTE_INLINE CF_V2 cf_midpoint(CF_Aabb bb) { return cf_mul_v2_f(cf_add_v2(bb.min, bb.max), 0.5f); }
 CUTE_INLINE CF_V2 cf_center(CF_Aabb bb) { return cf_mul_v2_f(cf_add_v2(bb.min, bb.max), 0.5f); }
-CUTE_INLINE CF_V2 cf_top_left(CF_Aabb bb) { return cf_V2(bb.min.x, bb.max.y); }
-CUTE_INLINE CF_V2 cf_top_right(CF_Aabb bb) { return cf_V2(bb.max.x, bb.max.y); }
-CUTE_INLINE CF_V2 cf_bottom_left(CF_Aabb bb) { return cf_V2(bb.min.x, bb.min.y); }
-CUTE_INLINE CF_V2 cf_bottom_right(CF_Aabb bb) { return cf_V2(bb.max.x, bb.min.y); }
+CUTE_INLINE CF_V2 cf_top_left(CF_Aabb bb) { return cf_v2(bb.min.x, bb.max.y); }
+CUTE_INLINE CF_V2 cf_top_right(CF_Aabb bb) { return cf_v2(bb.max.x, bb.max.y); }
+CUTE_INLINE CF_V2 cf_bottom_left(CF_Aabb bb) { return cf_v2(bb.min.x, bb.min.y); }
+CUTE_INLINE CF_V2 cf_bottom_right(CF_Aabb bb) { return cf_v2(bb.max.x, bb.min.y); }
 CUTE_INLINE bool cf_contains_point(CF_Aabb bb, CF_V2 p) { return cf_greater_equal_v2(p, bb.min) && cf_lesser_equal_v2(p, bb.max); }
 CUTE_INLINE bool cf_contains_aabb(CF_Aabb a, CF_Aabb b) { return cf_lesser_equal_v2(a.min, b.min) && cf_greater_equal_v2(a.max, b.max); }
 CUTE_INLINE float cf_surface_area_aabb(CF_Aabb bb) { return 2.0f * cf_width(bb) * cf_height(bb); }
@@ -352,6 +359,7 @@ CUTE_INLINE int cf_overlaps(CF_Aabb a, CF_Aabb b)
 	int d3 = a.max.y < b.min.y;
 	return !(d0 | d1 | d2 | d3);
 }
+
 CUTE_INLINE int cf_collide_aabb(CF_Aabb a, CF_Aabb b) { return cf_overlaps(a, b); }
 
 CUTE_INLINE CF_Aabb cf_make_aabb_verts(CF_V2* verts, int count)
@@ -368,13 +376,13 @@ CUTE_INLINE CF_Aabb cf_make_aabb_verts(CF_V2* verts, int count)
 CUTE_INLINE void cf_aabb_verts(CF_V2* out, CF_Aabb bb)
 {
 	out[0] = bb.min;
-	out[1] = cf_V2(bb.max.x, bb.min.y);
+	out[1] = cf_v2(bb.max.x, bb.min.y);
 	out[2] = bb.max;
-	out[3] = cf_V2(bb.min.x, bb.max.y);
+	out[3] = cf_v2(bb.min.x, bb.max.y);
 }
 
 //--------------------------------------------------------------------------------------------------
-// Circle helpers
+// Circle helpers.
 
 CUTE_INLINE float cf_area_circle(CF_Circle c) { return 3.14159265f * c.r * c.r; }
 CUTE_INLINE float cf_surface_area_circle(CF_Circle c) { return 2.0f * 3.14159265f * c.r; }
@@ -629,7 +637,7 @@ CUTE_API bool CUTE_CALL cf_cast_ray(CF_Ray A, const void* B, const CF_Transform*
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using v2 = CF_V2;
@@ -659,7 +667,7 @@ CUTE_INLINE int operator>=(v2 a, v2 b) { return a.x >= b.x && a.y >= b.y; }
 
 using SinCos = CF_SinCos;
 using M2x2 = CF_M2x2;
-using M3x2 = cf_m3x2;
+using M3x2 = CF_M3x2;
 using Transform = CF_Transform;
 using Halfspace = CF_Halfspace;
 using Ray = CF_Ray;

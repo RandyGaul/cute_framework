@@ -113,7 +113,7 @@ typedef struct CF_Sprite
 CUTE_INLINE CF_Sprite cf_sprite_defaults()
 {
 	CF_Sprite sprite = { 0 };
-	sprite.scale = cf_V2(1, 1);
+	sprite.scale = cf_v2(1, 1);
 	sprite.opacity = 1.0f;
 	sprite.play_speed_multiplier = 1.0f;
 	sprite.transform = cf_make_transform();
@@ -158,11 +158,11 @@ CUTE_API void CUTE_CALL cf_sprite_unload(const char* aseprite_path);
 //--------------------------------------------------------------------------------------------------
 // In-line implementation of `sprite_t` functions.
 
-CUTE_API void CUTE_CALL cf_batch_sprite_tf(const CF_Sprite* sprite, CF_Transform transform);
+CUTE_API void CUTE_CALL cf_draw_sprite_tf(const CF_Sprite* sprite, CF_Transform transform);
 
 CUTE_INLINE void cf_sprite_draw(CF_Sprite* sprite)
 {
-	cf_batch_sprite_tf(sprite, sprite->transform);
+	cf_draw_sprite_tf(sprite, sprite->transform);
 }
 
 /**
@@ -322,7 +322,7 @@ CUTE_INLINE void cf_animation_add_frame(CF_Animation* animation, CF_Frame frame)
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using frame_t = CF_Frame;

@@ -236,7 +236,7 @@ CUTE_INLINE bool cf_https_response_find_header(const CF_HttpsResponse* response,
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using Https = CF_Https;

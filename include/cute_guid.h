@@ -50,7 +50,7 @@ CUTE_INLINE bool cf_guid_equal(CF_Guid a, CF_Guid b) { return !CUTE_MEMCMP(&a, &
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using guid_t = CF_Guid;

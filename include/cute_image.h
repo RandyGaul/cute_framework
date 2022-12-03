@@ -77,7 +77,7 @@ CUTE_API void CUTE_CALL cf_image_flip_horizontal(CF_Image* img);
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using Image = CF_Image;

@@ -317,7 +317,7 @@ CUTE_API void CUTE_CALL cf_server_enable_network_simulator(CF_Server* server, do
 
 #ifdef CUTE_CPP
 
-namespace cute
+namespace Cute
 {
 
 using Client = CF_Client;
