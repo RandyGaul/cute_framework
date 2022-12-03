@@ -81,6 +81,7 @@ CUTE_API bool CUTE_CALL cf_app_mouse_inside();
 CUTE_API ImGuiContext* CUTE_CALL cf_app_init_imgui(bool no_default_font /*= false*/);
 CUTE_API sg_imgui_t* CUTE_CALL cf_app_get_sokol_imgui();
 CUTE_API CF_Canvas CUTE_CALL cf_app_get_canvas();
+CUTE_API void CUTE_CALL cf_app_resize_canvas(int x, int y);
 CUTE_API int CUTE_CALL cf_app_get_canvas_width();
 CUTE_API int CUTE_CALL cf_app_get_canvas_height();
 

@@ -63,22 +63,29 @@
 int main(int argc, const char** argv)
 {
 #if 0
-	Result result = make_app("Fancy Window Title", 0, 0, 640, 480, APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
+	uint32_t options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
+	Result result = make_app("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;
 
 	Sprite s = cf_make_sprite("test_data/girl.aseprite");
-	Matrix4x4 projection = cf_matrix_ortho_2d(640/2, 480/2, 0, 0);
 	s.play("spin");
 
 	auto imgui = cf_app_init_imgui(false);
 	sg_imgui_t* sg_imgui = app_get_sokol_imgui();
+	int w = 640/4;
+	int h = 480/4;
+	//cf_app_resize_canvas(w, h);
+	render_settings_view((float)w / 2, (float)h / 2);
+	//render_settings_view((float)w, (float)h);
+	//render_settings_view((float)w * 2, (float)h * 2);
+	//render_settings_view((float)w * 4, (float)h * 4);
 
 	while (app_is_running()) {
 		float dt = calc_dt();
 		app_update(dt);
 		s.update(dt);
 		s.draw();
-		draw_push_layer(1);
+		draw_push_layer(-1);
 		draw_line(V2(0,0), V2(100,0), 5, color_red(), false);
 		draw_pop_layer();
 		if (ImGui::BeginMainMenuBar()) {

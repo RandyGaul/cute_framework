@@ -113,6 +113,51 @@ unsigned char default_png_data[81] = {
 	0x82
 };
 
+static void s_canvas(int w, int h)
+{
+	{
+		CF_TextureParams params = cf_texture_defaults();
+		params.width = w;
+		params.height = h;
+		params.render_target = true;
+		if (app->backbuffer.id) {
+			cf_destroy_texture(app->backbuffer);
+		}
+		app->backbuffer = cf_make_texture(params);
+	}
+	{
+		CF_TextureParams params = cf_texture_defaults();
+		params.width = w;
+		params.height = h;
+		params.render_target = true;
+		params.pixel_format = CF_PIXELFORMAT_DEPTH_STENCIL;
+		if (app->backbuffer_depth_stencil.id) {
+			cf_destroy_texture(app->backbuffer_depth_stencil);
+		}
+		app->backbuffer_depth_stencil = cf_make_texture(params);
+	}
+	{
+		CF_CanvasParams params = cf_canvas_defaults();
+		params.target = app->backbuffer;
+		params.depth_stencil_target = app->backbuffer_depth_stencil;
+		if (app->offscreen_canvas.id) {
+			cf_destroy_canvas(app->offscreen_canvas);
+		}
+		app->offscreen_canvas = cf_make_canvas(params);
+	}
+	{
+		CF_CanvasParams params = cf_canvas_defaults();
+		params.clear_settings.color = cf_color_black();
+		if (app->backbuffer_canvas.id) {
+			cf_destroy_canvas(app->backbuffer_canvas);
+		}
+		app->backbuffer_canvas = cf_make_canvas(params);
+	}
+	app->canvas_w = w;
+	app->canvas_h = h;
+	cf_material_set_texture_fs(app->backbuffer_material, "u_image", app->backbuffer);
+}
+
 CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int options, const char* argv0)
 {
 	SDL_SetMainReady();
@@ -219,32 +264,6 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 
 	if (app->gfx_enabled) {
 		{
-			CF_TextureParams params = cf_texture_defaults();
-			params.width = app->w;
-			params.height = app->h;
-			params.render_target = true;
-			app->backbuffer = cf_make_texture(params);
-		}
-		{
-			CF_TextureParams params = cf_texture_defaults();
-			params.width = app->w;
-			params.height = app->h;
-			params.render_target = true;
-			params.pixel_format = CF_PIXELFORMAT_DEPTH_STENCIL;
-			app->backbuffer_depth_stencil = cf_make_texture(params);
-		}
-		{
-			CF_CanvasParams params = cf_canvas_defaults();
-			params.target = app->backbuffer;
-			params.depth_stencil_target = app->backbuffer_depth_stencil;
-			app->offscreen_canvas = cf_make_canvas(params);
-		}
-		{
-			CF_CanvasParams params = cf_canvas_defaults();
-			params.clear_settings.color = cf_color_black();
-			app->backbuffer_canvas = cf_make_canvas(params);
-		}
-		{
 			app->backbuffer_quad = cf_make_mesh(CF_USAGE_TYPE_IMMUTABLE, sizeof(Vertex) * 6, 0, 0);
 			CF_VertexAttribute attrs[2] = { };
 			attrs[0].name = "in_pos";
@@ -260,11 +279,11 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		}
 		{
 			app->backbuffer_material = cf_make_material();
-			cf_material_set_texture_fs(app->backbuffer_material, "u_image", app->backbuffer);
 			v2 u_texture_size = V2((float)app->w, (float)app->h);
 			cf_material_set_uniform_fs(app->backbuffer_material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 			app->backbuffer_shader = CF_MAKE_SOKOL_SHADER(backbuffer_shd);
 		}
+		s_canvas(app->w, app->h);
 		cf_make_draw();
 		cf_make_aseprite_cache();
 		cf_make_png_cache();
@@ -464,14 +483,19 @@ CF_Canvas cf_app_get_canvas()
 	return app->offscreen_canvas;
 }
 
+void cf_app_resize_canvas(int x, int y)
+{
+	s_canvas(x, y);
+}
+
 int cf_app_get_canvas_width()
 {
-	return app->w;
+	return app->canvas_w;
 }
 
 int cf_app_get_canvas_height()
 {
-	return app->h;
+	return app->canvas_h;
 }
 
 int cf_app_present()

@@ -134,7 +134,7 @@ struct cf_entity_config_t
 	Cute::String schema;
 };
 
-using CF_Entityype_t = uint16_t;
+using CF_EntityType = uint16_t;
 #define CF_INVALID_ENTITY_TYPE ((uint16_t)~0)
 
 struct CF_EcsArrays
@@ -177,13 +177,15 @@ struct CF_App
 	int x;
 	int y;
 	int draw_call_count = 0;
-	CF_Texture backbuffer;
-	CF_Texture backbuffer_depth_stencil;
-	CF_Canvas offscreen_canvas;
-	CF_Canvas backbuffer_canvas;
-	CF_Mesh backbuffer_quad;
-	CF_Shader backbuffer_shader;
-	CF_Material backbuffer_material;
+	CF_Texture backbuffer = { };
+	CF_Texture backbuffer_depth_stencil = { };
+	int canvas_w;
+	int canvas_h;
+	CF_Canvas offscreen_canvas = { };
+	CF_Canvas backbuffer_canvas = { };
+	CF_Mesh backbuffer_quad = { };
+	CF_Shader backbuffer_shader = { };
+	CF_Material backbuffer_material = { };
 	cf_window_state_t window_state;
 	cf_window_state_t window_state_prev;
 	bool using_imgui = false;
@@ -207,11 +209,11 @@ struct CF_App
 	cf_system_internal_t system_internal_builder;
 	Cute::Array<cf_system_internal_t> systems;
 	cf_entity_config_t entity_config_builder;
-	CF_Entityype_t Entityype_gen = 0;
-	Cute::Dictionary<const char*, CF_Entityype_t> Entityype_string_to_id;
+	CF_EntityType Entityype_gen = 0;
+	Cute::Dictionary<const char*, CF_EntityType> Entityype_string_to_id;
 	Cute::Array<const char*> Entityype_id_to_string;
-	Cute::Dictionary<CF_Entityype_t, cf_entity_collection_t> entity_collections;
-	CF_Entityype_t current_collection_type_being_iterated = ~0;
+	Cute::Dictionary<CF_EntityType, cf_entity_collection_t> entity_collections;
+	CF_EntityType current_collection_type_being_iterated = ~0;
 	cf_entity_collection_t* current_collection_being_updated = NULL;
 	Cute::Array<CF_Entity> delayed_destroy_entities;
 	Cute::Array<CF_Entity> delayed_deactivate_entities;
@@ -220,8 +222,8 @@ struct CF_App
 
 	cf_component_config_t component_config_builder;
 	Cute::Dictionary<const char*, cf_component_config_t> component_configs;
-	Cute::Dictionary<CF_Entityype_t, CF_KeyValue*> entity_parsed_schemas;
-	Cute::Dictionary<CF_Entityype_t, uint16_t> entity_schema_inheritence;
+	Cute::Dictionary<CF_EntityType, CF_KeyValue*> entity_parsed_schemas;
+	Cute::Dictionary<CF_EntityType, uint16_t> entity_schema_inheritence;
 
 	Cute::Dictionary<CF_Entity, int>* save_id_table = NULL;
 	Cute::Array<CF_Entity>* load_id_table = NULL;

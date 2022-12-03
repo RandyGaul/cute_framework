@@ -64,6 +64,7 @@ CUTE_API void CUTE_CALL cf_draw_push_layer(int layer);
 CUTE_API int CUTE_CALL cf_draw_pop_layer();
 CUTE_API int CUTE_CALL cf_draw_peek_layer();
 
+CUTE_API void CUTE_CALL cf_render_settings_view(float w, float h);
 CUTE_API void CUTE_CALL cf_render_settings_projection(CF_Matrix4x4 projection);
 CUTE_API void CUTE_CALL cf_render_settings_outlines(bool use_outlines);
 CUTE_API void CUTE_CALL cf_render_settings_outlines_use_corners(bool use_corners);
@@ -139,6 +140,7 @@ CUTE_INLINE void draw_push_layer(int layer) { cf_draw_push_layer(layer); }
 CUTE_INLINE int draw_pop_layer() { return cf_draw_pop_layer(); }
 CUTE_INLINE int draw_peek_layer() { return cf_draw_peek_layer(); }
 
+CUTE_INLINE void render_settings_view(float w, float h) { cf_render_settings_view(w, h); }
 CUTE_INLINE void render_settings_projection(CF_Matrix4x4 projection) { cf_render_settings_projection(projection); }
 CUTE_INLINE void render_settings_outlines(bool use_outlines) { cf_render_settings_outlines(use_outlines); }
 CUTE_INLINE void render_settings_outlines_use_corners(bool use_corners) { cf_render_settings_outlines_use_corners(use_corners); }

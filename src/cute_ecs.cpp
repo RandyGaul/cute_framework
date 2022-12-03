@@ -29,13 +29,13 @@
 
 using namespace Cute;
 
-static bool s_load_from_schema(CF_Entityype_t schema_type, CF_Entity entity, cf_component_config_t* config, void* component, void* udata)
+static bool s_load_from_schema(CF_EntityType schema_type, CF_Entity entity, cf_component_config_t* config, void* component, void* udata)
 {
 	// Look for parent.
 	// If parent exists, load values from it first.
 	auto inherit_ptr = app->entity_schema_inheritence.try_find(schema_type);
 	if (inherit_ptr) {
-		CF_Entityype_t inherits_from = *inherit_ptr;
+		CF_EntityType inherits_from = *inherit_ptr;
 		if (!s_load_from_schema(inherits_from, entity, config, component, udata)) {
 			return false;
 		}
@@ -122,7 +122,7 @@ CF_Entity cf_make_entity(const char* Entityype, CF_Result* err_out)
 		if (err_out) *err_out = cf_result_error("`Entityype` is not valid.");
 		return CF_INVALID_ENTITY;
 	}
-	CF_Entityype_t type = *type_ptr;
+	CF_EntityType type = *type_ptr;
 
 	cf_entity_collection_t* collection = app->entity_collections.try_find(type);
 	CUTE_ASSERT(collection);
@@ -414,7 +414,7 @@ static void s_register_Entityype(const char* schema)
 
 	const char* Entityype_string = s_kv_string(kv, "Entityype");
 	const char* inherits_from_string = s_kv_string(kv, "inherits_from");
-	CF_Entityype_t inherits_from = CF_INVALID_ENTITY_TYPE;
+	CF_EntityType inherits_from = CF_INVALID_ENTITY_TYPE;
 	auto inherits_ptr = app->Entityype_string_to_id.try_find(inherits_from_string);
 	if (inherits_ptr) inherits_from = *inherits_ptr;
 
@@ -432,7 +432,7 @@ static void s_register_Entityype(const char* schema)
 	cf_read_reset(kv);
 
 	// Register component types.
-	CF_Entityype_t Entityype = app->Entityype_gen++;
+	CF_EntityType Entityype = app->Entityype_gen++;
 	app->Entityype_string_to_id.insert(Entityype_string, Entityype);
 	app->Entityype_id_to_string.add(Entityype_string);
 	cf_entity_collection_t* collection = app->entity_collections.insert(Entityype);
@@ -476,7 +476,7 @@ static void s_register_Entityype(Array<const char*> component_type_tuple, const 
 
 	// Register component types.
 	const char* Entityype_string_id = sintern(Entityype_string);
-	CF_Entityype_t Entityype = app->Entityype_gen++;
+	CF_EntityType Entityype = app->Entityype_gen++;
 	app->Entityype_string_to_id.insert(Entityype_string_id, Entityype);
 	app->Entityype_id_to_string.add(Entityype_string_id);
 	cf_entity_collection_t* collection = app->entity_collections.insert(Entityype);
@@ -520,7 +520,7 @@ void cf_ecs_entity_set_optional_schema(const char* schema)
 
 const char* cf_entity_get_type_string(CF_Entity entity)
 {
-	CF_Entityype_t Entityype = s_Entityype(entity);
+	CF_EntityType Entityype = s_Entityype(entity);
 	return app->Entityype_id_to_string[Entityype];
 }
 
@@ -531,10 +531,10 @@ bool cf_entity_is_type(CF_Entity entity, const char* Entityype_name)
 	return !CUTE_STRCMP(type_string, Entityype_name);
 }
 
-CF_Entityype_t s_Entityype(CF_KeyValue* kv)
+CF_EntityType s_Entityype(CF_KeyValue* kv)
 {
 	const char* Entityype_string = s_kv_string(kv, "Entityype");
-	CF_Entityype_t Entityype = CF_INVALID_ENTITY_TYPE;
+	CF_EntityType Entityype = CF_INVALID_ENTITY_TYPE;
 	auto type_ptr = app->Entityype_string_to_id.try_find(Entityype_string);
 	if (type_ptr) Entityype = *type_ptr;
 	return Entityype;
@@ -550,7 +550,7 @@ static CF_Result s_fill_load_id_table(CF_KeyValue* kv)
 	while (entity_count--) {
 		cf_kv_object_begin(kv, NULL);
 
-		CF_Entityype_t Entityype = s_Entityype(kv);
+		CF_EntityType Entityype = s_Entityype(kv);
 		if (Entityype == CF_INVALID_ENTITY_TYPE) {
 			return cf_result_error("Unable to find entity type.");
 		}
@@ -599,7 +599,7 @@ CF_Result cf_internal_ecs_load_entities(CF_KeyValue* kv, Array<CF_Entity>* entit
 		CF_Entity entity = load_id_table[entity_index++];
 		cf_kv_object_begin(kv, NULL);
 
-		CF_Entityype_t Entityype = s_Entityype(kv);
+		CF_EntityType Entityype = s_Entityype(kv);
 		if (Entityype == CF_INVALID_ENTITY_TYPE) {
 			return cf_result_error("Unable to find entity type.");
 		}
@@ -696,7 +696,7 @@ CF_Result cf_internal_ecs_save_entities_kv(const CF_Entity* entities, int entiti
 
 	for (int i = 0; i < entities_count; ++i) {
 		CF_Entity entity = entities[i];
-		CF_Entityype_t Entityype = s_Entityype(entity);
+		CF_EntityType Entityype = s_Entityype(entity);
 		cf_entity_collection_t* collection = app->entity_collections.try_find(Entityype);
 		if (!collection) {
 			return cf_result_error("Unable to find entity type.");
@@ -758,7 +758,7 @@ CF_Result cf_internal_ecs_save_entities(const CF_Entity* entities, int entities_
 	int entity_count = entities_count;
 	for (int i = 0; i < entities_count; ++i) {
 		CF_Entity entity = entities[i];
-		CF_Entityype_t Entityype = s_Entityype(entity);
+		CF_EntityType Entityype = s_Entityype(entity);
 		cf_entity_collection_t* collection = app->entity_collections.try_find(Entityype);
 		if (!collection) {
 			return cf_result_error("Unable to find entity type.");
@@ -890,7 +890,7 @@ Array<const char*> cf_internal_ecs_get_component_list_for_Entityype(const char* 
 	auto type_ptr = app->Entityype_string_to_id.try_find(sintern(Entityype));
 	if (!type_ptr) return result;
 
-	CF_Entityype_t type = *type_ptr;
+	CF_EntityType type = *type_ptr;
 	cf_entity_collection_t* collection = app->entity_collections.try_find(type);
 	CUTE_ASSERT(collection);
 

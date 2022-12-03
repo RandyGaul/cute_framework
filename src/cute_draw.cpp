@@ -1044,6 +1044,11 @@ int cf_draw_peek_layer()
 	return draw->layers.last();
 }
 
+void cf_render_settings_view(float w, float h)
+{
+	draw->projection = cf_matrix_ortho_2d(w, h, 0, 0);
+}
+
 void cf_render_settings_projection(CF_Matrix4x4 projection)
 {
 	draw->projection = projection;
