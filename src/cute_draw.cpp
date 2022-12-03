@@ -377,7 +377,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	spritebatch_push(&draw->sb, s);
 }
 
-void cf_draw_sprite_tf(const CF_Sprite* sprite, CF_Transform transform)
+void cf_draw_sprite2(const CF_Sprite* sprite, CF_Transform transform)
 {
 	transform = mul(transform, sprite->transform);
 	v2 p = cf_mul_m32_v2(draw->m3x2s.last(), cf_add_v2(transform.p, sprite->local_offset));
