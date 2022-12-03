@@ -52,10 +52,10 @@ struct DrawVertex
 };
 
 #define DEFAULT_TINT cf_make_color_rgba_f(0.5f, 0.5f, 0.5f, 1.0f)
+
 struct CF_Draw
 {
 	spritebatch_t sb;
-	bool dirty = false;
 	float atlas_width = 1024;
 	float atlas_height = 1024;
 	CF_Shader shader;
@@ -67,9 +67,8 @@ struct CF_Draw
 	float outline_use_border;
 	float outline_use_corners;
 	CF_Color outline_color = cf_color_white();
+	CF_Filter filter = CF_FILTER_NEAREST;
 	Cute::Array<CF_RenderState> render_states;
-	Cute::Array<CF_WrapMode> wrap_modes = { CF_WRAP_MODE_REPEAT };
-	Cute::Array<CF_Filter> filters = { CF_FILTER_NEAREST };
 	Cute::Array<CF_M3x2> m3x2s = { cf_make_identity() };
 	Cute::Array<CF_Rect> scissors;
 	Cute::Array<CF_Color> tints = { DEFAULT_TINT };
@@ -79,7 +78,6 @@ struct CF_Draw
 
 void cf_make_draw();
 void cf_destroy_draw();
-void cf_draw_flush();
 
 // We slice up a 64-bit int into lo + hi ranges to map where we can fetch pixels
 // from. This slices up the 64-bit range into 16 unique ranges, though we're only

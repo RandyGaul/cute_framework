@@ -60,26 +60,24 @@ CUTE_API void CUTE_CALL cf_draw_polyline(CF_V2* points, int count, float thickne
 CUTE_API void CUTE_CALL cf_draw_push_m3x2(CF_M3x2 m);
 CUTE_API CF_M3x2 CUTE_CALL cf_draw_pop_m3x2();
 CUTE_API CF_M3x2 CUTE_CALL cf_draw_peek_m3x2();
-CUTE_API void CUTE_CALL cf_draw_push_tint(CF_Color c);
-CUTE_API CF_Color CUTE_CALL cf_draw_pop_tint();
-CUTE_API CF_Color CUTE_CALL cf_draw_peek_tint();
 CUTE_API void CUTE_CALL cf_draw_push_layer(int layer);
 CUTE_API int CUTE_CALL cf_draw_pop_layer();
 CUTE_API int CUTE_CALL cf_draw_peek_layer();
 
-CUTE_API void CUTE_CALL cf_draw_settings_projection(CF_Matrix4x4 projection);
-CUTE_API void CUTE_CALL cf_draw_settings_texture_wrap_mode(CF_WrapMode wrap_mode);
-CUTE_API void CUTE_CALL cf_draw_settings_texture_filter(CF_Filter filter);
-CUTE_API void CUTE_CALL cf_draw_settings_outlines(bool use_outlines);
-CUTE_API void CUTE_CALL cf_draw_settings_outlines_use_corners(bool use_corners);
-CUTE_API void CUTE_CALL cf_draw_settings_outlines_color(CF_Color c);
-CUTE_API void CUTE_CALL cf_draw_settings_push_scissor(CF_Rect rect);
-CUTE_API CF_Rect CUTE_CALL cf_draw_settings_pop_scissor();
-CUTE_API CF_Rect CUTE_CALL cf_draw_settings_peek_scissor();
-CUTE_API void CUTE_CALL cf_draw_settings_push_render_state(CF_RenderState render_state);
-CUTE_API CF_RenderState CUTE_CALL cf_draw_settings_pop_render_state();
-CUTE_API CF_RenderState CUTE_CALL cf_draw_settings_peek_render_state();
-
+CUTE_API void CUTE_CALL cf_render_settings_projection(CF_Matrix4x4 projection);
+CUTE_API void CUTE_CALL cf_render_settings_outlines(bool use_outlines);
+CUTE_API void CUTE_CALL cf_render_settings_outlines_use_corners(bool use_corners);
+CUTE_API void CUTE_CALL cf_render_settings_outlines_color(CF_Color c);
+CUTE_API void CUTE_CALL cf_render_settings_filter(CF_Filter filter);
+CUTE_API void CUTE_CALL cf_render_settings_push_scissor(CF_Rect rect);
+CUTE_API CF_Rect CUTE_CALL cf_render_settings_pop_scissor();
+CUTE_API CF_Rect CUTE_CALL cf_render_settings_peek_scissor();
+CUTE_API void CUTE_CALL cf_render_settings_push_render_state(CF_RenderState render_state);
+CUTE_API CF_RenderState CUTE_CALL cf_render_settings_pop_render_state();
+CUTE_API CF_RenderState CUTE_CALL cf_render_settings_peek_render_state();
+CUTE_API void CUTE_CALL cf_render_settings_push_tint(CF_Color c);
+CUTE_API CF_Color CUTE_CALL cf_render_settings_pop_tint();
+CUTE_API CF_Color CUTE_CALL cf_render_settings_peek_tint();
 CUTE_API void CUTE_CALL cf_render_to(CF_Canvas canvas);
 
 /**
@@ -137,26 +135,24 @@ CUTE_INLINE void draw_polyline(CF_V2* points, int count, float thickness, CF_Col
 CUTE_INLINE void draw_push_m3x2(CF_M3x2 m) { cf_draw_push_m3x2(m); }
 CUTE_INLINE CF_M3x2 draw_pop_m3x2() { return cf_draw_pop_m3x2(); }
 CUTE_INLINE CF_M3x2 draw_peek_m3x2() { return cf_draw_peek_m3x2(); }
-CUTE_INLINE void draw_push_tint(CF_Color c) { cf_draw_push_tint(c); }
-CUTE_INLINE CF_Color draw_pop_tint() { return cf_draw_pop_tint(); }
-CUTE_INLINE CF_Color draw_peek_tint() { return cf_draw_peek_tint(); }
 CUTE_INLINE void draw_push_layer(int layer) { cf_draw_push_layer(layer); }
 CUTE_INLINE int draw_pop_layer() { return cf_draw_pop_layer(); }
 CUTE_INLINE int draw_peek_layer() { return cf_draw_peek_layer(); }
 
-CUTE_INLINE void draw_settings_projection(CF_Matrix4x4 projection) { cf_draw_settings_projection(projection); }
-CUTE_INLINE void draw_settings_texture_wrap_mode(CF_WrapMode wrap_mode) { cf_draw_settings_texture_wrap_mode(wrap_mode); }
-CUTE_INLINE void draw_settings_texture_filter(CF_Filter filter) { cf_draw_settings_texture_filter(filter); }
-CUTE_INLINE void draw_settings_outlines(bool use_outlines) { cf_draw_settings_outlines(use_outlines); }
-CUTE_INLINE void draw_settings_outlines_use_corners(bool use_corners) { cf_draw_settings_outlines_use_corners(use_corners); }
-CUTE_INLINE void draw_settings_outlines_color(CF_Color c) { cf_draw_settings_outlines_color(c); }
-CUTE_INLINE void draw_settings_push_scissor(CF_Rect rect) { cf_draw_settings_push_scissor(rect); }
-CUTE_INLINE CF_Rect draw_settings_pop_scissor() { return cf_draw_settings_pop_scissor(); }
-CUTE_INLINE CF_Rect draw_settings_peek_scissor() { return cf_draw_settings_peek_scissor(); }
-CUTE_INLINE void draw_settings_push_render_state(CF_RenderState render_state) { draw_settings_push_render_state(render_state); }
-CUTE_INLINE CF_RenderState draw_settings_pop_render_state() { return draw_settings_pop_render_state(); }
-CUTE_INLINE CF_RenderState draw_settings_peek_render_state() { return draw_settings_peek_render_state(); }
-
+CUTE_INLINE void render_settings_projection(CF_Matrix4x4 projection) { cf_render_settings_projection(projection); }
+CUTE_INLINE void render_settings_outlines(bool use_outlines) { cf_render_settings_outlines(use_outlines); }
+CUTE_INLINE void render_settings_outlines_use_corners(bool use_corners) { cf_render_settings_outlines_use_corners(use_corners); }
+CUTE_INLINE void render_settings_outlines_color(CF_Color c) { cf_render_settings_outlines_color(c); }
+CUTE_INLINE void render_settings_filter(CF_Filter filter) { cf_render_settings_filter(filter); }
+CUTE_INLINE void render_settings_push_scissor(CF_Rect rect) { cf_render_settings_push_scissor(rect); }
+CUTE_INLINE CF_Rect render_settings_pop_scissor() { return cf_render_settings_pop_scissor(); }
+CUTE_INLINE CF_Rect render_settings_peek_scissor() { return cf_render_settings_peek_scissor(); }
+CUTE_INLINE void render_settings_push_render_state(CF_RenderState render_state) { render_settings_push_render_state(render_state); }
+CUTE_INLINE CF_RenderState render_settings_pop_render_state() { return render_settings_pop_render_state(); }
+CUTE_INLINE CF_RenderState render_settings_peek_render_state() { return render_settings_peek_render_state(); }
+CUTE_INLINE void render_settings_push_tint(CF_Color c) { cf_render_settings_push_tint(c); }
+CUTE_INLINE CF_Color render_settings_pop_tint() { return cf_render_settings_pop_tint(); }
+CUTE_INLINE CF_Color render_settings_peek_tint() { return cf_render_settings_peek_tint(); }
 CUTE_INLINE void render_to(CF_Canvas canvas) { cf_render_to(canvas); }
 
 CUTE_INLINE CF_TemporaryImage fetch_image(const CF_Sprite* sprite) { return cf_fetch_image(sprite); }

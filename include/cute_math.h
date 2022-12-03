@@ -674,6 +674,7 @@ using Ray = CF_Ray;
 using Raycast = CF_Raycast;
 using Circle = CF_Circle;
 using Aabb = CF_Aabb;
+using Rect = CF_Rect;
 using Poly = CF_Poly;
 using Capsule = CF_Capsule;
 using Manifold = CF_Manifold;

@@ -147,6 +147,8 @@ CUTE_INLINE Color operator*(Color a, float s) { return cf_mul_color(a, s); }
 CUTE_INLINE Color operator/(Color a, float s) { return cf_div_color(a, s); }
 CUTE_INLINE Color operator+(Color a, Color b) { return cf_add_color(a, b); }
 CUTE_INLINE Color operator-(Color a, Color b) { return cf_sub_color(a, b); }
+CUTE_INLINE bool operator==(Color a, Color b) { return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a; }
+CUTE_INLINE bool operator!=(Color a, Color b) { return !(a == b); }
 CUTE_INLINE Color lerp(Color a, Color b, float s) { return cf_color_lerp(a, b, s); }
 CUTE_INLINE Color premultiply(Color c) { return cf_color_premultiply(c); }
 
@@ -154,6 +156,8 @@ CUTE_INLINE Pixel operator*(Pixel a, float s) { return cf_mul_pixel(a, s); }
 CUTE_INLINE Pixel operator/(Pixel a, float s) { return cf_div_pixel(a, s); }
 CUTE_INLINE Pixel operator+(Pixel a, Pixel b) { return cf_add_pixel(a, b); }
 CUTE_INLINE Pixel operator-(Pixel a, Pixel b) { return cf_sub_pixel(a, b); }
+CUTE_INLINE bool operator==(Pixel a, Pixel b) { return a.val == b.val; }
+CUTE_INLINE bool operator!=(Pixel a, Pixel b) { return a.val != b.val; }
 CUTE_INLINE Pixel lerp(Pixel a, Pixel b, float s) { return cf_pixel_lerp(a, b, s); }
 CUTE_INLINE Pixel premultiply(Pixel p) { return cf_pixel_premultiply(p); }
 

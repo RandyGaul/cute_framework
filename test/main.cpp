@@ -62,7 +62,7 @@
 
 int main(int argc, const char** argv)
 {
-#if 0
+#if 1
 	Result result = make_app("Fancy Window Title", 0, 0, 640, 480, APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED, argv[0]);
 	if (is_error(result)) return -1;
 

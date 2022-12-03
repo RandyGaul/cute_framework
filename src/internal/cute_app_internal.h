@@ -45,7 +45,6 @@ struct cs_context_t;
 
 extern struct CF_App* app;
 
-struct cf_gfx_t;
 struct cf_audio_system_t;
 
 struct cf_mouse_state_t

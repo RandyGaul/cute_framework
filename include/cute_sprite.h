@@ -96,7 +96,6 @@ typedef struct CF_Sprite
 	CF_V2 scale;
 	CF_V2 local_offset;
 	float opacity;
-	int layer;
 
 	int frame_index;
 	int loop_count;

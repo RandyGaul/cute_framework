@@ -105,7 +105,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				x *= s->geom.scale.x;
 				y *= s->geom.scale.y;
 
-				// Translate sprite into the world.
+				// Translate sprite.
 				x += s->geom.position.x;
 				y += s->geom.position.y;
 
@@ -152,6 +152,12 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		}
 	}
 
+	// Apply scissor.
+	Rect scissor = draw->scissors.last();
+	if (scissor.x >= 0 && scissor.y >= 0) {
+		cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
+	}
+
 	// Map the vertex buffer with sprite vertex data.
 	cf_mesh_append_vertex_data(draw->mesh, verts, vert_count);
 	cf_apply_mesh(draw->mesh);
@@ -177,6 +183,9 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_use_border", &u_use_border, CF_UNIFORM_TYPE_FLOAT, 1);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_use_corners", &u_use_corners, CF_UNIFORM_TYPE_FLOAT, 1);
 
+	// Apply render state.
+	cf_material_set_render_state(draw->material, draw->render_states.last());
+
 	// Kick off a draw call.
 	cf_apply_shader(draw->shader, draw->material);
 	cf_draw_elements();
@@ -188,8 +197,7 @@ static SPRITEBATCH_U64 s_generate_texture_handle(void* pixels, int w, int h, voi
 	CF_TextureParams params = cf_texture_defaults();
 	params.width = w;
 	params.height = h;
-	params.wrap_u = params.wrap_v = draw->wrap_modes.last();
-	params.filter = draw->filters.last();
+	params.filter = draw->filter;
 	params.initial_data = pixels;
 	params.initial_data_size = w * h * sizeof(CF_Pixel);
 	CF_Texture texture = cf_make_texture(params);
@@ -244,7 +252,16 @@ void cf_make_draw()
 	state.blend.alpha_src_blend_factor = CF_BLENDFACTOR_ONE;
 	state.blend.alpha_dst_blend_factor = CF_BLENDFACTOR_ONE_MINUS_SRC_ALPHA;
 	state.blend.alpha_op = CF_BLEND_OP_ADD;
+	draw->render_states.add(state);
 	cf_material_set_render_state(draw->material, state);
+
+	// Scissor.
+	CF_Rect scissor;
+	scissor.w = -1;
+	scissor.h = -1;
+	scissor.x = 0;
+	scissor.y = 0;
+	draw->scissors.add(scissor);
 
 	// Spritebatcher.
 	spritebatch_config_t config;
@@ -282,7 +299,6 @@ void cf_destroy_draw()
 
 void cf_draw_sprite(const CF_Sprite* sprite)
 {
-	draw->dirty = true;
 	v2 p = cf_mul_m32_v2(draw->m3x2s.last(), cf_add_v2(sprite->transform.p, sprite->local_offset));
 	spritebatch_sprite_t s = { };
 	s.image_id = sprite->animation->frames[sprite->frame_index].id;
@@ -292,13 +308,12 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.geom.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
 	s.geom.rotation = sprite->transform.r;
 	s.geom.alpha = sprite->opacity;
-	s.sort_bits = sprite->layer;
+	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
 }
 
 void cf_draw_sprite_tf(const CF_Sprite* sprite, CF_Transform transform)
 {
-	draw->dirty = true;
 	transform = mul(transform, sprite->transform);
 	v2 p = cf_mul_m32_v2(draw->m3x2s.last(), cf_add_v2(transform.p, sprite->local_offset));
 	spritebatch_sprite_t s = { };
@@ -309,13 +324,12 @@ void cf_draw_sprite_tf(const CF_Sprite* sprite, CF_Transform transform)
 	s.geom.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
 	s.geom.rotation = sprite->transform.r;
 	s.geom.alpha = sprite->opacity;
-	s.sort_bits = sprite->layer;
+	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
 }
 
 void cf_draw_quad(CF_Aabb bb, float thickness, CF_Color c, bool antialias)
 {
-	draw->dirty = true;
 	CF_V2 verts[4];
 	cf_aabb_verts(verts, bb);
 	cf_draw_quad2(verts[0], verts[1], verts[2], verts[3], thickness, c, antialias);
@@ -323,7 +337,6 @@ void cf_draw_quad(CF_Aabb bb, float thickness, CF_Color c, bool antialias)
 
 static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3, bool antialias)
 {
-	draw->dirty = true;
 	if (antialias) {
 		CF_V2 verts[] = { p0, p1, p2, p3 };
 		cf_draw_polyline(verts, 4, thickness, c0, true, true, 0);
@@ -343,19 +356,16 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness,
 
 void cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c, bool antialias)
 {
-	draw->dirty = true;
 	s_draw_quad(p0, p1, p2, p3, thickness, c, c, c, c, antialias);
 }
 
 void cf_draw_quad3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3)
 {
-	draw->dirty = true;
 	s_draw_quad(p0, p1, p2, p3, thickness, c0, c1, c2, c3, false);
 }
 
 void cf_draw_quad_fill(CF_Aabb bb, CF_Color c)
 {
-	draw->dirty = true;
 	CF_V2 verts[4];
 	cf_aabb_verts(verts, bb);
 	cf_draw_quad_fill2(verts[0], verts[1], verts[2], verts[3], c);
@@ -363,17 +373,14 @@ void cf_draw_quad_fill(CF_Aabb bb, CF_Color c)
 
 void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c)
 {
-	draw->dirty = true;
 }
 
 void cf_draw_quad_fill3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3)
 {
-	draw->dirty = true;
 }
 
 void cf_draw_circle(CF_V2 p, float r, int iters, float thickness, CF_Color color, bool antialias)
 {
-	draw->dirty = true;
 	if (antialias) {
 		Array<CF_V2> verts(iters);
 		CF_V2 p0 = cf_v2(p.x + r, p.y);
@@ -407,7 +414,6 @@ void cf_draw_circle(CF_V2 p, float r, int iters, float thickness, CF_Color color
 
 void cf_draw_circle_fill(CF_V2 p, float r, int iters, CF_Color c)
 {
-	draw->dirty = true;
 	CF_V2 prev = cf_v2(r, 0);
 
 	for (int i = 1; i <= iters; ++i) {
@@ -420,7 +426,6 @@ void cf_draw_circle_fill(CF_V2 p, float r, int iters, CF_Color c)
 
 static void s_circle_arc_aa(Array<CF_V2>* verts, CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness, CF_Color color)
 {
-	draw->dirty = true;
 	float r = cf_len(center_of_arc - p);
 	CF_V2 d = cf_norm(center_of_arc - p);
 	CF_SinCos m = cf_sincos_f(range * 0.5f);
@@ -442,7 +447,6 @@ static void s_circle_arc_aa(Array<CF_V2>* verts, CF_V2 p, CF_V2 center_of_arc, f
 
 void cf_draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness, CF_Color color, bool antialias)
 {
-	draw->dirty = true;
 	if (antialias) {
 		Array<CF_V2> verts(iters);
 		s_circle_arc_aa(&verts, p, center_of_arc, range, iters, thickness, color);
@@ -473,7 +477,6 @@ void cf_draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, fl
 
 void cf_draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iters, CF_Color color)
 {
-	draw->dirty = true;
 	float r = cf_len(center_of_arc - p);
 	CF_V2 d = cf_norm(center_of_arc - p);
 	CF_SinCos m = cf_sincos_f(range * 0.5f);
@@ -494,7 +497,6 @@ void cf_draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iter
 
 void cf_draw_capsule(CF_V2 a, CF_V2 b, float r, int iters, float thickness, CF_Color c, bool antialias)
 {
-	draw->dirty = true;
 	if (antialias) {
 		Array<CF_V2> verts(iters * 2 + 2);
 		s_circle_arc_aa(&verts, a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness, c);
@@ -515,7 +517,6 @@ void cf_draw_capsule(CF_V2 a, CF_V2 b, float r, int iters, float thickness, CF_C
 
 void cf_draw_capsule_fill(CF_V2 a, CF_V2 b, float r, int iters, CF_Color c)
 {
-	draw->dirty = true;
 	cf_draw_circle_arc_fill(a, a + cf_norm(a - b) * r, CUTE_PI, iters, c);
 	cf_draw_circle_arc_fill(b, b + cf_norm(b - a) * r, CUTE_PI, iters, c);
 	CF_V2 n = cf_skew(cf_norm(b - a)) * r;
@@ -528,35 +529,29 @@ void cf_draw_capsule_fill(CF_V2 a, CF_V2 b, float r, int iters, CF_Color c)
 
 void cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c, bool antialias)
 {
-	draw->dirty = true;
 	CUTE_ASSERT(0);
 }
 
 void cf_draw_tri2(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, bool antialias)
 {
-	draw->dirty = true;
 	CUTE_ASSERT(0);
 }
 
 void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c)
 {
-	draw->dirty = true;
 }
 
 void cf_draw_tri_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, CF_Color c2)
 {
-	draw->dirty = true;
 }
 
 void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c, bool antialias)
 {
-	draw->dirty = true;
 	cf_draw_line2(p0, p1, thickness, c, c, antialias);
 }
 
 void cf_draw_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1, bool antialias)
 {
-	draw->dirty = true;
 	float scale = draw->scale_x; // Assume x/y uniform scaling.
 	float alias_scale = 1.0f / scale;
 	bool thick_line = thickness > alias_scale;
@@ -864,7 +859,6 @@ static void s_polyline(CF_V2* points, int count, float thickness, CF_Color c0, C
 
 void cf_draw_polyline(CF_V2* points, int count, float thickness, CF_Color color, bool loop, bool antialias, int bevel_count)
 {
-	draw->dirty = true;
 	CUTE_ASSERT(count >= 3);
 	float scale = draw->scale_x;
 	float alias_scale = 1.0f / scale;
@@ -906,25 +900,6 @@ CF_M3x2 cf_draw_peek_m3x2()
 	return draw->m3x2s.last();
 }
 
-void cf_draw_push_tint(CF_Color c)
-{
-	draw->tints.add(c);
-}
-
-CF_Color cf_draw_pop_tint()
-{
-	if (draw->tints.count() > 1) {
-		return draw->tints.pop();
-	} else {
-		return draw->tints.last();
-	}
-}
-
-CF_Color cf_draw_peek_tint()
-{
-	return draw->tints.last();
-}
-
 void cf_draw_push_layer(int layer)
 {
 	draw->layers.add(layer);
@@ -944,83 +919,100 @@ int cf_draw_peek_layer()
 	return draw->layers.last();
 }
 
-void cf_draw_settings_projection(CF_Matrix4x4 projection)
+void cf_render_settings_projection(CF_Matrix4x4 projection)
 {
 	draw->projection = projection;
 }
 
-void cf_draw_settings_texture_wrap_mode(CF_WrapMode wrap_mode)
+void cf_render_settings_filter(CF_Filter filter)
 {
-	draw->wrap_modes.add(wrap_mode);
+	// TODO - Invalidate spritebatch textures.
+	draw->filter = filter;
 }
 
-void cf_draw_settings_texture_filter(CF_Filter filter)
+void cf_render_settings_outlines(bool use_outlines)
 {
-	draw->filters.add(filter);
+	float val = use_outlines ? 1.0f : 0;
+	draw->outline_use_border = val;
 }
 
-void cf_draw_settings_outlines(bool use_outlines)
+void cf_render_settings_outlines_use_corners(bool use_corners)
 {
-	draw->outline_use_border = use_outlines ? 1.0f : 0;
+	float val = use_corners ? 1.0f : 0;
+	draw->outline_use_corners = val;
 }
 
-void cf_draw_settings_outlines_use_corners(bool use_corners)
-{
-	draw->outline_use_corners = use_corners ? 1.0f : 0;
-}
-
-void cf_draw_settings_outlines_color(CF_Color c)
+void cf_render_settings_outlines_color(CF_Color c)
 {
 	draw->outline_color = c;
 }
 
-void cf_draw_settings_push_scissor(CF_Rect scissor)
+void cf_render_settings_push_scissor(CF_Rect scissor)
 {
 	draw->scissors.add(scissor);
 }
 
-CF_Rect cf_draw_settings_pop_scissor()
+CF_Rect cf_render_settings_pop_scissor()
 {
 	if (draw->scissors.count()) {
-		return draw->scissors.pop();
+		CF_Rect result = draw->scissors.pop();
+		return result;
 	} else {
 		return draw->scissors.last();
 	}
 }
 
-CF_Rect cf_draw_settings_peek_scissor()
+CF_Rect cf_render_settings_peek_scissor()
 {
 	return draw->scissors.last();
 }
 
-void cf_draw_settings_push_render_state(CF_RenderState render_state)
+void cf_render_settings_push_render_state(CF_RenderState render_state)
 {
+	draw->render_states.add(render_state);
 }
 
-CF_RenderState cf_draw_settings_pop_render_state()
+CF_RenderState cf_render_settings_pop_render_state()
 {
 	if (draw->render_states.count()) {
-		return draw->render_states.pop();
+		CF_RenderState result = draw->render_states.pop();
+		return result;
 	} else {
 		return draw->render_states.last();
 	}
 }
 
-CF_RenderState cf_draw_settings_peek_render_state()
+CF_RenderState cf_render_settings_peek_render_state()
 {
 	return draw->render_states.last();
 }
 
+void cf_render_settings_push_tint(CF_Color c)
+{
+	draw->tints.add(c);
+}
+
+CF_Color cf_render_settings_pop_tint()
+{
+	if (draw->tints.count() > 1) {
+		return draw->tints.pop();
+	} else {
+		return draw->tints.last();
+	}
+}
+
+CF_Color cf_render_settings_peek_tint()
+{
+	return draw->tints.last();
+}
+
 void cf_render_to(CF_Canvas canvas)
 {
-	if (draw->dirty) {
-		draw->verts.clear();
-		spritebatch_tick(&draw->sb);
-		spritebatch_defrag(&draw->sb);
-		cf_apply_canvas(app->offscreen_canvas);
-		spritebatch_flush(&draw->sb);
-		draw->dirty = false;
-	}
+	cf_apply_canvas(canvas);
+	spritebatch_tick(&draw->sb);
+	spritebatch_defrag(&draw->sb);
+	spritebatch_flush(&draw->sb);
+	draw->verts.clear();
 }
 
 CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)

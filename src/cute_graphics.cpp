@@ -880,9 +880,9 @@ void cf_apply_viewport(float x, float y, float width, float height)
 	sg_apply_viewportf(x, y, width, height, false);
 }
 
-void cf_apply_scissor(float x, float y, float width, float height)
+void cf_apply_scissor(int x, int y, int width, int height)
 {
-	sg_apply_scissor_rectf(x, y, width, height, false);
+	sg_apply_scissor_rect(x, y, width, height, false);
 }
 
 void cf_apply_mesh(CF_Mesh mesh_handle)

@@ -304,6 +304,7 @@ void cf_destroy_app()
 		cf_destroy_aseprite_cache();
 		cf_destroy_png_cache();
 		cf_destroy_texture(app->backbuffer);
+		cf_destroy_canvas(app->offscreen_canvas);
 		cf_destroy_canvas(app->backbuffer_canvas);
 		cf_destroy_mesh(app->backbuffer_quad);
 		cf_destroy_shader(app->backbuffer_shader);
