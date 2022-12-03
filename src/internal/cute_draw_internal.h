@@ -26,14 +26,42 @@
 
 extern struct CF_Draw* draw;
 
-struct BatchGeometry
+enum BatchGeometryType : int
+{
+	BATCH_GEOMETRY_TYPE_TRI,
+	BATCH_GEOMETRY_TYPE_QUAD,
+	BATCH_GEOMETRY_TYPE_SPRITE,
+};
+
+struct BatchTri
+{
+	CF_V2 p0, p1, p2;
+	CF_Pixel c0, c1, c2;
+};
+
+struct BatchQuad
+{
+	CF_V2 p0, p1, p2, p3;
+	CF_Pixel c0, c1, c2, c3;
+};
+
+struct BatchSprite
 {
 	CF_V2 position;
-	CF_V2 scale;
 	CF_SinCos rotation;
-	CF_V2 a, b, c;
+	CF_V2 scale;
+};
+
+struct BatchGeometry
+{
+	BatchGeometryType type;
 	float alpha;
-	bool tri;
+	union
+	{
+		BatchTri tri;
+		BatchQuad quad;
+		BatchSprite sprite;
+	} u;
 };
 
 #define SPRITEBATCH_SPRITE_GEOMETRY BatchGeometry

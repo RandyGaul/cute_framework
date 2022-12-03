@@ -67,23 +67,80 @@ void cf_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, vo
 static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_w, int texture_h, void* udata)
 {
 	CUTE_UNUSED(udata);
-	int vert_count = count * 6;
-	draw->verts.ensure_count(vert_count);
+	int vert_count = 0;
+	draw->verts.ensure_count(count * 6);
 	DrawVertex* verts = draw->verts.data();
+	CUTE_MEMSET(verts, 0, sizeof(DrawVertex) * count * 6);
 
 	for (int i = 0; i < count; ++i) {
 		spritebatch_sprite_t* s = sprites + i;
 
-		// Expand sprite's scale to account for border pixels in the atlas.
-		s->geom.scale.x = s->geom.scale.x + (s->geom.scale.x / (float)s->w) * 2.0f;
-		s->geom.scale.y = s->geom.scale.y + (s->geom.scale.y / (float)s->h) * 2.0f;
+		switch (s->geom.type) {
+		case BATCH_GEOMETRY_TYPE_TRI:
+		{
+			BatchTri geom = s->geom.u.tri;
+			DrawVertex* out_verts = verts + vert_count;
 
-		if (s->geom.tri) {
-			// TODO.
-			vert_count -= 6;
-			count--;
-			i--;
-		} else {
+			for (int i = 0; i < 3; ++i) {
+				out_verts[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				out_verts[i].solid = 255;
+			}
+
+			out_verts[0].position.x = geom.p0.x;
+			out_verts[0].position.y = geom.p0.y;
+			out_verts[0].color      = geom.c0;
+
+			out_verts[1].position.x = geom.p1.x;
+			out_verts[1].position.y = geom.p1.y;
+			out_verts[1].color      = geom.c1;
+
+			out_verts[2].position.x = geom.p2.x;
+			out_verts[2].position.y = geom.p2.y;
+			out_verts[2].color      = geom.c2;
+
+			vert_count += 3;
+		}	break;
+
+		case BATCH_GEOMETRY_TYPE_QUAD:
+		{
+			BatchQuad geom = s->geom.u.quad;
+			DrawVertex* out_verts = verts + vert_count;
+
+			for (int i = 0; i < 6; ++i) {
+				out_verts[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				out_verts[i].solid = 255;
+			}
+
+			out_verts[0].position.x = geom.p0.x;
+			out_verts[0].position.y = geom.p0.y;
+			out_verts[0].color      = geom.c0;
+
+			out_verts[1].position.x = geom.p3.x;
+			out_verts[1].position.y = geom.p3.y;
+			out_verts[1].color      = geom.c3;
+
+			out_verts[2].position.x = geom.p1.x;
+			out_verts[2].position.y = geom.p1.y;
+			out_verts[2].color      = geom.c1;
+
+			out_verts[3].position.x = geom.p1.x;
+			out_verts[3].position.y = geom.p1.y;
+			out_verts[3].color      = geom.c1;
+
+			out_verts[4].position.x = geom.p3.x;
+			out_verts[4].position.y = geom.p3.y;
+			out_verts[4].color      = geom.c3;
+
+			out_verts[5].position.x = geom.p2.x;
+			out_verts[5].position.y = geom.p2.y;
+			out_verts[5].color      = geom.c2;
+
+			vert_count += 6;
+		}	break;
+
+		case BATCH_GEOMETRY_TYPE_SPRITE:
+		{
+			BatchSprite geom = s->geom.u.sprite;
 			CF_V2 quad[] = {
 				{ -0.5f,  0.5f },
 				{  0.5f,  0.5f },
@@ -91,30 +148,34 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				{ -0.5f, -0.5f },
 			};
 
+			// Expand sprite's scale to account for border pixels in the atlas.
+			geom.scale.x = geom.scale.x + (geom.scale.x / (float)s->w) * 2.0f;
+			geom.scale.y = geom.scale.y + (geom.scale.y / (float)s->h) * 2.0f;
+
 			for (int j = 0; j < 4; ++j) {
 				float x = quad[j].x;
 				float y = quad[j].y;
 
 				// Rotate sprite about origin.
-				float x0 = s->geom.rotation.c * x - s->geom.rotation.s * y;
-				float y0 = s->geom.rotation.s * x + s->geom.rotation.c * y;
+				float x0 = geom.rotation.c * x - geom.rotation.s * y;
+				float y0 = geom.rotation.s * x + geom.rotation.c * y;
 				x = x0;
 				y = y0;
 
 				// Scale sprite about origin.
-				x *= s->geom.scale.x;
-				y *= s->geom.scale.y;
+				x *= geom.scale.x;
+				y *= geom.scale.y;
 
 				// Translate sprite.
-				x += s->geom.position.x;
-				y += s->geom.position.y;
+				x += geom.position.x;
+				y += geom.position.y;
 
 				quad[j].x = x;
 				quad[j].y = y;
 			}
 
 			// output transformed quad into CPU buffer
-			DrawVertex* out_verts = verts + i * 6;
+			DrawVertex* out_verts = verts + vert_count;
 
 			for (int i = 0; i < 6; ++i) {
 				out_verts[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
@@ -149,6 +210,9 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			out_verts[5].position.y = quad[2].y;
 			out_verts[5].uv.x = s->maxx;
 			out_verts[5].uv.y = s->miny;
+
+			vert_count += 6;
+		}	break;
 		}
 	}
 
@@ -304,9 +368,10 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.image_id = sprite->animation->frames[sprite->frame_index].id;
 	s.w = sprite->w;
 	s.h = sprite->h;
-	s.geom.position = p;
-	s.geom.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
-	s.geom.rotation = sprite->transform.r;
+	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
+	s.geom.u.sprite.position = p;
+	s.geom.u.sprite.rotation = sprite->transform.r;
+	s.geom.u.sprite.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
 	s.geom.alpha = sprite->opacity;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -320,9 +385,10 @@ void cf_draw_sprite_tf(const CF_Sprite* sprite, CF_Transform transform)
 	s.image_id = sprite->animation->frames[sprite->frame_index].id;
 	s.w = sprite->w;
 	s.h = sprite->h;
-	s.geom.position = p;
-	s.geom.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
-	s.geom.rotation = sprite->transform.r;
+	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
+	s.geom.u.sprite.position = p;
+	s.geom.u.sprite.rotation = sprite->transform.r;
+	s.geom.u.sprite.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
 	s.geom.alpha = sprite->opacity;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -373,10 +439,41 @@ void cf_draw_quad_fill(CF_Aabb bb, CF_Color c)
 
 void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c)
 {
+	CF_M3x2 m = draw->m3x2s.last();
+	spritebatch_sprite_t s = { };
+	s.image_id = app->default_image_id;
+	s.w = 1;
+	s.h = 1;
+	s.geom.type = BATCH_GEOMETRY_TYPE_QUAD;
+	s.geom.u.quad.p0 = mul(m, p0);
+	s.geom.u.quad.p1 = mul(m, p1);
+	s.geom.u.quad.p2 = mul(m, p2);
+	s.geom.u.quad.p3 = mul(m, p3);
+	s.geom.u.quad.c0 = s.geom.u.quad.c1 = s.geom.u.quad.c2 = s.geom.u.quad.c3 = to_pixel(c);
+	s.geom.alpha = 1.0f;
+	s.sort_bits = draw->layers.last();
+	spritebatch_push(&draw->sb, s);
 }
 
 void cf_draw_quad_fill3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3)
 {
+	CF_M3x2 m = draw->m3x2s.last();
+	spritebatch_sprite_t s = { };
+	s.image_id = app->default_image_id;
+	s.w = 1;
+	s.h = 1;
+	s.geom.type = BATCH_GEOMETRY_TYPE_QUAD;
+	s.geom.u.quad.p0 = mul(m, p0);
+	s.geom.u.quad.p1 = mul(m, p1);
+	s.geom.u.quad.p2 = mul(m, p2);
+	s.geom.u.quad.p3 = mul(m, p3);
+	s.geom.u.quad.c0 = to_pixel(c0);
+	s.geom.u.quad.c1 = to_pixel(c1);
+	s.geom.u.quad.c2 = to_pixel(c2);
+	s.geom.u.quad.c3 = to_pixel(c3);
+	s.geom.alpha = 1.0f;
+	s.sort_bits = draw->layers.last();
+	spritebatch_push(&draw->sb, s);
 }
 
 void cf_draw_circle(CF_V2 p, float r, int iters, float thickness, CF_Color color, bool antialias)
@@ -539,10 +636,38 @@ void cf_draw_tri2(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c0, CF
 
 void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c)
 {
+	CF_M3x2 m = draw->m3x2s.last();
+	spritebatch_sprite_t s = { };
+	s.image_id = app->default_image_id;
+	s.w = 1;
+	s.h = 1;
+	s.geom.type = BATCH_GEOMETRY_TYPE_TRI;
+	s.geom.u.tri.p0 = mul(m, p0);
+	s.geom.u.tri.p1 = mul(m, p1);
+	s.geom.u.tri.p2 = mul(m, p2);
+	s.geom.u.tri.c0 = s.geom.u.tri.c1 = s.geom.u.tri.c2 = to_pixel(c);
+	s.geom.alpha = 1.0f;
+	s.sort_bits = draw->layers.last();
+	spritebatch_push(&draw->sb, s);
 }
 
 void cf_draw_tri_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, CF_Color c2)
 {
+	CF_M3x2 m = draw->m3x2s.last();
+	spritebatch_sprite_t s = { };
+	s.image_id = app->default_image_id;
+	s.w = 1;
+	s.h = 1;
+	s.geom.type = BATCH_GEOMETRY_TYPE_TRI;
+	s.geom.u.tri.p0 = mul(m, p0);
+	s.geom.u.tri.p1 = mul(m, p1);
+	s.geom.u.tri.p2 = mul(m, p2);
+	s.geom.u.tri.c0 = to_pixel(c0);
+	s.geom.u.tri.c1 = to_pixel(c1);
+	s.geom.u.tri.c2 = to_pixel(c2);
+	s.geom.alpha = 1.0f;
+	s.sort_bits = draw->layers.last();
+	spritebatch_push(&draw->sb, s);
 }
 
 void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c, bool antialias)

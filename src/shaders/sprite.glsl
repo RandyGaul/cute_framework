@@ -13,8 +13,10 @@
 	layout (location = 2) in vec4 in_col;
 	layout (location = 3) in vec4 in_params;
 
-	layout (location = 0) out vec2 uv;
-	layout (location = 1) out float alpha;
+	layout (location = 0) out vec2 v_uv;
+	layout (location = 1) out vec4 v_col;
+	layout (location = 2) out float v_solid;
+	layout (location = 3) out float v_alpha;
 
 	layout (binding = 0) uniform vs_params {
 		mat4 u_mvp;
@@ -23,15 +25,19 @@
 	void main()
 	{
 		vec4 posH = u_mvp * vec4(in_pos, 0, 1);
-		uv = in_uv;
-		alpha = in_params.b;
+		v_uv = in_uv;
+		v_col = in_col;
+		v_solid = in_params.r;
+		v_alpha = in_params.b;
 		gl_Position = posH;
 }
 @end
 
 @fs fs
-	layout (location = 0) in vec2 uv;
-	layout (location = 1) in float alpha;
+	layout (location = 0) in vec2 v_uv;
+	layout (location = 1) in vec4 v_col;
+	layout (location = 2) in float v_solid;
+	layout (location = 3) in float v_alpha;
 
 	out vec4 result;
 
@@ -47,9 +53,10 @@
 
 	void main()
 	{
-		vec4 color = texture(u_image, smooth_uv(uv, u_texture_size));
+		vec4 color = texture(u_image, smooth_uv(v_uv, u_texture_size));
 		color = overlay(color, u_tint);
-		color.a = color.a * alpha;
+		color = mix(color, v_col, v_solid);
+		color.a = color.a * v_alpha;
 		if (color.a == 0) discard;
 		result = color;
 	}
