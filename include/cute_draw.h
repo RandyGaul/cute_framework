@@ -78,7 +78,7 @@ CUTE_API CF_RenderState CUTE_CALL cf_render_settings_peek_render_state();
 CUTE_API void CUTE_CALL cf_render_settings_push_tint(CF_Color c);
 CUTE_API CF_Color CUTE_CALL cf_render_settings_pop_tint();
 CUTE_API CF_Color CUTE_CALL cf_render_settings_peek_tint();
-CUTE_API void CUTE_CALL cf_render_to(CF_Canvas canvas);
+CUTE_API void CUTE_CALL cf_render_to(CF_Canvas canvas, bool clear);
 
 /**
  * Temporal texture information for a sprite. Is valid until the next call to `draw_flush`
@@ -153,7 +153,7 @@ CUTE_INLINE CF_RenderState render_settings_peek_render_state() { return render_s
 CUTE_INLINE void render_settings_push_tint(CF_Color c) { cf_render_settings_push_tint(c); }
 CUTE_INLINE CF_Color render_settings_pop_tint() { return cf_render_settings_pop_tint(); }
 CUTE_INLINE CF_Color render_settings_peek_tint() { return cf_render_settings_peek_tint(); }
-CUTE_INLINE void render_to(CF_Canvas canvas) { cf_render_to(canvas); }
+CUTE_INLINE void render_to(CF_Canvas canvas, bool clear = false) { cf_render_to(canvas, clear); }
 
 CUTE_INLINE CF_TemporaryImage fetch_image(const CF_Sprite* sprite) { return cf_fetch_image(sprite); }
 

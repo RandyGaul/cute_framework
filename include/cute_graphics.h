@@ -452,7 +452,6 @@ CUTE_API void CUTE_CALL cf_destroy_shader(CF_Shader shader);
 
 typedef struct CF_CanvasClearSettings
 {
-	bool do_clear;
 	CF_Color color;
 	float depth;
 	uint8_t stencil;
@@ -469,7 +468,6 @@ typedef struct CF_CanvasParams
 CUTE_API CF_CanvasParams CUTE_CALL cf_canvas_defaults();
 CUTE_API CF_Canvas CUTE_CALL cf_make_canvas(CF_CanvasParams canvas_params);
 CUTE_API void CUTE_CALL cf_destroy_canvas(CF_Canvas canvas);
-CUTE_API void CUTE_CALL cf_pass_set_action(CF_Canvas pass, CF_CanvasClearSettings clear_settings);
 
 //--------------------------------------------------------------------------------------------------
 // Mesh.
@@ -870,7 +868,7 @@ CUTE_API void CUTE_CALL cf_material_set_uniform_fs(CF_Material material, const c
 //--------------------------------------------------------------------------------------------------
 // Rendering Functions.
 
-CUTE_API void CUTE_CALL cf_apply_canvas(CF_Canvas canvas);
+CUTE_API void CUTE_CALL cf_apply_canvas(CF_Canvas canvas, bool clear);
 CUTE_API void CUTE_CALL cf_apply_viewport(float x, float y, float width, float height);
 CUTE_API void CUTE_CALL cf_apply_scissor(int x, int y, int width, int height);
 CUTE_API void CUTE_CALL cf_apply_mesh(CF_Mesh mesh);
@@ -1153,7 +1151,7 @@ CUTE_INLINE void material_set_texture_vs(Material material, const char* name, Te
 CUTE_INLINE void material_set_texture_fs(Material material, const char* name, Texture texture) { cf_material_set_texture_fs(material, name, texture); }
 CUTE_INLINE void material_set_uniform_vs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_vs(material, block_name, name, data, type, array_length); }
 CUTE_INLINE void material_set_uniform_fs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_fs(material, block_name, name, data, type, array_length); }
-CUTE_INLINE void apply_canvas(Canvas canvas) { cf_apply_canvas(canvas); }
+CUTE_INLINE void apply_canvas(Canvas canvas, bool clear = true) { cf_apply_canvas(canvas, clear); }
 CUTE_INLINE void apply_viewport(float x, float y, float w, float h) { cf_apply_viewport(x, y, w, h); }
 CUTE_INLINE void apply_scissor(int x, int y, int w, int h) { cf_apply_scissor(x, y, w, h); }
 CUTE_INLINE void apply_mesh(Mesh mesh) { cf_apply_mesh(mesh); }

@@ -1131,9 +1131,9 @@ CF_Color cf_render_settings_peek_tint()
 	return draw->tints.last();
 }
 
-void cf_render_to(CF_Canvas canvas)
+void cf_render_to(CF_Canvas canvas, bool clear)
 {
-	cf_apply_canvas(canvas);
+	cf_apply_canvas(canvas, clear);
 	spritebatch_tick(&draw->sb);
 	spritebatch_defrag(&draw->sb);
 	spritebatch_flush(&draw->sb);

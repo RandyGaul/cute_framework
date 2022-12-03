@@ -476,8 +476,8 @@ int cf_app_get_canvas_height()
 
 int cf_app_present()
 {
-	cf_render_to(app->offscreen_canvas);
-	cf_apply_canvas(app->backbuffer_canvas);
+	cf_render_to(app->offscreen_canvas, false);
+	cf_apply_canvas(app->backbuffer_canvas, true);
 	cf_apply_mesh(app->backbuffer_quad);
 	cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);
 	cf_draw_elements();
@@ -485,6 +485,8 @@ int cf_app_present()
 		sg_imgui_draw(&app->sg_imgui);
 		s_imgui_present();
 	}
+
+	cf_apply_canvas(app->offscreen_canvas, true);
 
 	cf_commit();
 	cf_dx11_present();

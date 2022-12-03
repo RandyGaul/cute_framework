@@ -396,7 +396,6 @@ CF_CanvasParams cf_canvas_defaults()
 {
 	CF_CanvasParams params;
 	params.name = NULL;
-	params.clear_settings.do_clear = true;
 	params.clear_settings.color = cf_color_grey();
 	params.clear_settings.depth = 1.0f;
 	params.clear_settings.stencil = 0;
@@ -405,14 +404,14 @@ CF_CanvasParams cf_canvas_defaults()
 	return params;
 }
 
-static void s_canvas_clear_settings(CF_CanvasInternal* pass, CF_CanvasClearSettings clear_settings)
+static void s_canvas_clear_settings(CF_CanvasInternal* canvas, CF_CanvasClearSettings clear_settings)
 {
-	pass->action.colors[0].action = clear_settings.do_clear ? SG_ACTION_CLEAR : SG_ACTION_LOAD;
-	pass->action.colors[0].value = s_wrap(clear_settings.color);
-	pass->action.depth.action = pass->action.colors[0].action;
-	pass->action.depth.value = clear_settings.depth;
-	pass->action.stencil.action = pass->action.colors[0].action;
-	pass->action.stencil.value = clear_settings.stencil;
+	canvas->action.colors[0].action = SG_ACTION_LOAD;
+	canvas->action.colors[0].value = s_wrap(clear_settings.color);
+	canvas->action.depth.action = canvas->action.colors[0].action;
+	canvas->action.depth.value = clear_settings.depth;
+	canvas->action.stencil.action = canvas->action.colors[0].action;
+	canvas->action.stencil.value = clear_settings.stencil;
 }
 
 CF_Canvas cf_make_canvas(CF_CanvasParams pass_params)
@@ -441,12 +440,6 @@ void cf_destroy_canvas(CF_Canvas canvas_handle)
 		sg_destroy_pass(canvas->pass);
 	}
 	CUTE_FREE(canvas);
-}
-
-void cf_pass_set_action(CF_Canvas pass_handle, CF_CanvasClearSettings clear_settings)
-{
-	CF_CanvasInternal* pass = (CF_CanvasInternal*)pass_handle.id;
-	s_canvas_clear_settings(pass, clear_settings);
 }
 
 CF_Mesh cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size)
@@ -863,11 +856,20 @@ static void s_end_pass()
 	}
 }
 
-void cf_apply_canvas(CF_Canvas pass_handle)
+void cf_apply_canvas(CF_Canvas pass_handle, bool clear)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)pass_handle.id;
 	s_end_pass();
 	s_canvas = canvas;
+	if (clear) {
+		canvas->action.colors[0].action = SG_ACTION_CLEAR;
+		canvas->action.depth.action = SG_ACTION_CLEAR;
+		canvas->action.stencil.action = SG_ACTION_CLEAR;
+	} else {
+		canvas->action.colors[0].action = SG_ACTION_LOAD;
+		canvas->action.depth.action = SG_ACTION_LOAD;
+		canvas->action.stencil.action = SG_ACTION_LOAD;
+	}
 	if (canvas->pass_is_default) {
 		sg_begin_default_pass(&canvas->action, app->w, app->h);
 	} else {
