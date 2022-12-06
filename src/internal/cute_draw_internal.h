@@ -94,7 +94,8 @@ struct CF_Draw
 	CF_Color outline_color = cf_color_white();
 	CF_Filter filter = CF_FILTER_NEAREST;
 	Cute::Array<CF_RenderState> render_states;
-	Cute::Array<CF_Rect> scissors;
+	Cute::Array<CF_Rect> scissors = { { -1, -1, 0, 0 } };
+	Cute::Array<CF_Rect> viewports = { { -1, -1, 0, 0 } };
 	Cute::Array<CF_Color> tints = { DEFAULT_TINT };
 	Cute::Array<int> layers = { 0 };
 	Cute::Array<CF_M3x2> cam_stack;

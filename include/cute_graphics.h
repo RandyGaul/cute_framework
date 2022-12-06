@@ -869,7 +869,7 @@ CUTE_API void CUTE_CALL cf_material_set_uniform_fs(CF_Material material, const c
 // Rendering Functions.
 
 CUTE_API void CUTE_CALL cf_apply_canvas(CF_Canvas canvas, bool clear);
-CUTE_API void CUTE_CALL cf_apply_viewport(float x, float y, float width, float height);
+CUTE_API void CUTE_CALL cf_apply_viewport(int x, int y, int width, int height);
 CUTE_API void CUTE_CALL cf_apply_scissor(int x, int y, int width, int height);
 CUTE_API void CUTE_CALL cf_apply_mesh(CF_Mesh mesh);
 
@@ -1152,7 +1152,7 @@ CUTE_INLINE void material_set_texture_fs(Material material, const char* name, Te
 CUTE_INLINE void material_set_uniform_vs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_vs(material, block_name, name, data, type, array_length); }
 CUTE_INLINE void material_set_uniform_fs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_fs(material, block_name, name, data, type, array_length); }
 CUTE_INLINE void apply_canvas(Canvas canvas, bool clear = true) { cf_apply_canvas(canvas, clear); }
-CUTE_INLINE void apply_viewport(float x, float y, float w, float h) { cf_apply_viewport(x, y, w, h); }
+CUTE_INLINE void apply_viewport(int x, int y, int w, int h) { cf_apply_viewport(x, y, w, h); }
 CUTE_INLINE void apply_scissor(int x, int y, int w, int h) { cf_apply_scissor(x, y, w, h); }
 CUTE_INLINE void apply_mesh(Mesh mesh) { cf_apply_mesh(mesh); }
 CUTE_INLINE void apply_shader(Shader shader, Material material) { cf_apply_shader(shader, material); }

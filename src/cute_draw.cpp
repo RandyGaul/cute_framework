@@ -216,6 +216,12 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		}
 	}
 
+	// Apply viewport.
+	Rect viewport = draw->viewports.last();
+	if (viewport.x >= 0 && viewport.y >= 0) {
+		cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
+	}
+
 	// Apply scissor.
 	Rect scissor = draw->scissors.last();
 	if (scissor.x >= 0 && scissor.y >= 0) {
@@ -1041,6 +1047,26 @@ void cf_render_settings_outlines_use_corners(bool use_corners)
 void cf_render_settings_outlines_color(CF_Color c)
 {
 	draw->outline_color = c;
+}
+
+void cf_render_settings_push_viewport(CF_Rect viewport)
+{
+	draw->viewports.add(viewport);
+}
+
+CF_Rect cf_render_settings_pop_viewport()
+{
+	if (draw->viewports.count()) {
+		CF_Rect result = draw->viewports.pop();
+		return result;
+	} else {
+		return draw->viewports.last();
+	}
+}
+
+CF_Rect cf_render_settings_peek_viewport()
+{
+	return draw->viewports.last();
 }
 
 void cf_render_settings_push_scissor(CF_Rect scissor)

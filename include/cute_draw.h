@@ -65,7 +65,10 @@ CUTE_API void CUTE_CALL cf_render_settings_outlines(bool use_outlines);
 CUTE_API void CUTE_CALL cf_render_settings_outlines_use_corners(bool use_corners);
 CUTE_API void CUTE_CALL cf_render_settings_outlines_color(CF_Color c);
 CUTE_API void CUTE_CALL cf_render_settings_filter(CF_Filter filter);
-CUTE_API void CUTE_CALL cf_render_settings_push_scissor(CF_Rect rect);
+CUTE_API void CUTE_CALL cf_render_settings_push_viewport(CF_Rect viewport);
+CUTE_API CF_Rect CUTE_CALL cf_render_settings_pop_viewport();
+CUTE_API CF_Rect CUTE_CALL cf_render_settings_peek_viewport();
+CUTE_API void CUTE_CALL cf_render_settings_push_scissor(CF_Rect scissor);
 CUTE_API CF_Rect CUTE_CALL cf_render_settings_pop_scissor();
 CUTE_API CF_Rect CUTE_CALL cf_render_settings_peek_scissor();
 CUTE_API void CUTE_CALL cf_render_settings_push_render_state(CF_RenderState render_state);
@@ -144,7 +147,10 @@ CUTE_INLINE void render_settings_outlines(bool use_outlines) { cf_render_setting
 CUTE_INLINE void render_settings_outlines_use_corners(bool use_corners) { cf_render_settings_outlines_use_corners(use_corners); }
 CUTE_INLINE void render_settings_outlines_color(CF_Color c) { cf_render_settings_outlines_color(c); }
 CUTE_INLINE void render_settings_filter(CF_Filter filter) { cf_render_settings_filter(filter); }
-CUTE_INLINE void render_settings_push_scissor(CF_Rect rect) { cf_render_settings_push_scissor(rect); }
+CUTE_INLINE void render_settings_push_viewport(CF_Rect viewport) { cf_render_settings_push_viewport(viewport); }
+CUTE_INLINE CF_Rect render_settings_pop_viewport() { return cf_render_settings_pop_viewport(); }
+CUTE_INLINE CF_Rect render_settings_peek_viewport() { return cf_render_settings_peek_viewport(); }
+CUTE_INLINE void render_settings_push_scissor(CF_Rect scissor) { cf_render_settings_push_scissor(scissor); }
 CUTE_INLINE CF_Rect render_settings_pop_scissor() { return cf_render_settings_pop_scissor(); }
 CUTE_INLINE CF_Rect render_settings_peek_scissor() { return cf_render_settings_peek_scissor(); }
 CUTE_INLINE void render_settings_push_render_state(CF_RenderState render_state) { render_settings_push_render_state(render_state); }

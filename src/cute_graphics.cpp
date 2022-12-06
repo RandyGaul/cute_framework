@@ -877,9 +877,9 @@ void cf_apply_canvas(CF_Canvas pass_handle, bool clear)
 	}
 }
 
-void cf_apply_viewport(float x, float y, float width, float height)
+void cf_apply_viewport(int x, int y, int width, int height)
 {
-	sg_apply_viewportf(x, y, width, height, false);
+	sg_apply_viewport(x, y, width, height, false);
 }
 
 void cf_apply_scissor(int x, int y, int width, int height)
