@@ -34,7 +34,7 @@
 
 using namespace Cute;
 
-struct CF_Aabbree_node_t
+struct cf_aabb_tree_node_t
 {
 	int index_a;
 	int index_b;
@@ -48,7 +48,7 @@ struct CF_AabbTree
 	int freelist = 0;
 	int node_capacity = 0;
 	int node_count = 0;
-	Array<CF_Aabbree_node_t> nodes;
+	Array<cf_aabb_tree_node_t> nodes;
 	Array<CF_Aabb> aabbs;
 	Array<void*> udatas;
 };
@@ -61,23 +61,23 @@ static int s_balance(CF_AabbTree* tree, int index_a)
 	//  / \   / \
 	// d   e f   g
 
-	CF_Aabbree_node_t* nodes = tree->nodes.data();
+	cf_aabb_tree_node_t* nodes = tree->nodes.data();
 	CF_Aabb* aabbs = tree->aabbs.data();
-	CF_Aabbree_node_t* a = nodes + index_a;
+	cf_aabb_tree_node_t* a = nodes + index_a;
 	int index_b = a->index_a;
 	int index_c = a->index_b;
 	if ((a->index_a == AABB_TREE_NULL_NODE_INDEX) | (a->height < 2)) return index_a;
 
-	CF_Aabbree_node_t* b = nodes + index_b;
-	CF_Aabbree_node_t* c = nodes + index_c;
+	cf_aabb_tree_node_t* b = nodes + index_b;
+	cf_aabb_tree_node_t* c = nodes + index_c;
 	int balance = c->height - b->height;
 
 	// Rotate c up.
 	if (balance > 1) {
 		int index_f = c->index_a;
 		int index_g = c->index_b;
-		CF_Aabbree_node_t* f = nodes + index_f;
-		CF_Aabbree_node_t* g = nodes + index_g;
+		cf_aabb_tree_node_t* f = nodes + index_f;
+		cf_aabb_tree_node_t* g = nodes + index_g;
 
 		// Swap a and c.
 		c->index_a = index_a;
@@ -130,8 +130,8 @@ static int s_balance(CF_AabbTree* tree, int index_a)
 	else if (balance < -1) {
 		int index_d = b->index_a;
 		int index_e = b->index_b;
-		CF_Aabbree_node_t* d = nodes + index_d;
-		CF_Aabbree_node_t* e = nodes + index_e;
+		cf_aabb_tree_node_t* d = nodes + index_d;
+		cf_aabb_tree_node_t* e = nodes + index_e;
 
 		// Swap a and b.
 		b->index_a = index_a;
@@ -186,8 +186,8 @@ static int s_balance(CF_AabbTree* tree, int index_a)
 static inline void s_sync_node(CF_AabbTree* tree, int index)
 {
 	CF_Aabb* aabbs = tree->aabbs.data();
-	CF_Aabbree_node_t* nodes = tree->nodes.data();
-	CF_Aabbree_node_t* node = nodes + index;
+	cf_aabb_tree_node_t* nodes = tree->nodes.data();
+	cf_aabb_tree_node_t* node = nodes + index;
 	int index_a = node->index_a;
 	int index_b = node->index_b;
 	node->height = cf_max_int(nodes[index_a].height, nodes[index_b].height) + 1;
@@ -215,7 +215,7 @@ static inline int s_pop_freelist(CF_AabbTree* tree, CF_Aabb aabb, void* udata = 
 		tree->udatas.ensure_count(new_capacity);
 
 		// Link up new freelist and attach it to pre-existing freelist.
-		CF_Aabbree_node_t* new_nodes = tree->nodes.data() + tree->node_capacity;
+		cf_aabb_tree_node_t* new_nodes = tree->nodes.data() + tree->node_capacity;
 		for (int i = 0; i < tree->node_capacity - 1; ++i) new_nodes[i].index_a = i + tree->node_capacity + 1;
 		new_nodes[tree->node_capacity - 1].index_a = AABB_TREE_NULL_NODE_INDEX;
 		tree->freelist = tree->node_capacity;
@@ -244,7 +244,7 @@ void s_push_freelist(CF_AabbTree* tree, int index)
 	tree->node_count--;
 }
 
-struct CF_Aabbree_priority_queue
+struct cf_aabb_tree_priority_queue
 {
 	inline void init(int* indices, float* costs, int capacity)
 	{
@@ -329,7 +329,7 @@ static inline float s_delta_cost(CF_Aabb to_insert, CF_Aabb candidate)
 // https://en.wikipedia.org/wiki/Branch_and_bound#Generic_version
 static int s_branch_and_bound_find_optimal_sibling(CF_AabbTree* tree, CF_Aabb to_insert)
 {
-	CF_Aabbree_priority_queue queue;
+	cf_aabb_tree_priority_queue queue;
 	int indices[AABB_TREE_STACK_QUERY_CAPACITY];
 	float costs[AABB_TREE_STACK_QUERY_CAPACITY];
 	queue.init(indices, costs, AABB_TREE_STACK_QUERY_CAPACITY);
@@ -395,7 +395,7 @@ static void s_init_from_buffer(CF_AabbTree* tree, uint8_t** p, int height)
 	int index_parent = cf_read_uint32(p);
 
 	CF_Aabb aabb = cf_make_aabb(min, max);
-	CF_Aabbree_node_t node;
+	cf_aabb_tree_node_t node;
 	node.index_a = index_a;
 	node.index_b = index_b;
 	node.index_parent = index_parent;
@@ -468,7 +468,7 @@ CF_AabbTree* s_remap(const CF_AabbTree* tree)
 	result->freelist = tree->freelist;
 	result->node_capacity = tree->node_capacity;
 	result->node_count = tree->node_count;
-	Array<CF_Aabbree_node_t>& nodes = result->nodes;
+	Array<cf_aabb_tree_node_t>& nodes = result->nodes;
 	Array<CF_Aabb>& aabbs = result->aabbs;
 	Array<void*>& udatas = result->udatas;
 
@@ -498,8 +498,8 @@ CF_AabbTree* s_remap(const CF_AabbTree* tree)
 
 static void s_serialize_to_buffer(CF_AabbTree* tree, uint8_t** p, int index)
 {
-	CF_Aabbree_node_t* nodes = tree->nodes.data();
-	CF_Aabbree_node_t* node = nodes + index;
+	cf_aabb_tree_node_t* nodes = tree->nodes.data();
+	cf_aabb_tree_node_t* node = nodes + index;
 	bool is_leaf = node->index_a == AABB_TREE_NULL_NODE_INDEX;
 
 	if (is_leaf) {
@@ -608,13 +608,13 @@ static CF_Leaf s_insert(CF_AabbTree* tree, CF_Aabb aabb, void* udata)
 
 		// Make new branch node.
 		int branch_index = s_pop_freelist(tree, cf_combine(aabb, tree->aabbs[search_index]));
-		CF_Aabbree_node_t* branch = tree->nodes.data() + branch_index;
+		cf_aabb_tree_node_t* branch = tree->nodes.data() + branch_index;
 		int parent_index = tree->nodes[search_index].index_parent;
 
 		if (parent_index == AABB_TREE_NULL_NODE_INDEX) {
 			tree->root = branch_index;
 		} else {
-			CF_Aabbree_node_t* parent = tree->nodes.data() + parent_index;
+			cf_aabb_tree_node_t* parent = tree->nodes.data() + parent_index;
 
 			// Hookup parent to the new branch.
 			if (parent->index_a == search_index) {
@@ -649,27 +649,27 @@ static CF_Leaf s_insert(CF_AabbTree* tree, CF_Aabb aabb, void* udata)
 		s_refit_hierarchy(tree, parent_index);
 	}
 
-	CF_Aabbree_validate(tree);
+	cf_aabb_tree_validate(tree);
 
 	return { new_index };
 }
 
-CF_Leaf CF_Aabbree_insert(CF_AabbTree* tree, CF_Aabb aabb, void* udata)
+CF_Leaf cf_aabb_tree_insert(CF_AabbTree* tree, CF_Aabb aabb, void* udata)
 {
 	aabb = cf_expand_aabb_f(aabb, AABB_TREE_EXPAND_CONSTANT);
 	return s_insert(tree, aabb, udata);
 }
 
-void CF_Aabbree_remove(CF_AabbTree* tree, CF_Leaf leaf)
+void cf_aabb_tree_remove(CF_AabbTree* tree, CF_Leaf leaf)
 {
 	int index = leaf.id;
 	if (tree->root == index) {
 		tree->root = AABB_TREE_NULL_NODE_INDEX;
 	} else {
-		CF_Aabbree_node_t* nodes = tree->nodes.data();
-		CF_Aabbree_node_t* node = nodes + index;
+		cf_aabb_tree_node_t* nodes = tree->nodes.data();
+		cf_aabb_tree_node_t* node = nodes + index;
 		int index_parent = node->index_parent;
-		CF_Aabbree_node_t* parent = nodes + index_parent;
+		cf_aabb_tree_node_t* parent = nodes + index_parent;
 
 		// Can only remove leaves.
 		CUTE_ASSERT(node->index_a == AABB_TREE_NULL_NODE_INDEX);
@@ -681,16 +681,16 @@ void CF_Aabbree_remove(CF_AabbTree* tree, CF_Leaf leaf)
 			nodes[tree->root].index_parent = AABB_TREE_NULL_NODE_INDEX;
 		} else {
 			int index_grandparent = parent->index_parent;
-			CF_Aabbree_node_t* grandparent = nodes + index_grandparent;
+			cf_aabb_tree_node_t* grandparent = nodes + index_grandparent;
 
 			if (parent->index_a == index) {
-				CF_Aabbree_node_t* sindex_bling = nodes + parent->index_b;
+				cf_aabb_tree_node_t* sindex_bling = nodes + parent->index_b;
 				sindex_bling->index_parent = index_grandparent;
 				if (grandparent->index_a == index_parent) grandparent->index_a = parent->index_b;
 				else grandparent->index_b = parent->index_b;
 			} else {
 				CUTE_ASSERT(parent->index_b == index);
-				CF_Aabbree_node_t* sindex_bling = nodes + parent->index_a;
+				cf_aabb_tree_node_t* sindex_bling = nodes + parent->index_a;
 				sindex_bling->index_parent = index_grandparent;
 				if (grandparent->index_a == index_parent) grandparent->index_a = parent->index_a;
 				else grandparent->index_b = parent->index_a;
@@ -705,7 +705,7 @@ void CF_Aabbree_remove(CF_AabbTree* tree, CF_Leaf leaf)
 	s_push_freelist(tree, index);
 }
 
-bool CF_Aabbree_update_leaf(CF_AabbTree* tree, CF_Leaf leaf, CF_Aabb aabb)
+bool cf_aabb_tree_update_leaf(CF_AabbTree* tree, CF_Leaf leaf, CF_Aabb aabb)
 {
 	// Can only update leaves.
 	CUTE_ASSERT(tree->nodes[leaf.id].index_a == AABB_TREE_NULL_NODE_INDEX);
@@ -717,13 +717,13 @@ bool CF_Aabbree_update_leaf(CF_AabbTree* tree, CF_Leaf leaf, CF_Aabb aabb)
 	}
 
 	void* udata = tree->udatas[leaf.id];
-	CF_Aabbree_remove(tree, leaf);
-	CF_Aabbree_insert(tree, aabb, udata);
+	cf_aabb_tree_remove(tree, leaf);
+	cf_aabb_tree_insert(tree, aabb, udata);
 
 	return true;
 }
 
-bool CF_Aabbree_move(CF_AabbTree* tree, CF_Leaf leaf, CF_Aabb aabb, CF_V2 offset)
+bool cf_aabb_tree_move(CF_AabbTree* tree, CF_Leaf leaf, CF_Aabb aabb, CF_V2 offset)
 {
 	// Can only update leaves.
 	CUTE_ASSERT(tree->nodes[leaf.id].index_a == AABB_TREE_NULL_NODE_INDEX);
@@ -754,28 +754,28 @@ bool CF_Aabbree_move(CF_AabbTree* tree, CF_Leaf leaf, CF_Aabb aabb, CF_V2 offset
 	}
 
 	void* udata = tree->udatas[leaf.id];
-	CF_Aabbree_remove(tree, leaf);
+	cf_aabb_tree_remove(tree, leaf);
 	s_insert(tree, aabb, udata);
 
 	return true;
 }
 
-CF_Aabb CF_Aabbree_get_aabb(CF_AabbTree* tree, CF_Leaf leaf)
+CF_Aabb cf_aabb_tree_get_aabb(CF_AabbTree* tree, CF_Leaf leaf)
 {
 	return tree->aabbs[leaf.id];
 }
 
-void* CF_Aabbree_get_udata(CF_AabbTree* tree, CF_Leaf leaf)
+void* cf_aabb_tree_get_udata(CF_AabbTree* tree, CF_Leaf leaf)
 {
 	return tree->udatas[leaf.id];
 }
 
-void CF_Aabbree_query_aabb(const CF_AabbTree* tree, CF_AabbTreeQueryFn* fn, CF_Aabb aabb, void* fn_udata)
+void cf_aabb_tree_query_aabb(const CF_AabbTree* tree, CF_AabbTreeQueryFn* fn, CF_Aabb aabb, void* fn_udata)
 {
 	if (tree->root == AABB_TREE_NULL_NODE_INDEX) return;
 	int index_stack[AABB_TREE_STACK_QUERY_CAPACITY];
 	int sp = 1;
-	const CF_Aabbree_node_t* nodes = tree->nodes.data();
+	const cf_aabb_tree_node_t* nodes = tree->nodes.data();
 	const CF_Aabb* aabbs = tree->aabbs.data();
 	void* const* udatas = tree->udatas.data();
 	index_stack[0] = tree->root;
@@ -786,7 +786,7 @@ void CF_Aabbree_query_aabb(const CF_AabbTree* tree, CF_AabbTreeQueryFn* fn, CF_A
 		CF_Aabb search_aabb = aabbs[index];
 
 		if (cf_collide_aabb(aabb, search_aabb)) {
-			const CF_Aabbree_node_t* node = nodes + index;
+			const cf_aabb_tree_node_t* node = nodes + index;
 
 			if (node->index_a == AABB_TREE_NULL_NODE_INDEX) {
 				CF_Leaf leaf = { index };
@@ -801,18 +801,18 @@ void CF_Aabbree_query_aabb(const CF_AabbTree* tree, CF_AabbTreeQueryFn* fn, CF_A
 	}
 }
 
-void CF_Aabbree_query_ray(const CF_AabbTree* tree, CF_AabbTreeQueryFn* fn, CF_Ray ray, void* fn_udata)
+void cf_aabb_tree_query_ray(const CF_AabbTree* tree, CF_AabbTreeQueryFn* fn, CF_Ray ray, void* fn_udata)
 {
 	if (tree->root == AABB_TREE_NULL_NODE_INDEX) return;
 	int index_stack[AABB_TREE_STACK_QUERY_CAPACITY];
 	int sp = 1;
-	const CF_Aabbree_node_t* nodes = tree->nodes.data();
+	const cf_aabb_tree_node_t* nodes = tree->nodes.data();
 	const CF_Aabb* aabbs = tree->aabbs.data();
 	void* const* udatas = tree->udatas.data();
 	index_stack[0] = tree->root;
 
 	CF_Ray ray_inv = ray;
-	ray_inv.d = cf_invert_safe_v2(ray.d);
+	ray_inv.d = cf_safe_invert_v2(ray.d);
 	CF_V2 ray_end = cf_endpoint(ray);
 	CF_Aabb ray_aabb;
 	ray_aabb.min = cf_min_v2(ray.p, ray_end);
@@ -828,7 +828,7 @@ void CF_Aabbree_query_ray(const CF_AabbTree* tree, CF_AabbTreeQueryFn* fn, CF_Ra
 		}
 
 		if (s_raycast(search_aabb, ray_inv)) {
-			const CF_Aabbree_node_t* node = nodes + index;
+			const cf_aabb_tree_node_t* node = nodes + index;
 
 			if (node->index_a != AABB_TREE_NULL_NODE_INDEX) {
 				CF_Leaf leaf = { index };
@@ -843,12 +843,12 @@ void CF_Aabbree_query_ray(const CF_AabbTree* tree, CF_AabbTreeQueryFn* fn, CF_Ra
 	}
 }
 
-float CF_Aabbree_cost(const CF_AabbTree* tree)
+float cf_aabb_tree_cost(const CF_AabbTree* tree)
 {
 	return s_tree_cost(tree, tree->root);
 }
 
-void CF_Aabbree_validate(const CF_AabbTree* tree)
+void cf_aabb_tree_validate(const CF_AabbTree* tree)
 {
 	if (tree->root != AABB_TREE_NULL_NODE_INDEX) {
 		s_validate(tree, tree->root, 0);
@@ -856,7 +856,7 @@ void CF_Aabbree_validate(const CF_AabbTree* tree)
 	}
 }
 
-size_t CF_Aabbree_serialized_size(const CF_AabbTree* tree)
+size_t cf_aabb_tree_serialized_size(const CF_AabbTree* tree)
 {
 	size_t fourcc_size = 4;
 	size_t node_count_size = sizeof(uint32_t);
@@ -872,9 +872,9 @@ size_t CF_Aabbree_serialized_size(const CF_AabbTree* tree)
 	return needed_size;
 }
 
-bool CF_Aabbree_serialize(const CF_AabbTree* tree, void* buffer, size_t size)
+bool cf_aabb_tree_serialize(const CF_AabbTree* tree, void* buffer, size_t size)
 {
-	size_t needed_size = CF_Aabbree_serialized_size(tree);
+	size_t needed_size = cf_aabb_tree_serialized_size(tree);
 	if (needed_size < size) return false;
 	CF_AabbTree* copy = s_remap(tree);
 

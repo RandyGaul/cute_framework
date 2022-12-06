@@ -414,17 +414,17 @@ bool cf_app_was_moved()
 	return app->window_state.moved;
 }
 
-bool cf_app_keyboard_lost_focus()
+bool cf_app_lost_focus()
 {
 	return !app->window_state.has_keyboard_focus && app->window_state_prev.has_keyboard_focus;
 }
 
-bool cf_app_keyboard_gained_focus()
+bool cf_app_gained_focus()
 {
 	return app->window_state.has_keyboard_focus && !app->window_state_prev.has_keyboard_focus;
 }
 
-bool cf_app_keyboard_has_focus()
+bool cf_app_has_focus()
 {
 	return app->window_state.has_keyboard_focus;
 }

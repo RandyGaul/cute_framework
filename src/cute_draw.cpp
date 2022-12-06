@@ -231,7 +231,6 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_texture_fs(draw->material, "u_image", atlas);
 
 	// Apply uniforms.
-	cf_material_set_uniform_vs(draw->material, "vs_params", "u_mvp", &draw->projection, CF_UNIFORM_TYPE_MAT4, 1);
 	v2 u_texture_size = cf_v2(draw->atlas_width, draw->atlas_height);
 	CF_Color u_tint = draw->tints.last();
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
@@ -283,8 +282,8 @@ void cf_make_draw()
 {
 	draw = CUTE_NEW(CF_Draw);
 
-	// Setup a good default projection matrix.
-	draw->projection = cf_matrix_ortho_2d((float)app->w, (float)app->h, 0, 0);
+	// Setup a good default camera dimensions size.
+	cf_camera_dimensions((float)app->w, (float)app->h);
 
 	// Mesh + vertex attributes.
 	draw->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CUTE_MB * 25, 0, 0);
@@ -363,7 +362,7 @@ void cf_destroy_draw()
 
 void cf_draw_sprite(const CF_Sprite* sprite)
 {
-	v2 p = cf_mul_m32_v2(draw->m3x2s.last(), cf_add_v2(sprite->transform.p, sprite->local_offset));
+	v2 p = cf_mul_m32_v2(draw->cam, cf_add_v2(sprite->transform.p, sprite->local_offset));
 	spritebatch_sprite_t s = { };
 	s.image_id = sprite->animation->frames[sprite->frame_index].id;
 	s.w = sprite->w;
@@ -371,7 +370,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
 	s.geom.u.sprite.position = p;
 	s.geom.u.sprite.rotation = sprite->transform.r;
-	s.geom.u.sprite.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
+	s.geom.u.sprite.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h) * draw->cam_dimensions_inverse;
 	s.geom.alpha = sprite->opacity;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -380,7 +379,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 void cf_draw_sprite2(const CF_Sprite* sprite, CF_Transform transform)
 {
 	transform = mul(transform, sprite->transform);
-	v2 p = cf_mul_m32_v2(draw->m3x2s.last(), cf_add_v2(transform.p, sprite->local_offset));
+	v2 p = cf_mul_m32_v2(draw->cam, cf_add_v2(transform.p, sprite->local_offset));
 	spritebatch_sprite_t s = { };
 	s.image_id = sprite->animation->frames[sprite->frame_index].id;
 	s.w = sprite->w;
@@ -388,7 +387,7 @@ void cf_draw_sprite2(const CF_Sprite* sprite, CF_Transform transform)
 	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
 	s.geom.u.sprite.position = p;
 	s.geom.u.sprite.rotation = sprite->transform.r;
-	s.geom.u.sprite.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
+	s.geom.u.sprite.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h) * draw->cam_dimensions_inverse;
 	s.geom.alpha = sprite->opacity;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -439,7 +438,7 @@ void cf_draw_quad_fill(CF_Aabb bb, CF_Color c)
 
 void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c)
 {
-	CF_M3x2 m = draw->m3x2s.last();
+	CF_M3x2 m = draw->cam;
 	spritebatch_sprite_t s = { };
 	s.image_id = app->default_image_id;
 	s.w = 1;
@@ -457,7 +456,7 @@ void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c)
 
 void cf_draw_quad_fill3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3)
 {
-	CF_M3x2 m = draw->m3x2s.last();
+	CF_M3x2 m = draw->cam;
 	spritebatch_sprite_t s = { };
 	s.image_id = app->default_image_id;
 	s.w = 1;
@@ -636,7 +635,7 @@ void cf_draw_tri2(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c0, CF
 
 void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c)
 {
-	CF_M3x2 m = draw->m3x2s.last();
+	CF_M3x2 m = draw->cam;
 	spritebatch_sprite_t s = { };
 	s.image_id = app->default_image_id;
 	s.w = 1;
@@ -653,7 +652,7 @@ void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c)
 
 void cf_draw_tri_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, CF_Color c2)
 {
-	CF_M3x2 m = draw->m3x2s.last();
+	CF_M3x2 m = draw->cam;
 	spritebatch_sprite_t s = { };
 	s.image_id = app->default_image_id;
 	s.w = 1;
@@ -677,7 +676,7 @@ void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c, bool antialia
 
 void cf_draw_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1, bool antialias)
 {
-	float scale = draw->scale_x; // Assume x/y uniform scaling.
+	float scale = (float)app->w / draw->cam_dimensions.x; // Assume x/y uniform scaling.
 	float alias_scale = 1.0f / scale;
 	bool thick_line = thickness > alias_scale;
 	thickness = cf_max(thickness, alias_scale);
@@ -985,7 +984,7 @@ static void s_polyline(CF_V2* points, int count, float thickness, CF_Color c0, C
 void cf_draw_polyline(CF_V2* points, int count, float thickness, CF_Color color, bool loop, bool antialias, int bevel_count)
 {
 	CUTE_ASSERT(count >= 3);
-	float scale = draw->scale_x;
+	float scale = (float)app->w / draw->cam_dimensions.x; // Assume x/y uniform scaling.
 	float alias_scale = 1.0f / scale;
 	bool thick_line = thickness > alias_scale;
 	thickness = cf_max(thickness, alias_scale);
@@ -1000,29 +999,6 @@ void cf_draw_polyline(CF_V2* points, int count, float thickness, CF_Color color,
 	} else {
 		s_polyline(points, count, thickness, color, color, loop, false, 0, bevel_count);
 	}
-}
-
-void cf_draw_push_m3x2(CF_M3x2 m)
-{
-	draw->scale_x = cf_len(m.m.x);
-	draw->scale_y = cf_len(m.m.y);
-	draw->m3x2s.add(m);
-}
-
-CF_M3x2 cf_draw_pop_m3x2()
-{
-	if (draw->m3x2s.count() > 1) {
-		draw->scale_x = cf_len(draw->m3x2s.last().m.x);
-		draw->scale_y = cf_len(draw->m3x2s.last().m.y);
-		return draw->m3x2s.pop();
-	} else {
-		return draw->m3x2s.last();
-	}
-}
-
-CF_M3x2 cf_draw_peek_m3x2()
-{
-	return draw->m3x2s.last();
 }
 
 void cf_draw_push_layer(int layer)
@@ -1042,16 +1018,6 @@ int cf_draw_pop_layer()
 int cf_draw_peek_layer()
 {
 	return draw->layers.last();
-}
-
-void cf_render_settings_view(float w, float h)
-{
-	draw->projection = cf_matrix_ortho_2d(w, h, 0, 0);
-}
-
-void cf_render_settings_projection(CF_Matrix4x4 projection)
-{
-	draw->projection = projection;
 }
 
 void cf_render_settings_filter(CF_Filter filter)
@@ -1143,6 +1109,42 @@ void cf_render_to(CF_Canvas canvas, bool clear)
 	spritebatch_defrag(&draw->sb);
 	spritebatch_flush(&draw->sb);
 	draw->verts.clear();
+}
+
+void cf_camera_dimensions(float w, float h)
+{
+	draw->cam_dimensions = V2(w, h) * 0.5f;
+	draw->cam_dimensions_inverse = cf_safe_invert_v2(draw->cam_dimensions);
+	draw->cam = cf_make_transform_TSR_inverse(draw->cam_position, draw->cam_dimensions, draw->cam_rotation);
+}
+
+void cf_camera_look_at(float x, float y)
+{
+	draw->cam_position = V2(x, y);
+	draw->cam = cf_make_transform_TSR_inverse(draw->cam_position, draw->cam_dimensions, draw->cam_rotation);
+}
+
+void cf_camera_rotate(float radians)
+{
+	draw->cam_rotation = radians;
+	draw->cam = cf_make_transform_TSR_inverse(draw->cam_position, draw->cam_dimensions, draw->cam_rotation);
+}
+
+void cf_camera_push()
+{
+	draw->cam_stack.add(draw->cam);
+}
+
+void cf_camera_pop()
+{
+	if (draw->cam_stack.size()) {
+		draw->cam = draw->cam_stack.pop();
+	} else {
+		draw->cam_dimensions = V2((float)app->w, (float)app->h) * 0.5f;
+		draw->cam_position = V2(0, 0);
+		draw->cam_rotation = 0;
+		draw->cam = cf_make_transform_TSR_inverse(draw->cam_position, draw->cam_dimensions, draw->cam_rotation);
+	}
 }
 
 CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)

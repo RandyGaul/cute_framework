@@ -18,13 +18,9 @@
 	layout (location = 2) out float v_solid;
 	layout (location = 3) out float v_alpha;
 
-	layout (binding = 0) uniform vs_params {
-		mat4 u_mvp;
-	};
-
 	void main()
 	{
-		vec4 posH = u_mvp * vec4(in_pos, 0, 1);
+		vec4 posH = vec4(in_pos, 0, 1);
 		v_uv = in_uv;
 		v_col = in_col;
 		v_solid = in_params.r;

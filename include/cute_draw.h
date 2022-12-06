@@ -57,15 +57,10 @@ CUTE_API void CUTE_CALL cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness, CF_Col
 CUTE_API void CUTE_CALL cf_draw_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1, bool antialias);
 CUTE_API void CUTE_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, CF_Color c, bool loop, bool antialias, int bevel_count);
 
-CUTE_API void CUTE_CALL cf_draw_push_m3x2(CF_M3x2 m);
-CUTE_API CF_M3x2 CUTE_CALL cf_draw_pop_m3x2();
-CUTE_API CF_M3x2 CUTE_CALL cf_draw_peek_m3x2();
 CUTE_API void CUTE_CALL cf_draw_push_layer(int layer);
 CUTE_API int CUTE_CALL cf_draw_pop_layer();
 CUTE_API int CUTE_CALL cf_draw_peek_layer();
 
-CUTE_API void CUTE_CALL cf_render_settings_view(float w, float h);
-CUTE_API void CUTE_CALL cf_render_settings_projection(CF_Matrix4x4 projection);
 CUTE_API void CUTE_CALL cf_render_settings_outlines(bool use_outlines);
 CUTE_API void CUTE_CALL cf_render_settings_outlines_use_corners(bool use_corners);
 CUTE_API void CUTE_CALL cf_render_settings_outlines_color(CF_Color c);
@@ -79,7 +74,15 @@ CUTE_API CF_RenderState CUTE_CALL cf_render_settings_peek_render_state();
 CUTE_API void CUTE_CALL cf_render_settings_push_tint(CF_Color c);
 CUTE_API CF_Color CUTE_CALL cf_render_settings_pop_tint();
 CUTE_API CF_Color CUTE_CALL cf_render_settings_peek_tint();
+
+CUTE_API void CUTE_CALL cf_camera_dimensions(float w, float h);
+CUTE_API void CUTE_CALL cf_camera_look_at(float x, float y);
+CUTE_API void CUTE_CALL cf_camera_rotate(float radians);
+CUTE_API void CUTE_CALL cf_camera_push();
+CUTE_API void CUTE_CALL cf_camera_pop();
+
 CUTE_API void CUTE_CALL cf_render_to(CF_Canvas canvas, bool clear);
+
 
 /**
  * Temporal texture information for a sprite. Is valid until the next call to `draw_flush`
@@ -133,15 +136,10 @@ CUTE_INLINE void draw_line(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c, bool
 CUTE_INLINE void draw_line(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1, bool antialias) { cf_draw_line2(p0, p1, thickness, c0, c1, antialias); }
 CUTE_INLINE void draw_polyline(CF_V2* points, int count, float thickness, CF_Color c, bool loop, bool antialias, int bevel_count) { cf_draw_polyline(points, count, thickness, c, loop, antialias, bevel_count); }
 
-CUTE_INLINE void draw_push_m3x2(CF_M3x2 m) { cf_draw_push_m3x2(m); }
-CUTE_INLINE CF_M3x2 draw_pop_m3x2() { return cf_draw_pop_m3x2(); }
-CUTE_INLINE CF_M3x2 draw_peek_m3x2() { return cf_draw_peek_m3x2(); }
 CUTE_INLINE void draw_push_layer(int layer) { cf_draw_push_layer(layer); }
 CUTE_INLINE int draw_pop_layer() { return cf_draw_pop_layer(); }
 CUTE_INLINE int draw_peek_layer() { return cf_draw_peek_layer(); }
 
-CUTE_INLINE void render_settings_view(float w, float h) { cf_render_settings_view(w, h); }
-CUTE_INLINE void render_settings_projection(CF_Matrix4x4 projection) { cf_render_settings_projection(projection); }
 CUTE_INLINE void render_settings_outlines(bool use_outlines) { cf_render_settings_outlines(use_outlines); }
 CUTE_INLINE void render_settings_outlines_use_corners(bool use_corners) { cf_render_settings_outlines_use_corners(use_corners); }
 CUTE_INLINE void render_settings_outlines_color(CF_Color c) { cf_render_settings_outlines_color(c); }
@@ -155,6 +153,13 @@ CUTE_INLINE CF_RenderState render_settings_peek_render_state() { return render_s
 CUTE_INLINE void render_settings_push_tint(CF_Color c) { cf_render_settings_push_tint(c); }
 CUTE_INLINE CF_Color render_settings_pop_tint() { return cf_render_settings_pop_tint(); }
 CUTE_INLINE CF_Color render_settings_peek_tint() { return cf_render_settings_peek_tint(); }
+
+CUTE_INLINE void camera_dimensions(float w, float h) { cf_camera_dimensions(w, h); }
+CUTE_INLINE void camera_look_at(float x, float y) { cf_camera_look_at(x, y); }
+CUTE_INLINE void camera_rotate(float radians) { cf_camera_rotate(radians); }
+CUTE_INLINE void camera_push() { cf_camera_push(); }
+CUTE_INLINE void camera_pop() { cf_camera_pop(); }
+
 CUTE_INLINE void render_to(CF_Canvas canvas, bool clear = false) { cf_render_to(canvas, clear); }
 
 CUTE_INLINE CF_TemporaryImage fetch_image(const CF_Sprite* sprite) { return cf_fetch_image(sprite); }

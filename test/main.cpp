@@ -62,7 +62,7 @@
 
 int main(int argc, const char** argv)
 {
-#if 0
+#if 1
 	uint32_t options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
 	Result result = make_app("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;
@@ -72,13 +72,7 @@ int main(int argc, const char** argv)
 
 	auto imgui = cf_app_init_imgui(false);
 	sg_imgui_t* sg_imgui = app_get_sokol_imgui();
-	int w = 640/4;
-	int h = 480/4;
-	//cf_app_resize_canvas(w, h);
-	render_settings_view((float)w / 2, (float)h / 2);
-	//render_settings_view((float)w, (float)h);
-	//render_settings_view((float)w * 2, (float)h * 2);
-	//render_settings_view((float)w * 4, (float)h * 4);
+	camera_dimensions(640/2, 480/2);
 
 	while (app_is_running()) {
 		float dt = calc_dt();

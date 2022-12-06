@@ -66,9 +66,9 @@ CUTE_API void CUTE_CALL cf_app_size(int* w, int* h);
 CUTE_API void CUTE_CALL cf_app_position(int* x, int* y);
 CUTE_API bool CUTE_CALL cf_app_was_size_changed();
 CUTE_API bool CUTE_CALL cf_app_was_moved();
-CUTE_API bool CUTE_CALL cf_app_keyboard_lost_focus();
-CUTE_API bool CUTE_CALL cf_app_keyboard_gained_focus();
-CUTE_API bool CUTE_CALL cf_app_keyboard_has_focus();
+CUTE_API bool CUTE_CALL cf_app_lost_focus();
+CUTE_API bool CUTE_CALL cf_app_gained_focus();
+CUTE_API bool CUTE_CALL cf_app_has_focus();
 CUTE_API bool CUTE_CALL cf_app_was_minimized();
 CUTE_API bool CUTE_CALL cf_app_was_maximized();
 CUTE_API bool CUTE_CALL cf_app_is_minimized();
@@ -163,9 +163,9 @@ CUTE_INLINE void app_size(int* w, int* h) { return cf_app_size(w, h); }
 CUTE_INLINE void app_position(int* x, int* y) { return cf_app_position(x, y); }
 CUTE_INLINE bool app_was_size_changed() { return cf_app_was_size_changed(); }
 CUTE_INLINE bool app_was_moved() { return cf_app_was_moved(); }
-CUTE_INLINE bool app_keyboard_lost_focus() { return cf_app_keyboard_lost_focus(); }
-CUTE_INLINE bool app_keyboard_gained_focus() { return cf_app_keyboard_gained_focus(); }
-CUTE_INLINE bool app_keyboard_has_focus() { return cf_app_keyboard_has_focus(); }
+CUTE_INLINE bool app_lost_focus() { return cf_app_lost_focus(); }
+CUTE_INLINE bool app_gained_focus() { return cf_app_gained_focus(); }
+CUTE_INLINE bool app_has_focus() { return cf_app_has_focus(); }
 CUTE_INLINE bool app_was_minimized() { return cf_app_was_minimized(); }
 CUTE_INLINE bool app_was_maximized() { return cf_app_was_maximized(); }
 CUTE_INLINE bool app_is_minimized() { return cf_app_is_minimized(); }

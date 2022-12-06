@@ -89,18 +89,20 @@ struct CF_Draw
 	CF_Shader shader;
 	CF_Mesh mesh;
 	CF_Material material;
-	float scale_x = 1.0f;
-	float scale_y = 1.0f;
-	CF_Matrix4x4 projection;
 	float outline_use_border;
 	float outline_use_corners;
 	CF_Color outline_color = cf_color_white();
 	CF_Filter filter = CF_FILTER_NEAREST;
 	Cute::Array<CF_RenderState> render_states;
-	Cute::Array<CF_M3x2> m3x2s = { cf_make_identity() };
 	Cute::Array<CF_Rect> scissors;
 	Cute::Array<CF_Color> tints = { DEFAULT_TINT };
 	Cute::Array<int> layers = { 0 };
+	Cute::Array<CF_M3x2> cam_stack;
+	CF_M3x2 cam = cf_make_identity();
+	CF_V2 cam_dimensions = { };
+	CF_V2 cam_dimensions_inverse = { };
+	CF_V2 cam_position = { };
+	float cam_rotation = 0;
 	Cute::Array<DrawVertex> verts;
 };
 
