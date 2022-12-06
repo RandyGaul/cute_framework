@@ -62,7 +62,7 @@
 
 int main(int argc, const char** argv)
 {
-#if 1
+#if 0
 	uint32_t options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
 	Result result = make_app("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;
@@ -80,7 +80,7 @@ int main(int argc, const char** argv)
 		s.update(dt);
 		s.draw();
 		draw_push_layer(-1);
-		draw_line(V2(0,0), V2(100,0), 5, color_red(), false);
+		draw_line(V2(0,0), V2(100,10), 5, color_red(), true);
 		draw_pop_layer();
 		if (ImGui::BeginMainMenuBar()) {
 			if (ImGui::BeginMenu("sokol-gfx")) {

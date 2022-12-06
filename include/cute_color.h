@@ -75,17 +75,21 @@ CUTE_INLINE CF_Color cf_sub_color(CF_Color a, CF_Color b) { return cf_make_color
 CUTE_INLINE CF_Color cf_color_lerp(CF_Color a, CF_Color b, float s) { return cf_add_color(a, cf_mul_color(cf_sub_color(b, a), s)); }
 CUTE_INLINE CF_Color cf_color_premultiply(CF_Color c) { c.r *= c.a; c.g *= c.a; c.b *= c.a; return c; }
 
-CUTE_INLINE CF_Pixel cf_mul_pixel(CF_Pixel a, float s) { return cf_make_pixel_rgba_f(a.colors.r * s, a.colors.g * s, a.colors.b * s, a.colors.a * s); }
-CUTE_INLINE CF_Pixel cf_div_pixel(CF_Pixel a, float s) { return cf_make_pixel_rgba_f(a.colors.r / s, a.colors.g / s, a.colors.b / s, a.colors.a / s); }
-CUTE_INLINE CF_Pixel cf_add_pixel(CF_Pixel a, CF_Pixel b) { return cf_make_pixel_rgba(a.colors.r + b.colors.r, a.colors.g + b.colors.g, a.colors.b + b.colors.b, a.colors.a + b.colors.a); }
-CUTE_INLINE CF_Pixel cf_sub_pixel(CF_Pixel a, CF_Pixel b) { return cf_make_pixel_rgba(a.colors.r - b.colors.r, a.colors.g - b.colors.g, a.colors.b - b.colors.b, a.colors.a - b.colors.a); }
-CUTE_INLINE CF_Pixel cf_pixel_lerp(CF_Pixel a, CF_Pixel b, float s) { return cf_add_pixel(a, cf_mul_pixel(cf_sub_pixel(b, a), s)); }
-CUTE_INLINE CF_Pixel cf_pixel_premultiply(CF_Pixel c) { c.colors.r *= c.colors.a; c.colors.g *= c.colors.a; c.colors.b *= c.colors.a; return c; }
+CUTE_INLINE uint8_t cf_mul_un8(int a, int b) { int t = (a * b) + 0x80; return (uint8_t)(((t >> 8) + t) >> 8); }
+CUTE_INLINE uint8_t cf_div_un8(int a, int b) { return (uint8_t)(((b) * 0xFF + ((a) / 2)) / (a)); }
+CUTE_INLINE uint8_t cf_add_un8(int a, int b) { int t = a + b; return (uint8_t)(t | (t >> 8)); }
+CUTE_INLINE uint8_t cf_sub_un8(int a, int b) { int t = a - b; if (t < 0) t = 0; return (uint8_t)(t | (t >> 8)); }
+CUTE_INLINE CF_Pixel cf_mul_pixel(CF_Pixel a, uint8_t s) { return cf_make_pixel_rgba_f(cf_mul_un8(a.colors.r, s), cf_mul_un8(a.colors.g, s), cf_mul_un8(a.colors.b, s), cf_mul_un8(a.colors.a, s)); }
+CUTE_INLINE CF_Pixel cf_div_pixel(CF_Pixel a, uint8_t s) { return cf_make_pixel_rgba_f(cf_div_un8(a.colors.r, s), cf_div_un8(a.colors.g, s), cf_div_un8(a.colors.b, s), cf_div_un8(a.colors.a, s)); }
+CUTE_INLINE CF_Pixel cf_add_pixel(CF_Pixel a, CF_Pixel b) { return cf_make_pixel_rgba(cf_add_un8(a.colors.r, b.colors.r), cf_add_un8(a.colors.g, b.colors.g), cf_add_un8(a.colors.b, b.colors.b), cf_add_un8(a.colors.a, b.colors.a)); }
+CUTE_INLINE CF_Pixel cf_sub_pixel(CF_Pixel a, CF_Pixel b) { return cf_make_pixel_rgba(cf_sub_un8(a.colors.r, b.colors.r), cf_sub_un8(a.colors.g, b.colors.g), cf_sub_un8(a.colors.b, b.colors.b), cf_sub_un8(a.colors.a, b.colors.a)); }
+CUTE_INLINE CF_Pixel cf_pixel_lerp(CF_Pixel a, CF_Pixel b, uint8_t s) { return cf_add_pixel(a, cf_mul_pixel(cf_sub_pixel(b, a), s)); }
+CUTE_INLINE CF_Pixel cf_pixel_premultiply(CF_Pixel c) { c.colors.r = cf_mul_un8(c.colors.r, c.colors.a); c.colors.g = cf_mul_un8(c.colors.g, c.colors.a); c.colors.b = cf_mul_un8(c.colors.b, c.colors.a); return c; }
 
-CUTE_INLINE CF_Color CF_Pixelo_color(CF_Pixel p) { return cf_make_color_hex((int)p.val); }
-CUTE_INLINE uint32_t CF_Pixelo_int_rgba(CF_Pixel p) { return p.val; }
-CUTE_INLINE uint32_t CF_Pixelo_int_rgb(CF_Pixel p) { return p.val | 0x000000FF; }
-CUTE_INLINE char* CF_Pixelo_string(CF_Pixel p) { char* s = NULL; return shex(s, p.val); } // Call `sfree` when done.
+CUTE_INLINE CF_Color cf_pixel_to_color(CF_Pixel p) { return cf_make_color_hex((int)p.val); }
+CUTE_INLINE uint32_t cf_pixel_to_int_rgba(CF_Pixel p) { return p.val; }
+CUTE_INLINE uint32_t cf_pixel_to_int_rgb(CF_Pixel p) { return p.val | 0x000000FF; }
+CUTE_INLINE char* cf_pixel_to_string(CF_Pixel p) { char* s = NULL; return shex(s, p.val); } // Call `sfree` when done.
 
 CUTE_INLINE CF_Pixel cf_color_to_pixel(CF_Color c) { CF_Pixel p; p.colors.r = (int)((uint8_t)(c.r * 255.0f)); p.colors.g = (int)((uint8_t)(c.g * 255.0f)); p.colors.b = (int)((uint8_t)(c.b * 255.0f)); p.colors.a = (int)((uint8_t)(c.a * 255.0f)); return p; }
 CUTE_INLINE uint32_t cf_color_to_int_rgb(CF_Color c) { return cf_color_to_pixel(c).val | 0x000000FF; }
@@ -152,13 +156,13 @@ CUTE_INLINE bool operator!=(Color a, Color b) { return !(a == b); }
 CUTE_INLINE Color lerp(Color a, Color b, float s) { return cf_color_lerp(a, b, s); }
 CUTE_INLINE Color premultiply(Color c) { return cf_color_premultiply(c); }
 
-CUTE_INLINE Pixel operator*(Pixel a, float s) { return cf_mul_pixel(a, s); }
-CUTE_INLINE Pixel operator/(Pixel a, float s) { return cf_div_pixel(a, s); }
+CUTE_INLINE Pixel operator*(Pixel a, int s) { return cf_mul_pixel(a, s); }
+CUTE_INLINE Pixel operator/(Pixel a, int s) { return cf_div_pixel(a, s); }
 CUTE_INLINE Pixel operator+(Pixel a, Pixel b) { return cf_add_pixel(a, b); }
 CUTE_INLINE Pixel operator-(Pixel a, Pixel b) { return cf_sub_pixel(a, b); }
 CUTE_INLINE bool operator==(Pixel a, Pixel b) { return a.val == b.val; }
 CUTE_INLINE bool operator!=(Pixel a, Pixel b) { return a.val != b.val; }
-CUTE_INLINE Pixel lerp(Pixel a, Pixel b, float s) { return cf_pixel_lerp(a, b, s); }
+CUTE_INLINE Pixel lerp(Pixel a, Pixel b, uint8_t s) { return cf_pixel_lerp(a, b, s); }
 CUTE_INLINE Pixel premultiply(Pixel p) { return cf_pixel_premultiply(p); }
 
 CUTE_INLINE Color to_color(Pixel p) { return cf_make_color_hex((int)p.val); }

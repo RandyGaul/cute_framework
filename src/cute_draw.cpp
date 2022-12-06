@@ -454,7 +454,7 @@ void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c)
 	s.geom.u.quad.p1 = mul(m, p1);
 	s.geom.u.quad.p2 = mul(m, p2);
 	s.geom.u.quad.p3 = mul(m, p3);
-	s.geom.u.quad.c0 = s.geom.u.quad.c1 = s.geom.u.quad.c2 = s.geom.u.quad.c3 = to_pixel(c);
+	s.geom.u.quad.c0 = s.geom.u.quad.c1 = s.geom.u.quad.c2 = s.geom.u.quad.c3 = premultiply(to_pixel(c));
 	s.geom.alpha = 1.0f;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -472,10 +472,10 @@ void cf_draw_quad_fill3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_
 	s.geom.u.quad.p1 = mul(m, p1);
 	s.geom.u.quad.p2 = mul(m, p2);
 	s.geom.u.quad.p3 = mul(m, p3);
-	s.geom.u.quad.c0 = to_pixel(c0);
-	s.geom.u.quad.c1 = to_pixel(c1);
-	s.geom.u.quad.c2 = to_pixel(c2);
-	s.geom.u.quad.c3 = to_pixel(c3);
+	s.geom.u.quad.c0 = premultiply(to_pixel(c0));
+	s.geom.u.quad.c1 = premultiply(to_pixel(c1));
+	s.geom.u.quad.c2 = premultiply(to_pixel(c2));
+	s.geom.u.quad.c3 = premultiply(to_pixel(c3));
 	s.geom.alpha = 1.0f;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -650,7 +650,7 @@ void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c)
 	s.geom.u.tri.p0 = mul(m, p0);
 	s.geom.u.tri.p1 = mul(m, p1);
 	s.geom.u.tri.p2 = mul(m, p2);
-	s.geom.u.tri.c0 = s.geom.u.tri.c1 = s.geom.u.tri.c2 = to_pixel(c);
+	s.geom.u.tri.c0 = s.geom.u.tri.c1 = s.geom.u.tri.c2 = premultiply(to_pixel(c));
 	s.geom.alpha = 1.0f;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -667,9 +667,9 @@ void cf_draw_tri_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, C
 	s.geom.u.tri.p0 = mul(m, p0);
 	s.geom.u.tri.p1 = mul(m, p1);
 	s.geom.u.tri.p2 = mul(m, p2);
-	s.geom.u.tri.c0 = to_pixel(c0);
-	s.geom.u.tri.c1 = to_pixel(c1);
-	s.geom.u.tri.c2 = to_pixel(c2);
+	s.geom.u.tri.c0 = premultiply(to_pixel(c0));
+	s.geom.u.tri.c1 = premultiply(to_pixel(c1));
+	s.geom.u.tri.c2 = premultiply(to_pixel(c2));
 	s.geom.alpha = 1.0f;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
