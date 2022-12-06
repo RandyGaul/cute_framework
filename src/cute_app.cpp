@@ -225,6 +225,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	app->x = x;
 	app->y = y;
 	list_init(&app->joypads);
+	app->vsync = options & APP_OPTIONS_VSYNC;
 	::app = app;
 
 #ifdef CUTE_WINDOWS
@@ -238,7 +239,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 #endif
 
 	if ((options & APP_OPTIONS_OPENGL_CONTEXT) | (options & APP_OPTIONS_OPENGLES_CONTEXT)) {
-		SDL_GL_SetSwapInterval(0);
+		SDL_GL_SetSwapInterval(app->vsync);
 		SDL_GLContext ctx = SDL_GL_CreateContext(window);
 		if (!ctx) {
 			CUTE_FREE(app);
@@ -513,7 +514,7 @@ int cf_app_present()
 	cf_apply_canvas(app->offscreen_canvas, true);
 
 	cf_commit();
-	cf_dx11_present();
+	cf_dx11_present(app->vsync);
 	if (app->options & APP_OPTIONS_OPENGL_CONTEXT) {
 		SDL_GL_SwapWindow(app->window);
 	}

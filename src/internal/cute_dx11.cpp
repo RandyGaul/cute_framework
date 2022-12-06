@@ -35,7 +35,6 @@
 
 #define SAFE_RELEASE(class, obj) if (obj) { class##_Release(obj); obj=0; }
 
-
 static struct
 {
 	HWND hwnd;
@@ -80,7 +79,7 @@ void cf_d3d11_create_default_render_target()
 	CUTE_ASSERT(SUCCEEDED(hr) && state.depth_stencil_view);
 }
 
-void cf_d3d11_destroy_default_render_target(void)
+void cf_d3d11_destroy_default_render_target()
 {
 	SAFE_RELEASE(ID3D11Texture2D, state.render_target);
 	SAFE_RELEASE(ID3D11RenderTargetView, state.render_target_view);
@@ -88,7 +87,7 @@ void cf_d3d11_destroy_default_render_target(void)
 	SAFE_RELEASE(ID3D11DepthStencilView, state.depth_stencil_view);
 }
 
-void cf_d3d11_update_default_render_target(void)
+void cf_d3d11_update_default_render_target()
 {
 	if (state.swap_chain) {
 		cf_d3d11_destroy_default_render_target();
@@ -104,7 +103,7 @@ void cf_dx11_init(void* hwnd, int w, int h, int sample_count)
 	state.h = h;
 	state.sample_count = 1;
 
-	/* create device and swap chain */
+	// Create device and swap chain.
 	state.swap_chain_desc.BufferDesc.Width = w;
 	state.swap_chain_desc.BufferDesc.Height = h;
 	state.swap_chain_desc.BufferDesc.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
@@ -124,41 +123,41 @@ void cf_dx11_init(void* hwnd, int w, int h, int sample_count)
 	#endif
 	D3D_FEATURE_LEVEL feature_level;
 	HRESULT hr = D3D11CreateDeviceAndSwapChain(
-		NULL,                       /* pAdapter (use default) */
-		D3D_DRIVER_TYPE_HARDWARE,   /* DriverType */
-		NULL,                       /* Software */
-		create_flags,               /* Flags */
-		NULL,                       /* pFeatureLevels */
-		0,                          /* FeatureLevels */
-		D3D11_SDK_VERSION,          /* SDKVersion */
-		&state.swap_chain_desc,     /* pSwapChainDesc */
-		&state.swap_chain,          /* ppSwapChain */
-		&state.device,              /* ppDevice */
-		&feature_level,             /* pFeatureLevel */
-		&state.device_context);     /* ppImmediateContext */
+		NULL,                       // pAdapter (use default)
+		D3D_DRIVER_TYPE_HARDWARE,   // DriverType
+		NULL,                       // Software
+		create_flags,               // Flags
+		NULL,                       // pFeatureLevels
+		0,                          // FeatureLevels
+		D3D11_SDK_VERSION,          // SDKVersion
+		&state.swap_chain_desc,     // pSwapChainDesc
+		&state.swap_chain,          // ppSwapChain
+		&state.device,              // ppDevice
+		&feature_level,             // pFeatureLevel
+		&state.device_context);     // ppImmediateContext
 	(void)hr;
 	CUTE_ASSERT(SUCCEEDED(hr) && state.swap_chain && state.device && state.device_context);
 
-	/* default render target and depth-stencil-buffer */
+	// Default render target and depth-stencil-buffer.
 	cf_d3d11_create_default_render_target();
 }
 
-static const void* s_d3d11_device(void)
+static const void* s_d3d11_device()
 {
 	return (const void*)state.device;
 }
 
-static const void* s_d3d11_device_context(void)
+static const void* s_d3d11_device_context()
 {
 	return (const void*)state.device_context;
 }
 
-static const void* s_d3d11_render_target_view(void)
+static const void* s_d3d11_render_target_view()
 {
 	return (const void*)state.render_target_view;
 }
 
-static const void* s_d3d11_depth_stencil_view(void)
+static const void* s_d3d11_depth_stencil_view()
 {
 	return (const void*)state.depth_stencil_view;
 }
@@ -176,18 +175,18 @@ sg_context_desc cf_dx11_get_context()
 	return desc;
 }
 
-void cf_dx11_present()
+void cf_dx11_present(bool vsync)
 {
-	IDXGISwapChain_Present(state.swap_chain, 1, 0);
+	IDXGISwapChain_Present(state.swap_chain, vsync ? 1 : 0, 0);
 
-	/* handle window resizing */
+	// Handle window resizing.
 	RECT r;
 	if (GetClientRect(state.hwnd, &r)) {
 		const int cur_width = r.right - r.left;
 		const int cur_height = r.bottom - r.top;
 		if (((cur_width > 0) && (cur_width != state.w)) ||
 			((cur_height > 0) && (cur_height != state.h))) {
-			/* need to reallocate the default render target */
+			// Need to reallocate the default render target.
 			state.w = cur_width;
 			state.h = cur_height;
 			cf_d3d11_update_default_render_target();
@@ -207,7 +206,7 @@ void cf_dx11_shutdown()
 
 void cf_dx11_init(void* hwnd, int w, int h, int sample_count) { CUTE_UNUSED(hwnd); CUTE_UNUSED(w); CUTE_UNUSED(h); CUTE_UNUSED(sample_count); }
 sg_context_desc cf_dx11_get_context() { sg_context_desc desc; CUTE_MEMSET(&desc, 0, sizeof(desc)); return desc; }
-void cf_dx11_present() {}
+void cf_dx11_present(bool vsync) { CUTE_UNUSED(vsync); }
 void cf_dx11_shutdown() {}
 
 #endif // CUTE_WINDOWS

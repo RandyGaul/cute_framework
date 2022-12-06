@@ -48,6 +48,7 @@ typedef struct sg_image sg_image;
 	CF_ENUM(APP_OPTIONS_WINDOW_POS_CENTERED,            1 << 7) \
 	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT, 1 << 8) \
 	CF_ENUM(APP_OPTIONS_NO_AUDIO,                       1 << 9) \
+	CF_ENUM(APP_OPTIONS_VSYNC,                          1 << 10) \
 
 enum
 {

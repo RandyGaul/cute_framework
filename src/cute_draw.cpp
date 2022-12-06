@@ -1028,7 +1028,6 @@ int cf_draw_peek_layer()
 
 void cf_render_settings_filter(CF_Filter filter)
 {
-	// TODO - Invalidate spritebatch textures.
 	draw->filter = filter;
 }
 

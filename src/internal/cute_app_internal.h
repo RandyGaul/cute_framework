@@ -191,6 +191,7 @@ struct CF_App
 	bool using_imgui = false;
 	sg_imgui_t sg_imgui;
 	uint64_t default_image_id = CUTE_PNG_ID_RANGE_LO;
+	bool vsync = false;
 
 	// Input stuff.
 	Cute::Array<char> ime_composition;
