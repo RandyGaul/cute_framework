@@ -185,31 +185,37 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			out_verts[0].position.y = quad[0].y;
 			out_verts[0].uv.x = s->minx;
 			out_verts[0].uv.y = s->maxy;
+			out_verts[0].color = geom.tint;
 
 			out_verts[1].position.x = quad[3].x;
 			out_verts[1].position.y = quad[3].y;
 			out_verts[1].uv.x = s->minx;
 			out_verts[1].uv.y = s->miny;
+			out_verts[1].color = geom.tint;
 
 			out_verts[2].position.x = quad[1].x;
 			out_verts[2].position.y = quad[1].y;
 			out_verts[2].uv.x = s->maxx;
 			out_verts[2].uv.y = s->maxy;
+			out_verts[2].color = geom.tint;
 
 			out_verts[3].position.x = quad[1].x;
 			out_verts[3].position.y = quad[1].y;
 			out_verts[3].uv.x = s->maxx;
 			out_verts[3].uv.y = s->maxy;
+			out_verts[3].color = geom.tint;
 
 			out_verts[4].position.x = quad[3].x;
 			out_verts[4].position.y = quad[3].y;
 			out_verts[4].uv.x = s->minx;
 			out_verts[4].uv.y = s->miny;
+			out_verts[4].color = geom.tint;
 
 			out_verts[5].position.x = quad[2].x;
 			out_verts[5].position.y = quad[2].y;
 			out_verts[5].uv.x = s->maxx;
 			out_verts[5].uv.y = s->miny;
+			out_verts[5].color = geom.tint;
 
 			vert_count += 6;
 		}	break;
@@ -238,19 +244,11 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 
 	// Apply uniforms.
 	v2 u_texture_size = cf_v2(draw->atlas_width, draw->atlas_height);
-	CF_Color u_tint = draw->tints.last();
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
-	cf_material_set_uniform_fs(draw->material, "fs_params", "u_tint", &u_tint, CF_UNIFORM_TYPE_FLOAT4, 1);
 
 	// Outline shader uniforms.
-	CF_Color u_border_color = draw->outline_color;
 	v2 u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
-	float u_use_border = draw->outline_use_border;
-	float u_use_corners = draw->outline_use_corners;
-	cf_material_set_uniform_fs(draw->material, "fs_params", "u_border_color", &u_border_color, CF_UNIFORM_TYPE_FLOAT4, 1);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texel_size", &u_texel_size, CF_UNIFORM_TYPE_FLOAT2, 1);
-	cf_material_set_uniform_fs(draw->material, "fs_params", "u_use_border", &u_use_border, CF_UNIFORM_TYPE_FLOAT, 1);
-	cf_material_set_uniform_fs(draw->material, "fs_params", "u_use_corners", &u_use_corners, CF_UNIFORM_TYPE_FLOAT, 1);
 
 	// Apply render state.
 	cf_material_set_render_state(draw->material, draw->render_states.last());
@@ -324,14 +322,6 @@ void cf_make_draw()
 	draw->render_states.add(state);
 	cf_material_set_render_state(draw->material, state);
 
-	// Scissor.
-	CF_Rect scissor;
-	scissor.w = -1;
-	scissor.h = -1;
-	scissor.x = 0;
-	scissor.y = 0;
-	draw->scissors.add(scissor);
-
 	// Spritebatcher.
 	spritebatch_config_t config;
 	spritebatch_set_default_config(&config);
@@ -377,6 +367,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.geom.u.sprite.position = p;
 	s.geom.u.sprite.rotation = sprite->transform.r;
 	s.geom.u.sprite.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h) * draw->cam_dimensions_inverse;
+	s.geom.u.sprite.tint = premultiply(to_pixel(draw->tints.last()));
 	s.geom.alpha = sprite->opacity;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -394,23 +385,24 @@ void cf_draw_sprite2(const CF_Sprite* sprite, CF_Transform transform)
 	s.geom.u.sprite.position = p;
 	s.geom.u.sprite.rotation = sprite->transform.r;
 	s.geom.u.sprite.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h) * draw->cam_dimensions_inverse;
+	s.geom.u.sprite.tint = premultiply(to_pixel(draw->tints.last()));
 	s.geom.alpha = sprite->opacity;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
 }
 
-void cf_draw_quad(CF_Aabb bb, float thickness, CF_Color c, bool antialias)
+void cf_draw_quad(CF_Aabb bb, float thickness)
 {
 	CF_V2 verts[4];
 	cf_aabb_verts(verts, bb);
-	cf_draw_quad2(verts[0], verts[1], verts[2], verts[3], thickness, c, antialias);
+	cf_draw_quad2(verts[0], verts[1], verts[2], verts[3], thickness);
 }
 
 static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3, bool antialias)
 {
 	if (antialias) {
 		CF_V2 verts[] = { p0, p1, p2, p3 };
-		cf_draw_polyline(verts, 4, thickness, c0, true, true, 0);
+		cf_draw_polyline(verts, 4, thickness, true, 0);
 	} else {
 		float sqrt_2 = 1.41421356237f;
 		CF_V2 n = cf_v2(sqrt_2, sqrt_2) * thickness;
@@ -425,9 +417,10 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness,
 	}
 }
 
-void cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c, bool antialias)
+void cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness)
 {
-	s_draw_quad(p0, p1, p2, p3, thickness, c, c, c, c, antialias);
+	CF_Color c = draw->colors.last();
+	s_draw_quad(p0, p1, p2, p3, thickness, c, c, c, c, draw->antialias.last());
 }
 
 void cf_draw_quad3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3)
@@ -435,14 +428,14 @@ void cf_draw_quad3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_C
 	s_draw_quad(p0, p1, p2, p3, thickness, c0, c1, c2, c3, false);
 }
 
-void cf_draw_quad_fill(CF_Aabb bb, CF_Color c)
+void cf_draw_quad_fill(CF_Aabb bb)
 {
 	CF_V2 verts[4];
 	cf_aabb_verts(verts, bb);
-	cf_draw_quad_fill2(verts[0], verts[1], verts[2], verts[3], c);
+	cf_draw_quad_fill2(verts[0], verts[1], verts[2], verts[3]);
 }
 
-void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c)
+void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3)
 {
 	CF_M3x2 m = draw->cam;
 	spritebatch_sprite_t s = { };
@@ -454,7 +447,7 @@ void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c)
 	s.geom.u.quad.p1 = mul(m, p1);
 	s.geom.u.quad.p2 = mul(m, p2);
 	s.geom.u.quad.p3 = mul(m, p3);
-	s.geom.u.quad.c0 = s.geom.u.quad.c1 = s.geom.u.quad.c2 = s.geom.u.quad.c3 = premultiply(to_pixel(c));
+	s.geom.u.quad.c0 = s.geom.u.quad.c1 = s.geom.u.quad.c2 = s.geom.u.quad.c3 = premultiply(to_pixel(cf_tint(draw->colors.last(), draw->tints.last())));
 	s.geom.alpha = 1.0f;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -472,18 +465,18 @@ void cf_draw_quad_fill3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_
 	s.geom.u.quad.p1 = mul(m, p1);
 	s.geom.u.quad.p2 = mul(m, p2);
 	s.geom.u.quad.p3 = mul(m, p3);
-	s.geom.u.quad.c0 = premultiply(to_pixel(c0));
-	s.geom.u.quad.c1 = premultiply(to_pixel(c1));
-	s.geom.u.quad.c2 = premultiply(to_pixel(c2));
-	s.geom.u.quad.c3 = premultiply(to_pixel(c3));
+	s.geom.u.quad.c0 = premultiply(to_pixel(cf_tint(c0, draw->tints.last())));
+	s.geom.u.quad.c1 = premultiply(to_pixel(cf_tint(c1, draw->tints.last())));
+	s.geom.u.quad.c2 = premultiply(to_pixel(cf_tint(c2, draw->tints.last())));
+	s.geom.u.quad.c3 = premultiply(to_pixel(cf_tint(c3, draw->tints.last())));
 	s.geom.alpha = 1.0f;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
 }
 
-void cf_draw_circle(CF_V2 p, float r, int iters, float thickness, CF_Color color, bool antialias)
+void cf_draw_circle(CF_V2 p, float r, int iters, float thickness)
 {
-	if (antialias) {
+	if (draw->antialias.last()) {
 		Array<CF_V2> verts(iters);
 		CF_V2 p0 = cf_v2(p.x + r, p.y);
 		verts.add(p0);
@@ -496,7 +489,7 @@ void cf_draw_circle(CF_V2 p, float r, int iters, float thickness, CF_Color color
 			p0 = p1;
 		}
 
-		cf_draw_polyline(verts.data(), verts.size(), thickness, color, true, true, 0);
+		cf_draw_polyline(verts.data(), verts.size(), thickness, true, 0);
 	} else {
 		float half_thickness = thickness * 0.5f;
 		CF_V2 p0 = cf_v2(p.x + r - half_thickness, p.y);
@@ -507,26 +500,26 @@ void cf_draw_circle(CF_V2 p, float r, int iters, float thickness, CF_Color color
 			CF_V2 n = cf_from_angle(a);
 			CF_V2 p2 = p + n * (r + half_thickness);
 			CF_V2 p3 = p + n * (r - half_thickness);
-			cf_draw_quad_fill2(p0, p1, p2, p3, color);
+			cf_draw_quad_fill2(p0, p1, p2, p3);
 			p1 = p2;
 			p0 = p3;
 		}
 	}
 }
 
-void cf_draw_circle_fill(CF_V2 p, float r, int iters, CF_Color c)
+void cf_draw_circle_fill(CF_V2 p, float r, int iters)
 {
 	CF_V2 prev = cf_v2(r, 0);
 
 	for (int i = 1; i <= iters; ++i) {
 		float a = (i / (float)iters) * (2.0f * CUTE_PI);
 		CF_V2 next = cf_from_angle(a) * r;
-		cf_draw_tri_fill(p + prev, p + next, p, c);
+		cf_draw_tri_fill(p + prev, p + next, p);
 		prev = next;
 	}
 }
 
-static void s_circle_arc_aa(Array<CF_V2>* verts, CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness, CF_Color color)
+static void s_circle_arc_aa(Array<CF_V2>* verts, CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness)
 {
 	float r = cf_len(center_of_arc - p);
 	CF_V2 d = cf_norm(center_of_arc - p);
@@ -547,12 +540,12 @@ static void s_circle_arc_aa(Array<CF_V2>* verts, CF_V2 p, CF_V2 center_of_arc, f
 	}
 }
 
-void cf_draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness, CF_Color color, bool antialias)
+void cf_draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness)
 {
-	if (antialias) {
+	if (draw->antialias.last()) {
 		Array<CF_V2> verts(iters);
-		s_circle_arc_aa(&verts, p, center_of_arc, range, iters, thickness, color);
-		cf_draw_polyline(verts.data(), verts.size(), thickness, color, false, true, 3);
+		s_circle_arc_aa(&verts, p, center_of_arc, range, iters, thickness);
+		cf_draw_polyline(verts.data(), verts.size(), thickness, false, 3);
 	} else {
 		float r = cf_len(center_of_arc - p);
 		CF_V2 d = cf_norm(center_of_arc - p);
@@ -570,14 +563,14 @@ void cf_draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, fl
 			t = cf_mul_sc_v2(m, d);
 			CF_V2 p2 = p + t * (r + half_thickness);
 			CF_V2 p3 = p + t * (r - half_thickness);
-			cf_draw_quad_fill2(p0, p1, p2, p3, color);
+			cf_draw_quad_fill2(p0, p1, p2, p3);
 			p1 = p2;
 			p0 = p3;
 		}
 	}
 }
 
-void cf_draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iters, CF_Color color)
+void cf_draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iters)
 {
 	float r = cf_len(center_of_arc - p);
 	CF_V2 d = cf_norm(center_of_arc - p);
@@ -592,54 +585,54 @@ void cf_draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iter
 		m = cf_sincos_f(i * inc);
 		t = cf_mul_sc_v2(m, d);
 		CF_V2 p1 = p + t * r;
-		cf_draw_tri_fill(p, p1, p0, color);
+		cf_draw_tri_fill(p, p1, p0);
 		p0 = p1;
 	}
 }
 
-void cf_draw_capsule(CF_V2 a, CF_V2 b, float r, int iters, float thickness, CF_Color c, bool antialias)
+void cf_draw_capsule(CF_V2 a, CF_V2 b, float r, int iters, float thickness)
 {
-	if (antialias) {
+	if (draw->antialias.last()) {
 		Array<CF_V2> verts(iters * 2 + 2);
-		s_circle_arc_aa(&verts, a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness, c);
-		s_circle_arc_aa(&verts, b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness, c);
-		cf_draw_polyline(verts.data(), verts.count(), thickness, c, true, true, 0);
+		s_circle_arc_aa(&verts, a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness);
+		s_circle_arc_aa(&verts, b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness);
+		cf_draw_polyline(verts.data(), verts.count(), thickness, true, 0);
 	} else {
-		cf_draw_circle_arc(a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness, c, false);
-		cf_draw_circle_arc(b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness, c, false);
+		cf_draw_circle_arc(a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness);
+		cf_draw_circle_arc(b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness);
 		CF_V2 n = cf_skew(cf_norm(b - a)) * r;
 		CF_V2 q0 = a + n;
 		CF_V2 q1 = b + n;
 		CF_V2 q2 = b - n;
 		CF_V2 q3 = a - n;
-		cf_draw_line(q0, q1, thickness, c, false);
-		cf_draw_line(q2, q3, thickness, c, false);
+		cf_draw_line(q0, q1, thickness);
+		cf_draw_line(q2, q3, thickness);
 	}
 }
 
-void cf_draw_capsule_fill(CF_V2 a, CF_V2 b, float r, int iters, CF_Color c)
+void cf_draw_capsule_fill(CF_V2 a, CF_V2 b, float r, int iters)
 {
-	cf_draw_circle_arc_fill(a, a + cf_norm(a - b) * r, CUTE_PI, iters, c);
-	cf_draw_circle_arc_fill(b, b + cf_norm(b - a) * r, CUTE_PI, iters, c);
+	cf_draw_circle_arc_fill(a, a + cf_norm(a - b) * r, CUTE_PI, iters);
+	cf_draw_circle_arc_fill(b, b + cf_norm(b - a) * r, CUTE_PI, iters);
 	CF_V2 n = cf_skew(cf_norm(b - a)) * r;
 	CF_V2 q0 = a + n;
 	CF_V2 q1 = b + n;
 	CF_V2 q2 = b - n;
 	CF_V2 q3 = a - n;
-	cf_draw_quad_fill2(q0, q1, q2, q3, c);
+	cf_draw_quad_fill2(q0, q1, q2, q3);
 }
 
-void cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c, bool antialias)
+void cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness)
 {
 	CUTE_ASSERT(0);
 }
 
-void cf_draw_tri2(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, bool antialias)
+void cf_draw_tri2(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c0, CF_Color c1, CF_Color c2)
 {
 	CUTE_ASSERT(0);
 }
 
-void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c)
+void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2)
 {
 	CF_M3x2 m = draw->cam;
 	spritebatch_sprite_t s = { };
@@ -650,7 +643,7 @@ void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c)
 	s.geom.u.tri.p0 = mul(m, p0);
 	s.geom.u.tri.p1 = mul(m, p1);
 	s.geom.u.tri.p2 = mul(m, p2);
-	s.geom.u.tri.c0 = s.geom.u.tri.c1 = s.geom.u.tri.c2 = premultiply(to_pixel(c));
+	s.geom.u.tri.c0 = s.geom.u.tri.c1 = s.geom.u.tri.c2 = premultiply(to_pixel(draw->colors.last()));
 	s.geom.alpha = 1.0f;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -675,18 +668,19 @@ void cf_draw_tri_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, C
 	spritebatch_push(&draw->sb, s);
 }
 
-void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c, bool antialias)
+void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
 {
-	cf_draw_line2(p0, p1, thickness, c, c, antialias);
+	CF_Color c = draw->colors.last();
+	cf_draw_line2(p0, p1, thickness, c, c);
 }
 
-void cf_draw_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1, bool antialias)
+void cf_draw_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1)
 {
 	float scale = (float)app->w / draw->cam_dimensions.x; // Assume x/y uniform scaling.
 	float alias_scale = 1.0f / scale;
 	bool thick_line = thickness > alias_scale;
 	thickness = cf_max(thickness, alias_scale);
-	if (antialias) {
+	if (draw->antialias.last()) {
 		CF_Color c2 = c0;
 		CF_Color c3 = c1;
 		c2.a = 0;
@@ -763,26 +757,26 @@ CUTE_INLINE static void s_bevel_arc_feather(CF_V2 b, CF_V2 i3, CF_V2 f3, CF_V2 i
 	for (int i = 1; i < bevel_count; ++i) {
 		CF_V2 p2 = s_rot_b_about_a(r, b, p1);
 		CF_V2 p3 = s_rot_b_about_a(r, b, p0);
-		cf_draw_tri_fill(b, p0, p3, c0);
+		cf_draw_tri_fill(b, p0, p3);
 		cf_draw_quad_fill3(p3, p2, p1, p0, c0, c1, c1, c0);
 		p0 = p3;
 		p1 = p2;
 	}
-	cf_draw_tri_fill(b, i4, p0, c0);
+	cf_draw_tri_fill(b, i4, p0);
 	cf_draw_quad_fill3(p0, i4, f4, p1, c0, c0, c1, c1);
 }
 
-CUTE_INLINE static void s_bevel_arc(CF_V2 b, CF_V2 i3, CF_V2 i4, CF_Color c0, CF_Color c1, int bevel_count)
+CUTE_INLINE static void s_bevel_arc(CF_V2 b, CF_V2 i3, CF_V2 i4, int bevel_count)
 {
 	float arc = cf_shortest_arc(cf_norm(i3 - b), cf_norm(i4 - b)) / (float)(bevel_count + 1);
 	CF_SinCos r = cf_sincos_f(arc);
 	CF_V2 p0 = i3;
 	for (int i = 1; i < bevel_count; ++i) {
 		CF_V2 p3 = s_rot_b_about_a(r, b, p0);
-		cf_draw_tri_fill(b, p0, p3, c0);
+		cf_draw_tri_fill(b, p0, p3);
 		p0 = p3;
 	}
-	cf_draw_tri_fill(b, i4, p0, c0);
+	cf_draw_tri_fill(b, i4, p0);
 }
 
 static void s_polyline(CF_V2* points, int count, float thickness, CF_Color c0, CF_Color c1, bool loop, bool feather, float alias_scale, int bevel_count)
@@ -818,8 +812,8 @@ static void s_polyline(CF_V2* points, int count, float thickness, CF_Color c0, C
 					CF_V2 f2 = cf_intersect_halfspace2(cf_plane2(fn0, b - fn0), b - fn1, c - fn1);
 					CF_V2 f3 = cf_intersect_halfspace2(cf_plane2(fn0, b + fn0), b + fn1, c + fn1);
 					if (emit) {
-						cf_draw_quad_fill2(a, b, i3, i0, c0);
-						cf_draw_quad_fill2(i1, i2, b, a, c0);
+						cf_draw_quad_fill2(a, b, i3, i0);
+						cf_draw_quad_fill2(i1, i2, b, a);
 						cf_draw_quad_fill3(i0, i3, f3, f0, c0, c0, c1, c1);
 						cf_draw_quad_fill3(f1, f2, i2, i1, c1, c1, c0, c0);
 					}
@@ -842,8 +836,8 @@ static void s_polyline(CF_V2* points, int count, float thickness, CF_Color c0, C
 					CF_V2 f3 = cf_intersect_halfspace2(h, a + fn0, b + fn0);
 					CF_V2 f4 = cf_intersect_halfspace2(h, b + fn1, c + fn1);
 					if (emit) {
-						cf_draw_quad_fill2(a, b, i3, i0, c0);
-						cf_draw_quad_fill2(i1, i2, b, a, c0);
+						cf_draw_quad_fill2(a, b, i3, i0);
+						cf_draw_quad_fill2(i1, i2, b, a);
 						cf_draw_quad_fill3(i0, i3, f3, f0, c0, c0, c1, c1);
 						cf_draw_quad_fill3(i1, f1, f2, i2, c0, c1, c1, c0);
 						s_bevel_arc_feather(b, i3, f3, i4, f4, c0, c1, bevel_count);
@@ -853,7 +847,7 @@ static void s_polyline(CF_V2* points, int count, float thickness, CF_Color c0, C
 				} else if (emit) {
 					cf_draw_quad_fill3(a, b, i3, i0, c0, c0, c1, c1);
 					cf_draw_quad_fill3(i1, i2, b, a, c1, c1, c0, c0);
-					s_bevel_arc(b, i3, i4, c0, c1, bevel_count);
+					s_bevel_arc(b, i3, i4, bevel_count);
 				}
 				i0 = i4;
 				i1 = i2;
@@ -866,8 +860,8 @@ static void s_polyline(CF_V2* points, int count, float thickness, CF_Color c0, C
 					CF_V2 f2 = cf_intersect_halfspace2(cf_plane2(fn0, b + fn0), b + fn1, c + fn1);
 					CF_V2 f3 = cf_intersect_halfspace2(cf_plane2(fn0, b - fn0), b - fn1, c - fn1);
 					if (emit) {
-						cf_draw_quad_fill2(a, b, i3, i1, c0);
-						cf_draw_quad_fill2(i0, i2, b, a, c0);
+						cf_draw_quad_fill2(a, b, i3, i1);
+						cf_draw_quad_fill2(i0, i2, b, a);
 						cf_draw_quad_fill3(i1, i3, f3, f1, c0, c0, c1, c1);
 						cf_draw_quad_fill3(f0, f2, i2, i0, c1, c1, c0, c0);
 					}
@@ -890,8 +884,8 @@ static void s_polyline(CF_V2* points, int count, float thickness, CF_Color c0, C
 					CF_V2 f3 = cf_intersect_halfspace2(h, a - fn0, b - fn0);
 					CF_V2 f4 = cf_intersect_halfspace2(h, b - fn1, c - fn1);
 					if (emit) {
-						cf_draw_quad_fill2(a, b, i3, i1, c0);
-						cf_draw_quad_fill2(i0, i2, b, a, c0);
+						cf_draw_quad_fill2(a, b, i3, i1);
+						cf_draw_quad_fill2(i0, i2, b, a);
 						cf_draw_quad_fill3(i1, i3, f3, f1, c0, c0, c1, c1);
 						cf_draw_quad_fill3(i0, f0, f2, i2, c0, c1, c1, c0);
 						s_bevel_arc_feather(b, i3, f3, i4, f4, c0, c1, bevel_count);
@@ -901,7 +895,7 @@ static void s_polyline(CF_V2* points, int count, float thickness, CF_Color c0, C
 				} else if (emit) {
 					cf_draw_quad_fill3(a, b, i3, i1, c0, c0, c1, c1);
 					cf_draw_quad_fill3(i0, i2, b, a, c1, c1, c0, c0);
-					s_bevel_arc(b, i3, i4, c0, c1, bevel_count);
+					s_bevel_arc(b, i3, i4, bevel_count);
 				}
 				i1 = i4;
 				i0 = i2;
@@ -914,8 +908,8 @@ static void s_polyline(CF_V2* points, int count, float thickness, CF_Color c0, C
 				CF_V2 f2 = b + fn0;
 				CF_V2 f3 = b - fn0;
 				if (emit) {
-					cf_draw_quad_fill2(a, b, i2, i0, c0);
-					cf_draw_quad_fill2(i1, i3, b, a, c0);
+					cf_draw_quad_fill2(a, b, i2, i0);
+					cf_draw_quad_fill2(i1, i3, b, a);
 					cf_draw_quad_fill3(i0, i2, f2, f0, c0, c0, c1, c1);
 					cf_draw_quad_fill3(i1, f1, f3, i3, c0, c1, c1, c0);
 				}
@@ -961,8 +955,8 @@ static void s_polyline(CF_V2* points, int count, float thickness, CF_Color c0, C
 	// End case for non-loops.
 	if (!loop) {
 		if (feather) {
-			cf_draw_quad_fill2(a, b, b + n0, i0, c0);
-			cf_draw_quad_fill2(a, i1, b - n0, b, c0);
+			cf_draw_quad_fill2(a, b, b + n0, i0);
+			cf_draw_quad_fill2(a, i1, b - n0, b);
 			cf_draw_quad_fill3(f0, i0, b + n0, b + fn0, c1, c0, c0, c1);
 			cf_draw_quad_fill3(b - fn0, b - n0, i1, f1, c1, c0, c0, c1);
 
@@ -987,14 +981,15 @@ static void s_polyline(CF_V2* points, int count, float thickness, CF_Color c0, C
 	}
 }
 
-void cf_draw_polyline(CF_V2* points, int count, float thickness, CF_Color color, bool loop, bool antialias, int bevel_count)
+void cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count)
 {
 	CUTE_ASSERT(count >= 3);
+	CF_Color color = draw->colors.last();
 	float scale = (float)app->w / draw->cam_dimensions.x; // Assume x/y uniform scaling.
 	float alias_scale = 1.0f / scale;
 	bool thick_line = thickness > alias_scale;
 	thickness = cf_max(thickness, alias_scale);
-	if (antialias) {
+	if (draw->antialias.last()) {
 		CF_Color no_alpha = color;
 		no_alpha.a = 0;
 		if (thick_line) {
@@ -1005,6 +1000,34 @@ void cf_draw_polyline(CF_V2* points, int count, float thickness, CF_Color color,
 	} else {
 		s_polyline(points, count, thickness, color, color, loop, false, 0, bevel_count);
 	}
+}
+
+void cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, float thickness)
+{
+	draw->bezier.ensure_capacity(iters);
+	draw->bezier.clear();
+	float step = 1.0f / (float)iters;
+	draw->bezier.add(a);
+	for (int i = 1; i < iters; ++i) {
+		CF_V2 p = cf_bezier(a, c0, b, i * step);
+		draw->bezier.add(p);
+	}
+	draw->bezier.add(b);
+	cf_draw_polyline(draw->bezier.data(), draw->bezier.count(), thickness, false, 1);
+}
+
+void cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float thickness)
+{
+	draw->bezier.ensure_capacity(iters);
+	draw->bezier.clear();
+	float step = 1.0f / (float)iters;
+	draw->bezier.add(a);
+	for (int i = 1; i < iters; ++i) {
+		CF_V2 p = cf_bezier2(a, c0, c1, b, i * step);
+		draw->bezier.add(p);
+	}
+	draw->bezier.add(b);
+	cf_draw_polyline(draw->bezier.data(), draw->bezier.count(), thickness, false, 1);
 }
 
 void cf_draw_push_layer(int layer)
@@ -1026,26 +1049,66 @@ int cf_draw_peek_layer()
 	return draw->layers.last();
 }
 
+void cf_draw_push_color(CF_Color c)
+{
+	draw->colors.add(c);
+}
+
+CF_Color cf_draw_pop_color()
+{
+	if (draw->colors.count() > 1) {
+		return draw->colors.pop();
+	} else {
+		return draw->colors.last();
+	}
+}
+
+CF_Color cf_draw_peek_color()
+{
+	return draw->colors.last();
+}
+
+void cf_draw_push_tint(CF_Color c)
+{
+	draw->tints.add(c);
+}
+
+CF_Color cf_draw_pop_tint()
+{
+	if (draw->tints.count() > 1) {
+		return draw->tints.pop();
+	} else {
+		return draw->tints.last();
+	}
+}
+
+CF_Color cf_draw_peek_tint()
+{
+	return draw->tints.last();
+}
+
+void cf_draw_push_antialias(bool antialias)
+{
+	draw->antialias.add(antialias);
+}
+
+bool cf_draw_pop_antialias()
+{
+	if (draw->antialias.count() > 1) {
+		return draw->antialias.pop();
+	} else {
+		return draw->antialias.last();
+	}
+}
+
+bool cf_draw_peek_antialias()
+{
+	return draw->antialias.last();
+}
+
 void cf_render_settings_filter(CF_Filter filter)
 {
 	draw->filter = filter;
-}
-
-void cf_render_settings_outlines(bool use_outlines)
-{
-	float val = use_outlines ? 1.0f : 0;
-	draw->outline_use_border = val;
-}
-
-void cf_render_settings_outlines_use_corners(bool use_corners)
-{
-	float val = use_corners ? 1.0f : 0;
-	draw->outline_use_corners = val;
-}
-
-void cf_render_settings_outlines_color(CF_Color c)
-{
-	draw->outline_color = c;
 }
 
 void cf_render_settings_push_viewport(CF_Rect viewport)
@@ -1106,25 +1169,6 @@ CF_RenderState cf_render_settings_pop_render_state()
 CF_RenderState cf_render_settings_peek_render_state()
 {
 	return draw->render_states.last();
-}
-
-void cf_render_settings_push_tint(CF_Color c)
-{
-	draw->tints.add(c);
-}
-
-CF_Color cf_render_settings_pop_tint()
-{
-	if (draw->tints.count() > 1) {
-		return draw->tints.pop();
-	} else {
-		return draw->tints.last();
-	}
-}
-
-CF_Color cf_render_settings_peek_tint()
-{
-	return draw->tints.last();
 }
 
 void cf_render_to(CF_Canvas canvas, bool clear)

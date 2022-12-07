@@ -137,6 +137,7 @@ CUTE_INLINE float cf_safe_invert(float a) { return a != 0 ? 1.0f / a : 0; }
 CUTE_INLINE float cf_lerp(float a, float b, float t) { return a + (b - a) * t; }
 CUTE_INLINE float cf_remap(float t, float lo, float hi) { return (hi - lo) != 0 ? (t - lo) / (hi - lo) : 0; }
 CUTE_INLINE float cf_mod(float x, float m) { return x - (int)(x / m) * m; }
+CUTE_INLINE float cf_fract(float x) { return x - floorf(x); }
 
 CUTE_INLINE int cf_sign_int(int a) { return a < 0 ? -1 : 1; }
 CUTE_INLINE int cf_min_int(int a, int b) { return a < b ? a : b; }
@@ -707,6 +708,7 @@ CUTE_INLINE float safe_invert(float a) { return cf_safe_invert(a); }
 CUTE_INLINE float lerp_f(float a, float b, float t) { return cf_lerp(a, b, t); }
 CUTE_INLINE float remap(float t, float lo, float hi) { return cf_remap(t, lo, hi); }
 CUTE_INLINE float mod(float x, float m) { return cf_mod(x, m); }
+CUTE_INLINE float fract(float x) { return cf_fract(x); }
 
 CUTE_INLINE int sign(int a) { return cf_sign_int(a); }
 CUTE_INLINE int min(int a, int b) { return cf_min_int(a, b); }

@@ -24,6 +24,7 @@
 
 #include "cute_defines.h"
 #include "cute_string.h"
+#include "cute_math.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -69,11 +70,51 @@ CUTE_INLINE CF_Pixel cf_make_pixel_hex(int hex) { return cf_make_pixel_rgba((uin
 CUTE_INLINE CF_Pixel cf_make_pixel_hex_string(const char* hex) { cf_make_pixel_hex((int)stohex(hex)); }
 
 CUTE_INLINE CF_Color cf_mul_color(CF_Color a, float s) { return cf_make_color_rgba_f(a.r * s, a.g * s, a.b * s, a.a * s); }
+CUTE_INLINE CF_Color cf_mul_color2(CF_Color a, CF_Color b) { return cf_make_color_rgba_f(a.r * b.r, a.g * b.g, a.b * b.b, a.a * b.a); }
 CUTE_INLINE CF_Color cf_div_color(CF_Color a, float s) { return cf_make_color_rgba_f(a.r / s, a.g / s, a.b / s, a.a / s); }
 CUTE_INLINE CF_Color cf_add_color(CF_Color a, CF_Color b) { return cf_make_color_rgba_f(a.r + b.r, a.g + b.g, a.b + b.b, a.a + b.a); }
 CUTE_INLINE CF_Color cf_sub_color(CF_Color a, CF_Color b) { return cf_make_color_rgba_f(a.r - b.r, a.g - b.g, a.b - b.b, a.a - b.a); }
+CUTE_INLINE CF_Color cf_abs_color(CF_Color a) { return cf_make_color_rgba_f(cf_abs(a.r), cf_abs(a.g), cf_abs(a.b), cf_abs(a.a)); }
+CUTE_INLINE CF_Color cf_fract_color(CF_Color a) { return cf_make_color_rgba_f(cf_fract(a.r), cf_fract(a.g), cf_fract(a.b), cf_fract(a.a)); }
+CUTE_INLINE CF_Color cf_splat_color(float v) { CF_Color color; color.r = v; color.g = v; color.b = v; color.a = v; return color; }
+CUTE_INLINE CF_Color cf_mod_color(CF_Color a, float m) { return cf_make_color_rgba_f(cf_mod(a.r, m), cf_mod(a.g, m), cf_mod(a.b, m), cf_mod(a.a, m)); }
+CUTE_INLINE CF_Color cf_clamp_color(CF_Color a, CF_Color lo, CF_Color hi) { return cf_make_color_rgba_f(cf_clamp(a.r, lo.r, hi.r), cf_clamp(a.g, lo.g, hi.g), cf_clamp(a.b, lo.b, hi.b), cf_clamp(a.a, lo.a, hi.a)); }
+CUTE_INLINE CF_Color cf_clamp_color01(CF_Color a) { return cf_make_color_rgba_f(cf_clamp(a.r, 0, 1.0f), cf_clamp(a.g, 0, 1.0f), cf_clamp(a.b, 0, 1.0f), cf_clamp(a.a, 0, 1.0f)); }
 CUTE_INLINE CF_Color cf_color_lerp(CF_Color a, CF_Color b, float s) { return cf_add_color(a, cf_mul_color(cf_sub_color(b, a), s)); }
 CUTE_INLINE CF_Color cf_color_premultiply(CF_Color c) { c.r *= c.a; c.g *= c.a; c.b *= c.a; return c; }
+
+// HSV <-> RGB from : http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
+
+CUTE_INLINE CF_Color cf_rgb_to_hsv(CF_Color c)
+{
+	CF_Color K = cf_make_color_rgba_f(0, -1.0f / 3.0f, 2.0f / 3.0f, -1.0f);
+	CF_Color p = c.g < c.b ? cf_make_color_rgba_f(c.b, c.g, K.a, K.b) : cf_make_color_rgba_f(c.g, c.b, K.r, K.g);
+	CF_Color q = c.r < p.r ? cf_make_color_rgba_f(p.r, p.g, p.a, c.r) : cf_make_color_rgba_f(c.r, p.g, p.b, p.r);
+	float d = q.r - cf_min(q.a, q.g);
+	float e = 1.0e-10f;
+	return cf_make_color_rgba_f(cf_abs(q.b + (q.a - q.g) / (6.0f * d + e)), d / (q.r + e), q.r, c.a);
+}
+
+CUTE_INLINE CF_Color cf_hsv_to_rgb(CF_Color c)
+{
+	float alpha = c.a;
+	CF_Color one = cf_splat_color(1.0f);
+	CF_Color three = cf_splat_color(3.0f);
+	CF_Color x = cf_add_color(cf_splat_color(c.r*6.0f), cf_make_color_rgb_f(0,4.0f,2.0f));
+	CF_Color rgb = cf_clamp_color01(cf_sub_color(cf_abs_color(cf_sub_color(cf_mod_color(x,6.0f), three)), one));
+	rgb = cf_mul_color2(cf_mul_color2(cf_sub_color(three, cf_mul_color(rgb, 2.0f)), rgb), rgb);
+	CF_Color result = cf_mul_color(cf_color_lerp(one, rgb, c.g), c.b);
+	result.a = alpha;
+	return result;
+}
+
+CUTE_INLINE CF_Color cf_tint(CF_Color base, CF_Color tint)
+{
+	float alpha = base.a;
+	base = cf_rgb_to_hsv(base);
+	tint = cf_rgb_to_hsv(tint);
+	return cf_hsv_to_rgb(cf_make_color_rgba_f(tint.r, base.g, base.b, alpha));
+}
 
 CUTE_INLINE uint8_t cf_mul_un8(int a, int b) { int t = (a * b) + 0x80; return (uint8_t)(((t >> 8) + t) >> 8); }
 CUTE_INLINE uint8_t cf_div_un8(int a, int b) { return (uint8_t)(((b) * 0xFF + ((a) / 2)) / (a)); }
@@ -151,10 +192,19 @@ CUTE_INLINE Color operator*(Color a, float s) { return cf_mul_color(a, s); }
 CUTE_INLINE Color operator/(Color a, float s) { return cf_div_color(a, s); }
 CUTE_INLINE Color operator+(Color a, Color b) { return cf_add_color(a, b); }
 CUTE_INLINE Color operator-(Color a, Color b) { return cf_sub_color(a, b); }
+CUTE_INLINE Color operator*(Color a, Color b) { CF_Color c; c.r = a.r * b.r; c.g = a.g * b.g; c.b = a.b * b.b; c.a = a.a * b.a; return c; }
 CUTE_INLINE bool operator==(Color a, Color b) { return a.r == b.r && a.g == b.g && a.b == b.b && a.a == b.a; }
 CUTE_INLINE bool operator!=(Color a, Color b) { return !(a == b); }
+CUTE_INLINE CF_Color abs_color(CF_Color a) { return cf_abs_color(a); }
+CUTE_INLINE CF_Color fract_color(CF_Color a) { return cf_fract_color(a); }
+CUTE_INLINE CF_Color splat_color(float v) { return cf_splat_color(v); }
+CUTE_INLINE CF_Color clamp_color(CF_Color a, CF_Color lo, CF_Color hi) { return cf_clamp_color(a, lo, hi); }
+CUTE_INLINE CF_Color clamp_color01(CF_Color a) { return cf_clamp_color01(a); }
 CUTE_INLINE Color lerp(Color a, Color b, float s) { return cf_color_lerp(a, b, s); }
 CUTE_INLINE Color premultiply(Color c) { return cf_color_premultiply(c); }
+CUTE_INLINE CF_Color rgb_to_hsv(CF_Color c) { return cf_rgb_to_hsv(c); }
+CUTE_INLINE CF_Color hsv_to_rgb(CF_Color c) { return cf_hsv_to_rgb(c); }
+CUTE_INLINE CF_Color tint(CF_Color base, CF_Color tint) { return cf_tint(base, tint); }
 
 CUTE_INLINE Pixel operator*(Pixel a, int s) { return cf_mul_pixel(a, s); }
 CUTE_INLINE Pixel operator/(Pixel a, int s) { return cf_div_pixel(a, s); }

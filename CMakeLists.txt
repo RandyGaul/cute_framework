@@ -302,7 +302,7 @@ else()
 	fetch_content_with_folder(
 		SDL2
 		GIT_REPOSITORY https://github.com/libsdl-org/SDL
-		GIT_TAG release-2.0.14
+		GIT_TAG release-2.26.1
 		GIT_PROGRESS TRUE
 	)
 endif()

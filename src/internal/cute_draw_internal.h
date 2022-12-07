@@ -50,6 +50,8 @@ struct BatchSprite
 	CF_V2 position;
 	CF_SinCos rotation;
 	CF_V2 scale;
+	CF_Pixel tint;
+	float tint_strength;
 };
 
 struct BatchGeometry
@@ -73,13 +75,11 @@ struct DrawVertex
 	CF_V2 position;
 	CF_V2 uv;
 	CF_Pixel color;
-	uint8_t solid;
-	uint8_t outline;
-	uint8_t alpha;
-	uint8_t unused1;
+	uint8_t solid;         // r
+	uint8_t alpha;         // g
+	uint8_t tint_strength; // b
+	uint8_t unused1;       // a
 };
-
-#define DEFAULT_TINT cf_make_color_rgba_f(0.5f, 0.5f, 0.5f, 1.0f)
 
 struct CF_Draw
 {
@@ -89,14 +89,14 @@ struct CF_Draw
 	CF_Shader shader;
 	CF_Mesh mesh;
 	CF_Material material;
-	float outline_use_border;
-	float outline_use_corners;
-	CF_Color outline_color = cf_color_white();
 	CF_Filter filter = CF_FILTER_NEAREST;
+	Cute::Array<CF_Color> colors = { cf_color_red() };
+	Cute::Array<CF_Color> tints = { cf_color_grey() };
+	Cute::Array<float> tint_strengths = { 0 };
+	Cute::Array<bool> antialias = { false };
 	Cute::Array<CF_RenderState> render_states;
 	Cute::Array<CF_Rect> scissors = { { -1, -1, 0, 0 } };
 	Cute::Array<CF_Rect> viewports = { { -1, -1, 0, 0 } };
-	Cute::Array<CF_Color> tints = { DEFAULT_TINT };
 	Cute::Array<int> layers = { 0 };
 	Cute::Array<CF_M3x2> cam_stack;
 	CF_M3x2 cam = cf_make_identity();
@@ -104,6 +104,7 @@ struct CF_Draw
 	CF_V2 cam_dimensions_inverse = { };
 	CF_V2 cam_position = { };
 	float cam_rotation = 0;
+	Cute::Array<CF_V2> bezier;
 	Cute::Array<DrawVertex> verts;
 };
 

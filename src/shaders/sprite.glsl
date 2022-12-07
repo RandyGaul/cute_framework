@@ -3,7 +3,8 @@
 @ctype vec4 CF_Color
 @ctype vec2 CF_V2
 
-@include includes/overlay.glsl
+@include includes/blend.glsl
+@include includes/gamma.glsl
 @include includes/smooth_uv.glsl
 
 @vs vs
@@ -18,13 +19,15 @@
 	layout (location = 2) out float v_solid;
 	layout (location = 3) out float v_alpha;
 
+	@include_block gamma
+
 	void main()
 	{
 		vec4 posH = vec4(in_pos, 0, 1);
 		v_uv = in_uv;
-		v_col = in_col;
+		v_col = de_gamma(in_col);
 		v_solid = in_params.r;
-		v_alpha = in_params.b;
+		v_alpha = in_params.g;
 		gl_Position = posH;
 }
 @end
@@ -41,20 +44,20 @@
 
 	layout (binding = 0) uniform fs_params {
 		vec2 u_texture_size;
-		vec4 u_tint;
 	};
 
-	@include_block overlay
+	@include_block blend
+	@include_block gamma
 	@include_block smooth_uv
 
 	void main()
 	{
-		vec4 color = texture(u_image, smooth_uv(v_uv, u_texture_size));
-		color = overlay(color, u_tint);
-		color = mix(color, v_col, v_solid);
+		vec4 color = de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size)));
+		color = hue(color, v_col); // Tint sprites.
+		color = mix(color, v_col, v_solid); // Use color from CPU for solids (pre-tinted on CPU).
 		color.a = color.a * v_alpha;
 		if (color.a == 0) discard;
-		result = color;
+		result = gamma(color);
 	}
 @end
 

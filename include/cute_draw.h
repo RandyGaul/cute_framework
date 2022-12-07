@@ -37,33 +37,41 @@ extern "C" {
 
 CUTE_API void CUTE_CALL cf_draw_sprite(const CF_Sprite* sprite);
 CUTE_API void CUTE_CALL cf_draw_sprite2(const CF_Sprite* sprite, CF_Transform transform);
-CUTE_API void CUTE_CALL cf_draw_quad(CF_Aabb bb, float thickness, CF_Color c, bool antialias);
-CUTE_API void CUTE_CALL cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c, bool antialias);
+CUTE_API void CUTE_CALL cf_draw_quad(CF_Aabb bb, float thickness);
+CUTE_API void CUTE_CALL cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness);
 CUTE_API void CUTE_CALL cf_draw_quad3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3);
-CUTE_API void CUTE_CALL cf_draw_quad_fill(CF_Aabb bb, CF_Color c);
-CUTE_API void CUTE_CALL cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c);
+CUTE_API void CUTE_CALL cf_draw_quad_fill(CF_Aabb bb);
+CUTE_API void CUTE_CALL cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3);
 CUTE_API void CUTE_CALL cf_draw_quad_fill3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3);
-CUTE_API void CUTE_CALL cf_draw_circle(CF_V2 p, float r, int iters, float thickness, CF_Color c, bool antialias);
-CUTE_API void CUTE_CALL cf_draw_circle_fill(CF_V2 p, float r, int iters, CF_Color c);
-CUTE_API void CUTE_CALL cf_draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness, CF_Color color, bool antialias);
-CUTE_API void CUTE_CALL cf_draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iters, CF_Color color);
-CUTE_API void CUTE_CALL cf_draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness, CF_Color c, bool antialias);
-CUTE_API void CUTE_CALL cf_draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters, CF_Color c);
-CUTE_API void CUTE_CALL cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c, bool antialias);
-CUTE_API void CUTE_CALL cf_draw_tri2(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, bool antialias);
-CUTE_API void CUTE_CALL cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c);
+CUTE_API void CUTE_CALL cf_draw_circle(CF_V2 p, float r, int iters, float thickness);
+CUTE_API void CUTE_CALL cf_draw_circle_fill(CF_V2 p, float r, int iters);
+CUTE_API void CUTE_CALL cf_draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness);
+CUTE_API void CUTE_CALL cf_draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iters);
+CUTE_API void CUTE_CALL cf_draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness);
+CUTE_API void CUTE_CALL cf_draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters);
+CUTE_API void CUTE_CALL cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness);
+CUTE_API void CUTE_CALL cf_draw_tri2(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c0, CF_Color c1, CF_Color c2);
+CUTE_API void CUTE_CALL cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2);
 CUTE_API void CUTE_CALL cf_draw_tri_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, CF_Color c2);
-CUTE_API void CUTE_CALL cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c, bool antialias);
-CUTE_API void CUTE_CALL cf_draw_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1, bool antialias);
-CUTE_API void CUTE_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, CF_Color c, bool loop, bool antialias, int bevel_count);
+CUTE_API void CUTE_CALL cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness);
+CUTE_API void CUTE_CALL cf_draw_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1);
+CUTE_API void CUTE_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count);
+CUTE_API void CUTE_CALL cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, float thickness);
+CUTE_API void CUTE_CALL cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float thickness);
 
 CUTE_API void CUTE_CALL cf_draw_push_layer(int layer);
 CUTE_API int CUTE_CALL cf_draw_pop_layer();
 CUTE_API int CUTE_CALL cf_draw_peek_layer();
+CUTE_API void CUTE_CALL cf_draw_push_color(CF_Color c);
+CUTE_API CF_Color CUTE_CALL cf_draw_pop_color();
+CUTE_API CF_Color CUTE_CALL cf_draw_peek_color();
+CUTE_API void CUTE_CALL cf_draw_push_tint(CF_Color c);
+CUTE_API CF_Color CUTE_CALL cf_draw_pop_tint();
+CUTE_API CF_Color CUTE_CALL cf_draw_peek_tint();
+CUTE_API void CUTE_CALL cf_draw_push_antialias(bool antialias);
+CUTE_API bool CUTE_CALL cf_draw_pop_antialias();
+CUTE_API bool CUTE_CALL cf_draw_peek_antialias();
 
-CUTE_API void CUTE_CALL cf_render_settings_outlines(bool use_outlines);
-CUTE_API void CUTE_CALL cf_render_settings_outlines_use_corners(bool use_corners);
-CUTE_API void CUTE_CALL cf_render_settings_outlines_color(CF_Color c);
 CUTE_API void CUTE_CALL cf_render_settings_filter(CF_Filter filter);
 CUTE_API void CUTE_CALL cf_render_settings_push_viewport(CF_Rect viewport);
 CUTE_API CF_Rect CUTE_CALL cf_render_settings_pop_viewport();
@@ -74,9 +82,6 @@ CUTE_API CF_Rect CUTE_CALL cf_render_settings_peek_scissor();
 CUTE_API void CUTE_CALL cf_render_settings_push_render_state(CF_RenderState render_state);
 CUTE_API CF_RenderState CUTE_CALL cf_render_settings_pop_render_state();
 CUTE_API CF_RenderState CUTE_CALL cf_render_settings_peek_render_state();
-CUTE_API void CUTE_CALL cf_render_settings_push_tint(CF_Color c);
-CUTE_API CF_Color CUTE_CALL cf_render_settings_pop_tint();
-CUTE_API CF_Color CUTE_CALL cf_render_settings_peek_tint();
 
 CUTE_API void CUTE_CALL cf_camera_dimensions(float w, float h);
 CUTE_API void CUTE_CALL cf_camera_look_at(float x, float y);
@@ -119,33 +124,39 @@ using TemporaryImage = CF_TemporaryImage;
 
 CUTE_INLINE void draw_sprite(const CF_Sprite* sprite) { cf_draw_sprite(sprite); }
 CUTE_INLINE void draw_sprite(const CF_Sprite* sprite, CF_Transform transform) { cf_draw_sprite2(sprite, transform); }
-CUTE_INLINE void draw_quad(CF_Aabb bb, float thickness, CF_Color c, bool antialias) { cf_draw_quad(bb, thickness, c, antialias); }
-CUTE_INLINE void draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c, bool antialias) { cf_draw_quad2(p0, p1, p2, p3, thickness, c, antialias); }
+CUTE_INLINE void draw_quad(CF_Aabb bb, float thickness) { cf_draw_quad(bb, thickness); }
+CUTE_INLINE void draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness) { cf_draw_quad2(p0, p1, p2, p3, thickness); }
 CUTE_INLINE void draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3) { cf_draw_quad3(p0, p1, p2, p3, thickness, c0, c1, c2, c3); }
-CUTE_INLINE void draw_quad_fill(CF_Aabb bb, CF_Color c) { cf_draw_quad_fill(bb, c); }
-CUTE_INLINE void draw_quad_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c) { cf_draw_quad_fill2(p0, p1, p2, p3, c); }
+CUTE_INLINE void draw_quad_fill(CF_Aabb bb) { cf_draw_quad_fill(bb); }
+CUTE_INLINE void draw_quad_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3) { cf_draw_quad_fill2(p0, p1, p2, p3); }
 CUTE_INLINE void draw_quad_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3) { cf_draw_quad_fill3(p0, p1, p2, p3, c0, c1, c2, c3); }
-CUTE_INLINE void draw_circle(CF_V2 p, float r, int iters, float thickness, CF_Color c, bool antialias) { cf_draw_circle(p, r, iters, thickness, c, antialias); }
-CUTE_INLINE void draw_circle_fill(CF_V2 p, float r, int iters, CF_Color c) { cf_draw_circle_fill(p, r, iters, c); }
-CUTE_INLINE void draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness, CF_Color color, bool antialias) { cf_draw_circle_arc(p, center_of_arc, range, iters, thickness, color, antialias); }
-CUTE_INLINE void draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iters, CF_Color color) { draw_circle_arc_fill(p, center_of_arc, range, iters, color); }
-CUTE_INLINE void draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness, CF_Color c, bool antialias) { cf_draw_capsule(p0, p1, r, iters, thickness, c, antialias); }
-CUTE_INLINE void draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters, CF_Color c) { cf_draw_capsule_fill(p0, p1, r, iters, c); }
-CUTE_INLINE void draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c, bool antialias) { cf_draw_tri(p0, p1, p2, thickness, c, antialias); }
-CUTE_INLINE void draw_tri2(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, bool antialias) { cf_draw_tri2(p0, p1, p2, thickness, c0, c1, c2, antialias); }
-CUTE_INLINE void draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c) { cf_draw_tri_fill(p0, p1, p2, c); }
+CUTE_INLINE void draw_circle(CF_V2 p, float r, int iters, float thickness) { cf_draw_circle(p, r, iters, thickness); }
+CUTE_INLINE void draw_circle_fill(CF_V2 p, float r, int iters) { cf_draw_circle_fill(p, r, iters); }
+CUTE_INLINE void draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness) { cf_draw_circle_arc(p, center_of_arc, range, iters, thickness); }
+CUTE_INLINE void draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iters) { draw_circle_arc_fill(p, center_of_arc, range, iters); }
+CUTE_INLINE void draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness) { cf_draw_capsule(p0, p1, r, iters, thickness); }
+CUTE_INLINE void draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters) { cf_draw_capsule_fill(p0, p1, r, iters); }
+CUTE_INLINE void draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness) { cf_draw_tri(p0, p1, p2, thickness); }
+CUTE_INLINE void draw_tri2(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c0, CF_Color c1, CF_Color c2) { cf_draw_tri2(p0, p1, p2, thickness, c0, c1, c2); }
+CUTE_INLINE void draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2) { cf_draw_tri_fill(p0, p1, p2); }
 CUTE_INLINE void draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, CF_Color c2) { cf_draw_tri_fill2(p0, p1, p2, c0, c1, c2); }
-CUTE_INLINE void draw_line(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c, bool antialias) { cf_draw_line(p0, p1, thickness, c, antialias); }
-CUTE_INLINE void draw_line(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1, bool antialias) { cf_draw_line2(p0, p1, thickness, c0, c1, antialias); }
-CUTE_INLINE void draw_polyline(CF_V2* points, int count, float thickness, CF_Color c, bool loop, bool antialias, int bevel_count) { cf_draw_polyline(points, count, thickness, c, loop, antialias, bevel_count); }
+CUTE_INLINE void draw_line(CF_V2 p0, CF_V2 p1, float thickness) { cf_draw_line(p0, p1, thickness); }
+CUTE_INLINE void draw_line(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1) { cf_draw_line2(p0, p1, thickness, c0, c1); }
+CUTE_INLINE void draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count) { cf_draw_polyline(points, count, thickness, loop, bevel_count); }
 
 CUTE_INLINE void draw_push_layer(int layer) { cf_draw_push_layer(layer); }
 CUTE_INLINE int draw_pop_layer() { return cf_draw_pop_layer(); }
 CUTE_INLINE int draw_peek_layer() { return cf_draw_peek_layer(); }
+CUTE_INLINE void draw_push_color(CF_Color c) { cf_draw_push_color(c); }
+CUTE_INLINE CF_Color draw_pop_color() { return cf_draw_pop_color(); }
+CUTE_INLINE CF_Color draw_peek_color() { return cf_draw_peek_color(); }
+CUTE_INLINE void draw_push_tint(CF_Color c) { cf_draw_push_tint(c); }
+CUTE_INLINE CF_Color draw_pop_tint() { return cf_draw_pop_tint(); }
+CUTE_INLINE CF_Color draw_peek_tint() { return cf_draw_peek_tint(); }
+CUTE_INLINE void draw_push_antialias(bool antialias) { cf_draw_push_antialias(antialias); }
+CUTE_INLINE bool draw_pop_antialias() { return cf_draw_pop_antialias(); }
+CUTE_INLINE bool draw_peek_antialias() { return cf_draw_peek_antialias(); }
 
-CUTE_INLINE void render_settings_outlines(bool use_outlines) { cf_render_settings_outlines(use_outlines); }
-CUTE_INLINE void render_settings_outlines_use_corners(bool use_corners) { cf_render_settings_outlines_use_corners(use_corners); }
-CUTE_INLINE void render_settings_outlines_color(CF_Color c) { cf_render_settings_outlines_color(c); }
 CUTE_INLINE void render_settings_filter(CF_Filter filter) { cf_render_settings_filter(filter); }
 CUTE_INLINE void render_settings_push_viewport(CF_Rect viewport) { cf_render_settings_push_viewport(viewport); }
 CUTE_INLINE CF_Rect render_settings_pop_viewport() { return cf_render_settings_pop_viewport(); }
@@ -156,9 +167,6 @@ CUTE_INLINE CF_Rect render_settings_peek_scissor() { return cf_render_settings_p
 CUTE_INLINE void render_settings_push_render_state(CF_RenderState render_state) { render_settings_push_render_state(render_state); }
 CUTE_INLINE CF_RenderState render_settings_pop_render_state() { return render_settings_pop_render_state(); }
 CUTE_INLINE CF_RenderState render_settings_peek_render_state() { return render_settings_peek_render_state(); }
-CUTE_INLINE void render_settings_push_tint(CF_Color c) { cf_render_settings_push_tint(c); }
-CUTE_INLINE CF_Color render_settings_pop_tint() { return cf_render_settings_pop_tint(); }
-CUTE_INLINE CF_Color render_settings_peek_tint() { return cf_render_settings_peek_tint(); }
 
 CUTE_INLINE void camera_dimensions(float w, float h) { cf_camera_dimensions(w, h); }
 CUTE_INLINE void camera_look_at(float x, float y) { cf_camera_look_at(x, y); }
