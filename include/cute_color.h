@@ -212,6 +212,10 @@ CUTE_INLINE Color premultiply(Color c) { return cf_color_premultiply(c); }
 CUTE_INLINE CF_Color rgb_to_hsv(CF_Color c) { return cf_rgb_to_hsv(c); }
 CUTE_INLINE CF_Color hsv_to_rgb(CF_Color c) { return cf_hsv_to_rgb(c); }
 CUTE_INLINE CF_Color hue(CF_Color base, CF_Color tint) { return cf_hue(base, tint); }
+CUTE_INLINE float overlay(float base, float blend) { return cf_overlay(base, blend); }
+CUTE_INLINE float softlight(float base, float blend) { return cf_softlight(base, blend); }
+CUTE_INLINE CF_Color overlay(CF_Color base, CF_Color blend) { return cf_overlay_color(base, blend); }
+CUTE_INLINE CF_Color softlight(CF_Color base, CF_Color blend) { return cf_softlight_color(base, blend); }
 
 CUTE_INLINE Pixel operator*(Pixel a, int s) { return cf_mul_pixel(a, s); }
 CUTE_INLINE Pixel operator/(Pixel a, int s) { return cf_div_pixel(a, s); }

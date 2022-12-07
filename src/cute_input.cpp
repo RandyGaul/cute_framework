@@ -474,8 +474,7 @@ void cf_pump_input_msgs()
 
 	// Handle SDL messages.
 	SDL_Event event;
-	while (SDL_PollEvent(&event))
-	{
+	while (SDL_PollEvent(&event)) {
 		if (app->using_imgui) {
 			ImGui_ImplSDL2_ProcessEvent(&event);
 		}
@@ -678,6 +677,16 @@ void cf_pump_input_msgs()
 		}	break;
 		}
 	}
+
+	// Support held timer on KEY_ANY.
+	bool none_pressed = true;
+	for (int i = 0; i < CUTE_ARRAY_SIZE(app->keys); ++i) {
+		if (app->keys[i]) {
+			none_pressed = false;
+			break;
+		}
+	}
+	if (none_pressed) app->keys[KEY_ANY] = 0;
 }
 
 namespace Cute
