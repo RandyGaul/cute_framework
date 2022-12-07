@@ -14,12 +14,13 @@ Setting up an application and getting started is quite easy. Simply visit [the a
 
 ```cpp
 #include <cute.h>
-using namespace cute;
+using namespace Cute;
 
 int main(int argc, const char** argv)
 {
 	// Create a window with a resolution of 640 x 480.
-	result_t result = make_app("Fancy Window Title", 50, 50, 640, 480, APP_OPTIONS_DEFAULT_GFX_CONTEXT, argv[0]);
+	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_DEFAULT_GFX_CONTEXT;
+	Result result = make_app("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;
 
 	while (app_is_running())
