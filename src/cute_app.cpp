@@ -147,7 +147,6 @@ static void s_canvas(int w, int h)
 	}
 	{
 		CF_CanvasParams params = cf_canvas_defaults();
-		params.clear_settings.color = cf_color_black();
 		if (app->backbuffer_canvas.id) {
 			cf_destroy_canvas(app->backbuffer_canvas);
 		}

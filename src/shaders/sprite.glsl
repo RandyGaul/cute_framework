@@ -19,8 +19,6 @@
 	layout (location = 2) out float v_solid;
 	layout (location = 3) out float v_alpha;
 
-	@include_block gamma
-
 	void main()
 	{
 		vec4 posH = vec4(in_pos, 0, 1);
@@ -53,11 +51,11 @@
 	void main()
 	{
 		vec4 color = de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size)));
-		color = overlay(color, v_col); // Tint sprites.
+		color = gamma(overlay(color, v_col)); // Tint sprites.
 		color = mix(color, v_col, v_solid); // Use color from CPU for solids (pre-tinted on CPU).
 		color.a = color.a * v_alpha;
 		if (color.a == 0) discard;
-		result = gamma(color);
+		result = color;
 	}
 @end
 

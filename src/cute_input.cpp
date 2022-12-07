@@ -681,12 +681,14 @@ void cf_pump_input_msgs()
 	// Support held timer on KEY_ANY.
 	bool none_pressed = true;
 	for (int i = 0; i < CUTE_ARRAY_SIZE(app->keys); ++i) {
-		if (app->keys[i]) {
+		if (i != KEY_ANY && app->keys[i]) {
 			none_pressed = false;
 			break;
 		}
 	}
-	if (none_pressed) app->keys[KEY_ANY] = 0;
+	if (none_pressed) {
+		app->keys[KEY_ANY] = 0;
+	}
 }
 
 namespace Cute

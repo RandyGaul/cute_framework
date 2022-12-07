@@ -28,14 +28,14 @@ int main(int argc, const char** argv)
 		draw_push_layer(-1);
 		draw_circle(V2(0,30),10,10,5);
 		draw_pop_layer();
-		if (key_was_pressed(KEY_ANY)) draw_pop_tint();
-		if (key_was_pressed(KEY_1)) draw_push_tint(color_red());
-		if (key_was_pressed(KEY_2)) draw_push_tint(color_purple());
-		if (key_was_pressed(KEY_3)) draw_push_tint(color_orange());
-		if (key_was_pressed(KEY_4)) draw_push_tint(color_green());
-		if (key_was_pressed(KEY_5)) draw_push_tint(color_white());
-		if (key_was_pressed(KEY_6)) draw_push_tint(color_black());
-		if (key_was_pressed(KEY_7)) draw_push_tint(color_blue());
+		if (key_was_pressed(KEY_1)) draw_push_tint(color_grey());
+		if (key_was_pressed(KEY_2)) draw_push_tint(color_red());
+		if (key_was_pressed(KEY_3)) draw_push_tint(color_purple());
+		if (key_was_pressed(KEY_4)) draw_push_tint(color_orange());
+		if (key_was_pressed(KEY_5)) draw_push_tint(color_green());
+		if (key_was_pressed(KEY_6)) draw_push_tint(color_white());
+		if (key_was_pressed(KEY_7)) draw_push_tint(color_black());
+		if (key_was_pressed(KEY_8)) draw_push_tint(color_blue());
 		if (ImGui::BeginMainMenuBar()) {
 			if (ImGui::BeginMenu("sokol-gfx")) {
 				ImGui::MenuItem("Buffers", 0, &sg_imgui->buffers.open);
