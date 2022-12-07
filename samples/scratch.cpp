@@ -19,6 +19,7 @@ int main(int argc, const char** argv)
 	draw_push_color(make_color(0xeba48bff));
 	draw_push_tint(color_purple());
 	draw_push_antialias(true);
+	float t = 0;
 
 	while (app_is_running()) {
 		float dt = calc_dt();
@@ -26,7 +27,10 @@ int main(int argc, const char** argv)
 		s.update(dt);
 		s.draw();
 		draw_push_layer(-1);
-		draw_circle(V2(0,30),10,10,5);
+		t += dt;
+		float radius = 10.0f;
+		float motion = (sinf(t) + 1.0f) * 0.5f * 10.0f;
+		draw_circle(V2(0,10), radius + motion, 50, 1.0f + motion / 4);
 		draw_pop_layer();
 		if (key_was_pressed(KEY_1)) draw_push_tint(color_grey());
 		if (key_was_pressed(KEY_2)) draw_push_tint(color_red());
