@@ -31,6 +31,7 @@ endfunction()
 option(CUTE_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
 option(CUTE_FRAMEWORK_WITH_HTTPS "Build Cute Framework with mbedtls for HTTPS support (Apache 2.0 license)." ON)
 option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
+option(CUTE_FRAMEWORK_BUILD_SAMPLES "Build the cute framework sample programs." ON)
 option(CUTE_FRAMEWORK_CIMGUI "Build cute framework with cimgui implementation." OFF)
 
 # Platform detection.
@@ -363,6 +364,16 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tests)
 		set_property(TARGET tests PROPERTY VS_DEBUGGER_WORKING_DIRECTORY $<TARGET_FILE_DIR:tests>)
 	endif()
+endif()
+
+# Cute sample prgrams (optional, defaulted to also build).
+if (CUTE_FRAMEWORK_BUILD_SAMPLES)
+	add_executable(window samples/window.cpp)
+	target_link_libraries(window PRIVATE cute)
+	set_target_properties(window PROPERTIES FOLDER "samples")
+	add_executable(scratch samples/scratch.cpp)
+	target_link_libraries(scratch PRIVATE cute)
+	set_target_properties(scratch PROPERTIES FOLDER "samples")
 endif()
 
 # Propogate public headers to other cmake scripts including this subdirectory.

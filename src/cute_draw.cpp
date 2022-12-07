@@ -447,7 +447,7 @@ void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3)
 	s.geom.u.quad.p1 = mul(m, p1);
 	s.geom.u.quad.p2 = mul(m, p2);
 	s.geom.u.quad.p3 = mul(m, p3);
-	s.geom.u.quad.c0 = s.geom.u.quad.c1 = s.geom.u.quad.c2 = s.geom.u.quad.c3 = premultiply(to_pixel(cf_tint(draw->colors.last(), draw->tints.last())));
+	s.geom.u.quad.c0 = s.geom.u.quad.c1 = s.geom.u.quad.c2 = s.geom.u.quad.c3 = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
 	s.geom.alpha = 1.0f;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -465,10 +465,10 @@ void cf_draw_quad_fill3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_
 	s.geom.u.quad.p1 = mul(m, p1);
 	s.geom.u.quad.p2 = mul(m, p2);
 	s.geom.u.quad.p3 = mul(m, p3);
-	s.geom.u.quad.c0 = premultiply(to_pixel(cf_tint(c0, draw->tints.last())));
-	s.geom.u.quad.c1 = premultiply(to_pixel(cf_tint(c1, draw->tints.last())));
-	s.geom.u.quad.c2 = premultiply(to_pixel(cf_tint(c2, draw->tints.last())));
-	s.geom.u.quad.c3 = premultiply(to_pixel(cf_tint(c3, draw->tints.last())));
+	s.geom.u.quad.c0 = premultiply(to_pixel(cf_overlay_color(c0, draw->tints.last())));
+	s.geom.u.quad.c1 = premultiply(to_pixel(cf_overlay_color(c1, draw->tints.last())));
+	s.geom.u.quad.c2 = premultiply(to_pixel(cf_overlay_color(c2, draw->tints.last())));
+	s.geom.u.quad.c3 = premultiply(to_pixel(cf_overlay_color(c3, draw->tints.last())));
 	s.geom.alpha = 1.0f;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);

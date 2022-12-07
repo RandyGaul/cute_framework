@@ -25,7 +25,7 @@
 	{
 		vec4 posH = vec4(in_pos, 0, 1);
 		v_uv = in_uv;
-		v_col = de_gamma(in_col);
+		v_col = in_col;
 		v_solid = in_params.r;
 		v_alpha = in_params.g;
 		gl_Position = posH;
@@ -53,7 +53,7 @@
 	void main()
 	{
 		vec4 color = de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size)));
-		color = hue(color, v_col); // Tint sprites.
+		color = overlay(color, v_col); // Tint sprites.
 		color = mix(color, v_col, v_solid); // Use color from CPU for solids (pre-tinted on CPU).
 		color.a = color.a * v_alpha;
 		if (color.a == 0) discard;

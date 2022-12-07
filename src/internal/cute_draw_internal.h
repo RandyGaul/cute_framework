@@ -51,7 +51,6 @@ struct BatchSprite
 	CF_SinCos rotation;
 	CF_V2 scale;
 	CF_Pixel tint;
-	float tint_strength;
 };
 
 struct BatchGeometry
@@ -75,10 +74,10 @@ struct DrawVertex
 	CF_V2 position;
 	CF_V2 uv;
 	CF_Pixel color;
-	uint8_t solid;         // r
-	uint8_t alpha;         // g
-	uint8_t tint_strength; // b
-	uint8_t unused1;       // a
+	uint8_t solid;   // r - Tell between sprite and shape geometry (solid color).
+	uint8_t alpha;   // g - Used to fade sprites.
+	uint8_t unused0; // b - 
+	uint8_t unused1; // a - 
 };
 
 struct CF_Draw
@@ -92,7 +91,6 @@ struct CF_Draw
 	CF_Filter filter = CF_FILTER_NEAREST;
 	Cute::Array<CF_Color> colors = { cf_color_red() };
 	Cute::Array<CF_Color> tints = { cf_color_grey() };
-	Cute::Array<float> tint_strengths = { 0 };
 	Cute::Array<bool> antialias = { false };
 	Cute::Array<CF_RenderState> render_states;
 	Cute::Array<CF_Rect> scissors = { { -1, -1, 0, 0 } };
