@@ -62,7 +62,7 @@
 
 int main(int argc, const char** argv)
 {
-#if 1
+#if 0
 	uint32_t options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
 	Result result = make_app("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;

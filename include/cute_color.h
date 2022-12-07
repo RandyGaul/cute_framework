@@ -84,6 +84,7 @@ CUTE_INLINE CF_Color cf_color_lerp(CF_Color a, CF_Color b, float s) { return cf_
 CUTE_INLINE CF_Color cf_color_premultiply(CF_Color c) { c.r *= c.a; c.g *= c.a; c.b *= c.a; return c; }
 
 // HSV <-> RGB from : http://lolengine.net/blog/2013/07/27/rgb-to-hsv-in-glsl
+// And https://www.shadertoy.com/view/MsS3Wc
 
 CUTE_INLINE CF_Color cf_rgb_to_hsv(CF_Color c)
 {
