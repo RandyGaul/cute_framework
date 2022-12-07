@@ -9,20 +9,32 @@ int main(int argc, const char** argv)
 	Result result = make_app("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;
 
+	Sprite s = cf_make_sprite("test_data/girl.aseprite");
+	s.play("spin");
+
 	auto imgui = cf_app_init_imgui(false);
 	sg_imgui_t* sg_imgui = app_get_sokol_imgui();
 	camera_dimensions(640/4, 480/4);
-
-	draw_push_color(make_color(0xeba48bff));
-	draw_push_antialias(true);
 	float t = 0;
+
+	draw_push_antialias(true);
 
 	while (app_is_running()) {
 		float dt = calc_dt();
-		app_update(dt);
 		t += dt;
-		draw_circle(V2(0,10) + V2(sinf(t), cosf(t)) * 5.0f, 10, 50, 0);
-		draw_line(V2(0,0), V2(30,50), 0);
+		app_update(dt);
+		float opacity = (sinf(t)+1)*0.5f;
+		s.opacity = opacity;
+		s.update(dt);
+		s.draw();
+		draw_push_layer(-1);
+		CF_Color c = color_purple();
+		c.a = opacity;
+		draw_push_color(c);
+		draw_circle(V2(0,10),10,10,5);
+		draw_circle(V2(5,15),10,10,5);
+		draw_pop_color();
+		draw_pop_layer();
 		if (ImGui::BeginMainMenuBar()) {
 			if (ImGui::BeginMenu("sokol-gfx")) {
 				ImGui::MenuItem("Buffers", 0, &sg_imgui->buffers.open);

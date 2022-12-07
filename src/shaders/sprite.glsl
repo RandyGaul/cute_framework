@@ -52,8 +52,8 @@
 	{
 		vec4 color = de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size)));
 		color = gamma(overlay(color, v_col)); // Tint sprites.
+		color *= v_alpha;
 		color = mix(color, v_col, v_solid); // Use color from CPU for solids (pre-tinted on CPU).
-		color.a = color.a * v_alpha;
 		if (color.a == 0) discard;
 		result = color;
 	}
