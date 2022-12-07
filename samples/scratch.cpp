@@ -14,13 +14,14 @@ int main(int argc, const char** argv)
 	camera_dimensions(640/4, 480/4);
 
 	draw_push_color(make_color(0xeba48bff));
-	draw_push_tint(color_purple());
 	draw_push_antialias(true);
+	float t = 0;
 
 	while (app_is_running()) {
 		float dt = calc_dt();
 		app_update(dt);
-		draw_circle(V2(0,10), 10, 50, 0);
+		t += dt;
+		draw_circle(V2(0,10) + V2(sinf(t), cosf(t)) * 5.0f, 10, 50, 0);
 		draw_line(V2(0,0), V2(30,50), 0);
 		if (ImGui::BeginMainMenuBar()) {
 			if (ImGui::BeginMenu("sokol-gfx")) {

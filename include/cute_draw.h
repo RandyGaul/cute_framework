@@ -50,7 +50,6 @@ CUTE_API void CUTE_CALL cf_draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, fl
 CUTE_API void CUTE_CALL cf_draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness);
 CUTE_API void CUTE_CALL cf_draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters);
 CUTE_API void CUTE_CALL cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness);
-CUTE_API void CUTE_CALL cf_draw_tri2(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c0, CF_Color c1, CF_Color c2);
 CUTE_API void CUTE_CALL cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2);
 CUTE_API void CUTE_CALL cf_draw_tri_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, CF_Color c2);
 CUTE_API void CUTE_CALL cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness);
@@ -137,7 +136,6 @@ CUTE_INLINE void draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range,
 CUTE_INLINE void draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness) { cf_draw_capsule(p0, p1, r, iters, thickness); }
 CUTE_INLINE void draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters) { cf_draw_capsule_fill(p0, p1, r, iters); }
 CUTE_INLINE void draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness) { cf_draw_tri(p0, p1, p2, thickness); }
-CUTE_INLINE void draw_tri2(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c0, CF_Color c1, CF_Color c2) { cf_draw_tri2(p0, p1, p2, thickness, c0, c1, c2); }
 CUTE_INLINE void draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2) { cf_draw_tri_fill(p0, p1, p2); }
 CUTE_INLINE void draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, CF_Color c2) { cf_draw_tri_fill2(p0, p1, p2, c0, c1, c2); }
 CUTE_INLINE void draw_line(CF_V2 p0, CF_V2 p1, float thickness) { cf_draw_line(p0, p1, thickness); }

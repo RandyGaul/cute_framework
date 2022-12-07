@@ -477,19 +477,20 @@ void cf_draw_quad_fill3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_
 void cf_draw_circle(CF_V2 p, float r, int iters, float thickness)
 {
 	if (draw->antialias.last()) {
-		Array<CF_V2> verts(iters);
+		draw->temp.ensure_capacity(iters);
+		draw->temp.clear();
 		CF_V2 p0 = cf_v2(p.x + r, p.y);
-		verts.add(p0);
+		draw->temp.add(p0);
 
 		for (int i = 1; i < iters; i++) {
 			float a = (i / (float)iters) * (2.0f * CUTE_PI);
 			CF_V2 n = cf_from_angle(a);
 			CF_V2 p1 = p + n * r;
-			verts.add(p1);
+			draw->temp.add(p1);
 			p0 = p1;
 		}
 
-		cf_draw_polyline(verts.data(), verts.size(), thickness, true, 0);
+		cf_draw_polyline(draw->temp.data(), draw->temp.size(), thickness, true, 0);
 	} else {
 		float half_thickness = thickness * 0.5f;
 		CF_V2 p0 = cf_v2(p.x + r - half_thickness, p.y);
@@ -519,7 +520,7 @@ void cf_draw_circle_fill(CF_V2 p, float r, int iters)
 	}
 }
 
-static void s_circle_arc_aa(Array<CF_V2>* verts, CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness)
+static void s_circle_arc_aa(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness)
 {
 	float r = cf_len(center_of_arc - p);
 	CF_V2 d = cf_norm(center_of_arc - p);
@@ -529,13 +530,13 @@ static void s_circle_arc_aa(Array<CF_V2>* verts, CF_V2 p, CF_V2 center_of_arc, f
 	CF_V2 p0 = p + t * r;
 	d = cf_norm(p0 - p);
 	float inc = range / iters;
-	verts->add(p0);
+	draw->temp.add(p0);
 
 	for (int i = 1; i <= iters; i++) {
 		m = cf_sincos_f(i * inc);
 		t = cf_mul_sc_v2(m, d);
 		CF_V2 p1 = p + t * r;
-		verts->add(p1);
+		draw->temp.add(p1);
 		p0 = p1;
 	}
 }
@@ -543,9 +544,10 @@ static void s_circle_arc_aa(Array<CF_V2>* verts, CF_V2 p, CF_V2 center_of_arc, f
 void cf_draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness)
 {
 	if (draw->antialias.last()) {
-		Array<CF_V2> verts(iters);
-		s_circle_arc_aa(&verts, p, center_of_arc, range, iters, thickness);
-		cf_draw_polyline(verts.data(), verts.size(), thickness, false, 3);
+		draw->temp.ensure_capacity(iters);
+		draw->temp.clear();
+		s_circle_arc_aa(p, center_of_arc, range, iters, thickness);
+		cf_draw_polyline(draw->temp.data(), draw->temp.size(), thickness, false, 3);
 	} else {
 		float r = cf_len(center_of_arc - p);
 		CF_V2 d = cf_norm(center_of_arc - p);
@@ -593,10 +595,11 @@ void cf_draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iter
 void cf_draw_capsule(CF_V2 a, CF_V2 b, float r, int iters, float thickness)
 {
 	if (draw->antialias.last()) {
-		Array<CF_V2> verts(iters * 2 + 2);
-		s_circle_arc_aa(&verts, a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness);
-		s_circle_arc_aa(&verts, b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness);
-		cf_draw_polyline(verts.data(), verts.count(), thickness, true, 0);
+		draw->temp.ensure_capacity(iters * 2 + 2);
+		draw->temp.clear();
+		s_circle_arc_aa(a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness);
+		s_circle_arc_aa(b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness);
+		cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, true, 0);
 	} else {
 		cf_draw_circle_arc(a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness);
 		cf_draw_circle_arc(b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness);
@@ -624,12 +627,12 @@ void cf_draw_capsule_fill(CF_V2 a, CF_V2 b, float r, int iters)
 
 void cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness)
 {
-	CUTE_ASSERT(0);
-}
-
-void cf_draw_tri2(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, CF_Color c0, CF_Color c1, CF_Color c2)
-{
-	CUTE_ASSERT(0);
+	draw->temp.ensure_capacity(3);
+	draw->temp.clear();
+	draw->temp.add(p0);
+	draw->temp.add(p1);
+	draw->temp.add(p2);
+	cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, true, 0);
 }
 
 void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2)
@@ -1004,30 +1007,30 @@ void cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop, int 
 
 void cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, float thickness)
 {
-	draw->bezier.ensure_capacity(iters);
-	draw->bezier.clear();
+	draw->temp.ensure_capacity(iters);
+	draw->temp.clear();
 	float step = 1.0f / (float)iters;
-	draw->bezier.add(a);
+	draw->temp.add(a);
 	for (int i = 1; i < iters; ++i) {
 		CF_V2 p = cf_bezier(a, c0, b, i * step);
-		draw->bezier.add(p);
+		draw->temp.add(p);
 	}
-	draw->bezier.add(b);
-	cf_draw_polyline(draw->bezier.data(), draw->bezier.count(), thickness, false, 1);
+	draw->temp.add(b);
+	cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, false, 1);
 }
 
 void cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float thickness)
 {
-	draw->bezier.ensure_capacity(iters);
-	draw->bezier.clear();
+	draw->temp.ensure_capacity(iters);
+	draw->temp.clear();
 	float step = 1.0f / (float)iters;
-	draw->bezier.add(a);
+	draw->temp.add(a);
 	for (int i = 1; i < iters; ++i) {
 		CF_V2 p = cf_bezier2(a, c0, c1, b, i * step);
-		draw->bezier.add(p);
+		draw->temp.add(p);
 	}
-	draw->bezier.add(b);
-	cf_draw_polyline(draw->bezier.data(), draw->bezier.count(), thickness, false, 1);
+	draw->temp.add(b);
+	cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, false, 1);
 }
 
 void cf_draw_push_layer(int layer)

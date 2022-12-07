@@ -102,7 +102,7 @@ struct CF_Draw
 	CF_V2 cam_dimensions_inverse = { };
 	CF_V2 cam_position = { };
 	float cam_rotation = 0;
-	Cute::Array<CF_V2> bezier;
+	Cute::Array<CF_V2> temp;
 	Cute::Array<DrawVertex> verts;
 };
 
