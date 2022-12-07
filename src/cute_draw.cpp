@@ -724,7 +724,7 @@ void cf_draw_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1
 			cf_draw_quad_fill3(q0, q7, r7, r6, c0, c2, c2, c2);
 		} else {
 			// Zero opacity aliased quads, without any core line.
-			CF_V2 n = cf_skew(cf_norm(p1 - p0)) * alias_scale * 0.5f;
+			CF_V2 n = cf_skew(cf_norm(p1 - p0)) * alias_scale * 2.0f;
 			CF_V2 q0 = p0 + n;
 			CF_V2 q1 = p1 + n;
 			CF_V2 q2 = p1 - n;
@@ -995,7 +995,7 @@ void cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop, int 
 		if (thick_line) {
 			s_polyline(points, count, thickness, color, no_alpha, loop, true, alias_scale, bevel_count);
 		} else {
-			s_polyline(points, count, alias_scale, color, no_alpha, loop, false, 0, bevel_count);
+			s_polyline(points, count, alias_scale * 2.0f, color, no_alpha, loop, false, 0, bevel_count);
 		}
 	} else {
 		s_polyline(points, count, thickness, color, color, loop, false, 0, bevel_count);
