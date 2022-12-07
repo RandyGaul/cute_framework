@@ -141,78 +141,44 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		case BATCH_GEOMETRY_TYPE_SPRITE:
 		{
 			BatchSprite geom = s->geom.u.sprite;
-			CF_V2 quad[] = {
-				{ -0.5f,  0.5f },
-				{  0.5f,  0.5f },
-				{  0.5f, -0.5f },
-				{ -0.5f, -0.5f },
-			};
-
-			// Expand sprite's scale to account for border pixels in the atlas.
-			geom.scale.x = geom.scale.x + (geom.scale.x / (float)s->w) * 2.0f;
-			geom.scale.y = geom.scale.y + (geom.scale.y / (float)s->h) * 2.0f;
-
-			for (int j = 0; j < 4; ++j) {
-				float x = quad[j].x;
-				float y = quad[j].y;
-
-				// Rotate sprite about origin.
-				float x0 = geom.rotation.c * x - geom.rotation.s * y;
-				float y0 = geom.rotation.s * x + geom.rotation.c * y;
-				x = x0;
-				y = y0;
-
-				// Scale sprite about origin.
-				x *= geom.scale.x;
-				y *= geom.scale.y;
-
-				// Translate sprite.
-				x += geom.position.x;
-				y += geom.position.y;
-
-				quad[j].x = x;
-				quad[j].y = y;
-			}
-
-			// output transformed quad into CPU buffer
 			DrawVertex* out_verts = verts + vert_count;
 
 			for (int i = 0; i < 6; ++i) {
 				out_verts[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 			}
 
-			out_verts[0].position.x = quad[0].x;
-			out_verts[0].position.y = quad[0].y;
+			out_verts[0].position.x = geom.p0.x;
+			out_verts[0].position.y = geom.p0.y;
 			out_verts[0].uv.x = s->minx;
 			out_verts[0].uv.y = s->maxy;
 			out_verts[0].color = geom.tint;
 
-			out_verts[1].position.x = quad[3].x;
-			out_verts[1].position.y = quad[3].y;
+			out_verts[1].position.x = geom.p3.x;
+			out_verts[1].position.y = geom.p3.y;
 			out_verts[1].uv.x = s->minx;
 			out_verts[1].uv.y = s->miny;
 			out_verts[1].color = geom.tint;
 
-			out_verts[2].position.x = quad[1].x;
-			out_verts[2].position.y = quad[1].y;
+			out_verts[2].position.x = geom.p1.x;
+			out_verts[2].position.y = geom.p1.y;
 			out_verts[2].uv.x = s->maxx;
 			out_verts[2].uv.y = s->maxy;
 			out_verts[2].color = geom.tint;
 
-			out_verts[3].position.x = quad[1].x;
-			out_verts[3].position.y = quad[1].y;
+			out_verts[3].position.x = geom.p1.x;
+			out_verts[3].position.y = geom.p1.y;
 			out_verts[3].uv.x = s->maxx;
 			out_verts[3].uv.y = s->maxy;
 			out_verts[3].color = geom.tint;
 
-			out_verts[4].position.x = quad[3].x;
-			out_verts[4].position.y = quad[3].y;
+			out_verts[4].position.x = geom.p3.x;
+			out_verts[4].position.y = geom.p3.y;
 			out_verts[4].uv.x = s->minx;
 			out_verts[4].uv.y = s->miny;
 			out_verts[4].color = geom.tint;
 
-			out_verts[5].position.x = quad[2].x;
-			out_verts[5].position.y = quad[2].y;
+			out_verts[5].position.x = geom.p2.x;
+			out_verts[5].position.y = geom.p2.y;
 			out_verts[5].uv.x = s->maxx;
 			out_verts[5].uv.y = s->miny;
 			out_verts[5].color = geom.tint;
@@ -358,33 +324,52 @@ void cf_destroy_draw()
 
 void cf_draw_sprite(const CF_Sprite* sprite)
 {
-	v2 p = cf_mul_m32_v2(draw->cam, cf_add_v2(sprite->transform.p, sprite->local_offset));
 	spritebatch_sprite_t s = { };
 	s.image_id = sprite->animation->frames[sprite->frame_index].id;
 	s.w = sprite->w;
 	s.h = sprite->h;
 	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
-	s.geom.u.sprite.position = p;
-	s.geom.u.sprite.rotation = sprite->transform.r;
-	s.geom.u.sprite.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h) * draw->cam_dimensions_inverse;
-	s.geom.u.sprite.tint = premultiply(to_pixel(draw->tints.last()));
-	s.geom.alpha = sprite->opacity;
-	s.sort_bits = draw->layers.last();
-	spritebatch_push(&draw->sb, s);
-}
 
-void cf_draw_sprite2(const CF_Sprite* sprite, CF_Transform transform)
-{
-	transform = mul(transform, sprite->transform);
-	v2 p = cf_mul_m32_v2(draw->cam, cf_add_v2(transform.p, sprite->local_offset));
-	spritebatch_sprite_t s = { };
-	s.image_id = sprite->animation->frames[sprite->frame_index].id;
-	s.w = sprite->w;
-	s.h = sprite->h;
-	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
-	s.geom.u.sprite.position = p;
-	s.geom.u.sprite.rotation = sprite->transform.r;
-	s.geom.u.sprite.scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h) * draw->cam_dimensions_inverse;
+	v2 p = cf_add_v2(sprite->transform.p, sprite->local_offset);
+
+	// Expand sprite's scale to account for border pixels in the atlas.
+	v2 scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
+	scale.x = scale.x + (scale.x / (float)sprite->w) * 2.0f;
+	scale.y = scale.y + (scale.y / (float)sprite->h) * 2.0f;
+
+	CF_V2 quad[] = {
+		{ -0.5f,  0.5f },
+		{  0.5f,  0.5f },
+		{  0.5f, -0.5f },
+		{ -0.5f, -0.5f },
+	};
+
+	// Construct quad in local space.
+	for (int j = 0; j < 4; ++j) {
+		float x = quad[j].x;
+		float y = quad[j].y;
+
+		float x0 = sprite->transform.r.c * x - sprite->transform.r.s * y;
+		float y0 = sprite->transform.r.s * x + sprite->transform.r.c * y;
+		x = x0;
+		y = y0;
+
+		x *= scale.x;
+		y *= scale.y;
+
+		x += p.x;
+		y += p.y;
+
+		quad[j].x = x;
+		quad[j].y = y;
+	}
+
+	// Transform quad to camera space.
+	s.geom.u.sprite.p0 = mul(draw->cam, quad[0]);
+	s.geom.u.sprite.p1 = mul(draw->cam, quad[1]);
+	s.geom.u.sprite.p2 = mul(draw->cam, quad[2]);
+	s.geom.u.sprite.p3 = mul(draw->cam, quad[3]);
+
 	s.geom.u.sprite.tint = premultiply(to_pixel(draw->tints.last()));
 	s.geom.alpha = sprite->opacity;
 	s.sort_bits = draw->layers.last();
@@ -526,7 +511,7 @@ static void s_circle_arc_aa(CF_V2 p, CF_V2 center_of_arc, float range, int iters
 	CF_V2 d = cf_norm(center_of_arc - p);
 	CF_SinCos m = cf_sincos_f(range * 0.5f);
 
-	CF_V2 t = cf_mulT_sc_v2(m, d);
+	CF_V2 t = cf_mul_sc_v2(m, d);
 	CF_V2 p0 = p + t * r;
 	d = cf_norm(p0 - p);
 	float inc = range / iters;
@@ -554,7 +539,7 @@ void cf_draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, fl
 		CF_SinCos m = cf_sincos_f(range * 0.5f);
 
 		float half_thickness = thickness * 0.5f;
-		CF_V2 t = cf_mulT_sc_v2(m, d);
+		CF_V2 t = cf_mul_sc_v2(m, d);
 		CF_V2 p0 = p + t * (r + half_thickness);
 		CF_V2 p1 = p + t * (r - half_thickness);
 		d = cf_norm(p0 - p);
@@ -578,7 +563,7 @@ void cf_draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iter
 	CF_V2 d = cf_norm(center_of_arc - p);
 	CF_SinCos m = cf_sincos_f(range * 0.5f);
 
-	CF_V2 t = cf_mulT_sc_v2(m, d);
+	CF_V2 t = cf_mul_sc_v2(m, d);
 	CF_V2 p0 = p + t * r;
 	d = cf_norm(p0 - p);
 	float inc = range / iters;
@@ -1186,20 +1171,19 @@ void cf_render_to(CF_Canvas canvas, bool clear)
 void cf_camera_dimensions(float w, float h)
 {
 	draw->cam_dimensions = V2(w, h) * 0.5f;
-	draw->cam_dimensions_inverse = cf_safe_invert_v2(draw->cam_dimensions);
-	draw->cam = cf_make_transform_TSR_inverse(draw->cam_position, draw->cam_dimensions, draw->cam_rotation);
+	draw->cam = cf_invert(cf_make_transform_TSR(draw->cam_position, draw->cam_dimensions, draw->cam_rotation));
 }
 
 void cf_camera_look_at(float x, float y)
 {
 	draw->cam_position = V2(x, y);
-	draw->cam = cf_make_transform_TSR_inverse(draw->cam_position, draw->cam_dimensions, draw->cam_rotation);
+	draw->cam = cf_invert(cf_make_transform_TSR(draw->cam_position, draw->cam_dimensions, draw->cam_rotation));
 }
 
 void cf_camera_rotate(float radians)
 {
 	draw->cam_rotation = radians;
-	draw->cam = cf_make_transform_TSR_inverse(draw->cam_position, draw->cam_dimensions, draw->cam_rotation);
+	draw->cam = cf_invert(cf_make_transform_TSR(draw->cam_position, draw->cam_dimensions, draw->cam_rotation));
 }
 
 void cf_camera_push()
@@ -1215,7 +1199,7 @@ void cf_camera_pop()
 		draw->cam_dimensions = V2((float)app->w, (float)app->h) * 0.5f;
 		draw->cam_position = V2(0, 0);
 		draw->cam_rotation = 0;
-		draw->cam = cf_make_transform_TSR_inverse(draw->cam_position, draw->cam_dimensions, draw->cam_rotation);
+		draw->cam = cf_invert(cf_make_transform_TSR(draw->cam_position, draw->cam_dimensions, draw->cam_rotation));
 	}
 }
 

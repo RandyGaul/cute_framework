@@ -36,7 +36,6 @@ extern "C" {
 #endif // __cplusplus
 
 CUTE_API void CUTE_CALL cf_draw_sprite(const CF_Sprite* sprite);
-CUTE_API void CUTE_CALL cf_draw_sprite2(const CF_Sprite* sprite, CF_Transform transform);
 CUTE_API void CUTE_CALL cf_draw_quad(CF_Aabb bb, float thickness);
 CUTE_API void CUTE_CALL cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness);
 CUTE_API void CUTE_CALL cf_draw_quad3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3);
@@ -122,7 +121,6 @@ namespace Cute
 using TemporaryImage = CF_TemporaryImage;
 
 CUTE_INLINE void draw_sprite(const CF_Sprite* sprite) { cf_draw_sprite(sprite); }
-CUTE_INLINE void draw_sprite(const CF_Sprite* sprite, CF_Transform transform) { cf_draw_sprite2(sprite, transform); }
 CUTE_INLINE void draw_quad(CF_Aabb bb, float thickness) { cf_draw_quad(bb, thickness); }
 CUTE_INLINE void draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness) { cf_draw_quad2(p0, p1, p2, p3, thickness); }
 CUTE_INLINE void draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3) { cf_draw_quad3(p0, p1, p2, p3, thickness, c0, c1, c2, c3); }

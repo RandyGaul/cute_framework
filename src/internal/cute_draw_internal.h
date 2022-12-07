@@ -47,9 +47,7 @@ struct BatchQuad
 
 struct BatchSprite
 {
-	CF_V2 position;
-	CF_SinCos rotation;
-	CF_V2 scale;
+	CF_V2 p0, p1, p2, p3;
 	CF_Pixel tint;
 };
 
@@ -99,7 +97,6 @@ struct CF_Draw
 	Cute::Array<CF_M3x2> cam_stack;
 	CF_M3x2 cam = cf_make_identity();
 	CF_V2 cam_dimensions = { };
-	CF_V2 cam_dimensions_inverse = { };
 	CF_V2 cam_position = { };
 	float cam_rotation = 0;
 	Cute::Array<CF_V2> temp;

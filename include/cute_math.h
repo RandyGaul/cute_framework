@@ -272,19 +272,16 @@ CUTE_INLINE CF_V2 cf_from_angle(float radians) { return cf_v2(cosf(radians), sin
 // m2 ops.
 // 2D graphics matrix for only scale + rotate.
 
+CUTE_INLINE CF_M2x2 cf_mul_m2_f(CF_M2x2 a, float b) { CF_M2x2 c; c.x = cf_mul_v2_f(a.x, b); c.y = cf_mul_v2_f(a.y, b); return c; }
 CUTE_INLINE CF_V2 cf_mul_m2_v2(CF_M2x2 a, CF_V2 b) { CF_V2 c; c.x = a.x.x * b.x + a.y.x * b.y; c.y = a.x.y * b.x + a.y.y * b.y; return c; }
-CUTE_INLINE CF_V2 cf_mulT_m2_v2(CF_M2x2 a, CF_V2 b) { CF_V2 c; c.x = a.x.x * b.x + a.x.y * b.y; c.y = a.y.x * b.x + a.y.y * b.y; return c; }
 CUTE_INLINE CF_M2x2 cf_mul_m2(CF_M2x2 a, CF_M2x2 b) { CF_M2x2 c; c.x = cf_mul_m2_v2(a, b.x); c.y = cf_mul_m2_v2(a, b.y); return c; }
-CUTE_INLINE CF_M2x2 cf_mulT_m2(CF_M2x2 a, CF_M2x2 b) { CF_M2x2 c; c.x = cf_mulT_m2_v2(a, b.x); c.y = cf_mulT_m2_v2(a, b.y); return c; }
 
 //--------------------------------------------------------------------------------------------------
 // m3x2 ops.
 // General purpose 2D graphics matrix; scale + rotate + translate.
 
 CUTE_INLINE CF_V2 cf_mul_m32_v2(CF_M3x2 a, CF_V2 b) { return cf_add_v2(cf_mul_m2_v2(a.m, b), a.p); }
-CUTE_INLINE CF_V2 cf_mulT_m32_v2(CF_M3x2 a, CF_V2 b) { return cf_mulT_m2_v2(a.m, cf_sub_v2(b, a.p)); }
 CUTE_INLINE CF_M3x2 cf_mul_m32(CF_M3x2 a, CF_M3x2 b) { CF_M3x2 c; c.m = cf_mul_m2(a.m, b.m); c.p = cf_add_v2(cf_mul_m2_v2(a.m, b.p), a.p); return c; }
-CUTE_INLINE CF_M3x2 cf_mulT_m32(CF_M3x2 a, CF_M3x2 b) { CF_M3x2 c; c.m = cf_mulT_m2(a.m, b.m); c.p = cf_mulT_m2_v2(a.m, cf_sub_v2(b.p, a.p)); return c; }
 CUTE_INLINE CF_M3x2 cf_make_identity() { CF_M3x2 m; m.m.x = cf_v2(1, 0); m.m.y = cf_v2(0, 1); m.p = cf_v2(0, 0); return m; }
 CUTE_INLINE CF_M3x2 cf_make_translation_f(float x, float y) { CF_M3x2 m; m.m.x = cf_v2(1, 0); m.m.y = cf_v2(0, 1); m.p = cf_v2(x, y); return m; }
 CUTE_INLINE CF_M3x2 cf_make_translation(CF_V2 p) { return cf_make_translation_f(p.x, p.y); }
@@ -295,7 +292,17 @@ CUTE_INLINE CF_M3x2 cf_make_scale_translation_f(float s, CF_V2 p) { return cf_ma
 CUTE_INLINE CF_M3x2 cf_make_scale_translation_f_f(float sx, float sy, CF_V2 p) { return cf_make_scale_translation(cf_v2(sx, sy), p); }
 CUTE_INLINE CF_M3x2 cf_make_rotation(float radians) { CF_SinCos sc = cf_sincos_f(radians); CF_M3x2 m; m.m.x = cf_v2(sc.c, -sc.s); m.m.y = cf_v2(sc.s, sc.c); m.p = cf_v2(0, 0); return m; }
 CUTE_INLINE CF_M3x2 cf_make_transform_TSR(CF_V2 p, CF_V2 s, float radians) { CF_SinCos sc = cf_sincos_f(radians); CF_M3x2 m; m.m.x = cf_mul_v2_f(cf_v2(sc.c, -sc.s), s.x); m.m.y = cf_mul_v2_f(cf_v2(sc.s, sc.c), s.y); m.p = p; return m; }
-CUTE_INLINE CF_M3x2 cf_make_transform_TSR_inverse(CF_V2 p, CF_V2 s, float radians) { CF_SinCos sc = cf_sincos_f(-radians); CF_M3x2 m; m.m.x = cf_mul_v2_f(cf_v2(sc.c, -sc.s), cf_safe_invert(s.x)); m.m.y = cf_mul_v2_f(cf_v2(sc.s, sc.c), cf_safe_invert(s.y)); m.p = cf_neg_v2(p); return m; }
+
+CUTE_INLINE CF_M3x2 cf_invert(CF_M3x2 a)
+{
+	float id = cf_safe_invert(cf_det2(a.m.x, a.m.y));
+	CF_M3x2 b;
+	b.m.x = cf_v2(a.m.y.y * id, -a.m.x.y * id);
+	b.m.y = cf_v2(-a.m.y.x * id, a.m.x.x * id);
+	b.p.x = (a.m.y.x * a.p.y - a.p.x * a.m.y.y) * id;
+	b.p.y = (a.p.x * a.m.x.y - a.m.x.x * a.p.y) * id;
+	return b;
+}
 
 //--------------------------------------------------------------------------------------------------
 // Transform ops.
@@ -798,14 +805,10 @@ CUTE_INLINE float angle_diff(float radians_a, float radians_b) { return cf_angle
 CUTE_INLINE v2 from_angle(float radians) { return cf_from_angle(radians); }
 
 CUTE_INLINE v2 mul(M2x2 a, v2 b) { return cf_mul_m2_v2(a, b); }
-CUTE_INLINE v2 mulT(M2x2 a, v2 b) { return cf_mulT_m2_v2(a, b); }
 CUTE_INLINE M2x2 mul(M2x2 a, M2x2 b) { return cf_mul_m2(a, b); }
-CUTE_INLINE M2x2 mulT(M2x2 a, M2x2 b) { return cf_mulT_m2(a, b); }
 
 CUTE_INLINE v2 mul(M3x2 a, v2 b) { return cf_mul_m32_v2(a, b); }
-CUTE_INLINE v2 mulT(M3x2 a, v2 b) { return cf_mulT_m32_v2(a, b); }
 CUTE_INLINE M3x2 mul(M3x2 a, M3x2 b) { return cf_mul_m32(a, b); }
-CUTE_INLINE M3x2 mulT(M3x2 a, M3x2 b) { return cf_mulT_m32(a, b); }
 CUTE_INLINE M3x2 make_identity() { return cf_make_identity(); }
 CUTE_INLINE M3x2 make_translation(float x, float y) { return cf_make_translation_f(x, y); }
 CUTE_INLINE M3x2 make_translation(v2 p) { return cf_make_translation(p); }
@@ -816,6 +819,7 @@ CUTE_INLINE M3x2 make_scale(float s, v2 p) { return cf_make_scale_translation_f(
 CUTE_INLINE M3x2 make_scale(float sx, float sy, v2 p) { return cf_make_scale_translation_f_f(sx, sy, p); }
 CUTE_INLINE M3x2 make_rotation(float radians) { return cf_make_rotation(radians); }
 CUTE_INLINE M3x2 make_transform(v2 p, v2 s, float radians) { return cf_make_transform_TSR(p, s, radians); }
+CUTE_INLINE M3x2 invert(M3x2 m) { return cf_invert(m); }
 
 CUTE_INLINE Transform make_transform() { return cf_make_transform(); }
 CUTE_INLINE Transform make_transform(v2 p, float radians) { return cf_make_transform_TR(p, radians); }

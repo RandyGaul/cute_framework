@@ -14,7 +14,9 @@ int main(int argc, const char** argv)
 
 	auto imgui = cf_app_init_imgui(false);
 	sg_imgui_t* sg_imgui = app_get_sokol_imgui();
-	camera_dimensions(640/4, 480/4);
+	float w = 640/2;
+	float h = 480/2;
+	camera_dimensions(w, h);
 	float t = 0;
 
 	draw_push_antialias(true);
@@ -27,12 +29,13 @@ int main(int argc, const char** argv)
 		s.opacity = opacity;
 		s.update(dt);
 		s.draw();
+		camera_look_at(w/4, 0);
+		camera_rotate(t);
 		draw_push_layer(-1);
 		CF_Color c = color_purple();
 		c.a = opacity;
 		draw_push_color(c);
-		draw_circle(V2(0,10),10,10,5);
-		draw_circle(V2(5,15),10,10,5);
+		draw_line(V2(0,0), V2(100,100), 0);
 		draw_pop_color();
 		draw_pop_layer();
 		if (ImGui::BeginMainMenuBar()) {
