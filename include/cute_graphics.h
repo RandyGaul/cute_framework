@@ -878,7 +878,21 @@ CUTE_API void CUTE_CALL cf_apply_mesh(CF_Mesh mesh);
  * to the shader, for whichever inputs the shader accepts. Any missing inputs will be cleared to 0.
  */
 CUTE_API void CUTE_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
+
+/**
+ * Draws all elements within the last applied mesh. If the mesh is a static mesh with usage
+ * `CF_USAGE_TYPE_IMMUTABLE` the number of elements draw will always be consistent with the mesh's
+ * initial data. For `USAGE_TYPE_DYNAMIC` and `CF_USAGE_TYPE_STREAM` the number of elements will
+ * always match the previous call to `cf_mesh_update_***` or `cf_mesh_append_***`.
+ */
 CUTE_API void CUTE_CALL cf_draw_elements();
+
+/**
+ * An optional function to end the current rendering pass. This is only useful when a particular
+ * canvas needs to be destroyed, though it may be currently applied. For example, if the sreen is
+ * resized and you want to resize some of your canvases as well.
+ */
+CUTE_API void CUTE_CALL cf_unapply_canvas();
 
 #ifdef __cplusplus
 }
@@ -1157,6 +1171,7 @@ CUTE_INLINE void apply_scissor(int x, int y, int w, int h) { cf_apply_scissor(x,
 CUTE_INLINE void apply_mesh(Mesh mesh) { cf_apply_mesh(mesh); }
 CUTE_INLINE void apply_shader(Shader shader, Material material) { cf_apply_shader(shader, material); }
 CUTE_INLINE void draw_elements() { cf_draw_elements(); }
+CUTE_INLINE void unapply_canvas() { cf_unapply_canvas(); }
 
 }
 

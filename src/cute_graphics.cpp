@@ -1039,6 +1039,12 @@ void cf_draw_elements()
 	app->draw_call_count++;
 }
 
+void cf_unapply_canvas()
+{
+	s_end_pass();
+	s_canvas = NULL;
+}
+
 void cf_commit()
 {
 	s_end_pass();

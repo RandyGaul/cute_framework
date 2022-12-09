@@ -279,8 +279,6 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		}
 		{
 			app->backbuffer_material = cf_make_material();
-			v2 u_texture_size = V2((float)app->w, (float)app->h);
-			cf_material_set_uniform_fs(app->backbuffer_material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 			app->backbuffer_shader = CF_MAKE_SOKOL_SHADER(backbuffer_shd);
 		}
 		s_canvas(app->w, app->h);
@@ -294,6 +292,10 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		cf_png_cache_load_mem("cf_default_png", default_png_data, (size_t)default_png_sz, &png);
 		app->default_image_id = png.id;
 		CUTE_ASSERT(app->default_image_id == CUTE_PNG_ID_RANGE_LO);
+
+		// This will clear the initial offscreen canvas to prevent the first frame from starting off
+		// with a black background.
+		cf_apply_canvas(app->offscreen_canvas, true);
 	}
 
 	if (!(options & APP_OPTIONS_NO_AUDIO)) {
@@ -392,19 +394,19 @@ void cf_app_update(float dt)
 	}
 }
 
-void cf_app_size(int* w, int* h)
+void cf_app_get_size(int* w, int* h)
 {
 	if (w) *w = app->w;
 	if (h) *h = app->h;
 }
 
-void cf_app_position(int* x, int* y)
+void cf_app_get_position(int* x, int* y)
 {
 	if (x) *x = app->x;
 	if (y) *y = app->y;
 }
 
-bool cf_app_was_size_changed()
+bool cf_app_was_resized()
 {
 	return app->window_state.resized;
 }
@@ -485,6 +487,7 @@ CF_Canvas cf_app_get_canvas()
 
 void cf_app_resize_canvas(int x, int y)
 {
+	unapply_canvas();
 	s_canvas(x, y);
 }
 
@@ -502,14 +505,20 @@ int cf_app_present()
 {
 	cf_render_to(app->offscreen_canvas, false);
 	cf_apply_canvas(app->backbuffer_canvas, true);
-	cf_apply_mesh(app->backbuffer_quad);
-	cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);
-	cf_draw_elements();
+	{
+		cf_apply_mesh(app->backbuffer_quad);
+		cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);
+		v2 u_texture_size = V2((float)app->w, (float)app->h);
+		cf_material_set_uniform_fs(app->backbuffer_material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
+		cf_draw_elements();
+	}
 	if (app->using_imgui) {
 		sg_imgui_draw(&app->sg_imgui);
 		s_imgui_present();
 	}
 
+	// Start the default-pass for anyone using default behavior to catch rendering for the
+	// next frame in the above call to `cf_render_to`.
 	cf_apply_canvas(app->offscreen_canvas, true);
 
 	cf_commit();

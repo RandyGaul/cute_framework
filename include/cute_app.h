@@ -63,9 +63,9 @@ CUTE_API bool CUTE_CALL cf_app_is_running();
 CUTE_API void CUTE_CALL cf_app_stop_running();
 CUTE_API void CUTE_CALL cf_app_update(float dt);
 CUTE_API int CUTE_CALL cf_app_present();
-CUTE_API void CUTE_CALL cf_app_size(int* w, int* h);
-CUTE_API void CUTE_CALL cf_app_position(int* x, int* y);
-CUTE_API bool CUTE_CALL cf_app_was_size_changed();
+CUTE_API void CUTE_CALL cf_app_get_size(int* w, int* h);
+CUTE_API void CUTE_CALL cf_app_get_position(int* x, int* y);
+CUTE_API bool CUTE_CALL cf_app_was_resized();
 CUTE_API bool CUTE_CALL cf_app_was_moved();
 CUTE_API bool CUTE_CALL cf_app_lost_focus();
 CUTE_API bool CUTE_CALL cf_app_gained_focus();
@@ -160,9 +160,9 @@ CUTE_INLINE void destroy_app() { cf_destroy_app(); }
 CUTE_INLINE bool app_is_running() { return cf_app_is_running(); }
 CUTE_INLINE void app_stop_running() { cf_app_stop_running(); }
 CUTE_INLINE void app_update(float dt) { cf_app_update(dt); }
-CUTE_INLINE void app_size(int* w, int* h) { return cf_app_size(w, h); }
-CUTE_INLINE void app_position(int* x, int* y) { return cf_app_position(x, y); }
-CUTE_INLINE bool app_was_size_changed() { return cf_app_was_size_changed(); }
+CUTE_INLINE void app_get_size(int* w, int* h) { return cf_app_get_size(w, h); }
+CUTE_INLINE void app_get_position(int* x, int* y) { return cf_app_get_position(x, y); }
+CUTE_INLINE bool app_was_resized() { return cf_app_was_resized(); }
 CUTE_INLINE bool app_was_moved() { return cf_app_was_moved(); }
 CUTE_INLINE bool app_lost_focus() { return cf_app_lost_focus(); }
 CUTE_INLINE bool app_gained_focus() { return cf_app_gained_focus(); }

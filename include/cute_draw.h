@@ -89,19 +89,18 @@ CUTE_API void CUTE_CALL cf_camera_pop();
 
 CUTE_API void CUTE_CALL cf_render_to(CF_Canvas canvas, bool clear);
 
-
 /**
- * Temporal texture information for a sprite. Is valid until the next call to `draw_flush`
- * is issued. Useful to render a sprite in an external system, e.g. Dear ImGui. This struct
- * is only valid until the next time `cf_app_present` is called.
+ * Temporal texture information for a sprite. Useful to render a sprite in an external system,
+ * e.g. Dear ImGui. This struct is only valid until the next time `cf_render_to` or
+ * `cf_app_present` is called.
  */
 typedef struct CF_TemporaryImage
 {
 	CF_Texture tex; // A handle representing the texture for this image.
-	int w; // Width in pixels of the image.
-	int h; // Height in pixels of the image.
-	CF_V2 u; // u coordinate of the image in the texture.
-	CF_V2 v; // v coordinate of the image in the texture.
+	int w;          // Width in pixels of the image.
+	int h;          // Height in pixels of the image.
+	CF_V2 u;        // u coordinate of the image in the texture.
+	CF_V2 v;        // v coordinate of the image in the texture.
 } CF_TemporaryImage;
 
 CUTE_API CF_TemporaryImage CUTE_CALL cf_fetch_image(const CF_Sprite* sprite);
