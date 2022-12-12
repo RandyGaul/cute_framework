@@ -26,7 +26,9 @@
 #include <cute_file_system.h>
 #include <cute_math.h>
 #include <cute_defer.h>
+
 #include <internal/cute_app_internal.h>
+#include <internal/cute_draw_internal.h>
 
 #define STB_RECT_PACK_IMPLEMENTATION
 #include <stb/stb_rect_pack.h>
@@ -38,15 +40,6 @@
 
 using namespace Cute;
 
-struct Glyph
-{
-	v2 u, v;
-	int w, h;
-	v2 offset;
-	float xadvance;
-	bool visible;
-};
-
 struct FontInternal
 {
 	uint8_t* file_data = NULL;
@@ -54,7 +47,9 @@ struct FontInternal
 	Array<CodepointRange> ranges;
 	Dictionary<int, int> missing_codepoints;
 	Dictionary<int, Glyph> glyphs;
-	uint8_t* pixels = NULL;
+	Dictionary<uint64_t, int> kerning;
+	CF_Pixel* pixels = NULL;
+	uint64_t texture_id = ~0;
 	float size;
 	float scale;
 	float ascent;
@@ -339,7 +334,7 @@ CodepointSet cf_cyrillic()
 	return set;
 }
 
-Font cf_make_font_mem(void* data, int size, Result* result_out)
+CF_Font cf_make_font_mem(void* data, int size, CF_Result* result_out)
 {
 	FontInternal* font = (FontInternal*)CUTE_NEW(FontInternal);
 	font->file_data = (uint8_t*)data;
@@ -357,7 +352,7 @@ Font cf_make_font_mem(void* data, int size, Result* result_out)
 	return result;
 }
 
-Font cf_make_font(const char* path, Result* result_out)
+Font cf_make_font(const char* path, CF_Result* result_out)
 {
 	void* data;
 	size_t size;
@@ -371,7 +366,7 @@ Font cf_make_font(const char* path, Result* result_out)
 	return font;
 }
 
-void cf_destroy_font(Font font_handle)
+void cf_destroy_font(CF_Font font_handle)
 {
 	FontInternal* font = app->fonts.get(font_handle.id);
 	app->fonts.remove(font_handle.id);
@@ -381,7 +376,7 @@ void cf_destroy_font(Font font_handle)
 	CUTE_FREE(font);
 }
 
-Result cf_font_add_codepoints(Font font_handle, CodepointSet set)
+Result cf_font_add_codepoints(CF_Font font_handle, CF_CodepointSet set)
 {
 	FontInternal* font = app->fonts.get(font_handle.id);
 	if (!font) return result_failure("Invalid font, did you forget to call `cf_make_font`?");
@@ -408,12 +403,13 @@ static void s_save(const char* path, uint8_t* pixels, int w, int h)
 	CUTE_FREE(img.pix);
 }
 
-Result cf_font_build(Font font_handle, float size)
+#define CF_KERN_KEY(cp0, cp1) (((uint64_t)cp0) << 32 | ((uint64_t)cp1))
+
+Result cf_font_build(CF_Font font_handle, float size)
 {
 	FontInternal* font = app->fonts.get(font_handle.id);
 	if (!font) return result_failure("Invalid font, did you forget to call `cf_make_font`?");
 	// TODO - Delete old font data.
-	// TODO - Oversampling.
 	font->size = size;
 	font->scale = stbtt_ScaleForPixelHeight(&font->info, size);
 	int ascent, descent, line_gap;
@@ -431,7 +427,7 @@ Result cf_font_build(Font font_handle, float size)
 		int lo = font->ranges[i].lo;
 		int hi = font->ranges[i].hi;
 		while (lo < hi) {
-			int codepoint = ++lo;
+			int codepoint = lo++;
 			int glyph_index = stbtt_FindGlyphIndex(&font->info, codepoint);
 			if (!glyph_index) {
 				// This glyph wasn't found in the font at all.
@@ -453,7 +449,8 @@ Result cf_font_build(Font font_handle, float size)
 			glyph.u = glyph.v = V2(0,0);
 			glyph.w = w;
 			glyph.h = h;
-			glyph.offset = V2(lsb * font->scale, (float)y0);
+			glyph.q0 = V2((float)x0, -(float)y0);
+			glyph.q1 = V2((float)x1, -(float)y1);
 			glyph.xadvance = xadvance * font->scale;
 			glyph.visible = w > 0 && h > 0 && stbtt_IsGlyphEmpty(&font->info, glyph_index) == 0;
 			glyph_indices.add(glyph_index);
@@ -463,12 +460,12 @@ Result cf_font_build(Font font_handle, float size)
 
 	// Gather up all rectangles for each glyph.
 	int pad = 1;
-	int rect_count = font->glyphs.count();
+	int glyph_count = font->glyphs.count();
 	Array<stbrp_rect> rects;
-	rects.ensure_count(rect_count);
-	CUTE_MEMSET(rects.data(), 0, sizeof(stbrp_rect) * rect_count);
+	rects.ensure_count(glyph_count);
+	CUTE_MEMSET(rects.data(), 0, sizeof(stbrp_rect) * glyph_count);
 	Glyph* glyphs = font->glyphs.items();
-	for (int i = 0; i < rect_count; ++i) {
+	for (int i = 0; i < glyph_count; ++i) {
 		rects[i].w = glyphs[i].w + pad;
 		rects[i].h = glyphs[i].h + pad;
 		rects[i].id = i;
@@ -481,36 +478,77 @@ Result cf_font_build(Font font_handle, float size)
 	Array<stbrp_node> nodes;
 	nodes.ensure_count(atlas_height_max - pad);
 	stbrp_init_target(&stbrp, atlas_width - pad, atlas_height_max - pad, nodes.data(), nodes.count());
-	stbrp_pack_rects(&stbrp, rects.data(), rect_count);
+	stbrp_pack_rects(&stbrp, rects.data(), glyph_count);
 
 	// Find the texture atlas's packed height.
 	int packed_height = 0;
-	for (int i = 0; i < rect_count; ++i) {
+	for (int i = 0; i < glyph_count; ++i) {
 		packed_height = max(packed_height, rects[i].y + rects[i].h);
 	}
 	int atlas_height = fit_power_of_two(packed_height);
 
 	// Calculate glyph UV's.
 	// Render all glyphs acoording to their rectangle into a single texture atlas.
-	uint8_t* pixels = (uint8_t*)CUTE_CALLOC(atlas_width * atlas_height);
+	uint8_t* pixels_1bpp = (uint8_t*)CUTE_CALLOC(atlas_width * atlas_height);
+	CUTE_DEFER(CUTE_FREE(pixels_1bpp));
 	float iw = 1.0f / (float)atlas_width;
 	float ih = 1.0f / (float)atlas_height;
-	for (int i = 0; i < rect_count; ++i) {
+	for (int i = 0; i < glyph_count; ++i) {
 		int x = rects[i].x + pad;
 		int y = rects[i].y + pad;
 		int w = rects[i].w - pad;
 		int h = rects[i].h - pad;
 		CUTE_ASSERT(rects[i].was_packed);
 		glyphs[i].u.x = x * iw;
-		glyphs[i].v.x = y * ih;
-		glyphs[i].u.y = (x + w) * iw;
+		glyphs[i].u.y = y * ih;
+		glyphs[i].v.x = (x + w) * iw;
 		glyphs[i].v.y = (y + h) * ih;
-		stbtt_MakeGlyphBitmap(&font->info, pixels + y * atlas_width + x, w, h, atlas_width, font->scale, font->scale, glyph_indices[i]);
+		stbtt_MakeGlyphBitmap(&font->info, pixels_1bpp + y * atlas_width + x, w, h, atlas_width, font->scale, font->scale, glyph_indices[i]);
+	}
+
+	// Visualize atlas on disk?
+	//s_save("font_test.png", pixels_1bpp, atlas_width, atlas_height);
+
+	// Build kerning table.
+	Array<stbtt_kerningentry> table_array;
+	int table_length = stbtt_GetKerningTableLength(&font->info);
+	table_array.ensure_capacity(table_length);
+	stbtt_kerningentry* table = table_array.data();
+	stbtt_GetKerningTable(&font->info, table, table_length);
+	for (int i = 0; i < table_length; ++i) {
+		stbtt_kerningentry k = table[i];
+		uint64_t key = CF_KERN_KEY(k.glyph1, k.glyph2);
+		font->kerning.insert(key, k.advance);
+	}
+
+	// Convert to premultiplied RGBA8 pixel format.
+	CF_Pixel* pixels = (CF_Pixel*)CUTE_ALLOC(atlas_width * atlas_height * sizeof(CF_Pixel));
+	for (int i = 0; i < atlas_width * atlas_height; ++i) {
+		uint8_t v = pixels_1bpp[i];
+		CF_Pixel p = { };
+		if (v) p = make_pixel(v, v, v, v);
+		pixels[i] = p;
 	}
 	font->pixels = pixels;
-	//s_save("out.png", pixels, atlas_width, atlas_height);
 
-	// TODO - Hook up to batch API automagically.
+	// Create the actual GPU texture.
+	// TODO - Use a pixel format that takes less memory.
+	font->texture_id = cf_generate_texture_handle(pixels, atlas_width, atlas_height, NULL);
+
+	// Hook up to draw API automagically.
+	Array<spritebatch_premade_sprite_t> premade_sprites;
+	premade_sprites.ensure_capacity(glyph_count);
+	spritebatch_premade_sprite_t* premades = premade_sprites.data();
+	for (int i = 0; i < glyph_count; ++i) {
+		premades[i].image_id = glyphs[i].image_id = app->font_image_id_gen++;
+		premades[i].w = glyphs[i].w;
+		premades[i].h = glyphs[i].h;
+		premades[i].minx = glyphs[i].u.x;
+		premades[i].miny = glyphs[i].u.y;
+		premades[i].maxx = glyphs[i].v.x;
+		premades[i].maxy = glyphs[i].v.y;
+	}
+	spritebatch_register_premade_atlas(cf_get_draw_sb(), font->texture_id, atlas_width, atlas_height, glyph_count, premades);
 
 	return result_failure("Not finished implementing this.");
 }
@@ -525,4 +563,21 @@ void cf_font_missing_codepoints(CF_Font font_handle, int** missing_codepoints, i
 		*missing_codepoints = font->missing_codepoints.keys();
 		*count = font->missing_codepoints.count();
 	}
+}
+
+int cf_font_get_kern(CF_Font font_handle, int codepoint0, int codepoint1)
+{
+	FontInternal* font = app->fonts.get(font_handle.id);
+	uint64_t key = CF_KERN_KEY(codepoint0, codepoint1);
+	return font->kerning.find(key);
+}
+
+CF_Glyph cf_font_get_glyph(CF_Font font_handle, int codepoint)
+{
+	FontInternal* font = app->fonts.get(font_handle.id);
+	CF_Glyph g = font->glyphs.find(codepoint);
+	if (g.image_id == 0) {
+		g = font->glyphs.find(0xFFFD);
+	}
+	return g;
 }

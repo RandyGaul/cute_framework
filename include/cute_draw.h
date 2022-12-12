@@ -27,6 +27,7 @@
 #include "cute_result.h"
 #include "cute_graphics.h"
 #include "cute_sprite.h"
+#include "cute_font.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -56,6 +57,8 @@ CUTE_API void CUTE_CALL cf_draw_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Co
 CUTE_API void CUTE_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count);
 CUTE_API void CUTE_CALL cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, float thickness);
 CUTE_API void CUTE_CALL cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float thickness);
+
+CUTE_API void CUTE_CALL cf_draw_text(const char* text, CF_Font font, CF_V2 position);
 
 CUTE_API void CUTE_CALL cf_draw_push_layer(int layer);
 CUTE_API int CUTE_CALL cf_draw_pop_layer();

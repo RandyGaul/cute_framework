@@ -7,31 +7,19 @@ int main(int argc, const char** argv)
 	Result result = make_app("Development Scratch", 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;
 
-	float t = 0;
-	float w = 640/4;
-	float h = 480/4;
+	float w = 640/1;
+	float h = 480/1;
 	camera_dimensions(w, h);
-	draw_push_antialias(true);
 
-	Sprite s = cf_make_sprite("test_data/girl.aseprite");
-	s.play("spin");
+	Font font = make_font("test_data/ProggyClean.ttf");
+	font_add_codepoints(font, ascii_latin());
+	font_build(font, 13);
 
 	while (app_is_running()) {
 		float dt = calc_dt();
 		app_update(dt);
 
-		if (app_was_resized()) {
-			int x, y;
-			app_get_size(&x, &y);
-			cf_app_resize_canvas(x, y);
-		}
-
-		t += dt;
-		camera_look_at((cosf(t)+1)*0.5f * w/8, (sinf(t)+1)*0.5f * h/8);
-		camera_rotate(t*2);
-		draw_circle(V2(0, -20), 7, 20, 0);
-		s.update(dt);
-		s.draw();
+		cf_draw_text("The quick brown fox jumps over the lazy dog. 1234567890", font, V2(-100,0));
 
 		app_present();
 	}

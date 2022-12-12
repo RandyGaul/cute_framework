@@ -230,6 +230,7 @@ struct CF_App
 	Cute::Array<CF_Entity>* load_id_table = NULL;
 
 	// Font stuff.
+	uint64_t font_image_id_gen = CUTE_FONT_ID_RANGE_LO;
 	uint64_t font_id_gen = 0;
 	Cute::Dictionary<uint64_t, FontInternal*> fonts;
 };

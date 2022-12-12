@@ -451,7 +451,7 @@ extern "C" {
  *         DoSomethingWithCodepoint(cp);
  *     }
  */
-CUTE_API const char* CUTE_CALL cf_decode_UTF8(const char* s, uint32_t* codepoint);
+CUTE_API const char* CUTE_CALL cf_decode_UTF8(const char* s, int* codepoint);
 
 /**
  * Decodes a single UTF16 character from the string as a UTF32 codepoint.
@@ -482,7 +482,7 @@ CUTE_API const char* CUTE_CALL cf_decode_UTF8(const char* s, uint32_t* codepoint
  *     return s;
  * }
  */
-CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, uint32_t* codepoint);
+CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint);
 
 //--------------------------------------------------------------------------------------------------
 // String Intering C API (global string table).
@@ -634,7 +634,7 @@ CUTE_API char* CUTE_CALL cf_sreplace(char* s, const char* replace_me, const char
 CUTE_API char* CUTE_CALL cf_serase(char* s, int index, int count);
 CUTE_API char* CUTE_CALL cf_spop(char* s);
 CUTE_API char* CUTE_CALL cf_spopn(char* s, int n);
-CUTE_API char* CUTE_CALL cf_string_append_UTF8_impl(char *s, uint32_t codepoint);
+CUTE_API char* CUTE_CALL cf_string_append_UTF8_impl(char *s, int codepoint);
 
 CUTE_API const char* CUTE_CALL cf_sintern(const char* s);
 CUTE_API const char* CUTE_CALL cf_sintern_range(const char* start, const char* end);
@@ -780,7 +780,7 @@ struct UTF8
 
 	CUTE_INLINE bool next() { if (*text) { text = cf_decode_UTF8(text, &codepoint); return true; } else return false; }
 
-	uint32_t codepoint;
+	int codepoint;
 	const char* text = NULL;
 };
 
@@ -802,7 +802,7 @@ struct UTF16
 
 	CUTE_INLINE bool next() { if (*text) { text = cf_decode_UTF16(text, &codepoint); return true; } else return false; }
 
-	uint32_t codepoint;
+	int codepoint;
 	const uint16_t* text = NULL;
 };
 

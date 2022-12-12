@@ -509,7 +509,7 @@ void cf_sinuke_intern_table()
 // All invalid characters are encoded as the "replacement character" 0xFFFD for both
 // UTF8 and UTF16 functions.
 
-char* cf_string_append_UTF8_impl(char *s, uint32_t codepoint)
+char* cf_string_append_UTF8_impl(char *s, int codepoint)
 {
 	CF_ACANARY(s);
 	if (codepoint > 0x10FFFF) codepoint = 0xFFFD;
@@ -521,11 +521,11 @@ char* cf_string_append_UTF8_impl(char *s, uint32_t codepoint)
 	return s;
 }
 
-const char* cf_decode_UTF8(const char* s, uint32_t* codepoint)
+const char* cf_decode_UTF8(const char* s, int* codepoint)
 {
 	unsigned char c = *s++;
 	int extra = 0;
-	uint32_t min = 0;
+	int min = 0;
 	*codepoint = 0;
 	     if (c >= 0xF0) { *codepoint = c & 0x07; extra = 3; min = 0x10000; }
 	else if (c >= 0xE0) { *codepoint = c & 0x0F; extra = 2; min = 0x800; }
@@ -541,13 +541,13 @@ const char* cf_decode_UTF8(const char* s, uint32_t* codepoint)
 	return s;
 }
 
-const uint16_t* cf_decode_UTF16(const uint16_t* s, uint32_t* codepoint)
+const uint16_t* cf_decode_UTF16(const uint16_t* s, int* codepoint)
 {
-	uint32_t W1 = *s++;
+	int W1 = *s++;
 	if (W1 < 0xD800 || W1 > 0xDFFF) {
 		*codepoint = W1;
 	} else if (W1 > 0xD800 && W1 < 0xDBFF) {
-		uint32_t W2 = *s++;
+		int W2 = *s++;
 		if (W2 > 0xDC00 && W2 < 0xDFFF) *codepoint = 0x10000 + (((W1 & 0x03FF) << 10) | W2 & 0x03FF);
 		else *codepoint = 0xFFFD;
 	} else *codepoint = 0xFFFD;

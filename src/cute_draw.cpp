@@ -24,6 +24,7 @@
 #include <cute_array.h>
 #include <cute_file_system.h>
 #include <cute_defer.h>
+#include <cute_font.h>
 //#include <cute_debug_printf.h>
 
 #include <internal/cute_app_internal.h>
@@ -49,6 +50,32 @@ static struct CF_Draw* draw;
 // https://github.com/NoelFB/blah/blob/master/include/blah_draw.h
 
 using namespace Cute;
+
+SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata)
+{
+	CUTE_UNUSED(udata);
+	CF_TextureParams params = cf_texture_defaults();
+	params.width = w;
+	params.height = h;
+	params.filter = draw->filter;
+	params.initial_data = pixels;
+	params.initial_data_size = w * h * sizeof(CF_Pixel);
+	CF_Texture texture = cf_make_texture(params);
+	return texture.id;
+}
+
+void cf_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
+{
+	CUTE_UNUSED(udata);
+	CF_Texture tex;
+	tex.id = texture_id;
+	cf_destroy_texture(tex);
+}
+
+spritebatch_t* cf_get_draw_sb()
+{
+	return &draw->sb;
+}
 
 void cf_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
 {
@@ -224,27 +251,6 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_draw_elements();
 }
 
-static SPRITEBATCH_U64 s_generate_texture_handle(void* pixels, int w, int h, void* udata)
-{
-	CUTE_UNUSED(udata);
-	CF_TextureParams params = cf_texture_defaults();
-	params.width = w;
-	params.height = h;
-	params.filter = draw->filter;
-	params.initial_data = pixels;
-	params.initial_data_size = w * h * sizeof(CF_Pixel);
-	CF_Texture texture = cf_make_texture(params);
-	return texture.id;
-}
-
-static void s_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
-{
-	CUTE_UNUSED(udata);
-	CF_Texture tex;
-	tex.id = texture_id;
-	cf_destroy_texture(tex);
-}
-
 //--------------------------------------------------------------------------------------------------
 // Hidden API called by CF_App.
 
@@ -295,8 +301,8 @@ void cf_make_draw()
 	config.ticks_to_decay_texture = 100000;
 	config.batch_callback = s_draw_report;
 	config.get_pixels_callback = cf_get_pixels;
-	config.generate_texture_callback = s_generate_texture_handle;
-	config.delete_texture_callback = s_destroy_texture_handle;
+	config.generate_texture_callback = cf_generate_texture_handle;
+	config.delete_texture_callback = cf_destroy_texture_handle;
 	config.allocator_context = NULL;
 	config.lonely_buffer_count_till_flush = 0;
 
@@ -1016,6 +1022,59 @@ void cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float
 	}
 	draw->temp.add(b);
 	cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, false, 1);
+}
+
+void cf_draw_text(const char* text, CF_Font font, CF_V2 position)
+{
+	// TODO
+	// - alignment
+	// - CPU box clipping
+	// - word wrap
+	// - codes
+
+	// Codes to be supported
+	// - alignment
+	// - color
+	// - offset
+	// - time
+	// - custom params (for callback modifiers)
+
+	int cp_prev = 0;
+	int cp;
+	while (*text) {
+		text = cf_decode_UTF8(text, &cp);
+		spritebatch_sprite_t s = { };
+		CF_Glyph g = cf_font_get_glyph(font, cp);
+		if (g.image_id == 0) {
+			continue;
+		}
+		s.image_id = g.image_id;
+		s.w = g.w;
+		s.h = g.h;
+		s.minx = g.u.x;
+		s.miny = g.u.y;
+		s.maxx = g.v.x;
+		s.maxy = g.v.y;
+		s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
+		s.geom.u.sprite;
+		
+		v2 kern = V2((float)cf_font_get_kern(font, cp_prev, cp), 0);
+		v2 q0 = g.q0 + position + kern;
+		v2 q1 = g.q1 + position + kern;
+
+		s.geom.u.sprite.p3 = mul(draw->cam, V2(q0.x, q0.y));
+		s.geom.u.sprite.p0 = mul(draw->cam, V2(q0.x, q1.y));
+		s.geom.u.sprite.p1 = mul(draw->cam, V2(q1.x, q1.y));
+		s.geom.u.sprite.p2 = mul(draw->cam, V2(q1.x, q0.y));
+
+		s.geom.u.sprite.tint = premultiply(to_pixel(draw->tints.last()));
+		s.geom.alpha = 1.0f;
+		s.sort_bits = draw->layers.last();
+		spritebatch_push(&draw->sb, s);
+
+		position.x += g.xadvance;
+		cp_prev = cp;
+	}
 }
 
 void cf_draw_push_layer(int layer)

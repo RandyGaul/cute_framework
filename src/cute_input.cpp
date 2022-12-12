@@ -344,7 +344,7 @@ void cf_clear_all_mouse_state()
 void cf_input_text_add_utf8(const char* text)
 {
 	while (*text) {
-		uint32_t cp;
+		int cp;
 		text = cf_decode_UTF8(text, &cp);
 		app->input_text.add((int)cp);
 	}

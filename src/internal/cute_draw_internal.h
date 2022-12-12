@@ -117,4 +117,8 @@ void cf_destroy_draw();
 #define CUTE_FONT_ID_RANGE_LO     (CUTE_PNG_ID_RANGE_HI      + 1)
 #define CUTE_FONT_ID_RANGE_HI     (CUTE_FONT_ID_RANGE_LO     + CUTE_IMAGE_ID_RANGE_SIZE)
 
+SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata);
+void cf_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata);
+spritebatch_t* cf_get_draw_sb();
+
 #endif // CUTE_DRAW_INTERNAL_H
