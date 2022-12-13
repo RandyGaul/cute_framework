@@ -30,6 +30,7 @@
 #include <internal/cute_app_internal.h>
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
+#include <internal/cute_font_internal.h>
 
 #include <shaders/sprite_shader.h>
 
@@ -85,6 +86,7 @@ void cf_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, vo
 	} else if (image_id >= CUTE_PNG_ID_RANGE_LO && image_id <= CUTE_PNG_ID_RANGE_HI) {
 		cf_png_cache_get_pixels(image_id, buffer, bytes_to_fill);
 	} else if (image_id >= CUTE_FONT_ID_RANGE_LO && image_id <= CUTE_FONT_ID_RANGE_HI) {
+		CUTE_ASSERT(false);
 	} else {
 		CUTE_ASSERT(false);
 		CUTE_MEMSET(buffer, 0, sizeof(bytes_to_fill));
@@ -217,13 +219,13 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 
 	// Apply viewport.
 	Rect viewport = draw->viewports.last();
-	if (viewport.x >= 0 && viewport.y >= 0) {
+	if (viewport.w >= 0 && viewport.h >= 0) {
 		cf_apply_viewport(viewport.x, viewport.y, viewport.w, viewport.h);
 	}
 
 	// Apply scissor.
 	Rect scissor = draw->scissors.last();
-	if (scissor.x >= 0 && scissor.y >= 0) {
+	if (scissor.w >= 0 && scissor.h >= 0) {
 		cf_apply_scissor(scissor.x, scissor.y, scissor.w, scissor.h);
 	}
 
@@ -236,7 +238,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_texture_fs(draw->material, "u_image", atlas);
 
 	// Apply uniforms.
-	v2 u_texture_size = cf_v2(draw->atlas_width, draw->atlas_height);
+	v2 u_texture_size = cf_v2((float)texture_w, (float)texture_h);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 
 	// Outline shader uniforms.
@@ -311,9 +313,6 @@ void cf_make_draw()
 		draw = NULL;
 		CUTE_ASSERT(false);
 	}
-
-	draw->atlas_width = (float)config.atlas_width_in_pixels;
-	draw->atlas_height = (float)config.atlas_height_in_pixels;
 }
 
 void cf_destroy_draw()
@@ -1024,7 +1023,45 @@ void cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float
 	cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, false, 1);
 }
 
-void cf_draw_text(const char* text, CF_Font font, CF_V2 position)
+void cf_draw_push_font(const char* font)
+{
+	draw->fonts.add(sintern(font));
+}
+
+const char* cf_draw_pop_font()
+{
+	if (draw->fonts.count() > 1) {
+		return draw->fonts.pop();
+	} else {
+		return draw->fonts.last();
+	}
+}
+
+const char* cf_draw_peek_font()
+{
+	return draw->fonts.last();
+}
+
+void cf_draw_push_font_size(float size)
+{
+	draw->font_sizes.add(size);
+}
+
+float cf_draw_pop_font_size()
+{
+	if (draw->font_sizes.count() > 1) {
+		return draw->font_sizes.pop();
+	} else {
+		return draw->font_sizes.last();
+	}
+}
+
+float cf_draw_peek_font_size()
+{
+	return draw->font_sizes.last();
+}
+
+void cf_draw_text(const char* font_name, const char* text, CF_V2 position)
 {
 	// TODO
 	// - alignment
@@ -1039,12 +1076,25 @@ void cf_draw_text(const char* text, CF_Font font, CF_V2 position)
 	// - time
 	// - custom params (for callback modifiers)
 
+	CF_Font* font = cf_font_get(font_name);
+	CUTE_ASSERT(font);
+	if (!font) return;
+	CF_FontAtlas* atlas = cf_font_find_atlas(font_name, draw->font_sizes.last());
+	if (!atlas) {
+		// If no size is found, try and use the first atlas built, if it exists.
+		if (font->atlases.size()) {
+			atlas = font->atlases.data();
+		}
+	}
+	CUTE_ASSERT(atlas);
+	if (!atlas) return;
+
 	int cp_prev = 0;
 	int cp;
 	while (*text) {
 		text = cf_decode_UTF8(text, &cp);
 		spritebatch_sprite_t s = { };
-		CF_Glyph g = cf_font_get_glyph(font, cp);
+		CF_Glyph g = cf_font_get_glyph(atlas, cp);
 		if (g.image_id == 0) {
 			continue;
 		}
@@ -1057,8 +1107,9 @@ void cf_draw_text(const char* text, CF_Font font, CF_V2 position)
 		s.maxy = g.v.y;
 		s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
 		s.geom.u.sprite;
-		
-		v2 kern = V2((float)cf_font_get_kern(font, cp_prev, cp), 0);
+
+		uint64_t kern_key = CF_KERN_KEY(cp_prev, cp);
+		v2 kern = V2(font->kerning.find(kern_key) * atlas->scale, 0);
 		v2 q0 = g.q0 + position + kern;
 		v2 q1 = g.q1 + position + kern;
 

@@ -156,7 +156,7 @@ struct CF_EcsArrays
 	}
 };
 
-struct FontInternal;
+struct CF_Font;
 
 struct CF_App
 {
@@ -231,8 +231,7 @@ struct CF_App
 
 	// Font stuff.
 	uint64_t font_image_id_gen = CUTE_FONT_ID_RANGE_LO;
-	uint64_t font_id_gen = 0;
-	Cute::Dictionary<uint64_t, FontInternal*> fonts;
+	Cute::Dictionary<const char*, CF_Font*> fonts;
 };
 
 #endif // CUTE_APP_INTERNAL_H

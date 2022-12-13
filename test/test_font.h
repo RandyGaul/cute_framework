@@ -26,10 +26,10 @@ CUTE_TEST_CASE(test_font_wip, "This test is not yet fully implemented.");
 int test_font_wip()
 {
 	CUTE_TEST_ASSERT(!is_error(cf_make_app("UNIT TEST", 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_DEFAULT_GFX_CONTEXT, NULL)));
-	Font font = make_font("test_data/ProggyClean.ttf");
-	font_add_codepoints(font, ascii_latin());
-	font_build(font, 64.0f);
-	cf_destroy_font(font);
+	make_font("test_data/ProggyClean.ttf", "ProggyClean");
+	font_add_codepoints("ProggyClean", ascii_latin());
+	font_build("ProggyClean", 64.0f);
+	cf_destroy_font("ProggyClean");
 	destroy_app();
 
 	return 0;

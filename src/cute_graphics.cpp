@@ -524,7 +524,7 @@ int cf_mesh_append_vertex_data(CF_Mesh mesh_handle, void* data, int append_count
 	if (!sg_query_will_buffer_overflow(mesh->vertices.handle, size)) {
 		int offset = sg_append_buffer(mesh->vertices.handle, range);
 		mesh->vertices.offset = offset;
-		mesh->vertices.element_count += append_count;
+		mesh->vertices.element_count = append_count;
 		mesh->vertices.was_appended = true;
 		return offset;
 	} else {
@@ -583,7 +583,7 @@ int cf_mesh_append_instance_data(CF_Mesh mesh_handle, void* data, int append_cou
 	if (!sg_query_will_buffer_overflow(mesh->instances.handle, size)) {
 		int offset = sg_append_buffer(mesh->instances.handle, range);
 		mesh->instances.offset = offset;
-		mesh->instances.element_count += append_count;
+		mesh->instances.element_count = append_count;
 		mesh->instances.was_appended = true;
 		return offset;
 	} else {
@@ -641,7 +641,7 @@ int cf_mesh_append_index_data(CF_Mesh mesh_handle, uint32_t* indices, int append
 	if (!sg_query_will_buffer_overflow(mesh->indices.handle, size)) {
 		int offset = sg_append_buffer(mesh->indices.handle, range);
 		mesh->indices.offset = offset;
-		mesh->indices.element_count += append_count;
+		mesh->indices.element_count = append_count;
 		mesh->indices.was_appended = true;
 		return offset;
 	} else {
@@ -750,7 +750,7 @@ static void s_material_set_texture(CF_MaterialState* state, const char* name, CF
 	for (int i = 0; i < state->textures.count(); ++i) {
 		if (state->textures[i].name == name) {
 			state->textures[i].handle = texture;
-			found = false;
+			found = true;
 			break;
 		}
 	}

@@ -205,6 +205,7 @@ set(CUTE_HDRS
 	src/internal/cute_dx11.h
 	src/internal/cute_png_cache_internal.h
 	src/internal/cute_draw_internal.h
+	src/internal/cute_font_internal.h
 	src/internal/cute_graphics_internal.h
 	src/internal/cute_aseprite_cache_internal.h
 

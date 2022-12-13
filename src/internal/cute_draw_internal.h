@@ -81,8 +81,6 @@ struct DrawVertex
 struct CF_Draw
 {
 	spritebatch_t sb;
-	float atlas_width = 1024;
-	float atlas_height = 1024;
 	CF_Shader shader;
 	CF_Mesh mesh;
 	CF_Material material;
@@ -101,6 +99,8 @@ struct CF_Draw
 	float cam_rotation = 0;
 	Cute::Array<CF_V2> temp;
 	Cute::Array<DrawVertex> verts;
+	Cute::Array<float> font_sizes = { 0 };
+	Cute::Array<const char*> fonts = { NULL };
 };
 
 void cf_make_draw();

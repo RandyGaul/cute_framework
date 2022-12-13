@@ -486,15 +486,16 @@ CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, int* codep
 
 //--------------------------------------------------------------------------------------------------
 // String Intering C API (global string table).
+// ^      ^
 
 /**
  * Global string table.
  * Only one copy of each unique string is stored inside.
- * Use this function to get a stable pointer and unique to a string.
+ * Use this function to get a stable pointer to a string.
  * Primarily used as a memory optimization to reduce duplicate strings.
  * You *can not* modify this string in any way. It is 100% immutable.
  * You can hash returned pointers directly into hash tables (instead of hashing the entire string).
- * You can also simply compare pointers for equality, as opposed to comparing the string contents.
+ * You can simply compare pointers for equality, as opposed to comparing the string contents.
  * You may optionally call `sinuke` to free all resources used by the global string table.
  */
 #define sintern(s) cf_sintern(s)
@@ -502,11 +503,11 @@ CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, int* codep
 /**
  * Global string table.
  * Only one copy of each unique string is stored inside.
- * Use this function to get a stable pointer and unique to a string.
+ * Use this function to get a stable pointer to a string.
  * Primarily used as a memory optimization to reduce duplicate strings.
  * You *can not* modify this string in any way. It is 100% immutable.
  * You can hash returned pointers directly into hash tables (instead of hashing the entire string).
- * You can also simply compare pointers for equality, as opposed to comparing the string contents.
+ * You can simply compare pointers for equality, as opposed to comparing the string contents.
  * You may optionally call `sinuke` to free all resources used by the global string table.
  */
 #define sintern_range(start, end) cf_sintern_range(start, end)
@@ -514,6 +515,8 @@ CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, int* codep
 /**
  * Returns true if this string is a valid intern'd string (it was returned to you by `sintern`).
  * Returns false for all other strings.
+ * This is *not* a secure method -- do not use it on any unvalidated strings. It's designed to be
+ * very simple and fast, nothing more.
  */
 #define sivalid(s) (((cf_intern_t*)s - 1)->cookie == CF_INTERN_COOKIE)
 

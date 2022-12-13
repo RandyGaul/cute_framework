@@ -488,7 +488,7 @@ typedef struct spritebatch_internal_lonely_texture_t
 
 typedef struct spritebatch_internal_premade_sprite_t
 {
-	int w, h;
+	int atlas_w, atlas_h;
 	float minx, miny;
 	float maxx, maxy;
 	SPRITEBATCH_U64 texture_id;
@@ -1200,14 +1200,19 @@ void spritebatch_register_premade_atlas(spritebatch_t* sb, SPRITEBATCH_U64 textu
 {
 	for (int i = 0; i < sprite_count; ++i) {
 		spritebatch_internal_premade_sprite_t premade;
-		premade.w = sprites[i].w;
-		premade.h = sprites[i].h;
+		premade.atlas_w = w;
+		premade.atlas_h = h;
 		premade.minx = sprites[i].minx;
 		premade.miny = sprites[i].miny;
 		premade.maxx = sprites[i].maxx;
 		premade.maxy = sprites[i].maxy;
 		premade.texture_id = texture_id;
-		hashtable_insert(&sb->sprites_to_premades, sprites[i].image_id, &premade);
+		void* find = hashtable_find(&sb->sprites_to_premades, sprites[i].image_id);
+		if (find) {
+			SPRITEBATCH_MEMCPY(find, &premade, sizeof(premade));
+		} else {
+			hashtable_insert(&sb->sprites_to_premades, sprites[i].image_id, &premade);
+		}
 	}
 }
 
@@ -1586,8 +1591,8 @@ int spritebatch_flush(spritebatch_t* sb)
 			} 
 			else
 			{
-				w = premade->w;
-				h = premade->h;
+				w = premade->atlas_w;
+				h = premade->atlas_h;
 			}
 
 			sb->batch_callback(sb->sprites + min, batch_count, w, h, sb->udata);

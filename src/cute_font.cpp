@@ -24,11 +24,11 @@
 #include <cute_font.h>
 #include <cute_c_runtime.h>
 #include <cute_file_system.h>
-#include <cute_math.h>
 #include <cute_defer.h>
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_draw_internal.h>
+#include <internal/cute_font_internal.h>
 
 #define STB_RECT_PACK_IMPLEMENTATION
 #include <stb/stb_rect_pack.h>
@@ -39,25 +39,6 @@
 #include <cute/cute_png.h>
 
 using namespace Cute;
-
-struct FontInternal
-{
-	uint8_t* file_data = NULL;
-	stbtt_fontinfo info;
-	Array<CodepointRange> ranges;
-	Dictionary<int, int> missing_codepoints;
-	Dictionary<int, Glyph> glyphs;
-	Dictionary<uint64_t, int> kerning;
-	CF_Pixel* pixels = NULL;
-	uint64_t texture_id = ~0;
-	float size;
-	float scale;
-	float ascent;
-	float descent;
-	float line_gap;
-	float line_height;
-	float height;
-};
 
 // These character range functions are from Dear ImGui v1.89.
 // https://github.com/ocornut/imgui
@@ -92,7 +73,7 @@ CodepointSet cf_ascii_latin()
 {
 	static CodepointRange ranges[] = {
 		{ 0x0020, 0x00FF, }, // Basic Latin + Latin Supplement
-		{ 0xFFFD, 0xFFFD }  // Replacement character
+		{ 0xFFFD, 0xFFFD }   // Replacement character
 	};
 	CodepointSet set = { CUTE_ARRAY_SIZE(ranges), ranges };
 	return set;
@@ -103,7 +84,7 @@ CodepointSet cf_greek()
 	static CodepointRange ranges[] = {
 		{ 0x0020, 0x00FF, }, // Basic Latin + Latin Supplement
 		{ 0x0370, 0x03FF, }, // Greek and Coptic
-		{ 0xFFFD, 0xFFFD }  // Replacement character
+		{ 0xFFFD, 0xFFFD }   // Replacement character
 	};
 	CodepointSet set = { CUTE_ARRAY_SIZE(ranges), ranges };
 	return set;
@@ -334,25 +315,22 @@ CodepointSet cf_cyrillic()
 	return set;
 }
 
-CF_Font cf_make_font_mem(void* data, int size, CF_Result* result_out)
+void cf_make_font_mem(void* data, int size, const char* font_name, CF_Result* result_out)
 {
-	FontInternal* font = (FontInternal*)CUTE_NEW(FontInternal);
+	font_name = sintern(font_name);
+	CF_Font* font = (CF_Font*)CUTE_NEW(CF_Font);
 	font->file_data = (uint8_t*)data;
 	if (!stbtt_InitFont(&font->info, font->file_data, stbtt_GetFontOffsetForIndex(font->file_data, 0))) {
 		CUTE_FREE(data);
 		CUTE_FREE(font);
 		if (result_out) *result_out = result_failure("Failed to parse ttf file with stb_truetype.h.");
-		return { ~0ULL };
+		return;
 	}
-	Font result = { app->font_id_gen++ };
-	FontInternal** font_ptr = app->fonts.insert(result.id);
-	CUTE_ASSERT(font_ptr);
-	*font_ptr = font;
+	app->fonts.insert(font_name, font);
 	if (result_out) *result_out = result_success();
-	return result;
 }
 
-Font cf_make_font(const char* path, CF_Result* result_out)
+void cf_make_font(const char* path, const char* font_name, CF_Result* result_out)
 {
 	void* data;
 	size_t size;
@@ -360,26 +338,29 @@ Font cf_make_font(const char* path, CF_Result* result_out)
 	if (is_error(err)) {
 		CUTE_FREE(data);
 		if (result_out) *result_out = err;
-		return { ~0ULL };
+		return;
 	}
-	Font font = cf_make_font_mem(data, (int)size, result_out);
-	return font;
+	cf_make_font_mem(data, (int)size, font_name, result_out);
 }
 
-void cf_destroy_font(CF_Font font_handle)
+void cf_destroy_font(const char* font_name)
 {
-	FontInternal* font = app->fonts.get(font_handle.id);
-	app->fonts.remove(font_handle.id);
+	font_name = sintern(font_name);
+	CF_Font* font = app->fonts.get(font_name);
+	if (!font) return;
+	app->fonts.remove(font_name);
 	CUTE_FREE(font->file_data);
-	CUTE_FREE(font->pixels);
-	font->~FontInternal();
+	for (int i = 0; i < font->atlases.size(); ++i) {
+		CUTE_FREE(font->atlases[i].pixels);
+	}
+	font->~CF_Font();
 	CUTE_FREE(font);
 }
 
-Result cf_font_add_codepoints(CF_Font font_handle, CF_CodepointSet set)
+Result cf_font_add_codepoints(const char* font_name, CF_CodepointSet set)
 {
-	FontInternal* font = app->fonts.get(font_handle.id);
-	if (!font) return result_failure("Invalid font, did you forget to call `cf_make_font`?");
+	CF_Font* font = app->fonts.get(sintern(font_name));
+	if (!font) return result_failure("Failed to find font, did you forget to call `cf_make_font`?");
 	for (int i = 0; i < set.count; ++i) {
 		font->ranges.add(set.ranges[i]);
 	}
@@ -403,23 +384,38 @@ static void s_save(const char* path, uint8_t* pixels, int w, int h)
 	CUTE_FREE(img.pix);
 }
 
-#define CF_KERN_KEY(cp0, cp1) (((uint64_t)cp0) << 32 | ((uint64_t)cp1))
-
-Result cf_font_build(CF_Font font_handle, float size)
+Result cf_font_build(const char* font_name, float size)
 {
-	FontInternal* font = app->fonts.get(font_handle.id);
-	if (!font) return result_failure("Invalid font, did you forget to call `cf_make_font`?");
-	// TODO - Delete old font data.
-	font->size = size;
-	font->scale = stbtt_ScaleForPixelHeight(&font->info, size);
+	CF_Font* font = app->fonts.get(sintern(font_name));
+	if (!font) return result_failure("Failed to find font, did you forget to call `cf_make_font`?");
+
+	// Just always clear this for simplicity.
+	// Will get populated for each size of the font rasterized.
+	font->missing_codepoints.clear();
+
+	// Check if there's any new glyphs or a new font size to add.
+	CF_FontAtlas* atlas = cf_font_find_atlas(font, size);
+	if (atlas) {
+		if (atlas->installed_ranges_count == font->ranges.count()) {
+			return result_success();
+		}
+		atlas->glyphs.clear();
+		atlas->texture_id = ~0;
+		CUTE_FREE(atlas->pixels);
+		atlas->pixels = NULL;
+	} else {
+		atlas = &font->atlases.add();
+	}
+
+	atlas->size = size;
+	atlas->scale = stbtt_ScaleForPixelHeight(&font->info, size);
 	int ascent, descent, line_gap;
 	stbtt_GetFontVMetrics(&font->info, &ascent, &descent, &line_gap);
-	font->ascent = ascent * font->scale;
-	font->descent = descent * font->scale;
-	font->line_gap = line_gap * font->scale;
-	font->line_height = font->ascent - font->descent + font->line_gap;
-	font->height = font->ascent - font->descent;
-	font->size = size;
+	atlas->ascent = ascent * atlas->scale;
+	atlas->descent = descent * atlas->scale;
+	atlas->line_gap = line_gap * atlas->scale;
+	atlas->line_height = atlas->ascent - atlas->descent + atlas->line_gap;
+	atlas->height = atlas->ascent - atlas->descent;
 
 	// Load each glyph's data from the font.
 	Array<int> glyph_indices;
@@ -436,13 +432,13 @@ Result cf_font_build(CF_Font font_handle, float size)
 				}
 				continue;
 			}
-			if (font->glyphs.has(codepoint)) {
+			if (atlas->glyphs.has(codepoint)) {
 				// This glyph is already accounted for.
 				continue;
 			}
 			int xadvance, lsb, x0, y0, x1, y1;
 			stbtt_GetGlyphHMetrics(&font->info, glyph_index, &xadvance, &lsb);
-			stbtt_GetGlyphBitmapBox(&font->info, glyph_index, font->scale, font->scale, &x0, &y0, &x1, &y1);
+			stbtt_GetGlyphBitmapBox(&font->info, glyph_index, atlas->scale, atlas->scale, &x0, &y0, &x1, &y1);
 			int w = x1 - x0;
 			int h = y1 - y0;
 			Glyph glyph;
@@ -451,20 +447,20 @@ Result cf_font_build(CF_Font font_handle, float size)
 			glyph.h = h;
 			glyph.q0 = V2((float)x0, -(float)y0);
 			glyph.q1 = V2((float)x1, -(float)y1);
-			glyph.xadvance = xadvance * font->scale;
+			glyph.xadvance = xadvance * atlas->scale;
 			glyph.visible = w > 0 && h > 0 && stbtt_IsGlyphEmpty(&font->info, glyph_index) == 0;
 			glyph_indices.add(glyph_index);
-			font->glyphs.insert(codepoint, glyph);
+			atlas->glyphs.insert(codepoint, glyph);
 		}
 	}
 
 	// Gather up all rectangles for each glyph.
 	int pad = 1;
-	int glyph_count = font->glyphs.count();
+	int glyph_count = atlas->glyphs.count();
 	Array<stbrp_rect> rects;
 	rects.ensure_count(glyph_count);
 	CUTE_MEMSET(rects.data(), 0, sizeof(stbrp_rect) * glyph_count);
-	Glyph* glyphs = font->glyphs.items();
+	Glyph* glyphs = atlas->glyphs.items();
 	for (int i = 0; i < glyph_count; ++i) {
 		rects[i].w = glyphs[i].w + pad;
 		rects[i].h = glyphs[i].h + pad;
@@ -503,11 +499,14 @@ Result cf_font_build(CF_Font font_handle, float size)
 		glyphs[i].u.y = y * ih;
 		glyphs[i].v.x = (x + w) * iw;
 		glyphs[i].v.y = (y + h) * ih;
-		stbtt_MakeGlyphBitmap(&font->info, pixels_1bpp + y * atlas_width + x, w, h, atlas_width, font->scale, font->scale, glyph_indices[i]);
+		stbtt_MakeGlyphBitmap(&font->info, pixels_1bpp + y * atlas_width + x, w, h, atlas_width, atlas->scale, atlas->scale, glyph_indices[i]);
 	}
 
 	// Visualize atlas on disk?
-	//s_save("font_test.png", pixels_1bpp, atlas_width, atlas_height);
+	//String s = "font_test";
+	//static int n;
+	//s.fmt_append("%d.png", n++);
+	//s_save(s.c_str(), pixels_1bpp, atlas_width, atlas_height);
 
 	// Build kerning table.
 	Array<stbtt_kerningentry> table_array;
@@ -529,11 +528,11 @@ Result cf_font_build(CF_Font font_handle, float size)
 		if (v) p = make_pixel(v, v, v, v);
 		pixels[i] = p;
 	}
-	font->pixels = pixels;
+	atlas->pixels = pixels;
 
 	// Create the actual GPU texture.
 	// TODO - Use a pixel format that takes less memory.
-	font->texture_id = cf_generate_texture_handle(pixels, atlas_width, atlas_height, NULL);
+	atlas->texture_id = cf_generate_texture_handle(pixels, atlas_width, atlas_height, NULL);
 
 	// Hook up to draw API automagically.
 	Array<spritebatch_premade_sprite_t> premade_sprites;
@@ -548,14 +547,14 @@ Result cf_font_build(CF_Font font_handle, float size)
 		premades[i].maxx = glyphs[i].v.x;
 		premades[i].maxy = glyphs[i].v.y;
 	}
-	spritebatch_register_premade_atlas(cf_get_draw_sb(), font->texture_id, atlas_width, atlas_height, glyph_count, premades);
+	spritebatch_register_premade_atlas(cf_get_draw_sb(), atlas->texture_id, atlas_width, atlas_height, glyph_count, premades);
 
-	return result_failure("Not finished implementing this.");
+	return result_success();
 }
 
-void cf_font_missing_codepoints(CF_Font font_handle, int** missing_codepoints, int* count)
+void cf_font_missing_codepoints(const char* font_name, int** missing_codepoints, int* count)
 {
-	FontInternal* font = app->fonts.get(font_handle.id);
+	CF_Font* font = app->fonts.get(sintern(font_name));
 	if (!font) {
 		*missing_codepoints = NULL;
 		*count = 0;
@@ -565,19 +564,53 @@ void cf_font_missing_codepoints(CF_Font font_handle, int** missing_codepoints, i
 	}
 }
 
-int cf_font_get_kern(CF_Font font_handle, int codepoint0, int codepoint1)
+float cf_font_get_kern(const char* font_name, float font_size, int codepoint0, int codepoint1)
 {
-	FontInternal* font = app->fonts.get(font_handle.id);
+	CF_Font* font = app->fonts.get(sintern(font_name));
 	uint64_t key = CF_KERN_KEY(codepoint0, codepoint1);
-	return font->kerning.find(key);
+	int kern = font->kerning.find(key);
+	CF_FontAtlas* atlas = cf_font_find_atlas(font, font_size);
+	if (!atlas) return 0;
+	return kern * atlas->scale;
 }
 
-CF_Glyph cf_font_get_glyph(CF_Font font_handle, int codepoint)
+CF_Font* cf_font_get(const char* font_name)
 {
-	FontInternal* font = app->fonts.get(font_handle.id);
-	CF_Glyph g = font->glyphs.find(codepoint);
+	return app->fonts.get(sintern(font_name));
+}
+
+CF_FontAtlas* cf_font_find_atlas(CF_Font* font, float size)
+{
+	for (int i = 0; i < font->atlases.size(); ++i) {
+		if (font->atlases[i].size == size) {
+			return font->atlases + i;
+		}
+	}
+	return NULL;
+}
+
+CF_FontAtlas* cf_font_find_atlas(const char* font_name, float size)
+{
+	CF_Font* font = app->fonts.get(sintern(font_name));
+	if (!font) return NULL;
+	return cf_font_find_atlas(font, size);
+}
+
+CF_Glyph cf_font_get_glyph(CF_FontAtlas* atlas, int codepoint)
+{
+	CF_Glyph g = atlas->glyphs.find(codepoint);
 	if (g.image_id == 0) {
-		g = font->glyphs.find(0xFFFD);
+		g = atlas->glyphs.find(0xFFFD);
 	}
 	return g;
+}
+
+CF_Glyph cf_font_get_glyph(const char* font_name, float size, int codepoint)
+{
+	CF_Font* font = app->fonts.get(sintern(font_name));
+	CF_Glyph g = { };
+	if (!font) return g;
+	CF_FontAtlas* atlas = cf_font_find_atlas(font, size);
+	if (!atlas) return g;
+	return cf_font_get_glyph(atlas, codepoint);
 }
