@@ -1085,7 +1085,7 @@ int cf_draw_peek_font_blur()
 	return draw->blurs.last();
 }
 
-void cf_draw_text(const char* font_name, const char* text, CF_V2 position)
+void cf_draw_text(const char* text, CF_V2 position)
 {
 	// TODO
 	// - alignment
@@ -1100,7 +1100,7 @@ void cf_draw_text(const char* font_name, const char* text, CF_V2 position)
 	// - time
 	// - custom params (for callback modifiers)
 
-	CF_Font* font = cf_font_get(font_name);
+	CF_Font* font = cf_font_get(draw->fonts.last());
 	CUTE_ASSERT(font);
 	if (!font) return;
 
