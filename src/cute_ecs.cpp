@@ -238,7 +238,7 @@ void cf_entity_deactivate(CF_Entity entity)
 
 		// Swap all components into the deactive section (the end) of their respective arrays.
 		for (int i = 0; i < collection->component_tables.count(); ++i) {
-			collection->component_tables[i].copy(index, copy_index); // WORKING HERE
+			collection->component_tables[i].copy(index, copy_index);
 		}
 
 		// Update handle of the swapped entity.

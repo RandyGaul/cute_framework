@@ -86,7 +86,8 @@ void cf_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, vo
 	} else if (image_id >= CUTE_PNG_ID_RANGE_LO && image_id <= CUTE_PNG_ID_RANGE_HI) {
 		cf_png_cache_get_pixels(image_id, buffer, bytes_to_fill);
 	} else if (image_id >= CUTE_FONT_ID_RANGE_LO && image_id <= CUTE_FONT_ID_RANGE_HI) {
-		CUTE_ASSERT(false);
+		CF_Pixel* pixels = app->font_pixels.get(image_id);
+		CUTE_MEMCPY(buffer, pixels, bytes_to_fill);
 	} else {
 		CUTE_ASSERT(false);
 		CUTE_MEMSET(buffer, 0, sizeof(bytes_to_fill));
@@ -174,6 +175,10 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 
 			for (int i = 0; i < 6; ++i) {
 				out_verts[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				if (s->geom.u.sprite.color_override) {
+					out_verts[i].solid = 255;
+					out_verts[i].color = s->geom.u.sprite.tint;
+				}
 			}
 
 			out_verts[0].position.x = geom.p0.x;
@@ -1061,6 +1066,25 @@ float cf_draw_peek_font_size()
 	return draw->font_sizes.last();
 }
 
+void cf_draw_push_font_blur(int blur)
+{
+	draw->blurs.add(blur);
+}
+
+int cf_draw_pop_font_blur()
+{
+	if (draw->blurs.count() > 1) {
+		return draw->blurs.pop();
+	} else {
+		return draw->blurs.last();
+	}
+}
+
+int cf_draw_peek_font_blur()
+{
+	return draw->blurs.last();
+}
+
 void cf_draw_text(const char* font_name, const char* text, CF_V2 position)
 {
 	// TODO
@@ -1079,51 +1103,42 @@ void cf_draw_text(const char* font_name, const char* text, CF_V2 position)
 	CF_Font* font = cf_font_get(font_name);
 	CUTE_ASSERT(font);
 	if (!font) return;
-	CF_FontAtlas* atlas = cf_font_find_atlas(font_name, draw->font_sizes.last());
-	if (!atlas) {
-		// If no size is found, try and use the first atlas built, if it exists.
-		if (font->atlases.size()) {
-			atlas = font->atlases.data();
-		}
-	}
-	CUTE_ASSERT(atlas);
-	if (!atlas) return;
 
+	float font_size = draw->font_sizes.last();
+	int blur = draw->blurs.last();
 	int cp_prev = 0;
 	int cp;
 	while (*text) {
 		text = cf_decode_UTF8(text, &cp);
 		spritebatch_sprite_t s = { };
-		CF_Glyph g = cf_font_get_glyph(atlas, cp);
-		if (g.image_id == 0) {
+		CF_Glyph* glyph = cf_font_get_glyph(font, cp, font_size, blur);
+		if (!glyph) {
 			continue;
 		}
-		s.image_id = g.image_id;
-		s.w = g.w;
-		s.h = g.h;
-		s.minx = g.u.x;
-		s.miny = g.u.y;
-		s.maxx = g.v.x;
-		s.maxy = g.v.y;
+
+		s.image_id = glyph->image_id;
+		s.w = glyph->w;
+		s.h = glyph->h;
 		s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
 		s.geom.u.sprite;
 
 		uint64_t kern_key = CF_KERN_KEY(cp_prev, cp);
-		v2 kern = V2(font->kerning.find(kern_key) * atlas->scale, 0);
-		v2 q0 = g.q0 + position + kern;
-		v2 q1 = g.q1 + position + kern;
+		v2 kern = V2(cf_font_get_kern(font, font_size, cp_prev, cp), 0);
+		v2 pad = V2(1,1); // Account for 1-pixel padding in spritebatch.
+		v2 q0 = glyph->q0 + position + kern - pad;
+		v2 q1 = glyph->q1 + position + kern + pad;
 
-		s.geom.u.sprite.p3 = mul(draw->cam, V2(q0.x, q0.y));
 		s.geom.u.sprite.p0 = mul(draw->cam, V2(q0.x, q1.y));
 		s.geom.u.sprite.p1 = mul(draw->cam, V2(q1.x, q1.y));
 		s.geom.u.sprite.p2 = mul(draw->cam, V2(q1.x, q0.y));
-
-		s.geom.u.sprite.tint = premultiply(to_pixel(draw->tints.last()));
+		s.geom.u.sprite.p3 = mul(draw->cam, V2(q0.x, q0.y));
+		s.geom.u.sprite.color_override = draw->colors.size() > 1;
+		s.geom.u.sprite.tint = premultiply(to_pixel(draw->colors.last()));
 		s.geom.alpha = 1.0f;
 		s.sort_bits = draw->layers.last();
 		spritebatch_push(&draw->sb, s);
 
-		position.x += g.xadvance;
+		position.x += glyph->xadvance;
 		cp_prev = cp;
 	}
 }

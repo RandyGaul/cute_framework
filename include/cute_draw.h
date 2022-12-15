@@ -64,6 +64,9 @@ CUTE_API const char* CUTE_CALL cf_draw_peek_font();
 CUTE_API void CUTE_CALL cf_draw_push_font_size(float size);
 CUTE_API float CUTE_CALL cf_draw_pop_font_size();
 CUTE_API float CUTE_CALL cf_draw_peek_font_size();
+CUTE_API void CUTE_CALL cf_draw_push_font_blur(int blur);
+CUTE_API int CUTE_CALL cf_draw_pop_font_blur();
+CUTE_API int CUTE_CALL cf_draw_peek_font_blur();
 CUTE_API void CUTE_CALL cf_draw_text(const char* font, const char* text, CF_V2 position);
 
 CUTE_API void CUTE_CALL cf_draw_push_layer(int layer);

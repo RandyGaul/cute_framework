@@ -378,6 +378,7 @@ if (CUTE_FRAMEWORK_BUILD_SAMPLES)
 	add_executable(scratch samples/scratch.cpp)
 	target_link_libraries(scratch PRIVATE cute)
 	set_target_properties(scratch PROPERTIES FOLDER "samples")
+	add_custom_command(TARGET scratch POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/samples/sample_data" $<TARGET_FILE_DIR:scratch>/sample_data)
 endif()
 
 # Propogate public headers to other cmake scripts including this subdirectory.

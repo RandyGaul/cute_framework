@@ -48,7 +48,8 @@ struct BatchQuad
 struct BatchSprite
 {
 	CF_V2 p0, p1, p2, p3;
-	CF_Pixel tint;
+	CF_Pixel tint; // Tint sprite, or color text.
+	bool color_override;
 };
 
 struct BatchGeometry
@@ -85,7 +86,7 @@ struct CF_Draw
 	CF_Mesh mesh;
 	CF_Material material;
 	CF_Filter filter = CF_FILTER_NEAREST;
-	Cute::Array<CF_Color> colors = { cf_color_red() };
+	Cute::Array<CF_Color> colors = { cf_color_white() };
 	Cute::Array<CF_Color> tints = { cf_color_grey() };
 	Cute::Array<bool> antialias = { false };
 	Cute::Array<CF_RenderState> render_states;
@@ -99,8 +100,9 @@ struct CF_Draw
 	float cam_rotation = 0;
 	Cute::Array<CF_V2> temp;
 	Cute::Array<DrawVertex> verts;
-	Cute::Array<float> font_sizes = { 0 };
+	Cute::Array<float> font_sizes = { 18 };
 	Cute::Array<const char*> fonts = { NULL };
+	Cute::Array<int> blurs = { 0 };
 };
 
 void cf_make_draw();

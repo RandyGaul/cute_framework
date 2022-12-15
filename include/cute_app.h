@@ -178,7 +178,7 @@ CUTE_INLINE bool app_mouse_inside() { return cf_app_mouse_inside(); }
 CUTE_INLINE int app_get_canvas_width() { return cf_app_get_canvas_width(); }
 CUTE_INLINE int app_get_canvas_height() { return cf_app_get_canvas_height(); }
 CUTE_INLINE CF_Canvas app_get_canvas() { return cf_app_get_canvas(); }
-CUTE_INLINE void app_present() { cf_app_present(); }
+CUTE_INLINE int app_present() { return cf_app_present(); }
 CUTE_INLINE ImGuiContext* app_init_imgui(bool no_default_font = false) { return cf_app_init_imgui(no_default_font); }
 CUTE_INLINE sg_imgui_t* app_get_sokol_imgui() { return cf_app_get_sokol_imgui(); }
 CUTE_INLINE PowerInfo app_power_info() { return cf_app_power_info(); }

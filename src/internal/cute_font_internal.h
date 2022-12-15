@@ -27,38 +27,38 @@
 #include <cute_math.h>
 #include <cute_color.h>
 #include <cute_font.h>
+#include <cute_alloc.h>
 
 #include <stb/stb_truetype.h>
 
-struct CF_FontAtlas
+struct CF_Glyph
 {
-	int installed_ranges_count = 0;
-	Cute::Dictionary<int, CF_Glyph> glyphs;
-	uint64_t texture_id = ~0;
-	CF_Pixel* pixels = NULL;
-	float size;
-	float scale;
-	float ascent;
-	float descent;
-	float line_gap;
-	float line_height;
-	float height;
+	int index;
+	uint64_t image_id;
+	CF_V2 q0, q1;
+	int w, h;
+	float xadvance;
+	bool visible;
 };
 
 struct CF_Font
 {
 	uint8_t* file_data = NULL;
 	stbtt_fontinfo info;
-	Cute::Array<CF_CodepointRange> ranges;
-	Cute::Dictionary<int, int> missing_codepoints;
+	Cute::Array<int> backups;
 	Cute::Dictionary<uint64_t, int> kerning;
-	Cute::Array<CF_FontAtlas> atlases;
+	Cute::Dictionary<uint64_t, CF_Glyph> glyphs;
+	Cute::Array<uint64_t> image_ids;
+	int ascent;
+	int descent;
+	int line_gap;
+	int line_height;
+	int height;
 };
 
 CF_Font* cf_font_get(const char* font_name);
-CF_FontAtlas* cf_font_find_atlas(CF_Font* font, float size);
-CF_FontAtlas* cf_font_find_atlas(const char* font_name, float size);
-CF_Glyph cf_font_get_glyph(CF_FontAtlas* atlas, int codepoint);
+CF_Glyph* cf_font_get_glyph(CF_Font* font, int codepoint, float font_size, int blur);
+float cf_font_get_kern(CF_Font* font, float font_size, int codepoint0, int codepoint1);
 
 #define CF_KERN_KEY(cp0, cp1) (cp0 < cp1 ? ((uint64_t)cp0) << 32 | ((uint64_t)cp1) : ((uint64_t)cp1) << 32 | ((uint64_t)cp0))
 
