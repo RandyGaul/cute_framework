@@ -51,7 +51,9 @@ struct BatchQuad
 struct BatchSprite
 {
 	CF_V2 p0, p1, p2, p3;
+	CF_Aabb clip;
 	CF_Pixel c;
+	bool do_clipping;
 	bool is_text;
 	bool is_sprite;
 };

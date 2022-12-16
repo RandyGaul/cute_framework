@@ -20,15 +20,20 @@ int main(int argc, const char** argv)
 		float dt = calc_dt();
 		app_update(dt);
 
-		push_font_size(13);
 		static float t = 0;
 		t += dt;
+
+		v2 o = V2(cosf(t),sinf(t)) * 25.0f;
+		Aabb clip = make_aabb(V2(-100,-75) + o, V2(75,75) + o);
+		draw_quad(clip, 0);
+		push_text_clip_box(clip);
+		push_font_size(13);
 		push_text_wrap_width(100.0f + cosf(t) * 75.0f);
+		cf_draw_line(V2(cosf(t) * 75.0f,0), V2(cosf(t) * 75.0f,-75), 0);
 		draw_text("The quick brown fox jumps over the lazy dog. 1234567890", V2(-100,0));
 		pop_text_wrap_width();
 		pop_font_size();
-
-		draw_quad(make_aabb(V2(-100,1), V2(cosf(t) * 75.0f,-200)), 0);
+		pop_text_clip_box();
 
 		push_font_size(26);
 		draw_push_color(make_color(0x55b6f2ff));

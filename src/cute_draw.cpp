@@ -58,6 +58,8 @@ using namespace Cute;
 #define VA_TYPE_SHAPE  (1)
 #define VA_TYPE_TEXT   (2)
 
+CUTE_STATIC_ASSERT(sizeof(BatchGeometry) <= 64, "Try to fix this nicely into a cache line.");
+
 SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
 	CUTE_UNUSED(udata);
@@ -98,6 +100,13 @@ void cf_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, vo
 		CUTE_ASSERT(false);
 		CUTE_MEMSET(buffer, 0, sizeof(bytes_to_fill));
 	}
+}
+
+static CUTE_INLINE float s_intersect(float a, float b, float u0, float u1, float plane_d)
+{
+	float da = a - plane_d;
+	float db = b - plane_d;
+	return u0 + (u1 - u0) * (da / (da - db));
 }
 
 static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_w, int texture_h, void* udata)
@@ -178,6 +187,52 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		{
 			BatchSprite geom = s->geom.u.sprite;
 			DrawVertex* out_verts = verts + vert_count;
+
+			bool clipped_away = false;
+			if (geom.do_clipping) {
+				CUTE_ASSERT(geom.is_text);
+
+				// p3 min
+				// p1 max
+				CF_Aabb bb = make_aabb(geom.p3, geom.p1);
+				CF_Aabb clip = geom.clip;
+				float top = clip.max.y;
+				float left = clip.min.x;
+				float bottom = clip.min.y;
+				float right = clip.max.x;
+
+				int separating_x_axis = (bb.max.x < left) | (bb.min.x > right);
+				if (separating_x_axis) continue;
+
+				if (bb.min.x < left) {
+					s->minx = s_intersect(bb.min.x, bb.max.x, s->minx, s->maxx, left);
+					bb.min.x = left;
+				}
+
+				if (bb.max.x > right) {
+					s->maxx = s_intersect(bb.min.x, bb.max.x, s->minx, s->maxx, right);
+					bb.max.x = right;
+				}
+
+				if (bb.min.y < bottom) {
+					s->miny = s_intersect(bb.min.y, bb.max.y, s->miny, s->maxy, bottom);
+					bb.min.y = bottom;
+				}
+
+				if (bb.max.y > top) {
+					s->maxy = s_intersect(bb.min.y, bb.max.y, s->miny, s->maxy, top);
+					bb.max.y = top;
+				}
+
+				if ((bb.min.x >= bb.max.x) | (bb.min.y >= bb.max.y)) {
+					continue;
+				}
+
+				geom.p0 = V2(bb.min.x, bb.max.y);
+				geom.p1 = bb.max;
+				geom.p2 = V2(bb.max.x, bb.min.y);
+				geom.p3 = bb.min;
+			}
 
 			for (int i = 0; i < 6; ++i) {
 				out_verts[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
@@ -1485,13 +1540,6 @@ static const char* s_find_end_of_line(CF_Font* font, const char* text, float wra
 	return text;
 }
 
-static CUTE_INLINE float s_intersect(float a, float b, float u0, float u1, float plane_d)
-{
-	float da = a - plane_d;
-	float db = b - plane_d;
-	return u0 + (u1 - u0) * (da / (da - db));
-}
-
 void cf_draw_text(const char* text, CF_V2 position)
 {
 	// TODO
@@ -1511,6 +1559,8 @@ void cf_draw_text(const char* text, CF_V2 position)
 
 	float font_size = draw->font_sizes.last();
 	int blur = draw->blurs.last();
+	bool do_clipping = draw->text_clip_boxes.size() > 1;
+	CF_Aabb clip = draw->text_clip_boxes.last();
 	float wrap_w = draw->text_wrap_widths.last();
 	float scale = stbtt_ScaleForPixelHeight(&font->info, font_size);
 	float line_height = font->line_height * scale;
@@ -1578,6 +1628,8 @@ void cf_draw_text(const char* text, CF_V2 position)
 		s.geom.u.sprite.p2 = mul(draw->cam, V2(q1.x, q0.y));
 		s.geom.u.sprite.p3 = mul(draw->cam, V2(q0.x, q0.y));
 		s.geom.u.sprite.c = premultiply(to_pixel(draw->colors.last()));
+		s.geom.u.sprite.clip = make_aabb(mul(draw->cam, clip.min), mul(draw->cam, clip.max));
+		s.geom.u.sprite.do_clipping = do_clipping;
 		s.geom.u.sprite.is_text = true;
 		s.geom.alpha = 1.0f;
 		s.sort_bits = draw->layers.last();
