@@ -23,6 +23,9 @@
 #define CUTE_DRAW_INTERNAL_H
 
 #include <cute_array.h>
+#include <cute_math.h>
+
+#include <float.h>
 
 extern struct CF_Draw* draw;
 
@@ -48,8 +51,9 @@ struct BatchQuad
 struct BatchSprite
 {
 	CF_V2 p0, p1, p2, p3;
-	CF_Pixel tint; // Tint sprite, or color text.
-	bool color_override;
+	CF_Pixel c;
+	bool is_text;
+	bool is_sprite;
 };
 
 struct BatchGeometry
@@ -73,10 +77,10 @@ struct DrawVertex
 	CF_V2 position;
 	CF_V2 uv;
 	CF_Pixel color;
-	uint8_t solid;   // r - Tell between sprite and shape geometry (solid color).
-	uint8_t alpha;   // g - Used to fade sprites.
-	uint8_t unused0; // b - 
-	uint8_t unused1; // a - 
+	uint8_t alpha;   // r
+	uint8_t type;    // g
+	uint8_t unused0; // b
+	uint8_t unused1; // a
 };
 
 struct CF_Draw
@@ -103,6 +107,8 @@ struct CF_Draw
 	Cute::Array<float> font_sizes = { 18 };
 	Cute::Array<const char*> fonts = { NULL };
 	Cute::Array<int> blurs = { 0 };
+	Cute::Array<float> text_wrap_widths = { 0 };
+	Cute::Array<CF_Aabb> text_clip_boxes = { cf_make_aabb(cf_v2(-FLT_MAX, -FLT_MAX), cf_v2(FLT_MAX, FLT_MAX)) };
 };
 
 void cf_make_draw();

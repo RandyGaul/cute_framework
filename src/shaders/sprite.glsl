@@ -16,16 +16,16 @@
 
 	layout (location = 0) out vec2 v_uv;
 	layout (location = 1) out vec4 v_col;
-	layout (location = 2) out float v_solid;
-	layout (location = 3) out float v_alpha;
+	layout (location = 2) out float v_alpha;
+	layout (location = 3) out float v_type;
 
 	void main()
 	{
 		vec4 posH = vec4(in_pos, 0, 1);
 		v_uv = in_uv;
 		v_col = in_col;
-		v_solid = in_params.r;
-		v_alpha = in_params.g;
+		v_alpha = in_params.r;
+		v_type = in_params.g;
 		gl_Position = posH;
 }
 @end
@@ -33,8 +33,8 @@
 @fs fs
 	layout (location = 0) in vec2 v_uv;
 	layout (location = 1) in vec4 v_col;
-	layout (location = 2) in float v_solid;
-	layout (location = 3) in float v_alpha;
+	layout (location = 2) in float v_alpha;
+	layout (location = 3) in float v_type;
 
 	out vec4 result;
 
@@ -50,12 +50,15 @@
 
 	void main()
 	{
-		vec4 color = de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size)));
-		color = gamma(overlay(color, v_col)); // Tint sprites.
-		color *= v_alpha;
-		color = mix(color, v_col, v_solid * color.a); // Use color from CPU for solids (pre-tinted on CPU).
-		if (color.a == 0) discard;
-		result = color;
+		float is_sprite = v_type == (0.0/255.0) ? 1.0 : 0.0;
+		float is_shape  = v_type == (1.0/255.0) ? 1.0 : 0.0;
+		float is_text   = v_type == (2.0/255.0) ? 1.0 : 0.0;
+		vec4 c = de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size)));
+		c = mix(c, gamma(overlay(c, v_col)), is_sprite);
+		c = mix(c, v_col, is_shape);
+		c = mix(c, v_col * c.a, is_text);
+		if (c.a == 0) discard;
+		result = c;
 	}
 @end
 

@@ -24,7 +24,6 @@
 #include <cute_array.h>
 #include <cute_file_system.h>
 #include <cute_defer.h>
-#include <cute_font.h>
 //#include <cute_debug_printf.h>
 
 #include <internal/cute_app_internal.h>
@@ -45,12 +44,19 @@ static struct CF_Draw* draw;
 #define CUTE_PNG_IMPLEMENTATION
 #include <cute/cute_png.h>
 
+#define STB_TRUETYPE_IMPLEMENTATION
+#include <stb/stb_truetype.h>
+
 #define DEBUG_VERT(v, c) batch_quad(make_aabb(v, 3, 3), c)
 
 // Initial design of this API comes from Noel Berry's Blah framework here:
 // https://github.com/NoelFB/blah/blob/master/include/blah_draw.h
 
 using namespace Cute;
+
+#define VA_TYPE_SPRITE (0)
+#define VA_TYPE_SHAPE  (1)
+#define VA_TYPE_TEXT   (2)
 
 SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
@@ -113,7 +119,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 
 			for (int i = 0; i < 3; ++i) {
 				out_verts[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				out_verts[i].solid = 255;
+				out_verts[i].type = VA_TYPE_SHAPE;
 			}
 
 			out_verts[0].position.x = geom.p0.x;
@@ -138,7 +144,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 
 			for (int i = 0; i < 6; ++i) {
 				out_verts[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				out_verts[i].solid = 255;
+				out_verts[i].type = VA_TYPE_SHAPE;
 			}
 
 			out_verts[0].position.x = geom.p0.x;
@@ -175,47 +181,52 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 
 			for (int i = 0; i < 6; ++i) {
 				out_verts[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				if (s->geom.u.sprite.color_override) {
-					out_verts[i].solid = 255;
-					out_verts[i].color = s->geom.u.sprite.tint;
+				if (s->geom.u.sprite.is_sprite) {
+					out_verts[i].type = VA_TYPE_SPRITE;
+				} else if (s->geom.u.sprite.is_text) {
+					out_verts[i].type = VA_TYPE_TEXT;
+				} else {
+					CUTE_ASSERT(false);
 				}
+
+				out_verts[i].color = s->geom.u.sprite.c;
 			}
 
 			out_verts[0].position.x = geom.p0.x;
 			out_verts[0].position.y = geom.p0.y;
 			out_verts[0].uv.x = s->minx;
 			out_verts[0].uv.y = s->maxy;
-			out_verts[0].color = geom.tint;
+			out_verts[0].color = geom.c;
 
 			out_verts[1].position.x = geom.p3.x;
 			out_verts[1].position.y = geom.p3.y;
 			out_verts[1].uv.x = s->minx;
 			out_verts[1].uv.y = s->miny;
-			out_verts[1].color = geom.tint;
+			out_verts[1].color = geom.c;
 
 			out_verts[2].position.x = geom.p1.x;
 			out_verts[2].position.y = geom.p1.y;
 			out_verts[2].uv.x = s->maxx;
 			out_verts[2].uv.y = s->maxy;
-			out_verts[2].color = geom.tint;
+			out_verts[2].color = geom.c;
 
 			out_verts[3].position.x = geom.p1.x;
 			out_verts[3].position.y = geom.p1.y;
 			out_verts[3].uv.x = s->maxx;
 			out_verts[3].uv.y = s->maxy;
-			out_verts[3].color = geom.tint;
+			out_verts[3].color = geom.c;
 
 			out_verts[4].position.x = geom.p3.x;
 			out_verts[4].position.y = geom.p3.y;
 			out_verts[4].uv.x = s->minx;
 			out_verts[4].uv.y = s->miny;
-			out_verts[4].color = geom.tint;
+			out_verts[4].color = geom.c;
 
 			out_verts[5].position.x = geom.p2.x;
 			out_verts[5].position.y = geom.p2.y;
 			out_verts[5].uv.x = s->maxx;
 			out_verts[5].uv.y = s->miny;
-			out_verts[5].color = geom.tint;
+			out_verts[5].color = geom.c;
 
 			vert_count += 6;
 		}	break;
@@ -282,7 +293,7 @@ void cf_make_draw()
 	attrs[2].offset = CUTE_OFFSET_OF(DrawVertex, color);
 	attrs[3].name = "in_params";
 	attrs[3].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[3].offset = CUTE_OFFSET_OF(DrawVertex, solid);
+	attrs[3].offset = CUTE_OFFSET_OF(DrawVertex, alpha);
 	cf_mesh_set_attributes(draw->mesh, attrs, CUTE_ARRAY_SIZE(attrs), sizeof(DrawVertex), 0);
 
 	// Shaders.
@@ -379,8 +390,8 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.geom.u.sprite.p1 = mul(draw->cam, quad[1]);
 	s.geom.u.sprite.p2 = mul(draw->cam, quad[2]);
 	s.geom.u.sprite.p3 = mul(draw->cam, quad[3]);
-
-	s.geom.u.sprite.tint = premultiply(to_pixel(draw->tints.last()));
+	s.geom.u.sprite.is_sprite = true;
+	s.geom.u.sprite.c = premultiply(to_pixel(draw->tints.last()));
 	s.geom.alpha = sprite->opacity;
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -1028,12 +1039,263 @@ void cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float
 	cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, false, 1);
 }
 
-void cf_draw_push_font(const char* font)
+void cf_make_font_mem(void* data, int size, const char* font_name, CF_Result* result_out)
+{
+	font_name = sintern(font_name);
+	CF_Font* font = (CF_Font*)CUTE_NEW(CF_Font);
+	font->file_data = (uint8_t*)data;
+	if (!stbtt_InitFont(&font->info, font->file_data, stbtt_GetFontOffsetForIndex(font->file_data, 0))) {
+		CUTE_FREE(data);
+		CUTE_FREE(font);
+		if (result_out) *result_out = result_failure("Failed to parse ttf file with stb_truetype.h.");
+		return;
+	}
+	app->fonts.insert(font_name, font);
+
+	// Fetch unscaled vertical metrics for the font.
+	int ascent, descent, line_gap;
+	stbtt_GetFontVMetrics(&font->info, &ascent, &descent, &line_gap);
+	font->ascent = ascent;
+	font->descent = descent;
+	font->line_gap = line_gap;
+	font->line_height = font->ascent - font->descent + font->line_gap;
+	font->height = font->ascent - font->descent;
+
+	// Build kerning table.
+	Array<stbtt_kerningentry> table_array;
+	int table_length = stbtt_GetKerningTableLength(&font->info);
+	table_array.ensure_capacity(table_length);
+	stbtt_kerningentry* table = table_array.data();
+	stbtt_GetKerningTable(&font->info, table, table_length);
+	for (int i = 0; i < table_length; ++i) {
+		stbtt_kerningentry k = table[i];
+		uint64_t key = CF_KERN_KEY(k.glyph1, k.glyph2);
+		font->kerning.insert(key, k.advance);
+	}
+
+	if (result_out) *result_out = result_success();
+}
+
+void cf_make_font(const char* path, const char* font_name, CF_Result* result_out)
+{
+	void* data;
+	size_t size;
+	Result err = fs_read_entire_file_to_memory(path, &data, &size);
+	if (is_error(err)) {
+		CUTE_FREE(data);
+		if (result_out) *result_out = err;
+		return;
+	}
+	cf_make_font_mem(data, (int)size, font_name, result_out);
+}
+
+void cf_destroy_font(const char* font_name)
+{
+	font_name = sintern(font_name);
+	CF_Font* font = app->fonts.get(font_name);
+	if (!font) return;
+	app->fonts.remove(font_name);
+	CUTE_FREE(font->file_data);
+	for (int i = 0; i < font->image_ids.count(); ++i) {
+		uint64_t image_id = font->image_ids[i];
+		CF_Pixel* pixels = app->font_pixels.get(image_id);
+		if (pixels) {
+			CUTE_FREE(pixels);
+			app->font_pixels.remove(image_id);
+		}
+	}
+	font->~CF_Font();
+	CUTE_FREE(font);
+}
+
+void cf_font_add_backup_codepoints(const char* font_name, int* codepoints, int count)
+{
+	CF_Font* font = app->fonts.get(sintern(font_name));
+	for (int i = 0; i < count; ++i) {
+		bool found = false;
+		for (int j = 0; j < font->backups.count(); ++j) {
+			if (font->backups[j] == codepoints[i]) {
+				found = true;
+				break;
+			}
+		}
+		if (!found) {
+			font->backups.add(codepoints[i]);
+		}
+	}
+}
+
+CF_Font* cf_font_get(const char* font_name)
+{
+	return app->fonts.get(sintern(font_name));
+}
+
+CUTE_INLINE uint64_t cf_glyph_key(int cp, float font_size, int blur)
+{
+	int k0 = cp;
+	int k1 = (int)(font_size * 1000.0f);
+	int k2 = blur;
+	uint64_t key = ((uint64_t)k0 & 0xFFFFFFFFULL) << 32 | ((uint64_t)k1 & 0xFFFFULL) << 16 | ((uint64_t)k2 & 0xFFFFULL);
+	return key;
+}
+
+// From fontastash.h, memononen
+// Based on Exponential blur, Jani Huhtanen, 2006
+
+#define APREC 16
+#define ZPREC 7
+
+static void s_blur_cols(unsigned char* dst, int w, int h, int stride, int alpha)
+{
+	int x, y;
+	for (y = 0; y < h; y++) {
+		int z = 0; // force zero border
+		for (x = 1; x < w; x++) {
+			z += (alpha * (((int)(dst[x]) << ZPREC) - z)) >> APREC;
+			dst[x] = (unsigned char)(z >> ZPREC);
+		}
+		dst[w-1] = 0; // force zero border
+		z = 0;
+		for (x = w-2; x >= 0; x--) {
+			z += (alpha * (((int)(dst[x]) << ZPREC) - z)) >> APREC;
+			dst[x] = (unsigned char)(z >> ZPREC);
+		}
+		dst[0] = 0; // force zero border
+		dst += stride;
+	}
+}
+
+static void s_blur_rows(unsigned char* dst, int w, int h, int stride, int alpha)
+{
+	int x, y;
+	for (x = 0; x < w; x++) {
+		int z = 0; // force zero border
+		for (y = stride; y < h*stride; y += stride) {
+			z += (alpha * (((int)(dst[y]) << ZPREC) - z)) >> APREC;
+			dst[y] = (unsigned char)(z >> ZPREC);
+		}
+		dst[(h-1)*stride] = 0; // force zero border
+		z = 0;
+		for (y = (h-2)*stride; y >= 0; y -= stride) {
+			z += (alpha * (((int)(dst[y]) << ZPREC) - z)) >> APREC;
+			dst[y] = (unsigned char)(z >> ZPREC);
+		}
+		dst[0] = 0; // force zero border
+		dst++;
+	}
+}
+
+static void s_blur(unsigned char* dst, int w, int h, int stride, int blur)
+{
+	int alpha;
+	float sigma;
+
+	if (blur < 1)
+		return;
+
+	// Calculate the alpha such that 90% of the kernel is within the radius. (Kernel extends to infinity)
+	sigma = (float)blur * 0.57735f; // 1 / sqrt(3)
+	alpha = (int)((1<<APREC) * (1.0f - expf(-2.3f / (sigma+1.0f))));
+	s_blur_rows(dst, w, h, stride, alpha);
+	s_blur_cols(dst, w, h, stride, alpha);
+	s_blur_rows(dst, w, h, stride, alpha);
+	s_blur_cols(dst, w, h, stride, alpha);
+}
+
+static void s_save(const char* path, uint8_t* pixels, int w, int h)
+{
+	cp_image_t img;
+	img.w = w;
+	img.h = h;
+	img.pix = (cp_pixel_t*)CUTE_ALLOC(sizeof(cp_pixel_t) * w * h);
+	for (int i = 0; i < w * h; ++i) {
+		cp_pixel_t pix;
+		pix.r = pix.g = pix.b = pixels[i];
+		pix.a = 255;
+		img.pix[i] = pix;
+	}
+	cp_save_png(path, &img);
+	CUTE_FREE(img.pix);
+}
+
+static void s_render(CF_Font* font, CF_Glyph* glyph, float font_size, int blur)
+{
+	// Create glyph quad.
+	blur = clamp(blur, 0, 20);
+	int pad = blur + 2;
+	float scale = stbtt_ScaleForPixelHeight(&font->info, font_size);
+	int xadvance, lsb, x0, y0, x1, y1;
+	stbtt_GetGlyphHMetrics(&font->info, glyph->index, &xadvance, &lsb);
+	stbtt_GetGlyphBitmapBox(&font->info, glyph->index, scale, scale, &x0, &y0, &x1, &y1);
+	int w = x1 - x0 + pad*2;
+	int h = y1 - y0 + pad*2;
+	glyph->w = w;
+	glyph->h = h;
+	glyph->q0 = V2((float)x0, -(float)(y0 + h)); // Swapped y.
+	glyph->q1 = V2((float)(x0 + w), -(float)y0); // Swapped y.
+	glyph->xadvance = xadvance * scale;
+	glyph->visible |= w > 0 && h > 0;
+
+	// Render glyph.
+	uint8_t* pixels_1bpp = (uint8_t*)CUTE_CALLOC(w * h);
+	CUTE_DEFER(CUTE_FREE(pixels_1bpp));
+	stbtt_MakeGlyphBitmap(&font->info, pixels_1bpp + pad * w + pad, w - pad*2, h - pad*2, w, scale, scale, glyph->index);
+	//s_save("glyph.png", pixels_1bpp, w, h);
+
+	// Apply blur.
+	if (blur) s_blur(pixels_1bpp, w, h, w, blur);
+	//s_save("glyph_blur.png", pixels_1bpp, w, h);
+
+	// Convert to premultiplied RGBA8 pixel format.
+	CF_Pixel* pixels = (CF_Pixel*)CUTE_ALLOC(w * h * sizeof(CF_Pixel));
+	for (int i = 0; i < w * h; ++i) {
+		uint8_t v = pixels_1bpp[i];
+		CF_Pixel p = { };
+		if (v) p = make_pixel(v, v, v, v);
+		pixels[i] = p;
+	}
+
+	// Allocate an image id for the glyph's sprite.
+	glyph->image_id = app->font_image_id_gen++;
+	app->font_pixels.insert(glyph->image_id, pixels);
+	font->image_ids.add(glyph->image_id);
+}
+
+CF_Glyph* cf_font_get_glyph(CF_Font* font, int codepoint, float font_size, int blur)
+{
+	uint64_t glyph_key = cf_glyph_key(codepoint, font_size, blur);
+	CF_Glyph* glyph = font->glyphs.try_get(glyph_key);
+	if (!glyph) {
+		int glyph_index = stbtt_FindGlyphIndex(&font->info, codepoint);
+		if (!glyph_index) {
+			// This codepoint doesn't exist in this font.
+			// Try and use a backup glyph instead.
+			// TODO
+			CUTE_ASSERT(false);
+		}
+		glyph = font->glyphs.insert(glyph_key);
+		glyph->index = glyph_index;
+		glyph->visible = stbtt_IsGlyphEmpty(&font->info, glyph_index) == 0;
+	}
+	if (glyph->image_id) return glyph;
+
+	// Render the glyph if it exists in the font, but is not yet rendered.
+	s_render(font, glyph, font_size, blur);
+	return glyph;
+}
+
+float cf_font_get_kern(CF_Font* font, float font_size, int codepoint0, int codepoint1)
+{
+	uint64_t key = CF_KERN_KEY(codepoint0, codepoint1);
+	return font->kerning.get(key) * stbtt_ScaleForPixelHeight(&font->info, font_size);
+}
+
+void cf_push_font(const char* font)
 {
 	draw->fonts.add(sintern(font));
 }
 
-const char* cf_draw_pop_font()
+const char* cf_pop_font()
 {
 	if (draw->fonts.count() > 1) {
 		return draw->fonts.pop();
@@ -1042,17 +1304,17 @@ const char* cf_draw_pop_font()
 	}
 }
 
-const char* cf_draw_peek_font()
+const char* cf_peek_font()
 {
 	return draw->fonts.last();
 }
 
-void cf_draw_push_font_size(float size)
+void cf_push_font_size(float size)
 {
 	draw->font_sizes.add(size);
 }
 
-float cf_draw_pop_font_size()
+float cf_pop_font_size()
 {
 	if (draw->font_sizes.count() > 1) {
 		return draw->font_sizes.pop();
@@ -1061,17 +1323,17 @@ float cf_draw_pop_font_size()
 	}
 }
 
-float cf_draw_peek_font_size()
+float cf_peek_font_size()
 {
 	return draw->font_sizes.last();
 }
 
-void cf_draw_push_font_blur(int blur)
+void cf_push_font_blur(int blur)
 {
 	draw->blurs.add(blur);
 }
 
-int cf_draw_pop_font_blur()
+int cf_pop_font_blur()
 {
 	if (draw->blurs.count() > 1) {
 		return draw->blurs.pop();
@@ -1080,17 +1342,160 @@ int cf_draw_pop_font_blur()
 	}
 }
 
-int cf_draw_peek_font_blur()
+int cf_peek_font_blur()
 {
 	return draw->blurs.last();
+}
+
+void cf_push_text_wrap_width(float width)
+{
+	draw->text_wrap_widths.add(width);
+}
+
+float cf_pop_text_wrap_width()
+{
+	if (draw->text_wrap_widths.count() > 1) {
+		return draw->text_wrap_widths.pop();
+	} else {
+		return draw->text_wrap_widths.last();
+	}
+}
+
+float cf_peek_text_wrap_width()
+{
+	return draw->text_wrap_widths.last();
+}
+
+void cf_push_text_clip_box(CF_Aabb clip_box)
+{
+	draw->text_clip_boxes.add(clip_box);
+}
+
+CF_Aabb cf_pop_text_clip_box()
+{
+	if (draw->text_clip_boxes.count() > 1) {
+		return draw->text_clip_boxes.pop();
+	} else {
+		return draw->text_clip_boxes.last();
+	}
+}
+
+CF_Aabb cf_peek_text_clip_box()
+{
+	return draw->text_clip_boxes.last();
+}
+
+float cf_text_width(const char* text)
+{
+	CF_Font* font = cf_font_get(draw->fonts.last());
+	float font_size = draw->font_sizes.last();
+	int blur = draw->blurs.last();
+	float x = 0;
+	float w = 0;
+	int cp;
+
+	while (*text) {
+		text = cf_decode_UTF8(text, &cp);
+		if (cp == '\n' || cp == '\r') {
+			x = 0;
+		} else {
+			CF_Glyph* glyph = cf_font_get_glyph(font, cp, font_size, blur);
+			x += glyph->xadvance;
+			w = (x > w) ? x : w;
+		}
+	}
+
+	return w;
+}
+
+float cf_text_height(const char* text)
+{
+	CF_Font* font = cf_font_get(draw->fonts.last());
+	float font_size = draw->font_sizes.last();
+	float font_height, h;
+	h = font_height = font->line_height * stbtt_ScaleForPixelHeight(&font->info, font_size);
+	int cp;
+
+	while (*text) {
+		text = cf_decode_UTF8(text, &cp);
+		if (cp == '\n' && *text) h += font_height; 
+	}
+
+	return h;
+}
+
+static bool s_is_space(int cp)
+{
+	switch (cp) {
+	case ' ':
+	case '\n':
+	case '\t':
+	case '\v':
+	case '\f':
+	case '\r': return true;
+	default:   return false;
+	}
+}
+
+static const char* s_find_end_of_line(CF_Font* font, const char* text, float wrap_width)
+{
+	float font_size = draw->font_sizes.last();
+	int blur = draw->blurs.last();
+	float x = 0;
+	const char* start_of_word = 0;
+	float word_w = 0;
+	int cp;
+
+	while (*text) {
+		const char* text_prev = text;
+		text = cf_decode_UTF8(text, &cp);
+		CF_Glyph* glyph = cf_font_get_glyph(font, cp, font_size, blur);
+
+		if (cp == '\n') {
+			x = 0;
+			word_w = 0;
+			start_of_word = 0;
+			continue;
+		} else if (cp == '\r') {
+			continue;
+		} else {
+			if (s_is_space(cp)) {
+				x += word_w + glyph->xadvance;
+				word_w = 0;
+				start_of_word = 0;
+			} else {
+				if (!start_of_word) {
+					start_of_word = text_prev;
+				}
+				if (x + word_w + glyph->xadvance < wrap_width) {
+					word_w += glyph->xadvance;
+				} else {
+					if (word_w + glyph->xadvance < wrap_width) {
+						// Put entire word on the next line.
+						return start_of_word;
+					} else {
+						// Word itself does not fit on one line, so just cut it here.
+						return text;
+					}
+				}
+			}
+		}
+	}
+
+	return text;
+}
+
+static CUTE_INLINE float s_intersect(float a, float b, float u0, float u1, float plane_d)
+{
+	float da = a - plane_d;
+	float db = b - plane_d;
+	return u0 + (u1 - u0) * (da / (da - db));
 }
 
 void cf_draw_text(const char* text, CF_V2 position)
 {
 	// TODO
 	// - alignment
-	// - CPU box clipping
-	// - word wrap
 	// - codes
 
 	// Codes to be supported
@@ -1106,13 +1511,53 @@ void cf_draw_text(const char* text, CF_V2 position)
 
 	float font_size = draw->font_sizes.last();
 	int blur = draw->blurs.last();
+	float wrap_w = draw->text_wrap_widths.last();
+	float scale = stbtt_ScaleForPixelHeight(&font->info, font_size);
+	float line_height = font->line_height * scale;
 	int cp_prev = 0;
-	int cp;
+	int cp = 0;
+	const char* end_of_line = NULL;
+	float x = position.x;
+	float y = position.y - (font->ascent + font->descent) * scale;
 	while (*text) {
+		CUTE_DEFER(cp_prev = cp);
+		const char* prev_text = text;
 		text = cf_decode_UTF8(text, &cp);
 		spritebatch_sprite_t s = { };
 		CF_Glyph* glyph = cf_font_get_glyph(font, cp, font_size, blur);
 		if (!glyph) {
+			continue;
+		}
+
+		// Word wrapping logic.
+		if (wrap_w > 0) {
+			if (!end_of_line) {
+				end_of_line = s_find_end_of_line(font, prev_text, wrap_w);
+			}
+
+			int finished_rendering_line = !(text < end_of_line);
+			if (finished_rendering_line) {
+				end_of_line = 0;
+				x = position.x;
+				y -= line_height;
+
+				// Skip whitespace at the beginning of new lines.
+				while (cp) {
+					cp = *text;
+					if (s_is_space(cp)) ++text;
+					else if (cp == '\n') { text++; break; }
+					else break;
+				}
+
+				continue;
+			}
+		}
+
+		if (cp == '\n') {
+			x = position.x;
+			y -= line_height;
+			continue;
+		} else if (cp == '\r') {
 			continue;
 		}
 
@@ -1125,21 +1570,20 @@ void cf_draw_text(const char* text, CF_V2 position)
 		uint64_t kern_key = CF_KERN_KEY(cp_prev, cp);
 		v2 kern = V2(cf_font_get_kern(font, font_size, cp_prev, cp), 0);
 		v2 pad = V2(1,1); // Account for 1-pixel padding in spritebatch.
-		v2 q0 = glyph->q0 + position + kern - pad;
-		v2 q1 = glyph->q1 + position + kern + pad;
+		v2 q0 = glyph->q0 + V2(x,y) + kern - pad;
+		v2 q1 = glyph->q1 + V2(x,y) + kern + pad;
 
 		s.geom.u.sprite.p0 = mul(draw->cam, V2(q0.x, q1.y));
 		s.geom.u.sprite.p1 = mul(draw->cam, V2(q1.x, q1.y));
 		s.geom.u.sprite.p2 = mul(draw->cam, V2(q1.x, q0.y));
 		s.geom.u.sprite.p3 = mul(draw->cam, V2(q0.x, q0.y));
-		s.geom.u.sprite.color_override = draw->colors.size() > 1;
-		s.geom.u.sprite.tint = premultiply(to_pixel(draw->colors.last()));
+		s.geom.u.sprite.c = premultiply(to_pixel(draw->colors.last()));
+		s.geom.u.sprite.is_text = true;
 		s.geom.alpha = 1.0f;
 		s.sort_bits = draw->layers.last();
 		spritebatch_push(&draw->sb, s);
 
-		position.x += glyph->xadvance;
-		cp_prev = cp;
+		x += glyph->xadvance;
 	}
 }
 

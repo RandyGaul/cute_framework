@@ -26,7 +26,6 @@
 #include <cute_hashtable.h>
 #include <cute_math.h>
 #include <cute_color.h>
-#include <cute_font.h>
 #include <cute_alloc.h>
 
 #include <stb/stb_truetype.h>

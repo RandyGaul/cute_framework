@@ -27,7 +27,6 @@
 #include "cute_result.h"
 #include "cute_graphics.h"
 #include "cute_sprite.h"
-#include "cute_font.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -58,17 +57,6 @@ CUTE_API void CUTE_CALL cf_draw_polyline(CF_V2* points, int count, float thickne
 CUTE_API void CUTE_CALL cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, float thickness);
 CUTE_API void CUTE_CALL cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float thickness);
 
-CUTE_API void CUTE_CALL cf_draw_push_font(const char* font);
-CUTE_API const char* CUTE_CALL cf_draw_pop_font();
-CUTE_API const char* CUTE_CALL cf_draw_peek_font();
-CUTE_API void CUTE_CALL cf_draw_push_font_size(float size);
-CUTE_API float CUTE_CALL cf_draw_pop_font_size();
-CUTE_API float CUTE_CALL cf_draw_peek_font_size();
-CUTE_API void CUTE_CALL cf_draw_push_font_blur(int blur);
-CUTE_API int CUTE_CALL cf_draw_pop_font_blur();
-CUTE_API int CUTE_CALL cf_draw_peek_font_blur();
-CUTE_API void CUTE_CALL cf_draw_text(const char* text, CF_V2 position);
-
 CUTE_API void CUTE_CALL cf_draw_push_layer(int layer);
 CUTE_API int CUTE_CALL cf_draw_pop_layer();
 CUTE_API int CUTE_CALL cf_draw_peek_layer();
@@ -81,6 +69,29 @@ CUTE_API CF_Color CUTE_CALL cf_draw_peek_tint();
 CUTE_API void CUTE_CALL cf_draw_push_antialias(bool antialias);
 CUTE_API bool CUTE_CALL cf_draw_pop_antialias();
 CUTE_API bool CUTE_CALL cf_draw_peek_antialias();
+
+CUTE_API void CUTE_CALL cf_make_font(const char* path, const char* font_name, CF_Result* result_out);
+CUTE_API void CUTE_CALL cf_make_font_mem(void* data, int size, const char* font_name, CF_Result* result_out);
+CUTE_API void CUTE_CALL cf_destroy_font(const char* font_name);
+CUTE_API void CUTE_CALL cf_font_add_backup_codepoints(const char* font_name, int* codepoints, int count);
+CUTE_API void CUTE_CALL cf_push_font(const char* font);
+CUTE_API const char* CUTE_CALL cf_pop_font();
+CUTE_API const char* CUTE_CALL cf_peek_font();
+CUTE_API void CUTE_CALL cf_push_font_size(float size);
+CUTE_API float CUTE_CALL cf_pop_font_size();
+CUTE_API float CUTE_CALL cf_peek_font_size();
+CUTE_API void CUTE_CALL cf_push_font_blur(int blur);
+CUTE_API int CUTE_CALL cf_pop_font_blur();
+CUTE_API int CUTE_CALL cf_peek_font_blur();
+CUTE_API void CUTE_CALL cf_push_text_wrap_width(float width);
+CUTE_API float CUTE_CALL cf_pop_text_wrap_width();
+CUTE_API float CUTE_CALL cf_peek_text_wrap_width();
+CUTE_API void CUTE_CALL cf_push_text_clip_box(CF_Aabb clip_box);
+CUTE_API CF_Aabb CUTE_CALL cf_pop_text_clip_box();
+CUTE_API CF_Aabb CUTE_CALL cf_peek_text_clip_box();
+CUTE_API float CUTE_CALL cf_text_width(const char* text);
+CUTE_API float CUTE_CALL cf_text_height(const char* text);
+CUTE_API void CUTE_CALL cf_draw_text(const char* text, CF_V2 position);
 
 CUTE_API void CUTE_CALL cf_render_settings_filter(CF_Filter filter);
 CUTE_API void CUTE_CALL cf_render_settings_push_viewport(CF_Rect viewport);
@@ -163,6 +174,29 @@ CUTE_INLINE CF_Color draw_peek_tint() { return cf_draw_peek_tint(); }
 CUTE_INLINE void draw_push_antialias(bool antialias) { cf_draw_push_antialias(antialias); }
 CUTE_INLINE bool draw_pop_antialias() { return cf_draw_pop_antialias(); }
 CUTE_INLINE bool draw_peek_antialias() { return cf_draw_peek_antialias(); }
+
+CUTE_INLINE void make_font(const char* path, const char* font_name, CF_Result* result_out = NULL) { cf_make_font(path, font_name, result_out); }
+CUTE_INLINE void make_font_mem(void* data, int size, const char* font_name, CF_Result* result_out = NULL) { cf_make_font_mem(data, size, font_name, result_out); }
+CUTE_INLINE void destroy_font(const char* font_name) { cf_destroy_font(font_name); }
+CUTE_INLINE void font_add_backup_codepoints(const char* font_name, int* codepoints, int count) { cf_font_add_backup_codepoints(font_name, codepoints, count); }
+CUTE_INLINE void push_font(const char* font_name) { cf_push_font(font_name); }
+CUTE_INLINE const char* pop_font() { return cf_pop_font(); }
+CUTE_INLINE const char* peek_font() { return cf_peek_font(); }
+CUTE_INLINE void push_font_size(float size) { cf_push_font_size(size); }
+CUTE_INLINE float pop_font_size() { return cf_pop_font_size(); }
+CUTE_INLINE float peek_font_size() { return cf_peek_font_size(); }
+CUTE_INLINE void push_font_blur(int blur) { cf_push_font_blur(blur); }
+CUTE_INLINE int pop_font_blur() { return cf_pop_font_blur(); }
+CUTE_INLINE int peek_font_blur() { return cf_peek_font_blur(); }
+CUTE_INLINE void push_text_wrap_width(float width) { cf_push_text_wrap_width(width); }
+CUTE_INLINE float pop_text_wrap_width() { return cf_pop_text_wrap_width(); }
+CUTE_INLINE float peek_text_wrap_width() { return cf_peek_text_wrap_width(); }
+CUTE_INLINE void push_text_clip_box(CF_Aabb clip_box) { cf_push_text_clip_box(clip_box); }
+CUTE_INLINE CF_Aabb pop_text_clip_box() { return cf_pop_text_clip_box(); }
+CUTE_INLINE CF_Aabb peek_text_clip_box() { return cf_peek_text_clip_box(); }
+CUTE_INLINE float text_width(const char* text) { return cf_text_width(text); }
+CUTE_INLINE float text_height(const char* text) { return cf_text_height(text); }
+CUTE_INLINE void draw_text(const char* text, CF_V2 position) { cf_draw_text(text, position); }
 
 CUTE_INLINE void render_settings_filter(CF_Filter filter) { cf_render_settings_filter(filter); }
 CUTE_INLINE void render_settings_push_viewport(CF_Rect viewport) { cf_render_settings_push_viewport(viewport); }
