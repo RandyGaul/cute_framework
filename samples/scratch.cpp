@@ -9,7 +9,7 @@ int main(int argc, const char** argv)
 	Result result = make_app("Development Scratch", 0, 0, w, h, options, argv[0]);
 	if (is_error(result)) return -1;
 
-	camera_dimensions(w, h);
+	camera_dimensions((float)w, (float)h);
 	int draw_calls = 0;
 
 	draw_push_antialias(true);
@@ -70,7 +70,7 @@ int main(int argc, const char** argv)
 		String draws;
 		draws.fmt("Draw calls: %d", draw_calls);
 		push_font_size(13);
-		draw_text(draws.c_str(), V2(-w/2 + 10,-h/2 + 10));
+		draw_text(draws.c_str(), V2(-w/2.0f + 10,-h/2.0f + 10));
 		pop_font_size();
 
 		draw_calls = app_present();
