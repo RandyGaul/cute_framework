@@ -192,8 +192,6 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			if (geom.do_clipping) {
 				CUTE_ASSERT(geom.is_text);
 
-				// p3 min
-				// p1 max
 				CF_Aabb bb = make_aabb(geom.p3, geom.p1);
 				CF_Aabb clip = geom.clip;
 				float top = clip.max.y;
@@ -1537,17 +1535,15 @@ static const char* s_find_end_of_line(CF_Font* font, const char* text, float wra
 		}
 	}
 
-	return text;
+	return text + 1;
 }
 
 void cf_draw_text(const char* text, CF_V2 position)
 {
 	// TODO
-	// - alignment
 	// - codes
 
 	// Codes to be supported
-	// - alignment
 	// - color
 	// - offset
 	// - time
@@ -1573,41 +1569,33 @@ void cf_draw_text(const char* text, CF_V2 position)
 		CUTE_DEFER(cp_prev = cp);
 		const char* prev_text = text;
 		text = cf_decode_UTF8(text, &cp);
-		spritebatch_sprite_t s = { };
-		CF_Glyph* glyph = cf_font_get_glyph(font, cp, font_size, blur);
-		if (!glyph) {
-			continue;
-		}
 
 		// Word wrapping logic.
-		if (wrap_w > 0) {
-			if (!end_of_line) {
-				end_of_line = s_find_end_of_line(font, prev_text, wrap_w);
-			}
-
-			int finished_rendering_line = !(text < end_of_line);
-			if (finished_rendering_line) {
-				end_of_line = 0;
-				x = position.x;
-				y -= line_height;
-
-				// Skip whitespace at the beginning of new lines.
-				while (cp) {
-					cp = *text;
-					if (s_is_space(cp)) ++text;
-					else if (cp == '\n') { text++; break; }
-					else break;
-				}
-
-				continue;
-			}
+		if (!end_of_line) {
+			end_of_line = s_find_end_of_line(font, prev_text, wrap_w);
 		}
 
-		if (cp == '\n') {
+		int finished_rendering_line = !(text < end_of_line);
+		if (finished_rendering_line) {
+			end_of_line = 0;
 			x = position.x;
 			y -= line_height;
+
+			// Skip whitespace at the beginning of new lines.
+			while (cp) {
+				cp = *text;
+				if (s_is_space(cp)) ++text;
+				else if (cp == '\n') { text++; break; }
+				else break;
+			}
+
 			continue;
-		} else if (cp == '\r') {
+		}
+
+		spritebatch_sprite_t s = { };
+		CF_Glyph* glyph = cf_font_get_glyph(font, cp, font_size, blur);
+		if (glyph->image_id > CUTE_FONT_ID_RANGE_HI) __debugbreak();
+		if (!glyph) {
 			continue;
 		}
 

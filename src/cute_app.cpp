@@ -400,10 +400,20 @@ void cf_app_get_size(int* w, int* h)
 	if (h) *h = app->h;
 }
 
+void cf_app_set_size(int w, int h)
+{
+	SDL_SetWindowSize(app->window, w, h);
+}
+
 void cf_app_get_position(int* x, int* y)
 {
 	if (x) *x = app->x;
 	if (y) *y = app->y;
+}
+
+void cf_app_set_position(int x, int y)
+{
+	SDL_SetWindowPosition(app->window, x, y);
 }
 
 bool cf_app_was_resized()
@@ -485,10 +495,10 @@ CF_Canvas cf_app_get_canvas()
 	return app->offscreen_canvas;
 }
 
-void cf_app_resize_canvas(int x, int y)
+void cf_app_resize_canvas(int w, int h)
 {
 	unapply_canvas();
-	s_canvas(x, y);
+	s_canvas(w, h);
 }
 
 int cf_app_get_canvas_width()

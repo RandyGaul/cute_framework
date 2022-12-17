@@ -109,7 +109,7 @@ struct CF_Draw
 	Cute::Array<float> font_sizes = { 18 };
 	Cute::Array<const char*> fonts = { NULL };
 	Cute::Array<int> blurs = { 0 };
-	Cute::Array<float> text_wrap_widths = { 0 };
+	Cute::Array<float> text_wrap_widths = { FLT_MAX };
 	Cute::Array<CF_Aabb> text_clip_boxes = { cf_make_aabb(cf_v2(-FLT_MAX, -FLT_MAX), cf_v2(FLT_MAX, FLT_MAX)) };
 };
 

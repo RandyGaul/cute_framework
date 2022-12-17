@@ -3,22 +3,32 @@ using namespace Cute;
 
 int main(int argc, const char** argv)
 {
+	int w = 640/1;
+	int h = 480/1;
 	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
-	Result result = make_app("Development Scratch", 0, 0, 640, 480, options, argv[0]);
+	Result result = make_app("Development Scratch", 0, 0, w, h, options, argv[0]);
 	if (is_error(result)) return -1;
 
-	float w = 640/1;
-	float h = 480/1;
 	camera_dimensions(w, h);
 	int draw_calls = 0;
 
+	draw_push_antialias(true);
 	make_font("sample_data/ProggyClean.ttf", "ProggyClean");
 	push_font("ProggyClean");
-	draw_push_antialias(true);
 
 	while (app_is_running()) {
 		float dt = calc_dt();
 		app_update(dt);
+
+		if (app_was_resized()) {
+			app_get_size(&w, &h);
+			w = CUTE_ALIGN_TRUNCATE(w, 2);
+			h = CUTE_ALIGN_TRUNCATE(h, 2);
+			app_set_size(w, h);
+			app_resize_canvas(w, h);
+			camera_dimensions((float)w, (float)h);
+			printf("%d, %d\n", w, h);
+		}
 
 		static float t = 0;
 		t += dt;
