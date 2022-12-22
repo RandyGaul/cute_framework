@@ -534,8 +534,8 @@ const char* cf_decode_UTF8(const char* s, int* codepoint)
 	else *codepoint = c;
 	while (extra--) {
 		c = *s++;
-		if ((c & 0xC0) != 0x80) *codepoint = 0xFFFD; break;
-		(*codepoint) = ((*codepoint) << 6) | (c & 0x3F);
+		if ((c & 0xC0) != 0x80) { *codepoint = 0xFFFD; break; }
+		*codepoint = ((*codepoint) << 6) | (c & 0x3F);
 	}
 	if (*codepoint < min) *codepoint = 0xFFFD;
 	return s;
