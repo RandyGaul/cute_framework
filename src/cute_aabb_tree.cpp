@@ -110,8 +110,8 @@ static int s_balance(CF_AabbTree* tree, int index_a)
 			aabbs[index_a] = cf_combine(aabbs[index_b], aabbs[index_g]);
 			aabbs[index_c] = cf_combine(aabbs[index_a], aabbs[index_f]);
 
-			a->height = cf_max_int(b->height, g->height) + 1;
-			c->height = cf_max_int(a->height, f->height) + 1;
+			a->height = cf_max(b->height, g->height) + 1;
+			c->height = cf_max(a->height, f->height) + 1;
 		} else {
 			c->index_b = index_g;
 			a->index_b = index_f;
@@ -119,8 +119,8 @@ static int s_balance(CF_AabbTree* tree, int index_a)
 			aabbs[index_a] = cf_combine(aabbs[index_b], aabbs[index_f]);
 			aabbs[index_c] = cf_combine(aabbs[index_a], aabbs[index_g]);
 
-			a->height = cf_max_int(b->height, f->height) + 1;
-			c->height = cf_max_int(a->height, g->height) + 1;
+			a->height = cf_max(b->height, f->height) + 1;
+			c->height = cf_max(a->height, g->height) + 1;
 		}
 
 		return index_c;
@@ -164,8 +164,8 @@ static int s_balance(CF_AabbTree* tree, int index_a)
 			aabbs[index_a] = cf_combine(aabbs[index_c], aabbs[index_e]);
 			aabbs[index_b] = cf_combine(aabbs[index_a], aabbs[index_d]);
 
-			a->height = cf_max_int(c->height, e->height) + 1;
-			b->height = cf_max_int(a->height, d->height) + 1;
+			a->height = cf_max(c->height, e->height) + 1;
+			b->height = cf_max(a->height, d->height) + 1;
 		} else {
 			b->index_b = index_e;
 			a->index_a = index_d;
@@ -173,8 +173,8 @@ static int s_balance(CF_AabbTree* tree, int index_a)
 			aabbs[index_a] = cf_combine(aabbs[index_c], aabbs[index_d]);
 			aabbs[index_b] = cf_combine(aabbs[index_a], aabbs[index_e]);
 
-			a->height = cf_max_int(c->height, d->height) + 1;
-			b->height = cf_max_int(a->height, e->height) + 1;
+			a->height = cf_max(c->height, d->height) + 1;
+			b->height = cf_max(a->height, e->height) + 1;
 		}
 
 		return index_b;
@@ -190,7 +190,7 @@ static inline void s_sync_node(CF_AabbTree* tree, int index)
 	cf_aabb_tree_node_t* node = nodes + index;
 	int index_a = node->index_a;
 	int index_b = node->index_b;
-	node->height = cf_max_int(nodes[index_a].height, nodes[index_b].height) + 1;
+	node->height = cf_max(nodes[index_a].height, nodes[index_b].height) + 1;
 	aabbs[index] = cf_combine(aabbs[index_a], aabbs[index_b]);
 }
 
@@ -530,7 +530,7 @@ static int s_validate(const CF_AabbTree* tree, int index, int depth)
 	if (index == AABB_TREE_NULL_NODE_INDEX) return depth - 1;
 	int depthA = s_validate(tree, tree->nodes[index].index_a, depth + 1);
 	int depthB = s_validate(tree, tree->nodes[index].index_b, depth + 1);
-	int max_depth = cf_max_int(depthA, depthB);
+	int max_depth = cf_max(depthA, depthB);
 	int height = max_depth - depth;
 	CUTE_ASSERT(height == tree->nodes[index].height);
 	return max_depth;

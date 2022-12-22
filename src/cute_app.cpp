@@ -27,6 +27,7 @@
 #include <cute_c_runtime.h>
 #include <cute_kv.h>
 #include <cute_draw.h>
+#include <cute_time.h>
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_file_system_internal.h>
@@ -375,23 +376,65 @@ void cf_app_stop_running()
 	app->running = 0;
 }
 
-void cf_app_update(float dt)
+static void s_on_update()
 {
-	app->dt = dt;
 	cf_pump_input_msgs();
 	if (app->audio_system) {
-		cs_update(dt);
-#ifdef CUTE_EMSCRIPTEN
-		cf_app_do_mixing(cf_app);
-#endif // CUTE_EMSCRIPTEN
+		cs_update(DELTA_TIME);
 	}
+	if (app->user_on_update) app->user_on_update();
+}
 
+void cf_app_update(CF_OnUpdateFn* on_update)
+{
+	app->user_on_update = on_update;
+	cf_update_time(s_on_update);
 	if (app->gfx_enabled) {
 		if (app->using_imgui) {
-			simgui_new_frame(app->w, app->h, dt);
+			simgui_new_frame(app->w, app->h, DELTA_TIME);
 			ImGui_ImplSDL2_NewFrame(app->window);
 		}
 	}
+}
+
+static void s_imgui_present()
+{
+	if (app->using_imgui) {
+		ImGui::EndFrame();
+		ImGui::Render();
+		simgui_render();
+	}
+}
+
+int cf_app_present()
+{
+	cf_render_to(app->offscreen_canvas, false);
+	cf_apply_canvas(app->backbuffer_canvas, true);
+	{
+		cf_apply_mesh(app->backbuffer_quad);
+		cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);
+		v2 u_texture_size = V2((float)app->w, (float)app->h);
+		cf_material_set_uniform_fs(app->backbuffer_material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
+		cf_draw_elements();
+	}
+	if (app->using_imgui) {
+		sg_imgui_draw(&app->sg_imgui);
+		s_imgui_present();
+	}
+
+	// Start the default-pass for anyone using default behavior to catch rendering for the
+	// next frame in the above call to `cf_render_to`.
+	cf_apply_canvas(app->offscreen_canvas, true);
+
+	cf_commit();
+	cf_dx11_present(app->vsync);
+	if (app->options & APP_OPTIONS_OPENGL_CONTEXT) {
+		SDL_GL_SwapWindow(app->window);
+	}
+
+	int draw_call_count = app->draw_call_count;
+	app->draw_call_count = 0;
+	return draw_call_count;
 }
 
 void cf_app_get_size(int* w, int* h)
@@ -481,15 +524,6 @@ bool cf_app_mouse_inside()
 	return app->window_state.mouse_inside_window;
 }
 
-static void s_imgui_present()
-{
-	if (app->using_imgui) {
-		ImGui::EndFrame();
-		ImGui::Render();
-		simgui_render();
-	}
-}
-
 CF_Canvas cf_app_get_canvas()
 {
 	return app->offscreen_canvas;
@@ -509,37 +543,6 @@ int cf_app_get_canvas_width()
 int cf_app_get_canvas_height()
 {
 	return app->canvas_h;
-}
-
-int cf_app_present()
-{
-	cf_render_to(app->offscreen_canvas, false);
-	cf_apply_canvas(app->backbuffer_canvas, true);
-	{
-		cf_apply_mesh(app->backbuffer_quad);
-		cf_apply_shader(app->backbuffer_shader, app->backbuffer_material);
-		v2 u_texture_size = V2((float)app->w, (float)app->h);
-		cf_material_set_uniform_fs(app->backbuffer_material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
-		cf_draw_elements();
-	}
-	if (app->using_imgui) {
-		sg_imgui_draw(&app->sg_imgui);
-		s_imgui_present();
-	}
-
-	// Start the default-pass for anyone using default behavior to catch rendering for the
-	// next frame in the above call to `cf_render_to`.
-	cf_apply_canvas(app->offscreen_canvas, true);
-
-	cf_commit();
-	cf_dx11_present(app->vsync);
-	if (app->options & APP_OPTIONS_OPENGL_CONTEXT) {
-		SDL_GL_SwapWindow(app->window);
-	}
-
-	int draw_call_count = app->draw_call_count;
-	app->draw_call_count = 0;
-	return draw_call_count;
 }
 
 ImGuiContext* cf_app_init_imgui(bool no_default_font)
@@ -591,9 +594,4 @@ CF_PowerInfo cf_app_power_info()
 	case SDL_POWERSTATE_CHARGED: info.state = CF_POWER_STATE_CHARGED;
 	}
 	return info;
-}
-
-void cf_sleep(int milliseconds)
-{
-	SDL_Delay((Uint32)milliseconds);
 }

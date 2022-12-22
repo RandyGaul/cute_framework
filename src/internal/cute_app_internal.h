@@ -35,6 +35,7 @@
 #include <cute_string.h>
 
 #include <internal/cute_draw_internal.h>
+#include <internal/cute_font_internal.h>
 
 #include <sokol/sokol_gfx_imgui.h>
 
@@ -156,15 +157,13 @@ struct CF_EcsArrays
 	}
 };
 
-struct CF_Font;
-
 struct CF_App
 {
 	// App stuff.
-	float dt = 0;
 	bool running = true;
 	int options = 0;
 	void* platform_handle = NULL;
+	CF_OnUpdateFn* user_on_update = NULL;
 	SDL_Window* window = NULL;
 	cs_context_t* cute_sound = NULL;
 	bool spawned_mix_thread = false;
@@ -233,6 +232,7 @@ struct CF_App
 	uint64_t font_image_id_gen = CUTE_FONT_ID_RANGE_LO;
 	Cute::Dictionary<const char*, CF_Font*> fonts;
 	Cute::Dictionary<uint64_t, CF_Pixel*> font_pixels;
+	Cute::Dictionary<const char*, CF_TextEffect> text_effects;
 };
 
 #endif // CUTE_APP_INTERNAL_H

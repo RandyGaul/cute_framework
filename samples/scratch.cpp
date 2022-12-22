@@ -10,15 +10,14 @@ int main(int argc, const char** argv)
 	if (is_error(result)) return -1;
 
 	camera_dimensions((float)w, (float)h);
-	int draw_calls = 0;
-
 	draw_push_antialias(true);
 	make_font("sample_data/ProggyClean.ttf", "ProggyClean");
 	push_font("ProggyClean");
+	set_fixed_timestep();
+	int draw_calls = 0;
 
 	while (app_is_running()) {
-		float dt = calc_dt();
-		app_update(dt);
+		app_update();
 
 		if (app_was_resized()) {
 			app_get_size(&w, &h);
@@ -31,7 +30,7 @@ int main(int argc, const char** argv)
 		}
 
 		static float t = 0;
-		t += dt;
+		t += DELTA_TIME;
 
 		v2 o = V2(cosf(t),sinf(t)) * 25.0f;
 		Aabb clip = make_aabb(V2(-100,-75) + o, V2(75,75) + o);

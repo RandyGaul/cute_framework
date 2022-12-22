@@ -17,11 +17,10 @@ int main(int argc, const char** argv)
 	float t = 0;
 
 	while (app_is_running()) {
-		float dt = calc_dt();
-		app_update(dt);
-		s.update(dt);
+		app_update();
+		s.update(DELTA_TIME);
 		s.draw();
-		t += dt;
+		t += DELTA_TIME;
 		float radius = 10.0f;
 		float motion = (sinf(t) + 1.0f) * 0.5f * 10.0f;
 		draw_push_layer(-1);

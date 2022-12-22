@@ -25,6 +25,7 @@
 #include "cute_defines.h"
 #include "cute_result.h"
 #include "cute_graphics.h"
+#include "cute_time.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -61,7 +62,7 @@ CUTE_API CF_Result CUTE_CALL cf_make_app(const char* window_title, int x, int y,
 CUTE_API void CUTE_CALL cf_destroy_app();
 CUTE_API bool CUTE_CALL cf_app_is_running();
 CUTE_API void CUTE_CALL cf_app_stop_running();
-CUTE_API void CUTE_CALL cf_app_update(float dt);
+CUTE_API void CUTE_CALL cf_app_update(CF_OnUpdateFn* on_update);
 CUTE_API int CUTE_CALL cf_app_present();
 CUTE_API void CUTE_CALL cf_app_get_size(int* w, int* h);
 CUTE_API void CUTE_CALL cf_app_set_size(int w, int h);
@@ -120,9 +121,6 @@ typedef struct CF_PowerInfo
 
 CUTE_API CF_PowerInfo CUTE_CALL cf_app_power_info();
 
-// TODO - Where to put this?
-CUTE_API void CUTE_CALL cf_sleep(int milliseconds);
-
 #ifdef __cplusplus
 }
 #endif // __cplusplus
@@ -161,7 +159,7 @@ CUTE_INLINE Result make_app(const char* window_title, int x, int y, int w, int h
 CUTE_INLINE void destroy_app() { cf_destroy_app(); }
 CUTE_INLINE bool app_is_running() { return cf_app_is_running(); }
 CUTE_INLINE void app_stop_running() { cf_app_stop_running(); }
-CUTE_INLINE void app_update(float dt) { cf_app_update(dt); }
+CUTE_INLINE void app_update(OnUpdateFn* on_update = NULL) { cf_app_update(on_update); }
 CUTE_INLINE int app_present() { return cf_app_present(); }
 CUTE_INLINE void app_get_size(int* w, int* h) { return cf_app_get_size(w, h); }
 CUTE_INLINE void app_set_size(int w, int h) { return cf_app_set_size(w, h); }
@@ -188,7 +186,6 @@ CUTE_INLINE sg_imgui_t* app_get_sokol_imgui() { return cf_app_get_sokol_imgui();
 CUTE_INLINE CF_Canvas app_get_canvas() { return cf_app_get_canvas(); }
 CUTE_INLINE void app_resize_canvas(int w, int h) { cf_app_resize_canvas(w, h); }
 CUTE_INLINE PowerInfo app_power_info() { return cf_app_power_info(); }
-CUTE_INLINE void sleep(int milliseconds) { cf_sleep(milliseconds); }
 
 }
 

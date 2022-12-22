@@ -140,12 +140,12 @@ CUTE_INLINE float cf_mod(float x, float m) { return x - (int)(x / m) * m; }
 CUTE_INLINE float cf_fract(float x) { return x - floorf(x); }
 
 CUTE_INLINE int cf_sign_int(int a) { return a < 0 ? -1 : 1; }
-CUTE_INLINE int cf_min_int(int a, int b) { return a < b ? a : b; }
-CUTE_INLINE int cf_max_int(int a, int b) { return b < a ? a : b; }
+#define cf_min(a, b) ((a) < (b) ? (a) : (b))
+#define cf_max(a, b) ((b) < (a) ? (a) : (b))
 CUTE_INLINE float cf_abs(float a) { return fabsf(a); }
 CUTE_INLINE int cf_abs_int(int a) { int mask = a >> ((sizeof(int) * 8) - 1); return (a + mask) ^ mask; }
-CUTE_INLINE int cf_clamp_int(int a, int lo, int hi) { return cf_max_int(lo, cf_min_int(a, hi)); }
-CUTE_INLINE int cf_clamp01_int(int a) { return cf_max_int(0, cf_min_int(a, 1)); }
+CUTE_INLINE int cf_clamp_int(int a, int lo, int hi) { return cf_max(lo, cf_min(a, hi)); }
+CUTE_INLINE int cf_clamp01_int(int a) { return cf_max(0, cf_min(a, 1)); }
 CUTE_INLINE bool cf_is_even(int x) { return (x % 2) == 0; }
 CUTE_INLINE bool cf_is_odd(int x) { return !cf_is_even(x); }
 
@@ -718,8 +718,10 @@ CUTE_INLINE float mod(float x, float m) { return cf_mod(x, m); }
 CUTE_INLINE float fract(float x) { return cf_fract(x); }
 
 CUTE_INLINE int sign(int a) { return cf_sign_int(a); }
-CUTE_INLINE int min(int a, int b) { return cf_min_int(a, b); }
-CUTE_INLINE int max(int a, int b) { return cf_max_int(a, b); }
+CUTE_INLINE int min(int a, int b) { return cf_min(a, b); }
+CUTE_INLINE int max(int a, int b) { return cf_max(a, b); }
+CUTE_INLINE uint64_t min(uint64_t a, uint64_t b) { return cf_min(a, b); }
+CUTE_INLINE uint64_t max(uint64_t a, uint64_t b) { return cf_max(a, b); }
 CUTE_INLINE float abs(float a) { return cf_abs(a); }
 CUTE_INLINE int abs(int a) { return cf_abs_int(a); }
 CUTE_INLINE int clamp(int a, int lo, int hi) { return cf_clamp_int(a, lo, hi); }

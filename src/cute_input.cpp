@@ -22,6 +22,7 @@
 #include <cute_input.h>
 #include <cute_c_runtime.h>
 #include <cute_math.h>
+#include <cute_time.h>
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_input_internal.h>
@@ -459,13 +460,12 @@ void cf_pump_input_msgs()
 	app->window_state.resized = false;
 
 	// Update key durations to simulate "press and hold" style for `key_was_pressed`.
-	for (int i = 0; i < 512; ++i)
-	{
+	for (int i = 0; i < 512; ++i) {
 		if (cf_key_is_down((CF_KeyButton)i)) {
 			if (app->keys_duration[i] < 0) {
 				app->keys_duration[i] = 0;
 			} else {
-				app->keys_duration[i] += app->dt;
+				app->keys_duration[i] += DELTA_TIME;
 			}
 		} else {
 			app->keys_duration[i] = -1.0f;

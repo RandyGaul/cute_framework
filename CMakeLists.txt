@@ -82,7 +82,7 @@ set(CUTE_SRCS
 	src/cute_file_system.cpp
 	src/cute_handle_table.cpp
 	src/cute_input.cpp
-	src/cute_timer.cpp
+	src/cute_time.cpp
 	src/cute_version.cpp
 	src/cute_kv.cpp
 	src/cute_base64.cpp
@@ -136,7 +136,7 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_file_system.h
 	include/cute_handle_table.h
 	include/cute_input.h
-	include/cute_timer.h
+	include/cute_time.h
 	include/cute_version.h
 	include/cute_doubly_list.h
 	include/cute_kv.h

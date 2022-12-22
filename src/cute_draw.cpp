@@ -24,6 +24,7 @@
 #include <cute_array.h>
 #include <cute_file_system.h>
 #include <cute_defer.h>
+#include <cute_routine.h>
 //#include <cute_debug_printf.h>
 
 #include <internal/cute_app_internal.h>
@@ -1538,20 +1539,18 @@ static const char* s_find_end_of_line(CF_Font* font, const char* text, float wra
 	return text + 1;
 }
 
+static void s_parse_codes(CF_Routine* rt)
+{
+}
+
 void cf_draw_text(const char* text, CF_V2 position)
 {
-	// TODO
-	// - codes
-
-	// Codes to be supported
-	// - color
-	// - offset
-	// - time
-	// - custom params (for callback modifiers)
-
 	CF_Font* font = cf_font_get(draw->fonts.last());
 	CUTE_ASSERT(font);
 	if (!font) return;
+
+	CF_TextEffect* effect = app->text_effects.try_find(text);
+	// Need to refactor time simulation.
 
 	float font_size = draw->font_sizes.last();
 	int blur = draw->blurs.last();

@@ -61,4 +61,10 @@ float cf_font_get_kern(CF_Font* font, float font_size, int codepoint0, int codep
 
 #define CF_KERN_KEY(cp0, cp1) (cp0 < cp1 ? ((uint64_t)cp0) << 32 | ((uint64_t)cp1) : ((uint64_t)cp1) << 32 | ((uint64_t)cp0))
 
+struct CF_TextEffect
+{
+	float elapsed;
+	bool alive;
+};
+
 #endif // CUTE_FONT_INTERNAL_H

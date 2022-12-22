@@ -8,10 +8,8 @@ int main(int argc, const char** argv)
 	Result result = make_app("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;
 
-	while (app_is_running())
-	{
-		float dt = calc_dt();
-		app_update(dt);
+	while (app_is_running()) {
+		app_update();
 		// All your game logic and updates go here...
 		app_present();
 	}
