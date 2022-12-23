@@ -1779,8 +1779,11 @@ void cf_draw_text(const char* text, CF_V2 position)
 	}
 	effect->alive = true;
 	effect->elapsed += CF_DELTA_TIME;
+
+	// Use the sanitized string for rendering. This excludes all text codes.
 	text = effect->sanitized.c_str();
 
+	// Gather up all state required for rendering.
 	float font_size = draw->font_sizes.last();
 	int blur = draw->blurs.last();
 	bool do_clipping = draw->text_clip_boxes.size() > 1;
@@ -1833,7 +1836,7 @@ void cf_draw_text(const char* text, CF_V2 position)
 	};
 
 	while (*text) {
-		CUTE_DEFER(cp_prev = cp);
+		cp_prev = cp;
 		const char* prev_text = text;
 		text = cf_decode_UTF8(text, &cp);
 		do_codes();
