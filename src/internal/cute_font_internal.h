@@ -61,10 +61,54 @@ float cf_font_get_kern(CF_Font* font, float font_size, int codepoint0, int codep
 
 #define CF_KERN_KEY(cp0, cp1) (cp0 < cp1 ? ((uint64_t)cp0) << 32 | ((uint64_t)cp1) : ((uint64_t)cp1) << 32 | ((uint64_t)cp0))
 
+enum CF_TextCodeType
+{
+	CF_TEXT_CODE_TYPE_COLOR,
+	CF_TEXT_CODE_TYPE_SHAKE,
+	CF_TEXT_CODE_TYPE_FADE,
+	CF_TEXT_CODE_TYPE_WAVE,
+	CF_TEXT_CODE_TYPE_STRIKE,
+	CF_TEXT_CODE_TYPE_USER,
+};
+
+struct CF_TextCode
+{
+	CF_TextCodeType type;
+	int index_in_string;
+	bool pop;
+
+	CF_Color color;
+	CF_V2 offset;
+	float opacity;
+};
+
+enum CF_TextCodeValType
+{
+	CF_TEXT_CODE_VAL_TYPE_NONE,
+	CF_TEXT_CODE_VAL_TYPE_COLOR,
+	CF_TEXT_CODE_VAL_TYPE_NUMBER,
+	CF_TEXT_CODE_VAL_TYPE_STRING,
+};
+
+struct CF_TextCodeVal
+{
+	CF_TextCodeValType type;
+	union
+	{
+		CF_Color color;
+		double number;
+		const char* string;
+	} u;
+};
+
 struct CF_TextEffect
 {
-	float elapsed;
-	bool alive;
+	Cute::String sanitized;
+	uint64_t hash = 0;
+	float elapsed = 0;
+	bool alive = 0;
+	Cute::Dictionary<const char*, CF_TextCodeVal> env;
+	Cute::Array<CF_TextCode> codes;
 };
 
 #endif // CUTE_FONT_INTERNAL_H

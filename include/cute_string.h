@@ -722,7 +722,7 @@ struct String
 	CUTE_INLINE String& add(char ch) { spush(m_str, ch); return *this; }
 	CUTE_INLINE String& append(const char* s) { sappend(m_str, s); return *this; }
 	CUTE_INLINE String& append(const char* start, const char* end) { sappend_range(m_str, start, end); return *this; }
-	CUTE_INLINE String& append(uint32_t codepoint) { sappend_UTF8(m_str, codepoint); return *this; }
+	CUTE_INLINE String& append(int codepoint) { sappend_UTF8(m_str, codepoint); return *this; }
 	CUTE_INLINE String& fmt(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt(m_str, fmt, args); va_end(args); return *this; }
 	CUTE_INLINE String& fmt_append(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt_append(m_str, fmt, args); va_end(args); return *this; }
 	CUTE_INLINE String& trim() { strim(m_str); return *this; }
@@ -738,6 +738,8 @@ struct String
 	CUTE_INLINE char pop() { return apop(m_str); }
 	CUTE_INLINE int first_index_of(char ch) const { return sfirst_index_of(m_str, ch); }
 	CUTE_INLINE int last_index_of(char ch) const { return slast_index_of(m_str, ch); }
+	CUTE_INLINE int first_index_of(char ch, int offset) const { return sfirst_index_of(m_str + offset, ch); }
+	CUTE_INLINE int last_index_of(char ch, int offset) const { return slast_index_of(m_str + offset, ch); }
 	CUTE_INLINE String find(const char* find_me) const { return String(sfind(m_str, find_me)); }
 	CUTE_INLINE String& replace(const char* replace_me, const char* with_me) { sreplace(m_str, replace_me, with_me); return *this; }
 	CUTE_INLINE String& erase(int index, int count) { serase(m_str, index, count); return *this; }

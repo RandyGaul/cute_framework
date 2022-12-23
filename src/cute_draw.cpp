@@ -1539,8 +1539,220 @@ static const char* s_find_end_of_line(CF_Font* font, const char* text, float wra
 	return text + 1;
 }
 
-static void s_parse_codes(CF_Routine* rt)
+struct CF_CodeParseState
 {
+	CF_TextEffect* effect;
+	const char* in;
+	const char* end;
+	bool error;
+	String sanitized;
+
+	bool done() { return !error && in >= end; }
+	void append(int ch) { sanitized.append(ch); }
+	void ltrim() { while (!done()) { int cp = *in; if (s_is_space(cp)) ++in; else break; } }
+	int next(bool trim = true) { if (trim) ltrim(); int cp; in = cf_decode_UTF8(in, &cp); return cp; }
+	int peek() { ltrim(); int cp; cf_decode_UTF8(in, &cp); return cp; }
+	void skip() { ltrim(); int cp; in = cf_decode_UTF8(in, &cp); }
+	bool expect(int ch) { int cp = next(); if (cp != ch) { error = true; return false; } return true; }
+	bool try_next(int ch, bool trim = true)
+	{
+		if (trim) ltrim();
+		int cp;
+		const char* next = cf_decode_UTF8(in, &cp);
+		if (cp == ch) {
+			in = next;
+			return true;
+		}
+		return false;
+	}
+};
+
+static String s_parse_code_name(CF_CodeParseState* s)
+{
+	String name;
+	while (!s->done()) {
+		int cp = s->peek();
+		if (cp == '=' || cp == '>') {
+			return name;
+		} else if (cp == '/') {
+			s->skip();
+			if (s->try_next('>')) {
+				s->append('>');
+			} else {
+				s->append('/');
+			}
+		} else {
+			name.append(cp);
+			s->skip();
+		}
+	}
+	return name;
+}
+
+static bool s_is_hex_alphanum(int ch)
+{
+	switch (ch) {
+	case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7':
+	case '8': case '9': case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+	case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': return true;
+	default: return false;
+	}
+}
+
+static CF_Color s_parse_color(CF_CodeParseState* s)
+{
+	String string;
+	s->expect('#');
+	int digits = 0;
+	while (!s->done()) {
+		int cp = s->peek();
+		if (!s_is_hex_alphanum(cp)) {
+			break;
+		} else {
+			string.append(cp);
+			++digits;
+			s->skip();
+		}
+	}
+	int hex = (int)string.to_hex();
+	if (digits == 6) {
+		// Treat the color as opaque if only 3 bytes were found.
+		hex = hex << 8 | 0xFF;
+	}
+	CF_Color result = make_color(hex);
+	return result;
+}
+
+static bool s_is_num(int ch)
+{
+	switch (ch) {
+	case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': return true;
+	default: return false;
+	}
+}
+
+static double s_parse_number(CF_CodeParseState* s)
+{
+	String string;
+	bool is_float = false;
+	bool is_neg = false;
+	if (s->try_next('-')) {
+		is_neg = true;
+	} else {
+		s->try_next('+');
+	}
+	while (!s->done()) {
+		int cp = s->peek();
+		if (cp == '.') {
+			string.append('.');
+			is_float = true;
+		} else if (!s_is_num(cp)) {
+			break;
+		} else {
+			string.append(cp);
+		}
+	}
+	double result;
+	if (is_float) {
+		result = string.to_double();
+	} else {
+		result = (double)string.to_int();
+	}
+	if (is_neg) result = -result;
+	return result;
+}
+
+static String s_parse_string(CF_CodeParseState* s)
+{
+	String string;
+	s->expect('"');
+	while (!s->done()) {
+		int cp = s->next();
+		if (cp == '"') {
+			break;
+		} else {
+			string.append(cp);
+		}
+	}
+	return string;
+}
+
+static CF_TextCodeVal s_parse_code_val(CF_CodeParseState* s)
+{
+	CF_TextCodeVal val = { };
+	int cp = s->peek();
+	if (cp == '#') {
+		CF_Color c = s_parse_color(s);
+		val.type = CF_TEXT_CODE_VAL_TYPE_COLOR;
+		val.u.color = c;
+	} else if (cp == '"') {
+		String string = s_parse_string(s);
+		val.type = CF_TEXT_CODE_VAL_TYPE_STRING;
+		val.u.string = string;
+	} else {
+		double number = s_parse_number(s);
+		val.type = CF_TEXT_CODE_VAL_TYPE_NUMBER;
+		val.u.number = number;
+	}
+	return val;
+}
+
+static void s_parse_code(CF_CodeParseState* s)
+{
+	CF_TextCode code = { };
+	code.pop = s->try_next('/');
+	bool first = true;
+	while (!s->done()) {
+		String name = s_parse_code_name(s);
+		if (first) {
+			first = false;
+			if (name == "color") {
+				code.type = CF_TEXT_CODE_TYPE_COLOR;
+				if (!code.pop) {
+					s->expect('=');
+					code.color = s_parse_color(s);
+				}
+			} else if (name == "shake") {
+				code.type = CF_TEXT_CODE_TYPE_SHAKE;
+			} else if (name == "fade") {
+				code.type = CF_TEXT_CODE_TYPE_FADE;
+			} else if (name == "wave") {
+				code.type = CF_TEXT_CODE_TYPE_WAVE;
+			} else if (name == "strike") {
+				code.type = CF_TEXT_CODE_TYPE_STRIKE;
+			}
+		} else {
+			if (s->try_next('=')) {
+				CF_TextCodeVal val = s_parse_code_val(s);
+				s->effect->env.insert(sintern(name.c_str()), val);
+			}
+		}
+		if (s->try_next('>')) {
+			break;
+		}
+	}
+	code.index_in_string = s->sanitized.len();
+	s->effect->codes.add(code);
+}
+
+static void s_parse_codes(CF_TextEffect* effect, const char* text)
+{
+	CF_CodeParseState state = { };
+	CF_CodeParseState* s = &state;
+	s->effect = effect;
+	s->in = text;
+	s->end = text + CUTE_STRLEN(text);
+	while (!s->done()) {
+		int cp = s->next(false);
+		if (cp == '/' && s->try_next('<', false)) {
+			s->append('<');
+		} else if (cp == '<') {
+			s_parse_code(s);
+		} else {
+			s->append(cp);
+		}
+	}
+	effect->sanitized = s->sanitized;
 }
 
 void cf_draw_text(const char* text, CF_V2 position)
@@ -1549,8 +1761,25 @@ void cf_draw_text(const char* text, CF_V2 position)
 	CUTE_ASSERT(font);
 	if (!font) return;
 
+	// Cache effect state key'd by input text pointer.
 	CF_TextEffect* effect = app->text_effects.try_find(text);
-	// Need to refactor time simulation.
+	if (!effect) {
+		effect = app->text_effects.insert(text);
+		effect->hash = fnv1a(text, (int)CUTE_STRLEN(text) + 1);
+		s_parse_codes(effect, text);
+	} else {
+		uint64_t h = fnv1a(text, (int)CUTE_STRLEN(text) + 1);
+		if (effect->hash != h) {
+			// Contents have changed, re-parse the whole thing.
+			app->text_effects.remove(text);
+			effect = app->text_effects.insert(text);
+			effect->hash = h;
+			s_parse_codes(effect, text);
+		}
+	}
+	effect->alive = true;
+	effect->elapsed += CF_DELTA_TIME;
+	text = effect->sanitized.c_str();
 
 	float font_size = draw->font_sizes.last();
 	int blur = draw->blurs.last();
@@ -1564,10 +1793,50 @@ void cf_draw_text(const char* text, CF_V2 position)
 	const char* end_of_line = NULL;
 	float x = position.x;
 	float y = position.y - (font->ascent + font->descent) * scale;
+	int index = 0;
+	int code_index = 0;
+
+	// Performs any in-text codes.
+	// Used whenever going to the next character in the sanitized string.
+	auto do_codes = [&]() {
+		if (code_index < effect->codes.count()) {
+			CF_TextCode code = effect->codes[code_index];
+			if (index == code.index_in_string) {
+				++code_index;
+				switch (code.type) {
+				case CF_TEXT_CODE_TYPE_COLOR:
+					if (code.pop) {
+						draw_pop_color();
+					} else {
+						draw_push_color(code.color);
+					}
+					break;
+
+				case CF_TEXT_CODE_TYPE_SHAKE:
+					break;
+
+				case CF_TEXT_CODE_TYPE_FADE:
+					break;
+
+				case CF_TEXT_CODE_TYPE_WAVE:
+					break;
+
+				case CF_TEXT_CODE_TYPE_STRIKE:
+					break;
+
+				case CF_TEXT_CODE_TYPE_USER:
+					break;
+				}
+			}
+		}
+		++index;
+	};
+
 	while (*text) {
 		CUTE_DEFER(cp_prev = cp);
 		const char* prev_text = text;
 		text = cf_decode_UTF8(text, &cp);
+		do_codes();
 
 		// Word wrapping logic.
 		if (!end_of_line) {
@@ -1576,15 +1845,15 @@ void cf_draw_text(const char* text, CF_V2 position)
 
 		int finished_rendering_line = !(text < end_of_line);
 		if (finished_rendering_line) {
-			end_of_line = 0;
+			end_of_line = NULL;
 			x = position.x;
 			y -= line_height;
 
 			// Skip whitespace at the beginning of new lines.
 			while (cp) {
 				cp = *text;
-				if (s_is_space(cp)) ++text;
-				else if (cp == '\n') { text++; break; }
+				if (cp == '\n') { ++text; do_codes(); break; }
+				else if (s_is_space(cp)) { ++text; do_codes(); }
 				else break;
 			}
 
@@ -1593,7 +1862,6 @@ void cf_draw_text(const char* text, CF_V2 position)
 
 		spritebatch_sprite_t s = { };
 		CF_Glyph* glyph = cf_font_get_glyph(font, cp, font_size, blur);
-		if (glyph->image_id > CUTE_FONT_ID_RANGE_HI) __debugbreak();
 		if (!glyph) {
 			continue;
 		}
@@ -1620,6 +1888,7 @@ void cf_draw_text(const char* text, CF_V2 position)
 		s.geom.u.sprite.is_text = true;
 		s.geom.alpha = 1.0f;
 		s.sort_bits = draw->layers.last();
+
 		spritebatch_push(&draw->sb, s);
 
 		x += glyph->xadvance;

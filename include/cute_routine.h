@@ -104,7 +104,7 @@ struct CF_Routine
 // Begins the routine.
 #define rt_begin(routine, dt)                                                \
     do {                                                                     \
-        Routine& __rt = routine;                                             \
+        CF_Routine& __rt = routine;                                          \
         bool __mn = true;                                                    \
         float __dt = dt;                                                     \
         if (__rt.wait_elapsed > 0) __rt.wait_elapsed -= __dt;                \

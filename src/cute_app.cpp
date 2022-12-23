@@ -408,7 +408,24 @@ static void s_imgui_present()
 
 int cf_app_present()
 {
+	// Update lifteime of all text effects.
+	const char** keys = app->text_effects.keys();
+	CF_TextEffect* effects = app->text_effects.items();
+	int count = app->text_effects.count();
+	for (int i = 0; i < count;) {
+		if (!effects[i].alive) {
+			app->text_effects.remove(keys[i]);
+			--count;
+		} else {
+			effects[i].alive = false;
+			++i;
+		}
+	}
+
+	// Render any remaining geometry in the draw API.
 	cf_render_to(app->offscreen_canvas, false);
+
+	// Stretch the app canvas onto the backbuffer canvas.
 	cf_apply_canvas(app->backbuffer_canvas, true);
 	{
 		cf_apply_mesh(app->backbuffer_quad);
@@ -417,6 +434,8 @@ int cf_app_present()
 		cf_material_set_uniform_fs(app->backbuffer_material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 		cf_draw_elements();
 	}
+
+	// Dear ImGui draw.
 	if (app->using_imgui) {
 		sg_imgui_draw(&app->sg_imgui);
 		s_imgui_present();
@@ -426,12 +445,15 @@ int cf_app_present()
 	// next frame in the above call to `cf_render_to`.
 	cf_apply_canvas(app->offscreen_canvas, true);
 
+	// Flip to screen.
 	cf_commit();
 	cf_dx11_present(app->vsync);
 	if (app->options & APP_OPTIONS_OPENGL_CONTEXT) {
 		SDL_GL_SwapWindow(app->window);
 	}
 
+	// Report the number of draw calls.
+	// This is always user draw call count +1.
 	int draw_call_count = app->draw_call_count;
 	app->draw_call_count = 0;
 	return draw_call_count;

@@ -39,7 +39,7 @@ int main(int argc, const char** argv)
 		push_font_size(13);
 		push_text_wrap_width(100.0f + cosf(t) * 75.0f);
 		cf_draw_line(V2(cosf(t) * 75.0f,0), V2(cosf(t) * 75.0f,-75), 0);
-		draw_text("The quick brown fox jumps over the lazy dog. 1234567890", V2(-100,0));
+		draw_text("The quick <color=#8c4c14>brown</color> fox jumps over the lazy dog. 1234567890", V2(-100,0));
 		pop_text_wrap_width();
 		pop_font_size();
 		pop_text_clip_box();
