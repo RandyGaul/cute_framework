@@ -232,7 +232,8 @@ struct CF_App
 	uint64_t font_image_id_gen = CUTE_FONT_ID_RANGE_LO;
 	Cute::Dictionary<const char*, CF_Font*> fonts;
 	Cute::Dictionary<uint64_t, CF_Pixel*> font_pixels;
-	Cute::Dictionary<const char*, CF_TextEffect> text_effects;
+	Cute::Dictionary<const char*, CF_TextEffectState> text_effect_states;
+	Cute::Dictionary<const char*, CF_TextEffectFn*> text_effect_fns;
 };
 
 #endif // CUTE_APP_INTERNAL_H

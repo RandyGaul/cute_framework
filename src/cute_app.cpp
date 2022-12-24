@@ -409,15 +409,15 @@ static void s_imgui_present()
 int cf_app_present()
 {
 	// Update lifteime of all text effects.
-	const char** keys = app->text_effects.keys();
-	CF_TextEffect* effects = app->text_effects.items();
-	int count = app->text_effects.count();
+	const char** keys = app->text_effect_states.keys();
+	CF_TextEffectState* effect_states = app->text_effect_states.items();
+	int count = app->text_effect_states.count();
 	for (int i = 0; i < count;) {
-		if (!effects[i].alive) {
-			app->text_effects.remove(keys[i]);
+		if (!effect_states[i].alive) {
+			app->text_effect_states.remove(keys[i]);
 			--count;
 		} else {
-			effects[i].alive = false;
+			effect_states[i].alive = false;
 			++i;
 		}
 	}

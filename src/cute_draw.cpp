@@ -25,7 +25,7 @@
 #include <cute_file_system.h>
 #include <cute_defer.h>
 #include <cute_routine.h>
-//#include <cute_debug_printf.h>
+#include <cute_rnd.h>
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_png_cache_internal.h>
@@ -1541,7 +1541,7 @@ static const char* s_find_end_of_line(CF_Font* font, const char* text, float wra
 
 struct CF_CodeParseState
 {
-	CF_TextEffect* effect;
+	CF_TextEffectState* effect;
 	const char* in;
 	const char* end;
 	bool error;
@@ -1551,27 +1551,17 @@ struct CF_CodeParseState
 	void append(int ch) { sanitized.append(ch); }
 	void ltrim() { while (!done()) { int cp = *in; if (s_is_space(cp)) ++in; else break; } }
 	int next(bool trim = true) { if (trim) ltrim(); int cp; in = cf_decode_UTF8(in, &cp); return cp; }
-	int peek() { ltrim(); int cp; cf_decode_UTF8(in, &cp); return cp; }
-	void skip() { ltrim(); int cp; in = cf_decode_UTF8(in, &cp); }
+	int peek(bool trim = true) { if (trim) ltrim(); int cp; cf_decode_UTF8(in, &cp); return cp; }
+	void skip(bool trim = true) { if (trim) ltrim(); int cp; in = cf_decode_UTF8(in, &cp); }
 	bool expect(int ch) { int cp = next(); if (cp != ch) { error = true; return false; } return true; }
-	bool try_next(int ch, bool trim = true)
-	{
-		if (trim) ltrim();
-		int cp;
-		const char* next = cf_decode_UTF8(in, &cp);
-		if (cp == ch) {
-			in = next;
-			return true;
-		}
-		return false;
-	}
+	bool try_next(int ch, bool trim = true) { if (trim) ltrim(); int cp; const char* next = cf_decode_UTF8(in, &cp); if (cp == ch) { in = next; return true; } return false; }
 };
 
 static String s_parse_code_name(CF_CodeParseState* s)
 {
 	String name;
 	while (!s->done()) {
-		int cp = s->peek();
+		int cp = s->peek(false);
 		if (cp == '=' || cp == '>') {
 			return name;
 		} else if (cp == '/') {
@@ -1581,9 +1571,11 @@ static String s_parse_code_name(CF_CodeParseState* s)
 			} else {
 				s->append('/');
 			}
+		} else if (s_is_space(cp)) {
+			return name;
 		} else {
 			name.append(cp);
-			s->skip();
+			s->skip(false);
 		}
 	}
 	return name;
@@ -1645,11 +1637,13 @@ static double s_parse_number(CF_CodeParseState* s)
 		int cp = s->peek();
 		if (cp == '.') {
 			string.append('.');
+			s->skip(false);
 			is_float = true;
 		} else if (!s_is_num(cp)) {
 			break;
 		} else {
 			string.append(cp);
+			s->skip(false);
 		}
 	}
 	double result;
@@ -1667,9 +1661,14 @@ static String s_parse_string(CF_CodeParseState* s)
 	String string;
 	s->expect('"');
 	while (!s->done()) {
-		int cp = s->next();
+		int cp = s->next(false);
 		if (cp == '"') {
 			break;
+		} else if (cp == '/') {
+			if (s->peek(false) == '"') {
+				string.append('"');
+				s->skip();
+			}
 		} else {
 			string.append(cp);
 		}
@@ -1688,7 +1687,7 @@ static CF_TextCodeVal s_parse_code_val(CF_CodeParseState* s)
 	} else if (cp == '"') {
 		String string = s_parse_string(s);
 		val.type = CF_TEXT_CODE_VAL_TYPE_STRING;
-		val.u.string = string;
+		val.u.string = sintern(string.c_str());
 	} else {
 		double number = s_parse_number(s);
 		val.type = CF_TEXT_CODE_VAL_TYPE_NUMBER;
@@ -1700,43 +1699,93 @@ static CF_TextCodeVal s_parse_code_val(CF_CodeParseState* s)
 static void s_parse_code(CF_CodeParseState* s)
 {
 	CF_TextCode code = { };
-	code.pop = s->try_next('/');
+	bool finish = s->try_next('/');
 	bool first = true;
 	while (!s->done()) {
-		String name = s_parse_code_name(s);
+		const char* name = sintern(s_parse_code_name(s).c_str());
 		if (first) {
 			first = false;
-			if (name == "color") {
-				code.type = CF_TEXT_CODE_TYPE_COLOR;
-				if (!code.pop) {
-					s->expect('=');
-					code.color = s_parse_color(s);
-				}
-			} else if (name == "shake") {
-				code.type = CF_TEXT_CODE_TYPE_SHAKE;
-			} else if (name == "fade") {
-				code.type = CF_TEXT_CODE_TYPE_FADE;
-			} else if (name == "wave") {
-				code.type = CF_TEXT_CODE_TYPE_WAVE;
-			} else if (name == "strike") {
-				code.type = CF_TEXT_CODE_TYPE_STRIKE;
-			}
-		} else {
-			if (s->try_next('=')) {
-				CF_TextCodeVal val = s_parse_code_val(s);
-				s->effect->env.insert(sintern(name.c_str()), val);
-			}
+			code.effect_name = name;
+			code.fn = app->text_effect_fns.find(name);
+		}
+		if (s->try_next('=')) {
+			CF_TextCodeVal val = s_parse_code_val(s);
+			code.params.insert(name, val);
 		}
 		if (s->try_next('>')) {
 			break;
 		}
 	}
 	code.index_in_string = s->sanitized.len();
-	s->effect->codes.add(code);
+	if (finish) {
+		bool success = s->effect->parse_finish(code.effect_name, code.index_in_string);
+		// TODO - Error handling.
+	} else {
+		s->effect->parse_add(code);
+	}
 }
 
-static void s_parse_codes(CF_TextEffect* effect, const char* text)
+static bool s_text_fx_color(CF_TextEffect* effect)
 {
+	CF_Color c = effect->get_color("color");
+	effect->color = c;
+	return true;
+}
+
+static bool s_text_fx_shake(CF_TextEffect* effect)
+{
+	double freq = effect->get_number("freq", 35);
+	int seed = (int)(effect->elapsed * freq);
+	float x = (float)effect->get_number("x", 2);
+	float y = (float)effect->get_number("y", 2);
+	CF_Rnd rnd = cf_rnd_seed(seed);
+	v2 offset = V2(rnd_next_range(rnd, -x, y), rnd_next_range(rnd, -x, y));
+	effect->q0 += offset;
+	effect->q1 += offset;
+	return true;
+}
+
+static bool s_text_fx_fade(CF_TextEffect* effect)
+{
+	double speed = effect->get_number("speed", 2);
+	double span = effect->get_number("span", 5);
+	effect->opacity = cosf((float)(effect->elapsed * speed + effect->index_into_effect / span)) * 0.5f + 0.5f;
+	return true;
+}
+
+static bool s_text_fx_wave(CF_TextEffect* effect)
+{
+	double speed = effect->get_number("speed", 5);
+	double span = effect->get_number("span", 10);
+	double height = effect->get_number("height", 5);
+	float offset = (cosf((float)(effect->elapsed * speed + effect->index_into_effect / span)) * 0.5f + 0.5f) * (float)height;
+	effect->q0.y += offset;
+	effect->q1.y += offset;
+	return true;
+}
+
+static bool s_text_fx_strike(CF_TextEffect* effect)
+{
+	if (!effect->on_finish()) {
+		v2 hw = V2((float)effect->xadvance, 0) * 0.5f;
+		cf_draw_line(effect->center - hw, effect->center + hw, 0);
+	}
+	return true;
+}
+
+static void s_parse_codes(CF_TextEffectState* effect, const char* text)
+{
+	// Register built-in text effects.
+	static bool init = false;
+	if (!init) {
+		init = true;
+		cf_text_effect_register("color", s_text_fx_color);
+		cf_text_effect_register("shake", s_text_fx_shake);
+		cf_text_effect_register("fade", s_text_fx_fade);
+		cf_text_effect_register("wave", s_text_fx_wave);
+		cf_text_effect_register("strike", s_text_fx_strike);
+	}
+
 	CF_CodeParseState state = { };
 	CF_CodeParseState* s = &state;
 	s->effect = effect;
@@ -1762,26 +1811,26 @@ void cf_draw_text(const char* text, CF_V2 position)
 	if (!font) return;
 
 	// Cache effect state key'd by input text pointer.
-	CF_TextEffect* effect = app->text_effects.try_find(text);
-	if (!effect) {
-		effect = app->text_effects.insert(text);
-		effect->hash = fnv1a(text, (int)CUTE_STRLEN(text) + 1);
-		s_parse_codes(effect, text);
+	CF_TextEffectState* effect_state = app->text_effect_states.try_find(text);
+	if (!effect_state) {
+		effect_state = app->text_effect_states.insert(text);
+		effect_state->hash = fnv1a(text, (int)CUTE_STRLEN(text) + 1);
+		s_parse_codes(effect_state, text);
 	} else {
 		uint64_t h = fnv1a(text, (int)CUTE_STRLEN(text) + 1);
-		if (effect->hash != h) {
+		if (effect_state->hash != h) {
 			// Contents have changed, re-parse the whole thing.
-			app->text_effects.remove(text);
-			effect = app->text_effects.insert(text);
-			effect->hash = h;
-			s_parse_codes(effect, text);
+			app->text_effect_states.remove(text);
+			effect_state = app->text_effect_states.insert(text);
+			effect_state->hash = h;
+			s_parse_codes(effect_state, text);
 		}
 	}
-	effect->alive = true;
-	effect->elapsed += CF_DELTA_TIME;
+	effect_state->alive = true;
+	effect_state->elapsed += CF_DELTA_TIME;
 
 	// Use the sanitized string for rendering. This excludes all text codes.
-	text = effect->sanitized.c_str();
+	text = effect_state->sanitized.c_str();
 
 	// Gather up all state required for rendering.
 	float font_size = draw->font_sizes.last();
@@ -1794,52 +1843,54 @@ void cf_draw_text(const char* text, CF_V2 position)
 	int cp_prev = 0;
 	int cp = 0;
 	const char* end_of_line = NULL;
+	float h = (font->ascent + font->descent) * scale;
 	float x = position.x;
-	float y = position.y - (font->ascent + font->descent) * scale;
+	float y = position.y - h;
 	int index = 0;
 	int code_index = 0;
 
-	// Performs any in-text codes.
+	// Manages lifetimes of text effects.
 	// Used whenever going to the next character in the sanitized string.
-	auto do_codes = [&]() {
-		if (code_index < effect->codes.count()) {
-			CF_TextCode code = effect->codes[code_index];
-			if (index == code.index_in_string) {
+	auto effect_lifetimes = [&]() {
+		// Spawn new effects.
+		if (code_index < effect_state->codes.count()) {
+			CF_TextCode* code = effect_state->codes + code_index;
+			if (index == code->index_in_string) {
 				++code_index;
-				switch (code.type) {
-				case CF_TEXT_CODE_TYPE_COLOR:
-					if (code.pop) {
-						draw_pop_color();
-					} else {
-						draw_push_color(code.color);
-					}
-					break;
-
-				case CF_TEXT_CODE_TYPE_SHAKE:
-					break;
-
-				case CF_TEXT_CODE_TYPE_FADE:
-					break;
-
-				case CF_TEXT_CODE_TYPE_WAVE:
-					break;
-
-				case CF_TEXT_CODE_TYPE_STRIKE:
-					break;
-
-				case CF_TEXT_CODE_TYPE_USER:
-					break;
-				}
+				CF_TextEffect effect = { };
+				effect.effect_name = code->effect_name;
+				effect.index_into_string = code->index_in_string;
+				effect.index_into_effect = 0;
+				effect.glyph_count = code->glyph_count;
+				effect.elapsed = effect_state->elapsed;
+				effect.params = &code->params;
+				effect.fn = code->fn;
+				effect_state->effects.add(effect);
 			}
 		}
+		// Cleanup finished effects.
+		for (int i = 0; i < effect_state->effects.count();) {
+			CF_TextEffect* effect = effect_state->effects + i;
+			if (effect->index_into_string + effect->glyph_count + 1 == index) {
+				effect->index_into_effect = index - effect->index_into_string - 1;
+				effect->fn(effect); // Signal we're done (one past the end).
+				effect_state->effects.unordered_remove(i);
+			} else {
+				 ++i;
+			}
+		}
+	};
+
+	auto next = [&]() {
+		text = cf_decode_UTF8(text, &cp);
+		effect_lifetimes();
 		++index;
 	};
 
 	while (*text) {
 		cp_prev = cp;
 		const char* prev_text = text;
-		text = cf_decode_UTF8(text, &cp);
-		do_codes();
+		next();
 
 		// Word wrapping logic.
 		if (!end_of_line) {
@@ -1855,8 +1906,8 @@ void cf_draw_text(const char* text, CF_V2 position)
 			// Skip whitespace at the beginning of new lines.
 			while (cp) {
 				cp = *text;
-				if (cp == '\n') { ++text; do_codes(); break; }
-				else if (s_is_space(cp)) { ++text; do_codes(); }
+				if (cp == '\n') { next(); break; }
+				else if (s_is_space(cp)) { next(); }
 				else break;
 			}
 
@@ -1869,11 +1920,16 @@ void cf_draw_text(const char* text, CF_V2 position)
 			continue;
 		}
 
+		// Prepare a sprite struct for rendering.
+		bool visible = glyph->visible;
+		float xadvance = glyph->xadvance;
 		s.image_id = glyph->image_id;
 		s.w = glyph->w;
 		s.h = glyph->h;
 		s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
 		s.geom.u.sprite;
+		s.geom.alpha = 1.0f;
+		CF_Color color = draw->colors.last();
 
 		uint64_t kern_key = CF_KERN_KEY(cp_prev, cp);
 		v2 kern = V2(cf_font_get_kern(font, font_size, cp_prev, cp), 0);
@@ -1881,21 +1937,62 @@ void cf_draw_text(const char* text, CF_V2 position)
 		v2 q0 = glyph->q0 + V2(x,y) + kern - pad;
 		v2 q1 = glyph->q1 + V2(x,y) + kern + pad;
 
-		s.geom.u.sprite.p0 = mul(draw->cam, V2(q0.x, q1.y));
-		s.geom.u.sprite.p1 = mul(draw->cam, V2(q1.x, q1.y));
-		s.geom.u.sprite.p2 = mul(draw->cam, V2(q1.x, q0.y));
-		s.geom.u.sprite.p3 = mul(draw->cam, V2(q0.x, q0.y));
-		s.geom.u.sprite.c = premultiply(to_pixel(draw->colors.last()));
-		s.geom.u.sprite.clip = make_aabb(mul(draw->cam, clip.min), mul(draw->cam, clip.max));
-		s.geom.u.sprite.do_clipping = do_clipping;
-		s.geom.u.sprite.is_text = true;
-		s.geom.alpha = 1.0f;
-		s.sort_bits = draw->layers.last();
+		// Apply any active custom text effects.
+		for (int i = 0; i < effect_state->effects.count();) {
+			CF_TextEffect* effect = effect_state->effects + i;
+			CF_TextEffectFn* fn = effect->fn;
+			bool keep_going = true;
+			if (fn) {
+				effect->index_into_effect = index - effect->index_into_string - 1;
+				effect->center = V2(x + xadvance * 0.5f, y + h * 0.5f);
+				effect->q0 = q0;
+				effect->q1 = q1;
+				effect->w = s.w;
+				effect->h = s.h;
+				effect->color = color;
+				effect->opacity = s.geom.alpha;
+				effect->xadvance = xadvance;
+				effect->visible = visible;
+				keep_going = fn(effect);
+				q0 = effect->q0;
+				q1 = effect->q1;
+				color = effect->color;
+				s.geom.alpha = effect->opacity;
+				xadvance = effect->xadvance;
+				visible = effect->visible;
+				if (!keep_going) {
+					effect_state->effects.unordered_remove(i);
+				}
+			}
+			if (keep_going) {
+				++i;
+			}
+		}
 
-		spritebatch_push(&draw->sb, s);
+		int c = draw->colors.count();
 
-		x += glyph->xadvance;
+		// Actually render the sprite.
+		if (visible) {
+			s.geom.u.sprite.p0 = mul(draw->cam, V2(q0.x, q1.y));
+			s.geom.u.sprite.p1 = mul(draw->cam, V2(q1.x, q1.y));
+			s.geom.u.sprite.p2 = mul(draw->cam, V2(q1.x, q0.y));
+			s.geom.u.sprite.p3 = mul(draw->cam, V2(q0.x, q0.y));
+			s.geom.u.sprite.c = premultiply(to_pixel(color));
+			s.geom.u.sprite.clip = make_aabb(mul(draw->cam, clip.min), mul(draw->cam, clip.max));
+			s.geom.u.sprite.do_clipping = do_clipping;
+			s.geom.u.sprite.is_text = true;
+			s.sort_bits = draw->layers.last();
+
+			spritebatch_push(&draw->sb, s);
+		}
+
+		x += xadvance;
 	}
+}
+
+void cf_text_effect_register(const char* name, CF_TextEffectFn* fn)
+{
+	app->text_effect_fns.insert(sintern(name), fn);
 }
 
 void cf_draw_push_layer(int layer)

@@ -39,14 +39,14 @@ int main(int argc, const char** argv)
 		push_font_size(13);
 		push_text_wrap_width(100.0f + cosf(t) * 75.0f);
 		cf_draw_line(V2(cosf(t) * 75.0f,0), V2(cosf(t) * 75.0f,-75), 0);
-		draw_text("The quick <color=#8c4c14>brown</color> fox jumps over the lazy dog. 1234567890", V2(-100,0));
+		draw_text("The <shake freq=50 x=2.5 y=1>quick</shake> <color=#8c4c14>brown fox</color> jumps over the lazy dog. 1234567890", V2(-100,0));
 		pop_text_wrap_width();
 		pop_font_size();
 		pop_text_clip_box();
 
 		push_font_size(26);
 		draw_push_color(make_color(0x55b6f2ff));
-		draw_text("Some bigger and blue text.", V2(-100,-30));
+		draw_text("<strike>Some <wave>bigger and blue</wave> text.</strike>", V2(-100,-30));
 		draw_pop_color();
 		pop_font_size();
 
@@ -54,16 +54,16 @@ int main(int argc, const char** argv)
 		push_font_blur(10);
 		draw_text("glowing~", V2(-150-10,-90+10));
 		pop_font_blur();
-		draw_text("glowing~", V2(-150,-90));
+		draw_text("<fade>glowing~</fade>", V2(-150,-90));
 		pop_font_size();
 
 		push_font_size(13 * 10);
 		push_font_blur(10);
 		draw_push_color(color_black());
-		draw_text("shadow", V2(-150-10-2.5f,-200+5));
+		draw_text("shadow", V2(-150-10-2.5f,-175+5));
 		draw_pop_color();
 		pop_font_blur();
-		draw_text("shadow", V2(-150,-200));
+		draw_text("shadow", V2(-150,-175));
 		pop_font_size();
 
 		String draws;

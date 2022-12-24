@@ -61,27 +61,6 @@ float cf_font_get_kern(CF_Font* font, float font_size, int codepoint0, int codep
 
 #define CF_KERN_KEY(cp0, cp1) (cp0 < cp1 ? ((uint64_t)cp0) << 32 | ((uint64_t)cp1) : ((uint64_t)cp1) << 32 | ((uint64_t)cp0))
 
-enum CF_TextCodeType
-{
-	CF_TEXT_CODE_TYPE_COLOR,
-	CF_TEXT_CODE_TYPE_SHAKE,
-	CF_TEXT_CODE_TYPE_FADE,
-	CF_TEXT_CODE_TYPE_WAVE,
-	CF_TEXT_CODE_TYPE_STRIKE,
-	CF_TEXT_CODE_TYPE_USER,
-};
-
-struct CF_TextCode
-{
-	CF_TextCodeType type;
-	int index_in_string;
-	bool pop;
-
-	CF_Color color;
-	CF_V2 offset;
-	float opacity;
-};
-
 enum CF_TextCodeValType
 {
 	CF_TEXT_CODE_VAL_TYPE_NONE,
@@ -101,14 +80,94 @@ struct CF_TextCodeVal
 	} u;
 };
 
+typedef bool (CF_TextEffectFn)(struct CF_TextEffect* effect);
+
+struct CF_TextCode
+{
+	const char* effect_name;
+	int index_in_string;
+	int glyph_count;
+	CF_TextEffectFn* fn;
+	Cute::Dictionary<const char*, CF_TextCodeVal> params;
+};
+
 struct CF_TextEffect
+{
+	const char* effect_name;
+	int index_into_string;
+	int index_into_effect;
+	int glyph_count;
+	float elapsed;
+	CF_V2 center;
+	CF_V2 q0, q1;
+	int w, h;
+	CF_Color color;
+	float opacity;
+	float xadvance;
+	bool visible;
+	const Cute::Dictionary<const char*, CF_TextCodeVal>* params;
+	CF_TextEffectFn* fn;
+
+	CUTE_INLINE bool on_start() const { return index_into_effect == 0; }
+	CUTE_INLINE bool on_finish() const { return index_into_effect == glyph_count; }
+
+	CUTE_INLINE double get_number(const char* key, double default_val = 0)
+	{
+		const CF_TextCodeVal* v = params->try_find(sintern(key));
+		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_NUMBER) {
+			return v->u.number;
+		} else {
+			return default_val;
+		}
+	}
+	
+	CUTE_INLINE CF_Color get_color(const char* key, CF_Color default_val = cf_color_white())
+	{
+		const CF_TextCodeVal* v = params->try_find(sintern(key));
+		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_COLOR) {
+			return v->u.color;
+		} else {
+			return default_val;
+		}
+	}
+	
+	CUTE_INLINE const char* get_string(const char* key, const char* default_val = NULL)
+	{
+		const CF_TextCodeVal* v = params->try_find(sintern(key));
+		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_STRING) {
+			return v->u.string;
+		} else {
+			return default_val;
+		}
+	}
+};
+
+struct CF_TextEffectState
 {
 	Cute::String sanitized;
 	uint64_t hash = 0;
 	float elapsed = 0;
-	bool alive = 0;
-	Cute::Dictionary<const char*, CF_TextCodeVal> env;
+	bool alive = false;
+	Cute::Array<CF_TextEffect> effects;
 	Cute::Array<CF_TextCode> codes;
+	Cute::Array<CF_TextCode> parse_stack;
+
+	CUTE_INLINE void parse_add(CF_TextCode code) { parse_stack.add(code); }
+	CUTE_INLINE bool parse_finish(const char* effect_name, int final_index)
+	{
+		for (int i = parse_stack.count() - 1; i >= 0; --i) {
+			if (parse_stack[i].effect_name == effect_name) {
+				CF_TextCode code = parse_stack[i];
+				code.glyph_count = final_index - code.index_in_string;
+				parse_stack.unordered_remove(i);
+				codes.add(code);
+				return true;
+			}
+		}
+		return false;
+	}
 };
+
+void cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
 
 #endif // CUTE_FONT_INTERNAL_H
