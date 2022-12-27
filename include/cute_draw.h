@@ -151,7 +151,7 @@ typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
  * automatically. You only need to fetch them with the appropriate cf_text_effect_get*** function.
  * 
  * Be sure to carefully read the documentation at CF_TextEffect to see which kinds of
- * fields are read-only, and which are writeable.
+ * fields are read-only, and which are modifiable.
  */
 CUTE_API void CUTE_CALL cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
 CUTE_API bool CUTE_CALL cf_text_effect_on_start(CF_TextEffect* fx);
