@@ -59,7 +59,7 @@ CF_Font* cf_font_get(const char* font_name);
 CF_Glyph* cf_font_get_glyph(CF_Font* font, int codepoint, float font_size, int blur);
 float cf_font_get_kern(CF_Font* font, float font_size, int codepoint0, int codepoint1);
 
-#define CF_KERN_KEY(cp0, cp1) (cp0 < cp1 ? ((uint64_t)cp0) << 32 | ((uint64_t)cp1) : ((uint64_t)cp1) << 32 | ((uint64_t)cp0))
+#define CF_KERN_KEY(cp0, cp1) (((uint64_t)cp0) << 32 | ((uint64_t)cp1))
 
 enum CF_TextCodeValType
 {

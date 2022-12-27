@@ -13,8 +13,12 @@ int main(int argc, const char** argv)
 	draw_push_antialias(true);
 	make_font("sample_data/ProggyClean.ttf", "ProggyClean");
 	push_font("ProggyClean");
+	make_font("sample_data/dengxian.ttf", "dengxian");
 	set_fixed_timestep();
 	int draw_calls = 0;
+
+	char* sample = fs_read_entire_file_to_memory_and_nul_terminate("sample_data/sample.txt");
+	CUTE_DEFER(CUTE_FREE(sample));
 
 	while (app_is_running()) {
 		app_update();
@@ -39,10 +43,16 @@ int main(int argc, const char** argv)
 		push_font_size(13);
 		push_text_wrap_width(100.0f + cosf(t) * 75.0f);
 		cf_draw_line(V2(cosf(t) * 75.0f,0), V2(cosf(t) * 75.0f,-75), 0);
-		draw_text("The <shake freq=50 x=2.5 y=1>quick</shake> <color=#8c4c14>brown fox</color> jumps over the lazy dog. 1234567890", V2(-100,0));
+		draw_text("The <shake freq=50 x=2.5 y=1>quick</shake> <color=#8c4c14>brown fox</color> jumps over\nthe lazy dog. 1234567890", V2(-100,0));
 		pop_text_wrap_width();
 		pop_font_size();
 		pop_text_clip_box();
+
+		push_font("dengxian");
+		push_font_size(30);
+		draw_text(sample, V2(-300,200));
+		pop_font_size();
+		pop_font();
 
 		push_font_size(26);
 		draw_push_color(make_color(0x55b6f2ff));

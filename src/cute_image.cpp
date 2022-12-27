@@ -34,11 +34,10 @@ CUTE_STATIC_ASSERT(sizeof(CF_ImageIndexed) == sizeof(cp_indexed_image_t), "Must 
 
 CF_Result cf_image_load_png(const char* path, CF_Image* img)
 {
-	void* data;
 	size_t sz;
-	CF_Result err = cf_fs_read_entire_file_to_memory(path, &data, &sz);
-	if (cf_is_error(err)) return err;
-	err = cf_image_load_png_mem(data, (int)sz, img);
+	void* data = cf_fs_read_entire_file_to_memory(path, &sz);
+	if (!data) return cf_result_error("Unable to open png file.");
+	CF_Result err = cf_image_load_png_mem(data, (int)sz, img);
 	CUTE_FREE(data);
 	return err;
 }
@@ -66,10 +65,9 @@ void cf_image_free(CF_Image* img)
 
 CF_Result cf_image_load_png_indexed(const char* path, CF_ImageIndexed* img)
 {
-	void* data;
 	size_t sz;
-	CF_Result err = cf_fs_read_entire_file_to_memory(path, &data, &sz);
-	if (cf_is_error(err)) return err;
+	void* data = cf_fs_read_entire_file_to_memory(path, &sz);
+	if (!data) return cf_result_error("Unable to open png file.");
 	return cf_image_load_png_mem_indexed(data, (int)sz, img);
 }
 

@@ -120,9 +120,8 @@ CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite)
 	}
 
 	// Load the aseprite file.
-	void* data = NULL;
 	size_t sz = 0;
-	cf_fs_read_entire_file_to_memory(aseprite_path, &data, &sz);
+	void* data = cf_fs_read_entire_file_to_memory(aseprite_path, &sz);
 	if (!data) return cf_result_error("Unable to open ase file at `aseprite_path`.");
 	CUTE_DEFER(CUTE_FREE(data));
 	ase_t* ase = cute_aseprite_load_from_memory(data, (int)sz, NULL);

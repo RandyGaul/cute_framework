@@ -1132,12 +1132,10 @@ void cf_make_font_mem(void* data, int size, const char* font_name, CF_Result* re
 
 void cf_make_font(const char* path, const char* font_name, CF_Result* result_out)
 {
-	void* data;
 	size_t size;
-	Result err = fs_read_entire_file_to_memory(path, &data, &size);
-	if (is_error(err)) {
-		CUTE_FREE(data);
-		if (result_out) *result_out = err;
+	void* data = fs_read_entire_file_to_memory(path, &size);
+	if (!data) {
+		if (result_out) *result_out = cf_result_error("Unable to open font file.");
 		return;
 	}
 	cf_make_font_mem(data, (int)size, font_name, result_out);
@@ -1325,7 +1323,7 @@ CF_Glyph* cf_font_get_glyph(CF_Font* font, int codepoint, float font_size, int b
 			// This codepoint doesn't exist in this font.
 			// Try and use a backup glyph instead.
 			// TODO
-			CUTE_ASSERT(false);
+			glyph_index = 0xFFFD;
 		}
 		glyph = font->glyphs.insert(glyph_key);
 		glyph->index = glyph_index;
@@ -1892,6 +1890,12 @@ void cf_draw_text(const char* text, CF_V2 position)
 		const char* prev_text = text;
 		next();
 
+		if (cp == '\n') {
+			x = position.x;
+			y -= line_height;
+			continue;
+		}
+
 		// Word wrapping logic.
 		if (!end_of_line) {
 			end_of_line = s_find_end_of_line(font, prev_text, wrap_w);
@@ -1906,7 +1910,11 @@ void cf_draw_text(const char* text, CF_V2 position)
 			// Skip whitespace at the beginning of new lines.
 			while (cp) {
 				cp = *text;
-				if (cp == '\n') { next(); break; }
+				if (cp == '\n') {
+					y -= line_height;
+					next();
+					break;
+				}
 				else if (s_is_space(cp)) { next(); }
 				else break;
 			}

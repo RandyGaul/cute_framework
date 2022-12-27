@@ -395,37 +395,32 @@ size_t cf_fs_size(CF_File* file)
 	return (size_t)PHYSFS_fileLength((PHYSFS_file*)file);
 }
 
-CF_Result cf_fs_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size)
+void* cf_fs_read_entire_file_to_memory(const char* virtual_path, size_t* size)
 {
-	CUTE_ASSERT(data_ptr);
 	CF_File* file = cf_fs_open_file_for_read(virtual_path);
-	void* data = NULL;
-	if (!file) return cf_result_error(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+	if (!file) return NULL;
 	size_t sz = cf_fs_size(file);
-	data = CUTE_ALLOC(sz);
+	void* data = CUTE_ALLOC(sz);
 	size_t sz_read = cf_fs_read(file, data, sz);
 	CUTE_ASSERT(sz == sz_read);
-	*data_ptr = data;
 	if (size) *size = sz_read;
 	cf_fs_close(file);
-	return cf_result_success();
+	return data;
 }
 
-CF_Result cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size)
+char* cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, size_t* size)
 {
-	CUTE_ASSERT(data_ptr);
 	CF_File* file = cf_fs_open_file_for_read(virtual_path);
 	void* data = NULL;
-	if (!file) return cf_result_error(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
+	if (!file) return NULL;
 	size_t sz = cf_fs_size(file) + 1;
 	data = CUTE_ALLOC(sz);
 	size_t sz_read = cf_fs_read(file, data, sz);
 	CUTE_ASSERT(sz == sz_read + 1);
-	*data_ptr = data;
 	((char*)data)[sz - 1] = 0;
 	if (size) *size = sz;
 	cf_fs_close(file);
-	return cf_result_success();
+	return (char*)data;
 }
 
 CF_Result cf_fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size)

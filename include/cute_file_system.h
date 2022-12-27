@@ -440,13 +440,13 @@ CUTE_API size_t CUTE_CALL cf_fs_size(CF_File* file);
  * Reads an entire file into a buffer of memory, and returns the buffer to you. Call `CUTE_FREE`
  * on it when done.
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size /*= NULL*/ /*= NULL*/);
+CUTE_API void* CUTE_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, size_t* size);
 
 /**
  * Reads an entire file into a buffer of memory, and returns the buffer to you as a nul-term-
  * inated C string. Call `CUTE_FREE` on it when done.
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size /*= NULL*/ /*= NULL*/);
+CUTE_API char* CUTE_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, size_t* size);
 
 /**
  * Writes an entire buffer of data to a file as binary data.
@@ -525,8 +525,8 @@ CUTE_INLINE Result fs_eof(File* file) { return cf_fs_eof(file); }
 CUTE_INLINE size_t fs_tell(File* file) { return cf_fs_tell(file); }
 CUTE_INLINE Result fs_seek(File* file, size_t position) { return cf_fs_seek(file, position); }
 CUTE_INLINE size_t fs_size(File* file) { return cf_fs_size(file); }
-CUTE_INLINE Result fs_read_entire_file_to_memory(const char* virtual_path, void** data_ptr, size_t* size = NULL) { return cf_fs_read_entire_file_to_memory(virtual_path, data_ptr, size); }
-CUTE_INLINE Result fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, void** data_ptr, size_t* size = NULL) { return cf_fs_read_entire_file_to_memory_and_nul_terminate(virtual_path, data_ptr, size); }
+CUTE_INLINE void* fs_read_entire_file_to_memory(const char* virtual_path, size_t* size = NULL) { return cf_fs_read_entire_file_to_memory(virtual_path, size); }
+CUTE_INLINE char* fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, size_t* size = NULL) { return cf_fs_read_entire_file_to_memory_and_nul_terminate(virtual_path, size); }
 CUTE_INLINE Result fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size) { return cf_fs_write_entire_buffer_to_file(virtual_path, data, size); }
 CUTE_INLINE const char* fs_get_backend_specific_error_message() { return cf_fs_get_backend_specific_error_message(); }
 CUTE_INLINE const char* fs_get_user_directory(const char* org, const char* app) { return cf_fs_get_user_directory(org, app); }
