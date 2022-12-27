@@ -53,6 +53,7 @@ struct CF_Font
 	int descent;
 	int line_gap;
 	int line_height;
+	int width;
 	int height;
 };
 

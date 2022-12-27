@@ -89,30 +89,70 @@ CUTE_API float CUTE_CALL cf_peek_text_wrap_width();
 CUTE_API void CUTE_CALL cf_push_text_clip_box(CF_Aabb clip_box);
 CUTE_API CF_Aabb CUTE_CALL cf_pop_text_clip_box();
 CUTE_API CF_Aabb CUTE_CALL cf_peek_text_clip_box();
+CUTE_API void CUTE_CALL cf_push_text_vertical_layout(bool layout_vertically);
+CUTE_API bool CUTE_CALL cf_pop_text_vertical_layout();
+CUTE_API bool CUTE_CALL cf_peek_text_vertical_layout();
 CUTE_API float CUTE_CALL cf_text_width(const char* text);
 CUTE_API float CUTE_CALL cf_text_height(const char* text);
 CUTE_API void CUTE_CALL cf_draw_text(const char* text, CF_V2 position);
 
+// Fields marked with a star * can be modified in `CF_TextEffectFn` for
+// custom text effects.
 typedef struct CF_TextEffect
 {
-	const char* effect_name;
-	int character;
-	int index_into_string;
-	int index_into_effect;
-	int glyph_count;
-	float elapsed;
-	CF_V2 center;
-	CF_V2 q0, q1;
-	int w, h;
-	CF_Color color;
-	float opacity;
-	float xadvance;
-	bool visible;
-	float font_size;
+	const char* effect_name; // Name of this effect, as registered by `cf_text_effect_register`.
+	int character;           // UTF8 codepoint of the current character.
+	int index_into_string;   // The index into the string in `cf_draw_text` currently affected.
+	int index_into_effect;   // Starts at 0 and increments for each character affected.
+	int glyph_count;         // The number of glyphs spanning the entire effect.
+	float elapsed;           // How long this effect has persisted for.
+	CF_V2 center;            // Center of this glyp's space -- not the same as the center of the glyph quad.
+	CF_V2 q0, q1;            // * This glyph's renderable quad. q0 is the min vertex, while q1 is the max vertex.
+	int w, h;                // Width and height of the glyph.
+	CF_Color color;          // * The color to render this glyph with.
+	float opacity;           // * The opacity to render this glyph with.
+	float xadvance;          // * How far the text will advance along the x-axis (only applicable for non-vertical layout mode).
+	bool visible;            // * Whether or not this glyph is visibly rendered (e.g. not visible for spaces ' ').
+	float font_size;         // The last size passed to `cf_push_font_size`.
 } CF_TextEffect;
-
 typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
 
+
+/**
+ * Custom text effects can be registered here. Each text effect will have this callback
+ * called once per glyph during rendering. There are a few built-in text effects. The
+ * below table shows each effect name and their parameters. Each parameter has a default.
+ * 
+ *  - color
+ *     + example : "Here's some <color=#2c5ee8>blue text</color>."
+ *     +         : default (white) - The color to render text with.
+ *  - shake
+ *     + example : "<shake freq=30 x=3 y=3>This text is all shaky.</shake>"
+ *     + example : "<shake y=20>Shake this text with default values, but override for a big height.</shake>"
+ *     + freq    : default (35)    - Number of times per second to shake.
+ *     + x       : default (2)     - Max +/- distance to shake on x-axis.
+ *     + y       : default (2)     - Max +/- distance to shake on y-axis.
+ *  - fade
+ *     + example : "<fade speed=10 span=3>Fading some text like a ghost~</fade>"
+ *     + example : "<fade>Fading some text like a ghost~</fade>"
+ *     + speed   : default (2)     - Number of times per second to find in and then out.
+ *     + span    : default (5)     - Number of characters long for the fade to loop.
+ *  - wave
+ *     + example : "<wave>Wobbly wave text.</wave>"
+ *     + speed   : default (5)     - Number of times per second to bob up and down.
+ *     + span    : default (10)    - Number of characters long for the wave to loop.
+ *     + height  : default (5)     - How many characters high the wave will go.
+ *  - strike
+ *     + example : "<strike>Strikethrough</strike>"
+ *     + example : "<strike=10>Thick Strikethrough</strike>"
+ *     +         : default (font_height / 20) - The thickness of the strike line.
+ * 
+ * When registering a custom text effect, any parameters in the string will be stored for you
+ * automatically. You only need to fetch them with the appropriate cf_text_effect_get*** function.
+ * 
+ * Be sure to carefully read the documentation at CF_TextEffect to see which kinds of
+ * fields are read-only, and which are writeable.
+ */
 CUTE_API void CUTE_CALL cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
 CUTE_API bool CUTE_CALL cf_text_effect_on_start(CF_TextEffect* fx);
 CUTE_API bool CUTE_CALL cf_text_effect_on_finish(CF_TextEffect* fx);

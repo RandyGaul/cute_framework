@@ -1117,6 +1117,10 @@ void cf_make_font_mem(void* data, int size, const char* font_name, CF_Result* re
 	font->line_height = font->ascent - font->descent + font->line_gap;
 	font->height = font->ascent - font->descent;
 
+	int x0, y0, x1, y1;
+	stbtt_GetFontBoundingBox(&font->info, &x0, &y0, &x1, &y1);
+	font->width = x1 - x0;
+
 	// Build kerning table.
 	Array<stbtt_kerningentry> table_array;
 	int table_length = stbtt_GetKerningTableLength(&font->info);
@@ -1437,6 +1441,25 @@ CF_Aabb cf_pop_text_clip_box()
 CF_Aabb cf_peek_text_clip_box()
 {
 	return draw->text_clip_boxes.last();
+}
+
+void cf_push_text_vertical_layout(bool layout_vertically)
+{
+	draw->vertical.add(layout_vertically);
+}
+
+bool cf_pop_text_vertical_layout()
+{
+	if (draw->vertical.count() > 1) {
+		return draw->vertical.pop();
+	} else {
+		return draw->vertical.last();
+	}
+}
+
+bool cf_peek_text_vertical_layout()
+{
+	return draw->vertical.last();
 }
 
 float cf_text_width(const char* text)
@@ -1769,6 +1792,7 @@ static bool s_text_fx_strike(TextEffect* effect)
 	if (!s_is_space(effect->character) || effect->character == ' ') {
 		v2 hw = V2((float)effect->xadvance, 0) * 0.5f;
 		float h = effect->font_size / 20.0f;
+		h = (float)effect->get_number("strike", (double)h);
 		CF_Strike strike;
 		strike.p0 = effect->center - hw;
 		strike.p1 = effect->center + hw;
@@ -1854,8 +1878,10 @@ void cf_draw_text(const char* text, CF_V2 position)
 	int cp = 0;
 	const char* end_of_line = NULL;
 	float h = (font->ascent + font->descent) * scale;
+	float w = font->width * scale;
 	float x = position.x;
-	float y = position.y - font->ascent * scale;
+	float initial_y = position.y - font->ascent * scale;
+	float y = initial_y;
 	int index = 0;
 	int code_index = 0;
 
@@ -1899,6 +1925,26 @@ void cf_draw_text(const char* text, CF_V2 position)
 		++index;
 	};
 
+	bool vertical = draw->vertical.last();
+
+	auto advance_to_next_glyph = [&](float xadvance = 0) {
+		if (vertical) {
+			y -= line_height;
+		} else {
+			x += xadvance;
+		}
+	};
+
+	auto apply_newline = [&]() {
+		if (vertical) {
+			x += w;
+			y = initial_y;
+		} else {
+			x = position.x;
+			y -= line_height;
+		}
+	};
+
 	// Render the string glyph-by-glyph.
 	while (*text) {
 		cp_prev = cp;
@@ -1909,8 +1955,7 @@ void cf_draw_text(const char* text, CF_V2 position)
 		CUTE_DEFER(effect_cleanup());
 
 		if (cp == '\n') {
-			x = position.x;
-			y -= line_height;
+			apply_newline();
 			continue;
 		}
 
@@ -1922,14 +1967,13 @@ void cf_draw_text(const char* text, CF_V2 position)
 		int finished_rendering_line = !(text < end_of_line);
 		if (finished_rendering_line) {
 			end_of_line = NULL;
-			x = position.x;
-			y -= line_height;
+			apply_newline();
 		
 			// Skip whitespace at the beginning of new lines.
 			while (cp) {
 				cp = *text;
 				if (cp == '\n') {
-					y -= line_height;
+					apply_newline();
 					skip_to_next();
 					break;
 				}
@@ -2012,7 +2056,7 @@ void cf_draw_text(const char* text, CF_V2 position)
 			spritebatch_push(&draw->sb, s);
 		}
 
-		x += xadvance;
+		advance_to_next_glyph(xadvance);
 	}
 
 	// Draw strike-lines just after the text.
