@@ -85,6 +85,12 @@ struct DrawVertex
 	uint8_t unused1; // a
 };
 
+struct CF_Strike
+{
+	CF_V2 p0, p1;
+	float thickness;
+};
+
 struct CF_Draw
 {
 	spritebatch_t sb;
@@ -111,6 +117,7 @@ struct CF_Draw
 	Cute::Array<int> blurs = { 0 };
 	Cute::Array<float> text_wrap_widths = { FLT_MAX };
 	Cute::Array<CF_Aabb> text_clip_boxes = { cf_make_aabb(cf_v2(-FLT_MAX, -FLT_MAX), cf_v2(FLT_MAX, FLT_MAX)) };
+	Cute::Array<CF_Strike> strikes;
 };
 
 void cf_make_draw();

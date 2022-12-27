@@ -767,6 +767,8 @@ private:
 	CUTE_INLINE void s_chki(int i) const { CUTE_ASSERT(i >= 0 && i < ssize(m_str)); }
 };
 
+CUTE_INLINE String operator+(const String& a, const String& b) { String result = a; result.append(b); return result; }
+
 /**
  * UTF8 decoder. Load it up with a string and read `.codepoint`. Call `next` to fetch the
  * next codepoint.

@@ -94,6 +94,7 @@ struct CF_TextCode
 struct CF_TextEffect
 {
 	const char* effect_name;
+	int character;
 	int index_into_string;
 	int index_into_effect;
 	int glyph_count;
@@ -105,11 +106,12 @@ struct CF_TextEffect
 	float opacity;
 	float xadvance;
 	bool visible;
+	float font_size;
 	const Cute::Dictionary<const char*, CF_TextCodeVal>* params;
 	CF_TextEffectFn* fn;
 
 	CUTE_INLINE bool on_start() const { return index_into_effect == 0; }
-	CUTE_INLINE bool on_finish() const { return index_into_effect == glyph_count; }
+	CUTE_INLINE bool on_finish() const { return index_into_effect == glyph_count - 1; }
 
 	CUTE_INLINE double get_number(const char* key, double default_val = 0)
 	{

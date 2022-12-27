@@ -36,17 +36,17 @@ int main(int argc, const char** argv)
 		static float t = 0;
 		t += DELTA_TIME;
 
-		v2 o = V2(cosf(t),sinf(t)) * 25.0f;
-		Aabb clip = make_aabb(V2(-100,-75) + o, V2(75,75) + o);
-		draw_quad(clip, 0);
-		push_text_clip_box(clip);
-		push_font_size(13);
-		push_text_wrap_width(100.0f + cosf(t) * 75.0f);
-		cf_draw_line(V2(cosf(t) * 75.0f,0), V2(cosf(t) * 75.0f,-75), 0);
-		draw_text("The <shake freq=50 x=2.5 y=1>quick</shake> <color=#8c4c14>brown fox</color> jumps over\nthe lazy dog. 1234567890", V2(-100,0));
-		pop_text_wrap_width();
-		pop_font_size();
-		pop_text_clip_box();
+		//v2 o = V2(cosf(t),sinf(t)) * 25.0f;
+		//Aabb clip = make_aabb(V2(-100,-75) + o, V2(75,75) + o);
+		//draw_quad(clip, 0);
+		//push_text_clip_box(clip);
+		//push_font_size(13);
+		//push_text_wrap_width(100.0f + cosf(t) * 75.0f);
+		//cf_draw_line(V2(cosf(t) * 75.0f,0), V2(cosf(t) * 75.0f,-75), 0);
+		//draw_text("The <shake freq=50 x=2.5 y=1>quick</shake> <color=#8c4c14>brown fox</color> jumps over\nthe lazy dog. 1234567890", V2(-100,0));
+		//pop_text_wrap_width();
+		//pop_font_size();
+		//pop_text_clip_box();
 
 		push_font("dengxian");
 		push_font_size(30);
@@ -54,33 +54,33 @@ int main(int argc, const char** argv)
 		pop_font_size();
 		pop_font();
 
-		push_font_size(26);
-		draw_push_color(make_color(0x55b6f2ff));
-		draw_text("<strike>Some <wave>bigger and blue</wave> text.</strike>", V2(-100,-30));
-		draw_pop_color();
-		pop_font_size();
-
-		push_font_size(13 * 5);
-		push_font_blur(10);
-		draw_text("glowing~", V2(-150-10,-90+10));
-		pop_font_blur();
-		draw_text("<fade>glowing~</fade>", V2(-150,-90));
-		pop_font_size();
-
-		push_font_size(13 * 10);
-		push_font_blur(10);
-		draw_push_color(color_black());
-		draw_text("shadow", V2(-150-10-2.5f,-175+5));
-		draw_pop_color();
-		pop_font_blur();
-		draw_text("shadow", V2(-150,-175));
-		pop_font_size();
-
-		String draws;
-		draws.fmt("Draw calls: %d", draw_calls);
-		push_font_size(13);
-		draw_text(draws.c_str(), V2(-w/2.0f + 10,-h/2.0f + 10));
-		pop_font_size();
+		//push_font_size(26);
+		//draw_push_color(make_color(0x55b6f2ff));
+		//draw_text("Some bigger and blue text.", V2(-150,-30));
+		//draw_pop_color();
+		//pop_font_size();
+		//
+		//push_font_size(13 * 5);
+		//push_font_blur(10);
+		//draw_text("glowing~", V2(-150-10,-90+10));
+		//pop_font_blur();
+		//draw_text("<fade>glowing~</fade>", V2(-150,-90));
+		//pop_font_size();
+		//
+		//push_font_size(13 * 10);
+		//push_font_blur(10);
+		//draw_push_color(color_black());
+		//draw_text("shadow", V2(-150-10-2.5f,-175+5));
+		//draw_pop_color();
+		//pop_font_blur();
+		//draw_text("shadow", V2(-150,-175));
+		//pop_font_size();
+		//
+		//String draws;
+		//draws.fmt("Draw calls: %d", draw_calls);
+		//push_font_size(13);
+		//draw_text(draws.c_str(), V2(-w/2.0f + 10,-h/2.0f + 10));
+		//pop_font_size();
 
 		draw_calls = app_present();
 	}

@@ -48,6 +48,8 @@ static struct CF_Draw* draw;
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb/stb_truetype.h>
 
+#include <algorithm>
+
 #define DEBUG_VERT(v, c) batch_quad(make_aabb(v, 3, 3), c)
 
 // Initial design of this API comes from Noel Berry's Blah framework here:
@@ -1543,10 +1545,11 @@ struct CF_CodeParseState
 	const char* in;
 	const char* end;
 	bool error;
+	int glyph_count;
 	String sanitized;
 
 	bool done() { return !error && in >= end; }
-	void append(int ch) { sanitized.append(ch); }
+	void append(int ch) { sanitized.append(ch); ++glyph_count; }
 	void ltrim() { while (!done()) { int cp = *in; if (s_is_space(cp)) ++in; else break; } }
 	int next(bool trim = true) { if (trim) ltrim(); int cp; in = cf_decode_UTF8(in, &cp); return cp; }
 	int peek(bool trim = true) { if (trim) ltrim(); int cp; cf_decode_UTF8(in, &cp); return cp; }
@@ -1714,7 +1717,7 @@ static void s_parse_code(CF_CodeParseState* s)
 			break;
 		}
 	}
-	code.index_in_string = s->sanitized.len();
+	code.index_in_string = s->glyph_count;
 	if (finish) {
 		bool success = s->effect->parse_finish(code.effect_name, code.index_in_string);
 		// TODO - Error handling.
@@ -1764,9 +1767,14 @@ static bool s_text_fx_wave(CF_TextEffect* effect)
 
 static bool s_text_fx_strike(CF_TextEffect* effect)
 {
-	if (!effect->on_finish()) {
+	if (!s_is_space(effect->character) || effect->character == ' ') {
 		v2 hw = V2((float)effect->xadvance, 0) * 0.5f;
-		cf_draw_line(effect->center - hw, effect->center + hw, 0);
+		float h = effect->font_size / 20.0f;
+		CF_Strike strike;
+		strike.p0 = effect->center - hw;
+		strike.p1 = effect->center + hw;
+		strike.thickness = h;
+		draw->strikes.add(strike);
 	}
 	return true;
 }
@@ -1799,6 +1807,11 @@ static void s_parse_codes(CF_TextEffectState* effect, const char* text)
 			s->append(cp);
 		}
 	}
+	std::sort(effect->codes.begin(), effect->codes.end(),
+		[](const CF_TextCode& a, const CF_TextCode&b) {
+			return a.index_in_string < b.index_in_string;
+		}
+	);
 	effect->sanitized = s->sanitized;
 }
 
@@ -1843,14 +1856,12 @@ void cf_draw_text(const char* text, CF_V2 position)
 	const char* end_of_line = NULL;
 	float h = (font->ascent + font->descent) * scale;
 	float x = position.x;
-	float y = position.y - h;
+	float y = position.y - font->ascent * scale;
 	int index = 0;
 	int code_index = 0;
 
-	// Manages lifetimes of text effects.
-	// Used whenever going to the next character in the sanitized string.
-	auto effect_lifetimes = [&]() {
-		// Spawn new effects.
+	// Called whenever text-effects need to be spawned, before going to the next glyph.
+	auto effect_spawn = [&]() {
 		if (code_index < effect_state->codes.count()) {
 			CF_TextCode* code = effect_state->codes + code_index;
 			if (index == code->index_in_string) {
@@ -1866,10 +1877,13 @@ void cf_draw_text(const char* text, CF_V2 position)
 				effect_state->effects.add(effect);
 			}
 		}
-		// Cleanup finished effects.
+	};
+
+	// Called whenever text-effects need to be cleaned up, when going to the next glyph.
+	auto effect_cleanup = [&]() {
 		for (int i = 0; i < effect_state->effects.count();) {
 			CF_TextEffect* effect = effect_state->effects + i;
-			if (effect->index_into_string + effect->glyph_count + 1 == index) {
+			if (effect->index_into_string + effect->glyph_count == index) {
 				effect->index_into_effect = index - effect->index_into_string - 1;
 				effect->fn(effect); // Signal we're done (one past the end).
 				effect_state->effects.unordered_remove(i);
@@ -1879,16 +1893,21 @@ void cf_draw_text(const char* text, CF_V2 position)
 		}
 	};
 
-	auto next = [&]() {
+	// Used by the line-wrapping algorithm to skip characters.
+	auto skip_to_next = [&]() {
 		text = cf_decode_UTF8(text, &cp);
-		effect_lifetimes();
+		effect_cleanup();
 		++index;
 	};
 
+	// Render the string glyph-by-glyph.
 	while (*text) {
 		cp_prev = cp;
 		const char* prev_text = text;
-		next();
+		effect_spawn();
+		text = cf_decode_UTF8(text, &cp);
+		++index;
+		CUTE_DEFER(effect_cleanup());
 
 		if (cp == '\n') {
 			x = position.x;
@@ -1900,25 +1919,25 @@ void cf_draw_text(const char* text, CF_V2 position)
 		if (!end_of_line) {
 			end_of_line = s_find_end_of_line(font, prev_text, wrap_w);
 		}
-
+		
 		int finished_rendering_line = !(text < end_of_line);
 		if (finished_rendering_line) {
 			end_of_line = NULL;
 			x = position.x;
 			y -= line_height;
-
+		
 			// Skip whitespace at the beginning of new lines.
 			while (cp) {
 				cp = *text;
 				if (cp == '\n') {
 					y -= line_height;
-					next();
+					skip_to_next();
 					break;
 				}
-				else if (s_is_space(cp)) { next(); }
+				else if (s_is_space(cp)) { skip_to_next(); }
 				else break;
 			}
-
+		
 			continue;
 		}
 
@@ -1951,8 +1970,9 @@ void cf_draw_text(const char* text, CF_V2 position)
 			CF_TextEffectFn* fn = effect->fn;
 			bool keep_going = true;
 			if (fn) {
+				effect->character = cp;
 				effect->index_into_effect = index - effect->index_into_string - 1;
-				effect->center = V2(x + xadvance * 0.5f, y + h * 0.5f);
+				effect->center = V2(x + xadvance*0.5f, y + h*0.25f);
 				effect->q0 = q0;
 				effect->q1 = q1;
 				effect->w = s.w;
@@ -1961,6 +1981,7 @@ void cf_draw_text(const char* text, CF_V2 position)
 				effect->opacity = s.geom.alpha;
 				effect->xadvance = xadvance;
 				effect->visible = visible;
+				effect->font_size = font_size;
 				keep_going = fn(effect);
 				q0 = effect->q0;
 				q1 = effect->q1;
@@ -1976,8 +1997,6 @@ void cf_draw_text(const char* text, CF_V2 position)
 				++i;
 			}
 		}
-
-		int c = draw->colors.count();
 
 		// Actually render the sprite.
 		if (visible) {
@@ -1996,6 +2015,15 @@ void cf_draw_text(const char* text, CF_V2 position)
 
 		x += xadvance;
 	}
+
+	// Draw strike-lines just after the text.
+	for (int i = 0; i < draw->strikes.size(); ++i) {
+		v2 p0 = draw->strikes[i].p0;
+		v2 p1 = draw->strikes[i].p1;
+		float thickness = draw->strikes[i].thickness;
+		cf_draw_line(p0, p1, thickness);
+	}
+	draw->strikes.clear();
 }
 
 void cf_text_effect_register(const char* name, CF_TextEffectFn* fn)
