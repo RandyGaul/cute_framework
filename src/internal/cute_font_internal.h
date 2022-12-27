@@ -27,6 +27,7 @@
 #include <cute_math.h>
 #include <cute_color.h>
 #include <cute_alloc.h>
+#include <cute_draw.h>
 
 #include <stb/stb_truetype.h>
 
@@ -61,27 +62,6 @@ float cf_font_get_kern(CF_Font* font, float font_size, int codepoint0, int codep
 
 #define CF_KERN_KEY(cp0, cp1) (((uint64_t)cp0) << 32 | ((uint64_t)cp1))
 
-enum CF_TextCodeValType
-{
-	CF_TEXT_CODE_VAL_TYPE_NONE,
-	CF_TEXT_CODE_VAL_TYPE_COLOR,
-	CF_TEXT_CODE_VAL_TYPE_NUMBER,
-	CF_TEXT_CODE_VAL_TYPE_STRING,
-};
-
-struct CF_TextCodeVal
-{
-	CF_TextCodeValType type;
-	union
-	{
-		CF_Color color;
-		double number;
-		const char* string;
-	} u;
-};
-
-typedef bool (CF_TextEffectFn)(struct CF_TextEffect* effect);
-
 struct CF_TextCode
 {
 	const char* effect_name;
@@ -91,66 +71,13 @@ struct CF_TextCode
 	Cute::Dictionary<const char*, CF_TextCodeVal> params;
 };
 
-struct CF_TextEffect
-{
-	const char* effect_name;
-	int character;
-	int index_into_string;
-	int index_into_effect;
-	int glyph_count;
-	float elapsed;
-	CF_V2 center;
-	CF_V2 q0, q1;
-	int w, h;
-	CF_Color color;
-	float opacity;
-	float xadvance;
-	bool visible;
-	float font_size;
-	const Cute::Dictionary<const char*, CF_TextCodeVal>* params;
-	CF_TextEffectFn* fn;
-
-	CUTE_INLINE bool on_start() const { return index_into_effect == 0; }
-	CUTE_INLINE bool on_finish() const { return index_into_effect == glyph_count - 1; }
-
-	CUTE_INLINE double get_number(const char* key, double default_val = 0)
-	{
-		const CF_TextCodeVal* v = params->try_find(sintern(key));
-		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_NUMBER) {
-			return v->u.number;
-		} else {
-			return default_val;
-		}
-	}
-	
-	CUTE_INLINE CF_Color get_color(const char* key, CF_Color default_val = cf_color_white())
-	{
-		const CF_TextCodeVal* v = params->try_find(sintern(key));
-		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_COLOR) {
-			return v->u.color;
-		} else {
-			return default_val;
-		}
-	}
-	
-	CUTE_INLINE const char* get_string(const char* key, const char* default_val = NULL)
-	{
-		const CF_TextCodeVal* v = params->try_find(sintern(key));
-		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_STRING) {
-			return v->u.string;
-		} else {
-			return default_val;
-		}
-	}
-};
-
 struct CF_TextEffectState
 {
 	Cute::String sanitized;
 	uint64_t hash = 0;
 	float elapsed = 0;
 	bool alive = false;
-	Cute::Array<CF_TextEffect> effects;
+	Cute::Array<Cute::TextEffect> effects;
 	Cute::Array<CF_TextCode> codes;
 	Cute::Array<CF_TextCode> parse_stack;
 
@@ -169,7 +96,5 @@ struct CF_TextEffectState
 		return false;
 	}
 };
-
-void cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
 
 #endif // CUTE_FONT_INTERNAL_H

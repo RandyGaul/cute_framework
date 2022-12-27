@@ -93,6 +93,33 @@ CUTE_API float CUTE_CALL cf_text_width(const char* text);
 CUTE_API float CUTE_CALL cf_text_height(const char* text);
 CUTE_API void CUTE_CALL cf_draw_text(const char* text, CF_V2 position);
 
+typedef struct CF_TextEffect
+{
+	const char* effect_name;
+	int character;
+	int index_into_string;
+	int index_into_effect;
+	int glyph_count;
+	float elapsed;
+	CF_V2 center;
+	CF_V2 q0, q1;
+	int w, h;
+	CF_Color color;
+	float opacity;
+	float xadvance;
+	bool visible;
+	float font_size;
+} CF_TextEffect;
+
+typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
+
+CUTE_API void CUTE_CALL cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
+CUTE_API bool CUTE_CALL cf_text_effect_on_start(CF_TextEffect* fx);
+CUTE_API bool CUTE_CALL cf_text_effect_on_finish(CF_TextEffect* fx);
+CUTE_API double CUTE_CALL cf_text_effect_get_number(CF_TextEffect* fx, const char* key, double default_val);
+CUTE_API CF_Color CUTE_CALL cf_text_effect_get_color(CF_TextEffect* fx, const char* key, CF_Color default_val);
+CUTE_API const char* CUTE_CALL cf_text_effect_get_string(CF_TextEffect* fx, const char* key, const char* default_val);
+
 CUTE_API void CUTE_CALL cf_render_settings_filter(CF_Filter filter);
 CUTE_API void CUTE_CALL cf_render_settings_push_viewport(CF_Rect viewport);
 CUTE_API CF_Rect CUTE_CALL cf_render_settings_pop_viewport();
@@ -127,6 +154,28 @@ typedef struct CF_TemporaryImage
 } CF_TemporaryImage;
 
 CUTE_API CF_TemporaryImage CUTE_CALL cf_fetch_image(const CF_Sprite* sprite);
+
+//--------------------------------------------------------------------------------------------------
+// "Hidden" API -- Just here for some inline C++ functions below.
+
+enum CF_TextCodeValType
+{
+	CF_TEXT_CODE_VAL_TYPE_NONE,
+	CF_TEXT_CODE_VAL_TYPE_COLOR,
+	CF_TEXT_CODE_VAL_TYPE_NUMBER,
+	CF_TEXT_CODE_VAL_TYPE_STRING,
+};
+
+struct CF_TextCodeVal
+{
+	CF_TextCodeValType type;
+	union
+	{
+		CF_Color color;
+		double number;
+		const char* string;
+	} u;
+};
 
 #ifdef __cplusplus
 }
@@ -197,6 +246,50 @@ CUTE_INLINE CF_Aabb peek_text_clip_box() { return cf_peek_text_clip_box(); }
 CUTE_INLINE float text_width(const char* text) { return cf_text_width(text); }
 CUTE_INLINE float text_height(const char* text) { return cf_text_height(text); }
 CUTE_INLINE void draw_text(const char* text, CF_V2 position) { cf_draw_text(text, position); }
+
+struct TextEffect : public CF_TextEffect
+{
+	CUTE_INLINE bool on_start() const { return index_into_effect == 0; }
+	CUTE_INLINE bool on_finish() const { return index_into_effect == glyph_count - 1; }
+
+	CUTE_INLINE double get_number(const char* key, double default_val = 0)
+	{
+		const CF_TextCodeVal* v = params->try_find(sintern(key));
+		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_NUMBER) {
+			return v->u.number;
+		} else {
+			return default_val;
+		}
+	}
+	
+	CUTE_INLINE CF_Color get_color(const char* key, CF_Color default_val = cf_color_white())
+	{
+		const CF_TextCodeVal* v = params->try_find(sintern(key));
+		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_COLOR) {
+			return v->u.color;
+		} else {
+			return default_val;
+		}
+	}
+	
+	CUTE_INLINE const char* get_string(const char* key, const char* default_val = NULL)
+	{
+		const CF_TextCodeVal* v = params->try_find(sintern(key));
+		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_STRING) {
+			return v->u.string;
+		} else {
+			return default_val;
+		}
+	}
+
+	// "private" state -- don't touch.
+	const Cute::Dictionary<const char*, CF_TextCodeVal>* params;
+	CF_TextEffectFn* fn;
+};
+
+typedef bool (TextEffectFn)(TextEffect* fx);
+
+CUTE_INLINE void text_effect_register(const char* name, TextEffectFn* fn) { cf_text_effect_register(name, (CF_TextEffectFn*)fn); }
 
 CUTE_INLINE void render_settings_filter(CF_Filter filter) { cf_render_settings_filter(filter); }
 CUTE_INLINE void render_settings_push_viewport(CF_Rect viewport) { cf_render_settings_push_viewport(viewport); }

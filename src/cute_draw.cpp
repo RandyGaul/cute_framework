@@ -1544,17 +1544,16 @@ struct CF_CodeParseState
 	CF_TextEffectState* effect;
 	const char* in;
 	const char* end;
-	bool error;
 	int glyph_count;
 	String sanitized;
 
-	bool done() { return !error && in >= end; }
+	bool done() { return in >= end; }
 	void append(int ch) { sanitized.append(ch); ++glyph_count; }
 	void ltrim() { while (!done()) { int cp = *in; if (s_is_space(cp)) ++in; else break; } }
 	int next(bool trim = true) { if (trim) ltrim(); int cp; in = cf_decode_UTF8(in, &cp); return cp; }
 	int peek(bool trim = true) { if (trim) ltrim(); int cp; cf_decode_UTF8(in, &cp); return cp; }
 	void skip(bool trim = true) { if (trim) ltrim(); int cp; in = cf_decode_UTF8(in, &cp); }
-	bool expect(int ch) { int cp = next(); if (cp != ch) { error = true; return false; } return true; }
+	bool expect(int ch) { int cp = next(); if (cp != ch) { return false; } return true; }
 	bool try_next(int ch, bool trim = true) { if (trim) ltrim(); int cp; const char* next = cf_decode_UTF8(in, &cp); if (cp == ch) { in = next; return true; } return false; }
 };
 
@@ -1726,14 +1725,14 @@ static void s_parse_code(CF_CodeParseState* s)
 	}
 }
 
-static bool s_text_fx_color(CF_TextEffect* effect)
+static bool s_text_fx_color(TextEffect* fx)
 {
-	CF_Color c = effect->get_color("color");
-	effect->color = c;
+	CF_Color c = fx->get_color("color");
+	fx->color = c;
 	return true;
 }
 
-static bool s_text_fx_shake(CF_TextEffect* effect)
+static bool s_text_fx_shake(TextEffect* effect)
 {
 	double freq = effect->get_number("freq", 35);
 	int seed = (int)(effect->elapsed * freq);
@@ -1746,7 +1745,7 @@ static bool s_text_fx_shake(CF_TextEffect* effect)
 	return true;
 }
 
-static bool s_text_fx_fade(CF_TextEffect* effect)
+static bool s_text_fx_fade(TextEffect* effect)
 {
 	double speed = effect->get_number("speed", 2);
 	double span = effect->get_number("span", 5);
@@ -1754,7 +1753,7 @@ static bool s_text_fx_fade(CF_TextEffect* effect)
 	return true;
 }
 
-static bool s_text_fx_wave(CF_TextEffect* effect)
+static bool s_text_fx_wave(TextEffect* effect)
 {
 	double speed = effect->get_number("speed", 5);
 	double span = effect->get_number("span", 10);
@@ -1765,7 +1764,7 @@ static bool s_text_fx_wave(CF_TextEffect* effect)
 	return true;
 }
 
-static bool s_text_fx_strike(CF_TextEffect* effect)
+static bool s_text_fx_strike(TextEffect* effect)
 {
 	if (!s_is_space(effect->character) || effect->character == ' ') {
 		v2 hw = V2((float)effect->xadvance, 0) * 0.5f;
@@ -1785,11 +1784,11 @@ static void s_parse_codes(CF_TextEffectState* effect, const char* text)
 	static bool init = false;
 	if (!init) {
 		init = true;
-		cf_text_effect_register("color", s_text_fx_color);
-		cf_text_effect_register("shake", s_text_fx_shake);
-		cf_text_effect_register("fade", s_text_fx_fade);
-		cf_text_effect_register("wave", s_text_fx_wave);
-		cf_text_effect_register("strike", s_text_fx_strike);
+		text_effect_register("color", s_text_fx_color);
+		text_effect_register("shake", s_text_fx_shake);
+		text_effect_register("fade", s_text_fx_fade);
+		text_effect_register("wave", s_text_fx_wave);
+		text_effect_register("strike", s_text_fx_strike);
 	}
 
 	CF_CodeParseState state = { };
@@ -1866,7 +1865,7 @@ void cf_draw_text(const char* text, CF_V2 position)
 			CF_TextCode* code = effect_state->codes + code_index;
 			if (index == code->index_in_string) {
 				++code_index;
-				CF_TextEffect effect = { };
+				TextEffect effect = { };
 				effect.effect_name = code->effect_name;
 				effect.index_into_string = code->index_in_string;
 				effect.index_into_effect = 0;
@@ -1882,7 +1881,7 @@ void cf_draw_text(const char* text, CF_V2 position)
 	// Called whenever text-effects need to be cleaned up, when going to the next glyph.
 	auto effect_cleanup = [&]() {
 		for (int i = 0; i < effect_state->effects.count();) {
-			CF_TextEffect* effect = effect_state->effects + i;
+			TextEffect* effect = effect_state->effects + i;
 			if (effect->index_into_string + effect->glyph_count == index) {
 				effect->index_into_effect = index - effect->index_into_string - 1;
 				effect->fn(effect); // Signal we're done (one past the end).
@@ -1966,7 +1965,7 @@ void cf_draw_text(const char* text, CF_V2 position)
 
 		// Apply any active custom text effects.
 		for (int i = 0; i < effect_state->effects.count();) {
-			CF_TextEffect* effect = effect_state->effects + i;
+			TextEffect* effect = effect_state->effects + i;
 			CF_TextEffectFn* fn = effect->fn;
 			bool keep_going = true;
 			if (fn) {
@@ -2029,6 +2028,31 @@ void cf_draw_text(const char* text, CF_V2 position)
 void cf_text_effect_register(const char* name, CF_TextEffectFn* fn)
 {
 	app->text_effect_fns.insert(sintern(name), fn);
+}
+
+bool cf_text_effect_on_start(CF_TextEffect* fx)
+{
+	return ((TextEffect*)fx)->on_start();
+}
+
+bool cf_text_effect_on_finish(CF_TextEffect* fx)
+{
+	return ((TextEffect*)fx)->on_finish();
+}
+
+double cf_text_effect_get_number(CF_TextEffect* fx, const char* key, double default_val)
+{
+	return ((TextEffect*)fx)->get_number(key, default_val);
+}
+
+CF_Color cf_text_effect_get_color(CF_TextEffect* fx, const char* key, CF_Color default_val)
+{
+	return ((TextEffect*)fx)->get_color(key, default_val);
+}
+
+const char* cf_text_effect_get_string(CF_TextEffect* fx, const char* key, const char* default_val)
+{
+	return ((TextEffect*)fx)->get_string(key, default_val);
 }
 
 void cf_draw_push_layer(int layer)
