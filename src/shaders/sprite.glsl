@@ -16,16 +16,16 @@
 
 	layout (location = 0) out vec2 v_uv;
 	layout (location = 1) out vec4 v_col;
-	layout (location = 2) out float v_alpha;
-	layout (location = 3) out float v_type;
+	layout (location = 2) out float v_type;
+	layout (location = 3) out float v_alpha;
 
 	void main()
 	{
 		vec4 posH = vec4(in_pos, 0, 1);
 		v_uv = in_uv;
 		v_col = in_col;
-		v_alpha = in_params.r;
-		v_type = in_params.g;
+		v_type = in_params.r;
+		v_alpha = in_params.g;
 		gl_Position = posH;
 }
 @end
@@ -33,8 +33,8 @@
 @fs fs
 	layout (location = 0) in vec2 v_uv;
 	layout (location = 1) in vec4 v_col;
-	layout (location = 2) in float v_alpha;
-	layout (location = 3) in float v_type;
+	layout (location = 2) in float v_type;
+	layout (location = 3) in float v_alpha;
 
 	out vec4 result;
 
@@ -47,6 +47,7 @@
 	@include_block blend
 	@include_block gamma
 	@include_block smooth_uv
+	@include_block distance
 
 	void main()
 	{

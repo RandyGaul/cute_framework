@@ -1,6 +1,8 @@
 #include <cute.h>
 using namespace Cute;
 
+#include <imgui.h>
+
 int main(int argc, const char** argv)
 {
 	int w = 640/1;
@@ -8,6 +10,8 @@ int main(int argc, const char** argv)
 	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
 	Result result = make_app("Development Scratch", 0, 0, w, h, options, argv[0]);
 	if (is_error(result)) return -1;
+
+	app_init_imgui();
 
 	camera_dimensions((float)w, (float)h);
 	draw_push_antialias(true);
@@ -81,6 +85,8 @@ int main(int argc, const char** argv)
 		push_font_size(13);
 		draw_text(draws.c_str(), V2(-w/2.0f + 10,-h/2.0f + 10));
 		pop_font_size();
+
+		ImGui::ShowDemoWindow();
 
 		draw_calls = app_present();
 	}

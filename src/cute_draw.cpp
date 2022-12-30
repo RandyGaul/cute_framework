@@ -57,11 +57,15 @@ static struct CF_Draw* draw;
 
 using namespace Cute;
 
-#define VA_TYPE_SPRITE (0)
-#define VA_TYPE_SHAPE  (1)
-#define VA_TYPE_TEXT   (2)
-
-CUTE_STATIC_ASSERT(sizeof(BatchGeometry) <= 64, "Try to fix this nicely into a cache line.");
+#define VA_TYPE_SPRITE               (0)
+#define VA_TYPE_TEXT                 (1)
+#define VA_TYPE_BOX                  (2)
+#define VA_TYPE_SEGMENT              (3)
+#define VA_TYPE_SEGMENT_CHAIN_BEGIN  (4)
+#define VA_TYPE_SEGMENT_CHAIN_MIDDLE (5)
+#define VA_TYPE_SEGMENT_CHAIN_END    (6)
+#define VA_TYPE_TRIANGLE             (7)
+#define VA_TYPE_TRIANGLE_SDF         (8)
 
 SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
@@ -112,6 +116,45 @@ static CUTE_INLINE float s_intersect(float a, float b, float u0, float u1, float
 	return u0 + (u1 - u0) * (da / (da - db));
 }
 
+void CUTE_INLINE s_bounding_box_of_triangle(v2 a, v2 b, v2 c, float r, float one_pixel, v2* out)
+{
+	v2 ab = b - a;
+	v2 bc = c - b;
+	v2 ca = a - c;
+	float d0 = dot(ab, ab);
+	float d1 = dot(bc, bc);
+	float d2 = dot(ca, ca);
+	auto build_box = [](float d, v2 a, v2 b, v2 c, float r, v2* out) {
+		float w = sqrtf(d);
+		v2 n0 = (b - a) / w;
+		v2 n1 = skew(n0);
+		float h = dot(n1, c) - dot(n1, a);
+		a = a - n0 * r - n1 * r;
+		b = b + n0 * r - n1 * r;
+		out[0] = a;
+		out[1] = b;
+		out[2] = b + n1 * (h + r * 2.0f);
+		out[3] = a + n1 * (h + r * 2.0f);
+	};
+	if (d0 >= d1 && d0 >= d2) {
+		build_box(d0, a, b, c, r + one_pixel, out);
+	} else if (d1 >= d0 && d1 >= d2) {
+		build_box(d1, b, c, a, r + one_pixel, out);
+	} else {
+		build_box(d2, c, a, b, r + one_pixel, out);
+	}
+}
+
+static CUTE_INLINE void s_bounding_box_of_capsule(v2 a, v2 b, float r, float one_pixel, v2* out)
+{
+	v2 n0 = norm(b - a) * (r + one_pixel);
+	v2 n1 = skew(n0);
+	out[0] = a - n0 + n1;
+	out[1] = a - n0 - n1;
+	out[2] = b + n0 - n1;
+	out[3] = b + n0 + n1;
+}
+
 static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_w, int texture_h, void* udata)
 {
 	CUTE_UNUSED(udata);
@@ -127,61 +170,84 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		case BATCH_GEOMETRY_TYPE_TRI:
 		{
 			BatchTri geom = s->geom.u.tri;
-			DrawVertex* out_verts = verts + vert_count;
+			DrawVertex* out = verts + vert_count;
 
-			for (int i = 0; i < 3; ++i) {
-				out_verts[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				out_verts[i].type = VA_TYPE_SHAPE;
+			if (draw->antialias.last() || s->geom.radius > 0) {
+				// Wrap triangle in a minimum inflated bounding box.
+				v2 box[4];
+				s_bounding_box_of_triangle(geom.p0, geom.p1, geom.p2, s->geom.radius, 1, box);
+
+				v2 quad[6] = {
+					box[0],
+					box[3],
+					box[1],
+					box[1],
+					box[3],
+					box[2],
+				};
+
+				for (int i = 0; i < 6; ++i) {
+					out[i].p = quad[i];
+					out[i].a = geom.p0;
+					out[i].b = geom.p1;
+					out[i].c = geom.p2;
+					out[i].color = s->geom.color;
+					out[i].radius = s->geom.radius;
+					out[i].type = VA_TYPE_TRIANGLE_SDF;
+					out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				}
+
+				vert_count += 6;
+			} else {
+				// Traditional triangle (no inflation step necessary).
+				for (int i = 0; i < 3; ++i) {
+					out[i].color = s->geom.color;
+					out[i].radius = s->geom.radius;
+					out[i].type = VA_TYPE_TRIANGLE;
+					out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				}
+
+				out[0].p = geom.p0;
+				out[1].p = geom.p1;
+				out[2].p = geom.p2;
+
+				vert_count += 3;
 			}
-
-			out_verts[0].position.x = geom.p0.x;
-			out_verts[0].position.y = geom.p0.y;
-			out_verts[0].color      = geom.c0;
-
-			out_verts[1].position.x = geom.p1.x;
-			out_verts[1].position.y = geom.p1.y;
-			out_verts[1].color      = geom.c1;
-
-			out_verts[2].position.x = geom.p2.x;
-			out_verts[2].position.y = geom.p2.y;
-			out_verts[2].color      = geom.c2;
-
-			vert_count += 3;
 		}	break;
 
 		case BATCH_GEOMETRY_TYPE_QUAD:
 		{
 			BatchQuad geom = s->geom.u.quad;
-			DrawVertex* out_verts = verts + vert_count;
+			DrawVertex* out = verts + vert_count;
+
+			// Convert to segment + thickness format for the shader.
+			float w = distance(geom.p0, geom.p1);
+			float h = distance(geom.p1, geom.p2);
+			float thickness = min(w, h);
+			float hw = w * 0.5f;
+			float hh = h * 0.5f;
+			v2 n0 = norm(geom.p1 - geom.p0) * hw;
+			v2 n1 = norm(geom.p2 - geom.p1) * hh;
+			v2 a = geom.p0 + n0 + n1;
+			v2 b = geom.p2 - n0 - n1;
+			v2 c = V2(thickness, thickness);
 
 			for (int i = 0; i < 6; ++i) {
-				out_verts[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				out_verts[i].type = VA_TYPE_SHAPE;
+				out[i].a = a;
+				out[i].b = b;
+				out[i].c = c;
+				out[i].color = s->geom.color;
+				out[i].radius = s->geom.radius;
+				out[i].type = VA_TYPE_BOX;
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 			}
 
-			out_verts[0].position.x = geom.p0.x;
-			out_verts[0].position.y = geom.p0.y;
-			out_verts[0].color      = geom.c0;
-
-			out_verts[1].position.x = geom.p3.x;
-			out_verts[1].position.y = geom.p3.y;
-			out_verts[1].color      = geom.c3;
-
-			out_verts[2].position.x = geom.p1.x;
-			out_verts[2].position.y = geom.p1.y;
-			out_verts[2].color      = geom.c1;
-
-			out_verts[3].position.x = geom.p1.x;
-			out_verts[3].position.y = geom.p1.y;
-			out_verts[3].color      = geom.c1;
-
-			out_verts[4].position.x = geom.p3.x;
-			out_verts[4].position.y = geom.p3.y;
-			out_verts[4].color      = geom.c3;
-
-			out_verts[5].position.x = geom.p2.x;
-			out_verts[5].position.y = geom.p2.y;
-			out_verts[5].color      = geom.c2;
+			out[0].p = geom.p0;
+			out[1].p = geom.p3;
+			out[2].p = geom.p1;
+			out[3].p = geom.p1;
+			out[4].p = geom.p3;
+			out[5].p = geom.p2;
 
 			vert_count += 6;
 		}	break;
@@ -189,7 +255,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		case BATCH_GEOMETRY_TYPE_SPRITE:
 		{
 			BatchSprite geom = s->geom.u.sprite;
-			DrawVertex* out_verts = verts + vert_count;
+			DrawVertex* out = verts + vert_count;
 
 			bool clipped_away = false;
 			if (geom.do_clipping) {
@@ -236,55 +302,122 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			}
 
 			for (int i = 0; i < 6; ++i) {
-				out_verts[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				if (s->geom.u.sprite.is_sprite) {
-					out_verts[i].type = VA_TYPE_SPRITE;
+					out[i].type = VA_TYPE_SPRITE;
 				} else if (s->geom.u.sprite.is_text) {
-					out_verts[i].type = VA_TYPE_TEXT;
+					out[i].type = VA_TYPE_TEXT;
 				} else {
 					CUTE_ASSERT(false);
 				}
-
-				out_verts[i].color = s->geom.u.sprite.c;
+				out[i].color = s->geom.color;
 			}
 
-			out_verts[0].position.x = geom.p0.x;
-			out_verts[0].position.y = geom.p0.y;
-			out_verts[0].uv.x = s->minx;
-			out_verts[0].uv.y = s->maxy;
-			out_verts[0].color = geom.c;
+			out[0].p = geom.p0;
+			out[0].uv.x = s->minx;
+			out[0].uv.y = s->maxy;
 
-			out_verts[1].position.x = geom.p3.x;
-			out_verts[1].position.y = geom.p3.y;
-			out_verts[1].uv.x = s->minx;
-			out_verts[1].uv.y = s->miny;
-			out_verts[1].color = geom.c;
+			out[1].p = geom.p3;
+			out[1].uv.x = s->minx;
+			out[1].uv.y = s->miny;
 
-			out_verts[2].position.x = geom.p1.x;
-			out_verts[2].position.y = geom.p1.y;
-			out_verts[2].uv.x = s->maxx;
-			out_verts[2].uv.y = s->maxy;
-			out_verts[2].color = geom.c;
+			out[2].p = geom.p1;
+			out[2].uv.x = s->maxx;
+			out[2].uv.y = s->maxy;
 
-			out_verts[3].position.x = geom.p1.x;
-			out_verts[3].position.y = geom.p1.y;
-			out_verts[3].uv.x = s->maxx;
-			out_verts[3].uv.y = s->maxy;
-			out_verts[3].color = geom.c;
+			out[3].p = geom.p1;
+			out[3].uv.x = s->maxx;
+			out[3].uv.y = s->maxy;
 
-			out_verts[4].position.x = geom.p3.x;
-			out_verts[4].position.y = geom.p3.y;
-			out_verts[4].uv.x = s->minx;
-			out_verts[4].uv.y = s->miny;
-			out_verts[4].color = geom.c;
+			out[4].p = geom.p3;
+			out[4].uv.x = s->minx;
+			out[4].uv.y = s->miny;
 
-			out_verts[5].position.x = geom.p2.x;
-			out_verts[5].position.y = geom.p2.y;
-			out_verts[5].uv.x = s->maxx;
-			out_verts[5].uv.y = s->miny;
-			out_verts[5].color = geom.c;
+			out[5].p = geom.p2;
+			out[5].uv.x = s->maxx;
+			out[5].uv.y = s->miny;
 
 			vert_count += 6;
+		}	break;
+
+		case BATCH_GEOMETRY_TYPE_CIRCLE:
+		{
+			BatchCircle geom = s->geom.u.circle;
+			DrawVertex* out = verts + vert_count;
+
+			// Wrap circle in a minimum inflated box.
+			v2 rr = V2(s->geom.radius, s->geom.radius);
+			v2 aa = draw->antialias.last() ? V2(1,1) : V2(0,0);
+			CF_Aabb bb = make_aabb(geom.p0 - (rr + aa), geom.p0 + (rr + aa));
+
+			v2 box[4];
+			cf_aabb_verts(box, bb);
+
+			v2 quad[6] = {
+				box[0],
+				box[3],
+				box[1],
+				box[1],
+				box[3],
+				box[2],
+			};
+
+			for (int i = 0; i < 6; ++i) {
+				out[i].p = quad[i];
+				out[i].a = geom.p0;
+				out[i].b = geom.p0; // Use segment-path in shader for circle rendering.
+				out[i].color = s->geom.color;
+				out[i].radius = s->geom.radius;
+				out[i].thickness = s->geom.thickness;
+				out[i].type = VA_TYPE_SEGMENT;
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+			}
+
+			vert_count += 6;
+		}	break;
+
+		case BATCH_GEOMETRY_TYPE_SEGMENT:
+		{
+			BatchSegment geom = s->geom.u.segment;
+			DrawVertex* out = verts + vert_count;
+
+			// Wrap circle in a minimum inflated box.
+			v2 box[4];
+			s_bounding_box_of_capsule(geom.p0, geom.p1, s->geom.radius, 1, box);
+
+			v2 quad[6] = {
+				box[0],
+				box[3],
+				box[1],
+				box[1],
+				box[3],
+				box[2],
+			};
+
+			for (int i = 0; i < 6; ++i) {
+				out[i].p = quad[i];
+				out[i].a = geom.p0;
+				out[i].b = geom.p1;
+				out[i].color = s->geom.color;
+				out[i].radius = s->geom.radius;
+				out[i].thickness = s->geom.thickness;
+				out[i].type = VA_TYPE_SEGMENT;
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+			}
+
+			vert_count += 6;
+		}	break;
+
+		case BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_BEGIN:
+		{
+		}	break;
+
+		case BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_MIDDLE:
+		{
+		}	break;
+
+		case BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_END:
+		{
 		}	break;
 		}
 	}
@@ -310,10 +443,14 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_texture_fs(draw->material, "u_image", atlas);
 
 	// Apply uniforms.
+	CUTE_ASSERT(draw->atlas_dims.x == (float)texture_w);
+	CUTE_ASSERT(draw->atlas_dims.y == (float)texture_h);
 	v2 u_texture_size = cf_v2((float)texture_w, (float)texture_h);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 
 	// Outline shader uniforms.
+	CUTE_ASSERT(draw->texel_dims.x == 1.0f / (float)texture_w);
+	CUTE_ASSERT(draw->texel_dims.y == 1.0f / (float)texture_h);
 	v2 u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texel_size", &u_texel_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 
@@ -337,19 +474,34 @@ void cf_make_draw()
 
 	// Mesh + vertex attributes.
 	draw->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CUTE_MB * 25, 0, 0);
-	CF_VertexAttribute attrs[4] = { };
+	CF_VertexAttribute attrs[9] = { };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[0].offset = CUTE_OFFSET_OF(DrawVertex, position);
-	attrs[1].name = "in_uv";
+	attrs[0].offset = CUTE_OFFSET_OF(DrawVertex, p);
+	attrs[1].name = "in_a";
 	attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[1].offset = CUTE_OFFSET_OF(DrawVertex, uv);
-	attrs[2].name = "in_col";
-	attrs[2].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[2].offset = CUTE_OFFSET_OF(DrawVertex, color);
-	attrs[3].name = "in_params";
-	attrs[3].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[3].offset = CUTE_OFFSET_OF(DrawVertex, alpha);
+	attrs[1].offset = CUTE_OFFSET_OF(DrawVertex, a);
+	attrs[2].name = "in_b";
+	attrs[2].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[2].offset = CUTE_OFFSET_OF(DrawVertex, b);
+	attrs[3].name = "in_c";
+	attrs[3].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[3].offset = CUTE_OFFSET_OF(DrawVertex, c);
+	attrs[4].name = "in_d";
+	attrs[4].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[4].offset = CUTE_OFFSET_OF(DrawVertex, d);
+	attrs[5].name = "in_uv";
+	attrs[5].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[5].offset = CUTE_OFFSET_OF(DrawVertex, uv);
+	attrs[6].name = "in_col";
+	attrs[6].format = CF_VERTEX_FORMAT_UBYTE4N;
+	attrs[6].offset = CUTE_OFFSET_OF(DrawVertex, color);
+	attrs[7].name = "in_r";
+	attrs[7].format = CF_VERTEX_FORMAT_FLOAT;
+	attrs[7].offset = CUTE_OFFSET_OF(DrawVertex, radius);
+	attrs[8].name = "in_params";
+	attrs[8].format = CF_VERTEX_FORMAT_UBYTE4N;
+	attrs[8].offset = CUTE_OFFSET_OF(DrawVertex, type);
 	cf_mesh_set_attributes(draw->mesh, attrs, CUTE_ARRAY_SIZE(attrs), sizeof(DrawVertex), 0);
 
 	// Shaders.
