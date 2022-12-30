@@ -5,6 +5,12 @@ float safe_div(float a, float b)
 	return b == 0.0 ? 0.0 : a / b;
 }
 
+float safe_len(vec2 v)
+{
+	float d = dot(v,v);
+	return d == 0.0 ? 0.0 : sqrt(d);
+}
+
 vec2 safe_norm(vec2 v, float l)
 {
 	return mix(vec2(0), v / l, l == 0.0 ? 0.0 : 1.0);
@@ -46,7 +52,7 @@ float distance_segment(vec2 p, vec2 a, vec2 b, float r)
 	vec2 pa = p - a;
 	float d = safe_div(dot(pa,n), dot(n,n));
 	float h = clamp(d, 0.0, 1.0);
-	return length(pa - h * n) - r;
+	return safe_len(pa - h * n) - r;
 }
 
 // Referenced from: https://www.shadertoy.com/view/XsXSz4
