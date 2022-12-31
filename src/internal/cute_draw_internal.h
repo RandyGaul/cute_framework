@@ -117,6 +117,7 @@ struct CF_Draw
 
 void cf_make_draw();
 void cf_destroy_draw();
+void cf_load_default_font();
 
 // We slice up a 64-bit int into lo + hi ranges to map where we can fetch pixels
 // from. This slices up the 64-bit range into 16 unique ranges, though we're only

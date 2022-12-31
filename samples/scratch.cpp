@@ -16,6 +16,11 @@ int main(int argc, const char** argv)
 	camera_dimensions((float)w, (float)h);
 	int draw_calls = 0;
 
+	Sprite s = cf_make_sprite("test_data/girl.aseprite");
+	s.scale.x = 2.0f;
+	s.scale.y = 2.0f;
+	s.play("spin");
+
 	while (app_is_running()) {
 		app_update();
 
@@ -79,6 +84,14 @@ int main(int argc, const char** argv)
 			draw_push_antialias(true);
 			cf_draw_tri_fill(V2(-50,-50-100), V2(-70,30-100), V2(150,25-100));
 			draw_pop_antialias();
+
+			draw_push_layer(1);
+			s.update(CF_DELTA_TIME);
+			s.draw();
+			draw_push_color(color_red());
+			draw_text("testing <wave>some</wave> text", V2(-100,0));
+			draw_pop_color();
+			draw_pop_layer();
 		}
 
 		t += CF_DELTA_TIME;

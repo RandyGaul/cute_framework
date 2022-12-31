@@ -31,6 +31,7 @@
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
 #include <internal/cute_font_internal.h>
+#include <internal/calibri.h>
 
 #include <shaders/sprite_shader.h>
 
@@ -47,6 +48,9 @@ static struct CF_Draw* draw;
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb/stb_truetype.h>
+
+#define STB_COMPRESS_IMPLEMENTATION
+#include <stb/stb_compress.h>
 
 #include <algorithm>
 
@@ -202,90 +206,90 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			vert_count += 6;
 		}	break;
 
-		//case BATCH_GEOMETRY_TYPE_SPRITE:
-		//{
-		//	bool clipped_away = false;
-		//	if (geom.do_clipping) {
-		//		CUTE_ASSERT(geom.is_text);
-		//
-		//		CF_Aabb bb = make_aabb(geom.p3, geom.p1);
-		//		CF_Aabb clip = geom.clip;
-		//		float top = clip.max.y;
-		//		float left = clip.min.x;
-		//		float bottom = clip.min.y;
-		//		float right = clip.max.x;
-		//
-		//		int separating_x_axis = (bb.max.x < left) | (bb.min.x > right);
-		//		if (separating_x_axis) continue;
-		//
-		//		if (bb.min.x < left) {
-		//			s->minx = s_intersect(bb.min.x, bb.max.x, s->minx, s->maxx, left);
-		//			bb.min.x = left;
-		//		}
-		//
-		//		if (bb.max.x > right) {
-		//			s->maxx = s_intersect(bb.min.x, bb.max.x, s->minx, s->maxx, right);
-		//			bb.max.x = right;
-		//		}
-		//
-		//		if (bb.min.y < bottom) {
-		//			s->miny = s_intersect(bb.min.y, bb.max.y, s->miny, s->maxy, bottom);
-		//			bb.min.y = bottom;
-		//		}
-		//
-		//		if (bb.max.y > top) {
-		//			s->maxy = s_intersect(bb.min.y, bb.max.y, s->miny, s->maxy, top);
-		//			bb.max.y = top;
-		//		}
-		//
-		//		if ((bb.min.x >= bb.max.x) | (bb.min.y >= bb.max.y)) {
-		//			continue;
-		//		}
-		//
-		//		geom.p0 = V2(bb.min.x, bb.max.y);
-		//		geom.p1 = bb.max;
-		//		geom.p2 = V2(bb.max.x, bb.min.y);
-		//		geom.p3 = bb.min;
-		//	}
-		//
-		//	for (int i = 0; i < 6; ++i) {
-		//		out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-		//		if (s->geom.u.sprite.is_sprite) {
-		//			out[i].type = VA_TYPE_SPRITE;
-		//		} else if (s->geom.u.sprite.is_text) {
-		//			out[i].type = VA_TYPE_TEXT;
-		//		} else {
-		//			CUTE_ASSERT(false);
-		//		}
-		//		out[i].color = s->geom.color;
-		//	}
-		//
-		//	out[0].p = geom.p0;
-		//	out[0].uv.x = s->minx;
-		//	out[0].uv.y = s->maxy;
-		//
-		//	out[1].p = geom.p3;
-		//	out[1].uv.x = s->minx;
-		//	out[1].uv.y = s->miny;
-		//
-		//	out[2].p = geom.p1;
-		//	out[2].uv.x = s->maxx;
-		//	out[2].uv.y = s->maxy;
-		//
-		//	out[3].p = geom.p1;
-		//	out[3].uv.x = s->maxx;
-		//	out[3].uv.y = s->maxy;
-		//
-		//	out[4].p = geom.p3;
-		//	out[4].uv.x = s->minx;
-		//	out[4].uv.y = s->miny;
-		//
-		//	out[5].p = geom.p2;
-		//	out[5].uv.x = s->maxx;
-		//	out[5].uv.y = s->miny;
-		//
-		//	vert_count += 6;
-		//}	break;
+		case BATCH_GEOMETRY_TYPE_SPRITE:
+		{
+			bool clipped_away = false;
+			if (geom.do_clipping) {
+				CUTE_ASSERT(geom.is_text);
+		
+				CF_Aabb bb = make_aabb(geom.c, geom.b);
+				CF_Aabb clip = geom.clip;
+				float top = clip.max.y;
+				float left = clip.min.x;
+				float bottom = clip.min.y;
+				float right = clip.max.x;
+		
+				int separating_x_axis = (bb.max.x < left) | (bb.min.x > right);
+				if (separating_x_axis) continue;
+		
+				if (bb.min.x < left) {
+					s->minx = s_intersect(bb.min.x, bb.max.x, s->minx, s->maxx, left);
+					bb.min.x = left;
+				}
+		
+				if (bb.max.x > right) {
+					s->maxx = s_intersect(bb.min.x, bb.max.x, s->minx, s->maxx, right);
+					bb.max.x = right;
+				}
+		
+				if (bb.min.y < bottom) {
+					s->miny = s_intersect(bb.min.y, bb.max.y, s->miny, s->maxy, bottom);
+					bb.min.y = bottom;
+				}
+		
+				if (bb.max.y > top) {
+					s->maxy = s_intersect(bb.min.y, bb.max.y, s->miny, s->maxy, top);
+					bb.max.y = top;
+				}
+		
+				if ((bb.min.x >= bb.max.x) | (bb.min.y >= bb.max.y)) {
+					continue;
+				}
+		
+				geom.a = V2(bb.min.x, bb.max.y);
+				geom.b = bb.max;
+				geom.c = V2(bb.max.x, bb.min.y);
+				geom.d = bb.min;
+			}
+		
+			for (int i = 0; i < 6; ++i) {
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				if (s->geom.is_sprite) {
+					out[i].type = VA_TYPE_SPRITE;
+				} else if (s->geom.is_text) {
+					out[i].type = VA_TYPE_TEXT;
+				} else {
+					CUTE_ASSERT(false);
+				}
+				out[i].color = s->geom.color;
+			}
+		
+			out[0].p = geom.a;
+			out[0].uv.x = s->minx;
+			out[0].uv.y = s->maxy;
+		
+			out[1].p = geom.d;
+			out[1].uv.x = s->minx;
+			out[1].uv.y = s->miny;
+		
+			out[2].p = geom.b;
+			out[2].uv.x = s->maxx;
+			out[2].uv.y = s->maxy;
+		
+			out[3].p = geom.b;
+			out[3].uv.x = s->maxx;
+			out[3].uv.y = s->maxy;
+		
+			out[4].p = geom.d;
+			out[4].uv.x = s->minx;
+			out[4].uv.y = s->miny;
+		
+			out[5].p = geom.c;
+			out[5].uv.x = s->maxx;
+			out[5].uv.y = s->miny;
+		
+			vert_count += 6;
+		}	break;
 
 		case BATCH_GEOMETRY_TYPE_CIRCLE:
 		{
@@ -467,6 +471,16 @@ void cf_destroy_draw()
 	CUTE_FREE(draw);
 }
 
+void cf_load_default_font()
+{
+	CUTE_ASSERT(draw->fonts.size() == 1);
+	draw->fonts.pop();
+	draw->fonts.add(sintern("calibri"));
+	void* decompressed = CUTE_ALLOC(calibri_sz * 2);
+	int decompressed_size = stb_decompress(decompressed, (void*)calibri_data, calibri_sz);
+	cf_make_font_mem(decompressed, decompressed_size, "calibri", NULL);
+}
+
 //--------------------------------------------------------------------------------------------------
 
 void cf_draw_sprite(const CF_Sprite* sprite)
@@ -511,12 +525,11 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 		quad[j].y = y;
 	}
 
-	// Transform quad to camera space.
-	//s.geom.u.sprite.p0 = mul(draw->cam, quad[0]);
-	//s.geom.u.sprite.p1 = mul(draw->cam, quad[1]);
-	//s.geom.u.sprite.p2 = mul(draw->cam, quad[2]);
-	//s.geom.u.sprite.p3 = mul(draw->cam, quad[3]);
-	//s.geom.u.sprite.is_sprite = true;
+	s.geom.a = mul(draw->cam, quad[0]);
+	s.geom.b = mul(draw->cam, quad[1]);
+	s.geom.c = mul(draw->cam, quad[2]);
+	s.geom.d = mul(draw->cam, quad[3]);
+	s.geom.is_sprite = true;
 
 	s.geom.color = premultiply(to_pixel(draw->tints.last()));
 	s.geom.alpha = sprite->opacity;
@@ -904,6 +917,7 @@ void cf_font_add_backup_codepoints(const char* font_name, int* codepoints, int c
 
 CF_Font* cf_font_get(const char* font_name)
 {
+	CUTE_ASSERT(font_name);
 	return app->fonts.get(sintern(font_name));
 }
 
@@ -1716,7 +1730,6 @@ void cf_draw_text(const char* text, CF_V2 position)
 		s.w = glyph->w;
 		s.h = glyph->h;
 		s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
-		//s.geom.u.sprite;
 		s.geom.alpha = 1.0f;
 		CF_Color color = draw->colors.last();
 
@@ -1762,14 +1775,14 @@ void cf_draw_text(const char* text, CF_V2 position)
 
 		// Actually render the sprite.
 		if (visible) {
-			//s.geom.u.sprite.p0 = mul(draw->cam, V2(q0.x, q1.y));
-			//s.geom.u.sprite.p1 = mul(draw->cam, V2(q1.x, q1.y));
-			//s.geom.u.sprite.p2 = mul(draw->cam, V2(q1.x, q0.y));
-			//s.geom.u.sprite.p3 = mul(draw->cam, V2(q0.x, q0.y));
+			s.geom.a = mul(draw->cam, V2(q0.x, q1.y));
+			s.geom.b = mul(draw->cam, V2(q1.x, q1.y));
+			s.geom.c = mul(draw->cam, V2(q1.x, q0.y));
+			s.geom.d = mul(draw->cam, V2(q0.x, q0.y));
 			s.geom.color = premultiply(to_pixel(color));
-			//s.geom.u.sprite.clip = make_aabb(mul(draw->cam, clip.min), mul(draw->cam, clip.max));
-			//s.geom.u.sprite.do_clipping = do_clipping;
-			//s.geom.u.sprite.is_text = true;
+			s.geom.clip = make_aabb(mul(draw->cam, clip.min), mul(draw->cam, clip.max));
+			s.geom.do_clipping = do_clipping;
+			s.geom.is_text = true;
 			s.sort_bits = draw->layers.last();
 
 			spritebatch_push(&draw->sb, s);

@@ -121,27 +121,28 @@
 		vec4 c = vec4(0);
 		float d = 0;
 		if (is_sprite) {
+			c = de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size)));
+			c = gamma(overlay(c, v_col));
 		} else if (is_text) {
+			c = de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size)));
+			c = v_col * c.a;
 		} else if (is_box) {
 			d = distance_box(v_pos, v_a, v_b, v_c);
+			c = sdf(c, v_col, d - v_radius);
 		} else if (is_seg) {
 			d = distance_segment(v_pos, v_a, v_b);
+			c = sdf(c, v_col, d - v_radius);
 		} else if (is_seg_beg) {
 		} else if (is_seg_mid) {
 		} else if (is_seg_end) {
 		} else if (is_tri) {
 			d = -1.0;
+			c = sdf(c, v_col, d - v_radius);
 		} else if (is_tri_sdf) {
 			d = distance_triangle(v_pos, v_a, v_b, v_c);
+			c = sdf(c, v_col, d - v_radius);
 		}
-		c = sdf(c, v_col, d - v_radius);
 		c.a *= v_alpha;
-
-		//vec4 c = de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size)));
-		//c.a *= v_alpha;
-		//c = mix(c, gamma(overlay(c, v_col)), is_sprite);
-		//c = mix(c, v_col, is_shape);
-		//c = mix(c, v_col * c.a, is_text);
 
 		if (c.a == 0) discard;
 		result = c;
