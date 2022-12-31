@@ -33,7 +33,7 @@ int main(int argc, const char** argv)
 			draw_line(V2(0,0), V2(cosf(t*0.5f),sinf(t*0.5f))*100.0f,10);
 		}
 
-		if (1) {
+		if (0) {
 			v2 o = V2(sinf(t),cosf(t));
 			draw_push_antialias(true);
 			draw_quad(cf_make_aabb(V2(-20,-20)+o*25.0f, V2(20,20)+o*25.0f), 5);
@@ -41,6 +41,44 @@ int main(int argc, const char** argv)
 			draw_pop_antialias();
 			draw_quad(cf_make_aabb(V2(-20,-20)-o*25.0f, V2(20,20)-o*25.0f), 5);
 			draw_quad_fill(cf_make_aabb(V2(-60,-60)-o*25.0f, V2(-40,-30)-o*25.0f));
+		}
+
+		if (0) {
+			v2 box[4];
+			Aabb bb = make_aabb(V2(-20,-30), V2(30,50));
+			aabb_verts(box, bb);
+			M3x2 m = make_rotation(mod(t*0.25f, CUTE_PI*2));
+			for (int i = 0; i < 4; ++i) box[i] = mul(m, box[i]);
+			draw_push_antialias(true);
+			draw_quad_rounded2(box[0], box[1], box[2], box[3], 5, 20);
+			draw_pop_antialias();
+			m = make_translation(-150,0);
+			for (int i = 0; i < 4; ++i) box[i] = mul(m, box[i]);
+			draw_quad_rounded2(box[0], box[1], box[2], box[3], 5, 20);
+
+			m = make_translation(0,150);
+			for (int i = 0; i < 4; ++i) box[i] = mul(m, box[i]);
+			cf_draw_quad_fill_rounded2(box[0], box[1], box[2], box[3], 20);
+
+			m = make_translation(150,0);
+			for (int i = 0; i < 4; ++i) box[i] = mul(m, box[i]);
+			draw_push_antialias(true);
+			cf_draw_quad_fill_rounded2(box[0], box[1], box[2], box[3], 20);
+			draw_pop_antialias();
+		}
+
+		if (0) {
+			cf_draw_capsule(V2(-100,100), V2(100,150), 20, 3);
+			draw_push_antialias(true);
+			cf_draw_capsule(V2(-100,0), V2(100,50), 20, 3);
+			draw_pop_antialias();
+		}
+
+		if (1) {
+			cf_draw_tri_fill(V2(-100,-100), V2(-50,80), V2(120,15));
+			draw_push_antialias(true);
+			cf_draw_tri_fill(V2(-50,-50-100), V2(-70,30-100), V2(150,25-100));
+			draw_pop_antialias();
 		}
 
 		t += CF_DELTA_TIME;

@@ -119,18 +119,22 @@
 		bool is_tri_sdf = v_type == (8.0/255.0);
 
 		vec4 c = vec4(0);
+		float d = 0;
 		if (is_sprite) {
 		} else if (is_text) {
 		} else if (is_box) {
-			c = sdf(c, v_col, distance_box(v_pos, v_a, v_b, v_c) - v_radius);
+			d = distance_box(v_pos, v_a, v_b, v_c);
 		} else if (is_seg) {
-			c = sdf(c, v_col, distance_segment(v_pos, v_a, v_b) - v_radius);
+			d = distance_segment(v_pos, v_a, v_b);
 		} else if (is_seg_beg) {
 		} else if (is_seg_mid) {
 		} else if (is_seg_end) {
 		} else if (is_tri) {
+			d = -1.0;
 		} else if (is_tri_sdf) {
+			d = distance_triangle(v_pos, v_a, v_b, v_c);
 		}
+		c = sdf(c, v_col, d - v_radius);
 		c.a *= v_alpha;
 
 		//vec4 c = de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size)));

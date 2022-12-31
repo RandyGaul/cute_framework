@@ -116,45 +116,6 @@ static CUTE_INLINE float s_intersect(float a, float b, float u0, float u1, float
 	return u0 + (u1 - u0) * (da / (da - db));
 }
 
-void CUTE_INLINE s_bounding_box_of_triangle(v2 a, v2 b, v2 c, float r, float one_pixel, v2* out)
-{
-	v2 ab = b - a;
-	v2 bc = c - b;
-	v2 ca = a - c;
-	float d0 = dot(ab, ab);
-	float d1 = dot(bc, bc);
-	float d2 = dot(ca, ca);
-	auto build_box = [](float d, v2 a, v2 b, v2 c, float r, v2* out) {
-		float w = sqrtf(d);
-		v2 n0 = (b - a) / w;
-		v2 n1 = skew(n0);
-		float h = dot(n1, c) - dot(n1, a);
-		a = a - n0 * r - n1 * r;
-		b = b + n0 * r - n1 * r;
-		out[0] = a;
-		out[1] = b;
-		out[2] = b + n1 * (h + r * 2.0f);
-		out[3] = a + n1 * (h + r * 2.0f);
-	};
-	if (d0 >= d1 && d0 >= d2) {
-		build_box(d0, a, b, c, r + one_pixel, out);
-	} else if (d1 >= d0 && d1 >= d2) {
-		build_box(d1, b, c, a, r + one_pixel, out);
-	} else {
-		build_box(d2, c, a, b, r + one_pixel, out);
-	}
-}
-
-static CUTE_INLINE void s_bounding_box_of_capsule(v2 a, v2 b, float r, float one_pixel, v2* out)
-{
-	v2 n0 = norm(b - a) * (r + one_pixel);
-	v2 n1 = skew(n0);
-	out[0] = a - n0 + n1;
-	out[1] = a - n0 - n1;
-	out[2] = b + n0 - n1;
-	out[3] = b + n0 + n1;
-}
-
 static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_w, int texture_h, void* udata)
 {
 	CUTE_UNUSED(udata);
@@ -178,53 +139,43 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		};
 
 		switch (s->geom.type) {
-		//case BATCH_GEOMETRY_TYPE_TRI:
-		//{
-		//	BatchTri geom = s->geom.u.tri;
-		//	DrawVertex* out = verts + vert_count;
-		//
-		//	if (draw->antialias.last() || s->geom.radius > 0) {
-		//		// Wrap triangle in a minimum inflated bounding box.
-		//		v2 box[4];
-		//		s_bounding_box_of_triangle(geom.p0, geom.p1, geom.p2, s->geom.radius, 1, box);
-		//
-		//		v2 quad[6] = {
-		//			box[0],
-		//			box[3],
-		//			box[1],
-		//			box[1],
-		//			box[3],
-		//			box[2],
-		//		};
-		//
-		//		for (int i = 0; i < 6; ++i) {
-		//			out[i].p = quad[i];
-		//			out[i].a = geom.p0;
-		//			out[i].b = geom.p1;
-		//			out[i].c = geom.p2;
-		//			out[i].color = s->geom.color;
-		//			out[i].radius = s->geom.radius;
-		//			out[i].type = VA_TYPE_TRIANGLE_SDF;
-		//			out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-		//		}
-		//
-		//		vert_count += 6;
-		//	} else {
-		//		// Traditional triangle (no inflation step necessary).
-		//		for (int i = 0; i < 3; ++i) {
-		//			out[i].color = s->geom.color;
-		//			out[i].radius = s->geom.radius;
-		//			out[i].type = VA_TYPE_TRIANGLE;
-		//			out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-		//		}
-		//
-		//		out[0].p = geom.p0;
-		//		out[1].p = geom.p1;
-		//		out[2].p = geom.p2;
-		//
-		//		vert_count += 3;
-		//	}
-		//}	break;
+		case BATCH_GEOMETRY_TYPE_TRI:
+		{
+			for (int i = 0; i < 3; ++i) {
+				out[i].color = s->geom.color;
+				out[i].radius = s->geom.radius;
+				out[i].stroke = s->geom.stroke;
+				out[i].type = VA_TYPE_TRIANGLE_SDF;
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				out[i].fill = s->geom.fill ? 255 : 0;
+				out[i].aa = s->geom.antialias ? 255 : 0;
+			}
+
+			out[0].p = geom.a;
+			out[1].p = geom.b;
+			out[2].p = geom.c;
+		
+			vert_count += 3;
+		}	break;
+
+		case BATCH_GEOMETRY_TYPE_TRI_SDF:
+		{
+			for (int i = 0; i < 6; ++i) {
+				out[i].p = quad[i];
+				out[i].a = geom.a;
+				out[i].b = geom.b;
+				out[i].c = geom.c;
+				out[i].color = s->geom.color;
+				out[i].radius = s->geom.radius;
+				out[i].stroke = s->geom.stroke;
+				out[i].type = VA_TYPE_TRIANGLE_SDF;
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				out[i].fill = s->geom.fill ? 255 : 0;
+				out[i].aa = s->geom.antialias ? 255 : 0;
+			}
+		
+			vert_count += 6;
+		}	break;
 
 		case BATCH_GEOMETRY_TYPE_QUAD:
 		{
@@ -253,9 +204,6 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 
 		//case BATCH_GEOMETRY_TYPE_SPRITE:
 		//{
-		//	BatchSprite geom = s->geom.u.sprite;
-		//	DrawVertex* out = verts + vert_count;
-		//
 		//	bool clipped_away = false;
 		//	if (geom.do_clipping) {
 		//		CUTE_ASSERT(geom.is_text);
@@ -576,14 +524,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	spritebatch_push(&draw->sb, s);
 }
 
-void cf_draw_quad(CF_Aabb bb, float thickness)
-{
-	CF_V2 verts[4];
-	cf_aabb_verts(verts, bb);
-	cf_draw_quad2(verts[0], verts[1], verts[2], verts[3], thickness);
-}
-
-void cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness)
+static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, float radius, bool fill)
 {
 	CF_M3x2 m = draw->cam;
 	spritebatch_sprite_t s = { };
@@ -595,10 +536,11 @@ void cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness)
 	v2 v = skew(u);
 	v2 he = V2(distance(p1, p0), distance(p3, p0)) * 0.5f;
 	v2 c = ((p0 + p1) * 0.5f + (p2 + p3) * 0.5f) * 0.5f;
-	p0 = p0 - u * thickness * 2.0f - v * thickness * 2.0f;
-	p1 = p1 + u * thickness * 2.0f - v * thickness * 2.0f;
-	p2 = p2 + u * thickness * 2.0f + v * thickness * 2.0f;
-	p3 = p3 - u * thickness * 2.0f + v * thickness * 2.0f;
+	float inflate = stroke+radius+1.0f;
+	p0 = p0 - u * inflate - v * inflate;
+	p1 = p1 + u * inflate - v * inflate;
+	p2 = p2 + u * inflate + v * inflate;
+	p3 = p3 - u * inflate + v * inflate;
 
 	s.geom.box[0] = mul(m, p0);
 	s.geom.box[1] = mul(m, p1);
@@ -610,55 +552,63 @@ void cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness)
 
 	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
 	s.geom.alpha = 1.0f;
-	s.geom.stroke = thickness;
+	s.geom.radius = radius;
+	s.geom.stroke = stroke;
+	s.geom.fill = fill;
 	s.geom.antialias = draw->antialias.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
+}
+
+void cf_draw_quad(CF_Aabb bb, float thickness)
+{
+	CF_V2 verts[4];
+	cf_aabb_verts(verts, bb);
+	s_draw_quad(verts[0], verts[1], verts[2], verts[3], thickness, 0, false);
+}
+
+void cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness)
+{
+	s_draw_quad(p0, p1, p2, p3, thickness, 0, false);
+}
+
+void cf_draw_quad_rounded(CF_Aabb bb, float thickness, float radius)
+{
+	CF_V2 verts[4];
+	cf_aabb_verts(verts, bb);
+	s_draw_quad(verts[0], verts[1], verts[2], verts[3], thickness, radius, false);
+}
+
+void cf_draw_quad_rounded2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float radius)
+{
+	s_draw_quad(p0, p1, p2, p3, thickness, radius, false);
 }
 
 void cf_draw_quad_fill(CF_Aabb bb)
 {
 	CF_V2 verts[4];
 	cf_aabb_verts(verts, bb);
-	cf_draw_quad_fill2(verts[0], verts[1], verts[2], verts[3]);
+	s_draw_quad(verts[0], verts[1], verts[2], verts[3], 0, 0, true);
 }
 
 void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3)
 {
-	CF_M3x2 m = draw->cam;
-	spritebatch_sprite_t s = { };
-	s.image_id = app->default_image_id;
-	s.w = s.h = 1;
-	s.geom.type = BATCH_GEOMETRY_TYPE_QUAD;
-
-	v2 u = norm(p1 - p0);
-	v2 v = skew(u);
-	v2 he = V2(length(p1 - p0), length(p3 - p0)) * 0.5f;
-	v2 c = ((p0 + p1) * 0.5f + (p2 + p3) * 0.5f) * 0.5f;
-	if (draw->antialias.last()) {
-		p0 = p0 - u - v;
-		p1 = p1 + u - v;
-		p2 = p2 + u + v;
-		p3 = p3 - u + v;
-	}
-
-	s.geom.box[0] = mul(m, p0);
-	s.geom.box[1] = mul(m, p1);
-	s.geom.box[2] = mul(m, p2);
-	s.geom.box[3] = mul(m, p3);
-	s.geom.a = c;
-	s.geom.b = he;
-	s.geom.c = u;
-
-	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
-	s.geom.alpha = 1.0f;
-	s.geom.fill = true;
-	s.geom.antialias = draw->antialias.last();
-	s.sort_bits = draw->layers.last();
-	spritebatch_push(&draw->sb, s);
+	s_draw_quad(p0, p1, p2, p3, 0, 0, true);
 }
 
-void cf_draw_circle(CF_V2 p, float r, float thickness)
+void cf_draw_quad_fill_rounded(CF_Aabb bb, float radius)
+{
+	CF_V2 verts[4];
+	cf_aabb_verts(verts, bb);
+	s_draw_quad(verts[0], verts[1], verts[2], verts[3], 0, radius, true);
+}
+
+void cf_draw_quad_fill_rounded2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float radius)
+{
+	s_draw_quad(p0, p1, p2, p3, 0, radius, true);
+}
+
+static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 {
 	CF_M3x2 m = draw->cam;
 	spritebatch_sprite_t s = { };
@@ -666,97 +616,47 @@ void cf_draw_circle(CF_V2 p, float r, float thickness)
 	s.w = s.h = 1;
 	s.geom.type = BATCH_GEOMETRY_TYPE_CIRCLE;
 
-	// Wrap circle in a tight-box for rendering under a quad.
-	v2 rr = V2(r, r);
-	v2 border = draw->antialias.last() ? V2(thickness,thickness) + V2(1,1) : V2(thickness,thickness);
-	CF_Aabb bb = make_aabb(p - (rr + border), p + (rr + border));
+	v2 rr = V2(radius, radius);
+	v2 inflate = V2(stroke+1.0f, stroke+1.0f);
+	CF_Aabb bb = make_aabb(position - (rr+inflate), position + (rr+inflate));
 	cf_aabb_verts(s.geom.box, bb);
 	s.geom.box[0] = mul(m, s.geom.box[0]);
 	s.geom.box[1] = mul(m, s.geom.box[1]);
 	s.geom.box[2] = mul(m, s.geom.box[2]);
 	s.geom.box[3] = mul(m, s.geom.box[3]);
-	s.geom.a = p;
+	s.geom.a = position;
 
 	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
 	s.geom.alpha = 1.0f;
-	s.geom.radius = r;
-	if (draw->antialias.last()) {
-		s.geom.stroke = thickness;
-		s.geom.antialias = true;
-	} else {
-		s.geom.stroke = thickness * 0.5f;
-		s.geom.antialias = false;
-	}
-	s.sort_bits = draw->layers.last();
-	spritebatch_push(&draw->sb, s);
-}
-
-void cf_draw_circle_fill(CF_V2 p, float r)
-{
-	CF_M3x2 m = draw->cam;
-	spritebatch_sprite_t s = { };
-	s.image_id = app->default_image_id;
-	s.w = s.h = 1;
-	s.geom.type = BATCH_GEOMETRY_TYPE_CIRCLE;
-
-	// Wrap circle in a tight-box for rendering under a quad.
-	v2 rr = V2(r, r);
-	v2 aa = draw->antialias.last() ? V2(1,1) : V2(0,0);
-	CF_Aabb bb = make_aabb(p - (rr + aa), p + (rr + aa));
-	cf_aabb_verts(s.geom.box, bb);
-	s.geom.box[0] = mul(m, s.geom.box[0]);
-	s.geom.box[1] = mul(m, s.geom.box[1]);
-	s.geom.box[2] = mul(m, s.geom.box[2]);
-	s.geom.box[3] = mul(m, s.geom.box[3]);
-	s.geom.a = p;
-
-	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
-	s.geom.alpha = 1.0f;
-	s.geom.radius = r;
-	s.geom.fill = true;
+	s.geom.radius = radius;
+	s.geom.stroke = stroke;
+	s.geom.fill = fill;
 	s.geom.antialias = draw->antialias.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
 }
 
-void cf_draw_capsule(CF_V2 a, CF_V2 b, float r, int iters, float thickness)
+void cf_draw_circle(CF_V2 position, float radius, float thickness)
 {
+	s_draw_circle(position, thickness, radius, false);
 }
 
-void cf_draw_capsule_fill(CF_V2 a, CF_V2 b, float r, int iters)
+void cf_draw_circle_fill(CF_V2 position, float radius)
 {
+	s_draw_circle(position, 0, radius, true);
 }
 
-void cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness)
+static CUTE_INLINE void s_bounding_box_of_capsule(v2 a, v2 b, float radius, float stroke, v2 out[4])
 {
-	draw->temp.ensure_capacity(3);
-	draw->temp.clear();
-	draw->temp.add(p0);
-	draw->temp.add(p1);
-	draw->temp.add(p2);
-	cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, true, 0);
+	v2 n0 = norm(b - a) * (radius + stroke + 1.0f);
+	v2 n1 = skew(n0);
+	out[0] = a - n0 + n1;
+	out[1] = a - n0 - n1;
+	out[2] = b + n0 - n1;
+	out[3] = b + n0 + n1;
 }
 
-void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2)
-{
-	CF_M3x2 m = draw->cam;
-	spritebatch_sprite_t s = { };
-	s.image_id = app->default_image_id;
-	s.w = 1;
-	s.h = 1;
-	s.geom.type = BATCH_GEOMETRY_TYPE_TRI;
-
-	//s.geom.u.tri.p0 = mul(m, p0);
-	//s.geom.u.tri.p1 = mul(m, p1);
-	//s.geom.u.tri.p2 = mul(m, p2);
-
-	s.geom.color = premultiply(to_pixel(draw->colors.last()));
-	s.geom.alpha = 1.0f;
-	s.sort_bits = draw->layers.last();
-	spritebatch_push(&draw->sb, s);
-}
-
-void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
+static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 {
 	CF_M3x2 m = draw->cam;
 	spritebatch_sprite_t s = { };
@@ -764,22 +664,122 @@ void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
 	s.w = s.h = 1;
 	s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT;
 
-	// Wrap circle in a tight-box for rendering under a quad.
-	s_bounding_box_of_capsule(p0, p1, thickness, 1.0f, s.geom.box);
+	s_bounding_box_of_capsule(a, b, radius, stroke, s.geom.box);
 	s.geom.box[0] = mul(m, s.geom.box[0]);
 	s.geom.box[1] = mul(m, s.geom.box[1]);
 	s.geom.box[2] = mul(m, s.geom.box[2]);
 	s.geom.box[3] = mul(m, s.geom.box[3]);
-	s.geom.a = p0;
-	s.geom.b = p1;
+	s.geom.a = a;
+	s.geom.b = b;
 
 	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
 	s.geom.alpha = 1.0f;
-	s.geom.radius = thickness * 0.5f - (draw->antialias.last() ? 0.5f : 0);
-	s.geom.fill = true;
+	s.geom.radius = radius;
+	s.geom.stroke = stroke;
+	s.geom.fill = fill;
 	s.geom.antialias = draw->antialias.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
+}
+
+void cf_draw_capsule(CF_V2 a, CF_V2 b, float radius, float thickness)
+{
+	s_draw_capsule(a, b, thickness, radius, false);
+}
+
+void cf_draw_capsule_fill(CF_V2 a, CF_V2 b, float radius)
+{
+	s_draw_capsule(a, b, 0, radius, true);
+}
+
+void CUTE_INLINE s_bounding_box_of_triangle(v2 a, v2 b, v2 c, float radius, float stroke, v2* out)
+{
+	v2 ab = b - a;
+	v2 bc = c - b;
+	v2 ca = a - c;
+	float d0 = dot(ab, ab);
+	float d1 = dot(bc, bc);
+	float d2 = dot(ca, ca);
+	auto build_box = [](float d, v2 a, v2 b, v2 c, float inflate, v2* out) {
+		float w = sqrtf(d);
+		v2 u = (b - a) / w;
+		v2 v = skew(u);
+		float h = dot(v, c) - dot(v, a);
+		if (h < 0) {
+			h = -h;
+			v = -v;
+		}
+		out[0] = a - u * inflate - v * inflate;
+		out[1] = b + u * inflate - v * inflate;
+		out[2] = b + u * inflate + v * (inflate + h);
+		out[3] = a - u * inflate + v * (inflate + h);
+	};
+	if (d0 >= d1 && d0 >= d2) {
+		build_box(d0, a, b, c, radius + stroke + 1.0f, out);
+	} else if (d1 >= d0 && d1 >= d2) {
+		build_box(d1, b, c, a, radius + stroke + 1.0f, out);
+	} else {
+		build_box(d2, c, a, b, radius + stroke + 1.0f, out);
+	}
+}
+
+static void s_cf_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fill)
+{
+	CF_M3x2 m = draw->cam;
+	spritebatch_sprite_t s = { };
+	s.image_id = app->default_image_id;
+	s.w = s.h = 1;
+
+	if (stroke > 0 || radius > 0 || !fill || draw->antialias.last()) {
+		s.geom.type = BATCH_GEOMETRY_TYPE_TRI_SDF;
+		s_bounding_box_of_triangle(a, b, c, radius, stroke, s.geom.box);
+		s.geom.box[0] = mul(m, s.geom.box[0]);
+		s.geom.box[1] = mul(m, s.geom.box[1]);
+		s.geom.box[2] = mul(m, s.geom.box[2]);
+		s.geom.box[3] = mul(m, s.geom.box[3]);
+		s.geom.a = a;
+		s.geom.b = b;
+		s.geom.c = c;
+	} else {
+		s.geom.type = BATCH_GEOMETRY_TYPE_TRI;
+		s.geom.a = mul(m, a);
+		s.geom.b = mul(m, b);
+		s.geom.c = mul(m, c);
+	}
+
+	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
+	s.geom.alpha = 1.0f;
+	s.geom.radius = radius;
+	s.geom.stroke = stroke;
+	s.geom.fill = fill;
+	s.geom.antialias = draw->antialias.last();
+	s.sort_bits = draw->layers.last();
+	spritebatch_push(&draw->sb, s);
+}
+
+void cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness)
+{
+	s_cf_draw_tri(p0, p1, p2, thickness, 0, false);
+}
+
+void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2)
+{
+	s_cf_draw_tri(p0, p1, p2, 0, 0, true);
+}
+
+void cf_draw_tri_rounded(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float radius)
+{
+	s_cf_draw_tri(p0, p1, p2, thickness, radius, false);
+}
+
+void cf_draw_tri_fill_rounded(CF_V2 p0, CF_V2 p1, CF_V2 p2, float radius)
+{
+	s_cf_draw_tri(p0, p1, p2, 0, radius, true);
+}
+
+void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
+{
+	s_draw_capsule(p0, p1, 0, thickness, true);
 }
 
 void cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count)

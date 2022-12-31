@@ -44,10 +44,10 @@ CUTE_API void CUTE_CALL cf_draw_quad_fill(CF_Aabb bb);
 CUTE_API void CUTE_CALL cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3);
 CUTE_API void CUTE_CALL cf_draw_quad_fill_rounded(CF_Aabb bb, float radius);
 CUTE_API void CUTE_CALL cf_draw_quad_fill_rounded2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float radius);
-CUTE_API void CUTE_CALL cf_draw_circle(CF_V2 p, float r, float stroke);
-CUTE_API void CUTE_CALL cf_draw_circle_fill(CF_V2 p, float r);
-CUTE_API void CUTE_CALL cf_draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness);
-CUTE_API void CUTE_CALL cf_draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters);
+CUTE_API void CUTE_CALL cf_draw_circle(CF_V2 position, float radius, float thickness);
+CUTE_API void CUTE_CALL cf_draw_circle_fill(CF_V2 p, float radius);
+CUTE_API void CUTE_CALL cf_draw_capsule(CF_V2 p0, CF_V2 p1, float radius, float thickness);
+CUTE_API void CUTE_CALL cf_draw_capsule_fill(CF_V2 p0, CF_V2 p1, float radius);
 CUTE_API void CUTE_CALL cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness);
 CUTE_API void CUTE_CALL cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2);
 CUTE_API void CUTE_CALL cf_draw_tri_rounded(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float radius);
@@ -234,14 +234,20 @@ using TemporaryImage = CF_TemporaryImage;
 CUTE_INLINE void draw_sprite(const CF_Sprite* sprite) { cf_draw_sprite(sprite); }
 CUTE_INLINE void draw_quad(CF_Aabb bb, float thickness = 1.0f) { cf_draw_quad(bb, thickness); }
 CUTE_INLINE void draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness) { cf_draw_quad2(p0, p1, p2, p3, thickness); }
+CUTE_INLINE void draw_quad_rounded(CF_Aabb bb, float thickness, float radius) { cf_draw_quad_rounded(bb, thickness, radius); }
+CUTE_INLINE void draw_quad_rounded2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float radius) { cf_draw_quad_rounded2(p0, p1, p2, p3, thickness, radius); }
 CUTE_INLINE void draw_quad_fill(CF_Aabb bb) { cf_draw_quad_fill(bb); }
 CUTE_INLINE void draw_quad_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3) { cf_draw_quad_fill2(p0, p1, p2, p3); }
-CUTE_INLINE void draw_circle(CF_V2 p, float r, float thickness = 1.0f) { cf_draw_circle(p, r, thickness); }
-CUTE_INLINE void draw_circle_fill(CF_V2 p, float r) { cf_draw_circle_fill(p, r); }
-CUTE_INLINE void draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness) { cf_draw_capsule(p0, p1, r, iters, thickness); }
-CUTE_INLINE void draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters) { cf_draw_capsule_fill(p0, p1, r, iters); }
+CUTE_INLINE void draw_quad_fill_rounded(CF_Aabb bb, float radius) { cf_draw_quad_fill_rounded(bb, radius); }
+CUTE_INLINE void draw_quad_fill_rounded2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float radius) { cf_draw_quad_fill_rounded2(p0, p1, p2, p3, radius); }
+CUTE_INLINE void draw_circle(CF_V2 p, float radius, float thickness = 1.0f) { cf_draw_circle(p, radius, thickness); }
+CUTE_INLINE void draw_circle_fill(CF_V2 p, float radius) { cf_draw_circle_fill(p, radius); }
+CUTE_INLINE void draw_capsule(CF_V2 p0, CF_V2 p1, float radius, float thickness = 1.0f) { cf_draw_capsule(p0, p1, radius, thickness); }
+CUTE_INLINE void draw_capsule_fill(CF_V2 p0, CF_V2 p1, float radius) { cf_draw_capsule_fill(p0, p1, radius); }
 CUTE_INLINE void draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness) { cf_draw_tri(p0, p1, p2, thickness); }
 CUTE_INLINE void draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2) { cf_draw_tri_fill(p0, p1, p2); }
+CUTE_INLINE void draw_tri_rounded(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float radius) { cf_draw_tri_rounded(p0, p1, p2, thickness, radius); }
+CUTE_INLINE void draw_tri_fill_founded(CF_V2 p0, CF_V2 p1, CF_V2 p2, float radius) { cf_draw_tri_fill_rounded(p0, p1, p2, radius); }
 CUTE_INLINE void draw_line(CF_V2 p0, CF_V2 p1, float thickness = 1.0f) { cf_draw_line(p0, p1, thickness); }
 CUTE_INLINE void draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count) { cf_draw_polyline(points, count, thickness, loop, bevel_count); }
 
