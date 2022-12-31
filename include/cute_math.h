@@ -209,6 +209,7 @@ CUTE_INLINE CF_V2 cf_abs_v2(CF_V2 a) { return cf_v2(fabsf(a.x), fabsf(a.y)); }
 CUTE_INLINE float cf_hmin(CF_V2 a) { return cf_min(a.x, a.y); }
 CUTE_INLINE float cf_hmax(CF_V2 a) { return cf_max(a.x, a.y); }
 CUTE_INLINE float cf_len(CF_V2 a) { return sqrtf(cf_dot(a, a)); }
+CUTE_INLINE float cf_length(CF_V2 a) { return sqrtf(cf_dot(a, a)); }
 CUTE_INLINE float cf_distance(CF_V2 a, CF_V2 b) { CF_V2 d = cf_sub_v2(b, a); return sqrtf(cf_dot(d, d)); }
 CUTE_INLINE CF_V2 cf_norm(CF_V2 a) { return cf_div_v2_f(a, cf_len(a)); }
 CUTE_INLINE CF_V2 cf_safe_norm(CF_V2 a) { float sq = cf_dot(a, a); return sq ? cf_div_v2_f(a, sqrtf(sq)) : cf_v2(0, 0); }
@@ -772,6 +773,7 @@ CUTE_INLINE v2 abs(v2 a) { return cf_abs_v2(a); }
 CUTE_INLINE float hmin(v2 a) { return cf_hmin(a); }
 CUTE_INLINE float hmax(v2 a) { return cf_hmax(a); }
 CUTE_INLINE float len(v2 a) { return cf_len(a); }
+CUTE_INLINE float length(v2 a) { return cf_len(a); }
 CUTE_INLINE float distance(v2 a, v2 b) { return cf_distance(a, b); }
 CUTE_INLINE v2 norm(v2 a) { return cf_norm(a); }
 CUTE_INLINE v2 safe_norm(v2 a) { return cf_safe_norm(a); }

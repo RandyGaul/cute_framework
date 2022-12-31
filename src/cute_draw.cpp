@@ -240,7 +240,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].fill = s->geom.fill ? 255 : 0;
 				out[i].aa = s->geom.antialias ? 255 : 0;
 			}
-		
+
 			out[0].p = quad[0];
 			out[1].p = quad[1];
 			out[2].p = quad[2];
@@ -591,29 +591,26 @@ void cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness)
 	s.w = s.h = 1;
 	s.geom.type = BATCH_GEOMETRY_TYPE_QUAD;
 
+	v2 u = norm(p1 - p0);
+	v2 v = skew(u);
+	v2 he = V2(distance(p1, p0), distance(p3, p0)) * 0.5f;
+	v2 c = ((p0 + p1) * 0.5f + (p2 + p3) * 0.5f) * 0.5f;
+	p0 = p0 - u * thickness * 2.0f - v * thickness * 2.0f;
+	p1 = p1 + u * thickness * 2.0f - v * thickness * 2.0f;
+	p2 = p2 + u * thickness * 2.0f + v * thickness * 2.0f;
+	p3 = p3 - u * thickness * 2.0f + v * thickness * 2.0f;
+
 	s.geom.box[0] = mul(m, p0);
 	s.geom.box[1] = mul(m, p1);
 	s.geom.box[2] = mul(m, p2);
 	s.geom.box[3] = mul(m, p3);
-	
-	// Convert to segment + thickness format for the shader.
-	float w = distance(p0, p1);
-	float h = distance(p1, p2);
-	float hw = w * 0.5f;
-	float hh = h * 0.5f;
-	float box_thickness = min(hw, hh);
-	v2 n0 = norm(p1 - p0) * hw;
-	v2 n1 = norm(p2 - p1) * hh;
-	v2 a = p0 + n0 + n1;
-	v2 b = p2 - n0 - n1;
-	v2 c = V2(box_thickness, box_thickness);
-	s.geom.a = a;
-	s.geom.b = b;
-	s.geom.c = c;
+	s.geom.a = c;
+	s.geom.b = he;
+	s.geom.c = u;
 
 	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
 	s.geom.alpha = 1.0f;
-	s.geom.stroke = draw->antialias.last() ? thickness : thickness * 0.5f;
+	s.geom.stroke = thickness;
 	s.geom.antialias = draw->antialias.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -634,28 +631,28 @@ void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3)
 	s.w = s.h = 1;
 	s.geom.type = BATCH_GEOMETRY_TYPE_QUAD;
 
+	v2 u = norm(p1 - p0);
+	v2 v = skew(u);
+	v2 he = V2(length(p1 - p0), length(p3 - p0)) * 0.5f;
+	v2 c = ((p0 + p1) * 0.5f + (p2 + p3) * 0.5f) * 0.5f;
+	if (draw->antialias.last()) {
+		p0 = p0 - u - v;
+		p1 = p1 + u - v;
+		p2 = p2 + u + v;
+		p3 = p3 - u + v;
+	}
+
 	s.geom.box[0] = mul(m, p0);
 	s.geom.box[1] = mul(m, p1);
 	s.geom.box[2] = mul(m, p2);
 	s.geom.box[3] = mul(m, p3);
-	
-	// Convert to segment + thickness format for the shader.
-	float w = distance(p0, p1);
-	float h = distance(p1, p2);
-	float thickness = min(w, h);
-	float hw = w * 0.5f;
-	float hh = h * 0.5f;
-	v2 n0 = norm(p1 - p0) * hw;
-	v2 n1 = norm(p2 - p1) * hh;
-	v2 a = p0 + n0 + n1;
-	v2 b = p2 - n0 - n1;
-	v2 c = V2(thickness, thickness);
-	s.geom.a = a;
-	s.geom.b = b;
-	s.geom.c = c;
+	s.geom.a = c;
+	s.geom.b = he;
+	s.geom.c = u;
 
 	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
 	s.geom.alpha = 1.0f;
+	s.geom.fill = true;
 	s.geom.antialias = draw->antialias.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
@@ -671,7 +668,7 @@ void cf_draw_circle(CF_V2 p, float r, float thickness)
 
 	// Wrap circle in a tight-box for rendering under a quad.
 	v2 rr = V2(r, r);
-	v2 border = draw->antialias.last() ? V2(thickness,thickness) : V2(thickness,thickness) * 0.5f;
+	v2 border = draw->antialias.last() ? V2(thickness,thickness) + V2(1,1) : V2(thickness,thickness);
 	CF_Aabb bb = make_aabb(p - (rr + border), p + (rr + border));
 	cf_aabb_verts(s.geom.box, bb);
 	s.geom.box[0] = mul(m, s.geom.box[0]);

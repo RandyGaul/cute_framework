@@ -20,22 +20,30 @@ int main(int argc, const char** argv)
 		app_update();
 
 		static float t = 0;
+
+		if (0) {
+			draw_push_antialias(true);
+			draw_circle_fill(V2(sinf(t*0.25f) * 250.0f,0), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f);
+			draw_circle(V2(sinf(t+2.0f) * 50.0f,0), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f, 5);
+			draw_line(V2(0,0), V2(cosf(t*0.5f+CUTE_PI),sinf(t*0.5f+CUTE_PI))*100.0f,10);
+			draw_pop_antialias();
+
+			draw_circle_fill(V2(sinf(t*0.25f) * 250.0f,100), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f);
+			draw_circle(V2(20,sinf(t+2.0f) * 50.0f), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f, 5);
+			draw_line(V2(0,0), V2(cosf(t*0.5f),sinf(t*0.5f))*100.0f,10);
+		}
+
+		if (1) {
+			v2 o = V2(sinf(t),cosf(t));
+			draw_push_antialias(true);
+			draw_quad(cf_make_aabb(V2(-20,-20)+o*25.0f, V2(20,20)+o*25.0f), 5);
+			draw_quad_fill(cf_make_aabb(V2(-60,-60)+o*25.0f, V2(-40,-30)+o*25.0f));
+			draw_pop_antialias();
+			draw_quad(cf_make_aabb(V2(-20,-20)-o*25.0f, V2(20,20)-o*25.0f), 5);
+			draw_quad_fill(cf_make_aabb(V2(-60,-60)-o*25.0f, V2(-40,-30)-o*25.0f));
+		}
+
 		t += CF_DELTA_TIME;
-
-		//draw_push_antialias(true);
-		//draw_circle_fill(V2(sinf(t*0.25f) * 250.0f,0), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f);
-		//draw_circle(V2(sinf(t+2.0f) * 50.0f,0), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f);
-		//draw_circle(V2(0,50), 20.0f);
-		//draw_line(V2(0,0), V2(cosf(t*0.5f+CUTE_PI),sinf(t*0.5f+CUTE_PI))*100.0f,10);
-		//draw_pop_antialias();
-		//
-		//draw_circle_fill(V2(sinf(t*0.25f) * 250.0f,100), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f);
-		//draw_circle(V2(sinf(t+2.0f) * 50.0f,100), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f);
-		//draw_circle(V2(0,0), 20.0f);
-		//draw_line(V2(0,0), V2(cosf(t*0.5f),sinf(t*0.5f))*100.0f,10);
-
-		draw_quad(cf_make_aabb(V2(-20,-20), V2(20,20)));
-
 		draw_calls = app_present();
 	}
 

@@ -42,7 +42,6 @@
 		p.y *= 480.0*0.5f;
 		v_pos = p;
 		v_a = in_a;
-		v_a = in_a;
 		v_b = in_b;
 		v_c = in_c;
 		v_d = in_d;
@@ -87,15 +86,24 @@
 	@include_block smooth_uv
 	@include_block distance
 
+	float sdf_stroke(float d)
+	{
+		return abs(d) - v_stroke;
+	}
+
 	vec4 sdf(vec4 a, vec4 b, float d)
 	{
-		float on_border = clamp(safe_div(abs(d), v_stroke), 0.0, 1.0);
-		vec4 stroke = mix(a, b, 1.0 - on_border);
-		vec4 fill = mix(a, b, 1.0 - clamp(d, 0.0, 1.0));
-		vec4 c_aa = mix(stroke, fill, v_fill);
-		vec4 c_no_aa_fill = d < 0 ? b : a;
-		vec4 c_no_aa_stroke = on_border < 1.0 ? b : a;
-		return mix(mix(c_no_aa_stroke, c_no_aa_fill, v_fill), c_aa, v_aa);
+		vec4 stroke_aa = mix(a, b, 1.0 - mix(0.0, 1.0, sdf_stroke(d)));
+		vec4 stroke_no_aa = sdf_stroke(d) <= 0.0 ? b : a;
+
+		vec4 fill_aa = mix(a, b, 1.0 - mix(0.0, 1.0, d));
+		vec4 fill_no_aa = d <= 0.0 ? b : a;
+
+		vec4 stroke = mix(stroke_no_aa, stroke_aa, v_aa);
+		vec4 fill = mix(fill_no_aa, fill_aa, v_aa);
+
+		result = mix(stroke, fill, v_fill);
+		return result;
 	}
 
 	void main()
@@ -114,10 +122,9 @@
 		if (is_sprite) {
 		} else if (is_text) {
 		} else if (is_box) {
-			float d = distance_box(v_pos, v_a, v_b, v_c.x, v_radius);
-			c = sdf(c, v_col, d);
+			c = sdf(c, v_col, distance_box(v_pos, v_a, v_b, v_c) - v_radius);
 		} else if (is_seg) {
-			c = sdf(c, v_col, distance_segment(v_pos, v_a, v_b, v_radius));
+			c = sdf(c, v_col, distance_segment(v_pos, v_a, v_b) - v_radius);
 		} else if (is_seg_beg) {
 		} else if (is_seg_mid) {
 		} else if (is_seg_end) {

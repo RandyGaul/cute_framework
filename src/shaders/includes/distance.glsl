@@ -28,35 +28,32 @@ float det2(vec2 a, vec2 b)
 
 //--------------------------------------------------------------------------------------------------
 
-float distance_aabb(vec2 p, vec2 he, float r)
+float distance_aabb(vec2 p, vec2 he)
 {
 	vec2 d = abs(p) - he;
-	return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0) - r;
+	return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0);
 }
 
-// Referenced from: https://www.shadertoy.com/view/stcfzn
-float distance_box(vec2 p, vec2 a, vec2 b, float thickness, float r)
+float distance_box(vec2 p, vec2 c, vec2 he, vec2 u)
 {
-	vec2 d = b - a;
-	float l = length(d);
-	d = safe_norm(d, l);
-	vec2 L = p - (a + b) * 0.5;
-	L = mat2(skew(d), d) * L; // This (and prior) can be done in vertex shader.
-	return distance_aabb(L, vec2(l * 0.5, thickness), r);
+	mat2 m = transpose(mat2(u, skew(u)));
+	p = p - c;
+	p = m * p;
+	return distance_aabb(p, he);
 }
 
 // Referenced from: https://www.shadertoy.com/view/3tdSDj
-float distance_segment(vec2 p, vec2 a, vec2 b, float r)
+float distance_segment(vec2 p, vec2 a, vec2 b)
 {
 	vec2 n = b - a;
 	vec2 pa = p - a;
 	float d = safe_div(dot(pa,n), dot(n,n));
 	float h = clamp(d, 0.0, 1.0);
-	return safe_len(pa - h * n) - r;
+	return safe_len(pa - h * n);
 }
 
 // Referenced from: https://www.shadertoy.com/view/XsXSz4
-float distance_triangle(vec2 p, vec2 a, vec2 b, vec2 c, float r)
+float distance_triangle(vec2 p, vec2 a, vec2 b, vec2 c)
 {
 	vec2 e0 = b - a;
 	vec2 e1 = c - b;
@@ -75,7 +72,7 @@ float distance_triangle(vec2 p, vec2 a, vec2 b, vec2 c, float r)
 	                 vec2(dot(pq1, pq1), s * det2(v1, e1))),
 	                 vec2(dot(pq2, pq2), s * det2(v2, e2)));
 
-	return -sqrt(d.x) * sign(d.y) - r;
+	return -sqrt(d.x) * sign(d.y);
 }
 
 @end
