@@ -53,7 +53,7 @@ CUTE_API void CUTE_CALL cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2);
 CUTE_API void CUTE_CALL cf_draw_tri_rounded(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float radius);
 CUTE_API void CUTE_CALL cf_draw_tri_fill_rounded(CF_V2 p0, CF_V2 p1, CF_V2 p2, float radius);
 CUTE_API void CUTE_CALL cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness);
-CUTE_API void CUTE_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count);
+CUTE_API void CUTE_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop);
 CUTE_API void CUTE_CALL cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, float thickness);
 CUTE_API void CUTE_CALL cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float thickness);
 
@@ -249,7 +249,7 @@ CUTE_INLINE void draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2) { cf_draw_tri_fill(
 CUTE_INLINE void draw_tri_rounded(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float radius) { cf_draw_tri_rounded(p0, p1, p2, thickness, radius); }
 CUTE_INLINE void draw_tri_fill_founded(CF_V2 p0, CF_V2 p1, CF_V2 p2, float radius) { cf_draw_tri_fill_rounded(p0, p1, p2, radius); }
 CUTE_INLINE void draw_line(CF_V2 p0, CF_V2 p1, float thickness = 1.0f) { cf_draw_line(p0, p1, thickness); }
-CUTE_INLINE void draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count) { cf_draw_polyline(points, count, thickness, loop, bevel_count); }
+CUTE_INLINE void draw_polyline(CF_V2* points, int count, float thickness, bool loop = false) { cf_draw_polyline(points, count, thickness, loop); }
 
 CUTE_INLINE void draw_push_layer(int layer) { cf_draw_push_layer(layer); }
 CUTE_INLINE int draw_pop_layer() { return cf_draw_pop_layer(); }

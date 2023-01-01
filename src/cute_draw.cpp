@@ -328,15 +328,43 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		}	break;
 
 		case BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_BEGIN:
+		case BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_END:
 		{
+			for (int i = 0; i < 6; ++i) {
+				out[i].p = quad[i];
+				out[i].b = geom.b;
+				out[i].c = geom.c;
+				out[i].d = geom.d;
+				out[i].color = s->geom.color;
+				out[i].radius = s->geom.radius;
+				out[i].stroke = s->geom.stroke;
+				out[i].type = s->geom.type == BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_BEGIN ? VA_TYPE_SEGMENT_CHAIN_BEGIN : VA_TYPE_SEGMENT_CHAIN_END;
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				out[i].fill = s->geom.fill ? 255 : 0;
+				out[i].aa = s->geom.antialias ? 255 : 0;
+			}
+
+			vert_count += 6;
 		}	break;
 
 		case BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_MIDDLE:
 		{
-		}	break;
+			for (int i = 0; i < 6; ++i) {
+				out[i].p = quad[i];
+				out[i].a = geom.a;
+				out[i].b = geom.b;
+				out[i].c = geom.c;
+				out[i].d = geom.d;
+				out[i].color = s->geom.color;
+				out[i].radius = s->geom.radius;
+				out[i].stroke = s->geom.stroke;
+				out[i].type = VA_TYPE_SEGMENT_CHAIN_MIDDLE;
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				out[i].fill = s->geom.fill ? 255 : 0;
+				out[i].aa = s->geom.antialias ? 255 : 0;
+			}
 
-		case BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_END:
-		{
+			vert_count += 6;
 		}	break;
 		}
 	}
@@ -795,8 +823,102 @@ void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
 	s_draw_capsule(p0, p1, 0, thickness, true);
 }
 
-void cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count)
+void cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop)
 {
+	if (count < 3) {
+		return;
+	}
+
+	CF_M3x2 m = draw->cam;
+	spritebatch_sprite_t s = { };
+	s.image_id = app->default_image_id;
+	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
+	s.geom.alpha = 1.0f;
+	s.geom.radius = thickness;
+	s.geom.stroke = 0;
+	s.geom.fill = true;
+	s.geom.antialias = draw->antialias.last();
+	s.sort_bits = draw->layers.last();
+	s.w = s.h = 1;
+	int iprev = -1;
+	int i0 = 0;
+	int i1 = 1;
+	int inext = 2;
+
+	for (int i = 0; i < count - 1; ++i) {
+		if (iprev == -1 || inext == -1) {
+			v2 b, c, d;
+
+			if (iprev == -1) {
+				CUTE_ASSERT(inext != -1);
+				// Begin segment.
+				b = points[i0];
+				c = points[i1];
+				d = points[inext];
+				s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_BEGIN;
+			} else {
+				CUTE_ASSERT(iprev != -1);
+				CUTE_ASSERT(inext == -1);
+				// End segment.
+				b = points[i1];
+				c = points[i0];
+				d = points[iprev];
+				s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_END;
+			}
+
+			v2 end = c;
+
+			v2 n = c - b;
+			if (dot(n, d) > dot(n, c)) {
+				n = norm(n);
+				end = c + n * (dot(n, d) - dot(n, c));
+			}
+
+			s_bounding_box_of_capsule(b, end, thickness, 0, s.geom.box);
+			s.geom.box[0] = mul(m, s.geom.box[0]);
+			s.geom.box[1] = mul(m, s.geom.box[1]);
+			s.geom.box[2] = mul(m, s.geom.box[2]);
+			s.geom.box[3] = mul(m, s.geom.box[3]);
+			s.geom.b = b;
+			s.geom.c = c;
+			s.geom.d = d;
+			spritebatch_push(&draw->sb, s);
+		} else {
+			// Middle segment.
+			v2 a = points[iprev];
+			v2 b = points[i0];
+			v2 c = points[i1];
+			v2 d = points[inext];
+			v2 beg = b;
+			v2 end = c;
+
+			v2 n = norm(c - b);
+			if (dot(n, d) > dot(n, c)) {
+				end = c + n * (dot(n, d) - dot(n, c));
+			}
+
+			s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_MIDDLE;
+			s_bounding_box_of_capsule(beg, end, thickness, 0, s.geom.box);
+			s.geom.box[0] = mul(m, s.geom.box[0]);
+			s.geom.box[1] = mul(m, s.geom.box[1]);
+			s.geom.box[2] = mul(m, s.geom.box[2]);
+			s.geom.box[3] = mul(m, s.geom.box[3]);
+			s.geom.a = a;
+			s.geom.b = b;
+			s.geom.c = c;
+			s.geom.d = d;
+			spritebatch_push(&draw->sb, s);
+		}
+
+		iprev = i0;
+		i0 = i1;
+		i1 = inext;
+		if (loop) {
+			inext = inext == count - 1 ? 0 : ++inext;
+		} else {
+			inext = inext == count - 1 ? -1 : ++inext;
+		}
+	}
 }
 
 void cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, float thickness)
@@ -810,7 +932,7 @@ void cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, float thickness)
 		draw->temp.add(p);
 	}
 	draw->temp.add(b);
-	cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, false, 1);
+	cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, false);
 }
 
 void cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float thickness)
@@ -824,7 +946,7 @@ void cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float
 		draw->temp.add(p);
 	}
 	draw->temp.add(b);
-	cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, false, 1);
+	cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, false);
 }
 
 void cf_make_font_mem(void* data, int size, const char* font_name, CF_Result* result_out)

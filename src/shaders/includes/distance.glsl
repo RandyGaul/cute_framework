@@ -52,6 +52,13 @@ float distance_segment(vec2 p, vec2 a, vec2 b)
 	return safe_len(pa - h * n);
 }
 
+float distance_line(vec2 p, vec2 a, vec2 b)
+{
+	vec2 n = normalize(skew(b - a));
+	float d = dot(n, a);
+	return abs(dot(p, n) - d);
+}
+
 // Referenced from: https://www.shadertoy.com/view/XsXSz4
 float distance_triangle(vec2 p, vec2 a, vec2 b, vec2 c)
 {
