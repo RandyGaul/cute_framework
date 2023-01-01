@@ -21,12 +21,19 @@ int main(int argc, const char** argv)
 	s.scale.y = 2.0f;
 	s.play("spin");
 
+	float fps = 0;
+
 	while (app_is_running()) {
 		app_update();
 
+		if (fps == 0) {
+			fps = 1.0f / CF_DELTA_TIME;
+		} else {
+			fps = lerp(fps, 1.0f / CF_DELTA_TIME, 1.0f / 500.0f);
+		}
 		static float t = 0;
 
-		if (0) {
+		if (1) {
 			draw_push_antialias(true);
 			draw_circle_fill(V2(sinf(t*0.25f) * 250.0f,0), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f);
 			draw_circle(V2(sinf(t+2.0f) * 50.0f,0), (cosf(t) * 0.5f + 0.5f) * 50.0f + 50.0f, 5);
@@ -38,7 +45,7 @@ int main(int argc, const char** argv)
 			draw_line(V2(0,0), V2(cosf(t*0.5f),sinf(t*0.5f))*100.0f,10);
 		}
 
-		if (0) {
+		if (1) {
 			v2 o = V2(sinf(t),cosf(t));
 			draw_push_antialias(true);
 			draw_quad(cf_make_aabb(V2(-20,-20)+o*25.0f, V2(20,20)+o*25.0f), 5);
@@ -48,7 +55,7 @@ int main(int argc, const char** argv)
 			draw_quad_fill(cf_make_aabb(V2(-60,-60)-o*25.0f, V2(-40,-30)-o*25.0f));
 		}
 
-		if (0) {
+		if (1) {
 			v2 box[4];
 			Aabb bb = make_aabb(V2(-20,-30), V2(30,50));
 			aabb_verts(box, bb);
@@ -72,7 +79,7 @@ int main(int argc, const char** argv)
 			draw_pop_antialias();
 		}
 
-		if (0) {
+		if (1) {
 			cf_draw_capsule(V2(-100,100), V2(100,150), 20, 3);
 			draw_push_antialias(true);
 			cf_draw_capsule(V2(-100,0), V2(100,50), 20, 3);
@@ -93,6 +100,11 @@ int main(int argc, const char** argv)
 			draw_pop_color();
 			draw_pop_layer();
 		}
+
+		String s = String::from(fps);
+		draw_text(s.c_str(), V2(-w/2.0f,-h/2.0f)+V2(2,35));
+		s = String::from(CF_DELTA_TIME);
+		draw_text(s.c_str(), V2(-w/2.0f,-h/2.0f)+V2(2,20));
 
 		t += CF_DELTA_TIME;
 		draw_calls = app_present();

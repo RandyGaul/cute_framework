@@ -713,7 +713,7 @@ CUTE_INLINE float clamp01(float a) { return cf_clamp01(a); }
 CUTE_INLINE float sign(float a) { return cf_sign(a); }
 CUTE_INLINE float intersect(float da, float db) { return cf_intersect(da, db); }
 CUTE_INLINE float safe_invert(float a) { return cf_safe_invert(a); }
-CUTE_INLINE float lerp_f(float a, float b, float t) { return cf_lerp(a, b, t); }
+CUTE_INLINE float lerp(float a, float b, float t) { return cf_lerp(a, b, t); }
 CUTE_INLINE float remap(float t, float lo, float hi) { return cf_remap(t, lo, hi); }
 CUTE_INLINE float mod(float x, float m) { return cf_mod(x, m); }
 CUTE_INLINE float fract(float x) { return cf_fract(x); }
