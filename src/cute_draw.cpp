@@ -856,7 +856,7 @@ void cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop)
 				c = points[i1];
 				d = points[inext];
 				s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_BEGIN;
-			} else {
+			} else if (inext == -1) {
 				CUTE_ASSERT(iprev != -1);
 				CUTE_ASSERT(inext == -1);
 				// End segment.
@@ -866,15 +866,7 @@ void cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop)
 				s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_END;
 			}
 
-			v2 end = c;
-
-			v2 n = c - b;
-			if (dot(n, d) > dot(n, c)) {
-				n = norm(n);
-				end = c + n * (dot(n, d) - dot(n, c));
-			}
-
-			s_bounding_box_of_capsule(b, end, thickness, 0, s.geom.box);
+			s_bounding_box_of_capsule(b, c, thickness, 0, s.geom.box);
 			s.geom.box[0] = mul(m, s.geom.box[0]);
 			s.geom.box[1] = mul(m, s.geom.box[1]);
 			s.geom.box[2] = mul(m, s.geom.box[2]);
@@ -891,11 +883,6 @@ void cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop)
 			v2 d = points[inext];
 			v2 beg = b;
 			v2 end = c;
-
-			v2 n = norm(c - b);
-			if (dot(n, d) > dot(n, c)) {
-				end = c + n * (dot(n, d) - dot(n, c));
-			}
 
 			s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_MIDDLE;
 			s_bounding_box_of_capsule(beg, end, thickness, 0, s.geom.box);

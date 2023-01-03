@@ -91,6 +91,21 @@
 		return abs(d) - v_stroke;
 	}
 
+	float sdf_intersect(float a, float b)
+	{
+		return max(a, b);
+	}
+
+	float sdf_union(float a, float b)
+	{
+		return min(a, b);
+	}
+
+	float sdf_subtract(float d0, float d1)
+	{
+		return max(d0, -d1);
+	}
+
 	vec4 sdf(vec4 a, vec4 b, float d)
 	{
 		vec4 stroke_aa = mix(a, b, 1.0 - mix(0.0, 1.0, sdf_stroke(d)));
@@ -126,24 +141,33 @@
 		c = is_tri ? v_col : c;
 
 		// SDF cases.
-		float d = 0;
+		float d = 1000;
+		bool is_intersection = false;
 		bool trim = false;
 		if (is_box) {
 			d = distance_box(v_pos, v_a, v_b, v_c);
 		} else if (is_seg) {
 			d = distance_segment(v_pos, v_a, v_b);
 		} else if (is_seg_beg) {
-			d = min(distance_segment(v_pos, v_b, v_c), distance_segment(v_pos, v_c, v_d));
-			//trim = trim || distance_line(v_pos, v_b, v_c) - v_radius - 1.0 > 0;
-		} else if (is_seg_mid || is_seg_end) {
-			d = distance_segment(v_pos, v_b, v_c);
-			d = min(d, distance_segment(v_pos, v_c, v_d));
-			trim = trim || is_seg_mid && distance_line(v_pos, v_a, v_b) - v_radius - 1.0 < 0;
-			trim = trim || is_seg_end && distance_line(v_pos, v_c, v_d) - v_radius - 1.0 < 0;
+			float b = distance_segment(v_pos, v_b, v_c) - v_radius;
+			float c = distance_segment(v_pos, v_c, v_d) - v_radius;
+			d = sdf_union(b, c);
+			trim = sdf_subtract(c-1, b-1) < 0;
+		} else if (is_seg_mid) {
+			float a = distance_segment(v_pos, v_a, v_b) - v_radius;
+			float b = distance_segment(v_pos, v_b, v_c) - v_radius;
+			float c = distance_segment(v_pos, v_c, v_d) - v_radius;
+			d = sdf_union(b, c);
+			trim = sdf_subtract(b-1, a-1) >= 0;
+		} else if (is_seg_end) {
+			float b = distance_segment(v_pos, v_b, v_c) - v_radius;
+			float c = distance_segment(v_pos, v_c, v_d) - v_radius;
+			d = sdf_union(b, c);
+			trim = sdf_subtract(b-1, c-1) >= 0;
 		} else if (is_tri_sdf) {
-			d = distance_triangle(v_pos, v_a, v_b, v_c);
+			d = distance_triangle(v_pos, v_a, v_b, v_c) - v_radius;
 		}
-		c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
+		c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d) : c;
 		c = trim ? vec4(0) : c;
 
 		//c = vec4(0.5);
