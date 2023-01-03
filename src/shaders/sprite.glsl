@@ -144,26 +144,22 @@
 		float d = 1000;
 		bool is_intersection = false;
 		bool trim = false;
+		float da = distance_segment(v_pos, v_a, v_b) - v_radius;
+		float db = distance_segment(v_pos, v_b, v_c) - v_radius;
+		float dc = distance_segment(v_pos, v_c, v_d) - v_radius;
 		if (is_box) {
 			d = distance_box(v_pos, v_a, v_b, v_c);
 		} else if (is_seg) {
-			d = distance_segment(v_pos, v_a, v_b);
+			d = da;
 		} else if (is_seg_beg) {
-			float b = distance_segment(v_pos, v_b, v_c) - v_radius;
-			float c = distance_segment(v_pos, v_c, v_d) - v_radius;
-			d = sdf_union(b, c);
-			trim = sdf_subtract(c-1, b-1) < 0;
+			d = sdf_union(db, dc);
+			trim = sdf_subtract(dc-1, db-1) < 0;
 		} else if (is_seg_mid) {
-			float a = distance_segment(v_pos, v_a, v_b) - v_radius;
-			float b = distance_segment(v_pos, v_b, v_c) - v_radius;
-			float c = distance_segment(v_pos, v_c, v_d) - v_radius;
-			d = sdf_union(b, c);
-			trim = sdf_subtract(b-1, a-1) >= 0;
+			d = sdf_union(db, dc);
+			trim = sdf_subtract(db-1, da-1) >= 0;
 		} else if (is_seg_end) {
-			float b = distance_segment(v_pos, v_b, v_c) - v_radius;
-			float c = distance_segment(v_pos, v_c, v_d) - v_radius;
-			d = sdf_union(b, c);
-			trim = sdf_subtract(b-1, c-1) >= 0;
+			d = sdf_union(db, dc);
+			trim = sdf_subtract(db-1, dc-1) >= 0;
 		} else if (is_tri_sdf) {
 			d = distance_triangle(v_pos, v_a, v_b, v_c) - v_radius;
 		}
