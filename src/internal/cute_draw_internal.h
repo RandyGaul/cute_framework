@@ -37,9 +37,7 @@ enum BatchGeometryType : int
 	BATCH_GEOMETRY_TYPE_SPRITE,
 	BATCH_GEOMETRY_TYPE_CIRCLE,
 	BATCH_GEOMETRY_TYPE_SEGMENT,
-	BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_BEGIN,
-	BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_END,
-	BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_MIDDLE,
+	BATCH_GEOMETRY_TYPE_SEGMENT_TRI,
 };
 
 struct BatchGeometry
@@ -47,7 +45,7 @@ struct BatchGeometry
 	BatchGeometryType type;
 	CF_Pixel color;
 	CF_Aabb clip;
-	CF_V2 box[4];
+	CF_V2 verts[4];
 	CF_V2 a, b, c, d;
 	float alpha;
 	float radius;

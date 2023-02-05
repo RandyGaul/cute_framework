@@ -86,41 +86,6 @@
 	@include_block smooth_uv
 	@include_block distance
 
-	float sdf_stroke(float d)
-	{
-		return abs(d) - v_stroke;
-	}
-
-	float sdf_intersect(float a, float b)
-	{
-		return max(a, b);
-	}
-
-	float sdf_union(float a, float b)
-	{
-		return min(a, b);
-	}
-
-	float sdf_subtract(float d0, float d1)
-	{
-		return max(d0, -d1);
-	}
-
-	vec4 sdf(vec4 a, vec4 b, float d)
-	{
-		vec4 stroke_aa = mix(a, b, 1.0 - mix(0.0, 1.0, sdf_stroke(d)));
-		vec4 stroke_no_aa = sdf_stroke(d) <= 0.0 ? b : a;
-
-		vec4 fill_aa = mix(a, b, 1.0 - mix(0.0, 1.0, d));
-		vec4 fill_no_aa = d <= 0.0 ? b : a;
-
-		vec4 stroke = mix(stroke_no_aa, stroke_aa, v_aa);
-		vec4 fill = mix(fill_no_aa, fill_aa, v_aa);
-
-		result = mix(stroke, fill, v_fill);
-		return result;
-	}
-
 	void main()
 	{
 		bool is_sprite  = v_type == (0.0/255.0);

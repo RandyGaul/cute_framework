@@ -329,6 +329,7 @@ CUTE_INLINE CF_Halfspace cf_mul_tf_hs(CF_Transform a, CF_Halfspace b) { CF_Halfs
 CUTE_INLINE CF_Halfspace cf_mulT_tf_hs(CF_Transform a, CF_Halfspace b) { CF_Halfspace c; c.n = cf_mulT_sc_v2(a.r, b.n); c.d = cf_dot(cf_mulT_tf_v2(a, cf_origin(b)), c.n); return c; }
 CUTE_INLINE CF_V2 cf_intersect_halfspace(CF_V2 a, CF_V2 b, float da, float db) { return cf_add_v2(a, cf_mul_v2_f(cf_sub_v2(b, a), (da / (da - db)))); }
 CUTE_INLINE CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b) { return cf_intersect_halfspace(a, b, cf_distance_hs(h, a), cf_distance_hs(h, b)); }
+CUTE_INLINE CF_V2 cf_intersect_haflspace3(CF_Halfspace ha, CF_Halfspace hb) { CF_V2 a = {ha.n.x, hb.n.x}, b = {ha.n.y, hb.n.y}, c = {ha.d, hb.d}; float x = cf_det2(c, b) / cf_det2(a, b); float y = cf_det2(a, c) / cf_det2(a, b); return cf_v2(x, y); }
 
 //--------------------------------------------------------------------------------------------------
 // AABB helpers.
@@ -841,6 +842,7 @@ CUTE_INLINE Halfspace mul(Transform a, Halfspace b) { return cf_mul_tf_hs(a, b);
 CUTE_INLINE Halfspace mulT(Transform a, Halfspace b) { return cf_mulT_tf_hs(a, b); }
 CUTE_INLINE v2 intersect(v2 a, v2 b, float da, float db) { return cf_intersect_halfspace(a, b, da, db); }
 CUTE_INLINE v2 intersect(Halfspace h, v2 a, v2 b) { return cf_intersect_halfspace2(h, a, b); }
+CUTE_INLINE v2 intersect(Halfspace ha, Halfspace hb) { return cf_intersect_haflspace3(ha, hb); }
 
 CUTE_INLINE Aabb make_aabb(v2 min, v2 max) { return cf_make_aabb(min, max); }
 CUTE_INLINE Aabb make_aabb(v2 pos, float w, float h) { return cf_make_aabb_pos_w_h(pos, w, h); }

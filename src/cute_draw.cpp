@@ -823,7 +823,7 @@ void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
 	s_draw_capsule(p0, p1, 0, thickness, true);
 }
 
-void cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop)
+void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 {
 	if (count < 3) {
 		return;
@@ -838,73 +838,65 @@ void cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop)
 	s.geom.stroke = 0;
 	s.geom.fill = true;
 	s.geom.antialias = draw->antialias.last();
+	s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT_TRI;
 	s.sort_bits = draw->layers.last();
 	s.w = s.h = 1;
-	int iprev = -1;
-	int i0 = 0;
-	int i1 = 1;
-	int inext = 2;
+
+	v2 p0 = pts[0];
+	v2 p1 = pts[1];
+	v2 p2 = pts[2];
+	v2 n0 = norm(p1 - p0);
+	v2 n1 = norm(p2 - p1);
+	v2 t0 = skew(n0);
+	v2 t1 = skew(n1);
+	v2 a = p0 - n0 * thickness + t0;
+	v2 b = p0 - n0 * thickness - t0;
+
+	auto submit = [&](v2 a, v2 b, v2 c, v2 p0, v2 p1) {
+		s.geom.a = p0;
+		s.geom.b = p1;
+		s.geom.verts[0] = a;
+		s.geom.verts[1] = b;
+		s.geom.verts[2] = c;
+	};
 
 	for (int i = 0; i < count - 1; ++i) {
-		if (iprev == -1 || inext == -1) {
-			v2 b, c, d;
+		const float k_tol = 1.e-6f;
+		float p0p1_x_p1p2 = cross(n0, n1);
+		float d = dot(t0, t1);
+		Halfspace h0 = plane(t0, dot(t0, p0) + thickness);
+		Halfspace h1 = plane(-t0, -h0.d + thickness * 2);
+		Halfspace h2 = plane(t1, dot(t1, p2) + thickness);
+		Halfspace h3 = plane(-t1, -h2.d + thickness * 2);
+		v2 n = norm(n0 - n1);
+		Halfspace h4 = plane(n, p1 + n * thickness);
 
-			if (iprev == -1) {
-				CUTE_ASSERT(inext != -1);
-				// Begin segment.
-				b = points[i0];
-				c = points[i1];
-				d = points[inext];
-				s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_BEGIN;
-			} else if (inext == -1) {
-				CUTE_ASSERT(iprev != -1);
-				CUTE_ASSERT(inext == -1);
-				// End segment.
-				b = points[i1];
-				c = points[i0];
-				d = points[iprev];
-				s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_END;
+		if (p0p1_x_p1p2 < -k_tol) {
+			if (d >= 0) {
+				v2 c = intersect(h1, h2);
+				v2 d = intersect(h3, h4);
+				v2 e = intersect(h0, h4);
+			} else {
+				v2 n = norm(n0 + n1);
+				v2 c = p1 + n * thickness;
 			}
-
-			s_bounding_box_of_capsule(b, c, thickness, 0, s.geom.box);
-			s.geom.box[0] = mul(m, s.geom.box[0]);
-			s.geom.box[1] = mul(m, s.geom.box[1]);
-			s.geom.box[2] = mul(m, s.geom.box[2]);
-			s.geom.box[3] = mul(m, s.geom.box[3]);
-			s.geom.b = b;
-			s.geom.c = c;
-			s.geom.d = d;
-			spritebatch_push(&draw->sb, s);
 		} else {
-			// Middle segment.
-			v2 a = points[iprev];
-			v2 b = points[i0];
-			v2 c = points[i1];
-			v2 d = points[inext];
-			v2 beg = b;
-			v2 end = c;
-
-			s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_MIDDLE;
-			s_bounding_box_of_capsule(beg, end, thickness, 0, s.geom.box);
-			s.geom.box[0] = mul(m, s.geom.box[0]);
-			s.geom.box[1] = mul(m, s.geom.box[1]);
-			s.geom.box[2] = mul(m, s.geom.box[2]);
-			s.geom.box[3] = mul(m, s.geom.box[3]);
-			s.geom.a = a;
-			s.geom.b = b;
-			s.geom.c = c;
-			s.geom.d = d;
-			spritebatch_push(&draw->sb, s);
+			if (d >= 0) {
+			} else {
+			}
 		}
 
-		iprev = i0;
-		i0 = i1;
-		i1 = inext;
-		if (loop) {
-			inext = inext == count - 1 ? 0 : ++inext;
-		} else {
-			inext = inext == count - 1 ? -1 : ++inext;
-		}
+		s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_MIDDLE;
+		s_bounding_box_of_capsule(beg, end, thickness, 0, s.geom.box);
+		s.geom.box[0] = mul(m, s.geom.box[0]);
+		s.geom.box[1] = mul(m, s.geom.box[1]);
+		s.geom.box[2] = mul(m, s.geom.box[2]);
+		s.geom.box[3] = mul(m, s.geom.box[3]);
+		s.geom.a = a;
+		s.geom.b = b;
+		s.geom.c = c;
+		s.geom.d = d;
+		spritebatch_push(&draw->sb, s);
 	}
 }
 
