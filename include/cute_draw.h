@@ -208,7 +208,7 @@ enum CF_TextCodeValType
 
 struct CF_TextCodeVal
 {
-	CF_TextCodeValType type;
+	enum CF_TextCodeValType type;
 	union
 	{
 		CF_Color color;
