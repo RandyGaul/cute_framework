@@ -35,6 +35,7 @@ using namespace Cute;
 char* cf_sset(char* a, const char* b)
 {
 	CF_ACANARY(a);
+	if (!b) return NULL;
 	int bsize = (int)(b ? CUTE_STRLEN(b) : 0) + 1;
 	if (!bsize) {
 		sclear(a);
@@ -343,23 +344,52 @@ char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
 	CF_ACANARY(s);
 	size_t replace_len = CUTE_STRLEN(replace_me);
 	size_t with_len = CUTE_STRLEN(with_me);
-	char* start = s;
 	char* find;
-	while ((find = sfind(s, replace_me))) {
+	char* search = s;
+	while ((find = sfind(search, replace_me))) {
+		int find_offset = (int)(find - s);
 		if (replace_len > with_len) {
-			int remaining = scount(s) - (int)(s - start) - (int)with_len;
+			int remaining = scount(s) - find_offset - (int)with_len;
+			int diff = (int)(replace_len - with_len);
 			CUTE_MEMCPY(find, with_me, with_len);
 			CUTE_MEMMOVE(find + with_len, find + replace_len, remaining);
-			ssize(s) -= (int)(replace_len - with_len);
+			ssize(s) -= diff;
 		} else {
-			int remaining = scount(s) - (int)(s - start) - (int)replace_len;
+			int remaining = scount(s) - find_offset - (int)replace_len;
 			int diff = (int)(with_len - replace_len);
 			sfit(s, scount(s) + diff);
+			find = s + find_offset;
 			CUTE_MEMMOVE(find + with_len, find + replace_len, remaining);
 			CUTE_MEMCPY(find, with_me, with_len);
 			ssize(s) += diff;
 		}
+		search = find + with_len;
 	}
+	CUTE_ASSERT(_CrtCheckMemory());
+	return s;
+}
+
+char* cf_sdedup(char* s, int ch)
+{
+	CF_ACANARY(s);
+	int len = (int)CUTE_STRLEN(s);
+	int i = 0, j = 1;
+	bool dup = false;
+	while (j < len) {
+		if (s[i] == ch && s[j] == ch) {
+			dup = true;
+			++j;
+		} else {
+			++i;
+			if (dup) {
+				s[i] = s[j];
+			}
+			++j;
+		}
+	}
+	s[i + 1] = 0;
+	ssize(s) = i + 1;
+	CUTE_ASSERT(_CrtCheckMemory());
 	return s;
 }
 

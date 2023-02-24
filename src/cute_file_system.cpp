@@ -59,6 +59,13 @@ char* cf_path_get_ext(const char* path)
 	return smake(path + at);
 }
 
+bool cf_path_ext_equ(const char* path, const char* ext)
+{
+	int at = slast_index_of(path, '.');
+	if (at == -1 || path[at + 1] == 0 || path[at + 1] == '/') return NULL;
+	return sequ(path + at, ext);
+}
+
 char* cf_path_pop(const char* path)
 {
 	char* in = (char*)path;
@@ -305,7 +312,7 @@ CF_Result cf_fs_close(CF_File* file)
 	}
 }
 
-CF_Result cf_fs_delete(const char* virtual_path)
+CF_Result cf_fs_remove_directory(const char* virtual_path)
 {
 	if (!PHYSFS_delete(virtual_path)) {
 		return cf_result_error(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));

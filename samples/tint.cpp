@@ -34,7 +34,7 @@ int main(int argc, const char** argv)
 		if (key_was_pressed(KEY_6)) draw_push_tint(color_white());
 		if (key_was_pressed(KEY_7)) draw_push_tint(color_black());
 		if (key_was_pressed(KEY_8)) draw_push_tint(color_blue());
-		app_present();
+		app_draw_onto_screen();
 	}
 
 	destroy_app();

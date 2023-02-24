@@ -78,7 +78,6 @@ int main(int argc, const char** argv)
 #endif
 
 	test_t tests[] = {
-		CUTE_TEST_CASE_ENTRY(test_font_wip),
 		CUTE_TEST_CASE_ENTRY(test_path),
 		CUTE_TEST_CASE_ENTRY(test_array_macros_simple),
 		CUTE_TEST_CASE_ENTRY(test_string_macros_simple),
@@ -117,6 +116,7 @@ int main(int argc, const char** argv)
 		CUTE_TEST_CASE_ENTRY(test_png_cache),
 		CUTE_TEST_CASE_ENTRY(test_make_sprite),
 		CUTE_TEST_CASE_ENTRY(test_coroutine),
+		CUTE_TEST_CASE_ENTRY(test_font_wip),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;

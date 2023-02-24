@@ -210,12 +210,10 @@ CUTE_API void* CUTE_CALL cf_aset(const void* a, const void* b, size_t element_si
 #ifdef CUTE_CPP
 
 /**
- * Implements a basic growable array data structure. Constructors and destructors are called, but this
- * class does *not* act as a drop-in replacement for std::vector, as there are no iterators. Your elements
- * CAN NOT store a pointer or reference to themselves or other elements.
+ * Implements a basic growable array data structure.
  *
  * The main purpose of this class is to reduce the lines of code included compared to std::vector,
- * and also more importantly to have fast debug performance.
+ * and also more importantly to have fast debug performance via manual inlining.
  */
 
 namespace Cute
@@ -270,172 +268,193 @@ struct Array
 	const T* data() const;
 
 private:
+	int m_capacity = 0;
+	int m_count = 0;
 	T* m_ptr = NULL;
 };
 
 // -------------------------------------------------------------------------------------------------
 
+// Manually force-inline a few functions via macros to help with debug performance.
+
+#define CF_ARRAY_ENSURE_CAPACITY(capacity)                     \
+	int num_elements = capacity;                               \
+	if (num_elements > m_capacity) {                           \
+		if (m_capacity == 0) {                                 \
+			m_capacity = 8;                                    \
+		}                                                      \
+		while (num_elements < m_capacity) {                    \
+			m_capacity *= 2;                                   \
+		}                                                      \
+		T* new_ptr = (T*)CUTE_ALLOC(sizeof(T) * num_elements); \
+		for (int i = 0; i < m_count; ++i) {                    \
+			CUTE_PLACEMENT_NEW(new_ptr + i) T(move(m_ptr[i])); \
+		}                                                      \
+		CUTE_FREE(m_ptr);                                      \
+		m_ptr = new_ptr;                                       \
+	}                                                          \
+
+#define CF_ARRAY_CLEAR()                \
+	for (int i = 0; i < m_count; i++) { \
+		m_ptr[i].~T();                  \
+	}                                   \
+	m_count = 0;                        \
+
 template <typename T>
 Array<T>::Array(CF_InitializerList<T> list)
 {
-	afit(m_ptr, (int)list.size());
+	int count = (int)list.size();
+	T* ptr = m_ptr;
+	CF_ARRAY_ENSURE_CAPACITY(count);
 	for (const T* i = list.begin(); i < list.end(); ++i) {
-		add(*i);
+		CUTE_PLACEMENT_NEW(ptr++) T(*i);
 	}
+	m_count = count;
 }
 
 template <typename T>
 Array<T>::Array(const Array<T>& other)
 {
-	afit(m_ptr, (int)other.count());
-	for (int i = 0; i < other.count(); ++i) {
-		add(other[i]);
+	int count = other.count();
+	T* other_ptr = other.m_ptr;
+	CF_ARRAY_ENSURE_CAPACITY(count);
+	for (int i = 0; i < count; ++i) {
+		CUTE_PLACEMENT_NEW(m_ptr + i) T(other_ptr[i]);
 	}
+	m_count = count;
 }
 
 template <typename T>
 Array<T>::Array(Array<T>&& other)
 {
-	steal_from(&other);
+	m_capacity = other.m_capacity;
+	m_count = other.m_count;
+	m_ptr = other.m_ptr;
+	CUTE_MEMSET(&other, 0, sizeof(other));
 }
 
 template <typename T>
 Array<T>::Array(int capacity)
 {
-	afit(m_ptr, capacity);
+	CF_ARRAY_ENSURE_CAPACITY(capacity);
 }
 
 template <typename T>
 Array<T>::~Array()
 {
-	int len = asize(m_ptr);
-	for (int i = 0; i < len; ++i) {
-		T* slot = m_ptr + i;
-		slot->~T();
+	for (int i = 0; i < m_count; ++i) {
+		m_ptr[i].~T();
 	}
-	afree(m_ptr);
+	CUTE_FREE(m_ptr);
 }
 
 template <typename T>
 Array<T>& Array<T>::steal_from(Array<T>* steal_from_me)
 {
-	afree(m_ptr);
+	m_capacity = steal_from_me->m_capacity;
+	m_count = steal_from_me->m_count;
 	m_ptr = steal_from_me->m_ptr;
-	steal_from_me->m_ptr = NULL;
+	CUTE_MEMSET(steal_from_me, 0, sizeof(*steal_from_me));
 	return *this;
 }
 
 template <typename T>
 Array<T>& Array<T>::steal_from(Array<T>& steal_from_me)
 {
-	afree(m_ptr);
+	m_capacity = steal_from_me.m_capacity;
+	m_count = steal_from_me.m_count;
 	m_ptr = steal_from_me.m_ptr;
-	steal_from_me.m_ptr = NULL;
+	CUTE_MEMSET(&steal_from_me, 0, sizeof(steal_from_me));
 	return *this;
 }
 
 template <typename T>
 T& Array<T>::add()
 {
-	afit(m_ptr, asize(m_ptr) + 1);
-	T* slot = m_ptr + alen(m_ptr)++;
-	CUTE_PLACEMENT_NEW(slot) T;
-	return *slot;
+	CF_ARRAY_ENSURE_CAPACITY(m_count + 1);
+	return *CUTE_PLACEMENT_NEW(m_ptr + m_count++) T();
 }
 
 template <typename T>
 T& Array<T>::add(const T& item)
 {
-	afit(m_ptr, asize(m_ptr) + 1);
-	T* slot = m_ptr + alen(m_ptr)++;
-	CUTE_PLACEMENT_NEW(slot) T(item);
-	return *slot;
+	CF_ARRAY_ENSURE_CAPACITY(m_count + 1);
+	return *CUTE_PLACEMENT_NEW(m_ptr + m_count++) T(item);
 }
 
 template <typename T>
 T& Array<T>::add(T&& item)
 {
-	afit(m_ptr, asize(m_ptr) + 1);
-	T* slot = m_ptr + alen(m_ptr)++;
-	CUTE_PLACEMENT_NEW(slot) T(move(item));
-	return *slot;
+	CF_ARRAY_ENSURE_CAPACITY(m_count + 1);
+	return *CUTE_PLACEMENT_NEW(m_ptr + m_count++) T(move(item));
 }
 
 template <typename T>
 T Array<T>::pop()
 {
-	CUTE_ASSERT(!empty());
-	T* slot = m_ptr + alen(m_ptr) - 1;
-	T val = move(apop(m_ptr));
-	slot->~T();
+	CUTE_ASSERT(m_count > 0);
+	T val = move(m_ptr[m_count - 1]);
+	m_ptr[m_count - 1].~T();
+	m_count--;
 	return val;
 }
 
 template <typename T>
 void Array<T>::unordered_remove(int index)
 {
-	CUTE_ASSERT(index >= 0 && index < asize(m_ptr));
-	T* slot = m_ptr + index;
-	slot->~T();
-	m_ptr[index] = m_ptr[--alen(m_ptr)];
+	m_ptr[index].~T();
+	m_ptr[index] = move(m_ptr[--m_count]);
 }
 
 template <typename T>
 void Array<T>::clear()
 {
-	aclear(m_ptr);
-}
-
-template <typename T>
-void Array<T>::ensure_capacity(int num_elements)
-{
-	afit(m_ptr, num_elements);
+	CF_ARRAY_CLEAR();
 }
 
 template <typename T>
 void Array<T>::set_count(int count)
 {
-	CUTE_ASSERT(count < acap(m_ptr) || !count);
-	afit(m_ptr, count);
-	if (asize(m_ptr) > count) {
-		for (int i = count; i < asize(m_ptr); ++i) {
-			T* slot = m_ptr + i;
-			slot->~T();
+	CF_ARRAY_ENSURE_CAPACITY(count);
+	if (count > m_count) {
+		for (int i = count; ++i; i < m_count) {
+			CUTE_PLACEMENT_NEW(m_ptr + i) T();
 		}
-	} else if (asize(m_ptr) < count) {
-		for (int i = asize(m_ptr); i < count; ++i) {
-			T* slot = m_ptr + i;
-			CUTE_PLACEMENT_NEW(slot) T;
+	} else {
+		for (int i = m_count; i < count; ++i) {
+			m_ptr[i].~T();
 		}
 	}
-	if (m_ptr) alen(m_ptr) = count;
+	m_count = count;
+}
+
+template <typename T>
+void Array<T>::ensure_capacity(int capacity)
+{
+	CF_ARRAY_ENSURE_CAPACITY(capacity);
 }
 
 template <typename T>
 void Array<T>::ensure_count(int count)
 {
-	if (!count) return;
-	int old_count = asize(m_ptr);
-	afit(m_ptr, count);
-	if (alen(m_ptr) < count) {
-		alen(m_ptr) = count;
-		for (int i = old_count; i < count; ++i) {
-			T* slot = m_ptr + i;
-			CUTE_PLACEMENT_NEW(slot) T;
+	if (m_count < count) {
+		for (int i = m_count; i < count; ++i) {
+			CUTE_PLACEMENT_NEW(m_ptr + i) T();
 		}
 	}
+	m_count = count;
 }
 
 template <typename T>
 void Array<T>::reverse()
 {
 	T* a = m_ptr;
-	T* b = m_ptr + (asize(m_ptr) - 1);
+	T* b = m_ptr + (m_count - 1);
 
 	while (a < b) {
-		T t = *a;
-		*a = *b;
-		*b = t;
+		T t = move(*a);
+		*a = move(*b);
+		*b = move(t);
 		++a;
 		--b;
 	}
@@ -444,26 +463,25 @@ void Array<T>::reverse()
 template <typename T>
 int Array<T>::capacity() const
 {
-	return acap(m_ptr);
+	return m_capacity;
 }
 
 template <typename T>
 int Array<T>::count() const
 {
-	return asize(m_ptr);
+	return m_count;
 }
 
 template <typename T>
 int Array<T>::size() const
 {
-	return asize(m_ptr);
+	return m_count;
 }
 
 template <typename T>
 bool Array<T>::empty() const
 {
-	int size = asize(m_ptr);
-	return size <= 0;
+	return m_count == 0;
 }
 
 template <typename T>
@@ -481,26 +499,26 @@ const T* Array<T>::begin() const
 template <typename T>
 T* Array<T>::end()
 {
-	return m_ptr + count();
+	return m_ptr + m_count;
 }
 
 template <typename T>
 const T* Array<T>::end() const
 {
-	return m_ptr + count();
+	return m_ptr + m_count;
 }
 
 template <typename T>
 T& Array<T>::operator[](int index)
 {
-	CUTE_ASSERT(index >= 0 && index < count());
+	CUTE_ASSERT(index >= 0 && index < m_count);
 	return m_ptr[index];
 }
 
 template <typename T>
 const T& Array<T>::operator[](int index) const
 {
-	CUTE_ASSERT(index >= 0 && index < count());
+	CUTE_ASSERT(index >= 0 && index < m_count);
 	return m_ptr[index];
 }
 
@@ -519,46 +537,50 @@ const T* Array<T>::data() const
 template <typename T>
 T* Array<T>::operator+(int index)
 {
-	CUTE_ASSERT(index >= 0 && index < count());
+	CUTE_ASSERT(index >= 0 && index < m_count);
 	return m_ptr + index;
 }
 
 template <typename T>
 const T* Array<T>::operator+(int index) const
 {
-	CUTE_ASSERT(index >= 0 && index < count());
+	CUTE_ASSERT(index >= 0 && index < m_count);
 	return m_ptr + index;
 }
 
 template <typename T>
 Array<T>& Array<T>::operator=(const Array<T>& rhs)
 {
-	set_count(0);
-	afit(m_ptr, (int)rhs.count());
-	for (int i = 0; i < rhs.count(); ++i) {
-		add(rhs[i]);
+	CF_ARRAY_CLEAR();
+	CF_ARRAY_ENSURE_CAPACITY(rhs.m_count);
+	for (int i = 0; i < rhs.m_count; i++) {
+		CUTE_PLACEMENT_NEW(m_ptr + i) T(rhs.m_ptr[i]);
 	}
+	m_count = rhs.m_count;
 	return *this;
 }
 
 template <typename T>
 Array<T>& Array<T>::operator=(Array<T>&& rhs)
 {
-	afree(m_ptr);
-	m_ptr = rhs->m_ptr;
-	rhs->m_ptr = NULL;
+	CF_ARRAY_CLEAR();
+	m_capacity = rhs.m_capacity;
+	m_count = rhs.m_count;
+	m_ptr = rhs.m_ptr;
+	CUTE_MEMSET(&rhs, 0, sizeof(rhs));
+	return *this;
 }
 
 template <typename T>
 T& Array<T>::last()
 {
-	return *(aend(m_ptr) - 1);
+	return *(m_ptr + m_count - 1);
 }
 
 template <typename T>
 const T& Array<T>::last() const
 {
-	return *(aend(m_ptr) - 1);
+	return *(m_ptr + m_count - 1);
 }
 
 }

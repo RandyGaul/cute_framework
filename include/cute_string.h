@@ -101,7 +101,14 @@ extern "C" {
 #define scap(s) cf_string_cap(s)
 
 /**
- * Returns the last character in the string. Not the nul-byte. Undefined for empty strings.
+ * Returns the first character in the string.
+ * Returns '\0' if `s` is `NULL`.
+ */
+#define sfirst(s) cf_string_first(s)
+
+/**
+ * Returns the last character in the string. Not the nul-byte.
+ * Returns '\0' if `s` is `NULL`.
  */
 #define slast(s) cf_string_last(s)
 
@@ -181,12 +188,12 @@ extern "C" {
 #define sicmp(a, b) cf_string_icmp(a, b)
 
 /**
- * Returns false if the two strings are equivalent, true otherwise.
+ * Returns true if the two strings are equivalent, false otherwise.
  */
 #define sequ(a, b) cf_string_equ(a, b)
 
 /**
- * Returns false if the two strings are equivalent, true otherwise.
+ * Returns true if the two strings are equivalent, false otherwise.
  * Ignores case.
  */
 #define siequ(a, b) cf_string_iequ(a, b)
@@ -393,6 +400,11 @@ extern "C" {
 #define sreplace(s, replace_me, with_me) cf_string_replace(s, replace_me, with_me)
 
 /**
+ * Removes all consecutive occurances of `ch` from the string.
+ */
+#define sdedup(s, ch) cf_string_dedup(s, ch)
+
+/**
  * Deletes a number of characters from the string.
  */
 #define serase(s, index, count) cf_string_erase(s, index, count)
@@ -542,7 +554,8 @@ CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, int* codep
 #define cf_string_size(s) cf_array_len(s)
 #define cf_string_count(s) cf_array_count(s)
 #define cf_string_cap(s) cf_array_capacity(s)
-#define cf_string_last(s) (s[cf_string_len(s) - 1])
+#define cf_string_first(s) (s ? s[0] : '\0')
+#define cf_string_last(s) (s ? s[cf_string_len(s) - 1] : '\0')
 #define cf_string_clear(s) (cf_array_clear(s), cf_array_push(s, 0))
 #define cf_string_fit(s, n) cf_array_fit(s, n)
 #define cf_string_fmt(s, fmt, ...) (s = cf_sfmt(s, fmt, __VA_ARGS__))
@@ -587,6 +600,7 @@ CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, int* codep
 #define cf_string_tohex(s) cf_stohex(s)
 #define cf_string_tobool(s) (!CUTE_STRCMP(s, "true"))
 #define cf_string_replace(s, replace_me, with_me) (s = cf_sreplace(s, replace_me, with_me))
+#define cf_string_dedup(s, ch) (s = cf_sdedup(s, ch))
 #define cf_string_erase(s, index, count) (s = cf_serase(s, index, count))
 #define cf_string_pop(s) (s = cf_spop(s))
 #define cf_string_pop_n(s, n) (s = cf_spopn(s, n))
@@ -634,6 +648,7 @@ CUTE_API float CUTE_CALL cf_stofloat(const char* s);
 CUTE_API double CUTE_CALL cf_stodouble(const char* s);
 CUTE_API uint64_t CUTE_CALL cf_stohex(const char* s);
 CUTE_API char* CUTE_CALL cf_sreplace(char* s, const char* replace_me, const char* with_me);
+CUTE_API char* CUTE_CALL cf_sdedup(char* s, int ch);
 CUTE_API char* CUTE_CALL cf_serase(char* s, int index, int count);
 CUTE_API char* CUTE_CALL cf_spop(char* s);
 CUTE_API char* CUTE_CALL cf_spopn(char* s, int n);
@@ -679,8 +694,8 @@ struct String
 	CUTE_INLINE String(const char* s) { s_static(); sset(m_str, s); }
 	CUTE_INLINE String(const char* start, const char* end) { s_static(); int length = (int)(end - start); sfit(m_str, length); CUTE_STRNCPY(m_str, start, length); CF_AHDR(m_str)->size = length + 1; }
 	CUTE_INLINE String(const String& s) { s_static(); sset(m_str, s); }
-	CUTE_INLINE String(String&& s) { if (CF_AHDR(s.m_str)->is_static) { s_static(); sset(m_str, s); } else { m_str = s.m_str; } s.m_str = NULL; }
-	CUTE_INLINE ~String() { sfree(m_str); }
+	CUTE_INLINE String(String&& s) { if (CF_AHDR(s.m_str)->is_static) { s_static(); sset(m_str, s); } else { m_str = s.m_str; s.m_str = NULL; } }
+	CUTE_INLINE ~String() { sfree(m_str); m_str = NULL; }
 
 	CUTE_INLINE static String steal_from(char* cute_c_api_string) { CF_ACANARY(cute_c_api_string); String r; r.m_str = cute_c_api_string; return r; }
 	CUTE_INLINE static String from(int i) { String r; sint(r.m_str, i); return r; }
@@ -704,6 +719,7 @@ struct String
 	CUTE_INLINE const char* end() const { return m_str + ssize(m_str); }
 	CUTE_INLINE char* end() { return m_str + ssize(m_str); }
 	CUTE_INLINE char last() const { return slast(m_str); }
+	CUTE_INLINE char first() const { return sfirst(m_str); }
 	CUTE_INLINE operator const char*() const { return m_str; }
 	CUTE_INLINE operator char*() const { return m_str; }
 
@@ -723,19 +739,20 @@ struct String
 	CUTE_INLINE String& append(const char* s) { sappend(m_str, s); return *this; }
 	CUTE_INLINE String& append(const char* start, const char* end) { sappend_range(m_str, start, end); return *this; }
 	CUTE_INLINE String& append(int codepoint) { sappend_UTF8(m_str, codepoint); return *this; }
-	CUTE_INLINE String& fmt(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt(m_str, fmt, args); va_end(args); return *this; }
+	static CUTE_INLINE String fmt(const char* fmt, ...) { String result; va_list args; va_start(args, fmt); svfmt(result.m_str, fmt, args); va_end(args); return result; }
 	CUTE_INLINE String& fmt_append(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt_append(m_str, fmt, args); va_end(args); return *this; }
 	CUTE_INLINE String& trim() { strim(m_str); return *this; }
 	CUTE_INLINE String& ltrim() { sltrim(m_str); return *this; }
 	CUTE_INLINE String& rtrim() { srtrim(m_str); return *this; }
 	CUTE_INLINE String& lpad(char pad, int count) { slpad(m_str, pad, count); return *this; }
 	CUTE_INLINE String& rpad(char pad, int count) { srpad(m_str, pad, count); return *this; }
+	CUTE_INLINE String& dedup(char ch) { sdedup(m_str, ch); return *this; }
 	CUTE_INLINE String& set(const char* s) { sset(m_str, s); return *this; }
 	CUTE_INLINE String& operator=(const char* s) { sset(m_str, s); return *this; }
 	CUTE_INLINE String& operator=(const String& s) { sset(m_str, s); return *this; }
-	CUTE_INLINE String& operator=(String&& s) { sset(m_str, s); return *this; }
+	CUTE_INLINE String& operator=(String&& s) { if (CF_AHDR(s.m_str)->is_static) { s_static(); sset(m_str, s); } else { m_str = s.m_str; s.m_str = NULL; } return *this; }
 	CUTE_INLINE Array<String> split(char split_c) { Array<String> r; char** s = ssplit(m_str, split_c); for (int i=0;i<alen(s);++i) r.add(move(steal_from(s[i]))); return r; }
-	CUTE_INLINE char pop() { return apop(m_str); }
+	CUTE_INLINE char pop() { char result = slast(m_str); spop(m_str); return result; }
 	CUTE_INLINE int first_index_of(char ch) const { return sfirst_index_of(m_str, ch); }
 	CUTE_INLINE int last_index_of(char ch) const { return slast_index_of(m_str, ch); }
 	CUTE_INLINE int first_index_of(char ch, int offset) const { return sfirst_index_of(m_str + offset, ch); }
@@ -745,8 +762,9 @@ struct String
 	CUTE_INLINE String& erase(int index, int count) { serase(m_str, index, count); return *this; }
 	CUTE_INLINE String dup() const { return steal_from(sdup(m_str)); }
 	CUTE_INLINE void clear() { sclear(m_str); }
-
+	
 	CUTE_INLINE bool starts_with(const char* s) const { return sprefix(m_str, s); }
+	CUTE_INLINE bool begins_with(const char* s) const { return sprefix(m_str, s); }
 	CUTE_INLINE bool ends_with(const char* s) const { return ssuffix(m_str, s); }
 	CUTE_INLINE bool prefix(const char* s) const { return sprefix(m_str, s); }
 	CUTE_INLINE bool suffix(const char* s) const { return ssuffix(m_str, s); }
@@ -755,8 +773,8 @@ struct String
 	CUTE_INLINE bool compare(const char* s, bool no_case = false) { return no_case ? sequ(m_str, s) : siequ(m_str, s); }
 	CUTE_INLINE bool cmp(const char* s, bool no_case = false) { compare(s, no_case); }
 	CUTE_INLINE bool contains(const char* contains_me) { return scontains(m_str, contains_me); }
-	CUTE_INLINE void to_upper() { stoupper(m_str); }
-	CUTE_INLINE void to_lower() { stolower(m_str); }
+	CUTE_INLINE String& to_upper() { stoupper(m_str); return *this; }
+	CUTE_INLINE String& to_lower() { stolower(m_str); return *this; }
 	CUTE_INLINE uint64_t hash() const { return shash(m_str); }
 
 private:

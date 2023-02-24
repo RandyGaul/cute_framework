@@ -82,7 +82,7 @@ int main(int argc, const char** argv)
 		draw_text(draws.c_str(), V2(-w/2.0f + 10,-h/2.0f + 10));
 		pop_font_size();
 
-		draw_calls = app_present();
+		draw_calls = app_draw_onto_screen();
 	}
 
 	destroy_app();

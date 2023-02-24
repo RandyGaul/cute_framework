@@ -11,7 +11,7 @@ int main(int argc, const char** argv)
 	while (app_is_running()) {
 		app_update();
 		// All your game logic and updates go here...
-		app_present();
+		app_draw_onto_screen();
 	}
 
 	destroy_app();

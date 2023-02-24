@@ -182,7 +182,7 @@ CUTE_API void CUTE_CALL cf_render_to(CF_Canvas canvas, bool clear);
 /**
  * Temporal texture information for a sprite. Useful to render a sprite in an external system,
  * e.g. Dear ImGui. This struct is only valid until the next time `cf_render_to` or
- * `cf_app_present` is called.
+ * `cf_app_draw_onto_screen` is called.
  */
 typedef struct CF_TemporaryImage
 {

@@ -371,7 +371,7 @@ bool cf_app_is_running()
 	return app->running;
 }
 
-void cf_app_stop_running()
+void cf_app_signal_shutdown()
 {
 	app->running = 0;
 }
@@ -406,7 +406,7 @@ static void s_imgui_present()
 	}
 }
 
-int cf_app_present()
+int cf_app_draw_onto_screen()
 {
 	// Update lifteime of all text effects.
 	const char** keys = app->text_effect_states.keys();
@@ -516,12 +516,12 @@ bool cf_app_was_maximized()
 	return app->window_state.maximized && !app->window_state_prev.maximized;
 }
 
-bool cf_app_is_minimized()
+bool cf_app_minimized()
 {
 	return app->window_state.minimized;
 }
 
-bool cf_app_is_maximized()
+bool cf_app_maximized()
 {
 	return app->window_state.maximized;
 }

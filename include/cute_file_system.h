@@ -24,6 +24,7 @@
 
 #include "cute_defines.h"
 #include "cute_result.h"
+#include "cute_string.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -80,6 +81,11 @@ extern "C" {
  *     .txt
  */
 #define spext(s) cf_path_get_ext(s)
+	
+/**
+ * Returns true if the file's extension matches, false otherwise.
+ */
+#define spext_equ(s, ext) cf_path_ext_equ(s, ext)
 
 /**
  * Removes the rightmost file or directory from the path. If the string is not a
@@ -118,7 +124,7 @@ extern "C" {
 #define spdir_of(s) cf_path_directory_of(s)
 
 /**
- * Returns the directory of a given file or directory. Returns a new string.
+ * Returns the top-level directory of a given file or directory. Returns a new string.
  * 
  * Example:
  * 
@@ -132,7 +138,7 @@ extern "C" {
 #define sptop_of(s) cf_path_top_directory(s)
 
 /**
- * Normalizes a path. This means a few specific things:
+ * Normalizes a path as a new string. This means a few specific things:
  * 
  * - All '\\' are replaced with '/'.
  * - Any duplicate '////' are replaced with a single '/'.
@@ -152,6 +158,7 @@ extern "C" {
 CUTE_API char* CUTE_CALL cf_path_get_filename(const char* path);
 CUTE_API char* CUTE_CALL cf_path_get_filename_no_ext(const char* path);
 CUTE_API char* CUTE_CALL cf_path_get_ext(const char* path);
+CUTE_API bool CUTE_CALL cf_path_ext_equ(const char* path, const char* ext);
 CUTE_API char* CUTE_CALL cf_path_pop(const char* path);
 CUTE_API char* CUTE_CALL cf_path_pop_n(const char* path, int n);
 CUTE_API char* CUTE_CALL cf_path_compact(const char* path, int n);
@@ -368,7 +375,7 @@ CUTE_API CF_Result CUTE_CALL cf_fs_close(CF_File* file);
  * Deletes a file or directory. The directory must be empty, otherwise this function
  * will fail.
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_delete(const char* virtual_path);
+CUTE_API CF_Result CUTE_CALL cf_fs_remove_directory(const char* virtual_path);
 
 /**
  * Creates a directory at the path. All missing directories are also created.
@@ -514,8 +521,8 @@ CUTE_INLINE File* fs_open_file_for_write(const char* virtual_path) { return cf_f
 CUTE_INLINE File* fs_open_file_for_append(const char* virtual_path) { return cf_fs_open_file_for_append(virtual_path); }
 CUTE_INLINE File* fs_open_file_for_read(const char* virtual_path) { return cf_fs_open_file_for_read(virtual_path); }
 CUTE_INLINE Result fs_close(File* file) { return cf_fs_close(file); }
-CUTE_INLINE Result fs_delete(const char* virtual_path) { return cf_fs_delete(virtual_path); }
-CUTE_INLINE Result fs_create_dir(const char* virtual_path) { return cf_fs_create_directory(virtual_path); }
+CUTE_INLINE Result fs_remove_directory(const char* virtual_path) { return cf_fs_remove_directory(virtual_path); }
+CUTE_INLINE Result fs_create_directory(const char* virtual_path) { return cf_fs_create_directory(virtual_path); }
 CUTE_INLINE const char** fs_enumerate_directory(const char* virtual_path) { return cf_fs_enumerate_directory(virtual_path); }
 CUTE_INLINE void fs_free_enumerated_directory(const char** directory_list) { cf_fs_free_enumerated_directory(directory_list); }
 CUTE_INLINE bool fs_file_exists(const char* virtual_path) { return cf_fs_file_exists(virtual_path); }
@@ -531,6 +538,62 @@ CUTE_INLINE Result fs_write_entire_buffer_to_file(const char* virtual_path, cons
 CUTE_INLINE const char* fs_get_backend_specific_error_message() { return cf_fs_get_backend_specific_error_message(); }
 CUTE_INLINE const char* fs_get_user_directory(const char* org, const char* app) { return cf_fs_get_user_directory(org, app); }
 CUTE_INLINE const char* fs_get_actual_path(const char* virtual_path) { return cf_fs_get_actual_path(virtual_path); }
+
+struct Path
+{
+	CUTE_INLINE Path() { }
+	CUTE_INLINE Path(const char* s) { sset(m_path, s); }
+	CUTE_INLINE Path(const Path& p) { *this = p; }
+	CUTE_INLINE Path(Path&& p) { *this = p; }
+	CUTE_INLINE ~Path() { sfree(m_path); m_path = NULL; }
+
+	static CUTE_INLINE Path steal_from(const char* cute_c_api_string) { CF_ACANARY(cute_c_api_string); Path p; p.m_path = (char*)cute_c_api_string; return p; }
+
+	CUTE_INLINE String filename() const { return String::steal_from(spfname(m_path)); }
+	CUTE_INLINE String filename_no_ext() const { return String::steal_from(spfname_no_ext(m_path)); }
+	CUTE_INLINE String ext() const { return String::steal_from(spext(m_path)); }
+	CUTE_INLINE bool has_ext(const char* ext) const { return spext_equ(m_path, ext); }
+	CUTE_INLINE void pop() { sppop(m_path); }
+	CUTE_INLINE void popn(int n) { sppopn(m_path, n); }
+	CUTE_INLINE Path compact(int n) const { return Path::steal_from(spcompact(m_path, n)); }
+	CUTE_INLINE Path my_directory() const { return Path::steal_from(spdir_of(m_path)); }
+	CUTE_INLINE Path my_top() const { return Path::steal_from(sptop_of(m_path)); }
+	CUTE_INLINE Path normalize() const { return Path::steal_from(spnorm(m_path)); }
+
+	CUTE_INLINE Path& add(const char* path) { if (sfirst(path) != '/' && slast(m_path) != '/') sappend(m_path, "/"); scat(m_path, path); return *this; }
+	CUTE_INLINE Path& cat(const char* path) { return add(path); }
+	CUTE_INLINE Path& operator+(const Path& rhs) { return add(rhs.m_path); }
+	CUTE_INLINE Path& operator=(const Path& p) { sset(m_path, p.m_path); return *this; }
+	CUTE_INLINE Path& operator=(Path&& p) { m_path = p.m_path; p.m_path = NULL; return *this; }
+
+	CUTE_INLINE const char* c_str() const { return m_path; }
+
+private:
+	char* m_path = NULL;
+};
+
+struct Directory
+{
+	CUTE_INLINE ~Directory() { if (m_dirs) fs_free_enumerated_directory(m_dirs); m_path = NULL; m_list = m_dirs = NULL; }
+	CUTE_INLINE Directory(const Directory& d) { *this = d; }
+	CUTE_INLINE Directory(Directory&& d) { *this = d; }
+
+	static CUTE_INLINE Directory open(const char* virtual_path) { return Directory(virtual_path); }
+	static CUTE_INLINE Result create(const char* virtual_path) { fs_create_directory(virtual_path); }
+	static CUTE_INLINE Result remove(const char* virtual_path) { fs_remove_directory(virtual_path); }
+
+	CUTE_INLINE const char* next() { if (*m_list) { const char* result = *m_list++; return result; } else { return NULL; } }
+
+	CUTE_INLINE Directory& operator=(const Directory& d) { m_path = d.m_path; m_list = m_dirs = fs_enumerate_directory(m_path); return *this; }
+	CUTE_INLINE Directory& operator=(Directory&& d) { m_path = d.m_path; m_list = m_dirs = d.m_dirs; d.m_path = NULL; d.m_dirs = d.m_list = NULL; }
+
+private:
+	const char* m_path;
+	const char** m_dirs;
+	const char** m_list;
+
+	CUTE_INLINE Directory(const char* virtual_path) { m_path = virtual_path; m_list = m_dirs = fs_enumerate_directory(virtual_path); }
+};
 
 }
 
