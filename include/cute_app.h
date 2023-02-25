@@ -480,7 +480,7 @@ CUTE_INLINE const char* cf_power_state_to_string(CF_PowerState state) {
 }
 
 /**
- * @struct CF_PowerInfo
+ * @struct   CF_PowerInfo
  * @category app
  * @brief    Detailed information about the power level/status of the application.
  * @related  cf_app_power_info cf_power_state_to_string CF_PowerState

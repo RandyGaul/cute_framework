@@ -23,6 +23,7 @@ enum DocType
 	DOC_EMPTY,
 	DOC_ENUM,
 	DOC_FUNCTION,
+	DOC_STRUCT,
 };
 
 struct Doc
@@ -37,6 +38,7 @@ struct Doc
 	Array<String> param_briefs;
 	Array<String> enum_entries;
 	Array<String> enum_entry_briefs;
+	Array<String> member_briefs;
 	Array<String> members;
 	String return_value;
 	String example_brief;
@@ -57,6 +59,17 @@ struct Doc
 	void emit_signature(FILE* fp)
 	{
 		fprintf(fp, "```cpp\n%s\n```\n\n", signature.c_str());
+	}
+
+	void emit_members(FILE* fp)
+	{
+		if (param_names.count()) {
+			fprintf(fp, "Members | Description\n--- | ---\n");
+			for (int i = 0; i < param_names.count(); ++i) {
+				fprintf(fp, "`%s` | %s\n", param_names[i].c_str(), param_briefs[i].c_str());
+			}
+			fprintf(fp, "\n");
+		}
 	}
 
 	void emit_params(FILE* fp)
@@ -337,9 +350,8 @@ String parse_line()
 	return line.trim();
 }
 
-void parse_function()
+void parse_comment_block()
 {
-	s->doc.type = DOC_FUNCTION;
 	s->doc.title = parse_paragraph();
 	while (!s->done()) {
 		parse_token();
@@ -349,8 +361,28 @@ void parse_function()
 			break;
 		}
 	}
+}
+
+void parse_function()
+{
+	s->doc.type = DOC_FUNCTION;
+	parse_comment_block();
 	s->doc.signature = parse_line().replace("CUTE_API ", "").replace("CUTE_CALL ", "");
 	s->flush_doc();
+}
+
+void parse_struct()
+{
+	s->doc.type = DOC_STRUCT;
+	parse_comment_block();
+	while (!s->done()) {
+		parse_token();
+		if (s->token.first() == '@member') {
+			// WORKING HERE
+		} else if (s->token == "*/") {
+			break;
+		}
+	}
 }
 
 void parse(String header)
@@ -368,8 +400,10 @@ void parse(String header)
 				parse_enum();
 			} else if (s->token == "@function") {
 				parse_function();
+			} else if (s->token == "@struct") {
+				parse_struct();
 			} else {
-				panic(String::fmt("Found unexpected command %s, expected @enum, @function, @struct, @member, or @define.", s->token.c_str()));
+				panic(String::fmt("Found unexpected command %s, expected @enum, @function, @struct, or @define.", s->token.c_str()));
 			}
 		}
 	}
@@ -468,6 +502,13 @@ int main(int argc, const char** argv)
 			doc.emit_signature(fp);
 			doc.emit_params(fp);
 			doc.emit_return(fp);
+			doc.emit_example(fp);
+			doc.emit_remarks(fp);
+			doc.emit_related(fp);
+		} else if (doc.type == DOC_STRUCT) {
+			doc.emit_title(fp);
+			doc.emit_brief(fp);
+			doc.emit_members(fp);
 			doc.emit_example(fp);
 			doc.emit_remarks(fp);
 			doc.emit_related(fp);
