@@ -130,7 +130,7 @@ void cf_destroy_memory_pool(CF_MemoryPool* pool)
 
 void* cf_memory_pool_alloc(CF_MemoryPool* pool)
 {
-	void *mem = CF_MemoryPoolry_alloc(pool);
+	void *mem = cf_memory_pool_try_alloc(pool);
 	if (!mem) {
 		mem = cf_aligned_alloc(pool->unaligned_element_size, pool->alignment);
 		if (mem) {
@@ -140,7 +140,7 @@ void* cf_memory_pool_alloc(CF_MemoryPool* pool)
 	return mem;
 }
 
-void* CF_MemoryPoolry_alloc(CF_MemoryPool* pool)
+void* cf_memory_pool_try_alloc(CF_MemoryPool* pool)
 {
 	if (pool->free_list) {
 		void *mem = pool->free_list;

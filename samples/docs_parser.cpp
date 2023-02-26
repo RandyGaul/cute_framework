@@ -445,7 +445,7 @@ void parse(String header)
 			} else if (s->token == "@struct") {
 				parse_struct();
 			} else {
-				panic(String::fmt("Found unexpected command %s, expected @enum, @function, @struct, or @define.", s->token.c_str()));
+				panic(String::fmt("Found unexpected command %s, expected @enum, @function, or @struct.", s->token.c_str()));
 			}
 		}
 	}
