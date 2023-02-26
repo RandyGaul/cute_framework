@@ -394,7 +394,7 @@ void parse_function()
 {
 	s->doc.type = DOC_FUNCTION;
 	parse_comment_block();
-	s->doc.signature = parse_line().replace("CUTE_API ", "").replace("CUTE_CALL ", "");
+	s->doc.signature = parse_line().replace("CUTE_API ", "").replace("CUTE_CALL ", "").replace("CUTE_INLINE ", "");
 	s->flush_doc();
 }
 

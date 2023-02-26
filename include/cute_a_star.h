@@ -33,7 +33,7 @@ extern "C" {
 
 /**
  * @struct   CF_AStarGrid
- * @brief    An opaque handle representing an A* grid for calculating shortest paths. See `cf_make_a_star_grid` for more details.
+ * @brief    An opaque handle representing a grid for calculating shortest paths. See `cf_make_a_star_grid` for more details.
  * @related  cf_make_a_star_grid cf_destroy_a_star_grid cf_a_star_grid_set_cost cf_a_star_grid_get_cost cf_a_star
  */
 typedef struct CF_AStarGrid { uint64_t id; } CF_AStarGrid;
@@ -42,11 +42,11 @@ typedef struct CF_AStarGrid { uint64_t id; } CF_AStarGrid;
 /**
  * @function cf_make_a_star_grid
  * @category gameplay
- * @brief    Creates a `CF_AStarGrid` for running the A* path-finding algorithm via `cf_a_star`.
+ * @brief    Creates a `CF_AStarGrid` for running a path-finding algorithm via `cf_a_star`.
  * @param    w           The width of the grid.
  * @param    h           The height of the grid.
  * @param    cell_costs  The cost of each cell in the grid. 1.0f is default. Anything < 1.0f is treated as _non-traversable_. Can be `NULL`, meaning each cell is 1.0f cost.
- * @return   Returns a `CF_AStarGrid` for A* path-finding. Pass this to the function `cf_a_star`.
+ * @return   Returns a `CF_AStarGrid` for path-finding. Pass this to the function `cf_a_star`.
  * @example > Calculating a path along a small grid, and printing the result.
  *     TODO
  * @remarks  `CF_AStarGrid`'s are designed to be created once and used many times. You can update the cost of any index with
