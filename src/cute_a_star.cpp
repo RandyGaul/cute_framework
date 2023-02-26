@@ -120,8 +120,8 @@ bool cf_a_star(CF_AStarGrid grid_handle, int start_x, int start_y, int end_x, in
 	float allow_diagonals = allow_diagonal_movement ? 1.0f : 0;
 	CF_AStarNodeInternal* nodes = grid->nodes.data();
 	const float* cell_costs = grid->cell_costs;
-	int* out_x = NULL;
-	int* out_y = NULL;
+	dyna int* out_x = NULL;
+	dyna int* out_y = NULL;
 
 	if (s.x == e.x && s.y == e.y) {
 		if (out) {

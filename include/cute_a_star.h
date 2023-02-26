@@ -33,6 +33,7 @@ extern "C" {
 
 /**
  * @struct   CF_AStarGrid
+ * @category gameplay
  * @brief    An opaque handle representing a grid for calculating shortest paths. See `cf_make_a_star_grid` for more details.
  * @related  cf_make_a_star_grid cf_destroy_a_star_grid cf_a_star_grid_set_cost cf_a_star_grid_get_cost cf_a_star
  */
@@ -99,13 +100,13 @@ typedef struct CF_AStarOutput
 	int x_count;
 
 	/* @member An array of x-coordinates, one for each (x, y) coordinate in the calculated path. */
-	int* x;
+	dyna int* x;
 
 	/* @member The number of elements in the `y` array. */
 	int y_count;
 
 	/* @member An array of y-coordinates, one for each (x, y) coordinate in the calculated path. */
-	int* y;
+	dyna int* y;
 } CF_AStarOutput;
 // @end
 

@@ -162,7 +162,7 @@ CF_Result cf_music_set_sample_index(uint64_t sample_index)
 
 // -------------------------------------------------------------------------------------------------
 
-CF_Sound cf_play_sound(CF_Audio* audio_source, CF_SoundParams params /*= cf_sound_params_defaults()*/, CF_Result* err)
+CF_Sound cf_play_sound(CF_Audio* audio_source, CF_SoundParams params)
 {
 	cs_sound_params_t csparams;
 	csparams.paused = params.paused;

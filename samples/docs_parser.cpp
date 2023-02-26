@@ -18,6 +18,12 @@ static bool s_is_space(int cp)
 	}
 }
 
+static void panic(String msg)
+{
+	printf("ERROR: %s\n", msg.c_str());
+	exit(-1);
+}
+
 enum DocType
 {
 	DOC_EMPTY,
@@ -80,6 +86,9 @@ struct State
 		title.to_lower().replace(" ", "_").append(".md");
 		path.add(title);
 		doc.path = path;
+		if (page_to_doc_index.has(sintern(title))) {
+			panic(String::fmt("Tried to add a duplicate page for %s.", title.c_str()));
+		}
 		page_to_doc_index.insert(sintern(title), docs.count());
 		docs.add(doc);
 		doc = Doc();
@@ -293,12 +302,6 @@ String parse_paragraph(bool example = false)
 		}
 	}
 	return !example ? paragraph.trim().dedup(' ').replace("\n ", "\n") : paragraph;
-}
-
-void panic(String msg)
-{
-	printf("ERROR: %s\n", msg.c_str());
-	exit(-1);
 }
 
 void parse_command()
@@ -528,9 +531,15 @@ int main(int argc, const char** argv)
 		doc.example_brief = auto_generate_links(doc.example_brief);
 		doc.example = auto_generate_links(doc.example);
 		doc.remarks = auto_generate_links(doc.remarks);
-		for (int i = 0; i < doc.related.count(); ++i) {
-			doc.related[i] = linkify(doc.related[i], doc.related[i], false);
+		for (int i = 0; i < doc.related.count();) {
+			String related = doc.related[i];
+			if (related == doc.title) {
+				doc.related.unordered_remove(i);
+				continue;
+			}
+			doc.related[i] = linkify(related, related, false);
 			doc.related[i].append("  ");
+			++i;
 		}
 	}
 

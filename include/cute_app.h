@@ -510,7 +510,7 @@ typedef struct CF_PowerInfo
 // @end
 
 /**
- * @struct cf_app_power_info
+ * @function cf_app_power_info
  * @category app
  * @brief    Fetches detailed power info about the application.
  * @return   Returns a `CF_PowerInfo` struct.
