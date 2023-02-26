@@ -42,8 +42,8 @@ struct CF_AsepriteCacheEntry
 
 struct CF_AsepriteCache
 {
-	Dictionary<const char*, CF_AsepriteCacheEntry> aseprites;
-	Dictionary<uint64_t, void*> id_to_pixels;
+	Map<const char*, CF_AsepriteCacheEntry> aseprites;
+	Map<uint64_t, void*> id_to_pixels;
 	uint64_t id_gen = CUTE_ASEPRITE_ID_RANGE_LO;
 };
 

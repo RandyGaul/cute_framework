@@ -81,3 +81,25 @@ void* cf_aset(const void* a, const void* b, size_t element_size)
 	alen(a) = asize(b);
 	return (void*)a;
 }
+
+void* cf_arev(const void* a_ptr, size_t element_size)
+{
+	CF_ACANARY(a_ptr);
+	void* a = (void*)a_ptr;
+	int ia = 0;
+	int ib = acount(a) - 1;
+	void* t = CUTE_ALLOC(element_size); // Maybe use alloca? malloc won't cause stack overflow.
+	void* b = (void*)((uintptr_t)a + (element_size * ib));
+
+	while (ia < ib) {
+		CUTE_MEMCPY(t, a, element_size);
+		CUTE_MEMCPY(a, b, element_size);
+		CUTE_MEMCPY(b, t, element_size);
+		a = (void*)((uintptr_t)a + (element_size * ia++));
+		b = (void*)((uintptr_t)b + (element_size * ib++));
+	}
+
+	CUTE_FREE(t);
+
+	return (void*)a_ptr;
+}

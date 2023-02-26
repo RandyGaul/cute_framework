@@ -400,13 +400,13 @@ namespace Cute
 // Keys are treated as mere byte buffers (Plain Old Data).
 // Items have contructors/destructors called, but are *not* allowed to store references/pointers to themselves.
 template <typename K, typename T>
-struct Dictionary
+struct Map
 {
-	Dictionary();
-	Dictionary(const Dictionary<K, T>& other);
-	Dictionary(Dictionary<K, T>&& other);
-	Dictionary(int capacity);
-	~Dictionary();
+	Map();
+	Map(const Map<K, T>& other);
+	Map(Map<K, T>&& other);
+	Map(int capacity);
+	~Map();
 
 	T& get(const K& key);
 	T& find(const K& key) { return get(key); }
@@ -435,8 +435,8 @@ struct Dictionary
 
 	void swap(int index_a, int index_b);
 
-	Dictionary<K, T>& operator=(const Dictionary<K, T>& rhs);
-	Dictionary<K, T>& operator=(Dictionary<K, T>&& rhs);
+	Map<K, T>& operator=(const Map<K, T>& rhs);
+	Map<K, T>& operator=(Map<K, T>&& rhs);
 
 private:
 	CF_Hhdr* m_table = NULL;
@@ -445,13 +445,13 @@ private:
 // -------------------------------------------------------------------------------------------------
 
 template <typename K, typename T>
-Dictionary<K, T>::Dictionary()
+Map<K, T>::Map()
 {
 	m_table = CF_HHDR((T*)cf_hashtable_make_impl(sizeof(K), sizeof(T), 32));
 }
 
 template <typename K, typename T>
-Dictionary<K, T>::Dictionary(const Dictionary<K, T>& other)
+Map<K, T>::Map(const Map<K, T>& other)
 {
 	int n = other.count();
 	const T* items = other.items();
@@ -465,20 +465,20 @@ Dictionary<K, T>::Dictionary(const Dictionary<K, T>& other)
 }
 
 template <typename K, typename T>
-Dictionary<K, T>::Dictionary(Dictionary<K, T>&& other)
+Map<K, T>::Map(Map<K, T>&& other)
 {
 	m_table = other.m_table;
 	other.m_table = NULL;
 }
 
 template <typename K, typename T>
-Dictionary<K, T>::Dictionary(int capacity)
+Map<K, T>::Map(int capacity)
 {
 	m_table = CF_HHDR((T*)cf_hashtable_make_impl(sizeof(K), sizeof(T), capacity));
 }
 
 template <typename K, typename T>
-Dictionary<K, T>::~Dictionary()
+Map<K, T>::~Map()
 {
 	T* elements = items();
 	for (int i = 0; i < count(); ++i) {
@@ -489,21 +489,21 @@ Dictionary<K, T>::~Dictionary()
 }
 
 template <typename K, typename T>
-T& Dictionary<K, T>::get(const K& key)
+T& Map<K, T>::get(const K& key)
 {
 	int index = cf_hashtable_find_impl2(m_table, &key);
 	return items()[index];
 }
 
 template <typename K, typename T>
-const T& Dictionary<K, T>::get(const K& key) const
+const T& Map<K, T>::get(const K& key) const
 {
 	int index = cf_hashtable_find_impl2(m_table, &key);
 	return items()[index];
 }
 
 template <typename K, typename T>
-T* Dictionary<K, T>::try_get(const K& key)
+T* Map<K, T>::try_get(const K& key)
 {
 	if (!m_table) return NULL;
 	int index = cf_hashtable_find_impl2(m_table, &key);
@@ -512,7 +512,7 @@ T* Dictionary<K, T>::try_get(const K& key)
 }
 
 template <typename K, typename T>
-const T* Dictionary<K, T>::try_get(const K& key) const
+const T* Map<K, T>::try_get(const K& key) const
 {
 	if (!m_table) return NULL;
 	int index = cf_hashtable_find_impl2(m_table, &key);
@@ -521,7 +521,7 @@ const T* Dictionary<K, T>::try_get(const K& key) const
 }
 
 template <typename K, typename T>
-T* Dictionary<K, T>::insert(const K& key)
+T* Map<K, T>::insert(const K& key)
 {
 	m_table = CF_HHDR((T*)cf_hashtable_insert_impl3(m_table, &key));
 	int index = m_table->return_index;
@@ -532,7 +532,7 @@ T* Dictionary<K, T>::insert(const K& key)
 }
 
 template <typename K, typename T>
-T* Dictionary<K, T>::insert(const K& key, const T& val)
+T* Map<K, T>::insert(const K& key, const T& val)
 {
 	m_table = CF_HHDR((T*)cf_hashtable_insert_impl2(m_table, &key, &val));
 	int index = m_table->return_index;
@@ -543,7 +543,7 @@ T* Dictionary<K, T>::insert(const K& key, const T& val)
 }
 
 template <typename K, typename T>
-T* Dictionary<K, T>::insert(const K& key, T&& val)
+T* Map<K, T>::insert(const K& key, T&& val)
 {
 	m_table = CF_HHDR((T*)cf_hashtable_insert_impl2(m_table, &key, &val));
 	int index = m_table->return_index;
@@ -554,7 +554,7 @@ T* Dictionary<K, T>::insert(const K& key, T&& val)
 }
 
 template <typename K, typename T>
-void Dictionary<K, T>::remove(const K& key)
+void Map<K, T>::remove(const K& key)
 {
 	T* slot = try_find(key);
 	if (slot) {
@@ -564,7 +564,7 @@ void Dictionary<K, T>::remove(const K& key)
 }
 
 template <typename K, typename T>
-void Dictionary<K, T>::clear()
+void Map<K, T>::clear()
 {
 	T* elements = items();
 	for (int i = 0; i < count(); ++i) {
@@ -574,43 +574,43 @@ void Dictionary<K, T>::clear()
 }
 
 template <typename K, typename T>
-int Dictionary<K, T>::count() const
+int Map<K, T>::count() const
 {
 	return m_table ? cf_hashtable_count_impl(m_table) : 0;
 }
 
 template <typename K, typename T>
-T* Dictionary<K, T>::items()
+T* Map<K, T>::items()
 {
 	return m_table ? (T*)(m_table + 1) + 1 : NULL;
 }
 
 template <typename K, typename T>
-const T* Dictionary<K, T>::items() const
+const T* Map<K, T>::items() const
 {
 	return m_table ? (const T*)(m_table + 1) + 1 : NULL;
 }
 
 template <typename K, typename T>
-K* Dictionary<K, T>::keys()
+K* Map<K, T>::keys()
 {
 	return m_table ? (K*)cf_hashtable_keys_impl(m_table) : NULL;
 }
 
 template <typename K, typename T>
-const K* Dictionary<K, T>::keys() const
+const K* Map<K, T>::keys() const
 {
 	return m_table ? (const K*)cf_hashtable_keys_impl(m_table) : NULL;
 }
 
 template <typename K, typename T>
-void Dictionary<K, T>::swap(int index_a, int index_b)
+void Map<K, T>::swap(int index_a, int index_b)
 {
 	cf_hashtable_swap_impl(m_table, index_a, index_b);
 }
 
 template <typename K, typename T>
-Dictionary<K, T>& Dictionary<K, T>::operator=(const Dictionary<K, T>& rhs)
+Map<K, T>& Map<K, T>::operator=(const Map<K, T>& rhs)
 {
 	clear();
 	int n = rhs.count();
@@ -626,9 +626,9 @@ Dictionary<K, T>& Dictionary<K, T>::operator=(const Dictionary<K, T>& rhs)
 }
 
 template <typename K, typename T>
-Dictionary<K, T>& Dictionary<K, T>::operator=(Dictionary<K, T>&& rhs)
+Map<K, T>& Map<K, T>::operator=(Map<K, T>&& rhs)
 {
-	this->~Dictionary<K, T>();
+	this->~Map<K, T>();
 	m_table = rhs.m_table;
 	rhs.m_table = NULL;
 	return *this;

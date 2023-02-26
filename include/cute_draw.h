@@ -323,7 +323,7 @@ struct TextEffect : public CF_TextEffect
 	}
 
 	// "private" state -- don't touch.
-	const Cute::Dictionary<const char*, CF_TextCodeVal>* params;
+	const Cute::Map<const char*, CF_TextCodeVal>* params;
 	CF_TextEffectFn* fn;
 };
 

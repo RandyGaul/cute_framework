@@ -27,34 +27,34 @@
 
 using namespace Cute;
 
-struct cf_iv2
+struct CF_iv2
 {
 	int x, y;
 };
 
-struct cf_node_t
+struct CF_AStarNodeInternal
 {
-	cf_iv2 p;
+	CF_iv2 p;
 	float h; // Cost from the heuristic function to the end.
 	float g; // Accumulated cost of the path (from `cell_to_cost`).
 	float f; // h + g
 	bool visited;
-	cf_node_t* parent;
+	CF_AStarNodeInternal* parent;
 };
 
-struct CF_AStarGrid
+struct CF_AStarGridInternal
 {
 	int w = 0;
 	int h = 0;
-	const int* cells = NULL;
-	Array<cf_node_t> nodes;
-	PriorityQueue<cf_node_t*> open_list;
+	float* cell_costs = NULL;
+	Array<CF_AStarNodeInternal> nodes;
+	PriorityQueue<CF_AStarNodeInternal*> open_list;
 
 	void reset()
 	{
 		for (int i = 0; i < w; ++i) {
 			for (int j = 0; j < h; ++j) {
-				cf_node_t* n = nodes + (j * w + i);
+				CF_AStarNodeInternal* n = nodes + (j * w + i);
 				n->p = { i, j };
 				n->visited = false;
 				n->f = FLT_MAX;
@@ -67,7 +67,7 @@ struct CF_AStarGrid
 	}
 };
 
-static float cf_internal_s_heuristic(cf_iv2 a, cf_iv2 b, float allow_diagonals)
+static float cf_internal_s_heuristic(CF_iv2 a, CF_iv2 b, float allow_diagonals)
 {
 	float dx = (float)cf_abs_int(a.x - b.x);
 	float dy = (float)cf_abs_int(a.y - b.y);
@@ -78,54 +78,59 @@ static float cf_internal_s_heuristic(cf_iv2 a, cf_iv2 b, float allow_diagonals)
 }
 
 
-const CF_AStarGrid* cf_make_a_star_grid(int w, int h, const int* cells)
+CF_AStarGrid cf_make_a_star_grid(int w, int h, float* cell_costs)
 {
-	CF_AStarGrid* grid = CUTE_NEW(CF_AStarGrid);
+	CF_AStarGridInternal* grid = CUTE_NEW(CF_AStarGridInternal);
 	grid->w = w;
 	grid->h = h;
-	grid->cells = cells;
+	grid->cell_costs = cell_costs;
 	grid->nodes.ensure_count(w * h);
-	return grid;
+	CF_AStarGrid result;
+	result.id = (uint64_t)grid;
+	return result;
 }
 
-void cf_destroy_a_star_grid(CF_AStarGrid* grid)
+float cf_a_star_grid_get_cost(CF_AStarGrid grid_handle, int x, int y)
 {
-	grid->~CF_AStarGrid();
+	CF_AStarGridInternal* grid = (CF_AStarGridInternal*)grid_handle.id;
+	float cost = grid->cell_costs[y * grid->w + x];
+	return cost;
+}
+
+void cf_a_star_grid_set_cost(CF_AStarGrid grid_handle, int x, int y, float cost)
+{
+	CF_AStarGridInternal* grid = (CF_AStarGridInternal*)grid_handle.id;
+	grid->cell_costs[y * grid->w + x] = cost;
+}
+
+void cf_destroy_a_star_grid(CF_AStarGrid grid_handle)
+{
+	CF_AStarGridInternal* grid = (CF_AStarGridInternal*)grid_handle.id;
+	grid->~CF_AStarGridInternal();
 	CUTE_FREE(grid);
 }
 
-
-CUTE_API CF_AStarInput CUTE_CALL cf_a_star_input_defaults()
+bool cf_a_star(CF_AStarGrid grid_handle, int start_x, int start_y, int end_x, int end_y, bool allow_diagonal_movement, CF_AStarOutput* out)
 {
-	CF_AStarInput input = {};
-	input.allow_diagonal_movement = true;
-	return input;
-}
-
-namespace Cute
-{
-
-bool a_star(const AStarGrid* const_grid, const AStarInput* input, AStarOutput* output)
-{
-	CF_AStarGrid* grid = (CF_AStarGrid*)const_grid;
+	CF_AStarGridInternal* grid = (CF_AStarGridInternal*)grid_handle.id;
 	grid->reset();
-	PriorityQueue<cf_node_t*>& open_list = grid->open_list;
-	cf_iv2 s = { input->start_x, input->start_y };
-	cf_iv2 e = { input->end_x, input->end_y };
-	bool allow_diagonal_movement = input->allow_diagonal_movement;
+	PriorityQueue<CF_AStarNodeInternal*>& open_list = grid->open_list;
+	CF_iv2 s = { start_x, start_y };
+	CF_iv2 e = { end_x, end_y };
 	float allow_diagonals = allow_diagonal_movement ? 1.0f : 0;
-	cf_node_t* nodes = grid->nodes.data();
-	const float* cell_to_cost = input->cell_to_cost;
-	const int* cells = grid->cells;
-	if (output) {
-		output->x.clear();
-		output->y.clear();
-	}
+	CF_AStarNodeInternal* nodes = grid->nodes.data();
+	const float* cell_costs = grid->cell_costs;
+	int* out_x = NULL;
+	int* out_y = NULL;
 
 	if (s.x == e.x && s.y == e.y) {
-		if (output) {
-			output->x.add(s.x);
-			output->y.add(s.y);
+		if (out) {
+			apush(out_x, s.x);
+			apush(out_y, s.y);
+			out->x_count = 1;
+			out->x = out_x;
+			out->y_count = 1;
+			out->y = out_y;
 		}
 		return true;
 	}
@@ -133,7 +138,7 @@ bool a_star(const AStarGrid* const_grid, const AStarInput* input, AStarOutput* o
 	int w = grid->w;
 	int h = grid->h;
 	int index = s.y * w + s.x;
-	cf_node_t* initial = nodes + index;
+	CF_AStarNodeInternal* initial = nodes + index;
 	initial->g = 0;
 	initial->h = cf_internal_s_heuristic(s, e, allow_diagonals);
 	initial->f = initial->h;
@@ -141,27 +146,29 @@ bool a_star(const AStarGrid* const_grid, const AStarInput* input, AStarOutput* o
 	open_list.push_min(initial, initial->f);
 
 	while (open_list.count()) {
-		cf_node_t* q;
+		CF_AStarNodeInternal* q;
 		open_list.pop_min(&q);
-		cf_iv2 qp = q->p;
+		CF_iv2 qp = q->p;
 
 		if (qp.x == e.x && qp.y == e.y) {
-			if (output) {
+			if (out) {
 				while (q->parent) {
-					output->x.add(q->p.x);
-					output->y.add(q->p.y);
+					apush(out_x, q->p.x);
+					apush(out_y, q->p.y);
 					q = q->parent;
 				}
 
-				output->x.reverse();
-				output->y.reverse();
+				arev(out_x);
+				arev(out_y);
+				out->x_count = acount(out_x);
+				out->y_count = acount(out_y);
 			}
 
 			return true;
 		}
 
 		int next_count = 0;
-		cf_node_t* next[8];
+		CF_AStarNodeInternal* next[8];
 
 		#define CUTE_A_STAR_ADD_SUCCESSOR(x, y) \
 			if ((x) >= 0 && (x) < w && (y) >= 0 && (y) < h) { \
@@ -180,9 +187,9 @@ bool a_star(const AStarGrid* const_grid, const AStarInput* input, AStarOutput* o
 		}
 
 		for (int i = 0; i < next_count; ++i) {
-			cf_node_t* n = next[i];
+			CF_AStarNodeInternal* n = next[i];
 			index = n->p.y * w + n->p.x;
-			float cell_cost = cell_to_cost[cells[index]];
+			float cell_cost = cell_costs ? cell_costs[index] : 1.0f;
 			bool non_traversable = cell_cost <= 0;
 			float g = n->g + cell_cost;
 			if (n->visited) continue;
@@ -202,36 +209,8 @@ bool a_star(const AStarGrid* const_grid, const AStarInput* input, AStarOutput* o
 	return false;
 }
 
-}
-
-bool cf_a_star(const CF_AStarGrid* const_grid, const CF_AStarInput* input, CF_AStarOutput* output)
+CUTE_API void CUTE_CALL cf_free_a_star_output(CF_AStarOutput* out)
 {
-	bool result;
-
-	if (output) {
-		Cute::AStarOutput temp_output = {};
-
-		result = Cute::a_star(const_grid, (Cute::AStarInput*)input, &temp_output);
-
-		output->x = temp_output.x.data();
-		output->x_count = temp_output.x.count();
-
-		output->y = temp_output.y.data();
-		output->y_count = temp_output.y.count();
-
-		// Steal the memory from `temp_output` to support the C interface.
-		// This prevents the memory from getting cleaned up here, and will
-		// be cleaned up later in `cf_free_a_star_output`.
-		CUTE_MEMSET(&temp_output, 0, sizeof(temp_output));
-	} else {
-		result = Cute::a_star(const_grid, (Cute::AStarInput*)input, nullptr);
-	}
-
-	return result;
-}
-
-CUTE_API void CUTE_CALL cf_free_a_star_output(CF_AStarOutput* output)
-{
-	CUTE_FREE((void*)output->x);
-	CUTE_FREE((void*)output->y);
+	afree(out->x);
+	afree(out->y);
 }

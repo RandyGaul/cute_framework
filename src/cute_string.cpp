@@ -181,6 +181,7 @@ char* cf_sappend_range(char* a, const char* b, const char* b_end)
 char* cf_strim(char* s)
 {
 	CF_ACANARY(s);
+	if (slen(s) == 0) return s;
 	char* start = s;
 	char* end = s + slen(s) - 1;
 	while (isspace(*start)) start++;
@@ -365,7 +366,6 @@ char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
 		}
 		search = find + with_len;
 	}
-	CUTE_ASSERT(_CrtCheckMemory());
 	return s;
 }
 
@@ -389,7 +389,6 @@ char* cf_sdedup(char* s, int ch)
 	}
 	s[i + 1] = 0;
 	ssize(s) = i + 1;
-	CUTE_ASSERT(_CrtCheckMemory());
 	return s;
 }
 

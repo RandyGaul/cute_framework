@@ -33,12 +33,14 @@ struct Doc
 	String web_category;
 	String title;
 	String brief;
+	int this_index = -1;
 	String signature;
 	Array<String> param_names;
 	Array<String> param_briefs;
 	Array<String> enum_entries;
 	Array<String> enum_entry_briefs;
 	Array<String> member_briefs;
+	Array<int> member_functions;
 	Array<String> members;
 	String return_value;
 	String example_brief;
@@ -46,88 +48,17 @@ struct Doc
 	String remarks;
 	Array<String> related;
 
-	void emit_title(FILE* fp)
-	{
-		fprintf(fp, "# %s\n\n", title.c_str());
-	}
-
-	void emit_brief(FILE* fp)
-	{
-		fprintf(fp, "%s\n\n", brief.c_str());
-	}
-
-	void emit_signature(FILE* fp)
-	{
-		fprintf(fp, "```cpp\n%s\n```\n\n", signature.c_str());
-	}
-
-	void emit_members(FILE* fp)
-	{
-		if (param_names.count()) {
-			fprintf(fp, "Members | Description\n--- | ---\n");
-			for (int i = 0; i < param_names.count(); ++i) {
-				fprintf(fp, "`%s` | %s\n", param_names[i].c_str(), param_briefs[i].c_str());
-			}
-			fprintf(fp, "\n");
-		}
-	}
-
-	void emit_params(FILE* fp)
-	{
-		if (param_names.count()) {
-			fprintf(fp, "Parameters | Description\n--- | ---\n");
-			for (int i = 0; i < param_names.count(); ++i) {
-				fprintf(fp, "%s | %s\n", param_names[i].c_str(), param_briefs[i].c_str());
-			}
-			fprintf(fp, "\n");
-		}
-	}
-
-	void emit_enum_entries(FILE* fp)
-	{
-		fprintf(fp, "## Values\n\n");
-		fprintf(fp, "Enum | Description\n--- | ---\n");
-		for (int i = 0; i < enum_entries.count(); ++i) {
-			fprintf(fp, "%s | %s\n", enum_entries[i].c_str(), enum_entry_briefs[i].c_str());
-		}
-		fprintf(fp, "\n");
-	}
-
-	void emit_return(FILE* fp)
-	{
-		if (return_value.len()) {
-			fprintf(fp, "## Return Value\n\n%s\n\n", return_value.c_str());
-		}
-	}
-
-	void emit_example(FILE* fp)
-	{
-		if (example.len()) {
-			fprintf(fp, "## Code Example\n\n");
-			if (example_brief.len()) {
-				fprintf(fp, "%s\n\n", example_brief.c_str());
-			}
-			fprintf(fp, "```cpp%s```\n\n", example.c_str());
-		}
-	}
-
-	void emit_remarks(FILE* fp)
-	{
-		if (remarks.len()) {
-			fprintf(fp, "## Remarks\n\n");
-			fprintf(fp, "%s\n\n", remarks.c_str());
-		}
-	}
-
-	void emit_related(FILE* fp)
-	{
-		if (related.count()) {
-			fprintf(fp, "## Related Pages\n\n");
-			for (int i = 0; i < related.count(); ++i) {
-				fprintf(fp, "%s\n", related[i].c_str());
-			}
-		}
-	}
+	void emit_title(FILE* fp);
+	void emit_brief(FILE* fp);
+	void emit_signature(FILE* fp);
+	void emit_members(FILE* fp);
+	void emit_member_function_links(FILE* fp);
+	void emit_params(FILE* fp);
+	void emit_enum_entries(FILE* fp);
+	void emit_return(FILE* fp);
+	void emit_example(FILE* fp);
+	void emit_remarks(FILE* fp);
+	void emit_related(FILE* fp);
 };
 
 struct State
@@ -140,7 +71,7 @@ struct State
 	// Stored strings for output docs file.
 	Doc doc;
 	Array<Doc> docs;
-	Dictionary<const char*, int> page_to_doc_index;
+	Map<const char*, int> page_to_doc_index;
 
 	void flush_doc()
 	{
@@ -189,6 +120,103 @@ struct State
 
 State state;
 State* s = &state;
+
+void Doc::emit_title(FILE* fp)
+{
+	fprintf(fp, "# %s\n\n", title.c_str());
+}
+
+void Doc::emit_brief(FILE* fp)
+{
+	fprintf(fp, "%s\n\n", brief.c_str());
+}
+
+void Doc::emit_signature(FILE* fp)
+{
+	fprintf(fp, "```cpp\n%s\n```\n\n", signature.c_str());
+}
+
+void Doc::emit_members(FILE* fp)
+{
+	if (members.count()) {
+		fprintf(fp, "Struct Members | Description\n--- | ---\n");
+		for (int i = 0; i < members.count(); ++i) {
+			fprintf(fp, "`%s` | %s\n", members[i].c_str(), member_briefs[i].c_str());
+		}
+		fprintf(fp, "\n");
+	}
+}
+
+void Doc::emit_member_function_links(FILE* fp)
+{
+	if (member_functions.count()) {
+		fprintf(fp, "Functions | Description\n--- | ---\n");
+		for (int i = 0; i < member_functions.count(); ++i) {
+			int index = member_functions[i];
+			Doc& doc = s->docs[index];
+			// TODO - Linkify title spot here.
+			fprintf(fp, "%s | %s\n", doc.title.c_str(), doc.brief.c_str());
+		}
+		fprintf(fp, "\n");
+	}
+}
+
+void Doc::emit_params(FILE* fp)
+{
+	if (param_names.count()) {
+		fprintf(fp, "Parameters | Description\n--- | ---\n");
+		for (int i = 0; i < param_names.count(); ++i) {
+			fprintf(fp, "%s | %s\n", param_names[i].c_str(), param_briefs[i].c_str());
+		}
+		fprintf(fp, "\n");
+	}
+}
+
+void Doc::emit_enum_entries(FILE* fp)
+{
+	fprintf(fp, "## Values\n\n");
+	fprintf(fp, "Enum | Description\n--- | ---\n");
+	for (int i = 0; i < enum_entries.count(); ++i) {
+		fprintf(fp, "%s | %s\n", enum_entries[i].c_str(), enum_entry_briefs[i].c_str());
+	}
+	fprintf(fp, "\n");
+}
+
+void Doc::emit_return(FILE* fp)
+{
+	if (return_value.len()) {
+		fprintf(fp, "## Return Value\n\n%s\n\n", return_value.c_str());
+	}
+}
+
+void Doc::emit_example(FILE* fp)
+{
+	if (example.len()) {
+		fprintf(fp, "## Code Example\n\n");
+		if (example_brief.len()) {
+			fprintf(fp, "%s\n\n", example_brief.c_str());
+		}
+		fprintf(fp, "```cpp%s```\n\n", example.c_str());
+	}
+}
+
+void Doc::emit_remarks(FILE* fp)
+{
+	if (remarks.len()) {
+		fprintf(fp, "## Remarks\n\n");
+		fprintf(fp, "%s\n\n", remarks.c_str());
+	}
+}
+
+void Doc::emit_related(FILE* fp)
+{
+	if (related.count()) {
+		fprintf(fp, "## Related Pages\n\n");
+		for (int i = 0; i < related.count(); ++i) {
+			fprintf(fp, "%s\n", related[i].c_str());
+		}
+	}
+}
 
 void parse_token()
 {
@@ -290,7 +318,6 @@ void parse_command()
 		s->doc.param_briefs.add(parse_paragraph());
 	} else if (s->token == "@return") {
 		s->doc.return_value = parse_paragraph();
-		s->doc.return_value = String("?");
 	} else if (s->token == "@category") {
 		s->doc.web_category = parse_paragraph();
 	} else {
@@ -375,12 +402,27 @@ void parse_struct()
 {
 	s->doc.type = DOC_STRUCT;
 	parse_comment_block();
+	int doc_index = s->docs.count();
+	s->flush_doc();
+	Doc& doc = s->docs.last();
 	while (!s->done()) {
 		parse_token();
-		if (s->token.first() == '@member') {
-			// WORKING HERE
-		} else if (s->token == "*/") {
-			break;
+		if (s->token.first() == '@') {
+			if (s->token == "@member") {
+				String brief = parse_paragraph();
+				parse_token(); // Skip "*/"
+				String member = parse_line().replace("CUTE_INLINE ", "").replace(";", "");
+				doc.member_briefs.add(brief);
+				doc.members.add(member);
+			} else if (s->token == "@function") {
+				doc.member_functions.add(s->docs.count());
+				parse_function();
+				s->docs.last().this_index = doc_index;
+			} else if (s->token == "@end") {
+				break;
+			} else {
+				panic(String::fmt("Found unexpected command %s while parsing a struct, @member, @end, or @function.", s->token.c_str()));
+			}
 		}
 	}
 }
@@ -453,7 +495,11 @@ int main(int argc, const char** argv)
 	cf_fs_init(argv[0]);
 	Path path = cf_fs_get_base_directory();
 	path = path.normalize();
+#ifdef _MSC_VER
 	path.popn(2);
+#else
+	path.popn(1);
+#endif
 	path.add("/include");
 	cf_fs_mount(path.c_str(), "", true);
 
@@ -474,6 +520,9 @@ int main(int argc, const char** argv)
 		}
 		for (int i = 0; i < doc.enum_entry_briefs.count(); ++i) {
 			doc.enum_entry_briefs[i] = auto_generate_links(doc.enum_entry_briefs[i]);
+		}
+		for (int i = 0; i < doc.member_briefs.count(); ++i) {
+			doc.member_briefs[i] = auto_generate_links(doc.member_briefs[i]);
 		}
 		doc.return_value = auto_generate_links(doc.return_value);
 		doc.example_brief = auto_generate_links(doc.example_brief);
@@ -509,6 +558,7 @@ int main(int argc, const char** argv)
 			doc.emit_title(fp);
 			doc.emit_brief(fp);
 			doc.emit_members(fp);
+			doc.emit_member_function_links(fp);
 			doc.emit_example(fp);
 			doc.emit_remarks(fp);
 			doc.emit_related(fp);

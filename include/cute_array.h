@@ -137,6 +137,11 @@
 #define aset(a, b) cf_array_set(a, b)
 
 /**
+ * Reverses the elements in the array.
+ */
+#define arev(a) cf_array_reverse(a)
+
+/**
  * Returns the hash of all the bytes in the array.
  */
 #define ahash(a) cf_array_hash(a)
@@ -171,6 +176,7 @@
 #define cf_array_last(a) (a[cf_array_len(a) - 1])
 #define cf_array_clear(a) (CF_ACANARY(a), (a) ? cf_array_len(a) = 0 : 0)
 #define cf_array_set(a, b) (*(void**)&(a) = cf_aset((void*)(a), (void*)(b), sizeof(*a)))
+#define cf_array_reverse(a) cf_arev(a, sizeof(*a))
 #define cf_array_hash(a) cf_fnv1a(a, cf_array_size(a))
 #define cf_array_static(a, buffer, buffer_size) (*(void**)&(a) = cf_astatic(buffer, buffer_size, sizeof(*a)))
 #define cf_array_free(a) do { CF_ACANARY(a); if (a && !CF_AHDR(a)->is_static) CUTE_FREE(CF_AHDR(a)); a = NULL; } while (0)
@@ -199,6 +205,7 @@ extern "C" {
 CUTE_API void* CUTE_CALL cf_agrow(const void* a, int new_size, size_t element_size);
 CUTE_API void* CUTE_CALL cf_astatic(const void* a, int capacity, size_t element_size);
 CUTE_API void* CUTE_CALL cf_aset(const void* a, const void* b, size_t element_size);
+CUTE_API void* CUTE_CALL cf_arev(const void* a, size_t element_size);
 
 #ifdef __cplusplus
 }

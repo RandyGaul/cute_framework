@@ -46,8 +46,8 @@ struct CF_Font
 	uint8_t* file_data = NULL;
 	stbtt_fontinfo info;
 	Cute::Array<int> backups;
-	Cute::Dictionary<uint64_t, int> kerning;
-	Cute::Dictionary<uint64_t, CF_Glyph> glyphs;
+	Cute::Map<uint64_t, int> kerning;
+	Cute::Map<uint64_t, CF_Glyph> glyphs;
 	Cute::Array<uint64_t> image_ids;
 	int ascent;
 	int descent;
@@ -69,7 +69,7 @@ struct CF_TextCode
 	int index_in_string;
 	int glyph_count;
 	CF_TextEffectFn* fn;
-	Cute::Dictionary<const char*, CF_TextCodeVal> params;
+	Cute::Map<const char*, CF_TextCodeVal> params;
 };
 
 struct CF_TextEffectState

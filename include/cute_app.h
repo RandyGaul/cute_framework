@@ -392,6 +392,8 @@ CUTE_API bool CUTE_CALL cf_app_mouse_inside();
  * @function cf_app_init_imgui
  * @category app
  * @brief    Initializes Dear ImGui.
+ * @param    no_default_font  Prevents Dear ImGui from loading up it's own default font to save a small bit of memory.
+ *                            You must then supply your own font.
  * @remarks  [Dear ImGui](https://github.com/ocornut/imgui) is an excellent UI library for debugging, great for making tools and editors.
  *           After calling this init function you can call into Dear ImGui's functions.
  * @related  cf_app_get_sokol_imgui
@@ -424,6 +426,8 @@ CUTE_API CF_Canvas CUTE_CALL cf_app_get_canvas();
  * @function cf_app_resize_canvas
  * @category app
  * @brief    Resizes the app's internal canvas to a new w/h, in pixels.
+ * @param    w          The width in pixels to resize the canvas to.
+ * @param    h          The height in pixels to resize the canvas to.
  * @remarks  Be careful about calling this function, as it will invalidate any old references from `cf_app_get_canvas`.
  * @related  cf_app_get_canvas cf_app_get_canvas_width cf_app_get_canvas_height
  */
@@ -470,6 +474,13 @@ typedef enum CF_PowerState
 	#undef CF_ENUM
 } CF_PowerState;
 
+/**
+ * @function cf_power_state_to_string
+ * @category app
+ * @brief    Convert an enum `CF_PowerState` to a c-style string.
+ * @param    state        The state to convert to a string.
+ * @related  cf_app_power_info CF_PowerState CF_PowerInfo
+ */
 CUTE_INLINE const char* cf_power_state_to_string(CF_PowerState state) {
 	switch (state) {
 	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
@@ -487,13 +498,13 @@ CUTE_INLINE const char* cf_power_state_to_string(CF_PowerState state) {
  */
 typedef struct CF_PowerInfo
 {
-	// @member
+	/* @member Enumeration `CF_PowerState` for the power state.*/
 	CF_PowerState state;
 
-	// @member The seconds of battery life left. -1 means not running on the battery, or unable to get a valid value.
+	/* @member The seconds of battery life left. -1 means not running on the battery, or unable to get a valid value. */
 	int seconds_left;
 
-	// @member The percentage of battery life left from 0 to 100. -1 means not running on the battery, or unable to get a valid value.
+	/* @member The percentage of battery life left from 0 to 100. -1 means not running on the battery, or unable to get a valid value. */
 	int percentage_left;
 } CF_PowerInfo;
 // @end

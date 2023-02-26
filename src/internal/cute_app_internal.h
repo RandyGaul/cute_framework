@@ -210,9 +210,9 @@ struct CF_App
 	Cute::Array<cf_system_internal_t> systems;
 	cf_entity_config_t entity_config_builder;
 	CF_EntityType Entityype_gen = 0;
-	Cute::Dictionary<const char*, CF_EntityType> Entityype_string_to_id;
+	Cute::Map<const char*, CF_EntityType> Entityype_string_to_id;
 	Cute::Array<const char*> Entityype_id_to_string;
-	Cute::Dictionary<CF_EntityType, cf_entity_collection_t> entity_collections;
+	Cute::Map<CF_EntityType, cf_entity_collection_t> entity_collections;
 	CF_EntityType current_collection_type_being_iterated = ~0;
 	cf_entity_collection_t* current_collection_being_updated = NULL;
 	Cute::Array<CF_Entity> delayed_destroy_entities;
@@ -221,19 +221,19 @@ struct CF_App
 	CF_EcsArrays ecs_arrays;
 
 	cf_component_config_t component_config_builder;
-	Cute::Dictionary<const char*, cf_component_config_t> component_configs;
-	Cute::Dictionary<CF_EntityType, CF_KeyValue*> entity_parsed_schemas;
-	Cute::Dictionary<CF_EntityType, uint16_t> entity_schema_inheritence;
+	Cute::Map<const char*, cf_component_config_t> component_configs;
+	Cute::Map<CF_EntityType, CF_KeyValue*> entity_parsed_schemas;
+	Cute::Map<CF_EntityType, uint16_t> entity_schema_inheritence;
 
-	Cute::Dictionary<CF_Entity, int>* save_id_table = NULL;
+	Cute::Map<CF_Entity, int>* save_id_table = NULL;
 	Cute::Array<CF_Entity>* load_id_table = NULL;
 
 	// Font stuff.
 	uint64_t font_image_id_gen = CUTE_FONT_ID_RANGE_LO;
-	Cute::Dictionary<const char*, CF_Font*> fonts;
-	Cute::Dictionary<uint64_t, CF_Pixel*> font_pixels;
-	Cute::Dictionary<const char*, CF_TextEffectState> text_effect_states;
-	Cute::Dictionary<const char*, CF_TextEffectFn*> text_effect_fns;
+	Cute::Map<const char*, CF_Font*> fonts;
+	Cute::Map<uint64_t, CF_Pixel*> font_pixels;
+	Cute::Map<const char*, CF_TextEffectState> text_effect_states;
+	Cute::Map<const char*, CF_TextEffectFn*> text_effect_fns;
 };
 
 #endif // CUTE_APP_INTERNAL_H

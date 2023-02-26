@@ -682,7 +682,7 @@ CF_Result cf_internal_ecs_save_entities_kv(const CF_Entity* entities, int entiti
 		return cf_result_error("`kv` must be in `KV_STATE_WRITE` mode.");
 	}
 
-	Cute::Dictionary<CF_Entity, int> id_table;
+	Cute::Map<CF_Entity, int> id_table;
 	for (int i = 0; i < entities_count; ++i)
 		id_table.insert(entities[i], i);
 
@@ -747,7 +747,7 @@ CF_Result cf_ecs_save_entities_kv(const CF_Entity* entities, int entities_count,
 
 CF_Result cf_internal_ecs_save_entities(const CF_Entity* entities, int entities_count)
 {
-	Cute::Dictionary<CF_Entity, int> id_table;
+	Cute::Map<CF_Entity, int> id_table;
 	for (int i = 0; i < entities_count; ++i) {
 		id_table.insert(entities[i], i);
 	}
