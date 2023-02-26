@@ -32,7 +32,20 @@
 extern "C" {
 #endif // __cplusplus
 
+/**
+ * @function cf_clipboard_get
+ * @category input
+ * @brief    Returns a UTF-8 string of the clipboard contents.
+ * @related  cf_clipboard_get cf_clipboard_set
+ */
 CUTE_API char* CUTE_CALL cf_clipboard_get();
+
+/**
+ * @function cf_clipboard_set
+ * @category input
+ * @brief    Sets a UTF-8 string of the clipboard contents.
+ * @related  cf_clipboard_get cf_clipboard_set
+ */
 CUTE_API CF_Result CUTE_CALL cf_clipboard_set(const char* string);
 
 #ifdef __cplusplus
