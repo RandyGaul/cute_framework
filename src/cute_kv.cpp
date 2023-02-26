@@ -1065,7 +1065,7 @@ bool cf_kv_val_blob(CF_KeyValue* kv, void* data, size_t data_capacity, size_t* d
 				return true;
 			}
 		}
-		size_t buffer_size = CUTE_BASE64_ENCODED_SIZE(*data_len);
+		size_t buffer_size = CF_BASE64_ENCODED_SIZE(*data_len);
 		s_write_u8(kv, '"');
 		int old_len = kv->write_buffer.len();
 		kv->write_buffer.set_len((int)(old_len + buffer_size));
@@ -1079,7 +1079,7 @@ bool cf_kv_val_blob(CF_KeyValue* kv, void* data, size_t data_capacity, size_t* d
 			kv->last_err = cf_result_error("Unable to get `val` (out of bounds array index, or no matching `kv_key` call).");
 			return false;
 		}
-		size_t buffer_size = CUTE_BASE64_DECODED_SIZE(match->u.sval.len);
+		size_t buffer_size = CF_BASE64_DECODED_SIZE(match->u.sval.len);
 		if (!(buffer_size <= data_capacity)) {
 			kv->last_err = cf_result_error("Decoded base 64 string is too large to store in `data`.");
 			return false;

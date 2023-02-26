@@ -53,7 +53,7 @@ static const int s_base64_to_6bits[80] = {
 
 CF_Result cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size)
 {
-	size_t out_size = CUTE_BASE64_ENCODED_SIZE(src_size);
+	size_t out_size = CF_BASE64_ENCODED_SIZE(src_size);
 	if (dst_size < out_size) return cf_result_error("`dst` buffer too small to place encoded output.");
 
 	size_t triplets = (src_size) / 3;
@@ -134,13 +134,13 @@ CF_Result cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t s
 	if (end[-2] == '=') pads++;
 	if (pads) quadruplets--;
 
-	size_t exact_out_size = CUTE_BASE64_DECODED_SIZE(src_size);
+	size_t exact_out_size = CF_BASE64_DECODED_SIZE(src_size);
 	switch (pads)
 	{
 	case 1: dst_size -= 2; break;
 	case 2: dst_size -= 1; break;
 	}
-	if (CUTE_BASE64_DECODED_SIZE(src_size) < exact_out_size) return cf_result_error("'dst_size' is too small to decode.");
+	if (CF_BASE64_DECODED_SIZE(src_size) < exact_out_size) return cf_result_error("'dst_size' is too small to decode.");
 
 	// RFC describes the best way to handle bad input is to reject the entire input.
 	// https://tools.ietf.org/html/rfc4648#page-14
@@ -193,7 +193,7 @@ CF_Result cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t s
 	}	break;
 	}
 
-	CUTE_ASSERT((int)(out + pads - (uint8_t*)dst) == CUTE_BASE64_DECODED_SIZE(src_size));
+	CUTE_ASSERT((int)(out + pads - (uint8_t*)dst) == CF_BASE64_DECODED_SIZE(src_size));
 
 	return cf_result_success();
 }
