@@ -34,26 +34,192 @@
 extern "C" {
 #endif // __cplusplus
 
+// TODO - Rename this file to cute_multithreading.h
+
+/**
+ * @struct   CF_Mutex
+ * @category multithreading
+ * @brief    An opaque handle representing a mutex.
+ * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
+ */
 typedef cute_mutex_t CF_Mutex;
+// @end
+
+/**
+ * @struct   CF_ConditionVariable
+ * @category multithreading
+ * @brief    An opaque handle representing a condition variable.
+ * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
+ */
 typedef cute_cv_t CF_ConditionVariable;
+// @end
+
+/**
+ * @struct   CF_AtomicInt
+ * @category atomic
+ * @brief    An opaque handle representing an atomic integer.
+ * @related  CF_AtomicInt cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
+ */
 typedef cute_atomic_int_t CF_AtomicInt;
+// @end
+
+/**
+ * @struct   CF_Semaphore
+ * @category multithreading
+ * @brief    An opaque handle representing a semaphore.
+ * @related  CF_Semaphore cf_make_sem cf_destroy_sem cf_sem_post cf_sem_try cf_sem_wait cf_sem_value
+ */
 typedef cute_semaphore_t CF_Semaphore;
+// @end
+
+/**
+ * @struct   CF_Thread
+ * @category multithreading
+ * @brief    An opaque handle representing a thread.
+ * @related  CF_Thread cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
+ */
 typedef cute_thread_t CF_Thread;
+// @end
+
+/**
+ * @struct   CF_ThreadId
+ * @category multithreading
+ * @brief    An identifier of a thread.
+ * @related  CF_Thread cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
+ */
 typedef cute_thread_id_t CF_ThreadId;
+// @end
+
+/**
+ * @struct   CF_ThreadFn
+ * @category multithreading
+ * @brief    A thread.
+ * @example  > Example syntax of a thread.
+ *     int MyThreadFn(void *udata)
+ *     {
+ *         // Do work here...
+ *         return 0;
+ *     }
+ * @related  CF_Thread cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
+ */
 typedef cute_thread_fn CF_ThreadFn;
+// @end
+
+/**
+ * @struct   CF_ReadWriteLock
+ * @category multithreading
+ * @brief    An opaque handle representing a read-write lock.
+ * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
+ */
 typedef cute_rw_lock_t CF_ReadWriteLock;
+// @end
+
+/**
+ * @struct   CF_Threadpool
+ * @category multithreading
+ * @brief    An opaque handle representing a threadpool.
+ * @related  CF_Threadpool CF_TaskFn cf_make_threadpool cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
+ */
 typedef cute_threadpool_t CF_Threadpool;
+// @end
 
+/**
+ * @function cf_make_mutex
+ * @category multithreading
+ * @brief    Returns an initialized `CF_Mutex`.
+ * @remarks  Destroy the mutex with `cf_destroy_mutex` when done.
+ * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
+ */
 CUTE_API CF_Mutex CUTE_CALL cf_make_mutex();
-CUTE_API void CUTE_CALL cf_destroy_mutex(CF_Mutex* mutex);
-CUTE_API CF_Result CUTE_CALL cf_mutex_lock(CF_Mutex* mutex);
-CUTE_API CF_Result CUTE_CALL cf_mutex_unlock(CF_Mutex* mutex);
-CUTE_API bool CUTE_CALL CF_Mutexrylock(CF_Mutex* mutex);
 
+/**
+ * @function cf_destroy_mutex
+ * @category multithreading
+ * @brief    Destroys a `CF_Mutex` created with `cf_make_mutex`.
+ * @param    mutex      The mutex.
+ * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
+ */
+CUTE_API void CUTE_CALL cf_destroy_mutex(CF_Mutex* mutex);
+
+/**
+ * @function cf_mutex_lock
+ * @category multithreading
+ * @brief    Locks a `CF_Mutex`.
+ * @param    mutex      The mutex.
+ * @return   Returns any errors as a `CF_Result`.
+ * @remarks  Will cause the thread to wait until the lock is available if it's currently locked.
+ * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
+ */
+CUTE_API CF_Result CUTE_CALL cf_mutex_lock(CF_Mutex* mutex);
+
+/**
+ * @function cf_mutex_unlock
+ * @category multithreading
+ * @brief    Unlocks a `CF_Mutex`.
+ * @param    mutex      The mutex.
+ * @return   Returns any errors as a `CF_Result`.
+ * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
+ */
+CUTE_API CF_Result CUTE_CALL cf_mutex_unlock(CF_Mutex* mutex);
+
+/**
+ * @function cf_mutex_try_lock
+ * @category multithreading
+ * @brief    Attempts to lock a `CF_Mutex` without waiting.
+ * @param    mutex      The mutex.
+ * @return   Returns true if the lock was acquired, and false if the lock was already locked.
+ * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
+ */
+CUTE_API bool CUTE_CALL cf_mutex_try_lock(CF_Mutex* mutex);
+
+/**
+ * @function cf_make_cv
+ * @category multithreading
+ * @brief    Returns an initialized `CF_ConditionVariable`.
+ * @remarks  Destroy the mutex with `cf_destroy_cv` when done.
+ * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
+ */
 CUTE_API CF_ConditionVariable CUTE_CALL cf_make_cv();
+
+/**
+ * @function cf_destroy_cv
+ * @category multithreading
+ * @brief    Destroys a `CF_ConditionVariable` created with `cf_make_cv`.
+ * @param    cv         The condition variable.
+ * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
+ */
 CUTE_API void CUTE_CALL cf_destroy_cv(CF_ConditionVariable* cv);
+
+/**
+ * @function cf_cv_wake_all
+ * @category multithreading
+ * @brief    Wakes all threads sleeping on the condition variable.
+ * @param    cv         The condition variable.
+ * @return   Returns any errors as a `CF_Result`.
+ * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
+ */
 CUTE_API CF_Result CUTE_CALL cf_cv_wake_all(CF_ConditionVariable* cv);
+
+/**
+ * @function cf_cv_wake_one
+ * @category multithreading
+ * @brief    Wakes a single (implementation-dependent) thread sleeping on the condition variable.
+ * @param    cv         The condition variable.
+ * @return   Returns any errors as a `CF_Result`.
+ * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
+ */
 CUTE_API CF_Result CUTE_CALL cf_cv_wake_one(CF_ConditionVariable* cv);
+
+/**
+ * @function cf_cv_wait
+ * @category multithreading
+ * @brief    Causes the calling thread to wait on the condition variable.
+ * @param    cv         The condition variable.
+ * @param    mutex      The mutex used to access the condition variable.
+ * @return   Returns any errors as a `CF_Result`.
+ * @remarks  The thread will not wake until `cf_cv_wake_all` or `cf_cv_wake_one` is called.
+ * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
+ */
 CUTE_API CF_Result CUTE_CALL cf_cv_wait(CF_ConditionVariable* cv, CF_Mutex* mutex);
 
 CUTE_API CF_Semaphore CUTE_CALL cf_make_sem(int initial_count);
@@ -123,7 +289,7 @@ CUTE_INLINE Mutex make_mutex() { return cf_make_mutex(); }
 CUTE_INLINE void destroy_mutex(Mutex* mutex) { cf_destroy_mutex(mutex); }
 CUTE_INLINE Result mutex_lock(Mutex* mutex) { return cf_mutex_lock(mutex); }
 CUTE_INLINE Result mutex_unlock(Mutex* mutex) { return cf_mutex_unlock(mutex); }
-CUTE_INLINE bool Mutexrylock(Mutex* mutex) { return CF_Mutexrylock(mutex); }
+CUTE_INLINE bool Mutexrylock(Mutex* mutex) { return cf_mutex_try_lock(mutex); }
 
 CUTE_INLINE ConditionVariable make_cv() { return cf_make_cv(); }
 CUTE_INLINE void destroy_cv(ConditionVariable* cv) { cf_destroy_cv(cv); }

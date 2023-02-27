@@ -54,7 +54,7 @@ CF_Result cf_mutex_unlock(CF_Mutex* mutex)
 	return cf_result_make(cute_unlock(mutex), NULL);
 }
 
-bool CF_Mutexrylock(CF_Mutex* mutex)
+bool cf_mutex_try_lock(CF_Mutex* mutex)
 {
 	return !!cute_trylock(mutex);
 }
