@@ -29,9 +29,6 @@
 
 struct CF_Coroutine
 {
-	float dt = 0;
-	bool waiting = false;
-	float seconds_left = 0;
 	mco_coro* mco;
 	CF_CoroutineFn* fn = NULL;
 	void* udata = NULL;
@@ -66,20 +63,8 @@ void cf_destroy_coroutine(CF_Coroutine* co)
 	CUTE_FREE(co);
 }
 
-CF_Result cf_coroutine_resume(CF_Coroutine* co, float dt)
+CF_Result cf_coroutine_resume(CF_Coroutine* co)
 {
-	co->dt = dt;
-
-	if (co->waiting) {
-		co->seconds_left -= dt;
-		if (co->seconds_left <= 0) {
-			co->waiting = false;
-			co->seconds_left = 0;
-		} else {
-			return cf_result_success();
-		}
-	}
-
 	mco_result res = mco_resume(co->mco);
 	if (res != MCO_SUCCESS) {
 		return cf_result_error(mco_result_description(res));
@@ -88,26 +73,14 @@ CF_Result cf_coroutine_resume(CF_Coroutine* co, float dt)
 	}
 }
 
-float cf_coroutine_yield(CF_Coroutine* co, CF_Result* err)
+CF_Result cf_coroutine_yield(CF_Coroutine* co)
 {
 	mco_result res = mco_yield(co->mco);
-	if (err) {
-		if (res != MCO_SUCCESS) {
-			*err = cf_result_error(mco_result_description(res));
-		} else {
-			*err = cf_result_success();
-		}
+	if (res != MCO_SUCCESS) {
+		return cf_result_error(mco_result_description(res));
+	} else {
+		return cf_result_success();
 	}
-	return co->dt;
-}
-
-CF_Result cf_coroutine_wait(CF_Coroutine* co, float seconds)
-{
-	co->waiting = true;
-	co->seconds_left = seconds;
-	CF_Result err;
-	cf_coroutine_yield(co, &err);
-	return err;
 }
 
 CF_CoroutineState cf_coroutine_state(CF_Coroutine* co)

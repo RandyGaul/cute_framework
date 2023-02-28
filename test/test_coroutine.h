@@ -28,7 +28,7 @@ void coroutine_func(CF_Coroutine* co)
 	int a, b;
 	cf_coroutine_pop(co, &a, sizeof(a));
 	cf_coroutine_pop(co, &b, sizeof(b));
-	cf_coroutine_yield(co, NULL);
+	cf_coroutine_yield(co);
 
 	int c = a * b;
 	cf_coroutine_push(co, &c, sizeof(c));
@@ -36,7 +36,7 @@ void coroutine_func(CF_Coroutine* co)
 
 void coroutine_wait_func(CF_Coroutine* co)
 {
-	cf_coroutine_wait(co, 1.0f);
+	coroutine_yield(co);
 
 	int a = 3;
 	cf_coroutine_push(co, &a, sizeof(a));
@@ -51,9 +51,9 @@ int test_coroutine()
 	int c = 0;
 	cf_coroutine_push(co, &a, sizeof(a));
 	cf_coroutine_push(co, &b, sizeof(b));
-	cf_coroutine_resume(co, 0);
+	cf_coroutine_resume(co);
 	CUTE_TEST_ASSERT(c == 0);
-	cf_coroutine_resume(co, 0);
+	cf_coroutine_resume(co);
 	cf_coroutine_pop(co, &c, sizeof(c));
 	CUTE_TEST_ASSERT(c == 50);
 	cf_destroy_coroutine(co);
@@ -64,31 +64,11 @@ int test_coroutine()
 	c = 0;
 	cf_coroutine_push(co, &a, sizeof(a));
 	cf_coroutine_push(co, &b, sizeof(b));
-	cf_coroutine_resume(co, 0);
+	cf_coroutine_resume(co);
 	CUTE_TEST_ASSERT(c == 0);
-	cf_coroutine_resume(co, 0);
+	cf_coroutine_resume(co);
 	cf_coroutine_pop(co, &c, sizeof(c));
 	CUTE_TEST_ASSERT(c == 50);
-	cf_destroy_coroutine(co);
-
-	co = cf_make_coroutine(coroutine_wait_func, 0, NULL);
-	cf_coroutine_resume(co, 0);
-	size_t bytes = cf_coroutine_bytes_pushed(co);
-	CUTE_TEST_ASSERT(bytes == 0);
-	cf_coroutine_resume(co, 0);
-	cf_coroutine_resume(co, 0);
-	cf_coroutine_resume(co, 0);
-	bytes = cf_coroutine_bytes_pushed(co);
-	CUTE_TEST_ASSERT(bytes == 0);
-	cf_coroutine_resume(co, 0.5f);
-	bytes = cf_coroutine_bytes_pushed(co);
-	CUTE_TEST_ASSERT(bytes == 0);
-	cf_coroutine_resume(co, 0.5f);
-	bytes = cf_coroutine_bytes_pushed(co);
-	CUTE_TEST_ASSERT(bytes == sizeof(int));
-	cf_coroutine_pop(co, &a, sizeof(a));
-	CUTE_TEST_ASSERT(a == 3);
-	CUTE_TEST_ASSERT(cf_coroutine_state(co) == CF_COROUTINE_STATE_DEAD);
 	cf_destroy_coroutine(co);
 
 	return 0;
