@@ -201,6 +201,7 @@ CUTE_API void CUTE_CALL cf_app_signal_shutdown();
  * @function cf_app_update
  * @category app
  * @brief    Updates the application. Must be called once per frame.
+ * @param    on_update  Called for each update tick.
  * @example > Running an app in Variable or Fixed Timestep.
  *     TODO
  * @related  cf_make_app cf_app_is_running cf_app_signal_shutdown cf_destroy_app
