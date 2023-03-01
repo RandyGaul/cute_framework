@@ -1095,7 +1095,7 @@ void cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float
 	cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, false, 1);
 }
 
-void cf_make_font_mem(void* data, int size, const char* font_name, CF_Result* result_out)
+CF_Result cf_make_font_mem(void* data, int size, const char* font_name)
 {
 	font_name = sintern(font_name);
 	CF_Font* font = (CF_Font*)CUTE_NEW(CF_Font);
@@ -1103,8 +1103,7 @@ void cf_make_font_mem(void* data, int size, const char* font_name, CF_Result* re
 	if (!stbtt_InitFont(&font->info, font->file_data, stbtt_GetFontOffsetForIndex(font->file_data, 0))) {
 		CUTE_FREE(data);
 		CUTE_FREE(font);
-		if (result_out) *result_out = result_failure("Failed to parse ttf file with stb_truetype.h.");
-		return;
+		return result_failure("Failed to parse ttf file with stb_truetype.h.");
 	}
 	app->fonts.insert(font_name, font);
 
@@ -1133,18 +1132,17 @@ void cf_make_font_mem(void* data, int size, const char* font_name, CF_Result* re
 		font->kerning.insert(key, k.advance);
 	}
 
-	if (result_out) *result_out = result_success();
+	return result_success();
 }
 
-void cf_make_font(const char* path, const char* font_name, CF_Result* result_out)
+CF_Result cf_make_font(const char* path, const char* font_name)
 {
 	size_t size;
 	void* data = fs_read_entire_file_to_memory(path, &size);
 	if (!data) {
-		if (result_out) *result_out = cf_result_error("Unable to open font file.");
-		return;
+		return cf_result_error("Unable to open font file.");;
 	}
-	cf_make_font_mem(data, (int)size, font_name, result_out);
+	return cf_make_font_mem(data, (int)size, font_name);
 }
 
 void cf_destroy_font(const char* font_name)
