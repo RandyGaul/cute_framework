@@ -301,7 +301,7 @@ String parse_paragraph(bool example = false)
 			s->skip();
 		}
 	}
-	return !example ? paragraph.trim().dedup(' ').replace("\n ", "\n") : paragraph;
+	return !example ? paragraph.trim().replace("\n          ", "\n") : paragraph;
 }
 
 void parse_command()

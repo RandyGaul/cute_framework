@@ -429,7 +429,7 @@ static void s_canvas_clear_settings(CF_CanvasInternal* canvas)
 	canvas->action.depth.action = canvas->action.colors[0].action;
 	canvas->action.depth.value = s_clear_depth;
 	canvas->action.stencil.action = canvas->action.colors[0].action;
-	canvas->action.stencil.value = s_clear_stencil;
+	canvas->action.stencil.value = (uint8_t)(s_clear_stencil * 255.0f);
 }
 
 CF_Canvas cf_make_canvas(CF_CanvasParams pass_params)

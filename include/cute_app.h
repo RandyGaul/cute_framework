@@ -39,8 +39,9 @@ typedef struct sg_imgui_t sg_imgui_t;
 typedef struct sg_image sg_image;
 
 /**
- * @enum    App Options
- * @brief   Various options to control how the application starts up, such as fullscreen, or selecting a graphics backend.
+ * @enum     App Options
+ * @category app
+ * @brief    Various options to control how the application starts up, such as fullscreen, or selecting a graphics backend.
  * @example > Creating a basic window and immediately destroying it.
  *     #include <cute.h>
  *     using namespace cute;
@@ -52,8 +53,8 @@ typedef struct sg_image sg_image;
  *         app_destroy();
  *         return 0;
  *     }
- * @remarks The `app_options` parameter of `cf_make_app` is a bitmask flag. Simply take the `APP_OPTIONS_*` flags listed above and OR them together.
- * @related cf_make_app cf_destroy_app
+ * @remarks  The `app_options` parameter of `cf_make_app` is a bitmask flag. Simply take the `APP_OPTIONS_*` flags listed above and OR them together.
+ * @related  cf_make_app cf_destroy_app
  */
 #define CF_APP_OPTION_DEFS \
 	/* @entry Starts the app with an OpenGL 3.3 context. */     \

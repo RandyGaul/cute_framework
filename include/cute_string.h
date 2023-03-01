@@ -757,7 +757,7 @@ struct String
 	CUTE_INLINE int last_index_of(char ch) const { return slast_index_of(m_str, ch); }
 	CUTE_INLINE int first_index_of(char ch, int offset) const { return sfirst_index_of(m_str + offset, ch); }
 	CUTE_INLINE int last_index_of(char ch, int offset) const { return slast_index_of(m_str + offset, ch); }
-	CUTE_INLINE String find(const char* find_me) const { return String(sfind(m_str, find_me)); }
+	CUTE_INLINE int find(const char* find_me) const { const char* ptr = sfind(m_str, find_me); return (int)(ptr ? ptr - m_str : -1); }
 	CUTE_INLINE String& replace(const char* replace_me, const char* with_me) { sreplace(m_str, replace_me, with_me); return *this; }
 	CUTE_INLINE String& erase(int index, int count) { serase(m_str, index, count); return *this; }
 	CUTE_INLINE String dup() const { return steal_from(sdup(m_str)); }
