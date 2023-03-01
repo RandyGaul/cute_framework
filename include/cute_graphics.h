@@ -388,7 +388,7 @@ CUTE_API void CUTE_CALL cf_update_texture(CF_Texture texture, void* data, int si
  * For now shaders are difficult to use. This is an industry-wide problem. We have many different
  * shading languages and many different devices to deal with, but very little work has gone into
  * making high-quality and easy to use shader solutions. Most shader cross-compilers are way too
- * complex and riddled with giant dependencies, making them a poor for for CF.
+ * complex and riddled with giant dependencies, making them a poor fit for CF.
  * 
  * The best option (besides writing our own cross-compiler) is to use sokol_gfx.h, a very well written
  * thin wrapper around low-level 3D APIs. It supports a variety of backends:
@@ -409,9 +409,8 @@ CUTE_API void CUTE_CALL cf_update_texture(CF_Texture texture, void* data, int si
  * all supported platforms using the tool sokol-shdc. They are found in the `tools` folder.
  * https://github.com/floooh/sokol-tools/blob/master/docs/sokol-shdc.md
  * 
- * Just make sure to compile with the `--reflection` parameter. Once done `your_shader.h` will be
- * generated. Include it you can build a `CF_SokolShader`. It becomes a one-liner to create the shader
- * at runtime.
+ * Just make sure to call the sokol-shdc compiler with the `--reflection` parameter. Once done, `your_shader.h`
+ * is ready to go! Include `your_shader.h` and get a `CF_SokolShader` with a single call to `cf_make_shader`.
  * 
  *     #include "my_shader.h"
  *     CF_Shader my_shd = CF_MAKE_SOKOL_SHADER(my_shader);
@@ -450,17 +449,9 @@ CUTE_API void CUTE_CALL cf_destroy_shader(CF_Shader shader);
  * The clear settings are used when `cf_apply_canvas` is called.
  */
 
-typedef struct CF_CanvasClearSettings
-{
-	CF_Color color;
-	float depth;
-	uint8_t stencil;
-} CF_CanvasClearSettings;
-
 typedef struct CF_CanvasParams
 {
 	const char* name;
-	CF_CanvasClearSettings clear_settings;
 	CF_Texture target;
 	CF_Texture depth_stencil_target;
 } CF_CanvasParams;
@@ -868,6 +859,9 @@ CUTE_API void CUTE_CALL cf_material_set_uniform_fs(CF_Material material, const c
 //--------------------------------------------------------------------------------------------------
 // Rendering Functions.
 
+CUTE_API void CUTE_CALL cf_clear_color(float red, float green, float blue, float alpha);
+CUTE_API void CUTE_CALL cf_clear_color2(CF_Color color);
+CUTE_API void CUTE_CALL cf_clear_depth_stencil(float depth, float stencil);
 CUTE_API void CUTE_CALL cf_apply_canvas(CF_Canvas canvas, bool clear);
 CUTE_API void CUTE_CALL cf_apply_viewport(int x, int y, int width, int height);
 CUTE_API void CUTE_CALL cf_apply_scissor(int x, int y, int width, int height);

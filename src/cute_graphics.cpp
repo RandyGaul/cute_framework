@@ -25,6 +25,24 @@
 
 #include <internal/cute_app_internal.h>
 
+// Override sokol_gfx macros for the default clear color with our own values.
+// This is a simple way to control sokol's default clear color, as well as custom clear
+// colors all in the same place.
+
+static float s_clear_red     = 0.5f;
+static float s_clear_green   = 0.5f;
+static float s_clear_blue    = 0.5f;
+static float s_clear_alpha   = 1.0f;
+static float s_clear_depth   = 1.0f;
+static float s_clear_stencil = 0;
+
+#define SG_DEFAULT_CLEAR_RED     (s_clear_red)
+#define SG_DEFAULT_CLEAR_GREEN   (s_clear_green)
+#define SG_DEFAULT_CLEAR_BLUE    (s_clear_blue)
+#define SG_DEFAULT_CLEAR_ALPHA   (s_clear_alpha)
+#define SG_DEFAULT_CLEAR_DEPTH   (s_clear_depth)
+#define SG_DEFAULT_CLEAR_STENCIL (s_clear_stencil)
+
 // For now just a sokol_gfx.h backend is implemented. However, there are plans to also
 // implement an SDL_Gpu backend here whenever it's released. This should allow for a
 // much simpler shader solution.
@@ -396,22 +414,22 @@ CF_CanvasParams cf_canvas_defaults()
 {
 	CF_CanvasParams params;
 	params.name = NULL;
-	params.clear_settings.color = cf_color_grey();
-	params.clear_settings.depth = 1.0f;
-	params.clear_settings.stencil = 0;
 	params.target = { };
 	params.depth_stencil_target = { };
 	return params;
 }
 
-static void s_canvas_clear_settings(CF_CanvasInternal* canvas, CF_CanvasClearSettings clear_settings)
+static void s_canvas_clear_settings(CF_CanvasInternal* canvas)
 {
 	canvas->action.colors[0].action = SG_ACTION_LOAD;
-	canvas->action.colors[0].value = s_wrap(clear_settings.color);
+	canvas->action.colors[0].value.r = s_clear_red;
+	canvas->action.colors[0].value.g = s_clear_green;
+	canvas->action.colors[0].value.b = s_clear_blue;
+	canvas->action.colors[0].value.a = s_clear_alpha;
 	canvas->action.depth.action = canvas->action.colors[0].action;
-	canvas->action.depth.value = clear_settings.depth;
+	canvas->action.depth.value = s_clear_depth;
 	canvas->action.stencil.action = canvas->action.colors[0].action;
-	canvas->action.stencil.value = clear_settings.stencil;
+	canvas->action.stencil.value = s_clear_stencil;
 }
 
 CF_Canvas cf_make_canvas(CF_CanvasParams pass_params)
@@ -420,7 +438,6 @@ CF_Canvas cf_make_canvas(CF_CanvasParams pass_params)
 	if (pass_params.target.id) {
 		sg_pass_desc desc;
 		CUTE_MEMSET(&desc, 0, sizeof(desc));
-		s_canvas_clear_settings(pass, pass_params.clear_settings);
 		desc.color_attachments[0].image = { (uint32_t)pass_params.target.id };
 		desc.depth_stencil_attachment.image = { (uint32_t)pass_params.depth_stencil_target.id };
 		desc.label = pass_params.name;
@@ -856,11 +873,34 @@ static void s_end_pass()
 	}
 }
 
+void cf_clear_color(float red, float green, float blue, float alpha)
+{
+	s_clear_red = red;
+	s_clear_green = green;
+	s_clear_blue = blue;
+	s_clear_alpha = alpha;
+}
+
+void cf_clear_color2(CF_Color color)
+{
+	s_clear_red = color.r;
+	s_clear_green = color.g;
+	s_clear_blue = color.b;
+	s_clear_alpha = color.a;
+}
+
+void cf_clear_depth_stencil(float depth, float stencil)
+{
+	s_clear_depth = depth;
+	s_clear_stencil = stencil;
+}
+
 void cf_apply_canvas(CF_Canvas pass_handle, bool clear)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)pass_handle.id;
 	s_end_pass();
 	s_canvas = canvas;
+	s_canvas_clear_settings(canvas);
 	if (clear) {
 		canvas->action.colors[0].action = SG_ACTION_CLEAR;
 		canvas->action.depth.action = SG_ACTION_CLEAR;

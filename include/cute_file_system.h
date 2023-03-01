@@ -40,117 +40,140 @@ extern "C" {
 
 #ifndef CUTE_NO_SHORTHAND_API
 /**
- * Returns the filename portion of a path. Returns a new string.
- * 
- * Example:
- * 
+ * @function spfname
+ * @category path
+ * @brief    Returns the filename portion of a path. Returns a new string.
+ * @param    s          The path string.
+ * @example  > Example fetching a filename from a path.
  *     const char* filename = spfname("/data/collections/rare/big_gem.txt");
  *     printf("%s\n", filename);
- * 
- * Would print:
- * 
- *     big_gem.txt
+ *     // Prints: big_gem.txt
+ * @remarks  Call `sfree` on the return value when done. `sp` stands for "sting path".
+ * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define spfname(s) cf_path_get_filename(s)
 
 /**
- * Returns the filename portion of a path without the file extension.
- * Returns a new string.
- * 
- * Example:
- * 
+ * @function spfname_no_ext
+ * @category path
+ * @brief    Returns the filename portion of a path without the file extension. Returns a new string.
+ * @param    s          The path string.
+ * @example  > Example fetching a filename from a path without the extension attached.
  *     const char* filename = spfname("/data/collections/rare/big_gem.txt");
  *     printf("%s\n", filename);
- * 
- * Would print:
- * 
- *     big_gem
+ *     // Prints: big_gem
+ * @remarks  Call `sfree` on the return value when done. `sp` stands for "sting path".
+ * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define spfname_no_ext(s) cf_path_get_filename_no_ext(s)
 
 /**
- * Returns the extension of the file for the given path. Returns a new string.
- * 
- * Example:
- * 
+ * @function spext
+ * @category path
+ * @brief    Returns the extension of the file for the given path. Returns a new string.
+ * @param    s          The path string.
+ * @example  > Example fetching a filename from a path without the extension attached.
  *     const char* ext = spfname("/data/collections/rare/big_gem.txt");
  *     printf("%s\n", ext);
- * 
- * Would print:
- * 
- *     .txt
+ *     // Prints: .txt
+ * @remarks  Call `sfree` on the return value when done. `sp` stands for "sting path".
+ * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define spext(s) cf_path_get_ext(s)
-	
+
 /**
- * Returns true if the file's extension matches, false otherwise.
+ * @function spext_equ
+ * @category path
+ * @brief    Returns true if the file's extension matches, false otherwise.
+ * @param    s          The path string.
+ * @param    ext        The file extension.
+ * @remarks  `sp` stands for "sting path".
+ * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define spext_equ(s, ext) cf_path_ext_equ(s, ext)
 
 /**
- * Removes the rightmost file or directory from the path. If the string is not a
- * dynamic string from CF's string API, a new string is returned. Otherwise the
- * string is modified in-place.
+ * @function sppop
+ * @category path
+ * @brief    Removes the rightmost file or directory from the path.
+ * @param    s          The path string.
+ * @return   If the string is not a dynamic string from CF's string API, a new string is returned. Otherwise the
+ *           string is modified in-place. You must call `sfree` if a new dynamic string is returned, when done.
+ * @remarks  `sp` stands for "sting path".
+ * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define sppop(s) cf_path_pop(s)
 
 /**
- * Removes the rightmost n files or directories from the path. If the string is
- * not a dynamic string from CF's string API, a new string is returned. Otherwise
- * the string is modified in-place.
+ * @function sppopn
+ * @category path
+ * @brief    Removes the rightmost n files or directories from the path.
+ * @param    s          The path string.
+ * @param    n          The number of files to pop from the directory path.
+ * @return   If the string is not a dynamic string from CF's string API, a new string is returned. Otherwise the
+ *           string is modified in-place. You must call `sfree` if a new dynamic string is returned, when done.
+ * @remarks  `sp` stands for "sting path".
+ * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define sppopn(s, n) cf_path_pop_n(s, n)
 
 /**
- * Squishes the path to be less than or equal to n characters in length. This will
- * insert ellipses "..." into the path as necessary. This function is useful for
- * displaying paths and visualizing them in small boxes or windows. n includes the
- * nul-byte. Returns a new string.
+ * @function spcompact
+ * @category path
+ * @brief    Squishes the path to be less than or equal to n characters in length.
+ * @param    s          The path string.
+ * @param    n          The number of files to pop from the directory path.
+ * @return   If the string is not a dynamic string from CF's string API, a new string is returned. Otherwise the
+ *           string is modified in-place. You must call `sfree` if a new dynamic string is returned, when done.
+ * @remarks  This will insert ellipses "..." into the path as necessary. This function is useful for displaying paths
+ *           and visualizing them in small boxes or windows. n includes the nul-byte. Returns a new string.
+ * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define spcompact(s, n) cf_path_compact(s, n)
 
 /**
- * Returns the directory of a given file or directory. Returns a new string.
- * 
- * Example:
- * 
+ * @function spdir_of
+ * @category path
+ * @brief    Returns the directory of a given file or directory. Returns a new string.
+ * @param    s          The path string.
+ * @example  > Example fetching a directory a file sits within.
  *     const char* filename = spfname("/data/collections/rare/big_gem.txt");
  *     printf("%s\n", filename);
- * 
- * Would print:
- * 
- *     /rare
+ *     // Prints: /rare
+ * @remarks  `sp` stands for "sting path". Call `sfree` on the return value when done.
+ * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define spdir_of(s) cf_path_directory_of(s)
 
 /**
- * Returns the top-level directory of a given file or directory. Returns a new string.
- * 
- * Example:
- * 
+ * @function sptop_of
+ * @category path
+ * @brief    Returns the top-level directory of a given file or directory. Returns a new string.
+ * @param    s          The path string.
+ * @example  > Example fetching a the top-level directory a file sits within.
  *     const char* filename = spfname("/data/collections/rare/big_gem.txt");
  *     printf("%s\n", filename);
- * 
- * Would print:
- * 
- *     /data
+ *     // Prints: /data
+ * @remarks  `sp` stands for "sting path". Call `sfree` on the return value when done.
+ * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define sptop_of(s) cf_path_top_directory(s)
 
 /**
- * Normalizes a path as a new string. This means a few specific things:
- * 
- * - All '\\' are replaced with '/'.
- * - Any duplicate '////' are replaced with a single '/'.
- * - Trailing '/' are removed.
- * - Dot folders are resolved, e.g.
- * 
- *    spnorm("/a/b/./c") -> "/a/b/c"
- *    spnorm("/a/b/../c") -> "/a/c"
- * 
- * - The first character is always '/', unless it's a windows drive, e.g.
- * 
- *    spnorm("C:\\Users\\Randy\\Documents") -> "C:/Users/Randy/Documents"
+ * @function spnorm
+ * @category path
+ * @brief    Normalizes a path as a new string.
+ * @param    s          The path string.
+ * @remarks  All '\\' are replaced with '/'. Any duplicate '////' are replaced with a single '/'. Trailing '/' are removed. Dot folders are resolved, e.g.
+ *           ```
+ *           spnorm("/a/b/./c") -> "/a/b/c"
+ *           spnorm("/a/b/../c") -> "/a/c"
+ *           ```
+ *           The first character is always '/', unless it's a windows drive, e.g.
+ *           ```
+ *           spnorm("C:\\Users\\Randy\\Documents") -> "C:/Users/Randy/Documents"
+ *           ```
+ * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define spnorm(s) cf_path_normalize(s)
 #endif // CUTE_NO_SHORTHAND_API
@@ -239,13 +262,31 @@ CUTE_API char* CUTE_CALL cf_path_normalize(const char* path);
  * passing the `APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT` flag to `make_app`.
  */
 
+/**
+ * @struct   CF_File
+ * @category file
+ * @brief    An opaque pointer for representing a file.
+ * @remarks  TODO_LINK_VFS_README
+ * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
+ */
 typedef struct CF_File CF_File;
+// @end
 
+/**
+ * @enum    File Types
+ * @brief   The various kinds of files that can be opened.
+ * @related CF_File CF_Stat cf_file_type_to_string
+ */
 #define CF_FILE_TYPE_DEFS \
-	CF_ENUM(FILE_TYPE_REGULAR, 0) \
-	CF_ENUM(FILE_TYPE_DIRECTORY, 1) \
-	CF_ENUM(FILE_TYPE_SYMLINK, 2) \
-	CF_ENUM(FILE_TYPE_OTHER, 3) \
+	/* @entry A reguler file, such as a .txt or .pdf file. */ \
+	CF_ENUM(FILE_TYPE_REGULAR, 0)                             \
+	/* @entry A directory/folder. */                          \
+	CF_ENUM(FILE_TYPE_DIRECTORY, 1)                           \
+	/* @entry A symlink. Symlinks are not supported. */       \
+	CF_ENUM(FILE_TYPE_SYMLINK, 2)                             \
+	/* @entry An unknown file type. */                        \
+	CF_ENUM(FILE_TYPE_OTHER, 3)                               \
+// @end
 
 typedef enum CF_FileType
 {
@@ -254,6 +295,12 @@ typedef enum CF_FileType
 	#undef CF_ENUM
 } CF_FileType;
 
+/**
+ * @function cf_file_type_to_string
+ * @category file
+ * @brief    Returns a `CF_FileType` converted to a c-string.
+ * @related CF_File CF_Stat cf_file_type_to_string
+ */
 CUTE_INLINE const char* cf_file_type_to_string(CF_FileType type)
 {
 	switch (type) {
@@ -264,220 +311,358 @@ CUTE_INLINE const char* cf_file_type_to_string(CF_FileType type)
 	}
 }
 
+/**
+ * @struct   CF_Stat
+ * @category file
+ * @brief    A structure containing information about a file.
+ * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
+ */
 typedef struct CF_Stat
 {
+	/* @member The type of the file. */
 	CF_FileType type;
-	int is_read_only;
+
+	/* @member True if the file is read-only, false otherwise. */
+	bool is_read_only;
+
+	/* @member The size of the file in bytes. */
 	size_t size;
+
+	/* @member The last time the file was written to. */
 	uint64_t last_modified_time;
+
+	/* @member The time of file creation. */
 	uint64_t created_time;
+
+	/* @member The last time this file was accessed (not necessarily modified). */
 	uint64_t last_accessed_time;
 } CF_Stat;
+// @end
 
 /**
- * Returns the path of the base directory. This is not a virtual path, but the actual OS-path
- * where the executable was run from. This might not be the working directory, but probably is.
- * You should probably mount the base directory with `cf_fs_mount`.
+ * @function cf_fs_get_base_directory
+ * @category file
+ * @brief    Returns the path of the base directory.
+ * @remarks  This is not a virtual path, but the actual OS-path where the executable was run from. This might not be the working directory,
+ *           but probably is. You should probably mount the base directory with `cf_fs_mount`. See TODO_LINK_VFS_README for an overview.
+ * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
  */
 CUTE_API const char* CUTE_CALL cf_fs_get_base_directory();
 
 /**
- * Sets a path safe to store game-specific files, such as save data or profiles. The path is in
- * platform-dependent notation. It's highly recommend to use `cf_fs_get_user_directory` and pass
- * it into this function when shipping your game. This function will fail if any files are from
- * the write directory are currently open.
+ * @function cf_fs_set_write_directory
+ * @category file
+ * @brief    Sets a path safe to store game-specific files, such as save data or profiles.
+ * @param    platform_dependent_directory  The write directory in platform-dependent notation (use `cf_fs_get_user_directory`, see remarks for
+             more details).
+ * @return   Returns any errors as a `CF_Result`.
+ * @remarks  The path is in platform-dependent notation. It's highly recommend to use `cf_fs_get_user_directory` and pass it into this function
+ *           when shipping your game. This function will fail if any files are from the write directory are currently open.
+ *           See TODO_LINK_VFS_README for an overview.
+ * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
  */
 CUTE_API CF_Result CUTE_CALL cf_fs_set_write_directory(const char* platform_dependent_directory);
 
 /**
- * Returns a path safe to store game-specific files, such as save data or profiles. The path is
- * in platform-dependent notation. The location of this folder varies depending on the OS. You
- * should probably pass this into `cf_fs_set_write_directory` as well as `cf_fs_mount`.
- *
- *     Windows example:
- *     "C:\\Users\\OS_user_name\\AppData\\Roaming\\my_company\\my_game"
- *
- *     Linux example:
- *     "/home/OS_user_name/.local/share/my_game"
- *
- *     MacOS X example:
- *     "/Users/OS_user_name/Library/Application Support/my_game"
- * 
- * You should assume this directory is the only safe place to write files.
+ * @function cf_fs_get_user_directory
+ * @category file
+ * @brief    Returns a path safe to store game-specific files, such as save data or profiles.
+ * @param    company_name    The name of your org or company.
+ * @param    game_name       The name of your game.
+ * @remarks  The path is in platform-dependent notation. The location of this folder varies depending on the OS. You
+ *           should probably pass this into `cf_fs_set_write_directory` as well as `cf_fs_mount`. Windows example:
+ *           ```
+ *           "C:\\Users\\OS_user_name\\AppData\\Roaming\\my_company\\my_game"
+ *           ```
+ *           Linux example:
+ *           ```
+ *           "/home/OS_user_name/.local/share/my_game"
+ *           ```
+ *           MacOS X example:
+ *           ```
+ *           "/Users/OS_user_name/Library/Application Support/my_game"
+ *           ```
+ *           You should assume this directory is the only safe place to write files.
+ * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
  */
 CUTE_API const char* CUTE_CALL cf_fs_get_user_directory(const char* company_name, const char* game_name);
 
 /**
- * Adds a new archive/directory onto the search path.
- * 
- * archive        - Platform-dependent notation. The archive or directory to mount.
- * mount_point    - The new virtual path for `archive`.
- * append_to_path - If true `mount_point` is appended onto the end of the path. If false it
- *                  will be prepended.
- * 
- * Each individual archive can only be mounted once. Duplicate mount attempts will be ignored.
- * 
- * You can mount multiple archives onto a single mount point. This is a great way to support
- * modding or download patches, as duplicate entries will be searched for on the path as normal,
- * without the need to overwrite each other on the actual disk.
- * 
- * You can mount an actual directory or an archive file. If it's an archive the vitrual file
- * system will treat it like a normal directory for you. There are a variety of archive file
- * formats supported (see top of file).
- * 
- * By default CF mounts the base directory when you call `make_app`. This can be disabled by
- * passing the `APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT` flag to `make_app`.
+ * @function cf_fs_mount
+ * @category file
+ * @brief    Adds a new archive/directory onto the search path.
+ * @param    archive         Platform-dependent notation. The archive or directory to mount.
+ * @param    mount_point     The new virtual path for `archive`.
+ * @param    append_to_path  If true `mount_point` is appended onto the end of the path. If false it will be prepended.
+ * @return   Returns any errors as a `CF_Result`.
+ * @remarks  Each individual archive can only be mounted once. Duplicate mount attempts will be ignored.
+ *           
+ *           You can mount multiple archives onto a single mount point. This is a great way to support
+ *           modding or download patches, as duplicate entries will be searched for on the path as normal,
+ *           without the need to overwrite each other on the actual disk.
+ *           
+ *           You can mount an actual directory or an archive file. If it's an archive the vitrual file
+ *           system will treat it like a normal directory for you. There are a variety of archive file
+ *           formats supported (see top of file).
+ *           
+ *           By default CF mounts the base directory when you call `cf_make_app`. This can be disabled by
+ *           passing the `CF_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT` flag to `cf_make_app`. TODO_LINK_VFS_README.
+ * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_mount(const char* archive, const char* mount_point, bool append_to_path /*= true*/);
+CUTE_API CF_Result CUTE_CALL cf_fs_mount(const char* archive, const char* mount_point, bool append_to_path);
 
 /**
- * Removes an archive from the path, specified in platform-dependent notation. This function
- * does not remove a `mount_point` from the virtual file system, but only the actual archive
- * that was previously mounted.
+ * @function cf_fs_dismount
+ * @category file
+ * @brief    Removes an archive from the path specified in platform-dependent notation.
+ * @return   Returns any errors as a `CF_Result`.
+ * @remarks  This function does not remove a `mount_point` from the virtual file system, but only the actual archive that was previously mounted. TODO_LINK_VFS_README.
+ * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
  */
 CUTE_API CF_Result CUTE_CALL cf_fs_dismount(const char* archive);
 
 /**
- * Fetches file information at the given virtual path, such as file size or creation time.
+ * @function cf_fs_stat
+ * @category file
+ * @brief    Returns file information at the given virtual path, such as file size or creation time.
+ * @return   Returns any errors as a `CF_Result`.
+ * @remarks  This doesn't open the file itself, and is a fairly light-weight operation in comparison. TODO_LINK_VFS_README.
+ * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
  */
 CUTE_API CF_Result CUTE_CALL cf_fs_stat(const char* virtual_path, CF_Stat* stat);
 
 /**
- * Opens a file for writing relative to the write directory.
- * The write directory is specified by you when calling `cf_fs_set_write_directory`.
+ * @function cf_fs_create_file
+ * @category file
+ * @brief    Opens a file for writing relative to the write directory.
+ * @return   Returns a `CF_File` pointer representing the file.
+ * @remarks  The write directory is specified by you when calling `cf_fs_set_write_directory`. TODO_LINK_VFS_README.
+ * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
  */
 CUTE_API CF_File* CUTE_CALL cf_fs_create_file(const char* virtual_path);
 
 /**
- * Opens a file for writing relative to the write directory.
- * The write directory is specified by you when calling `cf_fs_set_write_directory`.
+ * @function cf_fs_open_file_for_write
+ * @category file
+ * @brief    Opens a file for writing relative to the write directory.
+ * @return   Returns a `CF_File` pointer representing the file.
+ * @remarks  The write directory is specified by you when calling `cf_fs_set_write_directory`. TODO_LINK_VFS_README.
+ * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
  */
 CUTE_API CF_File* CUTE_CALL cf_fs_open_file_for_write(const char* virtual_path);
 
 /**
- * Opens a file for appending relative to the write directory.
- * The write directory is specified by you when calling `cf_fs_set_write_directory`.
+ * @function cf_fs_open_file_for_append
+ * @category file
+ * @brief    Opens a file for appending relative to the write directory.
+ * @return   Returns a `CF_File` pointer representing the file.
+ * @remarks  The write directory is specified by you when calling `cf_fs_set_write_directory`. TODO_LINK_VFS_README.
+ * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
  */
 CUTE_API CF_File* CUTE_CALL cf_fs_open_file_for_append(const char* virtual_path);
 
 /**
- * Opens a file for reading. If you just want some basic information about the file (such as
- * it's size or when it was created), you can use `cf_fs_stat` instead.
+ * @function cf_fs_open_file_for_read
+ * @category file
+ * @brief    Opens a file for reading.
+ * @param    virtual_path  The virtual path to the file.
+ * @return   Returns a `CF_File` pointer representing the file.
+ * @remarks  If you just want some basic information about the file (such as it's size or when it was created), you can use `cf_fs_stat` instead. TODO_LINK_VFS_README.
+ * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
  */
 CUTE_API CF_File* CUTE_CALL cf_fs_open_file_for_read(const char* virtual_path);
 
 /**
- * Close a file.
+ * @function cf_fs_close
+ * @category file
+ * @brief    Closes a file.
+ * @param    file        The file.
+ * @return   Returns any errors as a `CF_Result`.
+ * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
  */
 CUTE_API CF_Result CUTE_CALL cf_fs_close(CF_File* file);
 
 /**
- * Deletes a file or directory. The directory must be empty, otherwise this function
- * will fail.
+ * @function cf_fs_remove_directory
+ * @category file
+ * @brief    Removes a directory.
+ * @param    virtual_path  The virtual path to the directory.
+ * @return   Returns any errors as a `CF_Result`.
+ * @remarks  TODO_LINK_VFS_README.
+ * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
  */
 CUTE_API CF_Result CUTE_CALL cf_fs_remove_directory(const char* virtual_path);
 
 /**
- * Creates a directory at the path. All missing directories are also created.
+ * @function cf_fs_create_directory
+ * @category file
+ * @brief    Creates a directory at the path.
+ * @param    virtual_path  The virtual path to the directory.
+ * @return   Returns any errors as a `CF_Result`.
+ * @remarks  All missing directories are also created. TODO_LINK_VFS_README.
+ * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
  */
 CUTE_API CF_Result CUTE_CALL cf_fs_create_directory(const char* virtual_path);
 
 /**
- * Returns a list of files and directories in the given directory. The list is sorted.
- * Results are collected by visiting the search path for all real directories mounted
- * on `virtual_path`. No duplicate file names will be reported. The list itself is
- * sorted alphabetically, though you can further sort it however you like. Free the list
- * up with `cf_fs_free_enumerated_directory` when done. The final element of the list
- * is NULL.
- * 
- * Example to loop over a list:
- * 
+ * @function cf_fs_enumerate_directory
+ * @category file
+ * @brief    Returns a sorted list of files and directories in the given directory.
+ * @param    virtual_path  The virtual path to the directory.
+ * @return   Returns any errors as a `CF_Result`.
+ * @example > Loop over a list of all files in a directory.
  *     const char** list = cf_fs_enumerate_directory("/data");
  *     for (const char** i = list; *i; ++i) {
  *         printf("Found %s\n", *i);
  *     }
+ *     cf_fs_free_enumerated_directory(list);
+ * @remarks  Results are collected by visiting the search path for all real directories mounted on `virtual_path`. No duplicate file
+ *           names will be reported. The list itself is sorted alphabetically, though you can further sort it however you like. Free
+ *           the list up with `cf_fs_free_enumerated_directory` when done. The final element of the list is NULL. TODO_LINK_VFS_README.
+ * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
  */
 CUTE_API const char** CUTE_CALL cf_fs_enumerate_directory(const char* virtual_path);
 
 /**
- * Frees a file list from `cf_fs_create_directory`.
+ * @function cf_fs_free_enumerated_directory
+ * @category file
+ * @brief    Frees a file list from `cf_fs_create_directory`.
+ * @param    directory_list  The directory list returned from `cf_fs_create_directory`.
+ * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
  */
 CUTE_API void CUTE_CALL cf_fs_free_enumerated_directory(const char** directory_list);
 
 /**
- * Frees a file list from `cf_fs_create_directory`.
+ * @function cf_fs_file_exists
+ * @category file
+ * @brief    Returns true if a file exists, false otherwise.
+ * @param    virtual_path  A path to the file.
+ * @remarks  TODO_LINK_VFS_README.
+ * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
  */
 CUTE_API bool CUTE_CALL cf_fs_file_exists(const char* virtual_path);
 
 /**
- * Reads bytes from a file opened in read mode. The file must be opened in read mode
- * with `cf_fs_open_file_for_read`. Returns the number of bytes read. Returns -1 on failure.
+ * @function cf_fs_read
+ * @category file
+ * @brief    Reads bytes from a file opened in read mode.
+ * @param    CF_File    The file.
+ * @param    buffer     Pointer to a buffer of bytes.
+ * @param    size       The size in bytes of `buffer`.
+ * @remarks  The file must be opened in read mode with `cf_fs_open_file_for_read`. Returns the number of bytes read. Returns -1 on
+ *           failure. TODO_LINK_VFS_README.
+ * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
  */
-CUTE_API size_t CUTE_CALL cf_fs_read(CF_File* file, void* buffer, size_t bytes);
+CUTE_API size_t CUTE_CALL cf_fs_read(CF_File* file, void* buffer, size_t size);
 
 /**
- * Writes bytes from a file opened in write mode. The file must be opened in write mode
- * with `cf_fs_open_file_for_write`. Returns the number of bytes written. Returns -1 on failure.
+ * @function cf_fs_write
+ * @category file
+ * @brief    Writes bytes from a file opened in write mode.
+ * @param    CF_File    The file.
+ * @param    buffer     Pointer to a buffer of bytes.
+ * @param    size       The size in bytes of `buffer`.
+ * @remarks  The file must be opened in write mode with `cf_fs_open_file_for_write`. Returns the number of bytes written. Returns -1 on
+ *           failure. TODO_LINK_VFS_README.
+ * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
  */
-CUTE_API size_t CUTE_CALL cf_fs_write(CF_File* file, const void* buffer, size_t bytes);
+CUTE_API size_t CUTE_CALL cf_fs_write(CF_File* file, const void* buffer, size_t size);
 
 /**
- * Check to see if the eof has been found after reading a file opened in read mode.
+ * @function cf_fs_eof
+ * @category file
+ * @brief    Check to see if the eof has been found after reading a file opened in read mode.
+ * @param    CF_File    The file.
+ * @remarks  TODO_LINK_VFS_README.
+ * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
  */
 CUTE_API CF_Result CUTE_CALL cf_fs_eof(CF_File* file);
 
 /**
- * Returns the current position within the file. This is an offset from the beginning of
- * the file. Returns -1 on failure.
+ * @function cf_fs_tell
+ * @category file
+ * @brief    Returns the current position within the file.
+ * @param    CF_File    The file.
+ * @remarks  This is an offset from the beginning of the file. Returns -1 on failure. TODO_LINK_VFS_README.
+ * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
  */
 CUTE_API size_t CUTE_CALL cf_fs_tell(CF_File* file);
 
 /**
- * Sets the current position within a file. This is an offset from the beginning of the file.
- * The next read or write will happen at this position.
+ * @function cf_fs_seek
+ * @category file
+ * @brief    Sets the current position within a file.
+ * @param    CF_File    The file.
+ * @param    position   The read/write position.
+ * @return   Returns any errors as a `CF_Result`.
+ * @remarks  This is an offset from the beginning of the file. The next read or write will happen at this position. TODO_LINK_VFS_README.
+ * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
  */
 CUTE_API CF_Result CUTE_CALL cf_fs_seek(CF_File* file, size_t position);
 
 /**
- * Returns the size of a file in bytes. You might want to use `cf_fs_stat` instead.
+ * @function cf_fs_size
+ * @category file
+ * @brief    Returns the size of a file in bytes.
+ * @param    CF_File    The file.
+ * @remarks  You might want to use `cf_fs_stat` instead to avoid needing to fully open the file first. TODO_LINK_VFS_README.
+ * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
  */
 CUTE_API size_t CUTE_CALL cf_fs_size(CF_File* file);
 
 /**
- * Reads an entire file into a buffer of memory, and returns the buffer to you. Call `CUTE_FREE`
- * on it when done.
+ * @function cf_fs_read_entire_file_to_memory
+ * @category file
+ * @brief    Reads an entire file into a buffer of memory and returns it.
+ * @param    virtual_path  A path to the file.
+ * @param    size          If the file exists the size of the file is stored here.
+ * @remarks  Call `CUTE_FREE` on it when done. TODO_LINK_VFS_README.
+ * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file
  */
 CUTE_API void* CUTE_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, size_t* size);
 
 /**
- * Reads an entire file into a buffer of memory, and returns the buffer to you as a nul-term-
- * inated C string. Call `CUTE_FREE` on it when done.
+ * @function cf_fs_read_entire_file_to_memory_and_nul_terminate
+ * @category file
+ * @brief    Reads an entire file into a buffer of memory and returns it as a nul-terminated C string.
+ * @param    virtual_path  A path to the file.
+ * @param    size          If the file exists the size of the file is stored here.
+ * @remarks  Call `CUTE_FREE` on it when done. TODO_LINK_VFS_README.
+ * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file
  */
 CUTE_API char* CUTE_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, size_t* size);
 
 /**
- * Writes an entire buffer of data to a file as binary data.
+ * @function cf_fs_write_entire_buffer_to_file
+ * @category file
+ * @brief    Writes an entire buffer of data to a file as binary data.
+ * @param    virtual_path  A path to the file.
+ * @param    data          A pointer to the data to write to the file.
+ * @param    size          The size in bytes of `data`.
+ * @remarks  Call `CUTE_FREE` on it when done. TODO_LINK_VFS_README.
+ * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file
  */
 CUTE_API CF_Result CUTE_CALL cf_fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
 
 /**
- * Feel free to call this whenever an error occurs in any of the file system functions
- * to try and get a detailed description on what might have happened. Often times this
- * string is already returned to you inside a `CF_Result`.
+ * @function cf_fs_get_backend_specific_error_message
+ * @category file
+ * @brief    Returns a backend specific error message in the case of any file system errors.
+ * @remarks  Feel free to call this whenever an error occurs in any of the file system functions to try and get a detailed description
+ *           on what might have happened. Often times this string is already returned to you inside a `CF_Result`.
  */
 CUTE_API const char* CUTE_CALL cf_fs_get_backend_specific_error_message();
 
 /**
- * Converts a virtual path to an actual path. This can be useful for editors, asset
- * hotloading, or other similar development features. When shipping your game it's highly
- * recommended to not call this function at all, and only use it for development
- * purposes.
- * 
- * If the virtual path points to a completely fake directory this will return the first
- * archive found there.
- * 
- * This function can point to a directory, an archive, a file, or NULL if nothing
- * suitable was found at all.
+ * @function cf_fs_get_actual_path
+ * @category file
+ * @brief    Converts a virtual path to an actual path.
+ * @param    virtual_path  A path to the file.
+ * @remarks  This can be useful for editors, asset hotloading, or other similar development features. When shipping your game it's highly
+ *           recommended to not call this function at all, and only use it for development purposes. If the virtual path points to a completely
+ *           fake directory this will return the first archive found there. This function can return a directory, an archive, a file, or `NULL`
+ *           if nothing suitable was found at all. TODO_LINK_VFS_README.
+ * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file
  */
 CUTE_API const char* CUTE_CALL cf_fs_get_actual_path(const char* virtual_path);
 
@@ -526,8 +711,8 @@ CUTE_INLINE Result fs_create_directory(const char* virtual_path) { return cf_fs_
 CUTE_INLINE const char** fs_enumerate_directory(const char* virtual_path) { return cf_fs_enumerate_directory(virtual_path); }
 CUTE_INLINE void fs_free_enumerated_directory(const char** directory_list) { cf_fs_free_enumerated_directory(directory_list); }
 CUTE_INLINE bool fs_file_exists(const char* virtual_path) { return cf_fs_file_exists(virtual_path); }
-CUTE_INLINE size_t fs_read(File* file, void* buffer, size_t bytes) { return cf_fs_read(file, buffer, bytes); }
-CUTE_INLINE size_t fs_write(File* file, const void* buffer, size_t bytes) { return cf_fs_write(file, buffer, bytes); }
+CUTE_INLINE size_t fs_read(File* file, void* buffer, size_t size) { return cf_fs_read(file, buffer, size); }
+CUTE_INLINE size_t fs_write(File* file, const void* buffer, size_t size) { return cf_fs_write(file, buffer, size); }
 CUTE_INLINE Result fs_eof(File* file) { return cf_fs_eof(file); }
 CUTE_INLINE size_t fs_tell(File* file) { return cf_fs_tell(file); }
 CUTE_INLINE Result fs_seek(File* file, size_t position) { return cf_fs_seek(file, position); }
