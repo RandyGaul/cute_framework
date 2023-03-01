@@ -135,7 +135,7 @@ uint16_t cf_handle_allocator_get_type(CF_HandleTable* table, CF_Handle handle)
 	return m_handles[table_index].data.user_type;
 }
 
-bool cf_handle_allocator_is_active(CF_HandleTable* table, CF_Handle handle)
+bool cf_handle_allocator_active(CF_HandleTable* table, CF_Handle handle)
 {
 	CF_HandleEntry* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);
@@ -181,7 +181,7 @@ void cf_handle_allocator_free(CF_HandleTable* table, CF_Handle handle)
 	table->m_freelist = table_index;
 }
 
-int cf_handle_allocator_is_handle_valid(CF_HandleTable* table, CF_Handle handle)
+int cf_handle_allocator_handle_valid(CF_HandleTable* table, CF_Handle handle)
 {
 	CF_HandleEntry* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);

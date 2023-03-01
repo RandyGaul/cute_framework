@@ -175,7 +175,7 @@ void cf_destroy_entity(CF_Entity entity)
 	cf_entity_collection_t* collection = app->entity_collections.try_find(Entityype);
 	CUTE_ASSERT(collection);
 
-	if (collection->entity_handle_table.is_valid(entity.handle)) {
+	if (collection->entity_handle_table.valid(entity.handle)) {
 		int index = collection->entity_handle_table.get_index(entity.handle);
 
 		// Call cleanup function on each component.
@@ -227,8 +227,8 @@ void cf_entity_deactivate(CF_Entity entity)
 	cf_entity_collection_t* collection = app->entity_collections.try_find(Entityype);
 	CUTE_ASSERT(collection);
 
-	if (collection->entity_handle_table.is_valid(entity.handle)) {
-		if (!collection->entity_handle_table.is_active(entity.handle)) {
+	if (collection->entity_handle_table.valid(entity.handle)) {
+		if (!collection->entity_handle_table.active(entity.handle)) {
 			return;
 		}
 
@@ -261,7 +261,7 @@ bool cf_entity_is_active(CF_Entity entity)
 bool cf_entity_is_valid(CF_Entity entity)
 {
 	cf_entity_collection_t* collection = s_collection(entity);
-	if (collection) return collection->entity_handle_table.is_valid(entity.handle);
+	if (collection) return collection->entity_handle_table.valid(entity.handle);
 	else return false;
 }
 
@@ -702,7 +702,7 @@ CF_Result cf_internal_ecs_save_entities_kv(const CF_Entity* entities, int entiti
 			return cf_result_error("Unable to find entity type.");
 		}
 
-		bool is_valid = collection->entity_handle_table.is_valid(entity.handle);
+		bool is_valid = collection->entity_handle_table.valid(entity.handle);
 		if (!is_valid) {
 			return cf_result_error("Attempted to save an invalid entity.");
 		}
@@ -764,7 +764,7 @@ CF_Result cf_internal_ecs_save_entities(const CF_Entity* entities, int entities_
 			return cf_result_error("Unable to find entity type.");
 		}
 
-		bool is_valid = collection->entity_handle_table.is_valid(entity.handle);
+		bool is_valid = collection->entity_handle_table.valid(entity.handle);
 		if (!is_valid) {
 			return cf_result_error("Attempted to save an invalid entity.");
 		}

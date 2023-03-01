@@ -32,13 +32,36 @@
 extern "C" {
 #endif // __cplusplus
 
+/**
+ * @struct   CF_Guid
+ * @category utility
+ * @brief    A general purpose unique identifier.
+ * @related  CF_Guid cf_make_guid cf_guid_equal
+ */
 typedef struct CF_Guid
 {
+	/* @member The raw bytes of the Guid. */
 	uint8_t data[16];
 } CF_Guid;
+// @end
 
-
+/**
+ * @function cf_make_guid
+ * @category utility
+ * @brief    Returns a new `CF_Guid`.
+ * @remarks  The bytes are generated in a cryptographically secure way.
+ * @related  CF_Guid cf_make_guid cf_guid_equal
+ */
 CUTE_API CF_Guid CUTE_CALL cf_make_guid();
+
+/**
+ * @function cf_guid_equal
+ * @category utility
+ * @brief    Returns true if two `CF_Guid`'s are equal, false otherwise.
+ * @param    a         A guid to compare.
+ * @param    b         A guid to compare.
+ * @related  CF_Guid cf_make_guid cf_guid_equal
+ */
 CUTE_INLINE bool cf_guid_equal(CF_Guid a, CF_Guid b) { return !CUTE_MEMCMP(&a, &b, sizeof(a)); }
 
 #ifdef __cplusplus
@@ -53,11 +76,11 @@ CUTE_INLINE bool cf_guid_equal(CF_Guid a, CF_Guid b) { return !CUTE_MEMCMP(&a, &
 namespace Cute
 {
 
-using guid_t = CF_Guid;
-CUTE_INLINE bool operator==(guid_t a, guid_t b) { return cf_guid_equal(a, b); }
-CUTE_INLINE bool operator!=(guid_t a, guid_t b) { return !cf_guid_equal(a, b); }
+using Guid = CF_Guid;
+CUTE_INLINE bool operator==(Guid a, Guid b) { return cf_guid_equal(a, b); }
+CUTE_INLINE bool operator!=(Guid a, Guid b) { return !cf_guid_equal(a, b); }
 
-CUTE_INLINE guid_t make_guid() { return cf_make_guid(); }
+CUTE_INLINE Guid make_guid() { return cf_make_guid(); }
 
 }
 

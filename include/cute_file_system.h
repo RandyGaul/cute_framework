@@ -192,6 +192,8 @@ CUTE_API char* CUTE_CALL cf_path_normalize(const char* path);
 //--------------------------------------------------------------------------------------------------
 // Virtual file system.
 
+// This next comment block would form the TODO_LINK_VFS_README.
+
 /**
  * Cute Framework (CF) uses a virtual file system. This has a bunch of benefits over directly
  * accessing files. CF's file system is a wrap layer over PhysFS (https://icculus.org/physfs/).
@@ -382,7 +384,7 @@ CUTE_API CF_Result CUTE_CALL cf_fs_set_write_directory(const char* platform_depe
  *           ```
  *           "/Users/OS_user_name/Library/Application Support/my_game"
  *           ```
- *           You should assume this directory is the only safe place to write files.
+ *           You should assume this directory is the only safe place to write files. TODO_LINK_VFS_README.
  * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
  */
 CUTE_API const char* CUTE_CALL cf_fs_get_user_directory(const char* company_name, const char* game_name);
