@@ -20,12 +20,12 @@
 */
 
 #include <cute_sprite.h>
-#include <cute_aseprite_cache.h>
 #include <cute_window.h>
 #include <cute_draw.h>
 
 #include <internal/cute_app_internal.h>
 #include <internal/cute_png_cache_internal.h>
+#include <internal/cute_aseprite_cache_internal.h>
 
 CF_Sprite cf_easy_make_sprite(const char* png_path)
 {

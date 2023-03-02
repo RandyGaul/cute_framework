@@ -27,6 +27,8 @@ using namespace Cute;
 #	include <cute/cute_aseprite.h>
 #endif
 
+#include <internal/cute_aseprite_cache_internal.h>
+
 CUTE_TEST_CASE(test_aseprite_make_destroy, "Load an aseprite file and destroy it.");
 int test_aseprite_make_destroy()
 {
@@ -34,4 +36,3 @@ int test_aseprite_make_destroy()
 	cute_aseprite_free(ase);
 	return 0;
 }
-

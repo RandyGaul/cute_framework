@@ -156,7 +156,6 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_graphics.h
 	include/cute_rnd.h
 	include/cute_sprite.h
-	include/cute_aseprite_cache.h
 	include/cute_png_cache.h
 	include/cute_https.h
 	include/cute_joypad.h
