@@ -545,7 +545,7 @@ void cf_draw_circle(CF_V2 p, float r, int iters, float thickness)
 		draw->temp.add(p0);
 
 		for (int i = 1; i < iters; i++) {
-			float a = (i / (float)iters) * (2.0f * CUTE_PI);
+			float a = (i / (float)iters) * (2.0f * CF_PI);
 			CF_V2 n = cf_from_angle(a);
 			CF_V2 p1 = p + n * r;
 			draw->temp.add(p1);
@@ -559,7 +559,7 @@ void cf_draw_circle(CF_V2 p, float r, int iters, float thickness)
 		CF_V2 p1 = cf_v2(p.x + r + half_thickness, p.y);
 
 		for (int i = 1; i <= iters; i++) {
-			float a = (i / (float)iters) * (2.0f * CUTE_PI);
+			float a = (i / (float)iters) * (2.0f * CF_PI);
 			CF_V2 n = cf_from_angle(a);
 			CF_V2 p2 = p + n * (r + half_thickness);
 			CF_V2 p3 = p + n * (r - half_thickness);
@@ -575,7 +575,7 @@ void cf_draw_circle_fill(CF_V2 p, float r, int iters)
 	CF_V2 prev = cf_v2(r, 0);
 
 	for (int i = 1; i <= iters; ++i) {
-		float a = (i / (float)iters) * (2.0f * CUTE_PI);
+		float a = (i / (float)iters) * (2.0f * CF_PI);
 		CF_V2 next = cf_from_angle(a) * r;
 		cf_draw_tri_fill(p + prev, p + next, p);
 		prev = next;
@@ -659,12 +659,12 @@ void cf_draw_capsule(CF_V2 a, CF_V2 b, float r, int iters, float thickness)
 	if (draw->antialias.last()) {
 		draw->temp.ensure_capacity(iters * 2 + 2);
 		draw->temp.clear();
-		s_circle_arc_aa(a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness);
-		s_circle_arc_aa(b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness);
+		s_circle_arc_aa(a, a + cf_norm(a - b) * r, CF_PI, iters, thickness);
+		s_circle_arc_aa(b, b + cf_norm(b - a) * r, CF_PI, iters, thickness);
 		cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, true, 0);
 	} else {
-		cf_draw_circle_arc(a, a + cf_norm(a - b) * r, CUTE_PI, iters, thickness);
-		cf_draw_circle_arc(b, b + cf_norm(b - a) * r, CUTE_PI, iters, thickness);
+		cf_draw_circle_arc(a, a + cf_norm(a - b) * r, CF_PI, iters, thickness);
+		cf_draw_circle_arc(b, b + cf_norm(b - a) * r, CF_PI, iters, thickness);
 		CF_V2 n = cf_skew(cf_norm(b - a)) * r;
 		CF_V2 q0 = a + n;
 		CF_V2 q1 = b + n;
@@ -677,8 +677,8 @@ void cf_draw_capsule(CF_V2 a, CF_V2 b, float r, int iters, float thickness)
 
 void cf_draw_capsule_fill(CF_V2 a, CF_V2 b, float r, int iters)
 {
-	cf_draw_circle_arc_fill(a, a + cf_norm(a - b) * r, CUTE_PI, iters);
-	cf_draw_circle_arc_fill(b, b + cf_norm(b - a) * r, CUTE_PI, iters);
+	cf_draw_circle_arc_fill(a, a + cf_norm(a - b) * r, CF_PI, iters);
+	cf_draw_circle_arc_fill(b, b + cf_norm(b - a) * r, CF_PI, iters);
 	CF_V2 n = cf_skew(cf_norm(b - a)) * r;
 	CF_V2 q0 = a + n;
 	CF_V2 q1 = b + n;

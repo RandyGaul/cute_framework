@@ -398,6 +398,10 @@ void parse_function()
 	s->doc.type = DOC_FUNCTION;
 	parse_comment_block();
 	s->doc.signature = parse_line().replace("CUTE_API ", "").replace("CUTE_CALL ", "").replace("CUTE_INLINE ", "");
+	int index = s->doc.signature.find(" {");
+	if (index != -1) {
+		s->doc.signature.set_len(index);
+	}
 	s->flush_doc();
 }
 

@@ -732,7 +732,7 @@ struct String
 	CUTE_INLINE int count() const { return ssize(m_str); }
 	CUTE_INLINE void ensure_capacity(int capacity) { sfit(m_str, capacity); }
 	CUTE_INLINE void fit(int capacity) { sfit(m_str, capacity); }
-	CUTE_INLINE void set_len(int len) { sfit(m_str, len + 1); ssize(m_str) = len + 1; }
+	CUTE_INLINE void set_len(int len) { sfit(m_str, len + 1); ssize(m_str) = len + 1; m_str[len] = 0; }
 	CUTE_INLINE bool empty() const { return sempty(m_str); }
 
 	CUTE_INLINE String& add(char ch) { spush(m_str, ch); return *this; }
