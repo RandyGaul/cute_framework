@@ -124,7 +124,7 @@ typedef enum CF_HapticType
  * @function cf_haptic_type_to_string
  * @category haptic
  * @brief    Converts a `CF_HapticType` to a C string.
- * @param    type       The string to convert.
+ * @param    type       The type to convert.
  * @related  CF_HapticType cf_haptic_type_to_string
  */
 CUTE_INLINE const char* cf_haptic_type_to_string(CF_HapticType type)

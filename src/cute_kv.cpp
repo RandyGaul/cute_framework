@@ -475,7 +475,7 @@ CF_KeyValueState cf_kv_state(CF_KeyValue* kv)
 	return kv->mode;
 }
 
-CF_KeyValue* cf_kv_read(const void* data, size_t size, Result* result_out)
+CF_KeyValue* cf_kv_read(const void* data, size_t size, CF_Result* result_out)
 {
 	CF_KeyValue* kv = s_kv();
 	s_set_mode(kv, data, size, CF_KV_STATE_READ);
