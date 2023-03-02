@@ -68,6 +68,7 @@ CUTE_INLINE CF_V2 cf_v2(float x, float y)
  * @struct   CF_SinCos
  * @category math
  * @brief    Rotation about an axis composed of cos/sin pair.
+ * @remarks  You can construct an identity with the `CF_SinCos cf_sin_cos()` function.
  * @related  CF_SinCos cf_sincos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2
  */
 typedef struct CF_SinCos
@@ -953,21 +954,93 @@ CUTE_INLINE bool cf_parallel(CF_V2 a, CF_V2 b, float tol)
 //--------------------------------------------------------------------------------------------------
 // CF_SinCos rotation ops.
 
+/**
+ * @function cf_sincos_f
+ * @category math
+ * @brief    Returns an initialized `CF_SinCos` from `radians`.
+ * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
+ */
 CUTE_INLINE CF_SinCos cf_sincos_f(float radians) { CF_SinCos r; r.s = sinf(radians); r.c = cosf(radians); return r; }
 CUTE_INLINE CF_SinCos cf_sincos() { CF_SinCos r; r.c = 1.0f; r.s = 0; return r; }
+
+/**
+ * @function cf_x_axis
+ * @category math
+ * @brief    Returns the x-axis of the 2x2 rotation matrix represented by `CF_SinCos`.
+ * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
+ */
 CUTE_INLINE CF_V2 cf_x_axis(CF_SinCos r) { return cf_v2(r.c, r.s); }
+
+/**
+ * @function cf_y_axis
+ * @category math
+ * @brief    Returns the y-axis of the 2x2 rotation matrix represented by `CF_SinCos`.
+ * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
+ */
 CUTE_INLINE CF_V2 cf_y_axis(CF_SinCos r) { return cf_v2(-r.s, r.c); }
+
+/**
+ * @function cf_mul_sc_v2
+ * @category math
+ * @brief    Returns a vector rotated by `a`.
+ * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
+ */
 CUTE_INLINE CF_V2 cf_mul_sc_v2(CF_SinCos a, CF_V2 b) { return cf_v2(a.c * b.x - a.s * b.y, a.s * b.x + a.c * b.y); }
+
+/**
+ * @function cf_mulT_sc_v2
+ * @category math
+ * @brief    Returns a vector inverse-rotated by `a`.
+ * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
+ */
 CUTE_INLINE CF_V2 cf_mulT_sc_v2(CF_SinCos a, CF_V2 b) { return cf_v2(a.c * b.x + a.s * b.y, -a.s * b.x + a.c * b.y); }
+
+/**
+ * @function cf_mul_sc
+ * @category math
+ * @brief    Returns the composition of `a` multiplied by `b`.
+ * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
+ */
 CUTE_INLINE CF_SinCos cf_mul_sc(CF_SinCos a, CF_SinCos b) { CF_SinCos c; c.c = a.c * b.c - a.s * b.s; c.s = a.s * b.c + a.c * b.s; return c; }
+
+/**
+ * @function cf_mulT_sc
+ * @category math
+ * @brief    Returns the composition of `a` multiplied by inverse of `b`.
+ * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
+ */
 CUTE_INLINE CF_SinCos cf_mulT_sc(CF_SinCos a, CF_SinCos b) { CF_SinCos c; c.c = a.c * b.c + a.s * b.s; c.s = a.c * b.s - a.s * b.c; return c; }
 
-// Remaps the result from atan2f to the continuous range of 0, 2*PI.
+/**
+ * @function cf_atan2_360
+ * @category math
+ * @brief    Returns a remap'd result from atan2f to the continuous range of 0, 2*PI.
+ * @related  cf_atan2_360 cf_atan2_360_sc cf_atan2_360_v2
+ */
 CUTE_INLINE float cf_atan2_360(float y, float x) { return atan2f(-y, -x) + CF_PI; }
+
+/**
+ * @function cf_atan2_360_sc
+ * @category math
+ * @brief    Returns a remap'd result from atan2f to the continuous range of 0, 2*PI.
+ * @related  cf_atan2_360 cf_atan2_360_sc cf_atan2_360_v2
+ */
 CUTE_INLINE float cf_atan2_360_sc(CF_SinCos r) { return cf_atan2_360(r.s, r.c); }
+
+/**
+ * @function cf_atan2_360_v2
+ * @category math
+ * @brief    Returns a remap'd result from atan2f to the continuous range of 0, 2*PI.
+ * @related  cf_atan2_360 cf_atan2_360_sc cf_atan2_360_v2
+ */
 CUTE_INLINE float cf_atan2_360_v2(CF_V2 v) { return atan2f(-v.y, -v.x) + CF_PI; }
 
-// Computes the shortest angle to rotate the vector a to the vector b.
+/**
+ * @function cf_shortest_arc
+ * @category math
+ * @brief    Returns the shortest angle to rotate the vector `a` to the vector `b`.
+ * @related  cf_shortest_arc cf_angle_diff cf_from_angle
+ */
 CUTE_INLINE float cf_shortest_arc(CF_V2 a, CF_V2 b)
 {
 	float c = cf_dot(a, b);
@@ -980,34 +1053,157 @@ CUTE_INLINE float cf_shortest_arc(CF_V2 a, CF_V2 b)
 	}
 }
 
+/**
+ * @function cf_angle_diff
+ * @category math
+ * @brief    Returns the difference of two angles in the range of -`CF_PI` to `CF_PI`.
+ * @related  cf_shortest_arc cf_angle_diff cf_from_angle
+ */
 CUTE_INLINE float cf_angle_diff(float radians_a, float radians_b) { return cf_mod((radians_b - radians_a) + CF_PI, 2.0f * CF_PI) - CF_PI; }
+
+/**
+ * @function cf_from_angle
+ * @category math
+ * @brief    returns a vector according to the sin/cos of `radians`.
+ * @related  cf_shortest_arc cf_angle_diff cf_from_angle
+ */
 CUTE_INLINE CF_V2 cf_from_angle(float radians) { return cf_v2(cosf(radians), sinf(radians)); }
 
 //--------------------------------------------------------------------------------------------------
 // m2 ops.
 // 2D graphics matrix for only scale + rotate.
 
+/**
+ * @function cf_mul_m2_f
+ * @category math
+ * @brief    Multiplies a `CF_M2x2` by a float.
+ * @related  CF_M2x2 cf_mul_m2_f cf_mul_m2_v2 cf_mul_m2
+ */
 CUTE_INLINE CF_M2x2 cf_mul_m2_f(CF_M2x2 a, float b) { CF_M2x2 c; c.x = cf_mul_v2_f(a.x, b); c.y = cf_mul_v2_f(a.y, b); return c; }
+
+/**
+ * @function cf_mul_m2_v2
+ * @category math
+ * @brief    Multiplies a vector by a `CF_M2x2`.
+ * @related  CF_M2x2 CF_V2 cf_mul_m2_f cf_mul_m2_v2 cf_mul_m2
+ */
 CUTE_INLINE CF_V2 cf_mul_m2_v2(CF_M2x2 a, CF_V2 b) { CF_V2 c; c.x = a.x.x * b.x + a.y.x * b.y; c.y = a.x.y * b.x + a.y.y * b.y; return c; }
+
+/**
+ * @function cf_mul_m2
+ * @category math
+ * @brief    Returns the composition of `a` times `b`.
+ * @related  CF_M2x2 cf_mul_m2_f cf_mul_m2_v2 cf_mul_m2
+ */
 CUTE_INLINE CF_M2x2 cf_mul_m2(CF_M2x2 a, CF_M2x2 b) { CF_M2x2 c; c.x = cf_mul_m2_v2(a, b.x); c.y = cf_mul_m2_v2(a, b.y); return c; }
 
 //--------------------------------------------------------------------------------------------------
 // m3x2 ops.
 // General purpose 2D graphics matrix; scale + rotate + translate.
 
+/**
+ * @function cf_mul_m32_v2
+ * @category math
+ * @brief    Returns a vector multiplied by a `CF_M3x2`.
+ * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
+ */
 CUTE_INLINE CF_V2 cf_mul_m32_v2(CF_M3x2 a, CF_V2 b) { return cf_add_v2(cf_mul_m2_v2(a.m, b), a.p); }
+
+/**
+ * @function cf_mul_m32
+ * @category math
+ * @brief    Returns the composition of two `CF_M3x2`s multiplied together.
+ * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
+ */
 CUTE_INLINE CF_M3x2 cf_mul_m32(CF_M3x2 a, CF_M3x2 b) { CF_M3x2 c; c.m = cf_mul_m2(a.m, b.m); c.p = cf_add_v2(cf_mul_m2_v2(a.m, b.p), a.p); return c; }
+
+/**
+ * @function cf_make_identity
+ * @category math
+ * @brief    Returns an identity `CF_M3x2`.
+ * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
+ */
 CUTE_INLINE CF_M3x2 cf_make_identity() { CF_M3x2 m; m.m.x = cf_v2(1, 0); m.m.y = cf_v2(0, 1); m.p = cf_v2(0, 0); return m; }
+
+/**
+ * @function cf_make_translation_f
+ * @category math
+ * @brief    Returns a `CF_M3x2` that represents a translation.
+ * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
+ */
 CUTE_INLINE CF_M3x2 cf_make_translation_f(float x, float y) { CF_M3x2 m; m.m.x = cf_v2(1, 0); m.m.y = cf_v2(0, 1); m.p = cf_v2(x, y); return m; }
+
+/**
+ * @function cf_make_translation
+ * @category math
+ * @brief    Returns a `CF_M3x2` that represents a translation.
+ * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
+ */
 CUTE_INLINE CF_M3x2 cf_make_translation(CF_V2 p) { return cf_make_translation_f(p.x, p.y); }
+
+/**
+ * @function cf_make_scale
+ * @category math
+ * @brief    Returns a `CF_M3x2` that represents a scale.
+ * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
+ */
 CUTE_INLINE CF_M3x2 cf_make_scale(CF_V2 s) { CF_M3x2 m; m.m.x = cf_v2(s.x, 0); m.m.y = cf_v2(0, s.y); m.p = cf_v2(0, 0); return m; }
+
+/**
+ * @function cf_make_scale_f
+ * @category math
+ * @brief    Returns a `CF_M3x2` that represents a scale.
+ * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
+ */
 CUTE_INLINE CF_M3x2 cf_make_scale_f(float s) { return cf_make_scale(cf_v2(s, s)); }
+
+/**
+ * @function cf_make_scale_translation
+ * @category math
+ * @brief    Returns a `CF_M3x2` that represents a scale + translation.
+ * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
+ */
 CUTE_INLINE CF_M3x2 cf_make_scale_translation(CF_V2 s, CF_V2 p) { CF_M3x2 m; m.m.x = cf_v2(s.x, 0); m.m.y = cf_v2(0, s.y); m.p = p; return m; }
+
+/**
+ * @function cf_make_scale_translation_f
+ * @category math
+ * @brief    Returns a `CF_M3x2` that represents a scale + translation.
+ * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
+ */
 CUTE_INLINE CF_M3x2 cf_make_scale_translation_f(float s, CF_V2 p) { return cf_make_scale_translation(cf_v2(s, s), p); }
+
+/**
+ * @function cf_make_scale_translation_f_f
+ * @category math
+ * @brief    Returns a `CF_M3x2` that represents a scale + translation.
+ * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
+ */
 CUTE_INLINE CF_M3x2 cf_make_scale_translation_f_f(float sx, float sy, CF_V2 p) { return cf_make_scale_translation(cf_v2(sx, sy), p); }
+
+/**
+ * @function cf_make_rotation
+ * @category math
+ * @brief    Returns a `CF_M3x2` that represents a rotation.
+ * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
+ */
 CUTE_INLINE CF_M3x2 cf_make_rotation(float radians) { CF_SinCos sc = cf_sincos_f(radians); CF_M3x2 m; m.m.x = cf_v2(sc.c, -sc.s); m.m.y = cf_v2(sc.s, sc.c); m.p = cf_v2(0, 0); return m; }
+
+/**
+ * @function cf_make_transform_TSR
+ * @category math
+ * @brief    Returns a `CF_M3x2` that represents a translation + scale + rotation.
+ * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
+ */
 CUTE_INLINE CF_M3x2 cf_make_transform_TSR(CF_V2 p, CF_V2 s, float radians) { CF_SinCos sc = cf_sincos_f(radians); CF_M3x2 m; m.m.x = cf_mul_v2_f(cf_v2(sc.c, -sc.s), s.x); m.m.y = cf_mul_v2_f(cf_v2(sc.s, sc.c), s.y); m.p = p; return m; }
 
+/**
+ * @function cf_invert
+ * @category math
+ * @brief    Returns a `CF_M3x2` inverted.
+ * @remarks  If the determinant is zero, the returned matrix is also zero.
+ * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
+ */
 CUTE_INLINE CF_M3x2 cf_invert(CF_M3x2 a)
 {
 	float id = cf_safe_invert(cf_det2(a.m.x, a.m.y));
@@ -1023,58 +1219,363 @@ CUTE_INLINE CF_M3x2 cf_invert(CF_M3x2 a)
 // Transform ops.
 // No scale factor allowed here, good for physics + colliders.
 
+/**
+ * @function cf_make_transform
+ * @category math
+ * @brief    Returns an identity `CF_Transform`.
+ * @related  CF_Transform cf_make_transform cf_make_transform_TR cf_mul_tf_v2 cf_mulT_tf_v2 cf_mul_tf cf_mulT_tf
+ */
 CUTE_INLINE CF_Transform cf_make_transform() { CF_Transform x; x.p = cf_v2(0, 0); x.r = cf_sincos(); return x; }
+
+/**
+ * @function cf_make_transform_TR
+ * @category math
+ * @brief    Returns a `CF_Transform` that represents a translation + rotation.
+ * @related  CF_Transform cf_make_transform cf_make_transform_TR cf_mul_tf_v2 cf_mulT_tf_v2 cf_mul_tf cf_mulT_tf
+ */
 CUTE_INLINE CF_Transform cf_make_transform_TR(CF_V2 p, float radians) { CF_Transform x; x.r = cf_sincos_f(radians); x.p = p; return x; }
+
+/**
+ * @function cf_mul_tf_v2
+ * @category math
+ * @brief    Returns a vector multiplied by a `CF_Transform`.
+ * @related  CF_Transform cf_make_transform cf_make_transform_TR cf_mul_tf_v2 cf_mulT_tf_v2 cf_mul_tf cf_mulT_tf
+ */
 CUTE_INLINE CF_V2 cf_mul_tf_v2(CF_Transform a, CF_V2 b) { return cf_add_v2(cf_mul_sc_v2(a.r, b), a.p); }
+
+/**
+ * @function cf_mulT_tf_v2
+ * @category math
+ * @brief    Returns a vector multiplied by an inverted `CF_Transform`.
+ * @related  CF_Transform cf_make_transform cf_make_transform_TR cf_mul_tf_v2 cf_mulT_tf_v2 cf_mul_tf cf_mulT_tf
+ */
 CUTE_INLINE CF_V2 cf_mulT_tf_v2(CF_Transform a, CF_V2 b) { return cf_mulT_sc_v2(a.r, cf_sub_v2(b, a.p)); }
+
+/**
+ * @function cf_mul_tf
+ * @category math
+ * @brief    Returns a the composition of multiplying two `CF_Transform`s.
+ * @related  CF_Transform cf_make_transform cf_make_transform_TR cf_mul_tf_v2 cf_mulT_tf_v2 cf_mul_tf cf_mulT_tf
+ */
 CUTE_INLINE CF_Transform cf_mul_tf(CF_Transform a, CF_Transform b) { CF_Transform c; c.r = cf_mul_sc(a.r, b.r); c.p = cf_add_v2(cf_mul_sc_v2(a.r, b.p), a.p); return c; }
+
+
+/**
+ * @function cf_mulT_tf
+ * @category math
+ * @brief    Returns `a` multiplied by inverse `b`.
+ * @related  CF_Transform cf_make_transform cf_make_transform_TR cf_mul_tf_v2 cf_mulT_tf_v2 cf_mul_tf cf_mulT_tf
+ */
 CUTE_INLINE CF_Transform cf_mulT_tf(CF_Transform a, CF_Transform b) { CF_Transform c; c.r = cf_mulT_sc(a.r, b.r); c.p = cf_mulT_sc_v2(a.r, cf_sub_v2(b.p, a.p)); return c; }
 
 //--------------------------------------------------------------------------------------------------
 // Halfspace (plane/line) ops.
 // Functions for infinite lines.
 
+/**
+ * @function cf_plane
+ * @category math
+ * @brief    Returns an initialized `CF_Halfpsace` (a 2-dimensional plane, aka line).
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
+ */
 CUTE_INLINE CF_Halfspace cf_plane(CF_V2 n, float d) { CF_Halfspace h; h.n = n; h.d = d; return h; }
+
+/**
+ * @function cf_plane2
+ * @category math
+ * @brief    Returns an initialized `CF_Halfpsace` (a 2-dimensional plane, aka line).
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
+ */
 CUTE_INLINE CF_Halfspace cf_plane2(CF_V2 n, CF_V2 p) { CF_Halfspace h; h.n = n; h.d = cf_dot(n, p); return h; }
+
+/**
+ * @function cf_origin
+ * @category math
+ * @brief    Returns the origin projected onto the plane.
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
+ */
 CUTE_INLINE CF_V2 cf_origin(CF_Halfspace h) { return cf_mul_v2_f(h.n, h.d); }
+
+/**
+ * @function cf_distance_hs
+ * @category math
+ * @brief    Returns distance of a point to the plane.
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
+ */
 CUTE_INLINE float cf_distance_hs(CF_Halfspace h, CF_V2 p) { return cf_dot(h.n, p) - h.d; }
+
+/**
+ * @function cf_project
+ * @category math
+ * @brief    Projects a point onto the surface of the plane.
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
+ */
 CUTE_INLINE CF_V2 cf_project(CF_Halfspace h, CF_V2 p) { return cf_sub_v2(p, cf_mul_v2_f(h.n, cf_distance_hs(h, p))); }
+
+/**
+ * @function cf_mul_tf_hs
+ * @category math
+ * @brief    Transforms a plane by a `CF_Transform`.
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
+ */
 CUTE_INLINE CF_Halfspace cf_mul_tf_hs(CF_Transform a, CF_Halfspace b) { CF_Halfspace c; c.n = cf_mul_sc_v2(a.r, b.n); c.d = cf_dot(cf_mul_tf_v2(a, cf_origin(b)), c.n); return c; }
+
+/**
+ * @function cf_mulT_tf_hs
+ * @category math
+ * @brief    Transforms a plane by an inverted `CF_Transform`.
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
+ */
 CUTE_INLINE CF_Halfspace cf_mulT_tf_hs(CF_Transform a, CF_Halfspace b) { CF_Halfspace c; c.n = cf_mulT_sc_v2(a.r, b.n); c.d = cf_dot(cf_mulT_tf_v2(a, cf_origin(b)), c.n); return c; }
+
+/**
+ * @function cf_intersect_halfspace
+ * @category math
+ * @brief    Returns the intersection point of two points to a plane.
+ * @remarks  The distance to the plane are provided as `da` and `db`. You can compute these with e.g. `cf_distance_hs`, or instead
+ *           call the similar function `cf_intersect_halfspace2`.
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
+ */
 CUTE_INLINE CF_V2 cf_intersect_halfspace(CF_V2 a, CF_V2 b, float da, float db) { return cf_add_v2(a, cf_mul_v2_f(cf_sub_v2(b, a), (da / (da - db)))); }
+
+/**
+ * @function cf_intersect_halfspace2
+ * @category math
+ * @brief    Returns the intersection point of two points to a plane.
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
+ */
 CUTE_INLINE CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b) { return cf_intersect_halfspace(a, b, cf_distance_hs(h, a), cf_distance_hs(h, b)); }
 
 //--------------------------------------------------------------------------------------------------
 // AABB helpers.
 
+/**
+ * @function cf_make_aabb
+ * @category math
+ * @brief    Returns an AABB (axis-aligned bounding box) from min/max points (bottom-left and top-right).
+ * @related  CF_Aabb cf_make_aabb cf_make_aabb_pos_w_h cf_make_aabb_center_half_extents cf_make_aabb_from_top_left
+ */
 CUTE_INLINE CF_Aabb cf_make_aabb(CF_V2 min, CF_V2 max) { CF_Aabb bb; bb.min = min; bb.max = max; return bb; }
+
+/**
+ * @function cf_make_aabb_pos_w_h
+ * @category math
+ * @brief    Returns an AABB (axis-aligned bounding box).
+ * @related  CF_Aabb cf_make_aabb cf_make_aabb_pos_w_h cf_make_aabb_center_half_extents cf_make_aabb_from_top_left
+ */
 CUTE_INLINE CF_Aabb cf_make_aabb_pos_w_h(CF_V2 pos, float w, float h) { CF_Aabb bb; CF_V2 he = cf_mul_v2_f(cf_v2(w, h), 0.5f); bb.min = cf_sub_v2(pos, he); bb.max = cf_add_v2(pos, he); return bb; }
+
+/**
+ * @function cf_make_aabb_center_half_extents
+ * @category math
+ * @brief    Returns an AABB (axis-aligned bounding box).
+ * @remarks  Half-extents refer to half-width and height-height: `half_extents = { half_width, half_height }`.
+ * @related  CF_Aabb cf_make_aabb cf_make_aabb_pos_w_h cf_make_aabb_center_half_extents cf_make_aabb_from_top_left
+ */
 CUTE_INLINE CF_Aabb cf_make_aabb_center_half_extents(CF_V2 center, CF_V2 half_extents) { CF_Aabb bb; bb.min = cf_sub_v2(center, half_extents); bb.max = cf_add_v2(center, half_extents); return bb; }
+
+/**
+ * @function cf_make_aabb_from_top_left
+ * @category math
+ * @brief    Returns an AABB (axis-aligned bounding box).
+ * @related  CF_Aabb cf_make_aabb cf_make_aabb_pos_w_h cf_make_aabb_center_half_extents cf_make_aabb_from_top_left
+ */
 CUTE_INLINE CF_Aabb cf_make_aabb_from_top_left(CF_V2 top_left, float w, float h) { return cf_make_aabb(cf_add_v2(top_left, cf_v2(0, -h)), cf_add_v2(top_left, cf_v2(w, 0))); }
+
+/**
+ * @function cf_width
+ * @category math
+ * @brief    Returns the width of an AABB (axis-aligned bounding box).
+ * @related  CF_Aabb cf_make_aabb cf_width cf_height cf_half_width cf_half_height cf_half_extents cf_extents
+ */
 CUTE_INLINE float cf_width(CF_Aabb bb) { return bb.max.x - bb.min.x; }
+
+/**
+ * @function cf_height
+ * @category math
+ * @brief    Returns the height of an AABB (axis-aligned bounding box).
+ * @related  CF_Aabb cf_make_aabb cf_width cf_height cf_half_width cf_half_height cf_half_extents cf_extents
+ */
 CUTE_INLINE float cf_height(CF_Aabb bb) { return bb.max.y - bb.min.y; }
+
+/**
+ * @function cf_half_width
+ * @category math
+ * @brief    Returns the half-width of an AABB (axis-aligned bounding box).
+ * @related  CF_Aabb cf_make_aabb cf_width cf_height cf_half_width cf_half_height cf_half_extents cf_extents
+ */
 CUTE_INLINE float cf_half_width(CF_Aabb bb) { return cf_width(bb) * 0.5f; }
+
+/**
+ * @function cf_half_height
+ * @category math
+ * @brief    Returns the half-height of an AABB (axis-aligned bounding box).
+ * @related  CF_Aabb cf_make_aabb cf_width cf_height cf_half_width cf_half_height cf_half_extents cf_extents
+ */
 CUTE_INLINE float cf_half_height(CF_Aabb bb) { return cf_height(bb) * 0.5f; }
+
+/**
+ * @function cf_half_extents
+ * @category math
+ * @brief    Returns the half-extents of an AABB (axis-aligned bounding box).
+ * @remarks  Half-extents refer to half-width and height-height: `half_extents = { half_width, half_height }`.
+ * @related  CF_Aabb cf_make_aabb cf_width cf_height cf_half_width cf_half_height cf_half_extents cf_extents
+ */
 CUTE_INLINE CF_V2 cf_half_extents(CF_Aabb bb) { return (cf_mul_v2_f(cf_sub_v2(bb.max, bb.min), 0.5f)); }
+
+/**
+ * @function cf_extents
+ * @category math
+ * @brief    Returns the extents of an AABB (axis-aligned bounding box).
+ * @remarks  Extents refer to width and height: `extents = { width, height }`.
+ * @related  CF_Aabb cf_make_aabb cf_width cf_height cf_half_width cf_half_height cf_half_extents cf_extents
+ */
 CUTE_INLINE CF_V2 cf_extents(CF_Aabb aabb) { return cf_sub_v2(aabb.max, aabb.min); }
+
+/**
+ * @function cf_expand_aabb
+ * @category math
+ * @brief    Expands an AABB (axis-aligned bounding box).
+ * @param    v      A vector of `{ half_width, half_height }` to expand by.
+ * @related  CF_Aabb cf_make_aabb cf_expand_aabb cf_expand_aabb_f
+ */
 CUTE_INLINE CF_Aabb cf_expand_aabb(CF_Aabb aabb, CF_V2 v) { return cf_make_aabb(cf_sub_v2(aabb.min, v), cf_add_v2(aabb.max, v)); }
+
+/**
+ * @function cf_expand_aabb_f
+ * @category math
+ * @brief    Expands an AABB (axis-aligned bounding box).
+ * @remarks  `v` is added to to `max.x` and `max.y` of `aabb`, and subtracted from `min.x` and `min.y` of `aabb`.
+ * @related  CF_Aabb cf_make_aabb cf_expand_aabb cf_expand_aabb_f
+ */
 CUTE_INLINE CF_Aabb cf_expand_aabb_f(CF_Aabb aabb, float v) { CF_V2 factor = cf_v2(v, v); return cf_make_aabb(cf_sub_v2(aabb.min, factor), cf_add_v2(aabb.max, factor)); }
+
+/**
+ * @function cf_min_aabb
+ * @category math
+ * @brief    Returns `bb.min`.
+ * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
+ */
 CUTE_INLINE CF_V2 cf_min_aabb(CF_Aabb bb) { return bb.min; }
+
+/**
+ * @function cf_max_aabb
+ * @category math
+ * @brief    Returns `bb.max`.
+ * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
+ */
 CUTE_INLINE CF_V2 cf_max_aabb(CF_Aabb bb) { return bb.max; }
+
+/**
+ * @function cf_midpoint
+ * @category math
+ * @brief    Returns the center of `bb`.
+ * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
+ */
 CUTE_INLINE CF_V2 cf_midpoint(CF_Aabb bb) { return cf_mul_v2_f(cf_add_v2(bb.min, bb.max), 0.5f); }
+
+/**
+ * @function cf_center
+ * @category math
+ * @brief    Returns the center of `bb`.
+ * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
+ */
 CUTE_INLINE CF_V2 cf_center(CF_Aabb bb) { return cf_mul_v2_f(cf_add_v2(bb.min, bb.max), 0.5f); }
+
+/**
+ * @function cf_top_left
+ * @category math
+ * @brief    Returns the top-left corner of bb.
+ * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
+ */
 CUTE_INLINE CF_V2 cf_top_left(CF_Aabb bb) { return cf_v2(bb.min.x, bb.max.y); }
+
+/**
+ * @function cf_top_right
+ * @category math
+ * @brief    Returns the top-right corner of bb.
+ * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
+ */
 CUTE_INLINE CF_V2 cf_top_right(CF_Aabb bb) { return cf_v2(bb.max.x, bb.max.y); }
+
+/**
+ * @function cf_bottom_left
+ * @category math
+ * @brief    Returns the bottom-left corner of bb.
+ * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
+ */
 CUTE_INLINE CF_V2 cf_bottom_left(CF_Aabb bb) { return cf_v2(bb.min.x, bb.min.y); }
+
+/**
+ * @function cf_bottom_right
+ * @category math
+ * @brief    Returns the bottom-right corner of bb.
+ * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
+ */
 CUTE_INLINE CF_V2 cf_bottom_right(CF_Aabb bb) { return cf_v2(bb.max.x, bb.min.y); }
+
+/**
+ * @function cf_contains_point
+ * @category math
+ * @brief    Returns true if `p` is contained within `b`.
+ * @related  CF_Aabb cf_contains_point cf_contains_aabb cf_surface_area_aabb cf_area_aabb cf_clamp_aabb_v2 cf_clamp_aabb cf_combine cf_overlaps
+ */
 CUTE_INLINE bool cf_contains_point(CF_Aabb bb, CF_V2 p) { return cf_greater_equal_v2(p, bb.min) && cf_lesser_equal_v2(p, bb.max); }
+
+/**
+ * @function cf_contains_aabb
+ * @category math
+ * @brief    Returns true if `a` is _fully_ contained within `b`.
+ * @related  CF_Aabb cf_contains_point cf_contains_aabb cf_surface_area_aabb cf_area_aabb cf_clamp_aabb_v2 cf_clamp_aabb cf_combine cf_overlaps
+ */
 CUTE_INLINE bool cf_contains_aabb(CF_Aabb a, CF_Aabb b) { return cf_lesser_equal_v2(a.min, b.min) && cf_greater_equal_v2(a.max, b.max); }
+
+/**
+ * @function cf_surface_area_aabb
+ * @category math
+ * @brief    Returns the surface area of a `CF_Aabb`.
+ * @related  CF_Aabb cf_contains_point cf_contains_aabb cf_surface_area_aabb cf_area_aabb cf_clamp_aabb_v2 cf_clamp_aabb cf_combine cf_overlaps
+ */
 CUTE_INLINE float cf_surface_area_aabb(CF_Aabb bb) { return 2.0f * cf_width(bb) * cf_height(bb); }
+
+/**
+ * @function cf_area_aabb
+ * @category math
+ * @brief    Returns the area of a `CF_Aabb`.
+ * @related  CF_Aabb cf_contains_point cf_contains_aabb cf_surface_area_aabb cf_area_aabb cf_clamp_aabb_v2 cf_clamp_aabb cf_combine cf_overlaps
+ */
 CUTE_INLINE float cf_area_aabb(CF_Aabb bb) { return cf_width(bb) * cf_height(bb); }
+
+/**
+ * @function cf_clamp_aabb_v2
+ * @category math
+ * @brief    Returns a point clamped within a `CF_Aabb`.
+ * @related  CF_Aabb cf_contains_point cf_contains_aabb cf_surface_area_aabb cf_area_aabb cf_clamp_aabb_v2 cf_clamp_aabb cf_combine cf_overlaps
+ */
 CUTE_INLINE CF_V2 cf_clamp_aabb_v2(CF_Aabb bb, CF_V2 p) { return cf_clamp_v2(p, bb.min, bb.max); }
+
+/**
+ * @function cf_clamp_aabb
+ * @category math
+ * @brief    Returns `a` clamped within `b`.
+ * @related  CF_Aabb cf_contains_point cf_contains_aabb cf_surface_area_aabb cf_area_aabb cf_clamp_aabb_v2 cf_clamp_aabb cf_combine cf_overlaps
+ */
 CUTE_INLINE CF_Aabb cf_clamp_aabb(CF_Aabb a, CF_Aabb b) { return cf_make_aabb(cf_clamp_v2(a.min, b.min, b.max), cf_clamp_v2(a.max, b.min, b.max)); }
+
+/**
+ * @function cf_combine
+ * @category math
+ * @brief    Returns a `CF_Aabb` that tightly contains both `a` and `b`.
+ * @related  CF_Aabb cf_contains_point cf_contains_aabb cf_surface_area_aabb cf_area_aabb cf_clamp_aabb_v2 cf_clamp_aabb cf_combine cf_overlaps
+ */
 CUTE_INLINE CF_Aabb cf_combine(CF_Aabb a, CF_Aabb b) { return cf_make_aabb(cf_min_v2(a.min, b.min), cf_max_v2(a.max, b.max)); }
 
+/**
+ * @function cf_overlaps
+ * @category math
+ * @brief    Returns true if `a` and `b` intersect.
+ * @related  CF_Aabb cf_overlaps cf_collide_aabb
+ */
 CUTE_INLINE int cf_overlaps(CF_Aabb a, CF_Aabb b)
 {
 	int d0 = b.max.x < a.min.x;
@@ -1084,8 +1585,20 @@ CUTE_INLINE int cf_overlaps(CF_Aabb a, CF_Aabb b)
 	return !(d0 | d1 | d2 | d3);
 }
 
+/**
+ * @function cf_collide_aabb
+ * @category math
+ * @brief    Returns true if `a` and `b` intersect.
+ * @related  CF_Aabb cf_overlaps cf_collide_aabb
+ */
 CUTE_INLINE int cf_collide_aabb(CF_Aabb a, CF_Aabb b) { return cf_overlaps(a, b); }
 
+/**
+ * @function cf_make_aabb_verts
+ * @category math
+ * @brief    Returns a `CF_Aabb` that tightly contains all input verts.
+ * @related  CF_Aabb cf_make_aabb_verts cf_aabb_verts
+ */
 CUTE_INLINE CF_Aabb cf_make_aabb_verts(CF_V2* verts, int count)
 {
 	CF_V2 vmin = verts[0];
@@ -1097,6 +1610,12 @@ CUTE_INLINE CF_Aabb cf_make_aabb_verts(CF_V2* verts, int count)
 	return cf_make_aabb(vmin, vmax);
 }
 
+/**
+ * @function cf_aabb_verts
+ * @category math
+ * @brief    Fills in `out` with four vertices, one for each corner of `bb`, in counter-clockwise order.
+ * @related  CF_Aabb cf_make_aabb_verts cf_aabb_verts
+ */
 CUTE_INLINE void cf_aabb_verts(CF_V2* out, CF_Aabb bb)
 {
 	out[0] = bb.min;
