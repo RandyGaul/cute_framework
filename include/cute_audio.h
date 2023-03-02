@@ -23,7 +23,7 @@
 #define CUTE_AUDIO_H
 
 #include "cute_defines.h"
-#include "cute_concurrency.h"
+#include "cute_multithreading.h"
 #include "cute_result.h"
 
 //--------------------------------------------------------------------------------------------------

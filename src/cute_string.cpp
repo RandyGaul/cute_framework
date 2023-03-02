@@ -20,7 +20,7 @@
 */
 
 #include "cute_string.h"
-#include "cute_concurrency.h"
+#include "cute_multithreading.h"
 #include "cute_handle_table.h"
 #include "cute_array.h"
 #include "cute_math.h"

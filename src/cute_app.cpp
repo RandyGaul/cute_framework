@@ -22,7 +22,7 @@
 #include <cute_app.h>
 #include <cute_alloc.h>
 #include <cute_audio.h>
-#include <cute_concurrency.h>
+#include <cute_multithreading.h>
 #include <cute_file_system.h>
 #include <cute_c_runtime.h>
 #include <cute_kv.h>

@@ -21,7 +21,7 @@
 
 #include <cute_audio.h>
 #include <cute_app.h>
-#include <cute_concurrency.h>
+#include <cute_multithreading.h>
 
 using namespace Cute;
 

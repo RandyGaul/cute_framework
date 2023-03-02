@@ -22,7 +22,7 @@
 #include <cute_circular_buffer.h>
 #include <cute_alloc.h>
 #include <cute_c_runtime.h>
-#include <cute_concurrency.h>
+#include <cute_multithreading.h>
 
 CF_CircularBuffer cf_make_circular_buffer(int initial_size_in_bytes)
 {

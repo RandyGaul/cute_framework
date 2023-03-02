@@ -23,7 +23,7 @@
 #define CUTE_CIRCULAR_BUFFER_H
 
 #include "cute_defines.h"
-#include "cute_concurrency.h"
+#include "cute_multithreading.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API

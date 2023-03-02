@@ -78,7 +78,7 @@ set(CUTE_SRCS
 	src/cute_audio.cpp
 	src/cute_circular_buffer.cpp
 	src/cute_clipboard.cpp
-	src/cute_concurrency.cpp
+	src/cute_multithreading.cpp
 	src/cute_file_system.cpp
 	src/cute_handle_table.cpp
 	src/cute_input.cpp
@@ -130,7 +130,7 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_c_runtime.h
 	include/cute_circular_buffer.h
 	include/cute_clipboard.h
-	include/cute_concurrency.h
+	include/cute_multithreading.h
 	include/cute_defines.h
 	include/cute_result.h
 	include/cute_file_system.h

@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_CONCURRENCY_H
-#define CUTE_CONCURRENCY_H
+#ifndef CUTE_MULTITHREADING_H
+#define CUTE_MULTITHREADING_H
 
 #include "cute_defines.h"
 #include "cute_result.h"
@@ -33,8 +33,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
-
-// TODO - Rename this file to cute_multithreading.h
 
 /**
  * @struct   CF_Mutex
@@ -661,4 +659,4 @@ CUTE_INLINE void threadpool_kick(Threadpool* pool) { return cf_threadpool_kick(p
 
 #endif // CUTE_CPP
 
-#endif // CUTE_CONCURRENCY_H
+#endif // CUTE_MULTITHREADING_H

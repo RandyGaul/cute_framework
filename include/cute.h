@@ -32,7 +32,7 @@
 #include "cute_circular_buffer.h"
 #include "cute_clipboard.h"
 #include "cute_color.h"
-#include "cute_concurrency.h"
+#include "cute_multithreading.h"
 #include "cute_coroutine.h"
 #include "cute_defer.h"
 #include "cute_doubly_list.h"
