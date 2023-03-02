@@ -29,285 +29,294 @@
 //--------------------------------------------------------------------------------------------------
 // C API
 
-// A hashtable for storing and looking up {key, item} pairs.
-// Implemented in C with macros to support fancy polymorphism.
-// The API works on typed pointers, just create one as NULL and start going.
-// Free it with `hfree` when done.
-// 
-// Example:
-// 
-//     htbl v2* pts = NULL;
-//     hset(pts, 0, V2(3, 5)); // Contructs a new table on-the-spot.
-//                             // The table is *hidden* behind `pts`.
-//     hset(pts, 10, v2(-1, -1);
-//     hset(pts, -2, v2(0, 0));
-//     
-//     // Use `hget` to fetch values.
-//     v2 a = hget(pts, 0);
-//     v2 b = hget(pts, 10);
-//     v2 c = hget(pts, -2);
-//     
-//     // Loop over {key, item} pairs like so:
-//     const uint64_t* keys = hkeys(pts);
-//     for (int i = 0; i < hcount(pts); ++i) {
-//         uint64_t key = keys[i];
-//         v2 v = pts[i];
-//         // ...
-//     }
-//     
-//     hfree(pts);
-
-
 #ifndef CUTE_NO_SHORTHAND_API
 /**
- * This is *optional* and _completely_ empty macro. It's only purpose is to provide a bit of visual
- * indication a type is a table. One downside of the C-macro API is the opaque nature of the table
- * type. Since the macros use polymorphism on typed pointers, there's no actual `cf_hashtable_t` type.
- * 
- * It can get really annoying to sometimes forget if a pointer is an array, a hashtable, or just a
- * pointer. This macro can be used to markup the type to make it much more clear for function parameters
- * or struct member definitions. It's saying "Hey, I'm a hashtable!" to mitigate this downside.
+ * @function htbl
+ * @category htbl
+ * @brief    An empty macro used in the C API to markup hastables.
+ * @example > Showcase of base htbl features.
+ *     htbl CF_V2* pts = NULL;
+ *     hset(pts, 0, cf_v2(3, 5)); // Contructs a new table on-the-spot.
+ *                             // The table is *hidden* behind `pts`.
+ *     hset(pts, 10, cf_v2(-1, -1);
+ *     hset(pts, -2, cf_v2(0, 0));
+ *     
+ *     // Use `hget` to fetch values.
+ *     CF_V2 a = hget(pts, 0);
+ *     CF_V2 b = hget(pts, 10);
+ *     CF_V2 c = hget(pts, -2);
+ *     
+ *     // Loop over {key, item} pairs like so:
+ *     const uint64_t* keys = hkeys(pts);
+ *     for (int i = 0; i < hcount(pts); ++i) {
+ *         uint64_t key = keys[i];
+ *         CF_V2 v = pts[i];
+ *         // ...
+ *     }
+ *     
+ *     hfree(pts);
+ * @remarks  This is an optional and _completely_ empty macro. It's only purpose is to provide a bit of visual indication a type is a
+ *           hashtable. One downside of the C-macro API is the opaque nature of the pointer type. Since the macros use polymorphism
+ *           on typed pointers, there's no actual hashtable struct type. It can get really annoying to sometimes forget if a pointer is an
+ *           array, a hashtable, or just a pointer. This macro can be used to markup the type to make it much more clear for function
+ *           parameters or struct member definitions. It's saying "Hey, I'm a hashtable!" to mitigate this downside.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define htbl
 
 /**
- * Add's a {key, item} pair. Creates a new table if `h` is NULL. Call `hfree` when done.
- * Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
- * 
- * h   - The hashtable. Will create a new table if h is NULL.
- *       h needs to be a pointer to the type of items in the table.
- * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
- * ... - An item to place into the table, by value.
- * 
- * Example:
- * 
+ * @function hset
+ * @category htbl
+ * @brief    Add's a {key, item} pair.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
+ * @param    ...      An item to place in the table.
+ * @example > Set and get a few elements from a hashtable.
  *     htbl int* table = NULL;
  *     hset(table, 0, 5);
  *     hset(table, 1, 12);
  *     CUTE_ASSERT(hget(table, 0) == 5);
  *     CUTE_ASSERT(hget(table, 1) == 12);
  *     hfree(table);
+ * @return   Returns a pointer to the item set into the table.
+ * @remarks  If the item does not exist in the table it is added. The pointer returned is not stable. Internally the table can be resized,
+ *           invalidating _all_ pointers to any elements within the table. Therefor, no items may store pointers to themselves or other items.
+ *           Indices however, are totally fine.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hset(h, k, ...) cf_hashtable_set(h, k, (__VA_ARGS__))
 
 /**
- * Add's a {key, item} pair. Creates a new table if `h` is NULL. Call `hfree` when done.
- * Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
- * 
- * h   - The hashtable. Will create a new table if h is NULL.
- *       h needs to be a pointer for the type of your items in the table.
- * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
- * ... - An item to place into the table, by value.
- * 
- * Example:
- * 
+ * @function hadd
+ * @category htbl
+ * @brief    Add's a {key, item} pair.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
+ * @param    ...      An item to place in the table.
+ * @example > Set and get a few elements from a hashtable.
  *     htbl int* table = NULL;
  *     hadd(table, 0, 5);
  *     hadd(table, 1, 12);
  *     CUTE_ASSERT(hget(table, 0) == 5);
  *     CUTE_ASSERT(hget(table, 1) == 12);
  *     hfree(table);
+ * @return   Returns a pointer to the item set into the table.
+ * @remarks  This function works the same as `hset`. If the item already exists in the table, it's simply updated to a new value.
+ *           The pointer returned is not stable. Internally the table can be resized, invalidating _all_ pointers to any elements
+ *           within the table. Therefor, no items may store pointers to themselves or other items. Indices however, are totally fine.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hadd(h, k, ...) cf_hashtable_add(h, k, (__VA_ARGS__))
 
 /**
- * Fetches the item that `k` maps to.
- * 
- * h   - The hashtable. Will assert h is NULL.
- *       h needs to be a pointer to the type of items in the table.
- * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
- * 
- * Items are returned by value, not pointer. If the item doesn't exist a zero'd out item
- * is instead returned. If you want to get a pointer (so you can see if it's `NULL` in
- * case the item didn't exist, then use `hget_ptr`). You can also call `hhas` for a bool.
- * 
- * Example:
- * 
- *     htbl v2* table = NULL;
- *     hadd(table, 10, V2(-1, 1));
- *     v2 v = hget(table, 10);
- *     CUTE_ASSERT(v.x == -1);
- *     CUTE_ASSERT(v.y == 1);
+ * @function hget
+ * @category htbl
+ * @brief    Fetches the item that `k` maps to.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
+ * @example > Set and get a few elements from a hashtable.
+ *     htbl int* table = NULL;
+ *     hadd(table, 0, 5);
+ *     hadd(table, 1, 12);
+ *     CUTE_ASSERT(hget(table, 0) == 5);
+ *     CUTE_ASSERT(hget(table, 1) == 12);
  *     hfree(table);
+ * @return   Returns a pointer to the item set into the table.
+ * @remarks  Items are returned by value, not pointer. If the item doesn't exist a zero'd out item is instead returned. If you want to get a pointer
+ *           (so you can see if it's `NULL` in case the item didn't exist, then use `hget_ptr`). You can also call `hhas` for a bool. This function does
+ *           the same as `hfind`.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hget(h, k) cf_hashtable_get(h, k)
 
 /**
- * Fetches the item that `k` maps to.
- * 
- * h   - The hashtable. Will assert if h is NULL.
- *       h needs to be a pointer to the type of items in the table.
- * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
- * 
- * Items are returned by value, not pointer. If the item doesn't exist a zero'd out item
- * is instead returned. If you want to get a pointer (so you can see if it's `NULL` in
- * case the item didn't exist, then use `hget_ptr`). You can also call `hhas` for a bool.
- * 
- * Example:
- * 
- *     htbl v2* table = NULL;
- *     hadd(table, 10, V2(-1, 1));
- *     v2 v = hfind(table, 10);
- *     CUTE_ASSERT(v.x == -1);
- *     CUTE_ASSERT(v.y == 1);
+ * @function hfind
+ * @category htbl
+ * @brief    Fetches the item that `k` maps to.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
+ * @example > Set and get a few elements from a hashtable.
+ *     htbl int* table = NULL;
+ *     hadd(table, 0, 5);
+ *     hadd(table, 1, 12);
+ *     CUTE_ASSERT(hfind(table, 0) == 5);
+ *     CUTE_ASSERT(hfind(table, 1) == 12);
  *     hfree(table);
+ * @return   Returns a pointer to the item set into the table.
+ * @remarks  Items are returned by value, not pointer. If the item doesn't exist a zero'd out item is instead returned. If you want to get a pointer
+ *           (so you can see if it's `NULL` in case the item didn't exist, then use `hfind_ptr`). You can also call `hhas` for a bool. This function does
+ *           the same as `hget`.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hfind(h, k) cf_hashtable_find(h, k)
 
 /**
- * Fetches a pointer to the item that `k` maps to. Returns NULL if not found.
- * 
- * h   - The hashtable. Can be NULL.
- *       h needs to be a pointer to the type of items in the table.
- * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
- * 
- * Example:
- * 
- *     htbl v2* table = NULL;
- *     hadd(table, 10, V2(-1, 1));
- *     v2* v = hget_ptr(table, 10);
+ * @function hget_ptr
+ * @category htbl
+ * @brief    Fetches a pointer to the item that `k` maps to.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
+ * @example > Set and get a few elements from a hashtable.
+ *     htbl CF_V2* table = NULL;
+ *     hadd(table, 10, cf_v2(-1, 1));
+ *     CF_V2* v = hget_ptr(table, 10);
  *     CUTE_ASSERT(v);
  *     CUTE_ASSERT(v->x == -1);
  *     CUTE_ASSERT(v->y == 1);
  *     hfree(table);
+ * @return   Returns a pointer to an item. Returns `NULL` if not found.
+ * @remarks  If you want to fetch an item by value, you can use `hget` or `hfind`. Does the same thing as `hfind_ptr`.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hget_ptr(h, k) cf_hashtable_get_ptr(h, k)
 
 /**
- * Fetches a pointer to the item that `k` maps to. Returns NULL if not found.
- * 
- * h   - The hashtable. Can be NULL.
- *       h needs to be a pointer to the type of items in the table.
- * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
- * 
- * Example:
- * 
- *     htbl v2* table = NULL;
- *     hadd(table, 10, V2(-1, 1));
- *     v2* v = hfind_ptr(table, 10);
+ * @function hfind_ptr
+ * @category htbl
+ * @brief    Fetches a pointer to the item that `k` maps to.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
+ * @example > Set and get a few elements from a hashtable.
+ *     htbl CF_V2* table = NULL;
+ *     hadd(table, 10, cf_v2(-1, 1));
+ *     CF_V2* v = hfind_ptr(table, 10);
  *     CUTE_ASSERT(v);
  *     CUTE_ASSERT(v->x == -1);
  *     CUTE_ASSERT(v->y == 1);
  *     hfree(table);
+ * @return   Returns a pointer to an item. Returns `NULL` if not found.
+ * @remarks  If you want to fetch an item by value, you can use `hget` or `hfind`. Does the same thing as `hget_ptr`.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hfind_ptr(h, k) cf_hashtable_find_ptr(h, k)
 
 /**
- * Check to see if an item exists in the table.
- * 
- * h   - The hashtable. Can be NULL.
- *       h needs to be a pointer to the type of items in the table.
- * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
- * 
- * Example:
- * 
+ * @function hhas
+ * @category htbl
+ * @brief    Check to see if an item exists in the table.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
+ * @example > Checks if an item exists in the table.
  *     htbl v2* table = NULL;
  *     hadd(table, 10, V2(-1, 1));
  *     CUTE_ASSERT(hhas(table, 10));
  *     hfree(table);
+ * @return   Returns true if the item was found, false otherwise.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hhas(h, k) cf_hashtable_has(h, k)
 
 /**
- * Removes an item from the table. Asserts if the item does not exist.
- * 
- * h   - The hashtable. Can be NULL.
- *       h needs to be a pointer to the type of items in the table.
- * k   - The key for lookups. Must be unique. Will be typecasted to uint64_t.
- * 
- * Example:
- * 
- *     htbl v2* table = NULL;
- *     hadd(table, 10, V2(-1, 1));
+ * @function hdel
+ * @category htbl
+ * @brief    Removes an item from the table.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
+ * @example > Removes an item in the table.
+ *     htbl CF_V2* table = NULL;
+ *     hadd(table, 10, cf_v2(-1, 1));
  *     hdel(table, 10);
  *     hfree(table);
+ * @remarks  Asserts if the item does not exist.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hdel(h, k) cf_hashtable_del(h, k)
 
 /**
- * Clears the hashtable. The count of items will now be zero.
- * Does not free any memory. Call `hfree` when you are done.
- * 
- * h   - The hashtable. Can be NULL.
- *       h needs to be a pointer to the type of items in the table.
+ * @function hclear
+ * @category htbl
+ * @brief    Clears the hashtable.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @remarks  The count of items will now be zero. Does not free any memory. Call `hfree` when you are done.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hclear(h) cf_hashtable_clear(h)
 
 /**
- * Get a const pointer to the array of keys. The keys are type uint64_t.
- * 
- * h   - The hashtable. Can be NULL.
- *       h needs to be a pointer to the type of items in the table.
- * 
- * Example:
- * 
- *     htbl v2* table = my_table();
+ * @function hkeys
+ * @category htbl
+ * @brief    Get a const pointer to the array of keys.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @example > Loop over all {key, item} pairs of a table.
+ *     htbl CF_V2* table = my_table();
  *     const uint64_t* keys = hkeys(table);
  *     for (int i = 0; i < hcount(table); ++i) {
  *         uint64_t key = keys[i];
- *         v2 item = table[i];
+ *         CF_V2 item = table[i];
  *         // ...
  *     }
+ * @remarks  The keys are type `uint64_t`.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hkeys(h) cf_hashtable_keys(h)
 
 /**
- * Get a pointer to the array of items.
- * This macro doesn't do much as `h` is already a valid pointer to the items.
- * 
- * h   - The hashtable. Can be NULL.
- *       h needs to be a pointer to the type of items in the table.
- * 
- * Example:
- * 
- *     htbl v2* table = my_table();
+ * @function hitems
+ * @category htbl
+ * @brief    Get a pointer to the array of items.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @example > Loop over all {key, item} pairs of a table.
+ *     htbl CF_V2* table = my_table();
  *     const uint64_t* keys = hkeys(table);
  *     for (int i = 0; i < hcount(table); ++i) {
  *         uint64_t key = keys[i];
- *         v2 item = table[i]; // Could also do `hitems(table)` here.
+ *         CF_V2 item = table[i]; // Could also do `hitems(table)` here.
  *         // ...
  *     }
+ * @remarks  This macro doesn't do much as `h` is already a valid pointer to the items.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hitems(h) cf_hashtable_items(h)
 
 /**
- * Swaps internal ordering of two {key, item} pairs without ruining the hashing.
- * Use this for e.g. implementing a priority queue on top of the hash table.
- * 
- * h       - The hashtable. Can be NULL.
- *           h needs to be a pointer to the type of items in the table.
- * index_a - Index to the first item to swap.
- * index_b - Index to the second item to swap.
- * 
- * Example:
- * 
- *     htbl v2* table = my_table();
+ * @function hswap
+ * @category htbl
+ * @brief    Swaps internal ordering of two {key, item} pairs without ruining the hashing.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @param    index_a  Index to the first item to swap.
+ * @param    index_b  Index to the second item to swap.
+ * @example > Loop over all {key, item} pairs of a table.
+ *     htbl CF_V2* table = my_table();
  *     const uint64_t* keys = hkeys(table);
  *     for (int i = 0; i < hcount(table); ++i) {
  *         for (int j = 0; j < hcount(table); ++j) {
  *             if (my_need_swap(table, i, j)) {
- *                 hswap(h, i, j);
+ *                 hswap(table, i, j);
  *             }
  *         }
  *     }
+ * @remarks  Use this for e.g. implementing a priority queue on top of the hash table.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hswap(h, index_a, index_b) cf_hashtable_swap(h, index_a, index_b)
 
 /**
- * The number of {key, item} pairs in the table.
- * h can be NULL.
+ * @function hsize
+ * @category htbl
+ * @brief    The number of {key, item} pairs in the table.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @remarks  `h` can be `NULL`.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hsize(h) cf_hashtable_size(h)
 
 /**
- * The number of {key, item} pairs in the table.
- * h can be NULL.
+ * @function hcount
+ * @category htbl
+ * @brief    The number of {key, item} pairs in the table.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @remarks  `h` can be `NULL`.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hcount(h) cf_hashtable_count(h)
 
 /**
- * Frees up all resources used and sets h to NULL.
- * h can be NULL.
+ * @function hfree
+ * @category htbl
+ * @brief    Frees up all resources used and sets `h` to `NULL`.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @remarks  `h` can be `NULL`.
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hfree(h) cf_hashtable_free(h)
 #endif // CUTE_NO_SHORTHAND_API
