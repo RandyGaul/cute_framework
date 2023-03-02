@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages

@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -1627,28 +1627,81 @@ CUTE_INLINE void cf_aabb_verts(CF_V2* out, CF_Aabb bb)
 //--------------------------------------------------------------------------------------------------
 // Circle helpers.
 
+/**
+ * @function cf_area_circle
+ * @category math
+ * @brief    Returns the area of a `CF_Circle`.
+ * @related  CF_Circle cf_area_circle cf_surface_area_circle
+ */
 CUTE_INLINE float cf_area_circle(CF_Circle c) { return 3.14159265f * c.r * c.r; }
+
+/**
+ * @function cf_surface_area_circle
+ * @category math
+ * @brief    Returns the surface area of a `CF_Circle`.
+ * @related  CF_Circle cf_area_circle cf_surface_area_circle
+ */
 CUTE_INLINE float cf_surface_area_circle(CF_Circle c) { return 2.0f * 3.14159265f * c.r; }
+
+/**
+ * @function cf_mul_tf_circle
+ * @category math
+ * @brief    Transforms a `CF_Circle`.
+ * @related  CF_Circle cf_mul_tf_circle
+ */
 CUTE_INLINE CF_Circle cf_mul_tf_circle(CF_Transform tx, CF_Circle a) { CF_Circle b; b.p = cf_mul_tf_v2(tx, a.p); b.r = a.r; return b; }
 
 //--------------------------------------------------------------------------------------------------
 // Ray ops.
 // Full raycasting suite is farther down below in this file.
 
+/**
+ * @function cf_impact
+ * @category math
+ * @brief    Returns the impact point of a ray, given the time of impact `t`.
+ * @related  CF_Ray cf_impact cf_endpoint
+ */
 CUTE_INLINE CF_V2 cf_impact(CF_Ray r, float t) { return cf_add_v2(r.p, cf_mul_v2_f(r.d, t)); }
+
+/**
+ * @function cf_endpoint
+ * @category math
+ * @brief    Returns the endpoint of a ray.
+ * @remarks  Rays are defined to have an endpoint as an optimization. Usually infinite rays are not needed in games, and cause
+ *           unnecessarily large computations when doing raycasts.
+ * @related  CF_Ray cf_impact cf_endpoint
+ */
 CUTE_INLINE CF_V2 cf_endpoint(CF_Ray r) { return cf_add_v2(r.p, cf_mul_v2_f(r.d, r.t)); }
 
-CUTE_INLINE int cf_ray_to_halfpsace(CF_Ray A, CF_Halfspace B, CF_Raycast* out)
+/**
+ * @function cf_ray_to_halfpsace
+ * @category math
+ * @brief    Returns true if the ray hits a given plane.
+ * @param    A          The ray.
+ * @param    B          The plane.
+ * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
+ * @related  CF_Ray
+ */
+CUTE_INLINE bool cf_ray_to_halfpsace(CF_Ray A, CF_Halfspace B, CF_Raycast* out)
 {
 	float da = cf_distance_hs(B, A.p);
 	float db = cf_distance_hs(B, cf_impact(A, A.t));
-	if (da * db > 0) return 0;
+	if (da * db > 0) return false;
 	out->n = cf_mul_v2_f(B.n, cf_sign(da));
 	out->t = cf_intersect(da, db);
-	return 1;
+	return true;
 }
 
-// http://www.randygaul.net/2014/07/23/distance-point-to-line-segment/
+/**
+ * @function cf_distance_sq
+ * @category math
+ * @brief    Returns the square distance of a point to a line segment.
+ * @param    a          The start point of a line segment.
+ * @param    b          The end point of a line segment.
+ * @param    p          The query point.
+ * @remarks  See [this article](https://randygaul.github.io/math/collision-detection/2014/07/01/Distance-Point-to-Line-Segment.html) for implementation details.
+ * @related  CF_V2 CF_Ray
+ */
 CUTE_INLINE float cf_distance_sq(CF_V2 a, CF_V2 b, CF_V2 p)
 {
 	CF_V2 n = cf_sub_v2(b, a);
