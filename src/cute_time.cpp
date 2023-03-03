@@ -220,17 +220,17 @@ CF_Stopwatch cf_make_stopwatch()
 	return result;
 }
 
-uint64_t cf_seconds(CF_Stopwatch stopwatch)
+double cf_stopwatch_seconds(CF_Stopwatch stopwatch)
 {
-	return (uint64_t)((cf_get_ticks() - stopwatch.start_time) * inv_freq);
+	return (cf_get_ticks() - stopwatch.start_time) * inv_freq;
 }
 
-uint64_t cf_milliseconds(CF_Stopwatch stopwatch)
+double cf_stopwatch_milliseconds(CF_Stopwatch stopwatch)
 {
-	return (uint64_t)(((cf_get_ticks() - stopwatch.start_time) * inv_freq) * 1000);
+	return ((cf_get_ticks() - stopwatch.start_time) * inv_freq) * 1000.0;
 }
 
-uint64_t cf_microseconds(CF_Stopwatch stopwatch)
+double cf_stopwatch_microseconds(CF_Stopwatch stopwatch)
 {
-	return (uint64_t)(((cf_get_ticks() - stopwatch.start_time) * inv_freq) * 1000000);
+	return ((cf_get_ticks() - stopwatch.start_time) * inv_freq) * 1000000.0;
 }
