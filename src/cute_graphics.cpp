@@ -97,40 +97,6 @@ struct CF_CanvasInternal
 	CF_MeshInternal* mesh;
 };
 
-CF_Matrix4x4 cf_matrix_identity()
-{
-	CF_Matrix4x4 m;
-	CUTE_MEMSET(&m, 0, sizeof(m));
-	m.elements[0] = 1.0f;
-	m.elements[5] = 1.0f;
-	m.elements[10] = 1.0f;
-	m.elements[15] = 1.0f;
-	return m;
-}
-
-CF_Matrix4x4 cf_matrix_ortho_2d(float w, float h, float x, float y)
-{
-	float L = -w / 2.0f;
-	float R = w / 2.0f;
-	float T = h / 2.0f;
-	float B = -h / 2.0f;
-
-	CF_Matrix4x4 projection;
-	CUTE_MEMSET(&projection, 0, sizeof(projection));
-
-	// ortho
-	projection.elements[0] = 2.0f / (R - L);
-	projection.elements[5] = 2.0f / (T - B);
-	projection.elements[10] = -0.5f;
-	projection.elements[15] = 1.0f;
-
-	// translate
-	projection.elements[12] = -x * projection.elements[0];
-	projection.elements[13] = -y * projection.elements[5];
-
-	return projection;
-}
-
 static CUTE_INLINE sg_usage s_wrap(CF_UsageType type)
 {
 	switch (type) {
