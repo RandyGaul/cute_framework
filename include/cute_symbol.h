@@ -31,21 +31,35 @@ extern "C" {
 typedef void CF_SharedLibrary;
 
 /**
- * Loads a shared library from disk and returns a pointer to the library.
- * Returns `NULL` in the case of errors, and can be unloaded by calling `unload_shared_library`.
+ * @function cf_load_shared_library
+ * @category utility
+ * @brief    Loads a shared library from disk and returns a pointer to the library.
+ * @param    path        Path to the shared library in platform-dependent notation.
+ * @return   Returns `NULL` in the case of errors, and can be unloaded by calling `unload_shared_library`.
+ * @remarks  Does not use the virtual file system (see TODO_LINK_VFS_TUTORIAL). Once loaded, individual functions can be loaded from the shared
+ *           library be called `cf_load_function`.
+ * @related  cf_load_shared_library cf_unload_shared_library cf_load_function
  */
 CUTE_API CF_SharedLibrary* CUTE_CALL cf_load_shared_library(const char* path);
 
 /**
- * Unloads a shared library previously loaded with `load_shared_library`.
+ * @function cf_unload_shared_library
+ * @category utility
+ * @brief    Unloads a shared library previously loaded with `load_shared_library`.
+ * @param    library      A library of functions from `load_shared_library`.
+ * @related  cf_load_shared_library cf_unload_shared_library cf_load_function
  */
 CUTE_API void cf_unload_shared_library(CF_SharedLibrary* library);
 
 /**
- * Loads a function pointer out of a shared library openened previously with `load_shared_library`.
- * The function pointer is not valid after calling `unload_shared_library`.
- * After obtaining the function pointer with `load_function` you must typecast it yourself.
- * Returns `NULL` in the case of errors.
+ * @function cf_load_function
+ * @category utility
+ * @brief    Loads a function out of a shared library.
+ * @param    library        A library of functions from `load_shared_library`.
+ * @param    function_name  The name of the function.
+ * @remarks  The function pointer is not valid after calling `unload_shared_library`. After obtaining the function pointer with `load_function`
+ *           you must typecast it yourself. Returns `NULL` in the case of errors.
+ * @related  cf_load_shared_library cf_unload_shared_library cf_load_function
  */
 CUTE_API void* cf_load_function(CF_SharedLibrary* library, const char* function_name);
 
