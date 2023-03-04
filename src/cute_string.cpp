@@ -121,6 +121,7 @@ char* cf_svfmt_append(char* s, const char* fmt, va_list args)
 bool cf_sprefix(char* s, const char* prefix)
 {
 	CF_ACANARY(s);
+	if (!s) return false;
 	int prefix_len = (int)(prefix ? CUTE_STRLEN(prefix) : 0);
 	bool a = slen(s) >= prefix_len;
 	bool b = !CUTE_MEMCMP(s, prefix, prefix_len);
@@ -130,6 +131,7 @@ bool cf_sprefix(char* s, const char* prefix)
 bool cf_ssuffix(char* s, const char* suffix)
 {
 	CF_ACANARY(s);
+	if (!s) return false;
 	int suffix_len = (int)(suffix ? CUTE_STRLEN(suffix) : 0);
 	bool a = slen(s) >= suffix_len;
 	bool b = !CUTE_MEMCMP(s + slen(s) - suffix_len, suffix, suffix_len);
@@ -372,6 +374,7 @@ char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
 char* cf_sdedup(char* s, int ch)
 {
 	CF_ACANARY(s);
+	if (!s) return s;
 	int len = (int)CUTE_STRLEN(s);
 	int i = 0, j = 1;
 	bool dup = false;
@@ -395,6 +398,7 @@ char* cf_sdedup(char* s, int ch)
 char* cf_serase(char* s, int index, int count)
 {
 	CF_ACANARY(s);
+	if (!s) return s;
 	if (index < 0) {
 		count += index;
 		index = 0;
@@ -552,22 +556,22 @@ char* cf_string_append_UTF8_impl(char *s, int codepoint)
 
 const char* cf_decode_UTF8(const char* s, int* codepoint)
 {
-	unsigned char c = *s++;
-	int extra = 0;
-	int min = 0;
-	*codepoint = 0;
-	     if (c >= 0xF0) { *codepoint = c & 0x07; extra = 3; min = 0x10000; }
-	else if (c >= 0xE0) { *codepoint = c & 0x0F; extra = 2; min = 0x800; }
-	else if (c >= 0xC0) { *codepoint = c & 0x1F; extra = 1; min = 0x80; }
-	else if (c >= 0x80) { *codepoint = 0xFFFD; }
-	else *codepoint = c;
-	while (extra--) {
-		c = *s++;
-		if ((c & 0xC0) != 0x80) { *codepoint = 0xFFFD; break; }
-		*codepoint = ((*codepoint) << 6) | (c & 0x3F);
-	}
-	if (*codepoint < min) *codepoint = 0xFFFD;
-	return s;
+    unsigned char c = *s++;
+    int extra = 0;
+    int min = 0;
+    *codepoint = 0;
+         if (c >= 0xF0) { *codepoint = c & 0x07; extra = 3; min = 0x10000; }
+    else if (c >= 0xE0) { *codepoint = c & 0x0F; extra = 2; min = 0x800; }
+    else if (c >= 0xC0) { *codepoint = c & 0x1F; extra = 1; min = 0x80; }
+    else if (c >= 0x80) { *codepoint = 0xFFFD; }
+    else *codepoint = c;
+    while (extra--) {
+        c = *s++;
+        if ((c & 0xC0) != 0x80) { *codepoint = 0xFFFD; }
+        if (*codepoint != 0xFFFD) { *codepoint = ((*codepoint) << 6) | (c & 0x3F); }
+    }
+    if (*codepoint < min) *codepoint = 0xFFFD;
+    return s;
 }
 
 const uint16_t* cf_decode_UTF16(const uint16_t* s, int* codepoint)

@@ -262,7 +262,12 @@
 
 #define CF_AHDR(a) ((CF_Ahdr*)a - 1)
 #define CF_ACOOKIE 0xE6F7E359
-#define CF_ACANARY(a) ((a) ? CUTE_ASSERT(CF_AHDR(a)->cookie == CF_ACOOKIE) : (void)0) // Detects buffer underruns.
+
+// If you see this macro asserting it likely means you didn't pass a proper dynamic string or array
+// to one of the array/string macros. You must not pass string literals to these functions for certain input
+// arguments, and instead, build a dynamic array/string using the C apis (e.g. `apush` or `sset`). This macro
+// also helps detect heap/stack corruption such as buffer underruns.
+#define CF_ACANARY(a) ((a) ? CUTE_ASSERT(CF_AHDR(a)->cookie == CF_ACOOKIE) : (void)0)
 
 // *Hidden* array header.
 typedef struct CF_Ahdr
