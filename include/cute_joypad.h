@@ -276,29 +276,29 @@ CUTE_API const char* CUTE_CALL cf_joypad_name(CF_Joypad* joypad);
  * @brief    Returns true if the button is currently down.
  * @param    joypad     The joypad.
  * @param    button     The button.
- * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_was_pressed cf_joypad_button_was_released cf_joypad_axis
+ * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
 CUTE_API bool CUTE_CALL cf_joypad_button_down(CF_Joypad* joypad, CF_JoypadButton button);
 
 /**
- * @function cf_joypad_button_was_pressed
+ * @function cf_joypad_button_just_pressed
  * @category input
- * @brief    Returns true once if the button was just pressed.
+ * @brief    Returns true if the button was just pressed.
  * @param    joypad     The joypad.
  * @param    button     The button.
- * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_was_pressed cf_joypad_button_was_released cf_joypad_axis
+ * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
-CUTE_API bool CUTE_CALL cf_joypad_button_was_pressed(CF_Joypad* joypad, CF_JoypadButton button);
+CUTE_API bool CUTE_CALL cf_joypad_button_just_pressed(CF_Joypad* joypad, CF_JoypadButton button);
 
 /**
- * @function cf_joypad_button_was_released
+ * @function cf_joypad_button_just_released
  * @category input
- * @brief    Returns true once if the button was just released.
+ * @brief    Returns true if the button was just released.
  * @param    joypad     The joypad.
  * @param    button     The button.
- * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_was_pressed cf_joypad_button_was_released cf_joypad_axis
+ * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
-CUTE_API bool CUTE_CALL cf_joypad_button_was_released(CF_Joypad* joypad, CF_JoypadButton button);
+CUTE_API bool CUTE_CALL cf_joypad_button_just_released(CF_Joypad* joypad, CF_JoypadButton button);
 
 /**
  * @function cf_joypad_axis
@@ -306,7 +306,7 @@ CUTE_API bool CUTE_CALL cf_joypad_button_was_released(CF_Joypad* joypad, CF_Joyp
  * @brief    Returns a signed 16-bit integer representing how much a joypad axis is activated by.
  * @param    joypad     The joypad.
  * @param    axis       The axis.
- * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_was_pressed cf_joypad_button_was_released cf_joypad_axis
+ * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
 CUTE_API int16_t CUTE_CALL cf_joypad_axis(CF_Joypad* joypad, CF_JoypadAxis axis);
 
@@ -377,8 +377,8 @@ CUTE_INLINE bool joypad_is_connected(Joypad* joypad) { return cf_joypad_is_conne
 CUTE_INLINE JoypadPowerLevel joypad_power_level(Joypad* joypad) { return cf_joypad_power_level(joypad); }
 CUTE_INLINE const char* joypad_name(Joypad* joypad) { return cf_joypad_name(joypad); }
 CUTE_INLINE bool joypad_button_down(Joypad* joypad, JoypadButton button) { return cf_joypad_button_down(joypad, button); }
-CUTE_INLINE bool joypad_button_was_pressed(Joypad* joypad, JoypadButton button) { return cf_joypad_button_was_pressed(joypad, button); }
-CUTE_INLINE bool joypad_button_was_released(Joypad* joypad, JoypadButton button) { return cf_joypad_button_was_released(joypad, button); }
+CUTE_INLINE bool joypad_button_was_pressed(Joypad* joypad, JoypadButton button) { return cf_joypad_button_just_pressed(joypad, button); }
+CUTE_INLINE bool joypad_button_was_released(Joypad* joypad, JoypadButton button) { return cf_joypad_button_just_released(joypad, button); }
 CUTE_INLINE int16_t joypad_axis(Joypad* joypad, JoypadAxis axis) { return cf_joypad_axis(joypad, axis); }
 
 }

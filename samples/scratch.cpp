@@ -28,7 +28,7 @@ int main(int argc, const char** argv)
 			w = CUTE_ALIGN_TRUNCATE(w, 2);
 			h = CUTE_ALIGN_TRUNCATE(h, 2);
 			app_set_size(w, h);
-			app_resize_canvas(w, h);
+			app_set_canvas_size(w, h);
 			camera_dimensions((float)w, (float)h);
 			printf("%d, %d\n", w, h);
 		}

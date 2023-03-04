@@ -26,14 +26,14 @@ int main(int argc, const char** argv)
 		draw_push_layer(-1);
 		draw_circle(V2(0,10), radius + motion, 50, 1.0f + motion / 4);
 		draw_pop_layer();
-		if (key_was_pressed(KEY_1)) draw_push_tint(color_grey());
-		if (key_was_pressed(KEY_2)) draw_push_tint(color_red());
-		if (key_was_pressed(KEY_3)) draw_push_tint(color_purple());
-		if (key_was_pressed(KEY_4)) draw_push_tint(color_orange());
-		if (key_was_pressed(KEY_5)) draw_push_tint(color_green());
-		if (key_was_pressed(KEY_6)) draw_push_tint(color_white());
-		if (key_was_pressed(KEY_7)) draw_push_tint(color_black());
-		if (key_was_pressed(KEY_8)) draw_push_tint(color_blue());
+		if (key_just_pressed(KEY_1)) draw_push_tint(color_grey());
+		if (key_just_pressed(KEY_2)) draw_push_tint(color_red());
+		if (key_just_pressed(KEY_3)) draw_push_tint(color_purple());
+		if (key_just_pressed(KEY_4)) draw_push_tint(color_orange());
+		if (key_just_pressed(KEY_5)) draw_push_tint(color_green());
+		if (key_just_pressed(KEY_6)) draw_push_tint(color_white());
+		if (key_just_pressed(KEY_7)) draw_push_tint(color_black());
+		if (key_just_pressed(KEY_8)) draw_push_tint(color_blue());
 		app_draw_onto_screen();
 	}
 

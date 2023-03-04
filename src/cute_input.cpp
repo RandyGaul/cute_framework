@@ -206,19 +206,13 @@ static int s_map_SDL_keys(int key)
 	return 0;
 }
 
-bool cf_key_is_down(CF_KeyButton key)
+bool cf_key_down(CF_KeyButton key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 	return app->keys[key];
 }
 
-bool cf_key_is_up(CF_KeyButton key)
-{
-	CUTE_ASSERT(key >= 0 && key < 512);
-	return !app->keys[key];
-}
-
-bool cf_key_was_pressed(CF_KeyButton key)
+bool cf_key_just_pressed(CF_KeyButton key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 
@@ -235,7 +229,7 @@ bool cf_key_was_pressed(CF_KeyButton key)
 	return (app->keys[key] & !app->keys_prev[key]) | repeat_count;
 }
 
-bool cf_key_was_released(CF_KeyButton key)
+bool cf_key_just_released(CF_KeyButton key)
 {
 	CUTE_ASSERT(key >= 0 && key < 512);
 	return !app->keys[key] && app->keys_prev[key];
@@ -261,7 +255,7 @@ bool cf_key_gui()
 	return app->keys[CF_KEY_LGUI] | app->keys[CF_KEY_RGUI];
 }
 
-void cf_clear_all_key_state()
+void cf_clear_key_states()
 {
 	CUTE_MEMSET(app->keys, 0, sizeof(app->keys));
 	CUTE_MEMSET(app->keys_prev, 0, sizeof(app->keys_prev));
@@ -277,7 +271,7 @@ int cf_mouse_y()
 	return app->mouse.y;
 }
 
-bool cf_mouse_is_down(CF_MouseButton button)
+bool cf_mouse_down(CF_MouseButton button)
 {
 	switch (button)
 	{
@@ -288,18 +282,7 @@ bool cf_mouse_is_down(CF_MouseButton button)
 	return 0;
 }
 
-bool cf_mouse_is_up(CF_MouseButton button)
-{
-	switch (button)
-	{
-	case MOUSE_BUTTON_LEFT:   return !app->mouse.left_button;
-	case MOUSE_BUTTON_RIGHT:  return !app->mouse.right_button;
-	case MOUSE_BUTTON_MIDDLE: return !app->mouse.middle_button;
-	}
-	return 0;
-}
-
-bool cf_mouse_was_pressed(CF_MouseButton button)
+bool cf_mouse_just_pressed(CF_MouseButton button)
 {
 	switch (button)
 	{
@@ -310,7 +293,7 @@ bool cf_mouse_was_pressed(CF_MouseButton button)
 	return 0;
 }
 
-bool cf_mouse_was_released(CF_MouseButton button)
+bool cf_mouse_just_released(CF_MouseButton button)
 {
 	switch (button)
 	{
@@ -326,14 +309,14 @@ int cf_mouse_wheel_motion()
 	return app->mouse.wheel_motion;
 }
 
-bool cf_mouse_is_down_double_click(CF_MouseButton button)
+bool cf_mouse_double_click_held(CF_MouseButton button)
 {
-	return cf_mouse_is_down(button) && app->mouse.click_type == CF_MOUSE_CLICK_DOUBLE;
+	return cf_mouse_down(button) && app->mouse.click_type == CF_MOUSE_CLICK_DOUBLE;
 }
 
-bool cf_mouse_double_click_was_pressed(CF_MouseButton button)
+bool cf_mouse_double_clicked(CF_MouseButton button)
 {
-	return cf_mouse_was_pressed(button) && app->mouse.click_type == CF_MOUSE_CLICK_DOUBLE;
+	return cf_mouse_just_pressed(button) && app->mouse.click_type == CF_MOUSE_CLICK_DOUBLE;
 }
 
 void cf_clear_all_mouse_state()
@@ -459,9 +442,9 @@ void cf_pump_input_msgs()
 	app->window_state.restored = false;
 	app->window_state.resized = false;
 
-	// Update key durations to simulate "press and hold" style for `key_was_pressed`.
+	// Update key durations to simulate "press and hold" style for `key_just_pressed`.
 	for (int i = 0; i < 512; ++i) {
-		if (cf_key_is_down((CF_KeyButton)i)) {
+		if (cf_key_down((CF_KeyButton)i)) {
 			if (app->keys_duration[i] < 0) {
 				app->keys_duration[i] = 0;
 			} else {

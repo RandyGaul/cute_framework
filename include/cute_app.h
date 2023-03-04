@@ -419,13 +419,13 @@ CUTE_API sg_imgui_t* CUTE_CALL cf_app_get_sokol_imgui();
  * @brief    Fetches the app's internal canvas for displaying content on the screen.
  * @remarks  This is an advanced function. If you just want to draw things on screen, try checking out `CF_Sprite`.
  *           The app's canvas can be used to implement low-level graphics features, such as multi-pass algorithms. Be careful about
- *           calling `cf_app_resize_canvas`, as it will invalidate any references to the app's canvas.
- * @related  cf_app_resize_canvas cf_app_get_canvas_width cf_app_get_canvas_height
+ *           calling `cf_app_set_canvas_size`, as it will invalidate any references to the app's canvas.
+ * @related  cf_app_set_canvas_size cf_app_get_canvas_width cf_app_get_canvas_height
  */
 CUTE_API CF_Canvas CUTE_CALL cf_app_get_canvas();
 
 /**
- * @function cf_app_resize_canvas
+ * @function cf_app_set_canvas_size
  * @category app
  * @brief    Resizes the app's internal canvas to a new w/h, in pixels.
  * @param    w          The width in pixels to resize the canvas to.
@@ -433,13 +433,13 @@ CUTE_API CF_Canvas CUTE_CALL cf_app_get_canvas();
  * @remarks  Be careful about calling this function, as it will invalidate any old references from `cf_app_get_canvas`.
  * @related  cf_app_get_canvas cf_app_get_canvas_width cf_app_get_canvas_height
  */
-CUTE_API void CUTE_CALL cf_app_resize_canvas(int w, int h);
+CUTE_API void CUTE_CALL cf_app_set_canvas_size(int w, int h);
 
 /**
  * @function cf_app_get_canvas_width
  * @category app
  * @brief    Gets the app's canvas width in pixels.
- * @related  cf_app_get_canvas cf_app_resize_canvas cf_app_get_canvas_height
+ * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_height
  */
 CUTE_API int CUTE_CALL cf_app_get_canvas_width();
 
@@ -447,7 +447,7 @@ CUTE_API int CUTE_CALL cf_app_get_canvas_width();
  * @function cf_app_get_canvas_height
  * @category app
  * @brief    Gets the app's canvas height in pixels.
- * @related  cf_app_get_canvas cf_app_resize_canvas cf_app_get_canvas_width
+ * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width
  */
 CUTE_API int CUTE_CALL cf_app_get_canvas_height();
 
@@ -584,7 +584,7 @@ CUTE_INLINE int app_get_canvas_height() { return cf_app_get_canvas_height(); }
 CUTE_INLINE ImGuiContext* app_init_imgui(bool no_default_font = false) { return cf_app_init_imgui(no_default_font); }
 CUTE_INLINE sg_imgui_t* app_get_sokol_imgui() { return cf_app_get_sokol_imgui(); }
 CUTE_INLINE CF_Canvas app_get_canvas() { return cf_app_get_canvas(); }
-CUTE_INLINE void app_resize_canvas(int w, int h) { cf_app_resize_canvas(w, h); }
+CUTE_INLINE void app_set_canvas_size(int w, int h) { cf_app_set_canvas_size(w, h); }
 CUTE_INLINE PowerInfo app_power_info() { return cf_app_power_info(); }
 
 }

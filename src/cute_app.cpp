@@ -551,7 +551,7 @@ CF_Canvas cf_app_get_canvas()
 	return app->offscreen_canvas;
 }
 
-void cf_app_resize_canvas(int w, int h)
+void app_set_canvas_size(int w, int h)
 {
 	unapply_canvas();
 	s_canvas(w, h);

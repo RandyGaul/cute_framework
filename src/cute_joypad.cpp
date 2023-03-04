@@ -112,12 +112,12 @@ bool cf_joypad_button_down(CF_Joypad* joypad, CF_JoypadButton button)
 	return joypad->buttons[button];
 }
 
-bool cf_joypad_button_was_pressed(CF_Joypad* joypad, CF_JoypadButton button)
+bool cf_joypad_button_just_pressed(CF_Joypad* joypad, CF_JoypadButton button)
 {
 	return joypad->buttons[button] && !joypad->buttons_prev[button];
 }
 
-bool cf_joypad_button_was_released(CF_Joypad* joypad, CF_JoypadButton button)
+bool cf_joypad_button_just_released(CF_Joypad* joypad, CF_JoypadButton button)
 {
 	return !joypad->buttons[button] && joypad->buttons_prev[button];
 }
