@@ -18,7 +18,7 @@ int main(int argc, const char** argv)
 
 	while (app_is_running()) {
 		app_update();
-		s.update(DELTA_TIME);
+		s.update();
 		s.draw();
 		t += DELTA_TIME;
 		float radius = 10.0f;

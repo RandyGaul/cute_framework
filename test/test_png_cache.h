@@ -61,7 +61,7 @@ int test_png_cache()
 	CUTE_TEST_CHECK_POINTER(sprite.animations);
 	CUTE_TEST_ASSERT(sprite.frame_index == 0);
 
-	cf_sprite_update(&sprite, 0.5f);
+	cf_sprite_update(&sprite);
 	CUTE_TEST_ASSERT(sprite.frame_index == 1);
 
 	cf_destroy_png_cache();

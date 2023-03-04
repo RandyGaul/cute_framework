@@ -56,6 +56,7 @@ int cf_joypad_count()
 
 CF_Joypad* cf_joypad_open(int index)
 {
+	cf_joypad_system_init();
 	if (SDL_IsGameController(index)) {
 		SDL_GameController* controller = SDL_GameControllerOpen(index);
 		if (controller) {
@@ -106,14 +107,9 @@ const char* cf_joypad_name(CF_Joypad* joypad)
 	return SDL_GameControllerName(joypad->controller);
 }
 
-bool cf_joypad_button_is_down(CF_Joypad* joypad, CF_JoypadButton button)
+bool cf_joypad_button_down(CF_Joypad* joypad, CF_JoypadButton button)
 {
 	return joypad->buttons[button];
-}
-
-bool cf_joypad_button_is_up(CF_Joypad* joypad, CF_JoypadButton button)
-{
-	return !joypad->buttons[button];
 }
 
 bool cf_joypad_button_was_pressed(CF_Joypad* joypad, CF_JoypadButton button)

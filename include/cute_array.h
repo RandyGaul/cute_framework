@@ -527,6 +527,7 @@ void Array<T>::ensure_capacity(int capacity)
 template <typename T>
 void Array<T>::ensure_count(int count)
 {
+	CF_ARRAY_ENSURE_CAPACITY(count);
 	if (m_count < count) {
 		for (int i = m_count; i < count; ++i) {
 			CUTE_PLACEMENT_NEW(m_ptr + i) T();
