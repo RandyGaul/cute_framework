@@ -158,6 +158,7 @@ void Doc::emit_members(FILE* fp)
 
 void Doc::emit_member_function_links(FILE* fp)
 {
+	// This function is not finished.
 	if (member_functions.count()) {
 		fprintf(fp, "Functions | Description\n--- | ---\n");
 		for (int i = 0; i < member_functions.count(); ++i) {

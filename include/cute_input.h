@@ -23,7 +23,6 @@
 #define CUTE_INPUT_H
 
 #include "cute_defines.h"
-#include "cute_array.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -443,7 +442,6 @@ CUTE_INLINE void CUTE_CALL input_set_ime_rect(int x, int y, int w, int h) { cf_i
 
 CUTE_INLINE bool CUTE_CALL input_get_ime_composition(ImeComposition* composition) { return cf_input_get_ime_composition(composition); }
 
-CUTE_API Array<Touch> CUTE_CALL touch_get_all();
 CUTE_INLINE bool CUTE_CALL touch_get(uint64_t id, Touch* touch) { return cf_touch_get(id,touch); }
 
 }

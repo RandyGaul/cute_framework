@@ -452,8 +452,9 @@ CUTE_API int CUTE_CALL cf_app_get_canvas_width();
 CUTE_API int CUTE_CALL cf_app_get_canvas_height();
 
 /**
- * @enum    CF_PowerState
- * @brief   The states of power for the application.
+ * @enum     CF_PowerState
+ * @category app
+ * @brief    The states of power for the application.
  * @related  CF_PowerInfo cf_app_power_info
  */
 #define CF_POWER_STATE_DEFS \

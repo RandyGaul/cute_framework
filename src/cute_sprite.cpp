@@ -27,7 +27,7 @@
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
 
-CF_Sprite cf_easy_make_sprite(const char* png_path)
+CF_Sprite cf_make_easy_sprite(const char* png_path)
 {
 	const CF_Animation** table = cf_png_cache_get_animation_table(png_path);
 	if (!table) {
@@ -49,12 +49,6 @@ CF_Sprite cf_easy_make_sprite(const char* png_path)
 
 	CF_Sprite s = cf_make_png_cache_sprite(png_path, table);
 	return s;
-}
-
-void cf_easy_sprite_unload(CF_Sprite sprite)
-{
-	CF_Png png = cf_png_cache_get_png(sprite.animations[0]->frames[0].id);
-	cf_png_cache_unload(png);
 }
 
 CF_Sprite cf_make_sprite(const char* aseprite_path)
