@@ -35,79 +35,121 @@ extern "C" {
 #endif // __cplusplus
 
 /**
- * Represents a single HTTPS request for clients to talk with web servers. POST and GET requests are
- * supported for when you just need a basic way to communicate over HTTPS. Insecure HTTP is not supported,
- * but cert verification can be skipped (not recommended).
- *
- * Supports chunked encoding. Does not support trailing headers, 100-continue, keep-alive, or other
- * "advanced" HTTP features.
- *
- * The design of this API comes mainly from Mattias Gustavsson's http.h single-file C header.
- * https://github.com/mattiasgustavsson/libs/blob/main/http.h
- *
- * Here is a full working example.
- *
- *    CF_Result err;
- *    CF_Https* https = cf_https_get("raw.githubusercontent.com", "443", "/RandyGaul/cute_framework/main/src/cute_https.h", &err);
- *    if (https) {
- *        while (cf_https_state(https) == CF_HTTPS_STATE_PENDING) {
- *            size_t bytes_read = cf_https_process(https);
- *            printf("Received %zu bytes...\n", bytes_read);
- *        }
- *        if (cf_https_state(https) == CF_HTTPS_STATE_COMPLETED) {
- *            const CF_HttpsResponse response;
- *            cf_https_response(https, &response);
- *            printf("%s", response.content);
- *        }
- *        cf_https_destroy(https);
- *    } else {
- *        printf("HTTPS request failed: %s\n", err.details);
- *    }
+ * @struct   CF_Https
+ * @category web
+ * @brief    Represents a single HTTPS request for clients to talk with web servers.
+ * @remarks  POST and GET requests are supported for when you just need a basic way to communicate over HTTPS. Insecure HTTP is not supported,
+ *           but cert verification can be skipped (not recommended).
+ *           
+ *           Supports chunked encoding. Does not support trailing headers, 100-continue, keep-alive, or other
+ *           "advanced" HTTP features.
+ *           
+ *           The design of this API comes mainly from Mattias Gustavsson's http.h single-file C header.
+ *           https://github.com/mattiasgustavsson/libs/blob/main/http.h
+ *           
+ *           Here is a full working example.
+ *           
+ *           ```cpp
+ *           CF_Result err;
+ *           CF_Https* https = cf_https_get("raw.githubusercontent.com", "443", "/RandyGaul/cute_framework/main/src/cute_https.h", &err);
+ *           if (https) {
+ *               while (cf_https_state(https) == CF_HTTPS_STATE_PENDING) {
+ *                   size_t bytes_read = cf_https_process(https);
+ *                   printf("Received %zu bytes...\n", bytes_read);
+ *               }
+ *               if (cf_https_state(https) == CF_HTTPS_STATE_COMPLETED) {
+ *                   const CF_HttpsResponse response;
+ *                   cf_https_response(https, &response);
+ *                   printf("%s", response.content);
+ *               }
+ *               cf_https_destroy(https);
+ *           } else {
+ *               printf("HTTPS request failed: %s\n", err.details);
+ *           }
+ *           ```
+ * @related  CF_Https cf_https_get cf_https_post
  */
 typedef struct CF_Https CF_Https;
+// @end
 
 /**
- * Initiates a GET request for the specified host (website address) and a given uri. For example if we wanted
- * to retrieve this header from github, we could use this `host` "raw.githubusercontent.com" with this `uri`
- * "/RandyGaul/cute_framework/main/src/cute_https.h" at port 443 (standard HTTPS port).
- *
- * Any errors are optionally reported through the `err` parameter.
- *
- * `verify_cert` will verify the server's x509 certificate, but can be disabled (dangerous).
- *
- * Returns an `Https` pointer which needs to be processed with `https_process` and cleaned up by `https_destroy`.
- *
- * `host` and `port` are unused when building with emscripten -- this is since an XMLHttpRequest is used
- * underneath, meaning only files from the server this code came from can be loaded, and as such the `uri`
- * should only be a relative path on the server.
+ * @function cf_https_get
+ * @category web
+ * @brief    Initiates a GET request for the specified host (website address) and a given uri.
+ * @param    host        The web address where we send the HTTPS GET request.
+ * @param    port        The port to use.
+ * @param    uri         The URI on the host.
+ * @param    err         Can be `NULL`. Reports any errors.
+ * @param    bool        You should set this to `true`. `false` will disable the secure part of HTTPS. Please only do this for testing.
+ * @return   Returns a `CF_Https` pointer.
+ * @remarks  If we wanted to retrieve this header from github, we could use this `host` "raw.githubusercontent.com" with this `uri`
+ *           "/RandyGaul/cute_framework/main/src/cute_https.h" at port 443 (standard HTTPS port).
+ *           
+ *           Any errors are optionally reported through the `err` parameter.
+ *           
+ *           `verify_cert` will verify the server's x509 certificate, but can be disabled (dangerous).
+ *           
+ *           Returns a `CF_Https` pointer which needs to be processed with `cf_https_process` and cleaned up by `cf_https_destroy`. See
+ *           `CF_Https` for a full example.
+ *           
+ *           `host` and `port` are unused when building with emscripten -- this is since an XMLHttpRequest is used
+ *           underneath, meaning only files from the server this code came from can be loaded, and as such the `uri`
+ *           should only be a relative path on the server.
+ * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process
  */
-CUTE_API CF_Https* CUTE_CALL cf_https_get(const char* host, const char* port, const char* uri, CF_Result* err /*= NULL*/, bool verify_cert /*= true*/);
+CUTE_API CF_Https* CUTE_CALL cf_https_get(const char* host, const char* port, const char* uri, CF_Result* err, bool verify_cert);
 
 /**
- * Initiates a POST request for the specified host (website address) and a given uri. The content of the post
- * is in `data`, which can be `NULL` if `size` is 0.
- *
- * Any errors are optionally reported through the `err` parameter.
- *
- * `verify_cert` will verify the server's x509 certificate, but can be disabled (dangerous).
- *
- * Returns an `CF_Https` pointer which needs to be processed with `cf_https_process` and cleaned up by `cf_https_destroy`.
- *
- * `host` and `port` are unused when building with emscripten -- this is since an XMLHttpRequest is used
- * underneath, meaning only files from the server this code came from can be loaded, and as such the `uri`
- * should only be a relative path on the server.
+ * @function cf_https_post
+ * @category web
+ * @brief    Initiates a GET request for the specified host (website address) and a given uri.
+ * @param    host        The web address where we send the HTTPS GET request.
+ * @param    port        The port to use.
+ * @param    data        Pointer to data to send to the host.
+ * @param    size        Size of `data` in bytes.
+ * @param    uri         The URI on the host.
+ * @param    err         Can be `NULL`. Reports any errors.
+ * @param    bool        You should set this to `true`. `false` will disable the secure part of HTTPS. Please only do this for testing.
+ * @return   Returns a `CF_Https` pointer.
+ * @remarks  Initiates a POST request for the specified host (website address) and a given uri. The content of the post
+ *           is in `data`, which can be `NULL` if `size` is 0.
+ *           
+ *           Any errors are optionally reported through the `err` parameter.
+ *           
+ *           `verify_cert` will verify the server's x509 certificate, but can be disabled (dangerous).
+ *           
+ *           Returns an `CF_Https` pointer which needs to be processed with `cf_https_process` and cleaned up by `cf_https_destroy`.
+ *           
+ *           `host` and `port` are unused when building with emscripten -- this is since an XMLHttpRequest is used
+ *           underneath, meaning only files from the server this code came from can be loaded, and as such the `uri`
+ *           should only be a relative path on the server.
+ * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process
  */
-CUTE_API CF_Https* CUTE_CALL cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, CF_Result* err /*= NULL*/, bool verify_cert /*= true*/);
+CUTE_API CF_Https* CUTE_CALL cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, CF_Result* err, bool verify_cert);
 
 /**
- * Frees up all memory and closes the underlying HTTPS connection if still open.
+ * @function cf_https_destroy
+ * @category web
+ * @brief    Frees up all memory and closes the underlying HTTPS connection if still open.
+ * @param    https       A `CF_Https` to destroy.
+ * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process
  */
 CUTE_API void CUTE_CALL cf_https_destroy(CF_Https* https);
 
+/**
+ * @enum     CF_HttpsState
+ * @category web
+ * @brief    The states of power for the application.
+ * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process
+ */
 #define CF_HTTPS_STATE_DEFS \
-	CF_ENUM(HTTPS_STATE_PENDING,   0) /* Keep calling `https_process`. */ \
-	CF_ENUM(HTTPS_STATE_COMPLETED, 1) /* The response has been acquired, retrieve it with `https_response`. */ \
-	CF_ENUM(HTTPS_STATE_FAILED,    2) /* The request has failed, the only valid operation left is `https_destroy`. */ \
+	/* @entry Keep calling `cf_https_process`. See `CF_Https` for a full example. */          \
+	CF_ENUM(HTTPS_STATE_PENDING,   0)                                                         \
+	/* @entry The response has been acquired, retrieve it with `cf_https_response`. */        \
+	CF_ENUM(HTTPS_STATE_COMPLETED, 1)                                                         \
+	/* @entry The request has failed, the only valid operation left is `cf_https_destroy`. */ \
+	CF_ENUM(HTTPS_STATE_FAILED,    2)                                                         \
+	/* @end */
 
 typedef enum CF_HttpsState
 {
@@ -116,6 +158,13 @@ typedef enum CF_HttpsState
 	#undef CF_ENUM
 } CF_HttpsState;
 
+/**
+ * @function cf_https_state_type_to_string
+ * @category web
+ * @brief    Convert an enum `CF_HttpsState` to a c-style string.
+ * @param    state        The state to convert to a string.
+ * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process
+ */
 CUTE_INLINE const char* cf_https_state_type_to_string(CF_HttpsState state)
 {
 	switch (state) {
@@ -127,38 +176,77 @@ CUTE_INLINE const char* cf_https_state_type_to_string(CF_HttpsState state)
 }
 
 /**
- * Returns the current state of the `https` object. This is used mainly for calling `https_process`.
+ * @function cf_https_state
+ * @category web
+ * @brief    Returns the current state of the `https` object.
+ * @remarks  This is used mainly for calling `https_process`.
+ * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response
  */
 CUTE_API CF_HttpsState CUTE_CALL cf_https_state(CF_Https* https);
 
 /**
- * Since this API uses non-blocking sockets `https_process` needs to be call periodically after `cf_https_get`
- * or `https_post` is called for as long as `https_state` returns `HTTPS_STATE_PENDING`. You can call
- * this function from within its own loop, put it on another thread within a loop, or call it once per
- * game tick -- whichever you prefer.
- *
- * Returns the bytes recieved so far.
+ * @function cf_https_process
+ * @category web
+ * @brief    Processes an HTTPS request.
+ * @return   Returns the bytes recieved so far.
+ * @remarks  Since this API uses non-blocking sockets `cf_https_process` needs to be call periodically after `cf_https_get`
+ *           or `cf_https_post` is called for as long as `cf_https_state` returns `CF_HTTPS_STATE_PENDING`. You can call
+ *           this function from within its own loop, put it on another thread within a loop, or call it once per
+ *           game tick -- whichever you prefer.
+ * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response cf_https_state
  */
 CUTE_API size_t CUTE_CALL cf_https_process(CF_Https* https);
 
+/**
+ * @struct   CF_HttpsString
+ * @category web
+ * @brief    A string within an `CF_HttpsResponse`.
+ * @related  CF_Https CF_HttpsString CF_HttpsHeader CF_HttpsHeader CF_HttpsResponse cf_https_response
+ */
 typedef struct CF_HttpsString
 {
+	/* @member The string contents, not nul-terminated. */
 	const char* ptr;
+
+	/* The number of characters in the string. */
 	size_t len;
 } CF_HttpsString;
+// @end
 
+/**
+ * @struct   CF_HttpsHeader
+ * @category web
+ * @brief    An HTTP header from a `CF_HttpsResponse`.
+ * @related  CF_Https CF_HttpsString CF_HttpsHeader CF_HttpsHeader CF_HttpsResponse cf_https_response cf_https_strcmp cf_https_response_find_header
+ */
 typedef struct CF_HttpsHeader
 {
+	/* @member Name of the header. */
 	CF_HttpsString name;
+
+	/* @member String contents of the header, not nul-terminated. */
 	CF_HttpsString content;
 } CF_HttpsHeader;
+// @end
 
+/**
+ * @enum     Transfer Encoding
+ * @category web
+ * @brief    Flags for `CF_HttpsResponse` transfer encoding settings.
+ * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process
+ */
 #define CF_TRANSFER_ENCODING_FLAG_DEFS \
-	CF_ENUM(TRANSFER_ENCODING_FLAG_NONE,                0x00) \
-	CF_ENUM(TRANSFER_ENCODING_FLAG_CHUNKED,             0x01) \
-	CF_ENUM(TRANSFER_ENCODING_FLAG_GZIP,                0x02) \
-	CF_ENUM(TRANSFER_ENCODING_FLAG_DEFLATE,             0x04) \
-	CF_ENUM(TRANSFER_ENCODING_FLAG_DEPRECATED_COMPRESS, 0x08) \
+	/* @entry No transfer encoding settings -- just raw bytes. */ \
+	CF_ENUM(TRANSFER_ENCODING_FLAG_NONE,                0x00)     \
+	/* @entry The content of the response is in chunked form. */  \
+	CF_ENUM(TRANSFER_ENCODING_FLAG_CHUNKED,             0x01)     \
+	/* @entry GZIP compression is used. */                        \
+	CF_ENUM(TRANSFER_ENCODING_FLAG_GZIP,                0x02)     \
+	/* @entry DEFLATE compression is used. */                     \
+	CF_ENUM(TRANSFER_ENCODING_FLAG_DEFLATE,             0x04)     \
+	/* @entry A deprecated compression method was used. */        \
+	CF_ENUM(TRANSFER_ENCODING_FLAG_DEPRECATED_COMPRESS, 0x08)     \
+	/* @end */
 
 enum
 {
@@ -168,39 +256,58 @@ enum
 };
 
 /**
- * Represents the response from a server after a successful process loop via `https_process`, where the
- * status returned from `https_state` is `HTTPS_STATE_COMPLETED`.
+ * @struct   CF_HttpsResponse
+ * @category web
+ * @brief    Represents the response from a server,
+ * @remarks  After a successful loop via `cf_https_process (see `CF_Https`) a response can be fetched by calling `cf_https_response`.
+ * @related  CF_Https CF_HttpsString CF_HttpsHeader CF_HttpsHeader CF_HttpsResponse cf_https_response
  */
 typedef struct CF_HttpsResponse
 {
+	/* @member The HTTP response code. */
 	int code;
+
+	/* @member Length of the HTTP response content. */
 	size_t content_len;
+
+	/* @member The HTTP response content. */
 	const char* content;
+
+	/* @member Array of headers from the response. See `CF_HttpsHeader`. */
 	const CF_HttpsHeader* headers;
+
+	/* @member Number of headers in `headers`. */
 	int headers_count;
 
-	/**
-	 * Flags from `TransferEncoding`. For example, if content is gzip'd, you can tell by using
-	 * something like so: `bool is_gzip = !!(response->transfer_encoding & CF_TRANSFER_ENCODING_GZIP);`
-	 *
-	 * Please note that if the encoding is `TRANSFER_ENCODING_CHUNKED` the `content` buffer will not
-	 * contain any chunked encoding -- all chunked data has been decoded already. For gzip/deflate
-	 * the `content` buffer will need to be decompressed by you.
+	/* @member Flags from `TransferEncoding`. For example, if content is gzip'd, you can tell by using
+	 *         something like so: `bool is_gzip = !!(response->transfer_encoding & CF_TRANSFER_ENCODING_GZIP);`.
+	 *         
+	 *         Please note that if the encoding is `CF_TRANSFER_ENCODING_CHUNKED` the `content` buffer will not
+	 *         contain any chunked encoding -- all chunked data has been decoded already. For gzip/deflate
+	 *         the `content` buffer will need to be decompressed by you.
 	 */
 	int transfer_encoding_flags;
-
 } CF_HttpsResponse;
+// @end
 
 /**
- * A response can be retrieved from the `https` object after `https_state` returns `HTTPS_STATE_COMPLETED`.
- * Calling this function otherwise will get you a NULL pointer returned. This will get cleaned up automatically
- * when `cf_https_destroy` is called.
+ * @function cf_https_response
+ * @category web
+ * @brief    Returns a `CF_HttpsResponse` from a request.
+ * @remarks  A response can be retrieved from the `https` object after `cf_https_state` returns `CF_HTTPS_STATE_COMPLETED`.
+ *           Calling this function otherwise will get you a NULL pointer returned. This will get cleaned up automatically
+ *           when `cf_https_destroy` is called.
+ * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response cf_https_state
  */
 CUTE_API CF_HttpsResponse CUTE_CALL cf_https_response(CF_Https* https);
 
-// -------------------------------------------------------------------------------------------------
-// Inline functions.
-
+/**
+ * @function cf_https_strcmp
+ * @category web
+ * @brief    Helper function to test a string for equality with a `CF_HttpsString`.
+ * @return   Returns true the string is equal. Case is ignored.
+ * @related  CF_Https CF_HttpsResponse cf_https_response CF_HttpsString CF_HttpsHeader cf_https_response_find_header
+ */
 CUTE_INLINE bool cf_https_strcmp(const char* lit, CF_HttpsString string)
 {
 	size_t len = CUTE_STRLEN(lit);
@@ -213,6 +320,13 @@ CUTE_INLINE bool cf_https_strcmp(const char* lit, CF_HttpsString string)
 	return false;
 }
 
+/**
+ * @function cf_https_response_find_header
+ * @category web
+ * @brief    Helper function find a specific header in a `CF_HttpsResponse`.
+ * @return   Returns true the header was found. The header will be written to `header_out`. Case is ignored.
+ * @related  CF_Https CF_HttpsResponse cf_https_response CF_HttpsString CF_HttpsHeader cf_https_response_find_header
+ */
 CUTE_INLINE bool cf_https_response_find_header(const CF_HttpsResponse* response, const char* header_name, CF_HttpsHeader* header_out)
 {
 	CUTE_MEMSET(header_out, 0, sizeof(CF_HttpsHeader));
