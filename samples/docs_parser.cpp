@@ -1,6 +1,8 @@
 #include <cute.h>
 using namespace Cute;
 
+#include <algorithm>
+
 // Parses all the Cute headers and generates documentation pages in .md format.
 
 #include "internal/cute_file_system_internal.h"
@@ -607,8 +609,12 @@ int main(int argc, const char** argv)
 		topic_path.add("docs/README.md");
 		FILE* fp = fopen(topic_path.c_str(), "wb");
 		fprintf(fp, "# Categories\n\n");
-		const char** categories = s->categories.keys();
+		Array<const char*> categories;
 		for (int i = 0; i < s->categories.count(); ++i) {
+			categories.add(s->categories.items()[i]);
+		}
+		std::sort(categories.data(), categories.data() + categories.count(), [](const char* a, const char* b) { return sicmp(a, b) < 0; });
+		for (int i = 0; i < categories.count(); ++i) {
 			const char* category = categories[i];
 			fprintf(fp, "- [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s/README.md)\n", category, category);
 		}
@@ -617,10 +623,15 @@ int main(int argc, const char** argv)
 
 	// Save each category index list.
 	{
-		const char** categories = s->categories.keys();
+		Array<const char*> categories;
 		for (int i = 0; i < s->categories.count(); ++i) {
+			categories.add(s->categories.items()[i]);
+		}
+		std::sort(categories.data(), categories.data() + categories.count(), [](const char* a, const char* b) { return sicmp(a, b) < 0; });
+		for (int i = 0; i < categories.count(); ++i) {
 			const char* category = categories[i];
 			Array<const char*> index_list = s->category_index_lists.find(category);
+			std::sort(index_list.data(), index_list.data() + index_list.count(), [](const char* a, const char* b) { return sicmp(a, b) < 0; });
 			Path topic_path = path;
 			topic_path.pop();
 			topic_path.add(String::fmt("docs/%s/README.md", category));
