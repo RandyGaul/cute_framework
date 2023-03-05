@@ -79,7 +79,7 @@ CUTE_INLINE void cf_write_bytes(uint8_t** p, const uint8_t* byte_array, int num_
 	}
 }
 
-CUTE_INLINE void cf_write_endpoint(uint8_t** p, CF_Endpoint endpoint)
+CUTE_INLINE void cf_write_address(uint8_t** p, CF_Address endpoint)
 {
 	cf_write_uint8(p, (uint8_t)endpoint.type);
 	if (endpoint.type == CF_ADDRESS_TYPE_IPV4) {
@@ -176,9 +176,9 @@ CUTE_INLINE void cf_read_bytes(uint8_t** p, uint8_t* byte_array, int num_bytes)
 	}
 }
 
-CUTE_INLINE CF_Endpoint cf_read_endpoint(uint8_t** p)
+CUTE_INLINE CF_Address cf_read_address(uint8_t** p)
 {
-	CF_Endpoint endpoint;
+	CF_Address endpoint;
 	endpoint.type = (CF_AddressType)cf_read_uint8(p);
 	if (endpoint.type == CF_ADDRESS_TYPE_IPV4) {
 		endpoint.u.ipv4[0] = cf_read_uint8(p);

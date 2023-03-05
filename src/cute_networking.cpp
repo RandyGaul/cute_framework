@@ -35,17 +35,17 @@ static CUTE_INLINE CF_Result cf_wrap(cn_result_t cn_result)
 CUTE_STATIC_ASSERT(CUTE_CONNECT_TOKEN_SIZE == CN_CONNECT_TOKEN_SIZE, "Must be equal.");
 CUTE_STATIC_ASSERT(CUTE_CONNECT_TOKEN_USER_DATA_SIZE == CN_CONNECT_TOKEN_USER_DATA_SIZE, "Must be equal.");
 
-int cf_endpoint_init(CF_Endpoint* endpoint, const char* address_and_port_string)
+int cf_adress_init(CF_Address* endpoint, const char* address_and_port_string)
 {
 	return cn_endpoint_init(endpoint, address_and_port_string);
 }
 
-void CF_Endpointo_string(CF_Endpoint endpoint, char* buffer, int buffer_size)
+void cf_adress_to_string(CF_Address endpoint, char* buffer, int buffer_size)
 {
 	cn_endpoint_to_string(endpoint, buffer, buffer_size);
 }
 
-int cf_endpoint_equals(CF_Endpoint a, CF_Endpoint b)
+int cf_adress_equals(CF_Address a, CF_Address b)
 {
 	return cn_endpoint_equals(a, b);
 }
@@ -145,11 +145,6 @@ CF_ClientState cf_client_state_get(const CF_Client* client)
 	return (CF_ClientState)cn_client_state_get(client);
 }
 
-const char* cf_client_state_string(CF_ClientState state)
-{
-	return cn_client_state_string((cn_client_state_t)state);
-}
-
 void cf_client_enable_network_simulator(CF_Client* client, double latency, double jitter, double drop_chance, double duplicate_chance)
 {
 	cn_client_enable_network_simulator(client, latency, jitter, drop_chance, duplicate_chance);
@@ -170,7 +165,7 @@ CF_Server* cf_make_server(CF_ServerConfig config)
 	cn_config.resend_rate = config.resend_rate;
 	cn_config.public_key = config.public_key;
 	cn_config.secret_key = config.secret_key;
-	cn_config.user_allocator_context = config.user_allocator_context;
+	cn_config.user_allocator_context = NULL;
 	return cn_server_create(cn_config);
 }
 
