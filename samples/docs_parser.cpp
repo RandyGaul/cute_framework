@@ -604,7 +604,7 @@ int main(int argc, const char** argv)
 	{
 		Path topic_path = path;
 		topic_path.pop();
-		topic_path.add("docs/topics.md");
+		topic_path.add("docs/README.md");
 		FILE* fp = fopen(topic_path.c_str(), "wb");
 		fprintf(fp, "# Categories\n\n");
 		const char** categories = s->categories.keys();
