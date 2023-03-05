@@ -44,7 +44,7 @@
 
     * [Path](/path/)
 
-    * [Pathfinding](/Pathfinding/)
+    * [Pathfinding](/pathfinding/)
 
     * [Random](/random/)
 
