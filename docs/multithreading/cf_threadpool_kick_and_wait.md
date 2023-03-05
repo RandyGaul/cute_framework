@@ -1,4 +1,4 @@
-# cf_threadpool_kick_and_wait | [multithreading](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading_readme.md) | [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)
+# cf_threadpool_kick_and_wait | [multithreading](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/README.md) | [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)
 
 Tells the internal threads to wake and start processing tasks, and blocks until all tasks are done.
 

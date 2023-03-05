@@ -1,4 +1,4 @@
-# cf_blend_op_string | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics_readme.md) | [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)
+# cf_blend_op_string | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/README.md) | [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)
 
 Returns a [CF_BlendOp](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_blendop.md) converted to a C string.
 

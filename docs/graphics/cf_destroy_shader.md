@@ -1,4 +1,4 @@
-# cf_destroy_shader | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics_readme.md) | [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)
+# cf_destroy_shader | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/README.md) | [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)
 
 Frees up a [CF_Shader](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_shader.md) created by [cf_make_shader](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_make_shader.md).
 

@@ -1,4 +1,4 @@
-# cf_query_backend | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics_readme.md) | [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)
+# cf_query_backend | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/README.md) | [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)
 
 Returns which [CF_BackendType](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_backendtype.md) is currently active.
 

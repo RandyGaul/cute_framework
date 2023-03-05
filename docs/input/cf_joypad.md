@@ -1,4 +1,4 @@
-# CF_Joypad | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input_readme.md) | [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)
+# CF_Joypad | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/README.md) | [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)
 
 An opaque pointer representing a joypad.
 

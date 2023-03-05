@@ -1,4 +1,4 @@
-# cf_arena_reset | [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator_readme.md) | [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_alloc.h)
+# cf_arena_reset | [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/README.md) | [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_alloc.h)
 
 Free's up all resources used by the allocator and places it back into an initialized state.
 

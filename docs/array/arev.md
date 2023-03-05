@@ -1,4 +1,4 @@
-# arev | [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/array_readme.md) | [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)
+# arev | [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/README.md) | [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)
 
 Reverses the elements in an array.
 

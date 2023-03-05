@@ -1,4 +1,4 @@
-# CF_HapticEffect | [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic_readme.md) | [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)
+# CF_HapticEffect | [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/README.md) | [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)
 
 An opaque handle representing a single instance of a [CF_HapticData](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_hapticdata.md) on a device.
 

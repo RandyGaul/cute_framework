@@ -1,4 +1,4 @@
-# CF_Stat | [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/file_readme.md) | [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)
+# CF_Stat | [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/README.md) | [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)
 
 A structure containing information about a file.
 

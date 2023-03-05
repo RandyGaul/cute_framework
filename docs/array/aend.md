@@ -1,4 +1,4 @@
-# aend | [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/array_readme.md) | [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)
+# aend | [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/README.md) | [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)
 
 Returns a pointer one element beyond the end of the array.
 

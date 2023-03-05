@@ -1,4 +1,4 @@
-# cf_camera_pop | [camera](https://github.com/RandyGaul/cute_framework/blob/master/docs/camera_readme.md) | [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)
+# cf_camera_pop | [camera](https://github.com/RandyGaul/cute_framework/blob/master/docs/camera/README.md) | [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)
 
 Pops the current camera state, and uses the previously pushed camera state.
 

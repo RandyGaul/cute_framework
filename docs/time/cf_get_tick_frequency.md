@@ -1,4 +1,4 @@
-# cf_get_tick_frequency | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time_readme.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
+# cf_get_tick_frequency | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/README.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
 
 Returns the machine-dependent number of ticks that occur in one second.
 

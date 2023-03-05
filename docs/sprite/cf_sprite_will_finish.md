@@ -1,4 +1,4 @@
-# cf_sprite_will_finish | [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite_readme.md) | [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)
+# cf_sprite_will_finish | [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/README.md) | [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)
 
 Returns true if the animation will loop around and finish if [cf_sprite_update](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_update.md) is called.
 

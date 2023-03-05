@@ -1,4 +1,4 @@
-# cf_a_star_grid_set_cost | [pathfinding](https://github.com/RandyGaul/cute_framework/blob/master/docs/pathfinding_readme.md) | [cute_a_star.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_a_star.h)
+# cf_a_star_grid_set_cost | [pathfinding](https://github.com/RandyGaul/cute_framework/blob/master/docs/pathfinding/README.md) | [cute_a_star.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_a_star.h)
 
 Set the cost of a grid cell.
 

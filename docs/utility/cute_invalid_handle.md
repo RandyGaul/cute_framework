@@ -1,4 +1,4 @@
-# CUTE_INVALID_HANDLE | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility_readme.md) | [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_handle_table.h)
+# CUTE_INVALID_HANDLE | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/README.md) | [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_handle_table.h)
 
 Defines an invalid handle.
 

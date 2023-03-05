@@ -1,4 +1,4 @@
-# CF_Result | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility_readme.md) | [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_result.h)
+# CF_Result | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/README.md) | [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_result.h)
 
 Information about the result of a function, containing any potential error details.
 

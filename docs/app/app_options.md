@@ -1,4 +1,4 @@
-# App Options | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app_readme.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
+# App Options | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/README.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
 
 Various options to control how the application starts up, such as fullscreen, or selecting a graphics backend.
 

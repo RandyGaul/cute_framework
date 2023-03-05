@@ -1,4 +1,4 @@
-# CF_Https | [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/web_readme.md) | [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)
+# CF_Https | [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/README.md) | [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)
 
 Represents a single HTTPS request for clients to talk with web servers.
 

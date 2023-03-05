@@ -1,4 +1,4 @@
-# CF_PlayDirection | [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite_readme.md) | [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)
+# CF_PlayDirection | [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/README.md) | [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)
 
 The direction a sprite plays frames.
 

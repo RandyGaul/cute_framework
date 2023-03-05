@@ -1,4 +1,4 @@
-# CF_Frame | [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite_readme.md) | [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)
+# CF_Frame | [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/README.md) | [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)
 
 Represents one frame of animation within a sprite.
 

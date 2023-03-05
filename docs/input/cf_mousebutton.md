@@ -1,4 +1,4 @@
-# CF_MouseButton | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input_readme.md) | [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)
+# CF_MouseButton | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/README.md) | [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)
 
 The mouse buttons.
 

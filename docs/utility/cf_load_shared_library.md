@@ -1,4 +1,4 @@
-# cf_load_shared_library | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility_readme.md) | [cute_symbol.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_symbol.h)
+# cf_load_shared_library | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/README.md) | [cute_symbol.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_symbol.h)
 
 Loads a shared library from disk and returns a pointer to the library.
 

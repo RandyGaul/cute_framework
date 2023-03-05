@@ -1,4 +1,4 @@
-# CF_PowerInfo | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app_readme.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
+# CF_PowerInfo | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/README.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
 
 Detailed information about the power level/status of the application.
 

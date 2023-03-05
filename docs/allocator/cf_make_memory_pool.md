@@ -1,4 +1,4 @@
-# cf_make_memory_pool | [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator_readme.md) | [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_alloc.h)
+# cf_make_memory_pool | [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/README.md) | [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_alloc.h)
 
 Creates a memory pool.
 

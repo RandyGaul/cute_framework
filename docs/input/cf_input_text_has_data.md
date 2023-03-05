@@ -1,4 +1,4 @@
-# cf_input_text_has_data | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input_readme.md) | [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)
+# cf_input_text_has_data | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/README.md) | [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)
 
 Returns true if the input buffer of the application has any text within.
 

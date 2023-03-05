@@ -1,4 +1,4 @@
-# spdir_of | [path](https://github.com/RandyGaul/cute_framework/blob/master/docs/path_readme.md) | [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)
+# spdir_of | [path](https://github.com/RandyGaul/cute_framework/blob/master/docs/path/README.md) | [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)
 
 Returns the directory of a given file or directory. Returns a new string.
 

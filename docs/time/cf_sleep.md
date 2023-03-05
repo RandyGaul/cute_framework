@@ -1,4 +1,4 @@
-# cf_sleep | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time_readme.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
+# cf_sleep | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/README.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
 
 Waits an estimated number of milliseconds before returning.
 

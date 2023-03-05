@@ -1,4 +1,4 @@
-# cf_app_is_running | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app_readme.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
+# cf_app_is_running | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/README.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
 
 Returns true while the app should keep running. Call this as your main loop condition.
 

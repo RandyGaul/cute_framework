@@ -1,4 +1,4 @@
-# cf_input_has_ime_keyboard_support | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input_readme.md) | [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)
+# cf_input_has_ime_keyboard_support | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/README.md) | [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)
 
 Returns true if the IME (Input Method Editor) for the operating system has keyboard support.
 

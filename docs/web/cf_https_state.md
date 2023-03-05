@@ -1,4 +1,4 @@
-# cf_https_state | [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/web_readme.md) | [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)
+# cf_https_state | [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/README.md) | [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)
 
 Returns the current state of the `https` object.
 

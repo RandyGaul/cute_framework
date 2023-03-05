@@ -1,4 +1,4 @@
-# cf_sprite_is_playing | [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite_readme.md) | [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)
+# cf_sprite_is_playing | [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/README.md) | [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)
 
 Returns true if `animation` the is currently playing animation.
 

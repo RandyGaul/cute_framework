@@ -1,4 +1,4 @@
-# CF_JoypadPowerLevel | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input_readme.md) | [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)
+# CF_JoypadPowerLevel | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/README.md) | [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)
 
 The states of power for a [CF_Joypad](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad.md).
 

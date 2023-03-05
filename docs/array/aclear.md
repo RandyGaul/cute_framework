@@ -1,4 +1,4 @@
-# aclear | [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/array_readme.md) | [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)
+# aclear | [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/README.md) | [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)
 
 Sets the array's count to zero. Does not free any resources.
 

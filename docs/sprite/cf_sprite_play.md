@@ -1,4 +1,4 @@
-# cf_sprite_play | [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite_readme.md) | [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)
+# cf_sprite_play | [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/README.md) | [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)
 
 Switches to a new aninmation and starts playing it from the beginning.
 

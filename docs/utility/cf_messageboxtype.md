@@ -1,4 +1,4 @@
-# CF_MessageBoxType | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility_readme.md) | [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_result.h)
+# CF_MessageBoxType | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/README.md) | [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_result.h)
 
 Types of supported message boxes.
 

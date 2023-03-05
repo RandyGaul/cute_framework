@@ -1,4 +1,4 @@
-# cf_aabb_tree_insert | [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision_readme.md) | [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)
+# cf_aabb_tree_insert | [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/README.md) | [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)
 
 Adds a new [CF_Leaf](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_leaf.md) to the tree.
 

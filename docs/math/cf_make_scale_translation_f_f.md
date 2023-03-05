@@ -1,4 +1,4 @@
-# cf_make_scale_translation_f_f | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math_readme.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# cf_make_scale_translation_f_f | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
 
 Returns a [CF_M3x2](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_m3x2.md) that represents a scale + translation.
 

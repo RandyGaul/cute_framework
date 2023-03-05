@@ -1,4 +1,4 @@
-# cf_make_coroutine | [coroutine](https://github.com/RandyGaul/cute_framework/blob/master/docs/coroutine_readme.md) | [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_coroutine.h)
+# cf_make_coroutine | [coroutine](https://github.com/RandyGaul/cute_framework/blob/master/docs/coroutine/README.md) | [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_coroutine.h)
 
 Sets up the entry point for a coroutine to start.
 

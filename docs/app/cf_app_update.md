@@ -1,4 +1,4 @@
-# cf_app_update | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app_readme.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
+# cf_app_update | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/README.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
 
 Updates the application. Must be called once per frame.
 

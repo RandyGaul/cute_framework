@@ -1,4 +1,4 @@
-# hitems | [hash](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash_readme.md) | [cute_hashtable.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_hashtable.h)
+# hitems | [hash](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/README.md) | [cute_hashtable.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_hashtable.h)
 
 Get a pointer to the array of items.
 

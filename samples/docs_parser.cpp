@@ -150,7 +150,7 @@ void Doc::emit_title(FILE* fp)
 {
 	fprintf(fp, "# %s |", title.c_str());
 	String link = linkify(web_category, web_category, false);
-	fprintf(fp, " [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s_readme.md)", web_category.c_str(), link.c_str());
+	fprintf(fp, " [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s/README.md)", web_category.c_str(), link.c_str());
 	fprintf(fp, " | [%s](https://github.com/RandyGaul/cute_framework/blob/master/include/%s)\n\n", file.c_str(), file.c_str());
 }
 

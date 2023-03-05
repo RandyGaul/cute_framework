@@ -1,4 +1,4 @@
-# astatic | [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/array_readme.md) | [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)
+# astatic | [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/README.md) | [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)
 
 Creates an array with an initial static storage backing. Will grow onto the heap if the size becomes too large.
 

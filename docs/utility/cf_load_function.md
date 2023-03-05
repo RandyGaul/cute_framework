@@ -1,4 +1,4 @@
-# cf_load_function | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility_readme.md) | [cute_symbol.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_symbol.h)
+# cf_load_function | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/README.md) | [cute_symbol.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_symbol.h)
 
 Loads a function out of a shared library.
 

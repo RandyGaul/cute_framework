@@ -1,4 +1,4 @@
-# CF_ToiResult | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math_readme.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# CF_ToiResult | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
 
 Stores results of a time of impact calculation done by [cf_toi](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_toi.md).
 

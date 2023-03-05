@@ -1,4 +1,4 @@
-# cf_destroy_server | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net_readme.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
+# cf_destroy_server | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/README.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
 
 Destroys a [CF_Server](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_server.md) created by [cf_make_server](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_make_server.md).
 

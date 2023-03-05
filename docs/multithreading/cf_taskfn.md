@@ -1,4 +1,4 @@
-# CF_TaskFn | [multithreading](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading_readme.md) | [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)
+# CF_TaskFn | [multithreading](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/README.md) | [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)
 
 A function pointer for a task in [CF_Threadpool](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_threadpool.md).
 

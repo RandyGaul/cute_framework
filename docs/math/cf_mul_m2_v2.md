@@ -1,4 +1,4 @@
-# cf_mul_m2_v2 | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math_readme.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# cf_mul_m2_v2 | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
 
 Multiplies a vector by a [CF_M2x2](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_m2x2.md).
 

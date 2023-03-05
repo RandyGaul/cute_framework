@@ -1,4 +1,4 @@
-# cf_sincos_f | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math_readme.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# cf_sincos_f | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
 
 Returns an initialized [CF_SinCos](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_sincos.md) from `radians`.
 

@@ -1,4 +1,4 @@
-# CF_OnUpdateFn | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time_readme.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
+# CF_OnUpdateFn | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/README.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
 
 An optional function pointer (callback), called whenever an update should occur, after calling [cf_update_time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/cf_update_time.md).
 

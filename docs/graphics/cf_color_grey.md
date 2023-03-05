@@ -1,4 +1,4 @@
-# cf_color_grey | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics_readme.md) | [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)
+# cf_color_grey | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/README.md) | [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)
 
 Helper function to return a grey [CF_Color](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color.md).
 

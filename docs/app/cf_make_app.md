@@ -1,4 +1,4 @@
-# cf_make_app | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app_readme.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
+# cf_make_app | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/README.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
 
 Use this function to construct an instance of your application window and (optionally) initialize graphics.
 

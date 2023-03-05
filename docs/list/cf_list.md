@@ -1,4 +1,4 @@
-# CF_List | [list](https://github.com/RandyGaul/cute_framework/blob/master/docs/list_readme.md) | [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_doubly_list.h)
+# CF_List | [list](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/README.md) | [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_doubly_list.h)
 
 A circular doubly-linked list.
 

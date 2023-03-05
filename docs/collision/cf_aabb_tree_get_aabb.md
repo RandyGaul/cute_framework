@@ -1,4 +1,4 @@
-# cf_aabb_tree_get_aabb | [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision_readme.md) | [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)
+# cf_aabb_tree_get_aabb | [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/README.md) | [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)
 
 Fetches the internally expanded AABB for a given leaf.
 

@@ -1,4 +1,4 @@
-# CF_GjkCache | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math_readme.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# CF_GjkCache | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
 
 This struct is only for advanced usage of the [cf_gjk](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_gjk.md) function. See comments inside of the [cf_gjk](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_gjk.md) function for more details.
 

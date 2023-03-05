@@ -1,4 +1,4 @@
-# cf_client_free_packet | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net_readme.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
+# cf_client_free_packet | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/README.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
 
 Free's a packet created by [cf_client_pop_packet](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client_pop_packet.md).
 

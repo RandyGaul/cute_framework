@@ -1,4 +1,4 @@
-# cf_make_aabb_tree_from_memory | [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision_readme.md) | [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)
+# cf_make_aabb_tree_from_memory | [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/README.md) | [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)
 
 Creates a [CF_AabbTree](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabbtree.md) from a buffer of memory. This is an advanced function, you're probably look for [cf_make_aabb_tree](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_make_aabb_tree.md) instead.
 

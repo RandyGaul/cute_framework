@@ -1,4 +1,4 @@
-# cf_joypad_add_mapping | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input_readme.md) | [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)
+# cf_joypad_add_mapping | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/README.md) | [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)
 
 Adds an SDL2 mapping to the joypad system.
 

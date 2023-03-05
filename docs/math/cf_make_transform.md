@@ -1,4 +1,4 @@
-# cf_make_transform | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math_readme.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# cf_make_transform | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
 
 Returns an identity [CF_Transform](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_transform.md).
 

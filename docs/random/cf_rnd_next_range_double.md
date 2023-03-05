@@ -1,4 +1,4 @@
-# cf_rnd_next_range_double | [random](https://github.com/RandyGaul/cute_framework/blob/master/docs/random_readme.md) | [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_rnd.h)
+# cf_rnd_next_range_double | [random](https://github.com/RandyGaul/cute_framework/blob/master/docs/random/README.md) | [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_rnd.h)
 
 Returns a random `double` from the range `min` to `max` (inclusive).
 

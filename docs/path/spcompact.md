@@ -1,4 +1,4 @@
-# spcompact | [path](https://github.com/RandyGaul/cute_framework/blob/master/docs/path_readme.md) | [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)
+# spcompact | [path](https://github.com/RandyGaul/cute_framework/blob/master/docs/path/README.md) | [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)
 
 Squishes the path to be less than or equal to n characters in length.
 

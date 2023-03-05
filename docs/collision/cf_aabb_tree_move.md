@@ -1,4 +1,4 @@
-# cf_aabb_tree_move | [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision_readme.md) | [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)
+# cf_aabb_tree_move | [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/README.md) | [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)
 
 An optimized version of [cf_aabb_tree_update_leaf](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabb_tree_update_leaf.md). Update's a [CF_Leaf](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_leaf.md)'s AABB (axis-aligned bounding box) based on `offset` movement.
 

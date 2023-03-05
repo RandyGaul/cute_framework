@@ -1,4 +1,4 @@
-# cf_list_pop_front | [list](https://github.com/RandyGaul/cute_framework/blob/master/docs/list_readme.md) | [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_doubly_list.h)
+# cf_list_pop_front | [list](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/README.md) | [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_doubly_list.h)
 
 Pops a node off the front of a list.
 

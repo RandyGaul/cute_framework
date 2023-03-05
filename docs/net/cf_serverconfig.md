@@ -1,4 +1,4 @@
-# CF_ServerConfig | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net_readme.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
+# CF_ServerConfig | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/README.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
 
 Parameters for calling [cf_make_server](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_make_server.md).
 

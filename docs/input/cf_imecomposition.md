@@ -1,4 +1,4 @@
-# CF_ImeComposition | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input_readme.md) | [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)
+# CF_ImeComposition | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/README.md) | [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)
 
 Represents the IME (Input Method Editor) composition from the operating system, for gathering complex text inputs.
 

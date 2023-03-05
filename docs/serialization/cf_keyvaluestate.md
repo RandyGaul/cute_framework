@@ -1,4 +1,4 @@
-# CF_KeyValueState | [serialization](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization_readme.md) | [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_kv.h)
+# CF_KeyValueState | [serialization](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/README.md) | [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_kv.h)
 
 Various types of supported haptic effects.
 

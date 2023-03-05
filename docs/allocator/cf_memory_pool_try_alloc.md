@@ -1,4 +1,4 @@
-# cf_memory_pool_try_alloc | [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator_readme.md) | [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_alloc.h)
+# cf_memory_pool_try_alloc | [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/README.md) | [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_alloc.h)
 
 Allocates a chunk of memory from the pool. The allocation size was determined by `element_size` in [cf_make_memory_pool](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/cf_make_memory_pool.md).
 

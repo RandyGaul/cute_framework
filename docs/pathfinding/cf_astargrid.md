@@ -1,4 +1,4 @@
-# CF_AStarGrid | [pathfinding](https://github.com/RandyGaul/cute_framework/blob/master/docs/pathfinding_readme.md) | [cute_a_star.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_a_star.h)
+# CF_AStarGrid | [pathfinding](https://github.com/RandyGaul/cute_framework/blob/master/docs/pathfinding/README.md) | [cute_a_star.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_a_star.h)
 
 An opaque handle representing a grid for calculating shortest paths. See [cf_make_a_star_grid](https://github.com/RandyGaul/cute_framework/blob/master/docs/pathfinding/cf_make_a_star_grid.md) for more details.
 

@@ -1,4 +1,4 @@
-# cf_message_box | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility_readme.md) | [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_result.h)
+# cf_message_box | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/README.md) | [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_result.h)
 
 Displays a message in a new window.
 

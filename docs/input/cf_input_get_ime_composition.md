@@ -1,4 +1,4 @@
-# cf_input_get_ime_composition | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input_readme.md) | [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)
+# cf_input_get_ime_composition | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/README.md) | [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)
 
 Returns the current IME (Input Method Editor) composition. See [CF_ImeComposition](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_imecomposition.md).
 

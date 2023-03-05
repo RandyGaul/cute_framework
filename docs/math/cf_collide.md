@@ -1,4 +1,4 @@
-# cf_collide | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math_readme.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# cf_collide | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
 
 Computes a [CF_Manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_manifold.md) between two shapes.
 

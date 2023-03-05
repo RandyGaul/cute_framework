@@ -1,4 +1,4 @@
-# cf_intersect | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math_readme.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# cf_intersect | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
 
 Given the distances of two points `a` and `b` to a plane (`da` and `db` respectively), compute the insterection
 value used to lerp from `a` to `b` to find the intersection point.

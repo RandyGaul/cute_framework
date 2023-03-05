@@ -1,4 +1,4 @@
-# cf_kv_last_error | [serialization](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization_readme.md) | [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_kv.h)
+# cf_kv_last_error | [serialization](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/README.md) | [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_kv.h)
 
 Returns the error state of the kv instance.
 

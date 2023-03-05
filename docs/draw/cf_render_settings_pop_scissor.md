@@ -1,4 +1,4 @@
-# cf_render_settings_pop_scissor | [draw](https://github.com/RandyGaul/cute_framework/blob/master/docs/draw_readme.md) | [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)
+# cf_render_settings_pop_scissor | [draw](https://github.com/RandyGaul/cute_framework/blob/master/docs/draw/README.md) | [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)
 
 Pops and returns the last [CF_Rect](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_rect.md) for the scissor box.
 

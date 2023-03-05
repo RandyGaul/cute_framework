@@ -1,4 +1,4 @@
-# cf_app_signal_shutdown | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app_readme.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
+# cf_app_signal_shutdown | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/README.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
 
 Call this to end your main-loop; makes [cf_app_is_running](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_is_running.md) return false.
 

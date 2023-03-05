@@ -1,4 +1,4 @@
-# CF_PAUSE_TIME_LEFT | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time_readme.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
+# CF_PAUSE_TIME_LEFT | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/README.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
 
 The number of seconds left for the global pause control.
 

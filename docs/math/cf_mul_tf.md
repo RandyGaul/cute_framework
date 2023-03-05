@@ -1,4 +1,4 @@
-# cf_mul_tf | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math_readme.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# cf_mul_tf | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
 
 Returns a the composition of multiplying two [CF_Transform](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_transform.md)s.
 

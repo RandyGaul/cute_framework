@@ -1,4 +1,4 @@
-# cf_thread_detach | [multithreading](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading_readme.md) | [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)
+# cf_thread_detach | [multithreading](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/README.md) | [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)
 
 Makes a special note your thread will never have [cf_thread_wait](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_thread_wait.md) called on it. Useful as a minor optimization
 for long-lived threads.

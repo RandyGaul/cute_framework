@@ -1,4 +1,4 @@
-# cf_set_fixed_timestep_max_updates | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time_readme.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
+# cf_set_fixed_timestep_max_updates | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/README.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
 
 Sets the frequency for fixed timestep updates to occur.
 

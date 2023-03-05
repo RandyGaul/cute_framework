@@ -1,4 +1,4 @@
-# cf_is_error | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility_readme.md) | [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_result.h)
+# cf_is_error | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/README.md) | [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_result.h)
 
 Returns true if a [CF_Result](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_result.md) contains an error.
 

@@ -1,4 +1,4 @@
-# cf_thread_create | [multithreading](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading_readme.md) | [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)
+# cf_thread_create | [multithreading](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/README.md) | [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)
 
 Creates a new thread and runs it's thread function ([CF_ThreadFn](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_threadfn.md)).
 

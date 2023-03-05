@@ -1,4 +1,4 @@
-# cf_destroy_aabb_tree | [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision_readme.md) | [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)
+# cf_destroy_aabb_tree | [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/README.md) | [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)
 
 Destroys an AABB tree previously created by [cf_make_aabb_tree](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_make_aabb_tree.md) or [cf_make_aabb_tree_from_memory](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_make_aabb_tree_from_memory.md).
 

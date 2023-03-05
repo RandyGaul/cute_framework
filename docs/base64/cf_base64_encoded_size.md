@@ -1,4 +1,4 @@
-# CF_BASE64_ENCODED_SIZE | [base64](https://github.com/RandyGaul/cute_framework/blob/master/docs/base64_readme.md) | [cute_base64.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_base64.h)
+# CF_BASE64_ENCODED_SIZE | [base64](https://github.com/RandyGaul/cute_framework/blob/master/docs/base64/README.md) | [cute_base64.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_base64.h)
 
 Calculates the size of data after base64 encoding it.
 

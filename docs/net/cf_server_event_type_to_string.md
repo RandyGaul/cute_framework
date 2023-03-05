@@ -1,4 +1,4 @@
-# cf_server_event_type_to_string | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net_readme.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
+# cf_server_event_type_to_string | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/README.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
 
 Convert an enum [CF_ServerEventType](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_servereventtype.md) to a c-style string.
 

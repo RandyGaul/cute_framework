@@ -1,4 +1,4 @@
-# cf_make_aabb_tree | [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision_readme.md) | [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)
+# cf_make_aabb_tree | [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/README.md) | [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)
 
 Creates a [CF_AabbTree](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabbtree.md). This kind of tree is used for optimizing collision detection using AABBs (axis-aligned bounding boxes).
 

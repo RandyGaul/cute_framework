@@ -1,4 +1,4 @@
-# cf_sub_un8 | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics_readme.md) | [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)
+# cf_sub_un8 | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/README.md) | [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)
 
 Returns the 8-bit unsigned subtraction of two input 8-bit numbers, intended for implementing 8-bit color blend operations.
 

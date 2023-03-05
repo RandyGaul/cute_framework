@@ -1,4 +1,4 @@
-# cf_https_state_type_to_string | [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/web_readme.md) | [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)
+# cf_https_state_type_to_string | [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/README.md) | [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)
 
 Convert an enum [CF_HttpsState](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_httpsstate.md) to a c-style string.
 

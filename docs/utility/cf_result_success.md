@@ -1,4 +1,4 @@
-# cf_result_success | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility_readme.md) | [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_result.h)
+# cf_result_success | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/README.md) | [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_result.h)
 
 Returns a [CF_Result](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_result.md) as a success, containing no error information.
 

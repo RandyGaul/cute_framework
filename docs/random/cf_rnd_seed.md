@@ -1,4 +1,4 @@
-# cf_rnd_seed | [random](https://github.com/RandyGaul/cute_framework/blob/master/docs/random_readme.md) | [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_rnd.h)
+# cf_rnd_seed | [random](https://github.com/RandyGaul/cute_framework/blob/master/docs/random/README.md) | [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_rnd.h)
 
 Returns an initialized [CF_Rnd](https://github.com/RandyGaul/cute_framework/blob/master/docs/random/cf_rnd.md) based on an initial `seed` value.
 

@@ -1,4 +1,4 @@
-# cf_key_value_state_to_string | [serialization](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization_readme.md) | [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_kv.h)
+# cf_key_value_state_to_string | [serialization](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/README.md) | [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_kv.h)
 
 Converts a [CF_KeyValueState](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_keyvaluestate.md) to a C string.
 
