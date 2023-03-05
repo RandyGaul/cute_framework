@@ -44,5 +44,5 @@
 - [cf_render_settings_pop_render_state](https://github.com/RandyGaul/cute_framework/blob/master/docs/draw/cf_render_settings_pop_render_state.md)
 - [cf_render_settings_peek_render_state](https://github.com/RandyGaul/cute_framework/blob/master/docs/draw/cf_render_settings_peek_render_state.md)
 - [cf_render_to](https://github.com/RandyGaul/cute_framework/blob/master/docs/draw/cf_render_to.md)
-- [cf_temporaryimage](https://github.com/RandyGaul/cute_framework/blob/master/docs/draw/cf_temporaryimage.md)
+- [CF_TemporaryImage](https://github.com/RandyGaul/cute_framework/blob/master/docs/draw/cf_temporaryimage.md)
 - [cf_fetch_image](https://github.com/RandyGaul/cute_framework/blob/master/docs/draw/cf_fetch_image.md)

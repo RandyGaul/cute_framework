@@ -628,8 +628,9 @@ int main(int argc, const char** argv)
 			fprintf(fp, "# Pages\n\n");
 			for (int i = 0; i < index_list.count(); ++i) {
 				String page = index_list[i];
-				page.to_lower();
-				fprintf(fp, "- [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s/%s.md)\n", page.c_str(), category, page.c_str());
+				String page_lower = page;
+				page_lower.to_lower();
+				fprintf(fp, "- [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s/%s.md)\n", page.c_str(), category, page_lower.c_str());
 			}
 			fclose(fp);
 		}

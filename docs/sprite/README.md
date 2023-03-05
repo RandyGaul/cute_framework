@@ -1,10 +1,10 @@
 # Pages
 
-- [cf_frame](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_frame.md)
-- [cf_playdirection](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_playdirection.md)
+- [CF_Frame](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_frame.md)
+- [CF_PlayDirection](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_playdirection.md)
 - [cf_play_direction_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_play_direction_to_string.md)
-- [cf_animation](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_animation.md)
-- [cf_sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite.md)
+- [CF_Animation](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_animation.md)
+- [CF_Sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite.md)
 - [cf_sprite_defaults](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_defaults.md)
 - [cf_make_easy_sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_make_easy_sprite.md)
 - [cf_make_sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_make_sprite.md)

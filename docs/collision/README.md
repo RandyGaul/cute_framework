@@ -1,8 +1,8 @@
 # Pages
 
-- [cf_aabbtree](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabbtree.md)
-- [cf_leaf](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_leaf.md)
-- [cf_aabbtreequeryfn](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabbtreequeryfn.md)
+- [CF_AabbTree](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabbtree.md)
+- [CF_Leaf](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_leaf.md)
+- [CF_AabbTreeQueryFn](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabbtreequeryfn.md)
 - [cf_make_aabb_tree](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_make_aabb_tree.md)
 - [cf_make_aabb_tree_from_memory](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_make_aabb_tree_from_memory.md)
 - [cf_destroy_aabb_tree](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_destroy_aabb_tree.md)

@@ -1,6 +1,6 @@
 # Pages
 
-- [cf_audio](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_audio.md)
+- [CF_Audio](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_audio.md)
 - [cf_audio_load_ogg](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_audio_load_ogg.md)
 - [cf_audio_load_wav](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_audio_load_wav.md)
 - [cf_audio_load_ogg_from_memory](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_audio_load_ogg_from_memory.md)
@@ -20,8 +20,8 @@
 - [cf_music_crossfade](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_music_crossfade.md)
 - [cf_music_get_sample_index](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_music_get_sample_index.md)
 - [cf_music_set_sample_index](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_music_set_sample_index.md)
-- [cf_soundparams](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_soundparams.md)
-- [cf_sound](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_sound.md)
+- [CF_SoundParams](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_soundparams.md)
+- [CF_Sound](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_sound.md)
 - [cf_sound_params_defaults](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_sound_params_defaults.md)
 - [cf_play_sound](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_play_sound.md)
 - [cf_sound_is_active](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_sound_is_active.md)
