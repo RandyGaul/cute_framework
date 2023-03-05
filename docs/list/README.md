@@ -1,9 +1,9 @@
 # Pages
 
-- [CF_ListNode](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/CF_ListNode.md)
-- [CF_List](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/CF_List.md)
-- [CUTE_LIST_NODE](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/CUTE_LIST_NODE.md)
-- [CUTE_LIST_HOST](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/CUTE_LIST_HOST.md)
+- [cf_listnode](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/cf_listnode.md)
+- [cf_list](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/cf_list.md)
+- [cute_list_node](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/cute_list_node.md)
+- [cute_list_host](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/cute_list_host.md)
 - [cf_list_init_node](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/cf_list_init_node.md)
 - [cf_list_init](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/cf_list_init.md)
 - [cf_list_push_front](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/cf_list_push_front.md)

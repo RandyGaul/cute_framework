@@ -1,7 +1,7 @@
 # Pages
 
-- [CF_KeyValue](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/CF_KeyValue.md)
-- [CF_KeyValueState](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/CF_KeyValueState.md)
+- [cf_keyvalue](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_keyvalue.md)
+- [cf_keyvaluestate](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_keyvaluestate.md)
 - [cf_key_value_state_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_key_value_state_to_string.md)
 - [cf_kv_read](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_read.md)
 - [cf_kv_write](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_write.md)
@@ -12,7 +12,7 @@
 - [cf_read_reset](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_read_reset.md)
 - [cf_kv_set_base](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_set_base.md)
 - [cf_kv_last_error](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_last_error.md)
-- [CF_KeyValueType](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/CF_KeyValueType.md)
+- [cf_keyvaluetype](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_keyvaluetype.md)
 - [cf_key_value_type_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_key_value_type_to_string.md)
 - [cf_kv_key](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_key.md)
 - [cf_kv_val_uint8](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_val_uint8.md)

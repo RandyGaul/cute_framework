@@ -1,6 +1,6 @@
 # Pages
 
-- [CF_Rnd](https://github.com/RandyGaul/cute_framework/blob/master/docs/random/CF_Rnd.md)
+- [cf_rnd](https://github.com/RandyGaul/cute_framework/blob/master/docs/random/cf_rnd.md)
 - [cf_rnd_seed](https://github.com/RandyGaul/cute_framework/blob/master/docs/random/cf_rnd_seed.md)
 - [cf_rnd_next](https://github.com/RandyGaul/cute_framework/blob/master/docs/random/cf_rnd_next.md)
 - [cf_rnd_next_float](https://github.com/RandyGaul/cute_framework/blob/master/docs/random/cf_rnd_next_float.md)

@@ -1,7 +1,7 @@
 # Pages
 
 - [cf_aligned_alloc](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/cf_aligned_alloc.md)
-- [CF_Arena](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/CF_Arena.md)
+- [cf_arena](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/cf_arena.md)
 - [cf_arena_init](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/cf_arena_init.md)
 - [cf_arena_alloc](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/cf_arena_alloc.md)
 - [cf_arena_reset](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/cf_arena_reset.md)

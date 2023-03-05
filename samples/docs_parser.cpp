@@ -627,8 +627,9 @@ int main(int argc, const char** argv)
 			FILE* fp = fopen(topic_path.c_str(), "wb");
 			fprintf(fp, "# Pages\n\n");
 			for (int i = 0; i < index_list.count(); ++i) {
-				const char* page = index_list[i];
-				fprintf(fp, "- [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s/%s.md)\n", page, category, page);
+				String page = index_list[i];
+				page.to_lower();
+				fprintf(fp, "- [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s/%s.md)\n", page.c_str(), category, page.c_str());
 			}
 			fclose(fp);
 		}

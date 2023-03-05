@@ -1,6 +1,6 @@
 # Pages
 
-- [App Options](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/App Options.md)
+- [app options](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/app options.md)
 - [cf_make_app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_make_app.md)
 - [cf_destroy_app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_destroy_app.md)
 - [cf_app_is_running](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_is_running.md)
@@ -30,7 +30,7 @@
 - [cf_app_set_canvas_size](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_set_canvas_size.md)
 - [cf_app_get_canvas_width](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_get_canvas_width.md)
 - [cf_app_get_canvas_height](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_get_canvas_height.md)
-- [CF_PowerState](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/CF_PowerState.md)
+- [cf_powerstate](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_powerstate.md)
 - [cf_power_state_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_power_state_to_string.md)
-- [CF_PowerInfo](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/CF_PowerInfo.md)
+- [cf_powerinfo](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_powerinfo.md)
 - [cf_app_power_info](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_power_info.md)
