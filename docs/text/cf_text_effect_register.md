@@ -42,28 +42,28 @@ The `name` of the text effect will be used within the string text codes. For exa
 example, the text code <shake> will be used.
 ```
 + color
-.... example : "Here's some <color=#2c5ee8>blue text</color>."
-............ : default (white) - The color to render text with.
+     example : "Here's some <color=#2c5ee8>blue text</color>."
+             : default (white) - The color to render text with.
 + shake
-.... example : "<shake freq=30 x=3 y=3>This text is all shaky.</shake>"
-.... example : "<shake y=20>Shake this text with default values, but override for a big height.</shake>"
-.... freq .. : default (35) .. - Number of times per second to shake.
-.... x ..... : default (2) ... - Max +/- distance to shake on x-axis.
-.... y ..... : default (2) ... - Max +/- distance to shake on y-axis.
+     example : "<shake freq=30 x=3 y=3>This text is all shaky.</shake>"
+     example : "<shake y=20>Shake this text with default values, but override for a big height.</shake>"
+     freq    : default (35)    - Number of times per second to shake.
+     x       : default (2)     - Max +/- distance to shake on x-axis.
+     y       : default (2)     - Max +/- distance to shake on y-axis.
 + fade
-.... example : "<fade speed=10 span=3>Fading some text like a ghost~</fade>"
-.... example : "<fade>Fading some text like a ghost~</fade>"
-.... speed . : default (2) ... - Number of times per second to find in and then out.
-.... span .. : default (5) ... - Number of characters long for the fade to loop.
+     example : "<fade speed=10 span=3>Fading some text like a ghost~</fade>"
+     example : "<fade>Fading some text like a ghost~</fade>"
+     speed   : default (2)     - Number of times per second to find in and then out.
+     span    : default (5)     - Number of characters long for the fade to loop.
 + wave
-.... example : "<wave>Wobbly wave text.</wave>"
-.... speed . : default (5) ... - Number of times per second to bob up and down.
-.... span .. : default (10) .. - Number of characters long for the wave to loop.
-.... height. : default (5) ... - How many characters high the wave will go.
+     example : "<wave>Wobbly wave text.</wave>"
+     speed   : default (5)     - Number of times per second to bob up and down.
+     span    : default (10)    - Number of characters long for the wave to loop.
+     height. : default (5)     - How many characters high the wave will go.
 + strike
-.... example : "<strike>Strikethrough</strike>"
-.... example : "<strike=10>Thick Strikethrough</strike>"
-............ : default (font_height / 20) - The thickness of the strike line.
+     example : "<strike>Strikethrough</strike>"
+     example : "<strike=10>Thick Strikethrough</strike>"
+             : default (font_height / 20) - The thickness of the strike line.
 ```
 When registering a custom text effect, any parameters in the string will be stored for you
 automatically. You only need to fetch them with the appropriate cf_text_effect_get function.
