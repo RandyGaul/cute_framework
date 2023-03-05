@@ -371,7 +371,7 @@ CUTE_API int CUTE_CALL cf_cacheline_size();
 
 /**
  * @function cf_atomic_zero
- * @category multithreading
+ * @category atomic
  * @brief    Returns an atomic integer of value zero.
  * @remarks  Atomics are an advanced topic. You've been warned!
  * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
@@ -380,7 +380,7 @@ CUTE_API CF_AtomicInt CUTE_CALL cf_atomic_zero();
 
 /**
  * @function cf_atomic_add
- * @category multithreading
+ * @category atomic
  * @brief    Atomically adds `addend` to `atomic` and returns the old value from `atomic`.
  * @param    atomic     The integer to atomically manipulate.
  * @param    addend     A value to atomically add to `atomic`.
@@ -391,7 +391,7 @@ CUTE_API int CUTE_CALL cf_atomic_add(CF_AtomicInt* atomic, int addend);
 
 /**
  * @function cf_atomic_set
- * @category multithreading
+ * @category atomic
  * @brief    Atomically sets `atomic` to `value` and returns the old value from `atomic`.
  * @param    atomic     The integer to atomically manipulate.
  * @param    value      A value to atomically set to `atomic`.
@@ -402,7 +402,7 @@ CUTE_API int CUTE_CALL cf_atomic_set(CF_AtomicInt* atomic, int value);
 
 /**
  * @function cf_atomic_get
- * @category multithreading
+ * @category atomic
  * @brief    Atomically fetches the value at `atomic`.
  * @param    atomic     The integer to fetch from.
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
@@ -412,7 +412,7 @@ CUTE_API int CUTE_CALL cf_atomic_get(CF_AtomicInt* atomic);
 
 /**
  * @function cf_atomic_cas
- * @category multithreading
+ * @category atomic
  * @brief    Atomically sets `atomic` to `value` if `expected` equals `atomic`.
  * @param    atomic     The pointer to atomically manipulate.
  * @param    expected   Used to compare against `atomic`.
@@ -425,7 +425,7 @@ CUTE_API CF_Result CUTE_CALL cf_atomic_cas(CF_AtomicInt* atomic, int expected, i
 
 /**
  * @function cf_atomic_ptr_set
- * @category multithreading
+ * @category atomic
  * @brief    Atomically sets `atomic` to `value` and returns the old value from `atomic`.
  * @param    atomic     The pointer to atomically manipulate.
  * @param    value      A value to atomically set to `atomic`.
@@ -436,7 +436,7 @@ CUTE_API void* CUTE_CALL cf_atomic_ptr_set(void** atomic, void* value);
 
 /**
  * @function cf_atomic_ptr_get
- * @category multithreading
+ * @category atomic
  * @brief    Atomically fetches the value at `atomic`.
  * @param    atomic    The pointer to fetch from.
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
@@ -446,7 +446,7 @@ CUTE_API void* CUTE_CALL cf_atomic_ptr_get(void** atomic);
 
 /**
  * @function cf_atomic_ptr_cas
- * @category multithreading
+ * @category atomic
  * @brief    Atomically sets `atomic` to `value` if `expected` equals `atomic`.
  * @param    atomic     The pointer to atomically manipulate.
  * @param    expected   Used to compare against `atomic`.
