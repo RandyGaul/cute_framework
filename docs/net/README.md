@@ -6,7 +6,7 @@
 - [CF_CryptoSignPublic](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_cryptosignpublic.md)
 - [CF_CryptoSignSecret](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_cryptosignsecret.md)
 - [CF_Address](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_address.md)
-- [Address Type](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/address type.md)
+- [Address Type](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/address_type.md)
 - [cf_address_init](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_address_init.md)
 - [cf_address_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_address_to_string.md)
 - [cf_address_equals](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_address_equals.md)

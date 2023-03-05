@@ -1,7 +1,7 @@
 # Pages
 
 - [CF_File](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_file.md)
-- [File Types](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/file types.md)
+- [File Types](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/file_types.md)
 - [cf_file_type_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_file_type_to_string.md)
 - [CF_Stat](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_stat.md)
 - [cf_fs_get_base_directory](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_fs_get_base_directory.md)

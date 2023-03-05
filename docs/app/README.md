@@ -1,6 +1,6 @@
 # Pages
 
-- [App Options](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/app options.md)
+- [App Options](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/app_options.md)
 - [cf_make_app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_make_app.md)
 - [cf_destroy_app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_destroy_app.md)
 - [cf_app_is_running](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_is_running.md)
