@@ -9,8 +9,8 @@ Struct Members | Description
 
 ## Related Pages
 
-[cf_ray_to_poly](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_ray_to_poly.md)  
-[cf_ray_to_halfpsace](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_ray_to_halfpsace.md)  
-[cf_ray_to_circle](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_ray_to_circle.md)  
-[cf_ray_to_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_ray_to_aabb.md)  
-[cf_ray_to_capsule](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_ray_to_capsule.md)  
+[cf_ray_to_poly](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_ray_to_poly.md)  
+[cf_ray_to_halfpsace](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_ray_to_halfpsace.md)  
+[cf_ray_to_circle](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_ray_to_circle.md)  
+[cf_ray_to_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_ray_to_aabb.md)  
+[cf_ray_to_capsule](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_ray_to_capsule.md)  

@@ -1657,7 +1657,7 @@ CUTE_INLINE CF_Circle cf_mul_tf_circle(CF_Transform tx, CF_Circle a) { CF_Circle
 
 /**
  * @function cf_impact
- * @category math
+ * @category collision
  * @brief    Returns the impact point of a ray, given the time of impact `t`.
  * @related  CF_Ray cf_impact cf_endpoint
  */
@@ -1665,7 +1665,7 @@ CUTE_INLINE CF_V2 cf_impact(CF_Ray r, float t) { return cf_add_v2(r.p, cf_mul_v2
 
 /**
  * @function cf_endpoint
- * @category math
+ * @category collision
  * @brief    Returns the endpoint of a ray.
  * @remarks  Rays are defined to have an endpoint as an optimization. Usually infinite rays are not needed in games, and cause
  *           unnecessarily large computations when doing raycasts.
@@ -1675,7 +1675,7 @@ CUTE_INLINE CF_V2 cf_endpoint(CF_Ray r) { return cf_add_v2(r.p, cf_mul_v2_f(r.d,
 
 /**
  * @function cf_ray_to_halfpsace
- * @category math
+ * @category collision
  * @brief    Returns true if the ray hits a given plane.
  * @param    A          The ray.
  * @param    B          The plane.
@@ -1725,7 +1725,7 @@ CUTE_INLINE float cf_distance_sq(CF_V2 a, CF_V2 b, CF_V2 p)
 
 /**
  * @function CF_POLY_MAX_VERTS
- * @category math
+ * @category collision
  * @brief    The maximum number of vertices in a `CF_Poly`.
  * @remarks  It's quite common to limit the number of verts on polygons to a low number. Feel free to adjust this number if needed,
  *           but be warned: higher than 8 and shapes generally start to look more like circles/ovals; it becomes pointless beyond a certain point.
@@ -1735,7 +1735,7 @@ CUTE_INLINE float cf_distance_sq(CF_V2 a, CF_V2 b, CF_V2 p)
 
 /**
  * @struct   CF_Poly
- * @category math
+ * @category collision
  * @brief    2D polygon.
  * @remarks  Verts are ordered in counter-clockwise order (CCW).
  * @related  CF_POLY_MAX_VERTS CF_Poly cf_circle_to_poly cf_aabb_to_poly cf_capsule_to_poly cf_poly_to_poly cf_ray_to_poly cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
@@ -1755,7 +1755,7 @@ typedef struct CF_Poly
 
 /**
  * @struct   CF_Capsule
- * @category math
+ * @category collision
  * @brief    A capsule shape.
  * @remarks  It's like a shrink-wrap of 2 circles connected by a rod.
  * @related  CF_Capsule cf_circle_to_capsule cf_aabb_to_capsule cf_capsule_to_capsule cf_capsule_to_poly cf_ray_to_capsule cf_circle_to_capsule_manifold cf_aabb_to_capsule_manifold cf_capsule_to_capsule_manifold cf_capsule_to_poly_manifold
@@ -1775,7 +1775,7 @@ typedef struct CF_Capsule
 
 /**
  * @struct   CF_Manifold
- * @category math
+ * @category collision
  * @brief    Contains all information necessary to resolve a collision.
  * @remarks  This is the information needed to separate shapes that are colliding.
  * @related  CF_Manifold cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_capsule_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
@@ -1801,7 +1801,7 @@ typedef struct CF_Manifold
 
 /**
  * @function cf_circle_to_circle
- * @category math
+ * @category collision
  * @brief    Returns true if two circles are intersecting.
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_circle_to_circle_manifold`.
  * @related  CF_Circle cf_circle_to_circle cf_circle_to_circle_manifold
@@ -1810,7 +1810,7 @@ CUTE_API bool CUTE_CALL cf_circle_to_circle(CF_Circle A, CF_Circle B);
 
 /**
  * @function cf_circle_to_aabb
- * @category math
+ * @category collision
  * @brief    Returns true if a circle is intersecting with an Aabb.
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_circle_to_aabb_manifold`.
  * @related  CF_Circle CF_Aabb cf_circle_to_aabb cf_circle_to_aabb_manifold
@@ -1819,7 +1819,7 @@ CUTE_API bool CUTE_CALL cf_circle_to_aabb(CF_Circle A, CF_Aabb B);
 
 /**
  * @function cf_circle_to_capsule
- * @category math
+ * @category collision
  * @brief    Returns true if a circle is intersecting with an capsule.
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_circle_to_capsule_manifold`.
  * @related  CF_Circle CF_Capsule cf_circle_to_capsule cf_circle_to_capsule_manifold
@@ -1828,7 +1828,7 @@ CUTE_API bool CUTE_CALL cf_circle_to_capsule(CF_Circle A, CF_Capsule B);
 
 /**
  * @function cf_aabb_to_aabb
- * @category math
+ * @category collision
  * @brief    Returns true two Aabb's are intersecting.
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_aabb_to_aabb_manifold`.
  * @related  CF_Aabb cf_aabb_to_aabb cf_aabb_to_aabb_manifold
@@ -1837,7 +1837,7 @@ CUTE_API bool CUTE_CALL cf_aabb_to_aabb(CF_Aabb A, CF_Aabb B);
 
 /**
  * @function cf_aabb_to_capsule
- * @category math
+ * @category collision
  * @brief    Returns true if an Aabb is intersecting a capsule.
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_aabb_to_capsule_manifold`.
  * @related  CF_Aabb CF_Capsule cf_aabb_to_capsule cf_aabb_to_capsule_manifold
@@ -1846,7 +1846,7 @@ CUTE_API bool CUTE_CALL cf_aabb_to_capsule(CF_Aabb A, CF_Capsule B);
 
 /**
  * @function cf_capsule_to_capsule
- * @category math
+ * @category collision
  * @brief    Returns true if two capsules are intersecting.
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_capsule_to_capsule_manifold`.
  * @related  CF_Capsule cf_capsule_to_capsule cf_capsule_to_capsule_manifold
@@ -1855,7 +1855,7 @@ CUTE_API bool CUTE_CALL cf_capsule_to_capsule(CF_Capsule A, CF_Capsule B);
 
 /**
  * @function cf_circle_to_poly
- * @category math
+ * @category collision
  * @brief    Returns true if a circle is intersecting a polygon.
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_circle_to_poly_manifold`.
  * @related  CF_Circle CF_Poly cf_circle_to_poly cf_circle_to_poly_manifold
@@ -1864,7 +1864,7 @@ CUTE_API bool CUTE_CALL cf_circle_to_poly(CF_Circle A, const CF_Poly* B, const C
 
 /**
  * @function cf_aabb_to_poly
- * @category math
+ * @category collision
  * @brief    Returns true an Aabb is intersecting a polygon.
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_aabb_to_poly_manifold`.
  * @related  CF_Aabb CF_Poly cf_aabb_to_poly cf_aabb_to_poly_manifold
@@ -1873,7 +1873,7 @@ CUTE_API bool CUTE_CALL cf_aabb_to_poly(CF_Aabb A, const CF_Poly* B, const CF_Tr
 
 /**
  * @function cf_capsule_to_poly
- * @category math
+ * @category collision
  * @brief    Returns true an capsule is intersecting a polygon.
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_capsule_to_poly_manifold`.
  * @related  CF_Capsule CF_Poly cf_capsule_to_poly cf_capsule_to_poly_manifold
@@ -1882,7 +1882,7 @@ CUTE_API bool CUTE_CALL cf_capsule_to_poly(CF_Capsule A, const CF_Poly* B, const
 
 /**
  * @function cf_poly_to_poly
- * @category math
+ * @category collision
  * @brief    Returns true if two polygons are intersecting.
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_poly_to_poly_manifold`.
  * @related  CF_Poly cf_poly_to_poly cf_poly_to_poly_manifold
@@ -1891,7 +1891,7 @@ CUTE_API bool CUTE_CALL cf_poly_to_poly(const CF_Poly* A, const CF_Transform* ax
 
 /**
  * @function cf_ray_to_circle
- * @category math
+ * @category collision
  * @brief    Returns true if a ray hits a circle.
  * @param    A          The ray.
  * @param    B          The circle.
@@ -1902,7 +1902,7 @@ CUTE_API bool CUTE_CALL cf_ray_to_circle(CF_Ray A, CF_Circle B, CF_Raycast* out)
 
 /**
  * @function cf_ray_to_aabb
- * @category math
+ * @category collision
  * @brief    Returns true if a ray hits an Aabb.
  * @param    A          The ray.
  * @param    B          The Aabb.
@@ -1913,7 +1913,7 @@ CUTE_API bool CUTE_CALL cf_ray_to_aabb(CF_Ray A, CF_Aabb B, CF_Raycast* out);
 
 /**
  * @function cf_ray_to_capsule
- * @category math
+ * @category collision
  * @brief    Returns true if a ray hits a capsule.
  * @param    A          The ray.
  * @param    B          The capsule.
@@ -1924,7 +1924,7 @@ CUTE_API bool CUTE_CALL cf_ray_to_capsule(CF_Ray A, CF_Capsule B, CF_Raycast* ou
 
 /**
  * @function cf_ray_to_poly
- * @category math
+ * @category collision
  * @brief    Returns true if a ray hits a polygon.
  * @param    A          The ray.
  * @param    B          The polygon.
@@ -1933,15 +1933,9 @@ CUTE_API bool CUTE_CALL cf_ray_to_capsule(CF_Ray A, CF_Capsule B, CF_Raycast* ou
  */
 CUTE_API bool CUTE_CALL cf_ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Transform* bx_ptr, CF_Raycast* out);
 
-// Manifold generation.
-// These functions are (generally) slower + more complex than bool versions, but compute one
-// or two points that represent the plane of contact. This information is
-// is usually needed to resolve and prevent shapes from colliding. If no coll-
-// ision occured the `count` member of the manifold typedef struct is set to 0.
-
 /**
  * @function cf_circle_to_circle_manifold
- * @category math
+ * @category collision
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
@@ -1953,7 +1947,7 @@ CUTE_API void CUTE_CALL cf_circle_to_circle_manifold(CF_Circle A, CF_Circle B, C
 
 /**
  * @function cf_circle_to_aabb_manifold
- * @category math
+ * @category collision
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
@@ -1965,7 +1959,7 @@ CUTE_API void CUTE_CALL cf_circle_to_aabb_manifold(CF_Circle A, CF_Aabb B, CF_Ma
 
 /**
  * @function cf_circle_to_capsule_manifold
- * @category math
+ * @category collision
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
@@ -1977,7 +1971,7 @@ CUTE_API void CUTE_CALL cf_circle_to_capsule_manifold(CF_Circle A, CF_Capsule B,
 
 /**
  * @function cf_aabb_to_aabb_manifold
- * @category math
+ * @category collision
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
@@ -1989,7 +1983,7 @@ CUTE_API void CUTE_CALL cf_aabb_to_aabb_manifold(CF_Aabb A, CF_Aabb B, CF_Manifo
 
 /**
  * @function cf_aabb_to_capsule_manifold
- * @category math
+ * @category collision
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
@@ -2001,7 +1995,7 @@ CUTE_API void CUTE_CALL cf_aabb_to_capsule_manifold(CF_Aabb A, CF_Capsule B, CF_
 
 /**
  * @function cf_capsule_to_capsule_manifold
- * @category math
+ * @category collision
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
@@ -2013,7 +2007,7 @@ CUTE_API void CUTE_CALL cf_capsule_to_capsule_manifold(CF_Capsule A, CF_Capsule 
 
 /**
  * @function cf_circle_to_poly_manifold
- * @category math
+ * @category collision
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
@@ -2025,7 +2019,7 @@ CUTE_API void CUTE_CALL cf_circle_to_poly_manifold(CF_Circle A, const CF_Poly* B
 
 /**
  * @function cf_aabb_to_poly_manifold
- * @category math
+ * @category collision
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
@@ -2037,7 +2031,7 @@ CUTE_API void CUTE_CALL cf_aabb_to_poly_manifold(CF_Aabb A, const CF_Poly* B, co
 
 /**
  * @function cf_capsule_to_poly_manifold
- * @category math
+ * @category collision
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
@@ -2049,7 +2043,7 @@ CUTE_API void CUTE_CALL cf_capsule_to_poly_manifold(CF_Capsule A, const CF_Poly*
 
 /**
  * @function cf_poly_to_poly_manifold
- * @category math
+ * @category collision
  * @brief    Computes information about how two shapes intersect.
  * @param    A          The first shape.
  * @param    B          The second shape.
@@ -2061,7 +2055,7 @@ CUTE_API void CUTE_CALL cf_poly_to_poly_manifold(const CF_Poly* A, const CF_Tran
 
 /**
  * @enum     CF_ShapeType
- * @category math
+ * @category collision
  * @brief    Various types of supported collision shapes.
  * @related  CF_ShapeType cf_shape_type_to_string cf_gjk cf_toi cf_inflate cf_collide cf_collided cf_cast_ray
  */
@@ -2087,7 +2081,7 @@ typedef enum CF_ShapeType
 
 /**
  * @function cf_shape_type_to_string
- * @category math
+ * @category collision
  * @brief    Converts a `CF_ShapeType` to a C string.
  * @param    type       The string to convert.
  * @related  CF_ShapeType cf_shape_type_to_string
@@ -2104,7 +2098,7 @@ CUTE_INLINE const char* cf_shape_type_to_string(CF_ShapeType type)
 
 /**
  * @struct   CF_GjkCache
- * @category math
+ * @category collision
  * @brief    This struct is only for advanced usage of the `cf_gjk` function. See comments inside of the `cf_gjk` function for more details.
  * @remarks  Contains cached geometric information to speed up successive calls to `cf_gjk` where the shapes don't move much relatie to
  *           one other from one call to the next.
@@ -2131,7 +2125,7 @@ typedef struct CF_GjkCache
 
 /**
  * @function cf_gjk
- * @category math
+ * @category collision
  * @brief    Returns the distance between two shapes, and computes the closest two points of the shapes.
  * @param    A           The first shape.
  * @param    typeA       The `CF_ShapeType` of the first shape `A`.
@@ -2157,7 +2151,7 @@ CUTE_API float CUTE_CALL cf_gjk(const void* A, CF_ShapeType typeA, const CF_Tran
 
 /**
  * @struct   CF_ToiResult
- * @category math
+ * @category collision
  * @brief    Stores results of a time of impact calculation done by `cf_toi`.
  * @remarks  This is an advanced struct, intended to be used by people who know what they're doing.
  * @related  CF_ToiResult cf_toi
@@ -2183,7 +2177,7 @@ typedef struct CF_ToiResult
 
 /**
  * @function cf_toi
- * @category math
+ * @category collision
  * @brief    Computes the time of impact of two shapes.
  * @param    A           The first shape.
  * @param    typeA       The `CF_ShapeType` of the first shape `A`.
@@ -2223,7 +2217,7 @@ CUTE_API CF_ToiResult CUTE_CALL cf_toi(const void* A, CF_ShapeType typeA, const 
 
 /**
  * @function cf_inflate
- * @category math
+ * @category collision
  * @brief    Inflates a shape.
  * @param    shape        The shape.
  * @param    type         The `CF_ShapeType` of `shape`.
@@ -2243,7 +2237,7 @@ CUTE_API void CUTE_CALL cf_inflate(void* shape, CF_ShapeType type, float skin_fa
 
 /**
  * @function cf_hull
- * @category math
+ * @category collision
  * @brief    Computes 2D convex hull.
  * @param    verts        The vertices of the shape.
  * @param    count        The number of vertices in `verts`.
@@ -2256,7 +2250,7 @@ CUTE_API int CUTE_CALL cf_hull(CF_V2* verts, int count);
 
 /**
  * @function cf_norms
- * @category math
+ * @category collision
  * @brief    Computes the normals for a polygon.
  * @param    verts        The vertices of the polygon.
  * @param    norms        The normals of the polygon (these are written to as output).
@@ -2268,7 +2262,7 @@ CUTE_API void CUTE_CALL cf_norms(CF_V2* verts, CF_V2* norms, int count);
 
 /**
  * @function cf_make_poly
- * @category math
+ * @category collision
  * @brief    Fills out the polygon with values.
  * @remarks  Runs `cf_hull` and `cf_norms`, assumes p->verts and p->count are both set to valid values.
  * @related  CF_Poly cf_hull cf_norms
@@ -2284,7 +2278,7 @@ CUTE_API CF_V2 CUTE_CALL cf_centroid(const CF_V2* verts, int count);
 
 /**
  * @function cf_collided
- * @category math
+ * @category collision
  * @brief    Returns a true if two shapes collided.
  * @param    A           The first shape.
  * @param    typeA       The `CF_ShapeType` of the first shape `A`.
@@ -2299,7 +2293,7 @@ CUTE_API int CUTE_CALL cf_collided(const void* A, const CF_Transform* ax, CF_Sha
 
 /**
  * @function cf_collide
- * @category math
+ * @category collision
  * @brief    Computes a `CF_Manifold` between two shapes.
  * @param    A           The first shape.
  * @param    ax          Can be `NULL` to represent an identity transform. An optional pointer to a `CF_Transform` to transform `A`.
@@ -2314,7 +2308,7 @@ CUTE_API void CUTE_CALL cf_collide(const void* A, const CF_Transform* ax, CF_Sha
 
 /**
  * @function cf_cast_ray
- * @category math
+ * @category collision
  * @brief    Casts a ray onto a shape.
  * @param    A           The ray.
  * @param    B           The shape.

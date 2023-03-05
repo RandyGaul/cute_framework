@@ -14,7 +14,7 @@ these options the min/max choice is the simplest when it comes to the majority o
 
 ## Related Pages
 
-[cf_aabb_to_poly_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_aabb_to_poly_manifold.md)  
+[cf_aabb_to_poly_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabb_to_poly_manifold.md)  
 [cf_make_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_make_aabb.md)  
 [cf_width](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_width.md)  
 [cf_height](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_height.md)  
@@ -27,11 +27,11 @@ these options the min/max choice is the simplest when it comes to the majority o
 [cf_overlaps](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_overlaps.md)  
 [cf_make_aabb_verts](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_make_aabb_verts.md)  
 [cf_aabb_verts](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_aabb_verts.md)  
-[cf_circle_to_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_circle_to_aabb.md)  
-[cf_aabb_to_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_aabb_to_aabb.md)  
-[cf_aabb_to_capsule](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_aabb_to_capsule.md)  
-[cf_aabb_to_poly](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_aabb_to_poly.md)  
-[cf_ray_to_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_ray_to_aabb.md)  
-[cf_circle_to_aabb_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_circle_to_aabb_manifold.md)  
-[cf_aabb_to_aabb_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_aabb_to_aabb_manifold.md)  
-[cf_aabb_to_capsule_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_aabb_to_capsule_manifold.md)  
+[cf_circle_to_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_circle_to_aabb.md)  
+[cf_aabb_to_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabb_to_aabb.md)  
+[cf_aabb_to_capsule](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabb_to_capsule.md)  
+[cf_aabb_to_poly](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabb_to_poly.md)  
+[cf_ray_to_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_ray_to_aabb.md)  
+[cf_circle_to_aabb_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_circle_to_aabb_manifold.md)  
+[cf_aabb_to_aabb_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabb_to_aabb_manifold.md)  
+[cf_aabb_to_capsule_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabb_to_capsule_manifold.md)  

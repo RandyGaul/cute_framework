@@ -9,12 +9,12 @@ Struct Members | Description
 
 ## Related Pages
 
-[cf_ray_to_circle](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_ray_to_circle.md)  
-[cf_circle_to_circle](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_circle_to_circle.md)  
-[cf_circle_to_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_circle_to_aabb.md)  
-[cf_circle_to_capsule](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_circle_to_capsule.md)  
-[cf_circle_to_poly](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_circle_to_poly.md)  
-[cf_circle_to_circle_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_circle_to_circle_manifold.md)  
-[cf_circle_to_aabb_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_circle_to_aabb_manifold.md)  
-[cf_circle_to_capsule_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_circle_to_capsule_manifold.md)  
-[cf_circle_to_poly_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_circle_to_poly_manifold.md)  
+[cf_ray_to_circle](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_ray_to_circle.md)  
+[cf_circle_to_circle](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_circle_to_circle.md)  
+[cf_circle_to_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_circle_to_aabb.md)  
+[cf_circle_to_capsule](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_circle_to_capsule.md)  
+[cf_circle_to_poly](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_circle_to_poly.md)  
+[cf_circle_to_circle_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_circle_to_circle_manifold.md)  
+[cf_circle_to_aabb_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_circle_to_aabb_manifold.md)  
+[cf_circle_to_capsule_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_circle_to_capsule_manifold.md)  
+[cf_circle_to_poly_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_circle_to_poly_manifold.md)  
