@@ -38,6 +38,7 @@ struct Doc
 	Path path;
 	String web_category;
 	String title;
+	String file;
 	String brief;
 	int this_index = -1;
 	String signature;
@@ -73,6 +74,9 @@ struct State
 	const char* in;
 	const char* end;
 	String token;
+	String file;
+	Map<const char*, const char*> categories;
+	Map<const char*, Array<const char*>> category_index_lists;
 
 	// Stored strings for output docs file.
 	Doc doc;
@@ -81,11 +85,13 @@ struct State
 
 	void flush_doc()
 	{
-		Path path = "../docs/gen";
+		Path path = "../docs";
+		path.add(doc.web_category);
 		String title = doc.title;
 		title.to_lower().replace(" ", "_").append(".md");
 		path.add(title);
 		doc.path = path;
+		doc.file = file;
 		if (page_to_doc_index.has(sintern(title))) {
 			panic(String::fmt("Tried to add a duplicate page for %s.", title.c_str()));
 		}
@@ -111,8 +117,7 @@ struct State
 		int index = get_doc_index(title);
 		String link = docs[index].path.c_str();
 		String link_prefix = "https://github.com/RandyGaul/cute_framework/blob/master/docs";
-		link_prefix.fmt_append("/%s", docs[index].web_category.c_str());
-		link.replace("../docs/gen", link_prefix.c_str());
+		link.replace("../docs", link_prefix.c_str());
 		return link;
 	}
 
@@ -130,9 +135,23 @@ struct State
 State state;
 State* s = &state;
 
+String linkify(String text, String scan, bool ticks = true)
+{
+	if (s->doc_has_link(scan)) {
+		String link = s->doc_get_link(scan);
+		String coded_link = String::fmt("[%s](%s)", scan.c_str(), link.c_str());
+		scan = String::fmt(ticks ? "`%s`" : "%s", scan.c_str());
+		text.replace(scan, coded_link);
+	}
+	return text;
+}
+
 void Doc::emit_title(FILE* fp)
 {
-	fprintf(fp, "# %s\n\n", title.c_str());
+	fprintf(fp, "# %s |", title.c_str());
+	String link = linkify(web_category, web_category, false);
+	fprintf(fp, " [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s_readme.md)", web_category.c_str(), link.c_str());
+	fprintf(fp, " | [%s](https://github.com/RandyGaul/cute_framework/blob/master/include/%s)\n\n", file.c_str(), file.c_str());
 }
 
 void Doc::emit_brief(FILE* fp)
@@ -324,6 +343,10 @@ void parse_command()
 		s->doc.return_value = parse_paragraph();
 	} else if (s->token == "@category") {
 		s->doc.web_category = parse_paragraph();
+		const char* category = sintern(s->doc.web_category);
+		if (!s->categories.has(category)) {
+			s->categories.insert(category, category);
+		}
 	} else {
 		panic(String::fmt("Found unrecognized command %s.", s->token.c_str()));
 	}
@@ -442,6 +465,7 @@ void parse(String header)
 	s->clear();
 	s->in = in;
 	s->end = in + sz;
+	s->file = header;
 
 	while (!s->done()) {
 		parse_token();
@@ -457,17 +481,6 @@ void parse(String header)
 			}
 		}
 	}
-}
-
-String linkify(String text, String scan, bool ticks = true)
-{
-	if (s->doc_has_link(scan)) {
-		String link = s->doc_get_link(scan);
-		String coded_link = String::fmt("[%s](%s)", scan.c_str(), link.c_str());
-		scan = String::fmt(ticks ? "`%s`" : "%s", scan.c_str());
-		text.replace(scan, coded_link);
-	}
-	return text;
 }
 
 // Scans text for `things in tick marks like this`. It will replace the tick mark text
@@ -552,6 +565,13 @@ int main(int argc, const char** argv)
 	for (int i = 0; i < s->docs.count(); ++i) {
 		Doc doc = s->docs[i];
 		FILE* fp = fopen(doc.path.c_str(), "wb");
+		const char* category = sintern(doc.web_category.c_str());
+		if (!s->category_index_lists.has(category)) {
+			s->category_index_lists.insert(category);
+		}
+		Array<const char*>& categories = s->category_index_lists.find(category);
+		categories.add(sintern(doc.title));
+
 		if (doc.type == DOC_ENUM) {
 			doc.emit_title(fp);
 			doc.emit_brief(fp);
@@ -578,6 +598,40 @@ int main(int argc, const char** argv)
 			doc.emit_related(fp);
 		}
 		fclose(fp);
+	}
+
+	// Save the categories index file.
+	{
+		Path topic_path = path;
+		topic_path.pop();
+		topic_path.add("docs/topics.md");
+		FILE* fp = fopen(topic_path.c_str(), "wb");
+		fprintf(fp, "# Categories\n\n");
+		const char** categories = s->categories.keys();
+		for (int i = 0; i < s->categories.count(); ++i) {
+			const char* category = categories[i];
+			fprintf(fp, "- [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s/index.md)\n", category, category);
+		}
+		fclose(fp);
+	}
+
+	// Save each category index list.
+	{
+		const char** categories = s->categories.keys();
+		for (int i = 0; i < s->categories.count(); ++i) {
+			const char* category = categories[i];
+			Array<const char*> index_list = s->category_index_lists.find(category);
+			Path topic_path = path;
+			topic_path.pop();
+			topic_path.add(String::fmt("docs/%s/index.md", category));
+			FILE* fp = fopen(topic_path.c_str(), "wb");
+			fprintf(fp, "# Pages\n\n");
+			for (int i = 0; i < index_list.count(); ++i) {
+				const char* page = index_list[i];
+				fprintf(fp, "- [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s/%s.md)\n", page, category, page);
+			}
+			fclose(fp);
+		}
 	}
 
 	return 0;

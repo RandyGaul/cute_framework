@@ -209,6 +209,7 @@ CUTE_API CF_Sprite CUTE_CALL cf_make_sprite(const char* aseprite_path);
 
 /**
  * @function cf_sprite_unload
+ * @category sprite
  * @brief    Unloads the sprite's image resources from the internal cache.
  * @param    aseprite_path  Virtual path to a .ase file.
  * @remarks  Any live `CF_Sprite` instances for `aseprite_path` will now by "dangling". TODO - LINK_TO_VFS_TUTORIAL.
@@ -228,6 +229,7 @@ CUTE_INLINE void cf_sprite_draw(CF_Sprite* sprite)
 
 /**
  * @function cf_sprite_update
+ * @category sprite
  * @brief    Updates a sprite's animation.
  * @param    sprite     The sprite.
  * @remarks  Call this once per frame.
@@ -253,6 +255,7 @@ CUTE_INLINE void cf_sprite_update(CF_Sprite* sprite)
 
 /**
  * @function cf_sprite_reset
+ * @category sprite
  * @brief    Resets the currently playing animation and unpauses the animation.
  * @param    sprite     The sprite.
  * @related  CF_Sprite cf_sprite_update cf_sprite_play
@@ -267,6 +270,7 @@ CUTE_INLINE void cf_sprite_reset(CF_Sprite* sprite)
 
 /**
  * @function cf_sprite_play
+ * @category sprite
  * @brief    Switches to a new aninmation and starts playing it from the beginning.
  * @param    sprite     The sprite.
  * @param    animation  Name of the animation to switch to and start playing.
@@ -281,6 +285,7 @@ CUTE_INLINE void cf_sprite_play(CF_Sprite* sprite, const char* animation)
 
 /**
  * @function cf_sprite_is_playing
+ * @category sprite
  * @brief    Returns true if `animation` the is currently playing animation.
  * @param    sprite     The sprite.
  * @param    animation  Name of the animation.
@@ -293,6 +298,7 @@ CUTE_INLINE bool cf_sprite_is_playing(CF_Sprite* sprite, const char* animation)
 
 /**
  * @function cf_sprite_pause
+ * @category sprite
  * @brief    Pauses the sprite's animation.
  * @param    sprite     The sprite.
  * @related  CF_Sprite cf_sprite_update cf_sprite_play cf_sprite_pause cf_sprite_unpause cf_sprite_toggle_pause
@@ -304,6 +310,7 @@ CUTE_INLINE void cf_sprite_pause(CF_Sprite* sprite)
 
 /**
  * @function cf_sprite_unpause
+ * @category sprite
  * @brief    Unpauses the sprite's animation.
  * @param    sprite     The sprite.
  * @related  CF_Sprite cf_sprite_update cf_sprite_play cf_sprite_pause cf_sprite_unpause cf_sprite_toggle_pause
@@ -315,6 +322,7 @@ CUTE_INLINE void cf_sprite_unpause(CF_Sprite* sprite)
 
 /**
  * @function cf_sprite_toggle_pause
+ * @category sprite
  * @brief    Toggles the sprite's pause state.
  * @param    sprite     The sprite.
  * @related  CF_Sprite cf_sprite_update cf_sprite_play cf_sprite_pause cf_sprite_unpause cf_sprite_toggle_pause
@@ -326,6 +334,7 @@ CUTE_INLINE void cf_sprite_toggle_pause(CF_Sprite* sprite)
 
 /**
  * @function cf_sprite_flip_x
+ * @category sprite
  * @brief    Flip's the sprite on the x-axis.
  * @param    sprite     The sprite.
  * @remarks  Works by flipping the sign of the sprite's scale on the x-axis.
@@ -338,6 +347,7 @@ CUTE_INLINE void cf_sprite_flip_x(CF_Sprite* sprite)
 
 /**
  * @function cf_sprite_flip_y
+ * @category sprite
  * @brief    Flip's the sprite on the y-axis.
  * @param    sprite     The sprite.
  * @remarks  Works by flipping the sign of the sprite's scale on the y-axis.
@@ -350,6 +360,7 @@ CUTE_INLINE void cf_sprite_flip_y(CF_Sprite* sprite)
 
 /**
  * @function cf_sprite_frame_count
+ * @category sprite
  * @brief    Returns the number of frames in the sprite's currently playing animation.
  * @param    sprite     The sprite.
  * @related  CF_Sprite cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay
@@ -361,6 +372,7 @@ CUTE_INLINE int cf_sprite_frame_count(const CF_Sprite* sprite)
 
 /**
  * @function cf_sprite_current_frame
+ * @category sprite
  * @brief    Returns the index of the currently playing frame.
  * @param    sprite     The sprite.
  * @related  CF_Sprite cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay
@@ -372,6 +384,7 @@ CUTE_INLINE int cf_sprite_current_frame(const CF_Sprite* sprite)
 
 /**
  * @function cf_sprite_frame_delay
+ * @category sprite
  * @brief    Returns the `delay` member of the currently playing frame, in milliseconds.
  * @param    sprite     The sprite.
  * @related  CF_Sprite CF_Frame cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay cf_sprite_animation_interpolant
@@ -383,6 +396,7 @@ CUTE_INLINE float cf_sprite_frame_delay(CF_Sprite* sprite)
 
 /**
  * @function cf_sprite_animation_delay
+ * @category sprite
  * @brief    Sums all the delays of each frame in the animation, and returns the total, in milliseconds.
  * @param    sprite     The sprite.
  * @related  CF_Sprite CF_Frame CF_Animation cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay cf_sprite_animation_interpolant
@@ -399,6 +413,7 @@ CUTE_INLINE float cf_sprite_animation_delay(CF_Sprite* sprite)
 
 /**
  * @function cf_sprite_animation_interpolant
+ * @category sprite
  * @brief    Returns a value from 0 to 1 representing how far along the animation has played.
  * @param    sprite     The sprite.
  * @remarks  0 means just started, while 1 means finished.
@@ -414,6 +429,7 @@ CUTE_INLINE float cf_sprite_animation_interpolant(CF_Sprite* sprite)
 
 /**
  * @function cf_sprite_will_finish
+ * @category sprite
  * @brief    Returns true if the animation will loop around and finish if `cf_sprite_update` is called.
  * @param    sprite     The sprite.
  * @remarks  This is useful to see if you're currently on the last frame of animation, and will finish in this particular update.
@@ -431,6 +447,7 @@ CUTE_INLINE bool cf_sprite_will_finish(CF_Sprite* sprite)
 
 /**
  * @function cf_sprite_on_loop
+ * @category sprite
  * @brief    Returns true whenever at the very beginning of the animation sequence.
  * @param    sprite     The sprite.
  * @remarks  This is useful for polling on when the animation restarts itself, for example, polling within an if-statement each game tick.
@@ -447,6 +464,7 @@ CUTE_INLINE bool cf_sprite_on_loop(CF_Sprite* sprite)
 
 /**
  * @function cf_animation_add_frame
+ * @category sprite
  * @brief    Adds a frame to an animation.
  * @param    animation   The sprite.
  * @param    frame       The frame.

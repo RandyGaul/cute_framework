@@ -1,0 +1,25 @@
+# CF_UniformType | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics_readme.md) | [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)
+
+The available types of uniforms.
+
+## Values
+
+Enum | Description
+--- | ---
+UNIFORM_TYPE_FLOAT | In a shader: `uniform float`
+UNIFORM_TYPE_FLOAT2 | In a shader: `uniform vec2`
+UNIFORM_TYPE_FLOAT4 | In a shader: `uniform vec4`
+UNIFORM_TYPE_INT | In a shader: `uniform int`
+UNIFORM_TYPE_INT2 | In a shader: `uniform int[2]`
+UNIFORM_TYPE_INT4 | In a shader: `uniform int[4]`
+UNIFORM_TYPE_MAT4 | In a shader: `uniform mat4`
+
+## Remarks
+
+A uniform is like a global variable for a shader. We set uniforms by using a [CF_Material](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_material.md).
+
+## Related Pages
+
+[cf_make_material](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_make_material.md)  
+[cf_uniform_type_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_uniform_type_string.md)  
+[CF_Material](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_material.md)  

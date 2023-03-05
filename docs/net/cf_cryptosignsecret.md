@@ -1,0 +1,10 @@
+# CF_CryptoSignSecret | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net_readme.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
+
+One-half of a cryptographically secure keypair. This key must be kept secret and hidden with your servers.
+
+## Related Pages
+
+[CF_CryptoKey](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_cryptokey.md)  
+[CF_CryptoSignPublic](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_cryptosignpublic.md)  
+[CF_ServerConfig](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_serverconfig.md)  
+[cf_crypto_sign_keygen](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_crypto_sign_keygen.md)  

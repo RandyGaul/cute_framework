@@ -32,7 +32,7 @@
 #ifndef CUTE_NO_SHORTHAND_API
 /**
  * @function htbl
- * @category htbl
+ * @category hash
  * @brief    An empty macro used in the C API to markup hastables.
  * @example > Showcase of base htbl features.
  *     htbl CF_V2* pts = NULL;
@@ -66,7 +66,7 @@
 
 /**
  * @function hset
- * @category htbl
+ * @category hash
  * @brief    Add's a {key, item} pair.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
@@ -88,7 +88,7 @@
 
 /**
  * @function hadd
- * @category htbl
+ * @category hash
  * @brief    Add's a {key, item} pair.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
@@ -110,7 +110,7 @@
 
 /**
  * @function hget
- * @category htbl
+ * @category hash
  * @brief    Fetches the item that `k` maps to.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
@@ -131,7 +131,7 @@
 
 /**
  * @function hfind
- * @category htbl
+ * @category hash
  * @brief    Fetches the item that `k` maps to.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
@@ -152,7 +152,7 @@
 
 /**
  * @function hget_ptr
- * @category htbl
+ * @category hash
  * @brief    Fetches a pointer to the item that `k` maps to.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
@@ -172,7 +172,7 @@
 
 /**
  * @function hfind_ptr
- * @category htbl
+ * @category hash
  * @brief    Fetches a pointer to the item that `k` maps to.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
@@ -192,7 +192,7 @@
 
 /**
  * @function hhas
- * @category htbl
+ * @category hash
  * @brief    Check to see if an item exists in the table.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
@@ -208,7 +208,7 @@
 
 /**
  * @function hdel
- * @category htbl
+ * @category hash
  * @brief    Removes an item from the table.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @param    k        The key for lookups. Each {key, item} pair must be unique. Keys are always typecasted to `uint64_t` e.g. you can use pointers as keys.
@@ -224,7 +224,7 @@
 
 /**
  * @function hclear
- * @category htbl
+ * @category hash
  * @brief    Clears the hashtable.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @remarks  The count of items will now be zero. Does not free any memory. Call `hfree` when you are done.
@@ -234,7 +234,7 @@
 
 /**
  * @function hkeys
- * @category htbl
+ * @category hash
  * @brief    Get a const pointer to the array of keys.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @example > Loop over all {key, item} pairs of a table.
@@ -252,7 +252,7 @@
 
 /**
  * @function hitems
- * @category htbl
+ * @category hash
  * @brief    Get a pointer to the array of items.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @example > Loop over all {key, item} pairs of a table.
@@ -270,7 +270,7 @@
 
 /**
  * @function hswap
- * @category htbl
+ * @category hash
  * @brief    Swaps internal ordering of two {key, item} pairs without ruining the hashing.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @param    index_a  Index to the first item to swap.
@@ -292,7 +292,7 @@
 
 /**
  * @function hsize
- * @category htbl
+ * @category hash
  * @brief    The number of {key, item} pairs in the table.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @remarks  `h` can be `NULL`.
@@ -302,7 +302,7 @@
 
 /**
  * @function hcount
- * @category htbl
+ * @category hash
  * @brief    The number of {key, item} pairs in the table.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @remarks  `h` can be `NULL`.
@@ -312,7 +312,7 @@
 
 /**
  * @function hfree
- * @category htbl
+ * @category hash
  * @brief    Frees up all resources used and sets `h` to `NULL`.
  * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
  * @remarks  `h` can be `NULL`.

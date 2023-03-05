@@ -20,7 +20,6 @@
 */
 
 #include <cute_sprite.h>
-#include <cute_window.h>
 #include <cute_draw.h>
 
 #include <internal/cute_app_internal.h>

@@ -33,7 +33,7 @@ extern "C" {
 
 /**
  * @struct   CF_AStarGrid
- * @category gameplay
+ * @category pathfinding
  * @brief    An opaque handle representing a grid for calculating shortest paths. See `cf_make_a_star_grid` for more details.
  * @related  cf_make_a_star_grid cf_destroy_a_star_grid cf_a_star_grid_set_cost cf_a_star_grid_get_cost cf_a_star
  */
@@ -42,7 +42,7 @@ typedef struct CF_AStarGrid { uint64_t id; } CF_AStarGrid;
 
 /**
  * @function cf_make_a_star_grid
- * @category gameplay
+ * @category pathfinding
  * @brief    Creates a `CF_AStarGrid` for running a path-finding algorithm via `cf_a_star`.
  * @param    w           The width of the grid.
  * @param    h           The height of the grid.
@@ -58,7 +58,7 @@ CUTE_API CF_AStarGrid CUTE_CALL cf_make_a_star_grid(int w, int h, float* cell_co
 
 /**
  * @function cf_a_star_grid_get_cost
- * @category gameplay
+ * @category pathfinding
  * @brief    Get the cost of a grid cell.
  * @param    x          The x position of the grid cell.
  * @param    y          The y position of the grid cell.
@@ -69,7 +69,7 @@ CUTE_API float CUTE_CALL cf_a_star_grid_get_cost(CF_AStarGrid grid, int x, int y
 
 /**
  * @function cf_a_star_grid_set_cost
- * @category gameplay
+ * @category pathfinding
  * @brief    Set the cost of a grid cell.
  * @param    x          The x position of the grid cell.
  * @param    y          The y position of the grid cell.
@@ -80,7 +80,7 @@ CUTE_API void CUTE_CALL cf_a_star_grid_set_cost(CF_AStarGrid grid, int x, int y,
 
 /**
  * @function cf_destroy_a_star_grid
- * @category gameplay
+ * @category pathfinding
  * @brief    Free up all resources used by a grid.
  * @param    grid       The grid.
  * @related  cf_make_a_star_grid cf_a_star_grid_set_cost cf_a_star_grid_get_cost cf_a_star
@@ -89,7 +89,7 @@ CUTE_API void CUTE_CALL cf_destroy_a_star_grid(CF_AStarGrid grid);
 
 /**
  * @struct   CF_AStarOutput
- * @category gameplay
+ * @category pathfinding
  * @brief    Represents the shortest path between two points as an array of 2d vectors.
  * @remarks  This output is returned by `cf_a_star` as an output parameter. Free it up with `cf_free_a_star_output` when done.
  * @related  cf_a_star cf_free_a_star_output
@@ -112,7 +112,7 @@ typedef struct CF_AStarOutput
 
 /**
  * @function cf_a_star
- * @category gameplay
+ * @category pathfinding
  * @brief    Calculates the shortest path along a grid.
  * @param    grid                     The `CF_AStarGrid` for calculating the shortest path along.
  * @param    start_x                  The starting x-position of the path.
@@ -130,7 +130,7 @@ CUTE_API bool CUTE_CALL cf_a_star(CF_AStarGrid grid, int start_x, int start_y, i
 
 /**
  * @function cf_free_a_star_output
- * @category gameplay
+ * @category pathfinding
  * @brief    Frees up all resources used by `CF_AStarOutput` from calling `cf_a_star`.
  * @param    out           The output from a call to `cf_a_star`.
  * @related  CF_AStarGrid cf_destroy_a_star_grid

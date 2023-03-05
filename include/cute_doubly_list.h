@@ -33,7 +33,7 @@ extern "C" {
 
 /**
  * @struct   CF_ListNode
- * @category doubly_list
+ * @category list
  * @brief    A node in a circular doubly-linked list.
  * @remarks  This node is _intrusive_ and to be placed within your struct/object definitions as a member.
  * @related  CF_ListNode CF_List CUTE_LIST_NODE CUTE_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
@@ -50,7 +50,7 @@ typedef struct CF_ListNode
 
 /**
  * @struct   CF_List
- * @category doubly_list
+ * @category list
  * @brief    A circular doubly-linked list.
  * @related  CF_ListNode CF_List CUTE_LIST_NODE CUTE_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
  */
@@ -63,7 +63,7 @@ typedef struct CF_List
 
 /**
  * @function CUTE_LIST_NODE
- * @category doubly_list
+ * @category list
  * @brief    Converts a pointer to a host struct/object to a specific `CF_ListNode` member.
  * @param    T          The type of the host.
  * @param    member     The name of the host member.
@@ -89,7 +89,7 @@ typedef struct CF_List
 
 /**
  * @function CUTE_LIST_HOST
- * @category doubly_list
+ * @category list
  * @brief    Converts a pointer to a node to a pointer to its host struct/object.
  * @param    T          The type of the host.
  * @param    member     The name of the host member.
@@ -115,7 +115,7 @@ typedef struct CF_List
 
 /**
  * @function cf_list_init_node
- * @category doubly_list
+ * @category list
  * @brief    Intializes a node.
  * @param    node       The node.
  * @remarks  As this list is circular, each node is initialized to point to itself.
@@ -129,7 +129,7 @@ CUTE_INLINE void cf_list_init_node(CF_ListNode* node)
 
 /**
  * @function cf_list_init
- * @category doubly_list
+ * @category list
  * @brief    Intializes a list.
  * @param    list       The list.
  * @remarks  As an optimization the list contains a dummy node inside of it. To traverse this list, use `cf_list_begin` and
@@ -143,7 +143,7 @@ CUTE_INLINE void cf_list_init(CF_List* list)
 
 /**
  * @function cf_list_push_front
- * @category doubly_list
+ * @category list
  * @brief    Pushes a node onto the front of the list.
  * @param    list       The list.
  * @param    node       The node.
@@ -159,7 +159,7 @@ CUTE_INLINE void cf_list_push_front(CF_List* list, CF_ListNode* node)
 
 /**
  * @function cf_list_push_back
- * @category doubly_list
+ * @category list
  * @brief    Pushes a node onto the back of the list.
  * @param    list       The list.
  * @param    node       The node.
@@ -175,7 +175,7 @@ CUTE_INLINE void cf_list_push_back(CF_List* list, CF_ListNode* node)
 
 /**
  * @function cf_list_remove
- * @category doubly_list
+ * @category list
  * @brief    Removes a node from the list.
  * @param    List       The list.
  * @related  CF_ListNode CF_List CUTE_LIST_NODE CUTE_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
@@ -189,7 +189,7 @@ CUTE_INLINE void cf_list_remove(CF_ListNode* node)
 
 /**
  * @function cf_list_pop_front
- * @category doubly_list
+ * @category list
  * @brief    Pops a node off the front of a list.
  * @param    List       The list.
  * @related  CF_ListNode CF_List CUTE_LIST_NODE CUTE_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
@@ -203,7 +203,7 @@ CUTE_INLINE CF_ListNode* cf_list_pop_front(CF_List* list)
 
 /**
  * @function cf_list_pop_back
- * @category doubly_list
+ * @category list
  * @brief    Pops a node off the back of a list.
  * @param    List       The list.
  * @related  CF_ListNode CF_List CUTE_LIST_NODE CUTE_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
@@ -217,7 +217,7 @@ CUTE_INLINE CF_ListNode* cf_list_pop_back(CF_List* list)
 
 /**
  * @function cf_list_empty
- * @category doubly_list
+ * @category list
  * @brief    Returns true if a list is empty.
  * @param    List       The list.
  * @related  CF_ListNode CF_List CUTE_LIST_NODE CUTE_LIST_HOST cf_list_init_node cf_list_init cf_list_push_front cf_list_push_back cf_list_remove cf_list_pop_front cf_list_pop_back cf_list_empty cf_list_begin cf_list_end cf_list_front cf_list_back
@@ -229,7 +229,7 @@ CUTE_INLINE bool cf_list_empty(CF_List* list)
 
 /**
  * @function cf_list_begin
- * @category doubly_list
+ * @category list
  * @brief    Returns a pointer to the first node in the list.
  * @param    List       The list.
  * @example > Looping over a list with a for loop.
@@ -247,7 +247,7 @@ CUTE_INLINE CF_ListNode* cf_list_begin(CF_List* list)
 
 /**
  * @function cf_list_end
- * @category doubly_list
+ * @category list
  * @brief    Returns a pointer to one passed the end of the list (to the dummy node).
  * @param    List       The list.
  * @example > Looping over a list with a for loop.
@@ -265,7 +265,7 @@ CUTE_INLINE CF_ListNode* cf_list_end(CF_List* list)
 
 /**
  * @function cf_list_front
- * @category doubly_list
+ * @category list
  * @brief    Returns a pointer to the first element in the list.
  * @param    List       The list.
  * @remarks  Check to see if this is a valid node in the list with `node != cf_list_end(list)`.
@@ -278,7 +278,7 @@ CUTE_INLINE CF_ListNode* cf_list_front(CF_List* list)
 
 /**
  * @function cf_list_back
- * @category doubly_list
+ * @category list
  * @brief    Returns a pointer to the last element in the list.
  * @param    List       The list.
  * @remarks  Check to see if this is a valid node in the list with `node != cf_list_end(list)`.

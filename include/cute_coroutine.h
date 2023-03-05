@@ -81,6 +81,7 @@ CUTE_API void CUTE_CALL cf_destroy_coroutine(CF_Coroutine* co);
 
 /**
  * @enum     CF_CoroutineState
+ * @category coroutine
  * @brief    The states of a coroutine.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  * @related  cf_make_app cf_destroy_app

@@ -55,6 +55,5 @@
 #include "cute_string.h"
 #include "cute_time.h"
 #include "cute_version.h"
-#include "cute_window.h"
 
 #endif // CUTE_H
