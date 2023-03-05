@@ -610,7 +610,7 @@ int main(int argc, const char** argv)
 		const char** categories = s->categories.keys();
 		for (int i = 0; i < s->categories.count(); ++i) {
 			const char* category = categories[i];
-			fprintf(fp, "- [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s/index.md)\n", category, category);
+			fprintf(fp, "- [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s/README.md)\n", category, category);
 		}
 		fclose(fp);
 	}
@@ -623,7 +623,7 @@ int main(int argc, const char** argv)
 			Array<const char*> index_list = s->category_index_lists.find(category);
 			Path topic_path = path;
 			topic_path.pop();
-			topic_path.add(String::fmt("docs/%s/index.md", category));
+			topic_path.add(String::fmt("docs/%s/README.md", category));
 			FILE* fp = fopen(topic_path.c_str(), "wb");
 			fprintf(fp, "# Pages\n\n");
 			for (int i = 0; i < index_list.count(); ++i) {
