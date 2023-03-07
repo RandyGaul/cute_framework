@@ -42,7 +42,7 @@ jobs:
 
       - name: Create binary directory
         run: |
-          cmake -A x64 -B build
+          cmake -B build
 
       - name: Build project binary
         run: |
