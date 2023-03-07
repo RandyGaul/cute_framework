@@ -1,0 +1,37 @@
+name: Build CF
+
+# This workflow will work for pushes, pull requests, or a manual trigger (workflow_dispatch).
+on: [push, pull_request, workflow_dispatch]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.).
+  BUILD_TYPE: Release
+
+jobs:
+  build:
+    # Matrix feature for cross-platform coverage. Names the build "Build X"
+    # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
+    name: "Build ${{ matrix.platform.name }}"
+    runs-on: ${{ matrix.platform.os }}
+    timeout-minutes: 10
+    
+    strategy:
+      # Don't cancel other in-progress jobs if one fails.
+      fail-fast: false
+      matrix:
+        platform:
+          - { name: "Windows", os: windows-latest }
+          - { name: "MacOS", os: macos-latest }
+          - { name: "Linux", os: ubuntu-latest }
+
+    steps:
+      # The only dependency required, allows workflow to access the commit
+      # and the runner to find our CMakeLists.txt file
+      - uses: actions/checkout@master
+
+      - name: Create binary directory
+        run: |
+          cmake -B build
+      - name: Build project binary
+        run: |
+          cmake -A x64 --build build --config Release
