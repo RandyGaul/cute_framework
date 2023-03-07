@@ -167,64 +167,7 @@ constexpr typename cf_remove_reference<T>::type&& move(T&& arg) noexcept
 	return (typename cf_remove_reference<T>::type&&)arg;
 }
 
-// -------------------------------------------------------------------------------------------------
-// Avoid including <initializer_list> header to reduce compile times.
-// Unfortunately this class *must* be in the std:: namespace or things won't compile. So we try to
-// avoid defining this class if someone already included <initializer_list> before including
-// cute framework <cute.h>.
-
-#ifdef CUTE_WINDOWS
-
-#if !defined(_INITIALIZER_LIST_) && !defined(_INITIALIZER_LIST) && !defined(_LIBCPP_INITIALIZER_LIST)
-#define _INITIALIZER_LIST_ // MSVC
-#define _INITIALIZER_LIST  // GCC
-#define _LIBCPP_INITIALIZER_LIST // Clang
-// Will probably need to add more here for more compilers later.
-
-namespace std
-{
-template <typename T>
-class initializer_list
-{
-public:
-	using value_type = T;
-	using reference = const T&;
-	using const_reference = const T&;
-	using size_type = size_t;
-
-	using iterator = const T*;
-	using const_iterator = const T*;
-
-	constexpr initializer_list() noexcept
-		: m_first(0)
-		, m_last(0)
-	{}
-
-	constexpr initializer_list(const T* first, const T* last) noexcept
-		: m_first(first)
-		, m_last(last)
-	{}
-
-	constexpr const T* begin() const noexcept { return m_first; }
-	constexpr const T* end() const noexcept { return m_last; }
-	constexpr size_t size() const noexcept { return (size_t)(m_last - m_first); }
-
-private:
-	const T* m_first;
-	const T* m_last;
-};
-
-template <class T> constexpr const T* begin(initializer_list<T> list) noexcept { return list.begin(); }
-template <class T> constexpr const T* end(initializer_list<T> list) noexcept { return list.end(); }
-}
-
-#endif
-
-#else // CUTE_WINDOWS
-
 #include <initializer_list>
-
-#endif // CUTE_WINDOWS
 
 template <typename T>
 using CF_InitializerList = std::initializer_list<T>;
