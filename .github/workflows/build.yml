@@ -3,10 +3,6 @@ name: Build CF
 # This workflow will work for pushes, pull requests, or a manual trigger (workflow_dispatch).
 on: [push, pull_request, workflow_dispatch]
 
-env:
-  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.).
-  BUILD_TYPE: Release
-
 jobs:
   build:
     # Matrix feature for cross-platform coverage. Names the build "Build X"
@@ -24,13 +20,15 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - { name: "Windows", os: windows-latest }
-          - { name: "MacOS", os: macos-latest }
-          - { name: "Linux", os: ubuntu-latest }
+          - { name: "Windows (MinGW)",         os: windows-latest, artifact: 'mingw',   generate: '-G "MinGW Makefiles' }
+          - { name: "Windows (MSCV 14 2015)",  os: windows-latest, artifact: 'mscv14',  generate: '-G "Visual Studio 14 2015" -A x64' }
+          - { name: "Windows (MSCV 15 2017)",  os: windows-latest, artifact: 'mscv15',  generate: '-G "Visual Studio 15 2017" -A x64' }
+          - { name: "Windows (MSCV 16 2019)",  os: windows-latest, artifact: 'mscv16',  generate: '-G "Visual Studio 16 2019" -A x64' }
+          - { name: "Windows (MSCV 17 2022)",  os: windows-latest, artifact: 'mscv17',  generate: '-G "Visual Studio 17 2022" -A x64' }
+          - { name: "MacOS",                   os: macos-latest,   artifact: 'macos',   generate: '-G Unix Makefiles' }
+          - { name: "Linux",                   os: ubuntu-latest,  artifact: 'linux',   generate: '-G Unix Makefiles' }
 
     steps:
-      # The only dependency required, allows workflow to access the commit
-      # and the runner to find our CMakeLists.txt file
       - uses: actions/checkout@master
 
       - name: Install OpenGL
@@ -40,10 +38,33 @@ jobs:
           sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
         if: matrix.platform.name == 'Linux'
 
-      - name: Create binary directory
+      - name: Create build folder with CMake
         run: |
-          cmake -B build
+            cmake ${{ matrix.platform.generate }} -B build_folder
 
       - name: Build project binary
         run: |
-          cmake --build build
+          cmake --build build_folder
+
+      - name: Generate artifacts for Windows
+        shell: cmd
+        run: |
+          robocopy include dist *.h
+          robocopy build_folder\Release dist cute.lib
+          7z a ${{ matrix.platform.artifact }}.zip .\dist\*
+        if: runner.os == 'Windows'
+
+      - name: Generate artifacts for non-Windows
+        run: |
+          cp -v ./include/*.h ./dist
+          cp -v ./build_folder/Release/cute.a ./dist
+          cd build_folder
+          tar -czvf ${{ matrix.platform.artifact }}.tar.gz ${{ matrix.platform.artifact }}
+        if: runner.os != 'Windows'
+          
+      - uses: actions/upload-artifact@v3
+        with:
+          if-no-files-found: error
+          name: ${{ matrix.platform.artifact }}
+          path: ./dist/*
+        
