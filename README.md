@@ -2,13 +2,14 @@
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/logo.png>
 </p>
 
-Cute Framework (CF for short) is the *cutest* framework available for making 2D games in C++. CF comprises of different features, where the various features avoid inter-dependencies. In this way using CF is about picking and choosing which pieces are needed for your game. Here's a [video from the Handmade Seattle conference](https://media.handmade-seattle.com/cute-framework/) talking all about CF if you're interested in some more juicy background deets.
+Cute Framework (CF for short) is the *cutest* framework available for making 2D games in C++. CF provides a portable foundational layer for building 2D games in C/C++ without baggage, gnarly dependencies, or cryptic APIs. CF is easy to build and great for getting projects off the ground. Written with a portable pure C API CF runs almost anywhere, including Windows, MacOS, iOS, Android, Linux, and more!
 
-CF is not quite ready for the official first release! This repository is public to prepare for first release, so expect breaking changes and use at your own peril, etc.
+# Getting Started
 
-# Gettin' all Cute
-
-Setting up an application and getting started is quite easy. Simply visit [the app docs](https://randygaul.github.io/cute_framework/#/app/), grab the following code snippet for [app_make](https://randygaul.github.io/cute_framework/#/app/app_make), and off you go.
+1. Download and install CMake v3.14+ (for easy cross-platform building)
+2. Copy + paste [CMakeLists.txt](https://github.com/RandyGaul/cute_framework_project_template/blob/main/CMakeLists.txt) from the [CF project template](https://github.com/RandyGaul/cute_framework_project_template). Find + replace "my_project_name".
+3. Run CMake on your project folder. Cmake will automagically download and hook up CF.
+4. Use the below code snippet for your first `main.cpp`!
 
 > Creating a window and closing it.
 
@@ -19,16 +20,15 @@ using namespace Cute;
 int main(int argc, const char** argv)
 {
 	// Create a window with a resolution of 640 x 480.
-	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_DEFAULT_GFX_CONTEXT;
+	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED;
 	Result result = make_app("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;
 
 	while (app_is_running())
 	{
-		float dt = calc_dt();
-		app_update(dt);
+		app_update();
 		// All your game logic and updates go here...
-		app_present();
+		app_draw_onto_screen();
 	}
 
 	destroy_app();
@@ -37,84 +37,29 @@ int main(int argc, const char** argv)
 }
 ```
 
-# Docs by API Category
+# Resources
 
-Select one of the categories below to learn more about them. Each category contains information about functions, structs, enums, and anything else relevant in the various Cute Framework header files.
+## Topics
 
-[app](https://randygaul.github.io/cute_framework/#/app/)  
-[audio](https://randygaul.github.io/cute_framework/#/audio/)  
-[clipboard](https://randygaul.github.io/cute_framework/#/clipboard/)  
-[data structures](https://randygaul.github.io/cute_framework/#/data_structures/)  
-[ecs](https://randygaul.github.io/cute_framework/#/ecs/)  
-[graphics](https://randygaul.github.io/cute_framework/#/graphics/)  
-[math](https://randygaul.github.io/cute_framework/#/math/)  
-[networking](https://randygaul.github.io/cute_framework/#/networking/)  
-[serialization](https://randygaul.github.io/cute_framework/#/serialization/)  
-[string](https://randygaul.github.io/cute_framework/#/string/)  
-[time](https://randygaul.github.io/cute_framework/#/time/)  
-[window](https://randygaul.github.io/cute_framework/#/window/)  
+* link
+* link
+* link
+* link
 
-# Docs by API List
+## API Reference
 
-TODO
+* link
+* link
+* link
 
-# Examples, Tutorials, and Articles
+## Samples
 
 - [Cute Snake, example game implemented in CF](https://github.com/RandyGaul/cute_snake)
-- [KV Serialization in CF docs](https://randygaul.github.io/cute_framework/#/serialization/)
-- [ECS in CF docs](https://randygaul.github.io/cute_framework/#/ecs/)
 
-# Download
+## Tutorials
 
-Fow now it's recommended to build CF from source, at least until CF hits a first official release. See the Building from Source section below.
-
-Prebuilt binaries for Windows are available in the [releases section](https://github.com/RandyGaul/cute_framework/releases). Please build and install from source for Mac/Linux users. Note - CF is designed for *64-bit only*.
-
-# Community and Support
-
-Feel free to open up an [issue right here on GitHub](https://github.com/RandyGaul/cute_framework/issues) to ask any questions. If you'd like to make a pull request I highly recommend opening a GitHub issue first to start a discussion on any changes you would like to make.
+## Community / Ask for Help
 
 Here's a [link to the discord chat](https://discord.gg/2DFHRmX) for Cute Framework and the [Cute Headers](https://github.com/RandyGaul/cute_headers). Feel free to pop in and ask questions, make suggestions, or have a discussion.
 
-Another easy way to get a hold of the author of Cute Framework is on twitter [@randypgaul](https://twitter.com/RandyPGaul).
-
-# Building from Source
-
-Install [cmake](https://cmake.org/). Then perform the usual cmake dance (make folder, -G to generate the build files, and then finally trigger the build), for example on Windows with Visual Studio 2019.
-
-```cmake
-mkdir build_msvc_2019 > nul 2> nul
-cmake -G "Visual Studio 16 2019" -A x64 -Bbuild_msvc_2019 .
-cmake --build build_msvc_2019 --config Debug
-cmake --build build_msvc_2019 --config Release
-```
-
-Some scripts for running this cmake process are laying around in the top-level folder, such as `build_bash.sh` for apple/linux machines, or `mingw.cmd` for building against a MingW compiler on Windows. Feel free to use or ignore these scripts as you wish.
-
-Once built go ahead and use cmake to install the headers and shared library for CF.
-
-```cmake
-cmake --install your_build_folder_name
-```
-
-Here is a more [in-depth tutorial](https://github.com/RandyGaul/cute_framework/issues/57) on how to use cmake to easily build your game with CF.
-
-## Prebuilt Releases
-
-Prebuilt releases are planned for Windows and MacOS, but not actively setup right now since CF has yet to hit first release. Building from source is recommended for now.
-
-# Emscripten Builds
-
-Make sure [emscripten is installed](https://emscripten.org/docs/getting_started/downloads.html) on your machine. If on Windows go ahead and run the `emscripten.cmd` file. This will build libcute.a. Though if you're using something Ninja the commands will be slightly different, as you'll need to consult [emscripten docs](https://emscripten.org/docs/compiling/Building-Projects.html#integrating-with-a-build-system).
-
-Additionally you can add something like the following to your cmake build script for your own project.
-
-```cmake
-if(${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
-	set(CMAKE_EXECUTABLE_SUFFIX ".html")
-	target_compile_options(your_game PUBLIC -O1 -fno-rtti -fno-exceptions)
-	target_link_options(your_game PRIVATE -o your_game.html --preload-file ${CMAKE_SOURCE_DIR}/content --emrun -O1)
-endif()
-```
-
-Also don't forget to call `emscripten_set_main_loop` from your `main` function!
+Feel free to open up an [issue right here on GitHub](https://github.com/RandyGaul/cute_framework/issues) to ask any questions. If you'd like to make a pull request I highly recommend opening a GitHub issue first to start a discussion on any changes you would like to make.
