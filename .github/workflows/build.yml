@@ -39,9 +39,15 @@ jobs:
         run: |
             cmake ${{ matrix.platform.generate }} -B build_folder
 
-      - name: Build project binary
+      - name: Build project binary (non-MSVC)
         run: |
           cmake --build build_folder
+        if: platform.name != "Windows (MSCV 17 2022)"
+
+      - name: Build project binary (MSVC)
+        run: |
+          cmake --build build_folder --config Release
+        if: platform.name == "Windows (MSCV 17 2022)"
 
       - name: Generate artifacts for Windows
         shell: cmd
