@@ -24,10 +24,13 @@ jobs:
           - { name: "Windows (MSCV 17 2022)",  os: windows-latest, artifact: 'mscv17',  generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release' }
           - { name: "MacOS",                   os: macos-latest,   artifact: 'macos',   generate: '-G "Unix Makefiles"' }
           - { name: "Linux",                   os: ubuntu-latest,  artifact: 'linux',   generate: '-G "Unix Makefiles"' }
+          # TODO - Add iOS and Android platforms.
 
     steps:
       - uses: actions/checkout@master
 
+      # Linux needs to install OpenGL dependencies.
+      # This could potentially be removed by using SOKOL_EXTERNAL_GL_LOADER.
       - name: Install OpenGL
         run: |
           sudo apt-get update -qq
@@ -44,11 +47,16 @@ jobs:
           cmake --build build_folder
         if: matrix.platform.name != 'Windows (MSCV 17 2022)'
 
+      # Default for MSVC is to build with Debug, so a special case is needed to produce
+      # Release binaries.
       - name: Build project binary (MSVC)
         run: |
           cmake --build build_folder --config Release
         if: matrix.platform.name == 'Windows (MSCV 17 2022)'
 
+      # Just call robocopy twice, one looking for libcute.a for MinGW, and one
+      # looking for cute.lib for MSCV. robocopy doesn't trigger a build failure for
+      # not finding a file.
       - name: Generate artifacts for Windows
         shell: cmd
         run: |
@@ -66,9 +74,10 @@ jobs:
           tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
         if: runner.os != 'Windows'
           
+      # Uploads the zip archives onto the workflow. They can be downloaded for 90 days (by default).
+      # Find them here: https://github.com/RandyGaul/cute_framework/actions
       - uses: actions/upload-artifact@v3
         with:
           if-no-files-found: error
           name: ${{ matrix.platform.artifact }}
           path: ./dist/*
-        
