@@ -197,18 +197,18 @@ static CF_Result s_load_platform_certs(CF_Https* https)
 #elif defined(CUTE_MACOSX)
 
 	SecKeychainRef keychain_ref;
-	CFMutableArrayRef search_settings_ref;
+	CFMutableDictionaryRef search_settings_ref;
 	CFArrayRef result_ref;
 
 	if (SecKeychainOpen("/System/Library/Keychains/SystemRootCertificates.keychain", &keychain_ref) != errSecSuccess) {
 		return cf_result_error("SecKeychainOpen failed.");
 	}
 
-	search_settings_ref = CFArrayCreateMutable(NULL, 0, NULL, NULL);
-	CFArraySetValue(search_settings_ref, kSecClass, kSecClassCertificate);
-	CFArraySetValue(search_settings_ref, kSecMatchLimit, kSecMatchLimitAll);
-	CFArraySetValue(search_settings_ref, kSecReturnRef, kCFBooleanTrue);
-	CFArraySetValue(search_settings_ref, kSecMatchSearchList, CFArrayCreate(NULL, (const void**)&keychain_ref, 1, NULL));
+	search_settings_ref = CFDictionaryCreateMutable(NULL, 0, NULL, NULL);
+	CFDictionarySetValue(search_settings_ref, kSecClass, kSecClassCertificate);
+	CFDictionarySetValue(search_settings_ref, kSecMatchLimit, kSecMatchLimitAll);
+	CFDictionarySetValue(search_settings_ref, kSecReturnRef, kCFBooleanTrue);
+	CFDictionarySetValue(search_settings_ref, kSecMatchSearchList, CFArrayCreate(NULL, (const void**)&keychain_ref, 1, NULL));
 
 	if (SecItemCopyMatching(search_settings_ref, (CFTypeRef*)&result_ref) != errSecSuccess) {
 		return cf_result_error("SecItemCopyMatching failed.");
