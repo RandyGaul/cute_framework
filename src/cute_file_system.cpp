@@ -62,7 +62,7 @@ char* cf_path_get_ext(const char* path)
 bool cf_path_ext_equ(const char* path, const char* ext)
 {
 	int at = slast_index_of(path, '.');
-	if (at == -1 || path[at + 1] == 0 || path[at + 1] == '/') return NULL;
+	if (at == -1 || path[at + 1] == 0 || path[at + 1] == '/') return false;
 	return sequ(path + at, ext);
 }
 

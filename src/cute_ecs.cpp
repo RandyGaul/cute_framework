@@ -387,14 +387,14 @@ static const char* s_kv_string(CF_KeyValue* kv, const char* key)
 		if (CUTE_STRCMP(key, "inherits_from")) {
 			CUTE_DEBUG_PRINTF("Unable to find the `%s` key.\n", key);
 		}
-		return { 0 };
+		return NULL;
 	}
 
 	const char* string_raw;
 	size_t string_sz;
 	if (!cf_kv_val_string(kv, &string_raw, &string_sz)) {
 		CUTE_DEBUG_PRINTF("`%s` key found, but is not a string.\n", key);
-		return { 0 };
+		return NULL;
 	}
 
 	return sintern_range(string_raw, string_raw + string_sz);

@@ -767,13 +767,13 @@ struct Directory
 	CUTE_INLINE Directory(Directory&& d) { *this = d; }
 
 	static CUTE_INLINE Directory open(const char* virtual_path) { return Directory(virtual_path); }
-	static CUTE_INLINE Result create(const char* virtual_path) { fs_create_directory(virtual_path); }
-	static CUTE_INLINE Result remove(const char* virtual_path) { fs_remove_directory(virtual_path); }
+	static CUTE_INLINE Result create(const char* virtual_path) { return fs_create_directory(virtual_path); }
+	static CUTE_INLINE Result remove(const char* virtual_path) { return fs_remove_directory(virtual_path); }
 
 	CUTE_INLINE const char* next() { if (*m_list) { const char* result = *m_list++; return result; } else { return NULL; } }
 
 	CUTE_INLINE Directory& operator=(const Directory& d) { m_path = d.m_path; m_list = m_dirs = fs_enumerate_directory(m_path); return *this; }
-	CUTE_INLINE Directory& operator=(Directory&& d) { m_path = d.m_path; m_list = m_dirs = d.m_dirs; d.m_path = NULL; d.m_dirs = d.m_list = NULL; }
+	CUTE_INLINE Directory& operator=(Directory&& d) { m_path = d.m_path; m_list = m_dirs = d.m_dirs; d.m_path = NULL; d.m_dirs = d.m_list = NULL; return *this; }
 
 private:
 	const char* m_path;

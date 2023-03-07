@@ -222,7 +222,7 @@ struct spritebatch_sprite_t
 	// back to you later.
 #ifdef SPRITEBATCH_SPRITE_USERDATA
 	SPRITEBATCH_SPRITE_USERDATA udata;
-#endif SPRITEBATCH_SPRITE_USERDATA
+#endif // SPRITEBATCH_SPRITE_USERDATA
 };
 
 // Pushes a sprite onto an internal buffer. Does no other logic.

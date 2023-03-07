@@ -213,7 +213,7 @@ CUTE_INLINE CF_Pixel cf_make_pixel_hex(int hex) { return cf_make_pixel_rgba((uin
  * @param    hex        A hex-value string, such as "#42f563" or "0x42f563FF".
  * @related  CF_Pixel cf_make_pixel_rgb_f cf_make_pixel_rgba_f cf_make_pixel_rgb cf_make_pixel_rgba cf_make_pixel_hex cf_make_pixel_hex_string
  */
-CUTE_INLINE CF_Pixel cf_make_pixel_hex_string(const char* hex) { cf_make_pixel_hex((int)stohex(hex)); }
+CUTE_INLINE CF_Pixel cf_make_pixel_hex_string(const char* hex) { return cf_make_pixel_hex((int)stohex(hex)); }
 
 /**
  * @function cf_mul_color
@@ -834,10 +834,10 @@ CUTE_INLINE Color make_color(const char* s) { return make_color((int)stohex(s));
 
 CUTE_INLINE Pixel make_pixel(float r, float g, float b) { return cf_make_pixel_rgb_f(r, g, b); }
 CUTE_INLINE Pixel make_pixel(float r, float g, float b, float a) { return cf_make_pixel_rgba_f(r, g, b, a); }
-CUTE_INLINE Pixel make_pixel(uint8_t r, uint8_t g, uint8_t b) { cf_make_pixel_rgb(r, g, b); }
+CUTE_INLINE Pixel make_pixel(uint8_t r, uint8_t g, uint8_t b) { return cf_make_pixel_rgb(r, g, b); }
 CUTE_INLINE Pixel make_pixel(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { return cf_make_pixel_rgba(r, g, b, a); }
 CUTE_INLINE Pixel make_pixel(int hex) { return cf_make_pixel_hex(hex); }
-CUTE_INLINE Pixel make_pixel(const char* hex) { cf_make_pixel_hex((int)stohex(hex)); }
+CUTE_INLINE Pixel make_pixel(const char* hex) { return cf_make_pixel_hex((int)stohex(hex)); }
 
 CUTE_INLINE Color operator*(Color a, float s) { return cf_mul_color(a, s); }
 CUTE_INLINE Color operator/(Color a, float s) { return cf_div_color(a, s); }

@@ -2090,9 +2090,9 @@ CUTE_INLINE constexpr const char* to_string(UniformType type) { switch(type) {
 }
 
 CUTE_INLINE BackendType query_backend() { return cf_query_backend(); }
-CUTE_INLINE bool query_pixel_format(PixelFormat format, PixelFormatOp op) { cf_query_pixel_format(format, op); }
-CUTE_INLINE bool query_device_feature(DeviceFeature feature) { cf_query_device_feature(feature); }
-CUTE_INLINE int query_resource_limit(ResourceLimit resource_limit) { cf_query_resource_limit(resource_limit); }
+CUTE_INLINE bool query_pixel_format(PixelFormat format, PixelFormatOp op) { return cf_query_pixel_format(format, op); }
+CUTE_INLINE bool query_device_feature(DeviceFeature feature) { return cf_query_device_feature(feature); }
+CUTE_INLINE int query_resource_limit(ResourceLimit resource_limit) { return cf_query_resource_limit(resource_limit); }
 CUTE_INLINE TextureParams texture_defaults() { return cf_texture_defaults(); }
 CUTE_INLINE Texture make_texture(TextureParams texture_params) { return cf_make_texture(texture_params); }
 CUTE_INLINE void destroy_texture(Texture texture) { cf_destroy_texture(texture); }

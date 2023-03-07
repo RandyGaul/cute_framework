@@ -1107,7 +1107,7 @@ struct String
 	CUTE_INLINE bool operator==(const char* s) { return !CUTE_STRCMP(m_str, s); }
 	CUTE_INLINE bool operator!=(const char* s) { return CUTE_STRCMP(m_str, s); }
 	CUTE_INLINE bool compare(const char* s, bool no_case = false) { return no_case ? sequ(m_str, s) : siequ(m_str, s); }
-	CUTE_INLINE bool cmp(const char* s, bool no_case = false) { compare(s, no_case); }
+	CUTE_INLINE bool cmp(const char* s, bool no_case = false) { return compare(s, no_case); }
 	CUTE_INLINE bool contains(const char* contains_me) { return scontains(m_str, contains_me); }
 	CUTE_INLINE String& to_upper() { stoupper(m_str); return *this; }
 	CUTE_INLINE String& to_lower() { stolower(m_str); return *this; }

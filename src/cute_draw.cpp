@@ -34,7 +34,7 @@
 
 #include <shaders/sprite_shader.h>
 
-static struct CF_Draw* draw;
+struct CF_Draw* draw;
 
 #include <cute/cute_png.h>
 
