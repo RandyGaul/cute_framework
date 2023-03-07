@@ -9,7 +9,7 @@ jobs:
     # See: https://docs.github.com/en/free-pro-team@latest/actions/learn-github-actions/managing-complex-workflows#using-a-build-matrix
     name: "Build ${{ matrix.platform.name }}"
     runs-on: ${{ matrix.platform.os }}
-    timeout-minutes: 10
+    timeout-minutes: 20
 
     defaults:
       run:
@@ -56,8 +56,7 @@ jobs:
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
           cp -v ./build_folder/libcute.a ./dist
-          cd build_folder
-          tar -czvf ${{ matrix.platform.artifact }}.tar.gz ${{ matrix.platform.artifact }}
+          tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
         if: runner.os != 'Windows'
           
       - uses: actions/upload-artifact@v3
