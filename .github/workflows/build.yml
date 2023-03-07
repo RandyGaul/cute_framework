@@ -42,12 +42,12 @@ jobs:
       - name: Build project binary (non-MSVC)
         run: |
           cmake --build build_folder
-        if: matrix.platform.name != "Windows (MSCV 17 2022)"
+        if: matrix.platform.name != 'Windows (MSCV 17 2022)'
 
       - name: Build project binary (MSVC)
         run: |
           cmake --build build_folder --config Release
-        if: matrix.platform.name == "Windows (MSCV 17 2022)"
+        if: matrix.platform.name == 'Windows (MSCV 17 2022)'
 
       - name: Generate artifacts for Windows
         shell: cmd
