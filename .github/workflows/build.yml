@@ -55,7 +55,7 @@ jobs:
         run: |
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
-          cp -v ./build_folder/cute.a ./dist
+          cp -v ./build_folder/libcute.a ./dist
           cd build_folder
           tar -czvf ${{ matrix.platform.artifact }}.tar.gz ${{ matrix.platform.artifact }}
         if: runner.os != 'Windows'
