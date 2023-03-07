@@ -27,13 +27,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@master
-      
-      # Lets us use msbuild
-      - name: Add msbuild to PATH
-        uses: microsoft/setup-msbuild@v1.1
-        with:
-          msbuild-architecture: x64
-        if: matrix.platform.name == 'Windows'
 
       - name: Install OpenGL
         run: |
@@ -60,6 +53,7 @@ jobs:
 
       - name: Generate artifacts for non-Windows
         run: |
+          mkdir -p ./dist
           cp -v ./include/*.h ./dist
           cp -v ./build_folder/Release/cute.a ./dist
           cd build_folder
