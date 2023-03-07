@@ -14,6 +14,10 @@ jobs:
     name: "Build ${{ matrix.platform.name }}"
     runs-on: ${{ matrix.platform.os }}
     timeout-minutes: 10
+
+    defaults:
+      run:
+        shell: bash
     
     strategy:
       # Don't cancel other in-progress jobs if one fails.
@@ -22,16 +26,24 @@ jobs:
         platform:
           - { name: "Windows", os: windows-latest }
           - { name: "MacOS", os: macos-latest }
-          - { name: "Linux", os: ubuntu-20.04 }
+          - { name: "Linux", os: ubuntu-latest }
 
     steps:
       # The only dependency required, allows workflow to access the commit
       # and the runner to find our CMakeLists.txt file
       - uses: actions/checkout@master
 
+      - name: Install OpenGL
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install gcc-multilib
+          sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
+        if: matrix.platform.name == 'Linux'
+
       - name: Create binary directory
         run: |
-          cmake -B build
+          cmake -A x64 -B build
+
       - name: Build project binary
         run: |
-          cmake -A x64 --build build
+          cmake --build build
