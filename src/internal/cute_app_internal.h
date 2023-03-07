@@ -142,7 +142,7 @@ struct CF_EcsArrays
 {
 	int count = 0;
 	CF_Handle* entities = NULL;
-	Cute::Array<const char*> types = NULL;
+	Cute::Array<const char*> types;
 	Cute::Array<CF_TypelessArray>* ptrs;
 
 	void* find_components(const char* type)

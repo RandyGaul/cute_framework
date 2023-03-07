@@ -82,12 +82,12 @@ CUTE_INLINE void cf_write_bytes(uint8_t** p, const uint8_t* byte_array, int num_
 CUTE_INLINE void cf_write_address(uint8_t** p, CF_Address endpoint)
 {
 	cf_write_uint8(p, (uint8_t)endpoint.type);
-	if (endpoint.type == CF_ADDRESS_TYPE_IPV4) {
+	if (endpoint.type == (cn_address_type_t)CF_ADDRESS_TYPE_IPV4) {
 		cf_write_uint8(p, endpoint.u.ipv4[0]);
 		cf_write_uint8(p, endpoint.u.ipv4[1]);
 		cf_write_uint8(p, endpoint.u.ipv4[2]);
 		cf_write_uint8(p, endpoint.u.ipv4[3]);
-	} else if (endpoint.type == CF_ADDRESS_TYPE_IPV6) {
+	} else if (endpoint.type == (cn_address_type_t)CF_ADDRESS_TYPE_IPV6) {
 		cf_write_uint16(p, endpoint.u.ipv6[0]);
 		cf_write_uint16(p, endpoint.u.ipv6[1]);
 		cf_write_uint16(p, endpoint.u.ipv6[2]);

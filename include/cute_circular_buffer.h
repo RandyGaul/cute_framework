@@ -65,7 +65,7 @@ namespace Cute
 
 using CircularBuffer = CF_CircularBuffer;
 
-CUTE_INLINE CircularBuffer make_circular_buffer(int initial_size_in_bytes = NULL) { return cf_make_circular_buffer(initial_size_in_bytes); }
+CUTE_INLINE CircularBuffer make_circular_buffer(int initial_size_in_bytes) { return cf_make_circular_buffer(initial_size_in_bytes); }
 CUTE_INLINE void destroy_circular_buffer(CircularBuffer* buffer) { cf_destroy_circular_buffer(buffer); }
 
 CUTE_INLINE void circular_buffer_reset(CircularBuffer* buffer) { cf_circular_buffer_reset(buffer); }

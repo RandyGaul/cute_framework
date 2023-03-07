@@ -263,7 +263,7 @@ using Aabb = CF_Aabb;
 using Ray = CF_Ray;
 
 CUTE_INLINE AabbTree make_aabb_tree(int initial_capacity = 0) { return cf_make_aabb_tree(initial_capacity); }
-CUTE_INLINE AabbTree make_aabb_tree_from_memory(const void* buffer, size_t size = NULL) { return cf_make_aabb_tree_from_memory(buffer, size); }
+CUTE_INLINE AabbTree make_aabb_tree_from_memory(const void* buffer, size_t size) { return cf_make_aabb_tree_from_memory(buffer, size); }
 CUTE_INLINE void destroy_aabb_tree(AabbTree tree) { cf_destroy_aabb_tree(tree); }
 CUTE_INLINE Leaf aabb_tree_insert(AabbTree tree, Aabb aabb, void* udata = NULL) { return cf_aabb_tree_insert(tree, aabb, udata); }
 CUTE_INLINE void aabb_tree_remove(AabbTree tree, Leaf leaf) { cf_aabb_tree_remove(tree, leaf); }

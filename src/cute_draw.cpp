@@ -1995,7 +1995,6 @@ void cf_draw_text(const char* text, CF_V2 position)
 		s.w = glyph->w;
 		s.h = glyph->h;
 		s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
-		s.geom.u.sprite;
 		s.geom.alpha = 1.0f;
 		CF_Color color = draw->colors.last();
 

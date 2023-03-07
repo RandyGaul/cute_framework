@@ -457,7 +457,7 @@ typedef struct spritebatch_internal_sprite_t
 	float premade_maxx, premade_maxy; // v coordinate for premade
 #ifdef SPRITEBATCH_SPRITE_USERDATA
 	SPRITEBATCH_SPRITE_USERDATA udata;
-#endif SPRITEBATCH_SPRITE_USERDATA
+#endif // SPRITEBATCH_SPRITE_USERDATA
 } spritebatch_internal_sprite_t;
 
 typedef struct spritebatch_internal_texture_t

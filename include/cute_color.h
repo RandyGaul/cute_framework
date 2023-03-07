@@ -147,7 +147,7 @@ CUTE_INLINE CF_Color cf_make_color_hex(int hex) { return cf_make_color_rgba((uin
  * @param    hex        A hex-value string, such as "#42f563" or "0x42f563FF".
  * @related  CF_Color cf_make_color_rgb_f cf_make_color_rgba_f cf_make_color_rgb cf_make_color_rgba cf_make_color_hex cf_make_color_hex_string
  */
-CUTE_INLINE CF_Color cf_make_color_hex_string(const char* hex) { cf_make_color_hex((int)stohex(hex)); }
+CUTE_INLINE CF_Color cf_make_color_hex_string(const char* hex) { return cf_make_color_hex((int)stohex(hex)); }
 
 /**
  * @function cf_make_pixel_rgb_f

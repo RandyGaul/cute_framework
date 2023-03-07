@@ -47,7 +47,7 @@ struct CF_AsepriteCache
 	uint64_t id_gen = CUTE_ASEPRITE_ID_RANGE_LO;
 };
 
-CF_AsepriteCache* cache;
+static CF_AsepriteCache* cache;
 
 void cf_aseprite_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill)
 {
