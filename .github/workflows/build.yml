@@ -21,9 +21,6 @@ jobs:
       matrix:
         platform:
           - { name: "Windows (MinGW)",         os: windows-latest, artifact: 'mingw',   generate: '-G "MinGW Makefiles"' }
-          - { name: "Windows (MSCV 14 2015)",  os: windows-latest, artifact: 'mscv14',  generate: '-G "Visual Studio 14 2015" -A x64' }
-          - { name: "Windows (MSCV 15 2017)",  os: windows-latest, artifact: 'mscv15',  generate: '-G "Visual Studio 15 2017" -A x64' }
-          - { name: "Windows (MSCV 16 2019)",  os: windows-latest, artifact: 'mscv16',  generate: '-G "Visual Studio 16 2019" -A x64' }
           - { name: "Windows (MSCV 17 2022)",  os: windows-latest, artifact: 'mscv17',  generate: '-G "Visual Studio 17 2022" -A x64' }
           - { name: "MacOS",                   os: macos-latest,   artifact: 'macos',   generate: '-G "Unix Makefiles"' }
           - { name: "Linux",                   os: ubuntu-latest,  artifact: 'linux',   generate: '-G "Unix Makefiles"' }
