@@ -22,7 +22,7 @@ jobs:
         platform:
           - { name: "Windows", os: windows-latest }
           - { name: "MacOS", os: macos-latest }
-          - { name: "Linux", os: ubuntu-latest }
+          - { name: "Linux", os: ubuntu-20.04 }
 
     steps:
       # The only dependency required, allows workflow to access the commit
@@ -34,4 +34,4 @@ jobs:
           cmake -B build
       - name: Build project binary
         run: |
-          cmake -A x64 --build build --config Release
+          cmake -A x64 --build build
