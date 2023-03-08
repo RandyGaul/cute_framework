@@ -56,4 +56,6 @@
 #include "cute_time.h"
 #include "cute_version.h"
 
+#include <SDL_main.h>
+
 #endif // CUTE_H

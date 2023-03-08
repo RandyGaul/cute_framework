@@ -60,7 +60,7 @@
 #include <imgui/imgui.h>
 #include <sokol/sokol_gfx_imgui.h>
 
-int main(int argc, const char** argv)
+int main(int argc, char* argv[])
 {
 	cf_fs_init(argv[0]);
 	printf("Tests are running from \"%s\"\n\n", cf_fs_get_base_directory());

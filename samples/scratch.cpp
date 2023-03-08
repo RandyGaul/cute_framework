@@ -1,7 +1,7 @@
 #include <cute.h>
 using namespace Cute;
 
-int main(int argc, const char** argv)
+int main(int argc, char* argv[])
 {
 	int w = 640/1;
 	int h = 480/1;

@@ -38,7 +38,6 @@
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
 
-#define SDL_MAIN_HANDLED
 #include <SDL.h>
 
 #ifdef CUTE_WINDOWS

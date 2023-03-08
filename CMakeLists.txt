@@ -305,7 +305,7 @@ else()
 		GIT_PROGRESS TRUE
 	)
 endif()
-set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} SDL2-static)
+set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} SDL2main SDL2-static)
 target_include_directories(cute PUBLIC ${SDL2_INCLUDE_DIRS})
 
 # Some platform specific settings.

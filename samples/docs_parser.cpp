@@ -512,7 +512,7 @@ String auto_generate_links(String text)
 	return text;
 }
 
-int main(int argc, const char** argv)
+int main(int argc, char* argv[])
 {
 	// Mount the headers folder as "".
 	cf_fs_init(argv[0]);
