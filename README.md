@@ -32,7 +32,7 @@ Another option for those familiar with CMake is to build Cute Framework from sou
 #include <cute.h>
 using namespace Cute;
 
-int main(int argc, const char** argv)
+int main(int argc, char* argv[])
 {
 	// Create a window with a resolution of 640 x 480.
 	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED;
