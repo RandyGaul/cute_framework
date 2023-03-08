@@ -1,5 +1,5 @@
 <p align="center">
-<img src=https://github.com/RandyGaul/cute_framework/blob/master/logo.png>
+<img src=https://github.com/RandyGaul/cute_framework/blob/master/CF_Banner_4x.png>
 <br>
 <img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/randygaul/cute_framework/build.yml">
 <img alt="Discord" src="https://img.shields.io/discord/432009046833233930?label=discord">
