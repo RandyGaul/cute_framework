@@ -1,6 +1,7 @@
 <p align="center">
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/CF_Banner_4x.png>
 <br>
+<br>
 <img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/randygaul/cute_framework/build.yml">
 <img alt="Discord" src="https://img.shields.io/discord/432009046833233930?label=discord">
 </p>
@@ -79,3 +80,6 @@ Here's the [API reference](https://randygaul.github.io/cute_framework/#/), organ
 Here's a [link to the discord chat](https://discord.gg/2DFHRmX) for Cute Framework and the [Cute Headers](https://github.com/RandyGaul/cute_headers). Feel free to pop in and ask questions, make suggestions, or have a discussion.
 
 Feel free to open up an [issue right here on GitHub](https://github.com/RandyGaul/cute_framework/issues) to ask any questions. If you'd like to make a pull request I highly recommend opening a GitHub issue first to start a discussion on any changes you would like to make.
+
+<br>
+<p align="center"><img src=https://github.com/RandyGaul/cute_framework/blob/master/CF_Logo_Pixel_2x.png></p>
