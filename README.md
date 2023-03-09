@@ -6,15 +6,15 @@
 <img alt="Discord" src="https://img.shields.io/discord/432009046833233930?label=discord">
 </p>
 
-[Cute Framework](https://randygaul.github.io/cute_framework/#/) (CF for short) is the *cutest* framework available for making 2D games in C++. CF provides a portable foundational layer for building 2D games in C/C++ without baggage, gnarly dependencies, or cryptic APIs. CF runs almost anywhere, including Windows, MacOS, iOS, Android, Linux, and more!
+[Cute Framework](https://randygaul.github.io/cute_framework/#/) (CF) is the *cutest* framework available for making 2D games in C++. It provides a portable foundational layer for building 2D games in C/C++ without baggage, gnarly dependencies, or cryptic APIs. CF runs almost anywhere, including Windows, MacOS, iOS, Android, Linux, and more!
 
 ## Download and Setup
 
-The easiest option is to head over and pickup the [latest pre-built version](https://github.com/randygaul/cute_framework/releases/latest) of Cute Framework. You can link your project against Cute Framework as either a static or shared library. Be sure to also visit the [Cute Framwork documentation site](https://randygaul.github.io/cute_framework/#/).
+The easiest option is to head over and pickup the [latest pre-built version](https://github.com/randygaul/cute_framework/releases/latest). You can link your project against CF as either a static or shared library. Be sure to also visit the [Cute Framwork documentation site](https://randygaul.github.io/cute_framework/#/).
 
 ### Building from Source
 
-Another option for those familiar with CMake is to build Cute Framework from source with CMake.
+Another option for those familiar with CMake is to build from source with CMake.
 
 1. Download and install CMake v3.14+ (for easy cross-platform building)
 2. Copy + paste [CMakeLists.txt](https://github.com/RandyGaul/cute_framework_project_template/blob/main/CMakeLists.txt) from the [CF project template](https://github.com/RandyGaul/cute_framework_project_template). Find + replace "my_project_name".
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
 
 # Resources
 
-The [Cute Framework documentation website](https://randygaul.github.io/cute_framework/#/) is the go-to place for finding all the resources available. Here are some quick-links to get you started:
+The [documentation website](https://randygaul.github.io/cute_framework/#/) is the go-to place for finding all the resources available. Here are some quick-links to get you started:
 
 - [Topics and Tutorials](https://randygaul.github.io/cute_framework/#/topics_and_tutorials)
 - [Samples](https://randygaul.github.io/cute_framework/#/samples)
