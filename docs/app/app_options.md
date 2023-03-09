@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # App Options
 
 Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  

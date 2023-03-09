@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_fs_write_entire_buffer_to_file
 
 Category: [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=file)  

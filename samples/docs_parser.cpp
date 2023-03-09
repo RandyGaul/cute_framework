@@ -150,6 +150,7 @@ String linkify(String text, String scan, bool ticks = true)
 
 void Doc::emit_title(FILE* fp)
 {
+	fprintf(fp, "[](../header.md ':include')\n\n");
 	fprintf(fp, "# %s\n\n", title.c_str());
 	String link = linkify(web_category, web_category, false);
 	fprintf(fp, "Category: [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=%s)  \n", web_category.c_str(), link.c_str());

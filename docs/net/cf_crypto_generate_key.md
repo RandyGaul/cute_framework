@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_crypto_generate_key
 
 Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  

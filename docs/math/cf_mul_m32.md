@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_mul_m32
 
 Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  

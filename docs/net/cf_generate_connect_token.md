@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_generate_connect_token
 
 Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  

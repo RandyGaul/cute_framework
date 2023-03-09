@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_haptic_create_effect
 
 Category: [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=haptic)  

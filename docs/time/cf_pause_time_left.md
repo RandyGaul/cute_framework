@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # CF_PAUSE_TIME_LEFT
 
 Category: [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=time)  

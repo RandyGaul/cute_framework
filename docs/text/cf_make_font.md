@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_make_font
 
 Category: [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=text)  

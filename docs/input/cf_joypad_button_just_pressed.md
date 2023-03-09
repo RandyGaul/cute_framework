@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_joypad_button_just_pressed
 
 Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  

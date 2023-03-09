@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_clipboard_set
 
 Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  

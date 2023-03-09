@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_mesh_append_index_data
 
 Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  

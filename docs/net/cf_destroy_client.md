@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_destroy_client
 
 Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  

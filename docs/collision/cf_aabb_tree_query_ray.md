@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_aabb_tree_query_ray
 
 Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  

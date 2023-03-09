@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_haptic_type_to_string
 
 Category: [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=haptic)  

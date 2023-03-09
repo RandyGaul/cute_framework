@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_draw_bezier_line
 
 Category: [draw](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=draw)  

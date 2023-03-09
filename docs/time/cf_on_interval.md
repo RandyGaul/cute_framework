@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_on_interval
 
 Category: [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=time)  

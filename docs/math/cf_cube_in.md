@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_cube_in
 
 Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  

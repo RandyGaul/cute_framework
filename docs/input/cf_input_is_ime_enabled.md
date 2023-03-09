@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_input_is_ime_enabled
 
 Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  

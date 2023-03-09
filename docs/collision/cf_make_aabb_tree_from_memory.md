@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_make_aabb_tree_from_memory
 
 Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  

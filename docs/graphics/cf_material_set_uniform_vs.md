@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_material_set_uniform_vs
 
 Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  

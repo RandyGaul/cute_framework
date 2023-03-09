@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_stopwatch_seconds
 
 Category: [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=time)  

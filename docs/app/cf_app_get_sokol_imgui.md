@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_app_get_sokol_imgui
 
 Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  

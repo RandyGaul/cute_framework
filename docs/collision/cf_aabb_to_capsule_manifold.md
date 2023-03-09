@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_aabb_to_capsule_manifold
 
 Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  

@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_sound_set_is_looped
 
 Category: [audio](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=audio)  

@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_sprite_toggle_pause
 
 Category: [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=sprite)  

@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_text_effect_on_start
 
 Category: [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=text)  

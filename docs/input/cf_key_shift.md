@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_key_shift
 
 Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  

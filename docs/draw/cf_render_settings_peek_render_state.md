@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_render_settings_peek_render_state
 
 Category: [draw](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=draw)  

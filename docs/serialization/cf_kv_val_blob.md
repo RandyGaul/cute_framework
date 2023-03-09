@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_kv_val_blob
 
 Category: [serialization](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=serialization)  

@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_key_value_state_to_string
 
 Category: [serialization](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=serialization)  

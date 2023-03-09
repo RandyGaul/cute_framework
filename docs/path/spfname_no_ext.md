@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # spfname_no_ext
 
 Category: [path](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=path)  

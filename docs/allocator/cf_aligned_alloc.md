@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_aligned_alloc
 
 Category: [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=allocator)  

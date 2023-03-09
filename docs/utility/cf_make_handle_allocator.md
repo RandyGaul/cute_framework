@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_make_handle_allocator
 
 Category: [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=utility)  

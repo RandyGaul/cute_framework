@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_input_get_ime_composition
 
 Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  

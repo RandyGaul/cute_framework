@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_uniform_type_string
 
 Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  

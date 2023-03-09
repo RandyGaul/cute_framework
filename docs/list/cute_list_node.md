@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # CUTE_LIST_NODE
 
 Category: [list](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=list)  

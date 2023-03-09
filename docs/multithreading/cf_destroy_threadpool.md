@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_destroy_threadpool
 
 Category: [multithreading](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=multithreading)  

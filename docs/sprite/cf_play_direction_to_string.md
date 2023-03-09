@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_play_direction_to_string
 
 Category: [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=sprite)  

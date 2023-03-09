@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_draw_tri_fill
 
 Category: [draw](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=draw)  

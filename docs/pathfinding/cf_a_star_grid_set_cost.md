@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_a_star_grid_set_cost
 
 Category: [pathfinding](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=pathfinding)  

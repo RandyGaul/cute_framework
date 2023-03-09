@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_cacheline_size
 
 Category: [CPU](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=CPU)  

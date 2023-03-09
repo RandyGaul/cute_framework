@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # CF_DELTA_TIME
 
 Category: [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=time)  

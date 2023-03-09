@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_app_power_info
 
 Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  

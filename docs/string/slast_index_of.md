@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # slast_index_of
 
 Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  

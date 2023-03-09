@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_read_lock
 
 Category: [multithreading](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=multithreading)  

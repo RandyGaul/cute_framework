@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_fract
 
 Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  

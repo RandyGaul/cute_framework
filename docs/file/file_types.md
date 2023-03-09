@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # File Types
 
 Category: [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=file)  

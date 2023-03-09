@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_animation_add_frame
 
 Category: [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=sprite)  

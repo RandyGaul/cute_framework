@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_music_set_sample_index
 
 Category: [audio](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=audio)  

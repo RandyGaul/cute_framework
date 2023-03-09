@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_memory_pool_free
 
 Category: [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=allocator)  

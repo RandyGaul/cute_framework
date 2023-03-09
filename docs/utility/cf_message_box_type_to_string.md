@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_message_box_type_to_string
 
 Category: [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=utility)  

@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # CF_TextEffectFn
 
 Category: [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=text)  

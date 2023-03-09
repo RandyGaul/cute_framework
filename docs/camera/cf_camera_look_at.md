@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_camera_look_at
 
 Category: [camera](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=camera)  

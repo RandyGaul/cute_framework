@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_peek_text_vertical_layout
 
 Category: [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=text)  

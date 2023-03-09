@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_server_event_type_to_string
 
 Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  

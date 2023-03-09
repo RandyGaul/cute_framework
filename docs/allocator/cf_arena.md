@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # CF_Arena
 
 Category: [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=allocator)  

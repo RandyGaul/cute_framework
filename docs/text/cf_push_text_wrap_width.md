@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_push_text_wrap_width
 
 Category: [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=text)  

@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_input_text_clear
 
 Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  

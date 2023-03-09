@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_a_star
 
 Category: [pathfinding](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=pathfinding)  

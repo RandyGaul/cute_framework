@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_set_fixed_timestep
 
 Category: [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=time)  

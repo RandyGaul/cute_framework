@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_cross_f_v2
 
 Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  

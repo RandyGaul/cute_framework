@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # sreplace
 
 Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  

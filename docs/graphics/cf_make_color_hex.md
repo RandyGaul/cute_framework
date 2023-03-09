@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_make_color_hex
 
 Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  

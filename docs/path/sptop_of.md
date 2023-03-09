@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # sptop_of
 
 Category: [path](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=path)  

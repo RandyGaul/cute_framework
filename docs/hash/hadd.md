@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # hadd
 
 Category: [hash](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=hash)  

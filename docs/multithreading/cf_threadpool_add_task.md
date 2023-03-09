@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_threadpool_add_task
 
 Category: [multithreading](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=multithreading)  

@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_input_text_pop_utf32
 
 Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  

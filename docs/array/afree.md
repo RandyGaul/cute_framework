@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # afree
 
 Category: [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=array)  

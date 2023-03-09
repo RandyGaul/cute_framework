@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # CF_BASE64_ENCODED_SIZE
 
 Category: [base64](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=base64)  

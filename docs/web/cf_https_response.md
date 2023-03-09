@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_https_response
 
 Category: [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=web)  

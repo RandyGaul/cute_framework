@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_clamp_color
 
 Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  

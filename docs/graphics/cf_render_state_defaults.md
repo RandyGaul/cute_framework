@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_render_state_defaults
 
 Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  

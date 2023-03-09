@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_rnd_next_double
 
 Category: [random](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=random)  

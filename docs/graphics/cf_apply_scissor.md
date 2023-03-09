@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # cf_apply_scissor
 
 Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  

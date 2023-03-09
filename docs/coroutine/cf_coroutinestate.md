@@ -1,3 +1,5 @@
+[](../header.md ':include')
+
 # CF_CoroutineState
 
 Category: [coroutine](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=coroutine)  
