@@ -512,6 +512,25 @@ String auto_generate_links(String text)
 	return text;
 }
 
+void save_list_page(Path path, const char* category, Array<const char*> pages, const char* path_name)
+{
+	// Save the actual list files.
+	{
+		Path topic_path = path;
+		topic_path.pop();
+		topic_path.add(String::fmt("docs/%s/%s.md", category, path_name));
+		FILE* fp = fopen(topic_path.c_str(), "wb");
+		for (int i = 0; i < pages.count(); ++i) {
+			String page = pages[i];
+			String page_lower = page;
+			page_lower.to_lower().replace(" ", "_");
+			fprintf(fp, "- [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s/%s.md)\n", page.c_str(), category, page_lower.c_str());
+		}
+		fprintf(fp, "\n");
+		fclose(fp);
+	}
+}
+
 int main(int argc, char* argv[])
 {
 	// Mount the headers folder as "".
@@ -602,26 +621,7 @@ int main(int argc, char* argv[])
 		fclose(fp);
 	}
 
-	// Save the categories index file.
-	{
-		Path topic_path = path;
-		topic_path.pop();
-		topic_path.add("docs/README.md");
-		FILE* fp = fopen(topic_path.c_str(), "wb");
-		fprintf(fp, "# Categories\n\n");
-		Array<const char*> categories;
-		for (int i = 0; i < s->categories.count(); ++i) {
-			categories.add(s->categories.items()[i]);
-		}
-		std::sort(categories.data(), categories.data() + categories.count(), [](const char* a, const char* b) { return sicmp(a, b) < 0; });
-		for (int i = 0; i < categories.count(); ++i) {
-			const char* category = categories[i];
-			fprintf(fp, "- [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s/README.md)\n", category, category);
-		}
-		fclose(fp);
-	}
-
-	// Save each category index list.
+	// Save a functions.md, structs.md, and enums.md for each category.
 	{
 		Array<const char*> categories;
 		for (int i = 0; i < s->categories.count(); ++i) {
@@ -631,19 +631,51 @@ int main(int argc, char* argv[])
 		for (int i = 0; i < categories.count(); ++i) {
 			const char* category = categories[i];
 			Array<const char*> index_list = s->category_index_lists.find(category);
-			std::sort(index_list.data(), index_list.data() + index_list.count(), [](const char* a, const char* b) { return sicmp(a, b) < 0; });
-			Path topic_path = path;
-			topic_path.pop();
-			topic_path.add(String::fmt("docs/%s/README.md", category));
-			FILE* fp = fopen(topic_path.c_str(), "wb");
-			fprintf(fp, "# Pages\n\n");
-			for (int i = 0; i < index_list.count(); ++i) {
-				String page = index_list[i];
-				String page_lower = page;
-				page_lower.to_lower().replace(" ", "_");
-				fprintf(fp, "- [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s/%s.md)\n", page.c_str(), category, page_lower.c_str());
+
+			// Save functions.md.
+			bool has_functions = false;
+			{
+				Array<const char*> functions;
+				for (int i = 0; i < index_list.size(); ++i) {
+					const char* title = index_list[i];
+					if (s->docs[s->get_doc_index(title)].type == DOC_FUNCTION) {
+						functions.add(title);
+					}
+				}
+				has_functions = functions.count() > 0;
+				std::sort(functions.data(), functions.data() + functions.count(), [](const char* a, const char* b) { return sicmp(a, b) < 0; });
+				save_list_page(path, category, functions, "functions");
 			}
-			fclose(fp);
+
+			// Save structs.md.
+			bool has_structs = false;
+			{
+				Array<const char*> structs;
+				for (int i = 0; i < index_list.size(); ++i) {
+					const char* title = index_list[i];
+					if (s->docs[s->get_doc_index(title)].type == DOC_STRUCT) {
+						structs.add(title);
+					}
+				}
+				has_structs = structs.count() > 0;
+				std::sort(structs.data(), structs.data() + structs.count(), [](const char* a, const char* b) { return sicmp(a, b) < 0; });
+				save_list_page(path, category, structs, "structs");
+			}
+
+			// Save enums.md.
+			bool has_enums = false;
+			{
+				Array<const char*> enums;
+				for (int i = 0; i < index_list.size(); ++i) {
+					const char* title = index_list[i];
+					if (s->docs[s->get_doc_index(title)].type == DOC_ENUM) {
+						enums.add(title);
+					}
+				}
+				has_enums = enums.count() > 0;
+				std::sort(enums.data(), enums.data() + enums.count(), [](const char* a, const char* b) { return sicmp(a, b) < 0; });
+				save_list_page(path, category, enums, "enums");
+			}
 		}
 	}
 
