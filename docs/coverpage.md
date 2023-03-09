@@ -1,5 +1,5 @@
-<p align="center"><img src=/cute_framework/assets/CF_Text_Hifi.png></p>
-<p align="center"><img src=/cute_framework/assets/CF_Logo_Hifi.png></p>
+<p align="center"><img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/CF_Text_Hifi.png?raw=true></p>
+<p align="center"><img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/CF_Logo_Hifi.png?raw=true></p>
 
 > The _cutest_ framework available for making 2D games in C/C++
 
