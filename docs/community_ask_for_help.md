@@ -1,4 +1,4 @@
-[](/assets/header.md ':include')
+[](/header.md ':include')
 
 Here's a [link to the discord chat](https://discord.gg/2DFHRmX) for Cute Framework. Feel free to pop in and ask questions, make suggestions, or have a discussion.
 

@@ -1,4 +1,4 @@
-[](/assets/header.md ':include')
+[](/header.md ':include')
 
 - [Cute Snake, example game implemented in CF](https://github.com/RandyGaul/cute_snake)
 - todo link
