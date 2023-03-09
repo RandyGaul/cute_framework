@@ -60,3 +60,5 @@ The [Cute Framework documentation website](https://randygaul.github.io/cute_fram
 If you're stuck and need help then check out the [Discord chat](https://discord.gg/2DFHRmX). Feel free to pop in and ask questions, make suggestions, or have a discussion. General gamedev chatting unrelated to CF is also welcome!
 
 Feel free to open up an [issue right here on GitHub](https://github.com/RandyGaul/cute_framework/issues) to ask any questions. If you'd like to make a pull request I highly recommend opening a GitHub issue first to start a discussion on any changes you would like to make.
+
+<p align="center"><img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/CF_Logo_Pixel_2x.png></p>
