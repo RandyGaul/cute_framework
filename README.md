@@ -1,20 +1,16 @@
 <p align="center">
-<img src=https://github.com/RandyGaul/cute_framework/blob/master/CF_Banner_4x.png>
+<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/CF_Banner_Hifi_1280.png>
 <br>
 <br>
 <img alt="GitHub Workflow Status" src="https://img.shields.io/github/actions/workflow/status/randygaul/cute_framework/build.yml">
 <img alt="Discord" src="https://img.shields.io/discord/432009046833233930?label=discord">
 </p>
 
-Cute Framework (CF for short) is the *cutest* framework available for making 2D games in C++. CF provides a portable foundational layer for building 2D games in C/C++ without baggage, gnarly dependencies, or cryptic APIs. CF is easy to build and great for getting projects off the ground. Written with a portable pure C API CF runs almost anywhere, including Windows, MacOS, iOS, Android, Linux, and more!
+[Cute Framework](https://randygaul.github.io/cute_framework/#/) (CF for short) is the *cutest* framework available for making 2D games in C++. CF provides a portable foundational layer for building 2D games in C/C++ without baggage, gnarly dependencies, or cryptic APIs. CF runs almost anywhere, including Windows, MacOS, iOS, Android, Linux, and more!
 
-Note: This document is WIP and being prepped for v1.0 -- Check back shortly!
+## Download and Setup
 
-# Getting Started
-
-### Download and Setup
-
-The easiest option is to head over and pickup the [latest pre-built version](https://github.com/randygaul/cute_framework/releases/latest) of Cute Framework. You can link your project against Cute Framework as either a static or shared library.
+The easiest option is to head over and pickup the [latest pre-built version](https://github.com/randygaul/cute_framework/releases/latest) of Cute Framework. You can link your project against Cute Framework as either a static or shared library. Be sure to also visit the [Cute Framwork documentation site](https://randygaul.github.io/cute_framework/#/).
 
 ### Building from Source
 
@@ -55,31 +51,12 @@ int main(int argc, char* argv[])
 
 # Resources
 
-## Topics and Tutorials
+The [Cute Framework documentation website](https://randygaul.github.io/cute_framework/#/) is the go-to place for finding all the resources available. Here are some quick-links to get you started:
 
-To learn about a specific area in Cute Framework visit one of these topic articles. Each article introduces a major feature of Cute Framework and provides an overview on how to piece things together for making games.
+- [Topics and Tutorials](https://randygaul.github.io/cute_framework/#/topics_and_tutorials)
+- [Samples](https://randygaul.github.io/cute_framework/#/samples)
+- [API Reference](https://randygaul.github.io/cute_framework/#/api_reference)
 
-* todo link
-* todo link
-* todo link
-* todo link
-
-## API Reference
-
-Here's the [API reference](https://randygaul.github.io/cute_framework/#/), organized by categories. This is great for more advanced users that want to see all the available functionality laid out plainly.
-
-## Samples
-
-- [Cute Snake, example game implemented in CF](https://github.com/RandyGaul/cute_snake)
-- todo link
-- todo link
-- todo link
-
-## Community / Ask for Help
-
-Here's a [link to the discord chat](https://discord.gg/2DFHRmX) for Cute Framework and the [Cute Headers](https://github.com/RandyGaul/cute_headers). Feel free to pop in and ask questions, make suggestions, or have a discussion.
+If you're stuck and need help then check out the [Discord chat](https://discord.gg/2DFHRmX). Feel free to pop in and ask questions, make suggestions, or have a discussion. General gamedev chatting unrelated to CF is also welcome!
 
 Feel free to open up an [issue right here on GitHub](https://github.com/RandyGaul/cute_framework/issues) to ask any questions. If you'd like to make a pull request I highly recommend opening a GitHub issue first to start a discussion on any changes you would like to make.
-
-<br>
-<p align="center"><img src=https://github.com/RandyGaul/cute_framework/blob/master/CF_Logo_Pixel_2x.png></p>
