@@ -2,7 +2,7 @@
 
 # cf_core_count
 
-Category: [CPU](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=CPU)  
+Category: [CPU](/api_reference?id=CPU)  
 GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)  
 ---
 

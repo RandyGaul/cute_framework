@@ -2,7 +2,7 @@
 
 # cf_sprite_unpause
 
-Category: [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=sprite)  
+Category: [sprite](/api_reference?id=sprite)  
 GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
 ---
 
@@ -18,8 +18,8 @@ sprite | The sprite.
 
 ## Related Pages
 
-[CF_Sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite.md)  
-[cf_sprite_update](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_update.md)  
-[cf_sprite_play](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_play.md)  
-[cf_sprite_pause](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_pause.md)  
-[cf_sprite_toggle_pause](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_toggle_pause.md)  
+[CF_Sprite](/sprite/cf_sprite.md)  
+[cf_sprite_update](/sprite/cf_sprite_update.md)  
+[cf_sprite_play](/sprite/cf_sprite_play.md)  
+[cf_sprite_pause](/sprite/cf_sprite_pause.md)  
+[cf_sprite_toggle_pause](/sprite/cf_sprite_toggle_pause.md)  

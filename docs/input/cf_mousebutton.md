@@ -2,7 +2,7 @@
 
 # CF_MouseButton
 
-Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+Category: [input](/api_reference?id=input)  
 GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)  
 ---
 
@@ -18,5 +18,5 @@ MOUSE_BUTTON_MIDDLE |
 
 ## Related Pages
 
-[cf_mouse_down](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_mouse_down.md)  
-[cf_mouse_button_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_mouse_button_to_string.md)  
+[cf_mouse_down](/input/cf_mouse_down.md)  
+[cf_mouse_button_to_string](/input/cf_mouse_button_to_string.md)  

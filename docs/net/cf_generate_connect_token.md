@@ -2,7 +2,7 @@
 
 # cf_generate_connect_token
 
-Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+Category: [net](/api_reference?id=net)  
 GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
 ---
 
@@ -15,12 +15,12 @@ CF_Result cf_generate_connect_token(uint64_t application_id, uint64_t creation_t
 Parameters | Description
 --- | ---
 application_id | A unique number to identify your game, can be whatever value you like.
-                      This must be the same number as in [cf_make_client](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_make_client.md) and [cf_make_server](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_make_server.md).
+                      This must be the same number as in [cf_make_client](/net/cf_make_client.md) and [cf_make_server](/net/cf_make_server.md).
 creation_timestamp | A unix timestamp of the current time.
 client_to_server_key | A unique key for this connect token for the client to encrypt packets, and server to
-                      decrypt packets. This can be generated with [cf_crypto_generate_key](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_crypto_generate_key.md) on your web service.
+                      decrypt packets. This can be generated with [cf_crypto_generate_key](/net/cf_crypto_generate_key.md) on your web service.
 server_to_client_key | A unique key for this connect token for the server to encrypt packets, and the client to
-                      decrypt packets. This can be generated with [cf_crypto_generate_key](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_crypto_generate_key.md) on your web service.
+                      decrypt packets. This can be generated with [cf_crypto_generate_key](/net/cf_crypto_generate_key.md) on your web service.
 expiration_timestamp | A unix timestamp for when this connect token expires and becomes invalid.
 handshake_timeout | The number of seconds the connection will stay alive during the handshake process before
                       the client and server reject the handshake process as failed.
@@ -29,11 +29,11 @@ address_list | A list of game servers the client can try connecting to, of lengt
 client_id | The unique client identifier (you pick this).
 user_data | Can be `NULL`. Optional buffer of data of `CUTE_PROTOCOL_CONNECT_TOKEN_USER_DATA_SIZE` (256) bytes.
 shared_secret_key | Only your webservice and game servers know this key.
-token_ptr_out | Pointer to your buffer, should be [CUTE_CONNECT_TOKEN_SIZE](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cute_connect_token_size.md) bytes large.
+token_ptr_out | Pointer to your buffer, should be [CUTE_CONNECT_TOKEN_SIZE](/net/cute_connect_token_size.md) bytes large.
 
 ## Return Value
 
-Returns any errors as [CF_Result](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_result.md).
+Returns any errors as [CF_Result](/utility/cf_result.md).
 
 ## Remarks
 
@@ -53,6 +53,6 @@ new one and distribute it to your webservice and game servers.
 
 ## Related Pages
 
-[CF_CryptoKey](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_cryptokey.md)  
-[cf_crypto_generate_key](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_crypto_generate_key.md)  
-[cf_client_connect](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client_connect.md)  
+[CF_CryptoKey](/net/cf_cryptokey.md)  
+[cf_crypto_generate_key](/net/cf_crypto_generate_key.md)  
+[cf_client_connect](/net/cf_client_connect.md)  

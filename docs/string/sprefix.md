@@ -2,7 +2,7 @@
 
 # sprefix
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -23,8 +23,8 @@ Returns true if `prefix` is the prefix of `s`, false otherwise.
 
 ## Related Pages
 
-[sfind](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfind.md)  
-[ssuffix](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/ssuffix.md)  
-[scontains](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/scontains.md)  
-[sfirst_index_of](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfirst_index_of.md)  
-[slast_index_of](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/slast_index_of.md)  
+[sfind](/string/sfind.md)  
+[ssuffix](/string/ssuffix.md)  
+[scontains](/string/scontains.md)  
+[sfirst_index_of](/string/sfirst_index_of.md)  
+[slast_index_of](/string/slast_index_of.md)  

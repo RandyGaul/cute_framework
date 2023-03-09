@@ -2,7 +2,7 @@
 
 # sfmt
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -24,7 +24,7 @@ The string will be overwritten from the beginning. Will automatically adjust cap
 
 ## Related Pages
 
-[sset](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sset.md)  
-[sfmt_append](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfmt_append.md)  
-[svfmt](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/svfmt.md)  
-[svfmt_append](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/svfmt_append.md)  
+[sset](/string/sset.md)  
+[sfmt_append](/string/sfmt_append.md)  
+[svfmt](/string/svfmt.md)  
+[svfmt_append](/string/svfmt_append.md)  

@@ -2,7 +2,7 @@
 
 # cf_kv_last_error
 
-Category: [serialization](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=serialization)  
+Category: [serialization](/api_reference?id=serialization)  
 GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_kv.h)  
 ---
 
@@ -19,13 +19,13 @@ kv | The kv instance.
 ## Remarks
 
 You can use this try and get a more useful description of what may have went wrong. These errors are not fatal.
-For example if you search for a key with [cf_kv_key](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_key.md) and it's non-existent a potentially useful error message may be
+For example if you search for a key with [cf_kv_key](/serialization/cf_kv_key.md) and it's non-existent a potentially useful error message may be
 generated, but you can still keep going and look for other keys freely.
 
 ## Related Pages
 
 TODO_KV_TUTORIAL_LINK  
-[CF_KeyValue](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_keyvalue.md)  
-[cf_kv_read](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_read.md)  
-[cf_kv_write](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_write.md)  
-[cf_kv_key](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_key.md)  
+[CF_KeyValue](/serialization/cf_keyvalue.md)  
+[cf_kv_read](/serialization/cf_kv_read.md)  
+[cf_kv_write](/serialization/cf_kv_write.md)  
+[cf_kv_key](/serialization/cf_kv_key.md)  

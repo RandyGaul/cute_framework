@@ -2,7 +2,7 @@
 
 # cf_https_post
 
-Category: [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=web)  
+Category: [web](/api_reference?id=web)  
 GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)  
 ---
 
@@ -24,7 +24,7 @@ bool | You should set this to `true`. `false` will disable the secure part of HT
 
 ## Return Value
 
-Returns a [CF_Https](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https.md) pointer.
+Returns a [CF_Https](/web/cf_https.md) pointer.
 
 ## Remarks
 
@@ -35,7 +35,7 @@ Any errors are optionally reported through the `err` parameter.
 
 `verify_cert` will verify the server's x509 certificate, but can be disabled (dangerous).
 
-Returns an [CF_Https](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https.md) pointer which needs to be processed with [cf_https_process](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https_process.md) and cleaned up by [cf_https_destroy](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https_destroy.md).
+Returns an [CF_Https](/web/cf_https.md) pointer which needs to be processed with [cf_https_process](/web/cf_https_process.md) and cleaned up by [cf_https_destroy](/web/cf_https_destroy.md).
 
 `host` and `port` are unused when building with emscripten -- this is since an XMLHttpRequest is used
 underneath, meaning only files from the server this code came from can be loaded, and as such the `uri`
@@ -43,7 +43,7 @@ should only be a relative path on the server.
 
 ## Related Pages
 
-[CF_Https](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https.md)  
-[cf_https_get](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https_get.md)  
-[cf_https_process](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https_process.md)  
-[cf_https_destroy](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https_destroy.md)  
+[CF_Https](/web/cf_https.md)  
+[cf_https_get](/web/cf_https_get.md)  
+[cf_https_process](/web/cf_https_process.md)  
+[cf_https_destroy](/web/cf_https_destroy.md)  

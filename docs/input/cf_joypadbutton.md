@@ -2,11 +2,11 @@
 
 # CF_JoypadButton
 
-Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+Category: [input](/api_reference?id=input)  
 GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
 ---
 
-Various buttons on a [CF_Joypad](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad.md).
+Various buttons on a [CF_Joypad](/input/cf_joypad.md).
 
 ## Values
 
@@ -32,6 +32,6 @@ JOYPAD_BUTTON_COUNT |
 
 ## Related Pages
 
-[cf_joypad_button_down](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad_button_down.md)  
-[cf_joypad_button_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad_button_to_string.md)  
-[CF_Joypad](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad.md)  
+[cf_joypad_button_down](/input/cf_joypad_button_down.md)  
+[cf_joypad_button_to_string](/input/cf_joypad_button_to_string.md)  
+[CF_Joypad](/input/cf_joypad.md)  

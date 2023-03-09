@@ -2,7 +2,7 @@
 
 # cf_text_effect_register
 
-Category: [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=text)  
+Category: [text](/api_reference?id=text)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
@@ -15,7 +15,7 @@ void cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
 Parameters | Description
 --- | ---
 name | A unique name for your text effect.
-fn | The [CF_TextEffectFn](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/cf_texteffectfn.md) function you must implement to perform the custom effect.
+fn | The [CF_TextEffectFn](/text/cf_texteffectfn.md) function you must implement to perform the custom effect.
 
 ## Code Example
 
@@ -76,10 +76,10 @@ automatically. You only need to fetch them with the appropriate cf_text_effect_g
 
 ## Related Pages
 
-[CF_TextEffect](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/cf_texteffect.md)  
-[CF_TextEffectFn](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/cf_texteffectfn.md)  
-[cf_text_effect_get_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/cf_text_effect_get_string.md)  
-[cf_text_effect_on_start](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/cf_text_effect_on_start.md)  
-[cf_text_effect_on_finish](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/cf_text_effect_on_finish.md)  
-[cf_text_effect_get_number](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/cf_text_effect_get_number.md)  
-[cf_text_effect_get_color](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/cf_text_effect_get_color.md)  
+[CF_TextEffect](/text/cf_texteffect.md)  
+[CF_TextEffectFn](/text/cf_texteffectfn.md)  
+[cf_text_effect_get_string](/text/cf_text_effect_get_string.md)  
+[cf_text_effect_on_start](/text/cf_text_effect_on_start.md)  
+[cf_text_effect_on_finish](/text/cf_text_effect_on_finish.md)  
+[cf_text_effect_get_number](/text/cf_text_effect_get_number.md)  
+[cf_text_effect_get_color](/text/cf_text_effect_get_color.md)  

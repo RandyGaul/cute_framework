@@ -2,7 +2,7 @@
 
 # cf_haptic_set_gain
 
-Category: [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=haptic)  
+Category: [haptic](/api_reference?id=haptic)  
 GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)  
 ---
 
@@ -19,8 +19,8 @@ gain | Must be from 0 to 1. This is like a global "volume" for the strength of a
 
 ## Related Pages
 
-[CF_Haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic.md)  
-[cf_haptic_open](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic_open.md)  
-[cf_haptic_close](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic_close.md)  
-[cf_haptic_create_effect](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic_create_effect.md)  
-[cf_haptic_run_effect](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic_run_effect.md)  
+[CF_Haptic](/haptic/cf_haptic.md)  
+[cf_haptic_open](/haptic/cf_haptic_open.md)  
+[cf_haptic_close](/haptic/cf_haptic_close.md)  
+[cf_haptic_create_effect](/haptic/cf_haptic_create_effect.md)  
+[cf_haptic_run_effect](/haptic/cf_haptic_run_effect.md)  

@@ -2,7 +2,7 @@
 
 # cf_make_sprite
 
-Category: [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=sprite)  
+Category: [sprite](/api_reference?id=sprite)  
 GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
 ---
 
@@ -18,7 +18,7 @@ aseprite_path | Virtual path to a .ase file.
 
 ## Return Value
 
-Returns a [CF_Sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite.md) that can be drawn with `cf_sprite_draw`.
+Returns a [CF_Sprite](/sprite/cf_sprite.md) that can be drawn with `cf_sprite_draw`.
 
 ## Remarks
 
@@ -29,5 +29,5 @@ TODO - LINK_TO_VFS_TUTORIAL.
 
 ## Related Pages
 
-[CF_Sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite.md)  
-[cf_sprite_unload](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_unload.md)  
+[CF_Sprite](/sprite/cf_sprite.md)  
+[cf_sprite_unload](/sprite/cf_sprite_unload.md)  

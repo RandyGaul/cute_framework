@@ -2,7 +2,7 @@
 
 # cf_threadpool_kick_and_wait
 
-Category: [multithreading](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=multithreading)  
+Category: [multithreading](/api_reference?id=multithreading)  
 GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)  
 ---
 
@@ -22,8 +22,8 @@ This function will block until all tasks are completed.
 
 ## Related Pages
 
-[CF_TaskFn](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_taskfn.md)  
-[cf_make_threadpool](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_make_threadpool.md)  
-[cf_destroy_threadpool](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_destroy_threadpool.md)  
-[cf_threadpool_add_task](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_threadpool_add_task.md)  
-[cf_threadpool_kick](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_threadpool_kick.md)  
+[CF_TaskFn](/multithreading/cf_taskfn.md)  
+[cf_make_threadpool](/multithreading/cf_make_threadpool.md)  
+[cf_destroy_threadpool](/multithreading/cf_destroy_threadpool.md)  
+[cf_threadpool_add_task](/multithreading/cf_threadpool_add_task.md)  
+[cf_threadpool_kick](/multithreading/cf_threadpool_kick.md)  

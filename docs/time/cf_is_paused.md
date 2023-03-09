@@ -2,7 +2,7 @@
 
 # cf_is_paused
 
-Category: [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=time)  
+Category: [time](/api_reference?id=time)  
 GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)  
 ---
 
@@ -14,10 +14,10 @@ bool cf_is_paused();
 
 ## Remarks
 
-Pause means from [cf_pause_for](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/cf_pause_for.md) or [cf_pause_for_ticks](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/cf_pause_for_ticks.md).
+Pause means from [cf_pause_for](/time/cf_pause_for.md) or [cf_pause_for_ticks](/time/cf_pause_for_ticks.md).
 
 ## Related Pages
 
-[CF_PAUSE_TIME_LEFT](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/cf_pause_time_left.md)  
-[cf_pause_for_ticks](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/cf_pause_for_ticks.md)  
-[cf_pause_for](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/cf_pause_for.md)  
+[CF_PAUSE_TIME_LEFT](/time/cf_pause_time_left.md)  
+[cf_pause_for_ticks](/time/cf_pause_for_ticks.md)  
+[cf_pause_for](/time/cf_pause_for.md)  

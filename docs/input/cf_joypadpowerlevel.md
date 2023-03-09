@@ -2,11 +2,11 @@
 
 # CF_JoypadPowerLevel
 
-Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+Category: [input](/api_reference?id=input)  
 GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
 ---
 
-The states of power for a [CF_Joypad](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad.md).
+The states of power for a [CF_Joypad](/input/cf_joypad.md).
 
 ## Values
 
@@ -22,6 +22,6 @@ JOYPAD_POWER_LEVEL_COUNT |
 
 ## Related Pages
 
-[CF_Joypad](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad.md)  
-[cf_joypad_power_level_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad_power_level_to_string.md)  
-[cf_joypad_power_level](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad_power_level.md)  
+[CF_Joypad](/input/cf_joypad.md)  
+[cf_joypad_power_level_to_string](/input/cf_joypad_power_level_to_string.md)  
+[cf_joypad_power_level](/input/cf_joypad_power_level.md)  

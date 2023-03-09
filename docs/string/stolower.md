@@ -2,7 +2,7 @@
 
 # stolower
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -18,6 +18,6 @@ s | The string. Can be `NULL`.
 
 ## Related Pages
 
-[stoupper](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/stoupper.md)  
-[sicmp](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sicmp.md)  
-[siequ](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/siequ.md)  
+[stoupper](/string/stoupper.md)  
+[sicmp](/string/sicmp.md)  
+[siequ](/string/siequ.md)  

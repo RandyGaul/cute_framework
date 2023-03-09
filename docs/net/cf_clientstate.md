@@ -2,11 +2,11 @@
 
 # CF_ClientState
 
-Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+Category: [net](/api_reference?id=net)  
 GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
 ---
 
-The various states of a [CF_Client](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client.md).
+The various states of a [CF_Client](/net/cf_client.md).
 
 ## Values
 
@@ -29,5 +29,5 @@ Anything less than or equal to 0 is an error.
 
 ## Related Pages
 
-[cf_client_state_get](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client_state_get.md)  
-[cf_client_state_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client_state_to_string.md)  
+[cf_client_state_get](/net/cf_client_state_get.md)  
+[cf_client_state_to_string](/net/cf_client_state_to_string.md)  

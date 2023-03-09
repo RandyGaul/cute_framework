@@ -2,7 +2,7 @@
 
 # spext_equ
 
-Category: [path](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=path)  
+Category: [path](/api_reference?id=path)  
 GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
 ---
 
@@ -23,12 +23,12 @@ ext | The file extension.
 
 ## Related Pages
 
-[spfname](https://github.com/RandyGaul/cute_framework/blob/master/docs/path/spfname.md)  
-[spfname_no_ext](https://github.com/RandyGaul/cute_framework/blob/master/docs/path/spfname_no_ext.md)  
-[spext](https://github.com/RandyGaul/cute_framework/blob/master/docs/path/spext.md)  
-[spnorm](https://github.com/RandyGaul/cute_framework/blob/master/docs/path/spnorm.md)  
-[sppop](https://github.com/RandyGaul/cute_framework/blob/master/docs/path/sppop.md)  
-[sppopn](https://github.com/RandyGaul/cute_framework/blob/master/docs/path/sppopn.md)  
-[spcompact](https://github.com/RandyGaul/cute_framework/blob/master/docs/path/spcompact.md)  
-[spdir_of](https://github.com/RandyGaul/cute_framework/blob/master/docs/path/spdir_of.md)  
-[sptop_of](https://github.com/RandyGaul/cute_framework/blob/master/docs/path/sptop_of.md)  
+[spfname](/path/spfname.md)  
+[spfname_no_ext](/path/spfname_no_ext.md)  
+[spext](/path/spext.md)  
+[spnorm](/path/spnorm.md)  
+[sppop](/path/sppop.md)  
+[sppopn](/path/sppopn.md)  
+[spcompact](/path/spcompact.md)  
+[spdir_of](/path/spdir_of.md)  
+[sptop_of](/path/sptop_of.md)  

@@ -2,7 +2,7 @@
 
 # CF_HapticType
 
-Category: [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=haptic)  
+Category: [haptic](/api_reference?id=haptic)  
 GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)  
 ---
 
@@ -19,8 +19,8 @@ HAPTIC_TYPE_RAMP | A ramp over time rumble haptic.
 
 ## Related Pages
 
-[cf_haptic_type_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic_type_to_string.md)  
-[CF_HapticData](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_hapticdata.md)  
-[CF_HapticLeftRight](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_hapticleftright.md)  
-[CF_HapticPeriodic](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_hapticperiodic.md)  
-[CF_HapticRamp](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_hapticramp.md)  
+[cf_haptic_type_to_string](/haptic/cf_haptic_type_to_string.md)  
+[CF_HapticData](/haptic/cf_hapticdata.md)  
+[CF_HapticLeftRight](/haptic/cf_hapticleftright.md)  
+[CF_HapticPeriodic](/haptic/cf_hapticperiodic.md)  
+[CF_HapticRamp](/haptic/cf_hapticramp.md)  

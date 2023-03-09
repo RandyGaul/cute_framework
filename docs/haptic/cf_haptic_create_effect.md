@@ -2,7 +2,7 @@
 
 # cf_haptic_create_effect
 
-Category: [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=haptic)  
+Category: [haptic](/api_reference?id=haptic)  
 GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)  
 ---
 
@@ -23,7 +23,7 @@ Run the haptic with `haptic_run_effect`.
 
 ## Related Pages
 
-[CF_Haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic.md)  
-[cf_haptic_open](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic_open.md)  
-[CF_HapticEffect](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_hapticeffect.md)  
-[cf_haptic_run_effect](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic_run_effect.md)  
+[CF_Haptic](/haptic/cf_haptic.md)  
+[cf_haptic_open](/haptic/cf_haptic_open.md)  
+[CF_HapticEffect](/haptic/cf_hapticeffect.md)  
+[cf_haptic_run_effect](/haptic/cf_haptic_run_effect.md)  

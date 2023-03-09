@@ -2,7 +2,7 @@
 
 # scount
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -18,7 +18,7 @@ s | The string. Must not be `NULL`.
 
 ## Code Example
 
-> Demonstrating decrement on [ssize](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/ssize.md).
+> Demonstrating decrement on [ssize](/string/ssize.md).
 
 ```cpp
 char s = NULL;
@@ -35,7 +35,7 @@ Both "" and NULL count as empty. Returns a proper l-value, so you can assign or 
 
 ## Related Pages
 
-[slen](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/slen.md)  
-[ssize](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/ssize.md)  
-[sempty](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sempty.md)  
-[scap](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/scap.md)  
+[slen](/string/slen.md)  
+[ssize](/string/ssize.md)  
+[sempty](/string/sempty.md)  
+[scap](/string/scap.md)  

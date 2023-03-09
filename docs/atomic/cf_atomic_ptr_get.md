@@ -2,7 +2,7 @@
 
 # cf_atomic_ptr_get
 
-Category: [atomic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=atomic)  
+Category: [atomic](/api_reference?id=atomic)  
 GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)  
 ---
 
@@ -22,10 +22,10 @@ Atomics are an advanced topic. You've been warned! Beej has a [good article on a
 
 ## Related Pages
 
-[cf_atomic_zero](https://github.com/RandyGaul/cute_framework/blob/master/docs/atomic/cf_atomic_zero.md)  
-[cf_atomic_add](https://github.com/RandyGaul/cute_framework/blob/master/docs/atomic/cf_atomic_add.md)  
-[cf_atomic_set](https://github.com/RandyGaul/cute_framework/blob/master/docs/atomic/cf_atomic_set.md)  
-[cf_atomic_get](https://github.com/RandyGaul/cute_framework/blob/master/docs/atomic/cf_atomic_get.md)  
-[cf_atomic_cas](https://github.com/RandyGaul/cute_framework/blob/master/docs/atomic/cf_atomic_cas.md)  
-[cf_atomic_ptr_set](https://github.com/RandyGaul/cute_framework/blob/master/docs/atomic/cf_atomic_ptr_set.md)  
-[cf_atomic_ptr_cas](https://github.com/RandyGaul/cute_framework/blob/master/docs/atomic/cf_atomic_ptr_cas.md)  
+[cf_atomic_zero](/atomic/cf_atomic_zero.md)  
+[cf_atomic_add](/atomic/cf_atomic_add.md)  
+[cf_atomic_set](/atomic/cf_atomic_set.md)  
+[cf_atomic_get](/atomic/cf_atomic_get.md)  
+[cf_atomic_cas](/atomic/cf_atomic_cas.md)  
+[cf_atomic_ptr_set](/atomic/cf_atomic_ptr_set.md)  
+[cf_atomic_ptr_cas](/atomic/cf_atomic_ptr_cas.md)  

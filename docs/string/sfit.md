@@ -2,7 +2,7 @@
 
 # sfit
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -23,5 +23,5 @@ Does not change the size/count of the string, or the len. This function is just 
 
 ## Related Pages
 
-[sclear](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sclear.md)  
-[scap](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/scap.md)  
+[sclear](/string/sclear.md)  
+[scap](/string/scap.md)  

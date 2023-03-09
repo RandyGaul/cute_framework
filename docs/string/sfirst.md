@@ -2,7 +2,7 @@
 
 # sfirst
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -22,7 +22,7 @@ Returns '\0' if `s` is `NULL`.
 
 ## Related Pages
 
-[spush](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/spush.md)  
-[spop](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/spop.md)  
-[sclear](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sclear.md)  
-[slast](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/slast.md)  
+[spush](/string/spush.md)  
+[spop](/string/spop.md)  
+[sclear](/string/sclear.md)  
+[slast](/string/slast.md)  

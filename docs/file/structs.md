@@ -1,3 +1,3 @@
-- [CF_File](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_file.md)
-- [CF_Stat](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_stat.md)
+- [CF_File](/file/cf_file.md)
+- [CF_Stat](/file/cf_stat.md)
 

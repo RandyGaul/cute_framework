@@ -2,7 +2,7 @@
 
 # cf_load_shared_library
 
-Category: [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=utility)  
+Category: [utility](/api_reference?id=utility)  
 GitHub: [cute_symbol.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_symbol.h)  
 ---
 
@@ -23,9 +23,9 @@ Returns `NULL` in the case of errors, and can be unloaded by calling `unload_sha
 ## Remarks
 
 Does not use the virtual file system (see TODO_LINK_VFS_TUTORIAL). Once loaded, individual functions can be loaded from the shared
-library be called [cf_load_function](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_load_function.md).
+library be called [cf_load_function](/utility/cf_load_function.md).
 
 ## Related Pages
 
-[cf_load_function](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_load_function.md)  
-[cf_unload_shared_library](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_unload_shared_library.md)  
+[cf_load_function](/utility/cf_load_function.md)  
+[cf_unload_shared_library](/utility/cf_unload_shared_library.md)  

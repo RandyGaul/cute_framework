@@ -2,7 +2,7 @@
 
 # cf_app_was_moved
 
-Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  
+Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
 ---
 
@@ -14,4 +14,4 @@ bool cf_app_was_moved();
 
 ## Related Pages
 
-[cf_app_was_resized](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_was_resized.md)  
+[cf_app_was_resized](/app/cf_app_was_resized.md)  

@@ -2,7 +2,7 @@
 
 # cf_font_add_backup_codepoints
 
-Category: [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=text)  
+Category: [text](/api_reference?id=text)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
@@ -20,4 +20,4 @@ count | The number of elements in `codepoints`.
 
 ## Related Pages
 
-[cf_draw_text](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/cf_draw_text.md)  
+[cf_draw_text](/text/cf_draw_text.md)  

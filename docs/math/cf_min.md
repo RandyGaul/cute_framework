@@ -2,7 +2,7 @@
 
 # cf_min
 
-Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -14,4 +14,4 @@ Returns the minimum of two values.
 
 ## Related Pages
 
-[cf_max](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_max.md)  
+[cf_max](/math/cf_max.md)  

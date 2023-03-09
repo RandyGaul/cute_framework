@@ -2,7 +2,7 @@
 
 # cf_get_tick_frequency
 
-Category: [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=time)  
+Category: [time](/api_reference?id=time)  
 GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)  
 ---
 
@@ -14,4 +14,4 @@ uint64_t cf_get_tick_frequency();
 
 ## Related Pages
 
-[cf_get_ticks](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/cf_get_ticks.md)  
+[cf_get_ticks](/time/cf_get_ticks.md)  

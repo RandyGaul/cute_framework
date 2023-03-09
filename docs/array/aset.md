@@ -2,11 +2,11 @@
 
 # aset
 
-Category: [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=array)  
+Category: [array](/api_reference?id=array)  
 GitHub: [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)  
 ---
 
-Copies the array b into array a. Will automatically fit a if needed with [afit](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/afit.md).
+Copies the array b into array a. Will automatically fit a if needed with [afit](/array/afit.md).
 
 ```cpp
 #define aset(a, b) cf_array_set(a, b)
@@ -23,17 +23,17 @@ Returns a pointer to `a`. `a` will automatically be reassigned to any new pointe
 
 ## Related Pages
 
-[dyna](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/dyna.md)  
-[asize](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/asize.md)  
-[acount](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/acount.md)  
-[acap](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/acap.md)  
-[afit](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/afit.md)  
-[apush](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/apush.md)  
-[apop](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/apop.md)  
-[aend](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/aend.md)  
-[alast](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/alast.md)  
-[aclear](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/aclear.md)  
-[afree](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/afree.md)  
-[arev](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/arev.md)  
-[ahash](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/ahash.md)  
-[astatic](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/astatic.md)  
+[dyna](/array/dyna.md)  
+[asize](/array/asize.md)  
+[acount](/array/acount.md)  
+[acap](/array/acap.md)  
+[afit](/array/afit.md)  
+[apush](/array/apush.md)  
+[apop](/array/apop.md)  
+[aend](/array/aend.md)  
+[alast](/array/alast.md)  
+[aclear](/array/aclear.md)  
+[afree](/array/afree.md)  
+[arev](/array/arev.md)  
+[ahash](/array/ahash.md)  
+[astatic](/array/astatic.md)  

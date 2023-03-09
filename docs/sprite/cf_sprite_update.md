@@ -2,7 +2,7 @@
 
 # cf_sprite_update
 
-Category: [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=sprite)  
+Category: [sprite](/api_reference?id=sprite)  
 GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
 ---
 
@@ -22,7 +22,7 @@ Call this once per frame.
 
 ## Related Pages
 
-[CF_Sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite.md)  
-[cf_make_sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_make_sprite.md)  
-[cf_sprite_pause](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_pause.md)  
-[cf_sprite_play](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_play.md)  
+[CF_Sprite](/sprite/cf_sprite.md)  
+[cf_make_sprite](/sprite/cf_make_sprite.md)  
+[cf_sprite_pause](/sprite/cf_sprite_pause.md)  
+[cf_sprite_play](/sprite/cf_sprite_play.md)  

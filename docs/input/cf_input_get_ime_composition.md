@@ -2,11 +2,11 @@
 
 # cf_input_get_ime_composition
 
-Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+Category: [input](/api_reference?id=input)  
 GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)  
 ---
 
-Returns the current IME (Input Method Editor) composition. See [CF_ImeComposition](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_imecomposition.md).
+Returns the current IME (Input Method Editor) composition. See [CF_ImeComposition](/input/cf_imecomposition.md).
 
 ```cpp
 bool cf_input_get_ime_composition(CF_ImeComposition* composition);
@@ -27,5 +27,5 @@ of different language inputs. This is usually a feature of the underlying operat
 
 ## Related Pages
 
-[cf_input_enable_ime](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_input_enable_ime.md)  
-[CF_ImeComposition](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_imecomposition.md)  
+[cf_input_enable_ime](/input/cf_input_enable_ime.md)  
+[CF_ImeComposition](/input/cf_imecomposition.md)  

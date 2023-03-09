@@ -2,11 +2,11 @@
 
 # cf_rnd_seed
 
-Category: [random](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=random)  
+Category: [random](/api_reference?id=random)  
 GitHub: [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_rnd.h)  
 ---
 
-Returns an initialized [CF_Rnd](https://github.com/RandyGaul/cute_framework/blob/master/docs/random/cf_rnd.md) based on an initial `seed` value.
+Returns an initialized [CF_Rnd](/random/cf_rnd.md) based on an initial `seed` value.
 
 ```cpp
 static CF_Rnd   cf_rnd_seed(uint64_t seed);
@@ -23,5 +23,5 @@ deterministic way, so it's often important for many games to control or note whi
 
 ## Related Pages
 
-[CF_Rnd](https://github.com/RandyGaul/cute_framework/blob/master/docs/random/cf_rnd.md)  
-[cf_rnd_next](https://github.com/RandyGaul/cute_framework/blob/master/docs/random/cf_rnd_next.md)  
+[CF_Rnd](/random/cf_rnd.md)  
+[cf_rnd_next](/random/cf_rnd_next.md)  

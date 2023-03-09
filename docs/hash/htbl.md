@@ -2,7 +2,7 @@
 
 # htbl
 
-Category: [hash](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=hash)  
+Category: [hash](/api_reference?id=hash)  
 GitHub: [cute_hashtable.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_hashtable.h)  
 ---
 
@@ -23,7 +23,7 @@ hset(pts, 0, cf_v2(3, 5)); // Contructs a new table on-the-spot.
 hset(pts, 10, cf_v2(-1, -1);
 hset(pts, -2, cf_v2(0, 0));
 
-// Use [hget](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hget.md) to fetch values.
+// Use [hget](/hash/hget.md) to fetch values.
 CF_V2 a = hget(pts, 0);
 CF_V2 b = hget(pts, 10);
 CF_V2 c = hget(pts, -2);
@@ -49,18 +49,18 @@ parameters or struct member definitions. It's saying "Hey, I'm a hashtable!" to 
 
 ## Related Pages
 
-[hfree](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hfree.md)  
-[hset](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hset.md)  
-[hadd](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hadd.md)  
-[hget](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hget.md)  
-[hfind](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hfind.md)  
-[hget_ptr](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hget_ptr.md)  
-[hfind_ptr](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hfind_ptr.md)  
-[hhas](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hhas.md)  
-[hdel](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hdel.md)  
-[hclear](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hclear.md)  
-[hkeys](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hkeys.md)  
-[hitems](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hitems.md)  
-[hswap](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hswap.md)  
-[hsize](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hsize.md)  
-[hcount](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hcount.md)  
+[hfree](/hash/hfree.md)  
+[hset](/hash/hset.md)  
+[hadd](/hash/hadd.md)  
+[hget](/hash/hget.md)  
+[hfind](/hash/hfind.md)  
+[hget_ptr](/hash/hget_ptr.md)  
+[hfind_ptr](/hash/hfind_ptr.md)  
+[hhas](/hash/hhas.md)  
+[hdel](/hash/hdel.md)  
+[hclear](/hash/hclear.md)  
+[hkeys](/hash/hkeys.md)  
+[hitems](/hash/hitems.md)  
+[hswap](/hash/hswap.md)  
+[hsize](/hash/hsize.md)  
+[hcount](/hash/hcount.md)  

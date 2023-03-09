@@ -2,7 +2,7 @@
 
 # cf_server_update
 
-Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+Category: [net](/api_reference?id=net)  
 GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
 ---
 
@@ -18,5 +18,5 @@ Call this once per game tick.
 
 ## Related Pages
 
-[cf_server_pop_event](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_server_pop_event.md)  
-[CF_ServerEvent](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_serverevent.md)  
+[cf_server_pop_event](/net/cf_server_pop_event.md)  
+[CF_ServerEvent](/net/cf_serverevent.md)  

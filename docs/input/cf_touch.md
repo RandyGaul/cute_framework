@@ -2,7 +2,7 @@
 
 # CF_Touch
 
-Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+Category: [input](/api_reference?id=input)  
 GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)  
 ---
 
@@ -17,5 +17,5 @@ Struct Members | Description
 
 ## Related Pages
 
-[cf_touch_get](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_touch_get.md)  
-[cf_touch_get_all](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_touch_get_all.md)  
+[cf_touch_get](/input/cf_touch_get.md)  
+[cf_touch_get_all](/input/cf_touch_get_all.md)  

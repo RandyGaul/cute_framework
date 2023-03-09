@@ -2,11 +2,11 @@
 
 # cf_resource_limit_to_string
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
-Returns a [CF_ResourceLimit](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_resourcelimit.md) converted to a C string.
+Returns a [CF_ResourceLimit](/graphics/cf_resourcelimit.md) converted to a C string.
 
 ```cpp
 const char* cf_resource_limit_to_string(CF_ResourceLimit limit)
@@ -14,5 +14,5 @@ const char* cf_resource_limit_to_string(CF_ResourceLimit limit)
 
 ## Related Pages
 
-[CF_ResourceLimit](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_resourcelimit.md)  
-[cf_query_resource_limit](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_query_resource_limit.md)  
+[CF_ResourceLimit](/graphics/cf_resourcelimit.md)  
+[cf_query_resource_limit](/graphics/cf_query_resource_limit.md)  

@@ -2,7 +2,7 @@
 
 # cf_safe_norm_int
 
-Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -14,4 +14,4 @@ int cf_safe_norm_int(int a)
 
 ## Related Pages
 
-[cf_safe_norm_f](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_safe_norm_f.md)  
+[cf_safe_norm_f](/math/cf_safe_norm_f.md)  

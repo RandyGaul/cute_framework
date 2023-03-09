@@ -1,3 +1,3 @@
-- [CF_AStarGrid](https://github.com/RandyGaul/cute_framework/blob/master/docs/pathfinding/cf_astargrid.md)
-- [CF_AStarOutput](https://github.com/RandyGaul/cute_framework/blob/master/docs/pathfinding/cf_astaroutput.md)
+- [CF_AStarGrid](/pathfinding/cf_astargrid.md)
+- [CF_AStarOutput](/pathfinding/cf_astaroutput.md)
 

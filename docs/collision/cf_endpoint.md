@@ -2,7 +2,7 @@
 
 # cf_endpoint
 
-Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  
+Category: [collision](/api_reference?id=collision)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -19,5 +19,5 @@ unnecessarily large computations when doing raycasts.
 
 ## Related Pages
 
-[CF_Ray](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_ray.md)  
-[cf_impact](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_impact.md)  
+[CF_Ray](/math/cf_ray.md)  
+[cf_impact](/collision/cf_impact.md)  

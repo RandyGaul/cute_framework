@@ -2,7 +2,7 @@
 
 # cf_app_get_canvas_height
 
-Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  
+Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
 ---
 
@@ -14,6 +14,6 @@ int cf_app_get_canvas_height();
 
 ## Related Pages
 
-[cf_app_get_canvas](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_get_canvas.md)  
-[cf_app_set_canvas_size](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_set_canvas_size.md)  
-[cf_app_get_canvas_width](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_get_canvas_width.md)  
+[cf_app_get_canvas](/app/cf_app_get_canvas.md)  
+[cf_app_set_canvas_size](/app/cf_app_set_canvas_size.md)  
+[cf_app_get_canvas_width](/app/cf_app_get_canvas_width.md)  

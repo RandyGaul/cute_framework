@@ -2,7 +2,7 @@
 
 # cf_fs_write_entire_buffer_to_file
 
-Category: [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=file)  
+Category: [file](/api_reference?id=file)  
 GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
 ---
 
@@ -24,5 +24,5 @@ Call `CUTE_FREE` on it when done. TODO_LINK_VFS_README.
 
 ## Related Pages
 
-[cf_fs_read_entire_file_to_memory](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_fs_read_entire_file_to_memory.md)  
-[cf_fs_read_entire_file_to_memory_and_nul_terminate](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_fs_read_entire_file_to_memory_and_nul_terminate.md)  
+[cf_fs_read_entire_file_to_memory](/file/cf_fs_read_entire_file_to_memory.md)  
+[cf_fs_read_entire_file_to_memory_and_nul_terminate](/file/cf_fs_read_entire_file_to_memory_and_nul_terminate.md)  

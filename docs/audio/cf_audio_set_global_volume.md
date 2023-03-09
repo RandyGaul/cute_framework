@@ -2,7 +2,7 @@
 
 # cf_audio_set_global_volume
 
-Category: [audio](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=audio)  
+Category: [audio](/api_reference?id=audio)  
 GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_audio.h)  
 ---
 
@@ -18,6 +18,6 @@ volume | A value from 0.0f to 1.0f, where 0.0f means no volume, and 1.0f means f
 
 ## Related Pages
 
-[cf_audio_set_pan](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_audio_set_pan.md)  
-[cf_audio_set_pause](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_audio_set_pause.md)  
-[cf_audio_set_sound_volume](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/cf_audio_set_sound_volume.md)  
+[cf_audio_set_pan](/audio/cf_audio_set_pan.md)  
+[cf_audio_set_pause](/audio/cf_audio_set_pause.md)  
+[cf_audio_set_sound_volume](/audio/cf_audio_set_sound_volume.md)  

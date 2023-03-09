@@ -2,7 +2,7 @@
 
 # App Options
 
-Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  
+Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
 ---
 
@@ -20,7 +20,7 @@ APP_OPTIONS_FULLSCREEN | Starts the application in borderless full-screen mode.
 APP_OPTIONS_RESIZABLE | Allows the window to be resized.
 APP_OPTIONS_HIDDEN | Starts the application with the window hidden.
 APP_OPTIONS_WINDOW_POS_CENTERED | Starts the application with the window centered on the screen.
-APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT | Disables automatically mounting the folder the executable runs from to "/". See [cf_fs_mount](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_fs_mount.md) for more details.
+APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT | Disables automatically mounting the folder the executable runs from to "/". See [cf_fs_mount](/file/cf_fs_mount.md) for more details.
 APP_OPTIONS_NO_AUDIO | Starts the application with no audio.
 APP_OPTIONS_VSYNC | Starts the application without vertical sync.
 
@@ -43,9 +43,9 @@ int main(int argc, const char argv)
 
 ## Remarks
 
-The [app_options](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/app_options.md) parameter of [cf_make_app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_make_app.md) is a bitmask flag. Simply take the `APP_OPTIONS_` flags listed above and OR them together.
+The [app_options](/app/app_options.md) parameter of [cf_make_app](/app/cf_make_app.md) is a bitmask flag. Simply take the `APP_OPTIONS_` flags listed above and OR them together.
 
 ## Related Pages
 
-[cf_make_app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_make_app.md)  
-[cf_destroy_app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_destroy_app.md)  
+[cf_make_app](/app/cf_make_app.md)  
+[cf_destroy_app](/app/cf_destroy_app.md)  

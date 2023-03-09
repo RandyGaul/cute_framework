@@ -2,7 +2,7 @@
 
 # smake
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -19,9 +19,9 @@ b | Source for copying.
 
 ## Remarks
 
-You must free the copy with [sfree](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfree.md) when done. Does the same thing as [sdup](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sdup.md).
+You must free the copy with [sfree](/string/sfree.md) when done. Does the same thing as [sdup](/string/sdup.md).
 
 ## Related Pages
 
-[sset](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sset.md)  
-[sdup](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sdup.md)  
+[sset](/string/sset.md)  
+[sdup](/string/sdup.md)  

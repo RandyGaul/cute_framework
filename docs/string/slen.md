@@ -2,7 +2,7 @@
 
 # slen
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -18,7 +18,7 @@ s | The string. Can be `NULL`.
 
 ## Related Pages
 
-[sempty](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sempty.md)  
-[ssize](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/ssize.md)  
-[scount](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/scount.md)  
-[scap](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/scap.md)  
+[sempty](/string/sempty.md)  
+[ssize](/string/ssize.md)  
+[scount](/string/scount.md)  
+[scap](/string/scap.md)  

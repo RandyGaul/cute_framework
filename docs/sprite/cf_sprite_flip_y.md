@@ -2,7 +2,7 @@
 
 # cf_sprite_flip_y
 
-Category: [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=sprite)  
+Category: [sprite](/api_reference?id=sprite)  
 GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
 ---
 
@@ -22,5 +22,5 @@ Works by flipping the sign of the sprite's scale on the y-axis.
 
 ## Related Pages
 
-[CF_Sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite.md)  
-[cf_sprite_flip_x](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_flip_x.md)  
+[CF_Sprite](/sprite/cf_sprite.md)  
+[cf_sprite_flip_x](/sprite/cf_sprite_flip_x.md)  

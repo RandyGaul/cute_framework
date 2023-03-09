@@ -2,7 +2,7 @@
 
 # cf_unapply_canvas
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -19,5 +19,5 @@ resized and you want to resize some of your canvases as well.
 
 ## Related Pages
 
-[CF_Canvas](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_canvas.md)  
-[cf_apply_canvas](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_apply_canvas.md)  
+[CF_Canvas](/graphics/cf_canvas.md)  
+[cf_apply_canvas](/graphics/cf_apply_canvas.md)  

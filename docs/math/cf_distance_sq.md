@@ -2,7 +2,7 @@
 
 # cf_distance_sq
 
-Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -24,5 +24,5 @@ See [this article](https://randygaul.github.io/math/collision-detection/2014/07/
 
 ## Related Pages
 
-[CF_V2](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_v2.md)  
-[CF_Ray](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_ray.md)  
+[CF_V2](/math/cf_v2.md)  
+[CF_Ray](/math/cf_ray.md)  

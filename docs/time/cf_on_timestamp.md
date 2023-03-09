@@ -2,7 +2,7 @@
 
 # cf_on_timestamp
 
-Category: [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=time)  
+Category: [time](/api_reference?id=time)  
 GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)  
 ---
 
@@ -23,5 +23,5 @@ This function is super useful for general purpose gameplay implementation where 
 
 ## Related Pages
 
-[cf_on_interval](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/cf_on_interval.md)  
-[cf_between_interval](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/cf_between_interval.md)  
+[cf_on_interval](/time/cf_on_interval.md)  
+[cf_between_interval](/time/cf_between_interval.md)  

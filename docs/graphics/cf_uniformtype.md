@@ -2,7 +2,7 @@
 
 # CF_UniformType
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -22,10 +22,10 @@ UNIFORM_TYPE_MAT4 | In a shader: `uniform mat4`
 
 ## Remarks
 
-A uniform is like a global variable for a shader. We set uniforms by using a [CF_Material](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_material.md).
+A uniform is like a global variable for a shader. We set uniforms by using a [CF_Material](/graphics/cf_material.md).
 
 ## Related Pages
 
-[cf_make_material](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_make_material.md)  
-[cf_uniform_type_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_uniform_type_string.md)  
-[CF_Material](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_material.md)  
+[cf_make_material](/graphics/cf_make_material.md)  
+[cf_uniform_type_string](/graphics/cf_uniform_type_string.md)  
+[CF_Material](/graphics/cf_material.md)  

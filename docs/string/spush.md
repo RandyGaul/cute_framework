@@ -2,7 +2,7 @@
 
 # spush
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -23,7 +23,7 @@ Does not overwite the nul-byte. If the string is empty a nul-byte is pushed afte
 
 ## Related Pages
 
-[sset](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sset.md)  
-[spop](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/spop.md)  
-[sfit](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfit.md)  
-[sfree](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfree.md)  
+[sset](/string/sset.md)  
+[spop](/string/spop.md)  
+[sfit](/string/sfit.md)  
+[sfree](/string/sfree.md)  

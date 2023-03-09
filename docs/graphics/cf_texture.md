@@ -2,7 +2,7 @@
 
 # CF_Texture
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -14,13 +14,13 @@ A texture is a buffer of data sent to the GPU for random access. Usually texture
 
 ## Related Pages
 
-[cf_material_set_texture_fs](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_material_set_texture_fs.md)  
-[CF_Canvas](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_canvas.md)  
-[CF_Material](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_material.md)  
-[CF_Shader](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_shader.md)  
-[CF_TextureParams](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_textureparams.md)  
-[cf_texture_defaults](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_texture_defaults.md)  
-[cf_make_texture](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_make_texture.md)  
-[cf_destroy_texture](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_destroy_texture.md)  
-[cf_update_texture](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_update_texture.md)  
-[cf_material_set_texture_vs](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_material_set_texture_vs.md)  
+[cf_material_set_texture_fs](/graphics/cf_material_set_texture_fs.md)  
+[CF_Canvas](/graphics/cf_canvas.md)  
+[CF_Material](/graphics/cf_material.md)  
+[CF_Shader](/graphics/cf_shader.md)  
+[CF_TextureParams](/graphics/cf_textureparams.md)  
+[cf_texture_defaults](/graphics/cf_texture_defaults.md)  
+[cf_make_texture](/graphics/cf_make_texture.md)  
+[cf_destroy_texture](/graphics/cf_destroy_texture.md)  
+[cf_update_texture](/graphics/cf_update_texture.md)  
+[cf_material_set_texture_vs](/graphics/cf_material_set_texture_vs.md)  

@@ -2,7 +2,7 @@
 
 # cf_atan2_360
 
-Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -14,5 +14,5 @@ float cf_atan2_360(float y, float x)
 
 ## Related Pages
 
-[cf_atan2_360_v2](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_atan2_360_v2.md)  
-[cf_atan2_360_sc](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_atan2_360_sc.md)  
+[cf_atan2_360_v2](/math/cf_atan2_360_v2.md)  
+[cf_atan2_360_sc](/math/cf_atan2_360_sc.md)  

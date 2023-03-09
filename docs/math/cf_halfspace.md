@@ -2,7 +2,7 @@
 
 # CF_Halfspace
 
-Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -15,8 +15,8 @@ Struct Members | Description
 
 ## Related Pages
 
-[cf_intersect_halfspace](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_intersect_halfspace.md)  
-[cf_plane](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_plane.md)  
-[cf_origin](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_origin.md)  
-[cf_distance_hs](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_distance_hs.md)  
-[cf_project](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_project.md)  
+[cf_intersect_halfspace](/math/cf_intersect_halfspace.md)  
+[cf_plane](/math/cf_plane.md)  
+[cf_origin](/math/cf_origin.md)  
+[cf_distance_hs](/math/cf_distance_hs.md)  
+[cf_project](/math/cf_project.md)  

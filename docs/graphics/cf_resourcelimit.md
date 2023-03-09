@@ -2,7 +2,7 @@
 
 # CF_ResourceLimit
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -17,5 +17,5 @@ RESOURCE_LIMIT_VERTEX_ATTRIBUTE_MAX | Limit on the number of vertex attributes. 
 
 ## Related Pages
 
-[cf_query_resource_limit](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_query_resource_limit.md)  
-[cf_resource_limit_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_resource_limit_to_string.md)  
+[cf_query_resource_limit](/graphics/cf_query_resource_limit.md)  
+[cf_resource_limit_to_string](/graphics/cf_resource_limit_to_string.md)  

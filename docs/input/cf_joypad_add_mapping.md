@@ -2,7 +2,7 @@
 
 # cf_joypad_add_mapping
 
-Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+Category: [input](/api_reference?id=input)  
 GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
 ---
 
@@ -21,4 +21,4 @@ to ever call this function.
 
 ## Related Pages
 
-[CF_Joypad](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad.md)  
+[CF_Joypad](/input/cf_joypad.md)  

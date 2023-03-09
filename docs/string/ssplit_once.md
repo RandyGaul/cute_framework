@@ -2,7 +2,7 @@
 
 # ssplit_once
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -34,4 +34,4 @@ an array of strings.
 
 ## Related Pages
 
-[ssplit](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/ssplit.md)  
+[ssplit](/string/ssplit.md)  

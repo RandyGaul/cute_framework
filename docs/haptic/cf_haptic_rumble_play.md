@@ -2,7 +2,7 @@
 
 # cf_haptic_rumble_play
 
-Category: [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=haptic)  
+Category: [haptic](/api_reference?id=haptic)  
 GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)  
 ---
 
@@ -24,7 +24,7 @@ Successive calls on this function will update the underlying rumble effect, inst
 
 ## Related Pages
 
-[CF_Haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic.md)  
-[cf_haptic_open](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic_open.md)  
-[cf_haptic_rumble_supported](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic_rumble_supported.md)  
-[cf_haptic_rumble_stop](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic_rumble_stop.md)  
+[CF_Haptic](/haptic/cf_haptic.md)  
+[cf_haptic_open](/haptic/cf_haptic_open.md)  
+[cf_haptic_rumble_supported](/haptic/cf_haptic_rumble_supported.md)  
+[cf_haptic_rumble_stop](/haptic/cf_haptic_rumble_stop.md)  

@@ -2,7 +2,7 @@
 
 # CF_PlayDirection
 
-Category: [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=sprite)  
+Category: [sprite](/api_reference?id=sprite)  
 GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
 ---
 
@@ -18,5 +18,5 @@ PLAY_DIRECTION_PINGPONG | Flips through the frames of an animation forwards, the
 
 ## Related Pages
 
-[CF_Animation](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_animation.md)  
-[cf_play_direction_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_play_direction_to_string.md)  
+[CF_Animation](/sprite/cf_animation.md)  
+[cf_play_direction_to_string](/sprite/cf_play_direction_to_string.md)  

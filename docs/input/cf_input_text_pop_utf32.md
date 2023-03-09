@@ -2,7 +2,7 @@
 
 # cf_input_text_pop_utf32
 
-Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+Category: [input](/api_reference?id=input)  
 GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)  
 ---
 
@@ -19,6 +19,6 @@ multiple keystrokes, especially when dealing with non-Latin based inputs.
 
 ## Related Pages
 
-[cf_input_text_add_utf8](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_input_text_add_utf8.md)  
-[cf_input_text_clear](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_input_text_clear.md)  
-[cf_input_text_has_data](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_input_text_has_data.md)  
+[cf_input_text_add_utf8](/input/cf_input_text_add_utf8.md)  
+[cf_input_text_clear](/input/cf_input_text_clear.md)  
+[cf_input_text_has_data](/input/cf_input_text_has_data.md)  

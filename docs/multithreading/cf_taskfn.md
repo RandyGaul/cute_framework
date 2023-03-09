@@ -2,11 +2,11 @@
 
 # CF_TaskFn
 
-Category: [multithreading](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=multithreading)  
+Category: [multithreading](/api_reference?id=multithreading)  
 GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)  
 ---
 
-A function pointer for a task in [CF_Threadpool](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_threadpool.md).
+A function pointer for a task in [CF_Threadpool](/multithreading/cf_threadpool.md).
 
 ```cpp
 typedef void (CF_TaskFn)(void* param);
@@ -14,7 +14,7 @@ typedef void (CF_TaskFn)(void* param);
 
 Parameters | Description
 --- | ---
-param | Can be `NULL`. This is passed to the task, and comes from [cf_threadpool_add_task](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_threadpool_add_task.md).
+param | Can be `NULL`. This is passed to the task, and comes from [cf_threadpool_add_task](/multithreading/cf_threadpool_add_task.md).
 
 ## Remarks
 
@@ -24,8 +24,8 @@ return. Often a task is defined as a bunch of processing that doesn't share any 
 
 ## Related Pages
 
-[cf_threadpool_kick](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_threadpool_kick.md)  
-[cf_make_threadpool](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_make_threadpool.md)  
-[cf_destroy_threadpool](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_destroy_threadpool.md)  
-[cf_threadpool_add_task](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_threadpool_add_task.md)  
-[cf_threadpool_kick_and_wait](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_threadpool_kick_and_wait.md)  
+[cf_threadpool_kick](/multithreading/cf_threadpool_kick.md)  
+[cf_make_threadpool](/multithreading/cf_make_threadpool.md)  
+[cf_destroy_threadpool](/multithreading/cf_destroy_threadpool.md)  
+[cf_threadpool_add_task](/multithreading/cf_threadpool_add_task.md)  
+[cf_threadpool_kick_and_wait](/multithreading/cf_threadpool_kick_and_wait.md)  

@@ -2,7 +2,7 @@
 
 # cf_mouse_x
 
-Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+Category: [input](/api_reference?id=input)  
 GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)  
 ---
 
@@ -19,5 +19,5 @@ int cf_mouse_x();
 ## Related Pages
 
 CF_MousButton  
-[cf_mouse_down](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_mouse_down.md)  
-[cf_mouse_y](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_mouse_y.md)  
+[cf_mouse_down](/input/cf_mouse_down.md)  
+[cf_mouse_y](/input/cf_mouse_y.md)  

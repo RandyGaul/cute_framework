@@ -2,7 +2,7 @@
 
 # sisdyna
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -26,6 +26,6 @@ This can be evaluated at compile time for string literals.
 
 ## Related Pages
 
-[sstatic](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sstatic.md)  
-[sset](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sset.md)  
-[spush](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/spush.md)  
+[sstatic](/string/sstatic.md)  
+[sset](/string/sset.md)  
+[spush](/string/spush.md)  

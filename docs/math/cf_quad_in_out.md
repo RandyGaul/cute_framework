@@ -2,7 +2,7 @@
 
 # cf_quad_in_out
 
-Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -18,5 +18,5 @@ Here is a great link to [visualize each easing function](https://easings.net/).
 
 ## Related Pages
 
-[cf_quad_in](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_quad_in.md)  
-[cf_quad_out](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_quad_out.md)  
+[cf_quad_in](/math/cf_quad_in.md)  
+[cf_quad_out](/math/cf_quad_out.md)  

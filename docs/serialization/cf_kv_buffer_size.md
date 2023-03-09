@@ -2,7 +2,7 @@
 
 # cf_kv_buffer_size
 
-Category: [serialization](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=serialization)  
+Category: [serialization](/api_reference?id=serialization)  
 GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_kv.h)  
 ---
 
@@ -22,7 +22,7 @@ This size does not include the nul-terminator.
 
 ## Related Pages
 
-[CF_KeyValue](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_keyvalue.md)  
-[cf_kv_write](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_write.md)  
-[cf_kv_buffer](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_buffer.md)  
-[cf_kv_key](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_key.md)  
+[CF_KeyValue](/serialization/cf_keyvalue.md)  
+[cf_kv_write](/serialization/cf_kv_write.md)  
+[cf_kv_buffer](/serialization/cf_kv_buffer.md)  
+[cf_kv_key](/serialization/cf_kv_key.md)  

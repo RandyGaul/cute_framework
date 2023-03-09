@@ -1,5 +1,5 @@
-- [CF_Https](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https.md)
-- [CF_HttpsHeader](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_httpsheader.md)
-- [CF_HttpsResponse](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_httpsresponse.md)
-- [CF_HttpsString](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_httpsstring.md)
+- [CF_Https](/web/cf_https.md)
+- [CF_HttpsHeader](/web/cf_httpsheader.md)
+- [CF_HttpsResponse](/web/cf_httpsresponse.md)
+- [CF_HttpsString](/web/cf_httpsstring.md)
 

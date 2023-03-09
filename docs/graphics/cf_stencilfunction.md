@@ -2,7 +2,7 @@
 
 # CF_StencilFunction
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -10,10 +10,10 @@ Defines functions for stencil rendering.
 
 Struct Members | Description
 --- | ---
-`CF_CompareFunction compare` | Comparison type for the stencil test. See [CF_CompareFunction](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_comparefunction.md).
-`CF_StencilOp fail_op` | An operation to perform upon failing a stencil test. See [CF_StencilOp](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_stencilop.md).
-`CF_StencilOp depth_fail_op` | An operation to perform upon failing a depth test. See [CF_StencilOp](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_stencilop.md).
-`CF_StencilOp pass_op` | An operation to perform upon passing a stencil test. See [CF_StencilOp](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_stencilop.md).
+`CF_CompareFunction compare` | Comparison type for the stencil test. See [CF_CompareFunction](/graphics/cf_comparefunction.md).
+`CF_StencilOp fail_op` | An operation to perform upon failing a stencil test. See [CF_StencilOp](/graphics/cf_stencilop.md).
+`CF_StencilOp depth_fail_op` | An operation to perform upon failing a depth test. See [CF_StencilOp](/graphics/cf_stencilop.md).
+`CF_StencilOp pass_op` | An operation to perform upon passing a stencil test. See [CF_StencilOp](/graphics/cf_stencilop.md).
 
 ## Remarks
 
@@ -23,6 +23,6 @@ has an excellent article](https://learnopengl.com/Advanced-OpenGL/Stencil-testin
 
 ## Related Pages
 
-[cf_material_set_render_state](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_material_set_render_state.md)  
-[CF_StencilParams](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_stencilparams.md)  
-[CF_RenderState](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_renderstate.md)  
+[cf_material_set_render_state](/graphics/cf_material_set_render_state.md)  
+[CF_StencilParams](/graphics/cf_stencilparams.md)  
+[CF_RenderState](/graphics/cf_renderstate.md)  

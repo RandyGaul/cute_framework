@@ -2,7 +2,7 @@
 
 # CF_AttributeStep
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -17,6 +17,6 @@ ATTRIBUTE_STEP_PER_INSTANCE | Take a step forward in the vertex buffer (the `str
 
 ## Related Pages
 
-[cf_mesh_set_attributes](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_mesh_set_attributes.md)  
-[cf_attribute_step_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_attribute_step_string.md)  
-[CF_VertexAttribute](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_vertexattribute.md)  
+[cf_mesh_set_attributes](/graphics/cf_mesh_set_attributes.md)  
+[cf_attribute_step_string](/graphics/cf_attribute_step_string.md)  
+[CF_VertexAttribute](/graphics/cf_vertexattribute.md)  

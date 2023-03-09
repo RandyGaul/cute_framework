@@ -2,11 +2,11 @@
 
 # cf_play_direction_to_string
 
-Category: [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=sprite)  
+Category: [sprite](/api_reference?id=sprite)  
 GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
 ---
 
-Returns a [CF_PlayDirection](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_playdirection.md) converted to a C string.
+Returns a [CF_PlayDirection](/sprite/cf_playdirection.md) converted to a C string.
 
 ```cpp
 const char* cf_play_direction_to_string(CF_PlayDirection dir)
@@ -14,5 +14,5 @@ const char* cf_play_direction_to_string(CF_PlayDirection dir)
 
 ## Related Pages
 
-[CF_PlayDirection](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_playdirection.md)  
-[CF_Animation](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_animation.md)  
+[CF_PlayDirection](/sprite/cf_playdirection.md)  
+[CF_Animation](/sprite/cf_animation.md)  

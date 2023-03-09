@@ -1,2 +1,2 @@
-- [CF_TextEffect](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/cf_texteffect.md)
+- [CF_TextEffect](/text/cf_texteffect.md)
 

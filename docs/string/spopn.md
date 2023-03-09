@@ -2,7 +2,7 @@
 
 # spopn
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -19,6 +19,6 @@ n | Number of characters to pop.
 
 ## Related Pages
 
-[spop](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/spop.md)  
-[slast](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/slast.md)  
-[serase](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/serase.md)  
+[spop](/string/spop.md)  
+[slast](/string/slast.md)  
+[serase](/string/serase.md)  

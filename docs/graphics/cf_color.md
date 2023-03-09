@@ -2,7 +2,7 @@
 
 # CF_Color
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)  
 ---
 
@@ -18,4 +18,4 @@ Struct Members | Description
 ## Related Pages
 
 TODO_LINK_TO_COLOR_PAGE  
-[CF_Pixel](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_pixel.md)  
+[CF_Pixel](/graphics/cf_pixel.md)  

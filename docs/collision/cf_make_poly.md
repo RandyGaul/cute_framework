@@ -2,7 +2,7 @@
 
 # cf_make_poly
 
-Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  
+Category: [collision](/api_reference?id=collision)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -14,10 +14,10 @@ void cf_make_poly(CF_Poly* p);
 
 ## Remarks
 
-Runs [cf_hull](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_hull.md) and [cf_norms](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_norms.md), assumes p->verts and p->count are both set to valid values.
+Runs [cf_hull](/collision/cf_hull.md) and [cf_norms](/collision/cf_norms.md), assumes p->verts and p->count are both set to valid values.
 
 ## Related Pages
 
-[CF_Poly](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_poly.md)  
-[cf_hull](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_hull.md)  
-[cf_norms](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_norms.md)  
+[CF_Poly](/collision/cf_poly.md)  
+[cf_hull](/collision/cf_hull.md)  
+[cf_norms](/collision/cf_norms.md)  

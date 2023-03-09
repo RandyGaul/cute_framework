@@ -2,7 +2,7 @@
 
 # CF_CompareFunction
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -23,6 +23,6 @@ COMPARE_FUNCTION_GREATER_THAN_OR_EQUAL | >=
 
 ## Related Pages
 
-[CF_StencilFunction](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_stencilfunction.md)  
-[cf_compare_function_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_compare_function_string.md)  
-[CF_StencilOp](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_stencilop.md)  
+[CF_StencilFunction](/graphics/cf_stencilfunction.md)  
+[cf_compare_function_string](/graphics/cf_compare_function_string.md)  
+[CF_StencilOp](/graphics/cf_stencilop.md)  

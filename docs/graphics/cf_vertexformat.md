@@ -2,11 +2,11 @@
 
 # CF_VertexFormat
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
-The possible formats for vertex attributes (inputs to vertex shader, coming from [CF_Mesh](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_mesh.md)).
+The possible formats for vertex attributes (inputs to vertex shader, coming from [CF_Mesh](/graphics/cf_mesh.md)).
 
 ## Values
 
@@ -26,10 +26,10 @@ VERTEX_FORMAT_USHORT4N | A single 32-bit unsigned byte, in normalized form.
 
 ## Remarks
 
-To help understand the notation see [CF_PixelFormat](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_pixelformat.md).
+To help understand the notation see [CF_PixelFormat](/graphics/cf_pixelformat.md).
 
 ## Related Pages
 
-[cf_mesh_set_attributes](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_mesh_set_attributes.md)  
-[cf_vertex_format_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_vertex_format_string.md)  
-[CF_VertexAttribute](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_vertexattribute.md)  
+[cf_mesh_set_attributes](/graphics/cf_mesh_set_attributes.md)  
+[cf_vertex_format_string](/graphics/cf_vertex_format_string.md)  
+[CF_VertexAttribute](/graphics/cf_vertexattribute.md)  

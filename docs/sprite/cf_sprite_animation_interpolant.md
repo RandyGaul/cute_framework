@@ -2,7 +2,7 @@
 
 # cf_sprite_animation_interpolant
 
-Category: [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=sprite)  
+Category: [sprite](/api_reference?id=sprite)  
 GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
 ---
 
@@ -22,10 +22,10 @@ sprite | The sprite.
 
 ## Related Pages
 
-[CF_Sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite.md)  
-[CF_Frame](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_frame.md)  
-[CF_Animation](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_animation.md)  
-[cf_sprite_frame_count](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_frame_count.md)  
-[cf_sprite_current_frame](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_current_frame.md)  
-[cf_sprite_frame_delay](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_frame_delay.md)  
-[cf_sprite_animation_delay](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_animation_delay.md)  
+[CF_Sprite](/sprite/cf_sprite.md)  
+[CF_Frame](/sprite/cf_frame.md)  
+[CF_Animation](/sprite/cf_animation.md)  
+[cf_sprite_frame_count](/sprite/cf_sprite_frame_count.md)  
+[cf_sprite_current_frame](/sprite/cf_sprite_current_frame.md)  
+[cf_sprite_frame_delay](/sprite/cf_sprite_frame_delay.md)  
+[cf_sprite_animation_delay](/sprite/cf_sprite_animation_delay.md)  

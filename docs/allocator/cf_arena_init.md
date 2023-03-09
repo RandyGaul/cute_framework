@@ -2,7 +2,7 @@
 
 # cf_arena_init
 
-Category: [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=allocator)  
+Category: [allocator](/api_reference?id=allocator)  
 GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_alloc.h)  
 ---
 
@@ -20,5 +20,5 @@ block_size | The default size of each internal call to `malloc` to form pages to
 
 ## Related Pages
 
-[cf_arena_alloc](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/cf_arena_alloc.md)  
-[cf_arena_reset](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/cf_arena_reset.md)  
+[cf_arena_alloc](/allocator/cf_arena_alloc.md)  
+[cf_arena_reset](/allocator/cf_arena_reset.md)  

@@ -2,7 +2,7 @@
 
 # cf_query_resource_limit
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -18,5 +18,5 @@ One notable limit is on `CF_BACKEND_TYPE_GLES2` the number of vertex attributes 
 
 ## Related Pages
 
-[CF_ResourceLimit](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_resourcelimit.md)  
-[cf_resource_limit_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_resource_limit_to_string.md)  
+[CF_ResourceLimit](/graphics/cf_resourcelimit.md)  
+[cf_resource_limit_to_string](/graphics/cf_resource_limit_to_string.md)  

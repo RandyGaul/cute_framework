@@ -2,7 +2,7 @@
 
 # sdup
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -18,9 +18,9 @@ s | The string to duplicate.
 
 ## Remarks
 
-You must free the copy with [sfree](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfree.md) when done. Does the same thing as [smake](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/smake.md).
+You must free the copy with [sfree](/string/sfree.md) when done. Does the same thing as [smake](/string/smake.md).
 
 ## Related Pages
 
-[sset](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sset.md)  
-[smake](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/smake.md)  
+[sset](/string/sset.md)  
+[smake](/string/smake.md)  

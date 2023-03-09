@@ -2,7 +2,7 @@
 
 # CF_Guid
 
-Category: [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=utility)  
+Category: [utility](/api_reference?id=utility)  
 GitHub: [cute_guid.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_guid.h)  
 ---
 
@@ -14,5 +14,5 @@ Struct Members | Description
 
 ## Related Pages
 
-[cf_guid_equal](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_guid_equal.md)  
-[cf_make_guid](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_make_guid.md)  
+[cf_guid_equal](/utility/cf_guid_equal.md)  
+[cf_make_guid](/utility/cf_make_guid.md)  

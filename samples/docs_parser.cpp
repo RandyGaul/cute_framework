@@ -118,8 +118,7 @@ struct State
 	{
 		int index = get_doc_index(title);
 		String link = docs[index].path.c_str();
-		String link_prefix = "https://github.com/RandyGaul/cute_framework/blob/master/docs";
-		link.replace("../docs", link_prefix.c_str());
+		link.replace("../docs", "");
 		return link;
 	}
 
@@ -153,7 +152,7 @@ void Doc::emit_title(FILE* fp)
 	fprintf(fp, "[](../header.md ':include')\n\n");
 	fprintf(fp, "# %s\n\n", title.c_str());
 	String link = linkify(web_category, web_category, false);
-	fprintf(fp, "Category: [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=%s)  \n", web_category.c_str(), link.c_str());
+	fprintf(fp, "Category: [%s](/api_reference?id=%s)  \n", web_category.c_str(), link.c_str());
 	fprintf(fp, "GitHub: [%s](https://github.com/RandyGaul/cute_framework/blob/master/include/%s)  \n---\n\n", file.c_str(), file.c_str());
 }
 
@@ -525,7 +524,7 @@ void save_list_page(Path path, const char* category, Array<const char*> pages, c
 			String page = pages[i];
 			String page_lower = page;
 			page_lower.to_lower().replace(" ", "_");
-			fprintf(fp, "- [%s](https://github.com/RandyGaul/cute_framework/blob/master/docs/%s/%s.md)\n", page.c_str(), category, page_lower.c_str());
+			fprintf(fp, "- [%s](/%s/%s.md)\n", page.c_str(), category, page_lower.c_str());
 		}
 		fprintf(fp, "\n");
 		fclose(fp);

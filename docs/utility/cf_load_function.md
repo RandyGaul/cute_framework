@@ -2,7 +2,7 @@
 
 # cf_load_function
 
-Category: [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=utility)  
+Category: [utility](/api_reference?id=utility)  
 GitHub: [cute_symbol.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_symbol.h)  
 ---
 
@@ -24,5 +24,5 @@ you must typecast it yourself. Returns `NULL` in the case of errors.
 
 ## Related Pages
 
-[cf_load_shared_library](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_load_shared_library.md)  
-[cf_unload_shared_library](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_unload_shared_library.md)  
+[cf_load_shared_library](/utility/cf_load_shared_library.md)  
+[cf_unload_shared_library](/utility/cf_unload_shared_library.md)  

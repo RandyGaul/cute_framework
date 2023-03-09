@@ -2,7 +2,7 @@
 
 # sfmt_append
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -24,7 +24,7 @@ All printed data is appended to the end of the string. Will automatically adjust
 
 ## Related Pages
 
-[sfmt](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfmt.md)  
-[sset](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sset.md)  
-[svfmt](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/svfmt.md)  
-[svfmt_append](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/svfmt_append.md)  
+[sfmt](/string/sfmt.md)  
+[sset](/string/sset.md)  
+[svfmt](/string/svfmt.md)  
+[svfmt_append](/string/svfmt_append.md)  

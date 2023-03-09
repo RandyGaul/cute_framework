@@ -2,11 +2,11 @@
 
 # CF_Filter
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
-Filtering options for how to access [CF_Texture](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_texture.md) data on the GPU.
+Filtering options for how to access [CF_Texture](/graphics/cf_texture.md) data on the GPU.
 
 ## Values
 
@@ -17,5 +17,5 @@ FILTER_LINEAR | Linear (bilinear) filtering. A good general purpose option.
 
 ## Related Pages
 
-[CF_TextureParams](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_textureparams.md)  
-[cf_filter_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_filter_to_string.md)  
+[CF_TextureParams](/graphics/cf_textureparams.md)  
+[cf_filter_to_string](/graphics/cf_filter_to_string.md)  

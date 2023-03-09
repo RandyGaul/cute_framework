@@ -2,11 +2,11 @@
 
 # cf_make_aabb_tree
 
-Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  
+Category: [collision](/api_reference?id=collision)  
 GitHub: [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)  
 ---
 
-Creates a [CF_AabbTree](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabbtree.md). This kind of tree is used for optimizing collision detection using AABBs (axis-aligned bounding boxes).
+Creates a [CF_AabbTree](/collision/cf_aabbtree.md). This kind of tree is used for optimizing collision detection using AABBs (axis-aligned bounding boxes).
 
 ```cpp
 CF_AabbTree cf_make_aabb_tree(int initial_capacity);
@@ -18,7 +18,7 @@ initial_capacity | Sizes the internal arrays for a number of elements to insert.
 
 ## Return Value
 
-Returns a [CF_AabbTree](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabbtree.md) for optimizing collision queries.
+Returns a [CF_AabbTree](/collision/cf_aabbtree.md) for optimizing collision queries.
 
 ## Remarks
 
@@ -29,8 +29,8 @@ first. You can then follow up potential hit-pairs by performing more expensive t
 
 ## Related Pages
 
-[cf_make_aabb_tree_from_memory](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_make_aabb_tree_from_memory.md)  
-[cf_destroy_aabb_tree](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_destroy_aabb_tree.md)  
-[cf_aabb_tree_insert](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabb_tree_insert.md)  
-[cf_aabb_tree_query_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabb_tree_query_aabb.md)  
-[cf_aabb_tree_query_ray](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabb_tree_query_ray.md)  
+[cf_make_aabb_tree_from_memory](/collision/cf_make_aabb_tree_from_memory.md)  
+[cf_destroy_aabb_tree](/collision/cf_destroy_aabb_tree.md)  
+[cf_aabb_tree_insert](/collision/cf_aabb_tree_insert.md)  
+[cf_aabb_tree_query_aabb](/collision/cf_aabb_tree_query_aabb.md)  
+[cf_aabb_tree_query_ray](/collision/cf_aabb_tree_query_ray.md)  

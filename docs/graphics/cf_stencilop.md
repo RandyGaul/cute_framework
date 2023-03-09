@@ -2,7 +2,7 @@
 
 # CF_StencilOp
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -23,5 +23,5 @@ STENCIL_OP_DECREMENT_WRAP | Decrement wrap.
 
 ## Related Pages
 
-[CF_StencilFunction](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_stencilfunction.md)  
-[cf_stencil_op_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_stencil_op_string.md)  
+[CF_StencilFunction](/graphics/cf_stencilfunction.md)  
+[cf_stencil_op_string](/graphics/cf_stencil_op_string.md)  

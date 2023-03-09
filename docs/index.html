@@ -60,21 +60,6 @@
 				noData       : 'No results!',
 				placeholder  : 'Search ...'
 			},
-
-			// PLUGINS
-			// -----------------------------------------------------------------
-			plugins: [
-				// Moves links from github source to website.
-				function (hook, vm) {
-					hook.afterEach(function (html) {
-						html = html.replace(
-							/https:\/\/github.com\/RandyGaul\/cute_framework\/(blob|tree)\/master\/docs\//gi,
-							'/'
-							)
-						return html
-					})
-				},
-			]
 		}
 	</script>
 	<!-- Docsify v4 -->

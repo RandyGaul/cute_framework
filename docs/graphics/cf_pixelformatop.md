@@ -2,7 +2,7 @@
 
 # CF_PixelFormatOp
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -21,11 +21,11 @@ PIXELFORMAT_OP_DEPTH | Performs hardware-accelerated depth-culling.
 
 ## Remarks
 
-Not all types are supported on each backend. Be sure to check with [cf_query_pixel_format](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_query_pixel_format.md) if a particular pixel format
+Not all types are supported on each backend. Be sure to check with [cf_query_pixel_format](/graphics/cf_query_pixel_format.md) if a particular pixel format
 is available for your use-case.
 
 ## Related Pages
 
-[CF_PixelFormat](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_pixelformat.md)  
-[cf_pixel_format_op_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_pixel_format_op_to_string.md)  
-[cf_query_pixel_format](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_query_pixel_format.md)  
+[CF_PixelFormat](/graphics/cf_pixelformat.md)  
+[cf_pixel_format_op_to_string](/graphics/cf_pixel_format_op_to_string.md)  
+[cf_query_pixel_format](/graphics/cf_query_pixel_format.md)  

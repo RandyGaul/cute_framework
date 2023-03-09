@@ -2,7 +2,7 @@
 
 # cf_kv_read
 
-Category: [serialization](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=serialization)  
+Category: [serialization](/api_reference?id=serialization)  
 GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_kv.h)  
 ---
 
@@ -20,11 +20,11 @@ result_out | Can be `NULL`. Contains any errors if present.
 
 ## Return Value
 
-Returns a new [CF_KeyValue](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_keyvalue.md) on success. Returns `NULL` on failure, and reports any errors in `result_out`.
+Returns a new [CF_KeyValue](/serialization/cf_keyvalue.md) on success. Returns `NULL` on failure, and reports any errors in `result_out`.
 
 ## Remarks
 
-All data is loaded up into memory at once. You can fetch out values as-needed by using [cf_kv_key](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_key.md) and `cf_kv_val_` functions.
+All data is loaded up into memory at once. You can fetch out values as-needed by using [cf_kv_key](/serialization/cf_kv_key.md) and `cf_kv_val_` functions.
 
 Example:
 
@@ -59,8 +59,8 @@ b was 13
 
 ## Related Pages
 
-[CF_KeyValue](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_keyvalue.md)  
-[cf_kv_write](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_write.md)  
-[cf_kv_key](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_key.md)  
-[cf_kv_destroy](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_destroy.md)  
-[cf_read_reset](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_read_reset.md)  
+[CF_KeyValue](/serialization/cf_keyvalue.md)  
+[cf_kv_write](/serialization/cf_kv_write.md)  
+[cf_kv_key](/serialization/cf_kv_key.md)  
+[cf_kv_destroy](/serialization/cf_kv_destroy.md)  
+[cf_read_reset](/serialization/cf_read_reset.md)  

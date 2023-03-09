@@ -2,7 +2,7 @@
 
 # CF_KeyButton
 
-Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+Category: [input](/api_reference?id=input)  
 GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)  
 ---
 
@@ -252,5 +252,5 @@ KEY_COUNT |
 
 ## Related Pages
 
-[cf_key_down](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_key_down.md)  
-[cf_key_button_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_key_button_to_string.md)  
+[cf_key_down](/input/cf_key_down.md)  
+[cf_key_button_to_string](/input/cf_key_button_to_string.md)  

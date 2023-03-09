@@ -2,7 +2,7 @@
 
 # cf_joypad_axis
 
-Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+Category: [input](/api_reference?id=input)  
 GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
 ---
 
@@ -19,8 +19,8 @@ axis | The axis.
 
 ## Related Pages
 
-[CF_Joypad](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad.md)  
-[CF_JoypadButton](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypadbutton.md)  
-[cf_joypad_button_down](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad_button_down.md)  
-[cf_joypad_button_just_pressed](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad_button_just_pressed.md)  
-[cf_joypad_button_just_released](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad_button_just_released.md)  
+[CF_Joypad](/input/cf_joypad.md)  
+[CF_JoypadButton](/input/cf_joypadbutton.md)  
+[cf_joypad_button_down](/input/cf_joypad_button_down.md)  
+[cf_joypad_button_just_pressed](/input/cf_joypad_button_just_pressed.md)  
+[cf_joypad_button_just_released](/input/cf_joypad_button_just_released.md)  

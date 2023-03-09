@@ -2,7 +2,7 @@
 
 # cf_bezier
 
-Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -21,6 +21,6 @@ t | A position along the curve.
 
 ## Related Pages
 
-[CF_V2](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_v2.md)  
-[cf_lerp_v2](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_lerp_v2.md)  
-[cf_bezier2](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_bezier2.md)  
+[CF_V2](/math/cf_v2.md)  
+[cf_lerp_v2](/math/cf_lerp_v2.md)  
+[cf_bezier2](/math/cf_bezier2.md)  

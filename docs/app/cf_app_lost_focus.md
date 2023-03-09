@@ -2,7 +2,7 @@
 
 # cf_app_lost_focus
 
-Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  
+Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
 ---
 
@@ -18,6 +18,6 @@ The app has focus if user inputs will go to the app, such as after clicking on o
 
 ## Related Pages
 
-[cf_app_gained_focus](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_gained_focus.md)  
-[cf_app_has_focus](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_has_focus.md)  
-[cf_app_was_restored](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_was_restored.md)  
+[cf_app_gained_focus](/app/cf_app_gained_focus.md)  
+[cf_app_has_focus](/app/cf_app_has_focus.md)  
+[cf_app_was_restored](/app/cf_app_was_restored.md)  

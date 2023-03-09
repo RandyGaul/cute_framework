@@ -2,7 +2,7 @@
 
 # cf_sub_un8
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)  
 ---
 
@@ -24,6 +24,6 @@ The core calculation is done with full integers to help avoid intermediate overf
 
 ## Related Pages
 
-[cf_mul_un8](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_mul_un8.md)  
-[cf_div_un8](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_div_un8.md)  
-[cf_add_un8](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_add_un8.md)  
+[cf_mul_un8](/graphics/cf_mul_un8.md)  
+[cf_div_un8](/graphics/cf_div_un8.md)  
+[cf_add_un8](/graphics/cf_add_un8.md)  

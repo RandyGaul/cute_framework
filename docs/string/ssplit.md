@@ -2,7 +2,7 @@
 
 # ssplit
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -19,7 +19,7 @@ ch | A character to split about.
 
 ## Return Value
 
-Returns a dynamic array of all delimited strings (see [dyna](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/dyna.md)).
+Returns a dynamic array of all delimited strings (see [dyna](/array/dyna.md)).
 
 ## Code Example
 
@@ -46,8 +46,8 @@ afree(array_of_splits);
 
 ## Remarks
 
-`s` is not modified. You must call [sfree](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfree.md) on the returned strings and [afree](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/afree.md) on the returned array.
+`s` is not modified. You must call [sfree](/string/sfree.md) on the returned strings and [afree](/array/afree.md) on the returned array.
 
 ## Related Pages
 
-[ssplit_once](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/ssplit_once.md)  
+[ssplit_once](/string/ssplit_once.md)  

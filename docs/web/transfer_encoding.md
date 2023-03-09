@@ -2,11 +2,11 @@
 
 # Transfer Encoding
 
-Category: [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=web)  
+Category: [web](/api_reference?id=web)  
 GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)  
 ---
 
-Flags for [CF_HttpsResponse](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_httpsresponse.md) transfer encoding settings.
+Flags for [CF_HttpsResponse](/web/cf_httpsresponse.md) transfer encoding settings.
 
 ## Values
 
@@ -20,8 +20,8 @@ TRANSFER_ENCODING_FLAG_DEPRECATED_COMPRESS | A deprecated compression method was
 
 ## Related Pages
 
-[CF_Https](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https.md)  
-[cf_https_get](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https_get.md)  
-[cf_https_post](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https_post.md)  
-[cf_https_destroy](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https_destroy.md)  
-[cf_https_process](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https_process.md)  
+[CF_Https](/web/cf_https.md)  
+[cf_https_get](/web/cf_https_get.md)  
+[cf_https_post](/web/cf_https_post.md)  
+[cf_https_destroy](/web/cf_https_destroy.md)  
+[cf_https_process](/web/cf_https_process.md)  

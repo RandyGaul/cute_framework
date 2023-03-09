@@ -2,7 +2,7 @@
 
 # CF_KeyValue
 
-Category: [serialization](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=serialization)  
+Category: [serialization](/api_reference?id=serialization)  
 GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_kv.h)  
 ---
 
@@ -17,7 +17,7 @@ and a low-friction API.
 
 You start by opening a KV in either read or write format. For 95% of use cases you can then get
 away with using the same code for reading and writing data, with only the difference of opening
-in read/write mode with [cf_kv_read](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_read.md) or [cf_kv_write](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_write.md).
+in read/write mode with [cf_kv_read](/serialization/cf_kv_read.md) or [cf_kv_write](/serialization/cf_kv_write.md).
 
 Here's a quick example of some KV data.
 
@@ -120,11 +120,11 @@ bool load(ImportantStuff stuff, const char path)
 
 In the common case it's possible to reuse most seriaization code for both reading and
 writing. However, sometimes it's necessary to have entirely different code for reading
-and writing. Use [cf_kv_state](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_state.md) to see if the KV is currently in read vs write mode, and then
+and writing. Use [cf_kv_state](/serialization/cf_kv_state.md) to see if the KV is currently in read vs write mode, and then
 run different code accordingly.
 
 ## Related Pages
 
-[cf_kv_write](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_write.md)  
-[CF_KeyValueState](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_keyvaluestate.md)  
-[cf_kv_read](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_read.md)  
+[cf_kv_write](/serialization/cf_kv_write.md)  
+[CF_KeyValueState](/serialization/cf_keyvaluestate.md)  
+[cf_kv_read](/serialization/cf_kv_read.md)  

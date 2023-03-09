@@ -2,7 +2,7 @@
 
 # cf_draw_push_antialias
 
-Category: [draw](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=draw)  
+Category: [draw](/api_reference?id=draw)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
@@ -23,5 +23,5 @@ but looks much smoother.
 
 ## Related Pages
 
-[cf_draw_peek_antialias](https://github.com/RandyGaul/cute_framework/blob/master/docs/draw/cf_draw_peek_antialias.md)  
-[cf_draw_pop_antialias](https://github.com/RandyGaul/cute_framework/blob/master/docs/draw/cf_draw_pop_antialias.md)  
+[cf_draw_peek_antialias](/draw/cf_draw_peek_antialias.md)  
+[cf_draw_pop_antialias](/draw/cf_draw_pop_antialias.md)  

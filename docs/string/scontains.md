@@ -2,7 +2,7 @@
 
 # scontains
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -19,8 +19,8 @@ contains_me | A substring to search for.
 
 ## Related Pages
 
-[sprefix](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sprefix.md)  
-[ssuffix](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/ssuffix.md)  
-[sfind](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfind.md)  
-[sfirst_index_of](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfirst_index_of.md)  
-[slast_index_of](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/slast_index_of.md)  
+[sprefix](/string/sprefix.md)  
+[ssuffix](/string/ssuffix.md)  
+[sfind](/string/sfind.md)  
+[sfirst_index_of](/string/sfirst_index_of.md)  
+[slast_index_of](/string/slast_index_of.md)  

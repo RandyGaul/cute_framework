@@ -2,7 +2,7 @@
 
 # cf_fs_stat
 
-Category: [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=file)  
+Category: [file](/api_reference?id=file)  
 GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
 ---
 
@@ -14,7 +14,7 @@ CF_Result cf_fs_stat(const char* virtual_path, CF_Stat* stat);
 
 ## Return Value
 
-Returns any errors as a [CF_Result](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_result.md).
+Returns any errors as a [CF_Result](/utility/cf_result.md).
 
 ## Remarks
 
@@ -22,9 +22,9 @@ This doesn't open the file itself, and is a fairly light-weight operation in com
 
 ## Related Pages
 
-[CF_File](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_file.md)  
-[CF_Stat](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_stat.md)  
-[cf_fs_create_file](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_fs_create_file.md)  
-[cf_fs_open_file_for_write](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_fs_open_file_for_write.md)  
-[cf_fs_open_file_for_read](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_fs_open_file_for_read.md)  
-[cf_fs_close](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_fs_close.md)  
+[CF_File](/file/cf_file.md)  
+[CF_Stat](/file/cf_stat.md)  
+[cf_fs_create_file](/file/cf_fs_create_file.md)  
+[cf_fs_open_file_for_write](/file/cf_fs_open_file_for_write.md)  
+[cf_fs_open_file_for_read](/file/cf_fs_open_file_for_read.md)  
+[cf_fs_close](/file/cf_fs_close.md)  

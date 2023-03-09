@@ -2,7 +2,7 @@
 
 # silen
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -23,7 +23,7 @@ The return value is calculated in constant time, as opposed to calling `CUTE_STR
 
 ## Related Pages
 
-[sintern](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sintern.md)  
-[sintern_range](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sintern_range.md)  
-[sivalid](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sivalid.md)  
-[sinuke](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sinuke.md)  
+[sintern](/string/sintern.md)  
+[sintern_range](/string/sintern_range.md)  
+[sivalid](/string/sivalid.md)  
+[sinuke](/string/sinuke.md)  

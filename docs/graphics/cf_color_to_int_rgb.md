@@ -2,11 +2,11 @@
 
 # cf_color_to_int_rgb
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)  
 ---
 
-Converts an RGBA [CF_Color](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color.md) to an integer.
+Converts an RGBA [CF_Color](/graphics/cf_color.md) to an integer.
 
 ```cpp
 uint32_t cf_color_to_int_rgb(CF_Color c)
@@ -23,6 +23,6 @@ the green component, the third byte is the blue component, the fourth byte is 0x
 
 ## Related Pages
 
-[cf_color_to_pixel](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color_to_pixel.md)  
-[cf_color_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color_to_string.md)  
-[cf_color_to_int_rgba](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color_to_int_rgba.md)  
+[cf_color_to_pixel](/graphics/cf_color_to_pixel.md)  
+[cf_color_to_string](/graphics/cf_color_to_string.md)  
+[cf_color_to_int_rgba](/graphics/cf_color_to_int_rgba.md)  

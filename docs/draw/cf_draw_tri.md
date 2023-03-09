@@ -2,7 +2,7 @@
 
 # cf_draw_tri
 
-Category: [draw](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=draw)  
+Category: [draw](/api_reference?id=draw)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
@@ -21,7 +21,7 @@ thickness | The thickness of each line to draw.
 
 ## Related Pages
 
-[cf_app_draw_onto_screen](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_draw_onto_screen.md)  
-[cf_draw_tri_fill](https://github.com/RandyGaul/cute_framework/blob/master/docs/draw/cf_draw_tri_fill.md)  
-[cf_draw_tri_fill2](https://github.com/RandyGaul/cute_framework/blob/master/docs/draw/cf_draw_tri_fill2.md)  
+[cf_app_draw_onto_screen](/app/cf_app_draw_onto_screen.md)  
+[cf_draw_tri_fill](/draw/cf_draw_tri_fill.md)  
+[cf_draw_tri_fill2](/draw/cf_draw_tri_fill2.md)  
 cf_draw_to  

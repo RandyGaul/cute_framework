@@ -2,7 +2,7 @@
 
 # cf_neg_v2
 
-Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -14,5 +14,5 @@ CF_V2 cf_neg_v2(CF_V2 a)
 
 ## Related Pages
 
-[CF_V2](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_v2.md)  
-[cf_sign_v2](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_sign_v2.md)  
+[CF_V2](/math/cf_v2.md)  
+[cf_sign_v2](/math/cf_sign_v2.md)  

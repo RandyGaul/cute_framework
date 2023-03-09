@@ -2,7 +2,7 @@
 
 # CF_Capsule
 
-Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  
+Category: [collision](/api_reference?id=collision)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -20,12 +20,12 @@ It's like a shrink-wrap of 2 circles connected by a rod.
 
 ## Related Pages
 
-[cf_capsule_to_poly_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_capsule_to_poly_manifold.md)  
-[cf_circle_to_capsule](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_circle_to_capsule.md)  
-[cf_aabb_to_capsule](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabb_to_capsule.md)  
-[cf_capsule_to_capsule](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_capsule_to_capsule.md)  
-[cf_capsule_to_poly](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_capsule_to_poly.md)  
-[cf_ray_to_capsule](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_ray_to_capsule.md)  
-[cf_circle_to_capsule_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_circle_to_capsule_manifold.md)  
-[cf_aabb_to_capsule_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_aabb_to_capsule_manifold.md)  
-[cf_capsule_to_capsule_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_capsule_to_capsule_manifold.md)  
+[cf_capsule_to_poly_manifold](/collision/cf_capsule_to_poly_manifold.md)  
+[cf_circle_to_capsule](/collision/cf_circle_to_capsule.md)  
+[cf_aabb_to_capsule](/collision/cf_aabb_to_capsule.md)  
+[cf_capsule_to_capsule](/collision/cf_capsule_to_capsule.md)  
+[cf_capsule_to_poly](/collision/cf_capsule_to_poly.md)  
+[cf_ray_to_capsule](/collision/cf_ray_to_capsule.md)  
+[cf_circle_to_capsule_manifold](/collision/cf_circle_to_capsule_manifold.md)  
+[cf_aabb_to_capsule_manifold](/collision/cf_aabb_to_capsule_manifold.md)  
+[cf_capsule_to_capsule_manifold](/collision/cf_capsule_to_capsule_manifold.md)  

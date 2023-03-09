@@ -2,7 +2,7 @@
 
 # cf_draw_text
 
-Category: [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=text)  
+Category: [text](/api_reference?id=text)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
@@ -19,7 +19,7 @@ position | The top-left corner of the text.
 
 ## Related Pages
 
-[cf_make_font](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/cf_make_font.md)  
-[cf_app_draw_onto_screen](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_draw_onto_screen.md)  
-[cf_text_effect_register](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/cf_text_effect_register.md)  
+[cf_make_font](/text/cf_make_font.md)  
+[cf_app_draw_onto_screen](/app/cf_app_draw_onto_screen.md)  
+[cf_text_effect_register](/text/cf_text_effect_register.md)  
 cf_draw_to  

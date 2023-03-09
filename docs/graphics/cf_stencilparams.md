@@ -2,7 +2,7 @@
 
 # CF_StencilParams
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -13,7 +13,7 @@ Struct Members | Description
 `bool enabled` | The stencil buffer will not be used unless this is true.
 `uint8_t read_mask` | Used to control which bits get read from the stencil buffer.
 `uint8_t write_mask` | Used to control which bits get written to the stencil buffer.
-`uint8_t reference` | After reading from the stencil buffer, the `reference` value is used in a comparison to perform a stencil operation. See [CF_StencilFunction](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_stencilfunction.md) and [CF_StencilOp](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_stencilop.md).
+`uint8_t reference` | After reading from the stencil buffer, the `reference` value is used in a comparison to perform a stencil operation. See [CF_StencilFunction](/graphics/cf_stencilfunction.md) and [CF_StencilOp](/graphics/cf_stencilop.md).
 `CF_StencilFunction front` | The stencil function to use for front-facing triangles (counter-clockwise).
 `CF_StencilFunction back` | The stencil function to use for back-facing triangles (clockwise).
 
@@ -23,6 +23,6 @@ For an overview of stencil testing [learnopengl.com has an excellent article](ht
 
 ## Related Pages
 
-[CF_StencilFunction](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_stencilfunction.md)  
-[cf_material_set_render_state](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_material_set_render_state.md)  
-[CF_RenderState](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_renderstate.md)  
+[CF_StencilFunction](/graphics/cf_stencilfunction.md)  
+[cf_material_set_render_state](/graphics/cf_material_set_render_state.md)  
+[CF_RenderState](/graphics/cf_renderstate.md)  

@@ -2,7 +2,7 @@
 
 # CF_BlendOp
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -18,9 +18,9 @@ BLEND_OP_REVERSE_SUBTRACT | Reverse subtract, B - A.
 
 ## Remarks
 
-See [CF_BlendState](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_blendstate.md) for an overview.
+See [CF_BlendState](/graphics/cf_blendstate.md) for an overview.
 
 ## Related Pages
 
-[CF_BlendState](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_blendstate.md)  
-[cf_blend_op_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_blend_op_string.md)  
+[CF_BlendState](/graphics/cf_blendstate.md)  
+[cf_blend_op_string](/graphics/cf_blend_op_string.md)  

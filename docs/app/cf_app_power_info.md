@@ -2,7 +2,7 @@
 
 # cf_app_power_info
 
-Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  
+Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
 ---
 
@@ -14,10 +14,10 @@ CF_PowerInfo cf_app_power_info();
 
 ## Return Value
 
-Returns a [CF_PowerInfo](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_powerinfo.md) struct.
+Returns a [CF_PowerInfo](/app/cf_powerinfo.md) struct.
 
 ## Related Pages
 
-[CF_PowerInfo](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_powerinfo.md)  
-[cf_power_state_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_power_state_to_string.md)  
-[CF_PowerState](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_powerstate.md)  
+[CF_PowerInfo](/app/cf_powerinfo.md)  
+[cf_power_state_to_string](/app/cf_power_state_to_string.md)  
+[CF_PowerState](/app/cf_powerstate.md)  

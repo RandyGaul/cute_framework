@@ -2,11 +2,11 @@
 
 # CF_HapticEnvelope
 
-Category: [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=haptic)  
+Category: [haptic](/api_reference?id=haptic)  
 GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)  
 ---
 
-Defines a fade in and fade out of strength for a [CF_HapticEffect](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_hapticeffect.md).
+Defines a fade in and fade out of strength for a [CF_HapticEffect](/haptic/cf_hapticeffect.md).
 
 Struct Members | Description
 --- | ---
@@ -44,7 +44,7 @@ From (3) to (4) is the `fade_milliseconds`.
 
 ## Related Pages
 
-[CF_Haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic.md)  
-[cf_haptic_create_effect](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic_create_effect.md)  
-[CF_HapticEffect](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_hapticeffect.md)  
-[CF_HapticData](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_hapticdata.md)  
+[CF_Haptic](/haptic/cf_haptic.md)  
+[cf_haptic_create_effect](/haptic/cf_haptic_create_effect.md)  
+[CF_HapticEffect](/haptic/cf_hapticeffect.md)  
+[CF_HapticData](/haptic/cf_hapticdata.md)  

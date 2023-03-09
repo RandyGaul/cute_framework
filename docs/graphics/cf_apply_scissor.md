@@ -2,7 +2,7 @@
 
 # cf_apply_scissor
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -26,5 +26,5 @@ scissor box will simply be ignored, rendering nothing and leaving the previous p
 
 ## Related Pages
 
-[cf_apply_canvas](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_apply_canvas.md)  
-[cf_apply_viewport](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_apply_viewport.md)  
+[cf_apply_canvas](/graphics/cf_apply_canvas.md)  
+[cf_apply_viewport](/graphics/cf_apply_viewport.md)  

@@ -2,7 +2,7 @@
 
 # siequ
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -19,6 +19,6 @@ b | The second string.
 
 ## Related Pages
 
-[scmp](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/scmp.md)  
-[sicmp](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sicmp.md)  
-[sequ](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sequ.md)  
+[scmp](/string/scmp.md)  
+[sicmp](/string/sicmp.md)  
+[sequ](/string/sequ.md)  

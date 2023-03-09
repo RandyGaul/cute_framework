@@ -2,7 +2,7 @@
 
 # sappend_UTF8
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -41,5 +41,5 @@ looks like question mark inside of a dark diamond.
 
 ## Related Pages
 
-[cf_decode_UTF16](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/cf_decode_utf16.md)  
-[cf_decode_UTF8](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/cf_decode_utf8.md)  
+[cf_decode_UTF16](/string/cf_decode_utf16.md)  
+[cf_decode_UTF8](/string/cf_decode_utf8.md)  

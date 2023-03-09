@@ -2,7 +2,7 @@
 
 # cf_len
 
-Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -14,7 +14,7 @@ float cf_len(CF_V2 a)
 
 ## Related Pages
 
-[CF_V2](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_v2.md)  
-[cf_safe_norm](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_safe_norm.md)  
-[cf_distance](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_distance.md)  
-[cf_norm](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_norm.md)  
+[CF_V2](/math/cf_v2.md)  
+[cf_safe_norm](/math/cf_safe_norm.md)  
+[cf_distance](/math/cf_distance.md)  
+[cf_norm](/math/cf_norm.md)  

@@ -2,7 +2,7 @@
 
 # CF_HandleTable
 
-Category: [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=utility)  
+Category: [utility](/api_reference?id=utility)  
 GitHub: [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_handle_table.h)  
 ---
 
@@ -10,11 +10,11 @@ An opaque pointer representing a handle table.
 
 ## Remarks
 
-The handle table stores a lookup table of unique [CF_Handle](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_handle.md)s.
+The handle table stores a lookup table of unique [CF_Handle](/utility/cf_handle.md)s.
 
 ## Related Pages
 
-[cf_handle_allocator_get_index](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_handle_allocator_get_index.md)  
-[CF_Handle](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_handle.md)  
-[cf_make_handle_allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_make_handle_allocator.md)  
-[cf_handle_allocator_alloc](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_handle_allocator_alloc.md)  
+[cf_handle_allocator_get_index](/utility/cf_handle_allocator_get_index.md)  
+[CF_Handle](/utility/cf_handle.md)  
+[cf_make_handle_allocator](/utility/cf_make_handle_allocator.md)  
+[cf_handle_allocator_alloc](/utility/cf_handle_allocator_alloc.md)  

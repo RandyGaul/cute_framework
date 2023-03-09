@@ -2,7 +2,7 @@
 
 # cf_decode_UTF16
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -35,7 +35,7 @@ while (tmp) {
 }
 ```
 
-You can convert a UTF16 string to UTF8 by calling [sappend_UTF8](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sappend_utf8.md) on another string
+You can convert a UTF16 string to UTF8 by calling [sappend_UTF8](/string/sappend_utf8.md) on another string
 instance inside the above example loop. Here's an example function to return a new string
 instance in UTF8 form given a UTF16 string.
 
@@ -54,5 +54,5 @@ return s;
 
 ## Related Pages
 
-[sappend_UTF8](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sappend_utf8.md)  
-[cf_decode_UTF8](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/cf_decode_utf8.md)  
+[sappend_UTF8](/string/sappend_utf8.md)  
+[cf_decode_UTF8](/string/cf_decode_utf8.md)  

@@ -2,7 +2,7 @@
 
 # cf_apply_viewport
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -25,5 +25,5 @@ The viewport is a window on the screen to render within. The canvas will be stre
 
 ## Related Pages
 
-[cf_apply_canvas](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_apply_canvas.md)  
-[cf_apply_scissor](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_apply_scissor.md)  
+[cf_apply_canvas](/graphics/cf_apply_canvas.md)  
+[cf_apply_scissor](/graphics/cf_apply_scissor.md)  

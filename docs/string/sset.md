@@ -2,7 +2,7 @@
 
 # sset
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -19,9 +19,9 @@ b | Source for copying.
 
 ## Related Pages
 
-[sfmt](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfmt.md)  
-[sfmt_append](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfmt_append.md)  
-[svfmt](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/svfmt.md)  
-[svfmt_append](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/svfmt_append.md)  
-[smake](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/smake.md)  
-[sdup](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sdup.md)  
+[sfmt](/string/sfmt.md)  
+[sfmt_append](/string/sfmt_append.md)  
+[svfmt](/string/svfmt.md)  
+[svfmt_append](/string/svfmt_append.md)  
+[smake](/string/smake.md)  
+[sdup](/string/sdup.md)  

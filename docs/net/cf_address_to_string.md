@@ -2,11 +2,11 @@
 
 # cf_address_to_string
 
-Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+Category: [net](/api_reference?id=net)  
 GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
 ---
 
-Converts a [CF_Address](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_address.md) to a C string.
+Converts a [CF_Address](/net/cf_address.md) to a C string.
 
 ```cpp
 void cf_address_to_string(CF_Address endpoint, char* buffer, int buffer_size);
@@ -14,6 +14,6 @@ void cf_address_to_string(CF_Address endpoint, char* buffer, int buffer_size);
 
 ## Related Pages
 
-[CF_Address](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_address.md)  
-[cf_address_init](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_address_init.md)  
-[cf_address_equals](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_address_equals.md)  
+[CF_Address](/net/cf_address.md)  
+[cf_address_init](/net/cf_address_init.md)  
+[cf_address_equals](/net/cf_address_equals.md)  

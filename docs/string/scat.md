@@ -2,7 +2,7 @@
 
 # scat
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -19,12 +19,12 @@ b | Used to append onto `a`.
 
 ## Remarks
 
-You can technically do this with [sfmt](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfmt.md), but this function is optimized much faster. Does the same thing as [sappend](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sappend.md).
+You can technically do this with [sfmt](/string/sfmt.md), but this function is optimized much faster. Does the same thing as [sappend](/string/sappend.md).
 
 ## Related Pages
 
-[sappend](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sappend.md)  
-[sfmt_append](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfmt_append.md)  
-[sappend_range](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sappend_range.md)  
-[scat_range](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/scat_range.md)  
-[sfmt](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfmt.md)  
+[sappend](/string/sappend.md)  
+[sfmt_append](/string/sfmt_append.md)  
+[sappend_range](/string/sappend_range.md)  
+[scat_range](/string/scat_range.md)  
+[sfmt](/string/sfmt.md)  

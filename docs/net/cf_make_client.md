@@ -2,7 +2,7 @@
 
 # cf_make_client
 
-Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+Category: [net](/api_reference?id=net)  
 GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
 ---
 
@@ -20,7 +20,7 @@ use_ipv6 | Whether or not the socket should turn on ipv6. Some users will not ha
 
 ## Related Pages
 
-[CF_Client](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client.md)  
-[cf_generate_connect_token](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_generate_connect_token.md)  
-[cf_destroy_client](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_destroy_client.md)  
-[cf_client_connect](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client_connect.md)  
+[CF_Client](/net/cf_client.md)  
+[cf_generate_connect_token](/net/cf_generate_connect_token.md)  
+[cf_destroy_client](/net/cf_destroy_client.md)  
+[cf_client_connect](/net/cf_client_connect.md)  

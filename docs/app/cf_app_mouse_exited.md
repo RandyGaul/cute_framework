@@ -2,7 +2,7 @@
 
 # cf_app_mouse_exited
 
-Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  
+Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
 ---
 
@@ -14,9 +14,9 @@ bool cf_app_mouse_exited();
 
 ## Remarks
 
-This function only deals with mouse coordinates, not focus (such as [cf_app_has_focus](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_has_focus.md)).
+This function only deals with mouse coordinates, not focus (such as [cf_app_has_focus](/app/cf_app_has_focus.md)).
 
 ## Related Pages
 
-[cf_app_mouse_entered](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_mouse_entered.md)  
-[cf_app_mouse_inside](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_mouse_inside.md)  
+[cf_app_mouse_entered](/app/cf_app_mouse_entered.md)  
+[cf_app_mouse_inside](/app/cf_app_mouse_inside.md)  

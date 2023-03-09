@@ -2,7 +2,7 @@
 
 # cf_app_init_imgui
 
-Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  
+Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
 ---
 
@@ -24,4 +24,4 @@ After calling this init function you can call into Dear ImGui's functions.
 
 ## Related Pages
 
-[cf_app_get_sokol_imgui](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_get_sokol_imgui.md)  
+[cf_app_get_sokol_imgui](/app/cf_app_get_sokol_imgui.md)  

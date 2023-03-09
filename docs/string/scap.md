@@ -2,7 +2,7 @@
 
 # scap
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -19,11 +19,11 @@ s | The string. Can be `NULL`.
 ## Remarks
 
 This is not the number of characters, but the size of the internal buffer. The capacity automatically grows as necessary, but
-you can use [sfit](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfit.md) to ensure a minimum capacity manually, as an optimization.
+you can use [sfit](/string/sfit.md) to ensure a minimum capacity manually, as an optimization.
 
 ## Related Pages
 
-[slen](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/slen.md)  
-[ssize](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/ssize.md)  
-[scount](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/scount.md)  
-[sempty](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sempty.md)  
+[slen](/string/slen.md)  
+[ssize](/string/ssize.md)  
+[scount](/string/scount.md)  
+[sempty](/string/sempty.md)  

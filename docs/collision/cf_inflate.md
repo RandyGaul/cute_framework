@@ -2,7 +2,7 @@
 
 # cf_inflate
 
-Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  
+Category: [collision](/api_reference?id=collision)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -15,7 +15,7 @@ void cf_inflate(void* shape, CF_ShapeType type, float skin_factor);
 Parameters | Description
 --- | ---
 shape | The shape.
-type | The [CF_ShapeType](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_shapetype.md) of `shape`.
+type | The [CF_ShapeType](/collision/cf_shapetype.md) of `shape`.
 skin_factor | The amount to inflate the shape by.
 
 ## Remarks
@@ -32,6 +32,6 @@ appropriately small skin factor, for example 1.0e-6f.
 
 ## Related Pages
 
-[cf_gjk](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_gjk.md)  
-[cf_toi](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_toi.md)  
-[CF_ShapeType](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_shapetype.md)  
+[cf_gjk](/collision/cf_gjk.md)  
+[cf_toi](/collision/cf_toi.md)  
+[CF_ShapeType](/collision/cf_shapetype.md)  

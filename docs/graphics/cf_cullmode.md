@@ -2,7 +2,7 @@
 
 # CF_CullMode
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -18,5 +18,5 @@ CULL_MODE_BACK | Cull triangles ordered counter-clockwise.
 
 ## Related Pages
 
-[CF_RenderState](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_renderstate.md)  
-[cf_cull_mode_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_cull_mode_string.md)  
+[CF_RenderState](/graphics/cf_renderstate.md)  
+[cf_cull_mode_string](/graphics/cf_cull_mode_string.md)  

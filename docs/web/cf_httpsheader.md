@@ -2,11 +2,11 @@
 
 # CF_HttpsHeader
 
-Category: [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=web)  
+Category: [web](/api_reference?id=web)  
 GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)  
 ---
 
-An HTTP header from a [CF_HttpsResponse](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_httpsresponse.md).
+An HTTP header from a [CF_HttpsResponse](/web/cf_httpsresponse.md).
 
 Struct Members | Description
 --- | ---
@@ -15,9 +15,9 @@ Struct Members | Description
 
 ## Related Pages
 
-[CF_Https](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https.md)  
-[CF_HttpsString](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_httpsstring.md)  
-[cf_https_response_find_header](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https_response_find_header.md)  
-[cf_https_strcmp](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https_strcmp.md)  
-[CF_HttpsResponse](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_httpsresponse.md)  
-[cf_https_response](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https_response.md)  
+[CF_Https](/web/cf_https.md)  
+[CF_HttpsString](/web/cf_httpsstring.md)  
+[cf_https_response_find_header](/web/cf_https_response_find_header.md)  
+[cf_https_strcmp](/web/cf_https_strcmp.md)  
+[CF_HttpsResponse](/web/cf_httpsresponse.md)  
+[cf_https_response](/web/cf_https_response.md)  

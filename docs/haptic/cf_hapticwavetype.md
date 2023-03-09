@@ -2,7 +2,7 @@
 
 # CF_HapticWaveType
 
-Category: [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=haptic)  
+Category: [haptic](/api_reference?id=haptic)  
 GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)  
 ---
 
@@ -18,7 +18,7 @@ HAPTIC_WAVE_TYPE_SAW | Saw pattern wave haptic type.
 
 ## Related Pages
 
-[cf_haptic_create_effect](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic_create_effect.md)  
-[cf_haptic_wave_type_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic_wave_type_to_string.md)  
-[CF_HapticPeriodic](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_hapticperiodic.md)  
-[CF_HapticEffect](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_hapticeffect.md)  
+[cf_haptic_create_effect](/haptic/cf_haptic_create_effect.md)  
+[cf_haptic_wave_type_to_string](/haptic/cf_haptic_wave_type_to_string.md)  
+[CF_HapticPeriodic](/haptic/cf_hapticperiodic.md)  
+[CF_HapticEffect](/haptic/cf_hapticeffect.md)  

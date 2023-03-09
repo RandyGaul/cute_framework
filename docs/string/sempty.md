@@ -2,7 +2,7 @@
 
 # sempty
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -22,7 +22,7 @@ Both "" and NULL count as empty.
 
 ## Related Pages
 
-[slen](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/slen.md)  
-[ssize](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/ssize.md)  
-[scount](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/scount.md)  
-[scap](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/scap.md)  
+[slen](/string/slen.md)  
+[ssize](/string/ssize.md)  
+[scount](/string/scount.md)  
+[scap](/string/scap.md)  

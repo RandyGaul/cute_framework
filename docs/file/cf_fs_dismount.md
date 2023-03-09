@@ -2,7 +2,7 @@
 
 # cf_fs_dismount
 
-Category: [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=file)  
+Category: [file](/api_reference?id=file)  
 GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
 ---
 
@@ -14,7 +14,7 @@ CF_Result cf_fs_dismount(const char* archive);
 
 ## Return Value
 
-Returns any errors as a [CF_Result](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_result.md).
+Returns any errors as a [CF_Result](/utility/cf_result.md).
 
 ## Remarks
 
@@ -22,7 +22,7 @@ This function does not remove a `mount_point` from the virtual file system, but 
 
 ## Related Pages
 
-[cf_fs_get_base_directory](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_fs_get_base_directory.md)  
-[cf_fs_set_write_directory](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_fs_set_write_directory.md)  
-[cf_fs_get_user_directory](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_fs_get_user_directory.md)  
-[cf_fs_mount](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_fs_mount.md)  
+[cf_fs_get_base_directory](/file/cf_fs_get_base_directory.md)  
+[cf_fs_set_write_directory](/file/cf_fs_set_write_directory.md)  
+[cf_fs_get_user_directory](/file/cf_fs_get_user_directory.md)  
+[cf_fs_mount](/file/cf_fs_mount.md)  

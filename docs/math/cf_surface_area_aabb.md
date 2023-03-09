@@ -2,11 +2,11 @@
 
 # cf_surface_area_aabb
 
-Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
-Returns the surface area of a [CF_Aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_aabb.md).
+Returns the surface area of a [CF_Aabb](/math/cf_aabb.md).
 
 ```cpp
 float cf_surface_area_aabb(CF_Aabb bb)
@@ -14,11 +14,11 @@ float cf_surface_area_aabb(CF_Aabb bb)
 
 ## Related Pages
 
-[CF_Aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_aabb.md)  
-[cf_contains_point](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_contains_point.md)  
-[cf_contains_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_contains_aabb.md)  
-[cf_overlaps](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_overlaps.md)  
-[cf_area_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_area_aabb.md)  
-[cf_clamp_aabb_v2](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_clamp_aabb_v2.md)  
-[cf_clamp_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_clamp_aabb.md)  
-[cf_combine](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_combine.md)  
+[CF_Aabb](/math/cf_aabb.md)  
+[cf_contains_point](/math/cf_contains_point.md)  
+[cf_contains_aabb](/math/cf_contains_aabb.md)  
+[cf_overlaps](/math/cf_overlaps.md)  
+[cf_area_aabb](/math/cf_area_aabb.md)  
+[cf_clamp_aabb_v2](/math/cf_clamp_aabb_v2.md)  
+[cf_clamp_aabb](/math/cf_clamp_aabb.md)  
+[cf_combine](/math/cf_combine.md)  

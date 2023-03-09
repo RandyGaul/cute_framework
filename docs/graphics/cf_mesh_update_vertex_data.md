@@ -2,7 +2,7 @@
 
 # cf_mesh_update_vertex_data
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -30,9 +30,9 @@ this function once per frame.
 
 ## Related Pages
 
-[CF_Mesh](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_mesh.md)  
-[cf_make_mesh](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_make_mesh.md)  
-[cf_destroy_mesh](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_destroy_mesh.md)  
-[cf_mesh_set_attributes](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_mesh_set_attributes.md)  
-[cf_mesh_update_index_data](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_mesh_update_index_data.md)  
-[cf_mesh_update_instance_data](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_mesh_update_instance_data.md)  
+[CF_Mesh](/graphics/cf_mesh.md)  
+[cf_make_mesh](/graphics/cf_make_mesh.md)  
+[cf_destroy_mesh](/graphics/cf_destroy_mesh.md)  
+[cf_mesh_set_attributes](/graphics/cf_mesh_set_attributes.md)  
+[cf_mesh_update_index_data](/graphics/cf_mesh_update_index_data.md)  
+[cf_mesh_update_instance_data](/graphics/cf_mesh_update_instance_data.md)  

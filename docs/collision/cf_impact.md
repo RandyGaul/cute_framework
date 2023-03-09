@@ -2,7 +2,7 @@
 
 # cf_impact
 
-Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  
+Category: [collision](/api_reference?id=collision)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -14,5 +14,5 @@ CF_V2 cf_impact(CF_Ray r, float t)
 
 ## Related Pages
 
-[CF_Ray](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_ray.md)  
-[cf_endpoint](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_endpoint.md)  
+[CF_Ray](/math/cf_ray.md)  
+[cf_endpoint](/collision/cf_endpoint.md)  

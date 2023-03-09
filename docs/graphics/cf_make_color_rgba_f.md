@@ -2,11 +2,11 @@
 
 # cf_make_color_rgba_f
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)  
 ---
 
-Returns a [CF_Color](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color.md) from RGBA float inputs.
+Returns a [CF_Color](/graphics/cf_color.md) from RGBA float inputs.
 
 ```cpp
 CF_Color cf_make_color_rgba_f(float r, float g, float b, float a)
@@ -21,9 +21,9 @@ a | The alpha component from 0.0f to 1.0f.
 
 ## Related Pages
 
-[CF_Color](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color.md)  
-[cf_make_color_rgb_f](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_make_color_rgb_f.md)  
-[cf_make_color_hex_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_make_color_hex_string.md)  
-[cf_make_color_rgb](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_make_color_rgb.md)  
-[cf_make_color_rgba](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_make_color_rgba.md)  
-[cf_make_color_hex](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_make_color_hex.md)  
+[CF_Color](/graphics/cf_color.md)  
+[cf_make_color_rgb_f](/graphics/cf_make_color_rgb_f.md)  
+[cf_make_color_hex_string](/graphics/cf_make_color_hex_string.md)  
+[cf_make_color_rgb](/graphics/cf_make_color_rgb.md)  
+[cf_make_color_rgba](/graphics/cf_make_color_rgba.md)  
+[cf_make_color_hex](/graphics/cf_make_color_hex.md)  

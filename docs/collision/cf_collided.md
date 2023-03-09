@@ -2,7 +2,7 @@
 
 # cf_collided
 
-Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  
+Category: [collision](/api_reference?id=collision)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -15,15 +15,15 @@ int cf_collided(const void* A, const CF_Transform* ax, CF_ShapeType typeA, const
 Parameters | Description
 --- | ---
 A | The first shape.
-typeA | The [CF_ShapeType](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_shapetype.md) of the first shape `A`.
-ax_ptr | Can be `NULL` to represent an identity transform. An optional pointer to a [CF_Transform](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_transform.md) to transform `A`.
+typeA | The [CF_ShapeType](/collision/cf_shapetype.md) of the first shape `A`.
+ax_ptr | Can be `NULL` to represent an identity transform. An optional pointer to a [CF_Transform](/math/cf_transform.md) to transform `A`.
 vA | The velocity of `A`.
 B | The second shape.
-typeA | The [CF_ShapeType](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_shapetype.md) of the second shape `B`.
-bx_ptr | Can be `NULL` to represent an identity transform. An optional pointer to a [CF_Transform](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_transform.md) to transform `B`.
+typeA | The [CF_ShapeType](/collision/cf_shapetype.md) of the second shape `B`.
+bx_ptr | Can be `NULL` to represent an identity transform. An optional pointer to a [CF_Transform](/math/cf_transform.md) to transform `B`.
 
 ## Related Pages
 
-[CF_ShapeType](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_shapetype.md)  
-[cf_collide](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_collide.md)  
-[CF_Transform](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_transform.md)  
+[CF_ShapeType](/collision/cf_shapetype.md)  
+[cf_collide](/collision/cf_collide.md)  
+[CF_Transform](/math/cf_transform.md)  

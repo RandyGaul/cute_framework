@@ -2,11 +2,11 @@
 
 # CF_POLY_MAX_VERTS
 
-Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  
+Category: [collision](/api_reference?id=collision)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
-The maximum number of vertices in a [CF_Poly](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_poly.md).
+The maximum number of vertices in a [CF_Poly](/collision/cf_poly.md).
 
 ```cpp
 #define CF_POLY_MAX_VERTS 8
@@ -19,4 +19,4 @@ but be warned: higher than 8 and shapes generally start to look more like circle
 
 ## Related Pages
 
-[CF_Poly](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_poly.md)  
+[CF_Poly](/collision/cf_poly.md)  

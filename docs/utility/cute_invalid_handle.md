@@ -2,7 +2,7 @@
 
 # CUTE_INVALID_HANDLE
 
-Category: [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=utility)  
+Category: [utility](/api_reference?id=utility)  
 GitHub: [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_handle_table.h)  
 ---
 
@@ -18,5 +18,5 @@ This can be used to initialize handle variables.
 
 ## Related Pages
 
-[CF_Handle](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_handle.md)  
-[CF_HandleTable](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_handletable.md)  
+[CF_Handle](/utility/cf_handle.md)  
+[CF_HandleTable](/utility/cf_handletable.md)  

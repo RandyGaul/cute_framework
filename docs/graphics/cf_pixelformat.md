@@ -2,7 +2,7 @@
 
 # CF_PixelFormat
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -77,7 +77,7 @@ PIXELFORMAT_COUNT | ETC2 red-green 11-bit channels, in signed-normalized form.
 
 ## Remarks
 
-Not all types are supported on each backend. Be sure to check with [cf_query_pixel_format](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_query_pixel_format.md) if a particular pixel format
+Not all types are supported on each backend. Be sure to check with [cf_query_pixel_format](/graphics/cf_query_pixel_format.md) if a particular pixel format
 is available for your use-case. If unsure, just use `CF_PIXELFORMAT_DEFAULT` for red-green-blue-alpha, 8 bits per component (32 bits total),
 which get mapped to 4 floats on the GPU from [0,1].
 
@@ -99,6 +99,6 @@ These can potentially save a lot of memory on the GPU, but are only good for cer
 
 ## Related Pages
 
-[cf_query_pixel_format](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_query_pixel_format.md)  
-[cf_pixel_format_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_pixel_format_to_string.md)  
-[CF_PixelFormatOp](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_pixelformatop.md)  
+[cf_query_pixel_format](/graphics/cf_query_pixel_format.md)  
+[cf_pixel_format_to_string](/graphics/cf_pixel_format_to_string.md)  
+[CF_PixelFormatOp](/graphics/cf_pixelformatop.md)  

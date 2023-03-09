@@ -2,7 +2,7 @@
 
 # cf_draw_elements
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -20,7 +20,7 @@ initial data. For `USAGE_TYPE_DYNAMIC` and `CF_USAGE_TYPE_STREAM` the number of 
 
 ## Related Pages
 
-[CF_Mesh](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_mesh.md)  
+[CF_Mesh](/graphics/cf_mesh.md)  
 cf_create_mesh  
-[cf_apply_shader](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_apply_shader.md)  
-[cf_apply_canvas](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_apply_canvas.md)  
+[cf_apply_shader](/graphics/cf_apply_shader.md)  
+[cf_apply_canvas](/graphics/cf_apply_canvas.md)  

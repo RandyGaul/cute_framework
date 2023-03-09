@@ -2,7 +2,7 @@
 
 # cf_client_pop_packet
 
-Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+Category: [net](/api_reference?id=net)  
 GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
 ---
 
@@ -25,10 +25,10 @@ Returns `true` if a packet was popped.
 
 ## Remarks
 
-You must free this packet when you're done by calling [cf_client_free_packet](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client_free_packet.md).
+You must free this packet when you're done by calling [cf_client_free_packet](/net/cf_client_free_packet.md).
 
 ## Related Pages
 
-[CF_Client](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client.md)  
-[cf_client_send](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client_send.md)  
-[cf_client_free_packet](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client_free_packet.md)  
+[CF_Client](/net/cf_client.md)  
+[cf_client_send](/net/cf_client_send.md)  
+[cf_client_free_packet](/net/cf_client_free_packet.md)  

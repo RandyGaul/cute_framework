@@ -2,11 +2,11 @@
 
 # cf_destroy_texture
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
-Destroys a [CF_Texture](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_texture.md) created by [cf_make_texture](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_make_texture.md).
+Destroys a [CF_Texture](/graphics/cf_texture.md) created by [cf_make_texture](/graphics/cf_make_texture.md).
 
 ```cpp
 void cf_destroy_texture(CF_Texture texture);
@@ -18,7 +18,7 @@ texture | The texture.
 
 ## Related Pages
 
-[CF_TextureParams](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_textureparams.md)  
-[CF_Texture](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_texture.md)  
-[cf_make_texture](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_make_texture.md)  
-[cf_update_texture](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_update_texture.md)  
+[CF_TextureParams](/graphics/cf_textureparams.md)  
+[CF_Texture](/graphics/cf_texture.md)  
+[cf_make_texture](/graphics/cf_make_texture.md)  
+[cf_update_texture](/graphics/cf_update_texture.md)  

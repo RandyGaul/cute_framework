@@ -1,3 +1,3 @@
-- [CF_KeyValueState](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_keyvaluestate.md)
-- [CF_KeyValueType](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_keyvaluetype.md)
+- [CF_KeyValueState](/serialization/cf_keyvaluestate.md)
+- [CF_KeyValueType](/serialization/cf_keyvaluetype.md)
 

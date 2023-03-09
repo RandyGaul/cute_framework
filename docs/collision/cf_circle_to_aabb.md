@@ -2,7 +2,7 @@
 
 # cf_circle_to_aabb
 
-Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  
+Category: [collision](/api_reference?id=collision)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -14,10 +14,10 @@ bool cf_circle_to_aabb(CF_Circle A, CF_Aabb B);
 
 ## Remarks
 
-For information about _how_ two shapes are intersecting (and not just boolean result), see [cf_circle_to_aabb_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_circle_to_aabb_manifold.md).
+For information about _how_ two shapes are intersecting (and not just boolean result), see [cf_circle_to_aabb_manifold](/collision/cf_circle_to_aabb_manifold.md).
 
 ## Related Pages
 
-[CF_Circle](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_circle.md)  
-[CF_Aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_aabb.md)  
-[cf_circle_to_aabb_manifold](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_circle_to_aabb_manifold.md)  
+[CF_Circle](/math/cf_circle.md)  
+[CF_Aabb](/math/cf_aabb.md)  
+[cf_circle_to_aabb_manifold](/collision/cf_circle_to_aabb_manifold.md)  

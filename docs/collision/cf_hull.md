@@ -2,7 +2,7 @@
 
 # cf_hull
 
-Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  
+Category: [collision](/api_reference?id=collision)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -28,4 +28,4 @@ Will not do anything if less than two verts supplied. If more than CF_POLY_MAX_V
 
 ## Related Pages
 
-[CF_Poly](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_poly.md)  
+[CF_Poly](/collision/cf_poly.md)  

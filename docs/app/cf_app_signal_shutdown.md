@@ -2,11 +2,11 @@
 
 # cf_app_signal_shutdown
 
-Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  
+Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
 ---
 
-Call this to end your main-loop; makes [cf_app_is_running](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_is_running.md) return false.
+Call this to end your main-loop; makes [cf_app_is_running](/app/cf_app_is_running.md) return false.
 
 ```cpp
 void cf_app_signal_shutdown();
@@ -44,6 +44,6 @@ int main(int argc, const char argv)
 
 ## Related Pages
 
-[cf_make_app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_make_app.md)  
-[cf_destroy_app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_destroy_app.md)  
-[cf_app_is_running](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_is_running.md)  
+[cf_make_app](/app/cf_make_app.md)  
+[cf_destroy_app](/app/cf_destroy_app.md)  
+[cf_app_is_running](/app/cf_app_is_running.md)  

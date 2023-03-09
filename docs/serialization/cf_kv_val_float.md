@@ -2,7 +2,7 @@
 
 # cf_kv_val_float
 
-Category: [serialization](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=serialization)  
+Category: [serialization](/api_reference?id=serialization)  
 GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_kv.h)  
 ---
 
@@ -23,14 +23,14 @@ Returns true upon success, false otherwise.
 
 ## Remarks
 
-You may call this function after succesfully calling [cf_kv_key](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_key.md). See [CF_KeyValue](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_keyvalue.md) for an overview.
+You may call this function after succesfully calling [cf_kv_key](/serialization/cf_kv_key.md). See [CF_KeyValue](/serialization/cf_keyvalue.md) for an overview.
 
-If the `kv` is in write made (made by [cf_kv_write](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_write.md)) this function will write the value from `val`. If the `kv` is in read mode
-(created by [cf_kv_read](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_read.md)) then this function read the value and store it in `val`.
+If the `kv` is in write made (made by [cf_kv_write](/serialization/cf_kv_write.md)) this function will write the value from `val`. If the `kv` is in read mode
+(created by [cf_kv_read](/serialization/cf_kv_read.md)) then this function read the value and store it in `val`.
 
 ## Related Pages
 
-[CF_KeyValue](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_keyvalue.md)  
-[cf_kv_key](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_key.md)  
-[cf_kv_val_bool](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_val_bool.md)  
-[cf_kv_val_double](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_kv_val_double.md)  
+[CF_KeyValue](/serialization/cf_keyvalue.md)  
+[cf_kv_key](/serialization/cf_kv_key.md)  
+[cf_kv_val_bool](/serialization/cf_kv_val_bool.md)  
+[cf_kv_val_double](/serialization/cf_kv_val_double.md)  

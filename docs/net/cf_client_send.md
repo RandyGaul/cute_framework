@@ -2,7 +2,7 @@
 
 # cf_client_send
 
-Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+Category: [net](/api_reference?id=net)  
 GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
 ---
 
@@ -22,7 +22,7 @@ send_reliably | If `true` the packet will be sent reliably and in order. If fals
 
 ## Return Value
 
-Returns any errors as a [CF_Result](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_result.md).
+Returns any errors as a [CF_Result](/utility/cf_result.md).
 
 ## Remarks
 
@@ -40,6 +40,6 @@ transform updates, can be sent unreliably.
 
 ## Related Pages
 
-[CF_Client](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client.md)  
-[cf_client_pop_packet](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client_pop_packet.md)  
-[cf_client_free_packet](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client_free_packet.md)  
+[CF_Client](/net/cf_client.md)  
+[cf_client_pop_packet](/net/cf_client_pop_packet.md)  
+[cf_client_free_packet](/net/cf_client_free_packet.md)  

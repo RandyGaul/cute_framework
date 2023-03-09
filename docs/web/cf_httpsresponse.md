@@ -2,7 +2,7 @@
 
 # CF_HttpsResponse
 
-Category: [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=web)  
+Category: [web](/api_reference?id=web)  
 GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)  
 ---
 
@@ -13,7 +13,7 @@ Struct Members | Description
 `int code` | The HTTP response code.
 `size_t content_len` | Length of the HTTP response content.
 `const char* content` | The HTTP response content.
-`const CF_HttpsHeader* headers` | Array of headers from the response. See [CF_HttpsHeader](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_httpsheader.md).
+`const CF_HttpsHeader* headers` | Array of headers from the response. See [CF_HttpsHeader](/web/cf_httpsheader.md).
 `int headers_count` | Number of headers in `headers`.
 `int transfer_encoding_flags` | Flags from `TransferEncoding`. For example, if content is gzip'd, you can tell by using
 	          something like so: `bool is_gzip = !!(response->transfer_encoding & CF_TRANSFER_ENCODING_GZIP);`.
@@ -28,8 +28,8 @@ After a successful loop via `cf_https_process (see `CF_Https`) a response can be
 
 ## Related Pages
 
-[CF_Https](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https.md)  
-[CF_HttpsString](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_httpsstring.md)  
-[CF_HttpsHeader](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_httpsheader.md)  
-[CF_HttpsHeader](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_httpsheader.md)  
-[cf_https_response](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_https_response.md)  
+[CF_Https](/web/cf_https.md)  
+[CF_HttpsString](/web/cf_httpsstring.md)  
+[CF_HttpsHeader](/web/cf_httpsheader.md)  
+[CF_HttpsHeader](/web/cf_httpsheader.md)  
+[cf_https_response](/web/cf_https_response.md)  

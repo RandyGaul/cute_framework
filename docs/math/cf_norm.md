@@ -2,7 +2,7 @@
 
 # cf_norm
 
-Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -18,7 +18,7 @@ Normalized vectors have unit-length without changing the vector's direction. Fai
 
 ## Related Pages
 
-[CF_V2](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_v2.md)  
-[cf_len](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_len.md)  
-[cf_distance](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_distance.md)  
-[cf_safe_norm](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_safe_norm.md)  
+[CF_V2](/math/cf_v2.md)  
+[cf_len](/math/cf_len.md)  
+[cf_distance](/math/cf_distance.md)  
+[cf_safe_norm](/math/cf_safe_norm.md)  

@@ -2,7 +2,7 @@
 
 # cf_joypad_power_level
 
-Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+Category: [input](/api_reference?id=input)  
 GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
 ---
 
@@ -18,6 +18,6 @@ joypad | The joypad.
 
 ## Related Pages
 
-[CF_JoypadPowerLevel](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypadpowerlevel.md)  
-[cf_joypad_power_level_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad_power_level_to_string.md)  
-[CF_Joypad](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad.md)  
+[CF_JoypadPowerLevel](/input/cf_joypadpowerlevel.md)  
+[cf_joypad_power_level_to_string](/input/cf_joypad_power_level_to_string.md)  
+[CF_Joypad](/input/cf_joypad.md)  

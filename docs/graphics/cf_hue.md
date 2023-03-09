@@ -2,7 +2,7 @@
 
 # cf_hue
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)  
 ---
 
@@ -23,8 +23,8 @@ This function attempts to mimic the Hue [Photoshop blend-layer](https://helpx.ad
 
 ## Related Pages
 
-[CF_Color](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color.md)  
-[cf_softlight](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_softlight.md)  
-[cf_overlay_color](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_overlay_color.md)  
-[cf_softlight_color](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_softlight_color.md)  
-[cf_overlay](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_overlay.md)  
+[CF_Color](/graphics/cf_color.md)  
+[cf_softlight](/graphics/cf_softlight.md)  
+[cf_overlay_color](/graphics/cf_overlay_color.md)  
+[cf_softlight_color](/graphics/cf_softlight_color.md)  
+[cf_overlay](/graphics/cf_overlay.md)  

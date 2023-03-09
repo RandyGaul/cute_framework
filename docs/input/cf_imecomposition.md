@@ -2,7 +2,7 @@
 
 # CF_ImeComposition
 
-Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+Category: [input](/api_reference?id=input)  
 GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)  
 ---
 
@@ -16,5 +16,5 @@ Struct Members | Description
 
 ## Related Pages
 
-[cf_input_enable_ime](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_input_enable_ime.md)  
-[cf_input_get_ime_composition](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_input_get_ime_composition.md)  
+[cf_input_enable_ime](/input/cf_input_enable_ime.md)  
+[cf_input_get_ime_composition](/input/cf_input_get_ime_composition.md)  

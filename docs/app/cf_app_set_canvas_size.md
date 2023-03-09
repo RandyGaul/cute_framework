@@ -2,7 +2,7 @@
 
 # cf_app_set_canvas_size
 
-Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  
+Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
 ---
 
@@ -19,10 +19,10 @@ h | The height in pixels to resize the canvas to.
 
 ## Remarks
 
-Be careful about calling this function, as it will invalidate any old references from [cf_app_get_canvas](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_get_canvas.md).
+Be careful about calling this function, as it will invalidate any old references from [cf_app_get_canvas](/app/cf_app_get_canvas.md).
 
 ## Related Pages
 
-[cf_app_get_canvas](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_get_canvas.md)  
-[cf_app_get_canvas_width](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_get_canvas_width.md)  
-[cf_app_get_canvas_height](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_get_canvas_height.md)  
+[cf_app_get_canvas](/app/cf_app_get_canvas.md)  
+[cf_app_get_canvas_width](/app/cf_app_get_canvas_width.md)  
+[cf_app_get_canvas_height](/app/cf_app_get_canvas_height.md)  

@@ -2,7 +2,7 @@
 
 # CF_BackendType
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -23,5 +23,5 @@ BACKEND_TYPE_WGPU | WebGPU (for browsers).
 
 ## Related Pages
 
-[cf_query_backend](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_query_backend.md)  
-[cf_backend_type_to_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_backend_type_to_string.md)  
+[cf_query_backend](/graphics/cf_query_backend.md)  
+[cf_backend_type_to_string](/graphics/cf_backend_type_to_string.md)  

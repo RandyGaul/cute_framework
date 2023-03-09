@@ -2,7 +2,7 @@
 
 # slast_index_of
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -23,5 +23,5 @@ Returns -1 if none are found.
 
 ## Related Pages
 
-[sfirst_index_of](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfirst_index_of.md)  
-[sfind](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfind.md)  
+[sfirst_index_of](/string/sfirst_index_of.md)  
+[sfind](/string/sfind.md)  

@@ -2,7 +2,7 @@
 
 # Address Type
 
-Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+Category: [net](/api_reference?id=net)  
 GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
 ---
 
@@ -18,4 +18,4 @@ ADDRESS_TYPE_IPV6 |
 
 ## Related Pages
 
-[CF_Address](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_address.md)  
+[CF_Address](/net/cf_address.md)  

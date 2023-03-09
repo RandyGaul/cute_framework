@@ -2,7 +2,7 @@
 
 # CF_WrapMode
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -20,5 +20,5 @@ WRAP_MODE_MIRRORED_REPEAT | The same as `CF_WRAP_MODE_REPEAT` but mirrors back a
 
 ## Related Pages
 
-[CF_TextureParams](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_textureparams.md)  
-[cf_wrap_mode_string](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_wrap_mode_string.md)  
+[CF_TextureParams](/graphics/cf_textureparams.md)  
+[cf_wrap_mode_string](/graphics/cf_wrap_mode_string.md)  

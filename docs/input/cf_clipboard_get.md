@@ -2,7 +2,7 @@
 
 # cf_clipboard_get
 
-Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+Category: [input](/api_reference?id=input)  
 GitHub: [cute_clipboard.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_clipboard.h)  
 ---
 
@@ -14,4 +14,4 @@ char* cf_clipboard_get();
 
 ## Related Pages
 
-[cf_clipboard_set](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_clipboard_set.md)  
+[cf_clipboard_set](/input/cf_clipboard_set.md)  

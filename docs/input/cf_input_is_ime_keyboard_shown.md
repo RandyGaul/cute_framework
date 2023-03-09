@@ -2,7 +2,7 @@
 
 # cf_input_is_ime_keyboard_shown
 
-Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+Category: [input](/api_reference?id=input)  
 GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)  
 ---
 
@@ -19,8 +19,8 @@ of different language inputs. This is usually a feature of the underlying operat
 
 ## Related Pages
 
-[cf_input_enable_ime](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_input_enable_ime.md)  
-[cf_input_disable_ime](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_input_disable_ime.md)  
-[cf_input_is_ime_enabled](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_input_is_ime_enabled.md)  
-[cf_input_has_ime_keyboard_support](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_input_has_ime_keyboard_support.md)  
-[cf_input_set_ime_rect](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_input_set_ime_rect.md)  
+[cf_input_enable_ime](/input/cf_input_enable_ime.md)  
+[cf_input_disable_ime](/input/cf_input_disable_ime.md)  
+[cf_input_is_ime_enabled](/input/cf_input_is_ime_enabled.md)  
+[cf_input_has_ime_keyboard_support](/input/cf_input_has_ime_keyboard_support.md)  
+[cf_input_set_ime_rect](/input/cf_input_set_ime_rect.md)  

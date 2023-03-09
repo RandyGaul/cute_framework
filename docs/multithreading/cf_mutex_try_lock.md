@@ -2,11 +2,11 @@
 
 # cf_mutex_try_lock
 
-Category: [multithreading](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=multithreading)  
+Category: [multithreading](/api_reference?id=multithreading)  
 GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)  
 ---
 
-Attempts to lock a [CF_Mutex](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_mutex.md) without waiting.
+Attempts to lock a [CF_Mutex](/multithreading/cf_mutex.md) without waiting.
 
 ```cpp
 bool cf_mutex_try_lock(CF_Mutex* mutex);
@@ -22,8 +22,8 @@ Returns true if the lock was acquired, and false if the lock was already locked.
 
 ## Related Pages
 
-[CF_Mutex](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_mutex.md)  
-[cf_make_mutex](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_make_mutex.md)  
-[cf_destroy_mutex](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_destroy_mutex.md)  
-[cf_mutex_lock](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_mutex_lock.md)  
-[cf_mutex_unlock](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_mutex_unlock.md)  
+[CF_Mutex](/multithreading/cf_mutex.md)  
+[cf_make_mutex](/multithreading/cf_make_mutex.md)  
+[cf_destroy_mutex](/multithreading/cf_destroy_mutex.md)  
+[cf_mutex_lock](/multithreading/cf_mutex_lock.md)  
+[cf_mutex_unlock](/multithreading/cf_mutex_unlock.md)  

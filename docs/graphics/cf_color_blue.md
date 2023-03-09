@@ -2,11 +2,11 @@
 
 # cf_color_blue
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)  
 ---
 
-Helper function to return a blue [CF_Color](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color.md).
+Helper function to return a blue [CF_Color](/graphics/cf_color.md).
 
 ```cpp
 CF_Color cf_color_blue()
@@ -14,12 +14,12 @@ CF_Color cf_color_blue()
 
 ## Related Pages
 
-[cf_color_invisible](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color_invisible.md)  
-[cf_color_black](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color_black.md)  
-[cf_color_white](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color_white.md)  
-[cf_color_red](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color_red.md)  
-[cf_color_green](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color_green.md)  
-[cf_color_grey](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color_grey.md)  
-[cf_color_yellow](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color_yellow.md)  
-[cf_color_orange](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color_orange.md)  
-[cf_color_purple](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color_purple.md)  
+[cf_color_invisible](/graphics/cf_color_invisible.md)  
+[cf_color_black](/graphics/cf_color_black.md)  
+[cf_color_white](/graphics/cf_color_white.md)  
+[cf_color_red](/graphics/cf_color_red.md)  
+[cf_color_green](/graphics/cf_color_green.md)  
+[cf_color_grey](/graphics/cf_color_grey.md)  
+[cf_color_yellow](/graphics/cf_color_yellow.md)  
+[cf_color_orange](/graphics/cf_color_orange.md)  
+[cf_color_purple](/graphics/cf_color_purple.md)  

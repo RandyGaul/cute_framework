@@ -2,7 +2,7 @@
 
 # hget
 
-Category: [hash](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=hash)  
+Category: [hash](/api_reference?id=hash)  
 GitHub: [cute_hashtable.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_hashtable.h)  
 ---
 
@@ -37,23 +37,23 @@ hfree(table);
 ## Remarks
 
 Items are returned by value, not pointer. If the item doesn't exist a zero'd out item is instead returned. If you want to get a pointer
-(so you can see if it's `NULL` in case the item didn't exist, then use [hget_ptr](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hget_ptr.md)). You can also call [hhas](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hhas.md) for a bool. This function does
-the same as [hfind](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hfind.md).
+(so you can see if it's `NULL` in case the item didn't exist, then use [hget_ptr](/hash/hget_ptr.md)). You can also call [hhas](/hash/hhas.md) for a bool. This function does
+the same as [hfind](/hash/hfind.md).
 
 ## Related Pages
 
-[htbl](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/htbl.md)  
-[hset](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hset.md)  
-[hadd](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hadd.md)  
-[hfree](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hfree.md)  
-[hfind](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hfind.md)  
-[hget_ptr](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hget_ptr.md)  
-[hfind_ptr](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hfind_ptr.md)  
-[hhas](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hhas.md)  
-[hdel](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hdel.md)  
-[hclear](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hclear.md)  
-[hkeys](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hkeys.md)  
-[hitems](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hitems.md)  
-[hswap](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hswap.md)  
-[hsize](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hsize.md)  
-[hcount](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/hcount.md)  
+[htbl](/hash/htbl.md)  
+[hset](/hash/hset.md)  
+[hadd](/hash/hadd.md)  
+[hfree](/hash/hfree.md)  
+[hfind](/hash/hfind.md)  
+[hget_ptr](/hash/hget_ptr.md)  
+[hfind_ptr](/hash/hfind_ptr.md)  
+[hhas](/hash/hhas.md)  
+[hdel](/hash/hdel.md)  
+[hclear](/hash/hclear.md)  
+[hkeys](/hash/hkeys.md)  
+[hitems](/hash/hitems.md)  
+[hswap](/hash/hswap.md)  
+[hsize](/hash/hsize.md)  
+[hcount](/hash/hcount.md)  

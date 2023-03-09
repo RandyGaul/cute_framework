@@ -2,7 +2,7 @@
 
 # cf_safe_invert_v2
 
-Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -14,5 +14,5 @@ CF_V2 cf_safe_invert_v2(CF_V2 a)
 
 ## Related Pages
 
-[CF_V2](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_v2.md)  
-[cf_safe_invert](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_safe_invert.md)  
+[CF_V2](/math/cf_v2.md)  
+[cf_safe_invert](/math/cf_safe_invert.md)  

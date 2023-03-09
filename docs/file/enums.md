@@ -1,2 +1,2 @@
-- [File Types](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/file_types.md)
+- [File Types](/file/file_types.md)
 

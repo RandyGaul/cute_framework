@@ -2,7 +2,7 @@
 
 # cf_sprite_on_loop
 
-Category: [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=sprite)  
+Category: [sprite](/api_reference?id=sprite)  
 GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
 ---
 
@@ -22,9 +22,9 @@ This is useful for polling on when the animation restarts itself, for example, p
 
 ## Related Pages
 
-[CF_Sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite.md)  
-[cf_sprite_frame_count](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_frame_count.md)  
-[cf_sprite_current_frame](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_current_frame.md)  
-[cf_sprite_frame_delay](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_frame_delay.md)  
-[cf_sprite_animation_delay](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_animation_delay.md)  
-[cf_sprite_will_finish](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_will_finish.md)  
+[CF_Sprite](/sprite/cf_sprite.md)  
+[cf_sprite_frame_count](/sprite/cf_sprite_frame_count.md)  
+[cf_sprite_current_frame](/sprite/cf_sprite_current_frame.md)  
+[cf_sprite_frame_delay](/sprite/cf_sprite_frame_delay.md)  
+[cf_sprite_animation_delay](/sprite/cf_sprite_animation_delay.md)  
+[cf_sprite_will_finish](/sprite/cf_sprite_will_finish.md)  

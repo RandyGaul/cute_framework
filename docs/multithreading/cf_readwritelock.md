@@ -2,7 +2,7 @@
 
 # CF_ReadWriteLock
 
-Category: [multithreading](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=multithreading)  
+Category: [multithreading](/api_reference?id=multithreading)  
 GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)  
 ---
 
@@ -16,9 +16,9 @@ modified a writer can wait for all readers to leave, and then exclusively lock t
 
 ## Related Pages
 
-[cf_write_unlock](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_write_unlock.md)  
-[cf_make_rw_lock](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_make_rw_lock.md)  
-[cf_destroy_rw_lock](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_destroy_rw_lock.md)  
-[cf_read_lock](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_read_lock.md)  
-[cf_read_unlock](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_read_unlock.md)  
-[cf_write_lock](https://github.com/RandyGaul/cute_framework/blob/master/docs/multithreading/cf_write_lock.md)  
+[cf_write_unlock](/multithreading/cf_write_unlock.md)  
+[cf_make_rw_lock](/multithreading/cf_make_rw_lock.md)  
+[cf_destroy_rw_lock](/multithreading/cf_destroy_rw_lock.md)  
+[cf_read_lock](/multithreading/cf_read_lock.md)  
+[cf_read_unlock](/multithreading/cf_read_unlock.md)  
+[cf_write_lock](/multithreading/cf_write_lock.md)  

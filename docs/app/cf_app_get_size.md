@@ -2,7 +2,7 @@
 
 # cf_app_get_size
 
-Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  
+Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
 ---
 
@@ -19,6 +19,6 @@ h | The height of the window in pixels.
 
 ## Related Pages
 
-[cf_app_set_size](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_set_size.md)  
-[cf_app_get_position](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_get_position.md)  
-[cf_app_set_position](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_set_position.md)  
+[cf_app_set_size](/app/cf_app_set_size.md)  
+[cf_app_get_position](/app/cf_app_get_position.md)  
+[cf_app_set_position](/app/cf_app_set_position.md)  

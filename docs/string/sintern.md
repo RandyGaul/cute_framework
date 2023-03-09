@@ -2,7 +2,7 @@
 
 # sintern
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -18,7 +18,7 @@ s | The string to insert into the global table.
 
 ## Return Value
 
-Returns a static, unique, stable, read-only copy of the string. The pointer is stable until [sinuke](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sinuke.md) is called.
+Returns a static, unique, stable, read-only copy of the string. The pointer is stable until [sinuke](/string/sinuke.md) is called.
 
 ## Remarks
 
@@ -28,12 +28,12 @@ table.
 
 - You can hash returned pointers directly into hash tables (instead of hashing the entire string).
 - You can simply compare pointers for equality, as opposed to comparing the string contents, as long as both strings came from this function.
-- You may optionally call [sinuke](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sinuke.md) to free all resources used by the global string table.
+- You may optionally call [sinuke](/string/sinuke.md) to free all resources used by the global string table.
 - This function is very fast if the string was already stored previously.
 
 ## Related Pages
 
-[sinuke](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sinuke.md)  
-[sintern_range](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sintern_range.md)  
-[sivalid](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sivalid.md)  
-[silen](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/silen.md)  
+[sinuke](/string/sinuke.md)  
+[sintern_range](/string/sintern_range.md)  
+[sivalid](/string/sivalid.md)  
+[silen](/string/silen.md)  

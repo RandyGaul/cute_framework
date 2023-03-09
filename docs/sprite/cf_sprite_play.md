@@ -2,7 +2,7 @@
 
 # cf_sprite_play
 
-Category: [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=sprite)  
+Category: [sprite](/api_reference?id=sprite)  
 GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
 ---
 
@@ -19,6 +19,6 @@ animation | Name of the animation to switch to and start playing.
 
 ## Related Pages
 
-[CF_Sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite.md)  
-[cf_sprite_update](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_update.md)  
-[cf_sprite_is_playing](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/cf_sprite_is_playing.md)  
+[CF_Sprite](/sprite/cf_sprite.md)  
+[cf_sprite_update](/sprite/cf_sprite_update.md)  
+[cf_sprite_is_playing](/sprite/cf_sprite_is_playing.md)  

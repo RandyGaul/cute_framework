@@ -2,7 +2,7 @@
 
 # sfree
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -18,7 +18,7 @@ s | The string. Can be `NULL`.
 
 ## Related Pages
 
-[spush](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/spush.md)  
-[spop](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/spop.md)  
-[sfit](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfit.md)  
-[sset](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sset.md)  
+[spush](/string/spush.md)  
+[spop](/string/spop.md)  
+[sfit](/string/sfit.md)  
+[sset](/string/sset.md)  

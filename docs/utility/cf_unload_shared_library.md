@@ -2,7 +2,7 @@
 
 # cf_unload_shared_library
 
-Category: [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=utility)  
+Category: [utility](/api_reference?id=utility)  
 GitHub: [cute_symbol.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_symbol.h)  
 ---
 
@@ -18,5 +18,5 @@ library | A library of functions from `load_shared_library`.
 
 ## Related Pages
 
-[cf_load_shared_library](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_load_shared_library.md)  
-[cf_load_function](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_load_function.md)  
+[cf_load_shared_library](/utility/cf_load_shared_library.md)  
+[cf_load_function](/utility/cf_load_function.md)  

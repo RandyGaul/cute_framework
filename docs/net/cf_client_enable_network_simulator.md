@@ -2,7 +2,7 @@
 
 # cf_client_enable_network_simulator
 
-Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+Category: [net](/api_reference?id=net)  
 GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
 ---
 
@@ -22,4 +22,4 @@ duplicate_chance | Number from [0,1] representing the chance to duplicate a pack
 
 ## Related Pages
 
-[CF_Client](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client.md)  
+[CF_Client](/net/cf_client.md)  

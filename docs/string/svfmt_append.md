@@ -2,7 +2,7 @@
 
 # svfmt_append
 
-Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+Category: [string](/api_reference?id=string)  
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
@@ -20,12 +20,12 @@ fmt | The format string.
 
 ## Remarks
 
-You probably are looking for [sfmt_append](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfmt_append.md) instead. The string will be overwritten from the beginning. Will automatically adjust it's
+You probably are looking for [sfmt_append](/string/sfmt_append.md) instead. The string will be overwritten from the beginning. Will automatically adjust it's
 capacity as needed. args must be a `va_list`.
 
 ## Related Pages
 
-[sfmt](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfmt.md)  
-[sfmt_append](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sfmt_append.md)  
-[svfmt](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/svfmt.md)  
-[sset](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sset.md)  
+[sfmt](/string/sfmt.md)  
+[sfmt_append](/string/sfmt_append.md)  
+[svfmt](/string/svfmt.md)  
+[sset](/string/sset.md)  

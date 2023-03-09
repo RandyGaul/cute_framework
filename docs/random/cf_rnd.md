@@ -2,7 +2,7 @@
 
 # CF_Rnd
 
-Category: [random](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=random)  
+Category: [random](/api_reference?id=random)  
 GitHub: [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_rnd.h)  
 ---
 
@@ -10,7 +10,7 @@ A random number generator.
 
 Struct Members | Description
 --- | ---
-`uint64_t state[2]` | Just two `uint64_t`'s for the internal state. Very small! These are setup by [cf_rnd_seed](https://github.com/RandyGaul/cute_framework/blob/master/docs/random/cf_rnd_seed.md).
+`uint64_t state[2]` | Just two `uint64_t`'s for the internal state. Very small! These are setup by [cf_rnd_seed](/random/cf_rnd_seed.md).
 
 ## Remarks
 
@@ -24,5 +24,5 @@ https://github.com/mattiasgustavsson/libs/blob/main/rnd.h
 
 ## Related Pages
 
-[cf_rnd_next](https://github.com/RandyGaul/cute_framework/blob/master/docs/random/cf_rnd_next.md)  
-[cf_rnd_seed](https://github.com/RandyGaul/cute_framework/blob/master/docs/random/cf_rnd_seed.md)  
+[cf_rnd_next](/random/cf_rnd_next.md)  
+[cf_rnd_seed](/random/cf_rnd_seed.md)  

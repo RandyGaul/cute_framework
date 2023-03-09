@@ -2,7 +2,7 @@
 
 # CF_MAKE_SOKOL_SHADER
 
-Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+Category: [graphics](/api_reference?id=graphics)  
 GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
 ---
 
@@ -44,7 +44,7 @@ The basic idea is to write your shader _one time_ in GLSL, then sokol-shdc will 
 into a header file that's compatible with all supported backends.
 
 Just make sure to call the sokol-shdc compiler with the `--reflection` parameter. Once done, `my_shader.h`
-is ready to go! Include `my_shader.h` and get a [CF_SokolShader](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_sokolshader.md) with a single call to [cf_make_shader](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_make_shader.md).
+is ready to go! Include `my_shader.h` and get a [CF_SokolShader](/graphics/cf_sokolshader.md) with a single call to [cf_make_shader](/graphics/cf_make_shader.md).
 
 ```cpp
 #include "my_shader.h"
@@ -53,9 +53,9 @@ CF_Shader my_shd = CF_MAKE_SOKOL_SHADER(my_shader);
 
 ## Related Pages
 
-[CF_Material](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_material.md)  
-[CF_SokolShader](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_sokolshader.md)  
-[CF_Shader](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_shader.md)  
-[cf_make_shader](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_make_shader.md)  
-[cf_destroy_shader](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_destroy_shader.md)  
-[cf_apply_shader](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_apply_shader.md)  
+[CF_Material](/graphics/cf_material.md)  
+[CF_SokolShader](/graphics/cf_sokolshader.md)  
+[CF_Shader](/graphics/cf_shader.md)  
+[cf_make_shader](/graphics/cf_make_shader.md)  
+[cf_destroy_shader](/graphics/cf_destroy_shader.md)  
+[cf_apply_shader](/graphics/cf_apply_shader.md)  

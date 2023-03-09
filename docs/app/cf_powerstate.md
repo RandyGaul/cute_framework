@@ -2,7 +2,7 @@
 
 # CF_PowerState
 
-Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  
+Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
 ---
 
@@ -20,5 +20,5 @@ POWER_STATE_CHARGED | Plugged in and battery is charged.
 
 ## Related Pages
 
-[CF_PowerInfo](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_powerinfo.md)  
-[cf_app_power_info](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_app_power_info.md)  
+[CF_PowerInfo](/app/cf_powerinfo.md)  
+[cf_app_power_info](/app/cf_app_power_info.md)  

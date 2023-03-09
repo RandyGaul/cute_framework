@@ -2,7 +2,7 @@
 
 # cf_top_left
 
-Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
@@ -14,11 +14,11 @@ CF_V2 cf_top_left(CF_Aabb bb)
 
 ## Related Pages
 
-[CF_Aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_aabb.md)  
-[cf_min_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_min_aabb.md)  
-[cf_max_aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_max_aabb.md)  
-[cf_midpoint](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_midpoint.md)  
-[cf_center](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_center.md)  
-[cf_bottom_right](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_bottom_right.md)  
-[cf_top_right](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_top_right.md)  
-[cf_bottom_left](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_bottom_left.md)  
+[CF_Aabb](/math/cf_aabb.md)  
+[cf_min_aabb](/math/cf_min_aabb.md)  
+[cf_max_aabb](/math/cf_max_aabb.md)  
+[cf_midpoint](/math/cf_midpoint.md)  
+[cf_center](/math/cf_center.md)  
+[cf_bottom_right](/math/cf_bottom_right.md)  
+[cf_top_right](/math/cf_top_right.md)  
+[cf_bottom_left](/math/cf_bottom_left.md)  
