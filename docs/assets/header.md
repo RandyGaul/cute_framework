@@ -1,4 +1,4 @@
 <p align="center">
-<img src=/assets/CF_Text_Hifi.png>
+<img src=/cute_framework/assets/CF_Text_Hifi.png>
 </p>
 <br>
