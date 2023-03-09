@@ -1,4 +1,8 @@
-# cf_pause_for_ticks | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/README.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
+# cf_pause_for_ticks
+
+Category: [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=time)  
+GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)  
+---
 
 Pauses the application.
 

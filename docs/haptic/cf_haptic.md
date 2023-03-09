@@ -1,4 +1,8 @@
-# CF_Haptic | [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/README.md) | [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)
+# CF_Haptic
+
+Category: [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=haptic)  
+GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)  
+---
 
 An opaque pointer representing a haptic.
 

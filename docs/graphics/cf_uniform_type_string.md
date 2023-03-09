@@ -1,4 +1,8 @@
-# cf_uniform_type_string | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/README.md) | [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)
+# cf_uniform_type_string
+
+Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
+---
 
 Returns a [CF_UniformType](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_uniformtype.md) converted to a C string.
 

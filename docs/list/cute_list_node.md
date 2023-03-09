@@ -1,4 +1,8 @@
-# CUTE_LIST_NODE | [list](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/README.md) | [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_doubly_list.h)
+# CUTE_LIST_NODE
+
+Category: [list](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=list)  
+GitHub: [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_doubly_list.h)  
+---
 
 Converts a pointer to a host struct/object to a specific [CF_ListNode](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/cf_listnode.md) member.
 

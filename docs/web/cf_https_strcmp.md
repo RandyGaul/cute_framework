@@ -1,4 +1,8 @@
-# cf_https_strcmp | [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/README.md) | [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)
+# cf_https_strcmp
+
+Category: [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=web)  
+GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)  
+---
 
 Helper function to test a string for equality with a [CF_HttpsString](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_httpsstring.md).
 

@@ -1,4 +1,8 @@
-# sppop | [path](https://github.com/RandyGaul/cute_framework/blob/master/docs/path/README.md) | [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)
+# sppop
+
+Category: [path](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=path)  
+GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
+---
 
 Removes the rightmost file or directory from the path.
 

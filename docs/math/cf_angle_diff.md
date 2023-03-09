@@ -1,4 +1,8 @@
-# cf_angle_diff | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# cf_angle_diff
+
+Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
+---
 
 Returns the difference of two angles in the range of -[CF_PI](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_pi.md) to [CF_PI](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_pi.md).
 

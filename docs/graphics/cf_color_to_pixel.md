@@ -1,4 +1,8 @@
-# cf_color_to_pixel | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/README.md) | [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)
+# cf_color_to_pixel
+
+Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)  
+---
 
 Converts a [CF_Color](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_color.md) (0.0f to 1.0f) to a [CF_Pixel](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_pixel.md) (0-255).
 

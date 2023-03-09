@@ -1,4 +1,8 @@
-# cf_query_pixel_format | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/README.md) | [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)
+# cf_query_pixel_format
+
+Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
+---
 
 Returns true if a particular [CF_PixelFormat](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_pixelformat.md) is compatible with a certain [CF_PixelFormatOp](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_pixelformatop.md).
 

@@ -1,4 +1,8 @@
-# CF_File | [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/README.md) | [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)
+# CF_File
+
+Category: [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=file)  
+GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
+---
 
 An opaque pointer for representing a file.
 

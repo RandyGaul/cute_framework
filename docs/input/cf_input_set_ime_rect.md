@@ -1,4 +1,8 @@
-# cf_input_set_ime_rect | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/README.md) | [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)
+# cf_input_set_ime_rect
+
+Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)  
+---
 
 Tells the operating system where the current IME (Input Method Editor) rect should be.
 

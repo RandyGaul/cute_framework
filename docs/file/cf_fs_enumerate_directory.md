@@ -1,4 +1,8 @@
-# cf_fs_enumerate_directory | [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/README.md) | [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)
+# cf_fs_enumerate_directory
+
+Category: [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=file)  
+GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
+---
 
 Returns a sorted list of files and directories in the given directory.
 

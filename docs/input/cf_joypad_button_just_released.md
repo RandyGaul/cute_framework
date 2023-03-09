@@ -1,4 +1,8 @@
-# cf_joypad_button_just_released | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/README.md) | [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)
+# cf_joypad_button_just_released
+
+Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
+---
 
 Returns true if the button was just released.
 

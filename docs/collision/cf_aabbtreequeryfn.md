@@ -1,4 +1,8 @@
-# CF_AabbTreeQueryFn | [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/README.md) | [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)
+# CF_AabbTreeQueryFn
+
+Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  
+GitHub: [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_aabb_tree.h)  
+---
 
 A function pointer (callback) that reports hits during a tree collision query.
 

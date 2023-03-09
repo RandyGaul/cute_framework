@@ -1,4 +1,8 @@
-# cf_rgb_to_hsv | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/README.md) | [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)
+# cf_rgb_to_hsv
+
+Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)  
+---
 
 Returns a color converted from rgb form to HSV (Hue Saturation Value) form.
 

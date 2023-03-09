@@ -1,4 +1,8 @@
-# cf_destroy_texture | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/README.md) | [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)
+# cf_destroy_texture
+
+Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
+---
 
 Destroys a [CF_Texture](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_texture.md) created by [cf_make_texture](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_make_texture.md).
 

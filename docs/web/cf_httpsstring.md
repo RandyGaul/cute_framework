@@ -1,4 +1,8 @@
-# CF_HttpsString | [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/README.md) | [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)
+# CF_HttpsString
+
+Category: [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=web)  
+GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)  
+---
 
 A string within an [CF_HttpsResponse](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_httpsresponse.md).
 

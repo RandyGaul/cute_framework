@@ -1,4 +1,8 @@
-# sinuke | [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/README.md) | [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)
+# sinuke
+
+Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
 
 Frees up all resources used by the global string table built by [sintern](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/sintern.md).
 

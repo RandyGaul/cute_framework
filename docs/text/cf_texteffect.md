@@ -1,4 +1,8 @@
-# CF_TextEffect | [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/README.md) | [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)
+# CF_TextEffect
+
+Category: [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=text)  
+GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
+---
 
 A user-defined text effect that can be triggered with text codes.
 

@@ -1,4 +1,8 @@
-# cf_make_stopwatch | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/README.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
+# cf_make_stopwatch
+
+Category: [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=time)  
+GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)  
+---
 
 Records a new `start_time` for a [CF_Stopwatch](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/cf_stopwatch.md).
 

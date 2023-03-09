@@ -1,4 +1,8 @@
-# cf_haptic_close | [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/README.md) | [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)
+# cf_haptic_close
+
+Category: [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=haptic)  
+GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)  
+---
 
 Frees up a [CF_Haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic.md) previously created by [cf_haptic_open](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/cf_haptic_open.md).
 

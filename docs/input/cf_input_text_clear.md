@@ -1,4 +1,8 @@
-# cf_input_text_clear | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/README.md) | [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)
+# cf_input_text_clear
+
+Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)  
+---
 
 Clears the application's input text buffer.
 

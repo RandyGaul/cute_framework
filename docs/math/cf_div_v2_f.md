@@ -1,4 +1,8 @@
-# cf_div_v2_f | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# cf_div_v2_f
+
+Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
+---
 
 Divides a vector by a float.
 

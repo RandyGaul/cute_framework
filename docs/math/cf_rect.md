@@ -1,4 +1,8 @@
-# CF_Rect | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# CF_Rect
+
+Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
+---
 
 Box that cannot rotate defined with integers instead of floats.
 

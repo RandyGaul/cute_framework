@@ -1,4 +1,8 @@
-# cf_address_to_string | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/README.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
+# cf_address_to_string
+
+Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
+---
 
 Converts a [CF_Address](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_address.md) to a C string.
 

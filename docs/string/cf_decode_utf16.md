@@ -1,4 +1,8 @@
-# cf_decode_UTF16 | [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/README.md) | [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)
+# cf_decode_UTF16
+
+Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
 
 Decodes a single UTF16 character from the string as a UTF32 codepoint.
 

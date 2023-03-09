@@ -1,4 +1,8 @@
-# cf_sprite_on_loop | [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/README.md) | [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)
+# cf_sprite_on_loop
+
+Category: [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=sprite)  
+GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
+---
 
 Returns true whenever at the very beginning of the animation sequence.
 

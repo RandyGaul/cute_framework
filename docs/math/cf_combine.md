@@ -1,4 +1,8 @@
-# cf_combine | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# cf_combine
+
+Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
+---
 
 Returns a [CF_Aabb](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_aabb.md) that tightly contains both `a` and `b`.
 

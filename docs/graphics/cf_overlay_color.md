@@ -1,4 +1,8 @@
-# cf_overlay_color | [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/README.md) | [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)
+# cf_overlay_color
+
+Category: [graphics](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=graphics)  
+GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_color.h)  
+---
 
 Returns an overlay'd color, where the colors are multiplied or screen'd depending on the `base` color.
 

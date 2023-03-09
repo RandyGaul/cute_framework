@@ -1,4 +1,8 @@
-# cf_mouse_down | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/README.md) | [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)
+# cf_mouse_down
+
+Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_input.h)  
+---
 
 Returns true if the mouse button is currently down.
 

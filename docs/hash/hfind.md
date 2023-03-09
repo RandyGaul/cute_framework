@@ -1,4 +1,8 @@
-# hfind | [hash](https://github.com/RandyGaul/cute_framework/blob/master/docs/hash/README.md) | [cute_hashtable.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_hashtable.h)
+# hfind
+
+Category: [hash](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=hash)  
+GitHub: [cute_hashtable.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_hashtable.h)  
+---
 
 Fetches the item that `k` maps to.
 

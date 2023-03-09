@@ -1,4 +1,8 @@
-# cf_arena_alloc | [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/README.md) | [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_alloc.h)
+# cf_arena_alloc
+
+Category: [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=allocator)  
+GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_alloc.h)  
+---
 
 Allocates a block of memory aligned along a byte boundary.
 

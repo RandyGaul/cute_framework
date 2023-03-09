@@ -1,4 +1,8 @@
-# cf_https_post | [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/README.md) | [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)
+# cf_https_post
+
+Category: [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=web)  
+GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)  
+---
 
 Initiates a GET request for the specified host (website address) and a given uri.
 

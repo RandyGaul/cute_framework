@@ -1,4 +1,8 @@
-# cf_between_interval | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/README.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
+# cf_between_interval
+
+Category: [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=time)  
+GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)  
+---
 
 Returns true for one interval of seconds, every other interval.
 

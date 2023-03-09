@@ -1,4 +1,8 @@
-# cf_mul_tf_circle | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# cf_mul_tf_circle
+
+Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
+---
 
 Transforms a [CF_Circle](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_circle.md).
 

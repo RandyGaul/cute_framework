@@ -1,4 +1,8 @@
-# cf_render_settings_filter | [draw](https://github.com/RandyGaul/cute_framework/blob/master/docs/draw/README.md) | [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)
+# cf_render_settings_filter
+
+Category: [draw](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=draw)  
+GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
+---
 
 Sets a rendering [CF_Filter](https://github.com/RandyGaul/cute_framework/blob/master/docs/graphics/cf_filter.md), used for sampling from textures.
 

@@ -1,4 +1,8 @@
-# CF_CryptoSignSecret | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/README.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
+# CF_CryptoSignSecret
+
+Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
+---
 
 One-half of a cryptographically secure keypair. This key must be kept secret and hidden with your servers.
 

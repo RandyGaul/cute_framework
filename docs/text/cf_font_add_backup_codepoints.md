@@ -1,4 +1,8 @@
-# cf_font_add_backup_codepoints | [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/README.md) | [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)
+# cf_font_add_backup_codepoints
+
+Category: [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=text)  
+GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
+---
 
 When drawing text, and missing glyphs from the font will be replaced by any backup codepoints.
 

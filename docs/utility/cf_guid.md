@@ -1,4 +1,8 @@
-# CF_Guid | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/README.md) | [cute_guid.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_guid.h)
+# CF_Guid
+
+Category: [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=utility)  
+GitHub: [cute_guid.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_guid.h)  
+---
 
 A general purpose unique identifier.
 

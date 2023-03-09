@@ -1,4 +1,8 @@
-# cf_sound_set_is_looped | [audio](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/README.md) | [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_audio.h)
+# cf_sound_set_is_looped
+
+Category: [audio](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=audio)  
+GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_audio.h)  
+---
 
 Sets the looped state for the sound.
 

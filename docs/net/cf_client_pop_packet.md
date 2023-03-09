@@ -1,4 +1,8 @@
-# cf_client_pop_packet | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/README.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
+# cf_client_pop_packet
+
+Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
+---
 
 Returns a packet from the server, if available.
 

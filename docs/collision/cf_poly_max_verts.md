@@ -1,4 +1,8 @@
-# CF_POLY_MAX_VERTS | [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# CF_POLY_MAX_VERTS
+
+Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  
+GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
+---
 
 The maximum number of vertices in a [CF_Poly](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_poly.md).
 

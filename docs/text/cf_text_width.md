@@ -1,4 +1,8 @@
-# cf_text_width | [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/README.md) | [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)
+# cf_text_width
+
+Category: [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=text)  
+GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
+---
 
 Returns the width of a text given the currently pushed font.
 

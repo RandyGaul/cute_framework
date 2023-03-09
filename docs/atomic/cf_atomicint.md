@@ -1,4 +1,8 @@
-# CF_AtomicInt | [atomic](https://github.com/RandyGaul/cute_framework/blob/master/docs/atomic/README.md) | [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)
+# CF_AtomicInt
+
+Category: [atomic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=atomic)  
+GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)  
+---
 
 An opaque handle representing an atomic integer.
 

@@ -1,4 +1,8 @@
-# CF_HapticPeriodic | [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/README.md) | [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)
+# CF_HapticPeriodic
+
+Category: [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=haptic)  
+GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)  
+---
 
 A basic haptic for sine-based waveforms (https://en.wikipedia.org/wiki/Sine_wave).
 

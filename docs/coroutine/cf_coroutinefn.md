@@ -1,4 +1,8 @@
-# CF_CoroutineFn | [coroutine](https://github.com/RandyGaul/cute_framework/blob/master/docs/coroutine/README.md) | [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_coroutine.h)
+# CF_CoroutineFn
+
+Category: [coroutine](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=coroutine)  
+GitHub: [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_coroutine.h)  
+---
 
 Entry point for a coroutine to start.
 

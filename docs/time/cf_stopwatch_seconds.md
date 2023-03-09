@@ -1,4 +1,8 @@
-# cf_stopwatch_seconds | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/README.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
+# cf_stopwatch_seconds
+
+Category: [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=time)  
+GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)  
+---
 
 Returns the number of seconds elapsed since the last call to [cf_make_stopwatch](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/cf_make_stopwatch.md) was made.
 

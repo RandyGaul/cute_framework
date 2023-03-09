@@ -1,4 +1,8 @@
-# cf_fs_free_enumerated_directory | [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/README.md) | [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)
+# cf_fs_free_enumerated_directory
+
+Category: [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=file)  
+GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
+---
 
 Frees a file list from [cf_fs_create_directory](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/cf_fs_create_directory.md).
 

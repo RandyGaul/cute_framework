@@ -1,4 +1,8 @@
-# CF_ClientState | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/README.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
+# CF_ClientState
+
+Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
+---
 
 The various states of a [CF_Client](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client.md).
 

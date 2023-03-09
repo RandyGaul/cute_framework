@@ -1,4 +1,8 @@
-# cf_app_was_moved | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/README.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
+# cf_app_was_moved
+
+Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  
+GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
+---
 
 Returns true if the app was moved (not resized) last frame.
 

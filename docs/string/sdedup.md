@@ -1,4 +1,8 @@
-# sdedup | [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/README.md) | [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)
+# sdedup
+
+Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
 
 Removes all consecutive occurances of `ch` from the string.
 

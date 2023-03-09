@@ -1,4 +1,8 @@
-# cf_sound_set_volume | [audio](https://github.com/RandyGaul/cute_framework/blob/master/docs/audio/README.md) | [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_audio.h)
+# cf_sound_set_volume
+
+Category: [audio](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=audio)  
+GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_audio.h)  
+---
 
 Sets the volume for the sound.
 

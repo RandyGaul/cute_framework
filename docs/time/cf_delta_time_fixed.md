@@ -1,4 +1,8 @@
-# CF_DELTA_TIME_FIXED | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/README.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
+# CF_DELTA_TIME_FIXED
+
+Category: [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=time)  
+GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)  
+---
 
 The time elapsed between two frames in fixed-timestep mode.
 

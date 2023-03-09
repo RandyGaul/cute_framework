@@ -1,4 +1,8 @@
-# CUTE_CONNECT_TOKEN_SIZE | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/README.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
+# CUTE_CONNECT_TOKEN_SIZE
+
+Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
+---
 
 The size of a single connect token.
 

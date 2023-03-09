@@ -1,4 +1,8 @@
-# cf_sprite_frame_count | [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/README.md) | [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)
+# cf_sprite_frame_count
+
+Category: [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=sprite)  
+GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
+---
 
 Returns the number of frames in the sprite's currently playing animation.
 

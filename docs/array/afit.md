@@ -1,4 +1,8 @@
-# afit | [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/README.md) | [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)
+# afit
+
+Category: [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=array)  
+GitHub: [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)  
+---
 
 Ensures the capacity of the array is at least `n` elements large.
 

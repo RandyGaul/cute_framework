@@ -1,4 +1,8 @@
-# cf_handle_allocator_free | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/README.md) | [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_handle_table.h)
+# cf_handle_allocator_free
+
+Category: [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=utility)  
+GitHub: [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_handle_table.h)  
+---
 
 Marks a [CF_Handle](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_handle.md) as invalid and frees up resources it used.
 

@@ -1,4 +1,8 @@
-# cf_https_state | [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/README.md) | [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)
+# cf_https_state
+
+Category: [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=web)  
+GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)  
+---
 
 Returns the current state of the `https` object.
 

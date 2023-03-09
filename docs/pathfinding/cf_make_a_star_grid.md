@@ -1,4 +1,8 @@
-# cf_make_a_star_grid | [pathfinding](https://github.com/RandyGaul/cute_framework/blob/master/docs/pathfinding/README.md) | [cute_a_star.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_a_star.h)
+# cf_make_a_star_grid
+
+Category: [pathfinding](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=pathfinding)  
+GitHub: [cute_a_star.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_a_star.h)  
+---
 
 Creates a [CF_AStarGrid](https://github.com/RandyGaul/cute_framework/blob/master/docs/pathfinding/cf_astargrid.md) for running a path-finding algorithm via [cf_a_star](https://github.com/RandyGaul/cute_framework/blob/master/docs/pathfinding/cf_a_star.md).
 

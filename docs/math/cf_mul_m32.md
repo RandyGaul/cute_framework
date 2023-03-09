@@ -1,4 +1,8 @@
-# cf_mul_m32 | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# cf_mul_m32
+
+Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
+---
 
 Returns the composition of two [CF_M3x2](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_m3x2.md)s multiplied together.
 

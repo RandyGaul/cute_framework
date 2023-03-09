@@ -1,4 +1,8 @@
-# CF_TextEffectFn | [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/README.md) | [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)
+# CF_TextEffectFn
+
+Category: [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=text)  
+GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
+---
 
 Implements a custom text effect, called once per glyph.
 

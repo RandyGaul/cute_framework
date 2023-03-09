@@ -1,4 +1,8 @@
-# cf_list_pop_back | [list](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/README.md) | [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_doubly_list.h)
+# cf_list_pop_back
+
+Category: [list](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=list)  
+GitHub: [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_doubly_list.h)  
+---
 
 Pops a node off the back of a list.
 

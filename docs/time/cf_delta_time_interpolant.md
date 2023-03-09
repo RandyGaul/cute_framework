@@ -1,4 +1,8 @@
-# CF_DELTA_TIME_INTERPOLANT | [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/time/README.md) | [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)
+# CF_DELTA_TIME_INTERPOLANT
+
+Category: [time](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=time)  
+GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)  
+---
 
 The remaining interpolant between two fixed timestep updates, used for rendering.
 

@@ -1,4 +1,8 @@
-# cf_joypad_power_level | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/README.md) | [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)
+# cf_joypad_power_level
+
+Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
+---
 
 Returns the power level of the joypad.
 

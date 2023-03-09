@@ -1,4 +1,8 @@
-# cf_camera_look_at | [camera](https://github.com/RandyGaul/cute_framework/blob/master/docs/camera/README.md) | [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)
+# cf_camera_look_at
+
+Category: [camera](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=camera)  
+GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
+---
 
 Sets where in the world the camera sees.
 

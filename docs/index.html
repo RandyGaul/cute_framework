@@ -48,6 +48,7 @@
 			coverpage    : 'coverpage.md',
 			homepage     : 'introduction.md',
 			loadSidebar  : 'sidebar.md',
+			externalLinkTarget: '_self',
 
 			// NAVIGATION
 			// -----------------------------------------------------------------
@@ -65,10 +66,10 @@
 			plugins: [
 				// Moves links from github source to website.
 				function (hook, vm) {
-					hook.beforeEach(function (html) {
+					hook.afterEach(function (html) {
 						html = html.replace(
 							/https:\/\/github.com\/RandyGaul\/cute_framework\/(blob|tree)\/master\/docs\//gi,
-							'/'
+							'/#/'
 							)
 						return html
 					})

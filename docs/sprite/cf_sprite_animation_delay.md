@@ -1,4 +1,8 @@
-# cf_sprite_animation_delay | [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/sprite/README.md) | [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)
+# cf_sprite_animation_delay
+
+Category: [sprite](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=sprite)  
+GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
+---
 
 Sums all the delays of each frame in the animation, and returns the total, in milliseconds.
 

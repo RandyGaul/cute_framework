@@ -1,4 +1,8 @@
-# CF_ToiResult | [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# CF_ToiResult
+
+Category: [collision](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=collision)  
+GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
+---
 
 Stores results of a time of impact calculation done by [cf_toi](https://github.com/RandyGaul/cute_framework/blob/master/docs/collision/cf_toi.md).
 

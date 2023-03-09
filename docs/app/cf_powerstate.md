@@ -1,4 +1,8 @@
-# CF_PowerState | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/README.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
+# CF_PowerState
+
+Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  
+GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
+---
 
 The states of power for the application.
 

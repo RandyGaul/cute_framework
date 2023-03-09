@@ -1,4 +1,8 @@
-# CF_ServerEventType | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/README.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
+# CF_ServerEventType
+
+Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
+---
 
 The various possible [CF_ServerEvent](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_serverevent.md) types.
 

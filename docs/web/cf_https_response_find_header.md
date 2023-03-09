@@ -1,4 +1,8 @@
-# cf_https_response_find_header | [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/README.md) | [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)
+# cf_https_response_find_header
+
+Category: [web](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=web)  
+GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)  
+---
 
 Helper function find a specific header in a [CF_HttpsResponse](https://github.com/RandyGaul/cute_framework/blob/master/docs/web/cf_httpsresponse.md).
 

@@ -1,4 +1,8 @@
-# cf_base64_decode | [base64](https://github.com/RandyGaul/cute_framework/blob/master/docs/base64/README.md) | [cute_base64.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_base64.h)
+# cf_base64_decode
+
+Category: [base64](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=base64)  
+GitHub: [cute_base64.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_base64.h)  
+---
 
 Decodes base64 encoded data into raw bytes.
 

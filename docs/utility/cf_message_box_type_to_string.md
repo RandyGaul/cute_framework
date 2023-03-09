@@ -1,4 +1,8 @@
-# cf_message_box_type_to_string | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/README.md) | [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_result.h)
+# cf_message_box_type_to_string
+
+Category: [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=utility)  
+GitHub: [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_result.h)  
+---
 
 Convert an enum [CF_MessageBoxType](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_messageboxtype.md) to a c-style string.
 

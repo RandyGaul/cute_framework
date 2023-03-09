@@ -1,4 +1,8 @@
-# CF_AStarOutput | [pathfinding](https://github.com/RandyGaul/cute_framework/blob/master/docs/pathfinding/README.md) | [cute_a_star.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_a_star.h)
+# CF_AStarOutput
+
+Category: [pathfinding](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=pathfinding)  
+GitHub: [cute_a_star.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_a_star.h)  
+---
 
 Represents the shortest path between two points as an array of 2d vectors.
 

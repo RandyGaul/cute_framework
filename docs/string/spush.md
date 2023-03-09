@@ -1,4 +1,8 @@
-# spush | [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/README.md) | [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)
+# spush
+
+Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
 
 Pushes character `ch` onto the end of the string.
 

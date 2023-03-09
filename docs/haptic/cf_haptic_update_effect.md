@@ -1,4 +1,8 @@
-# cf_haptic_update_effect | [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/haptic/README.md) | [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)
+# cf_haptic_update_effect
+
+Category: [haptic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=haptic)  
+GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)  
+---
 
 Dynamically updates an effect on the device. This _can not_ change the effect type.
 

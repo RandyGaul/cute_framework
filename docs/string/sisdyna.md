@@ -1,4 +1,8 @@
-# sisdyna | [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/string/README.md) | [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)
+# sisdyna
+
+Category: [string](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
 
 Checks to see if a C string is a dynamic string from Cute Framework's string API, or not.
 

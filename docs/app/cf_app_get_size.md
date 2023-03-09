@@ -1,4 +1,8 @@
-# cf_app_get_size | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/README.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
+# cf_app_get_size
+
+Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  
+GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
+---
 
 Gets the size of the window in pixels.
 

@@ -1,4 +1,8 @@
-# CF_Arena | [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/README.md) | [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_alloc.h)
+# CF_Arena
+
+Category: [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=allocator)  
+GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_alloc.h)  
+---
 
 A simple way to allocate memory without calling `malloc` too often.
 

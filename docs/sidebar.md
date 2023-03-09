@@ -8,4 +8,4 @@
 - [![GitHub](assets/github.svg)Github](https://github.com/RandyGaul/cute_framework/)
 - [![Discord](assets/discord.svg)Discord](https://discord.gg/ajWHTHz9)
 
-<p align="center"><img src=https://github.com/RandyGaul/cute_framework/blob/master/docs/assets/CF_Logo_Pixel_2x.png?raw=true></p>
+<p align="center"><img src=/assets/CF_Logo_Pixel_2x.png?raw=true></p>

@@ -1,4 +1,8 @@
-# cf_fetch_image | [draw](https://github.com/RandyGaul/cute_framework/blob/master/docs/draw/README.md) | [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)
+# cf_fetch_image
+
+Category: [draw](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=draw)  
+GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
+---
 
 Returns a [CF_TemporaryImage](https://github.com/RandyGaul/cute_framework/blob/master/docs/draw/cf_temporaryimage.md) for a given sprite.
 

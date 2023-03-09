@@ -1,4 +1,8 @@
-# CUTE_LIST_HOST | [list](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/README.md) | [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_doubly_list.h)
+# CUTE_LIST_HOST
+
+Category: [list](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=list)  
+GitHub: [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_doubly_list.h)  
+---
 
 Converts a pointer to a node to a pointer to its host struct/object.
 

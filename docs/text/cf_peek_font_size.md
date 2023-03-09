@@ -1,4 +1,8 @@
-# cf_peek_font_size | [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/README.md) | [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)
+# cf_peek_font_size
+
+Category: [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=text)  
+GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
+---
 
 Returns the last font size.
 

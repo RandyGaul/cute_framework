@@ -1,4 +1,8 @@
-# aend | [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/README.md) | [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)
+# aend
+
+Category: [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=array)  
+GitHub: [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)  
+---
 
 Returns a pointer one element beyond the end of the array.
 

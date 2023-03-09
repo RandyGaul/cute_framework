@@ -1,4 +1,8 @@
-# aset | [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/README.md) | [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)
+# aset
+
+Category: [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=array)  
+GitHub: [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)  
+---
 
 Copies the array b into array a. Will automatically fit a if needed with [afit](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/afit.md).
 

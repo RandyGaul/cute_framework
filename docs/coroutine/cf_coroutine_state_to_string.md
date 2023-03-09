@@ -1,4 +1,8 @@
-# cf_coroutine_state_to_string | [coroutine](https://github.com/RandyGaul/cute_framework/blob/master/docs/coroutine/README.md) | [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_coroutine.h)
+# cf_coroutine_state_to_string
+
+Category: [coroutine](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=coroutine)  
+GitHub: [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_coroutine.h)  
+---
 
 Converts a [CF_CoroutineState](https://github.com/RandyGaul/cute_framework/blob/master/docs/coroutine/cf_coroutinestate.md) to c-string.
 

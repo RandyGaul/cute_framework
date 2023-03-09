@@ -1,4 +1,8 @@
-# CF_Rnd | [random](https://github.com/RandyGaul/cute_framework/blob/master/docs/random/README.md) | [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_rnd.h)
+# CF_Rnd
+
+Category: [random](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=random)  
+GitHub: [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_rnd.h)  
+---
 
 A random number generator.
 

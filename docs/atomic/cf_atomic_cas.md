@@ -1,4 +1,8 @@
-# cf_atomic_cas | [atomic](https://github.com/RandyGaul/cute_framework/blob/master/docs/atomic/README.md) | [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)
+# cf_atomic_cas
+
+Category: [atomic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=atomic)  
+GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)  
+---
 
 Atomically sets `atomic` to `value` if `expected` equals `atomic`.
 

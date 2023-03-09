@@ -1,4 +1,8 @@
-# cf_list_empty | [list](https://github.com/RandyGaul/cute_framework/blob/master/docs/list/README.md) | [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_doubly_list.h)
+# cf_list_empty
+
+Category: [list](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=list)  
+GitHub: [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_doubly_list.h)  
+---
 
 Returns true if a list is empty.
 

@@ -1,4 +1,8 @@
-# cf_destroy_font | [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/README.md) | [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)
+# cf_destroy_font
+
+Category: [text](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=text)  
+GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
+---
 
 Destroys a font previously made by [cf_make_font](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/cf_make_font.md) or [cf_make_font_mem](https://github.com/RandyGaul/cute_framework/blob/master/docs/text/cf_make_font_mem.md).
 

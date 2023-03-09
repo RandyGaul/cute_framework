@@ -1,4 +1,8 @@
-# spfname | [path](https://github.com/RandyGaul/cute_framework/blob/master/docs/path/README.md) | [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)
+# spfname
+
+Category: [path](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=path)  
+GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
+---
 
 Returns the filename portion of a path. Returns a new string.
 

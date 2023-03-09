@@ -1,4 +1,8 @@
-# alast | [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/README.md) | [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)
+# alast
+
+Category: [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=array)  
+GitHub: [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)  
+---
 
 Returns the last element in the array.
 

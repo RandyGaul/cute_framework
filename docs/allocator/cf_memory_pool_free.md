@@ -1,4 +1,8 @@
-# cf_memory_pool_free | [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/README.md) | [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_alloc.h)
+# cf_memory_pool_free
+
+Category: [allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=allocator)  
+GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_alloc.h)  
+---
 
 Frees an allocation made by [cf_memory_pool_alloc](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/cf_memory_pool_alloc.md) or [cf_memory_pool_try_alloc](https://github.com/RandyGaul/cute_framework/blob/master/docs/allocator/cf_memory_pool_try_alloc.md).
 

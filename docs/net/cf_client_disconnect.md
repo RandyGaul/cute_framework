@@ -1,4 +1,8 @@
-# cf_client_disconnect | [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/README.md) | [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)
+# cf_client_disconnect
+
+Category: [net](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=net)  
+GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
+---
 
 Attempts to gracefully disconnect a [CF_Client](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_client.md) from a [CF_Server](https://github.com/RandyGaul/cute_framework/blob/master/docs/net/cf_server.md).
 

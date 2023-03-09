@@ -1,4 +1,8 @@
-# cf_mulT_tf_hs | [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/README.md) | [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)
+# cf_mulT_tf_hs
+
+Category: [math](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=math)  
+GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
+---
 
 Transforms a plane by an inverted [CF_Transform](https://github.com/RandyGaul/cute_framework/blob/master/docs/math/cf_transform.md).
 

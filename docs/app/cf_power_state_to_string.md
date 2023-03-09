@@ -1,4 +1,8 @@
-# cf_power_state_to_string | [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/README.md) | [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)
+# cf_power_state_to_string
+
+Category: [app](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=app)  
+GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
+---
 
 Convert an enum [CF_PowerState](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/cf_powerstate.md) to a c-style string.
 

@@ -1,4 +1,8 @@
-# ahash | [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/array/README.md) | [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)
+# ahash
+
+Category: [array](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=array)  
+GitHub: [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)  
+---
 
 Returns the hash of all the bytes in the array.
 

@@ -1,4 +1,8 @@
-# cf_coroutine_space_remaining | [coroutine](https://github.com/RandyGaul/cute_framework/blob/master/docs/coroutine/README.md) | [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_coroutine.h)
+# cf_coroutine_space_remaining
+
+Category: [coroutine](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=coroutine)  
+GitHub: [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_coroutine.h)  
+---
 
 Returns the number of bytes currently available for use in the coroutine's storage.
 

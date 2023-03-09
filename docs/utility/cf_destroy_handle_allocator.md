@@ -1,4 +1,8 @@
-# cf_destroy_handle_allocator | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/README.md) | [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_handle_table.h)
+# cf_destroy_handle_allocator
+
+Category: [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=utility)  
+GitHub: [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_handle_table.h)  
+---
 
 Destroys a handle table created by [cf_make_handle_allocator](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/cf_make_handle_allocator.md).
 

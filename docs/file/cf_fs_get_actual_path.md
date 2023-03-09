@@ -1,4 +1,8 @@
-# cf_fs_get_actual_path | [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/README.md) | [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)
+# cf_fs_get_actual_path
+
+Category: [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=file)  
+GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
+---
 
 Converts a virtual path to an actual path.
 

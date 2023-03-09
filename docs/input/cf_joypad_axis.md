@@ -1,4 +1,8 @@
-# cf_joypad_axis | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/README.md) | [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)
+# cf_joypad_axis
+
+Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
+---
 
 Returns a signed 16-bit integer representing how much a joypad axis is activated by.
 

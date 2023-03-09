@@ -1,4 +1,8 @@
-# File Types | [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/file/README.md) | [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)
+# File Types
+
+Category: [file](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=file)  
+GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
+---
 
 The various kinds of files that can be opened.
 

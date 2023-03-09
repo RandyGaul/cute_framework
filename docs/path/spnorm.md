@@ -1,4 +1,8 @@
-# spnorm | [path](https://github.com/RandyGaul/cute_framework/blob/master/docs/path/README.md) | [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)
+# spnorm
+
+Category: [path](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=path)  
+GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
+---
 
 Normalizes a path as a new string.
 

@@ -1,4 +1,8 @@
-# cf_atomic_add | [atomic](https://github.com/RandyGaul/cute_framework/blob/master/docs/atomic/README.md) | [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)
+# cf_atomic_add
+
+Category: [atomic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=atomic)  
+GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)  
+---
 
 Atomically adds `addend` to `atomic` and returns the old value from `atomic`.
 

@@ -1,4 +1,8 @@
-# cf_unload_shared_library | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/README.md) | [cute_symbol.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_symbol.h)
+# cf_unload_shared_library
+
+Category: [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=utility)  
+GitHub: [cute_symbol.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_symbol.h)  
+---
 
 Unloads a shared library previously loaded with `load_shared_library`.
 

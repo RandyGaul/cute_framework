@@ -1,4 +1,8 @@
-# CF_JoypadAxis | [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/README.md) | [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)
+# CF_JoypadAxis
+
+Category: [input](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=input)  
+GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
+---
 
 Various axis actions on a [CF_Joypad](https://github.com/RandyGaul/cute_framework/blob/master/docs/input/cf_joypad.md).
 

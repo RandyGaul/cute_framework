@@ -1,4 +1,8 @@
-# cf_handle_allocator_update_index | [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/utility/README.md) | [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_handle_table.h)
+# cf_handle_allocator_update_index
+
+Category: [utility](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=utility)  
+GitHub: [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_handle_table.h)  
+---
 
 Sets 32-bit index value a handle maps to.
 

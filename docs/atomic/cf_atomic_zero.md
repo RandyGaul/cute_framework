@@ -1,4 +1,8 @@
-# cf_atomic_zero | [atomic](https://github.com/RandyGaul/cute_framework/blob/master/docs/atomic/README.md) | [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)
+# cf_atomic_zero
+
+Category: [atomic](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=atomic)  
+GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_multithreading.h)  
+---
 
 Returns an atomic integer of value zero.
 

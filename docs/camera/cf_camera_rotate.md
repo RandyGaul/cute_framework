@@ -1,4 +1,8 @@
-# cf_camera_rotate | [camera](https://github.com/RandyGaul/cute_framework/blob/master/docs/camera/README.md) | [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)
+# cf_camera_rotate
+
+Category: [camera](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=camera)  
+GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
+---
 
 Rotates the camera.
 

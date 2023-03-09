@@ -1,4 +1,8 @@
-# cf_kv_state | [serialization](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/README.md) | [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_kv.h)
+# cf_kv_state
+
+Category: [serialization](https://github.com/RandyGaul/cute_framework/blob/master/docs/api_reference?id=serialization)  
+GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_kv.h)  
+---
 
 Returns the [CF_KeyValueState](https://github.com/RandyGaul/cute_framework/blob/master/docs/serialization/cf_keyvaluestate.md) the `kv` was created in.
 
