@@ -38,7 +38,7 @@ CF_Audio* cf_audio_load_ogg(const char* path)
 	void* data = fs_read_entire_file_to_memory(path, &size);
 	if (data) {
 		auto src = cf_audio_load_ogg_from_memory(data, (int)size);
-		CUTE_FREE(data);
+		CF_FREE(data);
 		return (CF_Audio*) src;
 	} else {
 		return NULL;
@@ -51,7 +51,7 @@ CF_Audio* cf_audio_load_wav(const char* path)
 	void* data = fs_read_entire_file_to_memory(path, &size);
 	if (data) {
 		auto src = cf_audio_load_wav_from_memory(data, (int)size);
-		CUTE_FREE(data);
+		CF_FREE(data);
 		return (CF_Audio*) src;
 	} else {
 		return NULL;

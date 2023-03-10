@@ -22,10 +22,10 @@
 #include <cute.h>
 using namespace Cute;
 
-CUTE_TEST_CASE(test_make_sprite, "Load a sprite destroy it.");
+CF_TEST_CASE(test_make_sprite, "Load a sprite destroy it.");
 int test_make_sprite()
 {
-	CUTE_TEST_ASSERT(!cf_is_error(cf_make_app("sprite test", 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_DEFAULT_GFX_CONTEXT, NULL)));
+	CF_TEST_ASSERT(!cf_is_error(cf_make_app("sprite test", 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_DEFAULT_GFX_CONTEXT, NULL)));
 
 	CF_Sprite s = cf_make_sprite("test_data/girl.aseprite");
 	cf_app_draw_onto_screen();

@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_HTTPS_H
-#define CUTE_HTTPS_H
+#ifndef CF_HTTPS_H
+#define CF_HTTPS_H
 
 #include "cute_defines.h"
 #include "cute_result.h"
@@ -97,7 +97,7 @@ typedef struct CF_Https CF_Https;
  *           should only be a relative path on the server.
  * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process
  */
-CUTE_API CF_Https* CUTE_CALL cf_https_get(const char* host, const char* port, const char* uri, CF_Result* err, bool verify_cert);
+CF_API CF_Https* CF_CALL cf_https_get(const char* host, const char* port, const char* uri, CF_Result* err, bool verify_cert);
 
 /**
  * @function cf_https_post
@@ -125,7 +125,7 @@ CUTE_API CF_Https* CUTE_CALL cf_https_get(const char* host, const char* port, co
  *           should only be a relative path on the server.
  * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process
  */
-CUTE_API CF_Https* CUTE_CALL cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, CF_Result* err, bool verify_cert);
+CF_API CF_Https* CF_CALL cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, CF_Result* err, bool verify_cert);
 
 /**
  * @function cf_https_destroy
@@ -134,7 +134,7 @@ CUTE_API CF_Https* CUTE_CALL cf_https_post(const char* host, const char* port, c
  * @param    https       A `CF_Https` to destroy.
  * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process
  */
-CUTE_API void CUTE_CALL cf_https_destroy(CF_Https* https);
+CF_API void CF_CALL cf_https_destroy(CF_Https* https);
 
 /**
  * @enum     CF_HttpsState
@@ -165,10 +165,10 @@ typedef enum CF_HttpsState
  * @param    state        The state to convert to a string.
  * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process
  */
-CUTE_INLINE const char* cf_https_state_type_to_string(CF_HttpsState state)
+CF_INLINE const char* cf_https_state_type_to_string(CF_HttpsState state)
 {
 	switch (state) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_HTTPS_STATE_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -182,7 +182,7 @@ CUTE_INLINE const char* cf_https_state_type_to_string(CF_HttpsState state)
  * @remarks  This is used mainly for calling `https_process`.
  * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response
  */
-CUTE_API CF_HttpsState CUTE_CALL cf_https_state(CF_Https* https);
+CF_API CF_HttpsState CF_CALL cf_https_state(CF_Https* https);
 
 /**
  * @function cf_https_process
@@ -195,7 +195,7 @@ CUTE_API CF_HttpsState CUTE_CALL cf_https_state(CF_Https* https);
  *           game tick -- whichever you prefer.
  * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response cf_https_state
  */
-CUTE_API size_t CUTE_CALL cf_https_process(CF_Https* https);
+CF_API size_t CF_CALL cf_https_process(CF_Https* https);
 
 /**
  * @struct   CF_HttpsString
@@ -299,7 +299,7 @@ typedef struct CF_HttpsResponse
  *           when `cf_https_destroy` is called.
  * @related  CF_Https cf_https_get cf_https_post cf_https_destroy cf_https_process cf_https_response cf_https_state
  */
-CUTE_API CF_HttpsResponse CUTE_CALL cf_https_response(CF_Https* https);
+CF_API CF_HttpsResponse CF_CALL cf_https_response(CF_Https* https);
 
 /**
  * @function cf_https_strcmp
@@ -308,12 +308,12 @@ CUTE_API CF_HttpsResponse CUTE_CALL cf_https_response(CF_Https* https);
  * @return   Returns true the string is equal. Case is ignored.
  * @related  CF_Https CF_HttpsResponse cf_https_response CF_HttpsString CF_HttpsHeader cf_https_response_find_header
  */
-CUTE_INLINE bool cf_https_strcmp(const char* lit, CF_HttpsString string)
+CF_INLINE bool cf_https_strcmp(const char* lit, CF_HttpsString string)
 {
-	size_t len = CUTE_STRLEN(lit);
+	size_t len = CF_STRLEN(lit);
 	if (len != string.len) return true;
 	for (size_t i = 0; i < len; ++i) {
-		if (CUTE_TOLOWER(lit[i]) != CUTE_TOLOWER(string.ptr[i])) {
+		if (CF_TOLOWER(lit[i]) != CF_TOLOWER(string.ptr[i])) {
 			return true;
 		}
 	}
@@ -327,9 +327,9 @@ CUTE_INLINE bool cf_https_strcmp(const char* lit, CF_HttpsString string)
  * @return   Returns true the header was found. The header will be written to `header_out`. Case is ignored.
  * @related  CF_Https CF_HttpsResponse cf_https_response CF_HttpsString CF_HttpsHeader cf_https_response_find_header
  */
-CUTE_INLINE bool cf_https_response_find_header(const CF_HttpsResponse* response, const char* header_name, CF_HttpsHeader* header_out)
+CF_INLINE bool cf_https_response_find_header(const CF_HttpsResponse* response, const char* header_name, CF_HttpsHeader* header_out)
 {
-	CUTE_MEMSET(header_out, 0, sizeof(CF_HttpsHeader));
+	CF_MEMSET(header_out, 0, sizeof(CF_HttpsHeader));
 
 	for (int i = 0; i < response->headers_count; ++i) {
 		CF_HttpsHeader header = response->headers[i];
@@ -348,7 +348,7 @@ CUTE_INLINE bool cf_https_response_find_header(const CF_HttpsResponse* response,
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
@@ -358,11 +358,11 @@ using HttpsString = CF_HttpsString;
 using HttpsHeader = CF_HttpsHeader;
 
 using HttpsState = CF_HttpsState;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr HttpsState K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr HttpsState K = CF_##K;
 CF_HTTPS_STATE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* to_string(HttpsState state)
+CF_INLINE const char* to_string(HttpsState state)
 {
 	switch (state) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -392,21 +392,21 @@ struct https_response_t
 	* Convenience function to find a specific header. Returns true if the header was found, and false
 	* otherwise.
 	*/
-	CUTE_INLINE bool find_header(const char* header_name, HttpsHeader* header_out = NULL) const;
+	CF_INLINE bool find_header(const char* header_name, HttpsHeader* header_out = NULL) const;
 };
 
 
-CUTE_INLINE Https* https_get(const char* host, const char* port, const char* uri, CF_Result* err = NULL, bool verify_cert = true) { return cf_https_get(host, port, uri, err, verify_cert); }
-CUTE_INLINE Https* https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, CF_Result* err = NULL, bool verify_cert = true) { return cf_https_post(host, port, uri, data, size, err, verify_cert); }
-CUTE_INLINE void https_destroy(Https* https) { cf_https_destroy(https); }
-CUTE_INLINE HttpsState https_state(Https* https) { return cf_https_state(https); }
-CUTE_INLINE size_t https_process(Https* https) { return cf_https_process(https); }
+CF_INLINE Https* https_get(const char* host, const char* port, const char* uri, CF_Result* err = NULL, bool verify_cert = true) { return cf_https_get(host, port, uri, err, verify_cert); }
+CF_INLINE Https* https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, CF_Result* err = NULL, bool verify_cert = true) { return cf_https_post(host, port, uri, data, size, err, verify_cert); }
+CF_INLINE void https_destroy(Https* https) { cf_https_destroy(https); }
+CF_INLINE HttpsState https_state(Https* https) { return cf_https_state(https); }
+CF_INLINE size_t https_process(Https* https) { return cf_https_process(https); }
 
-CUTE_API const https_response_t* CUTE_CALL https_response(Https* https);
+CF_API const https_response_t* CF_CALL https_response(Https* https);
 
-CUTE_INLINE bool https_strcmp(const char* lit, HttpsString string) { return cf_https_strcmp(lit, string); }
+CF_INLINE bool https_strcmp(const char* lit, HttpsString string) { return cf_https_strcmp(lit, string); }
 
-CUTE_INLINE bool https_response_find_header(const https_response_t* response, const char* header_name, HttpsHeader* header_out)
+CF_INLINE bool https_response_find_header(const https_response_t* response, const char* header_name, HttpsHeader* header_out)
 {
 	*header_out = { 0 };
 
@@ -420,13 +420,13 @@ CUTE_INLINE bool https_response_find_header(const https_response_t* response, co
 	return false;
 }
 
-CUTE_INLINE bool https_response_t::find_header(const char* header_name, HttpsHeader* header_out) const
+CF_INLINE bool https_response_t::find_header(const char* header_name, HttpsHeader* header_out) const
 {
 	return https_response_find_header(this, header_name, header_out);
 }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_HTTPS_H
+#endif // CF_HTTPS_H

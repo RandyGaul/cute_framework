@@ -21,7 +21,7 @@
 
 #include "cute_defines.h"
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 template<typename T>
 class CF_ScopeExit
@@ -40,11 +40,11 @@ static CF_ScopeExit<T> s_create_scope_helper(T func)
 	return CF_ScopeExit<T>(func);
 }
 
-#define CUTE_TOKEN_PASTE_HELPER(X, Y) X ## Y
-#define CUTE_TOKEN_PASTE(X, Y) CUTE_TOKEN_PASTE_HELPER(X, Y)
+#define CF_TOKEN_PASTE_HELPER(X, Y) X ## Y
+#define CF_TOKEN_PASTE(X, Y) CF_TOKEN_PASTE_HELPER(X, Y)
 
 /**
- * Runs a single line of code `L` whenever the scope the `CUTE_DEFER` macro resides within
+ * Runs a single line of code `L` whenever the scope the `CF_DEFER` macro resides within
  * exits. This is useful for closing files or cleaning things up when returning from a
  * function, especially when there are many different places to return from.
  *
@@ -53,7 +53,7 @@ static CF_ScopeExit<T> s_create_scope_helper(T func)
  * error_code_t read_file(const char* path)
  * {
  *     FILE* fp = fopen(path, "rb");
- *     CUTE_DEFER(fclose(fp));
+ *     CF_DEFER(fclose(fp));
  *
  *     // read from file...
  *
@@ -72,6 +72,6 @@ static CF_ScopeExit<T> s_create_scope_helper(T func)
  *     // And finally, the defer line can run here too.
  * }
  */
-#define CUTE_DEFER(L) const auto& CUTE_TOKEN_PASTE(CF_ScopeExit, __LINE__) = s_create_scope_helper([&]() { L; })
+#define CF_DEFER(L) const auto& CF_TOKEN_PASTE(CF_ScopeExit, __LINE__) = s_create_scope_helper([&]() { L; })
 
-#endif // CUTE_CPP
+#endif // CF_CPP

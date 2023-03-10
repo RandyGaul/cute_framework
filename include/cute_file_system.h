@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_FILE_SYSTEM_H
-#define CUTE_FILE_SYSTEM_H
+#ifndef CF_FILE_SYSTEM_H
+#define CF_FILE_SYSTEM_H
 
 #include "cute_defines.h"
 #include "cute_result.h"
@@ -38,7 +38,7 @@ extern "C" {
 // These are implemented with the C-string API in "cute_string.h"; each function returns a fully
 // mutable string you must free up with `sfree` or `cf_string_free` when done.
 
-#ifndef CUTE_NO_SHORTHAND_API
+#ifndef CF_NO_SHORTHAND_API
 /**
  * @function spfname
  * @category path
@@ -176,18 +176,18 @@ extern "C" {
  * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define spnorm(s) cf_path_normalize(s)
-#endif // CUTE_NO_SHORTHAND_API
+#endif // CF_NO_SHORTHAND_API
 
-CUTE_API char* CUTE_CALL cf_path_get_filename(const char* path);
-CUTE_API char* CUTE_CALL cf_path_get_filename_no_ext(const char* path);
-CUTE_API char* CUTE_CALL cf_path_get_ext(const char* path);
-CUTE_API bool CUTE_CALL cf_path_ext_equ(const char* path, const char* ext);
-CUTE_API char* CUTE_CALL cf_path_pop(const char* path);
-CUTE_API char* CUTE_CALL cf_path_pop_n(const char* path, int n);
-CUTE_API char* CUTE_CALL cf_path_compact(const char* path, int n);
-CUTE_API char* CUTE_CALL cf_path_directory_of(const char* path);
-CUTE_API char* CUTE_CALL cf_path_top_directory(const char* path);
-CUTE_API char* CUTE_CALL cf_path_normalize(const char* path);
+CF_API char* CF_CALL cf_path_get_filename(const char* path);
+CF_API char* CF_CALL cf_path_get_filename_no_ext(const char* path);
+CF_API char* CF_CALL cf_path_get_ext(const char* path);
+CF_API bool CF_CALL cf_path_ext_equ(const char* path, const char* ext);
+CF_API char* CF_CALL cf_path_pop(const char* path);
+CF_API char* CF_CALL cf_path_pop_n(const char* path, int n);
+CF_API char* CF_CALL cf_path_compact(const char* path, int n);
+CF_API char* CF_CALL cf_path_directory_of(const char* path);
+CF_API char* CF_CALL cf_path_top_directory(const char* path);
+CF_API char* CF_CALL cf_path_normalize(const char* path);
 
 //--------------------------------------------------------------------------------------------------
 // Virtual file system.
@@ -304,10 +304,10 @@ typedef enum CF_FileType
  * @brief    Returns a `CF_FileType` converted to a c-string.
  * @related CF_File CF_Stat cf_file_type_to_string
  */
-CUTE_INLINE const char* cf_file_type_to_string(CF_FileType type)
+CF_INLINE const char* cf_file_type_to_string(CF_FileType type)
 {
 	switch (type) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_FILE_TYPE_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -350,7 +350,7 @@ typedef struct CF_Stat
  *           but probably is. You should probably mount the base directory with `cf_fs_mount`. See TODO_LINK_VFS_README for an overview.
  * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
  */
-CUTE_API const char* CUTE_CALL cf_fs_get_base_directory();
+CF_API const char* CF_CALL cf_fs_get_base_directory();
 
 /**
  * @function cf_fs_set_write_directory
@@ -364,7 +364,7 @@ CUTE_API const char* CUTE_CALL cf_fs_get_base_directory();
  *           See TODO_LINK_VFS_README for an overview.
  * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_set_write_directory(const char* platform_dependent_directory);
+CF_API CF_Result CF_CALL cf_fs_set_write_directory(const char* platform_dependent_directory);
 
 /**
  * @function cf_fs_get_user_directory
@@ -388,7 +388,7 @@ CUTE_API CF_Result CUTE_CALL cf_fs_set_write_directory(const char* platform_depe
  *           You should assume this directory is the only safe place to write files. TODO_LINK_VFS_README.
  * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
  */
-CUTE_API const char* CUTE_CALL cf_fs_get_user_directory(const char* company_name, const char* game_name);
+CF_API const char* CF_CALL cf_fs_get_user_directory(const char* company_name, const char* game_name);
 
 /**
  * @function cf_fs_mount
@@ -412,7 +412,7 @@ CUTE_API const char* CUTE_CALL cf_fs_get_user_directory(const char* company_name
  *           passing the `CF_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT` flag to `cf_make_app`. TODO_LINK_VFS_README.
  * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_mount(const char* archive, const char* mount_point, bool append_to_path);
+CF_API CF_Result CF_CALL cf_fs_mount(const char* archive, const char* mount_point, bool append_to_path);
 
 /**
  * @function cf_fs_dismount
@@ -422,7 +422,7 @@ CUTE_API CF_Result CUTE_CALL cf_fs_mount(const char* archive, const char* mount_
  * @remarks  This function does not remove a `mount_point` from the virtual file system, but only the actual archive that was previously mounted. TODO_LINK_VFS_README.
  * @related  cf_fs_get_base_directory cf_fs_set_write_directory cf_fs_get_user_directory cf_fs_mount cf_fs_dismount
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_dismount(const char* archive);
+CF_API CF_Result CF_CALL cf_fs_dismount(const char* archive);
 
 /**
  * @function cf_fs_stat
@@ -432,7 +432,7 @@ CUTE_API CF_Result CUTE_CALL cf_fs_dismount(const char* archive);
  * @remarks  This doesn't open the file itself, and is a fairly light-weight operation in comparison. TODO_LINK_VFS_README.
  * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_stat(const char* virtual_path, CF_Stat* stat);
+CF_API CF_Result CF_CALL cf_fs_stat(const char* virtual_path, CF_Stat* stat);
 
 /**
  * @function cf_fs_create_file
@@ -442,7 +442,7 @@ CUTE_API CF_Result CUTE_CALL cf_fs_stat(const char* virtual_path, CF_Stat* stat)
  * @remarks  The write directory is specified by you when calling `cf_fs_set_write_directory`. TODO_LINK_VFS_README.
  * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
  */
-CUTE_API CF_File* CUTE_CALL cf_fs_create_file(const char* virtual_path);
+CF_API CF_File* CF_CALL cf_fs_create_file(const char* virtual_path);
 
 /**
  * @function cf_fs_open_file_for_write
@@ -452,7 +452,7 @@ CUTE_API CF_File* CUTE_CALL cf_fs_create_file(const char* virtual_path);
  * @remarks  The write directory is specified by you when calling `cf_fs_set_write_directory`. TODO_LINK_VFS_README.
  * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
  */
-CUTE_API CF_File* CUTE_CALL cf_fs_open_file_for_write(const char* virtual_path);
+CF_API CF_File* CF_CALL cf_fs_open_file_for_write(const char* virtual_path);
 
 /**
  * @function cf_fs_open_file_for_append
@@ -462,7 +462,7 @@ CUTE_API CF_File* CUTE_CALL cf_fs_open_file_for_write(const char* virtual_path);
  * @remarks  The write directory is specified by you when calling `cf_fs_set_write_directory`. TODO_LINK_VFS_README.
  * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
  */
-CUTE_API CF_File* CUTE_CALL cf_fs_open_file_for_append(const char* virtual_path);
+CF_API CF_File* CF_CALL cf_fs_open_file_for_append(const char* virtual_path);
 
 /**
  * @function cf_fs_open_file_for_read
@@ -473,7 +473,7 @@ CUTE_API CF_File* CUTE_CALL cf_fs_open_file_for_append(const char* virtual_path)
  * @remarks  If you just want some basic information about the file (such as it's size or when it was created), you can use `cf_fs_stat` instead. TODO_LINK_VFS_README.
  * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
  */
-CUTE_API CF_File* CUTE_CALL cf_fs_open_file_for_read(const char* virtual_path);
+CF_API CF_File* CF_CALL cf_fs_open_file_for_read(const char* virtual_path);
 
 /**
  * @function cf_fs_close
@@ -483,7 +483,7 @@ CUTE_API CF_File* CUTE_CALL cf_fs_open_file_for_read(const char* virtual_path);
  * @return   Returns any errors as a `CF_Result`.
  * @related  CF_File CF_Stat cf_fs_create_file cf_fs_open_file_for_write cf_fs_open_file_for_read cf_fs_close
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_close(CF_File* file);
+CF_API CF_Result CF_CALL cf_fs_close(CF_File* file);
 
 /**
  * @function cf_fs_remove_directory
@@ -494,7 +494,7 @@ CUTE_API CF_Result CUTE_CALL cf_fs_close(CF_File* file);
  * @remarks  TODO_LINK_VFS_README.
  * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_remove_directory(const char* virtual_path);
+CF_API CF_Result CF_CALL cf_fs_remove_directory(const char* virtual_path);
 
 /**
  * @function cf_fs_create_directory
@@ -505,7 +505,7 @@ CUTE_API CF_Result CUTE_CALL cf_fs_remove_directory(const char* virtual_path);
  * @remarks  All missing directories are also created. TODO_LINK_VFS_README.
  * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_create_directory(const char* virtual_path);
+CF_API CF_Result CF_CALL cf_fs_create_directory(const char* virtual_path);
 
 /**
  * @function cf_fs_enumerate_directory
@@ -524,7 +524,7 @@ CUTE_API CF_Result CUTE_CALL cf_fs_create_directory(const char* virtual_path);
  *           the list up with `cf_fs_free_enumerated_directory` when done. The final element of the list is NULL. TODO_LINK_VFS_README.
  * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
  */
-CUTE_API const char** CUTE_CALL cf_fs_enumerate_directory(const char* virtual_path);
+CF_API const char** CF_CALL cf_fs_enumerate_directory(const char* virtual_path);
 
 /**
  * @function cf_fs_free_enumerated_directory
@@ -533,7 +533,7 @@ CUTE_API const char** CUTE_CALL cf_fs_enumerate_directory(const char* virtual_pa
  * @param    directory_list  The directory list returned from `cf_fs_create_directory`.
  * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
  */
-CUTE_API void CUTE_CALL cf_fs_free_enumerated_directory(const char** directory_list);
+CF_API void CF_CALL cf_fs_free_enumerated_directory(const char** directory_list);
 
 /**
  * @function cf_fs_file_exists
@@ -543,7 +543,7 @@ CUTE_API void CUTE_CALL cf_fs_free_enumerated_directory(const char** directory_l
  * @remarks  TODO_LINK_VFS_README.
  * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
  */
-CUTE_API bool CUTE_CALL cf_fs_file_exists(const char* virtual_path);
+CF_API bool CF_CALL cf_fs_file_exists(const char* virtual_path);
 
 /**
  * @function cf_fs_read
@@ -556,7 +556,7 @@ CUTE_API bool CUTE_CALL cf_fs_file_exists(const char* virtual_path);
  *           failure. TODO_LINK_VFS_README.
  * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
  */
-CUTE_API size_t CUTE_CALL cf_fs_read(CF_File* file, void* buffer, size_t size);
+CF_API size_t CF_CALL cf_fs_read(CF_File* file, void* buffer, size_t size);
 
 /**
  * @function cf_fs_write
@@ -569,7 +569,7 @@ CUTE_API size_t CUTE_CALL cf_fs_read(CF_File* file, void* buffer, size_t size);
  *           failure. TODO_LINK_VFS_README.
  * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
  */
-CUTE_API size_t CUTE_CALL cf_fs_write(CF_File* file, const void* buffer, size_t size);
+CF_API size_t CF_CALL cf_fs_write(CF_File* file, const void* buffer, size_t size);
 
 /**
  * @function cf_fs_eof
@@ -579,7 +579,7 @@ CUTE_API size_t CUTE_CALL cf_fs_write(CF_File* file, const void* buffer, size_t 
  * @remarks  TODO_LINK_VFS_README.
  * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_eof(CF_File* file);
+CF_API CF_Result CF_CALL cf_fs_eof(CF_File* file);
 
 /**
  * @function cf_fs_tell
@@ -589,7 +589,7 @@ CUTE_API CF_Result CUTE_CALL cf_fs_eof(CF_File* file);
  * @remarks  This is an offset from the beginning of the file. Returns -1 on failure. TODO_LINK_VFS_README.
  * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
  */
-CUTE_API size_t CUTE_CALL cf_fs_tell(CF_File* file);
+CF_API size_t CF_CALL cf_fs_tell(CF_File* file);
 
 /**
  * @function cf_fs_seek
@@ -601,7 +601,7 @@ CUTE_API size_t CUTE_CALL cf_fs_tell(CF_File* file);
  * @remarks  This is an offset from the beginning of the file. The next read or write will happen at this position. TODO_LINK_VFS_README.
  * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_seek(CF_File* file, size_t position);
+CF_API CF_Result CF_CALL cf_fs_seek(CF_File* file, size_t position);
 
 /**
  * @function cf_fs_size
@@ -611,7 +611,7 @@ CUTE_API CF_Result CUTE_CALL cf_fs_seek(CF_File* file, size_t position);
  * @remarks  You might want to use `cf_fs_stat` instead to avoid needing to fully open the file first. TODO_LINK_VFS_README.
  * @related  CF_File cf_fs_file_exists cf_fs_read cf_fs_write cf_fs_eof cf_fs_tell cf_fs_seek cf_fs_size
  */
-CUTE_API size_t CUTE_CALL cf_fs_size(CF_File* file);
+CF_API size_t CF_CALL cf_fs_size(CF_File* file);
 
 /**
  * @function cf_fs_read_entire_file_to_memory
@@ -619,10 +619,10 @@ CUTE_API size_t CUTE_CALL cf_fs_size(CF_File* file);
  * @brief    Reads an entire file into a buffer of memory and returns it.
  * @param    virtual_path  A path to the file.
  * @param    size          If the file exists the size of the file is stored here.
- * @remarks  Call `CUTE_FREE` on it when done. TODO_LINK_VFS_README.
+ * @remarks  Call `CF_FREE` on it when done. TODO_LINK_VFS_README.
  * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file
  */
-CUTE_API void* CUTE_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, size_t* size);
+CF_API void* CF_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, size_t* size);
 
 /**
  * @function cf_fs_read_entire_file_to_memory_and_nul_terminate
@@ -630,10 +630,10 @@ CUTE_API void* CUTE_CALL cf_fs_read_entire_file_to_memory(const char* virtual_pa
  * @brief    Reads an entire file into a buffer of memory and returns it as a nul-terminated C string.
  * @param    virtual_path  A path to the file.
  * @param    size          If the file exists the size of the file is stored here.
- * @remarks  Call `CUTE_FREE` on it when done. TODO_LINK_VFS_README.
+ * @remarks  Call `CF_FREE` on it when done. TODO_LINK_VFS_README.
  * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file
  */
-CUTE_API char* CUTE_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, size_t* size);
+CF_API char* CF_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, size_t* size);
 
 /**
  * @function cf_fs_write_entire_buffer_to_file
@@ -642,10 +642,10 @@ CUTE_API char* CUTE_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(cons
  * @param    virtual_path  A path to the file.
  * @param    data          A pointer to the data to write to the file.
  * @param    size          The size in bytes of `data`.
- * @remarks  Call `CUTE_FREE` on it when done. TODO_LINK_VFS_README.
+ * @remarks  Call `CF_FREE` on it when done. TODO_LINK_VFS_README.
  * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file
  */
-CUTE_API CF_Result CUTE_CALL cf_fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
+CF_API CF_Result CF_CALL cf_fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
 
 /**
  * @function cf_fs_get_backend_specific_error_message
@@ -654,7 +654,7 @@ CUTE_API CF_Result CUTE_CALL cf_fs_write_entire_buffer_to_file(const char* virtu
  * @remarks  Feel free to call this whenever an error occurs in any of the file system functions to try and get a detailed description
  *           on what might have happened. Often times this string is already returned to you inside a `CF_Result`.
  */
-CUTE_API const char* CUTE_CALL cf_fs_get_backend_specific_error_message();
+CF_API const char* CF_CALL cf_fs_get_backend_specific_error_message();
 
 /**
  * @function cf_fs_get_actual_path
@@ -667,7 +667,7 @@ CUTE_API const char* CUTE_CALL cf_fs_get_backend_specific_error_message();
  *           if nothing suitable was found at all. TODO_LINK_VFS_README.
  * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file
  */
-CUTE_API const char* CUTE_CALL cf_fs_get_actual_path(const char* virtual_path);
+CF_API const char* CF_CALL cf_fs_get_actual_path(const char* virtual_path);
 
 #ifdef __cplusplus
 }
@@ -676,7 +676,7 @@ CUTE_API const char* CUTE_CALL cf_fs_get_actual_path(const char* virtual_path);
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
@@ -685,11 +685,11 @@ using Stat = CF_Stat;
 using File = CF_File;
 
 using FileType = CF_FileType;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr FileType K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr FileType K = CF_##K;
 CF_FILE_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* to_string(FileType type)
+CF_INLINE const char* to_string(FileType type)
 {
 	switch (type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -699,62 +699,62 @@ CUTE_INLINE const char* to_string(FileType type)
 	}
 }
 
-CUTE_INLINE const char* fs_get_base_dir() { return cf_fs_get_base_directory(); }
-CUTE_INLINE Result fs_set_write_dir(const char* platform_dependent_directory) { return cf_fs_set_write_directory(platform_dependent_directory); }
-CUTE_INLINE Result fs_mount(const char* archive, const char* mount_point, bool append_to_path = true) { return cf_fs_mount(archive, mount_point, append_to_path); }
-CUTE_INLINE Result fs_dismount(const char* archive) { return cf_fs_dismount(archive); }
-CUTE_INLINE Result fs_stat(const char* virtual_path, Stat* stat) { return cf_fs_stat(virtual_path, stat); }
-CUTE_INLINE File* fs_create_file(const char* virtual_path) { return cf_fs_create_file(virtual_path); }
-CUTE_INLINE File* fs_open_file_for_write(const char* virtual_path) { return cf_fs_open_file_for_write(virtual_path); }
-CUTE_INLINE File* fs_open_file_for_append(const char* virtual_path) { return cf_fs_open_file_for_append(virtual_path); }
-CUTE_INLINE File* fs_open_file_for_read(const char* virtual_path) { return cf_fs_open_file_for_read(virtual_path); }
-CUTE_INLINE Result fs_close(File* file) { return cf_fs_close(file); }
-CUTE_INLINE Result fs_remove_directory(const char* virtual_path) { return cf_fs_remove_directory(virtual_path); }
-CUTE_INLINE Result fs_create_directory(const char* virtual_path) { return cf_fs_create_directory(virtual_path); }
-CUTE_INLINE const char** fs_enumerate_directory(const char* virtual_path) { return cf_fs_enumerate_directory(virtual_path); }
-CUTE_INLINE void fs_free_enumerated_directory(const char** directory_list) { cf_fs_free_enumerated_directory(directory_list); }
-CUTE_INLINE bool fs_file_exists(const char* virtual_path) { return cf_fs_file_exists(virtual_path); }
-CUTE_INLINE size_t fs_read(File* file, void* buffer, size_t size) { return cf_fs_read(file, buffer, size); }
-CUTE_INLINE size_t fs_write(File* file, const void* buffer, size_t size) { return cf_fs_write(file, buffer, size); }
-CUTE_INLINE Result fs_eof(File* file) { return cf_fs_eof(file); }
-CUTE_INLINE size_t fs_tell(File* file) { return cf_fs_tell(file); }
-CUTE_INLINE Result fs_seek(File* file, size_t position) { return cf_fs_seek(file, position); }
-CUTE_INLINE size_t fs_size(File* file) { return cf_fs_size(file); }
-CUTE_INLINE void* fs_read_entire_file_to_memory(const char* virtual_path, size_t* size = NULL) { return cf_fs_read_entire_file_to_memory(virtual_path, size); }
-CUTE_INLINE char* fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, size_t* size = NULL) { return cf_fs_read_entire_file_to_memory_and_nul_terminate(virtual_path, size); }
-CUTE_INLINE Result fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size) { return cf_fs_write_entire_buffer_to_file(virtual_path, data, size); }
-CUTE_INLINE const char* fs_get_backend_specific_error_message() { return cf_fs_get_backend_specific_error_message(); }
-CUTE_INLINE const char* fs_get_user_directory(const char* org, const char* app) { return cf_fs_get_user_directory(org, app); }
-CUTE_INLINE const char* fs_get_actual_path(const char* virtual_path) { return cf_fs_get_actual_path(virtual_path); }
+CF_INLINE const char* fs_get_base_dir() { return cf_fs_get_base_directory(); }
+CF_INLINE Result fs_set_write_dir(const char* platform_dependent_directory) { return cf_fs_set_write_directory(platform_dependent_directory); }
+CF_INLINE Result fs_mount(const char* archive, const char* mount_point, bool append_to_path = true) { return cf_fs_mount(archive, mount_point, append_to_path); }
+CF_INLINE Result fs_dismount(const char* archive) { return cf_fs_dismount(archive); }
+CF_INLINE Result fs_stat(const char* virtual_path, Stat* stat) { return cf_fs_stat(virtual_path, stat); }
+CF_INLINE File* fs_create_file(const char* virtual_path) { return cf_fs_create_file(virtual_path); }
+CF_INLINE File* fs_open_file_for_write(const char* virtual_path) { return cf_fs_open_file_for_write(virtual_path); }
+CF_INLINE File* fs_open_file_for_append(const char* virtual_path) { return cf_fs_open_file_for_append(virtual_path); }
+CF_INLINE File* fs_open_file_for_read(const char* virtual_path) { return cf_fs_open_file_for_read(virtual_path); }
+CF_INLINE Result fs_close(File* file) { return cf_fs_close(file); }
+CF_INLINE Result fs_remove_directory(const char* virtual_path) { return cf_fs_remove_directory(virtual_path); }
+CF_INLINE Result fs_create_directory(const char* virtual_path) { return cf_fs_create_directory(virtual_path); }
+CF_INLINE const char** fs_enumerate_directory(const char* virtual_path) { return cf_fs_enumerate_directory(virtual_path); }
+CF_INLINE void fs_free_enumerated_directory(const char** directory_list) { cf_fs_free_enumerated_directory(directory_list); }
+CF_INLINE bool fs_file_exists(const char* virtual_path) { return cf_fs_file_exists(virtual_path); }
+CF_INLINE size_t fs_read(File* file, void* buffer, size_t size) { return cf_fs_read(file, buffer, size); }
+CF_INLINE size_t fs_write(File* file, const void* buffer, size_t size) { return cf_fs_write(file, buffer, size); }
+CF_INLINE Result fs_eof(File* file) { return cf_fs_eof(file); }
+CF_INLINE size_t fs_tell(File* file) { return cf_fs_tell(file); }
+CF_INLINE Result fs_seek(File* file, size_t position) { return cf_fs_seek(file, position); }
+CF_INLINE size_t fs_size(File* file) { return cf_fs_size(file); }
+CF_INLINE void* fs_read_entire_file_to_memory(const char* virtual_path, size_t* size = NULL) { return cf_fs_read_entire_file_to_memory(virtual_path, size); }
+CF_INLINE char* fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, size_t* size = NULL) { return cf_fs_read_entire_file_to_memory_and_nul_terminate(virtual_path, size); }
+CF_INLINE Result fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size) { return cf_fs_write_entire_buffer_to_file(virtual_path, data, size); }
+CF_INLINE const char* fs_get_backend_specific_error_message() { return cf_fs_get_backend_specific_error_message(); }
+CF_INLINE const char* fs_get_user_directory(const char* org, const char* app) { return cf_fs_get_user_directory(org, app); }
+CF_INLINE const char* fs_get_actual_path(const char* virtual_path) { return cf_fs_get_actual_path(virtual_path); }
 
 struct Path
 {
-	CUTE_INLINE Path() { }
-	CUTE_INLINE Path(const char* s) { sset(m_path, s); }
-	CUTE_INLINE Path(const Path& p) { *this = p; }
-	CUTE_INLINE Path(Path&& p) { *this = p; }
-	CUTE_INLINE ~Path() { sfree(m_path); m_path = NULL; }
+	CF_INLINE Path() { }
+	CF_INLINE Path(const char* s) { sset(m_path, s); }
+	CF_INLINE Path(const Path& p) { *this = p; }
+	CF_INLINE Path(Path&& p) { *this = p; }
+	CF_INLINE ~Path() { sfree(m_path); m_path = NULL; }
 
-	static CUTE_INLINE Path steal_from(const char* cute_c_api_string) { CF_ACANARY(cute_c_api_string); Path p; p.m_path = (char*)cute_c_api_string; return p; }
+	static CF_INLINE Path steal_from(const char* cute_c_api_string) { CF_ACANARY(cute_c_api_string); Path p; p.m_path = (char*)cute_c_api_string; return p; }
 
-	CUTE_INLINE String filename() const { return String::steal_from(spfname(m_path)); }
-	CUTE_INLINE String filename_no_ext() const { return String::steal_from(spfname_no_ext(m_path)); }
-	CUTE_INLINE String ext() const { return String::steal_from(spext(m_path)); }
-	CUTE_INLINE bool has_ext(const char* ext) const { return spext_equ(m_path, ext); }
-	CUTE_INLINE void pop() { sppop(m_path); }
-	CUTE_INLINE void popn(int n) { sppopn(m_path, n); }
-	CUTE_INLINE Path compact(int n) const { return Path::steal_from(spcompact(m_path, n)); }
-	CUTE_INLINE Path my_directory() const { return Path::steal_from(spdir_of(m_path)); }
-	CUTE_INLINE Path my_top() const { return Path::steal_from(sptop_of(m_path)); }
-	CUTE_INLINE Path normalize() const { return Path::steal_from(spnorm(m_path)); }
+	CF_INLINE String filename() const { return String::steal_from(spfname(m_path)); }
+	CF_INLINE String filename_no_ext() const { return String::steal_from(spfname_no_ext(m_path)); }
+	CF_INLINE String ext() const { return String::steal_from(spext(m_path)); }
+	CF_INLINE bool has_ext(const char* ext) const { return spext_equ(m_path, ext); }
+	CF_INLINE void pop() { sppop(m_path); }
+	CF_INLINE void popn(int n) { sppopn(m_path, n); }
+	CF_INLINE Path compact(int n) const { return Path::steal_from(spcompact(m_path, n)); }
+	CF_INLINE Path my_directory() const { return Path::steal_from(spdir_of(m_path)); }
+	CF_INLINE Path my_top() const { return Path::steal_from(sptop_of(m_path)); }
+	CF_INLINE Path normalize() const { return Path::steal_from(spnorm(m_path)); }
 
-	CUTE_INLINE Path& add(const char* path) { if (sfirst(path) != '/' && slast(m_path) != '/') sappend(m_path, "/"); scat(m_path, path); return *this; }
-	CUTE_INLINE Path& cat(const char* path) { return add(path); }
-	CUTE_INLINE Path& operator+(const Path& rhs) { return add(rhs.m_path); }
-	CUTE_INLINE Path& operator=(const Path& p) { sset(m_path, p.m_path); return *this; }
-	CUTE_INLINE Path& operator=(Path&& p) { m_path = p.m_path; p.m_path = NULL; return *this; }
+	CF_INLINE Path& add(const char* path) { if (sfirst(path) != '/' && slast(m_path) != '/') sappend(m_path, "/"); scat(m_path, path); return *this; }
+	CF_INLINE Path& cat(const char* path) { return add(path); }
+	CF_INLINE Path& operator+(const Path& rhs) { return add(rhs.m_path); }
+	CF_INLINE Path& operator=(const Path& p) { sset(m_path, p.m_path); return *this; }
+	CF_INLINE Path& operator=(Path&& p) { m_path = p.m_path; p.m_path = NULL; return *this; }
 
-	CUTE_INLINE const char* c_str() const { return m_path; }
+	CF_INLINE const char* c_str() const { return m_path; }
 
 private:
 	char* m_path = NULL;
@@ -762,29 +762,29 @@ private:
 
 struct Directory
 {
-	CUTE_INLINE ~Directory() { if (m_dirs) fs_free_enumerated_directory(m_dirs); m_path = NULL; m_list = m_dirs = NULL; }
-	CUTE_INLINE Directory(const Directory& d) { *this = d; }
-	CUTE_INLINE Directory(Directory&& d) { *this = d; }
+	CF_INLINE ~Directory() { if (m_dirs) fs_free_enumerated_directory(m_dirs); m_path = NULL; m_list = m_dirs = NULL; }
+	CF_INLINE Directory(const Directory& d) { *this = d; }
+	CF_INLINE Directory(Directory&& d) { *this = d; }
 
-	static CUTE_INLINE Directory open(const char* virtual_path) { return Directory(virtual_path); }
-	static CUTE_INLINE Result create(const char* virtual_path) { return fs_create_directory(virtual_path); }
-	static CUTE_INLINE Result remove(const char* virtual_path) { return fs_remove_directory(virtual_path); }
+	static CF_INLINE Directory open(const char* virtual_path) { return Directory(virtual_path); }
+	static CF_INLINE Result create(const char* virtual_path) { return fs_create_directory(virtual_path); }
+	static CF_INLINE Result remove(const char* virtual_path) { return fs_remove_directory(virtual_path); }
 
-	CUTE_INLINE const char* next() { if (*m_list) { const char* result = *m_list++; return result; } else { return NULL; } }
+	CF_INLINE const char* next() { if (*m_list) { const char* result = *m_list++; return result; } else { return NULL; } }
 
-	CUTE_INLINE Directory& operator=(const Directory& d) { m_path = d.m_path; m_list = m_dirs = fs_enumerate_directory(m_path); return *this; }
-	CUTE_INLINE Directory& operator=(Directory&& d) { m_path = d.m_path; m_list = m_dirs = d.m_dirs; d.m_path = NULL; d.m_dirs = d.m_list = NULL; return *this; }
+	CF_INLINE Directory& operator=(const Directory& d) { m_path = d.m_path; m_list = m_dirs = fs_enumerate_directory(m_path); return *this; }
+	CF_INLINE Directory& operator=(Directory&& d) { m_path = d.m_path; m_list = m_dirs = d.m_dirs; d.m_path = NULL; d.m_dirs = d.m_list = NULL; return *this; }
 
 private:
 	const char* m_path;
 	const char** m_dirs;
 	const char** m_list;
 
-	CUTE_INLINE Directory(const char* virtual_path) { m_path = virtual_path; m_list = m_dirs = fs_enumerate_directory(virtual_path); }
+	CF_INLINE Directory(const char* virtual_path) { m_path = virtual_path; m_list = m_dirs = fs_enumerate_directory(virtual_path); }
 };
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_FILE_SYSTEM_H
+#endif // CF_FILE_SYSTEM_H

@@ -55,9 +55,9 @@ void cf_d3d11_create_default_render_target()
 {
 	HRESULT hr;
 	hr = IDXGISwapChain_GetBuffer(state.swap_chain, 0, IID_ID3D11Texture2D, (void**)&state.render_target);
-	CUTE_ASSERT(SUCCEEDED(hr) && state.render_target);
+	CF_ASSERT(SUCCEEDED(hr) && state.render_target);
 	hr = ID3D11Device_CreateRenderTargetView(state.device, (ID3D11Resource*)state.render_target, NULL, &state.render_target_view);
-	CUTE_ASSERT(SUCCEEDED(hr) && state.render_target_view);
+	CF_ASSERT(SUCCEEDED(hr) && state.render_target_view);
 
 	D3D11_TEXTURE2D_DESC ds_desc = { 0 };
 	ds_desc.Width = state.w;
@@ -69,14 +69,14 @@ void cf_d3d11_create_default_render_target()
 	ds_desc.Usage = D3D11_USAGE_DEFAULT;
 	ds_desc.BindFlags = D3D11_BIND_DEPTH_STENCIL;
 	hr = ID3D11Device_CreateTexture2D(state.device, &ds_desc, NULL, &state.depth_stencil_buffer);
-	CUTE_ASSERT(SUCCEEDED(hr) && state.depth_stencil_buffer);
+	CF_ASSERT(SUCCEEDED(hr) && state.depth_stencil_buffer);
 
 	D3D11_DEPTH_STENCIL_VIEW_DESC dsv_desc;
 	SecureZeroMemory(&dsv_desc, sizeof(dsv_desc));
 	dsv_desc.Format = ds_desc.Format;
 	dsv_desc.ViewDimension = state.sample_count > 1 ? D3D11_DSV_DIMENSION_TEXTURE2DMS : D3D11_DSV_DIMENSION_TEXTURE2D;
 	hr = ID3D11Device_CreateDepthStencilView(state.device, (ID3D11Resource*)state.depth_stencil_buffer, &dsv_desc, &state.depth_stencil_view);
-	CUTE_ASSERT(SUCCEEDED(hr) && state.depth_stencil_view);
+	CF_ASSERT(SUCCEEDED(hr) && state.depth_stencil_view);
 }
 
 void cf_d3d11_destroy_default_render_target()
@@ -136,7 +136,7 @@ void cf_dx11_init(void* hwnd, int w, int h, int sample_count)
 		&feature_level,             // pFeatureLevel
 		&state.device_context);     // ppImmediateContext
 	(void)hr;
-	CUTE_ASSERT(SUCCEEDED(hr) && state.swap_chain && state.device && state.device_context);
+	CF_ASSERT(SUCCEEDED(hr) && state.swap_chain && state.device && state.device_context);
 
 	// Default render target and depth-stencil-buffer.
 	cf_d3d11_create_default_render_target();
@@ -202,11 +202,11 @@ void cf_dx11_shutdown()
 	SAFE_RELEASE(ID3D11Device, state.device);
 }
 
-#else // CUTE_WINDOWS
+#else // CF_WINDOWS
 
-void cf_dx11_init(void* hwnd, int w, int h, int sample_count) { CUTE_UNUSED(hwnd); CUTE_UNUSED(w); CUTE_UNUSED(h); CUTE_UNUSED(sample_count); }
-sg_context_desc cf_dx11_get_context() { sg_context_desc desc; CUTE_MEMSET(&desc, 0, sizeof(desc)); return desc; }
-void cf_dx11_present(bool vsync) { CUTE_UNUSED(vsync); }
+void cf_dx11_init(void* hwnd, int w, int h, int sample_count) { CF_UNUSED(hwnd); CF_UNUSED(w); CF_UNUSED(h); CF_UNUSED(sample_count); }
+sg_context_desc cf_dx11_get_context() { sg_context_desc desc; CF_MEMSET(&desc, 0, sizeof(desc)); return desc; }
+void cf_dx11_present(bool vsync) { CF_UNUSED(vsync); }
 void cf_dx11_shutdown() {}
 
-#endif // CUTE_WINDOWS
+#endif // CF_WINDOWS

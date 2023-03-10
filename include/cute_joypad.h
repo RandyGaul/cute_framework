@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_JOYPAD_H
-#define CUTE_JOYPAD_H
+#ifndef CF_JOYPAD_H
+#define CF_JOYPAD_H
 
 #include "cute_defines.h"
 #include "cute_result.h"
@@ -78,10 +78,10 @@ typedef enum CF_JoypadPowerLevel
  * @param    state        The state to convert to a string.
  * @related  CF_JoypadPowerLevel cf_joypad_power_level_to_string cf_joypad_power_level CF_Joypad
  */
-CUTE_INLINE const char* cf_joypad_power_level_to_string(CF_JoypadPowerLevel level)
+CF_INLINE const char* cf_joypad_power_level_to_string(CF_JoypadPowerLevel level)
 {
 	switch (level) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_JOYPAD_POWER_LEVEL_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -145,10 +145,10 @@ typedef enum CF_JoypadButton
  * @param    state        The state to convert to a string.
  * @related  CF_JoypadButton cf_joypad_button_to_string CF_Joypad cf_joypad_button_down
  */
-CUTE_INLINE const char* cf_joypad_button_to_string(CF_JoypadButton button)
+CF_INLINE const char* cf_joypad_button_to_string(CF_JoypadButton button)
 {
 	switch (button) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_JOYPAD_BUTTON_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -194,10 +194,10 @@ typedef enum CF_JoypadAxis
  * @param    state        The state to convert to a string.
  * @related  CF_JoypadAxis cf_joypad_axis_to_string CF_Joypad cf_joypad_axis
  */
-CUTE_INLINE const char* cf_joypad_axis_to_string(CF_JoypadAxis axis)
+CF_INLINE const char* cf_joypad_axis_to_string(CF_JoypadAxis axis)
 {
 	switch (axis) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_JOYPAD_AXIS_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -214,7 +214,7 @@ CUTE_INLINE const char* cf_joypad_axis_to_string(CF_JoypadAxis axis)
  *           to ever call this function.
  * @related  CF_Joypad
  */
-CUTE_API CF_Result CUTE_CALL cf_joypad_add_mapping(const char* mapping);
+CF_API CF_Result CF_CALL cf_joypad_add_mapping(const char* mapping);
 
 /**
  * @function cf_joypad_count
@@ -222,7 +222,7 @@ CUTE_API CF_Result CUTE_CALL cf_joypad_add_mapping(const char* mapping);
  * @brief    Returns the number of joypads currently connected to the system.
  * @related  CF_Joypad cf_joypad_count cf_joypad_open cf_joypad_close
  */
-CUTE_API int CUTE_CALL cf_joypad_count();
+CF_API int CF_CALL cf_joypad_count();
 
 /**
  * @function cf_joypad_open
@@ -232,7 +232,7 @@ CUTE_API int CUTE_CALL cf_joypad_count();
  * @remarks  The first joypad connected to the system is 0, the second is 1, and so on.
  * @related  CF_Joypad cf_joypad_count cf_joypad_open cf_joypad_close
  */
-CUTE_API CF_Joypad* CUTE_CALL cf_joypad_open(int index);
+CF_API CF_Joypad* CF_CALL cf_joypad_open(int index);
 
 /**
  * @function cf_joypad_close
@@ -241,7 +241,7 @@ CUTE_API CF_Joypad* CUTE_CALL cf_joypad_open(int index);
  * @param    joypad     The joypad.
  * @related  CF_Joypad cf_joypad_count cf_joypad_open cf_joypad_close
  */
-CUTE_API void CUTE_CALL cf_joypad_close(CF_Joypad* joypad);
+CF_API void CF_CALL cf_joypad_close(CF_Joypad* joypad);
 
 /**
  * @function cf_joypad_is_connected
@@ -250,7 +250,7 @@ CUTE_API void CUTE_CALL cf_joypad_close(CF_Joypad* joypad);
  * @param    joypad     The joypad.
  * @related  CF_Joypad cf_joypad_count cf_joypad_open cf_joypad_close
  */
-CUTE_API bool CUTE_CALL cf_joypad_is_connected(CF_Joypad* joypad);
+CF_API bool CF_CALL cf_joypad_is_connected(CF_Joypad* joypad);
 
 /**
  * @function cf_joypad_power_level
@@ -259,7 +259,7 @@ CUTE_API bool CUTE_CALL cf_joypad_is_connected(CF_Joypad* joypad);
  * @param    joypad     The joypad.
  * @related  CF_JoypadPowerLevel cf_joypad_power_level_to_string cf_joypad_power_level CF_Joypad
  */
-CUTE_API CF_JoypadPowerLevel CUTE_CALL cf_joypad_power_level(CF_Joypad* joypad);
+CF_API CF_JoypadPowerLevel CF_CALL cf_joypad_power_level(CF_Joypad* joypad);
 
 /**
  * @function cf_joypad_name
@@ -268,7 +268,7 @@ CUTE_API CF_JoypadPowerLevel CUTE_CALL cf_joypad_power_level(CF_Joypad* joypad);
  * @param    joypad     The joypad.
  * @related  CF_Joypad cf_joypad_count cf_joypad_open cf_joypad_close
  */
-CUTE_API const char* CUTE_CALL cf_joypad_name(CF_Joypad* joypad);
+CF_API const char* CF_CALL cf_joypad_name(CF_Joypad* joypad);
 
 /**
  * @function cf_joypad_button_down
@@ -278,7 +278,7 @@ CUTE_API const char* CUTE_CALL cf_joypad_name(CF_Joypad* joypad);
  * @param    button     The button.
  * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
-CUTE_API bool CUTE_CALL cf_joypad_button_down(CF_Joypad* joypad, CF_JoypadButton button);
+CF_API bool CF_CALL cf_joypad_button_down(CF_Joypad* joypad, CF_JoypadButton button);
 
 /**
  * @function cf_joypad_button_just_pressed
@@ -288,7 +288,7 @@ CUTE_API bool CUTE_CALL cf_joypad_button_down(CF_Joypad* joypad, CF_JoypadButton
  * @param    button     The button.
  * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
-CUTE_API bool CUTE_CALL cf_joypad_button_just_pressed(CF_Joypad* joypad, CF_JoypadButton button);
+CF_API bool CF_CALL cf_joypad_button_just_pressed(CF_Joypad* joypad, CF_JoypadButton button);
 
 /**
  * @function cf_joypad_button_just_released
@@ -298,7 +298,7 @@ CUTE_API bool CUTE_CALL cf_joypad_button_just_pressed(CF_Joypad* joypad, CF_Joyp
  * @param    button     The button.
  * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
-CUTE_API bool CUTE_CALL cf_joypad_button_just_released(CF_Joypad* joypad, CF_JoypadButton button);
+CF_API bool CF_CALL cf_joypad_button_just_released(CF_Joypad* joypad, CF_JoypadButton button);
 
 /**
  * @function cf_joypad_axis
@@ -308,7 +308,7 @@ CUTE_API bool CUTE_CALL cf_joypad_button_just_released(CF_Joypad* joypad, CF_Joy
  * @param    axis       The axis.
  * @related  CF_Joypad CF_JoypadButton cf_joypad_button_down cf_joypad_button_just_pressed cf_joypad_button_just_released cf_joypad_axis
  */
-CUTE_API int16_t CUTE_CALL cf_joypad_axis(CF_Joypad* joypad, CF_JoypadAxis axis);
+CF_API int16_t CF_CALL cf_joypad_axis(CF_Joypad* joypad, CF_JoypadAxis axis);
 
 #ifdef __cplusplus
 }
@@ -317,7 +317,7 @@ CUTE_API int16_t CUTE_CALL cf_joypad_axis(CF_Joypad* joypad, CF_JoypadAxis axis)
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
@@ -325,11 +325,11 @@ namespace Cute
 using Joypad = CF_Joypad;
 
 using JoypadPowerLevel = CF_JoypadPowerLevel;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr JoypadPowerLevel K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr JoypadPowerLevel K = CF_##K;
 CF_JOYPAD_POWER_LEVEL_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* to_string(JoypadPowerLevel level)
+CF_INLINE const char* to_string(JoypadPowerLevel level)
 {
 	switch (level) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -340,11 +340,11 @@ CUTE_INLINE const char* to_string(JoypadPowerLevel level)
 }
 
 using JoypadButton = CF_JoypadButton;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr JoypadButton K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr JoypadButton K = CF_##K;
 CF_JOYPAD_BUTTON_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* to_string(JoypadButton button)
+CF_INLINE const char* to_string(JoypadButton button)
 {
 	switch (button) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -355,11 +355,11 @@ CUTE_INLINE const char* to_string(JoypadButton button)
 }
 
 using JoypadAxis = CF_JoypadAxis;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr JoypadAxis K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr JoypadAxis K = CF_##K;
 CF_JOYPAD_AXIS_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* to_string(JoypadAxis axis)
+CF_INLINE const char* to_string(JoypadAxis axis)
 {
 	switch (axis) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -369,20 +369,20 @@ CUTE_INLINE const char* to_string(JoypadAxis axis)
 	}
 }
 
-CUTE_INLINE CF_Result joypad_add_mapping(const char* mapping) { return cf_joypad_add_mapping(mapping); }
-CUTE_INLINE int joypad_count() { return cf_joypad_count(); }
-CUTE_INLINE CF_Joypad* joypad_open(int index) { return cf_joypad_open(index); }
-CUTE_INLINE void joypad_close(Joypad* joypad) { cf_joypad_close(joypad); }
-CUTE_INLINE bool joypad_is_connected(Joypad* joypad) { return cf_joypad_is_connected(joypad); }
-CUTE_INLINE JoypadPowerLevel joypad_power_level(Joypad* joypad) { return cf_joypad_power_level(joypad); }
-CUTE_INLINE const char* joypad_name(Joypad* joypad) { return cf_joypad_name(joypad); }
-CUTE_INLINE bool joypad_button_down(Joypad* joypad, JoypadButton button) { return cf_joypad_button_down(joypad, button); }
-CUTE_INLINE bool joypad_button_was_pressed(Joypad* joypad, JoypadButton button) { return cf_joypad_button_just_pressed(joypad, button); }
-CUTE_INLINE bool joypad_button_was_released(Joypad* joypad, JoypadButton button) { return cf_joypad_button_just_released(joypad, button); }
-CUTE_INLINE int16_t joypad_axis(Joypad* joypad, JoypadAxis axis) { return cf_joypad_axis(joypad, axis); }
+CF_INLINE CF_Result joypad_add_mapping(const char* mapping) { return cf_joypad_add_mapping(mapping); }
+CF_INLINE int joypad_count() { return cf_joypad_count(); }
+CF_INLINE CF_Joypad* joypad_open(int index) { return cf_joypad_open(index); }
+CF_INLINE void joypad_close(Joypad* joypad) { cf_joypad_close(joypad); }
+CF_INLINE bool joypad_is_connected(Joypad* joypad) { return cf_joypad_is_connected(joypad); }
+CF_INLINE JoypadPowerLevel joypad_power_level(Joypad* joypad) { return cf_joypad_power_level(joypad); }
+CF_INLINE const char* joypad_name(Joypad* joypad) { return cf_joypad_name(joypad); }
+CF_INLINE bool joypad_button_down(Joypad* joypad, JoypadButton button) { return cf_joypad_button_down(joypad, button); }
+CF_INLINE bool joypad_button_was_pressed(Joypad* joypad, JoypadButton button) { return cf_joypad_button_just_pressed(joypad, button); }
+CF_INLINE bool joypad_button_was_released(Joypad* joypad, JoypadButton button) { return cf_joypad_button_just_released(joypad, button); }
+CF_INLINE int16_t joypad_axis(Joypad* joypad, JoypadAxis axis) { return cf_joypad_axis(joypad, axis); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_JOYPAD_H
+#endif // CF_JOYPAD_H

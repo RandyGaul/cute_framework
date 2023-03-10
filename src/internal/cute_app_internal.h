@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_APP_INTERNAL_H
-#define CUTE_APP_INTERNAL_H
+#ifndef CF_APP_INTERNAL_H
+#define CF_APP_INTERNAL_H
 
 #include <cute_app.h>
 #include <cute_audio.h>
@@ -39,7 +39,7 @@
 
 #include <sokol/sokol_gfx_imgui.h>
 
-#define CUTE_RETURN_IF_ERROR(x) do { CF_Result err = (x); if (cf_is_error(err)) return err; } while (0)
+#define CF_RETURN_IF_ERROR(x) do { CF_Result err = (x); if (cf_is_error(err)) return err; } while (0)
 
 struct SDL_Window;
 struct cs_context_t;
@@ -189,7 +189,7 @@ struct CF_App
 	cf_window_state_t window_state_prev;
 	bool using_imgui = false;
 	sg_imgui_t sg_imgui;
-	uint64_t default_image_id = CUTE_PNG_ID_RANGE_LO;
+	uint64_t default_image_id = CF_PNG_ID_RANGE_LO;
 	bool vsync = false;
 
 	// Input stuff.
@@ -229,11 +229,11 @@ struct CF_App
 	Cute::Array<CF_Entity>* load_id_table = NULL;
 
 	// Font stuff.
-	uint64_t font_image_id_gen = CUTE_FONT_ID_RANGE_LO;
+	uint64_t font_image_id_gen = CF_FONT_ID_RANGE_LO;
 	Cute::Map<const char*, CF_Font*> fonts;
 	Cute::Map<uint64_t, CF_Pixel*> font_pixels;
 	Cute::Map<const char*, CF_TextEffectState> text_effect_states;
 	Cute::Map<const char*, CF_TextEffectFn*> text_effect_fns;
 };
 
-#endif // CUTE_APP_INTERNAL_H
+#endif // CF_APP_INTERNAL_H

@@ -19,26 +19,26 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#define CUTE_C2_IMPLEMENTATION
+#define CF_C2_IMPLEMENTATION
 #include <cute/cute_c2.h>
 
 #include <cute_math.h>
 
-CUTE_STATIC_ASSERT(CF_POLY_MAX_VERTS == C2_MAX_POLYGON_VERTS, "Must be equal.");
+CF_STATIC_ASSERT(CF_POLY_MAX_VERTS == C2_MAX_POLYGON_VERTS, "Must be equal.");
 
-CUTE_STATIC_ASSERT(sizeof(CF_V2) == sizeof(c2v), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_SinCos) == sizeof(c2r), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Transform) == sizeof(c2x), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_M2x2) == sizeof(c2m), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Halfspace) == sizeof(c2h), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Ray) == sizeof(c2Ray), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Raycast) == sizeof(c2Raycast), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Manifold) == sizeof(c2Manifold), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_GjkCache) == sizeof(c2GJKCache), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Circle) == sizeof(c2Circle), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Aabb) == sizeof(c2AABB), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Capsule) == sizeof(c2Capsule), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Poly) == sizeof(c2Poly), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_V2) == sizeof(c2v), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_SinCos) == sizeof(c2r), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Transform) == sizeof(c2x), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_M2x2) == sizeof(c2m), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Halfspace) == sizeof(c2h), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Ray) == sizeof(c2Ray), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Raycast) == sizeof(c2Raycast), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Manifold) == sizeof(c2Manifold), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_GjkCache) == sizeof(c2GJKCache), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Circle) == sizeof(c2Circle), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Aabb) == sizeof(c2AABB), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Capsule) == sizeof(c2Capsule), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Poly) == sizeof(c2Poly), "Must be equal.");
 
 bool cf_circle_to_circle(CF_Circle A, CF_Circle B)
 {

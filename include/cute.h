@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_H
-#define CUTE_H
+#ifndef CF_H
+#define CF_H
 
 #include "cute_aabb_tree.h"
 #include "cute_alloc.h"
@@ -58,4 +58,4 @@
 
 #include <SDL_main.h>
 
-#endif // CUTE_H
+#endif // CF_H

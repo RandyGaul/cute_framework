@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_HASHTABLE_H
-#define CUTE_HASHTABLE_H
+#ifndef CF_HASHTABLE_H
+#define CF_HASHTABLE_H
 
 #include "cute_defines.h"
 #include "cute_c_runtime.h"
@@ -29,7 +29,7 @@
 //--------------------------------------------------------------------------------------------------
 // C API
 
-#ifndef CUTE_NO_SHORTHAND_API
+#ifndef CF_NO_SHORTHAND_API
 /**
  * @function htbl
  * @category hash
@@ -75,8 +75,8 @@
  *     htbl int* table = NULL;
  *     hset(table, 0, 5);
  *     hset(table, 1, 12);
- *     CUTE_ASSERT(hget(table, 0) == 5);
- *     CUTE_ASSERT(hget(table, 1) == 12);
+ *     CF_ASSERT(hget(table, 0) == 5);
+ *     CF_ASSERT(hget(table, 1) == 12);
  *     hfree(table);
  * @return   Returns a pointer to the item set into the table.
  * @remarks  If the item does not exist in the table it is added. The pointer returned is not stable. Internally the table can be resized,
@@ -97,8 +97,8 @@
  *     htbl int* table = NULL;
  *     hadd(table, 0, 5);
  *     hadd(table, 1, 12);
- *     CUTE_ASSERT(hget(table, 0) == 5);
- *     CUTE_ASSERT(hget(table, 1) == 12);
+ *     CF_ASSERT(hget(table, 0) == 5);
+ *     CF_ASSERT(hget(table, 1) == 12);
  *     hfree(table);
  * @return   Returns a pointer to the item set into the table.
  * @remarks  This function works the same as `hset`. If the item already exists in the table, it's simply updated to a new value.
@@ -118,8 +118,8 @@
  *     htbl int* table = NULL;
  *     hadd(table, 0, 5);
  *     hadd(table, 1, 12);
- *     CUTE_ASSERT(hget(table, 0) == 5);
- *     CUTE_ASSERT(hget(table, 1) == 12);
+ *     CF_ASSERT(hget(table, 0) == 5);
+ *     CF_ASSERT(hget(table, 1) == 12);
  *     hfree(table);
  * @return   Returns a pointer to the item set into the table.
  * @remarks  Items are returned by value, not pointer. If the item doesn't exist a zero'd out item is instead returned. If you want to get a pointer
@@ -139,8 +139,8 @@
  *     htbl int* table = NULL;
  *     hadd(table, 0, 5);
  *     hadd(table, 1, 12);
- *     CUTE_ASSERT(hfind(table, 0) == 5);
- *     CUTE_ASSERT(hfind(table, 1) == 12);
+ *     CF_ASSERT(hfind(table, 0) == 5);
+ *     CF_ASSERT(hfind(table, 1) == 12);
  *     hfree(table);
  * @return   Returns a pointer to the item set into the table.
  * @remarks  Items are returned by value, not pointer. If the item doesn't exist a zero'd out item is instead returned. If you want to get a pointer
@@ -160,9 +160,9 @@
  *     htbl CF_V2* table = NULL;
  *     hadd(table, 10, cf_v2(-1, 1));
  *     CF_V2* v = hget_ptr(table, 10);
- *     CUTE_ASSERT(v);
- *     CUTE_ASSERT(v->x == -1);
- *     CUTE_ASSERT(v->y == 1);
+ *     CF_ASSERT(v);
+ *     CF_ASSERT(v->x == -1);
+ *     CF_ASSERT(v->y == 1);
  *     hfree(table);
  * @return   Returns a pointer to an item. Returns `NULL` if not found.
  * @remarks  If you want to fetch an item by value, you can use `hget` or `hfind`. Does the same thing as `hfind_ptr`.
@@ -180,9 +180,9 @@
  *     htbl CF_V2* table = NULL;
  *     hadd(table, 10, cf_v2(-1, 1));
  *     CF_V2* v = hfind_ptr(table, 10);
- *     CUTE_ASSERT(v);
- *     CUTE_ASSERT(v->x == -1);
- *     CUTE_ASSERT(v->y == 1);
+ *     CF_ASSERT(v);
+ *     CF_ASSERT(v->x == -1);
+ *     CF_ASSERT(v->y == 1);
  *     hfree(table);
  * @return   Returns a pointer to an item. Returns `NULL` if not found.
  * @remarks  If you want to fetch an item by value, you can use `hget` or `hfind`. Does the same thing as `hget_ptr`.
@@ -199,7 +199,7 @@
  * @example > Checks if an item exists in the table.
  *     htbl v2* table = NULL;
  *     hadd(table, 10, V2(-1, 1));
- *     CUTE_ASSERT(hhas(table, 10));
+ *     CF_ASSERT(hhas(table, 10));
  *     hfree(table);
  * @return   Returns true if the item was found, false otherwise.
  * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
@@ -319,7 +319,7 @@
  * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hfree(h) cf_hashtable_free(h)
-#endif // CUTE_NO_SHORTHAND_API
+#endif // CF_NO_SHORTHAND_API
 
 //--------------------------------------------------------------------------------------------------
 // Longform C API.
@@ -346,7 +346,7 @@
 
 #define CF_HHDR(h) (((CF_Hhdr*)(h - 1) - 1)) // Converts pointer from the user-array to table header.
 #define CF_HCOOKIE 0xE6F7E359 // Magic number used for sanity/type checks.
-#define CF_HCANARY(h) (h ? CUTE_ASSERT(CF_HHDR(h)->cookie == CF_HCOOKIE) : (void)0) // Sanity/type check.
+#define CF_HCANARY(h) (h ? CF_ASSERT(CF_HHDR(h)->cookie == CF_HCOOKIE) : (void)0) // Sanity/type check.
 
 #ifdef __cplusplus
 extern "C" {
@@ -377,21 +377,21 @@ typedef struct CF_Hhdr
 	uint32_t cookie;
 } CF_Hhdr;
 
-CUTE_API void* CUTE_CALL cf_hashtable_make_impl(int key_size, int item_size, int capacity);
-CUTE_API void CUTE_CALL cf_hashtable_free_impl(CF_Hhdr* table);
-CUTE_API void* CUTE_CALL cf_hashtable_insert_impl(CF_Hhdr* table, uint64_t key);
-CUTE_API void* CUTE_CALL cf_hashtable_insert_impl2(CF_Hhdr* table, const void* key, const void* item);
-CUTE_API void* CUTE_CALL cf_hashtable_insert_impl3(CF_Hhdr* table, const void* key);
-CUTE_API void CUTE_CALL cf_hashtable_remove_impl(CF_Hhdr* table, uint64_t key);
-CUTE_API void CUTE_CALL cf_hashtable_remove_impl2(CF_Hhdr* table, const void* key);
-CUTE_API bool CUTE_CALL cf_hashtable_has_impl(CF_Hhdr* table, uint64_t key);
-CUTE_API int CUTE_CALL cf_hashtable_find_impl(const CF_Hhdr* table, uint64_t key);
-CUTE_API int CUTE_CALL cf_hashtable_find_impl2(const CF_Hhdr* table, const void* key);
-CUTE_API int CUTE_CALL cf_hashtable_count_impl(const CF_Hhdr* table);
-CUTE_API void* CUTE_CALL cf_hashtable_items_impl(const CF_Hhdr* table);
-CUTE_API void* CUTE_CALL cf_hashtable_keys_impl(const CF_Hhdr* table);
-CUTE_API void CUTE_CALL cf_hashtable_clear_impl(CF_Hhdr* table);
-CUTE_API void CUTE_CALL cf_hashtable_swap_impl(CF_Hhdr* table, int index_a, int index_b);
+CF_API void* CF_CALL cf_hashtable_make_impl(int key_size, int item_size, int capacity);
+CF_API void CF_CALL cf_hashtable_free_impl(CF_Hhdr* table);
+CF_API void* CF_CALL cf_hashtable_insert_impl(CF_Hhdr* table, uint64_t key);
+CF_API void* CF_CALL cf_hashtable_insert_impl2(CF_Hhdr* table, const void* key, const void* item);
+CF_API void* CF_CALL cf_hashtable_insert_impl3(CF_Hhdr* table, const void* key);
+CF_API void CF_CALL cf_hashtable_remove_impl(CF_Hhdr* table, uint64_t key);
+CF_API void CF_CALL cf_hashtable_remove_impl2(CF_Hhdr* table, const void* key);
+CF_API bool CF_CALL cf_hashtable_has_impl(CF_Hhdr* table, uint64_t key);
+CF_API int CF_CALL cf_hashtable_find_impl(const CF_Hhdr* table, uint64_t key);
+CF_API int CF_CALL cf_hashtable_find_impl2(const CF_Hhdr* table, const void* key);
+CF_API int CF_CALL cf_hashtable_count_impl(const CF_Hhdr* table);
+CF_API void* CF_CALL cf_hashtable_items_impl(const CF_Hhdr* table);
+CF_API void* CF_CALL cf_hashtable_keys_impl(const CF_Hhdr* table);
+CF_API void CF_CALL cf_hashtable_clear_impl(CF_Hhdr* table);
+CF_API void CF_CALL cf_hashtable_swap_impl(CF_Hhdr* table, int index_a, int index_b);
 
 #ifdef __cplusplus
 }
@@ -400,7 +400,7 @@ CUTE_API void CUTE_CALL cf_hashtable_swap_impl(CF_Hhdr* table, int index_a, int 
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
@@ -536,7 +536,7 @@ T* Map<K, T>::insert(const K& key)
 	int index = m_table->return_index;
 	if (index < 0) return NULL;
 	T* result = items() + index;
-	CUTE_PLACEMENT_NEW(result) T();
+	CF_PLACEMENT_NEW(result) T();
 	return result;
 }
 
@@ -547,7 +547,7 @@ T* Map<K, T>::insert(const K& key, const T& val)
 	int index = m_table->return_index;
 	if (index < 0) return NULL;
 	T* result = items() + index;
-	CUTE_PLACEMENT_NEW(result) T(val);
+	CF_PLACEMENT_NEW(result) T(val);
 	return result;
 }
 
@@ -558,7 +558,7 @@ T* Map<K, T>::insert(const K& key, T&& val)
 	int index = m_table->return_index;
 	if (index < 0) return NULL;
 	T* result = items() + index;
-	CUTE_PLACEMENT_NEW(result) T(move(val));
+	CF_PLACEMENT_NEW(result) T(move(val));
 	return result;
 }
 
@@ -645,6 +645,6 @@ Map<K, T>& Map<K, T>::operator=(Map<K, T>&& rhs)
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_HASHTABLE_H
+#endif // CF_HASHTABLE_H

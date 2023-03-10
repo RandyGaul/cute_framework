@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_ARRAY_H
-#define CUTE_ARRAY_H
+#ifndef CF_ARRAY_H
+#define CF_ARRAY_H
 
 #include "cute_defines.h"
 #include "cute_c_runtime.h"
@@ -29,7 +29,7 @@
 //--------------------------------------------------------------------------------------------------
 // C API
 
-#ifndef CUTE_NO_SHORTHAND_API
+#ifndef CF_NO_SHORTHAND_API
 /**
  * @function dyna
  * @category array
@@ -37,9 +37,9 @@
  * @example > Creating a dynamic array, pushing some elements into the array, and freeing it up afterwards.
  *     dyna int* a = NULL;
  *     apush(a, 5);
- *     CUTE_ASSERT(alen(a) == 1);
+ *     CF_ASSERT(alen(a) == 1);
  *     alen(a)--;
- *     CUTE_ASSERT(alen(a) == 0);
+ *     CF_ASSERT(alen(a) == 0);
  *     afree(a);
  * @remarks  This is an optional and _completely_ empty macro. It's only purpose is to provide a bit of visual indication a type is a
  *           dynamic array. One downside of the C-macro API is the opaque nature of the pointer type. Since the macros use polymorphism
@@ -59,9 +59,9 @@
  * @example > Creating an array, adding an element, then decrementing the count to zero before freeing the array.
  *     dyna int* a = NULL;
  *     apush(a, 5);
- *     CUTE_ASSERT(alen(a) == 1);
+ *     CF_ASSERT(alen(a) == 1);
  *     alen(a)--;
- *     CUTE_ASSERT(alen(a) == 0);
+ *     CF_ASSERT(alen(a) == 0);
  *     afree(a);
  * @remarks  `a` must not by `NULL`. This function returns a proper l-value, so you can assign to it, i.e. increment/decrement can be quite useful.
  * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash astatic afree
@@ -76,7 +76,7 @@
  * @example > Creating an array, getting the size of the array, then freeing it up afterwards.
  *     dyna int* a = NULL;
  *     apush(a, 5);
- *     CUTE_ASSERT(asize(a) == 1);
+ *     CF_ASSERT(asize(a) == 1);
  *     afree(a);
  * @remarks  `a` can be `NULL`.
  * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash astatic afree
@@ -91,7 +91,7 @@
  * @example > Creating an array, getting the size of the array, then freeing it up afterwards.
  *     dyna int* a = NULL;
  *     apush(a, 5);
- *     CUTE_ASSERT(acount(a) == 1);
+ *     CF_ASSERT(acount(a) == 1);
  *     afree(a);
  * @remarks  `a` can be `NULL`.
  * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash astatic afree
@@ -134,9 +134,9 @@
  *     dyna int* a = NULL;
  *     apush(a, 5);
  *     apush(a, 13);
- *     CUTE_ASSERT(a[0] == 5);
- *     CUTE_ASSERT(a[1] == 13);
- *     CUTE_ASSERT(asize(a) == 2);
+ *     CF_ASSERT(a[0] == 5);
+ *     CF_ASSERT(a[1] == 13);
+ *     CF_ASSERT(asize(a) == 2);
  *     afree(a);
  * @remarks  `a` is automatically re-assigned to a new pointer if the array was internally regrown. If `a` is `NULL` a new
  *           dynamic array is allocated on-the-spot for you, and assigned back to `a`.
@@ -236,7 +236,7 @@
  * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash astatic afree
  */
 #define afree(a) cf_array_free(a)
-#endif // CUTE_NO_SHORTHAND_API
+#endif // CF_NO_SHORTHAND_API
 
 //--------------------------------------------------------------------------------------------------
 // Longform C API.
@@ -255,7 +255,7 @@
 #define cf_array_reverse(a) (a ? cf_arev(a, sizeof(*a)) : NULL)
 #define cf_array_hash(a) cf_fnv1a(a, cf_array_size(a))
 #define cf_array_static(a, buffer, buffer_size) (*(void**)&(a) = cf_astatic(buffer, buffer_size, sizeof(*a)))
-#define cf_array_free(a) do { CF_ACANARY(a); if (a && !CF_AHDR(a)->is_static) CUTE_FREE(CF_AHDR(a)); a = NULL; } while (0)
+#define cf_array_free(a) do { CF_ACANARY(a); if (a && !CF_AHDR(a)->is_static) CF_FREE(CF_AHDR(a)); a = NULL; } while (0)
 
 //--------------------------------------------------------------------------------------------------
 // Hidden API - Not intended for direct use.
@@ -267,7 +267,7 @@
 // to one of the array/string macros. You must not pass string literals to these functions for certain input
 // arguments, and instead, build a dynamic array/string using the C apis (e.g. `apush` or `sset`). This macro
 // also helps detect heap/stack corruption such as buffer underruns.
-#define CF_ACANARY(a) ((a) ? CUTE_ASSERT(CF_AHDR(a)->cookie == CF_ACOOKIE) : (void)0)
+#define CF_ACANARY(a) ((a) ? CF_ASSERT(CF_AHDR(a)->cookie == CF_ACOOKIE) : (void)0)
 
 // *Hidden* array header.
 typedef struct CF_Ahdr
@@ -283,10 +283,10 @@ typedef struct CF_Ahdr
 extern "C" {
 #endif // __cplusplus
 
-CUTE_API void* CUTE_CALL cf_agrow(const void* a, int new_size, size_t element_size);
-CUTE_API void* CUTE_CALL cf_astatic(const void* a, int capacity, size_t element_size);
-CUTE_API void* CUTE_CALL cf_aset(const void* a, const void* b, size_t element_size);
-CUTE_API void* CUTE_CALL cf_arev(const void* a, size_t element_size);
+CF_API void* CF_CALL cf_agrow(const void* a, int new_size, size_t element_size);
+CF_API void* CF_CALL cf_astatic(const void* a, int capacity, size_t element_size);
+CF_API void* CF_CALL cf_aset(const void* a, const void* b, size_t element_size);
+CF_API void* CF_CALL cf_arev(const void* a, size_t element_size);
 
 #ifdef __cplusplus
 }
@@ -295,7 +295,7 @@ CUTE_API void* CUTE_CALL cf_arev(const void* a, size_t element_size);
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 /**
  * Implements a basic growable array data structure.
@@ -374,11 +374,11 @@ private:
 		while (m_capacity < num_elements) {                    \
 			m_capacity *= 2;                                   \
 		}                                                      \
-		T* new_ptr = (T*)CUTE_ALLOC(sizeof(T) * m_capacity);   \
+		T* new_ptr = (T*)CF_ALLOC(sizeof(T) * m_capacity);   \
 		for (int i = 0; i < m_count; ++i) {                    \
-			CUTE_PLACEMENT_NEW(new_ptr + i) T(move(m_ptr[i])); \
+			CF_PLACEMENT_NEW(new_ptr + i) T(move(m_ptr[i])); \
 		}                                                      \
-		CUTE_FREE(m_ptr);                                      \
+		CF_FREE(m_ptr);                                      \
 		m_ptr = new_ptr;                                       \
 	}                                                          \
 
@@ -395,7 +395,7 @@ Array<T>::Array(CF_InitializerList<T> list)
 	T* ptr = m_ptr;
 	CF_ARRAY_ENSURE_CAPACITY(count);
 	for (const T* i = list.begin(); i < list.end(); ++i) {
-		CUTE_PLACEMENT_NEW(ptr++) T(*i);
+		CF_PLACEMENT_NEW(ptr++) T(*i);
 	}
 	m_count = count;
 }
@@ -407,7 +407,7 @@ Array<T>::Array(const Array<T>& other)
 	T* other_ptr = other.m_ptr;
 	CF_ARRAY_ENSURE_CAPACITY(count);
 	for (int i = 0; i < count; ++i) {
-		CUTE_PLACEMENT_NEW(m_ptr + i) T(other_ptr[i]);
+		CF_PLACEMENT_NEW(m_ptr + i) T(other_ptr[i]);
 	}
 	m_count = count;
 }
@@ -418,7 +418,7 @@ Array<T>::Array(Array<T>&& other)
 	m_capacity = other.m_capacity;
 	m_count = other.m_count;
 	m_ptr = other.m_ptr;
-	CUTE_MEMSET(&other, 0, sizeof(other));
+	CF_MEMSET(&other, 0, sizeof(other));
 }
 
 template <typename T>
@@ -433,7 +433,7 @@ Array<T>::~Array()
 	for (int i = 0; i < m_count; ++i) {
 		m_ptr[i].~T();
 	}
-	CUTE_FREE(m_ptr);
+	CF_FREE(m_ptr);
 }
 
 template <typename T>
@@ -442,7 +442,7 @@ Array<T>& Array<T>::steal_from(Array<T>* steal_from_me)
 	m_capacity = steal_from_me->m_capacity;
 	m_count = steal_from_me->m_count;
 	m_ptr = steal_from_me->m_ptr;
-	CUTE_MEMSET(steal_from_me, 0, sizeof(*steal_from_me));
+	CF_MEMSET(steal_from_me, 0, sizeof(*steal_from_me));
 	return *this;
 }
 
@@ -452,7 +452,7 @@ Array<T>& Array<T>::steal_from(Array<T>& steal_from_me)
 	m_capacity = steal_from_me.m_capacity;
 	m_count = steal_from_me.m_count;
 	m_ptr = steal_from_me.m_ptr;
-	CUTE_MEMSET(&steal_from_me, 0, sizeof(steal_from_me));
+	CF_MEMSET(&steal_from_me, 0, sizeof(steal_from_me));
 	return *this;
 }
 
@@ -460,27 +460,27 @@ template <typename T>
 T& Array<T>::add()
 {
 	CF_ARRAY_ENSURE_CAPACITY(m_count + 1);
-	return *CUTE_PLACEMENT_NEW(m_ptr + m_count++) T();
+	return *CF_PLACEMENT_NEW(m_ptr + m_count++) T();
 }
 
 template <typename T>
 T& Array<T>::add(const T& item)
 {
 	CF_ARRAY_ENSURE_CAPACITY(m_count + 1);
-	return *CUTE_PLACEMENT_NEW(m_ptr + m_count++) T(item);
+	return *CF_PLACEMENT_NEW(m_ptr + m_count++) T(item);
 }
 
 template <typename T>
 T& Array<T>::add(T&& item)
 {
 	CF_ARRAY_ENSURE_CAPACITY(m_count + 1);
-	return *CUTE_PLACEMENT_NEW(m_ptr + m_count++) T(move(item));
+	return *CF_PLACEMENT_NEW(m_ptr + m_count++) T(move(item));
 }
 
 template <typename T>
 T Array<T>::pop()
 {
-	CUTE_ASSERT(m_count > 0);
+	CF_ASSERT(m_count > 0);
 	T val = move(m_ptr[m_count - 1]);
 	m_ptr[m_count - 1].~T();
 	m_count--;
@@ -508,7 +508,7 @@ void Array<T>::set_count(int count)
 	CF_ARRAY_ENSURE_CAPACITY(count);
 	if (count > m_count) {
 		for (int i = count; ++i; i < m_count) {
-			CUTE_PLACEMENT_NEW(m_ptr + i) T();
+			CF_PLACEMENT_NEW(m_ptr + i) T();
 		}
 	} else {
 		for (int i = m_count; i < count; ++i) {
@@ -530,7 +530,7 @@ void Array<T>::ensure_count(int count)
 	CF_ARRAY_ENSURE_CAPACITY(count);
 	if (m_count < count) {
 		for (int i = m_count; i < count; ++i) {
-			CUTE_PLACEMENT_NEW(m_ptr + i) T();
+			CF_PLACEMENT_NEW(m_ptr + i) T();
 		}
 	}
 	m_count = count;
@@ -602,14 +602,14 @@ const T* Array<T>::end() const
 template <typename T>
 T& Array<T>::operator[](int index)
 {
-	CUTE_ASSERT(index >= 0 && index < m_count);
+	CF_ASSERT(index >= 0 && index < m_count);
 	return m_ptr[index];
 }
 
 template <typename T>
 const T& Array<T>::operator[](int index) const
 {
-	CUTE_ASSERT(index >= 0 && index < m_count);
+	CF_ASSERT(index >= 0 && index < m_count);
 	return m_ptr[index];
 }
 
@@ -628,14 +628,14 @@ const T* Array<T>::data() const
 template <typename T>
 T* Array<T>::operator+(int index)
 {
-	CUTE_ASSERT(index >= 0 && index < m_count);
+	CF_ASSERT(index >= 0 && index < m_count);
 	return m_ptr + index;
 }
 
 template <typename T>
 const T* Array<T>::operator+(int index) const
 {
-	CUTE_ASSERT(index >= 0 && index < m_count);
+	CF_ASSERT(index >= 0 && index < m_count);
 	return m_ptr + index;
 }
 
@@ -645,7 +645,7 @@ Array<T>& Array<T>::operator=(const Array<T>& rhs)
 	CF_ARRAY_CLEAR();
 	CF_ARRAY_ENSURE_CAPACITY(rhs.m_count);
 	for (int i = 0; i < rhs.m_count; i++) {
-		CUTE_PLACEMENT_NEW(m_ptr + i) T(rhs.m_ptr[i]);
+		CF_PLACEMENT_NEW(m_ptr + i) T(rhs.m_ptr[i]);
 	}
 	m_count = rhs.m_count;
 	return *this;
@@ -658,7 +658,7 @@ Array<T>& Array<T>::operator=(Array<T>&& rhs)
 	m_capacity = rhs.m_capacity;
 	m_count = rhs.m_count;
 	m_ptr = rhs.m_ptr;
-	CUTE_MEMSET(&rhs, 0, sizeof(rhs));
+	CF_MEMSET(&rhs, 0, sizeof(rhs));
 	return *this;
 }
 
@@ -676,6 +676,6 @@ const T& Array<T>::last() const
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_ARRAY_H
+#endif // CF_ARRAY_H

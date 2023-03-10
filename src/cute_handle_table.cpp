@@ -69,8 +69,8 @@ static void s_add_elements_to_freelist(CF_HandleTable* table, int first_index, i
 
 CF_HandleTable* cf_make_handle_allocator(int initial_capacity)
 {
-	CF_HandleTable* table = (CF_HandleTable*)CUTE_ALLOC(sizeof(CF_HandleTable));
-	CUTE_PLACEMENT_NEW(table) CF_HandleTable();
+	CF_HandleTable* table = (CF_HandleTable*)CF_ALLOC(sizeof(CF_HandleTable));
+	CF_PLACEMENT_NEW(table) CF_HandleTable();
 
 	if (initial_capacity) {
 		table->m_handles.ensure_capacity(initial_capacity);
@@ -85,7 +85,7 @@ void cf_destroy_handle_allocator(CF_HandleTable* table)
 {
 	if (!table) return;
 	table->~CF_HandleTable();
-	CUTE_FREE(table);
+	CF_FREE(table);
 }
 
 CF_Handle cf_handle_allocator_alloc(CF_HandleTable* table, uint32_t index, uint16_t type)
@@ -112,7 +112,7 @@ CF_Handle cf_handle_allocator_alloc(CF_HandleTable* table, uint32_t index, uint1
 	return handle;
 }
 
-static CUTE_INLINE uint32_t s_table_index(CF_Handle handle)
+static CF_INLINE uint32_t s_table_index(CF_Handle handle)
 {
 	return (uint32_t)((handle & 0xFFFFFFFF00000000ULL) >> 32);
 }
@@ -122,7 +122,7 @@ uint32_t cf_handle_allocator_get_index(CF_HandleTable* table, CF_Handle handle)
 	CF_HandleEntry* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);
 	uint64_t generation = handle & 0xFFFF;
-	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
+	CF_ASSERT(m_handles[table_index].data.generation == generation);
 	return m_handles[table_index].data.user_index;
 }
 
@@ -131,7 +131,7 @@ uint16_t cf_handle_allocator_get_type(CF_HandleTable* table, CF_Handle handle)
 	CF_HandleEntry* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);
 	uint64_t generation = handle & 0xFFFF;
-	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
+	CF_ASSERT(m_handles[table_index].data.generation == generation);
 	return m_handles[table_index].data.user_type;
 }
 
@@ -140,7 +140,7 @@ bool cf_handle_allocator_active(CF_HandleTable* table, CF_Handle handle)
 	CF_HandleEntry* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);
 	uint64_t generation = handle & 0xFFFF;
-	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
+	CF_ASSERT(m_handles[table_index].data.generation == generation);
 	return m_handles[table_index].data.active;
 }
 
@@ -149,7 +149,7 @@ void cf_handle_allocator_activate(CF_HandleTable* table, CF_Handle handle)
 	CF_HandleEntry* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);
 	uint64_t generation = handle & 0xFFFF;
-	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
+	CF_ASSERT(m_handles[table_index].data.generation == generation);
 	m_handles[table_index].data.active = true;
 }
 
@@ -158,7 +158,7 @@ void cf_handle_allocator_deactivate(CF_HandleTable* table, CF_Handle handle)
 	CF_HandleEntry* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);
 	uint64_t generation = handle & 0xFFFF;
-	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
+	CF_ASSERT(m_handles[table_index].data.generation == generation);
 	m_handles[table_index].data.active = false;
 }
 
@@ -167,7 +167,7 @@ void cf_handle_allocator_update_index(CF_HandleTable* table, CF_Handle handle, u
 	CF_HandleEntry* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);
 	uint64_t generation = handle & 0xFFFF;
-	CUTE_ASSERT(m_handles[table_index].data.generation == generation);
+	CF_ASSERT(m_handles[table_index].data.generation == generation);
 	m_handles[table_index].data.user_index = index;
 }
 

@@ -105,7 +105,7 @@ bool test_component_octorok_serialize(CF_KeyValue* kv, bool reading, CF_Entity e
 
 // -------------------------------------------------------------------------------------------------
 
-#define FIND_COMPONENTS(T) T* T##s = (T*)cf_ecs_arrays_find_components(arrays, #T); CUTE_ASSERT(!count || T##s)
+#define FIND_COMPONENTS(T) T* T##s = (T*)cf_ecs_arrays_find_components(arrays, #T); CF_ASSERT(!count || T##s)
 
 int s_octorok_system_ran_ok;
 void update_test_octorok_system(float dt, CF_EcsArrays* arrays, int count, void* udata)
@@ -120,11 +120,11 @@ void update_test_octorok_system(float dt, CF_EcsArrays* arrays, int count, void*
 		test_component_collider_t* collider = test_component_collider_ts + i;
 		test_component_octorok_t* octorok = test_component_octorok_ts + i;
 
-		CUTE_ASSERT(sprite->img_id == 2); // Overridden by schema, originally initialized to 7.
-		CUTE_ASSERT(collider->type == 4); // Overridden by schema, originally initialized to 3.
-		CUTE_ASSERT(collider->radius == 3.0f); // Overridden by schema, originally initialized to 14.0f.
-		CUTE_ASSERT(octorok->ai_state == 0);
-		CUTE_ASSERT(octorok->pellet_count == 3);
+		CF_ASSERT(sprite->img_id == 2); // Overridden by schema, originally initialized to 7.
+		CF_ASSERT(collider->type == 4); // Overridden by schema, originally initialized to 3.
+		CF_ASSERT(collider->radius == 3.0f); // Overridden by schema, originally initialized to 14.0f.
+		CF_ASSERT(octorok->ai_state == 0);
+		CF_ASSERT(octorok->pellet_count == 3);
 
 		transform->x = 20.0f;
 		transform->y = 20.0f;
@@ -151,7 +151,7 @@ void update_test_octorok_buddy_counter_system(float dt, CF_EcsArrays* arrays, in
 
 // -------------------------------------------------------------------------------------------------
 
-CUTE_TEST_CASE(test_ecs_octorok, "Run ECS with a mock Octorok entity.");
+CF_TEST_CASE(test_ecs_octorok, "Run ECS with a mock Octorok entity.");
 int test_ecs_octorok()
 {
 	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL))) {
@@ -161,30 +161,30 @@ int test_ecs_octorok()
 	// Register component types.
 	cf_ecs_component_begin();
 	cf_ecs_component_set_size(sizeof(test_component_Transform));
-	cf_ecs_component_set_name(CUTE_STRINGIZE(test_component_Transform));
+	cf_ecs_component_set_name(CF_STRINGIZE(test_component_Transform));
 	cf_ecs_component_set_optional_serializer(test_component_transform_serialize, NULL);
 	cf_ecs_component_end();
 
 	cf_ecs_component_begin();
 	cf_ecs_component_set_size(sizeof(test_component_sprite_t));
-	cf_ecs_component_set_name(CUTE_STRINGIZE(test_component_sprite_t));
+	cf_ecs_component_set_name(CF_STRINGIZE(test_component_sprite_t));
 	cf_ecs_component_set_optional_serializer(test_component_sprite_serialize, NULL);
 	cf_ecs_component_end();
 
 	cf_ecs_component_begin();
 	cf_ecs_component_set_size(sizeof(test_component_collider_t));
-	cf_ecs_component_set_name(CUTE_STRINGIZE(test_component_collider_t));
+	cf_ecs_component_set_name(CF_STRINGIZE(test_component_collider_t));
 	cf_ecs_component_set_optional_serializer(test_component_collider_serialize, NULL);
 	cf_ecs_component_end();
 
 	cf_ecs_component_begin();
 	cf_ecs_component_set_size(sizeof(test_component_octorok_t));
-	cf_ecs_component_set_name(CUTE_STRINGIZE(test_component_octorok_t));
+	cf_ecs_component_set_name(CF_STRINGIZE(test_component_octorok_t));
 	cf_ecs_component_set_optional_serializer(test_component_octorok_serialize, NULL);
 	cf_ecs_component_end();
 
 	// Register entity types (just one, the octorok).
-	const char* octorok_schema_string = CUTE_STRINGIZE(
+	const char* octorok_schema_string = CF_STRINGIZE(
 		Entityype = "Octorok",
 		test_component_Transform = { },
 		test_component_octorok_t = { },
@@ -216,7 +216,7 @@ int test_ecs_octorok()
 	cf_ecs_system_end();
 
 	// Load up serialized entities.
-	const char* serialized_entities = CUTE_STRINGIZE(
+	const char* serialized_entities = CF_STRINGIZE(
 		entities = [2] {
 			{
 				Entityype = "Octorok",
@@ -241,7 +241,7 @@ int test_ecs_octorok()
 		}
 	);
 
-	CF_KeyValue* parsed_entities = cf_kv_read(serialized_entities, CUTE_STRLEN(serialized_entities), NULL);
+	CF_KeyValue* parsed_entities = cf_kv_read(serialized_entities, CF_STRLEN(serialized_entities), NULL);
 	if (!parsed_entities) return -1;
 
 	Array<CF_Entity> entities;
@@ -264,7 +264,7 @@ int test_ecs_octorok()
 			size_t len;
 			cf_kv_key(parsed_entities, "Entityype", NULL);
 			cf_kv_val_string(parsed_entities, &serialized_Entityype, &len);
-			CUTE_TEST_ASSERT(!CUTE_STRNCMP("Octorok", serialized_Entityype, len));
+			CF_TEST_ASSERT(!CF_STRNCMP("Octorok", serialized_Entityype, len));
 		cf_kv_object_end(parsed_entities);
 	cf_kv_array_end(parsed_entities);
 	
@@ -277,8 +277,8 @@ int test_ecs_octorok()
 	cf_ecs_run_systems(0);
 
 	// Assert outcomes (make sure the systems actually ran).
-	CUTE_TEST_ASSERT(s_octorok_system_ran_ok == 2);
-	CUTE_TEST_ASSERT(s_octorok_buddy_said_hi_count == 2);
+	CF_TEST_ASSERT(s_octorok_system_ran_ok == 2);
+	CF_TEST_ASSERT(s_octorok_buddy_said_hi_count == 2);
 
 	cf_destroy_app();
 
@@ -296,7 +296,7 @@ bool dummy_serialize(CF_KeyValue* kv, bool reading, CF_Entity entity, void* comp
 {
 	dummy_component_t* dummy = (dummy_component_t*)component;
 	if (reading) {
-		CUTE_PLACEMENT_NEW(dummy) dummy_component_t;
+		CF_PLACEMENT_NEW(dummy) dummy_component_t;
 	}
 	return true;
 }
@@ -310,7 +310,7 @@ void update_dummy_system(float dt, CF_EcsArrays* arrays, int count, void* udata)
 	}
 }
 
-CUTE_TEST_CASE(test_ecs_no_kv, "Run ECS without kv at all.");
+CF_TEST_CASE(test_ecs_no_kv, "Run ECS without kv at all.");
 int test_ecs_no_kv()
 {
 	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL))) {
@@ -334,11 +334,11 @@ int test_ecs_no_kv()
 	cf_ecs_entity_end();
 
 	CF_Entity e = cf_make_entity("Dummy_Entity", NULL);
-	CUTE_TEST_ASSERT(e != CF_INVALID_ENTITY);
+	CF_TEST_ASSERT(e != CF_INVALID_ENTITY);
 	cf_ecs_run_systems(0);
 
 	dummy_component_t* dummy = (dummy_component_t*)cf_entity_get_component(e, "dummy_component_t");
-	CUTE_TEST_ASSERT(dummy->iters == 1);
+	CF_TEST_ASSERT(dummy->iters == 1);
 
 	cf_destroy_app();
 

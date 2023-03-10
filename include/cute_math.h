@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_MATH_H
-#define CUTE_MATH_H
+#ifndef CF_MATH_H
+#define CF_MATH_H
 
 #include "cute_defines.h"
 
@@ -56,7 +56,7 @@ typedef struct CF_V2
 } CF_V2;
 // @end
 
-CUTE_INLINE CF_V2 cf_v2(float x, float y)
+CF_INLINE CF_V2 cf_v2(float x, float y)
 {
 	CF_V2 result;
 	result.x = x;
@@ -263,7 +263,7 @@ typedef struct CF_Rect
  * @brief    Returns absolute value of a float.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CUTE_INLINE float cf_abs(float a) { return fabsf(a); }
+CF_INLINE float cf_abs(float a) { return fabsf(a); }
 
 /**
  * @function cf_clamp
@@ -271,7 +271,7 @@ CUTE_INLINE float cf_abs(float a) { return fabsf(a); }
  * @brief    Returns `a` float clamped between `lo` and `hi`.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CUTE_INLINE float cf_clamp(float a, float lo, float hi) { return cf_max(lo, cf_min(a, hi)); }
+CF_INLINE float cf_clamp(float a, float lo, float hi) { return cf_max(lo, cf_min(a, hi)); }
 
 /**
  * @function cf_clamp01
@@ -279,7 +279,7 @@ CUTE_INLINE float cf_clamp(float a, float lo, float hi) { return cf_max(lo, cf_m
  * @brief    Returns `a` float clamped between 0.0f and 1.0f.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CUTE_INLINE float cf_clamp01(float a) { return cf_max(0.0f, cf_min(a, 1.0f)); }
+CF_INLINE float cf_clamp01(float a) { return cf_max(0.0f, cf_min(a, 1.0f)); }
 
 /**
  * @function cf_sign
@@ -287,7 +287,7 @@ CUTE_INLINE float cf_clamp01(float a) { return cf_max(0.0f, cf_min(a, 1.0f)); }
  * @brief    Returns the sign (either 1.0f or -1.0f) of `a` float.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CUTE_INLINE float cf_sign(float a) { return a < 0 ? -1.0f : 1.0f; }
+CF_INLINE float cf_sign(float a) { return a < 0 ? -1.0f : 1.0f; }
 
 /**
  * @function cf_intersect
@@ -296,7 +296,7 @@ CUTE_INLINE float cf_sign(float a) { return a < 0 ? -1.0f : 1.0f; }
  *           value used to lerp from `a` to `b` to find the intersection point.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CUTE_INLINE float cf_intersect(float da, float db) { return da / (da - db); }
+CF_INLINE float cf_intersect(float da, float db) { return da / (da - db); }
 
 /**
  * @function cf_safe_invert
@@ -304,7 +304,7 @@ CUTE_INLINE float cf_intersect(float da, float db) { return da / (da - db); }
  * @brief    Computes `1.0f/a`, but returns 0.0f if `a` is zero.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CUTE_INLINE float cf_safe_invert(float a) { return a != 0 ? 1.0f / a : 0; }
+CF_INLINE float cf_safe_invert(float a) { return a != 0 ? 1.0f / a : 0; }
 
 /**
  * @function cf_lerp
@@ -312,7 +312,7 @@ CUTE_INLINE float cf_safe_invert(float a) { return a != 0 ? 1.0f / a : 0; }
  * @brief    Returns the linear interpolation from `a` to `b` along `t`, where `t` is _usually_ a value from 0.0f to 1.0f.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CUTE_INLINE float cf_lerp(float a, float b, float t) { return a + (b - a) * t; }
+CF_INLINE float cf_lerp(float a, float b, float t) { return a + (b - a) * t; }
 
 /**
  * @function cf_remap
@@ -320,7 +320,7 @@ CUTE_INLINE float cf_lerp(float a, float b, float t) { return a + (b - a) * t; }
  * @brief    Returns the value `t` remaped from [0, 1] to [lo, hi].
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CUTE_INLINE float cf_remap(float t, float lo, float hi) { return (hi - lo) != 0 ? (t - lo) / (hi - lo) : 0; }
+CF_INLINE float cf_remap(float t, float lo, float hi) { return (hi - lo) != 0 ? (t - lo) / (hi - lo) : 0; }
 
 /**
  * @function cf_mod
@@ -328,7 +328,7 @@ CUTE_INLINE float cf_remap(float t, float lo, float hi) { return (hi - lo) != 0 
  * @brief    Returns floating point `x % m`.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CUTE_INLINE float cf_mod(float x, float m) { return x - (int)(x / m) * m; }
+CF_INLINE float cf_mod(float x, float m) { return x - (int)(x / m) * m; }
 
 /**
  * @function cf_fract
@@ -336,7 +336,7 @@ CUTE_INLINE float cf_mod(float x, float m) { return x - (int)(x / m) * m; }
  * @brief    Returns the fractional portion of a float.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CUTE_INLINE float cf_fract(float x) { return x - floorf(x); }
+CF_INLINE float cf_fract(float x) { return x - floorf(x); }
 
 /**
  * @function cf_sign_int
@@ -344,7 +344,7 @@ CUTE_INLINE float cf_fract(float x) { return x - floorf(x); }
  * @brief    Returns the sign (either 1 or -1) of an int.
  * @related  cf_sign_int cf_abs_int cf_clamp_int cf_clamp01_int cf_is_even cf_is_odd
  */
-CUTE_INLINE int cf_sign_int(int a) { return a < 0 ? -1 : 1; }
+CF_INLINE int cf_sign_int(int a) { return a < 0 ? -1 : 1; }
 
 /**
  * @function cf_abs_int
@@ -352,7 +352,7 @@ CUTE_INLINE int cf_sign_int(int a) { return a < 0 ? -1 : 1; }
  * @brief    Returns the absolute value of an int.
  * @related  cf_sign_int cf_abs_int cf_clamp_int cf_clamp01_int cf_is_even cf_is_odd
  */
-CUTE_INLINE int cf_abs_int(int a) { int mask = a >> ((sizeof(int) * 8) - 1); return (a + mask) ^ mask; }
+CF_INLINE int cf_abs_int(int a) { int mask = a >> ((sizeof(int) * 8) - 1); return (a + mask) ^ mask; }
 
 /**
  * @function cf_clamp_int
@@ -360,7 +360,7 @@ CUTE_INLINE int cf_abs_int(int a) { int mask = a >> ((sizeof(int) * 8) - 1); ret
  * @brief    Returns an int clamped between `lo` and `hi`.
  * @related  cf_sign_int cf_abs_int cf_clamp_int cf_clamp01_int cf_is_even cf_is_odd
  */
-CUTE_INLINE int cf_clamp_int(int a, int lo, int hi) { return cf_max(lo, cf_min(a, hi)); }
+CF_INLINE int cf_clamp_int(int a, int lo, int hi) { return cf_max(lo, cf_min(a, hi)); }
 
 /**
  * @function cf_clamp01_int
@@ -368,7 +368,7 @@ CUTE_INLINE int cf_clamp_int(int a, int lo, int hi) { return cf_max(lo, cf_min(a
  * @brief    Returns an int clamped between 0 and 1.
  * @related  cf_sign_int cf_abs_int cf_clamp_int cf_clamp01_int cf_is_even cf_is_odd
  */
-CUTE_INLINE int cf_clamp01_int(int a) { return cf_max(0, cf_min(a, 1)); }
+CF_INLINE int cf_clamp01_int(int a) { return cf_max(0, cf_min(a, 1)); }
 
 /**
  * @function cf_is_even
@@ -376,7 +376,7 @@ CUTE_INLINE int cf_clamp01_int(int a) { return cf_max(0, cf_min(a, 1)); }
  * @brief    Returns true if an int is even.
  * @related  cf_sign_int cf_abs_int cf_clamp_int cf_clamp01_int cf_is_even cf_is_odd
  */
-CUTE_INLINE bool cf_is_even(int x) { return (x % 2) == 0; }
+CF_INLINE bool cf_is_even(int x) { return (x % 2) == 0; }
 
 /**
  * @function cf_is_odd
@@ -384,7 +384,7 @@ CUTE_INLINE bool cf_is_even(int x) { return (x % 2) == 0; }
  * @brief    Returns true if an int is odd.
  * @related  cf_sign_int cf_abs_int cf_clamp_int cf_clamp01_int cf_is_even cf_is_odd
  */
-CUTE_INLINE bool cf_is_odd(int x) { return !cf_is_even(x); }
+CF_INLINE bool cf_is_odd(int x) { return !cf_is_even(x); }
 
 //--------------------------------------------------------------------------------------------------
 // Bit manipulation.
@@ -395,7 +395,7 @@ CUTE_INLINE bool cf_is_odd(int x) { return !cf_is_even(x); }
  * @brief    Returns true if an int is a power of two.
  * @related  cf_is_power_of_two cf_is_power_of_two_uint cf_fit_power_of_two
  */
-CUTE_INLINE bool cf_is_power_of_two(int a) { return a != 0 && (a & (a - 1)) == 0; }
+CF_INLINE bool cf_is_power_of_two(int a) { return a != 0 && (a & (a - 1)) == 0; }
 
 /**
  * @function cf_is_power_of_two_uint
@@ -403,7 +403,7 @@ CUTE_INLINE bool cf_is_power_of_two(int a) { return a != 0 && (a & (a - 1)) == 0
  * @brief    Returns true if an unsigned int is a power of two.
  * @related  cf_is_power_of_two cf_is_power_of_two_uint cf_fit_power_of_two
  */
-CUTE_INLINE bool cf_is_power_of_two_uint(uint64_t a) { return a != 0 && (a & (a - 1)) == 0; }
+CF_INLINE bool cf_is_power_of_two_uint(uint64_t a) { return a != 0 && (a & (a - 1)) == 0; }
 
 /**
  * @function cf_fit_power_of_two
@@ -411,7 +411,7 @@ CUTE_INLINE bool cf_is_power_of_two_uint(uint64_t a) { return a != 0 && (a & (a 
  * @brief    Returns an integer clamped upwards to the nearest power of two.
  * @related  cf_is_power_of_two cf_is_power_of_two_uint cf_fit_power_of_two
  */
-CUTE_INLINE int cf_fit_power_of_two(int a) { a--; a |= a >> 1; a |= a >> 2; a |= a >> 4; a |= a >> 8; a |= a >> 16; a++; return a; }
+CF_INLINE int cf_fit_power_of_two(int a) { a--; a |= a >> 1; a |= a >> 2; a |= a >> 4; a |= a >> 8; a |= a >> 16; a++; return a; }
 
 //--------------------------------------------------------------------------------------------------
 // Easing functions.
@@ -423,7 +423,7 @@ CUTE_INLINE int cf_fit_power_of_two(int a) { a--; a |= a >> 1; a |= a >> 2; a |=
  * @brief    Returns the smoothstep of a float from 0.0f to 1.0f.
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  */
-CUTE_INLINE float cf_smoothstep(float x) { return x * x * (3.0f - 2.0f * x); }
+CF_INLINE float cf_smoothstep(float x) { return x * x * (3.0f - 2.0f * x); }
 
 /**
  * @function cf_quad_in
@@ -432,7 +432,7 @@ CUTE_INLINE float cf_smoothstep(float x) { return x * x * (3.0f - 2.0f * x); }
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_quad_in cf_quad_out cf_quad_in_out
  */
-CUTE_INLINE float cf_quad_in(float x) { return x * x; }
+CF_INLINE float cf_quad_in(float x) { return x * x; }
 
 /**
  * @function cf_quad_out
@@ -441,7 +441,7 @@ CUTE_INLINE float cf_quad_in(float x) { return x * x; }
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_quad_in cf_quad_out cf_quad_in_out
  */
-CUTE_INLINE float cf_quad_out(float x) { return -(x * (x - 2.0f)); }
+CF_INLINE float cf_quad_out(float x) { return -(x * (x - 2.0f)); }
 
 /**
  * @function cf_quad_in_out
@@ -450,7 +450,7 @@ CUTE_INLINE float cf_quad_out(float x) { return -(x * (x - 2.0f)); }
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_quad_in cf_quad_out cf_quad_in_out
  */
-CUTE_INLINE float cf_quad_in_out(float x) { if (x < 0.5f) return 2.0f * x * x; else return (-2.0f * x * x) + (4.0f * x) - 1.0f; }
+CF_INLINE float cf_quad_in_out(float x) { if (x < 0.5f) return 2.0f * x * x; else return (-2.0f * x * x) + (4.0f * x) - 1.0f; }
 
 /**
  * @function cf_cube_in
@@ -459,7 +459,7 @@ CUTE_INLINE float cf_quad_in_out(float x) { if (x < 0.5f) return 2.0f * x * x; e
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_cube_in cf_cube_out cf_cube_in_out
  */
-CUTE_INLINE float cf_cube_in(float x) { return x * x * x; }
+CF_INLINE float cf_cube_in(float x) { return x * x * x; }
 
 /**
  * @function cf_cube_out
@@ -468,7 +468,7 @@ CUTE_INLINE float cf_cube_in(float x) { return x * x * x; }
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_cube_in cf_cube_out cf_cube_in_out
  */
-CUTE_INLINE float cf_cube_out(float x) { float f = (x - 1); return f * f * f + 1.0f; }
+CF_INLINE float cf_cube_out(float x) { float f = (x - 1); return f * f * f + 1.0f; }
 
 /**
  * @function cf_cube_in_out
@@ -477,7 +477,7 @@ CUTE_INLINE float cf_cube_out(float x) { float f = (x - 1); return f * f * f + 1
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_cube_in cf_cube_out cf_cube_in_out
  */
-CUTE_INLINE float cf_cube_in_out(float x) { if (x < 0.5f) return 4.0f * x * x * x; else { float f = ((2.0f * x) - 2.0f); return 0.5f * x * x * x + 1.0f; } }
+CF_INLINE float cf_cube_in_out(float x) { if (x < 0.5f) return 4.0f * x * x * x; else { float f = ((2.0f * x) - 2.0f); return 0.5f * x * x * x + 1.0f; } }
 
 /**
  * @function cf_quart_in
@@ -486,7 +486,7 @@ CUTE_INLINE float cf_cube_in_out(float x) { if (x < 0.5f) return 4.0f * x * x * 
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_quart_in cf_quart_out cf_quart_in_out
  */
-CUTE_INLINE float cf_quart_in(float x) { return x * x * x * x; }
+CF_INLINE float cf_quart_in(float x) { return x * x * x * x; }
 
 /**
  * @function cf_quart_out
@@ -495,7 +495,7 @@ CUTE_INLINE float cf_quart_in(float x) { return x * x * x * x; }
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_quart_in cf_quart_out cf_quart_in_out
  */
-CUTE_INLINE float cf_quart_out(float x) { float f = (x - 1.0f); return f * f * f * (1.0f - x) + 1.0f; }
+CF_INLINE float cf_quart_out(float x) { float f = (x - 1.0f); return f * f * f * (1.0f - x) + 1.0f; }
 
 /**
  * @function cf_quart_in_out
@@ -504,7 +504,7 @@ CUTE_INLINE float cf_quart_out(float x) { float f = (x - 1.0f); return f * f * f
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_quart_in cf_quart_out cf_quart_in_out
  */
-CUTE_INLINE float cf_quart_in_out(float x) { if (x < 0.5f) return 8.0f * x * x * x * x; else { float f = (x - 1); return -8.0f * f * f * f * f + 1.0f; } }
+CF_INLINE float cf_quart_in_out(float x) { if (x < 0.5f) return 8.0f * x * x * x * x; else { float f = (x - 1); return -8.0f * f * f * f * f + 1.0f; } }
 
 /**
  * @function cf_quint_in
@@ -513,7 +513,7 @@ CUTE_INLINE float cf_quart_in_out(float x) { if (x < 0.5f) return 8.0f * x * x *
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_quint_in cf_quint_out cf_quint_in_out
  */
-CUTE_INLINE float cf_quint_in(float x) { return x * x * x * x * x; }
+CF_INLINE float cf_quint_in(float x) { return x * x * x * x * x; }
 
 /**
  * @function cf_quint_out
@@ -522,7 +522,7 @@ CUTE_INLINE float cf_quint_in(float x) { return x * x * x * x * x; }
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_quint_in cf_quint_out cf_quint_in_out
  */
-CUTE_INLINE float cf_quint_out(float x) { float f = (x - 1); return f * f * f * f * f + 1.0f; }
+CF_INLINE float cf_quint_out(float x) { float f = (x - 1); return f * f * f * f * f + 1.0f; }
 
 /**
  * @function cf_quint_in_out
@@ -531,7 +531,7 @@ CUTE_INLINE float cf_quint_out(float x) { float f = (x - 1); return f * f * f * 
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_quint_in cf_quint_out cf_quint_in_out
  */
-CUTE_INLINE float cf_quint_in_out(float x) { if (x < 0.5f) return 16.0f * x * x * x * x * x; else { float f = ((2.0f * x) - 2.0f); return  0.5f * f * f * f * f * f + 1.0f; } }
+CF_INLINE float cf_quint_in_out(float x) { if (x < 0.5f) return 16.0f * x * x * x * x * x; else { float f = ((2.0f * x) - 2.0f); return  0.5f * f * f * f * f * f + 1.0f; } }
 
 /**
  * @function cf_sin_in
@@ -540,7 +540,7 @@ CUTE_INLINE float cf_quint_in_out(float x) { if (x < 0.5f) return 16.0f * x * x 
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_sin_in cf_sin_out cf_sin_in_out
  */
-CUTE_INLINE float cf_sin_in(float x) { return sinf((x - 1.0f) * CF_PI * 0.5f) + 1.0f; }
+CF_INLINE float cf_sin_in(float x) { return sinf((x - 1.0f) * CF_PI * 0.5f) + 1.0f; }
 
 /**
  * @function cf_sin_out
@@ -549,7 +549,7 @@ CUTE_INLINE float cf_sin_in(float x) { return sinf((x - 1.0f) * CF_PI * 0.5f) + 
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_sin_in cf_sin_out cf_sin_in_out
  */
-CUTE_INLINE float cf_sin_out(float x) { return sinf(x * (CF_PI * 0.5f)); }
+CF_INLINE float cf_sin_out(float x) { return sinf(x * (CF_PI * 0.5f)); }
 
 /**
  * @function cf_sin_in_out
@@ -558,7 +558,7 @@ CUTE_INLINE float cf_sin_out(float x) { return sinf(x * (CF_PI * 0.5f)); }
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_sin_in cf_sin_out cf_sin_in_out
  */
-CUTE_INLINE float cf_sin_in_out(float x) { return 0.5f * (1.0f - cosf(x * CF_PI)); }
+CF_INLINE float cf_sin_in_out(float x) { return 0.5f * (1.0f - cosf(x * CF_PI)); }
 
 /**
  * @function cf_circle_in
@@ -567,7 +567,7 @@ CUTE_INLINE float cf_sin_in_out(float x) { return 0.5f * (1.0f - cosf(x * CF_PI)
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_circle_in cf_circle_out cf_circle_in_out
  */
-CUTE_INLINE float cf_circle_in(float x) { return 1.0f - sqrtf(1.0f - (x * x)); }
+CF_INLINE float cf_circle_in(float x) { return 1.0f - sqrtf(1.0f - (x * x)); }
 
 /**
  * @function cf_circle_out
@@ -576,7 +576,7 @@ CUTE_INLINE float cf_circle_in(float x) { return 1.0f - sqrtf(1.0f - (x * x)); }
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_circle_in cf_circle_out cf_circle_in_out
  */
-CUTE_INLINE float cf_circle_out(float x) { return sqrtf((2.0f - x) * x); }
+CF_INLINE float cf_circle_out(float x) { return sqrtf((2.0f - x) * x); }
 
 /**
  * @function cf_circle_in_out
@@ -585,7 +585,7 @@ CUTE_INLINE float cf_circle_out(float x) { return sqrtf((2.0f - x) * x); }
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_circle_in cf_circle_out cf_circle_in_out
  */
-CUTE_INLINE float cf_circle_in_out(float x) { if (x < 0.5f) return 0.5f * (1.0f - sqrtf(1.0f - 4.0f * (x * x))); else return 0.5f * (sqrtf(-((2.0f * x) - 3.0f) * ((2.0f * x) - 1.0f)) + 1.0f); }
+CF_INLINE float cf_circle_in_out(float x) { if (x < 0.5f) return 0.5f * (1.0f - sqrtf(1.0f - 4.0f * (x * x))); else return 0.5f * (sqrtf(-((2.0f * x) - 3.0f) * ((2.0f * x) - 1.0f)) + 1.0f); }
 
 /**
  * @function cf_back_in
@@ -594,7 +594,7 @@ CUTE_INLINE float cf_circle_in_out(float x) { if (x < 0.5f) return 0.5f * (1.0f 
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_back_in cf_back_out cf_back_in_out
  */
-CUTE_INLINE float cf_back_in(float x) { return x * x * x - x * sinf(x * CF_PI); }
+CF_INLINE float cf_back_in(float x) { return x * x * x - x * sinf(x * CF_PI); }
 
 /**
  * @function cf_back_out
@@ -603,7 +603,7 @@ CUTE_INLINE float cf_back_in(float x) { return x * x * x - x * sinf(x * CF_PI); 
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_back_in cf_back_out cf_back_in_out
  */
-CUTE_INLINE float cf_back_out(float x) { float f = (1.0f - x); return 1.0f - (x * x * x - x * sinf(f * CF_PI)); }
+CF_INLINE float cf_back_out(float x) { float f = (1.0f - x); return 1.0f - (x * x * x - x * sinf(f * CF_PI)); }
 
 /**
  * @function cf_back_in_out
@@ -612,7 +612,7 @@ CUTE_INLINE float cf_back_out(float x) { float f = (1.0f - x); return 1.0f - (x 
  * @remarks  Here is a great link to [visualize each easing function](https://easings.net/).
  * @related  cf_back_in cf_back_out cf_back_in_out
  */
-CUTE_INLINE float cf_back_in_out(float x) { if (x < 0.5f) { float f = 2.0f * x; return 0.5f * (f * f * f - f * sinf(f * CF_PI)); } else { float f = (1.0f - (2.0f * x - 1.0f)); return 0.5f * (1.0f - (f * f * f - f * sinf(f * CF_PI))) + 0.5f; } }
+CF_INLINE float cf_back_in_out(float x) { if (x < 0.5f) { float f = 2.0f * x; return 0.5f * (f * f * f - f * sinf(f * CF_PI)); } else { float f = (1.0f - (2.0f * x - 1.0f)); return 0.5f * (1.0f - (f * f * f - f * sinf(f * CF_PI))) + 0.5f; } }
 
 //--------------------------------------------------------------------------------------------------
 // 2D vector ops.
@@ -623,7 +623,7 @@ CUTE_INLINE float cf_back_in_out(float x) { if (x < 0.5f) { float f = 2.0f * x; 
  * @brief    Returns two vectors added together.
  * @related  CF_V2 cf_add_v2 cf_sub_v2 cf_dot cf_mul_v2_f cf_div_v2_f
  */
-CUTE_INLINE CF_V2 cf_add_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x + b.x, a.y + b.y); }
+CF_INLINE CF_V2 cf_add_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x + b.x, a.y + b.y); }
 
 /**
  * @function cf_sub_v2
@@ -631,7 +631,7 @@ CUTE_INLINE CF_V2 cf_add_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x + b.x, a.y + b.
  * @brief    Returns a vector subtracted from another.
  * @related  CF_V2 cf_add_v2 cf_sub_v2 cf_dot cf_mul_v2_f cf_div_v2_f
  */
-CUTE_INLINE CF_V2 cf_sub_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x - b.x, a.y - b.y); }
+CF_INLINE CF_V2 cf_sub_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x - b.x, a.y - b.y); }
 
 /**
  * @function cf_dot
@@ -639,7 +639,7 @@ CUTE_INLINE CF_V2 cf_sub_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x - b.x, a.y - b.
  * @brief    Returns the dot product of two vectors.
  * @related  CF_V2 cf_add_v2 cf_sub_v2 cf_dot cf_mul_v2_f cf_div_v2_f
  */
-CUTE_INLINE float cf_dot(CF_V2 a, CF_V2 b) { return a.x * b.x + a.y * b.y; }
+CF_INLINE float cf_dot(CF_V2 a, CF_V2 b) { return a.x * b.x + a.y * b.y; }
 
 /**
  * @function cf_mul_v2_f
@@ -647,7 +647,7 @@ CUTE_INLINE float cf_dot(CF_V2 a, CF_V2 b) { return a.x * b.x + a.y * b.y; }
  * @brief    Multiplies a vector with a float.
  * @related  CF_V2 cf_mul_v2_f cf_mul_v2 cf_div_v2_f
  */
-CUTE_INLINE CF_V2 cf_mul_v2_f(CF_V2 a, float b) { return cf_v2(a.x * b, a.y * b); }
+CF_INLINE CF_V2 cf_mul_v2_f(CF_V2 a, float b) { return cf_v2(a.x * b, a.y * b); }
 
 /**
  * @function cf_mul_v2
@@ -656,7 +656,7 @@ CUTE_INLINE CF_V2 cf_mul_v2_f(CF_V2 a, float b) { return cf_v2(a.x * b, a.y * b)
  * @remarks  The vector returned is `{ a.x * b.x, a.y * b.y }`.
  * @related  CF_V2 cf_mul_v2_f cf_mul_v2 cf_div_v2_f
  */
-CUTE_INLINE CF_V2 cf_mul_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x * b.x, a.y * b.y); }
+CF_INLINE CF_V2 cf_mul_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x * b.x, a.y * b.y); }
 
 /**
  * @function cf_div_v2_f
@@ -664,7 +664,7 @@ CUTE_INLINE CF_V2 cf_mul_v2(CF_V2 a, CF_V2 b) { return cf_v2(a.x * b.x, a.y * b.
  * @brief    Divides a vector by a float.
  * @related  CF_V2 cf_mul_v2_f cf_mul_v2 cf_div_v2_f
  */
-CUTE_INLINE CF_V2 cf_div_v2_f(CF_V2 a, float b) { return cf_v2(a.x / b, a.y / b); }
+CF_INLINE CF_V2 cf_div_v2_f(CF_V2 a, float b) { return cf_v2(a.x / b, a.y / b); }
 
 /**
  * @function cf_skew
@@ -672,7 +672,7 @@ CUTE_INLINE CF_V2 cf_div_v2_f(CF_V2 a, float b) { return cf_v2(a.x / b, a.y / b)
  * @brief    Returns the skew of a vector. This acts like a 90 degree rotation counter-clockwise.
  * @related  CF_V2 cf_skew cf_cw90 cf_det2 cf_cross
  */
-CUTE_INLINE CF_V2 cf_skew(CF_V2 a) { return cf_v2(-a.y, a.x); }
+CF_INLINE CF_V2 cf_skew(CF_V2 a) { return cf_v2(-a.y, a.x); }
 
 /**
  * @function cf_cw90
@@ -680,7 +680,7 @@ CUTE_INLINE CF_V2 cf_skew(CF_V2 a) { return cf_v2(-a.y, a.x); }
  * @brief    Returns the anti-skew of a vector. This acts like a 90 degree rotation clockwise.
  * @related  CF_V2 cf_skew cf_cw90 cf_det2 cf_cross
  */
-CUTE_INLINE CF_V2 cf_cw90(CF_V2 a) { return cf_v2(a.y, -a.x); }
+CF_INLINE CF_V2 cf_cw90(CF_V2 a) { return cf_v2(a.y, -a.x); }
 
 /**
  * @function cf_det2
@@ -689,7 +689,7 @@ CUTE_INLINE CF_V2 cf_cw90(CF_V2 a) { return cf_v2(a.y, -a.x); }
  * @remarks  Also known as the 2D cross product.
  * @related  CF_V2 cf_skew cf_cw90 cf_det2 cf_cross
  */
-CUTE_INLINE float cf_det2(CF_V2 a, CF_V2 b) { return a.x * b.y - a.y * b.x; }
+CF_INLINE float cf_det2(CF_V2 a, CF_V2 b) { return a.x * b.y - a.y * b.x; }
 
 /**
  * @function cf_cross
@@ -697,7 +697,7 @@ CUTE_INLINE float cf_det2(CF_V2 a, CF_V2 b) { return a.x * b.y - a.y * b.x; }
  * @brief    Returns the 2D cross product of two vectors.
  * @related  CF_V2 cf_skew cf_cw90 cf_det2 cf_cross
  */
-CUTE_INLINE float cf_cross(CF_V2 a, CF_V2 b) { return cf_det2(a, b); }
+CF_INLINE float cf_cross(CF_V2 a, CF_V2 b) { return cf_det2(a, b); }
 
 /**
  * @function cf_cross_v2_f
@@ -705,7 +705,7 @@ CUTE_INLINE float cf_cross(CF_V2 a, CF_V2 b) { return cf_det2(a, b); }
  * @brief    Returns the 2D cross product of a vector against a scalar.
  * @related  CF_V2 cf_skew cf_cw90 cf_det2 cf_cross cf_cross_v2_f cf_cross_f_v2
  */
-CUTE_INLINE CF_V2 cf_cross_v2_f(CF_V2 a, float b) { return cf_v2(b * a.y, -b * a.x); }
+CF_INLINE CF_V2 cf_cross_v2_f(CF_V2 a, float b) { return cf_v2(b * a.y, -b * a.x); }
 
 /**
  * @function cf_cross_f_v2
@@ -713,7 +713,7 @@ CUTE_INLINE CF_V2 cf_cross_v2_f(CF_V2 a, float b) { return cf_v2(b * a.y, -b * a
  * @brief    Returns the 2D cross product of a scalar against a vector.
  * @related  CF_V2 cf_skew cf_cw90 cf_det2 cf_cross cf_cross_v2_f cf_cross_f_v2
  */
-CUTE_INLINE CF_V2 cf_cross_f_v2(float a, CF_V2 b) { return cf_v2(-a * b.y, a * b.x); }
+CF_INLINE CF_V2 cf_cross_f_v2(float a, CF_V2 b) { return cf_v2(-a * b.y, a * b.x); }
 
 /**
  * @function cf_min_v2
@@ -722,7 +722,7 @@ CUTE_INLINE CF_V2 cf_cross_f_v2(float a, CF_V2 b) { return cf_v2(-a * b.y, a * b
  * @remarks  The vector returned has the value `{ cf_min(a.x, b.x), cf_min(a.y, b.y) }`. See `cf_min`.
  * @related  CF_V2 cf_min_v2 cf_max_v2 cf_clamp_v2 cf_clamp01_v2 cf_abs_v2 cf_hmin cf_hmax
  */
-CUTE_INLINE CF_V2 cf_min_v2(CF_V2 a, CF_V2 b) { return cf_v2(cf_min(a.x, b.x), cf_min(a.y, b.y)); }
+CF_INLINE CF_V2 cf_min_v2(CF_V2 a, CF_V2 b) { return cf_v2(cf_min(a.x, b.x), cf_min(a.y, b.y)); }
 
 /**
  * @function cf_max_v2
@@ -731,7 +731,7 @@ CUTE_INLINE CF_V2 cf_min_v2(CF_V2 a, CF_V2 b) { return cf_v2(cf_min(a.x, b.x), c
  * @remarks  The vector returned has the value `{ cf_max(a.x, b.x), cf_max(a.y, b.y) }`. See `cf_max`.
  * @related  CF_V2 cf_min_v2 cf_max_v2 cf_clamp_v2 cf_clamp01_v2 cf_abs_v2 cf_hmin cf_hmax
  */
-CUTE_INLINE CF_V2 cf_max_v2(CF_V2 a, CF_V2 b) { return cf_v2(cf_max(a.x, b.x), cf_max(a.y, b.y)); }
+CF_INLINE CF_V2 cf_max_v2(CF_V2 a, CF_V2 b) { return cf_v2(cf_max(a.x, b.x), cf_max(a.y, b.y)); }
 
 /**
  * @function cf_clamp_v2
@@ -739,7 +739,7 @@ CUTE_INLINE CF_V2 cf_max_v2(CF_V2 a, CF_V2 b) { return cf_v2(cf_max(a.x, b.x), c
  * @brief    Returns the component-wise clamp of two vectors from `lo` to `hi`.
  * @related  CF_V2 cf_min_v2 cf_max_v2 cf_clamp_v2 cf_clamp01_v2 cf_abs_v2 cf_hmin cf_hmax
  */
-CUTE_INLINE CF_V2 cf_clamp_v2(CF_V2 a, CF_V2 lo, CF_V2 hi) { return cf_max_v2(lo, cf_min_v2(a, hi)); }
+CF_INLINE CF_V2 cf_clamp_v2(CF_V2 a, CF_V2 lo, CF_V2 hi) { return cf_max_v2(lo, cf_min_v2(a, hi)); }
 
 /**
  * @function cf_clamp01_v2
@@ -747,7 +747,7 @@ CUTE_INLINE CF_V2 cf_clamp_v2(CF_V2 a, CF_V2 lo, CF_V2 hi) { return cf_max_v2(lo
  * @brief    Returns the component-wise clamp of two vectors from 0.0f to 1.0f.
  * @related  CF_V2 cf_min_v2 cf_max_v2 cf_clamp_v2 cf_clamp01_v2 cf_abs_v2 cf_hmin cf_hmax
  */
-CUTE_INLINE CF_V2 cf_clamp01_v2(CF_V2 a) { return cf_max_v2(cf_v2(0, 0), cf_min_v2(a, cf_v2(1, 1))); }
+CF_INLINE CF_V2 cf_clamp01_v2(CF_V2 a) { return cf_max_v2(cf_v2(0, 0), cf_min_v2(a, cf_v2(1, 1))); }
 
 /**
  * @function cf_abs_v2
@@ -755,7 +755,7 @@ CUTE_INLINE CF_V2 cf_clamp01_v2(CF_V2 a) { return cf_max_v2(cf_v2(0, 0), cf_min_
  * @brief    Returns the component-wise absolute value of two vectors.
  * @related  CF_V2 cf_min_v2 cf_max_v2 cf_clamp_v2 cf_clamp01_v2 cf_abs_v2 cf_hmin cf_hmax
  */
-CUTE_INLINE CF_V2 cf_abs_v2(CF_V2 a) { return cf_v2(fabsf(a.x), fabsf(a.y)); }
+CF_INLINE CF_V2 cf_abs_v2(CF_V2 a) { return cf_v2(fabsf(a.x), fabsf(a.y)); }
 
 /**
  * @function cf_hmin
@@ -763,7 +763,7 @@ CUTE_INLINE CF_V2 cf_abs_v2(CF_V2 a) { return cf_v2(fabsf(a.x), fabsf(a.y)); }
  * @brief    Returns minimum of all components of a vector.
  * @related  CF_V2 cf_min_v2 cf_max_v2 cf_clamp_v2 cf_clamp01_v2 cf_abs_v2 cf_hmin cf_hmax
  */
-CUTE_INLINE float cf_hmin(CF_V2 a) { return cf_min(a.x, a.y); }
+CF_INLINE float cf_hmin(CF_V2 a) { return cf_min(a.x, a.y); }
 
 /**
  * @function cf_hmax
@@ -771,7 +771,7 @@ CUTE_INLINE float cf_hmin(CF_V2 a) { return cf_min(a.x, a.y); }
  * @brief    Returns maximum of all components of a vector.
  * @related  CF_V2 cf_min_v2 cf_max_v2 cf_clamp_v2 cf_clamp01_v2 cf_abs_v2 cf_hmin cf_hmax
  */
-CUTE_INLINE float cf_hmax(CF_V2 a) { return cf_max(a.x, a.y); }
+CF_INLINE float cf_hmax(CF_V2 a) { return cf_max(a.x, a.y); }
 
 /**
  * @function cf_len
@@ -779,7 +779,7 @@ CUTE_INLINE float cf_hmax(CF_V2 a) { return cf_max(a.x, a.y); }
  * @brief    Returns length of a vector.
  * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
  */
-CUTE_INLINE float cf_len(CF_V2 a) { return sqrtf(cf_dot(a, a)); }
+CF_INLINE float cf_len(CF_V2 a) { return sqrtf(cf_dot(a, a)); }
 
 /**
  * @function cf_distance
@@ -787,7 +787,7 @@ CUTE_INLINE float cf_len(CF_V2 a) { return sqrtf(cf_dot(a, a)); }
  * @brief    Returns distance between two points.
  * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
  */
-CUTE_INLINE float cf_distance(CF_V2 a, CF_V2 b) { CF_V2 d = cf_sub_v2(b, a); return sqrtf(cf_dot(d, d)); }
+CF_INLINE float cf_distance(CF_V2 a, CF_V2 b) { CF_V2 d = cf_sub_v2(b, a); return sqrtf(cf_dot(d, d)); }
 
 /**
  * @function cf_norm
@@ -796,7 +796,7 @@ CUTE_INLINE float cf_distance(CF_V2 a, CF_V2 b) { CF_V2 d = cf_sub_v2(b, a); ret
  * @remarks  Normalized vectors have unit-length without changing the vector's direction. Fails if the vector has a length of zero.
  * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
  */
-CUTE_INLINE CF_V2 cf_norm(CF_V2 a) { return cf_div_v2_f(a, cf_len(a)); }
+CF_INLINE CF_V2 cf_norm(CF_V2 a) { return cf_div_v2_f(a, cf_len(a)); }
 
 /**
  * @function cf_safe_norm
@@ -806,7 +806,7 @@ CUTE_INLINE CF_V2 cf_norm(CF_V2 a) { return cf_div_v2_f(a, cf_len(a)); }
  *           the case of a zero vector.
  * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
  */
-CUTE_INLINE CF_V2 cf_safe_norm(CF_V2 a) { float sq = cf_dot(a, a); return sq ? cf_div_v2_f(a, sqrtf(sq)) : cf_v2(0, 0); }
+CF_INLINE CF_V2 cf_safe_norm(CF_V2 a) { float sq = cf_dot(a, a); return sq ? cf_div_v2_f(a, sqrtf(sq)) : cf_v2(0, 0); }
 
 /**
  * @function cf_safe_norm_f
@@ -814,7 +814,7 @@ CUTE_INLINE CF_V2 cf_safe_norm(CF_V2 a) { float sq = cf_dot(a, a); return sq ? c
  * @brief    Returns the sign of a float, or zero if the float is zero.
  * @related  cf_safe_norm_f cf_safe_norm_int
  */
-CUTE_INLINE float cf_safe_norm_f(float a) { return a == 0 ? 0 : cf_sign(a); }
+CF_INLINE float cf_safe_norm_f(float a) { return a == 0 ? 0 : cf_sign(a); }
 
 /**
  * @function cf_safe_norm_int
@@ -822,7 +822,7 @@ CUTE_INLINE float cf_safe_norm_f(float a) { return a == 0 ? 0 : cf_sign(a); }
  * @brief    Returns the sign of an int, or zero if the int is zero.
  * @related  cf_safe_norm_f cf_safe_norm_int
  */
-CUTE_INLINE int cf_safe_norm_int(int a) { return a == 0 ? 0 : cf_sign_int(a); }
+CF_INLINE int cf_safe_norm_int(int a) { return a == 0 ? 0 : cf_sign_int(a); }
 
 /**
  * @function cf_neg_v2
@@ -830,7 +830,7 @@ CUTE_INLINE int cf_safe_norm_int(int a) { return a == 0 ? 0 : cf_sign_int(a); }
  * @brief    Returns a negated vector.
  * @related  CF_V2 cf_neg_v2 cf_sign_v2
  */
-CUTE_INLINE CF_V2 cf_neg_v2(CF_V2 a) { return cf_v2(-a.x, -a.y); }
+CF_INLINE CF_V2 cf_neg_v2(CF_V2 a) { return cf_v2(-a.x, -a.y); }
 
 /**
  * @function cf_lerp_v2
@@ -838,7 +838,7 @@ CUTE_INLINE CF_V2 cf_neg_v2(CF_V2 a) { return cf_v2(-a.x, -a.y); }
  * @brief    Returns a vector linearly interpolated from `a` to `b` along `t`, a value _usually_ from 0.0f to 1.0f.
  * @related  CF_V2 cf_lerp_v2 cf_bezier
  */
-CUTE_INLINE CF_V2 cf_lerp_v2(CF_V2 a, CF_V2 b, float t) { return cf_add_v2(a, cf_mul_v2_f(cf_sub_v2(b, a), t)); }
+CF_INLINE CF_V2 cf_lerp_v2(CF_V2 a, CF_V2 b, float t) { return cf_add_v2(a, cf_mul_v2_f(cf_sub_v2(b, a), t)); }
 
 /**
  * @function cf_bezier
@@ -850,7 +850,7 @@ CUTE_INLINE CF_V2 cf_lerp_v2(CF_V2 a, CF_V2 b, float t) { return cf_add_v2(a, cf
  * @param    t        A position along the curve.
  * @related  CF_V2 cf_lerp_v2 cf_bezier cf_bezier2
  */
-CUTE_INLINE CF_V2 cf_bezier(CF_V2 a, CF_V2 c0, CF_V2 b, float t) { return cf_lerp_v2(cf_lerp_v2(a, c0, t), cf_lerp_v2(c0, b, t), t); }
+CF_INLINE CF_V2 cf_bezier(CF_V2 a, CF_V2 c0, CF_V2 b, float t) { return cf_lerp_v2(cf_lerp_v2(a, c0, t), cf_lerp_v2(c0, b, t), t); }
 
 /**
  * @function cf_bezier2
@@ -863,7 +863,7 @@ CUTE_INLINE CF_V2 cf_bezier(CF_V2 a, CF_V2 c0, CF_V2 b, float t) { return cf_ler
  * @param    t        A position along the curve.
  * @related  CF_V2 cf_lerp_v2 cf_bezier cf_bezier2
  */
-CUTE_INLINE CF_V2 cf_bezier2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, float t) { return cf_bezier(cf_lerp_v2(a, c0, t), cf_lerp_v2(c0, c1, t), cf_lerp_v2(c1, b, t), t); }
+CF_INLINE CF_V2 cf_bezier2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, float t) { return cf_bezier(cf_lerp_v2(a, c0, t), cf_lerp_v2(c0, c1, t), cf_lerp_v2(c1, b, t), t); }
 
 /**
  * @function cf_lesser_v2
@@ -871,7 +871,7 @@ CUTE_INLINE CF_V2 cf_bezier2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, float t) { re
  * @brief    Returns true if `a.x < b.y` and `a.y < b.y`.
  * @related  CF_V2 cf_round cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel
  */
-CUTE_INLINE int cf_lesser_v2(CF_V2 a, CF_V2 b) { return a.x < b.x && a.y < b.y; }
+CF_INLINE int cf_lesser_v2(CF_V2 a, CF_V2 b) { return a.x < b.x && a.y < b.y; }
 
 /**
  * @function cf_greater_v2
@@ -879,7 +879,7 @@ CUTE_INLINE int cf_lesser_v2(CF_V2 a, CF_V2 b) { return a.x < b.x && a.y < b.y; 
  * @brief    Returns true if `a.x > b.y` and `a.y > b.y`.
  * @related  CF_V2 cf_round cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel
  */
-CUTE_INLINE int cf_greater_v2(CF_V2 a, CF_V2 b) { return a.x > b.x && a.y > b.y; }
+CF_INLINE int cf_greater_v2(CF_V2 a, CF_V2 b) { return a.x > b.x && a.y > b.y; }
 
 /**
  * @function cf_lesser_equal_v2
@@ -887,7 +887,7 @@ CUTE_INLINE int cf_greater_v2(CF_V2 a, CF_V2 b) { return a.x > b.x && a.y > b.y;
  * @brief    Returns true if `a.x <= b.y` and `a.y <= b.y`.
  * @related  CF_V2 cf_round cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel
  */
-CUTE_INLINE int cf_lesser_equal_v2(CF_V2 a, CF_V2 b) { return a.x <= b.x && a.y <= b.y; }
+CF_INLINE int cf_lesser_equal_v2(CF_V2 a, CF_V2 b) { return a.x <= b.x && a.y <= b.y; }
 
 /**
  * @function cf_greater_equal_v2
@@ -895,7 +895,7 @@ CUTE_INLINE int cf_lesser_equal_v2(CF_V2 a, CF_V2 b) { return a.x <= b.x && a.y 
  * @brief    Returns true if `a.x >= b.y` and `a.y >= b.y`.
  * @related  CF_V2 cf_roundcf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel
  */
-CUTE_INLINE int cf_greater_equal_v2(CF_V2 a, CF_V2 b) { return a.x >= b.x && a.y >= b.y; }
+CF_INLINE int cf_greater_equal_v2(CF_V2 a, CF_V2 b) { return a.x >= b.x && a.y >= b.y; }
 
 /**
  * @function cf_floor
@@ -904,7 +904,7 @@ CUTE_INLINE int cf_greater_equal_v2(CF_V2 a, CF_V2 b) { return a.x >= b.x && a.y
  * @remarks  Floor means the decimal-point part is zero'd out.
  * @related  CF_V2 cf_round cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel
  */
-CUTE_INLINE CF_V2 cf_floor(CF_V2 a) { return cf_v2(floorf(a.x), floorf(a.y)); }
+CF_INLINE CF_V2 cf_floor(CF_V2 a) { return cf_v2(floorf(a.x), floorf(a.y)); }
 
 /**
  * @function cf_round
@@ -913,7 +913,7 @@ CUTE_INLINE CF_V2 cf_floor(CF_V2 a) { return cf_v2(floorf(a.x), floorf(a.y)); }
  * @remarks  Rounding means clamping the float to the nearest whole integer value.
  * @related  CF_V2 cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel
  */
-CUTE_INLINE CF_V2 cf_round(CF_V2 a) { return cf_v2(roundf(a.x), roundf(a.y)); }
+CF_INLINE CF_V2 cf_round(CF_V2 a) { return cf_v2(roundf(a.x), roundf(a.y)); }
 
 /**
  * @function cf_safe_invert_v2
@@ -921,7 +921,7 @@ CUTE_INLINE CF_V2 cf_round(CF_V2 a) { return cf_v2(roundf(a.x), roundf(a.y)); }
  * @brief    Returns the component-wise safe inversion of a vector.
  * @related  CF_V2 cf_safe_invert
  */
-CUTE_INLINE CF_V2 cf_safe_invert_v2(CF_V2 a) { return cf_v2(cf_safe_invert(a.x), cf_safe_invert(a.y)); }
+CF_INLINE CF_V2 cf_safe_invert_v2(CF_V2 a) { return cf_v2(cf_safe_invert(a.x), cf_safe_invert(a.y)); }
 
 /**
  * @function cf_sign_v2
@@ -929,7 +929,7 @@ CUTE_INLINE CF_V2 cf_safe_invert_v2(CF_V2 a) { return cf_v2(cf_safe_invert(a.x),
  * @brief    Returns the component-wise sign of a vector.
  * @related  CF_V2 cf_sign
  */
-CUTE_INLINE CF_V2 cf_sign_v2(CF_V2 a) { return cf_v2(cf_sign(a.x), cf_sign(a.y)); }
+CF_INLINE CF_V2 cf_sign_v2(CF_V2 a) { return cf_v2(cf_sign(a.x), cf_sign(a.y)); }
 
 /**
  * @function cf_parallel
@@ -940,7 +940,7 @@ CUTE_INLINE CF_V2 cf_sign_v2(CF_V2 a) { return cf_v2(cf_sign(a.x), cf_sign(a.y))
  *           what a good tolerance is for your situation.
  * @related  CF_V2 cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel
  */
-CUTE_INLINE bool cf_parallel(CF_V2 a, CF_V2 b, float tol)
+CF_INLINE bool cf_parallel(CF_V2 a, CF_V2 b, float tol)
 {
 	float k = cf_len(a) / cf_len(b);
 	b = cf_mul_v2_f(b, k);
@@ -960,8 +960,8 @@ CUTE_INLINE bool cf_parallel(CF_V2 a, CF_V2 b, float tol)
  * @brief    Returns an initialized `CF_SinCos` from `radians`.
  * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
  */
-CUTE_INLINE CF_SinCos cf_sincos_f(float radians) { CF_SinCos r; r.s = sinf(radians); r.c = cosf(radians); return r; }
-CUTE_INLINE CF_SinCos cf_sincos() { CF_SinCos r; r.c = 1.0f; r.s = 0; return r; }
+CF_INLINE CF_SinCos cf_sincos_f(float radians) { CF_SinCos r; r.s = sinf(radians); r.c = cosf(radians); return r; }
+CF_INLINE CF_SinCos cf_sincos() { CF_SinCos r; r.c = 1.0f; r.s = 0; return r; }
 
 /**
  * @function cf_x_axis
@@ -969,7 +969,7 @@ CUTE_INLINE CF_SinCos cf_sincos() { CF_SinCos r; r.c = 1.0f; r.s = 0; return r; 
  * @brief    Returns the x-axis of the 2x2 rotation matrix represented by `CF_SinCos`.
  * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
  */
-CUTE_INLINE CF_V2 cf_x_axis(CF_SinCos r) { return cf_v2(r.c, r.s); }
+CF_INLINE CF_V2 cf_x_axis(CF_SinCos r) { return cf_v2(r.c, r.s); }
 
 /**
  * @function cf_y_axis
@@ -977,7 +977,7 @@ CUTE_INLINE CF_V2 cf_x_axis(CF_SinCos r) { return cf_v2(r.c, r.s); }
  * @brief    Returns the y-axis of the 2x2 rotation matrix represented by `CF_SinCos`.
  * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
  */
-CUTE_INLINE CF_V2 cf_y_axis(CF_SinCos r) { return cf_v2(-r.s, r.c); }
+CF_INLINE CF_V2 cf_y_axis(CF_SinCos r) { return cf_v2(-r.s, r.c); }
 
 /**
  * @function cf_mul_sc_v2
@@ -985,7 +985,7 @@ CUTE_INLINE CF_V2 cf_y_axis(CF_SinCos r) { return cf_v2(-r.s, r.c); }
  * @brief    Returns a vector rotated by `a`.
  * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
  */
-CUTE_INLINE CF_V2 cf_mul_sc_v2(CF_SinCos a, CF_V2 b) { return cf_v2(a.c * b.x - a.s * b.y, a.s * b.x + a.c * b.y); }
+CF_INLINE CF_V2 cf_mul_sc_v2(CF_SinCos a, CF_V2 b) { return cf_v2(a.c * b.x - a.s * b.y, a.s * b.x + a.c * b.y); }
 
 /**
  * @function cf_mulT_sc_v2
@@ -993,7 +993,7 @@ CUTE_INLINE CF_V2 cf_mul_sc_v2(CF_SinCos a, CF_V2 b) { return cf_v2(a.c * b.x - 
  * @brief    Returns a vector inverse-rotated by `a`.
  * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
  */
-CUTE_INLINE CF_V2 cf_mulT_sc_v2(CF_SinCos a, CF_V2 b) { return cf_v2(a.c * b.x + a.s * b.y, -a.s * b.x + a.c * b.y); }
+CF_INLINE CF_V2 cf_mulT_sc_v2(CF_SinCos a, CF_V2 b) { return cf_v2(a.c * b.x + a.s * b.y, -a.s * b.x + a.c * b.y); }
 
 /**
  * @function cf_mul_sc
@@ -1001,7 +1001,7 @@ CUTE_INLINE CF_V2 cf_mulT_sc_v2(CF_SinCos a, CF_V2 b) { return cf_v2(a.c * b.x +
  * @brief    Returns the composition of `a` multiplied by `b`.
  * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
  */
-CUTE_INLINE CF_SinCos cf_mul_sc(CF_SinCos a, CF_SinCos b) { CF_SinCos c; c.c = a.c * b.c - a.s * b.s; c.s = a.s * b.c + a.c * b.s; return c; }
+CF_INLINE CF_SinCos cf_mul_sc(CF_SinCos a, CF_SinCos b) { CF_SinCos c; c.c = a.c * b.c - a.s * b.s; c.s = a.s * b.c + a.c * b.s; return c; }
 
 /**
  * @function cf_mulT_sc
@@ -1009,7 +1009,7 @@ CUTE_INLINE CF_SinCos cf_mul_sc(CF_SinCos a, CF_SinCos b) { CF_SinCos c; c.c = a
  * @brief    Returns the composition of `a` multiplied by inverse of `b`.
  * @related  CF_SinCos cf_sincos_f cf_x_axis cf_y_axis cf_mul_sc_v2 cf_mulT_sc_v2 cf_mul_sc cf_mulT_sc
  */
-CUTE_INLINE CF_SinCos cf_mulT_sc(CF_SinCos a, CF_SinCos b) { CF_SinCos c; c.c = a.c * b.c + a.s * b.s; c.s = a.c * b.s - a.s * b.c; return c; }
+CF_INLINE CF_SinCos cf_mulT_sc(CF_SinCos a, CF_SinCos b) { CF_SinCos c; c.c = a.c * b.c + a.s * b.s; c.s = a.c * b.s - a.s * b.c; return c; }
 
 /**
  * @function cf_atan2_360
@@ -1017,7 +1017,7 @@ CUTE_INLINE CF_SinCos cf_mulT_sc(CF_SinCos a, CF_SinCos b) { CF_SinCos c; c.c = 
  * @brief    Returns a remap'd result from atan2f to the continuous range of 0, 2*PI.
  * @related  cf_atan2_360 cf_atan2_360_sc cf_atan2_360_v2
  */
-CUTE_INLINE float cf_atan2_360(float y, float x) { return atan2f(-y, -x) + CF_PI; }
+CF_INLINE float cf_atan2_360(float y, float x) { return atan2f(-y, -x) + CF_PI; }
 
 /**
  * @function cf_atan2_360_sc
@@ -1025,7 +1025,7 @@ CUTE_INLINE float cf_atan2_360(float y, float x) { return atan2f(-y, -x) + CF_PI
  * @brief    Returns a remap'd result from atan2f to the continuous range of 0, 2*PI.
  * @related  cf_atan2_360 cf_atan2_360_sc cf_atan2_360_v2
  */
-CUTE_INLINE float cf_atan2_360_sc(CF_SinCos r) { return cf_atan2_360(r.s, r.c); }
+CF_INLINE float cf_atan2_360_sc(CF_SinCos r) { return cf_atan2_360(r.s, r.c); }
 
 /**
  * @function cf_atan2_360_v2
@@ -1033,7 +1033,7 @@ CUTE_INLINE float cf_atan2_360_sc(CF_SinCos r) { return cf_atan2_360(r.s, r.c); 
  * @brief    Returns a remap'd result from atan2f to the continuous range of 0, 2*PI.
  * @related  cf_atan2_360 cf_atan2_360_sc cf_atan2_360_v2
  */
-CUTE_INLINE float cf_atan2_360_v2(CF_V2 v) { return atan2f(-v.y, -v.x) + CF_PI; }
+CF_INLINE float cf_atan2_360_v2(CF_V2 v) { return atan2f(-v.y, -v.x) + CF_PI; }
 
 /**
  * @function cf_shortest_arc
@@ -1041,7 +1041,7 @@ CUTE_INLINE float cf_atan2_360_v2(CF_V2 v) { return atan2f(-v.y, -v.x) + CF_PI; 
  * @brief    Returns the shortest angle to rotate the vector `a` to the vector `b`.
  * @related  cf_shortest_arc cf_angle_diff cf_from_angle
  */
-CUTE_INLINE float cf_shortest_arc(CF_V2 a, CF_V2 b)
+CF_INLINE float cf_shortest_arc(CF_V2 a, CF_V2 b)
 {
 	float c = cf_dot(a, b);
 	float s = cf_det2(a, b);
@@ -1059,7 +1059,7 @@ CUTE_INLINE float cf_shortest_arc(CF_V2 a, CF_V2 b)
  * @brief    Returns the difference of two angles in the range of -`CF_PI` to `CF_PI`.
  * @related  cf_shortest_arc cf_angle_diff cf_from_angle
  */
-CUTE_INLINE float cf_angle_diff(float radians_a, float radians_b) { return cf_mod((radians_b - radians_a) + CF_PI, 2.0f * CF_PI) - CF_PI; }
+CF_INLINE float cf_angle_diff(float radians_a, float radians_b) { return cf_mod((radians_b - radians_a) + CF_PI, 2.0f * CF_PI) - CF_PI; }
 
 /**
  * @function cf_from_angle
@@ -1067,7 +1067,7 @@ CUTE_INLINE float cf_angle_diff(float radians_a, float radians_b) { return cf_mo
  * @brief    returns a vector according to the sin/cos of `radians`.
  * @related  cf_shortest_arc cf_angle_diff cf_from_angle
  */
-CUTE_INLINE CF_V2 cf_from_angle(float radians) { return cf_v2(cosf(radians), sinf(radians)); }
+CF_INLINE CF_V2 cf_from_angle(float radians) { return cf_v2(cosf(radians), sinf(radians)); }
 
 //--------------------------------------------------------------------------------------------------
 // m2 ops.
@@ -1079,7 +1079,7 @@ CUTE_INLINE CF_V2 cf_from_angle(float radians) { return cf_v2(cosf(radians), sin
  * @brief    Multiplies a `CF_M2x2` by a float.
  * @related  CF_M2x2 cf_mul_m2_f cf_mul_m2_v2 cf_mul_m2
  */
-CUTE_INLINE CF_M2x2 cf_mul_m2_f(CF_M2x2 a, float b) { CF_M2x2 c; c.x = cf_mul_v2_f(a.x, b); c.y = cf_mul_v2_f(a.y, b); return c; }
+CF_INLINE CF_M2x2 cf_mul_m2_f(CF_M2x2 a, float b) { CF_M2x2 c; c.x = cf_mul_v2_f(a.x, b); c.y = cf_mul_v2_f(a.y, b); return c; }
 
 /**
  * @function cf_mul_m2_v2
@@ -1087,7 +1087,7 @@ CUTE_INLINE CF_M2x2 cf_mul_m2_f(CF_M2x2 a, float b) { CF_M2x2 c; c.x = cf_mul_v2
  * @brief    Multiplies a vector by a `CF_M2x2`.
  * @related  CF_M2x2 CF_V2 cf_mul_m2_f cf_mul_m2_v2 cf_mul_m2
  */
-CUTE_INLINE CF_V2 cf_mul_m2_v2(CF_M2x2 a, CF_V2 b) { CF_V2 c; c.x = a.x.x * b.x + a.y.x * b.y; c.y = a.x.y * b.x + a.y.y * b.y; return c; }
+CF_INLINE CF_V2 cf_mul_m2_v2(CF_M2x2 a, CF_V2 b) { CF_V2 c; c.x = a.x.x * b.x + a.y.x * b.y; c.y = a.x.y * b.x + a.y.y * b.y; return c; }
 
 /**
  * @function cf_mul_m2
@@ -1095,7 +1095,7 @@ CUTE_INLINE CF_V2 cf_mul_m2_v2(CF_M2x2 a, CF_V2 b) { CF_V2 c; c.x = a.x.x * b.x 
  * @brief    Returns the composition of `a` times `b`.
  * @related  CF_M2x2 cf_mul_m2_f cf_mul_m2_v2 cf_mul_m2
  */
-CUTE_INLINE CF_M2x2 cf_mul_m2(CF_M2x2 a, CF_M2x2 b) { CF_M2x2 c; c.x = cf_mul_m2_v2(a, b.x); c.y = cf_mul_m2_v2(a, b.y); return c; }
+CF_INLINE CF_M2x2 cf_mul_m2(CF_M2x2 a, CF_M2x2 b) { CF_M2x2 c; c.x = cf_mul_m2_v2(a, b.x); c.y = cf_mul_m2_v2(a, b.y); return c; }
 
 //--------------------------------------------------------------------------------------------------
 // m3x2 ops.
@@ -1107,7 +1107,7 @@ CUTE_INLINE CF_M2x2 cf_mul_m2(CF_M2x2 a, CF_M2x2 b) { CF_M2x2 c; c.x = cf_mul_m2
  * @brief    Returns a vector multiplied by a `CF_M3x2`.
  * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
  */
-CUTE_INLINE CF_V2 cf_mul_m32_v2(CF_M3x2 a, CF_V2 b) { return cf_add_v2(cf_mul_m2_v2(a.m, b), a.p); }
+CF_INLINE CF_V2 cf_mul_m32_v2(CF_M3x2 a, CF_V2 b) { return cf_add_v2(cf_mul_m2_v2(a.m, b), a.p); }
 
 /**
  * @function cf_mul_m32
@@ -1115,7 +1115,7 @@ CUTE_INLINE CF_V2 cf_mul_m32_v2(CF_M3x2 a, CF_V2 b) { return cf_add_v2(cf_mul_m2
  * @brief    Returns the composition of two `CF_M3x2`s multiplied together.
  * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
  */
-CUTE_INLINE CF_M3x2 cf_mul_m32(CF_M3x2 a, CF_M3x2 b) { CF_M3x2 c; c.m = cf_mul_m2(a.m, b.m); c.p = cf_add_v2(cf_mul_m2_v2(a.m, b.p), a.p); return c; }
+CF_INLINE CF_M3x2 cf_mul_m32(CF_M3x2 a, CF_M3x2 b) { CF_M3x2 c; c.m = cf_mul_m2(a.m, b.m); c.p = cf_add_v2(cf_mul_m2_v2(a.m, b.p), a.p); return c; }
 
 /**
  * @function cf_make_identity
@@ -1123,7 +1123,7 @@ CUTE_INLINE CF_M3x2 cf_mul_m32(CF_M3x2 a, CF_M3x2 b) { CF_M3x2 c; c.m = cf_mul_m
  * @brief    Returns an identity `CF_M3x2`.
  * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
  */
-CUTE_INLINE CF_M3x2 cf_make_identity() { CF_M3x2 m; m.m.x = cf_v2(1, 0); m.m.y = cf_v2(0, 1); m.p = cf_v2(0, 0); return m; }
+CF_INLINE CF_M3x2 cf_make_identity() { CF_M3x2 m; m.m.x = cf_v2(1, 0); m.m.y = cf_v2(0, 1); m.p = cf_v2(0, 0); return m; }
 
 /**
  * @function cf_make_translation_f
@@ -1131,7 +1131,7 @@ CUTE_INLINE CF_M3x2 cf_make_identity() { CF_M3x2 m; m.m.x = cf_v2(1, 0); m.m.y =
  * @brief    Returns a `CF_M3x2` that represents a translation.
  * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
  */
-CUTE_INLINE CF_M3x2 cf_make_translation_f(float x, float y) { CF_M3x2 m; m.m.x = cf_v2(1, 0); m.m.y = cf_v2(0, 1); m.p = cf_v2(x, y); return m; }
+CF_INLINE CF_M3x2 cf_make_translation_f(float x, float y) { CF_M3x2 m; m.m.x = cf_v2(1, 0); m.m.y = cf_v2(0, 1); m.p = cf_v2(x, y); return m; }
 
 /**
  * @function cf_make_translation
@@ -1139,7 +1139,7 @@ CUTE_INLINE CF_M3x2 cf_make_translation_f(float x, float y) { CF_M3x2 m; m.m.x =
  * @brief    Returns a `CF_M3x2` that represents a translation.
  * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
  */
-CUTE_INLINE CF_M3x2 cf_make_translation(CF_V2 p) { return cf_make_translation_f(p.x, p.y); }
+CF_INLINE CF_M3x2 cf_make_translation(CF_V2 p) { return cf_make_translation_f(p.x, p.y); }
 
 /**
  * @function cf_make_scale
@@ -1147,7 +1147,7 @@ CUTE_INLINE CF_M3x2 cf_make_translation(CF_V2 p) { return cf_make_translation_f(
  * @brief    Returns a `CF_M3x2` that represents a scale.
  * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
  */
-CUTE_INLINE CF_M3x2 cf_make_scale(CF_V2 s) { CF_M3x2 m; m.m.x = cf_v2(s.x, 0); m.m.y = cf_v2(0, s.y); m.p = cf_v2(0, 0); return m; }
+CF_INLINE CF_M3x2 cf_make_scale(CF_V2 s) { CF_M3x2 m; m.m.x = cf_v2(s.x, 0); m.m.y = cf_v2(0, s.y); m.p = cf_v2(0, 0); return m; }
 
 /**
  * @function cf_make_scale_f
@@ -1155,7 +1155,7 @@ CUTE_INLINE CF_M3x2 cf_make_scale(CF_V2 s) { CF_M3x2 m; m.m.x = cf_v2(s.x, 0); m
  * @brief    Returns a `CF_M3x2` that represents a scale.
  * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
  */
-CUTE_INLINE CF_M3x2 cf_make_scale_f(float s) { return cf_make_scale(cf_v2(s, s)); }
+CF_INLINE CF_M3x2 cf_make_scale_f(float s) { return cf_make_scale(cf_v2(s, s)); }
 
 /**
  * @function cf_make_scale_translation
@@ -1163,7 +1163,7 @@ CUTE_INLINE CF_M3x2 cf_make_scale_f(float s) { return cf_make_scale(cf_v2(s, s))
  * @brief    Returns a `CF_M3x2` that represents a scale + translation.
  * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
  */
-CUTE_INLINE CF_M3x2 cf_make_scale_translation(CF_V2 s, CF_V2 p) { CF_M3x2 m; m.m.x = cf_v2(s.x, 0); m.m.y = cf_v2(0, s.y); m.p = p; return m; }
+CF_INLINE CF_M3x2 cf_make_scale_translation(CF_V2 s, CF_V2 p) { CF_M3x2 m; m.m.x = cf_v2(s.x, 0); m.m.y = cf_v2(0, s.y); m.p = p; return m; }
 
 /**
  * @function cf_make_scale_translation_f
@@ -1171,7 +1171,7 @@ CUTE_INLINE CF_M3x2 cf_make_scale_translation(CF_V2 s, CF_V2 p) { CF_M3x2 m; m.m
  * @brief    Returns a `CF_M3x2` that represents a scale + translation.
  * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
  */
-CUTE_INLINE CF_M3x2 cf_make_scale_translation_f(float s, CF_V2 p) { return cf_make_scale_translation(cf_v2(s, s), p); }
+CF_INLINE CF_M3x2 cf_make_scale_translation_f(float s, CF_V2 p) { return cf_make_scale_translation(cf_v2(s, s), p); }
 
 /**
  * @function cf_make_scale_translation_f_f
@@ -1179,7 +1179,7 @@ CUTE_INLINE CF_M3x2 cf_make_scale_translation_f(float s, CF_V2 p) { return cf_ma
  * @brief    Returns a `CF_M3x2` that represents a scale + translation.
  * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
  */
-CUTE_INLINE CF_M3x2 cf_make_scale_translation_f_f(float sx, float sy, CF_V2 p) { return cf_make_scale_translation(cf_v2(sx, sy), p); }
+CF_INLINE CF_M3x2 cf_make_scale_translation_f_f(float sx, float sy, CF_V2 p) { return cf_make_scale_translation(cf_v2(sx, sy), p); }
 
 /**
  * @function cf_make_rotation
@@ -1187,7 +1187,7 @@ CUTE_INLINE CF_M3x2 cf_make_scale_translation_f_f(float sx, float sy, CF_V2 p) {
  * @brief    Returns a `CF_M3x2` that represents a rotation.
  * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
  */
-CUTE_INLINE CF_M3x2 cf_make_rotation(float radians) { CF_SinCos sc = cf_sincos_f(radians); CF_M3x2 m; m.m.x = cf_v2(sc.c, -sc.s); m.m.y = cf_v2(sc.s, sc.c); m.p = cf_v2(0, 0); return m; }
+CF_INLINE CF_M3x2 cf_make_rotation(float radians) { CF_SinCos sc = cf_sincos_f(radians); CF_M3x2 m; m.m.x = cf_v2(sc.c, -sc.s); m.m.y = cf_v2(sc.s, sc.c); m.p = cf_v2(0, 0); return m; }
 
 /**
  * @function cf_make_transform_TSR
@@ -1195,7 +1195,7 @@ CUTE_INLINE CF_M3x2 cf_make_rotation(float radians) { CF_SinCos sc = cf_sincos_f
  * @brief    Returns a `CF_M3x2` that represents a translation + scale + rotation.
  * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
  */
-CUTE_INLINE CF_M3x2 cf_make_transform_TSR(CF_V2 p, CF_V2 s, float radians) { CF_SinCos sc = cf_sincos_f(radians); CF_M3x2 m; m.m.x = cf_mul_v2_f(cf_v2(sc.c, -sc.s), s.x); m.m.y = cf_mul_v2_f(cf_v2(sc.s, sc.c), s.y); m.p = p; return m; }
+CF_INLINE CF_M3x2 cf_make_transform_TSR(CF_V2 p, CF_V2 s, float radians) { CF_SinCos sc = cf_sincos_f(radians); CF_M3x2 m; m.m.x = cf_mul_v2_f(cf_v2(sc.c, -sc.s), s.x); m.m.y = cf_mul_v2_f(cf_v2(sc.s, sc.c), s.y); m.p = p; return m; }
 
 /**
  * @function cf_invert
@@ -1204,7 +1204,7 @@ CUTE_INLINE CF_M3x2 cf_make_transform_TSR(CF_V2 p, CF_V2 s, float radians) { CF_
  * @remarks  If the determinant is zero, the returned matrix is also zero.
  * @related  CF_M3x2 cf_mul_m32_v2 cf_mul_m32 cf_make_identity cf_make_translation cf_make_scale cf_make_scale_translation cf_make_rotation cf_make_transform_TSR cf_invert
  */
-CUTE_INLINE CF_M3x2 cf_invert(CF_M3x2 a)
+CF_INLINE CF_M3x2 cf_invert(CF_M3x2 a)
 {
 	float id = cf_safe_invert(cf_det2(a.m.x, a.m.y));
 	CF_M3x2 b;
@@ -1225,7 +1225,7 @@ CUTE_INLINE CF_M3x2 cf_invert(CF_M3x2 a)
  * @brief    Returns an identity `CF_Transform`.
  * @related  CF_Transform cf_make_transform cf_make_transform_TR cf_mul_tf_v2 cf_mulT_tf_v2 cf_mul_tf cf_mulT_tf
  */
-CUTE_INLINE CF_Transform cf_make_transform() { CF_Transform x; x.p = cf_v2(0, 0); x.r = cf_sincos(); return x; }
+CF_INLINE CF_Transform cf_make_transform() { CF_Transform x; x.p = cf_v2(0, 0); x.r = cf_sincos(); return x; }
 
 /**
  * @function cf_make_transform_TR
@@ -1233,7 +1233,7 @@ CUTE_INLINE CF_Transform cf_make_transform() { CF_Transform x; x.p = cf_v2(0, 0)
  * @brief    Returns a `CF_Transform` that represents a translation + rotation.
  * @related  CF_Transform cf_make_transform cf_make_transform_TR cf_mul_tf_v2 cf_mulT_tf_v2 cf_mul_tf cf_mulT_tf
  */
-CUTE_INLINE CF_Transform cf_make_transform_TR(CF_V2 p, float radians) { CF_Transform x; x.r = cf_sincos_f(radians); x.p = p; return x; }
+CF_INLINE CF_Transform cf_make_transform_TR(CF_V2 p, float radians) { CF_Transform x; x.r = cf_sincos_f(radians); x.p = p; return x; }
 
 /**
  * @function cf_mul_tf_v2
@@ -1241,7 +1241,7 @@ CUTE_INLINE CF_Transform cf_make_transform_TR(CF_V2 p, float radians) { CF_Trans
  * @brief    Returns a vector multiplied by a `CF_Transform`.
  * @related  CF_Transform cf_make_transform cf_make_transform_TR cf_mul_tf_v2 cf_mulT_tf_v2 cf_mul_tf cf_mulT_tf
  */
-CUTE_INLINE CF_V2 cf_mul_tf_v2(CF_Transform a, CF_V2 b) { return cf_add_v2(cf_mul_sc_v2(a.r, b), a.p); }
+CF_INLINE CF_V2 cf_mul_tf_v2(CF_Transform a, CF_V2 b) { return cf_add_v2(cf_mul_sc_v2(a.r, b), a.p); }
 
 /**
  * @function cf_mulT_tf_v2
@@ -1249,7 +1249,7 @@ CUTE_INLINE CF_V2 cf_mul_tf_v2(CF_Transform a, CF_V2 b) { return cf_add_v2(cf_mu
  * @brief    Returns a vector multiplied by an inverted `CF_Transform`.
  * @related  CF_Transform cf_make_transform cf_make_transform_TR cf_mul_tf_v2 cf_mulT_tf_v2 cf_mul_tf cf_mulT_tf
  */
-CUTE_INLINE CF_V2 cf_mulT_tf_v2(CF_Transform a, CF_V2 b) { return cf_mulT_sc_v2(a.r, cf_sub_v2(b, a.p)); }
+CF_INLINE CF_V2 cf_mulT_tf_v2(CF_Transform a, CF_V2 b) { return cf_mulT_sc_v2(a.r, cf_sub_v2(b, a.p)); }
 
 /**
  * @function cf_mul_tf
@@ -1257,7 +1257,7 @@ CUTE_INLINE CF_V2 cf_mulT_tf_v2(CF_Transform a, CF_V2 b) { return cf_mulT_sc_v2(
  * @brief    Returns a the composition of multiplying two `CF_Transform`s.
  * @related  CF_Transform cf_make_transform cf_make_transform_TR cf_mul_tf_v2 cf_mulT_tf_v2 cf_mul_tf cf_mulT_tf
  */
-CUTE_INLINE CF_Transform cf_mul_tf(CF_Transform a, CF_Transform b) { CF_Transform c; c.r = cf_mul_sc(a.r, b.r); c.p = cf_add_v2(cf_mul_sc_v2(a.r, b.p), a.p); return c; }
+CF_INLINE CF_Transform cf_mul_tf(CF_Transform a, CF_Transform b) { CF_Transform c; c.r = cf_mul_sc(a.r, b.r); c.p = cf_add_v2(cf_mul_sc_v2(a.r, b.p), a.p); return c; }
 
 
 /**
@@ -1266,7 +1266,7 @@ CUTE_INLINE CF_Transform cf_mul_tf(CF_Transform a, CF_Transform b) { CF_Transfor
  * @brief    Returns `a` multiplied by inverse `b`.
  * @related  CF_Transform cf_make_transform cf_make_transform_TR cf_mul_tf_v2 cf_mulT_tf_v2 cf_mul_tf cf_mulT_tf
  */
-CUTE_INLINE CF_Transform cf_mulT_tf(CF_Transform a, CF_Transform b) { CF_Transform c; c.r = cf_mulT_sc(a.r, b.r); c.p = cf_mulT_sc_v2(a.r, cf_sub_v2(b.p, a.p)); return c; }
+CF_INLINE CF_Transform cf_mulT_tf(CF_Transform a, CF_Transform b) { CF_Transform c; c.r = cf_mulT_sc(a.r, b.r); c.p = cf_mulT_sc_v2(a.r, cf_sub_v2(b.p, a.p)); return c; }
 
 //--------------------------------------------------------------------------------------------------
 // Halfspace (plane/line) ops.
@@ -1278,7 +1278,7 @@ CUTE_INLINE CF_Transform cf_mulT_tf(CF_Transform a, CF_Transform b) { CF_Transfo
  * @brief    Returns an initialized `CF_Halfpsace` (a 2-dimensional plane, aka line).
  * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
  */
-CUTE_INLINE CF_Halfspace cf_plane(CF_V2 n, float d) { CF_Halfspace h; h.n = n; h.d = d; return h; }
+CF_INLINE CF_Halfspace cf_plane(CF_V2 n, float d) { CF_Halfspace h; h.n = n; h.d = d; return h; }
 
 /**
  * @function cf_plane2
@@ -1286,7 +1286,7 @@ CUTE_INLINE CF_Halfspace cf_plane(CF_V2 n, float d) { CF_Halfspace h; h.n = n; h
  * @brief    Returns an initialized `CF_Halfpsace` (a 2-dimensional plane, aka line).
  * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
  */
-CUTE_INLINE CF_Halfspace cf_plane2(CF_V2 n, CF_V2 p) { CF_Halfspace h; h.n = n; h.d = cf_dot(n, p); return h; }
+CF_INLINE CF_Halfspace cf_plane2(CF_V2 n, CF_V2 p) { CF_Halfspace h; h.n = n; h.d = cf_dot(n, p); return h; }
 
 /**
  * @function cf_origin
@@ -1294,7 +1294,7 @@ CUTE_INLINE CF_Halfspace cf_plane2(CF_V2 n, CF_V2 p) { CF_Halfspace h; h.n = n; 
  * @brief    Returns the origin projected onto the plane.
  * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
  */
-CUTE_INLINE CF_V2 cf_origin(CF_Halfspace h) { return cf_mul_v2_f(h.n, h.d); }
+CF_INLINE CF_V2 cf_origin(CF_Halfspace h) { return cf_mul_v2_f(h.n, h.d); }
 
 /**
  * @function cf_distance_hs
@@ -1302,7 +1302,7 @@ CUTE_INLINE CF_V2 cf_origin(CF_Halfspace h) { return cf_mul_v2_f(h.n, h.d); }
  * @brief    Returns distance of a point to the plane.
  * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
  */
-CUTE_INLINE float cf_distance_hs(CF_Halfspace h, CF_V2 p) { return cf_dot(h.n, p) - h.d; }
+CF_INLINE float cf_distance_hs(CF_Halfspace h, CF_V2 p) { return cf_dot(h.n, p) - h.d; }
 
 /**
  * @function cf_project
@@ -1310,7 +1310,7 @@ CUTE_INLINE float cf_distance_hs(CF_Halfspace h, CF_V2 p) { return cf_dot(h.n, p
  * @brief    Projects a point onto the surface of the plane.
  * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
  */
-CUTE_INLINE CF_V2 cf_project(CF_Halfspace h, CF_V2 p) { return cf_sub_v2(p, cf_mul_v2_f(h.n, cf_distance_hs(h, p))); }
+CF_INLINE CF_V2 cf_project(CF_Halfspace h, CF_V2 p) { return cf_sub_v2(p, cf_mul_v2_f(h.n, cf_distance_hs(h, p))); }
 
 /**
  * @function cf_mul_tf_hs
@@ -1318,7 +1318,7 @@ CUTE_INLINE CF_V2 cf_project(CF_Halfspace h, CF_V2 p) { return cf_sub_v2(p, cf_m
  * @brief    Transforms a plane by a `CF_Transform`.
  * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
  */
-CUTE_INLINE CF_Halfspace cf_mul_tf_hs(CF_Transform a, CF_Halfspace b) { CF_Halfspace c; c.n = cf_mul_sc_v2(a.r, b.n); c.d = cf_dot(cf_mul_tf_v2(a, cf_origin(b)), c.n); return c; }
+CF_INLINE CF_Halfspace cf_mul_tf_hs(CF_Transform a, CF_Halfspace b) { CF_Halfspace c; c.n = cf_mul_sc_v2(a.r, b.n); c.d = cf_dot(cf_mul_tf_v2(a, cf_origin(b)), c.n); return c; }
 
 /**
  * @function cf_mulT_tf_hs
@@ -1326,7 +1326,7 @@ CUTE_INLINE CF_Halfspace cf_mul_tf_hs(CF_Transform a, CF_Halfspace b) { CF_Halfs
  * @brief    Transforms a plane by an inverted `CF_Transform`.
  * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
  */
-CUTE_INLINE CF_Halfspace cf_mulT_tf_hs(CF_Transform a, CF_Halfspace b) { CF_Halfspace c; c.n = cf_mulT_sc_v2(a.r, b.n); c.d = cf_dot(cf_mulT_tf_v2(a, cf_origin(b)), c.n); return c; }
+CF_INLINE CF_Halfspace cf_mulT_tf_hs(CF_Transform a, CF_Halfspace b) { CF_Halfspace c; c.n = cf_mulT_sc_v2(a.r, b.n); c.d = cf_dot(cf_mulT_tf_v2(a, cf_origin(b)), c.n); return c; }
 
 /**
  * @function cf_intersect_halfspace
@@ -1336,7 +1336,7 @@ CUTE_INLINE CF_Halfspace cf_mulT_tf_hs(CF_Transform a, CF_Halfspace b) { CF_Half
  *           call the similar function `cf_intersect_halfspace2`.
  * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
  */
-CUTE_INLINE CF_V2 cf_intersect_halfspace(CF_V2 a, CF_V2 b, float da, float db) { return cf_add_v2(a, cf_mul_v2_f(cf_sub_v2(b, a), (da / (da - db)))); }
+CF_INLINE CF_V2 cf_intersect_halfspace(CF_V2 a, CF_V2 b, float da, float db) { return cf_add_v2(a, cf_mul_v2_f(cf_sub_v2(b, a), (da / (da - db)))); }
 
 /**
  * @function cf_intersect_halfspace2
@@ -1344,7 +1344,7 @@ CUTE_INLINE CF_V2 cf_intersect_halfspace(CF_V2 a, CF_V2 b, float da, float db) {
  * @brief    Returns the intersection point of two points to a plane.
  * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
  */
-CUTE_INLINE CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b) { return cf_intersect_halfspace(a, b, cf_distance_hs(h, a), cf_distance_hs(h, b)); }
+CF_INLINE CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b) { return cf_intersect_halfspace(a, b, cf_distance_hs(h, a), cf_distance_hs(h, b)); }
 
 //--------------------------------------------------------------------------------------------------
 // AABB helpers.
@@ -1355,7 +1355,7 @@ CUTE_INLINE CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b) { re
  * @brief    Returns an AABB (axis-aligned bounding box) from min/max points (bottom-left and top-right).
  * @related  CF_Aabb cf_make_aabb cf_make_aabb_pos_w_h cf_make_aabb_center_half_extents cf_make_aabb_from_top_left
  */
-CUTE_INLINE CF_Aabb cf_make_aabb(CF_V2 min, CF_V2 max) { CF_Aabb bb; bb.min = min; bb.max = max; return bb; }
+CF_INLINE CF_Aabb cf_make_aabb(CF_V2 min, CF_V2 max) { CF_Aabb bb; bb.min = min; bb.max = max; return bb; }
 
 /**
  * @function cf_make_aabb_pos_w_h
@@ -1363,7 +1363,7 @@ CUTE_INLINE CF_Aabb cf_make_aabb(CF_V2 min, CF_V2 max) { CF_Aabb bb; bb.min = mi
  * @brief    Returns an AABB (axis-aligned bounding box).
  * @related  CF_Aabb cf_make_aabb cf_make_aabb_pos_w_h cf_make_aabb_center_half_extents cf_make_aabb_from_top_left
  */
-CUTE_INLINE CF_Aabb cf_make_aabb_pos_w_h(CF_V2 pos, float w, float h) { CF_Aabb bb; CF_V2 he = cf_mul_v2_f(cf_v2(w, h), 0.5f); bb.min = cf_sub_v2(pos, he); bb.max = cf_add_v2(pos, he); return bb; }
+CF_INLINE CF_Aabb cf_make_aabb_pos_w_h(CF_V2 pos, float w, float h) { CF_Aabb bb; CF_V2 he = cf_mul_v2_f(cf_v2(w, h), 0.5f); bb.min = cf_sub_v2(pos, he); bb.max = cf_add_v2(pos, he); return bb; }
 
 /**
  * @function cf_make_aabb_center_half_extents
@@ -1372,7 +1372,7 @@ CUTE_INLINE CF_Aabb cf_make_aabb_pos_w_h(CF_V2 pos, float w, float h) { CF_Aabb 
  * @remarks  Half-extents refer to half-width and height-height: `half_extents = { half_width, half_height }`.
  * @related  CF_Aabb cf_make_aabb cf_make_aabb_pos_w_h cf_make_aabb_center_half_extents cf_make_aabb_from_top_left
  */
-CUTE_INLINE CF_Aabb cf_make_aabb_center_half_extents(CF_V2 center, CF_V2 half_extents) { CF_Aabb bb; bb.min = cf_sub_v2(center, half_extents); bb.max = cf_add_v2(center, half_extents); return bb; }
+CF_INLINE CF_Aabb cf_make_aabb_center_half_extents(CF_V2 center, CF_V2 half_extents) { CF_Aabb bb; bb.min = cf_sub_v2(center, half_extents); bb.max = cf_add_v2(center, half_extents); return bb; }
 
 /**
  * @function cf_make_aabb_from_top_left
@@ -1380,7 +1380,7 @@ CUTE_INLINE CF_Aabb cf_make_aabb_center_half_extents(CF_V2 center, CF_V2 half_ex
  * @brief    Returns an AABB (axis-aligned bounding box).
  * @related  CF_Aabb cf_make_aabb cf_make_aabb_pos_w_h cf_make_aabb_center_half_extents cf_make_aabb_from_top_left
  */
-CUTE_INLINE CF_Aabb cf_make_aabb_from_top_left(CF_V2 top_left, float w, float h) { return cf_make_aabb(cf_add_v2(top_left, cf_v2(0, -h)), cf_add_v2(top_left, cf_v2(w, 0))); }
+CF_INLINE CF_Aabb cf_make_aabb_from_top_left(CF_V2 top_left, float w, float h) { return cf_make_aabb(cf_add_v2(top_left, cf_v2(0, -h)), cf_add_v2(top_left, cf_v2(w, 0))); }
 
 /**
  * @function cf_width
@@ -1388,7 +1388,7 @@ CUTE_INLINE CF_Aabb cf_make_aabb_from_top_left(CF_V2 top_left, float w, float h)
  * @brief    Returns the width of an AABB (axis-aligned bounding box).
  * @related  CF_Aabb cf_make_aabb cf_width cf_height cf_half_width cf_half_height cf_half_extents cf_extents
  */
-CUTE_INLINE float cf_width(CF_Aabb bb) { return bb.max.x - bb.min.x; }
+CF_INLINE float cf_width(CF_Aabb bb) { return bb.max.x - bb.min.x; }
 
 /**
  * @function cf_height
@@ -1396,7 +1396,7 @@ CUTE_INLINE float cf_width(CF_Aabb bb) { return bb.max.x - bb.min.x; }
  * @brief    Returns the height of an AABB (axis-aligned bounding box).
  * @related  CF_Aabb cf_make_aabb cf_width cf_height cf_half_width cf_half_height cf_half_extents cf_extents
  */
-CUTE_INLINE float cf_height(CF_Aabb bb) { return bb.max.y - bb.min.y; }
+CF_INLINE float cf_height(CF_Aabb bb) { return bb.max.y - bb.min.y; }
 
 /**
  * @function cf_half_width
@@ -1404,7 +1404,7 @@ CUTE_INLINE float cf_height(CF_Aabb bb) { return bb.max.y - bb.min.y; }
  * @brief    Returns the half-width of an AABB (axis-aligned bounding box).
  * @related  CF_Aabb cf_make_aabb cf_width cf_height cf_half_width cf_half_height cf_half_extents cf_extents
  */
-CUTE_INLINE float cf_half_width(CF_Aabb bb) { return cf_width(bb) * 0.5f; }
+CF_INLINE float cf_half_width(CF_Aabb bb) { return cf_width(bb) * 0.5f; }
 
 /**
  * @function cf_half_height
@@ -1412,7 +1412,7 @@ CUTE_INLINE float cf_half_width(CF_Aabb bb) { return cf_width(bb) * 0.5f; }
  * @brief    Returns the half-height of an AABB (axis-aligned bounding box).
  * @related  CF_Aabb cf_make_aabb cf_width cf_height cf_half_width cf_half_height cf_half_extents cf_extents
  */
-CUTE_INLINE float cf_half_height(CF_Aabb bb) { return cf_height(bb) * 0.5f; }
+CF_INLINE float cf_half_height(CF_Aabb bb) { return cf_height(bb) * 0.5f; }
 
 /**
  * @function cf_half_extents
@@ -1421,7 +1421,7 @@ CUTE_INLINE float cf_half_height(CF_Aabb bb) { return cf_height(bb) * 0.5f; }
  * @remarks  Half-extents refer to half-width and height-height: `half_extents = { half_width, half_height }`.
  * @related  CF_Aabb cf_make_aabb cf_width cf_height cf_half_width cf_half_height cf_half_extents cf_extents
  */
-CUTE_INLINE CF_V2 cf_half_extents(CF_Aabb bb) { return (cf_mul_v2_f(cf_sub_v2(bb.max, bb.min), 0.5f)); }
+CF_INLINE CF_V2 cf_half_extents(CF_Aabb bb) { return (cf_mul_v2_f(cf_sub_v2(bb.max, bb.min), 0.5f)); }
 
 /**
  * @function cf_extents
@@ -1430,7 +1430,7 @@ CUTE_INLINE CF_V2 cf_half_extents(CF_Aabb bb) { return (cf_mul_v2_f(cf_sub_v2(bb
  * @remarks  Extents refer to width and height: `extents = { width, height }`.
  * @related  CF_Aabb cf_make_aabb cf_width cf_height cf_half_width cf_half_height cf_half_extents cf_extents
  */
-CUTE_INLINE CF_V2 cf_extents(CF_Aabb aabb) { return cf_sub_v2(aabb.max, aabb.min); }
+CF_INLINE CF_V2 cf_extents(CF_Aabb aabb) { return cf_sub_v2(aabb.max, aabb.min); }
 
 /**
  * @function cf_expand_aabb
@@ -1439,7 +1439,7 @@ CUTE_INLINE CF_V2 cf_extents(CF_Aabb aabb) { return cf_sub_v2(aabb.max, aabb.min
  * @param    v      A vector of `{ half_width, half_height }` to expand by.
  * @related  CF_Aabb cf_make_aabb cf_expand_aabb cf_expand_aabb_f
  */
-CUTE_INLINE CF_Aabb cf_expand_aabb(CF_Aabb aabb, CF_V2 v) { return cf_make_aabb(cf_sub_v2(aabb.min, v), cf_add_v2(aabb.max, v)); }
+CF_INLINE CF_Aabb cf_expand_aabb(CF_Aabb aabb, CF_V2 v) { return cf_make_aabb(cf_sub_v2(aabb.min, v), cf_add_v2(aabb.max, v)); }
 
 /**
  * @function cf_expand_aabb_f
@@ -1448,7 +1448,7 @@ CUTE_INLINE CF_Aabb cf_expand_aabb(CF_Aabb aabb, CF_V2 v) { return cf_make_aabb(
  * @remarks  `v` is added to to `max.x` and `max.y` of `aabb`, and subtracted from `min.x` and `min.y` of `aabb`.
  * @related  CF_Aabb cf_make_aabb cf_expand_aabb cf_expand_aabb_f
  */
-CUTE_INLINE CF_Aabb cf_expand_aabb_f(CF_Aabb aabb, float v) { CF_V2 factor = cf_v2(v, v); return cf_make_aabb(cf_sub_v2(aabb.min, factor), cf_add_v2(aabb.max, factor)); }
+CF_INLINE CF_Aabb cf_expand_aabb_f(CF_Aabb aabb, float v) { CF_V2 factor = cf_v2(v, v); return cf_make_aabb(cf_sub_v2(aabb.min, factor), cf_add_v2(aabb.max, factor)); }
 
 /**
  * @function cf_min_aabb
@@ -1456,7 +1456,7 @@ CUTE_INLINE CF_Aabb cf_expand_aabb_f(CF_Aabb aabb, float v) { CF_V2 factor = cf_
  * @brief    Returns `bb.min`.
  * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
  */
-CUTE_INLINE CF_V2 cf_min_aabb(CF_Aabb bb) { return bb.min; }
+CF_INLINE CF_V2 cf_min_aabb(CF_Aabb bb) { return bb.min; }
 
 /**
  * @function cf_max_aabb
@@ -1464,7 +1464,7 @@ CUTE_INLINE CF_V2 cf_min_aabb(CF_Aabb bb) { return bb.min; }
  * @brief    Returns `bb.max`.
  * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
  */
-CUTE_INLINE CF_V2 cf_max_aabb(CF_Aabb bb) { return bb.max; }
+CF_INLINE CF_V2 cf_max_aabb(CF_Aabb bb) { return bb.max; }
 
 /**
  * @function cf_midpoint
@@ -1472,7 +1472,7 @@ CUTE_INLINE CF_V2 cf_max_aabb(CF_Aabb bb) { return bb.max; }
  * @brief    Returns the center of `bb`.
  * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
  */
-CUTE_INLINE CF_V2 cf_midpoint(CF_Aabb bb) { return cf_mul_v2_f(cf_add_v2(bb.min, bb.max), 0.5f); }
+CF_INLINE CF_V2 cf_midpoint(CF_Aabb bb) { return cf_mul_v2_f(cf_add_v2(bb.min, bb.max), 0.5f); }
 
 /**
  * @function cf_center
@@ -1480,7 +1480,7 @@ CUTE_INLINE CF_V2 cf_midpoint(CF_Aabb bb) { return cf_mul_v2_f(cf_add_v2(bb.min,
  * @brief    Returns the center of `bb`.
  * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
  */
-CUTE_INLINE CF_V2 cf_center(CF_Aabb bb) { return cf_mul_v2_f(cf_add_v2(bb.min, bb.max), 0.5f); }
+CF_INLINE CF_V2 cf_center(CF_Aabb bb) { return cf_mul_v2_f(cf_add_v2(bb.min, bb.max), 0.5f); }
 
 /**
  * @function cf_top_left
@@ -1488,7 +1488,7 @@ CUTE_INLINE CF_V2 cf_center(CF_Aabb bb) { return cf_mul_v2_f(cf_add_v2(bb.min, b
  * @brief    Returns the top-left corner of bb.
  * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
  */
-CUTE_INLINE CF_V2 cf_top_left(CF_Aabb bb) { return cf_v2(bb.min.x, bb.max.y); }
+CF_INLINE CF_V2 cf_top_left(CF_Aabb bb) { return cf_v2(bb.min.x, bb.max.y); }
 
 /**
  * @function cf_top_right
@@ -1496,7 +1496,7 @@ CUTE_INLINE CF_V2 cf_top_left(CF_Aabb bb) { return cf_v2(bb.min.x, bb.max.y); }
  * @brief    Returns the top-right corner of bb.
  * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
  */
-CUTE_INLINE CF_V2 cf_top_right(CF_Aabb bb) { return cf_v2(bb.max.x, bb.max.y); }
+CF_INLINE CF_V2 cf_top_right(CF_Aabb bb) { return cf_v2(bb.max.x, bb.max.y); }
 
 /**
  * @function cf_bottom_left
@@ -1504,7 +1504,7 @@ CUTE_INLINE CF_V2 cf_top_right(CF_Aabb bb) { return cf_v2(bb.max.x, bb.max.y); }
  * @brief    Returns the bottom-left corner of bb.
  * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
  */
-CUTE_INLINE CF_V2 cf_bottom_left(CF_Aabb bb) { return cf_v2(bb.min.x, bb.min.y); }
+CF_INLINE CF_V2 cf_bottom_left(CF_Aabb bb) { return cf_v2(bb.min.x, bb.min.y); }
 
 /**
  * @function cf_bottom_right
@@ -1512,7 +1512,7 @@ CUTE_INLINE CF_V2 cf_bottom_left(CF_Aabb bb) { return cf_v2(bb.min.x, bb.min.y);
  * @brief    Returns the bottom-right corner of bb.
  * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
  */
-CUTE_INLINE CF_V2 cf_bottom_right(CF_Aabb bb) { return cf_v2(bb.max.x, bb.min.y); }
+CF_INLINE CF_V2 cf_bottom_right(CF_Aabb bb) { return cf_v2(bb.max.x, bb.min.y); }
 
 /**
  * @function cf_contains_point
@@ -1520,7 +1520,7 @@ CUTE_INLINE CF_V2 cf_bottom_right(CF_Aabb bb) { return cf_v2(bb.max.x, bb.min.y)
  * @brief    Returns true if `p` is contained within `b`.
  * @related  CF_Aabb cf_contains_point cf_contains_aabb cf_surface_area_aabb cf_area_aabb cf_clamp_aabb_v2 cf_clamp_aabb cf_combine cf_overlaps
  */
-CUTE_INLINE bool cf_contains_point(CF_Aabb bb, CF_V2 p) { return cf_greater_equal_v2(p, bb.min) && cf_lesser_equal_v2(p, bb.max); }
+CF_INLINE bool cf_contains_point(CF_Aabb bb, CF_V2 p) { return cf_greater_equal_v2(p, bb.min) && cf_lesser_equal_v2(p, bb.max); }
 
 /**
  * @function cf_contains_aabb
@@ -1528,7 +1528,7 @@ CUTE_INLINE bool cf_contains_point(CF_Aabb bb, CF_V2 p) { return cf_greater_equa
  * @brief    Returns true if `a` is _fully_ contained within `b`.
  * @related  CF_Aabb cf_contains_point cf_contains_aabb cf_surface_area_aabb cf_area_aabb cf_clamp_aabb_v2 cf_clamp_aabb cf_combine cf_overlaps
  */
-CUTE_INLINE bool cf_contains_aabb(CF_Aabb a, CF_Aabb b) { return cf_lesser_equal_v2(a.min, b.min) && cf_greater_equal_v2(a.max, b.max); }
+CF_INLINE bool cf_contains_aabb(CF_Aabb a, CF_Aabb b) { return cf_lesser_equal_v2(a.min, b.min) && cf_greater_equal_v2(a.max, b.max); }
 
 /**
  * @function cf_surface_area_aabb
@@ -1536,7 +1536,7 @@ CUTE_INLINE bool cf_contains_aabb(CF_Aabb a, CF_Aabb b) { return cf_lesser_equal
  * @brief    Returns the surface area of a `CF_Aabb`.
  * @related  CF_Aabb cf_contains_point cf_contains_aabb cf_surface_area_aabb cf_area_aabb cf_clamp_aabb_v2 cf_clamp_aabb cf_combine cf_overlaps
  */
-CUTE_INLINE float cf_surface_area_aabb(CF_Aabb bb) { return 2.0f * cf_width(bb) * cf_height(bb); }
+CF_INLINE float cf_surface_area_aabb(CF_Aabb bb) { return 2.0f * cf_width(bb) * cf_height(bb); }
 
 /**
  * @function cf_area_aabb
@@ -1544,7 +1544,7 @@ CUTE_INLINE float cf_surface_area_aabb(CF_Aabb bb) { return 2.0f * cf_width(bb) 
  * @brief    Returns the area of a `CF_Aabb`.
  * @related  CF_Aabb cf_contains_point cf_contains_aabb cf_surface_area_aabb cf_area_aabb cf_clamp_aabb_v2 cf_clamp_aabb cf_combine cf_overlaps
  */
-CUTE_INLINE float cf_area_aabb(CF_Aabb bb) { return cf_width(bb) * cf_height(bb); }
+CF_INLINE float cf_area_aabb(CF_Aabb bb) { return cf_width(bb) * cf_height(bb); }
 
 /**
  * @function cf_clamp_aabb_v2
@@ -1552,7 +1552,7 @@ CUTE_INLINE float cf_area_aabb(CF_Aabb bb) { return cf_width(bb) * cf_height(bb)
  * @brief    Returns a point clamped within a `CF_Aabb`.
  * @related  CF_Aabb cf_contains_point cf_contains_aabb cf_surface_area_aabb cf_area_aabb cf_clamp_aabb_v2 cf_clamp_aabb cf_combine cf_overlaps
  */
-CUTE_INLINE CF_V2 cf_clamp_aabb_v2(CF_Aabb bb, CF_V2 p) { return cf_clamp_v2(p, bb.min, bb.max); }
+CF_INLINE CF_V2 cf_clamp_aabb_v2(CF_Aabb bb, CF_V2 p) { return cf_clamp_v2(p, bb.min, bb.max); }
 
 /**
  * @function cf_clamp_aabb
@@ -1560,7 +1560,7 @@ CUTE_INLINE CF_V2 cf_clamp_aabb_v2(CF_Aabb bb, CF_V2 p) { return cf_clamp_v2(p, 
  * @brief    Returns `a` clamped within `b`.
  * @related  CF_Aabb cf_contains_point cf_contains_aabb cf_surface_area_aabb cf_area_aabb cf_clamp_aabb_v2 cf_clamp_aabb cf_combine cf_overlaps
  */
-CUTE_INLINE CF_Aabb cf_clamp_aabb(CF_Aabb a, CF_Aabb b) { return cf_make_aabb(cf_clamp_v2(a.min, b.min, b.max), cf_clamp_v2(a.max, b.min, b.max)); }
+CF_INLINE CF_Aabb cf_clamp_aabb(CF_Aabb a, CF_Aabb b) { return cf_make_aabb(cf_clamp_v2(a.min, b.min, b.max), cf_clamp_v2(a.max, b.min, b.max)); }
 
 /**
  * @function cf_combine
@@ -1568,7 +1568,7 @@ CUTE_INLINE CF_Aabb cf_clamp_aabb(CF_Aabb a, CF_Aabb b) { return cf_make_aabb(cf
  * @brief    Returns a `CF_Aabb` that tightly contains both `a` and `b`.
  * @related  CF_Aabb cf_contains_point cf_contains_aabb cf_surface_area_aabb cf_area_aabb cf_clamp_aabb_v2 cf_clamp_aabb cf_combine cf_overlaps
  */
-CUTE_INLINE CF_Aabb cf_combine(CF_Aabb a, CF_Aabb b) { return cf_make_aabb(cf_min_v2(a.min, b.min), cf_max_v2(a.max, b.max)); }
+CF_INLINE CF_Aabb cf_combine(CF_Aabb a, CF_Aabb b) { return cf_make_aabb(cf_min_v2(a.min, b.min), cf_max_v2(a.max, b.max)); }
 
 /**
  * @function cf_overlaps
@@ -1576,7 +1576,7 @@ CUTE_INLINE CF_Aabb cf_combine(CF_Aabb a, CF_Aabb b) { return cf_make_aabb(cf_mi
  * @brief    Returns true if `a` and `b` intersect.
  * @related  CF_Aabb cf_overlaps cf_collide_aabb
  */
-CUTE_INLINE int cf_overlaps(CF_Aabb a, CF_Aabb b)
+CF_INLINE int cf_overlaps(CF_Aabb a, CF_Aabb b)
 {
 	int d0 = b.max.x < a.min.x;
 	int d1 = a.max.x < b.min.x;
@@ -1591,7 +1591,7 @@ CUTE_INLINE int cf_overlaps(CF_Aabb a, CF_Aabb b)
  * @brief    Returns true if `a` and `b` intersect.
  * @related  CF_Aabb cf_overlaps cf_collide_aabb
  */
-CUTE_INLINE int cf_collide_aabb(CF_Aabb a, CF_Aabb b) { return cf_overlaps(a, b); }
+CF_INLINE int cf_collide_aabb(CF_Aabb a, CF_Aabb b) { return cf_overlaps(a, b); }
 
 /**
  * @function cf_make_aabb_verts
@@ -1599,7 +1599,7 @@ CUTE_INLINE int cf_collide_aabb(CF_Aabb a, CF_Aabb b) { return cf_overlaps(a, b)
  * @brief    Returns a `CF_Aabb` that tightly contains all input verts.
  * @related  CF_Aabb cf_make_aabb_verts cf_aabb_verts
  */
-CUTE_INLINE CF_Aabb cf_make_aabb_verts(CF_V2* verts, int count)
+CF_INLINE CF_Aabb cf_make_aabb_verts(CF_V2* verts, int count)
 {
 	CF_V2 vmin = verts[0];
 	CF_V2 vmax = vmin;
@@ -1616,7 +1616,7 @@ CUTE_INLINE CF_Aabb cf_make_aabb_verts(CF_V2* verts, int count)
  * @brief    Fills in `out` with four vertices, one for each corner of `bb`, in counter-clockwise order.
  * @related  CF_Aabb cf_make_aabb_verts cf_aabb_verts
  */
-CUTE_INLINE void cf_aabb_verts(CF_V2* out, CF_Aabb bb)
+CF_INLINE void cf_aabb_verts(CF_V2* out, CF_Aabb bb)
 {
 	out[0] = bb.min;
 	out[1] = cf_v2(bb.max.x, bb.min.y);
@@ -1633,7 +1633,7 @@ CUTE_INLINE void cf_aabb_verts(CF_V2* out, CF_Aabb bb)
  * @brief    Returns the area of a `CF_Circle`.
  * @related  CF_Circle cf_area_circle cf_surface_area_circle
  */
-CUTE_INLINE float cf_area_circle(CF_Circle c) { return 3.14159265f * c.r * c.r; }
+CF_INLINE float cf_area_circle(CF_Circle c) { return 3.14159265f * c.r * c.r; }
 
 /**
  * @function cf_surface_area_circle
@@ -1641,7 +1641,7 @@ CUTE_INLINE float cf_area_circle(CF_Circle c) { return 3.14159265f * c.r * c.r; 
  * @brief    Returns the surface area of a `CF_Circle`.
  * @related  CF_Circle cf_area_circle cf_surface_area_circle
  */
-CUTE_INLINE float cf_surface_area_circle(CF_Circle c) { return 2.0f * 3.14159265f * c.r; }
+CF_INLINE float cf_surface_area_circle(CF_Circle c) { return 2.0f * 3.14159265f * c.r; }
 
 /**
  * @function cf_mul_tf_circle
@@ -1649,7 +1649,7 @@ CUTE_INLINE float cf_surface_area_circle(CF_Circle c) { return 2.0f * 3.14159265
  * @brief    Transforms a `CF_Circle`.
  * @related  CF_Circle cf_mul_tf_circle
  */
-CUTE_INLINE CF_Circle cf_mul_tf_circle(CF_Transform tx, CF_Circle a) { CF_Circle b; b.p = cf_mul_tf_v2(tx, a.p); b.r = a.r; return b; }
+CF_INLINE CF_Circle cf_mul_tf_circle(CF_Transform tx, CF_Circle a) { CF_Circle b; b.p = cf_mul_tf_v2(tx, a.p); b.r = a.r; return b; }
 
 //--------------------------------------------------------------------------------------------------
 // Ray ops.
@@ -1661,7 +1661,7 @@ CUTE_INLINE CF_Circle cf_mul_tf_circle(CF_Transform tx, CF_Circle a) { CF_Circle
  * @brief    Returns the impact point of a ray, given the time of impact `t`.
  * @related  CF_Ray cf_impact cf_endpoint
  */
-CUTE_INLINE CF_V2 cf_impact(CF_Ray r, float t) { return cf_add_v2(r.p, cf_mul_v2_f(r.d, t)); }
+CF_INLINE CF_V2 cf_impact(CF_Ray r, float t) { return cf_add_v2(r.p, cf_mul_v2_f(r.d, t)); }
 
 /**
  * @function cf_endpoint
@@ -1671,7 +1671,7 @@ CUTE_INLINE CF_V2 cf_impact(CF_Ray r, float t) { return cf_add_v2(r.p, cf_mul_v2
  *           unnecessarily large computations when doing raycasts.
  * @related  CF_Ray cf_impact cf_endpoint
  */
-CUTE_INLINE CF_V2 cf_endpoint(CF_Ray r) { return cf_add_v2(r.p, cf_mul_v2_f(r.d, r.t)); }
+CF_INLINE CF_V2 cf_endpoint(CF_Ray r) { return cf_add_v2(r.p, cf_mul_v2_f(r.d, r.t)); }
 
 /**
  * @function cf_ray_to_halfpsace
@@ -1682,7 +1682,7 @@ CUTE_INLINE CF_V2 cf_endpoint(CF_Ray r) { return cf_add_v2(r.p, cf_mul_v2_f(r.d,
  * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
  * @related  CF_Ray
  */
-CUTE_INLINE bool cf_ray_to_halfpsace(CF_Ray A, CF_Halfspace B, CF_Raycast* out)
+CF_INLINE bool cf_ray_to_halfpsace(CF_Ray A, CF_Halfspace B, CF_Raycast* out)
 {
 	float da = cf_distance_hs(B, A.p);
 	float db = cf_distance_hs(B, cf_impact(A, A.t));
@@ -1702,7 +1702,7 @@ CUTE_INLINE bool cf_ray_to_halfpsace(CF_Ray A, CF_Halfspace B, CF_Raycast* out)
  * @remarks  See [this article](https://randygaul.github.io/math/collision-detection/2014/07/01/Distance-Point-to-Line-Segment.html) for implementation details.
  * @related  CF_V2 CF_Ray
  */
-CUTE_INLINE float cf_distance_sq(CF_V2 a, CF_V2 b, CF_V2 p)
+CF_INLINE float cf_distance_sq(CF_V2 a, CF_V2 b, CF_V2 p)
 {
 	CF_V2 n = cf_sub_v2(b, a);
 	CF_V2 pa = cf_sub_v2(a, p);
@@ -1806,7 +1806,7 @@ typedef struct CF_Manifold
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_circle_to_circle_manifold`.
  * @related  CF_Circle cf_circle_to_circle cf_circle_to_circle_manifold
  */
-CUTE_API bool CUTE_CALL cf_circle_to_circle(CF_Circle A, CF_Circle B);
+CF_API bool CF_CALL cf_circle_to_circle(CF_Circle A, CF_Circle B);
 
 /**
  * @function cf_circle_to_aabb
@@ -1815,7 +1815,7 @@ CUTE_API bool CUTE_CALL cf_circle_to_circle(CF_Circle A, CF_Circle B);
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_circle_to_aabb_manifold`.
  * @related  CF_Circle CF_Aabb cf_circle_to_aabb cf_circle_to_aabb_manifold
  */
-CUTE_API bool CUTE_CALL cf_circle_to_aabb(CF_Circle A, CF_Aabb B);
+CF_API bool CF_CALL cf_circle_to_aabb(CF_Circle A, CF_Aabb B);
 
 /**
  * @function cf_circle_to_capsule
@@ -1824,7 +1824,7 @@ CUTE_API bool CUTE_CALL cf_circle_to_aabb(CF_Circle A, CF_Aabb B);
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_circle_to_capsule_manifold`.
  * @related  CF_Circle CF_Capsule cf_circle_to_capsule cf_circle_to_capsule_manifold
  */
-CUTE_API bool CUTE_CALL cf_circle_to_capsule(CF_Circle A, CF_Capsule B);
+CF_API bool CF_CALL cf_circle_to_capsule(CF_Circle A, CF_Capsule B);
 
 /**
  * @function cf_aabb_to_aabb
@@ -1833,7 +1833,7 @@ CUTE_API bool CUTE_CALL cf_circle_to_capsule(CF_Circle A, CF_Capsule B);
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_aabb_to_aabb_manifold`.
  * @related  CF_Aabb cf_aabb_to_aabb cf_aabb_to_aabb_manifold
  */
-CUTE_API bool CUTE_CALL cf_aabb_to_aabb(CF_Aabb A, CF_Aabb B);
+CF_API bool CF_CALL cf_aabb_to_aabb(CF_Aabb A, CF_Aabb B);
 
 /**
  * @function cf_aabb_to_capsule
@@ -1842,7 +1842,7 @@ CUTE_API bool CUTE_CALL cf_aabb_to_aabb(CF_Aabb A, CF_Aabb B);
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_aabb_to_capsule_manifold`.
  * @related  CF_Aabb CF_Capsule cf_aabb_to_capsule cf_aabb_to_capsule_manifold
  */
-CUTE_API bool CUTE_CALL cf_aabb_to_capsule(CF_Aabb A, CF_Capsule B);
+CF_API bool CF_CALL cf_aabb_to_capsule(CF_Aabb A, CF_Capsule B);
 
 /**
  * @function cf_capsule_to_capsule
@@ -1851,7 +1851,7 @@ CUTE_API bool CUTE_CALL cf_aabb_to_capsule(CF_Aabb A, CF_Capsule B);
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_capsule_to_capsule_manifold`.
  * @related  CF_Capsule cf_capsule_to_capsule cf_capsule_to_capsule_manifold
  */
-CUTE_API bool CUTE_CALL cf_capsule_to_capsule(CF_Capsule A, CF_Capsule B);
+CF_API bool CF_CALL cf_capsule_to_capsule(CF_Capsule A, CF_Capsule B);
 
 /**
  * @function cf_circle_to_poly
@@ -1860,7 +1860,7 @@ CUTE_API bool CUTE_CALL cf_capsule_to_capsule(CF_Capsule A, CF_Capsule B);
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_circle_to_poly_manifold`.
  * @related  CF_Circle CF_Poly cf_circle_to_poly cf_circle_to_poly_manifold
  */
-CUTE_API bool CUTE_CALL cf_circle_to_poly(CF_Circle A, const CF_Poly* B, const CF_Transform* bx);
+CF_API bool CF_CALL cf_circle_to_poly(CF_Circle A, const CF_Poly* B, const CF_Transform* bx);
 
 /**
  * @function cf_aabb_to_poly
@@ -1869,7 +1869,7 @@ CUTE_API bool CUTE_CALL cf_circle_to_poly(CF_Circle A, const CF_Poly* B, const C
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_aabb_to_poly_manifold`.
  * @related  CF_Aabb CF_Poly cf_aabb_to_poly cf_aabb_to_poly_manifold
  */
-CUTE_API bool CUTE_CALL cf_aabb_to_poly(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx);
+CF_API bool CF_CALL cf_aabb_to_poly(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx);
 
 /**
  * @function cf_capsule_to_poly
@@ -1878,7 +1878,7 @@ CUTE_API bool CUTE_CALL cf_aabb_to_poly(CF_Aabb A, const CF_Poly* B, const CF_Tr
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_capsule_to_poly_manifold`.
  * @related  CF_Capsule CF_Poly cf_capsule_to_poly cf_capsule_to_poly_manifold
  */
-CUTE_API bool CUTE_CALL cf_capsule_to_poly(CF_Capsule A, const CF_Poly* B, const CF_Transform* bx);
+CF_API bool CF_CALL cf_capsule_to_poly(CF_Capsule A, const CF_Poly* B, const CF_Transform* bx);
 
 /**
  * @function cf_poly_to_poly
@@ -1887,7 +1887,7 @@ CUTE_API bool CUTE_CALL cf_capsule_to_poly(CF_Capsule A, const CF_Poly* B, const
  * @remarks  For information about _how_ two shapes are intersecting (and not just boolean result), see `cf_poly_to_poly_manifold`.
  * @related  CF_Poly cf_poly_to_poly cf_poly_to_poly_manifold
  */
-CUTE_API bool CUTE_CALL cf_poly_to_poly(const CF_Poly* A, const CF_Transform* ax, const CF_Poly* B, const CF_Transform* bx);
+CF_API bool CF_CALL cf_poly_to_poly(const CF_Poly* A, const CF_Transform* ax, const CF_Poly* B, const CF_Transform* bx);
 
 /**
  * @function cf_ray_to_circle
@@ -1898,7 +1898,7 @@ CUTE_API bool CUTE_CALL cf_poly_to_poly(const CF_Poly* A, const CF_Transform* ax
  * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
  * @related  CF_Ray CF_Circle CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
-CUTE_API bool CUTE_CALL cf_ray_to_circle(CF_Ray A, CF_Circle B, CF_Raycast* out);
+CF_API bool CF_CALL cf_ray_to_circle(CF_Ray A, CF_Circle B, CF_Raycast* out);
 
 /**
  * @function cf_ray_to_aabb
@@ -1909,7 +1909,7 @@ CUTE_API bool CUTE_CALL cf_ray_to_circle(CF_Ray A, CF_Circle B, CF_Raycast* out)
  * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
  * @related  CF_Ray CF_Aabb CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
-CUTE_API bool CUTE_CALL cf_ray_to_aabb(CF_Ray A, CF_Aabb B, CF_Raycast* out);
+CF_API bool CF_CALL cf_ray_to_aabb(CF_Ray A, CF_Aabb B, CF_Raycast* out);
 
 /**
  * @function cf_ray_to_capsule
@@ -1920,7 +1920,7 @@ CUTE_API bool CUTE_CALL cf_ray_to_aabb(CF_Ray A, CF_Aabb B, CF_Raycast* out);
  * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
  * @related  CF_Ray CF_Capsule CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
-CUTE_API bool CUTE_CALL cf_ray_to_capsule(CF_Ray A, CF_Capsule B, CF_Raycast* out);
+CF_API bool CF_CALL cf_ray_to_capsule(CF_Ray A, CF_Capsule B, CF_Raycast* out);
 
 /**
  * @function cf_ray_to_poly
@@ -1931,7 +1931,7 @@ CUTE_API bool CUTE_CALL cf_ray_to_capsule(CF_Ray A, CF_Capsule B, CF_Raycast* ou
  * @param    out        Can be `NULL`. `CF_Raycast` results are placed here (contains normal + time of impact).
  * @related  CF_Ray CF_Poly CF_Raycast cf_ray_to_circle cf_ray_to_aabb cf_ray_to_capsule cf_ray_to_poly
  */
-CUTE_API bool CUTE_CALL cf_ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Transform* bx_ptr, CF_Raycast* out);
+CF_API bool CF_CALL cf_ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Transform* bx_ptr, CF_Raycast* out);
 
 /**
  * @function cf_circle_to_circle_manifold
@@ -1943,7 +1943,7 @@ CUTE_API bool CUTE_CALL cf_ray_to_poly(CF_Ray A, const CF_Poly* B, const CF_Tran
  * @remarks  This function is slightly slower than the boolean version `cf_circle_to_circle`.
  * @related  CF_Manifold CF_Circle cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CUTE_API void CUTE_CALL cf_circle_to_circle_manifold(CF_Circle A, CF_Circle B, CF_Manifold* m);
+CF_API void CF_CALL cf_circle_to_circle_manifold(CF_Circle A, CF_Circle B, CF_Manifold* m);
 
 /**
  * @function cf_circle_to_aabb_manifold
@@ -1955,7 +1955,7 @@ CUTE_API void CUTE_CALL cf_circle_to_circle_manifold(CF_Circle A, CF_Circle B, C
  * @remarks  This function is slightly slower than the boolean version `cf_circle_to_aabb`.
  * @related  CF_Manifold CF_Circle CF_Aabb cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CUTE_API void CUTE_CALL cf_circle_to_aabb_manifold(CF_Circle A, CF_Aabb B, CF_Manifold* m);
+CF_API void CF_CALL cf_circle_to_aabb_manifold(CF_Circle A, CF_Aabb B, CF_Manifold* m);
 
 /**
  * @function cf_circle_to_capsule_manifold
@@ -1967,7 +1967,7 @@ CUTE_API void CUTE_CALL cf_circle_to_aabb_manifold(CF_Circle A, CF_Aabb B, CF_Ma
  * @remarks  This function is slightly slower than the boolean version `cf_circle_to_capsule`.
  * @related  CF_Manifold CF_Circle CF_Capsule cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CUTE_API void CUTE_CALL cf_circle_to_capsule_manifold(CF_Circle A, CF_Capsule B, CF_Manifold* m);
+CF_API void CF_CALL cf_circle_to_capsule_manifold(CF_Circle A, CF_Capsule B, CF_Manifold* m);
 
 /**
  * @function cf_aabb_to_aabb_manifold
@@ -1979,7 +1979,7 @@ CUTE_API void CUTE_CALL cf_circle_to_capsule_manifold(CF_Circle A, CF_Capsule B,
  * @remarks  This function is slightly slower than the boolean version `cf_aabb_to_aabb`.
  * @related  CF_Manifold CF_Aabb cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CUTE_API void CUTE_CALL cf_aabb_to_aabb_manifold(CF_Aabb A, CF_Aabb B, CF_Manifold* m);
+CF_API void CF_CALL cf_aabb_to_aabb_manifold(CF_Aabb A, CF_Aabb B, CF_Manifold* m);
 
 /**
  * @function cf_aabb_to_capsule_manifold
@@ -1991,7 +1991,7 @@ CUTE_API void CUTE_CALL cf_aabb_to_aabb_manifold(CF_Aabb A, CF_Aabb B, CF_Manifo
  * @remarks  This function is slightly slower than the boolean version `cf_aabb_to_capsule`.
  * @related  CF_Manifold CF_Aabb CF_Capsule cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CUTE_API void CUTE_CALL cf_aabb_to_capsule_manifold(CF_Aabb A, CF_Capsule B, CF_Manifold* m);
+CF_API void CF_CALL cf_aabb_to_capsule_manifold(CF_Aabb A, CF_Capsule B, CF_Manifold* m);
 
 /**
  * @function cf_capsule_to_capsule_manifold
@@ -2003,7 +2003,7 @@ CUTE_API void CUTE_CALL cf_aabb_to_capsule_manifold(CF_Aabb A, CF_Capsule B, CF_
  * @remarks  This function is slightly slower than the boolean version `cf_capsule_to_capsule`.
  * @related  CF_Manifold CF_Capsule cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CUTE_API void CUTE_CALL cf_capsule_to_capsule_manifold(CF_Capsule A, CF_Capsule B, CF_Manifold* m);
+CF_API void CF_CALL cf_capsule_to_capsule_manifold(CF_Capsule A, CF_Capsule B, CF_Manifold* m);
 
 /**
  * @function cf_circle_to_poly_manifold
@@ -2015,7 +2015,7 @@ CUTE_API void CUTE_CALL cf_capsule_to_capsule_manifold(CF_Capsule A, CF_Capsule 
  * @remarks  This function is slightly slower than the boolean version `cf_circle_to_poly`.
  * @related  CF_Manifold CF_Circle CF_Poly cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CUTE_API void CUTE_CALL cf_circle_to_poly_manifold(CF_Circle A, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m);
+CF_API void CF_CALL cf_circle_to_poly_manifold(CF_Circle A, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m);
 
 /**
  * @function cf_aabb_to_poly_manifold
@@ -2027,7 +2027,7 @@ CUTE_API void CUTE_CALL cf_circle_to_poly_manifold(CF_Circle A, const CF_Poly* B
  * @remarks  This function is slightly slower than the boolean version `cf_aabb_to_poly`.
  * @related  CF_Manifold CF_Aabb CF_Poly cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CUTE_API void CUTE_CALL cf_aabb_to_poly_manifold(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m);
+CF_API void CF_CALL cf_aabb_to_poly_manifold(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m);
 
 /**
  * @function cf_capsule_to_poly_manifold
@@ -2039,7 +2039,7 @@ CUTE_API void CUTE_CALL cf_aabb_to_poly_manifold(CF_Aabb A, const CF_Poly* B, co
  * @remarks  This function is slightly slower than the boolean version `cf_capsule_to_poly`.
  * @related  CF_Manifold CF_Capsule CF_Poly cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CUTE_API void CUTE_CALL cf_capsule_to_poly_manifold(CF_Capsule A, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m);
+CF_API void CF_CALL cf_capsule_to_poly_manifold(CF_Capsule A, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m);
 
 /**
  * @function cf_poly_to_poly_manifold
@@ -2051,7 +2051,7 @@ CUTE_API void CUTE_CALL cf_capsule_to_poly_manifold(CF_Capsule A, const CF_Poly*
  * @remarks  This function is slightly slower than the boolean version `cf_poly_to_poly`.
  * @related  CF_Manifold CF_Poly cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
  */
-CUTE_API void CUTE_CALL cf_poly_to_poly_manifold(const CF_Poly* A, const CF_Transform* ax, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m);
+CF_API void CF_CALL cf_poly_to_poly_manifold(const CF_Poly* A, const CF_Transform* ax, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m);
 
 /**
  * @enum     CF_ShapeType
@@ -2086,10 +2086,10 @@ typedef enum CF_ShapeType
  * @param    type       The string to convert.
  * @related  CF_ShapeType cf_shape_type_to_string
  */
-CUTE_INLINE const char* cf_shape_type_to_string(CF_ShapeType type)
+CF_INLINE const char* cf_shape_type_to_string(CF_ShapeType type)
 {
 	switch (type) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_SHAPE_TYPE_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -2147,7 +2147,7 @@ typedef struct CF_GjkCache
  *           render the geometry larger on-screen by scaling it up.
  * @related  cf_gjk CF_GjkCache CF_ShapeType
  */
-CUTE_API float CUTE_CALL cf_gjk(const void* A, CF_ShapeType typeA, const CF_Transform* ax_ptr, const void* B, CF_ShapeType typeB, const CF_Transform* bx_ptr, CF_V2* outA, CF_V2* outB, bool use_radius, int* iterations, CF_GjkCache* cache);
+CF_API float CF_CALL cf_gjk(const void* A, CF_ShapeType typeA, const CF_Transform* ax_ptr, const void* B, CF_ShapeType typeB, const CF_Transform* bx_ptr, CF_V2* outA, CF_V2* outB, bool use_radius, int* iterations, CF_GjkCache* cache);
 
 /**
  * @struct   CF_ToiResult
@@ -2213,7 +2213,7 @@ typedef struct CF_ToiResult
  *           5. Gently push the shapes apart. This will give the next call to `cf_toi` some breathing room.
  * @related  CF_ToiResult cf_toi CF_ShapeType
  */
-CUTE_API CF_ToiResult CUTE_CALL cf_toi(const void* A, CF_ShapeType typeA, const CF_Transform* ax_ptr, CF_V2 vA, const void* B, CF_ShapeType typeB, const CF_Transform* bx_ptr, CF_V2 vB, int use_radius);
+CF_API CF_ToiResult CF_CALL cf_toi(const void* A, CF_ShapeType typeA, const CF_Transform* ax_ptr, CF_V2 vA, const void* B, CF_ShapeType typeB, const CF_Transform* bx_ptr, CF_V2 vB, int use_radius);
 
 /**
  * @function cf_inflate
@@ -2233,7 +2233,7 @@ CUTE_API CF_ToiResult CUTE_CALL cf_toi(const void* A, CF_ShapeType typeA, const 
  *           appropriately small skin factor, for example 1.0e-6f.
  * @related  cf_gjk cf_toi CF_ShapeType
  */
-CUTE_API void CUTE_CALL cf_inflate(void* shape, CF_ShapeType type, float skin_factor);
+CF_API void CF_CALL cf_inflate(void* shape, CF_ShapeType type, float skin_factor);
 
 /**
  * @function cf_hull
@@ -2246,7 +2246,7 @@ CUTE_API void CUTE_CALL cf_inflate(void* shape, CF_ShapeType type, float skin_fa
  * @remarks  Will not do anything if less than two verts supplied. If more than CF_POLY_MAX_VERTS are supplied extras are ignored.
  * @related  CF_Poly
  */
-CUTE_API int CUTE_CALL cf_hull(CF_V2* verts, int count);
+CF_API int CF_CALL cf_hull(CF_V2* verts, int count);
 
 /**
  * @function cf_norms
@@ -2258,7 +2258,7 @@ CUTE_API int CUTE_CALL cf_hull(CF_V2* verts, int count);
  * @return   Writes the calculated normals to `norms`.
  * @related  CF_Poly
  */
-CUTE_API void CUTE_CALL cf_norms(CF_V2* verts, CF_V2* norms, int count);
+CF_API void CF_CALL cf_norms(CF_V2* verts, CF_V2* norms, int count);
 
 /**
  * @function cf_make_poly
@@ -2267,14 +2267,14 @@ CUTE_API void CUTE_CALL cf_norms(CF_V2* verts, CF_V2* norms, int count);
  * @remarks  Runs `cf_hull` and `cf_norms`, assumes p->verts and p->count are both set to valid values.
  * @related  CF_Poly cf_hull cf_norms
  */
-CUTE_API void CUTE_CALL cf_make_poly(CF_Poly* p);
+CF_API void CF_CALL cf_make_poly(CF_Poly* p);
 
 /**
  * @function cf_centroid
  * @category math
  * @brief    Returns the centroid of a set of vertices.
  */
-CUTE_API CF_V2 CUTE_CALL cf_centroid(const CF_V2* verts, int count);
+CF_API CF_V2 CF_CALL cf_centroid(const CF_V2* verts, int count);
 
 /**
  * @function cf_collided
@@ -2289,7 +2289,7 @@ CUTE_API CF_V2 CUTE_CALL cf_centroid(const CF_V2* verts, int count);
  * @param    bx_ptr      Can be `NULL` to represent an identity transform. An optional pointer to a `CF_Transform` to transform `B`.
  * @related  cf_collided cf_collide CF_Transform CF_ShapeType
  */
-CUTE_API int CUTE_CALL cf_collided(const void* A, const CF_Transform* ax, CF_ShapeType typeA, const void* B, const CF_Transform* bx, CF_ShapeType typeB);
+CF_API int CF_CALL cf_collided(const void* A, const CF_Transform* ax, CF_ShapeType typeA, const void* B, const CF_Transform* bx, CF_ShapeType typeB);
 
 /**
  * @function cf_collide
@@ -2304,7 +2304,7 @@ CUTE_API int CUTE_CALL cf_collided(const void* A, const CF_Transform* ax, CF_Sha
  * @param    m           Contains information about the intersection. `m->count` is set to zero for no-intersection. See `CF_Manifold` for details.
  * @related  cf_collided cf_collide CF_Transform CF_ShapeType CF_Manifold
  */
-CUTE_API void CUTE_CALL cf_collide(const void* A, const CF_Transform* ax, CF_ShapeType typeA, const void* B, const CF_Transform* bx, CF_ShapeType typeB, CF_Manifold* m);
+CF_API void CF_CALL cf_collide(const void* A, const CF_Transform* ax, CF_ShapeType typeA, const void* B, const CF_Transform* bx, CF_ShapeType typeB, CF_Manifold* m);
 
 /**
  * @function cf_cast_ray
@@ -2318,7 +2318,7 @@ CUTE_API void CUTE_CALL cf_collide(const void* A, const CF_Transform* ax, CF_Sha
  * @return   Returns true if the ray hit the shape.
  * @related  CF_Ray CF_Raycast CF_Transform CF_ShapeType cf_cast_ray
  */
-CUTE_API bool CUTE_CALL cf_cast_ray(CF_Ray A, const void* B, const CF_Transform* bx, CF_ShapeType typeB, CF_Raycast* out);
+CF_API bool CF_CALL cf_cast_ray(CF_Ray A, const void* B, const CF_Transform* bx, CF_ShapeType typeB, CF_Raycast* out);
 
 #ifdef __cplusplus
 }
@@ -2327,35 +2327,35 @@ CUTE_API bool CUTE_CALL cf_cast_ray(CF_Ray A, const void* B, const CF_Transform*
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
 
 using v2 = CF_V2;
 
-CUTE_INLINE v2 V2(float x, float y) { v2 result; result.x = x; result.y = y; return result; }
+CF_INLINE v2 V2(float x, float y) { v2 result; result.x = x; result.y = y; return result; }
 
-CUTE_INLINE v2 operator+(v2 a, v2 b) { return V2(a.x + b.x, a.y + b.y); }
-CUTE_INLINE v2 operator-(v2 a, v2 b) { return V2(a.x - b.x, a.y - b.y); }
-CUTE_INLINE v2& operator+=(v2& a, v2 b) { return a = a + b; }
-CUTE_INLINE v2& operator-=(v2& a, v2 b) { return a = a - b; }
+CF_INLINE v2 operator+(v2 a, v2 b) { return V2(a.x + b.x, a.y + b.y); }
+CF_INLINE v2 operator-(v2 a, v2 b) { return V2(a.x - b.x, a.y - b.y); }
+CF_INLINE v2& operator+=(v2& a, v2 b) { return a = a + b; }
+CF_INLINE v2& operator-=(v2& a, v2 b) { return a = a - b; }
 
-CUTE_INLINE v2 operator*(v2 a, float b) { return V2(a.x * b, a.y * b); }
-CUTE_INLINE v2 operator*(v2 a, v2 b) { return V2(a.x * b.x, a.y * b.y); }
-CUTE_INLINE v2& operator*=(v2& a, float b) { return a = a * b; }
-CUTE_INLINE v2& operator*=(v2& a, v2 b) { return a = a * b; }
-CUTE_INLINE v2 operator/(v2 a, float b) { return V2(a.x / b, a.y / b); }
-CUTE_INLINE v2 operator/(v2 a, v2 b) { return V2(a.x / b.x, a.y / b.y); }
-CUTE_INLINE v2& operator/=(v2& a, float b) { return a = a / b; }
-CUTE_INLINE v2& operator/=(v2& a, v2 b) { return a = a / b; }
+CF_INLINE v2 operator*(v2 a, float b) { return V2(a.x * b, a.y * b); }
+CF_INLINE v2 operator*(v2 a, v2 b) { return V2(a.x * b.x, a.y * b.y); }
+CF_INLINE v2& operator*=(v2& a, float b) { return a = a * b; }
+CF_INLINE v2& operator*=(v2& a, v2 b) { return a = a * b; }
+CF_INLINE v2 operator/(v2 a, float b) { return V2(a.x / b, a.y / b); }
+CF_INLINE v2 operator/(v2 a, v2 b) { return V2(a.x / b.x, a.y / b.y); }
+CF_INLINE v2& operator/=(v2& a, float b) { return a = a / b; }
+CF_INLINE v2& operator/=(v2& a, v2 b) { return a = a / b; }
 
-CUTE_INLINE v2 operator-(v2 a) { return V2(-a.x, -a.y); }
+CF_INLINE v2 operator-(v2 a) { return V2(-a.x, -a.y); }
 
-CUTE_INLINE int operator<(v2 a, v2 b) { return a.x < b.x&& a.y < b.y; }
-CUTE_INLINE int operator>(v2 a, v2 b) { return a.x > b.x && a.y > b.y; }
-CUTE_INLINE int operator<=(v2 a, v2 b) { return a.x <= b.x && a.y <= b.y; }
-CUTE_INLINE int operator>=(v2 a, v2 b) { return a.x >= b.x && a.y >= b.y; }
+CF_INLINE int operator<(v2 a, v2 b) { return a.x < b.x&& a.y < b.y; }
+CF_INLINE int operator>(v2 a, v2 b) { return a.x > b.x && a.y > b.y; }
+CF_INLINE int operator<=(v2 a, v2 b) { return a.x <= b.x && a.y <= b.y; }
+CF_INLINE int operator>=(v2 a, v2 b) { return a.x >= b.x && a.y >= b.y; }
 
 using SinCos = CF_SinCos;
 using M2x2 = CF_M2x2;
@@ -2374,11 +2374,11 @@ using GjkCache = CF_GjkCache;
 using ToiResult = CF_ToiResult;
 
 using ShapeType = CF_ShapeType;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr ShapeType K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr ShapeType K = CF_##K;
 CF_SHAPE_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* to_string(ShapeType type)
+CF_INLINE const char* to_string(ShapeType type)
 {
 	switch (type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -2388,236 +2388,236 @@ CUTE_INLINE const char* to_string(ShapeType type)
 	}
 }
 
-CUTE_INLINE float min(float a, float b) { return cf_min(a, b); }
-CUTE_INLINE float max(float a, float b) { return cf_max(a, b); }
-CUTE_INLINE float clamp(float a, float lo, float hi) { return cf_clamp(a, lo, hi); }
-CUTE_INLINE float clamp01(float a) { return cf_clamp01(a); }
-CUTE_INLINE float sign(float a) { return cf_sign(a); }
-CUTE_INLINE float intersect(float da, float db) { return cf_intersect(da, db); }
-CUTE_INLINE float safe_invert(float a) { return cf_safe_invert(a); }
-CUTE_INLINE float lerp_f(float a, float b, float t) { return cf_lerp(a, b, t); }
-CUTE_INLINE float remap(float t, float lo, float hi) { return cf_remap(t, lo, hi); }
-CUTE_INLINE float mod(float x, float m) { return cf_mod(x, m); }
-CUTE_INLINE float fract(float x) { return cf_fract(x); }
+CF_INLINE float min(float a, float b) { return cf_min(a, b); }
+CF_INLINE float max(float a, float b) { return cf_max(a, b); }
+CF_INLINE float clamp(float a, float lo, float hi) { return cf_clamp(a, lo, hi); }
+CF_INLINE float clamp01(float a) { return cf_clamp01(a); }
+CF_INLINE float sign(float a) { return cf_sign(a); }
+CF_INLINE float intersect(float da, float db) { return cf_intersect(da, db); }
+CF_INLINE float safe_invert(float a) { return cf_safe_invert(a); }
+CF_INLINE float lerp_f(float a, float b, float t) { return cf_lerp(a, b, t); }
+CF_INLINE float remap(float t, float lo, float hi) { return cf_remap(t, lo, hi); }
+CF_INLINE float mod(float x, float m) { return cf_mod(x, m); }
+CF_INLINE float fract(float x) { return cf_fract(x); }
 
-CUTE_INLINE int sign(int a) { return cf_sign_int(a); }
-CUTE_INLINE int min(int a, int b) { return cf_min(a, b); }
-CUTE_INLINE int max(int a, int b) { return cf_max(a, b); }
-CUTE_INLINE uint64_t min(uint64_t a, uint64_t b) { return cf_min(a, b); }
-CUTE_INLINE uint64_t max(uint64_t a, uint64_t b) { return cf_max(a, b); }
-CUTE_INLINE float abs(float a) { return cf_abs(a); }
-CUTE_INLINE int abs(int a) { return cf_abs_int(a); }
-CUTE_INLINE int clamp(int a, int lo, int hi) { return cf_clamp_int(a, lo, hi); }
-CUTE_INLINE int clamp01(int a) { return cf_clamp01_int(a); }
-CUTE_INLINE bool is_even(int x) { return cf_is_even(x); }
-CUTE_INLINE bool is_odd(int x) { return cf_is_odd(x); }
+CF_INLINE int sign(int a) { return cf_sign_int(a); }
+CF_INLINE int min(int a, int b) { return cf_min(a, b); }
+CF_INLINE int max(int a, int b) { return cf_max(a, b); }
+CF_INLINE uint64_t min(uint64_t a, uint64_t b) { return cf_min(a, b); }
+CF_INLINE uint64_t max(uint64_t a, uint64_t b) { return cf_max(a, b); }
+CF_INLINE float abs(float a) { return cf_abs(a); }
+CF_INLINE int abs(int a) { return cf_abs_int(a); }
+CF_INLINE int clamp(int a, int lo, int hi) { return cf_clamp_int(a, lo, hi); }
+CF_INLINE int clamp01(int a) { return cf_clamp01_int(a); }
+CF_INLINE bool is_even(int x) { return cf_is_even(x); }
+CF_INLINE bool is_odd(int x) { return cf_is_odd(x); }
 
-CUTE_INLINE bool is_power_of_two(int a) { return cf_is_power_of_two(a); }
-CUTE_INLINE bool is_power_of_two(uint64_t a) { return cf_is_power_of_two_uint(a); }
-CUTE_INLINE int fit_power_of_two(int a) { return cf_fit_power_of_two(a); }
+CF_INLINE bool is_power_of_two(int a) { return cf_is_power_of_two(a); }
+CF_INLINE bool is_power_of_two(uint64_t a) { return cf_is_power_of_two_uint(a); }
+CF_INLINE int fit_power_of_two(int a) { return cf_fit_power_of_two(a); }
 
-CUTE_INLINE float smoothstep(float x) { return cf_smoothstep(x); }
-CUTE_INLINE float quad_in(float x) { return cf_quad_in(x); }
-CUTE_INLINE float quad_out(float x) { return cf_quad_out(x); }
-CUTE_INLINE float quad_in_out(float x) { return cf_quad_in_out(x); }
-CUTE_INLINE float cube_in(float x) { return cf_cube_in(x); }
-CUTE_INLINE float cube_out(float x) { return cf_cube_out(x); }
-CUTE_INLINE float cube_in_out(float x) { return cf_cube_in_out(x); }
-CUTE_INLINE float quart_in(float x) { return cf_quart_in(x); }
-CUTE_INLINE float quart_out(float x) { return cf_quart_out(x); }
-CUTE_INLINE float quart_in_out(float x) { return cf_quart_in_out(x); }
-CUTE_INLINE float quint_in(float x) { return cf_quint_in(x); }
-CUTE_INLINE float quint_out(float x) { return cf_quint_out(x); }
-CUTE_INLINE float quint_in_out(float x) { return cf_quint_in_out(x); }
-CUTE_INLINE float sin_in(float x) { return cf_sin_in(x); }
-CUTE_INLINE float sin_out(float x) { return cf_sin_out(x); }
-CUTE_INLINE float sin_in_out(float x) { return cf_sin_in_out(x); }
-CUTE_INLINE float circle_in(float x) { return cf_circle_in(x); }
-CUTE_INLINE float circle_out(float x) { return cf_circle_out(x); }
-CUTE_INLINE float circle_in_out(float x) { return cf_circle_in_out(x); }
-CUTE_INLINE float back_in(float x) { return cf_back_in(x); }
-CUTE_INLINE float back_out(float x) { return cf_back_out(x); }
-CUTE_INLINE float back_in_out(float x) { return cf_back_in_out(x); }
+CF_INLINE float smoothstep(float x) { return cf_smoothstep(x); }
+CF_INLINE float quad_in(float x) { return cf_quad_in(x); }
+CF_INLINE float quad_out(float x) { return cf_quad_out(x); }
+CF_INLINE float quad_in_out(float x) { return cf_quad_in_out(x); }
+CF_INLINE float cube_in(float x) { return cf_cube_in(x); }
+CF_INLINE float cube_out(float x) { return cf_cube_out(x); }
+CF_INLINE float cube_in_out(float x) { return cf_cube_in_out(x); }
+CF_INLINE float quart_in(float x) { return cf_quart_in(x); }
+CF_INLINE float quart_out(float x) { return cf_quart_out(x); }
+CF_INLINE float quart_in_out(float x) { return cf_quart_in_out(x); }
+CF_INLINE float quint_in(float x) { return cf_quint_in(x); }
+CF_INLINE float quint_out(float x) { return cf_quint_out(x); }
+CF_INLINE float quint_in_out(float x) { return cf_quint_in_out(x); }
+CF_INLINE float sin_in(float x) { return cf_sin_in(x); }
+CF_INLINE float sin_out(float x) { return cf_sin_out(x); }
+CF_INLINE float sin_in_out(float x) { return cf_sin_in_out(x); }
+CF_INLINE float circle_in(float x) { return cf_circle_in(x); }
+CF_INLINE float circle_out(float x) { return cf_circle_out(x); }
+CF_INLINE float circle_in_out(float x) { return cf_circle_in_out(x); }
+CF_INLINE float back_in(float x) { return cf_back_in(x); }
+CF_INLINE float back_out(float x) { return cf_back_out(x); }
+CF_INLINE float back_in_out(float x) { return cf_back_in_out(x); }
 
-CUTE_INLINE float dot(v2 a, v2 b) { return cf_dot(a, b); }
+CF_INLINE float dot(v2 a, v2 b) { return cf_dot(a, b); }
 
-CUTE_INLINE v2 skew(v2 a) { return cf_skew(a); }
-CUTE_INLINE v2 cw90(v2 a) { return cf_cw90(a); }
-CUTE_INLINE float det2(v2 a, v2 b) { return cf_det2(a, b); }
-CUTE_INLINE float cross(v2 a, v2 b) { return cf_cross(a, b); }
-CUTE_INLINE v2 cross(v2 a, float b) { return cf_cross_v2_f(a, b); }
-CUTE_INLINE v2 cross(float a, v2 b) { return cf_cross_f_v2(a, b); }
-CUTE_INLINE v2 min(v2 a, v2 b) { return cf_min_v2(a, b); }
-CUTE_INLINE v2 max(v2 a, v2 b) { return cf_max_v2(a, b); }
-CUTE_INLINE v2 clamp(v2 a, v2 lo, v2 hi) { return cf_clamp_v2(a, lo, hi); }
-CUTE_INLINE v2 clamp01(v2 a) { return cf_clamp01_v2(a); }
-CUTE_INLINE v2 abs(v2 a) { return cf_abs_v2(a); }
-CUTE_INLINE float hmin(v2 a) { return cf_hmin(a); }
-CUTE_INLINE float hmax(v2 a) { return cf_hmax(a); }
-CUTE_INLINE float len(v2 a) { return cf_len(a); }
-CUTE_INLINE float distance(v2 a, v2 b) { return cf_distance(a, b); }
-CUTE_INLINE v2 norm(v2 a) { return cf_norm(a); }
-CUTE_INLINE v2 safe_norm(v2 a) { return cf_safe_norm(a); }
-CUTE_INLINE float safe_norm(float a) { return cf_safe_norm_f(a); }
-CUTE_INLINE int safe_norm(int a) { return cf_safe_norm_int(a); }
+CF_INLINE v2 skew(v2 a) { return cf_skew(a); }
+CF_INLINE v2 cw90(v2 a) { return cf_cw90(a); }
+CF_INLINE float det2(v2 a, v2 b) { return cf_det2(a, b); }
+CF_INLINE float cross(v2 a, v2 b) { return cf_cross(a, b); }
+CF_INLINE v2 cross(v2 a, float b) { return cf_cross_v2_f(a, b); }
+CF_INLINE v2 cross(float a, v2 b) { return cf_cross_f_v2(a, b); }
+CF_INLINE v2 min(v2 a, v2 b) { return cf_min_v2(a, b); }
+CF_INLINE v2 max(v2 a, v2 b) { return cf_max_v2(a, b); }
+CF_INLINE v2 clamp(v2 a, v2 lo, v2 hi) { return cf_clamp_v2(a, lo, hi); }
+CF_INLINE v2 clamp01(v2 a) { return cf_clamp01_v2(a); }
+CF_INLINE v2 abs(v2 a) { return cf_abs_v2(a); }
+CF_INLINE float hmin(v2 a) { return cf_hmin(a); }
+CF_INLINE float hmax(v2 a) { return cf_hmax(a); }
+CF_INLINE float len(v2 a) { return cf_len(a); }
+CF_INLINE float distance(v2 a, v2 b) { return cf_distance(a, b); }
+CF_INLINE v2 norm(v2 a) { return cf_norm(a); }
+CF_INLINE v2 safe_norm(v2 a) { return cf_safe_norm(a); }
+CF_INLINE float safe_norm(float a) { return cf_safe_norm_f(a); }
+CF_INLINE int safe_norm(int a) { return cf_safe_norm_int(a); }
 
-CUTE_INLINE v2 lerp_v2(v2 a, v2 b, float t) { return cf_lerp_v2(a, b, t); }
-CUTE_INLINE v2 bezier(v2 a, v2 c0, v2 b, float t) { return cf_bezier(a, c0, b, t); }
-CUTE_INLINE v2 bezier(v2 a, v2 c0, v2 c1, v2 b, float t) { return cf_bezier2(a, c0, c1, b, t); }
-CUTE_INLINE v2 floor(v2 a) { return cf_floor(a); }
-CUTE_INLINE v2 round(v2 a) { return cf_round(a); }
-CUTE_INLINE v2 safe_invert(v2 a) { return cf_safe_invert_v2(a); }
-CUTE_INLINE v2 sign(v2 a) { return cf_sign_v2(a); }
+CF_INLINE v2 lerp_v2(v2 a, v2 b, float t) { return cf_lerp_v2(a, b, t); }
+CF_INLINE v2 bezier(v2 a, v2 c0, v2 b, float t) { return cf_bezier(a, c0, b, t); }
+CF_INLINE v2 bezier(v2 a, v2 c0, v2 c1, v2 b, float t) { return cf_bezier2(a, c0, c1, b, t); }
+CF_INLINE v2 floor(v2 a) { return cf_floor(a); }
+CF_INLINE v2 round(v2 a) { return cf_round(a); }
+CF_INLINE v2 safe_invert(v2 a) { return cf_safe_invert_v2(a); }
+CF_INLINE v2 sign(v2 a) { return cf_sign_v2(a); }
 
-CUTE_INLINE int parallel(v2 a, v2 b, float tol) { return cf_parallel(a, b, tol); }
+CF_INLINE int parallel(v2 a, v2 b, float tol) { return cf_parallel(a, b, tol); }
 
-CUTE_INLINE SinCos sincos(float radians) { return cf_sincos_f(radians); }
-CUTE_INLINE SinCos sincos() { return cf_sincos(); }
-CUTE_INLINE v2 x_axis(SinCos r) { return cf_x_axis(r); }
-CUTE_INLINE v2 y_axis(SinCos r) { return cf_y_axis(r); }
-CUTE_INLINE v2 mul(SinCos a, v2 b) { return cf_mul_sc_v2(a, b); }
-CUTE_INLINE v2 mulT(SinCos a, v2 b) { return cf_mulT_sc_v2(a, b); }
-CUTE_INLINE SinCos mul(SinCos a, SinCos b) { return cf_mul_sc(a, b); }
-CUTE_INLINE SinCos mulT(SinCos a, SinCos b) { return cf_mulT_sc(a, b); }
+CF_INLINE SinCos sincos(float radians) { return cf_sincos_f(radians); }
+CF_INLINE SinCos sincos() { return cf_sincos(); }
+CF_INLINE v2 x_axis(SinCos r) { return cf_x_axis(r); }
+CF_INLINE v2 y_axis(SinCos r) { return cf_y_axis(r); }
+CF_INLINE v2 mul(SinCos a, v2 b) { return cf_mul_sc_v2(a, b); }
+CF_INLINE v2 mulT(SinCos a, v2 b) { return cf_mulT_sc_v2(a, b); }
+CF_INLINE SinCos mul(SinCos a, SinCos b) { return cf_mul_sc(a, b); }
+CF_INLINE SinCos mulT(SinCos a, SinCos b) { return cf_mulT_sc(a, b); }
 
-CUTE_INLINE float atan2_360(float y, float x) { return cf_atan2_360(y, x); }
-CUTE_INLINE float atan2_360(v2 v) { return cf_atan2_360_v2(v); }
-CUTE_INLINE float atan2_360(SinCos r) { return cf_atan2_360_sc(r); }
+CF_INLINE float atan2_360(float y, float x) { return cf_atan2_360(y, x); }
+CF_INLINE float atan2_360(v2 v) { return cf_atan2_360_v2(v); }
+CF_INLINE float atan2_360(SinCos r) { return cf_atan2_360_sc(r); }
 
-CUTE_INLINE float shortest_arc(v2 a, v2 b) { return cf_shortest_arc(a, b); }
+CF_INLINE float shortest_arc(v2 a, v2 b) { return cf_shortest_arc(a, b); }
 
-CUTE_INLINE float angle_diff(float radians_a, float radians_b) { return cf_angle_diff(radians_a, radians_b); }
-CUTE_INLINE v2 from_angle(float radians) { return cf_from_angle(radians); }
+CF_INLINE float angle_diff(float radians_a, float radians_b) { return cf_angle_diff(radians_a, radians_b); }
+CF_INLINE v2 from_angle(float radians) { return cf_from_angle(radians); }
 
-CUTE_INLINE v2 mul(M2x2 a, v2 b) { return cf_mul_m2_v2(a, b); }
-CUTE_INLINE M2x2 mul(M2x2 a, M2x2 b) { return cf_mul_m2(a, b); }
+CF_INLINE v2 mul(M2x2 a, v2 b) { return cf_mul_m2_v2(a, b); }
+CF_INLINE M2x2 mul(M2x2 a, M2x2 b) { return cf_mul_m2(a, b); }
 
-CUTE_INLINE v2 mul(M3x2 a, v2 b) { return cf_mul_m32_v2(a, b); }
-CUTE_INLINE M3x2 mul(M3x2 a, M3x2 b) { return cf_mul_m32(a, b); }
-CUTE_INLINE M3x2 make_identity() { return cf_make_identity(); }
-CUTE_INLINE M3x2 make_translation(float x, float y) { return cf_make_translation_f(x, y); }
-CUTE_INLINE M3x2 make_translation(v2 p) { return cf_make_translation(p); }
-CUTE_INLINE M3x2 make_scale(v2 s) { return cf_make_scale(s); }
-CUTE_INLINE M3x2 make_scale(float s) { return cf_make_scale_f(s); }
-CUTE_INLINE M3x2 make_scale(v2 s, v2 p) { return cf_make_scale_translation(s, p); }
-CUTE_INLINE M3x2 make_scale(float s, v2 p) { return cf_make_scale_translation_f(s, p); }
-CUTE_INLINE M3x2 make_scale(float sx, float sy, v2 p) { return cf_make_scale_translation_f_f(sx, sy, p); }
-CUTE_INLINE M3x2 make_rotation(float radians) { return cf_make_rotation(radians); }
-CUTE_INLINE M3x2 make_transform(v2 p, v2 s, float radians) { return cf_make_transform_TSR(p, s, radians); }
-CUTE_INLINE M3x2 invert(M3x2 m) { return cf_invert(m); }
+CF_INLINE v2 mul(M3x2 a, v2 b) { return cf_mul_m32_v2(a, b); }
+CF_INLINE M3x2 mul(M3x2 a, M3x2 b) { return cf_mul_m32(a, b); }
+CF_INLINE M3x2 make_identity() { return cf_make_identity(); }
+CF_INLINE M3x2 make_translation(float x, float y) { return cf_make_translation_f(x, y); }
+CF_INLINE M3x2 make_translation(v2 p) { return cf_make_translation(p); }
+CF_INLINE M3x2 make_scale(v2 s) { return cf_make_scale(s); }
+CF_INLINE M3x2 make_scale(float s) { return cf_make_scale_f(s); }
+CF_INLINE M3x2 make_scale(v2 s, v2 p) { return cf_make_scale_translation(s, p); }
+CF_INLINE M3x2 make_scale(float s, v2 p) { return cf_make_scale_translation_f(s, p); }
+CF_INLINE M3x2 make_scale(float sx, float sy, v2 p) { return cf_make_scale_translation_f_f(sx, sy, p); }
+CF_INLINE M3x2 make_rotation(float radians) { return cf_make_rotation(radians); }
+CF_INLINE M3x2 make_transform(v2 p, v2 s, float radians) { return cf_make_transform_TSR(p, s, radians); }
+CF_INLINE M3x2 invert(M3x2 m) { return cf_invert(m); }
 
-CUTE_INLINE Transform make_transform() { return cf_make_transform(); }
-CUTE_INLINE Transform make_transform(v2 p, float radians) { return cf_make_transform_TR(p, radians); }
-CUTE_INLINE v2 mul(Transform a, v2 b) { return cf_mul_tf_v2(a, b); }
-CUTE_INLINE v2 mulT(Transform a, v2 b) { return cf_mulT_tf_v2(a, b); }
-CUTE_INLINE Transform mul(Transform a, Transform b) { return cf_mul_tf(a, b); }
-CUTE_INLINE Transform mulT(Transform a, Transform b) { return cf_mulT_tf(a, b); }
+CF_INLINE Transform make_transform() { return cf_make_transform(); }
+CF_INLINE Transform make_transform(v2 p, float radians) { return cf_make_transform_TR(p, radians); }
+CF_INLINE v2 mul(Transform a, v2 b) { return cf_mul_tf_v2(a, b); }
+CF_INLINE v2 mulT(Transform a, v2 b) { return cf_mulT_tf_v2(a, b); }
+CF_INLINE Transform mul(Transform a, Transform b) { return cf_mul_tf(a, b); }
+CF_INLINE Transform mulT(Transform a, Transform b) { return cf_mulT_tf(a, b); }
 
-CUTE_INLINE Halfspace plane(v2 n, float d) { return cf_plane(n, d); }
-CUTE_INLINE Halfspace plane(v2 n, v2 p) { return cf_plane2(n, p); }
-CUTE_INLINE v2 origin(Halfspace h) { return cf_origin(h); }
-CUTE_INLINE float distance(Halfspace h, v2 p) { return cf_distance_hs(h, p); }
-CUTE_INLINE v2 project(Halfspace h, v2 p) { return cf_project(h, p); }
-CUTE_INLINE Halfspace mul(Transform a, Halfspace b) { return cf_mul_tf_hs(a, b); }
-CUTE_INLINE Halfspace mulT(Transform a, Halfspace b) { return cf_mulT_tf_hs(a, b); }
-CUTE_INLINE v2 intersect(v2 a, v2 b, float da, float db) { return cf_intersect_halfspace(a, b, da, db); }
-CUTE_INLINE v2 intersect(Halfspace h, v2 a, v2 b) { return cf_intersect_halfspace2(h, a, b); }
+CF_INLINE Halfspace plane(v2 n, float d) { return cf_plane(n, d); }
+CF_INLINE Halfspace plane(v2 n, v2 p) { return cf_plane2(n, p); }
+CF_INLINE v2 origin(Halfspace h) { return cf_origin(h); }
+CF_INLINE float distance(Halfspace h, v2 p) { return cf_distance_hs(h, p); }
+CF_INLINE v2 project(Halfspace h, v2 p) { return cf_project(h, p); }
+CF_INLINE Halfspace mul(Transform a, Halfspace b) { return cf_mul_tf_hs(a, b); }
+CF_INLINE Halfspace mulT(Transform a, Halfspace b) { return cf_mulT_tf_hs(a, b); }
+CF_INLINE v2 intersect(v2 a, v2 b, float da, float db) { return cf_intersect_halfspace(a, b, da, db); }
+CF_INLINE v2 intersect(Halfspace h, v2 a, v2 b) { return cf_intersect_halfspace2(h, a, b); }
 
-CUTE_INLINE Aabb make_aabb(v2 min, v2 max) { return cf_make_aabb(min, max); }
-CUTE_INLINE Aabb make_aabb(v2 pos, float w, float h) { return cf_make_aabb_pos_w_h(pos, w, h); }
-CUTE_INLINE Aabb make_aabb_center_half_extents(v2 center, v2 half_extents) { return cf_make_aabb_center_half_extents(center, half_extents); }
-CUTE_INLINE Aabb make_aabb_from_top_left(v2 top_left, float w, float h) { return cf_make_aabb_from_top_left(top_left, w, h); }
-CUTE_INLINE float width(Aabb bb) { return cf_width(bb); }
-CUTE_INLINE float height(Aabb bb) { return cf_height(bb); }
-CUTE_INLINE float half_width(Aabb bb) { return cf_half_width(bb); }
-CUTE_INLINE float half_height(Aabb bb) { return cf_half_height(bb); }
-CUTE_INLINE v2 half_extents(Aabb bb) { return cf_half_extents(bb); }
-CUTE_INLINE v2 extents(Aabb aabb) { return cf_extents(aabb); }
-CUTE_INLINE Aabb expand(Aabb aabb, v2 v) { return cf_expand_aabb(aabb, v); }
-CUTE_INLINE Aabb expand(Aabb aabb, float v) { return cf_expand_aabb_f(aabb, v); }
-CUTE_INLINE v2 min(Aabb bb) { return cf_min_aabb(bb); }
-CUTE_INLINE v2 max(Aabb bb) { return cf_max_aabb(bb); }
-CUTE_INLINE v2 midpoint(Aabb bb) { return cf_midpoint(bb); }
-CUTE_INLINE v2 center(Aabb bb) { return cf_center(bb); }
-CUTE_INLINE v2 top_left(Aabb bb) { return cf_top_left(bb); }
-CUTE_INLINE v2 top_right(Aabb bb) { return cf_top_right(bb); }
-CUTE_INLINE v2 bottom_left(Aabb bb) { return cf_bottom_left(bb); }
-CUTE_INLINE v2 bottom_right(Aabb bb) { return cf_bottom_right(bb); }
-CUTE_INLINE bool contains(Aabb bb, v2 p) { return cf_contains_point(bb, p); }
-CUTE_INLINE bool contains(Aabb a, Aabb b) { return cf_contains_aabb(a, b); }
-CUTE_INLINE float surface_area(Aabb bb) { return cf_surface_area_aabb(bb); }
-CUTE_INLINE float area(Aabb bb) { return cf_area_aabb(bb); }
-CUTE_INLINE v2 clamp(Aabb bb, v2 p) { return cf_clamp_aabb_v2(bb, p); }
-CUTE_INLINE Aabb clamp(Aabb a, Aabb b) { return cf_clamp_aabb(a, b); }
-CUTE_INLINE Aabb combine(Aabb a, Aabb b) { return cf_combine(a, b); }
+CF_INLINE Aabb make_aabb(v2 min, v2 max) { return cf_make_aabb(min, max); }
+CF_INLINE Aabb make_aabb(v2 pos, float w, float h) { return cf_make_aabb_pos_w_h(pos, w, h); }
+CF_INLINE Aabb make_aabb_center_half_extents(v2 center, v2 half_extents) { return cf_make_aabb_center_half_extents(center, half_extents); }
+CF_INLINE Aabb make_aabb_from_top_left(v2 top_left, float w, float h) { return cf_make_aabb_from_top_left(top_left, w, h); }
+CF_INLINE float width(Aabb bb) { return cf_width(bb); }
+CF_INLINE float height(Aabb bb) { return cf_height(bb); }
+CF_INLINE float half_width(Aabb bb) { return cf_half_width(bb); }
+CF_INLINE float half_height(Aabb bb) { return cf_half_height(bb); }
+CF_INLINE v2 half_extents(Aabb bb) { return cf_half_extents(bb); }
+CF_INLINE v2 extents(Aabb aabb) { return cf_extents(aabb); }
+CF_INLINE Aabb expand(Aabb aabb, v2 v) { return cf_expand_aabb(aabb, v); }
+CF_INLINE Aabb expand(Aabb aabb, float v) { return cf_expand_aabb_f(aabb, v); }
+CF_INLINE v2 min(Aabb bb) { return cf_min_aabb(bb); }
+CF_INLINE v2 max(Aabb bb) { return cf_max_aabb(bb); }
+CF_INLINE v2 midpoint(Aabb bb) { return cf_midpoint(bb); }
+CF_INLINE v2 center(Aabb bb) { return cf_center(bb); }
+CF_INLINE v2 top_left(Aabb bb) { return cf_top_left(bb); }
+CF_INLINE v2 top_right(Aabb bb) { return cf_top_right(bb); }
+CF_INLINE v2 bottom_left(Aabb bb) { return cf_bottom_left(bb); }
+CF_INLINE v2 bottom_right(Aabb bb) { return cf_bottom_right(bb); }
+CF_INLINE bool contains(Aabb bb, v2 p) { return cf_contains_point(bb, p); }
+CF_INLINE bool contains(Aabb a, Aabb b) { return cf_contains_aabb(a, b); }
+CF_INLINE float surface_area(Aabb bb) { return cf_surface_area_aabb(bb); }
+CF_INLINE float area(Aabb bb) { return cf_area_aabb(bb); }
+CF_INLINE v2 clamp(Aabb bb, v2 p) { return cf_clamp_aabb_v2(bb, p); }
+CF_INLINE Aabb clamp(Aabb a, Aabb b) { return cf_clamp_aabb(a, b); }
+CF_INLINE Aabb combine(Aabb a, Aabb b) { return cf_combine(a, b); }
 
-CUTE_INLINE int overlaps(Aabb a, Aabb b) { return cf_overlaps(a, b); }
-CUTE_INLINE int collide(Aabb a, Aabb b) { return cf_collide_aabb(a, b); }
+CF_INLINE int overlaps(Aabb a, Aabb b) { return cf_overlaps(a, b); }
+CF_INLINE int collide(Aabb a, Aabb b) { return cf_collide_aabb(a, b); }
 
-CUTE_INLINE Aabb make_aabb(v2* verts, int count) { return cf_make_aabb_verts((CF_V2*)verts, count); }
-CUTE_INLINE void aabb_verts(v2* out, Aabb bb) { return cf_aabb_verts((CF_V2*)out, bb); }
+CF_INLINE Aabb make_aabb(v2* verts, int count) { return cf_make_aabb_verts((CF_V2*)verts, count); }
+CF_INLINE void aabb_verts(v2* out, Aabb bb) { return cf_aabb_verts((CF_V2*)out, bb); }
 
-CUTE_INLINE float area(Circle c) { return cf_area_circle(c); }
-CUTE_INLINE float surface_area(Circle c) { return cf_surface_area_circle(c); }
-CUTE_INLINE Circle mul(Transform tx, Circle a) { return cf_mul_tf_circle(tx, a); }
+CF_INLINE float area(Circle c) { return cf_area_circle(c); }
+CF_INLINE float surface_area(Circle c) { return cf_surface_area_circle(c); }
+CF_INLINE Circle mul(Transform tx, Circle a) { return cf_mul_tf_circle(tx, a); }
 
-CUTE_INLINE v2 impact(Ray r, float t) { return cf_impact(r, t); }
-CUTE_INLINE v2 endpoint(Ray r) { return cf_endpoint(r); }
+CF_INLINE v2 impact(Ray r, float t) { return cf_impact(r, t); }
+CF_INLINE v2 endpoint(Ray r) { return cf_endpoint(r); }
 
-CUTE_INLINE int ray_to_halfpsace(Ray A, Halfspace B, Raycast* out) { return cf_ray_to_halfpsace(A, B, out); }
-CUTE_INLINE float distance_sq(v2 a, v2 b, v2 p) { return cf_distance_sq(a, b, p); }
+CF_INLINE int ray_to_halfpsace(Ray A, Halfspace B, Raycast* out) { return cf_ray_to_halfpsace(A, B, out); }
+CF_INLINE float distance_sq(v2 a, v2 b, v2 p) { return cf_distance_sq(a, b, p); }
 
-CUTE_INLINE bool circle_to_circle(Circle A, Circle B) { return cf_circle_to_circle(A, B); }
-CUTE_INLINE bool circle_to_aabb(Circle A, Aabb B) { return cf_circle_to_aabb(A, B); }
-CUTE_INLINE bool circle_to_capsule(Circle A, Capsule B) { return cf_circle_to_capsule(A, B); }
-CUTE_INLINE bool aabb_to_aabb(Aabb A, Aabb B) { return cf_aabb_to_aabb(A, B); }
-CUTE_INLINE bool aabb_to_capsule(Aabb A, Capsule B) { return cf_aabb_to_capsule(A, B); }
-CUTE_INLINE bool capsule_to_capsule(Capsule A, Capsule B) { return cf_capsule_to_capsule(A, B); }
-CUTE_INLINE bool circle_to_poly(Circle A, const Poly* B, const Transform* bx) { return cf_circle_to_poly(A, B, bx); }
-CUTE_INLINE bool aabb_to_poly(Aabb A, const Poly* B, const Transform* bx) { return cf_aabb_to_poly(A, B, bx); }
-CUTE_INLINE bool capsule_to_poly(Capsule A, const Poly* B, const Transform* bx) { return cf_capsule_to_poly(A, B, bx); }
-CUTE_INLINE bool poly_to_poly(const Poly* A, const Transform* ax, const Poly* B, const Transform* bx) { return cf_poly_to_poly(A, ax, B, bx); }
+CF_INLINE bool circle_to_circle(Circle A, Circle B) { return cf_circle_to_circle(A, B); }
+CF_INLINE bool circle_to_aabb(Circle A, Aabb B) { return cf_circle_to_aabb(A, B); }
+CF_INLINE bool circle_to_capsule(Circle A, Capsule B) { return cf_circle_to_capsule(A, B); }
+CF_INLINE bool aabb_to_aabb(Aabb A, Aabb B) { return cf_aabb_to_aabb(A, B); }
+CF_INLINE bool aabb_to_capsule(Aabb A, Capsule B) { return cf_aabb_to_capsule(A, B); }
+CF_INLINE bool capsule_to_capsule(Capsule A, Capsule B) { return cf_capsule_to_capsule(A, B); }
+CF_INLINE bool circle_to_poly(Circle A, const Poly* B, const Transform* bx) { return cf_circle_to_poly(A, B, bx); }
+CF_INLINE bool aabb_to_poly(Aabb A, const Poly* B, const Transform* bx) { return cf_aabb_to_poly(A, B, bx); }
+CF_INLINE bool capsule_to_poly(Capsule A, const Poly* B, const Transform* bx) { return cf_capsule_to_poly(A, B, bx); }
+CF_INLINE bool poly_to_poly(const Poly* A, const Transform* ax, const Poly* B, const Transform* bx) { return cf_poly_to_poly(A, ax, B, bx); }
 
-CUTE_INLINE bool ray_to_circle(Ray A, Circle B, Raycast* out) { return cf_ray_to_circle(A, B, out); }
-CUTE_INLINE bool ray_to_aabb(Ray A, Aabb B, Raycast* out) { return cf_ray_to_aabb(A, B, out); }
-CUTE_INLINE bool ray_to_capsule(Ray A, Capsule B, Raycast* out) { return cf_ray_to_capsule(A, B, out); }
-CUTE_INLINE bool ray_to_poly(Ray A, const Poly* B, const Transform* bx_ptr, Raycast* out) { return cf_ray_to_poly(A, B, bx_ptr, out); }
+CF_INLINE bool ray_to_circle(Ray A, Circle B, Raycast* out) { return cf_ray_to_circle(A, B, out); }
+CF_INLINE bool ray_to_aabb(Ray A, Aabb B, Raycast* out) { return cf_ray_to_aabb(A, B, out); }
+CF_INLINE bool ray_to_capsule(Ray A, Capsule B, Raycast* out) { return cf_ray_to_capsule(A, B, out); }
+CF_INLINE bool ray_to_poly(Ray A, const Poly* B, const Transform* bx_ptr, Raycast* out) { return cf_ray_to_poly(A, B, bx_ptr, out); }
 
-CUTE_INLINE void circle_to_circle_manifold(Circle A, Circle B, Manifold* m) { return cf_circle_to_circle_manifold(A, B, m); }
-CUTE_INLINE void circle_to_aabb_manifold(Circle A, Aabb B, Manifold* m) { return cf_circle_to_aabb_manifold(A, B, m); }
-CUTE_INLINE void circle_to_capsule_manifold(Circle A, Capsule B, Manifold* m) { return cf_circle_to_capsule_manifold(A, B, m); }
-CUTE_INLINE void aabb_to_aabb_manifold(Aabb A, Aabb B, Manifold* m) { return cf_aabb_to_aabb_manifold(A, B, m); }
-CUTE_INLINE void aabb_to_capsule_manifold(Aabb A, Capsule B, Manifold* m) { return cf_aabb_to_capsule_manifold(A, B, m); }
-CUTE_INLINE void capsule_to_capsule_manifold(Capsule A, Capsule B, Manifold* m) { return cf_capsule_to_capsule_manifold(A, B, m); }
-CUTE_INLINE void circle_to_poly_manifold(Circle A, const Poly* B, const Transform* bx, Manifold* m) { return cf_circle_to_poly_manifold(A, B, bx, m); }
-CUTE_INLINE void aabb_to_poly_manifold(Aabb A, const Poly* B, const Transform* bx, Manifold* m) { return cf_aabb_to_poly_manifold(A, B, bx, m); }
-CUTE_INLINE void capsule_to_poly_manifold(Capsule A, const Poly* B, const Transform* bx, Manifold* m) { return cf_capsule_to_poly_manifold(A, B, bx, m); }
-CUTE_INLINE void poly_to_poly_manifold(const Poly* A, const Transform* ax, const Poly* B, const Transform* bx, Manifold* m) { return cf_poly_to_poly_manifold(A, ax, B, bx, m); }
+CF_INLINE void circle_to_circle_manifold(Circle A, Circle B, Manifold* m) { return cf_circle_to_circle_manifold(A, B, m); }
+CF_INLINE void circle_to_aabb_manifold(Circle A, Aabb B, Manifold* m) { return cf_circle_to_aabb_manifold(A, B, m); }
+CF_INLINE void circle_to_capsule_manifold(Circle A, Capsule B, Manifold* m) { return cf_circle_to_capsule_manifold(A, B, m); }
+CF_INLINE void aabb_to_aabb_manifold(Aabb A, Aabb B, Manifold* m) { return cf_aabb_to_aabb_manifold(A, B, m); }
+CF_INLINE void aabb_to_capsule_manifold(Aabb A, Capsule B, Manifold* m) { return cf_aabb_to_capsule_manifold(A, B, m); }
+CF_INLINE void capsule_to_capsule_manifold(Capsule A, Capsule B, Manifold* m) { return cf_capsule_to_capsule_manifold(A, B, m); }
+CF_INLINE void circle_to_poly_manifold(Circle A, const Poly* B, const Transform* bx, Manifold* m) { return cf_circle_to_poly_manifold(A, B, bx, m); }
+CF_INLINE void aabb_to_poly_manifold(Aabb A, const Poly* B, const Transform* bx, Manifold* m) { return cf_aabb_to_poly_manifold(A, B, bx, m); }
+CF_INLINE void capsule_to_poly_manifold(Capsule A, const Poly* B, const Transform* bx, Manifold* m) { return cf_capsule_to_poly_manifold(A, B, bx, m); }
+CF_INLINE void poly_to_poly_manifold(const Poly* A, const Transform* ax, const Poly* B, const Transform* bx, Manifold* m) { return cf_poly_to_poly_manifold(A, ax, B, bx, m); }
 
-CUTE_INLINE float gjk(const void* A, ShapeType typeA, const Transform* ax_ptr, const void* B, ShapeType typeB, const Transform* bx_ptr, v2* outA, v2* outB, int use_radius, int* iterations, GjkCache* cache)
+CF_INLINE float gjk(const void* A, ShapeType typeA, const Transform* ax_ptr, const void* B, ShapeType typeB, const Transform* bx_ptr, v2* outA, v2* outB, int use_radius, int* iterations, GjkCache* cache)
 {
 	return cf_gjk(A, typeA, ax_ptr, B, typeB, bx_ptr, (CF_V2*)outA, (CF_V2*)outB, use_radius, iterations, cache);
 }
 
-CUTE_INLINE ToiResult toi(const void* A, ShapeType typeA, const Transform* ax_ptr, v2 vA, const void* B, ShapeType typeB, const Transform* bx_ptr, v2 vB, int use_radius, int* iterations)
+CF_INLINE ToiResult toi(const void* A, ShapeType typeA, const Transform* ax_ptr, v2 vA, const void* B, ShapeType typeB, const Transform* bx_ptr, v2 vB, int use_radius, int* iterations)
 {
 	return cf_toi(A, typeA, ax_ptr, vA, B, typeB, bx_ptr, vB, use_radius);
 }
 
-CUTE_INLINE void inflate(void* shape, ShapeType type, float skin_factor) { return cf_inflate(shape, type, skin_factor); }
+CF_INLINE void inflate(void* shape, ShapeType type, float skin_factor) { return cf_inflate(shape, type, skin_factor); }
 
-CUTE_INLINE int hull(v2* verts, int count) { return cf_hull((CF_V2*)verts, count); }
-CUTE_INLINE void norms(v2* verts, v2* norms, int count) { return cf_norms((CF_V2*)verts, (CF_V2*)norms, count); }
+CF_INLINE int hull(v2* verts, int count) { return cf_hull((CF_V2*)verts, count); }
+CF_INLINE void norms(v2* verts, v2* norms, int count) { return cf_norms((CF_V2*)verts, (CF_V2*)norms, count); }
 
-CUTE_INLINE void make_poly(Poly* p) { return cf_make_poly(p); }
-CUTE_INLINE v2 centroid(const v2* verts, int count) { return cf_centroid((CF_V2*)verts, count); }
+CF_INLINE void make_poly(Poly* p) { return cf_make_poly(p); }
+CF_INLINE v2 centroid(const v2* verts, int count) { return cf_centroid((CF_V2*)verts, count); }
 
-CUTE_INLINE int collided(const void* A, const Transform* ax, ShapeType typeA, const void* B, const Transform* bx, ShapeType typeB) { return cf_collided(A, ax, typeA, B, bx, typeB); }
-CUTE_INLINE void collide(const void* A, const Transform* ax, ShapeType typeA, const void* B, const Transform* bx, ShapeType typeB, Manifold* m) { return cf_collide(A, ax, typeA, B, bx, typeB, m); }
-CUTE_INLINE bool cast_ray(Ray A, const void* B, const Transform* bx, ShapeType typeB, Raycast* out) { return cf_cast_ray(A, B, bx, typeB, out); }
+CF_INLINE int collided(const void* A, const Transform* ax, ShapeType typeA, const void* B, const Transform* bx, ShapeType typeB) { return cf_collided(A, ax, typeA, B, bx, typeB); }
+CF_INLINE void collide(const void* A, const Transform* ax, ShapeType typeA, const void* B, const Transform* bx, ShapeType typeB, Manifold* m) { return cf_collide(A, ax, typeA, B, bx, typeB, m); }
+CF_INLINE bool cast_ray(Ray A, const void* B, const Transform* bx, ShapeType typeB, Raycast* out) { return cf_cast_ray(A, B, bx, typeB, out); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_MATH_H
+#endif // CF_MATH_H

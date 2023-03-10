@@ -25,13 +25,9 @@
 #include <SDL.h>
 
 #define CUTE_SYNC_IMPLEMENTATION
-#ifdef CUTE_WINDOWS
-#   define CUTE_SYNC_WINDOWS
-#else
-#   define CUTE_SYNC_SDL
-#endif
-#define CUTE_THREAD_ALLOC CUTE_ALLOC
-#define CUTE_THREAD_FREE CUTE_FREE
+#define CUTE_SYNC_SDL
+#define CUTE_THREAD_ALLOC CF_ALLOC
+#define CUTE_THREAD_FREE CF_FREE
 #include <cute/cute_sync.h>
 
 CF_Mutex cf_make_mutex()

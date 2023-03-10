@@ -18,15 +18,15 @@ int main(int argc, char* argv[])
 	int draw_calls = 0;
 
 	char* sample = fs_read_entire_file_to_memory_and_nul_terminate("sample_data/sample.txt");
-	CUTE_DEFER(CUTE_FREE(sample));
+	CF_DEFER(CF_FREE(sample));
 
 	while (app_is_running()) {
 		app_update();
 
 		if (app_was_resized()) {
 			app_get_size(&w, &h);
-			w = CUTE_ALIGN_TRUNCATE(w, 2);
-			h = CUTE_ALIGN_TRUNCATE(h, 2);
+			w = CF_ALIGN_TRUNCATE(w, 2);
+			h = CF_ALIGN_TRUNCATE(h, 2);
 			app_set_size(w, h);
 			app_set_canvas_size(w, h);
 			camera_dimensions((float)w, (float)h);

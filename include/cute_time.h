@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_TIMER_H
-#define CUTE_TIMER_H
+#ifndef CF_TIMER_H
+#define CF_TIMER_H
 
 #include "cute_defines.h"
 
@@ -37,7 +37,7 @@ extern "C" {
  * @brief    The `dt` or elapsed time from the previous two frames. Use this as an estimate to advance your current frame.
  * @related  CF_DELTA_TIME cf_update_time CF_OnUpdateFn
  */
-CUTE_API extern float CF_DELTA_TIME;
+CF_API extern float CF_DELTA_TIME;
 // @end
 
 /**
@@ -49,7 +49,7 @@ CUTE_API extern float CF_DELTA_TIME;
  *           games that require extreme precision and fine-tuning (such as certain fighting games or platformers).
  * @related  CF_DELTA_TIME cf_update_time CF_OnUpdateFn CF_DELTA_TIME_INTERPOLANT cf_set_fixed_timestep cf_set_fixed_timestep_max_updates
  */
-CUTE_API extern float CF_DELTA_TIME_FIXED;
+CF_API extern float CF_DELTA_TIME_FIXED;
 // @end
 
 /**
@@ -62,7 +62,7 @@ CUTE_API extern float CF_DELTA_TIME_FIXED;
  *           interval. This interpolant value is to interpolate between these two states to produce a smooth rendering transition.
  * @related  CF_DELTA_TIME cf_update_time CF_OnUpdateFn CF_DELTA_TIME_INTERPOLANT cf_set_fixed_timestep cf_set_fixed_timestep_max_updates
  */
-CUTE_API extern float CF_DELTA_TIME_INTERPOLANT;
+CF_API extern float CF_DELTA_TIME_INTERPOLANT;
 // @end
 
 /**
@@ -73,7 +73,7 @@ CUTE_API extern float CF_DELTA_TIME_INTERPOLANT;
  *           call `cf_get_tick_frequency` and use it as a divisor.
  * @related  CF_TICKS CF_PREV_TICKS cf_get_ticks cf_get_tick_frequency cf_make_stopwatch CF_SECONDS
  */
-CUTE_API extern uint64_t CF_TICKS;
+CF_API extern uint64_t CF_TICKS;
 // @end
 
 /**
@@ -84,7 +84,7 @@ CUTE_API extern uint64_t CF_TICKS;
  *           call `cf_get_tick_frequency` and use it as a divisor.
  * @related  CF_TICKS CF_PREV_TICKS cf_get_ticks cf_get_tick_frequency cf_make_stopwatch CF_SECONDS
  */
-CUTE_API extern uint64_t CF_PREV_TICKS;
+CF_API extern uint64_t CF_PREV_TICKS;
 // @end
 
 /**
@@ -93,7 +93,7 @@ CUTE_API extern uint64_t CF_PREV_TICKS;
  * @brief    The number of seconds elapsed since program start.
  * @related  CF_TICKS CF_PREV_TICKS cf_get_ticks cf_get_tick_frequency cf_make_stopwatch CF_SECONDS CF_PREV_SECONDS
  */
-CUTE_API extern double CF_SECONDS;
+CF_API extern double CF_SECONDS;
 // @end
 
 /**
@@ -102,7 +102,7 @@ CUTE_API extern double CF_SECONDS;
  * @brief    The number of seconds elapsed since program start for the last frame.
  * @related  CF_TICKS CF_PREV_TICKS cf_get_ticks cf_get_tick_frequency cf_make_stopwatch CF_SECONDS CF_PREV_SECONDS
  */
-CUTE_API extern double CF_PREV_SECONDS;
+CF_API extern double CF_PREV_SECONDS;
 // @end
 
 /**
@@ -113,7 +113,7 @@ CUTE_API extern double CF_PREV_SECONDS;
  *           happen when `cf_update_time` is called.
  * @related  CF_PAUSE_TIME_LEFT cf_update_time cf_pause_for cf_pause_for_ticks cf_is_paused
  */
-CUTE_API extern float CF_PAUSE_TIME_LEFT;
+CF_API extern float CF_PAUSE_TIME_LEFT;
 // @end
 
 /**
@@ -137,7 +137,7 @@ typedef void (CF_OnUpdateFn)();
  *           is clamped below `cf_set_fixed_timestep_max_updates`.
  * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT
  */
-CUTE_API void CUTE_CALL cf_set_fixed_timestep(int frames_per_second);
+CF_API void CF_CALL cf_set_fixed_timestep(int frames_per_second);
 
 /**
  * @function cf_set_fixed_timestep_max_updates
@@ -149,7 +149,7 @@ CUTE_API void CUTE_CALL cf_set_fixed_timestep(int frames_per_second);
  *           is clamped below `max_updates`.
  * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT
  */
-CUTE_API void CUTE_CALL cf_set_fixed_timestep_max_updates(int max_updates);
+CF_API void CF_CALL cf_set_fixed_timestep_max_updates(int max_updates);
 
 /**
  * @function cf_update_time
@@ -158,7 +158,7 @@ CUTE_API void CUTE_CALL cf_set_fixed_timestep_max_updates(int max_updates);
  * @param    on_update  Can be `NULL`. Called once per update. Mostly just useful for the fixed-timestep case (see `cf_set_fixed_timestep`).
  * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT
  */
-CUTE_API void CUTE_CALL cf_update_time(CF_OnUpdateFn* on_update);
+CF_API void CF_CALL cf_update_time(CF_OnUpdateFn* on_update);
 
 /**
  * @function cf_pause_for
@@ -169,7 +169,7 @@ CUTE_API void CUTE_CALL cf_update_time(CF_OnUpdateFn* on_update);
  *           happen when `cf_update_time` is called.
  * @related  CF_PAUSE_TIME_LEFT cf_update_time cf_pause_for cf_pause_for_ticks cf_is_paused
  */
-CUTE_API void CUTE_CALL cf_pause_for(float seconds);
+CF_API void CF_CALL cf_pause_for(float seconds);
 
 /**
  * @function cf_pause_for_ticks
@@ -180,7 +180,7 @@ CUTE_API void CUTE_CALL cf_pause_for(float seconds);
  *           happen when `cf_update_time` is called.
  * @related  CF_PAUSE_TIME_LEFT cf_update_time cf_pause_for cf_pause_for_ticks cf_is_paused
  */
-CUTE_API void CUTE_CALL cf_pause_for_ticks(uint64_t pause_ticks);
+CF_API void CF_CALL cf_pause_for_ticks(uint64_t pause_ticks);
 
 /**
  * @function cf_on_interval
@@ -193,7 +193,7 @@ CUTE_API void CUTE_CALL cf_pause_for_ticks(uint64_t pause_ticks);
  *           Simply place this within an if-statement!
  * @related  cf_on_interval cf_between_interval cf_on_timestamp
  */
-CUTE_API bool CUTE_CALL cf_on_interval(float interval, float offset);
+CF_API bool CF_CALL cf_on_interval(float interval, float offset);
 
 /**
  * @function cf_between_interval
@@ -206,7 +206,7 @@ CUTE_API bool CUTE_CALL cf_on_interval(float interval, float offset);
  *           and then _not_ fire for N seconds, flipping back and forth periodically. Simply place this within an if-statement!
  * @related  cf_on_interval cf_between_interval cf_on_timestamp
  */
-CUTE_API bool CUTE_CALL cf_between_interval(float interval, float offset);
+CF_API bool CF_CALL cf_between_interval(float interval, float offset);
 
 /**
  * @function cf_on_timestamp
@@ -217,7 +217,7 @@ CUTE_API bool CUTE_CALL cf_between_interval(float interval, float offset);
  *           (since program start). Simply place this within an if-statement!
  * @related  cf_on_interval cf_between_interval cf_on_timestamp
  */
-CUTE_API bool CUTE_CALL cf_on_timestamp(double timestamp);
+CF_API bool CF_CALL cf_on_timestamp(double timestamp);
 
 /**
  * @function cf_is_paused
@@ -226,7 +226,7 @@ CUTE_API bool CUTE_CALL cf_on_timestamp(double timestamp);
  * @remarks  Pause means from `cf_pause_for` or `cf_pause_for_ticks`.
  * @related  CF_PAUSE_TIME_LEFT cf_is_paused cf_pause_for cf_pause_for_ticks
  */
-CUTE_API bool CUTE_CALL cf_is_paused();
+CF_API bool CF_CALL cf_is_paused();
 
 /**
  * @function cf_get_ticks
@@ -236,7 +236,7 @@ CUTE_API bool CUTE_CALL cf_is_paused();
  *           queries the application for the number of ticks _right now_. Mostly useful for performance measuring.
  * @related  cf_get_ticks cf_get_tick_frequency
  */
-CUTE_API uint64_t CUTE_CALL cf_get_ticks();
+CF_API uint64_t CF_CALL cf_get_ticks();
 
 /**
  * @function cf_get_tick_frequency
@@ -244,7 +244,7 @@ CUTE_API uint64_t CUTE_CALL cf_get_ticks();
  * @brief    Returns the machine-dependent number of ticks that occur in one second.
  * @related  cf_get_ticks cf_get_tick_frequency
  */
-CUTE_API uint64_t CUTE_CALL cf_get_tick_frequency();
+CF_API uint64_t CF_CALL cf_get_tick_frequency();
 
 /**
  * @function cf_sleep
@@ -254,7 +254,7 @@ CUTE_API uint64_t CUTE_CALL cf_get_tick_frequency();
  *           applcation (so you can e.g. continue rendering and capturing user inputs) use `cf_pause_for` instead.
  * @related  cf_get_ticks cf_get_tick_frequency cf_pause_for
  */
-CUTE_API void CUTE_CALL cf_sleep(int milliseconds);
+CF_API void CF_CALL cf_sleep(int milliseconds);
 
 /**
  * @struct   CF_Stopwatch
@@ -281,7 +281,7 @@ typedef struct CF_Stopwatch
  *           `cf_stopwatch_milliseconds`, or `cf_microseconds`.
  * @related  CF_Stopwatch cf_make_stopwatch cf_stopwatch_seconds cf_stopwatch_milliseconds cf_stopwatch_microseconds
  */
-CUTE_API CF_Stopwatch CUTE_CALL cf_make_stopwatch();
+CF_API CF_Stopwatch CF_CALL cf_make_stopwatch();
 
 /**
  * @function cf_stopwatch_seconds
@@ -289,7 +289,7 @@ CUTE_API CF_Stopwatch CUTE_CALL cf_make_stopwatch();
  * @brief    Returns the number of seconds elapsed since the last call to `cf_make_stopwatch` was made.
  * @related  CF_Stopwatch cf_make_stopwatch cf_stopwatch_seconds cf_stopwatch_milliseconds cf_stopwatch_microseconds
  */
-CUTE_API double CUTE_CALL cf_stopwatch_seconds(CF_Stopwatch stopwatch);
+CF_API double CF_CALL cf_stopwatch_seconds(CF_Stopwatch stopwatch);
 
 /**
  * @function cf_stopwatch_milliseconds
@@ -297,7 +297,7 @@ CUTE_API double CUTE_CALL cf_stopwatch_seconds(CF_Stopwatch stopwatch);
  * @brief    Returns the number of milliseconds elapsed since the last call to `cf_make_stopwatch` was made.
  * @related  CF_Stopwatch cf_make_stopwatch cf_stopwatch_seconds cf_stopwatch_milliseconds cf_stopwatch_microseconds
  */
-CUTE_API double CUTE_CALL cf_stopwatch_milliseconds(CF_Stopwatch stopwatch);
+CF_API double CF_CALL cf_stopwatch_milliseconds(CF_Stopwatch stopwatch);
 
 /**
  * @function cf_stopwatch_microseconds
@@ -305,7 +305,7 @@ CUTE_API double CUTE_CALL cf_stopwatch_milliseconds(CF_Stopwatch stopwatch);
  * @brief    Returns the number of microseconds elapsed since the last call to `cf_make_stopwatch` was made.
  * @related  CF_Stopwatch cf_make_stopwatch cf_seconds cf_stopwatch_milliseconds cf_stopwatch_microseconds
  */
-CUTE_API double CUTE_CALL cf_stopwatch_microseconds(CF_Stopwatch stopwatch);
+CF_API double CF_CALL cf_stopwatch_microseconds(CF_Stopwatch stopwatch);
 
 #ifdef __cplusplus
 }
@@ -314,7 +314,7 @@ CUTE_API double CUTE_CALL cf_stopwatch_microseconds(CF_Stopwatch stopwatch);
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
@@ -325,28 +325,28 @@ namespace Cute
 using OnUpdateFn = CF_OnUpdateFn;
 using Stopwatch = CF_Stopwatch;
 
-CUTE_INLINE void set_fixed_timestep(int frames_per_second = 60) { cf_set_fixed_timestep(frames_per_second); }
-CUTE_INLINE void set_fixed_timestep_max_updates(int max_updates = 5) { cf_set_fixed_timestep_max_updates(max_updates); }
-CUTE_INLINE void update_time(OnUpdateFn* on_update = NULL) { cf_update_time(on_update); }
-CUTE_INLINE void pause_for(float seconds) { cf_pause_for(seconds); }
-CUTE_INLINE void pause_for_ticks(uint64_t pause_ticks) { cf_pause_for_ticks(pause_ticks); }
+CF_INLINE void set_fixed_timestep(int frames_per_second = 60) { cf_set_fixed_timestep(frames_per_second); }
+CF_INLINE void set_fixed_timestep_max_updates(int max_updates = 5) { cf_set_fixed_timestep_max_updates(max_updates); }
+CF_INLINE void update_time(OnUpdateFn* on_update = NULL) { cf_update_time(on_update); }
+CF_INLINE void pause_for(float seconds) { cf_pause_for(seconds); }
+CF_INLINE void pause_for_ticks(uint64_t pause_ticks) { cf_pause_for_ticks(pause_ticks); }
 
-CUTE_INLINE bool on_interval(float interval, float offset = 0) { return cf_on_interval(interval, offset); }
-CUTE_INLINE bool between_interval(float interval, float offset = 0) { return cf_between_interval(interval, offset); }
-CUTE_INLINE bool on_timestamp(double timestamp) { return cf_on_timestamp(timestamp); }
-CUTE_INLINE bool is_paused() { return cf_is_paused(); }
+CF_INLINE bool on_interval(float interval, float offset = 0) { return cf_on_interval(interval, offset); }
+CF_INLINE bool between_interval(float interval, float offset = 0) { return cf_between_interval(interval, offset); }
+CF_INLINE bool on_timestamp(double timestamp) { return cf_on_timestamp(timestamp); }
+CF_INLINE bool is_paused() { return cf_is_paused(); }
 
-CUTE_INLINE uint64_t get_ticks() { return cf_get_ticks(); }
-CUTE_INLINE uint64_t get_tick_frequency() { return cf_get_tick_frequency(); }
-CUTE_INLINE void sleep(int milliseconds) { cf_sleep(milliseconds); }
+CF_INLINE uint64_t get_ticks() { return cf_get_ticks(); }
+CF_INLINE uint64_t get_tick_frequency() { return cf_get_tick_frequency(); }
+CF_INLINE void sleep(int milliseconds) { cf_sleep(milliseconds); }
 
-CUTE_INLINE CF_Stopwatch make_stopwatch() { return cf_make_stopwatch(); }
-CUTE_INLINE double stopwatch_seconds(CF_Stopwatch stopwatch) { return cf_stopwatch_seconds(stopwatch); }
-CUTE_INLINE double stopwatch_milliseconds(CF_Stopwatch stopwatch) { return cf_stopwatch_milliseconds(stopwatch); }
-CUTE_INLINE double stopwatch_microseconds(CF_Stopwatch stopwatch) { return cf_stopwatch_microseconds(stopwatch); }
+CF_INLINE CF_Stopwatch make_stopwatch() { return cf_make_stopwatch(); }
+CF_INLINE double stopwatch_seconds(CF_Stopwatch stopwatch) { return cf_stopwatch_seconds(stopwatch); }
+CF_INLINE double stopwatch_milliseconds(CF_Stopwatch stopwatch) { return cf_stopwatch_milliseconds(stopwatch); }
+CF_INLINE double stopwatch_microseconds(CF_Stopwatch stopwatch) { return cf_stopwatch_microseconds(stopwatch); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_TIMER_H
+#endif // CF_TIMER_H

@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_CLIPBOARD_H
-#define CUTE_CLIPBOARD_H
+#ifndef CF_CLIPBOARD_H
+#define CF_CLIPBOARD_H
 
 #include "cute_defines.h"
 #include "cute_result.h"
@@ -38,7 +38,7 @@ extern "C" {
  * @brief    Returns a UTF-8 string of the clipboard contents.
  * @related  cf_clipboard_get cf_clipboard_set
  */
-CUTE_API char* CUTE_CALL cf_clipboard_get();
+CF_API char* CF_CALL cf_clipboard_get();
 
 /**
  * @function cf_clipboard_set
@@ -46,7 +46,7 @@ CUTE_API char* CUTE_CALL cf_clipboard_get();
  * @brief    Sets a UTF-8 string of the clipboard contents.
  * @related  cf_clipboard_get cf_clipboard_set
  */
-CUTE_API CF_Result CUTE_CALL cf_clipboard_set(const char* string);
+CF_API CF_Result CF_CALL cf_clipboard_set(const char* string);
 
 #ifdef __cplusplus
 }
@@ -55,16 +55,16 @@ CUTE_API CF_Result CUTE_CALL cf_clipboard_set(const char* string);
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
 
-CUTE_INLINE char* clipboard_get() { return cf_clipboard_get(); }
-CUTE_INLINE CF_Result clipboard_set(const char* string) { return cf_clipboard_set(string); }
+CF_INLINE char* clipboard_get() { return cf_clipboard_get(); }
+CF_INLINE CF_Result clipboard_set(const char* string) { return cf_clipboard_set(string); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_CLIPBOARD_H
+#endif // CF_CLIPBOARD_H

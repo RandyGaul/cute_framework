@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_SPRITE_H
-#define CUTE_SPRITE_H
+#ifndef CF_SPRITE_H
+#define CF_SPRITE_H
 
 #include "cute_defines.h"
 #include "cute_array.h"
@@ -80,10 +80,10 @@ typedef enum CF_PlayDirection
  * @brief    Returns a `CF_PlayDirection` converted to a C string.
  * @related  CF_PlayDirection cf_play_direction_to_string CF_Animation
  */
-CUTE_INLINE const char* cf_play_direction_to_string(CF_PlayDirection dir)
+CF_INLINE const char* cf_play_direction_to_string(CF_PlayDirection dir)
 {
 	switch (dir) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_PLAY_DIRECTION_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -170,7 +170,7 @@ typedef struct CF_Sprite
  *           you may be looking for `cf_make_sprite` or `cf_make_easy_sprite`.
  * @related  CF_Sprite cf_sprite_defaults cf_make_easy_sprite cf_make_sprite
  */
-CUTE_INLINE CF_Sprite cf_sprite_defaults()
+CF_INLINE CF_Sprite cf_sprite_defaults()
 {
 	CF_Sprite sprite = { 0 };
 	sprite.scale = cf_v2(1, 1);
@@ -191,7 +191,7 @@ CUTE_INLINE CF_Sprite cf_sprite_defaults()
  *           by merely loading a single .png image, or for games that don't require animations. TODO - LINK_TO_VFS_TUTORIAL.
  * @related  CF_Sprite cf_make_easy_sprite cf_make_sprite
  */
-CUTE_API CF_Sprite CUTE_CALL cf_make_easy_sprite(const char* png_path);
+CF_API CF_Sprite CF_CALL cf_make_easy_sprite(const char* png_path);
 
 /**
  * @function cf_make_sprite
@@ -205,7 +205,7 @@ CUTE_API CF_Sprite CUTE_CALL cf_make_easy_sprite(const char* png_path);
  *           TODO - LINK_TO_VFS_TUTORIAL.
  * @related  CF_Sprite cf_make_sprite cf_sprite_unload
  */
-CUTE_API CF_Sprite CUTE_CALL cf_make_sprite(const char* aseprite_path);
+CF_API CF_Sprite CF_CALL cf_make_sprite(const char* aseprite_path);
 
 /**
  * @function cf_sprite_unload
@@ -215,14 +215,14 @@ CUTE_API CF_Sprite CUTE_CALL cf_make_sprite(const char* aseprite_path);
  * @remarks  Any live `CF_Sprite` instances for `aseprite_path` will now by "dangling". TODO - LINK_TO_VFS_TUTORIAL.
  * @related  CF_Sprite cf_make_sprite cf_sprite_unload
  */
-CUTE_API void CUTE_CALL cf_sprite_unload(const char* aseprite_path);
+CF_API void CF_CALL cf_sprite_unload(const char* aseprite_path);
 
 //--------------------------------------------------------------------------------------------------
 // In-line implementation of `CF_Sprite` functions.
 
-CUTE_API void CUTE_CALL cf_draw_sprite(const CF_Sprite* sprite);
+CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
 
-CUTE_INLINE void cf_sprite_draw(CF_Sprite* sprite)
+CF_INLINE void cf_sprite_draw(CF_Sprite* sprite)
 {
 	cf_draw_sprite(sprite);
 }
@@ -235,7 +235,7 @@ CUTE_INLINE void cf_sprite_draw(CF_Sprite* sprite)
  * @remarks  Call this once per frame.
  * @related  CF_Sprite cf_make_sprite cf_sprite_update cf_sprite_play cf_sprite_pause
  */
-CUTE_INLINE void cf_sprite_update(CF_Sprite* sprite)
+CF_INLINE void cf_sprite_update(CF_Sprite* sprite)
 {
 	if (sprite->paused) return;
 
@@ -260,7 +260,7 @@ CUTE_INLINE void cf_sprite_update(CF_Sprite* sprite)
  * @param    sprite     The sprite.
  * @related  CF_Sprite cf_sprite_update cf_sprite_play
  */
-CUTE_INLINE void cf_sprite_reset(CF_Sprite* sprite)
+CF_INLINE void cf_sprite_reset(CF_Sprite* sprite)
 {
 	sprite->paused = false;
 	sprite->frame_index = 0;
@@ -276,10 +276,10 @@ CUTE_INLINE void cf_sprite_reset(CF_Sprite* sprite)
  * @param    animation  Name of the animation to switch to and start playing.
  * @related  CF_Sprite cf_sprite_update cf_sprite_play cf_sprite_is_playing
  */
-CUTE_INLINE void cf_sprite_play(CF_Sprite* sprite, const char* animation)
+CF_INLINE void cf_sprite_play(CF_Sprite* sprite, const char* animation)
 {
 	sprite->animation = hfind(sprite->animations, sintern(animation));
-	CUTE_ASSERT(sprite->animation);
+	CF_ASSERT(sprite->animation);
 	cf_sprite_reset(sprite);
 }
 
@@ -291,9 +291,9 @@ CUTE_INLINE void cf_sprite_play(CF_Sprite* sprite, const char* animation)
  * @param    animation  Name of the animation.
  * @related  CF_Sprite cf_sprite_update cf_sprite_play cf_sprite_is_playing
  */
-CUTE_INLINE bool cf_sprite_is_playing(CF_Sprite* sprite, const char* animation)
+CF_INLINE bool cf_sprite_is_playing(CF_Sprite* sprite, const char* animation)
 {
-	return !CUTE_STRCMP(animation, sprite->animation->name);
+	return !CF_STRCMP(animation, sprite->animation->name);
 }
 
 /**
@@ -303,7 +303,7 @@ CUTE_INLINE bool cf_sprite_is_playing(CF_Sprite* sprite, const char* animation)
  * @param    sprite     The sprite.
  * @related  CF_Sprite cf_sprite_update cf_sprite_play cf_sprite_pause cf_sprite_unpause cf_sprite_toggle_pause
  */
-CUTE_INLINE void cf_sprite_pause(CF_Sprite* sprite)
+CF_INLINE void cf_sprite_pause(CF_Sprite* sprite)
 {
 	sprite->paused = true;
 }
@@ -315,7 +315,7 @@ CUTE_INLINE void cf_sprite_pause(CF_Sprite* sprite)
  * @param    sprite     The sprite.
  * @related  CF_Sprite cf_sprite_update cf_sprite_play cf_sprite_pause cf_sprite_unpause cf_sprite_toggle_pause
  */
-CUTE_INLINE void cf_sprite_unpause(CF_Sprite* sprite)
+CF_INLINE void cf_sprite_unpause(CF_Sprite* sprite)
 {
 	sprite->paused = false;
 }
@@ -327,7 +327,7 @@ CUTE_INLINE void cf_sprite_unpause(CF_Sprite* sprite)
  * @param    sprite     The sprite.
  * @related  CF_Sprite cf_sprite_update cf_sprite_play cf_sprite_pause cf_sprite_unpause cf_sprite_toggle_pause
  */
-CUTE_INLINE void cf_sprite_toggle_pause(CF_Sprite* sprite)
+CF_INLINE void cf_sprite_toggle_pause(CF_Sprite* sprite)
 {
 	sprite->paused = !sprite->paused;
 }
@@ -340,7 +340,7 @@ CUTE_INLINE void cf_sprite_toggle_pause(CF_Sprite* sprite)
  * @remarks  Works by flipping the sign of the sprite's scale on the x-axis.
  * @related  CF_Sprite cf_sprite_flip_x cf_sprite_flip_y
  */
-CUTE_INLINE void cf_sprite_flip_x(CF_Sprite* sprite)
+CF_INLINE void cf_sprite_flip_x(CF_Sprite* sprite)
 {
 	sprite->scale.x *= -1.0f;
 }
@@ -353,7 +353,7 @@ CUTE_INLINE void cf_sprite_flip_x(CF_Sprite* sprite)
  * @remarks  Works by flipping the sign of the sprite's scale on the y-axis.
  * @related  CF_Sprite cf_sprite_flip_x cf_sprite_flip_y
  */
-CUTE_INLINE void cf_sprite_flip_y(CF_Sprite* sprite)
+CF_INLINE void cf_sprite_flip_y(CF_Sprite* sprite)
 {
 	sprite->scale.y *= -1.0f;
 }
@@ -365,7 +365,7 @@ CUTE_INLINE void cf_sprite_flip_y(CF_Sprite* sprite)
  * @param    sprite     The sprite.
  * @related  CF_Sprite cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay
  */
-CUTE_INLINE int cf_sprite_frame_count(const CF_Sprite* sprite)
+CF_INLINE int cf_sprite_frame_count(const CF_Sprite* sprite)
 {
 	return alen(sprite->animation);
 }
@@ -377,7 +377,7 @@ CUTE_INLINE int cf_sprite_frame_count(const CF_Sprite* sprite)
  * @param    sprite     The sprite.
  * @related  CF_Sprite cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay
  */
-CUTE_INLINE int cf_sprite_current_frame(const CF_Sprite* sprite)
+CF_INLINE int cf_sprite_current_frame(const CF_Sprite* sprite)
 {
 	return sprite->frame_index;
 }
@@ -389,7 +389,7 @@ CUTE_INLINE int cf_sprite_current_frame(const CF_Sprite* sprite)
  * @param    sprite     The sprite.
  * @related  CF_Sprite CF_Frame cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay cf_sprite_animation_interpolant
  */
-CUTE_INLINE float cf_sprite_frame_delay(CF_Sprite* sprite)
+CF_INLINE float cf_sprite_frame_delay(CF_Sprite* sprite)
 {
 	return sprite->animation->frames[sprite->frame_index].delay;
 }
@@ -401,7 +401,7 @@ CUTE_INLINE float cf_sprite_frame_delay(CF_Sprite* sprite)
  * @param    sprite     The sprite.
  * @related  CF_Sprite CF_Frame CF_Animation cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay cf_sprite_animation_interpolant
  */
-CUTE_INLINE float cf_sprite_animation_delay(CF_Sprite* sprite)
+CF_INLINE float cf_sprite_animation_delay(CF_Sprite* sprite)
 {
 	int count = cf_sprite_frame_count(sprite);
 	float delay = 0;
@@ -419,7 +419,7 @@ CUTE_INLINE float cf_sprite_animation_delay(CF_Sprite* sprite)
  * @remarks  0 means just started, while 1 means finished.
  * @related  CF_Sprite CF_Frame CF_Animation cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay
  */
-CUTE_INLINE float cf_sprite_animation_interpolant(CF_Sprite* sprite)
+CF_INLINE float cf_sprite_animation_interpolant(CF_Sprite* sprite)
 {
 	// TODO -- Backwards and pingpong.
 	float delay = cf_sprite_animation_delay(sprite);
@@ -435,7 +435,7 @@ CUTE_INLINE float cf_sprite_animation_interpolant(CF_Sprite* sprite)
  * @remarks  This is useful to see if you're currently on the last frame of animation, and will finish in this particular update.
  * @related  CF_Sprite cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay cf_sprite_will_finish
  */
-CUTE_INLINE bool cf_sprite_will_finish(CF_Sprite* sprite)
+CF_INLINE bool cf_sprite_will_finish(CF_Sprite* sprite)
 {
 	// TODO -- Backwards and pingpong.
 	if (sprite->frame_index == cf_sprite_frame_count(sprite) - 1) {
@@ -453,7 +453,7 @@ CUTE_INLINE bool cf_sprite_will_finish(CF_Sprite* sprite)
  * @remarks  This is useful for polling on when the animation restarts itself, for example, polling within an if-statement each game tick.
  * @related  CF_Sprite cf_sprite_frame_count cf_sprite_current_frame cf_sprite_frame_delay cf_sprite_animation_delay cf_sprite_will_finish
  */
-CUTE_INLINE bool cf_sprite_on_loop(CF_Sprite* sprite)
+CF_INLINE bool cf_sprite_on_loop(CF_Sprite* sprite)
 {
 	if (sprite->frame_index == 0 && sprite->t == 0) {
 		return true;
@@ -472,7 +472,7 @@ CUTE_INLINE bool cf_sprite_on_loop(CF_Sprite* sprite)
  *           loads a full sprite out of a .ase file. But, this function provides another low-level option if desired.
  * @related  CF_Sprite CF_Animation CF_Frame dyna htbl
  */
-CUTE_INLINE void cf_animation_add_frame(CF_Animation* animation, CF_Frame frame) { apush(animation->frames, frame); }
+CF_INLINE void cf_animation_add_frame(CF_Animation* animation, CF_Frame frame) { apush(animation->frames, frame); }
 
 #ifdef __cplusplus
 }
@@ -481,7 +481,7 @@ CUTE_INLINE void cf_animation_add_frame(CF_Animation* animation, CF_Frame frame)
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
@@ -490,11 +490,11 @@ using frame_t = CF_Frame;
 using animation_t = CF_Animation;
 
 using PlayDirection = CF_PlayDirection;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr PlayDirection K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr PlayDirection K = CF_##K;
 CF_PLAY_DIRECTION_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* to_string(PlayDirection dir)
+CF_INLINE const char* to_string(PlayDirection dir)
 {
 	switch (dir) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -509,31 +509,31 @@ struct Sprite : public CF_Sprite
 	Sprite() { *(CF_Sprite*)this = cf_sprite_defaults(); }
 	Sprite(CF_Sprite s) { *(CF_Sprite*)this = s; }
 
-	CUTE_INLINE void draw() { cf_sprite_draw(this); }
-	CUTE_INLINE void update() { return cf_sprite_update(this); }
-	CUTE_INLINE void play(const char* animation) { return cf_sprite_play(this, animation); }
-	CUTE_INLINE bool is_playing(const char* animation) { return cf_sprite_is_playing(this, animation); }
-	CUTE_INLINE void reset() { return cf_sprite_reset(this); }
-	CUTE_INLINE void pause() { return cf_sprite_pause(this); }
-	CUTE_INLINE void unpause() { return cf_sprite_unpause(this); }
-	CUTE_INLINE void toggle_pause() { return cf_sprite_toggle_pause(this); }
-	CUTE_INLINE void flip_x() { return cf_sprite_flip_x(this); }
-	CUTE_INLINE void flip_y() { return cf_sprite_flip_y(this); }
-	CUTE_INLINE int frame_count() const { return cf_sprite_frame_count(this); }
-	CUTE_INLINE int current_frame() const { return cf_sprite_current_frame(this); }
-	CUTE_INLINE float frame_delay() { return cf_sprite_frame_delay(this); }
-	CUTE_INLINE float animation_delay() { return cf_sprite_animation_delay(this); }
-	CUTE_INLINE float animation_interpolant() { return cf_sprite_animation_interpolant(this); }
-	CUTE_INLINE bool will_finish() { return cf_sprite_will_finish(this); }
-	CUTE_INLINE bool on_loop() { return cf_sprite_on_loop(this); }
+	CF_INLINE void draw() { cf_sprite_draw(this); }
+	CF_INLINE void update() { return cf_sprite_update(this); }
+	CF_INLINE void play(const char* animation) { return cf_sprite_play(this, animation); }
+	CF_INLINE bool is_playing(const char* animation) { return cf_sprite_is_playing(this, animation); }
+	CF_INLINE void reset() { return cf_sprite_reset(this); }
+	CF_INLINE void pause() { return cf_sprite_pause(this); }
+	CF_INLINE void unpause() { return cf_sprite_unpause(this); }
+	CF_INLINE void toggle_pause() { return cf_sprite_toggle_pause(this); }
+	CF_INLINE void flip_x() { return cf_sprite_flip_x(this); }
+	CF_INLINE void flip_y() { return cf_sprite_flip_y(this); }
+	CF_INLINE int frame_count() const { return cf_sprite_frame_count(this); }
+	CF_INLINE int current_frame() const { return cf_sprite_current_frame(this); }
+	CF_INLINE float frame_delay() { return cf_sprite_frame_delay(this); }
+	CF_INLINE float animation_delay() { return cf_sprite_animation_delay(this); }
+	CF_INLINE float animation_interpolant() { return cf_sprite_animation_interpolant(this); }
+	CF_INLINE bool will_finish() { return cf_sprite_will_finish(this); }
+	CF_INLINE bool on_loop() { return cf_sprite_on_loop(this); }
 };
 
-CUTE_INLINE Sprite easy_make_sprite(const char* png_path) { return cf_make_easy_sprite(png_path); }
-CUTE_INLINE Sprite make_sprite(const char* aseprite_path) { return cf_make_sprite(aseprite_path); }
-CUTE_INLINE void sprite_unload(const char* aseprite_path) { cf_sprite_unload(aseprite_path); }
+CF_INLINE Sprite easy_make_sprite(const char* png_path) { return cf_make_easy_sprite(png_path); }
+CF_INLINE Sprite make_sprite(const char* aseprite_path) { return cf_make_sprite(aseprite_path); }
+CF_INLINE void sprite_unload(const char* aseprite_path) { cf_sprite_unload(aseprite_path); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_SPRITE_H
+#endif // CF_SPRITE_H

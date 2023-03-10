@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_INPUT_H
-#define CUTE_INPUT_H
+#ifndef CF_INPUT_H
+#define CF_INPUT_H
 
 #include "cute_defines.h"
 
@@ -60,10 +60,10 @@ typedef enum CF_MouseButton
  * @param    state        The state to convert to a string.
  * @related  CF_MouseButton cf_mouse_button_to_string cf_mouse_down
  */
-CUTE_INLINE const char* cf_mouse_button_to_string(CF_MouseButton button)
+CF_INLINE const char* cf_mouse_button_to_string(CF_MouseButton button)
 {
 	switch (button) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_MOUSE_BUTTON_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -567,10 +567,10 @@ typedef enum CF_KeyButton
  * @param    state        The state to convert to a string.
  * @related  CF_KeyButton cf_key_button_to_string cf_key_down
  */
-CUTE_INLINE const char* cf_key_button_to_string(CF_KeyButton button)
+CF_INLINE const char* cf_key_button_to_string(CF_KeyButton button)
 {
 	switch (button) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_KEY_BUTTON_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -583,7 +583,7 @@ CUTE_INLINE const char* cf_key_button_to_string(CF_KeyButton button)
  * @brief    Returns true if a key is currently down.
  * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
  */
-CUTE_API bool CUTE_CALL cf_key_down(CF_KeyButton key);
+CF_API bool CF_CALL cf_key_down(CF_KeyButton key);
 
 /**
  * @function cf_key_just_pressed
@@ -591,7 +591,7 @@ CUTE_API bool CUTE_CALL cf_key_down(CF_KeyButton key);
  * @brief    Returns true if a key was just pressed.
  * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
  */
-CUTE_API bool CUTE_CALL cf_key_just_pressed(CF_KeyButton key);
+CF_API bool CF_CALL cf_key_just_pressed(CF_KeyButton key);
 
 /**
  * @function cf_key_just_released
@@ -599,7 +599,7 @@ CUTE_API bool CUTE_CALL cf_key_just_pressed(CF_KeyButton key);
  * @brief    Returns true if a key was just released.
  * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
  */
-CUTE_API bool CUTE_CALL cf_key_just_released(CF_KeyButton key);
+CF_API bool CF_CALL cf_key_just_released(CF_KeyButton key);
 
 /**
  * @function cf_key_ctrl
@@ -607,7 +607,7 @@ CUTE_API bool CUTE_CALL cf_key_just_released(CF_KeyButton key);
  * @brief    Returns true if the left or right control key is currently down.
  * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
  */
-CUTE_API bool CUTE_CALL cf_key_ctrl();
+CF_API bool CF_CALL cf_key_ctrl();
 
 /**
  * @function cf_key_shift
@@ -615,7 +615,7 @@ CUTE_API bool CUTE_CALL cf_key_ctrl();
  * @brief    Returns true if the left or right shift key is currently down.
  * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
  */
-CUTE_API bool CUTE_CALL cf_key_shift();
+CF_API bool CF_CALL cf_key_shift();
 
 /**
  * @function cf_key_alt
@@ -623,7 +623,7 @@ CUTE_API bool CUTE_CALL cf_key_shift();
  * @brief    Returns true if the left or right alt key is currently down.
  * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
  */
-CUTE_API bool CUTE_CALL cf_key_alt();
+CF_API bool CF_CALL cf_key_alt();
 
 /**
  * @function cf_key_gui
@@ -632,7 +632,7 @@ CUTE_API bool CUTE_CALL cf_key_alt();
  * @remarks  Windows key in Windows, Command key in OSX.
  * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
  */
-CUTE_API bool CUTE_CALL cf_key_gui();
+CF_API bool CF_CALL cf_key_gui();
 
 /**
  * @function cf_clear_key_states
@@ -640,7 +640,7 @@ CUTE_API bool CUTE_CALL cf_key_gui();
  * @brief    Zeroes out all internal keyboard state.
  * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
  */
-CUTE_API void CUTE_CALL cf_clear_key_states();
+CF_API void CF_CALL cf_clear_key_states();
 
 /**
  * @function cf_mouse_x
@@ -649,7 +649,7 @@ CUTE_API void CUTE_CALL cf_clear_key_states();
  * @remarks  (0, 0) is the top-left of the screen, y-downards.
  * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y
  */
-CUTE_API int CUTE_CALL cf_mouse_x();
+CF_API int CF_CALL cf_mouse_x();
 
 /**
  * @function cf_mouse_y
@@ -658,7 +658,7 @@ CUTE_API int CUTE_CALL cf_mouse_x();
  * @remarks  (0, 0) is the top-left of the screen, y-downwards.
  * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y
  */
-CUTE_API int CUTE_CALL cf_mouse_y();
+CF_API int CF_CALL cf_mouse_y();
 
 /**
  * @function cf_mouse_down
@@ -666,7 +666,7 @@ CUTE_API int CUTE_CALL cf_mouse_y();
  * @brief    Returns true if the mouse button is currently down.
  * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
  */
-CUTE_API bool CUTE_CALL cf_mouse_down(CF_MouseButton button);
+CF_API bool CF_CALL cf_mouse_down(CF_MouseButton button);
 
 /**
  * @function cf_mouse_just_pressed
@@ -674,7 +674,7 @@ CUTE_API bool CUTE_CALL cf_mouse_down(CF_MouseButton button);
  * @brief    Returns true if the mouse button was just pressed.
  * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
  */
-CUTE_API bool CUTE_CALL cf_mouse_just_pressed(CF_MouseButton button);
+CF_API bool CF_CALL cf_mouse_just_pressed(CF_MouseButton button);
 
 /**
  * @function cf_mouse_just_released
@@ -682,7 +682,7 @@ CUTE_API bool CUTE_CALL cf_mouse_just_pressed(CF_MouseButton button);
  * @brief    Returns true if the mouse button was just released.
  * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
  */
-CUTE_API bool CUTE_CALL cf_mouse_just_released(CF_MouseButton button);
+CF_API bool CF_CALL cf_mouse_just_released(CF_MouseButton button);
 
 /**
  * @function cf_mouse_wheel_motion
@@ -690,7 +690,7 @@ CUTE_API bool CUTE_CALL cf_mouse_just_released(CF_MouseButton button);
  * @brief    Returns a signed integer representing by how much the mouse wheel was rotated.
  * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
  */
-CUTE_API int CUTE_CALL cf_mouse_wheel_motion();
+CF_API int CF_CALL cf_mouse_wheel_motion();
 
 /**
  * @function cf_mouse_double_click_held
@@ -698,7 +698,7 @@ CUTE_API int CUTE_CALL cf_mouse_wheel_motion();
  * @brief    Returns true while a double click was detected and currently held down.
  * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
  */
-CUTE_API bool CUTE_CALL cf_mouse_double_click_held(CF_MouseButton button);
+CF_API bool CF_CALL cf_mouse_double_click_held(CF_MouseButton button);
 
 /**
  * @function cf_mouse_double_clicked
@@ -706,7 +706,7 @@ CUTE_API bool CUTE_CALL cf_mouse_double_click_held(CF_MouseButton button);
  * @brief    Returns true if a double click was just detected.
  * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
  */
-CUTE_API bool CUTE_CALL cf_mouse_double_clicked(CF_MouseButton button);
+CF_API bool CF_CALL cf_mouse_double_clicked(CF_MouseButton button);
 
 /**
  * @function cf_input_text_add_utf8
@@ -716,7 +716,7 @@ CUTE_API bool CUTE_CALL cf_mouse_double_clicked(CF_MouseButton button);
  *           multiple keystrokes, especially when dealing with non-Latin based inputs.
  * @related  cf_input_text_add_utf8 cf_input_text_pop_utf32 cf_input_text_has_data cf_input_text_clear
  */
-CUTE_API void CUTE_CALL cf_input_text_add_utf8(const char* text);
+CF_API void CF_CALL cf_input_text_add_utf8(const char* text);
 
 /**
  * @function cf_input_text_pop_utf32
@@ -726,7 +726,7 @@ CUTE_API void CUTE_CALL cf_input_text_add_utf8(const char* text);
  *           multiple keystrokes, especially when dealing with non-Latin based inputs.
  * @related  cf_input_text_add_utf8 cf_input_text_pop_utf32 cf_input_text_has_data cf_input_text_clear
  */
-CUTE_API int CUTE_CALL cf_input_text_pop_utf32();
+CF_API int CF_CALL cf_input_text_pop_utf32();
 
 /**
  * @function cf_input_text_has_data
@@ -736,7 +736,7 @@ CUTE_API int CUTE_CALL cf_input_text_pop_utf32();
  *           multiple keystrokes, especially when dealing with non-Latin based inputs.
  * @related  cf_input_text_add_utf8 cf_input_text_pop_utf32 cf_input_text_has_data cf_input_text_clear
  */
-CUTE_API bool CUTE_CALL cf_input_text_has_data();
+CF_API bool CF_CALL cf_input_text_has_data();
 
 /**
  * @function cf_input_text_clear
@@ -746,7 +746,7 @@ CUTE_API bool CUTE_CALL cf_input_text_has_data();
  *           multiple keystrokes, especially when dealing with non-Latin based inputs.
  * @related  cf_input_text_add_utf8 cf_input_text_pop_utf32 cf_input_text_has_data cf_input_text_clear
  */
-CUTE_API void CUTE_CALL cf_input_text_clear();
+CF_API void CF_CALL cf_input_text_clear();
 
 /**
  * @function cf_input_enable_ime
@@ -756,7 +756,7 @@ CUTE_API void CUTE_CALL cf_input_text_clear();
  *           of different language inputs. This is usually a feature of the underlying operating system.
  * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
  */
-CUTE_API void CUTE_CALL cf_input_enable_ime();
+CF_API void CF_CALL cf_input_enable_ime();
 
 /**
  * @function cf_input_disable_ime
@@ -766,7 +766,7 @@ CUTE_API void CUTE_CALL cf_input_enable_ime();
  *           of different language inputs. This is usually a feature of the underlying operating system.
  * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
  */
-CUTE_API void CUTE_CALL cf_input_disable_ime();
+CF_API void CF_CALL cf_input_disable_ime();
 
 /**
  * @function cf_input_is_ime_enabled
@@ -776,7 +776,7 @@ CUTE_API void CUTE_CALL cf_input_disable_ime();
  *           of different language inputs. This is usually a feature of the underlying operating system.
  * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
  */
-CUTE_API bool CUTE_CALL cf_input_is_ime_enabled();
+CF_API bool CF_CALL cf_input_is_ime_enabled();
 
 /**
  * @function cf_input_has_ime_keyboard_support
@@ -786,7 +786,7 @@ CUTE_API bool CUTE_CALL cf_input_is_ime_enabled();
  *           of different language inputs. This is usually a feature of the underlying operating system.
  * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
  */
-CUTE_API bool CUTE_CALL cf_input_has_ime_keyboard_support();
+CF_API bool CF_CALL cf_input_has_ime_keyboard_support();
 
 /**
  * @function cf_input_is_ime_keyboard_shown
@@ -796,7 +796,7 @@ CUTE_API bool CUTE_CALL cf_input_has_ime_keyboard_support();
  *           of different language inputs. This is usually a feature of the underlying operating system.
  * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
  */
-CUTE_API bool CUTE_CALL cf_input_is_ime_keyboard_shown();
+CF_API bool CF_CALL cf_input_is_ime_keyboard_shown();
 
 /**
  * @function cf_input_set_ime_rect
@@ -806,7 +806,7 @@ CUTE_API bool CUTE_CALL cf_input_is_ime_keyboard_shown();
  *           of different language inputs. This is usually a feature of the underlying operating system.
  * @related  cf_input_enable_ime cf_input_disable_ime cf_input_is_ime_enabled cf_input_has_ime_keyboard_support cf_input_is_ime_keyboard_shown cf_input_set_ime_rect
  */
-CUTE_API void CUTE_CALL cf_input_set_ime_rect(int x, int y, int w, int h);
+CF_API void CF_CALL cf_input_set_ime_rect(int x, int y, int w, int h);
 
 /**
  * @struct   CF_ImeComposition
@@ -837,7 +837,7 @@ typedef struct CF_ImeComposition
  *           of different language inputs. This is usually a feature of the underlying operating system.
  * @related  cf_input_enable_ime CF_ImeComposition cf_input_get_ime_composition
  */
-CUTE_API bool CUTE_CALL cf_input_get_ime_composition(CF_ImeComposition* composition);
+CF_API bool CF_CALL cf_input_get_ime_composition(CF_ImeComposition* composition);
 
 /**
  * @struct   CF_Touch
@@ -875,7 +875,7 @@ typedef struct CF_Touch
  *     }
  * @related  CF_Touch cf_touch_get_all cf_touch_get
  */
-CUTE_API int CUTE_CALL cf_touch_get_all(CF_Touch** touch_all);
+CF_API int CF_CALL cf_touch_get_all(CF_Touch** touch_all);
 
 /**
  * @function cf_touch_get
@@ -889,7 +889,7 @@ CUTE_API int CUTE_CALL cf_touch_get_all(CF_Touch** touch_all);
  *           become unavailable.
  * @related  CF_Touch cf_touch_get_all cf_touch_get
  */
-CUTE_API bool CUTE_CALL cf_touch_get(uint64_t id, CF_Touch* touch);
+CF_API bool CF_CALL cf_touch_get(uint64_t id, CF_Touch* touch);
 
 #ifdef __cplusplus
 }
@@ -898,17 +898,17 @@ CUTE_API bool CUTE_CALL cf_touch_get(uint64_t id, CF_Touch* touch);
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
 
 using KeyButton = CF_KeyButton;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr KeyButton K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr KeyButton K = CF_##K;
 CF_KEY_BUTTON_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* to_string(KeyButton button)
+CF_INLINE const char* to_string(KeyButton button)
 {
 	switch (button) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -919,11 +919,11 @@ CUTE_INLINE const char* to_string(KeyButton button)
 }
 
 using MouseButton = CF_MouseButton;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr MouseButton K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr MouseButton K = CF_##K;
 CF_MOUSE_BUTTON_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* to_string(MouseButton button)
+CF_INLINE const char* to_string(MouseButton button)
 {
 	switch (button) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -936,43 +936,43 @@ CUTE_INLINE const char* to_string(MouseButton button)
 using ImeComposition = CF_ImeComposition;
 using Touch = CF_Touch;
 
-CUTE_INLINE bool CUTE_CALL key_down(KeyButton key) { return cf_key_down(key); }
-CUTE_INLINE bool CUTE_CALL key_just_pressed(KeyButton key) { return cf_key_just_pressed(key); }
-CUTE_INLINE bool CUTE_CALL key_just_released(KeyButton key) { return cf_key_just_released(key); }
-CUTE_INLINE bool CUTE_CALL key_ctrl() { return cf_key_ctrl(); }
-CUTE_INLINE bool CUTE_CALL key_shift() { return cf_key_shift(); }
-CUTE_INLINE bool CUTE_CALL key_alt() { return cf_key_alt(); }
-CUTE_INLINE bool CUTE_CALL key_gui() { return cf_key_gui(); }
-CUTE_INLINE void CUTE_CALL clear_key_states() { cf_clear_key_states(); }
+CF_INLINE bool CF_CALL key_down(KeyButton key) { return cf_key_down(key); }
+CF_INLINE bool CF_CALL key_just_pressed(KeyButton key) { return cf_key_just_pressed(key); }
+CF_INLINE bool CF_CALL key_just_released(KeyButton key) { return cf_key_just_released(key); }
+CF_INLINE bool CF_CALL key_ctrl() { return cf_key_ctrl(); }
+CF_INLINE bool CF_CALL key_shift() { return cf_key_shift(); }
+CF_INLINE bool CF_CALL key_alt() { return cf_key_alt(); }
+CF_INLINE bool CF_CALL key_gui() { return cf_key_gui(); }
+CF_INLINE void CF_CALL clear_key_states() { cf_clear_key_states(); }
 	 
-CUTE_INLINE int CUTE_CALL mouse_x() { return cf_mouse_x(); }
-CUTE_INLINE int CUTE_CALL mouse_y() { return cf_mouse_y(); }
+CF_INLINE int CF_CALL mouse_x() { return cf_mouse_x(); }
+CF_INLINE int CF_CALL mouse_y() { return cf_mouse_y(); }
 	 
-CUTE_INLINE bool CUTE_CALL mouse_down(MouseButton button) { return cf_mouse_down(button); }
-CUTE_INLINE bool CUTE_CALL mouse_just_pressed(MouseButton button) { return cf_mouse_just_pressed(button); }
-CUTE_INLINE bool CUTE_CALL mouse_just_released(MouseButton button) { return cf_mouse_just_released(button); }
-CUTE_INLINE int CUTE_CALL mouse_wheel_motion() { return cf_mouse_wheel_motion(); }
-CUTE_INLINE bool CUTE_CALL mouse_double_click_held(MouseButton button) { return cf_mouse_double_click_held(button); }
-CUTE_INLINE bool CUTE_CALL mouse_double_clicked(MouseButton button) { return cf_mouse_double_clicked(button); }
+CF_INLINE bool CF_CALL mouse_down(MouseButton button) { return cf_mouse_down(button); }
+CF_INLINE bool CF_CALL mouse_just_pressed(MouseButton button) { return cf_mouse_just_pressed(button); }
+CF_INLINE bool CF_CALL mouse_just_released(MouseButton button) { return cf_mouse_just_released(button); }
+CF_INLINE int CF_CALL mouse_wheel_motion() { return cf_mouse_wheel_motion(); }
+CF_INLINE bool CF_CALL mouse_double_click_held(MouseButton button) { return cf_mouse_double_click_held(button); }
+CF_INLINE bool CF_CALL mouse_double_clicked(MouseButton button) { return cf_mouse_double_clicked(button); }
 	 
-CUTE_INLINE void CUTE_CALL input_text_add_utf8(const char* text) { cf_input_text_add_utf8(text); }
-CUTE_INLINE int CUTE_CALL input_text_pop_utf32() { return cf_input_text_pop_utf32(); }
-CUTE_INLINE bool CUTE_CALL input_text_has_data() { return cf_input_text_has_data(); }
-CUTE_INLINE void CUTE_CALL input_text_clear() {  cf_input_text_clear(); }
+CF_INLINE void CF_CALL input_text_add_utf8(const char* text) { cf_input_text_add_utf8(text); }
+CF_INLINE int CF_CALL input_text_pop_utf32() { return cf_input_text_pop_utf32(); }
+CF_INLINE bool CF_CALL input_text_has_data() { return cf_input_text_has_data(); }
+CF_INLINE void CF_CALL input_text_clear() {  cf_input_text_clear(); }
 	 
-CUTE_INLINE void CUTE_CALL input_enable_ime() { cf_input_enable_ime(); }
-CUTE_INLINE void CUTE_CALL input_disable_ime() { cf_input_disable_ime(); }
-CUTE_INLINE bool CUTE_CALL input_is_ime_enabled() { return cf_input_is_ime_enabled(); }
-CUTE_INLINE bool CUTE_CALL input_has_ime_keyboard_support() { return cf_input_has_ime_keyboard_support(); }
-CUTE_INLINE bool CUTE_CALL input_is_ime_keyboard_shown() { return cf_input_is_ime_keyboard_shown(); }
-CUTE_INLINE void CUTE_CALL input_set_ime_rect(int x, int y, int w, int h) { cf_input_set_ime_rect(x, y, w, h); }
+CF_INLINE void CF_CALL input_enable_ime() { cf_input_enable_ime(); }
+CF_INLINE void CF_CALL input_disable_ime() { cf_input_disable_ime(); }
+CF_INLINE bool CF_CALL input_is_ime_enabled() { return cf_input_is_ime_enabled(); }
+CF_INLINE bool CF_CALL input_has_ime_keyboard_support() { return cf_input_has_ime_keyboard_support(); }
+CF_INLINE bool CF_CALL input_is_ime_keyboard_shown() { return cf_input_is_ime_keyboard_shown(); }
+CF_INLINE void CF_CALL input_set_ime_rect(int x, int y, int w, int h) { cf_input_set_ime_rect(x, y, w, h); }
 
-CUTE_INLINE bool CUTE_CALL input_get_ime_composition(ImeComposition* composition) { return cf_input_get_ime_composition(composition); }
+CF_INLINE bool CF_CALL input_get_ime_composition(ImeComposition* composition) { return cf_input_get_ime_composition(composition); }
 
-CUTE_INLINE bool CUTE_CALL touch_get(uint64_t id, Touch* touch) { return cf_touch_get(id,touch); }
+CF_INLINE bool CF_CALL touch_get(uint64_t id, Touch* touch) { return cf_touch_get(id,touch); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_INPUT_H
+#endif // CF_INPUT_H

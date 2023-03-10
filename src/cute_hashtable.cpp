@@ -40,14 +40,14 @@ static int s_primes[] = {
 	67108859, 134217757, 268435459, 536870909, 1073741827, 2147483647
 };
 
-static CUTE_INLINE int s_next_prime(int a)
+static CF_INLINE int s_next_prime(int a)
 {
 	int i = 0;
 	while (s_primes[i] <= a) ++i;
 	return s_primes[i];
 }
 
-static CUTE_INLINE void* s_get_item(const CF_Hhdr* table, int index)
+static CF_INLINE void* s_get_item(const CF_Hhdr* table, int index)
 {
 	uint8_t* items = (uint8_t*)table->items_data;
 	return items + index * table->item_size;
@@ -55,9 +55,9 @@ static CUTE_INLINE void* s_get_item(const CF_Hhdr* table, int index)
 
 void* cf_hashtable_make_impl(int key_size, int item_size, int capacity)
 {
-	CUTE_ASSERT(capacity);
+	CF_ASSERT(capacity);
 
-	CF_Hhdr* table = (CF_Hhdr*)CUTE_CALLOC(sizeof(CF_Hhdr) + (capacity + 1) * item_size);
+	CF_Hhdr* table = (CF_Hhdr*)CF_CALLOC(sizeof(CF_Hhdr) + (capacity + 1) * item_size);
 	table->cookie = CF_HCOOKIE;
 	table->key_size = key_size;
 	table->item_size = item_size;
@@ -68,15 +68,15 @@ void* cf_hashtable_make_impl(int key_size, int item_size, int capacity)
 	table->hidden_item = (void*)((uintptr_t)(table + 1));
 	table->items_data = (void*)((uintptr_t)(table + 1) + item_size);
 	table->slot_capacity = s_next_prime(capacity);
-	table->slots = (CF_Hslot*)CUTE_CALLOC(table->slot_capacity * sizeof(CF_Hslot));
+	table->slots = (CF_Hslot*)CF_CALLOC(table->slot_capacity * sizeof(CF_Hslot));
 	for (int i = 0; i < table->slot_capacity; ++i) {
 		table->slots[i].item_index = -1;
 	}
 	table->item_capacity = capacity;
-	table->items_key = CUTE_ALLOC(capacity * key_size);
-	table->items_slot_index = (int*)CUTE_ALLOC(capacity * sizeof(*table->items_slot_index));
-	table->temp_key = CUTE_ALLOC(key_size);
-	table->temp_item = CUTE_ALLOC(item_size);
+	table->items_key = CF_ALLOC(capacity * key_size);
+	table->items_slot_index = (int*)CF_ALLOC(capacity * sizeof(*table->items_slot_index));
+	table->temp_key = CF_ALLOC(key_size);
+	table->temp_item = CF_ALLOC(item_size);
 
 	return s_get_item(table, 0);
 }
@@ -84,20 +84,20 @@ void* cf_hashtable_make_impl(int key_size, int item_size, int capacity)
 void cf_hashtable_free_impl(CF_Hhdr* table)
 {
 	if (!table) return;
-	CUTE_FREE(table->slots);
-	CUTE_FREE(table->items_key);
-	CUTE_FREE(table->items_slot_index);
-	CUTE_FREE(table->temp_key);
-	CUTE_FREE(table->temp_item);
-	CUTE_FREE(table);
+	CF_FREE(table->slots);
+	CF_FREE(table->items_key);
+	CF_FREE(table->items_slot_index);
+	CF_FREE(table->temp_key);
+	CF_FREE(table->temp_item);
+	CF_FREE(table);
 }
 
-static CUTE_INLINE int s_keys_equal(const CF_Hhdr* table, const void* a, const void* b)
+static CF_INLINE int s_keys_equal(const CF_Hhdr* table, const void* a, const void* b)
 {
-	return !CUTE_MEMCMP(a, b, table->key_size);
+	return !CF_MEMCMP(a, b, table->key_size);
 }
 
-static CUTE_INLINE void* s_get_key(const CF_Hhdr* table, int index)
+static CF_INLINE void* s_get_key(const CF_Hhdr* table, int index)
 {
 	uint8_t* keys = (uint8_t*)table->items_key;
 	return keys + index * table->key_size;
@@ -115,7 +115,7 @@ static int s_find_slot(const CF_Hhdr *table, uint32_t hash, const void* key)
 			uint32_t slot_hash = table->slots[slot].key_hash;
 			int slot_base = (int)(slot_hash % slot_capacity);
 			if (slot_base == base_slot) {
-				CUTE_ASSERT(base_count > 0);
+				CF_ASSERT(base_count > 0);
 				--base_count;
 				const void* slot_key = s_get_key(table, table->slots[slot].item_index);
 				if (slot_hash == hash && s_keys_equal(table, slot_key, key)) {
@@ -137,8 +137,8 @@ static void s_expand_slots(CF_Hhdr* table)
 	table->slot_capacity = s_next_prime(table->slot_capacity);
 	uint32_t slot_capacity = (uint32_t)table->slot_capacity;
 
-	table->slots = (CF_Hslot*)CUTE_CALLOC(table->slot_capacity * sizeof(CF_Hslot));
-	CUTE_ASSERT(table->slots);
+	table->slots = (CF_Hslot*)CF_CALLOC(table->slot_capacity * sizeof(CF_Hslot));
+	CF_ASSERT(table->slots);
 	for (int i = 0; i < table->slot_capacity; ++i) {
 		table->slots[i].item_index = -1;
 	}
@@ -159,25 +159,25 @@ static void s_expand_slots(CF_Hhdr* table)
 		}
 	}
 
-	CUTE_FREE(old_slots);
+	CF_FREE(old_slots);
 }
 
 static CF_Hhdr* s_expand_items(CF_Hhdr* table)
 {
 	int capacity = table->item_capacity * 2;
-	table = (CF_Hhdr*)CUTE_REALLOC(table, sizeof(CF_Hhdr) + (capacity + 1) * table->item_size);
+	table = (CF_Hhdr*)CF_REALLOC(table, sizeof(CF_Hhdr) + (capacity + 1) * table->item_size);
 	table->item_capacity = capacity;
 	table->hidden_item = (void*)((uintptr_t)(table + 1));
 	table->items_data = (void*)((uintptr_t)(table + 1) + table->item_size);
-	table->items_key = CUTE_REALLOC(table->items_key, capacity * table->key_size);
-	table->items_slot_index = (int*)CUTE_REALLOC(table->items_slot_index, capacity * sizeof(*table->items_slot_index));
+	table->items_key = CF_REALLOC(table->items_key, capacity * table->key_size);
+	table->items_slot_index = (int*)CF_REALLOC(table->items_slot_index, capacity * sizeof(*table->items_slot_index));
 	return table;
 }
 
 void* cf_hashtable_insert_impl2(CF_Hhdr* table, const void* key, const void* item)
 {
 	uint32_t hash = (uint32_t)fnv1a(key, table->key_size);
-	CUTE_ASSERT(s_find_slot(table, hash, key) < 0);
+	CF_ASSERT(s_find_slot(table, hash, key) < 0);
 
 	if (table->count >= (table->slot_capacity - table->slot_capacity / 3)) {
 		s_expand_slots(table);
@@ -211,16 +211,16 @@ void* cf_hashtable_insert_impl2(CF_Hhdr* table, const void* key, const void* ite
 		item = (void*)((uintptr_t)(table + 1));
 	}
 
-	CUTE_ASSERT(table->count < table->item_capacity);
-	CUTE_ASSERT(table->slots[slot].item_index < 0 && (hash % slot_capacity) == (uint32_t)base_slot);
+	CF_ASSERT(table->count < table->item_capacity);
+	CF_ASSERT(table->slots[slot].item_index < 0 && (hash % slot_capacity) == (uint32_t)base_slot);
 	table->slots[slot].key_hash = hash;
 	table->slots[slot].item_index = table->count;
 	++table->slots[base_slot].base_count;
 
 	void* item_dst = s_get_item(table, table->count);
 	void* key_dst = s_get_key(table, table->count);
-	if (item) CUTE_MEMCPY(item_dst, item, table->item_size);
-	CUTE_MEMCPY(key_dst, key, table->key_size);
+	if (item) CF_MEMCPY(item_dst, item, table->item_size);
+	CF_MEMCPY(key_dst, key, table->key_size);
 	table->items_slot_index[table->count] = slot;
 	table->return_index = table->count++;
 
@@ -241,7 +241,7 @@ void cf_hashtable_remove_impl2(CF_Hhdr* table, const void* key)
 {
 	uint32_t hash = (uint32_t)fnv1a(key, table->key_size);
 	int slot = s_find_slot(table, hash, key);
-	CUTE_ASSERT(slot >= 0);
+	CF_ASSERT(slot >= 0);
 
 	int base_slot = (int)(hash % (uint32_t)table->slot_capacity);
 	int index = table->slots[slot].item_index;
@@ -252,10 +252,10 @@ void cf_hashtable_remove_impl2(CF_Hhdr* table, const void* key)
 	if (index != last_index) {
 		void* dst_key = s_get_key(table, index);
 		void* src_key = s_get_key(table, last_index);
-		CUTE_MEMCPY(dst_key, src_key, (size_t)table->key_size);
+		CF_MEMCPY(dst_key, src_key, (size_t)table->key_size);
 		void* dst_item = s_get_item(table, index);
 		void* src_item = s_get_item(table, last_index);
-		CUTE_MEMCPY(dst_item, src_item, (size_t)table->item_size);
+		CF_MEMCPY(dst_item, src_item, (size_t)table->item_size);
 		table->items_slot_index[index] = table->items_slot_index[last_index];
 		table->slots[table->items_slot_index[last_index]].item_index = index;
 	}
@@ -282,7 +282,7 @@ int cf_hashtable_find_impl2(const CF_Hhdr* table, const void* key)
 	if (slot < 0) {
 		// We will be "returning" a zero'd out item through `hget` with this
 		// hidden item.
-		CUTE_MEMSET(table->hidden_item, 0, table->item_size);
+		CF_MEMSET(table->hidden_item, 0, table->item_size);
 		return -1;
 	}
 	int index = table->slots[slot].item_index;
@@ -326,15 +326,15 @@ void cf_hashtable_swap_impl(CF_Hhdr* table, int index_a, int index_b)
 
 	void* key_a = s_get_key(table, index_a);
 	void* key_b = s_get_key(table, index_b);
-	CUTE_MEMCPY(table->temp_key, key_a, table->key_size);
-	CUTE_MEMCPY(key_a, key_b, table->key_size);
-	CUTE_MEMCPY(key_b, table->temp_key, table->key_size);
+	CF_MEMCPY(table->temp_key, key_a, table->key_size);
+	CF_MEMCPY(key_a, key_b, table->key_size);
+	CF_MEMCPY(key_b, table->temp_key, table->key_size);
 
 	void* item_a = s_get_item(table, index_a);
 	void* item_b = s_get_item(table, index_b);
-	CUTE_MEMCPY(table->temp_item, item_a, table->item_size);
-	CUTE_MEMCPY(item_a, item_b, table->item_size);
-	CUTE_MEMCPY(item_b, table->temp_item, table->item_size);
+	CF_MEMCPY(table->temp_item, item_a, table->item_size);
+	CF_MEMCPY(item_a, item_b, table->item_size);
+	CF_MEMCPY(item_b, table->temp_item, table->item_size);
 
 	table->slots[slot_a].item_index = index_b;
 	table->slots[slot_b].item_index = index_a;

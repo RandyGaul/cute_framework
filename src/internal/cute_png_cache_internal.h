@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_PNG_CACHE_INTERNAL_H
-#define CUTE_PNG_CACHE_INTERNAL_H
+#ifndef CF_PNG_CACHE_INTERNAL_H
+#define CF_PNG_CACHE_INTERNAL_H
 
 #include <cute_defines.h>
 
@@ -29,4 +29,4 @@ void cf_destroy_png_cache();
 void cf_png_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill);
 struct CF_Png cf_png_cache_get_png(uint64_t image_id);
 
-#endif // CUTE_PNG_CACHE_INTERNAL_H
+#endif // CF_PNG_CACHE_INTERNAL_H

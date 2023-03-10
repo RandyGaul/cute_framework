@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_FONT_INTERNAL_H
-#define CUTE_FONT_INTERNAL_H
+#ifndef CF_FONT_INTERNAL_H
+#define CF_FONT_INTERNAL_H
 
 #include <cute_array.h>
 #include <cute_hashtable.h>
@@ -82,8 +82,8 @@ struct CF_TextEffectState
 	Cute::Array<CF_TextCode> codes;
 	Cute::Array<CF_TextCode> parse_stack;
 
-	CUTE_INLINE void parse_add(CF_TextCode code) { parse_stack.add(code); }
-	CUTE_INLINE bool parse_finish(const char* effect_name, int final_index)
+	CF_INLINE void parse_add(CF_TextCode code) { parse_stack.add(code); }
+	CF_INLINE bool parse_finish(const char* effect_name, int final_index)
 	{
 		for (int i = parse_stack.count() - 1; i >= 0; --i) {
 			if (parse_stack[i].effect_name == effect_name) {
@@ -98,4 +98,4 @@ struct CF_TextEffectState
 	}
 };
 
-#endif // CUTE_FONT_INTERNAL_H
+#endif // CF_FONT_INTERNAL_H

@@ -22,14 +22,14 @@
 #include <cute.h>
 using namespace Cute;
 
-#ifndef CUTE_STATIC
-#	define CUTE_ASEPRITE_IMPLEMENTATION
+#ifndef CF_STATIC
+#	define CF_ASEPRITE_IMPLEMENTATION
 #	include <cute/cute_aseprite.h>
 #endif
 
 #include <internal/cute_aseprite_cache_internal.h>
 
-CUTE_TEST_CASE(test_aseprite_make_destroy, "Load an aseprite file and destroy it.");
+CF_TEST_CASE(test_aseprite_make_destroy, "Load an aseprite file and destroy it.");
 int test_aseprite_make_destroy()
 {
 	ase_t* ase = cute_aseprite_load_from_file("test_data/girl.aseprite", NULL);

@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_STRING_H
-#define CUTE_STRING_H
+#ifndef CF_STRING_H
+#define CF_STRING_H
 
 #include "cute_defines.h"
 #include "cute_c_runtime.h"
@@ -49,7 +49,7 @@ extern "C" {
 //     printf("%s", s);
 //     sfree(s);
 
-#ifndef CUTE_NO_SHORTHAND_API
+#ifndef CF_NO_SHORTHAND_API
 /**
  * @function slen
  * @category string
@@ -97,9 +97,9 @@ extern "C" {
  * @example > Demonstrating decrement on `ssize`.
  *     char* s = NULL;
  *     spush(s, 'a');
- *     CUTE_ASSERT(ssize(s) == 1);
+ *     CF_ASSERT(ssize(s) == 1);
  *     ssize(s)--;
- *     CUTE_ASSERT(ssize(a) == 0);
+ *     CF_ASSERT(ssize(a) == 0);
  *     sfree(ssize);
  * @remarks  Both "" and NULL count as empty. Returns a proper l-value, so you can assign or increment it.
  * @related  slen ssize scount scap sempty
@@ -114,9 +114,9 @@ extern "C" {
  * @example > Demonstrating decrement on `ssize`.
  *     char* s = NULL;
  *     spush(s, 'a');
- *     CUTE_ASSERT(ssize(s) == 1);
+ *     CF_ASSERT(ssize(s) == 1);
  *     ssize(s)--;
- *     CUTE_ASSERT(ssize(a) == 0);
+ *     CF_ASSERT(ssize(a) == 0);
  *     sfree(ssize);
  * @remarks  Both "" and NULL count as empty. Returns a proper l-value, so you can assign or increment it.
  * @related  slen ssize scount scap sempty
@@ -488,7 +488,7 @@ extern "C" {
  *     char** array_of_splits = ssplit(s, '.');
  *     for (int i = 0; i < alen(array_of_splits); ++i) {
  *         const char* split = array_of_splits[i];
- *         CUTE_TEST_ASSERT(sequ(split, splits_expected[i]));
+ *         CF_TEST_ASSERT(sequ(split, splits_expected[i]));
  *         sfree(split);
  *     }
  *     afree(array_of_splits);
@@ -766,7 +766,7 @@ extern "C" {
  *           0xFFFD will be recorded instead.
  * @related  sappend_UTF8 cf_decode_UTF8 cf_decode_UTF16
  */
-CUTE_API const char* CUTE_CALL cf_decode_UTF8(const char* s, int* codepoint);
+CF_API const char* CF_CALL cf_decode_UTF8(const char* s, int* codepoint);
 
 /**
  * @function cf_decode_UTF16
@@ -805,7 +805,7 @@ CUTE_API const char* CUTE_CALL cf_decode_UTF8(const char* s, int* codepoint);
  *           ```
  * @related  sappend_UTF8 cf_decode_UTF8 cf_decode_UTF16
  */
-CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint);
+CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint);
 
 //--------------------------------------------------------------------------------------------------
 // String Intering C API (global string table).
@@ -864,7 +864,7 @@ CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, int* codep
  * @brief    Returns the length of an intern'd string.
  * @param    s            The string.
  * @remarks  This is *not* a secure method -- do not use it on any potentially dangerous strings. It's designed to be very simple and fast, nothing more.
- *           The return value is calculated in constant time, as opposed to calling `CUTE_STRLEN` (`strlen`).
+ *           The return value is calculated in constant time, as opposed to calling `CF_STRLEN` (`strlen`).
  * @related  sintern sintern_range sivalid silen sinuke
  */
 #define silen(s) (((cf_intern_t*)s - 1)->len)
@@ -877,7 +877,7 @@ CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, int* codep
  * @related  sintern sintern_range sivalid silen sinuke
  */
 #define sinuke() cf_sinuke()
-#endif // CUTE_NO_SHORTHAND_API
+#endif // CF_NO_SHORTHAND_API
 
 //--------------------------------------------------------------------------------------------------
 // Longform C API.
@@ -901,13 +901,13 @@ CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, int* codep
 #define cf_string_set(a, b) (a = cf_sset(a, b))
 #define cf_string_dup(s) cf_sset(NULL, s)
 #define cf_string_make(s) cf_sset(NULL, s)
-#define cf_string_cmp(a, b) CUTE_STRCMP(a, b)
-#define cf_string_icmp(a, b) CUTE_STRICMP(a, b)
-#define cf_string_equ(a, b) ((!(a) && !(b)) || !CUTE_STRCMP(a, b))
-#define cf_string_iequ(a, b) ((!(a) && !(b)) || !CUTE_STRICMP(a, b))
+#define cf_string_cmp(a, b) CF_STRCMP(a, b)
+#define cf_string_icmp(a, b) CF_STRICMP(a, b)
+#define cf_string_equ(a, b) ((!(a) && !(b)) || !CF_STRCMP(a, b))
+#define cf_string_iequ(a, b) ((!(a) && !(b)) || !CF_STRICMP(a, b))
 #define cf_string_prefix(s, prefix) cf_sprefix(s, prefix)
 #define cf_string_suffix(s, suffix) cf_ssuffix(s, suffix)
-#define cf_string_contains(s, contains_me) (cf_string_len(s) >= CUTE_STRLEN(contains_me) && !!CUTE_STRSTR(s, contains_me))
+#define cf_string_contains(s, contains_me) (cf_string_len(s) >= CF_STRLEN(contains_me) && !!CF_STRSTR(s, contains_me))
 #define cf_string_toupper(s) cf_stoupper(s)
 #define cf_string_tolower(s) cf_stolower(s)
 #define cf_string_hash(s) ahash(s)
@@ -922,7 +922,7 @@ CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, int* codep
 #define cf_string_split(s, ch) cf_ssplit(s, ch)
 #define cf_string_first_index_of(s, ch) cf_sfirst_index_of(s, ch)
 #define cf_string_last_index_of(s, ch) cf_slast_index_of(s, ch)
-#define cf_string_find(s, find) CUTE_STRSTR(s, find)
+#define cf_string_find(s, find) CF_STRSTR(s, find)
 #define cf_string_int(s, i) cf_string_fmt(s, "%d", i)
 #define cf_string_uint(s, uint) cf_string_fmt(s, "%" PRIu64, uint)
 #define cf_string_float(s, f) cf_string_fmt(s, "%f", f)
@@ -934,7 +934,7 @@ CUTE_API const uint16_t* CUTE_CALL cf_decode_UTF16(const uint16_t* s, int* codep
 #define cf_string_tofloat(s) cf_stofloat(s)
 #define cf_string_todouble(s) cf_stodouble(s)
 #define cf_string_tohex(s) cf_stohex(s)
-#define cf_string_tobool(s) (!CUTE_STRCMP(s, "true"))
+#define cf_string_tobool(s) (!CF_STRCMP(s, "true"))
 #define cf_string_replace(s, replace_me, with_me) (s = cf_sreplace(s, replace_me, with_me))
 #define cf_string_dedup(s, ch) (s = cf_sdedup(s, ch))
 #define cf_string_erase(s, index, count) (s = cf_serase(s, index, count))
@@ -958,41 +958,41 @@ typedef struct cf_intern_t
 	const char* string; // For debugging convenience but allocated after this struct.
 } cf_intern_t;
 
-CUTE_API char* CUTE_CALL cf_sset(char* a, const char* b);
-CUTE_API char* CUTE_CALL cf_sfmt(char* s, const char* fmt, ...);
-CUTE_API char* CUTE_CALL cf_sfmt_append(char* s, const char* fmt, ...);
-CUTE_API char* CUTE_CALL cf_svfmt(char* s, const char* fmt, va_list args);
-CUTE_API char* CUTE_CALL cf_svfmt_append(char* s, const char* fmt, va_list args);
-CUTE_API bool CUTE_CALL cf_sprefix(char* s, const char* prefix);
-CUTE_API bool CUTE_CALL cf_ssuffix(char* s, const char* suffix);
-CUTE_API void CUTE_CALL cf_stoupper(char* s);
-CUTE_API void CUTE_CALL cf_stolower(char* s);
-CUTE_API char* CUTE_CALL cf_sappend(char* a, const char* b);
-CUTE_API char* CUTE_CALL cf_sappend_range(char* a, const char* b, const char* b_end);
-CUTE_API char* CUTE_CALL cf_strim(char* s);
-CUTE_API char* CUTE_CALL cf_sltrim(char* s);
-CUTE_API char* CUTE_CALL cf_srtrim(char* s);
-CUTE_API char* CUTE_CALL cf_slpad(char* s, char pad, int count);
-CUTE_API char* CUTE_CALL cf_srpad(char* s, char pad, int count);
-CUTE_API char* CUTE_CALL cf_ssplit_once(char* s, char split_c);
-CUTE_API char** CUTE_CALL cf_ssplit(const char* s, char split_c);
-CUTE_API int CUTE_CALL cf_sfirst_index_of(const char* s, char c);
-CUTE_API int CUTE_CALL cf_slast_index_of(const char* s, char c);
-CUTE_API int CUTE_CALL cf_stoint(const char* s);
-CUTE_API uint64_t CUTE_CALL cf_stouint(const char* s);
-CUTE_API float CUTE_CALL cf_stofloat(const char* s);
-CUTE_API double CUTE_CALL cf_stodouble(const char* s);
-CUTE_API uint64_t CUTE_CALL cf_stohex(const char* s);
-CUTE_API char* CUTE_CALL cf_sreplace(char* s, const char* replace_me, const char* with_me);
-CUTE_API char* CUTE_CALL cf_sdedup(char* s, int ch);
-CUTE_API char* CUTE_CALL cf_serase(char* s, int index, int count);
-CUTE_API char* CUTE_CALL cf_spop(char* s);
-CUTE_API char* CUTE_CALL cf_spopn(char* s, int n);
-CUTE_API char* CUTE_CALL cf_string_append_UTF8_impl(char *s, int codepoint);
+CF_API char* CF_CALL cf_sset(char* a, const char* b);
+CF_API char* CF_CALL cf_sfmt(char* s, const char* fmt, ...);
+CF_API char* CF_CALL cf_sfmt_append(char* s, const char* fmt, ...);
+CF_API char* CF_CALL cf_svfmt(char* s, const char* fmt, va_list args);
+CF_API char* CF_CALL cf_svfmt_append(char* s, const char* fmt, va_list args);
+CF_API bool CF_CALL cf_sprefix(char* s, const char* prefix);
+CF_API bool CF_CALL cf_ssuffix(char* s, const char* suffix);
+CF_API void CF_CALL cf_stoupper(char* s);
+CF_API void CF_CALL cf_stolower(char* s);
+CF_API char* CF_CALL cf_sappend(char* a, const char* b);
+CF_API char* CF_CALL cf_sappend_range(char* a, const char* b, const char* b_end);
+CF_API char* CF_CALL cf_strim(char* s);
+CF_API char* CF_CALL cf_sltrim(char* s);
+CF_API char* CF_CALL cf_srtrim(char* s);
+CF_API char* CF_CALL cf_slpad(char* s, char pad, int count);
+CF_API char* CF_CALL cf_srpad(char* s, char pad, int count);
+CF_API char* CF_CALL cf_ssplit_once(char* s, char split_c);
+CF_API char** CF_CALL cf_ssplit(const char* s, char split_c);
+CF_API int CF_CALL cf_sfirst_index_of(const char* s, char c);
+CF_API int CF_CALL cf_slast_index_of(const char* s, char c);
+CF_API int CF_CALL cf_stoint(const char* s);
+CF_API uint64_t CF_CALL cf_stouint(const char* s);
+CF_API float CF_CALL cf_stofloat(const char* s);
+CF_API double CF_CALL cf_stodouble(const char* s);
+CF_API uint64_t CF_CALL cf_stohex(const char* s);
+CF_API char* CF_CALL cf_sreplace(char* s, const char* replace_me, const char* with_me);
+CF_API char* CF_CALL cf_sdedup(char* s, int ch);
+CF_API char* CF_CALL cf_serase(char* s, int index, int count);
+CF_API char* CF_CALL cf_spop(char* s);
+CF_API char* CF_CALL cf_spopn(char* s, int n);
+CF_API char* CF_CALL cf_string_append_UTF8_impl(char *s, int codepoint);
 
-CUTE_API const char* CUTE_CALL cf_sintern(const char* s);
-CUTE_API const char* CUTE_CALL cf_sintern_range(const char* start, const char* end);
-CUTE_API void CUTE_CALL cf_sinuke_intern_table();
+CF_API const char* CF_CALL cf_sintern(const char* s);
+CF_API const char* CF_CALL cf_sintern_range(const char* start, const char* end);
+CF_API void CF_CALL cf_sinuke_intern_table();
 
 #ifdef __cplusplus
 }
@@ -1001,12 +1001,12 @@ CUTE_API void CUTE_CALL cf_sinuke_intern_table();
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
 
-CUTE_INLINE uint64_t constexpr fnv1a(const void* data, int size)
+CF_INLINE uint64_t constexpr fnv1a(const void* data, int size)
 {
 	const char* s = (const char*)data;
 	uint64_t h = 14695981039346656037ULL;
@@ -1026,102 +1026,102 @@ CUTE_INLINE uint64_t constexpr fnv1a(const void* data, int size)
  */
 struct String
 {
-	CUTE_INLINE String() { s_static(); }
-	CUTE_INLINE String(const char* s) { s_static(); sset(m_str, s); }
-	CUTE_INLINE String(const char* start, const char* end) { s_static(); int length = (int)(end - start); sfit(m_str, length); CUTE_STRNCPY(m_str, start, length); CF_AHDR(m_str)->size = length + 1; }
-	CUTE_INLINE String(const String& s) { s_static(); sset(m_str, s); }
-	CUTE_INLINE String(String&& s) { if (CF_AHDR(s.m_str)->is_static) { s_static(); sset(m_str, s); } else { m_str = s.m_str; s.m_str = NULL; } }
-	CUTE_INLINE ~String() { sfree(m_str); m_str = NULL; }
+	CF_INLINE String() { s_static(); }
+	CF_INLINE String(const char* s) { s_static(); sset(m_str, s); }
+	CF_INLINE String(const char* start, const char* end) { s_static(); int length = (int)(end - start); sfit(m_str, length); CF_STRNCPY(m_str, start, length); CF_AHDR(m_str)->size = length + 1; }
+	CF_INLINE String(const String& s) { s_static(); sset(m_str, s); }
+	CF_INLINE String(String&& s) { if (CF_AHDR(s.m_str)->is_static) { s_static(); sset(m_str, s); } else { m_str = s.m_str; s.m_str = NULL; } }
+	CF_INLINE ~String() { sfree(m_str); m_str = NULL; }
 
-	CUTE_INLINE static String steal_from(char* cute_c_api_string) { CF_ACANARY(cute_c_api_string); String r; r.m_str = cute_c_api_string; return r; }
-	CUTE_INLINE static String from(int i) { String r; sint(r.m_str, i); return r; }
-	CUTE_INLINE static String from(uint64_t uint) { String r; suint(r.m_str, uint); return r; }
-	CUTE_INLINE static String from(float f) { String r; sfloat(r.m_str, f); return r; }
-	CUTE_INLINE static String from(double f) { String r; sfloat(r.m_str, f); return r; }
-	CUTE_INLINE static String from_hex(uint64_t uint) { String r; shex(r.m_str, uint); return r; }
-	CUTE_INLINE static String from(bool b) { String r; sbool(r.m_str, b); return r; }
+	CF_INLINE static String steal_from(char* cute_c_api_string) { CF_ACANARY(cute_c_api_string); String r; r.m_str = cute_c_api_string; return r; }
+	CF_INLINE static String from(int i) { String r; sint(r.m_str, i); return r; }
+	CF_INLINE static String from(uint64_t uint) { String r; suint(r.m_str, uint); return r; }
+	CF_INLINE static String from(float f) { String r; sfloat(r.m_str, f); return r; }
+	CF_INLINE static String from(double f) { String r; sfloat(r.m_str, f); return r; }
+	CF_INLINE static String from_hex(uint64_t uint) { String r; shex(r.m_str, uint); return r; }
+	CF_INLINE static String from(bool b) { String r; sbool(r.m_str, b); return r; }
 
-	CUTE_INLINE int to_int() const { return stoint(m_str); }
-	CUTE_INLINE uint64_t to_uint() const { return stouint(m_str); }
-	CUTE_INLINE float to_float() const { return stofloat(m_str); }
-	CUTE_INLINE double to_double() const { return stodouble(m_str); }
-	CUTE_INLINE uint64_t to_hex() const { return stohex(m_str); }
-	CUTE_INLINE bool to_bool() const { return stobool(m_str); }
+	CF_INLINE int to_int() const { return stoint(m_str); }
+	CF_INLINE uint64_t to_uint() const { return stouint(m_str); }
+	CF_INLINE float to_float() const { return stofloat(m_str); }
+	CF_INLINE double to_double() const { return stodouble(m_str); }
+	CF_INLINE uint64_t to_hex() const { return stohex(m_str); }
+	CF_INLINE bool to_bool() const { return stobool(m_str); }
 
-	CUTE_INLINE const char* c_str() const { return m_str; }
-	CUTE_INLINE char* c_str() { return m_str; }
-	CUTE_INLINE const char* begin() const { return m_str; }
-	CUTE_INLINE char* begin() { return m_str; }
-	CUTE_INLINE const char* end() const { return m_str + ssize(m_str); }
-	CUTE_INLINE char* end() { return m_str + ssize(m_str); }
-	CUTE_INLINE char last() const { return slast(m_str); }
-	CUTE_INLINE char first() const { return sfirst(m_str); }
-	CUTE_INLINE operator const char*() const { return m_str; }
-	CUTE_INLINE operator char*() const { return m_str; }
+	CF_INLINE const char* c_str() const { return m_str; }
+	CF_INLINE char* c_str() { return m_str; }
+	CF_INLINE const char* begin() const { return m_str; }
+	CF_INLINE char* begin() { return m_str; }
+	CF_INLINE const char* end() const { return m_str + ssize(m_str); }
+	CF_INLINE char* end() { return m_str + ssize(m_str); }
+	CF_INLINE char last() const { return slast(m_str); }
+	CF_INLINE char first() const { return sfirst(m_str); }
+	CF_INLINE operator const char*() const { return m_str; }
+	CF_INLINE operator char*() const { return m_str; }
 
-	CUTE_INLINE char& operator[](int index) { s_chki(index); return m_str[index]; }
-	CUTE_INLINE const char& operator[](int index) const { s_chki(index); return m_str[index]; }
+	CF_INLINE char& operator[](int index) { s_chki(index); return m_str[index]; }
+	CF_INLINE const char& operator[](int index) const { s_chki(index); return m_str[index]; }
 
-	CUTE_INLINE int len() const { return slen(m_str); }
-	CUTE_INLINE int capacity() const { return scap(m_str); }
-	CUTE_INLINE int size() const { return ssize(m_str); }
-	CUTE_INLINE int count() const { return ssize(m_str); }
-	CUTE_INLINE void ensure_capacity(int capacity) { sfit(m_str, capacity); }
-	CUTE_INLINE void fit(int capacity) { sfit(m_str, capacity); }
-	CUTE_INLINE void set_len(int len) { sfit(m_str, len + 1); ssize(m_str) = len + 1; m_str[len] = 0; }
-	CUTE_INLINE bool empty() const { return sempty(m_str); }
+	CF_INLINE int len() const { return slen(m_str); }
+	CF_INLINE int capacity() const { return scap(m_str); }
+	CF_INLINE int size() const { return ssize(m_str); }
+	CF_INLINE int count() const { return ssize(m_str); }
+	CF_INLINE void ensure_capacity(int capacity) { sfit(m_str, capacity); }
+	CF_INLINE void fit(int capacity) { sfit(m_str, capacity); }
+	CF_INLINE void set_len(int len) { sfit(m_str, len + 1); ssize(m_str) = len + 1; m_str[len] = 0; }
+	CF_INLINE bool empty() const { return sempty(m_str); }
 
-	CUTE_INLINE String& add(char ch) { spush(m_str, ch); return *this; }
-	CUTE_INLINE String& append(const char* s) { sappend(m_str, s); return *this; }
-	CUTE_INLINE String& append(const char* start, const char* end) { sappend_range(m_str, start, end); return *this; }
-	CUTE_INLINE String& append(int codepoint) { sappend_UTF8(m_str, codepoint); return *this; }
-	static CUTE_INLINE String fmt(const char* fmt, ...) { String result; va_list args; va_start(args, fmt); svfmt(result.m_str, fmt, args); va_end(args); return result; }
-	CUTE_INLINE String& fmt_append(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt_append(m_str, fmt, args); va_end(args); return *this; }
-	CUTE_INLINE String& trim() { strim(m_str); return *this; }
-	CUTE_INLINE String& ltrim() { sltrim(m_str); return *this; }
-	CUTE_INLINE String& rtrim() { srtrim(m_str); return *this; }
-	CUTE_INLINE String& lpad(char pad, int count) { slpad(m_str, pad, count); return *this; }
-	CUTE_INLINE String& rpad(char pad, int count) { srpad(m_str, pad, count); return *this; }
-	CUTE_INLINE String& dedup(char ch) { sdedup(m_str, ch); return *this; }
-	CUTE_INLINE String& set(const char* s) { sset(m_str, s); return *this; }
-	CUTE_INLINE String& operator=(const char* s) { sset(m_str, s); return *this; }
-	CUTE_INLINE String& operator=(const String& s) { sset(m_str, s); return *this; }
-	CUTE_INLINE String& operator=(String&& s) { if (CF_AHDR(s.m_str)->is_static) { s_static(); sset(m_str, s); } else { m_str = s.m_str; s.m_str = NULL; } return *this; }
-	CUTE_INLINE Array<String> split(char split_c) { Array<String> r; char** s = ssplit(m_str, split_c); for (int i=0;i<alen(s);++i) r.add(move(steal_from(s[i]))); return r; }
-	CUTE_INLINE char pop() { char result = slast(m_str); spop(m_str); return result; }
-	CUTE_INLINE int first_index_of(char ch) const { return sfirst_index_of(m_str, ch); }
-	CUTE_INLINE int last_index_of(char ch) const { return slast_index_of(m_str, ch); }
-	CUTE_INLINE int first_index_of(char ch, int offset) const { return sfirst_index_of(m_str + offset, ch); }
-	CUTE_INLINE int last_index_of(char ch, int offset) const { return slast_index_of(m_str + offset, ch); }
-	CUTE_INLINE int find(const char* find_me) const { const char* ptr = sfind(m_str, find_me); return (int)(ptr ? ptr - m_str : -1); }
-	CUTE_INLINE String& replace(const char* replace_me, const char* with_me) { sreplace(m_str, replace_me, with_me); return *this; }
-	CUTE_INLINE String& erase(int index, int count) { serase(m_str, index, count); return *this; }
-	CUTE_INLINE String dup() const { return steal_from(sdup(m_str)); }
-	CUTE_INLINE void clear() { sclear(m_str); }
+	CF_INLINE String& add(char ch) { spush(m_str, ch); return *this; }
+	CF_INLINE String& append(const char* s) { sappend(m_str, s); return *this; }
+	CF_INLINE String& append(const char* start, const char* end) { sappend_range(m_str, start, end); return *this; }
+	CF_INLINE String& append(int codepoint) { sappend_UTF8(m_str, codepoint); return *this; }
+	static CF_INLINE String fmt(const char* fmt, ...) { String result; va_list args; va_start(args, fmt); svfmt(result.m_str, fmt, args); va_end(args); return result; }
+	CF_INLINE String& fmt_append(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt_append(m_str, fmt, args); va_end(args); return *this; }
+	CF_INLINE String& trim() { strim(m_str); return *this; }
+	CF_INLINE String& ltrim() { sltrim(m_str); return *this; }
+	CF_INLINE String& rtrim() { srtrim(m_str); return *this; }
+	CF_INLINE String& lpad(char pad, int count) { slpad(m_str, pad, count); return *this; }
+	CF_INLINE String& rpad(char pad, int count) { srpad(m_str, pad, count); return *this; }
+	CF_INLINE String& dedup(char ch) { sdedup(m_str, ch); return *this; }
+	CF_INLINE String& set(const char* s) { sset(m_str, s); return *this; }
+	CF_INLINE String& operator=(const char* s) { sset(m_str, s); return *this; }
+	CF_INLINE String& operator=(const String& s) { sset(m_str, s); return *this; }
+	CF_INLINE String& operator=(String&& s) { if (CF_AHDR(s.m_str)->is_static) { s_static(); sset(m_str, s); } else { m_str = s.m_str; s.m_str = NULL; } return *this; }
+	CF_INLINE Array<String> split(char split_c) { Array<String> r; char** s = ssplit(m_str, split_c); for (int i=0;i<alen(s);++i) r.add(move(steal_from(s[i]))); return r; }
+	CF_INLINE char pop() { char result = slast(m_str); spop(m_str); return result; }
+	CF_INLINE int first_index_of(char ch) const { return sfirst_index_of(m_str, ch); }
+	CF_INLINE int last_index_of(char ch) const { return slast_index_of(m_str, ch); }
+	CF_INLINE int first_index_of(char ch, int offset) const { return sfirst_index_of(m_str + offset, ch); }
+	CF_INLINE int last_index_of(char ch, int offset) const { return slast_index_of(m_str + offset, ch); }
+	CF_INLINE int find(const char* find_me) const { const char* ptr = sfind(m_str, find_me); return (int)(ptr ? ptr - m_str : -1); }
+	CF_INLINE String& replace(const char* replace_me, const char* with_me) { sreplace(m_str, replace_me, with_me); return *this; }
+	CF_INLINE String& erase(int index, int count) { serase(m_str, index, count); return *this; }
+	CF_INLINE String dup() const { return steal_from(sdup(m_str)); }
+	CF_INLINE void clear() { sclear(m_str); }
 	
-	CUTE_INLINE bool starts_with(const char* s) const { return sprefix(m_str, s); }
-	CUTE_INLINE bool begins_with(const char* s) const { return sprefix(m_str, s); }
-	CUTE_INLINE bool ends_with(const char* s) const { return ssuffix(m_str, s); }
-	CUTE_INLINE bool prefix(const char* s) const { return sprefix(m_str, s); }
-	CUTE_INLINE bool suffix(const char* s) const { return ssuffix(m_str, s); }
-	CUTE_INLINE bool operator==(const char* s) { return !CUTE_STRCMP(m_str, s); }
-	CUTE_INLINE bool operator!=(const char* s) { return CUTE_STRCMP(m_str, s); }
-	CUTE_INLINE bool compare(const char* s, bool no_case = false) { return no_case ? sequ(m_str, s) : siequ(m_str, s); }
-	CUTE_INLINE bool cmp(const char* s, bool no_case = false) { return compare(s, no_case); }
-	CUTE_INLINE bool contains(const char* contains_me) { return scontains(m_str, contains_me); }
-	CUTE_INLINE String& to_upper() { stoupper(m_str); return *this; }
-	CUTE_INLINE String& to_lower() { stolower(m_str); return *this; }
-	CUTE_INLINE uint64_t hash() const { return shash(m_str); }
+	CF_INLINE bool starts_with(const char* s) const { return sprefix(m_str, s); }
+	CF_INLINE bool begins_with(const char* s) const { return sprefix(m_str, s); }
+	CF_INLINE bool ends_with(const char* s) const { return ssuffix(m_str, s); }
+	CF_INLINE bool prefix(const char* s) const { return sprefix(m_str, s); }
+	CF_INLINE bool suffix(const char* s) const { return ssuffix(m_str, s); }
+	CF_INLINE bool operator==(const char* s) { return !CF_STRCMP(m_str, s); }
+	CF_INLINE bool operator!=(const char* s) { return CF_STRCMP(m_str, s); }
+	CF_INLINE bool compare(const char* s, bool no_case = false) { return no_case ? sequ(m_str, s) : siequ(m_str, s); }
+	CF_INLINE bool cmp(const char* s, bool no_case = false) { return compare(s, no_case); }
+	CF_INLINE bool contains(const char* contains_me) { return scontains(m_str, contains_me); }
+	CF_INLINE String& to_upper() { stoupper(m_str); return *this; }
+	CF_INLINE String& to_lower() { stolower(m_str); return *this; }
+	CF_INLINE uint64_t hash() const { return shash(m_str); }
 
 private:
 	char* m_str = u.m_buffer;
 	union { char m_buffer[64]; void* align; } u;
 
-	CUTE_INLINE void s_static() { sstatic(m_str, u.m_buffer, sizeof(u.m_buffer)); CUTE_ASSERT(slen(m_str) == 0); }
-	CUTE_INLINE void s_chki(int i) const { CUTE_ASSERT(i >= 0 && i < ssize(m_str)); }
+	CF_INLINE void s_static() { sstatic(m_str, u.m_buffer, sizeof(u.m_buffer)); CF_ASSERT(slen(m_str) == 0); }
+	CF_INLINE void s_chki(int i) const { CF_ASSERT(i >= 0 && i < ssize(m_str)); }
 };
 
-CUTE_INLINE String operator+(const String& a, const String& b) { String result = a; result.append(b); return result; }
+CF_INLINE String operator+(const String& a, const String& b) { String result = a; result.append(b); return result; }
 
 /**
  * UTF8 decoder. Load it up with a string and read `.codepoint`. Call `next` to fetch the
@@ -1136,10 +1136,10 @@ CUTE_INLINE String operator+(const String& a, const String& b) { String result =
  */
 struct UTF8
 {
-	CUTE_INLINE UTF8() { }
-	CUTE_INLINE UTF8(const char* text) { this->text = text; }
+	CF_INLINE UTF8() { }
+	CF_INLINE UTF8(const char* text) { this->text = text; }
 
-	CUTE_INLINE bool next() { if (*text) { text = cf_decode_UTF8(text, &codepoint); return true; } else return false; }
+	CF_INLINE bool next() { if (*text) { text = cf_decode_UTF8(text, &codepoint); return true; } else return false; }
 
 	int codepoint;
 	const char* text = NULL;
@@ -1158,10 +1158,10 @@ struct UTF8
  */
 struct UTF16
 {
-	CUTE_INLINE UTF16() { }
-	CUTE_INLINE UTF16(const uint16_t* text) { this->text = text; }
+	CF_INLINE UTF16() { }
+	CF_INLINE UTF16(const uint16_t* text) { this->text = text; }
 
-	CUTE_INLINE bool next() { if (*text) { text = cf_decode_UTF16(text, &codepoint); return true; } else return false; }
+	CF_INLINE bool next() { if (*text) { text = cf_decode_UTF16(text, &codepoint); return true; } else return false; }
 
 	int codepoint;
 	const uint16_t* text = NULL;
@@ -1169,6 +1169,6 @@ struct UTF16
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_STRING_H
+#endif // CF_STRING_H

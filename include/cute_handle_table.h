@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_HANDLE_TABLE_H
-#define CUTE_HANDLE_TABLE_H
+#ifndef CF_HANDLE_TABLE_H
+#define CF_HANDLE_TABLE_H
 
 #include "cute_defines.h"
 
@@ -46,19 +46,19 @@ typedef struct CF_HandleTable CF_HandleTable;
  * @category utility
  * @brief    A handle stored within a `CF_HandleTable`.
  * @remarks  Each handle is unique from another and maps to a 32-bit index value, along with a 16-bit type value.
- * @related  CUTE_INVALID_HANDLE CF_HandleTable CF_Handle cf_make_handle_allocator cf_handle_allocator_alloc cf_handle_allocator_get_index cf_handle_allocator_get_type
+ * @related  CF_INVALID_HANDLE CF_HandleTable CF_Handle cf_make_handle_allocator cf_handle_allocator_alloc cf_handle_allocator_get_index cf_handle_allocator_get_type
  */
 typedef uint64_t CF_Handle;
 // @end
 
 /**
- * @function CUTE_INVALID_HANDLE
+ * @function CF_INVALID_HANDLE
  * @category utility
  * @brief    Defines an invalid handle.
  * @remarks  This can be used to initialize handle variables.
  * @related  CF_Handle CF_HandleTable
  */
-#define CUTE_INVALID_HANDLE (~0ULL)
+#define CF_INVALID_HANDLE (~0ULL)
 
 /**
  * @function cf_make_handle_allocator
@@ -71,7 +71,7 @@ typedef uint64_t CF_Handle;
  *           lifetime cycles. Free it up with `cf_destroy_handle_allocator` when done.
  * @related  CF_Handle CF_HandleTable cf_destroy_handle_allocator cf_handle_allocator_alloc
  */
-CUTE_API CF_HandleTable* CUTE_CALL cf_make_handle_allocator(int initial_capacity);
+CF_API CF_HandleTable* CF_CALL cf_make_handle_allocator(int initial_capacity);
 
 /**
  * @function cf_destroy_handle_allocator
@@ -80,7 +80,7 @@ CUTE_API CF_HandleTable* CUTE_CALL cf_make_handle_allocator(int initial_capacity
  * @param    table        The table.
  * @related  CF_Handle CF_HandleTable cf_destroy_handle_allocator cf_handle_allocator_alloc
  */
-CUTE_API void CUTE_CALL cf_destroy_handle_allocator(CF_HandleTable* table);
+CF_API void CF_CALL cf_destroy_handle_allocator(CF_HandleTable* table);
 
 /**
  * @function cf_handle_allocator_alloc
@@ -91,7 +91,7 @@ CUTE_API void CUTE_CALL cf_destroy_handle_allocator(CF_HandleTable* table);
  * @param    type         A 16-bit value the handle maps to. Can be fetched with `cf_handle_allocator_get_type`.
  * @related  CF_Handle CF_HandleTable cf_handle_allocator_get_index cf_handle_allocator_get_index cf_handle_allocator_get_type cf_handle_allocator_active cf_handle_allocator_activate cf_handle_allocator_deactivate cf_handle_allocator_update_index cf_handle_allocator_free cf_handle_allocator_handle_valid
  */
-CUTE_API CF_Handle CUTE_CALL cf_handle_allocator_alloc(CF_HandleTable* table, uint32_t index, uint16_t type);
+CF_API CF_Handle CF_CALL cf_handle_allocator_alloc(CF_HandleTable* table, uint32_t index, uint16_t type);
 
 /**
  * @function cf_handle_allocator_get_index
@@ -103,7 +103,7 @@ CUTE_API CF_Handle CUTE_CALL cf_handle_allocator_alloc(CF_HandleTable* table, ui
  *           function `cf_handle_allocator_active` does not affect handle validity.
  * @related  CF_Handle CF_HandleTable cf_handle_allocator_get_index cf_handle_allocator_get_index cf_handle_allocator_get_type cf_handle_allocator_active cf_handle_allocator_activate cf_handle_allocator_deactivate cf_handle_allocator_update_index cf_handle_allocator_free cf_handle_allocator_handle_valid
  */
-CUTE_API uint32_t CUTE_CALL cf_handle_allocator_get_index(CF_HandleTable* table, CF_Handle handle);
+CF_API uint32_t CF_CALL cf_handle_allocator_get_index(CF_HandleTable* table, CF_Handle handle);
 
 /**
  * @function cf_handle_allocator_get_type
@@ -115,7 +115,7 @@ CUTE_API uint32_t CUTE_CALL cf_handle_allocator_get_index(CF_HandleTable* table,
  *           function `cf_handle_allocator_active` does not affect handle validity.
  * @related  CF_Handle CF_HandleTable cf_handle_allocator_get_index cf_handle_allocator_get_index cf_handle_allocator_get_type cf_handle_allocator_active cf_handle_allocator_activate cf_handle_allocator_deactivate cf_handle_allocator_update_index cf_handle_allocator_free cf_handle_allocator_handle_valid
  */
-CUTE_API uint16_t CUTE_CALL cf_handle_allocator_get_type(CF_HandleTable* table, CF_Handle handle);
+CF_API uint16_t CF_CALL cf_handle_allocator_get_type(CF_HandleTable* table, CF_Handle handle);
 
 /**
  * @function cf_handle_allocator_active
@@ -127,7 +127,7 @@ CUTE_API uint16_t CUTE_CALL cf_handle_allocator_get_type(CF_HandleTable* table, 
  *           The active state _does not affect_ `cf_handle_allocator_handle_valid`.
  * @related  CF_Handle CF_HandleTable cf_handle_allocator_get_index cf_handle_allocator_get_index cf_handle_allocator_get_type cf_handle_allocator_active cf_handle_allocator_activate cf_handle_allocator_deactivate cf_handle_allocator_update_index cf_handle_allocator_free cf_handle_allocator_handle_valid
  */
-CUTE_API bool CUTE_CALL cf_handle_allocator_active(CF_HandleTable* table, CF_Handle handle);
+CF_API bool CF_CALL cf_handle_allocator_active(CF_HandleTable* table, CF_Handle handle);
 
 /**
  * @function cf_handle_allocator_activate
@@ -139,7 +139,7 @@ CUTE_API bool CUTE_CALL cf_handle_allocator_active(CF_HandleTable* table, CF_Han
  *           The active state _does not affect_ `cf_handle_allocator_handle_valid`.
  * @related  CF_Handle CF_HandleTable cf_handle_allocator_get_index cf_handle_allocator_get_index cf_handle_allocator_get_type cf_handle_allocator_active cf_handle_allocator_activate cf_handle_allocator_deactivate cf_handle_allocator_update_index cf_handle_allocator_free cf_handle_allocator_handle_valid
  */
-CUTE_API void CUTE_CALL cf_handle_allocator_activate(CF_HandleTable* table, CF_Handle handle);
+CF_API void CF_CALL cf_handle_allocator_activate(CF_HandleTable* table, CF_Handle handle);
 
 /**
  * @function cf_handle_allocator_deactivate
@@ -151,7 +151,7 @@ CUTE_API void CUTE_CALL cf_handle_allocator_activate(CF_HandleTable* table, CF_H
  *           The active state _does not affect_ `cf_handle_allocator_handle_valid`.
  * @related  CF_Handle CF_HandleTable cf_handle_allocator_get_index cf_handle_allocator_get_index cf_handle_allocator_get_type cf_handle_allocator_active cf_handle_allocator_activate cf_handle_allocator_deactivate cf_handle_allocator_update_index cf_handle_allocator_free cf_handle_allocator_handle_valid
  */
-CUTE_API void CUTE_CALL cf_handle_allocator_deactivate(CF_HandleTable* table, CF_Handle handle);
+CF_API void CF_CALL cf_handle_allocator_deactivate(CF_HandleTable* table, CF_Handle handle);
 
 /**
  * @function cf_handle_allocator_update_index
@@ -162,7 +162,7 @@ CUTE_API void CUTE_CALL cf_handle_allocator_deactivate(CF_HandleTable* table, CF
  * @param    index        A new 32-bit index value to store.
  * @related  CF_Handle CF_HandleTable cf_handle_allocator_get_index cf_handle_allocator_get_index cf_handle_allocator_get_type cf_handle_allocator_active cf_handle_allocator_activate cf_handle_allocator_deactivate cf_handle_allocator_update_index cf_handle_allocator_free cf_handle_allocator_handle_valid
  */
-CUTE_API void CUTE_CALL cf_handle_allocator_update_index(CF_HandleTable* table, CF_Handle handle, uint32_t index);
+CF_API void CF_CALL cf_handle_allocator_update_index(CF_HandleTable* table, CF_Handle handle, uint32_t index);
 
 /**
  * @function cf_handle_allocator_free
@@ -172,7 +172,7 @@ CUTE_API void CUTE_CALL cf_handle_allocator_update_index(CF_HandleTable* table, 
  * @param    handle       A handle created by `cf_handle_allocator_alloc`.
  * @related  CF_Handle CF_HandleTable cf_handle_allocator_get_index cf_handle_allocator_get_index cf_handle_allocator_get_type cf_handle_allocator_active cf_handle_allocator_activate cf_handle_allocator_deactivate cf_handle_allocator_update_index cf_handle_allocator_free cf_handle_allocator_handle_valid
  */
-CUTE_API void CUTE_CALL cf_handle_allocator_free(CF_HandleTable* table, CF_Handle handle);
+CF_API void CF_CALL cf_handle_allocator_free(CF_HandleTable* table, CF_Handle handle);
 
 /**
  * @function cf_handle_allocator_handle_valid
@@ -183,7 +183,7 @@ CUTE_API void CUTE_CALL cf_handle_allocator_free(CF_HandleTable* table, CF_Handl
  * @remarks  Handles are created in a valid state. They only become invalid when `cf_handle_allocator_free` is called.
  * @related  CF_Handle CF_HandleTable cf_handle_allocator_get_index cf_handle_allocator_get_index cf_handle_allocator_get_type cf_handle_allocator_active cf_handle_allocator_activate cf_handle_allocator_deactivate cf_handle_allocator_update_index cf_handle_allocator_free cf_handle_allocator_handle_valid
  */
-CUTE_API int CUTE_CALL cf_handle_allocator_handle_valid(CF_HandleTable* table, CF_Handle handle);
+CF_API int CF_CALL cf_handle_allocator_handle_valid(CF_HandleTable* table, CF_Handle handle);
 
 #ifdef __cplusplus
 }
@@ -192,7 +192,7 @@ CUTE_API int CUTE_CALL cf_handle_allocator_handle_valid(CF_HandleTable* table, C
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
@@ -201,63 +201,63 @@ using Handle = uint64_t;
 
 struct HandleTable
 {
-	CUTE_INLINE HandleTable(int initial_capacity = 0)
+	CF_INLINE HandleTable(int initial_capacity = 0)
 		: m_alloc(cf_make_handle_allocator(initial_capacity))
 	{
 	}
 
-	CUTE_INLINE ~HandleTable()
+	CF_INLINE ~HandleTable()
 	{
 		cf_destroy_handle_allocator(m_alloc);
 		m_alloc = NULL;
 	}
 
-	CUTE_INLINE CF_Handle alloc_handle(uint32_t index, uint16_t type = 0)
+	CF_INLINE CF_Handle alloc_handle(uint32_t index, uint16_t type = 0)
 	{
 		return cf_handle_allocator_alloc(m_alloc, index, type);
 	}
 
-	CUTE_INLINE CF_Handle alloc_handle()
+	CF_INLINE CF_Handle alloc_handle()
 	{
 		return cf_handle_allocator_alloc(m_alloc, ~0, 0);
 	}
 
-	CUTE_INLINE uint32_t get_index(CF_Handle handle)
+	CF_INLINE uint32_t get_index(CF_Handle handle)
 	{
 		return cf_handle_allocator_get_index(m_alloc, handle);
 	}
 
-	CUTE_INLINE uint16_t get_type(CF_Handle handle)
+	CF_INLINE uint16_t get_type(CF_Handle handle)
 	{
 		return cf_handle_allocator_get_type(m_alloc, handle);
 	}
 
-	CUTE_INLINE void update_index(CF_Handle handle, uint32_t index)
+	CF_INLINE void update_index(CF_Handle handle, uint32_t index)
 	{
 		cf_handle_allocator_update_index(m_alloc, handle, index);
 	}
 
-	CUTE_INLINE void free_handle(CF_Handle handle)
+	CF_INLINE void free_handle(CF_Handle handle)
 	{
 		cf_handle_allocator_free(m_alloc, handle);
 	}
 
-	CUTE_INLINE bool valid(CF_Handle handle)
+	CF_INLINE bool valid(CF_Handle handle)
 	{
 		return !!cf_handle_allocator_handle_valid(m_alloc, handle);
 	}
 
-	CUTE_INLINE bool active(CF_Handle handle)
+	CF_INLINE bool active(CF_Handle handle)
 	{
 		return cf_handle_allocator_active(m_alloc, handle);
 	}
 
-	CUTE_INLINE void activate(CF_Handle handle)
+	CF_INLINE void activate(CF_Handle handle)
 	{
 		cf_handle_allocator_activate(m_alloc, handle);
 	}
 
-	CUTE_INLINE void deactivate(CF_Handle handle)
+	CF_INLINE void deactivate(CF_Handle handle)
 	{
 		cf_handle_allocator_deactivate(m_alloc, handle);
 	}
@@ -267,6 +267,6 @@ struct HandleTable
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_HANDLE_TABLE_H
+#endif // CF_HANDLE_TABLE_H

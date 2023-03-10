@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifdef CUTE_DEBUG_PRINTF
-#undef CUTE_DEBUG_PRINTF
+#ifdef CF_DEBUG_PRINTF
+#undef CF_DEBUG_PRINTF
 #endif
 #include <stdio.h>
-#define CUTE_DEBUG_PRINTF(...) printf(__VA_ARGS__)
+#define CF_DEBUG_PRINTF(...) printf(__VA_ARGS__)

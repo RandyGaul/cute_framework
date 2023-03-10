@@ -39,7 +39,7 @@ struct CF_Draw* draw;
 #include <cute/cute_png.h>
 
 #define SPRITEBATCH_IMPLEMENTATION
-//#define SPRITEBATCH_LOG CUTE_DEBUG_PRINTF
+//#define SPRITEBATCH_LOG CF_DEBUG_PRINTF
 #include <cute/cute_spritebatch.h>
 
 #define CUTE_PNG_IMPLEMENTATION
@@ -61,11 +61,11 @@ using namespace Cute;
 #define VA_TYPE_SHAPE  (1)
 #define VA_TYPE_TEXT   (2)
 
-CUTE_STATIC_ASSERT(sizeof(BatchGeometry) <= 64, "Try to fix this nicely into a cache line.");
+CF_STATIC_ASSERT(sizeof(BatchGeometry) <= 64, "Try to fix this nicely into a cache line.");
 
 SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
-	CUTE_UNUSED(udata);
+	CF_UNUSED(udata);
 	CF_TextureParams params = cf_texture_defaults();
 	params.width = w;
 	params.height = h;
@@ -78,7 +78,7 @@ SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* uda
 
 void cf_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata)
 {
-	CUTE_UNUSED(udata);
+	CF_UNUSED(udata);
 	CF_Texture tex;
 	tex.id = texture_id;
 	cf_destroy_texture(tex);
@@ -91,21 +91,21 @@ spritebatch_t* cf_get_draw_sb()
 
 void cf_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, void* udata)
 {
-	CUTE_UNUSED(udata);
-	if (image_id >= CUTE_ASEPRITE_ID_RANGE_LO && image_id <= CUTE_ASEPRITE_ID_RANGE_HI) {
+	CF_UNUSED(udata);
+	if (image_id >= CF_ASEPRITE_ID_RANGE_LO && image_id <= CF_ASEPRITE_ID_RANGE_HI) {
 		cf_aseprite_cache_get_pixels(image_id, buffer, bytes_to_fill);
-	} else if (image_id >= CUTE_PNG_ID_RANGE_LO && image_id <= CUTE_PNG_ID_RANGE_HI) {
+	} else if (image_id >= CF_PNG_ID_RANGE_LO && image_id <= CF_PNG_ID_RANGE_HI) {
 		cf_png_cache_get_pixels(image_id, buffer, bytes_to_fill);
-	} else if (image_id >= CUTE_FONT_ID_RANGE_LO && image_id <= CUTE_FONT_ID_RANGE_HI) {
+	} else if (image_id >= CF_FONT_ID_RANGE_LO && image_id <= CF_FONT_ID_RANGE_HI) {
 		CF_Pixel* pixels = app->font_pixels.get(image_id);
-		CUTE_MEMCPY(buffer, pixels, bytes_to_fill);
+		CF_MEMCPY(buffer, pixels, bytes_to_fill);
 	} else {
-		CUTE_ASSERT(false);
-		CUTE_MEMSET(buffer, 0, sizeof(bytes_to_fill));
+		CF_ASSERT(false);
+		CF_MEMSET(buffer, 0, sizeof(bytes_to_fill));
 	}
 }
 
-static CUTE_INLINE float s_intersect(float a, float b, float u0, float u1, float plane_d)
+static CF_INLINE float s_intersect(float a, float b, float u0, float u1, float plane_d)
 {
 	float da = a - plane_d;
 	float db = b - plane_d;
@@ -114,11 +114,11 @@ static CUTE_INLINE float s_intersect(float a, float b, float u0, float u1, float
 
 static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_w, int texture_h, void* udata)
 {
-	CUTE_UNUSED(udata);
+	CF_UNUSED(udata);
 	int vert_count = 0;
 	draw->verts.ensure_count(count * 6);
 	DrawVertex* verts = draw->verts.data();
-	CUTE_MEMSET(verts, 0, sizeof(DrawVertex) * count * 6);
+	CF_MEMSET(verts, 0, sizeof(DrawVertex) * count * 6);
 
 	for (int i = 0; i < count; ++i) {
 		spritebatch_sprite_t* s = sprites + i;
@@ -193,7 +193,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 
 			bool clipped_away = false;
 			if (geom.do_clipping) {
-				CUTE_ASSERT(geom.is_text);
+				CF_ASSERT(geom.is_text);
 
 				CF_Aabb bb = make_aabb(geom.p3, geom.p1);
 				CF_Aabb clip = geom.clip;
@@ -242,7 +242,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				} else if (s->geom.u.sprite.is_text) {
 					out_verts[i].type = VA_TYPE_TEXT;
 				} else {
-					CUTE_ASSERT(false);
+					CF_ASSERT(false);
 				}
 
 				out_verts[i].color = s->geom.u.sprite.c;
@@ -330,27 +330,27 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 
 void cf_make_draw()
 {
-	draw = CUTE_NEW(CF_Draw);
+	draw = CF_NEW(CF_Draw);
 
 	// Setup a good default camera dimensions size.
 	cf_camera_dimensions((float)app->w, (float)app->h);
 
 	// Mesh + vertex attributes.
-	draw->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CUTE_MB * 25, 0, 0);
+	draw->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CF_MB * 25, 0, 0);
 	CF_VertexAttribute attrs[4] = { };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[0].offset = CUTE_OFFSET_OF(DrawVertex, position);
+	attrs[0].offset = CF_OFFSET_OF(DrawVertex, position);
 	attrs[1].name = "in_uv";
 	attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[1].offset = CUTE_OFFSET_OF(DrawVertex, uv);
+	attrs[1].offset = CF_OFFSET_OF(DrawVertex, uv);
 	attrs[2].name = "in_col";
 	attrs[2].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[2].offset = CUTE_OFFSET_OF(DrawVertex, color);
+	attrs[2].offset = CF_OFFSET_OF(DrawVertex, color);
 	attrs[3].name = "in_params";
 	attrs[3].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[3].offset = CUTE_OFFSET_OF(DrawVertex, alpha);
-	cf_mesh_set_attributes(draw->mesh, attrs, CUTE_ARRAY_SIZE(attrs), sizeof(DrawVertex), 0);
+	attrs[3].offset = CF_OFFSET_OF(DrawVertex, alpha);
+	cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(DrawVertex), 0);
 
 	// Shaders.
 	draw->shader = CF_MAKE_SOKOL_SHADER(sprite_shd);
@@ -381,9 +381,9 @@ void cf_make_draw()
 	config.lonely_buffer_count_till_flush = 0;
 
 	if (spritebatch_init(&draw->sb, &config, NULL)) {
-		CUTE_FREE(draw);
+		CF_FREE(draw);
 		draw = NULL;
-		CUTE_ASSERT(false);
+		CF_ASSERT(false);
 	}
 }
 
@@ -394,7 +394,7 @@ void cf_destroy_draw()
 	cf_destroy_material(draw->material);
 	cf_destroy_shader(draw->shader);
 	draw->~CF_Draw();
-	CUTE_FREE(draw);
+	CF_FREE(draw);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -807,13 +807,13 @@ void cf_draw_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1
 	}
 }
 
-CUTE_INLINE static CF_V2 s_rot_b_about_a(CF_SinCos r, CF_V2 b, CF_V2 a)
+CF_INLINE static CF_V2 s_rot_b_about_a(CF_SinCos r, CF_V2 b, CF_V2 a)
 {
 	CF_V2 result = cf_mul_sc_v2(r, a - b);
 	return result + b;
 }
 
-CUTE_INLINE static void s_bevel_arc_feather(CF_V2 b, CF_V2 i3, CF_V2 f3, CF_V2 i4, CF_V2 f4, CF_Color c0, CF_Color c1, int bevel_count)
+CF_INLINE static void s_bevel_arc_feather(CF_V2 b, CF_V2 i3, CF_V2 f3, CF_V2 i4, CF_V2 f4, CF_Color c0, CF_Color c1, int bevel_count)
 {
 	float arc = cf_shortest_arc(cf_norm(i3 - b), cf_norm(i4 - b)) / (float)(bevel_count + 1);
 	CF_SinCos r = cf_sincos_f(arc);
@@ -831,7 +831,7 @@ CUTE_INLINE static void s_bevel_arc_feather(CF_V2 b, CF_V2 i3, CF_V2 f3, CF_V2 i
 	cf_draw_quad_fill3(p0, i4, f4, p1, c0, c0, c1, c1);
 }
 
-CUTE_INLINE static void s_bevel_arc(CF_V2 b, CF_V2 i3, CF_V2 i4, int bevel_count)
+CF_INLINE static void s_bevel_arc(CF_V2 b, CF_V2 i3, CF_V2 i4, int bevel_count)
 {
 	float arc = cf_shortest_arc(cf_norm(i3 - b), cf_norm(i4 - b)) / (float)(bevel_count + 1);
 	CF_SinCos r = cf_sincos_f(arc);
@@ -1048,7 +1048,7 @@ static void s_polyline(CF_V2* points, int count, float thickness, CF_Color c0, C
 
 void cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count)
 {
-	CUTE_ASSERT(count >= 3);
+	CF_ASSERT(count >= 3);
 	CF_Color color = draw->colors.last();
 	float scale = (float)app->w / draw->cam_dimensions.x; // Assume x/y uniform scaling.
 	float alias_scale = 1.0f / scale;
@@ -1098,11 +1098,11 @@ void cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float
 CF_Result cf_make_font_mem(void* data, int size, const char* font_name)
 {
 	font_name = sintern(font_name);
-	CF_Font* font = (CF_Font*)CUTE_NEW(CF_Font);
+	CF_Font* font = (CF_Font*)CF_NEW(CF_Font);
 	font->file_data = (uint8_t*)data;
 	if (!stbtt_InitFont(&font->info, font->file_data, stbtt_GetFontOffsetForIndex(font->file_data, 0))) {
-		CUTE_FREE(data);
-		CUTE_FREE(font);
+		CF_FREE(data);
+		CF_FREE(font);
 		return result_failure("Failed to parse ttf file with stb_truetype.h.");
 	}
 	app->fonts.insert(font_name, font);
@@ -1151,17 +1151,17 @@ void cf_destroy_font(const char* font_name)
 	CF_Font* font = app->fonts.get(font_name);
 	if (!font) return;
 	app->fonts.remove(font_name);
-	CUTE_FREE(font->file_data);
+	CF_FREE(font->file_data);
 	for (int i = 0; i < font->image_ids.count(); ++i) {
 		uint64_t image_id = font->image_ids[i];
 		CF_Pixel* pixels = app->font_pixels.get(image_id);
 		if (pixels) {
-			CUTE_FREE(pixels);
+			CF_FREE(pixels);
 			app->font_pixels.remove(image_id);
 		}
 	}
 	font->~CF_Font();
-	CUTE_FREE(font);
+	CF_FREE(font);
 }
 
 void cf_font_add_backup_codepoints(const char* font_name, int* codepoints, int count)
@@ -1186,7 +1186,7 @@ CF_Font* cf_font_get(const char* font_name)
 	return app->fonts.get(sintern(font_name));
 }
 
-CUTE_INLINE uint64_t cf_glyph_key(int cp, float font_size, int blur)
+CF_INLINE uint64_t cf_glyph_key(int cp, float font_size, int blur)
 {
 	int k0 = cp;
 	int k1 = (int)(font_size * 1000.0f);
@@ -1263,7 +1263,7 @@ static void s_save(const char* path, uint8_t* pixels, int w, int h)
 	cp_image_t img;
 	img.w = w;
 	img.h = h;
-	img.pix = (cp_pixel_t*)CUTE_ALLOC(sizeof(cp_pixel_t) * w * h);
+	img.pix = (cp_pixel_t*)CF_ALLOC(sizeof(cp_pixel_t) * w * h);
 	for (int i = 0; i < w * h; ++i) {
 		cp_pixel_t pix;
 		pix.r = pix.g = pix.b = pixels[i];
@@ -1271,7 +1271,7 @@ static void s_save(const char* path, uint8_t* pixels, int w, int h)
 		img.pix[i] = pix;
 	}
 	cp_save_png(path, &img);
-	CUTE_FREE(img.pix);
+	CF_FREE(img.pix);
 }
 
 static void s_render(CF_Font* font, CF_Glyph* glyph, float font_size, int blur)
@@ -1293,8 +1293,8 @@ static void s_render(CF_Font* font, CF_Glyph* glyph, float font_size, int blur)
 	glyph->visible |= w > 0 && h > 0;
 
 	// Render glyph.
-	uint8_t* pixels_1bpp = (uint8_t*)CUTE_CALLOC(w * h);
-	CUTE_DEFER(CUTE_FREE(pixels_1bpp));
+	uint8_t* pixels_1bpp = (uint8_t*)CF_CALLOC(w * h);
+	CF_DEFER(CF_FREE(pixels_1bpp));
 	stbtt_MakeGlyphBitmap(&font->info, pixels_1bpp + pad * w + pad, w - pad*2, h - pad*2, w, scale, scale, glyph->index);
 	//s_save("glyph.png", pixels_1bpp, w, h);
 
@@ -1303,7 +1303,7 @@ static void s_render(CF_Font* font, CF_Glyph* glyph, float font_size, int blur)
 	//s_save("glyph_blur.png", pixels_1bpp, w, h);
 
 	// Convert to premultiplied RGBA8 pixel format.
-	CF_Pixel* pixels = (CF_Pixel*)CUTE_ALLOC(w * h * sizeof(CF_Pixel));
+	CF_Pixel* pixels = (CF_Pixel*)CF_ALLOC(w * h * sizeof(CF_Pixel));
 	for (int i = 0; i < w * h; ++i) {
 		uint8_t v = pixels_1bpp[i];
 		CF_Pixel p = { };
@@ -1817,7 +1817,7 @@ static void s_parse_codes(CF_TextEffectState* effect, const char* text)
 	CF_CodeParseState* s = &state;
 	s->effect = effect;
 	s->in = text;
-	s->end = text + CUTE_STRLEN(text);
+	s->end = text + CF_STRLEN(text);
 	while (!s->done()) {
 		int cp = s->next(false);
 		if (cp == '/' && s->try_next('<', false)) {
@@ -1839,17 +1839,17 @@ static void s_parse_codes(CF_TextEffectState* effect, const char* text)
 void cf_draw_text(const char* text, CF_V2 position)
 {
 	CF_Font* font = cf_font_get(draw->fonts.last());
-	CUTE_ASSERT(font);
+	CF_ASSERT(font);
 	if (!font) return;
 
 	// Cache effect state key'd by input text pointer.
 	CF_TextEffectState* effect_state = app->text_effect_states.try_find(text);
 	if (!effect_state) {
 		effect_state = app->text_effect_states.insert(text);
-		effect_state->hash = fnv1a(text, (int)CUTE_STRLEN(text) + 1);
+		effect_state->hash = fnv1a(text, (int)CF_STRLEN(text) + 1);
 		s_parse_codes(effect_state, text);
 	} else {
-		uint64_t h = fnv1a(text, (int)CUTE_STRLEN(text) + 1);
+		uint64_t h = fnv1a(text, (int)CF_STRLEN(text) + 1);
 		if (effect_state->hash != h) {
 			// Contents have changed, re-parse the whole thing.
 			app->text_effect_states.remove(text);
@@ -1950,7 +1950,7 @@ void cf_draw_text(const char* text, CF_V2 position)
 		effect_spawn();
 		text = cf_decode_UTF8(text, &cp);
 		++index;
-		CUTE_DEFER(effect_cleanup());
+		CF_DEFER(effect_cleanup());
 
 		if (cp == '\n') {
 			apply_newline();

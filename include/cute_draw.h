@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_DRAW_H
-#define CUTE_DRAW_H
+#ifndef CF_DRAW_H
+#define CF_DRAW_H
 
 #include "cute_defines.h"
 #include "cute_math.h"
@@ -42,7 +42,7 @@ extern "C" {
  * @param    sprite     The sprite.
  * @related  cf_draw_sprite cf_draw_quad camera_look_at cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_sprite(const CF_Sprite* sprite);
+CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
 
 /**
  * @function cf_draw_quad
@@ -52,7 +52,7 @@ CUTE_API void CUTE_CALL cf_draw_sprite(const CF_Sprite* sprite);
  * @param    thickness  The thickness of each line to draw.
  * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad3 cf_draw_quad_fill cf_draw_quad_fill2 cf_draw_quad_fill3 cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_quad(CF_Aabb bb, float thickness);
+CF_API void CF_CALL cf_draw_quad(CF_Aabb bb, float thickness);
 
 /**
  * @function cf_draw_quad2
@@ -66,7 +66,7 @@ CUTE_API void CUTE_CALL cf_draw_quad(CF_Aabb bb, float thickness);
  * @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order.
  * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad3 cf_draw_quad_fill cf_draw_quad_fill2 cf_draw_quad_fill3 cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness);
+CF_API void CF_CALL cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness);
 
 /**
  * @function cf_draw_quad3
@@ -84,7 +84,7 @@ CUTE_API void CUTE_CALL cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, fl
  * @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order.
  * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad3 cf_draw_quad_fill cf_draw_quad_fill2 cf_draw_quad_fill3 cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_quad3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3);
+CF_API void CF_CALL cf_draw_quad3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3);
 
 /**
  * @function cf_draw_quad_fill
@@ -93,7 +93,7 @@ CUTE_API void CUTE_CALL cf_draw_quad3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, fl
  * @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
  * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad3 cf_draw_quad_fill cf_draw_quad_fill2 cf_draw_quad_fill3 cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_quad_fill(CF_Aabb bb);
+CF_API void CF_CALL cf_draw_quad_fill(CF_Aabb bb);
 
 /**
  * @function cf_draw_quad_fill2
@@ -106,7 +106,7 @@ CUTE_API void CUTE_CALL cf_draw_quad_fill(CF_Aabb bb);
  * @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order.
  * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad3 cf_draw_quad_fill cf_draw_quad_fill2 cf_draw_quad_fill3 cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3);
+CF_API void CF_CALL cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3);
 
 /**
  * @function cf_draw_quad_fill3
@@ -123,7 +123,7 @@ CUTE_API void CUTE_CALL cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p
  * @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order.
  * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad3 cf_draw_quad_fill cf_draw_quad_fill2 cf_draw_quad_fill3 cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_quad_fill3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3);
+CF_API void CF_CALL cf_draw_quad_fill3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3);
 
 /**
  * @function cf_draw_circle
@@ -135,7 +135,7 @@ CUTE_API void CUTE_CALL cf_draw_quad_fill3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p
  * @param    thickness  The thickness of each line to draw.
  * @related  cf_draw_circle cf_draw_circle_fill cf_draw_circle_arc cf_draw_circle_arc_fill cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_circle(CF_V2 p, float r, int iters, float thickness);
+CF_API void CF_CALL cf_draw_circle(CF_V2 p, float r, int iters, float thickness);
 
 /**
  * @function cf_draw_circle_fill
@@ -146,7 +146,7 @@ CUTE_API void CUTE_CALL cf_draw_circle(CF_V2 p, float r, int iters, float thickn
  * @param    iters      Number of edges used for the circle. More looks smoother, but renders slower.
  * @related  cf_draw_circle cf_draw_circle_fill cf_draw_circle_arc cf_draw_circle_arc_fill cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_circle_fill(CF_V2 p, float r, int iters);
+CF_API void CF_CALL cf_draw_circle_fill(CF_V2 p, float r, int iters);
 
 /**
  * @function cf_draw_circle_arc
@@ -159,7 +159,7 @@ CUTE_API void CUTE_CALL cf_draw_circle_fill(CF_V2 p, float r, int iters);
  * @param    thickness      The thickness of each line to draw.
  * @related  cf_draw_circle cf_draw_circle_fill cf_draw_circle_arc cf_draw_circle_arc_fill cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness);
+CF_API void CF_CALL cf_draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness);
 
 /**
  * @function cf_draw_circle_arc_fill
@@ -171,7 +171,7 @@ CUTE_API void CUTE_CALL cf_draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float r
  * @param    iters          Number of edges used for the circle. More looks smoother, but renders slower.
  * @related  cf_draw_circle cf_draw_circle_fill cf_draw_circle_arc cf_draw_circle_arc_fill cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iters);
+CF_API void CF_CALL cf_draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iters);
 
 /**
  * @function cf_draw_capsule
@@ -184,7 +184,7 @@ CUTE_API void CUTE_CALL cf_draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, fl
  * @param    thickness  The thickness of each line to draw.
  * @related  cf_draw_capsule cf_draw_capsule_fill cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness);
+CF_API void CF_CALL cf_draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness);
 
 /**
  * @function cf_draw_capsule_fill
@@ -196,7 +196,7 @@ CUTE_API void CUTE_CALL cf_draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, 
  * @param    iters      Number of edges used for the circle-caps. More looks smoother, but renders slower.
  * @related  cf_draw_capsule cf_draw_capsule_fill cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters);
+CF_API void CF_CALL cf_draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters);
 
 /**
  * @function cf_draw_tri
@@ -208,7 +208,7 @@ CUTE_API void CUTE_CALL cf_draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int it
  * @param    thickness  The thickness of each line to draw.
  * @related  cf_draw_tri cf_draw_tri_fill cf_draw_tri_fill2 cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness);
+CF_API void CF_CALL cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness);
 
 /**
  * @function cf_draw_tri_fill
@@ -219,7 +219,7 @@ CUTE_API void CUTE_CALL cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thicknes
  * @param    p2         A corner of the triangle.
  * @related  cf_draw_tri cf_draw_tri_fill cf_draw_tri_fill2 cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2);
+CF_API void CF_CALL cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2);
 
 /**
  * @function cf_draw_tri_fill2
@@ -233,7 +233,7 @@ CUTE_API void CUTE_CALL cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2);
  * @param    c2         The color of one corner of the triangle.
  * @related  cf_draw_tri cf_draw_tri_fill cf_draw_tri_fill2 cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_tri_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, CF_Color c2);
+CF_API void CF_CALL cf_draw_tri_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, CF_Color c2);
 
 /**
  * @function cf_draw_line
@@ -244,7 +244,7 @@ CUTE_API void CUTE_CALL cf_draw_tri_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color
  * @param    thickness  The thickness of the line to draw.
  * @related  cf_draw_line cf_draw_line2 cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness);
+CF_API void CF_CALL cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness);
 
 /**
  * @function cf_draw_line2
@@ -257,7 +257,7 @@ CUTE_API void CUTE_CALL cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness);
  * @param    c1         The color one endpoint of the line.
  * @related  cf_draw_line cf_draw_line2 cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1);
+CF_API void CF_CALL cf_draw_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1);
 
 /**
  * @function cf_draw_polyline
@@ -270,7 +270,7 @@ CUTE_API void CUTE_CALL cf_draw_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Co
  * @param    bevel_count  The number of edges used to smooth corners.
  * @related  cf_draw_line cf_draw_line2 cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count);
+CF_API void CF_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count);
 
 /**
  * @function cf_draw_bezier_line
@@ -283,7 +283,7 @@ CUTE_API void CUTE_CALL cf_draw_polyline(CF_V2* points, int count, float thickne
  * @param    iters      The number of lines used to draw the bezier spline.
  * @related  cf_draw_line cf_draw_line2 cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, float thickness);
+CF_API void CF_CALL cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, float thickness);
 
 /**
  * @function cf_draw_bezier_line2
@@ -297,7 +297,7 @@ CUTE_API void CUTE_CALL cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iter
  * @param    iters      The number of lines used to draw the bezier spline.
  * @related  cf_draw_line cf_draw_line2 cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float thickness);
+CF_API void CF_CALL cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float thickness);
 
 /**
  * @function cf_draw_push_layer
@@ -308,7 +308,7 @@ CUTE_API void CUTE_CALL cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 
  *           This can be used to pick which sprites/shapes should draw on top of each other.
  * @related  cf_draw_push_layer cf_draw_pop_layer cf_draw_peek_layer
  */
-CUTE_API void CUTE_CALL cf_draw_push_layer(int layer);
+CF_API void CF_CALL cf_draw_push_layer(int layer);
 
 /**
  * @function cf_draw_pop_layer
@@ -318,7 +318,7 @@ CUTE_API void CUTE_CALL cf_draw_push_layer(int layer);
  *           This can be used to pick which sprites/shapes should draw on top of each other.
  * @related  cf_draw_push_layer cf_draw_pop_layer cf_draw_peek_layer
  */
-CUTE_API int CUTE_CALL cf_draw_pop_layer();
+CF_API int CF_CALL cf_draw_pop_layer();
 
 /**
  * @function cf_draw_peek_layer
@@ -328,7 +328,7 @@ CUTE_API int CUTE_CALL cf_draw_pop_layer();
  *           This can be used to pick which sprites/shapes should draw on top of each other.
  * @related  cf_draw_push_layer cf_draw_pop_layer cf_draw_peek_layer
  */
-CUTE_API int CUTE_CALL cf_draw_peek_layer();
+CF_API int CF_CALL cf_draw_peek_layer();
 
 /**
  * @function cf_draw_push_color
@@ -338,7 +338,7 @@ CUTE_API int CUTE_CALL cf_draw_peek_layer();
  * @remarks  Various draw functions do not specify a color. In these cases, the last color pushed will be used.
  * @related  cf_draw_push_color cf_draw_pop_color cf_draw_peek_color
  */
-CUTE_API void CUTE_CALL cf_draw_push_color(CF_Color c);
+CF_API void CF_CALL cf_draw_push_color(CF_Color c);
 
 /**
  * @function cf_draw_pop_color
@@ -347,7 +347,7 @@ CUTE_API void CUTE_CALL cf_draw_push_color(CF_Color c);
  * @remarks  Various draw functions do not specify a color. In these cases, the last color pushed will be used.
  * @related  cf_draw_push_color cf_draw_pop_color cf_draw_peek_color
  */
-CUTE_API CF_Color CUTE_CALL cf_draw_pop_color();
+CF_API CF_Color CF_CALL cf_draw_pop_color();
 
 /**
  * @function cf_draw_peek_color
@@ -356,7 +356,7 @@ CUTE_API CF_Color CUTE_CALL cf_draw_pop_color();
  * @remarks  Various draw functions do not specify a color. In these cases, the last color pushed will be used.
  * @related  cf_draw_push_color cf_draw_pop_color cf_draw_peek_color
  */
-CUTE_API CF_Color CUTE_CALL cf_draw_peek_color();
+CF_API CF_Color CF_CALL cf_draw_peek_color();
 
 /**
  * @function cf_draw_push_tint
@@ -367,7 +367,7 @@ CUTE_API CF_Color CUTE_CALL cf_draw_peek_color();
  *           dynamic color variations.
  * @related  cf_draw_push_tint cf_draw_pop_tint cf_draw_peek_tint
  */
-CUTE_API void CUTE_CALL cf_draw_push_tint(CF_Color c);
+CF_API void CF_CALL cf_draw_push_tint(CF_Color c);
 
 /**
  * @function cf_draw_pop_tint
@@ -376,7 +376,7 @@ CUTE_API void CUTE_CALL cf_draw_push_tint(CF_Color c);
  * @remarks  Sprites and shapes can be tinted. This is useful for certain effects such as damage flashes.
  * @related  cf_draw_push_tint cf_draw_pop_tint cf_draw_peek_tint
  */
-CUTE_API CF_Color CUTE_CALL cf_draw_pop_tint();
+CF_API CF_Color CF_CALL cf_draw_pop_tint();
 
 /**
  * @function cf_draw_peek_tint
@@ -385,7 +385,7 @@ CUTE_API CF_Color CUTE_CALL cf_draw_pop_tint();
  * @remarks  Sprites and shapes can be tinted. This is useful for certain effects such as damage flashes.
  * @related  cf_draw_push_tint cf_draw_pop_tint cf_draw_peek_tint
  */
-CUTE_API CF_Color CUTE_CALL cf_draw_peek_tint();
+CF_API CF_Color CF_CALL cf_draw_peek_tint();
 
 /**
  * @function cf_draw_push_antialias
@@ -396,7 +396,7 @@ CUTE_API CF_Color CUTE_CALL cf_draw_peek_tint();
  *           but looks much smoother.
  * @related  cf_draw_push_antialias cf_draw_pop_antialias cf_draw_peek_antialias
  */
-CUTE_API void CUTE_CALL cf_draw_push_antialias(bool antialias);
+CF_API void CF_CALL cf_draw_push_antialias(bool antialias);
 
 /**
  * @function cf_draw_pop_antialias
@@ -406,7 +406,7 @@ CUTE_API void CUTE_CALL cf_draw_push_antialias(bool antialias);
  *           but looks much smoother.
  * @related  cf_draw_push_antialias cf_draw_pop_antialias cf_draw_peek_antialias
  */
-CUTE_API bool CUTE_CALL cf_draw_pop_antialias();
+CF_API bool CF_CALL cf_draw_pop_antialias();
 
 /**
  * @function cf_draw_peek_antialias
@@ -416,7 +416,7 @@ CUTE_API bool CUTE_CALL cf_draw_pop_antialias();
  *           but looks much smoother.
  * @related  cf_draw_push_antialias cf_draw_pop_antialias cf_draw_peek_antialias
  */
-CUTE_API bool CUTE_CALL cf_draw_peek_antialias();
+CF_API bool CF_CALL cf_draw_peek_antialias();
 
 /**
  * @function cf_make_font
@@ -430,7 +430,7 @@ CUTE_API bool CUTE_CALL cf_draw_peek_antialias();
  *           _different fonts_ and each must be loaded up individually.
  * @related  cf_make_font cf_make_font_mem cf_destroy_font cf_push_font cf_push_font_size cf_push_font_blur cf_draw_text
  */
-CUTE_API CF_Result CUTE_CALL cf_make_font(const char* path, const char* font_name);
+CF_API CF_Result CF_CALL cf_make_font(const char* path, const char* font_name);
 
 /**
  * @function cf_make_font_mem
@@ -445,7 +445,7 @@ CUTE_API CF_Result CUTE_CALL cf_make_font(const char* path, const char* font_nam
  *           _different fonts_ and each must be loaded up individually.
  * @related  cf_make_font cf_make_font_mem cf_destroy_font cf_push_font cf_push_font_size cf_push_font_blur cf_draw_text
  */
-CUTE_API CF_Result CUTE_CALL cf_make_font_mem(void* data, int size, const char* font_name);
+CF_API CF_Result CF_CALL cf_make_font_mem(void* data, int size, const char* font_name);
 
 /**
  * @function cf_destroy_font
@@ -454,7 +454,7 @@ CUTE_API CF_Result CUTE_CALL cf_make_font_mem(void* data, int size, const char* 
  * @param    font_name   The unique name for this font.
  * @related  cf_make_font cf_make_font_mem cf_destroy_font cf_push_font cf_push_font_size cf_push_font_blur cf_draw_text
  */
-CUTE_API void CUTE_CALL cf_destroy_font(const char* font_name);
+CF_API void CF_CALL cf_destroy_font(const char* font_name);
 
 /**
  * @function cf_font_add_backup_codepoints
@@ -465,7 +465,7 @@ CUTE_API void CUTE_CALL cf_destroy_font(const char* font_name);
  * @param    count       The number of elements in `codepoints`.
  * @related  cf_draw_text
  */
-CUTE_API void CUTE_CALL cf_font_add_backup_codepoints(const char* font_name, int* codepoints, int count);
+CF_API void CF_CALL cf_font_add_backup_codepoints(const char* font_name, int* codepoints, int count);
 
 /**
  * @function cf_push_font
@@ -474,7 +474,7 @@ CUTE_API void CUTE_CALL cf_font_add_backup_codepoints(const char* font_name, int
  * @param    font_name   The unique name for this font.
  * @related  cf_make_font cf_push_font cf_pop_font cf_peek_font cf_push_font_size cf_push_font_blur cf_draw_text
  */
-CUTE_API void CUTE_CALL cf_push_font(const char* font);
+CF_API void CF_CALL cf_push_font(const char* font);
 
 /**
  * @function cf_pop_font
@@ -482,7 +482,7 @@ CUTE_API void CUTE_CALL cf_push_font(const char* font);
  * @brief    Pops and returns the last font name used.
  * @related  cf_make_font cf_push_font cf_pop_font cf_peek_font cf_push_font_size cf_push_font_blur cf_draw_text
  */
-CUTE_API const char* CUTE_CALL cf_pop_font();
+CF_API const char* CF_CALL cf_pop_font();
 
 /**
  * @function cf_peek_font
@@ -490,7 +490,7 @@ CUTE_API const char* CUTE_CALL cf_pop_font();
  * @brief    Returns the last font name used.
  * @related  cf_make_font cf_push_font cf_pop_font cf_peek_font cf_push_font_size cf_push_font_blur cf_draw_text
  */
-CUTE_API const char* CUTE_CALL cf_peek_font();
+CF_API const char* CF_CALL cf_peek_font();
 
 /**
  * @function cf_push_font_size
@@ -499,7 +499,7 @@ CUTE_API const char* CUTE_CALL cf_peek_font();
  * @param    size       The size to use for text drawing.
  * @related  cf_make_font cf_push_font cf_push_font_size cf_pop_font_size cf_peek_font_size cf_push_font_blur cf_draw_text
  */
-CUTE_API void CUTE_CALL cf_push_font_size(float size);
+CF_API void CF_CALL cf_push_font_size(float size);
 
 /**
  * @function cf_pop_font_size
@@ -507,7 +507,7 @@ CUTE_API void CUTE_CALL cf_push_font_size(float size);
  * @brief    Pops and returns the last font size.
  * @related  cf_make_font cf_push_font cf_push_font_size cf_pop_font_size cf_peek_font_size cf_push_font_blur cf_draw_text
  */
-CUTE_API float CUTE_CALL cf_pop_font_size();
+CF_API float CF_CALL cf_pop_font_size();
 
 /**
  * @function cf_peek_font_size
@@ -515,7 +515,7 @@ CUTE_API float CUTE_CALL cf_pop_font_size();
  * @brief    Returns the last font size.
  * @related  cf_make_font cf_push_font cf_push_font_size cf_pop_font_size cf_peek_font_size cf_push_font_blur cf_draw_text
  */
-CUTE_API float CUTE_CALL cf_peek_font_size();
+CF_API float CF_CALL cf_peek_font_size();
 
 /**
  * @function cf_push_font_blur
@@ -524,7 +524,7 @@ CUTE_API float CUTE_CALL cf_peek_font_size();
  * @param    blur       The blur to use for text drawing.
  * @related  cf_make_font cf_push_font cf_push_font_size cf_push_font_blur cf_pop_font_blur cf_peek_font_blur cf_draw_text
  */
-CUTE_API void CUTE_CALL cf_push_font_blur(int blur);
+CF_API void CF_CALL cf_push_font_blur(int blur);
 
 /**
  * @function cf_pop_font_blur
@@ -532,7 +532,7 @@ CUTE_API void CUTE_CALL cf_push_font_blur(int blur);
  * @brief    Pops and returns the last font blur.
  * @related  cf_make_font cf_push_font cf_push_font_size cf_push_font_blur cf_pop_font_blur cf_peek_font_blur cf_draw_text
  */
-CUTE_API int CUTE_CALL cf_pop_font_blur();
+CF_API int CF_CALL cf_pop_font_blur();
 
 /**
  * @function cf_peek_font_blur
@@ -540,7 +540,7 @@ CUTE_API int CUTE_CALL cf_pop_font_blur();
  * @brief    Returns the last font blur.
  * @related  cf_make_font cf_push_font cf_push_font_size cf_push_font_blur cf_pop_font_blur cf_peek_font_blur cf_draw_text
  */
-CUTE_API int CUTE_CALL cf_peek_font_blur();
+CF_API int CF_CALL cf_peek_font_blur();
 
 /**
  * @function cf_push_text_wrap_width
@@ -549,7 +549,7 @@ CUTE_API int CUTE_CALL cf_peek_font_blur();
  * @param    width      The text wrap width to use for text drawing.
  * @related  cf_make_font cf_push_font cf_push_text_wrap_width cf_pop_text_wrap_width cf_peek_text_wrap_width cf_push_text_clip_box cf_draw_text
  */
-CUTE_API void CUTE_CALL cf_push_text_wrap_width(float width);
+CF_API void CF_CALL cf_push_text_wrap_width(float width);
 
 /**
  * @function cf_pop_text_wrap_width
@@ -557,7 +557,7 @@ CUTE_API void CUTE_CALL cf_push_text_wrap_width(float width);
  * @brief    Pops and returns the last text wrap width.
  * @related  cf_make_font cf_push_font cf_push_text_wrap_width cf_pop_text_wrap_width cf_peek_text_wrap_width cf_push_text_clip_box cf_draw_text
  */
-CUTE_API float CUTE_CALL cf_pop_text_wrap_width();
+CF_API float CF_CALL cf_pop_text_wrap_width();
 
 /**
  * @function cf_peek_text_wrap_width
@@ -565,7 +565,7 @@ CUTE_API float CUTE_CALL cf_pop_text_wrap_width();
  * @brief    Returns the last text wrap width.
  * @related  cf_make_font cf_push_font cf_push_text_wrap_width cf_pop_text_wrap_width cf_peek_text_wrap_width cf_push_text_clip_box cf_draw_text
  */
-CUTE_API float CUTE_CALL cf_peek_text_wrap_width();
+CF_API float CF_CALL cf_peek_text_wrap_width();
 
 /**
  * @function cf_push_text_clip_box
@@ -574,7 +574,7 @@ CUTE_API float CUTE_CALL cf_peek_text_wrap_width();
  * @param    clip_box   The text clip box to use for text drawing.
  * @related  cf_make_font cf_push_font cf_push_text_wrap_width cf_push_text_clip_box cf_pop_text_clip_box cf_peek_text_clip_box cf_draw_text
  */
-CUTE_API void CUTE_CALL cf_push_text_clip_box(CF_Aabb clip_box);
+CF_API void CF_CALL cf_push_text_clip_box(CF_Aabb clip_box);
 
 /**
  * @function cf_pop_text_clip_box
@@ -582,7 +582,7 @@ CUTE_API void CUTE_CALL cf_push_text_clip_box(CF_Aabb clip_box);
  * @brief    Pops and returns the last text clip box.
  * @related  cf_make_font cf_push_font cf_push_text_wrap_width cf_push_text_clip_box cf_pop_text_clip_box cf_peek_text_clip_box cf_draw_text
  */
-CUTE_API CF_Aabb CUTE_CALL cf_pop_text_clip_box();
+CF_API CF_Aabb CF_CALL cf_pop_text_clip_box();
 
 /**
  * @function cf_peek_text_clip_box
@@ -590,7 +590,7 @@ CUTE_API CF_Aabb CUTE_CALL cf_pop_text_clip_box();
  * @brief    Returns the last text clip box.
  * @related  cf_make_font cf_push_font cf_push_text_wrap_width cf_push_text_clip_box cf_pop_text_clip_box cf_peek_text_clip_box cf_draw_text
  */
-CUTE_API CF_Aabb CUTE_CALL cf_peek_text_clip_box();
+CF_API CF_Aabb CF_CALL cf_peek_text_clip_box();
 
 /**
  * @function cf_push_text_vertical_layout
@@ -599,7 +599,7 @@ CUTE_API CF_Aabb CUTE_CALL cf_peek_text_clip_box();
  * @param    layout_vertically  True to layout vertically, false otherwise.
  * @related  cf_make_font cf_push_font cf_push_text_vertical_layout cf_pop_text_vertical_layout cf_peek_text_vertical_layout cf_draw_text
  */
-CUTE_API void CUTE_CALL cf_push_text_vertical_layout(bool layout_vertically);
+CF_API void CF_CALL cf_push_text_vertical_layout(bool layout_vertically);
 
 /**
  * @function cf_pop_text_vertical_layout
@@ -607,7 +607,7 @@ CUTE_API void CUTE_CALL cf_push_text_vertical_layout(bool layout_vertically);
  * @brief    Pops and returns the last vertical layout state.
  * @related  cf_make_font cf_push_font cf_push_text_vertical_layout cf_pop_text_vertical_layout cf_peek_text_vertical_layout cf_draw_text
  */
-CUTE_API bool CUTE_CALL cf_pop_text_vertical_layout();
+CF_API bool CF_CALL cf_pop_text_vertical_layout();
 
 /**
  * @function cf_peek_text_vertical_layout
@@ -615,7 +615,7 @@ CUTE_API bool CUTE_CALL cf_pop_text_vertical_layout();
  * @brief    Returns the last vertical layout state.
  * @related  cf_make_font cf_push_font cf_push_text_vertical_layout cf_pop_text_vertical_layout cf_peek_text_vertical_layout cf_draw_text
  */
-CUTE_API bool CUTE_CALL cf_peek_text_vertical_layout();
+CF_API bool CF_CALL cf_peek_text_vertical_layout();
 
 /**
  * @function cf_text_width
@@ -624,7 +624,7 @@ CUTE_API bool CUTE_CALL cf_peek_text_vertical_layout();
  * @param    text      The text considered for rendering.
  * @related  cf_make_font cf_text_width cf_text_height cf_draw_text
  */
-CUTE_API float CUTE_CALL cf_text_width(const char* text);
+CF_API float CF_CALL cf_text_width(const char* text);
 
 /**
  * @function cf_text_height
@@ -633,7 +633,7 @@ CUTE_API float CUTE_CALL cf_text_width(const char* text);
  * @param    height     The text considered for rendering.
  * @related  cf_make_font cf_text_width cf_text_height cf_draw_text
  */
-CUTE_API float CUTE_CALL cf_text_height(const char* text);
+CF_API float CF_CALL cf_text_height(const char* text);
 
 /**
  * @function cf_draw_text
@@ -643,7 +643,7 @@ CUTE_API float CUTE_CALL cf_text_height(const char* text);
  * @param    position  The top-left corner of the text.
  * @related  cf_make_font cf_draw_text cf_text_effect_register cf_draw_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_draw_text(const char* text, CF_V2 position);
+CF_API void CF_CALL cf_draw_text(const char* text, CF_V2 position);
 
 /**
  * @struct   CF_TextEffect
@@ -791,7 +791,7 @@ typedef bool (CF_TextEffectFn)(CF_TextEffect* fx);
  *           automatically. You only need to fetch them with the appropriate cf_text_effect_get*** function.
  * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
-CUTE_API void CUTE_CALL cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
+CF_API void CF_CALL cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
 
 /**
  * @function cf_text_effect_on_start
@@ -801,7 +801,7 @@ CUTE_API void CUTE_CALL cf_text_effect_register(const char* name, CF_TextEffectF
  * @return   Return true to continue to the next glyph, false otherwise.
  * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
-CUTE_API bool CUTE_CALL cf_text_effect_on_start(CF_TextEffect* fx);
+CF_API bool CF_CALL cf_text_effect_on_start(CF_TextEffect* fx);
 
 /**
  * @function cf_text_effect_on_finish
@@ -811,7 +811,7 @@ CUTE_API bool CUTE_CALL cf_text_effect_on_start(CF_TextEffect* fx);
  * @return   Return true to continue to the next glyph, false otherwise.
  * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
-CUTE_API bool CUTE_CALL cf_text_effect_on_finish(CF_TextEffect* fx);
+CF_API bool CF_CALL cf_text_effect_on_finish(CF_TextEffect* fx);
 
 /**
  * @function cf_text_effect_get_number
@@ -823,7 +823,7 @@ CUTE_API bool CUTE_CALL cf_text_effect_on_finish(CF_TextEffect* fx);
  * @return   Returns the value of the text code parameter.
  * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
-CUTE_API double CUTE_CALL cf_text_effect_get_number(CF_TextEffect* fx, const char* key, double default_val);
+CF_API double CF_CALL cf_text_effect_get_number(CF_TextEffect* fx, const char* key, double default_val);
 
 /**
  * @function cf_text_effect_get_color
@@ -835,7 +835,7 @@ CUTE_API double CUTE_CALL cf_text_effect_get_number(CF_TextEffect* fx, const cha
  * @return   Returns the value of the text code parameter.
  * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
-CUTE_API CF_Color CUTE_CALL cf_text_effect_get_color(CF_TextEffect* fx, const char* key, CF_Color default_val);
+CF_API CF_Color CF_CALL cf_text_effect_get_color(CF_TextEffect* fx, const char* key, CF_Color default_val);
 
 /**
  * @function cf_text_effect_get_string
@@ -847,7 +847,7 @@ CUTE_API CF_Color CUTE_CALL cf_text_effect_get_color(CF_TextEffect* fx, const ch
  * @return   Returns the value of the text code parameter.
  * @related  CF_TextEffect CF_TextEffectFn cf_text_effect_register cf_text_effect_on_start cf_text_effect_on_finish cf_text_effect_get_number cf_text_effect_get_color cf_text_effect_get_string
  */
-CUTE_API const char* CUTE_CALL cf_text_effect_get_string(CF_TextEffect* fx, const char* key, const char* default_val);
+CF_API const char* CF_CALL cf_text_effect_get_string(CF_TextEffect* fx, const char* key, const char* default_val);
 
 /**
  * @function cf_render_settings_filter
@@ -856,7 +856,7 @@ CUTE_API const char* CUTE_CALL cf_text_effect_get_string(CF_TextEffect* fx, cons
  * @param    filter       The filter.
  * @related  cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_push_scissor cf_render_settings_push_render_state cf_render_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_render_settings_filter(CF_Filter filter);
+CF_API void CF_CALL cf_render_settings_filter(CF_Filter filter);
 
 /**
  * @function cf_render_settings_push_viewport
@@ -865,7 +865,7 @@ CUTE_API void CUTE_CALL cf_render_settings_filter(CF_Filter filter);
  * @param    viewport     The viewport.
  * @related  cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_pop_viewport cf_render_settings_peek_viewport cf_render_settings_push_scissor cf_render_settings_push_render_state cf_render_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_render_settings_push_viewport(CF_Rect viewport);
+CF_API void CF_CALL cf_render_settings_push_viewport(CF_Rect viewport);
 
 /**
  * @function cf_render_settings_pop_viewport
@@ -873,7 +873,7 @@ CUTE_API void CUTE_CALL cf_render_settings_push_viewport(CF_Rect viewport);
  * @brief    Pops and returns the last `CF_Rect` for the viewport.
  * @related  cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_pop_viewport cf_render_settings_peek_viewport cf_render_settings_push_scissor cf_render_settings_push_render_state cf_render_to cf_app_draw_onto_screen
  */
-CUTE_API CF_Rect CUTE_CALL cf_render_settings_pop_viewport();
+CF_API CF_Rect CF_CALL cf_render_settings_pop_viewport();
 
 /**
  * @function cf_render_settings_peek_viewport
@@ -881,7 +881,7 @@ CUTE_API CF_Rect CUTE_CALL cf_render_settings_pop_viewport();
  * @brief    Returns the last `CF_Rect` for the viewport.
  * @related  cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_pop_viewport cf_render_settings_peek_viewport cf_render_settings_push_scissor cf_render_settings_push_render_state cf_render_to cf_app_draw_onto_screen
  */
-CUTE_API CF_Rect CUTE_CALL cf_render_settings_peek_viewport();
+CF_API CF_Rect CF_CALL cf_render_settings_peek_viewport();
 
 /**
  * @function cf_render_settings_push_scissor
@@ -890,7 +890,7 @@ CUTE_API CF_Rect CUTE_CALL cf_render_settings_peek_viewport();
  * @param    scissor      The scissor box.
  * @related  cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_push_scissor cf_render_settings_pop_scissor cf_render_settings_peek_scissor cf_render_settings_push_render_state cf_render_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_render_settings_push_scissor(CF_Rect scissor);
+CF_API void CF_CALL cf_render_settings_push_scissor(CF_Rect scissor);
 
 /**
  * @function cf_render_settings_pop_scissor
@@ -898,7 +898,7 @@ CUTE_API void CUTE_CALL cf_render_settings_push_scissor(CF_Rect scissor);
  * @brief    Pops and returns the last `CF_Rect` for the scissor box.
  * @related  cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_push_scissor cf_render_settings_pop_scissor cf_render_settings_peek_scissor cf_render_settings_push_render_state cf_render_to cf_app_draw_onto_screen
  */
-CUTE_API CF_Rect CUTE_CALL cf_render_settings_pop_scissor();
+CF_API CF_Rect CF_CALL cf_render_settings_pop_scissor();
 
 /**
  * @function cf_render_settings_peek_scissor
@@ -906,7 +906,7 @@ CUTE_API CF_Rect CUTE_CALL cf_render_settings_pop_scissor();
  * @brief    Returns the last `CF_Rect` for the scissor box.
  * @related  cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_push_scissor cf_render_settings_pop_scissor cf_render_settings_peek_scissor cf_render_settings_push_render_state cf_render_to cf_app_draw_onto_screen
  */
-CUTE_API CF_Rect CUTE_CALL cf_render_settings_peek_scissor();
+CF_API CF_Rect CF_CALL cf_render_settings_peek_scissor();
 
 /**
  * @function cf_render_settings_push_render_state
@@ -915,21 +915,21 @@ CUTE_API CF_Rect CUTE_CALL cf_render_settings_peek_scissor();
  * @param    render_state  Various types of rendering states.
  * @related  CF_RenderState cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_push_scissor cf_render_settings_push_render_state cf_render_settings_pop_render_state cf_render_settings_peek_render_state cf_render_to cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_render_settings_push_render_state(CF_RenderState render_state);
+CF_API void CF_CALL cf_render_settings_push_render_state(CF_RenderState render_state);
 
 /**
  * @function cf_render_settings_pop_render_state
  * @category draw
  * @brief    Pops and returns the last `CF_RenderState`.* @related  CF_RenderState cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_push_scissor cf_render_settings_push_render_state cf_render_settings_pop_render_state cf_render_settings_peek_render_state cf_render_to cf_app_draw_onto_screen
  */
-CUTE_API CF_RenderState CUTE_CALL cf_render_settings_pop_render_state();
+CF_API CF_RenderState CF_CALL cf_render_settings_pop_render_state();
 
 /**
  * @function cf_render_settings_peek_render_state
  * @category draw
  * @brief    Returns the last `CF_RenderState`.* @related  CF_RenderState cf_render_settings_filter cf_render_settings_push_viewport cf_render_settings_push_scissor cf_render_settings_push_render_state cf_render_settings_pop_render_state cf_render_settings_peek_render_state cf_render_to cf_app_draw_onto_screen
  */
-CUTE_API CF_RenderState CUTE_CALL cf_render_settings_peek_render_state();
+CF_API CF_RenderState CF_CALL cf_render_settings_peek_render_state();
 
 /**
  * @function cf_camera_dimensions
@@ -939,7 +939,7 @@ CUTE_API CF_RenderState CUTE_CALL cf_render_settings_peek_render_state();
  * @param    h          The height of the camera's view.
  * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to
  */
-CUTE_API void CUTE_CALL cf_camera_dimensions(float w, float h);
+CF_API void CF_CALL cf_camera_dimensions(float w, float h);
 
 /**
  * @function cf_camera_look_at
@@ -949,7 +949,7 @@ CUTE_API void CUTE_CALL cf_camera_dimensions(float w, float h);
  * @param    y          The y position of the camera's view.
  * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to
  */
-CUTE_API void CUTE_CALL cf_camera_look_at(float x, float y);
+CF_API void CF_CALL cf_camera_look_at(float x, float y);
 
 /**
  * @function cf_camera_rotate
@@ -958,7 +958,7 @@ CUTE_API void CUTE_CALL cf_camera_look_at(float x, float y);
  * @param    radians    The angle of camera rotation.
  * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to
  */
-CUTE_API void CUTE_CALL cf_camera_rotate(float radians);
+CF_API void CF_CALL cf_camera_rotate(float radians);
 
 /**
  * @function cf_camera_push
@@ -966,7 +966,7 @@ CUTE_API void CUTE_CALL cf_camera_rotate(float radians);
  * @brief    Pushes a copy of the camera state.
  * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to
  */
-CUTE_API void CUTE_CALL cf_camera_push();
+CF_API void CF_CALL cf_camera_push();
 
 /**
  * @function cf_camera_pop
@@ -974,7 +974,7 @@ CUTE_API void CUTE_CALL cf_camera_push();
  * @brief    Pops the current camera state, and uses the previously pushed camera state.
  * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to
  */
-CUTE_API void CUTE_CALL cf_camera_pop();
+CF_API void CF_CALL cf_camera_pop();
 
 /**
  * @function cf_render_to
@@ -987,7 +987,7 @@ CUTE_API void CUTE_CALL cf_camera_pop();
  *           canvas, so this function is not necessary to call at all. Instead, calling `cf_app_draw_onto_screen` should be the go-to.
  * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to
  */
-CUTE_API void CUTE_CALL cf_render_to(CF_Canvas canvas, bool clear);
+CF_API void CF_CALL cf_render_to(CF_Canvas canvas, bool clear);
 
 /**
  * @struct   CF_TemporaryImage
@@ -1025,7 +1025,7 @@ typedef struct CF_TemporaryImage
  *           `cf_app_draw_onto_screen` is called.
  * @related  CF_TemporaryImage cf_fetch_image
  */
-CUTE_API CF_TemporaryImage CUTE_CALL cf_fetch_image(const CF_Sprite* sprite);
+CF_API CF_TemporaryImage CF_CALL cf_fetch_image(const CF_Sprite* sprite);
 
 //--------------------------------------------------------------------------------------------------
 // "Hidden" API -- Just here for some inline C++ functions below.
@@ -1056,75 +1056,75 @@ struct CF_TextCodeVal
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
 
 using TemporaryImage = CF_TemporaryImage;
 
-CUTE_INLINE void draw_sprite(const CF_Sprite* sprite) { cf_draw_sprite(sprite); }
-CUTE_INLINE void draw_quad(CF_Aabb bb, float thickness) { cf_draw_quad(bb, thickness); }
-CUTE_INLINE void draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness) { cf_draw_quad2(p0, p1, p2, p3, thickness); }
-CUTE_INLINE void draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3) { cf_draw_quad3(p0, p1, p2, p3, thickness, c0, c1, c2, c3); }
-CUTE_INLINE void draw_quad_fill(CF_Aabb bb) { cf_draw_quad_fill(bb); }
-CUTE_INLINE void draw_quad_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3) { cf_draw_quad_fill2(p0, p1, p2, p3); }
-CUTE_INLINE void draw_quad_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3) { cf_draw_quad_fill3(p0, p1, p2, p3, c0, c1, c2, c3); }
-CUTE_INLINE void draw_circle(CF_V2 p, float r, int iters, float thickness) { cf_draw_circle(p, r, iters, thickness); }
-CUTE_INLINE void draw_circle_fill(CF_V2 p, float r, int iters) { cf_draw_circle_fill(p, r, iters); }
-CUTE_INLINE void draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness) { cf_draw_circle_arc(p, center_of_arc, range, iters, thickness); }
-CUTE_INLINE void draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iters) { draw_circle_arc_fill(p, center_of_arc, range, iters); }
-CUTE_INLINE void draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness) { cf_draw_capsule(p0, p1, r, iters, thickness); }
-CUTE_INLINE void draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters) { cf_draw_capsule_fill(p0, p1, r, iters); }
-CUTE_INLINE void draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness) { cf_draw_tri(p0, p1, p2, thickness); }
-CUTE_INLINE void draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2) { cf_draw_tri_fill(p0, p1, p2); }
-CUTE_INLINE void draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, CF_Color c2) { cf_draw_tri_fill2(p0, p1, p2, c0, c1, c2); }
-CUTE_INLINE void draw_line(CF_V2 p0, CF_V2 p1, float thickness) { cf_draw_line(p0, p1, thickness); }
-CUTE_INLINE void draw_line(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1) { cf_draw_line2(p0, p1, thickness, c0, c1); }
-CUTE_INLINE void draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count) { cf_draw_polyline(points, count, thickness, loop, bevel_count); }
+CF_INLINE void draw_sprite(const CF_Sprite* sprite) { cf_draw_sprite(sprite); }
+CF_INLINE void draw_quad(CF_Aabb bb, float thickness) { cf_draw_quad(bb, thickness); }
+CF_INLINE void draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness) { cf_draw_quad2(p0, p1, p2, p3, thickness); }
+CF_INLINE void draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3) { cf_draw_quad3(p0, p1, p2, p3, thickness, c0, c1, c2, c3); }
+CF_INLINE void draw_quad_fill(CF_Aabb bb) { cf_draw_quad_fill(bb); }
+CF_INLINE void draw_quad_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3) { cf_draw_quad_fill2(p0, p1, p2, p3); }
+CF_INLINE void draw_quad_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3) { cf_draw_quad_fill3(p0, p1, p2, p3, c0, c1, c2, c3); }
+CF_INLINE void draw_circle(CF_V2 p, float r, int iters, float thickness) { cf_draw_circle(p, r, iters, thickness); }
+CF_INLINE void draw_circle_fill(CF_V2 p, float r, int iters) { cf_draw_circle_fill(p, r, iters); }
+CF_INLINE void draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness) { cf_draw_circle_arc(p, center_of_arc, range, iters, thickness); }
+CF_INLINE void draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iters) { draw_circle_arc_fill(p, center_of_arc, range, iters); }
+CF_INLINE void draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness) { cf_draw_capsule(p0, p1, r, iters, thickness); }
+CF_INLINE void draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters) { cf_draw_capsule_fill(p0, p1, r, iters); }
+CF_INLINE void draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness) { cf_draw_tri(p0, p1, p2, thickness); }
+CF_INLINE void draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2) { cf_draw_tri_fill(p0, p1, p2); }
+CF_INLINE void draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, CF_Color c2) { cf_draw_tri_fill2(p0, p1, p2, c0, c1, c2); }
+CF_INLINE void draw_line(CF_V2 p0, CF_V2 p1, float thickness) { cf_draw_line(p0, p1, thickness); }
+CF_INLINE void draw_line(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1) { cf_draw_line2(p0, p1, thickness, c0, c1); }
+CF_INLINE void draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count) { cf_draw_polyline(points, count, thickness, loop, bevel_count); }
 
-CUTE_INLINE void draw_push_layer(int layer) { cf_draw_push_layer(layer); }
-CUTE_INLINE int draw_pop_layer() { return cf_draw_pop_layer(); }
-CUTE_INLINE int draw_peek_layer() { return cf_draw_peek_layer(); }
-CUTE_INLINE void draw_push_color(CF_Color c) { cf_draw_push_color(c); }
-CUTE_INLINE CF_Color draw_pop_color() { return cf_draw_pop_color(); }
-CUTE_INLINE CF_Color draw_peek_color() { return cf_draw_peek_color(); }
-CUTE_INLINE void draw_push_tint(CF_Color c) { cf_draw_push_tint(c); }
-CUTE_INLINE CF_Color draw_pop_tint() { return cf_draw_pop_tint(); }
-CUTE_INLINE CF_Color draw_peek_tint() { return cf_draw_peek_tint(); }
-CUTE_INLINE void draw_push_antialias(bool antialias) { cf_draw_push_antialias(antialias); }
-CUTE_INLINE bool draw_pop_antialias() { return cf_draw_pop_antialias(); }
-CUTE_INLINE bool draw_peek_antialias() { return cf_draw_peek_antialias(); }
+CF_INLINE void draw_push_layer(int layer) { cf_draw_push_layer(layer); }
+CF_INLINE int draw_pop_layer() { return cf_draw_pop_layer(); }
+CF_INLINE int draw_peek_layer() { return cf_draw_peek_layer(); }
+CF_INLINE void draw_push_color(CF_Color c) { cf_draw_push_color(c); }
+CF_INLINE CF_Color draw_pop_color() { return cf_draw_pop_color(); }
+CF_INLINE CF_Color draw_peek_color() { return cf_draw_peek_color(); }
+CF_INLINE void draw_push_tint(CF_Color c) { cf_draw_push_tint(c); }
+CF_INLINE CF_Color draw_pop_tint() { return cf_draw_pop_tint(); }
+CF_INLINE CF_Color draw_peek_tint() { return cf_draw_peek_tint(); }
+CF_INLINE void draw_push_antialias(bool antialias) { cf_draw_push_antialias(antialias); }
+CF_INLINE bool draw_pop_antialias() { return cf_draw_pop_antialias(); }
+CF_INLINE bool draw_peek_antialias() { return cf_draw_peek_antialias(); }
 
-CUTE_INLINE CF_Result make_font(const char* path, const char* font_name) { return cf_make_font(path, font_name); }
-CUTE_INLINE CF_Result make_font_mem(void* data, int size, const char* font_name) { return cf_make_font_mem(data, size, font_name); }
-CUTE_INLINE void destroy_font(const char* font_name) { cf_destroy_font(font_name); }
-CUTE_INLINE void font_add_backup_codepoints(const char* font_name, int* codepoints, int count) { cf_font_add_backup_codepoints(font_name, codepoints, count); }
-CUTE_INLINE void push_font(const char* font_name) { cf_push_font(font_name); }
-CUTE_INLINE const char* pop_font() { return cf_pop_font(); }
-CUTE_INLINE const char* peek_font() { return cf_peek_font(); }
-CUTE_INLINE void push_font_size(float size) { cf_push_font_size(size); }
-CUTE_INLINE float pop_font_size() { return cf_pop_font_size(); }
-CUTE_INLINE float peek_font_size() { return cf_peek_font_size(); }
-CUTE_INLINE void push_font_blur(int blur) { cf_push_font_blur(blur); }
-CUTE_INLINE int pop_font_blur() { return cf_pop_font_blur(); }
-CUTE_INLINE int peek_font_blur() { return cf_peek_font_blur(); }
-CUTE_INLINE void push_text_wrap_width(float width) { cf_push_text_wrap_width(width); }
-CUTE_INLINE float pop_text_wrap_width() { return cf_pop_text_wrap_width(); }
-CUTE_INLINE float peek_text_wrap_width() { return cf_peek_text_wrap_width(); }
-CUTE_INLINE void push_text_clip_box(CF_Aabb clip_box) { cf_push_text_clip_box(clip_box); }
-CUTE_INLINE CF_Aabb pop_text_clip_box() { return cf_pop_text_clip_box(); }
-CUTE_INLINE CF_Aabb peek_text_clip_box() { return cf_peek_text_clip_box(); }
-CUTE_INLINE float text_width(const char* text) { return cf_text_width(text); }
-CUTE_INLINE float text_height(const char* text) { return cf_text_height(text); }
-CUTE_INLINE void draw_text(const char* text, CF_V2 position) { cf_draw_text(text, position); }
+CF_INLINE CF_Result make_font(const char* path, const char* font_name) { return cf_make_font(path, font_name); }
+CF_INLINE CF_Result make_font_mem(void* data, int size, const char* font_name) { return cf_make_font_mem(data, size, font_name); }
+CF_INLINE void destroy_font(const char* font_name) { cf_destroy_font(font_name); }
+CF_INLINE void font_add_backup_codepoints(const char* font_name, int* codepoints, int count) { cf_font_add_backup_codepoints(font_name, codepoints, count); }
+CF_INLINE void push_font(const char* font_name) { cf_push_font(font_name); }
+CF_INLINE const char* pop_font() { return cf_pop_font(); }
+CF_INLINE const char* peek_font() { return cf_peek_font(); }
+CF_INLINE void push_font_size(float size) { cf_push_font_size(size); }
+CF_INLINE float pop_font_size() { return cf_pop_font_size(); }
+CF_INLINE float peek_font_size() { return cf_peek_font_size(); }
+CF_INLINE void push_font_blur(int blur) { cf_push_font_blur(blur); }
+CF_INLINE int pop_font_blur() { return cf_pop_font_blur(); }
+CF_INLINE int peek_font_blur() { return cf_peek_font_blur(); }
+CF_INLINE void push_text_wrap_width(float width) { cf_push_text_wrap_width(width); }
+CF_INLINE float pop_text_wrap_width() { return cf_pop_text_wrap_width(); }
+CF_INLINE float peek_text_wrap_width() { return cf_peek_text_wrap_width(); }
+CF_INLINE void push_text_clip_box(CF_Aabb clip_box) { cf_push_text_clip_box(clip_box); }
+CF_INLINE CF_Aabb pop_text_clip_box() { return cf_pop_text_clip_box(); }
+CF_INLINE CF_Aabb peek_text_clip_box() { return cf_peek_text_clip_box(); }
+CF_INLINE float text_width(const char* text) { return cf_text_width(text); }
+CF_INLINE float text_height(const char* text) { return cf_text_height(text); }
+CF_INLINE void draw_text(const char* text, CF_V2 position) { cf_draw_text(text, position); }
 
 struct TextEffect : public CF_TextEffect
 {
-	CUTE_INLINE bool on_start() const { return index_into_effect == 0; }
-	CUTE_INLINE bool on_finish() const { return index_into_effect == glyph_count - 1; }
+	CF_INLINE bool on_start() const { return index_into_effect == 0; }
+	CF_INLINE bool on_finish() const { return index_into_effect == glyph_count - 1; }
 
-	CUTE_INLINE double get_number(const char* key, double default_val = 0)
+	CF_INLINE double get_number(const char* key, double default_val = 0)
 	{
 		const CF_TextCodeVal* v = params->try_find(sintern(key));
 		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_NUMBER) {
@@ -1134,7 +1134,7 @@ struct TextEffect : public CF_TextEffect
 		}
 	}
 	
-	CUTE_INLINE CF_Color get_color(const char* key, CF_Color default_val = cf_color_white())
+	CF_INLINE CF_Color get_color(const char* key, CF_Color default_val = cf_color_white())
 	{
 		const CF_TextCodeVal* v = params->try_find(sintern(key));
 		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_COLOR) {
@@ -1144,7 +1144,7 @@ struct TextEffect : public CF_TextEffect
 		}
 	}
 	
-	CUTE_INLINE const char* get_string(const char* key, const char* default_val = NULL)
+	CF_INLINE const char* get_string(const char* key, const char* default_val = NULL)
 	{
 		const CF_TextCodeVal* v = params->try_find(sintern(key));
 		if (v && v->type == CF_TEXT_CODE_VAL_TYPE_STRING) {
@@ -1161,31 +1161,31 @@ struct TextEffect : public CF_TextEffect
 
 typedef bool (TextEffectFn)(TextEffect* fx);
 
-CUTE_INLINE void text_effect_register(const char* name, TextEffectFn* fn) { cf_text_effect_register(name, (CF_TextEffectFn*)fn); }
+CF_INLINE void text_effect_register(const char* name, TextEffectFn* fn) { cf_text_effect_register(name, (CF_TextEffectFn*)fn); }
 
-CUTE_INLINE void render_settings_filter(CF_Filter filter) { cf_render_settings_filter(filter); }
-CUTE_INLINE void render_settings_push_viewport(CF_Rect viewport) { cf_render_settings_push_viewport(viewport); }
-CUTE_INLINE CF_Rect render_settings_pop_viewport() { return cf_render_settings_pop_viewport(); }
-CUTE_INLINE CF_Rect render_settings_peek_viewport() { return cf_render_settings_peek_viewport(); }
-CUTE_INLINE void render_settings_push_scissor(CF_Rect scissor) { cf_render_settings_push_scissor(scissor); }
-CUTE_INLINE CF_Rect render_settings_pop_scissor() { return cf_render_settings_pop_scissor(); }
-CUTE_INLINE CF_Rect render_settings_peek_scissor() { return cf_render_settings_peek_scissor(); }
-CUTE_INLINE void render_settings_push_render_state(CF_RenderState render_state) { render_settings_push_render_state(render_state); }
-CUTE_INLINE CF_RenderState render_settings_pop_render_state() { return render_settings_pop_render_state(); }
-CUTE_INLINE CF_RenderState render_settings_peek_render_state() { return render_settings_peek_render_state(); }
+CF_INLINE void render_settings_filter(CF_Filter filter) { cf_render_settings_filter(filter); }
+CF_INLINE void render_settings_push_viewport(CF_Rect viewport) { cf_render_settings_push_viewport(viewport); }
+CF_INLINE CF_Rect render_settings_pop_viewport() { return cf_render_settings_pop_viewport(); }
+CF_INLINE CF_Rect render_settings_peek_viewport() { return cf_render_settings_peek_viewport(); }
+CF_INLINE void render_settings_push_scissor(CF_Rect scissor) { cf_render_settings_push_scissor(scissor); }
+CF_INLINE CF_Rect render_settings_pop_scissor() { return cf_render_settings_pop_scissor(); }
+CF_INLINE CF_Rect render_settings_peek_scissor() { return cf_render_settings_peek_scissor(); }
+CF_INLINE void render_settings_push_render_state(CF_RenderState render_state) { render_settings_push_render_state(render_state); }
+CF_INLINE CF_RenderState render_settings_pop_render_state() { return render_settings_pop_render_state(); }
+CF_INLINE CF_RenderState render_settings_peek_render_state() { return render_settings_peek_render_state(); }
 
-CUTE_INLINE void camera_dimensions(float w, float h) { cf_camera_dimensions(w, h); }
-CUTE_INLINE void camera_look_at(float x, float y) { cf_camera_look_at(x, y); }
-CUTE_INLINE void camera_rotate(float radians) { cf_camera_rotate(radians); }
-CUTE_INLINE void camera_push() { cf_camera_push(); }
-CUTE_INLINE void camera_pop() { cf_camera_pop(); }
+CF_INLINE void camera_dimensions(float w, float h) { cf_camera_dimensions(w, h); }
+CF_INLINE void camera_look_at(float x, float y) { cf_camera_look_at(x, y); }
+CF_INLINE void camera_rotate(float radians) { cf_camera_rotate(radians); }
+CF_INLINE void camera_push() { cf_camera_push(); }
+CF_INLINE void camera_pop() { cf_camera_pop(); }
 
-CUTE_INLINE void render_to(CF_Canvas canvas, bool clear = false) { cf_render_to(canvas, clear); }
+CF_INLINE void render_to(CF_Canvas canvas, bool clear = false) { cf_render_to(canvas, clear); }
 
-CUTE_INLINE CF_TemporaryImage fetch_image(const CF_Sprite* sprite) { return cf_fetch_image(sprite); }
+CF_INLINE CF_TemporaryImage fetch_image(const CF_Sprite* sprite) { return cf_fetch_image(sprite); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_DRAW_H
+#endif // CF_DRAW_H

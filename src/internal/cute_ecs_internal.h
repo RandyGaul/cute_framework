@@ -19,22 +19,22 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_ECS_INTERNAL_H
-#define CUTE_ECS_INTERNAL_H
+#ifndef CF_ECS_INTERNAL_H
+#define CF_ECS_INTERNAL_H
 
 #include <cute_kv.h>
 #include <cute_ecs.h>
 
 
-CUTE_API bool CUTE_CALL cf_kv_val_entity(CF_KeyValue* kv, CF_Entity* entity);
+CF_API bool CF_CALL cf_kv_val_entity(CF_KeyValue* kv, CF_Entity* entity);
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_ECS_INTERNAL_H
+#endif // CF_ECS_INTERNAL_H

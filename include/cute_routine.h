@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_ROUTINE_H
-#define CUTE_ROUTINE_H
+#ifndef CF_ROUTINE_H
+#define CF_ROUTINE_H
 
 #include <stdint.h>
 
@@ -215,4 +215,4 @@ inline uint64_t constexpr rt_fnv1a(const char* name)
 
 }
 
-#endif // CUTE_ROUTINE_H
+#endif // CF_ROUTINE_H

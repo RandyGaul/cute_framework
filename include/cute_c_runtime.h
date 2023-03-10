@@ -19,129 +19,129 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_C_RUNTIME_H
-#define CUTE_C_RUNTIME_H
+#ifndef CF_C_RUNTIME_H
+#define CF_C_RUNTIME_H
 
-#ifndef CUTE_ASSERT
+#ifndef CF_ASSERT
 #	include <assert.h>
 #	ifdef _MSC_VER
-#		define CUTE_ASSERT(...) (!(__VA_ARGS__) ? __debugbreak(), assert(__VA_ARGS__) : assert(__VA_ARGS__))
+#		define CF_ASSERT(...) (!(__VA_ARGS__) ? __debugbreak(), assert(__VA_ARGS__) : assert(__VA_ARGS__))
 #	else
-#		define CUTE_ASSERT assert
+#		define CF_ASSERT assert
 #	endif
 #endif
 
-#ifndef CUTE_MEMCPY
+#ifndef CF_MEMCPY
 #	include <string.h>
-#	define CUTE_MEMCPY memcpy
+#	define CF_MEMCPY memcpy
 #endif
 
-#ifndef CUTE_MEMMOVE
+#ifndef CF_MEMMOVE
 #	include <string.h>
-#	define CUTE_MEMMOVE memmove
+#	define CF_MEMMOVE memmove
 #endif
 
-#ifndef CUTE_MEMSET
+#ifndef CF_MEMSET
 #	include <string.h>
-#	define CUTE_MEMSET memset
+#	define CF_MEMSET memset
 #endif
 
-#ifndef CUTE_STRCPY
+#ifndef CF_STRCPY
 #	include <string.h>
-#	define CUTE_STRCPY strcpy
+#	define CF_STRCPY strcpy
 #endif
 
-#ifndef CUTE_STRNCPY
+#ifndef CF_STRNCPY
 #	include <string.h>
-#	define CUTE_STRNCPY strncpy
+#	define CF_STRNCPY strncpy
 #endif
 
-#ifndef CUTE_STRLEN
+#ifndef CF_STRLEN
 #	include <string.h>
-#	define CUTE_STRLEN strlen
+#	define CF_STRLEN strlen
 #endif
 
-#ifndef CUTE_MEMCHR
+#ifndef CF_MEMCHR
 #	include <string.h>
-#	define CUTE_MEMCHR memchr
+#	define CF_MEMCHR memchr
 #endif
 
-#ifndef CUTE_STRSTR
+#ifndef CF_STRSTR
 #	include <string.h>
-#	define CUTE_STRSTR strstr
+#	define CF_STRSTR strstr
 #endif
 
-#ifndef CUTE_MEMCMP
+#ifndef CF_MEMCMP
 #	include <string.h>
-#	define CUTE_MEMCMP memcmp
+#	define CF_MEMCMP memcmp
 #endif
 
-#ifndef CUTE_STRCMP
+#ifndef CF_STRCMP
 #	include <string.h>
-#	define CUTE_STRCMP strcmp
+#	define CF_STRCMP strcmp
 #endif
 
-#ifndef CUTE_STRICMP
+#ifndef CF_STRICMP
 #	include <string.h>
 #	ifdef _WIN32
-#		define CUTE_STRICMP stricmp
+#		define CF_STRICMP stricmp
 #	else
-#		define CUTE_STRICMP strcasecmp
+#		define CF_STRICMP strcasecmp
 #	endif
 #endif
 
-#ifndef CUTE_STRDUP
+#ifndef CF_STRDUP
 #	include <string.h>
-#	define CUTE_STRDUP strdup
+#	define CF_STRDUP strdup
 #endif
 
-#ifndef CUTE_STRNCMP
+#ifndef CF_STRNCMP
 #	include <string.h>
-#	define CUTE_STRNCMP strncmp
+#	define CF_STRNCMP strncmp
 #endif
 
-#ifndef CUTE_STRNICMP
+#ifndef CF_STRNICMP
 #	include <string.h>
 #	ifdef _WIN32
-#		define CUTE_STRNICMP strnicmp
+#		define CF_STRNICMP strnicmp
 #	else
-#		define CUTE_STRNICMP strncasecmp
+#		define CF_STRNICMP strncasecmp
 #	endif
 #endif
 
-#ifndef CUTE_SNPRINTF
+#ifndef CF_SNPRINTF
 #	include <stdio.h>
-#	define CUTE_SNPRINTF snprintf
+#	define CF_SNPRINTF snprintf
 #endif
 
-#ifndef CUTE_STRTOLL
+#ifndef CF_STRTOLL
 #	include <stdlib.h>
-#	define CUTE_STRTOLL strtoll
+#	define CF_STRTOLL strtoll
 #endif
 
-#ifndef CUTE_STRTOD
+#ifndef CF_STRTOD
 #	include <stdlib.h>
-#	define CUTE_STRTOD strtod
+#	define CF_STRTOD strtod
 #endif
 
-#ifndef CUTE_TOLOWER
+#ifndef CF_TOLOWER
 #	include <ctype.h>
-#	define CUTE_TOLOWER tolower
+#	define CF_TOLOWER tolower
 #endif
 
-#ifndef CUTE_TOUPPER
+#ifndef CF_TOUPPER
 #	include <ctype.h>
-#	define CUTE_TOUPPER toupper
+#	define CF_TOUPPER toupper
 #endif
 
-#ifndef CUTE_STRCHR
+#ifndef CF_STRCHR
 #	include <string.h>
-#	define CUTE_STRCHR strchr
+#	define CF_STRCHR strchr
 #endif
 
-#ifndef CUTE_STRRCHR
+#ifndef CF_STRRCHR
 #	include <string.h>
-#	define CUTE_STRRCHR strrchr
+#	define CF_STRRCHR strrchr
 #endif
 
-#endif // CUTE_C_RUNTIME_H
+#endif // CF_C_RUNTIME_H

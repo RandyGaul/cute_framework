@@ -40,11 +40,11 @@
 
 #include <SDL.h>
 
-#ifdef CUTE_WINDOWS
+#ifdef CF_WINDOWS
 #	include <SDL_syswm.h>
 #endif
 
-#ifdef CUTE_WINDOWS
+#ifdef CF_WINDOWS
 #	pragma comment (lib, "dxgi.lib")
 #	pragma comment (lib, "d3d11.lib")
 #	pragma comment (lib, "dxguid.lib")
@@ -56,9 +56,9 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 
-#ifdef CUTE_USE_CIMGUI
+#ifdef CF_USE_CIMGUI
 #include <cimgui.h>
-#endif // CUTE_FRAMEWORK_CIMGUI
+#endif // CF_FRAMEWORK_CIMGUI
 
 #define SOKOL_IMPL
 #define SOKOL_TRACE_HOOKS
@@ -161,7 +161,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 {
 	SDL_SetMainReady();
 
-#ifdef CUTE_EMSCRIPTEN
+#ifdef CF_EMSCRIPTEN
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER;
 #else
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC;
@@ -175,9 +175,9 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	}
 
 	if (options & APP_OPTIONS_DEFAULT_GFX_CONTEXT) {
-#ifdef CUTE_WINDOWS
+#ifdef CF_WINDOWS
 		options |= APP_OPTIONS_D3D11_CONTEXT;
-#elif CUTE_EMSCRIPTEN
+#elif CF_EMSCRIPTEN
 		options |= APP_OPTIONS_OPENGLES_CONTEXT;
 #else
 		options |= APP_OPTIONS_OPENGL_CONTEXT;
@@ -215,8 +215,8 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	} else {
 		window = SDL_CreateWindow(window_title, x, y, w, h, flags);
 	}
-	CF_App* app = (CF_App*)CUTE_ALLOC(sizeof(CF_App));
-	CUTE_PLACEMENT_NEW(app) CF_App;
+	CF_App* app = (CF_App*)CF_ALLOC(sizeof(CF_App));
+	CF_PLACEMENT_NEW(app) CF_App;
 	app->options = options;
 	app->window = window;
 	app->w = w;
@@ -227,7 +227,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	app->vsync = options & APP_OPTIONS_VSYNC;
 	::app = app;
 
-#ifdef CUTE_WINDOWS
+#ifdef CF_WINDOWS
 	SDL_SysWMinfo wmInfo;
 	SDL_VERSION(&wmInfo.version);
 	SDL_GetWindowWMInfo(window, &wmInfo);
@@ -241,10 +241,10 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		SDL_GL_SetSwapInterval(app->vsync);
 		SDL_GLContext ctx = SDL_GL_CreateContext(window);
 		if (!ctx) {
-			CUTE_FREE(app);
+			CF_FREE(app);
 			return cf_result_error("Unable to create OpenGL context.");
 		}
-		CUTE_MEMSET(&app->gfx_ctx_params, 0, sizeof(app->gfx_ctx_params));
+		CF_MEMSET(&app->gfx_ctx_params, 0, sizeof(app->gfx_ctx_params));
 		app->gfx_ctx_params.color_format = SG_PIXELFORMAT_RGBA8;
 		app->gfx_ctx_params.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;
 		sg_desc params = { 0 };
@@ -268,11 +268,11 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 			CF_VertexAttribute attrs[2] = { };
 			attrs[0].name = "in_pos";
 			attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
-			attrs[0].offset = CUTE_OFFSET_OF(Vertex, x);
+			attrs[0].offset = CF_OFFSET_OF(Vertex, x);
 			attrs[1].name = "in_uv";
 			attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
-			attrs[1].offset = CUTE_OFFSET_OF(Vertex, u);
-			cf_mesh_set_attributes(app->backbuffer_quad, attrs, CUTE_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
+			attrs[1].offset = CF_OFFSET_OF(Vertex, u);
+			cf_mesh_set_attributes(app->backbuffer_quad, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
 			Vertex quad[6];
 			s_quad(0, 0, 2, 2, quad);
 			cf_mesh_update_vertex_data(app->backbuffer_quad, quad, 6);
@@ -291,7 +291,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		CF_Png png;
 		cf_png_cache_load_mem("cf_default_png", default_png_data, (size_t)default_png_sz, &png);
 		app->default_image_id = png.id;
-		CUTE_ASSERT(app->default_image_id == CUTE_PNG_ID_RANGE_LO);
+		CF_ASSERT(app->default_image_id == CF_PNG_ID_RANGE_LO);
 
 		// This will clear the initial offscreen canvas to prevent the first frame from starting off
 		// with a black background.
@@ -300,17 +300,17 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 
 	if (!(options & APP_OPTIONS_NO_AUDIO)) {
 		int more_on_emscripten = 1;
-	#ifdef CUTE_EMSCRIPTEN
+	#ifdef CF_EMSCRIPTEN
 		more_on_emscripten = 4;
 	#endif
 		cs_error_t err = cs_init(NULL, 44100, 1024 * more_on_emscripten, NULL);
 		if (err == CUTE_SOUND_ERROR_NONE) {
-	#ifndef CUTE_EMSCRIPTEN
+	#ifndef CF_EMSCRIPTEN
 			cs_spawn_mix_thread();
 			app->spawned_mix_thread = true;
-	#endif // CUTE_EMSCRIPTEN
+	#endif // CF_EMSCRIPTEN
 		} else {
-			CUTE_ASSERT(false);
+			CF_ASSERT(false);
 		}
 	}
 
@@ -321,7 +321,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 
 	CF_Result err = cf_fs_init(argv0);
 	if (cf_is_error(err)) {
-		CUTE_ASSERT(0);
+		CF_ASSERT(0);
 	} else if (!(options & APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT)) {
 		// Put the base directory (the path to the exe) onto the file system search path.
 		cf_fs_mount(cf_fs_get_base_directory(), "", true);
@@ -361,7 +361,7 @@ void cf_destroy_app()
 	CF_KeyValue** schemas = app->entity_parsed_schemas.items();
 	for (int i = 0; i < schema_count; ++i) cf_kv_destroy(schemas[i]);
 	app->~CF_App();
-	CUTE_FREE(app);
+	CF_FREE(app);
 	cf_fs_destroy();
 }
 

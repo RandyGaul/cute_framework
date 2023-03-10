@@ -40,7 +40,7 @@ typedef void CF_SharedLibrary;
  *           library be called `cf_load_function`.
  * @related  cf_load_shared_library cf_unload_shared_library cf_load_function
  */
-CUTE_API CF_SharedLibrary* CUTE_CALL cf_load_shared_library(const char* path);
+CF_API CF_SharedLibrary* CF_CALL cf_load_shared_library(const char* path);
 
 /**
  * @function cf_unload_shared_library
@@ -49,7 +49,7 @@ CUTE_API CF_SharedLibrary* CUTE_CALL cf_load_shared_library(const char* path);
  * @param    library      A library of functions from `load_shared_library`.
  * @related  cf_load_shared_library cf_unload_shared_library cf_load_function
  */
-CUTE_API void cf_unload_shared_library(CF_SharedLibrary* library);
+CF_API void cf_unload_shared_library(CF_SharedLibrary* library);
 
 /**
  * @function cf_load_function
@@ -61,7 +61,7 @@ CUTE_API void cf_unload_shared_library(CF_SharedLibrary* library);
  *           you must typecast it yourself. Returns `NULL` in the case of errors.
  * @related  cf_load_shared_library cf_unload_shared_library cf_load_function
  */
-CUTE_API void* cf_load_function(CF_SharedLibrary* library, const char* function_name);
+CF_API void* cf_load_function(CF_SharedLibrary* library, const char* function_name);
 
 #ifdef __cplusplus
 }
@@ -70,17 +70,17 @@ CUTE_API void* cf_load_function(CF_SharedLibrary* library, const char* function_
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
 
 using shared_library_t = CF_SharedLibrary;
 
-CUTE_INLINE shared_library_t* load_shared_library(const char* path) { return cf_load_shared_library(path); }
-CUTE_INLINE void unload_shared_library(shared_library_t* library) { cf_unload_shared_library(library); }
-CUTE_INLINE void* load_function(shared_library_t* library, const char* function_name) { return cf_load_function(library,function_name); }
+CF_INLINE shared_library_t* load_shared_library(const char* path) { return cf_load_shared_library(path); }
+CF_INLINE void unload_shared_library(shared_library_t* library) { cf_unload_shared_library(library); }
+CF_INLINE void* load_function(shared_library_t* library, const char* function_name) { return cf_load_function(library,function_name); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP

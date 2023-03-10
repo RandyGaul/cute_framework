@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_INPUT_INTERNAL_H
-#define CUTE_INPUT_INTERNAL_H
+#ifndef CF_INPUT_INTERNAL_H
+#define CF_INPUT_INTERNAL_H
 
 #include <cute_input.h>
 #include <cute_joypad.h>
@@ -49,7 +49,7 @@ struct CF_Joypad
 
 void cf_pump_input_msgs();
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
@@ -59,6 +59,6 @@ using Joypad = CF_Joypad;
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_INPUT_INTERNAL_H
+#endif // CF_INPUT_INTERNAL_H

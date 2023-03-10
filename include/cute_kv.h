@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_KV_H
-#define CUTE_KV_H
+#ifndef CF_KV_H
+#define CF_KV_H
 
 #include "cute_defines.h"
 #include "cute_result.h"
@@ -180,10 +180,10 @@ typedef enum CF_KeyValueState
  * @param    state      The state to convert.
  * @related  CF_KeyValueState cf_key_value_state_to_string
  */
-CUTE_INLINE const char* cf_key_value_state_to_string(CF_KeyValueState state)
+CF_INLINE const char* cf_key_value_state_to_string(CF_KeyValueState state)
 {
 	switch (state) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_KV_STATE_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -207,7 +207,7 @@ CUTE_INLINE const char* cf_key_value_state_to_string(CF_KeyValueState state)
  *               "a = 10,\n"
  *               "b = 13,\n"
  *           ;
- *           size_t len = CUTE_STRLEN(string);
+ *           size_t len = CF_STRLEN(string);
  *           
  *           CF_KeyValue* kv = cf_kv_parse((void*)string, len, NULL);
  *           
@@ -232,7 +232,7 @@ CUTE_INLINE const char* cf_key_value_state_to_string(CF_KeyValueState state)
  *           ```
  * @related  CF_KeyValue cf_kv_write cf_kv_read cf_kv_destroy cf_read_reset cf_kv_key
  */
-CUTE_API CF_KeyValue* CUTE_CALL cf_kv_read(const void* data, size_t size, CF_Result* result_out);
+CF_API CF_KeyValue* CF_CALL cf_kv_read(const void* data, size_t size, CF_Result* result_out);
 
 /**
  * @function cf_kv_write
@@ -266,7 +266,7 @@ CUTE_API CF_KeyValue* CUTE_CALL cf_kv_read(const void* data, size_t size, CF_Res
  *           ```
  * @related  CF_KeyValue cf_kv_write cf_kv_read cf_kv_destroy cf_read_reset cf_kv_key
  */
-CUTE_API CF_KeyValue* CUTE_CALL cf_kv_write();
+CF_API CF_KeyValue* CF_CALL cf_kv_write();
 
 /**
  * @function cf_kv_destroy
@@ -275,7 +275,7 @@ CUTE_API CF_KeyValue* CUTE_CALL cf_kv_write();
  * @param    kv        The kv instance.
  * @related  CF_KeyValue cf_kv_write cf_kv_read cf_kv_destroy cf_read_reset cf_kv_key
  */
-CUTE_API void CUTE_CALL cf_kv_destroy(CF_KeyValue* kv);
+CF_API void CF_CALL cf_kv_destroy(CF_KeyValue* kv);
 
 /**
  * @function cf_kv_state
@@ -287,7 +287,7 @@ CUTE_API void CUTE_CALL cf_kv_destroy(CF_KeyValue* kv);
  *           can use the same code for both reading and writing.
  * @related  CF_KeyValue cf_kv_write cf_kv_read cf_kv_destroy cf_read_reset cf_kv_key
  */
-CUTE_API CF_KeyValueState CUTE_CALL cf_kv_state(CF_KeyValue* kv);
+CF_API CF_KeyValueState CF_CALL cf_kv_state(CF_KeyValue* kv);
 
 /**
  * @function cf_kv_buffer
@@ -297,7 +297,7 @@ CUTE_API CF_KeyValueState CUTE_CALL cf_kv_state(CF_KeyValue* kv);
  * @return   Returns `NULL` if the kv is not opened for write mode with `cf_kv_write`.
  * @related  CF_KeyValue cf_kv_write cf_kv_read cf_kv_destroy cf_kv_key
  */
-CUTE_API const char* CUTE_CALL cf_kv_buffer(CF_KeyValue* kv);
+CF_API const char* CF_CALL cf_kv_buffer(CF_KeyValue* kv);
 
 /**
  * @function cf_kv_buffer_size
@@ -307,7 +307,7 @@ CUTE_API const char* CUTE_CALL cf_kv_buffer(CF_KeyValue* kv);
  * @remarks  This size does not include the nul-terminator.
  * @related  CF_KeyValue cf_kv_write cf_kv_buffer cf_kv_key
  */
-CUTE_API size_t CUTE_CALL cf_kv_buffer_size(CF_KeyValue* kv);
+CF_API size_t CF_CALL cf_kv_buffer_size(CF_KeyValue* kv);
 
 /**
  * @function cf_read_reset
@@ -319,7 +319,7 @@ CUTE_API size_t CUTE_CALL cf_kv_buffer_size(CF_KeyValue* kv);
  *           function does not do any re-parsing, and merely clears/resets a few internal variables.
  * @related  CF_KeyValue cf_kv_read cf_kv_write cf_kv_key
  */
-CUTE_API void CUTE_CALL cf_read_reset(CF_KeyValue* kv);
+CF_API void CF_CALL cf_read_reset(CF_KeyValue* kv);
 
 /**
  * @function cf_kv_set_base
@@ -344,7 +344,7 @@ CUTE_API void CUTE_CALL cf_read_reset(CF_KeyValue* kv);
  *           Framework docs here: TODO_KV_TUTORIAL_LINK.
  * @related  CF_KeyValue cf_kv_read cf_kv_write cf_kv_key
  */
-CUTE_API void CUTE_CALL cf_kv_set_base(CF_KeyValue* kv, CF_KeyValue* base);
+CF_API void CF_CALL cf_kv_set_base(CF_KeyValue* kv, CF_KeyValue* base);
 
 /**
  * @function cf_kv_last_error
@@ -356,7 +356,7 @@ CUTE_API void CUTE_CALL cf_kv_set_base(CF_KeyValue* kv, CF_KeyValue* base);
  *           generated, but you can still keep going and look for other keys freely.
  * @related  TODO_KV_TUTORIAL_LINK CF_KeyValue cf_kv_read cf_kv_write cf_kv_key
  */
-CUTE_API CF_Result CUTE_CALL cf_kv_last_error(CF_KeyValue* kv);
+CF_API CF_Result CF_CALL cf_kv_last_error(CF_KeyValue* kv);
 
 /**
  * @enum     CF_KeyValueType
@@ -393,10 +393,10 @@ typedef enum CF_KeyValueType
  * @param    type       The type to convert.
  * @related  CF_KeyValueType cf_key_value_type_to_string
  */
-CUTE_INLINE const char* cf_key_value_type_to_string(CF_KeyValueType type)
+CF_INLINE const char* cf_key_value_type_to_string(CF_KeyValueType type)
 {
 	switch (type) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_KV_TYPE_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -415,7 +415,7 @@ CUTE_INLINE const char* cf_key_value_type_to_string(CF_KeyValueType type)
  *           (created by `cf_kv_read`) then this function will look for a matching key.
  * @related  CF_KeyValue cf_kv_key cf_kv_val_int32 cf_kv_val_float cf_kv_val_bool cf_kv_val_string cf_kv_val_blob cf_kv_object_begin cf_kv_array_begin
  */
-CUTE_API bool CUTE_CALL cf_kv_key(CF_KeyValue* kv, const char* key, CF_KeyValueType* type);
+CF_API bool CF_CALL cf_kv_key(CF_KeyValue* kv, const char* key, CF_KeyValueType* type);
 
 /**
  * @function cf_kv_val_uint8
@@ -430,7 +430,7 @@ CUTE_API bool CUTE_CALL cf_kv_key(CF_KeyValue* kv, const char* key, CF_KeyValueT
  *           (created by `cf_kv_read`) then this function read the value and store it in `val`.
  * @related  CF_KeyValue cf_kv_key cf_kv_val_uint8 cf_kv_val_uint16 cf_kv_val_uint32 cf_kv_val_uint64
  */
-CUTE_API bool CUTE_CALL cf_kv_val_uint8(CF_KeyValue* kv, uint8_t* val);
+CF_API bool CF_CALL cf_kv_val_uint8(CF_KeyValue* kv, uint8_t* val);
 
 /**
  * @function cf_kv_val_uint16
@@ -445,7 +445,7 @@ CUTE_API bool CUTE_CALL cf_kv_val_uint8(CF_KeyValue* kv, uint8_t* val);
  *           (created by `cf_kv_read`) then this function read the value and store it in `val`.
  * @related  CF_KeyValue cf_kv_key cf_kv_val_uint8 cf_kv_val_uint16 cf_kv_val_uint32 cf_kv_val_uint64
  */
-CUTE_API bool CUTE_CALL cf_kv_val_uint16(CF_KeyValue* kv, uint16_t* val);
+CF_API bool CF_CALL cf_kv_val_uint16(CF_KeyValue* kv, uint16_t* val);
 
 /**
  * @function cf_kv_val_uint32
@@ -460,7 +460,7 @@ CUTE_API bool CUTE_CALL cf_kv_val_uint16(CF_KeyValue* kv, uint16_t* val);
  *           (created by `cf_kv_read`) then this function read the value and store it in `val`.
  * @related  CF_KeyValue cf_kv_key cf_kv_val_uint8 cf_kv_val_uint16 cf_kv_val_uint32 cf_kv_val_uint64
  */
-CUTE_API bool CUTE_CALL cf_kv_val_uint32(CF_KeyValue* kv, uint32_t* val);
+CF_API bool CF_CALL cf_kv_val_uint32(CF_KeyValue* kv, uint32_t* val);
 
 /**
  * @function cf_kv_val_uint64
@@ -475,7 +475,7 @@ CUTE_API bool CUTE_CALL cf_kv_val_uint32(CF_KeyValue* kv, uint32_t* val);
  *           (created by `cf_kv_read`) then this function read the value and store it in `val`.
  * @related  CF_KeyValue cf_kv_key cf_kv_val_uint8 cf_kv_val_uint16 cf_kv_val_uint32 cf_kv_val_uint64
  */
-CUTE_API bool CUTE_CALL cf_kv_val_uint64(CF_KeyValue* kv, uint64_t* val);
+CF_API bool CF_CALL cf_kv_val_uint64(CF_KeyValue* kv, uint64_t* val);
 
 /**
  * @function cf_kv_val_int8
@@ -490,7 +490,7 @@ CUTE_API bool CUTE_CALL cf_kv_val_uint64(CF_KeyValue* kv, uint64_t* val);
  *           (created by `cf_kv_read`) then this function read the value and store it in `val`.
  * @related  CF_KeyValue cf_kv_key cf_kv_val_int8 cf_kv_val_int16 cf_kv_val_int32 cf_kv_val_int64
  */
-CUTE_API bool CUTE_CALL cf_kv_val_int8(CF_KeyValue* kv, int8_t* val);
+CF_API bool CF_CALL cf_kv_val_int8(CF_KeyValue* kv, int8_t* val);
 
 /**
  * @function cf_kv_val_int16
@@ -505,7 +505,7 @@ CUTE_API bool CUTE_CALL cf_kv_val_int8(CF_KeyValue* kv, int8_t* val);
  *           (created by `cf_kv_read`) then this function read the value and store it in `val`.
  * @related  CF_KeyValue cf_kv_key cf_kv_val_int8 cf_kv_val_int16 cf_kv_val_int32 cf_kv_val_int64
  */
-CUTE_API bool CUTE_CALL cf_kv_val_int16(CF_KeyValue* kv, int16_t* val);
+CF_API bool CF_CALL cf_kv_val_int16(CF_KeyValue* kv, int16_t* val);
 
 /**
  * @function cf_kv_val_int32
@@ -520,7 +520,7 @@ CUTE_API bool CUTE_CALL cf_kv_val_int16(CF_KeyValue* kv, int16_t* val);
  *           (created by `cf_kv_read`) then this function read the value and store it in `val`.
  * @related  CF_KeyValue cf_kv_key cf_kv_val_int8 cf_kv_val_int16 cf_kv_val_int32 cf_kv_val_int64
  */
-CUTE_API bool CUTE_CALL cf_kv_val_int32(CF_KeyValue* kv, int32_t* val);
+CF_API bool CF_CALL cf_kv_val_int32(CF_KeyValue* kv, int32_t* val);
 
 /**
  * @function cf_kv_val_int64
@@ -535,7 +535,7 @@ CUTE_API bool CUTE_CALL cf_kv_val_int32(CF_KeyValue* kv, int32_t* val);
  *           (created by `cf_kv_read`) then this function read the value and store it in `val`.
  * @related  CF_KeyValue cf_kv_key cf_kv_val_int8 cf_kv_val_int16 cf_kv_val_int32 cf_kv_val_int64
  */
-CUTE_API bool CUTE_CALL cf_kv_val_int64(CF_KeyValue* kv, int64_t* val);
+CF_API bool CF_CALL cf_kv_val_int64(CF_KeyValue* kv, int64_t* val);
 
 /**
  * @function cf_kv_val_float
@@ -550,7 +550,7 @@ CUTE_API bool CUTE_CALL cf_kv_val_int64(CF_KeyValue* kv, int64_t* val);
  *           (created by `cf_kv_read`) then this function read the value and store it in `val`.
  * @related  CF_KeyValue cf_kv_key cf_kv_val_float cf_kv_val_double cf_kv_val_bool
  */
-CUTE_API bool CUTE_CALL cf_kv_val_float(CF_KeyValue* kv, float* val);
+CF_API bool CF_CALL cf_kv_val_float(CF_KeyValue* kv, float* val);
 
 /**
  * @function cf_kv_val_double
@@ -565,7 +565,7 @@ CUTE_API bool CUTE_CALL cf_kv_val_float(CF_KeyValue* kv, float* val);
  *           (created by `cf_kv_read`) then this function read the value and store it in `val`.
  * @related  CF_KeyValue cf_kv_key cf_kv_val_float cf_kv_val_double cf_kv_val_bool
  */
-CUTE_API bool CUTE_CALL cf_kv_val_double(CF_KeyValue* kv, double* val);
+CF_API bool CF_CALL cf_kv_val_double(CF_KeyValue* kv, double* val);
 
 /**
  * @function cf_kv_val_bool
@@ -580,7 +580,7 @@ CUTE_API bool CUTE_CALL cf_kv_val_double(CF_KeyValue* kv, double* val);
  *           (created by `cf_kv_read`) then this function read the value and store it in `val`.
  * @related  CF_KeyValue cf_kv_key cf_kv_val_float cf_kv_val_double cf_kv_val_bool
  */
-CUTE_API bool CUTE_CALL cf_kv_val_bool(CF_KeyValue* kv, bool* val);
+CF_API bool CF_CALL cf_kv_val_bool(CF_KeyValue* kv, bool* val);
 
 /**
  * @function cf_kv_val_string
@@ -596,7 +596,7 @@ CUTE_API bool CUTE_CALL cf_kv_val_bool(CF_KeyValue* kv, bool* val);
  *           (created by `cf_kv_read`) then this function read the value and store it in `val`.
  * @related  CF_KeyValue cf_kv_key cf_kv_val_string cf_kv_val_blob
  */
-CUTE_API bool CUTE_CALL cf_kv_val_string(CF_KeyValue* kv, const char** str, size_t* size);
+CF_API bool CF_CALL cf_kv_val_string(CF_KeyValue* kv, const char** str, size_t* size);
 
 /**
  * @function cf_kv_val_blob
@@ -613,7 +613,7 @@ CUTE_API bool CUTE_CALL cf_kv_val_string(CF_KeyValue* kv, const char** str, size
  *           (created by `cf_kv_read`) then this function read the value and store it in `val`.
  * @related  CF_KeyValue cf_kv_key cf_kv_val_string cf_kv_val_blob
  */
-CUTE_API bool CUTE_CALL cf_kv_val_blob(CF_KeyValue* kv, void* data, size_t data_capacity, size_t* data_len);
+CF_API bool CF_CALL cf_kv_val_blob(CF_KeyValue* kv, void* data, size_t data_capacity, size_t* data_len);
 
 /**
  * @function cf_kv_object_begin
@@ -627,7 +627,7 @@ CUTE_API bool CUTE_CALL cf_kv_val_blob(CF_KeyValue* kv, void* data, size_t data_
  *           See `CF_KeyValue` for an overview and some examples.
  * @related  CF_KeyValue cf_kv_key cf_kv_object_begin cf_kv_object_end
  */
-CUTE_API bool CUTE_CALL cf_kv_object_begin(CF_KeyValue* kv, const char* key);
+CF_API bool CF_CALL cf_kv_object_begin(CF_KeyValue* kv, const char* key);
 
 /**
  * @function cf_kv_object_end
@@ -640,7 +640,7 @@ CUTE_API bool CUTE_CALL cf_kv_object_begin(CF_KeyValue* kv, const char* key);
  *           See `CF_KeyValue` for an overview and some examples.
  * @related  CF_KeyValue cf_kv_key cf_kv_object_begin cf_kv_object_end
  */
-CUTE_API bool CUTE_CALL cf_kv_object_end(CF_KeyValue* kv);
+CF_API bool CF_CALL cf_kv_object_end(CF_KeyValue* kv);
 
 /**
  * @function cf_kv_array_begin
@@ -655,7 +655,7 @@ CUTE_API bool CUTE_CALL cf_kv_object_end(CF_KeyValue* kv);
  *           See `CF_KeyValue` for an overview and some examples.
  * @related  CF_KeyValue cf_kv_key cf_kv_array_begin cf_kv_array_end
  */
-CUTE_API bool CUTE_CALL cf_kv_array_begin(CF_KeyValue* kv, int* count, const char* key);
+CF_API bool CF_CALL cf_kv_array_begin(CF_KeyValue* kv, int* count, const char* key);
 
 /**
  * @function cf_kv_array_end
@@ -668,7 +668,7 @@ CUTE_API bool CUTE_CALL cf_kv_array_begin(CF_KeyValue* kv, int* count, const cha
  *           See `CF_KeyValue` for an overview and some examples.
  * @related  CF_KeyValue cf_kv_key cf_kv_array_begin cf_kv_array_end
  */
-CUTE_API bool CUTE_CALL cf_kv_array_end(CF_KeyValue* kv);
+CF_API bool CF_CALL cf_kv_array_end(CF_KeyValue* kv);
 
 #ifdef __cplusplus
 }
@@ -677,7 +677,7 @@ CUTE_API bool CUTE_CALL cf_kv_array_end(CF_KeyValue* kv);
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
@@ -685,11 +685,11 @@ namespace Cute
 using KeyValue = CF_KeyValue;
 
 using KeyValueState = CF_KeyValueState;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr KeyValueState K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr KeyValueState K = CF_##K;
 CF_KV_STATE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* to_string(KeyValueState state)
+CF_INLINE const char* to_string(KeyValueState state)
 {
 	switch (state) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -700,11 +700,11 @@ CUTE_INLINE const char* to_string(KeyValueState state)
 }
 
 using KeyValueType = CF_KeyValueType;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr KeyValueType K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr KeyValueType K = CF_##K;
 CF_KV_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* to_string(KeyValueType type)
+CF_INLINE const char* to_string(KeyValueType type)
 {
 	switch (type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -714,35 +714,35 @@ CUTE_INLINE const char* to_string(KeyValueType type)
 	}
 }
 
-CUTE_INLINE KeyValue* kv_read(const void* data, size_t size, Result* result_out = NULL) { return cf_kv_read(data, size, result_out); }
-CUTE_INLINE KeyValue* kv_write(KeyValue* kv) { return cf_kv_write(); }
-CUTE_INLINE void kv_destroy(KeyValue* kv) { cf_kv_destroy(kv); }
-CUTE_INLINE KeyValueState kv_state(KeyValue* kv) { return (KeyValueState)cf_kv_state(kv); }
-CUTE_INLINE const char* kv_buffer(KeyValue* kv) { return cf_kv_buffer(kv); }
-CUTE_INLINE size_t kv_buffer_size(KeyValue* kv) { return cf_kv_buffer_size(kv); }
-CUTE_INLINE void kv_set_base(KeyValue* kv, KeyValue* base) { cf_kv_set_base(kv, base); }
-CUTE_INLINE Result kv_error_state(KeyValue* kv) { return cf_kv_last_error(kv); }
-CUTE_INLINE bool kv_key(KeyValue* kv, const char* key, KeyValueType* type = NULL) { return cf_kv_key(kv, key, type); }
-CUTE_INLINE bool kv_val(KeyValue* kv, uint8_t* val) { return cf_kv_val_uint8(kv, val); }
-CUTE_INLINE bool kv_val(KeyValue* kv, uint16_t* val) { return cf_kv_val_uint16(kv, val); }
-CUTE_INLINE bool kv_val(KeyValue* kv, uint32_t* val) { return cf_kv_val_uint32(kv, val); }
-CUTE_INLINE bool kv_val(KeyValue* kv, uint64_t* val) { return cf_kv_val_uint64(kv, val); }
-CUTE_INLINE bool kv_val(KeyValue* kv, int8_t* val) { return cf_kv_val_int8(kv, val); }
-CUTE_INLINE bool kv_val(KeyValue* kv, int16_t* val) { return cf_kv_val_int16(kv, val); }
-CUTE_INLINE bool kv_val(KeyValue* kv, int32_t* val) { return cf_kv_val_int32(kv, val); }
-CUTE_INLINE bool kv_val(KeyValue* kv, int64_t* val) { return cf_kv_val_int64(kv, val); }
-CUTE_INLINE bool kv_val(KeyValue* kv, float* val) { return cf_kv_val_float(kv, val); }
-CUTE_INLINE bool kv_val(KeyValue* kv, double* val) { return cf_kv_val_double(kv, val); }
-CUTE_INLINE bool kv_val(KeyValue* kv, bool* val) { return cf_kv_val_bool(kv, val); }
-CUTE_INLINE bool kv_val_string(KeyValue* kv, const char** str, size_t* size) { return cf_kv_val_string(kv, str, size); }
-CUTE_INLINE bool kv_val_blob(KeyValue* kv, void* data, size_t data_capacity, size_t* data_len) { return cf_kv_val_blob(kv, data, data_capacity, data_len); }
-CUTE_INLINE bool kv_object_begin(KeyValue* kv, const char* key = NULL) { return cf_kv_object_begin(kv, key); }
-CUTE_INLINE bool kv_object_end(KeyValue* kv) { return cf_kv_object_end(kv); }
-CUTE_INLINE bool kv_array_begin(KeyValue* kv, int* count, const char* key = NULL) { return cf_kv_array_begin(kv, count, key); }
-CUTE_INLINE bool kv_array_end(KeyValue* kv) { return cf_kv_array_end(kv); }
+CF_INLINE KeyValue* kv_read(const void* data, size_t size, Result* result_out = NULL) { return cf_kv_read(data, size, result_out); }
+CF_INLINE KeyValue* kv_write(KeyValue* kv) { return cf_kv_write(); }
+CF_INLINE void kv_destroy(KeyValue* kv) { cf_kv_destroy(kv); }
+CF_INLINE KeyValueState kv_state(KeyValue* kv) { return (KeyValueState)cf_kv_state(kv); }
+CF_INLINE const char* kv_buffer(KeyValue* kv) { return cf_kv_buffer(kv); }
+CF_INLINE size_t kv_buffer_size(KeyValue* kv) { return cf_kv_buffer_size(kv); }
+CF_INLINE void kv_set_base(KeyValue* kv, KeyValue* base) { cf_kv_set_base(kv, base); }
+CF_INLINE Result kv_error_state(KeyValue* kv) { return cf_kv_last_error(kv); }
+CF_INLINE bool kv_key(KeyValue* kv, const char* key, KeyValueType* type = NULL) { return cf_kv_key(kv, key, type); }
+CF_INLINE bool kv_val(KeyValue* kv, uint8_t* val) { return cf_kv_val_uint8(kv, val); }
+CF_INLINE bool kv_val(KeyValue* kv, uint16_t* val) { return cf_kv_val_uint16(kv, val); }
+CF_INLINE bool kv_val(KeyValue* kv, uint32_t* val) { return cf_kv_val_uint32(kv, val); }
+CF_INLINE bool kv_val(KeyValue* kv, uint64_t* val) { return cf_kv_val_uint64(kv, val); }
+CF_INLINE bool kv_val(KeyValue* kv, int8_t* val) { return cf_kv_val_int8(kv, val); }
+CF_INLINE bool kv_val(KeyValue* kv, int16_t* val) { return cf_kv_val_int16(kv, val); }
+CF_INLINE bool kv_val(KeyValue* kv, int32_t* val) { return cf_kv_val_int32(kv, val); }
+CF_INLINE bool kv_val(KeyValue* kv, int64_t* val) { return cf_kv_val_int64(kv, val); }
+CF_INLINE bool kv_val(KeyValue* kv, float* val) { return cf_kv_val_float(kv, val); }
+CF_INLINE bool kv_val(KeyValue* kv, double* val) { return cf_kv_val_double(kv, val); }
+CF_INLINE bool kv_val(KeyValue* kv, bool* val) { return cf_kv_val_bool(kv, val); }
+CF_INLINE bool kv_val_string(KeyValue* kv, const char** str, size_t* size) { return cf_kv_val_string(kv, str, size); }
+CF_INLINE bool kv_val_blob(KeyValue* kv, void* data, size_t data_capacity, size_t* data_len) { return cf_kv_val_blob(kv, data, data_capacity, data_len); }
+CF_INLINE bool kv_object_begin(KeyValue* kv, const char* key = NULL) { return cf_kv_object_begin(kv, key); }
+CF_INLINE bool kv_object_end(KeyValue* kv) { return cf_kv_object_end(kv); }
+CF_INLINE bool kv_array_begin(KeyValue* kv, int* count, const char* key = NULL) { return cf_kv_array_begin(kv, count, key); }
+CF_INLINE bool kv_array_end(KeyValue* kv) { return cf_kv_array_end(kv); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_KV_H
+#endif // CF_KV_H

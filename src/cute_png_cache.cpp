@@ -33,7 +33,7 @@ struct CF_PngCache
 	dyna CF_Animation** animations = NULL;
 	htbl CF_Animation*** animation_tables = NULL;
 	htbl CF_Png* pngs = NULL;
-	uint64_t id_gen = CUTE_PNG_ID_RANGE_LO;
+	uint64_t id_gen = CF_PNG_ID_RANGE_LO;
 };
 
 static CF_PngCache* cache;
@@ -42,10 +42,10 @@ void cf_png_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill)
 {
 	void* pixels = hget(cache->id_to_pixels, image_id);
 	if (!pixels) {
-		CUTE_DEBUG_PRINTF("png cache -- unable to find id %lld.", (long long int)image_id);
-		CUTE_MEMSET(buffer, 0, bytes_to_fill);
+		CF_DEBUG_PRINTF("png cache -- unable to find id %lld.", (long long int)image_id);
+		CF_MEMSET(buffer, 0, bytes_to_fill);
 	} else {
-		CUTE_MEMCPY(buffer, pixels, bytes_to_fill);
+		CF_MEMCPY(buffer, pixels, bytes_to_fill);
 	}
 }
 
@@ -57,14 +57,14 @@ CF_Png cf_png_cache_get_png(uint64_t image_id)
 
 void cf_make_png_cache()
 {
-	cache = CUTE_NEW(CF_PngCache);
+	cache = CF_NEW(CF_PngCache);
 }
 
 void cf_destroy_png_cache()
 {
 	for (int i = 0; i < hsize(cache->animations); ++i) {
 		afree(cache->animations[i]->frames);
-		CUTE_FREE(cache->animations[i]);
+		CF_FREE(cache->animations[i]);
 	}
 	hfree(cache->animations);
 
@@ -81,7 +81,7 @@ void cf_destroy_png_cache()
 	hfree(cache->pngs);
 	hfree(cache->id_to_pixels);
 
-	CUTE_FREE(cache);
+	CF_FREE(cache);
 	cache = NULL;
 }
 
@@ -133,7 +133,7 @@ void cf_png_cache_unload(CF_Png png)
 
 const CF_Animation* cf_make_png_cache_animation(const char* name, const CF_Png* pngs, int pngs_count, const float* delays, int delays_count)
 {
-	CUTE_ASSERT(pngs_count == delays_count);
+	CF_ASSERT(pngs_count == delays_count);
 	name = sintern(name);
 
 	// If already made, just return the old animation.
@@ -144,8 +144,8 @@ const CF_Animation* cf_make_png_cache_animation(const char* name, const CF_Png* 
 	}
 
 	// Otherwise allocate a new animation.
-	animation = (CF_Animation*)CUTE_ALLOC(sizeof(CF_Animation));
-	CUTE_MEMSET(animation, 0, sizeof(CF_Animation));
+	animation = (CF_Animation*)CF_ALLOC(sizeof(CF_Animation));
+	CF_MEMSET(animation, 0, sizeof(CF_Animation));
 	animation->name = name;
 	hadd(cache->animations, name, animation);
 
@@ -192,10 +192,10 @@ const CF_Animation** cf_png_cache_get_animation_table(const char* sprite_name)
 CF_Sprite cf_make_png_cache_sprite(const char* sprite_name, const CF_Animation** table)
 {
 	sprite_name = sintern(sprite_name);
-	CUTE_ASSERT(table);
+	CF_ASSERT(table);
 
 	CF_Png png = hget(cache->pngs, table[0]->frames[0].id);
-	CUTE_ASSERT(png.path);
+	CF_ASSERT(png.path);
 
 	CF_Sprite sprite = cf_sprite_defaults();
 	sprite.name = sprite_name;

@@ -37,8 +37,8 @@
 #include <test_harness.h>
 #include <internal/cute_file_system_internal.h>
 
-#define CUTE_RETURN_IF_ERROR(x) do { CF_Result err = (x); if (cf_is_error(err)) return err; } while (0)
-#define CUTE_RETURN_IF_FALSE(x) do { bool err = (x); if (!err) return err; } while (0)
+#define CF_RETURN_IF_ERROR(x) do { CF_Result err = (x); if (cf_is_error(err)) return err; } while (0)
+#define CF_RETURN_IF_FALSE(x) do { bool err = (x); if (!err) return err; } while (0)
 
 #include <test_handle.h>
 #include <test_circular_buffer.h>
@@ -78,45 +78,45 @@ int main(int argc, char* argv[])
 #endif
 
 	test_t tests[] = {
-		CUTE_TEST_CASE_ENTRY(test_path),
-		CUTE_TEST_CASE_ENTRY(test_array_macros_simple),
-		CUTE_TEST_CASE_ENTRY(test_string_macros_simple),
-		CUTE_TEST_CASE_ENTRY(test_string_macros_advanced),
-		CUTE_TEST_CASE_ENTRY(test_hashtable_macros),
-		CUTE_TEST_CASE_ENTRY(test_string_interning),
-		CUTE_TEST_CASE_ENTRY(test_dictionary_and_interning),
-		CUTE_TEST_CASE_ENTRY(test_handle_basic),
-		CUTE_TEST_CASE_ENTRY(test_handle_large_loop),
-		CUTE_TEST_CASE_ENTRY(test_handle_large_loop_and_free),
-		CUTE_TEST_CASE_ENTRY(test_handle_alloc_too_many),
-		CUTE_TEST_CASE_ENTRY(test_circular_buffer_basic),
-		CUTE_TEST_CASE_ENTRY(test_circular_buffer_fill_up_and_empty),
-		CUTE_TEST_CASE_ENTRY(test_circular_buffer_overflow),
-		CUTE_TEST_CASE_ENTRY(test_circular_buffer_underflow),
-		CUTE_TEST_CASE_ENTRY(test_CircularBufferwo_threads),
-		CUTE_TEST_CASE_ENTRY(test_doubly_list),
-		CUTE_TEST_CASE_ENTRY(test_base64_encode),
-		CUTE_TEST_CASE_ENTRY(test_kv_basic),
-		CUTE_TEST_CASE_ENTRY(test_kv_std_string_to_disk),
-		CUTE_TEST_CASE_ENTRY(test_kv_std_string_from_disk),
-		CUTE_TEST_CASE_ENTRY(test_kv_std_vector),
-		CUTE_TEST_CASE_ENTRY(test_kv_write_delta_basic),
-		CUTE_TEST_CASE_ENTRY(test_kv_read_delta_basic),
-		CUTE_TEST_CASE_ENTRY(test_kv_write_delta_deep),
-		CUTE_TEST_CASE_ENTRY(test_kv_read_delta_deep),
-		CUTE_TEST_CASE_ENTRY(test_kv_read_delta_array),
-		CUTE_TEST_CASE_ENTRY(test_kv_read_and_write_delta_blob),
-		CUTE_TEST_CASE_ENTRY(test_kv_read_delta_string),
-		CUTE_TEST_CASE_ENTRY(test_kv_read_delta_object),
-		CUTE_TEST_CASE_ENTRY(test_audio_load_synchronous),
-		CUTE_TEST_CASE_ENTRY(test_ecs_octorok),
-		CUTE_TEST_CASE_ENTRY(test_ecs_no_kv),
-		CUTE_TEST_CASE_ENTRY(test_array_list_init),
-		CUTE_TEST_CASE_ENTRY(test_aseprite_make_destroy),
-		CUTE_TEST_CASE_ENTRY(test_png_cache),
-		CUTE_TEST_CASE_ENTRY(test_make_sprite),
-		CUTE_TEST_CASE_ENTRY(test_coroutine),
-		CUTE_TEST_CASE_ENTRY(test_font_wip),
+		CF_TEST_CASE_ENTRY(test_path),
+		CF_TEST_CASE_ENTRY(test_array_macros_simple),
+		CF_TEST_CASE_ENTRY(test_string_macros_simple),
+		CF_TEST_CASE_ENTRY(test_string_macros_advanced),
+		CF_TEST_CASE_ENTRY(test_hashtable_macros),
+		CF_TEST_CASE_ENTRY(test_string_interning),
+		CF_TEST_CASE_ENTRY(test_dictionary_and_interning),
+		CF_TEST_CASE_ENTRY(test_handle_basic),
+		CF_TEST_CASE_ENTRY(test_handle_large_loop),
+		CF_TEST_CASE_ENTRY(test_handle_large_loop_and_free),
+		CF_TEST_CASE_ENTRY(test_handle_alloc_too_many),
+		CF_TEST_CASE_ENTRY(test_circular_buffer_basic),
+		CF_TEST_CASE_ENTRY(test_circular_buffer_fill_up_and_empty),
+		CF_TEST_CASE_ENTRY(test_circular_buffer_overflow),
+		CF_TEST_CASE_ENTRY(test_circular_buffer_underflow),
+		CF_TEST_CASE_ENTRY(test_CircularBufferwo_threads),
+		CF_TEST_CASE_ENTRY(test_doubly_list),
+		CF_TEST_CASE_ENTRY(test_base64_encode),
+		CF_TEST_CASE_ENTRY(test_kv_basic),
+		CF_TEST_CASE_ENTRY(test_kv_std_string_to_disk),
+		CF_TEST_CASE_ENTRY(test_kv_std_string_from_disk),
+		CF_TEST_CASE_ENTRY(test_kv_std_vector),
+		CF_TEST_CASE_ENTRY(test_kv_write_delta_basic),
+		CF_TEST_CASE_ENTRY(test_kv_read_delta_basic),
+		CF_TEST_CASE_ENTRY(test_kv_write_delta_deep),
+		CF_TEST_CASE_ENTRY(test_kv_read_delta_deep),
+		CF_TEST_CASE_ENTRY(test_kv_read_delta_array),
+		CF_TEST_CASE_ENTRY(test_kv_read_and_write_delta_blob),
+		CF_TEST_CASE_ENTRY(test_kv_read_delta_string),
+		CF_TEST_CASE_ENTRY(test_kv_read_delta_object),
+		CF_TEST_CASE_ENTRY(test_audio_load_synchronous),
+		CF_TEST_CASE_ENTRY(test_ecs_octorok),
+		CF_TEST_CASE_ENTRY(test_ecs_no_kv),
+		CF_TEST_CASE_ENTRY(test_array_list_init),
+		CF_TEST_CASE_ENTRY(test_aseprite_make_destroy),
+		CF_TEST_CASE_ENTRY(test_png_cache),
+		CF_TEST_CASE_ENTRY(test_make_sprite),
+		CF_TEST_CASE_ENTRY(test_coroutine),
+		CF_TEST_CASE_ENTRY(test_font_wip),
 	};
 	int test_count = sizeof(tests) / sizeof(*tests);
 	int fail_count = 0;
@@ -129,13 +129,13 @@ int main(int argc, char* argv[])
 			if (do_test(test, i + 1)) fail_count++;
 		}
 		if (fail_count) {
-			fprintf(CUTE_TEST_IO_STREAM, "\033[31mFAILED\033[0m %d test case%s.\n\n", fail_count, fail_count > 1 ? "s" : "");
+			fprintf(CF_TEST_IO_STREAM, "\033[31mFAILED\033[0m %d test case%s.\n\n", fail_count, fail_count > 1 ? "s" : "");
 		} else {
-			fprintf(CUTE_TEST_IO_STREAM, "All %d tests \033[32mPASSED\033[0m.\n\n", test_count);
+			fprintf(CF_TEST_IO_STREAM, "All %d tests \033[32mPASSED\033[0m.\n\n", test_count);
 		}
 	} else if (argc == 2) {
 		const char* soak = argv[1];
-		if (CUTE_STRCMP(soak, "soak") == 0) {
+		if (CF_STRCMP(soak, "soak") == 0) {
 			while (1)
 			{
 				for (int i = 0; i < test_count; ++i)
@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
 		for (int i = 0; i < test_count; ++i)
 		{
 			test_t* test = tests + i;
-			if (CUTE_STRCMP(test_name, test->test_name) == 0) {
+			if (CF_STRCMP(test_name, test->test_name) == 0) {
 				do_test(test, 1);
 				found = 1;
 				break;
@@ -161,11 +161,11 @@ int main(int argc, char* argv[])
 		}
 
 		if (!found) {
-			fprintf(CUTE_TEST_IO_STREAM, "Unable to find test %s.\n", test_name);
+			fprintf(CF_TEST_IO_STREAM, "Unable to find test %s.\n", test_name);
 			return -1;
 		}
 	} else {
-		fprintf(CUTE_TEST_IO_STREAM, "Invalid number of parameters. Please pass in either no parameters to run all tests, or just the test function name.\nYou may also pass in \"soak\" to run tests in an infinite loop.\n");
+		fprintf(CF_TEST_IO_STREAM, "Invalid number of parameters. Please pass in either no parameters to run all tests, or just the test function name.\nYou may also pass in \"soak\" to run tests in an infinite loop.\n");
 		return -1;
 	}
 

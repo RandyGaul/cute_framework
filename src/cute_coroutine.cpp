@@ -43,11 +43,11 @@ static void s_co_fn(mco_coro* mco)
 CF_Coroutine* cf_make_coroutine(CF_CoroutineFn* fn, int stack_size, void* udata)
 {
 	mco_desc desc = mco_desc_init(s_co_fn, (size_t)stack_size);
-	CF_Coroutine* co = CUTE_NEW(CF_Coroutine);
+	CF_Coroutine* co = CF_NEW(CF_Coroutine);
 	desc.user_data = (void*)co;
 	mco_coro* mco;
 	mco_result res = mco_create(&mco, &desc);
-	CUTE_ASSERT(res == MCO_SUCCESS);
+	CF_ASSERT(res == MCO_SUCCESS);
 	co->mco = mco;
 	co->fn = fn;
 	co->udata = udata;
@@ -57,10 +57,10 @@ CF_Coroutine* cf_make_coroutine(CF_CoroutineFn* fn, int stack_size, void* udata)
 void cf_destroy_coroutine(CF_Coroutine* co)
 {
 	mco_state state = mco_status(co->mco);
-	CUTE_ASSERT(state == MCO_DEAD || state == MCO_SUSPENDED);
+	CF_ASSERT(state == MCO_DEAD || state == MCO_SUSPENDED);
 	mco_result res = mco_destroy(co->mco);
-	CUTE_ASSERT(res == MCO_SUCCESS);
-	CUTE_FREE(co);
+	CF_ASSERT(res == MCO_SUCCESS);
+	CF_FREE(co);
 }
 
 CF_Result cf_coroutine_resume(CF_Coroutine* co)

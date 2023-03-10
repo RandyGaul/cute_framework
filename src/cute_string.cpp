@@ -36,14 +36,14 @@ char* cf_sset(char* a, const char* b)
 {
 	CF_ACANARY(a);
 	if (!b) return NULL;
-	int bsize = (int)(b ? CUTE_STRLEN(b) : 0) + 1;
+	int bsize = (int)(b ? CF_STRLEN(b) : 0) + 1;
 	if (!bsize) {
 		sclear(a);
 		return a;
 	} else if (acap(a) < bsize) {
 		a = (char*)cf_agrow(a, bsize, 1);
 	}
-	CUTE_MEMCPY((void*)a, b, bsize);
+	CF_MEMCPY((void*)a, b, bsize);
 	ssize(a) = bsize;
 	return a;
 }
@@ -78,7 +78,7 @@ char* cf_sfmt_append(char* s, const char* fmt, ...)
 		va_start(args, fmt);
 		int new_capacity = scap(s) - scount(s);
 		n = 1 + vsnprintf(s + slen(s), new_capacity, fmt, args);
-		CUTE_ASSERT(n <= new_capacity);
+		CF_ASSERT(n <= new_capacity);
 		va_end(args);
 	}
 	alen(s) += n - 1;
@@ -112,7 +112,7 @@ char* cf_svfmt_append(char* s, const char* fmt, va_list args)
 		afit(s, n + slen(s));
 		int new_capacity = scap(s) - scount(s);
 		n = 1 + vsnprintf(s + slen(s), new_capacity, fmt, args);
-		CUTE_ASSERT(n <= new_capacity);
+		CF_ASSERT(n <= new_capacity);
 	}
 	alen(s) += n - 1;
 	return s;
@@ -122,9 +122,9 @@ bool cf_sprefix(char* s, const char* prefix)
 {
 	CF_ACANARY(s);
 	if (!s) return false;
-	int prefix_len = (int)(prefix ? CUTE_STRLEN(prefix) : 0);
+	int prefix_len = (int)(prefix ? CF_STRLEN(prefix) : 0);
 	bool a = slen(s) >= prefix_len;
-	bool b = !CUTE_MEMCMP(s, prefix, prefix_len);
+	bool b = !CF_MEMCMP(s, prefix, prefix_len);
 	return a && b;
 }
 
@@ -132,9 +132,9 @@ bool cf_ssuffix(char* s, const char* suffix)
 {
 	CF_ACANARY(s);
 	if (!s) return false;
-	int suffix_len = (int)(suffix ? CUTE_STRLEN(suffix) : 0);
+	int suffix_len = (int)(suffix ? CF_STRLEN(suffix) : 0);
 	bool a = slen(s) >= suffix_len;
-	bool b = !CUTE_MEMCMP(s + slen(s) - suffix_len, suffix, suffix_len);
+	bool b = !CF_MEMCMP(s + slen(s) - suffix_len, suffix, suffix_len);
 	return a && b;
 }
 
@@ -159,10 +159,10 @@ void cf_stolower(char* s)
 char* cf_sappend(char* a, const char* b)
 {
 	CF_ACANARY(a);
-	int blen = (int)CUTE_STRLEN(b);
+	int blen = (int)CF_STRLEN(b);
 	if (blen <= 0) return a;
 	sfit(a, slen(a) + blen + 1);
-	CUTE_MEMCPY(a + slen(a), b, blen);
+	CF_MEMCPY(a + slen(a), b, blen);
 	ssize(a) += blen;
 	a[slen(a)] = 0;
 	return a;
@@ -174,7 +174,7 @@ char* cf_sappend_range(char* a, const char* b, const char* b_end)
 	int blen = (int)(b_end - b);
 	if (blen <= 0) return a;
 	sfit(a, slen(a) + blen + 1);
-	CUTE_MEMCPY(a + slen(a), b, blen);
+	CF_MEMCPY(a + slen(a), b, blen);
 	ssize(a) += blen;
 	a[slen(a)] = 0;
 	return a;
@@ -189,7 +189,7 @@ char* cf_strim(char* s)
 	while (isspace(*start)) start++;
 	while (isspace(*end)) end--;
 	size_t len = end - start + 1;
-	CUTE_MEMMOVE(s, start, len);
+	CF_MEMMOVE(s, start, len);
 	s[len] = 0;
 	ssize(s) = (int)(len + 1);
 	return s;
@@ -201,7 +201,7 @@ char* cf_sltrim(char* s)
 	char* start = s;
 	while (isspace(*start)) start++;
 	size_t len = slen(s) - (start - s);
-	CUTE_MEMMOVE(s, start, len);
+	CF_MEMMOVE(s, start, len);
 	s[len] = 0;
 	ssize(s) = (int)(len + 1);
 	return s;
@@ -222,8 +222,8 @@ char* cf_slpad(char* s, char pad, int count)
 	if (cap < count) {
 		sfit(s, scount(s) + cap);
 	}
-	CUTE_MEMMOVE(s + count, s, scount(s));
-	CUTE_MEMSET(s, pad, count);
+	CF_MEMMOVE(s + count, s, scount(s));
+	CF_MEMSET(s, pad, count);
 	ssize(s) += count;
 	return s;
 }
@@ -235,7 +235,7 @@ char* cf_srpad(char* s, char pad, int count)
 	if (cap < count) {
 		sfit(s, scount(s) + cap);
 	}
-	CUTE_MEMSET(s + slen(s), pad, count);
+	CF_MEMSET(s + slen(s), pad, count);
 	ssize(s) += count;
 	s[slen(s)] = 0;
 	return s;
@@ -257,10 +257,10 @@ char* cf_ssplit_once(char* s, char split_c)
 	char* split = NULL;
 	sfit(split, len + 1);
 	ssize(split) = len + 1;
-	CUTE_MEMCPY(split, s, len);
+	CF_MEMCPY(split, s, len);
 	split[len] = 0;
 	int new_len = slen(s) - len - 1;
-	CUTE_MEMMOVE(s, s + len + 1, new_len);
+	CF_MEMMOVE(s, s + len + 1, new_len);
 	ssize(s) = new_len + 1;
 	s[new_len] = 0;
 	return split;
@@ -283,7 +283,7 @@ char** cf_ssplit(const char* s, char split_c)
 int cf_sfirst_index_of(const char* s, char c)
 {
 	if (!s) return -1;
-	const char* p = CUTE_STRCHR(s, c);
+	const char* p = CF_STRCHR(s, c);
 	if (!p) return -1;
 	return ((int)(uintptr_t)(p - s));
 }
@@ -291,7 +291,7 @@ int cf_sfirst_index_of(const char* s, char c)
 int cf_slast_index_of(const char* s, char c)
 {
 	if (!s) return -1;
-	const char* p = CUTE_STRRCHR(s, c);
+	const char* p = CF_STRRCHR(s, c);
 	if (!p) return -1;
 	return ((int)(uintptr_t)(p - s));
 }
@@ -299,8 +299,8 @@ int cf_slast_index_of(const char* s, char c)
 static uint64_t s_stoint(const char* s)
 {
 	char* end;
-	uint64_t result = CUTE_STRTOLL(s, &end, 10);
-	CUTE_ASSERT(end == s + CUTE_STRLEN(s));
+	uint64_t result = CF_STRTOLL(s, &end, 10);
+	CF_ASSERT(end == s + CF_STRLEN(s));
 	return result;
 }
 
@@ -317,8 +317,8 @@ uint64_t cf_stouint(const char* s)
 static double s_stod(const char* s)
 {
 	char* end;
-	double result = CUTE_STRTOD(s, &end);
-	CUTE_ASSERT(end == s + CUTE_STRLEN(s));
+	double result = CF_STRTOD(s, &end);
+	CF_ASSERT(end == s + CF_STRLEN(s));
 	return result;
 }
 
@@ -334,19 +334,19 @@ double cf_stodouble(const char* s)
 
 uint64_t cf_stohex(const char* s)
 {
-	if (!CUTE_STRNCMP(s, "#", 1)) s += 1;
-	if (!CUTE_STRNCMP(s, "0x", 2)) s += 2;
+	if (!CF_STRNCMP(s, "#", 1)) s += 1;
+	if (!CF_STRNCMP(s, "0x", 2)) s += 2;
 	char* end;
-	uint64_t result = CUTE_STRTOLL(s, &end, 16);
-	CUTE_ASSERT(end == s + CUTE_STRLEN(s));
+	uint64_t result = CF_STRTOLL(s, &end, 16);
+	CF_ASSERT(end == s + CF_STRLEN(s));
 	return result;
 }
 
 char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
 {
 	CF_ACANARY(s);
-	size_t replace_len = CUTE_STRLEN(replace_me);
-	size_t with_len = CUTE_STRLEN(with_me);
+	size_t replace_len = CF_STRLEN(replace_me);
+	size_t with_len = CF_STRLEN(with_me);
 	char* find;
 	char* search = s;
 	while ((find = sfind(search, replace_me))) {
@@ -354,16 +354,16 @@ char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
 		if (replace_len > with_len) {
 			int remaining = scount(s) - find_offset - (int)with_len;
 			int diff = (int)(replace_len - with_len);
-			CUTE_MEMCPY(find, with_me, with_len);
-			CUTE_MEMMOVE(find + with_len, find + replace_len, remaining);
+			CF_MEMCPY(find, with_me, with_len);
+			CF_MEMMOVE(find + with_len, find + replace_len, remaining);
 			ssize(s) -= diff;
 		} else {
 			int remaining = scount(s) - find_offset - (int)replace_len;
 			int diff = (int)(with_len - replace_len);
 			sfit(s, scount(s) + diff);
 			find = s + find_offset;
-			CUTE_MEMMOVE(find + with_len, find + replace_len, remaining);
-			CUTE_MEMCPY(find, with_me, with_len);
+			CF_MEMMOVE(find + with_len, find + replace_len, remaining);
+			CF_MEMCPY(find, with_me, with_len);
 			ssize(s) += diff;
 		}
 		search = find + with_len;
@@ -375,7 +375,7 @@ char* cf_sdedup(char* s, int ch)
 {
 	CF_ACANARY(s);
 	if (!s) return s;
-	int len = (int)CUTE_STRLEN(s);
+	int len = (int)CF_STRLEN(s);
 	int i = 0, j = 1;
 	bool dup = false;
 	while (j < len) {
@@ -411,7 +411,7 @@ char* cf_serase(char* s, int index, int count)
 		return s;
 	} else {
 		int remaining = scount(s) - (count + index) + 1;
-		CUTE_MEMMOVE(s + index, s + count + index, remaining);
+		CF_MEMMOVE(s + index, s + count + index, remaining);
 		ssize(s) -= count;
 	}
 	return s;
@@ -443,10 +443,10 @@ struct intern_table_t
 	Arena arena;
 	ReadWriteLock lock;
 
-	CUTE_INLINE void read_lock() { cf_read_lock(&lock); }
-	CUTE_INLINE void read_unlock() { cf_read_unlock(&lock); }
-	CUTE_INLINE void write_lock() { cf_write_lock(&lock); }
-	CUTE_INLINE void write_unlock() { cf_write_unlock(&lock); }
+	CF_INLINE void read_lock() { cf_read_lock(&lock); }
+	CF_INLINE void read_unlock() { cf_read_unlock(&lock); }
+	CF_INLINE void write_lock() { cf_write_lock(&lock); }
+	CF_INLINE void write_unlock() { cf_write_unlock(&lock); }
 };
 
 static intern_table_t* g_intern_table;
@@ -457,11 +457,11 @@ static intern_table_t* s_inst()
 	intern_table_t* inst = (intern_table_t*)cf_atomic_ptr_get((void**)&g_intern_table);
 	if (!inst) {
 		// Create a new instance of the table.
-		inst = (intern_table_t*)CUTE_ALLOC(sizeof(intern_table_t));
-		CUTE_MEMSET(inst, 0, sizeof(*inst));
+		inst = (intern_table_t*)CF_ALLOC(sizeof(intern_table_t));
+		CF_MEMSET(inst, 0, sizeof(*inst));
 		inst->interns = NULL;
 		inst->arena.alignment = 8;
-		inst->arena.block_size = CUTE_MB;
+		inst->arena.block_size = CF_MB;
 		inst->lock = cf_make_rw_lock();
 
 		// Try and set the global pointer. If this fails it means another thread
@@ -469,9 +469,9 @@ static intern_table_t* s_inst()
 		Result result = cf_atomic_ptr_cas((void**)&g_intern_table, NULL, inst);
 		if (is_error(result)) {
 			cf_destroy_rw_lock(&inst->lock);
-			CUTE_FREE(inst);
+			CF_FREE(inst);
 			inst = (intern_table_t*)cf_atomic_ptr_get((void**)&g_intern_table);
-			CUTE_ASSERT(inst);
+			CF_ASSERT(inst);
 		}
 	}
 	return inst;
@@ -479,7 +479,7 @@ static intern_table_t* s_inst()
 
 const char* cf_sintern(const char* s)
 {
-	return cf_sintern_range(s, s + CUTE_STRLEN(s));
+	return cf_sintern_range(s, s + CF_STRLEN(s));
 }
 
 const char* cf_sintern_range(const char* start, const char* end)
@@ -500,7 +500,7 @@ const char* cf_sintern_range(const char* start, const char* end)
 			// This loop is highly unlikely to ever actually run more than one iteration.
 			intern_t* i = intern;
 			while (i) {
-				if (len == i->len && !CUTE_STRNCMP(i->string, start, len)) {
+				if (len == i->len && !CF_STRNCMP(i->string, start, len)) {
 					return i->string;
 				}
 				i = i->next;
@@ -510,7 +510,7 @@ const char* cf_sintern_range(const char* start, const char* end)
 
 	// String is not yet interned, create a new allocation for it.
 	// We write-lock the data structure, this will wait for all readers to flush.
-	CUTE_ASSERT(!intern || intern->cookie == CF_INTERN_COOKIE);
+	CF_ASSERT(!intern || intern->cookie == CF_INTERN_COOKIE);
 	intern_t* list = intern;
 	table->write_lock();
 	intern = (intern_t*)arena_alloc(&table->arena, sizeof(intern_t) + len + 1);
@@ -518,7 +518,7 @@ const char* cf_sintern_range(const char* start, const char* end)
 	intern->cookie = CF_INTERN_COOKIE;
 	intern->len = len;
 	intern->string = (char*)(intern + 1);
-	CUTE_MEMCPY((char*)intern->string, start, len);
+	CF_MEMCPY((char*)intern->string, start, len);
 	((char*)intern->string)[len] = 0;
 	intern->next = list;
 	table->write_unlock();
@@ -536,7 +536,7 @@ void cf_sinuke_intern_table()
 	arena_reset(&table->arena);
 	hfree(table->interns);
 	cf_destroy_rw_lock(&table->lock);
-	CUTE_FREE(table);
+	CF_FREE(table);
 }
 
 // All invalid characters are encoded as the "replacement character" 0xFFFD for both
@@ -546,11 +546,11 @@ char* cf_string_append_UTF8_impl(char *s, int codepoint)
 {
 	CF_ACANARY(s);
 	if (codepoint > 0x10FFFF) codepoint = 0xFFFD;
-#define CUTE_EMIT(X, Y, Z) spush(s, X | ((codepoint >> Y) & Z))
-	     if (codepoint <    0x80) { CUTE_EMIT(0x00,0,0x7F); }
-	else if (codepoint <   0x800) { CUTE_EMIT(0xC0,6,0x1F); CUTE_EMIT(0x80, 0,  0x3F); }
-	else if (codepoint < 0x10000) { CUTE_EMIT(0xE0,12,0xF); CUTE_EMIT(0x80, 6,  0x3F); CUTE_EMIT(0x80, 0, 0x3F); }
-	else                          { CUTE_EMIT(0xF0,18,0x7); CUTE_EMIT(0x80, 12, 0x3F); CUTE_EMIT(0x80, 6, 0x3F); CUTE_EMIT(0x80, 0, 0x3F); }
+#define CF_EMIT(X, Y, Z) spush(s, X | ((codepoint >> Y) & Z))
+	     if (codepoint <    0x80) { CF_EMIT(0x00,0,0x7F); }
+	else if (codepoint <   0x800) { CF_EMIT(0xC0,6,0x1F); CF_EMIT(0x80, 0,  0x3F); }
+	else if (codepoint < 0x10000) { CF_EMIT(0xE0,12,0xF); CF_EMIT(0x80, 6,  0x3F); CF_EMIT(0x80, 0, 0x3F); }
+	else                          { CF_EMIT(0xF0,18,0x7); CF_EMIT(0x80, 12, 0x3F); CF_EMIT(0x80, 6, 0x3F); CF_EMIT(0x80, 0, 0x3F); }
 	return s;
 }
 

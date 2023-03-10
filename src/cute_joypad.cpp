@@ -38,7 +38,7 @@ void cf_joypad_system_init()
 	if (!init) {
 		init = true;
 		int result = SDL_GameControllerAddMapping((const char*)joypad_mapping_db_data);
-		CUTE_ASSERT(result != -1);
+		CF_ASSERT(result != -1);
 	}
 }
 
@@ -61,7 +61,7 @@ CF_Joypad* cf_joypad_open(int index)
 		SDL_GameController* controller = SDL_GameControllerOpen(index);
 		if (controller) {
 			SDL_Joystick* joy = SDL_GameControllerGetJoystick(controller);
-			CF_Joypad* joypad = CUTE_NEW(CF_Joypad);
+			CF_Joypad* joypad = CF_NEW(CF_Joypad);
 			joypad->controller = controller;
 			joypad->id = SDL_JoystickInstanceID(joy);
 			cf_list_push_front(&app->joypads, &joypad->node);
@@ -78,7 +78,7 @@ void cf_joypad_close(CF_Joypad* joypad)
 		cf_haptic_close(joypad->haptic);
 	}
 	SDL_GameControllerClose(joypad->controller);
-	CUTE_FREE(joypad);
+	CF_FREE(joypad);
 }
 
 bool cf_joypad_is_connected(CF_Joypad* joypad)

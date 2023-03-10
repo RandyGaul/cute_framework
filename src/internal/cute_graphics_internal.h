@@ -19,10 +19,10 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_GRAPHICS_INTERNAL_H
-#define CUTE_GRAPHICS_INTERNAL_H
+#ifndef CF_GRAPHICS_INTERNAL_H
+#define CF_GRAPHICS_INTERNAL_H
 
 void cf_destroy_graphics();
 void cf_commit();
 
-#endif // CUTE_GRAPHICS_INTERNAL_H
+#endif // CF_GRAPHICS_INTERNAL_H

@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_GUID_H
-#define CUTE_GUID_H
+#ifndef CF_GUID_H
+#define CF_GUID_H
 
 #include "cute_defines.h"
 #include "cute_c_runtime.h"
@@ -52,7 +52,7 @@ typedef struct CF_Guid
  * @remarks  The bytes are generated in a cryptographically secure way.
  * @related  CF_Guid cf_make_guid cf_guid_equal
  */
-CUTE_API CF_Guid CUTE_CALL cf_make_guid();
+CF_API CF_Guid CF_CALL cf_make_guid();
 
 /**
  * @function cf_guid_equal
@@ -62,7 +62,7 @@ CUTE_API CF_Guid CUTE_CALL cf_make_guid();
  * @param    b         A guid to compare.
  * @related  CF_Guid cf_make_guid cf_guid_equal
  */
-CUTE_INLINE bool cf_guid_equal(CF_Guid a, CF_Guid b) { return !CUTE_MEMCMP(&a, &b, sizeof(a)); }
+CF_INLINE bool cf_guid_equal(CF_Guid a, CF_Guid b) { return !CF_MEMCMP(&a, &b, sizeof(a)); }
 
 #ifdef __cplusplus
 }
@@ -71,19 +71,19 @@ CUTE_INLINE bool cf_guid_equal(CF_Guid a, CF_Guid b) { return !CUTE_MEMCMP(&a, &
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
 
 using Guid = CF_Guid;
-CUTE_INLINE bool operator==(Guid a, Guid b) { return cf_guid_equal(a, b); }
-CUTE_INLINE bool operator!=(Guid a, Guid b) { return !cf_guid_equal(a, b); }
+CF_INLINE bool operator==(Guid a, Guid b) { return cf_guid_equal(a, b); }
+CF_INLINE bool operator!=(Guid a, Guid b) { return !cf_guid_equal(a, b); }
 
-CUTE_INLINE Guid make_guid() { return cf_make_guid(); }
+CF_INLINE Guid make_guid() { return cf_make_guid(); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_GUID_H
+#endif // CF_GUID_H

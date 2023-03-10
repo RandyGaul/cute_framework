@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_A_STAR_H
-#define CUTE_A_STAR_H
+#ifndef CF_A_STAR_H
+#define CF_A_STAR_H
 
 #include "cute_defines.h"
 
@@ -54,7 +54,7 @@ typedef struct CF_AStarGrid { uint64_t id; } CF_AStarGrid;
  *           `cf_a_star_grid_set_cost` and `cf_a_star_grid_get_cost`. Free the grid when you're done using it with `cf_destroy_a_star_grid`.
  * @related  cf_destroy_a_star_grid cf_a_star_grid_set_cost cf_a_star_grid_get_cost cf_a_star
  */
-CUTE_API CF_AStarGrid CUTE_CALL cf_make_a_star_grid(int w, int h, float* cell_costs);
+CF_API CF_AStarGrid CF_CALL cf_make_a_star_grid(int w, int h, float* cell_costs);
 
 /**
  * @function cf_a_star_grid_get_cost
@@ -65,7 +65,7 @@ CUTE_API CF_AStarGrid CUTE_CALL cf_make_a_star_grid(int w, int h, float* cell_co
  * @return   Returns the cost of the grid cell.
  * @related  cf_make_a_star_grid cf_destroy_a_star_grid cf_a_star_grid_set_cost cf_a_star
  */
-CUTE_API float CUTE_CALL cf_a_star_grid_get_cost(CF_AStarGrid grid, int x, int y);
+CF_API float CF_CALL cf_a_star_grid_get_cost(CF_AStarGrid grid, int x, int y);
 
 /**
  * @function cf_a_star_grid_set_cost
@@ -76,7 +76,7 @@ CUTE_API float CUTE_CALL cf_a_star_grid_get_cost(CF_AStarGrid grid, int x, int y
  * @param    cost       The cost of the grid cell.
  * @related  cf_make_a_star_grid cf_destroy_a_star_grid cf_a_star_grid_get_cost cf_a_star
  */
-CUTE_API void CUTE_CALL cf_a_star_grid_set_cost(CF_AStarGrid grid, int x, int y, float cost);
+CF_API void CF_CALL cf_a_star_grid_set_cost(CF_AStarGrid grid, int x, int y, float cost);
 
 /**
  * @function cf_destroy_a_star_grid
@@ -85,7 +85,7 @@ CUTE_API void CUTE_CALL cf_a_star_grid_set_cost(CF_AStarGrid grid, int x, int y,
  * @param    grid       The grid.
  * @related  cf_make_a_star_grid cf_a_star_grid_set_cost cf_a_star_grid_get_cost cf_a_star
  */
-CUTE_API void CUTE_CALL cf_destroy_a_star_grid(CF_AStarGrid grid);
+CF_API void CF_CALL cf_destroy_a_star_grid(CF_AStarGrid grid);
 
 /**
  * @struct   CF_AStarOutput
@@ -126,7 +126,7 @@ typedef struct CF_AStarOutput
  *           make multithreaded calls to `cf_a_star` with the same grid, as long as you don't modify the grid cell costs in the meantime.
  * @related  CF_AStarGrid cf_free_a_star_output
  */
-CUTE_API bool CUTE_CALL cf_a_star(CF_AStarGrid grid, int start_x, int start_y, int end_x, int end_y, bool allow_diagonal_movement, CF_AStarOutput* out);
+CF_API bool CF_CALL cf_a_star(CF_AStarGrid grid, int start_x, int start_y, int end_x, int end_y, bool allow_diagonal_movement, CF_AStarOutput* out);
 
 /**
  * @function cf_free_a_star_output
@@ -135,7 +135,7 @@ CUTE_API bool CUTE_CALL cf_a_star(CF_AStarGrid grid, int start_x, int start_y, i
  * @param    out           The output from a call to `cf_a_star`.
  * @related  CF_AStarGrid cf_destroy_a_star_grid
  */
-CUTE_API void CUTE_CALL cf_free_a_star_output(CF_AStarOutput* out);
+CF_API void CF_CALL cf_free_a_star_output(CF_AStarOutput* out);
 
 #ifdef __cplusplus
 }
@@ -144,7 +144,7 @@ CUTE_API void CUTE_CALL cf_free_a_star_output(CF_AStarOutput* out);
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 #include "cute_array.h"
 
@@ -154,13 +154,13 @@ namespace Cute
 using AStarGrid = CF_AStarGrid;
 using AStarOutput = CF_AStarOutput;
 
-CUTE_INLINE AStarGrid make_a_star_grid(int w, int h, float* cell_costs) { return cf_make_a_star_grid(w, h, cell_costs); }
-CUTE_INLINE void destroy_a_star_grid(AStarGrid grid) { cf_destroy_a_star_grid(grid); }
-CUTE_INLINE bool a_star(AStarGrid grid, int start_x, int start_y, int end_x, int end_y, bool allow_diagonal_movement, AStarOutput* out = NULL) { return cf_a_star(grid, start_x, start_y, end_x, end_y, allow_diagonal_movement, out); }
-CUTE_INLINE void free_a_star_output(CF_AStarOutput* output) { cf_free_a_star_output(output); }
+CF_INLINE AStarGrid make_a_star_grid(int w, int h, float* cell_costs) { return cf_make_a_star_grid(w, h, cell_costs); }
+CF_INLINE void destroy_a_star_grid(AStarGrid grid) { cf_destroy_a_star_grid(grid); }
+CF_INLINE bool a_star(AStarGrid grid, int start_x, int start_y, int end_x, int end_y, bool allow_diagonal_movement, AStarOutput* out = NULL) { return cf_a_star(grid, start_x, start_y, end_x, end_y, allow_diagonal_movement, out); }
+CF_INLINE void free_a_star_output(CF_AStarOutput* output) { cf_free_a_star_output(output); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_A_STAR_H
+#endif // CF_A_STAR_H

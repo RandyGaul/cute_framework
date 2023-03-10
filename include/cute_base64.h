@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_BASE64_H
-#define CUTE_BASE64_H
+#ifndef CF_BASE64_H
+#define CF_BASE64_H
 
 #include "cute_defines.h"
 #include "cute_result.h"
@@ -73,7 +73,7 @@ extern "C" {
  *           base64 encoding see this link: [RFC-4648](https://tools.ietf.org/html/rfc4648) or [Wikipedia Base64](https://en.wikipedia.org/wiki/Base64).
  * @related  CF_BASE64_ENCODED_SIZE CF_BASE64_DECODED_SIZE cf_base64_encode cf_base64_decode
  */
-CUTE_API CF_Result CUTE_CALL cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size);
+CF_API CF_Result CF_CALL cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size);
 
 /**
  * @function cf_base64_decode
@@ -88,7 +88,7 @@ CUTE_API CF_Result CUTE_CALL cf_base64_encode(void* dst, size_t dst_size, const 
  *           base64 encoding see this link: [RFC-4648](https://tools.ietf.org/html/rfc4648) or [Wikipedia Base64](https://en.wikipedia.org/wiki/Base64).
  * @related  CF_BASE64_ENCODED_SIZE CF_BASE64_DECODED_SIZE cf_base64_encode cf_base64_decode
  */
-CUTE_API CF_Result CUTE_CALL cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size);
+CF_API CF_Result CF_CALL cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size);
 
 #ifdef __cplusplus
 }
@@ -97,16 +97,16 @@ CUTE_API CF_Result CUTE_CALL cf_base64_decode(void* dst, size_t dst_size, const 
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
 
-CUTE_INLINE Result base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_encode(dst, dst_size, src, src_size); }
-CUTE_INLINE Result base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_decode(dst, dst_size, src, src_size); }
+CF_INLINE Result base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_encode(dst, dst_size, src, src_size); }
+CF_INLINE Result base64_decode(void* dst, size_t dst_size, const void* src, size_t src_size) { return cf_base64_decode(dst, dst_size, src, src_size); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // !CUTE_BASE64_H
+#endif // !CF_BASE64_H

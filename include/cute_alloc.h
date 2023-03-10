@@ -19,22 +19,22 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_ALLOC_H
-#define CUTE_ALLOC_H
+#ifndef CF_ALLOC_H
+#define CF_ALLOC_H
 
 #include "cute_defines.h"
 
-#if !defined(CUTE_ALLOC) && !defined(CUTE_FREE)
+#if !defined(CF_ALLOC) && !defined(CF_FREE)
 #	ifdef _MSC_VER // Leak checking for debug Windows builds.
 #		define _CRTDBG_MAPALLOC
 #		define _CRTDBG_MAP_ALLOC
 #		include <crtdbg.h>
 #	endif
 #	include <stdlib.h>
-#	define CUTE_CALLOC(size) calloc(size, 1)
-#	define CUTE_ALLOC(size) malloc(size)
-#	define CUTE_FREE(ptr) free(ptr)
-#	define CUTE_REALLOC(ptr, size) realloc(ptr, size)
+#	define CF_CALLOC(size) calloc(size, 1)
+#	define CF_ALLOC(size) malloc(size)
+#	define CF_FREE(ptr) free(ptr)
+#	define CF_REALLOC(ptr, size) realloc(ptr, size)
 #endif
 
 //--------------------------------------------------------------------------------------------------
@@ -42,16 +42,16 @@
 // This avoids including thousands of lines of code in <new>, and also lets us hook up our own
 // custom allocators without too much hassle.
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 	#ifdef _MSC_VER
 	#	pragma warning(disable:4291)
 	#endif
 
 	enum CF_DummyEnum { CF_DUMMY_ENUM };
 	inline void* operator new(size_t, CF_DummyEnum, void* ptr) { return ptr; }
-	#define CUTE_PLACEMENT_NEW(ptr) new(CF_DUMMY_ENUM, ptr)
-	#define CUTE_NEW(T) new(CF_DUMMY_ENUM, CUTE_ALLOC(sizeof(T))) T
-#endif // CUTE_CPP
+	#define CF_PLACEMENT_NEW(ptr) new(CF_DUMMY_ENUM, ptr)
+	#define CF_NEW(T) new(CF_DUMMY_ENUM, CF_ALLOC(sizeof(T))) T
+#endif // CF_CPP
 
 #ifdef __cplusplus
 extern "C" {
@@ -70,8 +70,8 @@ extern "C" {
  * @remarks  Aligned allocation is mostly useful as a performance optimization, or for SIMD operations that require byte alignments.
  * @related  cf_aligned_free
  */
-CUTE_API void* CUTE_CALL cf_aligned_alloc(size_t size, int alignment);
-CUTE_API void CUTE_CALL cf_aligned_free(void* p);
+CF_API void* CF_CALL cf_aligned_alloc(size_t size, int alignment);
+CF_API void CF_CALL cf_aligned_free(void* p);
 
 //--------------------------------------------------------------------------------------------------
 // Arena allocator.
@@ -102,7 +102,7 @@ typedef struct CF_Arena
  * @param    block_size    The default size of each internal call to `malloc` to form pages to further allocate from.
  * @related  cf_arena_alloc cf_arena_reset
  */
-CUTE_API void CUTE_CALL cf_arena_init(CF_Arena* arena, int alignment, int block_size);
+CF_API void CF_CALL cf_arena_init(CF_Arena* arena, int alignment, int block_size);
 
 /**
  * @function cf_arena_alloc
@@ -113,7 +113,7 @@ CUTE_API void CUTE_CALL cf_arena_init(CF_Arena* arena, int alignment, int block_
  * @return   Returns an aligned pointer of `size` bytes.
  * @related  cf_arena_init cf_arena_reset
  */
-CUTE_API void* CUTE_CALL cf_arena_alloc(CF_Arena* arena, size_t size);
+CF_API void* CF_CALL cf_arena_alloc(CF_Arena* arena, size_t size);
 
 /**
  * @function cf_arena_reset
@@ -122,7 +122,7 @@ CUTE_API void* CUTE_CALL cf_arena_alloc(CF_Arena* arena, size_t size);
  * @param    arena         The arena to reset.
  * @related  cf_arena_init cf_arena_alloc
  */
-CUTE_API void CUTE_CALL cf_arena_reset(CF_Arena* arena);
+CF_API void CF_CALL cf_arena_reset(CF_Arena* arena);
 
 //--------------------------------------------------------------------------------------------------
 // Memory pool allocator.
@@ -139,7 +139,7 @@ typedef struct CF_MemoryPool CF_MemoryPool;
  * @return   Returns a memory pool pointer.
  * @related  cf_destroy_memory_pool cf_memory_pool_alloc cf_memory_pool_try_alloc cf_memory_pool_free
  */
-CUTE_API CF_MemoryPool* CUTE_CALL cf_make_memory_pool(int element_size, int element_count, int alignment);
+CF_API CF_MemoryPool* CF_CALL cf_make_memory_pool(int element_size, int element_count, int alignment);
 
 /**
  * @function cf_destroy_memory_pool
@@ -149,7 +149,7 @@ CUTE_API CF_MemoryPool* CUTE_CALL cf_make_memory_pool(int element_size, int elem
  * @remarks  Does not clean up any allocations that overflowed to `malloc` backup. See `cf_memory_pool_alloc` for more details.
  * @related  cf_make_memory_pool cf_memory_pool_alloc cf_memory_pool_try_alloc cf_memory_pool_free
  */
-CUTE_API void CUTE_CALL cf_destroy_memory_pool(CF_MemoryPool* pool);
+CF_API void CF_CALL cf_destroy_memory_pool(CF_MemoryPool* pool);
 
 /**
  * @function cf_memory_pool_alloc
@@ -162,7 +162,7 @@ CUTE_API void CUTE_CALL cf_destroy_memory_pool(CF_MemoryPool* pool);
  *           sure they all properly cleaned up.
  * @related  cf_make_memory_pool cf_destroy_memory_pool cf_memory_pool_try_alloc cf_memory_pool_free
  */
-CUTE_API void* CUTE_CALL cf_memory_pool_alloc(CF_MemoryPool* pool);
+CF_API void* CF_CALL cf_memory_pool_alloc(CF_MemoryPool* pool);
 
 /**
  * @function cf_memory_pool_try_alloc
@@ -174,7 +174,7 @@ CUTE_API void* CUTE_CALL cf_memory_pool_alloc(CF_MemoryPool* pool);
  *           `cf_memory_pool_alloc` for more details about overflowing the pool to use `malloc` as a backup.
  * @related  cf_make_memory_pool cf_destroy_memory_pool cf_memory_pool_alloc cf_memory_pool_free
  */
-CUTE_API void* CUTE_CALL cf_memory_pool_try_alloc(CF_MemoryPool* pool);
+CF_API void* CF_CALL cf_memory_pool_try_alloc(CF_MemoryPool* pool);
 
 /**
  * @function cf_memory_pool_free
@@ -184,7 +184,7 @@ CUTE_API void* CUTE_CALL cf_memory_pool_try_alloc(CF_MemoryPool* pool);
  * @param    element        The pointer to deallocate.
  * @related  cf_make_memory_pool cf_destroy_memory_pool cf_memory_pool_alloc cf_memory_pool_try_alloc
  */
-CUTE_API void CUTE_CALL cf_memory_pool_free(CF_MemoryPool* pool, void* element);
+CF_API void CF_CALL cf_memory_pool_free(CF_MemoryPool* pool, void* element);
 
 #ifdef __cplusplus
 }
@@ -193,30 +193,30 @@ CUTE_API void CUTE_CALL cf_memory_pool_free(CF_MemoryPool* pool, void* element);
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
 
-CUTE_INLINE void* aligned_alloc(size_t size, int alignment) { return cf_aligned_alloc(size, alignment); }
-CUTE_INLINE void aligned_free(void* ptr) { return cf_aligned_free(ptr); }
+CF_INLINE void* aligned_alloc(size_t size, int alignment) { return cf_aligned_alloc(size, alignment); }
+CF_INLINE void aligned_free(void* ptr) { return cf_aligned_free(ptr); }
 
 using Arena = CF_Arena;
 
-CUTE_INLINE void arena_init(CF_Arena* arena, int alignment, int block_size) { cf_arena_init(arena, alignment, block_size); }
-CUTE_INLINE void* arena_alloc(CF_Arena* arena, size_t size) { return cf_arena_alloc(arena, size); }
-CUTE_INLINE void arena_reset(CF_Arena* arena) { return cf_arena_reset(arena); }
+CF_INLINE void arena_init(CF_Arena* arena, int alignment, int block_size) { cf_arena_init(arena, alignment, block_size); }
+CF_INLINE void* arena_alloc(CF_Arena* arena, size_t size) { return cf_arena_alloc(arena, size); }
+CF_INLINE void arena_reset(CF_Arena* arena) { return cf_arena_reset(arena); }
 
 using MemoryPool = CF_MemoryPool;
 
-CUTE_INLINE MemoryPool* make_memory_pool(int element_size, int element_count, int alignment) { return cf_make_memory_pool(element_size, element_count, alignment); }
-CUTE_INLINE void destroy_memory_pool(MemoryPool* pool) { cf_destroy_memory_pool(pool); }
-CUTE_INLINE void* memory_pool_alloc(MemoryPool* pool) { return cf_memory_pool_alloc(pool); }
-CUTE_INLINE void* memory_pool_try_alloc(MemoryPool* pool) { return cf_memory_pool_try_alloc(pool); }
-CUTE_INLINE void memory_pool_free(MemoryPool* pool, void* element) { return cf_memory_pool_free(pool, element); }
+CF_INLINE MemoryPool* make_memory_pool(int element_size, int element_count, int alignment) { return cf_make_memory_pool(element_size, element_count, alignment); }
+CF_INLINE void destroy_memory_pool(MemoryPool* pool) { cf_destroy_memory_pool(pool); }
+CF_INLINE void* memory_pool_alloc(MemoryPool* pool) { return cf_memory_pool_alloc(pool); }
+CF_INLINE void* memory_pool_try_alloc(MemoryPool* pool) { return cf_memory_pool_try_alloc(pool); }
+CF_INLINE void memory_pool_free(MemoryPool* pool, void* element) { return cf_memory_pool_free(pool, element); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_ALLOC_H
+#endif // CF_ALLOC_H

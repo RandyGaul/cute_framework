@@ -28,11 +28,11 @@ function(fetch_content_with_folder _name)
 endfunction()
 
 # Todo - Fix how turning some of these off breaks the build.
-option(CUTE_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
-option(CUTE_FRAMEWORK_WITH_HTTPS "Build Cute Framework with mbedtls for HTTPS support (Apache 2.0 license)." ON)
-option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
-option(CUTE_FRAMEWORK_BUILD_SAMPLES "Build the cute framework sample programs." ON)
-option(CUTE_FRAMEWORK_CIMGUI "Build cute framework with cimgui implementation." OFF)
+option(CF_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
+option(CF_FRAMEWORK_WITH_HTTPS "Build Cute Framework with mbedtls for HTTPS support (Apache 2.0 license)." ON)
+option(CF_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
+option(CF_FRAMEWORK_BUILD_SAMPLES "Build the cute framework sample programs." ON)
+option(CF_FRAMEWORK_CIMGUI "Build cute framework with cimgui implementation." OFF)
 
 # Platform detection.
 if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
@@ -65,14 +65,14 @@ endif()
 
 # Disable SSE for ARM Macbooks.
 if(APPLE AND "${CMAKE_OSX_ARCHITECTURES}" MATCHES "arm")
-	add_definitions(-DCUTE_SOUND_SCALAR_MODE)
+	add_definitions(-DCF_SOUND_SCALAR_MODE)
 endif()
 
 # Common directories for compiler/linker path.
 include_directories(src libraries test)
 
 # Cute Framework shared library.
-set(CUTE_SRCS
+set(CF_SRCS
 	src/cute_app.cpp
 	src/cute_array.cpp
 	src/cute_audio.cpp
@@ -123,7 +123,7 @@ set(CUTE_SRCS
 	libraries/cimgui/cimgui.cpp
 )
 
-set(CUTE_PUBLIC_HDRS
+set(CF_PUBLIC_HDRS
 	include/cute_alloc.h
 	include/cute_app.h
 	include/cute_audio.h
@@ -188,8 +188,8 @@ set(SOKOL_HDRS
 	libraries/sokol/sokol_gfx_imgui.h
 )
 
-set(CUTE_HDRS
-	${CUTE_PUBLIC_HDRS}
+set(CF_HDRS
+	${CF_PUBLIC_HDRS}
 	${IMGUI_HDRS}
 	${CIMGUI_HDRS}
 	${SOKOL_HDRS}
@@ -213,19 +213,19 @@ set(CUTE_HDRS
 	src/shaders/backbuffer_shader.h
 )
 
-if(CUTE_FRAMEWORK_STATIC)
-	add_library(cute STATIC ${CUTE_SRCS} ${CUTE_HDRS})
-	target_compile_definitions(cute PUBLIC CUTE_STATIC)
+if(CF_FRAMEWORK_STATIC)
+	add_library(cute STATIC ${CF_SRCS} ${CF_HDRS})
+	target_compile_definitions(cute PUBLIC CF_STATIC)
 else()
-	add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS})
+	add_library(cute SHARED ${CF_SRCS} ${CF_HDRS})
 endif()
-target_compile_definitions(cute PRIVATE CUTE_EXPORT)
+target_compile_definitions(cute PRIVATE CF_EXPORT)
 
-if(CUTE_FRAMEWORK_CIMGUI)
-	if(CUTE_FRAMEWORK_STATIC)
+if(CF_FRAMEWORK_CIMGUI)
+	if(CF_FRAMEWORK_STATIC)
 		target_compile_definitions(cute PUBLIC CIMGUI_NO_EXPORT)
 	endif()
-	target_compile_definitions(cute PUBLIC CUTE_USE_CIMGUI)
+	target_compile_definitions(cute PUBLIC CF_USE_CIMGUI)
 endif()
 
 # PhysicsFS, always statically linked.
@@ -268,19 +268,19 @@ if(MACOSX)
 	find_library(FOUNDATION Foundation)
 	find_library(SECURITY Security)
 	find_package(OpenGL REQUIRED)
-	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${OPENGL_LIBRARIES})
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${OPENGL_LIBRARIES})
 endif()
 
 if(LINUX)
 	find_package(OpenGL REQUIRED)
-	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${OPENGL_LIBRARIES})
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${OPENGL_LIBRARIES})
 endif()
 
 add_library(physfs STATIC ${PHYSFS_SRCS})
-set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} physfs)
+set(CF_LINK_LIBS ${CF_LINK_LIBS} physfs)
 
 # Optional mbedtls for HTTPS support.
-if(CUTE_FRAMEWORK_WITH_HTTPS)
+if(CF_FRAMEWORK_WITH_HTTPS)
 	option(ENABLE_PROGRAMS "Build mbed TLS programs." OFF)
 	option(ENABLE_TESTING "Build mbed TLS tests." OFF)
 	fetch_content_with_folder(
@@ -289,7 +289,7 @@ if(CUTE_FRAMEWORK_WITH_HTTPS)
 		GIT_TAG v3.1.0
 		GIT_PROGRESS TRUE
 	)
-	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} mbedx509 mbedtls mbedcrypto)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} mbedx509 mbedtls mbedcrypto)
 endif()
 
 # SDL2 for platform support.
@@ -305,7 +305,7 @@ else()
 		GIT_PROGRESS TRUE
 	)
 endif()
-set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} SDL2main SDL2-static)
+set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL2main SDL2-static)
 target_include_directories(cute PUBLIC ${SDL2_INCLUDE_DIRS})
 
 # Some platform specific settings.
@@ -313,18 +313,18 @@ if(EMSCRIPTEN)
 	target_compile_options(cute PUBLIC -O1 -fno-rtti -fno-exceptions)
 	target_link_libraries(cute PRIVATE "-s USE_WEBGL2=1 -s ASSERTIONS=1 -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1 -s ASYNCIFY=1")
 elseif(MINGW)
-	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} d3d11 crypt32)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} d3d11 crypt32)
 elseif(WINDOWS)
-	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} crypt32)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} crypt32)
 endif()
 
 # Link up all dependencies to Cute.
-target_link_libraries(cute PUBLIC ${CUTE_LINK_LIBS})
+target_link_libraries(cute PUBLIC ${CF_LINK_LIBS})
 
 # Cute unit tests executable (optional, defaulted to also build).
-if (CUTE_FRAMEWORK_BUILD_TESTS)
-	set(CUTE_TEST_SRCS test/main.cpp)
-	set(CUTE_TEST_HDRS
+if (CF_FRAMEWORK_BUILD_TESTS)
+	set(CF_TEST_SRCS test/main.cpp)
+	set(CF_TEST_HDRS
 		test/test_circular_buffer.h
 		test/test_handle.h
 		test/test_harness.h
@@ -344,7 +344,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		test/test_font.h
 	)
 
-	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
+	add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
 	target_link_libraries(tests PRIVATE cute)
 
 	if(EMSCRIPTEN)
@@ -365,7 +365,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 endif()
 
 # Cute sample prgrams (optional, defaulted to also build).
-if (CUTE_FRAMEWORK_BUILD_SAMPLES)
+if (CF_FRAMEWORK_BUILD_SAMPLES)
 	add_executable(window samples/window.cpp)
 	target_link_libraries(window PRIVATE cute)
 	set_target_properties(window PROPERTIES FOLDER "samples")
@@ -388,7 +388,7 @@ target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui/imgui>)
 
 install(TARGETS cute EXPORT cute DESTINATION "lib")
-install(FILES ${CUTE_PUBLIC_HDRS} DESTINATION "include/cute")
+install(FILES ${CF_PUBLIC_HDRS} DESTINATION "include/cute")
 install(FILES ${IMGUI_HDRS} DESTINATION "include/cute/imgui")
 install(FILES ${CIMGUI_HDRS} DESTINATION "include/cute/cimgui")
 install(FILES ${SOKOL_HDRS} DESTINATION "include/cute/sokol")

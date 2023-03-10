@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_ASEPRITE_CACHE_INTERNAL_H
-#define CUTE_ASEPRITE_CACHE_INTERNAL_H
+#ifndef CF_ASEPRITE_CACHE_INTERNAL_H
+#define CF_ASEPRITE_CACHE_INTERNAL_H
 
 #include <cute_defines.h>
 
@@ -35,4 +35,4 @@ void cf_destroy_aseprite_cache();
 void cf_aseprite_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill);
 
 
-#endif // CUTE_ASEPRITE_CACHE_INTERNAL_H
+#endif // CF_ASEPRITE_CACHE_INTERNAL_H

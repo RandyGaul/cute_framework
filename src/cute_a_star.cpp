@@ -80,7 +80,7 @@ static float cf_internal_s_heuristic(CF_iv2 a, CF_iv2 b, float allow_diagonals)
 
 CF_AStarGrid cf_make_a_star_grid(int w, int h, float* cell_costs)
 {
-	CF_AStarGridInternal* grid = CUTE_NEW(CF_AStarGridInternal);
+	CF_AStarGridInternal* grid = CF_NEW(CF_AStarGridInternal);
 	grid->w = w;
 	grid->h = h;
 	grid->cell_costs = cell_costs;
@@ -107,7 +107,7 @@ void cf_destroy_a_star_grid(CF_AStarGrid grid_handle)
 {
 	CF_AStarGridInternal* grid = (CF_AStarGridInternal*)grid_handle.id;
 	grid->~CF_AStarGridInternal();
-	CUTE_FREE(grid);
+	CF_FREE(grid);
 }
 
 bool cf_a_star(CF_AStarGrid grid_handle, int start_x, int start_y, int end_x, int end_y, bool allow_diagonal_movement, CF_AStarOutput* out)
@@ -170,20 +170,20 @@ bool cf_a_star(CF_AStarGrid grid_handle, int start_x, int start_y, int end_x, in
 		int next_count = 0;
 		CF_AStarNodeInternal* next[8];
 
-		#define CUTE_A_STAR_ADD_SUCCESSOR(x, y) \
+		#define CF_A_STAR_ADD_SUCCESSOR(x, y) \
 			if ((x) >= 0 && (x) < w && (y) >= 0 && (y) < h) { \
 				next[next_count++] = nodes + ((y) * w + (x)); \
 			}
 
-		CUTE_A_STAR_ADD_SUCCESSOR(qp.x + 1, qp.y);
-		CUTE_A_STAR_ADD_SUCCESSOR(qp.x, qp.y + 1);
-		CUTE_A_STAR_ADD_SUCCESSOR(qp.x - 1, qp.y);
-		CUTE_A_STAR_ADD_SUCCESSOR(qp.x, qp.y - 1);
+		CF_A_STAR_ADD_SUCCESSOR(qp.x + 1, qp.y);
+		CF_A_STAR_ADD_SUCCESSOR(qp.x, qp.y + 1);
+		CF_A_STAR_ADD_SUCCESSOR(qp.x - 1, qp.y);
+		CF_A_STAR_ADD_SUCCESSOR(qp.x, qp.y - 1);
 		if (allow_diagonal_movement) {
-			CUTE_A_STAR_ADD_SUCCESSOR(qp.x + 1, qp.y + 1);
-			CUTE_A_STAR_ADD_SUCCESSOR(qp.x - 1, qp.y + 1);
-			CUTE_A_STAR_ADD_SUCCESSOR(qp.x + 1, qp.y - 1);
-			CUTE_A_STAR_ADD_SUCCESSOR(qp.x - 1, qp.y - 1);
+			CF_A_STAR_ADD_SUCCESSOR(qp.x + 1, qp.y + 1);
+			CF_A_STAR_ADD_SUCCESSOR(qp.x - 1, qp.y + 1);
+			CF_A_STAR_ADD_SUCCESSOR(qp.x + 1, qp.y - 1);
+			CF_A_STAR_ADD_SUCCESSOR(qp.x - 1, qp.y - 1);
 		}
 
 		for (int i = 0; i < next_count; ++i) {
@@ -209,7 +209,7 @@ bool cf_a_star(CF_AStarGrid grid_handle, int start_x, int start_y, int end_x, in
 	return false;
 }
 
-CUTE_API void CUTE_CALL cf_free_a_star_output(CF_AStarOutput* out)
+CF_API void CF_CALL cf_free_a_star_output(CF_AStarOutput* out)
 {
 	afree(out->x);
 	afree(out->y);

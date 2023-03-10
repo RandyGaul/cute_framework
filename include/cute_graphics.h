@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_GRAPHICS_H
-#define CUTE_GRAPHICS_H
+#ifndef CF_GRAPHICS_H
+#define CF_GRAPHICS_H
 
 #include "cute_defines.h"
 #include "cute_result.h"
@@ -203,9 +203,9 @@ typedef enum CF_BackendType
  * @brief    Returns a `CF_BackendType` converted to a string.
  * @related  CF_BackendType cf_backend_type_to_string cf_query_backend
  */
-CUTE_INLINE const char* cf_backend_type_to_string(CF_BackendType type) {
+CF_INLINE const char* cf_backend_type_to_string(CF_BackendType type) {
 	switch (type) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_BACKEND_TYPE_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -218,7 +218,7 @@ CUTE_INLINE const char* cf_backend_type_to_string(CF_BackendType type) {
  * @brief    Returns which `CF_BackendType` is currently active.
  * @related  CF_BackendType cf_backend_type_to_string cf_query_backend
  */
-CUTE_API CF_BackendType CUTE_CALL cf_query_backend();
+CF_API CF_BackendType CF_CALL cf_query_backend();
 
 /**
  * @enum     CF_PixelFormat
@@ -385,9 +385,9 @@ typedef enum CF_PixelFormat
  * @brief    Returns a `CF_PixelFormat` converted to a C string.
  * @related  CF_PixelFormat cf_pixel_format_to_string CF_PixelFormatOp cf_query_pixel_format
  */
-CUTE_INLINE const char* cf_pixel_format_to_string(CF_PixelFormat format) {
+CF_INLINE const char* cf_pixel_format_to_string(CF_PixelFormat format) {
 	switch (format) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_PIXELFORMAT_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -430,9 +430,9 @@ typedef enum CF_PixelFormatOp
  * @brief    Returns a `CF_PixelFormatOp` converted to a C string.
  * @related  CF_PixelFormat cf_pixel_format_op_to_string CF_PixelFormatOp cf_query_pixel_format
  */
-CUTE_INLINE const char* cf_pixel_format_op_to_string(CF_PixelFormatOp op) {
+CF_INLINE const char* cf_pixel_format_op_to_string(CF_PixelFormatOp op) {
 	switch (op) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_PIXELFORMAT_OP_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -447,7 +447,7 @@ CUTE_INLINE const char* cf_pixel_format_op_to_string(CF_PixelFormatOp op) {
  *           Be sure to query the device with this function to make sure your use-case is supported.
  * @related  CF_PixelFormat cf_pixel_format_op_to_string CF_PixelFormatOp cf_query_pixel_format
  */
-CUTE_API bool CUTE_CALL cf_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op);
+CF_API bool CF_CALL cf_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op);
 
 /**
  * @enum     CF_DeviceFeature
@@ -478,9 +478,9 @@ typedef enum CF_DeviceFeature
  * @brief    Returns a `CF_DeviceFeature` converted to a C string.
  * @related  CF_DeviceFeature cf_device_feature_to_string cf_query_device_feature
  */
-CUTE_INLINE const char* cf_device_feature_to_string(CF_DeviceFeature feature) {
+CF_INLINE const char* cf_device_feature_to_string(CF_DeviceFeature feature) {
 	switch (feature) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_DEVICE_FEATURE_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -493,7 +493,7 @@ CUTE_INLINE const char* cf_device_feature_to_string(CF_DeviceFeature feature) {
  * @brief    Query to see if the device can support a particular feature.
  * @related  CF_PixelFormat cf_pixel_format_op_to_string CF_PixelFormatOp cf_query_pixel_format
  */
-CUTE_API bool CUTE_CALL cf_query_device_feature(CF_DeviceFeature feature);
+CF_API bool CF_CALL cf_query_device_feature(CF_DeviceFeature feature);
 
 /**
  * @enum     CF_ResourceLimit
@@ -521,9 +521,9 @@ typedef enum CF_ResourceLimit
  * @brief    Returns a `CF_ResourceLimit` converted to a C string.
  * @related  CF_ResourceLimit cf_resource_limit_to_string cf_query_resource_limit
  */
-CUTE_INLINE const char* cf_resource_limit_to_string(CF_ResourceLimit limit) {
+CF_INLINE const char* cf_resource_limit_to_string(CF_ResourceLimit limit) {
 	switch (limit) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_RESOURCE_LIMIT_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -537,7 +537,7 @@ CUTE_INLINE const char* cf_resource_limit_to_string(CF_ResourceLimit limit) {
  * @remarks  One notable limit is on `CF_BACKEND_TYPE_GLES2` the number of vertex attributes is low.
  * @related  CF_ResourceLimit cf_resource_limit_to_string cf_query_resource_limit
  */
-CUTE_API int CUTE_CALL cf_query_resource_limit(CF_ResourceLimit limit);
+CF_API int CF_CALL cf_query_resource_limit(CF_ResourceLimit limit);
 
 //--------------------------------------------------------------------------------------------------
 // Texture.
@@ -570,9 +570,9 @@ typedef enum CF_UsageType
  * @brief    Returns a `CF_UsageType` converted to a C string.
  * @related  CF_UsageType cf_usage_type_to_string CF_TextureParams cf_make_mesh
  */
-CUTE_INLINE const char* cf_usage_type_to_string(CF_UsageType type) {
+CF_INLINE const char* cf_usage_type_to_string(CF_UsageType type) {
 	switch (type) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_USAGE_TYPE_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -605,9 +605,9 @@ typedef enum CF_Filter
  * @brief    Returns a `CF_Filter` converted to a C string.
  * @related  CF_Filter cf_filter_to_string CF_TextureParams
  */
-CUTE_INLINE const char* cf_filter_to_string(CF_Filter filter) {
+CF_INLINE const char* cf_filter_to_string(CF_Filter filter) {
 	switch (filter) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_FILTER_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -646,9 +646,9 @@ typedef enum CF_WrapMode
  * @brief    Returns a `CF_WrapMode` converted to a C string.
  * @related  CF_WrapMode cf_wrap_mode_string CF_TextureParams
  */
-CUTE_INLINE const char* cf_wrap_mode_string(CF_WrapMode mode) {
+CF_INLINE const char* cf_wrap_mode_string(CF_WrapMode mode) {
 	switch (mode) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_WRAP_MODE_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -702,7 +702,7 @@ typedef struct CF_TextureParams
  * @brief    Returns a good set of default values for `CF_TextureParams` to call `cf_make_texture`.
  * @related  CF_TextureParams CF_Texture cf_make_texture
  */
-CUTE_API CF_TextureParams CUTE_CALL cf_texture_defaults();
+CF_API CF_TextureParams CF_CALL cf_texture_defaults();
 
 /**
  * @function cf_make_texture
@@ -712,7 +712,7 @@ CUTE_API CF_TextureParams CUTE_CALL cf_texture_defaults();
  * @return   Free it up with `cf_destroy_texture` when done.
  * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_update_texture
  */
-CUTE_API CF_Texture CUTE_CALL cf_make_texture(CF_TextureParams texture_params);
+CF_API CF_Texture CF_CALL cf_make_texture(CF_TextureParams texture_params);
 
 /**
  * @function cf_destroy_texture
@@ -721,7 +721,7 @@ CUTE_API CF_Texture CUTE_CALL cf_make_texture(CF_TextureParams texture_params);
  * @param    texture   The texture.
  * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_update_texture
  */
-CUTE_API void CUTE_CALL cf_destroy_texture(CF_Texture texture);
+CF_API void CF_CALL cf_destroy_texture(CF_Texture texture);
 
 /**
  * @function cf_update_texture
@@ -733,7 +733,7 @@ CUTE_API void CUTE_CALL cf_destroy_texture(CF_Texture texture);
  * @remarks  The texture must not have been created with `CF_USAGE_TYPE_IMMUTABLE`.
  * @related  CF_TextureParams CF_Texture cf_make_texture cf_destroy_texture cf_update_texture
  */
-CUTE_API void CUTE_CALL cf_update_texture(CF_Texture texture, void* data, int size);
+CF_API void CF_CALL cf_update_texture(CF_Texture texture, void* data, int size);
 
 //--------------------------------------------------------------------------------------------------
 // Shader.
@@ -828,7 +828,7 @@ typedef struct CF_SokolShader
  * @remarks  You should instead call `CF_MAKE_SOKOL_SHADER` unless you really know what you're doing.
  * @related  CF_MAKE_SOKOL_SHADER CF_SokolShader CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
  */
-CUTE_API CF_Shader CUTE_CALL cf_make_shader(CF_SokolShader sokol_shader);
+CF_API CF_Shader CF_CALL cf_make_shader(CF_SokolShader sokol_shader);
 
 /**
  * @function cf_destroy_shader
@@ -837,7 +837,7 @@ CUTE_API CF_Shader CUTE_CALL cf_make_shader(CF_SokolShader sokol_shader);
  * @param    shader     A shader.
  * @related  CF_MAKE_SOKOL_SHADER CF_SokolShader CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
  */
-CUTE_API void CUTE_CALL cf_destroy_shader(CF_Shader shader);
+CF_API void CF_CALL cf_destroy_shader(CF_Shader shader);
 
 //--------------------------------------------------------------------------------------------------
 // Render Canvases.
@@ -871,7 +871,7 @@ typedef struct CF_CanvasParams
  * @brief    Returns a good set of default values for a `CF_CanvasParams` to call `cf_make_canvas`.
  * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_destroy_canvas cf_apply_canvas cf_clear_color
  */
-CUTE_API CF_CanvasParams CUTE_CALL cf_canvas_defaults();
+CF_API CF_CanvasParams CF_CALL cf_canvas_defaults();
 
 /**
  * @function cf_make_canvas
@@ -879,7 +879,7 @@ CUTE_API CF_CanvasParams CUTE_CALL cf_canvas_defaults();
  * @brief    Returns a new `CF_Canvas` for offscreen rendering.
  * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_destroy_canvas cf_apply_canvas cf_clear_color
  */
-CUTE_API CF_Canvas CUTE_CALL cf_make_canvas(CF_CanvasParams canvas_params);
+CF_API CF_Canvas CF_CALL cf_make_canvas(CF_CanvasParams canvas_params);
 
 /**
  * @function cf_destroy_canvas
@@ -887,7 +887,7 @@ CUTE_API CF_Canvas CUTE_CALL cf_make_canvas(CF_CanvasParams canvas_params);
  * @brief    Frees up a `CF_Canvas` created by `cf_make_canvas`.
  * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_destroy_canvas cf_apply_canvas cf_clear_color
  */
-CUTE_API void CUTE_CALL cf_destroy_canvas(CF_Canvas canvas);
+CF_API void CF_CALL cf_destroy_canvas(CF_Canvas canvas);
 
 //--------------------------------------------------------------------------------------------------
 // Mesh.
@@ -937,9 +937,9 @@ typedef enum CF_VertexFormat
  * @brief    Frees up a `CF_Canvas` created by `cf_make_canvas`.
  * @related  CF_VertexFormat cf_vertex_format_string CF_VertexAttribute cf_mesh_set_attributes
  */
-CUTE_INLINE const char* cf_vertex_format_string(CF_VertexFormat format) {
+CF_INLINE const char* cf_vertex_format_string(CF_VertexFormat format) {
 	switch (format) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_VERTEX_FORMAT_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -972,9 +972,9 @@ typedef enum CF_AttributeStep
  * @brief    Returns a `CF_AttributeStep` converted to a C string.
  * @related  CF_AttributeStep cf_attribute_step_string CF_VertexAttribute cf_mesh_set_attributes
  */
-CUTE_INLINE const char* cf_attribute_step_string(CF_AttributeStep step) {
+CF_INLINE const char* cf_attribute_step_string(CF_AttributeStep step) {
 	switch (step) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_ATTRIBUTE_STEP_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -1015,7 +1015,7 @@ typedef struct CF_VertexAttribute
  * @param    instance_buffer_size  The size of the mesh's instance buffer. Set to 0 if you're not using instancing.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
  */
-CUTE_API CF_Mesh CUTE_CALL cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size);
+CF_API CF_Mesh CF_CALL cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size);
 
 /**
  * @function cf_destroy_mesh
@@ -1024,7 +1024,7 @@ CUTE_API CF_Mesh CUTE_CALL cf_make_mesh(CF_UsageType usage_type, int vertex_buff
  * @param    mesh       The mesh.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
  */
-CUTE_API void CUTE_CALL cf_destroy_mesh(CF_Mesh mesh);
+CF_API void CF_CALL cf_destroy_mesh(CF_Mesh mesh);
 
 /**
  * @function cf_mesh_set_attributes
@@ -1040,7 +1040,7 @@ CUTE_API void CUTE_CALL cf_destroy_mesh(CF_Mesh mesh);
  *           The limit of 16 vertex attributes is less on GLES2, see `cf_query_resource_limit`.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
  */
-CUTE_API void CUTE_CALL cf_mesh_set_attributes(CF_Mesh mesh, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride);
+CF_API void CF_CALL cf_mesh_set_attributes(CF_Mesh mesh, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride);
 
 /**
  * @function cf_mesh_update_vertex_data
@@ -1055,7 +1055,7 @@ CUTE_API void CUTE_CALL cf_mesh_set_attributes(CF_Mesh mesh, const CF_VertexAttr
  *           this function once per frame.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
  */
-CUTE_API void CUTE_CALL cf_mesh_update_vertex_data(CF_Mesh mesh, void* data, int count);
+CF_API void CF_CALL cf_mesh_update_vertex_data(CF_Mesh mesh, void* data, int count);
 
 /**
  * @function cf_mesh_append_vertex_data
@@ -1072,7 +1072,7 @@ CUTE_API void CUTE_CALL cf_mesh_update_vertex_data(CF_Mesh mesh, void* data, int
  *           all previously appended data will remain untouched.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
  */
-CUTE_API int CUTE_CALL cf_mesh_append_vertex_data(CF_Mesh mesh, void* data, int count);
+CF_API int CF_CALL cf_mesh_append_vertex_data(CF_Mesh mesh, void* data, int count);
 
 /**
  * @function cf_mesh_will_overflow_vertex_data
@@ -1086,7 +1086,7 @@ CUTE_API int CUTE_CALL cf_mesh_append_vertex_data(CF_Mesh mesh, void* data, int 
  *           internal buffers.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
  */
-CUTE_API bool CUTE_CALL cf_mesh_will_overflow_vertex_data(CF_Mesh mesh, int append_count);
+CF_API bool CF_CALL cf_mesh_will_overflow_vertex_data(CF_Mesh mesh, int append_count);
 
 /**
  * @function cf_mesh_update_instance_data
@@ -1100,7 +1100,7 @@ CUTE_API bool CUTE_CALL cf_mesh_will_overflow_vertex_data(CF_Mesh mesh, int appe
  *           this function once per frame.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
  */
-CUTE_API void CUTE_CALL cf_mesh_update_instance_data(CF_Mesh mesh, void* data, int count);
+CF_API void CF_CALL cf_mesh_update_instance_data(CF_Mesh mesh, void* data, int count);
 
 /**
  * @function cf_mesh_append_instance_data
@@ -1117,7 +1117,7 @@ CUTE_API void CUTE_CALL cf_mesh_update_instance_data(CF_Mesh mesh, void* data, i
  *           all previously appended data will remain untouched.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
  */
-CUTE_API int CUTE_CALL cf_mesh_append_instance_data(CF_Mesh mesh, void* data, int count);
+CF_API int CF_CALL cf_mesh_append_instance_data(CF_Mesh mesh, void* data, int count);
 
 /**
  * @function cf_mesh_will_overflow_instance_data
@@ -1131,7 +1131,7 @@ CUTE_API int CUTE_CALL cf_mesh_append_instance_data(CF_Mesh mesh, void* data, in
  *           internal buffers.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
  */
-CUTE_API bool CUTE_CALL cf_mesh_will_overflow_instance_data(CF_Mesh mesh, int append_count);
+CF_API bool CF_CALL cf_mesh_will_overflow_instance_data(CF_Mesh mesh, int append_count);
 
 /**
  * @function cf_mesh_update_index_data
@@ -1145,7 +1145,7 @@ CUTE_API bool CUTE_CALL cf_mesh_will_overflow_instance_data(CF_Mesh mesh, int ap
  *           this function once per frame.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
  */
-CUTE_API void CUTE_CALL cf_mesh_update_index_data(CF_Mesh mesh, uint32_t* indices, int count);
+CF_API void CF_CALL cf_mesh_update_index_data(CF_Mesh mesh, uint32_t* indices, int count);
 
 /**
  * @function cf_mesh_append_index_data
@@ -1162,7 +1162,7 @@ CUTE_API void CUTE_CALL cf_mesh_update_index_data(CF_Mesh mesh, uint32_t* indice
  *           all previously appended data will remain untouched.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
  */
-CUTE_API int CUTE_CALL cf_mesh_append_index_data(CF_Mesh mesh, uint32_t* indices, int count);
+CF_API int CF_CALL cf_mesh_append_index_data(CF_Mesh mesh, uint32_t* indices, int count);
 
 /**
  * @function cf_mesh_will_overflow_index_data
@@ -1176,7 +1176,7 @@ CUTE_API int CUTE_CALL cf_mesh_append_index_data(CF_Mesh mesh, uint32_t* indices
  *           internal buffers.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
  */
-CUTE_API bool CUTE_CALL cf_mesh_will_overflow_index_data(CF_Mesh mesh, int append_count);
+CF_API bool CF_CALL cf_mesh_will_overflow_index_data(CF_Mesh mesh, int append_count);
 
 //--------------------------------------------------------------------------------------------------
 // Render state.
@@ -1209,9 +1209,9 @@ typedef enum CF_CullMode
  * @brief    Returns a `CF_CullMode` converted to a C string.
  * @related  CF_CullMode cf_cull_mode_string CF_RenderState
  */
-CUTE_INLINE const char* cf_cull_mode_string(CF_CullMode mode) {
+CF_INLINE const char* cf_cull_mode_string(CF_CullMode mode) {
 	switch (mode) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_CULL_MODE_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -1256,9 +1256,9 @@ typedef enum CF_CompareFunction
  * @brief    Returns a `CF_CompareFunction` converted to a C string.
  * @related  CF_CompareFunction cf_compare_function_string CF_StencilOp CF_StencilFunction
  */
-CUTE_INLINE const char* cf_compare_function_string(CF_CompareFunction compare) {
+CF_INLINE const char* cf_compare_function_string(CF_CompareFunction compare) {
 	switch (compare) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_COMPARE_FUNCTION_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -1303,9 +1303,9 @@ typedef enum CF_StencilOp
  * @brief    Returns a `CF_StencilOp` converted to a C string.
  * @related  CF_StencilOp cf_stencil_op_string CF_StencilFunction
  */
-CUTE_INLINE const char* cf_stencil_op_string(CF_StencilOp op) {
+CF_INLINE const char* cf_stencil_op_string(CF_StencilOp op) {
 	switch (op) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_STENCIL_OP_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -1341,9 +1341,9 @@ typedef enum CF_BlendOp
  * @brief    Returns a `CF_BlendOp` converted to a C string.
  * @related  CF_StencilOp cf_stencil_op_string CF_StencilFunction
  */
-CUTE_INLINE const char* cf_blend_op_string(CF_BlendOp op) {
+CF_INLINE const char* cf_blend_op_string(CF_BlendOp op) {
 	switch (op) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_BLEND_OP_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -1403,9 +1403,9 @@ typedef enum CF_BlendFactor
  * @brief    Returns a `CF_BlendFactor` converted to a C string.
  * @related  CF_BlendFactor cf_blend_factor_string CF_BlendState
  */
-CUTE_INLINE const char* cf_blend_factor_string(CF_BlendFactor factor) {
+CF_INLINE const char* cf_blend_factor_string(CF_BlendFactor factor) {
 	switch (factor) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_BLEND_FACTOR_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -1598,7 +1598,7 @@ typedef struct CF_RenderState
  * @brief    Returns a good set of default parameters for a `CF_RenderState`.
  * @related  CF_RenderState cf_render_state_defaults cf_material_set_render_state
  */
-CUTE_API CF_RenderState CUTE_CALL cf_render_state_defaults();
+CF_API CF_RenderState CF_CALL cf_render_state_defaults();
 
 //--------------------------------------------------------------------------------------------------
 // Material.
@@ -1640,9 +1640,9 @@ typedef enum CF_UniformType
  * @brief    Returns a `CF_UniformType` converted to a C string.
  * @related  CF_UniformType cf_uniform_type_string CF_Material cf_make_material
  */
-CUTE_INLINE const char* cf_uniform_type_string(CF_UniformType type) {
+CF_INLINE const char* cf_uniform_type_string(CF_UniformType type) {
 	switch (type) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_UNIFORM_TYPE_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -1657,7 +1657,7 @@ CUTE_INLINE const char* cf_uniform_type_string(CF_UniformType type) {
  *           uniforms (see `CF_UniformType`). For an overview see `CF_Material`.
  * @related  CF_UniformType CF_Material cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs
  */
-CUTE_API CF_Material CUTE_CALL cf_make_material();
+CF_API CF_Material CF_CALL cf_make_material();
 
 /**
  * @function cf_destroy_material
@@ -1665,7 +1665,7 @@ CUTE_API CF_Material CUTE_CALL cf_make_material();
  * @brief    Frees up a material created by `cf_make_material`.
  * @related  CF_UniformType CF_Material cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs
  */
-CUTE_API void CUTE_CALL cf_destroy_material(CF_Material material);
+CF_API void CF_CALL cf_destroy_material(CF_Material material);
 
 /**
  * @function cf_material_set_render_state
@@ -1676,7 +1676,7 @@ CUTE_API void CUTE_CALL cf_destroy_material(CF_Material material);
  * @remarks  See `CF_RenderState` for an overview.
  * @related  CF_UniformType CF_Material cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs
  */
-CUTE_API void CUTE_CALL cf_material_set_render_state(CF_Material material, CF_RenderState render_state);
+CF_API void CF_CALL cf_material_set_render_state(CF_Material material, CF_RenderState render_state);
 
 /**
  * @function cf_material_set_texture_vs
@@ -1688,7 +1688,7 @@ CUTE_API void CUTE_CALL cf_material_set_render_state(CF_Material material, CF_Re
  * @remarks  See `CF_Texture` and `CF_TextureParams` for an overview.
  * @related  CF_UniformType CF_Material cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs
  */
-CUTE_API void CUTE_CALL cf_material_set_texture_vs(CF_Material material, const char* name, CF_Texture texture);
+CF_API void CF_CALL cf_material_set_texture_vs(CF_Material material, const char* name, CF_Texture texture);
 
 /**
  * @function cf_material_set_texture_fs
@@ -1700,7 +1700,7 @@ CUTE_API void CUTE_CALL cf_material_set_texture_vs(CF_Material material, const c
  * @remarks  See `CF_Texture` and `CF_TextureParams` for an overview.
  * @related  CF_UniformType CF_Material cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs
  */
-CUTE_API void CUTE_CALL cf_material_set_texture_fs(CF_Material material, const char* name, CF_Texture texture);
+CF_API void CF_CALL cf_material_set_texture_fs(CF_Material material, const char* name, CF_Texture texture);
 
 /**
  * @function cf_material_set_uniform_vs
@@ -1722,7 +1722,7 @@ CUTE_API void CUTE_CALL cf_material_set_texture_fs(CF_Material material, const c
  *           grouped up into uniform blocks the performance overhead is usually quite minimal for setting a variety of uniform and shader combinations.
  * @related  CF_UniformType CF_Material cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs
  */
-CUTE_API void CUTE_CALL cf_material_set_uniform_vs(CF_Material material, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
+CF_API void CF_CALL cf_material_set_uniform_vs(CF_Material material, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
 
 /**
  * @function cf_material_set_uniform_fs
@@ -1744,7 +1744,7 @@ CUTE_API void CUTE_CALL cf_material_set_uniform_vs(CF_Material material, const c
  *           grouped up into uniform blocks the performance overhead is usually quite minimal for setting a variety of uniform and shader combinations.
  * @related  CF_UniformType CF_Material cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs
  */
-CUTE_API void CUTE_CALL cf_material_set_uniform_fs(CF_Material material, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
+CF_API void CF_CALL cf_material_set_uniform_fs(CF_Material material, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
 
 //--------------------------------------------------------------------------------------------------
 // Rendering Functions.
@@ -1756,7 +1756,7 @@ CUTE_API void CUTE_CALL cf_material_set_uniform_fs(CF_Material material, const c
  * @remarks  This will get used when `cf_apply_canvas` or when `cf_app_draw_onto_screen` is called.
  * @related  cf_clear_color cf_clear_color2 cf_clear_depth_stencil cf_apply_canvas cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_clear_color(float red, float green, float blue, float alpha);
+CF_API void CF_CALL cf_clear_color(float red, float green, float blue, float alpha);
 
 /**
  * @function cf_clear_color2
@@ -1765,7 +1765,7 @@ CUTE_API void CUTE_CALL cf_clear_color(float red, float green, float blue, float
  * @remarks  This will get used when `cf_apply_canvas` or when `cf_app_draw_onto_screen` is called.
  * @related  cf_clear_color cf_clear_color2 cf_clear_depth_stencil cf_apply_canvas cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_clear_color2(CF_Color color);
+CF_API void CF_CALL cf_clear_color2(CF_Color color);
 
 /**
  * @function cf_clear_depth_stencil
@@ -1774,7 +1774,7 @@ CUTE_API void CUTE_CALL cf_clear_color2(CF_Color color);
  * @remarks  This will get used when `cf_apply_canvas` or when `cf_app_draw_onto_screen` is called.
  * @related  cf_clear_color cf_clear_color2 cf_clear_depth_stencil cf_apply_canvas cf_app_draw_onto_screen
  */
-CUTE_API void CUTE_CALL cf_clear_depth_stencil(float depth, float stencil);
+CF_API void CF_CALL cf_clear_depth_stencil(float depth, float stencil);
 
 /**
  * @function cf_apply_canvas
@@ -1784,7 +1784,7 @@ CUTE_API void CUTE_CALL cf_clear_depth_stencil(float depth, float stencil);
  * @param    clear      Clears the screen to `cf_clear_color` if true.
  * @related  CF_Canvas cf_clear_color cf_apply_viewport cf_apply_scissor
  */
-CUTE_API void CUTE_CALL cf_apply_canvas(CF_Canvas canvas, bool clear);
+CF_API void CF_CALL cf_apply_canvas(CF_Canvas canvas, bool clear);
 
 /**
  * @function cf_apply_viewport
@@ -1797,7 +1797,7 @@ CUTE_API void CUTE_CALL cf_apply_canvas(CF_Canvas canvas, bool clear);
  * @remarks  The viewport is a window on the screen to render within. The canvas will be stretched to fit onto the viewport.
  * @related  cf_apply_canvas cf_apply_viewport cf_apply_scissor
  */
-CUTE_API void CUTE_CALL cf_apply_viewport(int x, int y, int width, int height);
+CF_API void CF_CALL cf_apply_viewport(int x, int y, int width, int height);
 
 /**
  * @function cf_apply_scissor
@@ -1811,7 +1811,7 @@ CUTE_API void CUTE_CALL cf_apply_viewport(int x, int y, int width, int height);
  *           scissor box will simply be ignored, rendering nothing and leaving the previous pixel contents untouched.
  * @related  cf_apply_canvas cf_apply_viewport cf_apply_scissor
  */
-CUTE_API void CUTE_CALL cf_apply_scissor(int x, int y, int width, int height);
+CF_API void CF_CALL cf_apply_scissor(int x, int y, int width, int height);
 
 /**
  * @function cf_apply_mesh
@@ -1821,7 +1821,7 @@ CUTE_API void CUTE_CALL cf_apply_scissor(int x, int y, int width, int height);
  *           the vertex shader. See `CF_Mesh` for an overview.
  * @related  CF_Mesh cf_create_mesh cf_apply_shader cf_draw_elements
  */
-CUTE_API void CUTE_CALL cf_apply_mesh(CF_Mesh mesh);
+CF_API void CF_CALL cf_apply_mesh(CF_Mesh mesh);
 
 /**
  * @function cf_apply_shader
@@ -1831,7 +1831,7 @@ CUTE_API void CUTE_CALL cf_apply_mesh(CF_Mesh mesh);
  *           vertex shader. A `CF_Material` defines uniform and texture inputs to the shader.
  * @related  CF_Mesh cf_create_mesh cf_apply_shader cf_draw_elements
  */
-CUTE_API void CUTE_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
+CF_API void CF_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
 
 /**
  * @function cf_draw_elements
@@ -1842,7 +1842,7 @@ CUTE_API void CUTE_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
  *           `cf_mesh_update_***` or `cf_mesh_append_***`.
  * @related  CF_Mesh cf_create_mesh cf_apply_shader cf_apply_canvas
  */
-CUTE_API void CUTE_CALL cf_draw_elements();
+CF_API void CF_CALL cf_draw_elements();
 
 /**
  * @function cf_unapply_canvas
@@ -1852,7 +1852,7 @@ CUTE_API void CUTE_CALL cf_draw_elements();
  *           resized and you want to resize some of your canvases as well.
  * @related  CF_Canvas cf_apply_canvas
  */
-CUTE_API void CUTE_CALL cf_unapply_canvas();
+CF_API void CF_CALL cf_unapply_canvas();
 
 #ifdef __cplusplus
 }
@@ -1861,7 +1861,7 @@ CUTE_API void CUTE_CALL cf_unapply_canvas();
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
@@ -1882,11 +1882,11 @@ using RenderState = CF_RenderState;
 using BackendType = CF_BackendType;
 
 using BackendType = CF_BackendType;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr CF_BackendType K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr CF_BackendType K = CF_##K;
 CF_BACKEND_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(CF_BackendType type) { switch(type) {
+CF_INLINE constexpr const char* to_string(CF_BackendType type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_BACKEND_TYPE_DEFS
 	#undef CF_ENUM
@@ -1895,11 +1895,11 @@ CUTE_INLINE constexpr const char* to_string(CF_BackendType type) { switch(type) 
 }
 
 using DeviceFeature = CF_DeviceFeature;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr DeviceFeature K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr DeviceFeature K = CF_##K;
 CF_DEVICE_FEATURE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(DeviceFeature type) { switch(type) {
+CF_INLINE constexpr const char* to_string(DeviceFeature type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_DEVICE_FEATURE_DEFS
 	#undef CF_ENUM
@@ -1908,11 +1908,11 @@ CUTE_INLINE constexpr const char* to_string(DeviceFeature type) { switch(type) {
 }
 
 using PixelFormat = CF_PixelFormat;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr PixelFormat K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr PixelFormat K = CF_##K;
 CF_PIXELFORMAT_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(PixelFormat type) { switch(type) {
+CF_INLINE constexpr const char* to_string(PixelFormat type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_PIXELFORMAT_DEFS
 	#undef CF_ENUM
@@ -1921,11 +1921,11 @@ CUTE_INLINE constexpr const char* to_string(PixelFormat type) { switch(type) {
 }
 
 using PixelFormatOp = CF_PixelFormatOp;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr PixelFormatOp K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr PixelFormatOp K = CF_##K;
 CF_PIXELFORMAT_OP_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(PixelFormatOp type) { switch(type) {
+CF_INLINE constexpr const char* to_string(PixelFormatOp type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_PIXELFORMAT_OP_DEFS
 	#undef CF_ENUM
@@ -1934,11 +1934,11 @@ CUTE_INLINE constexpr const char* to_string(PixelFormatOp type) { switch(type) {
 }
 
 using ResourceLimit = CF_ResourceLimit;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr ResourceLimit K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr ResourceLimit K = CF_##K;
 CF_RESOURCE_LIMIT_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(ResourceLimit type) { switch(type) {
+CF_INLINE constexpr const char* to_string(ResourceLimit type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_RESOURCE_LIMIT_DEFS
 	#undef CF_ENUM
@@ -1947,11 +1947,11 @@ CUTE_INLINE constexpr const char* to_string(ResourceLimit type) { switch(type) {
 }
 
 using UsageType = CF_UsageType;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr UsageType K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr UsageType K = CF_##K;
 CF_USAGE_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(UsageType type) { switch(type) {
+CF_INLINE constexpr const char* to_string(UsageType type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_USAGE_TYPE_DEFS
 	#undef CF_ENUM
@@ -1960,11 +1960,11 @@ CUTE_INLINE constexpr const char* to_string(UsageType type) { switch(type) {
 }
 
 using Filter = CF_Filter;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr Filter K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr Filter K = CF_##K;
 CF_FILTER_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(Filter type) { switch(type) {
+CF_INLINE constexpr const char* to_string(Filter type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_FILTER_DEFS
 	#undef CF_ENUM
@@ -1973,11 +1973,11 @@ CUTE_INLINE constexpr const char* to_string(Filter type) { switch(type) {
 }
 
 using WrapMode = CF_WrapMode;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr WrapMode K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr WrapMode K = CF_##K;
 CF_WRAP_MODE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(WrapMode type) { switch(type) {
+CF_INLINE constexpr const char* to_string(WrapMode type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_WRAP_MODE_DEFS
 	#undef CF_ENUM
@@ -1986,11 +1986,11 @@ CUTE_INLINE constexpr const char* to_string(WrapMode type) { switch(type) {
 }
 
 using VertexFormat = CF_VertexFormat;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr VertexFormat K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr VertexFormat K = CF_##K;
 CF_VERTEX_FORMAT_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(VertexFormat type) { switch(type) {
+CF_INLINE constexpr const char* to_string(VertexFormat type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_VERTEX_FORMAT_DEFS
 	#undef CF_ENUM
@@ -1999,11 +1999,11 @@ CUTE_INLINE constexpr const char* to_string(VertexFormat type) { switch(type) {
 }
 
 using AttributeStep = CF_AttributeStep;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr AttributeStep K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr AttributeStep K = CF_##K;
 CF_ATTRIBUTE_STEP_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(AttributeStep type) { switch(type) {
+CF_INLINE constexpr const char* to_string(AttributeStep type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_ATTRIBUTE_STEP_DEFS
 	#undef CF_ENUM
@@ -2012,11 +2012,11 @@ CUTE_INLINE constexpr const char* to_string(AttributeStep type) { switch(type) {
 }
 
 using CullMode = CF_CullMode;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr CullMode K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr CullMode K = CF_##K;
 CF_CULL_MODE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(CullMode type) { switch(type) {
+CF_INLINE constexpr const char* to_string(CullMode type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_CULL_MODE_DEFS
 	#undef CF_ENUM
@@ -2025,11 +2025,11 @@ CUTE_INLINE constexpr const char* to_string(CullMode type) { switch(type) {
 }
 
 using CompareFunction = CF_CompareFunction;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr CompareFunction K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr CompareFunction K = CF_##K;
 CF_COMPARE_FUNCTION_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(CompareFunction type) { switch(type) {
+CF_INLINE constexpr const char* to_string(CompareFunction type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_COMPARE_FUNCTION_DEFS
 	#undef CF_ENUM
@@ -2038,11 +2038,11 @@ CUTE_INLINE constexpr const char* to_string(CompareFunction type) { switch(type)
 }
 
 using StencilOp = CF_StencilOp;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr StencilOp K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr StencilOp K = CF_##K;
 CF_STENCIL_OP_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(StencilOp type) { switch(type) {
+CF_INLINE constexpr const char* to_string(StencilOp type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_STENCIL_OP_DEFS
 	#undef CF_ENUM
@@ -2051,11 +2051,11 @@ CUTE_INLINE constexpr const char* to_string(StencilOp type) { switch(type) {
 }
 
 using BlendOp = CF_BlendOp;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr BlendOp K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr BlendOp K = CF_##K;
 CF_BLEND_OP_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(BlendOp type) { switch(type) {
+CF_INLINE constexpr const char* to_string(BlendOp type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_BLEND_OP_DEFS
 	#undef CF_ENUM
@@ -2064,11 +2064,11 @@ CUTE_INLINE constexpr const char* to_string(BlendOp type) { switch(type) {
 }
 
 using BlendFactor = CF_BlendFactor;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr BlendFactor K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr BlendFactor K = CF_##K;
 CF_BLEND_FACTOR_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(BlendFactor type) { switch(type) {
+CF_INLINE constexpr const char* to_string(BlendFactor type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_BLEND_FACTOR_DEFS
 	#undef CF_ENUM
@@ -2077,11 +2077,11 @@ CUTE_INLINE constexpr const char* to_string(BlendFactor type) { switch(type) {
 }
 
 using UniformType = CF_UniformType;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr UniformType K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr UniformType K = CF_##K;
 CF_UNIFORM_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE constexpr const char* to_string(UniformType type) { switch(type) {
+CF_INLINE constexpr const char* to_string(UniformType type) { switch(type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
 	CF_UNIFORM_TYPE_DEFS
 	#undef CF_ENUM
@@ -2089,49 +2089,49 @@ CUTE_INLINE constexpr const char* to_string(UniformType type) { switch(type) {
 	}
 }
 
-CUTE_INLINE BackendType query_backend() { return cf_query_backend(); }
-CUTE_INLINE bool query_pixel_format(PixelFormat format, PixelFormatOp op) { return cf_query_pixel_format(format, op); }
-CUTE_INLINE bool query_device_feature(DeviceFeature feature) { return cf_query_device_feature(feature); }
-CUTE_INLINE int query_resource_limit(ResourceLimit resource_limit) { return cf_query_resource_limit(resource_limit); }
-CUTE_INLINE TextureParams texture_defaults() { return cf_texture_defaults(); }
-CUTE_INLINE Texture make_texture(TextureParams texture_params) { return cf_make_texture(texture_params); }
-CUTE_INLINE void destroy_texture(Texture texture) { cf_destroy_texture(texture); }
-CUTE_INLINE void update_texture(Texture texture, void* data, int size) { cf_update_texture(texture, data, size); }
-CUTE_INLINE Shader make_shader(SokolShader sokol_shader) { return cf_make_shader(sokol_shader); }
-CUTE_INLINE void destroy_shader(Shader shader) { cf_destroy_shader(shader); }
-CUTE_INLINE CanvasParams pass_defaults() { return cf_canvas_defaults(); }
-CUTE_INLINE Canvas make_canvas(CanvasParams pass_params) { return cf_make_canvas(pass_params); }
-CUTE_INLINE void destroy_canvas(Canvas canvas) { cf_destroy_canvas(canvas); }
-CUTE_INLINE Mesh make_mesh(UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size) { return cf_make_mesh(usage_type, vertex_buffer_size, index_buffer_size, instance_buffer_size); }
-CUTE_INLINE void destroy_mesh(Mesh mesh) { cf_destroy_mesh(mesh); }
-CUTE_INLINE void mesh_set_attributes(Mesh mesh, const VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride) { cf_mesh_set_attributes(mesh, attributes, attribute_count, vertex_stride, instance_stride); }
-CUTE_INLINE void mesh_update_vertex_data(Mesh mesh, void* data, int count) { cf_mesh_update_vertex_data(mesh, data, count); }
-CUTE_INLINE int mesh_append_vertex_data(Mesh mesh, void* data, int append_count) { return cf_mesh_append_vertex_data(mesh, data, append_count); }
-CUTE_INLINE bool mesh_will_overflow_vertex_data(Mesh mesh, int append_count) { return cf_mesh_will_overflow_vertex_data(mesh, append_count); }
-CUTE_INLINE void mesh_update_instance_data(Mesh mesh, void* data, int count) { cf_mesh_update_instance_data(mesh, data, count); }
-CUTE_INLINE int mesh_append_instance_data(Mesh mesh, void* data, int append_count) { return cf_mesh_append_instance_data(mesh, data, append_count); }
-CUTE_INLINE bool mesh_will_overflow_instance_data(Mesh mesh, int append_count) { return cf_mesh_will_overflow_instance_data(mesh, append_count); }
-CUTE_INLINE void mesh_update_index_data(Mesh mesh, uint32_t* indices, int count) { cf_mesh_update_index_data(mesh, indices, count); }
-CUTE_INLINE int mesh_append_index_data(Mesh mesh, uint32_t* indices, int append_count) { return cf_mesh_append_index_data(mesh, indices, append_count); }
-CUTE_INLINE bool mesh_will_overflow_index_data(Mesh mesh, int append_count) { return cf_mesh_will_overflow_index_data(mesh, append_count); }
-CUTE_INLINE RenderState render_state_defaults() { return cf_render_state_defaults(); }
-CUTE_INLINE Material make_material() { return cf_make_material(); }
-CUTE_INLINE void destroy_material(Material material) { cf_destroy_material(material); }
-CUTE_INLINE void material_set_render_state(Material material, RenderState render_state) { cf_material_set_render_state(material, render_state); }
-CUTE_INLINE void material_set_texture_vs(Material material, const char* name, Texture texture) { cf_material_set_texture_vs(material, name, texture); }
-CUTE_INLINE void material_set_texture_fs(Material material, const char* name, Texture texture) { cf_material_set_texture_fs(material, name, texture); }
-CUTE_INLINE void material_set_uniform_vs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_vs(material, block_name, name, data, type, array_length); }
-CUTE_INLINE void material_set_uniform_fs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_fs(material, block_name, name, data, type, array_length); }
-CUTE_INLINE void apply_canvas(Canvas canvas, bool clear = true) { cf_apply_canvas(canvas, clear); }
-CUTE_INLINE void apply_viewport(int x, int y, int w, int h) { cf_apply_viewport(x, y, w, h); }
-CUTE_INLINE void apply_scissor(int x, int y, int w, int h) { cf_apply_scissor(x, y, w, h); }
-CUTE_INLINE void apply_mesh(Mesh mesh) { cf_apply_mesh(mesh); }
-CUTE_INLINE void apply_shader(Shader shader, Material material) { cf_apply_shader(shader, material); }
-CUTE_INLINE void draw_elements() { cf_draw_elements(); }
-CUTE_INLINE void unapply_canvas() { cf_unapply_canvas(); }
+CF_INLINE BackendType query_backend() { return cf_query_backend(); }
+CF_INLINE bool query_pixel_format(PixelFormat format, PixelFormatOp op) { return cf_query_pixel_format(format, op); }
+CF_INLINE bool query_device_feature(DeviceFeature feature) { return cf_query_device_feature(feature); }
+CF_INLINE int query_resource_limit(ResourceLimit resource_limit) { return cf_query_resource_limit(resource_limit); }
+CF_INLINE TextureParams texture_defaults() { return cf_texture_defaults(); }
+CF_INLINE Texture make_texture(TextureParams texture_params) { return cf_make_texture(texture_params); }
+CF_INLINE void destroy_texture(Texture texture) { cf_destroy_texture(texture); }
+CF_INLINE void update_texture(Texture texture, void* data, int size) { cf_update_texture(texture, data, size); }
+CF_INLINE Shader make_shader(SokolShader sokol_shader) { return cf_make_shader(sokol_shader); }
+CF_INLINE void destroy_shader(Shader shader) { cf_destroy_shader(shader); }
+CF_INLINE CanvasParams pass_defaults() { return cf_canvas_defaults(); }
+CF_INLINE Canvas make_canvas(CanvasParams pass_params) { return cf_make_canvas(pass_params); }
+CF_INLINE void destroy_canvas(Canvas canvas) { cf_destroy_canvas(canvas); }
+CF_INLINE Mesh make_mesh(UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size) { return cf_make_mesh(usage_type, vertex_buffer_size, index_buffer_size, instance_buffer_size); }
+CF_INLINE void destroy_mesh(Mesh mesh) { cf_destroy_mesh(mesh); }
+CF_INLINE void mesh_set_attributes(Mesh mesh, const VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride) { cf_mesh_set_attributes(mesh, attributes, attribute_count, vertex_stride, instance_stride); }
+CF_INLINE void mesh_update_vertex_data(Mesh mesh, void* data, int count) { cf_mesh_update_vertex_data(mesh, data, count); }
+CF_INLINE int mesh_append_vertex_data(Mesh mesh, void* data, int append_count) { return cf_mesh_append_vertex_data(mesh, data, append_count); }
+CF_INLINE bool mesh_will_overflow_vertex_data(Mesh mesh, int append_count) { return cf_mesh_will_overflow_vertex_data(mesh, append_count); }
+CF_INLINE void mesh_update_instance_data(Mesh mesh, void* data, int count) { cf_mesh_update_instance_data(mesh, data, count); }
+CF_INLINE int mesh_append_instance_data(Mesh mesh, void* data, int append_count) { return cf_mesh_append_instance_data(mesh, data, append_count); }
+CF_INLINE bool mesh_will_overflow_instance_data(Mesh mesh, int append_count) { return cf_mesh_will_overflow_instance_data(mesh, append_count); }
+CF_INLINE void mesh_update_index_data(Mesh mesh, uint32_t* indices, int count) { cf_mesh_update_index_data(mesh, indices, count); }
+CF_INLINE int mesh_append_index_data(Mesh mesh, uint32_t* indices, int append_count) { return cf_mesh_append_index_data(mesh, indices, append_count); }
+CF_INLINE bool mesh_will_overflow_index_data(Mesh mesh, int append_count) { return cf_mesh_will_overflow_index_data(mesh, append_count); }
+CF_INLINE RenderState render_state_defaults() { return cf_render_state_defaults(); }
+CF_INLINE Material make_material() { return cf_make_material(); }
+CF_INLINE void destroy_material(Material material) { cf_destroy_material(material); }
+CF_INLINE void material_set_render_state(Material material, RenderState render_state) { cf_material_set_render_state(material, render_state); }
+CF_INLINE void material_set_texture_vs(Material material, const char* name, Texture texture) { cf_material_set_texture_vs(material, name, texture); }
+CF_INLINE void material_set_texture_fs(Material material, const char* name, Texture texture) { cf_material_set_texture_fs(material, name, texture); }
+CF_INLINE void material_set_uniform_vs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_vs(material, block_name, name, data, type, array_length); }
+CF_INLINE void material_set_uniform_fs(Material material, const char* block_name, const char* name, void* data, UniformType type, int array_length) { cf_material_set_uniform_fs(material, block_name, name, data, type, array_length); }
+CF_INLINE void apply_canvas(Canvas canvas, bool clear = true) { cf_apply_canvas(canvas, clear); }
+CF_INLINE void apply_viewport(int x, int y, int w, int h) { cf_apply_viewport(x, y, w, h); }
+CF_INLINE void apply_scissor(int x, int y, int w, int h) { cf_apply_scissor(x, y, w, h); }
+CF_INLINE void apply_mesh(Mesh mesh) { cf_apply_mesh(mesh); }
+CF_INLINE void apply_shader(Shader shader, Material material) { cf_apply_shader(shader, material); }
+CF_INLINE void draw_elements() { cf_draw_elements(); }
+CF_INLINE void unapply_canvas() { cf_unapply_canvas(); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_GRAPHICS_H
+#endif // CF_GRAPHICS_H

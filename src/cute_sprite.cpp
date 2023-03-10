@@ -41,9 +41,9 @@ CF_Sprite cf_make_easy_sprite(const char* png_path)
 
 		CF_Png pngs[] = { png };
 		float delays[] = { 1.0f };
-		const CF_Animation* anim = cf_make_png_cache_animation(png_path, pngs, CUTE_ARRAY_SIZE(pngs), delays, CUTE_ARRAY_SIZE(delays));
+		const CF_Animation* anim = cf_make_png_cache_animation(png_path, pngs, CF_ARRAY_SIZE(pngs), delays, CF_ARRAY_SIZE(delays));
 		const CF_Animation* anims[] = { anim };
-		table = cf_make_png_cache_animation_table(png_path, anims, CUTE_ARRAY_SIZE(anims));
+		table = cf_make_png_cache_animation_table(png_path, anims, CF_ARRAY_SIZE(anims));
 	}
 
 	CF_Sprite s = cf_make_png_cache_sprite(png_path, table);

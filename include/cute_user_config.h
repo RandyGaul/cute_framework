@@ -19,19 +19,17 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <internal/cute_ecs_internal.h>
-#include <internal/cute_app_internal.h>
+#ifndef CUTE_USER_CONFIG_H
+#define CUTE_USER_CONFIG_H
 
-bool cf_kv_val_entity(CF_KeyValue* kv, CF_Entity* entity)
-{
-	if (cf_kv_state(kv) == CF_KV_STATE_READ) {
-		int index;
-		if (!cf_kv_val_int32(kv, &index)) return false;
-		*entity = app->load_id_table->operator[](index);
-		return true;
-	} else {
-		int* index_ptr = app->save_id_table->try_find(*entity);
-		CF_ASSERT(index_ptr);
-		return cf_kv_val_int32(kv, index_ptr);
-	}
-}
+/**
+ * Feel free to override any macros in Cute Framework with your own. These are mainly to change the default
+ * behavior for C runtime functions, but there are also some that are just settings.
+ * CF_ASSERT
+ * CF_ALLOC
+ * CF_FREE
+ * CF_REALLOC
+ */
+
+
+#endif // CUTE_USER_CONFIG_H

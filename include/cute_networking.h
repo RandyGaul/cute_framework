@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_NETWORKING_H
-#define CUTE_NETWORKING_H
+#ifndef CF_NETWORKING_H
+#define CF_NETWORKING_H
 
 #include <cute_result.h>
 #include <cute/cute_net.h>
@@ -120,7 +120,7 @@ enum
  * @return   Returns 0 on success, -1 on failure.
  * @related  CF_Address cf_address_init cf_address_to_string cf_address_equals
  */
-CUTE_API int CUTE_CALL cf_address_init(CF_Address* endpoint, const char* address_and_port_string);
+CF_API int CF_CALL cf_address_init(CF_Address* endpoint, const char* address_and_port_string);
 
 /**
  * @function cf_address_to_string
@@ -128,7 +128,7 @@ CUTE_API int CUTE_CALL cf_address_init(CF_Address* endpoint, const char* address
  * @brief    Converts a `CF_Address` to a C string.
  * @related  CF_Address cf_address_init cf_address_to_string cf_address_equals
  */
-CUTE_API void CUTE_CALL cf_address_to_string(CF_Address endpoint, char* buffer, int buffer_size);
+CF_API void CF_CALL cf_address_to_string(CF_Address endpoint, char* buffer, int buffer_size);
 
 /**
  * @function cf_address_equals
@@ -136,26 +136,26 @@ CUTE_API void CUTE_CALL cf_address_to_string(CF_Address endpoint, char* buffer, 
  * @brief    Tests two endpoints for equality.
  * @related  CF_Address cf_address_init cf_address_to_string cf_address_equals
  */
-CUTE_API int CUTE_CALL cf_address_equals(CF_Address a, CF_Address b);
+CF_API int CF_CALL cf_address_equals(CF_Address a, CF_Address b);
 
 //--------------------------------------------------------------------------------------------------
 // CONNECT TOKEN
 
 /**
- * @function CUTE_CONNECT_TOKEN_SIZE
+ * @function CF_CONNECT_TOKEN_SIZE
  * @category net
  * @brief    The size of a single connect token.
- * @related  CUTE_CONNECT_TOKEN_SIZE CUTE_CONNECT_TOKEN_USER_DATA_SIZE cf_generate_connect_token cf_client_connect
+ * @related  CF_CONNECT_TOKEN_SIZE CF_CONNECT_TOKEN_USER_DATA_SIZE cf_generate_connect_token cf_client_connect
  */
-#define CUTE_CONNECT_TOKEN_SIZE 1114
+#define CF_CONNECT_TOKEN_SIZE 1114
 
 /**
- * @function CUTE_CONNECT_TOKEN_USER_DATA_SIZE
+ * @function CF_CONNECT_TOKEN_USER_DATA_SIZE
  * @category net
  * @brief    The size of the user data section of a connect token.
- * @related  CUTE_CONNECT_TOKEN_SIZE CUTE_CONNECT_TOKEN_USER_DATA_SIZE cf_generate_connect_token cf_client_connect
+ * @related  CF_CONNECT_TOKEN_SIZE CF_CONNECT_TOKEN_USER_DATA_SIZE cf_generate_connect_token cf_client_connect
  */
-#define CUTE_CONNECT_TOKEN_USER_DATA_SIZE 256
+#define CF_CONNECT_TOKEN_USER_DATA_SIZE 256
 
 /**
  * @function cf_crypto_generate_key
@@ -163,14 +163,14 @@ CUTE_API int CUTE_CALL cf_address_equals(CF_Address a, CF_Address b);
  * @brief    Returns a cryptography key in a cryptographically secure way.
  * @related  CF_CryptoKey cf_crypto_generate_key cf_generate_connect_token
  */
-CUTE_API CF_CryptoKey CUTE_CALL cf_crypto_generate_key();
+CF_API CF_CryptoKey CF_CALL cf_crypto_generate_key();
 
 /**
  * @function cf_crypto_random_bytes
  * @category net
  * @brief    Fills a buffer in a cryptographically secure way (i.e. a slow way).
  */
-CUTE_API void CUTE_CALL cf_crypto_random_bytes(void* data, int byte_count);
+CF_API void CF_CALL cf_crypto_random_bytes(void* data, int byte_count);
 
 /**
  * @function cf_crypto_sign_keygen
@@ -180,7 +180,7 @@ CUTE_API void CUTE_CALL cf_crypto_random_bytes(void* data, int byte_count);
  * @param    secret_key     The secret key of the keypair. Keep this safe and hidden within your servers.
  * @related  CF_CryptoKey cf_crypto_generate_key cf_generate_connect_token
  */
-CUTE_API void CUTE_CALL cf_crypto_sign_keygen(CF_CryptoSignPublic* public_key, CF_CryptoSignSecret* secret_key);
+CF_API void CF_CALL cf_crypto_sign_keygen(CF_CryptoSignPublic* public_key, CF_CryptoSignSecret* secret_key);
 
 /**
  * @function cf_generate_connect_token
@@ -199,9 +199,9 @@ CUTE_API void CUTE_CALL cf_crypto_sign_keygen(CF_CryptoSignPublic* public_key, C
  * @param    address_count         Must be from 1 to 32 (inclusive). The number of addresses in `address_list`.
  * @param    address_list          A list of game servers the client can try connecting to, of length `address_count`.
  * @param    client_id             The unique client identifier (you pick this).
- * @param    user_data             Can be `NULL`. Optional buffer of data of `CUTE_PROTOCOL_CONNECT_TOKEN_USER_DATA_SIZE` (256) bytes.
+ * @param    user_data             Can be `NULL`. Optional buffer of data of `CF_PROTOCOL_CONNECT_TOKEN_USER_DATA_SIZE` (256) bytes.
  * @param    shared_secret_key     Only your webservice and game servers know this key.
- * @param    token_ptr_out         Pointer to your buffer, should be `CUTE_CONNECT_TOKEN_SIZE` bytes large.
+ * @param    token_ptr_out         Pointer to your buffer, should be `CF_CONNECT_TOKEN_SIZE` bytes large.
  * @return   Returns any errors as `CF_Result`.
  * @remarks  You can use this function whenever a validated client wants to join your game servers.
  *           
@@ -218,7 +218,7 @@ CUTE_API void CUTE_CALL cf_crypto_sign_keygen(CF_CryptoSignPublic* public_key, C
  *           new one and distribute it to your webservice and game servers.
  * @related  CF_CryptoKey cf_crypto_generate_key cf_generate_connect_token cf_client_connect
  */
-CUTE_API CF_Result CUTE_CALL cf_generate_connect_token(uint64_t application_id, uint64_t creation_timestamp, const CF_CryptoKey* client_to_server_key, const CF_CryptoKey* server_to_client_key, uint64_t expiration_timestamp, uint32_t handshake_timeout, int address_count, const char** address_list, uint64_t client_id, const uint8_t* user_data, const CF_CryptoSignSecret* shared_secret_key, uint8_t* token_ptr_out);
+CF_API CF_Result CF_CALL cf_generate_connect_token(uint64_t application_id, uint64_t creation_timestamp, const CF_CryptoKey* client_to_server_key, const CF_CryptoKey* server_to_client_key, uint64_t expiration_timestamp, uint32_t handshake_timeout, int address_count, const char** address_list, uint64_t client_id, const uint8_t* user_data, const CF_CryptoSignSecret* shared_secret_key, uint8_t* token_ptr_out);
 
 //--------------------------------------------------------------------------------------------------
 // CLIENT
@@ -232,7 +232,7 @@ CUTE_API CF_Result CUTE_CALL cf_generate_connect_token(uint64_t application_id, 
  * @param    use_ipv6        Whether or not the socket should turn on ipv6. Some users will not have ipv6 enabled, so consider setting to `false`.
  * @related  CF_Client cf_make_client cf_destroy_client cf_client_connect cf_generate_connect_token
  */
-CUTE_API CF_Client* CUTE_CALL cf_make_client(uint16_t port, uint64_t application_id, bool use_ipv6);
+CF_API CF_Client* CF_CALL cf_make_client(uint16_t port, uint64_t application_id, bool use_ipv6);
 
 /**
  * @function cf_destroy_client
@@ -241,7 +241,7 @@ CUTE_API CF_Client* CUTE_CALL cf_make_client(uint16_t port, uint64_t application
  * @remarks  Does not send out any disconnect packets. Call `cf_client_disconnect` first.
  * @related  CF_Client cf_make_client cf_destroy_client cf_client_connect cf_client_disconnect
  */
-CUTE_API void CUTE_CALL cf_destroy_client(CF_Client* client);
+CF_API void CF_CALL cf_destroy_client(CF_Client* client);
 
 /**
  * @function cf_client_connect
@@ -255,7 +255,7 @@ CUTE_API void CUTE_CALL cf_destroy_client(CF_Client* client);
  *           connection attempts to your servers.
  * @related  CF_Client cf_make_client cf_destroy_client cf_client_connect cf_client_disconnect cf_client_update
  */
-CUTE_API CF_Result CUTE_CALL cf_client_connect(CF_Client* client, const uint8_t* connect_token);
+CF_API CF_Result CF_CALL cf_client_connect(CF_Client* client, const uint8_t* connect_token);
 
 /**
  * @function cf_client_disconnect
@@ -263,7 +263,7 @@ CUTE_API CF_Result CUTE_CALL cf_client_connect(CF_Client* client, const uint8_t*
  * @brief    Attempts to gracefully disconnect a `CF_Client` from a `CF_Server`.
  * @related  CF_Client cf_make_client cf_destroy_client cf_client_connect cf_client_disconnect cf_client_update
  */
-CUTE_API void CUTE_CALL cf_client_disconnect(CF_Client* client);
+CF_API void CF_CALL cf_client_disconnect(CF_Client* client);
 
 /**
  * @function cf_client_update
@@ -272,7 +272,7 @@ CUTE_API void CUTE_CALL cf_client_disconnect(CF_Client* client);
  * @remarks  You should call this one per game loop after calling `cf_client_connect`.
  * @related  CF_Client cf_make_client cf_destroy_client cf_client_connect cf_client_disconnect cf_client_update
  */
-CUTE_API void CUTE_CALL cf_client_update(CF_Client* client, double dt, uint64_t current_time);
+CF_API void CF_CALL cf_client_update(CF_Client* client, double dt, uint64_t current_time);
 
 /**
  * @function cf_client_pop_packet
@@ -286,7 +286,7 @@ CUTE_API void CUTE_CALL cf_client_update(CF_Client* client, double dt, uint64_t 
  * @remarks  You must free this packet when you're done by calling `cf_client_free_packet`.
  * @related  CF_Client cf_client_pop_packet cf_client_free_packet cf_client_send
  */
-CUTE_API bool CUTE_CALL cf_client_pop_packet(CF_Client* client, void** packet, int* size, bool* was_sent_reliably);
+CF_API bool CF_CALL cf_client_pop_packet(CF_Client* client, void** packet, int* size, bool* was_sent_reliably);
 
 /**
  * @function cf_client_free_packet
@@ -294,7 +294,7 @@ CUTE_API bool CUTE_CALL cf_client_pop_packet(CF_Client* client, void** packet, i
  * @brief    Free's a packet created by `cf_client_pop_packet`.
  * @related  CF_Client cf_client_pop_packet cf_client_free_packet cf_client_send
  */
-CUTE_API void CUTE_CALL cf_client_free_packet(CF_Client* client, void* packet);
+CF_API void CF_CALL cf_client_free_packet(CF_Client* client, void* packet);
 
 /**
  * @function cf_client_send
@@ -319,7 +319,7 @@ CUTE_API void CUTE_CALL cf_client_free_packet(CF_Client* client, void* packet);
  *           transform updates, can be sent unreliably.
  * @related  CF_Client cf_client_pop_packet cf_client_free_packet cf_client_send
  */
-CUTE_API CF_Result CUTE_CALL cf_client_send(CF_Client* client, const void* packet, int size, bool send_reliably);
+CF_API CF_Result CF_CALL cf_client_send(CF_Client* client, const void* packet, int size, bool send_reliably);
 
 /**
  * @enum     CF_ClientState
@@ -365,10 +365,10 @@ typedef enum CF_ClientState
  * @param    state        The state to convert to a string.
  * @related  CF_ClientState cf_client_state_to_string cf_client_state_get
  */
-CUTE_INLINE const char* cf_client_state_to_string(CF_ClientState state)
+CF_INLINE const char* cf_client_state_to_string(CF_ClientState state)
 {
 	switch (state) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_CLIENT_STATE_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -381,7 +381,7 @@ CUTE_INLINE const char* cf_client_state_to_string(CF_ClientState state)
  * @brief    Returns the `CF_ClientState` of a `CF_Client`.
  * @related  CF_ClientState cf_client_state_to_string cf_client_state_get
  */
-CUTE_API CF_ClientState CUTE_CALL cf_client_state_get(const CF_Client* client);
+CF_API CF_ClientState CF_CALL cf_client_state_get(const CF_Client* client);
 
 /**
  * @function cf_client_enable_network_simulator
@@ -394,13 +394,13 @@ CUTE_API CF_ClientState CUTE_CALL cf_client_state_get(const CF_Client* client);
  * @param    duplicate_chance Number from [0,1] representing the chance to duplicate a packet, where 1 is 100% chance.
  * @related  CF_Client
  */
-CUTE_API void CUTE_CALL cf_client_enable_network_simulator(CF_Client* client, double latency, double jitter, double drop_chance, double duplicate_chance);
+CF_API void CF_CALL cf_client_enable_network_simulator(CF_Client* client, double latency, double jitter, double drop_chance, double duplicate_chance);
 
 //--------------------------------------------------------------------------------------------------
 // SERVER
 
 // Modify this value as seen fit.
-#define CUTE_SERVER_MAX_CLIENTS 32
+#define CF_SERVER_MAX_CLIENTS 32
 
 /**
  * @struct   CF_ServerConfig
@@ -440,7 +440,7 @@ typedef struct CF_ServerConfig
  * @brief    Returns a good set of default parameters for `cf_make_server`.
  * @related  CF_ServerConfig cf_server_config_defaults cf_make_server
  */
-CUTE_INLINE CF_ServerConfig CUTE_CALL cf_server_config_defaults()
+CF_INLINE CF_ServerConfig CF_CALL cf_server_config_defaults()
 {
 	CF_ServerConfig config;
 	config.application_id = 0;
@@ -458,7 +458,7 @@ CUTE_INLINE CF_ServerConfig CUTE_CALL cf_server_config_defaults()
  * @param    config      The server settings `CF_ServerConfig`.
  * @related  CF_ServerConfig cf_server_config_defaults cf_make_server cf_destroy_server cf_server_start cf_server_update
  */
-CUTE_API CF_Server* CUTE_CALL cf_make_server(CF_ServerConfig config);
+CF_API CF_Server* CF_CALL cf_make_server(CF_ServerConfig config);
 
 /**
  * @function cf_destroy_server
@@ -466,7 +466,7 @@ CUTE_API CF_Server* CUTE_CALL cf_make_server(CF_ServerConfig config);
  * @brief    Destroys a `CF_Server` created by `cf_make_server`.
  * @related  CF_ServerConfig cf_server_config_defaults cf_make_server cf_destroy_server cf_server_start cf_server_update
  */
-CUTE_API void CUTE_CALL cf_destroy_server(CF_Server* server);
+CF_API void CF_CALL cf_destroy_server(CF_Server* server);
 
 /**
  * @function cf_server_start
@@ -476,7 +476,7 @@ CUTE_API void CUTE_CALL cf_destroy_server(CF_Server* server);
  * @remarks  Please note that not all users will be able to access an ipv6 server address, so it might be good to also provide a way to connect through ipv4.
  * @related  CF_ServerConfig cf_server_config_defaults cf_make_server cf_destroy_server cf_server_start cf_server_update
  */
-CUTE_API CF_Result cf_server_start(CF_Server* server, const char* address_and_port);
+CF_API CF_Result cf_server_start(CF_Server* server, const char* address_and_port);
 
 /**
  * @function cf_server_stop
@@ -484,7 +484,7 @@ CUTE_API CF_Result cf_server_start(CF_Server* server, const char* address_and_po
  * @brief    Stops the server.
  * @related  CF_ServerConfig cf_server_config_defaults cf_make_server cf_destroy_server cf_server_start cf_server_update
  */
-CUTE_API void cf_server_stop(CF_Server* server);
+CF_API void cf_server_stop(CF_Server* server);
 
 /**
  * @enum     CF_ServerEventType
@@ -515,10 +515,10 @@ typedef enum CF_ServerEventType
  * @param    state        The state to convert to a string.
  * @related  CF_ServerEventType cf_server_event_type_to_string CF_ServerEvent cf_server_pop_event
  */
-CUTE_INLINE const char* cf_server_event_type_to_string(CF_ServerEventType type)
+CF_INLINE const char* cf_server_event_type_to_string(CF_ServerEventType type)
 {
 	switch (type) {
-	#define CF_ENUM(K, V) case CF_##K: return CUTE_STRINGIZE(CF_##K);
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
 	CF_SERVER_EVENT_TYPE_DEFS
 	#undef CF_ENUM
 	default: return NULL;
@@ -579,7 +579,7 @@ typedef struct CF_ServerEvent
  *           You must free the payload packets with `cf_server_free_packet` when done.
  * @related  CF_ServerEventType cf_server_event_type_to_string CF_ServerEvent cf_server_pop_event cf_server_update cf_server_send
  */
-CUTE_API bool CUTE_CALL cf_server_pop_event(CF_Server* server, CF_ServerEvent* event);
+CF_API bool CF_CALL cf_server_pop_event(CF_Server* server, CF_ServerEvent* event);
 
 /**
  * @function cf_server_free_packet
@@ -587,7 +587,7 @@ CUTE_API bool CUTE_CALL cf_server_pop_event(CF_Server* server, CF_ServerEvent* e
  * @brief    Frees a payload packet from a `CF_ServerEvent`.
  * @related  CF_ServerEventType cf_server_event_type_to_string CF_ServerEvent cf_server_pop_event
  */
-CUTE_API void CUTE_CALL cf_server_free_packet(CF_Server* server, int client_index, void* data);
+CF_API void CF_CALL cf_server_free_packet(CF_Server* server, int client_index, void* data);
 
 /**
  * @function cf_server_update
@@ -596,7 +596,7 @@ CUTE_API void CUTE_CALL cf_server_free_packet(CF_Server* server, int client_inde
  * @remarks  Call this once per game tick.
  * @related  cf_server_update CF_ServerEvent cf_server_pop_event
  */
-CUTE_API void CUTE_CALL cf_server_update(CF_Server* server, double dt, uint64_t current_time);
+CF_API void CF_CALL cf_server_update(CF_Server* server, double dt, uint64_t current_time);
 
 /**
  * @function cf_server_disconnect_client
@@ -604,7 +604,7 @@ CUTE_API void CUTE_CALL cf_server_update(CF_Server* server, double dt, uint64_t 
  * @brief    Disconnects a client from the server.
  * @related  cf_server_update CF_ServerEvent cf_server_pop_event cf_server_send
  */
-CUTE_API void CUTE_CALL cf_server_disconnect_client(CF_Server* server, int client_index, bool notify_client /* = true */);
+CF_API void CF_CALL cf_server_disconnect_client(CF_Server* server, int client_index, bool notify_client /* = true */);
 
 /**
  * @function cf_server_send
@@ -618,7 +618,7 @@ CUTE_API void CUTE_CALL cf_server_disconnect_client(CF_Server* server, int clien
  *                          arrive out of order or not at all.
  * @related  cf_server_update CF_ServerEvent cf_server_pop_event cf_server_send
  */
-CUTE_API void CUTE_CALL cf_server_send(CF_Server* server, const void* packet, int size, int client_index, bool send_reliably);
+CF_API void CF_CALL cf_server_send(CF_Server* server, const void* packet, int size, int client_index, bool send_reliably);
 
 /**
  * @function cf_server_is_client_connected
@@ -626,7 +626,7 @@ CUTE_API void CUTE_CALL cf_server_send(CF_Server* server, const void* packet, in
  * @brief    Returns true if a client is still connected.
  * @related  cf_server_update CF_ServerEvent cf_server_pop_event cf_server_send
  */
-CUTE_API bool CUTE_CALL cf_server_is_client_connected(CF_Server* server, int client_index);
+CF_API bool CF_CALL cf_server_is_client_connected(CF_Server* server, int client_index);
 
 /**
  * @function cf_server_enable_network_simulator
@@ -639,7 +639,7 @@ CUTE_API bool CUTE_CALL cf_server_is_client_connected(CF_Server* server, int cli
  * @param    duplicate_chance Number from [0,1] representing the chance to duplicate a packet, where 1 is 100% chance.
  * @related  CF_Server
  */
-CUTE_API void CUTE_CALL cf_server_enable_network_simulator(CF_Server* server, double latency, double jitter, double drop_chance, double duplicate_chance);
+CF_API void CF_CALL cf_server_enable_network_simulator(CF_Server* server, double latency, double jitter, double drop_chance, double duplicate_chance);
 
 #ifdef __cplusplus
 }
@@ -648,7 +648,7 @@ CUTE_API void CUTE_CALL cf_server_enable_network_simulator(CF_Server* server, do
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
@@ -672,17 +672,17 @@ enum : int
 	#undef CF_ENUM
 };
 
-CUTE_INLINE int address_init(Address* endpoint, const char* address_and_port_string) { return cf_address_init(endpoint,address_and_port_string); }
-CUTE_INLINE void address_to_string(Address endpoint, char* buffer, int buffer_size) { cf_address_to_string(endpoint,buffer,buffer_size); }
-CUTE_INLINE int address_equals(Address a, Address b) { return cf_address_equals(a,b); }
+CF_INLINE int address_init(Address* endpoint, const char* address_and_port_string) { return cf_address_init(endpoint,address_and_port_string); }
+CF_INLINE void address_to_string(Address endpoint, char* buffer, int buffer_size) { cf_address_to_string(endpoint,buffer,buffer_size); }
+CF_INLINE int address_equals(Address a, Address b) { return cf_address_equals(a,b); }
 
 //--------------------------------------------------------------------------------------------------
 // CONNECT TOKEN
 
-CUTE_INLINE CryptoKey crypto_generate_key() { return cf_crypto_generate_key(); }
-CUTE_INLINE void crypto_random_bytes(void* data, int byte_count) { cf_crypto_random_bytes(data,byte_count); }
-CUTE_INLINE void crypto_sign_keygen(CryptoSignPublic* public_key, CryptoSignSecret* secret_key) { cf_crypto_sign_keygen(public_key,secret_key); }
-CUTE_INLINE Result generate_connect_token(
+CF_INLINE CryptoKey crypto_generate_key() { return cf_crypto_generate_key(); }
+CF_INLINE void crypto_random_bytes(void* data, int byte_count) { cf_crypto_random_bytes(data,byte_count); }
+CF_INLINE void crypto_sign_keygen(CryptoSignPublic* public_key, CryptoSignSecret* secret_key) { cf_crypto_sign_keygen(public_key,secret_key); }
+CF_INLINE Result generate_connect_token(
 	uint64_t application_id,
 	uint64_t creation_timestamp,
 	const CryptoKey* client_to_server_key,
@@ -715,11 +715,11 @@ CUTE_INLINE Result generate_connect_token(
 // CLIENT
 
 using ClientState = CF_ClientState;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr ClientState K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr ClientState K = CF_##K;
 CF_CLIENT_STATE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* to_string(ClientState state)
+CF_INLINE const char* to_string(ClientState state)
 {
 	switch (state) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -729,16 +729,16 @@ CUTE_INLINE const char* to_string(ClientState state)
 	}
 }
 
-CUTE_INLINE Client* make_client(uint16_t port, uint64_t application_id, bool use_ipv6 = false) { return cf_make_client(port,application_id,use_ipv6); }
-CUTE_INLINE void destroy_client(Client* client) { cf_destroy_client(client); }
-CUTE_INLINE Result client_connect(Client* client, const uint8_t* connect_token) { return cf_client_connect(client,connect_token); }
-CUTE_INLINE void client_disconnect(Client* client) { cf_client_disconnect(client); }
-CUTE_INLINE void client_update(Client* client, double dt, uint64_t current_time) { cf_client_update(client,dt,current_time); }
-CUTE_INLINE bool client_pop_packet(Client* client, void** packet, int* size, bool* was_sent_reliably = NULL) { return cf_client_pop_packet(client,packet,size,was_sent_reliably); }
-CUTE_INLINE void client_free_packet(Client* client, void* packet) { cf_client_free_packet(client,packet); }
-CUTE_INLINE Result client_send(Client* client, const void* packet, int size, bool send_reliably) { return cf_client_send(client,packet,size,send_reliably); }
-CUTE_INLINE ClientState client_state_get(const Client* client) { return cf_client_state_get(client); }
-CUTE_INLINE void client_enable_network_simulator(Client* client, double latency, double jitter, double drop_chance, double duplicate_chance) { cf_client_enable_network_simulator(client,latency,jitter,drop_chance,duplicate_chance); }
+CF_INLINE Client* make_client(uint16_t port, uint64_t application_id, bool use_ipv6 = false) { return cf_make_client(port,application_id,use_ipv6); }
+CF_INLINE void destroy_client(Client* client) { cf_destroy_client(client); }
+CF_INLINE Result client_connect(Client* client, const uint8_t* connect_token) { return cf_client_connect(client,connect_token); }
+CF_INLINE void client_disconnect(Client* client) { cf_client_disconnect(client); }
+CF_INLINE void client_update(Client* client, double dt, uint64_t current_time) { cf_client_update(client,dt,current_time); }
+CF_INLINE bool client_pop_packet(Client* client, void** packet, int* size, bool* was_sent_reliably = NULL) { return cf_client_pop_packet(client,packet,size,was_sent_reliably); }
+CF_INLINE void client_free_packet(Client* client, void* packet) { cf_client_free_packet(client,packet); }
+CF_INLINE Result client_send(Client* client, const void* packet, int size, bool send_reliably) { return cf_client_send(client,packet,size,send_reliably); }
+CF_INLINE ClientState client_state_get(const Client* client) { return cf_client_state_get(client); }
+CF_INLINE void client_enable_network_simulator(Client* client, double latency, double jitter, double drop_chance, double duplicate_chance) { cf_client_enable_network_simulator(client,latency,jitter,drop_chance,duplicate_chance); }
 
 //--------------------------------------------------------------------------------------------------
 // SERVER
@@ -747,11 +747,11 @@ using ServerConfig = CF_ServerConfig;
 using ServerEvent = CF_ServerEvent;
 
 using ServerEventType = CF_ServerEventType;
-#define CF_ENUM(K, V) CUTE_INLINE constexpr ServerEventType K = CF_##K;
+#define CF_ENUM(K, V) CF_INLINE constexpr ServerEventType K = CF_##K;
 CF_SERVER_EVENT_TYPE_DEFS
 #undef CF_ENUM
 
-CUTE_INLINE const char* to_string(ServerEventType type)
+CF_INLINE const char* to_string(ServerEventType type)
 {
 	switch (type) {
 	#define CF_ENUM(K, V) case CF_##K: return #K;
@@ -761,21 +761,21 @@ CUTE_INLINE const char* to_string(ServerEventType type)
 	}
 }
 
-CUTE_INLINE ServerConfig server_config_defaults() { return cf_server_config_defaults(); }
-CUTE_INLINE Server* make_server(ServerConfig config) { return cf_make_server(config); }
-CUTE_INLINE void destroy_server(Server* server) { cf_destroy_server(server); }
-CUTE_INLINE Result server_start(Server* server, const char* address_and_port) { return cf_server_start(server,address_and_port); }
-CUTE_INLINE void server_stop(Server* server) { cf_server_stop(server); }
-CUTE_INLINE bool server_pop_event(Server* server, ServerEvent* event) { return cf_server_pop_event(server,event); }
-CUTE_INLINE void server_free_packet(Server* server, int client_index, void* data) { cf_server_free_packet(server,client_index,data); }
-CUTE_INLINE void server_update(Server* server, double dt, uint64_t current_time) { cf_server_update(server,dt,current_time); }
-CUTE_INLINE void server_disconnect_client(Server* server, int client_index, bool notify_client = true) { cf_server_disconnect_client(server, client_index, notify_client); }
-CUTE_INLINE void server_send(Server* server, const void* packet, int size, int client_index, bool send_reliably) { cf_server_send(server,packet,size,client_index,send_reliably); }
-CUTE_INLINE bool server_is_client_connected(Server* server, int client_index) { return cf_server_is_client_connected(server,client_index); }
-CUTE_INLINE void server_enable_network_simulator(Server* server, double latency, double jitter, double drop_chance, double duplicate_chance) { cf_server_enable_network_simulator(server,latency,jitter,drop_chance,duplicate_chance); }
+CF_INLINE ServerConfig server_config_defaults() { return cf_server_config_defaults(); }
+CF_INLINE Server* make_server(ServerConfig config) { return cf_make_server(config); }
+CF_INLINE void destroy_server(Server* server) { cf_destroy_server(server); }
+CF_INLINE Result server_start(Server* server, const char* address_and_port) { return cf_server_start(server,address_and_port); }
+CF_INLINE void server_stop(Server* server) { cf_server_stop(server); }
+CF_INLINE bool server_pop_event(Server* server, ServerEvent* event) { return cf_server_pop_event(server,event); }
+CF_INLINE void server_free_packet(Server* server, int client_index, void* data) { cf_server_free_packet(server,client_index,data); }
+CF_INLINE void server_update(Server* server, double dt, uint64_t current_time) { cf_server_update(server,dt,current_time); }
+CF_INLINE void server_disconnect_client(Server* server, int client_index, bool notify_client = true) { cf_server_disconnect_client(server, client_index, notify_client); }
+CF_INLINE void server_send(Server* server, const void* packet, int size, int client_index, bool send_reliably) { cf_server_send(server,packet,size,client_index,send_reliably); }
+CF_INLINE bool server_is_client_connected(Server* server, int client_index) { return cf_server_is_client_connected(server,client_index); }
+CF_INLINE void server_enable_network_simulator(Server* server, double latency, double jitter, double drop_chance, double duplicate_chance) { cf_server_enable_network_simulator(server,latency,jitter,drop_chance,duplicate_chance); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_NETWORKING_H
+#endif // CF_NETWORKING_H

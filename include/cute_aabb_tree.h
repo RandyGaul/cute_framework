@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_AABB_TREE_H
-#define CUTE_AABB_TREE_H
+#ifndef CF_AABB_TREE_H
+#define CF_AABB_TREE_H
 
 #include "cute_defines.h"
 #include "cute_math.h"
@@ -81,7 +81,7 @@ typedef bool (CF_AabbTreeQueryFn)(CF_Leaf leaf, CF_Aabb aabb, void* leaf_udata, 
  *           first. You can then follow up potential hit-pairs by performing more expensive tests on the underlying shapes.
  * @related  cf_make_aabb_tree_from_memory cf_destroy_aabb_tree cf_aabb_tree_insert cf_aabb_tree_query_aabb cf_aabb_tree_query_ray
  */
-CUTE_API CF_AabbTree CUTE_CALL cf_make_aabb_tree(int initial_capacity);
+CF_API CF_AabbTree CF_CALL cf_make_aabb_tree(int initial_capacity);
 
 /**
  * @function cf_make_aabb_tree_from_memory
@@ -93,7 +93,7 @@ CUTE_API CF_AabbTree CUTE_CALL cf_make_aabb_tree(int initial_capacity);
  *           function, if you just want to make an AABB tree you may be looking for `cf_make_aabb_tree` instead. Destroy the tree with `cf_destroy_aabb_tree` when you're done using it.
  * @related  cf_make_aabb_tree cf_aabb_tree_serialize cf_destroy_aabb_tree cf_aabb_tree_serialized_size
  */
-CUTE_API CF_AabbTree CUTE_CALL cf_make_aabb_tree_from_memory(const void* buffer, size_t size /*= NULL*/);
+CF_API CF_AabbTree CF_CALL cf_make_aabb_tree_from_memory(const void* buffer, size_t size /*= NULL*/);
 
 /**
  * @function cf_destroy_aabb_tree
@@ -104,7 +104,7 @@ CUTE_API CF_AabbTree CUTE_CALL cf_make_aabb_tree_from_memory(const void* buffer,
  *           function, if you just want to make an AABB tree you may be looking for `cf_make_aabb_tree` instead. Destroy the tree with `cf_destroy_aabb_tree` when you're done using it.
  * @related  cf_make_aabb_tree cf_make_aabb_tree_from_memory
  */
-CUTE_API void CUTE_CALL cf_destroy_aabb_tree(CF_AabbTree tree);
+CF_API void CF_CALL cf_destroy_aabb_tree(CF_AabbTree tree);
 
 /**
  * @function cf_aabb_tree_insert
@@ -116,7 +116,7 @@ CUTE_API void CUTE_CALL cf_destroy_aabb_tree(CF_AabbTree tree);
  * @return   Returns a `CF_Leaf` representing the inserted AABB.
  * @related  cf_aabb_tree_remove cf_aabb_tree_update_leaf cf_aabb_tree_move cf_aabb_tree_get_aabb cf_aabb_tree_query_aabb cf_aabb_tree_query_ray
  */
-CUTE_API CF_Leaf CUTE_CALL cf_aabb_tree_insert(CF_AabbTree tree, CF_Aabb aabb, void* udata);
+CF_API CF_Leaf CF_CALL cf_aabb_tree_insert(CF_AabbTree tree, CF_Aabb aabb, void* udata);
 
 /**
  * @function cf_aabb_tree_remove
@@ -124,7 +124,7 @@ CUTE_API CF_Leaf CUTE_CALL cf_aabb_tree_insert(CF_AabbTree tree, CF_Aabb aabb, v
  * @brief    Removes a `CF_Leaf` from the tree.
  * @related  cf_aabb_tree_insert
  */
-CUTE_API void CUTE_CALL cf_aabb_tree_remove(CF_AabbTree tree, CF_Leaf leaf);
+CF_API void CF_CALL cf_aabb_tree_remove(CF_AabbTree tree, CF_Leaf leaf);
 
 /**
  * @function cf_aabb_tree_update_leaf
@@ -137,7 +137,7 @@ CUTE_API void CUTE_CALL cf_aabb_tree_remove(CF_AabbTree tree, CF_Leaf leaf);
  * @remarks  Internally there are some optimizations so that the tree is only adjusted if the aabb is moved enough. See the return value for more details.
  * @related  cf_aabb_tree_insert cf_aabb_tree_move cf_aabb_tree_get_aabb cf_aabb_tree_query_aabb cf_aabb_tree_query_ray
  */
-CUTE_API bool CUTE_CALL cf_aabb_tree_update_leaf(CF_AabbTree tree, CF_Leaf leaf, CF_Aabb aabb);
+CF_API bool CF_CALL cf_aabb_tree_update_leaf(CF_AabbTree tree, CF_Leaf leaf, CF_Aabb aabb);
 
 /**
  * @function cf_aabb_tree_move
@@ -154,7 +154,7 @@ CUTE_API bool CUTE_CALL cf_aabb_tree_update_leaf(CF_AabbTree tree, CF_Leaf leaf,
  *           is likely good enough most of the time.
  * @related  cf_aabb_tree_insert cf_aabb_tree_update_leaf cf_aabb_tree_get_aabb cf_aabb_tree_query_aabb cf_aabb_tree_query_ray
  */
-CUTE_API bool CUTE_CALL cf_aabb_tree_move(CF_AabbTree tree, CF_Leaf leaf, CF_Aabb aabb, CF_V2 offset);
+CF_API bool CF_CALL cf_aabb_tree_move(CF_AabbTree tree, CF_Leaf leaf, CF_Aabb aabb, CF_V2 offset);
 
 /**
  * @function cf_aabb_tree_get_aabb
@@ -167,7 +167,7 @@ CUTE_API bool CUTE_CALL cf_aabb_tree_move(CF_AabbTree tree, CF_Leaf leaf, CF_Aab
              on the the return value of this function.
  * @related  cf_aabb_tree_insert cf_aabb_tree_remove cf_aabb_tree_update_leaf cf_aabb_tree_get_aabb cf_aabb_tree_query_aabb cf_aabb_tree_query_ray
  */
-CUTE_API CF_Aabb CUTE_CALL cf_aabb_tree_get_aabb(CF_AabbTree tree, CF_Leaf leaf);
+CF_API CF_Aabb CF_CALL cf_aabb_tree_get_aabb(CF_AabbTree tree, CF_Leaf leaf);
 
 /**
  * @function cf_aabb_tree_get_udata
@@ -178,7 +178,7 @@ CUTE_API CF_Aabb CUTE_CALL cf_aabb_tree_get_aabb(CF_AabbTree tree, CF_Leaf leaf)
  * @return   The `udata` pointer from `cf_aabb_tree_insert`.
  * @related  cf_aabb_tree_insert
  */
-CUTE_API void* CUTE_CALL cf_aabb_tree_get_udata(CF_AabbTree tree, CF_Leaf leaf);
+CF_API void* CF_CALL cf_aabb_tree_get_udata(CF_AabbTree tree, CF_Leaf leaf);
 
 /**
  * @function cf_aabb_tree_query_aabb
@@ -190,7 +190,7 @@ CUTE_API void* CUTE_CALL cf_aabb_tree_get_udata(CF_AabbTree tree, CF_Leaf leaf);
  * @param    fn_udata   Can be `NULL`. An optional user data pointer, handed back to you when `fn` is called to report hits.
  * @related  cf_aabb_tree_insert cf_aabb_tree_query_ray
  */
-CUTE_API void CUTE_CALL cf_aabb_tree_query_aabb(const CF_AabbTree tree, CF_AabbTreeQueryFn* fn, CF_Aabb aabb, void* fn_udata);
+CF_API void CF_CALL cf_aabb_tree_query_aabb(const CF_AabbTree tree, CF_AabbTreeQueryFn* fn, CF_Aabb aabb, void* fn_udata);
 
 /**
  * @function cf_aabb_tree_query_ray
@@ -202,7 +202,7 @@ CUTE_API void CUTE_CALL cf_aabb_tree_query_aabb(const CF_AabbTree tree, CF_AabbT
  * @param    fn_udata   Can be `NULL`. An optional user data pointer, handed back to you when `fn` is called to report hits.
  * @related  cf_aabb_tree_insert cf_aabb_tree_query_aabb
  */
-CUTE_API void CUTE_CALL cf_aabb_tree_query_ray(const CF_AabbTree tree, CF_AabbTreeQueryFn* fn, CF_Ray ray, void* fn_udata);
+CF_API void CF_CALL cf_aabb_tree_query_ray(const CF_AabbTree tree, CF_AabbTreeQueryFn* fn, CF_Ray ray, void* fn_udata);
 
 /**
  * @function cf_aabb_tree_cost
@@ -211,14 +211,14 @@ CUTE_API void CUTE_CALL cf_aabb_tree_query_ray(const CF_AabbTree tree, CF_AabbTr
  * @param    tree       The tree.
  * @return   Returns a cost heuristic value to quantify the quality of the tree.
  */
-CUTE_API float CUTE_CALL cf_aabb_tree_cost(const CF_AabbTree tree);
+CF_API float CF_CALL cf_aabb_tree_cost(const CF_AabbTree tree);
 
 /**
  * @function cf_aabb_tree_validate
  * @category collision
  * @brief    Asserts the internal structure is correct. Just for debugging.
  */
-CUTE_API void CUTE_CALL cf_aabb_tree_validate(const CF_AabbTree tree);
+CF_API void CF_CALL cf_aabb_tree_validate(const CF_AabbTree tree);
 
 /**
  * @function cf_aabb_tree_serialized_size
@@ -229,7 +229,7 @@ CUTE_API void CUTE_CALL cf_aabb_tree_validate(const CF_AabbTree tree);
  * @remarks  A tree may be serialized with `cf_aabb_tree_serialize`. The `size` parameter should be the value returned by this function.
  * @related  cf_aabb_tree_serialize
  */
-CUTE_API size_t CUTE_CALL cf_aabb_tree_serialized_size(const CF_AabbTree tree);
+CF_API size_t CF_CALL cf_aabb_tree_serialized_size(const CF_AabbTree tree);
 
 /**
  * @function cf_aabb_tree_serialize
@@ -242,7 +242,7 @@ CUTE_API size_t CUTE_CALL cf_aabb_tree_serialized_size(const CF_AabbTree tree);
  *           the network. The main purpose is an optimization to avoid building the tree from scratch.
  * @related  cf_make_aabb_tree cf_aabb_tree_serialized_size
  */
-CUTE_API bool CUTE_CALL cf_aabb_tree_serialize(const CF_AabbTree tree, void* buffer, size_t size);
+CF_API bool CF_CALL cf_aabb_tree_serialize(const CF_AabbTree tree, void* buffer, size_t size);
 
 #ifdef __cplusplus
 }
@@ -251,7 +251,7 @@ CUTE_API bool CUTE_CALL cf_aabb_tree_serialize(const CF_AabbTree tree, void* buf
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
@@ -262,24 +262,24 @@ using AabbTreeQueryFn = CF_AabbTreeQueryFn;
 using Aabb = CF_Aabb;
 using Ray = CF_Ray;
 
-CUTE_INLINE AabbTree make_aabb_tree(int initial_capacity = 0) { return cf_make_aabb_tree(initial_capacity); }
-CUTE_INLINE AabbTree make_aabb_tree_from_memory(const void* buffer, size_t size) { return cf_make_aabb_tree_from_memory(buffer, size); }
-CUTE_INLINE void destroy_aabb_tree(AabbTree tree) { cf_destroy_aabb_tree(tree); }
-CUTE_INLINE Leaf aabb_tree_insert(AabbTree tree, Aabb aabb, void* udata = NULL) { return cf_aabb_tree_insert(tree, aabb, udata); }
-CUTE_INLINE void aabb_tree_remove(AabbTree tree, Leaf leaf) { cf_aabb_tree_remove(tree, leaf); }
-CUTE_INLINE bool aabb_tree_update_leaf(AabbTree tree, Leaf leaf, Aabb aabb) { return cf_aabb_tree_update_leaf(tree, leaf, aabb); }
-CUTE_INLINE bool aabb_tree_move(AabbTree tree, Leaf leaf, Aabb aabb, v2 offset) { return cf_aabb_tree_move(tree, leaf, aabb, offset); }
-CUTE_INLINE Aabb aabb_tree_get_aabb(AabbTree tree, Leaf leaf) { return cf_aabb_tree_get_aabb(tree, leaf); }
-CUTE_INLINE void* aabb_tree_get_udata(AabbTree tree, Leaf leaf) { return cf_aabb_tree_get_udata(tree, leaf); }
-CUTE_INLINE void aabb_tree_query(const AabbTree tree, AabbTreeQueryFn* fn, Aabb aabb, void* fn_udata = NULL) { cf_aabb_tree_query_aabb(tree, fn, aabb, fn_udata); }
-CUTE_INLINE void aabb_tree_query(const AabbTree tree, AabbTreeQueryFn* fn, Ray ray, void* fn_udata = NULL) { cf_aabb_tree_query_ray(tree, fn, ray, fn_udata); }
-CUTE_INLINE float aabb_tree_cost(const AabbTree tree) { return cf_aabb_tree_cost(tree); }
-CUTE_INLINE void aabb_tree_validate(const AabbTree tree) { cf_aabb_tree_validate(tree); }
-CUTE_INLINE size_t aabb_tree_serialized_size(const AabbTree tree) { return cf_aabb_tree_serialized_size(tree); }
-CUTE_INLINE bool aabb_tree_serialize(const AabbTree tree, void* buffer, size_t size) { return cf_aabb_tree_serialize(tree, buffer, size); }
+CF_INLINE AabbTree make_aabb_tree(int initial_capacity = 0) { return cf_make_aabb_tree(initial_capacity); }
+CF_INLINE AabbTree make_aabb_tree_from_memory(const void* buffer, size_t size) { return cf_make_aabb_tree_from_memory(buffer, size); }
+CF_INLINE void destroy_aabb_tree(AabbTree tree) { cf_destroy_aabb_tree(tree); }
+CF_INLINE Leaf aabb_tree_insert(AabbTree tree, Aabb aabb, void* udata = NULL) { return cf_aabb_tree_insert(tree, aabb, udata); }
+CF_INLINE void aabb_tree_remove(AabbTree tree, Leaf leaf) { cf_aabb_tree_remove(tree, leaf); }
+CF_INLINE bool aabb_tree_update_leaf(AabbTree tree, Leaf leaf, Aabb aabb) { return cf_aabb_tree_update_leaf(tree, leaf, aabb); }
+CF_INLINE bool aabb_tree_move(AabbTree tree, Leaf leaf, Aabb aabb, v2 offset) { return cf_aabb_tree_move(tree, leaf, aabb, offset); }
+CF_INLINE Aabb aabb_tree_get_aabb(AabbTree tree, Leaf leaf) { return cf_aabb_tree_get_aabb(tree, leaf); }
+CF_INLINE void* aabb_tree_get_udata(AabbTree tree, Leaf leaf) { return cf_aabb_tree_get_udata(tree, leaf); }
+CF_INLINE void aabb_tree_query(const AabbTree tree, AabbTreeQueryFn* fn, Aabb aabb, void* fn_udata = NULL) { cf_aabb_tree_query_aabb(tree, fn, aabb, fn_udata); }
+CF_INLINE void aabb_tree_query(const AabbTree tree, AabbTreeQueryFn* fn, Ray ray, void* fn_udata = NULL) { cf_aabb_tree_query_ray(tree, fn, ray, fn_udata); }
+CF_INLINE float aabb_tree_cost(const AabbTree tree) { return cf_aabb_tree_cost(tree); }
+CF_INLINE void aabb_tree_validate(const AabbTree tree) { cf_aabb_tree_validate(tree); }
+CF_INLINE size_t aabb_tree_serialized_size(const AabbTree tree) { return cf_aabb_tree_serialized_size(tree); }
+CF_INLINE bool aabb_tree_serialize(const AabbTree tree, void* buffer, size_t size) { return cf_aabb_tree_serialize(tree, buffer, size); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_AABB_TREE_H
+#endif // CF_AABB_TREE_H

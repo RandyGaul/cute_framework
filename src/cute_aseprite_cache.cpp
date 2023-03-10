@@ -44,7 +44,7 @@ struct CF_AsepriteCache
 {
 	Map<const char*, CF_AsepriteCacheEntry> aseprites;
 	Map<uint64_t, void*> id_to_pixels;
-	uint64_t id_gen = CUTE_ASEPRITE_ID_RANGE_LO;
+	uint64_t id_gen = CF_ASEPRITE_ID_RANGE_LO;
 };
 
 static CF_AsepriteCache* cache;
@@ -53,17 +53,17 @@ void cf_aseprite_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_
 {
 	auto pixels_ptr = cache->id_to_pixels.try_find(image_id);
 	if (!pixels_ptr) {
-		CUTE_DEBUG_PRINTF("Aseprite cache -- unable to find id %lld.", (long long int)image_id);
-		CUTE_MEMSET(buffer, 0, bytes_to_fill);
+		CF_DEBUG_PRINTF("Aseprite cache -- unable to find id %lld.", (long long int)image_id);
+		CF_MEMSET(buffer, 0, bytes_to_fill);
 	} else {
 		void* pixels = *pixels_ptr;
-		CUTE_MEMCPY(buffer, pixels, bytes_to_fill);
+		CF_MEMCPY(buffer, pixels, bytes_to_fill);
 	}
 }
 
 void cf_make_aseprite_cache()
 {
-	cache = CUTE_NEW(CF_AsepriteCache);
+	cache = CF_NEW(CF_AsepriteCache);
 }
 
 void cf_destroy_aseprite_cache()
@@ -75,14 +75,14 @@ void cf_destroy_aseprite_cache()
 		int animation_count = hcount(entry->animations);
 		for (int j = 0; j < animation_count; ++j) {
 			afree(entry->animations[j]->frames);
-			CUTE_FREE(entry->animations[j]);
+			CF_FREE(entry->animations[j]);
 		}
 
 		hfree(entry->animations);
 		cute_aseprite_free(entry->ase);
 	}
 	cache->~CF_AsepriteCache();
-	CUTE_FREE(cache);
+	CF_FREE(cache);
 }
 
 static CF_PlayDirection s_play_direction(ase_animation_direction_t direction)
@@ -123,7 +123,7 @@ CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite)
 	size_t sz = 0;
 	void* data = cf_fs_read_entire_file_to_memory(aseprite_path, &sz);
 	if (!data) return cf_result_error("Unable to open ase file at `aseprite_path`.");
-	CUTE_DEFER(CUTE_FREE(data));
+	CF_DEFER(CF_FREE(data));
 	ase_t* ase = cute_aseprite_load_from_memory(data, (int)sz, NULL);
 	if (!ase) return cf_result_error("Unable to open ase file at `aseprite_path`.");
 
@@ -163,8 +163,8 @@ CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite)
 			ase_tag_t* tag = ase->tags + i;
 			int from = tag->from_frame;
 			int to = tag->to_frame;
-			CF_Animation* animation = (CF_Animation*)CUTE_ALLOC(sizeof(CF_Animation));
-			CUTE_MEMSET(animation, 0, sizeof(CF_Animation));
+			CF_Animation* animation = (CF_Animation*)CF_ALLOC(sizeof(CF_Animation));
+			CF_MEMSET(animation, 0, sizeof(CF_Animation));
 
 			animation->name = sintern(tag->name);
 			animation->play_direction = s_play_direction(tag->loop_animation_direction);
@@ -179,8 +179,8 @@ CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite)
 		}
 	} else {
 		// Treat the entire frame set as a single animation if there are no tags.
-		CF_Animation* animation = (CF_Animation*)CUTE_ALLOC(sizeof(CF_Animation));
-		CUTE_MEMSET(animation, 0, sizeof(CF_Animation));
+		CF_Animation* animation = (CF_Animation*)CF_ALLOC(sizeof(CF_Animation));
+		CF_MEMSET(animation, 0, sizeof(CF_Animation));
 
 		animation->name = sintern("default");
 		animation->play_direction = CF_PLAY_DIRECTION_FORWARDS;
@@ -199,7 +199,7 @@ CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite)
 	CF_AsepriteCacheEntry entry;
 	for (int i = 0; i < ase->slice_count; ++i) {
 		ase_slice_t* slice = ase->slices + i;
-		if (!CUTE_STRCMP(slice->name, "origin")) {
+		if (!CF_STRCMP(slice->name, "origin")) {
 			// Invert y-axis since ase saves slice as (0, 0) top-left.
 			float y = (float)slice->origin_y + (float)slice->h * 0.25f;
 			y = (float)ase->h - y - 1;
@@ -237,7 +237,7 @@ void cf_aseprite_cache_unload(const char* aseprite_path)
 		}
 
 		afree(animation->frames);
-		CUTE_FREE(animation);
+		CF_FREE(animation);
 	}
 
 	hfree(entry.animations);

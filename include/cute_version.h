@@ -19,21 +19,21 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_VERSION_H
-#define CUTE_VERSION_H
+#ifndef CF_VERSION_H
+#define CF_VERSION_H
 
 #include "cute_defines.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
 
-#define CUTE_VERSION_STRING_COMPILED "Cute Framework Version 0.0"
+#define CF_VERSION_STRING_COMPILED "Cute Framework Version 0.0"
 
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
 
-CUTE_API const char* CUTE_CALL cf_version_string_linked();
+CF_API const char* CF_CALL cf_version_string_linked();
 
 #ifdef __cplusplus
 }
@@ -42,15 +42,15 @@ CUTE_API const char* CUTE_CALL cf_version_string_linked();
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
 
-CUTE_INLINE const char* version_string_linked() { return cf_version_string_linked(); }
+CF_INLINE const char* version_string_linked() { return cf_version_string_linked(); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_VERSION_H
+#endif // CF_VERSION_H

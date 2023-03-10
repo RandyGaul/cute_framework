@@ -42,7 +42,7 @@ void coroutine_wait_func(CF_Coroutine* co)
 	cf_coroutine_push(co, &a, sizeof(a));
 }
 
-CUTE_TEST_CASE(test_coroutine, "Call some coroutine functions or whatever.");
+CF_TEST_CASE(test_coroutine, "Call some coroutine functions or whatever.");
 int test_coroutine()
 {
 	CF_Coroutine* co = cf_make_coroutine(coroutine_func, 0, NULL);
@@ -52,10 +52,10 @@ int test_coroutine()
 	cf_coroutine_push(co, &a, sizeof(a));
 	cf_coroutine_push(co, &b, sizeof(b));
 	cf_coroutine_resume(co);
-	CUTE_TEST_ASSERT(c == 0);
+	CF_TEST_ASSERT(c == 0);
 	cf_coroutine_resume(co);
 	cf_coroutine_pop(co, &c, sizeof(c));
-	CUTE_TEST_ASSERT(c == 50);
+	CF_TEST_ASSERT(c == 50);
 	cf_destroy_coroutine(co);
 
 	co = cf_make_coroutine(coroutine_func, 0, NULL);
@@ -65,10 +65,10 @@ int test_coroutine()
 	cf_coroutine_push(co, &a, sizeof(a));
 	cf_coroutine_push(co, &b, sizeof(b));
 	cf_coroutine_resume(co);
-	CUTE_TEST_ASSERT(c == 0);
+	CF_TEST_ASSERT(c == 0);
 	cf_coroutine_resume(co);
 	cf_coroutine_pop(co, &c, sizeof(c));
-	CUTE_TEST_ASSERT(c == 50);
+	CF_TEST_ASSERT(c == 50);
 	cf_destroy_coroutine(co);
 
 	return 0;

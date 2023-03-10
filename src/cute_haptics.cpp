@@ -34,15 +34,15 @@ struct CF_Haptic
 
 CF_Haptic* cf_haptic_open(CF_Joypad* joypad)
 {
-	CF_Haptic* haptic = CUTE_NEW(CF_Haptic);
+	CF_Haptic* haptic = CF_NEW(CF_Haptic);
 	SDL_Joystick* joy = SDL_GameControllerGetJoystick(joypad->controller);
 	if (!joy) {
-		CUTE_FREE(haptic);
+		CF_FREE(haptic);
 		return NULL;
 	}
 	haptic->ptr = SDL_HapticOpenFromJoystick(joy);
 	if (!haptic->ptr) {
-		CUTE_FREE(haptic);
+		CF_FREE(haptic);
 		return NULL;
 	}
 	joypad->haptic = haptic;
@@ -52,7 +52,7 @@ CF_Haptic* cf_haptic_open(CF_Joypad* joypad)
 void cf_haptic_close(CF_Haptic* haptic)
 {
 	SDL_HapticClose(haptic->ptr);
-	CUTE_FREE(haptic);
+	CF_FREE(haptic);
 }
 
 bool cf_haptic_supports(CF_Haptic* haptic, CF_HapticType type)

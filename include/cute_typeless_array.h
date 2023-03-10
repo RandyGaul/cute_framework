@@ -19,12 +19,12 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_TYPELESS_ARRAY_H
-#define CUTE_TYPELESS_ARRAY_H
+#ifndef CF_TYPELESS_ARRAY_H
+#define CF_TYPELESS_ARRAY_H
 
 #include "cute_defines.h"
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 /**
  * Implements a dynamically growable array without any type information (no templates).
@@ -81,6 +81,6 @@ using typeless_array = CF_TypelessArray;
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_TYPELESS_ARRAY_H
+#endif // CF_TYPELESS_ARRAY_H

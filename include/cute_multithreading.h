@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_MULTITHREADING_H
-#define CUTE_MULTITHREADING_H
+#ifndef CF_MULTITHREADING_H
+#define CF_MULTITHREADING_H
 
 #include "cute_defines.h"
 #include "cute_result.h"
@@ -132,7 +132,7 @@ typedef cute_threadpool_t CF_Threadpool;
  * @remarks  Destroy the mutex with `cf_destroy_mutex` when done.
  * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
  */
-CUTE_API CF_Mutex CUTE_CALL cf_make_mutex();
+CF_API CF_Mutex CF_CALL cf_make_mutex();
 
 /**
  * @function cf_destroy_mutex
@@ -141,7 +141,7 @@ CUTE_API CF_Mutex CUTE_CALL cf_make_mutex();
  * @param    mutex      The mutex.
  * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
  */
-CUTE_API void CUTE_CALL cf_destroy_mutex(CF_Mutex* mutex);
+CF_API void CF_CALL cf_destroy_mutex(CF_Mutex* mutex);
 
 /**
  * @function cf_mutex_lock
@@ -152,7 +152,7 @@ CUTE_API void CUTE_CALL cf_destroy_mutex(CF_Mutex* mutex);
  * @remarks  Will cause the thread to wait until the lock is available if it's currently locked.
  * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
  */
-CUTE_API CF_Result CUTE_CALL cf_mutex_lock(CF_Mutex* mutex);
+CF_API CF_Result CF_CALL cf_mutex_lock(CF_Mutex* mutex);
 
 /**
  * @function cf_mutex_unlock
@@ -162,7 +162,7 @@ CUTE_API CF_Result CUTE_CALL cf_mutex_lock(CF_Mutex* mutex);
  * @return   Returns any errors as a `CF_Result`.
  * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
  */
-CUTE_API CF_Result CUTE_CALL cf_mutex_unlock(CF_Mutex* mutex);
+CF_API CF_Result CF_CALL cf_mutex_unlock(CF_Mutex* mutex);
 
 /**
  * @function cf_mutex_try_lock
@@ -172,7 +172,7 @@ CUTE_API CF_Result CUTE_CALL cf_mutex_unlock(CF_Mutex* mutex);
  * @return   Returns true if the lock was acquired, and false if the lock was already locked.
  * @related  CF_Mutex cf_make_mutex cf_destroy_mutex cf_mutex_lock cf_mutex_unlock cf_mutex_try_lock
  */
-CUTE_API bool CUTE_CALL cf_mutex_try_lock(CF_Mutex* mutex);
+CF_API bool CF_CALL cf_mutex_try_lock(CF_Mutex* mutex);
 
 /**
  * @function cf_make_cv
@@ -181,7 +181,7 @@ CUTE_API bool CUTE_CALL cf_mutex_try_lock(CF_Mutex* mutex);
  * @remarks  Destroy the mutex with `cf_destroy_cv` when done.
  * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
  */
-CUTE_API CF_ConditionVariable CUTE_CALL cf_make_cv();
+CF_API CF_ConditionVariable CF_CALL cf_make_cv();
 
 /**
  * @function cf_destroy_cv
@@ -190,7 +190,7 @@ CUTE_API CF_ConditionVariable CUTE_CALL cf_make_cv();
  * @param    cv         The condition variable.
  * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
  */
-CUTE_API void CUTE_CALL cf_destroy_cv(CF_ConditionVariable* cv);
+CF_API void CF_CALL cf_destroy_cv(CF_ConditionVariable* cv);
 
 /**
  * @function cf_cv_wake_all
@@ -200,7 +200,7 @@ CUTE_API void CUTE_CALL cf_destroy_cv(CF_ConditionVariable* cv);
  * @return   Returns any errors as a `CF_Result`.
  * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
  */
-CUTE_API CF_Result CUTE_CALL cf_cv_wake_all(CF_ConditionVariable* cv);
+CF_API CF_Result CF_CALL cf_cv_wake_all(CF_ConditionVariable* cv);
 
 /**
  * @function cf_cv_wake_one
@@ -210,7 +210,7 @@ CUTE_API CF_Result CUTE_CALL cf_cv_wake_all(CF_ConditionVariable* cv);
  * @return   Returns any errors as a `CF_Result`.
  * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
  */
-CUTE_API CF_Result CUTE_CALL cf_cv_wake_one(CF_ConditionVariable* cv);
+CF_API CF_Result CF_CALL cf_cv_wake_one(CF_ConditionVariable* cv);
 
 /**
  * @function cf_cv_wait
@@ -222,7 +222,7 @@ CUTE_API CF_Result CUTE_CALL cf_cv_wake_one(CF_ConditionVariable* cv);
  * @remarks  The thread will not wake until `cf_cv_wake_all` or `cf_cv_wake_one` is called.
  * @related  CF_ConditionVariable cf_make_cv cf_destroy_cv cf_cv_wake_all cf_cv_wake_one cf_cv_wait
  */
-CUTE_API CF_Result CUTE_CALL cf_cv_wait(CF_ConditionVariable* cv, CF_Mutex* mutex);
+CF_API CF_Result CF_CALL cf_cv_wait(CF_ConditionVariable* cv, CF_Mutex* mutex);
 
 /**
  * @function cf_make_sem
@@ -235,7 +235,7 @@ CUTE_API CF_Result CUTE_CALL cf_cv_wait(CF_ConditionVariable* cv, CF_Mutex* mute
  *           the online book "The Little Book of Semaphores".
  * @related  CF_Semaphore cf_make_sem cf_destroy_sem cf_sem_post cf_sem_try cf_sem_wait cf_sem_value
  */
-CUTE_API CF_Semaphore CUTE_CALL cf_make_sem(int initial_count);
+CF_API CF_Semaphore CF_CALL cf_make_sem(int initial_count);
 
 /**
  * @function cf_destroy_sem
@@ -244,7 +244,7 @@ CUTE_API CF_Semaphore CUTE_CALL cf_make_sem(int initial_count);
  * @param    semaphore  The semaphore.
  * @related  CF_Semaphore cf_make_sem cf_destroy_sem cf_sem_post cf_sem_try cf_sem_wait cf_sem_value
  */
-CUTE_API void CUTE_CALL cf_destroy_sem(CF_Semaphore* semaphore);
+CF_API void CF_CALL cf_destroy_sem(CF_Semaphore* semaphore);
 
 /**
  * @function cf_sem_post
@@ -256,7 +256,7 @@ CUTE_API void CUTE_CALL cf_destroy_sem(CF_Semaphore* semaphore);
  *           available again, this function is used to wake one up.
  * @related  CF_Semaphore cf_make_sem cf_destroy_sem cf_sem_post cf_sem_try cf_sem_wait cf_sem_value
  */
-CUTE_API CF_Result CUTE_CALL cf_sem_post(CF_Semaphore* semaphore);
+CF_API CF_Result CF_CALL cf_sem_post(CF_Semaphore* semaphore);
 
 /**
  * @function cf_sem_try
@@ -269,7 +269,7 @@ CUTE_API CF_Result CUTE_CALL cf_sem_post(CF_Semaphore* semaphore);
  *           value was an error. This lets a thread poll the semaphore instead of blocking/sleeping.
  * @related  CF_Semaphore cf_make_sem cf_destroy_sem cf_sem_post cf_sem_try cf_sem_wait cf_sem_value
  */
-CUTE_API CF_Result CUTE_CALL cf_sem_try(CF_Semaphore* semaphore);
+CF_API CF_Result CF_CALL cf_sem_try(CF_Semaphore* semaphore);
 
 /**
  * @function cf_sem_wait
@@ -281,7 +281,7 @@ CUTE_API CF_Result CUTE_CALL cf_sem_try(CF_Semaphore* semaphore);
  *           decremented once.
  * @related  CF_Semaphore cf_make_sem cf_destroy_sem cf_sem_post cf_sem_try cf_sem_wait cf_sem_value
  */
-CUTE_API CF_Result CUTE_CALL cf_sem_wait(CF_Semaphore* semaphore);
+CF_API CF_Result CF_CALL cf_sem_wait(CF_Semaphore* semaphore);
 
 /**
  * @function cf_sem_value
@@ -291,7 +291,7 @@ CUTE_API CF_Result CUTE_CALL cf_sem_wait(CF_Semaphore* semaphore);
  * @return   Returns any errors upon failure.
  * @related  CF_Semaphore cf_make_sem cf_destroy_sem cf_sem_post cf_sem_try cf_sem_wait cf_sem_value
  */
-CUTE_API CF_Result CUTE_CALL cf_sem_value(CF_Semaphore* semaphore);
+CF_API CF_Result CF_CALL cf_sem_value(CF_Semaphore* semaphore);
 
 /**
  * @function cf_thread_create
@@ -311,7 +311,7 @@ CUTE_API CF_Result CUTE_CALL cf_sem_value(CF_Semaphore* semaphore);
  *           clean up resources and get the thread's return value back. It is considered a leak otherwise.
  * @related  CF_Thread CF_ThreadFn cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
  */
-CUTE_API CF_Thread* CUTE_CALL cf_thread_create(CF_ThreadFn func, const char* name, void* udata);
+CF_API CF_Thread* CF_CALL cf_thread_create(CF_ThreadFn func, const char* name, void* udata);
 
 /**
  * @function cf_thread_detach
@@ -322,7 +322,7 @@ CUTE_API CF_Thread* CUTE_CALL cf_thread_create(CF_ThreadFn func, const char* nam
  * @remarks  When a thread has `cf_thread_detach` called on it, it is no longer necessary to call `cf_thread_wait` on it.
  * @related  CF_Thread CF_ThreadFn cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
  */
-CUTE_API void CUTE_CALL cf_thread_detach(CF_Thread* thread);
+CF_API void CF_CALL cf_thread_detach(CF_Thread* thread);
 
 /**
  * @function cf_thread_get_id
@@ -331,7 +331,7 @@ CUTE_API void CUTE_CALL cf_thread_detach(CF_Thread* thread);
  * @param    thread  The thread.
  * @related  CF_Thread CF_ThreadFn cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
  */
-CUTE_API CF_ThreadId CUTE_CALL cf_thread_get_id(CF_Thread* thread);
+CF_API CF_ThreadId CF_CALL cf_thread_get_id(CF_Thread* thread);
 
 /**
  * @function cf_thread_id
@@ -340,7 +340,7 @@ CUTE_API CF_ThreadId CUTE_CALL cf_thread_get_id(CF_Thread* thread);
  * @param    thread  The thread.
  * @related  CF_Thread CF_ThreadFn cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
  */
-CUTE_API CF_ThreadId CUTE_CALL cf_thread_id();
+CF_API CF_ThreadId CF_CALL cf_thread_id();
 
 /**
  * @function cf_thread_wait
@@ -351,7 +351,7 @@ CUTE_API CF_ThreadId CUTE_CALL cf_thread_id();
  *           call this function on a thread more than once.
  * @related  CF_Thread CF_ThreadFn cf_thread_create cf_thread_detach cf_thread_get_id cf_thread_id cf_thread_wait
  */
-CUTE_API CF_Result CUTE_CALL cf_thread_wait(CF_Thread* thread);
+CF_API CF_Result CF_CALL cf_thread_wait(CF_Thread* thread);
 
 /**
  * @function cf_core_count
@@ -359,7 +359,7 @@ CUTE_API CF_Result CUTE_CALL cf_thread_wait(CF_Thread* thread);
  * @brief    Returns the number of cores on the CPU. Can be affected my machine dependent technology, such as Intel's hyperthreading.
  * @related  cf_core_count
  */
-CUTE_API int CUTE_CALL cf_core_count();
+CF_API int CF_CALL cf_core_count();
 
 /**
  * @function cf_cacheline_size
@@ -367,7 +367,7 @@ CUTE_API int CUTE_CALL cf_core_count();
  * @brief    Returns the number of bytes in a single cache line of the CPU L1 memory cache.
  * @related  cf_core_count
  */
-CUTE_API int CUTE_CALL cf_cacheline_size();
+CF_API int CF_CALL cf_cacheline_size();
 
 /**
  * @function cf_atomic_zero
@@ -376,7 +376,7 @@ CUTE_API int CUTE_CALL cf_cacheline_size();
  * @remarks  Atomics are an advanced topic. You've been warned!
  * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
  */
-CUTE_API CF_AtomicInt CUTE_CALL cf_atomic_zero();
+CF_API CF_AtomicInt CF_CALL cf_atomic_zero();
 
 /**
  * @function cf_atomic_add
@@ -387,7 +387,7 @@ CUTE_API CF_AtomicInt CUTE_CALL cf_atomic_zero();
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
  * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
  */
-CUTE_API int CUTE_CALL cf_atomic_add(CF_AtomicInt* atomic, int addend);
+CF_API int CF_CALL cf_atomic_add(CF_AtomicInt* atomic, int addend);
 
 /**
  * @function cf_atomic_set
@@ -398,7 +398,7 @@ CUTE_API int CUTE_CALL cf_atomic_add(CF_AtomicInt* atomic, int addend);
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
  * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
  */
-CUTE_API int CUTE_CALL cf_atomic_set(CF_AtomicInt* atomic, int value);
+CF_API int CF_CALL cf_atomic_set(CF_AtomicInt* atomic, int value);
 
 /**
  * @function cf_atomic_get
@@ -408,7 +408,7 @@ CUTE_API int CUTE_CALL cf_atomic_set(CF_AtomicInt* atomic, int value);
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
  * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
  */
-CUTE_API int CUTE_CALL cf_atomic_get(CF_AtomicInt* atomic);
+CF_API int CF_CALL cf_atomic_get(CF_AtomicInt* atomic);
 
 /**
  * @function cf_atomic_cas
@@ -421,7 +421,7 @@ CUTE_API int CUTE_CALL cf_atomic_get(CF_AtomicInt* atomic);
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
  * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
  */
-CUTE_API CF_Result CUTE_CALL cf_atomic_cas(CF_AtomicInt* atomic, int expected, int value);
+CF_API CF_Result CF_CALL cf_atomic_cas(CF_AtomicInt* atomic, int expected, int value);
 
 /**
  * @function cf_atomic_ptr_set
@@ -432,7 +432,7 @@ CUTE_API CF_Result CUTE_CALL cf_atomic_cas(CF_AtomicInt* atomic, int expected, i
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
  * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
  */
-CUTE_API void* CUTE_CALL cf_atomic_ptr_set(void** atomic, void* value);
+CF_API void* CF_CALL cf_atomic_ptr_set(void** atomic, void* value);
 
 /**
  * @function cf_atomic_ptr_get
@@ -442,7 +442,7 @@ CUTE_API void* CUTE_CALL cf_atomic_ptr_set(void** atomic, void* value);
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
  * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
  */
-CUTE_API void* CUTE_CALL cf_atomic_ptr_get(void** atomic);
+CF_API void* CF_CALL cf_atomic_ptr_get(void** atomic);
 
 /**
  * @function cf_atomic_ptr_cas
@@ -455,7 +455,7 @@ CUTE_API void* CUTE_CALL cf_atomic_ptr_get(void** atomic);
  * @remarks  Atomics are an advanced topic. You've been warned! Beej has a [good article on atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html).
  * @related  cf_atomic_zero cf_atomic_add cf_atomic_set cf_atomic_get cf_atomic_cas cf_atomic_ptr_set cf_atomic_ptr_get cf_atomic_ptr_cas
  */
-CUTE_API CF_Result CUTE_CALL cf_atomic_ptr_cas(void** atomic, void* expected, void* value);
+CF_API CF_Result CF_CALL cf_atomic_ptr_cas(void** atomic, void* expected, void* value);
 
 /**
  * @function cf_make_rw_lock
@@ -464,7 +464,7 @@ CUTE_API CF_Result CUTE_CALL cf_atomic_ptr_cas(void** atomic, void* expected, vo
  * @remarks  Call `cf_destroy_rw_lock` when done.
  * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
  */
-CUTE_API CF_ReadWriteLock CUTE_CALL cf_make_rw_lock();
+CF_API CF_ReadWriteLock CF_CALL cf_make_rw_lock();
 
 /**
  * @function cf_destroy_rw_lock
@@ -473,7 +473,7 @@ CUTE_API CF_ReadWriteLock CUTE_CALL cf_make_rw_lock();
  * @param    rw         The read/write lock.
  * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
  */
-CUTE_API void CUTE_CALL cf_destroy_rw_lock(CF_ReadWriteLock* rw);
+CF_API void CF_CALL cf_destroy_rw_lock(CF_ReadWriteLock* rw);
 
 /**
  * @function cf_read_lock
@@ -482,7 +482,7 @@ CUTE_API void CUTE_CALL cf_destroy_rw_lock(CF_ReadWriteLock* rw);
  * @param    rw         The read/write lock.
  * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
  */
-CUTE_API void CUTE_CALL cf_read_lock(CF_ReadWriteLock* rw);
+CF_API void CF_CALL cf_read_lock(CF_ReadWriteLock* rw);
 
 /**
  * @function cf_read_unlock
@@ -491,7 +491,7 @@ CUTE_API void CUTE_CALL cf_read_lock(CF_ReadWriteLock* rw);
  * @param    rw         The read/write lock.
  * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
  */
-CUTE_API void CUTE_CALL cf_read_unlock(CF_ReadWriteLock* rw);
+CF_API void CF_CALL cf_read_unlock(CF_ReadWriteLock* rw);
 
 /**
  * @function cf_write_lock
@@ -502,7 +502,7 @@ CUTE_API void CUTE_CALL cf_read_unlock(CF_ReadWriteLock* rw);
  *           readers and writers to unlock before acquiring exclusive access to the lock.
  * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
  */
-CUTE_API void CUTE_CALL cf_write_lock(CF_ReadWriteLock* rw);
+CF_API void CF_CALL cf_write_lock(CF_ReadWriteLock* rw);
 
 /**
  * @function cf_write_unlock
@@ -513,7 +513,7 @@ CUTE_API void CUTE_CALL cf_write_lock(CF_ReadWriteLock* rw);
  *           readers and writers to unlock before acquiring exclusive access to the lock.
  * @related  CF_ReadWriteLock cf_make_rw_lock cf_destroy_rw_lock cf_read_lock cf_read_unlock cf_write_lock cf_write_unlock
  */
-CUTE_API void CUTE_CALL cf_write_unlock(CF_ReadWriteLock* rw);
+CF_API void CF_CALL cf_write_unlock(CF_ReadWriteLock* rw);
 
 /**
  * @function CF_TaskFn
@@ -525,7 +525,7 @@ CUTE_API void CUTE_CALL cf_write_unlock(CF_ReadWriteLock* rw);
  *           return. Often a task is defined as a bunch of processing that doesn't share any data external to the task.
  * @related  CF_TaskFn cf_make_threadpool cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
  */
-typedef void (CUTE_CALL CF_TaskFn)(void* param);
+typedef void (CF_CALL CF_TaskFn)(void* param);
 
 /**
  * @function cf_make_threadpool
@@ -538,7 +538,7 @@ typedef void (CUTE_CALL CF_TaskFn)(void* param);
  *           subtract one, then use this number for `thread_count`. We subtract one to account for the main thread.
  * @related  CF_TaskFn cf_make_threadpool cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
  */
-CUTE_API CF_Threadpool* CUTE_CALL cf_make_threadpool(int thread_count);
+CF_API CF_Threadpool* CF_CALL cf_make_threadpool(int thread_count);
 
 /**
  * @function cf_destroy_threadpool
@@ -547,7 +547,7 @@ CUTE_API CF_Threadpool* CUTE_CALL cf_make_threadpool(int thread_count);
  * @param    pool       The pool.
  * @related  CF_TaskFn cf_make_threadpool cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
  */
-CUTE_API void CUTE_CALL cf_destroy_threadpool(CF_Threadpool* pool);
+CF_API void CF_CALL cf_destroy_threadpool(CF_Threadpool* pool);
 
 /**
  * @function cf_threadpool_add_task
@@ -560,7 +560,7 @@ CUTE_API void CUTE_CALL cf_destroy_threadpool(CF_Threadpool* pool);
  *           awake, threads will process the tasks. The order of start/finish for the tasks is not deterministic.
  * @related  CF_TaskFn cf_make_threadpool cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
  */
-CUTE_API void CUTE_CALL cf_threadpool_add_task(CF_Threadpool* pool, CF_TaskFn* task, void* param);
+CF_API void CF_CALL cf_threadpool_add_task(CF_Threadpool* pool, CF_TaskFn* task, void* param);
 
 /**
  * @function cf_threadpool_kick_and_wait
@@ -570,7 +570,7 @@ CUTE_API void CUTE_CALL cf_threadpool_add_task(CF_Threadpool* pool, CF_TaskFn* t
  * @remarks  This function will block until all tasks are completed.
  * @related  CF_TaskFn cf_make_threadpool cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
  */
-CUTE_API void CUTE_CALL cf_threadpool_kick_and_wait(CF_Threadpool* pool);
+CF_API void CF_CALL cf_threadpool_kick_and_wait(CF_Threadpool* pool);
 
 /**
  * @function cf_threadpool_kick
@@ -580,7 +580,7 @@ CUTE_API void CUTE_CALL cf_threadpool_kick_and_wait(CF_Threadpool* pool);
  * @remarks  This function will _not_ block. It immediately returns after signaling the threads in the pool to wake.
  * @related  CF_TaskFn cf_make_threadpool cf_destroy_threadpool cf_threadpool_add_task cf_threadpool_kick_and_wait cf_threadpool_kick
  */
-CUTE_API void CUTE_CALL cf_threadpool_kick(CF_Threadpool* pool);
+CF_API void CF_CALL cf_threadpool_kick(CF_Threadpool* pool);
 
 #ifdef __cplusplus
 }
@@ -589,7 +589,7 @@ CUTE_API void CUTE_CALL cf_threadpool_kick(CF_Threadpool* pool);
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
@@ -605,58 +605,58 @@ using ReadWriteLock = CF_ReadWriteLock;
 using Threadpool = CF_Threadpool;
 using TaskFn = CF_TaskFn;
 
-CUTE_INLINE Mutex make_mutex() { return cf_make_mutex(); }
-CUTE_INLINE void destroy_mutex(Mutex* mutex) { cf_destroy_mutex(mutex); }
-CUTE_INLINE Result mutex_lock(Mutex* mutex) { return cf_mutex_lock(mutex); }
-CUTE_INLINE Result mutex_unlock(Mutex* mutex) { return cf_mutex_unlock(mutex); }
-CUTE_INLINE bool Mutexrylock(Mutex* mutex) { return cf_mutex_try_lock(mutex); }
+CF_INLINE Mutex make_mutex() { return cf_make_mutex(); }
+CF_INLINE void destroy_mutex(Mutex* mutex) { cf_destroy_mutex(mutex); }
+CF_INLINE Result mutex_lock(Mutex* mutex) { return cf_mutex_lock(mutex); }
+CF_INLINE Result mutex_unlock(Mutex* mutex) { return cf_mutex_unlock(mutex); }
+CF_INLINE bool Mutexrylock(Mutex* mutex) { return cf_mutex_try_lock(mutex); }
 
-CUTE_INLINE ConditionVariable make_cv() { return cf_make_cv(); }
-CUTE_INLINE void destroy_cv(ConditionVariable* cv) { cf_destroy_cv(cv); }
-CUTE_INLINE Result cv_wake_all(ConditionVariable* cv) { return cf_cv_wake_all(cv); }
-CUTE_INLINE Result cv_wake_one(ConditionVariable* cv) { return cf_cv_wake_one(cv); }
-CUTE_INLINE Result cv_wait(ConditionVariable* cv, Mutex* mutex) { return cf_cv_wait(cv, mutex); }
+CF_INLINE ConditionVariable make_cv() { return cf_make_cv(); }
+CF_INLINE void destroy_cv(ConditionVariable* cv) { cf_destroy_cv(cv); }
+CF_INLINE Result cv_wake_all(ConditionVariable* cv) { return cf_cv_wake_all(cv); }
+CF_INLINE Result cv_wake_one(ConditionVariable* cv) { return cf_cv_wake_one(cv); }
+CF_INLINE Result cv_wait(ConditionVariable* cv, Mutex* mutex) { return cf_cv_wait(cv, mutex); }
 
-CUTE_INLINE Semaphore make_sem(int initial_count) { return cf_make_sem(initial_count); }
-CUTE_INLINE void destroy_sem(Semaphore* semaphore) { cf_destroy_sem(semaphore); }
-CUTE_INLINE Result sem_post(Semaphore* semaphore) { return cf_sem_post(semaphore); }
-CUTE_INLINE Result sem_try(Semaphore* semaphore) { return cf_sem_try(semaphore); }
-CUTE_INLINE Result sem_wait(Semaphore* semaphore) { return cf_sem_wait(semaphore); }
-CUTE_INLINE Result sem_value(Semaphore* semaphore) { return cf_sem_value(semaphore); }
+CF_INLINE Semaphore make_sem(int initial_count) { return cf_make_sem(initial_count); }
+CF_INLINE void destroy_sem(Semaphore* semaphore) { cf_destroy_sem(semaphore); }
+CF_INLINE Result sem_post(Semaphore* semaphore) { return cf_sem_post(semaphore); }
+CF_INLINE Result sem_try(Semaphore* semaphore) { return cf_sem_try(semaphore); }
+CF_INLINE Result sem_wait(Semaphore* semaphore) { return cf_sem_wait(semaphore); }
+CF_INLINE Result sem_value(Semaphore* semaphore) { return cf_sem_value(semaphore); }
 
-CUTE_INLINE Thread* thread_create(ThreadFn func, const char* name, void* udata) { return cf_thread_create(func, name, udata); }
-CUTE_INLINE void thread_detach(Thread* thread) { cf_thread_detach(thread); }
-CUTE_INLINE ThreadId thread_get_id(Thread* thread) { return cf_thread_get_id(thread); }
-CUTE_INLINE ThreadId thread_id() { return cf_thread_id(); }
-CUTE_INLINE Result thread_wait(Thread* thread) { return cf_thread_wait(thread); }
+CF_INLINE Thread* thread_create(ThreadFn func, const char* name, void* udata) { return cf_thread_create(func, name, udata); }
+CF_INLINE void thread_detach(Thread* thread) { cf_thread_detach(thread); }
+CF_INLINE ThreadId thread_get_id(Thread* thread) { return cf_thread_get_id(thread); }
+CF_INLINE ThreadId thread_id() { return cf_thread_id(); }
+CF_INLINE Result thread_wait(Thread* thread) { return cf_thread_wait(thread); }
 
-CUTE_INLINE int core_count() { return cf_core_count(); }
-CUTE_INLINE int cacheline_size() { return cf_cacheline_size(); }
+CF_INLINE int core_count() { return cf_core_count(); }
+CF_INLINE int cacheline_size() { return cf_cacheline_size(); }
 
-CUTE_INLINE AtomicInt atomic_zero() { return cf_atomic_zero(); }
-CUTE_INLINE int atomic_add(AtomicInt* atomic, int addend) { return cf_atomic_add(atomic, addend); }
-CUTE_INLINE int atomic_set(AtomicInt* atomic, int value) { return cf_atomic_set(atomic, value); }
-CUTE_INLINE int atomic_get(AtomicInt* atomic) { return cf_atomic_get(atomic); }
-CUTE_INLINE Result atomic_cas(AtomicInt* atomic, int expected, int value) { return cf_atomic_cas(atomic, expected, value); }
-CUTE_INLINE void* atomic_ptr_set(void** atomic, void* value) { return cf_atomic_ptr_set(atomic, value); }
-CUTE_INLINE void* atomic_ptr_get(void** atomic) { return cf_atomic_ptr_get(atomic); }
-CUTE_INLINE Result atomic_ptr_cas(void** atomic, void* expected, void* value) { return cf_atomic_ptr_cas(atomic, expected, value); }
+CF_INLINE AtomicInt atomic_zero() { return cf_atomic_zero(); }
+CF_INLINE int atomic_add(AtomicInt* atomic, int addend) { return cf_atomic_add(atomic, addend); }
+CF_INLINE int atomic_set(AtomicInt* atomic, int value) { return cf_atomic_set(atomic, value); }
+CF_INLINE int atomic_get(AtomicInt* atomic) { return cf_atomic_get(atomic); }
+CF_INLINE Result atomic_cas(AtomicInt* atomic, int expected, int value) { return cf_atomic_cas(atomic, expected, value); }
+CF_INLINE void* atomic_ptr_set(void** atomic, void* value) { return cf_atomic_ptr_set(atomic, value); }
+CF_INLINE void* atomic_ptr_get(void** atomic) { return cf_atomic_ptr_get(atomic); }
+CF_INLINE Result atomic_ptr_cas(void** atomic, void* expected, void* value) { return cf_atomic_ptr_cas(atomic, expected, value); }
 
-CUTE_INLINE ReadWriteLock make_rw_lock() { return cf_make_rw_lock(); }
-CUTE_INLINE void destroy_rw_lock(ReadWriteLock* rw) { cf_destroy_rw_lock(rw); }
-CUTE_INLINE void read_lock(ReadWriteLock* rw) { cf_read_lock(rw); }
-CUTE_INLINE void read_unlock(ReadWriteLock* rw) { cf_read_unlock(rw); }
-CUTE_INLINE void write_lock(ReadWriteLock* rw) { cf_write_lock(rw); }
-CUTE_INLINE void write_unlock(ReadWriteLock* rw) { cf_write_unlock(rw); }
+CF_INLINE ReadWriteLock make_rw_lock() { return cf_make_rw_lock(); }
+CF_INLINE void destroy_rw_lock(ReadWriteLock* rw) { cf_destroy_rw_lock(rw); }
+CF_INLINE void read_lock(ReadWriteLock* rw) { cf_read_lock(rw); }
+CF_INLINE void read_unlock(ReadWriteLock* rw) { cf_read_unlock(rw); }
+CF_INLINE void write_lock(ReadWriteLock* rw) { cf_write_lock(rw); }
+CF_INLINE void write_unlock(ReadWriteLock* rw) { cf_write_unlock(rw); }
 
-CUTE_INLINE Threadpool* make_threadpool(int thread_count) { return cf_make_threadpool(thread_count); }
-CUTE_INLINE void destroy_threadpool(Threadpool* pool) { return cf_destroy_threadpool(pool); }
-CUTE_INLINE void threadpool_add_task(Threadpool* pool, TaskFn* task, void* param) { return cf_threadpool_add_task(pool, task, param); }
-CUTE_INLINE void threadpool_kick_and_wait(Threadpool* pool) { return cf_threadpool_kick_and_wait(pool); }
-CUTE_INLINE void threadpool_kick(Threadpool* pool) { return cf_threadpool_kick(pool); }
+CF_INLINE Threadpool* make_threadpool(int thread_count) { return cf_make_threadpool(thread_count); }
+CF_INLINE void destroy_threadpool(Threadpool* pool) { return cf_destroy_threadpool(pool); }
+CF_INLINE void threadpool_add_task(Threadpool* pool, TaskFn* task, void* param) { return cf_threadpool_add_task(pool, task, param); }
+CF_INLINE void threadpool_kick_and_wait(Threadpool* pool) { return cf_threadpool_kick_and_wait(pool); }
+CF_INLINE void threadpool_kick(Threadpool* pool) { return cf_threadpool_kick(pool); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_MULTITHREADING_H
+#endif // CF_MULTITHREADING_H

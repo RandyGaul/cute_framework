@@ -19,26 +19,26 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_SERIALIZE_INTERNAL_H
-#define CUTE_SERIALIZE_INTERNAL_H
+#ifndef CF_SERIALIZE_INTERNAL_H
+#define CF_SERIALIZE_INTERNAL_H
 
 #include <cute_defines.h>
 #include <cute_networking.h>
 
-CUTE_INLINE void cf_write_uint8(uint8_t** p, uint8_t value)
+CF_INLINE void cf_write_uint8(uint8_t** p, uint8_t value)
 {
 	**p = value;
 	++(*p);
 }
 
-CUTE_INLINE void cf_write_uint16(uint8_t** p, uint16_t value)
+CF_INLINE void cf_write_uint16(uint8_t** p, uint16_t value)
 {
 	(*p)[0] = value & 0xFF;
 	(*p)[1] = value >> 8;
 	*p += 2;
 }
 
-CUTE_INLINE void cf_write_uint32(uint8_t** p, uint32_t value)
+CF_INLINE void cf_write_uint32(uint8_t** p, uint32_t value)
 {
 	(*p)[0] = value & 0xFF;
 	(*p)[1] = (value >> 8 ) & 0xFF;
@@ -47,7 +47,7 @@ CUTE_INLINE void cf_write_uint32(uint8_t** p, uint32_t value)
 	*p += 4;
 }
 
-CUTE_INLINE void cf_write_float(uint8_t** p, float value)
+CF_INLINE void cf_write_float(uint8_t** p, float value)
 {
 	union
 	{
@@ -58,7 +58,7 @@ CUTE_INLINE void cf_write_float(uint8_t** p, float value)
 	cf_write_uint32(p, val.as_uint32);
 }
 
-CUTE_INLINE void cf_write_uint64(uint8_t** p, uint64_t value)
+CF_INLINE void cf_write_uint64(uint8_t** p, uint64_t value)
 {
 	(*p)[0] = value & 0xFF;
 	(*p)[1] = (value >> 8 ) & 0xFF;
@@ -71,7 +71,7 @@ CUTE_INLINE void cf_write_uint64(uint8_t** p, uint64_t value)
 	*p += 8;
 }
 
-CUTE_INLINE void cf_write_bytes(uint8_t** p, const uint8_t* byte_array, int num_bytes)
+CF_INLINE void cf_write_bytes(uint8_t** p, const uint8_t* byte_array, int num_bytes)
 {
 	for (int i = 0; i < num_bytes; ++i)
 	{
@@ -79,7 +79,7 @@ CUTE_INLINE void cf_write_bytes(uint8_t** p, const uint8_t* byte_array, int num_
 	}
 }
 
-CUTE_INLINE void cf_write_address(uint8_t** p, CF_Address endpoint)
+CF_INLINE void cf_write_address(uint8_t** p, CF_Address endpoint)
 {
 	cf_write_uint8(p, (uint8_t)endpoint.type);
 	if (endpoint.type == (cn_address_type_t)CF_ADDRESS_TYPE_IPV4) {
@@ -97,17 +97,17 @@ CUTE_INLINE void cf_write_address(uint8_t** p, CF_Address endpoint)
 		cf_write_uint16(p, endpoint.u.ipv6[6]);
 		cf_write_uint16(p, endpoint.u.ipv6[7]);
 	} else {
-		CUTE_ASSERT(0);
+		CF_ASSERT(0);
 	}
 	cf_write_uint16(p, endpoint.port);
 }
 
-CUTE_INLINE void cf_write_key(uint8_t** p, const CF_CryptoKey* key)
+CF_INLINE void cf_write_key(uint8_t** p, const CF_CryptoKey* key)
 {
 	cf_write_bytes(p, (const uint8_t*)key, sizeof(*key));
 }
 
-CUTE_INLINE void cf_write_fourcc(uint8_t** p, const char* fourcc)
+CF_INLINE void cf_write_fourcc(uint8_t** p, const char* fourcc)
 {
 	cf_write_uint8(p, fourcc[0]);
 	cf_write_uint8(p, fourcc[1]);
@@ -115,14 +115,14 @@ CUTE_INLINE void cf_write_fourcc(uint8_t** p, const char* fourcc)
 	cf_write_uint8(p, fourcc[3]);
 }
 
-CUTE_INLINE uint8_t cf_read_uint8(uint8_t** p)
+CF_INLINE uint8_t cf_read_uint8(uint8_t** p)
 {
 	uint8_t value = **p;
 	++(*p);
 	return value;
 }
 
-CUTE_INLINE uint16_t cf_read_uint16(uint8_t** p)
+CF_INLINE uint16_t cf_read_uint16(uint8_t** p)
 {
 	uint16_t value;
 	value = (*p)[0];
@@ -131,7 +131,7 @@ CUTE_INLINE uint16_t cf_read_uint16(uint8_t** p)
 	return value;
 }
 
-CUTE_INLINE uint32_t cf_read_uint32(uint8_t** p)
+CF_INLINE uint32_t cf_read_uint32(uint8_t** p)
 {
 	uint32_t value;
 	value  = (*p)[0];
@@ -142,7 +142,7 @@ CUTE_INLINE uint32_t cf_read_uint32(uint8_t** p)
 	return value;
 }
 
-CUTE_INLINE float cf_read_float(uint8_t** p)
+CF_INLINE float cf_read_float(uint8_t** p)
 {
 	union
 	{
@@ -153,7 +153,7 @@ CUTE_INLINE float cf_read_float(uint8_t** p)
 	return val.as_float;
 }
 
-CUTE_INLINE uint64_t cf_read_uint64(uint8_t** p)
+CF_INLINE uint64_t cf_read_uint64(uint8_t** p)
 {
 	uint64_t value;
 	value  = (*p)[0];
@@ -168,7 +168,7 @@ CUTE_INLINE uint64_t cf_read_uint64(uint8_t** p)
 	return value;
 }
 
-CUTE_INLINE void cf_read_bytes(uint8_t** p, uint8_t* byte_array, int num_bytes)
+CF_INLINE void cf_read_bytes(uint8_t** p, uint8_t* byte_array, int num_bytes)
 {
 	for (int i = 0; i < num_bytes; ++i)
 	{
@@ -176,7 +176,7 @@ CUTE_INLINE void cf_read_bytes(uint8_t** p, uint8_t* byte_array, int num_bytes)
 	}
 }
 
-CUTE_INLINE CF_Address cf_read_address(uint8_t** p)
+CF_INLINE CF_Address cf_read_address(uint8_t** p)
 {
 	CF_Address endpoint;
 	endpoint.type = (CF_AddressType)cf_read_uint8(p);
@@ -195,20 +195,20 @@ CUTE_INLINE CF_Address cf_read_address(uint8_t** p)
 		endpoint.u.ipv6[6] = cf_read_uint16(p);
 		endpoint.u.ipv6[7] = cf_read_uint16(p);
 	} else {
-		CUTE_ASSERT(0);
+		CF_ASSERT(0);
 	}
 	endpoint.port = cf_read_uint16(p);
 	return endpoint;
 }
 
-CUTE_INLINE CF_CryptoKey cf_read_key(uint8_t** p)
+CF_INLINE CF_CryptoKey cf_read_key(uint8_t** p)
 {
 	CF_CryptoKey key;
 	cf_read_bytes(p, (uint8_t*)&key, sizeof(key));
 	return key;
 }
 
-CUTE_INLINE void cf_read_fourcc(uint8_t** p, uint8_t* fourcc)
+CF_INLINE void cf_read_fourcc(uint8_t** p, uint8_t* fourcc)
 {
 	fourcc[0] = cf_read_uint8(p);
 	fourcc[1] = cf_read_uint8(p);
@@ -216,13 +216,13 @@ CUTE_INLINE void cf_read_fourcc(uint8_t** p, uint8_t* fourcc)
 	fourcc[3] = cf_read_uint8(p);
 }
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_SERIALIZE_INTERNAL_H
+#endif // CF_SERIALIZE_INTERNAL_H

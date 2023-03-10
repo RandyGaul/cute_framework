@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_DRAW_INTERNAL_H
-#define CUTE_DRAW_INTERNAL_H
+#ifndef CF_DRAW_INTERNAL_H
+#define CF_DRAW_INTERNAL_H
 
 #include <cute_array.h>
 #include <cute_math.h>
@@ -127,16 +127,16 @@ void cf_destroy_draw();
 // We slice up a 64-bit int into lo + hi ranges to map where we can fetch pixels
 // from. This slices up the 64-bit range into 16 unique ranges, though we're only
 // using three of those ranges for now. The ranges are inclusive.
-#define CUTE_IMAGE_ID_RANGE_SIZE  ((1ULL << 60) - 1)
-#define CUTE_ASEPRITE_ID_RANGE_LO (0ULL)
-#define CUTE_ASEPRITE_ID_RANGE_HI (CUTE_ASEPRITE_ID_RANGE_LO + CUTE_IMAGE_ID_RANGE_SIZE)
-#define CUTE_PNG_ID_RANGE_LO      (CUTE_ASEPRITE_ID_RANGE_HI + 1)
-#define CUTE_PNG_ID_RANGE_HI      (CUTE_PNG_ID_RANGE_LO      + CUTE_IMAGE_ID_RANGE_SIZE)
-#define CUTE_FONT_ID_RANGE_LO     (CUTE_PNG_ID_RANGE_HI      + 1)
-#define CUTE_FONT_ID_RANGE_HI     (CUTE_FONT_ID_RANGE_LO     + CUTE_IMAGE_ID_RANGE_SIZE)
+#define CF_IMAGE_ID_RANGE_SIZE  ((1ULL << 60) - 1)
+#define CF_ASEPRITE_ID_RANGE_LO (0ULL)
+#define CF_ASEPRITE_ID_RANGE_HI (CF_ASEPRITE_ID_RANGE_LO + CF_IMAGE_ID_RANGE_SIZE)
+#define CF_PNG_ID_RANGE_LO      (CF_ASEPRITE_ID_RANGE_HI + 1)
+#define CF_PNG_ID_RANGE_HI      (CF_PNG_ID_RANGE_LO      + CF_IMAGE_ID_RANGE_SIZE)
+#define CF_FONT_ID_RANGE_LO     (CF_PNG_ID_RANGE_HI      + 1)
+#define CF_FONT_ID_RANGE_HI     (CF_FONT_ID_RANGE_LO     + CF_IMAGE_ID_RANGE_SIZE)
 
 SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata);
 void cf_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata);
 spritebatch_t* cf_get_draw_sb();
 
-#endif // CUTE_DRAW_INTERNAL_H
+#endif // CF_DRAW_INTERNAL_H

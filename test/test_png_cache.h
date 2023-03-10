@@ -24,7 +24,7 @@ using namespace Cute;
 
 #include <internal/cute_png_cache_internal.h>
 
-CUTE_TEST_CASE(test_png_cache, "Test all functions of the png caching API.");
+CF_TEST_CASE(test_png_cache, "Test all functions of the png caching API.");
 int test_png_cache()
 {
 	cf_fs_init(NULL);
@@ -35,9 +35,9 @@ int test_png_cache()
 	CF_Png white;
 	CF_Png black;
 	CF_Result err = cf_png_cache_load("test_data/white_pixel.png", &white);
-	CUTE_TEST_ASSERT(!cf_is_error(err));
+	CF_TEST_ASSERT(!cf_is_error(err));
 	err = cf_png_cache_load("test_data/black_pixel.png", &black);
-	CUTE_TEST_ASSERT(!cf_is_error(err));
+	CF_TEST_ASSERT(!cf_is_error(err));
 
 	CF_Png blink_png[] = { white, black };
 	float blink_delay[] = { 0.5f, 0.5f };
@@ -48,21 +48,21 @@ int test_png_cache()
 	CF_Png black_png[] = { black };
 	float black_delay[] = { 1.0f };
 
-	const CF_Animation* blink_anim = cf_make_png_cache_animation("blink", blink_png, CUTE_ARRAY_SIZE(blink_png), blink_delay, CUTE_ARRAY_SIZE(blink_delay));
-	const CF_Animation* white_anim = cf_make_png_cache_animation("white", white_png, CUTE_ARRAY_SIZE(white_png), white_delay, CUTE_ARRAY_SIZE(white_delay));
-	const CF_Animation* black_anim = cf_make_png_cache_animation("black", black_png, CUTE_ARRAY_SIZE(black_png), black_delay, CUTE_ARRAY_SIZE(black_delay));
+	const CF_Animation* blink_anim = cf_make_png_cache_animation("blink", blink_png, CF_ARRAY_SIZE(blink_png), blink_delay, CF_ARRAY_SIZE(blink_delay));
+	const CF_Animation* white_anim = cf_make_png_cache_animation("white", white_png, CF_ARRAY_SIZE(white_png), white_delay, CF_ARRAY_SIZE(white_delay));
+	const CF_Animation* black_anim = cf_make_png_cache_animation("black", black_png, CF_ARRAY_SIZE(black_png), black_delay, CF_ARRAY_SIZE(black_delay));
 
 	const CF_Animation* anims[] = { blink_anim, white_anim, black_anim };
 
-	const animation_t** table = cf_make_png_cache_animation_table("blink", anims, CUTE_ARRAY_SIZE(anims));
+	const animation_t** table = cf_make_png_cache_animation_table("blink", anims, CF_ARRAY_SIZE(anims));
 	CF_Sprite sprite = cf_make_png_cache_sprite("blink", table);
 
 	cf_sprite_play(&sprite, "blink");
-	CUTE_TEST_CHECK_POINTER(sprite.animations);
-	CUTE_TEST_ASSERT(sprite.frame_index == 0);
+	CF_TEST_CHECK_POINTER(sprite.animations);
+	CF_TEST_ASSERT(sprite.frame_index == 0);
 
 	cf_sprite_update(&sprite);
-	CUTE_TEST_ASSERT(sprite.frame_index == 1);
+	CF_TEST_ASSERT(sprite.frame_index == 1);
 
 	cf_destroy_png_cache();
 

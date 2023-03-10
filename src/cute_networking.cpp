@@ -21,10 +21,10 @@
 
 #include <cute_networking.h>
 
-#define CUTE_NET_IMPLEMENTATION
+#define CF_NET_IMPLEMENTATION
 #include <cute/cute_net.h>
 
-static CUTE_INLINE CF_Result cf_wrap(cn_result_t cn_result)
+static CF_INLINE CF_Result cf_wrap(cn_result_t cn_result)
 {
 	CF_Result result;
 	result.code = cn_result.code;
@@ -32,8 +32,8 @@ static CUTE_INLINE CF_Result cf_wrap(cn_result_t cn_result)
 	return result;
 }
 
-CUTE_STATIC_ASSERT(CUTE_CONNECT_TOKEN_SIZE == CN_CONNECT_TOKEN_SIZE, "Must be equal.");
-CUTE_STATIC_ASSERT(CUTE_CONNECT_TOKEN_USER_DATA_SIZE == CN_CONNECT_TOKEN_USER_DATA_SIZE, "Must be equal.");
+CF_STATIC_ASSERT(CF_CONNECT_TOKEN_SIZE == CN_CONNECT_TOKEN_SIZE, "Must be equal.");
+CF_STATIC_ASSERT(CF_CONNECT_TOKEN_USER_DATA_SIZE == CN_CONNECT_TOKEN_USER_DATA_SIZE, "Must be equal.");
 
 int cf_adress_init(CF_Address* endpoint, const char* address_and_port_string)
 {
@@ -153,7 +153,7 @@ void cf_client_enable_network_simulator(CF_Client* client, double latency, doubl
 //--------------------------------------------------------------------------------------------------
 // SERVER
 
-CUTE_STATIC_ASSERT(CUTE_SERVER_MAX_CLIENTS == CN_SERVER_MAX_CLIENTS, "Must be equal.");
+CF_STATIC_ASSERT(CF_SERVER_MAX_CLIENTS == CN_SERVER_MAX_CLIENTS, "Must be equal.");
 
 CF_Server* cf_make_server(CF_ServerConfig config)
 {
@@ -184,7 +184,7 @@ void cf_server_stop(CF_Server* server)
 	return cn_server_stop(server);
 }
 
-CUTE_STATIC_ASSERT(sizeof(CF_ServerEvent) == sizeof(cn_server_event_t), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_ServerEvent) == sizeof(cn_server_event_t), "Must be equal.");
 
 bool cf_server_pop_event(CF_Server* server, CF_ServerEvent* event)
 {

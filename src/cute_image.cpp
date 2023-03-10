@@ -28,9 +28,9 @@
 
 // TODO -- Hookup allocator context to cute_png.h
 
-CUTE_STATIC_ASSERT(sizeof(CF_Pixel) == sizeof(cp_pixel_t), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Image) == sizeof(cp_image_t), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_ImageIndexed) == sizeof(cp_indexed_image_t), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Pixel) == sizeof(cp_pixel_t), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Image) == sizeof(cp_image_t), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_ImageIndexed) == sizeof(cp_indexed_image_t), "Must be equal.");
 
 CF_Result cf_image_load_png(const char* path, CF_Image* img)
 {
@@ -38,7 +38,7 @@ CF_Result cf_image_load_png(const char* path, CF_Image* img)
 	void* data = cf_fs_read_entire_file_to_memory(path, &sz);
 	if (!data) return cf_result_error("Unable to open png file.");
 	CF_Result err = cf_image_load_png_mem(data, (int)sz, img);
-	CUTE_FREE(data);
+	CF_FREE(data);
 	return err;
 }
 
@@ -60,7 +60,7 @@ CF_Result cf_image_load_png_wh(const void* data, int size, int* w, int* h)
 
 void cf_image_free(CF_Image* img)
 {
-	CUTE_FREE(img->pix);
+	CF_FREE(img->pix);
 }
 
 CF_Result cf_image_load_png_indexed(const char* path, CF_ImageIndexed* img)
@@ -79,13 +79,13 @@ CF_Result cf_image_load_png_mem_indexed(const void* data, int size, CF_ImageInde
 	img->h = cp_img.h;
 	img->pix = cp_img.pix;
 	img->palette_len = cp_img.palette_len;
-	CUTE_MEMCPY(img->palette, cp_img.palette, sizeof(img->palette[0]) * 256);
+	CF_MEMCPY(img->palette, cp_img.palette, sizeof(img->palette[0]) * 256);
 	return cf_result_success();
 }
 
 void cf_image_free_indexed(CF_ImageIndexed* img)
 {
-	CUTE_FREE(img->pix);
+	CF_FREE(img->pix);
 }
 
 CF_Image cf_image_depallete(CF_ImageIndexed* indexed_img)
