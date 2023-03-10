@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Draws a triangle.
 
 ```cpp
-void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2);
+CF_API void CF_CALL cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2);
 ```
 
 Parameters | Description

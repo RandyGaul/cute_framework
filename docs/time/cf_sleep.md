@@ -9,7 +9,7 @@ GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Waits an estimated number of milliseconds before returning.
 
 ```cpp
-void cf_sleep(int milliseconds);
+CF_API void CF_CALL cf_sleep(int milliseconds);
 ```
 
 ## Remarks

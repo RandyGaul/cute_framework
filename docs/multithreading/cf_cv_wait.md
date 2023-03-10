@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Causes the calling thread to wait on the condition variable.
 
 ```cpp
-CF_Result cf_cv_wait(CF_ConditionVariable* cv, CF_Mutex* mutex);
+CF_API CF_Result CF_CALL cf_cv_wait(CF_ConditionVariable* cv, CF_Mutex* mutex);
 ```
 
 Parameters | Description

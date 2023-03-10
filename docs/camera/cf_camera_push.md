@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pushes a copy of the camera state.
 
 ```cpp
-void cf_camera_push();
+CF_API void CF_CALL cf_camera_push();
 ```
 
 ## Related Pages

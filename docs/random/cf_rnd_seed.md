@@ -9,7 +9,7 @@ GitHub: [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns an initialized [CF_Rnd](/random/cf_rnd.md) based on an initial `seed` value.
 
 ```cpp
-static CF_Rnd   cf_rnd_seed(uint64_t seed);
+static CF_INLINE CF_Rnd   CF_CALL cf_rnd_seed(uint64_t seed);
 ```
 
 Parameters | Description

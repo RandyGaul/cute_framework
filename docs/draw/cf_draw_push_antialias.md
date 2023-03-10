@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pushes whether or not to apply antialiasing.
 
 ```cpp
-void cf_draw_push_antialias(bool antialias);
+CF_API void CF_CALL cf_draw_push_antialias(bool antialias);
 ```
 
 Parameters | Description

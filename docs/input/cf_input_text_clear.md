@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Clears the application's input text buffer.
 
 ```cpp
-void cf_input_text_clear();
+CF_API void CF_CALL cf_input_text_clear();
 ```
 
 ## Remarks

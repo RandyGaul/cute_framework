@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a [CF_Color](/graphics/cf_color.md) made from RGB char inputs.
 
 ```cpp
-CF_Color cf_make_color_rgb(uint8_t r, uint8_t g, uint8_t b)
+CF_INLINE CF_Color cf_make_color_rgb(uint8_t r, uint8_t g, uint8_t b)
 ```
 
 Parameters | Description

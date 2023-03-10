@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the value `t` remaped from [0, 1] to [lo, hi].
 
 ```cpp
-float cf_remap(float t, float lo, float hi)
+CF_INLINE float cf_remap(float t, float lo, float hi)
 ```
 
 ## Related Pages

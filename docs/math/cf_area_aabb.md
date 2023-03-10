@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the area of a [CF_Aabb](/math/cf_aabb.md).
 
 ```cpp
-float cf_area_aabb(CF_Aabb bb)
+CF_INLINE float cf_area_aabb(CF_Aabb bb)
 ```
 
 ## Related Pages

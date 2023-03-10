@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a [CF_BlendOp](/graphics/cf_blendop.md) converted to a C string.
 
 ```cpp
-const char* cf_blend_op_string(CF_BlendOp op)
+CF_INLINE const char* cf_blend_op_string(CF_BlendOp op)
 ```
 
 ## Related Pages

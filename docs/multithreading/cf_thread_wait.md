@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Waits and blocks/sleeps until the thread exits, and returns the thread's return result.
 
 ```cpp
-CF_Result cf_thread_wait(CF_Thread* thread);
+CF_API CF_Result CF_CALL cf_thread_wait(CF_Thread* thread);
 ```
 
 Parameters | Description

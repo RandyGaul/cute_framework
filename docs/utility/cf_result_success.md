@@ -9,7 +9,7 @@ GitHub: [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns a [CF_Result](/utility/cf_result.md) as a success, containing no error information.
 
 ```cpp
-CF_Result cf_result_success()
+CF_INLINE CF_Result cf_result_success()
 ```
 
 ## Related Pages

@@ -9,7 +9,7 @@ GitHub: [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Creates a [CF_AabbTree](/collision/cf_aabbtree.md) from a buffer of memory. This is an advanced function, you're probably look for [cf_make_aabb_tree](/collision/cf_make_aabb_tree.md) instead.
 
 ```cpp
-CF_AabbTree cf_make_aabb_tree_from_memory(const void* buffer, size_t size /*= NULL*/);
+CF_API CF_AabbTree CF_CALL cf_make_aabb_tree_from_memory(const void* buffer, size_t size /*= NULL*/);
 ```
 
 Parameters | Description

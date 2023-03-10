@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the sign of an int, or zero if the int is zero.
 
 ```cpp
-int cf_safe_norm_int(int a)
+CF_INLINE int cf_safe_norm_int(int a)
 ```
 
 ## Related Pages

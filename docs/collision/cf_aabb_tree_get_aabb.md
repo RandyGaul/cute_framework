@@ -9,7 +9,7 @@ GitHub: [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Fetches the internally expanded AABB for a given leaf.
 
 ```cpp
-CF_Aabb cf_aabb_tree_get_aabb(CF_AabbTree tree, CF_Leaf leaf);
+CF_API CF_Aabb CF_CALL cf_aabb_tree_get_aabb(CF_AabbTree tree, CF_Leaf leaf);
 ```
 
 Parameters | Description

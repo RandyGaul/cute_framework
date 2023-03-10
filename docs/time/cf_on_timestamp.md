@@ -9,7 +9,7 @@ GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true for one frame where a specific timestamp (relative to program start) occurs.
 
 ```cpp
-bool cf_on_timestamp(double timestamp);
+CF_API bool CF_CALL cf_on_timestamp(double timestamp);
 ```
 
 Parameters | Description

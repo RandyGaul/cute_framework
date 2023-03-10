@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns true if the app was minimized last frame.
 
 ```cpp
-bool cf_app_was_minimized();
+CF_API bool CF_CALL cf_app_was_minimized();
 ```
 
 ## Related Pages

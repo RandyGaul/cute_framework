@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the component-wise minimum of two vectors.
 
 ```cpp
-CF_V2 cf_min_v2(CF_V2 a, CF_V2 b)
+CF_INLINE CF_V2 cf_min_v2(CF_V2 a, CF_V2 b)
 ```
 
 ## Remarks

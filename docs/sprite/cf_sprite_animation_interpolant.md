@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns a value from 0 to 1 representing how far along the animation has played.
 
 ```cpp
-float cf_sprite_animation_interpolant(CF_Sprite* sprite)
+CF_INLINE float cf_sprite_animation_interpolant(CF_Sprite* sprite)
 ```
 
 Parameters | Description

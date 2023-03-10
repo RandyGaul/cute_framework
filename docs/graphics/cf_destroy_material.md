@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Frees up a material created by [cf_make_material](/graphics/cf_make_material.md).
 
 ```cpp
-void cf_destroy_material(CF_Material material);
+CF_API void CF_CALL cf_destroy_material(CF_Material material);
 ```
 
 ## Related Pages

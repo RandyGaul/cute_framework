@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Transforms a [CF_Circle](/math/cf_circle.md).
 
 ```cpp
-CF_Circle cf_mul_tf_circle(CF_Transform tx, CF_Circle a)
+CF_INLINE CF_Circle cf_mul_tf_circle(CF_Transform tx, CF_Circle a)
 ```
 
 ## Related Pages

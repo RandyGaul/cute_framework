@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns true while the app is currently minimized.
 
 ```cpp
-bool cf_app_minimized();
+CF_API bool CF_CALL cf_app_minimized();
 ```
 
 ## Related Pages

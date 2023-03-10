@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Pauses all audio.
 
 ```cpp
-void cf_audio_set_pause(bool true_for_paused);
+CF_API void CF_CALL cf_audio_set_pause(bool true_for_paused);
 ```
 
 Parameters | Description

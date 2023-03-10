@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Sets a path safe to store game-specific files, such as save data or profiles.
 
 ```cpp
-CF_Result cf_fs_set_write_directory(const char* platform_dependent_directory);
+CF_API CF_Result CF_CALL cf_fs_set_write_directory(const char* platform_dependent_directory);
 ```
 
 Parameters | Description

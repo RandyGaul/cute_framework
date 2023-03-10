@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the absolute value of an int.
 
 ```cpp
-int cf_abs_int(int a)
+CF_INLINE int cf_abs_int(int a)
 ```
 
 ## Related Pages

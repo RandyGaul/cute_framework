@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Resets the read position of `kv`.
 
 ```cpp
-void cf_read_reset(CF_KeyValue* kv);
+CF_API void CF_CALL cf_read_reset(CF_KeyValue* kv);
 ```
 
 Parameters | Description

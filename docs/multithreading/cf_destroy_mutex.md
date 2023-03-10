@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Destroys a [CF_Mutex](/multithreading/cf_mutex.md) created with [cf_make_mutex](/multithreading/cf_make_mutex.md).
 
 ```cpp
-void cf_destroy_mutex(CF_Mutex* mutex);
+CF_API void CF_CALL cf_destroy_mutex(CF_Mutex* mutex);
 ```
 
 Parameters | Description

@@ -23,9 +23,9 @@ s | The string. Must not be `NULL`.
 ```cpp
 char s = NULL;
 spush(s, 'a');
-CUTE_ASSERT(ssize(s) == 1);
+CF_ASSERT(ssize(s) == 1);
 ssize(s)--;
-CUTE_ASSERT(ssize(a) == 0);
+CF_ASSERT(ssize(a) == 0);
 sfree(ssize);
 ```
 

@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the linear interpolation from `a` to `b` along `t`, where `t` is _usually_ a value from 0.0f to 1.0f.
 
 ```cpp
-float cf_lerp(float a, float b, float t)
+CF_INLINE float cf_lerp(float a, float b, float t)
 ```
 
 ## Related Pages

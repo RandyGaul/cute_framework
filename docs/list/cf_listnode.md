@@ -21,8 +21,8 @@ This node is _intrusive_ and to be placed within your struct/object definitions 
 
 [cf_list_back](/list/cf_list_back.md)  
 [CF_List](/list/cf_list.md)  
-[CUTE_LIST_NODE](/list/cute_list_node.md)  
-[CUTE_LIST_HOST](/list/cute_list_host.md)  
+[CF_LIST_NODE](/list/cf_list_node.md)  
+[CF_LIST_HOST](/list/cf_list_host.md)  
 [cf_list_init_node](/list/cf_list_init_node.md)  
 [cf_list_init](/list/cf_list_init.md)  
 [cf_list_push_front](/list/cf_list_push_front.md)  

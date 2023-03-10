@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Registers a custom text effect.
 
 ```cpp
-void cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
+CF_API void CF_CALL cf_text_effect_register(const char* name, CF_TextEffectFn* fn);
 ```
 
 Parameters | Description

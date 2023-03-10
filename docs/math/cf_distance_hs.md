@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns distance of a point to the plane.
 
 ```cpp
-float cf_distance_hs(CF_Halfspace h, CF_V2 p)
+CF_INLINE float cf_distance_hs(CF_Halfspace h, CF_V2 p)
 ```
 
 ## Related Pages

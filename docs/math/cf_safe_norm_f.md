@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the sign of a float, or zero if the float is zero.
 
 ```cpp
-float cf_safe_norm_f(float a)
+CF_INLINE float cf_safe_norm_f(float a)
 ```
 
 ## Related Pages

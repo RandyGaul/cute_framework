@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Reads an entire file into a buffer of memory and returns it.
 
 ```cpp
-void* cf_fs_read_entire_file_to_memory(const char* virtual_path, size_t* size);
+CF_API void* CF_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, size_t* size);
 ```
 
 Parameters | Description
@@ -19,7 +19,7 @@ size | If the file exists the size of the file is stored here.
 
 ## Remarks
 
-Call `CUTE_FREE` on it when done. TODO_LINK_VFS_README.
+Call `CF_FREE` on it when done. TODO_LINK_VFS_README.
 
 ## Related Pages
 

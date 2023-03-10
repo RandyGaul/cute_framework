@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if two circles are intersecting.
 
 ```cpp
-bool cf_circle_to_circle(CF_Circle A, CF_Circle B);
+CF_API bool CF_CALL cf_circle_to_circle(CF_Circle A, CF_Circle B);
 ```
 
 ## Remarks

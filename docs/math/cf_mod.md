@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns floating point `x % m`.
 
 ```cpp
-float cf_mod(float x, float m)
+CF_INLINE float cf_mod(float x, float m)
 ```
 
 ## Related Pages

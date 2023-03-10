@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Sets the current position within a file.
 
 ```cpp
-CF_Result cf_fs_seek(CF_File* file, size_t position);
+CF_API CF_Result CF_CALL cf_fs_seek(CF_File* file, size_t position);
 ```
 
 Parameters | Description

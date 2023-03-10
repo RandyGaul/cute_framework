@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Destroys a [CF_Semaphore](/multithreading/cf_semaphore.md) made by [cf_make_sem](/multithreading/cf_make_sem.md).
 
 ```cpp
-void cf_destroy_sem(CF_Semaphore* semaphore);
+CF_API void CF_CALL cf_destroy_sem(CF_Semaphore* semaphore);
 ```
 
 Parameters | Description

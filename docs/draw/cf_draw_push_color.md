@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pushes a draw color.
 
 ```cpp
-void cf_draw_push_color(CF_Color c);
+CF_API void CF_CALL cf_draw_push_color(CF_Color c);
 ```
 
 Parameters | Description

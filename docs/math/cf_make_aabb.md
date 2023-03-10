@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns an AABB (axis-aligned bounding box) from min/max points (bottom-left and top-right).
 
 ```cpp
-CF_Aabb cf_make_aabb(CF_V2 min, CF_V2 max)
+CF_INLINE CF_Aabb cf_make_aabb(CF_V2 min, CF_V2 max)
 ```
 
 ## Related Pages

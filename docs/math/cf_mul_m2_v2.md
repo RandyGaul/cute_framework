@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Multiplies a vector by a [CF_M2x2](/math/cf_m2x2.md).
 
 ```cpp
-CF_V2 cf_mul_m2_v2(CF_M2x2 a, CF_V2 b)
+CF_INLINE CF_V2 cf_mul_m2_v2(CF_M2x2 a, CF_V2 b)
 ```
 
 ## Related Pages

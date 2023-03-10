@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a [CF_SoundParams](/audio/cf_soundparams.md) filled with default state, to use with [cf_play_sound](/audio/cf_play_sound.md).
 
 ```cpp
-CF_SoundParams cf_sound_params_defaults()
+CF_INLINE CF_SoundParams CF_CALL cf_sound_params_defaults()
 ```
 
 ## Related Pages

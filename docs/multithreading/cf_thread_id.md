@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Returns the unique id of the calling thread.
 
 ```cpp
-CF_ThreadId cf_thread_id();
+CF_API CF_ThreadId CF_CALL cf_thread_id();
 ```
 
 Parameters | Description

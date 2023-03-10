@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns a [CF_TemporaryImage](/draw/cf_temporaryimage.md) for a given sprite.
 
 ```cpp
-CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite);
+CF_API CF_TemporaryImage CF_CALL cf_fetch_image(const CF_Sprite* sprite);
 ```
 
 Parameters | Description

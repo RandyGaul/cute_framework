@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if an int is odd.
 
 ```cpp
-bool cf_is_odd(int x)
+CF_INLINE bool cf_is_odd(int x)
 ```
 
 ## Related Pages

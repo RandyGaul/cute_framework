@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the last [CF_Rect](/math/cf_rect.md) for the scissor box.
 
 ```cpp
-CF_Rect cf_render_settings_peek_scissor();
+CF_API CF_Rect CF_CALL cf_render_settings_peek_scissor();
 ```
 
 ## Related Pages

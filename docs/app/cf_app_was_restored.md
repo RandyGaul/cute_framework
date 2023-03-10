@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns true if the app was restored last frame.
 
 ```cpp
-bool cf_app_was_restored();
+CF_API bool CF_CALL cf_app_was_restored();
 ```
 
 ## Remarks

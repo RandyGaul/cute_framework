@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Sets the render state for a material.
 
 ```cpp
-void cf_material_set_render_state(CF_Material material, CF_RenderState render_state);
+CF_API void CF_CALL cf_material_set_render_state(CF_Material material, CF_RenderState render_state);
 ```
 
 Parameters | Description

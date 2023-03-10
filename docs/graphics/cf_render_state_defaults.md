@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a good set of default parameters for a [CF_RenderState](/graphics/cf_renderstate.md).
 
 ```cpp
-CF_RenderState cf_render_state_defaults();
+CF_API CF_RenderState CF_CALL cf_render_state_defaults();
 ```
 
 ## Related Pages

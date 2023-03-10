@@ -9,7 +9,7 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns the number of joypads currently connected to the system.
 
 ```cpp
-int cf_joypad_count();
+CF_API int CF_CALL cf_joypad_count();
 ```
 
 ## Related Pages

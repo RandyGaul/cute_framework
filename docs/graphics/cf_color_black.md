@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Helper function to return a black [CF_Color](/graphics/cf_color.md).
 
 ```cpp
-CF_Color cf_color_black()
+CF_INLINE CF_Color cf_color_black()
 ```
 
 ## Related Pages

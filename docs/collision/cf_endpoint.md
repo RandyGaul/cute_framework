@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the endpoint of a ray.
 
 ```cpp
-CF_V2 cf_endpoint(CF_Ray r)
+CF_INLINE CF_V2 cf_endpoint(CF_Ray r)
 ```
 
 ## Remarks

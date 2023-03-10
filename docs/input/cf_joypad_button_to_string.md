@@ -9,7 +9,7 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Convert an enum [CF_JoypadButton](/input/cf_joypadbutton.md) to a c-style string.
 
 ```cpp
-const char* cf_joypad_button_to_string(CF_JoypadButton button)
+CF_INLINE const char* cf_joypad_button_to_string(CF_JoypadButton button)
 ```
 
 Parameters | Description

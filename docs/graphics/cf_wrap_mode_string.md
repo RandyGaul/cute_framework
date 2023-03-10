@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a [CF_WrapMode](/graphics/cf_wrapmode.md) converted to a C string.
 
 ```cpp
-const char* cf_wrap_mode_string(CF_WrapMode mode)
+CF_INLINE const char* cf_wrap_mode_string(CF_WrapMode mode)
 ```
 
 ## Related Pages

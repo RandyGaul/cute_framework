@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Multiplies a [CF_Pixel](/graphics/cf_pixel.md) by an unsigned 8-bit number.
 
 ```cpp
-CF_Pixel cf_mul_pixel(CF_Pixel a, uint8_t s)
+CF_INLINE CF_Pixel cf_mul_pixel(CF_Pixel a, uint8_t s)
 ```
 
 Parameters | Description

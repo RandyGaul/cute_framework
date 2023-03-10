@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Initialze a [CF_Address](/net/cf_address.md) from a C string.
 
 ```cpp
-int cf_address_init(CF_Address* endpoint, const char* address_and_port_string);
+CF_API int CF_CALL cf_address_init(CF_Address* endpoint, const char* address_and_port_string);
 ```
 
 ## Return Value

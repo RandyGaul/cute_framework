@@ -9,7 +9,7 @@ GitHub: [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Finds all [CF_Leaf](/collision/cf_leaf.md)'s who's AABB overlaps the param `aabb`.
 
 ```cpp
-void cf_aabb_tree_query_aabb(const CF_AabbTree tree, CF_AabbTreeQueryFn* fn, CF_Aabb aabb, void* fn_udata);
+CF_API void CF_CALL cf_aabb_tree_query_aabb(const CF_AabbTree tree, CF_AabbTreeQueryFn* fn, CF_Aabb aabb, void* fn_udata);
 ```
 
 Parameters | Description

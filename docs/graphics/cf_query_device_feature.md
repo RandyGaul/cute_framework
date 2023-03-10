@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Query to see if the device can support a particular feature.
 
 ```cpp
-bool cf_query_device_feature(CF_DeviceFeature feature);
+CF_API bool CF_CALL cf_query_device_feature(CF_DeviceFeature feature);
 ```
 
 ## Related Pages

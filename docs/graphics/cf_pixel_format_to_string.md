@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a [CF_PixelFormat](/graphics/cf_pixelformat.md) converted to a C string.
 
 ```cpp
-const char* cf_pixel_format_to_string(CF_PixelFormat format)
+CF_INLINE const char* cf_pixel_format_to_string(CF_PixelFormat format)
 ```
 
 ## Related Pages

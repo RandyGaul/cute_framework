@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Draws a sprite.
 
 ```cpp
-void cf_draw_sprite(const CF_Sprite* sprite);
+CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
 ```
 
 Parameters | Description

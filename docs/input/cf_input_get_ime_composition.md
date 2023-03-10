@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns the current IME (Input Method Editor) composition. See [CF_ImeComposition](/input/cf_imecomposition.md).
 
 ```cpp
-bool cf_input_get_ime_composition(CF_ImeComposition* composition);
+CF_API bool CF_CALL cf_input_get_ime_composition(CF_ImeComposition* composition);
 ```
 
 Parameters | Description

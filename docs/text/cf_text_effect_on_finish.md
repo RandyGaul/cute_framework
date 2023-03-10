@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Helper function to see if the current glyph is the end of the text, from within a custom text effect.
 
 ```cpp
-bool cf_text_effect_on_finish(CF_TextEffect* fx);
+CF_API bool CF_CALL cf_text_effect_on_finish(CF_TextEffect* fx);
 ```
 
 Parameters | Description

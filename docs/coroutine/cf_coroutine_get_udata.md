@@ -9,7 +9,7 @@ GitHub: [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Returns the `void udata` from `cf_coroutine_create`.
 
 ```cpp
-void* cf_coroutine_get_udata(CF_Coroutine* co);
+CF_API void* CF_CALL cf_coroutine_get_udata(CF_Coroutine* co);
 ```
 
 Parameters | Description

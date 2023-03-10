@@ -9,7 +9,7 @@ GitHub: [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Destroys an AABB tree previously created by [cf_make_aabb_tree](/collision/cf_make_aabb_tree.md) or [cf_make_aabb_tree_from_memory](/collision/cf_make_aabb_tree_from_memory.md).
 
 ```cpp
-void cf_destroy_aabb_tree(CF_AabbTree tree);
+CF_API void CF_CALL cf_destroy_aabb_tree(CF_AabbTree tree);
 ```
 
 Parameters | Description

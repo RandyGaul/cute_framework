@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Fetches a sokol Dear ImGui debug context.
 
 ```cpp
-sg_imgui_t* cf_app_get_sokol_imgui();
+CF_API sg_imgui_t* CF_CALL cf_app_get_sokol_imgui();
 ```
 
 ## Remarks

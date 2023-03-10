@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the quartic-out ease of a float from 0.0f to 1.0f.
 
 ```cpp
-float cf_quart_out(float x)
+CF_INLINE float cf_quart_out(float x)
 ```
 
 ## Remarks

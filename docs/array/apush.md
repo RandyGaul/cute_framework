@@ -29,9 +29,9 @@ Returns the pushed element.
 dyna int a = NULL;
 apush(a, 5);
 apush(a, 13);
-CUTE_ASSERT(a[0] == 5);
-CUTE_ASSERT(a[1] == 13);
-CUTE_ASSERT(asize(a) == 2);
+CF_ASSERT(a[0] == 5);
+CF_ASSERT(a[1] == 13);
+CF_ASSERT(asize(a) == 2);
 afree(a);
 ```
 

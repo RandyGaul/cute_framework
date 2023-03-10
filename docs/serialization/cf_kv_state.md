@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Returns the [CF_KeyValueState](/serialization/cf_keyvaluestate.md) the `kv` was created in.
 
 ```cpp
-CF_KeyValueState cf_kv_state(CF_KeyValue* kv);
+CF_API CF_KeyValueState CF_CALL cf_kv_state(CF_KeyValue* kv);
 ```
 
 Parameters | Description

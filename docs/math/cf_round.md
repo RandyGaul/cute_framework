@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the component-wise round of a vector.
 
 ```cpp
-CF_V2 cf_round(CF_V2 a)
+CF_INLINE CF_V2 cf_round(CF_V2 a)
 ```
 
 ## Remarks

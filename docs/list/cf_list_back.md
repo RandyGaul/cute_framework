@@ -9,7 +9,7 @@ GitHub: [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Returns a pointer to the last element in the list.
 
 ```cpp
-CF_ListNode* cf_list_back(CF_List* list)
+CF_INLINE CF_ListNode* cf_list_back(CF_List* list)
 ```
 
 Parameters | Description
@@ -24,8 +24,8 @@ Check to see if this is a valid node in the list with `node != cf_list_end(list)
 
 [CF_ListNode](/list/cf_listnode.md)  
 [CF_List](/list/cf_list.md)  
-[CUTE_LIST_NODE](/list/cute_list_node.md)  
-[CUTE_LIST_HOST](/list/cute_list_host.md)  
+[CF_LIST_NODE](/list/cf_list_node.md)  
+[CF_LIST_HOST](/list/cf_list_host.md)  
 [cf_list_init_node](/list/cf_list_init_node.md)  
 [cf_list_init](/list/cf_list_init.md)  
 [cf_list_push_front](/list/cf_list_push_front.md)  

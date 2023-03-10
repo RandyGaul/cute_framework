@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Plays audio as music.
 
 ```cpp
-void cf_music_play(CF_Audio* audio_source, float fade_in_time);
+CF_API void CF_CALL cf_music_play(CF_Audio* audio_source, float fade_in_time);
 ```
 
 Parameters | Description

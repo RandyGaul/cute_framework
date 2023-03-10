@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Projects a point onto the surface of the plane.
 
 ```cpp
-CF_V2 cf_project(CF_Halfspace h, CF_V2 p)
+CF_INLINE CF_V2 cf_project(CF_Halfspace h, CF_V2 p)
 ```
 
 ## Related Pages

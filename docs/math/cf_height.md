@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the height of an AABB (axis-aligned bounding box).
 
 ```cpp
-float cf_height(CF_Aabb bb)
+CF_INLINE float cf_height(CF_Aabb bb)
 ```
 
 ## Related Pages

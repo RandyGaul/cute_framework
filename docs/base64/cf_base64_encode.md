@@ -9,7 +9,7 @@ GitHub: [cute_base64.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Encodes raw binary data in base64 format.
 
 ```cpp
-CF_Result cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size);
+CF_API CF_Result CF_CALL cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size);
 ```
 
 Parameters | Description

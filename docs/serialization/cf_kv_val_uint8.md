@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Serializes an unsigned 8-bit value.
 
 ```cpp
-bool cf_kv_val_uint8(CF_KeyValue* kv, uint8_t* val);
+CF_API bool CF_CALL cf_kv_val_uint8(CF_KeyValue* kv, uint8_t* val);
 ```
 
 Parameters | Description

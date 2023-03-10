@@ -9,7 +9,7 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Starts playing the specified effect a number of times.
 
 ```cpp
-void cf_haptic_run_effect(CF_Haptic* haptic, CF_HapticEffect effect, int iterations);
+CF_API void CF_CALL cf_haptic_run_effect(CF_Haptic* haptic, CF_HapticEffect effect, int iterations);
 ```
 
 Parameters | Description

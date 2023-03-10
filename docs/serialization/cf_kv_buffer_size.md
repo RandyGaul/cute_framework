@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Returns the size written to the write buffer so far.
 
 ```cpp
-size_t cf_kv_buffer_size(CF_KeyValue* kv);
+CF_API size_t CF_CALL cf_kv_buffer_size(CF_KeyValue* kv);
 ```
 
 Parameters | Description

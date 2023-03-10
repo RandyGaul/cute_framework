@@ -38,7 +38,7 @@ const char splits_expected[] = {
 char array_of_splits = ssplit(s, '.');
 for (int i = 0; i < alen(array_of_splits); ++i) {
     const char split = array_of_splits[i];
-    CUTE_TEST_ASSERT(sequ(split, splits_expected[i]));
+    CF_TEST_ASSERT(sequ(split, splits_expected[i]));
     sfree(split);
 }
 afree(array_of_splits);

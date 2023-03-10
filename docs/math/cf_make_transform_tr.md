@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns a [CF_Transform](/math/cf_transform.md) that represents a translation + rotation.
 
 ```cpp
-CF_Transform cf_make_transform_TR(CF_V2 p, float radians)
+CF_INLINE CF_Transform cf_make_transform_TR(CF_V2 p, float radians)
 ```
 
 ## Related Pages

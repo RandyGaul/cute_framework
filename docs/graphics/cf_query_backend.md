@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns which [CF_BackendType](/graphics/cf_backendtype.md) is currently active.
 
 ```cpp
-CF_BackendType cf_query_backend();
+CF_API CF_BackendType CF_CALL cf_query_backend();
 ```
 
 ## Related Pages

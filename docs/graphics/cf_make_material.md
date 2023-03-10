@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Creates a new material.
 
 ```cpp
-CF_Material cf_make_material();
+CF_API CF_Material CF_CALL cf_make_material();
 ```
 
 ## Remarks

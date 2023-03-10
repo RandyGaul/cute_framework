@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns the fractional portion of each component of a color.
 
 ```cpp
-CF_Color cf_fract_color(CF_Color a)
+CF_INLINE CF_Color cf_fract_color(CF_Color a)
 ```
 
 Parameters | Description

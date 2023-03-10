@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Starts up the server connection, ready to receive new client connections.
 
 ```cpp
-CF_Result cf_server_start(CF_Server* server, const char* address_and_port);
+CF_API CF_Result cf_server_start(CF_Server* server, const char* address_and_port);
 ```
 
 Parameters | Description

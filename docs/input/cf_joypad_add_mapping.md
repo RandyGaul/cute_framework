@@ -9,7 +9,7 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Adds an SDL2 mapping to the joypad system.
 
 ```cpp
-CF_Result cf_joypad_add_mapping(const char* mapping);
+CF_API CF_Result CF_CALL cf_joypad_add_mapping(const char* mapping);
 ```
 
 ## Remarks

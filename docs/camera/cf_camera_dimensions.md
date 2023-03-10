@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Sets the width and height of the camera's view.
 
 ```cpp
-void cf_camera_dimensions(float w, float h);
+CF_API void CF_CALL cf_camera_dimensions(float w, float h);
 ```
 
 Parameters | Description

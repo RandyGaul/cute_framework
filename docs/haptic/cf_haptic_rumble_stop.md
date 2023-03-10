@@ -9,7 +9,7 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Stops playing the simple rumble effect.
 
 ```cpp
-void cf_haptic_rumble_stop(CF_Haptic* haptic);
+CF_API void CF_CALL cf_haptic_rumble_stop(CF_Haptic* haptic);
 ```
 
 Parameters | Description

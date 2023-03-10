@@ -9,7 +9,7 @@ GitHub: [cute_a_star.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Frees up all resources used by [CF_AStarOutput](/pathfinding/cf_astaroutput.md) from calling [cf_a_star](/pathfinding/cf_a_star.md).
 
 ```cpp
-void cf_free_a_star_output(CF_AStarOutput* out);
+CF_API void CF_CALL cf_free_a_star_output(CF_AStarOutput* out);
 ```
 
 Parameters | Description

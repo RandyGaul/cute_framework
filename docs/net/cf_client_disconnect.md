@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Attempts to gracefully disconnect a [CF_Client](/net/cf_client.md) from a [CF_Server](/net/cf_server.md).
 
 ```cpp
-void cf_client_disconnect(CF_Client* client);
+CF_API void CF_CALL cf_client_disconnect(CF_Client* client);
 ```
 
 ## Related Pages

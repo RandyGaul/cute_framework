@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Draws a capsule.
 
 ```cpp
-void cf_draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters);
+CF_API void CF_CALL cf_draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters);
 ```
 
 Parameters | Description

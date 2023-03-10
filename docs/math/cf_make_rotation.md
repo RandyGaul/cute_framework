@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns a [CF_M3x2](/math/cf_m3x2.md) that represents a rotation.
 
 ```cpp
-CF_M3x2 cf_make_rotation(float radians)
+CF_INLINE CF_M3x2 cf_make_rotation(float radians)
 ```
 
 ## Related Pages

@@ -9,7 +9,7 @@ GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pauses the application.
 
 ```cpp
-void cf_pause_for_ticks(uint64_t pause_ticks);
+CF_API void CF_CALL cf_pause_for_ticks(uint64_t pause_ticks);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns an AABB (axis-aligned bounding box).
 
 ```cpp
-CF_Aabb cf_make_aabb_center_half_extents(CF_V2 center, CF_V2 half_extents)
+CF_INLINE CF_Aabb cf_make_aabb_center_half_extents(CF_V2 center, CF_V2 half_extents)
 ```
 
 ## Remarks

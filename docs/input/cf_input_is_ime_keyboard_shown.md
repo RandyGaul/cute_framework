@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns true if the IME (Input Method Editor) for the operating system is currently showing the keyboard.
 
 ```cpp
-bool cf_input_is_ime_keyboard_shown();
+CF_API bool CF_CALL cf_input_is_ime_keyboard_shown();
 ```
 
 ## Remarks

@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 An optional function to end the current rendering pass.
 
 ```cpp
-void cf_unapply_canvas();
+CF_API void CF_CALL cf_unapply_canvas();
 ```
 
 ## Remarks

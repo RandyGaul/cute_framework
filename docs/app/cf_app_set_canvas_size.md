@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Resizes the app's internal canvas to a new w/h, in pixels.
 
 ```cpp
-void cf_app_set_canvas_size(int w, int h);
+CF_API void CF_CALL cf_app_set_canvas_size(int w, int h);
 ```
 
 Parameters | Description

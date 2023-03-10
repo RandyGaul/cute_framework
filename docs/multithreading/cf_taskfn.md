@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 A function pointer for a task in [CF_Threadpool](/multithreading/cf_threadpool.md).
 
 ```cpp
-typedef void (CF_TaskFn)(void* param);
+typedef void (CF_CALL CF_TaskFn)(void* param);
 ```
 
 Parameters | Description

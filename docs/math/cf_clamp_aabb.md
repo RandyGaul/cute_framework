@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns `a` clamped within `b`.
 
 ```cpp
-CF_Aabb cf_clamp_aabb(CF_Aabb a, CF_Aabb b)
+CF_INLINE CF_Aabb cf_clamp_aabb(CF_Aabb a, CF_Aabb b)
 ```
 
 ## Related Pages

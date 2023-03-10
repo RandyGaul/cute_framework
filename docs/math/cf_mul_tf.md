@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns a the composition of multiplying two [CF_Transform](/math/cf_transform.md)s.
 
 ```cpp
-CF_Transform cf_mul_tf(CF_Transform a, CF_Transform b)
+CF_INLINE CF_Transform cf_mul_tf(CF_Transform a, CF_Transform b)
 ```
 
 ## Related Pages

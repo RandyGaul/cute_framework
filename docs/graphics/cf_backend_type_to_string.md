@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a [CF_BackendType](/graphics/cf_backendtype.md) converted to a string.
 
 ```cpp
-const char* cf_backend_type_to_string(CF_BackendType type)
+CF_INLINE const char* cf_backend_type_to_string(CF_BackendType type)
 ```
 
 ## Related Pages

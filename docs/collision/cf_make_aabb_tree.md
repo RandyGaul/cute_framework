@@ -9,7 +9,7 @@ GitHub: [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Creates a [CF_AabbTree](/collision/cf_aabbtree.md). This kind of tree is used for optimizing collision detection using AABBs (axis-aligned bounding boxes).
 
 ```cpp
-CF_AabbTree cf_make_aabb_tree(int initial_capacity);
+CF_API CF_AabbTree CF_CALL cf_make_aabb_tree(int initial_capacity);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Opens a file for writing relative to the write directory.
 
 ```cpp
-CF_File* cf_fs_create_file(const char* virtual_path);
+CF_API CF_File* CF_CALL cf_fs_create_file(const char* virtual_path);
 ```
 
 ## Return Value

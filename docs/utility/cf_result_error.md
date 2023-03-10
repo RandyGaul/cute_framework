@@ -9,7 +9,7 @@ GitHub: [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns a [CF_Result](/utility/cf_result.md) containing an error.
 
 ```cpp
-CF_Result cf_result_error(const char* details)
+CF_INLINE CF_Result cf_result_error(const char* details)
 ```
 
 Parameters | Description

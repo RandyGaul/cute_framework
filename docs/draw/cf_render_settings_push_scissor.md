@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pushes a [CF_Rect](/math/cf_rect.md) for the scissor to render within.
 
 ```cpp
-void cf_render_settings_push_scissor(CF_Rect scissor);
+CF_API void CF_CALL cf_render_settings_push_scissor(CF_Rect scissor);
 ```
 
 Parameters | Description

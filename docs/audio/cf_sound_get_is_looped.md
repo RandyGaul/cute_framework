@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns whether or not a sound is looped.
 
 ```cpp
-bool cf_sound_get_is_looped(CF_Sound sound);
+CF_API bool CF_CALL cf_sound_get_is_looped(CF_Sound sound);
 ```
 
 Parameters | Description

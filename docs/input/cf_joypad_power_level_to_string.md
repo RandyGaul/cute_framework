@@ -9,7 +9,7 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Convert an enum [CF_JoypadPowerLevel](/input/cf_joypadpowerlevel.md) to a c-style string.
 
 ```cpp
-const char* cf_joypad_power_level_to_string(CF_JoypadPowerLevel level)
+CF_INLINE const char* cf_joypad_power_level_to_string(CF_JoypadPowerLevel level)
 ```
 
 Parameters | Description

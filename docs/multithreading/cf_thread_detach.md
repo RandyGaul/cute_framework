@@ -10,7 +10,7 @@ Makes a special note your thread will never have [cf_thread_wait](/multithreadin
 for long-lived threads.
 
 ```cpp
-void cf_thread_detach(CF_Thread* thread);
+CF_API void CF_CALL cf_thread_detach(CF_Thread* thread);
 ```
 
 Parameters | Description

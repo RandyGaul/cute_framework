@@ -9,7 +9,7 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Destroys an instance of an effect on the device.
 
 ```cpp
-void cf_haptic_destroy_effect(CF_Haptic* haptic, CF_HapticEffect effect);
+CF_API void CF_CALL cf_haptic_destroy_effect(CF_Haptic* haptic, CF_HapticEffect effect);
 ```
 
 Parameters | Description

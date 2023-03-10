@@ -9,7 +9,7 @@ GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Updates the application.
 
 ```cpp
-void cf_update_time(CF_OnUpdateFn* on_update);
+CF_API void CF_CALL cf_update_time(CF_OnUpdateFn* on_update);
 ```
 
 Parameters | Description

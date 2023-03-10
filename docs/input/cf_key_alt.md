@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns true if the left or right alt key is currently down.
 
 ```cpp
-bool cf_key_alt();
+CF_API bool CF_CALL cf_key_alt();
 ```
 
 ## Related Pages

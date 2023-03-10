@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the component-wise clamp of two vectors from `lo` to `hi`.
 
 ```cpp
-CF_V2 cf_clamp_v2(CF_V2 a, CF_V2 lo, CF_V2 hi)
+CF_INLINE CF_V2 cf_clamp_v2(CF_V2 a, CF_V2 lo, CF_V2 hi)
 ```
 
 ## Related Pages

@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns a point clamped within a [CF_Aabb](/math/cf_aabb.md).
 
 ```cpp
-CF_V2 cf_clamp_aabb_v2(CF_Aabb bb, CF_V2 p)
+CF_INLINE CF_V2 cf_clamp_aabb_v2(CF_Aabb bb, CF_V2 p)
 ```
 
 ## Related Pages

@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the width of an AABB (axis-aligned bounding box).
 
 ```cpp
-float cf_width(CF_Aabb bb)
+CF_INLINE float cf_width(CF_Aabb bb)
 ```
 
 ## Related Pages

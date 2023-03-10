@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Destroys a font previously made by [cf_make_font](/text/cf_make_font.md) or [cf_make_font_mem](/text/cf_make_font_mem.md).
 
 ```cpp
-void cf_destroy_font(const char* font_name);
+CF_API void CF_CALL cf_destroy_font(const char* font_name);
 ```
 
 Parameters | Description

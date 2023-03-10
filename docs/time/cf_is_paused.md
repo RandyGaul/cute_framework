@@ -9,7 +9,7 @@ GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if the application is currently paused.
 
 ```cpp
-bool cf_is_paused();
+CF_API bool CF_CALL cf_is_paused();
 ```
 
 ## Remarks

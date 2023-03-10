@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the intersection point of two points to a plane.
 
 ```cpp
-CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b)
+CF_INLINE CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b)
 ```
 
 ## Related Pages

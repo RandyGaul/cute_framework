@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Converts a [CF_KeyValueState](/serialization/cf_keyvaluestate.md) to a C string.
 
 ```cpp
-const char* cf_key_value_state_to_string(CF_KeyValueState state)
+CF_INLINE const char* cf_key_value_state_to_string(CF_KeyValueState state)
 ```
 
 Parameters | Description

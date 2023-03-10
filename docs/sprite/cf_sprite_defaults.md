@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns an empty sprite.
 
 ```cpp
-CF_Sprite cf_sprite_defaults()
+CF_INLINE CF_Sprite cf_sprite_defaults()
 ```
 
 ## Remarks

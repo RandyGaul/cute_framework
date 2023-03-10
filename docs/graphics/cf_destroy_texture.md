@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Destroys a [CF_Texture](/graphics/cf_texture.md) created by [cf_make_texture](/graphics/cf_make_texture.md).
 
 ```cpp
-void cf_destroy_texture(CF_Texture texture);
+CF_API void CF_CALL cf_destroy_texture(CF_Texture texture);
 ```
 
 Parameters | Description

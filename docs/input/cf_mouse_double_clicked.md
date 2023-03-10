@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns true if a double click was just detected.
 
 ```cpp
-bool cf_mouse_double_clicked(CF_MouseButton button);
+CF_API bool CF_CALL cf_mouse_double_clicked(CF_MouseButton button);
 ```
 
 ## Related Pages

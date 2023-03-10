@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Convert an enum [CF_ServerEventType](/net/cf_servereventtype.md) to a c-style string.
 
 ```cpp
-const char* cf_server_event_type_to_string(CF_ServerEventType type)
+CF_INLINE const char* cf_server_event_type_to_string(CF_ServerEventType type)
 ```
 
 Parameters | Description

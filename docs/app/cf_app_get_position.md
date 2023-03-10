@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Gets the position of the window in pixels.
 
 ```cpp
-void cf_app_get_position(int* x, int* y);
+CF_API void CF_CALL cf_app_get_position(int* x, int* y);
 ```
 
 Parameters | Description

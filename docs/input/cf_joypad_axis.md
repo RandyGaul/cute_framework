@@ -9,7 +9,7 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns a signed 16-bit integer representing how much a joypad axis is activated by.
 
 ```cpp
-int16_t cf_joypad_axis(CF_Joypad* joypad, CF_JoypadAxis axis);
+CF_API int16_t CF_CALL cf_joypad_axis(CF_Joypad* joypad, CF_JoypadAxis axis);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Creates a single effect instance on the device.
 
 ```cpp
-CF_HapticEffect cf_haptic_create_effect(CF_Haptic* haptic, CF_HapticData data);
+CF_API CF_HapticEffect CF_CALL cf_haptic_create_effect(CF_Haptic* haptic, CF_HapticData data);
 ```
 
 Parameters | Description

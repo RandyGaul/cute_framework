@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a [CF_UsageType](/graphics/cf_usagetype.md) converted to a C string.
 
 ```cpp
-const char* cf_usage_type_to_string(CF_UsageType type)
+CF_INLINE const char* cf_usage_type_to_string(CF_UsageType type)
 ```
 
 ## Related Pages

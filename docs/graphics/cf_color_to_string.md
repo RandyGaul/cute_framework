@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Converts a [CF_Color](/graphics/cf_color.md) to a dynamic string. Free it with [sfree](/string/sfree.md) when done.
 
 ```cpp
-char* cf_color_to_string(CF_Color c)
+CF_INLINE char* cf_color_to_string(CF_Color c)
 ```
 
 Parameters | Description

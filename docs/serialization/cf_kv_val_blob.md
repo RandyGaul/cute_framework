@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Serializes raw binary data as a base-64 encoded value.
 
 ```cpp
-bool cf_kv_val_blob(CF_KeyValue* kv, void* data, size_t data_capacity, size_t* data_len);
+CF_API bool CF_CALL cf_kv_val_blob(CF_KeyValue* kv, void* data, size_t data_capacity, size_t* data_len);
 ```
 
 Parameters | Description

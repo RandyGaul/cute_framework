@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Returns the current position within the file.
 
 ```cpp
-size_t cf_fs_tell(CF_File* file);
+CF_API size_t CF_CALL cf_fs_tell(CF_File* file);
 ```
 
 Parameters | Description

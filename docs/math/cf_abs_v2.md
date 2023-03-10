@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the component-wise absolute value of two vectors.
 
 ```cpp
-CF_V2 cf_abs_v2(CF_V2 a)
+CF_INLINE CF_V2 cf_abs_v2(CF_V2 a)
 ```
 
 ## Related Pages

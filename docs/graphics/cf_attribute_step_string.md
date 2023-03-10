@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a [CF_AttributeStep](/graphics/cf_attributestep.md) converted to a C string.
 
 ```cpp
-const char* cf_attribute_step_string(CF_AttributeStep step)
+CF_INLINE const char* cf_attribute_step_string(CF_AttributeStep step)
 ```
 
 ## Related Pages

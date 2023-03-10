@@ -9,7 +9,7 @@ GitHub: [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/m
 Destroys a handle table created by [cf_make_handle_allocator](/utility/cf_make_handle_allocator.md).
 
 ```cpp
-void cf_destroy_handle_allocator(CF_HandleTable* table);
+CF_API void CF_CALL cf_destroy_handle_allocator(CF_HandleTable* table);
 ```
 
 Parameters | Description

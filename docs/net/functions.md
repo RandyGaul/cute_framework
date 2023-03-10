@@ -10,6 +10,8 @@
 - [cf_client_state_get](/net/cf_client_state_get.md)
 - [cf_client_state_to_string](/net/cf_client_state_to_string.md)
 - [cf_client_update](/net/cf_client_update.md)
+- [CF_CONNECT_TOKEN_SIZE](/net/cf_connect_token_size.md)
+- [CF_CONNECT_TOKEN_USER_DATA_SIZE](/net/cf_connect_token_user_data_size.md)
 - [cf_crypto_generate_key](/net/cf_crypto_generate_key.md)
 - [cf_crypto_random_bytes](/net/cf_crypto_random_bytes.md)
 - [cf_crypto_sign_keygen](/net/cf_crypto_sign_keygen.md)
@@ -29,6 +31,4 @@
 - [cf_server_start](/net/cf_server_start.md)
 - [cf_server_stop](/net/cf_server_stop.md)
 - [cf_server_update](/net/cf_server_update.md)
-- [CUTE_CONNECT_TOKEN_SIZE](/net/cute_connect_token_size.md)
-- [CUTE_CONNECT_TOKEN_USER_DATA_SIZE](/net/cute_connect_token_user_data_size.md)
 

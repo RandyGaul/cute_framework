@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Returns a backend specific error message in the case of any file system errors.
 
 ```cpp
-const char* cf_fs_get_backend_specific_error_message();
+CF_API const char* CF_CALL cf_fs_get_backend_specific_error_message();
 ```
 
 ## Remarks

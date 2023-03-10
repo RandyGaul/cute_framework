@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Serializes an unsigned 32-bit value.
 
 ```cpp
-bool cf_kv_val_uint32(CF_KeyValue* kv, uint32_t* val);
+CF_API bool CF_CALL cf_kv_val_uint32(CF_KeyValue* kv, uint32_t* val);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pops and returns the last font blur.
 
 ```cpp
-int cf_pop_font_blur();
+CF_API int CF_CALL cf_pop_font_blur();
 ```
 
 ## Related Pages

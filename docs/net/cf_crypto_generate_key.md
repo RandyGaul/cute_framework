@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Returns a cryptography key in a cryptographically secure way.
 
 ```cpp
-CF_CryptoKey cf_crypto_generate_key();
+CF_API CF_CryptoKey CF_CALL cf_crypto_generate_key();
 ```
 
 ## Related Pages

@@ -9,7 +9,7 @@ GitHub: [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Intializes a list.
 
 ```cpp
-void cf_list_init(CF_List* list)
+CF_INLINE void cf_list_init(CF_List* list)
 ```
 
 Parameters | Description
@@ -25,8 +25,8 @@ As an optimization the list contains a dummy node inside of it. To traverse this
 
 [CF_ListNode](/list/cf_listnode.md)  
 [CF_List](/list/cf_list.md)  
-[CUTE_LIST_NODE](/list/cute_list_node.md)  
-[CUTE_LIST_HOST](/list/cute_list_host.md)  
+[CF_LIST_NODE](/list/cf_list_node.md)  
+[CF_LIST_HOST](/list/cf_list_host.md)  
 [cf_list_init_node](/list/cf_list_init_node.md)  
 [cf_list_back](/list/cf_list_back.md)  
 [cf_list_push_front](/list/cf_list_push_front.md)  

@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Appends index data onto the end of the mesh's internal index buffer.
 
 ```cpp
-int cf_mesh_append_index_data(CF_Mesh mesh, uint32_t* indices, int count);
+CF_API int CF_CALL cf_mesh_append_index_data(CF_Mesh mesh, uint32_t* indices, int count);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns an integer clamped upwards to the nearest power of two.
 
 ```cpp
-int cf_fit_power_of_two(int a)
+CF_INLINE int cf_fit_power_of_two(int a)
 ```
 
 ## Related Pages

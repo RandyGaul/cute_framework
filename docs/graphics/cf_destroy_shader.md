@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Frees up a [CF_Shader](/graphics/cf_shader.md) created by [cf_make_shader](/graphics/cf_make_shader.md).
 
 ```cpp
-void cf_destroy_shader(CF_Shader shader);
+CF_API void CF_CALL cf_destroy_shader(CF_Shader shader);
 ```
 
 Parameters | Description

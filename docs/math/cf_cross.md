@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the 2D cross product of two vectors.
 
 ```cpp
-float cf_cross(CF_V2 a, CF_V2 b)
+CF_INLINE float cf_cross(CF_V2 a, CF_V2 b)
 ```
 
 ## Related Pages

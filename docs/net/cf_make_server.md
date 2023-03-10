@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Returns a new [CF_Server](/net/cf_server.md).
 
 ```cpp
-CF_Server* cf_make_server(CF_ServerConfig config);
+CF_API CF_Server* CF_CALL cf_make_server(CF_ServerConfig config);
 ```
 
 Parameters | Description

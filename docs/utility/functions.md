@@ -9,6 +9,7 @@
 - [cf_handle_allocator_get_type](/utility/cf_handle_allocator_get_type.md)
 - [cf_handle_allocator_handle_valid](/utility/cf_handle_allocator_handle_valid.md)
 - [cf_handle_allocator_update_index](/utility/cf_handle_allocator_update_index.md)
+- [CF_INVALID_HANDLE](/utility/cf_invalid_handle.md)
 - [cf_is_error](/utility/cf_is_error.md)
 - [cf_load_function](/utility/cf_load_function.md)
 - [cf_load_shared_library](/utility/cf_load_shared_library.md)
@@ -19,5 +20,4 @@
 - [cf_result_error](/utility/cf_result_error.md)
 - [cf_result_success](/utility/cf_result_success.md)
 - [cf_unload_shared_library](/utility/cf_unload_shared_library.md)
-- [CUTE_INVALID_HANDLE](/utility/cute_invalid_handle.md)
 

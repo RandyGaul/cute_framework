@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Draws all elements within the last applied mesh.
 
 ```cpp
-void cf_draw_elements();
+CF_API void CF_CALL cf_draw_elements();
 ```
 
 ## Remarks

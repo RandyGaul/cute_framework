@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Returns an atomic integer of value zero.
 
 ```cpp
-CF_AtomicInt cf_atomic_zero();
+CF_API CF_AtomicInt CF_CALL cf_atomic_zero();
 ```
 
 ## Remarks

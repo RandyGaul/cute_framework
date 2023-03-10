@@ -29,9 +29,9 @@ Returns a pointer to an item. Returns `NULL` if not found.
 htbl CF_V2 table = NULL;
 hadd(table, 10, cf_v2(-1, 1));
 CF_V2 v = hget_ptr(table, 10);
-CUTE_ASSERT(v);
-CUTE_ASSERT(v->x == -1);
-CUTE_ASSERT(v->y == 1);
+CF_ASSERT(v);
+CF_ASSERT(v->x == -1);
+CF_ASSERT(v->y == 1);
 hfree(table);
 ```
 

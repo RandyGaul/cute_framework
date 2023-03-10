@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns the number of frames in the sprite's currently playing animation.
 
 ```cpp
-int cf_sprite_frame_count(const CF_Sprite* sprite)
+CF_INLINE int cf_sprite_frame_count(const CF_Sprite* sprite)
 ```
 
 Parameters | Description

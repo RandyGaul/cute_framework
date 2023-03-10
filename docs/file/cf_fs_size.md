@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Returns the size of a file in bytes.
 
 ```cpp
-size_t cf_fs_size(CF_File* file);
+CF_API size_t CF_CALL cf_fs_size(CF_File* file);
 ```
 
 Parameters | Description

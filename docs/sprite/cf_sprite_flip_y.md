@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Flip's the sprite on the y-axis.
 
 ```cpp
-void cf_sprite_flip_y(CF_Sprite* sprite)
+CF_INLINE void cf_sprite_flip_y(CF_Sprite* sprite)
 ```
 
 Parameters | Description

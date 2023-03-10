@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns an int clamped between 0 and 1.
 
 ```cpp
-int cf_clamp01_int(int a)
+CF_INLINE int cf_clamp01_int(int a)
 ```
 
 ## Related Pages

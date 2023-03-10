@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Atomically sets `atomic` to `value` if `expected` equals `atomic`.
 
 ```cpp
-CF_Result cf_atomic_ptr_cas(void** atomic, void* expected, void* value);
+CF_API CF_Result CF_CALL cf_atomic_ptr_cas(void** atomic, void* expected, void* value);
 ```
 
 Parameters | Description

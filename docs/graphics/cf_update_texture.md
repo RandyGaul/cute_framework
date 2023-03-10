@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Updates the contents of a [CF_Texture](/graphics/cf_texture.md).
 
 ```cpp
-void cf_update_texture(CF_Texture texture, void* data, int size);
+CF_API void CF_CALL cf_update_texture(CF_Texture texture, void* data, int size);
 ```
 
 Parameters | Description

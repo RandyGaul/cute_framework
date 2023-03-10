@@ -9,7 +9,7 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Sets the global gain for all haptics on this device.
 
 ```cpp
-void cf_haptic_set_gain(CF_Haptic* haptic, float gain);
+CF_API void CF_CALL cf_haptic_set_gain(CF_Haptic* haptic, float gain);
 ```
 
 Parameters | Description

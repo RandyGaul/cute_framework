@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Sets up a viewport to render within.
 
 ```cpp
-void cf_apply_viewport(int x, int y, int width, int height);
+CF_API void CF_CALL cf_apply_viewport(int x, int y, int width, int height);
 ```
 
 Parameters | Description

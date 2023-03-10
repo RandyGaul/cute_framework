@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Sends a packet to the server.
 
 ```cpp
-CF_Result cf_client_send(CF_Client* client, const void* packet, int size, bool send_reliably);
+CF_API CF_Result CF_CALL cf_client_send(CF_Client* client, const void* packet, int size, bool send_reliably);
 ```
 
 Parameters | Description

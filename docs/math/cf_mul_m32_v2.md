@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns a vector multiplied by a [CF_M3x2](/math/cf_m3x2.md).
 
 ```cpp
-CF_V2 cf_mul_m32_v2(CF_M3x2 a, CF_V2 b)
+CF_INLINE CF_V2 cf_mul_m32_v2(CF_M3x2 a, CF_V2 b)
 ```
 
 ## Related Pages

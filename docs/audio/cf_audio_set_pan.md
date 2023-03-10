@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Sets the global stereo pan for all audio.
 
 ```cpp
-void cf_audio_set_pan(float pan);
+CF_API void CF_CALL cf_audio_set_pan(float pan);
 ```
 
 Parameters | Description

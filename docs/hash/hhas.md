@@ -28,7 +28,7 @@ Returns true if the item was found, false otherwise.
 ```cpp
 htbl v2 table = NULL;
 hadd(table, 10, V2(-1, 1));
-CUTE_ASSERT(hhas(table, 10));
+CF_ASSERT(hhas(table, 10));
 hfree(table);
 ```
 

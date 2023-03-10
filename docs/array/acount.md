@@ -23,7 +23,7 @@ a | The array.
 ```cpp
 dyna int a = NULL;
 apush(a, 5);
-CUTE_ASSERT(acount(a) == 1);
+CF_ASSERT(acount(a) == 1);
 afree(a);
 ```
 

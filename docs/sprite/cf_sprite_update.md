@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Updates a sprite's animation.
 
 ```cpp
-void cf_sprite_update(CF_Sprite* sprite)
+CF_INLINE void cf_sprite_update(CF_Sprite* sprite)
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns true if the mouse's coordinates began hovering over the app last frame.
 
 ```cpp
-bool cf_app_mouse_entered();
+CF_API bool CF_CALL cf_app_mouse_entered();
 ```
 
 ## Remarks

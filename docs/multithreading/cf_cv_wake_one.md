@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Wakes a single (implementation-dependent) thread sleeping on the condition variable.
 
 ```cpp
-CF_Result cf_cv_wake_one(CF_ConditionVariable* cv);
+CF_API CF_Result CF_CALL cf_cv_wake_one(CF_ConditionVariable* cv);
 ```
 
 Parameters | Description

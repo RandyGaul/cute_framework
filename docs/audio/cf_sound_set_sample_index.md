@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Sets the sample index for the sound to control which sample to play next.
 
 ```cpp
-void cf_sound_set_sample_index(CF_Sound sound, uint64_t sample_index);
+CF_API void CF_CALL cf_sound_set_sample_index(CF_Sound sound, uint64_t sample_index);
 ```
 
 Parameters | Description

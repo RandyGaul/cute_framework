@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Draws a circle.
 
 ```cpp
-void cf_draw_circle_fill(CF_V2 p, float r, int iters);
+CF_API void CF_CALL cf_draw_circle_fill(CF_V2 p, float r, int iters);
 ```
 
 Parameters | Description

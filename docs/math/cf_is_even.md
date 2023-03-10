@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if an int is even.
 
 ```cpp
-bool cf_is_even(int x)
+CF_INLINE bool cf_is_even(int x)
 ```
 
 ## Related Pages

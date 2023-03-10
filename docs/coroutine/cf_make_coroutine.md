@@ -9,7 +9,7 @@ GitHub: [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Sets up the entry point for a coroutine to start.
 
 ```cpp
-CF_Coroutine* cf_make_coroutine(CF_CoroutineFn* fn, int stack_size, void* udata);
+CF_API CF_Coroutine* CF_CALL cf_make_coroutine(CF_CoroutineFn* fn, int stack_size, void* udata);
 ```
 
 Parameters | Description

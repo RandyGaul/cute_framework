@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Frees a file list from [cf_fs_create_directory](/file/cf_fs_create_directory.md).
 
 ```cpp
-void cf_fs_free_enumerated_directory(const char** directory_list);
+CF_API void CF_CALL cf_fs_free_enumerated_directory(const char** directory_list);
 ```
 
 Parameters | Description

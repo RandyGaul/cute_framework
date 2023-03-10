@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns minimum of all components of a vector.
 
 ```cpp
-float cf_hmin(CF_V2 a)
+CF_INLINE float cf_hmin(CF_V2 a)
 ```
 
 ## Related Pages

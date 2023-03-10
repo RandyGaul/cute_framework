@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 When drawing text, and missing glyphs from the font will be replaced by any backup codepoints.
 
 ```cpp
-void cf_font_add_backup_codepoints(const char* font_name, int* codepoints, int count);
+CF_API void CF_CALL cf_font_add_backup_codepoints(const char* font_name, int* codepoints, int count);
 ```
 
 Parameters | Description

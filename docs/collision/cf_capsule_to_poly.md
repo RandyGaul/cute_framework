@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true an capsule is intersecting a polygon.
 
 ```cpp
-bool cf_capsule_to_poly(CF_Capsule A, const CF_Poly* B, const CF_Transform* bx);
+CF_API bool CF_CALL cf_capsule_to_poly(CF_Capsule A, const CF_Poly* B, const CF_Transform* bx);
 ```
 
 ## Remarks

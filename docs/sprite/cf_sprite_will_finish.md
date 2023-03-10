@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns true if the animation will loop around and finish if [cf_sprite_update](/sprite/cf_sprite_update.md) is called.
 
 ```cpp
-bool cf_sprite_will_finish(CF_Sprite* sprite)
+CF_INLINE bool cf_sprite_will_finish(CF_Sprite* sprite)
 ```
 
 Parameters | Description

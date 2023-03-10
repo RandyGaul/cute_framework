@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Helper function to return a orange [CF_Pixel](/graphics/cf_pixel.md).
 
 ```cpp
-CF_Pixel cf_pixel_orange()
+CF_INLINE CF_Pixel cf_pixel_orange()
 ```
 
 ## Related Pages

@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Loads a single-frame sprite from a single png file.
 
 ```cpp
-CF_Sprite cf_make_easy_sprite(const char* png_path);
+CF_API CF_Sprite CF_CALL cf_make_easy_sprite(const char* png_path);
 ```
 
 Parameters | Description

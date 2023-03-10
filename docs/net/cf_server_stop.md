@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Stops the server.
 
 ```cpp
-void cf_server_stop(CF_Server* server);
+CF_API void cf_server_stop(CF_Server* server);
 ```
 
 ## Related Pages

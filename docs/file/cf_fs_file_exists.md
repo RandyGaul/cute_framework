@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Returns true if a file exists, false otherwise.
 
 ```cpp
-bool cf_fs_file_exists(const char* virtual_path);
+CF_API bool CF_CALL cf_fs_file_exists(const char* virtual_path);
 ```
 
 Parameters | Description

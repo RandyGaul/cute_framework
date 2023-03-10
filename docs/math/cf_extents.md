@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the extents of an AABB (axis-aligned bounding box).
 
 ```cpp
-CF_V2 cf_extents(CF_Aabb aabb)
+CF_INLINE CF_V2 cf_extents(CF_Aabb aabb)
 ```
 
 ## Remarks

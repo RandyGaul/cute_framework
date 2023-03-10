@@ -9,7 +9,7 @@ GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Free's up all resources used by the allocator and places it back into an initialized state.
 
 ```cpp
-void cf_arena_reset(CF_Arena* arena);
+CF_API void CF_CALL cf_arena_reset(CF_Arena* arena);
 ```
 
 Parameters | Description

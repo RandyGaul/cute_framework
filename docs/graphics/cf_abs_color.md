@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns the component-wise absolute value of a color.
 
 ```cpp
-CF_Color cf_abs_color(CF_Color a)
+CF_INLINE CF_Color cf_abs_color(CF_Color a)
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Computes 2D convex hull.
 
 ```cpp
-int cf_hull(CF_V2* verts, int count);
+CF_API int CF_CALL cf_hull(CF_V2* verts, int count);
 ```
 
 Parameters | Description

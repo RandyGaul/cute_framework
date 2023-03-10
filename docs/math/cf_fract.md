@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the fractional portion of a float.
 
 ```cpp
-float cf_fract(float x)
+CF_INLINE float cf_fract(float x)
 ```
 
 ## Related Pages

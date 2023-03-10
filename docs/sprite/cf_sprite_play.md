@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Switches to a new aninmation and starts playing it from the beginning.
 
 ```cpp
-void cf_sprite_play(CF_Sprite* sprite, const char* animation)
+CF_INLINE void cf_sprite_play(CF_Sprite* sprite, const char* animation)
 ```
 
 Parameters | Description

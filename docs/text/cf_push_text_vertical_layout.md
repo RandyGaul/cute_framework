@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pushes a whether or not to layout text vertically (as opposed to the default or horizontally).
 
 ```cpp
-void cf_push_text_vertical_layout(bool layout_vertically);
+CF_API void CF_CALL cf_push_text_vertical_layout(bool layout_vertically);
 ```
 
 Parameters | Description

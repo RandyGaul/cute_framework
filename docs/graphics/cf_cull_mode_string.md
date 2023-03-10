@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a [CF_CullMode](/graphics/cf_cullmode.md) converted to a C string.
 
 ```cpp
-const char* cf_cull_mode_string(CF_CullMode mode)
+CF_INLINE const char* cf_cull_mode_string(CF_CullMode mode)
 ```
 
 ## Related Pages

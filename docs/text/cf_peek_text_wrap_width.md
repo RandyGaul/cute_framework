@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the last text wrap width.
 
 ```cpp
-float cf_peek_text_wrap_width();
+CF_API float CF_CALL cf_peek_text_wrap_width();
 ```
 
 ## Related Pages

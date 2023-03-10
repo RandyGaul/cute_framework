@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the height of a text given the currently pushed font.
 
 ```cpp
-float cf_text_height(const char* text);
+CF_API float CF_CALL cf_text_height(const char* text);
 ```
 
 Parameters | Description

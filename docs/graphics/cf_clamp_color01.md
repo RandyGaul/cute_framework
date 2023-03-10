@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns the component-wise clamp of `a` between 0.0f and 1.0f.
 
 ```cpp
-CF_Color cf_clamp_color01(CF_Color a)
+CF_INLINE CF_Color cf_clamp_color01(CF_Color a)
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a color converted from rgb form to HSV (Hue Saturation Value) form.
 
 ```cpp
-CF_Color cf_rgb_to_hsv(CF_Color c)
+CF_INLINE CF_Color cf_rgb_to_hsv(CF_Color c)
 ```
 
 Parameters | Description

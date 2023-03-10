@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pushes a font to use for text drawing.
 
 ```cpp
-void cf_push_font(const char* font);
+CF_API void CF_CALL cf_push_font(const char* font);
 ```
 
 Parameters | Description

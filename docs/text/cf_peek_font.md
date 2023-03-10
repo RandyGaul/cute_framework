@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the last font name used.
 
 ```cpp
-const char* cf_peek_font();
+CF_API const char* CF_CALL cf_peek_font();
 ```
 
 ## Related Pages

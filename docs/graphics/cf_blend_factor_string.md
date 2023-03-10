@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a [CF_BlendFactor](/graphics/cf_blendfactor.md) converted to a C string.
 
 ```cpp
-const char* cf_blend_factor_string(CF_BlendFactor factor)
+CF_INLINE const char* cf_blend_factor_string(CF_BlendFactor factor)
 ```
 
 ## Related Pages

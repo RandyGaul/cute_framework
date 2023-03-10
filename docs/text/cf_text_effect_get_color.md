@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the text parameter as a color.
 
 ```cpp
-CF_Color cf_text_effect_get_color(CF_TextEffect* fx, const char* key, CF_Color default_val);
+CF_API CF_Color CF_CALL cf_text_effect_get_color(CF_TextEffect* fx, const char* key, CF_Color default_val);
 ```
 
 Parameters | Description

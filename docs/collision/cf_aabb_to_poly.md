@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true an Aabb is intersecting a polygon.
 
 ```cpp
-bool cf_aabb_to_poly(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx);
+CF_API bool CF_CALL cf_aabb_to_poly(CF_Aabb A, const CF_Poly* B, const CF_Transform* bx);
 ```
 
 ## Remarks

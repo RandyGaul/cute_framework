@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pushes a text clip box to use for text drawing.
 
 ```cpp
-void cf_push_text_clip_box(CF_Aabb clip_box);
+CF_API void CF_CALL cf_push_text_clip_box(CF_Aabb clip_box);
 ```
 
 Parameters | Description

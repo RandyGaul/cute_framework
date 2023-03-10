@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a new [CF_Texture](/graphics/cf_texture.md).
 
 ```cpp
-CF_Texture cf_make_texture(CF_TextureParams texture_params);
+CF_API CF_Texture CF_CALL cf_make_texture(CF_TextureParams texture_params);
 ```
 
 Parameters | Description

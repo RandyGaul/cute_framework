@@ -9,7 +9,7 @@ GitHub: [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/m
 Returns whether or not the handle is currently active.
 
 ```cpp
-bool cf_handle_allocator_active(CF_HandleTable* table, CF_Handle handle);
+CF_API bool CF_CALL cf_handle_allocator_active(CF_HandleTable* table, CF_Handle handle);
 ```
 
 Parameters | Description

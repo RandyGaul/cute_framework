@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns an initialized `CF_Halfpsace` (a 2-dimensional plane, aka line).
 
 ```cpp
-CF_Halfspace cf_plane(CF_V2 n, float d)
+CF_INLINE CF_Halfspace cf_plane(CF_V2 n, float d)
 ```
 
 ## Related Pages

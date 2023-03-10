@@ -9,7 +9,7 @@ GitHub: [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns a random `float`.
 
 ```cpp
-static float    cf_rnd_next_float(CF_Rnd* rnd);
+static CF_INLINE float    CF_CALL cf_rnd_next_float(CF_Rnd* rnd);
 ```
 
 Parameters | Description

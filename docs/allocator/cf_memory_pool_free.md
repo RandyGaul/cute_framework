@@ -9,7 +9,7 @@ GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Frees an allocation made by [cf_memory_pool_alloc](/allocator/cf_memory_pool_alloc.md) or [cf_memory_pool_try_alloc](/allocator/cf_memory_pool_try_alloc.md).
 
 ```cpp
-void cf_memory_pool_free(CF_MemoryPool* pool, void* element);
+CF_API void CF_CALL cf_memory_pool_free(CF_MemoryPool* pool, void* element);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Begins the serializatino of a KV object.
 
 ```cpp
-bool cf_kv_object_begin(CF_KeyValue* kv, const char* key);
+CF_API bool CF_CALL cf_kv_object_begin(CF_KeyValue* kv, const char* key);
 ```
 
 Parameters | Description

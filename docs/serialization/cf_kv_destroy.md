@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Frees up all resources using by the kv instance.
 
 ```cpp
-void cf_kv_destroy(CF_KeyValue* kv);
+CF_API void CF_CALL cf_kv_destroy(CF_KeyValue* kv);
 ```
 
 Parameters | Description

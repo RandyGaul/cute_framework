@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Returns a `CF_FileType` converted to a c-string.
 
 ```cpp
-const char* cf_file_type_to_string(CF_FileType type)
+CF_INLINE const char* cf_file_type_to_string(CF_FileType type)
 ```
 
 ## Related Pages

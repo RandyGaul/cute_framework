@@ -9,7 +9,7 @@ GitHub: [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/m
 Returns true if a [CF_Handle](/utility/cf_handle.md) is valid.
 
 ```cpp
-int cf_handle_allocator_handle_valid(CF_HandleTable* table, CF_Handle handle);
+CF_API int CF_CALL cf_handle_allocator_handle_valid(CF_HandleTable* table, CF_Handle handle);
 ```
 
 Parameters | Description

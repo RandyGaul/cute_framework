@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Returns an initialized semaphore.
 
 ```cpp
-CF_Semaphore cf_make_sem(int initial_count);
+CF_API CF_Semaphore CF_CALL cf_make_sem(int initial_count);
 ```
 
 Parameters | Description

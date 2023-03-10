@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Removes a directory.
 
 ```cpp
-CF_Result cf_fs_remove_directory(const char* virtual_path);
+CF_API CF_Result CF_CALL cf_fs_remove_directory(const char* virtual_path);
 ```
 
 Parameters | Description

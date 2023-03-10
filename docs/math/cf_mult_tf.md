@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns `a` multiplied by inverse `b`.
 
 ```cpp
-CF_Transform cf_mulT_tf(CF_Transform a, CF_Transform b)
+CF_INLINE CF_Transform cf_mulT_tf(CF_Transform a, CF_Transform b)
 ```
 
 ## Related Pages

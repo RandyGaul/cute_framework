@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns an identity [CF_Transform](/math/cf_transform.md).
 
 ```cpp
-CF_Transform cf_make_transform()
+CF_INLINE CF_Transform cf_make_transform()
 ```
 
 ## Related Pages

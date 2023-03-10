@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Adds a frame to an animation.
 
 ```cpp
-void cf_animation_add_frame(CF_Animation* animation, CF_Frame frame)
+CF_INLINE void cf_animation_add_frame(CF_Animation* animation, CF_Frame frame)
 ```
 
 Parameters | Description

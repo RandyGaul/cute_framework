@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns a remap'd result from atan2f to the continuous range of 0, 2PI.
 
 ```cpp
-float cf_atan2_360(float y, float x)
+CF_INLINE float cf_atan2_360(float y, float x)
 ```
 
 ## Related Pages

@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Adds a utf8 codepoint to the input buffer of the application.
 
 ```cpp
-void cf_input_text_add_utf8(const char* text);
+CF_API void CF_CALL cf_input_text_add_utf8(const char* text);
 ```
 
 ## Remarks

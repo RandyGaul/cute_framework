@@ -24,9 +24,9 @@ y | The y position of the window.
 ```cpp
 dyna int a = NULL;
 apush(a, 5);
-CUTE_ASSERT(alen(a) == 1);
+CF_ASSERT(alen(a) == 1);
 alen(a)--;
-CUTE_ASSERT(alen(a) == 0);
+CF_ASSERT(alen(a) == 0);
 afree(a);
 ```
 

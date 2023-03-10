@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Loads a sprite from an aseprite file.
 
 ```cpp
-CF_Sprite cf_make_sprite(const char* aseprite_path);
+CF_API CF_Sprite CF_CALL cf_make_sprite(const char* aseprite_path);
 ```
 
 Parameters | Description

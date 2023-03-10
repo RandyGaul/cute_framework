@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Destroys a [CF_Server](/net/cf_server.md) created by [cf_make_server](/net/cf_make_server.md).
 
 ```cpp
-void cf_destroy_server(CF_Server* server);
+CF_API void CF_CALL cf_destroy_server(CF_Server* server);
 ```
 
 ## Related Pages

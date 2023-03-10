@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Ends the serializatino of a KV object.
 
 ```cpp
-bool cf_kv_object_end(CF_KeyValue* kv);
+CF_API bool CF_CALL cf_kv_object_end(CF_KeyValue* kv);
 ```
 
 Parameters | Description

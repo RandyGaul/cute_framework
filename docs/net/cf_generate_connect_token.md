@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Generates a connect token, useable by clients to authenticate and securely connect to a server.
 
 ```cpp
-CF_Result cf_generate_connect_token(uint64_t application_id, uint64_t creation_timestamp, const CF_CryptoKey* client_to_server_key, const CF_CryptoKey* server_to_client_key, uint64_t expiration_timestamp, uint32_t handshake_timeout, int address_count, const char** address_list, uint64_t client_id, const uint8_t* user_data, const CF_CryptoSignSecret* shared_secret_key, uint8_t* token_ptr_out);
+CF_API CF_Result CF_CALL cf_generate_connect_token(uint64_t application_id, uint64_t creation_timestamp, const CF_CryptoKey* client_to_server_key, const CF_CryptoKey* server_to_client_key, uint64_t expiration_timestamp, uint32_t handshake_timeout, int address_count, const char** address_list, uint64_t client_id, const uint8_t* user_data, const CF_CryptoSignSecret* shared_secret_key, uint8_t* token_ptr_out);
 ```
 
 Parameters | Description
@@ -27,9 +27,9 @@ handshake_timeout | The number of seconds the connection will stay alive during 
 address_count | Must be from 1 to 32 (inclusive). The number of addresses in `address_list`.
 address_list | A list of game servers the client can try connecting to, of length `address_count`.
 client_id | The unique client identifier (you pick this).
-user_data | Can be `NULL`. Optional buffer of data of `CUTE_PROTOCOL_CONNECT_TOKEN_USER_DATA_SIZE` (256) bytes.
+user_data | Can be `NULL`. Optional buffer of data of `CF_PROTOCOL_CONNECT_TOKEN_USER_DATA_SIZE` (256) bytes.
 shared_secret_key | Only your webservice and game servers know this key.
-token_ptr_out | Pointer to your buffer, should be [CUTE_CONNECT_TOKEN_SIZE](/net/cute_connect_token_size.md) bytes large.
+token_ptr_out | Pointer to your buffer, should be [CF_CONNECT_TOKEN_SIZE](/net/cf_connect_token_size.md) bytes large.
 
 ## Return Value
 

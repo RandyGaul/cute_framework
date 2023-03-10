@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the last vertical layout state.
 
 ```cpp
-bool cf_peek_text_vertical_layout();
+CF_API bool CF_CALL cf_peek_text_vertical_layout();
 ```
 
 ## Related Pages

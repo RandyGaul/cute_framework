@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Converts an RGBA [CF_Pixel](/graphics/cf_pixel.md) to an integer.
 
 ```cpp
-uint32_t cf_pixel_to_int_rgba(CF_Pixel p)
+CF_INLINE uint32_t cf_pixel_to_int_rgba(CF_Pixel p)
 ```
 
 Parameters | Description

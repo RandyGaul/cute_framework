@@ -9,7 +9,7 @@ GitHub: [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Adds a new [CF_Leaf](/collision/cf_leaf.md) to the tree.
 
 ```cpp
-CF_Leaf cf_aabb_tree_insert(CF_AabbTree tree, CF_Aabb aabb, void* udata);
+CF_API CF_Leaf CF_CALL cf_aabb_tree_insert(CF_AabbTree tree, CF_Aabb aabb, void* udata);
 ```
 
 Parameters | Description

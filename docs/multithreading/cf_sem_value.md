@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Atomically fetches the semaphore's counter.
 
 ```cpp
-CF_Result cf_sem_value(CF_Semaphore* semaphore);
+CF_API CF_Result CF_CALL cf_sem_value(CF_Semaphore* semaphore);
 ```
 
 Parameters | Description

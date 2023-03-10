@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Convert an enum [CF_PowerState](/app/cf_powerstate.md) to a c-style string.
 
 ```cpp
-const char* cf_power_state_to_string(CF_PowerState state)
+CF_INLINE const char* cf_power_state_to_string(CF_PowerState state)
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Serializes a C style string value.
 
 ```cpp
-bool cf_kv_val_string(CF_KeyValue* kv, const char** str, size_t* size);
+CF_API bool CF_CALL cf_kv_val_string(CF_KeyValue* kv, const char** str, size_t* size);
 ```
 
 Parameters | Description

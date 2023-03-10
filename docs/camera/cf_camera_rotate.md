@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Rotates the camera.
 
 ```cpp
-void cf_camera_rotate(float radians);
+CF_API void CF_CALL cf_camera_rotate(float radians);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Attempts to connect the [CF_Client](/net/cf_client.md) to a [CF_Server](/net/cf_server.md).
 
 ```cpp
-CF_Result cf_client_connect(CF_Client* client, const uint8_t* connect_token);
+CF_API CF_Result CF_CALL cf_client_connect(CF_Client* client, const uint8_t* connect_token);
 ```
 
 ## Return Value

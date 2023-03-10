@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns absolute value of a float.
 
 ```cpp
-float cf_abs(float a)
+CF_INLINE float cf_abs(float a)
 ```
 
 ## Related Pages

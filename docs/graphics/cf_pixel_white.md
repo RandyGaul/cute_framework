@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Helper function to return a invisible `white`.
 
 ```cpp
-CF_Pixel cf_pixel_white()
+CF_INLINE CF_Pixel cf_pixel_white()
 ```
 
 ## Related Pages

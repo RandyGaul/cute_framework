@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the last font size.
 
 ```cpp
-float cf_peek_font_size();
+CF_API float CF_CALL cf_peek_font_size();
 ```
 
 ## Related Pages

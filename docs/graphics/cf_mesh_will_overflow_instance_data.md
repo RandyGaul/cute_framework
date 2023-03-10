@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns true if a number of bytes to append would overflow the internal vertex buffer.
 
 ```cpp
-bool cf_mesh_will_overflow_instance_data(CF_Mesh mesh, int append_count);
+CF_API bool CF_CALL cf_mesh_will_overflow_instance_data(CF_Mesh mesh, int append_count);
 ```
 
 Parameters | Description

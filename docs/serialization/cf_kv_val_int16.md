@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Serializes an signed 16-bit value.
 
 ```cpp
-bool cf_kv_val_int16(CF_KeyValue* kv, int16_t* val);
+CF_API bool CF_CALL cf_kv_val_int16(CF_KeyValue* kv, int16_t* val);
 ```
 
 Parameters | Description

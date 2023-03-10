@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns true if the left or right shift key is currently down.
 
 ```cpp
-bool cf_key_shift();
+CF_API bool CF_CALL cf_key_shift();
 ```
 
 ## Related Pages

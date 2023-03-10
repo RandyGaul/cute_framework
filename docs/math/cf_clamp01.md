@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns `a` float clamped between 0.0f and 1.0f.
 
 ```cpp
-float cf_clamp01(float a)
+CF_INLINE float cf_clamp01(float a)
 ```
 
 ## Related Pages

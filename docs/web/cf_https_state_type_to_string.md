@@ -9,7 +9,7 @@ GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Convert an enum [CF_HttpsState](/web/cf_httpsstate.md) to a c-style string.
 
 ```cpp
-const char* cf_https_state_type_to_string(CF_HttpsState state)
+CF_INLINE const char* cf_https_state_type_to_string(CF_HttpsState state)
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Transforms a plane by an inverted [CF_Transform](/math/cf_transform.md).
 
 ```cpp
-CF_Halfspace cf_mulT_tf_hs(CF_Transform a, CF_Halfspace b)
+CF_INLINE CF_Halfspace cf_mulT_tf_hs(CF_Transform a, CF_Halfspace b)
 ```
 
 ## Related Pages

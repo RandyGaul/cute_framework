@@ -9,7 +9,7 @@ GitHub: [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/m
 Returns the 16-bit type value a [CF_Handle](/utility/cf_handle.md) maps to.
 
 ```cpp
-uint16_t cf_handle_allocator_get_type(CF_HandleTable* table, CF_Handle handle);
+CF_API uint16_t CF_CALL cf_handle_allocator_get_type(CF_HandleTable* table, CF_Handle handle);
 ```
 
 Parameters | Description

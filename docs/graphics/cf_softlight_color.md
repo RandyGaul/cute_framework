@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a softlight'd color, where the colors are darkened or lightened depending on the `blend` color.
 
 ```cpp
-CF_Color cf_softlight_color(CF_Color base, CF_Color blend)
+CF_INLINE CF_Color cf_softlight_color(CF_Color base, CF_Color blend)
 ```
 
 Parameters | Description

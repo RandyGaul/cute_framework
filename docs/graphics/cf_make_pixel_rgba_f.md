@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a [CF_Pixel](/graphics/cf_pixel.md) made from RGBA float inputs.
 
 ```cpp
-CF_Pixel cf_make_pixel_rgba_f(float r, float g, float b, float a)
+CF_INLINE CF_Pixel cf_make_pixel_rgba_f(float r, float g, float b, float a)
 ```
 
 Parameters | Description

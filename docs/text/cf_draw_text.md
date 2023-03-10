@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Draws text.
 
 ```cpp
-void cf_draw_text(const char* text, CF_V2 position);
+CF_API void CF_CALL cf_draw_text(const char* text, CF_V2 position);
 ```
 
 Parameters | Description

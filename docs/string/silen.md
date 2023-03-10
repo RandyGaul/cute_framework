@@ -19,7 +19,7 @@ s | The string.
 ## Remarks
 
 This is not a secure method -- do not use it on any potentially dangerous strings. It's designed to be very simple and fast, nothing more.
-The return value is calculated in constant time, as opposed to calling `CUTE_STRLEN` (`strlen`).
+The return value is calculated in constant time, as opposed to calling `CF_STRLEN` (`strlen`).
 
 ## Related Pages
 

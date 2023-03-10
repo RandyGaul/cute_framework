@@ -9,6 +9,6 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Returns the number of cores on the CPU. Can be affected my machine dependent technology, such as Intel's hyperthreading.
 
 ```cpp
-int cf_core_count();
+CF_API int CF_CALL cf_core_count();
 ```
 

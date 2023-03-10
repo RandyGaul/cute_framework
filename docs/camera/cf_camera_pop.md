@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pops the current camera state, and uses the previously pushed camera state.
 
 ```cpp
-void cf_camera_pop();
+CF_API void CF_CALL cf_camera_pop();
 ```
 
 ## Related Pages

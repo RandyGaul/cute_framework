@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a [CF_Color](/graphics/cf_color.md) made from integer hex input.
 
 ```cpp
-CF_Color cf_make_color_hex(int hex)
+CF_INLINE CF_Color cf_make_color_hex(int hex)
 ```
 
 Parameters | Description

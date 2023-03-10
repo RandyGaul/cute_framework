@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Uses a specific shader + material combo for rendering.
 
 ```cpp
-void cf_apply_shader(CF_Shader shader, CF_Material material);
+CF_API void CF_CALL cf_apply_shader(CF_Shader shader, CF_Material material);
 ```
 
 ## Remarks

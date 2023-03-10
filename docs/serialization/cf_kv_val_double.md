@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Serializes an 64-bit floating point value.
 
 ```cpp
-bool cf_kv_val_double(CF_KeyValue* kv, double* val);
+CF_API bool CF_CALL cf_kv_val_double(CF_KeyValue* kv, double* val);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Destroys a memory pool.
 
 ```cpp
-void cf_destroy_memory_pool(CF_MemoryPool* pool);
+CF_API void CF_CALL cf_destroy_memory_pool(CF_MemoryPool* pool);
 ```
 
 Parameters | Description

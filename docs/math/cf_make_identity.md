@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns an identity [CF_M3x2](/math/cf_m3x2.md).
 
 ```cpp
-CF_M3x2 cf_make_identity()
+CF_INLINE CF_M3x2 cf_make_identity()
 ```
 
 ## Related Pages

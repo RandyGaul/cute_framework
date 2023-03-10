@@ -9,7 +9,7 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Destroys a joypad previously opened by `joypad_open`.
 
 ```cpp
-void cf_joypad_close(CF_Joypad* joypad);
+CF_API void CF_CALL cf_joypad_close(CF_Joypad* joypad);
 ```
 
 Parameters | Description

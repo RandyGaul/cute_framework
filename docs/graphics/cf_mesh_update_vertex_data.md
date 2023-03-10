@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Overwrites the vertex data of a mesh.
 
 ```cpp
-void cf_mesh_update_vertex_data(CF_Mesh mesh, void* data, int count);
+CF_API void CF_CALL cf_mesh_update_vertex_data(CF_Mesh mesh, void* data, int count);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Adds a new archive/directory onto the search path.
 
 ```cpp
-CF_Result cf_fs_mount(const char* archive, const char* mount_point, bool append_to_path);
+CF_API CF_Result CF_CALL cf_fs_mount(const char* archive, const char* mount_point, bool append_to_path);
 ```
 
 Parameters | Description

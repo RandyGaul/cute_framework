@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Loads a .ogg audio file.
 
 ```cpp
-CF_Audio* cf_audio_load_ogg(const char* path);
+CF_API CF_Audio* CF_CALL cf_audio_load_ogg(const char* path);
 ```
 
 Parameters | Description

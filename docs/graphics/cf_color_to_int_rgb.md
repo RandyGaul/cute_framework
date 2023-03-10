@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Converts an RGBA [CF_Color](/graphics/cf_color.md) to an integer.
 
 ```cpp
-uint32_t cf_color_to_int_rgb(CF_Color c)
+CF_INLINE uint32_t cf_color_to_int_rgb(CF_Color c)
 ```
 
 Parameters | Description

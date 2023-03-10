@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a signed integer representing by how much the mouse wheel was rotated.
 
 ```cpp
-int cf_mouse_wheel_motion();
+CF_API int CF_CALL cf_mouse_wheel_motion();
 ```
 
 ## Related Pages

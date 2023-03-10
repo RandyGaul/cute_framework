@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns `bb.max`.
 
 ```cpp
-CF_V2 cf_max_aabb(CF_Aabb bb)
+CF_INLINE CF_V2 cf_max_aabb(CF_Aabb bb)
 ```
 
 ## Related Pages

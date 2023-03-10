@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Sets up which canvas to draw to.
 
 ```cpp
-void cf_apply_canvas(CF_Canvas canvas, bool clear);
+CF_API void CF_CALL cf_apply_canvas(CF_Canvas canvas, bool clear);
 ```
 
 Parameters | Description

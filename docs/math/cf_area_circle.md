@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the area of a [CF_Circle](/math/cf_circle.md).
 
 ```cpp
-float cf_area_circle(CF_Circle c)
+CF_INLINE float cf_area_circle(CF_Circle c)
 ```
 
 ## Related Pages

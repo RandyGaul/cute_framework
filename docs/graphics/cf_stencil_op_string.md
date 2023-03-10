@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a [CF_StencilOp](/graphics/cf_stencilop.md) converted to a C string.
 
 ```cpp
-const char* cf_stencil_op_string(CF_StencilOp op)
+CF_INLINE const char* cf_stencil_op_string(CF_StencilOp op)
 ```
 
 ## Related Pages

@@ -9,7 +9,7 @@ GitHub: [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Returns the current state of the coroutine.
 
 ```cpp
-CF_CoroutineState cf_coroutine_state(CF_Coroutine* co);
+CF_API CF_CoroutineState CF_CALL cf_coroutine_state(CF_Coroutine* co);
 ```
 
 Parameters | Description

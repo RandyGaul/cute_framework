@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Returns true if a client is still connected.
 
 ```cpp
-bool cf_server_is_client_connected(CF_Server* server, int client_index);
+CF_API bool CF_CALL cf_server_is_client_connected(CF_Server* server, int client_index);
 ```
 
 ## Related Pages

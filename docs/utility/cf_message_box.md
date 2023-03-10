@@ -9,7 +9,7 @@ GitHub: [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Displays a message in a new window.
 
 ```cpp
-void cf_message_box(CF_MessageBoxType type, const char* title, const char* text);
+CF_API void CF_CALL cf_message_box(CF_MessageBoxType type, const char* title, const char* text);
 ```
 
 Parameters | Description

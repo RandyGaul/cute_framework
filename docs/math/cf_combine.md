@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns a [CF_Aabb](/math/cf_aabb.md) that tightly contains both `a` and `b`.
 
 ```cpp
-CF_Aabb cf_combine(CF_Aabb a, CF_Aabb b)
+CF_INLINE CF_Aabb cf_combine(CF_Aabb a, CF_Aabb b)
 ```
 
 ## Related Pages

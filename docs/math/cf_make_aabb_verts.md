@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns a [CF_Aabb](/math/cf_aabb.md) that tightly contains all input verts.
 
 ```cpp
-CF_Aabb cf_make_aabb_verts(CF_V2* verts, int count)
+CF_INLINE CF_Aabb cf_make_aabb_verts(CF_V2* verts, int count)
 ```
 
 ## Related Pages

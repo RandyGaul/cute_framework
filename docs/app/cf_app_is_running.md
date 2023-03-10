@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns true while the app should keep running. Call this as your main loop condition.
 
 ```cpp
-bool cf_app_is_running();
+CF_API bool CF_CALL cf_app_is_running();
 ```
 
 ## Return Value
@@ -27,7 +27,7 @@ using namespace cute;
 int main(int argc, const char argv)
 {
     // Create a window with a resolution of 640 x 480, along with a DirectX 11 context.
-    app_make("Fancy Window Title", 50, 50, 640, 480, CUTE_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
+    app_make("Fancy Window Title", 50, 50, 640, 480, CF_APP_OPTIONS_D3D11_CONTEXT, argv[0]);
     
     while (app_is_running())
     {

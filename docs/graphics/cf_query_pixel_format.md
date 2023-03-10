@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns true if a particular [CF_PixelFormat](/graphics/cf_pixelformat.md) is compatible with a certain [CF_PixelFormatOp](/graphics/cf_pixelformatop.md).
 
 ```cpp
-bool cf_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op);
+CF_API bool CF_CALL cf_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op);
 ```
 
 ## Remarks

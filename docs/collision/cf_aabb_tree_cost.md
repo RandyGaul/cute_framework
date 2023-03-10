@@ -9,7 +9,7 @@ GitHub: [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Returns a cost heuristic value to quantify the quality of the tree.
 
 ```cpp
-float cf_aabb_tree_cost(const CF_AabbTree tree);
+CF_API float CF_CALL cf_aabb_tree_cost(const CF_AabbTree tree);
 ```
 
 Parameters | Description

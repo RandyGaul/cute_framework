@@ -29,8 +29,8 @@ Returns a pointer to the item set into the table.
 htbl int table = NULL;
 hadd(table, 0, 5);
 hadd(table, 1, 12);
-CUTE_ASSERT(hget(table, 0) == 5);
-CUTE_ASSERT(hget(table, 1) == 12);
+CF_ASSERT(hget(table, 0) == 5);
+CF_ASSERT(hget(table, 1) == 12);
 hfree(table);
 ```
 

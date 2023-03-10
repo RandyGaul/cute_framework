@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Expands an AABB (axis-aligned bounding box).
 
 ```cpp
-CF_Aabb cf_expand_aabb(CF_Aabb aabb, CF_V2 v)
+CF_INLINE CF_Aabb cf_expand_aabb(CF_Aabb aabb, CF_V2 v)
 ```
 
 Parameters | Description

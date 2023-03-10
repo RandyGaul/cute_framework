@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Begins the serialization of an array.
 
 ```cpp
-bool cf_kv_array_begin(CF_KeyValue* kv, int* count, const char* key);
+CF_API bool CF_CALL cf_kv_array_begin(CF_KeyValue* kv, int* count, const char* key);
 ```
 
 Parameters | Description
