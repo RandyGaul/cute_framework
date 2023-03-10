@@ -22,6 +22,7 @@
 #include <cute_coroutine.h>
 #include <cute_c_runtime.h>
 
+#include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
 
 #define MINICORO_IMPL

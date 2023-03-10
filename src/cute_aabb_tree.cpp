@@ -23,6 +23,7 @@
 #include <cute_array.h>
 #include <cute_alloc.h>
 
+#include <internal/cute_alloc_internal.h>
 #include <internal/cute_serialize_internal.h>
 
 #include <float.h>

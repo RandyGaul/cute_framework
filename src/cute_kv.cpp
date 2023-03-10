@@ -26,7 +26,8 @@
 #include <cute_result.h>
 #include <cute_string.h>
 
-#include <stdio.h>
+#include <internal/cute_alloc_internal.h>
+
 #include <inttypes.h>
 
 using namespace Cute;

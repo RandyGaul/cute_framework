@@ -22,6 +22,8 @@
 #include "cute_array.h"
 #include "cute_math.h"
 
+#include <internal/cute_alloc_internal.h>
+
 using namespace Cute;
 
 void* cf_agrow(const void* a, int new_size, size_t element_size)

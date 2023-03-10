@@ -24,18 +24,31 @@
 
 #include "cute_defines.h"
 
-#if !defined(CF_ALLOC) && !defined(CF_FREE)
-#	ifdef _MSC_VER // Leak checking for debug Windows builds.
-#		define _CRTDBG_MAPALLOC
-#		define _CRTDBG_MAP_ALLOC
-#		include <crtdbg.h>
-#	endif
-#	include <stdlib.h>
-#	define CF_CALLOC(size) calloc(size, 1)
-#	define CF_ALLOC(size) malloc(size)
-#	define CF_FREE(ptr) free(ptr)
-#	define CF_REALLOC(ptr, size) realloc(ptr, size)
-#endif
+#ifdef __cplusplus
+extern "C" {
+#endif // __cplusplus
+
+typedef void* (CF_AllocFn)(size_t size, void* udata);
+typedef void (CF_FreeFn)(void* ptr, void* udata);
+typedef void* (CF_CallocFn)(size_t size, size_t count, void* udata);
+typedef void* (CF_ReallocFn)(void* ptr, size_t size, void* udata);
+
+typedef struct CF_Allocator
+{
+	void* udata;
+	CF_AllocFn* alloc_fn;
+	CF_FreeFn* free_fn;
+	CF_CallocFn* calloc_fn;
+	CF_ReallocFn* realloc_fn;
+} CF_Allocator;
+
+CF_API void CF_CALL cf_allocator_override(CF_Allocator allocator);
+CF_API void CF_CALL cf_allocator_restore_default();
+
+CF_API void* CF_CALL cf_alloc(size_t size);
+CF_API void CF_CALL cf_free(void* ptr);
+CF_API void* CF_CALL cf_calloc(size_t size, size_t count);
+CF_API void* CF_CALL cf_realloc(void* ptr, size_t size);
 
 //--------------------------------------------------------------------------------------------------
 // Overload operator new ourselves.
@@ -50,12 +63,8 @@
 	enum CF_DummyEnum { CF_DUMMY_ENUM };
 	inline void* operator new(size_t, CF_DummyEnum, void* ptr) { return ptr; }
 	#define CF_PLACEMENT_NEW(ptr) new(CF_DUMMY_ENUM, ptr)
-	#define CF_NEW(T) new(CF_DUMMY_ENUM, CF_ALLOC(sizeof(T))) T
+	#define CF_NEW(T) new(CF_DUMMY_ENUM, cf_alloc(sizeof(T))) T
 #endif // CF_CPP
-
-#ifdef __cplusplus
-extern "C" {
-#endif // __cplusplus
 
 //--------------------------------------------------------------------------------------------------
 // Aligned allocation.

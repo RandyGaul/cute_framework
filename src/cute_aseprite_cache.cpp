@@ -25,6 +25,7 @@
 #include <cute_file_system.h>
 #include <cute_defer.h>
 
+#include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
 
 #define CUTE_ASEPRITE_IMPLEMENTATION

@@ -24,6 +24,7 @@
 #include <cute_alloc.h>
 #include <cute_haptics.h>
 
+#include <internal/cute_alloc_internal.h>
 #include <internal/cute_input_internal.h>
 #include <internal/cute_app_internal.h>
 #include <data/cute_joypad_mapping_db.h>

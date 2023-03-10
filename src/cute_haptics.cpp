@@ -22,6 +22,7 @@
 #include <cute_haptics.h>
 #include <cute_alloc.h>
 
+#include <internal/cute_alloc_internal.h>
 #include <internal/cute_input_internal.h>
 
 #include <SDL.h>

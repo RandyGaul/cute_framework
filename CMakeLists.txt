@@ -205,6 +205,7 @@ set(CF_HDRS
 	src/internal/cute_font_internal.h
 	src/internal/cute_graphics_internal.h
 	src/internal/cute_aseprite_cache_internal.h
+	src/internal/cute_alloc_internal.h
 
 	src/internal/imgui/sokol_imgui.h
 	libraries/cimgui/imgui/backends/imgui_impl_sdl.h

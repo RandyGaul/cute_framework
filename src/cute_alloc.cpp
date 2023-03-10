@@ -19,9 +19,84 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifdef _MSC_VER // Leak checking for debug Windows builds.
+#	define _CRTDBG_MAPALLOC
+#	define _CRTDBG_MAP_ALLOC
+#	include <crtdbg.h>
+#endif
+#include <stdlib.h>
+
 #include <cute_alloc.h>
 #include <cute_c_runtime.h>
 #include <cute_array.h>
+
+#include <internal/cute_alloc_internal.h>
+
+void* s_default_alloc(size_t size, void* udata)
+{
+	CF_UNUSED(udata);
+	return malloc(size);
+}
+
+void s_default_free(void* ptr, void* udata)
+{
+	CF_UNUSED(udata);
+	free(ptr);
+}
+
+void* s_default_calloc(size_t size, size_t count, void* udata)
+{
+	CF_UNUSED(udata);
+	return calloc(size, count);
+}
+
+void* s_default_realloc(void* ptr, size_t size, void* udata)
+{
+	CF_UNUSED(udata);
+	return realloc(ptr, size);
+}
+
+CF_Allocator s_default_allocator = {
+	NULL,
+	s_default_alloc,
+	s_default_free,
+	s_default_calloc,
+	s_default_realloc
+};
+
+CF_Allocator s_allocator = s_default_allocator;
+
+CF_API void CF_CALL cf_allocator_override(CF_Allocator allocator)
+{
+	s_allocator = allocator;
+}
+
+CF_API void CF_CALL cf_allocator_restore_default()
+{
+	s_allocator = s_default_allocator;
+}
+
+void* cf_alloc(size_t size)
+{
+	return s_allocator.alloc_fn(size, NULL);
+}
+
+void cf_free(void* ptr)
+{
+	s_allocator.free_fn(ptr, NULL);
+}
+
+void* cf_calloc(size_t size, size_t count)
+{
+	return s_allocator.calloc_fn(size, count, NULL);
+}
+
+void* cf_realloc(void* ptr, size_t size)
+{
+	return s_allocator.realloc_fn(ptr, size, NULL);
+}
+
+//--------------------------------------------------------------------------------------------------
 
 void* cf_aligned_alloc(size_t size, int alignment)
 {

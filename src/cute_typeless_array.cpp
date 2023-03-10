@@ -23,6 +23,8 @@
 #include <cute_alloc.h>
 #include <cute_c_runtime.h>
 
+#include <internal/cute_alloc_internal.h>
+
 CF_TypelessArray::CF_TypelessArray()
 {
 }

@@ -24,6 +24,7 @@
 #include <cute_sprite.h>
 #include <cute_hashtable.h>
 
+#include <internal/cute_alloc_internal.h>
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_app_internal.h>
 

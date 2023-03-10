@@ -24,6 +24,7 @@
 #include <cute_c_runtime.h>
 #include <cute_alloc.h>
 
+#include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
 #include <internal/cute_file_system_internal.h>
 

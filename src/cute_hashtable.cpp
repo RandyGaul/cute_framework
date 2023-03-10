@@ -25,6 +25,8 @@
 #include <cute_string.h>
 #include <cute_array.h>
 
+#include <internal/cute_alloc_internal.h>
+
 using namespace Cute;
 
 // Original implementation by Mattias Gustavsson

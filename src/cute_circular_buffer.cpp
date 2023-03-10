@@ -24,6 +24,8 @@
 #include <cute_c_runtime.h>
 #include <cute_multithreading.h>
 
+#include <internal/cute_alloc_internal.h>
+
 CF_CircularBuffer cf_make_circular_buffer(int initial_size_in_bytes)
 {
 	CF_CircularBuffer buffer = { 0 };

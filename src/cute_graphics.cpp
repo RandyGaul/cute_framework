@@ -23,6 +23,7 @@
 #include <cute_c_runtime.h>
 #include <cute_graphics.h>
 
+#include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
 
 // Override sokol_gfx macros for the default clear color with our own values.

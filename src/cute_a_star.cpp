@@ -25,6 +25,8 @@
 #include <cute_priority_queue.h>
 #include <float.h>
 
+#include <internal/cute_alloc_internal.h>
+
 using namespace Cute;
 
 struct CF_iv2

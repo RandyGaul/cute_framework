@@ -255,7 +255,7 @@
 #define cf_array_reverse(a) (a ? cf_arev(a, sizeof(*a)) : NULL)
 #define cf_array_hash(a) cf_fnv1a(a, cf_array_size(a))
 #define cf_array_static(a, buffer, buffer_size) (*(void**)&(a) = cf_astatic(buffer, buffer_size, sizeof(*a)))
-#define cf_array_free(a) do { CF_ACANARY(a); if (a && !CF_AHDR(a)->is_static) CF_FREE(CF_AHDR(a)); a = NULL; } while (0)
+#define cf_array_free(a) do { CF_ACANARY(a); if (a && !CF_AHDR(a)->is_static) cf_free(CF_AHDR(a)); a = NULL; } while (0)
 
 //--------------------------------------------------------------------------------------------------
 // Hidden API - Not intended for direct use.
@@ -374,11 +374,11 @@ private:
 		while (m_capacity < num_elements) {                    \
 			m_capacity *= 2;                                   \
 		}                                                      \
-		T* new_ptr = (T*)CF_ALLOC(sizeof(T) * m_capacity);   \
+		T* new_ptr = (T*)cf_alloc(sizeof(T) * m_capacity);     \
 		for (int i = 0; i < m_count; ++i) {                    \
-			CF_PLACEMENT_NEW(new_ptr + i) T(move(m_ptr[i])); \
+			CF_PLACEMENT_NEW(new_ptr + i) T(move(m_ptr[i]));   \
 		}                                                      \
-		CF_FREE(m_ptr);                                      \
+		cf_free(m_ptr);                                        \
 		m_ptr = new_ptr;                                       \
 	}                                                          \
 
@@ -433,7 +433,7 @@ Array<T>::~Array()
 	for (int i = 0; i < m_count; ++i) {
 		m_ptr[i].~T();
 	}
-	CF_FREE(m_ptr);
+	cf_free(m_ptr);
 }
 
 template <typename T>

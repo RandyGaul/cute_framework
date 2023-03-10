@@ -25,6 +25,8 @@
 #include <cute_c_runtime.h>
 #include <cute_array.h>
 
+#include <internal/cute_alloc_internal.h>
+
 union CF_HandleEntry
 {
 	struct

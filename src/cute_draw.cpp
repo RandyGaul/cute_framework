@@ -27,6 +27,7 @@
 #include <cute_routine.h>
 #include <cute_rnd.h>
 
+#include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>

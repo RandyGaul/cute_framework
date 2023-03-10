@@ -24,9 +24,8 @@
 #include <cute_image.h>
 #include <cute_file_system.h>
 #include <cute_c_runtime.h>
-#include <cute_alloc.h>
 
-// TODO -- Hookup allocator context to cute_png.h
+#include <internal/cute_alloc_internal.h>
 
 CF_STATIC_ASSERT(sizeof(CF_Pixel) == sizeof(cp_pixel_t), "Must be equal.");
 CF_STATIC_ASSERT(sizeof(CF_Image) == sizeof(cp_image_t), "Must be equal.");

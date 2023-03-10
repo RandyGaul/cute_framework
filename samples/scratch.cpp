@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
 	int draw_calls = 0;
 
 	char* sample = fs_read_entire_file_to_memory_and_nul_terminate("sample_data/sample.txt");
-	CF_DEFER(CF_FREE(sample));
+	CF_DEFER(cf_free(sample));
 
 	while (app_is_running()) {
 		app_update();

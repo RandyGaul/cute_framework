@@ -24,6 +24,8 @@
 #include <cute_c_runtime.h>
 #include <cute_array.h>
 
+#include <internal/cute_alloc_internal.h>
+
 #include <mbedtls/build_info.h>
 #include <mbedtls/platform.h>
 #include <mbedtls/net_sockets.h>

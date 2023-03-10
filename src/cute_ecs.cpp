@@ -26,6 +26,7 @@
 #include <cute_string.h>
 
 #include <internal/cute_app_internal.h>
+#include <internal/cute_alloc_internal.h>
 
 using namespace Cute;
 

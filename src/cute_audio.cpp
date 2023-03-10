@@ -23,6 +23,8 @@
 #include <cute_file_system.h>
 #include <cute_alloc.h>
 
+#include <internal/cute_alloc_internal.h>
+
 #define STB_VORBIS_HEADER_ONLY
 #include <stb/stb_vorbis.c>
 
