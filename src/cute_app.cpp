@@ -465,6 +465,16 @@ void cf_app_get_size(int* w, int* h)
 	if (h) *h = app->h;
 }
 
+int cf_app_get_width()
+{
+	return app->w;
+}
+
+int cf_app_get_height()
+{
+	return app->h;
+}
+
 void cf_app_set_size(int w, int h)
 {
 	SDL_SetWindowSize(app->window, w, h);

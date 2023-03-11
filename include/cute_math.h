@@ -209,10 +209,10 @@ typedef struct CF_Circle
  */
 typedef struct CF_Aabb
 {
-	/* @member Position. */
+	/* @member The min corner of the box. */
 	CF_V2 min;
 
-	/* @member Radius. */
+	/* @member Top max corner of the box. */
 	CF_V2 max;
 } CF_Aabb;
 // @end

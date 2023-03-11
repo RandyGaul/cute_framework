@@ -246,9 +246,25 @@ CF_API int CF_CALL cf_app_draw_onto_screen();
  * @brief    Gets the size of the window in pixels.
  * @param    w          The width of the window in pixels.
  * @param    h          The height of the window in pixels.
- * @related  cf_app_set_size cf_app_get_position cf_app_set_position
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height
  */
 CF_API void CF_CALL cf_app_get_size(int* w, int* h);
+
+/**
+ * @function cf_app_get_width
+ * @category app
+ * @brief    Returns the size of the window width in pixels.
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height
+ */
+CF_API int CF_CALL cf_app_get_width();
+
+/**
+ * @function cf_app_get_height
+ * @category app
+ * @brief    Returns the size of the window height in pixels.
+ * @related  cf_app_set_size cf_app_get_position cf_app_set_position cf_app_get_width cf_app_get_height
+ */
+CF_API int CF_CALL cf_app_get_height();
 
 /**
  * @function cf_app_set_size

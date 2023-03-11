@@ -6,6 +6,7 @@ To learn about a specific area in Cute Framework visit one of these topic articl
 * [Application Window](/topics/application_window.md)
 * [Atomics](/topics/atomics.md)
 * [Audio](/topics/audio.md)
+* [Camera](/topics/camera.md)
 * [Collision](/topics/collision.md)
 * [Coroutines](/topics/coroutines.md)
 * [Data Structures](/topics/data_structures.md)

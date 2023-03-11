@@ -1,3 +1,3 @@
 [](../header.md ':include')
 
-TODO
+A virtual file system (VFS) is used in Cute Framework.
