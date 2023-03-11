@@ -14,7 +14,7 @@ CF_API bool CF_CALL cf_mouse_down(CF_MouseButton button);
 
 ## Related Pages
 
-CF_MousButton  
+[CF_MouseButton](/input/cf_mousebutton.md)  
 [cf_mouse_double_clicked](/input/cf_mouse_double_clicked.md)  
 [cf_mouse_x](/input/cf_mouse_x.md)  
 [cf_mouse_y](/input/cf_mouse_y.md)  

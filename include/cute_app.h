@@ -582,6 +582,8 @@ CF_INLINE void app_get_size(int* w, int* h) { return cf_app_get_size(w, h); }
 CF_INLINE void app_set_size(int w, int h) { return cf_app_set_size(w, h); }
 CF_INLINE void app_get_position(int* x, int* y) { return cf_app_get_position(x, y); }
 CF_INLINE void app_set_position(int x, int y) { return cf_app_set_position(x, y); }
+CF_INLINE int app_get_width() { return cf_app_get_width(); }
+CF_INLINE int app_get_height() { return cf_app_get_height(); }
 CF_INLINE bool app_was_resized() { return cf_app_was_resized(); }
 CF_INLINE bool app_was_moved() { return cf_app_was_moved(); }
 CF_INLINE bool app_lost_focus() { return cf_app_lost_focus(); }

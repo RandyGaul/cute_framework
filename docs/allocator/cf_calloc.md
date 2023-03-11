@@ -19,6 +19,7 @@ then clearing the memory to zero yourself. Though, it's not a concern for most g
 
 ## Related Pages
 
+[CF_Allocator](/allocator/cf_allocator.md)  
 [cf_allocator_override](/allocator/cf_allocator_override.md)  
 [cf_allocator_restore_default](/allocator/cf_allocator_restore_default.md)  
 [cf_alloc](/allocator/cf_alloc.md)  

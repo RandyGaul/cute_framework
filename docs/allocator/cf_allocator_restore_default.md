@@ -20,6 +20,7 @@ to do this on certain platforms for performance optimizations, but is not a nece
 
 ## Related Pages
 
+[CF_Allocator](/allocator/cf_allocator.md)  
 [cf_allocator_override](/allocator/cf_allocator_override.md)  
 [cf_realloc](/allocator/cf_realloc.md)  
 [cf_alloc](/allocator/cf_alloc.md)  

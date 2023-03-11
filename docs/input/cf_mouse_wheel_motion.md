@@ -14,7 +14,7 @@ CF_API int CF_CALL cf_mouse_wheel_motion();
 
 ## Related Pages
 
-CF_MousButton  
+[CF_MouseButton](/input/cf_mousebutton.md)  
 [cf_mouse_down](/input/cf_mouse_down.md)  
 [cf_mouse_x](/input/cf_mouse_x.md)  
 [cf_mouse_y](/input/cf_mouse_y.md)  

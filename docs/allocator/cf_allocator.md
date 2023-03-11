@@ -22,6 +22,9 @@ Individual allocations cannot be free'd, instead the entire allocator can reset.
 
 ## Related Pages
 
-[cf_arena_init](/allocator/cf_arena_init.md)  
-[cf_arena_alloc](/allocator/cf_arena_alloc.md)  
-[cf_arena_reset](/allocator/cf_arena_reset.md)  
+[cf_realloc](/allocator/cf_realloc.md)  
+[cf_allocator_override](/allocator/cf_allocator_override.md)  
+[cf_allocator_restore_default](/allocator/cf_allocator_restore_default.md)  
+[cf_alloc](/allocator/cf_alloc.md)  
+[cf_free](/allocator/cf_free.md)  
+[cf_calloc](/allocator/cf_calloc.md)  

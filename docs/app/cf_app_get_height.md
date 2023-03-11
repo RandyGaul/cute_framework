@@ -1,21 +1,16 @@
 [](../header.md ':include')
 
-# cf_app_get_size
+# cf_app_get_height
 
 Category: [app](/api_reference?id=app)  
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
 ---
 
-Gets the size of the window in pixels.
+Returns the size of the window height in pixels.
 
 ```cpp
-CF_API void CF_CALL cf_app_get_size(int* w, int* h);
+CF_API int CF_CALL cf_app_get_height();
 ```
-
-Parameters | Description
---- | ---
-w | The width of the window in pixels.
-h | The height of the window in pixels.
 
 ## Related Pages
 
@@ -23,4 +18,3 @@ h | The height of the window in pixels.
 [cf_app_get_position](/app/cf_app_get_position.md)  
 [cf_app_set_position](/app/cf_app_set_position.md)  
 [cf_app_get_width](/app/cf_app_get_width.md)  
-[cf_app_get_height](/app/cf_app_get_height.md)  

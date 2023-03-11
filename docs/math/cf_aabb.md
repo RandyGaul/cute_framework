@@ -10,8 +10,8 @@ Axis-aligned bounding box. A box that cannot rotate.
 
 Struct Members | Description
 --- | ---
-`CF_V2 min` | Position.
-`CF_V2 max` | Radius.
+`CF_V2 min` | The min corner of the box.
+`CF_V2 max` | Top max corner of the box.
 
 ## Remarks
 
