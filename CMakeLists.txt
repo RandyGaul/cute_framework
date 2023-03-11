@@ -127,6 +127,7 @@ set(CF_PUBLIC_HDRS
 	include/cute_alloc.h
 	include/cute_app.h
 	include/cute_audio.h
+	include/cute_user_config.h
 	include/cute_c_runtime.h
 	include/cute_circular_buffer.h
 	include/cute_clipboard.h

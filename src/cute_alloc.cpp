@@ -66,12 +66,12 @@ CF_Allocator s_default_allocator = {
 
 CF_Allocator s_allocator = s_default_allocator;
 
-CF_API void CF_CALL cf_allocator_override(CF_Allocator allocator)
+void cf_allocator_override(CF_Allocator allocator)
 {
 	s_allocator = allocator;
 }
 
-CF_API void CF_CALL cf_allocator_restore_default()
+void cf_allocator_restore_default()
 {
 	s_allocator = s_default_allocator;
 }

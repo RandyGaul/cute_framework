@@ -33,7 +33,7 @@ extern "C" {
  * @category allocator
  * @brief    A simple way to allocate memory without calling `malloc` too often.
  * @remarks  Individual allocations cannot be free'd, instead the entire allocator can reset.
- * @related  cf_arena_init cf_arena_alloc cf_arena_reset
+ * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
  */
 typedef struct CF_Allocator
 {
@@ -61,7 +61,7 @@ typedef struct CF_Allocator
  * @remarks  The default allocator simply calls malloc/free and friends. You may override this behavior by passing
  *           a `CF_Allocator` to this function. This lets you hook up your own custom allocator. Usually you only want
  *           to do this on certain platforms for performance optimizations, but is not a necessary thing to do for many games.
- * @related  cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
  */
 CF_API void CF_CALL cf_allocator_override(CF_Allocator allocator);
 
@@ -72,7 +72,7 @@ CF_API void CF_CALL cf_allocator_override(CF_Allocator allocator);
  * @remarks  The default allocator simply calls malloc/free and friends. You may override this behavior by passing
  *           a `CF_Allocator` to this function. This lets you hook up your own custom allocator. Usually you only want
  *           to do this on certain platforms for performance optimizations, but is not a necessary thing to do for many games.
- * @related  cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
  */
 CF_API void CF_CALL cf_allocator_restore_default();
 
@@ -80,7 +80,7 @@ CF_API void CF_CALL cf_allocator_restore_default();
  * @function cf_alloc
  * @category allocator
  * @brief    Allocates a block of memory of `size` bytes and returns it.
- * @related  cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
  */
 CF_API void* CF_CALL cf_alloc(size_t size);
 
@@ -88,7 +88,7 @@ CF_API void* CF_CALL cf_alloc(size_t size);
  * @function cf_free
  * @category allocator
  * @brief    Frees a block of memory previously allocated by `cf_alloc`.
- * @related  cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
  */
 CF_API void CF_CALL cf_free(void* ptr);
 
@@ -98,7 +98,7 @@ CF_API void CF_CALL cf_free(void* ptr);
  * @brief    Allocates a block of memory `size * count` bytes in size.
  * @remarks  The memory returned is completely zero'd out. Generally this is more efficient than calling `cf_malloc` and
  *           then clearing the memory to zero yourself. Though, it's not a concern for most games.
- * @related  cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
  */
 CF_API void* CF_CALL cf_calloc(size_t size, size_t count);
 
@@ -108,7 +108,7 @@ CF_API void* CF_CALL cf_calloc(size_t size, size_t count);
  * @brief    Reallocates a block of memory to a new size.
  * @remarks  You must reassign your old pointer! Generally this is more efficient than calling `cf_malloc`, `cf_free`, and
  *           `CF_MEMCPY` yourself. Though, this is not a concern for most games.
- * @related  cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ * @related  CF_Allocator cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
  */
 CF_API void* CF_CALL cf_realloc(void* ptr, size_t size);
 

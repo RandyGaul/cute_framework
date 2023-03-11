@@ -24,7 +24,7 @@
 
 /**
  * Feel free to override any macros in Cute Framework with your own. These are mainly to change the default
- * behavior for C runtime functions, but there are also some that are just settings.
+ * behavior for C runtime functions, but there are also some that are just settings. Here's a list of overrideable macros.
  * 
  * CF_NO_CPP
  * CF_ASSERT
