@@ -275,10 +275,10 @@ typedef struct CF_File CF_File;
 // @end
 
 /**
- * @enum    File Types
+ * @enum     File Types
  * @category file
- * @brief   The various kinds of files that can be opened.
- * @related CF_File CF_Stat cf_file_type_to_string
+ * @brief    The various kinds of files that can be opened.
+ * @related  CF_File CF_Stat cf_file_type_to_string
  */
 #define CF_FILE_TYPE_DEFS \
 	/* @entry A reguler file, such as a .txt or .pdf file. */ \
@@ -302,7 +302,7 @@ typedef enum CF_FileType
  * @function cf_file_type_to_string
  * @category file
  * @brief    Returns a `CF_FileType` converted to a c-string.
- * @related CF_File CF_Stat cf_file_type_to_string
+ * @related  CF_File CF_Stat cf_file_type_to_string
  */
 CF_INLINE const char* cf_file_type_to_string(CF_FileType type)
 {
