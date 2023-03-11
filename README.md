@@ -8,6 +8,8 @@
 
 [Cute Framework](https://randygaul.github.io/cute_framework/#/) (CF) is the *cutest* framework available for making 2D games in C++. It provides a portable foundational layer for building 2D games in C/C++ without baggage, gnarly dependencies, or cryptic APIs. CF runs almost anywhere, including Windows, MacOS, iOS, Android, Linux, and more!
 
+> **NOTE**: Cute Framework is currently in flux for it's v1.0 release! These notes/docs will be changed as they get rolled out and come online.
+
 ## Download and Setup
 
 ~~The easiest option is to head over and pickup the [latest pre-built version](https://github.com/randygaul/cute_framework/releases/latest)~~ This link is currently out of date, and awaiting the soon to be v1.0 release (see below for building latest from source). You can link your project against CF as either a static or shared library. Be sure to also visit the [Cute Framwork documentation site](https://randygaul.github.io/cute_framework/#/).
