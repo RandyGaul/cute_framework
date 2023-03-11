@@ -368,6 +368,12 @@ endif()
 
 # Cute sample prgrams (optional, defaulted to also build).
 if (CF_FRAMEWORK_BUILD_SAMPLES)
+	add_executable(basic_input samples/basic_input.c)
+	target_link_libraries(basic_input PRIVATE cute)
+	set_target_properties(basic_input PROPERTIES FOLDER "samples")
+	add_executable(window_events samples/window_events.c)
+	target_link_libraries(window_events PRIVATE cute)
+	set_target_properties(window_events PROPERTIES FOLDER "samples")
 	add_executable(window samples/window.cpp)
 	target_link_libraries(window PRIVATE cute)
 	set_target_properties(window PROPERTIES FOLDER "samples")

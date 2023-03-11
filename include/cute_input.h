@@ -647,7 +647,7 @@ CF_API void CF_CALL cf_clear_key_states();
  * @category input
  * @brief    Returns the current mouse x-coordinate in pixels.
  * @remarks  (0, 0) is the top-left of the screen, y-downards.
- * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y
+ * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y
  */
 CF_API int CF_CALL cf_mouse_x();
 
@@ -656,7 +656,7 @@ CF_API int CF_CALL cf_mouse_x();
  * @category input
  * @brief    Returns the current mouse y-coordinate in pixels.
  * @remarks  (0, 0) is the top-left of the screen, y-downwards.
- * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y
+ * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y
  */
 CF_API int CF_CALL cf_mouse_y();
 
@@ -664,7 +664,7 @@ CF_API int CF_CALL cf_mouse_y();
  * @function cf_mouse_down
  * @category input
  * @brief    Returns true if the mouse button is currently down.
- * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
+ * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
  */
 CF_API bool CF_CALL cf_mouse_down(CF_MouseButton button);
 
@@ -672,7 +672,7 @@ CF_API bool CF_CALL cf_mouse_down(CF_MouseButton button);
  * @function cf_mouse_just_pressed
  * @category input
  * @brief    Returns true if the mouse button was just pressed.
- * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
+ * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
  */
 CF_API bool CF_CALL cf_mouse_just_pressed(CF_MouseButton button);
 
@@ -680,7 +680,7 @@ CF_API bool CF_CALL cf_mouse_just_pressed(CF_MouseButton button);
  * @function cf_mouse_just_released
  * @category input
  * @brief    Returns true if the mouse button was just released.
- * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
+ * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
  */
 CF_API bool CF_CALL cf_mouse_just_released(CF_MouseButton button);
 
@@ -688,7 +688,7 @@ CF_API bool CF_CALL cf_mouse_just_released(CF_MouseButton button);
  * @function cf_mouse_wheel_motion
  * @category input
  * @brief    Returns a signed integer representing by how much the mouse wheel was rotated.
- * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
+ * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
  */
 CF_API int CF_CALL cf_mouse_wheel_motion();
 
@@ -696,7 +696,7 @@ CF_API int CF_CALL cf_mouse_wheel_motion();
  * @function cf_mouse_double_click_held
  * @category input
  * @brief    Returns true while a double click was detected and currently held down.
- * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
+ * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
  */
 CF_API bool CF_CALL cf_mouse_double_click_held(CF_MouseButton button);
 
@@ -704,7 +704,7 @@ CF_API bool CF_CALL cf_mouse_double_click_held(CF_MouseButton button);
  * @function cf_mouse_double_clicked
  * @category input
  * @brief    Returns true if a double click was just detected.
- * @related  CF_MousButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
+ * @related  CF_MouseButton cf_mouse_down cf_mouse_x cf_mouse_y cf_mouse_just_pressed cf_mouse_just_released cf_mouse_wheel_motion cf_mouse_double_click_held cf_mouse_double_clicked
  */
 CF_API bool CF_CALL cf_mouse_double_clicked(CF_MouseButton button);
 

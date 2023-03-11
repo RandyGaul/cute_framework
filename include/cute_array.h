@@ -241,7 +241,11 @@
 //--------------------------------------------------------------------------------------------------
 // Longform C API.
 
+#ifdef __cplusplus
 #define cf_array_len(a) (CF_ACANARY(a), CF_AHDR(a)->size)
+#else
+#define cf_array_len(a) (CF_AHDR(a)->size)
+#endif
 #define cf_array_size(a) (a ? cf_array_len(a) : 0)
 #define cf_array_count(a) cf_array_size(a)
 #define cf_array_capacity(a) ((a) ? CF_AHDR(a)->capacity : 0)

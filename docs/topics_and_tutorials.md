@@ -1,7 +1,5 @@
 [](/header.md ':include')
 
-## Topics and Tutorials
-
 To learn about a specific area in Cute Framework visit one of these topic articles. Each article introduces a major feature of Cute Framework and provides an overview on how to piece things together for making games.
 
 * [Allocators](/topics/allocator.md)
@@ -12,6 +10,7 @@ To learn about a specific area in Cute Framework visit one of these topic articl
 * [Coroutines](/topics/coroutines.md)
 * [Data Structures](/topics/data_structures.md)
 * [Drawing](/topics/drawing.md)
+* [Dear ImGui](/topics/dear_imgui.md)
 * [Emscripten](/topics/emscripten.md)
 * [Game Loop and Time](/topics/game_loop_and_time.md)
 * [Input](/topics/input.md)
