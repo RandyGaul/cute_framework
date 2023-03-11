@@ -28,9 +28,8 @@
 extern "C" {
 #endif // __cplusplus
 
-
 /**
- * @struct   CF_Arena
+ * @struct   CF_Allocator
  * @category allocator
  * @brief    A simple way to allocate memory without calling `malloc` too often.
  * @remarks  Individual allocations cannot be free'd, instead the entire allocator can reset.

@@ -78,22 +78,22 @@ CF_API void CF_CALL cf_allocator_restore_default()
 
 void* cf_alloc(size_t size)
 {
-	return s_allocator.alloc_fn(size, NULL);
+	return s_allocator.alloc_fn ? s_allocator.alloc_fn(size, NULL) : s_default_alloc(size, NULL);
 }
 
 void cf_free(void* ptr)
 {
-	s_allocator.free_fn(ptr, NULL);
+	s_allocator.free_fn ? s_allocator.free_fn(ptr, NULL) : s_default_free(ptr, NULL);
 }
 
 void* cf_calloc(size_t size, size_t count)
 {
-	return s_allocator.calloc_fn(size, count, NULL);
+	return s_allocator.calloc_fn ? s_allocator.calloc_fn(size, count, NULL) : s_default_calloc(size, count, NULL);
 }
 
 void* cf_realloc(void* ptr, size_t size)
 {
-	return s_allocator.realloc_fn(ptr, size, NULL);
+	return s_allocator.realloc_fn ? s_allocator.realloc_fn(ptr, size, NULL) : s_default_realloc(ptr, size, NULL);
 }
 
 //--------------------------------------------------------------------------------------------------

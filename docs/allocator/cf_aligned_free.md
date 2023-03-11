@@ -1,25 +1,20 @@
 [](../header.md ':include')
 
-# cf_aligned_alloc
+# cf_aligned_free
 
 Category: [allocator](/api_reference?id=allocator)  
 GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_alloc.h)  
 ---
 
-Allocates a block of memory aligned along a byte boundary.
+Frees a block of memory previously allocated by [cf_aligned_alloc](/allocator/cf_aligned_alloc.md).
 
 ```cpp
-CF_API void* CF_CALL cf_aligned_alloc(size_t size, int alignment);
+CF_API void CF_CALL cf_aligned_free(void* ptr);
 ```
 
 Parameters | Description
 --- | ---
-size | The size of the allocation.
-alignment | An alignment boundary, must be a power of two.
-
-## Return Value
-
-Returns an aligned pointer of `size` bytes.
+ptr | The memory to deallocate.
 
 ## Remarks
 
@@ -27,4 +22,4 @@ Aligned allocation is mostly useful as a performance optimization, or for SIMD o
 
 ## Related Pages
 
-[cf_aligned_free](/allocator/cf_aligned_free.md)  
+[cf_aligned_alloc](/allocator/cf_aligned_alloc.md)  

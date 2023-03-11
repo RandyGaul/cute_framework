@@ -20,7 +20,7 @@ size | The size in bytes of `data`.
 
 ## Remarks
 
-Call `CF_FREE` on it when done. TODO_LINK_VFS_README.
+Call [CF_FREE](/allocator/cf_free.md) on it when done. TODO_LINK_VFS_README.
 
 ## Related Pages
 
