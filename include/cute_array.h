@@ -396,8 +396,8 @@ template <typename T>
 Array<T>::Array(CF_InitializerList<T> list)
 {
 	int count = (int)list.size();
-	T* ptr = m_ptr;
 	CF_ARRAY_ENSURE_CAPACITY(count);
+	T* ptr = m_ptr;
 	for (const T* i = list.begin(); i < list.end(); ++i) {
 		CF_PLACEMENT_NEW(ptr++) T(*i);
 	}

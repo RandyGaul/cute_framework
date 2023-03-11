@@ -96,8 +96,8 @@ if (cf_app_lost_focus()) {
 For a full demonstration you can check out the sample on [Window Events](https://github.com/RandyGaul/cute_framework/blob/master/samples/window_events.c).
 
 
-## App Canvas
+## Resizing Windows
 
 If you've already learned about [Low Level Graphics](https://randygaul.github.io/cute_framework/#/topics/low_leveL_graphics) this section will make more sense. The application has its own internal canvas. A canvas is a graphical texture the application can render onto. The app's built-in canvas automatically gathers up all drawings from [`cute_draw.h`](https://randygaul.github.io/cute_framework/#/api_reference?id=draw) and displays them onto the screen. Whenever the app is resized you may want to also resize the app's internal canvas.
 
-TODO -- Resizing sample.
+Check out the sample on [Window Resizing](https://github.com/RandyGaul/cute_framework/blob/master/samples/window_resizing.cpp) for a full example of auto-resizing the app's internal canvas (or not).
