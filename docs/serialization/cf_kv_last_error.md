@@ -24,7 +24,6 @@ generated, but you can still keep going and look for other keys freely.
 
 ## Related Pages
 
-TODO_KV_TUTORIAL_LINK  
 [CF_KeyValue](/serialization/cf_keyvalue.md)  
 [cf_kv_read](/serialization/cf_kv_read.md)  
 [cf_kv_write](/serialization/cf_kv_write.md)  

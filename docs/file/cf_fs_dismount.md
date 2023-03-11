@@ -18,7 +18,7 @@ Returns any errors as a [CF_Result](/utility/cf_result.md).
 
 ## Remarks
 
-This function does not remove a `mount_point` from the virtual file system, but only the actual archive that was previously mounted. TODO_LINK_VFS_README.
+This function does not remove a `mount_point` from the virtual file system, but only the actual archive that was previously mounted. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 

@@ -18,7 +18,7 @@ Returns a [CF_File](/file/cf_file.md) pointer representing the file.
 
 ## Remarks
 
-The write directory is specified by you when calling [cf_fs_set_write_directory](/file/cf_fs_set_write_directory.md). TODO_LINK_VFS_README.
+The write directory is specified by you when calling [cf_fs_set_write_directory](/file/cf_fs_set_write_directory.md). [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 

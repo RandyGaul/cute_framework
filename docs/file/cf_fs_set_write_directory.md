@@ -25,7 +25,7 @@ Returns any errors as a [CF_Result](/utility/cf_result.md).
 
 The path is in platform-dependent notation. It's highly recommend to use [cf_fs_get_user_directory](/file/cf_fs_get_user_directory.md) and pass it into this function
 when shipping your game. This function will fail if any files are from the write directory are currently open.
-See TODO_LINK_VFS_README for an overview.
+See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system) for an overview.
 
 ## Related Pages
 

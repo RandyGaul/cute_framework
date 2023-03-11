@@ -21,7 +21,7 @@ size | The size in bytes of `buffer`.
 ## Remarks
 
 The file must be opened in read mode with [cf_fs_open_file_for_read](/file/cf_fs_open_file_for_read.md). Returns the number of bytes read. Returns -1 on
-failure. TODO_LINK_VFS_README.
+failure. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 

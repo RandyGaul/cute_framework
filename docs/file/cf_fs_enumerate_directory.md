@@ -36,7 +36,7 @@ cf_fs_free_enumerated_directory(list);
 
 Results are collected by visiting the search path for all real directories mounted on `virtual_path`. No duplicate file
 names will be reported. The list itself is sorted alphabetically, though you can further sort it however you like. Free
-the list up with [cf_fs_free_enumerated_directory](/file/cf_fs_free_enumerated_directory.md) when done. The final element of the list is NULL. TODO_LINK_VFS_README.
+the list up with [cf_fs_free_enumerated_directory](/file/cf_fs_free_enumerated_directory.md) when done. The final element of the list is NULL. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 

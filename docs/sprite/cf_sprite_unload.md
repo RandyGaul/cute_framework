@@ -18,7 +18,7 @@ aseprite_path | Virtual path to a .ase file.
 
 ## Remarks
 
-Any live [CF_Sprite](/sprite/cf_sprite.md) instances for `aseprite_path` will now by "dangling". TODO - LINK_TO_VFS_TUTORIAL.
+Any live [CF_Sprite](/sprite/cf_sprite.md) instances for `aseprite_path` will now by "dangling". See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 

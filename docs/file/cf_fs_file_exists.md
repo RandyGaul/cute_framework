@@ -18,7 +18,7 @@ virtual_path | A path to the file.
 
 ## Remarks
 
-TODO_LINK_VFS_README.
+[Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 

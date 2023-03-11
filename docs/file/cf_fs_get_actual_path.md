@@ -21,7 +21,7 @@ virtual_path | A path to the file.
 This can be useful for editors, asset hotloading, or other similar development features. When shipping your game it's highly
 recommended to not call this function at all, and only use it for development purposes. If the virtual path points to a completely
 fake directory this will return the first archive found there. This function can return a directory, an archive, a file, or `NULL`
-if nothing suitable was found at all. TODO_LINK_VFS_README.
+if nothing suitable was found at all. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 

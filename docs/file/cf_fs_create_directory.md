@@ -22,7 +22,7 @@ Returns any errors as a [CF_Result](/utility/cf_result.md).
 
 ## Remarks
 
-All missing directories are also created. TODO_LINK_VFS_README.
+All missing directories are also created. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 

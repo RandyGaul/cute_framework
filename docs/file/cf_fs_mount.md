@@ -35,7 +35,7 @@ system will treat it like a normal directory for you. There are a variety of arc
 formats supported (see top of file).
 
 By default CF mounts the base directory when you call [cf_make_app](/app/cf_make_app.md). This can be disabled by
-passing the `CF_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT` flag to [cf_make_app](/app/cf_make_app.md). TODO_LINK_VFS_README.
+passing the `CF_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT` flag to [cf_make_app](/app/cf_make_app.md). [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 

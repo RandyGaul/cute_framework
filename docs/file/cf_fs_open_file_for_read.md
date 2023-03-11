@@ -22,7 +22,7 @@ Returns a [CF_File](/file/cf_file.md) pointer representing the file.
 
 ## Remarks
 
-If you just want some basic information about the file (such as it's size or when it was created), you can use [cf_fs_stat](/file/cf_fs_stat.md) instead. TODO_LINK_VFS_README.
+If you just want some basic information about the file (such as it's size or when it was created), you can use [cf_fs_stat](/file/cf_fs_stat.md) instead. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 

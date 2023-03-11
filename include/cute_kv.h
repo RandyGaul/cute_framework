@@ -341,7 +341,7 @@ CF_API void CF_CALL cf_read_reset(CF_KeyValue* kv);
  *           > is only written if the new value is different from the value to be written.
  *           
  *           For a more in-depth description on how to use this function see the tutotorial page from the Cute
- *           Framework docs here: TODO_KV_TUTORIAL_LINK.
+ *           Framework docs here: [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
  * @related  CF_KeyValue cf_kv_read cf_kv_write cf_kv_key
  */
 CF_API void CF_CALL cf_kv_set_base(CF_KeyValue* kv, CF_KeyValue* base);
@@ -354,7 +354,7 @@ CF_API void CF_CALL cf_kv_set_base(CF_KeyValue* kv, CF_KeyValue* base);
  * @remarks  You can use this try and get a more useful description of what may have went wrong. These errors are not fatal.
  *           For example if you search for a key with `cf_kv_key` and it's non-existent a potentially useful error message may be
  *           generated, but you can still keep going and look for other keys freely.
- * @related  TODO_KV_TUTORIAL_LINK CF_KeyValue cf_kv_read cf_kv_write cf_kv_key
+ * @related  CF_KeyValue cf_kv_read cf_kv_write cf_kv_key
  */
 CF_API CF_Result CF_CALL cf_kv_last_error(CF_KeyValue* kv);
 

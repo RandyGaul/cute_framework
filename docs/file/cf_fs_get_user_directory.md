@@ -32,7 +32,7 @@ MacOS X example:
 ```
 "/Users/OS_user_name/Library/Application Support/my_game"
 ```
-You should assume this directory is the only safe place to write files. TODO_LINK_VFS_README.
+You should assume this directory is the only safe place to write files. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 

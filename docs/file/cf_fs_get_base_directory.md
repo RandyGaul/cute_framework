@@ -15,7 +15,7 @@ CF_API const char* CF_CALL cf_fs_get_base_directory();
 ## Remarks
 
 This is not a virtual path, but the actual OS-path where the executable was run from. This might not be the working directory,
-but probably is. You should probably mount the base directory with [cf_fs_mount](/file/cf_fs_mount.md). See TODO_LINK_VFS_README for an overview.
+but probably is. You should probably mount the base directory with [cf_fs_mount](/file/cf_fs_mount.md). See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system) for an overview.
 
 ## Related Pages
 

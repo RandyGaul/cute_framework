@@ -33,7 +33,7 @@ Delta Encoding
 > is only written if the new value is different from the value to be written.
 
 For a more in-depth description on how to use this function see the tutotorial page from the Cute
-Framework docs here: TODO_KV_TUTORIAL_LINK.
+Framework docs here: [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 

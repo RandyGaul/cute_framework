@@ -18,7 +18,7 @@ Returns any errors as a [CF_Result](/utility/cf_result.md).
 
 ## Remarks
 
-This doesn't open the file itself, and is a fairly light-weight operation in comparison. TODO_LINK_VFS_README.
+This doesn't open the file itself, and is a fairly light-weight operation in comparison. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 

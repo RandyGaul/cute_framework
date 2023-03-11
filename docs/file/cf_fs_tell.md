@@ -18,7 +18,7 @@ CF_File | The file.
 
 ## Remarks
 
-This is an offset from the beginning of the file. Returns -1 on failure. TODO_LINK_VFS_README.
+This is an offset from the beginning of the file. Returns -1 on failure. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 

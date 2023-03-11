@@ -18,7 +18,7 @@ CF_File | The file.
 
 ## Remarks
 
-You might want to use [cf_fs_stat](/file/cf_fs_stat.md) instead to avoid needing to fully open the file first. TODO_LINK_VFS_README.
+You might want to use [cf_fs_stat](/file/cf_fs_stat.md) instead to avoid needing to fully open the file first. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 
