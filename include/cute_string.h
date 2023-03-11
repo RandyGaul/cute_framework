@@ -1020,17 +1020,16 @@ CF_INLINE uint64_t constexpr fnv1a(const void* data, int size)
 
 /**
  * General purpose string class.
- * 
  * Each string is stored in its own buffer internally.
- * The buffer starts out statically allocated, and grows onto the heap as necessary.
+ * 8 byte stack size.
  */
 struct String
 {
-	CF_INLINE String() { s_static(); }
-	CF_INLINE String(const char* s) { s_static(); sset(m_str, s); }
-	CF_INLINE String(const char* start, const char* end) { s_static(); int length = (int)(end - start); sfit(m_str, length); CF_STRNCPY(m_str, start, length); CF_AHDR(m_str)->size = length + 1; }
-	CF_INLINE String(const String& s) { s_static(); sset(m_str, s); }
-	CF_INLINE String(String&& s) { if (CF_AHDR(s.m_str)->is_static) { s_static(); sset(m_str, s); } else { m_str = s.m_str; s.m_str = NULL; } }
+	CF_INLINE String() { }
+	CF_INLINE String(const char* s) { sset(m_str, s); }
+	CF_INLINE String(const char* start, const char* end) { int length = (int)(end - start); sfit(m_str, length); CF_STRNCPY(m_str, start, length); CF_AHDR(m_str)->size = length + 1; }
+	CF_INLINE String(const String& s) { sset(m_str, s); }
+	CF_INLINE String(String&& s) {  m_str = s.m_str; s.m_str = NULL; }
 	CF_INLINE ~String() { sfree(m_str); m_str = NULL; }
 
 	CF_INLINE static String steal_from(char* cute_c_api_string) { CF_ACANARY(cute_c_api_string); String r; r.m_str = cute_c_api_string; return r; }
@@ -1086,7 +1085,7 @@ struct String
 	CF_INLINE String& set(const char* s) { sset(m_str, s); return *this; }
 	CF_INLINE String& operator=(const char* s) { sset(m_str, s); return *this; }
 	CF_INLINE String& operator=(const String& s) { sset(m_str, s); return *this; }
-	CF_INLINE String& operator=(String&& s) { if (CF_AHDR(s.m_str)->is_static) { s_static(); sset(m_str, s); } else { m_str = s.m_str; s.m_str = NULL; } return *this; }
+	CF_INLINE String& operator=(String&& s) { m_str = s.m_str; s.m_str = NULL; return *this; }
 	CF_INLINE Array<String> split(char split_c) { Array<String> r; char** s = ssplit(m_str, split_c); for (int i=0;i<alen(s);++i) r.add(move(steal_from(s[i]))); return r; }
 	CF_INLINE char pop() { char result = slast(m_str); spop(m_str); return result; }
 	CF_INLINE int first_index_of(char ch) const { return sfirst_index_of(m_str, ch); }
@@ -1114,10 +1113,7 @@ struct String
 	CF_INLINE uint64_t hash() const { return shash(m_str); }
 
 private:
-	char* m_str = u.m_buffer;
-	union { char m_buffer[64]; void* align; } u;
-
-	CF_INLINE void s_static() { sstatic(m_str, u.m_buffer, sizeof(u.m_buffer)); CF_ASSERT(slen(m_str) == 0); }
+	char* m_str = NULL;
 	CF_INLINE void s_chki(int i) const { CF_ASSERT(i >= 0 && i < ssize(m_str)); }
 };
 
