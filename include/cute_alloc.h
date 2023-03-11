@@ -28,26 +28,89 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef void* (CF_AllocFn)(size_t size, void* udata);
-typedef void (CF_FreeFn)(void* ptr, void* udata);
-typedef void* (CF_CallocFn)(size_t size, size_t count, void* udata);
-typedef void* (CF_ReallocFn)(void* ptr, size_t size, void* udata);
 
+/**
+ * @struct   CF_Arena
+ * @category allocator
+ * @brief    A simple way to allocate memory without calling `malloc` too often.
+ * @remarks  Individual allocations cannot be free'd, instead the entire allocator can reset.
+ * @related  cf_arena_init cf_arena_alloc cf_arena_reset
+ */
 typedef struct CF_Allocator
 {
+	/* @member Can be `NULL`. An optional parameter handed back to you in the other function pointers below. */
 	void* udata;
-	CF_AllocFn* alloc_fn;
-	CF_FreeFn* free_fn;
-	CF_CallocFn* calloc_fn;
-	CF_ReallocFn* realloc_fn;
-} CF_Allocator;
 
+	/* @member Your custom allocation function. */
+	void* (*alloc_fn)(size_t size, void* udata);
+
+	/* @member Your custom free function. */
+	void (*free_fn)(void* ptr, void* udata);
+
+	/* @member Your custom calloc function. Allocates memory that is cleared to zero. */
+	void* (*calloc_fn)(size_t size, size_t count, void* udata);
+
+	/* @member Your custom realloc function. Reallocates a pointer to a new size. */
+	void* (*realloc_fn)(void* ptr, size_t size, void* udata);
+} CF_Allocator;
+// @end
+
+/**
+ * @function cf_allocator_override
+ * @category allocator
+ * @brief    Overrides the default allocator with a custom one.
+ * @remarks  The default allocator simply calls malloc/free and friends. You may override this behavior by passing
+ *           a `CF_Allocator` to this function. This lets you hook up your own custom allocator. Usually you only want
+ *           to do this on certain platforms for performance optimizations, but is not a necessary thing to do for many games.
+ * @related  cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ */
 CF_API void CF_CALL cf_allocator_override(CF_Allocator allocator);
+
+/**
+ * @function cf_allocator_restore_default
+ * @category allocator
+ * @brief    Restores the default allocator.
+ * @remarks  The default allocator simply calls malloc/free and friends. You may override this behavior by passing
+ *           a `CF_Allocator` to this function. This lets you hook up your own custom allocator. Usually you only want
+ *           to do this on certain platforms for performance optimizations, but is not a necessary thing to do for many games.
+ * @related  cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ */
 CF_API void CF_CALL cf_allocator_restore_default();
 
+/**
+ * @function cf_alloc
+ * @category allocator
+ * @brief    Allocates a block of memory of `size` bytes and returns it.
+ * @related  cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ */
 CF_API void* CF_CALL cf_alloc(size_t size);
+
+/**
+ * @function cf_free
+ * @category allocator
+ * @brief    Frees a block of memory previously allocated by `cf_alloc`.
+ * @related  cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ */
 CF_API void CF_CALL cf_free(void* ptr);
+
+/**
+ * @function cf_calloc
+ * @category allocator
+ * @brief    Allocates a block of memory `size * count` bytes in size.
+ * @remarks  The memory returned is completely zero'd out. Generally this is more efficient than calling `cf_malloc` and
+ *           then clearing the memory to zero yourself. Though, it's not a concern for most games.
+ * @related  cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ */
 CF_API void* CF_CALL cf_calloc(size_t size, size_t count);
+
+/**
+ * @function cf_realloc
+ * @category allocator
+ * @brief    Reallocates a block of memory to a new size.
+ * @remarks  You must reassign your old pointer! Generally this is more efficient than calling `cf_malloc`, `cf_free`, and
+ *           `CF_MEMCPY` yourself. Though, this is not a concern for most games.
+ * @related  cf_allocator_override cf_allocator_restore_default cf_alloc cf_free cf_calloc cf_realloc
+ */
 CF_API void* CF_CALL cf_realloc(void* ptr, size_t size);
 
 //--------------------------------------------------------------------------------------------------
@@ -80,7 +143,16 @@ CF_API void* CF_CALL cf_realloc(void* ptr, size_t size);
  * @related  cf_aligned_free
  */
 CF_API void* CF_CALL cf_aligned_alloc(size_t size, int alignment);
-CF_API void CF_CALL cf_aligned_free(void* p);
+
+/**
+ * @function cf_aligned_free
+ * @category allocator
+ * @brief    Frees a block of memory previously allocated by `cf_aligned_alloc`.
+ * @param    ptr           The memory to deallocate.
+ * @remarks  Aligned allocation is mostly useful as a performance optimization, or for SIMD operations that require byte alignments.
+ * @related  cf_aligned_alloc
+ */
+CF_API void CF_CALL cf_aligned_free(void* ptr);
 
 //--------------------------------------------------------------------------------------------------
 // Arena allocator.
