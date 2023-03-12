@@ -100,6 +100,10 @@ int main(int argc, char* argv[])
 }
 ```
 
+<p align="center">
+<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/basic_sprite.gif?raw=true>
+</p>
+
 The girl sprite in the above sample code contains a few different animations, such as "spin", "hold_side", "ladder", and "idle". Feel free to try them out!
 
 ## Drawing Text

@@ -6,3 +6,6 @@ Some of the samples using Cute Framework's C API, while some use the C++ API. Ma
 - [Basic Keyboard/Mouse Input](https://github.com/RandyGaul/cute_framework/blob/master/samples/basic_input.c)
 - [Window Events](https://github.com/RandyGaul/cute_framework/blob/master/samples/window_events.c)
 - [Window Resizing](https://github.com/RandyGaul/cute_framework/blob/master/samples/window_resizing.cpp)
+- [Basic Shape Drawing](https://github.com/RandyGaul/cute_framework/blob/master/samples/basic_shapes.cpp)
+- [Basic Sprite Drawing](https://github.com/RandyGaul/cute_framework/blob/master/samples/basic_sprite.cpp)
+- [Text Drawing](https://github.com/RandyGaul/cute_framework/blob/master/samples/text_drawing.cpp)
