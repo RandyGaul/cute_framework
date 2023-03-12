@@ -76,8 +76,7 @@ int main(int argc, char* argv[])
 		pop_font_size();
 
 		// Drawing a formatted string.
-		String draws;
-		draws.fmt("Draw calls: %d", draw_calls);
+		String draws = String::fmt("Draw calls: %d", draw_calls);
 		push_font_size(13);
 		draw_text(draws.c_str(), V2(-640/2.0f + 10,-480/2.0f + 20));
 		pop_font_size();

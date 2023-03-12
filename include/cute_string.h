@@ -1074,7 +1074,7 @@ struct String
 	CF_INLINE String& append(const char* s) { sappend(m_str, s); return *this; }
 	CF_INLINE String& append(const char* start, const char* end) { sappend_range(m_str, start, end); return *this; }
 	CF_INLINE String& append(int codepoint) { sappend_UTF8(m_str, codepoint); return *this; }
-	CF_INLINE String& fmt(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt(m_str, fmt, args); va_end(args); return *this; }
+	static CF_INLINE String fmt(const char* fmt, ...) { String result; va_list args; va_start(args, fmt); svfmt(result.m_str, fmt, args); va_end(args); return result; }
 	CF_INLINE String& fmt_append(const char* fmt, ...) { va_list args; va_start(args, fmt); svfmt_append(m_str, fmt, args); va_end(args); return *this; }
 	CF_INLINE String& trim() { strim(m_str); return *this; }
 	CF_INLINE String& ltrim() { sltrim(m_str); return *this; }
