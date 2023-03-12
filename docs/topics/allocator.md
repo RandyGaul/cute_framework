@@ -60,7 +60,7 @@ void* my_realloc(void* ptr, size_t size, void* udata)
 
 Then simply assign each function to a [`CF_Allocator`](https://randygaul.github.io/cute_framework/#/allocator/cf_allocator) struct, and pass it onto [`cf_allocator_override`](https://randygaul.github.io/cute_framework/#/allocator/cf_allocator_override).
 
-```
+```cpp
 CF_Allocator allocator;
 allocator.udata = &my_allocator;
 allocator.alloc_fn = my_alloc;
