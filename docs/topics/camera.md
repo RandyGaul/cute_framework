@@ -18,6 +18,10 @@ cf_camera_dimensions(screen_w * 0.5f, screen_h * 0.5f);
 
 ?> You can flip the screen on the x-axis by negating the camera width when calling [`cf_camera_dimensions`](https://randygaul.github.io/cute_framework/#/camera/cf_camera_dimensions). You can also flip the screen on the y-axis by negating the second parameter, the camera height.
 
+## Coordinate System
+
+In games typically the center of the screen is defined as position `(0, 0)`, with the positive y-axis going up the screen.
+
 ## Moving the Camera
 
 When we move the camera it's look location points to a new position with [`cf_camera_look_at`](https://randygaul.github.io/cute_framework/#/camera/cf_camera_look_at). By default the camera starts out looking at the origin `(0, 0)`. If we make the camera look at `(100, 0)` everything on the screen will shift to the left by `100` units.

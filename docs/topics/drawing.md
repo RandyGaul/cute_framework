@@ -222,6 +222,8 @@ int main(int argc, char* argv[])
 
 You can see the [Text Effect](https://randygaul.github.io/cute_framework/#/text/cf_text_effect_register) system in work. Text codes that look sort of like xml are supported for a variety of built-in effects. Click the previous link to see some documentation about built-in text effects, and how to contruct + register your own custom text effect codes.
 
+?> Note the position of rendering text is the top-left corner of the text.
+
 ## Camera
 
 The drawing functions are all relative to the camera. The camera has it's own [Camera API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=camera) as well as a [Camera](https://randygaul.github.io/cute_framework/#/topics/camera) topic overview page.
