@@ -6,7 +6,7 @@ Cute Framework (CF for short) is the *cutest* framework available for making 2D 
 
 ## Download and Setup
 
-The easiest option is to head over and pickup the [latest pre-built version](https://github.com/randygaul/cute_framework/releases/latest) of Cute Framework. You can link your project against Cute Framework as either a static or shared library.
+~~The easiest option is to head over and pickup the [latest pre-built version](https://github.com/randygaul/cute_framework/releases/latest) of Cute Framework~~ v1.0 of Cute Framework is to be released shortly, for now try building from source (see next section), or check back shortly. You can link your project against Cute Framework as either a static or shared library.
 
 ### Building from Source
 
