@@ -16,7 +16,7 @@ To learn about a specific area in Cute Framework visit one of these topic articl
 * [Game Loop and Time](/topics/game_loop_and_time.md)
 * [Input](/topics/input.md)
 * [Low Level Graphics](/topics/low_level_graphics.md)
-* [Mutltithreading](/topics/multithreading.md)
+* [Multithreading](/topics/multithreading.md)
 * [Networking](/topics/networking.md)
 * [Pathfinding](/topics/pathfinding.md)
 * [Random Numbers](/topics/random_numbers.md)
