@@ -157,6 +157,8 @@ It's highly recommended to copy this format when writing your own shaders, inclu
 CF_Shader my_shd = CF_MAKE_SOKOL_SHADER(my_shader);
 ```
 
+Check out this page on [`CF_SOKOL_MAKE_SHADER`](https://randygaul.github.io/cute_framework/#/graphics/cf_make_sokol_shader) to learn how to compile your shader and set it up in C++. You can find a copy of the shader compiler for Linux/MacOS/Windows development in the `tools` folder where you downloaded CF.
+
 ### Learning to Write Shaders
 
 Learning to write shaders can be very challenging at first. That's mostly because writing a shader requires a lot of prerequisite knowledge. But, once the prereqs are filled out writing shaders becomes quite easy with a little time and practice. Here are some prerequisites that will make writing shaders much easier:
