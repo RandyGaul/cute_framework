@@ -18,10 +18,11 @@
 
 Another option for those familiar with CMake is to build from source with CMake.
 
-1. Download and install CMake v3.14+ (for easy cross-platform building)
-2. Copy + paste [CMakeLists.txt](https://github.com/RandyGaul/cute_framework_project_template/blob/main/CMakeLists.txt) from the [CF project template](https://github.com/RandyGaul/cute_framework_project_template). Find + replace "my_project_name".
-3. Run CMake on your project folder. Cmake will automagically download and hook up CF.
-4. Use the below code snippet for your first `main.cpp`!
+1. Download and install CMake v3.14+ (for easy cross-platform building), and [git](https://git-scm.com/downloads). 
+2. Copy CMakeLists.txt ([this one here](https://github.com/RandyGaul/cute_framework_project_template/blob/main/CMakeLists.txt)) into the top-level of your project directory.
+3. Find + replace "my_project_name".
+4. Make a folder called `src` in the top-level of your project, and place your initial `main.cpp` there.
+5. Run CMake on your project folder.
 
 ## Example Game Window
 
