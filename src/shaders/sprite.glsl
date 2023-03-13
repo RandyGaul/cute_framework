@@ -55,7 +55,7 @@
 		float is_text   = v_type == (2.0/255.0) ? 1.0 : 0.0;
 		vec4 c = de_gamma(texture(u_image, smooth_uv(v_uv, u_texture_size)));
 		c.a *= v_alpha;
-		c = mix(c, gamma(overlay(c, v_col)), is_sprite);
+		c = mix(c, gamma(overlay(c, v_col)), is_sprite) * c.a;
 		c = mix(c, v_col, is_shape);
 		c = mix(c, v_col * c.a, is_text);
 		if (c.a == 0) discard;
