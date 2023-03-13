@@ -70,9 +70,16 @@ You can set what layer to draw upon with [`cf_draw_push_layer`](https://randygau
 
 Sprites can be loaded with either .ase/.aseprite files or .png files. The recommended method is .ase files called [Aseprite](https://www.aseprite.org/) files. An aseprite file contains all the animation and image data necessary for a 2D frame based animations. If instead you want to support your own custom animation format, or any other format, you can load up your animation data and feed it into the .png API (TODO LINK).
 
+Some particular pages of interest are:
+
+- [Sprite API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=sprite)
+- [CF_Sprite](https://randygaul.github.io/cute_framework/#/sprite/cf_sprite)
+- [cf_sprite_play](https://randygaul.github.io/cute_framework/#/sprite/cf_sprite_play)
+
 > Load and draw a sprite.
 
-```cpp#include <cute.h>
+```cpp
+#include <cute.h>
 using namespace Cute;
 
 int main(int argc, char* argv[])
