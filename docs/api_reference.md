@@ -33,6 +33,15 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [Game Loop and Time](/topics/game_loop_and_time.md)
 
 
+## Array
+
+### Functions
+[](array/functions.md ':include')
+
+### Related Reading
+- [Data Structures](/topics/data_structures.md)
+
+
 ## Atomics
 
 ### Functions

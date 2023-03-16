@@ -36,8 +36,7 @@
  * @brief    An empty macro used in the C API to markup hastables.
  * @example > Showcase of base htbl features.
  *     htbl CF_V2* pts = NULL;
- *     hset(pts, 0, cf_v2(3, 5)); // Contructs a new table on-the-spot.
- *                             // The table is *hidden* behind `pts`.
+ *     hset(pts, 0, cf_v2(3, 5)); // Contructs a new table on-the-spot. The table is *hidden* behind `pts`.
  *     hset(pts, 10, cf_v2(-1, -1);
  *     hset(pts, -2, cf_v2(0, 0));
  *     
