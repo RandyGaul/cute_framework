@@ -145,7 +145,7 @@ The best way to gather text or written input is to use CF's input text functions
 
 These functions have an internal buffer of [UTF8 encoded](https://en.wikipedia.org/wiki/UTF-8) text. As users input text (in any number ways, including typing on the keyboard) the operating system will report text characters as they arrive. These are all stored by CF and exposed here. To get one character at a time, simply call [`cf_input_text_pop_utf32`](https://randygaul.github.io/cute_framework/#/input/cf_input_text_pop_utf32), which returns a single character in [UTF32 format](https://en.wikipedia.org/wiki/UTF-32) (which means as a simple integer).
 
-### Input Method Editor
+## Input Method Editor
 
 An IME ([input method editor](https://learn.microsoft.com/en-us/windows/apps/design/input/input-method-editors)) is a feature of the operating system to allow users to input text that isn't easily representing on a standard QWERTY keyboard. A great example would by typing in [pinyin](https://en.wikipedia.org/wiki/Pinyin) as it's automatically converted into Mandarin characters.
 
