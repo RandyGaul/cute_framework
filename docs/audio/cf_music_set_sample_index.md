@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Sets the sample index to play at for the music.
 
 ```cpp
-CF_API CF_Result CF_CALL cf_music_set_sample_index(uint64_t sample_index);
+CF_Result cf_music_set_sample_index(uint64_t sample_index);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Fetches the app's internal canvas for displaying content on the screen.
 
 ```cpp
-CF_API CF_Canvas CF_CALL cf_app_get_canvas();
+CF_Canvas cf_app_get_canvas();
 ```
 
 ## Remarks

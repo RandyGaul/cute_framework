@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Pauses the music.
 
 ```cpp
-CF_API void CF_CALL cf_music_pause();
+void cf_music_pause();
 ```
 
 ## Related Pages

@@ -25,3 +25,4 @@ using a fixed timestep (see [cf_set_fixed_timestep](/time/cf_set_fixed_timestep.
 [cf_update_time](/time/cf_update_time.md)  
 [CF_DELTA_TIME_FIXED](/time/cf_delta_time_fixed.md)  
 [CF_DELTA_TIME_INTERPOLANT](/time/cf_delta_time_interpolant.md)  
+[cf_set_target_framerate](/time/cf_set_target_framerate.md)  

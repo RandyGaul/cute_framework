@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns the 8-bit unsigned addition of two input 8-bit numbers, intended for implementing 8-bit color blend operations.
 
 ```cpp
-CF_INLINE uint8_t cf_add_un8(int a, int b)
+uint8_t cf_add_un8(int a, int b)
 ```
 
 Parameters | Description

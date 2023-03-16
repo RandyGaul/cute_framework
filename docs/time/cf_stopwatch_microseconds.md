@@ -9,7 +9,7 @@ GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the number of microseconds elapsed since the last call to [cf_make_stopwatch](/time/cf_make_stopwatch.md) was made.
 
 ```cpp
-CF_API double CF_CALL cf_stopwatch_microseconds(CF_Stopwatch stopwatch);
+double cf_stopwatch_microseconds(CF_Stopwatch stopwatch);
 ```
 
 ## Related Pages

@@ -9,7 +9,7 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns the name of the joypad.
 
 ```cpp
-CF_API const char* CF_CALL cf_joypad_name(CF_Joypad* joypad);
+const char* cf_joypad_name(CF_Joypad* joypad);
 ```
 
 Parameters | Description

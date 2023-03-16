@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a premultiplied [CF_Pixel](/graphics/cf_pixel.md) by its alpha component.
 
 ```cpp
-CF_INLINE CF_Pixel cf_pixel_premultiply(CF_Pixel c)
+CF_Pixel cf_pixel_premultiply(CF_Pixel c)
 ```
 
 Parameters | Description

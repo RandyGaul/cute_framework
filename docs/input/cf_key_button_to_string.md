@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Convert an enum [CF_KeyButton](/input/cf_keybutton.md) to a c-style string.
 
 ```cpp
-CF_INLINE const char* cf_key_button_to_string(CF_KeyButton button)
+const char* cf_key_button_to_string(CF_KeyButton button)
 ```
 
 Parameters | Description

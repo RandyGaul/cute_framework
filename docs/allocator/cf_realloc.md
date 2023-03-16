@@ -9,7 +9,7 @@ GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Reallocates a block of memory to a new size.
 
 ```cpp
-CF_API void* CF_CALL cf_realloc(void* ptr, size_t size);
+void* cf_realloc(void* ptr, size_t size);
 ```
 
 ## Remarks

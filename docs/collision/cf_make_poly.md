@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Fills out the polygon with values.
 
 ```cpp
-CF_API void CF_CALL cf_make_poly(CF_Poly* p);
+void cf_make_poly(CF_Poly* p);
 ```
 
 ## Remarks

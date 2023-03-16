@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Cleans up all resources used by the application. Call [cf_app_signal_shutdown](/app/cf_app_signal_shutdown.md) first.
 
 ```cpp
-CF_API void CF_CALL cf_destroy_app();
+void cf_destroy_app();
 ```
 
 ## Related Pages

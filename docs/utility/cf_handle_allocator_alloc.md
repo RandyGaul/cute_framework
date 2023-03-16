@@ -9,7 +9,7 @@ GitHub: [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/m
 Allocates and returns a unique [CF_Handle](/utility/cf_handle.md) that maps to `index` and `type`.
 
 ```cpp
-CF_API CF_Handle CF_CALL cf_handle_allocator_alloc(CF_HandleTable* table, uint32_t index, uint16_t type);
+CF_Handle cf_handle_allocator_alloc(CF_HandleTable* table, uint32_t index, uint16_t type);
 ```
 
 Parameters | Description

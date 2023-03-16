@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns an overlay blend, where the colors are multiplied or screen'd depending on the `base` color.
 
 ```cpp
-CF_INLINE float cf_overlay(float base, float blend)
+float cf_overlay(float base, float blend)
 ```
 
 Parameters | Description

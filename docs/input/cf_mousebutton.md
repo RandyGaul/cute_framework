@@ -12,9 +12,9 @@ The mouse buttons.
 
 Enum | Description
 --- | ---
-MOUSE_BUTTON_LEFT | 
-MOUSE_BUTTON_RIGHT | 
-MOUSE_BUTTON_MIDDLE | 
+MOUSE_BUTTON_LEFT | (null)
+MOUSE_BUTTON_RIGHT | (null)
+MOUSE_BUTTON_MIDDLE | (null)
 
 ## Related Pages
 

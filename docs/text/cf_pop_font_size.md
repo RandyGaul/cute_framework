@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pops and returns the last font size.
 
 ```cpp
-CF_API float CF_CALL cf_pop_font_size();
+float cf_pop_font_size();
 ```
 
 ## Related Pages

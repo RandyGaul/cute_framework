@@ -9,7 +9,7 @@ GitHub: [cute_a_star.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Calculates the shortest path along a grid.
 
 ```cpp
-CF_API bool CF_CALL cf_a_star(CF_AStarGrid grid, int start_x, int start_y, int end_x, int end_y, bool allow_diagonal_movement, CF_AStarOutput* out);
+bool cf_a_star(CF_AStarGrid grid, int start_x, int start_y, int end_x, int end_y, bool allow_diagonal_movement, CF_AStarOutput* out);
 ```
 
 Parameters | Description

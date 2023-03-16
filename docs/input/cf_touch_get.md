@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Fetches a specific touch event.
 
 ```cpp
-CF_API bool CF_CALL cf_touch_get(uint64_t id, CF_Touch* touch);
+bool cf_touch_get(uint64_t id, CF_Touch* touch);
 ```
 
 Parameters | Description

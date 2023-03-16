@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the cubic-out ease of a float from 0.0f to 1.0f.
 
 ```cpp
-CF_INLINE float cf_cube_out(float x)
+float cf_cube_out(float x)
 ```
 
 ## Remarks

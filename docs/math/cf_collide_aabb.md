@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if `a` and `b` intersect.
 
 ```cpp
-CF_INLINE int cf_collide_aabb(CF_Aabb a, CF_Aabb b)
+int cf_collide_aabb(CF_Aabb a, CF_Aabb b)
 ```
 
 ## Related Pages

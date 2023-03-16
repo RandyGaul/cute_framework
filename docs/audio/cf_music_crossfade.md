@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Crossfades the currently playing track out with the next track in.
 
 ```cpp
-CF_API void CF_CALL cf_music_crossfade(CF_Audio* audio_source, float cross_fade_time);
+void cf_music_crossfade(CF_Audio* audio_source, float cross_fade_time);
 ```
 
 Parameters | Description

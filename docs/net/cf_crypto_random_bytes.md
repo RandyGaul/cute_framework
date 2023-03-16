@@ -9,6 +9,6 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Fills a buffer in a cryptographically secure way (i.e. a slow way).
 
 ```cpp
-CF_API void CF_CALL cf_crypto_random_bytes(void* data, int byte_count);
+void cf_crypto_random_bytes(void* data, int byte_count);
 ```
 

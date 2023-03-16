@@ -9,7 +9,7 @@ GitHub: [cute_symbol.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Unloads a shared library previously loaded with `load_shared_library`.
 
 ```cpp
-CF_API void cf_unload_shared_library(CF_SharedLibrary* library);
+void cf_unload_shared_library(CF_SharedLibrary* library);
 ```
 
 Parameters | Description

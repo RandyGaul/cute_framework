@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Tells the internal threads to wake and start processing tasks without blocking.
 
 ```cpp
-CF_API void CF_CALL cf_threadpool_kick(CF_Threadpool* pool);
+void cf_threadpool_kick(CF_Threadpool* pool);
 ```
 
 Parameters | Description

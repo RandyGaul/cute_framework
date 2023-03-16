@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Converts a [CF_Pixel](/graphics/cf_pixel.md) to a dynamic string. Free it with [sfree](/string/sfree.md) when done.
 
 ```cpp
-CF_INLINE char* cf_pixel_to_string(CF_Pixel p)
+char* cf_pixel_to_string(CF_Pixel p)
 ```
 
 Parameters | Description

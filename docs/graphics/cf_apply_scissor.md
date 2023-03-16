@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Sets up a scissor box to clip rendering within.
 
 ```cpp
-CF_API void CF_CALL cf_apply_scissor(int x, int y, int width, int height);
+void cf_apply_scissor(int x, int y, int width, int height);
 ```
 
 Parameters | Description

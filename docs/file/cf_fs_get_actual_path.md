@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Converts a virtual path to an actual path.
 
 ```cpp
-CF_API const char* CF_CALL cf_fs_get_actual_path(const char* virtual_path);
+const char* cf_fs_get_actual_path(const char* virtual_path);
 ```
 
 Parameters | Description

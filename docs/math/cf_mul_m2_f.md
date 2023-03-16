@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Multiplies a [CF_M2x2](/math/cf_m2x2.md) by a float.
 
 ```cpp
-CF_INLINE CF_M2x2 cf_mul_m2_f(CF_M2x2 a, float b)
+CF_M2x2 cf_mul_m2_f(CF_M2x2 a, float b)
 ```
 
 ## Related Pages

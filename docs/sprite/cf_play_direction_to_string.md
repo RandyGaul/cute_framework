@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns a [CF_PlayDirection](/sprite/cf_playdirection.md) converted to a C string.
 
 ```cpp
-CF_INLINE const char* cf_play_direction_to_string(CF_PlayDirection dir)
+const char* cf_play_direction_to_string(CF_PlayDirection dir)
 ```
 
 ## Related Pages

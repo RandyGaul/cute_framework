@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns the `delay` member of the currently playing frame, in milliseconds.
 
 ```cpp
-CF_INLINE float cf_sprite_frame_delay(CF_Sprite* sprite)
+float cf_sprite_frame_delay(CF_Sprite* sprite)
 ```
 
 Parameters | Description

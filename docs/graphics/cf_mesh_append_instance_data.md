@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Appends instance data onto the end of the mesh's internal instance buffer.
 
 ```cpp
-CF_API int CF_CALL cf_mesh_append_instance_data(CF_Mesh mesh, void* data, int count);
+int cf_mesh_append_instance_data(CF_Mesh mesh, void* data, int count);
 ```
 
 Parameters | Description

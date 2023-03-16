@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the component-wise clamp of two vectors from 0.0f to 1.0f.
 
 ```cpp
-CF_INLINE CF_V2 cf_clamp01_v2(CF_V2 a)
+CF_V2 cf_clamp01_v2(CF_V2 a)
 ```
 
 ## Related Pages

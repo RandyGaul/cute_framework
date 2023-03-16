@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns maximum of all components of a vector.
 
 ```cpp
-CF_INLINE float cf_hmax(CF_V2 a)
+float cf_hmax(CF_V2 a)
 ```
 
 ## Related Pages

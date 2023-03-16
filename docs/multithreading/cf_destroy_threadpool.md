@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Destroys a [CF_Threadpool](/multithreading/cf_threadpool.md) created by [cf_make_threadpool](/multithreading/cf_make_threadpool.md).
 
 ```cpp
-CF_API void CF_CALL cf_destroy_threadpool(CF_Threadpool* pool);
+void cf_destroy_threadpool(CF_Threadpool* pool);
 ```
 
 Parameters | Description

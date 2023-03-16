@@ -9,7 +9,7 @@ GitHub: [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/m
 Returns a new [CF_HandleTable](/utility/cf_handletable.md).
 
 ```cpp
-CF_API CF_HandleTable* CF_CALL cf_make_handle_allocator(int initial_capacity);
+CF_HandleTable* cf_make_handle_allocator(int initial_capacity);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns a vector multiplied by a [CF_Transform](/math/cf_transform.md).
 
 ```cpp
-CF_INLINE CF_V2 cf_mul_tf_v2(CF_Transform a, CF_V2 b)
+CF_V2 cf_mul_tf_v2(CF_Transform a, CF_V2 b)
 ```
 
 ## Related Pages

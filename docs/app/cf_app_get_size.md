@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Gets the size of the window in pixels.
 
 ```cpp
-CF_API void CF_CALL cf_app_get_size(int* w, int* h);
+void cf_app_get_size(int* w, int* h);
 ```
 
 Parameters | Description

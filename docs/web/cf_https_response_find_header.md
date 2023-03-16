@@ -9,7 +9,7 @@ GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Helper function find a specific header in a [CF_HttpsResponse](/web/cf_httpsresponse.md).
 
 ```cpp
-CF_INLINE bool cf_https_response_find_header(const CF_HttpsResponse* response, const char* header_name, CF_HttpsHeader* header_out)
+bool cf_https_response_find_header(const CF_HttpsResponse* response, const char* header_name, CF_HttpsHeader* header_out)
 ```
 
 ## Return Value

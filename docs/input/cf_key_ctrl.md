@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns true if the left or right control key is currently down.
 
 ```cpp
-CF_API bool CF_CALL cf_key_ctrl();
+bool cf_key_ctrl();
 ```
 
 ## Related Pages

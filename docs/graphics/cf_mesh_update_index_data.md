@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Overwrites the index data of a mesh.
 
 ```cpp
-CF_API void CF_CALL cf_mesh_update_index_data(CF_Mesh mesh, uint32_t* indices, int count);
+void cf_mesh_update_index_data(CF_Mesh mesh, uint32_t* indices, int count);
 ```
 
 Parameters | Description

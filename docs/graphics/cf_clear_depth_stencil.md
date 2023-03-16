@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Sets the depth/stencil values used when clearing a canvas, if depth/stencil are enabled (see [CF_RenderState](/graphics/cf_renderstate.md)).
 
 ```cpp
-CF_API void CF_CALL cf_clear_depth_stencil(float depth, float stencil);
+void cf_clear_depth_stencil(float depth, float stencil);
 ```
 
 ## Remarks

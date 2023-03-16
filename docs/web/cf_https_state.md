@@ -9,7 +9,7 @@ GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns the current state of the `https` object.
 
 ```cpp
-CF_API CF_HttpsState CF_CALL cf_https_state(CF_Https* https);
+CF_HttpsState cf_https_state(CF_Https* https);
 ```
 
 ## Remarks

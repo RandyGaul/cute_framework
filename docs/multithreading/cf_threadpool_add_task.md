@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Adds a [CF_TaskFn](/multithreading/cf_taskfn.md) to the threadpool.
 
 ```cpp
-CF_API void CF_CALL cf_threadpool_add_task(CF_Threadpool* pool, CF_TaskFn* task, void* param);
+void cf_threadpool_add_task(CF_Threadpool* pool, CF_TaskFn* task, void* param);
 ```
 
 Parameters | Description

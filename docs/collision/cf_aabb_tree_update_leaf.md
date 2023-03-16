@@ -9,7 +9,7 @@ GitHub: [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Update's a [CF_Leaf](/collision/cf_leaf.md)'s AABB (axis-aligned bounding box). Call this if your object moves to let the tree know about it.
 
 ```cpp
-CF_API bool CF_CALL cf_aabb_tree_update_leaf(CF_AabbTree tree, CF_Leaf leaf, CF_Aabb aabb);
+bool cf_aabb_tree_update_leaf(CF_AabbTree tree, CF_Leaf leaf, CF_Aabb aabb);
 ```
 
 Parameters | Description

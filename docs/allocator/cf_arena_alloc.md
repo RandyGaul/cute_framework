@@ -9,7 +9,7 @@ GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Allocates a block of memory aligned along a byte boundary.
 
 ```cpp
-CF_API void* CF_CALL cf_arena_alloc(CF_Arena* arena, size_t size);
+void* cf_arena_alloc(CF_Arena* arena, size_t size);
 ```
 
 Parameters | Description

@@ -2282,6 +2282,26 @@ void cf_camera_pop()
 	}
 }
 
+CF_V2 cf_camera_peek_position()
+{
+	return draw->cam_position;
+}
+
+CF_V2 cf_camera_peek_dimensions()
+{
+	return draw->cam_dimensions;
+}
+
+float cf_camera_peek_rotation()
+{
+	return draw->cam_rotation;
+}
+
+CF_M3x2 cf_camera_peek()
+{
+	return draw->cam;
+}
+
 CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
 {
 	spritebatch_sprite_t s = spritebatch_fetch(&draw->sb, sprite->animation->frames[sprite->frame_index].id, sprite->w, sprite->h);

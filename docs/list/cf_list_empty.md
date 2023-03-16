@@ -9,7 +9,7 @@ GitHub: [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Returns true if a list is empty.
 
 ```cpp
-CF_INLINE bool cf_list_empty(CF_List* list)
+bool cf_list_empty(CF_List* list)
 ```
 
 Parameters | Description

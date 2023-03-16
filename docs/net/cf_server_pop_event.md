@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Pops a [CF_ServerEvent](/net/cf_serverevent.md) off of the server, if available.
 
 ```cpp
-CF_API bool CF_CALL cf_server_pop_event(CF_Server* server, CF_ServerEvent* event);
+bool cf_server_pop_event(CF_Server* server, CF_ServerEvent* event);
 ```
 
 ## Return Value

@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Sets up a uniform value, used for inputs to fragment shaders.
 
 ```cpp
-CF_API void CF_CALL cf_material_set_uniform_fs(CF_Material material, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
+void cf_material_set_uniform_fs(CF_Material material, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length);
 ```
 
 Parameters | Description

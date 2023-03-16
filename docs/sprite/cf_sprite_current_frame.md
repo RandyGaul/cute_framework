@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns the index of the currently playing frame.
 
 ```cpp
-CF_INLINE int cf_sprite_current_frame(const CF_Sprite* sprite)
+int cf_sprite_current_frame(const CF_Sprite* sprite)
 ```
 
 Parameters | Description

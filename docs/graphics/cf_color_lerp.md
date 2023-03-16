@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a linearly interpolated color from `a` to `b`.
 
 ```cpp
-CF_INLINE CF_Color cf_color_lerp(CF_Color a, CF_Color b, float s)
+CF_Color cf_color_lerp(CF_Color a, CF_Color b, float s)
 ```
 
 Parameters | Description

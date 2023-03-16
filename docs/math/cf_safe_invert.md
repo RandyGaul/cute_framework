@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Computes `1.0f/a`, but returns 0.0f if `a` is zero.
 
 ```cpp
-CF_INLINE float cf_safe_invert(float a)
+float cf_safe_invert(float a)
 ```
 
 ## Related Pages

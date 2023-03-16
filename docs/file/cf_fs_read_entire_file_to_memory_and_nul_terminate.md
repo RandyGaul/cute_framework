@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Reads an entire file into a buffer of memory and returns it as a nul-terminated C string.
 
 ```cpp
-CF_API char* CF_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, size_t* size);
+char* cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, size_t* size);
 ```
 
 Parameters | Description

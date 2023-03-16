@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Computes information about how two shapes intersect.
 
 ```cpp
-CF_API void CF_CALL cf_circle_to_circle_manifold(CF_Circle A, CF_Circle B, CF_Manifold* m);
+void cf_circle_to_circle_manifold(CF_Circle A, CF_Circle B, CF_Manifold* m);
 ```
 
 Parameters | Description

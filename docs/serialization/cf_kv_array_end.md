@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Ends the serialization of an array.
 
 ```cpp
-CF_API bool CF_CALL cf_kv_array_end(CF_KeyValue* kv);
+bool cf_kv_array_end(CF_KeyValue* kv);
 ```
 
 Parameters | Description

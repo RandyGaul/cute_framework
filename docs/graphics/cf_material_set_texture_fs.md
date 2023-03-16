@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Sets up a texture, used for inputs to fragment shaders.
 
 ```cpp
-CF_API void CF_CALL cf_material_set_texture_fs(CF_Material material, const char* name, CF_Texture texture);
+void cf_material_set_texture_fs(CF_Material material, const char* name, CF_Texture texture);
 ```
 
 Parameters | Description

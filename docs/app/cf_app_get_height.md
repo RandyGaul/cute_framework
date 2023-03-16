@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns the size of the window height in pixels.
 
 ```cpp
-CF_API int CF_CALL cf_app_get_height();
+int cf_app_get_height();
 ```
 
 ## Related Pages

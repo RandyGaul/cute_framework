@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns true if the app was resized last frame.
 
 ```cpp
-CF_API bool CF_CALL cf_app_was_resized();
+bool cf_app_was_resized();
 ```
 
 ## Related Pages

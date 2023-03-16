@@ -9,7 +9,7 @@ GitHub: [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns a random `uint64_t` from the range `min` to `max` (inclusive).
 
 ```cpp
-static CF_INLINE uint64_t CF_CALL cf_rnd_next_range_uint64(CF_Rnd* rnd, uint64_t min, uint64_t max);
+static uint64_t cf_rnd_next_range_uint64(CF_Rnd* rnd, uint64_t min, uint64_t max);
 ```
 
 Parameters | Description

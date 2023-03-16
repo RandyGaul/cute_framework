@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Unpauses the sprite's animation.
 
 ```cpp
-CF_INLINE void cf_sprite_unpause(CF_Sprite* sprite)
+void cf_sprite_unpause(CF_Sprite* sprite)
 ```
 
 Parameters | Description

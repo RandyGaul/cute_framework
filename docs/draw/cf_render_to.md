@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Renders to a [CF_Canvas](/graphics/cf_canvas.md).
 
 ```cpp
-CF_API void CF_CALL cf_render_to(CF_Canvas canvas, bool clear);
+void cf_render_to(CF_Canvas canvas, bool clear);
 ```
 
 Parameters | Description

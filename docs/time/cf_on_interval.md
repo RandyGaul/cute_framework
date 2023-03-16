@@ -9,7 +9,7 @@ GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true for one frame update each time an interval of seconds elapses.
 
 ```cpp
-CF_API bool CF_CALL cf_on_interval(float interval, float offset);
+bool cf_on_interval(float interval, float offset);
 ```
 
 Parameters | Description

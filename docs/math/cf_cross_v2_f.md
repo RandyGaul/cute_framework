@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the 2D cross product of a vector against a scalar.
 
 ```cpp
-CF_INLINE CF_V2 cf_cross_v2_f(CF_V2 a, float b)
+CF_V2 cf_cross_v2_f(CF_V2 a, float b)
 ```
 
 ## Related Pages

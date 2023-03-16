@@ -9,7 +9,7 @@ GitHub: [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/m
 Marks a [CF_Handle](/utility/cf_handle.md) as invalid and frees up resources it used.
 
 ```cpp
-CF_API void CF_CALL cf_handle_allocator_free(CF_HandleTable* table, CF_Handle handle);
+void cf_handle_allocator_free(CF_HandleTable* table, CF_Handle handle);
 ```
 
 Parameters | Description

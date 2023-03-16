@@ -9,7 +9,7 @@ GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Decodes a single UTF8 character from the string as a UTF32 codepoint.
 
 ```cpp
-CF_API const char* CF_CALL cf_decode_UTF8(const char* s, int* codepoint);
+const char* cf_decode_UTF8(const char* s, int* codepoint);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns true while the mouse's coordinates are hovering the app currently.
 
 ```cpp
-CF_API bool CF_CALL cf_app_mouse_inside();
+bool cf_app_mouse_inside();
 ```
 
 ## Remarks

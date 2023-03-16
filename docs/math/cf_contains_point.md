@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if `p` is contained within `b`.
 
 ```cpp
-CF_INLINE bool cf_contains_point(CF_Aabb bb, CF_V2 p)
+bool cf_contains_point(CF_Aabb bb, CF_V2 p)
 ```
 
 ## Related Pages

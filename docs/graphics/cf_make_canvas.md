@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a new [CF_Canvas](/graphics/cf_canvas.md) for offscreen rendering.
 
 ```cpp
-CF_API CF_Canvas CF_CALL cf_make_canvas(CF_CanvasParams canvas_params);
+CF_Canvas cf_make_canvas(CF_CanvasParams canvas_params);
 ```
 
 ## Related Pages

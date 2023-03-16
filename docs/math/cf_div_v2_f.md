@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Divides a vector by a float.
 
 ```cpp
-CF_INLINE CF_V2 cf_div_v2_f(CF_V2 a, float b)
+CF_V2 cf_div_v2_f(CF_V2 a, float b)
 ```
 
 ## Related Pages

@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Creates a shader from a shader compiled by sokol-shdc.
 
 ```cpp
-CF_API CF_Shader CF_CALL cf_make_shader(CF_SokolShader sokol_shader);
+CF_Shader cf_make_shader(CF_SokolShader sokol_shader);
 ```
 
 Parameters | Description

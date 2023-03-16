@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the composition of `a` multiplied by `b`.
 
 ```cpp
-CF_INLINE CF_SinCos cf_mul_sc(CF_SinCos a, CF_SinCos b)
+CF_SinCos cf_mul_sc(CF_SinCos a, CF_SinCos b)
 ```
 
 ## Related Pages

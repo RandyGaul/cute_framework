@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Fetches detailed power info about the application.
 
 ```cpp
-CF_API CF_PowerInfo CF_CALL cf_app_power_info();
+CF_PowerInfo cf_app_power_info();
 ```
 
 ## Return Value

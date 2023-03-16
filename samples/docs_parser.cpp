@@ -423,7 +423,7 @@ void parse_function()
 {
 	s->doc.type = DOC_FUNCTION;
 	parse_comment_block();
-	s->doc.signature = parse_line().replace("CUTE_API ", "").replace("CUTE_CALL ", "").replace("CUTE_INLINE ", "");
+	s->doc.signature = parse_line().replace("CF_API ", "").replace("CF_CALL ", "").replace("CF_INLINE ", "");
 	int index = s->doc.signature.find(" {");
 	if (index != -1) {
 		s->doc.signature.set_len(index);
@@ -444,7 +444,7 @@ void parse_struct()
 			if (s->token == "@member") {
 				String brief = parse_paragraph();
 				parse_token(); // Skip "*/"
-				String member = parse_line().replace("CUTE_INLINE ", "").replace(";", "");
+				String member = parse_line().replace("CF_INLINE ", "").replace(";", "");
 				doc.member_briefs.add(brief);
 				doc.members.add(member);
 			} else if (s->token == "@function") {

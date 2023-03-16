@@ -9,7 +9,7 @@ GitHub: [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns a random `uint64_t`.
 
 ```cpp
-static CF_INLINE uint64_t CF_CALL cf_rnd_next(CF_Rnd* rnd);
+static uint64_t cf_rnd_next(CF_Rnd* rnd);
 ```
 
 Parameters | Description

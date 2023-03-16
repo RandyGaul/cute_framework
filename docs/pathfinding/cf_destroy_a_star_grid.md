@@ -9,7 +9,7 @@ GitHub: [cute_a_star.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Free up all resources used by a grid.
 
 ```cpp
-CF_API void CF_CALL cf_destroy_a_star_grid(CF_AStarGrid grid);
+void cf_destroy_a_star_grid(CF_AStarGrid grid);
 ```
 
 Parameters | Description

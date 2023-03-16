@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the composition of `a` times `b`.
 
 ```cpp
-CF_INLINE CF_M2x2 cf_mul_m2(CF_M2x2 a, CF_M2x2 b)
+CF_M2x2 cf_mul_m2(CF_M2x2 a, CF_M2x2 b)
 ```
 
 ## Related Pages

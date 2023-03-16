@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Returns a packet from the server, if available.
 
 ```cpp
-CF_API bool CF_CALL cf_client_pop_packet(CF_Client* client, void** packet, int* size, bool* was_sent_reliably);
+bool cf_client_pop_packet(CF_Client* client, void** packet, int* size, bool* was_sent_reliably);
 ```
 
 Parameters | Description

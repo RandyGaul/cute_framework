@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Locks for reading. Many simultaneous readers are allowed.
 
 ```cpp
-CF_API void CF_CALL cf_read_lock(CF_ReadWriteLock* rw);
+void cf_read_lock(CF_ReadWriteLock* rw);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Call this to end your main-loop; makes [cf_app_is_running](/app/cf_app_is_running.md) return false.
 
 ```cpp
-CF_API void CF_CALL cf_app_signal_shutdown();
+void cf_app_signal_shutdown();
 ```
 
 ## Code Example

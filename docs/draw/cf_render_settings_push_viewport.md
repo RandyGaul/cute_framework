@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pushes a [CF_Rect](/math/cf_rect.md) for the viewport to render within.
 
 ```cpp
-CF_API void CF_CALL cf_render_settings_push_viewport(CF_Rect viewport);
+void cf_render_settings_push_viewport(CF_Rect viewport);
 ```
 
 Parameters | Description

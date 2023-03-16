@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns a vector subtracted from another.
 
 ```cpp
-CF_INLINE CF_V2 cf_sub_v2(CF_V2 a, CF_V2 b)
+CF_V2 cf_sub_v2(CF_V2 a, CF_V2 b)
 ```
 
 ## Related Pages

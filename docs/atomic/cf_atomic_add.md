@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Atomically adds `addend` to `atomic` and returns the old value from `atomic`.
 
 ```cpp
-CF_API int CF_CALL cf_atomic_add(CF_AtomicInt* atomic, int addend);
+int cf_atomic_add(CF_AtomicInt* atomic, int addend);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Initializes Dear ImGui.
 
 ```cpp
-CF_API ImGuiContext* CF_CALL cf_app_init_imgui(bool no_default_font /*= false*/);
+ImGuiContext* cf_app_init_imgui(bool no_default_font /*= false*/);
 ```
 
 Parameters | Description

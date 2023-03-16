@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Unloads the sprite's image resources from the internal cache.
 
 ```cpp
-CF_API void CF_CALL cf_sprite_unload(const char* aseprite_path);
+void cf_sprite_unload(const char* aseprite_path);
 ```
 
 Parameters | Description

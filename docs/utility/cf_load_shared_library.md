@@ -9,7 +9,7 @@ GitHub: [cute_symbol.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Loads a shared library from disk and returns a pointer to the library.
 
 ```cpp
-CF_API CF_SharedLibrary* CF_CALL cf_load_shared_library(const char* path);
+CF_SharedLibrary* cf_load_shared_library(const char* path);
 ```
 
 Parameters | Description

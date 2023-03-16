@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Tells the operating system where the current IME (Input Method Editor) rect should be.
 
 ```cpp
-CF_API void CF_CALL cf_input_set_ime_rect(int x, int y, int w, int h);
+void cf_input_set_ime_rect(int x, int y, int w, int h);
 ```
 
 ## Remarks

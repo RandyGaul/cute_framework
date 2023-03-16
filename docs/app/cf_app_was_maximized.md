@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns true if the app was maximized last frame.
 
 ```cpp
-CF_API bool CF_CALL cf_app_was_maximized();
+bool cf_app_was_maximized();
 ```
 
 ## Related Pages

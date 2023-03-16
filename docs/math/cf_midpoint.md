@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the center of `bb`.
 
 ```cpp
-CF_INLINE CF_V2 cf_midpoint(CF_Aabb bb)
+CF_V2 cf_midpoint(CF_Aabb bb)
 ```
 
 ## Related Pages

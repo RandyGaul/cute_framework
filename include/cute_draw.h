@@ -937,7 +937,7 @@ CF_API CF_RenderState CF_CALL cf_render_settings_peek_render_state();
  * @brief    Sets the width and height of the camera's view.
  * @param    w          The width of the camera's view.
  * @param    h          The height of the camera's view.
- * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to
+ * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
  */
 CF_API void CF_CALL cf_camera_dimensions(float w, float h);
 
@@ -947,7 +947,7 @@ CF_API void CF_CALL cf_camera_dimensions(float w, float h);
  * @brief    Sets where in the world the camera sees.
  * @param    x          The x position of the camera's view.
  * @param    y          The y position of the camera's view.
- * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to
+ * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
  */
 CF_API void CF_CALL cf_camera_look_at(float x, float y);
 
@@ -956,7 +956,7 @@ CF_API void CF_CALL cf_camera_look_at(float x, float y);
  * @category camera
  * @brief    Rotates the camera.
  * @param    radians    The angle of camera rotation.
- * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to
+ * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
  */
 CF_API void CF_CALL cf_camera_rotate(float radians);
 
@@ -964,7 +964,7 @@ CF_API void CF_CALL cf_camera_rotate(float radians);
  * @function cf_camera_push
  * @category camera
  * @brief    Pushes a copy of the camera state.
- * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to
+ * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
  */
 CF_API void CF_CALL cf_camera_push();
 
@@ -972,9 +972,45 @@ CF_API void CF_CALL cf_camera_push();
  * @function cf_camera_pop
  * @category camera
  * @brief    Pops the current camera state, and uses the previously pushed camera state.
- * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to
+ * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
  */
 CF_API void CF_CALL cf_camera_pop();
+
+/**
+ * @function cf_camera_peek_position
+ * @category camera
+ * @brief    Returns the current camera position.
+ * @remarks  See `cf_camera_look_at`.
+ * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
+ */
+CF_API CF_V2 CF_CALL cf_camera_peek_position();
+
+/**
+ * @function cf_camera_peek_dimensions
+ * @category camera
+ * @brief    Returns the current camera dimensions.
+ * @remarks  See `cf_camera_dimensions`.
+ * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
+ */
+CF_API CF_V2 CF_CALL cf_camera_peek_dimensions();
+
+/**
+ * @function cf_camera_peek_rotation
+ * @category camera
+ * @brief    Returns the current camera rotation.
+ * @remarks  See `cf_camera_rotate`.
+ * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
+ */
+CF_API float CF_CALL cf_camera_peek_rotation();
+
+/**
+ * @function cf_camera_peek
+ * @category camera
+ * @brief    Returns the current camera as a `CF_M3x2`.
+ * @remarks  Multiplying this matrix against a vector will transform the vector to "cam space" or "eye space".
+ * @related  cf_camera_dimensions cf_camera_look_at cf_camera_rotate cf_camera_push cf_camera_pop cf_app_draw_onto_screen cf_render_to cf_camera_peek_position cf_camera_peek_dimensions cf_camera_peek_rotation cf_camera_peek
+ */
+CF_API CF_M3x2 CF_CALL cf_camera_peek();
 
 /**
  * @function cf_render_to

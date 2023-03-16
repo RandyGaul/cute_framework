@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns true if the mouse button was just pressed.
 
 ```cpp
-CF_API bool CF_CALL cf_mouse_just_pressed(CF_MouseButton button);
+bool cf_mouse_just_pressed(CF_MouseButton button);
 ```
 
 ## Related Pages

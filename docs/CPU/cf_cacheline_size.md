@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Returns the number of bytes in a single cache line of the CPU L1 memory cache.
 
 ```cpp
-CF_API int CF_CALL cf_cacheline_size();
+int cf_cacheline_size();
 ```
 
 ## Related Pages

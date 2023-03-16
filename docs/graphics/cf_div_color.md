@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Divides each component of a color by `s`.
 
 ```cpp
-CF_INLINE CF_Color cf_div_color(CF_Color a, float s)
+CF_Color cf_div_color(CF_Color a, float s)
 ```
 
 Parameters | Description

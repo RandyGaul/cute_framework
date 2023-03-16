@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns true if the app lost focus last frame.
 
 ```cpp
-CF_API bool CF_CALL cf_app_lost_focus();
+bool cf_app_lost_focus();
 ```
 
 ## Remarks

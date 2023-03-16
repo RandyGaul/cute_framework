@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Destroys a [CF_ConditionVariable](/multithreading/cf_conditionvariable.md) created with [cf_make_cv](/multithreading/cf_make_cv.md).
 
 ```cpp
-CF_API void CF_CALL cf_destroy_cv(CF_ConditionVariable* cv);
+void cf_destroy_cv(CF_ConditionVariable* cv);
 ```
 
 Parameters | Description

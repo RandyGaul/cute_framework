@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the bottom-right corner of bb.
 
 ```cpp
-CF_INLINE CF_V2 cf_bottom_right(CF_Aabb bb)
+CF_V2 cf_bottom_right(CF_Aabb bb)
 ```
 
 ## Related Pages

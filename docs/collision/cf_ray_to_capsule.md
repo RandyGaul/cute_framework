@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if a ray hits a capsule.
 
 ```cpp
-CF_API bool CF_CALL cf_ray_to_capsule(CF_Ray A, CF_Capsule B, CF_Raycast* out);
+bool cf_ray_to_capsule(CF_Ray A, CF_Capsule B, CF_Raycast* out);
 ```
 
 Parameters | Description

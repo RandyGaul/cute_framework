@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Reads bytes from a file opened in read mode.
 
 ```cpp
-CF_API size_t CF_CALL cf_fs_read(CF_File* file, void* buffer, size_t size);
+size_t cf_fs_read(CF_File* file, void* buffer, size_t size);
 ```
 
 Parameters | Description

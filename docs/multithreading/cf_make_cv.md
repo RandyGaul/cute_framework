@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Returns an initialized [CF_ConditionVariable](/multithreading/cf_conditionvariable.md), used to sleep or wake threads.
 
 ```cpp
-CF_API CF_ConditionVariable CF_CALL cf_make_cv();
+CF_ConditionVariable cf_make_cv();
 ```
 
 ## Remarks

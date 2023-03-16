@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Returns the error state of the kv instance.
 
 ```cpp
-CF_API CF_Result CF_CALL cf_kv_last_error(CF_KeyValue* kv);
+CF_Result cf_kv_last_error(CF_KeyValue* kv);
 ```
 
 Parameters | Description

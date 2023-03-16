@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pops and returns the last antialias state.
 
 ```cpp
-CF_API bool CF_CALL cf_draw_pop_antialias();
+bool cf_draw_pop_antialias();
 ```
 
 ## Remarks

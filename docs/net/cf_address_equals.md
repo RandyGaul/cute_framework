@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Tests two endpoints for equality.
 
 ```cpp
-CF_API int CF_CALL cf_address_equals(CF_Address a, CF_Address b);
+int cf_address_equals(CF_Address a, CF_Address b);
 ```
 
 ## Related Pages

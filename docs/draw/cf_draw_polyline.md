@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Draws a chain of connected line segments.
 
 ```cpp
-CF_API void CF_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count);
+void cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the text parameter as a number.
 
 ```cpp
-CF_API double CF_CALL cf_text_effect_get_number(CF_TextEffect* fx, const char* key, double default_val);
+double cf_text_effect_get_number(CF_TextEffect* fx, const char* key, double default_val);
 ```
 
 Parameters | Description

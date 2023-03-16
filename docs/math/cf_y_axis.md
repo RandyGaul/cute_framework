@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the y-axis of the 2x2 rotation matrix represented by [CF_SinCos](/math/cf_sincos.md).
 
 ```cpp
-CF_INLINE CF_V2 cf_y_axis(CF_SinCos r)
+CF_V2 cf_y_axis(CF_SinCos r)
 ```
 
 ## Related Pages

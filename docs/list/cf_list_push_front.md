@@ -9,7 +9,7 @@ GitHub: [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Pushes a node onto the front of the list.
 
 ```cpp
-CF_INLINE void cf_list_push_front(CF_List* list, CF_ListNode* node)
+void cf_list_push_front(CF_List* list, CF_ListNode* node)
 ```
 
 Parameters | Description

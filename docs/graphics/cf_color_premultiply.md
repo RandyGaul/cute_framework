@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a color in premultiplied alpha form.
 
 ```cpp
-CF_INLINE CF_Color cf_color_premultiply(CF_Color c)
+CF_Color cf_color_premultiply(CF_Color c)
 ```
 
 Parameters | Description

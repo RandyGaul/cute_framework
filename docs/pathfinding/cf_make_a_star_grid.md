@@ -9,7 +9,7 @@ GitHub: [cute_a_star.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Creates a [CF_AStarGrid](/pathfinding/cf_astargrid.md) for running a path-finding algorithm via [cf_a_star](/pathfinding/cf_a_star.md).
 
 ```cpp
-CF_API CF_AStarGrid CF_CALL cf_make_a_star_grid(int w, int h, float* cell_costs);
+CF_AStarGrid cf_make_a_star_grid(int w, int h, float* cell_costs);
 ```
 
 Parameters | Description

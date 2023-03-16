@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Destroys a client created by [cf_make_client](/net/cf_make_client.md).
 
 ```cpp
-CF_API void CF_CALL cf_destroy_client(CF_Client* client);
+void cf_destroy_client(CF_Client* client);
 ```
 
 ## Remarks

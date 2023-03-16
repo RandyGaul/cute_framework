@@ -9,7 +9,7 @@ GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Sets the frequency for fixed timestep updates to occur.
 
 ```cpp
-CF_API void CF_CALL cf_set_fixed_timestep_max_updates(int max_updates);
+void cf_set_fixed_timestep_max_updates(int max_updates);
 ```
 
 Parameters | Description
@@ -25,6 +25,7 @@ is clamped below `max_updates`.
 ## Related Pages
 
 [cf_set_fixed_timestep](/time/cf_set_fixed_timestep.md)  
-[CF_DELTA_TIME_INTERPOLANT](/time/cf_delta_time_interpolant.md)  
+[cf_set_target_framerate](/time/cf_set_target_framerate.md)  
 [cf_update_time](/time/cf_update_time.md)  
 [CF_DELTA_TIME_FIXED](/time/cf_delta_time_fixed.md)  
+[CF_DELTA_TIME_INTERPOLANT](/time/cf_delta_time_interpolant.md)  

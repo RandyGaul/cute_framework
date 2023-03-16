@@ -9,7 +9,7 @@ GitHub: [cute_guid.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if two [CF_Guid](/utility/cf_guid.md)'s are equal, false otherwise.
 
 ```cpp
-CF_INLINE bool cf_guid_equal(CF_Guid a, CF_Guid b)
+bool cf_guid_equal(CF_Guid a, CF_Guid b)
 ```
 
 Parameters | Description

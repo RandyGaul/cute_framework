@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Creates a new thread and runs it's thread function ([CF_ThreadFn](/multithreading/cf_threadfn.md)).
 
 ```cpp
-CF_API CF_Thread* CF_CALL cf_thread_create(CF_ThreadFn func, const char* name, void* udata);
+CF_Thread* cf_thread_create(CF_ThreadFn func, const char* name, void* udata);
 ```
 
 Parameters | Description

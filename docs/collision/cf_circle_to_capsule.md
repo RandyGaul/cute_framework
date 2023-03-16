@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if a circle is intersecting with an capsule.
 
 ```cpp
-CF_API bool CF_CALL cf_circle_to_capsule(CF_Circle A, CF_Capsule B);
+bool cf_circle_to_capsule(CF_Circle A, CF_Capsule B);
 ```
 
 ## Remarks

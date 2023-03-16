@@ -9,7 +9,7 @@ GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Frees up all memory and closes the underlying HTTPS connection if still open.
 
 ```cpp
-CF_API void CF_CALL cf_https_destroy(CF_Https* https);
+void cf_https_destroy(CF_Https* https);
 ```
 
 Parameters | Description

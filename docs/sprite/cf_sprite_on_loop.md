@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns true whenever at the very beginning of the animation sequence.
 
 ```cpp
-CF_INLINE bool cf_sprite_on_loop(CF_Sprite* sprite)
+bool cf_sprite_on_loop(CF_Sprite* sprite)
 ```
 
 Parameters | Description

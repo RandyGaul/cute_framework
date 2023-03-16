@@ -9,7 +9,7 @@ GitHub: [cute_result.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns true if a [CF_Result](/utility/cf_result.md) contains an error.
 
 ```cpp
-CF_INLINE bool cf_is_error(CF_Result result)
+bool cf_is_error(CF_Result result)
 ```
 
 Parameters | Description

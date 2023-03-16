@@ -9,7 +9,7 @@ GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Initializes an arena for later allocations.
 
 ```cpp
-CF_API void CF_CALL cf_arena_init(CF_Arena* arena, int alignment, int block_size);
+void cf_arena_init(CF_Arena* arena, int alignment, int block_size);
 ```
 
 Parameters | Description

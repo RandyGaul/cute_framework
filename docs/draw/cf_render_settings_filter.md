@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Sets a rendering [CF_Filter](/graphics/cf_filter.md), used for sampling from textures.
 
 ```cpp
-CF_API void CF_CALL cf_render_settings_filter(CF_Filter filter);
+void cf_render_settings_filter(CF_Filter filter);
 ```
 
 Parameters | Description

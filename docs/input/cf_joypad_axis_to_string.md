@@ -9,7 +9,7 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Convert an enum [CF_JoypadAxis](/input/cf_joypadaxis.md) to a c-style string.
 
 ```cpp
-CF_INLINE const char* cf_joypad_axis_to_string(CF_JoypadAxis axis)
+const char* cf_joypad_axis_to_string(CF_JoypadAxis axis)
 ```
 
 Parameters | Description

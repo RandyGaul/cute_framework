@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Unlocks a [CF_Mutex](/multithreading/cf_mutex.md).
 
 ```cpp
-CF_API CF_Result CF_CALL cf_mutex_unlock(CF_Mutex* mutex);
+CF_Result cf_mutex_unlock(CF_Mutex* mutex);
 ```
 
 Parameters | Description

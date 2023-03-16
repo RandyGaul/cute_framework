@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Updates the server.
 
 ```cpp
-CF_API void CF_CALL cf_server_update(CF_Server* server, double dt, uint64_t current_time);
+void cf_server_update(CF_Server* server, double dt, uint64_t current_time);
 ```
 
 ## Remarks

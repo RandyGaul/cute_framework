@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if an int is a power of two.
 
 ```cpp
-CF_INLINE bool cf_is_power_of_two(int a)
+bool cf_is_power_of_two(int a)
 ```
 
 ## Related Pages

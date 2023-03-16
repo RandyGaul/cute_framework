@@ -9,7 +9,7 @@ GitHub: [cute_guid.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns a new [CF_Guid](/utility/cf_guid.md).
 
 ```cpp
-CF_API CF_Guid CF_CALL cf_make_guid();
+CF_Guid cf_make_guid();
 ```
 
 ## Remarks

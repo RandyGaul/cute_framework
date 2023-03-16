@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Serializes a key name.
 
 ```cpp
-CF_API bool CF_CALL cf_kv_key(CF_KeyValue* kv, const char* key, CF_KeyValueType* type);
+bool cf_kv_key(CF_KeyValue* kv, const char* key, CF_KeyValueType* type);
 ```
 
 Parameters | Description

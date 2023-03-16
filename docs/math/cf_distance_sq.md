@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the square distance of a point to a line segment.
 
 ```cpp
-CF_INLINE float cf_distance_sq(CF_V2 a, CF_V2 b, CF_V2 p)
+float cf_distance_sq(CF_V2 a, CF_V2 b, CF_V2 p)
 ```
 
 Parameters | Description

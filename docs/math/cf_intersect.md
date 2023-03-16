@@ -10,7 +10,7 @@ Given the distances of two points `a` and `b` to a plane (`da` and `db` respecti
 value used to lerp from `a` to `b` to find the intersection point.
 
 ```cpp
-CF_INLINE float cf_intersect(float da, float db)
+float cf_intersect(float da, float db)
 ```
 
 ## Related Pages

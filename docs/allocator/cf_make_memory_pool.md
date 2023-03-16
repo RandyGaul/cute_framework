@@ -9,7 +9,7 @@ GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Creates a memory pool.
 
 ```cpp
-CF_API CF_MemoryPool* CF_CALL cf_make_memory_pool(int element_size, int element_count, int alignment);
+CF_MemoryPool* cf_make_memory_pool(int element_size, int element_count, int alignment);
 ```
 
 Parameters | Description

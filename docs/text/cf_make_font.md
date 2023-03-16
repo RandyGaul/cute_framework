@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Constructs a font for rendering text.
 
 ```cpp
-CF_API CF_Result CF_CALL cf_make_font(const char* path, const char* font_name);
+CF_Result cf_make_font(const char* path, const char* font_name);
 ```
 
 Parameters | Description

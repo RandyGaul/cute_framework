@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Returns file information at the given virtual path, such as file size or creation time.
 
 ```cpp
-CF_API CF_Result CF_CALL cf_fs_stat(const char* virtual_path, CF_Stat* stat);
+CF_Result cf_fs_stat(const char* virtual_path, CF_Stat* stat);
 ```
 
 ## Return Value

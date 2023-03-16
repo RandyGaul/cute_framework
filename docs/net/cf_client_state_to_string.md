@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Convert an enum [CF_ClientState](/net/cf_clientstate.md) to a c-style string.
 
 ```cpp
-CF_INLINE const char* cf_client_state_to_string(CF_ClientState state)
+const char* cf_client_state_to_string(CF_ClientState state)
 ```
 
 Parameters | Description

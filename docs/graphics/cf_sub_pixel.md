@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Subtracts one [CF_Pixel](/graphics/cf_pixel.md) from another.
 
 ```cpp
-CF_INLINE CF_Pixel cf_sub_pixel(CF_Pixel a, CF_Pixel b)
+CF_Pixel cf_sub_pixel(CF_Pixel a, CF_Pixel b)
 ```
 
 Parameters | Description

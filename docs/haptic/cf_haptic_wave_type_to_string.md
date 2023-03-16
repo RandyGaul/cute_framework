@@ -9,7 +9,7 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Converts a [CF_HapticWaveType](/haptic/cf_hapticwavetype.md) to a C string.
 
 ```cpp
-CF_INLINE const char* cf_haptic_wave_type_to_string(CF_HapticWaveType type)
+const char* cf_haptic_wave_type_to_string(CF_HapticWaveType type)
 ```
 
 Parameters | Description

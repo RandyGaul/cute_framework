@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Enables the IME (Input Method Editor) for the operating system.
 
 ```cpp
-CF_API void CF_CALL cf_input_enable_ime();
+void cf_input_enable_ime();
 ```
 
 ## Remarks

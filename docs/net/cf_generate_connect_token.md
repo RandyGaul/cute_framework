@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Generates a connect token, useable by clients to authenticate and securely connect to a server.
 
 ```cpp
-CF_API CF_Result CF_CALL cf_generate_connect_token(uint64_t application_id, uint64_t creation_timestamp, const CF_CryptoKey* client_to_server_key, const CF_CryptoKey* server_to_client_key, uint64_t expiration_timestamp, uint32_t handshake_timeout, int address_count, const char** address_list, uint64_t client_id, const uint8_t* user_data, const CF_CryptoSignSecret* shared_secret_key, uint8_t* token_ptr_out);
+CF_Result cf_generate_connect_token(uint64_t application_id, uint64_t creation_timestamp, const CF_CryptoKey* client_to_server_key, const CF_CryptoKey* server_to_client_key, uint64_t expiration_timestamp, uint32_t handshake_timeout, int address_count, const char** address_list, uint64_t client_id, const uint8_t* user_data, const CF_CryptoSignSecret* shared_secret_key, uint8_t* token_ptr_out);
 ```
 
 Parameters | Description

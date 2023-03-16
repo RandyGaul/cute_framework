@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the half-extents of an AABB (axis-aligned bounding box).
 
 ```cpp
-CF_INLINE CF_V2 cf_half_extents(CF_Aabb bb)
+CF_V2 cf_half_extents(CF_Aabb bb)
 ```
 
 ## Remarks

@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns the component-wise clamp of `a` between `lo` and `hi`.
 
 ```cpp
-CF_INLINE CF_Color cf_clamp_color(CF_Color a, CF_Color lo, CF_Color hi)
+CF_Color cf_clamp_color(CF_Color a, CF_Color lo, CF_Color hi)
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Converts a [CF_ShapeType](/collision/cf_shapetype.md) to a C string.
 
 ```cpp
-CF_INLINE const char* cf_shape_type_to_string(CF_ShapeType type)
+const char* cf_shape_type_to_string(CF_ShapeType type)
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns an int clamped between `lo` and `hi`.
 
 ```cpp
-CF_INLINE int cf_clamp_int(int a, int lo, int hi)
+int cf_clamp_int(int a, int lo, int hi)
 ```
 
 ## Related Pages

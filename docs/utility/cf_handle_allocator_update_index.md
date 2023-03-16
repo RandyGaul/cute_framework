@@ -9,7 +9,7 @@ GitHub: [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/m
 Sets 32-bit index value a handle maps to.
 
 ```cpp
-CF_API void CF_CALL cf_handle_allocator_update_index(CF_HandleTable* table, CF_Handle handle, uint32_t index);
+void cf_handle_allocator_update_index(CF_HandleTable* table, CF_Handle handle, uint32_t index);
 ```
 
 Parameters | Description

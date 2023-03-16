@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Frees up a [CF_Mesh](/graphics/cf_mesh.md) previously created with [cf_make_mesh](/graphics/cf_make_mesh.md).
 
 ```cpp
-CF_API void CF_CALL cf_destroy_mesh(CF_Mesh mesh);
+void cf_destroy_mesh(CF_Mesh mesh);
 ```
 
 Parameters | Description

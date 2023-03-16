@@ -9,7 +9,7 @@ GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Allocates a block of memory aligned along a byte boundary.
 
 ```cpp
-CF_API void* CF_CALL cf_aligned_alloc(size_t size, int alignment);
+void* cf_aligned_alloc(size_t size, int alignment);
 ```
 
 Parameters | Description

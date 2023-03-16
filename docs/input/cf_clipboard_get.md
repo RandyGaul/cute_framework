@@ -9,7 +9,7 @@ GitHub: [cute_clipboard.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Returns a UTF-8 string of the clipboard contents.
 
 ```cpp
-CF_API char* CF_CALL cf_clipboard_get();
+char* cf_clipboard_get();
 ```
 
 ## Related Pages

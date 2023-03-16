@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Parses a buffer of kv data for reading.
 
 ```cpp
-CF_API CF_KeyValue* CF_CALL cf_kv_read(const void* data, size_t size, CF_Result* result_out);
+CF_KeyValue* cf_kv_read(const void* data, size_t size, CF_Result* result_out);
 ```
 
 Parameters | Description

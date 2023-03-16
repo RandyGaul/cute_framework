@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 returns a vector according to the sin/cos of `radians`.
 
 ```cpp
-CF_INLINE CF_V2 cf_from_angle(float radians)
+CF_V2 cf_from_angle(float radians)
 ```
 
 ## Related Pages

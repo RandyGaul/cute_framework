@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Returns a new client.
 
 ```cpp
-CF_API CF_Client* CF_CALL cf_make_client(uint16_t port, uint64_t application_id, bool use_ipv6);
+CF_Client* cf_make_client(uint16_t port, uint64_t application_id, bool use_ipv6);
 ```
 
 Parameters | Description

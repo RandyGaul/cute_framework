@@ -9,7 +9,7 @@ GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Initiates a GET request for the specified host (website address) and a given uri.
 
 ```cpp
-CF_API CF_Https* CF_CALL cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, CF_Result* err, bool verify_cert);
+CF_Https* cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, CF_Result* err, bool verify_cert);
 ```
 
 Parameters | Description

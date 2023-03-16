@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Returns an opaque [CF_Threadpool](/multithreading/cf_threadpool.md) pointer.
 
 ```cpp
-CF_API CF_Threadpool* CF_CALL cf_make_threadpool(int thread_count);
+CF_Threadpool* cf_make_threadpool(int thread_count);
 ```
 
 Parameters | Description

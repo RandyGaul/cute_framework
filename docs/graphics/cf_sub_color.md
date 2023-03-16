@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns two color `b` subtracted from color `a`.
 
 ```cpp
-CF_INLINE CF_Color cf_sub_color(CF_Color a, CF_Color b)
+CF_Color cf_sub_color(CF_Color a, CF_Color b)
 ```
 
 Parameters | Description

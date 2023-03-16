@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the origin projected onto the plane.
 
 ```cpp
-CF_INLINE CF_V2 cf_origin(CF_Halfspace h)
+CF_V2 cf_origin(CF_Halfspace h)
 ```
 
 ## Related Pages

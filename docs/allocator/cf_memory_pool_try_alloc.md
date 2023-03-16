@@ -9,7 +9,7 @@ GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Allocates a chunk of memory from the pool. The allocation size was determined by `element_size` in [cf_make_memory_pool](/allocator/cf_make_memory_pool.md).
 
 ```cpp
-CF_API void* CF_CALL cf_memory_pool_try_alloc(CF_MemoryPool* pool);
+void* cf_memory_pool_try_alloc(CF_MemoryPool* pool);
 ```
 
 Parameters | Description

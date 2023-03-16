@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Converts a [CF_Pixel](/graphics/cf_pixel.md) to a color.
 
 ```cpp
-CF_INLINE CF_Color cf_pixel_to_color(CF_Pixel p)
+CF_Color cf_pixel_to_color(CF_Pixel p)
 ```
 
 Parameters | Description

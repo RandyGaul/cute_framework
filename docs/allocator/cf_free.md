@@ -9,7 +9,7 @@ GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Frees a block of memory previously allocated by [cf_alloc](/allocator/cf_alloc.md).
 
 ```cpp
-CF_API void CF_CALL cf_free(void* ptr);
+void cf_free(void* ptr);
 ```
 
 ## Related Pages

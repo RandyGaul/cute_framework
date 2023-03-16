@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns whether or not a sound is paused.
 
 ```cpp
-CF_API bool CF_CALL cf_sound_get_is_paused(CF_Sound sound);
+bool cf_sound_get_is_paused(CF_Sound sound);
 ```
 
 Parameters | Description

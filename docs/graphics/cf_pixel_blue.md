@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Helper function to return a blue [CF_Pixel](/graphics/cf_pixel.md).
 
 ```cpp
-CF_INLINE CF_Pixel cf_pixel_blue()
+CF_Pixel cf_pixel_blue()
 ```
 
 ## Related Pages

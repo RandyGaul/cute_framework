@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if the ray hits a given plane.
 
 ```cpp
-CF_INLINE bool cf_ray_to_halfpsace(CF_Ray A, CF_Halfspace B, CF_Raycast* out)
+bool cf_ray_to_halfpsace(CF_Ray A, CF_Halfspace B, CF_Raycast* out)
 ```
 
 Parameters | Description

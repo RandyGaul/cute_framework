@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a [CF_Pixel](/graphics/cf_pixel.md) made from RGB char inputs.
 
 ```cpp
-CF_INLINE CF_Pixel cf_make_pixel_rgb(uint8_t r, uint8_t g, uint8_t b)
+CF_Pixel cf_make_pixel_rgb(uint8_t r, uint8_t g, uint8_t b)
 ```
 
 Parameters | Description

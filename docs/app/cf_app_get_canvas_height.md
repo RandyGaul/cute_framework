@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Gets the app's canvas height in pixels.
 
 ```cpp
-CF_API int CF_CALL cf_app_get_canvas_height();
+int cf_app_get_canvas_height();
 ```
 
 ## Related Pages

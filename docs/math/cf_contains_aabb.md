@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if `a` is _fully_ contained within `b`.
 
 ```cpp
-CF_INLINE bool cf_contains_aabb(CF_Aabb a, CF_Aabb b)
+bool cf_contains_aabb(CF_Aabb a, CF_Aabb b)
 ```
 
 ## Related Pages

@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Undoes one call to [cf_read_lock](/multithreading/cf_read_lock.md).
 
 ```cpp
-CF_API void CF_CALL cf_read_unlock(CF_ReadWriteLock* rw);
+void cf_read_unlock(CF_ReadWriteLock* rw);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Uses a specific mesh for rendering.
 
 ```cpp
-CF_API void CF_CALL cf_apply_mesh(CF_Mesh mesh);
+void cf_apply_mesh(CF_Mesh mesh);
 ```
 
 ## Remarks

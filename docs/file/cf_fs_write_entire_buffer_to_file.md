@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Writes an entire buffer of data to a file as binary data.
 
 ```cpp
-CF_API CF_Result CF_CALL cf_fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
+CF_Result cf_fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
 ```
 
 Parameters | Description

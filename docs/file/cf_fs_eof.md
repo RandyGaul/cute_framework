@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Check to see if the eof has been found after reading a file opened in read mode.
 
 ```cpp
-CF_API CF_Result CF_CALL cf_fs_eof(CF_File* file);
+CF_Result cf_fs_eof(CF_File* file);
 ```
 
 Parameters | Description

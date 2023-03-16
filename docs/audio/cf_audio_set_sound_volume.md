@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Sets the volume for all sound effects.
 
 ```cpp
-CF_API void CF_CALL cf_audio_set_sound_volume(float volume);
+void cf_audio_set_sound_volume(float volume);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pops and returns the last text clip box.
 
 ```cpp
-CF_API CF_Aabb CF_CALL cf_pop_text_clip_box();
+CF_Aabb cf_pop_text_clip_box();
 ```
 
 ## Related Pages

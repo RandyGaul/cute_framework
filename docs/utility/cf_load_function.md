@@ -9,7 +9,7 @@ GitHub: [cute_symbol.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Loads a function out of a shared library.
 
 ```cpp
-CF_API void* cf_load_function(CF_SharedLibrary* library, const char* function_name);
+void* cf_load_function(CF_SharedLibrary* library, const char* function_name);
 ```
 
 Parameters | Description

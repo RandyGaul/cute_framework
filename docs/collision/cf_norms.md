@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Computes the normals for a polygon.
 
 ```cpp
-CF_API void CF_CALL cf_norms(CF_V2* verts, CF_V2* norms, int count);
+void cf_norms(CF_V2* verts, CF_V2* norms, int count);
 ```
 
 Parameters | Description

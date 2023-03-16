@@ -9,7 +9,7 @@ GitHub: [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Resumes the coroutine.
 
 ```cpp
-CF_API CF_Result CF_CALL cf_coroutine_resume(CF_Coroutine* co);
+CF_Result cf_coroutine_resume(CF_Coroutine* co);
 ```
 
 Parameters | Description

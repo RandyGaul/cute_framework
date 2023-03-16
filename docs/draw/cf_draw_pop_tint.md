@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pops and returns the last tint color.
 
 ```cpp
-CF_API CF_Color CF_CALL cf_draw_pop_tint();
+CF_Color cf_draw_pop_tint();
 ```
 
 ## Remarks

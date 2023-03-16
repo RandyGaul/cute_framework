@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a [CF_Pixel](/graphics/cf_pixel.md) made from integer hex input.
 
 ```cpp
-CF_INLINE CF_Pixel cf_make_pixel_hex(int hex)
+CF_Pixel cf_make_pixel_hex(int hex)
 ```
 
 Parameters | Description

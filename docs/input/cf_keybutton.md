@@ -12,243 +12,243 @@ The keys.
 
 Enum | Description
 --- | ---
-KEY_UNKNOWN | 
-KEY_RETURN | 
-KEY_ESCAPE | 
-KEY_BACKSPACE | 
-KEY_TAB | 
-KEY_SPACE | 
-KEY_EXCLAIM | 
-KEY_QUOTEDBL | 
-KEY_HASH | 
-KEY_PERCENT | 
-KEY_DOLLAR | 
-KEY_AMPERSAND | 
-KEY_QUOTE | 
-KEY_LEFTPAREN | 
-KEY_RIGHTPAREN | 
-KEY_ASTERISK | 
-KEY_PLUS | 
-KEY_COMMA | 
-KEY_MINUS | 
-KEY_PERIOD | 
-KEY_SLASH | 
-KEY_0 | 
-KEY_1 | 
-KEY_2 | 
-KEY_3 | 
-KEY_4 | 
-KEY_5 | 
-KEY_6 | 
-KEY_7 | 
-KEY_8 | 
-KEY_9 | 
-KEY_COLON | 
-KEY_SEMICOLON | 
-KEY_LESS | 
-KEY_EQUALS | 
-KEY_GREATER | 
-KEY_QUESTION | 
-KEY_AT | 
-KEY_LEFTBRACKET | 
-KEY_BACKSLASH | 
-KEY_RIGHTBRACKET | 
-KEY_CARET | 
-KEY_UNDERSCORE | 
-KEY_BACKQUOTE | 
-KEY_A | 
-KEY_B | 
-KEY_C | 
-KEY_D | 
-KEY_E | 
-KEY_F | 
-KEY_G | 
-KEY_H | 
-KEY_I | 
-KEY_J | 
-KEY_K | 
-KEY_L | 
-KEY_M | 
-KEY_N | 
-KEY_O | 
-KEY_P | 
-KEY_Q | 
-KEY_R | 
-KEY_S | 
-KEY_T | 
-KEY_U | 
-KEY_V | 
-KEY_W | 
-KEY_X | 
-KEY_Y | 
-KEY_Z | 
-KEY_CAPSLOCK | 
-KEY_F1 | 
-KEY_F2 | 
-KEY_F3 | 
-KEY_F4 | 
-KEY_F5 | 
-KEY_F6 | 
-KEY_F7 | 
-KEY_F8 | 
-KEY_F9 | 
-KEY_F10 | 
-KEY_F11 | 
-KEY_F12 | 
-KEY_PRINTSCREEN | 
-KEY_SCROLLLOCK | 
-KEY_PAUSE | 
-KEY_INSERT | 
-KEY_HOME | 
-KEY_PAGEUP | 
-KEY_DELETE | 
-KEY_END | 
-KEY_PAGEDOWN | 
-KEY_RIGHT | 
-KEY_LEFT | 
-KEY_DOWN | 
-KEY_UP | 
-KEY_NUMLOCKCLEAR | 
-KEY_KP_DIVIDE | 
-KEY_KP_MULTIPLY | 
-KEY_KP_MINUS | 
-KEY_KP_PLUS | 
-KEY_KP_ENTER | 
-KEY_KP_1 | 
-KEY_KP_2 | 
-KEY_KP_3 | 
-KEY_KP_4 | 
-KEY_KP_5 | 
-KEY_KP_6 | 
-KEY_KP_7 | 
-KEY_KP_8 | 
-KEY_KP_9 | 
-KEY_KP_0 | 
-KEY_KP_PERIOD | 
-KEY_APPLICATION | 
-KEY_POWER | 
-KEY_KP_EQUALS | 
-KEY_F13 | 
-KEY_F14 | 
-KEY_F15 | 
-KEY_F16 | 
-KEY_F17 | 
-KEY_F18 | 
-KEY_F19 | 
-KEY_F20 | 
-KEY_F21 | 
-KEY_F22 | 
-KEY_F23 | 
-KEY_F24 | 
-KEY_HELP | 
-KEY_MENU | 
-KEY_SELECT | 
-KEY_STOP | 
-KEY_AGAIN | 
-KEY_UNDO | 
-KEY_CUT | 
-KEY_COPY | 
-KEY_PASTE | 
-KEY_FIND | 
-KEY_MUTE | 
-KEY_VOLUMEUP | 
-KEY_VOLUMEDOWN | 
-KEY_KP_COMMA | 
-KEY_KP_EQUALSAS400 | 
-KEY_ALTERASE | 
-KEY_SYSREQ | 
-KEY_CANCEL | 
-KEY_CLEAR | 
-KEY_PRIOR | 
-KEY_RETURN2 | 
-KEY_SEPARATOR | 
-KEY_OUT | 
-KEY_OPER | 
-KEY_CLEARAGAIN | 
-KEY_CRSEL | 
-KEY_EXSEL | 
-KEY_KP_00 | 
-KEY_KP_000 | 
-KEY_THOUSANDSSEPARATOR | 
-KEY_DECIMALSEPARATOR | 
-KEY_CURRENCYUNIT | 
-KEY_CURRENCYSUBUNIT | 
-KEY_KP_LEFTPAREN | 
-KEY_KP_RIGHTPAREN | 
-KEY_KP_LEFTBRACE | 
-KEY_KP_RIGHTBRACE | 
-KEY_KP_TAB | 
-KEY_KP_BACKSPACE | 
-KEY_KP_A | 
-KEY_KP_B | 
-KEY_KP_C | 
-KEY_KP_D | 
-KEY_KP_E | 
-KEY_KP_F | 
-KEY_KP_XOR | 
-KEY_KP_POWER | 
-KEY_KP_PERCENT | 
-KEY_KP_LESS | 
-KEY_KP_GREATER | 
-KEY_KP_AMPERSAND | 
-KEY_KP_DBLAMPERSAND | 
-KEY_KP_VERTICALBAR | 
-KEY_KP_DBLVERTICALBAR | 
-KEY_KP_COLON | 
-KEY_KP_HASH | 
-KEY_KP_SPACE | 
-KEY_KP_AT | 
-KEY_KP_EXCLAM | 
-KEY_KP_MEMSTORE | 
-KEY_KP_MEMRECALL | 
-KEY_KP_MEMCLEAR | 
-KEY_KP_MEMADD | 
-KEY_KP_MEMSUBTRACT | 
-KEY_KP_MEMMULTIPLY | 
-KEY_KP_MEMDIVIDE | 
-KEY_KP_PLUSMINUS | 
-KEY_KP_CLEAR | 
-KEY_KP_CLEARENTRY | 
-KEY_KP_BINARY | 
-KEY_KP_OCTAL | 
-KEY_KP_DECIMAL | 
-KEY_KP_HEXADECIMAL | 
-KEY_LCTRL | 
-KEY_LSHIFT | 
-KEY_LALT | 
-KEY_LGUI | 
-KEY_RCTRL | 
-KEY_RSHIFT | 
-KEY_RALT | 
-KEY_RGUI | 
-KEY_MODE | 
-KEY_AUDIONEXT | 
-KEY_AUDIOPREV | 
-KEY_AUDIOSTOP | 
-KEY_AUDIOPLAY | 
-KEY_AUDIOMUTE | 
-KEY_MEDIASELECT | 
-KEY_WWW | 
-KEY_MAIL | 
-KEY_CALCULATOR | 
-KEY_COMPUTER | 
-KEY_AC_SEARCH | 
-KEY_AC_HOME | 
-KEY_AC_BACK | 
-KEY_AC_FORWARD | 
-KEY_AC_STOP | 
-KEY_AC_REFRESH | 
-KEY_AC_BOOKMARKS | 
-KEY_BRIGHTNESSDOWN | 
-KEY_BRIGHTNESSUP | 
-KEY_DISPLAYSWITCH | 
-KEY_KBDILLUMTOGGLE | 
-KEY_KBDILLUMDOWN | 
-KEY_KBDILLUMUP | 
-KEY_EJECT | 
-KEY_SLEEP | 
-KEY_ANY | 
-KEY_COUNT | 
+KEY_UNKNOWN | (null)
+KEY_RETURN | (null)
+KEY_ESCAPE | (null)
+KEY_BACKSPACE | (null)
+KEY_TAB | (null)
+KEY_SPACE | (null)
+KEY_EXCLAIM | (null)
+KEY_QUOTEDBL | (null)
+KEY_HASH | (null)
+KEY_PERCENT | (null)
+KEY_DOLLAR | (null)
+KEY_AMPERSAND | (null)
+KEY_QUOTE | (null)
+KEY_LEFTPAREN | (null)
+KEY_RIGHTPAREN | (null)
+KEY_ASTERISK | (null)
+KEY_PLUS | (null)
+KEY_COMMA | (null)
+KEY_MINUS | (null)
+KEY_PERIOD | (null)
+KEY_SLASH | (null)
+KEY_0 | (null)
+KEY_1 | (null)
+KEY_2 | (null)
+KEY_3 | (null)
+KEY_4 | (null)
+KEY_5 | (null)
+KEY_6 | (null)
+KEY_7 | (null)
+KEY_8 | (null)
+KEY_9 | (null)
+KEY_COLON | (null)
+KEY_SEMICOLON | (null)
+KEY_LESS | (null)
+KEY_EQUALS | (null)
+KEY_GREATER | (null)
+KEY_QUESTION | (null)
+KEY_AT | (null)
+KEY_LEFTBRACKET | (null)
+KEY_BACKSLASH | (null)
+KEY_RIGHTBRACKET | (null)
+KEY_CARET | (null)
+KEY_UNDERSCORE | (null)
+KEY_BACKQUOTE | (null)
+KEY_A | (null)
+KEY_B | (null)
+KEY_C | (null)
+KEY_D | (null)
+KEY_E | (null)
+KEY_F | (null)
+KEY_G | (null)
+KEY_H | (null)
+KEY_I | (null)
+KEY_J | (null)
+KEY_K | (null)
+KEY_L | (null)
+KEY_M | (null)
+KEY_N | (null)
+KEY_O | (null)
+KEY_P | (null)
+KEY_Q | (null)
+KEY_R | (null)
+KEY_S | (null)
+KEY_T | (null)
+KEY_U | (null)
+KEY_V | (null)
+KEY_W | (null)
+KEY_X | (null)
+KEY_Y | (null)
+KEY_Z | (null)
+KEY_CAPSLOCK | (null)
+KEY_F1 | (null)
+KEY_F2 | (null)
+KEY_F3 | (null)
+KEY_F4 | (null)
+KEY_F5 | (null)
+KEY_F6 | (null)
+KEY_F7 | (null)
+KEY_F8 | (null)
+KEY_F9 | (null)
+KEY_F10 | (null)
+KEY_F11 | (null)
+KEY_F12 | (null)
+KEY_PRINTSCREEN | (null)
+KEY_SCROLLLOCK | (null)
+KEY_PAUSE | (null)
+KEY_INSERT | (null)
+KEY_HOME | (null)
+KEY_PAGEUP | (null)
+KEY_DELETE | (null)
+KEY_END | (null)
+KEY_PAGEDOWN | (null)
+KEY_RIGHT | (null)
+KEY_LEFT | (null)
+KEY_DOWN | (null)
+KEY_UP | (null)
+KEY_NUMLOCKCLEAR | (null)
+KEY_KP_DIVIDE | (null)
+KEY_KP_MULTIPLY | (null)
+KEY_KP_MINUS | (null)
+KEY_KP_PLUS | (null)
+KEY_KP_ENTER | (null)
+KEY_KP_1 | (null)
+KEY_KP_2 | (null)
+KEY_KP_3 | (null)
+KEY_KP_4 | (null)
+KEY_KP_5 | (null)
+KEY_KP_6 | (null)
+KEY_KP_7 | (null)
+KEY_KP_8 | (null)
+KEY_KP_9 | (null)
+KEY_KP_0 | (null)
+KEY_KP_PERIOD | (null)
+KEY_APPLICATION | (null)
+KEY_POWER | (null)
+KEY_KP_EQUALS | (null)
+KEY_F13 | (null)
+KEY_F14 | (null)
+KEY_F15 | (null)
+KEY_F16 | (null)
+KEY_F17 | (null)
+KEY_F18 | (null)
+KEY_F19 | (null)
+KEY_F20 | (null)
+KEY_F21 | (null)
+KEY_F22 | (null)
+KEY_F23 | (null)
+KEY_F24 | (null)
+KEY_HELP | (null)
+KEY_MENU | (null)
+KEY_SELECT | (null)
+KEY_STOP | (null)
+KEY_AGAIN | (null)
+KEY_UNDO | (null)
+KEY_CUT | (null)
+KEY_COPY | (null)
+KEY_PASTE | (null)
+KEY_FIND | (null)
+KEY_MUTE | (null)
+KEY_VOLUMEUP | (null)
+KEY_VOLUMEDOWN | (null)
+KEY_KP_COMMA | (null)
+KEY_KP_EQUALSAS400 | (null)
+KEY_ALTERASE | (null)
+KEY_SYSREQ | (null)
+KEY_CANCEL | (null)
+KEY_CLEAR | (null)
+KEY_PRIOR | (null)
+KEY_RETURN2 | (null)
+KEY_SEPARATOR | (null)
+KEY_OUT | (null)
+KEY_OPER | (null)
+KEY_CLEARAGAIN | (null)
+KEY_CRSEL | (null)
+KEY_EXSEL | (null)
+KEY_KP_00 | (null)
+KEY_KP_000 | (null)
+KEY_THOUSANDSSEPARATOR | (null)
+KEY_DECIMALSEPARATOR | (null)
+KEY_CURRENCYUNIT | (null)
+KEY_CURRENCYSUBUNIT | (null)
+KEY_KP_LEFTPAREN | (null)
+KEY_KP_RIGHTPAREN | (null)
+KEY_KP_LEFTBRACE | (null)
+KEY_KP_RIGHTBRACE | (null)
+KEY_KP_TAB | (null)
+KEY_KP_BACKSPACE | (null)
+KEY_KP_A | (null)
+KEY_KP_B | (null)
+KEY_KP_C | (null)
+KEY_KP_D | (null)
+KEY_KP_E | (null)
+KEY_KP_F | (null)
+KEY_KP_XOR | (null)
+KEY_KP_POWER | (null)
+KEY_KP_PERCENT | (null)
+KEY_KP_LESS | (null)
+KEY_KP_GREATER | (null)
+KEY_KP_AMPERSAND | (null)
+KEY_KP_DBLAMPERSAND | (null)
+KEY_KP_VERTICALBAR | (null)
+KEY_KP_DBLVERTICALBAR | (null)
+KEY_KP_COLON | (null)
+KEY_KP_HASH | (null)
+KEY_KP_SPACE | (null)
+KEY_KP_AT | (null)
+KEY_KP_EXCLAM | (null)
+KEY_KP_MEMSTORE | (null)
+KEY_KP_MEMRECALL | (null)
+KEY_KP_MEMCLEAR | (null)
+KEY_KP_MEMADD | (null)
+KEY_KP_MEMSUBTRACT | (null)
+KEY_KP_MEMMULTIPLY | (null)
+KEY_KP_MEMDIVIDE | (null)
+KEY_KP_PLUSMINUS | (null)
+KEY_KP_CLEAR | (null)
+KEY_KP_CLEARENTRY | (null)
+KEY_KP_BINARY | (null)
+KEY_KP_OCTAL | (null)
+KEY_KP_DECIMAL | (null)
+KEY_KP_HEXADECIMAL | (null)
+KEY_LCTRL | (null)
+KEY_LSHIFT | (null)
+KEY_LALT | (null)
+KEY_LGUI | (null)
+KEY_RCTRL | (null)
+KEY_RSHIFT | (null)
+KEY_RALT | (null)
+KEY_RGUI | (null)
+KEY_MODE | (null)
+KEY_AUDIONEXT | (null)
+KEY_AUDIOPREV | (null)
+KEY_AUDIOSTOP | (null)
+KEY_AUDIOPLAY | (null)
+KEY_AUDIOMUTE | (null)
+KEY_MEDIASELECT | (null)
+KEY_WWW | (null)
+KEY_MAIL | (null)
+KEY_CALCULATOR | (null)
+KEY_COMPUTER | (null)
+KEY_AC_SEARCH | (null)
+KEY_AC_HOME | (null)
+KEY_AC_BACK | (null)
+KEY_AC_FORWARD | (null)
+KEY_AC_STOP | (null)
+KEY_AC_REFRESH | (null)
+KEY_AC_BOOKMARKS | (null)
+KEY_BRIGHTNESSDOWN | (null)
+KEY_BRIGHTNESSUP | (null)
+KEY_DISPLAYSWITCH | (null)
+KEY_KBDILLUMTOGGLE | (null)
+KEY_KBDILLUMDOWN | (null)
+KEY_KBDILLUMUP | (null)
+KEY_EJECT | (null)
+KEY_SLEEP | (null)
+KEY_ANY | (null)
+KEY_COUNT | (null)
 
 ## Related Pages
 

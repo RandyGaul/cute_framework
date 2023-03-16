@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Frees a payload packet from a [CF_ServerEvent](/net/cf_serverevent.md).
 
 ```cpp
-CF_API void CF_CALL cf_server_free_packet(CF_Server* server, int client_index, void* data);
+void cf_server_free_packet(CF_Server* server, int client_index, void* data);
 ```
 
 ## Related Pages

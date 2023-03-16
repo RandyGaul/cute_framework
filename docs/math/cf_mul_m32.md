@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the composition of two [CF_M3x2](/math/cf_m3x2.md)s multiplied together.
 
 ```cpp
-CF_INLINE CF_M3x2 cf_mul_m32(CF_M3x2 a, CF_M3x2 b)
+CF_M3x2 cf_mul_m32(CF_M3x2 a, CF_M3x2 b)
 ```
 
 ## Related Pages

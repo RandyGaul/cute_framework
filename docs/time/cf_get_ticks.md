@@ -9,7 +9,7 @@ GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the number of ticks elapsed _right now_ since program start.
 
 ```cpp
-CF_API uint64_t CF_CALL cf_get_ticks();
+uint64_t cf_get_ticks();
 ```
 
 ## Remarks

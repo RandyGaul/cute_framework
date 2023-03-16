@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Draws a quad wireframe.
 
 ```cpp
-CF_API void CF_CALL cf_draw_quad(CF_Aabb bb, float thickness);
+void cf_draw_quad(CF_Aabb bb, float thickness);
 ```
 
 Parameters | Description

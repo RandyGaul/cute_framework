@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Atomically fetches the value at `atomic`.
 
 ```cpp
-CF_API int CF_CALL cf_atomic_get(CF_AtomicInt* atomic);
+int cf_atomic_get(CF_AtomicInt* atomic);
 ```
 
 Parameters | Description

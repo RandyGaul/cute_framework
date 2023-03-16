@@ -9,7 +9,7 @@ GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the machine-dependent number of ticks that occur in one second.
 
 ```cpp
-CF_API uint64_t CF_CALL cf_get_tick_frequency();
+uint64_t cf_get_tick_frequency();
 ```
 
 ## Related Pages

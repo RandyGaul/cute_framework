@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Attempts to decrement the semaphore's counter without sleeping, and returns success if decremented.
 
 ```cpp
-CF_API CF_Result CF_CALL cf_sem_try(CF_Semaphore* semaphore);
+CF_Result cf_sem_try(CF_Semaphore* semaphore);
 ```
 
 Parameters | Description

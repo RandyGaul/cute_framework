@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pushes a text wrap width to use for text drawing.
 
 ```cpp
-CF_API void CF_CALL cf_push_text_wrap_width(float width);
+void cf_push_text_wrap_width(float width);
 ```
 
 Parameters | Description

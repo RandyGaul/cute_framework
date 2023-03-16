@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns a vector inverse-rotated by `a`.
 
 ```cpp
-CF_INLINE CF_V2 cf_mulT_sc_v2(CF_SinCos a, CF_V2 b)
+CF_V2 cf_mulT_sc_v2(CF_SinCos a, CF_V2 b)
 ```
 
 ## Related Pages

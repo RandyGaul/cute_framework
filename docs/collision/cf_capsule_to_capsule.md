@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if two capsules are intersecting.
 
 ```cpp
-CF_API bool CF_CALL cf_capsule_to_capsule(CF_Capsule A, CF_Capsule B);
+bool cf_capsule_to_capsule(CF_Capsule A, CF_Capsule B);
 ```
 
 ## Remarks

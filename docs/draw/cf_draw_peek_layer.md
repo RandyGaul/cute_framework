@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the last draw layer.
 
 ```cpp
-CF_API int CF_CALL cf_draw_peek_layer();
+int cf_draw_peek_layer();
 ```
 
 ## Remarks

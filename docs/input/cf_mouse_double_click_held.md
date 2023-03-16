@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns true while a double click was detected and currently held down.
 
 ```cpp
-CF_API bool CF_CALL cf_mouse_double_click_held(CF_MouseButton button);
+bool cf_mouse_double_click_held(CF_MouseButton button);
 ```
 
 ## Related Pages

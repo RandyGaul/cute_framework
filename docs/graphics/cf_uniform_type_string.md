@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a [CF_UniformType](/graphics/cf_uniformtype.md) converted to a C string.
 
 ```cpp
-CF_INLINE const char* cf_uniform_type_string(CF_UniformType type)
+const char* cf_uniform_type_string(CF_UniformType type)
 ```
 
 ## Related Pages

@@ -9,7 +9,7 @@ GitHub: [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Returns the `udata` pointer from [cf_aabb_tree_insert](/collision/cf_aabb_tree_insert.md).
 
 ```cpp
-CF_API void* CF_CALL cf_aabb_tree_get_udata(CF_AabbTree tree, CF_Leaf leaf);
+void* cf_aabb_tree_get_udata(CF_AabbTree tree, CF_Leaf leaf);
 ```
 
 Parameters | Description

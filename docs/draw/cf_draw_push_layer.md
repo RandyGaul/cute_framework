@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pushes a draw layer.
 
 ```cpp
-CF_API void CF_CALL cf_draw_push_layer(int layer);
+void cf_draw_push_layer(int layer);
 ```
 
 Parameters | Description

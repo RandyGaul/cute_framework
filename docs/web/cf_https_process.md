@@ -9,7 +9,7 @@ GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Processes an HTTPS request.
 
 ```cpp
-CF_API size_t CF_CALL cf_https_process(CF_Https* https);
+size_t cf_https_process(CF_Https* https);
 ```
 
 ## Return Value

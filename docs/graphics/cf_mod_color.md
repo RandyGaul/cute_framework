@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns the component-wise mod of a color.
 
 ```cpp
-CF_INLINE CF_Color cf_mod_color(CF_Color a, float m)
+CF_Color cf_mod_color(CF_Color a, float m)
 ```
 
 Parameters | Description

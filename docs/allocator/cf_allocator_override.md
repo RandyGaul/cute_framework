@@ -9,7 +9,7 @@ GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Overrides the default allocator with a custom one.
 
 ```cpp
-CF_API void CF_CALL cf_allocator_override(CF_Allocator allocator);
+void cf_allocator_override(CF_Allocator allocator);
 ```
 
 ## Remarks

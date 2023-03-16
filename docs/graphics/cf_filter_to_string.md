@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a [CF_Filter](/graphics/cf_filter.md) converted to a C string.
 
 ```cpp
-CF_INLINE const char* cf_filter_to_string(CF_Filter filter)
+const char* cf_filter_to_string(CF_Filter filter)
 ```
 
 ## Related Pages

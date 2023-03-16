@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Frees up a [CF_Canvas](/graphics/cf_canvas.md) created by [cf_make_canvas](/graphics/cf_make_canvas.md).
 
 ```cpp
-CF_API void CF_CALL cf_destroy_canvas(CF_Canvas canvas);
+void cf_destroy_canvas(CF_Canvas canvas);
 ```
 
 ## Related Pages

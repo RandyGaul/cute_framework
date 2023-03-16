@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pops and returns the last text wrap width.
 
 ```cpp
-CF_API float CF_CALL cf_pop_text_wrap_width();
+float cf_pop_text_wrap_width();
 ```
 
 ## Related Pages

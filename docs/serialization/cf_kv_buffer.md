@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Fetches the write buffer pointer containing any data serialized so far.
 
 ```cpp
-CF_API const char* CF_CALL cf_kv_buffer(CF_KeyValue* kv);
+const char* cf_kv_buffer(CF_KeyValue* kv);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Multiplies a vector with a float.
 
 ```cpp
-CF_INLINE CF_V2 cf_mul_v2_f(CF_V2 a, float b)
+CF_V2 cf_mul_v2_f(CF_V2 a, float b)
 ```
 
 ## Related Pages

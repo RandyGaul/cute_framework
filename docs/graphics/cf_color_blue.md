@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Helper function to return a blue [CF_Color](/graphics/cf_color.md).
 
 ```cpp
-CF_INLINE CF_Color cf_color_blue()
+CF_Color cf_color_blue()
 ```
 
 ## Related Pages

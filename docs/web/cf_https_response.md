@@ -9,7 +9,7 @@ GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a [CF_HttpsResponse](/web/cf_httpsresponse.md) from a request.
 
 ```cpp
-CF_API CF_HttpsResponse CF_CALL cf_https_response(CF_Https* https);
+CF_HttpsResponse cf_https_response(CF_Https* https);
 ```
 
 ## Remarks

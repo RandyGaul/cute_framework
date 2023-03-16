@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Returns a [CF_CompareFunction](/graphics/cf_comparefunction.md) converted to a C string.
 
 ```cpp
-CF_INLINE const char* cf_compare_function_string(CF_CompareFunction compare)
+const char* cf_compare_function_string(CF_CompareFunction compare)
 ```
 
 ## Related Pages

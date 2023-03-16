@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns the volume of the sound.
 
 ```cpp
-CF_API float CF_CALL cf_sound_get_volume(CF_Sound sound);
+float cf_sound_get_volume(CF_Sound sound);
 ```
 
 Parameters | Description

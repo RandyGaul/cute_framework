@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Creates a new kv ready for writing.
 
 ```cpp
-CF_API CF_KeyValue* CF_CALL cf_kv_write();
+CF_KeyValue* cf_kv_write();
 ```
 
 ## Return Value

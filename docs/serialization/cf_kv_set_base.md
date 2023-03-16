@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Sets up a base kv.
 
 ```cpp
-CF_API void CF_CALL cf_kv_set_base(CF_KeyValue* kv, CF_KeyValue* base);
+void cf_kv_set_base(CF_KeyValue* kv, CF_KeyValue* base);
 ```
 
 Parameters | Description

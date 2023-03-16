@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Sets the looped state for the sound.
 
 ```cpp
-CF_API void CF_CALL cf_sound_set_is_looped(CF_Sound sound, bool true_for_looped);
+void cf_sound_set_is_looped(CF_Sound sound, bool true_for_looped);
 ```
 
 Parameters | Description

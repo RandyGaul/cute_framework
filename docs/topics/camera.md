@@ -46,3 +46,7 @@ The camera itself can be rotated with [`cf_camera_rotate`](https://randygaul.git
 The camera comes along with [`cf_camera_push`](https://randygaul.github.io/cute_framework/#/camera/cf_camera_push) and [`cf_camera_pop`](https://randygaul.github.io/cute_framework/#/camera/cf_camera_pop). Internally CF has a stack of cameras. Whenever you call push it places a copy of the camera onto the stack. This is great for looking at all the various objects in your game and drawing them at their respective locations. Each time you want to visit a new location you may push the old camera, draw your object, then pop the camera. When popping the previously pushed camera is restored.
 
 This kind of push/pop control is ideal for drawing anything heirarchical, such as parented game objects, enemies around a level, bits of user-interface elements that should move all together, etc.
+
+## Getting the Camera
+
+You may peek at the current camera with [`cf_camera_peek_position`](https://randygaul.github.io/cute_framework/#/camera/cf_camera_peek_position), [`cf_camera_peek_dimensions`](https://randygaul.github.io/cute_framework/#/camera/cf_camera_peek_dimensions), or [`cf_camera_peek_rotation`](https://randygaul.github.io/cute_framework/#/camera/cf_camera_peek_rotation). The values returned are always from the last camera to have been setup by any other camera functions. If [`cf_camera_pop`](https://randygaul.github.io/cute_framework/#/camera/cf_camera_pop) is called the previously used camera will be restored, changing the return values of all the peek functions.

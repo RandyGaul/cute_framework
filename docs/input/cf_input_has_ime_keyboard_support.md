@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns true if the IME (Input Method Editor) for the operating system has keyboard support.
 
 ```cpp
-CF_API bool CF_CALL cf_input_has_ime_keyboard_support();
+bool cf_input_has_ime_keyboard_support();
 ```
 
 ## Remarks

@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the sign (either 1.0f or -1.0f) of `a` float.
 
 ```cpp
-CF_INLINE float cf_sign(float a)
+float cf_sign(float a)
 ```
 
 ## Related Pages

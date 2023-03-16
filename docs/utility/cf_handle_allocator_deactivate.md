@@ -9,7 +9,7 @@ GitHub: [cute_handle_table.h](https://github.com/RandyGaul/cute_framework/blob/m
 Sets the active state of a handle to false.
 
 ```cpp
-CF_API void CF_CALL cf_handle_allocator_deactivate(CF_HandleTable* table, CF_Handle handle);
+void cf_handle_allocator_deactivate(CF_HandleTable* table, CF_Handle handle);
 ```
 
 Parameters | Description

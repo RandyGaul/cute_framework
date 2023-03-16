@@ -9,7 +9,7 @@ GitHub: [cute_kv.h](https://github.com/RandyGaul/cute_framework/blob/master/incl
 Serializes an signed 64-bit value.
 
 ```cpp
-CF_API bool CF_CALL cf_kv_val_int64(CF_KeyValue* kv, int64_t* val);
+bool cf_kv_val_int64(CF_KeyValue* kv, int64_t* val);
 ```
 
 Parameters | Description

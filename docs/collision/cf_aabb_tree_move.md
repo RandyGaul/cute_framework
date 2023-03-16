@@ -9,7 +9,7 @@ GitHub: [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/mast
 An optimized version of [cf_aabb_tree_update_leaf](/collision/cf_aabb_tree_update_leaf.md). Update's a [CF_Leaf](/collision/cf_leaf.md)'s AABB (axis-aligned bounding box) based on `offset` movement.
 
 ```cpp
-CF_API bool CF_CALL cf_aabb_tree_move(CF_AabbTree tree, CF_Leaf leaf, CF_Aabb aabb, CF_V2 offset);
+bool cf_aabb_tree_move(CF_AabbTree tree, CF_Leaf leaf, CF_Aabb aabb, CF_V2 offset);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Turns on or off music looping.
 
 ```cpp
-CF_API void CF_CALL cf_music_set_loop(bool true_to_loop);
+void cf_music_set_loop(bool true_to_loop);
 ```
 
 Parameters | Description

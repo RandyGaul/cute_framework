@@ -9,7 +9,7 @@ GitHub: [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Converts a [CF_CoroutineState](/coroutine/cf_coroutinestate.md) to c-string.
 
 ```cpp
-CF_INLINE const char* cf_coroutine_state_to_string(CF_CoroutineState type)
+const char* cf_coroutine_state_to_string(CF_CoroutineState type)
 ```
 
 Parameters | Description

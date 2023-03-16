@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Converts an RGB [CF_Pixel](/graphics/cf_pixel.md) to an integer.
 
 ```cpp
-CF_INLINE uint32_t cf_pixel_to_int_rgb(CF_Pixel p)
+uint32_t cf_pixel_to_int_rgb(CF_Pixel p)
 ```
 
 Parameters | Description

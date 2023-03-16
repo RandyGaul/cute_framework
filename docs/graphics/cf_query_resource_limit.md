@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Query the device for resource limits.
 
 ```cpp
-CF_API int CF_CALL cf_query_resource_limit(CF_ResourceLimit limit);
+int cf_query_resource_limit(CF_ResourceLimit limit);
 ```
 
 ## Remarks

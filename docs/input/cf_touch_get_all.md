@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns an array of all touch events.
 
 ```cpp
-CF_API int CF_CALL cf_touch_get_all(CF_Touch** touch_all);
+int cf_touch_get_all(CF_Touch** touch_all);
 ```
 
 Parameters | Description

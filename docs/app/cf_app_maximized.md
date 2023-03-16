@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns true while the app is currently maximized.
 
 ```cpp
-CF_API bool CF_CALL cf_app_maximized();
+bool cf_app_maximized();
 ```
 
 ## Related Pages

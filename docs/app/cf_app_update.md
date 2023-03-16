@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Updates the application. Must be called once per frame.
 
 ```cpp
-CF_API void CF_CALL cf_app_update(CF_OnUpdateFn* on_update);
+void cf_app_update(CF_OnUpdateFn* on_update);
 ```
 
 Parameters | Description

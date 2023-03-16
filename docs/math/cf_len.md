@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns length of a vector.
 
 ```cpp
-CF_INLINE float cf_len(CF_V2 a)
+float cf_len(CF_V2 a)
 ```
 
 ## Related Pages

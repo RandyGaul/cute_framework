@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns `a` float clamped between `lo` and `hi`.
 
 ```cpp
-CF_INLINE float cf_clamp(float a, float lo, float hi)
+float cf_clamp(float a, float lo, float hi)
 ```
 
 ## Related Pages

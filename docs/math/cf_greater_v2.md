@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if `a.x > b.y` and `a.y > b.y`.
 
 ```cpp
-CF_INLINE int cf_greater_v2(CF_V2 a, CF_V2 b)
+int cf_greater_v2(CF_V2 a, CF_V2 b)
 ```
 
 ## Related Pages

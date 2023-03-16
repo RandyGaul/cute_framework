@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pops and returns the last font name used.
 
 ```cpp
-CF_API const char* CF_CALL cf_pop_font();
+const char* cf_pop_font();
 ```
 
 ## Related Pages

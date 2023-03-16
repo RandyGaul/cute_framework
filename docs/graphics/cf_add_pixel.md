@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Adds two [CF_Pixel](/graphics/cf_pixel.md)s together.
 
 ```cpp
-CF_INLINE CF_Pixel cf_add_pixel(CF_Pixel a, CF_Pixel b)
+CF_Pixel cf_add_pixel(CF_Pixel a, CF_Pixel b)
 ```
 
 Parameters | Description

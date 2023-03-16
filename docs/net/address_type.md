@@ -12,9 +12,9 @@ Available types of endpoints.
 
 Enum | Description
 --- | ---
-ADDRESS_TYPE_NONE | 
-ADDRESS_TYPE_IPV4 | 
-ADDRESS_TYPE_IPV6 | 
+ADDRESS_TYPE_NONE | (null)
+ADDRESS_TYPE_IPV4 | (null)
+ADDRESS_TYPE_IPV6 | (null)
 
 ## Related Pages
 

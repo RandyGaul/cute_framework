@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the sin-in ease of a float from 0.0f to 1.0f.
 
 ```cpp
-CF_INLINE float cf_sin_in(float x)
+float cf_sin_in(float x)
 ```
 
 ## Remarks

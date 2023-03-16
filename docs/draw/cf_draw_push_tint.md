@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pushes a tint color.
 
 ```cpp
-CF_API void CF_CALL cf_draw_push_tint(CF_Color c);
+void cf_draw_push_tint(CF_Color c);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_a_star.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Get the cost of a grid cell.
 
 ```cpp
-CF_API float CF_CALL cf_a_star_grid_get_cost(CF_AStarGrid grid, int x, int y);
+float cf_a_star_grid_get_cost(CF_AStarGrid grid, int x, int y);
 ```
 
 Parameters | Description

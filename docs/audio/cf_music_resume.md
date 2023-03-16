@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Resumes the music if the music was paused.
 
 ```cpp
-CF_API void CF_CALL cf_music_resume();
+void cf_music_resume();
 ```
 
 ## Related Pages

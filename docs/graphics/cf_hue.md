@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a result color with the luminance and saturation of the base color and the hue of the blend color.
 
 ```cpp
-CF_INLINE CF_Color cf_hue(CF_Color base, CF_Color tint)
+CF_Color cf_hue(CF_Color base, CF_Color tint)
 ```
 
 Parameters | Description

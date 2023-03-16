@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Destroys a [CF_ReadWriteLock](/multithreading/cf_readwritelock.md) made from [cf_make_rw_lock](/multithreading/cf_make_rw_lock.md).
 
 ```cpp
-CF_API void CF_CALL cf_destroy_rw_lock(CF_ReadWriteLock* rw);
+void cf_destroy_rw_lock(CF_ReadWriteLock* rw);
 ```
 
 Parameters | Description

@@ -82,6 +82,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 
 ### Related Reading
 - [Drawing](/topics/drawing.md)
+- [Camera](/topics/camera.md)
 
 
 ## Collision
@@ -347,7 +348,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 
 ### Related Reading
 - [Drawing](/topics/drawing.md)
-- [Drawing](/topics/drawing.md)
+- [Input](/topics/input.md)
 
 
 ## Utility

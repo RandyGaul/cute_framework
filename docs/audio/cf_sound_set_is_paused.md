@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Sets the paused state for the sound.
 
 ```cpp
-CF_API void CF_CALL cf_sound_set_is_paused(CF_Sound sound, bool true_for_paused);
+void cf_sound_set_is_paused(CF_Sound sound, bool true_for_paused);
 ```
 
 Parameters | Description

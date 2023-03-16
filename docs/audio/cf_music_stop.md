@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Stop the music currently playing.
 
 ```cpp
-CF_API void CF_CALL cf_music_stop(float fade_out_time);
+void cf_music_stop(float fade_out_time);
 ```
 
 Parameters | Description

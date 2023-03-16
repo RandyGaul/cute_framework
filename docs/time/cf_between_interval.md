@@ -9,7 +9,7 @@ GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true for one interval of seconds, every other interval.
 
 ```cpp
-CF_API bool CF_CALL cf_between_interval(float interval, float offset);
+bool cf_between_interval(float interval, float offset);
 ```
 
 Parameters | Description

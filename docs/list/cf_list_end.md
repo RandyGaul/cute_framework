@@ -9,7 +9,7 @@ GitHub: [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Returns a pointer to one passed the end of the list (to the dummy node).
 
 ```cpp
-CF_INLINE CF_ListNode* cf_list_end(CF_List* list)
+CF_ListNode* cf_list_end(CF_List* list)
 ```
 
 Parameters | Description

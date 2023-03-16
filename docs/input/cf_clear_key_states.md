@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Zeroes out all internal keyboard state.
 
 ```cpp
-CF_API void CF_CALL cf_clear_key_states();
+void cf_clear_key_states();
 ```
 
 ## Related Pages

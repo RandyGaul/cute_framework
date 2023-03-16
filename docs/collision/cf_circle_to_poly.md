@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if a circle is intersecting a polygon.
 
 ```cpp
-CF_API bool CF_CALL cf_circle_to_poly(CF_Circle A, const CF_Poly* B, const CF_Transform* bx);
+bool cf_circle_to_poly(CF_Circle A, const CF_Poly* B, const CF_Transform* bx);
 ```
 
 ## Remarks

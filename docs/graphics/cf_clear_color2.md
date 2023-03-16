@@ -9,7 +9,7 @@ GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/maste
 Sets the color used when clearing a canvas.
 
 ```cpp
-CF_API void CF_CALL cf_clear_color2(CF_Color color);
+void cf_clear_color2(CF_Color color);
 ```
 
 ## Remarks

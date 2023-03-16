@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Draws the app onto the screen.
 
 ```cpp
-CF_API int CF_CALL cf_app_draw_onto_screen();
+int cf_app_draw_onto_screen();
 ```
 
 ## Return Value

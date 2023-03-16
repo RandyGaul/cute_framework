@@ -9,7 +9,7 @@ GitHub: [cute_a_star.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Set the cost of a grid cell.
 
 ```cpp
-CF_API void CF_CALL cf_a_star_grid_set_cost(CF_AStarGrid grid, int x, int y, float cost);
+void cf_a_star_grid_set_cost(CF_AStarGrid grid, int x, int y, float cost);
 ```
 
 Parameters | Description

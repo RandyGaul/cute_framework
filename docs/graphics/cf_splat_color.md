@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a color where all components are the same value.
 
 ```cpp
-CF_INLINE CF_Color cf_splat_color(float v)
+CF_Color cf_splat_color(float v)
 ```
 
 Parameters | Description

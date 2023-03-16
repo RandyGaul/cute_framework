@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Performs component-wise multiplication between two colors.
 
 ```cpp
-CF_INLINE CF_Color cf_mul_color2(CF_Color a, CF_Color b)
+CF_Color cf_mul_color2(CF_Color a, CF_Color b)
 ```
 
 Parameters | Description

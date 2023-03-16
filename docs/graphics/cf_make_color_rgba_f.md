@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a [CF_Color](/graphics/cf_color.md) from RGBA float inputs.
 
 ```cpp
-CF_INLINE CF_Color cf_make_color_rgba_f(float r, float g, float b, float a)
+CF_Color cf_make_color_rgba_f(float r, float g, float b, float a)
 ```
 
 Parameters | Description

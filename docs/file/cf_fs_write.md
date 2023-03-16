@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Writes bytes from a file opened in write mode.
 
 ```cpp
-CF_API size_t CF_CALL cf_fs_write(CF_File* file, const void* buffer, size_t size);
+size_t cf_fs_write(CF_File* file, const void* buffer, size_t size);
 ```
 
 Parameters | Description

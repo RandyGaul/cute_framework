@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Increments the semaphore's counter and wakes one thread if the counter becomes greater than zero.
 
 ```cpp
-CF_API CF_Result CF_CALL cf_sem_post(CF_Semaphore* semaphore);
+CF_Result cf_sem_post(CF_Semaphore* semaphore);
 ```
 
 Parameters | Description

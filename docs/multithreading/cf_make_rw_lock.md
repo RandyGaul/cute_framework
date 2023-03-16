@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Returns an unlocked [CF_ReadWriteLock](/multithreading/cf_readwritelock.md) lock.
 
 ```cpp
-CF_API CF_ReadWriteLock CF_CALL cf_make_rw_lock();
+CF_ReadWriteLock cf_make_rw_lock();
 ```
 
 ## Remarks

@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a [CF_Color](/graphics/cf_color.md) made from hex-value string, such as "#42f563" or "0x42f563FF".
 
 ```cpp
-CF_INLINE CF_Color cf_make_color_hex_string(const char* hex)
+CF_Color cf_make_color_hex_string(const char* hex)
 ```
 
 Parameters | Description

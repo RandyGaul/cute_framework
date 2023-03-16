@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Use this function to construct an instance of your application window and (optionally) initialize graphics.
 
 ```cpp
-CF_API CF_Result CF_CALL cf_make_app(const char* window_title, int x, int y, int w, int h, int options, const char* argv0);
+CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int options, const char* argv0);
 ```
 
 Parameters | Description

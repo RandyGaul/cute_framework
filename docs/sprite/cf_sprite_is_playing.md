@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns true if `animation` the is currently playing animation.
 
 ```cpp
-CF_INLINE bool cf_sprite_is_playing(CF_Sprite* sprite, const char* animation)
+bool cf_sprite_is_playing(CF_Sprite* sprite, const char* animation)
 ```
 
 Parameters | Description

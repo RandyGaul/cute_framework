@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns true while the app has focus currently.
 
 ```cpp
-CF_API bool CF_CALL cf_app_has_focus();
+bool cf_app_has_focus();
 ```
 
 ## Remarks

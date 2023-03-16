@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Unlocks for writing.
 
 ```cpp
-CF_API void CF_CALL cf_write_unlock(CF_ReadWriteLock* rw);
+void cf_write_unlock(CF_ReadWriteLock* rw);
 ```
 
 Parameters | Description

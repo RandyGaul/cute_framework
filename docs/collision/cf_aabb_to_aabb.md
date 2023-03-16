@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true two Aabb's are intersecting.
 
 ```cpp
-CF_API bool CF_CALL cf_aabb_to_aabb(CF_Aabb A, CF_Aabb B);
+bool cf_aabb_to_aabb(CF_Aabb A, CF_Aabb B);
 ```
 
 ## Remarks

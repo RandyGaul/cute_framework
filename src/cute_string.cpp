@@ -345,6 +345,7 @@ uint64_t cf_stohex(const char* s)
 char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
 {
 	CF_ACANARY(s);
+	if (!s) return NULL;
 	size_t replace_len = CF_STRLEN(replace_me);
 	size_t with_len = CF_STRLEN(with_me);
 	char* find;
@@ -374,7 +375,7 @@ char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
 char* cf_sdedup(char* s, int ch)
 {
 	CF_ACANARY(s);
-	if (!s) return s;
+	if (!s) return NULL;
 	int len = (int)CF_STRLEN(s);
 	int i = 0, j = 1;
 	bool dup = false;
@@ -398,7 +399,7 @@ char* cf_sdedup(char* s, int ch)
 char* cf_serase(char* s, int index, int count)
 {
 	CF_ACANARY(s);
-	if (!s) return s;
+	if (!s) return NULL;
 	if (index < 0) {
 		count += index;
 		index = 0;

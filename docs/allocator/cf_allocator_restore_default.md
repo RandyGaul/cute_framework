@@ -9,7 +9,7 @@ GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Restores the default allocator.
 
 ```cpp
-CF_API void CF_CALL cf_allocator_restore_default();
+void cf_allocator_restore_default();
 ```
 
 ## Remarks

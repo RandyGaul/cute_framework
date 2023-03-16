@@ -9,7 +9,7 @@ GitHub: [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Serializes a tree to a buffer.
 
 ```cpp
-CF_API bool CF_CALL cf_aabb_tree_serialize(const CF_AabbTree tree, void* buffer, size_t size);
+bool cf_aabb_tree_serialize(const CF_AabbTree tree, void* buffer, size_t size);
 ```
 
 Parameters | Description

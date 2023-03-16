@@ -9,7 +9,7 @@ GitHub: [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Removes a node from the list.
 
 ```cpp
-CF_INLINE void cf_list_remove(CF_ListNode* node)
+void cf_list_remove(CF_ListNode* node)
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_clipboard.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Sets a UTF-8 string of the clipboard contents.
 
 ```cpp
-CF_API CF_Result CF_CALL cf_clipboard_set(const char* string);
+CF_Result cf_clipboard_set(const char* string);
 ```
 
 ## Related Pages

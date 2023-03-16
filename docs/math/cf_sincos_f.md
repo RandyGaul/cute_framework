@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns an initialized [CF_SinCos](/math/cf_sincos.md) from `radians`.
 
 ```cpp
-CF_INLINE CF_SinCos cf_sincos_f(float radians)
+CF_SinCos cf_sincos_f(float radians)
 ```
 
 ## Related Pages

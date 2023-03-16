@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Opens a file for reading.
 
 ```cpp
-CF_API CF_File* CF_CALL cf_fs_open_file_for_read(const char* virtual_path);
+CF_File* cf_fs_open_file_for_read(const char* virtual_path);
 ```
 
 Parameters | Description

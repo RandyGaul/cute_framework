@@ -9,7 +9,7 @@ GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master
 Frees up a [CF_Haptic](/haptic/cf_haptic.md) previously created by [cf_haptic_open](/haptic/cf_haptic_open.md).
 
 ```cpp
-CF_API void CF_CALL cf_haptic_close(CF_Haptic* haptic);
+void cf_haptic_close(CF_Haptic* haptic);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/mas
 Free's a packet created by [cf_client_pop_packet](/net/cf_client_pop_packet.md).
 
 ```cpp
-CF_API void CF_CALL cf_client_free_packet(CF_Client* client, void* packet);
+void cf_client_free_packet(CF_Client* client, void* packet);
 ```
 
 ## Related Pages

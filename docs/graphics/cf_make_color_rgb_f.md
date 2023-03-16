@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns a [CF_Color](/graphics/cf_color.md) from RGB float inputs.
 
 ```cpp
-CF_INLINE CF_Color cf_make_color_rgb_f(float r, float g, float b)
+CF_Color cf_make_color_rgb_f(float r, float g, float b)
 ```
 
 Parameters | Description

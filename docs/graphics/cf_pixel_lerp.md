@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Lerps from one [CF_Pixel](/graphics/cf_pixel.md) to another.
 
 ```cpp
-CF_INLINE CF_Pixel cf_pixel_lerp(CF_Pixel a, CF_Pixel b, uint8_t s)
+CF_Pixel cf_pixel_lerp(CF_Pixel a, CF_Pixel b, uint8_t s)
 ```
 
 Parameters | Description

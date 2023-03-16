@@ -9,7 +9,7 @@ GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Records a new `start_time` for a [CF_Stopwatch](/time/cf_stopwatch.md).
 
 ```cpp
-CF_API CF_Stopwatch CF_CALL cf_make_stopwatch();
+CF_Stopwatch cf_make_stopwatch();
 ```
 
 ## Return Value

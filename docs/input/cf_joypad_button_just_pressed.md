@@ -9,7 +9,7 @@ GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Returns true if the button was just pressed.
 
 ```cpp
-CF_API bool CF_CALL cf_joypad_button_just_pressed(CF_Joypad* joypad, CF_JoypadButton button);
+bool cf_joypad_button_just_pressed(CF_Joypad* joypad, CF_JoypadButton button);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Inflates a shape.
 
 ```cpp
-CF_API void CF_CALL cf_inflate(void* shape, CF_ShapeType type, float skin_factor);
+void cf_inflate(void* shape, CF_ShapeType type, float skin_factor);
 ```
 
 Parameters | Description

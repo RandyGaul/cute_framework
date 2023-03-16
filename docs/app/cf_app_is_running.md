@@ -9,7 +9,7 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns true while the app should keep running. Call this as your main loop condition.
 
 ```cpp
-CF_API bool CF_CALL cf_app_is_running();
+bool cf_app_is_running();
 ```
 
 ## Return Value

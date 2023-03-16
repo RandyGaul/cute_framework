@@ -9,7 +9,7 @@ GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Helper function to test a string for equality with a [CF_HttpsString](/web/cf_httpsstring.md).
 
 ```cpp
-CF_INLINE bool cf_https_strcmp(const char* lit, CF_HttpsString string)
+bool cf_https_strcmp(const char* lit, CF_HttpsString string)
 ```
 
 ## Return Value

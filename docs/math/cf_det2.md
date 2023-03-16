@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the 2x2 determinant of a matrix constructed with `a` and `b` as its columns.
 
 ```cpp
-CF_INLINE float cf_det2(CF_V2 a, CF_V2 b)
+float cf_det2(CF_V2 a, CF_V2 b)
 ```
 
 ## Remarks

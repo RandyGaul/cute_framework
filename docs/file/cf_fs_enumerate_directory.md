@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Returns a sorted list of files and directories in the given directory.
 
 ```cpp
-CF_API const char** CF_CALL cf_fs_enumerate_directory(const char* virtual_path);
+const char** cf_fs_enumerate_directory(const char* virtual_path);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if two vectors are parallel within a `tol` tolerance value.
 
 ```cpp
-CF_INLINE bool cf_parallel(CF_V2 a, CF_V2 b, float tol)
+bool cf_parallel(CF_V2 a, CF_V2 b, float tol)
 ```
 
 ## Remarks

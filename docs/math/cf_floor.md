@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the component-wise floor of a vector.
 
 ```cpp
-CF_INLINE CF_V2 cf_floor(CF_V2 a)
+CF_V2 cf_floor(CF_V2 a)
 ```
 
 ## Remarks

@@ -10,6 +10,7 @@
 - [cf_pause_for_ticks](/time/cf_pause_for_ticks.md)
 - [cf_set_fixed_timestep](/time/cf_set_fixed_timestep.md)
 - [cf_set_fixed_timestep_max_updates](/time/cf_set_fixed_timestep_max_updates.md)
+- [cf_set_target_framerate](/time/cf_set_target_framerate.md)
 - [cf_sleep](/time/cf_sleep.md)
 - [cf_stopwatch_microseconds](/time/cf_stopwatch_microseconds.md)
 - [cf_stopwatch_milliseconds](/time/cf_stopwatch_milliseconds.md)

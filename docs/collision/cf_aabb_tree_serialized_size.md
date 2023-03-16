@@ -9,7 +9,7 @@ GitHub: [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Returns the size of the tree if it were serialized into a buffer.
 
 ```cpp
-CF_API size_t CF_CALL cf_aabb_tree_serialized_size(const CF_AabbTree tree);
+size_t cf_aabb_tree_serialized_size(const CF_AabbTree tree);
 ```
 
 Parameters | Description

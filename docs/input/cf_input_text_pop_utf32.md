@@ -9,7 +9,7 @@ GitHub: [cute_input.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Pops a utf8 codepoint off of the input buffer of the application.
 
 ```cpp
-CF_API int CF_CALL cf_input_text_pop_utf32();
+int cf_input_text_pop_utf32();
 ```
 
 ## Remarks

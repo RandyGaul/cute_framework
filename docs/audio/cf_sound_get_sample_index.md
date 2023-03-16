@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Returns the index of the currently playing sample for the sound.
 
 ```cpp
-CF_API uint64_t CF_CALL cf_sound_get_sample_index(CF_Sound sound);
+uint64_t cf_sound_get_sample_index(CF_Sound sound);
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Intializes a list.
 
 ```cpp
-CF_INLINE void cf_list_init(CF_List* list)
+void cf_list_init(CF_List* list)
 ```
 
 Parameters | Description

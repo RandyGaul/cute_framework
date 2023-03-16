@@ -9,7 +9,7 @@ GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Returns the path of the base directory.
 
 ```cpp
-CF_API const char* CF_CALL cf_fs_get_base_directory();
+const char* cf_fs_get_base_directory();
 ```
 
 ## Remarks

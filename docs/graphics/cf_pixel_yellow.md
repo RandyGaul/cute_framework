@@ -9,7 +9,7 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Helper function to return a yellow [CF_Pixel](/graphics/cf_pixel.md).
 
 ```cpp
-CF_INLINE CF_Pixel cf_pixel_yellow()
+CF_Pixel cf_pixel_yellow()
 ```
 
 ## Related Pages

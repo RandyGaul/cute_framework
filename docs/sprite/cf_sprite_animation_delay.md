@@ -9,7 +9,7 @@ GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/
 Sums all the delays of each frame in the animation, and returns the total, in milliseconds.
 
 ```cpp
-CF_INLINE float cf_sprite_animation_delay(CF_Sprite* sprite)
+float cf_sprite_animation_delay(CF_Sprite* sprite)
 ```
 
 Parameters | Description

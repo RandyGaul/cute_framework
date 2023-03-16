@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns true if an Aabb is intersecting a capsule.
 
 ```cpp
-CF_API bool CF_CALL cf_aabb_to_capsule(CF_Aabb A, CF_Capsule B);
+bool cf_aabb_to_capsule(CF_Aabb A, CF_Capsule B);
 ```
 
 ## Remarks

@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Pops and returns the last [CF_RenderState](/graphics/cf_renderstate.md).
 
 ```cpp
-CF_API CF_RenderState CF_CALL cf_render_settings_pop_render_state();
+CF_RenderState cf_render_settings_pop_render_state();
 ```
 
 ## Related Pages

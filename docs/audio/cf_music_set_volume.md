@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Set the volume for music.
 
 ```cpp
-CF_API void CF_CALL cf_music_set_volume(float volume);
+void cf_music_set_volume(float volume);
 ```
 
 Parameters | Description

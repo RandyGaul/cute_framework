@@ -9,6 +9,6 @@ GitHub: [cute_aabb_tree.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Asserts the internal structure is correct. Just for debugging.
 
 ```cpp
-CF_API void CF_CALL cf_aabb_tree_validate(const CF_AabbTree tree);
+void cf_aabb_tree_validate(const CF_AabbTree tree);
 ```
 

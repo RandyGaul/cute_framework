@@ -9,7 +9,7 @@ GitHub: [cute_alloc.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Allocates a block of memory of `size` bytes and returns it.
 
 ```cpp
-CF_API void* CF_CALL cf_alloc(size_t size);
+void* cf_alloc(size_t size);
 ```
 
 ## Related Pages

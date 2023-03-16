@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Fills in `out` with four vertices, one for each corner of `bb`, in counter-clockwise order.
 
 ```cpp
-CF_INLINE void cf_aabb_verts(CF_V2* out, CF_Aabb bb)
+void cf_aabb_verts(CF_V2* out, CF_Aabb bb)
 ```
 
 ## Related Pages

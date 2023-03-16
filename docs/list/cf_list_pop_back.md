@@ -9,7 +9,7 @@ GitHub: [cute_doubly_list.h](https://github.com/RandyGaul/cute_framework/blob/ma
 Pops a node off the back of a list.
 
 ```cpp
-CF_INLINE CF_ListNode* cf_list_pop_back(CF_List* list)
+CF_ListNode* cf_list_pop_back(CF_List* list)
 ```
 
 Parameters | Description

@@ -9,7 +9,7 @@ GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Returns the sign (either 1 or -1) of an int.
 
 ```cpp
-CF_INLINE int cf_sign_int(int a)
+int cf_sign_int(int a)
 ```
 
 ## Related Pages

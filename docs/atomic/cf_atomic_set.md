@@ -9,7 +9,7 @@ GitHub: [cute_multithreading.h](https://github.com/RandyGaul/cute_framework/blob
 Atomically sets `atomic` to `value` and returns the old value from `atomic`.
 
 ```cpp
-CF_API int CF_CALL cf_atomic_set(CF_AtomicInt* atomic, int value);
+int cf_atomic_set(CF_AtomicInt* atomic, int value);
 ```
 
 Parameters | Description
