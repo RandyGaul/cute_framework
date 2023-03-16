@@ -113,6 +113,14 @@ int main(int argc, char* argv[])
 
 The girl sprite in the above sample code contains a few different animations, such as "spin", "hold_side", "ladder", and "idle". Feel free to try them out!
 
+---
+
+Here's an example of drawing a more full looking scene with various sprites. Simply load up a whole bunch of sprite assets and draw them all! The sprite drawing API is designed to efficiently handle many thousands of different sprites on all platforms, all without the need to bake textures into atlases or do any kind of sprite packing yourself.
+
+<p align="center">
+<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/block_man.gif?raw=true>
+</p>
+
 ## Drawing Text
 
 Text has it's own [Text API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=text). Call [`cf_make_font`](https://randygaul.github.io/cute_framework/#/text/cf_make_font) to load up a font file, then call [`cf_draw_text`](https://randygaul.github.io/cute_framework/#/text/cf_draw_text) to draw text onto the screen. Text has a whole bunch of settings, such as:

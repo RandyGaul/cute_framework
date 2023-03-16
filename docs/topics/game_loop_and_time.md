@@ -2,7 +2,7 @@
 
 <br>
 
-The [`Time API`](https://randygaul.github.io/cute_framework/#/api_reference?id=time) is all about updating the game and controlling the game's main loop. There are two styles: variable timestep (default) and fixed-timestemp. If you're a beginner then read just the next section. The rest of the document covers more advanced use cases.
+The [`Time API`](https://randygaul.github.io/cute_framework/#/api_reference?id=time) is all about updating the game and controlling the game's main loop. There are two styles: variable timestep (default) and fixed-timestemp. If you're a beginner then read just the next section (and the [Time Utilities](https://randygaul.github.io/cute_framework/#/topics/game_loop_and_time?id=time-utilities) section. The rest of the document covers more advanced use cases.
 
 ## Variable Timestep
 
