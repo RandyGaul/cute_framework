@@ -123,7 +123,7 @@ CF_API extern float CF_PAUSE_TIME_LEFT;
  * @remarks  This callback can be used to implement your main-loop, and is generally used to update your gameplay/logic/physics.
  *           Usually rendering will occur outside of this callback one time per frame. This callback is only really useful when
  *           using a fixed timestep (see `cf_set_fixed_timestep`), as multiple calls can occur given a single frame's update.
- * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT
+ * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT cf_set_target_framerate
  */
 typedef void (CF_OnUpdateFn)();
 
@@ -135,7 +135,7 @@ typedef void (CF_OnUpdateFn)();
  * @remarks  Often times a fixed-timestep can occur multiple times in one frame. In this case, `CF_OnUpdateFn` will be called once
  *           per update to simulate a fixed-timestep (see `CF_OnUpdateFn` and `cf_update_time`). The max number of updates possible 
  *           is clamped below `cf_set_fixed_timestep_max_updates`.
- * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT
+ * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT cf_set_target_framerate
  */
 CF_API void CF_CALL cf_set_fixed_timestep(int frames_per_second);
 
@@ -147,9 +147,19 @@ CF_API void CF_CALL cf_set_fixed_timestep(int frames_per_second);
  * @remarks  Often times a fixed-timestep can occur multiple times in one frame. In this case, `CF_OnUpdateFn` will be called once
  *           per update to simulate a fixed-timestep (see `CF_OnUpdateFn` and `cf_update_time`). The max number of updates possible 
  *           is clamped below `max_updates`.
- * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT
+ * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT cf_set_target_framerate
  */
 CF_API void CF_CALL cf_set_fixed_timestep_max_updates(int max_updates);
+
+/**
+ * @function cf_set_target_framerate
+ * @category time
+ * @brief    Attempts to run the app at a certain frequency.
+ * @param    frames_per_second  Target frequency to run the app.
+ * @remarks  Sleeps the app if you're updating too fast. This is sort of like vsync. Off by default. Set to -1 to turn off.
+ * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT cf_set_target_framerate
+ */
+CF_API void CF_CALL cf_set_target_framerate(int frames_per_second);
 
 /**
  * @function cf_update_time

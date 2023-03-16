@@ -328,6 +328,18 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [Strings](/topics/strings.md)
 
 
+## Time
+
+### Functions
+[](time/functions.md ':include')
+
+### Structs
+[](time/structs.md ':include')
+
+### Related Reading
+- [Game Loop and Time](/topics/game_loop_and_time.md)
+
+
 ## Text
 
 ### Functions

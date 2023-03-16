@@ -52,6 +52,7 @@ uint64_t ticks_per_second;
 uint64_t ticks_per_timestep;
 int max_updates = 5;
 uint64_t unsimulated_ticks;
+int target_framerate = -1;
 
 static void s_init()
 {
@@ -77,6 +78,11 @@ void cf_set_fixed_timestep_max_updates(int max_updates)
 	::max_updates = max(1, max_updates);
 }
 
+void cf_set_target_framerate(int frames_per_second)
+{
+	target_framerate = frames_per_second;
+}
+
 static void s_step(uint64_t delta)
 {
 	CF_PREV_TICKS = CF_TICKS;
@@ -89,7 +95,6 @@ void cf_update_time(CF_OnUpdateFn* on_update)
 {
 	if (ticks_per_timestep) {
 		// Fixed timestep (opt-in only).
-		// Related reading: https://gafferongames.com/post/fix_your_timestep/
 
 		// Accumulate unsimulated time.
 		uint64_t now = cf_get_ticks();
@@ -99,8 +104,9 @@ void cf_update_time(CF_OnUpdateFn* on_update)
 		unsimulated_ticks += delta;
 
 		// Sleep if the app is running too fast.
-		while (unsimulated_ticks < ticks_per_timestep) {
-			int milliseconds = (int)((ticks_per_timestep - unsimulated_ticks) * (inv_freq * 1000));
+		uint64_t target_ticks = (uint64_t)((1.0 / target_framerate) * freq);
+		while (target_framerate != -1 && unsimulated_ticks < target_ticks) {
+			int milliseconds = (int)((target_ticks - unsimulated_ticks) * (inv_freq * 1000));
 			cf_sleep(milliseconds);
 
 			// Record how much we slept by.
