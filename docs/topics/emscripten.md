@@ -1,5 +1,9 @@
 [](../header.md ':include')
 
+<br>
+
+!> This page is marked as _incomplete_, and will be refined for v1.0 launch of CF.
+
 # Emscripten Builds
 
 Make sure [emscripten is installed](https://emscripten.org/docs/getting_started/downloads.html) on your machine. If on Windows go ahead and run the `emscripten.cmd` file. This will build libcute.a. Though if you're using something Ninja the commands will be slightly different, as you'll need to consult [emscripten docs](https://emscripten.org/docs/compiling/Building-Projects.html#integrating-with-a-build-system).

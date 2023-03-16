@@ -135,6 +135,8 @@ v2* b_ptr = vecs.try_get(1);
 
 !> **Important Note** The `get` function will return by value. If a particular key does not exist the returned value is simply a zero'd out element. If instead you want to know if a particular element was found or not, use `try_get` to return a pointer to an element. `NULL` is returned if a particular key is not found.
 
+!> **Important Note** Since the table itself grows dynamically, values _may not_ store pointers to themselves or other values. All values are stored as POD (plain-old data), and will be `memcpy`'d or `realloc`'d around as necessary.
+
 ## Linked List
 
 The [`Linked List API`](https://randygaul.github.io/cute_framework/#/api_reference?id=list) in C++ implements a [doubly-linked list](https://en.wikipedia.org/wiki/Doubly_linked_list). Lniked lists have really fallen out of favor in recent years due to advancements in hardware, but, are still sometimes quite useful for keeping lists of objects.
