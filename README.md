@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 
 The [documentation website](https://randygaul.github.io/cute_framework/#/) is the go-to place for finding all the resources available. Here are some quick-links to get you started:
 
-- [Topics and Tutorials](https://randygaul.github.io/cute_framework/#/topics_and_tutorials)
+- [Topics and Tutorials](https://randygaul.github.io/cute_framework/#/topics/)
 - [Samples](https://randygaul.github.io/cute_framework/#/samples)
 - [API Reference](https://randygaul.github.io/cute_framework/#/api_reference)
 
