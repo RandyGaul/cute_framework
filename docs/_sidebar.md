@@ -1,9 +1,9 @@
 <!-- markdownlint-disable-next-line first-line-heading -->
 - [Getting Started](getting_started)
-- [Topics and Tutorials](topics_and_tutorials)
+- [Topics and Tutorials](/topics/)
 - [Samples](samples)
 - [Community / Ask for Help](community_ask_for_help)
-- [API Reference](api_reference)
+- [API Reference](/api_reference/)
 - **Links**
 
 <p><a href="https://github.com/RandyGaul/cute_framework/"><img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/github.svg?raw=true />GitHub</a>

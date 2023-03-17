@@ -1,14 +1,14 @@
-[](/header.md ':include')
+[](../header.md ':include')
 
 <br>
 
 To learn about a specific area in Cute Framework visit one of these topic articles. Each article introduces a major feature of Cute Framework and provides an overview on how to piece things together for making games. These are listed the **recommended reading order**.
 
-* [Application Window](/topics/application_window.md)
-* [Game Loop and Time](/topics/game_loop_and_time.md)
-* [Drawing](/topics/drawing.md)
-* [Camera](/topics/camera.md)
-* [Dear ImGui](/topics/dear_imgui.md)
+1. [Application Window](/topics/application_window.md)
+2. [Game Loop and Time](/topics/game_loop_and_time.md)
+3. [Drawing](/topics/drawing.md)
+4. [Camera](/topics/camera.md)
+5. [Dear ImGui](/topics/dear_imgui.md)
 
 ---
 
