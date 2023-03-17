@@ -62,6 +62,17 @@ You can of course create your own versions of these "generic" functions if you w
 
 [`CF_Manifold`](https://randygaul.github.io/cute_framework/#/collision/cf_manifold) is a special struct containing all the information necessary to separate shapes that are touching. To generate a manifold call one fo the functions `cf_***_to_***_manifold`. The manifold will contain 1 or 2 vertices if the shapes intersected, and 0 if the shapes do not intersect.
 
+```cpp
+struct CF_Manifold
+{
+	int count;               // The number of points in the manifold (0, 1 or 2).
+	float depths[2];         // The collision depth of each point in the manifold.
+	CF_V2 contact_points[2]; // Up to two points on the contact plane that suff-
+	                         // iciently (and minimally) describe how two shapes touch.
+	CF_V2 n                  // Always points from shape A to shape B.;
+};
+```
+
 ## Raycasting
 
 A mathemetical ray is like a line, starting at one point and extending in a single direction infinitely. In CF rays are not of infinite length. An infinite ray wastes computational resources when used in games. Instead, a ray is defined as a line segment with a start and end position.
