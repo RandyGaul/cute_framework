@@ -14,7 +14,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../allocator/structs.md ':include')
 
 ### Related Reading
-- [Allocator](../topics/allocator.md)
+- [Allocator](/topics/allocator.md)
 
 
 ## App
@@ -29,8 +29,8 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../app/enums.md ':include')
 
 ### Related Reading
-- [Application Window](../topics/application_window.md)
-- [Game Loop and Time](../topics/game_loop_and_time.md)
+- [Application Window](topics/application_window.md)
+- [Game Loop and Time](topics/game_loop_and_time.md)
 
 
 ## Array
@@ -39,7 +39,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../array/functions.md ':include')
 
 ### Related Reading
-- [Data Structures](../topics/data_structures.md)
+- [Data Structures](topics/data_structures.md)
 
 
 ## Atomics
@@ -51,7 +51,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../atomic/structs.md ':include')
 
 ### Related Reading
-- [Atomics](../topics/atomics.md)
+- [Atomics](topics/atomics.md)
 
 
 ## Audio
@@ -63,7 +63,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../audio/structs.md ':include')
 
 ### Related Reading
-- [Audio](../topics/audio.md)
+- [Audio](topics/audio.md)
 
 
 ## Base64
@@ -72,7 +72,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../base64/functions.md ':include')
 
 ### Related Reading
-- [Serialization](../topics/serialization.md)
+- [Serialization](topics/serialization.md)
 
 
 ## Camera
@@ -81,8 +81,8 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../camera/functions.md ':include')
 
 ### Related Reading
-- [Drawing](../topics/drawing.md)
-- [Camera](../topics/camera.md)
+- [Drawing](topics/drawing.md)
+- [Camera](topics/camera.md)
 
 
 ## Collision
@@ -97,7 +97,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../collision/enums.md ':include')
 
 ### Related Reading
-- [Collision](../topics/collision.md)
+- [Collision](topics/collision.md)
 
 
 ## Coroutine
@@ -112,7 +112,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../coroutine/enums.md ':include')
 
 ### Related Reading
-- [Coroutines](../topics/coroutines.md)
+- [Coroutines](topics/coroutines.md)
 
 
 ## CPU
@@ -130,7 +130,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../draw/structs.md ':include')
 
 ### Related Reading
-- [Drawing](../topics/drawing.md)
+- [Drawing](topics/drawing.md)
 
 
 ## File
@@ -145,7 +145,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../file/enums.md ':include')
 
 ### Related Reading
-- [Virtual File System](../topics/virtual_file_system.md)
+- [Virtual File System](topics/virtual_file_system.md)
 
 
 ## Graphics
@@ -160,7 +160,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../graphics/enums.md ':include')
 
 ### Related Reading
-- [Low Level Graphics](../topics/low_level_graphics.md)
+- [Low Level Graphics](topics/low_level_graphics.md)
 
 
 ## Haptic
@@ -175,7 +175,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../haptic/enums.md ':include')
 
 ### Related Reading
-- [Input](../topics/input.md)
+- [Input](topics/input.md)
 
 
 ## Hash
@@ -184,7 +184,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../hash/functions.md ':include')
 
 ### Related Reading
-- [Data Structures](../topics/data_structures.md)
+- [Data Structures](topics/data_structures.md)
 
 
 ## Input
@@ -199,7 +199,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../input/enums.md ':include')
 
 ### Related Reading
-- [Input](../topics/input.md)
+- [Input](topics/input.md)
 
 
 ## List
@@ -211,7 +211,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../list/structs.md ':include')
 
 ### Related Reading
-- [Data Structures](../topics/data_structures.md)
+- [Data Structures](topics/data_structures.md)
 
 
 ## Math
@@ -226,7 +226,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../math/enums.md ':include')
 
 ### Related Reading
-- [Collision](../topics/collision.md)
+- [Collision](topics/collision.md)
 
 
 ## Multithreading
@@ -238,8 +238,8 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../multithreading/structs.md ':include')
 
 ### Related Reading
-- [Atomics](../topics/atomics.md)
-- [Multithreading](../topics/multithreading.md)
+- [Atomics](topics/atomics.md)
+- [Multithreading](topics/multithreading.md)
 
 
 ## Net
@@ -254,7 +254,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../net/enums.md ':include')
 
 ### Related Reading
-- [Networking](../topics/Networking.md)
+- [Networking](topics/Networking.md)
 
 
 ## Path
@@ -263,7 +263,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../path/functions.md ':include')
 
 ### Related Reading
-- [Virtual File System](../topics/virtual_file_system.md)
+- [Virtual File System](topics/virtual_file_system.md)
 
 
 ## Pathfinding
@@ -275,7 +275,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../pathfinding/structs.md ':include')
 
 ### Related Reading
-- [Path Finding](../topics/pathfinding.md)
+- [Path Finding](topics/pathfinding.md)
 
 
 ## Random
@@ -287,7 +287,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../random/structs.md ':include')
 
 ### Related Reading
-- [Random Numbers](../topics/random_numbers.md)
+- [Random Numbers](topics/random_numbers.md)
 
 
 ## Serialization
@@ -302,7 +302,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../serialization/enums.md ':include')
 
 ### Related Reading
-- [Serialization](../topics/serialization.md)
+- [Serialization](topics/serialization.md)
 
 
 ## Sprite
@@ -317,7 +317,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../sprite/enums.md ':include')
 
 ### Related Reading
-- [Drawing](../topics/drawing.md)
+- [Drawing](topics/drawing.md)
 
 
 ## String
@@ -326,7 +326,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../string/functions.md ':include')
 
 ### Related Reading
-- [Strings](../topics/strings.md)
+- [Strings](topics/strings.md)
 
 
 ## Time
@@ -338,7 +338,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../time/structs.md ':include')
 
 ### Related Reading
-- [Game Loop and Time](../topics/game_loop_and_time.md)
+- [Game Loop and Time](topics/game_loop_and_time.md)
 
 
 ## Text
@@ -347,8 +347,8 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../text/functions.md ':include')
 
 ### Related Reading
-- [Drawing](../topics/drawing.md)
-- [Input](../topics/input.md)
+- [Drawing](topics/drawing.md)
+- [Input](topics/input.md)
 
 
 ## Utility
@@ -375,4 +375,4 @@ This is a list of all functions in Cute Framework organized by categories. This 
 [](../web/enums.md ':include')
 
 ### Related Reading
-- [Networking](../topics/networking.md)
+- [Networking](topics/networking.md)
