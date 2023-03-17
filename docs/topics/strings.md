@@ -137,3 +137,7 @@ while (utf8.next()) {
     DoSomethingWithCodepoint(utf8.codepoint);
 }
 ```
+
+## Paths
+
+TODO - Document the string path API : https://randygaul.github.io/cute_framework/#/api_reference/?id=path
