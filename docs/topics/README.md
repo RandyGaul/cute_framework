@@ -6,6 +6,7 @@ To learn about a specific area in Cute Framework visit one of these topic articl
 
 1. [Application Window](/topics/application_window.md)
 2. [Game Loop and Time](/topics/game_loop_and_time.md)
+3. [File I/O](/topics/file_io.md)
 3. [Drawing](/topics/drawing.md)
 4. [Camera](/topics/camera.md)
 5. [Dear ImGui](/topics/dear_imgui.md)

@@ -310,6 +310,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 			cs_spawn_mix_thread();
 			app->spawned_mix_thread = true;
 	#endif // CF_EMSCRIPTEN
+			app->audio_needs_updates = true;
 		} else {
 			CF_ASSERT(false);
 		}
@@ -327,6 +328,10 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		// Put the base directory (the path to the exe) onto the file system search path.
 		cf_fs_mount(cf_fs_get_base_directory(), "", true);
 	}
+
+	// Initialize a default ECS world.
+	app->world = cf_make_world();
+	app->worlds.add(app->world);
 
 	return cf_result_success();
 }
@@ -358,9 +363,6 @@ void cf_destroy_app()
 	SDL_Quit();
 	destroy_threadpool(app->threadpool);
 	cs_shutdown();
-	int schema_count = app->entity_parsed_schemas.count();
-	CF_KeyValue** schemas = app->entity_parsed_schemas.items();
-	for (int i = 0; i < schema_count; ++i) cf_kv_destroy(schemas[i]);
 	app->~CF_App();
 	CF_FREE(app);
 	cf_fs_destroy();
@@ -379,7 +381,7 @@ void cf_app_signal_shutdown()
 static void s_on_update()
 {
 	cf_pump_input_msgs();
-	if (app->audio_system) {
+	if (app->audio_needs_updates) {
 		cs_update(DELTA_TIME);
 	}
 	if (app->user_on_update) app->user_on_update();

@@ -109,7 +109,6 @@ set(CF_SRCS
 	src/cute_alloc.cpp
 	src/cute_result.cpp
 
-	src/internal/cute_ecs_internal.cpp
 	src/internal/cute_dx11.cpp
 
 	libraries/cimgui/imgui/backends/imgui_impl_sdl.cpp

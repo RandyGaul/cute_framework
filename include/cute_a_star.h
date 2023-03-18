@@ -96,14 +96,11 @@ CF_API void CF_CALL cf_destroy_a_star_grid(CF_AStarGrid grid);
  */
 typedef struct CF_AStarOutput
 {
-	/* @member The number of elements in the `x` array. */
-	int x_count;
+	/* @member The number of elements in the `x` and `y` arrays. */
+	int count;
 
 	/* @member An array of x-coordinates, one for each (x, y) coordinate in the calculated path. */
 	dyna int* x;
-
-	/* @member The number of elements in the `y` array. */
-	int y_count;
 
 	/* @member An array of y-coordinates, one for each (x, y) coordinate in the calculated path. */
 	dyna int* y;

@@ -129,9 +129,8 @@ bool cf_a_star(CF_AStarGrid grid_handle, int start_x, int start_y, int end_x, in
 		if (out) {
 			apush(out_x, s.x);
 			apush(out_y, s.y);
-			out->x_count = 1;
+			out->count = 1;
 			out->x = out_x;
-			out->y_count = 1;
 			out->y = out_y;
 		}
 		return true;
@@ -162,8 +161,8 @@ bool cf_a_star(CF_AStarGrid grid_handle, int start_x, int start_y, int end_x, in
 
 				arev(out_x);
 				arev(out_y);
-				out->x_count = acount(out_x);
-				out->y_count = acount(out_y);
+				out->count = acount(out_x);
+				CF_ASSERT(acount(out_x) == acount(out_y));
 			}
 
 			return true;

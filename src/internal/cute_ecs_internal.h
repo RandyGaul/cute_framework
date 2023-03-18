@@ -49,9 +49,9 @@ struct CF_SystemInternal
 
 	const char* name = { 0 };
 	void* udata = NULL;
-	void (*pre_update_fn)(float dt, void* udata) = NULL;
+	void (*pre_update_fn)(void* udata) = NULL;
 	CF_SystemUpdateFn* update_fn = NULL;
-	void (*post_update_fn)(float dt, void* udata) = NULL;
+	void (*post_update_fn)(void* udata) = NULL;
 	Cute::Array<const char*> component_type_tuple;
 };
 
@@ -81,12 +81,10 @@ struct CF_EntityConfig
 	{
 		entity_type = NULL;
 		component_types.clear();
-		schema.clear();
 	}
 
 	const char* entity_type = NULL;
 	Cute::Array<const char*> component_types;
-	Cute::String schema;
 };
 
 using CF_EntityType = uint16_t;

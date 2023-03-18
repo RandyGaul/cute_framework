@@ -35,7 +35,7 @@ CF_AStarOutput out;
 bool allow_diagonal_movement = true;
 bool valid = cf_a_star(grid, start_x, start_y, end_x, end_y, allow_diagonal_movement, out);
 if (valid) {
-	for (int i = 0; i < out.x_count; ++i) {
+	for (int i = 0; i < out.count; ++i) {
 		int x = out.x[i];
 		int y = out.y[i];
 		// ...

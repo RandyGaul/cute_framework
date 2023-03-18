@@ -2,7 +2,7 @@
 
 <br>
 
-CF comes with a full-featured [`Collision API`](https://randygaul.github.io/cute_framework/#/api_reference?id=collision).b Here's a quick list of the features available:
+CF comes with a full-featured [`Collision API`](https://randygaul.github.io/cute_framework/#/api_reference?id=collision). Here's a quick list of the features available:
 
 - Shapes (circle, capsule, Aabb, ray, poly)
 - Boolean collision functions (simply yes/no hit tests)

@@ -104,6 +104,7 @@ struct CF_App
 	sg_imgui_t sg_imgui;
 	uint64_t default_image_id = CF_PNG_ID_RANGE_LO;
 	bool vsync = false;
+	bool audio_needs_updates = false;
 
 	// Input stuff.
 	Cute::Array<char> ime_composition;
@@ -131,6 +132,7 @@ struct CF_App
 	CF_ComponentConfig component_config_builder;
 	Cute::Map<const char*, CF_ComponentConfig> component_configs;
 
+	CF_World world;
 	Cute::Array<CF_World> worlds;
 
 	// Font stuff.

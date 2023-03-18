@@ -110,7 +110,7 @@ int main(int argc, char* argv[])
 		CF_TEST_CASE_ENTRY(test_kv_read_delta_object),
 		CF_TEST_CASE_ENTRY(test_audio_load_synchronous),
 		CF_TEST_CASE_ENTRY(test_ecs_octorok),
-		CF_TEST_CASE_ENTRY(test_ecs_no_kv),
+		CF_TEST_CASE_ENTRY(test_ecs_basic),
 		CF_TEST_CASE_ENTRY(test_array_list_init),
 		CF_TEST_CASE_ENTRY(test_aseprite_make_destroy),
 		CF_TEST_CASE_ENTRY(test_png_cache),

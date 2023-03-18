@@ -3,6 +3,7 @@
 **Getting Started Series**
 - [Application Window](/topics/application_window.md)
 - [Game Loop and Time](/topics/game_loop_and_time.md)
+- [File I/O](/topics/file_io.md)
 - [Drawing](/topics/drawing.md)
 - [Camera](/topics/camera.md)
 - [Dear ImGui](/topics/dear_imgui.md)
