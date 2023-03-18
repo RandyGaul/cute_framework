@@ -6,7 +6,7 @@
 - [File I/O](/topics/file_io.md)
 - [Drawing](/topics/drawing.md)
 - [Camera](/topics/camera.md)
-- [Dear ImGui](/topics/dear_imgui.md)
+- [Debug/Tools UI](/topics/dear_imgui.md)
 ---
 **Selected Topics**
 - [Allocators](/topics/allocator.md)
