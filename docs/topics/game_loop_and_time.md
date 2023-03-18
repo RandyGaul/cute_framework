@@ -2,7 +2,9 @@
 
 <br>
 
-The [`Time API`](https://randygaul.github.io/cute_framework/#/api_reference?id=time) is all about updating the game and controlling the game's main loop. There are two styles: variable timestep (default) and fixed-timestemp. If you're a beginner then read just the next section (and the [Time Utilities](https://randygaul.github.io/cute_framework/#/topics/game_loop_and_time?id=time-utilities) section. The rest of the document covers more advanced use cases.
+The [`Time API`](https://randygaul.github.io/cute_framework/#/api_reference?id=time) is all about updating the game and controlling the game's main loop. There are two styles: variable timestep (default) and fixed-timestemp. If you're a beginner then read just the next section on Variable Timestep (and the [Time Utilities](https://randygaul.github.io/cute_framework/#/topics/game_loop_and_time?id=time-utilities) section). The rest of the document covers more advanced use cases.
+
+For beginners: You're just going to want to read the [Variable Timestep](https://randygaul.github.io/cute_framework/#/topics/game_loop_and_time?id=variable-timestep) and the [Time Utilities](https://randygaul.github.io/cute_framework/#/topics/game_loop_and_time?id=time-utilities) section. The other sections are for the advanced use-case [Fixed Timestep](https://randygaul.github.io/cute_framework/#/topics/game_loop_and_time?id=fixed-timestep).
 
 ## Variable Timestep
 
@@ -40,7 +42,7 @@ The time-slice is usually a small value, such as (1/60) or 0.0167. We can use th
 
 ?> **Note**  that the delta time for a given frame can't actually be computed, since before we simulate the frame we won't know exactly how long it takes. As a workaround employed by basically all games in existence, we can use the previous frame's delta time for the current frame, assuming it will last roughly as long.
 
-Usually you want to choose a variable timestep if you don't need any _determinism_ in your game, or if you aren't running any kind of _physics simulation_. In CF variable timestep is used by default when you call [`cf_app_update`](https://randygaul.github.io/cute_framework/#/app/cf_app_update) and pass `NULL` in as the parameter.
+Usually you want to choose a variable timestep if you don't need any [_determinism_](https://randygaul.github.io/cute_framework/#/topics/game_loop_and_time?id=determinism) in your game, or if you aren't running any kind of _physics simulation_. In CF variable timestep is used by default when you call [`cf_app_update`](https://randygaul.github.io/cute_framework/#/app/cf_app_update) and pass `NULL` in as the parameter.
 
 ## Fixed Timestep
 
@@ -107,4 +109,10 @@ if (cf_on_interval(1.0f)) {
 }
 ```
 
-Similarly, [`cf_between_interval`](https://randygaul.github.io/cute_framework/#/time/cf_between_interval) will return true for full interval, then false for one full interval, alternating.
+Similarly, [`cf_between_interval`](https://randygaul.github.io/cute_framework/#/time/cf_between_interval) will return true for the full interval, then false for one full interval, alternating.
+
+```cpp
+if (cf_between_interval(1.0f)) {
+	// True for one second, then false for one second.
+}
+```

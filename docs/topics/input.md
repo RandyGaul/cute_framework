@@ -9,6 +9,7 @@ There are four main ways to gather input: keyboard, mouse, touch, input text, an
 - Touch.
 - Input text -- Different than the keyboard. Stores characters coming from the Operating System about actual text the user is inputting. This can be multiple characters in a single frame, or characters created from multiple keystrokes.
 - IME ([input method editor](https://learn.microsoft.com/en-us/windows/apps/design/input/input-method-editors)) -- An operating system feature to transform multiple keystrokes into an editable text composition. For example, this is used when converting pinyin (typed english characters) into Mandarin (actual Chinese glyphs).
+- Joypad.
 
 ## Keyboard
 
@@ -154,3 +155,7 @@ We have access to the operating system's IME through [`CF_ImeComposition`](https
 You can check for keyboard support in the IME with [`cf_input_has_ime_keyboard_support`](https://randygaul.github.io/cute_framework/#/input/cf_input_has_ime_keyboard_support), and know if the operating system is currently showing an IME keyboard on screen with [`cf_input_is_ime_keyboard_shown`](https://randygaul.github.io/cute_framework/#/input/cf_input_is_ime_keyboard_shown).
 
 To tell the operating system where the IME should actually be on screen (as in, where the input rect is located) you can call [`cf_input_set_ime_rect`](https://randygaul.github.io/cute_framework/#/input/cf_input_set_ime_rect).
+
+## Joypad
+
+TODO

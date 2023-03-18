@@ -26,12 +26,12 @@ In games typically the center of the screen is defined as position `(0, 0)`, wit
 
 When we move the camera it's look location points to a new position with [`cf_camera_look_at`](https://randygaul.github.io/cute_framework/#/camera/cf_camera_look_at). By default the camera starts out looking at the origin `(0, 0)`. If we make the camera look at `(100, 0)` everything on the screen will shift to the left by `100` units.
 
-Instead you may prefer to "move the screen" instead of the camera. This way, if we move the screen from `(0, 0)` to `(100, 0)` then everything will be drawn 100 units to the right. To apply this technique you can make your own function for moving the screen.
+Instead you may prefer to "offset the world" instead of the camera. This way, if we offset the world from `(0, 0)` to `(100, 0)` then everything will be drawn 100 units to the right. To apply this technique you can make your own function for offsetting the world.
 
-> Example function to "move the screen" instead of moving the camera.
+> Example function to "offset the world" instead of moving the camera.
 
 ```cpp
-void MoveScreen(v2 position)
+void OffsetWorld(v2 position)
 {
 	cf_camera_look_at(-position.x, -position.y);
 }

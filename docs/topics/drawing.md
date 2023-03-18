@@ -2,11 +2,11 @@
 
 <br>
 
-Getting things on the screen with CF can be done in one of two ways: [Low Level Graphics](https://randygaul.github.io/cute_framework/#/topics/low_leveL_graphics), or the [Draw API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=draw). This page showcases the latter, a high level option for getting shapes, sprites and text onto the screen. Text has it's own dedicated [Text API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=text), discussed here as well.
+Getting things on the screen with CF can be done in one of two ways: [Low Level Graphics](https://randygaul.github.io/cute_framework/#/topics/low_leveL_graphics), or the [Draw API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=draw). This page showcases the latter, the recommended option for getting shapes, sprites and text onto the screen. Text has it's own dedicated [Text API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=text), discussed here as well.
 
 ## Drawing Shapes
 
-Getting started with drawing shapes in CF is about calling an associated drawing function. For circles use [`cf_draw_circle`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_circle), for boxes/rectangles use [`cf_draw_quad`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_quad), for lines use [`cf_draw_line`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_line) or [`cf_draw_polyline`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_polyline), and so on.
+Getting started with drawing shapes in CF is about calling an associated drawing function. For circles, use [`cf_draw_circle`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_circle), for boxes/rectangles use [`cf_draw_quad`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_quad), for lines use [`cf_draw_line`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_line) or [`cf_draw_polyline`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_polyline), and so on.
 
 > Drawing some basic shapes, a pulsating circle and square.
 
@@ -123,7 +123,7 @@ Here's an example of drawing a more full looking scene with various sprites. Sim
 
 ## Drawing Text
 
-Text has it's own [Text API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=text). Call [`cf_make_font`](https://randygaul.github.io/cute_framework/#/text/cf_make_font) to load up a font file, then call [`cf_draw_text`](https://randygaul.github.io/cute_framework/#/text/cf_draw_text) to draw text onto the screen. Text has a whole bunch of settings, such as:
+Text has it's own [Text API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=text). Call [`cf_make_font`](https://randygaul.github.io/cute_framework/#/text/cf_make_font) to load up a font file, then call [`cf_draw_text`](https://randygaul.github.io/cute_framework/#/text/cf_draw_text) to draw text. Text has a whole bunch of settings, such as:
 
 - [`cf_push_text_wrap_width`](https://randygaul.github.io/cute_framework/#/text/cf_push_text_wrap_width)
 - [`cf_push_font_size`](https://randygaul.github.io/cute_framework/#/text/cf_push_font_size)

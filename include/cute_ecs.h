@@ -33,34 +33,25 @@
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
+	
+typedef struct CF_ComponentList { uint64_t id; } CF_ComponentList;
+typedef struct CF_Entity { CF_Handle handle; } CF_Entity;
+typedef struct CF_World { uint64_t id; } CF_World;
 
-typedef struct CF_KeyValue CF_KeyValue;
-
-//--------------------------------------------------------------------------------------------------
-// Entity
-
-typedef struct CF_Entity
-{
-	#ifdef CF_CPP
-	CF_INLINE bool operator==(const CF_Entity& other) { return handle == other.handle; }
-	CF_INLINE bool operator!=(const CF_Entity& other) { return handle != other.handle; }
-	#endif // CF_CPP
-
-	CF_Handle handle; // For internal use -- don't touch.
-} CF_Entity;
-
+typedef void (CF_SystemUpdateFn)(CF_ComponentList component_list, int count, void* udata);
+typedef bool (CF_ComponentFn)(CF_Entity entity, void* component, void* udata);
 
 static CF_Entity CF_INVALID_ENTITY = { CF_INVALID_HANDLE };
+static CF_World CF_INVALID_WORLD = { 0 };
 
-CF_API void CF_CALL cf_ecs_entity_begin();
-CF_API void CF_CALL cf_ecs_entity_end();
-CF_API void CF_CALL cf_ecs_entity_set_name(const char* Entityype);
-CF_API void CF_CALL cf_ecs_entity_add_component(const char* component_type);
-CF_API void CF_CALL cf_ecs_entity_set_optional_schema(const char* schema);
+CF_API void CF_CALL cf_entity_begin();
+CF_API void CF_CALL cf_entity_set_name(const char* entity_type);
+CF_API void CF_CALL cf_entity_require_component(const char* component_type);
+CF_API void CF_CALL cf_entity_end();
 
-CF_API CF_Entity CF_CALL cf_make_entity(const char* Entityype, CF_Result* err /*= NULL*/);
+CF_API CF_Entity CF_CALL cf_make_entity(const char* entity_type, CF_Result* err /*= NULL*/);
 CF_API bool CF_CALL cf_entity_is_valid(CF_Entity entity);
-CF_API bool CF_CALL cf_entity_is_type(CF_Entity entity, const char* Entityype);
+CF_API bool CF_CALL cf_entity_is_type(CF_Entity entity, const char* entity_type);
 CF_API const char* CF_CALL cf_entity_get_type_string(CF_Entity entity);
 CF_API bool CF_CALL cf_entity_has_component(CF_Entity entity, const char* component_type);
 CF_API void* CF_CALL cf_entity_get_component(CF_Entity entity, const char* component_type);
@@ -75,60 +66,39 @@ CF_API void CF_CALL cf_entity_deactivate(CF_Entity entity);
 CF_API void CF_CALL cf_entity_activate(CF_Entity entity);
 CF_API bool CF_CALL cf_entity_is_active(CF_Entity entity);
 
-/**
- * `kv` needs to be in `KV_STATE_READ` mode.
- */
-CF_API CF_Result CF_CALL cf_ecs_load_entities(CF_KeyValue* kv, CF_Entity** entities_out /*= NULL*/, int* entities_count_out /*= NULL*/);
-CF_API void CF_CALL cf_ecs_free_entities(CF_Entity* entities);
+CF_API void CF_CALL cf_component_begin();
+CF_API void CF_CALL cf_component_set_name(const char* name);
+CF_API void CF_CALL cf_component_set_size(size_t size);
+CF_API void CF_CALL cf_component_set_optional_initializer(CF_ComponentFn* initializer, void* udata);
+CF_API void CF_CALL cf_component_set_optional_cleanup(CF_ComponentFn* cleanup, void* udata);
+CF_API void CF_CALL cf_component_end();
 
-/**
- * `kv` needs to be in `KV_STATE_WRITE` mode.
- */
-CF_API CF_Result CF_CALL cf_ecs_save_entities_kv(const CF_Entity* entities, int entities_count, CF_KeyValue* kv);
-CF_API CF_Result CF_CALL cf_ecs_save_entities(const CF_Entity* entities, int entities_count);
+CF_API void CF_CALL cf_system_begin();
+CF_API void CF_CALL cf_system_set_name(const char* name);
+CF_API void CF_CALL cf_system_set_update(CF_SystemUpdateFn* update_fn);
+CF_API void CF_CALL cf_system_require_component(const char* component_type);
+CF_API void CF_CALL cf_system_set_optional_pre_update(void (*pre_update_fn)(void* udata));
+CF_API void CF_CALL cf_system_set_optional_post_update(void (*post_update_fn)(void* udata));
+CF_API void CF_CALL cf_system_set_optional_udata(void* udata);
+CF_API void CF_CALL cf_system_end();
 
-//--------------------------------------------------------------------------------------------------
-// Component
+CF_API void CF_CALL cf_run_systems();
 
-typedef bool (CF_ComponentSerializeFn)(CF_KeyValue* kv, bool reading, CF_Entity entity, void* component, void* udata);
-typedef void (CF_ComponentCleanupFn)(CF_Entity entity, void* component, void* udata);
+CF_API void* CF_CALL cf_get_components(CF_ComponentList component_list, const char* component_type);
+CF_API CF_Entity* CF_CALL cf_get_entities(CF_ComponentList component_list);
 
-CF_API void CF_CALL cf_ecs_component_begin();
-CF_API void CF_CALL cf_ecs_component_end();
-CF_API void CF_CALL cf_ecs_component_set_name(const char* name);
-CF_API void CF_CALL cf_ecs_component_set_size(size_t size);
-CF_API void CF_CALL cf_ecs_component_set_optional_serializer(CF_ComponentSerializeFn* serializer_fn, void* udata /*= NULL*/);
-CF_API void CF_CALL cf_ecs_component_set_optional_cleanup(CF_ComponentCleanupFn* cleanup_fn, void* udata /*= NULL*/);
+CF_API CF_World CF_CALL cf_create_world();
+CF_API void CF_CALL cf_destroy_world(CF_World world);
+CF_API void CF_CALL cf_world_push(CF_World world);
+CF_API CF_World CF_CALL cf_world_pop();
+CF_API CF_World CF_CALL cf_world_peek();
+CF_INLINE bool cf_world_equals(CF_World a, CF_World b) { return a.id == b.id; }
 
-//--------------------------------------------------------------------------------------------------
-// System
-
-typedef struct CF_EcsArrays CF_EcsArrays;
-
-typedef void (CF_SystemUpdateFn)(float dt, CF_EcsArrays* arrays, int count, void* udata);
-CF_API void* CF_CALL cf_ecs_arrays_find_components(CF_EcsArrays* arrays, const char* component_type);
-CF_API CF_Entity* CF_CALL cf_ecs_arrays_get_entities(CF_EcsArrays* arrays);
-
-CF_API void CF_CALL cf_ecs_system_begin();
-CF_API void CF_CALL cf_ecs_system_end();
-CF_API void CF_CALL cf_ecs_system_set_name(const char* name);
-CF_API void CF_CALL cf_ecs_system_set_update(CF_SystemUpdateFn* update_fn);
-CF_API void CF_CALL cf_ecs_system_require_component(const char* component_type);
-CF_API void CF_CALL cf_ecs_system_set_optional_pre_update(void (*pre_update_fn)(float dt, void* udata));
-CF_API void CF_CALL cf_ecs_system_set_optional_post_update(void (*post_update_fn)(float dt, void* udata));
-CF_API void CF_CALL cf_ecs_system_set_optional_update_udata(void* udata);
-
-CF_API void CF_CALL cf_ecs_run_systems(float dt);
-
-//--------------------------------------------------------------------------------------------------
-// Introspection
-
-CF_API bool CF_CALL cf_ecs_is_Entityype_valid(const char* Entityype);
-CF_API const char** CF_CALL cf_ecs_get_entity_list(int* entities_count_out /*optional*/);
-CF_API const char** CF_CALL cf_ecs_get_component_list(int* components_count_out /*optional*/);
-CF_API const char** CF_CALL cf_ecs_get_system_list(int* systems_count_out /*optional*/);
-CF_API const char** CF_CALL cf_ecs_get_component_list_for_Entityype(const char* Entityype, int* components_count_out /*optional*/);
-CF_API void CF_CALL cf_ecs_free_list(const char** list);
+CF_API bool CF_CALL cf_is_entity_type_valid(const char* entity_type);
+CF_API dyna char* CF_CALL cf_get_entity_list();
+CF_API dyna char* CF_CALL cf_get_component_list();
+CF_API dyna char* CF_CALL cf_get_system_list();
+CF_API dyna char* CF_CALL cf_get_component_list_for_entity_type(const char* entity_type);
 
 #ifdef __cplusplus
 }
@@ -142,73 +112,68 @@ CF_API void CF_CALL cf_ecs_free_list(const char** list);
 namespace Cute
 {
 
-using KeyValue = CF_KeyValue;
 using Entity = CF_Entity;
-using EcsArrays = CF_EcsArrays;
+using ComponentList = CF_ComponentList;
 using SystemUpdateFn = CF_SystemUpdateFn;
-using ComponentSerializeFn = CF_ComponentSerializeFn;
-using ComponentCleanupFn = CF_ComponentCleanupFn;
+using ComponentFn = CF_ComponentFn;
 
 //--------------------------------------------------------------------------------------------------
 // Entity
 
 static constexpr Entity INVALID_ENTITY = { CF_INVALID_HANDLE };
 
-CF_INLINE void ecs_entity_begin() { cf_ecs_entity_begin(); }
-CF_INLINE void ecs_entity_end() { cf_ecs_entity_end(); }
-CF_INLINE void ecs_entity_set_name(const char* Entityype) { cf_ecs_entity_set_name(Entityype); }
-CF_INLINE void ecs_entity_add_component(const char* component_type) { cf_ecs_entity_add_component(component_type); }
-CF_INLINE void ecs_entity_set_optional_schema(const char* schema) { cf_ecs_entity_set_optional_schema(schema); }
+CF_INLINE bool operator==(const CF_Entity& a, const CF_Entity& b) { return a.handle == b.handle; }
+CF_INLINE bool operator!=(const CF_Entity& a, const CF_Entity& b) { return a.handle != b.handle; }
 
-CF_INLINE Entity make_entity(const char* Entityype, Result* err = NULL) { return cf_make_entity(Entityype, err); }
+CF_INLINE void entity_begin() { cf_entity_begin(); }
+CF_INLINE void entity_set_name(const char* entity_type) { cf_entity_set_name(entity_type); }
+CF_INLINE void entity_require_component(const char* component_type) { cf_entity_require_component(component_type); }
+CF_INLINE void entity_end() { cf_entity_end(); }
+
+CF_INLINE Entity make_entity(const char* entity_type, Result* err = NULL) { return cf_make_entity(entity_type, err); }
 CF_INLINE bool entity_is_valid(Entity entity) { return cf_entity_is_valid(entity); }
-CF_INLINE bool entity_is_type(Entity entity, const char* Entityype) { return cf_entity_is_type(entity, Entityype); }
+CF_INLINE bool entity_is_type(Entity entity, const char* entity_type) { return cf_entity_is_type(entity, entity_type); }
 CF_INLINE const char* entity_get_type_string(Entity entity) { return cf_entity_get_type_string(entity); }
 CF_INLINE bool entity_has_component(Entity entity, const char* component_type) { return cf_entity_has_component(entity, component_type); }
 CF_INLINE void* entity_get_component(Entity entity, const char* component_type) { return cf_entity_get_component(entity, component_type); }
 CF_INLINE void destroy_entity(Entity entity) { cf_destroy_entity(entity); }
 CF_INLINE void destroy_entity_delayed(Entity entity) { cf_destroy_entity_delayed(entity); }
 
-CF_API Result CF_CALL ecs_load_entities(KeyValue* kv, Array<Entity>* entities_out = NULL);
+CF_INLINE void component_begin() { cf_component_begin(); }
+CF_INLINE void component_end() { cf_component_end(); }
+CF_INLINE void component_set_name(const char* name) { cf_component_set_name(name); }
+CF_INLINE void component_set_size(size_t size) { cf_component_set_size(size); }
+CF_INLINE void component_set_optional_initializer(ComponentFn* intializer, void* udata = NULL) { cf_component_set_optional_initializer(intializer, udata); }
+CF_INLINE void component_set_optional_cleanup(ComponentFn* cleanup, void* udata = NULL) { cf_component_set_optional_cleanup(cleanup, udata); }
 
-CF_API Result CF_CALL ecs_save_entities(const Array<Entity>& entities, KeyValue* kv);
-CF_API Result CF_CALL ecs_save_entities(const Array<Entity>& entities);
+CF_INLINE void* CF_CALL get_components(ComponentList component_list, const char* component_type) { return cf_get_components(component_list, component_type); }
+CF_INLINE Entity* CF_CALL get_entities(ComponentList component_list) { return cf_get_entities(component_list); }
 
-//--------------------------------------------------------------------------------------------------
-// Component
+CF_INLINE CF_World create_world() { return cf_create_world(); }
+CF_INLINE void destroy_world(CF_World world) { cf_destroy_world(world); }
+CF_INLINE void world_push(CF_World world) { cf_world_push(world); }
+CF_INLINE CF_World world_pop() { return cf_world_pop(); }
+CF_INLINE CF_World world_peek() { return cf_world_peek(); }
+CF_INLINE bool world_equals(CF_World a, CF_World b) { return a.id == b.id; }
+CF_INLINE bool operator==(CF_World a, CF_World b) { return a.id == b.id; }
+CF_INLINE bool operator!=(CF_World a, CF_World b) { return a.id != b.id; }
 
-CF_INLINE void ecs_component_begin() { cf_ecs_component_begin(); }
-CF_INLINE void ecs_component_end() { cf_ecs_component_end(); }
-CF_INLINE void ecs_component_set_name(const char* name) { cf_ecs_component_set_name(name); }
-CF_INLINE void ecs_component_set_size(size_t size) { cf_ecs_component_set_size(size); }
-CF_INLINE void ecs_component_set_optional_serializer(ComponentSerializeFn* serializer_fn, void* udata = NULL) { cf_ecs_component_set_optional_serializer(serializer_fn, udata); }
-CF_INLINE void ecs_component_set_optional_cleanup(ComponentCleanupFn* cleanup_fn, void* udata = NULL) { cf_ecs_component_set_optional_cleanup(cleanup_fn, udata); }
+CF_INLINE void system_begin() { cf_system_begin(); }
+CF_INLINE void system_set_name(const char* name) { cf_system_set_name(name); }
+CF_INLINE void system_set_update(CF_SystemUpdateFn* update_fn) { cf_system_set_update(update_fn); }
+CF_INLINE void system_require_component(const char* component_type) { cf_system_require_component(component_type); }
+CF_INLINE void system_set_optional_pre_update(void (*pre_update_fn)(void* udata)) { cf_system_set_optional_pre_update(pre_update_fn); }
+CF_INLINE void system_set_optional_post_update(void (*post_update_fn)(void* udata)) { cf_system_set_optional_post_update(post_update_fn); }
+CF_INLINE void system_set_optional_udata(void* udata) { cf_system_set_optional_udata(udata); }
+CF_INLINE void system_end() { cf_system_end(); }
 
-//--------------------------------------------------------------------------------------------------
-// System
+CF_INLINE void run_systems() { cf_run_systems(); }
 
-CF_INLINE void* CF_CALL ecs_arrays_find_components(EcsArrays* arrays, const char* component_type) { return cf_ecs_arrays_find_components(arrays, component_type); }
-CF_INLINE Entity* CF_CALL ecs_arrays_get_entities(EcsArrays* arrays) { return cf_ecs_arrays_get_entities(arrays); }
-
-CF_INLINE void ecs_system_begin() { cf_ecs_system_begin(); }
-CF_INLINE void ecs_system_end() { cf_ecs_system_end(); }
-CF_INLINE void ecs_system_set_name(const char* name) { cf_ecs_system_set_name(name); }
-CF_INLINE void ecs_system_set_update(CF_SystemUpdateFn* update_fn) { cf_ecs_system_set_update(update_fn); }
-CF_INLINE void ecs_system_require_component(const char* component_type) { cf_ecs_system_require_component(component_type); }
-CF_INLINE void ecs_system_set_optional_pre_update(void (*pre_update_fn)(float dt, void* udata)) { cf_ecs_system_set_optional_pre_update(pre_update_fn); }
-CF_INLINE void ecs_system_set_optional_post_update(void (*post_update_fn)(float dt, void* udata)) { cf_ecs_system_set_optional_post_update(post_update_fn); }
-CF_INLINE void ecs_system_set_optional_update_udata(void* udata) { cf_ecs_system_set_optional_update_udata(udata); }
-
-CF_INLINE void ecs_run_systems(float dt) { cf_ecs_run_systems(dt); }
-
-//--------------------------------------------------------------------------------------------------
-// Introspection
-
-CF_INLINE bool ecs_is_Entityype_valid(const char* Entityype) { return cf_ecs_is_Entityype_valid(Entityype); }
-CF_API Array<const char*> CF_CALL ecs_get_entity_list();
-CF_API Array<const char*> CF_CALL ecs_get_component_list();
-CF_API Array<const char*> CF_CALL ecs_get_system_list();
-CF_API Array<const char*> CF_CALL ecs_get_component_list_for_Entityype(const char* Entityype);
+CF_INLINE bool is_entity_type_valid(const char* entity_type) { return cf_is_entity_type_valid(entity_type); }
+CF_API Array<const char*> CF_CALL get_entity_list();
+CF_API Array<const char*> CF_CALL get_component_list();
+CF_API Array<const char*> CF_CALL get_system_list();
+CF_API Array<const char*> CF_CALL get_component_list_for_entity_type(const char* entity_type);
 
 }
 

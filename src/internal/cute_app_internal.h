@@ -36,6 +36,7 @@
 
 #include <internal/cute_draw_internal.h>
 #include <internal/cute_font_internal.h>
+#include <internal/cute_ecs_internal.h>
 
 #include <sokol/sokol_gfx_imgui.h>
 
@@ -46,9 +47,7 @@ struct cs_context_t;
 
 extern struct CF_App* app;
 
-struct cf_audio_system_t;
-
-struct cf_mouse_state_t
+struct CF_MouseState
 {
 	int left_button = 0;
 	int right_button = 0;
@@ -61,7 +60,7 @@ struct cf_mouse_state_t
 	int click_type = 0;
 };
 
-struct cf_window_state_t
+struct CF_WindowState
 {
 	bool mouse_inside_window = false;
 	bool has_keyboard_focus = false;
@@ -70,91 +69,6 @@ struct cf_window_state_t
 	bool restored = false;
 	bool resized = false;
 	bool moved = false;
-};
-
-struct cf_entity_collection_t
-{
-	Cute::HandleTable entity_handle_table;
-	Cute::Array<CF_Handle> entity_handles; // TODO - Replace with a counter? Or delete?
-	Cute::Array<const char*> component_type_tuple;
-	Cute::Array<CF_TypelessArray> component_tables;
-	int inactive_count = 0;
-};
-
-struct cf_system_internal_t
-{
-	void clear()
-	{
-		name = { 0 };
-		udata = NULL;
-		pre_update_fn = NULL;
-		update_fn = NULL;
-		post_update_fn = NULL;
-		component_type_tuple.clear();
-	}
-
-	const char* name = { 0 };
-	void* udata = NULL;
-	void (*pre_update_fn)(float dt, void* udata) = NULL;
-	CF_SystemUpdateFn* update_fn = NULL;
-	void (*post_update_fn)(float dt, void* udata) = NULL;
-	Cute::Array<const char*> component_type_tuple;
-};
-
-struct cf_component_config_t
-{
-	void clear()
-	{
-		name = NULL;
-		size_of_component = 0;
-		serializer_fn = NULL;
-		cleanup_fn = NULL;
-		serializer_udata = NULL;
-		cleanup_udata = NULL;
-	}
-
-	const char* name = NULL;
-	size_t size_of_component = 0;
-	CF_ComponentSerializeFn* serializer_fn = NULL;
-	CF_ComponentCleanupFn* cleanup_fn = NULL;
-	void* serializer_udata = NULL;
-	void* cleanup_udata = NULL;
-};
-
-struct cf_entity_config_t
-{
-	void clear()
-	{
-		Entityype = NULL;
-		component_types.clear();
-		schema.clear();
-	}
-
-	const char* Entityype = NULL;
-	Cute::Array<const char*> component_types;
-	Cute::String schema;
-};
-
-using CF_EntityType = uint16_t;
-#define CF_INVALID_ENTITY_TYPE ((uint16_t)~0)
-
-struct CF_EcsArrays
-{
-	int count = 0;
-	CF_Handle* entities = NULL;
-	Cute::Array<const char*> types;
-	Cute::Array<CF_TypelessArray>* ptrs;
-
-	void* find_components(const char* type)
-	{
-		type = sintern(type);
-		for (int i = 0; i < count; ++i) {
-			if (types[i] == type) {
-				return (*ptrs)[i].data();
-			}
-		}
-		return NULL;
-	}
 };
 
 struct CF_App
@@ -168,7 +82,6 @@ struct CF_App
 	cs_context_t* cute_sound = NULL;
 	bool spawned_mix_thread = false;
 	CF_Threadpool* threadpool = NULL;
-	cf_audio_system_t* audio_system = NULL;
 	bool gfx_enabled = false;
 	sg_context_desc gfx_ctx_params;
 	int w;
@@ -185,8 +98,8 @@ struct CF_App
 	CF_Mesh backbuffer_quad = { };
 	CF_Shader backbuffer_shader = { };
 	CF_Material backbuffer_material = { };
-	cf_window_state_t window_state;
-	cf_window_state_t window_state_prev;
+	CF_WindowState window_state;
+	CF_WindowState window_state_prev;
 	bool using_imgui = false;
 	sg_imgui_t sg_imgui;
 	uint64_t default_image_id = CF_PNG_ID_RANGE_LO;
@@ -200,33 +113,25 @@ struct CF_App
 	int keys[512] = { 0 };
 	int keys_prev[512] = { 0 };
 	float keys_duration[512] = { 0 };
-	cf_mouse_state_t mouse, mouse_prev;
+	CF_MouseState mouse, mouse_prev;
 	CF_List joypads;
 	Cute::Array<CF_Touch> touches;
 
 	// ECS stuff.
-	// TODO: Set allocator context for these data structures.
-	cf_system_internal_t system_internal_builder;
-	Cute::Array<cf_system_internal_t> systems;
-	cf_entity_config_t entity_config_builder;
-	CF_EntityType Entityype_gen = 0;
-	Cute::Map<const char*, CF_EntityType> Entityype_string_to_id;
-	Cute::Array<const char*> Entityype_id_to_string;
-	Cute::Map<CF_EntityType, cf_entity_collection_t> entity_collections;
+	CF_SystemInternal system_internal_builder;
+	Cute::Array<CF_SystemInternal> systems;
+	CF_EntityConfig entity_config_builder;
+	CF_EntityType entity_type_gen = 0;
+	Cute::Map<const char*, CF_EntityType> entity_type_string_to_id;
+	Cute::Array<const char*> entity_type_id_to_string;
 	CF_EntityType current_collection_type_being_iterated = ~0;
-	cf_entity_collection_t* current_collection_being_updated = NULL;
-	Cute::Array<CF_Entity> delayed_destroy_entities;
-	Cute::Array<CF_Entity> delayed_deactivate_entities;
-	Cute::Array<CF_Entity> delayed_activate_entities;
-	CF_EcsArrays ecs_arrays;
+	CF_EntityCollection* current_collection_being_updated = NULL;
+	CF_ComponentListInternal component_list;
 
-	cf_component_config_t component_config_builder;
-	Cute::Map<const char*, cf_component_config_t> component_configs;
-	Cute::Map<CF_EntityType, CF_KeyValue*> entity_parsed_schemas;
-	Cute::Map<CF_EntityType, uint16_t> entity_schema_inheritence;
+	CF_ComponentConfig component_config_builder;
+	Cute::Map<const char*, CF_ComponentConfig> component_configs;
 
-	Cute::Map<CF_Entity, int>* save_id_table = NULL;
-	Cute::Array<CF_Entity>* load_id_table = NULL;
+	Cute::Array<CF_World> worlds;
 
 	// Font stuff.
 	uint64_t font_image_id_gen = CF_FONT_ID_RANGE_LO;
