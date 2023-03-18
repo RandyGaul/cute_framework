@@ -73,12 +73,12 @@ typedef struct CF_World { uint64_t id; } CF_World;
  * @category ecs
  * @brief    A system.
  * @param    component_list  A tuple of components. See `cf_get_components`.
- * @param    count           The number of entities to be updated.
+ * @param    entity_count    The number of entities to be updated.
  * @param    udata           An optional user data pointer. `NULL` by default, or set by `cf_system_set_optional_udata`.
  * @remarks  This function represents a single system in the ECS. See `cf_system_begin`.
  * @related  CF_SystemUpdateFn CF_ComponentList cf_run_systems cf_get_components cf_get_entities cf_system_begin
  */
-typedef void (CF_SystemUpdateFn)(CF_ComponentList component_list, int count, void* udata);
+typedef void (CF_SystemUpdateFn)(CF_ComponentList component_list, int entity_count, void* udata);
 
 /**
  * @function CF_ComponentFn
