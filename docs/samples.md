@@ -12,4 +12,5 @@ Some of the samples using Cute Framework's C API, while some use the C++ API. Ma
 - [Basic Sprite Drawing](https://github.com/RandyGaul/cute_framework/blob/master/samples/basic_sprite.cpp)
 - [Text Drawing](https://github.com/RandyGaul/cute_framework/blob/master/samples/text_drawing.cpp)
 - [Debug/Tools UI](https://github.com/RandyGaul/cute_framework/blob/master/samples/imgui.c)
+- [Basic Serialization](https://github.com/RandyGaul/cute_framework/blob/master/samples/basic_serialization.c)
 - [Cute Snake](https://github.com/RandyGaul/cute_snake), a silly demonstration game

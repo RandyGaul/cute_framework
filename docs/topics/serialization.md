@@ -401,9 +401,8 @@ Here is a quick example of a full program you can copy + paste and compile. It s
 
 ```cpp
 #include <cute.h>
-using namespace cute;
 
-int main(void)
+int main(int argc, char** argv)
 {
 	const char* string =
 		"a = 10,\n"
@@ -411,11 +410,11 @@ int main(void)
 	;
 	size_t len = strlen(string);
 	
-	CF_KeyValue* kv = cf_kv_read(void*)string, len, NULL);
+	CF_KeyValue* kv = cf_kv_read((void*)string, len, NULL);
 	
 	int val;
-	cf_kv_key(kv, "a"); cf_kv_val_int32(kv, &val); printf("a was %d\n", val);
-	cf_kv_key(kv, "b"); cf_kv_val_int32(kv, &val); printf("b was %d\n", val);
+	cf_kv_key(kv, "a", NULL); cf_kv_val_int32(kv, &val); printf("a was %d\n", val);
+	cf_kv_key(kv, "b", NULL); cf_kv_val_int32(kv, &val); printf("b was %d\n", val);
 	
 	cf_kv_destroy(kv);
 	

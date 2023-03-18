@@ -367,6 +367,9 @@ endif()
 
 # Cute sample prgrams (optional, defaulted to also build).
 if (CF_FRAMEWORK_BUILD_SAMPLES)
+	add_executable(basic_serialization samples/basic_serialization.c)
+	target_link_libraries(basic_serialization PRIVATE cute)
+	set_target_properties(basic_serialization PROPERTIES FOLDER "samples")
 	add_executable(imgui samples/imgui.c)
 	target_link_libraries(imgui PRIVATE cute)
 	set_target_properties(imgui PROPERTIES FOLDER "samples")
