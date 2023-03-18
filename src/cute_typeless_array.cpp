@@ -38,7 +38,7 @@ CF_TypelessArray::CF_TypelessArray(size_t element_size, int capacity)
 	: m_element_size(element_size)
 	, m_capacity(capacity)
 {
-	m_items = CF_ALLOC(m_element_size);
+	m_items = CF_ALLOC(m_element_size * m_capacity); 
 	CF_ASSERT(m_items);
 }
 
