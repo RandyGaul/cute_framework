@@ -367,6 +367,9 @@ endif()
 
 # Cute sample prgrams (optional, defaulted to also build).
 if (CF_FRAMEWORK_BUILD_SAMPLES)
+	add_executable(imgui samples/imgui.c)
+	target_link_libraries(imgui PRIVATE cute)
+	set_target_properties(imgui PROPERTIES FOLDER "samples")
 	add_executable(text_drawing samples/text_drawing.cpp)
 	target_link_libraries(text_drawing PRIVATE cute)
 	set_target_properties(text_drawing PROPERTIES FOLDER "samples")

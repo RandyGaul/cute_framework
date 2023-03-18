@@ -9,13 +9,13 @@ GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 A system.
 
 ```cpp
-typedef void (CF_SystemUpdateFn)(CF_ComponentList component_list, int count, void* udata);
+typedef void (CF_SystemUpdateFn)(CF_ComponentList component_list, int entity_count, void* udata);
 ```
 
 Parameters | Description
 --- | ---
 component_list | A tuple of components. See [cf_get_components](/ecs/cf_get_components.md).
-count | The number of entities to be updated.
+entity_count | The number of entities to be updated.
 udata | An optional user data pointer. `NULL` by default, or set by [cf_system_set_optional_udata](/ecs/cf_system_set_optional_udata.md).
 
 ## Remarks
