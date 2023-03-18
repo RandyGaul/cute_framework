@@ -133,6 +133,18 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [Drawing](/topics/drawing.md)
 
 
+## ECS
+
+### Functions
+[](ecs/functions.md ':include')
+
+### Structs
+[](ecs/structs.md ':include')
+
+### Related Reading
+- [Entity Component System](/topics/entity_component_system.md)
+
+
 ## File
 
 ### Functions

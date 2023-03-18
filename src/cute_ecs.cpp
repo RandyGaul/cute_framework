@@ -332,8 +332,6 @@ void cf_run_systems()
 	world->delayed_destroy_entities.clear();
 }
 
-//--------------------------------------------------------------------------------------------------
-
 void cf_component_begin()
 {
 	app->component_config_builder.clear();
