@@ -86,11 +86,11 @@ To read the value `10` from the key `a` followed by the value `12` from key `b` 
 ```cpp
 int value;
 
-cf_kv_key(kv, "a");
+cf_kv_key(kv, "a", NULL);
 cf_kv_val_int32(kv, &value);
 printf("a was %d\n", value);
 
-cf_kv_key(kv, "b");
+cf_kv_key(kv, "b", NULL);
 cf_kv_val_int32(kv, &value);
 printf("b was %d\n", value);
 ```
@@ -118,10 +118,10 @@ As in the previous section values can be written to the buffer the same way they
 int a = 10;
 int b = 12;
 
-cf_kv_key(kv, "a");
+cf_kv_key(kv, "a", NULL);
 cf_kv_val_int32(kv, &a);
 
-cf_kv_key(kv, "b");
+cf_kv_key(kv, "b", NULL);
 cf_kv_val_int32(kv, &b);
 ```
 
@@ -154,7 +154,7 @@ codes = [3] {
 Objects act similar to a scope in the C programming language. Querying for the key `data` should be paired up with a matching [`cf_kv_object_begin`](v) call, like so (after parsing the above example text with [`cf_kv_read`](https://randygaul.github.io/cute_framework/#/serialization/cf_kv_read)).
 
 ```
-cf_kv_key(kv, "data");
+cf_kv_key(kv, "data", NULL);
 cf_kv_object_begin(kv);
 ```
 
@@ -193,7 +193,7 @@ data = [5] {
 ```
 
 ```cpp
-cf_kv_key(kv, "data");
+cf_kv_key(kv, "data", NULL);
 int count = 0;
 cf_kv_array_begin(kv, &count);
 
@@ -235,7 +235,7 @@ Strings in kv are dealt with by the [`cf_kv_val_string`](https://randygaul.githu
 const char* string = "Hello.";
 size_t size = strlen(string);
 
-cf_kv_key(kv, "data");
+cf_kv_key(kv, "data", NULL);
 cf_kv_val_string(kv, &string, &size);
 ```
 
@@ -255,7 +255,7 @@ It can be decoded and printed like so.
 
 ```cpp
 size_t blob_len = 0;
-cf_kv_key(kv, "blob");
+cf_kv_key(kv, "blob", NULL);
 cf_kv_val_blob(kv, buffer, size, &blob_len);
 printf("%.*s\n", buffer, blob_len);
 ```
@@ -379,9 +379,9 @@ int a_val = 5;
 int b_val = -2;
 int c_val = 3;
 
-cf_kv_key(kv, "a"); kv_val_int32(kv, a_val);
-cf_kv_key(kv, "b"); kv_val_int32(kv, b_val);
-cf_kv_key(kv, "c"); kv_val_int32(kv, c_val);
+cf_kv_key(kv, "a", NULL); kv_val_int32(kv, a_val);
+cf_kv_key(kv, "b", NULL); kv_val_int32(kv, b_val);
+cf_kv_key(kv, "c", NULL); kv_val_int32(kv, c_val);
 ```
 
 The resulting buffer will be filled with the following contents.
