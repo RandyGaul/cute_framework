@@ -24,5 +24,6 @@
 
 void cf_destroy_graphics();
 void cf_commit();
+void cf_clear_graphics_static_pointers();
 
 #endif // CF_GRAPHICS_INTERNAL_H

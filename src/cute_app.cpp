@@ -345,6 +345,7 @@ void cf_destroy_app()
 		app->using_imgui = false;
 	}
 	if (app->gfx_enabled) {
+		sg_end_pass();
 		cf_destroy_draw();
 		cf_destroy_aseprite_cache();
 		cf_destroy_png_cache();
@@ -357,6 +358,13 @@ void cf_destroy_app()
 		cf_destroy_graphics();
 		sg_shutdown();
 		cf_dx11_shutdown();
+		cf_clear_graphics_static_pointers();
+	}
+	// Mainly here to cleanup the default world, but, as a convenience we can just clean them all up.
+	for (int i = 0; i < app->worlds.count(); ++i) {
+		CF_WorldInternal* world = (CF_WorldInternal*)app->worlds[i].id;
+		world->~CF_WorldInternal();
+		CF_FREE(world);
 	}
 	cs_shutdown();
 	SDL_DestroyWindow(app->window);

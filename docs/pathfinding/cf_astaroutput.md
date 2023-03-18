@@ -10,9 +10,8 @@ Represents the shortest path between two points as an array of 2d vectors.
 
 Struct Members | Description
 --- | ---
-`int x_count` | The number of elements in the `x` array.
+`int count` | The number of elements in the `x` and `y` arrays.
 `dyna int* x` | An array of x-coordinates, one for each (x, y) coordinate in the calculated path.
-`int y_count` | The number of elements in the `y` array.
 `dyna int* y` | An array of y-coordinates, one for each (x, y) coordinate in the calculated path.
 
 ## Remarks

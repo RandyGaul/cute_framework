@@ -61,6 +61,7 @@ int test_png_cache()
 	CF_TEST_CHECK_POINTER(sprite.animations);
 	CF_TEST_ASSERT(sprite.frame_index == 0);
 
+	CF_DELTA_TIME = 0.5f; // Hacky, yes.
 	cf_sprite_update(&sprite);
 	CF_TEST_ASSERT(sprite.frame_index == 1);
 

@@ -44,6 +44,10 @@ static float s_clear_stencil = 0;
 #define SG_DEFAULT_CLEAR_DEPTH   (s_clear_depth)
 #define SG_DEFAULT_CLEAR_STENCIL (s_clear_stencil)
 
+struct CF_CanvasInternal;
+static CF_CanvasInternal* s_canvas = NULL;
+static CF_CanvasInternal* s_default_canvas = NULL;
+
 // For now just a sokol_gfx.h backend is implemented. However, there are plans to also
 // implement an SDL_Gpu backend here whenever it's released. This should allow for a
 // much simpler shader solution.
@@ -815,9 +819,6 @@ void cf_material_set_uniform_fs(CF_Material material_handle, const char* block_n
 	s_material_set_uniform(&material->uniform_arena, &material->fs, block_name, name, data, type, array_length);
 }
 
-static CF_CanvasInternal* s_canvas = NULL;
-static CF_CanvasInternal* s_default_canvas = NULL;
-
 static void s_end_pass()
 {
 	if (s_canvas) {
@@ -1056,6 +1057,18 @@ void cf_commit()
 {
 	s_end_pass();
 	sg_commit();
+}
+
+void cf_clear_graphics_static_pointers()
+{
+	s_canvas = NULL;
+	s_default_canvas = NULL;
+	s_clear_red     = 0.5f;
+	s_clear_green   = 0.5f;
+	s_clear_blue    = 0.5f;
+	s_clear_alpha   = 1.0f;
+	s_clear_depth   = 1.0f;
+	s_clear_stencil = 0;
 }
 
 void cf_destroy_graphics()
