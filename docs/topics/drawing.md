@@ -76,7 +76,7 @@ Some particular pages of interest are:
 - [CF_Sprite](https://randygaul.github.io/cute_framework/#/sprite/cf_sprite)
 - [cf_sprite_play](https://randygaul.github.io/cute_framework/#/sprite/cf_sprite_play)
 
-> Load and draw a sprite.
+!> **Important Note** You will need to mount your content folder before the following sample code will run. This lets CF know where to find your files for loading. See here from the previous page on [File I/O](https://randygaul.github.io/cute_framework/#/#/topics/file_io) to learn how.
 
 ```cpp
 #include <cute.h>
@@ -88,7 +88,7 @@ int main(int argc, char* argv[])
 	Result result = make_app("Basic Sprite", 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;
 
-	Sprite girl_sprite = cf_make_sprite("test_data/girl.aseprite");
+	Sprite girl_sprite = cf_make_sprite("girl.aseprite");
 	girl_sprite.play("spin");
 	girl_sprite.scale = V2(4,4);
 
@@ -134,6 +134,8 @@ Text has it's own [Text API Reference](https://randygaul.github.io/cute_framewor
 
 Here's an example sample for drawing some text onto the screen.
 
+!> **Important Note** You will need to mount your content folder before the following sample code will run. This lets CF know where to find your files for loading. See here from the previous page on [File I/O](https://randygaul.github.io/cute_framework/#/#/topics/file_io) to learn how.
+
 ```cpp
 #include <cute.h>
 using namespace Cute;
@@ -145,13 +147,13 @@ int main(int argc, char* argv[])
 	if (is_error(result)) return -1;
 
 	draw_push_antialias(true);
-	make_font("sample_data/ProggyClean.ttf", "ProggyClean");
+	make_font("ProggyClean.ttf", "ProggyClean");
 	push_font("ProggyClean");
-	make_font("sample_data/calibri.ttf", "calibri");
+	make_font("calibri.ttf", "calibri");
 	set_fixed_timestep();
 	int draw_calls = 0;
 
-	char* sample = fs_read_entire_file_to_memory_and_nul_terminate("sample_data/sample.txt");
+	char* sample = fs_read_entire_file_to_memory_and_nul_terminate("sample.txt");
 	CF_DEFER(cf_free(sample));
 
 	while (app_is_running()) {
