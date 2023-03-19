@@ -6,7 +6,7 @@
 <img alt="Discord" src="https://img.shields.io/discord/432009046833233930?label=discord">
 </p>
 
-[Cute Framework](https://randygaul.github.io/cute_framework/#/) (CF) is the *cutest* framework available for making 2D games in C++. It provides a portable foundational layer for building 2D games in C/C++ without baggage, gnarly dependencies, or cryptic APIs. CF runs almost anywhere, including Windows, MacOS, iOS, Android, Linux, and more!
+[Cute Framework](https://randygaul.github.io/cute_framework/#/) (CF) is the *cutest* framework available for making 2D games in C++. It provides a portable foundational layer for building 2D games in C/C++ without baggage, gnarly dependencies, or cryptic APIs. CF runs almost anywhere, including Windows, MacOS, iOS, Android, Linux, Browsers, and more!
 
 > **NOTE**: Cute Framework is currently in flux for it's v1.0 release! These notes/docs will be changed as they get rolled out and come online.
 
