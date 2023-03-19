@@ -315,8 +315,8 @@ else()
 		GIT_TAG release-2.26.1
 		GIT_PROGRESS TRUE
 	)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL2main SDL2-static)
 endif()
-set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL2main SDL2-static)
 target_include_directories(cute PUBLIC ${SDL2_INCLUDE_DIRS})
 
 # Some platform specific settings.
