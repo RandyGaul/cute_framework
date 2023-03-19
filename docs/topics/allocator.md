@@ -1,10 +1,8 @@
 [](../header.md ':include')
 
-## Custom Allocators
-
 The topic of custom allocators is only relevant for certain games trying to eek out performance, i.e. for more advanced users. For most games, simply calling `malloc` or `new` is quite sufficient. However, in the event where some kind of custom allocator is needed [`cf_allocator_override`](https://randygaul.github.io/cute_framework/#/allocator/cf_allocator_override) provides a way to supply a custom [`CF_Allocator`](https://randygaul.github.io/cute_framework/#/allocator/cf_allocator). This lets you hook in your own allocation model and do whatever you want with all allocations internal to Cute Framework. For example, some games might need to reduce memory fragmentation and can't afford simply call `malloc` alone, but instead want to wrap it up inside of their implementation.
 
-### Overriding the Default Allocator
+## Overriding the Default Allocator
 
 To override the default allocator a few functions must be defined and passed to CF as function pointers.
 
@@ -28,7 +26,7 @@ typedef struct CF_Allocator
 
 Each of these functions has a `udata` parameter, standing for "user data". This is an optional pointer that simply gets handed back to you whenever any of the function pointers are called. This lets you have easy access to external state, such as a pointer to your memory allocator.
 
-### Implementing Your Own Allocator
+## Implementing Your Own Allocator
 
 Here's an example of how you might implement your own custom allocation functions. Let's assume you have `MyAllocator` implemented somewhere in your code.
 
@@ -69,6 +67,6 @@ allocator.calloc_fn = my_calloc;
 allocator.realloc_fn = my_realloc;
 ```
 
-### Restoring the Default Allocator
+## Restoring the Default Allocator
 
 If for any reason you need to restore the default allocator, simply call [`cf_allocator_restore_default`](https://randygaul.github.io/cute_framework/#/allocator/cf_allocator_restore_default).

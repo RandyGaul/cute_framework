@@ -1,5 +1,7 @@
 [](../header.md ':include')
 
+<br>
+
 Atomics are a rather advanced topic in programming. They aren't unique to Cute Framework, but CF does support atomics. You can check out the [API Reference for Atomics](https://randygaul.github.io/cute_framework/#/api_reference?id=atomics) to see all of the available functions.
 
 To fully understand atomics it's best to read some online articles such as [Beej's Article on Atomics](https://beej.us/guide/bgc/html/split/chapter-atomics.html). Briefly: an atomic operation is on that is guaranteed to start and finish in one go. This is super useful when dealing with multiple threads. Knowing that one thread will complete and operation before any other thread can mess with the operation is important to prevent [race conditions](https://stackoverflow.com/questions/34510/what-is-a-race-condition).

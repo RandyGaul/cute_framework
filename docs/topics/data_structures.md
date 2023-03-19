@@ -145,7 +145,7 @@ For example, an [LRU cache](https://leetcode.com/problems/lru-cache/) can be imp
 
 > Converting from host to node pointer.
 
-```
+```cpp
 struct MyStruct {
     int a;
     float b;
