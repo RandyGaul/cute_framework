@@ -2,7 +2,7 @@
 
 <br>
 
-Getting things on the screen with CF can be done in one of two ways: [Low Level Graphics](https://randygaul.github.io/cute_framework/#/topics/low_leveL_graphics), or the [Draw API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=draw). This page showcases the latter, the recommended option for getting shapes, sprites and text onto the screen. Text has it's own dedicated [Text API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=text), discussed here as well.
+Getting things on the screen with CF can be done in one of two ways: [Low Level Graphics](https://randygaul.github.io/cute_framework/#/topics/low_level_graphics), or the [Draw API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=draw). This page showcases the latter, the recommended option for getting shapes, sprites and text onto the screen. Text has it's own dedicated [Text API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=text), discussed here as well.
 
 ## Drawing Shapes
 
