@@ -28,6 +28,12 @@
 #define STB_VORBIS_HEADER_ONLY
 #include <stb/stb_vorbis.c>
 
+#ifdef CF_EMSCRIPTEN
+#	ifndef CUTE_SOUND_SCALAR_MODE
+#		define CUTE_SOUND_SCALAR_MODE
+#	endif // CUTE_SOUND_SCALAR_MODE
+#endif // CF_EMSCRIPTEN
+
 #define CUTE_SOUND_IMPLEMENTATION
 #define CUTE_SOUND_FORCE_SDL
 #include <cute/cute_sound.h>
