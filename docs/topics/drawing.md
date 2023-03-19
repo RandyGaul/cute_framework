@@ -78,6 +78,8 @@ Some particular pages of interest are:
 
 !> **Important Note** You will need to mount your content folder before the following sample code will run. This lets CF know where to find your files for loading. See here from the previous page on [File I/O](https://randygaul.github.io/cute_framework/#/#/topics/file_io) to learn how.
 
+You may download [girl.aseprite](https://github.com/RandyGaul/cute_framework/raw/master/test/test_data/girl.aseprite) for this example.
+
 ```cpp
 #include <cute.h>
 using namespace Cute;
@@ -135,6 +137,8 @@ Text has it's own [Text API Reference](https://randygaul.github.io/cute_framewor
 Here's an example sample for drawing some text onto the screen.
 
 !> **Important Note** You will need to mount your content folder before the following sample code will run. This lets CF know where to find your files for loading. See here from the previous page on [File I/O](https://randygaul.github.io/cute_framework/#/#/topics/file_io) to learn how.
+
+You may download [calibri.tff](https://github.com/RandyGaul/cute_framework/raw/master/samples/sample_data/calibri.ttf) to run this sample.
 
 ```cpp
 #include <cute.h>

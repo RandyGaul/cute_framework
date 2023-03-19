@@ -19,6 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifndef CF_NO_HTTPS
+
 #include <cute_https.h>
 #include <cute_alloc.h>
 #include <cute_c_runtime.h>
@@ -1010,3 +1012,5 @@ const https_response_t* https_response(CF_Https* https)
 }
 
 }
+
+#endif // CF_NO_HTTPS

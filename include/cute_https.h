@@ -19,6 +19,7 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifndef CF_NO_HTTPS
 #ifndef CF_HTTPS_H
 #define CF_HTTPS_H
 
@@ -430,3 +431,4 @@ CF_INLINE bool https_response_t::find_header(const char* header_name, HttpsHeade
 #endif // CF_CPP
 
 #endif // CF_HTTPS_H
+#endif // CF_NO_HTTPS

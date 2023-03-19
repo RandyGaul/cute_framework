@@ -21,7 +21,7 @@ After completing the above fundamental reading it's recommended to then select t
 * [Collision](/topics/collision.md)
 * [Coroutines](/topics/coroutines.md)
 * [Data Structures](/topics/data_structures.md)
-* [Emscripten](/topics/emscripten.md)
+* [Web Builds with Emscripten](/topics/emscripten.md)
 * [Entity Component System](/topics/entity_component_system.md)
 * [Input](/topics/input.md)
 * [Low Level Graphics](/topics/low_level_graphics.md)

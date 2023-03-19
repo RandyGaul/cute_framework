@@ -511,7 +511,7 @@ void Array<T>::set_count(int count)
 {
 	CF_ARRAY_ENSURE_CAPACITY(count);
 	if (count > m_count) {
-		for (int i = count; ++i; i < m_count) {
+		for (int i = count; i < m_count; ++i) {
 			CF_PLACEMENT_NEW(m_ptr + i) T();
 		}
 	} else {

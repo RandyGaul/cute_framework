@@ -2,11 +2,29 @@
 
 <br>
 
-!> This page is marked as _incomplete_, and will be refined for v1.0 launch of CF.
+CF can be used to build for the web using a compiler called [Emscripten](https://emscripten.org/). Getting started with Emscripten is a bit challenging, so hopefully this page can help get you started. Once you get your game building for the web it's usually quite a breeze after the initial setup.
 
-# Emscripten Builds
+!> **Note** Emscripten builds automatically disable CF's [HTTPS support](https://randygaul.github.io/cute_framework/#/api_reference?id=web), since web builds suffer from very poor support of this feature.
 
-Make sure [emscripten is installed](https://emscripten.org/docs/getting_started/downloads.html) on your machine. If on Windows go ahead and run the `emscripten.cmd` file. This will build libcute.a. Though if you're using something Ninja the commands will be slightly different, as you'll need to consult [emscripten docs](https://emscripten.org/docs/compiling/Building-Projects.html#integrating-with-a-build-system).
+## Install Emscripten
+
+Make sure [emscripten is installed](https://emscripten.org/docs/getting_started/downloads.html) on your machine, along with [Perl](https://strawberryperl.com/).
+
+?> Be sure to install any [platform-specific](https://emscripten.org/docs/getting_started/downloads.html#platform-specific-notes) dependencies first.
+
+?> **Note** For windows users performing setup with the command prompt you should omit `./` from the Emscripten docs. Instead of typing `./emsdk install latest`, try typing `emsdk install latest`.
+
+1. Run `./emsdk install latest` (or `emsdk install latest` for Windows users).
+2. Run `./emsdk activate latest` (or `emsdk activate latest` for Windows users).
+3. Windows uers only: Optionally run step 2 with `--permanent` flag (recommended), e.g. `emsdk activate latest --permanent`.
+
+You will likely need to call `source ./emsdk_env.sh` on Linux/MacOS to setup environment variables. For Windows users `--permanent` may be buggy and not correctly, in this case you must call `emsdk_env.bat` manually each time you open a new command prompt.
+
+## Build CF
+
+If on Windows go ahead and run the `emscripten.cmd` file. This will build libcute.a. Though if you're using something Ninja the commands will be slightly different, as you'll need to consult [emscripten docs](https://emscripten.org/docs/compiling/Building-Projects.html#integrating-with-a-build-system).
+
+## Build your Game
 
 Additionally you can add something like the following to your cmake build script for your own project.
 

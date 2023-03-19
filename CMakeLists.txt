@@ -37,6 +37,12 @@ option(CF_FRAMEWORK_CIMGUI "Build cute framework with cimgui implementation." OF
 # Platform detection.
 if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
 	set(EMSCRIPTEN TRUE)
+	# Disable HTTPS with Emscripten since mbedtls continually has build issues here, also it's not
+	# a very useful feature for web builds anyways, due to lack of socket/signal support.
+	set(CF_FRAMEWORK_WITH_HTTPS OFF)
+	# Also disable samples/tests.
+	set(CF_FRAMEWORK_BUILD_SAMPLES OFF)
+	set(CF_FRAMEWORK_BUILD_TESTS OFF)
 elseif(WIN32)
 	set(WINDOWS TRUE)
 elseif(UNIX AND NOT APPLE)
@@ -63,9 +69,13 @@ if(MSVC)
 	add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 endif()
 
-# Disable SSE for ARM Macbooks.
-if(APPLE AND "${CMAKE_OSX_ARCHITECTURES}" MATCHES "arm")
-	add_definitions(-DCF_SOUND_SCALAR_MODE)
+# Disable SSE for ARM Macbooks and Emscripten.
+if(APPLE AND "${CMAKE_OSX_ARCHITECTURES}" MATCHES "arm" OR EMSCRIPTEN)
+	add_definitions(-DCUTE_SOUND_SCALAR_MODE)
+endif()
+
+if(CF_FRAMEWORK_WITH_HTTPS MATCHES OFF)
+	add_definitions(-DCF_NO_HTTPS)
 endif()
 
 # Common directories for compiler/linker path.
@@ -287,7 +297,7 @@ if(CF_FRAMEWORK_WITH_HTTPS)
 	fetch_content_with_folder(
 		mbedtls
 		GIT_REPOSITORY https://github.com/Mbed-TLS/mbedtls
-		GIT_TAG v3.1.0
+		GIT_TAG v3.3.0
 		GIT_PROGRESS TRUE
 	)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} mbedx509 mbedtls mbedcrypto)
@@ -312,6 +322,7 @@ target_include_directories(cute PUBLIC ${SDL2_INCLUDE_DIRS})
 # Some platform specific settings.
 if(EMSCRIPTEN)
 	target_compile_options(cute PUBLIC -O1 -fno-rtti -fno-exceptions)
+	set_target_properties(cute PROPERTIES COMPILE_FLAGS "-s USE_SDL=2")
 	target_link_libraries(cute PRIVATE "-s USE_WEBGL2=1 -s ASSERTIONS=1 -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1 -s ASYNCIFY=1")
 elseif(MINGW)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} d3d11 crypt32)
@@ -347,6 +358,7 @@ if (CF_FRAMEWORK_BUILD_TESTS)
 
 	add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
 	target_link_libraries(tests PRIVATE cute)
+	set_target_properties(tests PROPERTIES COMPILE_FLAGS "-s USE_SDL=2")
 
 	if(EMSCRIPTEN)
 		set(CMAKE_EXECUTABLE_SUFFIX ".html")
@@ -354,7 +366,7 @@ if (CF_FRAMEWORK_BUILD_TESTS)
 		target_link_options(tests PRIVATE -o tests.html --preload-file ${PROJECT_SOURCE_DIR}/test/test_data --emrun -O1)
 	else()
 		# Copy over any test data in the test/test_data folder.
-		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:tests>/test_data)
+		add_custom_command(TARGET cute POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:cute>/test_data)
 	endif()
 
 	# For convenience make tests the startup project in Visual Studio.
@@ -403,7 +415,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 	add_executable(scratch samples/scratch.cpp)
 	target_link_libraries(scratch PRIVATE cute)
 	set_target_properties(scratch PROPERTIES FOLDER "samples")
-	add_custom_command(TARGET scratch POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/samples/sample_data" $<TARGET_FILE_DIR:scratch>/sample_data)
+	add_custom_command(TARGET cute POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/samples/sample_data" $<TARGET_FILE_DIR:cute>/sample_data)
 endif()
 
 # Propogate public headers to other cmake scripts including this subdirectory.
