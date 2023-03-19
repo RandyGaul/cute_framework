@@ -37,3 +37,7 @@ endif()
 ```
 
 Also don't forget to call `emscripten_set_main_loop` from your `main` function!
+
+## Example Game Project
+
+The [Cute Snake](https://github.com/RandyGaul/cute_snake/blob/master/README.md) game project is a good example of how to setup an Emscripten build with CMake.

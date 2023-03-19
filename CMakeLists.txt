@@ -40,7 +40,8 @@ if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
 	# Disable HTTPS with Emscripten since mbedtls continually has build issues here, also it's not
 	# a very useful feature for web builds anyways, due to lack of socket/signal support.
 	set(CF_FRAMEWORK_WITH_HTTPS OFF)
-	# Also disable samples/tests.
+
+	# Also disable samples/tests. These should be supported/added back in at some point.
 	set(CF_FRAMEWORK_BUILD_SAMPLES OFF)
 	set(CF_FRAMEWORK_BUILD_TESTS OFF)
 elseif(WIN32)
@@ -297,7 +298,7 @@ if(CF_FRAMEWORK_WITH_HTTPS)
 	fetch_content_with_folder(
 		mbedtls
 		GIT_REPOSITORY https://github.com/Mbed-TLS/mbedtls
-		GIT_TAG v3.3.0
+		GIT_TAG v3.1.0
 		GIT_PROGRESS TRUE
 	)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} mbedx509 mbedtls mbedcrypto)
@@ -358,7 +359,6 @@ if (CF_FRAMEWORK_BUILD_TESTS)
 
 	add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
 	target_link_libraries(tests PRIVATE cute)
-	set_target_properties(tests PROPERTIES COMPILE_FLAGS "-s USE_SDL=2")
 
 	if(EMSCRIPTEN)
 		set(CMAKE_EXECUTABLE_SUFFIX ".html")
