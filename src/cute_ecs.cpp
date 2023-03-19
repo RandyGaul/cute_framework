@@ -121,6 +121,7 @@ CF_Entity cf_make_entity(const char* entity_type, CF_Result* err_out)
 		}
 
 		void* component = collection->component_tables[i].add();
+		CF_MEMSET(component, 0, config->size_of_component);
 		if (config->initializer) {
 			config->initializer(entity, component, config->initializer_udata);
 		}

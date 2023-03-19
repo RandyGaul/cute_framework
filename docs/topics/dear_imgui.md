@@ -42,7 +42,6 @@ You can find [this sample program](https://github.com/RandyGaul/cute_framework/b
 #include <cute.h>
 #include <stdio.h>
 
-#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #include <cimgui.h>
 
 int main(int argc, char* argv[])
@@ -106,7 +105,7 @@ The [Dear ImGui](https://github.com/ocornut/imgui) page has tons of information 
 
 The above examples are shown with the [cimgui](https://github.com/cimgui/cimgui) API, which is a C wrapper around the C++ Dear ImGui library. If instead you want to use C++, include `<imgui.h>` instead of `<cimgui.h>`, and use `ImGui::` instead of the `ig` prefix.
 
-The C++ API is rather preferred since it adds in a lot of default parameters. But, if you're just using plain C then cimgu is here for you.
+The C++ API is rather preferred since it adds in a lot of default parameters. But, if you're just using plain C then cimgui is here for you.
 
 ## Making Tools
 

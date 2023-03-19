@@ -38,7 +38,7 @@ typedef unsigned __int64 ImU64;
 #endif
 
 
-#ifdef CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+#ifndef CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 
 typedef struct ImDrawChannel ImDrawChannel;
 typedef struct ImDrawCmd ImDrawCmd;
@@ -2587,7 +2587,7 @@ struct SDL_Window;
 typedef union SDL_Event SDL_Event;
 #endif // CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 
-#ifndef CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+#ifdef CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 typedef struct ImGuiStorage::ImGuiStoragePair ImGuiStoragePair;
 typedef struct ImGuiTextFilter::ImGuiTextRange ImGuiTextRange;
 typedef ImStb::STB_TexteditState STB_TexteditState;

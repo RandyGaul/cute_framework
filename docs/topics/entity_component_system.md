@@ -105,6 +105,10 @@ This initialize function will be called any time an `Octorok` entity is created,
 
 ?> You may be wondering about `CF_PLACEMENT_NEW`. This is a way to call a constructor in C++. In C there are no constructors, so a good alternative is to zero-out the entire component as an initial state.
 
+### Zero-Init
+
+Components are always created with their memory completely cleared to zero. If you design your components up-front with this mind, it's possible to avoid needing any initialization function at all, and instead only the occasional cleanup function.
+
 ### Component Dependency
 
 Other ECS's out there have the notion of component dependencies, where a component can not be added to an entity based on what other components the entity has. CF does not have any kind of dependency API. Instead it is suggested for users to enforce their own dependencies rules. Either the registration functions can be wrapped, or, within component serialize functions the [`cf_entity_has_component`](https://randygaul.github.io/cute_framework/#/ecs/cf_entity_has_component) function can be used to enforce custom dependencies.

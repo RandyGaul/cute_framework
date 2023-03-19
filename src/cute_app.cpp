@@ -57,10 +57,6 @@
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
 
-#ifdef CF_USE_CIMGUI
-#include <cimgui.h>
-#endif // CF_FRAMEWORK_CIMGUI
-
 #define SOKOL_IMPL
 #define SOKOL_TRACE_HOOKS
 #ifdef SOKOL_D3D11

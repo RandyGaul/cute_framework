@@ -32,7 +32,6 @@ option(CF_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
 option(CF_FRAMEWORK_WITH_HTTPS "Build Cute Framework with mbedtls for HTTPS support (Apache 2.0 license)." ON)
 option(CF_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
 option(CF_FRAMEWORK_BUILD_SAMPLES "Build the cute framework sample programs." ON)
-option(CF_FRAMEWORK_CIMGUI "Build cute framework with cimgui implementation." OFF)
 
 # Platform detection.
 if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
@@ -233,13 +232,6 @@ else()
 endif()
 target_compile_definitions(cute PRIVATE CF_EXPORT)
 
-if(CF_FRAMEWORK_CIMGUI)
-	if(CF_FRAMEWORK_STATIC)
-		target_compile_definitions(cute PUBLIC CIMGUI_NO_EXPORT)
-	endif()
-	target_compile_definitions(cute PUBLIC CF_USE_CIMGUI)
-endif()
-
 # PhysicsFS, always statically linked.
 set(PHYSFS_SRCS
 	libraries/physfs/physfs_archiver_7z.c
@@ -379,6 +371,9 @@ endif()
 
 # Cute sample prgrams (optional, defaulted to also build).
 if (CF_FRAMEWORK_BUILD_SAMPLES)
+	add_executable(basic_ecs samples/basic_ecs.cpp)
+	target_link_libraries(basic_ecs PRIVATE cute)
+	set_target_properties(basic_ecs PROPERTIES FOLDER "samples")
 	add_executable(basic_serialization samples/basic_serialization.c)
 	target_link_libraries(basic_serialization PRIVATE cute)
 	set_target_properties(basic_serialization PROPERTIES FOLDER "samples")

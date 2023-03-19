@@ -49,6 +49,11 @@ struct CF_Draw* draw;
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb/stb_truetype.h>
 
+#include <imgui.h>
+#include <imgui_internal.h>
+#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
+#include <cimgui.h>
+
 #include <algorithm>
 
 #define DEBUG_VERT(v, c) batch_quad(make_aabb(v, 3, 3), c)
