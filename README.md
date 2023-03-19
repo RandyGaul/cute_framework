@@ -12,7 +12,7 @@
 
 ## Download and Setup
 
-~~The easiest option is to head over and pickup the [latest pre-built version](https://github.com/randygaul/cute_framework/releases/latest)~~ This link is currently out of date, and awaiting the soon to be v1.0 release (see below for building latest from source). You can link your project against CF as either a static or shared library. Be sure to also visit the [Cute Framwork documentation site](https://randygaul.github.io/cute_framework/#/).
+~~The easiest option is to head over and pickup the [latest pre-built version](https://github.com/randygaul/cute_framework/releases/latest)~~ This link is currently out of date, and awaiting the soon to be v1.0 release (see below for building latest from source). You can link your project against CF as either a static or shared library. Be sure to also visit the [Cute Framework documentation site](https://randygaul.github.io/cute_framework/#/).
 
 ### Building from Source
 
