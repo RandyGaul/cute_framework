@@ -29,6 +29,11 @@ int main(int argc, char* argv[])
 	CF_Result result = cf_make_app("Basic Input", 0, 0, 640, 480, options, argv[0]);
 	if (cf_is_error(result)) return -1;
 
+	CF_Aabb bb;
+	CF_Circle circle;
+
+	cf_circle_to_aabb(circle, bb);
+
 	while (cf_app_is_running())
 	{
 		cf_app_update(NULL);

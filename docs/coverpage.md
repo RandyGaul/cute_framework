@@ -5,7 +5,7 @@
 
 - Foundational layer for almost any 2D game
 - 100% free and open source
-- Works nearly everwhere (Desktops, Mobile, and more...)
+- Works nearly everwhere (Desktops, Mobile, Web, and more...)
 
 [Get Started](getting_started)
 [GitHub](https://github.com/RandyGaul/cute_framework/)

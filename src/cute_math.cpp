@@ -19,7 +19,9 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#define CF_C2_IMPLEMENTATION
+#include <cute_defines.h>
+
+#define CUTE_C2_IMPLEMENTATION
 #include <cute/cute_c2.h>
 
 #include <cute_math.h>
