@@ -5,7 +5,7 @@
 using namespace Cute;
 
 // Mimics League of Legends armor/magic defense system. It supports shields, physical/magic/true damage, and
-// damage over time. Inputs are just raw-damage, so there's not attacker stats, only defender stats.
+// damage over time. Inputs are just raw-damage, so there's no attacker stats, only defender stats.
 
 struct Shield
 {
@@ -13,6 +13,7 @@ struct Shield
 	float expiration;
 };
 
+// C_ convention for components.
 struct C_HitPoints
 {
 	float max_hp;
@@ -49,6 +50,8 @@ struct Dbf_Dot
 	int tick_count;
 };
 
+// Stores all hits/damage over time information.
+// Later on other debug types can be added here as well.
 struct C_Debuff
 {
 	Array<Dbf_Hit> hits;
@@ -67,6 +70,7 @@ struct C_Debuff
 	}
 };
 
+// Marks entities as "dead", and handles shield expiration.
 void hitpoints_system(CF_ComponentList component_list, int entity_count, void* udata)
 {
 	CF_UNUSED(udata);
@@ -92,6 +96,7 @@ void hitpoints_system(CF_ComponentList component_list, int entity_count, void* u
 	}
 }
 
+// Apply damage post-mitigation (after armor/mage defense is applied).
 void hit_raw(C_HitPoints* hp, float damage)
 {
 	// Absorb damage into shields.
@@ -124,9 +129,12 @@ void hit_magic(C_HitPoints* hp, float damage)
 
 void hit_true(C_HitPoints* hp, float damage)
 {
+	// True damage cannot be mitigated at all, so just pass it on through.
 	hit_raw(hp, damage);
 }
 
+// Handles all logic for hits/dots.
+// This can be expanded to handle other kinds of debufs later as well.
 void debuff_system(CF_ComponentList component_list, int entity_count, void* udata)
 {
 	CF_UNUSED(udata);
