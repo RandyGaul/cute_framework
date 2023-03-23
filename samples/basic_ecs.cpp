@@ -4,6 +4,9 @@
 
 using namespace Cute;
 
+// Mimics League of Legends armor/magic defense system. It supports shields, physical/magic/true damage, and
+// damage over time. Inputs are just raw-damage, so there's not attacker stats, only defender stats.
+
 struct Shield
 {
 	float hp;
