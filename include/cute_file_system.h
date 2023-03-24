@@ -38,7 +38,6 @@ extern "C" {
 // These are implemented with the C-string API in "cute_string.h"; each function returns a fully
 // mutable string you must free up with `sfree` or `cf_string_free` when done.
 
-#ifndef CF_NO_SHORTHAND_API
 /**
  * @function spfname
  * @category path
@@ -176,7 +175,6 @@ extern "C" {
  * @related  spfname spfname_no_ext spext spext_equ sppop sppopn spcompact spdir_of sptop_of spnorm
  */
 #define spnorm(s) cf_path_normalize(s)
-#endif // CF_NO_SHORTHAND_API
 
 CF_API char* CF_CALL cf_path_get_filename(const char* path);
 CF_API char* CF_CALL cf_path_get_filename_no_ext(const char* path);

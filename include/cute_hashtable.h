@@ -29,7 +29,6 @@
 //--------------------------------------------------------------------------------------------------
 // C API
 
-#ifndef CF_NO_SHORTHAND_API
 /**
  * @function htbl
  * @category hash
@@ -318,7 +317,6 @@
  * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
  */
 #define hfree(h) cf_hashtable_free(h)
-#endif // CF_NO_SHORTHAND_API
 
 //--------------------------------------------------------------------------------------------------
 // Longform C API.

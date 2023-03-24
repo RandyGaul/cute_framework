@@ -49,7 +49,6 @@ extern "C" {
 //     printf("%s", s);
 //     sfree(s);
 
-#ifndef CF_NO_SHORTHAND_API
 /**
  * @function slen
  * @category string
@@ -877,7 +876,6 @@ CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint
  * @related  sintern sintern_range sivalid silen sinuke
  */
 #define sinuke() cf_sinuke()
-#endif // CF_NO_SHORTHAND_API
 
 //--------------------------------------------------------------------------------------------------
 // Longform C API.

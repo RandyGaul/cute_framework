@@ -29,7 +29,6 @@
 //--------------------------------------------------------------------------------------------------
 // C API
 
-#ifndef CF_NO_SHORTHAND_API
 /**
  * @function dyna
  * @category array
@@ -236,7 +235,6 @@
  * @related  dyna asize acount acap afit apush apop aend alast aclear aset arev ahash astatic afree
  */
 #define afree(a) cf_array_free(a)
-#endif // CF_NO_SHORTHAND_API
 
 //--------------------------------------------------------------------------------------------------
 // Longform C API.
