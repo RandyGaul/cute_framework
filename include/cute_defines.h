@@ -95,7 +95,11 @@
 
 #define CF_UNUSED(x) (void)x
 #define CF_ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
-#define CF_INLINE inline
+#ifdef __cplusplus
+#	define CF_INLINE inline
+#else
+#	define CF_INLINE static inline
+#endif
 #define CF_KB 1024
 #define CF_MB (CF_KB * CF_KB)
 #define CF_GB (CF_MB * CF_MB)

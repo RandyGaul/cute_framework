@@ -9,7 +9,7 @@ GitHub: [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns a random `double`.
 
 ```cpp
-static double   cf_rnd_next_double(CF_Rnd* rnd);
+double   cf_rnd_next_double(CF_Rnd* rnd);
 ```
 
 Parameters | Description

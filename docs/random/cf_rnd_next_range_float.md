@@ -9,7 +9,7 @@ GitHub: [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns a random `float` from the range `min` to `max` (inclusive).
 
 ```cpp
-static float    cf_rnd_next_range_float(CF_Rnd* rnd, float min, float max);
+float    cf_rnd_next_range_float(CF_Rnd* rnd, float min, float max);
 ```
 
 Parameters | Description

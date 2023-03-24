@@ -9,7 +9,7 @@ GitHub: [cute_rnd.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns a random `double` from the range `min` to `max` (inclusive).
 
 ```cpp
-static double   cf_rnd_next_range_double(CF_Rnd* rnd, double min, double max);
+double   cf_rnd_next_range_double(CF_Rnd* rnd, double min, double max);
 ```
 
 Parameters | Description
