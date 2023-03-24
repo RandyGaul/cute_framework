@@ -28,6 +28,8 @@
 #include "cute_string.h"
 #include "cute_math.h"
 #include "cute_time.h"
+#include "cute_color.h"
+#include "cute_result.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -145,14 +147,17 @@ typedef struct CF_Sprite
 	/* @member A speed multiplier for updating frames. Default of 1.0f. */
 	float play_speed_multiplier;
 
-	/* @member A pointer to the current animation to display, from within the set `animations`. See `CF_Animation`. */
-	const CF_Animation* animation;
-
 	/* @member Whether or not to pause updates to the animation. */
 	bool paused;
 
 	/* @member The current elapsed time within a frame of animation. */
 	float t;
+
+	/* @member For internal use only. */
+	uint64_t easy_sprite_id;
+
+	/* @member A pointer to the current animation to display, from within the set `animations`. See `CF_Animation`. */
+	const CF_Animation* animation;
 
 	/* @member The set of named animations for this sprite. See `CF_Animation` and `htbl`. */
 	htbl const CF_Animation** animations;
@@ -181,7 +186,7 @@ CF_INLINE CF_Sprite cf_sprite_defaults()
 }
 
 /**
- * @function cf_make_easy_sprite
+ * @function cf_make_easy_sprite_from_png
  * @category sprite
  * @brief    Loads a single-frame sprite from a single png file.
  * @param    png_path     Virtual path to the .png file.
@@ -189,9 +194,25 @@ CF_INLINE CF_Sprite cf_sprite_defaults()
  *           as it's only a single-frame made from a png file.
  * @remarks  The preferred way to make a sprite is `cf_make_sprite`, but this function provides a very simple way to get started
  *           by merely loading a single .png image, or for games that don't require animations. See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
- * @related  CF_Sprite cf_make_easy_sprite cf_make_sprite
+ * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels
  */
-CF_API CF_Sprite CF_CALL cf_make_easy_sprite(const char* png_path);
+CF_API CF_Sprite CF_CALL cf_make_easy_sprite_from_png(const char* png_path, CF_Result* result_out);
+
+/**
+ * @function cf_make_easy_sprite_from_pixels
+ * @category sprite
+ * @brief    TODO
+ * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels
+ */
+CF_API CF_Sprite CF_CALL cf_make_easy_sprite_from_pixels(const CF_Pixel* pixels, int w, int h);
+
+/**
+ * @function cf_easy_sprite_update_pixels
+ * @category sprite
+ * @brief    TODO
+ * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels
+ */
+CF_API void CF_CALL cf_easy_sprite_update_pixels(CF_Sprite* sprite, const CF_Pixel* pixels);
 
 /**
  * @function cf_make_sprite
@@ -202,8 +223,8 @@ CF_API CF_Sprite CF_CALL cf_make_easy_sprite(const char* png_path);
  * @remarks  This function caches the sprite internally. Subsequent calls to load the same sprite will be very fast; you can use
  *           this function directly to fetch sprites that were already loaded. If you want to load sprites with your own custom
  *           animation data, instead of using the .ase/.aseprite format, you can try out `cf_png_cache_load` for a more low-level option.
- *           TODO - LINK_TO_VFS_TUTORIAL.
- * @related  CF_Sprite cf_make_sprite cf_sprite_unload
+ *           See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels
  */
 CF_API CF_Sprite CF_CALL cf_make_sprite(const char* aseprite_path);
 
@@ -238,6 +259,7 @@ CF_INLINE void cf_sprite_draw(CF_Sprite* sprite)
 CF_INLINE void cf_sprite_update(CF_Sprite* sprite)
 {
 	if (sprite->paused) return;
+	if (!sprite->animation) return;
 
 	sprite->t += CF_DELTA_TIME * sprite->play_speed_multiplier;
 	if (sprite->t >= sprite->animation->frames[sprite->frame_index].delay) {
@@ -278,6 +300,7 @@ CF_INLINE void cf_sprite_reset(CF_Sprite* sprite)
  */
 CF_INLINE void cf_sprite_play(CF_Sprite* sprite, const char* animation)
 {
+	if (!sprite->animation) return;
 	sprite->animation = hfind(sprite->animations, sintern(animation));
 	CF_ASSERT(sprite->animation);
 	cf_sprite_reset(sprite);
@@ -293,6 +316,7 @@ CF_INLINE void cf_sprite_play(CF_Sprite* sprite, const char* animation)
  */
 CF_INLINE bool cf_sprite_is_playing(CF_Sprite* sprite, const char* animation)
 {
+	if (!sprite->animation) return false;
 	return !CF_STRCMP(animation, sprite->animation->name);
 }
 
@@ -367,7 +391,7 @@ CF_INLINE void cf_sprite_flip_y(CF_Sprite* sprite)
  */
 CF_INLINE int cf_sprite_frame_count(const CF_Sprite* sprite)
 {
-	return alen(sprite->animation);
+	return asize(sprite->animation);
 }
 
 /**
@@ -391,6 +415,7 @@ CF_INLINE int cf_sprite_current_frame(const CF_Sprite* sprite)
  */
 CF_INLINE float cf_sprite_frame_delay(CF_Sprite* sprite)
 {
+	if (!sprite->animation) return 0;
 	return sprite->animation->frames[sprite->frame_index].delay;
 }
 
@@ -403,6 +428,7 @@ CF_INLINE float cf_sprite_frame_delay(CF_Sprite* sprite)
  */
 CF_INLINE float cf_sprite_animation_delay(CF_Sprite* sprite)
 {
+	if (!sprite->animation) return 0;
 	int count = cf_sprite_frame_count(sprite);
 	float delay = 0;
 	for (int i = 0; i < count; ++i) {
@@ -422,6 +448,7 @@ CF_INLINE float cf_sprite_animation_delay(CF_Sprite* sprite)
 CF_INLINE float cf_sprite_animation_interpolant(CF_Sprite* sprite)
 {
 	// TODO -- Backwards and pingpong.
+	if (!sprite->animation) return 0;
 	float delay = cf_sprite_animation_delay(sprite);
 	float t = sprite->t + sprite->animation->frames[sprite->frame_index].delay * sprite->frame_index;
 	return cf_clamp(t / delay, 0.0f, 1.0f);
@@ -438,6 +465,7 @@ CF_INLINE float cf_sprite_animation_interpolant(CF_Sprite* sprite)
 CF_INLINE bool cf_sprite_will_finish(CF_Sprite* sprite)
 {
 	// TODO -- Backwards and pingpong.
+	if (!sprite->animation) return false;
 	if (sprite->frame_index == cf_sprite_frame_count(sprite) - 1) {
 		return sprite->t + CF_DELTA_TIME * sprite->play_speed_multiplier >= sprite->animation->frames[sprite->frame_index].delay;
 	} else {
@@ -528,7 +556,8 @@ struct Sprite : public CF_Sprite
 	CF_INLINE bool on_loop() { return cf_sprite_on_loop(this); }
 };
 
-CF_INLINE Sprite easy_make_sprite(const char* png_path) { return cf_make_easy_sprite(png_path); }
+CF_INLINE Sprite easy_make_sprite(const char* png_path, Result* result) { return cf_make_easy_sprite_from_png(png_path, result); }
+CF_INLINE Sprite easy_make_sprite(const Pixel* pixels, int w, int h) { return cf_make_easy_sprite_from_pixels(pixels, w, h); }
 CF_INLINE Sprite make_sprite(const char* aseprite_path) { return cf_make_sprite(aseprite_path); }
 CF_INLINE void sprite_unload(const char* aseprite_path) { cf_sprite_unload(aseprite_path); }
 

@@ -19,9 +19,10 @@ Struct Members | Description
 `int frame_index` | The current frame within `animation` to display.
 `int loop_count` | The number of times this sprite has completed an animation.
 `float play_speed_multiplier` | A speed multiplier for updating frames. Default of 1.0f.
-`const CF_Animation* animation` | A pointer to the current animation to display, from within the set `animations`. See [CF_Animation](/sprite/cf_animation.md).
 `bool paused` | Whether or not to pause updates to the animation.
 `float t` | The current elapsed time within a frame of animation.
+`uint64_t easy_sprite_id` | For internal use only.
+`const CF_Animation* animation` | A pointer to the current animation to display, from within the set `animations`. See [CF_Animation](/sprite/cf_animation.md).
 `htbl const CF_Animation** animations` | The set of named animations for this sprite. See [CF_Animation](/sprite/cf_animation.md) and [htbl](/hash/htbl.md).
 `CF_Transform transform` | An optional transform for rendering within a particular space. See [CF_Transform](/math/cf_transform.md).
 
@@ -34,4 +35,4 @@ TODO
 [CF_Frame](/sprite/cf_frame.md)  
 [CF_Animation](/sprite/cf_animation.md)  
 [cf_make_sprite](/sprite/cf_make_sprite.md)  
-[cf_make_easy_sprite](/sprite/cf_make_easy_sprite.md)  
+cf_make_easy_sprite  

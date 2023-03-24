@@ -1,5 +1,7 @@
 - [cf_animation_add_frame](/sprite/cf_animation_add_frame.md)
-- [cf_make_easy_sprite](/sprite/cf_make_easy_sprite.md)
+- [cf_easy_sprite_update_pixels](/sprite/cf_easy_sprite_update_pixels.md)
+- [cf_make_easy_sprite_from_pixels](/sprite/cf_make_easy_sprite_from_pixels.md)
+- [cf_make_easy_sprite_from_png](/sprite/cf_make_easy_sprite_from_png.md)
 - [cf_make_sprite](/sprite/cf_make_sprite.md)
 - [cf_play_direction_to_string](/sprite/cf_play_direction_to_string.md)
 - [cf_sprite_animation_delay](/sprite/cf_sprite_animation_delay.md)

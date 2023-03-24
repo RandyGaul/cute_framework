@@ -138,7 +138,7 @@ CF_INLINE CF_Color cf_make_color_rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a
  * @param    hex        An integer value, e.g. 0xFFAACC11.
  * @related  CF_Color cf_make_color_rgb_f cf_make_color_rgba_f cf_make_color_rgb cf_make_color_rgba cf_make_color_hex cf_make_color_hex_string
  */
-CF_INLINE CF_Color cf_make_color_hex(int hex) { return cf_make_color_rgba((uint8_t)((hex & 0xFF000000) >> 24), (uint8_t)((hex & 0x00FF0000) >> 16), (uint8_t)((hex & 0x0000FF00) >> 8), (uint8_t)(hex & 0x000000FF)); }
+CF_INLINE CF_Color cf_make_color_hex(int hex) { return cf_make_color_rgba((uint8_t)(hex & 0x000000FF), (uint8_t)((hex & 0x0000FF00) >> 8), (uint8_t)((hex & 0x00FF0000) >> 16), (uint8_t)((hex & 0xFF000000) >> 24)); }
 
 /**
  * @function cf_make_color_hex_string
@@ -546,16 +546,19 @@ CF_INLINE CF_Pixel cf_add_pixel(CF_Pixel a, CF_Pixel b) { return cf_make_pixel_r
  */
 CF_INLINE CF_Pixel cf_sub_pixel(CF_Pixel a, CF_Pixel b) { return cf_make_pixel_rgba(cf_sub_un8(a.colors.r, b.colors.r), cf_sub_un8(a.colors.g, b.colors.g), cf_sub_un8(a.colors.b, b.colors.b), cf_sub_un8(a.colors.a, b.colors.a)); }
 
+CF_INLINE CF_Color cf_pixel_to_color(CF_Pixel p);
+CF_INLINE CF_Pixel cf_color_to_pixel(CF_Color c);
+
 /**
  * @function cf_pixel_lerp
  * @category graphics
  * @brief    Lerps from one `CF_Pixel` to another.
  * @param    a          The first pixel.
  * @param    b          The second pixel.
- * @param    s          The interpolant from 0 to 255.
+ * @param    s          The interpolant from 0 to 1.
  * @related  cf_mul_pixel cf_div_pixel cf_add_pixel cf_sub_pixel cf_pixel_lerp cf_pixel_premultiply
  */
-CF_INLINE CF_Pixel cf_pixel_lerp(CF_Pixel a, CF_Pixel b, uint8_t s) { return cf_add_pixel(a, cf_mul_pixel(cf_sub_pixel(b, a), s)); }
+CF_INLINE CF_Pixel cf_pixel_lerp(CF_Pixel a, CF_Pixel b, float s) { CF_Color A = cf_pixel_to_color(a); return cf_color_to_pixel(cf_add_color(A, cf_mul_color(cf_sub_color(cf_pixel_to_color(b), A), s))); }
 
 /**
  * @function cf_pixel_premultiply

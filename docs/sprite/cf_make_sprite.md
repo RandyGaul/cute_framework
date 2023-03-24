@@ -25,9 +25,11 @@ Returns a [CF_Sprite](/sprite/cf_sprite.md) that can be drawn with `cf_sprite_dr
 This function caches the sprite internally. Subsequent calls to load the same sprite will be very fast; you can use
 this function directly to fetch sprites that were already loaded. If you want to load sprites with your own custom
 animation data, instead of using the .ase/.aseprite format, you can try out `cf_png_cache_load` for a more low-level option.
-TODO - LINK_TO_VFS_TUTORIAL.
+See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
 
 ## Related Pages
 
 [CF_Sprite](/sprite/cf_sprite.md)  
-[cf_sprite_unload](/sprite/cf_sprite_unload.md)  
+[cf_make_easy_sprite_from_png](/sprite/cf_make_easy_sprite_from_png.md)  
+[cf_make_easy_sprite_from_pixels](/sprite/cf_make_easy_sprite_from_pixels.md)  
+[cf_easy_sprite_update_pixels](/sprite/cf_easy_sprite_update_pixels.md)  

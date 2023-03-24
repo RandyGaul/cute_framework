@@ -9,14 +9,14 @@ GitHub: [cute_color.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Lerps from one [CF_Pixel](/graphics/cf_pixel.md) to another.
 
 ```cpp
-CF_Pixel cf_pixel_lerp(CF_Pixel a, CF_Pixel b, uint8_t s)
+CF_Pixel cf_pixel_lerp(CF_Pixel a, CF_Pixel b, float s)
 ```
 
 Parameters | Description
 --- | ---
 a | The first pixel.
 b | The second pixel.
-s | The interpolant from 0 to 255.
+s | The interpolant from 0 to 1.
 
 ## Related Pages
 

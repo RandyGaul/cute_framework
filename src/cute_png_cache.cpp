@@ -50,12 +50,6 @@ void cf_png_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill)
 	}
 }
 
-CF_Png cf_png_cache_get_png(uint64_t image_id)
-{
-	CF_Png png = hget(cache->pngs, image_id);
-	return png;
-}
-
 void cf_make_png_cache()
 {
 	cache = CF_NEW(CF_PngCache);

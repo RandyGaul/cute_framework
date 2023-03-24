@@ -371,6 +371,9 @@ endif()
 
 # Cute sample prgrams (optional, defaulted to also build).
 if (CF_FRAMEWORK_BUILD_SAMPLES)
+	add_executable(easy_sprite samples/easy_sprite.c)
+	target_link_libraries(easy_sprite PRIVATE cute)
+	set_target_properties(easy_sprite PROPERTIES FOLDER "samples")
 	add_executable(basic_ecs samples/basic_ecs.cpp)
 	target_link_libraries(basic_ecs PRIVATE cute)
 	set_target_properties(basic_ecs PROPERTIES FOLDER "samples")

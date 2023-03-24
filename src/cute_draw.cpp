@@ -105,6 +105,9 @@ void cf_get_pixels(SPRITEBATCH_U64 image_id, void* buffer, int bytes_to_fill, vo
 	} else if (image_id >= CF_FONT_ID_RANGE_LO && image_id <= CF_FONT_ID_RANGE_HI) {
 		CF_Pixel* pixels = app->font_pixels.get(image_id);
 		CF_MEMCPY(buffer, pixels, bytes_to_fill);
+	} else if (image_id >= CF_EASY_ID_RANGE_LO && image_id <= CF_EASY_ID_RANGE_HI) {
+		CF_Pixel* pixels = app->easy_sprites.get(image_id).pix;
+		CF_MEMCPY(buffer, pixels, bytes_to_fill);
 	} else {
 		CF_ASSERT(false);
 		CF_MEMSET(buffer, 0, sizeof(bytes_to_fill));
@@ -408,7 +411,11 @@ void cf_destroy_draw()
 void cf_draw_sprite(const CF_Sprite* sprite)
 {
 	spritebatch_sprite_t s = { };
-	s.image_id = sprite->animation->frames[sprite->frame_index].id;
+	if (sprite->animation) {
+		s.image_id = sprite->animation->frames[sprite->frame_index].id;
+	} else {
+		s.image_id = sprite->easy_sprite_id;
+	}
 	s.w = sprite->w;
 	s.h = sprite->h;
 	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;

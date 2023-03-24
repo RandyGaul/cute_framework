@@ -33,6 +33,7 @@
 #include <cute_graphics.h>
 #include <cute_input.h>
 #include <cute_string.h>
+#include <cute_image.h>
 
 #include <internal/cute_draw_internal.h>
 #include <internal/cute_font_internal.h>
@@ -141,6 +142,10 @@ struct CF_App
 	Cute::Map<uint64_t, CF_Pixel*> font_pixels;
 	Cute::Map<const char*, CF_TextEffectState> text_effect_states;
 	Cute::Map<const char*, CF_TextEffectFn*> text_effect_fns;
+
+	// Easy sprite stuff.
+	uint64_t easy_sprite_id_gen = CF_EASY_ID_RANGE_LO;
+	Cute::Map<uint64_t, CF_Image> easy_sprites;
 };
 
 #endif // CF_APP_INTERNAL_H

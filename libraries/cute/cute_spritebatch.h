@@ -3,7 +3,7 @@
 		Licensing information can be found at the end of the file.
 	------------------------------------------------------------------------------
 
-	cute_spritebatch.h - v1.05
+	cute_spritebatch.h - v1.06
 
 	To create implementation (the function definitions)
 		#define SPRITEBATCH_IMPLEMENTATION
@@ -143,6 +143,7 @@
 		1.05 (12/10/2022) added `SPRITEBATCH_SPRITE_GEOMETRY`, a way to put custom geom-
 		                  etry in sprites. Added `spritebatch_register_premade_atlas`, a
 		                  way to inject premade atlases into spritebatch
+		1.06 (03/24/2023) added `spritebatch_invalidate`, useful for updating pixels NOW
 */
 
 /*
@@ -234,6 +235,15 @@ int spritebatch_push(spritebatch_t* sb, spritebatch_sprite_t sprite);
 // drawn very soon, e.g. prefetch all ten images within a single animation just as it starts
 // playing.
 void spritebatch_prefetch(spritebatch_t* sb, SPRITEBATCH_U64 image_id, int w, int h);
+
+// Useful for re-uploading pixels to the GPU.
+// Invalidates the internal cache for a specific sprite. If this sprite resides in a texture atlas
+// the entire atlas is recompiled. If the sprite resides in the lonely buffer only the individual
+// texture gets recreated. You may want to beef up `lonely_buffer_count_till_flush` in the config
+// `spritebatch_config_t` if you want to invalidate sprites often -- this can help prevent constantly
+// invalidating internal atlases and recompiling them, and instead get your dynamic textures into the
+// lonely buffer.
+void spritebatch_invalidate(spritebatch_t* sb, SPRITEBATCH_U64 image_id);
 
 // If a match for `image_id` is found, the texture id and uv coordinates are looked up and returned
 // as a sprite instance. This is sometimes useful to render sprites through an external mechanism,
@@ -2024,6 +2034,19 @@ void spritebatch_internal_flush_atlas(spritebatch_t* sb, spritebatch_internal_at
 	SPRITEBATCH_FREE(atlas, sb->mem_ctx);
 }
 
+void spritebatch_invalidate(spritebatch_t* sb, SPRITEBATCH_U64 image_id)
+{
+	void* atlas_ptr = hashtable_find(&sb->sprites_to_atlases, image_id);
+	if (atlas_ptr) {
+		spritebatch_internal_atlas_t* atlas = *(spritebatch_internal_atlas_t**)atlas_ptr;
+		spritebatch_internal_flush_atlas(sb, atlas, 0, 0);
+	} else {
+		if (hashtable_find(&sb->sprites_to_lonely_textures, image_id)) {
+			hashtable_remove(&sb->sprites_to_lonely_textures, image_id);
+		}
+	}
+}
+
 void spritebatch_internal_log_chain(spritebatch_internal_atlas_t* atlas)
 {
 	if (atlas)
@@ -2226,7 +2249,7 @@ int spritebatch_defrag(spritebatch_t* sb)
 	This software is available under 2 licenses - you may choose the one you like.
 	------------------------------------------------------------------------------
 	ALTERNATIVE A - zlib license
-	Copyright (c) 2017 Randy Gaul http://www.randygaul.net
+	Copyright (c) 2023 Randy Gaul https://randygaul.github.io/
 	This software is provided 'as-is', without any express or implied warranty.
 	In no event will the authors be held liable for any damages arising from
 	the use of this software.

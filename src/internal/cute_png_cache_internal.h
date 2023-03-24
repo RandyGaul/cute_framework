@@ -27,6 +27,5 @@
 void cf_make_png_cache();
 void cf_destroy_png_cache();
 void cf_png_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill);
-struct CF_Png cf_png_cache_get_png(uint64_t image_id);
 
 #endif // CF_PNG_CACHE_INTERNAL_H
