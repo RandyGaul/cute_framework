@@ -9,7 +9,7 @@ GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 An optional function pointer (callback), called whenever an update should occur, after calling [cf_update_time](/time/cf_update_time.md).
 
 ```cpp
-typedef void (CF_OnUpdateFn)();
+typedef void (CF_OnUpdateFn)(void* udata);
 ```
 
 ## Remarks

@@ -23,6 +23,8 @@
 #include <cute_math.h>
 #include <cute_c_runtime.h>
 
+#include <internal/cute_app_internal.h>
+
 using namespace Cute;
 
 #include <SDL.h>
@@ -91,6 +93,11 @@ static void s_step(uint64_t delta)
 	CF_SECONDS = CF_TICKS * inv_freq;
 }
 
+void cf_set_update_udata(void* udata)
+{
+	app->update_udata = udata;
+}
+
 void cf_update_time(CF_OnUpdateFn* on_update)
 {
 	if (ticks_per_timestep) {
@@ -136,7 +143,7 @@ void cf_update_time(CF_OnUpdateFn* on_update)
 					if (leftover + unsimulated_ticks > ticks_per_timestep) {
 						unsimulated_ticks -= ticks_per_timestep - leftover;
 						s_step(ticks_per_timestep);
-						if (on_update) on_update();
+						if (on_update) on_update(app->update_udata);
 					} else {
 						unsimulated_ticks += leftover;
 					}
@@ -145,7 +152,7 @@ void cf_update_time(CF_OnUpdateFn* on_update)
 				}
 			} else {
 				s_step(ticks_per_timestep);
-				if (on_update) on_update();
+				if (on_update) on_update(app->update_udata);
 			}
 		}
 
@@ -164,7 +171,7 @@ void cf_update_time(CF_OnUpdateFn* on_update)
 			CF_PAUSE_TIME_LEFT = (float)(pause_ticks * inv_freq);
 		} else {
 			s_step(delta);
-			if (on_update) on_update();
+			if (on_update) on_update(app->update_udata);
 		}
 	}
 }

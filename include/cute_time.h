@@ -125,7 +125,7 @@ CF_API extern float CF_PAUSE_TIME_LEFT;
  *           using a fixed timestep (see `cf_set_fixed_timestep`), as multiple calls can occur given a single frame's update.
  * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT cf_set_target_framerate
  */
-typedef void (CF_OnUpdateFn)();
+typedef void (CF_OnUpdateFn)(void* udata);
 
 /**
  * @function cf_set_fixed_timestep
@@ -162,11 +162,19 @@ CF_API void CF_CALL cf_set_fixed_timestep_max_updates(int max_updates);
 CF_API void CF_CALL cf_set_target_framerate(int frames_per_second);
 
 /**
+ * @function cf_set_update_udata
+ * @category time
+ * @brief    Sets the `udata` passed into `CF_OnUpdateFn`.
+ * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time cf_set_update_udata CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT
+ */
+CF_API void CF_CALL cf_set_update_udata(void* udata);
+
+/**
  * @function cf_update_time
  * @category time
  * @brief    Updates the application.
  * @param    on_update  Can be `NULL`. Called once per update. Mostly just useful for the fixed-timestep case (see `cf_set_fixed_timestep`).
- * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT
+ * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time cf_set_update_udata CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT
  */
 CF_API void CF_CALL cf_update_time(CF_OnUpdateFn* on_update);
 

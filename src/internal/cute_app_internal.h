@@ -106,6 +106,7 @@ struct CF_App
 	uint64_t default_image_id = CF_PNG_ID_RANGE_LO;
 	bool vsync = false;
 	bool audio_needs_updates = false;
+	void* update_udata = NULL;
 
 	// Input stuff.
 	Cute::Array<char> ime_composition;

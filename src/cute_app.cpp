@@ -386,13 +386,13 @@ void cf_app_signal_shutdown()
 	app->running = 0;
 }
 
-static void s_on_update()
+static void s_on_update(void* udata)
 {
 	cf_pump_input_msgs();
 	if (app->audio_needs_updates) {
 		cs_update(DELTA_TIME);
 	}
-	if (app->user_on_update) app->user_on_update();
+	if (app->user_on_update) app->user_on_update(udata);
 }
 
 void cf_app_update(CF_OnUpdateFn* on_update)
