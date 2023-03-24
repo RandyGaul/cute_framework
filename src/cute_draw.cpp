@@ -337,6 +337,28 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 //--------------------------------------------------------------------------------------------------
 // Hidden API called by CF_App.
 
+static void s_init_sb(int w, int h)
+{
+	spritebatch_config_t config;
+	spritebatch_set_default_config(&config);
+	config.atlas_use_border_pixels = 1;
+	config.ticks_to_decay_texture = 100000;
+	config.batch_callback = s_draw_report;
+	config.get_pixels_callback = cf_get_pixels;
+	config.generate_texture_callback = cf_generate_texture_handle;
+	config.delete_texture_callback = cf_destroy_texture_handle;
+	config.allocator_context = NULL;
+	config.lonely_buffer_count_till_flush = 0;
+	config.atlas_height_in_pixels = w;
+	config.atlas_width_in_pixels = h;
+
+	if (spritebatch_init(&draw->sb, &config, NULL)) {
+		CF_FREE(draw);
+		draw = NULL;
+		CF_ASSERT(false);
+	}
+}
+
 void cf_make_draw()
 {
 	draw = CF_NEW(CF_Draw);
@@ -378,22 +400,7 @@ void cf_make_draw()
 	cf_material_set_render_state(draw->material, state);
 
 	// Spritebatcher.
-	spritebatch_config_t config;
-	spritebatch_set_default_config(&config);
-	config.atlas_use_border_pixels = 1;
-	config.ticks_to_decay_texture = 100000;
-	config.batch_callback = s_draw_report;
-	config.get_pixels_callback = cf_get_pixels;
-	config.generate_texture_callback = cf_generate_texture_handle;
-	config.delete_texture_callback = cf_destroy_texture_handle;
-	config.allocator_context = NULL;
-	config.lonely_buffer_count_till_flush = 0;
-
-	if (spritebatch_init(&draw->sb, &config, NULL)) {
-		CF_FREE(draw);
-		draw = NULL;
-		CF_ASSERT(false);
-	}
+	s_init_sb(2048, 2048);
 }
 
 void cf_destroy_draw()
@@ -2248,6 +2255,12 @@ CF_RenderState cf_render_settings_pop_render_state()
 CF_RenderState cf_render_settings_peek_render_state()
 {
 	return draw->render_states.last();
+}
+
+void cf_render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_pixels)
+{
+	spritebatch_term(&draw->sb);
+	s_init_sb(width_in_pixels, height_in_pixels);
 }
 
 void cf_render_to(CF_Canvas canvas, bool clear)

@@ -1136,8 +1136,8 @@ void spritebatch_reset_function_ptrs(spritebatch_t* sb, submit_batch_fn* batch_c
 void spritebatch_set_default_config(spritebatch_config_t* config)
 {
 	config->pixel_stride = sizeof(char) * 4;
-	config->atlas_width_in_pixels = 1024;
-	config->atlas_height_in_pixels = 1024;
+	config->atlas_width_in_pixels = 2048;
+	config->atlas_height_in_pixels = 2048;
 	config->atlas_use_border_pixels = 0;
 	config->ticks_to_decay_texture = 60 * 30;
 	config->lonely_buffer_count_till_flush = 64;

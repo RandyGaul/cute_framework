@@ -42,5 +42,6 @@
 - [cf_render_settings_push_render_state](/draw/cf_render_settings_push_render_state.md)
 - [cf_render_settings_push_scissor](/draw/cf_render_settings_push_scissor.md)
 - [cf_render_settings_push_viewport](/draw/cf_render_settings_push_viewport.md)
+- [cf_render_settings_set_atlas_dimensions](/draw/cf_render_settings_set_atlas_dimensions.md)
 - [cf_render_to](/draw/cf_render_to.md)
 

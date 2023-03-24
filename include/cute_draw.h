@@ -932,6 +932,27 @@ CF_API CF_RenderState CF_CALL cf_render_settings_pop_render_state();
 CF_API CF_RenderState CF_CALL cf_render_settings_peek_render_state();
 
 /**
+ * @function cf_render_settings_set_atlas_dimensions
+ * @category draw
+ * @brief    Sets the internal atlas size for batching sprites. The default is 2048x2048.
+ * @remarks  This function will completely invalidate the current cache, causing a noticeable perf cost -- do not call this
+ *           function frequently. It's intended as a one-time setup. Be careful not to pass in values too large as certain
+ *           graphics backends have different texture size limits. A very safe max size is 2048x2048 (the default), but you
+ *           can likely get away with 4096 on most devices. Larger internal atlases can be useful to decrease the number of
+ *           draw calls used, and also enables support for high-res image rendering.
+ *           
+ *           Please not you should put in power of 2 atlases sizes to make the hardware happy. Here are the recommended range
+ *           of sizes available:
+ *           
+ *           - 256
+ *           - 512
+ *           - 1024
+ *           - 2048
+ *           - 4096
+ */
+CF_API void CF_CALL cf_render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_pixels);
+
+/**
  * @function cf_camera_dimensions
  * @category camera
  * @brief    Sets the width and height of the camera's view.
