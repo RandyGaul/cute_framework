@@ -300,7 +300,7 @@ CF_INLINE void cf_sprite_reset(CF_Sprite* sprite)
  */
 CF_INLINE void cf_sprite_play(CF_Sprite* sprite, const char* animation)
 {
-	if (!sprite->animation) return;
+	if (!sprite->animations) return;
 	sprite->animation = hfind(sprite->animations, sintern(animation));
 	CF_ASSERT(sprite->animation);
 	cf_sprite_reset(sprite);

@@ -9,7 +9,7 @@ GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Returns a newly constructed entity instance.
 
 ```cpp
-CF_Entity cf_make_entity(const char* entity_type, CF_Result* err);
+CF_Entity cf_make_entity(const char* entity_type);
 ```
 
 ## Remarks

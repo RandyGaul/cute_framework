@@ -135,7 +135,7 @@ CF_API void CF_CALL cf_entity_set_name(const char* entity_type);
 /**
  * @function cf_entity_add_component
  * @category ecs
- * @brief    Adds a component to the new entity definition.
+ * @brief    Adds a component to the new entity type.
  * @param    component_type  The type of component to add.
  * @remarks  You must first call `cf_entity_begin` to begin a new entity definition. `component_type` is a component
  *           defined by `cf_component_begin` and friends.
@@ -159,7 +159,7 @@ CF_API void CF_CALL cf_entity_end();
  * @remarks  TODO
  * @related  TODO
  */
-CF_API CF_Entity CF_CALL cf_make_entity(const char* entity_type, CF_Result* err);
+CF_API CF_Entity CF_CALL cf_make_entity(const char* entity_type);
 
 /**
  * @function cf_entity_is_valid
@@ -207,15 +207,6 @@ CF_API bool CF_CALL cf_entity_has_component(CF_Entity entity, const char* compon
 CF_API void* CF_CALL cf_entity_get_component(CF_Entity entity, const char* component_type);
 
 /**
- * @function cf_destroy_entity
- * @category ecs
- * @brief    Destroys a specific entity right now.
- * @remarks  TODO
- * @related  TODO
- */
-CF_API void CF_CALL cf_destroy_entity(CF_Entity entity);
-
-/**
  * @function cf_destroy_entity_delayed
  * @category ecs
  * @brief    Marks a specific entity for delayed destruction.
@@ -223,6 +214,15 @@ CF_API void CF_CALL cf_destroy_entity(CF_Entity entity);
  * @related  TODO
  */
 CF_API void CF_CALL cf_destroy_entity_delayed(CF_Entity entity);
+
+/**
+ * @function cf_destroy_entity
+ * @category ecs
+ * @brief    Destroys a specific entity right now.
+ * @remarks  TODO
+ * @related  TODO
+ */
+CF_API void CF_CALL cf_destroy_entity(CF_Entity entity);
 
 /**
  * @function cf_entity_equals
@@ -560,7 +560,7 @@ CF_INLINE void entity_set_name(const char* entity_type) { cf_entity_set_name(ent
 CF_INLINE void entity_add_component(const char* component_type) { cf_entity_add_component(component_type); }
 CF_INLINE void entity_end() { cf_entity_end(); }
 
-CF_INLINE Entity make_entity(const char* entity_type, Result* err = NULL) { return cf_make_entity(entity_type, err); }
+CF_INLINE Entity make_entity(const char* entity_type) { return cf_make_entity(entity_type); }
 CF_INLINE bool entity_is_valid(Entity entity) { return cf_entity_is_valid(entity); }
 CF_INLINE bool entity_is_type(Entity entity, const char* entity_type) { return cf_entity_is_type(entity, entity_type); }
 CF_INLINE const char* entity_get_type_string(Entity entity) { return cf_entity_get_type_string(entity); }

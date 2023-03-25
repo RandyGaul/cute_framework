@@ -252,12 +252,133 @@ int test_ecs_basic()
 	cf_entity_add_component("DummyComponent");
 	cf_entity_end();
 
-	CF_Entity e = cf_make_entity("Dummy_Entity", NULL);
+	CF_Entity e = cf_make_entity("Dummy_Entity");
 	CF_TEST_ASSERT(e != CF_INVALID_ENTITY);
 	cf_run_systems();
 
 	DummyComponent* dummy = (DummyComponent*)cf_entity_get_component(e, "DummyComponent");
 	CF_TEST_ASSERT(dummy->iters == 1);
+
+	cf_destroy_app();
+
+	return 0;
+}
+
+CF_TEST_CASE(test_ecs_activation, "Tests out ECS the activate/deactivate API.");
+int test_ecs_activation()
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL))) {
+		return -1;
+	}
+
+	cf_component_begin();
+	cf_component_set_name("DummyComponent");
+	cf_component_set_size(sizeof(DummyComponent));
+	cf_component_set_optional_initializer(dummy_initialize, NULL);
+	cf_component_end();
+
+	cf_system_begin();
+	cf_system_set_update(update_dummy_system);
+	cf_system_require_component("DummyComponent");
+	cf_system_end();
+
+	cf_entity_begin();
+	cf_entity_set_name("Dummy_Entity");
+	cf_entity_add_component("DummyComponent");
+	cf_entity_end();
+	
+	CF_Entity e0 = cf_make_entity("Dummy_Entity");
+	CF_TEST_ASSERT(e0 != CF_INVALID_ENTITY);
+	CF_Entity e1 = cf_make_entity("Dummy_Entity");
+	CF_TEST_ASSERT(e1 != CF_INVALID_ENTITY);
+	CF_Entity e2 = cf_make_entity("Dummy_Entity");
+	CF_TEST_ASSERT(e2 != CF_INVALID_ENTITY);
+	cf_run_systems();
+
+	DummyComponent* dummy = (DummyComponent*)cf_entity_get_component(e0, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 1);
+	dummy = (DummyComponent*)cf_entity_get_component(e1, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 1);
+	dummy = (DummyComponent*)cf_entity_get_component(e2, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 1);
+
+	cf_entity_deactivate(e2);
+	cf_run_systems();
+
+	dummy = (DummyComponent*)cf_entity_get_component(e0, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 2);
+	dummy = (DummyComponent*)cf_entity_get_component(e1, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 2);
+	dummy = (DummyComponent*)cf_entity_get_component(e2, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 1);
+	CF_TEST_ASSERT(cf_entity_is_active(e0));
+	CF_TEST_ASSERT(cf_entity_is_active(e1));
+	CF_TEST_ASSERT(!cf_entity_is_active(e2));
+
+	cf_entity_deactivate(e1);
+	cf_run_systems();
+
+	dummy = (DummyComponent*)cf_entity_get_component(e0, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 3);
+	dummy = (DummyComponent*)cf_entity_get_component(e1, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 2);
+	dummy = (DummyComponent*)cf_entity_get_component(e2, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 1);
+	CF_TEST_ASSERT(cf_entity_is_active(e0));
+	CF_TEST_ASSERT(!cf_entity_is_active(e1));
+	CF_TEST_ASSERT(!cf_entity_is_active(e2));
+
+	cf_entity_deactivate(e0);
+	cf_run_systems();
+
+	dummy = (DummyComponent*)cf_entity_get_component(e0, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 3);
+	dummy = (DummyComponent*)cf_entity_get_component(e1, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 2);
+	dummy = (DummyComponent*)cf_entity_get_component(e2, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 1);
+	CF_TEST_ASSERT(!cf_entity_is_active(e0));
+	CF_TEST_ASSERT(!cf_entity_is_active(e1));
+	CF_TEST_ASSERT(!cf_entity_is_active(e2));
+
+	cf_entity_activate(e2);
+	cf_run_systems();
+
+	dummy = (DummyComponent*)cf_entity_get_component(e0, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 3);
+	dummy = (DummyComponent*)cf_entity_get_component(e1, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 2);
+	dummy = (DummyComponent*)cf_entity_get_component(e2, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 2);
+	CF_TEST_ASSERT(!cf_entity_is_active(e0));
+	CF_TEST_ASSERT(!cf_entity_is_active(e1));
+	CF_TEST_ASSERT(cf_entity_is_active(e2));
+
+	cf_entity_activate(e0);
+	cf_run_systems();
+
+	dummy = (DummyComponent*)cf_entity_get_component(e0, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 4);
+	dummy = (DummyComponent*)cf_entity_get_component(e1, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 2);
+	dummy = (DummyComponent*)cf_entity_get_component(e2, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 3);
+	CF_TEST_ASSERT(cf_entity_is_active(e0));
+	CF_TEST_ASSERT(!cf_entity_is_active(e1));
+	CF_TEST_ASSERT(cf_entity_is_active(e2));
+
+	cf_entity_activate(e1);
+	cf_run_systems();
+
+	dummy = (DummyComponent*)cf_entity_get_component(e0, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 5);
+	dummy = (DummyComponent*)cf_entity_get_component(e1, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 3);
+	dummy = (DummyComponent*)cf_entity_get_component(e2, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 4);
+	CF_TEST_ASSERT(cf_entity_is_active(e0));
+	CF_TEST_ASSERT(cf_entity_is_active(e1));
+	CF_TEST_ASSERT(cf_entity_is_active(e2));
 
 	cf_destroy_app();
 

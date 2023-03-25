@@ -6,7 +6,7 @@ Category: [ecs](/api_reference?id=ecs)
 GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
 ---
 
-Adds a component to the new entity definition.
+Adds a component to the new entity type.
 
 ```cpp
 void cf_entity_add_component(const char* component_type);

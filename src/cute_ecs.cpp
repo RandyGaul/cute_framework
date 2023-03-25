@@ -92,11 +92,10 @@ static CF_WorldInternal* s_world()
 	return (CF_WorldInternal*)app->world.id;
 }
 
-CF_Entity cf_make_entity(const char* entity_type, CF_Result* err_out)
+CF_Entity cf_make_entity(const char* entity_type)
 {
 	auto type_ptr = app->entity_type_string_to_id.try_find(sintern(entity_type));
 	if (!type_ptr) {
-		if (err_out) *err_out = cf_result_error("`entity_type` is not valid.");
 		return CF_INVALID_ENTITY;
 	}
 	CF_EntityType type = *type_ptr;
@@ -116,7 +115,6 @@ CF_Entity cf_make_entity(const char* entity_type, CF_Result* err_out)
 		CF_ComponentConfig* config = app->component_configs.try_find(component_type);
 
 		if (!config) {
-			if (err_out) *err_out = cf_result_error("Unable to find component config.");
 			return CF_INVALID_ENTITY;
 		}
 
@@ -127,7 +125,6 @@ CF_Entity cf_make_entity(const char* entity_type, CF_Result* err_out)
 		}
 	}
 
-	if (err_out) *err_out = cf_result_success();
 	return entity;
 }
 
@@ -180,7 +177,7 @@ void cf_destroy_entity(CF_Entity entity)
 
 		// Update handle of the swapped entity.
 		if (index < collection->entity_handles.size()) {
-			uint64_t h = collection->entity_handles[index];
+			CF_Handle h = collection->entity_handles[index];
 			collection->entity_handle_table.update_index(h, index);
 		}
 	}
@@ -209,7 +206,6 @@ void cf_entity_deactivate(CF_Entity entity)
 	uint16_t entity_type = s_entity_type(entity);
 	CF_WorldInternal* world = s_world();
 	CF_EntityCollection* collection = world->entity_collections.try_find(entity_type);
-	CF_ASSERT(collection);
 
 	if (collection->entity_handle_table.valid(entity.handle)) {
 		if (!collection->entity_handle_table.active(entity.handle)) {
@@ -217,28 +213,68 @@ void cf_entity_deactivate(CF_Entity entity)
 		}
 
 		int index = collection->entity_handle_table.get_index(entity.handle);
+		int last_active_index = collection->entity_handles.count() - collection->inactive_count - 1;
 
-		int copy_index = -1; // TODO.
-
-		// Swap all components into the deactive section (the end) of their respective arrays.
+		// Swap the component to the end of the active section.
 		for (int i = 0; i < collection->component_tables.count(); ++i) {
-			collection->component_tables[i].copy(index, copy_index);
+			collection->component_tables[i].swap(index, last_active_index);
 		}
 
-		// Update handle of the swapped entity.
-		if (index < collection->entity_handles.size()) {
-			uint64_t h = collection->entity_handles[index];
-			collection->entity_handle_table.update_index(h, index);
-		}
+		collection->inactive_count++;
+
+		// Update indices for each swapped entity.
+		CF_Handle handle = collection->entity_handles[index];
+		CF_Handle last_active_handle = collection->entity_handles[last_active_index];
+		CF_ASSERT(handle == entity.handle);
+		collection->entity_handles[index] = last_active_handle;
+		collection->entity_handles[last_active_index] = handle;
+		collection->entity_handle_table.update_index(handle, last_active_index);
+		collection->entity_handle_table.update_index(last_active_handle, index);
+
+		// Mark handle as inactive.
+		collection->entity_handle_table.deactivate(handle);
 	}
 }
 
 void cf_entity_activate(CF_Entity entity)
 {
+	uint16_t entity_type = s_entity_type(entity);
+	CF_WorldInternal* world = s_world();
+	CF_EntityCollection* collection = world->entity_collections.try_find(entity_type);
+
+	if (collection->entity_handle_table.valid(entity.handle)) {
+		if (collection->entity_handle_table.active(entity.handle)) {
+			return;
+		}
+
+		int index = collection->entity_handle_table.get_index(entity.handle);
+		int last_inactive_index = collection->entity_handles.count() - collection->inactive_count;
+
+		// Swap the inactive component to the beginning of the inactive section.
+		for (int i = 0; i < collection->component_tables.count(); ++i) {
+			collection->component_tables[i].swap(index, last_inactive_index);
+		}
+
+		collection->inactive_count--;
+
+		// Update indices for each swapped entity.
+		CF_Handle handle = collection->entity_handles[index];
+		CF_Handle last_inactive_handle = collection->entity_handles[last_inactive_index];
+		CF_ASSERT(handle == entity.handle);
+		collection->entity_handles[index] = last_inactive_handle;
+		collection->entity_handles[last_inactive_index] = handle;
+		collection->entity_handle_table.update_index(handle, last_inactive_index);
+		collection->entity_handle_table.update_index(last_inactive_handle, index);
+
+		// Mark handle as active.
+		collection->entity_handle_table.activate(handle);
+	}
 }
 
 bool cf_entity_is_active(CF_Entity entity)
 {
+	CF_EntityCollection* collection = s_collection(entity);
+	if (collection) return collection->entity_handle_table.active(entity.handle);
 	return false;
 }
 
@@ -278,7 +314,7 @@ static inline int s_match(const Array<const char*>& a, const Array<const char*>&
 	int matches = 0;
 	for (int i = 0; i < a.count(); ++i) {
 		for (int j = 0; j < b.count(); ++j) {
-			if (a[i]== b[j]) {
+			if (a[i] == b[j]) {
 				++matches;
 				break;
 			}
@@ -318,7 +354,8 @@ void cf_run_systems()
 					app->component_list.ptrs = &collection->component_tables;
 					app->component_list.types = collection->component_type_tuple;
 					app->component_list.entities = collection->entity_handles.data();
-					update_fn(component_list, collection->component_tables[0].count(), udata);
+					int active_count = collection->component_tables[0].count() - collection->inactive_count;
+					update_fn(component_list, active_count, udata);
 				}
 			}
 		}
@@ -326,11 +363,24 @@ void cf_run_systems()
 		if (post_update_fn) post_update_fn(udata);
 	}
 
+	// Perform delayed operations.
 	for (int i = 0; i < world->delayed_destroy_entities.count(); ++i) {
 		CF_Entity e = world->delayed_destroy_entities[i];
 		cf_destroy_entity(e);
 	}
 	world->delayed_destroy_entities.clear();
+
+	for (int i = 0; i < world->delayed_deactivate_entities.count(); ++i) {
+		CF_Entity e = world->delayed_deactivate_entities[i];
+		cf_entity_deactivate(e);
+	}
+	world->delayed_deactivate_entities.clear();
+
+	for (int i = 0; i < world->delayed_activate_entities.count(); ++i) {
+		CF_Entity e = world->delayed_activate_entities[i];
+		cf_entity_activate(e);
+	}
+	world->delayed_activate_entities.clear();
 }
 
 void cf_component_begin()

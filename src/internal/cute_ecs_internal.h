@@ -28,9 +28,9 @@
 
 struct CF_EntityCollection
 {
-	Cute::HandleTable entity_handle_table;
-	Cute::Array<CF_Handle> entity_handles; // TODO - Replace with a counter? Or delete?
 	Cute::Array<const char*> component_type_tuple;
+	Cute::HandleTable entity_handle_table;
+	Cute::Array<CF_Handle> entity_handles;
 	Cute::Array<CF_TypelessArray> component_tables;
 	int inactive_count = 0;
 };

@@ -125,6 +125,18 @@ void CF_TypelessArray::copy(int src, int dst, int count)
 	CF_MEMCPY(dst_slot, src_last, m_element_size * count);
 }
 
+void CF_TypelessArray::swap(int index_a, int index_b)
+{
+	CF_ASSERT(index_a >= 0 && index_a < m_count);
+	CF_ASSERT(index_b >= 0 && index_b < m_count);
+	int index_temp = count();
+	add();
+	copy(index_a, index_temp);
+	copy(index_b, index_a);
+	copy(index_temp, index_b);
+	pop();
+}
+
 void CF_TypelessArray::clear()
 {
 	m_count = 0;

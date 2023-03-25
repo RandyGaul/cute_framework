@@ -232,7 +232,7 @@ int main(int argc, char* argv[])
 	int n = 4;
 	Array<Entity> entities;
 	for (int i = 0; i < n; ++i) {
-		Entity e = cf_make_entity("Enemy", NULL);
+		Entity e = cf_make_entity("Enemy");
 		entities.add(e);
 
 		C_HitPoints* hp = (C_HitPoints*)cf_entity_get_component(e, CF_STRINGIZE(C_HitPoints));
