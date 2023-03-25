@@ -82,14 +82,15 @@ void cf_system_set_optional_udata(void* udata)
 	app->system_internal_builder.udata = udata;
 }
 
-static CF_INLINE uint16_t s_entity_type(CF_Entity entity)
-{
-	return (uint16_t)((entity.handle & 0x00000000FFFF0000ULL) >> 16);
-}
-
 static CF_WorldInternal* s_world()
 {
 	return (CF_WorldInternal*)app->world.id;
+}
+
+static CF_INLINE uint16_t s_entity_type(CF_Entity entity)
+{
+	CF_WorldInternal* world = s_world();
+	return world->handles.get_type(entity.handle);
 }
 
 CF_Entity cf_make_entity(const char* entity_type)
@@ -101,23 +102,21 @@ CF_Entity cf_make_entity(const char* entity_type)
 	CF_EntityType type = *type_ptr;
 
 	CF_WorldInternal* world = s_world();
-	CF_EntityCollection* collection = world->entity_collections.try_find(type);
+	CF_EntityCollection* collection = world->entity_collections.find(type);
 	CF_ASSERT(collection);
 
+	// Create the entity handle.
 	int index = collection->entity_handles.count();
-	CF_Handle h = collection->entity_handle_table.alloc_handle(index, type);
+	CF_Handle h = world->handles.alloc_handle(index, type);
 	collection->entity_handles.add(h);
 	CF_Entity entity = { h };
 
-	const Array<const char*>& component_type_tuple = collection->component_type_tuple;
-	for (int i = 0; i < component_type_tuple.count(); ++i) {
-		const char* component_type = component_type_tuple[i];
+	// Create and initialize each component.
+	const Array<const char*>& tuple = collection->component_type_tuple;
+	for (int i = 0; i < tuple.count(); ++i) {
+		const char* component_type = tuple[i];
 		CF_ComponentConfig* config = app->component_configs.try_find(component_type);
-
-		if (!config) {
-			return CF_INVALID_ENTITY;
-		}
-
+		CF_ASSERT(config); // `component_type` is not a valid type.
 		void* component = collection->component_tables[i].add();
 		CF_MEMSET(component, 0, config->size_of_component);
 		if (config->initializer) {
@@ -139,7 +138,7 @@ static CF_EntityCollection* s_collection(CF_Entity entity)
 	} else {
 		// Slightly slower path -- lookup collection first.
 		CF_WorldInternal* world = s_world();
-		collection = world->entity_collections.try_find(entity_type);
+		collection = world->entity_collections.find(entity_type);
 		if (!collection) return NULL;
 	}
 	return collection;
@@ -149,26 +148,26 @@ void cf_destroy_entity(CF_Entity entity)
 {
 	uint16_t entity_type = s_entity_type(entity);
 	CF_WorldInternal* world = s_world();
-	CF_EntityCollection* collection = world->entity_collections.try_find(entity_type);
+	CF_EntityCollection* collection = world->entity_collections.find(entity_type);
 	CF_ASSERT(collection);
 
-	if (collection->entity_handle_table.valid(entity.handle)) {
-		int index = collection->entity_handle_table.get_index(entity.handle);
+	if (world->handles.valid(entity.handle)) {
+		int index = world->handles.get_index(entity.handle);
 
 		// Call cleanup function on each component in reverse order.
 		for (int i = collection->component_tables.count() - 1; i >= 0 ; --i) {
 			CF_ComponentConfig* config = app->component_configs.try_find(collection->component_type_tuple[i]);
-			if (config && config->cleanup) {
+			if (config->cleanup) {
 				config->cleanup(entity, collection->component_tables[i][index], config->cleanup_udata);
 			}
 		}
 
 		// Update index in case user changed it (by destroying enties).
-		index = collection->entity_handle_table.get_index(entity.handle);
+		index = world->handles.get_index(entity.handle);
 
 		// Free the handle.
 		collection->entity_handles.unordered_remove(index);
-		collection->entity_handle_table.free_handle(entity.handle);
+		world->handles.free_handle(entity.handle);
 
 		// Free each component.
 		for (int i = 0; i < collection->component_tables.count(); ++i) {
@@ -178,7 +177,7 @@ void cf_destroy_entity(CF_Entity entity)
 		// Update handle of the swapped entity.
 		if (index < collection->entity_handles.size()) {
 			CF_Handle h = collection->entity_handles[index];
-			collection->entity_handle_table.update_index(h, index);
+			world->handles.update_index(h, index);
 		}
 	}
 }
@@ -205,14 +204,14 @@ void cf_entity_deactivate(CF_Entity entity)
 {
 	uint16_t entity_type = s_entity_type(entity);
 	CF_WorldInternal* world = s_world();
-	CF_EntityCollection* collection = world->entity_collections.try_find(entity_type);
+	CF_EntityCollection* collection = world->entity_collections.find(entity_type);
 
-	if (collection->entity_handle_table.valid(entity.handle)) {
-		if (!collection->entity_handle_table.active(entity.handle)) {
+	if (world->handles.valid(entity.handle)) {
+		if (!world->handles.active(entity.handle)) {
 			return;
 		}
 
-		int index = collection->entity_handle_table.get_index(entity.handle);
+		int index = world->handles.get_index(entity.handle);
 		int last_active_index = collection->entity_handles.count() - collection->inactive_count - 1;
 
 		// Swap the component to the end of the active section.
@@ -228,11 +227,11 @@ void cf_entity_deactivate(CF_Entity entity)
 		CF_ASSERT(handle == entity.handle);
 		collection->entity_handles[index] = last_active_handle;
 		collection->entity_handles[last_active_index] = handle;
-		collection->entity_handle_table.update_index(handle, last_active_index);
-		collection->entity_handle_table.update_index(last_active_handle, index);
+		world->handles.update_index(handle, last_active_index);
+		world->handles.update_index(last_active_handle, index);
 
 		// Mark handle as inactive.
-		collection->entity_handle_table.deactivate(handle);
+		world->handles.deactivate(handle);
 	}
 }
 
@@ -240,14 +239,14 @@ void cf_entity_activate(CF_Entity entity)
 {
 	uint16_t entity_type = s_entity_type(entity);
 	CF_WorldInternal* world = s_world();
-	CF_EntityCollection* collection = world->entity_collections.try_find(entity_type);
+	CF_EntityCollection* collection = world->entity_collections.find(entity_type);
 
-	if (collection->entity_handle_table.valid(entity.handle)) {
-		if (collection->entity_handle_table.active(entity.handle)) {
+	if (world->handles.valid(entity.handle)) {
+		if (world->handles.active(entity.handle)) {
 			return;
 		}
 
-		int index = collection->entity_handle_table.get_index(entity.handle);
+		int index = world->handles.get_index(entity.handle);
 		int last_inactive_index = collection->entity_handles.count() - collection->inactive_count;
 
 		// Swap the inactive component to the beginning of the inactive section.
@@ -263,30 +262,132 @@ void cf_entity_activate(CF_Entity entity)
 		CF_ASSERT(handle == entity.handle);
 		collection->entity_handles[index] = last_inactive_handle;
 		collection->entity_handles[last_inactive_index] = handle;
-		collection->entity_handle_table.update_index(handle, last_inactive_index);
-		collection->entity_handle_table.update_index(last_inactive_handle, index);
+		world->handles.update_index(handle, last_inactive_index);
+		world->handles.update_index(last_inactive_handle, index);
 
 		// Mark handle as active.
-		collection->entity_handle_table.activate(handle);
+		world->handles.activate(handle);
 	}
 }
 
 bool cf_entity_is_active(CF_Entity entity)
 {
-	CF_EntityCollection* collection = s_collection(entity);
-	if (collection) return collection->entity_handle_table.active(entity.handle);
-	return false;
+	CF_WorldInternal* world = s_world();
+	return world->handles.active(entity.handle);
 }
 
 bool cf_entity_is_valid(CF_Entity entity)
 {
-	CF_EntityCollection* collection = s_collection(entity);
-	if (collection) return collection->entity_handle_table.valid(entity.handle);
-	else return false;
+	CF_WorldInternal* world = s_world();
+	return world->handles.valid(entity.handle);
+}
+
+void cf_entity_delayed_change_type(CF_Entity entity, const char* entity_type)
+{
+	CF_WorldInternal* world = s_world();
+	CF_ChangeType change;
+	change.entity = entity;
+	change.entity_type = entity_type;
+	world->delayed_change_type.add(change);
+}
+
+void cf_entity_change_type(CF_Entity entity, const char* entity_type)
+{
+	// Lookup new/old entity types.
+	entity_type = sintern(entity_type);
+	CF_EntityType old_type = s_entity_type(entity);
+	auto type_ptr = app->entity_type_string_to_id.try_find(sintern(entity_type));
+	if (!type_ptr) return;
+	CF_EntityType new_type = *type_ptr;
+	if (old_type == new_type) return;
+
+	// Look new/old collections.
+	CF_WorldInternal* world = s_world();
+	CF_EntityCollection* new_collection = world->entity_collections.find(new_type);
+	CF_ASSERT(new_collection);
+	CF_EntityCollection* old_collection = world->entity_collections.find(old_type);
+	CF_ASSERT(old_collection);
+
+	// Place entity handle into the new collection.
+	int old_index = world->handles.get_index(entity.handle);
+	int new_index = new_collection->entity_handles.count();
+	new_collection->entity_handles.add(entity.handle);
+
+	// Construct the new components.
+	const Array<const char*>& new_tuple = new_collection->component_type_tuple;
+	const Array<const char*>& old_tuple = old_collection->component_type_tuple;
+	for (int i = 0; i < new_tuple.count(); ++i) {
+		// Allocate the new component.
+		const char* new_component_type = new_tuple[i];
+		CF_ComponentConfig* config = app->component_configs.try_find(new_component_type);
+		CF_ASSERT(config); // `new_component_type` is not a valid type.
+		void* new_component = new_collection->component_tables[i].add();
+
+		// Look for a matching old component.
+		bool match = false;
+		for (int i = 0; i < old_tuple.count(); ++i) {
+			const char* old_component_type = old_tuple[i];
+			if (new_component_type == old_component_type) {
+				// Copy over contents to the new component.
+				void* old_component = old_collection->component_tables[i][old_index];
+				CF_MEMCPY(new_component, old_component, config->size_of_component);
+				match = true;
+				break;
+			}
+		}
+
+		// Only perform initialization if a matching old component wasn't copied.
+		if (!match) {
+			CF_MEMSET(new_component, 0, config->size_of_component);
+			if (config->initializer) {
+				config->initializer(entity, new_component, config->initializer_udata);
+			}
+		}
+	}
+
+	// Cleanup the old components.
+	for (int i = old_tuple.count() - 1; i >= 0 ; --i) {
+		const char* old_component_type = old_tuple[i];
+		CF_ComponentConfig* config = app->component_configs.try_find(old_component_type);
+		
+		// Look for a matching old component.
+		bool match = false;
+		for (int i = 0; i < new_tuple.count(); ++i) {
+			const char* new_component_type = new_tuple[i];
+			if (old_component_type == new_component_type) {
+				match = true;
+				break;
+			}
+		}
+
+		// Only call cleanup if an old component was not copied over.
+		if (!match && config->cleanup) {
+			config->cleanup(entity, old_collection->component_tables[i][old_index], config->cleanup_udata);
+		}
+	}
+	
+	// Remove handle from the old collection.
+	old_collection->entity_handles.unordered_remove(old_index);
+
+	// Remove the old components.
+	for (int i = 0; i < old_collection->component_tables.count(); ++i) {
+		old_collection->component_tables[i].unordered_remove(old_index);
+	}
+
+	// Update handle of the swapped entity.
+	if (old_index < old_collection->entity_handles.size()) {
+		CF_Handle h = old_collection->entity_handles[old_index];
+		world->handles.update_index(h, old_index);
+	}
+
+	// Set the entity's handle to it's new index in the new collection, and update its type.
+	world->handles.update_index(entity.handle, new_index);
+	world->handles.update_type(entity.handle, new_type);
 }
 
 void* cf_entity_get_component(CF_Entity entity, const char* component_type)
 {
+	CF_WorldInternal* world = s_world();
 	CF_EntityCollection* collection = s_collection(entity);
 	if (!collection) return NULL;
 
@@ -294,7 +395,7 @@ void* cf_entity_get_component(CF_Entity entity, const char* component_type)
 	const Array<const char*>& component_type_tuple = collection->component_type_tuple;
 	for (int i = 0; i < component_type_tuple.count(); ++i) {
 		if (component_type_tuple[i] == component_type) {
-			int index = collection->entity_handle_table.get_index(entity.handle);
+			int index = world->handles.get_index(entity.handle);
 			return collection->component_tables[i][index];
 		}
 	}
@@ -338,7 +439,7 @@ void cf_run_systems()
 
 		if (update_fn) {
 			for (int j = 0; j < world->entity_collections.count(); ++j) {
-				CF_EntityCollection* collection = world->entity_collections.items() + j;
+				CF_EntityCollection* collection = world->entity_collections.items()[j];
 				CF_ASSERT(collection->component_tables.count() == collection->component_type_tuple.count());
 				int component_count = collection->component_tables.count();
 				app->current_collection_type_being_iterated = world->entity_collections.keys()[j];
@@ -380,7 +481,13 @@ void cf_run_systems()
 		CF_Entity e = world->delayed_activate_entities[i];
 		cf_entity_activate(e);
 	}
-	world->delayed_activate_entities.clear();
+	world->delayed_change_type.clear();
+
+	for (int i = 0; i < world->delayed_change_type.count(); ++i) {
+		CF_ChangeType change = world->delayed_change_type[i];
+		cf_entity_change_type(change.entity, change.entity_type);
+	}
+	world->delayed_change_type.clear();
 }
 
 void cf_component_begin()
@@ -462,7 +569,8 @@ static void s_register_entity_type(Array<const char*> component_type_tuple, cons
 	app->entity_type_string_to_id.insert(entity_type_string_id, entity_type);
 	app->entity_type_id_to_string.add(entity_type_string_id);
 	CF_WorldInternal* world = s_world();
-	CF_EntityCollection* collection = world->entity_collections.insert(entity_type);
+	CF_EntityCollection* collection = CF_NEW(CF_EntityCollection);
+	world->entity_collections.insert(entity_type, collection);
 	for (int i = 0; i < component_type_ids.count(); ++i) {
 		collection->component_type_tuple.add(component_type_ids[i]);
 		CF_TypelessArray& table = collection->component_tables.add();
@@ -505,15 +613,6 @@ bool cf_entity_is_type(CF_Entity entity, const char* entity_type_name)
 	return !CF_STRCMP(type_string, entity_type_name);
 }
 
-CF_EntityType s_entity_type(CF_KeyValue* kv)
-{
-	const char* entity_type_string = s_kv_string(kv, "entity_type");
-	CF_EntityType entity_type = CF_INVALID_ENTITY_TYPE;
-	auto type_ptr = app->entity_type_string_to_id.try_find(entity_type_string);
-	if (type_ptr) entity_type = *type_ptr;
-	return entity_type;
-}
-
 bool cf_is_entity_type_valid(const char* entity_type)
 {
 	if (app->entity_type_string_to_id.try_find(sintern(entity_type))) {
@@ -534,6 +633,11 @@ CF_World cf_make_world()
 void cf_destroy_world(CF_World world_handle)
 {
 	CF_WorldInternal* world = (CF_WorldInternal*)world_handle.id;
+	for (int i = 0; i < world->entity_collections.count(); ++i) {
+		CF_EntityCollection* collection = world->entity_collections.items()[i];
+		collection->~CF_EntityCollection();
+		CF_FREE(collection);
+	}
 	world->~CF_WorldInternal();
 	CF_FREE(world);
 }
@@ -602,7 +706,7 @@ dyna const char** cf_get_component_list_for_entity_type(const char* entity_type)
 
 	CF_WorldInternal* world = s_world();
 	CF_EntityType type = *type_ptr;
-	CF_EntityCollection* collection = world->entity_collections.try_find(type);
+	CF_EntityCollection* collection = world->entity_collections.find(type);
 	CF_ASSERT(collection);
 
 	const Array<const char*>& component_type_tuple = collection->component_type_tuple;

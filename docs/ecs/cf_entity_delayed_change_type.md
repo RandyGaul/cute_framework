@@ -1,6 +1,6 @@
 [](../header.md ':include')
 
-# cf_entity_delayed_deactivate
+# cf_entity_delayed_change_type
 
 Category: [ecs](/api_reference?id=ecs)  
 GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
@@ -9,8 +9,12 @@ GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 TODO
 
 ```cpp
-void cf_entity_delayed_deactivate(CF_Entity entity);
+void cf_entity_delayed_change_type(CF_Entity entity, const char* entity_type);
 ```
+
+## Remarks
+
+CURRENTLY NOT IMPLEMENTED.
 
 ## Related Pages
 

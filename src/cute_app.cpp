@@ -358,9 +358,7 @@ void cf_destroy_app()
 	}
 	// Mainly here to cleanup the default world, but, as a convenience we can just clean them all up.
 	for (int i = 0; i < app->worlds.count(); ++i) {
-		CF_WorldInternal* world = (CF_WorldInternal*)app->worlds[i].id;
-		world->~CF_WorldInternal();
-		CF_FREE(world);
+		cf_destroy_world(app->worlds[i]);
 	}
 	cs_shutdown();
 	SDL_DestroyWindow(app->window);

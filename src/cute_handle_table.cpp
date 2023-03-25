@@ -110,7 +110,7 @@ CF_Handle cf_handle_allocator_alloc(CF_HandleTable* table, uint32_t index, uint1
 	m_handles[freelist_index].data.user_index = index;
 	m_handles[freelist_index].data.user_type = type;
 	m_handles[freelist_index].data.active = true;
-	CF_Handle handle = (((uint64_t)freelist_index) << 32) | (((uint64_t)type) << 16) | m_handles[freelist_index].data.generation;
+	CF_Handle handle = (((uint64_t)freelist_index) << 32) | m_handles[freelist_index].data.generation;
 	return handle;
 }
 
@@ -173,6 +173,15 @@ void cf_handle_allocator_update_index(CF_HandleTable* table, CF_Handle handle, u
 	m_handles[table_index].data.user_index = index;
 }
 
+void cf_handle_allocator_update_type(CF_HandleTable* table, CF_Handle handle, uint16_t type)
+{
+	CF_HandleEntry* m_handles = table->m_handles.data();
+	uint32_t table_index = s_table_index(handle);
+	uint64_t generation = handle & 0xFFFF;
+	CF_ASSERT(m_handles[table_index].data.generation == generation);
+	m_handles[table_index].data.user_type = type;
+}
+
 void cf_handle_allocator_free(CF_HandleTable* table, CF_Handle handle)
 {
 	// Push handle onto m_freelist.
@@ -188,8 +197,6 @@ int cf_handle_allocator_handle_valid(CF_HandleTable* table, CF_Handle handle)
 	CF_HandleEntry* m_handles = table->m_handles.data();
 	uint32_t table_index = s_table_index(handle);
 	uint64_t generation = handle & 0xFFFF;
-	uint64_t type = (handle & 0x00000000FFFF0000ULL) >> 16;
 	bool match_generation = m_handles[table_index].data.generation == generation;
-	bool match_type = m_handles[table_index].data.user_type == type;
-	return match_generation && match_type;
+	return match_generation;
 }

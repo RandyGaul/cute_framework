@@ -9,6 +9,7 @@
 - [cf_handle_allocator_get_type](/utility/cf_handle_allocator_get_type.md)
 - [cf_handle_allocator_handle_valid](/utility/cf_handle_allocator_handle_valid.md)
 - [cf_handle_allocator_update_index](/utility/cf_handle_allocator_update_index.md)
+- [cf_handle_allocator_update_type](/utility/cf_handle_allocator_update_type.md)
 - [CF_INVALID_HANDLE](/utility/cf_invalid_handle.md)
 - [cf_is_error](/utility/cf_is_error.md)
 - [cf_load_function](/utility/cf_load_function.md)

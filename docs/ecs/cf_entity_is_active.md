@@ -12,10 +12,6 @@ TODO
 bool cf_entity_is_active(CF_Entity entity);
 ```
 
-## Remarks
-
-CURRENTLY NOT IMPLEMENTED.
-
 ## Related Pages
 
 TODO  

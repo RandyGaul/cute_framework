@@ -165,6 +165,13 @@ CF_API void CF_CALL cf_handle_allocator_deactivate(CF_HandleTable* table, CF_Han
 CF_API void CF_CALL cf_handle_allocator_update_index(CF_HandleTable* table, CF_Handle handle, uint32_t index);
 
 /**
+ * @function cf_handle_allocator_update_type
+ * @category utility
+ * @brief    TODO
+ */
+void cf_handle_allocator_update_type(CF_HandleTable* table, CF_Handle handle, uint16_t type);
+
+/**
  * @function cf_handle_allocator_free
  * @category utility
  * @brief    Marks a `CF_Handle` as invalid and frees up resources it used.
@@ -235,6 +242,11 @@ struct HandleTable
 	CF_INLINE void update_index(CF_Handle handle, uint32_t index)
 	{
 		cf_handle_allocator_update_index(m_alloc, handle, index);
+	}
+
+	CF_INLINE void update_type(CF_Handle handle, uint16_t type)
+	{
+		cf_handle_allocator_update_type(m_alloc, handle, type);
 	}
 
 	CF_INLINE void free_handle(CF_Handle handle)

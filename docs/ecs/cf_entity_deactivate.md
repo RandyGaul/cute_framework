@@ -12,10 +12,6 @@ TODO
 void cf_entity_deactivate(CF_Entity entity);
 ```
 
-## Remarks
-
-CURRENTLY NOT IMPLEMENTED.
-
 ## Related Pages
 
 TODO  

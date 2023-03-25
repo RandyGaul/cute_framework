@@ -29,7 +29,6 @@
 struct CF_EntityCollection
 {
 	Cute::Array<const char*> component_type_tuple;
-	Cute::HandleTable entity_handle_table;
 	Cute::Array<CF_Handle> entity_handles;
 	Cute::Array<CF_TypelessArray> component_tables;
 	int inactive_count = 0;
@@ -109,12 +108,20 @@ struct CF_ComponentListInternal
 	}
 };
 
+struct CF_ChangeType
+{
+	CF_Entity entity;
+	const char* entity_type;
+};
+
 struct CF_WorldInternal
 {
-	Cute::Map<CF_EntityType, CF_EntityCollection> entity_collections;
+	Cute::HandleTable handles;
+	Cute::Map<CF_EntityType, CF_EntityCollection*> entity_collections;
 	Cute::Array<CF_Entity> delayed_destroy_entities;
 	Cute::Array<CF_Entity> delayed_deactivate_entities;
 	Cute::Array<CF_Entity> delayed_activate_entities;
+	Cute::Array<CF_ChangeType> delayed_change_type;
 };
 
 #endif // CF_ECS_INTERNAL_H

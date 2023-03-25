@@ -237,7 +237,6 @@ CF_INLINE bool cf_entity_equals(CF_Entity* a, CF_Entity* b) { return a->handle =
  * @function cf_entity_delayed_deactivate
  * @category ecs
  * @brief    TODO
- * @remarks  CURRENTLY NOT IMPLEMENTED.
  * @related  TODO
  */
 CF_API void CF_CALL cf_entity_delayed_deactivate(CF_Entity entity);
@@ -246,7 +245,6 @@ CF_API void CF_CALL cf_entity_delayed_deactivate(CF_Entity entity);
  * @function cf_entity_delayed_activate
  * @category ecs
  * @brief    TODO
- * @remarks  CURRENTLY NOT IMPLEMENTED.
  * @related  TODO
  */
 CF_API void CF_CALL cf_entity_delayed_activate(CF_Entity entity);
@@ -255,7 +253,6 @@ CF_API void CF_CALL cf_entity_delayed_activate(CF_Entity entity);
  * @function cf_entity_deactivate
  * @category ecs
  * @brief    TODO
- * @remarks  CURRENTLY NOT IMPLEMENTED.
  * @related  TODO
  */
 CF_API void CF_CALL cf_entity_deactivate(CF_Entity entity);
@@ -264,7 +261,6 @@ CF_API void CF_CALL cf_entity_deactivate(CF_Entity entity);
  * @function cf_entity_activate
  * @category ecs
  * @brief    TODO
- * @remarks  CURRENTLY NOT IMPLEMENTED.
  * @related  TODO
  */
 CF_API void CF_CALL cf_entity_activate(CF_Entity entity);
@@ -273,10 +269,26 @@ CF_API void CF_CALL cf_entity_activate(CF_Entity entity);
  * @function cf_entity_is_active
  * @category ecs
  * @brief    TODO
- * @remarks  CURRENTLY NOT IMPLEMENTED.
  * @related  TODO
  */
 CF_API bool CF_CALL cf_entity_is_active(CF_Entity entity);
+
+/**
+ * @function cf_entity_delayed_change_type
+ * @category ecs
+ * @brief    TODO
+ * @remarks  CURRENTLY NOT IMPLEMENTED.
+ * @related  TODO
+ */
+CF_API void CF_CALL cf_entity_delayed_change_type(CF_Entity entity, const char* entity_type);
+
+/**
+ * @function cf_entity_change_type
+ * @category ecs
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API void CF_CALL cf_entity_change_type(CF_Entity entity, const char* entity_type);
 
 /**
  * @function cf_component_begin

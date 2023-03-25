@@ -384,3 +384,78 @@ int test_ecs_activation()
 
 	return 0;
 }
+
+struct DummyComponent2
+{
+	int number = 10;
+};
+
+void dummy2_initialize(CF_Entity entity, void* component, void* udata)
+{
+	DummyComponent2* dummy = (DummyComponent2*)component;
+	CF_PLACEMENT_NEW(dummy) DummyComponent2;
+	(*(int*)udata)++;
+}
+
+CF_TEST_CASE(test_ecs_change_entity_type, "Change an entity from one type to another.");
+int test_ecs_change_entity_type()
+{
+	if (cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL))) {
+		return -1;
+	}
+
+	cf_component_begin();
+	cf_component_set_name("DummyComponent");
+	cf_component_set_size(sizeof(DummyComponent));
+	cf_component_set_optional_initializer(dummy_initialize, NULL);
+	cf_component_end();
+
+	int dummy2_init_count = 0;
+
+	cf_component_begin();
+	cf_component_set_name("DummyComponent2");
+	cf_component_set_size(sizeof(DummyComponent2));
+	cf_component_set_optional_initializer(dummy2_initialize, (void*)&dummy2_init_count);
+	cf_component_end();
+
+	cf_entity_begin();
+	cf_entity_set_name("Dummy_Entity");
+	cf_entity_add_component("DummyComponent");
+	cf_entity_end();
+
+	cf_entity_begin();
+	cf_entity_set_name("Dummy_Entity2");
+	cf_entity_add_component("DummyComponent");
+	cf_entity_add_component("DummyComponent2");
+	cf_entity_end();
+
+	cf_entity_begin();
+	cf_entity_set_name("Dummy_Entity3");
+	cf_entity_add_component("DummyComponent2");
+	cf_entity_end();
+
+	CF_Entity e = cf_make_entity("Dummy_Entity");
+	DummyComponent* dummy = (DummyComponent*)cf_entity_get_component(e, "DummyComponent");
+	CF_TEST_ASSERT(dummy->iters == 0);
+	CF_TEST_ASSERT(dummy2_init_count == 0);
+
+	cf_entity_change_type(e, "Dummy_Entity2");
+	DummyComponent2* dummy2 = (DummyComponent2*)cf_entity_get_component(e, "DummyComponent2");
+	CF_TEST_ASSERT(dummy2->number == 10);
+	CF_TEST_ASSERT(dummy2_init_count == 1);
+
+	cf_entity_change_type(e, "Dummy_Entity");
+	dummy2 = (DummyComponent2*)cf_entity_get_component(e, "DummyComponent2");
+	CF_TEST_ASSERT(dummy2 == NULL);
+
+	cf_entity_change_type(e, "Dummy_Entity3");
+	dummy2 = (DummyComponent2*)cf_entity_get_component(e, "DummyComponent2");
+	CF_TEST_ASSERT(dummy2->number == 10);
+	CF_TEST_ASSERT(dummy2_init_count == 2);
+	dummy = (DummyComponent*)cf_entity_get_component(e, "DummyComponent");
+	CF_TEST_ASSERT(dummy == NULL);
+
+	cf_destroy_app();
+
+	return 0;
+}
