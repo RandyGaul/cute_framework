@@ -155,8 +155,8 @@ void cf_destroy_entity(CF_Entity entity)
 	if (collection->entity_handle_table.valid(entity.handle)) {
 		int index = collection->entity_handle_table.get_index(entity.handle);
 
-		// Call cleanup function on each component.
-		for (int i = 0; i < collection->component_tables.count(); ++i) {
+		// Call cleanup function on each component in reverse order.
+		for (int i = collection->component_tables.count() - 1; i >= 0 ; --i) {
 			CF_ComponentConfig* config = app->component_configs.try_find(collection->component_type_tuple[i]);
 			if (config && config->cleanup) {
 				config->cleanup(entity, collection->component_tables[i][index], config->cleanup_udata);
