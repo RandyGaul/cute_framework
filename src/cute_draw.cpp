@@ -427,7 +427,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.h = sprite->h;
 	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
 
-	v2 p = cf_add_v2(sprite->transform.p, sprite->local_offset);
+	v2 p = cf_add_v2(sprite->transform.p, cf_mul_v2(sprite->local_offset, sprite->scale));
 
 	// Expand sprite's scale to account for border pixels in the atlas.
 	v2 scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
