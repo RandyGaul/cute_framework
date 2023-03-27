@@ -138,7 +138,7 @@ CF_INLINE CF_Color cf_make_color_rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a
  * @param    hex        An integer value, e.g. 0xFFAACC11.
  * @related  CF_Color cf_make_color_rgb_f cf_make_color_rgba_f cf_make_color_rgb cf_make_color_rgba cf_make_color_hex cf_make_color_hex_string
  */
-CF_INLINE CF_Color cf_make_color_hex(int hex) { return cf_make_color_rgba((uint8_t)(hex & 0x000000FF), (uint8_t)((hex & 0x0000FF00) >> 8), (uint8_t)((hex & 0x00FF0000) >> 16), (uint8_t)((hex & 0xFF000000) >> 24)); }
+CF_INLINE CF_Color cf_make_color_hex(int hex) { return cf_make_color_rgba((uint8_t)((hex & 0xFF000000)>>24), (uint8_t)((hex & 0x00FF0000) >> 16), (uint8_t)((hex & 0x0000FF00) >> 8), (uint8_t)(hex & 0xFF0000FF)); }
 
 /**
  * @function cf_make_color_hex_string
