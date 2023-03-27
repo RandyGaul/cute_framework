@@ -27,7 +27,9 @@ Another option for those familiar with CMake is to build from source with CMake.
 > **Note** For Linux users make sure to you have OpenGL and gcc/g++ installed and setup. You can try these commands:
 ```cpp
 sudo apt-get update -qq
+sudo apt-get install build-essential
 sudo apt-get install gcc-multilib
+sudo apt-get install cmake
 sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
 ```
 
