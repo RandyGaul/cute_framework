@@ -24,6 +24,13 @@ Another option for those familiar with CMake is to build from source with CMake.
 4. Make a folder called `src` in the top-level of your project, and place your initial `main.cpp` there.
 5. Run CMake on your project folder. If you need help with this step, try reading a setup guide for CF here: [CF - CMake 101](https://github.com/RandyGaul/cute_framework_project_template#cmake-101-walkthrough).
 
+> **Note** For Linux users make sure to you have OpenGL and gcc/g++ installed and setup. You can try these commands:
+```cpp
+sudo apt-get update -qq
+sudo apt-get install gcc-multilib
+sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
+```
+
 ## Example Game Window
 
 > Creating a window and closing it.
