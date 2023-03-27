@@ -22,7 +22,7 @@ Another option for those familiar with CMake is to build from source with CMake.
 2. Copy CMakeLists.txt ([this one here](https://github.com/RandyGaul/cute_framework_project_template/blob/main/CMakeLists.txt)) into the top-level of your project directory.
 3. Find + replace "my_project_name".
 4. Make a folder called `src` in the top-level of your project, and place your initial `main.cpp` there.
-5. Run CMake on your project folder. If you need help with this step, try reading the [CMake 101 section here](https://github.com/RandyGaul/cute_framework_project_template#cmake-101-walkthrough).
+5. Run CMake on your project folder. If you need help with this step, try reading a setup guide for CF here: [CF - CMake 101].(https://github.com/RandyGaul/cute_framework_project_template#cmake-101-walkthrough).
 
 ## Example Game Window
 
