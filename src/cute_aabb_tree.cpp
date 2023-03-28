@@ -22,6 +22,7 @@
 #include <cute_aabb_tree.h>
 #include <cute_array.h>
 #include <cute_alloc.h>
+#include <cute_defer.h>
 
 #include <internal/cute_alloc_internal.h>
 #include <internal/cute_serialize_internal.h>
@@ -247,19 +248,23 @@ void s_push_freelist(CF_AabbTreeInternal* tree, int index)
 
 struct CF_AabbTreePriorityQueue
 {
+	~CF_AabbTreePriorityQueue()
+	{
+		afree(m_indices);
+		afree(m_costs);
+	}
+
 	inline void init(int* indices, float* costs, int capacity)
 	{
 		m_count = 0;
-		m_capacity = capacity;
-		m_indices = indices;
-		m_costs = costs;
+		astatic(m_indices, indices, capacity);
+		astatic(m_costs, costs, capacity);
 	}
 
 	inline void push(int index, float cost)
 	{
-		CF_ASSERT(m_count < m_capacity);
-		m_indices[m_count] = index;
-		m_costs[m_count] = cost;
+		apush(m_indices, index);
+		apush(m_costs, cost);
 		++m_count;
 
 		int i = m_count;
@@ -276,8 +281,8 @@ struct CF_AabbTreePriorityQueue
 		*cost = m_costs[0];
 
 		m_count--;
-		m_indices[0] = m_indices[m_count];
-		m_costs[0] = m_costs[m_count];
+		m_indices[0] = apop(m_indices);
+		m_costs[0] = apop(m_costs);
 
 		int u = 0, v = 1;
 		while (u != v) {
@@ -317,9 +322,8 @@ private:
 	}
 
 	int m_count = 0;
-	int m_capacity = 0;
-	int* m_indices = NULL;
-	float* m_costs = NULL;
+	dyna int* m_indices = NULL;
+	dyna float* m_costs = NULL;
 };
 
 static inline float s_delta_cost(CF_Aabb to_insert, CF_Aabb candidate)
@@ -791,16 +795,17 @@ void cf_aabb_tree_query_aabb(const CF_AabbTree tree_handle, CF_AabbTreeQueryFn* 
 {
 	CF_AabbTreeInternal* tree = (CF_AabbTreeInternal*)tree_handle.id;
 	if (tree->root == AABB_TREE_NULL_NODE_INDEX) return;
-	int index_stack[AABB_TREE_STACK_QUERY_CAPACITY];
-	int sp = 1;
+	int index_stack_buf[AABB_TREE_STACK_QUERY_CAPACITY];
+	int* index_stack = NULL;
+	astatic(index_stack, index_stack_buf, CF_ARRAY_SIZE(index_stack_buf));
+	CF_DEFER(afree(index_stack));
 	const CF_AabbTreeNode* nodes = tree->nodes.data();
 	const CF_Aabb* aabbs = tree->aabbs.data();
 	void* const* udatas = tree->udatas.data();
-	index_stack[0] = tree->root;
+	apush(index_stack, tree->root);
 
-	while (sp) {
-		CF_ASSERT(sp < AABB_TREE_STACK_QUERY_CAPACITY);
-		int index = index_stack[--sp];
+	while (alen(index_stack)) {
+		int index = apop(index_stack);
 		CF_Aabb search_aabb = aabbs[index];
 
 		if (cf_collide_aabb(aabb, search_aabb)) {
@@ -812,8 +817,8 @@ void cf_aabb_tree_query_aabb(const CF_AabbTree tree_handle, CF_AabbTreeQueryFn* 
 					return;
 				}
 			} else {
-				index_stack[sp++] = node->index_a;
-				index_stack[sp++] = node->index_b;
+				apush(index_stack, node->index_a);
+				apush(index_stack, node->index_b);
 			}
 		}
 	}
@@ -823,12 +828,14 @@ void cf_aabb_tree_query_ray(const CF_AabbTree tree_handle, CF_AabbTreeQueryFn* f
 {
 	CF_AabbTreeInternal* tree = (CF_AabbTreeInternal*)tree_handle.id;
 	if (tree->root == AABB_TREE_NULL_NODE_INDEX) return;
-	int index_stack[AABB_TREE_STACK_QUERY_CAPACITY];
-	int sp = 1;
+	int index_stack_buf[AABB_TREE_STACK_QUERY_CAPACITY];
+	int* index_stack = NULL;
+	astatic(index_stack, index_stack_buf, CF_ARRAY_SIZE(index_stack_buf));
+	CF_DEFER(afree(index_stack));
 	const CF_AabbTreeNode* nodes = tree->nodes.data();
 	const CF_Aabb* aabbs = tree->aabbs.data();
 	void* const* udatas = tree->udatas.data();
-	index_stack[0] = tree->root;
+	apush(index_stack, tree->root);
 
 	CF_Ray ray_inv = ray;
 	ray_inv.d = cf_safe_invert_v2(ray.d);
@@ -837,9 +844,8 @@ void cf_aabb_tree_query_ray(const CF_AabbTree tree_handle, CF_AabbTreeQueryFn* f
 	ray_aabb.min = cf_min_v2(ray.p, ray_end);
 	ray_aabb.max = cf_min_v2(ray.p, ray_end);
 
-	while (sp) {
-		CF_ASSERT(sp < AABB_TREE_STACK_QUERY_CAPACITY);
-		int index = index_stack[--sp];
+	while (alen(index_stack)) {
+		int index = apop(index_stack);
 		CF_Aabb search_aabb = aabbs[index];
 
 		if (!cf_collide_aabb(ray_aabb, search_aabb)) {
@@ -855,8 +861,8 @@ void cf_aabb_tree_query_ray(const CF_AabbTree tree_handle, CF_AabbTreeQueryFn* f
 					return;
 				}
 			} else {
-				index_stack[sp++] = node->index_a;
-				index_stack[sp++] = node->index_b;
+				apush(index_stack, node->index_a);
+				apush(index_stack, node->index_b);
 			}
 		}
 	}
