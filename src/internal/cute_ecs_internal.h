@@ -111,7 +111,7 @@ struct CF_ComponentListInternal
 struct CF_ChangeType
 {
 	CF_Entity entity;
-	const char* entity_type;
+	CF_EntityType type;
 };
 
 struct CF_WorldInternal

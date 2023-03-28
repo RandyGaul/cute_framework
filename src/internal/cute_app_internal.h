@@ -41,8 +41,6 @@
 
 #include <sokol/sokol_gfx_imgui.h>
 
-#define CF_RETURN_IF_ERROR(x) do { CF_Result err = (x); if (cf_is_error(err)) return err; } while (0)
-
 struct SDL_Window;
 struct cs_context_t;
 

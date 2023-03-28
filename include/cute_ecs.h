@@ -291,6 +291,14 @@ CF_API void CF_CALL cf_entity_delayed_change_type(CF_Entity entity, const char* 
 CF_API void CF_CALL cf_entity_change_type(CF_Entity entity, const char* entity_type);
 
 /**
+ * @function cf_entity_type_rename
+ * @category ecs
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API void CF_CALL cf_entity_type_rename(const char* entity_type, const char* new_entity_type_name);
+
+/**
  * @function cf_component_begin
  * @category ecs
  * @brief    TODO
@@ -343,6 +351,15 @@ CF_API void CF_CALL cf_component_set_optional_cleanup(CF_ComponentFn* cleanup, v
  * @related  TODO
  */
 CF_API void CF_CALL cf_component_end();
+
+/**
+ * @function cf_component_rename
+ * @category ecs
+ * @brief    TODO
+ * @remarks  TODO
+ * @related  TODO
+ */
+CF_API void CF_CALL cf_component_rename(const char* component_name, const char* new_component_name);
 
 /**
  * @function cf_system_begin

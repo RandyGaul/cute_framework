@@ -284,11 +284,14 @@ bool cf_entity_is_valid(CF_Entity entity)
 
 void cf_entity_delayed_change_type(CF_Entity entity, const char* entity_type)
 {
-	CF_WorldInternal* world = s_world();
-	CF_ChangeType change;
-	change.entity = entity;
-	change.entity_type = entity_type;
-	world->delayed_change_type.add(change);
+	auto type_ptr = app->entity_type_string_to_id.try_find(entity_type);
+	if (type_ptr && cf_entity_is_valid(entity)) {
+		CF_WorldInternal* world = s_world();
+		CF_ChangeType change;
+		change.entity = entity;
+		change.type = *type_ptr;
+		world->delayed_change_type.add(change);
+	}
 }
 
 void cf_entity_change_type(CF_Entity entity, const char* entity_type)
@@ -408,6 +411,21 @@ bool cf_entity_has_component(CF_Entity entity, const char* component_type)
 	return cf_entity_get_component(entity, component_type) ? true : false;
 }
 
+void cf_entity_type_rename(const char* entity_type, const char* new_entity_type_name)
+{
+	entity_type = sintern(entity_type);
+	new_entity_type_name = sintern(new_entity_type_name);
+	CF_EntityType* type = app->entity_type_string_to_id.try_find(entity_type);
+	bool new_type_found = app->entity_type_string_to_id.try_find(new_entity_type_name) ? true : false;
+	if (!type && !new_type_found) return;
+	app->entity_type_string_to_id.remove(entity_type);
+	app->entity_type_string_to_id.insert(new_entity_type_name, *type);
+	app->entity_type_id_to_string[*type] = new_entity_type_name;
+	if (app->entity_config_builder.entity_type == entity_type) {
+		app->entity_config_builder.entity_type = new_entity_type_name;
+	}
+}
+
 //--------------------------------------------------------------------------------------------------
 
 static inline int s_match(const Array<const char*>& a, const Array<const char*>& b)
@@ -485,7 +503,8 @@ void cf_run_systems()
 
 	for (int i = 0; i < world->delayed_change_type.count(); ++i) {
 		CF_ChangeType change = world->delayed_change_type[i];
-		cf_entity_change_type(change.entity, change.entity_type);
+		const char* type = app->entity_type_id_to_string[change.type];
+		cf_entity_change_type(change.entity, type);
 	}
 	world->delayed_change_type.clear();
 }
@@ -498,6 +517,47 @@ void cf_component_begin()
 void cf_component_end()
 {
 	app->component_configs.insert(app->component_config_builder.name, app->component_config_builder);
+}
+
+void cf_component_rename(const char* component_name, const char* new_component_name)
+{
+	component_name = sintern(component_name);
+	new_component_name = sintern(new_component_name);
+	CF_ComponentConfig config;
+	CF_ComponentConfig* ptr = app->component_configs.try_find(component_name);
+	bool new_name_found = app->component_configs.try_find(new_component_name) ? true : false;
+	if (ptr && !new_name_found) {
+		config = *ptr;
+		config.name = new_component_name;
+		app->component_configs.insert(new_component_name, config);
+		for (int i = 0; i < app->worlds.count(); ++i) {
+			CF_WorldInternal* world = (CF_WorldInternal*)app->worlds[i].id;
+			CF_EntityCollection** collections = world->entity_collections.items();
+			for (int i = 0; i < world->entity_collections.count(); ++i) {
+				CF_EntityCollection* collection = collections[i];
+				const char* type = collection->component_type_tuple[i];
+				if (type == component_name) {
+					collection->component_type_tuple[i] = new_component_name;
+				}
+			}
+		}
+		for (int i = 0; i < app->systems.count(); ++i) {
+			CF_SystemInternal* system = app->systems + i;
+			for (int i = 0; i < system->component_type_tuple.size(); ++i) {
+				if (system->component_type_tuple[i] == component_name) {
+					system->component_type_tuple[i] = new_component_name;
+				}
+			}
+		}
+		if (app->component_config_builder.name == component_name) {
+			app->component_config_builder.name = new_component_name;
+		}
+		for (int i = 0; i < app->component_list.types.count(); ++i) {
+			if (app->component_list.types[i] == component_name) {
+				app->component_list.types[i] = new_component_name;
+			}
+		}
+	}
 }
 
 void cf_component_set_name(const char* name)
