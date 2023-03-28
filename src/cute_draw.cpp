@@ -427,7 +427,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 	s.h = sprite->h;
 	s.geom.type = BATCH_GEOMETRY_TYPE_SPRITE;
 
-	v2 p = cf_add_v2(sprite->transform.p, sprite->local_offset);
+	v2 p = cf_add_v2(sprite->transform.p, cf_mul_v2(sprite->local_offset, sprite->scale));
 
 	// Expand sprite's scale to account for border pixels in the atlas.
 	v2 scale = V2(sprite->scale.x * s.w, sprite->scale.y * s.h);
@@ -679,12 +679,12 @@ void cf_draw_capsule(CF_V2 a, CF_V2 b, float r, int iters, float thickness)
 	if (draw->antialias.last()) {
 		draw->temp.ensure_capacity(iters * 2 + 2);
 		draw->temp.clear();
-		s_circle_arc_aa(a, a + cf_norm(a - b) * r, CF_PI, iters, thickness);
-		s_circle_arc_aa(b, b + cf_norm(b - a) * r, CF_PI, iters, thickness);
+		s_circle_arc_aa(a, a - cf_norm(a - b) * r, CF_PI, iters, thickness);
+		s_circle_arc_aa(b, b - cf_norm(b - a) * r, CF_PI, iters, thickness);
 		cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, true, 0);
 	} else {
-		cf_draw_circle_arc(a, a + cf_norm(a - b) * r, CF_PI, iters, thickness);
-		cf_draw_circle_arc(b, b + cf_norm(b - a) * r, CF_PI, iters, thickness);
+		cf_draw_circle_arc(a, a - cf_norm(a - b) * r, CF_PI, iters, thickness);
+		cf_draw_circle_arc(b, b - cf_norm(b - a) * r, CF_PI, iters, thickness);
 		CF_V2 n = cf_skew(cf_norm(b - a)) * r;
 		CF_V2 q0 = a + n;
 		CF_V2 q1 = b + n;
@@ -697,8 +697,8 @@ void cf_draw_capsule(CF_V2 a, CF_V2 b, float r, int iters, float thickness)
 
 void cf_draw_capsule_fill(CF_V2 a, CF_V2 b, float r, int iters)
 {
-	cf_draw_circle_arc_fill(a, a + cf_norm(a - b) * r, CF_PI, iters);
-	cf_draw_circle_arc_fill(b, b + cf_norm(b - a) * r, CF_PI, iters);
+	cf_draw_circle_arc_fill(a, a - cf_norm(a - b) * r, CF_PI, iters);
+	cf_draw_circle_arc_fill(b, b - cf_norm(b - a) * r, CF_PI, iters);
 	CF_V2 n = cf_skew(cf_norm(b - a)) * r;
 	CF_V2 q0 = a + n;
 	CF_V2 q1 = b + n;

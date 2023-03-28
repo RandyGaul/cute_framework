@@ -310,7 +310,10 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	#endif // CF_EMSCRIPTEN
 			app->audio_needs_updates = true;
 		} else {
-			CF_ASSERT(false);
+			CF_Result result;
+			result.code = -1;
+			result.details = cs_error_as_string(err);
+			return result;
 		}
 	}
 
