@@ -113,7 +113,7 @@ struct CF_App
 	Cute::Array<int> input_text;
 	int keys[512] = { 0 };
 	int keys_prev[512] = { 0 };
-	float keys_duration[512] = { 0 };
+	double keys_timestamp[512] = { 0 };
 	CF_MouseState mouse, mouse_prev;
 	CF_List joypads;
 	Cute::Array<CF_Touch> touches;

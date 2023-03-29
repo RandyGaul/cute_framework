@@ -216,23 +216,30 @@ bool cf_key_just_pressed(CF_KeyButton key)
 {
 	CF_ASSERT(key >= 0 && key < 512);
 
-	float repeat_delay = 0.5f;
-	float repeat_rate = 0.035f;
-	float t = app->keys_duration[key];
-	int repeat_count = 0;
-
-	if (t > repeat_delay) {
-		repeat_count = (int)((t - repeat_delay) / repeat_rate);
-		app->keys_duration[key] -= repeat_count * repeat_rate;
-	}
-
-	return (app->keys[key] & !app->keys_prev[key]) | repeat_count;
+	return app->keys[key] & !app->keys_prev[key];
 }
 
 bool cf_key_just_released(CF_KeyButton key)
 {
 	CF_ASSERT(key >= 0 && key < 512);
 	return !app->keys[key] && app->keys_prev[key];
+}
+
+bool cf_key_repeating(CF_KeyButton key)
+{
+	CF_ASSERT(key >= 0 && key < 512);
+
+	double repeat_delay = 0.5;
+	double repeat_rate = 0.035;
+
+	if (app->keys[key]) {
+		double t = app->keys_timestamp[key] + repeat_delay;
+		if (CF_SECONDS > t) {
+			return cf_on_interval((float)repeat_rate, (float)t);
+		}
+	}
+
+	return false;
 }
 
 bool cf_key_ctrl()
@@ -442,16 +449,10 @@ void cf_pump_input_msgs()
 	app->window_state.restored = false;
 	app->window_state.resized = false;
 
-	// Update key durations to simulate "press and hold" style for `key_just_pressed`.
+	// Update key durations to simulate "press and hold" style for `key_repeating`.
 	for (int i = 0; i < 512; ++i) {
-		if (cf_key_down((CF_KeyButton)i)) {
-			if (app->keys_duration[i] < 0) {
-				app->keys_duration[i] = 0;
-			} else {
-				app->keys_duration[i] += DELTA_TIME;
-			}
-		} else {
-			app->keys_duration[i] = -1.0f;
+		if (!cf_key_down((CF_KeyButton)i)) {
+			app->keys_timestamp[i] = 0;
 		}
 	}
 
@@ -521,6 +522,7 @@ void cf_pump_input_msgs()
 			CF_ASSERT(key >= 0 && key < 512);
 			app->keys[key] = 1;
 			app->keys[KEY_ANY] = 1;
+			app->keys_timestamp[key] = app->keys_timestamp[KEY_ANY] = CF_SECONDS;
 		}	break;
 
 		case SDL_KEYUP:

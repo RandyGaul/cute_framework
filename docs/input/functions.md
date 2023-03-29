@@ -33,6 +33,7 @@
 - [cf_key_gui](/input/cf_key_gui.md)
 - [cf_key_just_pressed](/input/cf_key_just_pressed.md)
 - [cf_key_just_released](/input/cf_key_just_released.md)
+- [cf_key_repeating](/input/cf_key_repeating.md)
 - [cf_key_shift](/input/cf_key_shift.md)
 - [cf_mouse_button_to_string](/input/cf_mouse_button_to_string.md)
 - [cf_mouse_double_click_held](/input/cf_mouse_double_click_held.md)

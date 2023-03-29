@@ -29,6 +29,11 @@ int main(int argc, char* argv[])
 			printf("Mouse right is currently DOWN\n");
 		}
 
+		// Repeating keys.
+		if (cf_key_repeating(CF_KEY_C)) {
+			printf("Key C was repeated\n");
+		}
+
 		cf_app_draw_onto_screen();
 	}
 

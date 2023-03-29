@@ -15,7 +15,7 @@ bool cf_key_down(CF_KeyButton key);
 ## Related Pages
 
 [CF_KeyButton](/input/cf_keybutton.md)  
-[cf_clear_key_states](/input/cf_clear_key_states.md)  
+[cf_key_repeating](/input/cf_key_repeating.md)  
 cf_key_up  
 [cf_key_just_pressed](/input/cf_key_just_pressed.md)  
 [cf_key_just_released](/input/cf_key_just_released.md)  
@@ -23,3 +23,4 @@ cf_key_up
 [cf_key_shift](/input/cf_key_shift.md)  
 [cf_key_alt](/input/cf_key_alt.md)  
 [cf_key_gui](/input/cf_key_gui.md)  
+[cf_clear_key_states](/input/cf_clear_key_states.md)  

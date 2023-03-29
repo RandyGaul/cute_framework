@@ -581,7 +581,7 @@ CF_INLINE const char* cf_key_button_to_string(CF_KeyButton button)
  * @function cf_key_down
  * @category input
  * @brief    Returns true if a key is currently down.
- * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
+ * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states cf_key_repeating
  */
 CF_API bool CF_CALL cf_key_down(CF_KeyButton key);
 
@@ -589,7 +589,7 @@ CF_API bool CF_CALL cf_key_down(CF_KeyButton key);
  * @function cf_key_just_pressed
  * @category input
  * @brief    Returns true if a key was just pressed.
- * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
+ * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states cf_key_repeating
  */
 CF_API bool CF_CALL cf_key_just_pressed(CF_KeyButton key);
 
@@ -597,15 +597,23 @@ CF_API bool CF_CALL cf_key_just_pressed(CF_KeyButton key);
  * @function cf_key_just_released
  * @category input
  * @brief    Returns true if a key was just released.
- * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
+ * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states cf_key_repeating
  */
 CF_API bool CF_CALL cf_key_just_released(CF_KeyButton key);
+
+/**
+ * @function cf_key_repeating
+ * @category input
+ * @brief    Returns true if a key was held long enough to repeat.
+ * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states cf_key_repeating
+ */
+CF_API bool CF_CALL cf_key_repeating(CF_KeyButton key);
 
 /**
  * @function cf_key_ctrl
  * @category input
  * @brief    Returns true if the left or right control key is currently down.
- * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
+ * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states cf_key_repeating
  */
 CF_API bool CF_CALL cf_key_ctrl();
 
