@@ -11,7 +11,10 @@
 - [hitems](/hash/hitems.md)
 - [hkeys](/hash/hkeys.md)
 - [hset](/hash/hset.md)
+- [hsisort](/hash/hsisort.md)
 - [hsize](/hash/hsize.md)
+- [hsort](/hash/hsort.md)
+- [hssort](/hash/hssort.md)
 - [hswap](/hash/hswap.md)
 - [htbl](/hash/htbl.md)
 

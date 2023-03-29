@@ -284,9 +284,45 @@
  *         }
  *     }
  * @remarks  Use this for e.g. implementing a priority queue on top of the hash table.
- * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree
+ * @related  htbl hset hadd hget hfind hget_ptr hfind_ptr hhas hdel hclear hkeys hitems hswap hsize hcount hfree hsort hssort hsisort
  */
 #define hswap(h, index_a, index_b) cf_hashtable_swap(h, index_a, index_b)
+
+/**
+ * @function hsort
+ * @category hash
+ * @brief    Sorts the {key, item} pairs in the table by keys.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @remarks  The keys and items returned by `hkeys` and `hitems` will be sorted. Recall that all keys in the hashtable are treated
+ *           as `uint64_t`, so the sorting simply sorts the keys from least to greatest as `uint64_t`. This is _not_ a stable sort.
+ * @related  htbl hswap hsort hssort hsisort
+ */
+#define hsort(h) cf_hashtable_sort(h)
+
+/**
+ * @function hssort
+ * @category hash
+ * @brief    Sorts the {key, item} pairs in the table by keys, where the keys are treated as C-strings.
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @remarks  The keys and items returned by `hkeys` and `hitems` will be sorted. Normally it's not valid to store strings as keys,
+ *           since all keys are simply typecasted to `uint64_t`. However, if you use `sintern` each unique string has a unique and
+ *           stable pointer, making them valid keys for hashtables. This is _not_ a stable sort.
+ * @related  htbl hswap hsort hssort hsisort sintern
+ */
+#define hssort(h) cf_hashtable_ssort(h)
+
+
+/**
+ * @function hsisort
+ * @category hash
+ * @brief    Sorts the {key, item} pairs in the table by keys, where the keys are treated as C-strings (case ignored).
+ * @param    h        The hashtable. Can be `NULL`. Needs to be a pointer to the type of items in the table.
+ * @remarks  The keys and items returned by `hkeys` and `hitems` will be sorted. Normally it's not valid to store strings as keys,
+ *           since all keys are simply typecasted to `uint64_t`. However, if you use `sintern` each unique string has a unique and
+ *           stable pointer, making them valid keys for hashtables. This is _not_ a stable sort.
+ * @related  htbl hswap hsort hssort hsisort sintern
+ */
+#define hsisort(h) cf_hashtable_sisort(h)
 
 /**
  * @function hsize
@@ -331,9 +367,12 @@
 #define cf_hashtable_has(h, k) (h ? cf_hashtable_remove_impl(CF_HHDR(h), (uint64_t)k) : NULL)
 #define cf_hashtable_del(h, k) (h ? cf_hashtable_remove_impl(CF_HHDR(h), (uint64_t)k) : (void)0)
 #define cf_hashtable_clear(h) (CF_HCANARY(h), cf_hashtable_clear_impl(CF_HHDR(h)))
-#define cf_hashtable_keys(h) (CF_HCANARY(h), h ? (const uint64_t*)cf_hashtable_keys_impl(CF_HHDR(h))) : (const uint64_t*)NULL)
+#define cf_hashtable_keys(h) (CF_HCANARY(h), h ? (const uint64_t*)cf_hashtable_keys_impl(CF_HHDR(h)) : (const uint64_t*)NULL)
 #define cf_hashtable_items(h) (CF_HCANARY(h), h)
 #define cf_hashtable_swap(h, index_a, index_b) (CF_HCANARY(h), cf_hashtable_swap_impl(CF_HHDR(h), index_a, index_b))
+#define cf_hashtable_sort(h) (*(void**)&(h) = cf_hashtable_sort_impl(CF_HHDR(h)))
+#define cf_hashtable_ssort(h) (*(void**)&(h) = cf_hashtable_ssort_impl(CF_HHDR(h)))
+#define cf_hashtable_sisort(h) (*(void**)&(h) = cf_hashtable_sisort_impl(CF_HHDR(h)))
 #define cf_hashtable_size(h) (h ? cf_hashtable_count_impl(CF_HHDR(h)) : 0)
 #define cf_hashtable_count(h) cf_hashtable_size(h)
 #define cf_hashtable_free(h) do { CF_HCANARY(h); if (h) cf_hashtable_free_impl(CF_HHDR(h)); h = NULL; } while (0)
@@ -389,6 +428,9 @@ CF_API void* CF_CALL cf_hashtable_items_impl(const CF_Hhdr* table);
 CF_API void* CF_CALL cf_hashtable_keys_impl(const CF_Hhdr* table);
 CF_API void CF_CALL cf_hashtable_clear_impl(CF_Hhdr* table);
 CF_API void CF_CALL cf_hashtable_swap_impl(CF_Hhdr* table, int index_a, int index_b);
+CF_API void* CF_CALL cf_hashtable_sort_impl(CF_Hhdr* table);
+CF_API void* CF_CALL cf_hashtable_ssort_impl(CF_Hhdr* table);
+CF_API void* CF_CALL cf_hashtable_sisort_impl(CF_Hhdr* table);
 
 #ifdef __cplusplus
 }
@@ -441,11 +483,23 @@ struct Map
 
 	void swap(int index_a, int index_b);
 
+	template <typename P>
+	void sort_by_keys(P predicate);
+
+	template <typename P>
+	void sort_by_items(P predicate);
+
 	Map<K, T>& operator=(const Map<K, T>& rhs);
 	Map<K, T>& operator=(Map<K, T>&& rhs);
 
 private:
 	CF_Hhdr* m_table = NULL;
+
+	template <typename P>
+	void sort_keys(int offset, int count, P predicate);
+
+	template <typename P>
+	void sort_items(int offset, int count, P predicate);
 };
 
 // -------------------------------------------------------------------------------------------------
@@ -638,6 +692,78 @@ Map<K, T>& Map<K, T>::operator=(Map<K, T>&& rhs)
 	m_table = rhs.m_table;
 	rhs.m_table = NULL;
 	return *this;
+}
+
+template <typename K, typename T>
+template <typename P>
+void Map<K, T>::sort_keys(int offset, int count, P predicate)
+{
+	if (count <= 1) return;
+
+	auto key = [=](int index) -> K& {
+		uint8_t* keys = (uint8_t*)m_table->items_key;
+		void* k = keys + index * m_table->key_size;
+		return *(K*)k;
+	};
+	auto swap = [=](int ia, int ib) { cf_hashtable_swap_impl(m_table, offset + ia, offset + ib); };
+
+	const K& pivot_key = key(count - 1);
+	int lo = 0;
+	for (int hi = 0; hi < count - 1; ++hi) {
+		const K& hi_key = key(hi);
+		if (predicate(hi_key, pivot_key)) {
+			swap(lo, hi);
+			lo++;
+		}
+	}
+
+	swap(count - 1, lo);
+
+	sort_keys(0, lo, predicate);
+	sort_keys(lo + 1, count - 1 - lo, predicate);
+}
+
+template <typename K, typename T>
+template <typename P>
+void Map<K, T>::sort_by_keys(P predicate)
+{
+	sort_keys(0, m_table->count, predicate);
+}
+
+template <typename K, typename T>
+template <typename P>
+void Map<K, T>::sort_items(int offset, int count, P predicate)
+{
+	if (count <= 1) return;
+
+	auto item = [=](int index) -> T& {
+		uint8_t* items = (uint8_t*)m_table->items_data;
+		void* item = items + index * m_table->item_size;
+		return *(T*)item;
+	};
+	auto swap = [=](int ia, int ib) { cf_hashtable_swap_impl(m_table, offset + ia, offset + ib); };
+
+	const K& pivot = item(count - 1);
+	int lo = 0;
+	for (int hi = 0; hi < count - 1; ++hi) {
+		const K& val = item(hi);
+		if (predicate(val, pivot)) {
+			swap(lo, hi);
+			lo++;
+		}
+	}
+
+	swap(count - 1, lo);
+
+	sort_items(0, lo, predicate);
+	sort_items(lo + 1, count - 1 - lo, predicate);
+}
+
+template <typename K, typename T>
+template <typename P>
+void Map<K, T>::sort_by_items(P predicate)
+{
+	sort_items(0, m_table->count, predicate);
 }
 
 }

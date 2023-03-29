@@ -55,6 +55,12 @@ static CF_INLINE void* s_get_item(const CF_Hhdr* table, int index)
 	return items + index * table->item_size;
 }
 
+static CF_INLINE void* s_get_key(const CF_Hhdr* table, int index)
+{
+	uint8_t* keys = (uint8_t*)table->items_key;
+	return keys + index * table->key_size;
+}
+
 void* cf_hashtable_make_impl(int key_size, int item_size, int capacity)
 {
 	CF_ASSERT(capacity);
@@ -97,12 +103,6 @@ void cf_hashtable_free_impl(CF_Hhdr* table)
 static CF_INLINE int s_keys_equal(const CF_Hhdr* table, const void* a, const void* b)
 {
 	return !CF_MEMCMP(a, b, table->key_size);
-}
-
-static CF_INLINE void* s_get_key(const CF_Hhdr* table, int index)
-{
-	uint8_t* keys = (uint8_t*)table->items_key;
-	return keys + index * table->key_size;
 }
 
 static int s_find_slot(const CF_Hhdr *table, uint32_t hash, const void* key)
@@ -340,4 +340,74 @@ void cf_hashtable_swap_impl(CF_Hhdr* table, int index_a, int index_b)
 
 	table->slots[slot_a].item_index = index_b;
 	table->slots[slot_b].item_index = index_a;
+}
+
+static void s_sort(CF_Hhdr* table, int offset, int count)
+{
+	if (count <= 1) return;
+
+	auto key = [=](int index) { return *(uint64_t*)s_get_key(table, offset + index); };
+	auto swap = [=](int ia, int ib) { cf_hashtable_swap_impl(table, offset + ia, offset + ib); };
+
+	uint64_t pivot_key = key(count - 1);
+	int lo = 0;
+	for (int hi = 0; hi < count - 1; ++hi) {
+		uint64_t hi_key = key(hi);
+		if (hi_key < pivot_key) {
+			swap(lo, hi);
+			lo++;
+		}
+	}
+
+	swap(count - 1, lo);
+
+	s_sort(table, 0, lo);
+	s_sort(table, lo + 1, count - 1 - lo);
+}
+
+void* cf_hashtable_sort_impl(CF_Hhdr* table)
+{
+	s_sort(table, 0, table->count);
+	return s_get_item(table, 0);
+}
+
+static void s_ssort(CF_Hhdr* table, int offset, int count, bool ignore_case)
+{
+	if (count <= 1) return;
+
+	auto key = [=](int index) { return (const char*)s_get_key(table, offset + index); };
+	auto swap = [=](int ia, int ib) { cf_hashtable_swap_impl(table, offset + ia, offset + ib); };
+
+	const char* pivot_key = key(count - 1);
+	int lo = 0;
+	for (int hi = 0; hi < count - 1; ++hi) {
+		const char* hi_key = key(hi);
+		bool pred;
+		if (ignore_case) {
+			pred = sicmp(hi_key, pivot_key) < 0 ? true : false;
+		} else {
+			pred = scmp(hi_key, pivot_key) < 0 ? true : false;
+		}
+		if (pred) {
+			swap(lo, hi);
+			lo++;
+		}
+	}
+
+	swap(count - 1, lo);
+
+	s_sort(table, 0, lo);
+	s_sort(table, lo + 1, count - 1 - lo);
+}
+
+void* cf_hashtable_ssort_impl(CF_Hhdr* table)
+{
+	s_ssort(table, 0, table->count, false);
+	return s_get_item(table, 0);
+}
+
+void* cf_hashtable_sisort_impl(CF_Hhdr* table)
+{
+	s_ssort(table, 0, table->count, true);
+	return s_get_item(table, 0);
 }
