@@ -947,6 +947,7 @@ using Touch = CF_Touch;
 CF_INLINE bool CF_CALL key_down(KeyButton key) { return cf_key_down(key); }
 CF_INLINE bool CF_CALL key_just_pressed(KeyButton key) { return cf_key_just_pressed(key); }
 CF_INLINE bool CF_CALL key_just_released(KeyButton key) { return cf_key_just_released(key); }
+CF_INLINE bool CF_CALL key_repeating(KeyButton key) { return cf_key_repeating(key); }
 CF_INLINE bool CF_CALL key_ctrl() { return cf_key_ctrl(); }
 CF_INLINE bool CF_CALL key_shift() { return cf_key_shift(); }
 CF_INLINE bool CF_CALL key_alt() { return cf_key_alt(); }
