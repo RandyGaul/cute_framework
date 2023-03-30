@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
+set(CMAKE_OSX_ARCHITECTURES "x86_64")
 project(cute_framework)
 
 # Must have at least C++17.
