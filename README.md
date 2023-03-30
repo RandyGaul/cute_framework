@@ -60,6 +60,7 @@ sudo apt-get install libasound2-dev libpulse-dev
 sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
 ```
 > **Note** On WSL2 you may also need `sudo apt install libpulse0`.
+
 > **Note** For non-Apple ARM platforms (like Raspberry/Orange Pi) you may need to define CUTE_SOUND_SCALAR_MODE to disable SSE intrinsics. Ideally CF could use preprocessor directives to define this for you -- pull requests are highly appreciated here!
 
 # Resources
