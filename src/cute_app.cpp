@@ -158,6 +158,10 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		sdl_options &= ~SDL_INIT_VIDEO;
 	}
 #endif
+
+	// Turn on high DPI support for all platforms.
+	options |= SDL_WINDOW_ALLOW_HIGHDPI;
+	
 	if (SDL_Init(sdl_options)) {
 		return cf_result_error("SDL_Init failed");
 	}
