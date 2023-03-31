@@ -37,6 +37,7 @@
 #elif defined(__linux__) || defined(__unix__) && !defined(__APPLE__) && !defined(__EMSCRIPTEN__)
 #	define CF_LINUX 1
 #elif defined(__APPLE__)
+#	define CF_APPLE 1
 #	include <TargetConditionals.h>
 #	if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE
 #		define CF_IOS 1
@@ -126,8 +127,8 @@
 #	define SOKOL_D3D11
 #elif defined(CF_LINUX)
 #	define SOKOL_GLCORE33
-#elif defined(CF_MACOSX)
-#	define SOKOL_GLCORE33
+#elif defined(CF_APPLE)
+#	define SOKOL_METAL
 #elif defined(CF_EMSCRIPTEN)
 #	define SOKOL_GLES3
 #	include <emscripten.h>

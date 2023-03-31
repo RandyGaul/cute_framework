@@ -36,6 +36,7 @@
 #include <internal/cute_graphics_internal.h>
 #include <internal/cute_draw_internal.h>
 #include <internal/cute_dx11.h>
+#include <internal/cute_metal.h>
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
 
@@ -54,18 +55,6 @@
 #define CUTE_SOUND_FORCE_SDL
 #include <cute/cute_sound.h>
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
-
-#define SOKOL_IMPL
-#define SOKOL_TRACE_HOOKS
-#ifdef SOKOL_D3D11
-#	define D3D11_NO_HELPERS
-#endif
-
-#include <sokol/sokol_gfx.h>
-
-#define SOKOL_IMGUI_IMPL
 #define SOKOL_IMGUI_NO_SOKOL_APP
 #include <internal/imgui/sokol_imgui.h>
 #include <imgui/backends/imgui_impl_sdl.h>
@@ -164,7 +153,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER;
 #else
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC;
-	bool needs_video = options & (APP_OPTIONS_OPENGL_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_DEFAULT_GFX_CONTEXT);
+	bool needs_video = options & (APP_OPTIONS_OPENGL_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_METAL_CONTEXT | APP_OPTIONS_DEFAULT_GFX_CONTEXT);
 	if (!needs_video) {
 		sdl_options &= ~SDL_INIT_VIDEO;
 	}
@@ -178,13 +167,15 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		options |= APP_OPTIONS_D3D11_CONTEXT;
 #elif CF_EMSCRIPTEN
 		options |= APP_OPTIONS_OPENGLES_CONTEXT;
+#elif CF_APPLE
+		options |= APP_OPTIONS_METAL_CONTEXT;
 #else
 		options |= APP_OPTIONS_OPENGL_CONTEXT;
 #endif
 	}
 
-	if (options & (APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_OPENGL_CONTEXT)) {
-		// D3D11 crashes if w/h are not positive.
+	if (options & (APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_OPENGL_CONTEXT | APP_OPTIONS_METAL_CONTEXT)) {
+		// Some backends don't support window size of zero.
 		w = w <= 0 ? 1 : w;
 		h = h <= 0 ? 1 : h;
 	}
@@ -192,6 +183,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	Uint32 flags = 0;
 	if (options & APP_OPTIONS_OPENGL_CONTEXT) flags |= SDL_WINDOW_OPENGL;
 	if (options & APP_OPTIONS_OPENGLES_CONTEXT) flags |= SDL_WINDOW_OPENGL;
+	if (options & APP_OPTIONS_METAL_CONTEXT) flags |= SDL_WINDOW_METAL;
 	if (options & APP_OPTIONS_FULLSCREEN) flags |= SDL_WINDOW_FULLSCREEN;
 	if (options & APP_OPTIONS_RESIZABLE) flags |= SDL_WINDOW_RESIZABLE;
 	if (options & APP_OPTIONS_HIDDEN) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
@@ -246,7 +238,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		CF_MEMSET(&app->gfx_ctx_params, 0, sizeof(app->gfx_ctx_params));
 		app->gfx_ctx_params.color_format = SG_PIXELFORMAT_RGBA8;
 		app->gfx_ctx_params.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;
-		sg_desc params = { 0 };
+		sg_desc params = { };
 		params.context = app->gfx_ctx_params;
 		sg_setup(params);
 		app->gfx_enabled = true;
@@ -255,7 +247,16 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	if (options & APP_OPTIONS_D3D11_CONTEXT) {
 		cf_dx11_init(hwnd, w, h, 1);
 		app->gfx_ctx_params = cf_dx11_get_context();
-		sg_desc params = { 0 };
+		sg_desc params = { };
+		params.context = app->gfx_ctx_params;
+		sg_setup(params);
+		app->gfx_enabled = true;
+	}
+	
+	if (options & APP_OPTIONS_METAL_CONTEXT) {
+		cf_metal_init(window, w, h, 1);
+		app->gfx_ctx_params = cf_metal_get_context();
+		sg_desc params = { };
 		params.context = app->gfx_ctx_params;
 		sg_setup(params);
 		app->gfx_enabled = true;
@@ -461,6 +462,7 @@ int cf_app_draw_onto_screen()
 	// Flip to screen.
 	cf_commit();
 	cf_dx11_present(app->vsync);
+	cf_metal_present(app->vsync);
 	if (app->options & APP_OPTIONS_OPENGL_CONTEXT) {
 		SDL_GL_SwapWindow(app->window);
 	}

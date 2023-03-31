@@ -55,6 +55,8 @@ elseif(UNIX AND NOT APPLE)
 elseif(APPLE)
 	if(CMAKE_SYSTEM_NAME MATCHES ".*MacOS.*" OR CMAKE_SYSTEM_NAME MATCHES ".*Darwin.*")
 		set(MACOSX TRUE)
+	elseif(CMAKE_SYSTEM_NAME MATCHES ".*iOS.*")
+		set(IOS TRUE)
 	else()
 		message(FATAL_ERROR, "No supported platform detected.")
 	endif()
@@ -121,6 +123,7 @@ set(CF_SRCS
 	src/cute_result.cpp
 
 	src/internal/cute_dx11.cpp
+	src/internal/cute_metal.mm
 
 	libraries/cimgui/imgui/backends/imgui_impl_sdl.cpp
 	
@@ -211,6 +214,7 @@ set(CF_HDRS
 	src/internal/cute_serialize_internal.h
 	src/internal/cute_ecs_internal.h
 	src/internal/cute_dx11.h
+	src/internal/cute_metal.h
 	src/internal/cute_png_cache_internal.h
 	src/internal/cute_draw_internal.h
 	src/internal/cute_font_internal.h
@@ -265,15 +269,18 @@ set(PHYSFS_SRCS
 	libraries/physfs/physfs.h
 )
 
-if(MACOSX)
+if(APPLE)
 	set(PHYSFS_SRCS ${PHYSFS_SRCS}
 		libraries/physfs/physfs_platform_apple.m
 	)
 	find_library(IOKIT IOKit)
 	find_library(FOUNDATION Foundation)
 	find_library(SECURITY Security)
-	find_package(OpenGL REQUIRED)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${OPENGL_LIBRARIES})
+	find_library(QUARTZCORE QuartzCore)
+	find_library(METAL Metal)
+	find_library(METALKIT MetalKit)
+	find_library(COCOA Cocoa)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${QUARTZCORE} ${METAL} ${METALKIT} ${COCOA})
 endif()
 
 if(LINUX)

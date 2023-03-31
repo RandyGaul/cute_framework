@@ -124,7 +124,7 @@ char* cf_path_compact(const char* path, int n)
 
 char* cf_path_directory_of(const char* path)
 {
-	if (!*path || *path == '.' && CF_STRLEN(path) < 3) return NULL;
+	if (!*path || (*path == '.' && CF_STRLEN(path) < 3)) return NULL;
 	if (sequ(path, "../")) return NULL;
 	if (sequ(path, "/")) return NULL;
 	int at = slast_index_of(path, '/');

@@ -58,28 +58,30 @@ typedef struct sg_image sg_image;
  * @related  cf_make_app cf_destroy_app
  */
 #define CF_APP_OPTION_DEFS \
-	/* @entry Starts the app with an OpenGL 3.3 context. */     \
-	CF_ENUM(APP_OPTIONS_OPENGL_CONTEXT,                 1 << 0) \
-	/* @entry Starts the app with an OpenGL ES 3.3 context. */  \
-	CF_ENUM(APP_OPTIONS_OPENGLES_CONTEXT,               1 << 1) \
-	/* @entry Starts the app with a DirectX 11 context. */      \
-	CF_ENUM(APP_OPTIONS_D3D11_CONTEXT,                  1 << 2) \
+	/* @entry Starts the app with an OpenGL 3.3 context. */      \
+	CF_ENUM(APP_OPTIONS_OPENGL_CONTEXT,                 1 << 0)  \
+	/* @entry Starts the app with an OpenGL ES 3.3 context. */   \
+	CF_ENUM(APP_OPTIONS_OPENGLES_CONTEXT,               1 << 1)  \
+	/* @entry Starts the app with a DirectX 11 context (Windows only). */ \
+	CF_ENUM(APP_OPTIONS_D3D11_CONTEXT,                  1 << 2)  \
+	/* @entry Starts the app with a Metal context (Apple only). */ \
+	CF_ENUM(APP_OPTIONS_METAL_CONTEXT,                  1 << 3)  \
 	/* @entry Picks a good default graphics context for the given platform. */ \
-	CF_ENUM(APP_OPTIONS_DEFAULT_GFX_CONTEXT,            1 << 3) \
+	CF_ENUM(APP_OPTIONS_DEFAULT_GFX_CONTEXT,            1 << 4)  \
 	/* @entry Starts the application in borderless full-screen mode. */ \
-	CF_ENUM(APP_OPTIONS_FULLSCREEN,                     1 << 4) \
-	/* @entry Allows the window to be resized. */               \
-	CF_ENUM(APP_OPTIONS_RESIZABLE,                      1 << 5) \
-	/* @entry Starts the application with the window hidden. */ \
-	CF_ENUM(APP_OPTIONS_HIDDEN,                         1 << 6) \
+	CF_ENUM(APP_OPTIONS_FULLSCREEN,                     1 << 5)  \
+	/* @entry Allows the window to be resized. */                \
+	CF_ENUM(APP_OPTIONS_RESIZABLE,                      1 << 6)  \
+	/* @entry Starts the application with the window hidden. */  \
+	CF_ENUM(APP_OPTIONS_HIDDEN,                         1 << 7)  \
 	/* @entry Starts the application with the window centered on the screen. */ \
-	CF_ENUM(APP_OPTIONS_WINDOW_POS_CENTERED,            1 << 7) \
+	CF_ENUM(APP_OPTIONS_WINDOW_POS_CENTERED,            1 << 8)  \
 	/* @entry Disables automatically mounting the folder the executable runs from to "/". See `cf_fs_mount` for more details. */ \
-	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT, 1 << 8) \
-	/* @entry Starts the application with no audio. */          \
-	CF_ENUM(APP_OPTIONS_NO_AUDIO,                       1 << 9) \
-	/* @entry Starts the application without vertical sync. */  \
-	CF_ENUM(APP_OPTIONS_VSYNC,                          1 << 10) \
+	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT, 1 << 9)  \
+	/* @entry Starts the application with no audio. */           \
+	CF_ENUM(APP_OPTIONS_NO_AUDIO,                       1 << 10) \
+	/* @entry Starts the application without vertical sync. */   \
+	CF_ENUM(APP_OPTIONS_VSYNC,                          1 << 11) \
 	/* @end */
 
 enum

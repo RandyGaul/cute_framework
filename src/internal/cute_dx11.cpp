@@ -179,16 +179,14 @@ void cf_dx11_present(bool vsync)
 {
 	IDXGISwapChain_Present(state.swap_chain, vsync ? 1 : 0, 0);
 
-	// Handle window resizing.
+	// Handle resizing the frame/depth+stencil buffers.
 	RECT r;
 	if (GetClientRect(state.hwnd, &r)) {
-		const int cur_width = r.right - r.left;
-		const int cur_height = r.bottom - r.top;
-		if (((cur_width > 0) && (cur_width != state.w)) ||
-			((cur_height > 0) && (cur_height != state.h))) {
-			// Need to reallocate the default render target.
-			state.w = cur_width;
-			state.h = cur_height;
+		int w = r.right - r.left;
+		int h = r.bottom - r.top;
+		if (((w > 0) && (w != state.w)) || ((h > 0) && (h != state.h))) {
+			state.w = w;
+			state.h = h;
 			cf_d3d11_update_default_render_target();
 		}
 	}
@@ -202,11 +200,11 @@ void cf_dx11_shutdown()
 	SAFE_RELEASE(ID3D11Device, state.device);
 }
 
-#else // CF_WINDOWS
+#else // SOKOL_D3D11
 
 void cf_dx11_init(void* hwnd, int w, int h, int sample_count) { CF_UNUSED(hwnd); CF_UNUSED(w); CF_UNUSED(h); CF_UNUSED(sample_count); }
 sg_context_desc cf_dx11_get_context() { sg_context_desc desc; CF_MEMSET(&desc, 0, sizeof(desc)); return desc; }
 void cf_dx11_present(bool vsync) { CF_UNUSED(vsync); }
 void cf_dx11_shutdown() {}
 
-#endif // CF_WINDOWS
+#endif // SOKOL_D3D11

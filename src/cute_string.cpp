@@ -582,7 +582,7 @@ const uint16_t* cf_decode_UTF16(const uint16_t* s, int* codepoint)
 		*codepoint = W1;
 	} else if (W1 > 0xD800 && W1 < 0xDBFF) {
 		int W2 = *s++;
-		if (W2 > 0xDC00 && W2 < 0xDFFF) *codepoint = 0x10000 + (((W1 & 0x03FF) << 10) | W2 & 0x03FF);
+		if (W2 > 0xDC00 && W2 < 0xDFFF) *codepoint = 0x10000 + (((W1 & 0x03FF) << 10) | (W2 & 0x03FF));
 		else *codepoint = 0xFFFD;
 	} else *codepoint = 0xFFFD;
 	return s;
