@@ -27,10 +27,11 @@
 
 #ifdef SOKOL_METAL
 
+#ifdef CF_MACOS
 #import <Cocoa/Cocoa.h>
+#endif
 #import <Metal/Metal.h>
-#import <MetalKit/MetalKit.h>
-#import <QuartzCore/QuartzCore.h>
+#import <QuartzCore/CAMetalLayer.h>
 
 static struct
 {
@@ -97,7 +98,13 @@ const void* cf_metal_get_drawable()
 
 void cf_metal_present(bool vsync)
 {
-	state.layer.displaySyncEnabled = vsync;
+	#ifdef CF_MACOS
+	if (@available(macOS 10.13, *)) {
+		state.layer.displaySyncEnabled = vsync;
+	}
+	#else
+	CF_UNUSED(vsync);
+	#endif
 
 	int w, h;
 	cf_metal_get_drawable_size(&w, &h);

@@ -123,7 +123,6 @@ set(CF_SRCS
 	src/cute_result.cpp
 
 	src/internal/cute_dx11.cpp
-	src/internal/cute_metal.mm
 
 	libraries/cimgui/imgui/backends/imgui_impl_sdl.cpp
 	
@@ -135,6 +134,15 @@ set(CF_SRCS
 	
 	libraries/cimgui/cimgui.cpp
 )
+if(APPLE)
+	set(CF_SRCS ${CF_SRCS}
+		src/internal/cute_metal.mm
+	)
+else()
+	set(CF_SRCS ${CF_SRCS}
+		src/internal/cute_metal.cpp
+	)
+endif()
 
 set(CF_PUBLIC_HDRS
 	include/cute_alloc.h
@@ -279,8 +287,7 @@ if(APPLE)
 	find_library(QUARTZCORE QuartzCore)
 	find_library(METAL Metal)
 	find_library(METALKIT MetalKit)
-	find_library(COCOA Cocoa)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${QUARTZCORE} ${METAL} ${METALKIT} ${COCOA})
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${QUARTZCORE} ${METAL} ${METALKIT})
 endif()
 
 if(LINUX)

@@ -42,7 +42,7 @@
 #	if TARGET_IPHONE_SIMULATOR || TARGET_OS_IPHONE
 #		define CF_IOS 1
 #	elif TARGET_OS_MAC
-#		define CF_MACOSX 1
+#		define CF_MACOS 1
 #	else
 #		error "Unknown Apple platform"
 #	endif

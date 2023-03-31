@@ -43,7 +43,7 @@
 #	include <windows.h>
 #	include <wincrypt.h>
 #	pragma comment(lib, "crypt32.lib")
-#elif defined(CF_MACOSX)
+#elif defined(CF_APPLE)
 #	include <Security/Security.h>
 #endif
 
@@ -198,7 +198,7 @@ static CF_Result s_load_platform_certs(CF_Https* https)
 	CertFreeCertificateContext(pCertContext);
 	CertCloseStore(hCertStore, 0);
 
-#elif defined(CF_MACOSX)
+#elif defined(CF_MACOS)
 
 	SecKeychainRef keychain_ref;
 	CFMutableDictionaryRef search_settings_ref;
@@ -230,7 +230,7 @@ static CF_Result s_load_platform_certs(CF_Https* https)
 
 	CFRelease(keychain_ref);
 
-#elif defined(CF_LINUX)
+#elif defined(CF_IOS) || defined(CF_LINUX)
 
 	if (mbedtls_x509_crt_parse_path(&https->cacert, "/etc/ssl/certs/") < 0) {
 		return cf_result_error("mbedtls_x509_crt_parse_path failed.");
@@ -238,7 +238,7 @@ static CF_Result s_load_platform_certs(CF_Https* https)
 
 #else
 
-	// TODO - Android, iOS (probably the same as CF_MACOSX section).
+	// TODO - Android, iOS (probably the same as CF_MACOS section).
 
 #	error Platform not yet supported for https.
 
