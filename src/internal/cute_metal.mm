@@ -121,13 +121,13 @@ void cf_metal_get_drawable_size(int* w, int* h)
 
 #else // SOKOL_METAL
 
-void cf_metal_init(void* sdl_window, int w, int h, int sample_count) { CF_UNUSED(sdl_window); CF_UNUSED(x); CF_UNUSED(y); CF_UNUSED(sample_count); }
-sg_context_desc cf_metal_get_context() { return NULL; }
+void cf_metal_init(void* sdl_window, int w, int h, int sample_count) { CF_UNUSED(sdl_window); CF_UNUSED(w); CF_UNUSED(h); CF_UNUSED(sample_count); }
+sg_context_desc cf_metal_get_context() { sg_context_desc desc; CF_MEMSET(&desc, 0, sizeof(desc)); return desc; }
 const void *cf_metal_get_render_pass_descriptor() { return NULL; }
 const void* cf_metal_get_drawable() { return NULL; }
 void cf_metal_present(bool vsync) { CF_UNUSED(vsync); }
 float cf_metal_get_dpi_scale() { return 0; }
-void cf_metal_get_drawable_size(int* w, int* h) { CF_UNUSED(x); CF_UNUSED(y); }
+void cf_metal_get_drawable_size(int* w, int* h) { CF_UNUSED(w); CF_UNUSED(h); }
 
 #endif // SOKOL_METAL
 
