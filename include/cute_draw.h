@@ -641,9 +641,10 @@ CF_API float CF_CALL cf_text_height(const char* text);
  * @brief    Draws text.
  * @param    text      The text to draw.
  * @param    position  The top-left corner of the text.
+ * @param    text_length The length of the text to draw. Use -1 to draw until a null terminator.
  * @related  cf_make_font cf_draw_text cf_text_effect_register cf_draw_to cf_app_draw_onto_screen
  */
-CF_API void CF_CALL cf_draw_text(const char* text, CF_V2 position);
+CF_API void CF_CALL cf_draw_text(const char* text, CF_V2 position, int text_length /*= -1*/);
 
 /**
  * @struct   CF_TextEffect
@@ -1174,7 +1175,7 @@ CF_INLINE CF_Aabb pop_text_clip_box() { return cf_pop_text_clip_box(); }
 CF_INLINE CF_Aabb peek_text_clip_box() { return cf_peek_text_clip_box(); }
 CF_INLINE float text_width(const char* text) { return cf_text_width(text); }
 CF_INLINE float text_height(const char* text) { return cf_text_height(text); }
-CF_INLINE void draw_text(const char* text, CF_V2 position) { cf_draw_text(text, position); }
+CF_INLINE void draw_text(const char* text, CF_V2 position, int text_length = -1) { cf_draw_text(text, position, text_length); }
 
 struct TextEffect : public CF_TextEffect
 {
