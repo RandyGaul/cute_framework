@@ -1856,7 +1856,7 @@ static void s_parse_codes(CF_TextEffectState* effect, const char* text)
 	effect->sanitized = s->sanitized;
 }
 
-void cf_draw_text(const char* text, CF_V2 position)
+void cf_draw_text(const char* text, CF_V2 position, int text_length)
 {
 	CF_Font* font = cf_font_get(draw->fonts.last());
 	CF_ASSERT(font);
@@ -1962,7 +1962,12 @@ void cf_draw_text(const char* text, CF_V2 position)
 			y -= line_height;
 		}
 	};
-
+	
+	if(text_length < 0)
+	{
+		text_length = INT_MAX;	
+	}
+	
 	// Render the string glyph-by-glyph.
 	while (*text) {
 		cp_prev = cp;
@@ -2058,8 +2063,9 @@ void cf_draw_text(const char* text, CF_V2 position)
 			}
 		}
 
-		// Actually render the sprite.
-		if (visible) {
+		// Actually render the sprite. 
+		// Test text_length using <= because index is already incremented at the beginning of the function
+		if (visible && index <= text_length) {
 			s.geom.u.sprite.p0 = mul(draw->cam, V2(q0.x, q1.y));
 			s.geom.u.sprite.p1 = mul(draw->cam, V2(q1.x, q1.y));
 			s.geom.u.sprite.p2 = mul(draw->cam, V2(q1.x, q0.y));
