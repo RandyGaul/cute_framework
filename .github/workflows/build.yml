@@ -66,13 +66,21 @@ jobs:
           7z a ${{ matrix.platform.artifact }}.zip .\dist\*
         if: runner.os == 'Windows'
 
-      - name: Generate artifacts for non-Windows
+      - name: Generate artifacts for MacOS
+        run: |
+          mkdir -p ./dist
+          cp -v ./include/*.h ./dist
+          cp -R -v ./build_folder/cute.framework ./dist
+          tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
+        if: runner.os == 'macOS'
+
+      - name: Generate artifacts for Linux
         run: |
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
           cp -v ./build_folder/libcute.a ./dist
           tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
-        if: runner.os != 'Windows'
+        if: runner.os == 'Linux'
           
       # Uploads the zip archives onto the workflow. They can be downloaded for 90 days (by default).
       # Find them here: https://github.com/RandyGaul/cute_framework/actions
