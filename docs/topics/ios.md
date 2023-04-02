@@ -95,7 +95,7 @@ The final step is to open up Xcode and add your developer account to Xcode. Open
 
 Now Xcode can auto-magically setup code signing for you through CMake! We will do this with a special CMake command in the next section of this article.
 
-### Generating through CMake with your App ID
+### Using your Apple Developer ID
 
 Simply make a folder called `build_ios` in your project's top-level directory, then run a special CMake command. Here's an example of both steps you can run in a terminal opened in the projects top-level directory:
 
@@ -162,3 +162,7 @@ Generate a build setup for Xcode on iOS Simulator for Arm CPUs.
 ```
 cmake -G "Xcode" -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphonesimulator -DCMAKE_XCODE_ATTRIBUTE_DEVELOPMENT_TEAM=XXXXXXXXXX  -Bbuild_ios .
 ```
+
+## Embedding Resources on iOS
+
+TODO
