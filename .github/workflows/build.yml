@@ -20,13 +20,11 @@ jobs:
       fail-fast: false
       matrix:
         platform:
-          - { name: "Windows (MinGW)",         os: windows-latest, artifact: 'mingw',       generate: '-G "MinGW Makefiles"' }
-          - { name: "Windows (MSCV 17 2022)",  os: windows-latest, artifact: 'mscv17',      generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release' }
-          - { name: "MacOS (Arm)",             os: macos-latest,   artifact: 'macos arm',   generate: '-G "Unix Makefiles" -DCMAKE_OSX_ARCHITECTURES=arm64' }
-          - { name: "MacOS (Intel)",           os: macos-latest,   artifact: 'macos intel', generate: '-G "Unix Makefiles" -DCMAKE_OSX_ARCHITECTURES=x86_64' }
-          - { name: "iOS (Arm)",               os: macos-latest,   artifact: 'ios arm',     generate: '-G "Unix Makefiles" -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=arm64' }
-          - { name: "iOS (Intel)",             os: macos-latest,   artifact: 'ios intel',   generate: '-G "Unix Makefiles" -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos -DCMAKE_OSX_ARCHITECTURES=x86_64' }
-          - { name: "Linux",                   os: ubuntu-latest,  artifact: 'linux',       generate: '-G "Unix Makefiles"' }
+          - { name: "Windows (MinGW)",         os: windows-latest, artifact: 'mingw',   generate: '-G "MinGW Makefiles"' }
+          - { name: "Windows (MSCV 17 2022)",  os: windows-latest, artifact: 'mscv17',  generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release' }
+          - { name: "MacOS",                   os: macos-latest,   artifact: 'macos',   generate: '-G "Unix Makefiles"' }
+          - { name: "iOS",                     os: macos-latest,   artifact: 'ios',     generate: '-G "Unix Makefiles" -DCMAKE_SYSTEM_NAME=iOS -DCMAKE_OSX_SYSROOT=iphoneos' }
+          - { name: "Linux",                   os: ubuntu-latest,  artifact: 'linux',   generate: '-G "Unix Makefiles"' }
           # TODO - Add iOS and Android platforms.
 
     steps:
@@ -73,7 +71,7 @@ jobs:
         run: |
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
-          cp -v ./build_folder/cute.framework ./dist
+          cp -R -v ./build_folder/cute.framework ./dist
           tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
         if: runner.os == 'macOS'
 
