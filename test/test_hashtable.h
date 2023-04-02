@@ -98,7 +98,7 @@ int test_hashtable_macros()
 		hadd(h, sintern("bbb"), 1);
 		hadd(h, sintern("ccc"), 2);
 		hadd(h, sintern("aaa"), 0);
-		hssort(h);
+		hsisort(h);
 		CF_TEST_ASSERT(hget(h, sintern("aaa")) == 0);
 		CF_TEST_ASSERT(hget(h, sintern("bbb")) == 1);
 		CF_TEST_ASSERT(hget(h, sintern("ccc")) == 2);

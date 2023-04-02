@@ -71,11 +71,6 @@ if(MSVC)
 	add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 endif()
 
-# Disable SSE for ARM Macbooks and Emscripten.
-if(APPLE AND "${CMAKE_OSX_ARCHITECTURES}" MATCHES "arm" OR EMSCRIPTEN)
-	add_definitions(-DCUTE_SOUND_SCALAR_MODE)
-endif()
-
 if(CF_FRAMEWORK_WITH_HTTPS MATCHES OFF)
 	add_definitions(-DCF_NO_HTTPS)
 endif()
@@ -434,11 +429,11 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 		set_target_properties("${CURRENT_TARGET}" PROPERTIES FOLDER "samples")
 		add_custom_command(TARGET "${CURRENT_TARGET}" POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/samples/sample_data" $<TARGET_FILE_DIR:${CURRENT_TARGET}>/sample_data)
 		if (APPLE)
-            		set_target_properties("${CURRENT_TARGET}" PROPERTIES
-                		MACOSX_BUNDLE_GUI_IDENTIFIER "com.cuteframework.${CURRENT_TARGET}"
-                		MACOSX_BUNDLE_BUNDLE_VERSION "1.0.0"
-                		MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0.0"
-            		)
+					set_target_properties("${CURRENT_TARGET}" PROPERTIES
+						MACOSX_BUNDLE_GUI_IDENTIFIER "com.cuteframework.${CURRENT_TARGET}"
+						MACOSX_BUNDLE_BUNDLE_VERSION "1.0.0"
+						MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0.0"
+					)
 		endif()
 	endforeach()
 endif()
