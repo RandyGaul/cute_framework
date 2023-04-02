@@ -46,6 +46,12 @@
 #	else
 #		error "Unknown Apple platform"
 #	endif
+#	ifdef TARGET_CPU_ARM64
+#		define CUTE_SOUND_SCALAR_MODE
+#	elif TARGET_CPU_X86_64
+#	else
+#		error "Unknown Apple Architecture"
+#	endif
 #elif defined(__ANDROID__)
 #	define CF_ANDROID 1
 #elif defined(__EMSCRIPTEN__)

@@ -1,5 +1,4 @@
 cmake_minimum_required(VERSION 3.14)
-set(CMAKE_OSX_ARCHITECTURES "x86_64" CACHE STRING "" FORCE)
 project(cute_framework)
 
 # Must have at least C++17.
@@ -336,6 +335,19 @@ elseif(MINGW)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} d3d11 crypt32)
 elseif(WINDOWS)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} crypt32)
+elseif(APPLE)
+	set_target_properties(cute PROPERTIES FRAMEWORK TRUE)
+	if (CF_FRAMEWORK_STATIC)
+	set_target_properties(cute PROPERTIES
+		FRAMEWORK_VERSION "1.0.0"
+		MACOSX_FRAMEWORK_IDENTIFIER "com.cuteframework.static"
+	)
+	else()
+	set_target_properties(cute PROPERTIES
+		FRAMEWORK_VERSION "1.0.0"
+		MACOSX_FRAMEWORK_IDENTIFIER "com.cuteframework.shared"
+	)
+	endif()
 endif()
 
 # Link up all dependencies to Cute.
@@ -386,49 +398,49 @@ endif()
 
 # Cute sample prgrams (optional, defaulted to also build).
 if (CF_FRAMEWORK_BUILD_SAMPLES)
-	add_executable(easy_sprite samples/easy_sprite.c)
-	target_link_libraries(easy_sprite PRIVATE cute)
-	set_target_properties(easy_sprite PROPERTIES FOLDER "samples")
-	add_executable(basic_ecs samples/basic_ecs.cpp)
-	target_link_libraries(basic_ecs PRIVATE cute)
-	set_target_properties(basic_ecs PROPERTIES FOLDER "samples")
-	add_executable(basic_serialization samples/basic_serialization.c)
-	target_link_libraries(basic_serialization PRIVATE cute)
-	set_target_properties(basic_serialization PROPERTIES FOLDER "samples")
+	add_executable(easysprite samples/easy_sprite.c)
+	add_executable(basicecs samples/basic_ecs.cpp)
+	add_executable(basicserialization samples/basic_serialization.c)
 	add_executable(imgui samples/imgui.c)
-	target_link_libraries(imgui PRIVATE cute)
-	set_target_properties(imgui PROPERTIES FOLDER "samples")
-	add_executable(text_drawing samples/text_drawing.cpp)
-	target_link_libraries(text_drawing PRIVATE cute)
-	set_target_properties(text_drawing PROPERTIES FOLDER "samples")
-	add_executable(basic_sprite samples/basic_sprite.cpp)
-	target_link_libraries(basic_sprite PRIVATE cute)
-	set_target_properties(basic_sprite PROPERTIES FOLDER "samples")
-	add_executable(basic_shapes samples/basic_shapes.cpp)
-	target_link_libraries(basic_shapes PRIVATE cute)
-	set_target_properties(basic_shapes PROPERTIES FOLDER "samples")
-	add_executable(window_resizing samples/window_resizing.cpp)
-	target_link_libraries(window_resizing PRIVATE cute)
-	set_target_properties(window_resizing PROPERTIES FOLDER "samples")
-	add_executable(basic_input samples/basic_input.c)
-	target_link_libraries(basic_input PRIVATE cute)
-	set_target_properties(basic_input PROPERTIES FOLDER "samples")
-	add_executable(window_events samples/window_events.c)
-	target_link_libraries(window_events PRIVATE cute)
-	set_target_properties(window_events PROPERTIES FOLDER "samples")
+	add_executable(textdrawing samples/text_drawing.cpp)
+	add_executable(basicsprite samples/basic_sprite.cpp)
+	add_executable(basicshapes samples/basic_shapes.cpp)
+	add_executable(windowresizing samples/window_resizing.cpp)
+	add_executable(basicinput samples/basic_input.c)
+	add_executable(windowevents samples/window_events.c)
 	add_executable(window samples/window.cpp)
-	target_link_libraries(window PRIVATE cute)
-	set_target_properties(window PROPERTIES FOLDER "samples")
 	add_executable(tint samples/tint.cpp)
-	target_link_libraries(tint PRIVATE cute)
-	set_target_properties(tint PROPERTIES FOLDER "samples")
-	add_executable(docs_parser samples/docs_parser.cpp)
-	target_link_libraries(docs_parser PRIVATE cute)
-	set_target_properties(docs_parser PROPERTIES FOLDER "samples")
+	add_executable(docsparser samples/docs_parser.cpp)
 	add_executable(scratch samples/scratch.cpp)
-	target_link_libraries(scratch PRIVATE cute)
-	set_target_properties(scratch PROPERTIES FOLDER "samples")
-	add_custom_command(TARGET cute POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/samples/sample_data" $<TARGET_FILE_DIR:cute>/sample_data)
+	set(SAMPLE_EXECUTABLES
+		easysprite
+		basicecs
+		basicserialization
+		imgui
+		textdrawing
+		basicsprite
+		basicshapes
+		windowresizing
+		basicinput
+		windowevents
+		window
+		tint
+		docsparser
+		scratch
+	)
+
+	foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
+		target_link_libraries("${CURRENT_TARGET}" PRIVATE cute)
+		set_target_properties("${CURRENT_TARGET}" PROPERTIES FOLDER "samples")
+		add_custom_command(TARGET "${CURRENT_TARGET}" POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/samples/sample_data" $<TARGET_FILE_DIR:${CURRENT_TARGET}>/sample_data)
+		if (APPLE)
+            		set_target_properties("${CURRENT_TARGET}" PROPERTIES
+                		MACOSX_BUNDLE_GUI_IDENTIFIER "com.cuteframework.${CURRENT_TARGET}"
+                		MACOSX_BUNDLE_BUNDLE_VERSION "1.0.0"
+                		MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0.0"
+            		)
+		endif()
+	endforeach()
 endif()
 
 # Propogate public headers to other cmake scripts including this subdirectory.
