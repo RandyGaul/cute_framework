@@ -70,6 +70,7 @@ jobs:
         run: |
           mkdir -p ./dist
           cp -v ./include/*.h ./dist
+          ls build_folder
           cp -v ./build_folder/libcute.a ./dist
           tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
         if: runner.os != 'Windows'
