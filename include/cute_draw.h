@@ -642,6 +642,7 @@ CF_API float CF_CALL cf_text_height(const char* text);
  * @param    text      The text to draw.
  * @param    position  The top-left corner of the text.
  * @param    text_length The length of the text to draw. Use -1 to draw until a null terminator.
+ * @remarks  `text_length` is a great way to control how many characters to draw for implementing a typewriter style effect.
  * @related  cf_make_font cf_draw_text cf_text_effect_register cf_draw_to cf_app_draw_onto_screen
  */
 CF_API void CF_CALL cf_draw_text(const char* text, CF_V2 position, int text_length /*= -1*/);
