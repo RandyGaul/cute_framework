@@ -14,5 +14,6 @@ int main(int argc, char* argv[])
 	echo(10.0f);
 	v2 v = V2(0,0);
 	echo("The vector is: " + v.x + ", " + v.y);
+	echo(V2(13,140));
 	return 0;
 }

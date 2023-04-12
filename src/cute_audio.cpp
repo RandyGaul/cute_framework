@@ -38,12 +38,10 @@
 #define CUTE_SOUND_FORCE_SDL
 #include <cute/cute_sound.h>
 
-using namespace Cute;
-
 CF_Audio* cf_audio_load_ogg(const char* path)
 {
 	size_t size;
-	void* data = fs_read_entire_file_to_memory(path, &size);
+	void* data = cf_fs_read_entire_file_to_memory(path, &size);
 	if (data) {
 		auto src = cf_audio_load_ogg_from_memory(data, (int)size);
 		CF_FREE(data);
@@ -56,7 +54,7 @@ CF_Audio* cf_audio_load_ogg(const char* path)
 CF_Audio* cf_audio_load_wav(const char* path)
 {
 	size_t size;
-	void* data = fs_read_entire_file_to_memory(path, &size);
+	void* data = cf_fs_read_entire_file_to_memory(path, &size);
 	if (data) {
 		auto src = cf_audio_load_wav_from_memory(data, (int)size);
 		CF_FREE(data);
@@ -109,10 +107,10 @@ void cf_audio_set_pause(bool true_for_paused)
 
 static inline CF_Result s_result(cs_error_t err)
 {
-	if (err == CUTE_SOUND_ERROR_NONE) return result_success();
+	if (err == CUTE_SOUND_ERROR_NONE) return cf_result_success();
 	else {
-		Result result;
-		result.code = RESULT_ERROR;
+		CF_Result result;
+		result.code = CF_RESULT_ERROR;
 		result.details = cs_error_as_string(err);
 		return result;
 	}

@@ -27,6 +27,7 @@
 #include "cute_alloc.h"
 #include "cute_hashtable.h"
 #include "cute_array.h"
+#include "cute_math.h"
 
 #include <inttypes.h>
 #include <stdarg.h>
@@ -1076,6 +1077,7 @@ struct String
 	CF_INLINE String& operator+(float f) { sfmt_append(m_str, "%f", f); return *this; }
 	CF_INLINE String& operator+(double f) { sfmt_append(m_str, "%f", f); return *this; }
 	CF_INLINE String& operator+(bool b) { sfmt_append(m_str, "%s", b ? "true" : "false"); return *this; }
+	CF_INLINE String& operator+(v2 v) { sfmt_append(m_str, "{ %f, %f }", v.x, v.y); return *this; }
 	CF_INLINE String& append(const char* start, const char* end) { sappend_range(m_str, start, end); return *this; }
 	CF_INLINE String& append(int codepoint) { sappend_UTF8(m_str, codepoint); return *this; }
 	static CF_INLINE String fmt(const char* fmt, ...) { String result; va_list args; va_start(args, fmt); svfmt(result.m_str, fmt, args); va_end(args); return result; }
