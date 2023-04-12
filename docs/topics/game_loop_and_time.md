@@ -61,7 +61,7 @@ The application frequency itself can also be controlled with [`cf_set_target_fra
 
 ## Determinism
 
-With fixed timesteps you can actually make your game entirely deterministic, so long as you don't accidentally introduce determinism into the simulation. Here are some common sources of non-determinism:
+With fixed timesteps you can actually make your game entirely deterministic, so long as you don't accidentally introduce non-determinism into the simulation. Here are some common sources of non-determinism:
 
 - Variable timestep -- of course!
 - Floating point math. On different CPUs the results of floating point arithmetic can vary. However, given the same hardware on two different machines you should end up with deterministic results.

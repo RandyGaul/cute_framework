@@ -1028,15 +1028,15 @@ struct String
 	CF_INLINE String(const char* start, const char* end) { int length = (int)(end - start); sfit(m_str, length); CF_STRNCPY(m_str, start, length); CF_AHDR(m_str)->size = length + 1; }
 	CF_INLINE String(const String& s) { sset(m_str, s); }
 	CF_INLINE String(String&& s) {  m_str = s.m_str; s.m_str = NULL; }
+	CF_INLINE String(int i) { sint(m_str, i); }
+	CF_INLINE String(uint64_t uint) { suint(m_str, uint); }
+	CF_INLINE String(float f) { sfloat(m_str, f); }
+	CF_INLINE String(double f) { sfloat(m_str, f); }
+	CF_INLINE String(bool b) { sbool(m_str, b); }
 	CF_INLINE ~String() { sfree(m_str); m_str = NULL; }
 
 	CF_INLINE static String steal_from(char* cute_c_api_string) { CF_ACANARY(cute_c_api_string); String r; r.m_str = cute_c_api_string; return r; }
-	CF_INLINE static String from(int i) { String r; sint(r.m_str, i); return r; }
-	CF_INLINE static String from(uint64_t uint) { String r; suint(r.m_str, uint); return r; }
-	CF_INLINE static String from(float f) { String r; sfloat(r.m_str, f); return r; }
-	CF_INLINE static String from(double f) { String r; sfloat(r.m_str, f); return r; }
 	CF_INLINE static String from_hex(uint64_t uint) { String r; shex(r.m_str, uint); return r; }
-	CF_INLINE static String from(bool b) { String r; sbool(r.m_str, b); return r; }
 
 	CF_INLINE int to_int() const { return stoint(m_str); }
 	CF_INLINE uint64_t to_uint() const { return stouint(m_str); }
@@ -1070,6 +1070,12 @@ struct String
 
 	CF_INLINE String& add(char ch) { spush(m_str, ch); return *this; }
 	CF_INLINE String& append(const char* s) { sappend(m_str, s); return *this; }
+	CF_INLINE String& operator+(const char* s) { sappend(m_str, s); return *this; }
+	CF_INLINE String& operator+(int i) { sfmt_append(m_str, "%d", i); return *this; }
+	CF_INLINE String& operator+(uint64_t uint) { sfmt_append(m_str, "%" PRIu64, uint); return *this; }
+	CF_INLINE String& operator+(float f) { sfmt_append(m_str, "%f", f); return *this; }
+	CF_INLINE String& operator+(double f) { sfmt_append(m_str, "%f", f); return *this; }
+	CF_INLINE String& operator+(bool b) { sfmt_append(m_str, "%s", b ? "true" : "false"); return *this; }
 	CF_INLINE String& append(const char* start, const char* end) { sappend_range(m_str, start, end); return *this; }
 	CF_INLINE String& append(int codepoint) { sappend_UTF8(m_str, codepoint); return *this; }
 	static CF_INLINE String fmt(const char* fmt, ...) { String result; va_list args; va_start(args, fmt); svfmt(result.m_str, fmt, args); va_end(args); return result; }

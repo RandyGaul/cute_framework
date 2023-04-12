@@ -407,6 +407,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 	add_executable(tint samples/tint.cpp)
 	add_executable(docsparser samples/docs_parser.cpp)
 	add_executable(scratch samples/scratch.cpp)
+	add_executable(echo samples/echo.cpp)
 	set(SAMPLE_EXECUTABLES
 		easysprite
 		basicecs
@@ -422,6 +423,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 		tint
 		docsparser
 		scratch
+		echo
 	)
 
 	foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
