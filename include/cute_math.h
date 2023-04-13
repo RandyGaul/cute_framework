@@ -325,7 +325,7 @@ CF_INLINE float cf_remap(float t, float lo, float hi) { return (hi - lo) != 0 ? 
 /**
  * @function cf_mod
  * @category math
- * @brief    Returns floating point `x % m`.
+ * @brief    Returns floating point `x % m`. Can return negative numbers.
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
 CF_INLINE float cf_mod(float x, float m) { return x - (int)(x / m) * m; }
