@@ -1056,15 +1056,13 @@ CF_INLINE float cf_shortest_arc(CF_V2 a, CF_V2 b)
 /**
  * @function cf_angle_diff
  * @category math
- * @brief    Returns the difference of two angles in the range of -`CF_PI` to `CF_PI`.
- * @remarks  This will return either (b-a) or (a-b) depending on which rotation is smaller.
+ * @brief    Returns the difference of two angles (b - a) in the range of -`CF_PI` to `CF_PI`.
  * @related  cf_shortest_arc cf_angle_diff cf_from_angle
  */
 CF_INLINE float cf_angle_diff(float radians_a, float radians_b)
 {
-	float a = cf_mod(radians_a - radians_b, CF_PI);
-	float b = cf_mod(radians_b - radians_a, CF_PI);
-	return cf_abs(a) < cf_abs(b) ? b : a;
+	float result = cf_mod(radians_b - radians_a, 2*CF_PI);
+	return cf_mod(result + 3*CF_PI, 2*CF_PI) - CF_PI;
 }
 
 /**
