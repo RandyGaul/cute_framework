@@ -156,8 +156,8 @@ CF_API void CF_CALL cf_set_fixed_timestep_max_updates(int max_updates);
  * @category time
  * @brief    Attempts to run the app at a certain frequency.
  * @param    frames_per_second  Target frequency to run the app.
- * @remarks  This is sort of like vsync. Set to -1 to disable this effect (disabled by default). This effect will try to render the game at
- *           a target framerate, similar to vsync. It doesn't effect gameplay at all, if you want to set your gameplay's timestep see `cf_set_fixed_timestep`.
+ * @remarks  This effect will try to render the game at a target framerate, similar to vsync. Set to -1 to disable this effect (disabled by default).
+ *           This only affects rendering (not gameplay/update), see `cf_set_fixed_timestep` to control your gameplay/update framerate.
  * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT cf_set_target_framerate
  */
 CF_API void CF_CALL cf_set_target_framerate(int frames_per_second);
