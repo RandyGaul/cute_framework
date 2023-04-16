@@ -156,7 +156,7 @@ CF_API void CF_CALL cf_set_fixed_timestep_max_updates(int max_updates);
  * @category time
  * @brief    Attempts to run the app at a certain frequency.
  * @param    frames_per_second  Target frequency to run the app.
- * @remarks  Sleeps the app if you're updating too fast. This is sort of like vsync. Off by default. Set to -1 to turn off.
+ * @remarks  Sleeps the app if you're updating too fast. This is sort of like vsync. Off by default. Set to -1 to turn off the sleep effect.
  * @related  cf_set_fixed_timestep cf_set_fixed_timestep_max_updates cf_update_time CF_DELTA_TIME_FIXED CF_DELTA_TIME_INTERPOLANT cf_set_target_framerate
  */
 CF_API void CF_CALL cf_set_target_framerate(int frames_per_second);
