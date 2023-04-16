@@ -6,7 +6,7 @@ Category: [math](/api_reference?id=math)
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
-Returns floating point `x % m`.
+Returns floating point `x % m`. Can return negative numbers.
 
 ```cpp
 float cf_mod(float x, float m)

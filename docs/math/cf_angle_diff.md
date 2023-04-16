@@ -6,7 +6,7 @@ Category: [math](/api_reference?id=math)
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
-Returns the difference of two angles in the range of -[CF_PI](/math/cf_pi.md) to [CF_PI](/math/cf_pi.md).
+Returns the difference of two angles (b - a) in the range of -[CF_PI](/math/cf_pi.md) to [CF_PI](/math/cf_pi.md).
 
 ```cpp
 float cf_angle_diff(float radians_a, float radians_b)
