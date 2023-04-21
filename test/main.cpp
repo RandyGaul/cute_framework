@@ -39,7 +39,7 @@ TEST_SUITE(test_png_cache);
 TEST_SUITE(test_sprite);
 TEST_SUITE(test_string);
 
-int main()
+int main(int argc, char* argv[])
 {
 	pu_display_colors(true);
 
