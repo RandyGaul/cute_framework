@@ -19,17 +19,19 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#include "test_harness.h"
+
 #include <cute.h>
 using namespace Cute;
 
-CF_TEST_CASE(test_hashtable_macros, "Call the hashtable APIs through the h*** macros.");
-int test_hashtable_macros()
+/* Call the hashtable APIs through the h*** macros. */
+TEST_CASE(test_hashtable_macros)
 {
 	{
 		const char** h = NULL;
 		hset(h, 5, "yo");
 		const char* val = hget(h, 5);
-		CF_TEST_ASSERT(!CF_STRCMP(val, "yo"));
+		REQUIRE(!CF_STRCMP(val, "yo"));
 		hfree(h);
 	}
 	{
@@ -40,18 +42,18 @@ int test_hashtable_macros()
 		v2 a = hget(h, 0);
 		v2 b = hget(h, 1);
 		v2 c = hget(h, 2);
-		CF_TEST_ASSERT(a.x == 1 && a.y == 2);
-		CF_TEST_ASSERT(b.x == 4 && b.y == 10);
-		CF_TEST_ASSERT(c.x == -12 && c.y == 13);
+		REQUIRE(a.x == 1 && a.y == 2);
+		REQUIRE(b.x == 4 && b.y == 10);
+		REQUIRE(c.x == -12 && c.y == 13);
 		hdel(h, 0);
 		hdel(h, 1);
 		hdel(h, 2);
 		a = hget(h, 0);
 		b = hget(h, 1);
 		c = hget(h, 2);
-		CF_TEST_ASSERT(a.x == 0 && a.y == 0);
-		CF_TEST_ASSERT(b.x == 0 && b.y == 0);
-		CF_TEST_ASSERT(c.x == 0 && c.y == 0);
+		REQUIRE(a.x == 0 && a.y == 0);
+		REQUIRE(b.x == 0 && b.y == 0);
+		REQUIRE(c.x == 0 && c.y == 0);
 		hfree(h);
 	}
 	{
@@ -63,7 +65,7 @@ int test_hashtable_macros()
 		}
 		for (int i = 0; i < iters; ++i) {
 			v2 v = hget(h, i);
-			CF_TEST_ASSERT(v.x == (float)i && v.y == (float)i);
+			REQUIRE(v.x == (float)i && v.y == (float)i);
 		}
 		for (int i = 0; i < iters; ++i) {
 			hdel(h, i);
@@ -87,7 +89,7 @@ int test_hashtable_macros()
 		for (int i = 0; i < hcount(h) - 1; ++i) {
 			int a = hget(h, i);
 			int b = hget(h, i + 1);
-			CF_TEST_ASSERT(a < b);
+			REQUIRE(a < b);
 		}
 		hfree(h);
 	}
@@ -99,15 +101,15 @@ int test_hashtable_macros()
 		hadd(h, sintern("ccc"), 2);
 		hadd(h, sintern("aaa"), 0);
 		hsisort(h);
-		CF_TEST_ASSERT(hget(h, sintern("aaa")) == 0);
-		CF_TEST_ASSERT(hget(h, sintern("bbb")) == 1);
-		CF_TEST_ASSERT(hget(h, sintern("ccc")) == 2);
-		CF_TEST_ASSERT(hget(h, sintern("ddd")) == 3);
-		CF_TEST_ASSERT(hget(h, sintern("eee")) == 4);
-		CF_TEST_ASSERT(hget(h, sintern("aaa")) < hget(h, sintern("bbb")));
-		CF_TEST_ASSERT(hget(h, sintern("bbb")) < hget(h, sintern("ccc")));
-		CF_TEST_ASSERT(hget(h, sintern("ccc")) < hget(h, sintern("ddd")));
-		CF_TEST_ASSERT(hget(h, sintern("ddd")) < hget(h, sintern("eee")));
+		REQUIRE(hget(h, sintern("aaa")) == 0);
+		REQUIRE(hget(h, sintern("bbb")) == 1);
+		REQUIRE(hget(h, sintern("ccc")) == 2);
+		REQUIRE(hget(h, sintern("ddd")) == 3);
+		REQUIRE(hget(h, sintern("eee")) == 4);
+		REQUIRE(hget(h, sintern("aaa")) < hget(h, sintern("bbb")));
+		REQUIRE(hget(h, sintern("bbb")) < hget(h, sintern("ccc")));
+		REQUIRE(hget(h, sintern("ccc")) < hget(h, sintern("ddd")));
+		REQUIRE(hget(h, sintern("ddd")) < hget(h, sintern("eee")));
 		const char* keys[] = {
 			sintern("aaa"),
 			sintern("bbb"),
@@ -118,7 +120,7 @@ int test_hashtable_macros()
 		for (int i = 0; i < 5 - 1; ++i) {
 			int a = hget(h, keys[i]);
 			int b = hget(h, keys[i + 1]);
-			CF_TEST_ASSERT(a < b);
+			REQUIRE(a < b);
 		}
 		hfree(h);
 	}
@@ -139,7 +141,7 @@ int test_hashtable_macros()
 		for (int i = 0; i < m.count() - 1; ++i) {
 			int a = m.get(i);
 			int b = m.get(i + 1);
-			CF_TEST_ASSERT(a < b);
+			REQUIRE(a < b);
 		}
 	}
 	{
@@ -150,15 +152,15 @@ int test_hashtable_macros()
 		m.insert(sintern("ccc"), 2);
 		m.insert(sintern("aaa"), 0);
 		m.sort_by_keys([](const char* a, const char* b) { return sicmp(a, b); });
-		CF_TEST_ASSERT(m.get(sintern("aaa")) == 0);
-		CF_TEST_ASSERT(m.get(sintern("bbb")) == 1);
-		CF_TEST_ASSERT(m.get(sintern("ccc")) == 2);
-		CF_TEST_ASSERT(m.get(sintern("ddd")) == 3);
-		CF_TEST_ASSERT(m.get(sintern("eee")) == 4);
-		CF_TEST_ASSERT(m.get(sintern("aaa")) < m.get(sintern("bbb")));
-		CF_TEST_ASSERT(m.get(sintern("bbb")) < m.get(sintern("ccc")));
-		CF_TEST_ASSERT(m.get(sintern("ccc")) < m.get(sintern("ddd")));
-		CF_TEST_ASSERT(m.get(sintern("ddd")) < m.get(sintern("eee")));
+		REQUIRE(m.get(sintern("aaa")) == 0);
+		REQUIRE(m.get(sintern("bbb")) == 1);
+		REQUIRE(m.get(sintern("ccc")) == 2);
+		REQUIRE(m.get(sintern("ddd")) == 3);
+		REQUIRE(m.get(sintern("eee")) == 4);
+		REQUIRE(m.get(sintern("aaa")) < m.get(sintern("bbb")));
+		REQUIRE(m.get(sintern("bbb")) < m.get(sintern("ccc")));
+		REQUIRE(m.get(sintern("ccc")) < m.get(sintern("ddd")));
+		REQUIRE(m.get(sintern("ddd")) < m.get(sintern("eee")));
 		const char* keys[] = {
 			sintern("aaa"),
 			sintern("bbb"),
@@ -169,8 +171,13 @@ int test_hashtable_macros()
 		for (int i = 0; i < 5 - 1; ++i) {
 			int a = m.get(keys[i]);
 			int b = m.get(keys[i + 1]);
-			CF_TEST_ASSERT(a < b);
+			REQUIRE(a < b);
 		}
 	}
-	return 0;
+	return true;
+}
+
+TEST_SUITE(test_hashtable)
+{
+	RUN_TEST_CASE(test_hashtable_macros);
 }

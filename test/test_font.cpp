@@ -19,16 +19,24 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#include "test_harness.h"
+
+#include <cute_app.h>
 #include <cute_draw.h>
 using namespace Cute;
 
-CF_TEST_CASE(test_font_wip, "This test is not yet fully implemented.");
-int test_font_wip()
+/* This test is not yet fully implemented. */
+TEST_CASE(test_font_wip)
 {
-	CF_TEST_ASSERT(!is_error(cf_make_app("UNIT TEST", 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_DEFAULT_GFX_CONTEXT, NULL)));
+	REQUIRE(!is_error(cf_make_app("UNIT TEST", 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_DEFAULT_GFX_CONTEXT, NULL)));
 	make_font("test_data/ProggyClean.ttf", "ProggyClean");
 	cf_destroy_font("ProggyClean");
 	destroy_app();
 
-	return 0;
+	return true;
+}
+
+TEST_SUITE(test_font)
+{
+	RUN_TEST_CASE(test_font_wip);
 }

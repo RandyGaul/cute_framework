@@ -19,13 +19,16 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#include "test_harness.h"
+
+#include <../src/internal/cute_file_system_internal.h> // fs_init / fs_destroy
 #include <cute.h>
 using namespace Cute;
 
 #include <internal/cute_png_cache_internal.h>
 
-CF_TEST_CASE(test_png_cache, "Test all functions of the png caching API.");
-int test_png_cache()
+/* Test all functions of the png caching API. */
+TEST_CASE(test_png_cache_all)
 {
 	cf_fs_init(NULL);
 	cf_fs_mount(cf_fs_get_base_directory(), "", true);
@@ -35,9 +38,9 @@ int test_png_cache()
 	CF_Png white;
 	CF_Png black;
 	CF_Result err = cf_png_cache_load("test_data/white_pixel.png", &white);
-	CF_TEST_ASSERT(!cf_is_error(err));
+	REQUIRE(!cf_is_error(err));
 	err = cf_png_cache_load("test_data/black_pixel.png", &black);
-	CF_TEST_ASSERT(!cf_is_error(err));
+	REQUIRE(!cf_is_error(err));
 
 	CF_Png blink_png[] = { white, black };
 	float blink_delay[] = { 0.5f, 0.5f };
@@ -58,16 +61,21 @@ int test_png_cache()
 	CF_Sprite sprite = cf_make_png_cache_sprite("blink", table);
 
 	cf_sprite_play(&sprite, "blink");
-	CF_TEST_CHECK_POINTER(sprite.animations);
-	CF_TEST_ASSERT(sprite.frame_index == 0);
+	CHECK_POINTER(sprite.animations);
+	REQUIRE(sprite.frame_index == 0);
 
 	CF_DELTA_TIME = 0.5f; // Hacky, yes.
 	cf_sprite_update(&sprite);
-	CF_TEST_ASSERT(sprite.frame_index == 1);
+	REQUIRE(sprite.frame_index == 1);
 
 	cf_destroy_png_cache();
 
 	cf_fs_destroy();
 
-	return 0;
+	return true;
+}
+
+TEST_SUITE(test_png_cache)
+{
+	RUN_TEST_CASE(test_png_cache_all);
 }

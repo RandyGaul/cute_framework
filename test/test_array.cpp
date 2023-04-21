@@ -19,6 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#include "test_harness.h"
+
 #include <cute.h>
 
 using namespace Cute;
@@ -34,10 +36,9 @@ static Array<String> s_get_array_of_strings()
 	return b;
 }
 
-CF_TEST_CASE(test_array_list_init, "Array list initializers and strings.");
-int test_array_list_init()
+TEST_CASE(test_array_list_init)
 {
-	Array<String> a = {
+		Array<String> a = {
 		"Hello",
 		"Goodbye",
 	};
@@ -47,24 +48,29 @@ int test_array_list_init()
 		"2",
 	};
 
-	CF_TEST_ASSERT(!CF_STRCMP(a[0].c_str(), "Hello"));
-	CF_TEST_ASSERT(!CF_STRCMP(b[0].c_str(), "1"));
-	CF_TEST_ASSERT(!CF_STRCMP(b[1].c_str(), "2"));
+	REQUIRE(!CF_STRCMP(a[0].c_str(), "Hello"));
+	REQUIRE(!CF_STRCMP(b[0].c_str(), "1"));
+	REQUIRE(!CF_STRCMP(b[1].c_str(), "2"));
 
 	Array<Array<String>> c = {
 		a,
 		b
 	};
 
-	CF_TEST_ASSERT(!CF_STRCMP(c[0][0].c_str(), "Hello"));
-	CF_TEST_ASSERT(!CF_STRCMP(c[0][1].c_str(), "Goodbye"));
-	CF_TEST_ASSERT(!CF_STRCMP(c[1][0].c_str(), "1"));
-	CF_TEST_ASSERT(!CF_STRCMP(c[1][1].c_str(), "2"));
+	REQUIRE(!CF_STRCMP(c[0][0].c_str(), "Hello"));
+	REQUIRE(!CF_STRCMP(c[0][1].c_str(), "Goodbye"));
+	REQUIRE(!CF_STRCMP(c[1][0].c_str(), "1"));
+	REQUIRE(!CF_STRCMP(c[1][1].c_str(), "2"));
 
 	Array<String> d = s_get_array_of_strings();
-	CF_TEST_ASSERT(!CF_STRCMP(d[0].c_str(), "a"));
-	CF_TEST_ASSERT(!CF_STRCMP(d[1].c_str(), "b"));
-	CF_TEST_ASSERT(!CF_STRCMP(d[2].c_str(), "c"));
+	REQUIRE(!CF_STRCMP(d[0].c_str(), "a"));
+	REQUIRE(!CF_STRCMP(d[1].c_str(), "b"));
+	REQUIRE(!CF_STRCMP(d[2].c_str(), "c"));
 
-	return 0;
+	return true;
+}
+
+TEST_SUITE(test_array)
+{
+	RUN_TEST_CASE(test_array_list_init);
 }
