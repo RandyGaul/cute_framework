@@ -19,6 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#include <SDL.h>
+
 #define PICO_UNIT_IMPLEMENTATION
 #include <pico/pico_unit.h>
 
