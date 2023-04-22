@@ -19,6 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#include "test_harness.h"
+
 #include <cute.h>
 
 using namespace Cute;
@@ -42,8 +44,8 @@ void coroutine_wait_func(CF_Coroutine* co)
 	cf_coroutine_push(co, &a, sizeof(a));
 }
 
-CF_TEST_CASE(test_coroutine, "Call some coroutine functions or whatever.");
-int test_coroutine()
+/* Call some coroutine functions or whatever. */
+TEST_CASE(test_basic)
 {
 	CF_Coroutine* co = cf_make_coroutine(coroutine_func, 0, NULL);
 	int a = 5;
@@ -52,10 +54,10 @@ int test_coroutine()
 	cf_coroutine_push(co, &a, sizeof(a));
 	cf_coroutine_push(co, &b, sizeof(b));
 	cf_coroutine_resume(co);
-	CF_TEST_ASSERT(c == 0);
+	REQUIRE(c == 0);
 	cf_coroutine_resume(co);
 	cf_coroutine_pop(co, &c, sizeof(c));
-	CF_TEST_ASSERT(c == 50);
+	REQUIRE(c == 50);
 	cf_destroy_coroutine(co);
 
 	co = cf_make_coroutine(coroutine_func, 0, NULL);
@@ -65,11 +67,16 @@ int test_coroutine()
 	cf_coroutine_push(co, &a, sizeof(a));
 	cf_coroutine_push(co, &b, sizeof(b));
 	cf_coroutine_resume(co);
-	CF_TEST_ASSERT(c == 0);
+	REQUIRE(c == 0);
 	cf_coroutine_resume(co);
 	cf_coroutine_pop(co, &c, sizeof(c));
-	CF_TEST_ASSERT(c == 50);
+	REQUIRE(c == 50);
 	cf_destroy_coroutine(co);
 
-	return 0;
+	return true;
+}
+
+TEST_SUITE(test_coroutine)
+{
+	RUN_TEST_CASE(test_basic);
 }

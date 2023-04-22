@@ -19,12 +19,14 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#include "test_harness.h"
+
 #include <cute_doubly_list.h>
 
 using namespace Cute;
 
-CF_TEST_CASE(test_doubly_list, "Make list of three elements, perform all operations on it, assert correctness.");
-int test_doubly_list()
+/* Make list of three elements, perform all operations on it, assert correctness. */
+TEST_CASE(test_doubly_list_operations)
 {
 	CF_List list;
 
@@ -37,41 +39,46 @@ int test_doubly_list()
 	cf_list_init_node(&b);
 	cf_list_init_node(&c);
 
-	CF_TEST_ASSERT(list.nodes.next == &list.nodes);
-	CF_TEST_ASSERT(list.nodes.prev == &list.nodes);
-	CF_TEST_ASSERT(a.next == &a);
-	CF_TEST_ASSERT(a.prev == &a);
-	CF_TEST_ASSERT(cf_list_empty(&list));
+	REQUIRE(list.nodes.next == &list.nodes);
+	REQUIRE(list.nodes.prev == &list.nodes);
+	REQUIRE(a.next == &a);
+	REQUIRE(a.prev == &a);
+	REQUIRE(cf_list_empty(&list));
 
 	cf_list_push_front(&list, &a);
-	CF_TEST_ASSERT(!cf_list_empty(&list));
-	CF_TEST_ASSERT(list.nodes.next == &a);
-	CF_TEST_ASSERT(list.nodes.prev == &a);
-	CF_TEST_ASSERT(list.nodes.next->next == &list.nodes);
-	CF_TEST_ASSERT(list.nodes.prev->prev == &list.nodes);
-	CF_TEST_ASSERT(cf_list_front(&list) == &a);
-	CF_TEST_ASSERT(cf_list_back(&list) == &a);
+	REQUIRE(!cf_list_empty(&list));
+	REQUIRE(list.nodes.next == &a);
+	REQUIRE(list.nodes.prev == &a);
+	REQUIRE(list.nodes.next->next == &list.nodes);
+	REQUIRE(list.nodes.prev->prev == &list.nodes);
+	REQUIRE(cf_list_front(&list) == &a);
+	REQUIRE(cf_list_back(&list) == &a);
 
 	cf_list_push_front(&list, &b);
-	CF_TEST_ASSERT(cf_list_front(&list) == &b);
-	CF_TEST_ASSERT(cf_list_back(&list) == &a);
+	REQUIRE(cf_list_front(&list) == &b);
+	REQUIRE(cf_list_back(&list) == &a);
 
 	cf_list_push_back(&list, &c);
-	CF_TEST_ASSERT(cf_list_front(&list) == &b);
-	CF_TEST_ASSERT(cf_list_back(&list) == &c);
+	REQUIRE(cf_list_front(&list) == &b);
+	REQUIRE(cf_list_back(&list) == &c);
 
 	CF_ListNode* nodes[3] = { &b, &a, &c };
 	int index = 0;
 	for (CF_ListNode* n = cf_list_begin(&list); n != cf_list_end(&list); n = n->next)
 	{
-		CF_TEST_ASSERT(n == nodes[index++]);
+		REQUIRE(n == nodes[index++]);
 	}
 
-	CF_TEST_ASSERT(cf_list_pop_front(&list) == &b);
-	CF_TEST_ASSERT(cf_list_pop_back(&list) == &c);
-	CF_TEST_ASSERT(cf_list_pop_back(&list) == &a);
+	REQUIRE(cf_list_pop_front(&list) == &b);
+	REQUIRE(cf_list_pop_back(&list) == &c);
+	REQUIRE(cf_list_pop_back(&list) == &a);
 
-	CF_TEST_ASSERT(cf_list_empty(&list));
+	REQUIRE(cf_list_empty(&list));
 
-	return 0;
+	return true;
+}
+
+TEST_SUITE(test_doubly_list)
+{
+	RUN_TEST_CASE(test_doubly_list_operations);
 }

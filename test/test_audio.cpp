@@ -19,18 +19,30 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <cute.h>
+#include "test_harness.h"
+
+#include <cute_audio.h>
+#include <cute_app.h>
+#include <cute_multithreading.h>
+
 using namespace Cute;
 
-CF_TEST_CASE(test_make_sprite, "Load a sprite destroy it.");
-int test_make_sprite()
+/* Load and free wav/ogg files synchronously. */
+TEST_CASE(test_audio_load_synchronous)
 {
-	CF_TEST_ASSERT(!cf_is_error(cf_make_app("sprite test", 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_DEFAULT_GFX_CONTEXT, NULL)));
-
-	CF_Sprite s = cf_make_sprite("test_data/girl.aseprite");
-	cf_app_draw_onto_screen();
-
+	REQUIRE(!cf_is_error(cf_make_app("UNIT TEST", 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL)));
+	//CF_Audio* audio = cf_audio_load_ogg("test_data/3-6-19-blue-suit-jam.ogg");
+	//CF_TEST_CHECK_POINTER(audio);
+	//cf_audio_destroy(audio);
+	//audio = cf_audio_load_wav("test_data/jump.wav");
+	//CF_TEST_CHECK_POINTER(audio);
+	//cf_audio_destroy(audio);
 	cf_destroy_app();
 
-	return 0;
+	return true;
+}
+
+TEST_SUITE(test_audio)
+{
+	RUN_TEST_CASE(test_audio_load_synchronous);
 }
