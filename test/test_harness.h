@@ -19,7 +19,20 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifndef TEST_HARNESS_H
+#define TEST_HARNESS_H
+
+#ifndef _CRT_SECURE_NO_WARNINGS
+#	define _CRT_SECURE_NO_WARNINGS
+#endif
+
+#ifndef _CRT_NONSTDC_NO_DEPRECATE
+#	define _CRT_NONSTDC_NO_DEPRECATE
+#endif
+
 #include <pico/pico_unit.h>
 
 #define CHECK(x)         REQUIRE(!(x))
 #define CHECK_POINTER(x) REQUIRE(x)
+
+#endif // TEST_HARNESS_H
