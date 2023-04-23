@@ -18,7 +18,8 @@ frames_per_second | Target frequency to run the app.
 
 ## Remarks
 
-Sleeps the app if you're updating too fast. This is sort of like vsync. Off by default. Set to -1 to turn off.
+This effect will try to render the game at a target framerate, similar to vsync. Set to -1 to disable this effect (disabled by default).
+This only affects rendering (not gameplay/update), see [cf_set_fixed_timestep](/time/cf_set_fixed_timestep.md) to control your gameplay/update framerate.
 
 ## Related Pages
 
