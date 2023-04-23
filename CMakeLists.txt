@@ -350,26 +350,25 @@ target_link_libraries(cute PUBLIC ${CF_LINK_LIBS})
 
 # Cute unit tests executable (optional, defaulted to also build).
 if (CF_FRAMEWORK_BUILD_TESTS)
-	set(CF_TEST_SRCS test/main.cpp)
-	set(CF_TEST_HDRS
-		test/test_circular_buffer.h
-		test/test_handle.h
-		test/test_harness.h
-		test/test_doubly_list.h
-		test/test_kv.h
-		test/test_base64.h
-		test/test_audio.h
-		test/test_ecs.h
-		test/test_array.h
-		test/test_aseprite.h
-		test/test_png_cache.h
-		test/test_sprite.h
-		test/test_coroutine.h
-		test/test_string.h
-		test/test_hashtable.h
-		test/test_path.h
-		test/test_font.h
-	)
+	set(CF_TEST_SRCS test/main.cpp
+		test/test_array.cpp
+		test/test_aseprite.cpp
+		test/test_audio.cpp
+		test/test_base64.cpp
+		test/test_circular_buffer.cpp
+		test/test_coroutine.cpp
+		test/test_doubly_list.cpp
+		test/test_ecs.cpp
+		test/test_font.cpp
+		test/test_handle.cpp
+		test/test_hashtable.cpp
+		test/test_kv.cpp
+		test/test_path.cpp
+		test/test_png_cache.cpp
+		test/test_sprite.cpp
+		test/test_string.cpp
+		)
+	set(CF_TEST_HDRS test/test_harness.h)
 
 	add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
 	target_link_libraries(tests PRIVATE cute)
