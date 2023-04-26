@@ -1094,6 +1094,8 @@ struct String
 	CF_INLINE String& operator=(String&& s) { m_str = s.m_str; s.m_str = NULL; return *this; }
 	CF_INLINE Array<String> split(char split_c) { Array<String> r; char** s = ssplit(m_str, split_c); for (int i=0;i<alen(s);++i) r.add(move(steal_from(s[i]))); return r; }
 	CF_INLINE char pop() { char result = slast(m_str); spop(m_str); return result; }
+	CF_INLINE char pop(int n) { char result = slast(m_str); spopn(m_str, n); return result; }
+	CF_INLINE char popn(int n) { char result = slast(m_str); spopn(m_str, n); return result; }
 	CF_INLINE int first_index_of(char ch) const { return sfirst_index_of(m_str, ch); }
 	CF_INLINE int last_index_of(char ch) const { return slast_index_of(m_str, ch); }
 	CF_INLINE int first_index_of(char ch, int offset) const { return sfirst_index_of(m_str + offset, ch); }

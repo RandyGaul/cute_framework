@@ -61,6 +61,45 @@ The base directory is the actual path to the directory the executable for your g
 
 The user directory is a safe place for your game to write files. It's unique per user and per application. On Windows it will probably live in AppData/Roaming, on Linux in user/.local, and so on. You should assume this directory is the only safe place to write files. You can fetch the user directory with [`cf_fs_get_user_directory`](https://randygaul.github.io/cute_framework/#/file/cf_fs_get_user_directory).
 
+Imagine you have a folder structure for your game like so:
+
+```
+/super_cool_game
+    ├─ build/
+    |  └─ game.exe
+    └─ content
+    |  ├─ sprites/
+    |  |    ├─ player.ase
+    |  |    └─ bomb.ase
+    │  └─ music/
+    |       ├─ song1.ogg
+    |       ├─ song2.ogg
+    |       └─ song3.ogg
+    └─ src/
+        ├─ main.cpp
+        └─ file.cpp
+```
+
+If you have all your loadable files in a folder called `content` right beside a build folder (e.g. called `build`), you can try using this function like the one below. This will mount the folder named `content` at the top-level of your project directory. It works by taking the base directory (which should be in the `build` folder, or one level deeper in `build/Debug` or `build/Release`), pops up into the top-level directory of your project and mounts the `content` folder.
+
+```cpp
+void mount_content_folder()
+{
+	char* path = spnorm(fs_get_base_dir());
+	int n = 1;
+	char* dir = spdir_of(path);
+	if (siequ(dir, "Debug") || siequ(dir, "Release")) {
+		// MSVC/XCode places the .exe into one-level deeper /Debug or /Release folders.
+		n = 2;
+	}
+	sfree(dir);
+	path = sppopn(path, n);
+	scat(path, "/content");
+	fs_mount(path, "/");
+	sfree(path);
+}
+```
+
 ## The Write Directory
 
 Your application gets a single write directory. You set it with [`cf_fs_set_write_directory`](https://randygaul.github.io/cute_framework/#/file/cf_fs_set_write_directory). This greatly aids security and keeps writing operations locked within a single directory for simplicity. It's highly recommended to setup your write directory as the user directory from [`cf_fs_get_user_directory`](https://randygaul.github.io/cute_framework/#/file/cf_fs_get_user_directory). This directory is guaranteed to be a write-enabled and safe place to store game-specific files for your player.

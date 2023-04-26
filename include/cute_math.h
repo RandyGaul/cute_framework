@@ -232,6 +232,79 @@ typedef struct CF_Rect
 // @end
 
 /**
+ * @function CF_POLY_MAX_VERTS
+ * @category collision
+ * @brief    The maximum number of vertices in a `CF_Poly`.
+ * @remarks  It's quite common to limit the number of verts on polygons to a low number. Feel free to adjust this number if needed,
+ *           but be warned: higher than 8 and shapes generally start to look more like circles/ovals; it becomes pointless beyond a certain point.
+ * @related  CF_POLY_MAX_VERTS CF_Poly
+ */
+#define CF_POLY_MAX_VERTS 8
+
+/**
+ * @struct   CF_Poly
+ * @category collision
+ * @brief    2D polygon.
+ * @remarks  Verts are ordered in counter-clockwise order (CCW).
+ * @related  CF_POLY_MAX_VERTS CF_Poly cf_circle_to_poly cf_aabb_to_poly cf_capsule_to_poly cf_poly_to_poly cf_ray_to_poly cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
+ */
+typedef struct CF_Poly
+{
+	/* @member The number of vertices in the polygon, capped at `CF_POLY_MAX_VERTS`. */
+	int count;
+
+	/* @member The vertices of the polygon, capped at `CF_POLY_MAX_VERTS`. */
+	CF_V2 verts[CF_POLY_MAX_VERTS];
+
+	/* @member The normals of the polygon, capped at `CF_POLY_MAX_VERTS`. Each normal is perpendicular along the poly's surface. */
+	CF_V2 norms[CF_POLY_MAX_VERTS];
+} CF_Poly;
+// @end
+
+/**
+ * @struct   CF_Capsule
+ * @category collision
+ * @brief    A capsule shape.
+ * @remarks  It's like a shrink-wrap of 2 circles connected by a rod.
+ * @related  CF_Capsule cf_circle_to_capsule cf_aabb_to_capsule cf_capsule_to_capsule cf_capsule_to_poly cf_ray_to_capsule cf_circle_to_capsule_manifold cf_aabb_to_capsule_manifold cf_capsule_to_capsule_manifold cf_capsule_to_poly_manifold
+ */
+typedef struct CF_Capsule
+{
+	/* @member The center of one end-cap. */
+	CF_V2 a;
+
+	/* @member The center of another end-cap. */
+	CF_V2 b;
+
+	/* @member The radius about the rod defined from `a` to `b`. */
+	float r;
+} CF_Capsule;
+// @end
+
+/**
+ * @struct   CF_Manifold
+ * @category collision
+ * @brief    Contains all information necessary to resolve a collision.
+ * @remarks  This is the information needed to separate shapes that are colliding.
+ * @related  CF_Manifold cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_capsule_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
+ */
+typedef struct CF_Manifold
+{
+	/* @member The number of points in the manifold (0, 1 or 2). */
+	int count;
+
+	/* @member The collision depth of each point in the manifold. */
+	float depths[2];
+
+	/* @member Up to two points on the contact plane that sufficiently (and minimally) describe how two shapes are touching. */
+	CF_V2 contact_points[2];
+
+	/* @member Always points from shape A to shape B. */
+	CF_V2 n;
+} CF_Manifold;
+// @end
+
+/**
  * @function CF_PI
  * @category math
  * @brief    PI the numeric constant.
@@ -1351,7 +1424,23 @@ CF_INLINE CF_V2 cf_intersect_halfspace(CF_V2 a, CF_V2 b, float da, float db) { r
 CF_INLINE CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b) { return cf_intersect_halfspace(a, b, cf_distance_hs(h, a), cf_distance_hs(h, b)); }
 
 //--------------------------------------------------------------------------------------------------
-// AABB helpers.
+// Shape helpers.
+
+/**
+ * @function cf_make_circle
+ * @category math
+ * @brief    Returns a circle.
+ * @related  CF_Circle
+ */
+CF_INLINE CF_Circle cf_make_circle(CF_V2 pos, float radius) { CF_Circle c; c.p = pos; c.r = radius; return c; }
+
+/**
+ * @function cf_make_capsule
+ * @category math
+ * @brief    Returns a capsule.
+ * @related  CF_Capsule
+ */
+CF_INLINE CF_Capsule cf_make_capsule(CF_V2 a, CF_V2 b, float radius) { CF_Capsule c; c.a = a; c.b = b; c.r = radius; return c; }
 
 /**
  * @function cf_make_aabb
@@ -1726,79 +1815,6 @@ CF_INLINE float cf_distance_sq(CF_V2 a, CF_V2 b, CF_V2 p)
 
 //--------------------------------------------------------------------------------------------------
 // Collision detection.
-
-/**
- * @function CF_POLY_MAX_VERTS
- * @category collision
- * @brief    The maximum number of vertices in a `CF_Poly`.
- * @remarks  It's quite common to limit the number of verts on polygons to a low number. Feel free to adjust this number if needed,
- *           but be warned: higher than 8 and shapes generally start to look more like circles/ovals; it becomes pointless beyond a certain point.
- * @related  CF_POLY_MAX_VERTS CF_Poly
- */
-#define CF_POLY_MAX_VERTS 8
-
-/**
- * @struct   CF_Poly
- * @category collision
- * @brief    2D polygon.
- * @remarks  Verts are ordered in counter-clockwise order (CCW).
- * @related  CF_POLY_MAX_VERTS CF_Poly cf_circle_to_poly cf_aabb_to_poly cf_capsule_to_poly cf_poly_to_poly cf_ray_to_poly cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
- */
-typedef struct CF_Poly
-{
-	/* @member The number of vertices in the polygon, capped at `CF_POLY_MAX_VERTS`. */
-	int count;
-
-	/* @member The vertices of the polygon, capped at `CF_POLY_MAX_VERTS`. */
-	CF_V2 verts[CF_POLY_MAX_VERTS];
-
-	/* @member The normals of the polygon, capped at `CF_POLY_MAX_VERTS`. Each normal is perpendicular along the poly's surface. */
-	CF_V2 norms[CF_POLY_MAX_VERTS];
-} CF_Poly;
-// @end
-
-/**
- * @struct   CF_Capsule
- * @category collision
- * @brief    A capsule shape.
- * @remarks  It's like a shrink-wrap of 2 circles connected by a rod.
- * @related  CF_Capsule cf_circle_to_capsule cf_aabb_to_capsule cf_capsule_to_capsule cf_capsule_to_poly cf_ray_to_capsule cf_circle_to_capsule_manifold cf_aabb_to_capsule_manifold cf_capsule_to_capsule_manifold cf_capsule_to_poly_manifold
- */
-typedef struct CF_Capsule
-{
-	/* @member The center of one end-cap. */
-	CF_V2 a;
-
-	/* @member The center of another end-cap. */
-	CF_V2 b;
-
-	/* @member The radius about the rod defined from `a` to `b`. */
-	float r;
-} CF_Capsule;
-// @end
-
-/**
- * @struct   CF_Manifold
- * @category collision
- * @brief    Contains all information necessary to resolve a collision.
- * @remarks  This is the information needed to separate shapes that are colliding.
- * @related  CF_Manifold cf_circle_to_circle_manifold cf_circle_to_aabb_manifold cf_circle_to_capsule_manifold cf_aabb_to_aabb_manifold cf_aabb_to_capsule_manifold cf_capsule_to_capsule_manifold cf_circle_to_poly_manifold cf_aabb_to_poly_manifold cf_capsule_to_poly_manifold cf_poly_to_poly_manifold
- */
-typedef struct CF_Manifold
-{
-	/* @member The number of points in the manifold (0, 1 or 2). */
-	int count;
-
-	/* @member The collision depth of each point in the manifold. */
-	float depths[2];
-
-	/* @member Up to two points on the contact plane that sufficiently (and minimally) describe how two shapes are touching. */
-	CF_V2 contact_points[2];
-
-	/* @member Always points from shape A to shape B. */
-	CF_V2 n;
-} CF_Manifold;
-// @end
 
 // Boolean collision detection functions.
 // These versions are slightly faster/simpler than the manifold versions, but only give a YES/NO result.
@@ -2399,7 +2415,7 @@ CF_INLINE float clamp01(float a) { return cf_clamp01(a); }
 CF_INLINE float sign(float a) { return cf_sign(a); }
 CF_INLINE float intersect(float da, float db) { return cf_intersect(da, db); }
 CF_INLINE float safe_invert(float a) { return cf_safe_invert(a); }
-CF_INLINE float lerp_f(float a, float b, float t) { return cf_lerp(a, b, t); }
+CF_INLINE float lerp(float a, float b, float t) { return cf_lerp(a, b, t); }
 CF_INLINE float remap(float t, float lo, float hi) { return cf_remap(t, lo, hi); }
 CF_INLINE float mod(float x, float m) { return cf_mod(x, m); }
 CF_INLINE float fract(float x) { return cf_fract(x); }
@@ -2465,7 +2481,7 @@ CF_INLINE v2 safe_norm(v2 a) { return cf_safe_norm(a); }
 CF_INLINE float safe_norm(float a) { return cf_safe_norm_f(a); }
 CF_INLINE int safe_norm(int a) { return cf_safe_norm_int(a); }
 
-CF_INLINE v2 lerp_v2(v2 a, v2 b, float t) { return cf_lerp_v2(a, b, t); }
+CF_INLINE v2 lerp(v2 a, v2 b, float t) { return cf_lerp_v2(a, b, t); }
 CF_INLINE v2 bezier(v2 a, v2 c0, v2 b, float t) { return cf_bezier(a, c0, b, t); }
 CF_INLINE v2 bezier(v2 a, v2 c0, v2 c1, v2 b, float t) { return cf_bezier2(a, c0, c1, b, t); }
 CF_INLINE v2 floor(v2 a) { return cf_floor(a); }
@@ -2527,6 +2543,8 @@ CF_INLINE Halfspace mulT(Transform a, Halfspace b) { return cf_mulT_tf_hs(a, b);
 CF_INLINE v2 intersect(v2 a, v2 b, float da, float db) { return cf_intersect_halfspace(a, b, da, db); }
 CF_INLINE v2 intersect(Halfspace h, v2 a, v2 b) { return cf_intersect_halfspace2(h, a, b); }
 
+CF_INLINE Circle make_circle(v2 pos, float radius) { return cf_make_circle(pos, radius); }
+CF_INLINE Capsule make_capsule(v2 a, v2 b, float radius) { return cf_make_capsule(a, b, radius); }
 CF_INLINE Aabb make_aabb(v2 min, v2 max) { return cf_make_aabb(min, max); }
 CF_INLINE Aabb make_aabb(v2 pos, float w, float h) { return cf_make_aabb_pos_w_h(pos, w, h); }
 CF_INLINE Aabb make_aabb_center_half_extents(v2 center, v2 half_extents) { return cf_make_aabb_center_half_extents(center, half_extents); }

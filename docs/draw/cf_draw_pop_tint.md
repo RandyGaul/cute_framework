@@ -15,6 +15,8 @@ CF_Color cf_draw_pop_tint();
 ## Remarks
 
 Sprites and shapes can be tinted. This is useful for certain effects such as damage flashes.
+Tint is implemented under the hood with an overlay operation. If you want to push a no-op, use
+[cf_color_grey](/graphics/cf_color_grey.md) to apply no tinting at all.
 
 ## Related Pages
 

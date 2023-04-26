@@ -80,8 +80,6 @@ typedef struct sg_image sg_image;
 	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT, 1 << 9)  \
 	/* @entry Starts the application with no audio. */           \
 	CF_ENUM(APP_OPTIONS_NO_AUDIO,                       1 << 10) \
-	/* @entry Starts the application without vertical sync. */   \
-	CF_ENUM(APP_OPTIONS_VSYNC,                          1 << 11) \
 	/* @end */
 
 enum
@@ -439,7 +437,7 @@ CF_API sg_imgui_t* CF_CALL cf_app_get_sokol_imgui();
  * @remarks  This is an advanced function. If you just want to draw things on screen, try checking out `CF_Sprite`.
  *           The app's canvas can be used to implement low-level graphics features, such as multi-pass algorithms. Be careful about
  *           calling `cf_app_set_canvas_size`, as it will invalidate any references to the app's canvas.
- * @related  cf_app_set_canvas_size cf_app_get_canvas_width cf_app_get_canvas_height
+ * @related  cf_app_set_canvas_size cf_app_get_canvas_width cf_app_get_canvas_height cf_app_set_vsync cf_app_get_vsync
  */
 CF_API CF_Canvas CF_CALL cf_app_get_canvas();
 
@@ -450,7 +448,7 @@ CF_API CF_Canvas CF_CALL cf_app_get_canvas();
  * @param    w          The width in pixels to resize the canvas to.
  * @param    h          The height in pixels to resize the canvas to.
  * @remarks  Be careful about calling this function, as it will invalidate any old references from `cf_app_get_canvas`.
- * @related  cf_app_get_canvas cf_app_get_canvas_width cf_app_get_canvas_height
+ * @related  cf_app_get_canvas cf_app_get_canvas_width cf_app_get_canvas_height cf_app_set_vsync cf_app_get_vsync
  */
 CF_API void CF_CALL cf_app_set_canvas_size(int w, int h);
 
@@ -458,7 +456,7 @@ CF_API void CF_CALL cf_app_set_canvas_size(int w, int h);
  * @function cf_app_get_canvas_width
  * @category app
  * @brief    Gets the app's canvas width in pixels.
- * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_height
+ * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_height cf_app_set_vsync cf_app_get_vsync
  */
 CF_API int CF_CALL cf_app_get_canvas_width();
 
@@ -466,9 +464,25 @@ CF_API int CF_CALL cf_app_get_canvas_width();
  * @function cf_app_get_canvas_height
  * @category app
  * @brief    Gets the app's canvas height in pixels.
- * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width
+ * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync
  */
 CF_API int CF_CALL cf_app_get_canvas_height();
+
+/**
+ * @function cf_app_set_vsync
+ * @category app
+ * @brief    Turns on vsync via the graphical backend (if supported).
+ * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync
+ */
+CF_API void CF_CALL cf_app_set_vsync(bool true_turn_on_vsync);
+
+/**
+ * @function cf_app_get_vsync
+ * @category app
+ * @brief    Returns the vsync state (true for on).
+ * @related  cf_app_get_canvas cf_app_set_canvas_size cf_app_get_canvas_width cf_app_set_vsync cf_app_get_vsync
+ */
+CF_API bool CF_CALL cf_app_get_vsync();
 
 /**
  * @enum     CF_PowerState

@@ -590,6 +590,11 @@ void cf_draw_circle(CF_V2 p, float r, int iters, float thickness)
 	}
 }
 
+void cf_draw_circle2(CF_Circle circle, int iters, float thickness)
+{
+	cf_draw_circle(circle.p, circle.r, iters, thickness);
+}
+
 void cf_draw_circle_fill(CF_V2 p, float r, int iters)
 {
 	CF_V2 prev = cf_v2(r, 0);
@@ -600,6 +605,11 @@ void cf_draw_circle_fill(CF_V2 p, float r, int iters)
 		cf_draw_tri_fill(p + prev, p + next, p);
 		prev = next;
 	}
+}
+
+void cf_draw_circle_fill2(CF_Circle circle, int iters)
+{
+	cf_draw_circle_fill(circle.p, circle.r, iters);
 }
 
 static void s_circle_arc_aa(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness)

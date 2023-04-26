@@ -34,10 +34,12 @@ void mount_content_folder()
 {
 	char* path = spnorm(fs_get_base_dir());
 	int n = 1;
-#ifdef _MSC_VER
-	// Visual studio places .exe into one-level deeper /Debug or /Release folders.
-	n = 2;
-#endif
+	char* dir = spdir_of(path);
+	if (siequ(dir, "Debug") || siequ(dir, "Release")) {
+		// MSVC/XCode places the .exe into one-level deeper /Debug or /Release folders.
+		n = 2;
+	}
+	sfree(dir);
 	path = sppopn(path, n);
 	scat(path, "/content");
 	fs_mount(path, "/");

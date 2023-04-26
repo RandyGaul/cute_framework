@@ -657,7 +657,7 @@ CF_INLINE char* cf_color_to_string(CF_Color c) { char* s = NULL; return shex(s, 
  * @function cf_color_invisible
  * @category graphics
  * @brief    Helper function to return an invisible `CF_Color`.
- * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey
+ * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey cf_color_cyan cf_color_magenta
  */
 CF_INLINE CF_Color cf_color_invisible() { return cf_make_color_rgba_f(0.0f, 0.0f, 0.0f, 0.0f); }
 
@@ -665,7 +665,7 @@ CF_INLINE CF_Color cf_color_invisible() { return cf_make_color_rgba_f(0.0f, 0.0f
  * @function cf_color_black
  * @category graphics
  * @brief    Helper function to return a black `CF_Color`.
- * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey
+ * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey cf_color_cyan cf_color_magenta
  */
 CF_INLINE CF_Color cf_color_black() { return cf_make_color_rgb_f(0.0f, 0.0f, 0.0f); }
 
@@ -673,7 +673,7 @@ CF_INLINE CF_Color cf_color_black() { return cf_make_color_rgb_f(0.0f, 0.0f, 0.0
  * @function cf_color_white
  * @category graphics
  * @brief    Helper function to return a white `CF_Color`.
- * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey
+ * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey cf_color_cyan cf_color_magenta
  */
 CF_INLINE CF_Color cf_color_white() { return cf_make_color_rgb_f(1.0f, 1.0f, 1.0f); }
 
@@ -681,7 +681,7 @@ CF_INLINE CF_Color cf_color_white() { return cf_make_color_rgb_f(1.0f, 1.0f, 1.0
  * @function cf_color_red
  * @category graphics
  * @brief    Helper function to return a red `CF_Color`.
- * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey
+ * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey cf_color_cyan cf_color_magenta
  */
 CF_INLINE CF_Color cf_color_red() { return cf_make_color_rgb_f(1.0f, 0.0f, 0.0f); }
 
@@ -689,7 +689,7 @@ CF_INLINE CF_Color cf_color_red() { return cf_make_color_rgb_f(1.0f, 0.0f, 0.0f)
  * @function cf_color_green
  * @category graphics
  * @brief    Helper function to return a green `CF_Color`.
- * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey
+ * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey cf_color_cyan cf_color_magenta
  */
 CF_INLINE CF_Color cf_color_green() { return cf_make_color_rgb_f(0.0f, 1.0f, 0.0f); }
 
@@ -697,7 +697,7 @@ CF_INLINE CF_Color cf_color_green() { return cf_make_color_rgb_f(0.0f, 1.0f, 0.0
  * @function cf_color_blue
  * @category graphics
  * @brief    Helper function to return a blue `CF_Color`.
- * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey
+ * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey cf_color_cyan cf_color_magenta
  */
 CF_INLINE CF_Color cf_color_blue() { return cf_make_color_rgb_f(0.0f, 0.0f, 1.0f); }
 
@@ -705,7 +705,7 @@ CF_INLINE CF_Color cf_color_blue() { return cf_make_color_rgb_f(0.0f, 0.0f, 1.0f
  * @function cf_color_yellow
  * @category graphics
  * @brief    Helper function to return a yellow `CF_Color`.
- * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey
+ * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey cf_color_cyan cf_color_magenta
  */
 CF_INLINE CF_Color cf_color_yellow() { return cf_make_color_rgb_f(1.0f, 1.0f, 0.0f); }
 
@@ -713,7 +713,7 @@ CF_INLINE CF_Color cf_color_yellow() { return cf_make_color_rgb_f(1.0f, 1.0f, 0.
  * @function cf_color_orange
  * @category graphics
  * @brief    Helper function to return a orange `CF_Color`.
- * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey
+ * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey cf_color_cyan cf_color_magenta
  */
 CF_INLINE CF_Color cf_color_orange() { return cf_make_color_rgb_f(1.0f, 0.65f, 0.0f); }
 
@@ -721,7 +721,7 @@ CF_INLINE CF_Color cf_color_orange() { return cf_make_color_rgb_f(1.0f, 0.65f, 0
  * @function cf_color_purple
  * @category graphics
  * @brief    Helper function to return a purple `CF_Color`.
- * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey
+ * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey cf_color_cyan cf_color_magenta
  */
 CF_INLINE CF_Color cf_color_purple() { return cf_make_color_rgb_f(1.0f, 0.0f, 1.0f); }
 
@@ -729,15 +729,31 @@ CF_INLINE CF_Color cf_color_purple() { return cf_make_color_rgb_f(1.0f, 0.0f, 1.
  * @function cf_color_grey
  * @category graphics
  * @brief    Helper function to return a grey `CF_Color`.
- * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey
+ * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey cf_color_cyan cf_color_magenta
  */
 CF_INLINE CF_Color cf_color_grey() { return cf_make_color_rgb_f(0.5f, 0.5f, 0.5f); }
+
+/**
+ * @function cf_color_cyan
+ * @category graphics
+ * @brief    Helper function to return a cyan `CF_Color`.
+ * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey cf_color_cyan cf_color_magenta
+ */
+CF_INLINE CF_Color cf_color_cyan() { return cf_make_color_rgb(68, 220, 235); }
+
+/**
+ * @function cf_color_magenta
+ * @category graphics
+ * @brief    Helper function to return a magenta `CF_Color`.
+ * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey cf_color_cyan cf_color_magenta
+ */
+CF_INLINE CF_Color cf_color_magenta() { return cf_make_color_rgb(224, 70, 224); }
 
 /**
  * @function cf_pixel_invisible
  * @category graphics
  * @brief    Helper function to return a invisible `CF_Pixel`.
- * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey
+ * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
 CF_INLINE CF_Pixel cf_pixel_invisible() { return cf_make_pixel_hex(0); }
 
@@ -745,7 +761,7 @@ CF_INLINE CF_Pixel cf_pixel_invisible() { return cf_make_pixel_hex(0); }
  * @function cf_pixel_black
  * @category graphics
  * @brief    Helper function to return a black `CF_Pixel`.
- * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey
+ * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
 CF_INLINE CF_Pixel cf_pixel_black() { return cf_make_pixel_rgb(0, 0, 0); }
 
@@ -753,7 +769,7 @@ CF_INLINE CF_Pixel cf_pixel_black() { return cf_make_pixel_rgb(0, 0, 0); }
  * @function cf_pixel_white
  * @category graphics
  * @brief    Helper function to return a invisible `white`.
- * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey
+ * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
 CF_INLINE CF_Pixel cf_pixel_white() { return cf_make_pixel_rgb(255, 255, 255); }
 
@@ -761,7 +777,7 @@ CF_INLINE CF_Pixel cf_pixel_white() { return cf_make_pixel_rgb(255, 255, 255); }
  * @function cf_pixel_red
  * @category graphics
  * @brief    Helper function to return a red `CF_Pixel`.
- * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey
+ * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
 CF_INLINE CF_Pixel cf_pixel_red() { return cf_make_pixel_rgb(255, 0, 0); }
 
@@ -769,7 +785,7 @@ CF_INLINE CF_Pixel cf_pixel_red() { return cf_make_pixel_rgb(255, 0, 0); }
  * @function cf_pixel_green
  * @category graphics
  * @brief    Helper function to return a green `CF_Pixel`.
- * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey
+ * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
 CF_INLINE CF_Pixel cf_pixel_green() { return cf_make_pixel_rgb(0, 255, 0); }
 
@@ -777,7 +793,7 @@ CF_INLINE CF_Pixel cf_pixel_green() { return cf_make_pixel_rgb(0, 255, 0); }
  * @function cf_pixel_blue
  * @category graphics
  * @brief    Helper function to return a blue `CF_Pixel`.
- * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey
+ * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
 CF_INLINE CF_Pixel cf_pixel_blue() { return cf_make_pixel_rgb(0, 0, 255); }
 
@@ -785,7 +801,7 @@ CF_INLINE CF_Pixel cf_pixel_blue() { return cf_make_pixel_rgb(0, 0, 255); }
  * @function cf_pixel_yellow
  * @category graphics
  * @brief    Helper function to return a yellow `CF_Pixel`.
- * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey
+ * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
 CF_INLINE CF_Pixel cf_pixel_yellow() { return cf_make_pixel_rgb(255, 255, 0); }
 
@@ -793,7 +809,7 @@ CF_INLINE CF_Pixel cf_pixel_yellow() { return cf_make_pixel_rgb(255, 255, 0); }
  * @function cf_pixel_orange
  * @category graphics
  * @brief    Helper function to return a orange `CF_Pixel`.
- * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey
+ * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
 CF_INLINE CF_Pixel cf_pixel_orange() { return cf_make_pixel_rgb(255, 165, 0); }
 
@@ -801,7 +817,7 @@ CF_INLINE CF_Pixel cf_pixel_orange() { return cf_make_pixel_rgb(255, 165, 0); }
  * @function cf_pixel_purple
  * @category graphics
  * @brief    Helper function to return a purple `CF_Pixel`.
- * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey
+ * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
 CF_INLINE CF_Pixel cf_pixel_purple() { return cf_make_pixel_rgb(255, 0, 255); }
 
@@ -809,9 +825,25 @@ CF_INLINE CF_Pixel cf_pixel_purple() { return cf_make_pixel_rgb(255, 0, 255); }
  * @function cf_pixel_grey
  * @category graphics
  * @brief    Helper function to return a grey `CF_Pixel`.
- * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey
+ * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
 CF_INLINE CF_Pixel cf_pixel_grey() { return cf_make_pixel_rgb(127, 127, 127); }
+
+/**
+ * @function cf_pixel_cyan
+ * @category graphics
+ * @brief    Helper function to return a cyan `CF_Pixel`.
+ * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
+ */
+CF_INLINE CF_Pixel cf_pixel_cyan() { return cf_make_pixel_rgb(68, 220, 235); }
+
+/**
+ * @function cf_pixel_magenta
+ * @category graphics
+ * @brief    Helper function to return a magenta `CF_Pixel`.
+ * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
+ */
+CF_INLINE CF_Pixel cf_pixel_magenta() { return cf_make_pixel_rgb(224, 70, 224); }
 
 #ifdef __cplusplus
 }
@@ -894,6 +926,8 @@ CF_INLINE Color color_yellow() { return cf_color_yellow(); }
 CF_INLINE Color color_orange() { return cf_color_orange(); }
 CF_INLINE Color color_purple() { return cf_color_purple(); }
 CF_INLINE Color color_grey() { return cf_color_grey(); }
+CF_INLINE Color color_cyan() { return cf_color_cyan(); }
+CF_INLINE Color color_magenta() { return cf_color_magenta(); }
 
 CF_INLINE Pixel pixel_invisible() { return cf_pixel_invisible(); }
 CF_INLINE Pixel pixel_black() { return cf_pixel_black(); }
@@ -905,6 +939,8 @@ CF_INLINE Pixel pixel_yellow() { return cf_pixel_yellow(); }
 CF_INLINE Pixel pixel_orange() { return cf_pixel_orange(); }
 CF_INLINE Pixel pixel_purple() { return cf_pixel_purple(); }
 CF_INLINE Pixel pixel_grey() { return cf_pixel_grey(); }
+CF_INLINE Pixel pixel_cyan() { return cf_pixel_cyan(); }
+CF_INLINE Pixel pixel_magenta() { return cf_pixel_magenta(); }
 
 }
 

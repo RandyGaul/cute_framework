@@ -75,10 +75,10 @@ int main(int argc, char* argv[])
 
 	pu_display_colors(true);
 
-	RUN_TEST_SUITE(test_array);	
-	RUN_TEST_SUITE(test_aseprite);	
-	RUN_TEST_SUITE(test_audio);	
-	RUN_TEST_SUITE(test_base64);	
+	RUN_TEST_SUITE(test_array);
+	RUN_TEST_SUITE(test_aseprite);
+	RUN_TEST_SUITE(test_audio);
+	RUN_TEST_SUITE(test_base64);
 	RUN_TEST_SUITE(test_circular_buffer);
 	RUN_TEST_SUITE(test_coroutine);
 	RUN_TEST_SUITE(test_doubly_list);

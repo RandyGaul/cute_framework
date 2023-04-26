@@ -100,7 +100,7 @@ struct CF_Draw
 	CF_Filter filter = CF_FILTER_NEAREST;
 	Cute::Array<CF_Color> colors = { cf_color_white() };
 	Cute::Array<CF_Color> tints = { cf_color_grey() };
-	Cute::Array<bool> antialias = { false };
+	Cute::Array<bool> antialias = { true };
 	Cute::Array<CF_RenderState> render_states;
 	Cute::Array<CF_Rect> scissors = { { -1, -1, 0, 0 } };
 	Cute::Array<CF_Rect> viewports = { { -1, -1, 0, 0 } };

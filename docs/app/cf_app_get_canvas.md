@@ -23,3 +23,5 @@ calling [cf_app_set_canvas_size](/app/cf_app_set_canvas_size.md), as it will inv
 [cf_app_set_canvas_size](/app/cf_app_set_canvas_size.md)  
 [cf_app_get_canvas_width](/app/cf_app_get_canvas_width.md)  
 [cf_app_get_canvas_height](/app/cf_app_get_canvas_height.md)  
+[cf_app_set_vsync](/app/cf_app_set_vsync.md)  
+[cf_app_get_vsync](/app/cf_app_get_vsync.md)  

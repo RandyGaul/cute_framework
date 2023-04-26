@@ -14,7 +14,7 @@ CF_Color cf_color_invisible()
 
 ## Related Pages
 
-[cf_color_grey](/graphics/cf_color_grey.md)  
+[cf_color_magenta](/graphics/cf_color_magenta.md)  
 [cf_color_black](/graphics/cf_color_black.md)  
 [cf_color_white](/graphics/cf_color_white.md)  
 [cf_color_red](/graphics/cf_color_red.md)  
@@ -23,3 +23,5 @@ CF_Color cf_color_invisible()
 [cf_color_yellow](/graphics/cf_color_yellow.md)  
 [cf_color_orange](/graphics/cf_color_orange.md)  
 [cf_color_purple](/graphics/cf_color_purple.md)  
+[cf_color_grey](/graphics/cf_color_grey.md)  
+[cf_color_cyan](/graphics/cf_color_cyan.md)  

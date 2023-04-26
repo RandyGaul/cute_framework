@@ -17,3 +17,5 @@ int cf_app_get_canvas_width();
 [cf_app_get_canvas](/app/cf_app_get_canvas.md)  
 [cf_app_set_canvas_size](/app/cf_app_set_canvas_size.md)  
 [cf_app_get_canvas_height](/app/cf_app_get_canvas_height.md)  
+[cf_app_set_vsync](/app/cf_app_set_vsync.md)  
+[cf_app_get_vsync](/app/cf_app_get_vsync.md)  

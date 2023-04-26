@@ -358,6 +358,9 @@ This is a list of all functions in Cute Framework organized by categories. This 
 ### Functions
 [](text/functions.md ':include')
 
+### Structs
+[](text/structs.md ':include')
+
 ### Related Reading
 - [Drawing](/topics/drawing.md)
 - [Input](/topics/input.md)

@@ -219,7 +219,6 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	app->x = x;
 	app->y = y;
 	list_init(&app->joypads);
-	app->vsync = options & APP_OPTIONS_VSYNC;
 	::app = app;
 
 #ifdef CF_WINDOWS
@@ -594,6 +593,16 @@ int cf_app_get_canvas_width()
 int cf_app_get_canvas_height()
 {
 	return app->canvas_h;
+}
+
+void cf_app_set_vsync(bool true_turn_on_vsync)
+{
+	app->vsync = true_turn_on_vsync;
+}
+
+bool cf_app_get_vsync()
+{
+	return app->vsync;
 }
 
 ImGuiContext* cf_app_init_imgui(bool no_default_font)

@@ -14,7 +14,7 @@ CF_Pixel cf_pixel_invisible()
 
 ## Related Pages
 
-[cf_pixel_grey](/graphics/cf_pixel_grey.md)  
+[cf_pixel_magenta](/graphics/cf_pixel_magenta.md)  
 [cf_pixel_black](/graphics/cf_pixel_black.md)  
 [cf_pixel_white](/graphics/cf_pixel_white.md)  
 [cf_pixel_red](/graphics/cf_pixel_red.md)  
@@ -23,3 +23,5 @@ CF_Pixel cf_pixel_invisible()
 [cf_pixel_yellow](/graphics/cf_pixel_yellow.md)  
 [cf_pixel_orange](/graphics/cf_pixel_orange.md)  
 [cf_pixel_purple](/graphics/cf_pixel_purple.md)  
+[cf_pixel_grey](/graphics/cf_pixel_grey.md)  
+[cf_pixel_cyan](/graphics/cf_pixel_cyan.md)  

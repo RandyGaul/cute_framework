@@ -79,6 +79,8 @@
 - [cf_make_aabb_from_top_left](/math/cf_make_aabb_from_top_left.md)
 - [cf_make_aabb_pos_w_h](/math/cf_make_aabb_pos_w_h.md)
 - [cf_make_aabb_verts](/math/cf_make_aabb_verts.md)
+- [cf_make_capsule](/math/cf_make_capsule.md)
+- [cf_make_circle](/math/cf_make_circle.md)
 - [cf_make_identity](/math/cf_make_identity.md)
 - [cf_make_rotation](/math/cf_make_rotation.md)
 - [cf_make_scale](/math/cf_make_scale.md)

@@ -695,8 +695,8 @@ CF_INLINE const char* to_string(FileType type)
 	}
 }
 
-CF_INLINE const char* fs_get_base_dir() { return cf_fs_get_base_directory(); }
-CF_INLINE Result fs_set_write_dir(const char* platform_dependent_directory) { return cf_fs_set_write_directory(platform_dependent_directory); }
+CF_INLINE const char* fs_get_base_directory() { return cf_fs_get_base_directory(); }
+CF_INLINE Result fs_set_write_directory(const char* platform_dependent_directory) { return cf_fs_set_write_directory(platform_dependent_directory); }
 CF_INLINE Result fs_mount(const char* archive, const char* mount_point, bool append_to_path = true) { return cf_fs_mount(archive, mount_point, append_to_path); }
 CF_INLINE Result fs_dismount(const char* archive) { return cf_fs_dismount(archive); }
 CF_INLINE Result fs_stat(const char* virtual_path, Stat* stat) { return cf_fs_stat(virtual_path, stat); }
@@ -738,6 +738,7 @@ struct Path
 	CF_INLINE String ext() const { return String::steal_from(spext(m_path)); }
 	CF_INLINE bool has_ext(const char* ext) const { return spext_equ(m_path, ext); }
 	CF_INLINE void pop() { sppop(m_path); }
+	CF_INLINE void pop(int n) { sppopn(m_path, n); }
 	CF_INLINE void popn(int n) { sppopn(m_path, n); }
 	CF_INLINE Path compact(int n) const { return Path::steal_from(spcompact(m_path, n)); }
 	CF_INLINE Path my_directory() const { return Path::steal_from(spdir_of(m_path)); }
@@ -746,11 +747,14 @@ struct Path
 
 	CF_INLINE Path& add(const char* path) { if (sfirst(path) != '/' && slast(m_path) != '/') sappend(m_path, "/"); scat(m_path, path); return *this; }
 	CF_INLINE Path& cat(const char* path) { return add(path); }
-	CF_INLINE Path& operator+(const Path& rhs) { return add(rhs.m_path); }
+	CF_INLINE Path& operator+(const Path& p) { return add(p.m_path); }
 	CF_INLINE Path& operator=(const Path& p) { sset(m_path, p.m_path); return *this; }
+	CF_INLINE Path& operator+=(const Path& p) { *this = *this + p; return *this; }
 	CF_INLINE Path& operator=(Path&& p) { m_path = p.m_path; p.m_path = NULL; return *this; }
 
 	CF_INLINE const char* c_str() const { return m_path; }
+	CF_INLINE operator char*() { return m_path; }
+	CF_INLINE operator const char*() const { return m_path; }
 
 private:
 	char* m_path = NULL;

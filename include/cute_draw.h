@@ -138,6 +138,17 @@ CF_API void CF_CALL cf_draw_quad_fill3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, C
 CF_API void CF_CALL cf_draw_circle(CF_V2 p, float r, int iters, float thickness);
 
 /**
+ * @function cf_draw_circle2
+ * @category draw
+ * @brief    Draws a circle wireframe.
+ * @param    circle     The circle.
+ * @param    iters      Number of edges used for the circle. More looks smoother, but renders slower.
+ * @param    thickness  The thickness of each line to draw.
+ * @related  cf_draw_circle cf_draw_circle_fill cf_draw_circle_arc cf_draw_circle_arc_fill cf_draw_to cf_app_draw_onto_screen
+ */
+CF_API void CF_CALL cf_draw_circle2(CF_Circle circle, int iters, float thickness);
+
+/**
  * @function cf_draw_circle_fill
  * @category draw
  * @brief    Draws a circle.
@@ -147,6 +158,16 @@ CF_API void CF_CALL cf_draw_circle(CF_V2 p, float r, int iters, float thickness)
  * @related  cf_draw_circle cf_draw_circle_fill cf_draw_circle_arc cf_draw_circle_arc_fill cf_draw_to cf_app_draw_onto_screen
  */
 CF_API void CF_CALL cf_draw_circle_fill(CF_V2 p, float r, int iters);
+
+/**
+ * @function cf_draw_circle_fill2
+ * @category draw
+ * @brief    Draws a circle.
+ * @param    circle     The circle.
+ * @param    iters      Number of edges used for the circle. More looks smoother, but renders slower.
+ * @related  cf_draw_circle cf_draw_circle_fill cf_draw_circle_arc cf_draw_circle_arc_fill cf_draw_to cf_app_draw_onto_screen
+ */
+CF_API void CF_CALL cf_draw_circle_fill2(CF_Circle circle, int iters);
 
 /**
  * @function cf_draw_circle_arc
@@ -187,6 +208,17 @@ CF_API void CF_CALL cf_draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float 
 CF_API void CF_CALL cf_draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness);
 
 /**
+ * @function cf_draw_capsule2
+ * @category draw
+ * @brief    Draws a capsule wireframe.
+ * @param    capsule    The capsule.
+ * @param    iters      Number of edges used for the circle-caps. More looks smoother, but renders slower.
+ * @param    thickness  The thickness of each line to draw.
+ * @related  cf_draw_capsule cf_draw_capsule_fill cf_draw_to cf_app_draw_onto_screen
+ */
+CF_API void CF_CALL cf_draw_capsule2(CF_Capsule capsule, int iters, float thickness);
+
+/**
  * @function cf_draw_capsule_fill
  * @category draw
  * @brief    Draws a capsule.
@@ -197,6 +229,16 @@ CF_API void CF_CALL cf_draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, floa
  * @related  cf_draw_capsule cf_draw_capsule_fill cf_draw_to cf_app_draw_onto_screen
  */
 CF_API void CF_CALL cf_draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters);
+
+/**
+ * @function cf_draw_capsule_fill2
+ * @category draw
+ * @brief    Draws a capsule.
+ * @param    capsule    The capsule.
+ * @param    iters      Number of edges used for the circle-caps. More looks smoother, but renders slower.
+ * @related  cf_draw_capsule cf_draw_capsule_fill cf_draw_to cf_app_draw_onto_screen
+ */
+CF_API void CF_CALL cf_draw_capsule_fill2(CF_Capsule capsule, int iters);
 
 /**
  * @function cf_draw_tri
@@ -364,7 +406,8 @@ CF_API CF_Color CF_CALL cf_draw_peek_color();
  * @brief    Pushes a tint color.
  * @param    c          The color.
  * @remarks  Sprites and shapes can be tinted. This is useful for certain effects such as damage flashes, or
- *           dynamic color variations.
+ *           dynamic color variations. Tint is implemented under the hood with an overlay operation. If you want
+ *           to push a no-op, use `cf_color_grey` to apply no tinting at all.
  * @related  cf_draw_push_tint cf_draw_pop_tint cf_draw_peek_tint
  */
 CF_API void CF_CALL cf_draw_push_tint(CF_Color c);
@@ -374,6 +417,8 @@ CF_API void CF_CALL cf_draw_push_tint(CF_Color c);
  * @category draw
  * @brief    Pops and returns the last tint color.
  * @remarks  Sprites and shapes can be tinted. This is useful for certain effects such as damage flashes.
+ *           Tint is implemented under the hood with an overlay operation. If you want to push a no-op, use
+ *           `cf_color_grey` to apply no tinting at all.
  * @related  cf_draw_push_tint cf_draw_pop_tint cf_draw_peek_tint
  */
 CF_API CF_Color CF_CALL cf_draw_pop_tint();
@@ -1130,7 +1175,9 @@ CF_INLINE void draw_quad_fill(CF_Aabb bb) { cf_draw_quad_fill(bb); }
 CF_INLINE void draw_quad_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3) { cf_draw_quad_fill2(p0, p1, p2, p3); }
 CF_INLINE void draw_quad_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3) { cf_draw_quad_fill3(p0, p1, p2, p3, c0, c1, c2, c3); }
 CF_INLINE void draw_circle(CF_V2 p, float r, int iters, float thickness) { cf_draw_circle(p, r, iters, thickness); }
+CF_INLINE void draw_circle(CF_Circle circle, int iters, float thickness) { cf_draw_circle2(circle, iters, thickness); }
 CF_INLINE void draw_circle_fill(CF_V2 p, float r, int iters) { cf_draw_circle_fill(p, r, iters); }
+CF_INLINE void draw_circle_fill(CF_Circle circle, int iters) { cf_draw_circle_fill2(circle, iters); }
 CF_INLINE void draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness) { cf_draw_circle_arc(p, center_of_arc, range, iters, thickness); }
 CF_INLINE void draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iters) { draw_circle_arc_fill(p, center_of_arc, range, iters); }
 CF_INLINE void draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness) { cf_draw_capsule(p0, p1, r, iters, thickness); }
