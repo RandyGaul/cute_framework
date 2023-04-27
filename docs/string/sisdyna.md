@@ -1,0 +1,31 @@
+[](../header.md ':include')
+
+# sisdyna
+
+Category: [string](/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
+
+Checks to see if a C string is a dynamic string from Cute Framework's string API, or not.
+
+```cpp
+#define sisdyna(s) cf_string_is_dynamic(s)
+```
+
+Parameters | Description
+--- | ---
+s | The string. Can be `NULL`.
+
+## Return Value
+
+Returns true if `s` is a dynamically alloced string from this C string API.
+
+## Remarks
+
+This can be evaluated at compile time for string literals.
+
+## Related Pages
+
+[sstatic](/string/sstatic.md)  
+[sset](/string/sset.md)  
+[spush](/string/spush.md)  

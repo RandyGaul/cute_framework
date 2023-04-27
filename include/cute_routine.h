@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_ROUTINE_H
-#define CUTE_ROUTINE_H
+#ifndef CF_ROUTINE_H
+#define CF_ROUTINE_H
 
 #include <stdint.h>
 
@@ -215,4 +215,4 @@ inline uint64_t constexpr rt_fnv1a(const char* name)
 
 }
 
-#endif // CUTE_ROUTINE_H
+#endif // CF_ROUTINE_H

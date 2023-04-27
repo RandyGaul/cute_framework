@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_FONT_INTERNAL_H
-#define CUTE_FONT_INTERNAL_H
+#ifndef CF_FONT_INTERNAL_H
+#define CF_FONT_INTERNAL_H
 
 #include <cute_array.h>
 #include <cute_hashtable.h>
@@ -46,8 +46,8 @@ struct CF_Font
 	uint8_t* file_data = NULL;
 	stbtt_fontinfo info;
 	Cute::Array<int> backups;
-	Cute::Dictionary<uint64_t, int> kerning;
-	Cute::Dictionary<uint64_t, CF_Glyph> glyphs;
+	Cute::Map<uint64_t, int> kerning;
+	Cute::Map<uint64_t, CF_Glyph> glyphs;
 	Cute::Array<uint64_t> image_ids;
 	int ascent;
 	int descent;
@@ -69,7 +69,7 @@ struct CF_TextCode
 	int index_in_string;
 	int glyph_count;
 	CF_TextEffectFn* fn;
-	Cute::Dictionary<const char*, CF_TextCodeVal> params;
+	Cute::Map<const char*, CF_TextCodeVal> params;
 };
 
 struct CF_TextEffectState
@@ -82,8 +82,8 @@ struct CF_TextEffectState
 	Cute::Array<CF_TextCode> codes;
 	Cute::Array<CF_TextCode> parse_stack;
 
-	CUTE_INLINE void parse_add(CF_TextCode code) { parse_stack.add(code); }
-	CUTE_INLINE bool parse_finish(const char* effect_name, int final_index)
+	CF_INLINE void parse_add(CF_TextCode code) { parse_stack.add(code); }
+	CF_INLINE bool parse_finish(const char* effect_name, int final_index)
 	{
 		for (int i = parse_stack.count() - 1; i >= 0; --i) {
 			if (parse_stack[i].effect_name == effect_name) {
@@ -98,4 +98,4 @@ struct CF_TextEffectState
 	}
 };
 
-#endif // CUTE_FONT_INTERNAL_H
+#endif // CF_FONT_INTERNAL_H

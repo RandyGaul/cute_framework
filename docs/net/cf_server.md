@@ -1,0 +1,14 @@
+[](../header.md ':include')
+
+# CF_Server
+
+Category: [net](/api_reference?id=net)  
+GitHub: [cute_networking.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_networking.h)  
+---
+
+An opaque pointer representing a single networked server.
+
+## Related Pages
+
+[CF_Client](/net/cf_client.md)  
+[cf_make_client](/net/cf_make_client.md)  

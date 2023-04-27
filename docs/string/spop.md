@@ -1,0 +1,23 @@
+[](../header.md ':include')
+
+# spop
+
+Category: [string](/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
+
+Removes a character from the end of the string.
+
+```cpp
+#define spop(s) (s = cf_string_pop(s))
+```
+
+Parameters | Description
+--- | ---
+s | The string. Can be `NULL`.
+
+## Related Pages
+
+[slast](/string/slast.md)  
+[spopn](/string/spopn.md)  
+[serase](/string/serase.md)  

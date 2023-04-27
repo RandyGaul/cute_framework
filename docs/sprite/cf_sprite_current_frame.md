@@ -1,0 +1,24 @@
+[](../header.md ':include')
+
+# cf_sprite_current_frame
+
+Category: [sprite](/api_reference?id=sprite)  
+GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
+---
+
+Returns the index of the currently playing frame.
+
+```cpp
+int cf_sprite_current_frame(const CF_Sprite* sprite)
+```
+
+Parameters | Description
+--- | ---
+sprite | The sprite.
+
+## Related Pages
+
+[CF_Sprite](/sprite/cf_sprite.md)  
+[cf_sprite_frame_count](/sprite/cf_sprite_frame_count.md)  
+[cf_sprite_animation_delay](/sprite/cf_sprite_animation_delay.md)  
+[cf_sprite_frame_delay](/sprite/cf_sprite_frame_delay.md)  

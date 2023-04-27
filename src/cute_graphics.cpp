@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -23,7 +23,30 @@
 #include <cute_c_runtime.h>
 #include <cute_graphics.h>
 
+#include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
+
+// Override sokol_gfx macros for the default clear color with our own values.
+// This is a simple way to control sokol's default clear color, as well as custom clear
+// colors all in the same place.
+
+static float s_clear_red     = 0.5f;
+static float s_clear_green   = 0.5f;
+static float s_clear_blue    = 0.5f;
+static float s_clear_alpha   = 1.0f;
+static float s_clear_depth   = 1.0f;
+static float s_clear_stencil = 0;
+
+#define SG_DEFAULT_CLEAR_RED     (s_clear_red)
+#define SG_DEFAULT_CLEAR_GREEN   (s_clear_green)
+#define SG_DEFAULT_CLEAR_BLUE    (s_clear_blue)
+#define SG_DEFAULT_CLEAR_ALPHA   (s_clear_alpha)
+#define SG_DEFAULT_CLEAR_DEPTH   (s_clear_depth)
+#define SG_DEFAULT_CLEAR_STENCIL (s_clear_stencil)
+
+struct CF_CanvasInternal;
+static CF_CanvasInternal* s_canvas = NULL;
+static CF_CanvasInternal* s_default_canvas = NULL;
 
 // For now just a sokol_gfx.h backend is implemented. However, there are plans to also
 // implement an SDL_Gpu backend here whenever it's released. This should allow for a
@@ -79,41 +102,7 @@ struct CF_CanvasInternal
 	CF_MeshInternal* mesh;
 };
 
-CF_Matrix4x4 cf_matrix_identity()
-{
-	CF_Matrix4x4 m;
-	CUTE_MEMSET(&m, 0, sizeof(m));
-	m.elements[0] = 1.0f;
-	m.elements[5] = 1.0f;
-	m.elements[10] = 1.0f;
-	m.elements[15] = 1.0f;
-	return m;
-}
-
-CF_Matrix4x4 cf_matrix_ortho_2d(float w, float h, float x, float y)
-{
-	float L = -w / 2.0f;
-	float R = w / 2.0f;
-	float T = h / 2.0f;
-	float B = -h / 2.0f;
-
-	CF_Matrix4x4 projection;
-	CUTE_MEMSET(&projection, 0, sizeof(projection));
-
-	// ortho
-	projection.elements[0] = 2.0f / (R - L);
-	projection.elements[5] = 2.0f / (T - B);
-	projection.elements[10] = -0.5f;
-	projection.elements[15] = 1.0f;
-
-	// translate
-	projection.elements[12] = -x * projection.elements[0];
-	projection.elements[13] = -y * projection.elements[5];
-
-	return projection;
-}
-
-static CUTE_INLINE sg_usage s_wrap(CF_UsageType type)
+static CF_INLINE sg_usage s_wrap(CF_UsageType type)
 {
 	switch (type) {
 	case CF_USAGE_TYPE_IMMUTABLE: return SG_USAGE_IMMUTABLE;
@@ -123,16 +112,16 @@ static CUTE_INLINE sg_usage s_wrap(CF_UsageType type)
 	}
 }
 
-static CUTE_INLINE sg_pixel_format s_wrap(CF_PixelFormat fmt)
+static CF_INLINE sg_pixel_format s_wrap(CF_PixelFormat fmt)
 {
-	CUTE_STATIC_ASSERT(CF_PIXELFORMAT_COUNT == _SG_PIXELFORMAT_NUM - 1, "Must be equal.");
+	CF_STATIC_ASSERT(CF_PIXELFORMAT_COUNT == _SG_PIXELFORMAT_NUM - 1, "Must be equal.");
 	switch (fmt) {
 	case CF_PIXELFORMAT_DEFAULT: return _SG_PIXELFORMAT_DEFAULT;
 	default:                     return (sg_pixel_format)(fmt + 1);
 	}
 }
 
-static CUTE_INLINE sg_filter s_wrap(CF_Filter filter)
+static CF_INLINE sg_filter s_wrap(CF_Filter filter)
 {
 	switch (filter) {
 	case CF_FILTER_NEAREST: return SG_FILTER_NEAREST;
@@ -141,16 +130,16 @@ static CUTE_INLINE sg_filter s_wrap(CF_Filter filter)
 	}
 }
 
-static CUTE_INLINE CF_PixelFormat s_wrap(sg_pixel_format fmt)
+static CF_INLINE CF_PixelFormat s_wrap(sg_pixel_format fmt)
 {
-	CUTE_STATIC_ASSERT(CF_PIXELFORMAT_COUNT == _SG_PIXELFORMAT_NUM - 1, "Must be equal.");
+	CF_STATIC_ASSERT(CF_PIXELFORMAT_COUNT == _SG_PIXELFORMAT_NUM - 1, "Must be equal.");
 	switch (fmt) {
 	case _SG_PIXELFORMAT_DEFAULT: return CF_PIXELFORMAT_DEFAULT;
 	default:                     return (CF_PixelFormat)(fmt - 1);
 	}
 }
 
-static CUTE_INLINE sg_wrap s_wrap(CF_WrapMode mode)
+static CF_INLINE sg_wrap s_wrap(CF_WrapMode mode)
 {
 	switch (mode) {
 	case CF_WRAP_MODE_DEFAULT:         return _SG_WRAP_DEFAULT;
@@ -162,7 +151,7 @@ static CUTE_INLINE sg_wrap s_wrap(CF_WrapMode mode)
 	}
 }
 
-static CUTE_INLINE sg_vertex_format s_wrap(CF_VertexFormat fmt)
+static CF_INLINE sg_vertex_format s_wrap(CF_VertexFormat fmt)
 {
 	switch (fmt) {
 	case CF_VERTEX_FORMAT_INVALID:  return SG_VERTEXFORMAT_INVALID;
@@ -180,7 +169,7 @@ static CUTE_INLINE sg_vertex_format s_wrap(CF_VertexFormat fmt)
 	}
 }
 
-static CUTE_INLINE sg_compare_func s_wrap(CF_CompareFunction fn)
+static CF_INLINE sg_compare_func s_wrap(CF_CompareFunction fn)
 {
 	switch (fn) {
 	case CF_COMPARE_FUNCTION_ALWAYS:                return SG_COMPAREFUNC_ALWAYS;
@@ -195,7 +184,7 @@ static CUTE_INLINE sg_compare_func s_wrap(CF_CompareFunction fn)
 	}
 }
 
-static CUTE_INLINE sg_stencil_op s_wrap(CF_StencilOp op)
+static CF_INLINE sg_stencil_op s_wrap(CF_StencilOp op)
 {
 	switch (op) {
 	case CF_STENCIL_OP_KEEP:            return SG_STENCILOP_KEEP;
@@ -210,7 +199,7 @@ static CUTE_INLINE sg_stencil_op s_wrap(CF_StencilOp op)
 	}
 }
 
-static CUTE_INLINE sg_blend_factor s_wrap(CF_BlendFactor factor)
+static CF_INLINE sg_blend_factor s_wrap(CF_BlendFactor factor)
 {
 	switch (factor) {
 	case CF_BLENDFACTOR_ZERO:                  return SG_BLENDFACTOR_ZERO;
@@ -232,7 +221,7 @@ static CUTE_INLINE sg_blend_factor s_wrap(CF_BlendFactor factor)
 	}
 }
 
-static CUTE_INLINE sg_blend_op s_wrap(CF_BlendOp op)
+static CF_INLINE sg_blend_op s_wrap(CF_BlendOp op)
 {
 	switch (op) {
 	case CF_BLEND_OP_ADD:              return SG_BLENDOP_ADD;
@@ -242,7 +231,7 @@ static CUTE_INLINE sg_blend_op s_wrap(CF_BlendOp op)
 	}
 }
 
-static CUTE_INLINE sg_cull_mode s_wrap(CF_CullMode mode)
+static CF_INLINE sg_cull_mode s_wrap(CF_CullMode mode)
 {
 	switch (mode) {
 	case CF_CULL_MODE_NONE:  return SG_CULLMODE_NONE;
@@ -252,7 +241,7 @@ static CUTE_INLINE sg_cull_mode s_wrap(CF_CullMode mode)
 	}
 }
 
-static CUTE_INLINE sg_color s_wrap(CF_Color color)
+static CF_INLINE sg_color s_wrap(CF_Color color)
 {
 	sg_color sgc;
 	sgc.r = color.r;
@@ -333,7 +322,7 @@ CF_TextureParams cf_texture_defaults()
 CF_Texture cf_make_texture(CF_TextureParams texture_params)
 {
 	sg_image_desc desc;
-	CUTE_MEMSET(&desc, 0, sizeof(desc));
+	CF_MEMSET(&desc, 0, sizeof(desc));
 	desc.type = SG_IMAGETYPE_2D;
 	desc.render_target = texture_params.render_target;
 	desc.width = texture_params.width;
@@ -375,7 +364,7 @@ void cf_update_texture(CF_Texture texture, void* data, int size)
 
 CF_Shader cf_make_shader(CF_SokolShader sokol_shader)
 {
-	CF_ShaderInternal* shader = (CF_ShaderInternal*)CUTE_ALLOC(sizeof(CF_ShaderInternal));
+	CF_ShaderInternal* shader = (CF_ShaderInternal*)CF_ALLOC(sizeof(CF_ShaderInternal));
 	shader->table = sokol_shader;
 	const sg_shader_desc* desc = shader->table.get_desc_fn(sg_query_backend());
 	shader->desc = desc;
@@ -389,38 +378,37 @@ void cf_destroy_shader(CF_Shader shader)
 {
 	CF_ShaderInternal* shader_internal = (CF_ShaderInternal*)shader.id;
 	sg_destroy_shader(shader_internal->shd);
-	CUTE_FREE(shader_internal);
+	CF_FREE(shader_internal);
 }
 
 CF_CanvasParams cf_canvas_defaults()
 {
 	CF_CanvasParams params;
 	params.name = NULL;
-	params.clear_settings.color = cf_color_grey();
-	params.clear_settings.depth = 1.0f;
-	params.clear_settings.stencil = 0;
 	params.target = { };
 	params.depth_stencil_target = { };
 	return params;
 }
 
-static void s_canvas_clear_settings(CF_CanvasInternal* canvas, CF_CanvasClearSettings clear_settings)
+static void s_canvas_clear_settings(CF_CanvasInternal* canvas)
 {
 	canvas->action.colors[0].action = SG_ACTION_LOAD;
-	canvas->action.colors[0].value = s_wrap(clear_settings.color);
+	canvas->action.colors[0].value.r = s_clear_red;
+	canvas->action.colors[0].value.g = s_clear_green;
+	canvas->action.colors[0].value.b = s_clear_blue;
+	canvas->action.colors[0].value.a = s_clear_alpha;
 	canvas->action.depth.action = canvas->action.colors[0].action;
-	canvas->action.depth.value = clear_settings.depth;
+	canvas->action.depth.value = s_clear_depth;
 	canvas->action.stencil.action = canvas->action.colors[0].action;
-	canvas->action.stencil.value = clear_settings.stencil;
+	canvas->action.stencil.value = (uint8_t)(s_clear_stencil * 255.0f);
 }
 
 CF_Canvas cf_make_canvas(CF_CanvasParams pass_params)
 {
-	CF_CanvasInternal* pass = (CF_CanvasInternal*)CUTE_CALLOC(sizeof(CF_CanvasInternal));
+	CF_CanvasInternal* pass = (CF_CanvasInternal*)CF_CALLOC(sizeof(CF_CanvasInternal));
 	if (pass_params.target.id) {
 		sg_pass_desc desc;
-		CUTE_MEMSET(&desc, 0, sizeof(desc));
-		s_canvas_clear_settings(pass, pass_params.clear_settings);
+		CF_MEMSET(&desc, 0, sizeof(desc));
 		desc.color_attachments[0].image = { (uint32_t)pass_params.target.id };
 		desc.depth_stencil_attachment.image = { (uint32_t)pass_params.depth_stencil_target.id };
 		desc.label = pass_params.name;
@@ -439,12 +427,12 @@ void cf_destroy_canvas(CF_Canvas canvas_handle)
 	if (!canvas->pass_is_default) {
 		sg_destroy_pass(canvas->pass);
 	}
-	CUTE_FREE(canvas);
+	CF_FREE(canvas);
 }
 
 CF_Mesh cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size)
 {
-	CF_MeshInternal* mesh = (CF_MeshInternal*)CUTE_CALLOC(sizeof(CF_MeshInternal));
+	CF_MeshInternal* mesh = (CF_MeshInternal*)CF_CALLOC(sizeof(CF_MeshInternal));
 	mesh->need_vertex_sync = true;
 	mesh->need_index_sync = true;
 	mesh->need_instance_sync = true;
@@ -463,7 +451,7 @@ void cf_destroy_mesh(CF_Mesh mesh_handle)
 	if (mesh->vertices.handle.id) sg_destroy_buffer(mesh->vertices.handle);
 	if (mesh->indices.handle.id) sg_destroy_buffer(mesh->indices.handle);
 	if (mesh->instances.handle.id) sg_destroy_buffer(mesh->instances.handle);
-	CUTE_FREE(mesh);
+	CF_FREE(mesh);
 }
 
 void cf_mesh_set_attributes(CF_Mesh mesh_handle, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride)
@@ -501,7 +489,7 @@ void cf_mesh_update_vertex_data(CF_Mesh mesh_handle, void* data, int count)
 		mesh->vertices.size = size;
 		mesh->need_vertex_sync = true;
 	}
-	CUTE_ASSERT(mesh->attribute_count);
+	CF_ASSERT(mesh->attribute_count);
 	if (mesh->need_vertex_sync) {
 		s_sync_vertex_buffer(mesh, data, size);
 	} else {
@@ -515,8 +503,8 @@ int cf_mesh_append_vertex_data(CF_Mesh mesh_handle, void* data, int append_count
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	int size = append_count * mesh->vertices.stride;
-	CUTE_ASSERT(mesh->attribute_count);
-	CUTE_ASSERT(mesh->vertices.size >= size);
+	CF_ASSERT(mesh->attribute_count);
+	CF_ASSERT(mesh->vertices.size >= size);
 	if (mesh->need_vertex_sync) {
 		s_sync_vertex_buffer(mesh, NULL, mesh->vertices.size);
 	}
@@ -560,7 +548,7 @@ void cf_mesh_update_instance_data(CF_Mesh mesh_handle, void* data, int count)
 		mesh->instances.size = size;
 		mesh->need_instance_sync = true;
 	}
-	CUTE_ASSERT(mesh->attribute_count);
+	CF_ASSERT(mesh->attribute_count);
 	if (mesh->need_instance_sync) {
 		s_sync_isntance_buffer(mesh, data, size);
 	} else {
@@ -574,8 +562,8 @@ int cf_mesh_append_instance_data(CF_Mesh mesh_handle, void* data, int append_cou
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	int size = append_count * mesh->instances.stride;
-	CUTE_ASSERT(mesh->attribute_count);
-	CUTE_ASSERT(mesh->instances.size >= size);
+	CF_ASSERT(mesh->attribute_count);
+	CF_ASSERT(mesh->instances.size >= size);
 	if (mesh->need_instance_sync) {
 		s_sync_isntance_buffer(mesh, NULL, mesh->instances.size);
 	}
@@ -619,7 +607,7 @@ void cf_mesh_update_index_data(CF_Mesh mesh_handle, uint32_t* indices, int count
 		mesh->indices.size = size;
 		mesh->need_index_sync = true;
 	}
-	CUTE_ASSERT(mesh->attribute_count);
+	CF_ASSERT(mesh->attribute_count);
 	if (mesh->need_index_sync) {
 		s_sync_index_buffer(mesh, indices, size);
 	} else {
@@ -633,7 +621,7 @@ int cf_mesh_append_index_data(CF_Mesh mesh_handle, uint32_t* indices, int append
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	int size = append_count * sizeof(uint32_t);
-	CUTE_ASSERT(mesh->indices.size >= size);
+	CF_ASSERT(mesh->indices.size >= size);
 	if (mesh->need_index_sync) {
 		s_sync_index_buffer(mesh, NULL, mesh->indices.size);
 	}
@@ -721,7 +709,7 @@ struct CF_MaterialInternal
 
 CF_Material cf_make_material()
 {
-	CF_MaterialInternal* material = CUTE_NEW(CF_MaterialInternal);
+	CF_MaterialInternal* material = CF_NEW(CF_MaterialInternal);
 	cf_arena_init(&material->uniform_arena, 4, 1024);
 	cf_arena_init(&material->block_arena, 4, 1024);
 	material->state = cf_render_state_defaults();
@@ -735,7 +723,7 @@ void cf_destroy_material(CF_Material material_handle)
 	cf_arena_reset(&material->uniform_arena);
 	cf_arena_reset(&material->block_arena);
 	material->~CF_MaterialInternal();
-	CUTE_FREE(material);
+	CF_FREE(material);
 }
 
 void cf_material_set_render_state(CF_Material material_handle, CF_RenderState render_state)
@@ -810,9 +798,9 @@ static void s_material_set_uniform(CF_Arena* arena, CF_MaterialState* state, con
 		uniform->type = type;
 		uniform->array_length = array_length;
 	}
-	CUTE_ASSERT(uniform->type == type);
-	CUTE_ASSERT(uniform->array_length == array_length);
-	CUTE_MEMCPY(uniform->data, data, size);
+	CF_ASSERT(uniform->type == type);
+	CF_ASSERT(uniform->array_length == array_length);
+	CF_MEMCPY(uniform->data, data, size);
 }
 
 void cf_material_set_uniform_vs(CF_Material material_handle, const char* block_name, const char* name, void* data, CF_UniformType type, int array_length)
@@ -830,9 +818,6 @@ void cf_material_set_uniform_fs(CF_Material material_handle, const char* block_n
 	name = sintern(name);
 	s_material_set_uniform(&material->uniform_arena, &material->fs, block_name, name, data, type, array_length);
 }
-
-static CF_CanvasInternal* s_canvas = NULL;
-static CF_CanvasInternal* s_default_canvas = NULL;
 
 static void s_end_pass()
 {
@@ -856,11 +841,34 @@ static void s_end_pass()
 	}
 }
 
+void cf_clear_color(float red, float green, float blue, float alpha)
+{
+	s_clear_red = red;
+	s_clear_green = green;
+	s_clear_blue = blue;
+	s_clear_alpha = alpha;
+}
+
+void cf_clear_color2(CF_Color color)
+{
+	s_clear_red = color.r;
+	s_clear_green = color.g;
+	s_clear_blue = color.b;
+	s_clear_alpha = color.a;
+}
+
+void cf_clear_depth_stencil(float depth, float stencil)
+{
+	s_clear_depth = depth;
+	s_clear_stencil = stencil;
+}
+
 void cf_apply_canvas(CF_Canvas pass_handle, bool clear)
 {
 	CF_CanvasInternal* canvas = (CF_CanvasInternal*)pass_handle.id;
 	s_end_pass();
 	s_canvas = canvas;
+	s_canvas_clear_settings(canvas);
 	if (clear) {
 		canvas->action.colors[0].action = SG_ACTION_CLEAR;
 		canvas->action.depth.action = SG_ACTION_CLEAR;
@@ -889,7 +897,7 @@ void cf_apply_scissor(int x, int y, int width, int height)
 
 void cf_apply_mesh(CF_Mesh mesh_handle)
 {
-	CUTE_ASSERT(s_canvas);
+	CF_ASSERT(s_canvas);
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
 	s_canvas->mesh = mesh;
 }
@@ -908,7 +916,7 @@ static void s_copy_uniforms(CF_Arena* arena, CF_SokolShader table, CF_MaterialSt
 				// Create temporary space for a uniform block.
 				int size = (int)table.get_uniformblock_size(stage, uniform.block_name);
 				void* block = cf_arena_alloc(arena, size);
-				CUTE_MEMSET(block, 0, size);
+				CF_MEMSET(block, 0, size);
 				ub_ptrs[slot] = block;
 				ub_sizes[slot] = size;
 			}
@@ -917,7 +925,7 @@ static void s_copy_uniforms(CF_Arena* arena, CF_SokolShader table, CF_MaterialSt
 			if (offset >= 0) {
 				void* block = ub_ptrs[slot];
 				void* dst = (void*)(((uintptr_t)block) + offset);
-				CUTE_MEMCPY(dst, uniform.data, uniform.size);
+				CF_MEMCPY(dst, uniform.data, uniform.size);
 			}
 		}
 	}
@@ -936,7 +944,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 {
 	// TODO - Somehow cache results from all the get_*** callbacks.
 
-	CUTE_ASSERT(s_canvas);
+	CF_ASSERT(s_canvas);
 	CF_MeshInternal* mesh = s_canvas->mesh;
 	CF_MaterialInternal* material = (CF_MaterialInternal*)material_handle.id;
 	CF_ShaderInternal* shader = (CF_ShaderInternal*)shader_handle.id;
@@ -944,7 +952,7 @@ void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 
 	// Apply the render state and vertex attributes.
 	// Match any attributes the shader needs to the attributes in the material.
-	CUTE_ASSERT(mesh->attribute_count < SG_MAX_VERTEX_ATTRIBUTES);
+	CF_ASSERT(mesh->attribute_count < SG_MAX_VERTEX_ATTRIBUTES);
 	sg_layout_desc layout = { };
 	for (int i = 0; i < mesh->attribute_count; ++i) {
 		CF_VertexAttribute attr = mesh->attributes[i];
@@ -1049,6 +1057,18 @@ void cf_commit()
 {
 	s_end_pass();
 	sg_commit();
+}
+
+void cf_clear_graphics_static_pointers()
+{
+	s_canvas = NULL;
+	s_default_canvas = NULL;
+	s_clear_red     = 0.5f;
+	s_clear_green   = 0.5f;
+	s_clear_blue    = 0.5f;
+	s_clear_alpha   = 1.0f;
+	s_clear_depth   = 1.0f;
+	s_clear_stencil = 0;
 }
 
 void cf_destroy_graphics()

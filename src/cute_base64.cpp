@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -53,7 +53,7 @@ static const int s_base64_to_6bits[80] = {
 
 CF_Result cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t src_size)
 {
-	size_t out_size = CUTE_BASE64_ENCODED_SIZE(src_size);
+	size_t out_size = CF_BASE64_ENCODED_SIZE(src_size);
 	if (dst_size < out_size) return cf_result_error("`dst` buffer too small to place encoded output.");
 
 	size_t triplets = (src_size) / 3;
@@ -70,10 +70,10 @@ CF_Result cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t s
 		uint32_t c = (bits & 0xFC0) >> 6;
 		uint32_t d = (bits & 0x3F);
 		in += 3;
-		CUTE_ASSERT(a < 64);
-		CUTE_ASSERT(b < 64);
-		CUTE_ASSERT(c < 64);
-		CUTE_ASSERT(d < 64);
+		CF_ASSERT(a < 64);
+		CF_ASSERT(b < 64);
+		CF_ASSERT(c < 64);
+		CF_ASSERT(d < 64);
 		*out++ = s_6bits_to_base64[a];
 		*out++ = s_6bits_to_base64[b];
 		*out++ = s_6bits_to_base64[c];
@@ -88,9 +88,9 @@ CF_Result cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t s
 		uint32_t a = (bits & 0xFC00) >> 10;
 		uint32_t b = (bits & 0x3F0) >> 4;
 		uint32_t c = (bits & 0xF) << 2;
-		CUTE_ASSERT(a < 64);
-		CUTE_ASSERT(b < 64);
-		CUTE_ASSERT(c < 64);
+		CF_ASSERT(a < 64);
+		CF_ASSERT(b < 64);
+		CF_ASSERT(c < 64);
 		*out++ = s_6bits_to_base64[a];
 		*out++ = s_6bits_to_base64[b];
 		*out++ = s_6bits_to_base64[c];
@@ -101,8 +101,8 @@ CF_Result cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t s
 		uint32_t bits = ((uint32_t)in[0]);
 		uint32_t a = (bits & 0xFC) >> 2;
 		uint32_t b = (bits & 0x3) << 4;
-		CUTE_ASSERT(a < 64);
-		CUTE_ASSERT(b < 64);
+		CF_ASSERT(a < 64);
+		CF_ASSERT(b < 64);
 		*out++ = s_6bits_to_base64[a];
 		*out++ = s_6bits_to_base64[b];
 		in += 1;
@@ -114,7 +114,7 @@ CF_Result cf_base64_encode(void* dst, size_t dst_size, const void* src, size_t s
 		*out++ = '=';
 	}
 
-	CUTE_ASSERT((int)(out - (uint8_t*)dst) == out_size);
+	CF_ASSERT((int)(out - (uint8_t*)dst) == out_size);
 
 	return cf_result_success();
 }
@@ -134,13 +134,13 @@ CF_Result cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t s
 	if (end[-2] == '=') pads++;
 	if (pads) quadruplets--;
 
-	size_t exact_out_size = CUTE_BASE64_DECODED_SIZE(src_size);
+	size_t exact_out_size = CF_BASE64_DECODED_SIZE(src_size);
 	switch (pads)
 	{
 	case 1: dst_size -= 2; break;
 	case 2: dst_size -= 1; break;
 	}
-	if (CUTE_BASE64_DECODED_SIZE(src_size) < exact_out_size) return cf_result_error("'dst_size' is too small to decode.");
+	if (CF_BASE64_DECODED_SIZE(src_size) < exact_out_size) return cf_result_error("'dst_size' is too small to decode.");
 
 	// RFC describes the best way to handle bad input is to reject the entire input.
 	// https://tools.ietf.org/html/rfc4648#page-14
@@ -193,7 +193,7 @@ CF_Result cf_base64_decode(void* dst, size_t dst_size, const void* src, size_t s
 	}	break;
 	}
 
-	CUTE_ASSERT((int)(out + pads - (uint8_t*)dst) == CUTE_BASE64_DECODED_SIZE(src_size));
+	CF_ASSERT((int)(out + pads - (uint8_t*)dst) == CF_BASE64_DECODED_SIZE(src_size));
 
 	return cf_result_success();
 }

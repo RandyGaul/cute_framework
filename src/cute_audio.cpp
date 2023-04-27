@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -23,22 +23,28 @@
 #include <cute_file_system.h>
 #include <cute_alloc.h>
 
+#include <internal/cute_alloc_internal.h>
+
 #define STB_VORBIS_HEADER_ONLY
 #include <stb/stb_vorbis.c>
+
+#ifdef CF_EMSCRIPTEN
+#	ifndef CUTE_SOUND_SCALAR_MODE
+#		define CUTE_SOUND_SCALAR_MODE
+#	endif // CUTE_SOUND_SCALAR_MODE
+#endif // CF_EMSCRIPTEN
 
 #define CUTE_SOUND_IMPLEMENTATION
 #define CUTE_SOUND_FORCE_SDL
 #include <cute/cute_sound.h>
 
-using namespace Cute;
-
 CF_Audio* cf_audio_load_ogg(const char* path)
 {
 	size_t size;
-	void* data = fs_read_entire_file_to_memory(path, &size);
+	void* data = cf_fs_read_entire_file_to_memory(path, &size);
 	if (data) {
 		auto src = cf_audio_load_ogg_from_memory(data, (int)size);
-		CUTE_FREE(data);
+		CF_FREE(data);
 		return (CF_Audio*) src;
 	} else {
 		return NULL;
@@ -48,10 +54,10 @@ CF_Audio* cf_audio_load_ogg(const char* path)
 CF_Audio* cf_audio_load_wav(const char* path)
 {
 	size_t size;
-	void* data = fs_read_entire_file_to_memory(path, &size);
+	void* data = cf_fs_read_entire_file_to_memory(path, &size);
 	if (data) {
 		auto src = cf_audio_load_wav_from_memory(data, (int)size);
-		CUTE_FREE(data);
+		CF_FREE(data);
 		return (CF_Audio*) src;
 	} else {
 		return NULL;
@@ -101,10 +107,10 @@ void cf_audio_set_pause(bool true_for_paused)
 
 static inline CF_Result s_result(cs_error_t err)
 {
-	if (err == CUTE_SOUND_ERROR_NONE) return result_success();
+	if (err == CUTE_SOUND_ERROR_NONE) return cf_result_success();
 	else {
-		Result result;
-		result.code = RESULT_ERROR;
+		CF_Result result;
+		result.code = CF_RESULT_ERROR;
 		result.details = cs_error_as_string(err);
 		return result;
 	}
@@ -162,7 +168,7 @@ CF_Result cf_music_set_sample_index(uint64_t sample_index)
 
 // -------------------------------------------------------------------------------------------------
 
-CF_Sound cf_play_sound(CF_Audio* audio_source, CF_SoundParams params /*= cf_sound_params_defaults()*/, CF_Result* err)
+CF_Sound cf_play_sound(CF_Audio* audio_source, CF_SoundParams params)
 {
 	cs_sound_params_t csparams;
 	csparams.paused = params.paused;

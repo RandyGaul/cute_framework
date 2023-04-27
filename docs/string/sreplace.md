@@ -1,0 +1,33 @@
+[](../header.md ':include')
+
+# sreplace
+
+Category: [string](/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
+
+Replaces all substrings `replace_me` with the substring `with_me`.
+
+```cpp
+#define sreplace(s, replace_me, with_me) cf_string_replace(s, replace_me, with_me)
+```
+
+Parameters | Description
+--- | ---
+s | The string. Can be `NULL`.
+replace_me | Substring to replace.
+with_me | The replacement string.
+
+## Remarks
+
+Supports srings that start with "0x", "#", or no prefix.
+
+## Related Pages
+
+[strim](/string/strim.md)  
+[sltrim](/string/sltrim.md)  
+[srtrim](/string/srtrim.md)  
+[slpad](/string/slpad.md)  
+[srpad](/string/srpad.md)  
+[sdedup](/string/sdedup.md)  
+[serase](/string/serase.md)  

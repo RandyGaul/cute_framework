@@ -1,0 +1,30 @@
+[](../header.md ':include')
+
+# CF_ComponentFn
+
+Category: [ecs](/api_reference?id=ecs)  
+GitHub: [cute_ecs.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_ecs.h)  
+---
+
+A function for initializing or cleaning up a component.
+
+```cpp
+typedef void (CF_ComponentFn)(CF_Entity entity, void* component, void* udata);
+```
+
+Parameters | Description
+--- | ---
+CF_Entity | The entity.
+component | A pointr to the component. You must typecast to the appropriate type.
+udata | An optional user data pointer. `NULL` by default, or set by one of: [cf_component_set_optional_initializer](/ecs/cf_component_set_optional_initializer.md); [cf_component_set_optional_cleanup](/ecs/cf_component_set_optional_cleanup.md).
+
+## Remarks
+
+This function gets called when an entity is created or destroyed.
+
+## Related Pages
+
+[cf_destroy_entity](/ecs/cf_destroy_entity.md)  
+[cf_component_set_optional_initializer](/ecs/cf_component_set_optional_initializer.md)  
+[cf_component_set_optional_cleanup](/ecs/cf_component_set_optional_cleanup.md)  
+[cf_make_entity](/ecs/cf_make_entity.md)  

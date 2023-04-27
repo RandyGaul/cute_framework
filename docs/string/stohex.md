@@ -1,0 +1,35 @@
+[](../header.md ':include')
+
+# stohex
+
+Category: [string](/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
+
+Converts a hex-string to a uint64_t and returns it.
+
+```cpp
+#define stohex(s) cf_string_tohex(s)
+```
+
+Parameters | Description
+--- | ---
+s | The string.
+
+## Remarks
+
+Supports srings that start with "0x", "#", or no prefix.
+
+## Related Pages
+
+[sint](/string/sint.md)  
+[suint](/string/suint.md)  
+[sfloat](/string/sfloat.md)  
+[sdouble](/string/sdouble.md)  
+[shex](/string/shex.md)  
+[sbool](/string/sbool.md)  
+stint  
+[stouint](/string/stouint.md)  
+[stofloat](/string/stofloat.md)  
+[stodouble](/string/stodouble.md)  
+[stobool](/string/stobool.md)  

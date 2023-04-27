@@ -19,66 +19,20 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <cute_result.h>
-#include <cute_string.h>
+#ifndef TEST_HARNESS_H
+#define TEST_HARNESS_H
 
-typedef int (test_fn)();
-
-struct test_t
-{
-	const char* test_name;
-	const char* description;
-	test_fn* fn_ptr;
-};
-
-#ifndef CUTE_TEST_IO_STREAM
-#	include <stdio.h>
-#	define CUTE_TEST_IO_STREAM stderr
+#ifndef _CRT_SECURE_NO_WARNINGS
+#	define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#ifdef _MSC_VER
-#define _WINSOCKAPI_
-#include <Windows.h>
-
-// At the time of writing, this define requires fairly recent windows version, so it's
-// safest to just define it ourselves... Should be harmless!
-#ifndef ENABLE_VIRTUAL_TERMINAL_PROCESSING
-#	define ENABLE_VIRTUAL_TERMINAL_PROCESSING 0x0004
+#ifndef _CRT_NONSTDC_NO_DEPRECATE
+#	define _CRT_NONSTDC_NO_DEPRECATE
 #endif
 
-// https://docs.microsoft.com/en-us/windows/console/console-virtual-terminal-sequences
-void windows_turn_on_console_color()
-{
-	HANDLE h = GetStdHandle(STD_OUTPUT_HANDLE);
-	DWORD flags = 0;
-	GetConsoleMode(h, &flags);
-	flags |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
-	SetConsoleMode(h, flags);
-}
-#endif
+#include <pico/pico_unit.h>
 
-int do_test(test_t* test, int i)
-{
-	const char* test_name = test->test_name;
-	const char* description = test->description;
-	fprintf(CUTE_TEST_IO_STREAM, "Running test #%d\n\tName:         %s\n\tDescription:  %s\n\t", i, test_name, description);
-	int result = test->fn_ptr();
-	const char* result_string = result ? "\033[31mFAILED\033[0m\n\n" : "\033[32mPASSED\033[0m\n\n";
-	fprintf(CUTE_TEST_IO_STREAM, "Result:       %s", result_string);
+#define CHECK(x)         REQUIRE(!(x))
+#define CHECK_POINTER(x) REQUIRE(x)
 
-	sinuke();
-
-#ifdef _MSC_VER
-	_CrtDumpMemoryLeaks();
-#endif
-
-	return result;
-}
-
-#define CUTE_TEST_PRINT_FILE_LINE(s) do { fprintf(CUTE_TEST_IO_STREAM, "Extra info:   %s\n\tLine number:  %d\n\tFile:         %s\n\t", s, __LINE__, __FILE__); } while (0)
-#define CUTE_TEST_ASSERT(x) do { if (!(x)) { CUTE_TEST_PRINT_FILE_LINE("Assertion was false."); return -1; } } while (0)
-#define CUTE_TEST_CHECK(x) do { if (x) { CUTE_TEST_PRINT_FILE_LINE("Return code failed check."); return -1; } } while (0)
-#define CUTE_TEST_CHECK_POINTER(x) do { if (!(x)) { CUTE_TEST_PRINT_FILE_LINE("Pointer failed check."); return -1; } } while (0)
-
-#define CUTE_TEST_CASE(function, description) int function(); test_t test_##function = { #function, description, function }
-#define CUTE_TEST_CASE_ENTRY(function) test_##function
+#endif // TEST_HARNESS_H

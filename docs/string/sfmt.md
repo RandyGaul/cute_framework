@@ -1,0 +1,30 @@
+[](../header.md ':include')
+
+# sfmt
+
+Category: [string](/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
+
+Printf's into the string using the format string `fmt`.
+
+```cpp
+#define sfmt(s, fmt, ...) cf_string_fmt(s, fmt, (__VA_ARGS__))
+```
+
+Parameters | Description
+--- | ---
+s | The string. Can be `NULL`.
+fmt | The format string.
+... | The parameters for the format string.
+
+## Remarks
+
+The string will be overwritten from the beginning. Will automatically adjust capacity as needed.
+
+## Related Pages
+
+[sset](/string/sset.md)  
+[sfmt_append](/string/sfmt_append.md)  
+[svfmt](/string/svfmt.md)  
+[svfmt_append](/string/svfmt_append.md)  

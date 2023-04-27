@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -22,6 +22,8 @@
 #include <cute_time.h>
 #include <cute_math.h>
 #include <cute_c_runtime.h>
+
+#include <internal/cute_app_internal.h>
 
 using namespace Cute;
 
@@ -52,6 +54,7 @@ uint64_t ticks_per_second;
 uint64_t ticks_per_timestep;
 int max_updates = 5;
 uint64_t unsimulated_ticks;
+int target_framerate = -1;
 
 static void s_init()
 {
@@ -77,6 +80,11 @@ void cf_set_fixed_timestep_max_updates(int max_updates)
 	::max_updates = max(1, max_updates);
 }
 
+void cf_set_target_framerate(int frames_per_second)
+{
+	target_framerate = frames_per_second;
+}
+
 static void s_step(uint64_t delta)
 {
 	CF_PREV_TICKS = CF_TICKS;
@@ -85,11 +93,15 @@ static void s_step(uint64_t delta)
 	CF_SECONDS = CF_TICKS * inv_freq;
 }
 
+void cf_set_update_udata(void* udata)
+{
+	app->update_udata = udata;
+}
+
 void cf_update_time(CF_OnUpdateFn* on_update)
 {
 	if (ticks_per_timestep) {
 		// Fixed timestep (opt-in only).
-		// Related reading: https://gafferongames.com/post/fix_your_timestep/
 
 		// Accumulate unsimulated time.
 		uint64_t now = cf_get_ticks();
@@ -99,8 +111,9 @@ void cf_update_time(CF_OnUpdateFn* on_update)
 		unsimulated_ticks += delta;
 
 		// Sleep if the app is running too fast.
-		while (unsimulated_ticks < ticks_per_timestep) {
-			int milliseconds = (int)((ticks_per_timestep - unsimulated_ticks) * (inv_freq * 1000));
+		uint64_t target_ticks = (uint64_t)((1.0 / target_framerate) * freq);
+		while (target_framerate != -1 && unsimulated_ticks < target_ticks) {
+			int milliseconds = (int)((target_ticks - unsimulated_ticks) * (inv_freq * 1000));
 			cf_sleep(milliseconds);
 
 			// Record how much we slept by.
@@ -130,7 +143,7 @@ void cf_update_time(CF_OnUpdateFn* on_update)
 					if (leftover + unsimulated_ticks > ticks_per_timestep) {
 						unsimulated_ticks -= ticks_per_timestep - leftover;
 						s_step(ticks_per_timestep);
-						if (on_update) on_update();
+						if (on_update) on_update(app->update_udata);
 					} else {
 						unsimulated_ticks += leftover;
 					}
@@ -139,7 +152,7 @@ void cf_update_time(CF_OnUpdateFn* on_update)
 				}
 			} else {
 				s_step(ticks_per_timestep);
-				if (on_update) on_update();
+				if (on_update) on_update(app->update_udata);
 			}
 		}
 
@@ -158,7 +171,7 @@ void cf_update_time(CF_OnUpdateFn* on_update)
 			CF_PAUSE_TIME_LEFT = (float)(pause_ticks * inv_freq);
 		} else {
 			s_step(delta);
-			if (on_update) on_update();
+			if (on_update) on_update(app->update_udata);
 		}
 	}
 }
@@ -220,17 +233,17 @@ CF_Stopwatch cf_make_stopwatch()
 	return result;
 }
 
-uint64_t cf_seconds(CF_Stopwatch stopwatch)
+double cf_stopwatch_seconds(CF_Stopwatch stopwatch)
 {
-	return (uint64_t)((cf_get_ticks() - stopwatch.start_time) * inv_freq);
+	return (cf_get_ticks() - stopwatch.start_time) * inv_freq;
 }
 
-uint64_t cf_milliseconds(CF_Stopwatch stopwatch)
+double cf_stopwatch_milliseconds(CF_Stopwatch stopwatch)
 {
-	return (uint64_t)(((cf_get_ticks() - stopwatch.start_time) * inv_freq) * 1000);
+	return ((cf_get_ticks() - stopwatch.start_time) * inv_freq) * 1000.0;
 }
 
-uint64_t cf_microseconds(CF_Stopwatch stopwatch)
+double cf_stopwatch_microseconds(CF_Stopwatch stopwatch)
 {
-	return (uint64_t)(((cf_get_ticks() - stopwatch.start_time) * inv_freq) * 1000000);
+	return ((cf_get_ticks() - stopwatch.start_time) * inv_freq) * 1000000.0;
 }

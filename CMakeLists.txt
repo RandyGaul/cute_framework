@@ -28,15 +28,21 @@ function(fetch_content_with_folder _name)
 endfunction()
 
 # Todo - Fix how turning some of these off breaks the build.
-option(CUTE_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
-option(CUTE_FRAMEWORK_WITH_HTTPS "Build Cute Framework with mbedtls for HTTPS support (Apache 2.0 license)." ON)
-option(CUTE_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
-option(CUTE_FRAMEWORK_BUILD_SAMPLES "Build the cute framework sample programs." ON)
-option(CUTE_FRAMEWORK_CIMGUI "Build cute framework with cimgui implementation." OFF)
+option(CF_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
+option(CF_FRAMEWORK_WITH_HTTPS "Build Cute Framework with mbedtls for HTTPS support (Apache 2.0 license)." ON)
+option(CF_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
+option(CF_FRAMEWORK_BUILD_SAMPLES "Build the cute framework sample programs." ON)
 
 # Platform detection.
 if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
 	set(EMSCRIPTEN TRUE)
+	# Disable HTTPS with Emscripten since mbedtls continually has build issues here, also it's not
+	# a very useful feature for web builds anyways, due to lack of socket/signal support.
+	set(CF_FRAMEWORK_WITH_HTTPS OFF)
+
+	# Also disable samples/tests. These should be supported/added back in at some point.
+	set(CF_FRAMEWORK_BUILD_SAMPLES OFF)
+	set(CF_FRAMEWORK_BUILD_TESTS OFF)
 elseif(WIN32)
 	set(WINDOWS TRUE)
 elseif(UNIX AND NOT APPLE)
@@ -48,6 +54,8 @@ elseif(UNIX AND NOT APPLE)
 elseif(APPLE)
 	if(CMAKE_SYSTEM_NAME MATCHES ".*MacOS.*" OR CMAKE_SYSTEM_NAME MATCHES ".*Darwin.*")
 		set(MACOSX TRUE)
+	elseif(CMAKE_SYSTEM_NAME MATCHES ".*iOS.*")
+		set(IOS TRUE)
 	else()
 		message(FATAL_ERROR, "No supported platform detected.")
 	endif()
@@ -63,22 +71,21 @@ if(MSVC)
 	add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/utf-8>")
 endif()
 
-# Disable SSE for ARM Macbooks.
-if(APPLE AND "${CMAKE_OSX_ARCHITECTURES}" MATCHES "arm")
-	add_definitions(-DCUTE_SOUND_SCALAR_MODE)
+if(CF_FRAMEWORK_WITH_HTTPS MATCHES OFF)
+	add_definitions(-DCF_NO_HTTPS)
 endif()
 
 # Common directories for compiler/linker path.
 include_directories(src libraries test)
 
 # Cute Framework shared library.
-set(CUTE_SRCS
+set(CF_SRCS
 	src/cute_app.cpp
 	src/cute_array.cpp
 	src/cute_audio.cpp
 	src/cute_circular_buffer.cpp
 	src/cute_clipboard.cpp
-	src/cute_concurrency.cpp
+	src/cute_multithreading.cpp
 	src/cute_file_system.cpp
 	src/cute_handle_table.cpp
 	src/cute_input.cpp
@@ -108,8 +115,8 @@ set(CUTE_SRCS
 	src/cute_guid.cpp
 	src/cute_alloc.cpp
 	src/cute_result.cpp
+	src/cute_quadtree.cpp
 
-	src/internal/cute_ecs_internal.cpp
 	src/internal/cute_dx11.cpp
 
 	libraries/cimgui/imgui/backends/imgui_impl_sdl.cpp
@@ -122,15 +129,25 @@ set(CUTE_SRCS
 	
 	libraries/cimgui/cimgui.cpp
 )
+if(APPLE)
+	set(CF_SRCS ${CF_SRCS}
+		src/internal/cute_metal.mm
+	)
+else()
+	set(CF_SRCS ${CF_SRCS}
+		src/internal/cute_metal.cpp
+	)
+endif()
 
-set(CUTE_PUBLIC_HDRS
+set(CF_PUBLIC_HDRS
 	include/cute_alloc.h
 	include/cute_app.h
 	include/cute_audio.h
+	include/cute_user_config.h
 	include/cute_c_runtime.h
 	include/cute_circular_buffer.h
 	include/cute_clipboard.h
-	include/cute_concurrency.h
+	include/cute_multithreading.h
 	include/cute_defines.h
 	include/cute_result.h
 	include/cute_file_system.h
@@ -156,7 +173,6 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_graphics.h
 	include/cute_rnd.h
 	include/cute_sprite.h
-	include/cute_aseprite_cache.h
 	include/cute_png_cache.h
 	include/cute_https.h
 	include/cute_joypad.h
@@ -169,6 +185,7 @@ set(CUTE_PUBLIC_HDRS
 	include/cute_networking.h
 	include/cute_guid.h
 	include/cute_routine.h
+	include/cute_quadtree.h
 )
 
 set(IMGUI_HDRS
@@ -189,8 +206,8 @@ set(SOKOL_HDRS
 	libraries/sokol/sokol_gfx_imgui.h
 )
 
-set(CUTE_HDRS
-	${CUTE_PUBLIC_HDRS}
+set(CF_HDRS
+	${CF_PUBLIC_HDRS}
 	${IMGUI_HDRS}
 	${CIMGUI_HDRS}
 	${SOKOL_HDRS}
@@ -201,11 +218,13 @@ set(CUTE_HDRS
 	src/internal/cute_serialize_internal.h
 	src/internal/cute_ecs_internal.h
 	src/internal/cute_dx11.h
+	src/internal/cute_metal.h
 	src/internal/cute_png_cache_internal.h
 	src/internal/cute_draw_internal.h
 	src/internal/cute_font_internal.h
 	src/internal/cute_graphics_internal.h
 	src/internal/cute_aseprite_cache_internal.h
+	src/internal/cute_alloc_internal.h
 
 	src/internal/imgui/sokol_imgui.h
 	libraries/cimgui/imgui/backends/imgui_impl_sdl.h
@@ -214,20 +233,13 @@ set(CUTE_HDRS
 	src/shaders/backbuffer_shader.h
 )
 
-if(CUTE_FRAMEWORK_STATIC)
-	add_library(cute STATIC ${CUTE_SRCS} ${CUTE_HDRS})
-	target_compile_definitions(cute PUBLIC CUTE_STATIC)
+if(CF_FRAMEWORK_STATIC)
+	add_library(cute STATIC ${CF_SRCS} ${CF_HDRS})
+	target_compile_definitions(cute PUBLIC CF_STATIC)
 else()
-	add_library(cute SHARED ${CUTE_SRCS} ${CUTE_HDRS})
+	add_library(cute SHARED ${CF_SRCS} ${CF_HDRS})
 endif()
-target_compile_definitions(cute PRIVATE CUTE_EXPORT)
-
-if(CUTE_FRAMEWORK_CIMGUI)
-	if(CUTE_FRAMEWORK_STATIC)
-		target_compile_definitions(cute PUBLIC CIMGUI_NO_EXPORT)
-	endif()
-	target_compile_definitions(cute PUBLIC CUTE_USE_CIMGUI)
-endif()
+target_compile_definitions(cute PRIVATE CF_EXPORT)
 
 # PhysicsFS, always statically linked.
 set(PHYSFS_SRCS
@@ -261,27 +273,29 @@ set(PHYSFS_SRCS
 	libraries/physfs/physfs.h
 )
 
-if(MACOSX)
+if(APPLE)
 	set(PHYSFS_SRCS ${PHYSFS_SRCS}
 		libraries/physfs/physfs_platform_apple.m
 	)
 	find_library(IOKIT IOKit)
 	find_library(FOUNDATION Foundation)
 	find_library(SECURITY Security)
-	find_package(OpenGL REQUIRED)
-	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${OPENGL_LIBRARIES})
+	find_library(QUARTZCORE QuartzCore)
+	find_library(METAL Metal)
+	find_library(METALKIT MetalKit)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${QUARTZCORE} ${METAL} ${METALKIT})
 endif()
 
 if(LINUX)
 	find_package(OpenGL REQUIRED)
-	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${OPENGL_LIBRARIES})
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} ${IOKIT} ${FOUNDATION} ${SECURITY} ${OPENGL_LIBRARIES})
 endif()
 
 add_library(physfs STATIC ${PHYSFS_SRCS})
-set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} physfs)
+set(CF_LINK_LIBS ${CF_LINK_LIBS} physfs)
 
 # Optional mbedtls for HTTPS support.
-if(CUTE_FRAMEWORK_WITH_HTTPS)
+if(CF_FRAMEWORK_WITH_HTTPS)
 	option(ENABLE_PROGRAMS "Build mbed TLS programs." OFF)
 	option(ENABLE_TESTING "Build mbed TLS tests." OFF)
 	fetch_content_with_folder(
@@ -290,7 +304,7 @@ if(CUTE_FRAMEWORK_WITH_HTTPS)
 		GIT_TAG v3.1.0
 		GIT_PROGRESS TRUE
 	)
-	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} mbedx509 mbedtls mbedcrypto)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} mbedx509 mbedtls mbedcrypto)
 endif()
 
 # SDL2 for platform support.
@@ -305,47 +319,60 @@ else()
 		GIT_TAG release-2.26.1
 		GIT_PROGRESS TRUE
 	)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} SDL2main SDL2-static)
 endif()
-set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} SDL2-static)
 target_include_directories(cute PUBLIC ${SDL2_INCLUDE_DIRS})
 
 # Some platform specific settings.
 if(EMSCRIPTEN)
 	target_compile_options(cute PUBLIC -O1 -fno-rtti -fno-exceptions)
+	set_target_properties(cute PROPERTIES COMPILE_FLAGS "-s USE_SDL=2")
 	target_link_libraries(cute PRIVATE "-s USE_WEBGL2=1 -s ASSERTIONS=1 -s MAX_WEBGL_VERSION=2 -s USE_SDL=2 -s ALLOW_MEMORY_GROWTH=1 -O1 -s ASYNCIFY=1")
 elseif(MINGW)
-	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} d3d11 crypt32)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} d3d11 crypt32)
 elseif(WINDOWS)
-	set(CUTE_LINK_LIBS ${CUTE_LINK_LIBS} crypt32)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} crypt32)
+elseif(APPLE)
+	set_target_properties(cute PROPERTIES FRAMEWORK TRUE)
+	if (CF_FRAMEWORK_STATIC)
+	set_target_properties(cute PROPERTIES
+		FRAMEWORK_VERSION "1.0.0"
+		MACOSX_FRAMEWORK_IDENTIFIER "com.cuteframework.static"
+	)
+	else()
+	set_target_properties(cute PROPERTIES
+		FRAMEWORK_VERSION "1.0.0"
+		MACOSX_FRAMEWORK_IDENTIFIER "com.cuteframework.shared"
+	)
+	endif()
 endif()
 
 # Link up all dependencies to Cute.
-target_link_libraries(cute PUBLIC ${CUTE_LINK_LIBS})
+target_link_libraries(cute PUBLIC ${CF_LINK_LIBS})
 
 # Cute unit tests executable (optional, defaulted to also build).
-if (CUTE_FRAMEWORK_BUILD_TESTS)
-	set(CUTE_TEST_SRCS test/main.cpp)
-	set(CUTE_TEST_HDRS
-		test/test_circular_buffer.h
-		test/test_handle.h
-		test/test_harness.h
-		test/test_doubly_list.h
-		test/test_kv.h
-		test/test_base64.h
-		test/test_audio.h
-		test/test_ecs.h
-		test/test_array.h
-		test/test_aseprite.h
-		test/test_png_cache.h
-		test/test_sprite.h
-		test/test_coroutine.h
-		test/test_string.h
-		test/test_hashtable.h
-		test/test_path.h
-		test/test_font.h
-	)
+if (CF_FRAMEWORK_BUILD_TESTS)
+	set(CF_TEST_SRCS test/main.cpp
+		test/test_array.cpp
+		test/test_aseprite.cpp
+		test/test_audio.cpp
+		test/test_base64.cpp
+		test/test_circular_buffer.cpp
+		test/test_coroutine.cpp
+		test/test_doubly_list.cpp
+		test/test_ecs.cpp
+		test/test_font.cpp
+		test/test_handle.cpp
+		test/test_hashtable.cpp
+		test/test_kv.cpp
+		test/test_path.cpp
+		test/test_png_cache.cpp
+		test/test_sprite.cpp
+		test/test_string.cpp
+		)
+	set(CF_TEST_HDRS test/test_harness.h)
 
-	add_executable(tests ${CUTE_TEST_SRCS} ${CUTE_TEST_HDRS})
+	add_executable(tests ${CF_TEST_SRCS} ${CF_TEST_HDRS})
 	target_link_libraries(tests PRIVATE cute)
 
 	if(EMSCRIPTEN)
@@ -354,7 +381,7 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 		target_link_options(tests PRIVATE -o tests.html --preload-file ${PROJECT_SOURCE_DIR}/test/test_data --emrun -O1)
 	else()
 		# Copy over any test data in the test/test_data folder.
-		add_custom_command(TARGET tests POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:tests>/test_data)
+		add_custom_command(TARGET cute POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:cute>/test_data)
 	endif()
 
 	# For convenience make tests the startup project in Visual Studio.
@@ -366,17 +393,54 @@ if (CUTE_FRAMEWORK_BUILD_TESTS)
 endif()
 
 # Cute sample prgrams (optional, defaulted to also build).
-if (CUTE_FRAMEWORK_BUILD_SAMPLES)
+if (CF_FRAMEWORK_BUILD_SAMPLES)
+	add_executable(easysprite samples/easy_sprite.c)
+	add_executable(basicecs samples/basic_ecs.cpp)
+	add_executable(basicserialization samples/basic_serialization.c)
+	add_executable(imgui samples/imgui.c)
+	add_executable(textdrawing samples/text_drawing.cpp)
+	add_executable(basicsprite samples/basic_sprite.cpp)
+	add_executable(basicshapes samples/basic_shapes.cpp)
+	add_executable(windowresizing samples/window_resizing.cpp)
+	add_executable(basicinput samples/basic_input.c)
+	add_executable(windowevents samples/window_events.c)
 	add_executable(window samples/window.cpp)
-	target_link_libraries(window PRIVATE cute)
-	set_target_properties(window PROPERTIES FOLDER "samples")
 	add_executable(tint samples/tint.cpp)
-	target_link_libraries(tint PRIVATE cute)
-	set_target_properties(tint PROPERTIES FOLDER "samples")
+	add_executable(docsparser samples/docs_parser.cpp)
 	add_executable(scratch samples/scratch.cpp)
-	target_link_libraries(scratch PRIVATE cute)
-	set_target_properties(scratch PROPERTIES FOLDER "samples")
-	add_custom_command(TARGET scratch POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/samples/sample_data" $<TARGET_FILE_DIR:scratch>/sample_data)
+	add_executable(echo samples/echo.cpp)
+	add_executable(quadtree samples/quadtree.cpp)
+	set(SAMPLE_EXECUTABLES
+		easysprite
+		basicecs
+		basicserialization
+		imgui
+		textdrawing
+		basicsprite
+		basicshapes
+		windowresizing
+		basicinput
+		windowevents
+		window
+		tint
+		docsparser
+		scratch
+		echo
+		quadtree
+	)
+
+	foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
+		target_link_libraries("${CURRENT_TARGET}" PRIVATE cute)
+		set_target_properties("${CURRENT_TARGET}" PROPERTIES FOLDER "samples")
+		add_custom_command(TARGET "${CURRENT_TARGET}" POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/samples/sample_data" $<TARGET_FILE_DIR:${CURRENT_TARGET}>/sample_data)
+		if (APPLE)
+					set_target_properties("${CURRENT_TARGET}" PROPERTIES
+						MACOSX_BUNDLE_GUI_IDENTIFIER "com.cuteframework.${CURRENT_TARGET}"
+						MACOSX_BUNDLE_BUNDLE_VERSION "1.0.0"
+						MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0.0"
+					)
+		endif()
+	endforeach()
 endif()
 
 # Propogate public headers to other cmake scripts including this subdirectory.
@@ -386,7 +450,7 @@ target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui/imgui>)
 
 install(TARGETS cute EXPORT cute DESTINATION "lib")
-install(FILES ${CUTE_PUBLIC_HDRS} DESTINATION "include/cute")
+install(FILES ${CF_PUBLIC_HDRS} DESTINATION "include/cute")
 install(FILES ${IMGUI_HDRS} DESTINATION "include/cute/imgui")
 install(FILES ${CIMGUI_HDRS} DESTINATION "include/cute/cimgui")
 install(FILES ${SOKOL_HDRS} DESTINATION "include/cute/sokol")

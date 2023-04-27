@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -206,39 +206,40 @@ static int s_map_SDL_keys(int key)
 	return 0;
 }
 
-bool cf_key_is_down(CF_KeyButton key)
+bool cf_key_down(CF_KeyButton key)
 {
-	CUTE_ASSERT(key >= 0 && key < 512);
+	CF_ASSERT(key >= 0 && key < 512);
 	return app->keys[key];
 }
 
-bool cf_key_is_up(CF_KeyButton key)
+bool cf_key_just_pressed(CF_KeyButton key)
 {
-	CUTE_ASSERT(key >= 0 && key < 512);
-	return !app->keys[key];
+	CF_ASSERT(key >= 0 && key < 512);
+
+	return app->keys[key] & !app->keys_prev[key];
 }
 
-bool cf_key_was_pressed(CF_KeyButton key)
+bool cf_key_just_released(CF_KeyButton key)
 {
-	CUTE_ASSERT(key >= 0 && key < 512);
+	CF_ASSERT(key >= 0 && key < 512);
+	return !app->keys[key] && app->keys_prev[key];
+}
 
-	float repeat_delay = 0.5f;
-	float repeat_rate = 0.035f;
-	float t = app->keys_duration[key];
-	int repeat_count = 0;
+bool cf_key_repeating(CF_KeyButton key)
+{
+	CF_ASSERT(key >= 0 && key < 512);
 
-	if (t > repeat_delay) {
-		repeat_count = (int)((t - repeat_delay) / repeat_rate);
-		app->keys_duration[key] -= repeat_count * repeat_rate;
+	double repeat_delay = 0.5;
+	double repeat_rate = 0.035;
+
+	if (app->keys[key]) {
+		double t = app->keys_timestamp[key] + repeat_delay;
+		if (CF_SECONDS > t) {
+			return cf_on_interval((float)repeat_rate, (float)t);
+		}
 	}
 
-	return (app->keys[key] & !app->keys_prev[key]) | repeat_count;
-}
-
-bool cf_key_was_released(CF_KeyButton key)
-{
-	CUTE_ASSERT(key >= 0 && key < 512);
-	return !app->keys[key] && app->keys_prev[key];
+	return false;
 }
 
 bool cf_key_ctrl()
@@ -261,10 +262,10 @@ bool cf_key_gui()
 	return app->keys[CF_KEY_LGUI] | app->keys[CF_KEY_RGUI];
 }
 
-void cf_clear_all_key_state()
+void cf_clear_key_states()
 {
-	CUTE_MEMSET(app->keys, 0, sizeof(app->keys));
-	CUTE_MEMSET(app->keys_prev, 0, sizeof(app->keys_prev));
+	CF_MEMSET(app->keys, 0, sizeof(app->keys));
+	CF_MEMSET(app->keys_prev, 0, sizeof(app->keys_prev));
 }
 
 int cf_mouse_x()
@@ -277,7 +278,7 @@ int cf_mouse_y()
 	return app->mouse.y;
 }
 
-bool cf_mouse_is_down(CF_MouseButton button)
+bool cf_mouse_down(CF_MouseButton button)
 {
 	switch (button)
 	{
@@ -288,18 +289,7 @@ bool cf_mouse_is_down(CF_MouseButton button)
 	return 0;
 }
 
-bool cf_mouse_is_up(CF_MouseButton button)
-{
-	switch (button)
-	{
-	case MOUSE_BUTTON_LEFT:   return !app->mouse.left_button;
-	case MOUSE_BUTTON_RIGHT:  return !app->mouse.right_button;
-	case MOUSE_BUTTON_MIDDLE: return !app->mouse.middle_button;
-	}
-	return 0;
-}
-
-bool cf_mouse_was_pressed(CF_MouseButton button)
+bool cf_mouse_just_pressed(CF_MouseButton button)
 {
 	switch (button)
 	{
@@ -310,7 +300,7 @@ bool cf_mouse_was_pressed(CF_MouseButton button)
 	return 0;
 }
 
-bool cf_mouse_was_released(CF_MouseButton button)
+bool cf_mouse_just_released(CF_MouseButton button)
 {
 	switch (button)
 	{
@@ -326,20 +316,20 @@ int cf_mouse_wheel_motion()
 	return app->mouse.wheel_motion;
 }
 
-bool cf_mouse_is_down_double_click(CF_MouseButton button)
+bool cf_mouse_double_click_held(CF_MouseButton button)
 {
-	return cf_mouse_is_down(button) && app->mouse.click_type == CF_MOUSE_CLICK_DOUBLE;
+	return cf_mouse_down(button) && app->mouse.click_type == CF_MOUSE_CLICK_DOUBLE;
 }
 
-bool cf_mouse_double_click_was_pressed(CF_MouseButton button)
+bool cf_mouse_double_clicked(CF_MouseButton button)
 {
-	return cf_mouse_was_pressed(button) && app->mouse.click_type == CF_MOUSE_CLICK_DOUBLE;
+	return cf_mouse_just_pressed(button) && app->mouse.click_type == CF_MOUSE_CLICK_DOUBLE;
 }
 
 void cf_clear_all_mouse_state()
 {
-	CUTE_MEMSET(&app->mouse, 0, sizeof(app->mouse));
-	CUTE_MEMSET(&app->mouse_prev, 0, sizeof(app->mouse_prev));
+	CF_MEMSET(&app->mouse, 0, sizeof(app->mouse));
+	CF_MEMSET(&app->mouse_prev, 0, sizeof(app->mouse_prev));
 }
 
 void cf_input_text_add_utf8(const char* text)
@@ -436,7 +426,7 @@ bool cf_touch_get(uint64_t id, CF_Touch* touch)
 static CF_Joypad* s_joy(SDL_JoystickID id)
 {
 	for (CF_ListNode* n = cf_list_begin(&app->joypads); n != cf_list_end(&app->joypads); n = n->next) {
-		CF_Joypad* joypad = CUTE_LIST_HOST(CF_Joypad, node, n);
+		CF_Joypad* joypad = CF_LIST_HOST(CF_Joypad, node, n);
 		if (joypad->id == id) return joypad;
 	}
 	return NULL;
@@ -447,28 +437,22 @@ void cf_pump_input_msgs()
 	// Clear any necessary single-frame state and copy to `prev` states.
 	app->mouse.xrel = 0;
 	app->mouse.yrel = 0;
-	CUTE_MEMCPY(app->keys_prev, app->keys, sizeof(app->keys));
-	CUTE_MEMCPY(&app->mouse_prev, &app->mouse, sizeof(app->mouse));
-	CUTE_MEMCPY(&app->window_state_prev, &app->window_state, sizeof(app->window_state));
+	CF_MEMCPY(app->keys_prev, app->keys, sizeof(app->keys));
+	CF_MEMCPY(&app->mouse_prev, &app->mouse, sizeof(app->mouse));
+	CF_MEMCPY(&app->window_state_prev, &app->window_state, sizeof(app->window_state));
 	for (CF_ListNode* n = cf_list_begin(&app->joypads); n != cf_list_end(&app->joypads); n = n->next) {
-		CF_Joypad* joypad = CUTE_LIST_HOST(CF_Joypad, node, n);
-		CUTE_MEMCPY(joypad->buttons_prev, joypad->buttons, sizeof(joypad->buttons));
+		CF_Joypad* joypad = CF_LIST_HOST(CF_Joypad, node, n);
+		CF_MEMCPY(joypad->buttons_prev, joypad->buttons, sizeof(joypad->buttons));
 	}
 	app->mouse.wheel_motion = 0;
 	app->window_state.moved = false;
 	app->window_state.restored = false;
 	app->window_state.resized = false;
 
-	// Update key durations to simulate "press and hold" style for `key_was_pressed`.
+	// Update key durations to simulate "press and hold" style for `key_repeating`.
 	for (int i = 0; i < 512; ++i) {
-		if (cf_key_is_down((CF_KeyButton)i)) {
-			if (app->keys_duration[i] < 0) {
-				app->keys_duration[i] = 0;
-			} else {
-				app->keys_duration[i] += DELTA_TIME;
-			}
-		} else {
-			app->keys_duration[i] = -1.0f;
+		if (!cf_key_down((CF_KeyButton)i)) {
+			app->keys_timestamp[i] = 0;
 		}
 	}
 
@@ -535,9 +519,10 @@ void cf_pump_input_msgs()
 			if (event.key.repeat) continue;
 			int key = SDL_GetKeyFromScancode(event.key.keysym.scancode);
 			key = s_map_SDL_keys(key);
-			CUTE_ASSERT(key >= 0 && key < 512);
+			CF_ASSERT(key >= 0 && key < 512);
 			app->keys[key] = 1;
 			app->keys[KEY_ANY] = 1;
+			app->keys_timestamp[key] = app->keys_timestamp[KEY_ANY] = CF_SECONDS;
 		}	break;
 
 		case SDL_KEYUP:
@@ -545,7 +530,7 @@ void cf_pump_input_msgs()
 			if (event.key.repeat) continue;
 			int key = SDL_GetKeyFromScancode(event.key.keysym.scancode);
 			key = s_map_SDL_keys(key);
-			CUTE_ASSERT(key >= 0 && key < 512);
+			CF_ASSERT(key >= 0 && key < 512);
 			app->keys[key] = 0;
 		}	break;
 
@@ -614,7 +599,7 @@ void cf_pump_input_msgs()
 			CF_Joypad* joypad = s_joy(id);
 			if (joypad) {
 				int button = (int)event.cbutton.button;
-				CUTE_ASSERT(button >= 0 && button < CF_JOYPAD_BUTTON_COUNT);
+				CF_ASSERT(button >= 0 && button < CF_JOYPAD_BUTTON_COUNT);
 				joypad->buttons[button] = 0;
 			}
 		}	break;
@@ -625,7 +610,7 @@ void cf_pump_input_msgs()
 			CF_Joypad* joypad = s_joy(id);
 			if (joypad) {
 				int button = (int)event.cbutton.button;
-				CUTE_ASSERT(button >= 0 && button < CF_JOYPAD_BUTTON_COUNT);
+				CF_ASSERT(button >= 0 && button < CF_JOYPAD_BUTTON_COUNT);
 				joypad->buttons[button] = 1;
 			}
 		}	break;
@@ -637,7 +622,7 @@ void cf_pump_input_msgs()
 			if (joypad) {
 				int axis = (int)event.caxis.axis;
 				int value = (int)event.caxis.value;
-				CUTE_ASSERT(axis >= 0 && axis < CF_JOYPAD_AXIS_COUNT);
+				CF_ASSERT(axis >= 0 && axis < CF_JOYPAD_AXIS_COUNT);
 				joypad->axes[axis] = value;
 			}
 		}	break;
@@ -680,7 +665,7 @@ void cf_pump_input_msgs()
 
 	// Support held timer on KEY_ANY.
 	bool none_pressed = true;
-	for (int i = 0; i < CUTE_ARRAY_SIZE(app->keys); ++i) {
+	for (int i = 0; i < CF_ARRAY_SIZE(app->keys); ++i) {
 		if (i != KEY_ANY && app->keys[i]) {
 			none_pressed = false;
 			break;
@@ -693,5 +678,5 @@ void cf_pump_input_msgs()
 
 namespace Cute
 {
-	Array<CF_Touch> CUTE_CALL touch_get_all() { return app->touches; }
+	Array<CF_Touch> CF_CALL touch_get_all() { return app->touches; }
 }

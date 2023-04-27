@@ -1,0 +1,25 @@
+[](../header.md ':include')
+
+# cf_haptic_close
+
+Category: [haptic](/api_reference?id=haptic)  
+GitHub: [cute_haptics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_haptics.h)  
+---
+
+Frees up a [CF_Haptic](/haptic/cf_haptic.md) previously created by [cf_haptic_open](/haptic/cf_haptic_open.md).
+
+```cpp
+void cf_haptic_close(CF_Haptic* haptic);
+```
+
+Parameters | Description
+--- | ---
+haptic | The haptic.
+
+## Related Pages
+
+[CF_Haptic](/haptic/cf_haptic.md)  
+[cf_haptic_open](/haptic/cf_haptic_open.md)  
+[cf_haptic_rumble_play](/haptic/cf_haptic_rumble_play.md)  
+[cf_haptic_create_effect](/haptic/cf_haptic_create_effect.md)  
+[cf_haptic_run_effect](/haptic/cf_haptic_run_effect.md)  

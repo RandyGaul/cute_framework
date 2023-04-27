@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_H
-#define CUTE_H
+#ifndef CF_H
+#define CF_H
 
 #include "cute_aabb_tree.h"
 #include "cute_alloc.h"
@@ -32,7 +32,7 @@
 #include "cute_circular_buffer.h"
 #include "cute_clipboard.h"
 #include "cute_color.h"
-#include "cute_concurrency.h"
+#include "cute_multithreading.h"
 #include "cute_coroutine.h"
 #include "cute_defer.h"
 #include "cute_doubly_list.h"
@@ -55,6 +55,9 @@
 #include "cute_string.h"
 #include "cute_time.h"
 #include "cute_version.h"
-#include "cute_window.h"
 
-#endif // CUTE_H
+#ifndef CF_EMSCRIPTEN
+#	include <SDL_main.h>
+#endif
+
+#endif // CF_H

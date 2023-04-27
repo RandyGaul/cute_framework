@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -22,30 +22,31 @@
 #include <cute_app.h>
 #include <cute_alloc.h>
 #include <cute_audio.h>
-#include <cute_concurrency.h>
+#include <cute_multithreading.h>
 #include <cute_file_system.h>
 #include <cute_c_runtime.h>
 #include <cute_kv.h>
 #include <cute_draw.h>
 #include <cute_time.h>
 
+#include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
 #include <internal/cute_file_system_internal.h>
 #include <internal/cute_input_internal.h>
 #include <internal/cute_graphics_internal.h>
 #include <internal/cute_draw_internal.h>
 #include <internal/cute_dx11.h>
+#include <internal/cute_metal.h>
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
 
-#define SDL_MAIN_HANDLED
 #include <SDL.h>
 
-#ifdef CUTE_WINDOWS
+#ifdef CF_WINDOWS
 #	include <SDL_syswm.h>
 #endif
 
-#ifdef CUTE_WINDOWS
+#ifdef CF_WINDOWS
 #	pragma comment (lib, "dxgi.lib")
 #	pragma comment (lib, "d3d11.lib")
 #	pragma comment (lib, "dxguid.lib")
@@ -54,28 +55,14 @@
 #define CUTE_SOUND_FORCE_SDL
 #include <cute/cute_sound.h>
 
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
-
-#ifdef CUTE_USE_CIMGUI
-#include <cimgui.h>
-#endif // CUTE_FRAMEWORK_CIMGUI
-
-#define SOKOL_IMPL
-#define SOKOL_TRACE_HOOKS
-#ifdef SOKOL_D3D11
-#	define D3D11_NO_HELPERS
-#endif
-
-#include <sokol/sokol_gfx.h>
-
-#define SOKOL_IMGUI_IMPL
 #define SOKOL_IMGUI_NO_SOKOL_APP
 #include <internal/imgui/sokol_imgui.h>
 #include <imgui/backends/imgui_impl_sdl.h>
 #include <sokol/sokol_gfx_imgui.h>
 
 #include <shaders/backbuffer_shader.h>
+
+CF_STATIC_ASSERT(sizeof(uint64_t) >= sizeof(void*), "Must be equal for opaque id implementations throughout CF.");
 
 CF_App* app;
 
@@ -162,31 +149,37 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 {
 	SDL_SetMainReady();
 
-#ifdef CUTE_EMSCRIPTEN
+#ifdef CF_EMSCRIPTEN
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER;
 #else
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC;
-	bool needs_video = options & (APP_OPTIONS_OPENGL_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_DEFAULT_GFX_CONTEXT);
+	bool needs_video = options & (APP_OPTIONS_OPENGL_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_METAL_CONTEXT | APP_OPTIONS_DEFAULT_GFX_CONTEXT);
 	if (!needs_video) {
 		sdl_options &= ~SDL_INIT_VIDEO;
 	}
 #endif
+
+	// Turn on high DPI support for all platforms.
+	options |= SDL_WINDOW_ALLOW_HIGHDPI;
+	
 	if (SDL_Init(sdl_options)) {
 		return cf_result_error("SDL_Init failed");
 	}
 
 	if (options & APP_OPTIONS_DEFAULT_GFX_CONTEXT) {
-#ifdef CUTE_WINDOWS
+#ifdef CF_WINDOWS
 		options |= APP_OPTIONS_D3D11_CONTEXT;
-#elif CUTE_EMSCRIPTEN
+#elif CF_EMSCRIPTEN
 		options |= APP_OPTIONS_OPENGLES_CONTEXT;
+#elif CF_APPLE
+		options |= APP_OPTIONS_METAL_CONTEXT;
 #else
 		options |= APP_OPTIONS_OPENGL_CONTEXT;
 #endif
 	}
 
-	if (options & (APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_OPENGL_CONTEXT)) {
-		// D3D11 crashes if w/h are not positive.
+	if (options & (APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_OPENGL_CONTEXT | APP_OPTIONS_METAL_CONTEXT)) {
+		// Some backends don't support window size of zero.
 		w = w <= 0 ? 1 : w;
 		h = h <= 0 ? 1 : h;
 	}
@@ -194,6 +187,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	Uint32 flags = 0;
 	if (options & APP_OPTIONS_OPENGL_CONTEXT) flags |= SDL_WINDOW_OPENGL;
 	if (options & APP_OPTIONS_OPENGLES_CONTEXT) flags |= SDL_WINDOW_OPENGL;
+	if (options & APP_OPTIONS_METAL_CONTEXT) flags |= SDL_WINDOW_METAL;
 	if (options & APP_OPTIONS_FULLSCREEN) flags |= SDL_WINDOW_FULLSCREEN;
 	if (options & APP_OPTIONS_RESIZABLE) flags |= SDL_WINDOW_RESIZABLE;
 	if (options & APP_OPTIONS_HIDDEN) flags |= (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
@@ -216,8 +210,8 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	} else {
 		window = SDL_CreateWindow(window_title, x, y, w, h, flags);
 	}
-	CF_App* app = (CF_App*)CUTE_ALLOC(sizeof(CF_App));
-	CUTE_PLACEMENT_NEW(app) CF_App;
+	CF_App* app = (CF_App*)CF_ALLOC(sizeof(CF_App));
+	CF_PLACEMENT_NEW(app) CF_App;
 	app->options = options;
 	app->window = window;
 	app->w = w;
@@ -225,10 +219,9 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	app->x = x;
 	app->y = y;
 	list_init(&app->joypads);
-	app->vsync = options & APP_OPTIONS_VSYNC;
 	::app = app;
 
-#ifdef CUTE_WINDOWS
+#ifdef CF_WINDOWS
 	SDL_SysWMinfo wmInfo;
 	SDL_VERSION(&wmInfo.version);
 	SDL_GetWindowWMInfo(window, &wmInfo);
@@ -242,13 +235,13 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		SDL_GL_SetSwapInterval(app->vsync);
 		SDL_GLContext ctx = SDL_GL_CreateContext(window);
 		if (!ctx) {
-			CUTE_FREE(app);
+			CF_FREE(app);
 			return cf_result_error("Unable to create OpenGL context.");
 		}
-		CUTE_MEMSET(&app->gfx_ctx_params, 0, sizeof(app->gfx_ctx_params));
+		CF_MEMSET(&app->gfx_ctx_params, 0, sizeof(app->gfx_ctx_params));
 		app->gfx_ctx_params.color_format = SG_PIXELFORMAT_RGBA8;
 		app->gfx_ctx_params.depth_format = SG_PIXELFORMAT_DEPTH_STENCIL;
-		sg_desc params = { 0 };
+		sg_desc params = { };
 		params.context = app->gfx_ctx_params;
 		sg_setup(params);
 		app->gfx_enabled = true;
@@ -257,7 +250,16 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	if (options & APP_OPTIONS_D3D11_CONTEXT) {
 		cf_dx11_init(hwnd, w, h, 1);
 		app->gfx_ctx_params = cf_dx11_get_context();
-		sg_desc params = { 0 };
+		sg_desc params = { };
+		params.context = app->gfx_ctx_params;
+		sg_setup(params);
+		app->gfx_enabled = true;
+	}
+	
+	if (options & APP_OPTIONS_METAL_CONTEXT) {
+		cf_metal_init(window, w, h, 1);
+		app->gfx_ctx_params = cf_metal_get_context();
+		sg_desc params = { };
 		params.context = app->gfx_ctx_params;
 		sg_setup(params);
 		app->gfx_enabled = true;
@@ -269,11 +271,11 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 			CF_VertexAttribute attrs[2] = { };
 			attrs[0].name = "in_pos";
 			attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
-			attrs[0].offset = CUTE_OFFSET_OF(Vertex, x);
+			attrs[0].offset = CF_OFFSET_OF(Vertex, x);
 			attrs[1].name = "in_uv";
 			attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
-			attrs[1].offset = CUTE_OFFSET_OF(Vertex, u);
-			cf_mesh_set_attributes(app->backbuffer_quad, attrs, CUTE_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
+			attrs[1].offset = CF_OFFSET_OF(Vertex, u);
+			cf_mesh_set_attributes(app->backbuffer_quad, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
 			Vertex quad[6];
 			s_quad(0, 0, 2, 2, quad);
 			cf_mesh_update_vertex_data(app->backbuffer_quad, quad, 6);
@@ -289,10 +291,10 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 
 		// Load up a default image of 1x1 white pixel.
 		// Used in various places as a placeholder or default.
-		CF_Png png;
-		cf_png_cache_load_mem("cf_default_png", default_png_data, (size_t)default_png_sz, &png);
-		app->default_image_id = png.id;
-		CUTE_ASSERT(app->default_image_id == CUTE_PNG_ID_RANGE_LO);
+		CF_Png img;
+		cf_png_cache_load_mem("cf_default_png", default_png_data, (size_t)default_png_sz, &img);
+		app->default_image_id = img.id;
+		CF_ASSERT(app->default_image_id == CF_PNG_ID_RANGE_LO);
 
 		// This will clear the initial offscreen canvas to prevent the first frame from starting off
 		// with a black background.
@@ -304,17 +306,21 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 
 	if (!(options & APP_OPTIONS_NO_AUDIO)) {
 		int more_on_emscripten = 1;
-	#ifdef CUTE_EMSCRIPTEN
+	#ifdef CF_EMSCRIPTEN
 		more_on_emscripten = 4;
 	#endif
 		cs_error_t err = cs_init(NULL, 44100, 1024 * more_on_emscripten, NULL);
 		if (err == CUTE_SOUND_ERROR_NONE) {
-	#ifndef CUTE_EMSCRIPTEN
+	#ifndef CF_EMSCRIPTEN
 			cs_spawn_mix_thread();
 			app->spawned_mix_thread = true;
-	#endif // CUTE_EMSCRIPTEN
+	#endif // CF_EMSCRIPTEN
+			app->audio_needs_updates = true;
 		} else {
-			CUTE_ASSERT(false);
+			CF_Result result;
+			result.code = -1;
+			result.details = cs_error_as_string(err);
+			return result;
 		}
 	}
 
@@ -325,11 +331,15 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 
 	CF_Result err = cf_fs_init(argv0);
 	if (cf_is_error(err)) {
-		CUTE_ASSERT(0);
+		CF_ASSERT(0);
 	} else if (!(options & APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT)) {
 		// Put the base directory (the path to the exe) onto the file system search path.
 		cf_fs_mount(cf_fs_get_base_directory(), "", true);
 	}
+
+	// Initialize a default ECS world.
+	app->world = cf_make_world();
+	app->worlds.add(app->world);
 
 	return cf_result_success();
 }
@@ -343,6 +353,7 @@ void cf_destroy_app()
 		app->using_imgui = false;
 	}
 	if (app->gfx_enabled) {
+		sg_end_pass();
 		cf_destroy_draw();
 		cf_destroy_aseprite_cache();
 		cf_destroy_png_cache();
@@ -355,17 +366,23 @@ void cf_destroy_app()
 		cf_destroy_graphics();
 		sg_shutdown();
 		cf_dx11_shutdown();
+		cf_clear_graphics_static_pointers();
+	}
+	// Mainly here to cleanup the default world, but, as a convenience we can just clean them all up.
+	for (int i = 0; i < app->worlds.count(); ++i) {
+		cf_destroy_world(app->worlds[i]);
 	}
 	cs_shutdown();
 	SDL_DestroyWindow(app->window);
 	SDL_Quit();
 	destroy_threadpool(app->threadpool);
 	cs_shutdown();
-	int schema_count = app->entity_parsed_schemas.count();
-	CF_KeyValue** schemas = app->entity_parsed_schemas.items();
-	for (int i = 0; i < schema_count; ++i) cf_kv_destroy(schemas[i]);
+	CF_Image* easy_sprites = app->easy_sprites.items();
+	for (int i = 0; i < app->easy_sprites.count(); ++i) {
+		cf_image_free(&easy_sprites[i]);
+	}
 	app->~CF_App();
-	CUTE_FREE(app);
+	CF_FREE(app);
 	cf_fs_destroy();
 }
 
@@ -374,18 +391,18 @@ bool cf_app_is_running()
 	return app->running;
 }
 
-void cf_app_stop_running()
+void cf_app_signal_shutdown()
 {
 	app->running = 0;
 }
 
-static void s_on_update()
+static void s_on_update(void* udata)
 {
 	cf_pump_input_msgs();
-	if (app->audio_system) {
+	if (app->audio_needs_updates) {
 		cs_update(DELTA_TIME);
 	}
-	if (app->user_on_update) app->user_on_update();
+	if (app->user_on_update) app->user_on_update(udata);
 }
 
 void cf_app_update(CF_OnUpdateFn* on_update)
@@ -409,7 +426,7 @@ static void s_imgui_present()
 	}
 }
 
-int cf_app_present()
+int cf_app_draw_onto_screen()
 {
 	// Update lifteime of all text effects.
 	const char** keys = app->text_effect_states.keys();
@@ -451,6 +468,7 @@ int cf_app_present()
 	// Flip to screen.
 	cf_commit();
 	cf_dx11_present(app->vsync);
+	cf_metal_present(app->vsync);
 	if (app->options & APP_OPTIONS_OPENGL_CONTEXT) {
 		SDL_GL_SwapWindow(app->window);
 	}
@@ -466,6 +484,16 @@ void cf_app_get_size(int* w, int* h)
 {
 	if (w) *w = app->w;
 	if (h) *h = app->h;
+}
+
+int cf_app_get_width()
+{
+	return app->w;
+}
+
+int cf_app_get_height()
+{
+	return app->h;
 }
 
 void cf_app_set_size(int w, int h)
@@ -519,12 +547,12 @@ bool cf_app_was_maximized()
 	return app->window_state.maximized && !app->window_state_prev.maximized;
 }
 
-bool cf_app_is_minimized()
+bool cf_app_minimized()
 {
 	return app->window_state.minimized;
 }
 
-bool cf_app_is_maximized()
+bool cf_app_maximized()
 {
 	return app->window_state.maximized;
 }
@@ -554,7 +582,7 @@ CF_Canvas cf_app_get_canvas()
 	return app->offscreen_canvas;
 }
 
-void cf_app_resize_canvas(int w, int h)
+void cf_app_set_canvas_size(int w, int h)
 {
 	unapply_canvas();
 	s_canvas(w, h);
@@ -568,6 +596,16 @@ int cf_app_get_canvas_width()
 int cf_app_get_canvas_height()
 {
 	return app->canvas_h;
+}
+
+void cf_app_set_vsync(bool true_turn_on_vsync)
+{
+	app->vsync = true_turn_on_vsync;
+}
+
+bool cf_app_get_vsync()
+{
+	return app->vsync;
 }
 
 ImGuiContext* cf_app_init_imgui(bool no_default_font)

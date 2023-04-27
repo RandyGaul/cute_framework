@@ -1,0 +1,11 @@
+- [spcompact](/path/spcompact.md)
+- [spdir_of](/path/spdir_of.md)
+- [spext](/path/spext.md)
+- [spext_equ](/path/spext_equ.md)
+- [spfname](/path/spfname.md)
+- [spfname_no_ext](/path/spfname_no_ext.md)
+- [spnorm](/path/spnorm.md)
+- [sppop](/path/sppop.md)
+- [sppopn](/path/sppopn.md)
+- [sptop_of](/path/sptop_of.md)
+

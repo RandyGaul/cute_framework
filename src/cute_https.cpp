@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2021 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,10 +19,14 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifndef CF_NO_HTTPS
+
 #include <cute_https.h>
 #include <cute_alloc.h>
 #include <cute_c_runtime.h>
 #include <cute_array.h>
+
+#include <internal/cute_alloc_internal.h>
 
 #include <mbedtls/build_info.h>
 #include <mbedtls/platform.h>
@@ -35,11 +39,11 @@
 
 #include <SDL.h>
 
-#if defined(CUTE_WINDOWS)
+#if defined(CF_WINDOWS)
 #	include <windows.h>
 #	include <wincrypt.h>
 #	pragma comment(lib, "crypt32.lib")
-#elif defined(CUTE_MACOSX)
+#elif defined(CF_APPLE)
 #	include <Security/Security.h>
 #endif
 
@@ -67,7 +71,7 @@ typedef struct cf_internal_https_response_t
 	int transfer_encoding_flags;
 } cf_internal_https_response_t;
 
-#ifndef CUTE_EMSCRIPTEN
+#ifndef CF_EMSCRIPTEN
 
 struct cf_https_decoder_t;
 
@@ -109,7 +113,7 @@ struct cf_https_decoder_t
 
 	bool advance(size_t size)
 	{
-		CUTE_ASSERT(buffer_offset + size <= buffer.count());
+		CF_ASSERT(buffer_offset + size <= buffer.count());
 		buffer_offset += size;
 		return buffer_offset == buffer.count();
 	}
@@ -139,7 +143,7 @@ struct CF_Https
 
 CF_Https* cf_https_make()
 {
-	CF_Https* https = CUTE_NEW(CF_Https);
+	CF_Https* https = CF_NEW(CF_Https);
 
 	mbedtls_net_init(&https->server_fd);
 	mbedtls_ssl_init(&https->ssl);
@@ -150,9 +154,9 @@ CF_Https* cf_https_make()
 
 	const char* seed = "Cute Framework";
 
-	if (mbedtls_ctr_drbg_seed(&https->ctr_drbg, mbedtls_entropy_func, &https->entropy, (const unsigned char*)seed, CUTE_STRLEN(seed))) {
+	if (mbedtls_ctr_drbg_seed(&https->ctr_drbg, mbedtls_entropy_func, &https->entropy, (const unsigned char*)seed, CF_STRLEN(seed))) {
 		https->~CF_Https();
-		CUTE_FREE(https);
+		CF_FREE(https);
 		return NULL;
 	}
 
@@ -168,7 +172,7 @@ void cf_https_destroy(CF_Https* https)
 	mbedtls_ctr_drbg_free(&https->ctr_drbg);
 	mbedtls_entropy_free(&https->entropy);
 	https->~CF_Https();
-	CUTE_FREE(https);
+	CF_FREE(https);
 }
 
 static void s_tls_log(void* param, int debug_level, const char* file_name, int line_number, const char*  message)
@@ -178,7 +182,7 @@ static void s_tls_log(void* param, int debug_level, const char* file_name, int l
 
 static CF_Result s_load_platform_certs(CF_Https* https)
 {
-#if defined(CUTE_WINDOWS)
+#if defined(CF_WINDOWS)
 
 	HCERTSTORE hCertStore;
 	PCCERT_CONTEXT pCertContext = NULL;
@@ -194,7 +198,7 @@ static CF_Result s_load_platform_certs(CF_Https* https)
 	CertFreeCertificateContext(pCertContext);
 	CertCloseStore(hCertStore, 0);
 
-#elif defined(CUTE_MACOSX)
+#elif defined(CF_MACOS)
 
 	SecKeychainRef keychain_ref;
 	CFMutableDictionaryRef search_settings_ref;
@@ -226,7 +230,7 @@ static CF_Result s_load_platform_certs(CF_Https* https)
 
 	CFRelease(keychain_ref);
 
-#elif defined(CUTE_LINUX)
+#elif defined(CF_IOS) || defined(CF_LINUX)
 
 	if (mbedtls_x509_crt_parse_path(&https->cacert, "/etc/ssl/certs/") < 0) {
 		return cf_result_error("mbedtls_x509_crt_parse_path failed.");
@@ -234,7 +238,7 @@ static CF_Result s_load_platform_certs(CF_Https* https)
 
 #else
 
-	// TODO - Android, iOS (probably the same as CUTE_MACOSX section).
+	// TODO - Android, iOS (probably the same as CF_MACOS section).
 
 #	error Platform not yet supported for https.
 
@@ -317,7 +321,7 @@ CF_Https* cf_https_get(const char* host, const char* port, const char* uri, CF_R
 		"GET %s HTTP/1.1\r\n"
 		"Host: %s\r\n"
 		"\r\n";
-	size_t len = 64 + CUTE_STRLEN(uri) + CUTE_STRLEN(host);
+	size_t len = 64 + CF_STRLEN(uri) + CF_STRLEN(host);
 	https->request.ensure_count((int)len);
 	sprintf(https->request.data(), fmt, uri, https->host);
 	https->request_sent = false;
@@ -341,13 +345,13 @@ CF_Https* cf_https_post(const char* host, const char* port, const char* uri, con
 		"Host: %s\r\n"
 		"Content-Length: %zu\r\n"
 		"\r\n";
-	size_t len = 64 + CUTE_STRLEN(uri) + CUTE_STRLEN(host);
+	size_t len = 64 + CF_STRLEN(uri) + CF_STRLEN(host);
 	https->request.ensure_count((int)len);
 	sprintf(https->request.data(), fmt, uri, https->host, size);
 	https->request_sent = false;
-	len = CUTE_STRLEN(https->request.data());
+	len = CF_STRLEN(https->request.data());
 	https->request.ensure_count((int)(len + size));
-	CUTE_MEMCPY(https->request.data() + len, data, size);
+	CF_MEMCPY(https->request.data() + len, data, size);
 	if (err_out) *err_out = cf_result_success();
 
 	return https;
@@ -384,7 +388,7 @@ static bool s_crlf(cf_https_decoder_t* h, const char* data, size_t size, size_t*
 	const char* in = data;
 	const char* end = data + size;
 	while (in != end) {
-		const char* found_lf = (const char*)CUTE_MEMCHR(in, '\n', end - in);
+		const char* found_lf = (const char*)CF_MEMCHR(in, '\n', end - in);
 		if (!found_lf) {
 			break;
 		}
@@ -422,7 +426,7 @@ static bool s_get_line(cf_https_decoder_t* h, const char* data, size_t size, siz
 	int old_count = h->buffer.count();
 	h->buffer.ensure_count((int)(h->buffer.count() + *bytes_read));
 	void* buffer_data = h->buffer.data() + old_count;
-	CUTE_MEMCPY(buffer_data, data, *bytes_read);
+	CF_MEMCPY(buffer_data, data, *bytes_read);
 
 	if (found_crlf || h->process_line == s_no_chunks) {
 		return h->process_line(h);
@@ -434,7 +438,7 @@ static bool s_get_line(cf_https_decoder_t* h, const char* data, size_t size, siz
 static bool s_no_chunks(cf_https_decoder_t* h)
 {
 	size_t bytes_read = 0;
-	CUTE_ASSERT(h->content_processed < h->content_length);
+	CF_ASSERT(h->content_processed < h->content_length);
 	h->content_processed = h->buffer.count();
 	bool finished = h->content_processed == h->content_length;
 	return finished;
@@ -443,7 +447,7 @@ static bool s_no_chunks(cf_https_decoder_t* h)
 static bool s_state_chunk(cf_https_decoder_t* h) {
 	// RFC-7230 section 4.1 Chunked Transfer Encoding
 	size_t bytes_read = 0;
-	CUTE_ASSERT(h->chunk_processed < h->chunk_size);
+	CF_ASSERT(h->chunk_processed < h->chunk_size);
 	h->chunk_processed = h->buffer.count() - 2;
 	bool finished = h->chunk_processed == h->chunk_size;
 	if (finished) {
@@ -456,7 +460,7 @@ static bool s_state_chunk(cf_https_decoder_t* h) {
 static bool s_int(CF_HttpsString str, int radix, uint64_t* out)
 {
 	char* ptr;
-	uint64_t number = CUTE_STRTOLL(str.ptr, &ptr, radix);
+	uint64_t number = CF_STRTOLL(str.ptr, &ptr, radix);
 	*out = number;
 	return str.ptr == ptr;
 }
@@ -464,7 +468,7 @@ static bool s_int(CF_HttpsString str, int radix, uint64_t* out)
 static bool s_read_int(cf_https_decoder_t* h, int radix, uint64_t* out)
 {
 	char* ptr;
-	uint64_t number = CUTE_STRTOLL(h->data(), &ptr, radix);
+	uint64_t number = CF_STRTOLL(h->data(), &ptr, radix);
 	*out = number;
 	if (ptr == h->data()) {
 		h->err = cf_result_error("Failed to parse number.");
@@ -678,7 +682,7 @@ size_t cf_https_process(CF_Https* https)
 	if (!https->request_sent) {
 		const char* request = https->request.data();
 		int result;
-		while ((result = mbedtls_ssl_write(&https->ssl, (uint8_t*)request, CUTE_STRLEN(request))) <= 0) {
+		while ((result = mbedtls_ssl_write(&https->ssl, (uint8_t*)request, CF_STRLEN(request))) <= 0) {
 			if (result != MBEDTLS_ERR_SSL_WANT_READ && result != MBEDTLS_ERR_SSL_WANT_WRITE) {
 				https->state = CF_HTTPS_STATE_FAILED;
 				return https->bytes_read;
@@ -715,7 +719,7 @@ size_t cf_https_process(CF_Https* https)
 	return https->bytes_read;
 }
 
-#else // CUTE_EMSCRIPTEN
+#else // CF_EMSCRIPTEN
 
 struct CF_Https
 {
@@ -747,7 +751,7 @@ EMSCRIPTEN_KEEPALIVE void s_response_code(void* https_ptr, int code)
 
 static char* s_trim(char* s)
 {
-	size_t i = CUTE_STRLEN(s);
+	size_t i = CF_STRLEN(s);
 	while (i && *s == ' ') {
 		++s;
 		--i;
@@ -762,34 +766,34 @@ static char* s_trim(char* s)
 static const char** s_unpack_headers(const char* headers)
 {
 	size_t count = 0;
-	for (const char* pos = CUTE_STRCHR(headers, '\n'); pos; pos = CUTE_STRCHR(pos + 1, '\n')) {
+	for (const char* pos = CF_STRCHR(headers, '\n'); pos; pos = CF_STRCHR(pos + 1, '\n')) {
 		count++;
 	}
 
-	char **unpacked_headers = (char**)CUTE_ALLOC(sizeof(char*) * ((count * 2) + 1), NULL);
+	char **unpacked_headers = (char**)CF_ALLOC(sizeof(char*) * ((count * 2) + 1), NULL);
 	unpacked_headers[count * 2] = NULL;
 
 	const char* row_start = headers;
-	const char* row_end = CUTE_STRCHR(row_start, '\n');
+	const char* row_end = CF_STRCHR(row_start, '\n');
 	for (size_t i = 0; row_end; i += 2) {
-		const char* split = CUTE_STRCHR(row_start, ':');
+		const char* split = CF_STRCHR(row_start, ':');
 		size_t key_size = (size_t)split - (size_t)row_start;
-		char* key = (char*)CUTE_ALLOC(key_size + 1, NULL);
-		CUTE_STRNCPY(key, row_start, key_size);
+		char* key = (char*)CF_ALLOC(key_size + 1, NULL);
+		CF_STRNCPY(key, row_start, key_size);
 		key[key_size] = '\0';
 
 		size_t content_size = (size_t)row_end - (size_t)split - 1;
-		char* value = (char*)CUTE_ALLOC(content_size + 1, NULL);
-		CUTE_STRNCPY(value, split + 1, content_size);
+		char* value = (char*)CF_ALLOC(content_size + 1, NULL);
+		CF_STRNCPY(value, split + 1, content_size);
 		value[content_size] = '\0';
 
-		unpacked_headers[i] = CUTE_STRDUP(s_trim(key));
-		unpacked_headers[i + 1] = CUTE_STRDUP(s_trim(value));
-		CUTE_FREE(key, NULL);
-		CUTE_FREE(value, NULL);
+		unpacked_headers[i] = CF_STRDUP(s_trim(key));
+		unpacked_headers[i + 1] = CF_STRDUP(s_trim(value));
+		CF_FREE(key, NULL);
+		CF_FREE(value, NULL);
 
 		row_start = row_end + 1;
-		row_end = CUTE_STRCHR(row_start, '\n');
+		row_end = CF_STRCHR(row_start, '\n');
 	}
 
 	return (const char**)unpacked_headers;
@@ -798,8 +802,8 @@ static const char** s_unpack_headers(const char* headers)
 static void s_free_unpacked_headers(const char** unpacked_headers)
 {
 	for (int i = 0; unpacked_headers[i]; ++i)
-		CUTE_FREE((void*)unpacked_headers[i], NULL);
-	CUTE_FREE((void*)unpacked_headers, NULL);
+		CF_FREE((void*)unpacked_headers[i], NULL);
+	CF_FREE((void*)unpacked_headers, NULL);
 }
 
 EMSCRIPTEN_KEEPALIVE void s_response_headers(void* https_ptr, const char* headers)
@@ -814,9 +818,9 @@ EMSCRIPTEN_KEEPALIVE void s_response_headers(void* https_ptr, const char* header
 		const char* header_content = unpacked_headers[i + 1];
 		CF_HttpsHeader header;
 		header.name.ptr = header_name;
-		header.name.len = CUTE_STRLEN(header_name);
+		header.name.len = CF_STRLEN(header_name);
 		header.content.ptr = header_content;
-		header.content.len = CUTE_STRLEN(header_content);
+		header.content.len = CF_STRLEN(header_content);
 		https->response.headers.add(header);
 	}
 }
@@ -918,7 +922,7 @@ EM_JS(void, s_js_post, (void* https_ptr, const char* c_host, const char* c_uri, 
 
 CF_Https* cf_https_get(const char* host, const char* port, const char* uri, CF_Result* err, bool verify_cert)
 {
-	CF_Https* https = CUTE_NEW(CF_Https, NULL);
+	CF_Https* https = CF_NEW(CF_Https, NULL);
 	https->host = host;
 	https->uri = uri;
 	// `port` and `verify_cert` are not used with emscripten.
@@ -928,7 +932,7 @@ CF_Https* cf_https_get(const char* host, const char* port, const char* uri, CF_R
 
 CF_Https* cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, CF_Result* err, bool verify_cert)
 {
-	CF_Https* https = CUTE_NEW(CF_Https, NULL);
+	CF_Https* https = CF_NEW(CF_Https, NULL);
 	https->host = host;
 	https->uri = uri;
 	https->data = data;
@@ -943,7 +947,7 @@ void cf_https_destroy(CF_Https* https)
 	s_free_unpacked_headers(https->unpacked_headers);
 	free((void*)https->response.content);
 	https->~CF_Https();
-	CUTE_FREE(https, NULL);
+	CF_FREE(https, NULL);
 }
 
 CF_HttpsState cf_https_state(CF_Https* https)
@@ -993,13 +997,13 @@ CF_HttpsResponse cf_https_response(CF_Https* https)
 	return true;
 }
 
-#endif // CUTE_EMSCRIPTEN
+#endif // CF_EMSCRIPTEN
 
 namespace Cute
 {
 const https_response_t* https_response(CF_Https* https)
 {
-	CUTE_ASSERT(sizeof(cf_internal_https_response_t) == sizeof(https_response_t));
+	CF_ASSERT(sizeof(cf_internal_https_response_t) == sizeof(https_response_t));
 
 	cf_internal_https_response_t* response_interal;
 	if (!cf_internal_https_response(https, &response_interal)) { return NULL; }
@@ -1008,3 +1012,5 @@ const https_response_t* https_response(CF_Https* https)
 }
 
 }
+
+#endif // CF_NO_HTTPS

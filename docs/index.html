@@ -1,63 +1,90 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>cute_framework</title>
-  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-  <meta name="description" content="Description">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
-  <link rel="stylesheet" href="mariana.css">
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+	<meta name="description" content="">
+	 <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1.0, shrink-to-fit=no, viewport-fit=cover">
+	<title>Cute Framework</title>
+
+	<link rel="stylesheet" media="(prefers-color-scheme: dark)" href="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple-dark.css">
+	<link rel="stylesheet" media="(prefers-color-scheme: light)" href="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/css/theme-simple.css">
+
+	<!-- Custom theme styles -->
+	<style>
+	:root {
+		--theme-color: #f0787e;
+		--cover-background-color: #c0f0e0;
+		--cover-max-width: ;
+		--cover-blockquote-color: ;
+
+		--cover-button-background: var(--theme-color);
+		--cover-button-color: #fff;
+		--cover-background-color: var(--base-background-color);
+
+		--cover-button-primary-background                  : var(--cover_button-background);
+		--cover-button-primary-background--hover           : var(--cover_button-background--hover);
+		--cover-button-primary-border                      : var(--cover_button-border);
+		--cover-button-primary-border--hover               : var(--cover_button-border--hover);
+		--cover-button-primary-box-shadow                  : var(--cover_button-box-shadow);
+		--cover-button-primary-box-shadow--hover           : var(--cover_button-box-shadow--hover );
+		--cover-button-primary-color                       : var(--cover_button-color);
+		--cover-button-primary-color--hover                : var(--cover_button-color--hover);
+		--cover-button-primary-text-decoration             : var(--cover_button-decoration);
+		--cover-button-primary-text-decoration--hover      : var(--cover_button-decoration--hover);
+		--cover-button-primary-text-decoration-color       : var(--cover_button-decoration-color);
+		--cover-button-primary-text-decoration-color--hover: var(--cover_button-decoration-color--hover);
+	}
+	</style>
 </head>
 <body>
-  <div id="app"></div>
-  <script>
-    window.$docsify = {
-      name: 'cute_framework',
-      repo: 'https://github.com/RandyGaul/cute_framework',
-      homepage: 'README.md',
-      loadSidebar: '_sidebar.md',
-      loadNavbar: '_navbar.md',
-      mergeNavbar: true,
-      auto2top: true,
-      maxLevel: 3,
-      subMaxLevel: 3,
-      alias: {
-        '/.*/_sidebar.md': '/_sidebar.md',
-        '/.*/_navbar.md': '/_navbar.md'
-      },
-      search: {
-        maxAge: 86400000, 
-        paths: 'auto',
-        placeholder: {
-          '/': 'Type to search'
-        },
-        noData: {
-          '/': 'No Results'
-        },
-        depth: 6,
-        namespace: 'cute_framework',
-        hideOtherSidebarContent: false
-      },
-      plugins: [
-        function (hook, vm) {
-          hook.beforeEach(function (html) {
-            html = html.replace(
-              /https:\/\/github.com\/RandyGaul\/cute_framework\/(blob|tree)\/master\/docs\//gi,
-              '/'
-              )
-            return html
-          })
-        }
-      ]
-    }
-  </script>
-  <!-- Docsify v4 -->
-  <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
-  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/zoom-image.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-c.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-cpp.min.js"></script>
-  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-json.min.js"></script>
+	<div id="app"></div>
+	<script>
+		window.$docsify = {
+			// GENERAL
+			// -----------------------------------------------------------------
+			name         : 'Cute Framework',
+			repo         : 'https://github.com/RandyGaul/cute_framework',
+			homepage     : 'README.md',
+			coverpage    : 'coverpage.md',
+			homepage     : 'introduction.md',
+			loadSidebar  : true,
+			externalLinkTarget: '_self',
+
+			// NAVIGATION
+			// -----------------------------------------------------------------
+			auto2top     : true,
+			maxLevel     : 3,
+			subMaxLevel  : 2,
+			search: {
+				depth        : 3,
+				noData       : 'No results!',
+				placeholder  : 'Search ...'
+			},
+
+			// PAGINATION
+			// -----------------------------------------------------------------
+			pagination: {
+				crossChapter     : true,
+				crossChapterText : true,
+			},
+		}
+	</script>
+	<!-- Docsify v4 -->
+	<script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/docsify.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/docsify-themeable@0/dist/js/docsify-themeable.min.js"></script>
+
+	<script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/plugins/search.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/docsify@4/lib/plugins/zoom-image.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/docsify-pagination@2/dist/docsify-pagination.min.js"></script>
+
+	<script src="https://unpkg.com/docsify-copy-code@2"></script>
+	<script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-bat.min.js"></script>
+	<script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+	<script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-c.min.js"></script>
+	<script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-cmake.min.js"></script>
+	<script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-cpp.min.js"></script>
+	<script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-json.min.js"></script>
+	<script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-glsl.min.js"></script>
 </body>
 </html>

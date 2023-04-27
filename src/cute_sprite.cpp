@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,42 +19,58 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <cute_sprite.h>
-#include <cute_aseprite_cache.h>
-#include <cute_window.h>
-#include <cute_draw.h>
+#include "cute_sprite.h"
+#include "cute_draw.h"
+#include "cute_image.h"
 
 #include <internal/cute_app_internal.h>
-#include <internal/cute_png_cache_internal.h>
+#include <internal/cute_aseprite_cache_internal.h>
+#include <internal/cute_alloc_internal.h>
 
-CF_Sprite cf_easy_make_sprite(const char* png_path)
+static CF_Sprite s_insert(CF_Image img)
 {
-	const CF_Animation** table = cf_png_cache_get_animation_table(png_path);
-	if (!table) {
-		CF_Png png;
-		char buf[1024];
-		CF_Result err = cf_png_cache_load(png_path, &png);
-		if (cf_is_error(err)) {
-			sprintf(buf, "Unable to load sprite at path \"%s\".\n", png_path);
-			cf_message_box(CF_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
-			return cf_sprite_defaults();
-		}
+	uint64_t id = app->easy_sprite_id_gen++;
+	app->easy_sprites.insert(id, img);
 
-		CF_Png pngs[] = { png };
-		float delays[] = { 1.0f };
-		const CF_Animation* anim = cf_make_png_cache_animation(png_path, pngs, CUTE_ARRAY_SIZE(pngs), delays, CUTE_ARRAY_SIZE(delays));
-		const CF_Animation* anims[] = { anim };
-		table = cf_make_png_cache_animation_table(png_path, anims, CUTE_ARRAY_SIZE(anims));
-	}
+	CF_Sprite sprite = cf_sprite_defaults();
+	sprite.name = "easy_sprite";
+	sprite.w = img.w;
+	sprite.h = img.h;
+	sprite.easy_sprite_id = id;
 
-	CF_Sprite s = cf_make_png_cache_sprite(png_path, table);
-	return s;
+	return sprite;
 }
 
-void cf_easy_sprite_unload(CF_Sprite sprite)
+CF_Sprite cf_make_easy_sprite_from_png(const char* png_path, CF_Result* result_out)
 {
-	CF_Png png = cf_png_cache_get_png(sprite.animations[0]->frames[0].id);
-	cf_png_cache_unload(png);
+	CF_Image img;
+	CF_Result result = cf_image_load_png(png_path, &img);
+	if (cf_is_error(result)) {
+		if (result_out) *result_out = result;
+		return cf_sprite_defaults();
+	}
+	cf_image_premultiply(&img);
+	return s_insert(img);
+}
+
+CF_Sprite cf_make_easy_sprite_from_pixels(const CF_Pixel* pixels, int w, int h)
+{
+	CF_Image img;
+	img.w = w;
+	img.h = h;
+	img.pix = (CF_Pixel*)CF_ALLOC(sizeof(CF_Pixel) * w * h);
+	CF_MEMCPY(img.pix, pixels, sizeof(CF_Pixel) * w * h);
+	return s_insert(img);
+}
+
+void cf_easy_sprite_update_pixels(CF_Sprite* sprite, const CF_Pixel* pixels)
+{
+	CF_Image* img = app->easy_sprites.try_find(sprite->easy_sprite_id);
+	if (img) {
+		CF_MEMCPY(img->pix, pixels, sizeof(CF_Pixel) * img->w * img->h);
+		spritebatch_t* sb = cf_get_draw_sb();
+		spritebatch_invalidate(sb, sprite->easy_sprite_id);
+	}
 }
 
 CF_Sprite cf_make_sprite(const char* aseprite_path)

@@ -1,0 +1,26 @@
+[](../header.md ':include')
+
+# cf_destroy_mesh
+
+Category: [graphics](/api_reference?id=graphics)  
+GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
+---
+
+Frees up a [CF_Mesh](/graphics/cf_mesh.md) previously created with [cf_make_mesh](/graphics/cf_make_mesh.md).
+
+```cpp
+void cf_destroy_mesh(CF_Mesh mesh);
+```
+
+Parameters | Description
+--- | ---
+mesh | The mesh.
+
+## Related Pages
+
+[CF_Mesh](/graphics/cf_mesh.md)  
+[cf_make_mesh](/graphics/cf_make_mesh.md)  
+[cf_mesh_update_index_data](/graphics/cf_mesh_update_index_data.md)  
+[cf_mesh_set_attributes](/graphics/cf_mesh_set_attributes.md)  
+[cf_mesh_update_vertex_data](/graphics/cf_mesh_update_vertex_data.md)  
+[cf_mesh_update_instance_data](/graphics/cf_mesh_update_instance_data.md)  

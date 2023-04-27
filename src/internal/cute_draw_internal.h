@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_DRAW_INTERNAL_H
-#define CUTE_DRAW_INTERNAL_H
+#ifndef CF_DRAW_INTERNAL_H
+#define CF_DRAW_INTERNAL_H
 
 #include <cute_array.h>
 #include <cute_math.h>
@@ -92,7 +92,7 @@ struct CF_Draw
 	CF_Filter filter = CF_FILTER_NEAREST;
 	Cute::Array<CF_Color> colors = { cf_color_white() };
 	Cute::Array<CF_Color> tints = { cf_color_grey() };
-	Cute::Array<bool> antialias = { false };
+	Cute::Array<bool> antialias = { true };
 	Cute::Array<CF_RenderState> render_states;
 	Cute::Array<CF_Rect> scissors = { { -1, -1, 0, 0 } };
 	Cute::Array<CF_Rect> viewports = { { -1, -1, 0, 0 } };
@@ -118,18 +118,19 @@ void cf_destroy_draw();
 void cf_load_default_font();
 
 // We slice up a 64-bit int into lo + hi ranges to map where we can fetch pixels
-// from. This slices up the 64-bit range into 16 unique ranges, though we're only
-// using three of those ranges for now. The ranges are inclusive.
-#define CUTE_IMAGE_ID_RANGE_SIZE  ((1ULL << 60) - 1)
-#define CUTE_ASEPRITE_ID_RANGE_LO (0ULL)
-#define CUTE_ASEPRITE_ID_RANGE_HI (CUTE_ASEPRITE_ID_RANGE_LO + CUTE_IMAGE_ID_RANGE_SIZE)
-#define CUTE_PNG_ID_RANGE_LO      (CUTE_ASEPRITE_ID_RANGE_HI + 1)
-#define CUTE_PNG_ID_RANGE_HI      (CUTE_PNG_ID_RANGE_LO      + CUTE_IMAGE_ID_RANGE_SIZE)
-#define CUTE_FONT_ID_RANGE_LO     (CUTE_PNG_ID_RANGE_HI      + 1)
-#define CUTE_FONT_ID_RANGE_HI     (CUTE_FONT_ID_RANGE_LO     + CUTE_IMAGE_ID_RANGE_SIZE)
+// from. This slices up the 64-bit range into 16 unique range. The ranges are inclusive.
+#define CF_IMAGE_ID_RANGE_SIZE   ((1ULL << 60) - 1)
+#define CF_ASEPRITE_ID_RANGE_LO  (0ULL)
+#define CF_ASEPRITE_ID_RANGE_HI  (CF_ASEPRITE_ID_RANGE_LO + CF_IMAGE_ID_RANGE_SIZE)
+#define CF_PNG_ID_RANGE_LO       (CF_ASEPRITE_ID_RANGE_HI + 1)
+#define CF_PNG_ID_RANGE_HI       (CF_PNG_ID_RANGE_LO      + CF_IMAGE_ID_RANGE_SIZE)
+#define CF_FONT_ID_RANGE_LO      (CF_PNG_ID_RANGE_HI      + 1)
+#define CF_FONT_ID_RANGE_HI      (CF_FONT_ID_RANGE_LO     + CF_IMAGE_ID_RANGE_SIZE)
+#define CF_EASY_ID_RANGE_LO      (CF_FONT_ID_RANGE_HI     + 1)
+#define CF_EASY_ID_RANGE_HI      (CF_EASY_ID_RANGE_LO     + CF_IMAGE_ID_RANGE_SIZE)
 
 SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata);
 void cf_destroy_texture_handle(SPRITEBATCH_U64 texture_id, void* udata);
 spritebatch_t* cf_get_draw_sb();
 
-#endif // CUTE_DRAW_INTERNAL_H
+#endif // CF_DRAW_INTERNAL_H

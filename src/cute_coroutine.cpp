@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -22,6 +22,7 @@
 #include <cute_coroutine.h>
 #include <cute_c_runtime.h>
 
+#include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
 
 #define MINICORO_IMPL
@@ -29,9 +30,6 @@
 
 struct CF_Coroutine
 {
-	float dt = 0;
-	bool waiting = false;
-	float seconds_left = 0;
 	mco_coro* mco;
 	CF_CoroutineFn* fn = NULL;
 	void* udata = NULL;
@@ -46,11 +44,11 @@ static void s_co_fn(mco_coro* mco)
 CF_Coroutine* cf_make_coroutine(CF_CoroutineFn* fn, int stack_size, void* udata)
 {
 	mco_desc desc = mco_desc_init(s_co_fn, (size_t)stack_size);
-	CF_Coroutine* co = CUTE_NEW(CF_Coroutine);
+	CF_Coroutine* co = CF_NEW(CF_Coroutine);
 	desc.user_data = (void*)co;
 	mco_coro* mco;
 	mco_result res = mco_create(&mco, &desc);
-	CUTE_ASSERT(res == MCO_SUCCESS);
+	CF_ASSERT(res == MCO_SUCCESS);
 	co->mco = mco;
 	co->fn = fn;
 	co->udata = udata;
@@ -60,26 +58,14 @@ CF_Coroutine* cf_make_coroutine(CF_CoroutineFn* fn, int stack_size, void* udata)
 void cf_destroy_coroutine(CF_Coroutine* co)
 {
 	mco_state state = mco_status(co->mco);
-	CUTE_ASSERT(state == MCO_DEAD || state == MCO_SUSPENDED);
+	CF_ASSERT(state == MCO_DEAD || state == MCO_SUSPENDED);
 	mco_result res = mco_destroy(co->mco);
-	CUTE_ASSERT(res == MCO_SUCCESS);
-	CUTE_FREE(co);
+	CF_ASSERT(res == MCO_SUCCESS);
+	CF_FREE(co);
 }
 
-CF_Result cf_coroutine_resume(CF_Coroutine* co, float dt)
+CF_Result cf_coroutine_resume(CF_Coroutine* co)
 {
-	co->dt = dt;
-
-	if (co->waiting) {
-		co->seconds_left -= dt;
-		if (co->seconds_left <= 0) {
-			co->waiting = false;
-			co->seconds_left = 0;
-		} else {
-			return cf_result_success();
-		}
-	}
-
 	mco_result res = mco_resume(co->mco);
 	if (res != MCO_SUCCESS) {
 		return cf_result_error(mco_result_description(res));
@@ -88,26 +74,14 @@ CF_Result cf_coroutine_resume(CF_Coroutine* co, float dt)
 	}
 }
 
-float cf_coroutine_yield(CF_Coroutine* co, CF_Result* err)
+CF_Result cf_coroutine_yield(CF_Coroutine* co)
 {
 	mco_result res = mco_yield(co->mco);
-	if (err) {
-		if (res != MCO_SUCCESS) {
-			*err = cf_result_error(mco_result_description(res));
-		} else {
-			*err = cf_result_success();
-		}
+	if (res != MCO_SUCCESS) {
+		return cf_result_error(mco_result_description(res));
+	} else {
+		return cf_result_success();
 	}
-	return co->dt;
-}
-
-CF_Result cf_coroutine_wait(CF_Coroutine* co, float seconds)
-{
-	co->waiting = true;
-	co->seconds_left = seconds;
-	CF_Result err;
-	cf_coroutine_yield(co, &err);
-	return err;
 }
 
 CF_CoroutineState cf_coroutine_state(CF_Coroutine* co)

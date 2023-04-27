@@ -1,0 +1,26 @@
+[](../header.md ':include')
+
+# cf_joypad_button_just_released
+
+Category: [input](/api_reference?id=input)  
+GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
+---
+
+Returns true if the button was just released.
+
+```cpp
+bool cf_joypad_button_just_released(CF_Joypad* joypad, CF_JoypadButton button);
+```
+
+Parameters | Description
+--- | ---
+joypad | The joypad.
+button | The button.
+
+## Related Pages
+
+[CF_Joypad](/input/cf_joypad.md)  
+[CF_JoypadButton](/input/cf_joypadbutton.md)  
+[cf_joypad_button_down](/input/cf_joypad_button_down.md)  
+[cf_joypad_button_just_pressed](/input/cf_joypad_button_just_pressed.md)  
+[cf_joypad_axis](/input/cf_joypad_axis.md)  

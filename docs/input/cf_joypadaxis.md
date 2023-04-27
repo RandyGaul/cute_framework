@@ -1,0 +1,28 @@
+[](../header.md ':include')
+
+# CF_JoypadAxis
+
+Category: [input](/api_reference?id=input)  
+GitHub: [cute_joypad.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_joypad.h)  
+---
+
+Various axis actions on a [CF_Joypad](/input/cf_joypad.md).
+
+## Values
+
+Enum | Description
+--- | ---
+JOYPAD_AXIS_INVALID | (null)
+JOYPAD_AXIS_LEFTX | (null)
+JOYPAD_AXIS_LEFTY | (null)
+JOYPAD_AXIS_RIGHTX | (null)
+JOYPAD_AXIS_RIGHTY | (null)
+JOYPAD_AXIS_TRIGGERLEFT | (null)
+JOYPAD_AXIS_TRIGGERRIGHT | (null)
+JOYPAD_AXIS_COUNT | (null)
+
+## Related Pages
+
+[cf_joypad_axis](/input/cf_joypad_axis.md)  
+[cf_joypad_axis_to_string](/input/cf_joypad_axis_to_string.md)  
+[CF_Joypad](/input/cf_joypad.md)  

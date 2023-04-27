@@ -15,6 +15,7 @@
 #include "./imgui/misc/freetype/imgui_freetype.h"
 #endif
 #include "./imgui/imgui_internal.h"
+#define CIMGUI_DEFINE_ENUMS_AND_STRUCTS
 #include "cimgui.h"
 
 

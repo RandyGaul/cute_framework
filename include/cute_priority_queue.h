@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,12 +19,12 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_PRIORITY_QUEUE_H
-#define CUTE_PRIORITY_QUEUE_H
+#ifndef CF_PRIORITY_QUEUE_H
+#define CF_PRIORITY_QUEUE_H
 
 #include "cute_defines.h"
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 #include "cute_array.h"
 
@@ -197,6 +197,6 @@ void PriorityQueue<T>::swap(int iA, int iB)
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_PRIORITY_QUEUE_H
+#endif // CF_PRIORITY_QUEUE_H

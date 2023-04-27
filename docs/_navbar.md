@@ -1,5 +1,0 @@
-<!-- navbar -->
-
-* Languages
-
-  * [:uk: English](/)

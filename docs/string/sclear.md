@@ -1,0 +1,28 @@
+[](../header.md ':include')
+
+# sclear
+
+Category: [string](/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
+
+Sets the string size to zero.
+
+```cpp
+#define sclear(s) cf_string_clear(s)
+```
+
+Parameters | Description
+--- | ---
+s | The string. Can be `NULL`.
+
+## Remarks
+
+Does not free up any resources.
+
+## Related Pages
+
+[spush](/string/spush.md)  
+[spop](/string/spop.md)  
+[sfirst](/string/sfirst.md)  
+[slast](/string/slast.md)  

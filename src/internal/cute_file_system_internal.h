@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,21 +19,21 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_FILE_SYSTEM_INTERNAL_H
-#define CUTE_FILE_SYSTEM_INTERNAL_H
+#ifndef CF_FILE_SYSTEM_INTERNAL_H
+#define CF_FILE_SYSTEM_INTERNAL_H
 
 #include <cute_result.h>
 
-CUTE_API CF_Result CUTE_CALL cf_fs_init(const char* argv0);
-CUTE_API void CUTE_CALL cf_fs_destroy();
+CF_API CF_Result CF_CALL cf_fs_init(const char* argv0);
+CF_API void CF_CALL cf_fs_destroy();
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_FILE_SYSTEM_INTERNAL_H
+#endif // CF_FILE_SYSTEM_INTERNAL_H

@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,10 +19,11 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_GRAPHICS_INTERNAL_H
-#define CUTE_GRAPHICS_INTERNAL_H
+#ifndef CF_GRAPHICS_INTERNAL_H
+#define CF_GRAPHICS_INTERNAL_H
 
 void cf_destroy_graphics();
 void cf_commit();
+void cf_clear_graphics_static_pointers();
 
-#endif // CUTE_GRAPHICS_INTERNAL_H
+#endif // CF_GRAPHICS_INTERNAL_H

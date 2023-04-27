@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_A_STAR_H
-#define CUTE_A_STAR_H
+#ifndef CF_A_STAR_H
+#define CF_A_STAR_H
 
 #include "cute_defines.h"
 
@@ -31,67 +31,108 @@
 extern "C" {
 #endif // __cplusplus
 
-typedef struct CF_AStarGrid CF_AStarGrid;
-
 /**
- * Creates a grid based on an array of cells, usable in calls to `a_star`. The `cells` array
- * is an array of types of cells. For example, if your grid should have land and water, you
- * could use 0 for land, and 1 for water for each element in `cells`.
- *
- * To specify a cost for each kind of cell, please see the `cell_to_cost` member of the
- * `CF_AStarInput` struct.
+ * @struct   CF_AStarGrid
+ * @category pathfinding
+ * @brief    An opaque handle representing a grid for calculating shortest paths. See `cf_make_a_star_grid` for more details.
+ * @related  cf_make_a_star_grid cf_destroy_a_star_grid cf_a_star_grid_set_cost cf_a_star_grid_get_cost cf_a_star
  */
-CUTE_API const CF_AStarGrid* CUTE_CALL cf_make_a_star_grid(int w, int h, const int* cells);
-CUTE_API void CUTE_CALL cf_destroy_a_star_grid(CF_AStarGrid* grid);
-
-typedef struct CF_AStarInput
-{
-	bool allow_diagonal_movement;
-	int start_x;
-	int start_y;
-	int end_x;
-	int end_y;
-
-	/**
-	 * Each element of `cells_to_cost` is used to map types of cells in the `cells` parameter
-	 * of `make_a_star_grid` to a cost. The default cost is 1.0f, while <= 0.0f costs are
-	 * treated as *not* traversable.
-	 *
-	 * For example, to lookup the cost of a cell at { x, y }, we could do something like this.
-	 * You don't need to do any lookups like this -- it all happens internally within the
-	 * `a_star` function -- this is just here to explain how to setup `cell_to_cost` properly.
-	 *
-	 *     float cost = cell_to_cost[cell[y * w + x]];
-	 */
-	const float* cell_to_cost;
-} CF_AStarInput;
-
-CUTE_API CF_AStarInput CUTE_CALL cf_a_star_input_defaults();
+typedef struct CF_AStarGrid { uint64_t id; } CF_AStarGrid;
+// @end
 
 /**
- * Represents the shortest path between two points as an array of 2d vectors.
+ * @function cf_make_a_star_grid
+ * @category pathfinding
+ * @brief    Creates a `CF_AStarGrid` for running a path-finding algorithm via `cf_a_star`.
+ * @param    w           The width of the grid.
+ * @param    h           The height of the grid.
+ * @param    cell_costs  The cost of each cell in the grid. 1.0f is default. Anything < 1.0f is treated as _non-traversable_. Can be `NULL`, meaning each cell is 1.0f cost.
+ * @return   Returns a `CF_AStarGrid` for path-finding. Pass this to the function `cf_a_star`.
+ * @example > Calculating a path along a small grid, and printing the result.
+ *     TODO
+ * @remarks  `CF_AStarGrid`'s are designed to be created once and used many times. You can update the cost of any index with
+ *           `cf_a_star_grid_set_cost` and `cf_a_star_grid_get_cost`. Free the grid when you're done using it with `cf_destroy_a_star_grid`.
+ * @related  cf_destroy_a_star_grid cf_a_star_grid_set_cost cf_a_star_grid_get_cost cf_a_star
+ */
+CF_API CF_AStarGrid CF_CALL cf_make_a_star_grid(int w, int h, float* cell_costs);
+
+/**
+ * @function cf_a_star_grid_get_cost
+ * @category pathfinding
+ * @brief    Get the cost of a grid cell.
+ * @param    x          The x position of the grid cell.
+ * @param    y          The y position of the grid cell.
+ * @return   Returns the cost of the grid cell.
+ * @related  cf_make_a_star_grid cf_destroy_a_star_grid cf_a_star_grid_set_cost cf_a_star
+ */
+CF_API float CF_CALL cf_a_star_grid_get_cost(CF_AStarGrid grid, int x, int y);
+
+/**
+ * @function cf_a_star_grid_set_cost
+ * @category pathfinding
+ * @brief    Set the cost of a grid cell.
+ * @param    x          The x position of the grid cell.
+ * @param    y          The y position of the grid cell.
+ * @param    cost       The cost of the grid cell.
+ * @related  cf_make_a_star_grid cf_destroy_a_star_grid cf_a_star_grid_get_cost cf_a_star
+ */
+CF_API void CF_CALL cf_a_star_grid_set_cost(CF_AStarGrid grid, int x, int y, float cost);
+
+/**
+ * @function cf_destroy_a_star_grid
+ * @category pathfinding
+ * @brief    Free up all resources used by a grid.
+ * @param    grid       The grid.
+ * @related  cf_make_a_star_grid cf_a_star_grid_set_cost cf_a_star_grid_get_cost cf_a_star
+ */
+CF_API void CF_CALL cf_destroy_a_star_grid(CF_AStarGrid grid);
+
+/**
+ * @struct   CF_AStarOutput
+ * @category pathfinding
+ * @brief    Represents the shortest path between two points as an array of 2d vectors.
+ * @remarks  This output is returned by `cf_a_star` as an output parameter. Free it up with `cf_free_a_star_output` when done.
+ * @related  cf_a_star cf_free_a_star_output
  */
 typedef struct CF_AStarOutput
 {
-	const int* x;
-	const int* y;
+	/* @member The number of elements in the `x` and `y` arrays. */
+	int count;
 
-	int x_count;
-	int y_count;
+	/* @member An array of x-coordinates, one for each (x, y) coordinate in the calculated path. */
+	dyna int* x;
+
+	/* @member An array of y-coordinates, one for each (x, y) coordinate in the calculated path. */
+	dyna int* y;
 } CF_AStarOutput;
+// @end
 
 /**
- * Calculates the shortest path from start to end from `input` upon `grid`.
- * Only works with 2d grids. Arbitrary graphs are not supported.
- * The `output` struct is optional and can be NULL.
- * Returns true if a valid path was found, false otherwise.
- *
- * Note: `grid` cannot be used by two different `cf_a_star` calls simultaneously. If you want to
- * perform many different A* computations in a concurrent way, you need a different `grid`
- * pointer for each multithreaded call.
+ * @function cf_a_star
+ * @category pathfinding
+ * @brief    Calculates the shortest path along a grid.
+ * @param    grid                     The `CF_AStarGrid` for calculating the shortest path along.
+ * @param    start_x                  The starting x-position of the path.
+ * @param    start_y                  The starting y-position of the path.
+ * @param    end_x                    The ending x-position of the path.
+ * @param    end_y                    The ending y-position of the path.
+ * @param    allow_diagonal_movement  True to allow diagonal movements on the grid. False for only up/down/left/right movements.
+ * @param    out                      `CF_AStarOutput` containing the calculated shortest path. Free it up with `cf_free_a_star_output` when done.
+ * @return   Returns true if a path was calculated, false if no valid path is possible.
+ * @remarks  Call `cf_make_a_star_grid` to make a `CF_AStarGrid` before calling this function. The grid is treated as read-only, so you can freely
+ *           make multithreaded calls to `cf_a_star` with the same grid, as long as you don't modify the grid cell costs in the meantime.
+ * @related  CF_AStarGrid cf_free_a_star_output
  */
-CUTE_API bool CUTE_CALL cf_a_star(const CF_AStarGrid* grid, const CF_AStarInput* input, CF_AStarOutput* output /* = NULL */);
-CUTE_API void CUTE_CALL cf_free_a_star_output(CF_AStarOutput* output);
+CF_API bool CF_CALL cf_a_star(CF_AStarGrid grid, int start_x, int start_y, int end_x, int end_y, bool allow_diagonal_movement, CF_AStarOutput* out);
+
+/**
+ * @function cf_free_a_star_output
+ * @category pathfinding
+ * @brief    Frees up all resources used by `CF_AStarOutput` from calling `cf_a_star`.
+ * @param    out           The output from a call to `cf_a_star`.
+ * @related  CF_AStarGrid cf_destroy_a_star_grid
+ */
+CF_API void CF_CALL cf_free_a_star_output(CF_AStarOutput* out);
 
 #ifdef __cplusplus
 }
@@ -100,7 +141,7 @@ CUTE_API void CUTE_CALL cf_free_a_star_output(CF_AStarOutput* output);
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 #include "cute_array.h"
 
@@ -108,24 +149,15 @@ namespace Cute
 {
 
 using AStarGrid = CF_AStarGrid;
+using AStarOutput = CF_AStarOutput;
 
-struct AStarInput : public CF_AStarInput
-{
-	AStarInput() { *(CF_AStarInput*)this = cf_a_star_input_defaults(); }
-};
-
-struct AStarOutput
-{
-	Array<int> x;
-	Array<int> y;
-};
-
-CUTE_INLINE const AStarGrid* make_a_star_grid(int w, int h, const int* cells) { return cf_make_a_star_grid(w, h, cells); }
-CUTE_INLINE void destroy_a_star_grid(AStarGrid* grid) { cf_destroy_a_star_grid(grid); }
-CUTE_API bool CUTE_CALL a_star(const AStarGrid* grid, const AStarInput* input, AStarOutput* output = NULL);
+CF_INLINE AStarGrid make_a_star_grid(int w, int h, float* cell_costs) { return cf_make_a_star_grid(w, h, cell_costs); }
+CF_INLINE void destroy_a_star_grid(AStarGrid grid) { cf_destroy_a_star_grid(grid); }
+CF_INLINE bool a_star(AStarGrid grid, int start_x, int start_y, int end_x, int end_y, bool allow_diagonal_movement, AStarOutput* out = NULL) { return cf_a_star(grid, start_x, start_y, end_x, end_y, allow_diagonal_movement, out); }
+CF_INLINE void free_a_star_output(CF_AStarOutput* output) { cf_free_a_star_output(output); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_A_STAR_H
+#endif // CF_A_STAR_H

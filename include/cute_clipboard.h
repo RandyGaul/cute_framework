@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_CLIPBOARD_H
-#define CUTE_CLIPBOARD_H
+#ifndef CF_CLIPBOARD_H
+#define CF_CLIPBOARD_H
 
 #include "cute_defines.h"
 #include "cute_result.h"
@@ -32,8 +32,21 @@
 extern "C" {
 #endif // __cplusplus
 
-CUTE_API char* CUTE_CALL cf_clipboard_get();
-CUTE_API CF_Result CUTE_CALL cf_clipboard_set(const char* string);
+/**
+ * @function cf_clipboard_get
+ * @category input
+ * @brief    Returns a UTF-8 string of the clipboard contents.
+ * @related  cf_clipboard_get cf_clipboard_set
+ */
+CF_API char* CF_CALL cf_clipboard_get();
+
+/**
+ * @function cf_clipboard_set
+ * @category input
+ * @brief    Sets a UTF-8 string of the clipboard contents.
+ * @related  cf_clipboard_get cf_clipboard_set
+ */
+CF_API CF_Result CF_CALL cf_clipboard_set(const char* string);
 
 #ifdef __cplusplus
 }
@@ -42,16 +55,16 @@ CUTE_API CF_Result CUTE_CALL cf_clipboard_set(const char* string);
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 namespace Cute
 {
 
-CUTE_INLINE char* clipboard_get() { return cf_clipboard_get(); }
-CUTE_INLINE CF_Result clipboard_set(const char* string) { return cf_clipboard_set(string); }
+CF_INLINE char* clipboard_get() { return cf_clipboard_get(); }
+CF_INLINE CF_Result clipboard_set(const char* string) { return cf_clipboard_set(string); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_CLIPBOARD_H
+#endif // CF_CLIPBOARD_H

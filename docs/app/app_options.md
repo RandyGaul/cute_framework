@@ -1,43 +1,51 @@
-# app options
+[](../header.md ':include')
 
-The bitmask flags passed into [app_make](https://github.com/RandyGaul/cute_framework/blob/master/docs/app/app_make.md).
+# App Options
+
+Category: [app](/api_reference?id=app)  
+GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
+---
+
+Various options to control how the application starts up, such as fullscreen, or selecting a graphics backend.
 
 ## Values
 
-Enumeration Entry | Description
+Enum | Description
 --- | ---
-CUTE_APP_OPTIONS_OPENGL_CONTEXT | Creates an Open GL 3.3 context.
-CUTE_APP_OPTIONS_OPENGLES_CONTEXT | Creates an Open GL ES 3.0 context.
-CUTE_APP_OPTIONS_D3D11_CONTEXT | Initializes a DirectX 11 context.
-CUTE_APP_OPTIONS_DEFAULT_GFX_CONTEXT | Picks a good default graphics context for the given platform.
-CUTE_APP_OPTIONS_FULLSCREEN | Starts the application in borderless full-screen mode.
-CUTE_APP_OPTIONS_RESIZABLE | Allows the window to be resized.
-CUTE_APP_OPTIONS_HIDDEN | Starts the application with the window hidden.
-CUTE_APP_OPTIONS_WINDOW_POS_CENTERED | Starts the application with the window centered on the screen.
-CUTE_APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT | Skips the default file system mount point. See TODO for details.
+APP_OPTIONS_OPENGL_CONTEXT | Starts the app with an OpenGL 3.3 context.
+APP_OPTIONS_OPENGLES_CONTEXT | Starts the app with an OpenGL ES 3.3 context.
+APP_OPTIONS_D3D11_CONTEXT | Starts the app with a DirectX 11 context (Windows only).
+APP_OPTIONS_METAL_CONTEXT | Starts the app with a Metal context (Apple only).
+APP_OPTIONS_DEFAULT_GFX_CONTEXT | Picks a good default graphics context for the given platform.
+APP_OPTIONS_FULLSCREEN | Starts the application in borderless full-screen mode.
+APP_OPTIONS_RESIZABLE | Allows the window to be resized.
+APP_OPTIONS_HIDDEN | Starts the application with the window hidden.
+APP_OPTIONS_WINDOW_POS_CENTERED | Starts the application with the window centered on the screen.
+APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT | Disables automatically mounting the folder the executable runs from to "/". See [cf_fs_mount](/file/cf_fs_mount.md) for more details.
+APP_OPTIONS_NO_AUDIO | Starts the application with no audio.
 
 ## Code Example
 
-
-> Creating a window and immediately closing it.
+> Creating a basic window and immediately destroying it.
 
 ```cpp
 #include <cute.h>
 using namespace cute;
 
-int main(int argc, const char** argv)
+int main(int argc, const char argv)
 {
-	uint32_t options = CUTE_APP_OPTIONS_D3D11_CONTEXT | CUTE_APP_OPTIONS_WINDOW_POS_CENTERED;
-	app_make("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
-	app_destroy();
-	return 0;
+    uint32_t options = APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED;
+    app_make("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
+    app_destroy();
+    return 0;
 }
 ```
 
 ## Remarks
 
-The `options` parameter of [cute_make](https://github.com/RandyGaul/cute_framework/blob/master/docs/window/cute_make.md) is a bitmask flag. Simply take the `CUTE_APP_OPTIONS_*` flags listed above and OR them together.
+The [app_options](/app/app_options.md) parameter of [cf_make_app](/app/cf_make_app.md) is a bitmask flag. Simply take the `APP_OPTIONS_` flags listed above and OR them together.
 
-## Related Functions
+## Related Pages
 
-[cute_make](https://github.com/RandyGaul/cute_framework/tree/master/docs/window/cute_make.md)
+[cf_make_app](/app/cf_make_app.md)  
+[cf_destroy_app](/app/cf_destroy_app.md)  

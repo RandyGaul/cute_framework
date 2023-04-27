@@ -1,0 +1,27 @@
+[](../header.md ':include')
+
+# sset
+
+Category: [string](/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
+
+Copies the string `b` into string `a`.
+
+```cpp
+#define sset(a, b) cf_string_set(a, b)
+```
+
+Parameters | Description
+--- | ---
+a | Destination for copying. Can be `NULL`.
+b | Source for copying.
+
+## Related Pages
+
+[sfmt](/string/sfmt.md)  
+[sfmt_append](/string/sfmt_append.md)  
+[svfmt](/string/svfmt.md)  
+[svfmt_append](/string/svfmt_append.md)  
+[smake](/string/smake.md)  
+[sdup](/string/sdup.md)  

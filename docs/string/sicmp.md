@@ -1,0 +1,28 @@
+[](../header.md ':include')
+
+# sicmp
+
+Category: [string](/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
+
+Compares two strings, ignoring case.
+
+```cpp
+#define sicmp(a, b) cf_string_icmp(a, b)
+```
+
+Parameters | Description
+--- | ---
+a | The first string.
+b | The second string.
+
+## Remarks
+
+Returns 0 if the two strings are equivalent. Otherwise returns 1 if a[i] > b[i], or -1 if a[i] < b[i].
+
+## Related Pages
+
+[scmp](/string/scmp.md)  
+[siequ](/string/siequ.md)  
+[sequ](/string/sequ.md)  

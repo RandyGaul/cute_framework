@@ -1,0 +1,24 @@
+[](../header.md ':include')
+
+# File Types
+
+Category: [file](/api_reference?id=file)  
+GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
+---
+
+The various kinds of files that can be opened.
+
+## Values
+
+Enum | Description
+--- | ---
+FILE_TYPE_REGULAR | A reguler file, such as a .txt or .pdf file.
+FILE_TYPE_DIRECTORY | A directory/folder.
+FILE_TYPE_SYMLINK | A symlink. Symlinks are not supported.
+FILE_TYPE_OTHER | An unknown file type.
+
+## Related Pages
+
+[CF_File](/file/cf_file.md)  
+[CF_Stat](/file/cf_stat.md)  
+[cf_file_type_to_string](/file/cf_file_type_to_string.md)  

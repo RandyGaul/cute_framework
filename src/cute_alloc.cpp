@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,18 +19,93 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#ifdef _MSC_VER // Leak checking for debug Windows builds.
+#	define _CRTDBG_MAPALLOC
+#	define _CRTDBG_MAP_ALLOC
+#	include <crtdbg.h>
+#endif
+#include <stdlib.h>
+
 #include <cute_alloc.h>
 #include <cute_c_runtime.h>
 #include <cute_array.h>
 
+#include <internal/cute_alloc_internal.h>
+
+void* s_default_alloc(size_t size, void* udata)
+{
+	CF_UNUSED(udata);
+	return malloc(size);
+}
+
+void s_default_free(void* ptr, void* udata)
+{
+	CF_UNUSED(udata);
+	free(ptr);
+}
+
+void* s_default_calloc(size_t size, size_t count, void* udata)
+{
+	CF_UNUSED(udata);
+	return calloc(size, count);
+}
+
+void* s_default_realloc(void* ptr, size_t size, void* udata)
+{
+	CF_UNUSED(udata);
+	return realloc(ptr, size);
+}
+
+CF_Allocator s_default_allocator = {
+	NULL,
+	s_default_alloc,
+	s_default_free,
+	s_default_calloc,
+	s_default_realloc
+};
+
+CF_Allocator s_allocator = s_default_allocator;
+
+void cf_allocator_override(CF_Allocator allocator)
+{
+	s_allocator = allocator;
+}
+
+void cf_allocator_restore_default()
+{
+	s_allocator = s_default_allocator;
+}
+
+void* cf_alloc(size_t size)
+{
+	return s_allocator.alloc_fn ? s_allocator.alloc_fn(size, NULL) : s_default_alloc(size, NULL);
+}
+
+void cf_free(void* ptr)
+{
+	s_allocator.free_fn ? s_allocator.free_fn(ptr, NULL) : s_default_free(ptr, NULL);
+}
+
+void* cf_calloc(size_t size, size_t count)
+{
+	return s_allocator.calloc_fn ? s_allocator.calloc_fn(size, count, NULL) : s_default_calloc(size, count, NULL);
+}
+
+void* cf_realloc(void* ptr, size_t size)
+{
+	return s_allocator.realloc_fn ? s_allocator.realloc_fn(ptr, size, NULL) : s_default_realloc(ptr, size, NULL);
+}
+
+//--------------------------------------------------------------------------------------------------
+
 void* cf_aligned_alloc(size_t size, int alignment)
 {
-	CUTE_ASSERT(alignment <= 256);
-	void* p = CUTE_ALLOC(size + alignment);
+	CF_ASSERT(alignment <= 256);
+	void* p = CF_ALLOC(size + alignment);
 	if (!p) return NULL;
 	size_t offset = (size_t)p & (alignment - 1);
-	p = CUTE_ALIGN_FORWARD_PTR((char*)p + 1, alignment);
-	CUTE_ASSERT(!(((size_t)p) & (alignment - 1)));
+	p = CF_ALIGN_FORWARD_PTR((char*)p + 1, alignment);
+	CF_ASSERT(!(((size_t)p) & (alignment - 1)));
 	*((char*)p - 1) = (char)(alignment - offset);
 	return p;
 }
@@ -39,30 +114,30 @@ void cf_aligned_free(void* p)
 {
 	if (!p) return;
 	size_t offset = (size_t)*((uint8_t*)p - 1);
-	CUTE_FREE((char*)p - (offset & 0xFF));
+	CF_FREE((char*)p - (offset & 0xFF));
 }
 
 //--------------------------------------------------------------------------------------------------
 
 void cf_arena_init(CF_Arena* arena, int alignment, int block_size)
 {
-	CUTE_MEMSET(arena, 0, sizeof(*arena));
+	CF_MEMSET(arena, 0, sizeof(*arena));
 	arena->alignment = alignment;
 	arena->block_size = block_size;
 }
 
 void* cf_arena_alloc(CF_Arena* arena, size_t size)
 {
-	CUTE_ASSERT((int)size < arena->block_size);
+	CF_ASSERT((int)size < arena->block_size);
 	if (size > (size_t)(arena->end - arena->ptr)) {
 		arena->ptr = (char*)cf_aligned_alloc(arena->block_size, arena->alignment);
 		arena->end = arena->ptr + arena->block_size;
 		apush(arena->blocks, arena->ptr);
 	}
 	void* result = arena->ptr;
-	arena->ptr = (char*)CUTE_ALIGN_FORWARD_PTR(arena->ptr + size, arena->alignment);
-	CUTE_ASSERT(!(((size_t)(arena->ptr)) & (arena->alignment - 1)));
-	CUTE_ASSERT(arena->ptr <= arena->end);
+	arena->ptr = (char*)CF_ALIGN_FORWARD_PTR(arena->ptr + size, arena->alignment);
+	CF_ASSERT(!(((size_t)(arena->ptr)) & (arena->alignment - 1)));
+	CF_ASSERT(arena->ptr <= arena->end);
 	return result;
 }
 
@@ -96,8 +171,8 @@ CF_MemoryPool* cf_make_memory_pool(int element_size, int element_count, int alig
 {
 	element_size = element_size > sizeof(void*) ? element_size : sizeof(void*);
 	int unaligned_element_size = element_size;
-	element_size = CUTE_ALIGN_FORWARD(element_size, alignment);
-	size_t header_size = CUTE_ALIGN_FORWARD(sizeof(CF_MemoryPool), alignment);
+	element_size = CF_ALIGN_FORWARD(element_size, alignment);
+	size_t header_size = CF_ALIGN_FORWARD(sizeof(CF_MemoryPool), alignment);
 	CF_MemoryPool* pool = (CF_MemoryPool*)cf_aligned_alloc(header_size + element_size * element_count, alignment);
 
 	pool->unaligned_element_size = unaligned_element_size;
@@ -123,14 +198,14 @@ void cf_destroy_memory_pool(CF_MemoryPool* pool)
 {
 	if (pool->overflow_count) {
 		// Attempted to destroy pool without freeing all overflow allocations.
-		CUTE_ASSERT(pool->overflow_count == 0);
+		CF_ASSERT(pool->overflow_count == 0);
 	}
-	CUTE_FREE(pool);
+	CF_FREE(pool);
 }
 
 void* cf_memory_pool_alloc(CF_MemoryPool* pool)
 {
-	void *mem = CF_MemoryPoolry_alloc(pool);
+	void *mem = cf_memory_pool_try_alloc(pool);
 	if (!mem) {
 		mem = cf_aligned_alloc(pool->unaligned_element_size, pool->alignment);
 		if (mem) {
@@ -140,7 +215,7 @@ void* cf_memory_pool_alloc(CF_MemoryPool* pool)
 	return mem;
 }
 
-void* CF_MemoryPoolry_alloc(CF_MemoryPool* pool)
+void* cf_memory_pool_try_alloc(CF_MemoryPool* pool)
 {
 	if (pool->free_list) {
 		void *mem = pool->free_list;
@@ -163,6 +238,6 @@ void cf_memory_pool_free(CF_MemoryPool* pool, void* element)
 		pool->free_list = element;
 	} else {
 		// Tried to free something that definitely didn't come from this pool.
-		CUTE_ASSERT(false);
+		CF_ASSERT(false);
 	}
 }

@@ -1,0 +1,26 @@
+[](../header.md ':include')
+
+# sdup
+
+Category: [string](/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
+
+Returns a completely new string copy.
+
+```cpp
+#define sdup(s) cf_string_dup(s)
+```
+
+Parameters | Description
+--- | ---
+s | The string to duplicate.
+
+## Remarks
+
+You must free the copy with [sfree](/string/sfree.md) when done. Does the same thing as [smake](/string/smake.md).
+
+## Related Pages
+
+[sset](/string/sset.md)  
+[smake](/string/smake.md)  

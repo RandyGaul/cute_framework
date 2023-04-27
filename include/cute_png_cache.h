@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2020 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_PNG_CACHE_H
-#define CUTE_PNG_CACHE_H
+#ifndef CF_PNG_CACHE_H
+#define CF_PNG_CACHE_H
 
 #include "cute_defines.h"
 #include "cute_result.h"
@@ -66,7 +66,7 @@ typedef struct CF_Png
 	int h;
 } CF_Png;
 
-CUTE_INLINE CF_Png cf_png_defaults()
+CF_INLINE CF_Png cf_png_defaults()
 {
 	CF_Png result = { 0 };
 	result.id = ~0;
@@ -77,20 +77,20 @@ CUTE_INLINE CF_Png cf_png_defaults()
  * Returns an image from the cache. If it does not exist in the cache, it is loaded from disk
  * and placed into the cache.
  */
-CUTE_API CF_Result CUTE_CALL cf_png_cache_load(const char* png_path, CF_Png* png /*= NULL*/);
+CF_API CF_Result CF_CALL cf_png_cache_load(const char* png_path, CF_Png* png /*= NULL*/);
 
 /**
  * Returns an image from the cache. If it does not exist in the cache, it is loaded from memory
  * and placed into the cache.
  */
-CUTE_API CF_Result CUTE_CALL cf_png_cache_load_mem(const char* png_path, const void* memory, size_t size, CF_Png* png /*= NULL*/);
+CF_API CF_Result CF_CALL cf_png_cache_load_mem(const char* png_path, const void* memory, size_t size, CF_Png* png /*= NULL*/);
 
 /**
  * Unloads an image from the cache. This function can be used to control your RAM usage, for example
  * when switching from one level/area to another can be a good time to unload images that will no
  * longer be used.
  */
-CUTE_API void CUTE_CALL cf_png_cache_unload(CF_Png png);
+CF_API void CF_CALL cf_png_cache_unload(CF_Png png);
 
 //--------------------------------------------------------------------------------------------------
 // Animation and sprite functions.
@@ -102,29 +102,29 @@ CUTE_API void CUTE_CALL cf_png_cache_unload(CF_Png png);
  * Constructs an animation out of an array of frames, along with their delays in milliseconds.
  * The animation is stored within the png cache.
  */
-CUTE_API const CF_Animation* CUTE_CALL cf_make_png_cache_animation(const char* name, const CF_Png* pngs, int pngs_count, const float* delays, int delays_count);
+CF_API const CF_Animation* CF_CALL cf_make_png_cache_animation(const char* name, const CF_Png* pngs, int pngs_count, const float* delays, int delays_count);
 
 /**
  * Looks up an animation within the png cache by name.
  */
-CUTE_API const CF_Animation* CUTE_CALL cf_png_cache_get_animation(const char* name);
+CF_API const CF_Animation* CF_CALL cf_png_cache_get_animation(const char* name);
 
 /**
  * Constructs an animation table given an array of animations. The table is stored within the png cache.
  */
-CUTE_API const CF_Animation** CUTE_CALL cf_make_png_cache_animation_table(const char* sprite_name, const CF_Animation* const* animations, int animations_count);
+CF_API const CF_Animation** CF_CALL cf_make_png_cache_animation_table(const char* sprite_name, const CF_Animation* const* animations, int animations_count);
 
 /**
  * Looks up an animation table within the png cache by name.
  */
-CUTE_API const CF_Animation** CUTE_CALL cf_png_cache_get_animation_table(const char* sprite_name);
+CF_API const CF_Animation** CF_CALL cf_png_cache_get_animation_table(const char* sprite_name);
 
 /**
  * Makes a sprite. Each sprite must refer to an animation table previously constructed by `cf_make_png_cache_animation_table`.
  * You can supply the pointer to the animation table yourself in `table`, or just leave it NULL.
  * If table is `NULL` then `sprite_name` is used to lookup the table within the png cache.
  */
-CUTE_API CF_Sprite CUTE_CALL cf_make_png_cache_sprite(const char* sprite_name, const CF_Animation** table /*= NULL*/);
+CF_API CF_Sprite CF_CALL cf_make_png_cache_sprite(const char* sprite_name, const CF_Animation** table /*= NULL*/);
 
 #ifdef __cplusplus
 }
@@ -133,7 +133,7 @@ CUTE_API CF_Sprite CUTE_CALL cf_make_png_cache_sprite(const char* sprite_name, c
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 #include "cute_array.h"
 
@@ -148,16 +148,16 @@ struct Png : public CF_Png
 	Png(CF_Png png) { *(CF_Png*)this = png; }
 };
 
-CUTE_INLINE Result png_cache_load(const char* png_path, Png* png = NULL) { return cf_png_cache_load(png_path, (CF_Png*)png); }
-CUTE_INLINE Result png_cache_load_mem(const char* png_path, const void* memory, size_t size, CF_Png* png = NULL) { return cf_png_cache_load_mem(png_path, memory, size, png); }
-CUTE_INLINE void png_cache_unload(Png png) { cf_png_cache_unload(png); }
-CUTE_API const Animation* CUTE_CALL make_png_cache_animation(const char* name, const Array<CF_Png>& pngs, const Array<float>& delays);
-CUTE_INLINE const Animation* png_cache_get_animation(const char* name) { return cf_png_cache_get_animation(name); }
-CUTE_API const CF_Animation** CUTE_CALL make_png_cache_animation_table(const char* sprite_name, const Array<const Animation*>& animations);
-CUTE_INLINE const CF_Animation** png_cache_get_animation_table(const char* sprite_name) { return cf_png_cache_get_animation_table(sprite_name); }
+CF_INLINE Result png_cache_load(const char* png_path, Png* png = NULL) { return cf_png_cache_load(png_path, (CF_Png*)png); }
+CF_INLINE Result png_cache_load_mem(const char* png_path, const void* memory, size_t size, CF_Png* png = NULL) { return cf_png_cache_load_mem(png_path, memory, size, png); }
+CF_INLINE void png_cache_unload(Png png) { cf_png_cache_unload(png); }
+CF_API const Animation* CF_CALL make_png_cache_animation(const char* name, const Array<CF_Png>& pngs, const Array<float>& delays);
+CF_INLINE const Animation* png_cache_get_animation(const char* name) { return cf_png_cache_get_animation(name); }
+CF_API const CF_Animation** CF_CALL make_png_cache_animation_table(const char* sprite_name, const Array<const Animation*>& animations);
+CF_INLINE const CF_Animation** png_cache_get_animation_table(const char* sprite_name) { return cf_png_cache_get_animation_table(sprite_name); }
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_PNG_CACHE_H
+#endif // CF_PNG_CACHE_H

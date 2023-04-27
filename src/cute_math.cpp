@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,26 +19,28 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
+#include <cute_defines.h>
+
 #define CUTE_C2_IMPLEMENTATION
 #include <cute/cute_c2.h>
 
 #include <cute_math.h>
 
-CUTE_STATIC_ASSERT(CUTE_POLY_MAX_VERTS == C2_MAX_POLYGON_VERTS, "Must be equal.");
+CF_STATIC_ASSERT(CF_POLY_MAX_VERTS == C2_MAX_POLYGON_VERTS, "Must be equal.");
 
-CUTE_STATIC_ASSERT(sizeof(CF_V2) == sizeof(c2v), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_SinCos) == sizeof(c2r), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Transform) == sizeof(c2x), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_M2x2) == sizeof(c2m), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Halfspace) == sizeof(c2h), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Ray) == sizeof(c2Ray), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Raycast) == sizeof(c2Raycast), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Manifold) == sizeof(c2Manifold), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_GjkCache) == sizeof(c2GJKCache), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Circle) == sizeof(c2Circle), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Aabb) == sizeof(c2AABB), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Capsule) == sizeof(c2Capsule), "Must be equal.");
-CUTE_STATIC_ASSERT(sizeof(CF_Poly) == sizeof(c2Poly), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_V2) == sizeof(c2v), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_SinCos) == sizeof(c2r), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Transform) == sizeof(c2x), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_M2x2) == sizeof(c2m), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Halfspace) == sizeof(c2h), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Ray) == sizeof(c2Ray), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Raycast) == sizeof(c2Raycast), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Manifold) == sizeof(c2Manifold), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_GjkCache) == sizeof(c2GJKCache), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Circle) == sizeof(c2Circle), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Aabb) == sizeof(c2AABB), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Capsule) == sizeof(c2Capsule), "Must be equal.");
+CF_STATIC_ASSERT(sizeof(CF_Poly) == sizeof(c2Poly), "Must be equal.");
 
 bool cf_circle_to_circle(CF_Circle A, CF_Circle B)
 {
@@ -160,9 +162,9 @@ void cf_poly_to_poly_manifold(const CF_Poly* A, const CF_Transform* ax, const CF
 	c2PolytoPolyManifold((c2Poly*)A, (c2x*)ax, (c2Poly*)B, (c2x*)bx, (c2Manifold*)m);
 }
 
-float cf_gjk(const void* A, CF_ShapeType typeA, const CF_Transform* ax_ptr, const void* B, CF_ShapeType typeB, const CF_Transform* bx_ptr, CF_V2* outA, CF_V2* outB, int use_radius, int* iterations, CF_GjkCache* cache)
+float cf_gjk(const void* A, CF_ShapeType typeA, const CF_Transform* ax_ptr, const void* B, CF_ShapeType typeB, const CF_Transform* bx_ptr, CF_V2* outA, CF_V2* outB, bool use_radius, int* iterations, CF_GjkCache* cache)
 {
-	return c2GJK(A, (C2_TYPE)typeA, (c2x*)ax_ptr, B, (C2_TYPE)typeB, (c2x*)bx_ptr, (c2v*)outA, (c2v*)outB, use_radius, iterations, (c2GJKCache*)cache);
+	return c2GJK(A, (C2_TYPE)typeA, (c2x*)ax_ptr, B, (C2_TYPE)typeB, (c2x*)bx_ptr, (c2v*)outA, (c2v*)outB, (int)use_radius, iterations, (c2GJKCache*)cache);
 }
 
 CF_ToiResult cf_toi(const void* A, CF_ShapeType typeA, const CF_Transform* ax_ptr, CF_V2 vA, const void* B, CF_ShapeType typeB, const CF_Transform* bx_ptr, CF_V2 vB, int use_radius)

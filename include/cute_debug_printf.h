@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifdef CUTE_DEBUG_PRINTF
-#undef CUTE_DEBUG_PRINTF
+#ifdef CF_DEBUG_PRINTF
+#undef CF_DEBUG_PRINTF
 #endif
 #include <stdio.h>
-#define CUTE_DEBUG_PRINTF(...) printf(__VA_ARGS__)
+#define CF_DEBUG_PRINTF(...) printf(__VA_ARGS__)

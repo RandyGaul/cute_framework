@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,12 +19,12 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_TYPELESS_ARRAY_H
-#define CUTE_TYPELESS_ARRAY_H
+#ifndef CF_TYPELESS_ARRAY_H
+#define CF_TYPELESS_ARRAY_H
 
 #include "cute_defines.h"
 
-#ifdef CUTE_CPP
+#ifdef CF_CPP
 
 /**
  * Implements a dynamically growable array without any type information (no templates).
@@ -49,6 +49,7 @@ struct CF_TypelessArray
 	void* pop();
 	void unordered_remove(int index);
 	void copy(int src, int dst, int count = 1);
+	void swap(int index_a, int index_b);
 	void clear();
 	void ensure_capacity(int num_elements);
 	void steal_from(CF_TypelessArray* steal_from_me);
@@ -81,6 +82,6 @@ using typeless_array = CF_TypelessArray;
 
 }
 
-#endif // CUTE_CPP
+#endif // CF_CPP
 
-#endif // CUTE_TYPELESS_ARRAY_H
+#endif // CF_TYPELESS_ARRAY_H

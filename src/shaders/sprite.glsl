@@ -133,6 +133,7 @@
 
 		//c = vec4(0.5);
 		c.a *= v_alpha;
+
 		if (c.a == 0) discard;
 		result = c;
 	}

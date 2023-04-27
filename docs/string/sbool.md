@@ -1,0 +1,32 @@
+[](../header.md ':include')
+
+# sbool
+
+Category: [string](/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
+
+Converts a bool to a string and assigns `s` to it.
+
+```cpp
+#define sbool(s, b) cf_string_bool(s, b)
+```
+
+Parameters | Description
+--- | ---
+s | The string.
+uint | The value to convert.
+
+## Related Pages
+
+[sint](/string/sint.md)  
+[suint](/string/suint.md)  
+[sfloat](/string/sfloat.md)  
+[sdouble](/string/sdouble.md)  
+[shex](/string/shex.md)  
+[stobool](/string/stobool.md)  
+stint  
+[stouint](/string/stouint.md)  
+[stofloat](/string/stofloat.md)  
+[stodouble](/string/stodouble.md)  
+[stohex](/string/stohex.md)  

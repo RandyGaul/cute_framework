@@ -1,0 +1,18 @@
+[](/header.md ':include')
+
+<br>
+
+Some of the samples using Cute Framework's C API, while some use the C++ API. Make sure to note if you're looking at one or the other! The main difference between each API is in C there are no namespaces, so most names are prepended with `cf_`.
+
+- [Your First Window](https://github.com/RandyGaul/cute_framework/blob/master/samples/window.cpp)
+- [Basic Keyboard/Mouse Input](https://github.com/RandyGaul/cute_framework/blob/master/samples/basic_input.c)
+- [Window Events](https://github.com/RandyGaul/cute_framework/blob/master/samples/window_events.c)
+- [Window Resizing](https://github.com/RandyGaul/cute_framework/blob/master/samples/window_resizing.cpp)
+- [Basic Shape Drawing](https://github.com/RandyGaul/cute_framework/blob/master/samples/basic_shapes.cpp)
+- [Basic Sprite Drawing](https://github.com/RandyGaul/cute_framework/blob/master/samples/basic_sprite.cpp)
+- [Text Drawing](https://github.com/RandyGaul/cute_framework/blob/master/samples/text_drawing.cpp)
+- [Debug/Tools UI](https://github.com/RandyGaul/cute_framework/blob/master/samples/imgui.c)
+- [Basic Serialization](https://github.com/RandyGaul/cute_framework/blob/master/samples/basic_serialization.c)
+- [Hitpoints with ECS](https://github.com/RandyGaul/cute_framework/blob/master/samples/basic_ecs.cpp)
+- [Easy Sprite (and updating pixel content)](https://github.com/RandyGaul/cute_framework/blob/master/samples/easy_sprite.c)
+- [Cute Snake](https://github.com/RandyGaul/cute_snake), a silly demonstration game

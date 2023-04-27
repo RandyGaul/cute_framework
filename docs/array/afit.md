@@ -1,0 +1,45 @@
+[](../header.md ':include')
+
+# afit
+
+Category: [array](/api_reference?id=array)  
+GitHub: [cute_array.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_array.h)  
+---
+
+Ensures the capacity of the array is at least `n` elements large.
+
+```cpp
+#define afit(a, n) cf_array_fit(a, n)
+```
+
+Parameters | Description
+--- | ---
+a | The array.
+n | The number of elements to resize the array's capacity to.
+
+## Return Value
+
+Returns a pointer to the array.
+
+## Remarks
+
+This function does not change the number of live elements, the count/size, of the array. Only the capacity.
+This function is only useful as an optimization to avoid extra/unnecessary internal allocations. `a` is
+automatically re-assigned to a new pointer if the array was internally regrown.
+
+## Related Pages
+
+[dyna](/array/dyna.md)  
+[asize](/array/asize.md)  
+[acount](/array/acount.md)  
+[acap](/array/acap.md)  
+[afree](/array/afree.md)  
+[apush](/array/apush.md)  
+[apop](/array/apop.md)  
+[aend](/array/aend.md)  
+[alast](/array/alast.md)  
+[aclear](/array/aclear.md)  
+[aset](/array/aset.md)  
+[arev](/array/arev.md)  
+[ahash](/array/ahash.md)  
+[astatic](/array/astatic.md)  

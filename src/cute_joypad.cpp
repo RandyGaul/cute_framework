@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2021 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -24,6 +24,7 @@
 #include <cute_alloc.h>
 #include <cute_haptics.h>
 
+#include <internal/cute_alloc_internal.h>
 #include <internal/cute_input_internal.h>
 #include <internal/cute_app_internal.h>
 #include <data/cute_joypad_mapping_db.h>
@@ -38,7 +39,7 @@ void cf_joypad_system_init()
 	if (!init) {
 		init = true;
 		int result = SDL_GameControllerAddMapping((const char*)joypad_mapping_db_data);
-		CUTE_ASSERT(result != -1);
+		CF_ASSERT(result != -1);
 	}
 }
 
@@ -56,11 +57,12 @@ int cf_joypad_count()
 
 CF_Joypad* cf_joypad_open(int index)
 {
+	cf_joypad_system_init();
 	if (SDL_IsGameController(index)) {
 		SDL_GameController* controller = SDL_GameControllerOpen(index);
 		if (controller) {
 			SDL_Joystick* joy = SDL_GameControllerGetJoystick(controller);
-			CF_Joypad* joypad = CUTE_NEW(CF_Joypad);
+			CF_Joypad* joypad = CF_NEW(CF_Joypad);
 			joypad->controller = controller;
 			joypad->id = SDL_JoystickInstanceID(joy);
 			cf_list_push_front(&app->joypads, &joypad->node);
@@ -77,7 +79,7 @@ void cf_joypad_close(CF_Joypad* joypad)
 		cf_haptic_close(joypad->haptic);
 	}
 	SDL_GameControllerClose(joypad->controller);
-	CUTE_FREE(joypad);
+	CF_FREE(joypad);
 }
 
 bool cf_joypad_is_connected(CF_Joypad* joypad)
@@ -106,22 +108,17 @@ const char* cf_joypad_name(CF_Joypad* joypad)
 	return SDL_GameControllerName(joypad->controller);
 }
 
-bool cf_joypad_button_is_down(CF_Joypad* joypad, CF_JoypadButton button)
+bool cf_joypad_button_down(CF_Joypad* joypad, CF_JoypadButton button)
 {
 	return joypad->buttons[button];
 }
 
-bool cf_joypad_button_is_up(CF_Joypad* joypad, CF_JoypadButton button)
-{
-	return !joypad->buttons[button];
-}
-
-bool cf_joypad_button_was_pressed(CF_Joypad* joypad, CF_JoypadButton button)
+bool cf_joypad_button_just_pressed(CF_Joypad* joypad, CF_JoypadButton button)
 {
 	return joypad->buttons[button] && !joypad->buttons_prev[button];
 }
 
-bool cf_joypad_button_was_released(CF_Joypad* joypad, CF_JoypadButton button)
+bool cf_joypad_button_just_released(CF_Joypad* joypad, CF_JoypadButton button)
 {
 	return !joypad->buttons[button] && joypad->buttons_prev[button];
 }

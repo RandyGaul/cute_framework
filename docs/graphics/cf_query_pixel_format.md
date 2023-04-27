@@ -1,0 +1,24 @@
+[](../header.md ':include')
+
+# cf_query_pixel_format
+
+Category: [graphics](/api_reference?id=graphics)  
+GitHub: [cute_graphics.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_graphics.h)  
+---
+
+Returns true if a particular [CF_PixelFormat](/graphics/cf_pixelformat.md) is compatible with a certain [CF_PixelFormatOp](/graphics/cf_pixelformatop.md).
+
+```cpp
+bool cf_query_pixel_format(CF_PixelFormat format, CF_PixelFormatOp op);
+```
+
+## Remarks
+
+Not all backends support each combination of format and operation, some backends don't support particular pixel formats at all.
+Be sure to query the device with this function to make sure your use-case is supported.
+
+## Related Pages
+
+[CF_PixelFormat](/graphics/cf_pixelformat.md)  
+[cf_pixel_format_op_to_string](/graphics/cf_pixel_format_op_to_string.md)  
+[CF_PixelFormatOp](/graphics/cf_pixelformatop.md)  

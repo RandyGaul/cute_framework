@@ -1,0 +1,32 @@
+[](../header.md ':include')
+
+# sdouble
+
+Category: [string](/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
+
+Converts a double to a string and assigns `s` to it.
+
+```cpp
+#define sdouble(s, f) cf_string_double(s, f)
+```
+
+Parameters | Description
+--- | ---
+s | The string.
+f | The value to convert.
+
+## Related Pages
+
+[sint](/string/sint.md)  
+[suint](/string/suint.md)  
+[sfloat](/string/sfloat.md)  
+[stobool](/string/stobool.md)  
+[shex](/string/shex.md)  
+[sbool](/string/sbool.md)  
+stint  
+[stouint](/string/stouint.md)  
+[stofloat](/string/stofloat.md)  
+[stodouble](/string/stodouble.md)  
+[stohex](/string/stohex.md)  

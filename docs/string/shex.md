@@ -1,0 +1,32 @@
+[](../header.md ':include')
+
+# shex
+
+Category: [string](/api_reference?id=string)  
+GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
+---
+
+Converts a uint64_t to a hex-string and assigns `s` to it.
+
+```cpp
+#define shex(s, uint) cf_string_hex(s, uint)
+```
+
+Parameters | Description
+--- | ---
+s | The string.
+uint | The value to convert.
+
+## Related Pages
+
+[sint](/string/sint.md)  
+[suint](/string/suint.md)  
+[sfloat](/string/sfloat.md)  
+[sdouble](/string/sdouble.md)  
+[stobool](/string/stobool.md)  
+[sbool](/string/sbool.md)  
+stint  
+[stouint](/string/stouint.md)  
+[stofloat](/string/stofloat.md)  
+[stodouble](/string/stodouble.md)  
+[stohex](/string/stohex.md)  

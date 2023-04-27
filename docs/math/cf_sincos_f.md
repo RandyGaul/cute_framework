@@ -1,0 +1,23 @@
+[](../header.md ':include')
+
+# cf_sincos_f
+
+Category: [math](/api_reference?id=math)  
+GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
+---
+
+Returns an initialized [CF_SinCos](/math/cf_sincos.md) from `radians`.
+
+```cpp
+CF_SinCos cf_sincos_f(float radians)
+```
+
+## Related Pages
+
+[CF_SinCos](/math/cf_sincos.md)  
+[cf_mulT_sc](/math/cf_mult_sc.md)  
+[cf_x_axis](/math/cf_x_axis.md)  
+[cf_y_axis](/math/cf_y_axis.md)  
+[cf_mul_sc_v2](/math/cf_mul_sc_v2.md)  
+[cf_mulT_sc_v2](/math/cf_mult_sc_v2.md)  
+[cf_mul_sc](/math/cf_mul_sc.md)  

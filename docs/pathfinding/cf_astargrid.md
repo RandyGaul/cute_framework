@@ -1,0 +1,17 @@
+[](../header.md ':include')
+
+# CF_AStarGrid
+
+Category: [pathfinding](/api_reference?id=pathfinding)  
+GitHub: [cute_a_star.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_a_star.h)  
+---
+
+An opaque handle representing a grid for calculating shortest paths. See [cf_make_a_star_grid](/pathfinding/cf_make_a_star_grid.md) for more details.
+
+## Related Pages
+
+[cf_make_a_star_grid](/pathfinding/cf_make_a_star_grid.md)  
+[cf_destroy_a_star_grid](/pathfinding/cf_destroy_a_star_grid.md)  
+[cf_a_star_grid_set_cost](/pathfinding/cf_a_star_grid_set_cost.md)  
+[cf_a_star_grid_get_cost](/pathfinding/cf_a_star_grid_get_cost.md)  
+[cf_a_star](/pathfinding/cf_a_star.md)  

@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -19,8 +19,8 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CUTE_DX11_H
-#define CUTE_DX11_H
+#ifndef CF_DX11_H
+#define CF_DX11_H
 
 #include "cute_defines.h"
 #include "sokol/sokol_gfx.h"
@@ -30,13 +30,4 @@ sg_context_desc cf_dx11_get_context();
 void cf_dx11_present(bool vsync);
 void cf_dx11_shutdown();
 
-#ifdef CUTE_CPP
-
-namespace Cute
-{
-
-}
-
-#endif // CUTE_CPP
-
-#endif // CUTE_DX11_H
+#endif // CF_DX11_H

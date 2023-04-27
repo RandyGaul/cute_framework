@@ -1,0 +1,30 @@
+[](../header.md ':include')
+
+# cf_fs_stat
+
+Category: [file](/api_reference?id=file)  
+GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
+---
+
+Returns file information at the given virtual path, such as file size or creation time.
+
+```cpp
+CF_Result cf_fs_stat(const char* virtual_path, CF_Stat* stat);
+```
+
+## Return Value
+
+Returns any errors as a [CF_Result](/utility/cf_result.md).
+
+## Remarks
+
+This doesn't open the file itself, and is a fairly light-weight operation in comparison. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+
+## Related Pages
+
+[CF_File](/file/cf_file.md)  
+[CF_Stat](/file/cf_stat.md)  
+[cf_fs_create_file](/file/cf_fs_create_file.md)  
+[cf_fs_open_file_for_write](/file/cf_fs_open_file_for_write.md)  
+[cf_fs_open_file_for_read](/file/cf_fs_open_file_for_read.md)  
+[cf_fs_close](/file/cf_fs_close.md)  

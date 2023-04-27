@@ -1,0 +1,43 @@
+[](../header.md ':include')
+
+# spdir_of
+
+Category: [path](/api_reference?id=path)  
+GitHub: [cute_file_system.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h)  
+---
+
+Returns the directory of a given file or directory. Returns a new string.
+
+```cpp
+#define spdir_of(s) cf_path_directory_of(s)
+```
+
+Parameters | Description
+--- | ---
+s | The path string.
+
+## Code Example
+
+> Example fetching a directory a file sits within.
+
+```cpp
+const char filename = spfname("/data/collections/rare/big_gem.txt");
+printf("%s\n", filename);
+// Prints: /rare
+```
+
+## Remarks
+
+`sp` stands for "sting path". Call [sfree](/string/sfree.md) on the return value when done.
+
+## Related Pages
+
+[spfname](/path/spfname.md)  
+[spfname_no_ext](/path/spfname_no_ext.md)  
+[spext](/path/spext.md)  
+[spext_equ](/path/spext_equ.md)  
+[sppop](/path/sppop.md)  
+[sppopn](/path/sppopn.md)  
+[spcompact](/path/spcompact.md)  
+[spnorm](/path/spnorm.md)  
+[sptop_of](/path/sptop_of.md)  

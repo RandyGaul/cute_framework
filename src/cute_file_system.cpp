@@ -1,6 +1,6 @@
 /*
 	Cute Framework
-	Copyright (C) 2019 Randy Gaul https://randygaul.net
+	Copyright (C) 2023 Randy Gaul https://randygaul.github.io/
 
 	This software is provided 'as-is', without any express or implied
 	warranty.  In no event will the authors be held liable for any damages
@@ -24,12 +24,13 @@
 #include <cute_c_runtime.h>
 #include <cute_alloc.h>
 
+#include <internal/cute_alloc_internal.h>
 #include <internal/cute_app_internal.h>
 #include <internal/cute_file_system_internal.h>
 
 #include <physfs/physfs.h>
 
-#define CUTE_FILE_SYSTEM_BUFFERED_IO_SIZE (2 * CUTE_MB)
+#define CF_FILE_SYSTEM_BUFFERED_IO_SIZE (2 * CF_MB)
 
 char* cf_path_get_filename(const char* path)
 {
@@ -57,6 +58,13 @@ char* cf_path_get_ext(const char* path)
 	int at = slast_index_of(path, '.');
 	if (at == -1 || path[at + 1] == 0 || path[at + 1] == '/') return NULL;
 	return smake(path + at);
+}
+
+bool cf_path_ext_equ(const char* path, const char* ext)
+{
+	int at = slast_index_of(path, '.');
+	if (at == -1 || path[at + 1] == 0 || path[at + 1] == '/') return false;
+	return sequ(path + at, ext);
 }
 
 char* cf_path_pop(const char* path)
@@ -89,7 +97,7 @@ char* cf_path_pop_n(const char* path, int n)
 
 char* cf_path_compact(const char* path, int n)
 {
-	int len = (int)CUTE_STRLEN(path);
+	int len = (int)CF_STRLEN(path);
 	if (n <= 6) return NULL;
 	if (len < n) return sdup(path);
 	int at = slast_index_of(path, '/');
@@ -116,7 +124,7 @@ char* cf_path_compact(const char* path, int n)
 
 char* cf_path_directory_of(const char* path)
 {
-	if (!*path || *path == '.' && CUTE_STRLEN(path) < 3) return NULL;
+	if (!*path || (*path == '.' && CF_STRLEN(path) < 3)) return NULL;
 	if (sequ(path, "../")) return NULL;
 	if (sequ(path, "/")) return NULL;
 	int at = slast_index_of(path, '/');
@@ -150,7 +158,7 @@ char* cf_path_top_directory(const char* path)
 char* cf_path_normalize(const char* path)
 {
 	char* result = NULL;
-	int len = (int)CUTE_STRLEN(path);
+	int len = (int)CF_STRLEN(path);
 	if (*path != '\\' && *path != '/') {
 		bool windows_drive = len >= 2 && path[1] == ':';
 		if (!windows_drive) {
@@ -221,7 +229,7 @@ CF_Result cf_fs_dismount(const char* archive)
 	}
 }
 
-static CUTE_INLINE CF_FileType s_file_type(PHYSFS_FileType type)
+static CF_INLINE CF_FileType s_file_type(PHYSFS_FileType type)
 {
 	switch (type)
 	{
@@ -253,7 +261,7 @@ CF_File* cf_fs_create_file(const char* virtual_path)
 	PHYSFS_file* file = PHYSFS_openWrite(virtual_path);
 	if (!file) {
 		return NULL;
-	} else if (!PHYSFS_setBuffer(file, CUTE_FILE_SYSTEM_BUFFERED_IO_SIZE)) {
+	} else if (!PHYSFS_setBuffer(file, CF_FILE_SYSTEM_BUFFERED_IO_SIZE)) {
 		PHYSFS_close(file);
 		return NULL;
 	}
@@ -265,7 +273,7 @@ CF_File* cf_fs_open_file_for_write(const char* virtual_path)
 	PHYSFS_file* file = PHYSFS_openWrite(virtual_path);
 	if (!file) {
 		return NULL;
-	} else if (!PHYSFS_setBuffer(file, CUTE_FILE_SYSTEM_BUFFERED_IO_SIZE)) {
+	} else if (!PHYSFS_setBuffer(file, CF_FILE_SYSTEM_BUFFERED_IO_SIZE)) {
 		PHYSFS_close(file);
 		return NULL;
 	}
@@ -277,7 +285,7 @@ CF_File* cf_fs_open_file_for_append(const char* virtual_path)
 	PHYSFS_file* file = PHYSFS_openAppend(virtual_path);
 	if (!file) {
 		return NULL;
-	} else if (!PHYSFS_setBuffer(file, CUTE_FILE_SYSTEM_BUFFERED_IO_SIZE)) {
+	} else if (!PHYSFS_setBuffer(file, CF_FILE_SYSTEM_BUFFERED_IO_SIZE)) {
 		PHYSFS_close(file);
 		return NULL;
 	}
@@ -289,7 +297,7 @@ CF_File* cf_fs_open_file_for_read(const char* virtual_path)
 	PHYSFS_file* file = PHYSFS_openRead(virtual_path);
 	if (!file) {
 		return NULL;
-	} else if (!PHYSFS_setBuffer(file, CUTE_FILE_SYSTEM_BUFFERED_IO_SIZE)) {
+	} else if (!PHYSFS_setBuffer(file, CF_FILE_SYSTEM_BUFFERED_IO_SIZE)) {
 		PHYSFS_close(file);
 		return NULL;
 	}
@@ -305,7 +313,7 @@ CF_Result cf_fs_close(CF_File* file)
 	}
 }
 
-CF_Result cf_fs_delete(const char* virtual_path)
+CF_Result cf_fs_remove_directory(const char* virtual_path)
 {
 	if (!PHYSFS_delete(virtual_path)) {
 		return cf_result_error(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));
@@ -400,9 +408,9 @@ void* cf_fs_read_entire_file_to_memory(const char* virtual_path, size_t* size)
 	CF_File* file = cf_fs_open_file_for_read(virtual_path);
 	if (!file) return NULL;
 	size_t sz = cf_fs_size(file);
-	void* data = CUTE_ALLOC(sz);
+	void* data = CF_ALLOC(sz);
 	size_t sz_read = cf_fs_read(file, data, sz);
-	CUTE_ASSERT(sz == sz_read);
+	CF_ASSERT(sz == sz_read);
 	if (size) *size = sz_read;
 	cf_fs_close(file);
 	return data;
@@ -414,9 +422,9 @@ char* cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_pat
 	void* data = NULL;
 	if (!file) return NULL;
 	size_t sz = cf_fs_size(file) + 1;
-	data = CUTE_ALLOC(sz);
+	data = CF_ALLOC(sz);
 	size_t sz_read = cf_fs_read(file, data, sz);
-	CUTE_ASSERT(sz == sz_read + 1);
+	CF_ASSERT(sz == sz_read + 1);
 	((char*)data)[sz - 1] = 0;
 	if (size) *size = sz;
 	cf_fs_close(file);
