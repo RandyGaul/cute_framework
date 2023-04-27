@@ -85,8 +85,8 @@ struct CF_Strike
 
 struct CF_Draw
 {
-	CF_V2 atlas_dims = cf_v2(1024, 1024);
-	CF_V2 texel_dims = cf_v2(1.0f/1024.0f, 1.0f/1024.0f);
+	CF_V2 atlas_dims = cf_v2(2048, 2048);
+	CF_V2 texel_dims = cf_v2(1.0f/2048.0f, 1.0f/2048.0f);
 	spritebatch_t sb;
 	CF_Shader shader;
 	CF_Mesh mesh;
@@ -117,7 +117,6 @@ struct CF_Draw
 
 void cf_make_draw();
 void cf_destroy_draw();
-void cf_load_default_font();
 
 // We slice up a 64-bit int into lo + hi ranges to map where we can fetch pixels
 // from. This slices up the 64-bit range into 16 unique range. The ranges are inclusive.

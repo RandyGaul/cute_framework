@@ -44,7 +44,7 @@ struct CF_Draw* draw;
 //#define SPRITEBATCH_LOG CF_DEBUG_PRINTF
 #include <cute/cute_spritebatch.h>
 
-#define CF_PNG_IMPLEMENTATION
+#define CUTE_PNG_IMPLEMENTATION
 #include <cute/cute_png.h>
 
 #define STB_TRUETYPE_IMPLEMENTATION
@@ -2077,6 +2077,10 @@ void cf_render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_
 {
 	spritebatch_term(&draw->sb);
 	s_init_sb(width_in_pixels, height_in_pixels);
+	draw->atlas_dims.x = (float)width_in_pixels;
+	draw->atlas_dims.y = (float)height_in_pixels;
+	draw->texel_dims.x = 1.0f / draw->atlas_dims.x;
+	draw->texel_dims.y = 1.0f / draw->atlas_dims.y;
 }
 
 void cf_render_to(CF_Canvas canvas, bool clear)

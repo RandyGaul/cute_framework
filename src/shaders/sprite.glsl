@@ -106,34 +106,28 @@
 		c = is_tri ? v_col : c;
 
 		// SDF cases.
-		float d = 1000;
-		bool is_intersection = false;
+		float d = 0;
 		bool trim = false;
-		float da = distance_segment(v_pos, v_a, v_b) - v_radius;
-		float db = distance_segment(v_pos, v_b, v_c) - v_radius;
-		float dc = distance_segment(v_pos, v_c, v_d) - v_radius;
 		if (is_box) {
 			d = distance_box(v_pos, v_a, v_b, v_c);
 		} else if (is_seg) {
-			d = da;
+			d = distance_segment(v_pos, v_a, v_b);
 		} else if (is_seg_beg) {
-			d = sdf_union(db, dc);
-			trim = sdf_subtract(dc-1, db-1) < 0;
-		} else if (is_seg_mid) {
-			d = sdf_union(db, dc);
-			trim = sdf_subtract(db-1, da-1) >= 0;
-		} else if (is_seg_end) {
-			d = sdf_union(db, dc);
-			trim = sdf_subtract(db-1, dc-1) >= 0;
+			d = min(distance_segment(v_pos, v_b, v_c), distance_segment(v_pos, v_c, v_d));
+			//trim = trim || distance_line(v_pos, v_b, v_c) - v_radius - 1.0 > 0;
+		} else if (is_seg_mid || is_seg_end) {
+			d = distance_segment(v_pos, v_b, v_c);
+			d = min(d, distance_segment(v_pos, v_c, v_d));
+			trim = trim || is_seg_mid && distance_line(v_pos, v_a, v_b) - v_radius - 1.0 < 0;
+			trim = trim || is_seg_end && distance_line(v_pos, v_c, v_d) - v_radius - 1.0 < 0;
 		} else if (is_tri_sdf) {
-			d = distance_triangle(v_pos, v_a, v_b, v_c) - v_radius;
+			d = distance_triangle(v_pos, v_a, v_b, v_c);
 		}
-		c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d) : c;
+		c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
 		c = trim ? vec4(0) : c;
 
 		//c = vec4(0.5);
 		c.a *= v_alpha;
-
 		if (c.a == 0) discard;
 		result = c;
 	}

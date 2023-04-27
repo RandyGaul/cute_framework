@@ -299,9 +299,6 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		// This will clear the initial offscreen canvas to prevent the first frame from starting off
 		// with a black background.
 		cf_apply_canvas(app->offscreen_canvas, true);
-
-		// Add a default font.
-		cf_load_default_font();
 	}
 
 	if (!(options & APP_OPTIONS_NO_AUDIO)) {
