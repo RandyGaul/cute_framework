@@ -44,7 +44,7 @@ struct CF_Draw* draw;
 //#define SPRITEBATCH_LOG CF_DEBUG_PRINTF
 #include <cute/cute_spritebatch.h>
 
-#define CUTE_PNG_IMPLEMENTATION
+#define CF_PNG_IMPLEMENTATION
 #include <cute/cute_png.h>
 
 #define STB_TRUETYPE_IMPLEMENTATION
@@ -216,7 +216,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		{
 			bool clipped_away = false;
 			if (geom.do_clipping) {
-				CUTE_ASSERT(geom.is_text);
+				CF_ASSERT(geom.is_text);
 		
 				CF_Aabb bb = make_aabb(geom.c, geom.b);
 				CF_Aabb clip = geom.clip;
@@ -396,14 +396,14 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_texture_fs(draw->material, "u_image", atlas);
 
 	// Apply uniforms.
-	CUTE_ASSERT(draw->atlas_dims.x == (float)texture_w);
-	CUTE_ASSERT(draw->atlas_dims.y == (float)texture_h);
+	CF_ASSERT(draw->atlas_dims.x == (float)texture_w);
+	CF_ASSERT(draw->atlas_dims.y == (float)texture_h);
 	v2 u_texture_size = cf_v2((float)texture_w, (float)texture_h);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 
 	// Outline shader uniforms.
-	CUTE_ASSERT(draw->texel_dims.x == 1.0f / (float)texture_w);
-	CUTE_ASSERT(draw->texel_dims.y == 1.0f / (float)texture_h);
+	CF_ASSERT(draw->texel_dims.x == 1.0f / (float)texture_w);
+	CF_ASSERT(draw->texel_dims.y == 1.0f / (float)texture_h);
 	v2 u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texel_size", &u_texel_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 
@@ -448,39 +448,39 @@ void cf_make_draw()
 	cf_camera_dimensions((float)app->w, (float)app->h);
 
 	// Mesh + vertex attributes.
-	draw->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CUTE_MB * 25, 0, 0);
+	draw->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CF_MB * 25, 0, 0);
 	CF_VertexAttribute attrs[10] = { };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[0].offset = CUTE_OFFSET_OF(DrawVertex, p);
+	attrs[0].offset = CF_OFFSET_OF(DrawVertex, p);
 	attrs[1].name = "in_a";
 	attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[1].offset = CUTE_OFFSET_OF(DrawVertex, a);
+	attrs[1].offset = CF_OFFSET_OF(DrawVertex, a);
 	attrs[2].name = "in_b";
 	attrs[2].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[2].offset = CUTE_OFFSET_OF(DrawVertex, b);
+	attrs[2].offset = CF_OFFSET_OF(DrawVertex, b);
 	attrs[3].name = "in_c";
 	attrs[3].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[3].offset = CUTE_OFFSET_OF(DrawVertex, c);
+	attrs[3].offset = CF_OFFSET_OF(DrawVertex, c);
 	attrs[4].name = "in_d";
 	attrs[4].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[4].offset = CUTE_OFFSET_OF(DrawVertex, d);
+	attrs[4].offset = CF_OFFSET_OF(DrawVertex, d);
 	attrs[5].name = "in_uv";
 	attrs[5].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[5].offset = CUTE_OFFSET_OF(DrawVertex, uv);
+	attrs[5].offset = CF_OFFSET_OF(DrawVertex, uv);
 	attrs[6].name = "in_col";
 	attrs[6].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[6].offset = CUTE_OFFSET_OF(DrawVertex, color);
+	attrs[6].offset = CF_OFFSET_OF(DrawVertex, color);
 	attrs[7].name = "in_radius";
 	attrs[7].format = CF_VERTEX_FORMAT_FLOAT;
-	attrs[7].offset = CUTE_OFFSET_OF(DrawVertex, radius);
+	attrs[7].offset = CF_OFFSET_OF(DrawVertex, radius);
 	attrs[8].name = "in_stroke";
 	attrs[8].format = CF_VERTEX_FORMAT_FLOAT;
-	attrs[8].offset = CUTE_OFFSET_OF(DrawVertex, stroke);
+	attrs[8].offset = CF_OFFSET_OF(DrawVertex, stroke);
 	attrs[9].name = "in_params";
 	attrs[9].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[9].offset = CUTE_OFFSET_OF(DrawVertex, type);
-	cf_mesh_set_attributes(draw->mesh, attrs, CUTE_ARRAY_SIZE(attrs), sizeof(DrawVertex), 0);
+	attrs[9].offset = CF_OFFSET_OF(DrawVertex, type);
+	cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(DrawVertex), 0);
 
 	// Shaders.
 	draw->shader = CF_MAKE_SOKOL_SHADER(sprite_shd);
@@ -510,16 +510,6 @@ void cf_destroy_draw()
 	cf_destroy_shader(draw->shader);
 	draw->~CF_Draw();
 	CF_FREE(draw);
-}
-
-void cf_load_default_font()
-{
-	CUTE_ASSERT(draw->fonts.size() == 1);
-	draw->fonts.pop();
-	draw->fonts.add(sintern("calibri"));
-	void* decompressed = CUTE_ALLOC(calibri_sz * 2);
-	int decompressed_size = stb_decompress(decompressed, (void*)calibri_data, calibri_sz);
-	cf_make_font_mem(decompressed, decompressed_size, "calibri", NULL);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -618,52 +608,28 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	spritebatch_push(&draw->sb, s);
 }
 
-void cf_draw_quad(CF_Aabb bb, float thickness)
+void cf_draw_quad(CF_Aabb bb, float thickness, float chubbiness)
 {
 	CF_V2 verts[4];
 	cf_aabb_verts(verts, bb);
-	s_draw_quad(verts[0], verts[1], verts[2], verts[3], thickness, 0, false);
+	s_draw_quad(verts[0], verts[1], verts[2], verts[3], thickness, chubbiness, false);
 }
 
-void cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness)
+void cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float chubbiness)
 {
-	s_draw_quad(p0, p1, p2, p3, thickness, 0, false);
+	s_draw_quad(p0, p1, p2, p3, thickness, chubbiness, false);
 }
 
-void cf_draw_quad_rounded(CF_Aabb bb, float thickness, float radius)
-{
-	CF_V2 verts[4];
-	cf_aabb_verts(verts, bb);
-	s_draw_quad(verts[0], verts[1], verts[2], verts[3], thickness, radius, false);
-}
-
-void cf_draw_quad_rounded2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float radius)
-{
-	s_draw_quad(p0, p1, p2, p3, thickness, radius, false);
-}
-
-void cf_draw_quad_fill(CF_Aabb bb)
+void cf_draw_quad_fill(CF_Aabb bb, float chubbiness)
 {
 	CF_V2 verts[4];
 	cf_aabb_verts(verts, bb);
-	s_draw_quad(verts[0], verts[1], verts[2], verts[3], 0, 0, true);
+	s_draw_quad(verts[0], verts[1], verts[2], verts[3], 0, chubbiness, true);
 }
 
-void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3)
+void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float chubbiness)
 {
-	s_draw_quad(p0, p1, p2, p3, 0, 0, true);
-}
-
-void cf_draw_quad_fill_rounded(CF_Aabb bb, float radius)
-{
-	CF_V2 verts[4];
-	cf_aabb_verts(verts, bb);
-	s_draw_quad(verts[0], verts[1], verts[2], verts[3], 0, radius, true);
-}
-
-void cf_draw_quad_fill_rounded2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float radius)
-{
-	s_draw_quad(p0, p1, p2, p3, 0, radius, true);
+	s_draw_quad(p0, p1, p2, p3, 0, chubbiness, true);
 }
 
 static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
@@ -694,17 +660,31 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	spritebatch_push(&draw->sb, s);
 }
 
-void cf_draw_circle(CF_V2 position, float radius, float thickness)
+void cf_draw_circle(CF_Circle circle, float thickness)
+{
+	s_draw_circle(circle.p, thickness, circle.r, false);
+}
+
+void cf_draw_circle2(CF_V2 position, float radius, float thickness)
 {
 	s_draw_circle(position, thickness, radius, false);
 }
 
-void cf_draw_circle_fill(CF_V2 position, float radius)
+void cf_draw_circle_fill(CF_Circle circle)
+{
+	s_draw_circle(circle.p, 0, circle.r, true);
+}
+
+void cf_draw_circle_fill2(CF_V2 position, float radius)
 {
 	s_draw_circle(position, 0, radius, true);
 }
 
-static CUTE_INLINE void s_bounding_box_of_capsule(v2 a, v2 b, float radius, float stroke, v2 out[4])
+void cf_draw_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness)
+{
+}
+
+static CF_INLINE void s_bounding_box_of_capsule(v2 a, v2 b, float radius, float stroke, v2 out[4])
 {
 	v2 n0 = norm(b - a) * (radius + stroke + 1.0f);
 	v2 n1 = skew(n0);
@@ -740,17 +720,27 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	spritebatch_push(&draw->sb, s);
 }
 
-void cf_draw_capsule(CF_V2 a, CF_V2 b, float radius, float thickness)
+void cf_draw_capsule(CF_Capsule capsule, float thickness)
+{
+	s_draw_capsule(capsule.a, capsule.b, thickness, capsule.r, false);
+}
+
+void cf_draw_capsule2(CF_V2 a, CF_V2 b, float radius, float thickness)
 {
 	s_draw_capsule(a, b, thickness, radius, false);
 }
 
-void cf_draw_capsule_fill(CF_V2 a, CF_V2 b, float radius)
+void cf_draw_capsule_fill(CF_Capsule capsule)
+{
+	s_draw_capsule(capsule.a, capsule.b, 0, capsule.r, true);
+}
+
+void cf_draw_capsule_fill2(CF_V2 a, CF_V2 b, float radius)
 {
 	s_draw_capsule(a, b, 0, radius, true);
 }
 
-void CUTE_INLINE s_bounding_box_of_triangle(v2 a, v2 b, v2 c, float radius, float stroke, v2* out)
+void CF_INLINE s_bounding_box_of_triangle(v2 a, v2 b, v2 c, float radius, float stroke, v2* out)
 {
 	v2 ab = b - a;
 	v2 bc = c - b;
@@ -815,24 +805,14 @@ static void s_cf_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fil
 	spritebatch_push(&draw->sb, s);
 }
 
-void cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness)
+void cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float chubbiness)
 {
-	s_cf_draw_tri(p0, p1, p2, thickness, 0, false);
+	s_cf_draw_tri(p0, p1, p2, thickness, chubbiness, false);
 }
 
-void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2)
+void cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, float chubbiness)
 {
-	s_cf_draw_tri(p0, p1, p2, 0, 0, true);
-}
-
-void cf_draw_tri_rounded(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float radius)
-{
-	s_cf_draw_tri(p0, p1, p2, thickness, radius, false);
-}
-
-void cf_draw_tri_fill_rounded(CF_V2 p0, CF_V2 p1, CF_V2 p2, float radius)
-{
-	s_cf_draw_tri(p0, p1, p2, 0, radius, true);
+	s_cf_draw_tri(p0, p1, p2, 0, chubbiness, true);
 }
 
 void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
@@ -855,7 +835,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	s.geom.stroke = 0;
 	s.geom.fill = true;
 	s.geom.antialias = draw->antialias.last();
-	s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT_TRI;
+	s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT;
 	s.sort_bits = draw->layers.last();
 	s.w = s.h = 1;
 
@@ -872,9 +852,9 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	auto submit = [&](v2 a, v2 b, v2 c, v2 p0, v2 p1) {
 		s.geom.a = p0;
 		s.geom.b = p1;
-		s.geom.verts[0] = a;
-		s.geom.verts[1] = b;
-		s.geom.verts[2] = c;
+		s.geom.box[0] = a;
+		s.geom.box[1] = b;
+		s.geom.box[2] = c;
 	};
 
 	for (int i = 0; i < count - 1; ++i) {
@@ -903,16 +883,16 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 			}
 		}
 
-		s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_MIDDLE;
-		s_bounding_box_of_capsule(beg, end, thickness, 0, s.geom.box);
-		s.geom.box[0] = mul(m, s.geom.box[0]);
-		s.geom.box[1] = mul(m, s.geom.box[1]);
-		s.geom.box[2] = mul(m, s.geom.box[2]);
-		s.geom.box[3] = mul(m, s.geom.box[3]);
-		s.geom.a = a;
-		s.geom.b = b;
-		s.geom.c = c;
-		s.geom.d = d;
+		//s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_MIDDLE;
+		//s_bounding_box_of_capsule(beg, end, thickness, 0, s.geom.box);
+		//s.geom.box[0] = mul(m, s.geom.box[0]);
+		//s.geom.box[1] = mul(m, s.geom.box[1]);
+		//s.geom.box[2] = mul(m, s.geom.box[2]);
+		//s.geom.box[3] = mul(m, s.geom.box[3]);
+		//s.geom.a = a;
+		//s.geom.b = b;
+		//s.geom.c = c;
+		//s.geom.d = d;
 		spritebatch_push(&draw->sb, s);
 	}
 }
@@ -1033,7 +1013,7 @@ void cf_font_add_backup_codepoints(const char* font_name, int* codepoints, int c
 
 CF_Font* cf_font_get(const char* font_name)
 {
-	CUTE_ASSERT(font_name);
+	CF_ASSERT(font_name);
 	return app->fonts.get(sintern(font_name));
 }
 

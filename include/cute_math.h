@@ -1411,7 +1411,7 @@ CF_INLINE CF_Halfspace cf_mulT_tf_hs(CF_Transform a, CF_Halfspace b) { CF_Halfsp
  * @brief    Returns the intersection point of two points to a plane.
  * @remarks  The distance to the plane are provided as `da` and `db`. You can compute these with e.g. `cf_distance_hs`, or instead
  *           call the similar function `cf_intersect_halfspace2`.
- * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace cf_intersect_haflspace2 cf_intersect_haflspace3
  */
 CF_INLINE CF_V2 cf_intersect_halfspace(CF_V2 a, CF_V2 b, float da, float db) { return cf_add_v2(a, cf_mul_v2_f(cf_sub_v2(b, a), (da / (da - db)))); }
 
@@ -1419,9 +1419,17 @@ CF_INLINE CF_V2 cf_intersect_halfspace(CF_V2 a, CF_V2 b, float da, float db) { r
  * @function cf_intersect_halfspace2
  * @category math
  * @brief    Returns the intersection point of two points to a plane.
- * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace cf_intersect_haflspace2 cf_intersect_haflspace3
  */
 CF_INLINE CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b) { return cf_intersect_halfspace(a, b, cf_distance_hs(h, a), cf_distance_hs(h, b)); }
+
+/**
+ * @function cf_intersect_halfspace3
+ * @category math
+ * @brief    Returns the intersection point of two planes.
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace cf_intersect_haflspace2 cf_intersect_haflspace3
+ */
+CF_INLINE CF_V2 cf_intersect_halfspace3(CF_Halfspace ha, CF_Halfspace hb) { CF_V2 a = {ha.n.x, hb.n.x}, b = {ha.n.y, hb.n.y}, c = {ha.d, hb.d}; float x = cf_det2(c, b) / cf_det2(a, b); float y = cf_det2(a, c) / cf_det2(a, b); return cf_v2(x, y); }
 
 //--------------------------------------------------------------------------------------------------
 // Shape helpers.
@@ -2542,6 +2550,7 @@ CF_INLINE Halfspace mul(Transform a, Halfspace b) { return cf_mul_tf_hs(a, b); }
 CF_INLINE Halfspace mulT(Transform a, Halfspace b) { return cf_mulT_tf_hs(a, b); }
 CF_INLINE v2 intersect(v2 a, v2 b, float da, float db) { return cf_intersect_halfspace(a, b, da, db); }
 CF_INLINE v2 intersect(Halfspace h, v2 a, v2 b) { return cf_intersect_halfspace2(h, a, b); }
+CF_INLINE v2 intersect(Halfspace a, Halfspace b) { return cf_intersect_halfspace3(a, b); }
 
 CF_INLINE Circle make_circle(v2 pos, float radius) { return cf_make_circle(pos, radius); }
 CF_INLINE Capsule make_capsule(v2 a, v2 b, float radius) { return cf_make_capsule(a, b, radius); }
