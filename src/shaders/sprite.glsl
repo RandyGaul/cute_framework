@@ -14,26 +14,24 @@
 	layout (location = 1) in vec2 in_a;
 	layout (location = 2) in vec2 in_b;
 	layout (location = 3) in vec2 in_c;
-	layout (location = 4) in vec2 in_d;
-	layout (location = 5) in vec2 in_uv;
-	layout (location = 6) in vec4 in_col;
-	layout (location = 7) in float in_radius;
-	layout (location = 8) in float in_stroke;
-	layout (location = 9) in vec4 in_params;
+	layout (location = 4) in vec2 in_uv;
+	layout (location = 5) in vec4 in_col;
+	layout (location = 6) in float in_radius;
+	layout (location = 7) in float in_stroke;
+	layout (location = 8) in vec4 in_params;
 
 	layout (location = 0) out vec2 v_pos;
 	layout (location = 1) out vec2 v_a;
 	layout (location = 2) out vec2 v_b;
 	layout (location = 3) out vec2 v_c;
-	layout (location = 4) out vec2 v_d;
-	layout (location = 5) out vec2 v_uv;
-	layout (location = 6) out vec4 v_col;
-	layout (location = 7) out float v_radius;
-	layout (location = 8) out float v_stroke;
-	layout (location = 9) out float v_type;
-	layout (location = 10) out float v_alpha;
-	layout (location = 11) out float v_fill;
-	layout (location = 12) out float v_aa;
+	layout (location = 4) out vec2 v_uv;
+	layout (location = 5) out vec4 v_col;
+	layout (location = 6) out float v_radius;
+	layout (location = 7) out float v_stroke;
+	layout (location = 8) out float v_type;
+	layout (location = 9) out float v_alpha;
+	layout (location = 10) out float v_fill;
+	layout (location = 11) out float v_aa;
 
 	void main()
 	{
@@ -44,7 +42,6 @@
 		v_a = in_a;
 		v_b = in_b;
 		v_c = in_c;
-		v_d = in_d;
 		v_uv = in_uv;
 		v_col = in_col;
 		v_radius = in_radius;
@@ -63,15 +60,14 @@
 	layout (location = 1) in vec2 v_a;
 	layout (location = 2) in vec2 v_b;
 	layout (location = 3) in vec2 v_c;
-	layout (location = 4) in vec2 v_d;
-	layout (location = 5) in vec2 v_uv;
-	layout (location = 6) in vec4 v_col;
-	layout (location = 7) in float v_radius;
-	layout (location = 8) in float v_stroke;
-	layout (location = 9) in float v_type;
-	layout (location = 10) in float v_alpha;
-	layout (location = 11) in float v_fill;
-	layout (location = 12) in float v_aa;
+	layout (location = 4) in vec2 v_uv;
+	layout (location = 5) in vec4 v_col;
+	layout (location = 6) in float v_radius;
+	layout (location = 7) in float v_stroke;
+	layout (location = 8) in float v_type;
+	layout (location = 9) in float v_alpha;
+	layout (location = 10) in float v_fill;
+	layout (location = 11) in float v_aa;
 
 	out vec4 result;
 
@@ -88,15 +84,12 @@
 
 	void main()
 	{
-		bool is_sprite  = v_type == (0.0/255.0);
-		bool is_text    = v_type == (1.0/255.0);
-		bool is_box     = v_type == (2.0/255.0);
-		bool is_seg     = v_type == (3.0/255.0);
-		bool is_seg_beg = v_type == (4.0/255.0);
-		bool is_seg_mid = v_type == (5.0/255.0);
-		bool is_seg_end = v_type == (6.0/255.0);
-		bool is_tri     = v_type == (7.0/255.0);
-		bool is_tri_sdf = v_type == (8.0/255.0);
+		bool is_sprite    = v_type == (0.0/255.0);
+		bool is_text      = v_type == (1.0/255.0);
+		bool is_box       = v_type == (2.0/255.0);
+		bool is_seg       = v_type == (3.0/255.0);
+		bool is_tri       = v_type == (4.0/255.0);
+		bool is_tri_sdf   = v_type == (5.0/255.0);
 
 		// Traditional sprite/text/tri cases.
 		vec4 c = vec4(0);
@@ -107,26 +100,16 @@
 
 		// SDF cases.
 		float d = 0;
-		bool trim = false;
 		if (is_box) {
 			d = distance_box(v_pos, v_a, v_b, v_c);
 		} else if (is_seg) {
 			d = distance_segment(v_pos, v_a, v_b);
-		} else if (is_seg_beg) {
-			d = min(distance_segment(v_pos, v_b, v_c), distance_segment(v_pos, v_c, v_d));
-			//trim = trim || distance_line(v_pos, v_b, v_c) - v_radius - 1.0 > 0;
-		} else if (is_seg_mid || is_seg_end) {
-			d = distance_segment(v_pos, v_b, v_c);
-			d = min(d, distance_segment(v_pos, v_c, v_d));
-			trim = trim || is_seg_mid && distance_line(v_pos, v_a, v_b) - v_radius - 1.0 < 0;
-			trim = trim || is_seg_end && distance_line(v_pos, v_c, v_d) - v_radius - 1.0 < 0;
+			d = min(d, distance_segment(v_pos, v_b, v_c));
 		} else if (is_tri_sdf) {
 			d = distance_triangle(v_pos, v_a, v_b, v_c);
 		}
 		c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
-		c = trim ? vec4(0) : c;
 
-		//c = vec4(0.5);
 		c.a *= v_alpha;
 		if (c.a == 0) discard;
 		result = c;

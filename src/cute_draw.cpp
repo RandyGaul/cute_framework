@@ -64,15 +64,12 @@ struct CF_Draw* draw;
 
 using namespace Cute;
 
-#define VA_TYPE_SPRITE               (0)
-#define VA_TYPE_TEXT                 (1)
-#define VA_TYPE_BOX                  (2)
-#define VA_TYPE_SEGMENT              (3)
-#define VA_TYPE_SEGMENT_CHAIN_BEGIN  (4)
-#define VA_TYPE_SEGMENT_CHAIN_MIDDLE (5)
-#define VA_TYPE_SEGMENT_CHAIN_END    (6)
-#define VA_TYPE_TRIANGLE             (7)
-#define VA_TYPE_TRIANGLE_SDF         (8)
+#define VA_TYPE_SPRITE        (0)
+#define VA_TYPE_TEXT          (1)
+#define VA_TYPE_BOX           (2)
+#define VA_TYPE_SEGMENT       (3)
+#define VA_TYPE_TRIANGLE      (4)
+#define VA_TYPE_TRIANGLE_SDF  (5)
 
 SPRITEBATCH_U64 cf_generate_texture_handle(void* pixels, int w, int h, void* udata)
 {
@@ -153,12 +150,12 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		{
 			for (int i = 0; i < 3; ++i) {
 				out[i].color = s->geom.color;
-				out[i].radius = s->geom.radius;
-				out[i].stroke = s->geom.stroke;
-				out[i].type = VA_TYPE_TRIANGLE_SDF;
+				out[i].radius = 0;
+				out[i].stroke = 0;
+				out[i].type = VA_TYPE_TRIANGLE;
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				out[i].fill = s->geom.fill ? 255 : 0;
-				out[i].aa = s->geom.antialias ? 255 : 0;
+				out[i].fill = 255;
+				out[i].aa = 0;
 			}
 
 			out[0].p = geom.a;
@@ -297,74 +294,18 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			vert_count += 6;
 		}	break;
 
-		case BATCH_GEOMETRY_TYPE_CIRCLE:
-		{
-			for (int i = 0; i < 6; ++i) {
-				out[i].p = quad[i];
-				out[i].a = geom.a;
-				out[i].b = geom.a; // Use segment-path in shader for circle rendering.
-				out[i].color = s->geom.color;
-				out[i].radius = s->geom.radius;
-				out[i].stroke = s->geom.stroke;
-				out[i].type = VA_TYPE_SEGMENT;
-				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				out[i].fill = s->geom.fill ? 255 : 0;
-				out[i].aa = s->geom.antialias ? 255 : 0;
-			}
-
-			vert_count += 6;
-		}	break;
-
+		case BATCH_GEOMETRY_TYPE_CIRCLE: // Use the segment path for circle rendering.
 		case BATCH_GEOMETRY_TYPE_SEGMENT:
 		{
 			for (int i = 0; i < 6; ++i) {
 				out[i].p = quad[i];
 				out[i].a = geom.a;
 				out[i].b = geom.b;
+				out[i].c = geom.c;
 				out[i].color = s->geom.color;
 				out[i].radius = s->geom.radius;
 				out[i].stroke = s->geom.stroke;
 				out[i].type = VA_TYPE_SEGMENT;
-				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				out[i].fill = s->geom.fill ? 255 : 0;
-				out[i].aa = s->geom.antialias ? 255 : 0;
-			}
-
-			vert_count += 6;
-		}	break;
-
-		case BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_BEGIN:
-		case BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_END:
-		{
-			for (int i = 0; i < 6; ++i) {
-				out[i].p = quad[i];
-				out[i].b = geom.b;
-				out[i].c = geom.c;
-				out[i].d = geom.d;
-				out[i].color = s->geom.color;
-				out[i].radius = s->geom.radius;
-				out[i].stroke = s->geom.stroke;
-				out[i].type = s->geom.type == BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_BEGIN ? VA_TYPE_SEGMENT_CHAIN_BEGIN : VA_TYPE_SEGMENT_CHAIN_END;
-				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
-				out[i].fill = s->geom.fill ? 255 : 0;
-				out[i].aa = s->geom.antialias ? 255 : 0;
-			}
-
-			vert_count += 6;
-		}	break;
-
-		case BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_MIDDLE:
-		{
-			for (int i = 0; i < 6; ++i) {
-				out[i].p = quad[i];
-				out[i].a = geom.a;
-				out[i].b = geom.b;
-				out[i].c = geom.c;
-				out[i].d = geom.d;
-				out[i].color = s->geom.color;
-				out[i].radius = s->geom.radius;
-				out[i].stroke = s->geom.stroke;
-				out[i].type = VA_TYPE_SEGMENT_CHAIN_MIDDLE;
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = s->geom.fill ? 255 : 0;
 				out[i].aa = s->geom.antialias ? 255 : 0;
@@ -449,7 +390,7 @@ void cf_make_draw()
 
 	// Mesh + vertex attributes.
 	draw->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CF_MB * 25, 0, 0);
-	CF_VertexAttribute attrs[10] = { };
+	CF_VertexAttribute attrs[9] = { };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[0].offset = CF_OFFSET_OF(DrawVertex, p);
@@ -462,24 +403,21 @@ void cf_make_draw()
 	attrs[3].name = "in_c";
 	attrs[3].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[3].offset = CF_OFFSET_OF(DrawVertex, c);
-	attrs[4].name = "in_d";
+	attrs[4].name = "in_uv";
 	attrs[4].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[4].offset = CF_OFFSET_OF(DrawVertex, d);
-	attrs[5].name = "in_uv";
-	attrs[5].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[5].offset = CF_OFFSET_OF(DrawVertex, uv);
-	attrs[6].name = "in_col";
-	attrs[6].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[6].offset = CF_OFFSET_OF(DrawVertex, color);
-	attrs[7].name = "in_radius";
+	attrs[4].offset = CF_OFFSET_OF(DrawVertex, uv);
+	attrs[5].name = "in_col";
+	attrs[5].format = CF_VERTEX_FORMAT_UBYTE4N;
+	attrs[5].offset = CF_OFFSET_OF(DrawVertex, color);
+	attrs[6].name = "in_radius";
+	attrs[6].format = CF_VERTEX_FORMAT_FLOAT;
+	attrs[6].offset = CF_OFFSET_OF(DrawVertex, radius);
+	attrs[7].name = "in_stroke";
 	attrs[7].format = CF_VERTEX_FORMAT_FLOAT;
-	attrs[7].offset = CF_OFFSET_OF(DrawVertex, radius);
-	attrs[8].name = "in_stroke";
-	attrs[8].format = CF_VERTEX_FORMAT_FLOAT;
-	attrs[8].offset = CF_OFFSET_OF(DrawVertex, stroke);
-	attrs[9].name = "in_params";
-	attrs[9].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[9].offset = CF_OFFSET_OF(DrawVertex, type);
+	attrs[7].offset = CF_OFFSET_OF(DrawVertex, stroke);
+	attrs[8].name = "in_params";
+	attrs[8].format = CF_VERTEX_FORMAT_UBYTE4N;
+	attrs[8].offset = CF_OFFSET_OF(DrawVertex, type);
 	cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(DrawVertex), 0);
 
 	// Shaders.
@@ -649,6 +587,8 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	s.geom.box[2] = mul(m, s.geom.box[2]);
 	s.geom.box[3] = mul(m, s.geom.box[3]);
 	s.geom.a = position;
+	s.geom.b = position;
+	s.geom.c = position;
 
 	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
 	s.geom.alpha = 1.0f;
@@ -709,6 +649,7 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	s.geom.box[3] = mul(m, s.geom.box[3]);
 	s.geom.a = a;
 	s.geom.b = b;
+	s.geom.c = a;
 
 	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
 	s.geom.alpha = 1.0f;
@@ -831,7 +772,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	s.image_id = app->default_image_id;
 	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
 	s.geom.alpha = 1.0f;
-	s.geom.radius = thickness;
+	s.geom.radius = thickness * 0.5f;
 	s.geom.stroke = 0;
 	s.geom.fill = true;
 	s.geom.antialias = draw->antialias.last();
@@ -846,33 +787,63 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	v2 n1 = norm(p2 - p1);
 	v2 t0 = skew(n0);
 	v2 t1 = skew(n1);
-	v2 a = p0 - n0 * thickness + t0;
-	v2 b = p0 - n0 * thickness - t0;
+	v2 a = p0 - n0 * thickness + t0 * thickness;
+	v2 b = p0 - n0 * thickness - t0 * thickness;
 
-	auto submit = [&](v2 a, v2 b, v2 c, v2 p0, v2 p1) {
-		s.geom.a = p0;
-		s.geom.b = p1;
-		s.geom.box[0] = a;
-		s.geom.box[1] = b;
-		s.geom.box[2] = c;
+	auto submit = [&](v2 a, v2 b, v2 c, v2 p0, v2 p1, v2 p2) {
+		s.geom.a = a;
+		s.geom.b = b;
+		s.geom.c = c;
+		s.geom.box[0] = mul(m, p0);
+		s.geom.box[1] = mul(m, p1);
+		s.geom.box[2] = mul(m, p2);
+		spritebatch_push(&draw->sb, s);
 	};
+
+	//draw_push_color(color_cyan());
+	//for (int i = 0; i < count - 1; ++i) {
+	//	int j = i + 1;
+	//	draw_capsule(pts[i], pts[j], 5.0f);
+	//}
+	//draw_pop_color();
 
 	for (int i = 0; i < count - 1; ++i) {
 		const float k_tol = 1.e-6f;
 		float p0p1_x_p1p2 = cross(n0, n1);
 		float d = dot(t0, t1);
-		Halfspace h0 = plane(t0, dot(t0, p0) + thickness);
-		Halfspace h1 = plane(-t0, -h0.d + thickness * 2);
-		Halfspace h2 = plane(t1, dot(t1, p2) + thickness);
-		Halfspace h3 = plane(-t1, -h2.d + thickness * 2);
+		Halfspace h0 = plane(t0, a);
+		Halfspace h1 = plane(-t0, b);
+		Halfspace h2 = plane(-t1, p2 - t1 * thickness);
+		Halfspace h3 = plane(t1, p2 + t1 * thickness);
 		v2 n = norm(n0 - n1);
 		Halfspace h4 = plane(n, p1 + n * thickness);
+
+		//draw_push_color(color_yellow());
+		//draw_quad(make_aabb(a, 2.0f, 2.0f));
+		//draw_quad(make_aabb(b, 2.0f, 2.0f));
+		//draw_pop_color();
 
 		if (p0p1_x_p1p2 < -k_tol) {
 			if (d >= 0) {
 				v2 c = intersect(h1, h2);
 				v2 d = intersect(h3, h4);
 				v2 e = intersect(h0, h4);
+				submit(p0, p1, p2, a, b, e);
+				submit(p0, p1, p2, e, b, c);
+				submit(p0, p1, p2, e, c, d);
+
+				//draw_push_antialias(false);
+				//draw_tri_fill(a, b, e);
+				//draw_tri_fill(e, b, c);
+				//draw_tri_fill(e, c, d);
+				//draw_pop_antialias();
+
+				//draw_push_color(color_red());
+				//draw_quad(make_aabb(c, 2.0f, 2.0f));
+				//draw_quad(make_aabb(d, 2.0f, 2.0f));
+				//draw_quad(make_aabb(e, 2.0f, 2.0f));
+				//draw_pop_color();
+				break;
 			} else {
 				v2 n = norm(n0 + n1);
 				v2 c = p1 + n * thickness;
@@ -882,18 +853,6 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 			} else {
 			}
 		}
-
-		//s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_MIDDLE;
-		//s_bounding_box_of_capsule(beg, end, thickness, 0, s.geom.box);
-		//s.geom.box[0] = mul(m, s.geom.box[0]);
-		//s.geom.box[1] = mul(m, s.geom.box[1]);
-		//s.geom.box[2] = mul(m, s.geom.box[2]);
-		//s.geom.box[3] = mul(m, s.geom.box[3]);
-		//s.geom.a = a;
-		//s.geom.b = b;
-		//s.geom.c = c;
-		//s.geom.d = d;
-		spritebatch_push(&draw->sb, s);
 	}
 }
 

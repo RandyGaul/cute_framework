@@ -37,9 +37,6 @@ enum BatchGeometryType : int
 	BATCH_GEOMETRY_TYPE_SPRITE,
 	BATCH_GEOMETRY_TYPE_CIRCLE,
 	BATCH_GEOMETRY_TYPE_SEGMENT,
-	BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_BEGIN,
-	BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_END,
-	BATCH_GEOMETRY_TYPE_SEGMENT_CHAIN_MIDDLE,
 };
 
 struct BatchGeometry
@@ -66,7 +63,7 @@ struct BatchGeometry
 struct DrawVertex
 {
 	CF_V2 p;
-	CF_V2 a, b, c, d;
+	CF_V2 a, b, c;
 	CF_V2 uv;
 	CF_Pixel color;
 	float radius;
