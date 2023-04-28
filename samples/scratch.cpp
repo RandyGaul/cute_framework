@@ -117,8 +117,12 @@ int main(int argc, char* argv[])
 			};
 			Rnd rnd = rnd_seed(0);
 			for (int i = 0; i < CF_ARRAY_SIZE(pts); ++i) {
-				auto f = [&](float s) { return rnd_next_range(rnd, 1.0f, 2.0f) * s; };
-				pts[i] += V2(cosf(t*f(0.5f)*0.5f + f(3)), sinf(t*f(0.5f)*0.5f + f(3))) * f(50);
+				auto f = [&](float s) { return rnd_next_range(rnd, 1.0f, 3.0f) * s; };
+				if (i%2) {
+					pts[i] += V2(cosf(t*f(0.5f)*0.5f + f(3)), sinf(t*f(0.5f)*0.5f + f(3))) * f(50);
+				} else {
+					pts[i] += V2(sinf(t*f(0.5f)*0.5f + f(3)), cosf(t*f(0.5f)*0.5f + f(3))) * f(50);
+				}
 			}
 			draw_push_antialias(true);
 			cf_draw_polyline(pts, CF_ARRAY_SIZE(pts), 5, false);
@@ -135,12 +139,17 @@ int main(int argc, char* argv[])
 			}
 		}
 
+		static v2 v = V2(0,0);
+		ImGui::Begin("what");
+		ImGui::InputFloat2("pt", &v.x);
+		ImGui::End();
+
 		if (0) {
 			v2 pts[] = {
-				V2(0,0),
+				v,
 				V2(100,0),
-				V2(50,100),
 				V2(100,100),
+				V2(50, 50),
 			};
 			draw_push_antialias(true);
 			cf_draw_polyline(pts, CF_ARRAY_SIZE(pts), 5, false);

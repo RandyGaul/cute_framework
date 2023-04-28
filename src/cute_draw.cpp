@@ -791,7 +791,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	v2 a = p0 - n0 * thickness + t0 * thickness;
 	v2 b = p0 - n0 * thickness - t0 * thickness;
 
-	auto submit = [&](v2 a, v2 b, v2 c, v2 p0, v2 p1, v2 p2) {
+	auto submit = [&](v2 a, v2 b, v2 c) {
 		s.geom.a = a;
 		s.geom.b = b;
 		s.geom.c = c;
@@ -801,12 +801,17 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 		spritebatch_push(&draw->sb, s);
 	};
 
-	draw_push_color(color_cyan());
-	for (int i = 0; i < count - 1; ++i) {
-		int j = i + 1;
-		draw_capsule(pts[i], pts[j], 5.0f);
+	const bool debug = false;
+
+	if (debug) {
+		draw_push_color(color_cyan());
+		for (int i = 0; i < count - 1; ++i) {
+			int j = i + 1;
+			draw_capsule(pts[i], pts[j], 5.0f);
+		}
+		draw_pop_color();
+		draw_push_color(make_color(1.0f, 1.0f, 1.0f, 0.5f));
 	}
-	draw_pop_color();
 
 	for (int i = 0; i < count - 2; ++i) {
 		n0 = norm(p1 - p0);
@@ -825,106 +830,176 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 		Halfspace h4 = plane(n, p1 + n * thickness);
 
 		if (::abs(p0p1_x_p1p2) < k_tol) {
+			// Parallel line case.
 			v2 c = p1 + t0 * (thickness);
 			v2 d = p1 - t0 * (thickness);
 
-			draw_push_antialias(false);
-			draw_tri_fill(a, b, c);
-			draw_tri_fill(c, b, d);
-			draw_pop_antialias();
+			if (debug) {
+				draw_push_antialias(false);
+				draw_tri_fill(a, b, c);
+				draw_tri_fill(c, b, d);
+				draw_pop_antialias();
 
-			draw_push_color(color_orange());
-			draw_quad(make_aabb(c, 2.0f, 2.0f));
-			draw_quad(make_aabb(d, 2.0f, 2.0f));
-			draw_pop_color();
+				draw_push_color(color_orange());
+				draw_quad(make_aabb(c, 2.0f, 2.0f));
+				draw_quad(make_aabb(d, 2.0f, 2.0f));
+				draw_pop_color();
+			} else {
+				submit(a, b, c);
+				submit(c, b, d);
+			}
 
 			a = c;
 			b = d;
 		} else {
 			if (p0p1_x_p1p2 < 0) {
 				if (d < 0) {
-					v2 c = intersect(h1, h2);
+					// Acute.
 					v2 d = intersect(h3, h4);
 					v2 e = intersect(h0, h4);
 
-					Halfspace bounds = plane(n0, a);
-					if (distance(bounds, c) < 0) {
-						c = project(bounds, c);
+					if (distance(h1, p2 - t1 * thickness) < 0) {
+						// Self-intersecting.
+						v2 c = p1 + t1 * thickness;
+
+						if (debug) {
+							draw_push_antialias(false);
+							draw_tri_fill(a, b, e);
+							draw_tri_fill(e, b, c);
+							draw_pop_antialias();
+
+							draw_push_color(color_red());
+							draw_quad(make_aabb(d, 2.0f, 2.0f));
+							draw_quad(make_aabb(e, 2.0f, 2.0f));
+							draw_pop_color();
+						} else {
+							submit(a, b, e);
+							submit(e, b, c);
+						}
+
+						a = d;
+						b = e;
+					} else {
+						v2 c = intersect(h1, h2);
+
+						if (debug) {
+							draw_push_antialias(false);
+							draw_tri_fill(a, b, e);
+							draw_tri_fill(e, b, c);
+							draw_tri_fill(e, c, d);
+							draw_pop_antialias();
+
+							draw_push_color(color_red());
+							draw_quad(make_aabb(c, 2.0f, 2.0f));
+							draw_quad(make_aabb(d, 2.0f, 2.0f));
+							draw_quad(make_aabb(e, 2.0f, 2.0f));
+							draw_pop_color();
+						} else {
+							submit(a, b, e);
+							submit(e, b, c);
+							submit(e, c, d);
+						}
+
+						a = d;
+						b = c;
 					}
-
-					//submit(p0, p1, p2, a, b, e);
-					//submit(p0, p1, p2, e, b, c);
-					//submit(p0, p1, p2, e, c, d);
-
-					draw_push_antialias(false);
-					draw_tri_fill(a, b, e);
-					draw_tri_fill(e, b, c);
-					draw_tri_fill(e, c, d);
-					draw_pop_antialias();
-
-					draw_push_color(color_red());
-					draw_quad(make_aabb(c, 2.0f, 2.0f));
-					draw_quad(make_aabb(d, 2.0f, 2.0f));
-					draw_quad(make_aabb(e, 2.0f, 2.0f));
-					draw_pop_color();
-
-					a = d;
-					b = c;
 				} else {
+					// Obtuse.
 					v2 c = intersect(h0, h3);
 					v2 d = intersect(h1, h2);
 
-					draw_push_antialias(false);
-					draw_tri_fill(a, b, c);
-					draw_tri_fill(c, b, d);
-					draw_pop_antialias();
+					if (debug) {
+						draw_push_antialias(false);
+						draw_tri_fill(a, b, c);
+						draw_tri_fill(c, b, d);
+						draw_pop_antialias();
 
-					draw_push_color(color_blue());
-					draw_quad(make_aabb(c, 2.0f, 2.0f));
-					draw_quad(make_aabb(d, 2.0f, 2.0f));
-					draw_pop_color();
+						draw_push_color(color_blue());
+						draw_quad(make_aabb(c, 2.0f, 2.0f));
+						draw_quad(make_aabb(d, 2.0f, 2.0f));
+						draw_pop_color();
+					} else {
+						submit(a, b, c);
+						submit(c, b, d);
+					}
 
-					a = d;
-					b = c;
+					a = c;
+					b = d;
 				}
 			} else {
 				if (d < 0) {
+					// Acute.
 					v2 c = intersect(h1, h4);
 					v2 d = intersect(h4, h2);
-					v2 e = intersect(h0, h3);
 
-					Halfspace bounds = plane(n0, a);
-					if (distance(bounds, e) < 0) {
-						e = project(bounds, e);
+					if (distance(h0, p2 + t1 * thickness) < 0) {
+						// Self-intersecting.
+						v2 e = p1 + t0 * thickness;
+
+						if (debug) {
+							draw_push_antialias(false);
+							draw_tri_fill(a, c, b);
+							draw_tri_fill(c, a, e);
+							draw_pop_antialias();
+
+							draw_push_color(color_magenta());
+							draw_push_layer(1);
+							draw_quad(make_aabb(c, 2.0f, 2.0f));
+							draw_quad(make_aabb(d, 2.0f, 2.0f));
+							draw_pop_layer();
+							draw_pop_color();
+						} else {
+							submit(a, c, b);
+							submit(c, a, e);
+						}
+
+						a = c;
+						b = d;
+					} else {
+						v2 e = intersect(h0, h3);
+
+						if (debug) {
+							draw_push_antialias(false);
+							draw_tri_fill(a, b, c);
+							draw_tri_fill(c, e, a);
+							draw_tri_fill(d, e, c);
+							draw_pop_antialias();
+
+							draw_push_color(color_magenta());
+							draw_push_layer(1);
+							draw_quad(make_aabb(c, 2.0f, 2.0f));
+							draw_quad(make_aabb(d, 2.0f, 2.0f));
+							draw_quad(make_aabb(e, 2.0f, 2.0f));
+							draw_pop_layer();
+							draw_pop_color();
+						} else {
+							submit(a, b, c);
+							submit(c, e, a);
+							submit(d, e, c);
+						}
+
+						a = e;
+						b = d;
 					}
-
-					draw_push_antialias(false);
-					draw_tri_fill(a, b, c);
-					draw_tri_fill(c, e, a);
-					draw_tri_fill(d, e, c);
-					draw_pop_antialias();
-
-					draw_push_color(color_magenta());
-					draw_quad(make_aabb(c, 2.0f, 2.0f));
-					draw_quad(make_aabb(d, 2.0f, 2.0f));
-					draw_quad(make_aabb(e, 2.0f, 2.0f));
-					draw_pop_color();
-
-					a = e;
-					b = d;
 				} else {
+					// Obtuse.
 					v2 c = intersect(h0, h3);
 					v2 d = intersect(h1, h2);
 
-					draw_push_antialias(false);
-					draw_tri_fill(a, b, c);
-					draw_tri_fill(c, b, d);
-					draw_pop_antialias();
+					if (debug) {
+						draw_push_antialias(false);
+						draw_tri_fill(a, b, c);
+						draw_tri_fill(c, b, d);
+						draw_pop_antialias();
 
-					draw_push_color(color_yellow());
-					draw_quad(make_aabb(c, 2.0f, 2.0f));
-					draw_quad(make_aabb(d, 2.0f, 2.0f));
-					draw_pop_color();
+						draw_push_color(color_yellow());
+						draw_quad(make_aabb(c, 2.0f, 2.0f));
+						draw_quad(make_aabb(d, 2.0f, 2.0f));
+						draw_pop_color();
+					} else {
+						submit(a, b, c);
+						submit(c, b, d);
+					}
 
 					a = c;
 					b = d;
@@ -942,11 +1017,18 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 		v2 d = p1 + n1 * thickness + t1 * thickness;
 		v2 c = p1 + n1 * thickness - t1 * thickness;
 
-		draw_push_antialias(false);
-		draw_tri_fill(a, b, c);
-		draw_tri_fill(c, a, d);
-		draw_pop_antialias();
+		if (debug) {
+			draw_push_antialias(false);
+			draw_tri_fill(a, b, c);
+			draw_tri_fill(c, a, d);
+			draw_pop_antialias();
+		} else {
+			submit(a, b, c);
+			submit(c, a, d);
+		}
 	}
+
+	draw_pop_color();
 }
 
 void cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, float thickness)
