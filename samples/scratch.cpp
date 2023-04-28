@@ -137,10 +137,10 @@ int main(int argc, char* argv[])
 
 		if (0) {
 			v2 pts[] = {
-				V2(83.351868f,6.237495f),
-				V2(48.392147f,7.478302f),
-				V2(124.183350f,6.947308f),
-				V2(184.208954f,72.963791f),
+				V2(0,0),
+				V2(100,0),
+				V2(50,100),
+				V2(100,100),
 			};
 			draw_push_antialias(true);
 			cf_draw_polyline(pts, CF_ARRAY_SIZE(pts), 5, false);

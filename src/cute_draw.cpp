@@ -780,9 +780,10 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	s.sort_bits = draw->layers.last();
 	s.w = s.h = 1;
 
+	int i2 = 2;
 	v2 p0 = pts[0];
 	v2 p1 = pts[1];
-	v2 p2 = pts[2];
+	v2 p2 = pts[i2];
 	v2 n0 = norm(p1 - p0);
 	v2 n1 = norm(p2 - p1);
 	v2 t0 = skew(n0);
@@ -800,17 +801,22 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 		spritebatch_push(&draw->sb, s);
 	};
 
-	//draw_push_color(color_cyan());
-	//for (int i = 0; i < count - 1; ++i) {
-	//	int j = i + 1;
-	//	draw_capsule(pts[i], pts[j], 5.0f);
-	//}
-	//draw_pop_color();
-
+	draw_push_color(color_cyan());
 	for (int i = 0; i < count - 1; ++i) {
+		int j = i + 1;
+		draw_capsule(pts[i], pts[j], 5.0f);
+	}
+	draw_pop_color();
+
+	for (int i = 0; i < count - 2; ++i) {
+		n0 = norm(p1 - p0);
+		n1 = norm(p2 - p1);
+		t0 = skew(n0);
+		t1 = skew(n1);
+
 		const float k_tol = 1.e-6f;
 		float p0p1_x_p1p2 = cross(n0, n1);
-		float d = dot(t0, t1);
+		float d = dot(n0, n1);
 		Halfspace h0 = plane(t0, a);
 		Halfspace h1 = plane(-t0, b);
 		Halfspace h2 = plane(-t1, p2 - t1 * thickness);
@@ -818,41 +824,128 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 		v2 n = norm(n0 - n1);
 		Halfspace h4 = plane(n, p1 + n * thickness);
 
-		//draw_push_color(color_yellow());
-		//draw_quad(make_aabb(a, 2.0f, 2.0f));
-		//draw_quad(make_aabb(b, 2.0f, 2.0f));
-		//draw_pop_color();
+		if (::abs(p0p1_x_p1p2) < k_tol) {
+			v2 c = p1 + t0 * (thickness);
+			v2 d = p1 - t0 * (thickness);
 
-		if (p0p1_x_p1p2 < -k_tol) {
-			if (d >= 0) {
-				v2 c = intersect(h1, h2);
-				v2 d = intersect(h3, h4);
-				v2 e = intersect(h0, h4);
-				submit(p0, p1, p2, a, b, e);
-				submit(p0, p1, p2, e, b, c);
-				submit(p0, p1, p2, e, c, d);
+			draw_push_antialias(false);
+			draw_tri_fill(a, b, c);
+			draw_tri_fill(c, b, d);
+			draw_pop_antialias();
 
-				//draw_push_antialias(false);
-				//draw_tri_fill(a, b, e);
-				//draw_tri_fill(e, b, c);
-				//draw_tri_fill(e, c, d);
-				//draw_pop_antialias();
+			draw_push_color(color_orange());
+			draw_quad(make_aabb(c, 2.0f, 2.0f));
+			draw_quad(make_aabb(d, 2.0f, 2.0f));
+			draw_pop_color();
 
-				//draw_push_color(color_red());
-				//draw_quad(make_aabb(c, 2.0f, 2.0f));
-				//draw_quad(make_aabb(d, 2.0f, 2.0f));
-				//draw_quad(make_aabb(e, 2.0f, 2.0f));
-				//draw_pop_color();
-				break;
-			} else {
-				v2 n = norm(n0 + n1);
-				v2 c = p1 + n * thickness;
-			}
+			a = c;
+			b = d;
 		} else {
-			if (d >= 0) {
+			if (p0p1_x_p1p2 < 0) {
+				if (d < 0) {
+					v2 c = intersect(h1, h2);
+					v2 d = intersect(h3, h4);
+					v2 e = intersect(h0, h4);
+
+					Halfspace bounds = plane(n0, a);
+					if (distance(bounds, c) < 0) {
+						c = project(bounds, c);
+					}
+
+					//submit(p0, p1, p2, a, b, e);
+					//submit(p0, p1, p2, e, b, c);
+					//submit(p0, p1, p2, e, c, d);
+
+					draw_push_antialias(false);
+					draw_tri_fill(a, b, e);
+					draw_tri_fill(e, b, c);
+					draw_tri_fill(e, c, d);
+					draw_pop_antialias();
+
+					draw_push_color(color_red());
+					draw_quad(make_aabb(c, 2.0f, 2.0f));
+					draw_quad(make_aabb(d, 2.0f, 2.0f));
+					draw_quad(make_aabb(e, 2.0f, 2.0f));
+					draw_pop_color();
+
+					a = d;
+					b = c;
+				} else {
+					v2 c = intersect(h0, h3);
+					v2 d = intersect(h1, h2);
+
+					draw_push_antialias(false);
+					draw_tri_fill(a, b, c);
+					draw_tri_fill(c, b, d);
+					draw_pop_antialias();
+
+					draw_push_color(color_blue());
+					draw_quad(make_aabb(c, 2.0f, 2.0f));
+					draw_quad(make_aabb(d, 2.0f, 2.0f));
+					draw_pop_color();
+
+					a = d;
+					b = c;
+				}
 			} else {
+				if (d < 0) {
+					v2 c = intersect(h1, h4);
+					v2 d = intersect(h4, h2);
+					v2 e = intersect(h0, h3);
+
+					Halfspace bounds = plane(n0, a);
+					if (distance(bounds, e) < 0) {
+						e = project(bounds, e);
+					}
+
+					draw_push_antialias(false);
+					draw_tri_fill(a, b, c);
+					draw_tri_fill(c, e, a);
+					draw_tri_fill(d, e, c);
+					draw_pop_antialias();
+
+					draw_push_color(color_magenta());
+					draw_quad(make_aabb(c, 2.0f, 2.0f));
+					draw_quad(make_aabb(d, 2.0f, 2.0f));
+					draw_quad(make_aabb(e, 2.0f, 2.0f));
+					draw_pop_color();
+
+					a = e;
+					b = d;
+				} else {
+					v2 c = intersect(h0, h3);
+					v2 d = intersect(h1, h2);
+
+					draw_push_antialias(false);
+					draw_tri_fill(a, b, c);
+					draw_tri_fill(c, b, d);
+					draw_pop_antialias();
+
+					draw_push_color(color_yellow());
+					draw_quad(make_aabb(c, 2.0f, 2.0f));
+					draw_quad(make_aabb(d, 2.0f, 2.0f));
+					draw_pop_color();
+
+					a = c;
+					b = d;
+				}
 			}
 		}
+
+		p0 = p1;
+		p1 = p2;
+		i2 = i2 + 1 == count ? 0 : i2 + 1;
+		p2 = pts[i2];
+	}
+
+	if (!loop) {
+		v2 d = p1 + n1 * thickness + t1 * thickness;
+		v2 c = p1 + n1 * thickness - t1 * thickness;
+
+		draw_push_antialias(false);
+		draw_tri_fill(a, b, c);
+		draw_tri_fill(c, a, d);
+		draw_pop_antialias();
 	}
 }
 
