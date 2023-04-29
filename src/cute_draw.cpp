@@ -294,8 +294,8 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			vert_count += 6;
 		}	break;
 
-		case BATCH_GEOMETRY_TYPE_CIRCLE: // Use the segment path for circle rendering.
-		case BATCH_GEOMETRY_TYPE_SEGMENT:
+		case BATCH_GEOMETRY_TYPE_CIRCLE: // Use the capsule path for circle rendering.
+		case BATCH_GEOMETRY_TYPE_CAPSULE:
 		{
 			for (int i = 0; i < 6; ++i) {
 				out[i].p = quad[i];
@@ -312,6 +312,28 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			}
 
 			vert_count += 6;
+		}	break;
+
+		case BATCH_GEOMETRY_TYPE_SEGMENT:
+		{
+			for (int i = 0; i < 3; ++i) {
+				out[i].a = geom.a;
+				out[i].b = geom.b;
+				out[i].c = geom.c;
+				out[i].color = s->geom.color;
+				out[i].radius = s->geom.radius;
+				out[i].stroke = s->geom.stroke;
+				out[i].type = VA_TYPE_SEGMENT;
+				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
+				out[i].fill = s->geom.fill ? 255 : 0;
+				out[i].aa = s->geom.antialias ? 255 : 0;
+			}
+
+			out[0].p = geom.box[0];
+			out[1].p = geom.box[1];
+			out[2].p = geom.box[2];
+		
+			vert_count += 3;
 		}	break;
 		}
 	}
@@ -640,7 +662,7 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	spritebatch_sprite_t s = { };
 	s.image_id = app->default_image_id;
 	s.w = s.h = 1;
-	s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT;
+	s.geom.type = BATCH_GEOMETRY_TYPE_CAPSULE;
 
 	s_bounding_box_of_capsule(a, b, radius, stroke, s.geom.box);
 	s.geom.box[0] = mul(m, s.geom.box[0]);
@@ -763,22 +785,31 @@ void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
 
 void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 {
-	if (count < 3) {
+	if (count <= 0) {
 		return;
+	} else if (count == 1) {
+		cf_draw_circle_fill2(pts[0], thickness * 0.5f);
+	} else if (count == 2) {
+		cf_draw_capsule_fill2(pts[0], pts[1], thickness * 0.5f);
 	}
 
+	// Each portion of the polyline will be rendered with a single triangle per spritebatch entry.
 	CF_M3x2 m = draw->cam;
 	spritebatch_sprite_t s = { };
 	s.image_id = app->default_image_id;
 	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
 	s.geom.alpha = 1.0f;
-	s.geom.radius = thickness * 0.5f;
+	s.geom.radius = thickness;
 	s.geom.stroke = 0;
 	s.geom.fill = true;
 	s.geom.antialias = draw->antialias.last();
 	s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT;
 	s.sort_bits = draw->layers.last();
 	s.w = s.h = 1;
+
+	// TODO - Audit.
+	// Expand thickness to account for aa.
+	thickness += 2.0f;
 
 	int i2 = 2;
 	v2 p0 = pts[0];
@@ -792,26 +823,28 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	v2 b = p0 - n0 * thickness - t0 * thickness;
 
 	auto submit = [&](v2 a, v2 b, v2 c) {
-		s.geom.a = a;
-		s.geom.b = b;
-		s.geom.c = c;
-		s.geom.box[0] = mul(m, p0);
-		s.geom.box[1] = mul(m, p1);
-		s.geom.box[2] = mul(m, p2);
+		s.geom.a = p0;
+		s.geom.b = p1;
+		s.geom.c = p2;
+		s.geom.box[0] = mul(m, a);
+		s.geom.box[1] = mul(m, b);
+		s.geom.box[2] = mul(m, c);
 		spritebatch_push(&draw->sb, s);
 	};
 
-	const bool debug = false;
+	const bool debug = true;
 
 	if (debug) {
-		draw_push_color(color_cyan());
-		for (int i = 0; i < count - 1; ++i) {
-			int j = i + 1;
-			draw_capsule(pts[i], pts[j], 5.0f);
-		}
-		draw_pop_color();
-		draw_push_color(make_color(1.0f, 1.0f, 1.0f, 0.5f));
+		//draw_push_color(color_cyan());
+		//for (int i = 0; i < count - 1; ++i) {
+		//	int j = i + 1;
+		//	draw_capsule(pts[i], pts[j], 5.0f);
+		//}
+		//draw_pop_color();
+		//draw_push_color(make_color(1.0f, 1.0f, 1.0f, 0.5f));
 	}
+
+	draw_push_color(make_color(1.0f, 1.0f, 1.0f, 0.5f));
 
 	for (int i = 0; i < count - 2; ++i) {
 		n0 = norm(p1 - p0);
@@ -858,9 +891,10 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 					v2 d = intersect(h3, h4);
 					v2 e = intersect(h0, h4);
 
+					// WORKING HERE -- Predicate broken.
 					if (distance(h1, p2 - t1 * thickness) < 0) {
 						// Self-intersecting.
-						v2 c = p1 + t1 * thickness;
+						v2 c = p1 - t1 * thickness;
 
 						if (debug) {
 							draw_push_antialias(false);
@@ -1016,6 +1050,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	if (!loop) {
 		v2 d = p1 + n1 * thickness + t1 * thickness;
 		v2 c = p1 + n1 * thickness - t1 * thickness;
+		p2 = p1;
 
 		if (debug) {
 			draw_push_antialias(false);

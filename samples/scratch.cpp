@@ -25,6 +25,7 @@ int main(int argc, char* argv[])
 	s.play("spin");
 
 	draw_push_antialias(false);
+	draw_push_color(color_white() * 0.5f);
 
 	float fps = 0;
 	bool pause = false;
@@ -108,7 +109,7 @@ int main(int argc, char* argv[])
 			draw_pop_layer();
 		}
 
-		if (1) {
+		if (0) {
 			v2 pts[] = {
 				V2(0,0),
 				V2(100,0),
@@ -139,17 +140,17 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		static v2 v = V2(0,0);
+		static v2 v = V2(145.517410f,21.522755f);
 		ImGui::Begin("what");
-		ImGui::InputFloat2("pt", &v.x);
+		ImGui::SliderFloat2("pt", &v.x, -200, 200);
 		ImGui::End();
 
-		if (0) {
+		if (1) {
 			v2 pts[] = {
+				V2(143.011002f,134.825836f),
 				v,
-				V2(100,0),
-				V2(100,100),
-				V2(50, 50),
+				V2(131.278458f,21.804234f),
+				V2(76.532333f,168.995590f),
 			};
 			draw_push_antialias(true);
 			cf_draw_polyline(pts, CF_ARRAY_SIZE(pts), 5, false);
