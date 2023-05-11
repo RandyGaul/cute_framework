@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
 
 		float radius = 100.0f;
 		float motion = (sinf(t) + 1.0f) * 0.5f * 40.0f;
-		draw_circle(V2(0,0), radius + motion, 50, 1.0f + motion / 4);
+		draw_circle(V2(0,0), radius + motion, 1.0f + motion / 4);
 
 		draw_push_color(color_purple());
 		motion *= 3;

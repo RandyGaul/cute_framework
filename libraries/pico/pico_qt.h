@@ -466,7 +466,7 @@ qt_rect_t* qt_get_grid_rects(qt_t* qt, int* size)
     if (!size)
         return NULL;
 
-    qt_array qt_rect_t* rects = qt_node_all_grid_rects(qt, NULL);
+    qt_array qt_rect_t* rects = qt_node_all_grid_rects(qt->root, NULL);
 
     // If no results then return NULL
     if (!rects)
@@ -851,14 +851,14 @@ static qt_node_t* qt_node_alloc(qt_node_allocator_t* arena)
     return result;
 }
 
-static void qt_node_free(qt_node_allocator_t* allocator, qt_node_t* node)
+static void qt_node_free(qt_node_allocator_t* arena, qt_node_t* node)
 {
     // Safe cast as `qt_unode_t` contains an entire `qt_node_t`.
     qt_unode_t* unode = (qt_unode_t*)node;
 
     // Push node back onto singly-linked free list.
-    unode->next = qt->arena.free_list;
-    qt->arena.free_list = unode;
+    unode->next = arena->free_list;
+    arena->free_list = unode;
 }
 
 #endif // PICO_QT_IMPLEMENTATION

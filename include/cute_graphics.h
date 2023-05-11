@@ -2129,6 +2129,8 @@ CF_INLINE void apply_mesh(Mesh mesh) { cf_apply_mesh(mesh); }
 CF_INLINE void apply_shader(Shader shader, Material material) { cf_apply_shader(shader, material); }
 CF_INLINE void draw_elements() { cf_draw_elements(); }
 CF_INLINE void unapply_canvas() { cf_unapply_canvas(); }
+CF_INLINE void clear_color(float r, float g, float b, float a) { cf_clear_color(r, g, b, a); }
+CF_INLINE void clear_color(Color color) { cf_clear_color2(color); }
 
 }
 

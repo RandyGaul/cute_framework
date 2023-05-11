@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
 		float radius = 10.0f;
 		float motion = (sinf(t) + 1.0f) * 0.5f * 10.0f;
 		draw_push_layer(-1);
-		draw_circle(V2(0,10), radius + motion, 50, 1.0f + motion / 4);
+		draw_circle(V2(0,10), radius + motion, 1.0f + motion / 4);
 		draw_pop_layer();
 		if (key_just_pressed(KEY_1)) draw_push_tint(color_grey());
 		if (key_just_pressed(KEY_2)) draw_push_tint(color_red());

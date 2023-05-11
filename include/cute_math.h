@@ -743,9 +743,18 @@ CF_INLINE CF_V2 cf_div_v2_f(CF_V2 a, float b) { return cf_v2(a.x / b, a.y / b); 
  * @function cf_skew
  * @category math
  * @brief    Returns the skew of a vector. This acts like a 90 degree rotation counter-clockwise.
- * @related  CF_V2 cf_skew cf_cw90 cf_det2 cf_cross
+ * @related  CF_V2 cf_skew cf_cw90 cf_det2 cf_cross cf_perp
  */
 CF_INLINE CF_V2 cf_skew(CF_V2 a) { return cf_v2(-a.y, a.x); }
+
+/**
+ * @function cf_perp
+ * @category math
+ * @brief    Returns the skew of a vector. This acts like a 90 degree rotation counter-clockwise. In this case
+ *           perp stands for perpendicular.
+ * @related  CF_V2 cf_skew cf_cw90 cf_det2 cf_cross cf_perp
+ */
+CF_INLINE CF_V2 cf_perp(CF_V2 a) { return cf_v2(-a.y, a.x); }
 
 /**
  * @function cf_cw90
@@ -760,7 +769,7 @@ CF_INLINE CF_V2 cf_cw90(CF_V2 a) { return cf_v2(a.y, -a.x); }
  * @category math
  * @brief    Returns the 2x2 determinant of a matrix constructed with `a` and `b` as its columns.
  * @remarks  Also known as the 2D cross product.
- * @related  CF_V2 cf_skew cf_cw90 cf_det2 cf_cross
+ * @related  CF_V2 cf_skew cf_cw90 cf_det2 cf_cross cf_perp
  */
 CF_INLINE float cf_det2(CF_V2 a, CF_V2 b) { return a.x * b.y - a.y * b.x; }
 
@@ -768,7 +777,7 @@ CF_INLINE float cf_det2(CF_V2 a, CF_V2 b) { return a.x * b.y - a.y * b.x; }
  * @function cf_cross
  * @category math
  * @brief    Returns the 2D cross product of two vectors.
- * @related  CF_V2 cf_skew cf_cw90 cf_det2 cf_cross
+ * @related  CF_V2 cf_skew cf_cw90 cf_det2 cf_cross cf_perp
  */
 CF_INLINE float cf_cross(CF_V2 a, CF_V2 b) { return cf_det2(a, b); }
 
@@ -853,6 +862,14 @@ CF_INLINE float cf_hmax(CF_V2 a) { return cf_max(a.x, a.y); }
  * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
  */
 CF_INLINE float cf_len(CF_V2 a) { return sqrtf(cf_dot(a, a)); }
+
+/**
+ * @function cf_len_sq
+ * @category math
+ * @brief    Returns squared length of a vector.
+ * @related  CF_V2 cf_len cf_distance cf_norm cf_safe_norm
+ */
+CF_INLINE float cf_len_sq(CF_V2 a) { return cf_dot(a, a); }
 
 /**
  * @function cf_distance
@@ -1003,26 +1020,6 @@ CF_INLINE CF_V2 cf_safe_invert_v2(CF_V2 a) { return cf_v2(cf_safe_invert(a.x), c
  * @related  CF_V2 cf_sign
  */
 CF_INLINE CF_V2 cf_sign_v2(CF_V2 a) { return cf_v2(cf_sign(a.x), cf_sign(a.y)); }
-
-/**
- * @function cf_parallel
- * @category math
- * @brief    Returns true if two vectors are parallel within a `tol` tolerance value.
- * @remarks  You should experiment to find a good `tol` value, such as commonly used values like 1.0e-3f, 1.0e-6f, or 1.0e-8f.
- *           Different orders of magnitude are suitable for different tasks, so it may take some experience to figure out
- *           what a good tolerance is for your situation.
- * @related  CF_V2 cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel
- */
-CF_INLINE bool cf_parallel(CF_V2 a, CF_V2 b, float tol)
-{
-	float k = cf_len(a) / cf_len(b);
-	b = cf_mul_v2_f(b, k);
-	if (fabs(a.x - b.x) < tol && fabs(a.y - b.y) < tol) {
-		return true;
-	} else {
-		return false;
-	}
-}
 
 //--------------------------------------------------------------------------------------------------
 // CF_SinCos rotation ops.
@@ -1411,7 +1408,7 @@ CF_INLINE CF_Halfspace cf_mulT_tf_hs(CF_Transform a, CF_Halfspace b) { CF_Halfsp
  * @brief    Returns the intersection point of two points to a plane.
  * @remarks  The distance to the plane are provided as `da` and `db`. You can compute these with e.g. `cf_distance_hs`, or instead
  *           call the similar function `cf_intersect_halfspace2`.
- * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace cf_intersect_haflspace2 cf_intersect_haflspace3
  */
 CF_INLINE CF_V2 cf_intersect_halfspace(CF_V2 a, CF_V2 b, float da, float db) { return cf_add_v2(a, cf_mul_v2_f(cf_sub_v2(b, a), (da / (da - db)))); }
 
@@ -1419,9 +1416,63 @@ CF_INLINE CF_V2 cf_intersect_halfspace(CF_V2 a, CF_V2 b, float da, float db) { r
  * @function cf_intersect_halfspace2
  * @category math
  * @brief    Returns the intersection point of two points to a plane.
- * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace cf_intersect_haflspace2 cf_intersect_haflspace3
  */
 CF_INLINE CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b) { return cf_intersect_halfspace(a, b, cf_distance_hs(h, a), cf_distance_hs(h, b)); }
+
+/**
+ * @function cf_intersect_halfspace3
+ * @category math
+ * @brief    Returns the intersection point of two planes.
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace cf_intersect_haflspace2 cf_intersect_haflspace3
+ */
+CF_INLINE CF_V2 cf_intersect_halfspace3(CF_Halfspace ha, CF_Halfspace hb) { CF_V2 a = {ha.n.x, hb.n.x}, b = {ha.n.y, hb.n.y}, c = {ha.d, hb.d}; float x = cf_det2(c, b) / cf_det2(a, b); float y = cf_det2(a, c) / cf_det2(a, b); return cf_v2(x, y); }
+
+/**
+ * @function cf_shift
+ * @category math
+ * @brief    Returns a plane shifted along it's normal by distance `d`.
+ * @related  CF_Halfspace cf_plane cf_origin cf_distance_hs cf_project cf_mul_tf_hs cf_mulT_tf_hs cf_intersect_halfspace cf_intersect_haflspace2 cf_intersect_haflspace3
+ */
+CF_INLINE CF_Halfspace cf_shift(CF_Halfspace h, float d) { h.d += d; return h; }
+
+/**
+ * @function cf_parallel
+ * @category math
+ * @brief    Returns true if two vectors are parallel within a `tol` tolerance value.
+ * @remarks  You should experiment to find a good `tol` value, such as commonly used values like 1.0e-3f, 1.0e-6f, or 1.0e-8f.
+ *           Different orders of magnitude are suitable for different tasks, so it may take some experience to figure out
+ *           what a good tolerance is for your situation.
+ * @related  CF_V2 cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel cf_parallel2
+ */
+CF_INLINE bool cf_parallel(CF_V2 a, CF_V2 b, float tol)
+{
+	float k = cf_len(a) / cf_len(b);
+	b = cf_mul_v2_f(b, k);
+	if (fabs(a.x - b.x) < tol && fabs(a.y - b.y) < tol) {
+		return true;
+	} else {
+		return false;
+	}
+}
+
+/**
+ * @function cf_parallel2
+ * @category math
+ * @brief    Returns true the planes a-b and b-c are parallel with a distance tolerance.
+ * @remarks  You should experiment to find a good `tol` value, such as commonly used values like 1.0e-3f, 1.0e-6f, or 1.0e-8f.
+ *           Different orders of magnitude are suitable for different tasks, so it may take some experience to figure out
+ *           what a good tolerance is for your situation.
+ * @related  CF_V2 cf_lesser_v2 cf_greater_v2 cf_lesser_equal_v2 cf_greater_equal_v2 cf_parallel cf_parallel2
+ */
+CF_INLINE bool cf_parallel2(CF_V2 a, CF_V2 b, CF_V2 c, float tol)
+{
+	CF_Halfspace h0 = cf_plane2(cf_skew(cf_norm(cf_sub_v2(b,a))), a);
+	CF_Halfspace h1 = cf_plane2(cf_skew(cf_norm(cf_sub_v2(c,b))), b);
+	float d0 = cf_abs(cf_distance_hs(h0, c));
+	float d1 = cf_abs(cf_distance_hs(h1, a));
+	return d0 < tol && d1 < tol;
+}
 
 //--------------------------------------------------------------------------------------------------
 // Shape helpers.
@@ -2462,6 +2513,7 @@ CF_INLINE float back_in_out(float x) { return cf_back_in_out(x); }
 CF_INLINE float dot(v2 a, v2 b) { return cf_dot(a, b); }
 
 CF_INLINE v2 skew(v2 a) { return cf_skew(a); }
+CF_INLINE v2 perp(v2 a) { return cf_skew(a); }
 CF_INLINE v2 cw90(v2 a) { return cf_cw90(a); }
 CF_INLINE float det2(v2 a, v2 b) { return cf_det2(a, b); }
 CF_INLINE float cross(v2 a, v2 b) { return cf_cross(a, b); }
@@ -2475,6 +2527,7 @@ CF_INLINE v2 abs(v2 a) { return cf_abs_v2(a); }
 CF_INLINE float hmin(v2 a) { return cf_hmin(a); }
 CF_INLINE float hmax(v2 a) { return cf_hmax(a); }
 CF_INLINE float len(v2 a) { return cf_len(a); }
+CF_INLINE float len_sq(v2 a) { return cf_len(a); }
 CF_INLINE float distance(v2 a, v2 b) { return cf_distance(a, b); }
 CF_INLINE v2 norm(v2 a) { return cf_norm(a); }
 CF_INLINE v2 safe_norm(v2 a) { return cf_safe_norm(a); }
@@ -2488,8 +2541,6 @@ CF_INLINE v2 floor(v2 a) { return cf_floor(a); }
 CF_INLINE v2 round(v2 a) { return cf_round(a); }
 CF_INLINE v2 safe_invert(v2 a) { return cf_safe_invert_v2(a); }
 CF_INLINE v2 sign(v2 a) { return cf_sign_v2(a); }
-
-CF_INLINE int parallel(v2 a, v2 b, float tol) { return cf_parallel(a, b, tol); }
 
 CF_INLINE SinCos sincos(float radians) { return cf_sincos_f(radians); }
 CF_INLINE SinCos sincos() { return cf_sincos(); }
@@ -2542,6 +2593,10 @@ CF_INLINE Halfspace mul(Transform a, Halfspace b) { return cf_mul_tf_hs(a, b); }
 CF_INLINE Halfspace mulT(Transform a, Halfspace b) { return cf_mulT_tf_hs(a, b); }
 CF_INLINE v2 intersect(v2 a, v2 b, float da, float db) { return cf_intersect_halfspace(a, b, da, db); }
 CF_INLINE v2 intersect(Halfspace h, v2 a, v2 b) { return cf_intersect_halfspace2(h, a, b); }
+CF_INLINE v2 intersect(Halfspace a, Halfspace b) { return cf_intersect_halfspace3(a, b); }
+CF_INLINE Halfspace shift(Halfspace h, float d) { return cf_shift(h, d); }
+CF_INLINE bool parallel(v2 a, v2 b, float tol) { return cf_parallel(a, b, tol); }
+CF_INLINE bool parallel(v2 a, v2 b, v2 c, float tol) { return cf_parallel2(a, b, c, tol); }
 
 CF_INLINE Circle make_circle(v2 pos, float radius) { return cf_make_circle(pos, radius); }
 CF_INLINE Capsule make_capsule(v2 a, v2 b, float radius) { return cf_make_capsule(a, b, radius); }

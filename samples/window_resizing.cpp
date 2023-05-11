@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
 			printf("%d, %d\n", w, h);
 		}
 
-		draw_circle(V2(0,0), 100.0f, 100, 10.0f);
+		draw_circle(V2(0,0), 100.0f, 10.0f);
 
 		app_draw_onto_screen();
 	}

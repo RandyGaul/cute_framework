@@ -32,42 +32,29 @@ extern struct CF_Draw* draw;
 enum BatchGeometryType : int
 {
 	BATCH_GEOMETRY_TYPE_TRI,
+	BATCH_GEOMETRY_TYPE_TRI_SDF,
 	BATCH_GEOMETRY_TYPE_QUAD,
 	BATCH_GEOMETRY_TYPE_SPRITE,
-};
-
-struct BatchTri
-{
-	CF_V2 p0, p1, p2;
-	CF_Pixel c0, c1, c2;
-};
-
-struct BatchQuad
-{
-	CF_V2 p0, p1, p2, p3;
-	CF_Pixel c0, c1, c2, c3;
-};
-
-struct BatchSprite
-{
-	CF_V2 p0, p1, p2, p3;
-	CF_Aabb clip;
-	CF_Pixel c;
-	bool do_clipping;
-	bool is_text;
-	bool is_sprite;
+	BATCH_GEOMETRY_TYPE_CIRCLE,
+	BATCH_GEOMETRY_TYPE_CAPSULE,
+	BATCH_GEOMETRY_TYPE_SEGMENT,
 };
 
 struct BatchGeometry
 {
 	BatchGeometryType type;
+	CF_Pixel color;
+	CF_Aabb clip;
+	CF_V2 box[4];
+	CF_V2 a, b, c, d;
 	float alpha;
-	union
-	{
-		BatchTri tri;
-		BatchQuad quad;
-		BatchSprite sprite;
-	} u;
+	float radius;
+	float stroke;
+	bool do_clipping;
+	bool is_text;
+	bool is_sprite;
+	bool fill;
+	bool antialias;
 };
 
 #define SPRITEBATCH_SPRITE_GEOMETRY BatchGeometry
@@ -76,13 +63,16 @@ struct BatchGeometry
 
 struct DrawVertex
 {
-	CF_V2 position;
+	CF_V2 p;
+	CF_V2 a, b, c;
 	CF_V2 uv;
 	CF_Pixel color;
-	uint8_t alpha;   // r
-	uint8_t type;    // g
-	uint8_t unused0; // b
-	uint8_t unused1; // a
+	float radius;
+	float stroke;
+	uint8_t type;    // r
+	uint8_t alpha;   // g
+	uint8_t fill;    // b
+	uint8_t aa;      // a
 };
 
 struct CF_Strike
@@ -93,6 +83,8 @@ struct CF_Strike
 
 struct CF_Draw
 {
+	CF_V2 atlas_dims = cf_v2(2048, 2048);
+	CF_V2 texel_dims = cf_v2(1.0f/2048.0f, 1.0f/2048.0f);
 	spritebatch_t sb;
 	CF_Shader shader;
 	CF_Mesh mesh;

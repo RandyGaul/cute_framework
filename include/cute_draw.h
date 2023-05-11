@@ -50,9 +50,10 @@ CF_API void CF_CALL cf_draw_sprite(const CF_Sprite* sprite);
  * @brief    Draws a quad wireframe.
  * @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
  * @param    thickness  The thickness of each line to draw.
- * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad3 cf_draw_quad_fill cf_draw_quad_fill2 cf_draw_quad_fill3 cf_draw_to cf_app_draw_onto_screen
+ * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
  */
-CF_API void CF_CALL cf_draw_quad(CF_Aabb bb, float thickness);
+CF_API void CF_CALL cf_draw_quad(CF_Aabb bb, float thickness, float chubbiness);
 
 /**
  * @function cf_draw_quad2
@@ -63,37 +64,21 @@ CF_API void CF_CALL cf_draw_quad(CF_Aabb bb, float thickness);
  * @param    p2         A corner of the quad.
  * @param    p3         A corner of the quad.
  * @param    thickness  The thickness of each line to draw.
+ * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
  * @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order.
- * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad3 cf_draw_quad_fill cf_draw_quad_fill2 cf_draw_quad_fill3 cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
  */
-CF_API void CF_CALL cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness);
-
-/**
- * @function cf_draw_quad3
- * @category draw
- * @brief    Draws a quad wireframe.
- * @param    p0         A corner of the quad.
- * @param    p1         A corner of the quad.
- * @param    p2         A corner of the quad.
- * @param    p3         A corner of the quad.
- * @param    thickness  The thickness of each line to draw.
- * @param    c0         The color of a corner of the quad.
- * @param    c1         The color of a corner of the quad.
- * @param    c2         The color of a corner of the quad.
- * @param    c3         The color of a corner of the quad.
- * @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order.
- * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad3 cf_draw_quad_fill cf_draw_quad_fill2 cf_draw_quad_fill3 cf_draw_to cf_app_draw_onto_screen
- */
-CF_API void CF_CALL cf_draw_quad3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3);
+CF_API void CF_CALL cf_draw_quad2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float chubbiness);
 
 /**
  * @function cf_draw_quad_fill
  * @category draw
  * @brief    Draws a quad.
  * @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
- * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad3 cf_draw_quad_fill cf_draw_quad_fill2 cf_draw_quad_fill3 cf_draw_to cf_app_draw_onto_screen
+ * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
  */
-CF_API void CF_CALL cf_draw_quad_fill(CF_Aabb bb);
+CF_API void CF_CALL cf_draw_quad_fill(CF_Aabb bb, float chubbiness);
 
 /**
  * @function cf_draw_quad_fill2
@@ -103,74 +88,54 @@ CF_API void CF_CALL cf_draw_quad_fill(CF_Aabb bb);
  * @param    p1         A corner of the quad.
  * @param    p2         A corner of the quad.
  * @param    p3         A corner of the quad.
+ * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
  * @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order.
- * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad3 cf_draw_quad_fill cf_draw_quad_fill2 cf_draw_quad_fill3 cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
  */
-CF_API void CF_CALL cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3);
-
-/**
- * @function cf_draw_quad_fill3
- * @category draw
- * @brief    Draws a quad wireframe.
- * @param    p0         A corner of the quad.
- * @param    p1         A corner of the quad.
- * @param    p2         A corner of the quad.
- * @param    p3         A corner of the quad.
- * @param    c0         The color of a corner of the quad.
- * @param    c1         The color of a corner of the quad.
- * @param    c2         The color of a corner of the quad.
- * @param    c3         The color of a corner of the quad.
- * @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order.
- * @related  cf_draw_quad cf_draw_quad2 cf_draw_quad3 cf_draw_quad_fill cf_draw_quad_fill2 cf_draw_quad_fill3 cf_draw_to cf_app_draw_onto_screen
- */
-CF_API void CF_CALL cf_draw_quad_fill3(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3);
+CF_API void CF_CALL cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float chubbiness);
 
 /**
  * @function cf_draw_circle
  * @category draw
  * @brief    Draws a circle wireframe.
- * @param    p          Center of the circle.
- * @param    r          Radius of the circle.
- * @param    iters      Number of edges used for the circle. More looks smoother, but renders slower.
+ * @param    circle     The circle.
  * @param    thickness  The thickness of each line to draw.
- * @related  cf_draw_circle cf_draw_circle_fill cf_draw_circle_arc cf_draw_circle_arc_fill cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2 cf_draw_arc
  */
-CF_API void CF_CALL cf_draw_circle(CF_V2 p, float r, int iters, float thickness);
+CF_API void CF_CALL cf_draw_circle(CF_Circle circle, float thickness);
 
 /**
  * @function cf_draw_circle2
  * @category draw
  * @brief    Draws a circle wireframe.
- * @param    circle     The circle.
- * @param    iters      Number of edges used for the circle. More looks smoother, but renders slower.
+ * @param    p          Center of the circle.
+ * @param    r          Radius of the circle.
  * @param    thickness  The thickness of each line to draw.
- * @related  cf_draw_circle cf_draw_circle_fill cf_draw_circle_arc cf_draw_circle_arc_fill cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2 cf_draw_arc
  */
-CF_API void CF_CALL cf_draw_circle2(CF_Circle circle, int iters, float thickness);
+CF_API void CF_CALL cf_draw_circle2(CF_V2 p, float r, float thickness);
 
 /**
  * @function cf_draw_circle_fill
  * @category draw
  * @brief    Draws a circle.
- * @param    p          Center of the circle.
- * @param    r          Radius of the circle.
- * @param    iters      Number of edges used for the circle. More looks smoother, but renders slower.
- * @related  cf_draw_circle cf_draw_circle_fill cf_draw_circle_arc cf_draw_circle_arc_fill cf_draw_to cf_app_draw_onto_screen
+ * @param    circle     The circle.
+ * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2 cf_draw_arc
  */
-CF_API void CF_CALL cf_draw_circle_fill(CF_V2 p, float r, int iters);
+CF_API void CF_CALL cf_draw_circle_fill(CF_Circle circle);
 
 /**
  * @function cf_draw_circle_fill2
  * @category draw
  * @brief    Draws a circle.
- * @param    circle     The circle.
- * @param    iters      Number of edges used for the circle. More looks smoother, but renders slower.
- * @related  cf_draw_circle cf_draw_circle_fill cf_draw_circle_arc cf_draw_circle_arc_fill cf_draw_to cf_app_draw_onto_screen
+ * @param    p          Center of the circle.
+ * @param    r          Radius of the circle.
+ * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2 cf_draw_arc
  */
-CF_API void CF_CALL cf_draw_circle_fill2(CF_Circle circle, int iters);
+CF_API void CF_CALL cf_draw_circle_fill2(CF_V2 p, float r);
 
 /**
- * @function cf_draw_circle_arc
+ * @function cf_draw_arc
  * @category draw
  * @brief    Draws an arc of a circle wireframe.
  * @param    p              Center of the arc.
@@ -178,67 +143,51 @@ CF_API void CF_CALL cf_draw_circle_fill2(CF_Circle circle, int iters);
  * @param    range          Angle the arc covers.
  * @param    iters          Number of edges used for the circle. More looks smoother, but renders slower.
  * @param    thickness      The thickness of each line to draw.
- * @related  cf_draw_circle cf_draw_circle_fill cf_draw_circle_arc cf_draw_circle_arc_fill cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_circle cf_draw_circle2 cf_draw_circle_fill cf_draw_circle_fill2 cf_draw_arc
  */
-CF_API void CF_CALL cf_draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness);
-
-/**
- * @function cf_draw_circle_arc_fill
- * @category draw
- * @brief    Draws an arc of a circle, like a pie-slice.
- * @param    p              Center of the arc.
- * @param    center_of_arc  Radius of the circle.
- * @param    range          Angle the arc covers.
- * @param    iters          Number of edges used for the circle. More looks smoother, but renders slower.
- * @related  cf_draw_circle cf_draw_circle_fill cf_draw_circle_arc cf_draw_circle_arc_fill cf_draw_to cf_app_draw_onto_screen
- */
-CF_API void CF_CALL cf_draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iters);
+CF_API void CF_CALL cf_draw_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness);
 
 /**
  * @function cf_draw_capsule
  * @category draw
  * @brief    Draws a capsule wireframe.
- * @param    p0         An endpoint of the interior line-segment of the capsule (the center of one end-cap).
- * @param    p1         An endpoint of the interior line-segment of the capsule (the center of one end-cap).
- * @param    r          Radius of the capsule.
- * @param    iters      Number of edges used for the circle-caps. More looks smoother, but renders slower.
+ * @param    capsule    The capsule.
  * @param    thickness  The thickness of each line to draw.
- * @related  cf_draw_capsule cf_draw_capsule_fill cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_capsule cf_draw_capsule2 cf_draw_capsule_fill cf_draw_capsule_fill2
  */
-CF_API void CF_CALL cf_draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness);
+CF_API void CF_CALL cf_draw_capsule(CF_Capsule capsule, float thickness);
 
 /**
  * @function cf_draw_capsule2
  * @category draw
  * @brief    Draws a capsule wireframe.
- * @param    capsule    The capsule.
- * @param    iters      Number of edges used for the circle-caps. More looks smoother, but renders slower.
+ * @param    p0         An endpoint of the interior line-segment of the capsule (the center of one end-cap).
+ * @param    p1         An endpoint of the interior line-segment of the capsule (the center of one end-cap).
+ * @param    r          Radius of the capsule.
  * @param    thickness  The thickness of each line to draw.
- * @related  cf_draw_capsule cf_draw_capsule_fill cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_capsule cf_draw_capsule2 cf_draw_capsule_fill cf_draw_capsule_fill2
  */
-CF_API void CF_CALL cf_draw_capsule2(CF_Capsule capsule, int iters, float thickness);
+CF_API void CF_CALL cf_draw_capsule2(CF_V2 p0, CF_V2 p1, float r, float thickness);
 
 /**
  * @function cf_draw_capsule_fill
  * @category draw
  * @brief    Draws a capsule.
- * @param    p0         An endpoint of the interior line-segment of the capsule (the center of one end-cap).
- * @param    p1         An endpoint of the interior line-segment of the capsule (the center of one end-cap).
- * @param    r          Radius of the capsule.
- * @param    iters      Number of edges used for the circle-caps. More looks smoother, but renders slower.
- * @related  cf_draw_capsule cf_draw_capsule_fill cf_draw_to cf_app_draw_onto_screen
+ * @param    capsule    The capsule.
+ * @related  cf_draw_capsule cf_draw_capsule2 cf_draw_capsule_fill cf_draw_capsule_fill2
  */
-CF_API void CF_CALL cf_draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters);
+CF_API void CF_CALL cf_draw_capsule_fill(CF_Capsule capsule);
 
 /**
  * @function cf_draw_capsule_fill2
  * @category draw
  * @brief    Draws a capsule.
- * @param    capsule    The capsule.
- * @param    iters      Number of edges used for the circle-caps. More looks smoother, but renders slower.
- * @related  cf_draw_capsule cf_draw_capsule_fill cf_draw_to cf_app_draw_onto_screen
+ * @param    p0         An endpoint of the interior line-segment of the capsule (the center of one end-cap).
+ * @param    p1         An endpoint of the interior line-segment of the capsule (the center of one end-cap).
+ * @param    r          Radius of the capsule.
+ * @related  cf_draw_capsule cf_draw_capsule2 cf_draw_capsule_fill cf_draw_capsule_fill2
  */
-CF_API void CF_CALL cf_draw_capsule_fill2(CF_Capsule capsule, int iters);
+CF_API void CF_CALL cf_draw_capsule_fill2(CF_V2 p0, CF_V2 p1, float r);
 
 /**
  * @function cf_draw_tri
@@ -248,9 +197,10 @@ CF_API void CF_CALL cf_draw_capsule_fill2(CF_Capsule capsule, int iters);
  * @param    p1         A corner of the triangle.
  * @param    p2         A corner of the triangle.
  * @param    thickness  The thickness of each line to draw.
- * @related  cf_draw_tri cf_draw_tri_fill cf_draw_tri_fill2 cf_draw_to cf_app_draw_onto_screen
+ * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @related  cf_draw_tri cf_draw_tri_fill
  */
-CF_API void CF_CALL cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness);
+CF_API void CF_CALL cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness, float chubbiness);
 
 /**
  * @function cf_draw_tri_fill
@@ -259,23 +209,10 @@ CF_API void CF_CALL cf_draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness);
  * @param    p0         A corner of the triangle.
  * @param    p1         A corner of the triangle.
  * @param    p2         A corner of the triangle.
- * @related  cf_draw_tri cf_draw_tri_fill cf_draw_tri_fill2 cf_draw_to cf_app_draw_onto_screen
+ * @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+ * @related  cf_draw_tri cf_draw_tri_fill
  */
-CF_API void CF_CALL cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2);
-
-/**
- * @function cf_draw_tri_fill2
- * @category draw
- * @brief    Draws a triangle.
- * @param    p0         A corner of the triangle.
- * @param    p1         A corner of the triangle.
- * @param    p2         A corner of the triangle.
- * @param    c0         The color of one corner of the triangle.
- * @param    c1         The color of one corner of the triangle.
- * @param    c2         The color of one corner of the triangle.
- * @related  cf_draw_tri cf_draw_tri_fill cf_draw_tri_fill2 cf_draw_to cf_app_draw_onto_screen
- */
-CF_API void CF_CALL cf_draw_tri_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, CF_Color c2);
+CF_API void CF_CALL cf_draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, float chubbiness);
 
 /**
  * @function cf_draw_line
@@ -284,22 +221,9 @@ CF_API void CF_CALL cf_draw_tri_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0,
  * @param    p0         An endpoint of the line.
  * @param    p1         An endpoint of the line.
  * @param    thickness  The thickness of the line to draw.
- * @related  cf_draw_line cf_draw_line2 cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow
  */
 CF_API void CF_CALL cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness);
-
-/**
- * @function cf_draw_line2
- * @category draw
- * @brief    Draws a line.
- * @param    p0         An endpoint of the line.
- * @param    p1         An endpoint of the line.
- * @param    thickness  The thickness of the line to draw.
- * @param    c0         The color one endpoint of the line.
- * @param    c1         The color one endpoint of the line.
- * @related  cf_draw_line cf_draw_line2 cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_to cf_app_draw_onto_screen
- */
-CF_API void CF_CALL cf_draw_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1);
 
 /**
  * @function cf_draw_polyline
@@ -310,9 +234,9 @@ CF_API void CF_CALL cf_draw_line2(CF_V2 p0, CF_V2 p1, float thickness, CF_Color 
  * @param    thickness    The thickness of the line to draw.
  * @param    loop         True to connect the first and last point to form a loop. False otherwise.
  * @param    bevel_count  The number of edges used to smooth corners.
- * @related  cf_draw_line cf_draw_line2 cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow
  */
-CF_API void CF_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count);
+CF_API void CF_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, bool loop);
 
 /**
  * @function cf_draw_bezier_line
@@ -323,7 +247,7 @@ CF_API void CF_CALL cf_draw_polyline(CF_V2* points, int count, float thickness, 
  * @param    b          The end point.
  * @param    thickness  The thickness of the line to draw.
  * @param    iters      The number of lines used to draw the bezier spline.
- * @related  cf_draw_line cf_draw_line2 cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow
  */
 CF_API void CF_CALL cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, float thickness);
 
@@ -337,9 +261,21 @@ CF_API void CF_CALL cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, f
  * @param    b          The end point.
  * @param    thickness  The thickness of the line to draw.
  * @param    iters      The number of lines used to draw the bezier spline.
- * @related  cf_draw_line cf_draw_line2 cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_to cf_app_draw_onto_screen
+ * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow
  */
 CF_API void CF_CALL cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float thickness);
+
+/**
+ * @function cf_draw_arrow
+ * @category draw
+ * @brief    
+ * @param    a            The starting point.
+ * @param    b            The end point.
+ * @param    thickness    The thickness of the line to draw.
+ * @param    arrow_width  The width of the arrow to draw.
+ * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow
+ */
+CF_API void CF_CALL cf_draw_arrow(CF_V2 a, CF_V2 b, float thickness, float arrow_width);
 
 /**
  * @function cf_draw_push_layer
@@ -684,13 +620,13 @@ CF_API float CF_CALL cf_text_height(const char* text);
  * @function cf_draw_text
  * @category text
  * @brief    Draws text.
- * @param    text      The text to draw.
- * @param    position  The top-left corner of the text.
- * @param    text_length The length of the text to draw. Use -1 to draw until a null terminator.
- * @remarks  `text_length` is a great way to control how many characters to draw for implementing a typewriter style effect.
+ * @param    text               The text to draw.
+ * @param    position           The top-left corner of the text.
+ * @param    num_chars_to_draw  The number of characters to draw `text`. Use -1 to draw the whole string.
+ * @remarks  `num_chars_to_draw` is a great way to control how many characters to draw for implementing a typewriter style effect.
  * @related  cf_make_font cf_draw_text cf_text_effect_register cf_draw_to cf_app_draw_onto_screen
  */
-CF_API void CF_CALL cf_draw_text(const char* text, CF_V2 position, int text_length /*= -1*/);
+CF_API void CF_CALL cf_draw_text(const char* text, CF_V2 position, int num_chars_to_draw /*= -1*/);
 
 /**
  * @struct   CF_TextEffect
@@ -1167,27 +1103,27 @@ namespace Cute
 
 using TemporaryImage = CF_TemporaryImage;
 
-CF_INLINE void draw_sprite(const CF_Sprite* sprite) { cf_draw_sprite(sprite); }
-CF_INLINE void draw_quad(CF_Aabb bb, float thickness) { cf_draw_quad(bb, thickness); }
-CF_INLINE void draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness) { cf_draw_quad2(p0, p1, p2, p3, thickness); }
-CF_INLINE void draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3) { cf_draw_quad3(p0, p1, p2, p3, thickness, c0, c1, c2, c3); }
-CF_INLINE void draw_quad_fill(CF_Aabb bb) { cf_draw_quad_fill(bb); }
-CF_INLINE void draw_quad_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3) { cf_draw_quad_fill2(p0, p1, p2, p3); }
-CF_INLINE void draw_quad_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, CF_Color c0, CF_Color c1, CF_Color c2, CF_Color c3) { cf_draw_quad_fill3(p0, p1, p2, p3, c0, c1, c2, c3); }
-CF_INLINE void draw_circle(CF_V2 p, float r, int iters, float thickness) { cf_draw_circle(p, r, iters, thickness); }
-CF_INLINE void draw_circle(CF_Circle circle, int iters, float thickness) { cf_draw_circle2(circle, iters, thickness); }
-CF_INLINE void draw_circle_fill(CF_V2 p, float r, int iters) { cf_draw_circle_fill(p, r, iters); }
-CF_INLINE void draw_circle_fill(CF_Circle circle, int iters) { cf_draw_circle_fill2(circle, iters); }
-CF_INLINE void draw_circle_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thickness) { cf_draw_circle_arc(p, center_of_arc, range, iters, thickness); }
-CF_INLINE void draw_circle_arc_fill(CF_V2 p, CF_V2 center_of_arc, float range, int iters) { draw_circle_arc_fill(p, center_of_arc, range, iters); }
-CF_INLINE void draw_capsule(CF_V2 p0, CF_V2 p1, float r, int iters, float thickness) { cf_draw_capsule(p0, p1, r, iters, thickness); }
-CF_INLINE void draw_capsule_fill(CF_V2 p0, CF_V2 p1, float r, int iters) { cf_draw_capsule_fill(p0, p1, r, iters); }
-CF_INLINE void draw_tri(CF_V2 p0, CF_V2 p1, CF_V2 p2, float thickness) { cf_draw_tri(p0, p1, p2, thickness); }
-CF_INLINE void draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2) { cf_draw_tri_fill(p0, p1, p2); }
-CF_INLINE void draw_tri_fill(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_Color c0, CF_Color c1, CF_Color c2) { cf_draw_tri_fill2(p0, p1, p2, c0, c1, c2); }
-CF_INLINE void draw_line(CF_V2 p0, CF_V2 p1, float thickness) { cf_draw_line(p0, p1, thickness); }
-CF_INLINE void draw_line(CF_V2 p0, CF_V2 p1, float thickness, CF_Color c0, CF_Color c1) { cf_draw_line2(p0, p1, thickness, c0, c1); }
-CF_INLINE void draw_polyline(CF_V2* points, int count, float thickness, bool loop, int bevel_count) { cf_draw_polyline(points, count, thickness, loop, bevel_count); }
+CF_INLINE void draw_sprite(const Sprite* sprite) { cf_draw_sprite(sprite); }
+CF_INLINE void draw_quad(Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad(bb, thickness, chubbiness); }
+CF_INLINE void draw_quad(v2 p0, v2 p1, v2 p2, v2 p3, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad2(p0, p1, p2, p3, thickness, chubbiness); }
+CF_INLINE void draw_quad_fill(Aabb bb, float chubbiness = 0) { cf_draw_quad_fill(bb, chubbiness); }
+CF_INLINE void draw_quad_fill(v2 p0, v2 p1, v2 p2, v2 p3, float chubbiness = 0) { cf_draw_quad_fill2(p0, p1, p2, p3, chubbiness); }
+CF_INLINE void draw_circle(Circle circle, float thickness = 1.0f) { cf_draw_circle(circle, thickness); }
+CF_INLINE void draw_circle(v2 p, float r, float thickness = 1.0f) { cf_draw_circle2(p, r, thickness); }
+CF_INLINE void draw_circle_fill(Circle circle) { cf_draw_circle_fill(circle); }
+CF_INLINE void draw_circle_fill(v2 p, float r) { cf_draw_circle_fill2(p, r); }
+CF_INLINE void draw_arc(v2 p, v2 center_of_arc, float range, int iters = 20, float thickness = 1.0f) { cf_draw_arc(p, center_of_arc, range, iters, thickness); }
+CF_INLINE void draw_capsule(Capsule capsule, float thickness = 1.0f) { cf_draw_capsule(capsule, thickness); }
+CF_INLINE void draw_capsule(v2 p0, v2 p1, float r, float thickness = 1.0f) { cf_draw_capsule2(p0, p1, r, thickness); }
+CF_INLINE void draw_capsule_fill(Capsule capsule) { cf_draw_capsule_fill(capsule); }
+CF_INLINE void draw_capsule_fill(v2 p0, v2 p1, float r) { cf_draw_capsule_fill2(p0, p1, r); }
+CF_INLINE void draw_tri(v2 p0, v2 p1, v2 p2, float thickness = 1.0f, float chubbiness = 0) { cf_draw_tri(p0, p1, p2, thickness, chubbiness); }
+CF_INLINE void draw_tri_fill(v2 p0, v2 p1, v2 p2, float chubbiness = 0) { cf_draw_tri_fill(p0, p1, p2, chubbiness); }
+CF_INLINE void draw_line(v2 p0, v2 p1, float thickness = 1.0f) { cf_draw_line(p0, p1, thickness); }
+CF_INLINE void draw_polyline(v2* points, int count, float thickness = 1.0f, bool loop = false) { cf_draw_polyline(points, count, thickness, loop); }
+CF_INLINE void draw_bezier_line(v2 a, v2 c0, v2 b, int iters, float thickness) { cf_draw_bezier_line(a, c0, b, iters, thickness); }
+CF_INLINE void draw_bezier_line(v2 a, v2 c0, v2 c1, v2 b, int iters, float thickness) { cf_draw_bezier_line2(a, c0, c1, b, iters, thickness); }
+CF_INLINE void draw_arrow(v2 a, v2 b, float thickness, float arrow_width) { cf_draw_arrow(a, b, thickness, arrow_width); }
 
 CF_INLINE void draw_push_layer(int layer) { cf_draw_push_layer(layer); }
 CF_INLINE int draw_pop_layer() { return cf_draw_pop_layer(); }
