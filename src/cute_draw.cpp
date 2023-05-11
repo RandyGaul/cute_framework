@@ -32,7 +32,6 @@
 #include <internal/cute_png_cache_internal.h>
 #include <internal/cute_aseprite_cache_internal.h>
 #include <internal/cute_font_internal.h>
-#include <internal/calibri.h>
 
 #include <shaders/sprite_shader.h>
 
