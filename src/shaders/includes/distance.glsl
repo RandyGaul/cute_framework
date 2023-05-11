@@ -28,7 +28,7 @@ float det2(vec2 a, vec2 b)
 
 float sdf_stroke(float d)
 {
-	return abs(d) - v_stroke;
+	return clamp(abs(d) - v_stroke, -1.0, 1.0);
 }
 
 float sdf_intersect(float a, float b)
@@ -51,8 +51,8 @@ vec4 sdf(vec4 a, vec4 b, float d)
 	vec4 stroke_aa = mix(a, b, 1.0 - mix(0.0, 1.0, sdf_stroke(d)));
 	vec4 stroke_no_aa = sdf_stroke(d) <= 0.0 ? b : a;
 
-	vec4 fill_aa = mix(a, b, 1.0 - mix(0.0, 1.0, d));
-	vec4 fill_no_aa = d <= 0.0 ? b : a;
+	vec4 fill_aa = mix(a, b, 1.0 - mix(0.0, 1.0, clamp(d, 0, 1.0)));
+	vec4 fill_no_aa = clamp(d, -1.0, 1.0) <= 0.0 ? b : a;
 
 	vec4 stroke = mix(stroke_no_aa, stroke_aa, v_aa);
 	vec4 fill = mix(fill_no_aa, fill_aa, v_aa);

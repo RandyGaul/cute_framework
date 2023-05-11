@@ -785,12 +785,14 @@ void cf_draw_line(CF_V2 p0, CF_V2 p1, float thickness)
 
 void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 {
+	float radius = thickness * 0.5f;
+
 	if (count <= 0) {
 		return;
 	} else if (count == 1) {
-		cf_draw_circle_fill2(pts[0], thickness * 0.5f);
+		cf_draw_circle_fill2(pts[0], radius);
 	} else if (count == 2) {
-		cf_draw_capsule_fill2(pts[0], pts[1], thickness * 0.5f);
+		cf_draw_capsule_fill2(pts[0], pts[1], radius);
 	}
 
 	// Each portion of the polyline will be rendered with a single triangle per spritebatch entry.
@@ -799,7 +801,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	s.image_id = app->default_image_id;
 	s.geom.color = premultiply(to_pixel(cf_overlay_color(draw->colors.last(), draw->tints.last())));
 	s.geom.alpha = 1.0f;
-	s.geom.radius = thickness;
+	s.geom.radius = radius;
 	s.geom.stroke = 0;
 	s.geom.fill = true;
 	s.geom.antialias = draw->antialias.last();
@@ -807,9 +809,8 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	s.sort_bits = draw->layers.last();
 	s.w = s.h = 1;
 
-	// TODO - Audit.
-	// Expand thickness to account for aa.
-	thickness += 2.0f;
+	// Expand to account for aa.
+	radius += 2.0f;
 
 	int i2 = 2;
 	v2 p0 = pts[0];
@@ -819,225 +820,125 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	v2 n1 = norm(p2 - p1);
 	v2 t0 = skew(n0);
 	v2 t1 = skew(n1);
-	v2 a = p0 - n0 * thickness + t0 * thickness;
-	v2 b = p0 - n0 * thickness - t0 * thickness;
+	v2 a = p0 - n0 * radius + t0 * radius;
+	v2 b = p0 - n0 * radius - t0 * radius;
 
-	auto submit = [&](v2 a, v2 b, v2 c) {
-		s.geom.a = p0;
-		s.geom.b = p1;
-		s.geom.c = p2;
-		s.geom.box[0] = mul(m, a);
-		s.geom.box[1] = mul(m, b);
-		s.geom.box[2] = mul(m, c);
-		spritebatch_push(&draw->sb, s);
-	};
-
-	const bool debug = true;
-
-	if (debug) {
-		//draw_push_color(color_cyan());
-		//for (int i = 0; i < count - 1; ++i) {
-		//	int j = i + 1;
-		//	draw_capsule(pts[i], pts[j], 5.0f);
-		//}
-		//draw_pop_color();
-		//draw_push_color(make_color(1.0f, 1.0f, 1.0f, 0.5f));
+	bool debug = false;
+	bool skip = false;
+	int iters = count - 2;
+	if (loop) {
+		skip = true;
+		iters += 3;
 	}
 
-	draw_push_color(make_color(1.0f, 1.0f, 1.0f, 0.5f));
+	auto submit = [&](v2 a, v2 b, v2 c, bool solo = false) {
+		if (skip) return;
+		if (debug) {
+			draw_push_antialias(false);
+			draw_tri(a, b, c);
+			draw_tri_fill(a, b, c);
+			draw_pop_antialias();
+		} else {
+			s.geom.a = p0;
+			s.geom.b = p1;
+			s.geom.c = solo ? p0 : p2;
+			s.geom.box[0] = mul(m, a);
+			s.geom.box[1] = mul(m, b);
+			s.geom.box[2] = mul(m, c);
+			spritebatch_push(&draw->sb, s);
+		}
+	};
 
-	for (int i = 0; i < count - 2; ++i) {
+#define DBG_POINT(P, C) \
+	draw_push_color(color_##C()); \
+	draw_quad(make_aabb(P, 2.0f, 2.0f)); \
+	draw_text(#P, P + V2(0, 5)); \
+	draw_pop_color()
+
+#define DBG_PLANE(H, P, C, L) \
+	draw_push_color(color_##C()); \
+	draw_arrow(project(H, P), (P) + H.n * L * 15.0f, L, L * 3.0f); \
+	draw_text(#H, (P) + H.n * L * 15.0f); \
+	draw_pop_color()
+
+	for (int i = 0; i < iters; ++i) {
 		n0 = norm(p1 - p0);
 		n1 = norm(p2 - p1);
 		t0 = skew(n0);
 		t1 = skew(n1);
 
-		const float k_tol = 1.e-6f;
 		float p0p1_x_p1p2 = cross(n0, n1);
 		float d = dot(n0, n1);
 		Halfspace h0 = plane(t0, a);
 		Halfspace h1 = plane(-t0, b);
-		Halfspace h2 = plane(-t1, p2 - t1 * thickness);
-		Halfspace h3 = plane(t1, p2 + t1 * thickness);
+		Halfspace h2 = plane(-t1, p2 - t1 * radius);
+		Halfspace h3 = plane(t1, p2 + t1 * radius);
 		v2 n = norm(n0 - n1);
-		Halfspace h4 = plane(n, p1 + n * thickness);
+		Halfspace h4 = plane(n, p1 + n * radius);
+		Halfspace x = plane(n1, p2);
+		Halfspace y = plane(-n0, p0);
 
-		if (::abs(p0p1_x_p1p2) < k_tol) {
-			// Parallel line case.
-			v2 c = p1 + t0 * (thickness);
-			v2 d = p1 - t0 * (thickness);
-
-			if (debug) {
-				draw_push_antialias(false);
-				draw_tri_fill(a, b, c);
-				draw_tri_fill(c, b, d);
-				draw_pop_antialias();
-
-				draw_push_color(color_orange());
-				draw_quad(make_aabb(c, 2.0f, 2.0f));
-				draw_quad(make_aabb(d, 2.0f, 2.0f));
-				draw_pop_color();
-			} else {
-				submit(a, b, c);
-				submit(c, b, d);
-			}
-
-			a = c;
-			b = d;
-		} else {
-			if (p0p1_x_p1p2 < 0) {
-				if (d < 0) {
-					// Acute.
+		if (p0p1_x_p1p2 < 0) {
+			if (d < 0) {
+				// Acute.
+				v2 c = intersect(h1, h2);
+				if (dot(c, x.n) - radius > dot(p2, x.n) || dot(c, y.n) - radius > dot(p0, y.n)) {
+					// Self-intersecting.
+					v2 e = p1 + h1.n * radius + n0 * radius;
+					v2 d = p1 + h0.n * radius + n0 * radius;
+					submit(a, b, e, true);
+					submit(d, a, e, true);
+					a = p1 + h3.n * radius - n1 * radius;
+					b = p1 + h2.n * radius - n1 * radius;
+				} else {
 					v2 d = intersect(h3, h4);
 					v2 e = intersect(h0, h4);
-
-					// WORKING HERE -- Predicate broken.
-					if (distance(h1, p2 - t1 * thickness) < 0) {
-						// Self-intersecting.
-						v2 c = p1 - t1 * thickness;
-
-						if (debug) {
-							draw_push_antialias(false);
-							draw_tri_fill(a, b, e);
-							draw_tri_fill(e, b, c);
-							draw_pop_antialias();
-
-							draw_push_color(color_red());
-							draw_quad(make_aabb(d, 2.0f, 2.0f));
-							draw_quad(make_aabb(e, 2.0f, 2.0f));
-							draw_pop_color();
-						} else {
-							submit(a, b, e);
-							submit(e, b, c);
-						}
-
-						a = d;
-						b = e;
-					} else {
-						v2 c = intersect(h1, h2);
-
-						if (debug) {
-							draw_push_antialias(false);
-							draw_tri_fill(a, b, e);
-							draw_tri_fill(e, b, c);
-							draw_tri_fill(e, c, d);
-							draw_pop_antialias();
-
-							draw_push_color(color_red());
-							draw_quad(make_aabb(c, 2.0f, 2.0f));
-							draw_quad(make_aabb(d, 2.0f, 2.0f));
-							draw_quad(make_aabb(e, 2.0f, 2.0f));
-							draw_pop_color();
-						} else {
-							submit(a, b, e);
-							submit(e, b, c);
-							submit(e, c, d);
-						}
-
-						a = d;
-						b = c;
-					}
+					submit(a, b, e);
+					submit(e, b, c);
+					submit(e, c, d);
+					a = d;
+					b = c;
+				}
+			} else {
+				// Obtuse.
+				Halfspace hn = plane(norm(n0 + n1), p1);
+				v2 c = intersect(hn, h0);
+				v2 d = intersect(hn, h1);
+				submit(a, b, c);
+				submit(c, b, d);
+				a = c;
+				b = d;
+			}
+		} else {
+			if (d < 0) {
+				// Acute.
+				v2 e = intersect(h0, h3);
+				if (dot(e, x.n) - radius > dot(p2, x.n) || dot(e, y.n) - radius > dot(p0, y.n)) {
+					// Self-intersecting.
+					v2 c = p1 + h1.n * radius + n0 * radius;
+					v2 d = p1 + h0.n * radius + n0 * radius;
+					submit(a, b, c, true);
+					submit(d, a, c, true);
+					a = p1 + h3.n * radius - n1 * radius;
+					b = p1 + h2.n * radius - n1 * radius;
 				} else {
-					// Obtuse.
-					v2 c = intersect(h0, h3);
-					v2 d = intersect(h1, h2);
-
-					if (debug) {
-						draw_push_antialias(false);
-						draw_tri_fill(a, b, c);
-						draw_tri_fill(c, b, d);
-						draw_pop_antialias();
-
-						draw_push_color(color_blue());
-						draw_quad(make_aabb(c, 2.0f, 2.0f));
-						draw_quad(make_aabb(d, 2.0f, 2.0f));
-						draw_pop_color();
-					} else {
-						submit(a, b, c);
-						submit(c, b, d);
-					}
-
-					a = c;
+					v2 c = intersect(h1, h4);
+					v2 d = intersect(h4, h2);
+					submit(a, b, c);
+					submit(c, e, a);
+					submit(d, e, c);
+					a = e;
 					b = d;
 				}
 			} else {
-				if (d < 0) {
-					// Acute.
-					v2 c = intersect(h1, h4);
-					v2 d = intersect(h4, h2);
-
-					if (distance(h0, p2 + t1 * thickness) < 0) {
-						// Self-intersecting.
-						v2 e = p1 + t0 * thickness;
-
-						if (debug) {
-							draw_push_antialias(false);
-							draw_tri_fill(a, c, b);
-							draw_tri_fill(c, a, e);
-							draw_pop_antialias();
-
-							draw_push_color(color_magenta());
-							draw_push_layer(1);
-							draw_quad(make_aabb(c, 2.0f, 2.0f));
-							draw_quad(make_aabb(d, 2.0f, 2.0f));
-							draw_pop_layer();
-							draw_pop_color();
-						} else {
-							submit(a, c, b);
-							submit(c, a, e);
-						}
-
-						a = c;
-						b = d;
-					} else {
-						v2 e = intersect(h0, h3);
-
-						if (debug) {
-							draw_push_antialias(false);
-							draw_tri_fill(a, b, c);
-							draw_tri_fill(c, e, a);
-							draw_tri_fill(d, e, c);
-							draw_pop_antialias();
-
-							draw_push_color(color_magenta());
-							draw_push_layer(1);
-							draw_quad(make_aabb(c, 2.0f, 2.0f));
-							draw_quad(make_aabb(d, 2.0f, 2.0f));
-							draw_quad(make_aabb(e, 2.0f, 2.0f));
-							draw_pop_layer();
-							draw_pop_color();
-						} else {
-							submit(a, b, c);
-							submit(c, e, a);
-							submit(d, e, c);
-						}
-
-						a = e;
-						b = d;
-					}
-				} else {
-					// Obtuse.
-					v2 c = intersect(h0, h3);
-					v2 d = intersect(h1, h2);
-
-					if (debug) {
-						draw_push_antialias(false);
-						draw_tri_fill(a, b, c);
-						draw_tri_fill(c, b, d);
-						draw_pop_antialias();
-
-						draw_push_color(color_yellow());
-						draw_quad(make_aabb(c, 2.0f, 2.0f));
-						draw_quad(make_aabb(d, 2.0f, 2.0f));
-						draw_pop_color();
-					} else {
-						submit(a, b, c);
-						submit(c, b, d);
-					}
-
-					a = c;
-					b = d;
-				}
+				// Obtuse.
+				Halfspace hn = plane(norm(n0 + n1), p1);
+				v2 c = intersect(hn, h0);
+				v2 d = intersect(hn, h1);
+				submit(a, b, c);
+				submit(c, b, d);
+				a = c;
+				b = d;
 			}
 		}
 
@@ -1045,25 +946,17 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 		p1 = p2;
 		i2 = i2 + 1 == count ? 0 : i2 + 1;
 		p2 = pts[i2];
+
+		skip = false;
 	}
 
 	if (!loop) {
-		v2 d = p1 + n1 * thickness + t1 * thickness;
-		v2 c = p1 + n1 * thickness - t1 * thickness;
+		v2 d = p1 + n1 * radius + t1 * radius;
+		v2 c = p1 + n1 * radius - t1 * radius;
 		p2 = p1;
-
-		if (debug) {
-			draw_push_antialias(false);
-			draw_tri_fill(a, b, c);
-			draw_tri_fill(c, a, d);
-			draw_pop_antialias();
-		} else {
-			submit(a, b, c);
-			submit(c, a, d);
-		}
+		submit(a, b, c);
+		submit(c, a, d);
 	}
-
-	draw_pop_color();
 }
 
 void cf_draw_bezier_line(CF_V2 a, CF_V2 c0, CF_V2 b, int iters, float thickness)
@@ -1092,6 +985,15 @@ void cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float
 	}
 	draw->temp.add(b);
 	cf_draw_polyline(draw->temp.data(), draw->temp.count(), thickness, false);
+}
+
+void cf_draw_arrow(CF_V2 a, CF_V2 b, float thickness, float arrow_width)
+{
+	v2 n = norm(b - a);
+	v2 t = skew(n) * arrow_width;
+	n = n * arrow_width;
+	cf_draw_capsule_fill2(a, b - n, thickness * 0.5f);
+	cf_draw_tri_fill(b, b - n + t, b - n - t, 0);
 }
 
 CF_Result cf_make_font_mem(void* data, int size, const char* font_name)

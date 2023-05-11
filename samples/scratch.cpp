@@ -25,7 +25,10 @@ int main(int argc, char* argv[])
 	s.play("spin");
 
 	draw_push_antialias(false);
-	draw_push_color(color_white() * 0.5f);
+	Color c = color_white();
+	c.a = 0.5f;
+	draw_push_color(c);
+	cf_clear_color(0, 0, 0, 0);
 
 	float fps = 0;
 	bool pause = false;
@@ -40,6 +43,11 @@ int main(int argc, char* argv[])
 			fps = lerp(fps, 1.0f / CF_DELTA_TIME, 1.0f / 500.0f);
 		}
 		static float t = 0;
+
+		static v2 v = V2(35,50);
+		ImGui::Begin("what");
+		ImGui::SliderFloat2("pt", &v.x, -200, 200);
+		ImGui::End();
 
 		if (0) {
 			draw_push_antialias(true);
@@ -126,7 +134,7 @@ int main(int argc, char* argv[])
 				}
 			}
 			draw_push_antialias(true);
-			cf_draw_polyline(pts, CF_ARRAY_SIZE(pts), 5, false);
+			cf_draw_polyline(pts, CF_ARRAY_SIZE(pts), 25, true);
 			draw_pop_antialias();
 
 			if (key_just_pressed(KEY_SPACE)) {
@@ -140,20 +148,14 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		static v2 v = V2(145.517410f,21.522755f);
-		ImGui::Begin("what");
-		ImGui::SliderFloat2("pt", &v.x, -200, 200);
-		ImGui::End();
-
 		if (1) {
 			v2 pts[] = {
-				V2(143.011002f,134.825836f),
+				V2(0,0),
 				v,
-				V2(131.278458f,21.804234f),
-				V2(76.532333f,168.995590f),
+				V2(0,100),
 			};
 			draw_push_antialias(true);
-			cf_draw_polyline(pts, CF_ARRAY_SIZE(pts), 5, false);
+			cf_draw_polyline(pts, CF_ARRAY_SIZE(pts), 10, false);
 			draw_pop_antialias();
 		}
 
@@ -162,7 +164,7 @@ int main(int argc, char* argv[])
 		s = CF_DELTA_TIME;
 		draw_text(s.c_str(), V2(-w/2.0f,-h/2.0f)+V2(2,20));
 
-		if (!pause) {
+		if (!pause || key_just_pressed(KEY_F)) {
 			t += CF_DELTA_TIME;
 		}
 
