@@ -9,18 +9,18 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Draws text.
 
 ```cpp
-void cf_draw_text(const char* text, CF_V2 position, int text_length /*= -1*/);
+void cf_draw_text(const char* text, CF_V2 position, int num_chars_to_draw /*= -1*/);
 ```
 
 Parameters | Description
 --- | ---
 text | The text to draw.
 position | The top-left corner of the text.
-text_length | The length of the text to draw. Use -1 to draw until a null terminator.
+num_chars_to_draw | The number of characters to draw `text`. Use -1 to draw the whole string.
 
 ## Remarks
 
-`text_length` is a great way to control how many characters to draw for implementing a typewriter style effect.
+`num_chars_to_draw` is a great way to control how many characters to draw for implementing a typewriter style effect.
 
 ## Related Pages
 

@@ -268,11 +268,14 @@ CF_API void CF_CALL cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, i
 /**
  * @function cf_draw_arrow
  * @category draw
- * @brief    
+ * @brief    Draws an arrow.
  * @param    a            The starting point.
  * @param    b            The end point.
  * @param    thickness    The thickness of the line to draw.
  * @param    arrow_width  The width of the arrow to draw.
+ * @remarks  This function is intended only for debug purposes. It's implemented in naive way so the
+ *           arrow shaft will overdraw atop the arrow head. This will become visible if the arrow is
+ *           drawn with any transparency.
  * @related  cf_draw_line cf_draw_polyline cf_draw_bezier_line cf_draw_bezier_line2 cf_draw_arrow
  */
 CF_API void CF_CALL cf_draw_arrow(CF_V2 a, CF_V2 b, float thickness, float arrow_width);

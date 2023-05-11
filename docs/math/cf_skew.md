@@ -15,6 +15,7 @@ CF_V2 cf_skew(CF_V2 a)
 ## Related Pages
 
 [CF_V2](/math/cf_v2.md)  
-[cf_cross](/math/cf_cross.md)  
+[cf_perp](/math/cf_perp.md)  
 [cf_cw90](/math/cf_cw90.md)  
 [cf_det2](/math/cf_det2.md)  
+[cf_cross](/math/cf_cross.md)  

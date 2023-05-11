@@ -1,29 +1,33 @@
 [](../header.md ':include')
 
-# cf_draw_bezier_line2
+# cf_draw_arrow
 
 Category: [draw](/api_reference?id=draw)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
-Draws line segments over a cubic bezier line.
+Draws an arrow.
 
 ```cpp
-void cf_draw_bezier_line2(CF_V2 a, CF_V2 c0, CF_V2 c1, CF_V2 b, int iters, float thickness);
+void cf_draw_arrow(CF_V2 a, CF_V2 b, float thickness, float arrow_width);
 ```
 
 Parameters | Description
 --- | ---
 a | The starting point.
-c0 | A bezier control point.
-c1 | A bezier control point.
 b | The end point.
 thickness | The thickness of the line to draw.
-iters | The number of lines used to draw the bezier spline.
+arrow_width | The width of the arrow to draw.
+
+## Remarks
+
+This function is intended only for debug purposes. It's implemented in naive way so the
+arrow shaft will overdraw atop the arrow head. This will become visible if the arrow is
+drawn with any transparency.
 
 ## Related Pages
 
 [cf_draw_line](/draw/cf_draw_line.md)  
 [cf_draw_polyline](/draw/cf_draw_polyline.md)  
 [cf_draw_bezier_line](/draw/cf_draw_bezier_line.md)  
-[cf_draw_arrow](/draw/cf_draw_arrow.md)  
+[cf_draw_bezier_line2](/draw/cf_draw_bezier_line2.md)  

@@ -1,15 +1,15 @@
 [](../header.md ':include')
 
-# cf_intersect_halfspace2
+# cf_shift
 
 Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
-Returns the intersection point of two points to a plane.
+Returns a plane shifted along it's normal by distance `d`.
 
 ```cpp
-CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b)
+CF_Halfspace cf_shift(CF_Halfspace h, float d)
 ```
 
 ## Related Pages

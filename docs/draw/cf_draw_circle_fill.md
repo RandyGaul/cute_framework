@@ -9,19 +9,16 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Draws a circle.
 
 ```cpp
-void cf_draw_circle_fill(CF_V2 p, float r, int iters);
+void cf_draw_circle_fill(CF_Circle circle);
 ```
 
 Parameters | Description
 --- | ---
-p | Center of the circle.
-r | Radius of the circle.
-iters | Number of edges used for the circle. More looks smoother, but renders slower.
+circle | The circle.
 
 ## Related Pages
 
 [cf_draw_circle](/draw/cf_draw_circle.md)  
-[cf_app_draw_onto_screen](/app/cf_app_draw_onto_screen.md)  
-[cf_draw_circle_arc](/draw/cf_draw_circle_arc.md)  
-[cf_draw_circle_arc_fill](/draw/cf_draw_circle_arc_fill.md)  
-cf_draw_to  
+[cf_draw_circle2](/draw/cf_draw_circle2.md)  
+[cf_draw_arc](/draw/cf_draw_arc.md)  
+[cf_draw_circle_fill2](/draw/cf_draw_circle_fill2.md)  

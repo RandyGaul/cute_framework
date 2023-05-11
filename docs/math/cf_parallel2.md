@@ -1,15 +1,15 @@
 [](../header.md ':include')
 
-# cf_parallel
+# cf_parallel2
 
 Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
-Returns true if two vectors are parallel within a `tol` tolerance value.
+Returns true the planes a-b and b-c are parallel with a distance tolerance.
 
 ```cpp
-bool cf_parallel(CF_V2 a, CF_V2 b, float tol)
+bool cf_parallel2(CF_V2 a, CF_V2 b, CF_V2 c, float tol)
 ```
 
 ## Remarks
@@ -25,4 +25,4 @@ what a good tolerance is for your situation.
 [cf_greater_v2](/math/cf_greater_v2.md)  
 [cf_lesser_equal_v2](/math/cf_lesser_equal_v2.md)  
 [cf_greater_equal_v2](/math/cf_greater_equal_v2.md)  
-[cf_parallel2](/math/cf_parallel2.md)  
+[cf_parallel](/math/cf_parallel.md)  

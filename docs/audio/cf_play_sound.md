@@ -15,7 +15,7 @@ CF_Sound cf_play_sound(CF_Audio* audio_source, CF_SoundParams params);
 Parameters | Description
 --- | ---
 audio_source | The [CF_Audio](/audio/cf_audio.md) samples for the sound to play.
-params | [CF_SoundParams](/audio/cf_soundparams.md) on how to play the sound. You can use default values by calling [cf_sound_params_defaults](/audio/cf_sound_params_defaults.md) (in C++ this is already the default argument).
+params | [CF_SoundParams](/audio/cf_soundparams.md) on how to play the sound. You can use default values by calling [cf_sound_params_defaults](/audio/cf_sound_params_defaults.md).
 
 ## Return Value
 

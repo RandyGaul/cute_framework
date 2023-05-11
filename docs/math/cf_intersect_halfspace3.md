@@ -1,15 +1,15 @@
 [](../header.md ':include')
 
-# cf_intersect_halfspace2
+# cf_intersect_halfspace3
 
 Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
-Returns the intersection point of two points to a plane.
+Returns the intersection point of two planes.
 
 ```cpp
-CF_V2 cf_intersect_halfspace2(CF_Halfspace h, CF_V2 a, CF_V2 b)
+CF_V2 cf_intersect_halfspace3(CF_Halfspace ha, CF_Halfspace hb)
 ```
 
 ## Related Pages

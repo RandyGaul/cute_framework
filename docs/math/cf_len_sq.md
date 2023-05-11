@@ -1,21 +1,21 @@
 [](../header.md ':include')
 
-# cf_cross
+# cf_len_sq
 
 Category: [math](/api_reference?id=math)  
 GitHub: [cute_math.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_math.h)  
 ---
 
-Returns the 2D cross product of two vectors.
+Returns squared length of a vector.
 
 ```cpp
-float cf_cross(CF_V2 a, CF_V2 b)
+float cf_len_sq(CF_V2 a)
 ```
 
 ## Related Pages
 
 [CF_V2](/math/cf_v2.md)  
-[cf_skew](/math/cf_skew.md)  
-[cf_cw90](/math/cf_cw90.md)  
-[cf_det2](/math/cf_det2.md)  
-[cf_perp](/math/cf_perp.md)  
+[cf_len](/math/cf_len.md)  
+[cf_distance](/math/cf_distance.md)  
+[cf_norm](/math/cf_norm.md)  
+[cf_safe_norm](/math/cf_safe_norm.md)  

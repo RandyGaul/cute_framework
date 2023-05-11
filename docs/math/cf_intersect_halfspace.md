@@ -26,3 +26,5 @@ call the similar function [cf_intersect_halfspace2](/math/cf_intersect_halfspace
 [cf_project](/math/cf_project.md)  
 [cf_mul_tf_hs](/math/cf_mul_tf_hs.md)  
 [cf_mulT_tf_hs](/math/cf_mult_tf_hs.md)  
+cf_intersect_haflspace3  
+cf_intersect_haflspace2  
