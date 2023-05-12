@@ -1126,6 +1126,12 @@ private:
 };
 
 CF_INLINE String operator+(const String& a, const String& b) { String result = a; result.append(b); return result; }
+CF_INLINE String to_string(const char* s) { return String(s); }
+CF_INLINE String to_string(int i) { return String(i); }
+CF_INLINE String to_string(uint64_t uint) { return String(uint); }
+CF_INLINE String to_string(float f) { return String(f); }
+CF_INLINE String to_string(double f) { return String(f); }
+CF_INLINE String to_string(bool b) { return String(b); }
 
 /**
  * UTF8 decoder. Load it up with a string and read `.codepoint`. Call `next` to fetch the

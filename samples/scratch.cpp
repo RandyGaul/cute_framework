@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
 				V2(0,100),
 			};
 			draw_push_antialias(true);
-			cf_draw_polyline(pts, CF_ARRAY_SIZE(pts), 10, false);
+			cf_draw_polyline(pts, CF_ARRAY_SIZE(pts), 10, true);
 			draw_pop_antialias();
 		}
 
