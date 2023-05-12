@@ -48,10 +48,10 @@ float sdf_subtract(float d0, float d1)
 
 vec4 sdf(vec4 a, vec4 b, float d)
 {
-	vec4 stroke_aa = mix(a, b, 1.0 - mix(0.0, 1.0, sdf_stroke(d)));
+	vec4 stroke_aa = mix(a, b, 1.0 - smoothstep(0.0, 1.0, sdf_stroke(d)));
 	vec4 stroke_no_aa = sdf_stroke(d) <= 0.0 ? b : a;
 
-	vec4 fill_aa = mix(a, b, 1.0 - mix(0.0, 1.0, clamp(d, 0, 1.0)));
+	vec4 fill_aa = mix(a, b, 1.0 - smoothstep(0.0, 1.0, d));
 	vec4 fill_no_aa = clamp(d, -1.0, 1.0) <= 0.0 ? b : a;
 
 	vec4 stroke = mix(stroke_no_aa, stroke_aa, v_aa);
@@ -85,13 +85,6 @@ float distance_segment(vec2 p, vec2 a, vec2 b)
 	float d = safe_div(dot(pa,n), dot(n,n));
 	float h = clamp(d, 0.0, 1.0);
 	return safe_len(pa - h * n);
-}
-
-float distance_line(vec2 p, vec2 a, vec2 b)
-{
-	vec2 n = normalize(skew(b - a));
-	float d = dot(n, a);
-	return abs(dot(p, n) - d);
 }
 
 // Referenced from: https://www.shadertoy.com/view/XsXSz4

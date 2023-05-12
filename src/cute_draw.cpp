@@ -358,12 +358,16 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_texture_fs(draw->material, "u_image", atlas);
 
 	// Apply uniforms.
+	CF_ASSERT(draw->cam_dimensions.x != 0);
+	CF_ASSERT(draw->cam_dimensions.y != 0);
+	cf_material_set_uniform_vs(draw->material, "vs_params", "u_cam_scale", &draw->cam_dimensions.x, CF_UNIFORM_TYPE_FLOAT2, 1);
+	cf_material_set_uniform_vs(draw->material, "vs_params", "u_cam_pos", &draw->cam_position, CF_UNIFORM_TYPE_FLOAT2, 1);
+	cf_material_set_uniform_vs(draw->material, "vs_params", "u_cam_angle", &draw->cam_rotation, CF_UNIFORM_TYPE_FLOAT2, 1);
 	CF_ASSERT(draw->atlas_dims.x == (float)texture_w);
 	CF_ASSERT(draw->atlas_dims.y == (float)texture_h);
 	v2 u_texture_size = cf_v2((float)texture_w, (float)texture_h);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
-
-	// Outline shader uniforms.
+	cf_material_set_uniform_fs(draw->material, "fs_params", "u_pixel_aspect", &draw->pixel_aspect, CF_UNIFORM_TYPE_FLOAT2, 1);
 	CF_ASSERT(draw->texel_dims.x == 1.0f / (float)texture_w);
 	CF_ASSERT(draw->texel_dims.y == 1.0f / (float)texture_h);
 	v2 u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
@@ -543,7 +547,7 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	v2 v = skew(u);
 	v2 he = V2(distance(p1, p0), distance(p3, p0)) * 0.5f;
 	v2 c = ((p0 + p1) * 0.5f + (p2 + p3) * 0.5f) * 0.5f;
-	float inflate = stroke+radius+1.0f;
+	v2 inflate = V2(stroke+radius+1.0f,stroke+radius+1.0f)/draw->pixel_aspect;
 	p0 = p0 - u * inflate - v * inflate;
 	p1 = p1 + u * inflate - v * inflate;
 	p2 = p2 + u * inflate + v * inflate;
@@ -2165,6 +2169,7 @@ void cf_render_to(CF_Canvas canvas, bool clear)
 void cf_camera_dimensions(float w, float h)
 {
 	draw->cam_dimensions = V2(w, h) * 0.5f;
+	draw->pixel_aspect = (V2((float)app->w, (float)app->h) * 0.5f) / draw->cam_dimensions;
 	draw->cam = cf_invert(cf_make_transform_TSR(draw->cam_position, draw->cam_dimensions, draw->cam_rotation));
 }
 
@@ -2182,17 +2187,29 @@ void cf_camera_rotate(float radians)
 
 void cf_camera_push()
 {
-	draw->cam_stack.add(draw->cam);
+	CF_Cam cam;
+	cam.m = draw->cam;
+	cam.pos = draw->cam_position;
+	cam.scale = draw->cam_dimensions;
+	cam.angle = draw->cam_rotation;
+	cam.pixel_aspect = draw->pixel_aspect;
+	draw->cam_stack.add(cam);
 }
 
 void cf_camera_pop()
 {
 	if (draw->cam_stack.size()) {
-		draw->cam = draw->cam_stack.pop();
+		CF_Cam cam = draw->cam_stack.pop();
+		draw->cam = cam.m;
+		draw->cam_position = cam.pos;
+		draw->cam_dimensions = cam.scale;
+		draw->cam_rotation = cam.angle;
+		draw->pixel_aspect = cam.pixel_aspect;
 	} else {
 		draw->cam_dimensions = V2((float)app->w, (float)app->h) * 0.5f;
 		draw->cam_position = V2(0, 0);
 		draw->cam_rotation = 0;
+		draw->pixel_aspect = (V2((float)app->w, (float)app->h) * 0.5f) / draw->cam_dimensions;
 		draw->cam = cf_invert(cf_make_transform_TSR(draw->cam_position, draw->cam_dimensions, draw->cam_rotation));
 	}
 }

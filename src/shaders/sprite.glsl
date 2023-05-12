@@ -33,12 +33,21 @@
 	layout (location = 10) out float v_fill;
 	layout (location = 11) out float v_aa;
 
+	layout (binding = 0) uniform vs_params {
+		vec2 u_cam_pos;
+		vec2 u_cam_scale;
+		float u_cam_angle;
+	};
+
 	void main()
 	{
-		vec2 p = in_pos;
-		p.x *= 640.0*0.5f;
-		p.y *= 480.0*0.5f;
+		vec2 p = in_pos * u_cam_scale;
+		float c = cos(u_cam_angle);
+		float s = sin(u_cam_angle);
+		p = mat2(vec2(c, -s),vec2(s,  c)) * p;
+		p += u_cam_pos;
 		v_pos = p;
+
 		v_a = in_a;
 		v_b = in_b;
 		v_c = in_c;
@@ -50,6 +59,7 @@
 		v_alpha = in_params.g;
 		v_fill = in_params.b;
 		v_aa = in_params.a;
+
 		vec4 posH = vec4(in_pos, 0, 1);
 		gl_Position = posH;
 }
@@ -75,6 +85,7 @@
 
 	layout (binding = 0) uniform fs_params {
 		vec2 u_texture_size;
+		vec2 u_pixel_aspect;
 	};
 
 	@include_block blend

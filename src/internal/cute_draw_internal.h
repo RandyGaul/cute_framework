@@ -81,6 +81,15 @@ struct CF_Strike
 	float thickness;
 };
 
+struct CF_Cam
+{
+	CF_V2 pos;
+	CF_V2 scale;
+	float angle;
+	CF_V2 pixel_aspect;
+	CF_M3x2 m;
+};
+
 struct CF_Draw
 {
 	CF_V2 atlas_dims = cf_v2(2048, 2048);
@@ -97,11 +106,12 @@ struct CF_Draw
 	Cute::Array<CF_Rect> scissors = { { -1, -1, 0, 0 } };
 	Cute::Array<CF_Rect> viewports = { { -1, -1, 0, 0 } };
 	Cute::Array<int> layers = { 0 };
-	Cute::Array<CF_M3x2> cam_stack;
+	Cute::Array<CF_Cam> cam_stack;
 	CF_M3x2 cam = cf_make_identity();
 	CF_V2 cam_dimensions = { };
 	CF_V2 cam_position = { };
 	float cam_rotation = 0;
+	CF_V2 pixel_aspect = { };
 	Cute::Array<CF_V2> temp;
 	Cute::Array<DrawVertex> verts;
 	Cute::Array<float> font_sizes = { 18 };

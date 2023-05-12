@@ -16,7 +16,6 @@ int main(int argc, char* argv[])
 	make_font("sample_data/calibri.ttf", "Calibri");
 	push_font("Calibri");
 
-	camera_dimensions((float)w, (float)h);
 	int draw_calls = 0;
 
 	Sprite s = cf_make_sprite("test_data/girl.aseprite");
@@ -26,7 +25,6 @@ int main(int argc, char* argv[])
 
 	draw_push_antialias(false);
 	Color c = color_white();
-	c.a = 0.5f;
 	draw_push_color(c);
 	cf_clear_color(0, 0, 0, 0);
 
@@ -44,10 +42,29 @@ int main(int argc, char* argv[])
 		}
 		static float t = 0;
 
-		static v2 v = V2(35,50);
+		static v2 v = V2(0,0);
 		ImGui::Begin("what");
 		ImGui::SliderFloat2("pt", &v.x, -200, 200);
+		static v2 cam_p = V2(0,0);
+		static v2 cam_scale = V2((float)w,(float)h);
+		static float cam_rot = 0;
+		static bool aa = false;
+		ImGui::SliderFloat2("cam_p", &cam_p.x, -200, 200);
+		ImGui::SliderFloat2("cam_scale", &cam_scale.x, 100, 1000);
+		ImGui::SliderFloat("cam_rot", &cam_rot, -10, 10);
+		ImGui::Checkbox("aa", &aa);
+		camera_look_at(cam_p.x, cam_p.y);
+		camera_rotate(cam_rot);
+		camera_dimensions(cam_scale.x, cam_scale.y);
 		ImGui::End();
+
+		if (0) {
+			draw_push_antialias(aa);
+			//draw_circle_fill(v, 100);
+			//draw_capsule(v,v+V2(100,100),20);
+			draw_capsule_fill(v,v+V2(100,100),20);
+			draw_pop_antialias();
+		}
 
 		if (0) {
 			draw_push_antialias(true);
@@ -117,7 +134,7 @@ int main(int argc, char* argv[])
 			draw_pop_layer();
 		}
 
-		if (0) {
+		if (1) {
 			v2 pts[] = {
 				V2(0,0),
 				V2(100,0),
@@ -148,7 +165,7 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		if (1) {
+		if (0) {
 			v2 pts[] = {
 				V2(0,0),
 				v,
