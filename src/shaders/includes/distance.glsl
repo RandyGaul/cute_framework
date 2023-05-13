@@ -28,7 +28,7 @@ float det2(vec2 a, vec2 b)
 
 float sdf_stroke(float d)
 {
-	return clamp(abs(d) - v_stroke, -1.0, 1.0);
+	return abs(d) - v_stroke;
 }
 
 float sdf_intersect(float a, float b)
@@ -46,12 +46,19 @@ float sdf_subtract(float d0, float d1)
 	return max(d0, -d1);
 }
 
+float dd(float d)
+{
+	return length(vec2(dFdx(d), dFdy(d)));
+}
+
 vec4 sdf(vec4 a, vec4 b, float d)
 {
-	vec4 stroke_aa = mix(a, b, 1.0 - smoothstep(0.0, 1.0, sdf_stroke(d)));
-	vec4 stroke_no_aa = sdf_stroke(d) <= 0.0 ? b : a;
+	float aaf = u_aaf * u_aa_scale;
+	float wire_d = sdf_stroke(d);
+	vec4 stroke_aa = mix(b, a, smoothstep(0.0, aaf, wire_d));
+	vec4 stroke_no_aa = wire_d <= 0.0 ? b : a;
 
-	vec4 fill_aa = mix(a, b, 1.0 - smoothstep(0.0, 1.0, d));
+	vec4 fill_aa = mix(b, a, smoothstep(0.0, aaf, d));
 	vec4 fill_no_aa = clamp(d, -1.0, 1.0) <= 0.0 ? b : a;
 
 	vec4 stroke = mix(stroke_no_aa, stroke_aa, v_aa);

@@ -85,7 +85,8 @@
 
 	layout (binding = 0) uniform fs_params {
 		vec2 u_texture_size;
-		vec2 u_pixel_aspect;
+		float u_aaf;
+		float u_aa_scale;
 	};
 
 	@include_block blend
@@ -122,6 +123,7 @@
 		c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
 
 		c.a *= v_alpha;
+		//if (c.a == 0) c = vec4(0.5);
 		if (c.a == 0) discard;
 		result = c;
 	}

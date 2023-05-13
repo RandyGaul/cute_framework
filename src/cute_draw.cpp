@@ -360,14 +360,15 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	// Apply uniforms.
 	CF_ASSERT(draw->cam_dimensions.x != 0);
 	CF_ASSERT(draw->cam_dimensions.y != 0);
-	cf_material_set_uniform_vs(draw->material, "vs_params", "u_cam_scale", &draw->cam_dimensions.x, CF_UNIFORM_TYPE_FLOAT2, 1);
+	cf_material_set_uniform_vs(draw->material, "vs_params", "u_cam_scale", &draw->cam_dimensions, CF_UNIFORM_TYPE_FLOAT2, 1);
 	cf_material_set_uniform_vs(draw->material, "vs_params", "u_cam_pos", &draw->cam_position, CF_UNIFORM_TYPE_FLOAT2, 1);
 	cf_material_set_uniform_vs(draw->material, "vs_params", "u_cam_angle", &draw->cam_rotation, CF_UNIFORM_TYPE_FLOAT2, 1);
 	CF_ASSERT(draw->atlas_dims.x == (float)texture_w);
 	CF_ASSERT(draw->atlas_dims.y == (float)texture_h);
 	v2 u_texture_size = cf_v2((float)texture_w, (float)texture_h);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
-	cf_material_set_uniform_fs(draw->material, "fs_params", "u_pixel_aspect", &draw->pixel_aspect, CF_UNIFORM_TYPE_FLOAT2, 1);
+	cf_material_set_uniform_fs(draw->material, "fs_params", "u_aaf", &draw->aaf, CF_UNIFORM_TYPE_FLOAT, 1);
+	cf_material_set_uniform_fs(draw->material, "fs_params", "u_aa_scale", &draw->antialias_scale.last(), CF_UNIFORM_TYPE_FLOAT, 1);
 	CF_ASSERT(draw->texel_dims.x == 1.0f / (float)texture_w);
 	CF_ASSERT(draw->texel_dims.y == 1.0f / (float)texture_h);
 	v2 u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
@@ -538,6 +539,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, float radius, bool fill)
 {
 	CF_M3x2 m = draw->cam;
+	float aaf = draw->aaf * draw->antialias_scale.last();
 	spritebatch_sprite_t s = { };
 	s.image_id = app->default_image_id;
 	s.w = s.h = 1;
@@ -547,7 +549,7 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	v2 v = skew(u);
 	v2 he = V2(distance(p1, p0), distance(p3, p0)) * 0.5f;
 	v2 c = ((p0 + p1) * 0.5f + (p2 + p3) * 0.5f) * 0.5f;
-	v2 inflate = V2(stroke+radius+1.0f,stroke+radius+1.0f)/draw->pixel_aspect;
+	v2 inflate = V2(stroke+radius+aaf,stroke+radius+aaf);
 	p0 = p0 - u * inflate - v * inflate;
 	p1 = p1 + u * inflate - v * inflate;
 	p2 = p2 + u * inflate + v * inflate;
@@ -598,13 +600,14 @@ void cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float chubbiness
 static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 {
 	CF_M3x2 m = draw->cam;
+	float aaf = draw->aaf * draw->antialias_scale.last();
 	spritebatch_sprite_t s = { };
 	s.image_id = app->default_image_id;
 	s.w = s.h = 1;
 	s.geom.type = BATCH_GEOMETRY_TYPE_CIRCLE;
 
 	v2 rr = V2(radius, radius);
-	v2 inflate = V2(stroke+1.0f, stroke+1.0f);
+	v2 inflate = V2(stroke+aaf, stroke+aaf);
 	CF_Aabb bb = make_aabb(position - (rr+inflate), position + (rr+inflate));
 	cf_aabb_verts(s.geom.box, bb);
 	s.geom.box[0] = mul(m, s.geom.box[0]);
@@ -651,7 +654,8 @@ void cf_draw_arc(CF_V2 p, CF_V2 center_of_arc, float range, int iters, float thi
 
 static CF_INLINE void s_bounding_box_of_capsule(v2 a, v2 b, float radius, float stroke, v2 out[4])
 {
-	v2 n0 = norm(b - a) * (radius + stroke + 1.0f);
+	float aaf = draw->aaf * draw->antialias_scale.last();
+	v2 n0 = norm(b - a) * (radius + stroke + aaf);
 	v2 n1 = skew(n0);
 	out[0] = a - n0 + n1;
 	out[1] = a - n0 - n1;
@@ -728,12 +732,13 @@ void CF_INLINE s_bounding_box_of_triangle(v2 a, v2 b, v2 c, float radius, float 
 		out[2] = b + u * inflate + v * (inflate + h);
 		out[3] = a - u * inflate + v * (inflate + h);
 	};
+	float aaf = draw->aaf * draw->antialias_scale.last();
 	if (d0 >= d1 && d0 >= d2) {
-		build_box(d0, a, b, c, radius + stroke + 1.0f, out);
+		build_box(d0, a, b, c, radius + stroke + aaf, out);
 	} else if (d1 >= d0 && d1 >= d2) {
-		build_box(d1, b, c, a, radius + stroke + 1.0f, out);
+		build_box(d1, b, c, a, radius + stroke + aaf, out);
 	} else {
-		build_box(d2, c, a, b, radius + stroke + 1.0f, out);
+		build_box(d2, c, a, b, radius + stroke + aaf, out);
 	}
 }
 
@@ -813,7 +818,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	s.w = s.h = 1;
 
 	// Expand to account for aa.
-	radius += 2.0f;
+	radius += draw->aaf;
 
 	int i2 = 2;
 	v2 p0 = pts[0];
@@ -2082,6 +2087,25 @@ bool cf_draw_peek_antialias()
 	return draw->antialias.last();
 }
 
+void cf_draw_push_antialias_scale(float scale)
+{
+	draw->antialias_scale.add(scale);
+}
+
+float cf_draw_pop_antialias_scale()
+{
+	if (draw->antialias_scale.count() > 1) {
+		return draw->antialias_scale.pop();
+	} else {
+		return draw->antialias_scale.last();
+	}
+}
+
+float cf_draw_peek_antialias_scale()
+{
+	return draw->antialias_scale.last();
+}
+
 void cf_render_settings_filter(CF_Filter filter)
 {
 	draw->filter = filter;
@@ -2169,7 +2193,7 @@ void cf_render_to(CF_Canvas canvas, bool clear)
 void cf_camera_dimensions(float w, float h)
 {
 	draw->cam_dimensions = V2(w, h) * 0.5f;
-	draw->pixel_aspect = (V2((float)app->w, (float)app->h) * 0.5f) / draw->cam_dimensions;
+	draw->aaf = draw->cam_dimensions.y / (float)app->h;
 	draw->cam = cf_invert(cf_make_transform_TSR(draw->cam_position, draw->cam_dimensions, draw->cam_rotation));
 }
 
@@ -2192,7 +2216,7 @@ void cf_camera_push()
 	cam.pos = draw->cam_position;
 	cam.scale = draw->cam_dimensions;
 	cam.angle = draw->cam_rotation;
-	cam.pixel_aspect = draw->pixel_aspect;
+	cam.aaf = draw->aaf;
 	draw->cam_stack.add(cam);
 }
 
@@ -2204,12 +2228,12 @@ void cf_camera_pop()
 		draw->cam_position = cam.pos;
 		draw->cam_dimensions = cam.scale;
 		draw->cam_rotation = cam.angle;
-		draw->pixel_aspect = cam.pixel_aspect;
+		draw->aaf = cam.aaf;
 	} else {
 		draw->cam_dimensions = V2((float)app->w, (float)app->h) * 0.5f;
 		draw->cam_position = V2(0, 0);
 		draw->cam_rotation = 0;
-		draw->pixel_aspect = (V2((float)app->w, (float)app->h) * 0.5f) / draw->cam_dimensions;
+		draw->aaf = draw->cam_dimensions.y / (float)app->h;
 		draw->cam = cf_invert(cf_make_transform_TSR(draw->cam_position, draw->cam_dimensions, draw->cam_rotation));
 	}
 }

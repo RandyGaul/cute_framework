@@ -46,23 +46,27 @@ int main(int argc, char* argv[])
 		ImGui::Begin("what");
 		ImGui::SliderFloat2("pt", &v.x, -200, 200);
 		static v2 cam_p = V2(0,0);
-		static v2 cam_scale = V2((float)w,(float)h);
+		static float cam_scale = 1.0f;
 		static float cam_rot = 0;
 		static bool aa = false;
+		static float aaf = 1.5f;
 		ImGui::SliderFloat2("cam_p", &cam_p.x, -200, 200);
-		ImGui::SliderFloat2("cam_scale", &cam_scale.x, 100, 1000);
+		ImGui::SliderFloat("cam_scale", &cam_scale, 0.1f, 10);
 		ImGui::SliderFloat("cam_rot", &cam_rot, -10, 10);
+		ImGui::SliderFloat("aaf", &aaf, 0, 10);
 		ImGui::Checkbox("aa", &aa);
 		camera_look_at(cam_p.x, cam_p.y);
 		camera_rotate(cam_rot);
-		camera_dimensions(cam_scale.x, cam_scale.y);
+		camera_dimensions(cam_scale * w, cam_scale * h);
+		draw_pop_antialias_scale();
+		draw_push_antialias_scale(aaf);
 		ImGui::End();
 
-		if (0) {
+		if (1) {
 			draw_push_antialias(aa);
 			//draw_circle_fill(v, 100);
-			//draw_capsule(v,v+V2(100,100),20);
-			draw_capsule_fill(v,v+V2(100,100),20);
+			draw_capsule(v,v+V2(100,100),20);
+			//draw_capsule_fill(v,v+V2(100,100),20);
 			draw_pop_antialias();
 		}
 
@@ -134,7 +138,7 @@ int main(int argc, char* argv[])
 			draw_pop_layer();
 		}
 
-		if (1) {
+		if (0) {
 			v2 pts[] = {
 				V2(0,0),
 				V2(100,0),

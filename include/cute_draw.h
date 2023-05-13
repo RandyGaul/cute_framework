@@ -403,6 +403,36 @@ CF_API bool CF_CALL cf_draw_pop_antialias();
 CF_API bool CF_CALL cf_draw_peek_antialias();
 
 /**
+ * @function cf_draw_push_antialias_scale
+ * @category draw
+ * @brief    Returns the last antialias scale.
+ * @remarks  Antialias scale controls how much antialiasing will be used. A larger number makes the borders of shapes blurry.
+ *           The number must be greater than 0, but probably not more than 2 or 3 for most cases. The default is 1.5.
+ * @related  cf_draw_push_antialias_scale cf_draw_pop_antialias_scale cf_draw_peek_antialias_scale
+ */
+CF_API void CF_CALL cf_draw_push_antialias_scale(float scale);
+
+/**
+ * @function cf_draw_pop_antialias_scale
+ * @category draw
+ * @brief    Pops and returns the last antialias scale.
+ * @remarks  Antialias scale controls how much antialiasing will be used. A larger number makes the borders of shapes blurry.
+ *           The number must be greater than 0, but probably not more than 2 or 3 for most cases. The default is 1.5.
+ * @related  cf_draw_push_antialias_scale cf_draw_pop_antialias_scale cf_draw_peek_antialias_scale
+ */
+CF_API float CF_CALL cf_draw_pop_antialias_scale();
+
+/**
+ * @function cf_draw_peek_antialias_scale
+ * @category draw
+ * @brief    Returns the last antialias scale.
+ * @remarks  Antialias scale controls how much antialiasing will be used. A larger number makes the borders of shapes blurry.
+ *           The number must be greater than 0, but probably not more than 2 or 3 for most cases. The default is 1.5.
+ * @related  cf_draw_push_antialias_scale cf_draw_pop_antialias_scale cf_draw_peek_antialias_scale
+ */
+CF_API float CF_CALL cf_draw_peek_antialias_scale();
+
+/**
  * @function cf_make_font
  * @category text
  * @brief    Constructs a font for rendering text.
@@ -1140,6 +1170,9 @@ CF_INLINE CF_Color draw_peek_tint() { return cf_draw_peek_tint(); }
 CF_INLINE void draw_push_antialias(bool antialias) { cf_draw_push_antialias(antialias); }
 CF_INLINE bool draw_pop_antialias() { return cf_draw_pop_antialias(); }
 CF_INLINE bool draw_peek_antialias() { return cf_draw_peek_antialias(); }
+CF_INLINE void draw_push_antialias_scale(float scale) { return cf_draw_push_antialias_scale(scale); }
+CF_INLINE float draw_pop_antialias_scale() { return cf_draw_pop_antialias_scale(); }
+CF_INLINE float draw_peek_antialias_scale() { return cf_draw_peek_antialias_scale(); }
 
 CF_INLINE CF_Result make_font(const char* path, const char* font_name) { return cf_make_font(path, font_name); }
 CF_INLINE CF_Result make_font_mem(void* data, int size, const char* font_name) { return cf_make_font_mem(data, size, font_name); }
