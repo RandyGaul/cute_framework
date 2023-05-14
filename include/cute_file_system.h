@@ -743,7 +743,8 @@ struct Path
 	CF_INLINE Path compact(int n) const { return Path::steal_from(spcompact(m_path, n)); }
 	CF_INLINE Path my_directory() const { return Path::steal_from(spdir_of(m_path)); }
 	CF_INLINE Path my_top() const { return Path::steal_from(sptop_of(m_path)); }
-	CF_INLINE Path normalize() const { return Path::steal_from(spnorm(m_path)); }
+	CF_INLINE Path& normalize() { char* result = spnorm(m_path); sfree(m_path); m_path = result; return *this; }
+	CF_INLINE Path normalized() const { return Path::steal_from(spnorm(m_path)); }
 
 	CF_INLINE Path& add(const char* path) { if (sfirst(path) != '/' && slast(m_path) != '/') sappend(m_path, "/"); scat(m_path, path); return *this; }
 	CF_INLINE Path& cat(const char* path) { return add(path); }
