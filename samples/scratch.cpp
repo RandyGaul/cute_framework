@@ -50,10 +50,12 @@ int main(int argc, char* argv[])
 		static float cam_rot = 0;
 		static bool aa = false;
 		static float aaf = 1.5f;
+		static float chubbiness = 5.0f;
 		ImGui::SliderFloat2("cam_p", &cam_p.x, -200, 200);
 		ImGui::SliderFloat("cam_scale", &cam_scale, 0.1f, 10);
 		ImGui::SliderFloat("cam_rot", &cam_rot, -10, 10);
 		ImGui::SliderFloat("aaf", &aaf, 0, 10);
+		ImGui::SliderFloat("chubbiness", &chubbiness, 0, 10);
 		ImGui::Checkbox("aa", &aa);
 		camera_look_at(cam_p.x, cam_p.y);
 		camera_rotate(cam_rot);
@@ -99,20 +101,20 @@ int main(int argc, char* argv[])
 			M3x2 m = make_rotation(mod(t*0.25f, CF_PI*2));
 			for (int i = 0; i < 4; ++i) box[i] = mul(m, box[i]);
 			draw_push_antialias(true);
-			draw_quad(box[0], box[1], box[2], box[3], 5, 20);
+			draw_quad(box[0], box[1], box[2], box[3], 5, chubbiness);
 			draw_pop_antialias();
 			m = make_translation(-150,0);
 			for (int i = 0; i < 4; ++i) box[i] = mul(m, box[i]);
-			draw_quad(box[0], box[1], box[2], box[3], 5, 20);
+			draw_quad(box[0], box[1], box[2], box[3], 5, chubbiness);
 
 			m = make_translation(0,150);
 			for (int i = 0; i < 4; ++i) box[i] = mul(m, box[i]);
-			draw_quad_fill(box[0], box[1], box[2], box[3], 20);
+			draw_quad_fill(box[0], box[1], box[2], box[3], chubbiness);
 
 			m = make_translation(150,0);
 			for (int i = 0; i < 4; ++i) box[i] = mul(m, box[i]);
 			draw_push_antialias(true);
-			draw_quad_fill(box[0], box[1], box[2], box[3], 20);
+			draw_quad_fill(box[0], box[1], box[2], box[3], chubbiness);
 			draw_pop_antialias();
 		}
 
@@ -124,18 +126,18 @@ int main(int argc, char* argv[])
 		}
 
 		if (0) {
-			draw_tri_fill(V2(-100,-100), V2(-50,80), V2(120,15));
+			draw_tri_fill(V2(-100,-100), V2(-50,80), V2(120,15), chubbiness);
 			draw_push_antialias(true);
-			draw_tri_fill(V2(-50,-50-100), V2(-70,30-100), V2(150,25-100));
+			draw_tri_fill(V2(-50,-50-100), V2(-70,30-100), V2(150,25-100), chubbiness);
 			draw_pop_antialias();
 
-			draw_push_layer(1);
-			s.update();
-			s.draw();
-			draw_push_color(color_red());
-			draw_text("testing <wave>some</wave> text", V2(-100,0));
-			draw_pop_color();
-			draw_pop_layer();
+			//draw_push_layer(1);
+			//s.update();
+			//s.draw();
+			//draw_push_color(color_red());
+			//draw_text("testing <wave>some</wave> text", V2(-100,0));
+			//draw_pop_color();
+			//draw_pop_layer();
 		}
 
 		if (0) {

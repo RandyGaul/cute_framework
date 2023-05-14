@@ -615,6 +615,8 @@ CF_INLINE bool app_mouse_exited() { return cf_app_mouse_exited(); }
 CF_INLINE bool app_mouse_inside() { return cf_app_mouse_inside(); }
 CF_INLINE int app_get_canvas_width() { return cf_app_get_canvas_width(); }
 CF_INLINE int app_get_canvas_height() { return cf_app_get_canvas_height(); }
+CF_INLINE void app_set_vsync(bool true_turn_on_vsync) { cf_app_set_vsync(true_turn_on_vsync); }
+CF_INLINE bool app_get_vsync() { return cf_app_get_vsync(); }
 
 CF_INLINE ImGuiContext* app_init_imgui(bool no_default_font = false) { return cf_app_init_imgui(no_default_font); }
 CF_INLINE sg_imgui_t* app_get_sokol_imgui() { return cf_app_get_sokol_imgui(); }
