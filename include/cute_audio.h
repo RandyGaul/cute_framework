@@ -39,7 +39,7 @@ extern "C" {
  * @brief    An opaque pointer representing raw audio samples loaded as a resource.
  * @related  CF_Audio cf_audio_load_ogg cf_audio_load_ogg_from_memory cf_audio_load_wav cf_audio_load_wav_from_memory cf_audio_destroy cf_music_play cf_music_switch_to cf_music_crossfade cf_play_sound
  */
-typedef struct CF_Audio CF_Audio;
+typedef struct CF_Audio { uint64_t id; } CF_Audio;
 // @end
 
 /**
@@ -50,7 +50,7 @@ typedef struct CF_Audio CF_Audio;
  * @return   Returns a pointer to `CF_Audio`. Free it up with `cf_audio_destroy` when done.
  * @related  CF_Audio cf_audio_load_ogg cf_audio_load_ogg_from_memory cf_audio_load_wav cf_audio_load_wav_from_memory cf_audio_destroy
  */
-CF_API CF_Audio* CF_CALL cf_audio_load_ogg(const char* path);
+CF_API CF_Audio CF_CALL cf_audio_load_ogg(const char* path);
 
 /**
  * @function cf_audio_load_wav
@@ -60,7 +60,7 @@ CF_API CF_Audio* CF_CALL cf_audio_load_ogg(const char* path);
  * @return   Returns a pointer to `CF_Audio`. Free it up with `cf_audio_destroy` when done.
  * @related  CF_Audio cf_audio_load_ogg cf_audio_load_ogg_from_memory cf_audio_load_wav cf_audio_load_wav_from_memory cf_audio_destroy
  */
-CF_API CF_Audio* CF_CALL cf_audio_load_wav(const char* path);
+CF_API CF_Audio CF_CALL cf_audio_load_wav(const char* path);
 
 /**
  * @function cf_audio_load_ogg_from_memory
@@ -71,7 +71,7 @@ CF_API CF_Audio* CF_CALL cf_audio_load_wav(const char* path);
  * @return   Returns a pointer to `CF_Audio`. Free it up with `cf_audio_destroy` when done.
  * @related  CF_Audio cf_audio_load_ogg cf_audio_load_ogg_from_memory cf_audio_load_wav cf_audio_load_wav_from_memory cf_audio_destroy
  */
-CF_API CF_Audio* CF_CALL cf_audio_load_ogg_from_memory(void* memory, int byte_count);
+CF_API CF_Audio CF_CALL cf_audio_load_ogg_from_memory(void* memory, int byte_count);
 
 /**
  * @function cf_audio_load_wav_from_memory
@@ -82,7 +82,7 @@ CF_API CF_Audio* CF_CALL cf_audio_load_ogg_from_memory(void* memory, int byte_co
  * @return   Returns a pointer to `CF_Audio`. Free it up with `cf_audio_destroy` when done.
  * @related  CF_Audio cf_audio_load_ogg cf_audio_load_ogg_from_memory cf_audio_load_wav cf_audio_load_wav_from_memory cf_audio_destroy
  */
-CF_API CF_Audio* CF_CALL cf_audio_load_wav_from_memory(void* memory, int byte_count);
+CF_API CF_Audio CF_CALL cf_audio_load_wav_from_memory(void* memory, int byte_count);
 
 /**
  * @function cf_audio_destroy
@@ -91,7 +91,7 @@ CF_API CF_Audio* CF_CALL cf_audio_load_wav_from_memory(void* memory, int byte_co
  * @param    audio        A pointer to the `CF_Audio`.
  * @related  CF_Audio cf_audio_load_ogg cf_audio_load_ogg_from_memory cf_audio_load_wav cf_audio_load_wav_from_memory cf_audio_destroy
  */
-CF_API void CF_CALL cf_audio_destroy(CF_Audio* audio);
+CF_API void CF_CALL cf_audio_destroy(CF_Audio audio);
 
 // -------------------------------------------------------------------------------------------------
 // Global controls.
@@ -144,7 +144,7 @@ CF_API void CF_CALL cf_audio_set_pause(bool true_for_paused);
  * @param    fade_in_time   A number of seconds to fade the music in. Can be 0.0f to instantly play your music.
  * @related  cf_music_play cf_music_stop cf_music_set_volume cf_music_set_loop cf_music_pause cf_music_resume cf_music_switch_to cf_music_crossfade cf_music_get_sample_index cf_music_set_sample_index
  */
-CF_API void CF_CALL cf_music_play(CF_Audio* audio_source, float fade_in_time);
+CF_API void CF_CALL cf_music_play(CF_Audio audio_source, float fade_in_time);
 
 /**
  * @function cf_music_stop
@@ -198,7 +198,7 @@ CF_API void CF_CALL cf_music_resume();
  * @remarks  The currently playing track is faded out, then the second track is faded in.
  * @related  cf_music_play cf_music_stop cf_music_set_volume cf_music_set_loop cf_music_pause cf_music_resume cf_music_switch_to cf_music_crossfade cf_music_get_sample_index cf_music_set_sample_index
  */
-CF_API void CF_CALL cf_music_switch_to(CF_Audio* audio_source, float fade_out_time, float fade_in_time);
+CF_API void CF_CALL cf_music_switch_to(CF_Audio audio_source, float fade_out_time, float fade_in_time);
 
 /**
  * @function cf_music_crossfade
@@ -207,7 +207,7 @@ CF_API void CF_CALL cf_music_switch_to(CF_Audio* audio_source, float fade_out_ti
  * @param    cross_fade_time  A number of seconds to crossfade to the next track. Can be 0.0f to instantly switch to the next track.
  * @related  cf_music_play cf_music_stop cf_music_set_volume cf_music_set_loop cf_music_pause cf_music_resume cf_music_switch_to cf_music_crossfade cf_music_get_sample_index cf_music_set_sample_index
  */
-CF_API void CF_CALL cf_music_crossfade(CF_Audio* audio_source, float cross_fade_time);
+CF_API void CF_CALL cf_music_crossfade(CF_Audio audio_source, float cross_fade_time);
 
 /**
  * @function cf_music_get_sample_index
@@ -292,7 +292,7 @@ CF_INLINE CF_SoundParams CF_CALL cf_sound_params_defaults()
  * @return   Returns a playing sound `CF_Sound`.
  * @related  CF_SoundParams CF_Sound cf_sound_params_defaults cf_play_sound cf_sound_is_active cf_sound_get_is_paused cf_sound_get_is_looped cf_sound_get_volume cf_sound_get_sample_index cf_sound_set_sample_index cf_sound_set_is_paused cf_sound_set_is_looped cf_sound_set_volume
  */
-CF_API CF_Sound CF_CALL cf_play_sound(CF_Audio* audio_source, CF_SoundParams params);
+CF_API CF_Sound CF_CALL cf_play_sound(CF_Audio audio_source, CF_SoundParams params);
 
 /**
  * @function cf_sound_is_active
@@ -416,11 +416,11 @@ struct Sound : public CF_Sound
 	Sound(CF_Sound s) { *(CF_Sound*)this = s; }
 };
 
-CF_INLINE Audio* audio_load_ogg(const char* path) { return cf_audio_load_ogg(path); }
-CF_INLINE Audio* audio_load_wav(const char* path) { return cf_audio_load_wav(path); }
-CF_INLINE Audio* audio_load_ogg_from_memory(void* memory, int byte_count) { return cf_audio_load_ogg_from_memory(memory, byte_count); }
-CF_INLINE Audio* audio_load_wav_from_memory(void* memory, int byte_count) { return cf_audio_load_wav_from_memory(memory, byte_count); }
-CF_INLINE void audio_destroy(Audio* audio) { cf_audio_destroy(audio); }
+CF_INLINE Audio audio_load_ogg(const char* path) { return cf_audio_load_ogg(path); }
+CF_INLINE Audio audio_load_wav(const char* path) { return cf_audio_load_wav(path); }
+CF_INLINE Audio audio_load_ogg_from_memory(void* memory, int byte_count) { return cf_audio_load_ogg_from_memory(memory, byte_count); }
+CF_INLINE Audio audio_load_wav_from_memory(void* memory, int byte_count) { return cf_audio_load_wav_from_memory(memory, byte_count); }
+CF_INLINE void audio_destroy(Audio audio) { cf_audio_destroy(audio); }
 
 // -------------------------------------------------------------------------------------------------
 
@@ -431,20 +431,20 @@ CF_INLINE void audio_set_pause(bool true_for_paused) { cf_audio_set_pause(true_f
 
 // -------------------------------------------------------------------------------------------------
 
-CF_INLINE void music_play(Audio* audio_source, float fade_in_time = 0) { cf_music_play(audio_source, fade_in_time); }
+CF_INLINE void music_play(Audio audio_source, float fade_in_time = 0) { cf_music_play(audio_source, fade_in_time); }
 CF_INLINE void music_stop(float fade_out_time = 0) { cf_music_stop(fade_out_time = 0); }
 CF_INLINE void music_set_volume(float volume) { cf_music_set_volume(volume); }
 CF_INLINE void music_set_loop(bool true_to_loop) { cf_music_set_loop(true_to_loop); }
 CF_INLINE void music_pause() { cf_music_pause(); }
 CF_INLINE void music_resume() { cf_music_resume(); }
-CF_INLINE void music_switch_to(Audio* audio_source, float fade_out_time = 0, float fade_in_time = 0) { cf_music_switch_to(audio_source, fade_out_time, fade_in_time); }
-CF_INLINE void music_crossfade(Audio* audio_source, float cross_fade_time = 0) { cf_music_crossfade(audio_source, cross_fade_time); }
+CF_INLINE void music_switch_to(Audio audio_source, float fade_out_time = 0, float fade_in_time = 0) { cf_music_switch_to(audio_source, fade_out_time, fade_in_time); }
+CF_INLINE void music_crossfade(Audio audio_source, float cross_fade_time = 0) { cf_music_crossfade(audio_source, cross_fade_time); }
 CF_INLINE void music_set_sample_index(uint64_t sample_index) { cf_music_set_sample_index(sample_index); }
 CF_INLINE uint64_t music_get_sample_index() { return cf_music_get_sample_index(); }
 
 // -------------------------------------------------------------------------------------------------
 
-CF_INLINE Sound sound_play(Audio* audio_source, SoundParams params = SoundParams()) { return cf_play_sound(audio_source, params); }
+CF_INLINE Sound sound_play(Audio audio_source, SoundParams params = SoundParams()) { return cf_play_sound(audio_source, params); }
 
 CF_INLINE bool sound_is_active(Sound sound) { return cf_sound_is_active(sound); }
 CF_INLINE bool sound_get_is_paused(Sound sound) { return cf_sound_get_is_paused(sound); }

@@ -588,7 +588,7 @@ CF_INLINE const char* power_state_to_string(PowerState state) { switch (state) {
 	}
 }
 
-CF_INLINE Result make_app(const char* window_title, int x, int y, int w, int h, uint32_t options = 0, const char* argv0 = NULL) { return cf_make_app(window_title, x, y, w, h, options, argv0); }
+CF_INLINE Result make_app(const char* window_title, int x, int y, int w, int h, int options = 0, const char* argv0 = NULL) { return cf_make_app(window_title, x, y, w, h, options, argv0); }
 CF_INLINE void destroy_app() { cf_destroy_app(); }
 CF_INLINE bool app_is_running() { return cf_app_is_running(); }
 CF_INLINE void app_signal_shutdown() { cf_app_signal_shutdown(); }

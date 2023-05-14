@@ -1494,6 +1494,34 @@ CF_INLINE CF_Circle cf_make_circle(CF_V2 pos, float radius) { CF_Circle c; c.p =
 CF_INLINE CF_Capsule cf_make_capsule(CF_V2 a, CF_V2 b, float radius) { CF_Capsule c; c.a = a; c.b = b; c.r = radius; return c; }
 
 /**
+ * @function cf_make_capsule2
+ * @category math
+ * @brief    Returns a capsule.
+ * @param    p          The position the capsule stands upon.
+ * @param    height     The total length of the capsule, from end to end.
+ * @param    radius     How thick the capsule is. Make sure this is less than or equal to height (or you'll get a sphere).
+ * @remarks  The `height` is measured from the end of each cap, covering the full length of the capsule. The capsule is constructed
+ *           standing straight up on the y-axis. You should make sure `height` is taller than the `radius`. `a` is the center of the
+ *           bottom cap, while `b` is the center of the top cap.
+ * @related  CF_Capsule
+ */
+CF_INLINE CF_Capsule cf_make_capsule2(CF_V2 p, float height, float radius)
+{
+	CF_Capsule c;
+	c.r = radius;
+
+	if (height < radius) {
+		c.a = c.b = p;
+	} else {
+		c.a.x = c.b.x = p.x;
+		c.a.y = p.y + radius;
+		c.b.y = c.a.y + height - radius * 2;
+	}
+
+	return c;
+}
+
+/**
  * @function cf_make_aabb
  * @category math
  * @brief    Returns an AABB (axis-aligned bounding box) from min/max points (bottom-left and top-right).
@@ -2600,6 +2628,7 @@ CF_INLINE bool parallel(v2 a, v2 b, v2 c, float tol) { return cf_parallel2(a, b,
 
 CF_INLINE Circle make_circle(v2 pos, float radius) { return cf_make_circle(pos, radius); }
 CF_INLINE Capsule make_capsule(v2 a, v2 b, float radius) { return cf_make_capsule(a, b, radius); }
+CF_INLINE Capsule make_capsule(v2 p, float height, float radius) { return cf_make_capsule2(p, height, radius); }
 CF_INLINE Aabb make_aabb(v2 min, v2 max) { return cf_make_aabb(min, max); }
 CF_INLINE Aabb make_aabb(v2 pos, float w, float h) { return cf_make_aabb_pos_w_h(pos, w, h); }
 CF_INLINE Aabb make_aabb_center_half_extents(v2 center, v2 half_extents) { return cf_make_aabb_center_half_extents(center, half_extents); }
