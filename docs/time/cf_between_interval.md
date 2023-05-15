@@ -15,8 +15,7 @@ bool cf_between_interval(float interval, float offset);
 Parameters | Description
 --- | ---
 interval | Number of seconds between each interval.
-offset | An offset of seconds used to offset within the interval of [0,interval]. This gets mathematically mod'd,
-           so it can be any number of seconds.
+offset | An offset of seconds used to offset within the interval of [0,interval]. This gets mathematically modulo'd, so it can be any number of seconds.
 
 ## Remarks
 

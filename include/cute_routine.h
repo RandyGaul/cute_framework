@@ -30,6 +30,20 @@
 namespace Cute
 {
 
+// -------------------------------------------------------------------------------------------------
+// For internal use by `rt_label(name)` and `nav_goto(name)`.
+
+inline uint64_t constexpr rt_fnv1a(const char* name)
+{
+	uint64_t h = 14695981039346656037ULL;
+	char c = 0;
+	while ((c = *name++)) {
+		h = h ^ (uint64_t)c;
+		h = h * 1099511628211ULL;
+	}
+	return h;
+}
+
 // A portable "coroutine"-like thing for implementing FSM and behavior-cycles.
 // 
 // Original implementation by Noel Berry.
@@ -62,6 +76,9 @@ struct Routine
 
 	// Bookmark for which block in the routine we are currently at.
 	uint64_t at = 0;
+
+    // Sets which label (defined by `rt_label`) to resume from next.
+    CF_INLINE void set_next(const char* label) { at = rt_fnv1a(label); }
 };
 
 // -------------------------------------------------------------------------------------------------
@@ -193,25 +210,6 @@ struct Routine
             __rt.wait_elapsed = 0;                                           \
             goto __rt_end;                                                   \
         } while (0)                                                          \
-
-// Goes to `name`'s block on the next frame.
-// Can be called *outside* of the coroutine.
-#define nav_next(routine, name)                                              \
-        do { routine.at = rt_fnv1a(name); } while (0)                        \
-
-// -------------------------------------------------------------------------------------------------
-// For internal use by `rt_label(name)` and `nav_goto(name)`.
-
-inline uint64_t constexpr rt_fnv1a(const char* name)
-{
-	uint64_t h = 14695981039346656037ULL;
-	char c = 0;
-	while ((c = *name++)) {
-		h = h ^ (uint64_t)c;
-		h = h * 1099511628211ULL;
-	}
-	return h;
-}
 
 }
 
