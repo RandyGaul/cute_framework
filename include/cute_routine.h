@@ -27,13 +27,15 @@
 //--------------------------------------------------------------------------------------------------
 // C++ API
 
+#ifdef CF_CPP
+
 namespace Cute
 {
 
 // -------------------------------------------------------------------------------------------------
 // For internal use by `rt_label(name)` and `nav_goto(name)`.
 
-inline uint64_t constexpr rt_fnv1a(const char* name)
+CF_INLINE uint64_t constexpr rt_fnv1a(const char* name)
 {
 	uint64_t h = 14695981039346656037ULL;
 	char c = 0;
@@ -212,5 +214,7 @@ struct Routine
         } while (0)                                                          \
 
 }
+
+#endif // CF_CPP
 
 #endif // CF_ROUTINE_H
