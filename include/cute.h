@@ -55,6 +55,7 @@
 #include "cute_string.h"
 #include "cute_time.h"
 #include "cute_version.h"
+#include "cute_routine.h"
 
 #ifndef CF_EMSCRIPTEN
 #	include <SDL_main.h>
