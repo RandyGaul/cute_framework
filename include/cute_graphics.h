@@ -889,6 +889,22 @@ CF_API CF_Canvas CF_CALL cf_make_canvas(CF_CanvasParams canvas_params);
  */
 CF_API void CF_CALL cf_destroy_canvas(CF_Canvas canvas);
 
+/**
+ * @function cf_canvas_get_backend_target_handle
+ * @category graphics
+ * @brief    Returns a backend-specific handle to the underlying pixel texture of a canvas.
+ * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_canvas_get_backend_target_handle cf_canvas_get_backend_depth_stencil_handle
+ */
+CF_API uint64_t CF_CALL cf_canvas_get_backend_target_handle(CF_Canvas canvas);
+
+/**
+ * @function cf_canvas_get_backend_depth_stencil_handle
+ * @category graphics
+ * @brief    Returns a backend-specific handle to the underlying depth-stencil texture of a canvas.
+ * @related  CF_CanvasParams cf_canvas_defaults cf_make_canvas cf_canvas_get_backend_target_handle cf_canvas_get_backend_depth_stencil_handle
+ */
+CF_API uint64_t CF_CALL cf_canvas_get_backend_depth_stencil_handle(CF_Canvas canvas);
+
 //--------------------------------------------------------------------------------------------------
 // Mesh.
 
@@ -2099,9 +2115,11 @@ CF_INLINE void destroy_texture(Texture texture) { cf_destroy_texture(texture); }
 CF_INLINE void update_texture(Texture texture, void* data, int size) { cf_update_texture(texture, data, size); }
 CF_INLINE Shader make_shader(SokolShader sokol_shader) { return cf_make_shader(sokol_shader); }
 CF_INLINE void destroy_shader(Shader shader) { cf_destroy_shader(shader); }
-CF_INLINE CanvasParams pass_defaults() { return cf_canvas_defaults(); }
+CF_INLINE CanvasParams canvas_defaults() { return cf_canvas_defaults(); }
 CF_INLINE Canvas make_canvas(CanvasParams pass_params) { return cf_make_canvas(pass_params); }
 CF_INLINE void destroy_canvas(Canvas canvas) { cf_destroy_canvas(canvas); }
+CF_INLINE uint64_t canvas_get_backend_target_handle(CF_Canvas canvas) { return cf_canvas_get_backend_target_handle(canvas); }
+CF_INLINE uint64_t canvas_get_backend_depth_stencil_handle(CF_Canvas canvas) { return cf_canvas_get_backend_depth_stencil_handle(canvas); }
 CF_INLINE Mesh make_mesh(UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size) { return cf_make_mesh(usage_type, vertex_buffer_size, index_buffer_size, instance_buffer_size); }
 CF_INLINE void destroy_mesh(Mesh mesh) { cf_destroy_mesh(mesh); }
 CF_INLINE void mesh_set_attributes(Mesh mesh, const VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride) { cf_mesh_set_attributes(mesh, attributes, attribute_count, vertex_stride, instance_stride); }

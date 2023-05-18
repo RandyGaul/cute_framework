@@ -97,6 +97,8 @@ struct CF_CanvasInternal
 {
 	sg_pass_action action;
 	bool pass_is_default;
+	sg_image texture;
+	sg_image depth_stencil;
 	sg_pass pass;
 	sg_pipeline pip;
 	CF_MeshInternal* mesh;
@@ -403,21 +405,25 @@ static void s_canvas_clear_settings(CF_CanvasInternal* canvas)
 	canvas->action.stencil.value = (uint8_t)(s_clear_stencil * 255.0f);
 }
 
-CF_Canvas cf_make_canvas(CF_CanvasParams pass_params)
+CF_Canvas cf_make_canvas(CF_CanvasParams canvas_params)
 {
-	CF_CanvasInternal* pass = (CF_CanvasInternal*)CF_CALLOC(sizeof(CF_CanvasInternal));
-	if (pass_params.target.id) {
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)CF_CALLOC(sizeof(CF_CanvasInternal));
+	if (canvas_params.target.id) {
 		sg_pass_desc desc;
 		CF_MEMSET(&desc, 0, sizeof(desc));
-		desc.color_attachments[0].image = { (uint32_t)pass_params.target.id };
-		desc.depth_stencil_attachment.image = { (uint32_t)pass_params.depth_stencil_target.id };
-		desc.label = pass_params.name;
-		pass->pass = sg_make_pass(desc);
+		desc.color_attachments[0].image = { (uint32_t)canvas_params.target.id };
+		desc.depth_stencil_attachment.image = { (uint32_t)canvas_params.depth_stencil_target.id };
+		canvas->texture = desc.color_attachments[0].image;
+		canvas->depth_stencil = desc.depth_stencil_attachment.image;
+		desc.label = canvas_params.name;
+		canvas->pass = sg_make_pass(desc);
 	} else {
-		pass->pass_is_default = true;
+		canvas->texture.id = SG_INVALID_ID;
+		canvas->depth_stencil.id = SG_INVALID_ID;
+		canvas->pass_is_default = true;
 	}
 	CF_Canvas result;
-	result.id = (uint64_t)pass;
+	result.id = (uint64_t)canvas;
 	return result;
 }
 
@@ -428,6 +434,18 @@ void cf_destroy_canvas(CF_Canvas canvas_handle)
 		sg_destroy_pass(canvas->pass);
 	}
 	CF_FREE(canvas);
+}
+
+CF_API uint64_t CF_CALL cf_canvas_get_backend_target_handle(CF_Canvas canvas_handle)
+{
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	return (uint64_t)canvas->texture.id;
+}
+
+CF_API uint64_t CF_CALL cf_canvas_get_backend_depth_stencil_handle(CF_Canvas canvas_handle)
+{
+	CF_CanvasInternal* canvas = (CF_CanvasInternal*)canvas_handle.id;
+	return (uint64_t)canvas->depth_stencil.id;
 }
 
 CF_Mesh cf_make_mesh(CF_UsageType usage_type, int vertex_buffer_size, int index_buffer_size, int instance_buffer_size)

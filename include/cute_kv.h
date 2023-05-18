@@ -322,31 +322,6 @@ CF_API size_t CF_CALL cf_kv_buffer_size(CF_KeyValue* kv);
 CF_API void CF_CALL cf_read_reset(CF_KeyValue* kv);
 
 /**
- * @function cf_kv_set_base
- * @category serialization
- * @brief    Sets up a base kv.
- * @param    kv        The kv instance.
- * @param    base      The base kv instance.
- * @remarks  The base must be in read mode. This function is used to support data inheritence and delta encoding.
- *           Depending on whether `kv` is in read or write mode this function behaves very differently. Read mode
- *           is for data inheritence, while write mode is for delta encoding.
- *           
- *           Data Inheritence
- *           
- *           > If `kv` is in read mode any value missing will be fetched recursively from `base`.
- *           
- *           Delta Encoding
- *           
- *           > If `kv` is in write mode any value will first be recursively looked up in `base`. If found, it
- *           > is only written if the new value is different from the value to be written.
- *           
- *           For a more in-depth description on how to use this function see the tutotorial page from the Cute
- *           Framework docs here: [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
- * @related  CF_KeyValue cf_kv_read cf_kv_write cf_kv_key
- */
-CF_API void CF_CALL cf_kv_set_base(CF_KeyValue* kv, CF_KeyValue* base);
-
-/**
  * @function cf_kv_last_error
  * @category serialization
  * @brief    Returns the error state of the kv instance.
@@ -416,6 +391,26 @@ CF_INLINE const char* cf_key_value_type_to_string(CF_KeyValueType type)
  * @related  CF_KeyValue cf_kv_key cf_kv_val_int32 cf_kv_val_float cf_kv_val_bool cf_kv_val_string cf_kv_val_blob cf_kv_object_begin cf_kv_array_begin
  */
 CF_API bool CF_CALL cf_kv_key(CF_KeyValue* kv, const char* key, CF_KeyValueType* type);
+
+/**
+ * @function cf_kv_key_count
+ * @category serialization
+ * @brief    Returns the number of keys within the current object.
+ * @param    kv         The kv.
+ * @remarks  The kv must have entered an object with `kv_object_begin` in order for this function to make sense.
+ * @related  CF_KeyValue cf_kv_key cf_kv_val_int32 cf_kv_val_float cf_kv_val_bool cf_kv_val_string cf_kv_val_blob cf_kv_object_begin cf_kv_array_begin cf_kv_key_count cf_kv_key_at
+ */
+CF_API int CF_CALL cf_kv_key_count(CF_KeyValue* kv);
+
+/**
+ * @function cf_kv_key_at
+ * @category serialization
+ * @brief    TODO
+ * @param    kv         The kv.
+ * @remarks  TODO
+ * @related  CF_KeyValue cf_kv_key cf_kv_val_int32 cf_kv_val_float cf_kv_val_bool cf_kv_val_string cf_kv_val_blob cf_kv_object_begin cf_kv_array_begin cf_kv_key_count cf_kv_key_at
+ */
+CF_API bool CF_CALL cf_kv_key_at(CF_KeyValue* kv, int index, const char** key, CF_KeyValueType* type);
 
 /**
  * @function cf_kv_val_uint8
@@ -720,7 +715,6 @@ CF_INLINE void kv_destroy(KeyValue* kv) { cf_kv_destroy(kv); }
 CF_INLINE KeyValueState kv_state(KeyValue* kv) { return (KeyValueState)cf_kv_state(kv); }
 CF_INLINE const char* kv_buffer(KeyValue* kv) { return cf_kv_buffer(kv); }
 CF_INLINE size_t kv_buffer_size(KeyValue* kv) { return cf_kv_buffer_size(kv); }
-CF_INLINE void kv_set_base(KeyValue* kv, KeyValue* base) { cf_kv_set_base(kv, base); }
 CF_INLINE Result kv_error_state(KeyValue* kv) { return cf_kv_last_error(kv); }
 CF_INLINE bool kv_key(KeyValue* kv, const char* key, KeyValueType* type = NULL) { return cf_kv_key(kv, key, type); }
 CF_INLINE bool kv_val(KeyValue* kv, uint8_t* val) { return cf_kv_val_uint8(kv, val); }

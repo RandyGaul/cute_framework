@@ -470,6 +470,12 @@ int cf_app_draw_onto_screen()
 		SDL_GL_SwapWindow(app->window);
 	}
 
+	// Update the spritebatch itself.
+	// This does atlas management internally.
+	// All references to backend texture id's are now invalid (fetch_image or canvas_get_backend_target_handle).
+	spritebatch_tick(&draw->sb);
+	spritebatch_defrag(&draw->sb);
+
 	// Report the number of draw calls.
 	// This is always user draw call count +1.
 	int draw_call_count = app->draw_call_count;

@@ -125,7 +125,7 @@ CF_API void* CF_CALL cf_realloc(void* ptr, size_t size);
 	enum CF_DummyEnum { CF_DUMMY_ENUM };
 	inline void* operator new(size_t, CF_DummyEnum, void* ptr) { return ptr; }
 	#define CF_PLACEMENT_NEW(ptr) new(CF_DUMMY_ENUM, ptr)
-	#define CF_NEW(T) new(CF_DUMMY_ENUM, cf_alloc(sizeof(T))) T
+	#define CF_NEW(...) new(CF_DUMMY_ENUM, cf_alloc(sizeof(__VA_ARGS__)) (__VA_ARGS__)
 #endif // CF_CPP
 
 //--------------------------------------------------------------------------------------------------

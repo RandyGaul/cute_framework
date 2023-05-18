@@ -2184,8 +2184,6 @@ void cf_render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_
 void cf_render_to(CF_Canvas canvas, bool clear)
 {
 	cf_apply_canvas(canvas, clear);
-	spritebatch_tick(&draw->sb);
-	spritebatch_defrag(&draw->sb);
 	spritebatch_flush(&draw->sb);
 	draw->verts.clear();
 }
