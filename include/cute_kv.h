@@ -710,13 +710,15 @@ CF_INLINE const char* to_string(KeyValueType type)
 }
 
 CF_INLINE KeyValue* kv_read(const void* data, size_t size, Result* result_out = NULL) { return cf_kv_read(data, size, result_out); }
-CF_INLINE KeyValue* kv_write(KeyValue* kv) { return cf_kv_write(); }
+CF_INLINE KeyValue* kv_write() { return cf_kv_write(); }
 CF_INLINE void kv_destroy(KeyValue* kv) { cf_kv_destroy(kv); }
 CF_INLINE KeyValueState kv_state(KeyValue* kv) { return (KeyValueState)cf_kv_state(kv); }
 CF_INLINE const char* kv_buffer(KeyValue* kv) { return cf_kv_buffer(kv); }
 CF_INLINE size_t kv_buffer_size(KeyValue* kv) { return cf_kv_buffer_size(kv); }
 CF_INLINE Result kv_error_state(KeyValue* kv) { return cf_kv_last_error(kv); }
 CF_INLINE bool kv_key(KeyValue* kv, const char* key, KeyValueType* type = NULL) { return cf_kv_key(kv, key, type); }
+CF_INLINE int kv_key_count(CF_KeyValue* kv) { return cf_kv_key_count(kv); }
+CF_INLINE bool kv_key_at(CF_KeyValue* kv, int index, const char** key, CF_KeyValueType* type) { return cf_kv_key_at(kv, index, key, type); }
 CF_INLINE bool kv_val(KeyValue* kv, uint8_t* val) { return cf_kv_val_uint8(kv, val); }
 CF_INLINE bool kv_val(KeyValue* kv, uint16_t* val) { return cf_kv_val_uint16(kv, val); }
 CF_INLINE bool kv_val(KeyValue* kv, uint32_t* val) { return cf_kv_val_uint32(kv, val); }
