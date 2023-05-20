@@ -2261,8 +2261,8 @@ CF_TemporaryImage cf_fetch_image(const CF_Sprite* sprite)
 	spritebatch_sprite_t s = spritebatch_fetch(&draw->sb, sprite->animation->frames[sprite->frame_index].id, sprite->w, sprite->h);
 	CF_TemporaryImage image;
 	image.tex = { s.texture_id };
-	image.w = s.w;
-	image.h = s.h;
+	image.w = sprite->w;
+	image.h = sprite->h;
 	image.u = cf_v2(s.minx, s.miny);
 	image.v = cf_v2(s.maxx, s.maxy);
 	return image;
