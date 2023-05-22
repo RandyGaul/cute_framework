@@ -363,14 +363,10 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_uniform_vs(draw->material, "vs_params", "u_cam_scale", &draw->cam_dimensions, CF_UNIFORM_TYPE_FLOAT2, 1);
 	cf_material_set_uniform_vs(draw->material, "vs_params", "u_cam_pos", &draw->cam_position, CF_UNIFORM_TYPE_FLOAT2, 1);
 	cf_material_set_uniform_vs(draw->material, "vs_params", "u_cam_angle", &draw->cam_rotation, CF_UNIFORM_TYPE_FLOAT2, 1);
-	CF_ASSERT(draw->atlas_dims.x == (float)texture_w);
-	CF_ASSERT(draw->atlas_dims.y == (float)texture_h);
 	v2 u_texture_size = cf_v2((float)texture_w, (float)texture_h);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_aaf", &draw->aaf, CF_UNIFORM_TYPE_FLOAT, 1);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_aa_scale", &draw->antialias_scale.last(), CF_UNIFORM_TYPE_FLOAT, 1);
-	CF_ASSERT(draw->texel_dims.x == 1.0f / (float)texture_w);
-	CF_ASSERT(draw->texel_dims.y == 1.0f / (float)texture_h);
 	v2 u_texel_size = cf_v2(1.0f / (float)texture_w, 1.0f / (float)texture_h);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texel_size", &u_texel_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 

@@ -372,6 +372,7 @@ static CF_Result s_parse_value(CF_KeyValue* kv, KvVal* val)
 
 static CF_Result s_parse_object(CF_KeyValue* kv, int* index, bool is_top_level)
 {
+	int object_index = kv->objects.count();
 	KvObject* object = &kv->objects.add();
 	CF_PLACEMENT_NEW(object) KvObject;
 	*index = kv->objects.count() - 1;
@@ -392,6 +393,9 @@ static CF_Result s_parse_object(CF_KeyValue* kv, int* index, bool is_top_level)
 				break;
 			}
 		}
+
+		// Refresh this pointer in case kv->objects grew upon allocation.
+		object = kv->objects + object_index;
 
 		KvField* field = &object->fields.add();
 		CF_PLACEMENT_NEW(field) KvField;

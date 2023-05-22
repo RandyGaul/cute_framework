@@ -1254,6 +1254,7 @@ CF_INLINE CF_RenderState render_settings_peek_render_state() { return render_set
 
 CF_INLINE void camera_dimensions(float w, float h) { cf_camera_dimensions(w, h); }
 CF_INLINE void camera_look_at(float x, float y) { cf_camera_look_at(x, y); }
+CF_INLINE void camera_look_at(v2 pos) { cf_camera_look_at(pos.x, pos.y); }
 CF_INLINE void camera_rotate(float radians) { cf_camera_rotate(radians); }
 CF_INLINE void camera_push() { cf_camera_push(); }
 CF_INLINE void camera_pop() { cf_camera_pop(); }
