@@ -74,7 +74,7 @@ char* cf_sfmt_append(char* s, const char* fmt, ...)
 	int n = 1 + vsnprintf(s + slen(s), capacity, fmt, args);
 	va_end(args);
 	if (n > capacity) {
-		afit(s, n + slen(s));
+		afit(s, n + scount(s));
 		va_start(args, fmt);
 		int new_capacity = scap(s) - scount(s);
 		n = 1 + vsnprintf(s + slen(s), new_capacity, fmt, args);
