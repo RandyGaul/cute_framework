@@ -745,10 +745,12 @@ struct Path
 	CF_INLINE Path my_top() const { return Path::steal_from(sptop_of(m_path)); }
 	CF_INLINE Path& normalize() { char* result = spnorm(m_path); sfree(m_path); m_path = result; return *this; }
 	CF_INLINE Path normalized() const { return Path::steal_from(spnorm(m_path)); }
+	CF_INLINE bool is_directory() const { Stat s; fs_stat(m_path, &s); return s.type == FILE_TYPE_DIRECTORY; }
+	CF_INLINE bool is_file() const { Stat s; fs_stat(m_path, &s); return s.type == FILE_TYPE_REGULAR; }
 
 	CF_INLINE Path& add(const char* path) { if (sfirst(path) != '/' && slast(m_path) != '/') sappend(m_path, "/"); scat(m_path, path); return *this; }
 	CF_INLINE Path& cat(const char* path) { return add(path); }
-	CF_INLINE Path& operator+(const Path& p) { return add(p.m_path); }
+	CF_INLINE Path operator+(const Path& p) { Path result = *this; result.add(p.m_path); return result; }
 	CF_INLINE Path& operator=(const Path& p) { sset(m_path, p.m_path); return *this; }
 	CF_INLINE Path& operator+=(const Path& p) { *this = *this + p; return *this; }
 	CF_INLINE Path& operator=(Path&& p) { m_path = p.m_path; p.m_path = NULL; return *this; }
@@ -770,6 +772,17 @@ struct Directory
 	static CF_INLINE Directory open(const char* virtual_path) { return Directory(virtual_path); }
 	static CF_INLINE Result create(const char* virtual_path) { return fs_create_directory(virtual_path); }
 	static CF_INLINE Result remove(const char* virtual_path) { return fs_remove_directory(virtual_path); }
+	static CF_INLINE Array<Path> enumerate(const char* virtual_path) {
+		Array<Path> files;
+		const char** paths = fs_enumerate_directory(virtual_path);
+		const char** paths_ptr = paths;
+		while (*paths) {
+			const char* file = *paths++;
+			files.add(file);
+		}
+		fs_free_enumerated_directory(paths_ptr);
+		return files;
+	}
 
 	CF_INLINE const char* next() { if (*m_list) { const char* result = *m_list++; return result; } else { return NULL; } }
 
