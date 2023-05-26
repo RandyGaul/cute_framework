@@ -122,7 +122,7 @@
 		}
 		c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
 
-		c.a *= v_alpha;
+		c *= v_alpha;
 		//if (c.a == 0) c = vec4(0.5);
 		if (c.a == 0) discard;
 		result = c;
