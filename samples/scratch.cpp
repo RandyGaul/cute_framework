@@ -191,6 +191,8 @@ int main(int argc, char* argv[])
 			t += CF_DELTA_TIME;
 		}
 
+		ImGui::ShowDemoWindow();
+
 		draw_calls = app_draw_onto_screen();
 	}
 

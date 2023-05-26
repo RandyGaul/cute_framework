@@ -408,8 +408,13 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 	cf_update_time(s_on_update);
 	if (app->gfx_enabled) {
 		if (app->using_imgui) {
-			simgui_new_frame(app->w, app->h, DELTA_TIME);
+			simgui_frame_desc_t desc = { };
+			desc.delta_time = DELTA_TIME;
+			desc.width = app->w;
+			desc.height = app->h;
+			desc.dpi_scale; // TODO.
 			ImGui_ImplSDL2_NewFrame(app->window);
+			simgui_new_frame(&desc);
 		}
 	}
 }
@@ -624,7 +629,6 @@ ImGuiContext* cf_app_init_imgui(bool no_default_font)
 	sg_backend backend = sg_query_backend();
 	switch (backend) {
 		case SG_BACKEND_GLCORE33: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
-		case SG_BACKEND_GLES2: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
 		case SG_BACKEND_GLES3: ImGui_ImplSDL2_InitForOpenGL(app->window, NULL); break;
 		case SG_BACKEND_D3D11: ImGui_ImplSDL2_InitForD3D(app->window); break;
 		case SG_BACKEND_METAL_IOS: ImGui_ImplSDL2_InitForMetal(app->window); break;
@@ -637,7 +641,8 @@ ImGuiContext* cf_app_init_imgui(bool no_default_font)
 	imgui_params.no_default_font = no_default_font;
 	imgui_params.ini_filename = "imgui.ini";
 	simgui_setup(imgui_params);
-	sg_imgui_init(&app->sg_imgui);
+	sg_imgui_desc_t sg_imgui_desc = { };
+	sg_imgui_init(&app->sg_imgui, &sg_imgui_desc);
 
 	return ::ImGui::GetCurrentContext();
 }

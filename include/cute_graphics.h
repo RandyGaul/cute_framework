@@ -145,7 +145,7 @@ typedef struct CF_Mesh { uint64_t id; } CF_Mesh;
  *           
  *           - Max number of uniform buffers for each shader stage (4)
  *           - Max number of uniforms in a uniform buffer (16)
- *           - Max number of vertex attributes (16) (less on GLES2, see `cf_query_resource_limit`)
+ *           - Max number of vertex attributes (16)
  *           - Max number of textures for each shader stag (12)
  * @related  CF_Texture CF_Canvas CF_Material CF_Shader cf_make_material cf_destroy_material cf_material_set_render_state cf_material_set_texture_vs cf_material_set_texture_fs cf_material_set_uniform_vs cf_material_set_uniform_fs cf_apply_shader
  */
@@ -174,20 +174,18 @@ typedef struct CF_Shader { uint64_t id; } CF_Shader;
 #define CF_BACKEND_TYPE_DEFS \
 	/* @entry OpenGL 3.3 Core Profile. */    \
 	CF_ENUM(BACKEND_TYPE_GLCORE33,        0) \
-	/* @entry OpenGL ES 2.0. */              \
-	CF_ENUM(BACKEND_TYPE_GLES2,           1) \
 	/* @entry OpenGL ES 3.0. */              \
-	CF_ENUM(BACKEND_TYPE_GLES3,           2) \
+	CF_ENUM(BACKEND_TYPE_GLES3,           1) \
 	/* @entry DirectX 11. */                 \
-	CF_ENUM(BACKEND_TYPE_D3D11,           3) \
+	CF_ENUM(BACKEND_TYPE_D3D11,           2) \
 	/* @entry Metal for iOS. */              \
-	CF_ENUM(BACKEND_TYPE_METAL_IOS,       4) \
+	CF_ENUM(BACKEND_TYPE_METAL_IOS,       3) \
 	/* @entry Metal for MacOS. */            \
-	CF_ENUM(BACKEND_TYPE_METAL_MACOS,     5) \
+	CF_ENUM(BACKEND_TYPE_METAL_MACOS,     4) \
 	/* @entry Metal for debug simulator (XCode). */ \
-	CF_ENUM(BACKEND_TYPE_METAL_SIMULATOR, 6) \
+	CF_ENUM(BACKEND_TYPE_METAL_SIMULATOR, 5) \
 	/* @entry WebGPU (for browsers). */      \
-	CF_ENUM(BACKEND_TYPE_WGPU,            7) \
+	CF_ENUM(BACKEND_TYPE_WGPU,            6) \
 	/* @end */
 
 typedef enum CF_BackendType
@@ -292,84 +290,88 @@ CF_API CF_BackendType CF_CALL cf_query_backend();
 	CF_ENUM(PIXELFORMAT_RG16F,           21)                                                           \
 	/* @entry 8-bit red-green-blue-alpha channels, 32 bits total. */                                   \
 	CF_ENUM(PIXELFORMAT_RGBA8,           22)                                                           \
+	/* @entry TODO. */                                                                                 \
+	CF_ENUM(PIXELFORMAT_SRGB8A8,         23)                                                           \
 	/* @entry 8-bit red-green-blue-alpha channels, in signed normalized form, 32 bits total. */        \
-	CF_ENUM(PIXELFORMAT_RGBA8SN,         23)                                                           \
+	CF_ENUM(PIXELFORMAT_RGBA8SN,         24)                                                           \
 	/* @entry 8-bit red-green-blue-alpha channels, in unsigned integer form, 32 bits total. */         \
-	CF_ENUM(PIXELFORMAT_RGBA8UI,         24)                                                           \
+	CF_ENUM(PIXELFORMAT_RGBA8UI,         25)                                                           \
 	/* @entry 8-bit red-green-blue-alpha channels, in signed integer form, 32 bits total. */           \
-	CF_ENUM(PIXELFORMAT_RGBA8SI,         25)                                                           \
+	CF_ENUM(PIXELFORMAT_RGBA8SI,         26)                                                           \
 	/* @entry 8-bit blue-green-red-alpha channels, 32 bits total. */                                   \
-	CF_ENUM(PIXELFORMAT_BGRA8,           26)                                                           \
+	CF_ENUM(PIXELFORMAT_BGRA8,           27)                                                           \
 	/* @entry 10-bit red-green-blue channels, 2-bit alpha channel, 32 bits total. */                   \
-	CF_ENUM(PIXELFORMAT_RGB10A2,         27)                                                           \
+	CF_ENUM(PIXELFORMAT_RGB10A2,         28)                                                           \
 	/* @entry 11-bit red-green channels, 10-bit blue channel, in floating point form, 32 bits total. */\
-	CF_ENUM(PIXELFORMAT_RG11B10F,        28)                                                           \
+	CF_ENUM(PIXELFORMAT_RG11B10F,        29)                                                           \
 	/* @entry 32-bit red-green channels, in unsigned integer form, 64 bits total. */                   \
-	CF_ENUM(PIXELFORMAT_RG32UI,          29)                                                           \
+	CF_ENUM(PIXELFORMAT_RG32UI,          30)                                                           \
 	/* @entry 32-bit red-green channels, in signed integer form, 64 bits total. */                     \
-	CF_ENUM(PIXELFORMAT_RG32SI,          30)                                                           \
+	CF_ENUM(PIXELFORMAT_RG32SI,          31)                                                           \
 	/* @entry 32-bit red-green channels, in floating point form, 64 bits total. */                     \
-	CF_ENUM(PIXELFORMAT_RG32F,           31)                                                           \
+	CF_ENUM(PIXELFORMAT_RG32F,           32)                                                           \
 	/* @entry 16-bit red-green-blue-alpha channels, 64 bits total. */                                  \
-	CF_ENUM(PIXELFORMAT_RGBA16,          32)                                                           \
+	CF_ENUM(PIXELFORMAT_RGBA16,          33)                                                           \
 	/* @entry 16-bit red-green-blue-alpha channels, in signed normalized form, 64 bits total. */       \
-	CF_ENUM(PIXELFORMAT_RGBA16SN,        33)                                                           \
+	CF_ENUM(PIXELFORMAT_RGBA16SN,        34)                                                           \
 	/* @entry 16-bit red-green-blue-alpha channels, in unsigned integer form, 64 bits total. */        \
-	CF_ENUM(PIXELFORMAT_RGBA16UI,        34)                                                           \
+	CF_ENUM(PIXELFORMAT_RGBA16UI,        35)                                                           \
 	/* @entry 16-bit red-green-blue-alpha channels, in signed integer form, 64 bits total. */          \
-	CF_ENUM(PIXELFORMAT_RGBA16SI,        35)                                                           \
+	CF_ENUM(PIXELFORMAT_RGBA16SI,        36)                                                           \
 	/* @entry 16-bit red-green-blue-alpha channels, in floating point form, 64 bits total. */          \
-	CF_ENUM(PIXELFORMAT_RGBA16F,         36)                                                           \
+	CF_ENUM(PIXELFORMAT_RGBA16F,         37)                                                           \
 	/* @entry 32-bit red-green-blue-alpha channels, in unsigned integer form, 128 bits total. */       \
-	CF_ENUM(PIXELFORMAT_RGBA32UI,        37)                                                           \
+	CF_ENUM(PIXELFORMAT_RGBA32UI,        38)                                                           \
 	/* @entry 32-bit red-green-blue-alpha channels, in signed integer form, 128 bits total. */         \
-	CF_ENUM(PIXELFORMAT_RGBA32SI,        38)                                                           \
+	CF_ENUM(PIXELFORMAT_RGBA32SI,        39)                                                           \
 	/* @entry 32-bit red-green-blue-alpha channels, in floating point form, 128 bits total. */         \
-	CF_ENUM(PIXELFORMAT_RGBA32F,         39)                                                           \
+	CF_ENUM(PIXELFORMAT_RGBA32F,         40)                                                           \
 	/* @entry 32-bit red-green-blue-alpha channels, in floating point form, 128 bits total. */         \
-	CF_ENUM(PIXELFORMAT_DEPTH,           40)                                                           \
+	CF_ENUM(PIXELFORMAT_DEPTH,           41)                                                           \
 	/* @entry 24-bit depth channel, 8-bit stencil channel. */                                          \
-	CF_ENUM(PIXELFORMAT_DEPTH_STENCIL,   41)                                                           \
+	CF_ENUM(PIXELFORMAT_DEPTH_STENCIL,   42)                                                           \
 	/* @entry Block Compression 1. */                                                                  \
-	CF_ENUM(PIXELFORMAT_BC1_RGBA,        42)                                                           \
+	CF_ENUM(PIXELFORMAT_BC1_RGBA,        43)                                                           \
 	/* @entry Block Compression 2. */                                                                  \
-	CF_ENUM(PIXELFORMAT_BC2_RGBA,        43)                                                           \
+	CF_ENUM(PIXELFORMAT_BC2_RGBA,        44)                                                           \
 	/* @entry Block Compression 3. */                                                                  \
-	CF_ENUM(PIXELFORMAT_BC3_RGBA,        44)                                                           \
+	CF_ENUM(PIXELFORMAT_BC3_RGBA,        45)                                                           \
 	/* @entry Block Compression 4. */                                                                  \
-	CF_ENUM(PIXELFORMAT_BC4_R,           45)                                                           \
+	CF_ENUM(PIXELFORMAT_BC4_R,           46)                                                           \
 	/* @entry Block Compression 4 (signed normalized). */                                              \
-	CF_ENUM(PIXELFORMAT_BC4_RSN,         46)                                                           \
+	CF_ENUM(PIXELFORMAT_BC4_RSN,         47)                                                           \
 	/* @entry Block Compression 5. */                                                                  \
-	CF_ENUM(PIXELFORMAT_BC5_RG,          47)                                                           \
+	CF_ENUM(PIXELFORMAT_BC5_RG,          48)                                                           \
 	/* @entry Block Compression 5 (signed normalized). */                                              \
-	CF_ENUM(PIXELFORMAT_BC5_RGSN,        48)                                                           \
+	CF_ENUM(PIXELFORMAT_BC5_RGSN,        49)                                                           \
 	/* @entry Block Compression 6. */                                                                  \
-	CF_ENUM(PIXELFORMAT_BC6H_RGBF,       49)                                                           \
+	CF_ENUM(PIXELFORMAT_BC6H_RGBF,       50)                                                           \
 	/* @entry Block Compression 6 (unsigned). */                                                       \
-	CF_ENUM(PIXELFORMAT_BC6H_RGBUF,      50)                                                           \
+	CF_ENUM(PIXELFORMAT_BC6H_RGBUF,      51)                                                           \
 	/* @entry Block Compression 7. */                                                                  \
-	CF_ENUM(PIXELFORMAT_BC7_RGBA,        51)                                                           \
+	CF_ENUM(PIXELFORMAT_BC7_RGBA,        52)                                                           \
 	/* @entry PVRTC compression 7. */                                                                  \
-	CF_ENUM(PIXELFORMAT_PVRTC_RGB_2BPP,  52)                                                           \
+	CF_ENUM(PIXELFORMAT_PVRTC_RGB_2BPP,  53)                                                           \
 	/* @entry PVRTC red-green-blue 2-bits-per-pixel. */                                                \
-	CF_ENUM(PIXELFORMAT_PVRTC_RGB_4BPP,  53)                                                           \
+	CF_ENUM(PIXELFORMAT_PVRTC_RGB_4BPP,  54)                                                           \
 	/* @entry PVRTC red-green-blue 4-bits-per-pixel. */                                                \
-	CF_ENUM(PIXELFORMAT_PVRTC_RGBA_2BPP, 54)                                                           \
+	CF_ENUM(PIXELFORMAT_PVRTC_RGBA_2BPP, 55)                                                           \
 	/* @entry PVRTC red-green-blue-alpha 2-bits-per-pixel. */                                          \
-	CF_ENUM(PIXELFORMAT_PVRTC_RGBA_4BPP, 55)                                                           \
+	CF_ENUM(PIXELFORMAT_PVRTC_RGBA_4BPP, 56)                                                           \
 	/* @entry PVRTC red-green-blue-alpha 4-bits-per-pixel. */                                          \
-	CF_ENUM(PIXELFORMAT_ETC2_RGB8,       56)                                                           \
+	CF_ENUM(PIXELFORMAT_ETC2_RGB8,       57)                                                           \
 	/* @entry ETC2 red-green-blue 8-bit channels. */                                                   \
-	CF_ENUM(PIXELFORMAT_ETC2_RGB8A1,     57)                                                           \
+	CF_ENUM(PIXELFORMAT_ETC2_RGB8A1,     58)                                                           \
 	/* @entry ETC2 red-green-blue 8-bit channels, 1-bit alpha channel. */                              \
-	CF_ENUM(PIXELFORMAT_ETC2_RGBA8,      58)                                                           \
+	CF_ENUM(PIXELFORMAT_ETC2_RGBA8,      59)                                                           \
 	/* @entry ETC2 red-green-blue-alpha 8-bit channels. */                                             \
-	CF_ENUM(PIXELFORMAT_ETC2_RG11,       59)                                                           \
+	CF_ENUM(PIXELFORMAT_ETC2_RG11,       60)                                                           \
 	/* @entry ETC2 red-green 11-bit channels. */                                                       \
-	CF_ENUM(PIXELFORMAT_ETC2_RG11SN,     60)                                                           \
+	CF_ENUM(PIXELFORMAT_ETC2_RG11SN,     61)                                                           \
+	/* @entry TODO. */                                                                                 \
+	CF_ENUM(PIXELFORMAT_RGB9E5,          62)                                                           \
 	/* @entry ETC2 red-green 11-bit channels, in signed-normalized form. */                            \
-	CF_ENUM(PIXELFORMAT_COUNT,           61)                                                           \
+	CF_ENUM(PIXELFORMAT_COUNT,           63)                                                           \
 	/* @end */
 
 typedef enum CF_PixelFormat
@@ -457,12 +459,8 @@ CF_API bool CF_CALL cf_query_pixel_format(CF_PixelFormat format, CF_PixelFormatO
  * @related  CF_DeviceFeature cf_device_feature_to_string cf_query_device_feature
  */
 #define CF_DEVICE_FEATURE_DEFS \
-	/* @entry Instancing support, e.g. `cf_mesh_update_instance_data`. */                                              \
-	CF_ENUM(DEVICE_FEATURE_INSTANCING,       0)                                                                        \
-	/* @entry Hardware-accelerated multi-sample antialiasing (not supporting in Cute Framework yet). */                \
-	CF_ENUM(DEVICE_FEATURE_MSAA,             1)                                                                        \
 	/* @entry Texture clamp addressing style, e.g. `CF_WRAP_MODE_CLAMP_TO_EDGE` or `CF_WRAP_MODE_CLAMP_TO_BORDER` . */ \
-	CF_ENUM(DEVICE_FEATURE_TEXTURE_CLAMP,    2)                                                                        \
+	CF_ENUM(DEVICE_FEATURE_TEXTURE_CLAMP,    0)                                                                        \
 	/* @end */
 
 typedef enum CF_DeviceFeature
@@ -504,7 +502,7 @@ CF_API bool CF_CALL cf_query_device_feature(CF_DeviceFeature feature);
 #define CF_RESOURCE_LIMIT_DEFS \
 	/* @entry Limit on the number of dimensions a texture can have, e.g. 2 or 3. */ \
 	CF_ENUM(RESOURCE_LIMIT_TEXTURE_DIMENSION,       0)                              \
-	/* @entry Limit on the number of vertex attributes. Notably lower on `CF_BACKEND_TYPE_GLES2`. */  \
+	/* @entry Limit on the number of vertex attributes. */  \
 	CF_ENUM(RESOURCE_LIMIT_VERTEX_ATTRIBUTE_MAX,    1)                              \
 	/* @end */
 
@@ -534,7 +532,6 @@ CF_INLINE const char* cf_resource_limit_to_string(CF_ResourceLimit limit) {
  * @function cf_query_resource_limit
  * @category graphics
  * @brief    Query the device for resource limits.
- * @remarks  One notable limit is on `CF_BACKEND_TYPE_GLES2` the number of vertex attributes is low.
  * @related  CF_ResourceLimit cf_resource_limit_to_string cf_query_resource_limit
  */
 CF_API int CF_CALL cf_query_resource_limit(CF_ResourceLimit limit);
@@ -1052,8 +1049,6 @@ CF_API void CF_CALL cf_destroy_mesh(CF_Mesh mesh);
  * @param    vertex_stride    Number of bytes between each vertex.
  * @param    instance_stride  Number of bytes between each instance.
  * @remarks  You must call this before uploading any data to the GPU. The max number of attributes is 16. Any more attributes beyond 16 will be ignored.
- *           
- *           The limit of 16 vertex attributes is less on GLES2, see `cf_query_resource_limit`.
  * @related  CF_Mesh cf_make_mesh cf_destroy_mesh cf_mesh_set_attributes cf_mesh_update_vertex_data cf_mesh_update_instance_data cf_mesh_update_index_data
  */
 CF_API void CF_CALL cf_mesh_set_attributes(CF_Mesh mesh, const CF_VertexAttribute* attributes, int attribute_count, int vertex_stride, int instance_stride);

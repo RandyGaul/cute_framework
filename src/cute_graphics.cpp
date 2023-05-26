@@ -287,8 +287,6 @@ bool cf_query_device_feature(CF_DeviceFeature feature)
 	sg_features sgf = sg_query_features();
 	bool result = false;
 	switch (feature) {
-	case CF_DEVICE_FEATURE_INSTANCING:       result = sgf.instancing;                  break;
-	case CF_DEVICE_FEATURE_MSAA:             result = sgf.msaa_render_targets;         break;
 	case CF_DEVICE_FEATURE_TEXTURE_CLAMP:    result = sgf.image_clamp_to_border;       break;
 	}
 	return result;
@@ -394,15 +392,15 @@ CF_CanvasParams cf_canvas_defaults()
 
 static void s_canvas_clear_settings(CF_CanvasInternal* canvas)
 {
-	canvas->action.colors[0].action = SG_ACTION_LOAD;
-	canvas->action.colors[0].value.r = s_clear_red;
-	canvas->action.colors[0].value.g = s_clear_green;
-	canvas->action.colors[0].value.b = s_clear_blue;
-	canvas->action.colors[0].value.a = s_clear_alpha;
-	canvas->action.depth.action = canvas->action.colors[0].action;
-	canvas->action.depth.value = s_clear_depth;
-	canvas->action.stencil.action = canvas->action.colors[0].action;
-	canvas->action.stencil.value = (uint8_t)(s_clear_stencil * 255.0f);
+	canvas->action.colors[0].load_action = SG_LOADACTION_CLEAR;
+	canvas->action.colors[0].clear_value.r = s_clear_red;
+	canvas->action.colors[0].clear_value.g = s_clear_green;
+	canvas->action.colors[0].clear_value.b = s_clear_blue;
+	canvas->action.colors[0].clear_value.a = s_clear_alpha;
+	canvas->action.depth.load_action = canvas->action.colors[0].load_action;
+	canvas->action.depth.clear_value = s_clear_depth;
+	canvas->action.stencil.load_action = canvas->action.colors[0].load_action;
+	canvas->action.stencil.clear_value = (uint8_t)(s_clear_stencil * 255.0f);
 }
 
 CF_Canvas cf_make_canvas(CF_CanvasParams canvas_params)
@@ -527,7 +525,7 @@ int cf_mesh_append_vertex_data(CF_Mesh mesh_handle, void* data, int append_count
 		s_sync_vertex_buffer(mesh, NULL, mesh->vertices.size);
 	}
 	sg_range range = { data, (size_t)size };
-	if (!sg_query_will_buffer_overflow(mesh->vertices.handle, size)) {
+	if (!sg_query_buffer_will_overflow(mesh->vertices.handle, size)) {
 		int offset = sg_append_buffer(mesh->vertices.handle, range);
 		mesh->vertices.offset = offset;
 		mesh->vertices.element_count = append_count;
@@ -541,7 +539,7 @@ int cf_mesh_append_vertex_data(CF_Mesh mesh_handle, void* data, int append_count
 bool cf_mesh_will_overflow_vertex_data(CF_Mesh mesh_handle, int append_count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	return sg_query_will_buffer_overflow(mesh->vertices.handle, append_count * mesh->vertices.stride);
+	return sg_query_buffer_will_overflow(mesh->vertices.handle, append_count * mesh->vertices.stride);
 }
 
 static void s_sync_isntance_buffer(CF_MeshInternal* mesh, void* data, int size)
@@ -586,7 +584,7 @@ int cf_mesh_append_instance_data(CF_Mesh mesh_handle, void* data, int append_cou
 		s_sync_isntance_buffer(mesh, NULL, mesh->instances.size);
 	}
 	sg_range range = { data, (size_t)size };
-	if (!sg_query_will_buffer_overflow(mesh->instances.handle, size)) {
+	if (!sg_query_buffer_will_overflow(mesh->instances.handle, size)) {
 		int offset = sg_append_buffer(mesh->instances.handle, range);
 		mesh->instances.offset = offset;
 		mesh->instances.element_count = append_count;
@@ -600,7 +598,7 @@ int cf_mesh_append_instance_data(CF_Mesh mesh_handle, void* data, int append_cou
 bool cf_mesh_will_overflow_instance_data(CF_Mesh mesh_handle, int append_count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	return sg_query_will_buffer_overflow(mesh->instances.handle, append_count * mesh->instances.stride);
+	return sg_query_buffer_will_overflow(mesh->instances.handle, append_count * mesh->instances.stride);
 }
 
 static void s_sync_index_buffer(CF_MeshInternal* mesh, uint32_t* indices, int size)
@@ -644,7 +642,7 @@ int cf_mesh_append_index_data(CF_Mesh mesh_handle, uint32_t* indices, int append
 		s_sync_index_buffer(mesh, NULL, mesh->indices.size);
 	}
 	sg_range range = { indices, (size_t)size };
-	if (!sg_query_will_buffer_overflow(mesh->indices.handle, size)) {
+	if (!sg_query_buffer_will_overflow(mesh->indices.handle, size)) {
 		int offset = sg_append_buffer(mesh->indices.handle, range);
 		mesh->indices.offset = offset;
 		mesh->indices.element_count = append_count;
@@ -658,7 +656,7 @@ int cf_mesh_append_index_data(CF_Mesh mesh_handle, uint32_t* indices, int append
 bool cf_mesh_will_overflow_index_data(CF_Mesh mesh_handle, int append_count)
 {
 	CF_MeshInternal* mesh = (CF_MeshInternal*)mesh_handle.id;
-	return sg_query_will_buffer_overflow(mesh->indices.handle, append_count * sizeof(uint32_t));
+	return sg_query_buffer_will_overflow(mesh->indices.handle, append_count * sizeof(uint32_t));
 }
 
 CF_RenderState cf_render_state_defaults()
@@ -888,13 +886,13 @@ void cf_apply_canvas(CF_Canvas pass_handle, bool clear)
 	s_canvas = canvas;
 	s_canvas_clear_settings(canvas);
 	if (clear) {
-		canvas->action.colors[0].action = SG_ACTION_CLEAR;
-		canvas->action.depth.action = SG_ACTION_CLEAR;
-		canvas->action.stencil.action = SG_ACTION_CLEAR;
+		canvas->action.colors[0].load_action = SG_LOADACTION_CLEAR;
+		canvas->action.depth.load_action = SG_LOADACTION_CLEAR;
+		canvas->action.stencil.load_action = SG_LOADACTION_CLEAR;
 	} else {
-		canvas->action.colors[0].action = SG_ACTION_LOAD;
-		canvas->action.depth.action = SG_ACTION_LOAD;
-		canvas->action.stencil.action = SG_ACTION_LOAD;
+		canvas->action.colors[0].load_action = SG_LOADACTION_CLEAR;
+		canvas->action.depth.load_action = SG_LOADACTION_CLEAR;
+		canvas->action.stencil.load_action = SG_LOADACTION_CLEAR;
 	}
 	if (canvas->pass_is_default) {
 		sg_begin_default_pass(&canvas->action, app->w, app->h);
