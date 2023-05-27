@@ -747,6 +747,8 @@ struct Path
 	CF_INLINE Path normalized() const { return Path::steal_from(spnorm(m_path)); }
 	CF_INLINE bool is_directory() const { Stat s; fs_stat(m_path, &s); return s.type == FILE_TYPE_DIRECTORY; }
 	CF_INLINE bool is_file() const { Stat s; fs_stat(m_path, &s); return s.type == FILE_TYPE_REGULAR; }
+	static CF_INLINE bool is_directory(const char* path) { Stat s; fs_stat(path, &s); return s.type == FILE_TYPE_DIRECTORY; }
+	static CF_INLINE bool is_file(const char* path) { Stat s; fs_stat(path, &s); return s.type == FILE_TYPE_REGULAR; }
 
 	CF_INLINE Path& add(const char* path) { if (sfirst(path) != '/' && slast(m_path) != '/') sappend(m_path, "/"); scat(m_path, path); return *this; }
 	CF_INLINE Path& cat(const char* path) { return add(path); }
