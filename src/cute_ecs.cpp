@@ -146,12 +146,11 @@ static CF_EntityCollection* s_collection(CF_Entity entity)
 
 void cf_destroy_entity(CF_Entity entity)
 {
-	uint16_t entity_type = s_entity_type(entity);
 	CF_WorldInternal* world = s_world();
-	CF_EntityCollection* collection = world->entity_collections.find(entity_type);
-	CF_ASSERT(collection);
-
 	if (world->handles.valid(entity.handle)) {
+		uint16_t entity_type = s_entity_type(entity);
+		CF_EntityCollection* collection = world->entity_collections.find(entity_type);
+		CF_ASSERT(collection);
 		int index = world->handles.get_index(entity.handle);
 
 		// Call cleanup function on each component in reverse order.
