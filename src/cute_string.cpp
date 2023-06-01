@@ -109,7 +109,7 @@ char* cf_svfmt_append(char* s, const char* fmt, va_list args)
 	int n = 1 + vsnprintf(s + slen(s), capacity, fmt, copy_args);
 	va_end(copy_args);
 	if (n > capacity) {
-		afit(s, n + slen(s));
+		afit(s, n + scount(s));
 		int new_capacity = scap(s) - scount(s);
 		n = 1 + vsnprintf(s + slen(s), new_capacity, fmt, args);
 		CF_ASSERT(n <= new_capacity);
