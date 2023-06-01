@@ -12,7 +12,10 @@ int main(int argc, char* argv[])
 	// Create a window with a resolution of 640 x 480.
 	int options = CF_APP_OPTIONS_DEFAULT_GFX_CONTEXT | CF_APP_OPTIONS_WINDOW_POS_CENTERED;
 	CF_Result result = cf_make_app("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
-	if (cf_is_error(result)) return -1;
+	if (is_error(result)) {
+		printf("Error: %s\n", result.details);
+		return -1;
+	}
 
 	while (cf_app_is_running())
 	{
@@ -31,7 +34,7 @@ Now is a good time to check out the [App Options](https://randygaul.github.io/cu
 
 ## Gathering Input
 
-Once your window is created your app is now up and running. You have access to inputs from the keyboard, mouse, joypad, touch, and IME inputs. For more in-depth reading about input, see the [Input](https://randygaul.github.io/cute_framework/#/topics/input) page.
+Once your window is created your app is now up and running. You have access to inputs from the keyboard, mouse, joypad, touch, and [IME inputs](https://learn.microsoft.com/en-us/windows/apps/design/input/input-method-editors). For more in-depth reading about input, see the [Input](https://randygaul.github.io/cute_framework/#/topics/input) page.
 
 The basic way to gather input is to call functions such as [`cf_key_down`](https://randygaul.github.io/cute_framework/#/input/cf_key_down) or [`cf_mouse_down`](https://randygaul.github.io/cute_framework/#/input/cf_mouse_down). These will return true for as long as the corresponding key or mouse button are currently down. Feel free to call these any time after calling [`cf_app_update`](https://randygaul.github.io/cute_framework/#/app/cf_app_update).
 

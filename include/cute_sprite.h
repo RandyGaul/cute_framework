@@ -115,7 +115,8 @@ typedef struct CF_Animation
  * @struct   CF_Sprite
  * @category sprite
  * @brief    A sprite represents a drawable entity, made of 2D animations/images.
- * @remarks  TODO
+ * @remarks  Sprites can be drawn by `cf_draw_sprite`. Since sprites are [plain old data POD](https://stackoverflow.com/questions/146452/what-are-pod-types-in-c) you may create one on the stack anywhere
+ *           and freely copy it around. In C++ you may simply draw via `sprite.draw()`.
  * @related  CF_Frame CF_Animation CF_Sprite cf_make_easy_sprite cf_make_sprite
  */
 typedef struct CF_Sprite

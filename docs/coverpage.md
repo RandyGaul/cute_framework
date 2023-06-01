@@ -9,4 +9,4 @@
 
 [Get Started](getting_started)
 [GitHub](https://github.com/RandyGaul/cute_framework/)
-[Discord](https://discord.gg/ajWHTHz9)
+[Discord](https://discord.gg/ZvxfCyjZCj)

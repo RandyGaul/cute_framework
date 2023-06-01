@@ -18,7 +18,10 @@ int main(int argc, char* argv[])
 {
 	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED;
 	Result result = make_app("Basic Shapes", 0, 0, 640, 480, options, argv[0]);
-	if (is_error(result)) return -1;
+	if (is_error(result)) {
+		printf("Error: %s\n", result.details);
+		return -1;
+	}
 
 	draw_push_color(make_color(0xeba48bff));
 	draw_push_antialias(true);
@@ -26,12 +29,12 @@ int main(int argc, char* argv[])
 
 	while (app_is_running()) {
 		app_update();
-
+/Users/randygaul/Documents/GitHub/cute_framework/docs/index.html
 		t += DELTA_TIME;
 
 		float radius = 100.0f;
 		float motion = (sinf(t) + 1.0f) * 0.5f * 40.0f;
-		draw_circle(V2(0,0), radius + motion, 50, 1.0f + motion / 4);
+		draw_circle(V2(0,0), radius + motion, 1.0f + motion / 4);
 
 		draw_push_color(color_purple());
 		motion *= 3;
@@ -56,7 +59,8 @@ int main(int argc, char* argv[])
 Like we saw in the above example, the draw API has some settings that can be pushed and popped. The various settings include:
 
 - color
-- antialias (temporarily unavailable for filled shapes)
+- antialias
+- antialias scale
 - layer
 - tint
 
@@ -64,11 +68,11 @@ Whenever a setting is pushed it will be used by subsequent drawing functions. Fo
 
 ## Draw Layer
 
-You can set what layer to draw upon with [`cf_draw_push_layer`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_push_layer). When done, restore the previously used layer with [`cf_draw_pop_layer`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_pop_layer). The layer controls the order things are drawn.
+The layer controls the order things are drawn. You can set what layer to draw upon with [`cf_draw_push_layer`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_push_layer). When done, restore the previously used layer with [`cf_draw_pop_layer`](https://randygaul.github.io/cute_framework/#/draw/cf_draw_pop_layer).
 
 ## Drawing Sprites
 
-Sprites can be loaded with either .ase/.aseprite files or .png files. The recommended method is .ase files called [Aseprite](https://www.aseprite.org/) files. An aseprite file contains all the animation and image data necessary for a 2D frame based animations. If instead you want to support your own custom animation format, or any other format, you can load up your animation data and feed it into the .png API (TODO LINK).
+Sprites can be loaded with either .ase/.aseprite files or .png files. The recommended method is .ase files called [Aseprite](https://www.aseprite.org/) files. An aseprite file contains all the animation and image data necessary for a 2D frame based animations. If instead you want to support your own custom animation format, or any other format, you can load up your animation data and feed it into the [.png API](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_png_cache.h).
 
 Some particular pages of interest are:
 

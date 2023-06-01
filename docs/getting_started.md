@@ -8,7 +8,7 @@ Cute Framework (CF for short) is the *cutest* framework available for making 2D 
 
 ## Download and Setup
 
-~~The easiest option is to head over and pickup the [latest pre-built version](https://github.com/randygaul/cute_framework/releases/latest)~~ This link is currently out of date, and awaiting the soon to be v1.0 release (see below for building latest from source). You can link your project against CF as either a static or shared library.
+For now CF must be built from source using Cmake. Cmake provides one of the only reliable ways to setup and build C/C++ programs in a cross-platform manner. If you're new to Cmake there are some step-by-step instructions just below written specifically for getting your project up and running. These steps are a great way to learn about cross-platform developement in general, not just for CF!
 
 ### Building from Source
 
@@ -33,7 +33,10 @@ int main(int argc, char* argv[])
 	// Create a window with a resolution of 640 x 480.
 	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED;
 	Result result = make_app("Fancy Window Title", 0, 0, 640, 480, options, argv[0]);
-	if (is_error(result)) return -1;
+	if (is_error(result)) {
+		printf("Error: %s\n", result.details);
+		return -1;
+	}
 
 	while (app_is_running())
 	{
