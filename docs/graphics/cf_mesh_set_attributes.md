@@ -24,8 +24,6 @@ instance_stride | Number of bytes between each instance.
 
 You must call this before uploading any data to the GPU. The max number of attributes is 16. Any more attributes beyond 16 will be ignored.
 
-The limit of 16 vertex attributes is less on GLES2, see [cf_query_resource_limit](/graphics/cf_query_resource_limit.md).
-
 ## Related Pages
 
 [CF_Mesh](/graphics/cf_mesh.md)  

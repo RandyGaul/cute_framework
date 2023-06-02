@@ -35,6 +35,7 @@ PIXELFORMAT_RG16UI | 16-bit red-green channels, in unsigned integer form, 32 bit
 PIXELFORMAT_RG16SI | 16-bit red-green channels, in signed integer form, 32 bits total.
 PIXELFORMAT_RG16F | 16-bit red-green channels, in floating point form, 32 bits total.
 PIXELFORMAT_RGBA8 | 8-bit red-green-blue-alpha channels, 32 bits total.
+PIXELFORMAT_SRGB8A8 | TODO.
 PIXELFORMAT_RGBA8SN | 8-bit red-green-blue-alpha channels, in signed normalized form, 32 bits total.
 PIXELFORMAT_RGBA8UI | 8-bit red-green-blue-alpha channels, in unsigned integer form, 32 bits total.
 PIXELFORMAT_RGBA8SI | 8-bit red-green-blue-alpha channels, in signed integer form, 32 bits total.
@@ -73,6 +74,7 @@ PIXELFORMAT_ETC2_RGB8A1 | ETC2 red-green-blue 8-bit channels.
 PIXELFORMAT_ETC2_RGBA8 | ETC2 red-green-blue 8-bit channels, 1-bit alpha channel.
 PIXELFORMAT_ETC2_RG11 | ETC2 red-green-blue-alpha 8-bit channels.
 PIXELFORMAT_ETC2_RG11SN | ETC2 red-green 11-bit channels.
+PIXELFORMAT_RGB9E5 | TODO.
 PIXELFORMAT_COUNT | ETC2 red-green 11-bit channels, in signed-normalized form.
 
 ## Remarks

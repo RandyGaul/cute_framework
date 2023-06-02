@@ -28,7 +28,8 @@ Struct Members | Description
 
 ## Remarks
 
-TODO
+Sprites can be drawn by [cf_draw_sprite](/draw/cf_draw_sprite.md). Since sprites are [plain old data POD](https://stackoverflow.com/questions/146452/what-are-pod-types-in-c) you may create one on the stack anywhere
+and freely copy it around. In C++ you may simply draw via `sprite.draw()`.
 
 ## Related Pages
 

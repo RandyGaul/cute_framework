@@ -13,12 +13,11 @@ To actually play the audio as a music track call [`cf_music_play`](https://randy
 > Loading some music from a .ogg file and playing it.
 
 ```cpp
-CF_Audio* my_song = NULL;
+CF_Audio my_song;
 
 void LoadMusic()
 {
 	my_song = cf_audio_load_ogg("/music/song.ogg");
-	CF_ASSERT(my_song);
 }
 
 void PlayMusic(float fade_in_time = 0)
@@ -40,8 +39,8 @@ To play a sound call [`cf_play_sound`](https://randygaul.github.io/cute_framewor
 > Playing a few different sound FX. [`CF_SoundParams`](https://randygaul.github.io/cute_framework/#/audio/cf_soundparams) contains all of the initialization parameters for a sound effect.
 
 ```cpp
-CF_Audio* jump = NULL;
-CF_Audio* bonk = NULL;
+CF_Audio jump;
+CF_Audio bonk;
 
 void LoadSounds()
 {

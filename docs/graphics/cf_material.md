@@ -23,7 +23,7 @@ When using sokol-shdc (see [CF_MAKE_SOKOL_SHADER](/graphics/cf_make_sokol_shader
 
 - Max number of uniform buffers for each shader stage (4)
 - Max number of uniforms in a uniform buffer (16)
-- Max number of vertex attributes (16) (less on GLES2, see [cf_query_resource_limit](/graphics/cf_query_resource_limit.md))
+- Max number of vertex attributes (16)
 - Max number of textures for each shader stag (12)
 
 ## Related Pages

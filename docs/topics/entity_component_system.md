@@ -12,8 +12,6 @@ A key benefit of using the ECS is having a clear answer to the question "where d
 
 In laymen's terms, entities are things, components are parts of things, and systems are how things behave.
 
-**Disclaimer**: This is an oversimplification of ECS, but it is one that serves our purpose while minimizing confusion for now. For a full understanding, please consult your local [Google](http://www.google.com/search?q=entity+component+system).
-
 ## Entities
 
 An entity is merely a collection of components that represents a "thing" in your game, like an enemy, the player, or other game features. Before an entity instance can be created an entity type must be defined and registered with the ECS (like a blueprint, or archetype). How to make components is explained in the next section.
@@ -237,4 +235,4 @@ If a particular entity contained many kinds of components, but also still contai
 
 ## Full Example
 
-TODO - Make a sample.
+For a more full example you can check out the [Basic ECS sample](https://github.com/RandyGaul/cute_framework/blob/master/samples/basic_ecs.cpp), containing a simulation of League-of-Legends-like armor/magic defense system. It supports shields, physical/magic/true damage, as well as damage over time. The entire simulation is visualized with [Dear ImGui debug UI](https://randygaul.github.io/cute_framework/#/topics/dear_imgui).

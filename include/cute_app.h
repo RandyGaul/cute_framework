@@ -60,7 +60,7 @@ typedef struct sg_image sg_image;
 #define CF_APP_OPTION_DEFS \
 	/* @entry Starts the app with an OpenGL 3.3 context. */      \
 	CF_ENUM(APP_OPTIONS_OPENGL_CONTEXT,                 1 << 0)  \
-	/* @entry Starts the app with an OpenGL ES 3.3 context. */   \
+	/* @entry Starts the app with an OpenGL ES 3.0 context. */   \
 	CF_ENUM(APP_OPTIONS_OPENGLES_CONTEXT,               1 << 1)  \
 	/* @entry Starts the app with a DirectX 11 context (Windows only). */ \
 	CF_ENUM(APP_OPTIONS_D3D11_CONTEXT,                  1 << 2)  \

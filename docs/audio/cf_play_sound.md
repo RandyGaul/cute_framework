@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Plays a sound.
 
 ```cpp
-CF_Sound cf_play_sound(CF_Audio* audio_source, CF_SoundParams params);
+CF_Sound cf_play_sound(CF_Audio audio_source, CF_SoundParams params);
 ```
 
 Parameters | Description

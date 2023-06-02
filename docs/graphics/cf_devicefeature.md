@@ -12,8 +12,6 @@ Some various device features that may or may not be supported on various backend
 
 Enum | Description
 --- | ---
-DEVICE_FEATURE_INSTANCING | Instancing support, e.g. [cf_mesh_update_instance_data](/graphics/cf_mesh_update_instance_data.md).
-DEVICE_FEATURE_MSAA | Hardware-accelerated multi-sample antialiasing (not supporting in Cute Framework yet).
 DEVICE_FEATURE_TEXTURE_CLAMP | Texture clamp addressing style, e.g. `CF_WRAP_MODE_CLAMP_TO_EDGE` or `CF_WRAP_MODE_CLAMP_TO_BORDER` .
 
 ## Remarks

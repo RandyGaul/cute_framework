@@ -12,6 +12,8 @@
 - [cf_blend_factor_string](/graphics/cf_blend_factor_string.md)
 - [cf_blend_op_string](/graphics/cf_blend_op_string.md)
 - [cf_canvas_defaults](/graphics/cf_canvas_defaults.md)
+- [cf_canvas_get_backend_depth_stencil_handle](/graphics/cf_canvas_get_backend_depth_stencil_handle.md)
+- [cf_canvas_get_backend_target_handle](/graphics/cf_canvas_get_backend_target_handle.md)
 - [cf_clamp_color](/graphics/cf_clamp_color.md)
 - [cf_clamp_color01](/graphics/cf_clamp_color01.md)
 - [cf_clear_color](/graphics/cf_clear_color.md)

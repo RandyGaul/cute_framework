@@ -15,12 +15,12 @@ bool cf_between_interval(float interval, float offset);
 Parameters | Description
 --- | ---
 interval | Number of seconds between each interval.
-offset | An offset of seconds used to offset within the interval of [0,interval]. This gets mathematically modulo'd, so it can be any number of seconds.
+offset | A starting offset in seconds for the interval. This gets mathematically modulo'd. Used to sync times for rythms or repeats.
 
 ## Remarks
 
 This function is super useful for general purpose gameplay implementation where you want an event to fire for N seconds,
-and then _not_ fire for N seconds, flipping back and forth periodically. Simply place this within an if-statement!
+and then _not_ fire for N seconds, flipping back and forth periodically. Simply place this within an if-statement.
 
 ## Related Pages
 

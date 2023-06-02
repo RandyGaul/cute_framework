@@ -13,7 +13,7 @@ Various options to control how the application starts up, such as fullscreen, or
 Enum | Description
 --- | ---
 APP_OPTIONS_OPENGL_CONTEXT | Starts the app with an OpenGL 3.3 context.
-APP_OPTIONS_OPENGLES_CONTEXT | Starts the app with an OpenGL ES 3.3 context.
+APP_OPTIONS_OPENGLES_CONTEXT | Starts the app with an OpenGL ES 3.0 context.
 APP_OPTIONS_D3D11_CONTEXT | Starts the app with a DirectX 11 context (Windows only).
 APP_OPTIONS_METAL_CONTEXT | Starts the app with a Metal context (Apple only).
 APP_OPTIONS_DEFAULT_GFX_CONTEXT | Picks a good default graphics context for the given platform.

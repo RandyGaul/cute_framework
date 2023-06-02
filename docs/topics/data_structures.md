@@ -51,6 +51,8 @@ A hash table is used to map a unique key to a specific value. The value can be f
 
 In C we use the [Hash API](https://randygaul.github.io/cute_framework/#/api_reference?id=hash), while in C++ there's a `Map<T>` class that wraps the C functionality. It contains a very similar API including get/find, insert, remove, etc. We will cover both the C and C++ APIs in this page.
 
+!> **Important Note** Since the table itself grows dynamically, values _may not_ store pointers to themselves or other values. All values are stored as [plain old data (POD)](https://stackoverflow.com/questions/146452/what-are-pod-types-in-c), as their location in memory will get shuffled around internally as the map grows.
+
 ## htbl in C
 
 The [`htbl`](https://randygaul.github.io/cute_framework/#/hash/htbl) (stands for hashtable) works on a typed pointer, and automatically grows to fit new key/value pairs as necessary. Internally it's implemented with a [stretchy buffer](https://github.com/creikey/stretchy-buff), just like the [Array API in C](https://randygaul.github.io/cute_framework/#/topics/data_structures?id=array). It can store values with unique 64-bit keys.
@@ -79,8 +81,6 @@ hfree(pts);
 
 All keys for [`htbl`](https://randygaul.github.io/cute_framework/#/hash/htbl) are typecasted to a `uint64_t`. You can use pointers, integers, chars, etc. as keys. Arbitrary values can be passed to the table, including return results from function calls or hard-coded literals (like `10` or `"Strings!"`).
 
-!> **Important Note** Since the table itself grows dynamically, values _may not_ store pointers to themselves or other values. All values are stored as POD (plain-old data), and will be `memcpy`'d or `realloc`'d around as necessary.
-
 ### Strings as Keys
 
 Since the [`htbl`](https://randygaul.github.io/cute_framework/#/hash/htbl) typecasts all keys to `uint64_t` internally we cannot use strings as keys, right? Good question! Actually there's a _highly recommended_ technique to deal with strings as keys. The [Strings](https://randygaul.github.io/cute_framework/#/topics/strings) page has all the string related details. We can make use of the _string interning_ functions to create stable, unique string references. Here is the list of intern functions:
@@ -101,7 +101,7 @@ const char* special_name = sintern("Something Special");
 const char* name = GetName();
 name = sintern(name);
 if (name == special_name) { // Valid to compare pointers directly!
-	Data* data = hget(table, name); // Valid to use as key lookup!
+	Data* data = hget(table, name); // Valid to use as key lookup! Internally compares pointers directly.
 	DoStuff(data);
 }
 ```
@@ -135,11 +135,11 @@ v2* b_ptr = vecs.try_get(1);
 
 !> **Important Note** The `get` function will return by value. If a particular key does not exist the returned value is simply a zero'd out element. If instead you want to know if a particular element was found or not, use `try_get` to return a pointer to an element. `NULL` is returned if a particular key is not found.
 
-!> **Important Note** Since the table itself grows dynamically, values _may not_ store pointers to themselves or other values. All values are stored as POD (plain-old data), and will be `memcpy`'d or `realloc`'d around as necessary.
+!> **Important Note** Since the table itself grows dynamically, values _may not_ store pointers to themselves or other values. All values are stored as [plain old data (POD)](https://stackoverflow.com/questions/146452/what-are-pod-types-in-c), as their location in memory will get shuffled around internally as the map grows.
 
 ## Linked List
 
-The [`Linked List API`](https://randygaul.github.io/cute_framework/#/api_reference?id=list) in C++ implements a [doubly-linked list](https://en.wikipedia.org/wiki/Doubly_linked_list). Lniked lists have really fallen out of favor in recent years due to advancements in hardware, but, are still sometimes quite useful for keeping lists of objects.
+The [`Linked List API`](https://randygaul.github.io/cute_framework/#/api_reference?id=list) in C++ implements a [doubly-linked list](https://en.wikipedia.org/wiki/Doubly_linked_list). Linked lists have really fallen out of favor in recent years due to advancements in hardware, but, are still sometimes quite useful for keeping lists of objects.
 
 For example, an [LRU cache](https://leetcode.com/problems/lru-cache/) can be implement with a linked list. Usually linked lists are used nowadays to implement other data structures or algorithms, mainly when constant-time list insertion/removal is top priority. CF's linked lists are intrusive, meaning the nodes of a list live within other structs. Macros are used to convert from pointers to structs to a node, or from a pointer to node to the host struct.
 

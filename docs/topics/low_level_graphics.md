@@ -9,7 +9,6 @@ This page talks about the low level graphics API in CF. If you want to draw shap
 CF wraps [low level 3D rendering APIs](https://randygaul.github.io/cute_framework/#/api_reference?id=graphics). The backends supported are:
 
 - OpenGL 3.3 Core Profile
-- OpenGL ES 2.0
 - OpenGL ES 3.0
 - DirectX 11
 - Metal (not quite available just yet)

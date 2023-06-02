@@ -12,10 +12,6 @@ Query the device for resource limits.
 int cf_query_resource_limit(CF_ResourceLimit limit);
 ```
 
-## Remarks
-
-One notable limit is on `CF_BACKEND_TYPE_GLES2` the number of vertex attributes is low.
-
 ## Related Pages
 
 [CF_ResourceLimit](/graphics/cf_resourcelimit.md)  

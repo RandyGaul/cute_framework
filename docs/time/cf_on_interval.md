@@ -15,12 +15,7 @@ bool cf_on_interval(float interval, float offset);
 Parameters | Description
 --- | ---
 interval | Number of seconds between each interval.
-offset | An offset of seconds used to offset within the interval of [0,interval]. This gets mathematically mod'd,
-           so it can be any number of seconds.
-
-## Remarks
-
-This function is super useful for general purpose gameplay implementation where you want an event to fire every N seconds.
+offset | A starting offset in seconds for the interval. This gets mathematically modulo'd. Used to sync times for rythms or repeats.
 Simply place this within an if-statement!
 
 ## Related Pages

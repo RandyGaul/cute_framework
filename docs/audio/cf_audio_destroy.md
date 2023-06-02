@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Frees all resources used by a [CF_Audio](/audio/cf_audio.md).
 
 ```cpp
-void cf_audio_destroy(CF_Audio* audio);
+void cf_audio_destroy(CF_Audio audio);
 ```
 
 Parameters | Description

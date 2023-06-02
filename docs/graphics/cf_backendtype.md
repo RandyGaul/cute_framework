@@ -13,7 +13,6 @@ The various supported graphics backends.
 Enum | Description
 --- | ---
 BACKEND_TYPE_GLCORE33 | OpenGL 3.3 Core Profile.
-BACKEND_TYPE_GLES2 | OpenGL ES 2.0.
 BACKEND_TYPE_GLES3 | OpenGL ES 3.0.
 BACKEND_TYPE_D3D11 | DirectX 11.
 BACKEND_TYPE_METAL_IOS | Metal for iOS.

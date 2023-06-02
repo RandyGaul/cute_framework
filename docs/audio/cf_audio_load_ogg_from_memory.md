@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Loads a .ogg audio file from memory.
 
 ```cpp
-CF_Audio* cf_audio_load_ogg_from_memory(void* memory, int byte_count);
+CF_Audio cf_audio_load_ogg_from_memory(void* memory, int byte_count);
 ```
 
 Parameters | Description

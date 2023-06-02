@@ -70,6 +70,12 @@ struct Doc
 	void emit_related(FILE* fp);
 };
 
+#ifdef CF_APPLE
+const char* relative_path = "../../docs";
+#else
+const char* relative_path = "../docs";
+#endif
+
 struct State
 {
 	// Header parsing state.
@@ -87,7 +93,7 @@ struct State
 
 	void flush_doc()
 	{
-		Path path = "../docs";
+		Path path = relative_path;
 		path.add(doc.web_category);
 		String title = doc.title;
 		title.to_lower().replace(" ", "_").append(".md");
@@ -118,7 +124,7 @@ struct State
 	{
 		int index = get_doc_index(title);
 		String link = docs[index].path.c_str();
-		link.replace("../docs", "");
+		link.replace(relative_path, "");
 		return link;
 	}
 
@@ -537,11 +543,7 @@ int main(int argc, char* argv[])
 	cf_fs_init(argv[0]);
 	Path path = cf_fs_get_base_directory();
 	path = path.normalize();
-#ifdef _MSC_VER
 	path.popn(2);
-#else
-	path.popn(1);
-#endif
 	path.add("/include");
 	cf_fs_mount(path.c_str(), "", true);
 
@@ -584,8 +586,9 @@ int main(int argc, char* argv[])
 
 	// Save each doc file.
 	for (int i = 0; i < s->docs.count(); ++i) {
-		Doc doc = s->docs[i];
+		Doc& doc = s->docs[i];
 		FILE* fp = fopen(doc.path.c_str(), "wb");
+		CF_ASSERT(fp);
 		const char* category = sintern(doc.web_category.c_str());
 		if (!s->category_index_lists.has(category)) {
 			s->category_index_lists.insert(category);

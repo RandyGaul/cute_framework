@@ -1,0 +1,23 @@
+[](../header.md ':include')
+
+# cf_draw_pop_antialias_scale
+
+Category: [draw](/api_reference?id=draw)  
+GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
+---
+
+Pops and returns the last antialias scale.
+
+```cpp
+float cf_draw_pop_antialias_scale();
+```
+
+## Remarks
+
+Antialias scale controls how much antialiasing will be used. A larger number makes the borders of shapes blurry.
+The number must be greater than 0, but probably not more than 2 or 3 for most cases. The default is 1.5.
+
+## Related Pages
+
+[cf_draw_push_antialias_scale](/draw/cf_draw_push_antialias_scale.md)  
+[cf_draw_peek_antialias_scale](/draw/cf_draw_peek_antialias_scale.md)  

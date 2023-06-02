@@ -9,7 +9,7 @@ GitHub: [cute_audio.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 Switches from the currently playing music to another track.
 
 ```cpp
-void cf_music_switch_to(CF_Audio* audio_source, float fade_out_time, float fade_in_time);
+void cf_music_switch_to(CF_Audio audio_source, float fade_out_time, float fade_in_time);
 ```
 
 Parameters | Description

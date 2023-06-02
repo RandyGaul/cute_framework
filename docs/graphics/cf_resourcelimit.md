@@ -13,7 +13,7 @@ Some backends have limits on specific GPU resources.
 Enum | Description
 --- | ---
 RESOURCE_LIMIT_TEXTURE_DIMENSION | Limit on the number of dimensions a texture can have, e.g. 2 or 3.
-RESOURCE_LIMIT_VERTEX_ATTRIBUTE_MAX | Limit on the number of vertex attributes. Notably lower on `CF_BACKEND_TYPE_GLES2`.
+RESOURCE_LIMIT_VERTEX_ATTRIBUTE_MAX | Limit on the number of vertex attributes.
 
 ## Related Pages
 
