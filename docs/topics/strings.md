@@ -102,7 +102,7 @@ There are a variety of manipulation functions available for strings. Be sure to 
 
 ## String in C++
 
-In C++ we have access to the `String` class. It wraps up the dynamic C string API into a convenience class. It will automatically call `sfree` in its destructor. Here's a quick demo of some its basic features:
+In C++ we have access to the [`String` class](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h) (near the bottom of cute_string.h). It wraps up the dynamic C string API into a convenience class. It will automatically call `sfree` in its destructor. Here's a quick demo of some its basic features:
 
 ```cpp
 String s = "   Well hello there! Today is <color> day, meaning everything is the color <color>.    ";
@@ -131,7 +131,6 @@ The UTF8 format encodes a large number of characters by making certain character
 In C++ we have access to the `UTF8` helper class. Simply load it up with a string and call `.next()` to get each decoded character with `.codepoint`.
 
 ```cpp
-
 UTF8 utf8 = UTF8(my_string_in_utf8_format);
 while (utf8.next()) {
     DoSomethingWithCodepoint(utf8.codepoint);
@@ -140,4 +139,58 @@ while (utf8.next()) {
 
 ## Paths
 
-TODO - Document the string path API : https://randygaul.github.io/cute_framework/#/api_reference/?id=path
+The [path API in CF](https://randygaul.github.io/cute_framework/#/api_reference/?id=path) is a set of helper functions to deal with paths as a string. It auto-magically inserts "/" between folder names as appropriate, and can pop parts of the path off the end. It's great for easily opening up and traversing directories.
+
+### Paths in C++
+
+It's recommended to use the [C++ wrapper for paths in CF](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_file_system.h) (located at the bottom of cute_file_system.h), along with the directory wrapper.
+
+Here's an example of creating a `Cute::Path`.
+
+```cpp
+Path path = "/content/my_file.txt";
+```
+
+There are a variety of helpful member functions on the path helper, such as checking if a path is a folder or file:
+
+```
+Path path = "/content/my_file.txt";
+if (path.is_directory()) {
+	// ...
+} else if (path.is_file()) {
+	// ...
+}
+```
+
+It's easy to pop files or directories off the end of the path:
+
+```
+Path path = "/content/my_file.txt";
+path.pop(1);              // Path is now "/content"."
+path += "other_file.txt"; // Path is now "/content/other_file.txt".
+// Notice how "/" was auto-magically inserted.
+```
+
+You may also check if a path is a file or directory without creating a `Path` instance using some static functions:
+
+```
+// Check if path is a directory.
+if (Path::is_directory("/content/areas")) {
+	// ...
+}
+
+// Check if path is a file.
+if (Path::is_file("/content/areas/area1.txt")) {
+	// ...
+}
+```
+
+Similarly a `Directory` helper class exists to easily enumerate files in a directory.
+
+```
+// Print all files in a directory.
+Directory dir = Directory::open("/content/areas");
+for (const char* file = dir.next(); file; file = dir.next()) {
+	printf("File file %s\n", file);
+}
+```
