@@ -287,8 +287,8 @@ int cf_hashtable_find_impl2(const CF_Hhdr* table, const void* key)
 		CF_MEMSET(table->hidden_item, 0, table->item_size);
 		return -1;
 	}
-	int index = table->slots[slot].item_index;
-	return index;
+	((CF_Hhdr*)table)->return_index = table->slots[slot].item_index;
+	return table->return_index;
 }
 
 int cf_hashtable_find_impl(const CF_Hhdr* table, uint64_t key)
