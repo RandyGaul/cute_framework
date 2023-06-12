@@ -58,6 +58,28 @@ TEST_CASE(test_hashtable_macros)
 	}
 	{
 		v2* h = NULL;
+		hset(h, 0, V2(1, 2));
+		hset(h, 1, V2(4, 10));
+		hset(h, 2, V2(-12, 13));
+		v2 *a = hget_ptr(h, 0);
+		v2 *b = hget_ptr(h, 1);
+		v2 *c = hget_ptr(h, 2);
+		REQUIRE(a->x == 1 && a->y == 2);
+		REQUIRE(b->x == 4 && b->y == 10);
+		REQUIRE(c->x == -12 && c->y == 13);
+		hdel(h, 0);
+		hdel(h, 1);
+		hdel(h, 2);
+		a = hget_ptr(h, 0);
+		b = hget_ptr(h, 1);
+		c = hget_ptr(h, 2);
+		REQUIRE(a == NULL);
+		REQUIRE(b == NULL);
+		REQUIRE(c == NULL);
+		hfree(h);
+	}
+	{
+		v2* h = NULL;
 		int iters = 100;
 		for (int i = 0; i < iters; ++i) {
 			v2 v = V2((float)i, (float)i);
