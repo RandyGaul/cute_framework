@@ -285,6 +285,8 @@ int cf_hashtable_find_impl2(const CF_Hhdr* table, const void* key)
 		// We will be "returning" a zero'd out item through `hget` with this
 		// hidden item.
 		CF_MEMSET(table->hidden_item, 0, table->item_size);
+
+		((CF_Hhdr *)table)->return_index = -1;
 		return -1;
 	}
 	((CF_Hhdr*)table)->return_index = table->slots[slot].item_index;
