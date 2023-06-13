@@ -33,7 +33,7 @@
 
 #include <windowsx.h>
 
-#define SAFE_RELEASE(class, obj) if (obj) { class##_Release(obj); obj=0; }
+#define SAFE_RELEASE(class, obj) if (obj) { class##_Release(obj); obj = NULL; }
 
 static struct
 {
@@ -43,6 +43,7 @@ static struct
 	int h;
 	int sample_count;
 	ID3D11Device* device;
+	ID3D11Debug* debug;
 	ID3D11DeviceContext* device_context;
 	IDXGISwapChain* swap_chain;
 	ID3D11Texture2D* render_target;
@@ -138,6 +139,28 @@ void cf_dx11_init(void* hwnd, int w, int h, int sample_count)
 	(void)hr;
 	CF_ASSERT(SUCCEEDED(hr) && state.swap_chain && state.device && state.device_context);
 
+	if (SUCCEEDED(ID3D11Device_QueryInterface(state.device, IID_ID3D11Debug, (void**)&state.debug))) {
+		ID3D11InfoQueue* info_queue = NULL;
+		if(SUCCEEDED(ID3D11Device_QueryInterface(state.debug, IID_ID3D11InfoQueue, (void**)&info_queue))) {
+#ifdef _DEBUG
+			ID3D11InfoQueue_SetBreakOnSeverity(info_queue, D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
+			ID3D11InfoQueue_SetBreakOnSeverity(info_queue, D3D11_MESSAGE_SEVERITY_ERROR, true);
+#endif
+
+			D3D11_MESSAGE_ID hide[] =
+			{
+				D3D11_MESSAGE_ID_SETPRIVATEDATA_CHANGINGPARAMS,
+			};
+ 
+			D3D11_INFO_QUEUE_FILTER filter = { };
+			filter.DenyList.NumIDs = _countof(hide);
+			filter.DenyList.pIDList = hide;
+
+			ID3D11InfoQueue_AddStorageFilterEntries(info_queue, &filter);
+			ID3D11InfoQueue_Release(info_queue);
+		}
+	}
+
 	// Default render target and depth-stencil-buffer.
 	cf_d3d11_create_default_render_target();
 }
@@ -177,7 +200,8 @@ sg_context_desc cf_dx11_get_context()
 
 void cf_dx11_present(bool vsync)
 {
-	IDXGISwapChain_Present(state.swap_chain, vsync ? 1 : 0, 0);
+	HRESULT hr = IDXGISwapChain_Present(state.swap_chain, vsync ? 1 : 0, 0);
+	CF_ASSERT(SUCCEEDED(hr));
 
 	// Handle resizing the frame/depth+stencil buffers.
 	RECT r;
