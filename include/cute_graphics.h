@@ -502,7 +502,7 @@ CF_API bool CF_CALL cf_query_device_feature(CF_DeviceFeature feature);
 #define CF_RESOURCE_LIMIT_DEFS \
 	/* @entry Limit on the number of dimensions a texture can have, e.g. 2 or 3. */ \
 	CF_ENUM(RESOURCE_LIMIT_TEXTURE_DIMENSION,       0)                              \
-	/* @entry Limit on the number of vertex attributes. */  \
+	/* @entry Limit on the number of vertex attributes. */                          \
 	CF_ENUM(RESOURCE_LIMIT_VERTEX_ATTRIBUTE_MAX,    1)                              \
 	/* @end */
 

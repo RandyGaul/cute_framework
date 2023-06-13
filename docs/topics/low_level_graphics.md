@@ -11,7 +11,7 @@ CF wraps [low level 3D rendering APIs](https://randygaul.github.io/cute_framewor
 - OpenGL 3.3 Core Profile
 - OpenGL ES 3.0
 - DirectX 11
-- Metal (not quite available just yet)
+- Metal
 - WebGPU
 
 The major primitives that make up the graphics layer of CF are:
