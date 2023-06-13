@@ -115,7 +115,6 @@ set(CF_SRCS
 	src/cute_guid.cpp
 	src/cute_alloc.cpp
 	src/cute_result.cpp
-	src/cute_quadtree.cpp
 
 	src/internal/cute_dx11.cpp
 
@@ -185,7 +184,6 @@ set(CF_PUBLIC_HDRS
 	include/cute_networking.h
 	include/cute_guid.h
 	include/cute_routine.h
-	include/cute_quadtree.h
 )
 
 set(IMGUI_HDRS
@@ -409,7 +407,6 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 	add_executable(docsparser samples/docs_parser.cpp)
 	add_executable(scratch samples/scratch.cpp)
 	add_executable(echo samples/echo.cpp)
-	add_executable(quadtree samples/quadtree.cpp)
 	set(SAMPLE_EXECUTABLES
 		easysprite
 		basicecs
@@ -426,7 +423,6 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 		docsparser
 		scratch
 		echo
-		quadtree
 	)
 
 	foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
