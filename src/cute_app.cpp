@@ -444,8 +444,14 @@ int cf_app_draw_onto_screen()
 		}
 	}
 
+	// Update the spritebatch itself.
+	// This does atlas management internally.
+	// All references to backend texture id's are now invalid (fetch_image or canvas_get_backend_target_handle).
+	spritebatch_tick(&draw->sb);
+	spritebatch_defrag(&draw->sb);
+
 	// Render any remaining geometry in the draw API.
-	cf_render_to(app->offscreen_canvas, false);
+	cf_render_to(app->offscreen_canvas, true);
 
 	// Stretch the app canvas onto the backbuffer canvas.
 	cf_apply_canvas(app->backbuffer_canvas, true);
@@ -463,10 +469,6 @@ int cf_app_draw_onto_screen()
 		s_imgui_present();
 	}
 
-	// Start the default-pass for anyone using default behavior to catch rendering for the
-	// next frame in the above call to `cf_render_to`.
-	cf_apply_canvas(app->offscreen_canvas, true);
-
 	// Flip to screen.
 	cf_commit();
 	cf_dx11_present(app->vsync);
@@ -474,12 +476,6 @@ int cf_app_draw_onto_screen()
 	if (app->options & APP_OPTIONS_OPENGL_CONTEXT) {
 		SDL_GL_SwapWindow(app->window);
 	}
-
-	// Update the spritebatch itself.
-	// This does atlas management internally.
-	// All references to backend texture id's are now invalid (fetch_image or canvas_get_backend_target_handle).
-	spritebatch_tick(&draw->sb);
-	spritebatch_defrag(&draw->sb);
 
 	// Report the number of draw calls.
 	// This is always user draw call count +1.
