@@ -54,15 +54,20 @@ jobs:
           cmake --build build_folder --config Release
         if: matrix.platform.name == 'Windows (MSCV 17 2022)'
       
-      # Run tests on Windows/Apple
       - name: Run Tests
         run: |
           cd build_folder\Release
           tests.exe
           cd ..\..
-        if: runner.os == 'Windows' || runner.os == 'macOS'
+        if: runner.os == 'Windows'
       
-      # Run tests on Linux
+      - name: Run Tests
+        run: |
+          cd build_folder/Release
+          ./tests
+          cd ../..
+        if: runner.os == runner.os == 'macOS'
+      
       - name: Run Tests
         run: |
           cd build_folder
