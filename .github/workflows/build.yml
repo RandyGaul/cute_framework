@@ -24,7 +24,7 @@ jobs:
           - { name: "Windows (MSCV 17 2022)",  os: windows-latest, artifact: 'mscv17',  generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release' }
           - { name: "MacOS",                   os: macos-latest,   artifact: 'macos',   generate: '-G "Unix Makefiles"' }
           - { name: "Linux",                   os: ubuntu-latest,  artifact: 'linux',   generate: '-G "Unix Makefiles"' }
-          # TODO - Add iOS and Android platforms.
+          # TODO - Add iOS and Android platforms. Waiting on better support from GitHub.
 
     steps:
       - uses: actions/checkout@master
@@ -53,6 +53,22 @@ jobs:
         run: |
           cmake --build build_folder --config Release
         if: matrix.platform.name == 'Windows (MSCV 17 2022)'
+      
+      # Run tests on Windows/Apple
+      - name: Run Tests
+        run: |
+          cd build_folder\Release
+          tests.exe
+          cd ..\..
+        if: runner.os == 'Windows' || runner.os == 'macOS'
+      
+      # Run tests on Linux
+      - name: Run Tests
+        run: |
+          cd build_folder
+          tests.exe
+          cd ..
+        if: runner.os == 'Linux'
 
       # Just call robocopy twice, one looking for libcute.a for MinGW, and one
       # looking for cute.lib for MSCV. robocopy doesn't trigger a build failure for
