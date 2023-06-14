@@ -54,18 +54,29 @@ jobs:
           cmake --build build_folder --config Release
         if: matrix.platform.name == 'Windows (MSCV 17 2022)'
       
+      # Run tests for MSVC 17
       - name: Run Tests
+        shell: cmd
         run: |
           cd build_folder\Release
           tests.exe
           cd ..\..
-        if: runner.os == 'Windows'
+        if: matrix.platform.name == 'Windows (MSCV 17 2022)'
+      
+      # Run tests for MinGW (no Release folder)
+      - name: Run Tests
+        shell: cmd
+        run: |
+          cd build_folder
+          tests.exe
+          cd ..
+        if: matrix.platform.name == "Windows (MinGW)"
       
       - name: Run Tests
         run: |
-          cd build_folder/Release
+          cd build_folder
           ./tests
-          cd ../..
+          cd ..
         if: runner.os == 'macOS'
       
       - name: Run Tests
