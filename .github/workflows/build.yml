@@ -66,7 +66,7 @@ jobs:
           cd build_folder/Release
           ./tests
           cd ../..
-        if: runner.os == runner.os == 'macOS'
+        if: runner.os == 'macOS'
       
       - name: Run Tests
         run: |
