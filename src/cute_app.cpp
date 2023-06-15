@@ -286,8 +286,6 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		}
 		s_canvas(app->w, app->h);
 		cf_make_draw();
-		cf_make_aseprite_cache();
-		cf_make_png_cache();
 
 		// Load up a default image of 1x1 white pixel.
 		// Used in various places as a placeholder or default.
@@ -300,6 +298,9 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		// with a black background.
 		cf_apply_canvas(app->offscreen_canvas, true);
 	}
+
+	cf_make_aseprite_cache();
+	cf_make_png_cache();
 
 	if (!(options & APP_OPTIONS_NO_AUDIO)) {
 		int more_on_emscripten = 1;
@@ -352,8 +353,6 @@ void cf_destroy_app()
 	if (app->gfx_enabled) {
 		sg_end_pass();
 		cf_destroy_draw();
-		cf_destroy_aseprite_cache();
-		cf_destroy_png_cache();
 		cf_destroy_texture(app->backbuffer);
 		cf_destroy_canvas(app->offscreen_canvas);
 		cf_destroy_canvas(app->backbuffer_canvas);
@@ -365,6 +364,8 @@ void cf_destroy_app()
 		cf_dx11_shutdown();
 		cf_clear_graphics_static_pointers();
 	}
+	cf_destroy_aseprite_cache();
+	cf_destroy_png_cache();
 	// Mainly here to cleanup the default world, but, as a convenience we can just clean them all up.
 	for (int i = 0; i < app->worlds.count(); ++i) {
 		cf_destroy_world(app->worlds[i]);
