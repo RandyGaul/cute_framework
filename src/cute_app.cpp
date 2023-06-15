@@ -154,7 +154,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 #else
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC;
 	bool needs_video = options & (APP_OPTIONS_OPENGL_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_METAL_CONTEXT | APP_OPTIONS_DEFAULT_GFX_CONTEXT);
-	if (!needs_video) {
+	if (!needs_video || options & APP_OPTIONS_NO_GFX) {
 		sdl_options &= ~SDL_INIT_VIDEO;
 	}
 #endif
@@ -166,7 +166,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		return cf_result_error("SDL_Init failed");
 	}
 
-	if (options & APP_OPTIONS_DEFAULT_GFX_CONTEXT) {
+	if (options & APP_OPTIONS_DEFAULT_GFX_CONTEXT && !(options & APP_OPTIONS_NO_GFX)) {
 #ifdef CF_WINDOWS
 		options |= APP_OPTIONS_D3D11_CONTEXT;
 #elif CF_EMSCRIPTEN
@@ -231,7 +231,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	void* hwnd = NULL;
 #endif
 
-	if ((options & APP_OPTIONS_OPENGL_CONTEXT) | (options & APP_OPTIONS_OPENGLES_CONTEXT)) {
+	if ((options & APP_OPTIONS_OPENGL_CONTEXT) | (options & APP_OPTIONS_OPENGLES_CONTEXT) && !(options & APP_OPTIONS_NO_GFX)) {
 		SDL_GL_SetSwapInterval(app->vsync);
 		SDL_GLContext ctx = SDL_GL_CreateContext(window);
 		if (!ctx) {
@@ -247,7 +247,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		app->gfx_enabled = true;
 	}
 
-	if (options & APP_OPTIONS_D3D11_CONTEXT) {
+	if (options & APP_OPTIONS_D3D11_CONTEXT && !(options & APP_OPTIONS_NO_GFX)) {
 		cf_dx11_init(hwnd, w, h, 1);
 		app->gfx_ctx_params = cf_dx11_get_context();
 		sg_desc params = { };
@@ -256,7 +256,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		app->gfx_enabled = true;
 	}
 	
-	if (options & APP_OPTIONS_METAL_CONTEXT) {
+	if (options & APP_OPTIONS_METAL_CONTEXT && !(options & APP_OPTIONS_NO_GFX)) {
 		cf_metal_init(window, w, h, 1);
 		app->gfx_ctx_params = cf_metal_get_context();
 		sg_desc params = { };

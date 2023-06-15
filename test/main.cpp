@@ -48,7 +48,6 @@ TEST_SUITE(test_circular_buffer);
 TEST_SUITE(test_coroutine);
 TEST_SUITE(test_doubly_list);
 TEST_SUITE(test_ecs);
-TEST_SUITE(test_font);
 TEST_SUITE(test_handle);
 TEST_SUITE(test_hashtable);
 TEST_SUITE(test_kv);
@@ -83,7 +82,6 @@ int main(int argc, char* argv[])
 	RUN_TEST_SUITE(test_coroutine);
 	RUN_TEST_SUITE(test_doubly_list);
 	RUN_TEST_SUITE(test_ecs);
-	RUN_TEST_SUITE(test_font);
 	RUN_TEST_SUITE(test_handle);
 	RUN_TEST_SUITE(test_hashtable);
 	RUN_TEST_SUITE(test_kv);

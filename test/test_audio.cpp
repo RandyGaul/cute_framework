@@ -27,17 +27,18 @@
 
 using namespace Cute;
 
+#include "thingy.h"
+#include "jump.h"
+
 /* Load and free wav/ogg files synchronously. */
 TEST_CASE(test_audio_load_synchronous)
 {
-	REQUIRE(!cf_is_error(cf_make_app("UNIT TEST", 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL)));
-	//CF_Audio* audio = cf_audio_load_ogg("test_data/3-6-19-blue-suit-jam.ogg");
-	//CF_TEST_CHECK_POINTER(audio);
-	//cf_audio_destroy(audio);
-	//audio = cf_audio_load_wav("test_data/jump.wav");
-	//CF_TEST_CHECK_POINTER(audio);
-	//cf_audio_destroy(audio);
-	cf_destroy_app();
+	CF_Audio audio = cf_audio_load_ogg_from_memory(thingy_data, thingy_sz);
+	REQUIRE(audio.id);
+	cf_audio_destroy(audio);
+	audio = cf_audio_load_wav_from_memory(jump_data, jump_sz);
+	cf_audio_destroy(audio);
+	cf_audio_destroy(audio);
 
 	return true;
 }

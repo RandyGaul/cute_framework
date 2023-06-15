@@ -68,18 +68,20 @@ typedef struct sg_image sg_image;
 	CF_ENUM(APP_OPTIONS_METAL_CONTEXT,                  1 << 3)  \
 	/* @entry Picks a good default graphics context for the given platform. */ \
 	CF_ENUM(APP_OPTIONS_DEFAULT_GFX_CONTEXT,            1 << 4)  \
+	/* @entry Does not initialize any graphics backend at all (for servers or headless mode). */ \
+	CF_ENUM(APP_OPTIONS_NO_GFX,                         1 << 5)  \
 	/* @entry Starts the application in borderless full-screen mode. */ \
-	CF_ENUM(APP_OPTIONS_FULLSCREEN,                     1 << 5)  \
+	CF_ENUM(APP_OPTIONS_FULLSCREEN,                     1 << 6)  \
 	/* @entry Allows the window to be resized. */                \
-	CF_ENUM(APP_OPTIONS_RESIZABLE,                      1 << 6)  \
+	CF_ENUM(APP_OPTIONS_RESIZABLE,                      1 << 7)  \
 	/* @entry Starts the application with the window hidden. */  \
-	CF_ENUM(APP_OPTIONS_HIDDEN,                         1 << 7)  \
+	CF_ENUM(APP_OPTIONS_HIDDEN,                         1 << 8)  \
 	/* @entry Starts the application with the window centered on the screen. */ \
-	CF_ENUM(APP_OPTIONS_WINDOW_POS_CENTERED,            1 << 8)  \
+	CF_ENUM(APP_OPTIONS_WINDOW_POS_CENTERED,            1 << 9)  \
 	/* @entry Disables automatically mounting the folder the executable runs from to "/". See `cf_fs_mount` for more details. */ \
-	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT, 1 << 9)  \
+	CF_ENUM(APP_OPTIONS_FILE_SYSTEM_DONT_DEFAULT_MOUNT, 1 << 10)  \
 	/* @entry Starts the application with no audio. */           \
-	CF_ENUM(APP_OPTIONS_NO_AUDIO,                       1 << 10) \
+	CF_ENUM(APP_OPTIONS_NO_AUDIO,                       1 << 11) \
 	/* @end */
 
 enum

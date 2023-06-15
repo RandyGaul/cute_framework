@@ -27,6 +27,7 @@
 #include <cute/cute_aseprite.h>
 
 CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite_out);
+CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void* data, int sz, CF_Sprite* sprite_out);
 void cf_aseprite_cache_unload(const char* aseprite_path);
 CF_Result cf_aseprite_cache_load_ase(const char* aseprite_path, ase_t** ase);
 

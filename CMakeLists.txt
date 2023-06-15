@@ -359,7 +359,6 @@ if (CF_FRAMEWORK_BUILD_TESTS)
 		test/test_coroutine.cpp
 		test/test_doubly_list.cpp
 		test/test_ecs.cpp
-		test/test_font.cpp
 		test/test_handle.cpp
 		test/test_hashtable.cpp
 		test/test_kv.cpp

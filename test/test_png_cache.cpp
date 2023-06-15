@@ -27,6 +27,9 @@ using namespace Cute;
 
 #include <internal/cute_png_cache_internal.h>
 
+#include "white_pixel.h"
+#include "black_pixel.h"
+
 /* Test all functions of the png caching API. */
 TEST_CASE(test_png_cache_all)
 {
@@ -37,9 +40,9 @@ TEST_CASE(test_png_cache_all)
 
 	CF_Png white;
 	CF_Png black;
-	CF_Result err = cf_png_cache_load("test_data/white_pixel.png", &white);
+	CF_Result err = cf_png_cache_load_mem("test_data/white_pixel.png", white_pixel_data, white_pixel_sz, &white);
 	REQUIRE(!cf_is_error(err));
-	err = cf_png_cache_load("test_data/black_pixel.png", &black);
+	err = cf_png_cache_load_mem("test_data/black_pixel.png", black_pixel_data, black_pixel_sz, &black);
 	REQUIRE(!cf_is_error(err));
 
 	CF_Png blink_png[] = { white, black };

@@ -135,7 +135,7 @@ void update_test_octorok_buddy_counter_system(CF_ComponentList component_list, i
 /* Run ECS with a mock Octorok entity. */
 TEST_CASE(test_ecs_octorok)
 {
-	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL)));
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_NO_AUDIO | APP_OPTIONS_NO_GFX, NULL)));
 
 	// Register component types.
 	cf_component_begin();
@@ -233,7 +233,7 @@ void update_dummy_system(CF_ComponentList component_list, int count, void* udata
 /* Very rudimentary test of the ECS. */
 TEST_CASE(test_ecs_basic)
 {
-	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL)));
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_NO_AUDIO | APP_OPTIONS_NO_GFX, NULL)));
 
 	cf_component_begin();
 	cf_component_set_name("DummyComponent");
@@ -267,7 +267,7 @@ TEST_CASE(test_ecs_basic)
 /* Tests out ECS the activate/deactivate API. */
 TEST_CASE(test_ecs_activation)
 {
-	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL)));
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_NO_AUDIO | APP_OPTIONS_NO_GFX, NULL)));
 
 	cf_component_begin();
 	cf_component_set_name("DummyComponent");
@@ -398,7 +398,7 @@ void dummy2_initialize(CF_Entity entity, void* component, void* udata)
 /* Change an entity from one type to another. */
 TEST_CASE(test_ecs_change_entity_type)
 {
-	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN, NULL)));
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_NO_AUDIO | APP_OPTIONS_NO_GFX, NULL)));
 
 	cf_component_begin();
 	cf_component_set_name("DummyComponent");

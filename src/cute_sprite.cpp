@@ -85,6 +85,18 @@ CF_Sprite cf_make_sprite(const char* aseprite_path)
 	return s;
 }
 
+CF_Sprite cf_make_sprite_from_memory(const char* unique_name, const void* aseprite_data, int size)
+{
+	CF_Sprite s = cf_sprite_defaults();
+	CF_Result err = cf_aseprite_cache_load_from_memory(unique_name, aseprite_data, size, &s);
+	char buf[1024];
+	if (cf_is_error(err)) {
+		sprintf(buf, "Unable to load sprite from memory with name \"%s\".\n", aseprite_data);
+		cf_message_box(CF_MESSAGE_BOX_TYPE_ERROR, "ERROR", buf);
+	}
+	return s;
+}
+
 void cf_sprite_unload(const char* aseprite_path)
 {
 	cf_aseprite_cache_unload(aseprite_path);
