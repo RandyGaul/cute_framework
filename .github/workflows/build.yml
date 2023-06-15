@@ -31,10 +31,11 @@ jobs:
 
       # Linux needs to install OpenGL dependencies.
       # This could potentially be removed by using SOKOL_EXTERNAL_GL_LOADER.
-      - name: Install OpenGL
+      - name: Install OpenGL + Audio
         run: |
           sudo apt-get update -qq
           sudo apt-get install gcc-multilib
+          sudo apt-get install libasound2-dev libpulse-dev
           sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
         if: matrix.platform.name == 'Linux'
 
@@ -55,7 +56,7 @@ jobs:
         if: matrix.platform.name == 'Windows (MSCV 17 2022)'
       
       # Run tests for MSVC 17
-      - name: Run Tests
+      - name: Run Tests for MSVC 17
         shell: cmd
         run: |
           cd build_folder\Release
@@ -64,7 +65,7 @@ jobs:
         if: matrix.platform.name == 'Windows (MSCV 17 2022)'
       
       # Run tests for MinGW (no Release folder)
-      - name: Run Tests
+      - name: Run Tests for MinGW
         shell: cmd
         run: |
           cd build_folder
@@ -72,14 +73,14 @@ jobs:
           cd ..
         if: matrix.platform.name == 'Windows (MinGW)'
       
-      - name: Run Tests
+      - name: Run Tests for Apple
         run: |
           cd build_folder
           ./tests
           cd ..
         if: runner.os == 'macOS'
       
-      - name: Run Tests
+      - name: Run Tests for Linux
         run: |
           cd build_folder
           ./tests
