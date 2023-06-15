@@ -1,6 +1,10 @@
 #include <cute.h>
 using namespace Cute;
 
+#include "proggy.h"
+#include "sample_text.h"
+#include "calibri.h"
+
 int main(int argc, char* argv[])
 {
 	int options = APP_OPTIONS_DEFAULT_GFX_CONTEXT | APP_OPTIONS_WINDOW_POS_CENTERED | APP_OPTIONS_RESIZABLE;
@@ -8,14 +12,13 @@ int main(int argc, char* argv[])
 	if (is_error(result)) return -1;
 
 	draw_push_antialias(true);
-	make_font("sample_data/ProggyClean.ttf", "ProggyClean");
+	make_font_mem(proggy_data, proggy_sz, "ProggyClean");
 	push_font("ProggyClean");
-	make_font("sample_data/calibri.ttf", "calibri");
+	make_font_mem(calibri_data, calibri_sz, "calibri");
 	set_fixed_timestep();
 	int draw_calls = 0;
 
-	char* sample = fs_read_entire_file_to_memory_and_nul_terminate("sample_data/sample.txt");
-	CF_DEFER(cf_free(sample));
+	const char* sample = (const char*)sample_text_data;
 
 	while (app_is_running()) {
 		app_update();
@@ -56,7 +59,7 @@ int main(int argc, char* argv[])
 		draw_text("Some bigger and blue text.", V2(-100,150));
 		draw_pop_color();
 		pop_font_size();
-		
+
 		// Using font blurring for a glowing effect.
 		push_font_size(13 * 5);
 		push_font_blur(10);
@@ -64,7 +67,7 @@ int main(int argc, char* argv[])
 		pop_font_blur();
 		draw_text("<fade>glowing~</fade>", V2(-200,-90));
 		pop_font_size();
-		
+
 		// Using font blurring for a shadow effect.
 		push_font_size(13 * 5);
 		push_font_blur(10);

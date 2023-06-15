@@ -24,7 +24,7 @@
 #include <cute.h>
 using namespace Cute;
 
-#include "girl.h"
+#include <internal/cute_girl.h>
 
 /* Load a sprite destroy it. */
 TEST_CASE(test_make_sprite)

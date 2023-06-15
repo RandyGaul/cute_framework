@@ -265,6 +265,9 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		app->gfx_enabled = true;
 	}
 
+	cf_make_aseprite_cache();
+	cf_make_png_cache();
+
 	if (app->gfx_enabled) {
 		{
 			app->backbuffer_quad = cf_make_mesh(CF_USAGE_TYPE_IMMUTABLE, sizeof(Vertex) * 6, 0, 0);
@@ -298,9 +301,6 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		// with a black background.
 		cf_apply_canvas(app->offscreen_canvas, true);
 	}
-
-	cf_make_aseprite_cache();
-	cf_make_png_cache();
 
 	if (!(options & APP_OPTIONS_NO_AUDIO)) {
 		int more_on_emscripten = 1;

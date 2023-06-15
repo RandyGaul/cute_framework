@@ -230,7 +230,7 @@ CF_API void CF_CALL cf_easy_sprite_update_pixels(CF_Sprite* sprite, const CF_Pix
 CF_API CF_Sprite CF_CALL cf_make_sprite(const char* aseprite_path);
 
 /**
- * @function cf_make_sprite
+ * @function cf_make_sprite_from_memory
  * @category sprite
  * @brief    Loads a sprite from an aseprite file already in memory.
  * @param    unique_name   A completely unique string from all other sprites.
@@ -242,6 +242,15 @@ CF_API CF_Sprite CF_CALL cf_make_sprite(const char* aseprite_path);
  * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels
  */
 CF_API CF_Sprite CF_CALL cf_make_sprite_from_memory(const char* unique_name, const void* aseprite_data, int size);
+
+/**
+ * @function cf_make_demo_sprite
+ * @category sprite
+ * @brief    Loads a pixel sprite of a girl, used for testing/learning purposes.
+ * @return   The sprite contains a few animations called "up", "side", "hold_down", "hold_side", "hold_up", "idle" you may try out.
+ * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels
+ */
+CF_API CF_Sprite CF_CALL cf_make_demo_sprite();
 
 /**
  * @function cf_sprite_unload

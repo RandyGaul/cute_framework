@@ -31,7 +31,7 @@ using namespace Cute;
 
 #include <internal/cute_aseprite_cache_internal.h>
 
-#include "girl.h"
+#include <internal/cute_girl.h>
 
 /* Load an aseprite file and destroy it. */
 TEST_CASE(test_aseprite_make_destroy)
