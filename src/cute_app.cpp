@@ -154,7 +154,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 #else
 	Uint32 sdl_options = SDL_INIT_EVENTS | SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER | SDL_INIT_HAPTIC;
 	bool needs_video = options & (APP_OPTIONS_OPENGL_CONTEXT | APP_OPTIONS_OPENGLES_CONTEXT | APP_OPTIONS_D3D11_CONTEXT | APP_OPTIONS_METAL_CONTEXT | APP_OPTIONS_DEFAULT_GFX_CONTEXT);
-	if (!needs_video) {
+	if (!needs_video || options & APP_OPTIONS_NO_GFX) {
 		sdl_options &= ~SDL_INIT_VIDEO;
 	}
 #endif
@@ -166,7 +166,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		return cf_result_error("SDL_Init failed");
 	}
 
-	if (options & APP_OPTIONS_DEFAULT_GFX_CONTEXT) {
+	if (options & APP_OPTIONS_DEFAULT_GFX_CONTEXT && !(options & APP_OPTIONS_NO_GFX)) {
 #ifdef CF_WINDOWS
 		options |= APP_OPTIONS_D3D11_CONTEXT;
 #elif CF_EMSCRIPTEN
@@ -231,7 +231,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 	void* hwnd = NULL;
 #endif
 
-	if ((options & APP_OPTIONS_OPENGL_CONTEXT) | (options & APP_OPTIONS_OPENGLES_CONTEXT)) {
+	if ((options & APP_OPTIONS_OPENGL_CONTEXT) | (options & APP_OPTIONS_OPENGLES_CONTEXT) && !(options & APP_OPTIONS_NO_GFX)) {
 		SDL_GL_SetSwapInterval(app->vsync);
 		SDL_GLContext ctx = SDL_GL_CreateContext(window);
 		if (!ctx) {
@@ -247,7 +247,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		app->gfx_enabled = true;
 	}
 
-	if (options & APP_OPTIONS_D3D11_CONTEXT) {
+	if (options & APP_OPTIONS_D3D11_CONTEXT && !(options & APP_OPTIONS_NO_GFX)) {
 		cf_dx11_init(hwnd, w, h, 1);
 		app->gfx_ctx_params = cf_dx11_get_context();
 		sg_desc params = { };
@@ -256,7 +256,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		app->gfx_enabled = true;
 	}
 	
-	if (options & APP_OPTIONS_METAL_CONTEXT) {
+	if (options & APP_OPTIONS_METAL_CONTEXT && !(options & APP_OPTIONS_NO_GFX)) {
 		cf_metal_init(window, w, h, 1);
 		app->gfx_ctx_params = cf_metal_get_context();
 		sg_desc params = { };
@@ -264,6 +264,9 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		sg_setup(params);
 		app->gfx_enabled = true;
 	}
+
+	cf_make_aseprite_cache();
+	cf_make_png_cache();
 
 	if (app->gfx_enabled) {
 		{
@@ -286,8 +289,6 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		}
 		s_canvas(app->w, app->h);
 		cf_make_draw();
-		cf_make_aseprite_cache();
-		cf_make_png_cache();
 
 		// Load up a default image of 1x1 white pixel.
 		// Used in various places as a placeholder or default.
@@ -352,8 +353,6 @@ void cf_destroy_app()
 	if (app->gfx_enabled) {
 		sg_end_pass();
 		cf_destroy_draw();
-		cf_destroy_aseprite_cache();
-		cf_destroy_png_cache();
 		cf_destroy_texture(app->backbuffer);
 		cf_destroy_canvas(app->offscreen_canvas);
 		cf_destroy_canvas(app->backbuffer_canvas);
@@ -365,6 +364,8 @@ void cf_destroy_app()
 		cf_dx11_shutdown();
 		cf_clear_graphics_static_pointers();
 	}
+	cf_destroy_aseprite_cache();
+	cf_destroy_png_cache();
 	// Mainly here to cleanup the default world, but, as a convenience we can just clean them all up.
 	for (int i = 0; i < app->worlds.count(); ++i) {
 		cf_destroy_world(app->worlds[i]);

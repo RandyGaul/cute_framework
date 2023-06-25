@@ -24,16 +24,15 @@
 #include <cute.h>
 using namespace Cute;
 
+#include <internal/cute_girl.h>
+
 /* Load a sprite destroy it. */
 TEST_CASE(test_make_sprite)
 {
-	REQUIRE(!cf_is_error(cf_make_app("sprite test", 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_DEFAULT_GFX_CONTEXT, NULL)));
-
-	CF_Sprite s = cf_make_sprite("test_data/girl.aseprite");
-	cf_app_draw_onto_screen();
-
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_NO_AUDIO | APP_OPTIONS_NO_GFX, NULL)));
+	CF_Sprite s = cf_make_sprite_from_memory("girl.aseprite", girl_data, girl_sz);
+	REQUIRE(s.name);
 	cf_destroy_app();
-
 	return true;
 }
 

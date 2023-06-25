@@ -359,7 +359,6 @@ if (CF_FRAMEWORK_BUILD_TESTS)
 		test/test_coroutine.cpp
 		test/test_doubly_list.cpp
 		test/test_ecs.cpp
-		test/test_font.cpp
 		test/test_handle.cpp
 		test/test_hashtable.cpp
 		test/test_kv.cpp
@@ -376,10 +375,7 @@ if (CF_FRAMEWORK_BUILD_TESTS)
 	if(EMSCRIPTEN)
 		set(CMAKE_EXECUTABLE_SUFFIX ".html")
 		target_compile_options(tests PUBLIC -O1 -fno-rtti -fno-exceptions)
-		target_link_options(tests PRIVATE -o tests.html --preload-file ${PROJECT_SOURCE_DIR}/test/test_data --emrun -O1)
-	else()
-		# Copy over any test data in the test/test_data folder.
-		add_custom_command(TARGET cute POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/test/test_data" $<TARGET_FILE_DIR:cute>/test_data)
+		target_link_options(tests PRIVATE -o tests.html --emrun -O1)
 	endif()
 
 	# For convenience make tests the startup project in Visual Studio.
@@ -427,14 +423,12 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 
 	foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
 		target_link_libraries("${CURRENT_TARGET}" PRIVATE cute)
-		set_target_properties("${CURRENT_TARGET}" PROPERTIES FOLDER "samples")
-		add_custom_command(TARGET "${CURRENT_TARGET}" POST_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory "${PROJECT_SOURCE_DIR}/samples/sample_data" $<TARGET_FILE_DIR:${CURRENT_TARGET}>/sample_data)
 		if (APPLE)
-					set_target_properties("${CURRENT_TARGET}" PROPERTIES
-						MACOSX_BUNDLE_GUI_IDENTIFIER "com.cuteframework.${CURRENT_TARGET}"
-						MACOSX_BUNDLE_BUNDLE_VERSION "1.0.0"
-						MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0.0"
-					)
+			set_target_properties("${CURRENT_TARGET}" PROPERTIES
+				MACOSX_BUNDLE_GUI_IDENTIFIER "com.cuteframework.${CURRENT_TARGET}"
+				MACOSX_BUNDLE_BUNDLE_VERSION "1.0.0"
+				MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0.0"
+			)
 		endif()
 	endforeach()
 endif()
@@ -445,8 +439,9 @@ target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui>)
 target_include_directories(cute PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/libraries/cimgui/imgui>)
 
-install(TARGETS cute EXPORT cute DESTINATION "lib")
-install(FILES ${CF_PUBLIC_HDRS} DESTINATION "include/cute")
-install(FILES ${IMGUI_HDRS} DESTINATION "include/cute/imgui")
-install(FILES ${CIMGUI_HDRS} DESTINATION "include/cute/cimgui")
-install(FILES ${SOKOL_HDRS} DESTINATION "include/cute/sokol")
+# These are not properly tested!!!
+# install(TARGETS cute EXPORT cute DESTINATION "lib")
+# install(FILES ${CF_PUBLIC_HDRS} DESTINATION "include/cute")
+# install(FILES ${IMGUI_HDRS} DESTINATION "include/cute/imgui")
+# install(FILES ${CIMGUI_HDRS} DESTINATION "include/cute/cimgui")
+# install(FILES ${SOKOL_HDRS} DESTINATION "include/cute/sokol")

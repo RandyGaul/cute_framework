@@ -24,17 +24,18 @@ jobs:
           - { name: "Windows (MSCV 17 2022)",  os: windows-latest, artifact: 'mscv17',  generate: '-G "Visual Studio 17 2022" -A x64 -DCMAKE_BUILD_TYPE=Release' }
           - { name: "MacOS",                   os: macos-latest,   artifact: 'macos',   generate: '-G "Unix Makefiles"' }
           - { name: "Linux",                   os: ubuntu-latest,  artifact: 'linux',   generate: '-G "Unix Makefiles"' }
-          # TODO - Add iOS and Android platforms.
+          # TODO - Add iOS and Android platforms. Waiting on better support from GitHub.
 
     steps:
       - uses: actions/checkout@master
 
       # Linux needs to install OpenGL dependencies.
       # This could potentially be removed by using SOKOL_EXTERNAL_GL_LOADER.
-      - name: Install OpenGL
+      - name: Install OpenGL + Audio
         run: |
           sudo apt-get update -qq
           sudo apt-get install gcc-multilib
+          sudo apt-get install libasound2-dev libpulse-dev
           sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
         if: matrix.platform.name == 'Linux'
 
@@ -53,6 +54,38 @@ jobs:
         run: |
           cmake --build build_folder --config Release
         if: matrix.platform.name == 'Windows (MSCV 17 2022)'
+      
+      # Run tests for MSVC 17
+      - name: Run Tests for MSVC 17
+        shell: cmd
+        run: |
+          cd build_folder\Release
+          tests.exe
+          cd ..\..
+        if: matrix.platform.name == 'Windows (MSCV 17 2022)'
+      
+      # Run tests for MinGW (no Release folder)
+      - name: Run Tests for MinGW
+        shell: cmd
+        run: |
+          cd build_folder
+          tests.exe
+          cd ..
+        if: matrix.platform.name == 'Windows (MinGW)'
+      
+      - name: Run Tests for Apple
+        run: |
+          cd build_folder
+          ./tests
+          cd ..
+        if: runner.os == 'macOS'
+      
+      - name: Run Tests for Linux
+        run: |
+          cd build_folder
+          ./tests
+          cd ..
+        if: runner.os == 'Linux'
 
       # Just call robocopy twice, one looking for libcute.a for MinGW, and one
       # looking for cute.lib for MSCV. robocopy doesn't trigger a build failure for

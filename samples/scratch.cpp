@@ -3,6 +3,8 @@ using namespace Cute;
 
 #include <imgui.h>
 
+#include "calibri.h"
+
 int main(int argc, char* argv[])
 {
 	int w = 640/1;
@@ -13,15 +15,15 @@ int main(int argc, char* argv[])
 
 	app_init_imgui();
 
-	make_font("sample_data/calibri.ttf", "Calibri");
+	make_font_mem(calibri_data, calibri_sz, "calibri");
 	push_font("Calibri");
 
 	int draw_calls = 0;
 
-	Sprite s = cf_make_sprite("test_data/girl.aseprite");
+	Sprite s = cf_make_demo_sprite();
 	s.scale.x = 2.0f;
 	s.scale.y = 2.0f;
-	s.play("spin");
+	s.play("idle");
 
 	draw_push_antialias(false);
 	Color c = color_white();

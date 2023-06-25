@@ -94,8 +94,8 @@ int main(int argc, char* argv[])
 	Result result = make_app("Basic Sprite", 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;
 
-	Sprite girl_sprite = cf_make_sprite("girl.aseprite");
-	girl_sprite.play("spin");
+	Sprite girl_sprite = cf_make_demo_sprite();
+	girl_sprite.play("idle");
 	girl_sprite.scale = V2(4,4);
 
 	while (app_is_running()) {
@@ -117,7 +117,7 @@ int main(int argc, char* argv[])
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/basic_sprite.gif?raw=true>
 </p>
 
-The girl sprite in the above sample code contains a few different animations, such as "spin", "hold_side", "ladder", and "idle". Feel free to try them out!
+The girl sprite in the above sample code contains a few different animations, such as "up" "side", "hold_side", "ladder", and "idle". Feel free to try them out! The above gif shows the girl sprite spinning -- this animation was removed to reduced the sprite's file size (so you unfortunately can't try spinning out).
 
 ---
 

@@ -7,8 +7,8 @@ int main(int argc, char* argv[])
 	Result result = make_app("Tint Demo", 0, 0, 640, 480, options, argv[0]);
 	if (is_error(result)) return -1;
 
-	Sprite s = cf_make_sprite("test_data/girl.aseprite");
-	s.play("spin");
+	Sprite s = cf_make_demo_sprite();
+	s.play("idle");
 
 	camera_dimensions(640/4, 480/4);
 	draw_push_color(make_color(0xeba48bff));

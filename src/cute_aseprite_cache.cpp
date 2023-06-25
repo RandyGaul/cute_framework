@@ -110,21 +110,8 @@ static void s_sprite(CF_AsepriteCacheEntry entry, CF_Sprite* sprite)
 	}
 }
 
-CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite)
+CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void* data, int sz, CF_Sprite* sprite_out)
 {
-	// First see if this ase was already cached.
-	aseprite_path = sintern(aseprite_path);
-	auto entry_ptr = cache->aseprites.try_find(aseprite_path);
-	if (entry_ptr) {
-		s_sprite(*entry_ptr, sprite);
-		return cf_result_success();
-	}
-
-	// Load the aseprite file.
-	size_t sz = 0;
-	void* data = cf_fs_read_entire_file_to_memory(aseprite_path, &sz);
-	if (!data) return cf_result_error("Unable to open ase file at `aseprite_path`.");
-	CF_DEFER(CF_FREE(data));
 	ase_t* ase = cute_aseprite_load_from_memory(data, (int)sz, NULL);
 	if (!ase) return cf_result_error("Unable to open ase file at `aseprite_path`.");
 
@@ -215,13 +202,32 @@ CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite)
 	}
 
 	// Cache the ase and animation.
-	entry.path = aseprite_path;
+	entry.path = unique_name;
 	entry.ase = ase;
 	entry.animations = animations;
-	cache->aseprites.insert(aseprite_path, entry);
+	cache->aseprites.insert(unique_name, entry);
 
-	s_sprite(entry, sprite);
+	s_sprite(entry, sprite_out);
 	return cf_result_success();
+}
+
+CF_Result cf_aseprite_cache_load(const char* aseprite_path, CF_Sprite* sprite)
+{
+	// First see if this ase was already cached.
+	aseprite_path = sintern(aseprite_path);
+	auto entry_ptr = cache->aseprites.try_find(aseprite_path);
+	if (entry_ptr) {
+		s_sprite(*entry_ptr, sprite);
+		return cf_result_success();
+	}
+
+	// Load the aseprite file.
+	size_t sz = 0;
+	void* data = cf_fs_read_entire_file_to_memory(aseprite_path, &sz);
+	if (!data) return cf_result_error("Unable to open ase file at `aseprite_path`.");
+	CF_DEFER(CF_FREE(data));
+
+	return cf_aseprite_cache_load_from_memory(aseprite_path, data, (int)sz, sprite);
 }
 
 void cf_aseprite_cache_unload(const char* aseprite_path)
