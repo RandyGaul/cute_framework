@@ -21,7 +21,7 @@
 
 #include <cute_networking.h>
 
-#define CF_NET_IMPLEMENTATION
+#define CUTE_NET_IMPLEMENTATION
 #include <cute/cute_net.h>
 
 static CF_INLINE CF_Result cf_wrap(cn_result_t cn_result)
