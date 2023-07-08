@@ -336,10 +336,12 @@ uint64_t cf_stohex(const char* s)
 {
 	if (!CF_STRNCMP(s, "#", 1)) s += 1;
 	if (!CF_STRNCMP(s, "0x", 2)) s += 2;
+	int len = CF_STRLEN(s);
+	if (len != 6 && len != 8) return 0;
 	char* end;
 	uint64_t result = CF_STRTOLL(s, &end, 16);
-	CF_ASSERT(end == s + CF_STRLEN(s));
-	return result;
+	CF_ASSERT(end == s + len);
+	return len == 6 ? ((result << 16) | 0xFF) : result;
 }
 
 char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
