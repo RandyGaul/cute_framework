@@ -405,8 +405,6 @@ static void s_on_update(void* udata)
 
 void cf_app_update(CF_OnUpdateFn* on_update)
 {
-	app->user_on_update = on_update;
-	cf_update_time(s_on_update);
 	if (app->gfx_enabled) {
 		if (app->using_imgui) {
 			simgui_frame_desc_t desc = { };
@@ -418,6 +416,8 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 			simgui_new_frame(&desc);
 		}
 	}
+	app->user_on_update = on_update;
+	cf_update_time(s_on_update);
 }
 
 static void s_imgui_present()
