@@ -153,7 +153,7 @@ Path path = "/content/my_file.txt";
 
 There are a variety of helpful member functions on the path helper, such as checking if a path is a folder or file:
 
-```
+```cpp
 Path path = "/content/my_file.txt";
 if (path.is_directory()) {
 	// ...
@@ -164,7 +164,7 @@ if (path.is_directory()) {
 
 It's easy to pop files or directories off the end of the path:
 
-```
+```cpp
 Path path = "/content/my_file.txt";
 path.pop(1);              // Path is now "/content"."
 path += "other_file.txt"; // Path is now "/content/other_file.txt".
@@ -173,7 +173,7 @@ path += "other_file.txt"; // Path is now "/content/other_file.txt".
 
 You may also check if a path is a file or directory without creating a `Path` instance using some static functions:
 
-```
+```cpp
 // Check if path is a directory.
 if (Path::is_directory("/content/areas")) {
 	// ...
@@ -187,7 +187,7 @@ if (Path::is_file("/content/areas/area1.txt")) {
 
 Similarly a `Directory` helper class exists to easily enumerate files in a directory.
 
-```
+```cpp
 // Print all files in a directory.
 Directory dir = Directory::open("/content/areas");
 for (const char* file = dir.next(); file; file = dir.next()) {

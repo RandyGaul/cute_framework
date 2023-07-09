@@ -139,7 +139,7 @@ CF_INLINE CF_Color cf_make_color_rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a
  * @remarks  The opacity of the output color is set to 0xFF (fully opaque). Will assert if the value is greater than 0xFFFFFF.
  * @related  CF_Color cf_make_color_rgb_f cf_make_color_rgba_f cf_make_color_rgb cf_make_color_rgba cf_make_color_hex cf_make_color_hex_string
  */
-CF_INLINE CF_Color cf_make_color_hex(int hex) { CF_ASSERT(hex & 0xFF000000 == 0); return cf_make_color_rgba((uint8_t)((hex & 0xFF0000) >> 16), (uint8_t)((hex & 0x00FF00) >> 8), (uint8_t)(hex & 0x0000FF), 0xFF); }
+CF_INLINE CF_Color cf_make_color_hex(int hex) { CF_ASSERT((hex & 0xFF000000) == 0); return cf_make_color_rgba((uint8_t)((hex & 0xFF0000) >> 16), (uint8_t)((hex & 0x00FF00) >> 8), (uint8_t)(hex & 0x0000FF), 0xFF); }
 
 /**
  * @function cf_make_color_hex2
@@ -588,7 +588,7 @@ CF_INLINE CF_Pixel cf_pixel_premultiply(CF_Pixel c) { c.colors.r = cf_mul_un8(c.
  * @return   Returns a `CF_Color` (0.0f-1.0f) converted from pixel form (0-255).
  * @related  cf_pixel_to_color cf_pixel_to_int_rgba cf_pixel_to_int_rgb cf_pixel_to_string
  */
-CF_INLINE CF_Color cf_pixel_to_color(CF_Pixel p) { return cf_make_color_hex((int)p.val); }
+CF_INLINE CF_Color cf_pixel_to_color(CF_Pixel p) { return cf_make_color_hex2((int)p.val & 0xFFFFFF, ((int)p.val & 0xFF000000) >> 24); }
 
 /**
  * @function cf_pixel_to_int_rgb

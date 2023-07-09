@@ -29,7 +29,6 @@ int main(int argc, char* argv[])
 
 	while (app_is_running()) {
 		app_update();
-/Users/randygaul/Documents/GitHub/cute_framework/docs/index.html
 		t += DELTA_TIME;
 
 		float radius = 100.0f;
