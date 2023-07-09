@@ -180,9 +180,9 @@ TEST_CASE(test_string_macros_advanced)
 	REQUIRE(sfirst_index_of(a, '3') == 3);
 	REQUIRE(slast_index_of(a, '3') == 4);
 	REQUIRE(slast_index_of(a, '0') == 5);
-	sset(a, "0xbadf00d");
-	REQUIRE(stohex(a) == 0xbadf00d);
-	shex(b, 0xbadf00d);
+	sset(a, "0xbaadf00d");
+	REQUIRE(stohex(a) == 0xbaadf00d);
+	shex(b, 0xbaadf00d);
 	REQUIRE(sequ(a, b));
 	sset(a, "hi hi hi");
 	sreplace(a, "hi", "oof");
