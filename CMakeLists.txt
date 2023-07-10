@@ -300,6 +300,11 @@ if(LINUX)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} s2n)
 endif()
 
+# MinGW needs these since gcc ignores pragma links in C/C++.
+if(WINDOWS AND NOT MSVC)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} ws2_32 secur32 shlwapi)
+endif()
+
 # SDL2 for platform support.
 # Just don't build the shared library at all, it's not needed.
 set(SDL_SHARED_ENABLED_BY_DEFAULT OFF)

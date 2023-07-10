@@ -321,7 +321,7 @@ int tls_send(TLS_Connection connection, const void* data, int size);
 #	include <shlwapi.h>
 #	include <assert.h>
 #	include <stdio.h>
-	
+
 #	pragma comment (lib, "ws2_32.lib")
 #	pragma comment (lib, "secur32.lib")
 #	pragma comment (lib, "shlwapi.lib")
