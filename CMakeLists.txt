@@ -126,6 +126,7 @@ set(CF_SRCS
 if(APPLE)
 	set(CF_SRCS ${CF_SRCS}
 		src/internal/cute_metal.mm
+		src/internal/cute_tls.m
 	)
 else()
 	set(CF_SRCS ${CF_SRCS}

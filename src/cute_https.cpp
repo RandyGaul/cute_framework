@@ -30,7 +30,10 @@
 
 #include <SDL.h>
 
-#define CUTE_TLS_IMPLEMENTATION
+#ifndef CF_APPLE
+#	define CUTE_TLS_IMPLEMENTATION
+	// .m file is used to compile this on apple.
+#endif
 #include <cute/cute_tls.h>
 
 using namespace Cute;
