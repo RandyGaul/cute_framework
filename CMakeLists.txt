@@ -294,6 +294,7 @@ if(LINUX)
 	fetch_content_with_folder(
 		s2n
 		GIT_REPOSITORY https://github.com/aws/s2n-tls
+		GIT_TAG v1.3.46
 		GIT_PROGRESS TRUE
 	)
 	set(CF_LINK_LIBS ${CF_LINK_LIBS} AWS::s2n)
