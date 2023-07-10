@@ -297,7 +297,7 @@ if(LINUX)
 		GIT_TAG v1.3.46
 		GIT_PROGRESS TRUE
 	)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} AWS::s2n)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} s2n)
 endif()
 
 # SDL2 for platform support.
