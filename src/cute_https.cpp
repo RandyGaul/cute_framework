@@ -33,8 +33,12 @@
 #ifndef CF_APPLE
 #	define CUTE_TLS_IMPLEMENTATION
 	// .m file is used to compile this on apple.
+#	include <cute/cute_tls.h>
+#else
+extern "C" {
+#	include <cute/cute_tls.h>
+}
 #endif
-#include <cute/cute_tls.h>
 
 using namespace Cute;
 

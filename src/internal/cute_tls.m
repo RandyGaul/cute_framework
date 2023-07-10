@@ -20,6 +20,4 @@
 */
 
 #define CUTE_TLS_IMPLEMENTATION
-extern "C" {
 #include <cute/cute_tls.h>
-}
