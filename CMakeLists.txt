@@ -289,18 +289,15 @@ endif()
 add_library(physfs STATIC ${PHYSFS_SRCS})
 set(CF_LINK_LIBS ${CF_LINK_LIBS} physfs)
 
-# TODO - Change this to s2n for Linux.
-#if(CF_FRAMEWORK_WITH_HTTPS)
-#	option(ENABLE_PROGRAMS "Build mbed TLS programs." OFF)
-#	option(ENABLE_TESTING "Build mbed TLS tests." OFF)
-#	fetch_content_with_folder(
-#		mbedtls
-#		GIT_REPOSITORY https://github.com/Mbed-TLS/mbedtls
-#		GIT_TAG v3.1.0
-#		GIT_PROGRESS TRUE
-#	)
-#	set(CF_LINK_LIBS ${CF_LINK_LIBS} mbedx509 mbedtls mbedcrypto)
-#endif()
+# Add s2n for Linux builds.
+if(LINUX)
+	fetch_content_with_folder(
+		s2n
+		GIT_REPOSITORY https://github.com/aws/s2n-tls
+		GIT_PROGRESS TRUE
+	)
+	set(CF_LINK_LIBS ${CF_LINK_LIBS} AWS::s2n)
+endif()
 
 # SDL2 for platform support.
 # Just don't build the shared library at all, it's not needed.
