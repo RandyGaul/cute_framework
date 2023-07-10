@@ -37,7 +37,6 @@ jobs:
           sudo apt-get install gcc-multilib
           sudo apt-get install libasound2-dev libpulse-dev
           sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
-          git clone https://github.com/${YOUR_GITHUB_ACCOUNT_NAME}/s2n-tls.git
           cd s2n-tls
           S2N_LIBCRYPTO=openssl-1.1.1 BUILD_S2N=true
           sudo codebuild/bin/s2n_install_test_dependencies.sh
@@ -119,6 +118,11 @@ jobs:
           cp -v ./build_folder/libcute.a ./dist
           tar -czvf ${{ matrix.platform.artifact }}.tar.gz -C dist .
         if: runner.os == 'Linux'
+        
+      - uses: actions/checkout@v3
+        with:
+          repository: aws/s2n-tls
+          path: './s2n-tls'
           
       # Uploads the zip archives onto the workflow. They can be downloaded for 90 days (by default).
       # Find them here: https://github.com/RandyGaul/cute_framework/actions
