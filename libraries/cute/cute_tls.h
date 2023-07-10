@@ -513,7 +513,7 @@ static void tls_recv(TLS_Context* ctx)
 		int bytes_read = 0;
 		while (bytes_read < sizeof(ctx->incoming)) {
 			int r = s2n_recv(ctx->connection, ctx->incoming + bytes_read, sizeof(ctx->incoming) - bytes_read, &blocked);
-			s2n_error_type etype = s2n_error_get_type(s2n_errno);
+			s2n_error_type etype = (s2n_error_type)s2n_error_get_type(s2n_errno);
 			if (r == 0) {
 				break;
 			} else if (r > 0) {
@@ -914,7 +914,7 @@ TLS_State tls_process(TLS_Connection connection)
 			s2n_blocked_status blocked = S2N_NOT_BLOCKED;
 			s2n_errno = S2N_ERR_T_OK;
 			if (s2n_negotiate(ctx->connection, &blocked) != S2N_SUCCESS) {
-				s2n_error_type etype = s2n_error_get_type(s2n_errno);
+				s2n_error_type etype = (s2n_error_type)s2n_error_get_type(s2n_errno);
 				if (etype == S2N_ERR_T_PROTO) {
 					// For some unknown reason s2n doesn't expose their error constants, like at all.
 					// So to avoid finding the correct header and including it, we can at least us
