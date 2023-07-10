@@ -39,10 +39,12 @@ jobs:
           sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
           git config --global url.https://github.com/.insteadOf git://github.com/
           git clone https://github.com/aws/s2n-tls.git
-          S2N_LIBCRYPTO=openssl-1.1.1 BUILD_S2N=true
           cd s2n-tls
-          sudo codebuild/bin/s2n_install_test_dependencies.sh
-          codebuild/bin/s2n_codebuild.sh
+          mkdir s2n-build
+          cd s2n-build
+          cmake ../s2n-build
+          make
+          sudo make install
         if: matrix.platform.name == 'Linux'
 
       - name: Create build folder with CMake
