@@ -31,7 +31,7 @@ jobs:
 
       # Linux needs to install various dependencies.
       # This could potentially be removed by using SOKOL_EXTERNAL_GL_LOADER.
-      - name: Install OpenGL + Audio + s2n
+      - name: Install OpenGL + Audio
         run: |
           sudo apt-get update -qq
           sudo apt-get install gcc-multilib
@@ -42,7 +42,7 @@ jobs:
           cd s2n-tls
           mkdir s2n-build
           cd s2n-build
-          cmake ../s2n-build
+          cmake ../
           make
           sudo make install
         if: matrix.platform.name == 'Linux'
