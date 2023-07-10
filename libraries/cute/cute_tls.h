@@ -267,6 +267,10 @@ int tls_read(TLS_Connection connection, void* data, int size);
 // Returns 0 on disconnect or -1 on error.
 int tls_send(TLS_Connection connection, const void* data, int size);
 
+#define TLS_1_KB 1024
+#define TLS_MAX_RECORD_SIZE (16 * TLS_1_KB)                  // TLS defines records to be up to 16kb.
+#define TLS_MAX_PACKET_SIZE (TLS_MAX_RECORD_SIZE + TLS_1_KB) // Some extra rooms for records split over two packets.
+
 #endif // CUTE_TLS_H
 
 #ifdef CUTE_TLS_IMPLEMENTATION
@@ -338,10 +342,6 @@ int tls_send(TLS_Connection connection, const void* data, int size);
 #else
 #	error No supported backend implementation found.
 #endif
-
-#define TLS_1_KB 1024
-#define TLS_MAX_RECORD_SIZE (16 * TLS_1_KB)                  // TLS defines records to be up to 16kb.
-#define TLS_MAX_PACKET_SIZE (TLS_MAX_RECORD_SIZE + TLS_1_KB) // Some extra rooms for records split over two packets.
 
 #define TLS_MIN(x, y) ((x) < (y) ? (x) : (y))
 #define TLS_ARRAYSIZE(A) (sizeof(A) / sizeof(*A))
