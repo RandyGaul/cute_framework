@@ -32,6 +32,13 @@
 
 using namespace Cute;
 
+char* cf_sfit(char* a, int n)
+{
+	cf_array_fit(a, n + 1);
+	if (ssize(a) == 0) apush(a, 0);
+	return a;
+}
+
 char* cf_sset(char* a, const char* b)
 {
 	CF_ACANARY(a);

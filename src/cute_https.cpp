@@ -518,6 +518,8 @@ htbl const CF_HttpsHeader* cf_https_response_headers(CF_HttpsResponse response_h
 
 #else // CF_EMSCRIPTEN
 
+// This stuff is all currently broken and needs a rewrite.
+
 struct CF_Https
 {
 	const char* host = NULL;

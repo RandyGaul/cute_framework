@@ -891,7 +891,7 @@ CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint
 #define cf_string_first(s) (s ? s[0] : '\0')
 #define cf_string_last(s) (s ? s[cf_string_len(s) - 1] : '\0')
 #define cf_string_clear(s) (cf_array_clear(s), cf_array_push(s, 0))
-#define cf_string_fit(s, n) (cf_array_fit(s, n+1), ssize(s) == 0 ? apush(s, 0) : (void)0)
+#define cf_string_fit(s, n) (s = cf_sfit(s, n))
 #define cf_string_fmt(s, fmt, ...) (s = cf_sfmt(s, fmt, __VA_ARGS__))
 #define cf_string_fmt_append(s, fmt, ...) (s = cf_sfmt_append(s, fmt, __VA_ARGS__))
 #define cf_string_vfmt(s, fmt, args) (s = cf_svfmt(s, fmt, args))
@@ -957,6 +957,7 @@ typedef struct cf_intern_t
 	const char* string; // For debugging convenience but allocated after this struct.
 } cf_intern_t;
 
+CF_API char* CF_CALL cf_sfit(char* a, int n);
 CF_API char* CF_CALL cf_sset(char* a, const char* b);
 CF_API char* CF_CALL cf_sfmt(char* s, const char* fmt, ...);
 CF_API char* CF_CALL cf_sfmt_append(char* s, const char* fmt, ...);
