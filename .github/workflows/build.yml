@@ -29,14 +29,19 @@ jobs:
     steps:
       - uses: actions/checkout@master
 
-      # Linux needs to install OpenGL dependencies.
+      # Linux needs to install various dependencies.
       # This could potentially be removed by using SOKOL_EXTERNAL_GL_LOADER.
-      - name: Install OpenGL + Audio
+      - name: Install OpenGL + Audio + s2n
         run: |
           sudo apt-get update -qq
           sudo apt-get install gcc-multilib
           sudo apt-get install libasound2-dev libpulse-dev
           sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
+          git clone https://github.com/${YOUR_GITHUB_ACCOUNT_NAME}/s2n-tls.git
+          cd s2n-tls
+          S2N_LIBCRYPTO=openssl-1.1.1 BUILD_S2N=true
+          sudo codebuild/bin/s2n_install_test_dependencies.sh
+          codebuild/bin/s2n_codebuild.sh
         if: matrix.platform.name == 'Linux'
 
       - name: Create build folder with CMake
