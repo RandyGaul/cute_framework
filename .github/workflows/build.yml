@@ -37,14 +37,6 @@ jobs:
           sudo apt-get install gcc-multilib
           sudo apt-get install libasound2-dev libpulse-dev
           sudo apt-get install -y --no-install-recommends libglfw3 libglfw3-dev libx11-dev libxcursor-dev libxrandr-dev libxinerama-dev libxi-dev libxext-dev libxfixes-dev
-          git config --global url.https://github.com/.insteadOf git://github.com/
-          git clone https://github.com/aws/s2n-tls.git
-          cd s2n-tls
-          mkdir s2n-build
-          cd s2n-build
-          cmake ../
-          make
-          sudo make install
         if: matrix.platform.name == 'Linux'
 
       - name: Create build folder with CMake
