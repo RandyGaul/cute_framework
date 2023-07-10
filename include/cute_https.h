@@ -35,6 +35,8 @@
 extern "C" {
 #endif // __cplusplus
 
+#ifndef CF_EMSCRIPTEN
+
 /**
  * @struct   CF_HttpsRequest
  * @category web
@@ -256,5 +258,7 @@ namespace Cute
 }
 
 #endif // CF_CPP
+
+#endif // CF_EMSCRIPTEN
 
 #endif // CF_HTTPS_H
