@@ -1,3 +1,2 @@
-- [CF_HttpsState](/web/cf_httpsstate.md)
-- [Transfer Encoding](/web/transfer_encoding.md)
+- [CF_HttpsResult](/web/cf_httpsresult.md)
 

@@ -10,7 +10,7 @@ int main(int argc, char* argv[])
 		return -1;
 	}
 
-	draw_push_color(make_color(0xeba48bff));
+	draw_push_color(make_color(0xeba48b));
 	draw_push_antialias(true);
 	float t = 0;
 

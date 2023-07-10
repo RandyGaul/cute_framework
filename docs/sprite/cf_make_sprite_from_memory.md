@@ -1,20 +1,20 @@
 [](../header.md ':include')
 
-# cf_make_sprite
+# cf_make_sprite_from_memory
 
 Category: [sprite](/api_reference?id=sprite)  
 GitHub: [cute_sprite.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_sprite.h)  
 ---
 
-Loads a sprite from an aseprite file.
+Loads a sprite from an aseprite file already in memory.
 
 ```cpp
-CF_Sprite cf_make_sprite(const char* aseprite_path);
+CF_Sprite cf_make_sprite_from_memory(const char* unique_name, const void* aseprite_data, int size);
 ```
 
 Parameters | Description
 --- | ---
-aseprite_path | Virtual path to a .ase file.
+unique_name | A completely unique string from all other sprites.
 
 ## Return Value
 
@@ -33,4 +33,3 @@ See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/vi
 [cf_make_easy_sprite_from_png](/sprite/cf_make_easy_sprite_from_png.md)  
 [cf_make_easy_sprite_from_pixels](/sprite/cf_make_easy_sprite_from_pixels.md)  
 [cf_easy_sprite_update_pixels](/sprite/cf_easy_sprite_update_pixels.md)  
-[cf_make_sprite_from_memory](/sprite/cf_make_sprite_from_memory.md)  

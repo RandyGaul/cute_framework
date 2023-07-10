@@ -9,7 +9,7 @@ GitHub: [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Returns the number of bytes currently used in the coroutine's storage.
 
 ```cpp
-size_t cf_coroutine_bytes_pushed(CF_Coroutine* co);
+size_t cf_coroutine_bytes_pushed(CF_Coroutine co);
 ```
 
 Parameters | Description

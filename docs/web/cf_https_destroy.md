@@ -6,19 +6,20 @@ Category: [web](/api_reference?id=web)
 GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)  
 ---
 
-Frees up all memory and closes the underlying HTTPS connection if still open.
+TODO
 
 ```cpp
-void cf_https_destroy(CF_Https* https);
+void cf_https_destroy(CF_HttpsRequest request);
 ```
 
-Parameters | Description
---- | ---
-https | A [CF_Https](/web/cf_https.md) to destroy.
+## Return Value
+
+TODO
+
+## Remarks
+
+TODO
 
 ## Related Pages
 
-[CF_Https](/web/cf_https.md)  
-[cf_https_get](/web/cf_https_get.md)  
-[cf_https_post](/web/cf_https_post.md)  
-[cf_https_process](/web/cf_https_process.md)  
+TODO  

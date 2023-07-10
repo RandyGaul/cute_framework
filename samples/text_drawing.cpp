@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
 
 		// Coloring text.
 		push_font_size(26);
-		draw_push_color(make_color(0x55b6f2ff));
+		draw_push_color(make_color(0x55b6f2));
 		draw_text("Some bigger and blue text.", V2(-100,150));
 		draw_pop_color();
 		pop_font_size();

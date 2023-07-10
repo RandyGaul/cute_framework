@@ -9,7 +9,7 @@ GitHub: [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Returns the opaque pointer to the coroutine currently running.
 
 ```cpp
-CF_Coroutine* cf_coroutine_currently_running();
+CF_Coroutine cf_coroutine_currently_running();
 ```
 
 ## Remarks

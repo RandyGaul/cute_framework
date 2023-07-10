@@ -17,6 +17,7 @@ APP_OPTIONS_OPENGLES_CONTEXT | Starts the app with an OpenGL ES 3.0 context.
 APP_OPTIONS_D3D11_CONTEXT | Starts the app with a DirectX 11 context (Windows only).
 APP_OPTIONS_METAL_CONTEXT | Starts the app with a Metal context (Apple only).
 APP_OPTIONS_DEFAULT_GFX_CONTEXT | Picks a good default graphics context for the given platform.
+APP_OPTIONS_NO_GFX | Does not initialize any graphics backend at all (for servers or headless mode).
 APP_OPTIONS_FULLSCREEN | Starts the application in borderless full-screen mode.
 APP_OPTIONS_RESIZABLE | Allows the window to be resized.
 APP_OPTIONS_HIDDEN | Starts the application with the window hidden.

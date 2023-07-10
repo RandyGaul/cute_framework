@@ -9,7 +9,7 @@ GitHub: [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Pops some bytes off of the coroutine's storage.
 
 ```cpp
-CF_Result cf_coroutine_pop(CF_Coroutine* co, void* data, size_t size);
+CF_Result cf_coroutine_pop(CF_Coroutine co, void* data, size_t size);
 ```
 
 Parameters | Description

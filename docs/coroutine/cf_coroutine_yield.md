@@ -9,7 +9,7 @@ GitHub: [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Yields the coroutine.
 
 ```cpp
-CF_Result cf_coroutine_yield(CF_Coroutine* co);
+CF_Result cf_coroutine_yield(CF_Coroutine co);
 ```
 
 Parameters | Description

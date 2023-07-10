@@ -1,24 +1,20 @@
 [](../header.md ':include')
 
-# cf_https_response_find_header
+# cf_https_result_to_string
 
 Category: [web](/api_reference?id=web)  
 GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)  
 ---
 
-TODO
+Convert an enum `CF_HttpsState` to a c-style string.
 
 ```cpp
-CF_HttpsHeader cf_https_response_find_header(CF_HttpsResponse response, const char* header_name);
+const char* cf_https_result_to_string(CF_HttpsResult state)
 ```
 
-## Return Value
-
-TODO
-
-## Remarks
-
-TODO
+Parameters | Description
+--- | ---
+state | The state to convert to a string.
 
 ## Related Pages
 

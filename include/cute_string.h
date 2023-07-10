@@ -167,7 +167,7 @@ extern "C" {
 /**
  * @function sfit
  * @category string
- * @brief    Ensures the capacity of the string is at least n elements.
+ * @brief    Ensures the capacity of the string is at least n+1 elements.
  * @param    s            The string. Can be `NULL`.
  * @param    n            The number of elements for the new internal capacity.
  * @remarks  Does not change the size/count of the string, or the len. This function is just here for optimization purposes.
@@ -891,7 +891,7 @@ CF_API const uint16_t* CF_CALL cf_decode_UTF16(const uint16_t* s, int* codepoint
 #define cf_string_first(s) (s ? s[0] : '\0')
 #define cf_string_last(s) (s ? s[cf_string_len(s) - 1] : '\0')
 #define cf_string_clear(s) (cf_array_clear(s), cf_array_push(s, 0))
-#define cf_string_fit(s, n) cf_array_fit(s, n)
+#define cf_string_fit(s, n) (cf_array_fit(s, n+1), ssize(s) == 0 ? apush(s, 0) : (void)0)
 #define cf_string_fmt(s, fmt, ...) (s = cf_sfmt(s, fmt, __VA_ARGS__))
 #define cf_string_fmt_append(s, fmt, ...) (s = cf_sfmt_append(s, fmt, __VA_ARGS__))
 #define cf_string_vfmt(s, fmt, args) (s = cf_svfmt(s, fmt, args))
@@ -1037,6 +1037,7 @@ struct String
 	CF_INLINE ~String() { sfree(m_str); m_str = NULL; }
 
 	CF_INLINE static String steal_from(char* cute_c_api_string) { CF_ACANARY(cute_c_api_string); String r; r.m_str = cute_c_api_string; return r; }
+	CF_INLINE char* steal() { char* result = m_str; m_str = NULL; return result; }
 	CF_INLINE static String from_hex(uint64_t uint) { String r; shex(r.m_str, uint); return r; }
 
 	CF_INLINE int to_int() const { return stoint(m_str); }

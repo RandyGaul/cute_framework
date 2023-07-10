@@ -1,6 +1,6 @@
 [](../header.md ':include')
 
-# cf_https_response_find_header
+# cf_https_response_content
 
 Category: [web](/api_reference?id=web)  
 GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)  
@@ -9,7 +9,7 @@ GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/i
 TODO
 
 ```cpp
-CF_HttpsHeader cf_https_response_find_header(CF_HttpsResponse response, const char* header_name);
+char* cf_https_response_content(CF_HttpsResponse response);
 ```
 
 ## Return Value

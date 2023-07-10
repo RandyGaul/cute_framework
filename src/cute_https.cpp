@@ -19,704 +19,498 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#ifndef CF_NO_HTTPS
-
 #include <cute_https.h>
 #include <cute_alloc.h>
 #include <cute_c_runtime.h>
 #include <cute_array.h>
+#include <cute_string.h>
+#include <cute_coroutine.h>
 
 #include <internal/cute_alloc_internal.h>
 
-#include <mbedtls/build_info.h>
-#include <mbedtls/platform.h>
-#include <mbedtls/net_sockets.h>
-#include <mbedtls/debug.h>
-#include <mbedtls/ssl.h>
-#include <mbedtls/entropy.h>
-#include <mbedtls/ctr_drbg.h>
-#include <mbedtls/error.h>
-
 #include <SDL.h>
 
-#if defined(CF_WINDOWS)
-#	include <windows.h>
-#	include <wincrypt.h>
-#	pragma comment(lib, "crypt32.lib")
-#elif defined(CF_APPLE)
-#	include <Security/Security.h>
-#endif
+#define CUTE_TLS_IMPLEMENTATION
+#include <cute/cute_tls.h>
 
 using namespace Cute;
 
-/**
- * Represents the response from a server after a successful process loop via `https_process`, where the
- * status returned from `https_state` is `HTTPS_STATE_COMPLETED`.
- */
-typedef struct cf_internal_https_response_t
-{
-	int code;
-	size_t content_len;
-	const char* content;
-	Array<CF_HttpsHeader> headers;
-
-	/**
-	 * Flags from `transfer_encoding_t`. For example, if content is gzip'd, you can tell by using
-	 * something like so: `bool is_gzip = !!(response->transfer_encoding & CF_TRANSFER_ENCODING_FLAG_GZIP);`
-	 *
-	 * Please note that if the encoding is `TRANSFER_ENCODING_CHUNKED` the `content` buffer will not
-	 * contain any chunked encoding -- all chunked data has been decoded already. For gzip/deflate
-	 * the `content` buffer will need to be decompressed by you.
-	 */
-	int transfer_encoding_flags;
-} cf_internal_https_response_t;
+// TODO - Rewrite with string view wrapper class, instead of dynamic strings, as an optimization.
 
 #ifndef CF_EMSCRIPTEN
 
-struct cf_https_decoder_t;
+#define CF_RESPONSE_CHUNKED             1
+#define CF_RESPONSE_GZIP                2
+#define CF_RESPONSE_DEFLATE             4
+#define CF_RESPONSE_DEPRECATED_COMPRESS 8
 
-typedef bool (cf_https_decode_fn)(cf_https_decoder_t* h, const char* data, size_t size, size_t* bytes_read);
-typedef bool (cf_https_process_line_fn)(cf_https_decoder_t* h);
-
-struct cf_https_decoder_t
+typedef struct CF_Response
 {
-	cf_https_decode_fn* decode = NULL;
-	cf_https_process_line_fn* process_line = NULL;
-	int transfer_encoding = 0;
-	size_t content_processed = 0;
-	size_t content_length = 0;
-	size_t chunk_processed = 0;
-	size_t chunk_size = 0;
-	bool found_last_chunk = false;
-	size_t buffer_offset = 0;
-	int response_code = 0;
-	Array<char> buffer;
-	Array<CF_HttpsHeader> headers;
-	CF_Result err = cf_result_success();
+	const char* in = NULL;
+	const char* end = NULL;
+	int code = 0;
+	bool ok = true;
+	int flags = 0;
+	bool gzip = false;
+	bool deflate = false;
+	int content_length = 0;
+	bool trailers = false;
+	Map<const char*, CF_HttpsHeader> headers;
+	String parse;
+	String content;
+} CF_Response;
 
-	void next(cf_https_process_line_fn* process_line)
-	{
-		this->process_line = process_line;
-		buffer.clear();
-		buffer_offset = 0;
-	}
-
-	char* data()
-	{
-		return buffer.data() + buffer_offset;
-	}
-
-	size_t data_left()
-	{
-		return buffer.count() - buffer_offset;
-	}
-
-	bool advance(size_t size)
-	{
-		CF_ASSERT(buffer_offset + size <= buffer.count());
-		buffer_offset += size;
-		return buffer_offset == buffer.count();
-	}
-};
-
-struct CF_Https
+typedef struct CF_Request
 {
-	mbedtls_net_context server_fd;
-	mbedtls_entropy_context entropy;
-	mbedtls_ctr_drbg_context ctr_drbg;
-	mbedtls_ssl_context ssl;
-	mbedtls_ssl_config conf;
-	mbedtls_x509_crt cacert;
-
 	const char* host = NULL;
-	const char* port = NULL;
-	CF_HttpsState state = CF_HTTPS_STATE_PENDING; // TODO - Atomic this.
-	Array<char> request;
-	Array<char> response_buffer;
-	cf_internal_https_response_t response;
+	int port = 0;
+	const char* uri = NULL;
+	int content_length = 0;
+	const void* content = NULL;
+	bool verify_cert = true;
+	CF_HttpsResult result = CF_HTTPS_RESULT_PENDING;
+	CF_Response response = { };
+	CF_Coroutine co = { };
+	TLS_Connection connection = { };
+	Array<CF_HttpsHeader> headers;
+} CF_Request;
 
-	bool request_sent = false;
-
-	int bytes_read = 0; // TODO - Atomic this.
-	cf_https_decoder_t h;
-};
-
-CF_Https* cf_https_make()
+static CF_INLINE CF_HttpsResult s_tls_state_to_https_result(TLS_State state)
 {
-	CF_Https* https = CF_NEW(CF_Https);
-
-	mbedtls_net_init(&https->server_fd);
-	mbedtls_ssl_init(&https->ssl);
-	mbedtls_ssl_config_init(&https->conf);
-	mbedtls_x509_crt_init(&https->cacert);
-	mbedtls_ctr_drbg_init(&https->ctr_drbg);
-	mbedtls_entropy_init(&https->entropy);
-
-	const char* seed = "Cute Framework";
-
-	if (mbedtls_ctr_drbg_seed(&https->ctr_drbg, mbedtls_entropy_func, &https->entropy, (const unsigned char*)seed, CF_STRLEN(seed))) {
-		https->~CF_Https();
-		CF_FREE(https);
-		return NULL;
+	switch (state) {
+	case TLS_STATE_BAD_CERTIFICATE                       : return CF_HTTPS_RESULT_BAD_CERTIFICATE;
+	case TLS_STATE_SERVER_ASKED_FOR_CLIENT_CERTS         : return CF_HTTPS_RESULT_FAILED;
+	case TLS_STATE_CERTIFICATE_EXPIRED                   : return CF_HTTPS_RESULT_CERTIFICATE_EXPIRED;
+	case TLS_STATE_BAD_HOSTNAME                          : return CF_HTTPS_RESULT_BAD_HOSTNAME;
+	case TLS_STATE_CANNOT_VERIFY_CA_CHAIN                : return CF_HTTPS_RESULT_CANNOT_VERIFY_CA_CHAIN;
+	case TLS_STATE_NO_MATCHING_ENCRYPTION_ALGORITHMS     : return CF_HTTPS_RESULT_NO_MATCHING_ENCRYPTION_ALGORITHMS;
+	case TLS_STATE_INVALID_SOCKET                        : return CF_HTTPS_RESULT_SOCKET_ERROR;
+	case TLS_STATE_UNKNOWN_ERROR                         : return CF_HTTPS_RESULT_FAILED;
+	case TLS_STATE_DISCONNECTED                          : return CF_HTTPS_RESULT_OK;
+	case TLS_STATE_DISCONNECTED_BUT_PACKETS_STILL_REMAIN : return CF_HTTPS_RESULT_PENDING;
+	case TLS_STATE_PENDING                               : return CF_HTTPS_RESULT_PENDING;
+	case TLS_STATE_CONNECTED                             : return CF_HTTPS_RESULT_PENDING;
+	case TLS_STATE_PACKET_QUEUE_FILLED                   : return CF_HTTPS_RESULT_PENDING;
 	}
-
-	return https;
+	return CF_HTTPS_RESULT_FAILED;
 }
 
-void cf_https_destroy(CF_Https* https)
+static void s_get_line(Coroutine co, CF_Response* response)
 {
-	mbedtls_net_free(&https->server_fd);
-	mbedtls_x509_crt_free(&https->cacert);
-	mbedtls_ssl_free(&https->ssl);
-	mbedtls_ssl_config_free(&https->conf);
-	mbedtls_ctr_drbg_free(&https->ctr_drbg);
-	mbedtls_entropy_free(&https->entropy);
-	https->~CF_Https();
-	CF_FREE(https);
-}
+	response->parse.clear();
+	while (1) {
+		while (response->in != response->end) {
+			const char* found_cr = (const char*)CF_MEMCHR(response->in, '\r', response->end - response->in);
+			if (found_cr) {
+				response->parse.append(response->in, found_cr);
+				response->in = found_cr + 1;
+				if (*response->in == '\n') {
+					response->in++;
+					return;
+				}
+			} else {
+				response->parse.append(response->in, response->end);
+				response->in = response->end;
+			}
+		}
 
-static void s_tls_log(void* param, int debug_level, const char* file_name, int line_number, const char*  message)
-{
-	printf("%s\n", message);
-}
-
-static CF_Result s_load_platform_certs(CF_Https* https)
-{
-#if defined(CF_WINDOWS)
-
-	HCERTSTORE hCertStore;
-	PCCERT_CONTEXT pCertContext = NULL;
-
-	if (!(hCertStore = CertOpenSystemStoreA((HCRYPTPROV)NULL, "ROOT"))) {
-		return cf_result_error("CertOpenSystemStoreA failed.");
-	}
-
-	while (pCertContext = CertEnumCertificatesInStore(hCertStore, pCertContext)) {
-		mbedtls_x509_crt_parse_der(&https->cacert, (unsigned char*)pCertContext->pbCertEncoded, pCertContext->cbCertEncoded);
-	}
-
-	CertFreeCertificateContext(pCertContext);
-	CertCloseStore(hCertStore, 0);
-
-#elif defined(CF_MACOS)
-
-	SecKeychainRef keychain_ref;
-	CFMutableDictionaryRef search_settings_ref;
-	CFArrayRef result_ref;
-
-	if (SecKeychainOpen("/System/Library/Keychains/SystemRootCertificates.keychain", &keychain_ref) != errSecSuccess) {
-		return cf_result_error("SecKeychainOpen failed.");
-	}
-
-	search_settings_ref = CFDictionaryCreateMutable(NULL, 0, NULL, NULL);
-	CFDictionarySetValue(search_settings_ref, kSecClass, kSecClassCertificate);
-	CFDictionarySetValue(search_settings_ref, kSecMatchLimit, kSecMatchLimitAll);
-	CFDictionarySetValue(search_settings_ref, kSecReturnRef, kCFBooleanTrue);
-	CFDictionarySetValue(search_settings_ref, kSecMatchSearchList, CFArrayCreate(NULL, (const void**)&keychain_ref, 1, NULL));
-
-	if (SecItemCopyMatching(search_settings_ref, (CFTypeRef*)&result_ref) != errSecSuccess) {
-		return cf_result_error("SecItemCopyMatching failed.");
-	}
-
-	for (CFIndex i = 0; i < CFArrayGetCount(result_ref); i++) {
-		SecCertificateRef item_ref = (SecCertificateRef)CFArrayGetValueAtIndex(result_ref, i);
-		CFDataRef data_ref;
-
-		if ((data_ref = SecCertificateCopyData(item_ref))) {
-			mbedtls_x509_crt_parse_der(&https->cacert, (unsigned char*)CFDataGetBytePtr(data_ref), CFDataGetLength(data_ref));
-			CFRelease(data_ref);
+		if (response->in == response->end) {
+			coroutine_yield(co);
 		}
 	}
-
-	CFRelease(keychain_ref);
-
-#elif defined(CF_IOS) || defined(CF_LINUX)
-
-	if (mbedtls_x509_crt_parse_path(&https->cacert, "/etc/ssl/certs/") < 0) {
-		return cf_result_error("mbedtls_x509_crt_parse_path failed.");
-	}
-
-#else
-
-	// TODO - Android, iOS (probably the same as CF_MACOS section).
-
-#	error Platform not yet supported for https.
-
-#endif
-
-	return cf_result_success();
 }
 
-CF_Result cf_https_connect(CF_Https* https, const char* host, const char* port, bool verify_cert)
+static bool s_status(Coroutine co, CF_Response* response)
 {
-	int result;
+	s_get_line(co, response);
+	const char* in = response->parse.c_str();
 
-	result = MBEDTLS_ERR_NET_UNKNOWN_HOST;
-	if ((result = mbedtls_net_connect(&https->server_fd, host, port, MBEDTLS_NET_PROTO_TCP))) {
-		return cf_result_error("Failed to connect TCP socket to host with mbedtls_net_connect.");
+	// Only accept HTTP version 1.1.
+	if (CF_MEMCMP(in, "HTTP/1.1 ", 9)) {
+		return false;
 	}
 
-	if ((result = mbedtls_net_set_nonblock(&https->server_fd))) {
-		return cf_result_error("Failed to set socket to non-blocking.");
-	}
+	// Parse status code.
+	in += 9;
+	const char* next = CF_STRCHR(in, ' ');
+	int num_digits = (int)(next - in);
+	if (num_digits != 3) return false;
+	int code = (int)CF_STRTOLL(in, NULL, 10);
+	if (!code || code > 999) return false;
+	response->code = code;
 
-	if ((result = mbedtls_ssl_config_defaults(&https->conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT))) {
-		return cf_result_error("Failed to set ssl defaults with mbedtls_ssl_config_defaults.");
-	}
-
-	mbedtls_ssl_conf_authmode(&https->conf, verify_cert ? MBEDTLS_SSL_VERIFY_REQUIRED : MBEDTLS_SSL_VERIFY_OPTIONAL);
-	s_load_platform_certs(https);
-	mbedtls_ssl_conf_ca_chain(&https->conf, &https->cacert, NULL);
-	mbedtls_ssl_conf_rng(&https->conf, mbedtls_ctr_drbg_random, &https->ctr_drbg);
-
-	if ((result = mbedtls_ssl_setup(&https->ssl, &https->conf))) {
-		return cf_result_error("Failed to setup ssl context with mbedtls_ssl_setup.");
-	}
-
-	if ((result = mbedtls_ssl_set_hostname(&https->ssl, host))) {
-		return cf_result_error("mbedtls_ssl_set_hostname failed.");
-	}
-
-	mbedtls_ssl_set_bio(&https->ssl, &https->server_fd, mbedtls_net_send, mbedtls_net_recv, NULL);
-
-	while ((result = mbedtls_ssl_handshake(&https->ssl))) {
-		if (result != MBEDTLS_ERR_SSL_WANT_READ && result != MBEDTLS_ERR_SSL_WANT_WRITE) {
-			char buf[1024];
-			mbedtls_strerror(result, buf, 1024);
-			//const char* high = mbedtls_high_level_strerr(result);
-			//const char* low = mbedtls_low_level_strerr(result);
-			return cf_result_error("TLS handshake failed with mbedtls_ssl_handshake.");
-		}
-	}
-
-	if (verify_cert) {
-		uint32_t flags;
-		if ((flags = mbedtls_ssl_get_verify_result(&https->ssl))) {
-			return cf_result_error("Failed to verify certs via mbedtls_ssl_get_verify_result -- unsafe to connect.");
-		}
-	}
-
-	https->host = host;
-	https->port = port;
-	https->state = CF_HTTPS_STATE_PENDING;
-	return cf_result_success();
-}
-
-void cf_https_disconnect(CF_Https* https)
-{
-	mbedtls_ssl_close_notify(&https->ssl);
-}
-
-CF_Https* cf_https_get(const char* host, const char* port, const char* uri, CF_Result* err_out, bool verify_cert)
-{
-	CF_Https* https = cf_https_make();
-	CF_Result err = cf_https_connect(https, host, port, verify_cert);
-	if (cf_is_error(err)) {
-		cf_https_destroy(https);
-		if (err_out) *err_out = err;
-		return NULL;
-	}
-
-	const char* fmt =
-		"GET %s HTTP/1.1\r\n"
-		"Host: %s\r\n"
-		"\r\n";
-	size_t len = 64 + CF_STRLEN(uri) + CF_STRLEN(host);
-	https->request.ensure_count((int)len);
-	sprintf(https->request.data(), fmt, uri, https->host);
-	https->request_sent = false;
-	if (err_out) *err_out = cf_result_success();
-
-	return https;
-}
-
-CF_Https* cf_https_post(const char* host, const char* port, const char* uri, const void* data, size_t size, CF_Result* err_out, bool verify_cert)
-{
-	CF_Https* https = cf_https_make();
-	CF_Result err = cf_https_connect(https, host, port, verify_cert);
-	if (cf_is_error(err)) {
-		cf_https_destroy(https);
-		if (err_out) *err_out = err;
-		return NULL;
-	}
-
-	const char* fmt =
-		"POST %s HTTP/1.1\r\n"
-		"Host: %s\r\n"
-		"Content-Length: %zu\r\n"
-		"\r\n";
-	size_t len = 64 + CF_STRLEN(uri) + CF_STRLEN(host);
-	https->request.ensure_count((int)len);
-	sprintf(https->request.data(), fmt, uri, https->host, size);
-	https->request_sent = false;
-	len = CF_STRLEN(https->request.data());
-	https->request.ensure_count((int)(len + size));
-	CF_MEMCPY(https->request.data() + len, data, size);
-	if (err_out) *err_out = cf_result_success();
-
-	return https;
-}
-
-bool cf_internal_https_response(CF_Https* https, cf_internal_https_response_t** response_out)
-{
-	if (https->state != CF_HTTPS_STATE_COMPLETED) return false;
-
-	*response_out = &https->response;
+	// Just skip parsing the status phrase.
+	response->parse.clear();
 
 	return true;
 }
 
-CF_HttpsResponse cf_https_response(CF_Https* https)
+static bool s_header(Coroutine co, CF_Response* response)
 {
-	CF_HttpsResponse response_out = { 0 };
+	const char* in = response->parse.c_str();
 
-	cf_internal_https_response_t* response_internal;
-	if (!cf_internal_https_response(https, &response_internal)) return response_out;
+	// Name of the header.
+	const char* next = CF_STRCHR(in, ':');
+	if (!next) return false;
+	String name = String(in, next);
+	name.trim();
+	in = next + 1;
 
-	response_out.code = response_internal->code;
-	response_out.content_len = response_internal->content_len;
-	response_out.content = response_internal->content;
-	response_out.headers = response_internal->headers.data();
-	response_out.headers_count = response_internal->headers.count();
-	response_out.transfer_encoding_flags = response_internal->transfer_encoding_flags;
+	// Content of the header.
+	String content = next + 1;
+	content.trim();
 
-	return response_out;
+	// Handle certain resposne headers.
+	if (name == "Content-Length") {
+		if (response->flags) {
+			// Content-Length and transfer encoding flags are not compatible.
+			return false;
+		}
+		response->content_length = content.to_int();
+	} else if (name == "Transfer-Encoding") {
+		Array<String> encodings = content.split(',');
+		for (int i = 0; i < encodings.size(); ++i) {
+			int prev_flags = response->flags;
+			if (content == "deflate") {
+				if (response->flags & CF_RESPONSE_GZIP) return false;
+				response->flags |= CF_RESPONSE_DEFLATE;
+			} else if (content == "gzip") {
+				if (response->flags & CF_RESPONSE_DEFLATE) return false;
+				response->flags |= CF_RESPONSE_GZIP;
+			} else if (content == "chunked") {
+				if (response->content_length > 0) {
+					// Content-Length and transfer encoding flags are not compatible.
+					return false;
+				}
+				response->flags |= CF_RESPONSE_CHUNKED;
+			} else if (content.len() > 0) {
+				// Invalid encoding found.
+				return false;
+			}
+			if ((prev_flags & CF_RESPONSE_CHUNKED) && (response->flags != prev_flags)) {
+				// Chunked encoding must be specified last.
+				return false;
+			}
+		}
+	} else if (name == "Trailer") {
+		response->trailers = true;
+		// Don't bother parsing the trailer list, just forward them all along to the user when get them later.
+		// This isn't technically compliant, but it's simple and good enough.
+	}
+
+	// Add header to response collection.
+	CF_HttpsHeader header;
+	header.name = sintern(name.c_str()); // Potentially malicious memory bloat here.
+	header.value = content.steal();
+	if (!response->headers.has(header.name)) {
+		response->headers.insert(header.name, header);
+	} else {
+		// BUG - Duplicate headers are ignored!
+	}
+	return true;
 }
 
-static bool s_crlf(cf_https_decoder_t* h, const char* data, size_t size, size_t* bytes_read)
+static void s_headers(Coroutine co, CF_Response* response)
 {
-	const char* in = data;
-	const char* end = data + size;
-	while (in != end) {
-		const char* found_lf = (const char*)CF_MEMCHR(in, '\n', end - in);
-		if (!found_lf) {
+	while (1) {
+		s_get_line(co, response);
+		if (response->parse.len() == 0) {
+			break;
+		}
+		if (!s_header(co, response)) {
+			response->ok = false;
+			return;
+		}
+	}
+}
+
+static void s_decode(Coroutine co)
+{
+	CF_Response* response = (CF_Response*)coroutine_get_udata(co);
+	// Read status line.
+	if (!s_status(co, response)) {
+		response->ok = false;
+		return;
+	}
+
+	// Read headers.
+	s_headers(co, response);
+	if (!response->ok) return;
+
+	// Read in response body.
+	if (response->flags & CF_RESPONSE_CHUNKED) {
+		// Chunked decoding.
+		while (1) {
+			// Parse chunk size (hex).
+			s_get_line(co, response);
+			char* ptr;
+			uint64_t chunk_size = CF_STRTOLL(response->parse.c_str(), &ptr, 16);
+			if (ptr == response->parse.c_str()) {
+				response->ok = false;
+				return;
+			}
+
+			// Skip any chunk extensions (these are optional by definition).
+
+			if (chunk_size == 0) {
+				// Final chunk reached.
+				break;
+			}
+
+			// Read in chunk data.
+			while (1) {
+				if (response->in == response->end) {
+					coroutine_yield(co);
+				}
+
+				uint64_t bytes = min(chunk_size, response->end - response->in);
+				response->content.append(response->in, response->in + bytes);
+				response->in += bytes;
+
+				int len = response->content.len();
+				if (len == chunk_size) {
+					break;
+				}
+			}
+
+			s_get_line(co, response);
+			if (response->parse.len() != 0) {
+				// Chunks are supposed to end with CRLF.
+				response->ok = false;
+				return;
+			}
+		}
+	} else {
+		// Read in content bytes (non-chunked).
+		uint64_t bytes_read = 0;
+		while (1) {
+			uint64_t bytes = response->end - response->in;
+			response->content.append(response->in, response->in + bytes);
+			bytes_read += bytes;
+
+			if (bytes_read == response->content_length) {
+				break;
+			} else if (bytes_read > response->content_length) {
+				// Content length did not match expectation.
+				response->ok = false;
+				return;
+			} else {
+				coroutine_yield(co);
+			}
+		}
+	}
+
+	// Note what compression was used.
+	// TODO - Just decompress things ourselves. Code for DEFLATE already exists in cute_aseprite.h, but,
+	//        gzip header parsing + CRC would need to be written (super annoying). So, this will probably
+	//        never get implemented.
+	if (response->flags & CF_RESPONSE_DEFLATE) {
+		response->deflate = true;
+	} else if (response->flags & CF_RESPONSE_GZIP) {
+		response->gzip = true;
+	}
+
+	// Parsing code implemented incorrectly.
+	CF_ASSERT(!(response->deflate && response->gzip));
+
+	if (response->trailers) {
+		// Read in any trailing headers.
+		s_headers(co, response);
+	} else {
+		s_get_line(co, response);
+		if (response->parse.len() != 0) {
+			// End of response doesn't have expected final empty-line CRLF.
+			response->ok = false;
+			return;
+		}
+	}
+}
+
+static void s_https_process(Coroutine co)
+{
+	CF_Request* request = (CF_Request*)coroutine_get_udata(co);
+
+	// Start up the TLS connection.
+	request->connection = tls_connect(request->host, request->port);
+	while (1) {
+		TLS_State state = tls_process(request->connection);
+		request->result = s_tls_state_to_https_result(state);
+		if (state == TLS_STATE_CONNECTED) {
+			// Connected!
+			break;
+		} else if (state < 0) {
+			return;
+		}
+		coroutine_yield(co);
+	}
+
+	// Send of the HTTP request.
+	String s;
+	if (request->content) {
+		s = String::fmt(
+			"POST %s HTTP/1.1\r\n"
+			"Host: %s\r\n"
+			"Connection: close\r\n"
+			"TE: trailers, deflate, gzip\r\n"
+			"Content-Length: %d\r\n"
+			"\r\n",
+			request->uri, request->host, request->content_length
+		);
+		const char* content = (const char*)request->content;
+		s.append(content, content + request->content_length); 
+	} else {
+		s = String::fmt(
+			"GET %s HTTP/1.1\r\n"
+			"Host: %s\r\n"
+			"Connection: close\r\n"
+			"TE: trailers, deflate, gzip\r\n"
+			"\r\n",
+			request->uri, request->host
+		);
+	}
+
+	if (tls_send(request->connection, s.c_str(), s.len()) < 0) {
+		request->result = CF_HTTPS_RESULT_SOCKET_ERROR;
+		return;
+	}
+
+	// Receive all response bytes.
+	CF_Response* response = &request->response;
+	CF_Coroutine decoder = make_coroutine(s_decode, 0, response);
+	char buf[TLS_MAX_PACKET_SIZE];
+	while (1) {
+		TLS_State state = tls_process(request->connection);
+		if (state == TLS_STATE_DISCONNECTED) {
+			tls_disconnect(request->connection);
+			request->connection.id = 0;
 			break;
 		}
 
-		char prev_char = 0;
-		bool was_first_character_in_line = found_lf == data;
-		if (was_first_character_in_line) {
-			if (h->buffer.count()) {
-				prev_char = h->buffer.last();
+		int bytes = tls_read(request->connection, buf, sizeof(buf));
+		if (bytes < 0) {
+			request->result = CF_HTTPS_RESULT_SOCKET_ERROR;
+			destroy_coroutine(decoder);
+			return;
+		}
+		if (bytes) {
+			// Parse the response as it arrives, packet-by-packet.
+			response->in = buf;
+			response->end = buf + bytes;
+			response->parse.clear();
+			coroutine_resume(decoder); // s_decode
+			if (!response->ok) {
+				request->result = CF_HTTPS_RESULT_FAILED;
+				destroy_coroutine(decoder);
+				return;
 			}
-		} else {
-			prev_char = *(found_lf - 1);
 		}
-
-		if (prev_char == '\r') {
-			*bytes_read = 1 + (found_lf - data);
-			return true;
-		}
-
-		in = found_lf + 1;
+		coroutine_yield(co);
 	}
 
-	*bytes_read = size;
-	return false;
+	request->result = CF_HTTPS_RESULT_OK;
+	destroy_coroutine(decoder);
 }
 
-static bool s_chunk_size(cf_https_decoder_t* h);
-static bool s_header(cf_https_decoder_t* h);
-static bool s_no_chunks(cf_https_decoder_t* h);
-
-static bool s_get_line(cf_https_decoder_t* h, const char* data, size_t size, size_t* bytes_read)
+static CF_Request* s_request(const char* host, int port, const char* uri, const void* content, int content_length, bool verify_cert)
 {
-	bool found_crlf = s_crlf(h, data, size, bytes_read);
-
-	int old_count = h->buffer.count();
-	h->buffer.ensure_count((int)(h->buffer.count() + *bytes_read));
-	void* buffer_data = h->buffer.data() + old_count;
-	CF_MEMCPY(buffer_data, data, *bytes_read);
-
-	if (found_crlf || h->process_line == s_no_chunks) {
-		return h->process_line(h);
-	}
-
-	return false;
+	CF_Request* request = CF_NEW(CF_Request);
+	request->host = host;
+	request->port = port;
+	request->uri = uri;
+	request->content = content;
+	request->content_length = content_length;
+	request->verify_cert = verify_cert;
+	request->co = make_coroutine(s_https_process, CF_MB, request);
+	return request;
 }
 
-static bool s_no_chunks(cf_https_decoder_t* h)
+CF_HttpsRequest cf_https_get(const char* host, int port, const char* uri, bool verify_cert)
 {
-	size_t bytes_read = 0;
-	CF_ASSERT(h->content_processed < h->content_length);
-	h->content_processed = h->buffer.count();
-	bool finished = h->content_processed == h->content_length;
-	return finished;
+	CF_Request* request = s_request(host, port, uri, NULL, 0, verify_cert);
+	CF_HttpsRequest result;
+	result.id = (uint64_t)request;
+	return result;
 }
 
-static bool s_state_chunk(cf_https_decoder_t* h) {
-	// RFC-7230 section 4.1 Chunked Transfer Encoding
-	size_t bytes_read = 0;
-	CF_ASSERT(h->chunk_processed < h->chunk_size);
-	h->chunk_processed = h->buffer.count() - 2;
-	bool finished = h->chunk_processed == h->chunk_size;
-	if (finished) {
-		h->chunk_processed = 0;
-		h->next(s_chunk_size);
-	}
-	return false;
-}
-
-static bool s_int(CF_HttpsString str, int radix, uint64_t* out)
+CF_HttpsRequest cf_https_post(const char* host, int port, const char* uri, const void* content, int content_length, bool verify_cert)
 {
-	char* ptr;
-	uint64_t number = CF_STRTOLL(str.ptr, &ptr, radix);
-	*out = number;
-	return str.ptr == ptr;
+	CF_Request* request = s_request(host, port, uri, content, content_length, verify_cert);
+	CF_HttpsRequest result;
+	result.id = (uint64_t)request;
+	return result;
 }
 
-static bool s_read_int(cf_https_decoder_t* h, int radix, uint64_t* out)
+void cf_https_destroy(CF_HttpsRequest request_handle)
 {
-	char* ptr;
-	uint64_t number = CF_STRTOLL(h->data(), &ptr, radix);
-	*out = number;
-	if (ptr == h->data()) {
-		h->err = cf_result_error("Failed to parse number.");
-		return true;
-	} else {
-		h->advance(ptr - h->data());
+	CF_Request* request = (CF_Request*)request_handle.id;
+	if (request->connection.id) tls_disconnect(request->connection);
+	destroy_coroutine(request->co);
+	for (int i = 0; i < request->response.headers.count(); ++i) {
+		CF_HttpsHeader header = request->response.headers.items()[i];
+		char* val = (char*)header.value;
+		sfree(val); // This was stolen earlier from a String, so we manually cleanup here.
 	}
-	return false;
+	request->~CF_Request();
+	cf_free(request);
 }
 
-static bool s_chunk_size(cf_https_decoder_t* h) {
-	if (s_read_int(h, 16, (uint64_t*)&h->chunk_size)) {
-		return true;
-	}
-
-	bool was_last_chunk = h->chunk_size == 0;
-	if (was_last_chunk) {
-		h->found_last_chunk = true;
-		h->next(s_header);
-		return false;
-	}
-
-	// RFC-7230 section 4.1.1 Chunk Extensions -- Skip (optional).
-
-	h->next(s_state_chunk);
-	return false;
-}
-
-static CF_HttpsString s_scan(cf_https_decoder_t* h, char delimiter, bool must_find = true)
+void cf_https_add_header(CF_HttpsRequest request_handle, const char* name, const char* value)
 {
-	const char* data = h->data();
-	size_t len = h->data_left();
-	CF_HttpsString string;
-	string.ptr = data;
-	string.len = 0;
-	while (len && *data != delimiter) {
-		++data;
-		--len;
-		string.len++;
-	}
-
-	if (len && *data == delimiter) {
-		h->advance(string.len + 1);
-	} else if (len) {
-		h->advance(string.len);
-	} else if (must_find) {
-		h->err = cf_result_error("Malformed header found while searching for colon separator ':'");
-		string.ptr = NULL;
-		string.len = 0;
-	}
-
-	// Trim whitespace.
-	while (string.len && *string.ptr == ' ') {
-		string.ptr++;
-		string.len--;
-	}
-	while (string.len && string.ptr[string.len - 1] == ' ') {
-		string.len--;
-	}
-
-	return string;
-}
-
-static bool s_header(cf_https_decoder_t* h)
-{
-	// RFC-7230 section 3 Message Format
-	if (h->data_left() == 2) {
-		if (h->transfer_encoding & CF_TRANSFER_ENCODING_FLAG_CHUNKED) {
-			if (h->found_last_chunk) {
-				// TODO - Possible to start logic for trailers here.
-				return true;
-			}
-			h->next(s_chunk_size);
-		} else if (h->content_length > 0) {
-			h->next(s_no_chunks);
-		} else {
-			return true;
-		}
-
-		return false;
-	}
-
-	// RFC-7230 3.2
-	CF_HttpsString name = s_scan(h, ':');
-	if (!name.ptr) return true;
-	CF_HttpsString content = s_scan(h, '\r');
-	if (!content.ptr) return true;
-
-	if (!cf_https_strcmp("Content-Length", name)) {
-		if (h->transfer_encoding) {
-			h->err = cf_result_error("Found illegal combo of headers for both content-length and transfer-encoding.");
-			return true;
-		}
-
-		if (s_int(content, 10, (uint64_t*)&h->content_length)) {
-			h->err = cf_result_error("Failed to read content length.");
-			return true;
-		}
-	} else if (!cf_https_strcmp("Transfer-Encoding", name)) {
-		if (h->content_length) {
-			h->err = cf_result_error("Found illegal combo of headers for both content-length and transfer-encoding.");
-			return true;
-		}
-
-		// RFC-7230 section 3.3.1 Transfer-Encoding
-		// RFC-7230 section 4.2 Compression Codings
-		CF_HttpsString string = content;
-		while (string.ptr) {
-			int prev_flags = h->transfer_encoding;
-
-			if (!cf_https_strcmp("chunked", string)) {
-				h->transfer_encoding |= CF_TRANSFER_ENCODING_FLAG_CHUNKED;
-			} else if (!cf_https_strcmp("compress", string) || !cf_https_strcmp("x_compress", string)) {
-				h->transfer_encoding |= CF_TRANSFER_ENCODING_FLAG_DEPRECATED_COMPRESS;
-			} else if (!cf_https_strcmp("deflate", string)) {
-				h->transfer_encoding |= CF_TRANSFER_ENCODING_FLAG_DEFLATE;
-			} else if (!cf_https_strcmp("gzip", string) || !cf_https_strcmp("x_gzip", string)) {
-				h->transfer_encoding |= CF_TRANSFER_ENCODING_FLAG_GZIP;
-			} else if (string.len > 0) {
-				h->err = cf_result_error("Unrecognized transfer encoding encountered.");
-				return true;
-			}
-
-			// RFC-7230 3.3.1
-			if ((prev_flags & CF_TRANSFER_ENCODING_FLAG_CHUNKED) && (h->transfer_encoding != prev_flags)) {
-				h->err = cf_result_error("Invalid transfer encoding order found (chunked must be last).");
-				return true;
-			}
-
-			string = s_scan(h, ',');
-			if (!string.ptr) break;
-		}
-	}
-
-	CF_HttpsHeader header;
+	CF_Request* request = (CF_Request*)request_handle.id;
+	CF_HttpsHeader& header = request->headers.add();
 	header.name = name;
-	header.content = content;
-	h->headers.add(header);
-
-	h->next(s_header);
-	return false;
+	header.value = value;
 }
 
-static bool s_request(cf_https_decoder_t* h)
+CF_HttpsResult cf_https_process(CF_HttpsRequest request_handle)
 {
-	CF_HttpsString method = s_scan(h, ' ');
-	if (!method.ptr) return true;
-	CF_HttpsString uri = s_scan(h, ' ');
-	if (!uri.ptr) return true;
-	CF_HttpsString version = s_scan(h, ' ', false);
-	if (!version.ptr) return true;
-
-	if (!cf_https_strcmp("HTTP/1.1", version)) {
-		h->err = cf_result_error("Expected HTTP/1.1");
-		return true;
-	}
-
-	h->next(s_header);
-	return false;
+	CF_Request* request = (CF_Request*)request_handle.id;
+	coroutine_resume(request->co); // s_https_process
+	return request->result;
 }
 
-static bool s_response(cf_https_decoder_t* h) {
-	CF_HttpsString version = s_scan(h, ' ');
-	if (!version.ptr) return true;
-	CF_HttpsString code = s_scan(h, ' ');
-	if (!code.ptr) return true;
-	CF_HttpsString phrase = s_scan(h, ' ', false);
-	if (!phrase.ptr) return true;
-
-	if (cf_https_strcmp("HTTP/1.1", version)) {
-		h->err = cf_result_error("Expected HTTP/1.1");
-		return true;
-	}
-
-	// RFC7230 section 3.1.2
-	uint64_t code_number;
-	if (s_int(code, 10, &code_number) || code.len != 3 || code_number > 999) {
-		h->err = cf_result_error("Bad response code.");
-		return true;
-	}
-	h->response_code = (int)code_number;
-
-	h->next(s_header);
-	return false;
-}
-
-static bool s_decode(cf_https_decoder_t* h, const char* data, size_t size)
+CF_HttpsResponse cf_https_response(CF_HttpsRequest request_handle)
 {
-	bool done = false;
-
-	while (size) {
-		size_t bytes_read = 0;
-		done = h->decode(h, data, size, &bytes_read);
-		if (done) break;
-		data += bytes_read;
-		size -= bytes_read;
-	}
-
-	return done;
+	CF_Request* request = (CF_Request*)request_handle.id;
+	CF_HttpsResponse result;
+	result.id = (uint64_t)&request->response;
+	return result;
 }
 
-CF_HttpsState cf_https_state(CF_Https* https)
+int cf_https_response_code(CF_HttpsResponse response_handle)
 {
-	return https->state;
+	CF_Response* response = (CF_Response*)response_handle.id;
+	return response->code;
 }
 
-size_t cf_https_process(CF_Https* https)
+int cf_https_response_content_length(CF_HttpsResponse response_handle)
 {
-	if (https->state != CF_HTTPS_STATE_PENDING) return https->bytes_read;
+	CF_Response* response = (CF_Response*)response_handle.id;
+	return response->content.len();
+}
 
-	if (!https->request_sent) {
-		const char* request = https->request.data();
-		int result;
-		while ((result = mbedtls_ssl_write(&https->ssl, (uint8_t*)request, CF_STRLEN(request))) <= 0) {
-			if (result != MBEDTLS_ERR_SSL_WANT_READ && result != MBEDTLS_ERR_SSL_WANT_WRITE) {
-				https->state = CF_HTTPS_STATE_FAILED;
-				return https->bytes_read;
-			}
-		}
-		https->request_sent = true;
-		https->h.decode = s_get_line;
-		https->h.process_line = s_response;
-	}
-	
-	https->response_buffer.ensure_count(https->bytes_read + 1024 * 10);
+char* cf_https_response_content(CF_HttpsResponse response_handle)
+{
+	CF_Response* response = (CF_Response*)response_handle.id;
+	return response->content.c_str();
+}
 
-	int result;
-	const char* data = https->response_buffer.data() + https->bytes_read;
-	result = mbedtls_ssl_read(&https->ssl, (uint8_t*)(https->response_buffer.data() + https->bytes_read), https->response_buffer.count() - https->bytes_read - 1);
+CF_HttpsHeader cf_https_response_find_header(CF_HttpsResponse response_handle, const char* header_name)
+{
+	CF_Response* response = (CF_Response*)response_handle.id;
+	return response->headers.get(sintern(header_name));
+}
 
-	const char* err = mbedtls_high_level_strerr(result);
+int cf_https_response_headers_count(CF_HttpsResponse response_handle)
+{
+	CF_Response* response = (CF_Response*)response_handle.id;
+	return response->headers.count();
+}
 
-	if (result == MBEDTLS_ERR_SSL_WANT_READ || result == MBEDTLS_ERR_SSL_WANT_WRITE) return https->bytes_read;
-	else if (result == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY) return https->bytes_read;
-	else if (result <= 0) return https->bytes_read;
-
-	https->bytes_read += result;
-	bool done = s_decode(&https->h, data, result);
-	if (!done) return https->bytes_read;
-
-	https->h.buffer.add(0);
-	https->response.code = https->h.response_code;
-	https->response.content = https->h.buffer.data();
-	https->response.headers.steal_from(https->h.headers);
-	https->response.content_len = https->h.buffer.count() - 1;
-	https->response.transfer_encoding_flags = https->h.transfer_encoding;
-	https->state = CF_HTTPS_STATE_COMPLETED;
-	return https->bytes_read;
+htbl const CF_HttpsHeader* cf_https_response_headers(CF_HttpsResponse response_handle)
+{
+	CF_Response* response = (CF_Response*)response_handle.id;
+	return response->headers.items();
 }
 
 #else // CF_EMSCRIPTEN
@@ -1001,16 +795,5 @@ CF_HttpsResponse cf_https_response(CF_Https* https)
 
 namespace Cute
 {
-const https_response_t* https_response(CF_Https* https)
-{
-	CF_ASSERT(sizeof(cf_internal_https_response_t) == sizeof(https_response_t));
-
-	cf_internal_https_response_t* response_interal;
-	if (!cf_internal_https_response(https, &response_interal)) { return NULL; }
-
-	return (const https_response_t*)response_interal;
-}
 
 }
-
-#endif // CF_NO_HTTPS

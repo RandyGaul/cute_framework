@@ -6,7 +6,7 @@ Category: [string](/api_reference?id=string)
 GitHub: [cute_string.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_string.h)  
 ---
 
-Ensures the capacity of the string is at least n elements.
+Ensures the capacity of the string is at least n+1 elements.
 
 ```cpp
 #define sfit(s, n) cf_string_fit(s, n)

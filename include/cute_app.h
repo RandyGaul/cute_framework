@@ -204,7 +204,7 @@ CF_API void CF_CALL cf_app_signal_shutdown();
 /**
  * @function cf_app_update
  * @category app
- * @brief    Updates the application. Must be called once per frame.
+ * @brief    Updates the application. Must be called once per frame, at the beginning of the frame.
  * @param    on_update  Called for each update tick.
  * @example > Running an app in Variable or Fixed Timestep.
  *     TODO
@@ -237,7 +237,7 @@ CF_API void CF_CALL cf_app_update(CF_OnUpdateFn* on_update);
  *         
  *         return 0;
  *     }
- * @remarks  Call this at tnhe *end* of your main loop.
+ * @remarks  Call this at the *end* of your main loop. You may only call this function once per game tick.
  * @related  cf_make_app cf_app_is_running cf_app_signal_shutdown cf_destroy_app
  */
 CF_API int CF_CALL cf_app_draw_onto_screen();

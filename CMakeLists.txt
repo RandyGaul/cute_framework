@@ -29,17 +29,12 @@ endfunction()
 
 # Todo - Fix how turning some of these off breaks the build.
 option(CF_FRAMEWORK_STATIC "Build static library for Cute Framework." ON)
-option(CF_FRAMEWORK_WITH_HTTPS "Build Cute Framework with mbedtls for HTTPS support (Apache 2.0 license)." ON)
 option(CF_FRAMEWORK_BUILD_TESTS "Build the cute framework unit tests." ON)
 option(CF_FRAMEWORK_BUILD_SAMPLES "Build the cute framework sample programs." ON)
 
 # Platform detection.
 if(CMAKE_SYSTEM_NAME MATCHES "Emscripten")
 	set(EMSCRIPTEN TRUE)
-	# Disable HTTPS with Emscripten since mbedtls continually has build issues here, also it's not
-	# a very useful feature for web builds anyways, due to lack of socket/signal support.
-	set(CF_FRAMEWORK_WITH_HTTPS OFF)
-
 	# Also disable samples/tests. These should be supported/added back in at some point.
 	set(CF_FRAMEWORK_BUILD_SAMPLES OFF)
 	set(CF_FRAMEWORK_BUILD_TESTS OFF)
@@ -292,18 +287,18 @@ endif()
 add_library(physfs STATIC ${PHYSFS_SRCS})
 set(CF_LINK_LIBS ${CF_LINK_LIBS} physfs)
 
-# Optional mbedtls for HTTPS support.
-if(CF_FRAMEWORK_WITH_HTTPS)
-	option(ENABLE_PROGRAMS "Build mbed TLS programs." OFF)
-	option(ENABLE_TESTING "Build mbed TLS tests." OFF)
-	fetch_content_with_folder(
-		mbedtls
-		GIT_REPOSITORY https://github.com/Mbed-TLS/mbedtls
-		GIT_TAG v3.1.0
-		GIT_PROGRESS TRUE
-	)
-	set(CF_LINK_LIBS ${CF_LINK_LIBS} mbedx509 mbedtls mbedcrypto)
-endif()
+# TODO - Change this to s2n for Linux.
+#if(CF_FRAMEWORK_WITH_HTTPS)
+#	option(ENABLE_PROGRAMS "Build mbed TLS programs." OFF)
+#	option(ENABLE_TESTING "Build mbed TLS tests." OFF)
+#	fetch_content_with_folder(
+#		mbedtls
+#		GIT_REPOSITORY https://github.com/Mbed-TLS/mbedtls
+#		GIT_TAG v3.1.0
+#		GIT_PROGRESS TRUE
+#	)
+#	set(CF_LINK_LIBS ${CF_LINK_LIBS} mbedx509 mbedtls mbedcrypto)
+#endif()
 
 # SDL2 for platform support.
 # Just don't build the shared library at all, it's not needed.
@@ -403,6 +398,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 	add_executable(docsparser samples/docs_parser.cpp)
 	add_executable(scratch samples/scratch.cpp)
 	add_executable(echo samples/echo.cpp)
+	add_executable(https samples/https.c)
 	set(SAMPLE_EXECUTABLES
 		easysprite
 		basicecs
@@ -419,6 +415,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 		docsparser
 		scratch
 		echo
+		https
 	)
 
 	foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
