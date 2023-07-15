@@ -30,6 +30,7 @@
 #include "cute_time.h"
 #include "cute_color.h"
 #include "cute_result.h"
+#include "cute_math.h"
 
 //--------------------------------------------------------------------------------------------------
 // C API
@@ -156,6 +157,9 @@ typedef struct CF_Sprite
 
 	/* @member For internal use only. */
 	uint64_t easy_sprite_id;
+
+	/* @member Controls the animation play direction. This gets set each time `cf_sprite_play` is called to the animation's play direction. You may override this member yourself after calling `cf_sprite_play`. */
+	CF_PlayDirection play_direction;
 
 	/* @member A pointer to the current animation to display, from within the set `animations`. See `CF_Animation`. */
 	const CF_Animation* animation;
@@ -286,16 +290,43 @@ CF_INLINE void cf_sprite_update(CF_Sprite* sprite)
 	if (!sprite->animation) return;
 
 	sprite->t += CF_DELTA_TIME * sprite->play_speed_multiplier;
-	if (sprite->t >= sprite->animation->frames[sprite->frame_index].delay) {
-		sprite->frame_index++;
-		if (sprite->frame_index == alen(sprite->animation->frames)) {
-			sprite->loop_count++;
-			sprite->frame_index = 0;
+	int frame_count = alen(sprite->animation->frames);
+	CF_PlayDirection direction = sprite->play_direction;
+	if (direction == CF_PLAY_DIRECTION_FORWARDS) {
+		if (sprite->t >= sprite->animation->frames[sprite->frame_index].delay) {
+			sprite->frame_index++;
+			sprite->t = 0;
+			if (sprite->frame_index == frame_count) {
+				sprite->loop_count++;
+				sprite->frame_index = 0;
+			}
 		}
-
-		sprite->t = 0;
-
-		// TODO - Backwards and pingpong.
+	} else if (direction == CF_PLAY_DIRECTION_BACKWARDS) {
+		if (sprite->t >= sprite->animation->frames[sprite->frame_index].delay) {
+			sprite->frame_index--;
+			sprite->t = 0;
+			if (sprite->frame_index < 0) {
+				sprite->loop_count++;
+				sprite->frame_index = cf_min(1, frame_count);
+			}
+		}
+	} else if (direction == CF_PLAY_DIRECTION_PINGPONG) {
+		if (sprite->t >= sprite->animation->frames[sprite->frame_index].delay) {
+			sprite->t = 0;
+			if (sprite->loop_count % 2) {
+				sprite->frame_index--;
+				if (sprite->frame_index < 0) {
+					sprite->loop_count++;
+					sprite->frame_index = cf_min(1, frame_count);
+				}
+			} else {
+				sprite->frame_index++;
+				if (sprite->frame_index == frame_count) {
+					sprite->loop_count++;
+					sprite->frame_index = cf_max(0, frame_count - 2);
+				}
+			}
+		}
 	}
 }
 
@@ -312,6 +343,7 @@ CF_INLINE void cf_sprite_reset(CF_Sprite* sprite)
 	sprite->frame_index = 0;
 	sprite->loop_count = 0;
 	sprite->t = 0;
+	if (sprite->animation) sprite->play_direction = sprite->animation->play_direction;
 }
 
 /**
