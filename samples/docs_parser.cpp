@@ -644,13 +644,9 @@ int main(int argc, char* argv[])
 
 	// Save a functions.md, structs.md, and enums.md for each category.
 	{
-		Array<const char*> categories;
+		s->categories.sort_by_items([](const char* a, const char* b) { return sicmp(a, b) < 0; });
 		for (int i = 0; i < s->categories.count(); ++i) {
-			categories.add(s->categories.items()[i]);
-		}
-		std::sort(categories.data(), categories.data() + categories.count(), [](const char* a, const char* b) { return sicmp(a, b) < 0; });
-		for (int i = 0; i < categories.count(); ++i) {
-			const char* category = categories[i];
+			const char* category = s->categories.items()[i];
 			Array<const char*> index_list = s->category_index_lists.find(category);
 
 			// Save functions.md.
