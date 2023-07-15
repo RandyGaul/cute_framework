@@ -18,7 +18,7 @@
 - [cf_fs_read](/file/cf_fs_read.md)
 - [cf_fs_read_entire_file_to_memory](/file/cf_fs_read_entire_file_to_memory.md)
 - [cf_fs_read_entire_file_to_memory_and_nul_terminate](/file/cf_fs_read_entire_file_to_memory_and_nul_terminate.md)
-- [cf_fs_remove_directory](/file/cf_fs_remove_directory.md)
+- [cf_fs_remove](/file/cf_fs_remove.md)
 - [cf_fs_seek](/file/cf_fs_seek.md)
 - [cf_fs_set_write_directory](/file/cf_fs_set_write_directory.md)
 - [cf_fs_size](/file/cf_fs_size.md)

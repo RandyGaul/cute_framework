@@ -18,6 +18,6 @@ directory_list | The directory list returned from [cf_fs_create_directory](/file
 
 ## Related Pages
 
-[cf_fs_remove_directory](/file/cf_fs_remove_directory.md)  
+cf_fs_remove_directory  
 [cf_fs_create_directory](/file/cf_fs_create_directory.md)  
 [cf_fs_enumerate_directory](/file/cf_fs_enumerate_directory.md)  

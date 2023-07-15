@@ -26,6 +26,6 @@ All missing directories are also created. [Virtual File System](https://randygau
 
 ## Related Pages
 
-[cf_fs_remove_directory](/file/cf_fs_remove_directory.md)  
+cf_fs_remove_directory  
 [cf_fs_free_enumerated_directory](/file/cf_fs_free_enumerated_directory.md)  
 [cf_fs_enumerate_directory](/file/cf_fs_enumerate_directory.md)  

@@ -482,15 +482,15 @@ CF_API CF_File* CF_CALL cf_fs_open_file_for_read(const char* virtual_path);
 CF_API CF_Result CF_CALL cf_fs_close(CF_File* file);
 
 /**
- * @function cf_fs_remove_directory
+ * @function cf_fs_remove
  * @category file
- * @brief    Removes a directory.
- * @param    virtual_path  The virtual path to the directory.
+ * @brief    Removes a file or directory.
+ * @param    virtual_path  The virtual path to the file or directory.
  * @return   Returns any errors as a `CF_Result`.
  * @remarks  [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
  * @related  cf_fs_remove_directory cf_fs_create_directory cf_fs_enumerate_directory cf_fs_free_enumerated_directory
  */
-CF_API CF_Result CF_CALL cf_fs_remove_directory(const char* virtual_path);
+CF_API CF_Result CF_CALL cf_fs_remove(const char* virtual_path);
 
 /**
  * @function cf_fs_create_directory
@@ -705,7 +705,7 @@ CF_INLINE File* fs_open_file_for_write(const char* virtual_path) { return cf_fs_
 CF_INLINE File* fs_open_file_for_append(const char* virtual_path) { return cf_fs_open_file_for_append(virtual_path); }
 CF_INLINE File* fs_open_file_for_read(const char* virtual_path) { return cf_fs_open_file_for_read(virtual_path); }
 CF_INLINE Result fs_close(File* file) { return cf_fs_close(file); }
-CF_INLINE Result fs_remove_directory(const char* virtual_path) { return cf_fs_remove_directory(virtual_path); }
+CF_INLINE Result fs_remove(const char* virtual_path) { return cf_fs_remove(virtual_path); }
 CF_INLINE Result fs_create_directory(const char* virtual_path) { return cf_fs_create_directory(virtual_path); }
 CF_INLINE const char** fs_enumerate_directory(const char* virtual_path) { return cf_fs_enumerate_directory(virtual_path); }
 CF_INLINE void fs_free_enumerated_directory(const char** directory_list) { cf_fs_free_enumerated_directory(directory_list); }
@@ -773,7 +773,7 @@ struct Directory
 
 	static CF_INLINE Directory open(const char* virtual_path) { return Directory(virtual_path); }
 	static CF_INLINE Result create(const char* virtual_path) { return fs_create_directory(virtual_path); }
-	static CF_INLINE Result remove(const char* virtual_path) { return fs_remove_directory(virtual_path); }
+	static CF_INLINE Result remove(const char* virtual_path) { return fs_remove(virtual_path); }
 	static CF_INLINE Array<Path> enumerate(const char* virtual_path) {
 		Array<Path> files;
 		const char** paths = fs_enumerate_directory(virtual_path);

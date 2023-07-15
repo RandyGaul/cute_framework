@@ -40,6 +40,6 @@ the list up with [cf_fs_free_enumerated_directory](/file/cf_fs_free_enumerated_d
 
 ## Related Pages
 
-[cf_fs_remove_directory](/file/cf_fs_remove_directory.md)  
+cf_fs_remove_directory  
 [cf_fs_create_directory](/file/cf_fs_create_directory.md)  
 [cf_fs_free_enumerated_directory](/file/cf_fs_free_enumerated_directory.md)  
