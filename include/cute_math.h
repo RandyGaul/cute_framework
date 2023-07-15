@@ -923,6 +923,16 @@ CF_INLINE int cf_safe_norm_int(int a) { return a == 0 ? 0 : cf_sign_int(a); }
 CF_INLINE CF_V2 cf_neg_v2(CF_V2 a) { return cf_v2(-a.x, -a.y); }
 
 /**
+ * @function cf_reflect_v2
+ * @category math
+ * @brief    Returns a vector of equal length to `a` but with its direction reflected
+ * @param    a        The vector being reflected
+ * @param    n        The normal of the plane that is being reflected off of
+ * @related  CF_V2 cf_neg_v2 cf_norm cf_safe_norm
+ */
+CF_INLINE CF_V2 cf_reflect_v2(CF_V2 a, CF_V2 n) { return cf_sub_v2(a, cf_mul_v2_f(n, (2.f * cf_dot(a, n)))); }
+
+/**
  * @function cf_lerp_v2
  * @category math
  * @brief    Returns a vector linearly interpolated from `a` to `b` along `t`, a value _usually_ from 0.0f to 1.0f.
@@ -2561,6 +2571,7 @@ CF_INLINE v2 norm(v2 a) { return cf_norm(a); }
 CF_INLINE v2 safe_norm(v2 a) { return cf_safe_norm(a); }
 CF_INLINE float safe_norm(float a) { return cf_safe_norm_f(a); }
 CF_INLINE int safe_norm(int a) { return cf_safe_norm_int(a); }
+CF_INLINE v2 reflect(v2 a, v2 n) { return cf_reflect_v2(a, n); }
 
 CF_INLINE v2 lerp(v2 a, v2 b, float t) { return cf_lerp_v2(a, b, t); }
 CF_INLINE v2 bezier(v2 a, v2 c0, v2 b, float t) { return cf_bezier(a, c0, b, t); }
