@@ -134,7 +134,7 @@ typedef struct CF_Sprite
 	/* @member Scale factor for the sprite when drawing. Default of `(1, 1)`. See `cf_draw_sprite`. */
 	CF_V2 scale;
 
-	/* @member A local offset/origin for the sprite when drawing. See `cf_draw_sprite`. */
+	/* @member A local offset/origin for the sprite when drawing. See `cf_draw_sprite`. This value is automatically set for .ase files if a slice called "origin" is present. */
 	CF_V2 local_offset;
 
 	/* @member An opacity value for the entire sprite. Default of 1.0f. See `cf_draw_sprite`. */

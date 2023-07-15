@@ -126,6 +126,14 @@ Here's an example of drawing a more full looking scene with various sprites. Sim
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/block_man.gif?raw=true>
 </p>
 
+### Sprite Origin
+
+The sprite may have a local origin to offset itself whenever drawn. Set the `local_offset` member of any [CF_Sprite](https://randygaul.github.io/cute_framework/#/sprite/cf_sprite) struct. This field gets automatically populated if loading a sprite from a .ase file, if the .ase file contains a [slice](https://www.aseprite.org/docs/slices/) called `origin`.
+
+<p align="center">
+<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/origin_slice.png?raw=true>
+</p>
+
 ## Drawing Text
 
 Text has it's own [Text API Reference](https://randygaul.github.io/cute_framework/#/api_reference?id=text). Call [`cf_make_font`](https://randygaul.github.io/cute_framework/#/text/cf_make_font) to load up a font file, then call [`cf_draw_text`](https://randygaul.github.io/cute_framework/#/text/cf_draw_text) to draw text. Text has a whole bunch of settings, such as:
