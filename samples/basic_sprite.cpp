@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 	if (is_error(result)) return -1;
 
 	Sprite girl_sprite = cf_make_demo_sprite();
-	girl_sprite.play("idle");
+	girl_sprite.play("spin");
 	girl_sprite.scale = V2(4,4);
 
 	while (app_is_running()) {

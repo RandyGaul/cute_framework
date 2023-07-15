@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
 
 	app_init_imgui();
 
-	make_font_mem(calibri_data, calibri_sz, "calibri");
+	make_font_mem(calibri_data, calibri_sz, "Calibri");
 	push_font("Calibri");
 
 	int draw_calls = 0;
@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 	Sprite s = cf_make_demo_sprite();
 	s.scale.x = 2.0f;
 	s.scale.y = 2.0f;
-	s.play("idle");
+	s.play("spin");
 
 	draw_push_antialias(false);
 	Color c = color_white();
@@ -66,7 +66,7 @@ int main(int argc, char* argv[])
 		draw_push_antialias_scale(aaf);
 		ImGui::End();
 
-		if (1) {
+		if (0) {
 			draw_push_antialias(aa);
 			//draw_circle_fill(v, 100);
 			draw_capsule(v,v+V2(100,100),20);
@@ -183,6 +183,9 @@ int main(int argc, char* argv[])
 			cf_draw_polyline(pts, CF_ARRAY_SIZE(pts), 10, true);
 			draw_pop_antialias();
 		}
+
+		s.update();
+		s.draw();
 
 		String s = fps;
 		draw_text(s.c_str(), V2(-w/2.0f,-h/2.0f)+V2(2,35));
