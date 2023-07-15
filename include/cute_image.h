@@ -53,12 +53,12 @@ typedef struct CF_ImageIndexed
 // PNG loading.
 
 CF_API CF_Result CF_CALL cf_image_load_png(const char* virtual_path, CF_Image* img);
-CF_API CF_Result CF_CALL cf_image_load_png_mem(const void* data, int size, CF_Image* img);
+CF_API CF_Result CF_CALL cf_image_load_png_from_memory(const void* data, int size, CF_Image* img);
 CF_API CF_Result CF_CALL cf_image_load_png_wh(const void* data, int size, int* w, int* h);
 CF_API void CF_CALL cf_image_free(CF_Image* img);
 
 CF_API CF_Result CF_CALL cf_image_load_png_indexed(const char* virtual_path, CF_ImageIndexed* img);
-CF_API CF_Result CF_CALL cf_image_load_png_mem_indexed(const void* data, int size, CF_ImageIndexed* img);
+CF_API CF_Result CF_CALL cf_image_load_png_from_memory_indexed(const void* data, int size, CF_ImageIndexed* img);
 CF_API void CF_CALL cf_image_free_indexed(CF_ImageIndexed* img);
 
 // -------------------------------------------------------------------------------------------------
@@ -87,12 +87,12 @@ using ImageIndexed = CF_ImageIndexed;
 // PNG loading.
 
 CF_INLINE Result image_load_png(const char* virtual_path, Image* img) { return cf_image_load_png(virtual_path, img); }
-CF_INLINE Result image_load_png_mem(const void* data, int size, Image* img) { return cf_image_load_png_mem(data, size, img); }
+CF_INLINE Result image_load_png_mem(const void* data, int size, Image* img) { return cf_image_load_png_from_memory(data, size, img); }
 CF_INLINE Result image_load_png_wh(const void* data, int size, int* w, int* h) { return cf_image_load_png_wh(data, size, w, h); }
 CF_INLINE void image_free(Image* img) { cf_image_free(img); }
 
 CF_INLINE Result image_load_png_indexed(const char* virtual_path, ImageIndexed* img) { return cf_image_load_png_indexed(virtual_path, img); }
-CF_INLINE Result image_load_png_mem_indexed(const void* data, int size, ImageIndexed* img) { return cf_image_load_png_mem_indexed(data, size, img); }
+CF_INLINE Result image_load_png_mem_indexed(const void* data, int size, ImageIndexed* img) { return cf_image_load_png_from_memory_indexed(data, size, img); }
 CF_INLINE void image_free(ImageIndexed* img) { cf_image_free_indexed(img); }
 
 // -------------------------------------------------------------------------------------------------

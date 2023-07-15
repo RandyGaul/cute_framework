@@ -293,7 +293,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		// Load up a default image of 1x1 white pixel.
 		// Used in various places as a placeholder or default.
 		CF_Png img;
-		cf_png_cache_load_mem("cf_default_png", default_png_data, (size_t)default_png_sz, &img);
+		cf_png_cache_load_from_memory("cf_default_png", default_png_data, (size_t)default_png_sz, &img);
 		app->default_image_id = img.id;
 		CF_ASSERT(app->default_image_id == CF_PNG_ID_RANGE_LO);
 

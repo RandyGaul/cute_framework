@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
 
 	app_init_imgui();
 
-	make_font_mem(calibri_data, calibri_sz, "Calibri");
+	make_font_from_memory(calibri_data, calibri_sz, "Calibri");
 	push_font("Calibri");
 
 	int draw_calls = 0;

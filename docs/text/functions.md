@@ -2,7 +2,7 @@
 - [cf_draw_text](/text/cf_draw_text.md)
 - [cf_font_add_backup_codepoints](/text/cf_font_add_backup_codepoints.md)
 - [cf_make_font](/text/cf_make_font.md)
-- [cf_make_font_mem](/text/cf_make_font_mem.md)
+- [cf_make_font_from_memory](/text/cf_make_font_from_memory.md)
 - [cf_peek_font](/text/cf_peek_font.md)
 - [cf_peek_font_blur](/text/cf_peek_font_blur.md)
 - [cf_peek_font_size](/text/cf_peek_font_size.md)

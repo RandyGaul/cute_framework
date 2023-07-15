@@ -98,10 +98,10 @@ CF_Result cf_png_cache_load(const char* png_path, CF_Png* png)
 	return cf_result_success();
 }
 
-CF_Result cf_png_cache_load_mem(const char* png_path, const void* memory, size_t size, CF_Png* png)
+CF_Result cf_png_cache_load_from_memory(const char* png_path, const void* memory, size_t size, CF_Png* png)
 {
 	CF_Image img;
-	CF_Result err = cf_image_load_png_mem(memory, (int)size, &img);
+	CF_Result err = cf_image_load_png_from_memory(memory, (int)size, &img);
 	if (cf_is_error(err)) return err;
 	CF_Png entry;
 	entry.path = sintern(png_path);

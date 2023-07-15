@@ -1000,7 +1000,7 @@ void cf_draw_arrow(CF_V2 a, CF_V2 b, float thickness, float arrow_width)
 	cf_draw_tri_fill(b, b - n + t, b - n - t, 0);
 }
 
-CF_Result cf_make_font_mem(void* data, int size, const char* font_name)
+CF_Result cf_make_font_from_memory(void* data, int size, const char* font_name)
 {
 	font_name = sintern(font_name);
 	CF_Font* font = (CF_Font*)CF_NEW(CF_Font);
@@ -1047,7 +1047,7 @@ CF_Result cf_make_font(const char* path, const char* font_name)
 	if (!data) {
 		return cf_result_error("Unable to open font file.");;
 	}
-	return cf_make_font_mem(data, (int)size, font_name);
+	return cf_make_font_from_memory(data, (int)size, font_name);
 }
 
 void cf_destroy_font(const char* font_name)

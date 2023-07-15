@@ -36,12 +36,12 @@ CF_Result cf_image_load_png(const char* path, CF_Image* img)
 	size_t sz;
 	void* data = cf_fs_read_entire_file_to_memory(path, &sz);
 	if (!data) return cf_result_error("Unable to open png file.");
-	CF_Result err = cf_image_load_png_mem(data, (int)sz, img);
+	CF_Result err = cf_image_load_png_from_memory(data, (int)sz, img);
 	CF_FREE(data);
 	return err;
 }
 
-CF_Result cf_image_load_png_mem(const void* data, int size, CF_Image* img)
+CF_Result cf_image_load_png_from_memory(const void* data, int size, CF_Image* img)
 {
 	cp_image_t cp_img = cp_load_png_mem(data, size);
 	if (!cp_img.pix) return cf_result_error(cp_error_reason);
@@ -67,10 +67,10 @@ CF_Result cf_image_load_png_indexed(const char* path, CF_ImageIndexed* img)
 	size_t sz;
 	void* data = cf_fs_read_entire_file_to_memory(path, &sz);
 	if (!data) return cf_result_error("Unable to open png file.");
-	return cf_image_load_png_mem_indexed(data, (int)sz, img);
+	return cf_image_load_png_from_memory_indexed(data, (int)sz, img);
 }
 
-CF_Result cf_image_load_png_mem_indexed(const void* data, int size, CF_ImageIndexed* img)
+CF_Result cf_image_load_png_from_memory_indexed(const void* data, int size, CF_ImageIndexed* img)
 {
 	cp_indexed_image_t cp_img = cp_load_indexed_png_mem(data, size);
 	if (!cp_img.pix) return cf_result_error(cp_error_reason);

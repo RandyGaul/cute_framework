@@ -1,20 +1,21 @@
 [](../header.md ':include')
 
-# cf_make_font
+# cf_make_font_from_memory
 
 Category: [text](/api_reference?id=text)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
 ---
 
-Constructs a font for rendering text.
+Constructs a font for rendering text from memory.
 
 ```cpp
-CF_Result cf_make_font(const char* path, const char* font_name);
+CF_Result cf_make_font_from_memory(void* data, int size, const char* font_name);
 ```
 
 Parameters | Description
 --- | ---
-path | A virtual path (TODO_LINK) to the font file.
+data | A buffer containing the bytes of a font file in memory.
+size | The size of `data` in bytes.
 font_name | A unique name for this font. Used by [cf_push_font](/text/cf_push_font.md) and friends.
 
 ## Return Value
@@ -29,8 +30,8 @@ _different fonts_ and each must be loaded up individually.
 
 ## Related Pages
 
+[cf_make_font](/text/cf_make_font.md)  
 [cf_draw_text](/text/cf_draw_text.md)  
-[cf_make_font_from_memory](/text/cf_make_font_from_memory.md)  
 [cf_destroy_font](/text/cf_destroy_font.md)  
 [cf_push_font](/text/cf_push_font.md)  
 [cf_push_font_size](/text/cf_push_font_size.md)  
