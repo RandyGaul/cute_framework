@@ -30,7 +30,7 @@ _different fonts_ and each must be loaded up individually.
 ## Related Pages
 
 [cf_draw_text](/text/cf_draw_text.md)  
-[cf_make_font_mem](/text/cf_make_font_mem.md)  
+[cf_make_font_from_memory](/text/cf_make_font_from_memory.md)  
 [cf_destroy_font](/text/cf_destroy_font.md)  
 [cf_push_font](/text/cf_push_font.md)  
 [cf_push_font_size](/text/cf_push_font_size.md)  

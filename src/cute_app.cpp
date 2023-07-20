@@ -293,7 +293,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 		// Load up a default image of 1x1 white pixel.
 		// Used in various places as a placeholder or default.
 		CF_Png img;
-		cf_png_cache_load_mem("cf_default_png", default_png_data, (size_t)default_png_sz, &img);
+		cf_png_cache_load_from_memory("cf_default_png", default_png_data, (size_t)default_png_sz, &img);
 		app->default_image_id = img.id;
 		CF_ASSERT(app->default_image_id == CF_PNG_ID_RANGE_LO);
 
@@ -405,8 +405,6 @@ static void s_on_update(void* udata)
 
 void cf_app_update(CF_OnUpdateFn* on_update)
 {
-	app->user_on_update = on_update;
-	cf_update_time(s_on_update);
 	if (app->gfx_enabled) {
 		if (app->using_imgui) {
 			simgui_frame_desc_t desc = { };
@@ -418,6 +416,8 @@ void cf_app_update(CF_OnUpdateFn* on_update)
 			simgui_new_frame(&desc);
 		}
 	}
+	app->user_on_update = on_update;
+	cf_update_time(s_on_update);
 }
 
 static void s_imgui_present()

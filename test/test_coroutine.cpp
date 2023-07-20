@@ -25,7 +25,7 @@
 
 using namespace Cute;
 
-void coroutine_func(CF_Coroutine* co)
+void coroutine_func(CF_Coroutine co)
 {
 	int a, b;
 	cf_coroutine_pop(co, &a, sizeof(a));
@@ -36,7 +36,7 @@ void coroutine_func(CF_Coroutine* co)
 	cf_coroutine_push(co, &c, sizeof(c));
 }
 
-void coroutine_wait_func(CF_Coroutine* co)
+void coroutine_wait_func(CF_Coroutine co)
 {
 	coroutine_yield(co);
 
@@ -47,7 +47,7 @@ void coroutine_wait_func(CF_Coroutine* co)
 /* Call some coroutine functions or whatever. */
 TEST_CASE(test_basic)
 {
-	CF_Coroutine* co = cf_make_coroutine(coroutine_func, 0, NULL);
+	CF_Coroutine co = cf_make_coroutine(coroutine_func, 0, NULL);
 	int a = 5;
 	int b = 10;
 	int c = 0;

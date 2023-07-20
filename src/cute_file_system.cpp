@@ -313,7 +313,7 @@ CF_Result cf_fs_close(CF_File* file)
 	}
 }
 
-CF_Result cf_fs_remove_directory(const char* virtual_path)
+CF_Result cf_fs_remove(const char* virtual_path)
 {
 	if (!PHYSFS_delete(virtual_path)) {
 		return cf_result_error(PHYSFS_getErrorByCode(PHYSFS_getLastErrorCode()));

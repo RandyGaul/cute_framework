@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 	s.play("idle");
 
 	camera_dimensions(640/4, 480/4);
-	draw_push_color(make_color(0xeba48bff));
+	draw_push_color(make_color(0xeba48b));
 	draw_push_tint(color_purple());
 	draw_push_antialias(true);
 	float t = 0;

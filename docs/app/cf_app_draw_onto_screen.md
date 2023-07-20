@@ -44,7 +44,7 @@ int main(int argc, const char argv)
 
 ## Remarks
 
-Call this at tnhe end of your main loop.
+Call this at the end of your main loop. You may only call this function once per game tick.
 
 ## Related Pages
 

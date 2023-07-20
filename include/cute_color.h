@@ -135,10 +135,20 @@ CF_INLINE CF_Color cf_make_color_rgba(uint8_t r, uint8_t g, uint8_t b, uint8_t a
  * @function cf_make_color_hex
  * @category graphics
  * @brief    Returns a `CF_Color` made from integer hex input.
- * @param    hex        An integer value, e.g. 0xFFAACC11.
+ * @param    hex        An integer value, e.g. 0xFFAACC.
+ * @remarks  The opacity of the output color is set to 0xFF (fully opaque). Will assert if the value is greater than 0xFFFFFF.
  * @related  CF_Color cf_make_color_rgb_f cf_make_color_rgba_f cf_make_color_rgb cf_make_color_rgba cf_make_color_hex cf_make_color_hex_string
  */
-CF_INLINE CF_Color cf_make_color_hex(int hex) { return cf_make_color_rgba((uint8_t)((hex & 0xFF000000)>>24), (uint8_t)((hex & 0x00FF0000) >> 16), (uint8_t)((hex & 0x0000FF00) >> 8), (uint8_t)(hex & 0xFF0000FF)); }
+CF_INLINE CF_Color cf_make_color_hex(int hex) { CF_ASSERT((hex & 0xFF000000) == 0); return cf_make_color_rgba((uint8_t)((hex & 0xFF0000) >> 16), (uint8_t)((hex & 0x00FF00) >> 8), (uint8_t)(hex & 0x0000FF), 0xFF); }
+
+/**
+ * @function cf_make_color_hex2
+ * @category graphics
+ * @brief    Returns a `CF_Color` made from integer hex input.
+ * @param    hex        An integer value, e.g. 0xFFAACC, and alpha e.g. 0xFF.
+ * @related  CF_Color cf_make_color_rgb_f cf_make_color_rgba_f cf_make_color_rgb cf_make_color_rgba cf_make_color_hex cf_make_color_hex_string
+ */
+CF_INLINE CF_Color cf_make_color_hex2(int hex, int alpha) { return cf_make_color_rgba((uint8_t)((hex & 0xFF0000) >> 16), (uint8_t)((hex & 0x00FF00) >> 8), (uint8_t)(hex & 0x0000FF), (uint8_t)(alpha & 0xFF)); }
 
 /**
  * @function cf_make_color_hex_string
@@ -578,7 +588,7 @@ CF_INLINE CF_Pixel cf_pixel_premultiply(CF_Pixel c) { c.colors.r = cf_mul_un8(c.
  * @return   Returns a `CF_Color` (0.0f-1.0f) converted from pixel form (0-255).
  * @related  cf_pixel_to_color cf_pixel_to_int_rgba cf_pixel_to_int_rgb cf_pixel_to_string
  */
-CF_INLINE CF_Color cf_pixel_to_color(CF_Pixel p) { return cf_make_color_hex((int)p.val); }
+CF_INLINE CF_Color cf_pixel_to_color(CF_Pixel p) { return cf_make_color_hex2((int)p.val & 0xFFFFFF, ((int)p.val & 0xFF000000) >> 24); }
 
 /**
  * @function cf_pixel_to_int_rgb
@@ -750,6 +760,14 @@ CF_INLINE CF_Color cf_color_cyan() { return cf_make_color_rgb(68, 220, 235); }
 CF_INLINE CF_Color cf_color_magenta() { return cf_make_color_rgb(224, 70, 224); }
 
 /**
+ * @function cf_color_brown
+ * @category graphics
+ * @brief    Helper function to return a brown `CF_Color`.
+ * @related  cf_color_invisible cf_color_black cf_color_white cf_color_red cf_color_green cf_color_blue cf_color_yellow cf_color_orange cf_color_purple cf_color_grey cf_color_cyan cf_color_magenta
+ */
+CF_INLINE CF_Color cf_color_brown() { return cf_make_color_rgb(150, 105, 25); }
+
+/**
  * @function cf_pixel_invisible
  * @category graphics
  * @brief    Helper function to return a invisible `CF_Pixel`.
@@ -844,6 +862,14 @@ CF_INLINE CF_Pixel cf_pixel_cyan() { return cf_make_pixel_rgb(68, 220, 235); }
  * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
  */
 CF_INLINE CF_Pixel cf_pixel_magenta() { return cf_make_pixel_rgb(224, 70, 224); }
+
+/**
+ * @function cf_pixel_brown
+ * @category graphics
+ * @brief    Helper function to return a brown `CF_Pixel`.
+ * @related  cf_pixel_invisible cf_pixel_black cf_pixel_white cf_pixel_red cf_pixel_green cf_pixel_blue cf_pixel_yellow cf_pixel_orange cf_pixel_purple cf_pixel_grey cf_pixel_cyan cf_pixel_magenta
+ */
+CF_INLINE CF_Pixel cf_pixel_brown() { return cf_make_pixel_rgb(150, 105, 25); }
 
 #ifdef __cplusplus
 }

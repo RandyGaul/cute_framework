@@ -83,7 +83,7 @@ CF_API CF_Result CF_CALL cf_png_cache_load(const char* png_path, CF_Png* png /*=
  * Returns an image from the cache. If it does not exist in the cache, it is loaded from memory
  * and placed into the cache.
  */
-CF_API CF_Result CF_CALL cf_png_cache_load_mem(const char* png_path, const void* memory, size_t size, CF_Png* png /*= NULL*/);
+CF_API CF_Result CF_CALL cf_png_cache_load_from_memory(const char* png_path, const void* memory, size_t size, CF_Png* png /*= NULL*/);
 
 /**
  * Unloads an image from the cache. This function can be used to control your RAM usage, for example
@@ -149,7 +149,7 @@ struct Png : public CF_Png
 };
 
 CF_INLINE Result png_cache_load(const char* png_path, Png* png = NULL) { return cf_png_cache_load(png_path, (CF_Png*)png); }
-CF_INLINE Result png_cache_load_mem(const char* png_path, const void* memory, size_t size, CF_Png* png = NULL) { return cf_png_cache_load_mem(png_path, memory, size, png); }
+CF_INLINE Result png_cache_load_mem(const char* png_path, const void* memory, size_t size, CF_Png* png = NULL) { return cf_png_cache_load_from_memory(png_path, memory, size, png); }
 CF_INLINE void png_cache_unload(Png png) { cf_png_cache_unload(png); }
 CF_API const Animation* CF_CALL make_png_cache_animation(const char* name, const Array<CF_Png>& pngs, const Array<float>& delays);
 CF_INLINE const Animation* png_cache_get_animation(const char* name) { return cf_png_cache_get_animation(name); }

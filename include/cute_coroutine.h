@@ -44,7 +44,7 @@ extern "C" {
  *           preserving state between yield/resume calls, for example to perform some complex action over multiple frames.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  */
-typedef struct CF_Coroutine CF_Coroutine;
+typedef struct CF_Coroutine { uint64_t id; } CF_Coroutine;
 // @end
 
 /**
@@ -54,7 +54,7 @@ typedef struct CF_Coroutine CF_Coroutine;
  * @param    co            The coroutine.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  */
-typedef void (CF_CoroutineFn)(CF_Coroutine* co);
+typedef void (CF_CoroutineFn)(CF_Coroutine co);
 
 /**
  * @function cf_make_coroutine
@@ -67,7 +67,7 @@ typedef void (CF_CoroutineFn)(CF_Coroutine* co);
  *           coroutine with `cf_destroy_coroutine` when done. See `CF_Coroutine` for some more details.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  */
-CF_API CF_Coroutine* CF_CALL cf_make_coroutine(CF_CoroutineFn* fn, int stack_size, void* udata);
+CF_API CF_Coroutine CF_CALL cf_make_coroutine(CF_CoroutineFn* fn, int stack_size, void* udata);
 
 /**
  * @function cf_destroy_coroutine
@@ -77,7 +77,7 @@ CF_API CF_Coroutine* CF_CALL cf_make_coroutine(CF_CoroutineFn* fn, int stack_siz
  * @remarks  All objects on the coroutine's stack will get automically cleaned up.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  */
-CF_API void CF_CALL cf_destroy_coroutine(CF_Coroutine* co);
+CF_API void CF_CALL cf_destroy_coroutine(CF_Coroutine co);
 
 /**
  * @enum     CF_CoroutineState
@@ -131,7 +131,7 @@ CF_INLINE const char* cf_coroutine_state_to_string(CF_CoroutineState type)
  *           for more details.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  */
-CF_API CF_Result CF_CALL cf_coroutine_resume(CF_Coroutine* co);
+CF_API CF_Result CF_CALL cf_coroutine_resume(CF_Coroutine co);
 
 /**
  * @function cf_coroutine_yield
@@ -143,7 +143,7 @@ CF_API CF_Result CF_CALL cf_coroutine_resume(CF_Coroutine* co);
  *           for more details.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  */
-CF_API CF_Result CF_CALL cf_coroutine_yield(CF_Coroutine* co);
+CF_API CF_Result CF_CALL cf_coroutine_yield(CF_Coroutine co);
 
 /**
  * @function cf_coroutine_state
@@ -152,7 +152,7 @@ CF_API CF_Result CF_CALL cf_coroutine_yield(CF_Coroutine* co);
  * @param    co            The coroutine.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  */
-CF_API CF_CoroutineState CF_CALL cf_coroutine_state(CF_Coroutine* co);
+CF_API CF_CoroutineState CF_CALL cf_coroutine_state(CF_Coroutine co);
 
 /**
  * @function cf_coroutine_get_udata
@@ -161,7 +161,7 @@ CF_API CF_CoroutineState CF_CALL cf_coroutine_state(CF_Coroutine* co);
  * @param    co            The coroutine.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  */
-CF_API void* CF_CALL cf_coroutine_get_udata(CF_Coroutine* co);
+CF_API void* CF_CALL cf_coroutine_get_udata(CF_Coroutine co);
 
 /**
  * @function cf_coroutine_push
@@ -175,7 +175,7 @@ CF_API void* CF_CALL cf_coroutine_get_udata(CF_Coroutine* co);
  *           in/out of coroutines via FIFO ordering. These storage are totally optional, and here merely for convenience.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  */
-CF_API CF_Result CF_CALL cf_coroutine_push(CF_Coroutine* co, const void* data, size_t size);
+CF_API CF_Result CF_CALL cf_coroutine_push(CF_Coroutine co, const void* data, size_t size);
 
 /**
  * @function cf_coroutine_pop
@@ -189,7 +189,7 @@ CF_API CF_Result CF_CALL cf_coroutine_push(CF_Coroutine* co, const void* data, s
  *           in/out of coroutines via FIFO ordering. These storage are totally optional, and here merely for convenience.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  */
-CF_API CF_Result CF_CALL cf_coroutine_pop(CF_Coroutine* co, void* data, size_t size);
+CF_API CF_Result CF_CALL cf_coroutine_pop(CF_Coroutine co, void* data, size_t size);
 
 /**
  * @function cf_coroutine_bytes_pushed
@@ -200,7 +200,7 @@ CF_API CF_Result CF_CALL cf_coroutine_pop(CF_Coroutine* co, void* data, size_t s
  *           in/out of coroutines via FIFO ordering. These storage are totally optional, and here merely for convenience.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  */
-CF_API size_t CF_CALL cf_coroutine_bytes_pushed(CF_Coroutine* co);
+CF_API size_t CF_CALL cf_coroutine_bytes_pushed(CF_Coroutine co);
 
 /**
  * @function cf_coroutine_space_remaining
@@ -211,7 +211,7 @@ CF_API size_t CF_CALL cf_coroutine_bytes_pushed(CF_Coroutine* co);
  *           in/out of coroutines via FIFO ordering. These storage are totally optional, and here merely for convenience.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  */
-CF_API size_t CF_CALL cf_coroutine_space_remaining(CF_Coroutine* co);
+CF_API size_t CF_CALL cf_coroutine_space_remaining(CF_Coroutine co);
 
 /**
  * @function cf_coroutine_currently_running
@@ -224,7 +224,7 @@ CF_API size_t CF_CALL cf_coroutine_space_remaining(CF_Coroutine* co);
  *           this function.
  * @related  CF_Coroutine CF_CoroutineFn CF_CoroutineState cf_make_coroutine cf_destroy_coroutine cf_coroutine_state_to_string cf_coroutine_resume cf_coroutine_yield cf_coroutine_state cf_coroutine_get_udata cf_coroutine_push cf_coroutine_pop cf_coroutine_bytes_pushed cf_coroutine_space_remaining cf_coroutine_currently_running
  */
-CF_API CF_Coroutine* CF_CALL cf_coroutine_currently_running();
+CF_API CF_Coroutine CF_CALL cf_coroutine_currently_running();
 
 #ifdef __cplusplus
 }
@@ -256,20 +256,20 @@ CF_INLINE const char* to_string(CoroutineState type)
 	}
 }
 
-CF_INLINE Coroutine* make_coroutine(CoroutineFn* fn, int stack_size = 0, void* udata = NULL) { return cf_make_coroutine(fn, stack_size, udata); }
-CF_INLINE void destroy_coroutine(Coroutine* co) { cf_destroy_coroutine(co); }
+CF_INLINE Coroutine make_coroutine(CoroutineFn* fn, int stack_size = 0, void* udata = NULL) { return cf_make_coroutine(fn, stack_size, udata); }
+CF_INLINE void destroy_coroutine(Coroutine co) { cf_destroy_coroutine(co); }
 	 
-CF_INLINE Result coroutine_resume(Coroutine* co) { return cf_coroutine_resume(co); }
-CF_INLINE Result coroutine_yield(Coroutine* co) { return cf_coroutine_yield(co); }
-CF_INLINE CoroutineState coroutine_state(Coroutine* co) { return cf_coroutine_state(co); }
-CF_INLINE void* coroutine_get_udata(Coroutine* co) { return cf_coroutine_get_udata(co); }
+CF_INLINE Result coroutine_resume(Coroutine co) { return cf_coroutine_resume(co); }
+CF_INLINE Result coroutine_yield(Coroutine co) { return cf_coroutine_yield(co); }
+CF_INLINE CoroutineState coroutine_state(Coroutine co) { return cf_coroutine_state(co); }
+CF_INLINE void* coroutine_get_udata(Coroutine co) { return cf_coroutine_get_udata(co); }
 	 
-CF_INLINE Result coroutine_push(Coroutine* co, const void* data, size_t size) { return cf_coroutine_push(co, data, size); }
-CF_INLINE Result coroutine_pop(Coroutine* co, void* data, size_t size) { return cf_coroutine_pop(co, data, size); }
-CF_INLINE size_t coroutine_bytes_pushed(Coroutine* co) { return cf_coroutine_bytes_pushed(co); }
-CF_INLINE size_t coroutine_space_remaining(Coroutine* co) { return cf_coroutine_space_remaining(co); }
+CF_INLINE Result coroutine_push(Coroutine co, const void* data, size_t size) { return cf_coroutine_push(co, data, size); }
+CF_INLINE Result coroutine_pop(Coroutine co, void* data, size_t size) { return cf_coroutine_pop(co, data, size); }
+CF_INLINE size_t coroutine_bytes_pushed(Coroutine co) { return cf_coroutine_bytes_pushed(co); }
+CF_INLINE size_t coroutine_space_remaining(Coroutine co) { return cf_coroutine_space_remaining(co); }
 	 
-CF_INLINE Coroutine* coroutine_currently_running() { return cf_coroutine_currently_running(); }
+CF_INLINE Coroutine coroutine_currently_running() { return cf_coroutine_currently_running(); }
 
 }
 

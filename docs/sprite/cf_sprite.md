@@ -14,7 +14,7 @@ Struct Members | Description
 `int w` | Width of the sprite in pixels.
 `int h` | Height of the sprite in pixels.
 `CF_V2 scale` | Scale factor for the sprite when drawing. Default of `(1, 1)`. See [cf_draw_sprite](/draw/cf_draw_sprite.md).
-`CF_V2 local_offset` | A local offset/origin for the sprite when drawing. See [cf_draw_sprite](/draw/cf_draw_sprite.md).
+`CF_V2 local_offset` | A local offset/origin for the sprite when drawing. See [cf_draw_sprite](/draw/cf_draw_sprite.md). This value is automatically set for .ase files if a slice called "origin" is present.
 `float opacity` | An opacity value for the entire sprite. Default of 1.0f. See [cf_draw_sprite](/draw/cf_draw_sprite.md).
 `int frame_index` | The current frame within `animation` to display.
 `int loop_count` | The number of times this sprite has completed an animation.
@@ -22,6 +22,7 @@ Struct Members | Description
 `bool paused` | Whether or not to pause updates to the animation.
 `float t` | The current elapsed time within a frame of animation.
 `uint64_t easy_sprite_id` | For internal use only.
+`CF_PlayDirection play_direction` | Controls the animation play direction. This gets set each time [cf_sprite_play](/sprite/cf_sprite_play.md) is called to the animation's play direction. You may override this member yourself after calling [cf_sprite_play](/sprite/cf_sprite_play.md).
 `const CF_Animation* animation` | A pointer to the current animation to display, from within the set `animations`. See [CF_Animation](/sprite/cf_animation.md).
 `htbl const CF_Animation** animations` | The set of named animations for this sprite. See [CF_Animation](/sprite/cf_animation.md) and [htbl](/hash/htbl.md).
 `CF_Transform transform` | An optional transform for rendering within a particular space. See [CF_Transform](/math/cf_transform.md).

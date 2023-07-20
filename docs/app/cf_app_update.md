@@ -6,7 +6,7 @@ Category: [app](/api_reference?id=app)
 GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_app.h)  
 ---
 
-Updates the application. Must be called once per frame.
+Updates the application. Must be called once per frame, at the beginning of the frame.
 
 ```cpp
 void cf_app_update(CF_OnUpdateFn* on_update);

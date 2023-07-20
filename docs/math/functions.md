@@ -142,6 +142,7 @@
 - [cf_quint_in](/math/cf_quint_in.md)
 - [cf_quint_in_out](/math/cf_quint_in_out.md)
 - [cf_quint_out](/math/cf_quint_out.md)
+- [cf_reflect_v2](/math/cf_reflect_v2.md)
 - [cf_remap](/math/cf_remap.md)
 - [cf_round](/math/cf_round.md)
 - [cf_safe_invert](/math/cf_safe_invert.md)

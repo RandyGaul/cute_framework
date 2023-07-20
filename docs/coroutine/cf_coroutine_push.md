@@ -9,7 +9,7 @@ GitHub: [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Pushes some bytes onto the coroutine's storage.
 
 ```cpp
-CF_Result cf_coroutine_push(CF_Coroutine* co, const void* data, size_t size);
+CF_Result cf_coroutine_push(CF_Coroutine co, const void* data, size_t size);
 ```
 
 Parameters | Description

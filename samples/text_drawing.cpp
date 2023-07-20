@@ -12,9 +12,9 @@ int main(int argc, char* argv[])
 	if (is_error(result)) return -1;
 
 	draw_push_antialias(true);
-	make_font_mem(proggy_data, proggy_sz, "ProggyClean");
+	make_font_from_memory(proggy_data, proggy_sz, "ProggyClean");
 	push_font("ProggyClean");
-	make_font_mem(calibri_data, calibri_sz, "calibri");
+	make_font_from_memory(calibri_data, calibri_sz, "calibri");
 	set_fixed_timestep();
 	int draw_calls = 0;
 
@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
 
 		// Coloring text.
 		push_font_size(26);
-		draw_push_color(make_color(0x55b6f2ff));
+		draw_push_color(make_color(0x55b6f2));
 		draw_text("Some bigger and blue text.", V2(-100,150));
 		draw_pop_color();
 		pop_font_size();

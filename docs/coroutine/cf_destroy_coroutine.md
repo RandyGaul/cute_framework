@@ -9,7 +9,7 @@ GitHub: [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Destroys a coroutine created by [cf_make_coroutine](/coroutine/cf_make_coroutine.md).
 
 ```cpp
-void cf_destroy_coroutine(CF_Coroutine* co);
+void cf_destroy_coroutine(CF_Coroutine co);
 ```
 
 Parameters | Description

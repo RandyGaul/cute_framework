@@ -147,8 +147,6 @@ void cf_update_time(CF_OnUpdateFn* on_update)
 					} else {
 						unsimulated_ticks += leftover;
 					}
-				} else {
-					continue;
 				}
 			} else {
 				s_step(ticks_per_timestep);

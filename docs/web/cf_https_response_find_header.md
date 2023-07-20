@@ -6,20 +6,20 @@ Category: [web](/api_reference?id=web)
 GitHub: [cute_https.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_https.h)  
 ---
 
-Helper function find a specific header in a [CF_HttpsResponse](/web/cf_httpsresponse.md).
+TODO
 
 ```cpp
-bool cf_https_response_find_header(const CF_HttpsResponse* response, const char* header_name, CF_HttpsHeader* header_out)
+CF_HttpsHeader cf_https_response_find_header(CF_HttpsResponse response, const char* header_name);
 ```
 
 ## Return Value
 
-Returns true the header was found. The header will be written to `header_out`. Case is ignored.
+TODO
+
+## Remarks
+
+TODO
 
 ## Related Pages
 
-[CF_Https](/web/cf_https.md)  
-[CF_HttpsResponse](/web/cf_httpsresponse.md)  
-[cf_https_response](/web/cf_https_response.md)  
-[CF_HttpsString](/web/cf_httpsstring.md)  
-[CF_HttpsHeader](/web/cf_httpsheader.md)  
+TODO  

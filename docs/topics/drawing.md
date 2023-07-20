@@ -29,7 +29,6 @@ int main(int argc, char* argv[])
 
 	while (app_is_running()) {
 		app_update();
-/Users/randygaul/Documents/GitHub/cute_framework/docs/index.html
 		t += DELTA_TIME;
 
 		float radius = 100.0f;
@@ -117,7 +116,7 @@ int main(int argc, char* argv[])
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/basic_sprite.gif?raw=true>
 </p>
 
-The girl sprite in the above sample code contains a few different animations, such as "up" "side", "hold_side", "ladder", and "idle". Feel free to try them out! The above gif shows the girl sprite spinning -- this animation was removed to reduced the sprite's file size (so you unfortunately can't try spinning out).
+The girl sprite in the above sample code contains a few different animations, such as "up" "side", "hold_side", "ladder", and "idle". Feel free to try them out!
 
 ---
 
@@ -125,6 +124,14 @@ Here's an example of drawing a more full looking scene with various sprites. Sim
 
 <p align="center">
 <img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/block_man.gif?raw=true>
+</p>
+
+### Sprite Origin
+
+The sprite may have a local origin to offset itself whenever drawn. Set the `local_offset` member of any [CF_Sprite](https://randygaul.github.io/cute_framework/#/sprite/cf_sprite) struct. This field gets automatically populated if loading a sprite from a .ase file, if the .ase file contains a [slice](https://www.aseprite.org/docs/slices/) called `origin`.
+
+<p align="center">
+<img src=https://github.com/RandyGaul/cute_framework/blob/master/assets/origin_slice.png?raw=true>
 </p>
 
 ## Drawing Text

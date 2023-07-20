@@ -33,3 +33,4 @@ See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/vi
 [cf_make_easy_sprite_from_png](/sprite/cf_make_easy_sprite_from_png.md)  
 [cf_make_easy_sprite_from_pixels](/sprite/cf_make_easy_sprite_from_pixels.md)  
 [cf_easy_sprite_update_pixels](/sprite/cf_easy_sprite_update_pixels.md)  
+[cf_make_sprite_from_memory](/sprite/cf_make_sprite_from_memory.md)  

@@ -6,7 +6,7 @@ Category: [time](/api_reference?id=time)
 GitHub: [cute_time.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_time.h)  
 ---
 
-Attempts to run the app at a certain frequency.
+Attempts to render onto the screen at a certain frequency.
 
 ```cpp
 void cf_set_target_framerate(int frames_per_second);

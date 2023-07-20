@@ -442,12 +442,12 @@ CF_API float CF_CALL cf_draw_peek_antialias_scale();
  * @remarks  Memory is only consumed when you draw a certain glyph (text character). Just loading up the font initially is
  *           a low-cost operation. You may load up many fonts with low overhead. Please note that bold, italic, etc. are actually
  *           _different fonts_ and each must be loaded up individually.
- * @related  cf_make_font cf_make_font_mem cf_destroy_font cf_push_font cf_push_font_size cf_push_font_blur cf_draw_text
+ * @related  cf_make_font cf_make_font_from_memory cf_destroy_font cf_push_font cf_push_font_size cf_push_font_blur cf_draw_text
  */
 CF_API CF_Result CF_CALL cf_make_font(const char* path, const char* font_name);
 
 /**
- * @function cf_make_font_mem
+ * @function cf_make_font_from_memory
  * @category text
  * @brief    Constructs a font for rendering text from memory.
  * @param    data        A buffer containing the bytes of a font file in memory.
@@ -457,16 +457,16 @@ CF_API CF_Result CF_CALL cf_make_font(const char* path, const char* font_name);
  * @remarks  Memory is only consumed when you draw a certain glyph (text character). Just loading up the font initially is
  *           a low-cost operation. You may load up many fonts with low overhead. Please note that bold, italic, etc. are actually
  *           _different fonts_ and each must be loaded up individually.
- * @related  cf_make_font cf_make_font_mem cf_destroy_font cf_push_font cf_push_font_size cf_push_font_blur cf_draw_text
+ * @related  cf_make_font cf_make_font_from_memory cf_destroy_font cf_push_font cf_push_font_size cf_push_font_blur cf_draw_text
  */
-CF_API CF_Result CF_CALL cf_make_font_mem(void* data, int size, const char* font_name);
+CF_API CF_Result CF_CALL cf_make_font_from_memory(void* data, int size, const char* font_name);
 
 /**
  * @function cf_destroy_font
  * @category text
- * @brief    Destroys a font previously made by `cf_make_font` or `cf_make_font_mem`.
+ * @brief    Destroys a font previously made by `cf_make_font` or `cf_make_font_from_memory`.
  * @param    font_name   The unique name for this font.
- * @related  cf_make_font cf_make_font_mem cf_destroy_font cf_push_font cf_push_font_size cf_push_font_blur cf_draw_text
+ * @related  cf_make_font cf_make_font_from_memory cf_destroy_font cf_push_font cf_push_font_size cf_push_font_blur cf_draw_text
  */
 CF_API void CF_CALL cf_destroy_font(const char* font_name);
 
@@ -1175,7 +1175,7 @@ CF_INLINE float draw_pop_antialias_scale() { return cf_draw_pop_antialias_scale(
 CF_INLINE float draw_peek_antialias_scale() { return cf_draw_peek_antialias_scale(); }
 
 CF_INLINE CF_Result make_font(const char* path, const char* font_name) { return cf_make_font(path, font_name); }
-CF_INLINE CF_Result make_font_mem(void* data, int size, const char* font_name) { return cf_make_font_mem(data, size, font_name); }
+CF_INLINE CF_Result make_font_from_memory(void* data, int size, const char* font_name) { return cf_make_font_from_memory(data, size, font_name); }
 CF_INLINE void destroy_font(const char* font_name) { cf_destroy_font(font_name); }
 CF_INLINE void font_add_backup_codepoints(const char* font_name, int* codepoints, int count) { cf_font_add_backup_codepoints(font_name, codepoints, count); }
 CF_INLINE void push_font(const char* font_name) { cf_push_font(font_name); }

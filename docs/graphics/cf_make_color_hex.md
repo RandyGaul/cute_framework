@@ -14,7 +14,11 @@ CF_Color cf_make_color_hex(int hex)
 
 Parameters | Description
 --- | ---
-hex | An integer value, e.g. 0xFFAACC11.
+hex | An integer value, e.g. 0xFFAACC.
+
+## Remarks
+
+The opacity of the output color is set to 0xFF (fully opaque). Will assert if the value is greater than 0xFFFFFF.
 
 ## Related Pages
 

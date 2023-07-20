@@ -9,7 +9,7 @@ GitHub: [cute_coroutine.h](https://github.com/RandyGaul/cute_framework/blob/mast
 Entry point for a coroutine to start.
 
 ```cpp
-typedef void (CF_CoroutineFn)(CF_Coroutine* co);
+typedef void (CF_CoroutineFn)(CF_Coroutine co);
 ```
 
 Parameters | Description

@@ -1,6 +1,6 @@
 [](../header.md ':include')
 
-# cf_make_font_mem
+# cf_make_font_from_memory
 
 Category: [text](/api_reference?id=text)  
 GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
@@ -9,7 +9,7 @@ GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/in
 Constructs a font for rendering text from memory.
 
 ```cpp
-CF_Result cf_make_font_mem(void* data, int size, const char* font_name);
+CF_Result cf_make_font_from_memory(void* data, int size, const char* font_name);
 ```
 
 Parameters | Description

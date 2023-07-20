@@ -128,6 +128,11 @@ struct State
 		return link;
 	}
 
+	bool has_doc(const char* file)
+	{
+		return page_to_doc_index.has(sintern(file));
+	}
+
 	void clear() { token.clear(); in = end = NULL; }
 	bool done() { return in >= end; }
 	void append(int ch) { token.append(ch); }
@@ -523,9 +528,9 @@ void save_list_page(Path path, const char* category, Array<const char*> pages, c
 	// Save the actual list files.
 	{
 		Path topic_path = path;
-		topic_path.pop();
 		topic_path.add(String::fmt("docs/%s/%s.md", category, path_name));
 		FILE* fp = fopen(topic_path.c_str(), "wb");
+		CF_ASSERT(fp);
 		for (int i = 0; i < pages.count(); ++i) {
 			String page = pages[i];
 			String page_lower = page;
@@ -539,13 +544,26 @@ void save_list_page(Path path, const char* category, Array<const char*> pages, c
 
 int main(int argc, char* argv[])
 {
-	// Mount the headers folder as "".
+	// Mount the headers folder as "/".
 	cf_fs_init(argv[0]);
 	Path path = cf_fs_get_base_directory();
 	path = path.normalize();
 	path.popn(2);
 	path.add("/include");
-	cf_fs_mount(path.c_str(), "", true);
+	cf_fs_mount(path.c_str(), "/", true);
+
+	// Mount docs folder as "/docs".
+	path = cf_fs_get_base_directory();
+	path = path.normalize();
+	path.popn(2);
+	path.add("/docs");
+	cf_fs_mount(path.c_str(), "/docs", true);
+
+	// Allow us to freely write in the project directory.
+	path = cf_fs_get_base_directory();
+	path = path.normalize();
+	path.popn(2);
+	cf_fs_set_write_directory(path.c_str());
 
 	// Parse each header into docs.
 	Directory headers = Directory::open("");
@@ -626,13 +644,9 @@ int main(int argc, char* argv[])
 
 	// Save a functions.md, structs.md, and enums.md for each category.
 	{
-		Array<const char*> categories;
+		s->categories.sort_by_items([](const char* a, const char* b) { return sicmp(a, b) < 0; });
 		for (int i = 0; i < s->categories.count(); ++i) {
-			categories.add(s->categories.items()[i]);
-		}
-		std::sort(categories.data(), categories.data() + categories.count(), [](const char* a, const char* b) { return sicmp(a, b) < 0; });
-		for (int i = 0; i < categories.count(); ++i) {
-			const char* category = categories[i];
+			const char* category = s->categories.items()[i];
 			Array<const char*> index_list = s->category_index_lists.find(category);
 
 			// Save functions.md.
@@ -678,6 +692,27 @@ int main(int argc, char* argv[])
 				has_enums = enums.count() > 0;
 				std::sort(enums.data(), enums.data() + enums.count(), [](const char* a, const char* b) { return sicmp(a, b) < 0; });
 				save_list_page(path, category, enums, "enums");
+			}
+		}
+	}
+
+	// Delete any old document files that are no longer used in the category folders.
+	{
+		for (int i = 0; i < s->categories.count(); ++i) {
+			const char* category = s->categories.keys()[i];
+			Path path = "/docs";
+			path.add(category);
+			Directory dir = Directory::open(path);
+			const char* file;
+			while ((file = dir.next())) {
+				if (sequ(file, "enums.md") ||  sequ(file, "functions.md") || sequ(file, "structs.md")) {
+					continue;
+				}
+				if (!s->has_doc(file)) {
+					Path filepath = path;
+					filepath += file;
+					fs_remove(filepath.c_str());
+				}
 			}
 		}
 	}
