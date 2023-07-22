@@ -123,7 +123,7 @@ CF_INLINE void cf_draw_box(CF_Aabb bb, float thickness, float chubbiness) { cf_d
 CF_INLINE void cf_draw_box2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float chubbiness) { cf_draw_quad2(p0, p1, p2, p3, thickness,  chubbiness); }
 
 /**
-* @function cf_draw_quad_fill
+* @function cf_draw_boxW_fill
 * @category draw
 * @brief    Draws a quad.
 * @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
@@ -134,7 +134,7 @@ CF_INLINE void cf_draw_box2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickn
 CF_INLINE void cf_draw_box_fill(CF_Aabb bb, float chubbiness) { cf_draw_quad_fill(bb, chubbiness); }
 
 /**
-* @function cf_draw_quad_fill2
+* @function cf_draw_box_fill2
 * @category draw
 * @brief    Draws a quad.
 * @param    p0         A corner of the quad.
