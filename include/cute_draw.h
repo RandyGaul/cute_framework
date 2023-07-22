@@ -95,6 +95,59 @@ CF_API void CF_CALL cf_draw_quad_fill(CF_Aabb bb, float chubbiness);
 CF_API void CF_CALL cf_draw_quad_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float chubbiness);
 
 /**
+* @function cf_draw_box
+* @category draw
+* @brief    Draws a quad wireframe.
+* @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
+* @param    thickness  The thickness of each line to draw.
+* @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+* @remarks  This is an alias for `cf_draw_quad`
+* @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
+*/
+CF_INLINE void cf_draw_box(CF_Aabb bb, float thickness, float chubbiness) { cf_draw_quad(bb, thickness, chubbiness); }
+
+
+/**
+* @function cf_draw_box2
+* @category draw
+* @brief    Draws a quad wireframe.
+* @param    p0         A corner of the quad.
+* @param    p1         A corner of the quad.
+* @param    p2         A corner of the quad.
+* @param    p3         A corner of the quad.
+* @param    thickness  The thickness of each line to draw.
+* @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+* @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order. This is an alias for `cf_draw_quad2`
+* @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
+*/
+CF_INLINE void cf_draw_box2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float thickness, float chubbiness) { cf_draw_quad2(p0, p1, p2, p3, thickness,  chubbiness); }
+
+/**
+* @function cf_draw_box_fill
+* @category draw
+* @brief    Draws a quad.
+* @param    bb         The AABB (Axis-Aligned Bounding Box) to draw a quad over.
+* @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+* @remarks  This is an alias for `cf_draw_quad_fill`
+* @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
+*/
+CF_INLINE void cf_draw_box_fill(CF_Aabb bb, float chubbiness) { cf_draw_quad_fill(bb, chubbiness); }
+
+/**
+* @function cf_draw_box_fill2
+* @category draw
+* @brief    Draws a quad.
+* @param    p0         A corner of the quad.
+* @param    p1         A corner of the quad.
+* @param    p2         A corner of the quad.
+* @param    p3         A corner of the quad.
+* @param    chubbiness Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+* @remarks  All points `p0` through `p3` are encouraged to be in counter-clockwise order. This is an alias for `cf_draw_quad_fill2`
+* @related  cf_draw_quad cf_draw_quad2 cf_draw_quad_fill cf_draw_quad_fill2
+*/
+CF_INLINE void cf_draw_box_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float chubbiness) { cf_draw_quad_fill2(p0, p1, p2, p3, chubbiness); }
+
+/**
  * @function cf_draw_circle
  * @category draw
  * @brief    Draws a circle wireframe.
@@ -1141,6 +1194,10 @@ CF_INLINE void draw_quad(Aabb bb, float thickness = 1.0f, float chubbiness = 0) 
 CF_INLINE void draw_quad(v2 p0, v2 p1, v2 p2, v2 p3, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad2(p0, p1, p2, p3, thickness, chubbiness); }
 CF_INLINE void draw_quad_fill(Aabb bb, float chubbiness = 0) { cf_draw_quad_fill(bb, chubbiness); }
 CF_INLINE void draw_quad_fill(v2 p0, v2 p1, v2 p2, v2 p3, float chubbiness = 0) { cf_draw_quad_fill2(p0, p1, p2, p3, chubbiness); }
+CF_INLINE void draw_box(Aabb bb, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad(bb, thickness, chubbiness); }
+CF_INLINE void draw_box(v2 p0, v2 p1, v2 p2, v2 p3, float thickness = 1.0f, float chubbiness = 0) { cf_draw_quad2(p0, p1, p2, p3, thickness, chubbiness); }
+CF_INLINE void draw_box_fill(Aabb bb, float chubbiness = 0) { cf_draw_quad_fill(bb, chubbiness); }
+CF_INLINE void draw_box_fill(v2 p0, v2 p1, v2 p2, v2 p3, float chubbiness = 0) { cf_draw_quad_fill2(p0, p1, p2, p3, chubbiness); }
 CF_INLINE void draw_circle(Circle circle, float thickness = 1.0f) { cf_draw_circle(circle, thickness); }
 CF_INLINE void draw_circle(v2 p, float r, float thickness = 1.0f) { cf_draw_circle2(p, r, thickness); }
 CF_INLINE void draw_circle_fill(Circle circle) { cf_draw_circle_fill(circle); }
