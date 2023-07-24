@@ -187,17 +187,27 @@ const CF_Animation** cf_png_cache_get_animation_table(const char* sprite_name)
 CF_Sprite cf_make_png_cache_sprite(const char* sprite_name, const CF_Animation** table)
 {
 	sprite_name = sintern(sprite_name);
-	CF_ASSERT(table);
-
-	CF_Png png = hget(cache->pngs, table[0]->frames[0].id);
-	CF_ASSERT(png.path);
-
 	CF_Sprite sprite = cf_sprite_defaults();
 	sprite.name = sprite_name;
-	sprite.w = png.w;
-	sprite.h = png.h;
-	sprite.animations = table;
-	cf_sprite_play(&sprite, sprite.animations[0]->name);
+
+	if (table) {
+		CF_Png png = hget(cache->pngs, table[0]->frames[0].id);
+		CF_ASSERT(png.path);
+		sprite.w = png.w;
+		sprite.h = png.h;
+		sprite.animations = table;
+		cf_sprite_play(&sprite, sprite.animations[0]->name);
+	} else {
+		CF_Png entry;
+		CF_Result result = cf_png_cache_load(sprite_name, &entry);
+		if (cf_is_error(result)) {
+			return cf_sprite_defaults();
+		} else {
+			sprite.w = entry.w;
+			sprite.h = entry.h;
+			sprite.easy_sprite_id = entry.id;
+		}
+	}
 
 	return sprite;
 }

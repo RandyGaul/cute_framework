@@ -50,11 +50,11 @@ TEST_SUITE(test_doubly_list);
 TEST_SUITE(test_ecs);
 TEST_SUITE(test_handle);
 TEST_SUITE(test_hashtable);
-TEST_SUITE(test_kv);
 TEST_SUITE(test_path);
 TEST_SUITE(test_png_cache);
 TEST_SUITE(test_sprite);
 TEST_SUITE(test_string);
+TEST_SUITE(test_json);
 
 int main(int argc, char* argv[])
 {
@@ -84,11 +84,11 @@ int main(int argc, char* argv[])
 	RUN_TEST_SUITE(test_ecs);
 	RUN_TEST_SUITE(test_handle);
 	RUN_TEST_SUITE(test_hashtable);
-	RUN_TEST_SUITE(test_kv);
 	RUN_TEST_SUITE(test_path);
 	RUN_TEST_SUITE(test_png_cache);
 	RUN_TEST_SUITE(test_sprite);
 	RUN_TEST_SUITE(test_string);
+	RUN_TEST_SUITE(test_json);
 
 	pu_print_stats();
 	return pu_test_failed();

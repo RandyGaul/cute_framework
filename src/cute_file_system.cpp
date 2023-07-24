@@ -443,6 +443,16 @@ CF_Result cf_fs_write_entire_buffer_to_file(const char* virtual_path, const void
 	return cf_result_success();
 }
 
+CF_Result cf_fs_write_string_to_file(const char* virtual_path, const char* string)
+{
+	return cf_fs_write_entire_buffer_to_file(virtual_path, (void*)string, CF_STRLEN(string));
+}
+
+CF_Result cf_fs_write_string_range_to_file(const char* virtual_path, const char* begin, const char* end)
+{
+	return cf_fs_write_entire_buffer_to_file(virtual_path, (void*)begin, end - begin);
+}
+
 CF_Result cf_fs_init(const char* argv0)
 {
 	if (!PHYSFS_init(argv0)) {

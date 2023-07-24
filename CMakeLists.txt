@@ -86,7 +86,7 @@ set(CF_SRCS
 	src/cute_input.cpp
 	src/cute_time.cpp
 	src/cute_version.cpp
-	src/cute_kv.cpp
+	src/cute_json.cpp
 	src/cute_base64.cpp
 	src/cute_hashtable.cpp
 	src/cute_ecs.cpp
@@ -112,6 +112,7 @@ set(CF_SRCS
 	src/cute_result.cpp
 
 	src/internal/cute_dx11.cpp
+	src/internal/yyjson.c
 
 	libraries/cimgui/imgui/backends/imgui_impl_sdl.cpp
 	
@@ -120,7 +121,7 @@ set(CF_SRCS
 	libraries/cimgui/imgui/imgui_draw.cpp
 	libraries/cimgui/imgui/imgui_tables.cpp
 	libraries/cimgui/imgui/imgui_widgets.cpp
-	
+
 	libraries/cimgui/cimgui.cpp
 )
 if(APPLE)
@@ -151,7 +152,7 @@ set(CF_PUBLIC_HDRS
 	include/cute_time.h
 	include/cute_version.h
 	include/cute_doubly_list.h
-	include/cute_kv.h
+	include/cute_json.h
 	include/cute_base64.h
 	include/cute_array.h
 	include/cute_hashtable.h
@@ -219,6 +220,7 @@ set(CF_HDRS
 	src/internal/cute_graphics_internal.h
 	src/internal/cute_aseprite_cache_internal.h
 	src/internal/cute_alloc_internal.h
+	src/internal/yyjson.h
 
 	src/internal/imgui/sokol_imgui.h
 	libraries/cimgui/imgui/backends/imgui_impl_sdl.h
@@ -361,11 +363,11 @@ if (CF_FRAMEWORK_BUILD_TESTS)
 		test/test_ecs.cpp
 		test/test_handle.cpp
 		test/test_hashtable.cpp
-		test/test_kv.cpp
 		test/test_path.cpp
 		test/test_png_cache.cpp
 		test/test_sprite.cpp
 		test/test_string.cpp
+		test/test_json.cpp
 		)
 	set(CF_TEST_HDRS test/test_harness.h)
 

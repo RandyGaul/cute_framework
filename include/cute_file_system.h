@@ -616,7 +616,7 @@ CF_API size_t CF_CALL cf_fs_size(CF_File* file);
  * @param    virtual_path  A path to the file.
  * @param    size          If the file exists the size of the file is stored here.
  * @remarks  Call `CF_FREE` on it when done. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
- * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file
+ * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file
  */
 CF_API void* CF_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, size_t* size);
 
@@ -627,7 +627,7 @@ CF_API void* CF_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, 
  * @param    virtual_path  A path to the file.
  * @param    size          If the file exists the size of the file is stored here.
  * @remarks  Call `CF_FREE` on it when done. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
- * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file
+ * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file
  */
 CF_API char* CF_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, size_t* size);
 
@@ -638,10 +638,30 @@ CF_API char* CF_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(const ch
  * @param    virtual_path  A path to the file.
  * @param    data          A pointer to the data to write to the file.
  * @param    size          The size in bytes of `data`.
- * @remarks  Call `CF_FREE` on it when done. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
- * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file
+ * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file cf_fs_write_string_range_to_file
  */
 CF_API CF_Result CF_CALL cf_fs_write_entire_buffer_to_file(const char* virtual_path, const void* data, size_t size);
+
+/**
+ * @function cf_fs_write_string_to_file
+ * @category file
+ * @brief    Writes a string to a file.
+ * @param    virtual_path  A path to the file.
+ * @param    string        A string to write.
+ * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file cf_fs_write_string_range_to_file
+ */
+CF_API CF_Result CF_CALL cf_fs_write_string_to_file(const char* virtual_path, const char* string);
+
+/**
+ * @function cf_fs_write_string_range_to_file
+ * @category file
+ * @brief    Writes a string to a file.
+ * @param    virtual_path  A path to the file.
+ * @param    begin         Beginning of the string.
+ * @param    end           Pointer to one passed the end of the string's contents.
+ * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file cf_fs_write_string_range_to_file
+ */
+CF_API CF_Result CF_CALL cf_fs_write_string_range_to_file(const char* virtual_path, const char* begin, const char* end);
 
 /**
  * @function cf_fs_get_backend_specific_error_message

@@ -122,7 +122,7 @@ CF_API const CF_Animation** CF_CALL cf_png_cache_get_animation_table(const char*
 /**
  * Makes a sprite. Each sprite must refer to an animation table previously constructed by `cf_make_png_cache_animation_table`.
  * You can supply the pointer to the animation table yourself in `table`, or just leave it NULL.
- * If table is `NULL` then `sprite_name` is used to lookup the table within the png cache.
+ * If table is `NULL` then `sprite_name` should be the path to your png file instead of the sprite's actual name.
  */
 CF_API CF_Sprite CF_CALL cf_make_png_cache_sprite(const char* sprite_name, const CF_Animation** table /*= NULL*/);
 
