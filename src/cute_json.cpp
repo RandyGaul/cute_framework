@@ -23,6 +23,8 @@
 #include "cute_file_system.h"
 #include "internal/yyjson.h"
 
+#include <stddef.h>
+
 CF_JDoc cf_make_json(const void* data, size_t size)
 {
 	yyjson_mut_doc* doc = NULL;
@@ -35,6 +37,17 @@ CF_JDoc cf_make_json(const void* data, size_t size)
 		doc = yyjson_mut_doc_new(NULL);
 	}
 	CF_JDoc result = { (uint64_t)doc };
+	return result;
+}
+
+CF_JDoc cf_make_json_from_file(const char* virtual_path)
+{
+	CF_JDoc result = { 0 };
+	size_t size;
+	char* file = cf_fs_read_entire_file_to_memory_and_nul_terminate(virtual_path, &size);
+	if (!file) return result;
+	result = cf_make_json(file, CF_STRLEN(file));
+	cf_free(file);
 	return result;
 }
 
@@ -166,17 +179,17 @@ CF_JVal cf_json_array_get(CF_JVal val_handle, int index)
 
 // Make sure memory layout is identical.
 static_assert(sizeof(CF_JIter) == sizeof(yyjson_mut_arr_iter));
-static_assert(CF_OFFSET_OF(CF_JIter, index) == CF_OFFSET_OF(yyjson_mut_arr_iter, idx));
-static_assert(CF_OFFSET_OF(CF_JIter, count) == CF_OFFSET_OF(yyjson_mut_arr_iter, max));
-static_assert(CF_OFFSET_OF(CF_JIter, val) == CF_OFFSET_OF(yyjson_mut_arr_iter, cur));
-static_assert(CF_OFFSET_OF(CF_JIter, prev) == CF_OFFSET_OF(yyjson_mut_arr_iter, pre));
-static_assert(CF_OFFSET_OF(CF_JIter, parent) == CF_OFFSET_OF(yyjson_mut_arr_iter, arr));
+static_assert(offsetof(CF_JIter, index) == offsetof(yyjson_mut_arr_iter, idx));
+static_assert(offsetof(CF_JIter, count) == offsetof(yyjson_mut_arr_iter, max));
+static_assert(offsetof(CF_JIter, val) == offsetof(yyjson_mut_arr_iter, cur));
+static_assert(offsetof(CF_JIter, prev) == offsetof(yyjson_mut_arr_iter, pre));
+static_assert(offsetof(CF_JIter, parent) == offsetof(yyjson_mut_arr_iter, arr));
 static_assert(sizeof(CF_JIter) == sizeof(yyjson_mut_obj_iter));
-static_assert(CF_OFFSET_OF(CF_JIter, index) == CF_OFFSET_OF(yyjson_mut_obj_iter, idx));
-static_assert(CF_OFFSET_OF(CF_JIter, count) == CF_OFFSET_OF(yyjson_mut_obj_iter, max));
-static_assert(CF_OFFSET_OF(CF_JIter, val) == CF_OFFSET_OF(yyjson_mut_obj_iter, cur));
-static_assert(CF_OFFSET_OF(CF_JIter, prev) == CF_OFFSET_OF(yyjson_mut_obj_iter, pre));
-static_assert(CF_OFFSET_OF(CF_JIter, parent) == CF_OFFSET_OF(yyjson_mut_obj_iter, obj));
+static_assert(offsetof(CF_JIter, index) == offsetof(yyjson_mut_obj_iter, idx));
+static_assert(offsetof(CF_JIter, count) == offsetof(yyjson_mut_obj_iter, max));
+static_assert(offsetof(CF_JIter, val) == offsetof(yyjson_mut_obj_iter, cur));
+static_assert(offsetof(CF_JIter, prev) == offsetof(yyjson_mut_obj_iter, pre));
+static_assert(offsetof(CF_JIter, parent) == offsetof(yyjson_mut_obj_iter, obj));
 
 CF_JIter cf_json_iter(CF_JVal val_handle)
 {

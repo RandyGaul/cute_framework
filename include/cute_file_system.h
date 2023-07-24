@@ -615,7 +615,7 @@ CF_API size_t CF_CALL cf_fs_size(CF_File* file);
  * @brief    Reads an entire file into a buffer of memory and returns it.
  * @param    virtual_path  A path to the file.
  * @param    size          If the file exists the size of the file is stored here.
- * @remarks  Call `CF_FREE` on it when done. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @remarks  Call `cf_free` on it when done. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
  * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file
  */
 CF_API void* CF_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, size_t* size);
@@ -626,7 +626,7 @@ CF_API void* CF_CALL cf_fs_read_entire_file_to_memory(const char* virtual_path, 
  * @brief    Reads an entire file into a buffer of memory and returns it as a nul-terminated C string.
  * @param    virtual_path  A path to the file.
  * @param    size          If the file exists the size of the file is stored here.
- * @remarks  Call `CF_FREE` on it when done. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
+ * @remarks  Call `cf_free` on it when done. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
  * @related  cf_fs_read_entire_file_to_memory cf_fs_read_entire_file_to_memory_and_nul_terminate cf_fs_write_entire_buffer_to_file cf_fs_write_string_file
  */
 CF_API char* CF_CALL cf_fs_read_entire_file_to_memory_and_nul_terminate(const char* virtual_path, size_t* size);

@@ -86,6 +86,7 @@ CF_INLINE const char* cf_json_type_to_string(CF_JType type)
 }
 
 CF_API CF_JDoc CF_CALL cf_make_json(const void* data, size_t size);
+CF_API CF_JDoc CF_CALL cf_make_json_from_file(const char* virtual_path);
 CF_API void CF_CALL cf_destroy_json(CF_JDoc doc);
 CF_API CF_JVal CF_CALL cf_json_get_root(CF_JDoc doc);
 CF_API void CF_CALL cf_json_set_root(CF_JDoc doc, CF_JVal val);
