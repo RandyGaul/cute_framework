@@ -581,25 +581,6 @@ void cf_component_set_optional_cleanup(CF_ComponentFn* cleanup, void* udata)
 	app->component_config_builder.cleanup_udata = udata;
 }
 
-static const char* s_kv_string(CF_KeyValue* kv, const char* key)
-{
-	if (!cf_kv_key(kv, key, NULL)) {
-		if (CF_STRCMP(key, "inherits_from")) {
-			CF_DEBUG_PRINTF("Unable to find the `%s` key.\n", key);
-		}
-		return NULL;
-	}
-
-	const char* string_raw;
-	size_t string_sz;
-	if (!cf_kv_val_string(kv, &string_raw, &string_sz)) {
-		CF_DEBUG_PRINTF("`%s` key found, but is not a string.\n", key);
-		return NULL;
-	}
-
-	return sintern_range(string_raw, string_raw + string_sz);
-}
-
 static void s_register_entity_type(Array<const char*> component_type_tuple, const char* entity_type_string)
 {
 	// Search for all component types present in the schema.
