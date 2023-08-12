@@ -38,12 +38,12 @@
  *     hset(pts, 0, cf_v2(3, 5)); // Contructs a new table on-the-spot. The table is *hidden* behind `pts`.
  *     hset(pts, 10, cf_v2(-1, -1);
  *     hset(pts, -2, cf_v2(0, 0));
- *     
+ *
  *     // Use `hget` to fetch values.
  *     CF_V2 a = hget(pts, 0);
  *     CF_V2 b = hget(pts, 10);
  *     CF_V2 c = hget(pts, -2);
- *     
+ *
  *     // Loop over {key, item} pairs like so:
  *     const uint64_t* keys = hkeys(pts);
  *     for (int i = 0; i < hcount(pts); ++i) {
@@ -51,7 +51,7 @@
  *         CF_V2 v = pts[i];
  *         // ...
  *     }
- *     
+ *
  *     hfree(pts);
  * @remarks  This is an optional and _completely_ empty macro. It's only purpose is to provide a bit of visual indication a type is a
  *           hashtable. One downside of the C-macro API is the opaque nature of the pointer type. Since the macros use polymorphism
@@ -364,8 +364,8 @@
 #define cf_hashtable_find(h, k) cf_hashtable_get(h, k)
 #define cf_hashtable_get_ptr(h, k) (cf_hashtable_find_impl(CF_HHDR(h), (uint64_t)k), CF_HHDR(h)->return_index < 0 ? NULL : (h) + CF_HHDR(h)->return_index)
 #define cf_hashtable_find_ptr(h, k) cf_hashtable_get_ptr(h, k)
-#define cf_hashtable_has(h, k) (h ? cf_hashtable_remove_impl(CF_HHDR(h), (uint64_t)k) : NULL)
-#define cf_hashtable_del(h, k) (h ? cf_hashtable_remove_impl(CF_HHDR(h), (uint64_t)k) : (void)0)
+#define cf_hashtable_has(h, k) ((h) ? cf_hashtable_has_impl(CF_HHDR(h), (uint64_t)k) : false)
+#define cf_hashtable_del(h, k) ((h) ? cf_hashtable_remove_impl(CF_HHDR(h), (uint64_t)k) : (void)0)
 #define cf_hashtable_clear(h) (CF_HCANARY(h), cf_hashtable_clear_impl(CF_HHDR(h)))
 #define cf_hashtable_keys(h) (CF_HCANARY(h), h ? (const uint64_t*)cf_hashtable_keys_impl(CF_HHDR(h)) : (const uint64_t*)NULL)
 #define cf_hashtable_items(h) (CF_HCANARY(h), h)
