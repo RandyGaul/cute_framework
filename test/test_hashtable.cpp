@@ -214,6 +214,8 @@ TEST_CASE(test_hashtable_has)
 	REQUIRE(!hhas(h, 1));
 	REQUIRE(hhas(h, 2));
 
+    hfree(h);
+
     return true;
 }
 
