@@ -25,7 +25,6 @@
 #include <cute_multithreading.h>
 #include <cute_file_system.h>
 #include <cute_c_runtime.h>
-#include <cute_kv.h>
 #include <cute_draw.h>
 #include <cute_time.h>
 
@@ -477,6 +476,25 @@ int cf_app_draw_onto_screen()
 	if (app->options & APP_OPTIONS_OPENGL_CONTEXT) {
 		SDL_GL_SwapWindow(app->window);
 	}
+
+	// Clear all pushed draw parameters.
+	draw->colors.set_count(1);
+	draw->tints.set_count(1);
+	draw->antialias.set_count(1);
+	draw->antialias_scale.set_count(1);
+	draw->render_states.set_count(1);
+	draw->scissors.set_count(1);
+	draw->viewports.set_count(1);
+	draw->layers.set_count(1);
+	draw->layers.set_count(1);
+	draw->cam_stack.clear();
+	cf_camera_pop();
+	draw->font_sizes.set_count(1);
+	draw->fonts.set_count(1);
+	draw->blurs.set_count(1);
+	draw->text_wrap_widths.set_count(1);
+	draw->text_clip_boxes.set_count(1);
+	draw->vertical.set_count(1);
 
 	// Report the number of draw calls.
 	// This is always user draw call count +1.

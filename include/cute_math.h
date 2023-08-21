@@ -393,7 +393,15 @@ CF_INLINE float cf_lerp(float a, float b, float t) { return a + (b - a) * t; }
  * @brief    Returns the value `t` remaped from [0, 1] to [lo, hi].
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
  */
-CF_INLINE float cf_remap(float t, float lo, float hi) { return (hi - lo) != 0 ? (t - lo) / (hi - lo) : 0; }
+CF_INLINE float cf_remap01(float t, float lo, float hi) { return lo + t * (hi - lo); }
+
+/**
+ * @function cf_remap
+ * @category math
+ * @brief    Returns the value `t` remaped from [old_lo, old_hi] to [lo, hi].
+ * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract
+ */
+CF_INLINE float cf_remap(float t, float old_lo, float old_hi, float lo, float hi) { return lo + ((old_hi - old_lo) != 0 ? (t - old_lo) / (old_hi - old_lo) : 0) * (hi - lo); }
 
 /**
  * @function cf_mod
@@ -1697,6 +1705,38 @@ CF_INLINE CF_V2 cf_bottom_left(CF_Aabb bb) { return cf_v2(bb.min.x, bb.min.y); }
 CF_INLINE CF_V2 cf_bottom_right(CF_Aabb bb) { return cf_v2(bb.max.x, bb.min.y); }
 
 /**
+ * @function cf_top
+ * @category math
+ * @brief    Returns the top of the aabb.
+ * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
+ */
+CF_INLINE CF_V2 cf_top(CF_Aabb bb) { return cf_v2((bb.min.x + bb.max.x) * 0.5f, bb.max.y); }
+
+/**
+ * @function cf_left
+ * @category math
+ * @brief    Returns the left of the aabb.
+ * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
+ */
+CF_INLINE CF_V2 cf_left(CF_Aabb bb) { return cf_v2(bb.min.x, (bb.min.y + bb.max.y) * 0.5f); }
+
+/**
+ * @function cf_bottom
+ * @category math
+ * @brief    Returns the bottom of the aabb.
+ * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
+ */
+CF_INLINE CF_V2 cf_bottom(CF_Aabb bb) { return cf_v2((bb.min.x + bb.max.x) * 0.5f, bb.min.y); }
+
+/**
+ * @function cf_right
+ * @category math
+ * @brief    Returns the bottom of the aabb.
+ * @related  CF_Aabb cf_min_aabb cf_max_aabb cf_midpoint cf_center cf_top_left cf_top_right cf_bottom_left cf_bottom_right
+ */
+CF_INLINE CF_V2 cf_right(CF_Aabb bb) { return cf_v2(bb.max.x, (bb.min.y + bb.max.y) * 0.5f); }
+
+/**
  * @function cf_contains_point
  * @category math
  * @brief    Returns true if `p` is contained within `b`.
@@ -1838,6 +1878,14 @@ CF_INLINE CF_Circle cf_mul_tf_circle(CF_Transform tx, CF_Circle a) { CF_Circle b
 // Full raycasting suite is farther down below in this file.
 
 /**
+ * @function cf_make_ray
+ * @category collision
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_INLINE CF_Ray cf_make_ray(CF_V2 start, CF_V2 direction_normalized, float length) { CF_Ray ray; ray.p = start; ray.d = direction_normalized; ray.t = length; return ray; }
+
+/**
  * @function cf_impact
  * @category collision
  * @brief    Returns the impact point of a ray, given the time of impact `t`.
@@ -1901,6 +1949,153 @@ CF_INLINE float cf_distance_sq(CF_V2 a, CF_V2 b, CF_V2 p)
 	CF_V2 e = cf_sub_v2(pa, cf_mul_v2_f(n, (c / cf_dot(n, n))));
 	return cf_dot(e, e);
 }
+
+//--------------------------------------------------------------------------------------------------
+// Polygonal functions.
+
+/**
+ * @function cf_center_of_mass
+ * @category collision
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API CF_V2 CF_CALL cf_center_of_mass(CF_Poly poly);
+
+/**
+ * @function cf_calc_area
+ * @category collision
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API float CF_CALL cf_calc_area(CF_Poly poly);
+
+/**
+ * @struct   CF_SliceOutput
+ * @category collision
+ * @brief    TODO
+ * @related  TODO
+ */
+typedef struct CF_SliceOutput
+{
+	/* @member TODO */
+	CF_Poly front;
+
+	/* @member TODO */
+	CF_Poly back;
+} CF_SliceOutput;
+// @end
+
+/**
+ * @function cf_slice
+ * @category collision
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API CF_SliceOutput CF_CALL cf_slice(CF_Halfspace slice_plane, CF_Poly slice_me, const float k_epsilon);
+
+/**
+ * @enum     CF_ShapeType
+ * @category collision
+ * @brief    Various types of supported collision shapes.
+ * @related  CF_ShapeType cf_shape_type_to_string cf_gjk cf_toi cf_inflate cf_collide cf_collided cf_cast_ray
+ */
+#define CF_SHAPE_TYPE_DEFS \
+	/* @entry Unknown shape type. */      \
+	CF_ENUM(SHAPE_TYPE_NONE,    0)        \
+	/* @entry `CF_Circle` shape type. */  \
+	CF_ENUM(SHAPE_TYPE_CIRCLE,  1)        \
+	/* @entry `CF_Aabb` shape type. */    \
+	CF_ENUM(SHAPE_TYPE_AABB,    2)        \
+	/* @entry `CF_Capsule` shape type. */ \
+	CF_ENUM(SHAPE_TYPE_CAPSULE, 3)        \
+	/* @entry `CF_Poly` shape type. */    \
+	CF_ENUM(SHAPE_TYPE_POLY,    4)        \
+	/* @end */
+
+typedef enum CF_ShapeType
+{
+	#define CF_ENUM(K, V) CF_##K = V,
+	CF_SHAPE_TYPE_DEFS
+	#undef CF_ENUM
+} CF_ShapeType;
+
+/**
+ * @function cf_shape_type_to_string
+ * @category collision
+ * @brief    Converts a `CF_ShapeType` to a C string.
+ * @param    type       The string to convert.
+ * @related  CF_ShapeType cf_shape_type_to_string
+ */
+CF_INLINE const char* cf_shape_type_to_string(CF_ShapeType type)
+{
+	switch (type) {
+	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
+	CF_SHAPE_TYPE_DEFS
+	#undef CF_ENUM
+	default: return NULL;
+	}
+}
+
+/**
+ * @function cf_inflate
+ * @category collision
+ * @brief    Inflates a shape.
+ * @param    shape        The shape.
+ * @param    type         The `CF_ShapeType` of `shape`.
+ * @param    skin_factor  The amount to inflate the shape by.
+ * @remarks  This is useful to numerically grow or shrink a shape. For example, when calling a time of impact function it can be good to use
+ *           a slightly smaller shape. Then, once both shapes are moved to the time of impact a collision manifold can be made from the
+ *           slightly larger (and now overlapping) shapes.
+ *           
+ *           IMPORTANT NOTE
+ *           
+ *           Inflating a shape with sharp corners can cause those corners to move dramatically. Deflating a shape can avoid this problem,
+ *           but deflating a very small shape can invert the planes and result in something that is no longer convex. Make sure to pick an
+ *           appropriately small skin factor, for example 1.0e-6f.
+ * @related  cf_gjk cf_toi CF_ShapeType
+ */
+CF_API void CF_CALL cf_inflate(void* shape, CF_ShapeType type, float skin_factor);
+
+/**
+ * @function cf_hull
+ * @category collision
+ * @brief    Computes 2D convex hull.
+ * @param    verts        The vertices of the shape.
+ * @param    count        The number of vertices in `verts`.
+ * @param    skin_factor  The amount to inflate the shape by.
+ * @return   Returns the number of vertices written to the `verts` array.
+ * @remarks  Will not do anything if less than two verts supplied. If more than CF_POLY_MAX_VERTS are supplied extras are ignored.
+ * @related  CF_Poly
+ */
+CF_API int CF_CALL cf_hull(CF_V2* verts, int count);
+
+/**
+ * @function cf_norms
+ * @category collision
+ * @brief    Computes the normals for a polygon.
+ * @param    verts        The vertices of the polygon.
+ * @param    norms        The normals of the polygon (these are written to as output).
+ * @param    count        The number of vertices in `verts`.
+ * @return   Writes the calculated normals to `norms`.
+ * @related  CF_Poly
+ */
+CF_API void CF_CALL cf_norms(CF_V2* verts, CF_V2* norms, int count);
+
+/**
+ * @function cf_make_poly
+ * @category collision
+ * @brief    Fills out the polygon with values.
+ * @remarks  Runs `cf_hull` and `cf_norms`, assumes p->verts and p->count are both set to valid values.
+ * @related  CF_Poly cf_hull cf_norms
+ */
+CF_API void CF_CALL cf_make_poly(CF_Poly* p);
+
+/**
+ * @function cf_centroid
+ * @category math
+ * @brief    Returns the centroid of a set of vertices.
+ */
+CF_API CF_V2 CF_CALL cf_centroid(const CF_V2* verts, int count);
 
 //--------------------------------------------------------------------------------------------------
 // Collision detection.
@@ -2163,49 +2358,6 @@ CF_API void CF_CALL cf_capsule_to_poly_manifold(CF_Capsule A, const CF_Poly* B, 
 CF_API void CF_CALL cf_poly_to_poly_manifold(const CF_Poly* A, const CF_Transform* ax, const CF_Poly* B, const CF_Transform* bx, CF_Manifold* m);
 
 /**
- * @enum     CF_ShapeType
- * @category collision
- * @brief    Various types of supported collision shapes.
- * @related  CF_ShapeType cf_shape_type_to_string cf_gjk cf_toi cf_inflate cf_collide cf_collided cf_cast_ray
- */
-#define CF_SHAPE_TYPE_DEFS \
-	/* @entry Unknown shape type. */      \
-	CF_ENUM(SHAPE_TYPE_NONE,    0)        \
-	/* @entry `CF_Circle` shape type. */  \
-	CF_ENUM(SHAPE_TYPE_CIRCLE,  1)        \
-	/* @entry `CF_Aabb` shape type. */    \
-	CF_ENUM(SHAPE_TYPE_AABB,    2)        \
-	/* @entry `CF_Capsule` shape type. */ \
-	CF_ENUM(SHAPE_TYPE_CAPSULE, 3)        \
-	/* @entry `CF_Poly` shape type. */    \
-	CF_ENUM(SHAPE_TYPE_POLY,    4)        \
-	/* @end */
-
-typedef enum CF_ShapeType
-{
-	#define CF_ENUM(K, V) CF_##K = V,
-	CF_SHAPE_TYPE_DEFS
-	#undef CF_ENUM
-} CF_ShapeType;
-
-/**
- * @function cf_shape_type_to_string
- * @category collision
- * @brief    Converts a `CF_ShapeType` to a C string.
- * @param    type       The string to convert.
- * @related  CF_ShapeType cf_shape_type_to_string
- */
-CF_INLINE const char* cf_shape_type_to_string(CF_ShapeType type)
-{
-	switch (type) {
-	#define CF_ENUM(K, V) case CF_##K: return CF_STRINGIZE(CF_##K);
-	CF_SHAPE_TYPE_DEFS
-	#undef CF_ENUM
-	default: return NULL;
-	}
-}
-
-/**
  * @struct   CF_GjkCache
  * @category collision
  * @brief    This struct is only for advanced usage of the `cf_gjk` function. See comments inside of the `cf_gjk` function for more details.
@@ -2325,67 +2477,6 @@ typedef struct CF_ToiResult
 CF_API CF_ToiResult CF_CALL cf_toi(const void* A, CF_ShapeType typeA, const CF_Transform* ax_ptr, CF_V2 vA, const void* B, CF_ShapeType typeB, const CF_Transform* bx_ptr, CF_V2 vB, int use_radius);
 
 /**
- * @function cf_inflate
- * @category collision
- * @brief    Inflates a shape.
- * @param    shape        The shape.
- * @param    type         The `CF_ShapeType` of `shape`.
- * @param    skin_factor  The amount to inflate the shape by.
- * @remarks  This is useful to numerically grow or shrink a shape. For example, when calling a time of impact function it can be good to use
- *           a slightly smaller shape. Then, once both shapes are moved to the time of impact a collision manifold can be made from the
- *           slightly larger (and now overlapping) shapes.
- *           
- *           IMPORTANT NOTE
- *           
- *           Inflating a shape with sharp corners can cause those corners to move dramatically. Deflating a shape can avoid this problem,
- *           but deflating a very small shape can invert the planes and result in something that is no longer convex. Make sure to pick an
- *           appropriately small skin factor, for example 1.0e-6f.
- * @related  cf_gjk cf_toi CF_ShapeType
- */
-CF_API void CF_CALL cf_inflate(void* shape, CF_ShapeType type, float skin_factor);
-
-/**
- * @function cf_hull
- * @category collision
- * @brief    Computes 2D convex hull.
- * @param    verts        The vertices of the shape.
- * @param    count        The number of vertices in `verts`.
- * @param    skin_factor  The amount to inflate the shape by.
- * @return   Returns the number of vertices written to the `verts` array.
- * @remarks  Will not do anything if less than two verts supplied. If more than CF_POLY_MAX_VERTS are supplied extras are ignored.
- * @related  CF_Poly
- */
-CF_API int CF_CALL cf_hull(CF_V2* verts, int count);
-
-/**
- * @function cf_norms
- * @category collision
- * @brief    Computes the normals for a polygon.
- * @param    verts        The vertices of the polygon.
- * @param    norms        The normals of the polygon (these are written to as output).
- * @param    count        The number of vertices in `verts`.
- * @return   Writes the calculated normals to `norms`.
- * @related  CF_Poly
- */
-CF_API void CF_CALL cf_norms(CF_V2* verts, CF_V2* norms, int count);
-
-/**
- * @function cf_make_poly
- * @category collision
- * @brief    Fills out the polygon with values.
- * @remarks  Runs `cf_hull` and `cf_norms`, assumes p->verts and p->count are both set to valid values.
- * @related  CF_Poly cf_hull cf_norms
- */
-CF_API void CF_CALL cf_make_poly(CF_Poly* p);
-
-/**
- * @function cf_centroid
- * @category math
- * @brief    Returns the centroid of a set of vertices.
- */
-CF_API CF_V2 CF_CALL cf_centroid(const CF_V2* verts, int count);
-
-/**
  * @function cf_collided
  * @category collision
  * @brief    Returns a true if two shapes collided.
@@ -2477,6 +2568,7 @@ using Circle = CF_Circle;
 using Aabb = CF_Aabb;
 using Rect = CF_Rect;
 using Poly = CF_Poly;
+using SliceOutput = CF_SliceOutput;
 using Capsule = CF_Capsule;
 using Manifold = CF_Manifold;
 using GjkCache = CF_GjkCache;
@@ -2505,7 +2597,8 @@ CF_INLINE float sign(float a) { return cf_sign(a); }
 CF_INLINE float intersect(float da, float db) { return cf_intersect(da, db); }
 CF_INLINE float safe_invert(float a) { return cf_safe_invert(a); }
 CF_INLINE float lerp(float a, float b, float t) { return cf_lerp(a, b, t); }
-CF_INLINE float remap(float t, float lo, float hi) { return cf_remap(t, lo, hi); }
+CF_INLINE float remap(float t, float lo, float hi) { return cf_remap01(t, lo, hi); }
+CF_INLINE float remap(float t, float old_lo, float old_hi, float lo, float hi) { return cf_remap(t, old_lo, old_hi, lo, hi); }
 CF_INLINE float mod(float x, float m) { return cf_mod(x, m); }
 CF_INLINE float fract(float x) { return cf_fract(x); }
 
@@ -2660,6 +2753,10 @@ CF_INLINE v2 top_left(Aabb bb) { return cf_top_left(bb); }
 CF_INLINE v2 top_right(Aabb bb) { return cf_top_right(bb); }
 CF_INLINE v2 bottom_left(Aabb bb) { return cf_bottom_left(bb); }
 CF_INLINE v2 bottom_right(Aabb bb) { return cf_bottom_right(bb); }
+CF_INLINE v2 top(Aabb bb) { return cf_top(bb); }
+CF_INLINE v2 left(Aabb bb) { return cf_left(bb); }
+CF_INLINE v2 bottom(Aabb bb) { return cf_bottom(bb); }
+CF_INLINE v2 right(Aabb bb) { return cf_right(bb); }
 CF_INLINE bool contains(Aabb bb, v2 p) { return cf_contains_point(bb, p); }
 CF_INLINE bool contains(Aabb a, Aabb b) { return cf_contains_aabb(a, b); }
 CF_INLINE float surface_area(Aabb bb) { return cf_surface_area_aabb(bb); }
@@ -2678,11 +2775,21 @@ CF_INLINE float area(Circle c) { return cf_area_circle(c); }
 CF_INLINE float surface_area(Circle c) { return cf_surface_area_circle(c); }
 CF_INLINE Circle mul(Transform tx, Circle a) { return cf_mul_tf_circle(tx, a); }
 
+CF_INLINE Ray make_ray(v2 start, v2 direction_normalized, float length) { return cf_make_ray(start, direction_normalized, length); }
 CF_INLINE v2 impact(Ray r, float t) { return cf_impact(r, t); }
 CF_INLINE v2 endpoint(Ray r) { return cf_endpoint(r); }
 
 CF_INLINE int ray_to_halfpsace(Ray A, Halfspace B, Raycast* out) { return cf_ray_to_halfpsace(A, B, out); }
 CF_INLINE float distance_sq(v2 a, v2 b, v2 p) { return cf_distance_sq(a, b, p); }
+
+CF_INLINE v2 center_of_mass(Poly poly) { return cf_center_of_mass(poly); }
+CF_INLINE float calc_area(Poly poly) { return cf_calc_area(poly); }
+CF_INLINE SliceOutput slice(Halfspace slice_plane, Poly slice_me, const float k_epsilon = 1.e-4f) { return cf_slice(slice_plane, slice_me, k_epsilon); }
+CF_INLINE void inflate(void* shape, ShapeType type, float skin_factor) { return cf_inflate(shape, type, skin_factor); }
+CF_INLINE int hull(v2* verts, int count) { return cf_hull((CF_V2*)verts, count); }
+CF_INLINE void norms(v2* verts, v2* norms, int count) { return cf_norms((CF_V2*)verts, (CF_V2*)norms, count); }
+CF_INLINE void make_poly(Poly* p) { return cf_make_poly(p); }
+CF_INLINE v2 centroid(const v2* verts, int count) { return cf_centroid((CF_V2*)verts, count); }
 
 CF_INLINE bool circle_to_circle(Circle A, Circle B) { return cf_circle_to_circle(A, B); }
 CF_INLINE bool circle_to_aabb(Circle A, Aabb B) { return cf_circle_to_aabb(A, B); }
@@ -2695,10 +2802,10 @@ CF_INLINE bool aabb_to_poly(Aabb A, const Poly* B, const Transform* bx) { return
 CF_INLINE bool capsule_to_poly(Capsule A, const Poly* B, const Transform* bx) { return cf_capsule_to_poly(A, B, bx); }
 CF_INLINE bool poly_to_poly(const Poly* A, const Transform* ax, const Poly* B, const Transform* bx) { return cf_poly_to_poly(A, ax, B, bx); }
 
-CF_INLINE bool ray_to_circle(Ray A, Circle B, Raycast* out) { return cf_ray_to_circle(A, B, out); }
-CF_INLINE bool ray_to_aabb(Ray A, Aabb B, Raycast* out) { return cf_ray_to_aabb(A, B, out); }
-CF_INLINE bool ray_to_capsule(Ray A, Capsule B, Raycast* out) { return cf_ray_to_capsule(A, B, out); }
-CF_INLINE bool ray_to_poly(Ray A, const Poly* B, const Transform* bx_ptr, Raycast* out) { return cf_ray_to_poly(A, B, bx_ptr, out); }
+CF_INLINE bool ray_to_circle(Ray A, Circle B, Raycast* out = NULL) { return cf_ray_to_circle(A, B, out); }
+CF_INLINE bool ray_to_aabb(Ray A, Aabb B, Raycast* out = NULL) { return cf_ray_to_aabb(A, B, out); }
+CF_INLINE bool ray_to_capsule(Ray A, Capsule B, Raycast* out = NULL) { return cf_ray_to_capsule(A, B, out); }
+CF_INLINE bool ray_to_poly(Ray A, const Poly* B, const Transform* bx_ptr = NULL, Raycast* out = NULL) { return cf_ray_to_poly(A, B, bx_ptr, out); }
 
 CF_INLINE void circle_to_circle_manifold(Circle A, Circle B, Manifold* m) { return cf_circle_to_circle_manifold(A, B, m); }
 CF_INLINE void circle_to_aabb_manifold(Circle A, Aabb B, Manifold* m) { return cf_circle_to_aabb_manifold(A, B, m); }
@@ -2720,14 +2827,6 @@ CF_INLINE ToiResult toi(const void* A, ShapeType typeA, const Transform* ax_ptr,
 {
 	return cf_toi(A, typeA, ax_ptr, vA, B, typeB, bx_ptr, vB, use_radius);
 }
-
-CF_INLINE void inflate(void* shape, ShapeType type, float skin_factor) { return cf_inflate(shape, type, skin_factor); }
-
-CF_INLINE int hull(v2* verts, int count) { return cf_hull((CF_V2*)verts, count); }
-CF_INLINE void norms(v2* verts, v2* norms, int count) { return cf_norms((CF_V2*)verts, (CF_V2*)norms, count); }
-
-CF_INLINE void make_poly(Poly* p) { return cf_make_poly(p); }
-CF_INLINE v2 centroid(const v2* verts, int count) { return cf_centroid((CF_V2*)verts, count); }
 
 CF_INLINE int collided(const void* A, const Transform* ax, ShapeType typeA, const void* B, const Transform* bx, ShapeType typeB) { return cf_collided(A, ax, typeA, B, bx, typeB); }
 CF_INLINE void collide(const void* A, const Transform* ax, ShapeType typeA, const void* B, const Transform* bx, ShapeType typeB, Manifold* m) { return cf_collide(A, ax, typeA, B, bx, typeB, m); }

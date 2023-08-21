@@ -11,14 +11,15 @@
 @vs vs
 @glsl_options flip_vert_y
 	layout (location = 0) in vec2 in_pos;
-	layout (location = 1) in vec2 in_a;
-	layout (location = 2) in vec2 in_b;
-	layout (location = 3) in vec2 in_c;
-	layout (location = 4) in vec2 in_uv;
-	layout (location = 5) in vec4 in_col;
-	layout (location = 6) in float in_radius;
-	layout (location = 7) in float in_stroke;
-	layout (location = 8) in vec4 in_params;
+	layout (location = 1) in vec2 in_posH;
+	layout (location = 2) in vec2 in_a;
+	layout (location = 3) in vec2 in_b;
+	layout (location = 4) in vec2 in_c;
+	layout (location = 5) in vec2 in_uv;
+	layout (location = 6) in vec4 in_col;
+	layout (location = 7) in float in_radius;
+	layout (location = 8) in float in_stroke;
+	layout (location = 9) in vec4 in_params;
 
 	layout (location = 0) out vec2 v_pos;
 	layout (location = 1) out vec2 v_a;
@@ -41,13 +42,7 @@
 
 	void main()
 	{
-		vec2 p = in_pos * u_cam_scale;
-		float c = cos(u_cam_angle);
-		float s = sin(u_cam_angle);
-		p = mat2(vec2(c, -s),vec2(s,  c)) * p;
-		p += u_cam_pos;
-		v_pos = p;
-
+		v_pos = in_pos;
 		v_a = in_a;
 		v_b = in_b;
 		v_c = in_c;
@@ -60,7 +55,7 @@
 		v_fill = in_params.b;
 		v_aa = in_params.a;
 
-		vec4 posH = vec4(in_pos, 0, 1);
+		vec4 posH = vec4(in_posH, 0, 1);
 		gl_Position = posH;
 }
 @end
@@ -123,7 +118,6 @@
 		c = (!is_sprite && !is_text && !is_tri) ? sdf(c, v_col, d - v_radius) : c;
 
 		c *= v_alpha;
-		//if (c.a == 0) c = vec4(0.5);
 		if (c.a == 0) discard;
 		result = c;
 	}

@@ -406,6 +406,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 	add_executable(scratch samples/scratch.cpp)
 	add_executable(echo samples/echo.cpp)
 	add_executable(https samples/https.c)
+	add_executable(spaceshooter samples/spaceshooter.cpp)
 	set(SAMPLE_EXECUTABLES
 		easysprite
 		basicecs
@@ -423,6 +424,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 		scratch
 		echo
 		https
+		spaceshooter
 	)
 
 	foreach(CURRENT_TARGET ${SAMPLE_EXECUTABLES})
@@ -434,7 +436,11 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 				MACOSX_BUNDLE_SHORT_VERSION_STRING "1.0.0"
 			)
 		endif()
+		set_target_properties("${CURRENT_TARGET}" PROPERTIES FOLDER "samples")
 	endforeach()
+
+	# Copy over some folders for certain samples.
+	add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples $<TARGET_FILE_DIR:spaceshooter>)
 endif()
 
 # Propogate public headers to other cmake scripts including this subdirectory.

@@ -144,6 +144,15 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			geom.box[2],
 		};
 
+		v2 quadH[6] = {
+			geom.boxH[0],
+			geom.boxH[3],
+			geom.boxH[1],
+			geom.boxH[1],
+			geom.boxH[3],
+			geom.boxH[2],
+		};
+
 		switch (s->geom.type) {
 		case BATCH_GEOMETRY_TYPE_TRI:
 		{
@@ -157,9 +166,9 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].aa = 0;
 			}
 
-			out[0].p = geom.a;
-			out[1].p = geom.b;
-			out[2].p = geom.c;
+			out[0].posH = geom.a;
+			out[1].posH = geom.b;
+			out[2].posH = geom.c;
 		
 			vert_count += 3;
 		}	break;
@@ -168,6 +177,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		{
 			for (int i = 0; i < 6; ++i) {
 				out[i].p = quad[i];
+				out[i].posH = quadH[i];
 				out[i].a = geom.a;
 				out[i].b = geom.b;
 				out[i].c = geom.c;
@@ -179,7 +189,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].fill = s->geom.fill ? 255 : 0;
 				out[i].aa = s->geom.antialias ? 255 : 0;
 			}
-		
+
 			vert_count += 6;
 		}	break;
 
@@ -204,6 +214,13 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			out[3].p = quad[3];
 			out[4].p = quad[4];
 			out[5].p = quad[5];
+
+			out[0].posH = quadH[0];
+			out[1].posH = quadH[1];
+			out[2].posH = quadH[2];
+			out[3].posH = quadH[3];
+			out[4].posH = quadH[4];
+			out[5].posH = quadH[5];
 		
 			vert_count += 6;
 		}	break;
@@ -213,47 +230,47 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 			bool clipped_away = false;
 			if (geom.do_clipping) {
 				CF_ASSERT(geom.is_text);
-		
+
 				CF_Aabb bb = make_aabb(geom.c, geom.b);
 				CF_Aabb clip = geom.clip;
 				float top = clip.max.y;
 				float left = clip.min.x;
 				float bottom = clip.min.y;
 				float right = clip.max.x;
-		
+
 				int separating_x_axis = (bb.max.x < left) | (bb.min.x > right);
 				if (separating_x_axis) continue;
-		
+
 				if (bb.min.x < left) {
 					s->minx = s_intersect(bb.min.x, bb.max.x, s->minx, s->maxx, left);
 					bb.min.x = left;
 				}
-		
+
 				if (bb.max.x > right) {
 					s->maxx = s_intersect(bb.min.x, bb.max.x, s->minx, s->maxx, right);
 					bb.max.x = right;
 				}
-		
+
 				if (bb.min.y < bottom) {
 					s->miny = s_intersect(bb.min.y, bb.max.y, s->miny, s->maxy, bottom);
 					bb.min.y = bottom;
 				}
-		
+
 				if (bb.max.y > top) {
 					s->maxy = s_intersect(bb.min.y, bb.max.y, s->miny, s->maxy, top);
 					bb.max.y = top;
 				}
-		
+
 				if ((bb.min.x >= bb.max.x) | (bb.min.y >= bb.max.y)) {
 					continue;
 				}
-		
+
 				geom.a = V2(bb.min.x, bb.max.y);
 				geom.b = bb.max;
 				geom.c = V2(bb.max.x, bb.min.y);
 				geom.d = bb.min;
 			}
-		
+
 			for (int i = 0; i < 6; ++i) {
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				if (s->geom.is_sprite) {
@@ -265,31 +282,31 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				}
 				out[i].color = s->geom.color;
 			}
-		
-			out[0].p = geom.a;
+
+			out[0].posH = geom.a;
 			out[0].uv.x = s->minx;
 			out[0].uv.y = s->maxy;
-		
-			out[1].p = geom.d;
+
+			out[1].posH = geom.d;
 			out[1].uv.x = s->minx;
 			out[1].uv.y = s->miny;
-		
-			out[2].p = geom.b;
+
+			out[2].posH = geom.b;
 			out[2].uv.x = s->maxx;
 			out[2].uv.y = s->maxy;
-		
-			out[3].p = geom.b;
+
+			out[3].posH = geom.b;
 			out[3].uv.x = s->maxx;
 			out[3].uv.y = s->maxy;
-		
-			out[4].p = geom.d;
+
+			out[4].posH = geom.d;
 			out[4].uv.x = s->minx;
 			out[4].uv.y = s->miny;
-		
-			out[5].p = geom.c;
+
+			out[5].posH = geom.c;
 			out[5].uv.x = s->maxx;
 			out[5].uv.y = s->miny;
-		
+
 			vert_count += 6;
 		}	break;
 
@@ -298,6 +315,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 		{
 			for (int i = 0; i < 6; ++i) {
 				out[i].p = quad[i];
+				out[i].posH = quadH[i];
 				out[i].a = geom.a;
 				out[i].b = geom.b;
 				out[i].c = geom.c;
@@ -327,10 +345,14 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].fill = s->geom.fill ? 255 : 0;
 				out[i].aa = s->geom.antialias ? 255 : 0;
 			}
-
+			
 			out[0].p = geom.box[0];
 			out[1].p = geom.box[1];
 			out[2].p = geom.box[2];
+
+			out[0].posH = geom.boxH[0];
+			out[1].posH = geom.boxH[1];
+			out[2].posH = geom.boxH[2];
 		
 			vert_count += 3;
 		}	break;
@@ -358,11 +380,6 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_texture_fs(draw->material, "u_image", atlas);
 
 	// Apply uniforms.
-	CF_ASSERT(draw->cam_dimensions.x != 0);
-	CF_ASSERT(draw->cam_dimensions.y != 0);
-	cf_material_set_uniform_vs(draw->material, "vs_params", "u_cam_scale", &draw->cam_dimensions, CF_UNIFORM_TYPE_FLOAT2, 1);
-	cf_material_set_uniform_vs(draw->material, "vs_params", "u_cam_pos", &draw->cam_position, CF_UNIFORM_TYPE_FLOAT2, 1);
-	cf_material_set_uniform_vs(draw->material, "vs_params", "u_cam_angle", &draw->cam_rotation, CF_UNIFORM_TYPE_FLOAT2, 1);
 	v2 u_texture_size = cf_v2((float)texture_w, (float)texture_h);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_texture_size", &u_texture_size, CF_UNIFORM_TYPE_FLOAT2, 1);
 	cf_material_set_uniform_fs(draw->material, "fs_params", "u_aaf", &draw->aaf, CF_UNIFORM_TYPE_FLOAT, 1);
@@ -412,34 +429,37 @@ void cf_make_draw()
 
 	// Mesh + vertex attributes.
 	draw->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CF_MB * 25, 0, 0);
-	CF_VertexAttribute attrs[9] = { };
+	CF_VertexAttribute attrs[10] = { };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[0].offset = CF_OFFSET_OF(DrawVertex, p);
-	attrs[1].name = "in_a";
+	attrs[1].name = "in_posH";
 	attrs[1].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[1].offset = CF_OFFSET_OF(DrawVertex, a);
-	attrs[2].name = "in_b";
+	attrs[1].offset = CF_OFFSET_OF(DrawVertex, posH);
+	attrs[2].name = "in_a";
 	attrs[2].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[2].offset = CF_OFFSET_OF(DrawVertex, b);
-	attrs[3].name = "in_c";
+	attrs[2].offset = CF_OFFSET_OF(DrawVertex, a);
+	attrs[3].name = "in_b";
 	attrs[3].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[3].offset = CF_OFFSET_OF(DrawVertex, c);
-	attrs[4].name = "in_uv";
+	attrs[3].offset = CF_OFFSET_OF(DrawVertex, b);
+	attrs[4].name = "in_c";
 	attrs[4].format = CF_VERTEX_FORMAT_FLOAT2;
-	attrs[4].offset = CF_OFFSET_OF(DrawVertex, uv);
-	attrs[5].name = "in_col";
-	attrs[5].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[5].offset = CF_OFFSET_OF(DrawVertex, color);
-	attrs[6].name = "in_radius";
-	attrs[6].format = CF_VERTEX_FORMAT_FLOAT;
-	attrs[6].offset = CF_OFFSET_OF(DrawVertex, radius);
-	attrs[7].name = "in_stroke";
+	attrs[4].offset = CF_OFFSET_OF(DrawVertex, c);
+	attrs[5].name = "in_uv";
+	attrs[5].format = CF_VERTEX_FORMAT_FLOAT2;
+	attrs[5].offset = CF_OFFSET_OF(DrawVertex, uv);
+	attrs[6].name = "in_col";
+	attrs[6].format = CF_VERTEX_FORMAT_UBYTE4N;
+	attrs[6].offset = CF_OFFSET_OF(DrawVertex, color);
+	attrs[7].name = "in_radius";
 	attrs[7].format = CF_VERTEX_FORMAT_FLOAT;
-	attrs[7].offset = CF_OFFSET_OF(DrawVertex, stroke);
-	attrs[8].name = "in_params";
-	attrs[8].format = CF_VERTEX_FORMAT_UBYTE4N;
-	attrs[8].offset = CF_OFFSET_OF(DrawVertex, type);
+	attrs[7].offset = CF_OFFSET_OF(DrawVertex, radius);
+	attrs[8].name = "in_stroke";
+	attrs[8].format = CF_VERTEX_FORMAT_FLOAT;
+	attrs[8].offset = CF_OFFSET_OF(DrawVertex, stroke);
+	attrs[9].name = "in_params";
+	attrs[9].format = CF_VERTEX_FORMAT_UBYTE4N;
+	attrs[9].offset = CF_OFFSET_OF(DrawVertex, type);
 	cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(DrawVertex), 0);
 
 	// Shaders.
@@ -551,10 +571,14 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	p2 = p2 + u * inflate + v * inflate;
 	p3 = p3 - u * inflate + v * inflate;
 
-	s.geom.box[0] = mul(m, p0);
-	s.geom.box[1] = mul(m, p1);
-	s.geom.box[2] = mul(m, p2);
-	s.geom.box[3] = mul(m, p3);
+	s.geom.box[0] = p0;
+	s.geom.box[1] = p1;
+	s.geom.box[2] = p2;
+	s.geom.box[3] = p3;
+	s.geom.boxH[0] = mul(m, p0);
+	s.geom.boxH[1] = mul(m, p1);
+	s.geom.boxH[2] = mul(m, p2);
+	s.geom.boxH[3] = mul(m, p3);
 	s.geom.a = c;
 	s.geom.b = he;
 	s.geom.c = u;
@@ -606,10 +630,14 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	v2 inflate = V2(stroke+aaf, stroke+aaf);
 	CF_Aabb bb = make_aabb(position - (rr+inflate), position + (rr+inflate));
 	cf_aabb_verts(s.geom.box, bb);
-	s.geom.box[0] = mul(m, s.geom.box[0]);
-	s.geom.box[1] = mul(m, s.geom.box[1]);
-	s.geom.box[2] = mul(m, s.geom.box[2]);
-	s.geom.box[3] = mul(m, s.geom.box[3]);
+	s.geom.box[0] = s.geom.box[0];
+	s.geom.box[1] = s.geom.box[1];
+	s.geom.box[2] = s.geom.box[2];
+	s.geom.box[3] = s.geom.box[3];
+	s.geom.boxH[0] = mul(m, s.geom.box[0]);
+	s.geom.boxH[1] = mul(m, s.geom.box[1]);
+	s.geom.boxH[2] = mul(m, s.geom.box[2]);
+	s.geom.boxH[3] = mul(m, s.geom.box[3]);
 	s.geom.a = position;
 	s.geom.b = position;
 	s.geom.c = position;
@@ -668,10 +696,14 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	s.geom.type = BATCH_GEOMETRY_TYPE_CAPSULE;
 
 	s_bounding_box_of_capsule(a, b, radius, stroke, s.geom.box);
-	s.geom.box[0] = mul(m, s.geom.box[0]);
-	s.geom.box[1] = mul(m, s.geom.box[1]);
-	s.geom.box[2] = mul(m, s.geom.box[2]);
-	s.geom.box[3] = mul(m, s.geom.box[3]);
+	s.geom.box[0] = s.geom.box[0];
+	s.geom.box[1] = s.geom.box[1];
+	s.geom.box[2] = s.geom.box[2];
+	s.geom.box[3] = s.geom.box[3];
+	s.geom.boxH[0] = mul(m, s.geom.box[0]);
+	s.geom.boxH[1] = mul(m, s.geom.box[1]);
+	s.geom.boxH[2] = mul(m, s.geom.box[2]);
+	s.geom.boxH[3] = mul(m, s.geom.box[3]);
 	s.geom.a = a;
 	s.geom.b = b;
 	s.geom.c = a;
@@ -748,10 +780,14 @@ static void s_cf_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fil
 	if (stroke > 0 || radius > 0 || !fill || draw->antialias.last()) {
 		s.geom.type = BATCH_GEOMETRY_TYPE_TRI_SDF;
 		s_bounding_box_of_triangle(a, b, c, radius, stroke, s.geom.box);
-		s.geom.box[0] = mul(m, s.geom.box[0]);
-		s.geom.box[1] = mul(m, s.geom.box[1]);
-		s.geom.box[2] = mul(m, s.geom.box[2]);
-		s.geom.box[3] = mul(m, s.geom.box[3]);
+		s.geom.box[0] = s.geom.box[0];
+		s.geom.box[1] = s.geom.box[1];
+		s.geom.box[2] = s.geom.box[2];
+		s.geom.box[3] = s.geom.box[3];
+		s.geom.boxH[0] = mul(m, s.geom.box[0]);
+		s.geom.boxH[1] = mul(m, s.geom.box[1]);
+		s.geom.boxH[2] = mul(m, s.geom.box[2]);
+		s.geom.boxH[3] = mul(m, s.geom.box[3]);
 		s.geom.a = a;
 		s.geom.b = b;
 		s.geom.c = c;
@@ -846,9 +882,12 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 			s.geom.a = p0;
 			s.geom.b = p1;
 			s.geom.c = solo ? p0 : p2;
-			s.geom.box[0] = mul(m, a);
-			s.geom.box[1] = mul(m, b);
-			s.geom.box[2] = mul(m, c);
+			s.geom.box[0] = a;
+			s.geom.box[1] = b;
+			s.geom.box[2] = c;
+			s.geom.boxH[0] = mul(m, a);
+			s.geom.boxH[1] = mul(m, b);
+			s.geom.boxH[2] = mul(m, c);
 			spritebatch_push(&draw->sb, s);
 		}
 	};

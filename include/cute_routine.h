@@ -161,6 +161,10 @@ struct Routine
         case __LINE__: if (condition)                                        \
             do { __mn = false;                                               \
 
+// Runs the block indefinitely, until a `nav_***` macro is used.
+#define rt_always()                                                          \
+        rt_while(true)
+
 // Runs its block once when `condition` becomes true.
 #define rt_upon(condition)                                                   \
         } while (0); if (__mn) {                                             \
@@ -179,6 +183,11 @@ struct Routine
         }                                                                    \
         break;                                                               \
         case __LINE__: do {                                                  \
+
+#ifdef _MSC_VER
+// Unreferenced goto label (sometimes from rt_end).
+#pragma warning(disable:4102)
+#endif
 
 // End of the routine. Does not have a block.
 #define rt_end()                                                             \

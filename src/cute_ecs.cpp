@@ -21,7 +21,6 @@
 
 #include <cute_ecs.h>
 #include <cute_c_runtime.h>
-#include <cute_kv.h>
 #include <cute_defer.h>
 #include <cute_string.h>
 

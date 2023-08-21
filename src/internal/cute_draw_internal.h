@@ -46,6 +46,7 @@ struct BatchGeometry
 	CF_Pixel color;
 	CF_Aabb clip;
 	CF_V2 box[4];
+	CF_V2 boxH[4];
 	CF_V2 a, b, c, d;
 	float alpha;
 	float radius;
@@ -64,6 +65,7 @@ struct BatchGeometry
 struct DrawVertex
 {
 	CF_V2 p;
+	CF_V2 posH;
 	CF_V2 a, b, c;
 	CF_V2 uv;
 	CF_Pixel color;

@@ -13,7 +13,6 @@ int main(int argc, char* argv[])
 
 	draw_push_antialias(true);
 	make_font_from_memory(proggy_data, proggy_sz, "ProggyClean");
-	push_font("ProggyClean");
 	make_font_from_memory(calibri_data, calibri_sz, "calibri");
 	set_fixed_timestep();
 	int draw_calls = 0;
@@ -25,6 +24,8 @@ int main(int argc, char* argv[])
 
 		static float t = 0;
 		t += DELTA_TIME;
+
+		push_font("ProggyClean");
 
 		// Clip text within a box.
 		v2 o = V2(cosf(t),sinf(t)) * 25.0f;
