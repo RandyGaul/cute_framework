@@ -525,13 +525,13 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 		float x = quad[j].x;
 		float y = quad[j].y;
 
+		x *= scale.x;
+		y *= scale.y;
+
 		float x0 = sprite->transform.r.c * x - sprite->transform.r.s * y;
 		float y0 = sprite->transform.r.s * x + sprite->transform.r.c * y;
 		x = x0;
 		y = y0;
-
-		x *= scale.x;
-		y *= scale.y;
 
 		x += p.x;
 		y += p.y;

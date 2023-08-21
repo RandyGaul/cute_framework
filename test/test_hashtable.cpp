@@ -199,6 +199,26 @@ TEST_CASE(test_hashtable_macros)
 	return true;
 }
 
+TEST_CASE(test_hashtable_has)
+{
+	v2* h = NULL;
+	hset(h, 0, V2(1, 2));
+	hset(h, 1, V2(4, 10));
+	hset(h, 2, V2(-12, 13));
+
+	REQUIRE(!hhas(h, 42));
+	REQUIRE(hhas(h, 0));
+
+	hdel(h, 1);
+
+	REQUIRE(!hhas(h, 1));
+	REQUIRE(hhas(h, 2));
+
+    hfree(h);
+
+    return true;
+}
+
 TEST_SUITE(test_hashtable)
 {
 	RUN_TEST_CASE(test_hashtable_macros);
