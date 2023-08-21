@@ -883,11 +883,10 @@ void mount_content_directory_as(const char* dir)
 {
 	Path path = fs_get_base_directory();
 	path.normalize();
-	path += "/spaceshooter";
+	path += "/spaceshooter_data";
 	fs_mount(path.c_str(), dir);
 }
 
-#if 1
 int main(int argc, char* argv[])
 {
 	// Create a window with a resolution of 640 x 480.
@@ -1006,71 +1005,3 @@ int main(int argc, char* argv[])
 
 	return 0;
 }
-#else
-#include <cute.h>
-
-#define TARGET_SCREEN_WIDTH 1920
-#define TARGET_SCREEN_HEIGHT 1080
-#define PIXELS_PER_METER 16
-
-CF_V2 MouseToScreen(int32_t mouseX, int32_t mouseY)
-{
-    int32_t w = cf_app_get_width();
-    int32_t h = cf_app_get_height();
-
-    int32_t y = -(mouseY - h);
-    int32_t x = mouseX;
-
-    CF_V2 result = cf_v2(x - (w * 0.5f), y - (h * 0.5f));
-    return result;
-}
-
-void Draw_Box(CF_Aabb bb, float thickness, float chubbiness, float pixelsPerMeter)
-{
-    //CF_Aabb scaledBB = cf_make_aabb_pos_w_h(cf_center(bb), cf_width(bb) * pixelsPerMeter, cf_height(bb) * pixelsPerMeter);
-
-    cf_camera_push();
-	static float t;
-	t += DELTA_TIME;
-    cf_camera_rotate(t);
-    cf_draw_box(bb, thickness, chubbiness);
-    cf_camera_pop();
-}
-
-void MainLoop(void)
-{
-    cf_app_update(NULL);
-
-    Draw_Box(make_aabb(V2(0,0),100,100), 5, 0, 0);
-
-    cf_app_draw_onto_screen();
-}
-
-int main(int argc, char *argv[])
-{
-    int options = CF_APP_OPTIONS_DEFAULT_GFX_CONTEXT | CF_APP_OPTIONS_WINDOW_POS_CENTERED;
-    CF_Result result = cf_make_app("Hunters", 0, 0, TARGET_SCREEN_WIDTH, TARGET_SCREEN_HEIGHT, options, argv[0]);
-    
-    if (cf_is_error(result)) return -1;
-
-    cf_clear_color2(cf_color_grey());
-
-    CF_V2 camDim = cf_v2(TARGET_SCREEN_WIDTH / PIXELS_PER_METER, TARGET_SCREEN_HEIGHT / PIXELS_PER_METER);
-    cf_camera_dimensions(camDim.x, camDim.y);
-    cf_camera_look_at(0, 0);
-
-
-#if CF_EMSCRIPTEN
-    emscripten_set_main_loop(MainLoop, 0, true);
-#else
-    while (cf_app_is_running())
-    {
-        MainLoop();
-    }
-#endif
-
-    cf_destroy_app();
-
-    return 0;
-}
-#endif

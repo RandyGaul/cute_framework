@@ -440,7 +440,7 @@ if (CF_FRAMEWORK_BUILD_SAMPLES)
 	endforeach()
 
 	# Copy over some folders for certain samples.
-	add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples $<TARGET_FILE_DIR:spaceshooter>)
+	add_custom_command(TARGET spaceshooter PRE_BUILD COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/samples/spaceshooter_data $<TARGET_FILE_DIR:spaceshooter>)
 endif()
 
 # Propogate public headers to other cmake scripts including this subdirectory.
