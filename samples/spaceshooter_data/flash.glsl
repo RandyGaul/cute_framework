@@ -1,4 +1,4 @@
-@module sprite
+@module flash
 
 @ctype mat4 CF_Matrix4x4
 @ctype vec4 CF_Color
@@ -7,7 +7,7 @@
 @block shader_block
 vec4 shader(vec4 color, vec2 uv, vec2 pos, vec2 posH, vec4 params)
 {
-	return color;
+	return vec4(mix(color.rgb, params.rgb, params.a), color.a);
 }
 @end
 

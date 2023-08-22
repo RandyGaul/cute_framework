@@ -56,6 +56,7 @@ struct BatchGeometry
 	bool is_sprite;
 	bool fill;
 	bool antialias;
+	CF_Pixel user_params;
 };
 
 #define SPRITEBATCH_SPRITE_GEOMETRY BatchGeometry
@@ -71,10 +72,11 @@ struct DrawVertex
 	CF_Pixel color;
 	float radius;
 	float stroke;
-	uint8_t type;    // r
-	uint8_t alpha;   // g
-	uint8_t fill;    // b
-	uint8_t aa;      // a
+	uint8_t type;  // r
+	uint8_t alpha; // g
+	uint8_t fill;  // b
+	uint8_t aa;    // a
+	CF_Pixel user_params;
 };
 
 struct CF_Strike
@@ -97,7 +99,6 @@ struct CF_Draw
 	CF_V2 atlas_dims = cf_v2(2048, 2048);
 	CF_V2 texel_dims = cf_v2(1.0f/2048.0f, 1.0f/2048.0f);
 	spritebatch_t sb;
-	CF_Shader shader;
 	CF_Mesh mesh;
 	CF_Material material;
 	CF_Filter filter = CF_FILTER_NEAREST;
@@ -110,6 +111,8 @@ struct CF_Draw
 	Cute::Array<CF_Rect> viewports = { { -1, -1, 0, 0 } };
 	Cute::Array<int> layers = { 0 };
 	Cute::Array<CF_Cam> cam_stack;
+	Cute::Array<CF_Pixel> user_params = { cf_make_pixel_hex(0) };
+	Cute::Array<CF_Shader> shaders;
 	CF_M3x2 cam = cf_make_identity();
 	CF_V2 cam_dimensions = { };
 	CF_V2 cam_position = { };

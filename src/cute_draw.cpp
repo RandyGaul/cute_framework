@@ -164,6 +164,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = 255;
 				out[i].aa = 0;
+				out[i].user_params = geom.user_params;
 			}
 
 			out[0].posH = geom.a;
@@ -188,6 +189,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = s->geom.fill ? 255 : 0;
 				out[i].aa = s->geom.antialias ? 255 : 0;
+				out[i].user_params = geom.user_params;
 			}
 
 			vert_count += 6;
@@ -206,6 +208,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = s->geom.fill ? 255 : 0;
 				out[i].aa = s->geom.antialias ? 255 : 0;
+				out[i].user_params = geom.user_params;
 			}
 
 			out[0].p = quad[0];
@@ -281,6 +284,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 					CF_ASSERT(false);
 				}
 				out[i].color = s->geom.color;
+				out[i].user_params = geom.user_params;
 			}
 
 			out[0].posH = geom.a;
@@ -326,6 +330,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = s->geom.fill ? 255 : 0;
 				out[i].aa = s->geom.antialias ? 255 : 0;
+				out[i].user_params = geom.user_params;
 			}
 
 			vert_count += 6;
@@ -344,6 +349,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 				out[i].alpha = (uint8_t)(s->geom.alpha * 255.0f);
 				out[i].fill = s->geom.fill ? 255 : 0;
 				out[i].aa = s->geom.antialias ? 255 : 0;
+				out[i].user_params = geom.user_params;
 			}
 			
 			out[0].p = geom.box[0];
@@ -391,7 +397,7 @@ static void s_draw_report(spritebatch_sprite_t* sprites, int count, int texture_
 	cf_material_set_render_state(draw->material, draw->render_states.last());
 
 	// Kick off a draw call.
-	cf_apply_shader(draw->shader, draw->material);
+	cf_apply_shader(draw->shaders.last(), draw->material);
 	cf_draw_elements();
 }
 
@@ -429,7 +435,7 @@ void cf_make_draw()
 
 	// Mesh + vertex attributes.
 	draw->mesh = cf_make_mesh(CF_USAGE_TYPE_STREAM, CF_MB * 25, 0, 0);
-	CF_VertexAttribute attrs[10] = { };
+	CF_VertexAttribute attrs[11] = { };
 	attrs[0].name = "in_pos";
 	attrs[0].format = CF_VERTEX_FORMAT_FLOAT2;
 	attrs[0].offset = CF_OFFSET_OF(DrawVertex, p);
@@ -460,10 +466,13 @@ void cf_make_draw()
 	attrs[9].name = "in_params";
 	attrs[9].format = CF_VERTEX_FORMAT_UBYTE4N;
 	attrs[9].offset = CF_OFFSET_OF(DrawVertex, type);
+	attrs[10].name = "in_user_params";
+	attrs[10].format = CF_VERTEX_FORMAT_UBYTE4N;
+	attrs[10].offset = CF_OFFSET_OF(DrawVertex, user_params);
 	cf_mesh_set_attributes(draw->mesh, attrs, CF_ARRAY_SIZE(attrs), sizeof(DrawVertex), 0);
 
 	// Shaders.
-	draw->shader = CF_MAKE_SOKOL_SHADER(sprite_shd);
+	draw->shaders.add(CF_MAKE_SOKOL_SHADER(sprite_shader));
 
 	// Material.
 	draw->material = cf_make_material();
@@ -487,7 +496,7 @@ void cf_destroy_draw()
 	spritebatch_term(&draw->sb);
 	cf_destroy_mesh(draw->mesh);
 	cf_destroy_material(draw->material);
-	cf_destroy_shader(draw->shader);
+	cf_destroy_shader(draw->shaders[0]);
 	draw->~CF_Draw();
 	CF_FREE(draw);
 }
@@ -548,6 +557,7 @@ void cf_draw_sprite(const CF_Sprite* sprite)
 
 	s.geom.color = premultiply(to_pixel(draw->tints.last()));
 	s.geom.alpha = sprite->opacity;
+	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
 }
@@ -589,6 +599,7 @@ static void s_draw_quad(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float stroke, fl
 	s.geom.stroke = stroke;
 	s.geom.fill = fill;
 	s.geom.antialias = draw->antialias.last();
+	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
 }
@@ -648,6 +659,7 @@ static void s_draw_circle(v2 position, float stroke, float radius, bool fill)
 	s.geom.stroke = stroke;
 	s.geom.fill = fill;
 	s.geom.antialias = draw->antialias.last();
+	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
 }
@@ -714,6 +726,7 @@ static void s_draw_capsule(v2 a, v2 b, float stroke, float radius, bool fill)
 	s.geom.stroke = stroke;
 	s.geom.fill = fill;
 	s.geom.antialias = draw->antialias.last();
+	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
 }
@@ -804,6 +817,7 @@ static void s_cf_draw_tri(v2 a, v2 b, v2 c, float stroke, float radius, bool fil
 	s.geom.stroke = stroke;
 	s.geom.fill = fill;
 	s.geom.antialias = draw->antialias.last();
+	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
 	spritebatch_push(&draw->sb, s);
 }
@@ -846,6 +860,7 @@ void cf_draw_polyline(CF_V2* pts, int count, float thickness, bool loop)
 	s.geom.fill = true;
 	s.geom.antialias = draw->antialias.last();
 	s.geom.type = BATCH_GEOMETRY_TYPE_SEGMENT;
+	s.geom.user_params = draw->user_params.last();
 	s.sort_bits = draw->layers.last();
 	s.w = s.h = 1;
 
@@ -2141,6 +2156,26 @@ float cf_draw_peek_antialias_scale()
 	return draw->antialias_scale.last();
 }
 
+void cf_draw_push_vertex_attributes(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+{
+	draw->user_params.add(cf_make_pixel_rgba(r, g, b, a));
+}
+
+void cf_draw_push_vertex_attributes2(CF_Pixel attributes)
+{
+	draw->user_params.add(attributes);
+}
+
+CF_Pixel cf_draw_pop_vertex_attributes()
+{
+	return draw->user_params.count() > 1 ? draw->user_params.pop() : draw->user_params.last();
+}
+
+CF_Pixel cf_draw_peek_vertex_attributes()
+{
+	return draw->user_params.last();
+}
+
 void cf_render_settings_filter(CF_Filter filter)
 {
 	draw->filter = filter;
@@ -2214,6 +2249,21 @@ void cf_render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_
 	draw->atlas_dims.y = (float)height_in_pixels;
 	draw->texel_dims.x = 1.0f / draw->atlas_dims.x;
 	draw->texel_dims.y = 1.0f / draw->atlas_dims.y;
+}
+
+void cf_render_settings_push_shader(CF_Shader shader)
+{
+	draw->shaders.add(shader);
+}
+
+CF_Shader cf_render_settings_pop_shader()
+{
+	return draw->shaders.count() > 1 ? draw->shaders.pop() : draw->shaders.last();
+}
+
+CF_Shader cf_render_settings_peek_shader()
+{
+	return draw->shaders.last();
 }
 
 void cf_render_to(CF_Canvas canvas, bool clear)

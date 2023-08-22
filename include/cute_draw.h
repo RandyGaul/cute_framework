@@ -486,6 +486,38 @@ CF_API float CF_CALL cf_draw_pop_antialias_scale();
 CF_API float CF_CALL cf_draw_peek_antialias_scale();
 
 /**
+ * @function cf_draw_push_vertex_attributes
+ * @category draw
+ * @brief    Pushes a set of vertex parameters.
+ * @related  TODO
+ */
+CF_API void CF_CALL cf_draw_push_vertex_attributes(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+
+/**
+ * @function cf_draw_push_vertex_attributes2
+ * @category draw
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API void CF_CALL cf_draw_push_vertex_attributes2(CF_Pixel attributes);
+
+/**
+ * @function cf_draw_pop_vertex_attributes
+ * @category draw
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API CF_Pixel CF_CALL cf_draw_pop_vertex_attributes();
+
+/**
+ * @function cf_draw_peek_vertex_attributes
+ * @category draw
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API CF_Pixel CF_CALL cf_draw_peek_vertex_attributes();
+
+/**
  * @function cf_make_font
  * @category text
  * @brief    Constructs a font for rendering text.
@@ -1022,6 +1054,30 @@ CF_API CF_RenderState CF_CALL cf_render_settings_peek_render_state();
 CF_API void CF_CALL cf_render_settings_set_atlas_dimensions(int width_in_pixels, int height_in_pixels);
 
 /**
+ * @function cf_draw_push_shader
+ * @category draw
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API void CF_CALL cf_render_settings_push_shader(CF_Shader shader);
+
+/**
+ * @function cf_draw_pop_shader
+ * @category draw
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API CF_Shader CF_CALL cf_render_settings_pop_shader();
+
+/**
+ * @function cf_draw_peek_shader
+ * @category draw
+ * @brief    TODO
+ * @related  TODO
+ */
+CF_API CF_Shader CF_CALL cf_render_settings_peek_shader();
+
+/**
  * @function cf_camera_dimensions
  * @category camera
  * @brief    Sets the width and height of the camera's view.
@@ -1230,6 +1286,10 @@ CF_INLINE bool draw_peek_antialias() { return cf_draw_peek_antialias(); }
 CF_INLINE void draw_push_antialias_scale(float scale) { return cf_draw_push_antialias_scale(scale); }
 CF_INLINE float draw_pop_antialias_scale() { return cf_draw_pop_antialias_scale(); }
 CF_INLINE float draw_peek_antialias_scale() { return cf_draw_peek_antialias_scale(); }
+CF_INLINE void draw_push_vertex_attributes(uint8_t r, uint8_t g, uint8_t b, uint8_t a) { cf_draw_push_vertex_attributes(r, g, b, a); }
+CF_INLINE void draw_push_vertex_attributes(CF_Pixel attributes) { cf_draw_push_vertex_attributes2(attributes); }
+CF_INLINE CF_Pixel draw_pop_vertex_attributes() { return cf_draw_pop_vertex_attributes(); }
+CF_INLINE CF_Pixel draw_peek_vertex_attributes() { return cf_draw_peek_vertex_attributes(); }
 
 CF_INLINE CF_Result make_font(const char* path, const char* font_name) { return cf_make_font(path, font_name); }
 CF_INLINE CF_Result make_font_from_memory(void* data, int size, const char* font_name) { return cf_make_font_from_memory(data, size, font_name); }
@@ -1308,6 +1368,9 @@ CF_INLINE CF_Rect render_settings_peek_scissor() { return cf_render_settings_pee
 CF_INLINE void render_settings_push_render_state(CF_RenderState render_state) { render_settings_push_render_state(render_state); }
 CF_INLINE CF_RenderState render_settings_pop_render_state() { return render_settings_pop_render_state(); }
 CF_INLINE CF_RenderState render_settings_peek_render_state() { return render_settings_peek_render_state(); }
+CF_INLINE void render_settings_push_shader(CF_Shader shader) { cf_render_settings_push_shader(shader); }
+CF_INLINE CF_Shader render_settings_pop_shader() { return cf_render_settings_pop_shader(); }
+CF_INLINE CF_Shader render_settings_peek_shader() { return cf_render_settings_peek_shader(); }
 
 CF_INLINE void camera_dimensions(float w, float h) { cf_camera_dimensions(w, h); }
 CF_INLINE void camera_look_at(float x, float y) { cf_camera_look_at(x, y); }

@@ -648,11 +648,10 @@ void player_movement_routine()
 
 	rt_label("hurt")
 	{
-		printf("hurt\n");
 		g->player.hurt = true;
 		g->player.hp--;
 	}
-	rt_wait(0.5f)
+	rt_wait(0.25f)
 	{
 		g->player.hurt = false;
 		nav_restart();
@@ -887,6 +886,18 @@ void mount_content_directory_as(const char* dir)
 	fs_mount(path.c_str(), dir);
 }
 
+#include "spaceshooter_data/flash_shader.h"
+
+void push_flash(CF_Color color)
+{
+	draw_push_vertex_attributes(to_pixel(color));
+}
+
+CF_Color pop_flash()
+{
+	return to_color(draw_pop_vertex_attributes());
+}
+
 int main(int argc, char* argv[])
 {
 	// Create a window with a resolution of 640 x 480.
@@ -900,6 +911,8 @@ int main(int argc, char* argv[])
 	g = (Game*)cf_calloc(sizeof(Game), 1);
 	g->rnd = rnd_seed(0);
 	g->player.reset();
+
+	CF_Shader flash_shader = CF_MAKE_SOKOL_SHADER(flash_shader);
 
 	while (app_is_running()) {
 		app_update();
@@ -933,14 +946,15 @@ int main(int argc, char* argv[])
 		g->player.sprite.transform.p = g->player.p;
 		if (g->player.hurt) {
 			if (between_interval(0.05f)) {
-				draw_push_tint(color_red());
+				push_flash(color_red());
 			} else {
-				draw_push_tint(color_white());
+				push_flash(color_invisible());
 			}
 		} else {
-			draw_push_tint(color_white());
+			push_flash(color_invisible());
 		}
 		g->player.sprite.draw();
+		pop_flash();
 		if (g->player.shielding) {
 			float shield_alpha = remap(1.0f - g->player.shield_time / player_shield_max, 0.4f, 1.0f);
 			draw_push_color(color_white() * shield_alpha);
@@ -980,6 +994,7 @@ int main(int argc, char* argv[])
 			s.draw();
 		}
 
+		render_settings_push_shader(flash_shader);
 		app_draw_onto_screen();
 	}
 
@@ -987,8 +1002,9 @@ int main(int argc, char* argv[])
 
 	// [x] Bullet pop asteroid
 	// [x] Shield bonk asteroid
-	// [ ] Hurt by asteroid impact
-	// [ ] 
+	// [x] Ship can get hurt
+	// [ ] Ship iframes
+	// [ ] Boss 1
 
 	// Boss 1: shield (rotates)
 	// --> beat normally w/ timing, stun with charge shot and spam minis, no stun lock

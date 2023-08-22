@@ -495,6 +495,8 @@ int cf_app_draw_onto_screen()
 	draw->text_wrap_widths.set_count(1);
 	draw->text_clip_boxes.set_count(1);
 	draw->vertical.set_count(1);
+	draw->user_params.set_count(1);
+	draw->shaders.set_count(1);
 
 	// Report the number of draw calls.
 	// This is always user draw call count +1.

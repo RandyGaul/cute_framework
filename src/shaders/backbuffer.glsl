@@ -1,7 +1,17 @@
 @module backbuffer
 @ctype vec2 CF_V2
 
-@include includes/smooth_uv.glsl
+@block smooth_uv
+
+vec2 smooth_uv(vec2 uv, vec2 texture_size)
+{
+	vec2 pixel = uv * texture_size;
+	vec2 seam = floor(pixel + 0.5);
+	pixel = seam + clamp((pixel - seam) / fwidth(pixel), -0.5, 0.5);
+	return pixel / texture_size;
+}
+
+@end
 
 @vs vs
 	layout (location = 0) in vec2 in_pos;
