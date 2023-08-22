@@ -29,6 +29,7 @@ struct RocketBarn
 };
 
 #define BULLETS_MAX 16
+#define BULLETS_RADIUS 4
 
 struct BulletBarn
 {
@@ -36,6 +37,7 @@ struct BulletBarn
 	v2 p[BULLETS_MAX];
 
 	bool add();
+	void hit(int i);
 	void update();
 	void draw();
 };
@@ -51,7 +53,7 @@ struct AsteroidBarn
 	v2 center_mass[ASTEROIDS_MAX];
 	float slice_timeout[ASTEROIDS_MAX];
 
-	void add(v2 p, v2 v);
+	void add(v2 p, v2 v, float size);
 	void add(CF_Poly p, v2 v, float a, float timeout);
 	void update();
 	void slice(CF_Ray r);
@@ -100,6 +102,7 @@ struct PlayerShip
 	v2 old_dir;
 	int hp;
 	bool hurt;
+	float iframes;
 
 	void reset();
 };
@@ -189,12 +192,15 @@ struct ParticleBarn
 struct ChargeShot
 {
 	Routine rt;
-	v2 at;
 	Sprite shot_spawn;
 	Sprite shot;
+	v2 at;
 	bool start = false;
+	bool alive = false;
 	inline void spawn(v2 at) { rt = { }; this->at = at; start = true; }
+	void hit();
 	void update_and_draw();
+	#define CHARGE_SHOT_RADIUS 12
 };
 
 struct LineParticleBarn
@@ -267,6 +273,16 @@ struct Game
 	ChargeShot charge_shot;
 	ParticleBarn particles;
 	LineParticleBarn line_particles;
+
+	// Boss stuff.
+	bool boss_hurt;
+	bool boss_hurt_small;
+	bool boss1;
+	int boss_state;
+	Routine rt;
+	Routine rt_hurt;
+	Routine rt_hurt_small;
+	v2 boss_p, boss_last_p;
 };
 
 Game* g;
@@ -406,6 +422,16 @@ bool BulletBarn::add()
 	return false;
 }
 
+void BulletBarn::hit(int i)
+{
+	Sprite s = make_sprite("bullet_pop.ase");
+	s.transform.p = p[i];
+	g->animations.add(s);
+	alive[i] = false;
+	g->particles.add(p[i], 2, V2(-200,0), 0.25f);
+	g->particles.add(p[i], 2, V2( 200,0), 0.25f);
+}
+
 void BulletBarn::update()
 {
 	for (int i = 0; i < BULLETS_MAX; ++i) {
@@ -416,13 +442,8 @@ void BulletBarn::update()
 		} else {
 			for (int j = 0; j < ASTEROIDS_MAX; ++j) {
 				if (!g->asteroids.alive[j]) continue;
-				if (circle_to_poly(make_circle(p[i], 4), g->asteroids.poly + j, NULL)) {
-					Sprite s = make_sprite("bullet_pop.ase");
-					s.transform.p = p[i];
-					g->animations.add(s);
-					alive[i] = false;
-					g->particles.add(p[i], 2, V2(-200,0), 0.25f);
-					g->particles.add(p[i], 2, V2( 200,0), 0.25f);
+				if (circle_to_poly(make_circle(p[i], BULLETS_RADIUS), g->asteroids.poly + j, NULL)) {
+					hit(i);
 				}
 			}
 		}
@@ -445,11 +466,10 @@ inline float flicker(float interval, float lo, float hi)
 	else return hi;
 }
 
-CF_Poly make_asteroid_poly(v2 p0)
+CF_Poly make_asteroid_poly(v2 p0, float size)
 {
 	CF_Poly poly;
 	for (int i = 0; i < CF_POLY_MAX_VERTS; ++i) {
-		float size = 30;
 		poly.verts[i] = rnd_range(V2(-size,-size), V2(size,size));
 		poly.verts[i] += p0;
 	}
@@ -458,14 +478,14 @@ CF_Poly make_asteroid_poly(v2 p0)
 	return poly;
 }
 
-void AsteroidBarn::add(v2 p, v2 v)
+void AsteroidBarn::add(v2 p, v2 v, float size)
 {
 	for (int i = 0; i < ASTEROIDS_MAX; ++i) {
 		if (alive[i]) continue;
 		alive[i] = true;
 		angular_velocity[i] = rnd_range(0.2f, 1.0f) * sign(rnd_range(-1,1));
 		velocity[i] = v;
-		poly[i] = make_asteroid_poly(p);
+		poly[i] = make_asteroid_poly(p, size);
 		center_mass[i] = center_of_mass(poly[i]);
 		slice_timeout[i] = 0;
 		return;
@@ -569,18 +589,21 @@ void AsteroidBarn::explode(int i)
 
 void player_movement_routine()
 {
+	g->player.iframes -= DELTA_TIME;
 	rt_begin(g->player.rt_movement, DELTA_TIME)
 	{
 		if (g->player.fired_laser) {
 			nav_goto("knockback");
 		}
 
-		// Detect running into asteroids.
-		for (int i = 0; i < ASTEROIDS_MAX; ++i) {
-			if (!g->asteroids.alive[i]) continue;
-			Circle c = make_circle(g->player.sprite.transform.p, 12.5f);
-			if (circle_to_poly(c, g->asteroids.poly + i, NULL)) {
-				nav_goto("hurt");
+		if (g->player.iframes <= 0) {
+			// Detect running into asteroids.
+			for (int i = 0; i < ASTEROIDS_MAX; ++i) {
+				if (!g->asteroids.alive[i]) continue;
+				Circle c = make_circle(g->player.sprite.transform.p, 12.5f);
+				if (circle_to_poly(c, g->asteroids.poly + i, NULL)) {
+					nav_goto("hurt");
+				}
 			}
 		}
 
@@ -654,6 +677,7 @@ void player_movement_routine()
 	rt_wait(0.25f)
 	{
 		g->player.hurt = false;
+		g->player.iframes = 2.0f;
 		nav_restart();
 	}
 
@@ -818,6 +842,194 @@ void player_weapons_routine()
 	rt_end();
 }
 
+void boss1()
+{
+	#define BOSS1_RADIUS 20
+	#define BOSS1_ASTEROID_RADIUS 15
+
+	rt_begin(g->rt, DELTA_TIME) { }
+	rt_seconds(2)
+	{
+		g->boss1 = true;
+		g->boss_p = lerp(V2(0,270), V2(0,180), smoothstep(rt.elapsed));
+	}
+	rt_wait(1)
+	{
+		nav_goto("asteroid");
+	}
+
+	rt_label("main")
+	{
+		g->boss_last_p = g->boss_p;
+	}
+	rt_wait(3)
+	{
+		if (g->boss_state == 0) {
+			g->boss_state++;
+			nav_goto("left");
+		} else if (g->boss_state == 1) {
+			g->boss_state++;
+			nav_goto("right");
+		} else {
+			g->boss_state = 0;
+			nav_goto("center");
+		}
+	}
+
+	rt_label("left") { }
+	rt_seconds(2.5f)
+	{
+		g->boss_p = bezier(g->boss_last_p, V2(-80, 50), V2(-180, 200), V2(-200,160), smoothstep(rt.elapsed));
+	}
+	rt_once()
+	{
+		nav_goto("asteroid");
+	}
+
+	rt_label("right") { }
+	rt_seconds(2.5f)
+	{
+		g->boss_p = bezier(g->boss_last_p, V2(80, 50), V2(180, 200), V2(200,160), smoothstep(rt.elapsed));
+	}
+	rt_once()
+	{
+		nav_goto("asteroid");
+	}
+
+	rt_label("center") { }
+	rt_seconds(2.5f)
+	{
+		g->boss_p = bezier(g->boss_last_p, V2(100, 100), V2(50, 260), V2(0,180), smoothstep(rt.elapsed));
+	}
+	rt_once()
+	{
+		nav_goto("asteroid");
+	}
+
+	rt_label("asteroid") { }
+	rt_seconds(1.0f)
+	{
+		float t = smoothstep(rt.elapsed);
+		draw_push_color(color_white() * t);
+		draw_circle_fill(g->boss_p - V2(0,35), t * BOSS1_ASTEROID_RADIUS);
+		draw_pop_color();
+	}
+	rt_once()
+	{
+		draw_circle_fill(g->boss_p - V2(0,35), BOSS1_ASTEROID_RADIUS);
+		g->asteroids.add(g->boss_p - V2(0,35), -V2(0,30), BOSS1_ASTEROID_RADIUS);
+	}
+	rt_seconds(0.35f)
+	{
+		float t = smoothstep(1.0f - rt.elapsed);
+		draw_push_color(color_white() * t);
+		draw_circle_fill(g->boss_p - V2(0,35), t * BOSS1_ASTEROID_RADIUS);
+		draw_pop_color();
+	}
+	rt_once()
+	{
+		nav_goto("main");
+	}
+
+	rt_end();
+}
+
+void boss_hurt()
+{
+	rt_begin(g->rt_hurt, DELTA_TIME) { }
+	rt_wait(1)
+	{
+		g->rt.set_next("main");
+		g->boss_hurt = false;
+		nav_restart();
+	}
+	rt_end() { }
+}
+
+void boss_hurt_small()
+{
+	rt_begin(g->rt_hurt_small, DELTA_TIME) { }
+	rt_wait(0.1f)
+	{
+		g->boss_hurt_small = false;
+		nav_restart();
+	}
+	rt_end();
+}
+
+void update_bosses()
+{
+	if (g->boss1) {
+		if (g->charge_shot.alive && !g->boss_hurt) {
+			if (circle_to_circle(make_circle(g->charge_shot.at, CHARGE_SHOT_RADIUS), make_circle(g->boss_p, BOSS1_RADIUS))) {
+				g->boss_hurt = true;
+				g->charge_shot.hit();
+				g->boss_p -= V2(0,-5);
+				g->boss_last_p -= V2(0,-5);
+			}
+		}
+
+		if (g->boss_hurt) {
+			boss_hurt();
+		} else {
+			boss1();
+		}
+
+		if (g->boss_hurt_small) {
+			boss_hurt_small();
+		}
+
+		for (int i = 0; i < BULLETS_MAX; ++i) {
+			if (!g->player.bullets.alive[i]) continue;
+			v2 p = g->player.bullets.p[i];
+			if (circle_to_circle(make_circle(g->boss_p, BOSS1_RADIUS), make_circle(p, BULLETS_RADIUS))) {
+				g->boss_hurt_small = true;
+				g->player.bullets.hit(i);
+				g->rt_hurt_small.reset();
+			}
+		}
+	}
+}
+
+void draw_bosses()
+{
+	if (g->boss1) {
+		if (!g->boss_hurt) {
+			if (g->boss_hurt_small) {
+				if (between_interval(0.05f)) draw_push_color(color_red());
+				else draw_push_color(color_white());
+			}
+			draw_circle(make_circle(g->boss_p, BOSS1_RADIUS));
+			if (g->boss_hurt_small) draw_pop_color();
+			draw_line(g->boss_p + V2(-12,4), g->boss_p + V2(-5,4));
+			draw_line(g->boss_p + V2(5,4), g->boss_p + V2(12,4));
+		} else {
+			if (between_interval(0.05f)) {
+				draw_push_color(color_red());
+			} else {
+				draw_push_color(color_white());
+			}
+			draw_circle(make_circle(g->boss_p, BOSS1_RADIUS));
+			draw_circle(g->boss_p + (V2(-12,4)+V2(-5,4)) * 0.5f, 4);
+			draw_circle(g->boss_p + (V2( 5, 4)+V2(12,4)) * 0.5f, 4);
+			draw_pop_color();
+		}
+	}
+}
+
+void ChargeShot::hit()
+{
+	Sprite s = make_sprite("explosion.ase");
+	s.transform.p = shot.transform.p;
+	g->animations.add(s);
+	for (int i = 0; i < 10; ++i) {
+		SinCos r = sincos(rnd_range(-CF_PI*0.25f, CF_PI*0.25f));
+		g->particles.add(shot.transform.p, 3.0f, mul(r,V2(0,rnd_range(50,250))), rnd_range(0.25f, 0.5f));
+	}
+	alive = false;
+	rt.reset();
+}
+
 void ChargeShot::update_and_draw()
 {
 	rt_begin(rt, DELTA_TIME)
@@ -843,32 +1055,24 @@ void ChargeShot::update_and_draw()
 	rt_label("shot")
 	{
 		// Draw the charge shot with trails.
+		alive = true;
 		shot.update();
 		shot.draw();
 		v2 v = V2(0,400);
 		shot.transform.p += v * DELTA_TIME;
+		at = shot.transform.p;
 		if (on_interval(0.075f)) {
 			v2 offset = rnd_range(V2(-5,0), V2(5,0));
 			g->particles.add(shot.transform.p + offset, rnd_range(0.75f,3.5f), v * rnd_range(0.35f, 0.6f), rnd_range(0.5f,1.5f));
 		}
 
-		auto on_hit_fx = [&]() {
-			Sprite s = make_sprite("explosion.ase");
-			s.transform.p = shot.transform.p;
-			g->animations.add(s);
-			for (int i = 0; i < 10; ++i) {
-				SinCos r = sincos(rnd_range(-CF_PI*0.25f, CF_PI*0.25f));
-				g->particles.add(shot.transform.p, 3.0f, mul(r,V2(0,rnd_range(50,250))), rnd_range(0.25f, 0.5f));
-			}
-		};
-
 		// Collide with asteroids.
 		for (int i = 0; i < ASTEROIDS_MAX; ++i) {
 			if (!g->asteroids.alive[i]) continue;
-			if (circle_to_poly(make_circle(shot.transform.p, 8), g->asteroids.poly + i, NULL)) {
+			if (circle_to_poly(make_circle(shot.transform.p, CHARGE_SHOT_RADIUS), g->asteroids.poly + i, NULL)) {
 				g->asteroids.alive[i] = false;
-				on_hit_fx();
 				g->asteroids.explode(i);
+				hit();
 				nav_restart();
 			}
 		}
@@ -911,6 +1115,7 @@ int main(int argc, char* argv[])
 	g = (Game*)cf_calloc(sizeof(Game), 1);
 	g->rnd = rnd_seed(0);
 	g->player.reset();
+	g->boss1 = true;
 
 	CF_Shader flash_shader = CF_MAKE_SOKOL_SHADER(flash_shader);
 
@@ -961,10 +1166,10 @@ int main(int argc, char* argv[])
 			draw_circle(make_circle(g->player.p, flicker(0.075f, 25, 26)));
 		}
 
+		update_bosses();
+		draw_bosses();
+
 		// Update + draw asteroids.
-		if (on_interval(0.3f)) {
-			g->asteroids.add(g->player.p + V2(rnd_range(-50,50),600), V2(0,-100));
-		}
 		g->asteroids.update();
 		g->asteroids.draw();
 
@@ -1003,7 +1208,7 @@ int main(int argc, char* argv[])
 	// [x] Bullet pop asteroid
 	// [x] Shield bonk asteroid
 	// [x] Ship can get hurt
-	// [ ] Ship iframes
+	// [x] Ship iframes
 	// [ ] Boss 1
 
 	// Boss 1: shield (rotates)
