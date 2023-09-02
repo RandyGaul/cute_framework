@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
 		// Normally a *very* cheap operation if you don't update the pixels each frame.
 		cf_sprite_draw(&sprite);
 
-		cf_app_draw_onto_screen();
+		cf_app_draw_onto_screen(true);
 	}
 
 	cf_free(pixels);

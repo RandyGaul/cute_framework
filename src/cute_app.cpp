@@ -428,7 +428,7 @@ static void s_imgui_present()
 	}
 }
 
-int cf_app_draw_onto_screen()
+int cf_app_draw_onto_screen(bool clear)
 {
 	// Update lifteime of all text effects.
 	const char** keys = app->text_effect_states.keys();
@@ -451,7 +451,7 @@ int cf_app_draw_onto_screen()
 	spritebatch_defrag(&draw->sb);
 
 	// Render any remaining geometry in the draw API.
-	cf_render_to(app->offscreen_canvas, true);
+	cf_render_to(app->offscreen_canvas, clear);
 
 	// Stretch the app canvas onto the backbuffer canvas.
 	cf_apply_canvas(app->backbuffer_canvas, true);

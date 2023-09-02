@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
 			mutate = !mutate;
 		}
 
-		cf_app_draw_onto_screen();
+		cf_app_draw_onto_screen(true);
 	}
 
 	cf_destroy_app();

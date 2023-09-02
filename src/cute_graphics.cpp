@@ -890,9 +890,9 @@ void cf_apply_canvas(CF_Canvas pass_handle, bool clear)
 		canvas->action.depth.load_action = SG_LOADACTION_CLEAR;
 		canvas->action.stencil.load_action = SG_LOADACTION_CLEAR;
 	} else {
-		canvas->action.colors[0].load_action = SG_LOADACTION_CLEAR;
-		canvas->action.depth.load_action = SG_LOADACTION_CLEAR;
-		canvas->action.stencil.load_action = SG_LOADACTION_CLEAR;
+		canvas->action.colors[0].load_action = SG_LOADACTION_LOAD;
+		canvas->action.depth.load_action = SG_LOADACTION_LOAD;
+		canvas->action.stencil.load_action = SG_LOADACTION_LOAD;
 	}
 	if (canvas->pass_is_default) {
 		sg_begin_default_pass(&canvas->action, app->w, app->h);

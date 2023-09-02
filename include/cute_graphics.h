@@ -774,6 +774,7 @@ CF_API void CF_CALL cf_update_texture(CF_Texture texture, void* data, int size);
  *           ```
  * @related  CF_MAKE_SOKOL_SHADER CF_SokolShader CF_Shader cf_make_shader cf_destroy_shader cf_apply_shader CF_Material
  */
+#ifdef __cplusplus
 #define CF_MAKE_SOKOL_SHADER(prefix) \
 	cf_make_shader({ \
 		prefix##_shader_desc, \
@@ -782,8 +783,20 @@ CF_API void CF_CALL cf_update_texture(CF_Texture texture, void* data, int size);
 		prefix##_uniformblock_slot, \
 		prefix##_uniformblock_size, \
 		prefix##_uniform_offset, \
-		prefix##_uniform_desc, \
+		prefix##_uniform_desc \
 	})
+#else
+#define CF_MAKE_SOKOL_SHADER(prefix) \
+	cf_make_shader((CF_SokolShader){ \
+		prefix##_shader_desc, \
+		prefix##_attr_slot, \
+		prefix##_image_slot, \
+		prefix##_uniformblock_slot, \
+		prefix##_uniformblock_size, \
+		prefix##_uniform_offset, \
+		prefix##_uniform_desc \
+	})
+#endif
 
 /**
  * @struct   CF_SokolShader
