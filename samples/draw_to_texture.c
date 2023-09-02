@@ -20,16 +20,20 @@ typedef struct Vertex
 	float u, v;
 } Vertex;
 
+// UV (0,0) is top-left of the screen, while UV (1,1) is bottom right. We flip the y-axis for UVs to make the y-axis point up.
+// Coordinate (-1,1) is top left, while (1,-1) is bottom right.
 static void s_quad(float x, float y, float sx, float sy, Vertex quad[6])
 {
-	quad[0].x = -0.5f; quad[0].y =  0.5f; quad[0].u = 0; quad[0].v = 0;
-	quad[1].x =  0.5f; quad[1].y = -0.5f; quad[1].u = 1; quad[1].v = 1;
-	quad[2].x =  0.5f; quad[2].y =  0.5f; quad[2].u = 1; quad[2].v = 0;
+	// Build a quad from (-1.0f,-1.0f) to (1.0f,1.0f).
+	quad[0].x = -1.0f; quad[0].y =  1.0f; quad[0].u = 0; quad[0].v = 0;
+	quad[1].x =  1.0f; quad[1].y = -1.0f; quad[1].u = 1; quad[1].v = 1;
+	quad[2].x =  1.0f; quad[2].y =  1.0f; quad[2].u = 1; quad[2].v = 0;
 
-	quad[3].x = -0.5f; quad[3].y =  0.5f; quad[3].u = 0; quad[3].v = 0;
-	quad[4].x = -0.5f; quad[4].y = -0.5f; quad[4].u = 0; quad[4].v = 1;
-	quad[5].x =  0.5f; quad[5].y = -0.5f; quad[5].u = 1; quad[5].v = 1;
+	quad[3].x = -1.0f; quad[3].y =  1.0f; quad[3].u = 0; quad[3].v = 0;
+	quad[4].x = -1.0f; quad[4].y = -1.0f; quad[4].u = 0; quad[4].v = 1;
+	quad[5].x =  1.0f; quad[5].y = -1.0f; quad[5].u = 1; quad[5].v = 1;
 
+	// Scale the quad about the origin by (sx,sy), then translate it by (x,y).
 	for (int i = 0; i < 6; ++i) {
 		quad[i].x = quad[i].x * sx + x;
 		quad[i].y = quad[i].y * sy + y;
@@ -95,21 +99,21 @@ int main(int argc, char* argv[])
 	attrs[1].offset = CF_OFFSET_OF(Vertex, u);
 	cf_mesh_set_attributes(left_quad, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
 	Vertex left_quad_verts[6];
-	s_quad(-0.5f, 0, 1, 1, left_quad_verts);
+	s_quad(-0.5f, 0, 0.5f, 0.5f, left_quad_verts);
 	cf_mesh_update_vertex_data(left_quad, left_quad_verts, 6);
 
 	// Create a quad for the right view.
 	CF_Mesh right_quad = cf_make_mesh(CF_USAGE_TYPE_IMMUTABLE, sizeof(Vertex) * 6, 0, 0);
 	cf_mesh_set_attributes(right_quad, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
 	Vertex right_quad_verts[6];
-	s_quad(0.5f, 0, 1, 1, right_quad_verts);
+	s_quad(0.5f, 0, 0.5f, 0.5f, right_quad_verts);
 	cf_mesh_update_vertex_data(right_quad, right_quad_verts, 6);
 
 	// Create a quad for the full screen.
 	CF_Mesh fullscreen_quad = cf_make_mesh(CF_USAGE_TYPE_IMMUTABLE, sizeof(Vertex) * 6, 0, 0);
 	cf_mesh_set_attributes(fullscreen_quad, attrs, CF_ARRAY_SIZE(attrs), sizeof(Vertex), 0);
 	Vertex fullscreen_quad_verts[6];
-	s_quad(0, 0, 2, 2, fullscreen_quad_verts);
+	s_quad(0, 0, 1, 1, fullscreen_quad_verts);
 	cf_mesh_update_vertex_data(fullscreen_quad, fullscreen_quad_verts, 6);
 
 	// Setup shader + material for drawing the offscreen canvas onto the screen (blit).
