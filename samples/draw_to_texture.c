@@ -160,6 +160,11 @@ int main(int argc, char* argv[])
 		cf_app_draw_onto_screen(false);
 	}
 
+	cf_destroy_shader(blit_shader);
+	cf_destroy_material(blit_material);
+	cf_destroy_mesh(left_quad);
+	cf_destroy_mesh(right_quad);
+	cf_destroy_mesh(fullscreen_quad);
 	destroy_offscreen(offscreen);
 	cf_destroy_app();
 
