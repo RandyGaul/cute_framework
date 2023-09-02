@@ -35,17 +35,17 @@ static CF_INLINE CF_Result cf_wrap(cn_result_t cn_result)
 CF_STATIC_ASSERT(CF_CONNECT_TOKEN_SIZE == CN_CONNECT_TOKEN_SIZE, "Must be equal.");
 CF_STATIC_ASSERT(CF_CONNECT_TOKEN_USER_DATA_SIZE == CN_CONNECT_TOKEN_USER_DATA_SIZE, "Must be equal.");
 
-int cf_adress_init(CF_Address* endpoint, const char* address_and_port_string)
+int cf_address_init(CF_Address* endpoint, const char* address_and_port_string)
 {
 	return cn_endpoint_init(endpoint, address_and_port_string);
 }
 
-void cf_adress_to_string(CF_Address endpoint, char* buffer, int buffer_size)
+void cf_address_to_string(CF_Address endpoint, char* buffer, int buffer_size)
 {
 	cn_endpoint_to_string(endpoint, buffer, buffer_size);
 }
 
-int cf_adress_equals(CF_Address a, CF_Address b)
+int cf_address_equals(CF_Address a, CF_Address b)
 {
 	return cn_endpoint_equals(a, b);
 }
