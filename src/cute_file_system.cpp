@@ -34,8 +34,9 @@
 
 char* cf_path_get_filename(const char* path)
 {
+	if (!path || path[0] == '\0') { return NULL; }
+
 	int at = slast_index_of(path, '/');
-	if (at == -1) return NULL;
 	return smake(path + at + 1);
 }
 
