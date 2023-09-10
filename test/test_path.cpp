@@ -39,6 +39,10 @@ TEST_CASE(test_path_c)
 	REQUIRE(sequ(s, "file.txt"));
 	sfree(s);
 
+	s = spfname("file");
+	REQUIRE(sequ(s, "file"));
+	sfree(s);
+
 	s = spfname("/.txt");
 	REQUIRE(sequ(s, ".txt"));
 	sfree(s);
