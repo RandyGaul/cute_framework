@@ -37,19 +37,35 @@ char* cf_path_get_filename(const char* path)
 	if (!path || path[0] == '\0') { return NULL; }
 
 	int at = slast_index_of(path, '/');
-	return smake(path + at + 1);
+
+	const char *f = path + at + 1;
+	if (f[0] != '\0') {
+		return smake(f);
+	}
+
+	// The last character was "/" so there was no filename
+	return NULL;
 }
 
 char* cf_path_get_filename_no_ext(const char* path)
 {
-	int at = slast_index_of(path, '.');
-	if (at == -1) return NULL;
-	char* s = (char*)cf_path_get_filename(path);
-	at = slast_index_of(s, '.');
-	if (at == -1 || at == 0) {
+	char* s = cf_path_get_filename(path);
+	
+	if (!s) { return NULL; }
+
+	int at = slast_index_of(s, '.');
+	if (at == 0) {
+		// The filename only has an extension
 		sfree(s);
 		return NULL;
 	}
+
+	if (at == -1) {
+		// The filename has no extension
+		return s;
+	}
+
+	// Remove the extension from the filename
 	serase(s, at, slen(s) - at);
 	return s;
 }
