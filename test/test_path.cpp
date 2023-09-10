@@ -36,10 +36,18 @@ TEST_CASE(test_path_c)
 	sfree(s);
 
 	s = spfname("file.txt");
+	REQUIRE(sequ(s, "file.txt"));
+	sfree(s);
+
+	s = spfname("/.txt");
+	REQUIRE(sequ(s, ".txt"));
+	sfree(s);
+
+	s = spfname("/root/");
 	REQUIRE(sequ(s, NULL));
 	sfree(s);
 
-	s = spfname(".txt");
+	s = spfname("/.root/");
 	REQUIRE(sequ(s, NULL));
 	sfree(s);
 
@@ -60,10 +68,18 @@ TEST_CASE(test_path_c)
 	sfree(s);
 
 	s = spfname_no_ext("file.txt");
-	REQUIRE(sequ(s, NULL));
+	REQUIRE(sequ(s, "file"));
 	sfree(s);
 
 	s = spfname_no_ext("/file");
+	REQUIRE(sequ(s, "file"));
+	sfree(s);
+
+	s = spfname_no_ext("/root/");
+	REQUIRE(sequ(s, NULL));
+	sfree(s);
+
+	s = spfname_no_ext("/.root/");
 	REQUIRE(sequ(s, NULL));
 	sfree(s);
 
