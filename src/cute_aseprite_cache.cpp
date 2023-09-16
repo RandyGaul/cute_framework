@@ -19,7 +19,6 @@
 	3. This notice may not be removed or altered from any source distribution.
 */
 
-#include <cute_aseprite_cache.h>
 #include <cute_sprite.h>
 #include <cute_debug_printf.h>
 #include <cute_file_system.h>
@@ -48,7 +47,7 @@ struct CF_AsepriteCache
 	uint64_t id_gen = CF_ASEPRITE_ID_RANGE_LO;
 };
 
-static CF_AsepriteCache* cache;
+CF_GLOBAL static CF_AsepriteCache* cache;
 
 void cf_aseprite_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill)
 {

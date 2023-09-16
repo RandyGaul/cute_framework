@@ -63,7 +63,7 @@
 
 CF_STATIC_ASSERT(sizeof(uint64_t) >= sizeof(void*), "Must be equal for opaque id implementations throughout CF.");
 
-CF_App* app;
+CF_GLOBAL CF_App* app;
 
 using namespace Cute;
 

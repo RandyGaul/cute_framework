@@ -37,7 +37,7 @@ struct CF_PngCache
 	uint64_t id_gen = CF_PNG_ID_RANGE_LO;
 };
 
-static CF_PngCache* cache;
+CF_GLOBAL static CF_PngCache* cache;
 
 void cf_png_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_fill)
 {

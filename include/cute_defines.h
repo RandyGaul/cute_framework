@@ -120,6 +120,7 @@
 #define CF_ALIGN_FORWARD(v, n) CF_ALIGN_TRUNCATE((v) + (n) - 1, (n))
 #define CF_ALIGN_TRUNCATE_PTR(p, n) ((void*)CF_ALIGN_TRUNCATE((uintptr_t)(p), n))
 #define CF_ALIGN_FORWARD_PTR(p, n) ((void*)CF_ALIGN_FORWARD((uintptr_t)(p), n))
+#define CF_GLOBAL
 
 #ifdef __cplusplus
 #	ifndef CF_NO_CPP

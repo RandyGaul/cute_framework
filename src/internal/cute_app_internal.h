@@ -28,7 +28,6 @@
 #include <cute_ecs.h>
 #include <cute_math.h>
 #include <cute_doubly_list.h>
-#include <cute_aseprite_cache.h>
 #include <cute_png_cache.h>
 #include <cute_graphics.h>
 #include <cute_input.h>

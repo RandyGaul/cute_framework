@@ -64,7 +64,7 @@ CF_Allocator s_default_allocator = {
 	s_default_realloc
 };
 
-CF_Allocator s_allocator = s_default_allocator;
+CF_GLOBAL CF_Allocator s_allocator = s_default_allocator;
 
 void cf_allocator_override(CF_Allocator allocator)
 {
