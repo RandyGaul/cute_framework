@@ -26,7 +26,6 @@
 #include "cute_alloc.h"
 #include "cute_app.h"
 #include "cute_array.h"
-#include "cute_aseprite_cache.h"
 #include "cute_audio.h"
 #include "cute_base64.h"
 #include "cute_circular_buffer.h"
