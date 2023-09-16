@@ -189,7 +189,7 @@ CF_API void CF_CALL cf_arena_init(CF_Arena* arena, int alignment, int block_size
  * @category allocator
  * @brief    Allocates a block of memory aligned along a byte boundary.
  * @param    arena         The arena to allocate from.
- * @param    size          The size of the allocation, it can be larger than `block_size` from `cf_arena_init`.
+ * @param    size          The size of the allocation, it cannot be larger than `block_size` from `cf_arena_init`.
  * @return   Returns an aligned pointer of `size` bytes.
  * @related  cf_arena_init cf_arena_reset
  */
