@@ -199,6 +199,10 @@ TEST_CASE(test_path_c)
 	REQUIRE(sequ(s, "/"));
 	sfree(s);
 
+    s = spnorm("/first.last/.hidden");
+    REQUIRE(sequ(s, "/first.last/.hidden"));
+    sfree(s);
+
 	return true;
 }
 

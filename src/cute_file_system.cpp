@@ -202,6 +202,9 @@ char* cf_path_normalize(const char* path)
 			}
 			prev_was_dot = true;
 		} else {
+            if (prev_was_dot) {
+                spush(result, '.');
+            }
 			spush(result, c);
 			prev_was_dot = false;
 			prev_was_dotdot = false;
