@@ -220,6 +220,15 @@ CF_API CF_Sprite CF_CALL cf_make_easy_sprite_from_pixels(const CF_Pixel* pixels,
 CF_API void CF_CALL cf_easy_sprite_update_pixels(CF_Sprite* sprite, const CF_Pixel* pixels);
 
 /**
+ * @function cf_easy_sprite_unload
+ * @category sprite
+ * @brief    Unloads an easy sprite's image resources.
+ * @param    sprite The `CF_Sprite` to unload. This `CF_Sprite` should have been created by a `cf_make_easy_sprite_*` function.
+ * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels cf_easy_sprite_unload
+ */
+CF_API void CF_CALL cf_easy_sprite_unload(CF_Sprite *sprite);
+
+/**
  * @function cf_make_sprite
  * @category sprite
  * @brief    Loads a sprite from an aseprite file.
@@ -265,15 +274,6 @@ CF_API CF_Sprite CF_CALL cf_make_demo_sprite();
  * @related  CF_Sprite cf_make_sprite cf_sprite_unload
  */
 CF_API void CF_CALL cf_sprite_unload(const char* aseprite_path);
-
-/**
- * @function cf_easy_sprite_unload
- * @category sprite
- * @brief    Unloads an easy sprite's image resources.
- * @param    sprite The `CF_Sprite` to unload. This `CF_Sprite` should have been created by a `cf_make_easy_sprite_*` function.
- * @related  CF_Sprite cf_make_easy_sprite_from_png cf_make_easy_sprite_from_pixels cf_easy_sprite_update_pixels cf_easy_sprite_unload
- */
-CF_API void CF_CALL cf_easy_sprite_unload(CF_Sprite *sprite);
 
 //--------------------------------------------------------------------------------------------------
 // In-line implementation of `CF_Sprite` functions.
