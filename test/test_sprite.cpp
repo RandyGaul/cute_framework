@@ -20,6 +20,7 @@
 */
 
 #include "test_harness.h"
+#include "internal/cute_app_internal.h"
 
 #include <cute.h>
 using namespace Cute;
@@ -36,7 +37,30 @@ TEST_CASE(test_make_sprite)
 	return true;
 }
 
+TEST_CASE(test_easy_sprite_unload)
+{
+	CHECK(cf_is_error(cf_make_app(NULL, 0, 0, 0, 0, APP_OPTIONS_HIDDEN | APP_OPTIONS_NO_AUDIO | APP_OPTIONS_NO_GFX, NULL)));
+
+	CF_Pixel r, g, b;
+	r.val = 0xFF0000FF;
+	g.val = 0x00FF00FF;
+	b.val = 0x0000FFFF;
+
+	CF_Pixel pixels[3] = { r, g, b };
+
+	CF_Sprite s = cf_make_easy_sprite_from_pixels(pixels, 3, 1);
+	REQUIRE(s.easy_sprite_id);
+	REQUIRE(app->easy_sprites.count() == 1);
+
+	cf_easy_sprite_unload(&s);
+	REQUIRE(app->easy_sprites.count() == 0);
+
+	cf_destroy_app();
+	return true;
+}
+
 TEST_SUITE(test_sprite)
 {
 	RUN_TEST_CASE(test_make_sprite);
+	RUN_TEST_CASE(test_easy_sprite_unload);
 }
