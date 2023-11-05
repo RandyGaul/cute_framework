@@ -2328,7 +2328,7 @@ CF_V2 cf_camera_peek_position()
 
 CF_V2 cf_camera_peek_dimensions()
 {
-	return draw->cam_dimensions;
+	return draw->cam_dimensions * 2.0f;
 }
 
 float cf_camera_peek_rotation()
