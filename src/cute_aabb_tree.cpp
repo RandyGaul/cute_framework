@@ -600,7 +600,7 @@ CF_AabbTree cf_make_aabb_tree_from_memory(const void* buffer, size_t size)
 
 void cf_destroy_aabb_tree(CF_AabbTree tree_handle)
 {
-	CF_AabbTreeInternal* tree = CF_NEW(CF_AabbTreeInternal);
+	CF_AabbTreeInternal* tree = (CF_AabbTreeInternal*)tree_handle.id;
 	tree->~CF_AabbTreeInternal();
 	CF_FREE(tree);
 }

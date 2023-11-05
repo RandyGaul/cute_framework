@@ -368,6 +368,7 @@ if (CF_FRAMEWORK_BUILD_TESTS)
 		test/test_sprite.cpp
 		test/test_string.cpp
 		test/test_json.cpp
+		test/test_aabb.cpp
 		)
 	set(CF_TEST_HDRS test/test_harness.h)
 

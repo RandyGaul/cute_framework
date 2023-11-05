@@ -40,6 +40,7 @@
 #include <internal/cute_file_system_internal.h>
 #include <cute.h>
 
+TEST_SUITE(test_aabb);
 TEST_SUITE(test_array);
 TEST_SUITE(test_aseprite);
 TEST_SUITE(test_audio);
@@ -74,6 +75,7 @@ int main(int argc, char* argv[])
 
 	pu_display_colors(true);
 
+	RUN_TEST_SUITE(test_aabb);
 	RUN_TEST_SUITE(test_array);
 	RUN_TEST_SUITE(test_aseprite);
 	RUN_TEST_SUITE(test_audio);
