@@ -508,12 +508,12 @@ template <typename T>
 void Array<T>::set_count(int count)
 {
 	CF_ARRAY_ENSURE_CAPACITY(count);
-	if (count > m_count) {
-		for (int i = count; i < m_count; ++i) {
+	if (m_count < count) {
+		for (int i = m_count; i < count; ++i) {
 			CF_PLACEMENT_NEW(m_ptr + i) T();
 		}
 	} else {
-		for (int i = m_count; i < count; ++i) {
+		for (int i = count; i < m_count; ++i) {
 			m_ptr[i].~T();
 		}
 	}
