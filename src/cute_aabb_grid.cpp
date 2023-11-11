@@ -20,19 +20,86 @@
 */
 
 #include <cute_aabb_grid.h>
+#include <internal/cute_alloc_internal.h>
 
 using namespace Cute;
 
-void aabb_grid_insert(AabbGrid *grid, Cute::Aabb aabb, void *udata)
+struct CF_AabbGridNodeInternal
 {
-	v2 half_extents = grid->extents * 0.5f;
+	int id;
+	Aabb aabb;
+	void *udata;
+};
 
-	int max_tiles_x = (int)grid->extents.x / grid->tile_size;
-	int max_tiles_y = (int)grid->extents.y / grid->tile_size;
+struct CF_AabbGridInternal
+{
+	int w;
+	int h;
+
+	v2 pos;
+
+	int tile_size;
+
+	Array<Array<CF_AabbGridNodeInternal>> map;
+
+	int next_id;
+};
+
+
+CF_AabbGrid cf_make_aabb_grid(CF_V2 pos, int width, int height, int tile_size)
+{
+	CF_AabbGridInternal *grid = CF_NEW(CF_AabbGridInternal);
+
+	grid->pos = pos;
+	grid->w = width;
+	grid->h = height;
+	grid->tile_size = tile_size;
+	grid->next_id = 0;
+
+	int max_tiles_x = width / tile_size;
+	int max_tiles_y = height / tile_size;
+
+	grid->map.ensure_count(max_tiles_x * max_tiles_y);
+
+	CF_AabbGrid result;
+	result.id = (uint64_t)grid;
+	return result;
+}
+
+void cf_destroy_aabb_grid(CF_AabbGrid grid_handle)
+{
+	CF_AabbGridInternal *grid = (CF_AabbGridInternal *)grid_handle.id;
+	grid->~CF_AabbGridInternal();
+	CF_FREE(grid);
+}
+
+void cf_aabb_grid_clear(CF_AabbGrid grid_handle)
+{
+	CF_AabbGridInternal *grid = (CF_AabbGridInternal *)grid_handle.id;
+	for (int i = 0; i < grid->map.count(); i++)
+	{
+		grid->map[i].clear();
+	}
+
+	grid->next_id = 0;
+}
+
+void cf_aabb_grid_set_pos(CF_AabbGrid grid_handle, CF_V2 pos) {
+	CF_AabbGridInternal *grid = (CF_AabbGridInternal *)grid_handle.id;
+	grid->pos = pos;
+}
+
+void cf_aabb_grid_insert(CF_AabbGrid grid_handle, CF_Aabb aabb, void *udata)
+{
+	CF_AabbGridInternal *grid = (CF_AabbGridInternal *)grid_handle.id;
+	v2 half_extents = V2((float)grid->w, (float)grid->h) * 0.5f;
+
+	int max_tiles_x = grid->w / grid->tile_size;
+	int max_tiles_y = grid->h / grid->tile_size;
 
 	Aabb relative_aabb = aabb;
-	relative_aabb.min += half_extents - grid->center;
-	relative_aabb.max += half_extents - grid->center;
+	relative_aabb.min += half_extents - grid->pos;
+	relative_aabb.max += half_extents - grid->pos;
 
 	int min_x = (int)relative_aabb.min.x / grid->tile_size;
 	int min_y = (int)relative_aabb.min.y / grid->tile_size;
@@ -45,7 +112,7 @@ void aabb_grid_insert(AabbGrid *grid, Cute::Aabb aabb, void *udata)
 		return;
 	}
 
-	int id = ++grid->count;
+	int id = ++grid->next_id;
 
 	for (int x = min_x; x <= max_x; x++)
 	{
@@ -57,33 +124,20 @@ void aabb_grid_insert(AabbGrid *grid, Cute::Aabb aabb, void *udata)
 	}
 }
 
-void aabb_grid_clear(AabbGrid *grid)
-{
-	for (int i = 0; i < grid->map.count(); i++)
-	{
-		grid->map[i].clear();
-	}
-
-	grid->count = 0;
-}
-
-void aabb_grid_query(
-		AabbGrid *grid,
-		Cute::Aabb a_aabb,
-		bool (*on_hit)(int id, Cute::Aabb aabb, void *leaf_udata, void *fn_udata),
-		void *udata
-)
+void cf_aabb_grid_query(CF_AabbGrid grid_handle, CF_Aabb a_aabb, CF_AabbGridQueryFn *fn, void *udata)
 {
 	static Array<int> visited;
 	visited.clear();
 
-	v2 half_extents = grid->extents * 0.5f;
+	CF_AabbGridInternal *grid = (CF_AabbGridInternal *)grid_handle.id;
 
-	int max_tiles_x = (int)grid->extents.x / grid->tile_size;
-	int max_tiles_y = (int)grid->extents.y / grid->tile_size;
+	v2 half_extents = V2((float)grid->w, (float)grid->h) * 0.5f;
 
-	a_aabb.min += half_extents - grid->center;
-	a_aabb.max += half_extents - grid->center;
+	int max_tiles_x = grid->w / grid->tile_size;
+	int max_tiles_y = grid->h / grid->tile_size;
+
+	a_aabb.min += half_extents - grid->pos;
+	a_aabb.max += half_extents - grid->pos;
 
 	int min_x = (int)a_aabb.min.x / grid->tile_size;
 	int min_y = (int)a_aabb.min.y / grid->tile_size;
@@ -120,13 +174,13 @@ void aabb_grid_query(
 				}
 
 				auto b_aabb = b.aabb;
-				b_aabb.min += half_extents - grid->center;
-				b_aabb.max += half_extents - grid->center;
+				b_aabb.min += half_extents - grid->pos;
+				b_aabb.max += half_extents - grid->pos;
 
 				if (aabb_to_aabb(a_aabb, b_aabb))
 				{
 					visited.add(b.id);
-					if (!on_hit(b.id, b.aabb, b.udata, udata))
+					if (!fn({b.id}, b.aabb, b.udata, udata))
 					{
 						return;
 					}
@@ -136,19 +190,5 @@ void aabb_grid_query(
 	}
 }
 
-AabbGrid make_aabb_grid(Aabb bounds, int tile_size)
-{
-	AabbGrid grid;
 
-	grid.extents = extents(bounds);
-	grid.center = center(bounds);
-	grid.tile_size = tile_size;
-
-	int max_tiles_x = (int)grid.extents.x / tile_size;
-	int max_tiles_y = (int)grid.extents.y / tile_size;
-
-	grid.map.ensure_count(max_tiles_x * max_tiles_y);
-
-	return grid;
-}
 
