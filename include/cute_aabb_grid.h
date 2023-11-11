@@ -53,14 +53,14 @@ struct AabbGrid
 
 AabbGrid make_aabb_grid(Aabb bounds, int grid_size);
 
-void aabb_grid_insert(AabbGrid *grid, Cute::Aabb aabb, void *udata);
+void aabb_grid_insert(AabbGrid *grid, Aabb aabb, void *udata);
 
 void aabb_grid_clear(AabbGrid *grid);
 
 void aabb_grid_query(
 		AabbGrid *grid,
-		Cute::Aabb aabb,
-		bool (*on_hit)(int id, Cute::Aabb aabb, void *leaf_udata, void *fn_udata),
+		Aabb aabb,
+		bool (*on_hit)(int id, Aabb aabb, void *leaf_udata, void *fn_udata),
 		void *udata
 );
 
