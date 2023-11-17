@@ -497,7 +497,7 @@ void cf_run_systems()
 		CF_Entity e = world->delayed_activate_entities[i];
 		cf_entity_activate(e);
 	}
-	world->delayed_change_type.clear();
+	world->delayed_activate_entities.clear();
 
 	for (int i = 0; i < world->delayed_change_type.count(); ++i) {
 		CF_ChangeType change = world->delayed_change_type[i];
