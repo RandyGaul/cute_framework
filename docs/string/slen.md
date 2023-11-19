@@ -19,6 +19,5 @@ s | The string. Can be `NULL`.
 ## Related Pages
 
 [sempty](/string/sempty.md)  
-[ssize](/string/ssize.md)  
 [scount](/string/scount.md)  
 [scap](/string/scap.md)  

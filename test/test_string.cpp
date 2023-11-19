@@ -82,14 +82,14 @@ TEST_CASE(test_string_macros_simple)
 	spush(s, 'b');
 	spush(s, 'c');
 	REQUIRE(slen(s) == 3);
-	REQUIRE(ssize(s) == 4);
+	REQUIRE(scount(s) == 4);
 	REQUIRE(sequ(s, "abc"));
 	sfmt(s, "WELP %d", 1500);
 	REQUIRE(sequ(s, "WELP 1500"));
 	sfmt_append(s, "%s", ", append_me");
 	REQUIRE(sequ(s, "WELP 1500, append_me"));
 	REQUIRE(CF_STRLEN(s) == slen(s));
-	REQUIRE(CF_STRLEN(s) + 1 == ssize(s));
+	REQUIRE(CF_STRLEN(s) + 1 == scount(s));
 	sfree(s);
 	REQUIRE(s == NULL);
 	const char* long_string = "some string longer than the default string length forcing an `sfit` call to test it's code path.";
