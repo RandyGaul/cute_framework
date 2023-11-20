@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
 		if (fps == 0) {
 			fps = 1.0f / CF_DELTA_TIME;
 		} else {
-			fps = lerp(fps, 1.0f / CF_DELTA_TIME, 1.0f / 500.0f);
+			fps = Cute::lerp(fps, 1.0f / CF_DELTA_TIME, 1.0f / 500.0f);
 		}
 		static float t = 0;
 

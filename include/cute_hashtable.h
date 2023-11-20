@@ -700,12 +700,12 @@ void Map<K, T>::sort_keys(int offset, int count, P predicate)
 {
 	if (count <= 1) return;
 
-	auto key = [=](int index) -> K& {
+	auto key = [=, this](int index) -> K& {
 		uint8_t* keys = (uint8_t*)m_table->items_key;
 		void* k = keys + index * m_table->key_size;
 		return *(K*)k;
 	};
-	auto swap = [=](int ia, int ib) { cf_hashtable_swap_impl(m_table, offset + ia, offset + ib); };
+	auto swap = [=, this](int ia, int ib) { cf_hashtable_swap_impl(m_table, offset + ia, offset + ib); };
 
 	const K& pivot_key = key(count - 1);
 	int lo = 0;
@@ -736,12 +736,12 @@ void Map<K, T>::sort_items(int offset, int count, P predicate)
 {
 	if (count <= 1) return;
 
-	auto item = [=](int index) -> T& {
+	auto item = [=, this](int index) -> T& {
 		uint8_t* items = (uint8_t*)m_table->items_data;
 		void* item = items + index * m_table->item_size;
 		return *(T*)item;
 	};
-	auto swap = [=](int ia, int ib) { cf_hashtable_swap_impl(m_table, offset + ia, offset + ib); };
+	auto swap = [=, this](int ia, int ib) { cf_hashtable_swap_impl(m_table, offset + ia, offset + ib); };
 
 	const K& pivot = item(count - 1);
 	int lo = 0;

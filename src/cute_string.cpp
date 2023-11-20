@@ -35,7 +35,7 @@ using namespace Cute;
 char* cf_sfit(char* a, int n)
 {
 	cf_array_fit(a, n + 1);
-	if (ssize(a) == 0) apush(a, 0);
+	if (scount(a) == 0) apush(a, 0);
 	return a;
 }
 
@@ -51,7 +51,7 @@ char* cf_sset(char* a, const char* b)
 		a = (char*)cf_agrow(a, bsize, 1);
 	}
 	CF_MEMCPY((void*)a, b, bsize);
-	ssize(a) = bsize;
+	alen(a) = bsize;
 	return a;
 }
 
@@ -68,7 +68,7 @@ char* cf_sfmt(char* s, const char* fmt, ...)
 		n = 1 + vsnprintf(s, scap(s), fmt, args);
 		va_end(args);
 	}
-	ssize(s) = n;
+	alen(s) = n;
 	return s;
 }
 
@@ -103,7 +103,7 @@ char* cf_svfmt(char* s, const char* fmt, va_list args)
 		n = 1 + vsnprintf(s, scap(s), fmt, copy_args);
 		va_end(copy_args);
 	}
-	ssize(s) = n;
+	alen(s) = n;
 	return s;
 }
 
@@ -170,7 +170,7 @@ char* cf_sappend(char* a, const char* b)
 	if (blen <= 0) return a;
 	sfit(a, slen(a) + blen + 1);
 	CF_MEMCPY(a + slen(a), b, blen);
-	ssize(a) += blen;
+	alen(a) += blen;
 	a[slen(a)] = 0;
 	return a;
 }
@@ -182,7 +182,7 @@ char* cf_sappend_range(char* a, const char* b, const char* b_end)
 	if (blen <= 0) return a;
 	sfit(a, slen(a) + blen + 1);
 	CF_MEMCPY(a + slen(a), b, blen);
-	ssize(a) += blen;
+	alen(a) += blen;
 	a[slen(a)] = 0;
 	return a;
 }
@@ -198,7 +198,7 @@ char* cf_strim(char* s)
 	size_t len = end - start + 1;
 	CF_MEMMOVE(s, start, len);
 	s[len] = 0;
-	ssize(s) = (int)(len + 1);
+	alen(s) = (int)(len + 1);
 	return s;
 }
 
@@ -210,14 +210,14 @@ char* cf_sltrim(char* s)
 	size_t len = slen(s) - (start - s);
 	CF_MEMMOVE(s, start, len);
 	s[len] = 0;
-	ssize(s) = (int)(len + 1);
+	alen(s) = (int)(len + 1);
 	return s;
 }
 
 char* cf_srtrim(char* s)
 {
 	CF_ACANARY(s);
-	while (isspace(*(s + slen(s) - 1))) ssize(s)--;
+	while (isspace(*(s + slen(s) - 1))) alen(s)--;
 	s[slen(s)] = 0;
 	return s;
 }
@@ -231,7 +231,7 @@ char* cf_slpad(char* s, char pad, int count)
 	}
 	CF_MEMMOVE(s + count, s, scount(s));
 	CF_MEMSET(s, pad, count);
-	ssize(s) += count;
+	alen(s) += count;
 	return s;
 }
 
@@ -243,7 +243,7 @@ char* cf_srpad(char* s, char pad, int count)
 		sfit(s, scount(s) + cap);
 	}
 	CF_MEMSET(s + slen(s), pad, count);
-	ssize(s) += count;
+	alen(s) += count;
 	s[slen(s)] = 0;
 	return s;
 }
@@ -263,12 +263,12 @@ char* cf_ssplit_once(char* s, char split_c)
 	if (len + 1 == slen(s)) return NULL;
 	char* split = NULL;
 	sfit(split, len + 1);
-	ssize(split) = len + 1;
+	alen(split) = len + 1;
 	CF_MEMCPY(split, s, len);
 	split[len] = 0;
 	int new_len = slen(s) - len - 1;
 	CF_MEMMOVE(s, s + len + 1, new_len);
-	ssize(s) = new_len + 1;
+	alen(s) = new_len + 1;
 	s[new_len] = 0;
 	return split;
 }
@@ -366,7 +366,7 @@ char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
 			int diff = (int)(replace_len - with_len);
 			CF_MEMCPY(find, with_me, with_len);
 			CF_MEMMOVE(find + with_len, find + replace_len, remaining);
-			ssize(s) -= diff;
+			alen(s) -= diff;
 		} else {
 			int remaining = scount(s) - find_offset - (int)replace_len;
 			int diff = (int)(with_len - replace_len);
@@ -374,7 +374,7 @@ char* cf_sreplace(char* s, const char* replace_me, const char* with_me)
 			find = s + find_offset;
 			CF_MEMMOVE(find + with_len, find + replace_len, remaining);
 			CF_MEMCPY(find, with_me, with_len);
-			ssize(s) += diff;
+			alen(s) += diff;
 		}
 		search = find + with_len;
 	}
@@ -401,7 +401,7 @@ char* cf_sdedup(char* s, int ch)
 		}
 	}
 	s[i + 1] = 0;
-	ssize(s) = i + 1;
+	alen(s) = i + 1;
 	return s;
 }
 
@@ -416,13 +416,13 @@ char* cf_serase(char* s, int index, int count)
 	}
 	if (index >= slen(s)) return s;
 	if (index + count >= slen(s)) {
-		ssize(s) = index + 1;
+		alen(s) = index + 1;
 		s[index] = 0;
 		return s;
 	} else {
 		int remaining = scount(s) - (count + index) + 1;
 		CF_MEMMOVE(s + index, s + count + index, remaining);
-		ssize(s) -= count;
+		alen(s) -= count;
 	}
 	return s;
 }
@@ -430,7 +430,7 @@ char* cf_serase(char* s, int index, int count)
 char* cf_spop(char* s)
 {
 	CF_ACANARY(s);
-	if (s && slen(s)) s[--ssize(s) - 1] = 0;
+	if (s && slen(s)) s[--alen(s) - 1] = 0;
 	return s;
 }
 
@@ -438,8 +438,8 @@ char* cf_spopn(char* s, int n)
 {
 	CF_ACANARY(s);
 	if (!s || n < 0) return s;
-	while (ssize(s) > 1 && n--) {
-		ssize(s)--;
+	while (scount(s) > 1 && n--) {
+		alen(s)--;
 	}
 	s[slen(s)] = 0;
 	return s;

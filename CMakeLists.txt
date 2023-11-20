@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.14)
 project(cute_framework)
 
 # Must have at least C++17.
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 # These are needed for how we use FetchContent.
 include(FetchContent)

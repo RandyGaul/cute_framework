@@ -55,7 +55,7 @@ extern "C" {
  * @category string
  * @brief    Returns the number of characters in the string, not counting the nul-terminator.
  * @param    s            The string. Can be `NULL`.
- * @related  slen ssize scount scap sempty
+ * @related  slen scount scap sempty
  */
 #define slen(s) cf_string_len(s)
 
@@ -65,7 +65,7 @@ extern "C" {
  * @brief    Returns whether or not the string is empty.
  * @param    s            The string. Can be `NULL`.
  * @remarks  Both "" and NULL count as empty.
- * @related  slen ssize scount scap sempty
+ * @related  slen scount scap sempty
  */
 #define sempty(s) cf_string_empty(s)
 
@@ -90,36 +90,11 @@ extern "C" {
 #define sfree(s) cf_string_free(s)
 
 /**
- * @function ssize
- * @category string
- * @brief    Returns the number of characters in the string.
- * @param    s            The string. Must not be `NULL`.
- * @example > Demonstrating decrement on `ssize`.
- *     char* s = NULL;
- *     spush(s, 'a');
- *     CF_ASSERT(ssize(s) == 1);
- *     ssize(s)--;
- *     CF_ASSERT(ssize(a) == 0);
- *     sfree(ssize);
- * @remarks  Both "" and NULL count as empty. Returns a proper l-value, so you can assign or increment it.
- * @related  slen ssize scount scap sempty
- */
-#define ssize(s) cf_string_size(s)
-
-/**
  * @function scount
  * @category string
- * @brief    Returns the number of characters in the string.
- * @param    s            The string. Must not be `NULL`.
- * @example > Demonstrating decrement on `ssize`.
- *     char* s = NULL;
- *     spush(s, 'a');
- *     CF_ASSERT(ssize(s) == 1);
- *     ssize(s)--;
- *     CF_ASSERT(ssize(a) == 0);
- *     sfree(ssize);
- * @remarks  Both "" and NULL count as empty. Returns a proper l-value, so you can assign or increment it.
- * @related  slen ssize scount scap sempty
+ * @brief    Returns the number of characters in the string, including the nul-terminator.
+ * @param    s            The string.
+ * @related  slen scount scap sempty
  */
 #define scount(s) cf_string_count(s)
 
@@ -130,7 +105,7 @@ extern "C" {
  * @param    s            The string. Can be `NULL`.
  * @remarks  This is not the number of characters, but the size of the internal buffer. The capacity automatically grows as necessary, but
  *           you can use `sfit` to ensure a minimum capacity manually, as an optimization.
- * @related  slen ssize scount scap sempty
+ * @related  slen scount scap sempty
  */
 #define scap(s) cf_string_cap(s)
 
@@ -1052,8 +1027,8 @@ struct String
 	CF_INLINE char* c_str() { return m_str; }
 	CF_INLINE const char* begin() const { return m_str; }
 	CF_INLINE char* begin() { return m_str; }
-	CF_INLINE const char* end() const { return m_str + ssize(m_str); }
-	CF_INLINE char* end() { return m_str + ssize(m_str); }
+	CF_INLINE const char* end() const { return m_str + scount(m_str); }
+	CF_INLINE char* end() { return m_str + scount(m_str); }
 	CF_INLINE char last() const { return slast(m_str); }
 	CF_INLINE char first() const { return sfirst(m_str); }
 	CF_INLINE operator const char*() const { return m_str; }
@@ -1064,11 +1039,11 @@ struct String
 
 	CF_INLINE int len() const { return slen(m_str); }
 	CF_INLINE int capacity() const { return scap(m_str); }
-	CF_INLINE int size() const { return ssize(m_str); }
-	CF_INLINE int count() const { return ssize(m_str); }
+	CF_INLINE int size() const { return scount(m_str); }
+	CF_INLINE int count() const { return scount(m_str); }
 	CF_INLINE void ensure_capacity(int capacity) { sfit(m_str, capacity); }
 	CF_INLINE void fit(int capacity) { sfit(m_str, capacity); }
-	CF_INLINE void set_len(int len) { sfit(m_str, len + 1); ssize(m_str) = len + 1; m_str[len] = 0; }
+	CF_INLINE void set_len(int len) { sfit(m_str, len + 1); cf_array_len(m_str) = len + 1; m_str[len] = 0; }
 	CF_INLINE bool empty() const { return sempty(m_str); }
 
 	CF_INLINE String& add(char ch) { spush(m_str, ch); return *this; }
@@ -1124,7 +1099,7 @@ struct String
 
 private:
 	char* m_str = NULL;
-	CF_INLINE void s_chki(int i) const { CF_ASSERT(i >= 0 && i < ssize(m_str)); }
+	CF_INLINE void s_chki(int i) const { CF_ASSERT(i >= 0 && i < scount(m_str)); }
 };
 
 CF_INLINE String operator+(const String& a, const String& b) { String result = a; result.append(b); return result; }

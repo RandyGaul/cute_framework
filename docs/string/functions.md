@@ -50,7 +50,6 @@
 - [srpad](/string/srpad.md)
 - [srtrim](/string/srtrim.md)
 - [sset](/string/sset.md)
-- [ssize](/string/ssize.md)
 - [ssplit](/string/ssplit.md)
 - [ssplit_once](/string/ssplit_once.md)
 - [sstatic](/string/sstatic.md)

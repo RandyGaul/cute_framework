@@ -24,6 +24,5 @@ you can use [sfit](/string/sfit.md) to ensure a minimum capacity manually, as an
 ## Related Pages
 
 [slen](/string/slen.md)  
-[ssize](/string/ssize.md)  
 [scount](/string/scount.md)  
 [sempty](/string/sempty.md)  

@@ -23,6 +23,5 @@ Both "" and NULL count as empty.
 ## Related Pages
 
 [slen](/string/slen.md)  
-[ssize](/string/ssize.md)  
 [scount](/string/scount.md)  
 [scap](/string/scap.md)  

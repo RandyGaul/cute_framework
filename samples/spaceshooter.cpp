@@ -659,7 +659,7 @@ void player_movement_routine()
 		v2 p = s.transform.p;
 		for (int i = 0; i < n; ++i) {
 			float t = (float)i / (float)n;
-			s.transform.p = p + lerp(V2(0,0), offset, t);
+			s.transform.p = p + cf_lerp_v2(V2(0,0), offset, t);
 			g->fades.add(s, t*0.5f);
 		}
 		g->player.p += offset;
@@ -725,7 +725,7 @@ void player_weapons_routine()
 	{
 		if (key_down(KEY_X)) {
 			v2 p = top(g->player.bounds) + V2(0, 10.0f);
-			draw_circle(make_circle(p, lerp(3.0f, 10.0f, rt.elapsed)));
+			draw_circle(make_circle(p, cf_lerp(3.0f, 10.0f, rt.elapsed)));
 		} else {
 			g->player.charging_laser = false;
 			nav_restart();
@@ -851,7 +851,7 @@ void boss1()
 	rt_seconds(2)
 	{
 		g->boss1 = true;
-		g->boss_p = lerp(V2(0,270), V2(0,180), smoothstep(rt.elapsed));
+		g->boss_p = cf_lerp_v2(V2(0,270), V2(0,180), smoothstep(rt.elapsed));
 	}
 	rt_wait(1)
 	{
