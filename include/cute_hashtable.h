@@ -609,7 +609,7 @@ T* Map<K, T>::insert(const K& key, T&& val)
 	int index = m_table->return_index;
 	if (index < 0) return NULL;
 	T* result = items() + index;
-	CF_PLACEMENT_NEW(result) T(move(val));
+	CF_PLACEMENT_NEW(result) T(cf_move(val));
 	return result;
 }
 

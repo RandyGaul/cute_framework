@@ -378,7 +378,7 @@ private:
 		}                                                      \
 		T* new_ptr = (T*)cf_alloc(sizeof(T) * m_capacity);     \
 		for (int i = 0; i < m_count; ++i) {                    \
-			CF_PLACEMENT_NEW(new_ptr + i) T(move(m_ptr[i]));   \
+			CF_PLACEMENT_NEW(new_ptr + i) T(cf_move(m_ptr[i]));\
 		}                                                      \
 		cf_free(m_ptr);                                        \
 		m_ptr = new_ptr;                                       \
@@ -476,14 +476,14 @@ template <typename T>
 T& Array<T>::add(T&& item)
 {
 	CF_ARRAY_ENSURE_CAPACITY(m_count + 1);
-	return *CF_PLACEMENT_NEW(m_ptr + m_count++) T(move(item));
+	return *CF_PLACEMENT_NEW(m_ptr + m_count++) T(cf_move(item));
 }
 
 template <typename T>
 T Array<T>::pop()
 {
 	CF_ASSERT(m_count > 0);
-	T val = move(m_ptr[m_count - 1]);
+	T val = cf_move(m_ptr[m_count - 1]);
 	m_ptr[m_count - 1].~T();
 	m_count--;
 	return val;
@@ -494,7 +494,7 @@ void Array<T>::unordered_remove(int index)
 {
 	m_ptr[index].~T();
 	if (index != --m_count) {
-		m_ptr[index] = move(m_ptr[m_count]);
+		m_ptr[index] = cf_move(m_ptr[m_count]);
 	}
 }
 
@@ -545,9 +545,9 @@ void Array<T>::reverse()
 	T* b = m_ptr + (m_count - 1);
 
 	while (a < b) {
-		T t = move(*a);
-		*a = move(*b);
-		*b = move(t);
+		T t = cf_move(*a);
+		*a = cf_move(*b);
+		*b = cf_move(t);
 		++a;
 		--b;
 	}

@@ -176,7 +176,7 @@ struct cf_remove_reference<T&&>
 };
 
 template <typename T>
-constexpr typename cf_remove_reference<T>::type&& move(T&& arg) noexcept
+constexpr typename cf_remove_reference<T>::type&& cf_move(T&& arg) noexcept
 {
 	return (typename cf_remove_reference<T>::type&&)arg;
 }
