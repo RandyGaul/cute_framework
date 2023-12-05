@@ -22,7 +22,7 @@ With some time investment on the reader's part to learn some new concepts about 
 
 A good way to get into the real meat of coroutines is to go through transforming a full example of a complex state machine written in a traditional manner to one written with a coroutine.
 
-Instead of talking about a full example in the context of a game, which [Elias Daler has done wonderfully here](https://eliasdaler.github.io/how-to-implement-action-sequences-and-cutscenes/), a very tight example has been chosen of making a game editor tool. Editors are typically very complex and riddled with little bits of state machines everywhere. The lessons to learn from the rest of the document are the following points.
+Instead of talking about a full example in the context of a game, which [Elias Daler has done wonderfully here](https://edw.is/how-to-implement-action-sequences-and-cutscenes/), a very tight example has been chosen of making a game editor tool. Editors are typically very complex and riddled with little bits of state machines everywhere. The lessons to learn from the rest of the document are the following points.
 
 1. Reducing extreme code duplication for storing state outside the state machine, like ad-hoc stacks or persistant data.
 2. Rewriting the code so it reads like a script from a play. The state machine should list actions in chronological order: Do task A, then task B, then task C, etc. A traditional state machine cuts up the tasks and jumps around with switches or if-else chains, breaking code flow.
