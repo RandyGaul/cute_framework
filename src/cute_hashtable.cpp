@@ -300,7 +300,7 @@ int cf_hashtable_find_impl(const CF_Hhdr* table, uint64_t key)
 
 bool cf_hashtable_has_impl(CF_Hhdr* table, uint64_t key)
 {
-	return !!cf_hashtable_find_impl(table, key);
+	return cf_hashtable_find_impl(table, key) < 0 ? false : true;
 }
 
 int cf_hashtable_count_impl(const CF_Hhdr* table)
