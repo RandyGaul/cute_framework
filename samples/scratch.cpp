@@ -36,6 +36,7 @@ int main(int argc, char* argv[])
 
 	while (app_is_running()) {
 		app_update();
+		push_font("Calibri");
 
 		if (fps == 0) {
 			fps = 1.0f / CF_DELTA_TIME;
