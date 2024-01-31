@@ -456,7 +456,8 @@ CF_INLINE void cf_sprite_flip_y(CF_Sprite* sprite)
  */
 CF_INLINE int cf_sprite_frame_count(const CF_Sprite* sprite)
 {
-	return asize(sprite->animation);
+	if (!sprite->animation) return 0;
+	return alen(sprite->animation->frames);
 }
 
 /**
