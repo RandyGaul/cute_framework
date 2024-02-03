@@ -1,0 +1,32 @@
+[](../header.md ':include')
+
+# cf_draw_box_fill2
+
+Category: [draw](/api_reference?id=draw)  
+GitHub: [cute_draw.h](https://github.com/RandyGaul/cute_framework/blob/master/include/cute_draw.h)  
+---
+
+Draws a quad.
+
+```cpp
+void cf_draw_box_fill2(CF_V2 p0, CF_V2 p1, CF_V2 p2, CF_V2 p3, float chubbiness)
+```
+
+Parameters | Description
+--- | ---
+p0 | A corner of the quad.
+p1 | A corner of the quad.
+p2 | A corner of the quad.
+p3 | A corner of the quad.
+chubbiness | Inflates the shape, similar to corner-rounding. Makes the shape chubbier.
+
+## Remarks
+
+All points `p0` through `p3` are encouraged to be in counter-clockwise order. This is an alias for [cf_draw_quad_fill2](/draw/cf_draw_quad_fill2.md)
+
+## Related Pages
+
+[cf_draw_quad](/draw/cf_draw_quad.md)  
+[cf_draw_quad2](/draw/cf_draw_quad2.md)  
+[cf_draw_quad_fill](/draw/cf_draw_quad_fill.md)  
+[cf_draw_quad_fill2](/draw/cf_draw_quad_fill2.md)  

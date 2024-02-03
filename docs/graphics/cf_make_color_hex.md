@@ -18,7 +18,7 @@ hex | An integer value, e.g. 0xFFAACC.
 
 ## Remarks
 
-The opacity of the output color is set to 0xFF (fully opaque). Will assert if the value is greater than 0xFFFFFF.
+The opacity of the output color is set to 0xFF (fully opaque).
 
 ## Related Pages
 

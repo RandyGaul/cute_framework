@@ -24,3 +24,4 @@ Any live [CF_Sprite](/sprite/cf_sprite.md) instances for `aseprite_path` will no
 
 [CF_Sprite](/sprite/cf_sprite.md)  
 [cf_make_sprite](/sprite/cf_make_sprite.md)  
+[cf_sprite_reload](/sprite/cf_sprite_reload.md)  

@@ -9,8 +9,12 @@ GitHub: [cute_app.h](https://github.com/RandyGaul/cute_framework/blob/master/inc
 Draws the app onto the screen.
 
 ```cpp
-int cf_app_draw_onto_screen();
+int cf_app_draw_onto_screen(bool clear);
 ```
+
+Parameters | Description
+--- | ---
+clear | Default to true. Will clear the previous screen's contents to the clear color if true.
 
 ## Return Value
 

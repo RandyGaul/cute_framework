@@ -469,6 +469,9 @@ struct Map
 	T* insert(const K& key);
 	T* insert(const K& key, const T& val);
 	T* insert(const K& key, T&& val);
+	T* add(const K& key) { return insert(key); }
+	T* add(const K& key, const T& val) { return insert(key, val); }
+	T* add(const K& key, T&& val) { return insert(key, val); }
 	void remove(const K& key);
 
 	void clear();

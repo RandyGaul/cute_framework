@@ -29,5 +29,6 @@ by merely loading a single .png image, or for games that don't require animation
 ## Related Pages
 
 [CF_Sprite](/sprite/cf_sprite.md)  
-[cf_easy_sprite_update_pixels](/sprite/cf_easy_sprite_update_pixels.md)  
+[cf_easy_sprite_unload](/sprite/cf_easy_sprite_unload.md)  
 [cf_make_easy_sprite_from_pixels](/sprite/cf_make_easy_sprite_from_pixels.md)  
+[cf_easy_sprite_update_pixels](/sprite/cf_easy_sprite_update_pixels.md)  

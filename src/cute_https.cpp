@@ -42,8 +42,6 @@ extern "C" {
 
 using namespace Cute;
 
-// TODO - Rewrite with string view wrapper class, instead of dynamic strings, as an optimization.
-
 #ifndef CF_EMSCRIPTEN
 
 #define CF_RESPONSE_CHUNKED             1

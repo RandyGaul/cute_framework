@@ -18,11 +18,9 @@ virtual_path | A path to the file.
 data | A pointer to the data to write to the file.
 size | The size in bytes of `data`.
 
-## Remarks
-
-Call [CF_FREE](/allocator/cf_free.md) on it when done. [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
-
 ## Related Pages
 
 [cf_fs_read_entire_file_to_memory](/file/cf_fs_read_entire_file_to_memory.md)  
 [cf_fs_read_entire_file_to_memory_and_nul_terminate](/file/cf_fs_read_entire_file_to_memory_and_nul_terminate.md)  
+[cf_fs_write_string_range_to_file](/file/cf_fs_write_string_range_to_file.md)  
+cf_fs_write_string_file  

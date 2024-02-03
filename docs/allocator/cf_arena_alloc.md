@@ -15,7 +15,7 @@ void* cf_arena_alloc(CF_Arena* arena, size_t size);
 Parameters | Description
 --- | ---
 arena | The arena to allocate from.
-size | The size of the allocation, it can be larger than `block_size` from [cf_arena_init](/allocator/cf_arena_init.md).
+size | The size of the allocation, it cannot be larger than `block_size` from [cf_arena_init](/allocator/cf_arena_init.md).
 
 ## Return Value
 

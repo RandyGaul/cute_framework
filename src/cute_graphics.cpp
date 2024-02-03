@@ -953,12 +953,12 @@ static void s_copy_uniforms(CF_Arena* arena, CF_SokolShader table, CF_MaterialSt
 			sg_apply_uniforms(stage, i, range);
 		}
 	}
-	cf_arena_reset(arena); // TODO - Should not actually need to free anything here.
+	cf_arena_reset(arena);
 }
 
 void cf_apply_shader(CF_Shader shader_handle, CF_Material material_handle)
 {
-	// TODO - Somehow cache results from all the get_*** callbacks.
+	// TODO - LOW PRIORITY - Somehow cache results from all the get_*** callbacks.
 
 	CF_ASSERT(s_canvas);
 	CF_MeshInternal* mesh = s_canvas->mesh;

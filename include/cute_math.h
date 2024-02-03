@@ -388,7 +388,7 @@ CF_INLINE float cf_safe_invert(float a) { return a != 0 ? 1.0f / a : 0; }
 CF_INLINE float cf_lerp(float a, float b, float t) { return a + (b - a) * t; }
 
 /**
- * @function cf_remap
+ * @function cf_remap01
  * @category math
  * @brief    Returns the value `t` remaped from [0, 1] to [lo, hi].
  * @related  cf_min cf_max cf_clamp cf_clamp01 cf_sign cf_intersect cf_safe_invert cf_lerp cf_remap cf_mod cf_fract

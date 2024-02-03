@@ -70,7 +70,7 @@ typedef enum CF_JType
 
 /**
  * @function cf_json_type_to_string
- * @category web
+ * @category json
  * @brief    Convert an enum `CF_JType` to a c-style string.
  * @param    state        The type to convert to a string.
  * @related  TODO

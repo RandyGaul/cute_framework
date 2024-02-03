@@ -14,7 +14,7 @@ Returns the number of characters in the string, including the nul-terminator.
 
 Parameters | Description
 --- | ---
-s | The string. Can be `NULL`.
+s | The string.
 
 ## Related Pages
 
