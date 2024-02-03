@@ -271,9 +271,22 @@ CF_API CF_Sprite CF_CALL cf_make_demo_sprite();
  * @brief    Unloads the sprite's image resources from the internal cache.
  * @param    aseprite_path  Virtual path to a .ase file.
  * @remarks  Any live `CF_Sprite` instances for `aseprite_path` will now by "dangling". See [Virtual File System](https://randygaul.github.io/cute_framework/#/topics/virtual_file_system).
- * @related  CF_Sprite cf_make_sprite cf_sprite_unload
+ * @related  CF_Sprite cf_make_sprite cf_sprite_unload cf_sprite_reload
  */
 CF_API void CF_CALL cf_sprite_unload(const char* aseprite_path);
+
+/**
+ * @function cf_sprite_reload
+ * @category sprite
+ * @brief    Reloads the sprite's pixels from disk.
+ * @param    sprite        The sprite to reload.
+ * @return   The reloaded sprite.
+ * @remarks  This function is designed to help support asset or image hotloading/reloading during development.
+ *           This function is *not* designed to be called once you ship your game.
+ *           All old instances of the sprite are now invalid and should be reset to this return value.
+ * @related  CF_Sprite cf_make_sprite cf_sprite_unload cf_sprite_reload
+ */
+CF_API CF_Sprite CF_CALL cf_sprite_reload(const CF_Sprite* sprite);
 
 //--------------------------------------------------------------------------------------------------
 // In-line implementation of `CF_Sprite` functions.
@@ -580,8 +593,8 @@ CF_INLINE void cf_animation_add_frame(CF_Animation* animation, CF_Frame frame) {
 namespace Cute
 {
 
-using frame_t = CF_Frame;
-using animation_t = CF_Animation;
+using Frame = CF_Frame;
+using Animation = CF_Animation;
 
 using PlayDirection = CF_PlayDirection;
 #define CF_ENUM(K, V) CF_INLINE constexpr PlayDirection K = CF_##K;
@@ -626,6 +639,8 @@ CF_INLINE Sprite easy_make_sprite(const char* png_path, Result* result) { return
 CF_INLINE Sprite easy_make_sprite(const Pixel* pixels, int w, int h) { return cf_make_easy_sprite_from_pixels(pixels, w, h); }
 CF_INLINE Sprite make_sprite(const char* aseprite_path) { return cf_make_sprite(aseprite_path); }
 CF_INLINE void sprite_unload(const char* aseprite_path) { cf_sprite_unload(aseprite_path); }
+CF_INLINE Sprite sprite_reload(const Sprite* sprite) { return cf_sprite_reload(sprite); }
+CF_INLINE Sprite sprite_reload(Sprite& sprite) { return (sprite = cf_sprite_reload(&sprite)); }
 
 }
 

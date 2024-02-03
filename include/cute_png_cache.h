@@ -153,8 +153,8 @@ CF_INLINE Result png_cache_load_mem(const char* png_path, const void* memory, si
 CF_INLINE void png_cache_unload(Png png) { cf_png_cache_unload(png); }
 CF_API const Animation* CF_CALL make_png_cache_animation(const char* name, const Array<CF_Png>& pngs, const Array<float>& delays);
 CF_INLINE const Animation* png_cache_get_animation(const char* name) { return cf_png_cache_get_animation(name); }
-CF_API const CF_Animation** CF_CALL make_png_cache_animation_table(const char* sprite_name, const Array<const Animation*>& animations);
-CF_INLINE const CF_Animation** png_cache_get_animation_table(const char* sprite_name) { return cf_png_cache_get_animation_table(sprite_name); }
+CF_API const Animation** CF_CALL make_png_cache_animation_table(const char* sprite_name, const Array<const Animation*>& animations);
+CF_INLINE const Animation** png_cache_get_animation_table(const char* sprite_name) { return cf_png_cache_get_animation_table(sprite_name); }
 
 }
 

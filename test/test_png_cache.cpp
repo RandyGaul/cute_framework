@@ -60,7 +60,7 @@ TEST_CASE(test_png_cache_all)
 
 	const CF_Animation* anims[] = { blink_anim, white_anim, black_anim };
 
-	const animation_t** table = cf_make_png_cache_animation_table("blink", anims, CF_ARRAY_SIZE(anims));
+	const Animation** table = cf_make_png_cache_animation_table("blink", anims, CF_ARRAY_SIZE(anims));
 	CF_Sprite sprite = cf_make_png_cache_sprite("blink", table);
 
 	cf_sprite_play(&sprite, "blink");

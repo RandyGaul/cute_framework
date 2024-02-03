@@ -1122,6 +1122,10 @@ int main(int argc, char* argv[])
 	while (app_is_running()) {
 		app_update();
 
+		if (key_just_pressed(KEY_R)) {
+			sprite_reload(g->player.sprite);
+		}
+
 		player_movement_routine();
 		player_weapons_routine();
 

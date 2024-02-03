@@ -36,7 +36,7 @@ struct CF_AsepriteCacheEntry
 {
 	const char* path = NULL;
 	ase_t* ase = NULL;
-	htbl animation_t** animations = NULL;
+	htbl Animation** animations = NULL;
 	CF_V2 local_offset = V2(0, 0);
 };
 
@@ -53,7 +53,7 @@ void cf_aseprite_cache_get_pixels(uint64_t image_id, void* buffer, int bytes_to_
 {
 	auto pixels_ptr = cache->id_to_pixels.try_find(image_id);
 	if (!pixels_ptr) {
-		CF_DEBUG_PRINTF("Aseprite cache -- unable to find id %lld.", (long long int)image_id);
+		CF_DEBUG_PRINTF("Aseprite cache -- unable to find id %lld.\n", (long long int)image_id);
 		CF_MEMSET(buffer, 0, bytes_to_fill);
 	} else {
 		void* pixels = *pixels_ptr;
@@ -98,7 +98,7 @@ static CF_PlayDirection s_play_direction(ase_animation_direction_t direction)
 static void s_sprite(CF_AsepriteCacheEntry entry, CF_Sprite* sprite)
 {
 	sprite->name = entry.path;
-	sprite->animations = (const animation_t**)entry.animations;
+	sprite->animations = (const Animation**)entry.animations;
 	sprite->w = entry.ase->w;
 	sprite->h = entry.ase->h;
 	sprite->local_offset = entry.local_offset;
@@ -115,7 +115,7 @@ CF_Result cf_aseprite_cache_load_from_memory(const char* unique_name, const void
 	if (!ase) return cf_result_error("Unable to open ase file at `aseprite_path`.");
 
 	// Allocate internal cache data structure entries.
-	animation_t** animations = NULL;
+	Animation** animations = NULL;
 	Array<uint64_t> ids;
 	ids.ensure_capacity(ase->frame_count);
 
@@ -234,12 +234,14 @@ void cf_aseprite_cache_unload(const char* aseprite_path)
 	aseprite_path = sintern(aseprite_path);
 	auto entry_ptr = cache->aseprites.try_find(aseprite_path);
 	if (!entry_ptr) return;
-	
+
 	CF_AsepriteCacheEntry entry = *entry_ptr;
 	for (int i = 0; i < hcount(entry.animations); ++i) {
 		CF_Animation* animation = entry.animations[i];
 		for (int j = 0; j < alen(animation->frames); ++j) {
-			cache->id_to_pixels.remove(animation->frames[j].id);
+			uint64_t id = animation->frames[j].id;
+			cache->id_to_pixels.remove(id);
+			spritebatch_invalidate(&draw->sb, id);
 		}
 
 		afree(animation->frames);
@@ -247,6 +249,7 @@ void cf_aseprite_cache_unload(const char* aseprite_path)
 	}
 
 	hfree(entry.animations);
+	cute_aseprite_free(entry.ase);
 	cache->aseprites.remove(aseprite_path);
 }
 

@@ -108,6 +108,13 @@ void cf_sprite_unload(const char* aseprite_path)
 	cf_aseprite_cache_unload(aseprite_path);
 }
 
+CF_Sprite cf_sprite_reload(const CF_Sprite* sprite)
+{
+	const char* name = sprite->name;
+	cf_aseprite_cache_unload(name);
+	return cf_make_sprite(name);
+}
+
 void cf_easy_sprite_unload(CF_Sprite *sprite)
 {
 	CF_Image* img = app->easy_sprites.try_find(sprite->easy_sprite_id);

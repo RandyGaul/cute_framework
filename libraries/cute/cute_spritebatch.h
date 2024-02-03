@@ -2040,10 +2040,9 @@ void spritebatch_invalidate(spritebatch_t* sb, SPRITEBATCH_U64 image_id)
 	if (atlas_ptr) {
 		spritebatch_internal_atlas_t* atlas = *(spritebatch_internal_atlas_t**)atlas_ptr;
 		spritebatch_internal_flush_atlas(sb, atlas, 0, 0);
-	} else {
-		if (hashtable_find(&sb->sprites_to_lonely_textures, image_id)) {
-			hashtable_remove(&sb->sprites_to_lonely_textures, image_id);
-		}
+	}
+	if (hashtable_find(&sb->sprites_to_lonely_textures, image_id)) {
+		hashtable_remove(&sb->sprites_to_lonely_textures, image_id);
 	}
 }
 
