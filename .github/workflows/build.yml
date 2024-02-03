@@ -70,6 +70,7 @@ jobs:
         run: |
           cd build_folder
           tests.exe
+          docsparser.exe
           cd ..
         if: matrix.platform.name == 'Windows (MinGW)'
       
@@ -77,6 +78,7 @@ jobs:
         run: |
           cd build_folder
           ./tests
+          ./docsparser
           cd ..
         if: runner.os == 'macOS'
       
@@ -84,6 +86,7 @@ jobs:
         run: |
           cd build_folder
           ./tests
+          ./docsparser
           cd ..
         if: runner.os == 'Linux'
 
