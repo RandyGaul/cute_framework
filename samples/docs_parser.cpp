@@ -13,8 +13,9 @@ const char* get_relative_path()
 {
 	if (!g_relative_path) {
 		Path path = cf_fs_get_base_directory();
-		const char* dir = path.my_directory();
-		if (siequ(dir, "debug") || siequ(dir, "release")) {
+		path.normalize();
+		Path dir = path.my_directory();
+		if (siequ(dir.c_str(), "debug") || siequ(dir.c_str(), "release")) {
 			g_relative_path = "../../docs";
 		} else {
 			g_relative_path = "../docs";

@@ -651,6 +651,14 @@ CF_API bool CF_CALL cf_key_gui();
 CF_API void CF_CALL cf_clear_key_states();
 
 /**
+ * @function cf_register_key_callback
+ * @category input
+ * @brief    Registers a callback invoked whenever a key is pressed.
+ * @related  CF_KeyButton cf_key_down cf_key_up cf_key_just_pressed cf_key_just_released cf_key_ctrl cf_key_shift cf_key_alt cf_key_gui cf_clear_key_states
+ */
+CF_API void CF_CALL cf_register_key_callback(void (*key_callback)(CF_KeyButton key, bool true_down_false_up));
+
+/**
  * @function cf_mouse_x
  * @category input
  * @brief    Returns the current mouse x-coordinate in pixels.

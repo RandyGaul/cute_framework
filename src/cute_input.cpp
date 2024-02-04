@@ -268,6 +268,11 @@ void cf_clear_key_states()
 	CF_MEMSET(app->keys_prev, 0, sizeof(app->keys_prev));
 }
 
+void cf_register_key_callback(void (*key_callback)(CF_KeyButton key, bool true_down_false_up))
+{
+	app->key_callback = key_callback;
+}
+
 int cf_mouse_x()
 {
 	return app->mouse.x;
@@ -523,6 +528,7 @@ void cf_pump_input_msgs()
 			app->keys[key] = 1;
 			app->keys[KEY_ANY] = 1;
 			app->keys_timestamp[key] = app->keys_timestamp[KEY_ANY] = CF_SECONDS;
+			if (app->key_callback) app->key_callback((CF_KeyButton)key, true);
 		}	break;
 
 		case SDL_KEYUP:
@@ -532,6 +538,7 @@ void cf_pump_input_msgs()
 			key = s_map_SDL_keys(key);
 			CF_ASSERT(key >= 0 && key < 512);
 			app->keys[key] = 0;
+			if (app->key_callback) app->key_callback((CF_KeyButton)key, false);
 		}	break;
 
 		case SDL_TEXTINPUT:

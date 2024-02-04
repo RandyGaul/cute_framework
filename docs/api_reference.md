@@ -1017,6 +1017,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_mouse_wheel_motion](/input/cf_mouse_wheel_motion.md)
 - [cf_mouse_x](/input/cf_mouse_x.md)
 - [cf_mouse_y](/input/cf_mouse_y.md)
+- [cf_register_key_callback](/input/cf_register_key_callback.md)
 - [cf_touch_get](/input/cf_touch_get.md)
 - [cf_touch_get_all](/input/cf_touch_get_all.md)
 
