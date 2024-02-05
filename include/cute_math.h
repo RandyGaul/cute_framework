@@ -2534,29 +2534,6 @@ namespace Cute
 
 using v2 = CF_V2;
 
-CF_INLINE v2 V2(float x, float y) { v2 result; result.x = x; result.y = y; return result; }
-
-CF_INLINE v2 operator+(v2 a, v2 b) { return V2(a.x + b.x, a.y + b.y); }
-CF_INLINE v2 operator-(v2 a, v2 b) { return V2(a.x - b.x, a.y - b.y); }
-CF_INLINE v2& operator+=(v2& a, v2 b) { return a = a + b; }
-CF_INLINE v2& operator-=(v2& a, v2 b) { return a = a - b; }
-
-CF_INLINE v2 operator*(v2 a, float b) { return V2(a.x * b, a.y * b); }
-CF_INLINE v2 operator*(v2 a, v2 b) { return V2(a.x * b.x, a.y * b.y); }
-CF_INLINE v2& operator*=(v2& a, float b) { return a = a * b; }
-CF_INLINE v2& operator*=(v2& a, v2 b) { return a = a * b; }
-CF_INLINE v2 operator/(v2 a, float b) { return V2(a.x / b, a.y / b); }
-CF_INLINE v2 operator/(v2 a, v2 b) { return V2(a.x / b.x, a.y / b.y); }
-CF_INLINE v2& operator/=(v2& a, float b) { return a = a / b; }
-CF_INLINE v2& operator/=(v2& a, v2 b) { return a = a / b; }
-
-CF_INLINE v2 operator-(v2 a) { return V2(-a.x, -a.y); }
-
-CF_INLINE int operator<(v2 a, v2 b) { return a.x < b.x&& a.y < b.y; }
-CF_INLINE int operator>(v2 a, v2 b) { return a.x > b.x && a.y > b.y; }
-CF_INLINE int operator<=(v2 a, v2 b) { return a.x <= b.x && a.y <= b.y; }
-CF_INLINE int operator>=(v2 a, v2 b) { return a.x >= b.x && a.y >= b.y; }
-
 using SinCos = CF_SinCos;
 using M2x2 = CF_M2x2;
 using M3x2 = CF_M3x2;
@@ -2833,6 +2810,29 @@ CF_INLINE void collide(const void* A, const Transform* ax, ShapeType typeA, cons
 CF_INLINE bool cast_ray(Ray A, const void* B, const Transform* bx, ShapeType typeB, Raycast* out) { return cf_cast_ray(A, B, bx, typeB, out); }
 
 }
+
+CF_INLINE Cute::v2 V2(float x, float y) { Cute::v2 result; result.x = x; result.y = y; return result; }
+
+CF_INLINE Cute::v2 operator+(Cute::v2 a, Cute::v2 b) { return V2(a.x + b.x, a.y + b.y); }
+CF_INLINE Cute::v2 operator-(Cute::v2 a, Cute::v2 b) { return V2(a.x - b.x, a.y - b.y); }
+CF_INLINE Cute::v2& operator+=(Cute::v2& a, Cute::v2 b) { return a = a + b; }
+CF_INLINE Cute::v2& operator-=(Cute::v2& a, Cute::v2 b) { return a = a - b; }
+
+CF_INLINE Cute::v2 operator*(Cute::v2 a, float b) { return V2(a.x * b, a.y * b); }
+CF_INLINE Cute::v2 operator*(Cute::v2 a, Cute::v2 b) { return V2(a.x * b.x, a.y * b.y); }
+CF_INLINE Cute::v2& operator*=(Cute::v2& a, float b) { return a = a * b; }
+CF_INLINE Cute::v2& operator*=(Cute::v2& a, Cute::v2 b) { return a = a * b; }
+CF_INLINE Cute::v2 operator/(Cute::v2 a, float b) { return V2(a.x / b, a.y / b); }
+CF_INLINE Cute::v2 operator/(Cute::v2 a, Cute::v2 b) { return V2(a.x / b.x, a.y / b.y); }
+CF_INLINE Cute::v2& operator/=(Cute::v2& a, float b) { return a = a / b; }
+CF_INLINE Cute::v2& operator/=(Cute::v2& a, Cute::v2 b) { return a = a / b; }
+
+CF_INLINE Cute::v2 operator-(Cute::v2 a) { return V2(-a.x, -a.y); }
+
+CF_INLINE int operator<(Cute::v2 a, Cute::v2 b) { return a.x < b.x&& a.y < b.y; }
+CF_INLINE int operator>(Cute::v2 a, Cute::v2 b) { return a.x > b.x && a.y > b.y; }
+CF_INLINE int operator<=(Cute::v2 a, Cute::v2 b) { return a.x <= b.x && a.y <= b.y; }
+CF_INLINE int operator>=(Cute::v2 a, Cute::v2 b) { return a.x >= b.x && a.y >= b.y; }
 
 #endif // CF_CPP
 
