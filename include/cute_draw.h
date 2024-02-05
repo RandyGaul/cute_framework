@@ -721,18 +721,32 @@ CF_API bool CF_CALL cf_peek_text_vertical_layout();
  * @category text
  * @brief    Returns the width of a text given the currently pushed font.
  * @param    text      The text considered for rendering.
- * @related  cf_make_font cf_text_width cf_text_height cf_draw_text
+ * @param    num_chars_to_draw  The number of characters to draw `text`. Use -1 to draw the whole string.
+ * @related  cf_make_font cf_text_width cf_text_height cf_draw_text cf_text_size
  */
-CF_API float CF_CALL cf_text_width(const char* text);
+CF_API float CF_CALL cf_text_width(const char* text, int num_chars_to_draw);
 
 /**
  * @function cf_text_height
  * @category text
  * @brief    Returns the height of a text given the currently pushed font.
- * @param    height     The text considered for rendering.
- * @related  cf_make_font cf_text_width cf_text_height cf_draw_text
+ * @param    text      The text considered for rendering.
+ * @param    num_chars_to_draw  The number of characters to draw `text`. Use -1 to draw the whole string.
+ * @related  cf_make_font cf_text_width cf_text_height cf_draw_text cf_text_size
  */
-CF_API float CF_CALL cf_text_height(const char* text);
+CF_API float CF_CALL cf_text_height(const char* text, int num_chars_to_draw);
+
+/**
+ * @function cf_text_size
+ * @category text
+ * @brief    Returns the width/height of a text given the currently pushed font.
+ * @param    text      The text considered for rendering.
+ * @param    num_chars_to_draw  The number of characters to draw `text`. Use -1 to draw the whole string.
+ * @remarks  This function is slightly superior to `cf_text_width` or `cf_text_height` if you need both width/height, as
+ *           it will run the layout code only a single time.
+ * @related  cf_make_font cf_text_width cf_text_height cf_draw_text cf_text_size
+ */
+CF_API CF_V2 CF_CALL cf_text_size(const char* text, int num_chars_to_draw);
 
 /**
  * @function cf_draw_text
@@ -1310,9 +1324,10 @@ CF_INLINE float peek_text_wrap_width() { return cf_peek_text_wrap_width(); }
 CF_INLINE void push_text_clip_box(CF_Aabb clip_box) { cf_push_text_clip_box(clip_box); }
 CF_INLINE CF_Aabb pop_text_clip_box() { return cf_pop_text_clip_box(); }
 CF_INLINE CF_Aabb peek_text_clip_box() { return cf_peek_text_clip_box(); }
-CF_INLINE float text_width(const char* text) { return cf_text_width(text); }
-CF_INLINE float text_height(const char* text) { return cf_text_height(text); }
-CF_INLINE void draw_text(const char* text, CF_V2 position, int text_length = -1) { cf_draw_text(text, position, text_length); }
+CF_INLINE float text_width(const char* text, int num_chars_to_render = -1) { return cf_text_width(text, num_chars_to_render); }
+CF_INLINE float text_height(const char* text, int num_chars_to_render = -1) { return cf_text_height(text, num_chars_to_render); }
+CF_INLINE v2 text_size(const char* text, int num_chars_to_render = -1) { return cf_text_size(text, num_chars_to_render); }
+CF_INLINE void draw_text(const char* text, CF_V2 position, int num_chars_to_render = -1) { cf_draw_text(text, position, num_chars_to_render); }
 
 struct TextEffect : public CF_TextEffect
 {

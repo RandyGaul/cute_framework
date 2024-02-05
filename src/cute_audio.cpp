@@ -238,5 +238,10 @@ void cf_sound_set_sample_index(CF_Sound sound, uint64_t sample_index)
 	cs_sound_set_sample_index(cssound, sample_index);
 }
 
+void cf_audio_cull_duplicates(bool true_to_cull_duplicates)
+{
+	cs_cull_duplicates(true_to_cull_duplicates);
+}
+
 #undef STB_VORBIS_HEADER_ONLY
 #include <stb/stb_vorbis.c>

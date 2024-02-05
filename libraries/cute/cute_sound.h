@@ -89,6 +89,8 @@
 		                * Fixed a bug where dsound mixing could run too fast.
 		2.03 (11/12/2022) Added internal queue for freeing audio sources to avoid the
 		                  need for refcount polling.
+		2.04 (02/04/2024) Added `cs_cull_duplicates` helper for removing extra plays
+		                  to the same sound on the exact same update tick.
 
 
 	CONTRIBUTORS
@@ -357,6 +359,13 @@ cs_error_t cs_sound_set_sample_index(cs_playing_sound_t sound, uint64_t sample_i
 
 void cs_set_playing_sounds_volume(float volume_0_to_1);
 void cs_stop_all_playing_sounds();
+
+/**
+ * Off by default. When enabled only one instance of audio can be created per audio update-tick. This
+ * does *not* take into account the starting sample index, so disable this feature if you want to spawn
+ * audio with dynamic sample indices, such as when syncing programmatically generated scores/sequences.
+ */
+void cs_cull_duplicates(bool true_to_enable);
 
 // -------------------------------------------------------------------------------------------------
 // C++ overloads.
@@ -1320,6 +1329,10 @@ typedef struct cs_context_t
 	bool global_pause /* = false */;
 	float music_volume /* = 1.0f */;
 	float sound_volume /* = 1.0f */;
+	bool cull_duplicates /* = false */;
+	void** duplicates /* = NULL */;
+	int duplicate_count /* = 0 */;
+	int duplicate_capacity /* = 0 */;
 
 	bool music_paused /* = false */;
 	bool music_looped /* = true */;
@@ -2123,6 +2136,22 @@ void cs_mix()
 			if (!playing->active || !s_ctx->running) goto remove;
 			if (!audio) goto remove;
 			if (playing->paused) goto get_next_playing_sound;
+			if (s_ctx->cull_duplicates) {
+				for (int i = 0; i < s_ctx->duplicate_count; ++i) {
+					if (s_ctx->duplicates[i] == (void*)audio) {
+						goto remove;
+					}
+				}
+				if (s_ctx->duplicate_count == s_ctx->duplicate_capacity) {
+					int new_capacity = s_ctx->duplicate_capacity ? s_ctx->duplicate_capacity * 2 : 1024;
+					void* duplicates = CUTE_SOUND_ALLOC(sizeof(void*) * new_capacity, s_ctx->mem_ctx);
+					CUTE_SOUND_MEMCPY(duplicates, s_ctx->duplicates, sizeof(void*) * s_ctx->duplicate_count);
+					CUTE_SOUND_FREE(s_ctx->duplicates);
+					s_ctx->duplicates = (void**)duplicates;
+					s_ctx->duplicate_capacity = new_capacity;
+				}
+				s_ctx->duplicates[s_ctx->duplicate_count++] = (void*)audio;
+			}
 
 			{
 				cs__m128* cA = (cs__m128*)audio->channels[0];
@@ -2238,6 +2267,8 @@ void cs_mix()
 			continue;
 		} while (playing_node != end_node);
 	}
+
+	s_ctx->duplicate_count = 0;
 
 	// load all floats into 16 bit packed interleaved samples
 #if CUTE_SOUND_PLATFORM == CUTE_SOUND_WINDOWS
@@ -3123,6 +3154,11 @@ void cs_stop_all_playing_sounds()
 	} while (playing_sound != end);
 
 	cs_unlock();
+}
+
+void cs_cull_duplicates(bool true_to_enable)
+{
+	s_ctx->cull_duplicates = true_to_enable;
 }
 
 #endif // CUTE_SOUND_IMPLEMENTATION_ONCE

@@ -122,6 +122,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 ## audio
 
 ### functions
+- [cf_audio_cull_duplicates](/audio/cf_audio_cull_duplicates.md)
 - [cf_audio_destroy](/audio/cf_audio_destroy.md)
 - [cf_audio_load_ogg](/audio/cf_audio_load_ogg.md)
 - [cf_audio_load_ogg_from_memory](/audio/cf_audio_load_ogg_from_memory.md)
@@ -1330,6 +1331,7 @@ This is a list of all functions in Cute Framework organized by categories. This 
 - [cf_text_effect_on_start](/text/cf_text_effect_on_start.md)
 - [cf_text_effect_register](/text/cf_text_effect_register.md)
 - [cf_text_height](/text/cf_text_height.md)
+- [cf_text_size](/text/cf_text_size.md)
 - [cf_text_width](/text/cf_text_width.md)
 - [CF_TextEffectFn](/text/cf_texteffectfn.md)
 

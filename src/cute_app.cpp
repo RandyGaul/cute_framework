@@ -313,6 +313,7 @@ CF_Result cf_make_app(const char* window_title, int x, int y, int w, int h, int 
 			app->spawned_mix_thread = true;
 	#endif // CF_EMSCRIPTEN
 			app->audio_needs_updates = true;
+			cs_cull_duplicates(true);
 		} else {
 			CF_Result result;
 			result.code = -1;
